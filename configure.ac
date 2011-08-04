@@ -669,6 +669,11 @@ AC_ARG_ENABLE([gbm],
          [enable gbm library @<:@default=auto@:>@])],
    [enable_gbm="$enableval"],
    [enable_gbm=auto])
+AC_ARG_ENABLE([nine],
+    [AS_HELP_STRING([--enable-nine],
+        [enable build of the nine Direct3D9 API @<:@default=no@:>@])],
+    [enable_nine="$enableval"],
+    [enable_nine=no])
 
 AC_ARG_ENABLE([xvmc],
    [AS_HELP_STRING([--enable-xvmc],
@@ -742,6 +747,7 @@ esac
 if test "x$enable_opengl" = xno -a \
         "x$enable_gles1" = xno -a \
         "x$enable_gles2" = xno -a \
+        "x$enable_nine" = xno -a \
         "x$enable_openvg" = xno -a \
         "x$enable_xa" = xno -a \
         "x$enable_xvmc" = xno -a \
@@ -1395,6 +1401,24 @@ fi
 AM_CONDITIONAL(HAVE_ST_VA, test "x$enable_va" = xyes)
 
 dnl
+dnl Nine Direct3D9 configuration
+dnl
+if test "x$enable_nine" = xyes; then
+    if ! echo "$with_gallium_drivers" | grep -q 'swrast'; then
+        AC_MSG_ERROR([nine requires the gallium swrast driver])
+    fi
+    if test "x$with_gallium_drivers" == xswrast; then
+        AC_MSG_ERROR([nine requires at least one non-swrast gallium driver])
+    fi
+    if test "x$enable_dri3" = xno; then
+        AC_MSG_WARN([using nine together with wine requires DRI3 enabled system])
+    fi
+
+    enable_gallium_loader=$enable_shared_pipe_drivers
+fi
+AM_CONDITIONAL(HAVE_ST_NINE, test "x$enable_nine" = xyes)
+
+dnl
 dnl OpenCL configuration
 dnl
 
@@ -1768,6 +1792,13 @@ AC_ARG_WITH([va-libdir],
     [VA_LIB_INSTALL_DIR="${libdir}/dri"])
 AC_SUBST([VA_LIB_INSTALL_DIR])
 
+AC_ARG_WITH([d3d-libdir],
+    [AS_HELP_STRING([--with-d3d-libdir=DIR],
+        [directory for the D3D modules @<:@${libdir}/d3d@:>@])],
+    [D3D_DRIVER_INSTALL_DIR="$withval"],
+    [D3D_DRIVER_INSTALL_DIR="${libdir}/d3d"])
+AC_SUBST([D3D_DRIVER_INSTALL_DIR])
+
 dnl
 dnl Gallium helper functions
 dnl
@@ -2052,6 +2083,9 @@ AM_CONDITIONAL(HAVE_X86_ASM, test "x$asm_arch" = xx86 -o "x$asm_arch" = xx86_64)
 AM_CONDITIONAL(HAVE_X86_64_ASM, test "x$asm_arch" = xx86_64)
 AM_CONDITIONAL(HAVE_SPARC_ASM, test "x$asm_arch" = xsparc)
 
+AC_SUBST([NINE_MAJOR], 1)
+AC_SUBST([NINE_MINOR], 0)
+
 AC_SUBST([VDPAU_MAJOR], 1)
 AC_SUBST([VDPAU_MINOR], 0)
 
@@ -2121,6 +2155,7 @@ AC_CONFIG_FILES([Makefile
 		src/gallium/state_trackers/clover/Makefile
 		src/gallium/state_trackers/dri/Makefile
 		src/gallium/state_trackers/glx/xlib/Makefile
+		src/gallium/state_trackers/nine/Makefile
 		src/gallium/state_trackers/omx/Makefile
 		src/gallium/state_trackers/osmesa/Makefile
 		src/gallium/state_trackers/va/Makefile
@@ -2128,6 +2163,8 @@ AC_CONFIG_FILES([Makefile
 		src/gallium/state_trackers/vega/Makefile
 		src/gallium/state_trackers/xa/Makefile
 		src/gallium/state_trackers/xvmc/Makefile
+		src/gallium/targets/d3dadapter9/Makefile
+		src/gallium/targets/d3dadapter9/d3d.pc
 		src/gallium/targets/dri/Makefile
 		src/gallium/targets/egl-static/Makefile
 		src/gallium/targets/gbm/Makefile

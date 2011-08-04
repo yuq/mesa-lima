@@ -166,6 +166,10 @@ if HAVE_ST_XVMC
 SUBDIRS += state_trackers/xvmc targets/xvmc
 endif
 
+if HAVE_ST_NINE
+SUBDIRS += state_trackers/nine targets/d3dadapter9
+endif
+
 ##
 ## Don't forget to bundle the remaining (non autotools) state-trackers/targets
 ##
