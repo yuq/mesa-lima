@@ -160,21 +160,18 @@ stw_create_context_attribs(HDC hdc, INT iLayerPlane, DHGLRC hShareContext,
    if (iLayerPlane != 0)
       return 0;
 
-   iPixelFormat = GetPixelFormat(hdc);
-   if(!iPixelFormat)
-      return 0;
-
    /*
     * GDI only knows about displayable pixel formats, so determine the pixel
     * format from the framebuffer.
     *
-    * TODO: Remove the GetPixelFormat() above, and stop relying on GDI.
+    * This also allows to use a OpenGL DLL / ICD without installing.
     */
    fb = stw_framebuffer_from_hdc( hdc );
    if (fb) {
-      assert(iPixelFormat == fb->iDisplayablePixelFormat);
       iPixelFormat = fb->iPixelFormat;
       stw_framebuffer_release(fb);
+   } else {
+      return 0;
    }
 
    pfi = stw_pixelformat_get_info( iPixelFormat );

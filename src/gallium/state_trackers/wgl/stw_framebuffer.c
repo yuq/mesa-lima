@@ -466,7 +466,9 @@ DrvSetPixelFormat(HDC hdc, LONG iPixelFormat)
     * avoid opengl32.dll's wglCreateContext to fail */
    if (GetPixelFormat(hdc) == 0) {
       BOOL bRet = SetPixelFormat(hdc, iPixelFormat, NULL);
-      assert(bRet);
+      if (!bRet) {
+	  debug_printf("SetPixelFormat failed\n");
+      }
    }
 
    return TRUE;
