@@ -4405,6 +4405,7 @@ struct gl_context
    /** \name API function pointer tables */
    /*@{*/
    gl_api API;
+
    /**
     * The current dispatch table for non-displaylist-saving execution, either
     * BeginEnd or OutsideBeginEnd
@@ -4427,10 +4428,24 @@ struct gl_context
     */
    struct _glapi_table *ContextLost;
    /**
-    * Tracks the current dispatch table out of the 4 above, so that it can be
-    * re-set on glXMakeCurrent().
+    * Dispatch table used to marshal API calls from the client program to a
+    * separate server thread.  NULL if API calls are not being marshalled to
+    * another thread.
     */
-   struct _glapi_table *CurrentDispatch;
+   struct _glapi_table *MarshalExec;
+   /**
+    * Dispatch table currently in use for fielding API calls from the client
+    * program.  If API calls are being marshalled to another thread, this ==
+    * MarshalExec.  Otherwise it == CurrentServerDispatch.
+    */
+   struct _glapi_table *CurrentClientDispatch;
+
+   /**
+    * Dispatch table currently in use for performing API calls.  == Save or
+    * Exec.
+    */
+   struct _glapi_table *CurrentServerDispatch;
+
    /*@}*/
 
    struct glthread_state *GLThread;
