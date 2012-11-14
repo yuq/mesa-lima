@@ -132,6 +132,7 @@ MAIN_FILES = \
 	main/lines.c \
 	main/lines.h \
 	main/macros.h \
+	main/marshal.c \
 	main/marshal_generated.c \
 	main/marshal_generated.h \
 	main/matrix.c \

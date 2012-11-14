@@ -109,4 +109,14 @@ _mesa_post_marshal_hook(struct gl_context *ctx)
       _mesa_glthread_finish(ctx);
 }
 
+struct marshal_cmd_ShaderSource;
+
+void GLAPIENTRY
+_mesa_marshal_ShaderSource(GLuint shader, GLsizei count,
+                           const GLchar * const *string, const GLint *length);
+
+void
+_mesa_unmarshal_ShaderSource(struct gl_context *ctx,
+                             const struct marshal_cmd_ShaderSource *cmd);
+
 #endif /* MARSHAL_H */

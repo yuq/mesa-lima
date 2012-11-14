@@ -5475,7 +5475,7 @@
         <glx ignore="true"/>
     </function>
 
-    <function name="ShaderSource" es2="2.0">
+    <function name="ShaderSource" es2="2.0" marshal="custom">
         <param name="shader" type="GLuint"/>
         <param name="count" type="GLsizei"/>
         <param name="string" type="const GLchar * const *"/>
