@@ -201,6 +201,9 @@ _mesa_init_driver_functions(struct dd_function_table *driver)
 
    /* GL_ARB_texture_multisample */
    driver->GetSamplePosition = NULL;
+
+   /* Multithreading */
+   driver->SetBackgroundContext = NULL;
 }
 
 

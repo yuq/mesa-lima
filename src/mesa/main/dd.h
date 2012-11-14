@@ -1025,6 +1025,24 @@ struct dd_function_table {
     */
    void (*QueryMemoryInfo)(struct gl_context *ctx,
                            struct gl_memory_info *info);
+
+   /**
+    * Indicate that this thread is being used by Mesa as a background drawing
+    * thread for the given GL context.
+    *
+    * If this function is called more than once from any given thread, each
+    * subsequent call overrides the context that was passed in the previous
+    * call.  Mesa takes advantage of this to re-use a background thread to
+    * perform drawing on behalf of multiple contexts.
+    *
+    * Mesa may sometimes call this function from a non-background thread
+    * (i.e. a thread that has already been bound to a context using
+    * __DriverAPIRec::MakeCurrent()); when this happens, ctx will be equal to
+    * the context that is bound to this thread.
+    *
+    * Mesa will only call this function if GL multithreading is enabled.
+    */
+   void (*SetBackgroundContext)(struct gl_context *ctx);
 };
 
 
