@@ -1683,4 +1683,43 @@ struct __DRIimageDriverExtensionRec {
    __DRIgetAPIMaskFunc                  getAPIMask;
 };
 
+/**
+ * Background callable loader extension.
+ *
+ * Loaders expose this extension to indicate to drivers that they are capable
+ * of handling callbacks from the driver's background drawing threads.
+ */
+#define __DRI_BACKGROUND_CALLABLE "DRI_BackgroundCallable"
+#define __DRI_BACKGROUND_CALLABLE_VERSION 1
+
+typedef struct __DRIbackgroundCallableExtensionRec __DRIbackgroundCallableExtension;
+struct __DRIbackgroundCallableExtensionRec {
+   __DRIextension base;
+
+   /**
+    * Indicate that this thread is being used by the driver as a background
+    * drawing thread which may make callbacks to the loader.
+    *
+    * \param loaderPrivate is the value that was passed to to the driver when
+    * the context was created.  This can be used by the loader to identify
+    * which context any callbacks are associated with.
+    *
+    * If this function is called more than once from any given thread, each
+    * subsequent call overrides the loaderPrivate data that was passed in the
+    * previous call.  The driver can take advantage of this to re-use a
+    * background thread to perform drawing on behalf of multiple contexts.
+    *
+    * It is permissible for the driver to call this function from a
+    * non-background thread (i.e. a thread that has already been bound to a
+    * context using __DRIcoreExtensionRec::bindContext()); when this happens,
+    * the \c loaderPrivate pointer must be equal to the pointer that was
+    * passed to the driver when the currently bound context was created.
+    *
+    * This call should execute quickly enough that the driver can call it with
+    * impunity whenever a background thread starts performing drawing
+    * operations (e.g. it should just set a thread-local variable).
+    */
+   void (*setBackgroundContext)(void *loaderPrivate);
+};
+
 #endif
