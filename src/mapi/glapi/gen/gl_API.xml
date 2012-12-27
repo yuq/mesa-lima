@@ -3153,7 +3153,7 @@
         <glx handcode="true"/>
     </function>
 
-    <function name="ColorPointer" es1="1.0" deprecated="3.1">
+    <function name="ColorPointer" es1="1.0" deprecated="3.1" marshal="async">
         <param name="size" type="GLint"/>
         <param name="type" type="GLenum"/>
         <param name="stride" type="GLsizei"/>
@@ -3181,7 +3181,7 @@
         <glx handcode="true"/>
     </function>
 
-    <function name="EdgeFlagPointer" deprecated="3.1">
+    <function name="EdgeFlagPointer" deprecated="3.1" marshal="async">
         <param name="stride" type="GLsizei"/>
         <param name="pointer" type="const GLvoid *"/>
         <glx handcode="true"/>
@@ -3198,7 +3198,7 @@
         <glx handcode="true"/>
     </function>
 
-    <function name="IndexPointer" deprecated="3.1">
+    <function name="IndexPointer" deprecated="3.1" marshal="async">
         <param name="type" type="GLenum"/>
         <param name="stride" type="GLsizei"/>
         <param name="pointer" type="const GLvoid *"/>
@@ -3212,14 +3212,14 @@
         <glx handcode="true"/>
     </function>
 
-    <function name="NormalPointer" es1="1.0" deprecated="3.1">
+    <function name="NormalPointer" es1="1.0" deprecated="3.1" marshal="async">
         <param name="type" type="GLenum"/>
         <param name="stride" type="GLsizei"/>
         <param name="pointer" type="const GLvoid *"/>
         <glx handcode="true"/>
     </function>
 
-    <function name="TexCoordPointer" es1="1.0" deprecated="3.1">
+    <function name="TexCoordPointer" es1="1.0" deprecated="3.1" marshal="async">
         <param name="size" type="GLint"/>
         <param name="type" type="GLenum"/>
         <param name="stride" type="GLsizei"/>
@@ -3227,7 +3227,7 @@
         <glx handcode="true"/>
     </function>
 
-    <function name="VertexPointer" es1="1.0" deprecated="3.1">
+    <function name="VertexPointer" es1="1.0" deprecated="3.1" marshal="async">
         <param name="size" type="GLint"/>
         <param name="type" type="GLenum"/>
         <param name="stride" type="GLsizei"/>
@@ -4557,7 +4557,7 @@
         <glx rop="218" handcode="client"/>
     </function>
 
-    <function name="CompressedTexSubImage1D">
+    <function name="CompressedTexSubImage1D" marshal="sync">
         <param name="target" type="GLenum"/>
         <param name="level" type="GLint"/>
         <param name="xoffset" type="GLint"/>
@@ -4716,7 +4716,7 @@
         <glx rop="4125"/>
     </function>
 
-    <function name="FogCoordPointer" deprecated="3.1">
+    <function name="FogCoordPointer" deprecated="3.1" marshal="async">
         <param name="type" type="GLenum"/>
         <param name="stride" type="GLsizei"/>
         <param name="pointer" type="const GLvoid *"/>
@@ -4852,7 +4852,7 @@
         <glx rop="4132"/>
     </function>
 
-    <function name="SecondaryColorPointer" deprecated="3.1">
+    <function name="SecondaryColorPointer" deprecated="3.1" marshal="async">
         <param name="size" type="GLint"/>
         <param name="type" type="GLenum"/>
         <param name="stride" type="GLsizei"/>
@@ -5806,7 +5806,7 @@
         <glx rop="4233"/>
     </function>
 
-    <function name="VertexAttribPointer" es2="2.0">
+    <function name="VertexAttribPointer" es2="2.0" marshal="async">
         <param name="index" type="GLuint"/>
         <param name="size" type="GLint"/>
         <param name="type" type="GLenum"/>
@@ -9179,7 +9179,7 @@
         <param name="i" type="GLint"/>
     </function>
 
-    <function name="ColorPointerEXT" deprecated="3.1">
+    <function name="ColorPointerEXT" deprecated="3.1" marshal="async">
         <param name="size" type="GLint"/>
         <param name="type" type="GLenum"/>
         <param name="stride" type="GLsizei"/>
@@ -9194,7 +9194,7 @@
         <param name="count" type="GLsizei"/>
     </function>
 
-    <function name="EdgeFlagPointerEXT" deprecated="3.1">
+    <function name="EdgeFlagPointerEXT" deprecated="3.1" marshal="async">
         <param name="stride" type="GLsizei"/>
         <param name="count" type="GLsizei"/>
         <param name="pointer" type="const GLboolean *"/>
@@ -9206,7 +9206,7 @@
         <param name="params" type="GLvoid **" output="true"/>
     </function>
 
-    <function name="IndexPointerEXT" deprecated="3.1">
+    <function name="IndexPointerEXT" deprecated="3.1" marshal="async">
         <param name="type" type="GLenum"/>
         <param name="stride" type="GLsizei"/>
         <param name="count" type="GLsizei"/>
@@ -9214,7 +9214,7 @@
         <glx handcode="true"/>
     </function>
 
-    <function name="NormalPointerEXT" deprecated="3.1">
+    <function name="NormalPointerEXT" deprecated="3.1" marshal="async">
         <param name="type" type="GLenum"/>
         <param name="stride" type="GLsizei"/>
         <param name="count" type="GLsizei"/>
@@ -9222,7 +9222,7 @@
         <glx handcode="true"/>
     </function>
 
-    <function name="TexCoordPointerEXT" deprecated="3.1">
+    <function name="TexCoordPointerEXT" deprecated="3.1" marshal="async">
         <param name="size" type="GLint"/>
         <param name="type" type="GLenum"/>
         <param name="stride" type="GLsizei"/>
@@ -9231,7 +9231,7 @@
         <glx handcode="true"/>
     </function>
 
-    <function name="VertexPointerEXT" deprecated="3.1">
+    <function name="VertexPointerEXT" deprecated="3.1" marshal="async">
         <param name="size" type="GLint"/>
         <param name="type" type="GLenum"/>
         <param name="stride" type="GLsizei"/>

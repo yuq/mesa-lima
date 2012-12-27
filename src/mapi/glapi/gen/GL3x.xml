@@ -256,7 +256,7 @@
 
   <!-- These functions alias ones from GL_EXT_gpu_shader4 -->
 
-  <function name="VertexAttribIPointer" es2="3.0">
+  <function name="VertexAttribIPointer" es2="3.0" marshal="async">
     <param name="index" type="GLuint"/>
     <param name="size" type="GLint"/>
     <param name="type" type="GLenum"/>
