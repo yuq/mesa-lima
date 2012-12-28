@@ -351,6 +351,7 @@ _EGL_DRIVER_TYPECAST(dri2_egl_sync, _EGLSync, obj)
 
 extern const __DRIimageLookupExtension image_lookup_extension;
 extern const __DRIuseInvalidateExtension use_invalidate;
+extern const __DRIbackgroundCallableExtension background_callable_extension;
 
 EGLBoolean
 dri2_load_driver(_EGLDisplay *disp);

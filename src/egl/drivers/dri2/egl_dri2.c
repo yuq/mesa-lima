@@ -83,6 +83,21 @@
 #define DRM_FORMAT_GR1616        fourcc_code('G', 'R', '3', '2') /* [31:0] R:G 16:16 little endian */
 #endif
 
+static void
+dri_set_background_context(void *loaderPrivate)
+{
+   _EGLContext *ctx = _eglGetCurrentContext();
+   _EGLThreadInfo *t = _eglGetCurrentThread();
+
+   _eglBindContextToThread(ctx, t);
+}
+
+const __DRIbackgroundCallableExtension background_callable_extension = {
+   .base = { __DRI_BACKGROUND_CALLABLE, 1 },
+
+   .setBackgroundContext = dri_set_background_context,
+};
+
 const __DRIuseInvalidateExtension use_invalidate = {
    .base = { __DRI_USE_INVALIDATE, 1 }
 };
