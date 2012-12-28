@@ -4433,6 +4433,8 @@ struct gl_context
    struct _glapi_table *CurrentDispatch;
    /*@}*/
 
+   struct glthread_state *GLThread;
+
    struct gl_config Visual;
    struct gl_framebuffer *DrawBuffer;	/**< buffer for writing */
    struct gl_framebuffer *ReadBuffer;	/**< buffer for reading */
