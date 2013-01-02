@@ -54,7 +54,14 @@ glthread_allocate_batch(struct gl_context *ctx)
 static void
 glthread_unmarshal_batch(struct gl_context *ctx, struct glthread_batch *batch)
 {
+   size_t pos = 0;
+
    _glapi_set_dispatch(ctx->CurrentServerDispatch);
+
+   while (pos < batch->used)
+      pos += _mesa_unmarshal_dispatch_cmd(ctx, &batch->buffer[pos]);
+
+   assert(pos == batch->used);
 
    free(batch->buffer);
    free(batch);
@@ -111,6 +118,14 @@ _mesa_glthread_init(struct gl_context *ctx)
 
    if (!glthread)
       return;
+
+   ctx->MarshalExec = _mesa_create_marshal_table(ctx);
+   if (!ctx->MarshalExec) {
+      free(glthread);
+      return;
+   }
+
+   ctx->CurrentClientDispatch = ctx->MarshalExec;
 
    pthread_mutex_init(&glthread->mutex, NULL);
    pthread_cond_init(&glthread->new_work, NULL);
