@@ -175,6 +175,19 @@ class PrintCode(gl_XML.gl_print_base):
             self.print_sync_call(func)
         out('}')
 
+    def validate_count_or_return(self, func):
+        # Check that any counts for variable-length arguments might be < 0, in
+        # which case the command alloc or the memcpy would blow up before we
+        # get to the validation in Mesa core.
+        for p in func.parameters:
+            if p.is_variable_length():
+                out('if (unlikely({0} < 0)) {{'.format(p.size_string()))
+                with indent():
+                    out('_mesa_glthread_finish(ctx);')
+                    out('_mesa_error(ctx, GL_INVALID_VALUE, "{0}({1} < 0)");'.format(func.name, p.size_string()))
+                    out('return;')
+                out('}')
+
     def print_async_marshal(self, func):
         out('static void GLAPIENTRY')
         out('_mesa_marshal_{0}({1})'.format(
@@ -190,6 +203,8 @@ class PrintCode(gl_XML.gl_print_base):
             out('{0} *cmd;'.format(struct))
 
             out('debug_print_marshal("{0}");'.format(func.name))
+
+            self.validate_count_or_return(func)
 
             out('if (cmd_size <= MARSHAL_MAX_CMD_SIZE) {')
             with indent():
