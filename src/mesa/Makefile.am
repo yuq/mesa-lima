@@ -62,6 +62,13 @@ include $(GLAPI)/glapi_gen.mk
 BUILDDIR = $(builddir)/
 include Makefile.sources
 
+EXTRA_DIST = \
+	main/format_info.py \
+	main/format_parser.py \
+	main/formats.csv \
+	main/get_hash_generator.py \
+	main/get_hash_params.py
+
 BUILT_SOURCES = \
 	main/get_hash.h \
         main/format_info.c \
