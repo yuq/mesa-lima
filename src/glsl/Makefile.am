@@ -30,6 +30,8 @@ AM_CPPFLAGS = \
 AM_CFLAGS = $(VISIBILITY_CFLAGS)
 AM_CXXFLAGS = $(VISIBILITY_CXXFLAGS)
 
+EXTRA_DIST = tests glcpp/tests README TODO
+
 include Makefile.sources
 
 TESTS = glcpp/tests/glcpp-test				\
