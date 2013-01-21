@@ -52,6 +52,7 @@ POT=xmlpool.pot
 
 .PHONY: all clean pot po mo
 
+EXTRA_DIST = gen_xmlpool.py t_options.h $(POS)
 BUILT_SOURCES = options.h
 
 # All generated files are cleaned up.
