@@ -94,14 +94,14 @@ struct glthread_batch
    struct glthread_batch *next;
 
    /**
-    * Points to the first command in the batch.
-    */
-   uint8_t *buffer;
-
-   /**
     * Amount of data used by batch commands, in bytes.
     */
    size_t used;
+
+   /**
+    * Data contained in the command buffer.
+    */
+   uint8_t buffer[MARSHAL_MAX_CMD_SIZE];
 };
 
 void _mesa_glthread_init(struct gl_context *ctx);

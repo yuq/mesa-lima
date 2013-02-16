@@ -45,10 +45,10 @@ glthread_allocate_batch(struct gl_context *ctx)
    struct glthread_state *glthread = ctx->GLThread;
 
    /* TODO: handle memory allocation failure. */
-   glthread->batch = calloc(1, sizeof(*glthread->batch));
+   glthread->batch = malloc(sizeof(*glthread->batch));
    if (!glthread->batch)
       return;
-   glthread->batch->buffer = malloc(MARSHAL_MAX_CMD_SIZE);
+   memset(glthread->batch, 0, offsetof(struct glthread_batch, buffer));
 }
 
 static void
@@ -63,7 +63,6 @@ glthread_unmarshal_batch(struct gl_context *ctx, struct glthread_batch *batch)
 
    assert(pos == batch->used);
 
-   free(batch->buffer);
    free(batch);
 }
 
