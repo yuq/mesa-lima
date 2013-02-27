@@ -1904,6 +1904,12 @@ enum brw_message_target {
 /* DW12: attr 0-7 wrap shortest enables */
 /* DW13: attr 8-16 wrap shortest enables */
 
+/* DW4-5: Attribute active components (gen9) */
+#define GEN9_SBE_ACTIVE_COMPONENT_NONE			0
+#define GEN9_SBE_ACTIVE_COMPONENT_XY			1
+#define GEN9_SBE_ACTIVE_COMPONENT_XYZ			2
+#define GEN9_SBE_ACTIVE_COMPONENT_XYZW			3
+
 #define _3DSTATE_SBE_SWIZ                       0x7851 /* GEN8+ */
 
 #define _3DSTATE_RASTER                         0x7850 /* GEN8+ */

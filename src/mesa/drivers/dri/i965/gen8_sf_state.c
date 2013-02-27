@@ -39,10 +39,13 @@ upload_sbe(struct brw_context *brw)
    uint32_t urb_entry_read_length;
    uint32_t point_sprite_enables;
    uint32_t flat_enables;
+   int sbe_cmd_length;
 
    uint32_t dw1 =
       GEN7_SBE_SWIZZLE_ENABLE |
       num_outputs << GEN7_SBE_NUM_OUTPUTS_SHIFT;
+   uint32_t dw4 = 0;
+   uint32_t dw5 = 0;
 
    /* _NEW_BUFFERS */
    bool render_to_fbo = _mesa_is_user_fbo(ctx->DrawBuffer);
@@ -79,11 +82,34 @@ upload_sbe(struct brw_context *brw)
       GEN8_SBE_FORCE_URB_ENTRY_READ_LENGTH |
       GEN8_SBE_FORCE_URB_ENTRY_READ_OFFSET;
 
-   BEGIN_BATCH(4);
-   OUT_BATCH(_3DSTATE_SBE << 16 | (4 - 2));
+   if (brw->gen == 8) {
+      sbe_cmd_length = 4;
+   } else {
+      sbe_cmd_length = 6;
+
+      /* prepare the active component dwords */
+      int input_index = 0;
+      for (int attr = 0; attr < VARYING_SLOT_MAX; attr++) {
+         if (!(brw->fragment_program->Base.InputsRead & BITFIELD64_BIT(attr)))
+            continue;
+
+         if (input_index < 16)
+            dw4 |= (GEN9_SBE_ACTIVE_COMPONENT_XYZW << (input_index << 1));
+         else
+            dw5 |= (GEN9_SBE_ACTIVE_COMPONENT_XYZW << (input_index << 1));
+
+         ++input_index;
+      }
+   }
+   BEGIN_BATCH(sbe_cmd_length);
+   OUT_BATCH(_3DSTATE_SBE << 16 | (sbe_cmd_length - 2));
    OUT_BATCH(dw1);
    OUT_BATCH(point_sprite_enables);
    OUT_BATCH(flat_enables);
+   if (sbe_cmd_length >= 6) {
+      OUT_BATCH(dw4);
+      OUT_BATCH(dw5);
+   }
    ADVANCE_BATCH();
 
    BEGIN_BATCH(11);
