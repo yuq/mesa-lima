@@ -88,9 +88,4 @@ class marshal_function(gl_XML.gl_function):
                 # Parameter size is determined by enums; haven't
                 # written logic to handle this yet.  TODO: fix.
                 return 'sync'
-            if p.img_null_flag:
-                # Caller is allowed to pass NULL for this parameter;
-                # haven't written logic to handle this yet.  TODO:
-                # fix.
-                return 'sync'
         return 'async'

@@ -118,10 +118,21 @@ class PrintCode(gl_XML.gl_print_base):
         if func.variable_params:
             out('char *variable_data = (char *) (cmd + 1);')
             for p in func.variable_params:
-                out(('memcpy(variable_data, {0}, {1});').format(
+                if p.img_null_flag:
+                    out('cmd->{0}_null = !{0};'.format(p.name))
+                    out('if (!cmd->{0}_null) {{'.format(p.name))
+                    with indent():
+                        out(('memcpy(variable_data, {0}, {1});').format(
+                            p.name, p.size_string(False)))
+                        out('variable_data += {0};'.format(
+                            p.size_string(False)))
+                    out('}')
+                else:
+                    out(('memcpy(variable_data, {0}, {1});').format(
                         p.name, p.size_string(False)))
-                out('variable_data += {0};'.format(
+                    out('variable_data += {0};'.format(
                         p.size_string(False)))
+
         if not func.fixed_params and not func.variable_params:
             out('(void) cmd;\n')
         out('_mesa_post_marshal_hook(ctx);')
@@ -137,6 +148,12 @@ class PrintCode(gl_XML.gl_print_base):
                             p.get_base_type_string(), p.name, p.count))
                 else:
                     out('{0} {1};'.format(p.type_string(), p.name))
+
+            for p in func.variable_params:
+                if p.img_null_flag:
+                    out('bool {0}_null; /* If set, no data follows '
+                        'for "{0}" */'.format(p.name))
+
             for p in func.variable_params:
                 if p.count_scale != 1:
                     out(('/* Next {0} bytes are '
@@ -171,7 +188,17 @@ class PrintCode(gl_XML.gl_print_base):
                 for p in func.variable_params:
                     out('{0} = (const {1} *) variable_data;'.format(
                             p.name, p.get_base_type_string()))
-                    out('variable_data += {0};'.format(p.size_string(False)))
+
+                    if p.img_null_flag:
+                        out('if (cmd->{0}_null)'.format(p.name))
+                        with indent():
+                            out('{0} = NULL;'.format(p.name))
+                        out('else')
+                        with indent():
+                            out('variable_data += {0};'.format(p.size_string(False)))
+                    else:
+                        out('variable_data += {0};'.format(p.size_string(False)))
+
             self.print_sync_call(func)
         out('}')
 
@@ -198,7 +225,10 @@ class PrintCode(gl_XML.gl_print_base):
             struct = 'struct marshal_cmd_{0}'.format(func.name)
             size_terms = ['sizeof({0})'.format(struct)]
             for p in func.variable_params:
-                size_terms.append(p.size_string())
+                size = p.size_string()
+                if p.img_null_flag:
+                    size = '({0} ? {1} : 0)'.format(p.name, size)
+                size_terms.append(size)
             out('size_t cmd_size = {0};'.format(' + '.join(size_terms)))
             out('{0} *cmd;'.format(struct))
 
