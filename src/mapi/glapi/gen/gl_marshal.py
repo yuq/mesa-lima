@@ -244,6 +244,10 @@ class PrintCode(gl_XML.gl_print_base):
                 self.print_sync_dispatch(func)
             out('}')
 
+            if func.marshal == 'draw':
+                out('/* We relied on all vertex and index data being in VBOs */')
+                out('assert(ctx->API == API_OPENGL_CORE);')
+
         out('}')
 
     def print_async_body(self, func):
