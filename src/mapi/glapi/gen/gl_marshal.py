@@ -236,6 +236,14 @@ class PrintCode(gl_XML.gl_print_base):
 
             self.validate_count_or_return(func)
 
+            if func.marshal_fail:
+                out('if ({0}) {{'.format(func.marshal_fail))
+                with indent():
+                    out('_mesa_glthread_destroy(ctx);')
+                    self.print_sync_dispatch(func)
+                    out('return;')
+                out('}')
+
             out('if (cmd_size <= MARSHAL_MAX_CMD_SIZE) {')
             with indent():
                 self.print_async_dispatch(func)

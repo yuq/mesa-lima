@@ -58,6 +58,7 @@ class marshal_function(gl_XML.gl_function):
 
         # Store the "marshal" attribute, if present.
         self.marshal = element.get('marshal')
+        self.marshal_fail = element.get('marshal_fail')
 
     def marshal_flavor(self):
         """Find out how this function should be marshalled between
