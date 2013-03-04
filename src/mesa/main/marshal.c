@@ -154,3 +154,106 @@ _mesa_marshal_ShaderSource(GLuint shader, GLsizei count,
    }
    free(length_tmp);
 }
+
+
+/* BindBufferBase: marshalled asynchronously */
+struct marshal_cmd_BindBufferBase
+{
+   struct marshal_cmd_base cmd_base;
+   GLenum target;
+   GLuint index;
+   GLuint buffer;
+};
+static inline void
+_mesa_unmarshal_BindBufferBase(struct gl_context *ctx, const struct marshal_cmd_BindBufferBase *cmd)
+{
+   const GLenum target = cmd->target;
+   const GLuint index = cmd->index;
+   const GLuint buffer = cmd->buffer;
+   CALL_BindBufferBase(ctx->CurrentServerDispatch, (target, index, buffer));
+}
+
+/** Tracks the current bindings for the vertex array and index array buffers.
+ *
+ * This is part of what we need to enable glthread on compat-GL contexts that
+ * happen to use VBOs, without also supporting the full tracking of VBO vs
+ * user vertex array bindings per attribute on each vertex array for
+ * determining what to upload at draw call time.
+ *
+ * Note that GL core makes it so that a buffer binding with an invalid handle
+ * in the "buffer" parameter will throw an error, and then a
+ * glVertexAttribPointer() that followsmight not end up pointing at a VBO.
+ * However, in GL core the draw call would throw an error as well, so we don't
+ * really care if our tracking is wrong for this case -- we never need to
+ * marshal user data for draw calls, and the unmarshal will just generate an
+ * error or not as appropriate.
+ *
+ * For compatibility GL, we do need to accurately know whether the draw call
+ * on the unmarshal side will dereference a user pointer or load data from a
+ * VBO per vertex.  That would make it seem like we need to track whether a
+ * "buffer" is valid, so that we can know when an error will be generated
+ * instead of updating the binding.  However, compat GL has the ridiculous
+ * feature that if you pass a bad name, it just gens a buffer object for you,
+ * so we escape without having to know if things are valid or not.
+ */
+static void
+track_vbo_binding(struct gl_context *ctx, GLenum target, GLuint buffer)
+{
+   struct glthread_state *glthread = ctx->GLThread;
+
+   switch (target) {
+   case GL_ARRAY_BUFFER:
+      glthread->vertex_array_is_vbo = (buffer != 0);
+      break;
+   case GL_ELEMENT_ARRAY_BUFFER:
+      /* The current element array buffer binding is actually tracked in the
+       * vertex array object instead of the context, so this would need to
+       * change on vertex array object updates.
+       */
+      glthread->element_array_is_vbo = (buffer != 0);
+      break;
+   }
+}
+
+
+struct marshal_cmd_BindBuffer
+{
+   struct marshal_cmd_base cmd_base;
+   GLenum target;
+   GLuint buffer;
+};
+
+/**
+ * This is just like the code-generated glBindBuffer() support, except that we
+ * call track_vbo_binding().
+ */
+void
+_mesa_unmarshal_BindBuffer(struct gl_context *ctx,
+                           const struct marshal_cmd_BindBuffer *cmd)
+{
+   const GLenum target = cmd->target;
+   const GLuint buffer = cmd->buffer;
+   CALL_BindBuffer(ctx->CurrentServerDispatch, (target, buffer));
+}
+void GLAPIENTRY
+_mesa_marshal_BindBuffer(GLenum target, GLuint buffer)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   size_t cmd_size = sizeof(struct marshal_cmd_BindBuffer);
+   struct marshal_cmd_BindBuffer *cmd;
+   debug_print_marshal("BindBuffer");
+
+   track_vbo_binding(ctx, target, buffer);
+
+   if (cmd_size <= MARSHAL_MAX_CMD_SIZE) {
+      cmd = _mesa_glthread_allocate_command(ctx, DISPATCH_CMD_BindBuffer,
+                                            cmd_size);
+      cmd->target = target;
+      cmd->buffer = buffer;
+      _mesa_post_marshal_hook(ctx);
+   } else {
+      _mesa_glthread_finish(ctx);
+      CALL_BindBuffer(ctx->CurrentServerDispatch, (target, buffer));
+   }
+}
+

@@ -79,6 +79,18 @@ struct glthread_state
     * be accessed.
     */
    struct glthread_batch *batch;
+
+   /**
+    * Tracks on the main thread side whether the current vertex array binding
+    * is in a VBO.
+    */
+   bool vertex_array_is_vbo;
+
+   /**
+    * Tracks on the main thread side whether the current element array (index
+    * buffer) binding is in a VBO.
+    */
+   bool element_array_is_vbo;
 };
 
 /**
