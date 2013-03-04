@@ -1148,7 +1148,7 @@
         <glx rop="3"/>
     </function>
 
-    <function name="Begin" deprecated="3.1" exec="dynamic">
+    <function name="Begin" deprecated="3.1" exec="dynamic" marshal_fail="true">
         <param name="mode" type="GLenum"/>
         <glx rop="4"/>
     </function>
