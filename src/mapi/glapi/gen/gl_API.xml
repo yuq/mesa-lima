@@ -4494,7 +4494,7 @@
         <glx rop="229"/>
     </function>
 
-    <function name="CompressedTexImage3D" es2="3.0">
+    <function name="CompressedTexImage3D" es2="3.0" marshal="sync">
         <param name="target" type="GLenum"/>
         <param name="level" type="GLint"/>
         <param name="internalformat" type="GLenum"/>
@@ -4507,7 +4507,7 @@
         <glx rop="216" handcode="client"/>
     </function>
 
-    <function name="CompressedTexImage2D" es1="1.0" es2="2.0">
+    <function name="CompressedTexImage2D" es1="1.0" es2="2.0" marshal="sync">
         <param name="target" type="GLenum"/>
         <param name="level" type="GLint"/>
         <param name="internalformat" type="GLenum"/>
@@ -4519,7 +4519,7 @@
         <glx rop="215" handcode="client"/>
     </function>
 
-    <function name="CompressedTexImage1D">
+    <function name="CompressedTexImage1D" marshal="sync">
         <param name="target" type="GLenum"/>
         <param name="level" type="GLint"/>
         <param name="internalformat" type="GLenum"/>
@@ -4530,7 +4530,7 @@
         <glx rop="214" handcode="client"/>
     </function>
 
-    <function name="CompressedTexSubImage3D" es2="3.0">
+    <function name="CompressedTexSubImage3D" es2="3.0" marshal="sync">
         <param name="target" type="GLenum"/>
         <param name="level" type="GLint"/>
         <param name="xoffset" type="GLint"/>
@@ -4545,7 +4545,7 @@
         <glx rop="219" handcode="client"/>
     </function>
 
-    <function name="CompressedTexSubImage2D" es1="1.0" es2="2.0">
+    <function name="CompressedTexSubImage2D" es1="1.0" es2="2.0" marshal="sync">
         <param name="target" type="GLenum"/>
         <param name="level" type="GLint"/>
         <param name="xoffset" type="GLint"/>
