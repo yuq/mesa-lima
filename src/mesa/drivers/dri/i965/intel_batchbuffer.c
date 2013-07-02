@@ -279,6 +279,11 @@ throttle(struct brw_context *brw)
    }
 }
 
+/* Drop when RS headers get pulled to libdrm */
+#ifndef I915_EXEC_RESOURCE_STREAMER
+#define I915_EXEC_RESOURCE_STREAMER (1<<15)
+#endif
+
 /* TODO: Push this whole function into bufmgr.
  */
 static int
@@ -305,7 +310,8 @@ do_flush_locked(struct brw_context *brw)
       if (brw->gen >= 6 && batch->ring == BLT_RING) {
          flags = I915_EXEC_BLT;
       } else {
-         flags = I915_EXEC_RENDER;
+         flags = I915_EXEC_RENDER |
+            (brw->use_resource_streamer ? I915_EXEC_RESOURCE_STREAMER : 0);
       }
       if (batch->needs_sol_reset)
 	 flags |= I915_EXEC_GEN7_SOL_RESET;

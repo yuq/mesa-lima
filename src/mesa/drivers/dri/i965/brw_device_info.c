@@ -170,7 +170,8 @@ static const struct brw_device_info brw_device_info_byt = {
 #define HSW_FEATURES             \
    GEN7_FEATURES,                \
    .is_haswell = true,           \
-   .supports_simd16_3src = true
+   .supports_simd16_3src = true, \
+   .has_resource_streamer = true
 
 static const struct brw_device_info brw_device_info_hsw_gt1 = {
    HSW_FEATURES, .gt = 1,
@@ -229,6 +230,7 @@ static const struct brw_device_info brw_device_info_hsw_gt3 = {
 #define GEN8_FEATURES                               \
    .gen = 8,                                        \
    .has_hiz_and_separate_stencil = true,            \
+   .has_resource_streamer = true,                   \
    .must_use_separate_stencil = true,               \
    .has_llc = true,                                 \
    .has_pln = true,                                 \
@@ -301,6 +303,7 @@ static const struct brw_device_info brw_device_info_chv = {
 #define GEN9_FEATURES                               \
    .gen = 9,                                        \
    .has_hiz_and_separate_stencil = true,            \
+   .has_resource_streamer = true,                   \
    .must_use_separate_stencil = true,               \
    .has_llc = true,                                 \
    .has_pln = true,                                 \

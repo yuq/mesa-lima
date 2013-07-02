@@ -1348,6 +1348,11 @@ brw_get_revision(int fd)
    return revision;
 }
 
+/* Drop when RS headers get pulled to libdrm */
+#ifndef I915_PARAM_HAS_RESOURCE_STREAMER
+#define I915_PARAM_HAS_RESOURCE_STREAMER 36
+#endif
+
 /**
  * This is the driver specific part of the createNewScreen entry point.
  * Called when using DRI2.
@@ -1439,6 +1444,15 @@ __DRIconfig **intelInitScreen2(__DRIscreen *psp)
 
    intelScreen->compiler = brw_compiler_create(intelScreen,
                                                intelScreen->devinfo);
+
+   if (intelScreen->devinfo->has_resource_streamer) {
+      int val = -1;
+      getparam.param = I915_PARAM_HAS_RESOURCE_STREAMER;
+      getparam.value = &val;
+
+      drmIoctl(psp->fd, DRM_IOCTL_I915_GETPARAM, &getparam);
+      intelScreen->has_resource_streamer = val > 0;
+   }
 
    return (const __DRIconfig**) intel_screen_make_configs(psp);
 }

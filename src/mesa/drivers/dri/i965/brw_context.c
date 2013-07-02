@@ -871,6 +871,10 @@ brwCreateContext(gl_api api,
 
    brw->predicate.state = BRW_PREDICATE_STATE_RENDER;
 
+   brw->use_resource_streamer = screen->has_resource_streamer &&
+      (brw_env_var_as_boolean("INTEL_USE_HW_BT", false) ||
+       brw_env_var_as_boolean("INTEL_USE_GATHER", false));
+
    ctx->VertexProgram._MaintainTnlProgram = true;
    ctx->FragmentProgram._MaintainTexEnvProgram = true;
 
