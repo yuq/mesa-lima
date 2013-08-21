@@ -660,8 +660,6 @@ the maximum allowed legal value is 32.
 
 **bindings** is a bitmask of :ref:`PIPE_BIND` flags.
 
-**geom_flags** is a bitmask of PIPE_TEXTURE_GEOM_x flags.
-
 Returns TRUE if all usages can be satisfied.
 
 
