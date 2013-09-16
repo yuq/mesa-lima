@@ -38,6 +38,8 @@
 extern "C" {
 #endif
 
+#define TGSI_DUMP_FLOAT_AS_HEX (1 << 0)
+
 void
 tgsi_dump_str(
    const struct tgsi_token *tokens,
