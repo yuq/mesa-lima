@@ -50,6 +50,35 @@ static const GLuint stage_to_bt_edit[MESA_SHADER_FRAGMENT + 1] = {
    _3DSTATE_BINDING_TABLE_EDIT_PS,
 };
 
+static uint32_t
+reserve_hw_bt_space(struct brw_context *brw, unsigned bytes)
+{
+   /* From the Broadwell PRM, Volume 16, "Workarounds",
+    * WaStateBindingTableOverfetch:
+    * "HW over-fetches two cache lines of binding table indices.  When
+    *  using the resource streamer, SW needs to pad binding table pointer
+    *  updates with an additional two cache lines."
+    *
+    * Cache lines are 64 bytes, so we subtract 128 bytes from the size of
+    * the binding table pool buffer.
+    */
+   if (brw->hw_bt_pool.next_offset + bytes >= brw->hw_bt_pool.bo->size - 128) {
+      gen7_reset_hw_bt_pool_offsets(brw);
+   }
+
+   uint32_t offset = brw->hw_bt_pool.next_offset;
+
+   /* From the Haswell PRM, Volume 2b: Command Reference: Instructions,
+    * 3DSTATE_BINDING_TABLE_POINTERS_xS:
+    *
+    * "If HW Binding Table is enabled, the offset is relative to the
+    *  Binding Table Pool Base Address and the alignment is 64 bytes."
+    */
+   brw->hw_bt_pool.next_offset += ALIGN(bytes, 64);
+
+   return offset;
+}
+
 /**
  * Upload a shader stage's binding table as indirect state.
  *
@@ -78,22 +107,41 @@ brw_upload_binding_table(struct brw_context *brw,
             brw->shader_time.bo, 0, BRW_SURFACEFORMAT_RAW,
             brw->shader_time.bo->size, 1, true);
       }
+      /* When RS is enabled use hw-binding table uploads, otherwise fallback to
+       * software-uploads.
+       */
+      if (brw->use_resource_streamer) {
+         gen7_update_binding_table_from_array(brw, stage_state->stage,
+                                              stage_state->surf_offset,
+                                              prog_data->binding_table
+                                              .size_bytes / 4);
+      } else {
+         uint32_t *bind = brw_state_batch(brw, AUB_TRACE_BINDING_TABLE,
+                                          prog_data->binding_table.size_bytes,
+                                          32,
+                                          &stage_state->bind_bo_offset);
 
-      uint32_t *bind = brw_state_batch(brw, AUB_TRACE_BINDING_TABLE,
-                                       prog_data->binding_table.size_bytes, 32,
-                                       &stage_state->bind_bo_offset);
-
-      /* BRW_NEW_SURFACES and BRW_NEW_*_CONSTBUF */
-      memcpy(bind, stage_state->surf_offset,
-             prog_data->binding_table.size_bytes);
+         /* BRW_NEW_SURFACES and BRW_NEW_*_CONSTBUF */
+         memcpy(bind, stage_state->surf_offset,
+                prog_data->binding_table.size_bytes);
+      }
    }
 
    brw->ctx.NewDriverState |= brw_new_binding_table;
 
    if (brw->gen >= 7) {
+      if (brw->use_resource_streamer) {
+         stage_state->bind_bo_offset =
+            reserve_hw_bt_space(brw, prog_data->binding_table.size_bytes);
+      }
       BEGIN_BATCH(2);
       OUT_BATCH(packet_name << 16 | (2 - 2));
-      OUT_BATCH(stage_state->bind_bo_offset);
+      /* Align SurfaceStateOffset[16:6] format to [15:5] PS Binding Table field
+       * when hw-generated binding table is enabled.
+       */
+      OUT_BATCH(brw->use_resource_streamer ?
+                (stage_state->bind_bo_offset >> 1) :
+                stage_state->bind_bo_offset);
       ADVANCE_BATCH();
    }
 }
