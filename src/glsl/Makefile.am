@@ -79,6 +79,7 @@ tests_uniform_initializer_test_SOURCES =		\
 	tests/copy_constant_to_storage_tests.cpp	\
 	tests/set_uniform_initializer_tests.cpp		\
 	tests/uniform_initializer_utils.cpp		\
+	tests/uniform_initializer_utils.h		\
 	tests/common.c
 tests_uniform_initializer_test_CFLAGS =			\
 	$(PTHREAD_CFLAGS)
@@ -137,7 +138,8 @@ glsl_test_SOURCES = \
 	$(GLSL_SRCDIR)/standalone_scaffolding.cpp \
 	tests/common.c \
 	test.cpp \
-	test_optpass.cpp
+	test_optpass.cpp \
+	test_optpass.h
 
 glsl_test_LDADD = libglsl.la
 
