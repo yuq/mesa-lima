@@ -345,22 +345,30 @@ SWRAST_SETUP_FILES = \
 
 TNL_FILES = \
 	$(SRCDIR)tnl/t_context.c \
+	$(SRCDIR)tnl/t_context.h \
 	$(SRCDIR)tnl/t_draw.c \
+	$(SRCDIR)tnl/tnl.h \
 	$(SRCDIR)tnl/t_pipeline.c \
+	$(SRCDIR)tnl/t_pipeline.h \
 	$(SRCDIR)tnl/t_rasterpos.c \
+	$(SRCDIR)tnl/t_vb_cliptmp.h \
 	$(SRCDIR)tnl/t_vb_fog.c \
 	$(SRCDIR)tnl/t_vb_light.c \
+	$(SRCDIR)tnl/t_vb_lighttmp.h \
 	$(SRCDIR)tnl/t_vb_normals.c \
 	$(SRCDIR)tnl/t_vb_points.c \
 	$(SRCDIR)tnl/t_vb_program.c \
 	$(SRCDIR)tnl/t_vb_render.c \
+	$(SRCDIR)tnl/t_vb_rendertmp.h \
 	$(SRCDIR)tnl/t_vb_texgen.c \
 	$(SRCDIR)tnl/t_vb_texmat.c \
 	$(SRCDIR)tnl/t_vb_vertex.c \
 	$(SRCDIR)tnl/t_vertex.c \
 	$(SRCDIR)tnl/t_vertex_generic.c \
+	$(SRCDIR)tnl/t_vertex.h \
 	$(SRCDIR)tnl/t_vertex_sse.c \
-	$(SRCDIR)tnl/t_vp_build.c
+	$(SRCDIR)tnl/t_vp_build.c \
+	$(SRCDIR)tnl/t_vp_build.h
 
 VBO_FILES = \
 	$(SRCDIR)vbo/vbo_context.c \
