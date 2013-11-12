@@ -67,7 +67,8 @@ EXTRA_DIST = \
 	main/format_parser.py \
 	main/formats.csv \
 	main/get_hash_generator.py \
-	main/get_hash_params.py
+	main/get_hash_params.py \
+	tnl_dd
 
 BUILT_SOURCES = \
 	main/get_hash.h \
