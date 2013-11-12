@@ -388,26 +388,44 @@ STATETRACKER_FILES = \
 
 PROGRAM_FILES = \
 	$(SRCDIR)program/arbprogparse.c \
+	$(SRCDIR)program/arbprogparse.h \
+	$(SRCDIR)program/hash_table.h \
 	$(SRCDIR)program/ir_to_mesa.cpp \
+	$(SRCDIR)program/ir_to_mesa.h \
 	$(BUILDDIR)program/lex.yy.c \
 	$(SRCDIR)program/prog_cache.c \
+	$(SRCDIR)program/prog_cache.h \
 	$(SRCDIR)program/prog_execute.c \
+	$(SRCDIR)program/prog_execute.h \
 	$(SRCDIR)program/prog_hash_table.c \
 	$(SRCDIR)program/prog_instruction.c \
+	$(SRCDIR)program/prog_instruction.h \
 	$(SRCDIR)program/prog_noise.c \
+	$(SRCDIR)program/prog_noise.h \
 	$(SRCDIR)program/prog_opt_constant_fold.c \
 	$(SRCDIR)program/prog_optimize.c \
+	$(SRCDIR)program/prog_optimize.h \
 	$(SRCDIR)program/prog_parameter.c \
+	$(SRCDIR)program/prog_parameter.h \
 	$(SRCDIR)program/prog_parameter_layout.c \
+	$(SRCDIR)program/prog_parameter_layout.h \
 	$(SRCDIR)program/prog_print.c \
+	$(SRCDIR)program/prog_print.h \
 	$(SRCDIR)program/program.c \
+	$(SRCDIR)program/program.h \
 	$(SRCDIR)program/programopt.c \
+	$(SRCDIR)program/programopt.h \
 	$(SRCDIR)program/program_parse_extra.c \
 	$(BUILDDIR)program/program_parse.tab.c \
+	$(BUILDDIR)program/program_parse.tab.h \
+	$(SRCDIR)program/program_parser.h \
 	$(SRCDIR)program/prog_statevars.c \
+	$(SRCDIR)program/prog_statevars.h \
 	$(SRCDIR)program/sampler.cpp \
+	$(SRCDIR)program/sampler.h \
 	$(SRCDIR)program/string_to_uint_map.cpp \
-	$(SRCDIR)program/symbol_table.c
+	$(SRCDIR)program/symbol_table.c \
+	$(SRCDIR)program/symbol_table.h
 
 ASM_C_FILES =	\
 	$(SRCDIR)x86/common_x86.c \
