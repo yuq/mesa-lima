@@ -57,6 +57,13 @@ EXTRA_FILES = \
 	src/mesa/program/program_parse.tab.h		\
 	`git ls-files | grep "Makefile.am" | sed -e "s/Makefile.am/Makefile.in/"`
 
+noinst_HEADERS =					\
+	include/c99_compat.h				\
+	include/c99					\
+	include/c11					\
+	include/D3D9					\
+	include/HaikuGL					\
+	include/pci_ids
 
 IGNORE_FILES = \
 	-x autogen.sh

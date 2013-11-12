@@ -46,7 +46,8 @@ pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = dri.pc
 
 driincludedir = $(includedir)/GL/internal
-driinclude_HEADERS = $(top_srcdir)/include/GL/internal/dri_interface.h
+driinclude_HEADERS = \
+	$(top_srcdir)/include/GL/internal/dri_interface.h
 
 nodist_EXTRA_mesa_dri_drivers_la_SOURCES = dummy.cpp
 mesa_dri_drivers_la_SOURCES =
