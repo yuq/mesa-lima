@@ -11,15 +11,15 @@ MAIN_ES_FILES = \
 	$(SRCDIR)main/es1_conversion.c
 
 MAIN_FILES = \
+	$(SRCDIR)main/accum.c \
 	$(SRCDIR)main/api_arrayelt.c \
 	$(BUILDDIR)main/api_exec.c \
 	$(SRCDIR)main/api_loopback.c \
 	$(SRCDIR)main/api_validate.c \
-	$(SRCDIR)main/accum.c \
 	$(SRCDIR)main/arbprogram.c \
+	$(SRCDIR)main/arrayobj.c \
 	$(SRCDIR)main/atifragshader.c \
 	$(SRCDIR)main/attrib.c \
-	$(SRCDIR)main/arrayobj.c \
 	$(SRCDIR)main/blend.c \
 	$(SRCDIR)main/blit.c \
 	$(SRCDIR)main/bufferobj.c \
@@ -39,18 +39,19 @@ MAIN_FILES = \
 	$(SRCDIR)main/drawpix.c \
 	$(SRCDIR)main/drawtex.c \
 	$(SRCDIR)main/enable.c \
+	$(BUILDDIR)main/enums.c \
 	$(SRCDIR)main/errors.c \
 	$(SRCDIR)main/eval.c \
 	$(SRCDIR)main/execmem.c \
 	$(SRCDIR)main/extensions.c \
 	$(SRCDIR)main/fbobject.c \
 	$(SRCDIR)main/feedback.c \
-	$(SRCDIR)main/ffvertex_prog.c \
 	$(SRCDIR)main/ff_fragment_shader.cpp \
+	$(SRCDIR)main/ffvertex_prog.c \
 	$(SRCDIR)main/fog.c \
+	$(SRCDIR)main/format_pack.c \
 	$(SRCDIR)main/formatquery.c \
 	$(SRCDIR)main/formats.c \
-	$(SRCDIR)main/format_pack.c \
 	$(SRCDIR)main/format_unpack.c \
 	$(SRCDIR)main/format_utils.c \
 	$(SRCDIR)main/framebuffer.c \
@@ -79,8 +80,8 @@ MAIN_FILES = \
 	$(SRCDIR)main/pixeltransfer.c \
 	$(SRCDIR)main/points.c \
 	$(SRCDIR)main/polygon.c \
-	$(SRCDIR)main/queryobj.c \
 	$(SRCDIR)main/querymatrix.c \
+	$(SRCDIR)main/queryobj.c \
 	$(SRCDIR)main/rastpos.c \
 	$(SRCDIR)main/readpix.c \
 	$(SRCDIR)main/remap.c \
@@ -99,10 +100,10 @@ MAIN_FILES = \
 	$(SRCDIR)main/texcompress.c \
 	$(SRCDIR)main/texcompress_bptc.c \
 	$(SRCDIR)main/texcompress_cpal.c \
+	$(SRCDIR)main/texcompress_etc.c \
+	$(SRCDIR)main/texcompress_fxt1.c \
 	$(SRCDIR)main/texcompress_rgtc.c \
 	$(SRCDIR)main/texcompress_s3tc.c \
-	$(SRCDIR)main/texcompress_fxt1.c \
-	$(SRCDIR)main/texcompress_etc.c \
 	$(SRCDIR)main/texenv.c \
 	$(SRCDIR)main/texformat.c \
 	$(SRCDIR)main/texgen.c \
@@ -116,14 +117,13 @@ MAIN_FILES = \
         $(SRCDIR)main/textureview.c \
 	$(SRCDIR)main/texturebarrier.c \
 	$(SRCDIR)main/transformfeedback.c \
-	$(SRCDIR)main/uniforms.c \
 	$(SRCDIR)main/uniform_query.cpp \
+	$(SRCDIR)main/uniforms.c \
 	$(SRCDIR)main/varray.c \
 	$(SRCDIR)main/vdpau.c \
 	$(SRCDIR)main/version.c \
 	$(SRCDIR)main/viewport.c \
 	$(SRCDIR)main/vtxfmt.c \
-	$(BUILDDIR)main/enums.c \
 	$(MAIN_ES_FILES)
 
 MATH_FILES = \
