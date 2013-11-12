@@ -451,17 +451,28 @@ ASM_C_FILES =	\
 	$(SRCDIR)x86-64/x86-64.c
 
 X86_FILES =			\
+	$(SRCDIR)x86/assyntax.h		\
+	$(SRCDIR)x86/clip_args.h	\
+	$(SRCDIR)x86/norm_args.h	\
+	$(SRCDIR)x86/xform_args.h	\
 	$(SRCDIR)x86/common_x86_asm.S	\
+	$(SRCDIR)x86/common_x86_asm.h	\
+	$(SRCDIR)x86/common_x86_features.h	\
+	$(SRCDIR)x86/x86_xform.h	\
 	$(SRCDIR)x86/x86_xform2.S	\
 	$(SRCDIR)x86/x86_xform3.S	\
 	$(SRCDIR)x86/x86_xform4.S	\
 	$(SRCDIR)x86/x86_cliptest.S	\
-	$(SRCDIR)x86/mmx_blend.S		\
+	$(SRCDIR)x86/mmx.h		\
+	$(SRCDIR)x86/mmx_blend.S	\
+	$(SRCDIR)x86/mmx_blendtmp.h	\
+	$(SRCDIR)x86/3dnow.h		\
 	$(SRCDIR)x86/3dnow_xform1.S	\
 	$(SRCDIR)x86/3dnow_xform2.S	\
 	$(SRCDIR)x86/3dnow_xform3.S	\
 	$(SRCDIR)x86/3dnow_xform4.S	\
 	$(SRCDIR)x86/3dnow_normal.S	\
+	$(SRCDIR)x86/sse.h		\
 	$(SRCDIR)x86/sse_xform1.S	\
 	$(SRCDIR)x86/sse_xform2.S	\
 	$(SRCDIR)x86/sse_xform3.S	\
