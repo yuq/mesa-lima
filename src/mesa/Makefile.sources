@@ -276,38 +276,72 @@ MATH_XFORM_FILES = \
 
 SWRAST_FILES = \
 	$(SRCDIR)swrast/s_aaline.c \
+	$(SRCDIR)swrast/s_aaline.h \
+	$(SRCDIR)swrast/s_aalinetemp.h \
 	$(SRCDIR)swrast/s_aatriangle.c \
+	$(SRCDIR)swrast/s_aatriangle.h \
+	$(SRCDIR)swrast/s_aatritemp.h \
 	$(SRCDIR)swrast/s_alpha.c \
+	$(SRCDIR)swrast/s_alpha.h \
 	$(SRCDIR)swrast/s_atifragshader.c \
+	$(SRCDIR)swrast/s_atifragshader.h \
 	$(SRCDIR)swrast/s_bitmap.c \
 	$(SRCDIR)swrast/s_blend.c \
+	$(SRCDIR)swrast/s_blend.h \
 	$(SRCDIR)swrast/s_blit.c \
+	$(SRCDIR)swrast/s_chan.h \
 	$(SRCDIR)swrast/s_clear.c \
-	$(SRCDIR)swrast/s_copypix.c \
 	$(SRCDIR)swrast/s_context.c \
+	$(SRCDIR)swrast/s_context.h \
+	$(SRCDIR)swrast/s_copypix.c \
 	$(SRCDIR)swrast/s_depth.c \
+	$(SRCDIR)swrast/s_depth.h \
 	$(SRCDIR)swrast/s_drawpix.c \
+	$(SRCDIR)swrast_setup/ss_tritmp.h \
+	$(SRCDIR)swrast_setup/ss_vb.h \
+	$(SRCDIR)swrast_setup/swrast_setup.h \
 	$(SRCDIR)swrast/s_feedback.c \
+	$(SRCDIR)swrast/s_feedback.h \
 	$(SRCDIR)swrast/s_fog.c \
+	$(SRCDIR)swrast/s_fog.h \
 	$(SRCDIR)swrast/s_fragprog.c \
+	$(SRCDIR)swrast/s_fragprog.h \
 	$(SRCDIR)swrast/s_lines.c \
+	$(SRCDIR)swrast/s_lines.h \
+	$(SRCDIR)swrast/s_linetemp.h \
 	$(SRCDIR)swrast/s_logic.c \
+	$(SRCDIR)swrast/s_logic.h \
 	$(SRCDIR)swrast/s_masking.c \
+	$(SRCDIR)swrast/s_masking.h \
 	$(SRCDIR)swrast/s_points.c \
+	$(SRCDIR)swrast/s_points.h \
 	$(SRCDIR)swrast/s_renderbuffer.c \
+	$(SRCDIR)swrast/s_renderbuffer.h \
 	$(SRCDIR)swrast/s_span.c \
+	$(SRCDIR)swrast/s_span.h \
 	$(SRCDIR)swrast/s_stencil.c \
+	$(SRCDIR)swrast/s_stencil.h \
 	$(SRCDIR)swrast/s_texcombine.c \
+	$(SRCDIR)swrast/s_texcombine.h \
 	$(SRCDIR)swrast/s_texfetch.c \
+	$(SRCDIR)swrast/s_texfetch.h \
+	$(SRCDIR)swrast/s_texfetch_tmp.h \
 	$(SRCDIR)swrast/s_texfilter.c \
+	$(SRCDIR)swrast/s_texfilter.h \
 	$(SRCDIR)swrast/s_texrender.c \
 	$(SRCDIR)swrast/s_texture.c \
 	$(SRCDIR)swrast/s_triangle.c \
-	$(SRCDIR)swrast/s_zoom.c
+	$(SRCDIR)swrast/s_triangle.h \
+	$(SRCDIR)swrast/s_tritemp.h \
+	$(SRCDIR)swrast/swrast.h \
+	$(SRCDIR)swrast/s_zoom.c \
+	$(SRCDIR)swrast/s_zoom.h
 
 SWRAST_SETUP_FILES = \
 	$(SRCDIR)swrast_setup/ss_context.c \
-	$(SRCDIR)swrast_setup/ss_triangle.c
+	$(SRCDIR)swrast_setup/ss_context.h \
+	$(SRCDIR)swrast_setup/ss_triangle.c \
+	$(SRCDIR)swrast_setup/ss_triangle.h
 
 TNL_FILES = \
 	$(SRCDIR)tnl/t_context.c \
