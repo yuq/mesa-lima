@@ -347,57 +347,96 @@ VBO_FILES = \
 	$(SRCDIR)vbo/vbo_save_loopback.c
 
 STATETRACKER_FILES = \
-	$(SRCDIR)state_tracker/st_atom.c \
 	$(SRCDIR)state_tracker/st_atom_array.c \
 	$(SRCDIR)state_tracker/st_atom_blend.c \
+	$(SRCDIR)state_tracker/st_atom.c \
 	$(SRCDIR)state_tracker/st_atom_clip.c \
 	$(SRCDIR)state_tracker/st_atom_constbuf.c \
+	$(SRCDIR)state_tracker/st_atom_constbuf.h \
 	$(SRCDIR)state_tracker/st_atom_depth.c \
 	$(SRCDIR)state_tracker/st_atom_framebuffer.c \
+	$(SRCDIR)state_tracker/st_atom.h \
 	$(SRCDIR)state_tracker/st_atom_msaa.c \
 	$(SRCDIR)state_tracker/st_atom_pixeltransfer.c \
+	$(SRCDIR)state_tracker/st_atom_rasterizer.c \
 	$(SRCDIR)state_tracker/st_atom_sampler.c \
 	$(SRCDIR)state_tracker/st_atom_scissor.c \
 	$(SRCDIR)state_tracker/st_atom_shader.c \
-	$(SRCDIR)state_tracker/st_atom_rasterizer.c \
+	$(SRCDIR)state_tracker/st_atom_shader.h \
 	$(SRCDIR)state_tracker/st_atom_stipple.c \
 	$(SRCDIR)state_tracker/st_atom_texture.c \
 	$(SRCDIR)state_tracker/st_atom_viewport.c \
+	$(SRCDIR)state_tracker/st_cache.h \
 	$(SRCDIR)state_tracker/st_cb_bitmap.c \
+	$(SRCDIR)state_tracker/st_cb_bitmap.h \
 	$(SRCDIR)state_tracker/st_cb_blit.c \
+	$(SRCDIR)state_tracker/st_cb_blit.h \
 	$(SRCDIR)state_tracker/st_cb_bufferobjects.c \
+	$(SRCDIR)state_tracker/st_cb_bufferobjects.h \
 	$(SRCDIR)state_tracker/st_cb_clear.c \
+	$(SRCDIR)state_tracker/st_cb_clear.h \
 	$(SRCDIR)state_tracker/st_cb_condrender.c \
-	$(SRCDIR)state_tracker/st_cb_flush.c \
+	$(SRCDIR)state_tracker/st_cb_condrender.h \
 	$(SRCDIR)state_tracker/st_cb_drawpixels.c \
+	$(SRCDIR)state_tracker/st_cb_drawpixels.h \
 	$(SRCDIR)state_tracker/st_cb_drawtex.c \
+	$(SRCDIR)state_tracker/st_cb_drawtex.h \
 	$(SRCDIR)state_tracker/st_cb_eglimage.c \
+	$(SRCDIR)state_tracker/st_cb_eglimage.h \
 	$(SRCDIR)state_tracker/st_cb_fbo.c \
+	$(SRCDIR)state_tracker/st_cb_fbo.h \
 	$(SRCDIR)state_tracker/st_cb_feedback.c \
+	$(SRCDIR)state_tracker/st_cb_feedback.h \
+	$(SRCDIR)state_tracker/st_cb_flush.c \
+	$(SRCDIR)state_tracker/st_cb_flush.h \
 	$(SRCDIR)state_tracker/st_cb_msaa.c \
+	$(SRCDIR)state_tracker/st_cb_msaa.h \
 	$(SRCDIR)state_tracker/st_cb_program.c \
+	$(SRCDIR)state_tracker/st_cb_program.h \
 	$(SRCDIR)state_tracker/st_cb_queryobj.c \
+	$(SRCDIR)state_tracker/st_cb_queryobj.h \
 	$(SRCDIR)state_tracker/st_cb_rasterpos.c \
+	$(SRCDIR)state_tracker/st_cb_rasterpos.h \
 	$(SRCDIR)state_tracker/st_cb_readpixels.c \
-	$(SRCDIR)state_tracker/st_cb_syncobj.c \
+	$(SRCDIR)state_tracker/st_cb_readpixels.h \
 	$(SRCDIR)state_tracker/st_cb_strings.c \
-	$(SRCDIR)state_tracker/st_cb_texture.c \
+	$(SRCDIR)state_tracker/st_cb_strings.h \
+	$(SRCDIR)state_tracker/st_cb_syncobj.c \
+	$(SRCDIR)state_tracker/st_cb_syncobj.h \
 	$(SRCDIR)state_tracker/st_cb_texturebarrier.c \
+	$(SRCDIR)state_tracker/st_cb_texturebarrier.h \
+	$(SRCDIR)state_tracker/st_cb_texture.c \
+	$(SRCDIR)state_tracker/st_cb_texture.h \
 	$(SRCDIR)state_tracker/st_cb_viewport.c \
+	$(SRCDIR)state_tracker/st_cb_viewport.h \
 	$(SRCDIR)state_tracker/st_cb_xformfb.c \
+	$(SRCDIR)state_tracker/st_cb_xformfb.h \
 	$(SRCDIR)state_tracker/st_context.c \
+	$(SRCDIR)state_tracker/st_context.h \
 	$(SRCDIR)state_tracker/st_debug.c \
+	$(SRCDIR)state_tracker/st_debug.h \
 	$(SRCDIR)state_tracker/st_draw.c \
 	$(SRCDIR)state_tracker/st_draw_feedback.c \
+	$(SRCDIR)state_tracker/st_draw.h \
 	$(SRCDIR)state_tracker/st_extensions.c \
+	$(SRCDIR)state_tracker/st_extensions.h \
 	$(SRCDIR)state_tracker/st_format.c \
+	$(SRCDIR)state_tracker/st_format.h \
 	$(SRCDIR)state_tracker/st_gen_mipmap.c \
+	$(SRCDIR)state_tracker/st_gen_mipmap.h \
+	$(SRCDIR)state_tracker/st_gl_api.h \
 	$(SRCDIR)state_tracker/st_glsl_to_tgsi.cpp \
+	$(SRCDIR)state_tracker/st_glsl_to_tgsi.h \
 	$(SRCDIR)state_tracker/st_manager.c \
+	$(SRCDIR)state_tracker/st_manager.h \
 	$(SRCDIR)state_tracker/st_mesa_to_tgsi.c \
+	$(SRCDIR)state_tracker/st_mesa_to_tgsi.h \
 	$(SRCDIR)state_tracker/st_program.c \
+	$(SRCDIR)state_tracker/st_program.h \
 	$(SRCDIR)state_tracker/st_texture.c \
-	$(SRCDIR)state_tracker/st_vdpau.c
+	$(SRCDIR)state_tracker/st_texture.h \
+	$(SRCDIR)state_tracker/st_vdpau.c \
+	$(SRCDIR)state_tracker/st_vdpau.h
 
 PROGRAM_FILES = \
 	$(SRCDIR)program/arbprogparse.c \
