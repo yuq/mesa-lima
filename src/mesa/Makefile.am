@@ -68,6 +68,8 @@ EXTRA_DIST = \
 	main/formats.csv \
 	main/get_hash_generator.py \
 	main/get_hash_params.py \
+	program/program_lexer.l \
+	program/program_parse.y \
 	tnl_dd
 
 BUILT_SOURCES = \
