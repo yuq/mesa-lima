@@ -470,6 +470,7 @@ X86_FILES =			\
 	$(SRCDIR)x86/read_rgba_span_x86.S
 
 X86_64_FILES =		\
+	$(SRCDIR)x86-64/x86-64.h	\
 	$(SRCDIR)x86-64/xform4.S
 
 SPARC_FILES =			\
