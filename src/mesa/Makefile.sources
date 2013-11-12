@@ -372,21 +372,21 @@ TNL_FILES = \
 
 VBO_FILES = \
 	$(SRCDIR)vbo/vbo_context.c \
-	$(SRCDIR)vbo/vbo_exec.c \
 	$(SRCDIR)vbo/vbo_exec_api.c \
 	$(SRCDIR)vbo/vbo_exec_array.c \
+	$(SRCDIR)vbo/vbo_exec.c \
 	$(SRCDIR)vbo/vbo_exec_draw.c \
 	$(SRCDIR)vbo/vbo_exec_eval.c \
 	$(SRCDIR)vbo/vbo_noop.c \
 	$(SRCDIR)vbo/vbo_primitive_restart.c \
 	$(SRCDIR)vbo/vbo_rebase.c \
+	$(SRCDIR)vbo/vbo_save_api.c \
+	$(SRCDIR)vbo/vbo_save.c \
+	$(SRCDIR)vbo/vbo_save_draw.c \
+	$(SRCDIR)vbo/vbo_save_loopback.c \
 	$(SRCDIR)vbo/vbo_split.c \
 	$(SRCDIR)vbo/vbo_split_copy.c \
-	$(SRCDIR)vbo/vbo_split_inplace.c \
-	$(SRCDIR)vbo/vbo_save.c \
-	$(SRCDIR)vbo/vbo_save_api.c \
-	$(SRCDIR)vbo/vbo_save_draw.c \
-	$(SRCDIR)vbo/vbo_save_loopback.c
+	$(SRCDIR)vbo/vbo_split_inplace.c
 
 STATETRACKER_FILES = \
 	$(SRCDIR)state_tracker/st_atom_array.c \
