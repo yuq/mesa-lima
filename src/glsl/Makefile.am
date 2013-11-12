@@ -109,6 +109,7 @@ libglcpp_la_LIBADD =					\
 libglcpp_la_SOURCES =					\
 	glcpp/glcpp-lex.c				\
 	glcpp/glcpp-parse.c				\
+	glcpp/glcpp-parse.h				\
 	$(LIBGLCPP_FILES)
 
 glcpp_glcpp_SOURCES =					\
@@ -123,6 +124,7 @@ libglsl_la_LIBADD = libglcpp.la
 libglsl_la_SOURCES =					\
 	glsl_lexer.cpp					\
 	glsl_parser.cpp					\
+	glsl_parser.h					\
 	$(LIBGLSL_FILES)
 
 glsl_compiler_SOURCES = \
