@@ -250,16 +250,29 @@ MAIN_FILES = \
 	$(MAIN_ES_FILES)
 
 MATH_FILES = \
+	$(SRCDIR)math/m_debug.h \
 	$(SRCDIR)math/m_debug_clip.c \
 	$(SRCDIR)math/m_debug_norm.c \
+	$(SRCDIR)math/m_debug_util.h \
 	$(SRCDIR)math/m_debug_xform.c \
 	$(SRCDIR)math/m_eval.c \
+	$(SRCDIR)math/m_eval.h \
 	$(SRCDIR)math/m_matrix.c \
+	$(SRCDIR)math/m_matrix.h \
+	$(SRCDIR)math/m_trans_tmp.h \
 	$(SRCDIR)math/m_translate.c \
-	$(SRCDIR)math/m_vector.c
+	$(SRCDIR)math/m_translate.h \
+	$(SRCDIR)math/m_vector.c \
+	$(SRCDIR)math/m_vector.h
 
 MATH_XFORM_FILES = \
-	$(SRCDIR)math/m_xform.c
+	$(SRCDIR)math/m_clip_tmp.h \
+	$(SRCDIR)math/m_copy_tmp.h \
+	$(SRCDIR)math/m_dotprod_tmp.h \
+	$(SRCDIR)math/m_norm_tmp.h \
+	$(SRCDIR)math/m_xform.c \
+	$(SRCDIR)math/m_xform.h \
+	$(SRCDIR)math/m_xform_tmp.h
 
 SWRAST_FILES = \
 	$(SRCDIR)swrast/s_aaline.c \
