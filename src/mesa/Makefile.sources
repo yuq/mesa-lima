@@ -371,21 +371,29 @@ TNL_FILES = \
 	$(SRCDIR)tnl/t_vp_build.h
 
 VBO_FILES = \
+	$(SRCDIR)vbo/vbo_attrib.h \
+	$(SRCDIR)vbo/vbo_attrib_tmp.h \
 	$(SRCDIR)vbo/vbo_context.c \
+	$(SRCDIR)vbo/vbo_context.h \
 	$(SRCDIR)vbo/vbo_exec_api.c \
 	$(SRCDIR)vbo/vbo_exec_array.c \
 	$(SRCDIR)vbo/vbo_exec.c \
 	$(SRCDIR)vbo/vbo_exec_draw.c \
 	$(SRCDIR)vbo/vbo_exec_eval.c \
+	$(SRCDIR)vbo/vbo_exec.h \
+	$(SRCDIR)vbo/vbo.h \
 	$(SRCDIR)vbo/vbo_noop.c \
+	$(SRCDIR)vbo/vbo_noop.h \
 	$(SRCDIR)vbo/vbo_primitive_restart.c \
 	$(SRCDIR)vbo/vbo_rebase.c \
 	$(SRCDIR)vbo/vbo_save_api.c \
 	$(SRCDIR)vbo/vbo_save.c \
 	$(SRCDIR)vbo/vbo_save_draw.c \
+	$(SRCDIR)vbo/vbo_save.h \
 	$(SRCDIR)vbo/vbo_save_loopback.c \
 	$(SRCDIR)vbo/vbo_split.c \
 	$(SRCDIR)vbo/vbo_split_copy.c \
+	$(SRCDIR)vbo/vbo_split.h \
 	$(SRCDIR)vbo/vbo_split_inplace.c
 
 STATETRACKER_FILES = \
