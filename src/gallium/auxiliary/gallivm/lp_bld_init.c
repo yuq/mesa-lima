@@ -457,6 +457,11 @@ lp_build_init(void)
       util_cpu_caps.has_f16c = 0;
       util_cpu_caps.has_fma = 0;
    }
+   if (HAVE_LLVM < 0x0304 || !USE_MCJIT) {
+      /* AVX2 support has only been tested with LLVM 3.4, and it requires
+       * MCJIT. */
+      util_cpu_caps.has_avx2 = 0;
+   }
 
 #ifdef PIPE_ARCH_PPC_64
    /* Set the NJ bit in VSCR to 0 so denormalized values are handled as
