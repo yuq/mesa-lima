@@ -505,6 +505,18 @@ brw_initialize_context_constants(struct brw_context *brw)
       ctx->Const.Program[MESA_SHADER_GEOMETRY].MaxAtomicBuffers = BRW_MAX_ABO;
       ctx->Const.Program[MESA_SHADER_COMPUTE].MaxAtomicBuffers = BRW_MAX_ABO;
       ctx->Const.MaxCombinedAtomicBuffers = 3 * BRW_MAX_ABO;
+
+      ctx->Const.Program[MESA_SHADER_FRAGMENT].MaxImageUniforms =
+         BRW_MAX_IMAGES;
+      ctx->Const.Program[MESA_SHADER_VERTEX].MaxImageUniforms =
+         (brw->intelScreen->compiler->scalar_vs ? BRW_MAX_IMAGES : 0);
+      ctx->Const.Program[MESA_SHADER_COMPUTE].MaxImageUniforms =
+         BRW_MAX_IMAGES;
+      ctx->Const.MaxImageUnits = MAX_IMAGE_UNITS;
+      ctx->Const.MaxCombinedImageUnitsAndFragmentOutputs =
+         MAX_IMAGE_UNITS + BRW_MAX_DRAW_BUFFERS;
+      ctx->Const.MaxImageSamples = 0;
+      ctx->Const.MaxCombinedImageUniforms = 3 * BRW_MAX_IMAGES;
    }
 
    /* Gen6 converts quads to polygon in beginning of 3D pipeline,
