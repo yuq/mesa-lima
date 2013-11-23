@@ -1440,7 +1440,13 @@ enum brw_message_target {
 #define GEN6_DATAPORT_WRITE_MESSAGE_RENDER_TARGET_UNORM_WRITE       14
 
 /* GEN7 */
-#define GEN7_DATAPORT_WRITE_MESSAGE_OWORD_DUAL_BLOCK_WRITE          10
+#define GEN7_DATAPORT_RC_MEDIA_BLOCK_READ                           4
+#define GEN7_DATAPORT_RC_TYPED_SURFACE_READ                         5
+#define GEN7_DATAPORT_RC_TYPED_ATOMIC_OP                            6
+#define GEN7_DATAPORT_RC_MEMORY_FENCE                               7
+#define GEN7_DATAPORT_RC_MEDIA_BLOCK_WRITE                          10
+#define GEN7_DATAPORT_RC_RENDER_TARGET_WRITE                        12
+#define GEN7_DATAPORT_RC_TYPED_SURFACE_WRITE                        13
 #define GEN7_DATAPORT_DC_OWORD_BLOCK_READ                           0
 #define GEN7_DATAPORT_DC_UNALIGNED_OWORD_BLOCK_READ                 1
 #define GEN7_DATAPORT_DC_OWORD_DUAL_BLOCK_READ                      2
