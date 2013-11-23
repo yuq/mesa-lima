@@ -44,6 +44,7 @@
 #include "brw_context.h"
 #include "brw_shader.h"
 #include "brw_wm.h"
+#include "intel_batchbuffer.h"
 
 static unsigned
 get_new_program_id(struct intel_screen *screen)
@@ -179,6 +180,43 @@ brwProgramStringNotify(struct gl_context *ctx,
    return true;
 }
 
+static void
+brw_memory_barrier(struct gl_context *ctx, GLbitfield barriers)
+{
+   struct brw_context *brw = brw_context(ctx);
+   unsigned bits = (PIPE_CONTROL_DATA_CACHE_INVALIDATE |
+                    PIPE_CONTROL_NO_WRITE |
+                    PIPE_CONTROL_CS_STALL);
+   assert(brw->gen >= 7 && brw->gen <= 8);
+
+   if (barriers & (GL_VERTEX_ATTRIB_ARRAY_BARRIER_BIT |
+                   GL_ELEMENT_ARRAY_BARRIER_BIT |
+                   GL_COMMAND_BARRIER_BIT))
+      bits |= PIPE_CONTROL_VF_CACHE_INVALIDATE;
+
+   if (barriers & GL_UNIFORM_BARRIER_BIT)
+      bits |= (PIPE_CONTROL_TC_FLUSH |
+               PIPE_CONTROL_CONST_CACHE_INVALIDATE);
+
+   if (barriers & GL_TEXTURE_FETCH_BARRIER_BIT)
+      bits |= PIPE_CONTROL_TC_FLUSH;
+
+   if (barriers & GL_TEXTURE_UPDATE_BARRIER_BIT)
+      bits |= PIPE_CONTROL_WRITE_FLUSH;
+
+   if (barriers & GL_FRAMEBUFFER_BARRIER_BIT)
+      bits |= (PIPE_CONTROL_DEPTH_CACHE_FLUSH |
+               PIPE_CONTROL_WRITE_FLUSH);
+
+   /* Typed surface messages are handled by the render cache on IVB, so we
+    * need to flush it too.
+    */
+   if (brw->gen == 7 && !brw->is_haswell)
+      bits |= PIPE_CONTROL_WRITE_FLUSH;
+
+   brw_emit_pipe_control_flush(brw, bits);
+}
+
 void
 brw_add_texrect_params(struct gl_program *prog)
 {
@@ -236,6 +274,8 @@ void brwInitFragProgFuncs( struct dd_function_table *functions )
 
    functions->NewShader = brw_new_shader;
    functions->LinkShader = brw_link_shader;
+
+   functions->MemoryBarrier = brw_memory_barrier;
 }
 
 void
