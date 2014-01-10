@@ -288,6 +288,7 @@ brw_init_driver_functions(struct brw_context *brw,
       gen6_init_queryobj_functions(functions);
    else
       gen4_init_queryobj_functions(functions);
+   brw_init_compute_functions(functions);
 
    functions->QuerySamplesForFormat = brw_query_samples_for_format;
 

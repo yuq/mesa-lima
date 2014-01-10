@@ -1829,6 +1829,10 @@ gen7_emit_urb_state(struct brw_context *brw,
 extern GLenum
 brw_get_graphics_reset_status(struct gl_context *ctx);
 
+/* brw_compute.c */
+extern void
+brw_init_compute_functions(struct dd_function_table *functions);
+
 /*======================================================================
  * Inline conversion functions.  These are better-typed than the
  * macros used previously:
