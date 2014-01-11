@@ -70,17 +70,18 @@ static const struct dri_debug_control debug_control[] = {
    { "no8",         DEBUG_NO8 },
    { "vec4vs",      DEBUG_VEC4VS },
    { "spill",       DEBUG_SPILL },
+   { "cs",          DEBUG_CS },
    { NULL,    0 }
 };
 
 uint64_t
 intel_debug_flag_for_shader_stage(gl_shader_stage stage)
 {
-   int flags[] = {
+   uint64_t flags[] = {
       [MESA_SHADER_VERTEX] = DEBUG_VS,
       [MESA_SHADER_GEOMETRY] = DEBUG_GS,
       [MESA_SHADER_FRAGMENT] = DEBUG_WM,
-      [MESA_SHADER_COMPUTE] = 0, /* no debug flag yet */
+      [MESA_SHADER_COMPUTE] = DEBUG_CS,
    };
    STATIC_ASSERT(MESA_SHADER_STAGES == 4);
    return flags[stage];
