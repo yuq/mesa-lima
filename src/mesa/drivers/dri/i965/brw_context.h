@@ -148,6 +148,7 @@ struct brw_vs_prog_key;
 struct brw_vue_prog_key;
 struct brw_wm_prog_key;
 struct brw_wm_prog_data;
+struct brw_cs_prog_data;
 
 enum brw_pipeline {
    BRW_RENDER_PIPELINE,
@@ -427,6 +428,17 @@ struct brw_wm_prog_data {
     * For varying slots that are not used by the FS, the value is -1.
     */
    int urb_setup[VARYING_SLOT_MAX];
+};
+
+/* Note: brw_cs_prog_data_compare() must be updated when adding fields to this
+ * struct!
+ */
+struct brw_cs_prog_data {
+   struct brw_stage_prog_data base;
+
+   GLuint dispatch_grf_start_reg_16;
+   unsigned local_size[3];
+   unsigned simd_size;
 };
 
 /**
@@ -1372,6 +1384,10 @@ struct brw_context
       uint32_t fast_clear_op;
    } wm;
 
+   struct {
+      struct brw_stage_state base;
+      struct brw_cs_prog_data *prog_data;
+   } cs;
 
    struct {
       uint32_t state_offset;
