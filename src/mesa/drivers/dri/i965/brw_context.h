@@ -209,6 +209,7 @@ enum brw_state_id {
    BRW_STATE_CLIP_VP,
    BRW_STATE_SAMPLER_STATE_TABLE,
    BRW_STATE_VS_ATTRIB_WORKAROUNDS,
+   BRW_STATE_COMPUTE_PROGRAM,
    BRW_NUM_STATE_BITS
 };
 
@@ -288,6 +289,7 @@ enum brw_state_id {
 #define BRW_NEW_CLIP_VP                 (1ull << BRW_STATE_CLIP_VP)
 #define BRW_NEW_SAMPLER_STATE_TABLE     (1ull << BRW_STATE_SAMPLER_STATE_TABLE)
 #define BRW_NEW_VS_ATTRIB_WORKAROUNDS   (1ull << BRW_STATE_VS_ATTRIB_WORKAROUNDS)
+#define BRW_NEW_COMPUTE_PROGRAM         (1ull << BRW_STATE_COMPUTE_PROGRAM)
 
 struct brw_state_flags {
    /** State update flags signalled by mesa internals */
@@ -1205,6 +1207,7 @@ struct brw_context
    const struct gl_vertex_program *vertex_program;
    const struct gl_geometry_program *geometry_program;
    const struct gl_fragment_program *fragment_program;
+   const struct gl_compute_program *compute_program;
 
    /**
     * Number of samples in ctx->DrawBuffer, updated by BRW_NEW_NUM_SAMPLES so

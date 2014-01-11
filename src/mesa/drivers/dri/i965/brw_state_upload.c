@@ -580,6 +580,7 @@ static struct dirty_bit_map brw_bits[] = {
    DEFINE_BIT(BRW_NEW_CLIP_VP),
    DEFINE_BIT(BRW_NEW_SAMPLER_STATE_TABLE),
    DEFINE_BIT(BRW_NEW_VS_ATTRIB_WORKAROUNDS),
+   DEFINE_BIT(BRW_NEW_COMPUTE_PROGRAM),
    {0, 0, 0}
 };
 
@@ -668,6 +669,11 @@ brw_upload_pipeline_state(struct brw_context *brw,
          brw->vertex_program = ctx->VertexProgram._Current;
          brw->ctx.NewDriverState |= BRW_NEW_VERTEX_PROGRAM;
       }
+   }
+
+   if (brw->compute_program != ctx->ComputeProgram._Current) {
+      brw->compute_program = ctx->ComputeProgram._Current;
+      brw->ctx.NewDriverState |= BRW_NEW_COMPUTE_PROGRAM;
    }
 
    if (brw->meta_in_progress != _mesa_meta_in_progress(ctx)) {
