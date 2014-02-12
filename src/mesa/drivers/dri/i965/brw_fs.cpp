@@ -3632,6 +3632,8 @@ fs_visitor::optimize()
       OPT(dead_code_eliminate);
    }
 
+   OPT(opt_combine_constants);
+
    lower_uniform_pull_constant_loads();
 }
 

@@ -242,6 +242,7 @@ public:
    void no16(const char *msg, ...);
    void lower_uniform_pull_constant_loads();
    bool lower_load_payload();
+   bool opt_combine_constants();
 
    void emit_dummy_fs();
    void emit_repclear_shader();
