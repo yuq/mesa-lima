@@ -418,7 +418,8 @@ cfg_t::dump(backend_visitor *v) const
                  link->block->num);
       }
       fprintf(stderr, "\n");
-      block->dump(v);
+      if (v != NULL)
+         block->dump(v);
       fprintf(stderr, "END B%d", block->num);
       foreach_list_typed(bblock_link, link, link, &block->children) {
          fprintf(stderr, " ->B%d",
