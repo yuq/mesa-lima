@@ -495,3 +495,17 @@ cfg_t::intersect(bblock_t *b1, bblock_t *b2)
    assert(b1);
    return b1;
 }
+
+void
+cfg_t::dump_cfg()
+{
+   printf("digraph CFG {\n");
+   for (int b = 0; b < num_blocks; b++) {
+      bblock_t *block = this->blocks[b];
+
+      foreach_list_typed_safe (bblock_link, child, link, &block->children) {
+         printf("\t%d -> %d\n", b, child->block->num);
+      }
+   }
+   printf("}\n");
+}

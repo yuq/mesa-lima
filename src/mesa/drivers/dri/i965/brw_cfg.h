@@ -274,6 +274,7 @@ struct cfg_t {
    static bblock_t *intersect(bblock_t *b1, bblock_t *b2);
 
    void dump(backend_visitor *v);
+   void dump_cfg();
 #endif
    void *mem_ctx;
 
