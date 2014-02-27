@@ -275,6 +275,7 @@ struct cfg_t {
 
    void dump(backend_visitor *v);
    void dump_cfg();
+   void dump_domtree();
 #endif
    void *mem_ctx;
 
