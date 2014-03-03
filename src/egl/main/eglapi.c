@@ -423,6 +423,8 @@ _eglCreateExtensionsString(_EGLDisplay *dpy)
    _EGL_CHECK_EXTENSION(EXT_image_dma_buf_import);
 
    _EGL_CHECK_EXTENSION(NV_post_sub_buffer);
+
+   _EGL_CHECK_EXTENSION(MESA_image_dma_buf_export);
 #undef _EGL_CHECK_EXTENSION
 }
 
@@ -1239,6 +1241,10 @@ eglGetProcAddress(const char *procname)
       { "eglCreatePlatformWindowSurfaceEXT", (_EGLProc) eglCreatePlatformWindowSurfaceEXT },
       { "eglCreatePlatformPixmapSurfaceEXT", (_EGLProc) eglCreatePlatformPixmapSurfaceEXT },
       { "eglGetSyncValuesCHROMIUM", (_EGLProc) eglGetSyncValuesCHROMIUM },
+#ifdef EGL_MESA_drm_buf_image_export
+      { "eglExportDMABUFImageQueryMESA", (_EGLProc) eglExportDMABUFImageQueryMESA },
+      { "eglExportDMABUFImageMESA", (_EGLProc) eglExportDMABUFImageMESA },
+#endif
       { NULL, NULL }
    };
    EGLint i;
@@ -1926,3 +1932,47 @@ eglGetSyncValuesCHROMIUM(EGLDisplay display, EGLSurface surface,
 
    RETURN_EGL_EVAL(disp, ret);
 }
+
+#ifdef EGL_MESA_image_dma_buf_export
+EGLBoolean EGLAPIENTRY
+eglExportDMABUFImageQueryMESA(EGLDisplay dpy, EGLImageKHR image,
+                              EGLint *fourcc, EGLint *nplanes,
+                              EGLuint64MESA *modifiers)
+{
+   _EGLDisplay *disp = _eglLockDisplay(dpy);
+   _EGLImage *img = _eglLookupImage(image, disp);
+   _EGLDriver *drv;
+   EGLBoolean ret;
+
+   _EGL_CHECK_DISPLAY(disp, EGL_FALSE, drv);
+   assert(disp->Extensions.MESA_image_dma_buf_export);
+
+   if (!img)
+      RETURN_EGL_ERROR(disp, EGL_BAD_PARAMETER, EGL_FALSE);
+
+   ret = drv->API.ExportDMABUFImageQueryMESA(drv, disp, img, fourcc, nplanes,
+                                             modifiers);
+
+   RETURN_EGL_EVAL(disp, ret);
+}
+
+EGLBoolean EGLAPIENTRY
+eglExportDMABUFImageMESA(EGLDisplay dpy, EGLImageKHR image,
+                         int *fds, EGLint *strides, EGLint *offsets)
+{
+   _EGLDisplay *disp = _eglLockDisplay(dpy);
+   _EGLImage *img = _eglLookupImage(image, disp);
+   _EGLDriver *drv;
+   EGLBoolean ret;
+
+   _EGL_CHECK_DISPLAY(disp, EGL_FALSE, drv);
+   assert(disp->Extensions.MESA_image_dma_buf_export);
+
+   if (!img)
+      RETURN_EGL_ERROR(disp, EGL_BAD_PARAMETER, EGL_FALSE);
+
+   ret = drv->API.ExportDMABUFImageMESA(drv, disp, img, fds, strides, offsets);
+
+   RETURN_EGL_EVAL(disp, ret);
+}
+#endif

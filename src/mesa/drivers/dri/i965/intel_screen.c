@@ -300,6 +300,17 @@ intel_image_format_lookup(int fourcc)
    return f;
 }
 
+static boolean intel_lookup_fourcc(int dri_format, int *fourcc)
+{
+   for (unsigned i = 0; i < ARRAY_SIZE(intel_image_formats); i++) {
+      if (intel_image_formats[i].planes[0].dri_format == dri_format) {
+         *fourcc = intel_image_formats[i].fourcc;
+         return true;
+      }
+   }
+   return false;
+}
+
 static __DRIimage *
 intel_allocate_image(int dri_format, void *loaderPrivate)
 {
@@ -559,6 +570,14 @@ intel_query_image(__DRIimage *image, int attrib, int *value)
       if (drm_intel_bo_gem_export_to_prime(image->bo, value) == 0)
          return true;
       return false;
+   case __DRI_IMAGE_ATTRIB_FOURCC:
+      if (intel_lookup_fourcc(image->dri_format, value))
+         return true;
+      return false;
+   case __DRI_IMAGE_ATTRIB_NUM_PLANES:
+      *value = 1;
+      return true;
+
   default:
       return false;
    }
@@ -784,7 +803,7 @@ intel_from_planar(__DRIimage *parent, int plane, void *loaderPrivate)
 }
 
 static const __DRIimageExtension intelImageExtension = {
-    .base = { __DRI_IMAGE, 8 },
+    .base = { __DRI_IMAGE, 11 },
 
     .createImageFromName                = intel_create_image_from_name,
     .createImageFromRenderbuffer        = intel_create_image_from_renderbuffer,
@@ -797,7 +816,9 @@ static const __DRIimageExtension intelImageExtension = {
     .fromPlanar                         = intel_from_planar,
     .createImageFromTexture             = intel_create_image_from_texture,
     .createImageFromFds                 = intel_create_image_from_fds,
-    .createImageFromDmaBufs             = intel_create_image_from_dma_bufs
+    .createImageFromDmaBufs             = intel_create_image_from_dma_bufs,
+    .blitImage                          = NULL,
+    .getCapabilities                    = NULL
 };
 
 static int

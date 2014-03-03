@@ -525,8 +525,14 @@ dri2_setup_screen(_EGLDisplay *disp)
 
          capabilities = dri2_dpy->image->getCapabilities(dri2_dpy->dri_screen);
          disp->Extensions.MESA_drm_image = (capabilities & __DRI_IMAGE_CAP_GLOBAL_NAMES) != 0;
-      } else
+
+         if (dri2_dpy->image->base.version >= 11)
+            disp->Extensions.MESA_image_dma_buf_export = EGL_TRUE;
+      } else {
          disp->Extensions.MESA_drm_image = EGL_TRUE;
+         if (dri2_dpy->image->base.version >= 11)
+            disp->Extensions.MESA_image_dma_buf_export = EGL_TRUE;
+      }
 
       disp->Extensions.KHR_image_base = EGL_TRUE;
       disp->Extensions.KHR_gl_renderbuffer_image = EGL_TRUE;
@@ -1965,6 +1971,55 @@ dri2_export_drm_image_mesa(_EGLDriver *drv, _EGLDisplay *disp, _EGLImage *img,
 
    return EGL_TRUE;
 }
+
+static EGLBoolean
+dri2_export_dma_buf_image_query_mesa(_EGLDriver *drv, _EGLDisplay *disp,
+                                     _EGLImage *img,
+                                     EGLint *fourcc, EGLint *nplanes,
+                                     EGLuint64MESA *modifiers)
+{
+   struct dri2_egl_display *dri2_dpy = dri2_egl_display(disp);
+   struct dri2_egl_image *dri2_img = dri2_egl_image(img);
+
+   (void) drv;
+
+
+   if (nplanes)
+      dri2_dpy->image->queryImage(dri2_img->dri_image,
+				  __DRI_IMAGE_ATTRIB_NUM_PLANES, nplanes);
+   if (fourcc)
+      dri2_dpy->image->queryImage(dri2_img->dri_image,
+				  __DRI_IMAGE_ATTRIB_FOURCC, fourcc);
+
+   if (modifiers)
+      *modifiers = 0;
+
+   return EGL_TRUE;
+}
+
+static EGLBoolean
+dri2_export_dma_buf_image_mesa(_EGLDriver *drv, _EGLDisplay *disp, _EGLImage *img,
+                               int *fds, EGLint *strides, EGLint *offsets)
+{
+   struct dri2_egl_display *dri2_dpy = dri2_egl_display(disp);
+   struct dri2_egl_image *dri2_img = dri2_egl_image(img);
+
+   (void) drv;
+
+   /* rework later to provide multiple fds/strides/offsets */
+   if (fds)
+      dri2_dpy->image->queryImage(dri2_img->dri_image,
+				  __DRI_IMAGE_ATTRIB_FD, fds);
+
+   if (strides)
+      dri2_dpy->image->queryImage(dri2_img->dri_image,
+				  __DRI_IMAGE_ATTRIB_STRIDE, strides);
+
+   if (offsets)
+      offsets[0] = 0;
+
+   return EGL_TRUE;
+}
 #endif
 
 #ifdef HAVE_WAYLAND_PLATFORM
@@ -2219,6 +2274,8 @@ _eglBuiltInDriverDRI2(const char *args)
 #ifdef HAVE_LIBDRM
    dri2_drv->base.API.CreateDRMImageMESA = dri2_create_drm_image_mesa;
    dri2_drv->base.API.ExportDRMImageMESA = dri2_export_drm_image_mesa;
+   dri2_drv->base.API.ExportDMABUFImageQueryMESA = dri2_export_dma_buf_image_query_mesa;
+   dri2_drv->base.API.ExportDMABUFImageMESA = dri2_export_dma_buf_image_mesa;
 #endif
 #ifdef HAVE_WAYLAND_PLATFORM
    dri2_drv->base.API.BindWaylandDisplayWL = dri2_bind_wayland_display_wl;

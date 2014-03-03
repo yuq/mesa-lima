@@ -76,6 +76,30 @@ static int convert_fourcc(int format, int *dri_components_p)
    return format;
 }
 
+static int convert_to_fourcc(int format)
+{
+   switch(format) {
+   case __DRI_IMAGE_FORMAT_RGB565:
+      format = __DRI_IMAGE_FOURCC_RGB565;
+      break;
+   case __DRI_IMAGE_FORMAT_ARGB8888:
+      format = __DRI_IMAGE_FOURCC_ARGB8888;
+      break;
+   case __DRI_IMAGE_FORMAT_XRGB8888:
+      format = __DRI_IMAGE_FOURCC_XRGB8888;
+      break;
+   case __DRI_IMAGE_FORMAT_ABGR8888:
+      format = __DRI_IMAGE_FOURCC_ABGR8888;
+      break;
+   case __DRI_IMAGE_FORMAT_XBGR8888:
+      format = __DRI_IMAGE_FOURCC_XBGR8888;
+      break;
+   default:
+      return -1;
+   }
+   return format;
+}
+
 /**
  * DRI2 flush extension.
  */
@@ -909,6 +933,12 @@ dri2_query_image(__DRIimage *image, int attrib, int *value)
          return GL_FALSE;
       *value = image->dri_components;
       return GL_TRUE;
+   case __DRI_IMAGE_ATTRIB_FOURCC:
+      *value = convert_to_fourcc(image->dri_format);
+      return GL_TRUE;
+   case __DRI_IMAGE_ATTRIB_NUM_PLANES:
+      *value = 1;
+      return GL_TRUE;
    default:
       return GL_FALSE;
    }
@@ -1203,7 +1233,7 @@ dri2_get_capabilities(__DRIscreen *_screen)
 
 /* The extension is modified during runtime if DRI_PRIME is detected */
 static __DRIimageExtension dri2ImageExtension = {
-    .base = { __DRI_IMAGE, 10 },
+    .base = { __DRI_IMAGE, 11 },
 
     .createImageFromName          = dri2_create_image_from_name,
     .createImageFromRenderbuffer  = dri2_create_image_from_renderbuffer,

@@ -140,6 +140,11 @@ typedef EGLBoolean (*SwapBuffersWithDamageEXT_t) (_EGLDriver *drv, _EGLDisplay *
 
 typedef EGLBoolean (*GetSyncValuesCHROMIUM_t) (_EGLDisplay *dpy, _EGLSurface *surface, EGLuint64KHR *ust, EGLuint64KHR *msc, EGLuint64KHR *sbc);
 
+#ifdef EGL_MESA_image_dma_buf_export
+typedef EGLBoolean (*ExportDMABUFImageQueryMESA_t)(_EGLDriver *drv, _EGLDisplay *disp, _EGLImage *img, EGLint *fourcc, EGLint *stride, EGLuint64MESA *modifiers);
+typedef EGLBoolean (*ExportDMABUFImageMESA_t)(_EGLDriver *drv, _EGLDisplay *disp, _EGLImage *img, EGLint *fds, EGLint *strides, EGLint *offsets);
+#endif
+
 /**
  * The API dispatcher jumps through these functions
  */
@@ -226,6 +231,11 @@ struct _egl_api
 
    QueryBufferAge_t QueryBufferAge;
    GetSyncValuesCHROMIUM_t GetSyncValuesCHROMIUM;
+
+#ifdef EGL_MESA_image_dma_buf_export
+   ExportDMABUFImageQueryMESA_t ExportDMABUFImageQueryMESA;
+   ExportDMABUFImageMESA_t ExportDMABUFImageMESA;
+#endif
 };
 
 #endif /* EGLAPI_INCLUDED */
