@@ -315,6 +315,7 @@ invariant	KEYWORD(120, 100, 120, 100, INVARIANT);
 flat		KEYWORD(130, 100, 130, 300, FLAT);
 smooth		KEYWORD(130, 300, 130, 300, SMOOTH);
 noperspective	KEYWORD(130, 300, 130, 0, NOPERSPECTIVE);
+patch		KEYWORD_WITH_ALT(0, 300, 400, 0, yyextra->ARB_tessellation_shader_enable, PATCH);
 
 sampler1D	DEPRECATED_ES_KEYWORD(SAMPLER1D);
 sampler2D	return SAMPLER2D;
@@ -576,7 +577,6 @@ usamplerBuffer	KEYWORD(140, 300, 140, 0, USAMPLERBUFFER);
 
     /* Additional reserved words in GLSL ES 3.00 */
 resource	KEYWORD(0, 300, 0, 0, RESOURCE);
-patch		KEYWORD(0, 300, 0, 0, PATCH);
 sample		KEYWORD_WITH_ALT(400, 300, 400, 0, yyextra->ARB_gpu_shader5_enable, SAMPLE);
 subroutine	KEYWORD(0, 300, 0, 0, SUBROUTINE);
 

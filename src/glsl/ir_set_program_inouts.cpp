@@ -140,6 +140,24 @@ ir_set_program_inouts_visitor::mark_whole_variable(ir_variable *var)
       type = type->fields.array;
    }
 
+   if (this->shader_stage == MESA_SHADER_TESS_CTRL &&
+       var->data.mode == ir_var_shader_in) {
+      assert(type->is_array());
+      type = type->fields.array;
+   }
+
+   if (this->shader_stage == MESA_SHADER_TESS_CTRL &&
+       var->data.mode == ir_var_shader_out && !var->data.patch) {
+      assert(type->is_array());
+      type = type->fields.array;
+   }
+
+   if (this->shader_stage == MESA_SHADER_TESS_EVAL &&
+       var->data.mode == ir_var_shader_in && !var->data.patch) {
+      assert(type->is_array());
+      type = type->fields.array;
+   }
+
    mark(this->prog, var, 0, type->count_attribute_slots(),
         this->shader_stage == MESA_SHADER_FRAGMENT);
 }
@@ -165,6 +183,9 @@ ir_set_program_inouts_visitor::visit(ir_dereference_variable *ir)
  *
  * *Except gl_PrimitiveIDIn, as noted below.
  *
+ * For tessellation control shaders all inputs and non-patch outputs are
+ * arrays. For tessellation evaluation shaders non-patch inputs are arrays.
+ *
  * If the index can't be interpreted as a constant, or some other problem
  * occurs, then nothing will be marked and false will be returned.
  */
@@ -180,6 +201,24 @@ ir_set_program_inouts_visitor::try_mark_partial_variable(ir_variable *var,
        * gl_PrimitiveIDIn, and in that case, this code will never be reached,
        * because gl_PrimitiveIDIn can't be indexed into in array fashion.
        */
+      assert(type->is_array());
+      type = type->fields.array;
+   }
+
+   if (this->shader_stage == MESA_SHADER_TESS_CTRL &&
+       var->data.mode == ir_var_shader_in) {
+      assert(type->is_array());
+      type = type->fields.array;
+   }
+
+   if (this->shader_stage == MESA_SHADER_TESS_CTRL &&
+       var->data.mode == ir_var_shader_out && !var->data.patch) {
+      assert(type->is_array());
+      type = type->fields.array;
+   }
+
+   if (this->shader_stage == MESA_SHADER_TESS_EVAL &&
+       var->data.mode == ir_var_shader_in && !var->data.patch) {
       assert(type->is_array());
       type = type->fields.array;
    }
@@ -242,6 +281,22 @@ ir_set_program_inouts_visitor::try_mark_partial_variable(ir_variable *var,
    return true;
 }
 
+static bool
+is_multiple_vertices(gl_shader_stage stage, ir_variable *var)
+{
+   if (var->data.patch)
+      return false;
+
+   if (var->data.mode == ir_var_shader_in)
+      return stage == MESA_SHADER_GEOMETRY ||
+             stage == MESA_SHADER_TESS_CTRL ||
+             stage == MESA_SHADER_TESS_EVAL;
+   if (var->data.mode == ir_var_shader_out)
+      return stage == MESA_SHADER_TESS_CTRL;
+
+   return false;
+}
+
 ir_visitor_status
 ir_set_program_inouts_visitor::visit_enter(ir_dereference_array *ir)
 {
@@ -256,10 +311,9 @@ ir_set_program_inouts_visitor::visit_enter(ir_dereference_array *ir)
        */
       if (ir_dereference_variable * const deref_var =
           inner_array->array->as_dereference_variable()) {
-         if (this->shader_stage == MESA_SHADER_GEOMETRY &&
-             deref_var->var->data.mode == ir_var_shader_in) {
-            /* foo is a geometry shader input, so i is the vertex, and j the
-             * part of the input we're accessing.
+         if (is_multiple_vertices(this->shader_stage, deref_var->var)) {
+            /* foo is a geometry or tessellation shader input, so i is
+             * the vertex, and j the part of the input we're accessing.
              */
             if (try_mark_partial_variable(deref_var->var, ir->array_index))
             {
@@ -275,10 +329,9 @@ ir_set_program_inouts_visitor::visit_enter(ir_dereference_array *ir)
    } else if (ir_dereference_variable * const deref_var =
               ir->array->as_dereference_variable()) {
       /* ir => foo[i], where foo is a variable. */
-      if (this->shader_stage == MESA_SHADER_GEOMETRY &&
-          deref_var->var->data.mode == ir_var_shader_in) {
-         /* foo is a geometry shader input, so i is the vertex, and we're
-          * accessing the entire input.
+      if (is_multiple_vertices(this->shader_stage, deref_var->var)) {
+         /* foo is a geometry or tessellation shader input, so i is
+          * the vertex, and we're accessing the entire input.
           */
          mark_whole_variable(deref_var->var);
          /* We've now taken care of foo, but i might contain a subexpression

@@ -86,7 +86,8 @@ bool
 ast_type_qualifier::has_auxiliary_storage() const
 {
    return this->flags.q.centroid
-          || this->flags.q.sample;
+          || this->flags.q.sample
+          || this->flags.q.patch;
 }
 
 const char*

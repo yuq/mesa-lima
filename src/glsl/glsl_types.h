@@ -752,6 +752,12 @@ struct glsl_struct_field {
    unsigned matrix_layout:2;
 
    /**
+    * For interface blocks, 1 if this variable is a per-patch input or output
+    * (as in ir_variable::patch). 0 otherwise.
+    */
+   unsigned patch:1;
+
+   /**
     * For interface blocks, it has a value if this variable uses multiple vertex
     * streams (as in ir_variable::stream). -1 otherwise.
     */

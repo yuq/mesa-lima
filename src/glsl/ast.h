@@ -434,6 +434,7 @@ struct ast_type_qualifier {
 	 unsigned out:1;
 	 unsigned centroid:1;
          unsigned sample:1;
+	 unsigned patch:1;
 	 unsigned uniform:1;
 	 unsigned buffer:1;
 	 unsigned smooth:1;

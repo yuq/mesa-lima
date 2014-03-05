@@ -883,10 +883,10 @@ builtin_variable_generator::generate_tcs_special_vars()
    add_system_value(SYSTEM_VALUE_VERTICES_IN, int_t, "gl_PatchVerticesIn");
    add_system_value(SYSTEM_VALUE_INVOCATION_ID, int_t, "gl_InvocationID");
 
-   add_output(VARYING_SLOT_TESS_LEVEL_OUTER,
-                    array(float_t, 4), "gl_TessLevelOuter");
-   add_output(VARYING_SLOT_TESS_LEVEL_INNER,
-                    array(float_t, 2), "gl_TessLevelInner");
+   add_output(VARYING_SLOT_TESS_LEVEL_OUTER, array(float_t, 4),
+              "gl_TessLevelOuter")->data.patch = 1;
+   add_output(VARYING_SLOT_TESS_LEVEL_INNER, array(float_t, 2),
+              "gl_TessLevelInner")->data.patch = 1;
 }
 
 

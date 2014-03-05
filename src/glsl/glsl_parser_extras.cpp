@@ -861,6 +861,8 @@ _mesa_ast_type_qualifier_print(const struct ast_type_qualifier *q)
       printf("centroid ");
    if (q->flags.q.sample)
       printf("sample ");
+   if (q->flags.q.patch)
+      printf("patch ");
    if (q->flags.q.uniform)
       printf("uniform ");
    if (q->flags.q.buffer)

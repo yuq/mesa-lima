@@ -159,6 +159,7 @@ flatten_named_interface_blocks_declarations::run(exec_list *instructions)
                iface_t->fields.structure[i].interpolation;
             new_var->data.centroid = iface_t->fields.structure[i].centroid;
             new_var->data.sample = iface_t->fields.structure[i].sample;
+            new_var->data.patch = iface_t->fields.structure[i].patch;
 
             new_var->init_interface_type(iface_t);
             hash_table_insert(interface_namespace, new_var,

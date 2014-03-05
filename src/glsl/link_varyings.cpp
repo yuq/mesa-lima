@@ -116,6 +116,18 @@ cross_validate_types_and_qualifiers(struct gl_shader_program *prog,
       return;
    }
 
+   if (input->data.patch != output->data.patch) {
+      linker_error(prog,
+                   "%s shader output `%s' %s patch qualifier, "
+                   "but %s shader input %s patch qualifier\n",
+                   _mesa_shader_stage_to_string(producer_stage),
+                   output->name,
+                   (output->data.patch) ? "has" : "lacks",
+                   _mesa_shader_stage_to_string(consumer_stage),
+                   (input->data.patch) ? "has" : "lacks");
+      return;
+   }
+
    if (!prog->IsES && input->data.invariant != output->data.invariant) {
       linker_error(prog,
                    "%s shader output `%s' %s invariant qualifier, "
@@ -989,7 +1001,8 @@ varying_matches::compute_packing_class(const ir_variable *var)
     *
     * Therefore, the packing class depends only on the interpolation type.
     */
-   unsigned packing_class = var->data.centroid | (var->data.sample << 1);
+   unsigned packing_class = var->data.centroid | (var->data.sample << 1) |
+                            (var->data.patch << 2);
    packing_class *= 4;
    packing_class += var->data.interpolation;
    return packing_class;

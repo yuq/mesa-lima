@@ -2487,6 +2487,9 @@ apply_type_qualifier_to_variable(const struct ast_type_qualifier *qual,
       var->data.stream = qual->stream;
    }
 
+   if (qual->flags.q.patch)
+      var->data.patch = 1;
+
    if (qual->flags.q.attribute && state->stage != MESA_SHADER_VERTEX) {
       var->type = glsl_type::error_type;
       _mesa_glsl_error(loc, state,
@@ -3208,6 +3211,17 @@ handle_tess_ctrl_shader_output_decl(struct _mesa_glsl_parse_state *state,
    if (state->tcs_output_vertices_specified) {
       num_vertices = state->out_qualifier->vertices;
    }
+
+   if (!var->type->is_array() && !var->data.patch) {
+      _mesa_glsl_error(&loc, state,
+                       "tessellation control shader outputs must be arrays");
+
+      /* To avoid cascading failures, short circuit the checks below. */
+      return;
+   }
+
+   if (var->data.patch)
+      return;
 
    validate_layout_qualifier_vertex_count(state, loc, var, num_vertices,
                                           &state->tcs_output_size,
@@ -3957,6 +3971,33 @@ ast_declarator_list::hir(exec_list *instructions,
          }
       }
 
+
+      /* From section 4.3.4 of the GLSL 4.00 spec:
+       *    "Input variables may not be declared using the patch in qualifier
+       *    in tessellation control or geometry shaders."
+       *
+       * From section 4.3.6 of the GLSL 4.00 spec:
+       *    "It is an error to use patch out in a vertex, tessellation
+       *    evaluation, or geometry shader."
+       *
+       * This doesn't explicitly forbid using them in a fragment shader, but
+       * that's probably just an oversight.
+       */
+      if (state->stage != MESA_SHADER_TESS_EVAL
+          && this->type->qualifier.flags.q.patch
+          && this->type->qualifier.flags.q.in) {
+
+         _mesa_glsl_error(&loc, state, "'patch in' can only be used in a "
+                          "tessellation evaluation shader");
+      }
+
+      if (state->stage != MESA_SHADER_TESS_CTRL
+          && this->type->qualifier.flags.q.patch
+          && this->type->qualifier.flags.q.out) {
+
+         _mesa_glsl_error(&loc, state, "'patch out' can only be used in a "
+                          "tessellation control shader");
+      }
 
       /* Precision qualifiers exists only in GLSL versions 1.00 and >= 1.30.
        */
@@ -5481,6 +5522,7 @@ ast_process_structure_or_interface_block(exec_list *instructions,
             interpret_interpolation_qualifier(qual, var_mode, state, &loc);
          fields[i].centroid = qual->flags.q.centroid ? 1 : 0;
          fields[i].sample = qual->flags.q.sample ? 1 : 0;
+         fields[i].patch = qual->flags.q.patch ? 1 : 0;
 
          /* Only save explicitly defined streams in block's field */
          fields[i].stream = qual->flags.q.explicit_stream ? qual->stream : -1;
@@ -5815,6 +5857,8 @@ ast_interface_block::hir(exec_list *instructions,
                earlier_per_vertex->fields.structure[j].centroid;
             fields[i].sample =
                earlier_per_vertex->fields.structure[j].sample;
+            fields[i].patch =
+               earlier_per_vertex->fields.structure[j].patch;
          }
       }
 
@@ -5994,6 +6038,7 @@ ast_interface_block::hir(exec_list *instructions,
          var->data.interpolation = fields[i].interpolation;
          var->data.centroid = fields[i].centroid;
          var->data.sample = fields[i].sample;
+         var->data.patch = fields[i].patch;
          var->init_interface_type(block_type);
 
          if (var_mode == ir_var_shader_in || var_mode == ir_var_uniform)

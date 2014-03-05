@@ -1643,6 +1643,7 @@ ir_variable::ir_variable(const struct glsl_type *type, const char *name,
    this->data.read_only = false;
    this->data.centroid = false;
    this->data.sample = false;
+   this->data.patch = false;
    this->data.invariant = false;
    this->data.how_declared = ir_var_declared_normally;
    this->data.mode = mode;
@@ -1785,6 +1786,7 @@ ir_function_signature::qualifiers_match(exec_list *params)
 	  a->data.interpolation != b->data.interpolation ||
 	  a->data.centroid != b->data.centroid ||
           a->data.sample != b->data.sample ||
+          a->data.patch != b->data.patch ||
           a->data.image_read_only != b->data.image_read_only ||
           a->data.image_write_only != b->data.image_write_only ||
           a->data.image_coherent != b->data.image_coherent ||

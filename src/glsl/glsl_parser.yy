@@ -1866,7 +1866,11 @@ auxiliary_storage_qualifier:
       memset(& $$, 0, sizeof($$));
       $$.flags.q.sample = 1;
    }
-   /* TODO: "patch" also goes here someday. */
+   | PATCH
+   {
+      memset(& $$, 0, sizeof($$));
+      $$.flags.q.patch = 1;
+   }
 
 storage_qualifier:
    CONST_TOK
