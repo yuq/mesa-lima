@@ -1984,3 +1984,21 @@ _mesa_CreateShaderProgramv(GLenum type, GLsizei count,
 
    return _mesa_create_shader_program(ctx, GL_TRUE, type, count, strings);
 }
+
+
+/**
+ * For GL_ARB_tessellation_shader
+ */
+extern void GLAPIENTRY
+_mesa_PatchParameteri(GLenum pname, GLint value)
+{
+   /* STUB */
+}
+
+
+extern void GLAPIENTRY
+_mesa_PatchParameterfv(GLenum pname, const GLfloat *values)
+{
+   /* STUB */
+}
+

@@ -563,6 +563,8 @@ const struct function common_desktop_functions_possible[] = {
 
    /* GL 4.0 */
    { "glMinSampleShading", 40, -1 },
+   { "glPatchParameteri", 40, -1 },
+   { "glPatchParameterfv", 40, -1 },
    { "glBlendEquationi", 40, -1 },
    { "glBlendEquationSeparatei", 40, -1 },
    { "glBlendFunci", 40, -1 },

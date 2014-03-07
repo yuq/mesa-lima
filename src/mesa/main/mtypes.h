@@ -90,7 +90,7 @@ struct vbo_context;
 
 
 /** Extra draw modes beyond GL_POINTS, GL_TRIANGLE_FAN, etc */
-#define PRIM_MAX                 GL_TRIANGLE_STRIP_ADJACENCY
+#define PRIM_MAX                 GL_PATCHES
 #define PRIM_OUTSIDE_BEGIN_END   (PRIM_MAX + 1)
 #define PRIM_UNKNOWN             (PRIM_MAX + 2)
 

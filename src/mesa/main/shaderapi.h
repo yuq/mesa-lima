@@ -264,6 +264,14 @@ _mesa_get_program_resourceiv(struct gl_shader_program *shProg,
                              GLsizei bufSize, GLsizei *length,
                              GLint *params);
 
+/* GL_ARB_tessellation_shader */
+extern void GLAPIENTRY
+_mesa_PatchParameteri(GLenum pname, GLint value);
+
+extern void GLAPIENTRY
+_mesa_PatchParameterfv(GLenum pname, const GLfloat *values);
+
+
 #ifdef __cplusplus
 }
 #endif

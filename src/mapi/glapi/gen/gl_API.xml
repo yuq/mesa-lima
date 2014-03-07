@@ -8072,7 +8072,11 @@
 
 <xi:include href="ARB_vertex_type_2_10_10_10_rev.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
 
-<!-- ARB extensions #86...#93 -->
+<!-- ARB extensions #86...#90 -->
+
+<xi:include href="ARB_tessellation_shader.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
+
+<!-- ARB extensions #92...#93 -->
 
 <xi:include href="ARB_draw_indirect.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
 
