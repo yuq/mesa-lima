@@ -2164,6 +2164,29 @@ struct gl_vertex_program
 };
 
 
+/** Tessellation control program object */
+struct gl_tess_ctrl_program
+{
+   struct gl_program Base;   /**< base class */
+
+   /* output layout */
+   GLint VerticesOut;
+};
+
+
+/** Tessellation evaluation program object */
+struct gl_tess_eval_program
+{
+   struct gl_program Base;   /**< base class */
+
+   /* input layout */
+   GLenum PrimitiveMode; /* GL_TRIANGLES, GL_QUADS or GL_ISOLINES */
+   GLenum Spacing;       /* GL_EQUAL, GL_FRACTIONAL_EVEN, GL_FRACTIONAL_ODD */
+   GLenum VertexOrder;   /* GL_CW or GL_CCW */
+   bool PointMode;
+};
+
+
 /** Geometry program object */
 struct gl_geometry_program
 {
@@ -2266,6 +2289,27 @@ struct gl_vertex_program_state
    GLboolean _Overriden;
 };
 
+/**
+ * Context state for tessellation control programs.
+ */
+struct gl_tess_ctrl_program_state
+{
+   /** Currently bound and valid shader. */
+   struct gl_tess_ctrl_program *_Current;
+
+   GLint patch_vertices;
+   GLfloat patch_default_outer_level[4];
+   GLfloat patch_default_inner_level[2];
+};
+
+/**
+ * Context state for tessellation evaluation programs.
+ */
+struct gl_tess_eval_program_state
+{
+   /** Currently bound and valid shader. */
+   struct gl_tess_eval_program *_Current;
+};
 
 /**
  * Context state for geometry programs.
@@ -2444,6 +2488,41 @@ struct gl_shader
     */
    bool origin_upper_left;
    bool pixel_center_integer;
+
+   /**
+    * Tessellation Control shader state from layout qualifiers.
+    */
+   struct {
+      /**
+       * 0 - vertices not declared in shader, or
+       * 1 .. GL_MAX_PATCH_VERTICES
+       */
+      GLint VerticesOut;
+   } TessCtrl;
+
+   /**
+    * Tessellation Evaluation shader state from layout qualifiers.
+    */
+   struct {
+      /**
+       * GL_TRIANGLES, GL_QUADS, GL_ISOLINES or PRIM_UNKNOWN if it's not set
+       * in this shader.
+       */
+      GLenum PrimitiveMode;
+      /**
+       * GL_EQUAL, GL_FRACTIONAL_ODD, GL_FRACTIONAL_EVEN, or 0 if it's not set
+       * in this shader.
+       */
+      GLenum Spacing;
+      /**
+       * GL_CW, GL_CCW, or 0 if it's not set in this shader.
+       */
+      GLenum VertexOrder;
+      /**
+       * 1, 0, or -1 if it's not set in this shader.
+       */
+      int PointMode;
+   } TessEval;
 
    /**
     * Geometry shader state from GLSL 1.50 layout qualifiers.
@@ -2672,6 +2751,30 @@ struct gl_shader_program
 
    /** Post-link gl_FragDepth layout for ARB_conservative_depth. */
    enum gl_frag_depth_layout FragDepthLayout;
+
+   /**
+    * Tessellation Control shader state from layout qualifiers.
+    */
+   struct {
+      /**
+       * 0 - vertices not declared in shader, or
+       * 1 .. GL_MAX_PATCH_VERTICES
+       */
+      GLint VerticesOut;
+   } TessCtrl;
+
+   /**
+    * Tessellation Evaluation shader state from layout qualifiers.
+    */
+   struct {
+      /** GL_TRIANGLES, GL_QUADS or GL_ISOLINES */
+      GLenum PrimitiveMode;
+      /** GL_EQUAL, GL_FRACTIONAL_ODD or GL_FRACTIONAL_EVEN */
+      GLenum Spacing;
+      /** GL_CW or GL_CCW */
+      GLenum VertexOrder;
+      bool PointMode;
+   } TessEval;
 
    /**
     * Geometry shader state - copied into gl_geometry_program by
@@ -4287,6 +4390,8 @@ struct gl_context
    struct gl_fragment_program_state FragmentProgram;
    struct gl_geometry_program_state GeometryProgram;
    struct gl_compute_program_state ComputeProgram;
+   struct gl_tess_ctrl_program_state TessCtrlProgram;
+   struct gl_tess_eval_program_state TessEvalProgram;
    struct gl_ati_fragment_shader_state ATIFragmentShader;
 
    struct gl_pipeline_shader_state Pipeline; /**< GLSL pipeline shader object state */
