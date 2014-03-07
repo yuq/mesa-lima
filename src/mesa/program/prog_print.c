@@ -1015,6 +1015,12 @@ _mesa_write_shader_to_file(const struct gl_shader *shader)
    case MESA_SHADER_FRAGMENT:
       type = "frag";
       break;
+   case MESA_SHADER_TESS_CTRL:
+      type = "tesc";
+      break;
+   case MESA_SHADER_TESS_EVAL:
+      type = "tese";
+      break;
    case MESA_SHADER_VERTEX:
       type = "vert";
       break;

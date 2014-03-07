@@ -478,6 +478,8 @@ init_program_limits(struct gl_constants *consts, gl_shader_stage stage,
       prog->MaxInputComponents = 16 * 4; /* old limit not to break tnl and swrast */
       prog->MaxOutputComponents = 0; /* value not used */
       break;
+   case MESA_SHADER_TESS_CTRL:
+   case MESA_SHADER_TESS_EVAL:
    case MESA_SHADER_GEOMETRY:
       prog->MaxParameters = MAX_VERTEX_PROGRAM_PARAMS;
       prog->MaxAttribs = MAX_VERTEX_GENERIC_ATTRIBS;

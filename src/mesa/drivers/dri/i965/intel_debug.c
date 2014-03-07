@@ -79,11 +79,13 @@ intel_debug_flag_for_shader_stage(gl_shader_stage stage)
 {
    uint64_t flags[] = {
       [MESA_SHADER_VERTEX] = DEBUG_VS,
+      [MESA_SHADER_TESS_CTRL] = 0,
+      [MESA_SHADER_TESS_EVAL] = 0,
       [MESA_SHADER_GEOMETRY] = DEBUG_GS,
       [MESA_SHADER_FRAGMENT] = DEBUG_WM,
       [MESA_SHADER_COMPUTE] = DEBUG_CS,
    };
-   STATIC_ASSERT(MESA_SHADER_STAGES == 4);
+   STATIC_ASSERT(MESA_SHADER_STAGES == 6);
    return flags[stage];
 }
 

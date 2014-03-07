@@ -945,6 +945,8 @@ _mesa_meta_end(struct gl_context *ctx)
    if (state & MESA_META_SHADER) {
       static const GLenum targets[] = {
          GL_VERTEX_SHADER,
+         GL_TESS_CONTROL_SHADER,
+         GL_TESS_EVALUATION_SHADER,
          GL_GEOMETRY_SHADER,
          GL_FRAGMENT_SHADER,
       };
