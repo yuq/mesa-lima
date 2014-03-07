@@ -206,6 +206,9 @@ _mesa_validate_shader_target(const struct gl_context *ctx, GLenum type)
       return ctx == NULL || ctx->Extensions.ARB_vertex_shader;
    case GL_GEOMETRY_SHADER_ARB:
       return ctx == NULL || _mesa_has_geometry_shaders(ctx);
+   case GL_TESS_CONTROL_SHADER:
+   case GL_TESS_EVALUATION_SHADER:
+      return ctx == NULL || _mesa_has_tessellation(ctx);
    case GL_COMPUTE_SHADER:
       return ctx == NULL || ctx->Extensions.ARB_compute_shader;
    default:
@@ -422,6 +425,8 @@ detach_shader(struct gl_context *ctx, GLuint program, GLuint shader)
          /* sanity check - make sure the new list's entries are sensible */
          for (j = 0; j < shProg->NumShaders; j++) {
             assert(shProg->Shaders[j]->Type == GL_VERTEX_SHADER ||
+                   shProg->Shaders[j]->Type == GL_TESS_CONTROL_SHADER ||
+                   shProg->Shaders[j]->Type == GL_TESS_EVALUATION_SHADER ||
                    shProg->Shaders[j]->Type == GL_GEOMETRY_SHADER ||
                    shProg->Shaders[j]->Type == GL_FRAGMENT_SHADER);
             assert(shProg->Shaders[j]->RefCount > 0);
@@ -1083,6 +1088,12 @@ print_shader_info(const struct gl_shader_program *shProg)
    if (shProg->_LinkedShaders[MESA_SHADER_GEOMETRY])
       printf("  geom prog %u\n",
 	     shProg->_LinkedShaders[MESA_SHADER_GEOMETRY]->Program->Id);
+   if (shProg->_LinkedShaders[MESA_SHADER_TESS_CTRL])
+      printf("  tesc prog %u\n",
+	     shProg->_LinkedShaders[MESA_SHADER_TESS_CTRL]->Program->Id);
+   if (shProg->_LinkedShaders[MESA_SHADER_TESS_EVAL])
+      printf("  tese prog %u\n",
+	     shProg->_LinkedShaders[MESA_SHADER_TESS_EVAL]->Program->Id);
 }
 
 
@@ -2035,6 +2046,21 @@ _mesa_copy_linked_program_data(gl_shader_stage type,
    case MESA_SHADER_VERTEX:
       dst->UsesClipDistanceOut = src->Vert.UsesClipDistance;
       break;
+   case MESA_SHADER_TESS_CTRL: {
+      struct gl_tess_ctrl_program *dst_tcp =
+         (struct gl_tess_ctrl_program *) dst;
+      dst_tcp->VerticesOut = src->TessCtrl.VerticesOut;
+      break;
+   }
+   case MESA_SHADER_TESS_EVAL: {
+      struct gl_tess_eval_program *dst_tep =
+         (struct gl_tess_eval_program *) dst;
+      dst_tep->PrimitiveMode = src->TessEval.PrimitiveMode;
+      dst_tep->Spacing = src->TessEval.Spacing;
+      dst_tep->VertexOrder = src->TessEval.VertexOrder;
+      dst_tep->PointMode = src->TessEval.PointMode;
+      break;
+   }
    case MESA_SHADER_GEOMETRY: {
       struct gl_geometry_program *dst_gp = (struct gl_geometry_program *) dst;
       dst_gp->VerticesIn = src->Geom.VerticesIn;
