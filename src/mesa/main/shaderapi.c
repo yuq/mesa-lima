@@ -518,6 +518,57 @@ check_gs_query(struct gl_context *ctx, const struct gl_shader_program *shProg)
 
 
 /**
+ * Check if a tessellation control shader query is valid at this time.
+ * If not, report an error and return false.
+ *
+ * From GL 4.0 section 6.1.12 (Shader and Program Queries):
+ *
+ *     "If TESS_CONTROL_OUTPUT_VERTICES is queried for a program which has
+ *     not been linked successfully, or which does not contain objects to
+ *     form a tessellation control shader, then an INVALID_OPERATION error is
+ *     generated."
+ */
+static bool
+check_tcs_query(struct gl_context *ctx, const struct gl_shader_program *shProg)
+{
+   if (shProg->LinkStatus &&
+       shProg->_LinkedShaders[MESA_SHADER_TESS_CTRL] != NULL) {
+      return true;
+   }
+
+   _mesa_error(ctx, GL_INVALID_OPERATION,
+               "glGetProgramv(linked tessellation control shader required)");
+   return false;
+}
+
+
+/**
+ * Check if a tessellation evaluation shader query is valid at this time.
+ * If not, report an error and return false.
+ *
+ * From GL 4.0 section 6.1.12 (Shader and Program Queries):
+ *
+ *     "If any of the pname values in this paragraph are queried for a program
+ *     which has not been linked successfully, or which does not contain
+ *     objects to form a tessellation evaluation shader, then an
+ *     INVALID_OPERATION error is generated."
+ *
+ */
+static bool
+check_tes_query(struct gl_context *ctx, const struct gl_shader_program *shProg)
+{
+   if (shProg->LinkStatus &&
+       shProg->_LinkedShaders[MESA_SHADER_TESS_EVAL] != NULL) {
+      return true;
+   }
+
+   _mesa_error(ctx, GL_INVALID_OPERATION, "glGetProgramv(linked tessellation "
+               "evaluation shader required)");
+   return false;
+}
+
+
+/**
  * glGetProgramiv() - get shader program state.
  * Note that this is for GLSL shader programs, not ARB vertex/fragment
  * programs (see glGetProgramivARB).
@@ -540,6 +591,7 @@ get_programiv(struct gl_context *ctx, GLuint program, GLenum pname,
     * and GL 3.2) are available in this context
     */
    const bool has_core_gs = _mesa_has_geometry_shaders(ctx);
+   const bool has_tess = _mesa_has_tessellation(ctx);
 
    /* Are uniform buffer objects available in this context?
     */
@@ -717,6 +769,38 @@ get_programiv(struct gl_context *ctx, GLuint program, GLenum pname,
    }
    case GL_PROGRAM_SEPARABLE:
       *params = shProg->SeparateShader;
+      return;
+
+   /* ARB_tessellation_shader */
+   case GL_TESS_CONTROL_OUTPUT_VERTICES:
+      if (!has_tess)
+         break;
+      if (check_tcs_query(ctx, shProg))
+         *params = shProg->TessCtrl.VerticesOut;
+      return;
+   case GL_TESS_GEN_MODE:
+      if (!has_tess)
+         break;
+      if (check_tes_query(ctx, shProg))
+         *params = shProg->TessEval.PrimitiveMode;
+      return;
+   case GL_TESS_GEN_SPACING:
+      if (!has_tess)
+         break;
+      if (check_tes_query(ctx, shProg))
+         *params = shProg->TessEval.Spacing;
+      return;
+   case GL_TESS_GEN_VERTEX_ORDER:
+      if (!has_tess)
+         break;
+      if (check_tes_query(ctx, shProg))
+         *params = shProg->TessEval.VertexOrder;
+      return;
+   case GL_TESS_GEN_POINT_MODE:
+      if (!has_tess)
+         break;
+      if (check_tes_query(ctx, shProg))
+         *params = shProg->TessEval.PointMode;
       return;
    default:
       break;

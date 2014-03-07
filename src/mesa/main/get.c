@@ -149,6 +149,8 @@ enum value_extra {
    EXTRA_EXT_UBO_GS4,
    EXTRA_EXT_ATOMICS_GS4,
    EXTRA_EXT_SHADER_IMAGE_GS4,
+   EXTRA_EXT_ATOMICS_TESS,
+   EXTRA_EXT_SHADER_IMAGE_TESS,
 };
 
 #define NO_EXTRA NULL
@@ -349,6 +351,16 @@ static const int extra_ARB_shader_image_load_store_and_geometry_shader[] = {
    EXTRA_END
 };
 
+static const int extra_ARB_shader_atomic_counters_and_tessellation[] = {
+   EXTRA_EXT_ATOMICS_TESS,
+   EXTRA_END
+};
+
+static const int extra_ARB_shader_image_load_store_and_tessellation[] = {
+   EXTRA_EXT_SHADER_IMAGE_TESS,
+   EXTRA_END
+};
+
 static const int extra_ARB_draw_indirect_es31[] = {
    EXT(ARB_draw_indirect),
    EXTRA_API_ES31,
@@ -401,6 +413,7 @@ EXTRA_EXT(ARB_explicit_uniform_location);
 EXTRA_EXT(ARB_clip_control);
 EXTRA_EXT(EXT_polygon_offset_clamp);
 EXTRA_EXT(ARB_framebuffer_no_attachments);
+EXTRA_EXT(ARB_tessellation_shader);
 
 static const int
 extra_ARB_color_buffer_float_or_glcore[] = {
@@ -1148,6 +1161,16 @@ check_extra(struct gl_context *ctx, const char *func, const struct value_desc *d
          api_check = GL_TRUE;
          api_found = (ctx->Extensions.ARB_shader_image_load_store &&
                       _mesa_has_geometry_shaders(ctx));
+         break;
+      case EXTRA_EXT_ATOMICS_TESS:
+         api_check = GL_TRUE;
+         api_found = ctx->Extensions.ARB_shader_atomic_counters &&
+                     _mesa_has_tessellation(ctx);
+         break;
+      case EXTRA_EXT_SHADER_IMAGE_TESS:
+         api_check = GL_TRUE;
+         api_found = ctx->Extensions.ARB_shader_image_load_store &&
+                     _mesa_has_tessellation(ctx);
          break;
       case EXTRA_END:
 	 break;
