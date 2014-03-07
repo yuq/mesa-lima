@@ -79,6 +79,16 @@ _mesa_init_fragment_program(struct gl_context *ctx,
                             GLenum target, GLuint id);
 
 extern struct gl_program *
+_mesa_init_tess_ctrl_program(struct gl_context *ctx,
+                            struct gl_tess_ctrl_program *prog,
+                            GLenum target, GLuint id);
+
+extern struct gl_program *
+_mesa_init_tess_eval_program(struct gl_context *ctx,
+                            struct gl_tess_eval_program *prog,
+                            GLenum target, GLuint id);
+
+extern struct gl_program *
 _mesa_init_geometry_program(struct gl_context *ctx,
                             struct gl_geometry_program *prog,
                             GLenum target, GLuint id);

@@ -286,6 +286,38 @@ _mesa_init_compute_program(struct gl_context *ctx,
 
 
 /**
+ * Initialize a new tessellation control program object.
+ */
+struct gl_program *
+_mesa_init_tess_ctrl_program(struct gl_context *ctx,
+                             struct gl_tess_ctrl_program *prog,
+                             GLenum target, GLuint id)
+{
+   if (prog) {
+      init_program_struct(&prog->Base, target, id);
+      return &prog->Base;
+   }
+   return NULL;
+}
+
+
+/**
+ * Initialize a new tessellation evaluation program object.
+ */
+struct gl_program *
+_mesa_init_tess_eval_program(struct gl_context *ctx,
+                             struct gl_tess_eval_program *prog,
+                             GLenum target, GLuint id)
+{
+   if (prog) {
+      init_program_struct(&prog->Base, target, id);
+      return &prog->Base;
+   }
+   return NULL;
+}
+
+
+/**
  * Initialize a new geometry program object.
  */
 struct gl_program *
