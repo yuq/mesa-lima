@@ -92,6 +92,9 @@ vec4_instruction::get_src(const struct brw_vec4_prog_data *prog_data, int i)
       case BRW_REGISTER_TYPE_UD:
 	 brw_reg = brw_imm_ud(src[i].fixed_hw_reg.dw1.ud);
 	 break;
+      case BRW_REGISTER_TYPE_VF:
+         brw_reg = brw_imm_vf(src[i].fixed_hw_reg.dw1.ud);
+         break;
       default:
 	 unreachable("not reached");
       }

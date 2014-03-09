@@ -112,6 +112,18 @@ src_reg::src_reg(int32_t i)
    this->fixed_hw_reg.dw1.d = i;
 }
 
+src_reg::src_reg(uint8_t vf0, uint8_t vf1, uint8_t vf2, uint8_t vf3)
+{
+   init();
+
+   this->file = IMM;
+   this->type = BRW_REGISTER_TYPE_VF;
+   this->fixed_hw_reg.dw1.ud = (vf0 <<  0) |
+                               (vf1 <<  8) |
+                               (vf2 << 16) |
+                               (vf3 << 24);
+}
+
 src_reg::src_reg(struct brw_reg reg)
 {
    init();
@@ -1395,6 +1407,13 @@ vec4_visitor::dump_instruction(backend_instruction *be_inst, FILE *file)
             break;
          case BRW_REGISTER_TYPE_UD:
             fprintf(file, "%uU", inst->src[i].fixed_hw_reg.dw1.ud);
+            break;
+         case BRW_REGISTER_TYPE_VF:
+            fprintf(stderr, "[%-gF, %-gF, %-gF, %-gF]",
+                    brw_vf_to_float((inst->src[i].fixed_hw_reg.dw1.ud >>  0) & 0xff),
+                    brw_vf_to_float((inst->src[i].fixed_hw_reg.dw1.ud >>  8) & 0xff),
+                    brw_vf_to_float((inst->src[i].fixed_hw_reg.dw1.ud >> 16) & 0xff),
+                    brw_vf_to_float((inst->src[i].fixed_hw_reg.dw1.ud >> 24) & 0xff));
             break;
          default:
             fprintf(file, "???");
