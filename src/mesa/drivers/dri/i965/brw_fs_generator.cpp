@@ -1255,6 +1255,9 @@ brw_reg_from_fs_reg(fs_reg *reg)
       case BRW_REGISTER_TYPE_UD:
 	 brw_reg = brw_imm_ud(reg->fixed_hw_reg.dw1.ud);
 	 break;
+      case BRW_REGISTER_TYPE_VF:
+         brw_reg = brw_imm_vf(reg->fixed_hw_reg.dw1.ud);
+         break;
       default:
 	 unreachable("not reached");
       }

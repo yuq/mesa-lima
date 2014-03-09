@@ -581,6 +581,18 @@ fs_reg::fs_reg(uint32_t u)
    this->width = 1;
 }
 
+/** Vector float immediate value constructor. */
+fs_reg::fs_reg(uint8_t vf0, uint8_t vf1, uint8_t vf2, uint8_t vf3)
+{
+   init();
+   this->file = IMM;
+   this->type = BRW_REGISTER_TYPE_VF;
+   this->fixed_hw_reg.dw1.ud = (vf0 <<  0) |
+                               (vf1 <<  8) |
+                               (vf2 << 16) |
+                               (vf3 << 24);
+}
+
 /** Fixed brw_reg. */
 fs_reg::fs_reg(struct brw_reg fixed_hw_reg)
 {
@@ -3188,6 +3200,13 @@ fs_visitor::dump_instruction(backend_instruction *be_inst, FILE *file)
             break;
          case BRW_REGISTER_TYPE_UD:
             fprintf(file, "%uu", inst->src[i].fixed_hw_reg.dw1.ud);
+            break;
+         case BRW_REGISTER_TYPE_VF:
+            fprintf(stderr, "[%-gF, %-gF, %-gF, %-gF]",
+                    brw_vf_to_float((inst->src[i].fixed_hw_reg.dw1.ud >>  0) & 0xff),
+                    brw_vf_to_float((inst->src[i].fixed_hw_reg.dw1.ud >>  8) & 0xff),
+                    brw_vf_to_float((inst->src[i].fixed_hw_reg.dw1.ud >> 16) & 0xff),
+                    brw_vf_to_float((inst->src[i].fixed_hw_reg.dw1.ud >> 24) & 0xff));
             break;
          default:
             fprintf(file, "???");
