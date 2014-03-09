@@ -1025,7 +1025,11 @@ imm(FILE *file, struct brw_context *brw, unsigned type, brw_inst *inst)
       format(file, "0x%08xUV", brw_inst_imm_ud(brw, inst));
       break;
    case BRW_HW_REG_IMM_TYPE_VF:
-      format(file, "Vector Float");
+      format(file, "[%-gF, %-gF, %-gF, %-gF]VF",
+             brw_vf_to_float(brw_inst_imm_ud(brw, inst)),
+             brw_vf_to_float(brw_inst_imm_ud(brw, inst) >> 8),
+             brw_vf_to_float(brw_inst_imm_ud(brw, inst) >> 16),
+             brw_vf_to_float(brw_inst_imm_ud(brw, inst) >> 24));
       break;
    case BRW_HW_REG_IMM_TYPE_V:
       format(file, "0x%08xV", brw_inst_imm_ud(brw, inst));
