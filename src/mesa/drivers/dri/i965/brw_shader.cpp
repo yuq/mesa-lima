@@ -85,8 +85,11 @@ brw_lower_packing_builtins(struct brw_context *brw,
            | LOWER_UNPACK_UNORM_2x16
            | LOWER_PACK_SNORM_4x8
            | LOWER_UNPACK_SNORM_4x8
-           | LOWER_PACK_UNORM_4x8
-           | LOWER_UNPACK_UNORM_4x8;
+           | LOWER_PACK_UNORM_4x8;
+
+   if (shader_type == MESA_SHADER_FRAGMENT) {
+      ops |= LOWER_UNPACK_UNORM_4x8;
+   }
 
    if (brw->gen >= 7) {
       /* Gen7 introduced the f32to16 and f16to32 instructions, which can be
