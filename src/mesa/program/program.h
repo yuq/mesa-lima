@@ -157,6 +157,25 @@ _mesa_reference_compprog(struct gl_context *ctx,
                            (struct gl_program *) prog);
 }
 
+
+static inline void
+_mesa_reference_tesscprog(struct gl_context *ctx,
+                         struct gl_tess_ctrl_program **ptr,
+                         struct gl_tess_ctrl_program *prog)
+{
+   _mesa_reference_program(ctx, (struct gl_program **) ptr,
+                           (struct gl_program *) prog);
+}
+
+static inline void
+_mesa_reference_tesseprog(struct gl_context *ctx,
+                         struct gl_tess_eval_program **ptr,
+                         struct gl_tess_eval_program *prog)
+{
+   _mesa_reference_program(ctx, (struct gl_program **) ptr,
+                           (struct gl_program *) prog);
+}
+
 extern struct gl_program *
 _mesa_clone_program(struct gl_context *ctx, const struct gl_program *prog);
 
@@ -165,6 +184,20 @@ _mesa_clone_vertex_program(struct gl_context *ctx,
                            const struct gl_vertex_program *prog)
 {
    return (struct gl_vertex_program *) _mesa_clone_program(ctx, &prog->Base);
+}
+
+static inline struct gl_tess_ctrl_program *
+_mesa_clone_tess_ctrl_program(struct gl_context *ctx,
+                             const struct gl_tess_ctrl_program *prog)
+{
+   return (struct gl_tess_ctrl_program *) _mesa_clone_program(ctx, &prog->Base);
+}
+
+static inline struct gl_tess_eval_program *
+_mesa_clone_tess_eval_program(struct gl_context *ctx,
+                             const struct gl_tess_eval_program *prog)
+{
+   return (struct gl_tess_eval_program *) _mesa_clone_program(ctx, &prog->Base);
 }
 
 static inline struct gl_geometry_program *
@@ -262,7 +295,9 @@ _mesa_shader_stage_to_program(unsigned stage)
 }
 
 
-/* Cast wrappers from gl_program to gl_vertex/geometry/fragment_program */
+/* Cast wrappers from gl_program to derived program types.
+ * (e.g. gl_vertex_program)
+ */
 
 static inline struct gl_fragment_program *
 gl_fragment_program(struct gl_program *prog)
@@ -313,6 +348,31 @@ static inline const struct gl_compute_program *
 gl_compute_program_const(const struct gl_program *prog)
 {
    return (const struct gl_compute_program *) prog;
+}
+
+static inline struct gl_tess_ctrl_program *
+gl_tess_ctrl_program(struct gl_program *prog)
+{
+   return (struct gl_tess_ctrl_program *) prog;
+}
+
+static inline const struct gl_tess_ctrl_program *
+gl_tess_ctrl_program_const(const struct gl_program *prog)
+{
+   return (const struct gl_tess_ctrl_program *) prog;
+}
+
+
+static inline struct gl_tess_eval_program *
+gl_tess_eval_program(struct gl_program *prog)
+{
+   return (struct gl_tess_eval_program *) prog;
+}
+
+static inline const struct gl_tess_eval_program *
+gl_tess_eval_program_const(const struct gl_program *prog)
+{
+   return (const struct gl_tess_eval_program *) prog;
 }
 
 
