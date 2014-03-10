@@ -132,6 +132,7 @@ bool optimize_split_arrays(exec_list *instructions, bool linked);
 bool lower_offset_arrays(exec_list *instructions);
 void optimize_dead_builtin_variables(exec_list *instructions,
                                      enum ir_variable_mode other);
+bool lower_tess_level(gl_shader *shader);
 
 bool lower_vertex_id(gl_shader *shader);
 

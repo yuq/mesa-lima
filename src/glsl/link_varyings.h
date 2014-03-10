@@ -128,7 +128,7 @@ public:
     */
    unsigned num_components() const
    {
-      if (this->is_clip_distance_mesa)
+      if (this->lowered_builtin_array_variable)
          return this->size;
       else
          return this->vector_elements * this->matrix_columns * this->size;
@@ -161,10 +161,15 @@ private:
    unsigned array_subscript;
 
    /**
-    * True if the variable is gl_ClipDistance and the driver lowers
-    * gl_ClipDistance to gl_ClipDistanceMESA.
+    * Non-zero if the variable is gl_ClipDistance, glTessLevelOuter or
+    * gl_TessLevelInner and the driver lowers it to gl_*MESA.
     */
-   bool is_clip_distance_mesa;
+   enum {
+      none,
+      clip_distance,
+      tess_level_outer,
+      tess_level_inner,
+   } lowered_builtin_array_variable;
 
    /**
     * The vertex shader output location that the linker assigned for this

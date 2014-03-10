@@ -328,7 +328,7 @@ tfeedback_decl::init(struct gl_context *ctx, const void *mem_ctx,
 
    this->location = -1;
    this->orig_name = input;
-   this->is_clip_distance_mesa = false;
+   this->lowered_builtin_array_variable = none;
    this->skip_components = 0;
    this->next_buffer_separator = false;
    this->matched_candidate = NULL;
@@ -377,8 +377,15 @@ tfeedback_decl::init(struct gl_context *ctx, const void *mem_ctx,
     */
    if (ctx->Const.ShaderCompilerOptions[MESA_SHADER_VERTEX].LowerClipDistance &&
        strcmp(this->var_name, "gl_ClipDistance") == 0) {
-      this->is_clip_distance_mesa = true;
+      this->lowered_builtin_array_variable = clip_distance;
    }
+
+   if (ctx->Const.LowerTessLevel &&
+       (strcmp(this->var_name, "gl_TessLevelOuter") == 0))
+      this->lowered_builtin_array_variable = tess_level_outer;
+   if (ctx->Const.LowerTessLevel &&
+       (strcmp(this->var_name, "gl_TessLevelInner") == 0))
+      this->lowered_builtin_array_variable = tess_level_inner;
 }
 
 
@@ -425,9 +432,22 @@ tfeedback_decl::assign_location(struct gl_context *ctx,
          this->matched_candidate->type->fields.array->matrix_columns;
       const unsigned vector_elements =
          this->matched_candidate->type->fields.array->vector_elements;
-      unsigned actual_array_size = this->is_clip_distance_mesa ?
-         prog->LastClipDistanceArraySize :
-         this->matched_candidate->type->array_size();
+      unsigned actual_array_size;
+      switch (this->lowered_builtin_array_variable) {
+      case clip_distance:
+         actual_array_size = prog->LastClipDistanceArraySize;
+         break;
+      case tess_level_outer:
+         actual_array_size = 4;
+         break;
+      case tess_level_inner:
+         actual_array_size = 2;
+         break;
+      case none:
+      default:
+         actual_array_size = this->matched_candidate->type->array_size();
+         break;
+      }
 
       if (this->is_subscripted) {
          /* Check array bounds. */
@@ -438,7 +458,7 @@ tfeedback_decl::assign_location(struct gl_context *ctx,
                          actual_array_size);
             return false;
          }
-         unsigned array_elem_size = this->is_clip_distance_mesa ?
+         unsigned array_elem_size = this->lowered_builtin_array_variable ?
             1 : vector_elements * matrix_cols;
          fine_location += array_elem_size * this->array_subscript;
          this->size = 1;
@@ -447,7 +467,7 @@ tfeedback_decl::assign_location(struct gl_context *ctx,
       }
       this->vector_elements = vector_elements;
       this->matrix_columns = matrix_cols;
-      if (this->is_clip_distance_mesa)
+      if (this->lowered_builtin_array_variable)
          this->type = GL_FLOAT;
       else
          this->type = this->matched_candidate->type->fields.array->gl_type;
@@ -570,8 +590,21 @@ const tfeedback_candidate *
 tfeedback_decl::find_candidate(gl_shader_program *prog,
                                hash_table *tfeedback_candidates)
 {
-   const char *name = this->is_clip_distance_mesa
-      ? "gl_ClipDistanceMESA" : this->var_name;
+   const char *name = this->var_name;
+   switch (this->lowered_builtin_array_variable) {
+   case none:
+      name = this->var_name;
+      break;
+   case clip_distance:
+      name = "gl_ClipDistanceMESA";
+      break;
+   case tess_level_outer:
+      name = "gl_TessLevelOuterMESA";
+      break;
+   case tess_level_inner:
+      name = "gl_TessLevelInnerMESA";
+      break;
+   }
    this->matched_candidate = (const tfeedback_candidate *)
       hash_table_find(tfeedback_candidates, name);
    if (!this->matched_candidate) {

@@ -3758,6 +3758,7 @@ struct gl_constants
    GLuint MaxTessGenLevel;
    GLuint MaxTessPatchComponents;
    GLuint MaxTessControlTotalOutputComponents;
+   bool LowerTessLevel; /**< Lower gl_TessLevel* from float[n] to vecn? */
 };
 
 

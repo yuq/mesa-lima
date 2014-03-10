@@ -3324,6 +3324,10 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
          lower_clip_distance(prog->_LinkedShaders[i]);
       }
 
+      if (ctx->Const.LowerTessLevel) {
+         lower_tess_level(prog->_LinkedShaders[i]);
+      }
+
       while (do_common_optimization(prog->_LinkedShaders[i]->ir, true, false,
                                     &ctx->Const.ShaderCompilerOptions[i],
                                     ctx->Const.NativeIntegers))
