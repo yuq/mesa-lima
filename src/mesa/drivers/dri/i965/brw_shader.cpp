@@ -447,6 +447,9 @@ brw_instruction_name(enum opcode op)
    case SHADER_OPCODE_GEN7_SCRATCH_READ:
       return "gen7_scratch_read";
 
+   case VEC4_OPCODE_PACK_BYTES:
+      return "pack_bytes";
+
    case FS_OPCODE_DDX:
       return "ddx";
    case FS_OPCODE_DDY:

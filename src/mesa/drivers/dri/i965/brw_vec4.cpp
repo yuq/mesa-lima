@@ -352,6 +352,12 @@ vec4_visitor::opt_reduce_swizzle()
 
       /* Determine which channels of the sources are read. */
       switch (inst->opcode) {
+      case VEC4_OPCODE_PACK_BYTES:
+         swizzle[0] = 0;
+         swizzle[1] = 1;
+         swizzle[2] = 2;
+         swizzle[3] = 3;
+         break;
       case BRW_OPCODE_DP4:
       case BRW_OPCODE_DPH: /* FINISHME: DPH reads only three channels of src0,
                             *           but all four of src1.
@@ -1016,6 +1022,12 @@ vec4_instruction::reswizzle(int dst_writemask, int swizzle)
        opcode != BRW_OPCODE_DP3 && opcode != BRW_OPCODE_DP2) {
       for (int i = 0; i < 3; i++) {
          if (src[i].file == BAD_FILE || src[i].file == IMM)
+            continue;
+
+         /* Destination write mask doesn't correspond to source swizzle for the
+          * pack_bytes instruction.
+          */
+         if (opcode == VEC4_OPCODE_PACK_BYTES)
             continue;
 
          for (int c = 0; c < 4; c++) {

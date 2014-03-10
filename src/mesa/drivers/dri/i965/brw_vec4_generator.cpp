@@ -1495,6 +1495,41 @@ vec4_generator::generate_code(const cfg_t *cfg)
          generate_unpack_flags(inst, dst);
          break;
 
+      case VEC4_OPCODE_PACK_BYTES: {
+         /* Is effectively:
+          *
+          *   mov(8) dst<16,4,1>:UB src<4,1,0>:UB
+          *
+          * but destinations' only regioning is horizontal stride, so instead we
+          * have to use two instructions:
+          *
+          *   mov(4) dst<1>:UB     src<4,1,0>:UB
+          *   mov(4) dst.16<1>:UB  src.16<4,1,0>:UB
+          *
+          * where they pack the four bytes from the low and high four DW.
+          */
+         dst.type = BRW_REGISTER_TYPE_UB;
+
+         brw_set_default_access_mode(p, BRW_ALIGN_1);
+
+         src[0].type = BRW_REGISTER_TYPE_UB;
+         src[0].vstride = BRW_VERTICAL_STRIDE_4;
+         src[0].width = BRW_WIDTH_1;
+         src[0].hstride = BRW_HORIZONTAL_STRIDE_0;
+         struct brw_inst *insn = brw_MOV(p, dst, src[0]);
+         brw_inst_set_exec_size(brw, insn, BRW_EXECUTE_4);
+         brw_inst_set_no_dd_clear(brw, insn, true);
+
+         src[0].subnr = 16;
+         dst.subnr = 16;
+         insn = brw_MOV(p, dst, src[0]);
+         brw_inst_set_exec_size(brw, insn, BRW_EXECUTE_4);
+         brw_inst_set_no_dd_check(brw, insn, true);
+
+         brw_set_default_access_mode(p, BRW_ALIGN_16);
+         break;
+      }
+
       default:
          if (inst->opcode < (int) ARRAY_SIZE(opcode_descs)) {
             _mesa_problem(&brw->ctx, "Unsupported opcode in `%s' in vec4\n",
