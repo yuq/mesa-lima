@@ -516,6 +516,26 @@ vec4_visitor::emit_unpack_snorm_4x8(const dst_reg &dst, src_reg src0)
 }
 
 void
+vec4_visitor::emit_pack_unorm_4x8(const dst_reg &dst, const src_reg &src0)
+{
+   dst_reg saturated(this, glsl_type::vec4_type);
+   vec4_instruction *inst = emit(MOV(saturated, src0));
+   inst->saturate = true;
+
+   dst_reg scaled(this, glsl_type::vec4_type);
+   emit(MUL(scaled, src_reg(saturated), src_reg(255.0f)));
+
+   dst_reg rounded(this, glsl_type::vec4_type);
+   emit(RNDE(rounded, src_reg(scaled)));
+
+   dst_reg u(this, glsl_type::uvec4_type);
+   emit(MOV(u, src_reg(rounded)));
+
+   src_reg bytes(u);
+   emit(VEC4_OPCODE_PACK_BYTES, dst, bytes);
+}
+
+void
 vec4_visitor::visit_instructions(const exec_list *list)
 {
    foreach_in_list(ir_instruction, ir, list) {
@@ -1802,10 +1822,12 @@ vec4_visitor::visit(ir_expression *ir)
    case ir_unop_unpack_snorm_4x8:
       emit_unpack_snorm_4x8(result_dst, op[0]);
       break;
+   case ir_unop_pack_unorm_4x8:
+      emit_pack_unorm_4x8(result_dst, op[0]);
+      break;
    case ir_unop_pack_snorm_2x16:
    case ir_unop_pack_snorm_4x8:
    case ir_unop_pack_unorm_2x16:
-   case ir_unop_pack_unorm_4x8:
    case ir_unop_unpack_snorm_2x16:
    case ir_unop_unpack_unorm_2x16:
       unreachable("not reached: should be handled by lower_packing_builtins");
