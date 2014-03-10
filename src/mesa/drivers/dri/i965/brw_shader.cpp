@@ -82,13 +82,13 @@ brw_lower_packing_builtins(struct brw_context *brw,
    int ops = LOWER_PACK_SNORM_2x16
            | LOWER_UNPACK_SNORM_2x16
            | LOWER_PACK_UNORM_2x16
-           | LOWER_UNPACK_UNORM_2x16
-           | LOWER_PACK_SNORM_4x8;
+           | LOWER_UNPACK_UNORM_2x16;
 
    if (shader_type == MESA_SHADER_FRAGMENT) {
       ops |= LOWER_UNPACK_UNORM_4x8
            | LOWER_UNPACK_SNORM_4x8
-           | LOWER_PACK_UNORM_4x8;
+           | LOWER_PACK_UNORM_4x8
+           | LOWER_PACK_SNORM_4x8;
    }
 
    if (brw->gen >= 7) {

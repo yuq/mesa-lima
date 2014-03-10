@@ -536,6 +536,28 @@ vec4_visitor::emit_pack_unorm_4x8(const dst_reg &dst, const src_reg &src0)
 }
 
 void
+vec4_visitor::emit_pack_snorm_4x8(const dst_reg &dst, const src_reg &src0)
+{
+   dst_reg max(this, glsl_type::vec4_type);
+   emit_minmax(BRW_CONDITIONAL_G, max, src0, src_reg(-1.0f));
+
+   dst_reg min(this, glsl_type::vec4_type);
+   emit_minmax(BRW_CONDITIONAL_L, min, src_reg(max), src_reg(1.0f));
+
+   dst_reg scaled(this, glsl_type::vec4_type);
+   emit(MUL(scaled, src_reg(min), src_reg(127.0f)));
+
+   dst_reg rounded(this, glsl_type::vec4_type);
+   emit(RNDE(rounded, src_reg(scaled)));
+
+   dst_reg i(this, glsl_type::ivec4_type);
+   emit(MOV(i, src_reg(rounded)));
+
+   src_reg bytes(i);
+   emit(VEC4_OPCODE_PACK_BYTES, dst, bytes);
+}
+
+void
 vec4_visitor::visit_instructions(const exec_list *list)
 {
    foreach_in_list(ir_instruction, ir, list) {
@@ -1825,8 +1847,10 @@ vec4_visitor::visit(ir_expression *ir)
    case ir_unop_pack_unorm_4x8:
       emit_pack_unorm_4x8(result_dst, op[0]);
       break;
-   case ir_unop_pack_snorm_2x16:
    case ir_unop_pack_snorm_4x8:
+      emit_pack_snorm_4x8(result_dst, op[0]);
+      break;
+   case ir_unop_pack_snorm_2x16:
    case ir_unop_pack_unorm_2x16:
    case ir_unop_unpack_snorm_2x16:
    case ir_unop_unpack_unorm_2x16:
