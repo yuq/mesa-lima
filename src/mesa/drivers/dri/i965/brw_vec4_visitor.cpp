@@ -489,6 +489,33 @@ vec4_visitor::emit_unpack_unorm_4x8(const dst_reg &dst, src_reg src0)
 }
 
 void
+vec4_visitor::emit_unpack_snorm_4x8(const dst_reg &dst, src_reg src0)
+{
+   /* Instead of splitting the 32-bit integer, shifting, and ORing it back
+    * together, we can shift it by <0, 8, 16, 24>. The packed integer immediate
+    * is not suitable to generate the shift values, but we can use the packed
+    * vector float and a type-converting MOV.
+    */
+   dst_reg shift(this, glsl_type::uvec4_type);
+   emit(MOV(shift, src_reg(0x00, 0x60, 0x70, 0x78)));
+
+   dst_reg shifted(this, glsl_type::uvec4_type);
+   src0.swizzle = BRW_SWIZZLE_XXXX;
+   emit(SHR(shifted, src0, src_reg(shift)));
+
+   shifted.type = BRW_REGISTER_TYPE_B;
+   dst_reg f(this, glsl_type::vec4_type);
+   emit(MOV(f, src_reg(shifted)));
+
+   dst_reg scaled(this, glsl_type::vec4_type);
+   emit(MUL(scaled, src_reg(f), src_reg(1.0f / 127.0f)));
+
+   dst_reg max(this, glsl_type::vec4_type);
+   emit_minmax(BRW_CONDITIONAL_G, max, src_reg(scaled), src_reg(-1.0f));
+   emit_minmax(BRW_CONDITIONAL_L, dst, src_reg(max), src_reg(1.0f));
+}
+
+void
 vec4_visitor::visit_instructions(const exec_list *list)
 {
    foreach_in_list(ir_instruction, ir, list) {
@@ -1772,12 +1799,14 @@ vec4_visitor::visit(ir_expression *ir)
    case ir_unop_unpack_unorm_4x8:
       emit_unpack_unorm_4x8(result_dst, op[0]);
       break;
+   case ir_unop_unpack_snorm_4x8:
+      emit_unpack_snorm_4x8(result_dst, op[0]);
+      break;
    case ir_unop_pack_snorm_2x16:
    case ir_unop_pack_snorm_4x8:
    case ir_unop_pack_unorm_2x16:
    case ir_unop_pack_unorm_4x8:
    case ir_unop_unpack_snorm_2x16:
-   case ir_unop_unpack_snorm_4x8:
    case ir_unop_unpack_unorm_2x16:
       unreachable("not reached: should be handled by lower_packing_builtins");
    case ir_unop_unpack_half_2x16_split_x:

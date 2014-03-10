@@ -509,6 +509,7 @@ public:
    void emit_pack_half_2x16(dst_reg dst, src_reg src0);
    void emit_unpack_half_2x16(dst_reg dst, src_reg src0);
    void emit_unpack_unorm_4x8(const dst_reg &dst, src_reg src0);
+   void emit_unpack_snorm_4x8(const dst_reg &dst, src_reg src0);
 
    uint32_t gather_channel(ir_texture *ir, uint32_t sampler);
    src_reg emit_mcs_fetch(ir_texture *ir, src_reg coordinate, src_reg sampler);
