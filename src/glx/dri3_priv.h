@@ -138,7 +138,7 @@ struct dri3_screen {
    int fd;
    int is_different_gpu;
 
-   Bool show_fps;
+   int show_fps_interval;
 };
 
 struct dri3_context
@@ -198,6 +198,10 @@ struct dri3_drawable {
    xcb_present_event_t eid;
    xcb_gcontext_t gc;
    xcb_special_event_t *special_event;
+
+   /* LIBGL_SHOW_FPS support */
+   uint64_t previous_ust;
+   unsigned frames;
 };
 
 

@@ -361,12 +361,34 @@ dri3_create_drawable(struct glx_screen *base, XID xDrawable,
    return &pdraw->base;
 }
 
+static void
+show_fps(struct dri3_drawable *draw, uint64_t current_ust)
+{
+   const uint64_t interval =
+      ((struct dri3_screen *) draw->base.psc)->show_fps_interval;
+
+   draw->frames++;
+
+   /* DRI3+Present together uses microseconds for UST. */
+   if (draw->previous_ust + interval * 1000000 <= current_ust) {
+      if (draw->previous_ust) {
+         fprintf(stderr, "libGL: FPS = %.1f\n",
+                 ((uint64_t) draw->frames * 1000000) /
+                 (double)(current_ust - draw->previous_ust));
+      }
+      draw->frames = 0;
+      draw->previous_ust = current_ust;
+   }
+}
+
 /*
  * Process one Present event
  */
 static void
 dri3_handle_present_event(struct dri3_drawable *priv, xcb_present_generic_event_t *ge)
 {
+   struct dri3_screen *psc = (struct dri3_screen *) priv->base.psc;
+
    switch (ge->evtype) {
    case XCB_PRESENT_CONFIGURE_NOTIFY: {
       xcb_present_configure_notify_event_t *ce = (void *) ge;
@@ -395,6 +417,9 @@ dri3_handle_present_event(struct dri3_drawable *priv, xcb_present_generic_event_
             break;
          }
          dri3_update_num_back(priv);
+
+         if (psc->show_fps_interval)
+            show_fps(priv, ce->ust);
       } else {
          priv->recv_msc_serial = ce->serial;
       }
@@ -1830,7 +1855,7 @@ dri3_create_screen(int screen, struct glx_display * priv)
    struct dri3_screen *psc;
    __GLXDRIscreen *psp;
    struct glx_config *configs = NULL, *visuals = NULL;
-   char *driverName, *deviceName;
+   char *driverName, *deviceName, *tmp;
    int i;
 
    psc = calloc(1, sizeof *psc);
@@ -1968,6 +1993,11 @@ dri3_create_screen(int screen, struct glx_display * priv)
 
    free(driverName);
    free(deviceName);
+
+   tmp = getenv("LIBGL_SHOW_FPS");
+   psc->show_fps_interval = tmp ? atoi(tmp) : 0;
+   if (psc->show_fps_interval < 0)
+      psc->show_fps_interval = 0;
 
    return &psc->base;
 
