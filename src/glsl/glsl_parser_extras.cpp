@@ -145,6 +145,9 @@ _mesa_glsl_parse_state::_mesa_glsl_parse_state(struct gl_context *_ctx,
    /* ARB_viewport_array */
    this->Const.MaxViewports = ctx->Const.MaxViewports;
 
+   /* tessellation shader constants */
+   this->Const.MaxPatchVertices = ctx->Const.MaxPatchVertices;
+
    this->current_function = NULL;
    this->toplevel_ir = NULL;
    this->found_return = false;
@@ -224,6 +227,7 @@ _mesa_glsl_parse_state::_mesa_glsl_parse_state(struct gl_context *_ctx,
    this->fs_redeclares_gl_fragcoord_with_no_layout_qualifiers = false;
 
    this->gs_input_prim_type_specified = false;
+   this->tcs_output_vertices_specified = false;
    this->gs_input_size = 0;
    this->in_qualifier = new(this) ast_type_qualifier();
    this->out_qualifier = new(this) ast_type_qualifier();
@@ -389,6 +393,8 @@ _mesa_shader_stage_to_string(unsigned stage)
    case MESA_SHADER_FRAGMENT: return "fragment";
    case MESA_SHADER_GEOMETRY: return "geometry";
    case MESA_SHADER_COMPUTE:  return "compute";
+   case MESA_SHADER_TESS_CTRL: return "tess ctrl";
+   case MESA_SHADER_TESS_EVAL: return "tess eval";
    }
 
    unreachable("Unknown shader stage.");
@@ -406,6 +412,8 @@ _mesa_shader_stage_to_abbrev(unsigned stage)
    case MESA_SHADER_FRAGMENT: return "FS";
    case MESA_SHADER_GEOMETRY: return "GS";
    case MESA_SHADER_COMPUTE:  return "CS";
+   case MESA_SHADER_TESS_CTRL: return "TCS";
+   case MESA_SHADER_TESS_EVAL: return "TES";
    }
 
    unreachable("Unknown shader stage.");
@@ -574,6 +582,7 @@ static const _mesa_glsl_extension _mesa_glsl_supported_extensions[] = {
    EXT(ARB_shader_texture_lod,           true,  false,     ARB_shader_texture_lod),
    EXT(ARB_shading_language_420pack,     true,  false,     ARB_shading_language_420pack),
    EXT(ARB_shading_language_packing,     true,  false,     ARB_shading_language_packing),
+   EXT(ARB_tessellation_shader,          true,  false,     ARB_tessellation_shader),
    EXT(ARB_texture_cube_map_array,       true,  false,     ARB_texture_cube_map_array),
    EXT(ARB_texture_gather,               true,  false,     ARB_texture_gather),
    EXT(ARB_texture_multisample,          true,  false,     ARB_texture_multisample),
@@ -1420,8 +1429,12 @@ static void
 set_shader_inout_layout(struct gl_shader *shader,
 		     struct _mesa_glsl_parse_state *state)
 {
-   if (shader->Stage != MESA_SHADER_GEOMETRY) {
-      /* Should have been prevented by the parser. */
+   /* Should have been prevented by the parser. */
+   if (shader->Stage == MESA_SHADER_TESS_CTRL) {
+      assert(!state->in_qualifier->flags.i);
+   } else if (shader->Stage == MESA_SHADER_TESS_EVAL) {
+      assert(!state->out_qualifier->flags.i);
+   } else if (shader->Stage != MESA_SHADER_GEOMETRY) {
       assert(!state->in_qualifier->flags.i);
       assert(!state->out_qualifier->flags.i);
    }
@@ -1441,6 +1454,28 @@ set_shader_inout_layout(struct gl_shader *shader,
    }
 
    switch (shader->Stage) {
+   case MESA_SHADER_TESS_CTRL:
+      shader->TessCtrl.VerticesOut = 0;
+      if (state->tcs_output_vertices_specified)
+         shader->TessCtrl.VerticesOut = state->out_qualifier->vertices;
+      break;
+   case MESA_SHADER_TESS_EVAL:
+      shader->TessEval.PrimitiveMode = PRIM_UNKNOWN;
+      if (state->in_qualifier->flags.q.prim_type)
+         shader->TessEval.PrimitiveMode = state->in_qualifier->prim_type;
+
+      shader->TessEval.Spacing = 0;
+      if (state->in_qualifier->flags.q.vertex_spacing)
+         shader->TessEval.Spacing = state->in_qualifier->vertex_spacing;
+
+      shader->TessEval.VertexOrder = 0;
+      if (state->in_qualifier->flags.q.ordering)
+         shader->TessEval.VertexOrder = state->in_qualifier->ordering;
+
+      shader->TessEval.PointMode = -1;
+      if (state->in_qualifier->flags.q.point_mode)
+         shader->TessEval.PointMode = state->in_qualifier->point_mode;
+      break;
    case MESA_SHADER_GEOMETRY:
       shader->Geom.VerticesOut = 0;
       if (state->out_qualifier->flags.q.max_vertices)

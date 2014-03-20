@@ -1385,6 +1385,89 @@ layout_qualifier_id:
          }
       }
 
+      /* Layout qualifiers for tessellation evaluation shaders. */
+      if (!$$.flags.i) {
+         struct {
+            const char *s;
+            GLenum e;
+         } map[] = {
+                 /* triangles already parsed by gs-specific code */
+                 { "quads", GL_QUADS },
+                 { "isolines", GL_ISOLINES },
+         };
+         for (unsigned i = 0; i < ARRAY_SIZE(map); i++) {
+            if (match_layout_qualifier($1, map[i].s, state) == 0) {
+               $$.flags.q.prim_type = 1;
+               $$.prim_type = map[i].e;
+               break;
+            }
+         }
+
+         if ($$.flags.i &&
+             !state->ARB_tessellation_shader_enable &&
+             !state->is_version(400, 0)) {
+            _mesa_glsl_error(& @1, state,
+                             "primitive mode qualifier `%s' requires "
+                             "GLSL 4.00 or ARB_tessellation_shader", $1);
+         }
+      }
+      if (!$$.flags.i) {
+         struct {
+            const char *s;
+            GLenum e;
+         } map[] = {
+                 { "equal_spacing", GL_EQUAL },
+                 { "fractional_odd_spacing", GL_FRACTIONAL_ODD },
+                 { "fractional_even_spacing", GL_FRACTIONAL_EVEN },
+         };
+         for (unsigned i = 0; i < ARRAY_SIZE(map); i++) {
+            if (match_layout_qualifier($1, map[i].s, state) == 0) {
+               $$.flags.q.vertex_spacing = 1;
+               $$.vertex_spacing = map[i].e;
+               break;
+            }
+         }
+
+         if ($$.flags.i &&
+             !state->ARB_tessellation_shader_enable &&
+             !state->is_version(400, 0)) {
+            _mesa_glsl_error(& @1, state,
+                             "vertex spacing qualifier `%s' requires "
+                             "GLSL 4.00 or ARB_tessellation_shader", $1);
+         }
+      }
+      if (!$$.flags.i) {
+         if (match_layout_qualifier($1, "cw", state) == 0) {
+            $$.flags.q.ordering = 1;
+            $$.ordering = GL_CW;
+         } else if (match_layout_qualifier($1, "ccw", state) == 0) {
+            $$.flags.q.ordering = 1;
+            $$.ordering = GL_CCW;
+         }
+
+         if ($$.flags.i &&
+             !state->ARB_tessellation_shader_enable &&
+             !state->is_version(400, 0)) {
+            _mesa_glsl_error(& @1, state,
+                             "ordering qualifier `%s' requires "
+                             "GLSL 4.00 or ARB_tessellation_shader", $1);
+         }
+      }
+      if (!$$.flags.i) {
+         if (match_layout_qualifier($1, "point_mode", state) == 0) {
+            $$.flags.q.point_mode = 1;
+            $$.point_mode = true;
+         }
+
+         if ($$.flags.i &&
+             !state->ARB_tessellation_shader_enable &&
+             !state->is_version(400, 0)) {
+            _mesa_glsl_error(& @1, state,
+                             "qualifier `point_mode' requires "
+                             "GLSL 4.00 or ARB_tessellation_shader");
+         }
+      }
+
       if (!$$.flags.i) {
          _mesa_glsl_error(& @1, state, "unrecognized layout identifier "
                           "`%s'", $1);
@@ -1518,6 +1601,30 @@ layout_qualifier_id:
                _mesa_glsl_error(& @3, state,
                                 "GL_ARB_gpu_shader5 invocations "
                                 "qualifier specified", $3);
+            }
+         }
+      }
+
+      /* Layout qualifiers for tessellation control shaders. */
+      if (match_layout_qualifier("vertices", $1, state) == 0) {
+         $$.flags.q.vertices = 1;
+
+         if ($3 <= 0) {
+            _mesa_glsl_error(& @3, state,
+                             "invalid vertices (%d) specified", $3);
+            YYERROR;
+         } else if ($3 > (int)state->Const.MaxPatchVertices) {
+            _mesa_glsl_error(& @3, state,
+                             "vertices (%d) exceeds "
+                             "GL_MAX_PATCH_VERTICES", $3);
+            YYERROR;
+         } else {
+            $$.vertices = $3;
+            if (!state->ARB_tessellation_shader_enable &&
+                !state->is_version(400, 0)) {
+               _mesa_glsl_error(& @1, state,
+                                "vertices qualifier requires GLSL 4.00 or "
+                                "ARB_tessellation_shader");
             }
          }
       }
@@ -2743,11 +2850,8 @@ layout_defaults:
 
    | layout_qualifier OUT_TOK ';'
    {
-      if (state->stage != MESA_SHADER_GEOMETRY) {
-         _mesa_glsl_error(& @1, state,
-                          "out layout qualifiers only valid in "
-                          "geometry shaders");
-      } else {
+      $$ = NULL;
+      if (state->stage == MESA_SHADER_GEOMETRY) {
          if ($1.flags.q.prim_type) {
             /* Make sure this is a valid output primitive type. */
             switch ($1.prim_type) {
@@ -2766,6 +2870,12 @@ layout_defaults:
 
          /* Allow future assigments of global out's stream id value */
          state->out_qualifier->flags.q.explicit_stream = 0;
+      } else if (state->stage == MESA_SHADER_TESS_CTRL) {
+         if (!state->out_qualifier->merge_out_qualifier(& @1, state, $1, $$))
+            YYERROR;
+      } else {
+         _mesa_glsl_error(& @1, state,
+                          "out layout qualifiers only valid in "
+                          "tessellation control or geometry shaders");
       }
-      $$ = NULL;
    }

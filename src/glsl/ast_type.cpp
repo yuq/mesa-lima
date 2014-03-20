@@ -212,6 +212,44 @@ ast_type_qualifier::merge_qualifier(YYLTYPE *loc,
       }
    }
 
+   if (q.flags.q.vertices) {
+      if (this->flags.q.vertices && this->vertices != q.vertices) {
+	 _mesa_glsl_error(loc, state,
+			  "tessellation control shader set conflicting "
+			  "vertices (%d and %d)",
+			  this->vertices, q.vertices);
+	 return false;
+      }
+      this->vertices = q.vertices;
+   }
+
+   if (q.flags.q.vertex_spacing) {
+      if (this->flags.q.vertex_spacing && this->vertex_spacing != q.vertex_spacing) {
+	 _mesa_glsl_error(loc, state,
+			  "conflicting vertex spacing used");
+	 return false;
+      }
+      this->vertex_spacing = q.vertex_spacing;
+   }
+
+   if (q.flags.q.ordering) {
+      if (this->flags.q.ordering && this->ordering != q.ordering) {
+	 _mesa_glsl_error(loc, state,
+			  "conflicting ordering used");
+	 return false;
+      }
+      this->ordering = q.ordering;
+   }
+
+   if (q.flags.q.point_mode) {
+      if (this->flags.q.point_mode && this->point_mode != q.point_mode) {
+	 _mesa_glsl_error(loc, state,
+			  "conflicting point mode used");
+	 return false;
+      }
+      this->point_mode = q.point_mode;
+   }
+
    if ((q.flags.i & ubo_mat_mask.flags.i) != 0)
       this->flags.i &= ~ubo_mat_mask.flags.i;
    if ((q.flags.i & ubo_layout_mask.flags.i) != 0)
@@ -257,6 +295,22 @@ ast_type_qualifier::merge_qualifier(YYLTYPE *loc,
 }
 
 bool
+ast_type_qualifier::merge_out_qualifier(YYLTYPE *loc,
+                                        _mesa_glsl_parse_state *state,
+                                        ast_type_qualifier q,
+                                        ast_node* &node)
+{
+   void *mem_ctx = state;
+   const bool r = this->merge_qualifier(loc, state, q);
+
+   if (state->stage == MESA_SHADER_TESS_CTRL) {
+      node = new(mem_ctx) ast_tcs_output_layout(*loc, q.vertices);
+   }
+
+   return r;
+}
+
+bool
 ast_type_qualifier::merge_in_qualifier(YYLTYPE *loc,
                                        _mesa_glsl_parse_state *state,
                                        ast_type_qualifier q,
@@ -269,6 +323,27 @@ ast_type_qualifier::merge_in_qualifier(YYLTYPE *loc,
    valid_in_mask.flags.i = 0;
 
    switch (state->stage) {
+   case MESA_SHADER_TESS_EVAL:
+      if (q.flags.q.prim_type) {
+         /* Make sure this is a valid input primitive type. */
+         switch (q.prim_type) {
+         case GL_TRIANGLES:
+         case GL_QUADS:
+         case GL_ISOLINES:
+            break;
+         default:
+            _mesa_glsl_error(loc, state,
+                             "invalid tessellation evaluation "
+                             "shader input primitive type");
+            break;
+         }
+      }
+
+      valid_in_mask.flags.q.prim_type = 1;
+      valid_in_mask.flags.q.vertex_spacing = 1;
+      valid_in_mask.flags.q.ordering = 1;
+      valid_in_mask.flags.q.point_mode = 1;
+      break;
    case MESA_SHADER_GEOMETRY:
       if (q.flags.q.prim_type) {
          /* Make sure this is a valid input primitive type. */
@@ -324,7 +399,9 @@ ast_type_qualifier::merge_in_qualifier(YYLTYPE *loc,
       if (q.flags.q.prim_type &&
           this->prim_type != q.prim_type) {
          _mesa_glsl_error(loc, state,
-                          "conflicting input primitive types specified");
+                          "conflicting input primitive %s specified",
+                          state->stage == MESA_SHADER_GEOMETRY ?
+                          "type" : "mode");
       }
    } else if (q.flags.q.prim_type) {
       state->in_qualifier->flags.q.prim_type = 1;
@@ -344,6 +421,39 @@ ast_type_qualifier::merge_in_qualifier(YYLTYPE *loc,
 
    if (q.flags.q.early_fragment_tests) {
       state->fs_early_fragment_tests = true;
+   }
+
+   if (this->flags.q.vertex_spacing) {
+      if (q.flags.q.vertex_spacing &&
+          this->vertex_spacing != q.vertex_spacing) {
+         _mesa_glsl_error(loc, state,
+                          "conflicting vertex spacing specified");
+      }
+   } else if (q.flags.q.vertex_spacing) {
+      this->flags.q.vertex_spacing = 1;
+      this->vertex_spacing = q.vertex_spacing;
+   }
+
+   if (this->flags.q.ordering) {
+      if (q.flags.q.ordering &&
+          this->ordering != q.ordering) {
+         _mesa_glsl_error(loc, state,
+                          "conflicting ordering specified");
+      }
+   } else if (q.flags.q.ordering) {
+      this->flags.q.ordering = 1;
+      this->ordering = q.ordering;
+   }
+
+   if (this->flags.q.point_mode) {
+      if (q.flags.q.point_mode &&
+          this->point_mode != q.point_mode) {
+         _mesa_glsl_error(loc, state,
+                          "conflicting point mode specified");
+      }
+   } else if (q.flags.q.point_mode) {
+      this->flags.q.point_mode = 1;
+      this->point_mode = q.point_mode;
    }
 
    if (create_gs_ast) {
