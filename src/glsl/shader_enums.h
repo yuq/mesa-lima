@@ -152,7 +152,7 @@ typedef enum
     * \name Geometry shader system values
     */
    /*@{*/
-   SYSTEM_VALUE_INVOCATION_ID,
+   SYSTEM_VALUE_INVOCATION_ID,  /**< (Also in Tessellation Control shader) */
    /*@}*/
 
    /**
@@ -163,6 +163,17 @@ typedef enum
    SYSTEM_VALUE_SAMPLE_ID,
    SYSTEM_VALUE_SAMPLE_POS,
    SYSTEM_VALUE_SAMPLE_MASK_IN,
+   /*@}*/
+
+   /**
+    * \name Tessellation Evaluation shader system values
+    */
+   /*@{*/
+   SYSTEM_VALUE_TESS_COORD,
+   SYSTEM_VALUE_VERTICES_IN,    /**< Tessellation vertices in input patch */
+   SYSTEM_VALUE_PRIMITIVE_ID,   /**< (currently not used by GS) */
+   SYSTEM_VALUE_TESS_LEVEL_OUTER, /**< TES input */
+   SYSTEM_VALUE_TESS_LEVEL_INNER, /**< TES input */
    /*@}*/
 
    SYSTEM_VALUE_MAX             /**< Number of values */

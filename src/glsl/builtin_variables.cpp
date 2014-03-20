@@ -343,6 +343,8 @@ public:
    void generate_constants();
    void generate_uniforms();
    void generate_vs_special_vars();
+   void generate_tcs_special_vars();
+   void generate_tes_special_vars();
    void generate_gs_special_vars();
    void generate_fs_special_vars();
    void generate_cs_special_vars();
@@ -872,6 +874,39 @@ builtin_variable_generator::generate_vs_special_vars()
 
 
 /**
+ * Generate variables which only exist in tessellation control shaders.
+ */
+void
+builtin_variable_generator::generate_tcs_special_vars()
+{
+   add_system_value(SYSTEM_VALUE_PRIMITIVE_ID, int_t, "gl_PrimitiveID");
+   add_system_value(SYSTEM_VALUE_VERTICES_IN, int_t, "gl_PatchVerticesIn");
+   add_system_value(SYSTEM_VALUE_INVOCATION_ID, int_t, "gl_InvocationID");
+
+   add_output(VARYING_SLOT_TESS_LEVEL_OUTER,
+                    array(float_t, 4), "gl_TessLevelOuter");
+   add_output(VARYING_SLOT_TESS_LEVEL_INNER,
+                    array(float_t, 2), "gl_TessLevelInner");
+}
+
+
+/**
+ * Generate variables which only exist in tessellation evaluation shaders.
+ */
+void
+builtin_variable_generator::generate_tes_special_vars()
+{
+   add_system_value(SYSTEM_VALUE_PRIMITIVE_ID, int_t, "gl_PrimitiveID");
+   add_system_value(SYSTEM_VALUE_VERTICES_IN, int_t, "gl_PatchVerticesIn");
+   add_system_value(SYSTEM_VALUE_TESS_COORD, vec3_t, "gl_TessCoord");
+   add_system_value(SYSTEM_VALUE_TESS_LEVEL_OUTER, array(float_t, 4),
+                    "gl_TessLevelOuter");
+   add_system_value(SYSTEM_VALUE_TESS_LEVEL_INNER, array(float_t, 2),
+                    "gl_TessLevelInner");
+}
+
+
+/**
  * Generate variables which only exist in geometry shaders.
  */
 void
@@ -994,6 +1029,8 @@ builtin_variable_generator::add_varying(int slot, const glsl_type *type,
                                         const char *name_as_gs_input)
 {
    switch (state->stage) {
+   case MESA_SHADER_TESS_CTRL:
+   case MESA_SHADER_TESS_EVAL:
    case MESA_SHADER_GEOMETRY:
       this->per_vertex_in.add_field(slot, type, name);
       /* FALLTHROUGH */
@@ -1046,13 +1083,40 @@ builtin_variable_generator::generate_varyings()
       }
    }
 
+   /* Section 7.1 (Built-In Language Variables) of the GLSL 4.00 spec
+    * says:
+    *
+    *    "In the tessellation control language, built-in variables are
+    *    intrinsically declared as:
+    *
+    *        in gl_PerVertex {
+    *            vec4 gl_Position;
+    *            float gl_PointSize;
+    *            float gl_ClipDistance[];
+    *        } gl_in[gl_MaxPatchVertices];"
+    */
+   if (state->stage == MESA_SHADER_TESS_CTRL ||
+       state->stage == MESA_SHADER_TESS_EVAL) {
+      const glsl_type *per_vertex_in_type =
+         this->per_vertex_in.construct_interface_instance();
+      add_variable("gl_in", array(per_vertex_in_type, state->Const.MaxPatchVertices),
+                   ir_var_shader_in, -1);
+   }
    if (state->stage == MESA_SHADER_GEOMETRY) {
       const glsl_type *per_vertex_in_type =
          this->per_vertex_in.construct_interface_instance();
       add_variable("gl_in", array(per_vertex_in_type, 0),
                    ir_var_shader_in, -1);
    }
-   if (state->stage == MESA_SHADER_VERTEX || state->stage == MESA_SHADER_GEOMETRY) {
+   if (state->stage == MESA_SHADER_TESS_CTRL) {
+      const glsl_type *per_vertex_out_type =
+         this->per_vertex_out.construct_interface_instance();
+      add_variable("gl_out", array(per_vertex_out_type, 0),
+                   ir_var_shader_out, -1);
+   }
+   if (state->stage == MESA_SHADER_VERTEX ||
+       state->stage == MESA_SHADER_TESS_EVAL ||
+       state->stage == MESA_SHADER_GEOMETRY) {
       const glsl_type *per_vertex_out_type =
          this->per_vertex_out.construct_interface_instance();
       const glsl_struct_field *fields = per_vertex_out_type->fields.structure;
@@ -1086,6 +1150,12 @@ _mesa_glsl_initialize_variables(exec_list *instructions,
    switch (state->stage) {
    case MESA_SHADER_VERTEX:
       gen.generate_vs_special_vars();
+      break;
+   case MESA_SHADER_TESS_CTRL:
+      gen.generate_tcs_special_vars();
+      break;
+   case MESA_SHADER_TESS_EVAL:
+      gen.generate_tes_special_vars();
       break;
    case MESA_SHADER_GEOMETRY:
       gen.generate_gs_special_vars();
