@@ -126,7 +126,8 @@ flatten_named_interface_blocks_declarations::run(exec_list *instructions)
       for (unsigned i = 0; i < iface_t->length; i++) {
          const char * field_name = iface_t->fields.structure[i].name;
          char *iface_field_name =
-            ralloc_asprintf(mem_ctx, "%s.%s.%s",
+            ralloc_asprintf(mem_ctx, "%s %s.%s.%s",
+                            var->data.mode == ir_var_shader_in ? "in" : "out",
                             iface_t->name, var->name, field_name);
 
          ir_variable *found_var =
@@ -219,7 +220,9 @@ flatten_named_interface_blocks_declarations::handle_rvalue(ir_rvalue **rvalue)
 
    if (var->get_interface_type() != NULL) {
       char *iface_field_name =
-         ralloc_asprintf(mem_ctx, "%s.%s.%s", var->get_interface_type()->name,
+         ralloc_asprintf(mem_ctx, "%s %s.%s.%s",
+                         var->data.mode == ir_var_shader_in ? "in" : "out",
+                         var->get_interface_type()->name,
                          var->name, ir->field);
       /* Find the variable in the set of flattened interface blocks */
       ir_variable *found_var =
