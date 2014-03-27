@@ -88,6 +88,7 @@ EXT(ARB_point_parameters                    , EXT_point_parameters              
 EXT(ARB_point_sprite                        , ARB_point_sprite                       , GLL, GLC,  x ,  x , 2003)
 EXT(ARB_program_interface_query             , dummy_true                             , GLL, GLC,  x ,  x , 2012)
 EXT(ARB_provoking_vertex                    , EXT_provoking_vertex                   , GLL, GLC,  x ,  x , 2009)
+EXT(ARB_query_buffer_object                 , ARB_query_buffer_object                , GLL, GLC,  x ,  x , 2013)
 EXT(ARB_robustness                          , dummy_true                             , GLL, GLC,  x ,  x , 2010)
 EXT(ARB_sample_shading                      , ARB_sample_shading                     , GLL, GLC,  x ,  x , 2009)
 EXT(ARB_sampler_objects                     , dummy_true                             , GLL, GLC,  x ,  x , 2009)
