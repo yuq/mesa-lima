@@ -121,6 +121,10 @@ get_buffer_target(struct gl_context *ctx, GLenum target)
       return &ctx->CopyReadBuffer;
    case GL_COPY_WRITE_BUFFER:
       return &ctx->CopyWriteBuffer;
+   case GL_QUERY_BUFFER:
+      if (_mesa_has_ARB_query_buffer_object(ctx))
+         return &ctx->QueryBuffer;
+      break;
    case GL_DRAW_INDIRECT_BUFFER:
       if ((ctx->API == API_OPENGL_CORE &&
            ctx->Extensions.ARB_draw_indirect) ||
@@ -900,6 +904,9 @@ _mesa_init_buffer_objects( struct gl_context *ctx )
    _mesa_reference_buffer_object(ctx, &ctx->DispatchIndirectBuffer,
 				 ctx->Shared->NullBufferObj);
 
+   _mesa_reference_buffer_object(ctx, &ctx->QueryBuffer,
+                                 ctx->Shared->NullBufferObj);
+
    for (i = 0; i < MAX_COMBINED_UNIFORM_BUFFERS; i++) {
       _mesa_reference_buffer_object(ctx,
 				    &ctx->UniformBufferBindings[i].BufferObject,
@@ -947,6 +954,8 @@ _mesa_free_buffer_objects( struct gl_context *ctx )
    _mesa_reference_buffer_object(ctx, &ctx->ParameterBuffer, NULL);
 
    _mesa_reference_buffer_object(ctx, &ctx->DispatchIndirectBuffer, NULL);
+
+   _mesa_reference_buffer_object(ctx, &ctx->QueryBuffer, NULL);
 
    for (i = 0; i < MAX_COMBINED_UNIFORM_BUFFERS; i++) {
       _mesa_reference_buffer_object(ctx,
@@ -1378,6 +1387,11 @@ _mesa_DeleteBuffers(GLsizei n, const GLuint *ids)
 
          if (ctx->ExternalVirtualMemoryBuffer == bufObj) {
             _mesa_BindBuffer(GL_EXTERNAL_VIRTUAL_MEMORY_BUFFER_AMD, 0);
+         }
+
+         /* unbind query buffer binding point */
+         if (ctx->QueryBuffer == bufObj) {
+            _mesa_BindBuffer(GL_QUERY_BUFFER, 0);
          }
 
          /* The ID is immediately freed for re-use */
