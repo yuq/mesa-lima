@@ -439,6 +439,7 @@ EXTRA_EXT(ARB_shader_image_load_store);
 EXTRA_EXT(ARB_viewport_array);
 EXTRA_EXT(ARB_compute_shader);
 EXTRA_EXT(ARB_gpu_shader5);
+EXTRA_EXT(ARB_query_buffer_object);
 EXTRA_EXT2(ARB_transform_feedback3, ARB_gpu_shader5);
 EXTRA_EXT(INTEL_performance_query);
 EXTRA_EXT(ARB_explicit_uniform_location);
@@ -1036,6 +1037,10 @@ find_custom_value(struct gl_context *ctx, const struct value_desc *d, union valu
    /* GL_ARB_shader_storage_buffer_object */
    case GL_SHADER_STORAGE_BUFFER_BINDING:
       v->value_int = ctx->ShaderStorageBuffer->Name;
+      break;
+   /* GL_ARB_query_buffer_object */
+   case GL_QUERY_BUFFER_BINDING:
+      v->value_int = ctx->QueryBuffer->Name;
       break;
    /* GL_ARB_timer_query */
    case GL_TIMESTAMP:
