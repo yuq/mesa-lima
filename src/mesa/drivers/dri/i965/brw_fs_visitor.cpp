@@ -296,6 +296,59 @@ fs_visitor::try_emit_saturate(ir_expression *ir)
 }
 
 bool
+fs_visitor::try_emit_line(ir_expression *ir)
+{
+   /* LINE's src0 must be of type float. */
+   if (ir->type != glsl_type::float_type)
+      return false;
+
+   ir_rvalue *nonmul = ir->operands[1];
+   ir_expression *mul = ir->operands[0]->as_expression();
+
+   if (!mul || mul->operation != ir_binop_mul) {
+      nonmul = ir->operands[0];
+      mul = ir->operands[1]->as_expression();
+
+      if (!mul || mul->operation != ir_binop_mul)
+         return false;
+   }
+
+   ir_constant *const_add = nonmul->as_constant();
+   if (!const_add)
+      return false;
+
+   int add_operand_vf = brw_float_to_vf(const_add->value.f[0]);
+   if (add_operand_vf == -1)
+      return false;
+
+   ir_rvalue *non_const_mul = mul->operands[1];
+   ir_constant *const_mul = mul->operands[0]->as_constant();
+   if (!const_mul) {
+      const_mul = mul->operands[1]->as_constant();
+
+      if (!const_mul)
+         return false;
+
+      non_const_mul = mul->operands[0];
+   }
+
+   int mul_operand_vf = brw_float_to_vf(const_mul->value.f[0]);
+   if (mul_operand_vf == -1)
+      return false;
+
+   non_const_mul->accept(this);
+   fs_reg src1 = this->result;
+
+   fs_reg src0 = fs_reg(this, ir->type);
+   emit(BRW_OPCODE_MOV, src0,
+        fs_reg((uint8_t)mul_operand_vf, 0, 0, (uint8_t)add_operand_vf));
+
+   this->result = fs_reg(this, ir->type);
+   emit(BRW_OPCODE_LINE, this->result, src0, src1);
+   return true;
+}
+
+bool
 fs_visitor::try_emit_mad(ir_expression *ir)
 {
    /* 3-src instructions were introduced in gen6. */
@@ -482,6 +535,8 @@ fs_visitor::visit(ir_expression *ir)
    /* Deal with the real oddball stuff first */
    switch (ir->operation) {
    case ir_binop_add:
+      if (brw->gen <= 5 && try_emit_line(ir))
+         return;
       if (try_emit_mad(ir))
          return;
       break;
