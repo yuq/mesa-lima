@@ -1598,6 +1598,10 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
 	 brw_MACH(p, dst, src[0], src[1]);
 	 break;
 
+      case BRW_OPCODE_LINE:
+         brw_LINE(p, dst, src[0], src[1]);
+         break;
+
       case BRW_OPCODE_MAD:
          assert(brw->gen >= 6);
 	 brw_set_default_access_mode(p, BRW_ALIGN_16);
