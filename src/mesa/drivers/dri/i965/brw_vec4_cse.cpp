@@ -48,6 +48,7 @@ static bool
 is_expression(const vec4_instruction *const inst)
 {
    switch (inst->opcode) {
+   case BRW_OPCODE_MOV:
    case BRW_OPCODE_SEL:
    case BRW_OPCODE_NOT:
    case BRW_OPCODE_AND:
@@ -154,11 +155,16 @@ vec4_visitor::opt_cse_local(bblock_t *block)
          }
 
          if (!found) {
-            /* Our first sighting of this expression.  Create an entry. */
-            aeb_entry *entry = ralloc(cse_ctx, aeb_entry);
-            entry->tmp = src_reg(); /* file will be BAD_FILE */
-            entry->generator = inst;
-            aeb.push_tail(entry);
+            if (inst->opcode != BRW_OPCODE_MOV ||
+                (inst->opcode == BRW_OPCODE_MOV &&
+                 inst->src[0].file == IMM &&
+                 inst->src[0].type == BRW_REGISTER_TYPE_VF)) {
+               /* Our first sighting of this expression.  Create an entry. */
+               aeb_entry *entry = ralloc(cse_ctx, aeb_entry);
+               entry->tmp = src_reg(); /* file will be BAD_FILE */
+               entry->generator = inst;
+               aeb.push_tail(entry);
+            }
          } else {
             /* This is at least our second sighting of this expression.
              * If we don't have a temporary already, make one.
