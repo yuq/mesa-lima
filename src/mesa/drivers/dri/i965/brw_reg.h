@@ -881,6 +881,10 @@ brw_indirect(unsigned addr_subnr, int offset)
    return ptr;
 }
 
+/* brw_packed_float.c */
+int brw_float_to_vf(float f);
+float brw_vf_to_float(unsigned char vf);
+
 #ifdef __cplusplus
 }
 #endif
