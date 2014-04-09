@@ -82,6 +82,7 @@ struct ruvd_decoder {
 	unsigned			bs_size;
 
 	struct rvid_buffer		dpb;
+	bool				use_legacy;
 };
 
 /* flush IB to the hardware */
@@ -107,8 +108,16 @@ static void send_cmd(struct ruvd_decoder *dec, unsigned cmd,
 
 	reloc_idx = dec->ws->cs_add_reloc(dec->cs, cs_buf, usage, domain,
 					  RADEON_PRIO_MIN);
-	set_reg(dec, RUVD_GPCOM_VCPU_DATA0, off);
-	set_reg(dec, RUVD_GPCOM_VCPU_DATA1, reloc_idx * 4);
+	if (!dec->use_legacy) {
+		uint64_t addr;
+		addr = dec->ws->buffer_get_virtual_address(cs_buf);
+		addr = addr + off;
+		set_reg(dec, RUVD_GPCOM_VCPU_DATA0, addr);
+		set_reg(dec, RUVD_GPCOM_VCPU_DATA1, addr >> 32);
+	} else {
+		set_reg(dec, RUVD_GPCOM_VCPU_DATA0, off);
+		set_reg(dec, RUVD_GPCOM_VCPU_DATA1, reloc_idx * 4);
+	}
 	set_reg(dec, RUVD_GPCOM_VCPU_CMD, cmd << 1);
 }
 
@@ -791,6 +800,9 @@ struct pipe_video_codec *ruvd_create_decoder(struct pipe_context *context,
 
 	if (!dec)
 		return NULL;
+
+	if (info.drm_major < 3)
+		dec->use_legacy = TRUE;
 
 	dec->base = *templ;
 	dec->base.context = context;
