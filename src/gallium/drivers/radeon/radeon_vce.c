@@ -396,6 +396,8 @@ struct pipe_video_codec *rvce_create_encoder(struct pipe_context *context,
 	if (!enc)
 		return NULL;
 
+	if (rscreen->info.drm_major == 3)
+		enc->use_vm = true;
 	if ((rscreen->info.drm_major > 2) || (rscreen->info.drm_minor >= 42))
 		enc->use_vui = true;
 
@@ -484,4 +486,26 @@ bool rvce_is_fw_version_supported(struct r600_common_screen *rscreen)
 	return rscreen->info.vce_fw_version == FW_40_2_2 ||
 		rscreen->info.vce_fw_version == FW_50_0_1 ||
 		rscreen->info.vce_fw_version == FW_50_1_2;
+}
+
+/**
+ * Add the buffer as relocation to the current command submission
+ */
+void rvce_add_buffer(struct rvce_encoder *enc, struct radeon_winsys_cs_handle *buf,
+                     enum radeon_bo_usage usage, enum radeon_bo_domain domain,
+                     uint32_t offset)
+{
+	int reloc_idx;
+
+	reloc_idx = enc->ws->cs_add_reloc(enc->cs, buf, usage, domain, RADEON_PRIO_MIN);
+	if (enc->use_vm) {
+		uint64_t addr;
+		addr = enc->ws->buffer_get_virtual_address(buf);
+		addr = addr + offset;
+		RVCE_CS(addr >> 32);
+		RVCE_CS(addr);
+	} else {
+		RVCE_CS(reloc_idx * 4);
+		RVCE_CS(offset);
+	}
 }

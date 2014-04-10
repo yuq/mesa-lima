@@ -96,12 +96,12 @@ static void encode(struct rvce_encoder *enc)
 	task_info(enc, 0x00000003);
 
 	RVCE_BEGIN(0x05000001); // context buffer
-	RVCE_READWRITE(enc->cpb.res->cs_buf, enc->cpb.res->domains); // encodeContextAddressHi
+	RVCE_READWRITE(enc->cpb.res->cs_buf, enc->cpb.res->domains, 0); // encodeContextAddressHi
 	RVCE_CS(0x00000000); // encodeContextAddressLo
 	RVCE_END();
 
 	RVCE_BEGIN(0x05000004); // video bitstream buffer
-	RVCE_WRITE(enc->bs_handle, RADEON_DOMAIN_GTT); // videoBitstreamRingAddressHi
+	RVCE_WRITE(enc->bs_handle, RADEON_DOMAIN_GTT, 0); // videoBitstreamRingAddressHi
 	RVCE_CS(0x00000000); // videoBitstreamRingAddressLo
 	RVCE_CS(enc->bs_size); // videoBitstreamRingSize
 	RVCE_END();
@@ -114,9 +114,9 @@ static void encode(struct rvce_encoder *enc)
 	RVCE_CS(0x00000000); // insertAUD
 	RVCE_CS(0x00000000); // endOfSequence
 	RVCE_CS(0x00000000); // endOfStream
-	RVCE_READ(enc->handle, RADEON_DOMAIN_VRAM); // inputPictureLumaAddressHi
+	RVCE_READ(enc->handle, RADEON_DOMAIN_VRAM, 0); // inputPictureLumaAddressHi
 	RVCE_CS(enc->luma->level[0].offset); // inputPictureLumaAddressLo
-	RVCE_READ(enc->handle, RADEON_DOMAIN_VRAM); // inputPictureChromaAddressHi
+	RVCE_READ(enc->handle, RADEON_DOMAIN_VRAM, 0); // inputPictureChromaAddressHi
 	RVCE_CS(enc->chroma->level[0].offset); // inputPictureChromaAddressLo
 	RVCE_CS(align(enc->luma->npix_y, 16)); // encInputFrameYPitch
 	RVCE_CS(enc->luma->level[0].pitch_bytes); // encInputPicLumaPitch
