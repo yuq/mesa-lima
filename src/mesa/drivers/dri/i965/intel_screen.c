@@ -1266,6 +1266,7 @@ set_max_gl_versions(struct intel_screen *screen)
    __DRIscreen *psp = screen->driScrnPriv;
 
    switch (screen->devinfo->gen) {
+   case 9:
    case 8:
    case 7:
    case 6:
