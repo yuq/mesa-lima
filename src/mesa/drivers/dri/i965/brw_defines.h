@@ -1914,6 +1914,7 @@ enum brw_message_target {
 
 #define _3DSTATE_RASTER                         0x7850 /* GEN8+ */
 /* DW1 */
+# define GEN9_RASTER_VIEWPORT_Z_FAR_CLIP_TEST_ENABLE    (1 << 26)
 # define GEN8_RASTER_FRONT_WINDING_CCW                  (1 << 21)
 # define GEN8_RASTER_CULL_BOTH                          (0 << 16)
 # define GEN8_RASTER_CULL_NONE                          (1 << 16)
@@ -1924,6 +1925,7 @@ enum brw_message_target {
 # define GEN8_RASTER_LINE_AA_ENABLE                     (1 << 2)
 # define GEN8_RASTER_SCISSOR_ENABLE                     (1 << 1)
 # define GEN8_RASTER_VIEWPORT_Z_CLIP_TEST_ENABLE        (1 << 0)
+# define GEN9_RASTER_VIEWPORT_Z_NEAR_CLIP_TEST_ENABLE   (1 << 0)
 
 /* Gen8 BLEND_STATE */
 /* DW0 */

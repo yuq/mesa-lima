@@ -291,8 +291,14 @@ upload_raster(struct brw_context *brw)
       dw1 |= GEN8_RASTER_SCISSOR_ENABLE;
 
    /* _NEW_TRANSFORM */
-   if (!ctx->Transform.DepthClamp)
-      dw1 |= GEN8_RASTER_VIEWPORT_Z_CLIP_TEST_ENABLE;
+   if (!ctx->Transform.DepthClamp) {
+      if (brw->gen >= 9) {
+         dw1 |= GEN9_RASTER_VIEWPORT_Z_NEAR_CLIP_TEST_ENABLE |
+                GEN9_RASTER_VIEWPORT_Z_FAR_CLIP_TEST_ENABLE;
+      } else {
+         dw1 |= GEN8_RASTER_VIEWPORT_Z_CLIP_TEST_ENABLE;
+      }
+   }
 
    BEGIN_BATCH(5);
    OUT_BATCH(_3DSTATE_RASTER << 16 | (5 - 2));
