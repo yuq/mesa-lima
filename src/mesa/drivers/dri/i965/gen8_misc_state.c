@@ -31,8 +31,12 @@
  */
 static void upload_state_base_address(struct brw_context *brw)
 {
-   BEGIN_BATCH(16);
-   OUT_BATCH(CMD_STATE_BASE_ADDRESS << 16 | (16 - 2));
+   perf_debug("Missing MOCS setup for STATE_BASE_ADDRESS.");
+
+   int pkt_len = brw->gen >= 9 ? 19 : 16;
+
+   BEGIN_BATCH(pkt_len);
+   OUT_BATCH(CMD_STATE_BASE_ADDRESS << 16 | (pkt_len - 2));
    /* General state base address: stateless DP read/write requests */
    OUT_BATCH(BDW_MOCS_WB << 4 | 1);
    OUT_BATCH(0);
@@ -59,6 +63,11 @@ static void upload_state_base_address(struct brw_context *brw)
    OUT_BATCH(0xfffff001);
    /* Instruction access upper bound */
    OUT_BATCH(ALIGN(brw->cache.bo->size, 4096) | 1);
+   if (brw->gen >= 9) {
+      OUT_BATCH(1);
+      OUT_BATCH(0);
+      OUT_BATCH(0);
+   }
    ADVANCE_BATCH();
 
    brw->state.dirty.brw |= BRW_NEW_STATE_BASE_ADDRESS;
