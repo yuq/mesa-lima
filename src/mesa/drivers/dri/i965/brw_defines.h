@@ -2034,6 +2034,11 @@ enum brw_message_target {
 # define GEN8_WM_DS_BF_STENCIL_TEST_MASK_SHIFT          8
 # define GEN8_WM_DS_BF_STENCIL_WRITE_MASK_MASK          INTEL_MASK(7, 0)
 # define GEN8_WM_DS_BF_STENCIL_WRITE_MASK_SHIFT         0
+/* DW3 */
+# define GEN9_WM_DS_STENCIL_REF_MASK                    INTEL_MASK(15, 8)
+# define GEN9_WM_DS_STENCIL_REF_SHIFT                   8
+# define GEN9_WM_DS_BF_STENCIL_REF_MASK                 INTEL_MASK(7, 0)
+# define GEN9_WM_DS_BF_STENCIL_REF_SHIFT                0
 
 #define _3DSTATE_PS_EXTRA                       0x784F /* GEN8+ */
 /* DW1 */
