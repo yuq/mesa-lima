@@ -81,6 +81,16 @@ horizontal_alignment(struct intel_mipmap_tree *mt)
    }
 }
 
+static uint32_t *
+allocate_surface_state(struct brw_context *brw, uint32_t *out_offset)
+{
+   int dwords = 13;
+   uint32_t *surf = brw_state_batch(brw, AUB_TRACE_SURFACE_STATE,
+                                    dwords * 4, 64, out_offset);
+   memset(surf, 0, dwords * 4);
+   return surf;
+}
+
 static void
 gen8_emit_buffer_surface_state(struct brw_context *brw,
                                uint32_t *out_offset,
@@ -92,9 +102,7 @@ gen8_emit_buffer_surface_state(struct brw_context *brw,
                                unsigned mocs,
                                bool rw)
 {
-   uint32_t *surf = brw_state_batch(brw, AUB_TRACE_SURFACE_STATE,
-                                    13 * 4, 64, out_offset);
-   memset(surf, 0, 13 * 4);
+   uint32_t *surf = allocate_surface_state(brw, out_offset);
 
    surf[0] = BRW_SURFACE_BUFFER << BRW_SURFACE_TYPE_SHIFT |
              surface_format << BRW_SURFACE_FORMAT_SHIFT |
@@ -169,8 +177,7 @@ gen8_update_texture_surface(struct gl_context *ctx,
 
    uint32_t tex_format = translate_tex_format(brw, format, sampler->sRGBDecode);
 
-   uint32_t *surf = brw_state_batch(brw, AUB_TRACE_SURFACE_STATE,
-                                    13 * 4, 64, surf_offset);
+   uint32_t *surf = allocate_surface_state(brw, surf_offset);
 
    surf[0] = translate_tex_target(tObj->Target) << BRW_SURFACE_TYPE_SHIFT |
              tex_format << BRW_SURFACE_FORMAT_SHIFT |
@@ -283,9 +290,8 @@ gen8_update_null_renderbuffer_surface(struct brw_context *brw, unsigned unit)
    uint32_t surf_index =
       brw->wm.prog_data->binding_table.render_target_start + unit;
 
-   uint32_t *surf = brw_state_batch(brw, AUB_TRACE_SURFACE_STATE, 13 * 4, 64,
-                                    &brw->wm.base.surf_offset[surf_index]);
-   memset(surf, 0, 13 * 4);
+   uint32_t *surf =
+      allocate_surface_state(brw, &brw->wm.base.surf_offset[surf_index]);
 
    surf[0] = BRW_SURFACE_NULL << BRW_SURFACE_TYPE_SHIFT |
              BRW_SURFACEFORMAT_B8G8R8A8_UNORM << BRW_SURFACE_FORMAT_SHIFT |
@@ -367,8 +373,8 @@ gen8_update_renderbuffer_surface(struct brw_context *brw,
       aux_mode = GEN8_SURFACE_AUX_MODE_MCS;
    }
 
-   uint32_t *surf = brw_state_batch(brw, AUB_TRACE_SURFACE_STATE, 13 * 4, 64,
-                                    &brw->wm.base.surf_offset[surf_index]);
+   uint32_t *surf =
+      allocate_surface_state(brw, &brw->wm.base.surf_offset[surf_index]);
 
    surf[0] = (surf_type << BRW_SURFACE_TYPE_SHIFT) |
              (is_array ? GEN7_SURFACE_IS_ARRAY : 0) |
