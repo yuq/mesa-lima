@@ -2678,6 +2678,8 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
                                     &ctx->Const.ShaderCompilerOptions[i],
                                     ctx->Const.NativeIntegers))
 	 ;
+
+      lower_const_arrays_to_uniforms(prog->_LinkedShaders[i]->ir);
    }
 
    /* Check and validate stream emissions in geometry shaders */
