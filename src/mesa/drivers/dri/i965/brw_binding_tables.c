@@ -61,7 +61,7 @@ brw_upload_binding_table(struct brw_context *brw,
 
    if (prog_data->binding_table.size_bytes == 0) {
       /* There are no surfaces; skip making the binding table altogether. */
-      if (stage_state->bind_bo_offset == 0)
+      if (stage_state->bind_bo_offset == 0 && brw->gen < 9)
          return;
 
       stage_state->bind_bo_offset = 0;
