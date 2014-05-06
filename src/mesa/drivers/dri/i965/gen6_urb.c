@@ -119,9 +119,9 @@ gen6_upload_urb( struct brw_context *brw )
     * doesn't exist on Gen6).  So for now we just do a full pipeline flush as
     * a workaround.
     */
-   if (brw->urb.gen6_gs_previously_active && !gs_present)
+   if (brw->urb.gs_present && !gs_present)
       intel_batchbuffer_emit_mi_flush(brw);
-   brw->urb.gen6_gs_previously_active = gs_present;
+   brw->urb.gs_present = gs_present;
 }
 
 const struct brw_tracked_state gen6_urb = {

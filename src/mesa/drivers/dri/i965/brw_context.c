@@ -814,7 +814,7 @@ brwCreateContext(gl_api api,
    brw->max_gtt_map_object_size = gtt_size / 4;
 
    if (brw->gen == 6)
-      brw->urb.gen6_gs_previously_active = false;
+      brw->urb.gs_present = false;
 
    brw->prim_restart.in_progress = false;
    brw->prim_restart.enable_cut_index = false;

@@ -1169,6 +1169,7 @@ struct brw_context
     */
    struct {
       GLuint vsize;		/* vertex size plus header in urb registers */
+      GLuint gsize;	        /* GS output size in urb registers */
       GLuint csize;		/* constant buffer size in urb registers */
       GLuint sfsize;		/* setup data size in urb registers */
 
@@ -1191,10 +1192,10 @@ struct brw_context
       GLuint cs_start;
       GLuint size; /* Hardware URB size, in KB. */
 
-      /* gen6: True if the most recently sent _3DSTATE_URB message allocated
+      /* True if the most recently sent _3DSTATE_URB message allocated
        * URB space for the GS.
        */
-      bool gen6_gs_previously_active;
+      bool gs_present;
    } urb;
 
 
