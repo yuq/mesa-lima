@@ -98,7 +98,7 @@ fs_visitor::visit(ir_variable *ir)
       } else if (!strcmp(ir->name, "gl_FrontFacing")) {
 	 reg = emit_frontfacing_interpolation();
       } else {
-         reg = new(this->mem_ctx) fs_reg(this, ir->type);
+         reg = new(this->mem_ctx) fs_reg(vgrf(ir->type));
          emit_general_interpolation(*reg, ir->name, ir->type,
                                     (glsl_interp_qualifier) ir->data.interpolation,
                                     ir->data.location, ir->data.centroid,
@@ -108,7 +108,7 @@ fs_visitor::visit(ir_variable *ir)
       hash_table_insert(this->variable_ht, reg, ir);
       return;
    } else if (ir->data.mode == ir_var_shader_out) {
-      reg = new(this->mem_ctx) fs_reg(this, ir->type);
+      reg = new(this->mem_ctx) fs_reg(vgrf(ir->type));
 
       if (stage == MESA_SHADER_VERTEX) {
 	 int vector_elements =
@@ -210,7 +210,7 @@ fs_visitor::visit(ir_variable *ir)
    }
 
    if (!reg)
-      reg = new(this->mem_ctx) fs_reg(this, ir->type);
+      reg = new(this->mem_ctx) fs_reg(vgrf(ir->type));
 
    hash_table_insert(this->variable_ht, reg, ir);
 }
@@ -279,7 +279,7 @@ fs_visitor::visit(ir_dereference_array *ir)
       ir->array_index->accept(this);
 
       fs_reg index_reg;
-      index_reg = fs_reg(this, glsl_type::int_type);
+      index_reg = vgrf(glsl_type::int_type);
       emit(BRW_OPCODE_MUL, index_reg, this->result, fs_reg(element_size));
 
       if (src.reladdr) {
@@ -298,9 +298,9 @@ fs_visitor::emit_lrp(const fs_reg &dst, const fs_reg &x, const fs_reg &y,
 {
    if (brw->gen < 6) {
       /* We can't use the LRP instruction.  Emit x*(1-a) + y*a. */
-      fs_reg y_times_a           = fs_reg(this, glsl_type::float_type);
-      fs_reg one_minus_a         = fs_reg(this, glsl_type::float_type);
-      fs_reg x_times_one_minus_a = fs_reg(this, glsl_type::float_type);
+      fs_reg y_times_a           = vgrf(glsl_type::float_type);
+      fs_reg one_minus_a         = vgrf(glsl_type::float_type);
+      fs_reg x_times_one_minus_a = vgrf(glsl_type::float_type);
 
       emit(MUL(y_times_a, y, a));
 
@@ -408,11 +408,11 @@ fs_visitor::try_emit_line(ir_expression *ir)
    non_const_mul->accept(this);
    fs_reg src1 = this->result;
 
-   fs_reg src0 = fs_reg(this, ir->type);
+   fs_reg src0 = vgrf(ir->type);
    emit(BRW_OPCODE_MOV, src0,
         fs_reg((uint8_t)mul_operand_vf, 0, 0, (uint8_t)add_operand_vf));
 
-   this->result = fs_reg(this, ir->type);
+   this->result = vgrf(ir->type);
    emit(BRW_OPCODE_LINE, this->result, src0, src1);
    return true;
 }
@@ -477,7 +477,7 @@ fs_visitor::try_emit_mad(ir_expression *ir)
    if (mul_abs)
       src2.negate = false;
 
-   this->result = fs_reg(this, ir->type);
+   this->result = vgrf(ir->type);
    emit(BRW_OPCODE_MAD, this->result, src0, src1, src2);
 
    return true;
@@ -520,13 +520,13 @@ fs_visitor::emit_interpolate_expression(ir_expression *ir)
 
    /* 1. collect interpolation factors */
 
-   fs_reg dst_x = fs_reg(this, glsl_type::get_instance(ir->type->base_type, 2, 1));
+   fs_reg dst_x = vgrf(glsl_type::get_instance(ir->type->base_type, 2, 1));
    fs_reg dst_y = offset(dst_x, 1);
 
    /* for most messages, we need one reg of ignored data; the hardware requires mlen==1
     * even when there is no payload. in the per-slot offset case, we'll replace this with
     * the proper source data. */
-   fs_reg src = fs_reg(this, glsl_type::float_type);
+   fs_reg src = vgrf(glsl_type::float_type);
    int mlen = 1;     /* one reg unless overriden */
    int reg_width = dispatch_width / 8;
    fs_inst *inst;
@@ -555,10 +555,10 @@ fs_visitor::emit_interpolate_expression(ir_expression *ir)
       } else {
          /* pack the operands: hw wants offsets as 4 bit signed ints */
          ir->operands[1]->accept(this);
-         src = fs_reg(this, glsl_type::ivec2_type);
+         src = vgrf(glsl_type::ivec2_type);
          fs_reg src2 = src;
          for (int i = 0; i < 2; i++) {
-            fs_reg temp = fs_reg(this, glsl_type::float_type);
+            fs_reg temp = vgrf(glsl_type::float_type);
             emit(MUL(temp, this->result, fs_reg(16.0f)));
             emit(MOV(src2, temp));  /* float to int */
 
@@ -600,7 +600,7 @@ fs_visitor::emit_interpolate_expression(ir_expression *ir)
 
    /* 2. emit linterp */
 
-   fs_reg res(this, ir->type);
+   fs_reg res = vgrf(ir->type);
    this->result = res;
 
    for (int i = 0; i < ir->type->vector_elements; i++) {
@@ -642,7 +642,7 @@ fs_visitor::visit(ir_expression *ir)
 
       emit_bool_to_cond_code(ir->operands[0]);
 
-      this->result = fs_reg(this, ir->type);
+      this->result = vgrf(ir->type);
       inst = emit(SEL(this->result, op[1], op[2]));
       inst->predicate = BRW_PREDICATE_NORMAL;
       return;
@@ -680,7 +680,7 @@ fs_visitor::visit(ir_expression *ir)
    /* Storage for our result.  If our result goes into an assignment, it will
     * just get copy-propagated out, so no worries.
     */
-   this->result = fs_reg(this, ir->type);
+   this->result = vgrf(ir->type);
 
    switch (ir->operation) {
    case ir_unop_logic_not:
@@ -984,7 +984,7 @@ fs_visitor::visit(ir_expression *ir)
       emit(RNDZ(this->result, op[0]));
       break;
    case ir_unop_ceil: {
-         fs_reg tmp = fs_reg(this, ir->type);
+         fs_reg tmp = vgrf(ir->type);
          op[0].negate = !op[0].negate;
          emit(RNDD(tmp, op[0]));
          tmp.negate = true;
@@ -1037,7 +1037,7 @@ fs_visitor::visit(ir_expression *ir)
       emit(CBIT(this->result, op[0]));
       break;
    case ir_unop_find_msb:
-      temp = fs_reg(this, glsl_type::uint_type);
+      temp = vgrf(glsl_type::uint_type);
       emit(FBH(temp, op[0]));
 
       /* FBH counts from the MSB side, while GLSL's findMSB() wants the count
@@ -1121,7 +1121,7 @@ fs_visitor::visit(ir_expression *ir)
           * per-channel and add the base UBO index; the generator will select
           * a value from any live channel.
           */
-         surf_index = fs_reg(this, glsl_type::uint_type);
+         surf_index = vgrf(glsl_type::uint_type);
          emit(ADD(surf_index, op[0],
                   fs_reg(stage_prog_data->binding_table.ubo_start)))
             ->force_writemask_all = true;
@@ -1135,7 +1135,7 @@ fs_visitor::visit(ir_expression *ir)
       }
 
       if (const_offset) {
-         fs_reg packed_consts = fs_reg(this, glsl_type::float_type);
+         fs_reg packed_consts = vgrf(glsl_type::float_type);
          packed_consts.type = result.type;
 
          fs_reg const_offset_reg = fs_reg(const_offset->value.u[0] & ~15);
@@ -1163,7 +1163,7 @@ fs_visitor::visit(ir_expression *ir)
          }
       } else {
          /* Turn the byte offset into a dword offset. */
-         fs_reg base_offset = fs_reg(this, glsl_type::int_type);
+         fs_reg base_offset = vgrf(glsl_type::int_type);
          emit(SHR(base_offset, op[1], fs_reg(2)));
 
          for (int i = 0; i < ir->type->vector_elements; i++) {
@@ -1655,7 +1655,7 @@ fs_visitor::emit_texture_gen7(ir_texture_opcode op, fs_reg dst,
 
    fs_reg *sources = ralloc_array(mem_ctx, fs_reg, MAX_SAMPLER_MESSAGE_SIZE);
    for (int i = 0; i < MAX_SAMPLER_MESSAGE_SIZE; i++) {
-      sources[i] = fs_reg(this, glsl_type::float_type);
+      sources[i] = vgrf(glsl_type::float_type);
    }
    int length = 0;
 
@@ -1956,7 +1956,7 @@ fs_visitor::rescale_texcoord(fs_reg coordinate, int coord_components,
 	     * for clamping, but we don't care enough to make a new
 	     * parameter type, so just invert back.
 	     */
-	    fs_reg limit = fs_reg(this, glsl_type::float_type);
+	    fs_reg limit = vgrf(glsl_type::float_type);
 	    emit(MOV(limit, i == 0 ? scale_x : scale_y));
 	    emit(SHADER_OPCODE_RCP, limit, limit);
 
@@ -1987,12 +1987,12 @@ fs_visitor::emit_mcs_fetch(fs_reg coordinate, int components, fs_reg sampler)
    int reg_width = dispatch_width / 8;
    fs_reg payload = fs_reg(GRF, virtual_grf_alloc(components * reg_width),
                            BRW_REGISTER_TYPE_F);
-   fs_reg dest = fs_reg(this, glsl_type::uvec4_type);
+   fs_reg dest = vgrf(glsl_type::uvec4_type);
    fs_reg *sources = ralloc_array(mem_ctx, fs_reg, components);
 
    /* parameters are: u, v, r; missing parameters are treated as zero */
    for (int i = 0; i < components; i++) {
-      sources[i] = fs_reg(this, glsl_type::float_type);
+      sources[i] = vgrf(glsl_type::float_type);
       emit(MOV(retype(sources[i], BRW_REGISTER_TYPE_D), coordinate));
       coordinate = offset(coordinate, 1);
    }
@@ -2036,7 +2036,7 @@ fs_visitor::emit_texture(ir_texture_opcode op,
       int swiz = GET_SWZ(tex->swizzles[sampler], gather_component);
       if (swiz == SWIZZLE_ZERO || swiz == SWIZZLE_ONE) {
 
-         fs_reg res = fs_reg(this, glsl_type::vec4_type);
+         fs_reg res = vgrf(glsl_type::vec4_type);
          this->result = res;
 
          for (int i=0; i<4; i++) {
@@ -2058,7 +2058,7 @@ fs_visitor::emit_texture(ir_texture_opcode op,
    /* Writemasking doesn't eliminate channels on SIMD8 texture
     * samples, so don't worry about them.
     */
-   fs_reg dst(this, glsl_type::get_instance(dest_type->base_type, 4, 1));
+   fs_reg dst = vgrf(glsl_type::get_instance(dest_type->base_type, 4, 1));
 
    if (brw->gen >= 7) {
       inst = emit_texture_gen7(op, dst, coordinate, coord_components,
@@ -2093,7 +2093,7 @@ fs_visitor::emit_texture(ir_texture_opcode op,
    /* fixup #layers for cube map arrays */
    if (op == ir_txs && is_cube_array) {
       fs_reg depth = offset(dst, 2);
-      fs_reg fixed_depth = fs_reg(this, glsl_type::int_type);
+      fs_reg fixed_depth = vgrf(glsl_type::int_type);
       emit_math(SHADER_OPCODE_INT_QUOTIENT, fixed_depth, depth, fs_reg(6));
 
       fs_reg *fixed_payload = ralloc_array(mem_ctx, fs_reg, inst->regs_written);
@@ -2142,7 +2142,7 @@ fs_visitor::visit(ir_texture *ir)
 
       /* Emit code to evaluate the actual indexing expression */
       nonconst_sampler_index->accept(this);
-      fs_reg temp(this, glsl_type::uint_type);
+      fs_reg temp = vgrf(glsl_type::uint_type);
       emit(ADD(temp, this->result, fs_reg(sampler)))
             ->force_writemask_all = true;
       sampler_reg = temp;
@@ -2342,7 +2342,7 @@ fs_visitor::swizzle_result(ir_texture_opcode op, int dest_components,
    if (dest_components == 1) {
       /* Ignore DEPTH_TEXTURE_MODE swizzling. */
    } else if (tex->swizzles[sampler] != SWIZZLE_NOOP) {
-      fs_reg swizzled_result = fs_reg(this, glsl_type::vec4_type);
+      fs_reg swizzled_result = vgrf(glsl_type::vec4_type);
       swizzled_result.type = orig_val.type;
 
       for (int i = 0; i < 4; i++) {
@@ -2374,7 +2374,7 @@ fs_visitor::visit(ir_swizzle *ir)
       return;
    }
 
-   fs_reg result = fs_reg(this, ir->type);
+   fs_reg result = vgrf(ir->type);
    this->result = result;
 
    for (unsigned int i = 0; i < ir->type->vector_elements; i++) {
@@ -2442,7 +2442,7 @@ fs_visitor::visit(ir_constant *ir)
     * Make reg constant so that it doesn't get accidentally modified along the
     * way.  Yes, I actually had this problem. :(
     */
-   const fs_reg reg(this, ir->type);
+   const fs_reg reg = vgrf(ir->type);
    fs_reg dst_reg = reg;
 
    if (ir->type->is_array()) {
@@ -2536,7 +2536,7 @@ fs_visitor::emit_bool_to_cond_code(ir_rvalue *ir)
 
    case ir_binop_logic_xor:
       if (brw->gen <= 5) {
-         fs_reg temp = fs_reg(this, ir->type);
+         fs_reg temp = vgrf(ir->type);
          emit(XOR(temp, op[0], op[1]));
          inst = emit(AND(reg_null_d, temp, fs_reg(1)));
       } else {
@@ -2547,7 +2547,7 @@ fs_visitor::emit_bool_to_cond_code(ir_rvalue *ir)
 
    case ir_binop_logic_or:
       if (brw->gen <= 5) {
-         fs_reg temp = fs_reg(this, ir->type);
+         fs_reg temp = vgrf(ir->type);
          emit(OR(temp, op[0], op[1]));
          inst = emit(AND(reg_null_d, temp, fs_reg(1)));
       } else {
@@ -2558,7 +2558,7 @@ fs_visitor::emit_bool_to_cond_code(ir_rvalue *ir)
 
    case ir_binop_logic_and:
       if (brw->gen <= 5) {
-         fs_reg temp = fs_reg(this, ir->type);
+         fs_reg temp = vgrf(ir->type);
          emit(AND(temp, op[0], op[1]));
          inst = emit(AND(reg_null_d, temp, fs_reg(1)));
       } else {
@@ -2608,7 +2608,7 @@ fs_visitor::emit_bool_to_cond_code(ir_rvalue *ir)
       inst->conditional_mod = BRW_CONDITIONAL_NZ;
 
       /* Select which boolean to return. */
-      fs_reg temp(this, expr->operands[1]->type);
+      fs_reg temp = vgrf(expr->operands[1]->type);
       inst = emit(SEL(temp, op[1], op[2]));
       inst->predicate = BRW_PREDICATE_NORMAL;
 
@@ -2655,13 +2655,13 @@ fs_visitor::emit_if_gen6(ir_if *ir)
          return;
 
       case ir_binop_logic_or:
-         temp = fs_reg(this, glsl_type::bool_type);
+         temp = vgrf(glsl_type::bool_type);
          emit(OR(temp, op[0], op[1]));
          emit(IF(temp, fs_reg(0), BRW_CONDITIONAL_NZ));
          return;
 
       case ir_binop_logic_and:
-         temp = fs_reg(this, glsl_type::bool_type);
+         temp = vgrf(glsl_type::bool_type);
          emit(AND(temp, op[0], op[1]));
          emit(IF(temp, fs_reg(0), BRW_CONDITIONAL_NZ));
          return;
@@ -2698,7 +2698,7 @@ fs_visitor::emit_if_gen6(ir_if *ir)
          inst->conditional_mod = BRW_CONDITIONAL_NZ;
 
          /* Select which boolean to use as the result. */
-         fs_reg temp(this, expr->operands[1]->type);
+         fs_reg temp = vgrf(expr->operands[1]->type);
          inst = emit(SEL(temp, op[1], op[2]));
          inst->predicate = BRW_PREDICATE_NORMAL;
 
@@ -2779,7 +2779,7 @@ fs_visitor::try_replace_with_sel()
        */
       fs_reg src0(then_mov->src[0]);
       if (src0.file == IMM) {
-         src0 = fs_reg(this, glsl_type::float_type);
+         src0 = vgrf(glsl_type::float_type);
          src0.type = then_mov->src[0].type;
          emit(MOV(src0, then_mov->src[0]));
       }
@@ -2881,13 +2881,13 @@ fs_visitor::visit_atomic_counter_intrinsic(ir_call *ir)
                           location->data.binding);
 
    /* Calculate the surface offset */
-   fs_reg offset(this, glsl_type::uint_type);
+   fs_reg offset = vgrf(glsl_type::uint_type);
    ir_dereference_array *deref_array = deref->as_dereference_array();
 
    if (deref_array) {
       deref_array->array_index->accept(this);
 
-      fs_reg tmp(this, glsl_type::uint_type);
+      fs_reg tmp = vgrf(glsl_type::uint_type);
       emit(MUL(tmp, this->result, fs_reg(ATOMIC_COUNTER_SIZE)));
       emit(ADD(offset, tmp, fs_reg(location->data.atomic.offset)));
    } else {
@@ -3000,19 +3000,19 @@ fs_visitor::emit_untyped_atomic(unsigned atomic_op, unsigned surf_index,
    length++;
 
    /* Set the atomic operation offset. */
-   sources[1] = fs_reg(this, glsl_type::uint_type);
+   sources[1] = vgrf(glsl_type::uint_type);
    emit(MOV(sources[1], offset));
    length++;
 
    /* Set the atomic operation arguments. */
    if (src0.file != BAD_FILE) {
-      sources[length] = fs_reg(this, glsl_type::uint_type);
+      sources[length] = vgrf(glsl_type::uint_type);
       emit(MOV(sources[length], src0));
       length++;
    }
 
    if (src1.file != BAD_FILE) {
-      sources[length] = fs_reg(this, glsl_type::uint_type);
+      sources[length] = vgrf(glsl_type::uint_type);
       emit(MOV(sources[length], src1));
       length++;
    }
@@ -3054,7 +3054,7 @@ fs_visitor::emit_untyped_surface_read(unsigned surf_index, fs_reg dst,
    }
 
    /* Set the surface read offset. */
-   sources[1] = fs_reg(this, glsl_type::uint_type);
+   sources[1] = vgrf(glsl_type::uint_type);
    emit(MOV(sources[1], offset));
 
    int mlen = 1 + reg_width;
@@ -3157,8 +3157,8 @@ void
 fs_visitor::emit_interpolation_setup_gen4()
 {
    this->current_annotation = "compute pixel centers";
-   this->pixel_x = fs_reg(this, glsl_type::uint_type);
-   this->pixel_y = fs_reg(this, glsl_type::uint_type);
+   this->pixel_x = vgrf(glsl_type::uint_type);
+   this->pixel_y = vgrf(glsl_type::uint_type);
    this->pixel_x.type = BRW_REGISTER_TYPE_UW;
    this->pixel_y.type = BRW_REGISTER_TYPE_UW;
 
@@ -3168,14 +3168,14 @@ fs_visitor::emit_interpolation_setup_gen4()
    this->current_annotation = "compute pixel deltas from v0";
    if (brw->has_pln) {
       this->delta_x[BRW_WM_PERSPECTIVE_PIXEL_BARYCENTRIC] =
-         fs_reg(this, glsl_type::vec2_type);
+         vgrf(glsl_type::vec2_type);
       this->delta_y[BRW_WM_PERSPECTIVE_PIXEL_BARYCENTRIC] =
          offset(this->delta_x[BRW_WM_PERSPECTIVE_PIXEL_BARYCENTRIC], 1);
    } else {
       this->delta_x[BRW_WM_PERSPECTIVE_PIXEL_BARYCENTRIC] =
-         fs_reg(this, glsl_type::float_type);
+         vgrf(glsl_type::float_type);
       this->delta_y[BRW_WM_PERSPECTIVE_PIXEL_BARYCENTRIC] =
-         fs_reg(this, glsl_type::float_type);
+         vgrf(glsl_type::float_type);
    }
    emit(ADD(this->delta_x[BRW_WM_PERSPECTIVE_PIXEL_BARYCENTRIC],
             this->pixel_x, fs_reg(negate(brw_vec1_grf(1, 0)))));
@@ -3186,13 +3186,13 @@ fs_visitor::emit_interpolation_setup_gen4()
    /* Compute wpos.w.  It's always in our setup, since it's needed to
     * interpolate the other attributes.
     */
-   this->wpos_w = fs_reg(this, glsl_type::float_type);
+   this->wpos_w = vgrf(glsl_type::float_type);
    emit(FS_OPCODE_LINTERP, wpos_w,
         this->delta_x[BRW_WM_PERSPECTIVE_PIXEL_BARYCENTRIC],
         this->delta_y[BRW_WM_PERSPECTIVE_PIXEL_BARYCENTRIC],
 	interp_reg(VARYING_SLOT_POS, 3));
    /* Compute the pixel 1/W value from wpos.w. */
-   this->pixel_w = fs_reg(this, glsl_type::float_type);
+   this->pixel_w = vgrf(glsl_type::float_type);
    emit_math(SHADER_OPCODE_RCP, this->pixel_w, wpos_w);
    this->current_annotation = NULL;
 }
@@ -3205,8 +3205,8 @@ fs_visitor::emit_interpolation_setup_gen6()
 
    /* If the pixel centers end up used, the setup is the same as for gen4. */
    this->current_annotation = "compute pixel centers";
-   fs_reg int_pixel_x = fs_reg(this, glsl_type::uint_type);
-   fs_reg int_pixel_y = fs_reg(this, glsl_type::uint_type);
+   fs_reg int_pixel_x = vgrf(glsl_type::uint_type);
+   fs_reg int_pixel_y = vgrf(glsl_type::uint_type);
    int_pixel_x.type = BRW_REGISTER_TYPE_UW;
    int_pixel_y.type = BRW_REGISTER_TYPE_UW;
    emit(ADD(int_pixel_x,
@@ -3220,14 +3220,14 @@ fs_visitor::emit_interpolation_setup_gen6()
     * to turn the integer pixel centers into floats for their actual
     * use.
     */
-   this->pixel_x = fs_reg(this, glsl_type::float_type);
-   this->pixel_y = fs_reg(this, glsl_type::float_type);
+   this->pixel_x = vgrf(glsl_type::float_type);
+   this->pixel_y = vgrf(glsl_type::float_type);
    emit(MOV(this->pixel_x, int_pixel_x));
    emit(MOV(this->pixel_y, int_pixel_y));
 
    this->current_annotation = "compute pos.w";
    this->pixel_w = fs_reg(brw_vec8_grf(payload.source_w_reg, 0));
-   this->wpos_w = fs_reg(this, glsl_type::float_type);
+   this->wpos_w = vgrf(glsl_type::float_type);
    emit_math(SHADER_OPCODE_RCP, this->wpos_w, this->pixel_w);
 
    for (int i = 0; i < BRW_WM_BARYCENTRIC_INTERP_MODE_COUNT; ++i) {
@@ -3458,7 +3458,7 @@ fs_visitor::emit_single_fb_write(fs_reg color0, fs_reg color1,
 	 no16("Missing support for simd16 depth writes on gen6\n");
       }
 
-      sources[length] = fs_reg(this, glsl_type::float_type);
+      sources[length] = vgrf(glsl_type::float_type);
       if (prog->OutputsWritten & BITFIELD64_BIT(FRAG_RESULT_DEPTH)) {
 	 /* Hand over gl_FragDepth. */
 	 assert(this->frag_depth.file != BAD_FILE);
@@ -3472,7 +3472,7 @@ fs_visitor::emit_single_fb_write(fs_reg color0, fs_reg color1,
    }
 
    if (payload.dest_depth_reg) {
-      sources[length] = fs_reg(this, glsl_type::float_type);
+      sources[length] = vgrf(glsl_type::float_type);
       emit(MOV(sources[length],
                fs_reg(brw_vec8_grf(payload.dest_depth_reg, 0))));
       length++;
@@ -3615,8 +3615,8 @@ void fs_visitor::compute_clip_distance()
 
    current_annotation = "user clip distances";
 
-   this->outputs[VARYING_SLOT_CLIP_DIST0] = fs_reg(this, glsl_type::vec4_type);
-   this->outputs[VARYING_SLOT_CLIP_DIST1] = fs_reg(this, glsl_type::vec4_type);
+   this->outputs[VARYING_SLOT_CLIP_DIST0] = vgrf(glsl_type::vec4_type);
+   this->outputs[VARYING_SLOT_CLIP_DIST1] = vgrf(glsl_type::vec4_type);
 
    for (int i = 0; i < key->nr_userclip_plane_consts; i++) {
       fs_reg u = userplane[i];
@@ -3802,7 +3802,7 @@ fs_visitor::resolve_ud_negate(fs_reg *reg)
        !reg->negate)
       return;
 
-   fs_reg temp = fs_reg(this, glsl_type::uint_type);
+   fs_reg temp = vgrf(glsl_type::uint_type);
    emit(MOV(temp, *reg));
    *reg = temp;
 }
@@ -3821,8 +3821,8 @@ fs_visitor::resolve_bool_comparison(ir_rvalue *rvalue, fs_reg *reg)
    if (rvalue->type != glsl_type::bool_type)
       return;
 
-   fs_reg and_result = fs_reg(this, glsl_type::bool_type);
-   fs_reg neg_result = fs_reg(this, glsl_type::bool_type);
+   fs_reg and_result = vgrf(glsl_type::bool_type);
+   fs_reg neg_result = vgrf(glsl_type::bool_type);
    emit(AND(and_result, *reg, fs_reg(1)));
    emit(MOV(neg_result, negate(and_result)));
    *reg = neg_result;

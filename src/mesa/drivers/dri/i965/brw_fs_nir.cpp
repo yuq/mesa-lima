@@ -858,7 +858,7 @@ fs_visitor::nir_emit_alu(nir_alu_instr *instr)
    }
    case nir_op_fceil: {
       op[0].negate = !op[0].negate;
-      fs_reg temp = fs_reg(this, glsl_type::vec4_type);
+      fs_reg temp = vgrf(glsl_type::vec4_type);
       emit_percomp(RNDD(temp, op[0]), instr->dest.write_mask);
       temp.negate = true;
       fs_inst *inst = MOV(result, temp);
@@ -1393,7 +1393,7 @@ fs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
           * per-channel and add the base UBO index; the generator will select
           * a value from any live channel.
           */
-         surf_index = fs_reg(this, glsl_type::uint_type);
+         surf_index = vgrf(glsl_type::uint_type);
          emit(ADD(surf_index, get_nir_src(instr->src[0]),
                   fs_reg(stage_prog_data->binding_table.ubo_start)))
             ->force_writemask_all = true;
@@ -1408,7 +1408,7 @@ fs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
 
       if (has_indirect) {
          /* Turn the byte offset into a dword offset. */
-         fs_reg base_offset = fs_reg(this, glsl_type::int_type);
+         fs_reg base_offset = vgrf(glsl_type::int_type);
          emit(SHR(base_offset, retype(get_nir_src(instr->src[1]),
                                  BRW_REGISTER_TYPE_D),
                   fs_reg(2)));
@@ -1418,7 +1418,7 @@ fs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
             emit(VARYING_PULL_CONSTANT_LOAD(offset(dest, i), surf_index,
                                             base_offset, vec4_offset + i));
       } else {
-         fs_reg packed_consts = fs_reg(this, glsl_type::float_type);
+         fs_reg packed_consts = vgrf(glsl_type::float_type);
          packed_consts.type = dest.type;
 
          fs_reg const_offset_reg((unsigned) instr->const_index[0] & ~15);
@@ -1494,7 +1494,7 @@ fs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
        * requires mlen==1 even when there is no payload. in the per-slot
        * offset case, we'll replace this with the proper source data.
        */
-      fs_reg src(this, glsl_type::float_type);
+      fs_reg src = vgrf(glsl_type::float_type);
       int mlen = 1;     /* one reg unless overriden */
       fs_inst *inst;
 
@@ -1523,13 +1523,13 @@ fs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
             inst = emit(FS_OPCODE_INTERPOLATE_AT_SHARED_OFFSET, dst_x, src,
                         fs_reg(off_x | (off_y << 4)));
          } else {
-            src = fs_reg(this, glsl_type::ivec2_type);
+            src = vgrf(glsl_type::ivec2_type);
             fs_reg offset_src = retype(get_nir_src(instr->src[0]),
                                        BRW_REGISTER_TYPE_F);
             for (int i = 0; i < 2; i++) {
-               fs_reg temp(this, glsl_type::float_type);
+               fs_reg temp = vgrf(glsl_type::float_type);
                emit(MUL(temp, offset(offset_src, i), fs_reg(16.0f)));
-               fs_reg itemp(this, glsl_type::int_type);
+               fs_reg itemp = vgrf(glsl_type::int_type);
                emit(MOV(itemp, temp));  /* float to int */
 
                /* Clamp the upper end of the range to +7/16.
@@ -1691,7 +1691,7 @@ fs_visitor::nir_emit_texture(nir_tex_instr *instr)
          brw_mark_surface_used(prog_data, max_used);
 
          /* Emit code to evaluate the actual indexing expression */
-         sampler_reg = fs_reg(this, glsl_type::uint_type);
+         sampler_reg = vgrf(glsl_type::uint_type);
          emit(ADD(sampler_reg, src, fs_reg(sampler)))
              ->force_writemask_all = true;
          break;

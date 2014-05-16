@@ -406,7 +406,7 @@ fs_visitor::VARYING_PULL_CONSTANT_LOAD(const fs_reg &dst,
     * CSE can later notice that those loads are all the same and eliminate
     * the redundant ones.
     */
-   fs_reg vec4_offset = fs_reg(this, glsl_type::int_type);
+   fs_reg vec4_offset = vgrf(glsl_type::int_type);
    instructions.push_tail(ADD(vec4_offset,
                               varying_offset, fs_reg(const_offset & ~3)));
 
@@ -778,9 +778,9 @@ fs_visitor::emit_shader_time_write(enum shader_time_shader_type type,
 
    fs_reg payload;
    if (dispatch_width == 8)
-      payload = fs_reg(this, glsl_type::uvec2_type);
+      payload = vgrf(glsl_type::uvec2_type);
    else
-      payload = fs_reg(this, glsl_type::uint_type);
+      payload = vgrf(glsl_type::uint_type);
 
    emit(new(mem_ctx) fs_inst(SHADER_OPCODE_SHADER_TIME_ADD,
                              fs_reg(), payload, offset, value));
@@ -1032,6 +1032,14 @@ fs_visitor::virtual_grf_alloc(int size)
    return virtual_grf_count++;
 }
 
+fs_reg
+fs_visitor::vgrf(const glsl_type *const type)
+{
+   int reg_width = dispatch_width / 8;
+   return fs_reg(GRF, virtual_grf_alloc(type_size(type) * reg_width),
+                 brw_type_for_base_type(type), dispatch_width);
+}
+
 /** Fixed HW reg constructor. */
 fs_reg::fs_reg(enum register_file file, int reg)
 {
@@ -1075,20 +1083,6 @@ fs_reg::fs_reg(enum register_file file, int reg, enum brw_reg_type type,
    this->reg = reg;
    this->type = type;
    this->width = width;
-}
-
-/** Automatic reg constructor. */
-fs_reg::fs_reg(fs_visitor *v, const struct glsl_type *type)
-{
-   init();
-   int reg_width = v->dispatch_width / 8;
-
-   this->file = GRF;
-   this->reg = v->virtual_grf_alloc(v->type_size(type) * reg_width);
-   this->reg_offset = 0;
-   this->type = brw_type_for_base_type(type);
-   this->width = v->dispatch_width;
-   assert(this->width == 8 || this->width == 16);
 }
 
 fs_reg *
@@ -1208,7 +1202,7 @@ fs_visitor::emit_fragcoord_interpolation(bool pixel_center_integer,
 {
    assert(stage == MESA_SHADER_FRAGMENT);
    brw_wm_prog_key *key = (brw_wm_prog_key*) this->key;
-   fs_reg *reg = new(this->mem_ctx) fs_reg(this, glsl_type::vec4_type);
+   fs_reg *reg = new(this->mem_ctx) fs_reg(vgrf(glsl_type::vec4_type));
    fs_reg wpos = *reg;
    bool flip = !origin_upper_left ^ key->render_to_fbo;
 
@@ -1394,7 +1388,7 @@ fs_visitor::emit_general_interpolation(fs_reg attr, const char *name,
 fs_reg *
 fs_visitor::emit_frontfacing_interpolation()
 {
-   fs_reg *reg = new(this->mem_ctx) fs_reg(this, glsl_type::bool_type);
+   fs_reg *reg = new(this->mem_ctx) fs_reg(vgrf(glsl_type::bool_type));
 
    if (brw->gen >= 6) {
       /* Bit 15 of g0.0 is 0 if the polygon is front facing. We want to create
@@ -1461,10 +1455,10 @@ fs_visitor::emit_samplepos_setup()
    assert(brw->gen >= 6);
 
    this->current_annotation = "compute sample position";
-   fs_reg *reg = new(this->mem_ctx) fs_reg(this, glsl_type::vec2_type);
+   fs_reg *reg = new(this->mem_ctx) fs_reg(vgrf(glsl_type::vec2_type));
    fs_reg pos = *reg;
-   fs_reg int_sample_x = fs_reg(this, glsl_type::int_type);
-   fs_reg int_sample_y = fs_reg(this, glsl_type::int_type);
+   fs_reg int_sample_x = vgrf(glsl_type::int_type);
+   fs_reg int_sample_y = vgrf(glsl_type::int_type);
 
    /* WM will be run in MSDISPMODE_PERSAMPLE. So, only one of SIMD8 or SIMD16
     * mode will be enabled.
@@ -1512,11 +1506,11 @@ fs_visitor::emit_sampleid_setup()
    assert(brw->gen >= 6);
 
    this->current_annotation = "compute sample id";
-   fs_reg *reg = new(this->mem_ctx) fs_reg(this, glsl_type::int_type);
+   fs_reg *reg = new(this->mem_ctx) fs_reg(vgrf(glsl_type::int_type));
 
    if (key->compute_sample_id) {
-      fs_reg t1 = fs_reg(this, glsl_type::int_type);
-      fs_reg t2 = fs_reg(this, glsl_type::int_type);
+      fs_reg t1 = vgrf(glsl_type::int_type);
+      fs_reg t2 = vgrf(glsl_type::int_type);
       t2.type = BRW_REGISTER_TYPE_UW;
 
       /* The PS will be run in MSDISPMODE_PERSAMPLE. For example with
@@ -1584,7 +1578,7 @@ fs_visitor::fix_math_operand(fs_reg src)
    if (brw->gen >= 7 && src.file != IMM)
       return src;
 
-   fs_reg expanded = fs_reg(this, glsl_type::float_type);
+   fs_reg expanded = vgrf(glsl_type::float_type);
    expanded.type = src.type;
    emit(BRW_OPCODE_MOV, expanded, src);
    return expanded;
@@ -2261,7 +2255,7 @@ fs_visitor::demote_pull_constants()
          current_annotation = inst->annotation;
 
          fs_reg surf_index(stage_prog_data->binding_table.pull_constants_start);
-         fs_reg dst = fs_reg(this, glsl_type::float_type);
+         fs_reg dst = vgrf(glsl_type::float_type);
 
          /* Generate a pull load into dst. */
          if (inst->src[i].reladdr) {
@@ -2997,7 +2991,7 @@ fs_visitor::lower_uniform_pull_constant_loads()
          assert(const_offset_reg.file == IMM &&
                 const_offset_reg.type == BRW_REGISTER_TYPE_UD);
          const_offset_reg.fixed_hw_reg.dw1.ud /= 4;
-         fs_reg payload = fs_reg(this, glsl_type::uint_type);
+         fs_reg payload = vgrf(glsl_type::uint_type);
 
          /* We have to use a message header on Skylake to get SIMD4x2 mode.
           * Reserve space for the register.

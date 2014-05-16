@@ -83,7 +83,6 @@ public:
    fs_reg(enum register_file file, int reg);
    fs_reg(enum register_file file, int reg, enum brw_reg_type type);
    fs_reg(enum register_file file, int reg, enum brw_reg_type type, uint8_t width);
-   fs_reg(fs_visitor *v, const struct glsl_type *type);
 
    bool equals(const fs_reg &r) const;
    bool is_contiguous() const;
@@ -323,6 +322,7 @@ public:
 
    fs_reg *variable_storage(ir_variable *var);
    int virtual_grf_alloc(int size);
+   fs_reg vgrf(const glsl_type *const type);
    void import_uniforms(fs_visitor *v);
    void setup_uniform_clipplane_values();
    void compute_clip_distance();
