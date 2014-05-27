@@ -1,0 +1,2 @@
+C_SOURCES := \
+	tegra_drm_winsys.c

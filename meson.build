@@ -135,6 +135,7 @@ with_gallium_vc4 = false
 with_gallium_vc5 = false
 with_gallium_etnaviv = false
 with_gallium_imx = false
+with_gallium_tegra = false
 with_gallium_i915 = false
 with_gallium_svga = false
 with_gallium_virgl = false
@@ -146,7 +147,7 @@ if _drivers == 'auto'
     if ['x86', 'x86_64'].contains(host_machine.cpu_family())
       _drivers = 'r300,r600,radeonsi,nouveau,virgl,svga,swrast'
     elif ['arm', 'aarch64'].contains(host_machine.cpu_family())
-      _drivers = 'pl111,vc4,vc5,freedreno,etnaviv,imx,virgl,svga,swrast'
+      _drivers = 'pl111,vc4,vc5,freedreno,etnaviv,imx,nouveau,tegra,virgl,svga,swrast'
     else
       error('Unknown architecture. Please pass -Dgallium-drivers to set driver options. Patches gladly accepted to fix this.')
     endif
@@ -169,6 +170,7 @@ if _drivers != ''
   with_gallium_vc5 = _split.contains('vc5')
   with_gallium_etnaviv = _split.contains('etnaviv')
   with_gallium_imx = _split.contains('imx')
+  with_gallium_tegra = _split.contains('tegra')
   with_gallium_i915 = _split.contains('i915')
   with_gallium_svga = _split.contains('svga')
   with_gallium_virgl = _split.contains('virgl')
@@ -219,6 +221,9 @@ if with_gallium_imx and not with_gallium_etnaviv
 endif
 if with_gallium_pl111 and not with_gallium_vc4
   error('pl111 driver requires vc4 driver')
+endif
+if with_gallium_tegra and not with_gallium_nouveau
+  error('tegra driver requires nouveau driver')
 endif
 
 dep_libdrm_intel = []
