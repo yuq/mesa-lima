@@ -1460,6 +1460,7 @@ NineDevice9_StretchRect( struct NineDevice9 *This,
     blit.filter = Filter == D3DTEXF_LINEAR ?
        PIPE_TEX_FILTER_LINEAR : PIPE_TEX_FILTER_NEAREST;
     blit.scissor_enable = FALSE;
+    blit.alpha_blend = FALSE;
 
     /* If both of a src and dst dimension are negative, flip them. */
     if (blit.dst.box.width < 0 && blit.src.box.width < 0) {

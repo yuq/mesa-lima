@@ -588,6 +588,7 @@ handle_draw_cursor_and_hud( struct NineSwapChain9 *This, struct pipe_resource *r
             blit.src.box.width, blit.src.box.height,
             blit.dst.box.x, blit.dst.box.y);
 
+        blit.alpha_blend = TRUE;
         This->pipe->blit(This->pipe, &blit);
     }
 
@@ -705,6 +706,7 @@ present( struct NineSwapChain9 *This,
         blit.mask = PIPE_MASK_RGBA;
         blit.filter = PIPE_TEX_FILTER_NEAREST;
         blit.scissor_enable = FALSE;
+        blit.alpha_blend = FALSE;
 
         This->pipe->blit(This->pipe, &blit);
     }
