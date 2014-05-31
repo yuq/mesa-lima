@@ -430,7 +430,8 @@ generate_call(exec_list *instructions, ir_function_signature *sig,
               exec_list *actual_parameters,
               ir_variable *sub_var,
               ir_rvalue *array_idx,
-              struct _mesa_glsl_parse_state *state)
+              struct _mesa_glsl_parse_state *state,
+              bool inline_immediately)
 {
    void *ctx = state;
    exec_list post_call_conversions;
@@ -542,6 +543,10 @@ generate_call(exec_list *instructions, ir_function_signature *sig,
    ir_call *call = new(ctx) ir_call(sig, deref,
                                     actual_parameters, sub_var, array_idx);
    instructions->push_tail(call);
+   if (inline_immediately) {
+      call->generate_inline(call);
+      call->remove();
+   }
 
    /* Also emit any necessary out-parameter conversions. */
    instructions->append_list(&post_call_conversions);
@@ -557,19 +562,18 @@ match_function_by_name(const char *name,
                        exec_list *actual_parameters,
                        struct _mesa_glsl_parse_state *state)
 {
-   void *ctx = state;
    ir_function *f = state->symbols->get_function(name);
    ir_function_signature *local_sig = NULL;
    ir_function_signature *sig = NULL;
 
    /* Is the function hidden by a record type constructor? */
    if (state->symbols->get_type(name))
-      goto done; /* no match */
+      return sig; /* no match */
 
    /* Is the function hidden by a variable (impossible in 1.10)? */
    if (!state->symbols->separate_function_namespace
        && state->symbols->get_variable(name))
-      goto done; /* no match */
+      return sig; /* no match */
 
    if (f != NULL) {
       /* In desktop GL, the presence of a user-defined signature hides any
@@ -583,31 +587,15 @@ match_function_by_name(const char *name,
       sig = local_sig = f->matching_signature(state, actual_parameters,
                                               allow_builtins, &is_exact);
       if (is_exact)
-         goto done;
+         return sig;
 
       if (!allow_builtins)
-         goto done;
+         return sig;
    }
 
    /* Local shader has no exact candidates; check the built-ins. */
    _mesa_glsl_initialize_builtin_functions();
    sig = _mesa_glsl_find_builtin_function(state, name, actual_parameters);
-
- done:
-   if (sig != NULL) {
-      /* If the match is from a linked built-in shader, import the
-       * prototype.
-       */
-      if (sig != local_sig) {
-         if (f == NULL) {
-            f = new(ctx) ir_function(name);
-            state->symbols->add_global_function(f);
-            emit_function(state, f);
-         }
-         sig = sig->clone_prototype(f, NULL);
-         f->add_signature(sig);
-      }
-   }
    return sig;
 }
 
@@ -2142,6 +2130,16 @@ ast_function_expression::hir(exec_list *instructions,
                                          this->expressions)) {
          /* an error has already been emitted */
          value = ir_rvalue::error_value(ctx);
+      } else if (sig->is_builtin() && strcmp(func_name, "ftransform") == 0) {
+         /* ftransform refers to global variables, and we don't have any code
+          * for remapping the variable references in the built-in shader.
+          */
+         ir_variable *mvp =
+            state->symbols->get_variable("gl_ModelViewProjectionMatrix");
+         ir_variable *vtx = state->symbols->get_variable("gl_Vertex");
+         value = new(ctx) ir_expression(ir_binop_mul, glsl_type::vec4_type,
+                                        new(ctx) ir_dereference_variable(mvp),
+                                        new(ctx) ir_dereference_variable(vtx));
       } else {
          if (state->stage == MESA_SHADER_TESS_CTRL &&
              sig->is_builtin() && strcmp(func_name, "barrier") == 0) {
@@ -2162,8 +2160,8 @@ ast_function_expression::hir(exec_list *instructions,
             }
          }
 
-         value = generate_call(instructions, sig,
-                               &actual_parameters, sub_var, array_idx, state);
+         value = generate_call(instructions, sig, &actual_parameters, sub_var,
+                               array_idx, state, sig->is_builtin());
          if (!value) {
             ir_variable *const tmp = new(ctx) ir_variable(glsl_type::void_type,
                                                           "void_var",
