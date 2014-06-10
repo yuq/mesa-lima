@@ -1455,94 +1455,86 @@ INT_32 CiAddrLib::HwlComputeMacroModeIndex(
 {
     INT_32 macroModeIndex = TileIndexInvalid;
 
-    if (flags.tcCompatible && flags.stencil)
+    AddrTileMode tileMode = m_tileTable[tileIndex].mode;
+    AddrTileType tileType = m_tileTable[tileIndex].type;
+    UINT_32 thickness = ComputeSurfaceThickness(tileMode);
+
+    if (!IsMacroTiled(tileMode))
     {
-        // Don't compute macroModeIndex for tc compatible stencil surface
+        *pTileInfo = m_tileTable[tileIndex].info;
         macroModeIndex = TileIndexNoMacroIndex;
     }
     else
     {
-        AddrTileMode tileMode = m_tileTable[tileIndex].mode;
-        AddrTileType tileType = m_tileTable[tileIndex].type;
-        UINT_32 thickness = ComputeSurfaceThickness(tileMode);
+        UINT_32 tileBytes1x = BITS_TO_BYTES(bpp * MicroTilePixels * thickness);
+        UINT_32 tileSplit;
 
-        if (!IsMacroTiled(tileMode))
+        if (m_tileTable[tileIndex].type == ADDR_DEPTH_SAMPLE_ORDER)
         {
-            *pTileInfo = m_tileTable[tileIndex].info;
-            macroModeIndex = TileIndexNoMacroIndex;
+            // Depth entries store real tileSplitBytes
+            tileSplit = m_tileTable[tileIndex].info.tileSplitBytes;
         }
         else
         {
-            UINT_32 tileBytes1x = BITS_TO_BYTES(bpp * MicroTilePixels * thickness);
-            UINT_32 tileSplit;
+            // Non-depth entries store a split factor
+            UINT_32 sampleSplit = m_tileTable[tileIndex].info.tileSplitBytes;
+            UINT_32 colorTileSplit = Max(256u, sampleSplit * tileBytes1x);
 
-            if (m_tileTable[tileIndex].type == ADDR_DEPTH_SAMPLE_ORDER)
-            {
-                // Depth entries store real tileSplitBytes
-                tileSplit = m_tileTable[tileIndex].info.tileSplitBytes;
-            }
-            else
-            {
-                // Non-depth entries store a split factor
-                UINT_32 sampleSplit = m_tileTable[tileIndex].info.tileSplitBytes;
-                UINT_32 colorTileSplit = Max(256u, sampleSplit * tileBytes1x);
-
-                tileSplit = colorTileSplit;
-            }
-
-            UINT_32 tileSplitC = Min(m_rowSize, tileSplit);
-            UINT_32 tileBytes;
-
-            if (flags.fmask)
-            {
-                tileBytes = Min(tileSplitC, tileBytes1x);
-            }
-            else
-            {
-                tileBytes = Min(tileSplitC, numSamples * tileBytes1x);
-            }
-
-            if (tileBytes < 64)
-            {
-                tileBytes = 64;
-            }
-
-            macroModeIndex = Log2(tileBytes / 64);
-
-            if (flags.prt || IsPrtTileMode(tileMode))
-            {
-                // Unknown - assume it is 1/2 of table size
-                const UINT_32 PrtMacroModeOffset = MacroTileTableSize / 2;
-
-                macroModeIndex += PrtMacroModeOffset;
-                *pTileInfo = m_macroTileTable[macroModeIndex];
-            }
-            else
-            {
-                *pTileInfo = m_macroTileTable[macroModeIndex];
-            }
-
-            pTileInfo->pipeConfig = m_tileTable[tileIndex].info.pipeConfig;
-
-            if (m_tileTable[tileIndex].type != ADDR_DEPTH_SAMPLE_ORDER)
-            {
-                pTileInfo->tileSplitBytes = tileSplitC;
-            }
-            else
-            {
-                pTileInfo->tileSplitBytes = m_tileTable[tileIndex].info.tileSplitBytes;
-            }
+            tileSplit = colorTileSplit;
         }
 
-        if (NULL != pTileMode)
+        UINT_32 tileSplitC = Min(m_rowSize, tileSplit);
+        UINT_32 tileBytes;
+
+        if (flags.fmask)
         {
-            *pTileMode = tileMode;
+            tileBytes = Min(tileSplitC, tileBytes1x);
+        }
+        else
+        {
+            tileBytes = Min(tileSplitC, numSamples * tileBytes1x);
         }
 
-        if (NULL != pTileType)
+        if (tileBytes < 64)
         {
-            *pTileType = tileType;
+            tileBytes = 64;
         }
+
+        macroModeIndex = Log2(tileBytes / 64);
+
+        if (flags.prt || IsPrtTileMode(tileMode))
+        {
+            // Unknown - assume it is 1/2 of table size
+            const UINT_32 PrtMacroModeOffset = MacroTileTableSize / 2;
+
+            macroModeIndex += PrtMacroModeOffset;
+            *pTileInfo = m_macroTileTable[macroModeIndex];
+        }
+        else
+        {
+            *pTileInfo = m_macroTileTable[macroModeIndex];
+        }
+
+        pTileInfo->pipeConfig = m_tileTable[tileIndex].info.pipeConfig;
+
+        if (m_tileTable[tileIndex].type != ADDR_DEPTH_SAMPLE_ORDER)
+        {
+            pTileInfo->tileSplitBytes = tileSplitC;
+        }
+        else
+        {
+            pTileInfo->tileSplitBytes = m_tileTable[tileIndex].info.tileSplitBytes;
+        }
+    }
+
+    if (NULL != pTileMode)
+    {
+        *pTileMode = tileMode;
+    }
+
+    if (NULL != pTileType)
+    {
+        *pTileType = tileType;
     }
 
     return macroModeIndex;

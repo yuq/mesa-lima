@@ -542,6 +542,8 @@ ADDR_E_RETURNCODE AddrLib::ComputeSurfaceInfo(
                 {
                     ADDR_ASSERT(!IsMacroTiled(localIn.tileMode));
                 }
+
+                pOut->macroModeIndex = macroModeIndex;
             }
         }
 
