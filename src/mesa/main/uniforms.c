@@ -1338,3 +1338,198 @@ _mesa_GetActiveAtomicCounterBufferiv(GLuint program, GLuint bufferIndex,
       return;
    }
 }
+
+void GLAPIENTRY
+_mesa_Uniform1d(GLint location, GLdouble v0)
+{
+}
+
+void GLAPIENTRY
+_mesa_Uniform2d(GLint location, GLdouble v0, GLdouble v1)
+{
+}
+
+void GLAPIENTRY
+_mesa_Uniform3d(GLint location, GLdouble v0, GLdouble v1, GLdouble v2)
+{
+}
+
+void GLAPIENTRY
+_mesa_Uniform4d(GLint location, GLdouble v0, GLdouble v1, GLdouble v2,
+                GLdouble v3)
+{
+}
+
+void GLAPIENTRY
+_mesa_Uniform1dv(GLint location, GLsizei count, const GLdouble * value)
+{
+}
+
+void GLAPIENTRY
+_mesa_Uniform2dv(GLint location, GLsizei count, const GLdouble * value)
+{
+}
+
+void GLAPIENTRY
+_mesa_Uniform3dv(GLint location, GLsizei count, const GLdouble * value)
+{
+}
+
+void GLAPIENTRY
+_mesa_Uniform4dv(GLint location, GLsizei count, const GLdouble * value)
+{
+}
+
+void GLAPIENTRY
+_mesa_UniformMatrix2dv(GLint location, GLsizei count, GLboolean transpose,
+                       const GLdouble * value)
+{
+}
+
+void GLAPIENTRY
+_mesa_UniformMatrix3dv(GLint location, GLsizei count, GLboolean transpose,
+                       const GLdouble * value)
+{
+}
+
+void GLAPIENTRY
+_mesa_UniformMatrix4dv(GLint location, GLsizei count, GLboolean transpose,
+                       const GLdouble * value)
+{
+}
+
+void GLAPIENTRY
+_mesa_UniformMatrix2x3dv(GLint location, GLsizei count, GLboolean transpose,
+                         const GLdouble *value)
+{
+}
+
+void GLAPIENTRY
+_mesa_UniformMatrix3x2dv(GLint location, GLsizei count, GLboolean transpose,
+                         const GLdouble *value)
+{
+}
+
+void GLAPIENTRY
+_mesa_UniformMatrix2x4dv(GLint location, GLsizei count, GLboolean transpose,
+                         const GLdouble *value)
+{
+}
+
+void GLAPIENTRY
+_mesa_UniformMatrix4x2dv(GLint location, GLsizei count, GLboolean transpose,
+                         const GLdouble *value)
+{
+}
+
+void GLAPIENTRY
+_mesa_UniformMatrix3x4dv(GLint location, GLsizei count, GLboolean transpose,
+                         const GLdouble *value)
+{
+}
+
+void GLAPIENTRY
+_mesa_UniformMatrix4x3dv(GLint location, GLsizei count, GLboolean transpose,
+                         const GLdouble *value)
+{
+}
+
+void GLAPIENTRY
+_mesa_ProgramUniform1d(GLuint program, GLint location, GLdouble v0)
+{
+}
+
+void GLAPIENTRY
+_mesa_ProgramUniform2d(GLuint program, GLint location, GLdouble v0, GLdouble v1)
+{
+}
+
+void GLAPIENTRY
+_mesa_ProgramUniform3d(GLuint program, GLint location, GLdouble v0, GLdouble v1,
+                       GLdouble v2)
+{
+}
+
+void GLAPIENTRY
+_mesa_ProgramUniform4d(GLuint program, GLint location, GLdouble v0, GLdouble v1,
+                       GLdouble v2, GLdouble v3)
+{
+}
+
+void GLAPIENTRY
+_mesa_ProgramUniform1dv(GLuint program, GLint location, GLsizei count,
+                        const GLdouble * value)
+{
+}
+
+void GLAPIENTRY
+_mesa_ProgramUniform2dv(GLuint program, GLint location, GLsizei count,
+                        const GLdouble * value)
+{
+}
+
+void GLAPIENTRY
+_mesa_ProgramUniform3dv(GLuint program, GLint location, GLsizei count,
+                        const GLdouble * value)
+{
+}
+
+void GLAPIENTRY
+_mesa_ProgramUniform4dv(GLuint program, GLint location, GLsizei count,
+                        const GLdouble * value)
+{
+}
+
+void GLAPIENTRY
+_mesa_ProgramUniformMatrix2dv(GLuint program, GLint location, GLsizei count,
+                              GLboolean transpose, const GLdouble * value)
+{
+}
+
+void GLAPIENTRY
+_mesa_ProgramUniformMatrix3dv(GLuint program, GLint location, GLsizei count,
+                              GLboolean transpose, const GLdouble * value)
+{
+}
+
+void GLAPIENTRY
+_mesa_ProgramUniformMatrix4dv(GLuint program, GLint location, GLsizei count,
+                              GLboolean transpose, const GLdouble * value)
+{
+}
+
+void GLAPIENTRY
+_mesa_ProgramUniformMatrix2x3dv(GLuint program, GLint location, GLsizei count,
+                                GLboolean transpose, const GLdouble * value)
+{
+}
+
+void GLAPIENTRY
+_mesa_ProgramUniformMatrix3x2dv(GLuint program, GLint location, GLsizei count,
+                                GLboolean transpose, const GLdouble * value)
+{
+}
+
+void GLAPIENTRY
+_mesa_ProgramUniformMatrix2x4dv(GLuint program, GLint location, GLsizei count,
+                                GLboolean transpose, const GLdouble * value)
+{
+}
+
+void GLAPIENTRY
+_mesa_ProgramUniformMatrix4x2dv(GLuint program, GLint location, GLsizei count,
+                                GLboolean transpose, const GLdouble * value)
+{
+}
+
+void GLAPIENTRY
+_mesa_ProgramUniformMatrix3x4dv(GLuint program, GLint location, GLsizei count,
+                                GLboolean transpose, const GLdouble * value)
+{
+}
+
+void GLAPIENTRY
+_mesa_ProgramUniformMatrix4x3dv(GLuint program, GLint location, GLsizei count,
+                                GLboolean transpose, const GLdouble * value)
+{
+}

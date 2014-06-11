@@ -669,24 +669,24 @@ const struct function gl_core_functions_possible[] = {
    { "glVertexAttribP4uiv", 43, -1 },
    { "glDrawArraysIndirect", 43, -1 },
    { "glDrawElementsIndirect", 43, -1 },
-// { "glUniform1d", 43, -1 },                           // XXX: Add to xml
-// { "glUniform2d", 43, -1 },                           // XXX: Add to xml
-// { "glUniform3d", 43, -1 },                           // XXX: Add to xml
-// { "glUniform4d", 43, -1 },                           // XXX: Add to xml
-// { "glUniform1dv", 43, -1 },                          // XXX: Add to xml
-// { "glUniform2dv", 43, -1 },                          // XXX: Add to xml
-// { "glUniform3dv", 43, -1 },                          // XXX: Add to xml
-// { "glUniform4dv", 43, -1 },                          // XXX: Add to xml
-// { "glUniformMatrix2dv", 43, -1 },                    // XXX: Add to xml
-// { "glUniformMatrix3dv", 43, -1 },                    // XXX: Add to xml
-// { "glUniformMatrix4dv", 43, -1 },                    // XXX: Add to xml
-// { "glUniformMatrix2x3dv", 43, -1 },                  // XXX: Add to xml
-// { "glUniformMatrix2x4dv", 43, -1 },                  // XXX: Add to xml
-// { "glUniformMatrix3x2dv", 43, -1 },                  // XXX: Add to xml
-// { "glUniformMatrix3x4dv", 43, -1 },                  // XXX: Add to xml
-// { "glUniformMatrix4x2dv", 43, -1 },                  // XXX: Add to xml
-// { "glUniformMatrix4x3dv", 43, -1 },                  // XXX: Add to xml
-// { "glGetUniformdv", 43, -1 },                        // XXX: Add to xml
+   { "glUniform1d", 40, -1 },
+   { "glUniform2d", 40, -1 },
+   { "glUniform3d", 40, -1 },
+   { "glUniform4d", 40, -1 },
+   { "glUniform1dv", 40, -1 },
+   { "glUniform2dv", 40, -1 },
+   { "glUniform3dv", 40, -1 },
+   { "glUniform4dv", 40, -1 },
+   { "glUniformMatrix2dv", 40, -1 },
+   { "glUniformMatrix3dv", 40, -1 },
+   { "glUniformMatrix4dv", 40, -1 },
+   { "glUniformMatrix2x3dv", 40, -1 },
+   { "glUniformMatrix2x4dv", 40, -1 },
+   { "glUniformMatrix3x2dv", 40, -1 },
+   { "glUniformMatrix3x4dv", 40, -1 },
+   { "glUniformMatrix4x2dv", 40, -1 },
+   { "glUniformMatrix4x3dv", 40, -1 },
+   { "glGetUniformdv", 43, -1 },
 // { "glGetSubroutineUniformLocation", 43, -1 },        // XXX: Add to xml
 // { "glGetSubroutineIndex", 43, -1 },                  // XXX: Add to xml
 // { "glGetActiveSubroutineUniformiv", 43, -1 },        // XXX: Add to xml
@@ -728,52 +728,52 @@ const struct function gl_core_functions_possible[] = {
    { "glProgramUniform1iv", 43, -1 },
    { "glProgramUniform1f", 43, -1 },
    { "glProgramUniform1fv", 43, -1 },
-// { "glProgramUniform1d", 43, -1 },                    // XXX: Add to xml
-// { "glProgramUniform1dv", 43, -1 },                   // XXX: Add to xml
+   { "glProgramUniform1d", 40, -1 },
+   { "glProgramUniform1dv", 40, -1 },
    { "glProgramUniform1ui", 43, -1 },
    { "glProgramUniform1uiv", 43, -1 },
    { "glProgramUniform2i", 43, -1 },
    { "glProgramUniform2iv", 43, -1 },
    { "glProgramUniform2f", 43, -1 },
    { "glProgramUniform2fv", 43, -1 },
-// { "glProgramUniform2d", 43, -1 },                    // XXX: Add to xml
-// { "glProgramUniform2dv", 43, -1 },                   // XXX: Add to xml
+   { "glProgramUniform2d", 40, -1 },
+   { "glProgramUniform2dv", 40, -1 },
    { "glProgramUniform2ui", 43, -1 },
    { "glProgramUniform2uiv", 43, -1 },
    { "glProgramUniform3i", 43, -1 },
    { "glProgramUniform3iv", 43, -1 },
    { "glProgramUniform3f", 43, -1 },
    { "glProgramUniform3fv", 43, -1 },
-// { "glProgramUniform3d", 43, -1 },                    // XXX: Add to xml
-// { "glProgramUniform3dv", 43, -1 },                   // XXX: Add to xml
+   { "glProgramUniform3d", 40, -1 },
+   { "glProgramUniform3dv", 40, -1 },
    { "glProgramUniform3ui", 43, -1 },
    { "glProgramUniform3uiv", 43, -1 },
    { "glProgramUniform4i", 43, -1 },
    { "glProgramUniform4iv", 43, -1 },
    { "glProgramUniform4f", 43, -1 },
    { "glProgramUniform4fv", 43, -1 },
-// { "glProgramUniform4d", 43, -1 },                    // XXX: Add to xml
-// { "glProgramUniform4dv", 43, -1 },                   // XXX: Add to xml
+   { "glProgramUniform4d", 40, -1 },
+   { "glProgramUniform4dv", 40, -1 },
    { "glProgramUniform4ui", 43, -1 },
    { "glProgramUniform4uiv", 43, -1 },
    { "glProgramUniformMatrix2fv", 43, -1 },
    { "glProgramUniformMatrix3fv", 43, -1 },
    { "glProgramUniformMatrix4fv", 43, -1 },
-// { "glProgramUniformMatrix2dv", 43, -1 },             // XXX: Add to xml
-// { "glProgramUniformMatrix3dv", 43, -1 },             // XXX: Add to xml
-// { "glProgramUniformMatrix4dv", 43, -1 },             // XXX: Add to xml
+   { "glProgramUniformMatrix2dv", 40, -1 },
+   { "glProgramUniformMatrix3dv", 40, -1 },
+   { "glProgramUniformMatrix4dv", 40, -1 },
    { "glProgramUniformMatrix2x3fv", 43, -1 },
    { "glProgramUniformMatrix3x2fv", 43, -1 },
    { "glProgramUniformMatrix2x4fv", 43, -1 },
    { "glProgramUniformMatrix4x2fv", 43, -1 },
    { "glProgramUniformMatrix3x4fv", 43, -1 },
    { "glProgramUniformMatrix4x3fv", 43, -1 },
-// { "glProgramUniformMatrix2x3dv", 43, -1 },           // XXX: Add to xml
-// { "glProgramUniformMatrix3x2dv", 43, -1 },           // XXX: Add to xml
-// { "glProgramUniformMatrix2x4dv", 43, -1 },           // XXX: Add to xml
-// { "glProgramUniformMatrix4x2dv", 43, -1 },           // XXX: Add to xml
-// { "glProgramUniformMatrix3x4dv", 43, -1 },           // XXX: Add to xml
-// { "glProgramUniformMatrix4x3dv", 43, -1 },           // XXX: Add to xml
+   { "glProgramUniformMatrix2x3dv", 40, -1 },
+   { "glProgramUniformMatrix3x2dv", 40, -1 },
+   { "glProgramUniformMatrix2x4dv", 40, -1 },
+   { "glProgramUniformMatrix4x2dv", 40, -1 },
+   { "glProgramUniformMatrix3x4dv", 40, -1 },
+   { "glProgramUniformMatrix4x3dv", 40, -1 },
    { "glValidateProgramPipeline", 43, -1 },
    { "glGetProgramPipelineInfoLog", 43, -1 },
 // { "glVertexAttribL1d", 43, -1 },                     // XXX: Add to xml
