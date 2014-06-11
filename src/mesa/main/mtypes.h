@@ -3764,6 +3764,7 @@ struct gl_extensions
    GLboolean ARB_explicit_uniform_location;
    GLboolean ARB_geometry_shader4;
    GLboolean ARB_gpu_shader5;
+   GLboolean ARB_gpu_shader_fp64;
    GLboolean ARB_half_float_vertex;
    GLboolean ARB_instanced_arrays;
    GLboolean ARB_internalformat_query;
