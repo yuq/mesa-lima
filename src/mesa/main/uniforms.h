@@ -362,7 +362,8 @@ void
 _mesa_uniform_matrix(struct gl_context *ctx, struct gl_shader_program *shProg,
 		     GLuint cols, GLuint rows,
                      GLint location, GLsizei count,
-                     GLboolean transpose, const GLfloat *values);
+                     GLboolean transpose,
+                     const GLvoid *values, GLenum type);
 
 void
 _mesa_get_uniform(struct gl_context *ctx, GLuint program, GLint location,
