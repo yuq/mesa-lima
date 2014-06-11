@@ -414,6 +414,8 @@ struct _mesa_glsl_parse_state {
    bool ARB_fragment_layer_viewport_warn;
    bool ARB_gpu_shader5_enable;
    bool ARB_gpu_shader5_warn;
+   bool ARB_gpu_shader_fp64_enable;
+   bool ARB_gpu_shader_fp64_warn;
    bool ARB_sample_shading_enable;
    bool ARB_sample_shading_warn;
    bool ARB_separate_shader_objects_enable;

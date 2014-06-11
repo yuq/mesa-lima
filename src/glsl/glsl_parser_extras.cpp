@@ -527,6 +527,7 @@ static const _mesa_glsl_extension _mesa_glsl_supported_extensions[] = {
    EXT(ARB_fragment_coord_conventions, true,  false,     ARB_fragment_coord_conventions),
    EXT(ARB_fragment_layer_viewport,    true,  false,     ARB_fragment_layer_viewport),
    EXT(ARB_gpu_shader5,                true,  false,     ARB_gpu_shader5),
+   EXT(ARB_gpu_shader_fp64,            true,  false,     ARB_gpu_shader_fp64),
    EXT(ARB_sample_shading,             true,  false,     ARB_sample_shading),
    EXT(ARB_separate_shader_objects,    true,  false,     dummy_true),
    EXT(ARB_shader_atomic_counters,     true,  false,     ARB_shader_atomic_counters),
