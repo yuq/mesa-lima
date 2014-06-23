@@ -6335,7 +6335,8 @@ ast_interface_block::hir(exec_list *instructions,
                              _mesa_shader_stage_to_string(state->stage));
          }
          if (this->instance_name == NULL ||
-             strcmp(this->instance_name, "gl_in") != 0 || this->array_specifier == NULL) {
+             strcmp(this->instance_name, "gl_in") != 0 || this->array_specifier == NULL ||
+             !this->array_specifier->is_single_dimension()) {
             _mesa_glsl_error(&loc, state,
                              "gl_PerVertex input must be redeclared as "
                              "gl_in[]");
