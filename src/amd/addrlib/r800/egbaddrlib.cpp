@@ -994,7 +994,7 @@ BOOL_32 EgBasedAddrLib::SanityCheckMacroTiled(
     {
         if (pTileInfo->tileSplitBytes > m_rowSize)
         {
-            valid = FALSE;
+            ADDR_WARN(0, ("tileSplitBytes is bigger than row size"));
         }
     }
 
