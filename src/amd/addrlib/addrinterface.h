@@ -456,7 +456,8 @@ typedef union _ADDR_SURFACE_FLAGS
         UINT_32 czDispCompatible: 1; ///< SI+: CZ family (Carrizo) has a HW bug needs special alignment.
                                      ///<      This flag indicates we need to follow the alignment with
                                      ///<      CZ families or other ASICs under PX configuration + CZ.
-        UINT_32 reserved      :10; ///< Reserved bits
+        UINT_32 nonSplit      : 1; ///< CI: depth texture should not be split
+        UINT_32 reserved      : 9; ///< Reserved bits
     };
 
     UINT_32 value;

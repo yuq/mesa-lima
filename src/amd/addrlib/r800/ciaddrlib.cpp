@@ -1010,7 +1010,7 @@ VOID CiAddrLib::HwlSetupTileInfo(
         // See table entries 0-4
         if (flags.depth || flags.stencil)
         {
-            if (flags.depth && flags.tcCompatible)
+            if (flags.depth && (flags.nonSplit || flags.tcCompatible))
             {
                 // tileSize = bpp * numSamples * 8 * 8 / 8
                 UINT_32 tileSize = bpp * numSamples * 8;
