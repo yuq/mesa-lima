@@ -884,7 +884,10 @@ intel_miptree_release(struct intel_mipmap_tree **mt)
       drm_intel_bo_unreference((*mt)->bo);
       intel_miptree_release(&(*mt)->stencil_mt);
       if ((*mt)->hiz_buf) {
-         intel_miptree_release(&(*mt)->hiz_buf->mt);
+         if ((*mt)->hiz_buf->mt)
+            intel_miptree_release(&(*mt)->hiz_buf->mt);
+         else
+            drm_intel_bo_unreference((*mt)->hiz_buf->bo);
          free((*mt)->hiz_buf);
       }
       intel_miptree_release(&(*mt)->mcs_mt);
@@ -1442,6 +1445,100 @@ intel_miptree_level_enable_hiz(struct brw_context *brw,
 }
 
 
+/**
+ * Helper for intel_miptree_alloc_hiz() that determines the required hiz
+ * buffer dimensions and allocates a bo for the hiz buffer.
+ */
+static struct intel_miptree_aux_buffer *
+intel_gen7_hiz_buf_create(struct brw_context *brw,
+                          struct intel_mipmap_tree *mt)
+{
+   unsigned z_width = mt->logical_width0;
+   unsigned z_height = mt->logical_height0;
+   const unsigned z_depth = MAX2(mt->logical_depth0, 1);
+   unsigned hz_width, hz_height;
+   struct intel_miptree_aux_buffer *buf = calloc(sizeof(*buf), 1);
+
+   if (!buf)
+      return NULL;
+
+   /* Gen7 PRM Volume 2, Part 1, 11.5.3 "Hierarchical Depth Buffer" documents
+    * adjustments required for Z_Height and Z_Width based on multisampling.
+    */
+   switch (mt->num_samples) {
+   case 0:
+   case 1:
+      break;
+   case 2:
+   case 4:
+      z_width *= 2;
+      z_height *= 2;
+      break;
+   case 8:
+      z_width *= 4;
+      z_height *= 2;
+      break;
+   default:
+      unreachable("unsupported sample count");
+   }
+
+   const unsigned vertical_align = 8; /* 'j' in the docs */
+   const unsigned H0 = z_height;
+   const unsigned h0 = ALIGN(H0, vertical_align);
+   const unsigned h1 = ALIGN(minify(H0, 1), vertical_align);
+   const unsigned Z0 = z_depth;
+
+   /* HZ_Width (bytes) = ceiling(Z_Width / 16) * 16 */
+   hz_width = ALIGN(z_width, 16);
+
+   if (mt->target == GL_TEXTURE_3D) {
+      unsigned H_i = H0;
+      unsigned Z_i = Z0;
+      hz_height = 0;
+      for (int level = mt->first_level; level <= mt->last_level; ++level) {
+         unsigned h_i = ALIGN(H_i, vertical_align);
+         /* sum(i=0 to m; h_i * max(1, floor(Z_Depth/2**i))) */
+         hz_height += h_i * Z_i;
+         H_i = minify(H_i, 1);
+         Z_i = minify(Z_i, 1);
+      }
+      /* HZ_Height =
+       *    (1/2) * sum(i=0 to m; h_i * max(1, floor(Z_Depth/2**i)))
+       */
+      hz_height = DIV_ROUND_UP(hz_height, 2);
+   } else {
+      const unsigned hz_qpitch = h0 + h1 + (12 * vertical_align);
+      if (mt->target == GL_TEXTURE_CUBE_MAP_ARRAY ||
+          mt->target == GL_TEXTURE_CUBE_MAP) {
+         /* HZ_Height (rows) = Ceiling ( ( Q_pitch * Z_depth * 6/2) /8 ) * 8 */
+         hz_height = DIV_ROUND_UP(hz_qpitch * Z0 * 6, 2 * 8) * 8;
+      } else {
+         /* HZ_Height (rows) = Ceiling ( ( Q_pitch * Z_depth/2) /8 ) * 8 */
+         hz_height = DIV_ROUND_UP(hz_qpitch * Z0, 2 * 8) * 8;
+      }
+   }
+
+   unsigned long pitch;
+   uint32_t tiling = I915_TILING_Y;
+   buf->bo = drm_intel_bo_alloc_tiled(brw->bufmgr, "hiz",
+                                      hz_width, hz_height, 1,
+                                      &tiling, &pitch,
+                                      BO_ALLOC_FOR_RENDER);
+   if (!buf->bo) {
+      free(buf);
+      return NULL;
+   } else if (tiling != I915_TILING_Y) {
+      drm_intel_bo_unreference(buf->bo);
+      free(buf);
+      return NULL;
+   }
+
+   buf->pitch = pitch;
+
+   return buf;
+}
+
+
 static struct intel_miptree_aux_buffer *
 intel_hiz_miptree_buf_create(struct brw_context *brw,
                              struct intel_mipmap_tree *mt)
@@ -1482,7 +1579,12 @@ intel_miptree_alloc_hiz(struct brw_context *brw,
 			struct intel_mipmap_tree *mt)
 {
    assert(mt->hiz_buf == NULL);
-   mt->hiz_buf = intel_hiz_miptree_buf_create(brw, mt);
+
+   if (brw->gen == 7) {
+      mt->hiz_buf = intel_gen7_hiz_buf_create(brw, mt);
+   } else {
+      mt->hiz_buf = intel_hiz_miptree_buf_create(brw, mt);
+   }
 
    if (!mt->hiz_buf)
       return false;
