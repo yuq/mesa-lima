@@ -561,9 +561,9 @@ intel_renderbuffer_update_wrapper(struct brw_context *brw,
 
    intel_renderbuffer_set_draw_offset(irb);
 
-   if (mt->hiz_mt == NULL && brw_is_hiz_depth_format(brw, rb->Format)) {
+   if (mt->hiz_buf == NULL && brw_is_hiz_depth_format(brw, rb->Format)) {
       intel_miptree_alloc_hiz(brw, mt);
-      if (!mt->hiz_mt)
+      if (!mt->hiz_buf)
 	 return false;
    }
 

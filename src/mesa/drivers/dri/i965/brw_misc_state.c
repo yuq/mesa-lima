@@ -172,7 +172,7 @@ brw_get_depthstencil_tile_masks(struct intel_mipmap_tree *depth_mt,
 
       if (intel_miptree_level_has_hiz(depth_mt, depth_level)) {
          uint32_t hiz_tile_mask_x, hiz_tile_mask_y;
-         intel_miptree_get_tile_masks(depth_mt->hiz_mt,
+         intel_miptree_get_tile_masks(depth_mt->hiz_buf->mt,
                                       &hiz_tile_mask_x, &hiz_tile_mask_y,
                                       false);
 
@@ -632,7 +632,7 @@ brw_emit_depth_stencil_hiz(struct brw_context *brw,
 
       /* Emit hiz buffer. */
       if (hiz) {
-         struct intel_mipmap_tree *hiz_mt = depth_mt->hiz_mt;
+         struct intel_mipmap_tree *hiz_mt = depth_mt->hiz_buf->mt;
 	 BEGIN_BATCH(3);
 	 OUT_BATCH((_3DSTATE_HIER_DEPTH_BUFFER << 16) | (3 - 2));
 	 OUT_BATCH(hiz_mt->pitch - 1);

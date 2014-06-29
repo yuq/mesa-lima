@@ -307,6 +307,29 @@ enum miptree_array_layout {
    ALL_SLICES_AT_EACH_LOD,
 };
 
+/**
+ * Miptree aux buffer. These buffers are associated with a miptree, but the
+ * format is managed by the hardware.
+ *
+ * For Gen7+, we always give the hardware the start of the buffer, and let it
+ * handle all accesses to the buffer. Therefore we don't need the full miptree
+ * layout structure for this buffer.
+ *
+ * For Gen6, we need a hiz miptree structure for this buffer so we can program
+ * offsets to slices & miplevels.
+ */
+struct intel_miptree_aux_buffer
+{
+   /** Buffer object containing the pixel data. */
+   drm_intel_bo *bo;
+
+   uint32_t pitch; /**< pitch in bytes. */
+
+   uint32_t qpitch; /**< The distance in rows between array slices. */
+
+   struct intel_mipmap_tree *mt; /**< hiz miptree used with Gen6 */
+};
+
 struct intel_mipmap_tree
 {
    /** Buffer object containing the pixel data. */
@@ -411,15 +434,15 @@ struct intel_mipmap_tree
    uint32_t offset;
 
    /**
-    * \brief HiZ miptree
+    * \brief HiZ aux buffer
     *
     * The hiz miptree contains the miptree's hiz buffer. To allocate the hiz
-    * miptree, use intel_miptree_alloc_hiz().
+    * buffer, use intel_miptree_alloc_hiz().
     *
     * To determine if hiz is enabled, do not check this pointer. Instead, use
     * intel_miptree_slice_has_hiz().
     */
-   struct intel_mipmap_tree *hiz_mt;
+   struct intel_miptree_aux_buffer *hiz_buf;
 
    /**
     * \brief Map of miptree slices to needed resolves.

@@ -156,7 +156,7 @@ gen6_emit_depth_stencil_hiz(struct brw_context *brw,
 
       /* Emit hiz buffer. */
       if (hiz) {
-         struct intel_mipmap_tree *hiz_mt = depth_mt->hiz_mt;
+         struct intel_mipmap_tree *hiz_mt = depth_mt->hiz_buf->mt;
          uint32_t offset = 0;
 
          if (hiz_mt->array_layout == ALL_SLICES_AT_EACH_LOD) {

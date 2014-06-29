@@ -857,7 +857,7 @@ gen6_blorp_emit_depth_stencil_config(struct brw_context *brw,
 
    /* 3DSTATE_HIER_DEPTH_BUFFER */
    {
-      struct intel_mipmap_tree *hiz_mt = params->depth.mt->hiz_mt;
+      struct intel_mipmap_tree *hiz_mt = params->depth.mt->hiz_buf->mt;
       uint32_t offset = 0;
 
       if (hiz_mt->array_layout == ALL_SLICES_AT_EACH_LOD) {

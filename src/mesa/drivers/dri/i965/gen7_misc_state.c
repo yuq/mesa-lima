@@ -145,7 +145,7 @@ gen7_emit_depth_stencil_hiz(struct brw_context *brw,
       OUT_BATCH(0);
       ADVANCE_BATCH();
    } else {
-      struct intel_mipmap_tree *hiz_mt = depth_mt->hiz_mt;
+      struct intel_mipmap_tree *hiz_mt = depth_mt->hiz_buf->mt;
       BEGIN_BATCH(3);
       OUT_BATCH(GEN7_3DSTATE_HIER_DEPTH_BUFFER << 16 | (3 - 2));
       OUT_BATCH((mocs << 25) |

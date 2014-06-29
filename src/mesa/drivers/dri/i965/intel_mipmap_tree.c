@@ -883,7 +883,10 @@ intel_miptree_release(struct intel_mipmap_tree **mt)
 
       drm_intel_bo_unreference((*mt)->bo);
       intel_miptree_release(&(*mt)->stencil_mt);
-      intel_miptree_release(&(*mt)->hiz_mt);
+      if ((*mt)->hiz_buf) {
+         intel_miptree_release(&(*mt)->hiz_buf->mt);
+         free((*mt)->hiz_buf);
+      }
       intel_miptree_release(&(*mt)->mcs_mt);
       intel_resolve_map_clear(&(*mt)->hiz_map);
 
@@ -1415,7 +1418,7 @@ intel_miptree_level_enable_hiz(struct brw_context *brw,
                                struct intel_mipmap_tree *mt,
                                uint32_t level)
 {
-   assert(mt->hiz_mt);
+   assert(mt->hiz_buf);
 
    if (brw->gen >= 8 || brw->is_haswell) {
       uint32_t width = minify(mt->physical_width0, level);
@@ -1439,27 +1442,49 @@ intel_miptree_level_enable_hiz(struct brw_context *brw,
 }
 
 
+static struct intel_miptree_aux_buffer *
+intel_hiz_miptree_buf_create(struct brw_context *brw,
+                             struct intel_mipmap_tree *mt)
+{
+   struct intel_miptree_aux_buffer *buf = calloc(sizeof(*buf), 1);
+   const bool force_all_slices_at_each_lod = brw->gen == 6;
+
+   if (!buf)
+      return NULL;
+
+   buf->mt = intel_miptree_create(brw,
+                                  mt->target,
+                                  mt->format,
+                                  mt->first_level,
+                                  mt->last_level,
+                                  mt->logical_width0,
+                                  mt->logical_height0,
+                                  mt->logical_depth0,
+                                  true,
+                                  mt->num_samples,
+                                  INTEL_MIPTREE_TILING_ANY,
+                                  force_all_slices_at_each_lod);
+   if (!buf->mt) {
+      free(buf);
+      return NULL;
+   }
+
+   buf->bo = buf->mt->bo;
+   buf->pitch = buf->mt->pitch;
+   buf->qpitch = buf->mt->qpitch;
+
+   return buf;
+}
+
 
 bool
 intel_miptree_alloc_hiz(struct brw_context *brw,
 			struct intel_mipmap_tree *mt)
 {
-   assert(mt->hiz_mt == NULL);
-   const bool force_all_slices_at_each_lod = brw->gen == 6;
-   mt->hiz_mt = intel_miptree_create(brw,
-                                     mt->target,
-                                     mt->format,
-                                     mt->first_level,
-                                     mt->last_level,
-                                     mt->logical_width0,
-                                     mt->logical_height0,
-                                     mt->logical_depth0,
-                                     true,
-                                     mt->num_samples,
-                                     INTEL_MIPTREE_TILING_ANY,
-                                     force_all_slices_at_each_lod);
+   assert(mt->hiz_buf == NULL);
+   mt->hiz_buf = intel_hiz_miptree_buf_create(brw, mt);
 
-   if (!mt->hiz_mt)
+   if (!mt->hiz_buf)
       return false;
 
    /* Mark that all slices need a HiZ resolve. */
