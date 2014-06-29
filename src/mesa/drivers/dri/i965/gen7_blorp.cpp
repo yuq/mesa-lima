@@ -695,13 +695,13 @@ gen7_blorp_emit_depth_stencil_config(struct brw_context *brw,
 
    /* 3DSTATE_HIER_DEPTH_BUFFER */
    {
-      struct intel_mipmap_tree *hiz_mt = params->depth.mt->hiz_buf->mt;
+      struct intel_miptree_aux_buffer *hiz_buf = params->depth.mt->hiz_buf;
 
       BEGIN_BATCH(3);
       OUT_BATCH((GEN7_3DSTATE_HIER_DEPTH_BUFFER << 16) | (3 - 2));
       OUT_BATCH((mocs << 25) |
-                (hiz_mt->pitch - 1));
-      OUT_RELOC(hiz_mt->bo,
+                (hiz_buf->pitch - 1));
+      OUT_RELOC(hiz_buf->bo,
                 I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER,
                 0);
       ADVANCE_BATCH();
