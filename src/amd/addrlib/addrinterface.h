@@ -111,14 +111,6 @@ typedef VOID*   ADDR_CLIENT_HANDLE;
 *     AddrUseTileIndex()
 *     AddrUseCombinedSwizzle()
 *
-* /////////////////////////////////////////////////////////////////////////////////////////////////
-* //                                    Dump functions
-* /////////////////////////////////////////////////////////////////////////////////////////////////
-*     AddrDumpSurfaceInfo()
-*     AddrDumpFmaskInfo()
-*     AddrDumpCmaskInfo()
-*     AddrDumpHtileInfo()
-*
 **/
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -430,34 +422,33 @@ typedef union _ADDR_SURFACE_FLAGS
 {
     struct
     {
-        UINT_32 color         : 1; ///< Flag indicates this is a color buffer
-        UINT_32 depth         : 1; ///< Flag indicates this is a depth/stencil buffer
-        UINT_32 stencil       : 1; ///< Flag indicates this is a stencil buffer
-        UINT_32 texture       : 1; ///< Flag indicates this is a texture
-        UINT_32 cube          : 1; ///< Flag indicates this is a cubemap
-
-        UINT_32 volume        : 1; ///< Flag indicates this is a volume texture
-        UINT_32 fmask         : 1; ///< Flag indicates this is an fmask
-        UINT_32 cubeAsArray   : 1; ///< Flag indicates if treat cubemap as arrays
-        UINT_32 compressZ     : 1; ///< Flag indicates z buffer is compressed
-        UINT_32 overlay       : 1; ///< Flag indicates this is an overlay surface
-        UINT_32 noStencil     : 1; ///< Flag indicates this depth has no separate stencil
-        UINT_32 display       : 1; ///< Flag indicates this should match display controller req.
-        UINT_32 opt4Space     : 1; ///< Flag indicates this surface should be optimized for space
-                                   ///  i.e. save some memory but may lose performance
-        UINT_32 prt           : 1; ///< Flag for partially resident texture
-        UINT_32 qbStereo      : 1; ///< Quad buffer stereo surface
-        UINT_32 pow2Pad       : 1; ///< SI: Pad to pow2, must set for mipmap (include level0)
-        UINT_32 interleaved   : 1; ///< Special flag for interleaved YUV surface padding
-        UINT_32 degrade4Space : 1; ///< Degrade base level's tile mode to save memory
-        UINT_32 tcCompatible  : 1; ///< Flag indicates surface needs to be shader readable
-        UINT_32 dispTileType  : 1; ///< NI: force display Tiling for 128 bit shared resoruce
-        UINT_32 dccCompatible : 1; ///< VI: whether to support dcc fast clear
-        UINT_32 czDispCompatible: 1; ///< SI+: CZ family (Carrizo) has a HW bug needs special alignment.
-                                     ///<      This flag indicates we need to follow the alignment with
-                                     ///<      CZ families or other ASICs under PX configuration + CZ.
-        UINT_32 nonSplit      : 1; ///< CI: depth texture should not be split
-        UINT_32 reserved      : 9; ///< Reserved bits
+        UINT_32 color           : 1; ///< Flag indicates this is a color buffer
+        UINT_32 depth           : 1; ///< Flag indicates this is a depth/stencil buffer
+        UINT_32 stencil         : 1; ///< Flag indicates this is a stencil buffer
+        UINT_32 texture         : 1; ///< Flag indicates this is a texture
+        UINT_32 cube            : 1; ///< Flag indicates this is a cubemap
+        UINT_32 volume          : 1; ///< Flag indicates this is a volume texture
+        UINT_32 fmask           : 1; ///< Flag indicates this is an fmask
+        UINT_32 cubeAsArray     : 1; ///< Flag indicates if treat cubemap as arrays
+        UINT_32 compressZ       : 1; ///< Flag indicates z buffer is compressed
+        UINT_32 overlay         : 1; ///< Flag indicates this is an overlay surface
+        UINT_32 noStencil       : 1; ///< Flag indicates this depth has no separate stencil
+        UINT_32 display         : 1; ///< Flag indicates this should match display controller req.
+        UINT_32 opt4Space       : 1; ///< Flag indicates this surface should be optimized for space
+                                     ///  i.e. save some memory but may lose performance
+        UINT_32 prt             : 1; ///< Flag for partially resident texture
+        UINT_32 qbStereo        : 1; ///< Quad buffer stereo surface
+        UINT_32 pow2Pad         : 1; ///< SI: Pad to pow2, must set for mipmap (include level0)
+        UINT_32 interleaved     : 1; ///< Special flag for interleaved YUV surface padding
+        UINT_32 degrade4Space   : 1; ///< Degrade base level's tile mode to save memory
+        UINT_32 tcCompatible    : 1; ///< Flag indicates surface needs to be shader readable
+        UINT_32 dispTileType    : 1; ///< NI: force display Tiling for 128 bit shared resoruce
+        UINT_32 dccCompatible   : 1; ///< VI: whether to support dcc fast clear
+        UINT_32 czDispCompatible: 1; ///< SI+: CZ family has a HW bug needs special alignment.
+                                     ///  This flag indicates we need to follow the alignment with
+                                     ///  CZ families or other ASICs under PX configuration + CZ.
+        UINT_32 nonSplit        : 1; ///< CI: depth texture should not be split
+        UINT_32 reserved        : 9; ///< Reserved bits
     };
 
     UINT_32 value;
@@ -482,18 +473,9 @@ typedef struct _ADDR_COMPUTE_SURFACE_INFO_INPUT
     UINT_32             numSamples;         ///< Number of samples
     UINT_32             width;              ///< Width, in pixels
     UINT_32             height;             ///< Height, in pixels
-    UINT_32             numSlices;          ///< Number surface slice/depth,
-                                            ///  Note:
-                                            ///  For cubemap, driver clients usually set numSlices
-                                            ///  to 1 in per-face calc.
-                                            ///  For 7xx and above, we need pad faces as slices.
-                                            ///  In this case, clients should set numSlices to 6 and
-                                            ///  this is also can be turned off by createFlags when
-                                            ///  calling AddrCreate
+    UINT_32             numSlices;          ///< Number of surface slices or depth
     UINT_32             slice;              ///< Slice index
-    UINT_32             mipLevel;           ///< Current mipmap level.
-                                            ///  Padding/tiling have different rules for level0 and
-                                            ///  sublevels
+    UINT_32             mipLevel;           ///< Current mipmap level
     ADDR_SURFACE_FLAGS  flags;              ///< Surface type flags
     UINT_32             numFrags;           ///< Number of fragments, leave it zero or the same as
                                             ///  number of samples for normal AA; Set it to the
