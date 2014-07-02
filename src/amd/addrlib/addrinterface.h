@@ -534,9 +534,16 @@ typedef struct _ADDR_COMPUTE_SURFACE_INFO_OUTPUT
     INT_32          tileIndex;      ///< Tile index, MAY be "downgraded"
 
     INT_32          macroModeIndex; ///< Index in macro tile mode table if there is one (CI)
-    /// Special information to work around SI mipmap swizzle bug UBTS #317508
-    BOOL_32         last2DLevel;    ///< TRUE if this is the last 2D(3D) tiled
-                                    ///< Only meaningful when create flag checkLast2DLevel is set
+    /// Output flags
+    struct
+    {
+        /// Special information to work around SI mipmap swizzle bug UBTS #317508
+        UINT_32     last2DLevel  : 1;  ///< TRUE if this is the last 2D(3D) tiled
+                                       ///< Only meaningful when create flag checkLast2DLevel is set
+        UINT_32     tcCompatible : 1;  ///< If the surface can be shader compatible
+        UINT_32     reserved     :30; ///< Reserved bits
+    };
+
     /// Stereo info
     ADDR_QBSTEREOINFO*  pStereoInfo;///< Stereo information, needed when .qbStereo flag is TRUE
 } ADDR_COMPUTE_SURFACE_INFO_OUTPUT;

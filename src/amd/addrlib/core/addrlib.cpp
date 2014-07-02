@@ -449,6 +449,7 @@ ADDR_E_RETURNCODE AddrLib::ComputeSurfaceInfo(
         pOut->pixelBits = localIn.bpp;
         pOut->numSamples = localIn.numSamples;
         pOut->last2DLevel = FALSE;
+        pOut->tcCompatible = FALSE;
 
 #if !ALT_TEST
         if (localIn.numSamples > 1)

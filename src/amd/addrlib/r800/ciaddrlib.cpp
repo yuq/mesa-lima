@@ -483,7 +483,8 @@ INT_32 CiAddrLib::HwlPostCheckTileIndex(
                         // tileSplitBytes stored in m_tileTable is only valid for depth entries
                         if (type == ADDR_DEPTH_SAMPLE_ORDER)
                         {
-                            if (pInfo->tileSplitBytes == m_tileTable[index].info.tileSplitBytes)
+                            if (Min(m_tileTable[index].info.tileSplitBytes,
+                                    m_rowSize) == pInfo->tileSplitBytes)
                             {
                                 break;
                             }
@@ -620,6 +621,9 @@ ADDR_E_RETURNCODE CiAddrLib::HwlComputeSurfaceInfo(
     {
         pOut->macroModeIndex = TileIndexInvalid;
     }
+
+    // Pass tcCompatible flag from input to output; and turn off it if tile split occurs
+    pOut->tcCompatible = pIn->flags.tcCompatible;
 
     ADDR_E_RETURNCODE retCode = SiAddrLib::HwlComputeSurfaceInfo(pIn,pOut);
 
@@ -1010,11 +1014,18 @@ VOID CiAddrLib::HwlSetupTileInfo(
         // See table entries 0-4
         if (flags.depth || flags.stencil)
         {
+            // tileSize = thickness * bpp * numSamples * 8 * 8 / 8
+            UINT_32 tileSize = thickness * bpp * numSamples * 8;
+
+            // Turn off tc compatible if row_size is smaller than tile size (tile split occurs).
+            if (m_rowSize < tileSize)
+            {
+                flags.tcCompatible = FALSE;
+                pOut->tcCompatible = FALSE;
+            }
+
             if (flags.depth && (flags.nonSplit || flags.tcCompatible))
             {
-                // tileSize = bpp * numSamples * 8 * 8 / 8
-                UINT_32 tileSize = bpp * numSamples * 8;
-
                 // Texure readable depth surface should not be split
                 switch (tileSize)
                 {
@@ -1214,6 +1225,29 @@ VOID CiAddrLib::HwlSetupTileInfo(
     {
         pOut->tileIndex = 8;
         *pTileInfo = m_tileTable[8].info;
+    }
+
+    // Turn off tcCompatible for color surface if tileSplit happens. Depth/stencil is
+    // handled at tileIndex selecting time.
+    if (pOut->tcCompatible && (inTileType != ADDR_DEPTH_SAMPLE_ORDER))
+    {
+        if (IsMacroTiled(tileMode))
+        {
+            // Non-depth entries store a split factor
+            UINT_32 sampleSplit = m_tileTable[pOut->tileIndex].info.tileSplitBytes;
+            UINT_32 tileBytes1x = BITS_TO_BYTES(bpp * MicroTilePixels * thickness);
+            UINT_32 colorTileSplit = Max(256u, sampleSplit * tileBytes1x);
+
+            if (m_rowSize < colorTileSplit)
+            {
+                pOut->tcCompatible = FALSE;
+            }
+        }
+        else
+        {
+            // Client should not enable tc compatible for linear and 1D tile modes.
+            pOut->tcCompatible = FALSE;
+        }
     }
 }
 
@@ -1517,14 +1551,7 @@ INT_32 CiAddrLib::HwlComputeMacroModeIndex(
 
         pTileInfo->pipeConfig = m_tileTable[tileIndex].info.pipeConfig;
 
-        if (m_tileTable[tileIndex].type != ADDR_DEPTH_SAMPLE_ORDER)
-        {
-            pTileInfo->tileSplitBytes = tileSplitC;
-        }
-        else
-        {
-            pTileInfo->tileSplitBytes = m_tileTable[tileIndex].info.tileSplitBytes;
-        }
+        pTileInfo->tileSplitBytes = tileSplitC;
     }
 
     if (NULL != pTileMode)
