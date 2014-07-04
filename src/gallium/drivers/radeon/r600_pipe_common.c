@@ -658,17 +658,17 @@ static int r600_get_driver_query_info(struct pipe_screen *screen,
 	struct r600_common_screen *rscreen = (struct r600_common_screen*)screen;
 	struct pipe_driver_query_info list[] = {
 		{"draw-calls", R600_QUERY_DRAW_CALLS, 0},
-		{"requested-VRAM", R600_QUERY_REQUESTED_VRAM, rscreen->info.vram_size, TRUE},
-		{"requested-GTT", R600_QUERY_REQUESTED_GTT, rscreen->info.gart_size, TRUE},
-		{"buffer-wait-time", R600_QUERY_BUFFER_WAIT_TIME, 0, FALSE},
-		{"num-cs-flushes", R600_QUERY_NUM_CS_FLUSHES, 0, FALSE},
-		{"num-bytes-moved", R600_QUERY_NUM_BYTES_MOVED, 0, TRUE},
-		{"VRAM-usage", R600_QUERY_VRAM_USAGE, rscreen->info.vram_size, TRUE},
-		{"GTT-usage", R600_QUERY_GTT_USAGE, rscreen->info.gart_size, TRUE},
-		{"temperature", R600_QUERY_GPU_TEMPERATURE, 100, FALSE},
-		{"shader-clock", R600_QUERY_CURRENT_GPU_SCLK, 0, FALSE},
-		{"memory-clock", R600_QUERY_CURRENT_GPU_MCLK, 0, FALSE},
-		{"GPU-load", R600_QUERY_GPU_LOAD, 100, FALSE}
+		{"requested-VRAM", R600_QUERY_REQUESTED_VRAM, rscreen->info.vram_size, PIPE_DRIVER_QUERY_TYPE_BYTES},
+		{"requested-GTT", R600_QUERY_REQUESTED_GTT, rscreen->info.gart_size, PIPE_DRIVER_QUERY_TYPE_BYTES},
+		{"buffer-wait-time", R600_QUERY_BUFFER_WAIT_TIME, 0},
+		{"num-cs-flushes", R600_QUERY_NUM_CS_FLUSHES, 0},
+		{"num-bytes-moved", R600_QUERY_NUM_BYTES_MOVED, 0, PIPE_DRIVER_QUERY_TYPE_BYTES},
+		{"VRAM-usage", R600_QUERY_VRAM_USAGE, rscreen->info.vram_size, PIPE_DRIVER_QUERY_TYPE_BYTES},
+		{"GTT-usage", R600_QUERY_GTT_USAGE, rscreen->info.gart_size, PIPE_DRIVER_QUERY_TYPE_BYTES},
+		{"temperature", R600_QUERY_GPU_TEMPERATURE, 100},
+		{"shader-clock", R600_QUERY_CURRENT_GPU_SCLK, 0},
+		{"memory-clock", R600_QUERY_CURRENT_GPU_MCLK, 0},
+		{"GPU-load", R600_QUERY_GPU_LOAD, 100}
 	};
 	unsigned num_queries;
 

@@ -752,6 +752,15 @@ union pipe_color_union
    unsigned int ui[4];
 };
 
+enum pipe_driver_query_type
+{
+   PIPE_DRIVER_QUERY_TYPE_UINT64     = 0,
+   PIPE_DRIVER_QUERY_TYPE_UINT       = 1,
+   PIPE_DRIVER_QUERY_TYPE_FLOAT      = 2,
+   PIPE_DRIVER_QUERY_TYPE_PERCENTAGE = 3,
+   PIPE_DRIVER_QUERY_TYPE_BYTES      = 4,
+};
+
 enum pipe_driver_query_group_type
 {
    PIPE_DRIVER_QUERY_GROUP_TYPE_CPU = 0,
@@ -763,7 +772,8 @@ struct pipe_driver_query_info
    const char *name;
    unsigned query_type; /* PIPE_QUERY_DRIVER_SPECIFIC + i */
    uint64_t max_value; /* max value that can be returned */
-   boolean uses_byte_units; /* whether the result is in bytes */
+   enum pipe_driver_query_type type;
+   unsigned group_id;
 };
 
 struct pipe_driver_query_group_info

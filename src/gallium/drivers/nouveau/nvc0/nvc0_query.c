@@ -1419,7 +1419,8 @@ nvc0_screen_get_driver_query_info(struct pipe_screen *pscreen,
       info->name = nvc0_drv_stat_names[id];
       info->query_type = NVC0_QUERY_DRV_STAT(id);
       info->max_value = 0;
-      info->uses_byte_units = !!strstr(info->name, "bytes");
+      if (strstr(info->name, "bytes"))
+         info->type = PIPE_DRIVER_QUERY_TYPE_BYTES;
       return 1;
    } else
 #endif
@@ -1428,14 +1429,12 @@ nvc0_screen_get_driver_query_info(struct pipe_screen *pscreen,
          info->name = nve4_pm_query_names[id - NVC0_QUERY_DRV_STAT_COUNT];
          info->query_type = NVE4_PM_QUERY(id - NVC0_QUERY_DRV_STAT_COUNT);
          info->max_value = (id < NVE4_PM_QUERY_METRIC_MP_OCCUPANCY) ? 0 : 100;
-         info->uses_byte_units = FALSE;
          return 1;
       } else
       if (screen->compute) {
          info->name = nvc0_pm_query_names[id - NVC0_QUERY_DRV_STAT_COUNT];
          info->query_type = NVC0_PM_QUERY(id - NVC0_QUERY_DRV_STAT_COUNT);
          info->max_value = 0;
-         info->uses_byte_units = FALSE;
          return 1;
       }
    }
@@ -1443,7 +1442,6 @@ nvc0_screen_get_driver_query_info(struct pipe_screen *pscreen,
    info->name = "this_is_not_the_query_you_are_looking_for";
    info->query_type = 0xdeadd01d;
    info->max_value = 0;
-   info->uses_byte_units = FALSE;
    return 0;
 }
 
