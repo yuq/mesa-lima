@@ -651,6 +651,7 @@ nvc0_screen_create(struct nouveau_device *dev)
    pscreen->get_shader_param = nvc0_screen_get_shader_param;
    pscreen->get_paramf = nvc0_screen_get_paramf;
    pscreen->get_driver_query_info = nvc0_screen_get_driver_query_info;
+   pscreen->get_driver_query_group_info = nvc0_screen_get_driver_query_group_info;
 
    nvc0_screen_init_resource_functions(pscreen);
 
