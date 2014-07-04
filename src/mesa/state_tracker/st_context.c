@@ -51,6 +51,7 @@
 #include "st_cb_fbo.h"
 #include "st_cb_feedback.h"
 #include "st_cb_msaa.h"
+#include "st_cb_perfmon.h"
 #include "st_cb_program.h"
 #include "st_cb_queryobj.h"
 #include "st_cb_readpixels.h"
@@ -116,6 +117,7 @@ st_destroy_context_priv(struct st_context *st)
    st_destroy_bitmap(st);
    st_destroy_drawpix(st);
    st_destroy_drawtex(st);
+   st_destroy_perfmon(st);
 
    for (shader = 0; shader < ARRAY_SIZE(st->state.sampler_views); shader++) {
       for (i = 0; i < ARRAY_SIZE(st->state.sampler_views[0]); i++) {
@@ -249,6 +251,12 @@ st_create_context_priv( struct gl_context *ctx, struct pipe_context *pipe,
    st_init_limits(st->pipe->screen, &ctx->Const, &ctx->Extensions);
    st_init_extensions(st->pipe->screen, &ctx->Const,
                       &ctx->Extensions, &st->options, ctx->Mesa_DXTn);
+
+   if (st_init_perfmon(st)) {
+      /* GL_AMD_performance_monitor is only enabled when the underlying
+       * driver expose GPU hardware performance counters. */
+      ctx->Extensions.AMD_performance_monitor = GL_TRUE;
+   }
 
    /* Enable shader-based fallbacks for ARB_color_buffer_float if needed. */
    if (screen->get_param(screen, PIPE_CAP_VERTEX_COLOR_UNCLAMPED)) {
@@ -414,6 +422,7 @@ void st_init_driver_functions(struct dd_function_table *functions)
    st_init_fbo_functions(functions);
    st_init_feedback_functions(functions);
    st_init_msaa_functions(functions);
+   st_init_perfmon_functions(functions);
    st_init_program_functions(functions);
    st_init_query_functions(functions);
    st_init_cond_render_functions(functions);
