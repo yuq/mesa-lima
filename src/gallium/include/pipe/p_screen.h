@@ -236,6 +236,17 @@ struct pipe_screen {
                                 unsigned index,
                                 struct pipe_driver_query_info *info);
 
+   /**
+    * Returns a driver-specific query group.
+    *
+    * If \p info is NULL, the number of available groups is returned.
+    * Otherwise, the driver query group at the specified \p index is returned
+    * in \p info. The function returns non-zero on success.
+    */
+   int (*get_driver_query_group_info)(struct pipe_screen *screen,
+                                      unsigned index,
+                                      struct pipe_driver_query_group_info *info);
+
 };
 
 

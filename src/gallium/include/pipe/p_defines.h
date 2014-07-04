@@ -752,12 +752,26 @@ union pipe_color_union
    unsigned int ui[4];
 };
 
+enum pipe_driver_query_group_type
+{
+   PIPE_DRIVER_QUERY_GROUP_TYPE_CPU = 0,
+   PIPE_DRIVER_QUERY_GROUP_TYPE_GPU = 1,
+};
+
 struct pipe_driver_query_info
 {
    const char *name;
    unsigned query_type; /* PIPE_QUERY_DRIVER_SPECIFIC + i */
    uint64_t max_value; /* max value that can be returned */
    boolean uses_byte_units; /* whether the result is in bytes */
+};
+
+struct pipe_driver_query_group_info
+{
+   const char *name;
+   enum pipe_driver_query_group_type type;
+   unsigned max_active_queries;
+   unsigned num_queries;
 };
 
 #ifdef __cplusplus

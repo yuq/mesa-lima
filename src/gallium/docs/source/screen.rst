@@ -588,3 +588,13 @@ query at the specified **index** is returned in **info**.
 The function returns non-zero on success.
 The driver-specific query is described with the pipe_driver_query_info
 structure.
+
+get_driver_query_group_info
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Return a driver-specific query group. If the **info** parameter is NULL,
+the number of available groups is returned.  Otherwise, the driver
+query group at the specified **index** is returned in **info**.
+The function returns non-zero on success.
+The driver-specific query group is described with the
+pipe_driver_query_group_info structure.
