@@ -56,7 +56,8 @@ struct nvc0_query {
 
 #define NVC0_QUERY_ALLOC_SPACE 256
 
-static void nvc0_mp_pm_query_begin(struct nvc0_context *, struct nvc0_query *);
+static boolean nvc0_mp_pm_query_begin(struct nvc0_context *,
+                                      struct nvc0_query *);
 static void nvc0_mp_pm_query_end(struct nvc0_context *, struct nvc0_query *);
 static boolean nvc0_mp_pm_query_result(struct nvc0_context *,
                                        struct nvc0_query *, void *, boolean);
@@ -256,6 +257,7 @@ nvc0_query_begin(struct pipe_context *pipe, struct pipe_query *pq)
    struct nvc0_context *nvc0 = nvc0_context(pipe);
    struct nouveau_pushbuf *push = nvc0->base.pushbuf;
    struct nvc0_query *q = nvc0_query(pq);
+   boolean ret = true;
 
    /* For occlusion queries we have to change the storage, because a previous
     * query might set the initial render conition to FALSE even *after* we re-
@@ -327,12 +329,12 @@ nvc0_query_begin(struct pipe_context *pipe, struct pipe_query *pq)
 #endif
       if ((q->type >= NVE4_PM_QUERY(0) && q->type <= NVE4_PM_QUERY_LAST) ||
           (q->type >= NVC0_PM_QUERY(0) && q->type <= NVC0_PM_QUERY_LAST)) {
-         nvc0_mp_pm_query_begin(nvc0, q);
+         ret = nvc0_mp_pm_query_begin(nvc0, q);
       }
       break;
    }
    q->state = NVC0_QUERY_STATE_ACTIVE;
-   return true;
+   return ret;
 }
 
 static void
@@ -1072,7 +1074,7 @@ nvc0_mp_pm_query_get_cfg(struct nvc0_context *nvc0, struct nvc0_query *q)
    return &nvc0_mp_pm_queries[q->type - NVC0_PM_QUERY(0)];
 }
 
-void
+boolean
 nvc0_mp_pm_query_begin(struct nvc0_context *nvc0, struct nvc0_query *q)
 {
    struct nvc0_screen *screen = nvc0->screen;
@@ -1091,7 +1093,7 @@ nvc0_mp_pm_query_begin(struct nvc0_context *nvc0, struct nvc0_query *q)
    if (screen->pm.num_mp_pm_active[0] + num_ab[0] > 4 ||
        screen->pm.num_mp_pm_active[1] + num_ab[1] > 4) {
       NOUVEAU_ERR("Not enough free MP counter slots !\n");
-      return;
+      return false;
    }
 
    assert(cfg->num_counters <= 4);
@@ -1156,6 +1158,7 @@ nvc0_mp_pm_query_begin(struct nvc0_context *nvc0, struct nvc0_query *q)
          }
       }
    }
+   return true;
 }
 
 static void
