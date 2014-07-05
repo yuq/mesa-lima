@@ -425,7 +425,8 @@ static void r600_destroy_query(struct pipe_context *ctx, struct pipe_query *quer
 	FREE(query);
 }
 
-static void r600_begin_query(struct pipe_context *ctx, struct pipe_query *query)
+static boolean r600_begin_query(struct pipe_context *ctx,
+                                struct pipe_query *query)
 {
 	struct r600_common_context *rctx = (struct r600_common_context *)ctx;
 	struct r600_query *rquery = (struct r600_query *)query;
@@ -433,7 +434,7 @@ static void r600_begin_query(struct pipe_context *ctx, struct pipe_query *query)
 
 	if (!r600_query_needs_begin(rquery->type)) {
 		assert(0);
-		return;
+		return false;
 	}
 
 	/* Non-GPU queries. */
@@ -442,7 +443,7 @@ static void r600_begin_query(struct pipe_context *ctx, struct pipe_query *query)
 		return;
 	case R600_QUERY_DRAW_CALLS:
 		rquery->begin_result = rctx->num_draw_calls;
-		return;
+		return true;
 	case R600_QUERY_REQUESTED_VRAM:
 	case R600_QUERY_REQUESTED_GTT:
 	case R600_QUERY_VRAM_USAGE:
@@ -451,19 +452,19 @@ static void r600_begin_query(struct pipe_context *ctx, struct pipe_query *query)
 	case R600_QUERY_CURRENT_GPU_SCLK:
 	case R600_QUERY_CURRENT_GPU_MCLK:
 		rquery->begin_result = 0;
-		return;
+		return true;
 	case R600_QUERY_BUFFER_WAIT_TIME:
 		rquery->begin_result = rctx->ws->query_value(rctx->ws, RADEON_BUFFER_WAIT_TIME_NS);
-		return;
+		return true;
 	case R600_QUERY_NUM_CS_FLUSHES:
 		rquery->begin_result = rctx->ws->query_value(rctx->ws, RADEON_NUM_CS_FLUSHES);
-		return;
+		return true;
 	case R600_QUERY_NUM_BYTES_MOVED:
 		rquery->begin_result = rctx->ws->query_value(rctx->ws, RADEON_NUM_BYTES_MOVED);
-		return;
+		return true;
 	case R600_QUERY_GPU_LOAD:
 		rquery->begin_result = r600_gpu_load_begin(rctx->screen);
-		return;
+		return true;
 	}
 
 	/* Discard the old query buffers. */
@@ -489,6 +490,7 @@ static void r600_begin_query(struct pipe_context *ctx, struct pipe_query *query)
 	if (!r600_is_timer_query(rquery->type)) {
 		LIST_ADDTAIL(&rquery->list, &rctx->active_nontimer_queries);
 	}
+   return true;
 }
 
 static void r600_end_query(struct pipe_context *ctx, struct pipe_query *query)

@@ -111,7 +111,7 @@ ilo_destroy_query(struct pipe_context *pipe, struct pipe_query *query)
    FREE(q);
 }
 
-static void
+static boolean
 ilo_begin_query(struct pipe_context *pipe, struct pipe_query *query)
 {
    struct ilo_query *q = ilo_query(query);
@@ -124,6 +124,7 @@ ilo_begin_query(struct pipe_context *pipe, struct pipe_query *query)
    q->active = true;
 
    ilo_query_table[q->type].begin(ilo_context(pipe), q);
+   return true;
 }
 
 static void

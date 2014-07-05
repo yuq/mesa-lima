@@ -185,12 +185,13 @@ trace_context_destroy_query(struct pipe_context *_pipe,
 }
 
 
-static INLINE void
+static INLINE boolean
 trace_context_begin_query(struct pipe_context *_pipe,
                           struct pipe_query *query)
 {
    struct trace_context *tr_ctx = trace_context(_pipe);
    struct pipe_context *pipe = tr_ctx->pipe;
+   boolean ret;
 
    query = trace_query_unwrap(query);
 
@@ -199,9 +200,10 @@ trace_context_begin_query(struct pipe_context *_pipe,
    trace_dump_arg(ptr, pipe);
    trace_dump_arg(ptr, query);
 
-   pipe->begin_query(pipe, query);
+   ret = pipe->begin_query(pipe, query);
 
    trace_dump_call_end();
+   return ret;
 }
 
 

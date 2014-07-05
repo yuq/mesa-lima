@@ -250,7 +250,7 @@ nvc0_query_rotate(struct nvc0_context *nvc0, struct nvc0_query *q)
       nvc0_query_allocate(nvc0, q, NVC0_QUERY_ALLOC_SPACE);
 }
 
-static void
+static boolean
 nvc0_query_begin(struct pipe_context *pipe, struct pipe_query *pq)
 {
    struct nvc0_context *nvc0 = nvc0_context(pipe);
@@ -332,6 +332,7 @@ nvc0_query_begin(struct pipe_context *pipe, struct pipe_query *pq)
       break;
    }
    q->state = NVC0_QUERY_STATE_ACTIVE;
+   return true;
 }
 
 static void

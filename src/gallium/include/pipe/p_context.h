@@ -115,7 +115,7 @@ struct pipe_context {
    void (*destroy_query)(struct pipe_context *pipe,
                          struct pipe_query *q);
 
-   void (*begin_query)(struct pipe_context *pipe, struct pipe_query *q);
+   boolean (*begin_query)(struct pipe_context *pipe, struct pipe_query *q);
    void (*end_query)(struct pipe_context *pipe, struct pipe_query *q);
 
    /**

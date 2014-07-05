@@ -58,8 +58,9 @@ static void noop_destroy_query(struct pipe_context *ctx, struct pipe_query *quer
 	FREE(query);
 }
 
-static void noop_begin_query(struct pipe_context *ctx, struct pipe_query *query)
+static boolean noop_begin_query(struct pipe_context *ctx, struct pipe_query *query)
 {
+   return true;
 }
 
 static void noop_end_query(struct pipe_context *ctx, struct pipe_query *query)

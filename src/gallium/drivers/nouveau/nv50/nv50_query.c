@@ -138,7 +138,7 @@ nv50_query_get(struct nouveau_pushbuf *push, struct nv50_query *q,
    PUSH_DATA (push, get);
 }
 
-static void
+static boolean
 nv50_query_begin(struct pipe_context *pipe, struct pipe_query *pq)
 {
    struct nv50_context *nv50 = nv50_context(pipe);
@@ -201,6 +201,7 @@ nv50_query_begin(struct pipe_context *pipe, struct pipe_query *pq)
       break;
    }
    q->ready = FALSE;
+   return true;
 }
 
 static void
