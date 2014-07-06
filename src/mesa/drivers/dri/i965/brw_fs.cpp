@@ -2558,6 +2558,47 @@ fs_visitor::opt_register_renaming()
    return progress;
 }
 
+/**
+ * Remove redundant or useless discard jumps.
+ *
+ * For example, we can eliminate jumps in the following sequence:
+ *
+ * discard-jump       (redundant with the next jump)
+ * discard-jump       (useless; jumps to the next instruction)
+ * placeholder-halt
+ */
+bool
+fs_visitor::opt_redundant_discard_jumps()
+{
+   bool progress = false;
+
+   bblock_t *last_bblock = cfg->blocks[cfg->num_blocks - 1];
+
+   fs_inst *placeholder_halt = NULL;
+   foreach_inst_in_block_reverse(fs_inst, inst, last_bblock) {
+      if (inst->opcode == FS_OPCODE_PLACEHOLDER_HALT) {
+         placeholder_halt = inst;
+         break;
+      }
+   }
+
+   if (!placeholder_halt)
+      return false;
+
+   /* Delete any HALTs immediately before the placeholder halt. */
+   for (fs_inst *prev = (fs_inst *) placeholder_halt->prev;
+        !prev->is_head_sentinel() && prev->opcode == FS_OPCODE_DISCARD_JUMP;
+        prev = (fs_inst *) placeholder_halt->prev) {
+      prev->remove(last_bblock);
+      progress = true;
+   }
+
+   if (progress)
+      invalidate_live_intervals();
+
+   return progress;
+}
+
 bool
 fs_visitor::compute_to_mrf()
 {
@@ -3661,6 +3702,7 @@ fs_visitor::optimize()
       OPT(opt_peephole_sel);
       OPT(dead_control_flow_eliminate, this);
       OPT(opt_register_renaming);
+      OPT(opt_redundant_discard_jumps);
       OPT(opt_saturate_propagation);
       OPT(register_coalesce);
       OPT(compute_to_mrf);

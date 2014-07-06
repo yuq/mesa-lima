@@ -218,6 +218,7 @@ public:
    void calculate_live_intervals();
    void calculate_register_pressure();
    bool opt_algebraic();
+   bool opt_redundant_discard_jumps();
    bool opt_cse();
    bool opt_cse_local(bblock_t *block);
    bool opt_copy_propagate();
