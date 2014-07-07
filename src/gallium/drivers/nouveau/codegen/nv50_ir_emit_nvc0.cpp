@@ -92,11 +92,14 @@ private:
 
    void emitUADD(const Instruction *);
    void emitFADD(const Instruction *);
+   void emitDADD(const Instruction *);
    void emitUMUL(const Instruction *);
    void emitFMUL(const Instruction *);
+   void emitDMUL(const Instruction *);
    void emitIMAD(const Instruction *);
    void emitISAD(const Instruction *);
    void emitFMAD(const Instruction *);
+   void emitDMAD(const Instruction *);
    void emitMADSP(const Instruction *);
 
    void emitNOT(Instruction *);
@@ -523,6 +526,25 @@ CodeEmitterNVC0::emitFMAD(const Instruction *i)
 }
 
 void
+CodeEmitterNVC0::emitDMAD(const Instruction *i)
+{
+   bool neg1 = (i->src(0).mod ^ i->src(1).mod).neg();
+
+   emitForm_A(i, HEX64(20000000, 00000001));
+
+   if (i->src(2).mod.neg())
+      code[0] |= 1 << 8;
+
+   roundMode_A(i);
+
+   if (neg1)
+      code[0] |= 1 << 9;
+
+   assert(!i->saturate);
+   assert(!i->ftz);
+}
+
+void
 CodeEmitterNVC0::emitFMUL(const Instruction *i)
 {
    bool neg = (i->src(0).mod ^ i->src(1).mod).neg();
@@ -554,6 +576,23 @@ CodeEmitterNVC0::emitFMUL(const Instruction *i)
       assert(!neg && !i->saturate && !i->ftz && !i->postFactor);
       emitForm_S(i, 0xa8, true);
    }
+}
+
+void
+CodeEmitterNVC0::emitDMUL(const Instruction *i)
+{
+   bool neg = (i->src(0).mod ^ i->src(1).mod).neg();
+
+   emitForm_A(i, HEX64(50000000, 00000001));
+   roundMode_A(i);
+
+   if (neg)
+      code[0] |= 1 << 9;
+
+   assert(!i->saturate);
+   assert(!i->ftz);
+   assert(!i->dnz);
+   assert(!i->postFactor);
 }
 
 void
@@ -616,6 +655,19 @@ CodeEmitterNVC0::emitFADD(const Instruction *i)
       if (i->src(0).mod.neg())
          code[0] |= 1 << 7;
    }
+}
+
+void
+CodeEmitterNVC0::emitDADD(const Instruction *i)
+{
+   assert(i->encSize == 8);
+   emitForm_A(i, HEX64(48000000, 00000001));
+   roundMode_A(i);
+   assert(!i->saturate);
+   assert(!i->ftz);
+   emitNegAbs12(i);
+   if (i->op == OP_SUB)
+      code[0] ^= 1 << 8;
 }
 
 void
@@ -895,6 +947,8 @@ CodeEmitterNVC0::emitMINMAX(const Instruction *i)
    else
    if (!isFloatType(i->dType))
       op |= isSignedType(i->dType) ? 0x23 : 0x03;
+   if (i->dType == TYPE_F64)
+      op |= 0x01;
 
    emitForm_A(i, op);
    emitNegAbs12(i);
@@ -2242,20 +2296,26 @@ CodeEmitterNVC0::emitInstruction(Instruction *insn)
       break;
    case OP_ADD:
    case OP_SUB:
-      if (isFloatType(insn->dType))
+      if (insn->dType == TYPE_F64)
+         emitDADD(insn);
+      else if (isFloatType(insn->dType))
          emitFADD(insn);
       else
          emitUADD(insn);
       break;
    case OP_MUL:
-      if (isFloatType(insn->dType))
+      if (insn->dType == TYPE_F64)
+         emitDMUL(insn);
+      else if (isFloatType(insn->dType))
          emitFMUL(insn);
       else
          emitUMUL(insn);
       break;
    case OP_MAD:
    case OP_FMA:
-      if (isFloatType(insn->dType))
+      if (insn->dType == TYPE_F64)
+         emitDMAD(insn);
+      else if (isFloatType(insn->dType))
          emitFMAD(insn);
       else
          emitIMAD(insn);
