@@ -775,11 +775,18 @@ enum pipe_driver_query_group_type
    PIPE_DRIVER_QUERY_GROUP_TYPE_GPU = 1,
 };
 
+union pipe_numeric_type_union
+{
+   uint64_t u64;
+   uint32_t u32;
+   float f;
+};
+
 struct pipe_driver_query_info
 {
    const char *name;
    unsigned query_type; /* PIPE_QUERY_DRIVER_SPECIFIC + i */
-   uint64_t max_value; /* max value that can be returned */
+   union pipe_numeric_type_union max_value; /* max value that can be returned */
    enum pipe_driver_query_type type;
    unsigned group_id;
 };
