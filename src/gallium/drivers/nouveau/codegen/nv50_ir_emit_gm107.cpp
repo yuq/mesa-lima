@@ -1265,8 +1265,8 @@ CodeEmitterGM107::emitMUFU()
    case OP_SIN: mufu = 1; break;
    case OP_EX2: mufu = 2; break;
    case OP_LG2: mufu = 3; break;
-   case OP_RCP: mufu = 4; break;
-   case OP_RSQ: mufu = 5; break;
+   case OP_RCP: mufu = 4 + 2 * insn->subOp; break;
+   case OP_RSQ: mufu = 5 + 2 * insn->subOp; break;
    default:
       assert(!"invalid mufu");
       break;

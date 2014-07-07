@@ -70,7 +70,30 @@ NVC0LegalizeSSA::handleDIV(Instruction *i)
 void
 NVC0LegalizeSSA::handleRCPRSQ(Instruction *i)
 {
-   // TODO
+   assert(i->dType == TYPE_F64);
+   // There are instructions that will compute the high 32 bits of the 64-bit
+   // float. We will just stick 0 in the bottom 32 bits.
+
+   bld.setPosition(i, false);
+
+   // 1. Take the source and it up.
+   Value *src[2], *dst[2], *def = i->getDef(0);
+   bld.mkSplit(src, 4, i->getSrc(0));
+
+   // 2. We don't care about the low 32 bits of the destination. Stick a 0 in.
+   dst[0] = bld.loadImm(NULL, 0);
+   dst[1] = bld.getSSA();
+
+   // 3. The new version of the instruction takes the high 32 bits of the
+   // source and outputs the high 32 bits of the destination.
+   i->setSrc(0, src[1]);
+   i->setDef(0, dst[1]);
+   i->setType(TYPE_F32);
+   i->subOp = NV50_IR_SUBOP_RCPRSQ_64H;
+
+   // 4. Recombine the two dst pieces back into the original destination.
+   bld.setPosition(i, true);
+   bld.mkOp2(OP_MERGE, TYPE_U64, def, dst[0], dst[1]);
 }
 
 bool
@@ -1520,7 +1543,7 @@ NVC0LoweringPass::handleDIV(Instruction *i)
    if (!isFloatType(i->dType))
       return true;
    bld.setPosition(i, false);
-   Instruction *rcp = bld.mkOp1(OP_RCP, i->dType, bld.getSSA(), i->getSrc(1));
+   Instruction *rcp = bld.mkOp1(OP_RCP, i->dType, bld.getSSA(typeSizeof(i->dType)), i->getSrc(1));
    i->op = OP_MUL;
    i->setSrc(1, rcp->getDef(0));
    return true;
@@ -1529,13 +1552,13 @@ NVC0LoweringPass::handleDIV(Instruction *i)
 bool
 NVC0LoweringPass::handleMOD(Instruction *i)
 {
-   if (i->dType != TYPE_F32)
+   if (!isFloatType(i->dType))
       return true;
-   LValue *value = bld.getScratch();
-   bld.mkOp1(OP_RCP, TYPE_F32, value, i->getSrc(1));
-   bld.mkOp2(OP_MUL, TYPE_F32, value, i->getSrc(0), value);
-   bld.mkOp1(OP_TRUNC, TYPE_F32, value, value);
-   bld.mkOp2(OP_MUL, TYPE_F32, value, i->getSrc(1), value);
+   LValue *value = bld.getScratch(typeSizeof(i->dType));
+   bld.mkOp1(OP_RCP, i->dType, value, i->getSrc(1));
+   bld.mkOp2(OP_MUL, i->dType, value, i->getSrc(0), value);
+   bld.mkOp1(OP_TRUNC, i->dType, value, value);
+   bld.mkOp2(OP_MUL, i->dType, value, i->getSrc(1), value);
    i->op = OP_SUB;
    i->setSrc(1, value);
    return true;
@@ -1544,8 +1567,8 @@ NVC0LoweringPass::handleMOD(Instruction *i)
 bool
 NVC0LoweringPass::handleSQRT(Instruction *i)
 {
-   Instruction *rsq = bld.mkOp1(OP_RSQ, TYPE_F32,
-                                bld.getSSA(), i->getSrc(0));
+   Instruction *rsq = bld.mkOp1(OP_RSQ, i->dType,
+                                bld.getSSA(typeSizeof(i->dType)), i->getSrc(0));
    i->op = OP_MUL;
    i->setSrc(1, rsq->getDef(0));
 

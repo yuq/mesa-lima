@@ -1771,10 +1771,10 @@ CodeEmitterGK110::emitInstruction(Instruction *insn)
       emitCVT(insn);
       break;
    case OP_RSQ:
-      emitSFnOp(insn, 5);
+      emitSFnOp(insn, 5 + 2 * insn->subOp);
       break;
    case OP_RCP:
-      emitSFnOp(insn, 4);
+      emitSFnOp(insn, 4 + 2 * insn->subOp);
       break;
    case OP_LG2:
       emitSFnOp(insn, 3);
