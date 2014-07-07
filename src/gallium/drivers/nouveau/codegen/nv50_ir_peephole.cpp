@@ -118,6 +118,35 @@ CopyPropagation::visit(BasicBlock *bb)
 
 // =============================================================================
 
+class MergeSplits : public Pass
+{
+private:
+   virtual bool visit(BasicBlock *);
+};
+
+// For SPLIT / MERGE pairs that operate on the same registers, replace the
+// post-merge def with the SPLIT's source.
+bool
+MergeSplits::visit(BasicBlock *bb)
+{
+   Instruction *i, *next, *si;
+
+   for (i = bb->getEntry(); i; i = next) {
+      next = i->next;
+      if (i->op != OP_MERGE || typeSizeof(i->dType) != 8)
+         continue;
+      si = i->getSrc(0)->getInsn();
+      if (si->op != OP_SPLIT || si != i->getSrc(1)->getInsn())
+         continue;
+      i->def(0).replace(si->getSrc(0), false);
+      delete_Instruction(prog, i);
+   }
+
+   return true;
+}
+
+// =============================================================================
+
 class LoadPropagation : public Pass
 {
 private:
@@ -2662,6 +2691,7 @@ Program::optimizeSSA(int level)
 {
    RUN_PASS(1, DeadCodeElim, buryAll);
    RUN_PASS(1, CopyPropagation, run);
+   RUN_PASS(1, MergeSplits, run);
    RUN_PASS(2, GlobalCSE, run);
    RUN_PASS(1, LocalCSE, run);
    RUN_PASS(2, AlgebraicOpt, run);
