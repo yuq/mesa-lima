@@ -225,6 +225,8 @@ i830_update_tex_unit(struct intel_context *intel, GLuint unit, GLuint ss3)
       if (sampler->MaxAnisotropy > 1.0) {
          minFilt = FILTER_ANISOTROPIC;
          magFilt = FILTER_ANISOTROPIC;
+         /* no trilinear + anisotropic */
+         mipFilt = MIPFILTER_NEAREST;
       }
       else {
          switch (sampler->MagFilter) {
