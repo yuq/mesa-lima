@@ -1418,6 +1418,13 @@ nvc0_screen_get_driver_query_info(struct pipe_screen *pscreen,
    if (!info)
       return count;
 
+   /* Init default values. */
+   info->name = "this_is_not_the_query_you_are_looking_for";
+   info->query_type = 0xdeadd01d;
+   info->max_value.u64 = 0;
+   info->type = PIPE_DRIVER_QUERY_TYPE_UINT64;
+   info->group_id = -1;
+
 #ifdef NOUVEAU_ENABLE_DRIVER_STATISTICS
    if (id < NVC0_QUERY_DRV_STAT_COUNT) {
       info->name = nvc0_drv_stat_names[id];
@@ -1441,16 +1448,11 @@ nvc0_screen_get_driver_query_info(struct pipe_screen *pscreen,
       if (screen->compute) {
          info->name = nvc0_pm_query_names[id - NVC0_QUERY_DRV_STAT_COUNT];
          info->query_type = NVC0_PM_QUERY(id - NVC0_QUERY_DRV_STAT_COUNT);
-         info->max_value.u64 = 0;
          info->group_id = NVC0_QUERY_MP_COUNTER_GROUP;
          return 1;
       }
    }
    /* user asked for info about non-existing query */
-   info->name = "this_is_not_the_query_you_are_looking_for";
-   info->query_type = 0xdeadd01d;
-   info->group_id = -1;
-   info->max_value.u64 = 0;
    return 0;
 }
 
