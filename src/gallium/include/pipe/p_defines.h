@@ -733,7 +733,15 @@ union pipe_query_result
    /* PIPE_QUERY_TIME_ELAPSED */
    /* PIPE_QUERY_PRIMITIVES_GENERATED */
    /* PIPE_QUERY_PRIMITIVES_EMITTED */
+   /* PIPE_DRIVER_QUERY_TYPE_UINT64 */
    uint64_t u64;
+
+   /* PIPE_DRIVER_QUERY_TYPE_UINT */
+   uint32_t u32;
+
+   /* PIPE_DRIVER_QUERY_TYPE_FLOAT */
+   /* PIPE_DRIVER_QUERY_TYPE_PERCENTAGE */
+   float f;
 
    /* PIPE_QUERY_SO_STATISTICS */
    struct pipe_query_data_so_statistics so_statistics;
