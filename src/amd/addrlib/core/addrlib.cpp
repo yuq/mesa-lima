@@ -264,7 +264,6 @@ ADDR_E_RETURNCODE AddrLib::Create(
         pLib->m_configFlags.useCombinedSwizzle  = pCreateIn->createFlags.useCombinedSwizzle;
         pLib->m_configFlags.checkLast2DLevel    = pCreateIn->createFlags.checkLast2DLevel;
         pLib->m_configFlags.useHtileSliceAlign  = pCreateIn->createFlags.useHtileSliceAlign;
-        pLib->m_configFlags.degradeBaseLevel    = pCreateIn->createFlags.degradeBaseLevel;
         pLib->m_configFlags.allowLargeThickTile = pCreateIn->createFlags.allowLargeThickTile;
 
         pLib->SetAddrChipFamily(pCreateIn->chipFamily, pCreateIn->chipRevision);
@@ -559,8 +558,8 @@ ADDR_E_RETURNCODE AddrLib::ComputeSurfaceInfo(
                 localIn.tileMode = tileMode;
                 localIn.tileType = tileType;
             }
-            // Degrade base level if applicable
-            if (DegradeBaseLevel(&localIn, &tileMode))
+            // Optimize tile mode if possible
+            if (OptimizeTileMode(&localIn, &tileMode))
             {
                 localIn.tileMode = tileMode;
             }
@@ -3493,34 +3492,44 @@ VOID AddrLib::ComputeMipLevel(
 
 /**
 ***************************************************************************************************
-*   AddrLib::DegradeBaseLevel
+*   AddrLib::OptimizeTileMode
 *
 *   @brief
-*       Check if base level's tile mode can be degraded
+*       Check if base level's tile mode can be optimized (degraded)
 *   @return
 *       TRUE if degraded, also returns degraded tile mode (unchanged if not degraded)
 ***************************************************************************************************
 */
-BOOL_32 AddrLib::DegradeBaseLevel(
+BOOL_32 AddrLib::OptimizeTileMode(
     const ADDR_COMPUTE_SURFACE_INFO_INPUT*  pIn,        ///< [in] Input structure for surface info
     AddrTileMode*                           pTileMode   ///< [out] Degraded tile mode
     ) const
 {
-    BOOL_32 degraded = FALSE;
     AddrTileMode tileMode = pIn->tileMode;
     UINT_32 thickness = ComputeSurfaceThickness(tileMode);
 
-    if (m_configFlags.degradeBaseLevel) // This is a global setting
+    // Optimization can only be done on level 0 and samples <= 1
+    if ((pIn->flags.opt4Space == TRUE)      &&
+        (pIn->mipLevel == 0)                &&
+        (pIn->numSamples <= 1)              &&
+        (pIn->flags.display == FALSE)       &&
+        (IsPrtTileMode(tileMode) == FALSE)  &&
+        (pIn->flags.prt == FALSE))
     {
-        if (pIn->flags.degrade4Space        && // Degradation per surface
-            pIn->mipLevel == 0              &&
-            pIn->numSamples == 1            &&
-            IsMacroTiled(tileMode))
+        // Check if linear mode is optimal
+        if ((pIn->height == 1) &&
+            (IsLinear(tileMode) == FALSE) &&
+            (AddrElemLib::IsBlockCompressed(pIn->format) == FALSE) &&
+            (pIn->flags.depth == FALSE) &&
+            (pIn->flags.stencil == FALSE))
+        {
+            tileMode = ADDR_TM_LINEAR_ALIGNED;
+        }
+        else if (IsMacroTiled(tileMode))
         {
             if (HwlDegradeBaseLevel(pIn))
             {
-                *pTileMode = thickness == 1 ? ADDR_TM_1D_TILED_THIN1 : ADDR_TM_1D_TILED_THICK;
-                degraded = TRUE;
+                tileMode = (thickness == 1) ? ADDR_TM_1D_TILED_THIN1 : ADDR_TM_1D_TILED_THICK;
             }
             else if (thickness > 1)
             {
@@ -3534,15 +3543,19 @@ BOOL_32 AddrLib::DegradeBaseLevel(
                     input.tileMode = tileMode;
                     if (HwlDegradeBaseLevel(&input))
                     {
-                        *pTileMode = ADDR_TM_1D_TILED_THICK;
-                        degraded = TRUE;
+                        tileMode = ADDR_TM_1D_TILED_THICK;
                     }
                 }
             }
         }
     }
 
-    return degraded;
+    BOOL_32 optimized = (tileMode != pIn->tileMode);
+    if (optimized)
+    {
+        *pTileMode = tileMode;
+    }
+    return optimized;
 }
 
 /**

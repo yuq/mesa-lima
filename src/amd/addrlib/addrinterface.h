@@ -246,9 +246,8 @@ typedef union _ADDR_CREATE_FLAGS
         UINT_32 useCombinedSwizzle     : 1;    ///< Use combined tile swizzle
         UINT_32 checkLast2DLevel       : 1;    ///< Check the last 2D mip sub level
         UINT_32 useHtileSliceAlign     : 1;    ///< Do htile single slice alignment
-        UINT_32 degradeBaseLevel       : 1;    ///< Degrade to 1D modes automatically for base level
         UINT_32 allowLargeThickTile    : 1;    ///< Allow 64*thickness*bytesPerPixel > rowSize
-        UINT_32 reserved               : 24;   ///< Reserved bits for future use
+        UINT_32 reserved               : 25;   ///< Reserved bits for future use
     };
 
     UINT_32 value;
@@ -440,7 +439,6 @@ typedef union _ADDR_SURFACE_FLAGS
         UINT_32 qbStereo        : 1; ///< Quad buffer stereo surface
         UINT_32 pow2Pad         : 1; ///< SI: Pad to pow2, must set for mipmap (include level0)
         UINT_32 interleaved     : 1; ///< Special flag for interleaved YUV surface padding
-        UINT_32 degrade4Space   : 1; ///< Degrade base level's tile mode to save memory
         UINT_32 tcCompatible    : 1; ///< Flag indicates surface needs to be shader readable
         UINT_32 dispTileType    : 1; ///< NI: force display Tiling for 128 bit shared resoruce
         UINT_32 dccCompatible   : 1; ///< VI: whether to support dcc fast clear
@@ -448,7 +446,7 @@ typedef union _ADDR_SURFACE_FLAGS
                                      ///  This flag indicates we need to follow the alignment with
                                      ///  CZ families or other ASICs under PX configuration + CZ.
         UINT_32 nonSplit        : 1; ///< CI: depth texture should not be split
-        UINT_32 reserved        : 9; ///< Reserved bits
+        UINT_32 reserved        : 10; ///< Reserved bits
     };
 
     UINT_32 value;

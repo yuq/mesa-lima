@@ -140,7 +140,6 @@ ADDR_HANDLE radv_amdgpu_addr_create(struct amdgpu_gpu_info *amdinfo, int family,
 
 	createFlags.value = 0;
 	createFlags.useTileIndex = 1;
-	createFlags.degradeBaseLevel = 1;
 
 	addrCreateInput.chipEngine = CIASICIDGFXENGINE_SOUTHERNISLAND;
 	addrCreateInput.chipFamily = family;
@@ -398,7 +397,7 @@ static int radv_amdgpu_winsys_surface_init(struct radeon_winsys *_ws,
 	AddrSurfInfoIn.flags.cube = type == RADEON_SURF_TYPE_CUBEMAP;
 	AddrSurfInfoIn.flags.display = (surf->flags & RADEON_SURF_SCANOUT) != 0;
 	AddrSurfInfoIn.flags.pow2Pad = surf->last_level > 0;
-	AddrSurfInfoIn.flags.degrade4Space = 1;
+	AddrSurfInfoIn.flags.opt4Space = 1;
 
 	/* DCC notes:
 	 * - If we add MSAA support, keep in mind that CB can't decompress 8bpp
@@ -437,7 +436,7 @@ static int radv_amdgpu_winsys_surface_init(struct radeon_winsys *_ws,
 		AddrTileInfoIn.macroAspectRatio = surf->mtilea;
 		AddrTileInfoIn.tileSplitBytes = surf->tile_split;
 		AddrTileInfoIn.pipeConfig = surf->pipe_config + 1; /* +1 compared to GB_TILE_MODE */
-		AddrSurfInfoIn.flags.degrade4Space = 0;
+		AddrSurfInfoIn.flags.opt4Space = 0;
 		AddrSurfInfoIn.pTileInfo = &AddrTileInfoIn;
 
 		/* If AddrSurfInfoIn.pTileInfo is set, Addrlib doesn't set

@@ -1158,6 +1158,22 @@ BOOL_32 EgBasedAddrLib::HwlDegradeBaseLevel(
     if (valid)
     {
         degrade = (pIn->width < pitchAlign || pIn->height < heightAlign);
+        // Check whether 2D tiling still has too much footprint
+        if (degrade == FALSE)
+        {
+            // Only check width and height as slices are aligned to thickness
+            UINT_64 unalignedSize = pIn->width * pIn->height;
+
+            UINT_32 alignedPitch = PowTwoAlign(pIn->width, pitchAlign);
+            UINT_32 alignedHeight = PowTwoAlign(pIn->height, heightAlign);
+            UINT_64 alignedSize = alignedPitch * alignedHeight;
+
+            // alignedSize > 1.5 * unalignedSize
+            if (2 * alignedSize > 3 * unalignedSize)
+            {
+                degrade = TRUE;
+            }
+        }
     }
     else
     {

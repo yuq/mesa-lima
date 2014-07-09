@@ -124,7 +124,6 @@ ADDR_HANDLE amdgpu_addr_create(struct amdgpu_winsys *ws)
 
    createFlags.value = 0;
    createFlags.useTileIndex = 1;
-   createFlags.degradeBaseLevel = 1;
    createFlags.useHtileSliceAlign = 1;
 
    addrCreateInput.chipEngine = CIASICIDGFXENGINE_SOUTHERNISLAND;
@@ -401,11 +400,10 @@ static int amdgpu_surface_init(struct radeon_winsys *rws,
    /* Only degrade the tile mode for space if TC-compatible HTILE hasn't been
     * requested, because TC-compatible HTILE requires 2D tiling.
     */
-   AddrSurfInfoIn.flags.degrade4Space = !AddrSurfInfoIn.flags.tcCompatible &&
-                                        !AddrSurfInfoIn.flags.fmask &&
-                                        tex->nr_samples <= 1 &&
-                                        (flags & RADEON_SURF_OPTIMIZE_FOR_SPACE);
-   AddrSurfInfoIn.flags.opt4Space = AddrSurfInfoIn.flags.degrade4Space;
+   AddrSurfInfoIn.flags.opt4Space = !AddrSurfInfoIn.flags.tcCompatible &&
+                                    !AddrSurfInfoIn.flags.fmask &&
+                                    tex->nr_samples <= 1 &&
+                                    (flags & RADEON_SURF_OPTIMIZE_FOR_SPACE);
 
    /* DCC notes:
     * - If we add MSAA support, keep in mind that CB can't decompress 8bpp
@@ -447,7 +445,7 @@ static int amdgpu_surface_init(struct radeon_winsys *rws,
       AddrTileInfoIn.macroAspectRatio = surf->mtilea;
       AddrTileInfoIn.tileSplitBytes = surf->tile_split;
       AddrTileInfoIn.pipeConfig = surf->pipe_config + 1; /* +1 compared to GB_TILE_MODE */
-      AddrSurfInfoIn.flags.degrade4Space = 0;
+      AddrSurfInfoIn.flags.opt4Space = 0;
       AddrSurfInfoIn.pTileInfo = &AddrTileInfoIn;
 
       /* If AddrSurfInfoIn.pTileInfo is set, Addrlib doesn't set

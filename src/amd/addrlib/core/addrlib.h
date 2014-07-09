@@ -652,7 +652,7 @@ private:
 
     VOID SetMinPitchAlignPixels(UINT_32 minPitchAlignPixels);
 
-    BOOL_32 DegradeBaseLevel(
+    BOOL_32 OptimizeTileMode(
         const ADDR_COMPUTE_SURFACE_INFO_INPUT* pIn, AddrTileMode* pTileMode) const;
 
 protected:
