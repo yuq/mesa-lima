@@ -170,6 +170,16 @@ struct pipe_context {
    void   (*bind_gs_state)(struct pipe_context *, void *);
    void   (*delete_gs_state)(struct pipe_context *, void *);
 
+   void * (*create_tcs_state)(struct pipe_context *,
+                              const struct pipe_shader_state *);
+   void   (*bind_tcs_state)(struct pipe_context *, void *);
+   void   (*delete_tcs_state)(struct pipe_context *, void *);
+
+   void * (*create_tes_state)(struct pipe_context *,
+                              const struct pipe_shader_state *);
+   void   (*bind_tes_state)(struct pipe_context *, void *);
+   void   (*delete_tes_state)(struct pipe_context *, void *);
+
    void * (*create_vertex_elements_state)(struct pipe_context *,
                                           unsigned num_elements,
                                           const struct pipe_vertex_element *);
