@@ -61,6 +61,8 @@ static const struct st_tracked_state *atoms[] =
    &st_update_vertex_texture,
    &st_update_fragment_texture,
    &st_update_geometry_texture,
+   &st_update_tessctrl_texture,
+   &st_update_tesseval_texture,
    &st_update_sampler, /* depends on update_*_texture for swizzle */
    &st_update_framebuffer,
    &st_update_msaa,

@@ -474,6 +474,38 @@ update_geometry_textures(struct st_context *st)
 }
 
 
+static void
+update_tessctrl_textures(struct st_context *st)
+{
+   const struct gl_context *ctx = st->ctx;
+
+   if (ctx->TessCtrlProgram._Current) {
+      update_textures(st,
+                      PIPE_SHADER_TESS_CTRL,
+                      &ctx->TessCtrlProgram._Current->Base,
+                      ctx->Const.Program[MESA_SHADER_TESS_CTRL].MaxTextureImageUnits,
+                      st->state.sampler_views[PIPE_SHADER_TESS_CTRL],
+                      &st->state.num_sampler_views[PIPE_SHADER_TESS_CTRL]);
+   }
+}
+
+
+static void
+update_tesseval_textures(struct st_context *st)
+{
+   const struct gl_context *ctx = st->ctx;
+
+   if (ctx->TessEvalProgram._Current) {
+      update_textures(st,
+                      PIPE_SHADER_TESS_EVAL,
+                      &ctx->TessEvalProgram._Current->Base,
+                      ctx->Const.Program[MESA_SHADER_TESS_EVAL].MaxTextureImageUnits,
+                      st->state.sampler_views[PIPE_SHADER_TESS_EVAL],
+                      &st->state.num_sampler_views[PIPE_SHADER_TESS_EVAL]);
+   }
+}
+
+
 const struct st_tracked_state st_update_fragment_texture = {
    "st_update_texture",					/* name */
    {							/* dirty */
@@ -501,6 +533,26 @@ const struct st_tracked_state st_update_geometry_texture = {
       ST_NEW_GEOMETRY_PROGRAM,				/* st */
    },
    update_geometry_textures				/* update */
+};
+
+
+const struct st_tracked_state st_update_tessctrl_texture = {
+   "st_update_tessctrl_texture",			/* name */
+   {							/* dirty */
+      _NEW_TEXTURE,					/* mesa */
+      ST_NEW_TESSCTRL_PROGRAM,				/* st */
+   },
+   update_tessctrl_textures				/* update */
+};
+
+
+const struct st_tracked_state st_update_tesseval_texture = {
+   "st_update_tesseval_texture",			/* name */
+   {							/* dirty */
+      _NEW_TEXTURE,					/* mesa */
+      ST_NEW_TESSEVAL_PROGRAM,				/* st */
+   },
+   update_tesseval_textures				/* update */
 };
 
 

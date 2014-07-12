@@ -66,6 +66,8 @@ extern const struct st_tracked_state st_update_sampler;
 extern const struct st_tracked_state st_update_fragment_texture;
 extern const struct st_tracked_state st_update_vertex_texture;
 extern const struct st_tracked_state st_update_geometry_texture;
+extern const struct st_tracked_state st_update_tessctrl_texture;
+extern const struct st_tracked_state st_update_tesseval_texture;
 extern const struct st_tracked_state st_finalize_textures;
 extern const struct st_tracked_state st_update_fs_constants;
 extern const struct st_tracked_state st_update_gs_constants;

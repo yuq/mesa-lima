@@ -305,6 +305,22 @@ update_samplers(struct st_context *st)
                              st->state.samplers[PIPE_SHADER_GEOMETRY],
                              &st->state.num_samplers[PIPE_SHADER_GEOMETRY]);
    }
+   if (ctx->TessCtrlProgram._Current) {
+      update_shader_samplers(st,
+                             PIPE_SHADER_TESS_CTRL,
+                             &ctx->TessCtrlProgram._Current->Base,
+                             ctx->Const.Program[MESA_SHADER_TESS_CTRL].MaxTextureImageUnits,
+                             st->state.samplers[PIPE_SHADER_TESS_CTRL],
+                             &st->state.num_samplers[PIPE_SHADER_TESS_CTRL]);
+   }
+   if (ctx->TessEvalProgram._Current) {
+      update_shader_samplers(st,
+                             PIPE_SHADER_TESS_EVAL,
+                             &ctx->TessEvalProgram._Current->Base,
+                             ctx->Const.Program[MESA_SHADER_TESS_EVAL].MaxTextureImageUnits,
+                             st->state.samplers[PIPE_SHADER_TESS_EVAL],
+                             &st->state.num_samplers[PIPE_SHADER_TESS_EVAL]);
+   }
 }
 
 
