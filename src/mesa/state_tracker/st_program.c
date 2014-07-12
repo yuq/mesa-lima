@@ -163,6 +163,68 @@ st_release_gp_variants(struct st_context *st, struct st_geometry_program *stgp)
 }
 
 
+/**
+ * Delete a tessellation control program variant.  Note the caller must unlink
+ * the variant from the linked list.
+ */
+static void
+delete_tcp_variant(struct st_context *st, struct st_tcp_variant *tcpv)
+{
+   if (tcpv->driver_shader)
+      cso_delete_tessctrl_shader(st->cso_context, tcpv->driver_shader);
+
+   free(tcpv);
+}
+
+
+/**
+ * Free all variants of a tessellation control program.
+ */
+void
+st_release_tcp_variants(struct st_context *st, struct st_tessctrl_program *sttcp)
+{
+   struct st_tcp_variant *tcpv;
+
+   for (tcpv = sttcp->variants; tcpv; ) {
+      struct st_tcp_variant *next = tcpv->next;
+      delete_tcp_variant(st, tcpv);
+      tcpv = next;
+   }
+
+   sttcp->variants = NULL;
+}
+
+
+/**
+ * Delete a tessellation evaluation program variant.  Note the caller must
+ * unlink the variant from the linked list.
+ */
+static void
+delete_tep_variant(struct st_context *st, struct st_tep_variant *tepv)
+{
+   if (tepv->driver_shader)
+      cso_delete_tesseval_shader(st->cso_context, tepv->driver_shader);
+
+   free(tepv);
+}
+
+
+/**
+ * Free all variants of a tessellation evaluation program.
+ */
+void
+st_release_tep_variants(struct st_context *st, struct st_tesseval_program *sttep)
+{
+   struct st_tep_variant *tepv;
+
+   for (tepv = sttep->variants; tepv; ) {
+      struct st_tep_variant *next = tepv->next;
+      delete_tep_variant(st, tepv);
+      tepv = next;
+   }
+
+   sttep->variants = NULL;
+}
 
 
 /**
@@ -1168,6 +1230,92 @@ st_get_gp_variant(struct st_context *st,
 
 
 /**
+ * Translate a tessellation control program to create a new variant.
+ */
+static struct st_tcp_variant *
+st_translate_tessctrl_program(struct st_context *st,
+                              struct st_tessctrl_program *sttcp,
+                              const struct st_tcp_variant_key *key)
+{
+   return NULL; /* will be updated in the next commit */
+}
+
+
+/**
+ * Get/create tessellation control program variant.
+ */
+struct st_tcp_variant *
+st_get_tcp_variant(struct st_context *st,
+                  struct st_tessctrl_program *sttcp,
+                  const struct st_tcp_variant_key *key)
+{
+   struct st_tcp_variant *tcpv;
+
+   /* Search for existing variant */
+   for (tcpv = sttcp->variants; tcpv; tcpv = tcpv->next) {
+      if (memcmp(&tcpv->key, key, sizeof(*key)) == 0) {
+         break;
+      }
+   }
+
+   if (!tcpv) {
+      /* create new */
+      tcpv = st_translate_tessctrl_program(st, sttcp, key);
+      if (tcpv) {
+         /* insert into list */
+         tcpv->next = sttcp->variants;
+         sttcp->variants = tcpv;
+      }
+   }
+
+   return tcpv;
+}
+
+
+/**
+ * Translate a tessellation evaluation program to create a new variant.
+ */
+static struct st_tep_variant *
+st_translate_tesseval_program(struct st_context *st,
+                              struct st_tesseval_program *sttep,
+                              const struct st_tep_variant_key *key)
+{
+   return NULL; /* will be updated in the next commit */
+}
+
+
+/**
+ * Get/create tessellation evaluation program variant.
+ */
+struct st_tep_variant *
+st_get_tep_variant(struct st_context *st,
+                  struct st_tesseval_program *sttep,
+                  const struct st_tep_variant_key *key)
+{
+   struct st_tep_variant *tepv;
+
+   /* Search for existing variant */
+   for (tepv = sttep->variants; tepv; tepv = tepv->next) {
+      if (memcmp(&tepv->key, key, sizeof(*key)) == 0) {
+         break;
+      }
+   }
+
+   if (!tepv) {
+      /* create new */
+      tepv = st_translate_tesseval_program(st, sttep, key);
+      if (tepv) {
+         /* insert into list */
+         tepv->next = sttep->variants;
+         sttep->variants = tepv;
+      }
+   }
+
+   return tepv;
+}
+
+
+/**
  * Vert/Geom/Frag programs have per-context variants.  Free all the
  * variants attached to the given program which match the given context.
  */
@@ -1240,6 +1388,48 @@ destroy_program_variants(struct st_context *st, struct gl_program *program)
          }
       }
       break;
+   case GL_TESS_CONTROL_PROGRAM_NV:
+      {
+         struct st_tessctrl_program *sttcp =
+            (struct st_tessctrl_program *) program;
+         struct st_tcp_variant *tcpv, **prevPtr = &sttcp->variants;
+
+         for (tcpv = sttcp->variants; tcpv; ) {
+            struct st_tcp_variant *next = tcpv->next;
+            if (tcpv->key.st == st) {
+               /* unlink from list */
+               *prevPtr = next;
+               /* destroy this variant */
+               delete_tcp_variant(st, tcpv);
+            }
+            else {
+               prevPtr = &tcpv->next;
+            }
+            tcpv = next;
+         }
+      }
+      break;
+   case GL_TESS_EVALUATION_PROGRAM_NV:
+      {
+         struct st_tesseval_program *sttep =
+            (struct st_tesseval_program *) program;
+         struct st_tep_variant *tepv, **prevPtr = &sttep->variants;
+
+         for (tepv = sttep->variants; tepv; ) {
+            struct st_tep_variant *next = tepv->next;
+            if (tepv->key.st == st) {
+               /* unlink from list */
+               *prevPtr = next;
+               /* destroy this variant */
+               delete_tep_variant(st, tepv);
+            }
+            else {
+               prevPtr = &tepv->next;
+            }
+            tepv = next;
+         }
+      }
+      break;
    default:
       _mesa_problem(NULL, "Unexpected program target 0x%x in "
                     "destroy_program_variants_cb()", program->Target);
@@ -1276,6 +1466,8 @@ destroy_shader_program_variants_cb(GLuint key, void *data, void *userData)
    case GL_VERTEX_SHADER:
    case GL_FRAGMENT_SHADER:
    case GL_GEOMETRY_SHADER:
+   case GL_TESS_CONTROL_SHADER:
+   case GL_TESS_EVALUATION_SHADER:
       {
          destroy_program_variants(st, shader->Program);
       }

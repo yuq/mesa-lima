@@ -52,6 +52,8 @@ extern const struct st_tracked_state st_update_clip;
 extern const struct st_tracked_state st_update_depth_stencil_alpha;
 extern const struct st_tracked_state st_update_fp;
 extern const struct st_tracked_state st_update_gp;
+extern const struct st_tracked_state st_update_tep;
+extern const struct st_tracked_state st_update_tcp;
 extern const struct st_tracked_state st_update_vp;
 extern const struct st_tracked_state st_update_rasterizer;
 extern const struct st_tracked_state st_update_polygon_stipple;

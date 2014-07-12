@@ -5622,6 +5622,10 @@ shader_stage_to_ptarget(gl_shader_stage stage)
       return PIPE_SHADER_FRAGMENT;
    case MESA_SHADER_GEOMETRY:
       return PIPE_SHADER_GEOMETRY;
+   case MESA_SHADER_TESS_CTRL:
+      return PIPE_SHADER_TESS_CTRL;
+   case MESA_SHADER_TESS_EVAL:
+      return PIPE_SHADER_TESS_EVAL;
    case MESA_SHADER_COMPUTE:
       return PIPE_SHADER_COMPUTE;
    }
