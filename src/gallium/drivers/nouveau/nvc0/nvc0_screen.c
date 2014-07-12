@@ -228,10 +228,8 @@ nvc0_screen_get_shader_param(struct pipe_screen *pscreen, unsigned shader,
 
    switch (shader) {
    case PIPE_SHADER_VERTEX:
-      /*
-   case PIPE_SHADER_TESSELLATION_CONTROL:
-   case PIPE_SHADER_TESSELLATION_EVALUATION:
-      */
+   case PIPE_SHADER_TESS_CTRL:
+   case PIPE_SHADER_TESS_EVAL:
    case PIPE_SHADER_GEOMETRY:
    case PIPE_SHADER_FRAGMENT:
       break;

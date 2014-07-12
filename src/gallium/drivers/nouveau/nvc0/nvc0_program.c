@@ -34,7 +34,8 @@ static uint32_t
 nvc0_shader_input_address(unsigned sn, unsigned si, unsigned ubase)
 {
    switch (sn) {
-   case NV50_SEMANTIC_TESSFACTOR:   return 0x000 + si * 0x4;
+   case TGSI_SEMANTIC_TESSOUTER:    return 0x000 + si * 0x4;
+   case TGSI_SEMANTIC_TESSINNER:    return 0x010 + si * 0x4;
    case TGSI_SEMANTIC_PRIMID:       return 0x060;
    case TGSI_SEMANTIC_LAYER:        return 0x064;
    case TGSI_SEMANTIC_VIEWPORT_INDEX:return 0x068;
@@ -48,7 +49,7 @@ nvc0_shader_input_address(unsigned sn, unsigned si, unsigned ubase)
    case TGSI_SEMANTIC_CLIPDIST:     return 0x2c0 + si * 0x10;
    case TGSI_SEMANTIC_CLIPVERTEX:   return 0x270;
    case TGSI_SEMANTIC_PCOORD:       return 0x2e0;
-   case NV50_SEMANTIC_TESSCOORD:    return 0x2f0;
+   case TGSI_SEMANTIC_TESSCOORD:    return 0x2f0;
    case TGSI_SEMANTIC_INSTANCEID:   return 0x2f8;
    case TGSI_SEMANTIC_VERTEXID:     return 0x2fc;
    case TGSI_SEMANTIC_TEXCOORD:     return 0x300 + si * 0x10;
@@ -63,7 +64,8 @@ static uint32_t
 nvc0_shader_output_address(unsigned sn, unsigned si, unsigned ubase)
 {
    switch (sn) {
-   case NV50_SEMANTIC_TESSFACTOR:    return 0x000 + si * 0x4;
+   case TGSI_SEMANTIC_TESSOUTER:     return 0x000 + si * 0x4;
+   case TGSI_SEMANTIC_TESSINNER:     return 0x010 + si * 0x4;
    case TGSI_SEMANTIC_PRIMID:        return 0x060;
    case TGSI_SEMANTIC_LAYER:         return 0x064;
    case TGSI_SEMANTIC_VIEWPORT_INDEX:return 0x068;
@@ -277,7 +279,6 @@ nvc0_vp_gen_header(struct nvc0_program *vp, struct nv50_ir_prog_info *info)
    return nvc0_vtgp_gen_header(vp, info);
 }
 
-#if defined(PIPE_SHADER_HULL) || defined(PIPE_SHADER_DOMAIN)
 static void
 nvc0_tp_get_tess_mode(struct nvc0_program *tp, struct nv50_ir_prog_info *info)
 {
@@ -305,14 +306,13 @@ nvc0_tp_get_tess_mode(struct nvc0_program *tp, struct nv50_ir_prog_info *info)
       tp->tp.tess_mode |= NVC0_3D_TESS_MODE_CONNECTED;
 
    switch (info->prop.tp.partitioning) {
-   case PIPE_TESS_PART_INTEGER:
-   case PIPE_TESS_PART_POW2:
+   case PIPE_TESS_SPACING_EQUAL:
       tp->tp.tess_mode |= NVC0_3D_TESS_MODE_SPACING_EQUAL;
       break;
-   case PIPE_TESS_PART_FRACT_ODD:
+   case PIPE_TESS_SPACING_FRACTIONAL_ODD:
       tp->tp.tess_mode |= NVC0_3D_TESS_MODE_SPACING_FRACTIONAL_ODD;
       break;
-   case PIPE_TESS_PART_FRACT_EVEN:
+   case PIPE_TESS_SPACING_FRACTIONAL_EVEN:
       tp->tp.tess_mode |= NVC0_3D_TESS_MODE_SPACING_FRACTIONAL_EVEN;
       break;
    default:
@@ -320,9 +320,7 @@ nvc0_tp_get_tess_mode(struct nvc0_program *tp, struct nv50_ir_prog_info *info)
       break;
    }
 }
-#endif
 
-#ifdef PIPE_SHADER_HULL
 static int
 nvc0_tcp_gen_header(struct nvc0_program *tcp, struct nv50_ir_prog_info *info)
 {
@@ -346,9 +344,7 @@ nvc0_tcp_gen_header(struct nvc0_program *tcp, struct nv50_ir_prog_info *info)
 
    return 0;
 }
-#endif
 
-#ifdef PIPE_SHADER_DOMAIN
 static int
 nvc0_tep_gen_header(struct nvc0_program *tep, struct nv50_ir_prog_info *info)
 {
@@ -365,7 +361,6 @@ nvc0_tep_gen_header(struct nvc0_program *tep, struct nv50_ir_prog_info *info)
 
    return 0;
 }
-#endif
 
 static int
 nvc0_gp_gen_header(struct nvc0_program *gp, struct nv50_ir_prog_info *info)
@@ -598,16 +593,12 @@ nvc0_program_translate(struct nvc0_program *prog, uint16_t chipset)
    case PIPE_SHADER_VERTEX:
       ret = nvc0_vp_gen_header(prog, info);
       break;
-#ifdef PIPE_SHADER_HULL
-   case PIPE_SHADER_HULL:
+   case PIPE_SHADER_TESS_CTRL:
       ret = nvc0_tcp_gen_header(prog, info);
       break;
-#endif
-#ifdef PIPE_SHADER_DOMAIN
-   case PIPE_SHADER_DOMAIN:
+   case PIPE_SHADER_TESS_EVAL:
       ret = nvc0_tep_gen_header(prog, info);
       break;
-#endif
    case PIPE_SHADER_GEOMETRY:
       ret = nvc0_gp_gen_header(prog, info);
       break;

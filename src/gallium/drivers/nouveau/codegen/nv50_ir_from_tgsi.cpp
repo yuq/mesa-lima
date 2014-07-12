@@ -372,6 +372,8 @@ static nv50_ir::SVSemantic translateSysVal(uint sysval)
    case TGSI_SEMANTIC_SAMPLEPOS:  return nv50_ir::SV_SAMPLE_POS;
    case TGSI_SEMANTIC_SAMPLEMASK: return nv50_ir::SV_SAMPLE_MASK;
    case TGSI_SEMANTIC_INVOCATIONID: return nv50_ir::SV_INVOCATION_ID;
+   case TGSI_SEMANTIC_TESSCOORD:  return nv50_ir::SV_TESS_COORD;
+   case TGSI_SEMANTIC_VERTICESIN: return nv50_ir::SV_VERTEX_COUNT;
    default:
       assert(0);
       return nv50_ir::SV_CLOCK;

@@ -74,11 +74,6 @@ struct nv50_ir_varying
 #define NV50_SEMANTIC_TESSCOORD     (TGSI_SEMANTIC_COUNT + 8)
 #define NV50_SEMANTIC_COUNT         (TGSI_SEMANTIC_COUNT + 10)
 
-#define NV50_TESS_PART_FRACT_ODD  0
-#define NV50_TESS_PART_FRACT_EVEN 1
-#define NV50_TESS_PART_POW2       2
-#define NV50_TESS_PART_INTEGER    3
-
 #define NV50_PRIM_PATCHES PIPE_PRIM_MAX
 
 struct nv50_ir_prog_symbol

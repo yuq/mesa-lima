@@ -356,16 +356,14 @@ nve4_validate_tic(struct nvc0_context *nvc0, unsigned s)
 
 void nvc0_validate_textures(struct nvc0_context *nvc0)
 {
-   bool need_flush;
+   bool need_flush = false;
+   int i;
 
-   if (nvc0->screen->base.class_3d >= NVE4_3D_CLASS) {
-      need_flush  = nve4_validate_tic(nvc0, 0);
-      need_flush |= nve4_validate_tic(nvc0, 3);
-      need_flush |= nve4_validate_tic(nvc0, 4);
-   } else {
-      need_flush  = nvc0_validate_tic(nvc0, 0);
-      need_flush |= nvc0_validate_tic(nvc0, 3);
-      need_flush |= nvc0_validate_tic(nvc0, 4);
+   for (i = 0; i < 5; i++) {
+      if (nvc0->screen->base.class_3d >= NVE4_3D_CLASS)
+         need_flush |= nve4_validate_tic(nvc0, i);
+      else
+         need_flush |= nvc0_validate_tic(nvc0, i);
    }
 
    if (need_flush) {
@@ -466,16 +464,14 @@ nve4_validate_tsc(struct nvc0_context *nvc0, int s)
 
 void nvc0_validate_samplers(struct nvc0_context *nvc0)
 {
-   bool need_flush;
+   bool need_flush = false;
+   int i;
 
-   if (nvc0->screen->base.class_3d >= NVE4_3D_CLASS) {
-      need_flush  = nve4_validate_tsc(nvc0, 0);
-      need_flush |= nve4_validate_tsc(nvc0, 3);
-      need_flush |= nve4_validate_tsc(nvc0, 4);
-   } else {
-      need_flush  = nvc0_validate_tsc(nvc0, 0);
-      need_flush |= nvc0_validate_tsc(nvc0, 3);
-      need_flush |= nvc0_validate_tsc(nvc0, 4);
+   for (i = 0; i < 5; i++) {
+      if (nvc0->screen->base.class_3d >= NVE4_3D_CLASS)
+         need_flush |= nve4_validate_tsc(nvc0, i);
+      else
+         need_flush |= nvc0_validate_tsc(nvc0, i);
    }
 
    if (need_flush) {

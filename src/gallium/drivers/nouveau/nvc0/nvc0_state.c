@@ -508,6 +508,14 @@ nvc0_bind_sampler_states(struct pipe_context *pipe, unsigned shader,
       assert(start == 0);
       nvc0_stage_sampler_states_bind(nvc0_context(pipe), 0, nr, s);
       break;
+   case PIPE_SHADER_TESS_CTRL:
+      assert(start == 0);
+      nvc0_stage_sampler_states_bind(nvc0_context(pipe), 1, nr, s);
+      break;
+   case PIPE_SHADER_TESS_EVAL:
+      assert(start == 0);
+      nvc0_stage_sampler_states_bind(nvc0_context(pipe), 2, nr, s);
+      break;
    case PIPE_SHADER_GEOMETRY:
       assert(start == 0);
       nvc0_stage_sampler_states_bind(nvc0_context(pipe), 3, nr, s);
@@ -633,6 +641,12 @@ nvc0_set_sampler_views(struct pipe_context *pipe, unsigned shader,
    case PIPE_SHADER_VERTEX:
       nvc0_stage_set_sampler_views(nvc0_context(pipe), 0, nr, views);
       break;
+   case PIPE_SHADER_TESS_CTRL:
+      nvc0_stage_set_sampler_views(nvc0_context(pipe), 1, nr, views);
+      break;
+   case PIPE_SHADER_TESS_EVAL:
+      nvc0_stage_set_sampler_views(nvc0_context(pipe), 2, nr, views);
+      break;
    case PIPE_SHADER_GEOMETRY:
       nvc0_stage_set_sampler_views(nvc0_context(pipe), 3, nr, views);
       break;
@@ -731,6 +745,38 @@ nvc0_gp_state_bind(struct pipe_context *pipe, void *hwcso)
 
     nvc0->gmtyprog = hwcso;
     nvc0->dirty |= NVC0_NEW_GMTYPROG;
+}
+
+static void *
+nvc0_tcp_state_create(struct pipe_context *pipe,
+                     const struct pipe_shader_state *cso)
+{
+   return nvc0_sp_state_create(pipe, cso, PIPE_SHADER_TESS_CTRL);
+}
+
+static void
+nvc0_tcp_state_bind(struct pipe_context *pipe, void *hwcso)
+{
+    struct nvc0_context *nvc0 = nvc0_context(pipe);
+
+    nvc0->tctlprog = hwcso;
+    nvc0->dirty |= NVC0_NEW_TCTLPROG;
+}
+
+static void *
+nvc0_tep_state_create(struct pipe_context *pipe,
+                     const struct pipe_shader_state *cso)
+{
+   return nvc0_sp_state_create(pipe, cso, PIPE_SHADER_TESS_EVAL);
+}
+
+static void
+nvc0_tep_state_bind(struct pipe_context *pipe, void *hwcso)
+{
+    struct nvc0_context *nvc0 = nvc0_context(pipe);
+
+    nvc0->tevlprog = hwcso;
+    nvc0->dirty |= NVC0_NEW_TEVLPROG;
 }
 
 static void *
@@ -1220,12 +1266,18 @@ nvc0_init_state_functions(struct nvc0_context *nvc0)
    pipe->create_vs_state = nvc0_vp_state_create;
    pipe->create_fs_state = nvc0_fp_state_create;
    pipe->create_gs_state = nvc0_gp_state_create;
+   pipe->create_tcs_state = nvc0_tcp_state_create;
+   pipe->create_tes_state = nvc0_tep_state_create;
    pipe->bind_vs_state = nvc0_vp_state_bind;
    pipe->bind_fs_state = nvc0_fp_state_bind;
    pipe->bind_gs_state = nvc0_gp_state_bind;
+   pipe->bind_tcs_state = nvc0_tcp_state_bind;
+   pipe->bind_tes_state = nvc0_tep_state_bind;
    pipe->delete_vs_state = nvc0_sp_state_delete;
    pipe->delete_fs_state = nvc0_sp_state_delete;
    pipe->delete_gs_state = nvc0_sp_state_delete;
+   pipe->delete_tcs_state = nvc0_sp_state_delete;
+   pipe->delete_tes_state = nvc0_sp_state_delete;
 
    pipe->create_compute_state = nvc0_cp_state_create;
    pipe->bind_compute_state = nvc0_cp_state_bind;
