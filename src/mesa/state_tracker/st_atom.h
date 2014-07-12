@@ -69,10 +69,14 @@ extern const struct st_tracked_state st_update_geometry_texture;
 extern const struct st_tracked_state st_finalize_textures;
 extern const struct st_tracked_state st_update_fs_constants;
 extern const struct st_tracked_state st_update_gs_constants;
+extern const struct st_tracked_state st_update_tes_constants;
+extern const struct st_tracked_state st_update_tcs_constants;
 extern const struct st_tracked_state st_update_vs_constants;
 extern const struct st_tracked_state st_bind_fs_ubos;
 extern const struct st_tracked_state st_bind_vs_ubos;
 extern const struct st_tracked_state st_bind_gs_ubos;
+extern const struct st_tracked_state st_bind_tcs_ubos;
+extern const struct st_tracked_state st_bind_tes_ubos;
 extern const struct st_tracked_state st_update_pixel_transfer;
 
 
