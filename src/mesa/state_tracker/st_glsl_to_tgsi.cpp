@@ -158,9 +158,12 @@ public:
    {
       this->file = file;
       this->index = index;
+      this->index2D = 0;
       this->writemask = writemask;
       this->cond_mask = COND_TR;
       this->reladdr = NULL;
+      this->reladdr2 = NULL;
+      this->has_index2 = false;
       this->type = type;
       this->array_id = 0;
    }
@@ -169,9 +172,12 @@ public:
    {
       this->file = file;
       this->index = 0;
+      this->index2D = 0;
       this->writemask = writemask;
       this->cond_mask = COND_TR;
       this->reladdr = NULL;
+      this->reladdr2 = NULL;
+      this->has_index2 = false;
       this->type = type;
       this->array_id = 0;
    }
@@ -181,9 +187,12 @@ public:
       this->type = GLSL_TYPE_ERROR;
       this->file = PROGRAM_UNDEFINED;
       this->index = 0;
+      this->index2D = 0;
       this->writemask = 0;
       this->cond_mask = COND_TR;
       this->reladdr = NULL;
+      this->reladdr2 = NULL;
+      this->has_index2 = false;
       this->array_id = 0;
    }
 
@@ -191,11 +200,14 @@ public:
 
    gl_register_file file; /**< PROGRAM_* from Mesa */
    int index; /**< temporary index, VERT_ATTRIB_*, VARYING_SLOT_*, etc. */
+   int index2D;
    int writemask; /**< Bitfield of WRITEMASK_[XYZW] */
    GLuint cond_mask:4;
    int type; /** GLSL_TYPE_* from GLSL IR (enum glsl_base_type) */
    /** Register index should be offset by the integer in this reg. */
    st_src_reg *reladdr;
+   st_src_reg *reladdr2;
+   bool has_index2;
    unsigned array_id;
 };
 
@@ -207,9 +219,9 @@ st_src_reg::st_src_reg(st_dst_reg reg)
    this->swizzle = SWIZZLE_XYZW;
    this->negate = 0;
    this->reladdr = reg.reladdr;
-   this->index2D = 0;
-   this->reladdr2 = NULL;
-   this->has_index2 = false;
+   this->index2D = reg.index2D;
+   this->reladdr2 = reg.reladdr2;
+   this->has_index2 = reg.has_index2;
    this->double_reg2 = false;
    this->array_id = reg.array_id;
 }
@@ -222,6 +234,9 @@ st_dst_reg::st_dst_reg(st_src_reg reg)
    this->writemask = WRITEMASK_XYZW;
    this->cond_mask = COND_TR;
    this->reladdr = reg.reladdr;
+   this->index2D = reg.index2D;
+   this->reladdr2 = reg.reladdr2;
+   this->has_index2 = reg.has_index2;
    this->array_id = reg.array_id;
 }
 
@@ -551,8 +566,8 @@ glsl_to_tgsi_visitor::emit_asm(ir_instruction *ir, unsigned op,
     * reg directly for one of the regs, and preload the other reladdr
     * sources into temps.
     */
-   num_reladdr += dst.reladdr != NULL;
-   num_reladdr += dst1.reladdr != NULL;
+   num_reladdr += dst.reladdr != NULL || dst.reladdr2;
+   num_reladdr += dst1.reladdr != NULL || dst1.reladdr2;
    num_reladdr += src0.reladdr != NULL || src0.reladdr2 != NULL;
    num_reladdr += src1.reladdr != NULL || src1.reladdr2 != NULL;
    num_reladdr += src2.reladdr != NULL || src2.reladdr2 != NULL;
@@ -563,8 +578,11 @@ glsl_to_tgsi_visitor::emit_asm(ir_instruction *ir, unsigned op,
    reladdr_to_temp(ir, &src1, &num_reladdr);
    reladdr_to_temp(ir, &src0, &num_reladdr);
 
-   if (dst.reladdr) {
-      emit_arl(ir, address_reg, *dst.reladdr);
+   if (dst.reladdr || dst.reladdr2) {
+      if (dst.reladdr)
+         emit_arl(ir, address_reg, *dst.reladdr);
+      if (dst.reladdr2)
+         emit_arl(ir, address_reg2, *dst.reladdr2);
       num_reladdr--;
    }
    if (dst1.reladdr) {
@@ -590,7 +608,7 @@ glsl_to_tgsi_visitor::emit_asm(ir_instruction *ir, unsigned op,
    inst->function = NULL;
 
    /* Update indirect addressing status used by TGSI */
-   if (dst.reladdr) {
+   if (dst.reladdr || dst.reladdr2) {
       switch(dst.file) {
       case PROGRAM_STATE_VAR:
       case PROGRAM_CONSTANT:
@@ -3591,8 +3609,8 @@ glsl_to_tgsi_visitor::simplify_cmp(void)
       unsigned prevWriteMask = 0;
 
       /* Give up if we encounter relative addressing or flow control. */
-      if (inst->dst[0].reladdr ||
-          inst->dst[1].reladdr ||
+      if (inst->dst[0].reladdr || inst->dst[0].reladdr2 ||
+          inst->dst[1].reladdr || inst->dst[1].reladdr2 ||
           tgsi_get_opcode_info(inst->op)->is_branch ||
           inst->op == TGSI_OPCODE_BGNSUB ||
           inst->op == TGSI_OPCODE_CONT ||
@@ -3970,6 +3988,7 @@ glsl_to_tgsi_visitor::copy_propagate(void)
           !(inst->dst[0].file == inst->src[0].file &&
              inst->dst[0].index == inst->src[0].index) &&
           !inst->dst[0].reladdr &&
+          !inst->dst[0].reladdr2 &&
           !inst->saturate &&
           inst->src[0].file != PROGRAM_ARRAY &&
           !inst->src[0].reladdr &&
@@ -4829,6 +4848,14 @@ translate_dst(struct st_translate *t,
    if (dst_reg->reladdr != NULL) {
       assert(dst_reg->file != PROGRAM_TEMPORARY);
       dst = ureg_dst_indirect(dst, ureg_src(t->address[0]));
+   }
+
+   if (dst_reg->has_index2) {
+      if (dst_reg->reladdr2)
+         dst = ureg_dst_dimension_indirect(dst, ureg_src(t->address[1]),
+                                           dst_reg->index2D);
+      else
+         dst = ureg_dst_dimension(dst, dst_reg->index2D);
    }
 
    return dst;
