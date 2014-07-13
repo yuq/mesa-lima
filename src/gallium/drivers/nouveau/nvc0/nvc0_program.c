@@ -123,9 +123,6 @@ nvc0_sp_assign_input_slots(struct nv50_ir_prog_info *info)
       if (info->in[i].patch && offset >= 0x20)
          offset = 0x20 + info->in[i].si * 0x10;
 
-      if (info->in[i].sn == NV50_SEMANTIC_TESSCOORD)
-         info->in[i].mask &= 3;
-
       for (c = 0; c < 4; ++c)
          info->in[i].slot[c] = (offset + c * 0x4) / 4;
    }
@@ -218,12 +215,8 @@ nvc0_vtgp_gen_header(struct nvc0_program *vp, struct nv50_ir_prog_info *info)
          continue;
       for (c = 0; c < 4; ++c) {
          a = info->in[i].slot[c];
-         if (info->in[i].mask & (1 << c)) {
-            if (info->in[i].sn != NV50_SEMANTIC_TESSCOORD)
-               vp->hdr[5 + a / 32] |= 1 << (a % 32);
-            else
-               nvc0_vtgp_hdr_update_oread(vp, info->in[i].slot[c]);
-         }
+         if (info->in[i].mask & (1 << c))
+            vp->hdr[5 + a / 32] |= 1 << (a % 32);
       }
    }
 
@@ -251,6 +244,14 @@ nvc0_vtgp_gen_header(struct nvc0_program *vp, struct nv50_ir_prog_info *info)
          break;
       case TGSI_SEMANTIC_VERTEXID:
          vp->hdr[10] |= 1 << 31;
+         break;
+      case TGSI_SEMANTIC_TESSCOORD:
+         /* We don't have the mask, nor the slots populated. While this could
+          * be achieved, the vast majority of the time if either of the coords
+          * are read, then both will be read.
+          */
+         nvc0_vtgp_hdr_update_oread(vp, 0x2f0 / 4);
+         nvc0_vtgp_hdr_update_oread(vp, 0x2f4 / 4);
          break;
       default:
          break;
