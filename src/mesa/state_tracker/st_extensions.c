@@ -253,6 +253,8 @@ void st_init_limits(struct pipe_screen *screen,
       options->LowerClipDistance = true;
    }
 
+   c->LowerTessLevel = true;
+
    c->MaxCombinedTextureImageUnits =
          _min(c->Program[MESA_SHADER_VERTEX].MaxTextureImageUnits +
               c->Program[MESA_SHADER_TESS_CTRL].MaxTextureImageUnits +
