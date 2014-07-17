@@ -38,6 +38,7 @@
  * - LOG_TO_LOG2
  * - MOD_TO_FLOOR
  * - LDEXP_TO_ARITH
+ * - DFREXP_TO_ARITH
  * - BITFIELD_INSERT_TO_BFM_BFI
  * - CARRY_TO_ARITH
  * - BORROW_TO_ARITH
@@ -91,7 +92,12 @@
  *
  * LDEXP_TO_ARITH:
  * -------------
- * Converts ir_binop_ldexp to arithmetic and bit operations.
+ * Converts ir_binop_ldexp to arithmetic and bit operations for float sources.
+ *
+ * DFREXP_DLDEXP_TO_ARITH:
+ * ---------------
+ * Converts ir_binop_ldexp, ir_unop_frexp_sig, and ir_unop_frexp_exp to
+ * arithmetic and bit ops for double arguments.
  *
  * BITFIELD_INSERT_TO_BFM_BFI:
  * ---------------------------
@@ -150,6 +156,9 @@ private:
    void log_to_log2(ir_expression *);
    void bitfield_insert_to_bfm_bfi(ir_expression *);
    void ldexp_to_arith(ir_expression *);
+   void dldexp_to_arith(ir_expression *);
+   void dfrexp_sig_to_arith(ir_expression *);
+   void dfrexp_exp_to_arith(ir_expression *);
    void carry_to_arith(ir_expression *);
    void borrow_to_arith(ir_expression *);
    void sat_to_clamp(ir_expression *);
@@ -483,6 +492,262 @@ lower_instructions_visitor::ldexp_to_arith(ir_expression *ir)
 }
 
 void
+lower_instructions_visitor::dldexp_to_arith(ir_expression *ir)
+{
+   /* See ldexp_to_arith for structure. Uses frexp_exp to extract the exponent
+    * from the significand.
+    */
+
+   const unsigned vec_elem = ir->type->vector_elements;
+
+   /* Types */
+   const glsl_type *ivec = glsl_type::get_instance(GLSL_TYPE_INT, vec_elem, 1);
+   const glsl_type *bvec = glsl_type::get_instance(GLSL_TYPE_BOOL, vec_elem, 1);
+
+   /* Constants */
+   ir_constant *zeroi = ir_constant::zero(ir, ivec);
+
+   ir_constant *sign_mask = new(ir) ir_constant(0x80000000u);
+
+   ir_constant *exp_shift = new(ir) ir_constant(20);
+   ir_constant *exp_width = new(ir) ir_constant(11);
+   ir_constant *exp_bias = new(ir) ir_constant(1022, vec_elem);
+
+   /* Temporary variables */
+   ir_variable *x = new(ir) ir_variable(ir->type, "x", ir_var_temporary);
+   ir_variable *exp = new(ir) ir_variable(ivec, "exp", ir_var_temporary);
+
+   ir_variable *zero_sign_x = new(ir) ir_variable(ir->type, "zero_sign_x",
+                                                  ir_var_temporary);
+
+   ir_variable *extracted_biased_exp =
+      new(ir) ir_variable(ivec, "extracted_biased_exp", ir_var_temporary);
+   ir_variable *resulting_biased_exp =
+      new(ir) ir_variable(ivec, "resulting_biased_exp", ir_var_temporary);
+
+   ir_variable *is_not_zero_or_underflow =
+      new(ir) ir_variable(bvec, "is_not_zero_or_underflow", ir_var_temporary);
+
+   ir_instruction &i = *base_ir;
+
+   /* Copy <x> and <exp> arguments. */
+   i.insert_before(x);
+   i.insert_before(assign(x, ir->operands[0]));
+   i.insert_before(exp);
+   i.insert_before(assign(exp, ir->operands[1]));
+
+   ir_expression *frexp_exp = expr(ir_unop_frexp_exp, x);
+   if (lowering(DFREXP_DLDEXP_TO_ARITH))
+      dfrexp_exp_to_arith(frexp_exp);
+
+   /* Extract the biased exponent from <x>. */
+   i.insert_before(extracted_biased_exp);
+   i.insert_before(assign(extracted_biased_exp, add(frexp_exp, exp_bias)));
+
+   i.insert_before(resulting_biased_exp);
+   i.insert_before(assign(resulting_biased_exp,
+                          add(extracted_biased_exp, exp)));
+
+   /* Test if result is ±0.0, subnormal, or underflow by checking if the
+    * resulting biased exponent would be less than 0x1. If so, the result is
+    * 0.0 with the sign of x. (Actually, invert the conditions so that
+    * immediate values are the second arguments, which is better for i965)
+    * TODO: Implement in a vector fashion.
+    */
+   i.insert_before(zero_sign_x);
+   for (unsigned elem = 0; elem < vec_elem; elem++) {
+      ir_variable *unpacked =
+         new(ir) ir_variable(glsl_type::uvec2_type, "unpacked", ir_var_temporary);
+      i.insert_before(unpacked);
+      i.insert_before(
+            assign(unpacked,
+                   expr(ir_unop_unpack_double_2x32, swizzle(x, elem, 1))));
+      i.insert_before(assign(unpacked, bit_and(swizzle_y(unpacked), sign_mask->clone(ir, NULL)),
+                             WRITEMASK_Y));
+      i.insert_before(assign(unpacked, ir_constant::zero(ir, glsl_type::uint_type), WRITEMASK_X));
+      i.insert_before(assign(zero_sign_x,
+                             expr(ir_unop_pack_double_2x32, unpacked),
+                             1 << elem));
+   }
+   i.insert_before(is_not_zero_or_underflow);
+   i.insert_before(assign(is_not_zero_or_underflow,
+                          gequal(resulting_biased_exp,
+                                  new(ir) ir_constant(0x1, vec_elem))));
+   i.insert_before(assign(x, csel(is_not_zero_or_underflow,
+                                  x, zero_sign_x)));
+   i.insert_before(assign(resulting_biased_exp,
+                          csel(is_not_zero_or_underflow,
+                               resulting_biased_exp, zeroi)));
+
+   /* We could test for overflows by checking if the resulting biased exponent
+    * would be greater than 0xFE. Turns out we don't need to because the GLSL
+    * spec says:
+    *
+    *    "If this product is too large to be represented in the
+    *     floating-point type, the result is undefined."
+    */
+
+   ir_rvalue *results[4] = {NULL};
+   for (unsigned elem = 0; elem < vec_elem; elem++) {
+      ir_variable *unpacked =
+         new(ir) ir_variable(glsl_type::uvec2_type, "unpacked", ir_var_temporary);
+      i.insert_before(unpacked);
+      i.insert_before(
+            assign(unpacked,
+                   expr(ir_unop_unpack_double_2x32, swizzle(x, elem, 1))));
+
+      ir_expression *bfi = bitfield_insert(
+            swizzle_y(unpacked),
+            i2u(swizzle(resulting_biased_exp, elem, 1)),
+            exp_shift->clone(ir, NULL),
+            exp_width->clone(ir, NULL));
+
+      if (lowering(BITFIELD_INSERT_TO_BFM_BFI))
+         bitfield_insert_to_bfm_bfi(bfi);
+
+      i.insert_before(assign(unpacked, bfi, WRITEMASK_Y));
+
+      results[elem] = expr(ir_unop_pack_double_2x32, unpacked);
+   }
+
+   ir->operation = ir_quadop_vector;
+   ir->operands[0] = results[0];
+   ir->operands[1] = results[1];
+   ir->operands[2] = results[2];
+   ir->operands[3] = results[3];
+
+   /* Don't generate new IR that would need to be lowered in an additional
+    * pass.
+    */
+
+   this->progress = true;
+}
+
+void
+lower_instructions_visitor::dfrexp_sig_to_arith(ir_expression *ir)
+{
+   const unsigned vec_elem = ir->type->vector_elements;
+   const glsl_type *bvec = glsl_type::get_instance(GLSL_TYPE_BOOL, vec_elem, 1);
+
+   /* Double-precision floating-point values are stored as
+    *   1 sign bit;
+    *   11 exponent bits;
+    *   52 mantissa bits.
+    *
+    * We're just extracting the significand here, so we only need to modify
+    * the upper 32-bit uint. Unfortunately we must extract each double
+    * independently as there is no vector version of unpackDouble.
+    */
+
+   ir_instruction &i = *base_ir;
+
+   ir_variable *is_not_zero =
+      new(ir) ir_variable(bvec, "is_not_zero", ir_var_temporary);
+   ir_rvalue *results[4] = {NULL};
+
+   ir_constant *dzero = new(ir) ir_constant(0.0d, vec_elem);
+   i.insert_before(is_not_zero);
+   i.insert_before(
+         assign(is_not_zero,
+                nequal(abs(ir->operands[0]->clone(ir, NULL)), dzero)));
+
+   /* TODO: Remake this as more vector-friendly when int64 support is
+    * available.
+    */
+   for (unsigned elem = 0; elem < vec_elem; elem++) {
+      ir_constant *zero = new(ir) ir_constant(0u, 1);
+      ir_constant *sign_mantissa_mask = new(ir) ir_constant(0x800fffffu, 1);
+
+      /* Exponent of double floating-point values in the range [0.5, 1.0). */
+      ir_constant *exponent_value = new(ir) ir_constant(0x3fe00000u, 1);
+
+      ir_variable *bits =
+         new(ir) ir_variable(glsl_type::uint_type, "bits", ir_var_temporary);
+      ir_variable *unpacked =
+         new(ir) ir_variable(glsl_type::uvec2_type, "unpacked", ir_var_temporary);
+
+      ir_rvalue *x = swizzle(ir->operands[0]->clone(ir, NULL), elem, 1);
+
+      i.insert_before(bits);
+      i.insert_before(unpacked);
+      i.insert_before(assign(unpacked, expr(ir_unop_unpack_double_2x32, x)));
+
+      /* Manipulate the high uint to remove the exponent and replace it with
+       * either the default exponent or zero.
+       */
+      i.insert_before(assign(bits, swizzle_y(unpacked)));
+      i.insert_before(assign(bits, bit_and(bits, sign_mantissa_mask)));
+      i.insert_before(assign(bits, bit_or(bits,
+                                          csel(swizzle(is_not_zero, elem, 1),
+                                               exponent_value,
+                                               zero))));
+      i.insert_before(assign(unpacked, bits, WRITEMASK_Y));
+      results[elem] = expr(ir_unop_pack_double_2x32, unpacked);
+   }
+
+   /* Put the dvec back together */
+   ir->operation = ir_quadop_vector;
+   ir->operands[0] = results[0];
+   ir->operands[1] = results[1];
+   ir->operands[2] = results[2];
+   ir->operands[3] = results[3];
+
+   this->progress = true;
+}
+
+void
+lower_instructions_visitor::dfrexp_exp_to_arith(ir_expression *ir)
+{
+   const unsigned vec_elem = ir->type->vector_elements;
+   const glsl_type *bvec = glsl_type::get_instance(GLSL_TYPE_BOOL, vec_elem, 1);
+   const glsl_type *uvec = glsl_type::get_instance(GLSL_TYPE_UINT, vec_elem, 1);
+
+   /* Double-precision floating-point values are stored as
+    *   1 sign bit;
+    *   11 exponent bits;
+    *   52 mantissa bits.
+    *
+    * We're just extracting the exponent here, so we only care about the upper
+    * 32-bit uint.
+    */
+
+   ir_instruction &i = *base_ir;
+
+   ir_variable *is_not_zero =
+      new(ir) ir_variable(bvec, "is_not_zero", ir_var_temporary);
+   ir_variable *high_words =
+      new(ir) ir_variable(uvec, "high_words", ir_var_temporary);
+   ir_constant *dzero = new(ir) ir_constant(0.0d, vec_elem);
+   ir_constant *izero = new(ir) ir_constant(0, vec_elem);
+
+   ir_rvalue *absval = abs(ir->operands[0]);
+
+   i.insert_before(is_not_zero);
+   i.insert_before(high_words);
+   i.insert_before(assign(is_not_zero, nequal(absval->clone(ir, NULL), dzero)));
+
+   /* Extract all of the upper uints. */
+   for (unsigned elem = 0; elem < vec_elem; elem++) {
+      ir_rvalue *x = swizzle(absval->clone(ir, NULL), elem, 1);
+
+      i.insert_before(assign(high_words,
+                             swizzle_y(expr(ir_unop_unpack_double_2x32, x)),
+                             1 << elem));
+
+   }
+   ir_constant *exponent_shift = new(ir) ir_constant(20, vec_elem);
+   ir_constant *exponent_bias = new(ir) ir_constant(-1022, vec_elem);
+
+   /* For non-zero inputs, shift the exponent down and apply bias. */
+   ir->operation = ir_triop_csel;
+   ir->operands[0] = new(ir) ir_dereference_variable(is_not_zero);
+   ir->operands[1] = add(exponent_bias, u2i(rshift(high_words, exponent_shift)));
+   ir->operands[2] = izero;
+
+   this->progress = true;
+}
+
+void
 lower_instructions_visitor::carry_to_arith(ir_expression *ir)
 {
    /* Translates
@@ -781,6 +1046,18 @@ lower_instructions_visitor::visit_leave(ir_expression *ir)
    case ir_binop_ldexp:
       if (lowering(LDEXP_TO_ARITH) && ir->type->is_float())
          ldexp_to_arith(ir);
+      if (lowering(DFREXP_DLDEXP_TO_ARITH) && ir->type->is_double())
+         dldexp_to_arith(ir);
+      break;
+
+   case ir_unop_frexp_exp:
+      if (lowering(DFREXP_DLDEXP_TO_ARITH) && ir->operands[0]->type->is_double())
+         dfrexp_exp_to_arith(ir);
+      break;
+
+   case ir_unop_frexp_sig:
+      if (lowering(DFREXP_DLDEXP_TO_ARITH) && ir->operands[0]->type->is_double())
+         dfrexp_sig_to_arith(ir);
       break;
 
    case ir_binop_carry:
