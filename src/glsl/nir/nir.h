@@ -1242,6 +1242,10 @@ void nir_print_shader(nir_shader *shader, FILE *fp);
 
 void nir_validate_shader(nir_shader *shader);
 
+void nir_lower_variables_scalar(nir_shader *shader, bool lower_globals,
+                                bool lower_io, bool add_names,
+                                bool native_integers);
+
 #ifdef __cplusplus
 } /* extern "C" */
 #endif

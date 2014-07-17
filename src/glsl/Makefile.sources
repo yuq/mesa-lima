@@ -18,6 +18,7 @@ NIR_FILES = \
 	$(GLSL_SRCDIR)/nir/nir.h \
 	$(GLSL_SRCDIR)/nir/nir_intrinsics.c \
 	$(GLSL_SRCDIR)/nir/nir_intrinsics.h \
+	$(GLSL_SRCDIR)/nir/nir_lower_variables_scalar.c \
 	$(GLSL_SRCDIR)/nir/nir_opcodes.c \
 	$(GLSL_SRCDIR)/nir/nir_opcodes.h \
 	$(GLSL_SRCDIR)/nir/nir_print.c \
