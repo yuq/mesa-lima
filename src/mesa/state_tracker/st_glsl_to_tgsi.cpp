@@ -5707,6 +5707,8 @@ st_link_shader(struct gl_context *ctx, struct gl_shader_program *prog)
       unsigned ptarget = shader_stage_to_ptarget(stage);
       bool have_dround = pscreen->get_shader_param(pscreen, ptarget,
                                                    PIPE_SHADER_CAP_TGSI_DROUND_SUPPORTED);
+      bool have_dfrexp = pscreen->get_shader_param(pscreen, ptarget,
+                                                   PIPE_SHADER_CAP_TGSI_DFRACEXP_DLDEXP_SUPPORTED);
 
       /* If there are forms of indirect addressing that the driver
        * cannot handle, perform the lowering pass.
@@ -5744,6 +5746,7 @@ st_link_shader(struct gl_context *ctx, struct gl_shader_program *prog)
                          EXP_TO_EXP2 |
                          LOG_TO_LOG2 |
                          LDEXP_TO_ARITH |
+                         (have_dfrexp ? 0 : DFREXP_DLDEXP_TO_ARITH) |
                          CARRY_TO_ARITH |
                          BORROW_TO_ARITH |
                          (have_dround ? 0 : DOPS_TO_DFRAC) |
