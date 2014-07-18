@@ -979,6 +979,18 @@ typedef struct nir_block {
    struct nir_block *successors[2];
 
    struct set *predecessors;
+
+   /*
+    * this node's immediate dominator in the dominance tree - set to NULL for
+    * the start block.
+    */
+   struct nir_block *imm_dom;
+
+   /* This node's children in the dominance tree */
+   unsigned num_dom_children;
+   struct nir_block **dom_children;
+
+   struct set *dom_frontier;
 } nir_block;
 
 #define nir_block_first_instr(block) \
@@ -1052,6 +1064,7 @@ typedef struct {
    unsigned num_blocks;
 
    bool block_index_dirty;
+   bool dominance_dirty;
 } nir_function_impl;
 
 #define nir_cf_node_next(_node) \
@@ -1248,6 +1261,18 @@ void nir_index_blocks(nir_function_impl *impl);
 void nir_print_shader(nir_shader *shader, FILE *fp);
 
 void nir_validate_shader(nir_shader *shader);
+
+void nir_calc_dominance_impl(nir_function_impl *impl);
+void nir_calc_dominance(nir_shader *shader);
+
+void nir_dump_dom_tree_impl(nir_function_impl *impl, FILE *fp);
+void nir_dump_dom_tree(nir_shader *shader, FILE *fp);
+
+void nir_dump_dom_frontier_impl(nir_function_impl *impl, FILE *fp);
+void nir_dump_dom_frontier(nir_shader *shader, FILE *fp);
+
+void nir_dump_cfg_impl(nir_function_impl *impl, FILE *fp);
+void nir_dump_cfg(nir_shader *shader, FILE *fp);
 
 void nir_lower_variables_scalar(nir_shader *shader, bool lower_globals,
                                 bool lower_io, bool add_names,
