@@ -90,6 +90,11 @@ const char *tgsi_semantic_names[TGSI_SEMANTIC_COUNT] =
    "INVOCATIONID",
    "VERTEXID_NOBASE",
    "BASEVERTEX",
+   "PATCH",
+   "TESSCOORD",
+   "TESSOUTER",
+   "TESSINNER",
+   "VERTICESIN",
 };
 
 const char *tgsi_texture_names[TGSI_TEXTURE_COUNT] =

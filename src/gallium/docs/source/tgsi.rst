@@ -2894,6 +2894,43 @@ and only the X component is used.
 FIXME: This right now can be either a ordinary input or a system value...
 
 
+TGSI_SEMANTIC_PATCH
+"""""""""""""""""""
+
+For tessellation evaluation/control shaders, this semantic label indicates a
+generic per-patch attribute. Such semantics will not implicitly be per-vertex
+arrays.
+
+TGSI_SEMANTIC_TESSCOORD
+"""""""""""""""""""""""
+
+For tessellation evaluation shaders, this semantic label indicates the
+coordinates of the vertex being processed. This is available in XYZ; W is
+undefined.
+
+TGSI_SEMANTIC_TESSOUTER
+"""""""""""""""""""""""
+
+For tessellation evaluation/control shaders, this semantic label indicates the
+outer tessellation levels of the patch. Isoline tessellation will only have XY
+defined, triangle will have XYZ and quads will have XYZW defined. This
+corresponds to gl_TessLevelOuter.
+
+TGSI_SEMANTIC_TESSINNER
+"""""""""""""""""""""""
+
+For tessellation evaluation/control shaders, this semantic label indicates the
+inner tessellation levels of the patch. The X value is only defined for
+triangle tessellation, while quads will have XY defined. This is entirely
+undefined for isoline tessellation.
+
+TGSI_SEMANTIC_VERTICESIN
+""""""""""""""""""""""""
+
+For tessellation evaluation/control shaders, this semantic label indicates the
+number of vertices provided in the input patch. Only the X value is defined.
+
+
 Declaration Interpolate
 ^^^^^^^^^^^^^^^^^^^^^^^
 

@@ -180,7 +180,12 @@ struct tgsi_declaration_interp
 #define TGSI_SEMANTIC_INVOCATIONID 27
 #define TGSI_SEMANTIC_VERTEXID_NOBASE 28
 #define TGSI_SEMANTIC_BASEVERTEX 29
-#define TGSI_SEMANTIC_COUNT      30 /**< number of semantic values */
+#define TGSI_SEMANTIC_PATCH      30 /**< generic per-patch semantic */
+#define TGSI_SEMANTIC_TESSCOORD  31 /**< coordinate being processed by tess */
+#define TGSI_SEMANTIC_TESSOUTER  32 /**< outer tessellation levels */
+#define TGSI_SEMANTIC_TESSINNER  33 /**< inner tessellation levels */
+#define TGSI_SEMANTIC_VERTICESIN 34 /**< number of input vertices */
+#define TGSI_SEMANTIC_COUNT      35 /**< number of semantic values */
 
 struct tgsi_declaration_semantic
 {
