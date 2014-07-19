@@ -168,7 +168,8 @@ const char *tgsi_primitive_names[PIPE_PRIM_MAX] =
    "LINES_ADJACENCY",
    "LINE_STRIP_ADJACENCY",
    "TRIANGLES_ADJACENCY",
-   "TRIANGLE_STRIP_ADJACENCY"
+   "TRIANGLE_STRIP_ADJACENCY",
+   "PATCHES",
 };
 
 const char *tgsi_fs_coord_origin_names[2] =

@@ -427,7 +427,8 @@ enum pipe_flush_flags
 #define PIPE_PRIM_LINE_STRIP_ADJACENCY     11
 #define PIPE_PRIM_TRIANGLES_ADJACENCY      12
 #define PIPE_PRIM_TRIANGLE_STRIP_ADJACENCY 13
-#define PIPE_PRIM_MAX                      14
+#define PIPE_PRIM_PATCHES                  14
+#define PIPE_PRIM_MAX                      15
 
 
 /**
