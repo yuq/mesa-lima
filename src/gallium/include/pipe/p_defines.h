@@ -404,8 +404,10 @@ enum pipe_flush_flags
 #define PIPE_SHADER_VERTEX   0
 #define PIPE_SHADER_FRAGMENT 1
 #define PIPE_SHADER_GEOMETRY 2
-#define PIPE_SHADER_COMPUTE  3
-#define PIPE_SHADER_TYPES    4
+#define PIPE_SHADER_TESS_CTRL 3
+#define PIPE_SHADER_TESS_EVAL 4
+#define PIPE_SHADER_COMPUTE  5
+#define PIPE_SHADER_TYPES    6
 
 
 /**

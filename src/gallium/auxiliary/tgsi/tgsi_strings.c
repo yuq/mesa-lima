@@ -32,11 +32,13 @@
 #include "tgsi_strings.h"
 
 
-const char *tgsi_processor_type_names[4] =
+const char *tgsi_processor_type_names[6] =
 {
    "FRAG",
    "VERT",
    "GEOM",
+   "TESS_CTRL",
+   "TESS_EVAL",
    "COMP"
 };
 

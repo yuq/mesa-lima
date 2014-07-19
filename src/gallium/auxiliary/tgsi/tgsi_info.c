@@ -302,6 +302,10 @@ tgsi_get_processor_name( uint processor )
       return "fragment shader";
    case TGSI_PROCESSOR_GEOMETRY:
       return "geometry shader";
+   case TGSI_PROCESSOR_TESSCTRL:
+      return "tessellation control shader";
+   case TGSI_PROCESSOR_TESSEVAL:
+      return "tessellation evaluation shader";
    default:
       return "unknown shader type!";
    }
