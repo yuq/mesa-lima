@@ -432,6 +432,13 @@ enum pipe_flush_flags
 
 
 /**
+ * Tessellator spacing types
+ */
+#define PIPE_TESS_SPACING_FRACTIONAL_ODD    0
+#define PIPE_TESS_SPACING_FRACTIONAL_EVEN   1
+#define PIPE_TESS_SPACING_EQUAL             2
+
+/**
  * Query object types
  */
 #define PIPE_QUERY_OCCLUSION_COUNTER     0

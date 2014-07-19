@@ -3071,6 +3071,39 @@ Naturally, clipping is not performed on window coordinates either.
 The effect of this property is undefined if a geometry or tessellation shader
 are in use.
 
+TCS_VERTICES_OUT
+""""""""""""""""
+
+The number of vertices written by the tessellation control shader. This
+effectively defines the patch input size of the tessellation evaluation shader
+as well.
+
+TES_PRIM_MODE
+"""""""""""""
+
+This sets the tessellation primitive mode, one of ``PIPE_PRIM_TRIANGLES``,
+``PIPE_PRIM_QUADS``, or ``PIPE_PRIM_LINES``. (Unlike in GL, there is no
+separate isolines settings, the regular lines is assumed to mean isolines.)
+
+TES_SPACING
+"""""""""""
+
+This sets the spacing mode of the tessellation generator, one of
+``PIPE_TESS_SPACING_*``.
+
+TES_VERTEX_ORDER_CW
+"""""""""""""""""""
+
+This sets the vertex order to be clockwise if the value is 1, or
+counter-clockwise if set to 0.
+
+TES_POINT_MODE
+""""""""""""""
+
+If set to a non-zero value, this turns on point mode for the tessellator,
+which means that points will be generated instead of primitives.
+
+
 Texture Sampling and Texture Formats
 ------------------------------------
 

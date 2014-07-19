@@ -131,7 +131,12 @@ const char *tgsi_property_names[TGSI_PROPERTY_COUNT] =
    "FS_DEPTH_LAYOUT",
    "VS_PROHIBIT_UCPS",
    "GS_INVOCATIONS",
-   "VS_WINDOW_SPACE_POSITION"
+   "VS_WINDOW_SPACE_POSITION",
+   "TCS_VERTICES_OUT",
+   "TES_PRIM_MODE",
+   "TES_SPACING",
+   "TES_VERTEX_ORDER_CW",
+   "TES_POINT_MODE",
 };
 
 const char *tgsi_return_type_names[TGSI_RETURN_TYPE_COUNT] =

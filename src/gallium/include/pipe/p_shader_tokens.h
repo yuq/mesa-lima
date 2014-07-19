@@ -262,7 +262,12 @@ union tgsi_immediate_data
 #define TGSI_PROPERTY_VS_PROHIBIT_UCPS       7
 #define TGSI_PROPERTY_GS_INVOCATIONS         8
 #define TGSI_PROPERTY_VS_WINDOW_SPACE_POSITION 9
-#define TGSI_PROPERTY_COUNT                  10
+#define TGSI_PROPERTY_TCS_VERTICES_OUT       10
+#define TGSI_PROPERTY_TES_PRIM_MODE          11
+#define TGSI_PROPERTY_TES_SPACING            12
+#define TGSI_PROPERTY_TES_VERTEX_ORDER_CW    13
+#define TGSI_PROPERTY_TES_POINT_MODE         14
+#define TGSI_PROPERTY_COUNT                  15
 
 struct tgsi_property {
    unsigned Type         : 4;  /**< TGSI_TOKEN_TYPE_PROPERTY */
