@@ -948,6 +948,24 @@ void Source::scanProperty(const struct tgsi_full_property *prop)
    case TGSI_PROPERTY_VS_PROHIBIT_UCPS:
       info->io.genUserClip = -1;
       break;
+   case TGSI_PROPERTY_TCS_VERTICES_OUT:
+      info->prop.tp.outputPatchSize = prop->u[0].Data;
+      break;
+   case TGSI_PROPERTY_TES_PRIM_MODE:
+      info->prop.tp.domain = prop->u[0].Data;
+      break;
+   case TGSI_PROPERTY_TES_SPACING:
+      info->prop.tp.partitioning = prop->u[0].Data;
+      break;
+   case TGSI_PROPERTY_TES_VERTEX_ORDER_CW:
+      info->prop.tp.winding = prop->u[0].Data;
+      break;
+   case TGSI_PROPERTY_TES_POINT_MODE:
+      if (prop->u[0].Data)
+         info->prop.tp.outputPrim = PIPE_PRIM_POINTS;
+      else
+         info->prop.tp.outputPrim = PIPE_PRIM_TRIANGLES; /* anything but points */
+      break;
    default:
       INFO("unhandled TGSI property %d\n", prop->Property.PropertyName);
       break;
