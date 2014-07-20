@@ -1575,6 +1575,7 @@ Converter::fetchSrc(tgsi::Instruction::SrcRegister src, int c, Value *ptr)
    const int idx2d = src.is2D() ? src.getIndex(1) : 0;
    const int idx = src.getIndex(0);
    const int swz = src.getSwizzle(c);
+   Instruction *ld;
 
    switch (src.getFile()) {
    case TGSI_FILE_IMMEDIATE:
@@ -1602,7 +1603,9 @@ Converter::fetchSrc(tgsi::Instruction::SrcRegister src, int c, Value *ptr)
          if (ptr)
             return mkLoadv(TYPE_U32, srcToSym(src, c), ptr);
       }
-      return mkLoadv(TYPE_U32, srcToSym(src, c), shiftAddress(ptr));
+      ld = mkLoad(TYPE_U32, getSSA(), srcToSym(src, c), shiftAddress(ptr));
+      ld->perPatch = info->in[idx].patch;
+      return ld->getDef(0);
    case TGSI_FILE_OUTPUT:
       assert(!"load from output file");
       return NULL;
@@ -1678,7 +1681,8 @@ Converter::storeDst(const tgsi::Instruction::DstRegister dst, int c,
              viewport != NULL)
             mkOp1(OP_MOV, TYPE_U32, viewport, val);
          else
-            mkStore(OP_EXPORT, TYPE_U32, dstToSym(dst, c), ptr, val);
+            mkStore(OP_EXPORT, TYPE_U32, dstToSym(dst, c), ptr, val)->perPatch =
+               info->out[idx].patch;
       }
    } else
    if (f == TGSI_FILE_TEMPORARY ||
