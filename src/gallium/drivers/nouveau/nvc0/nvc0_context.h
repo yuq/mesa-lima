@@ -54,6 +54,7 @@
 #define NVC0_NEW_IDXBUF       (1 << 22)
 #define NVC0_NEW_SURFACES     (1 << 23)
 #define NVC0_NEW_MIN_SAMPLES  (1 << 24)
+#define NVC0_NEW_TESSFACTOR   (1 << 25)
 
 #define NVC0_NEW_CP_PROGRAM   (1 << 0)
 #define NVC0_NEW_CP_SURFACES  (1 << 1)
@@ -163,6 +164,9 @@ struct nvc0_context {
 
    unsigned sample_mask;
    unsigned min_samples;
+
+   float default_tess_outer[4];
+   float default_tess_inner[2];
 
    bool vbo_push_hint;
 

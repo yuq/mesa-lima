@@ -980,6 +980,18 @@ nvc0_set_viewport_states(struct pipe_context *pipe,
 }
 
 static void
+nvc0_set_tess_state(struct pipe_context *pipe,
+                    const float default_tess_outer[4],
+                    const float default_tess_inner[2])
+{
+   struct nvc0_context *nvc0 = nvc0_context(pipe);
+
+   memcpy(nvc0->default_tess_outer, default_tess_outer, 4 * sizeof(float));
+   memcpy(nvc0->default_tess_inner, default_tess_inner, 2 * sizeof(float));
+   nvc0->dirty |= NVC0_NEW_TESSFACTOR;
+}
+
+static void
 nvc0_set_vertex_buffers(struct pipe_context *pipe,
                         unsigned start_slot, unsigned count,
                         const struct pipe_vertex_buffer *vb)
@@ -1293,6 +1305,7 @@ nvc0_init_state_functions(struct nvc0_context *nvc0)
    pipe->set_polygon_stipple = nvc0_set_polygon_stipple;
    pipe->set_scissor_states = nvc0_set_scissor_states;
    pipe->set_viewport_states = nvc0_set_viewport_states;
+   pipe->set_tess_state = nvc0_set_tess_state;
 
    pipe->create_vertex_elements_state = nvc0_vertex_state_create;
    pipe->delete_vertex_elements_state = nvc0_vertex_state_delete;
@@ -1311,4 +1324,10 @@ nvc0_init_state_functions(struct nvc0_context *nvc0)
 
    nvc0->sample_mask = ~0;
    nvc0->min_samples = 1;
+   nvc0->default_tess_outer[0] =
+   nvc0->default_tess_outer[1] =
+   nvc0->default_tess_outer[2] =
+   nvc0->default_tess_outer[3] = 1.0;
+   nvc0->default_tess_inner[0] =
+   nvc0->default_tess_inner[1] = 1.0;
 }

@@ -555,6 +555,16 @@ nvc0_validate_derived_2(struct nvc0_context *nvc0)
 }
 
 static void
+nvc0_validate_tess_state(struct nvc0_context *nvc0)
+{
+   struct nouveau_pushbuf *push = nvc0->base.pushbuf;
+
+   BEGIN_NVC0(push, NVC0_3D(TESS_LEVEL_OUTER(0)), 6);
+   PUSH_DATAp(push, nvc0->default_tess_outer, 4);
+   PUSH_DATAp(push, nvc0->default_tess_inner, 2);
+}
+
+static void
 nvc0_switch_pipe_context(struct nvc0_context *ctx_to)
 {
    struct nvc0_context *ctx_from = ctx_to->screen->cur_ctx;
@@ -612,6 +622,7 @@ static struct state_validate {
     { nvc0_vertprog_validate,      NVC0_NEW_VERTPROG },
     { nvc0_tctlprog_validate,      NVC0_NEW_TCTLPROG },
     { nvc0_tevlprog_validate,      NVC0_NEW_TEVLPROG },
+    { nvc0_validate_tess_state,    NVC0_NEW_TESSFACTOR },
     { nvc0_gmtyprog_validate,      NVC0_NEW_GMTYPROG },
     { nvc0_fragprog_validate,      NVC0_NEW_FRAGPROG },
     { nvc0_validate_derived_1,     NVC0_NEW_FRAGPROG | NVC0_NEW_ZSA |
