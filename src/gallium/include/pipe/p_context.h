@@ -231,6 +231,10 @@ struct pipe_context {
                              unsigned start_slot, unsigned num_views,
                              struct pipe_sampler_view **);
 
+   void (*set_tess_state)(struct pipe_context *,
+                          float default_outer_level[4],
+                          float default_inner_level[2]);
+
    /**
     * Bind an array of shader resources that will be used by the
     * graphics pipeline.  Any resources that were previously bound to
