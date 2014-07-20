@@ -36,6 +36,7 @@ nvc0_shader_input_address(unsigned sn, unsigned si, unsigned ubase)
    switch (sn) {
    case TGSI_SEMANTIC_TESSOUTER:    return 0x000 + si * 0x4;
    case TGSI_SEMANTIC_TESSINNER:    return 0x010 + si * 0x4;
+   case TGSI_SEMANTIC_PATCH:        return 0x020 + si * 0x10;
    case TGSI_SEMANTIC_PRIMID:       return 0x060;
    case TGSI_SEMANTIC_LAYER:        return 0x064;
    case TGSI_SEMANTIC_VIEWPORT_INDEX:return 0x068;
@@ -66,6 +67,7 @@ nvc0_shader_output_address(unsigned sn, unsigned si, unsigned ubase)
    switch (sn) {
    case TGSI_SEMANTIC_TESSOUTER:     return 0x000 + si * 0x4;
    case TGSI_SEMANTIC_TESSINNER:     return 0x010 + si * 0x4;
+   case TGSI_SEMANTIC_PATCH:         return 0x020 + si * 0x10;
    case TGSI_SEMANTIC_PRIMID:        return 0x060;
    case TGSI_SEMANTIC_LAYER:         return 0x064;
    case TGSI_SEMANTIC_VIEWPORT_INDEX:return 0x068;
@@ -120,8 +122,6 @@ nvc0_sp_assign_input_slots(struct nv50_ir_prog_info *info)
    for (i = 0; i < info->numInputs; ++i) {
       offset = nvc0_shader_input_address(info->in[i].sn,
                                          info->in[i].si, ubase);
-      if (info->in[i].patch && offset >= 0x20)
-         offset = 0x20 + info->in[i].si * 0x10;
 
       for (c = 0; c < 4; ++c)
          info->in[i].slot[c] = (offset + c * 0x4) / 4;
@@ -163,8 +163,6 @@ nvc0_sp_assign_output_slots(struct nv50_ir_prog_info *info)
    for (i = 0; i < info->numOutputs; ++i) {
       offset = nvc0_shader_output_address(info->out[i].sn,
                                           info->out[i].si, ubase);
-      if (info->out[i].patch && offset >= 0x20)
-         offset = 0x20 + info->out[i].si * 0x10;
 
       for (c = 0; c < 4; ++c)
          info->out[i].slot[c] = (offset + c * 0x4) / 4;

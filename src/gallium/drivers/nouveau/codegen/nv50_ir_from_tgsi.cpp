@@ -1036,6 +1036,13 @@ bool Source::scanDeclaration(const struct tgsi_full_declaration *decl)
                if (decl->Interp.Location || info->io.sampleInterp)
                   info->in[i].centroid = 1;
             }
+
+            if (sn == TGSI_SEMANTIC_PATCH ||
+                sn == TGSI_SEMANTIC_TESSOUTER ||
+                sn == TGSI_SEMANTIC_TESSINNER)
+               info->in[i].patch = 1;
+            if (sn == TGSI_SEMANTIC_PATCH)
+               info->numPatchConstants = MAX2(info->numPatchConstants, si + 1);
          }
       }
       break;
@@ -1069,6 +1076,13 @@ bool Source::scanDeclaration(const struct tgsi_full_declaration *decl)
             break;
          case TGSI_SEMANTIC_VIEWPORT_INDEX:
             info->io.viewportId = i;
+            break;
+         case TGSI_SEMANTIC_PATCH:
+            info->numPatchConstants = MAX2(info->numPatchConstants, si + 1);
+            /* fallthrough */
+         case TGSI_SEMANTIC_TESSOUTER:
+         case TGSI_SEMANTIC_TESSINNER:
+            info->out[i].patch = 1;
             break;
          default:
             break;
