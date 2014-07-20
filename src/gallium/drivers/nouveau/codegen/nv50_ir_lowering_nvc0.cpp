@@ -1815,6 +1815,9 @@ NVC0LoweringPass::visit(Instruction *i)
             i->setIndirect(0, 0, ptr);
             i->subOp = NV50_IR_SUBOP_LDC_IS;
          }
+      } else if (i->src(0).getFile() == FILE_SHADER_OUTPUT) {
+         assert(prog->getType() == Program::TYPE_TESSELLATION_CONTROL);
+         i->op = OP_VFETCH;
       }
       break;
    case OP_ATOM:

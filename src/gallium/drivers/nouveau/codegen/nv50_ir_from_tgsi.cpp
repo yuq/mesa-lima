@@ -1203,6 +1203,16 @@ bool Source::scanInstruction(const struct tgsi_full_instruction *inst)
          if (src.getIndex(0) == TGSI_RESOURCE_GLOBAL)
             info->io.globalAccess |= (insn.getOpcode() == TGSI_OPCODE_LOAD) ?
                0x1 : 0x2;
+      } else
+      if (src.getFile() == TGSI_FILE_OUTPUT) {
+         if (src.isIndirect(0)) {
+            // We don't know which one is accessed, just mark everything for
+            // reading. This is an extremely unlikely occurrence.
+            for (unsigned i = 0; i < info->numOutputs; ++i)
+               info->out[i].oread = 1;
+         } else {
+            info->out[src.getIndex(0)].oread = 1;
+         }
       }
       if (src.getFile() != TGSI_FILE_INPUT)
          continue;
@@ -1521,6 +1531,7 @@ Converter::fetchSrc(int s, int c)
 
    if (src.is2D()) {
       switch (src.getFile()) {
+      case TGSI_FILE_OUTPUT:
       case TGSI_FILE_INPUT:
          dimRel = getVertexBase(s);
          break;
@@ -1607,8 +1618,10 @@ Converter::fetchSrc(tgsi::Instruction::SrcRegister src, int c, Value *ptr)
       ld->perPatch = info->in[idx].patch;
       return ld->getDef(0);
    case TGSI_FILE_OUTPUT:
-      assert(!"load from output file");
-      return NULL;
+      assert(prog->getType() == Program::TYPE_TESSELLATION_CONTROL);
+      ld = mkLoad(TYPE_U32, getSSA(), srcToSym(src, c), shiftAddress(ptr));
+      ld->perPatch = info->out[idx].patch;
+      return ld->getDef(0);
    case TGSI_FILE_SYSTEM_VALUE:
       assert(!ptr);
       return mkOp1v(OP_RDSV, TYPE_U32, getSSA(), srcToSym(src, c));
