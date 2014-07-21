@@ -543,6 +543,8 @@ struct pipe_draw_info
    unsigned start_instance; /**< first instance id */
    unsigned instance_count; /**< number of instances */
 
+   unsigned vertices_per_patch; /**< the number of vertices per patch */
+
    /**
     * For indexed drawing, these fields apply after index lookup.
     */
