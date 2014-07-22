@@ -1,0 +1,682 @@
+/*
+ * Copyright © 2014 Intel Corporation
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice (including the next
+ * paragraph) shall be included in all copies or substantial portions of the
+ * Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
+ * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+ * IN THE SOFTWARE.
+ *
+ * Authors:
+ *    Connor Abbott (cwabbott0@gmail.com)
+ *
+ */
+
+#include "nir.h"
+#include "malloc.h"
+#include <unistd.h>
+
+/*
+ * Implements the classic to-SSA algorithm described by Cytron et. al. in
+ * "Efficiently Computing Static Single Assignment Form and the Control
+ * Dependence Graph."
+ */
+
+/* inserts a phi node of the form reg = phi(reg, reg, reg, ...) */
+
+static void
+insert_trivial_phi(nir_register *reg, nir_block *block, void *mem_ctx)
+{
+   nir_phi_instr *instr = nir_phi_instr_create(mem_ctx);
+
+   instr->dest.reg.reg = reg;
+   struct set_entry *entry;
+   set_foreach(block->predecessors, entry) {
+      nir_block *pred = (nir_block *) entry->key;
+
+      nir_phi_src *src = ralloc(mem_ctx, nir_phi_src);
+      src->pred = pred;
+      src->src.is_ssa = false;
+      src->src.reg.base_offset = 0;
+      src->src.reg.indirect = NULL;
+      src->src.reg.reg = reg;
+      exec_list_push_tail(&instr->srcs, &src->node);
+   }
+
+   nir_instr_insert_before_block(block, &instr->instr);
+}
+
+static void
+insert_phi_nodes(nir_function_impl *impl)
+{
+   void *mem_ctx = ralloc_parent(impl);
+
+   unsigned *work = calloc(impl->num_blocks, sizeof(unsigned));
+   unsigned *has_already = calloc(impl->num_blocks, sizeof(unsigned));
+
+   /*
+    * Since the work flags already prevent us from inserting a node that has
+    * ever been inserted into W, we don't need to use a set to represent W.
+    * Also, since no block can ever be inserted into W more than once, we know
+    * that the maximum size of W is the number of basic blocks in the
+    * function. So all we need to handle W is an array and a pointer to the
+    * next element to be inserted and the next element to be removed.
+    */
+   nir_block **W = malloc(impl->num_blocks * sizeof(nir_block *));
+   unsigned w_start, w_end;
+
+   unsigned iter_count = 0;
+
+   nir_index_blocks(impl);
+
+   foreach_list_typed(nir_register, reg, node, &impl->registers) {
+      if (reg->num_array_elems != 0)
+         continue;
+
+      w_start = w_end = 0;
+      iter_count++;
+
+      struct set_entry *entry;
+      set_foreach(reg->defs, entry) {
+         nir_instr *def = (nir_instr *) entry->key;
+         if (work[def->block->index] < iter_count)
+            W[w_end++] = def->block;
+         work[def->block->index] = iter_count;
+      }
+
+      while (w_start != w_end) {
+         nir_block *cur = W[w_start++];
+         set_foreach(cur->dom_frontier, entry) {
+            nir_block *next = (nir_block *) entry->key;
+
+            /*
+             * If there's more than one return statement, then the end block
+             * can be a join point for some definitions. However, there are
+             * no instructions in the end block, so nothing would use those
+             * phi nodes. Of course, we couldn't place those phi nodes
+             * anyways due to the restriction of having no instructions in the
+             * end block...
+             */
+            if (next == impl->end_block)
+               continue;
+
+            if (has_already[next->index] < iter_count) {
+               insert_trivial_phi(reg, next, mem_ctx);
+               has_already[next->index] = iter_count;
+               if (work[next->index] < iter_count) {
+                  work[next->index] = iter_count;
+                  W[w_end++] = next;
+               }
+            }
+         }
+      }
+   }
+
+   free(work);
+   free(has_already);
+   free(W);
+}
+
+typedef struct {
+   nir_ssa_def **stack;
+   int index;
+   unsigned num_defs; /** < used to add indices to debug names */
+#ifdef DEBUG
+   unsigned stack_size;
+#endif
+} reg_state;
+
+typedef struct {
+   reg_state *states;
+   void *mem_ctx;
+   nir_instr *parent_instr;
+   nir_if *parent_if;
+   nir_function_impl *impl;
+
+   /* map from SSA value -> original register */
+   struct hash_table *ssa_map;
+
+   /* predicate for this instruction */
+   nir_src *predicate;
+} rewrite_state;
+
+static nir_ssa_def *get_ssa_src(nir_register *reg, rewrite_state *state)
+{
+   unsigned index = reg->index;
+
+   if (state->states[index].index == -1) {
+      /*
+       * We're using an undefined register, create a new undefined SSA value
+       * to preserve the information that this source is undefined
+       */
+      nir_ssa_undef_instr *instr = nir_ssa_undef_instr_create(state->mem_ctx);
+      instr->def.index = state->impl->ssa_alloc++;
+      instr->def.num_components = reg->num_components;
+      instr->def.uses = _mesa_set_create(state->mem_ctx,
+                                         _mesa_key_pointer_equal);
+      instr->def.if_uses = _mesa_set_create(state->mem_ctx,
+                                            _mesa_key_pointer_equal);
+      /*
+       * We could just insert the undefined instruction before the instruction
+       * we're rewriting, but we could be rewriting a phi source in which case
+       * we can't do that, so do the next easiest thing - insert it at the
+       * beginning of the program. In the end, it doesn't really matter where
+       * the undefined instructions are because they're going to be ignored
+       * in the backend.
+       */
+      nir_instr_insert_before_cf_list(&state->impl->body, &instr->instr);
+      return &instr->def;
+   }
+
+   return state->states[index].stack[state->states[index].index];
+}
+
+static bool
+rewrite_use(nir_src *src, void *_state)
+{
+   rewrite_state *state = (rewrite_state *) _state;
+
+   if (src->is_ssa)
+      return true;
+
+   unsigned index = src->reg.reg->index;
+
+   if (state->states[index].stack == NULL)
+      return true;
+
+   src->is_ssa = true;
+   src->ssa = get_ssa_src(src->reg.reg, state);
+
+   if (state->parent_instr)
+      _mesa_set_add(src->ssa->uses, _mesa_hash_pointer(state->parent_instr),
+                  state->parent_instr);
+   else
+      _mesa_set_add(src->ssa->if_uses, _mesa_hash_pointer(state->parent_if),
+                  state->parent_if);
+   return true;
+}
+
+static bool
+rewrite_def_forwards(nir_dest *dest, void *_state)
+{
+   rewrite_state *state = (rewrite_state *) _state;
+
+   if (dest->is_ssa)
+      return true;
+
+   nir_register *reg = dest->reg.reg;
+   unsigned index = reg->index;
+
+   if (state->states[index].stack == NULL)
+      return true;
+
+   nir_alu_instr *csel = NULL;
+   if (state->predicate) {
+         /*
+          * To capture the information that we may or may not overwrite this
+          * register due to the predicate, we need to emit a conditional select
+          * that takes the old version of the register and the new version.
+          * This is basically a watered-down version of the Psi-SSA
+          * representation, without any of the optimizations.
+          *
+          * TODO: do we actually need full-blown Psi-SSA?
+          */
+      csel = nir_alu_instr_create(state->mem_ctx, nir_op_bcsel);
+      csel->dest.dest.reg.reg = dest->reg.reg;
+      csel->dest.write_mask = (1 << dest->reg.reg->num_components) - 1;
+      csel->src[0].src = nir_src_copy(*state->predicate, state->mem_ctx);
+      if (csel->src[0].src.is_ssa)
+         _mesa_set_add(csel->src[0].src.ssa->uses,
+                       _mesa_hash_pointer(&csel->instr), &csel->instr);
+      csel->src[2].src.is_ssa = true;
+      csel->src[2].src.ssa = get_ssa_src(dest->reg.reg, state);
+      _mesa_set_add(csel->src[2].src.ssa->uses,
+                    _mesa_hash_pointer(&csel->instr), &csel->instr);
+   }
+
+   dest->is_ssa = true;
+
+   char *name = NULL;
+   if (dest->reg.reg->name)
+      name = ralloc_asprintf(state->mem_ctx, "%s_%u", dest->reg.reg->name,
+                             state->states[index].num_defs);
+
+   dest->ssa.index = state->impl->ssa_alloc++;
+   dest->ssa.num_components = reg->num_components;
+   dest->ssa.parent_instr = state->parent_instr;
+   dest->ssa.uses = _mesa_set_create(state->mem_ctx, _mesa_key_pointer_equal);
+   dest->ssa.if_uses = _mesa_set_create(state->mem_ctx,
+                                        _mesa_key_pointer_equal);
+   dest->ssa.name = name;
+
+   /* push our SSA destination on the stack */
+   state->states[index].index++;
+   assert(state->states[index].index < state->states[index].stack_size);
+   state->states[index].stack[state->states[index].index] = &dest->ssa;
+   state->states[index].num_defs++;
+
+   _mesa_hash_table_insert(state->ssa_map, &dest->ssa, reg);
+
+   if (state->predicate) {
+      csel->src[1].src.is_ssa = true;
+      csel->src[1].src.ssa = &dest->ssa;
+      _mesa_set_add(dest->ssa.uses, _mesa_hash_pointer(&csel->instr),
+                    &csel->instr);
+
+      nir_instr *old_parent_instr = state->parent_instr;
+      nir_src *old_predicate = state->predicate;
+      state->parent_instr = &csel->instr;
+      state->predicate = NULL;
+      rewrite_def_forwards(&csel->dest.dest, state);
+      state->parent_instr = old_parent_instr;
+      state->predicate = old_predicate;
+
+      nir_instr_insert_after(state->parent_instr, &csel->instr);
+   }
+
+   return true;
+}
+
+static void
+rewrite_alu_instr_forward(nir_alu_instr *instr, rewrite_state *state)
+{
+   state->parent_instr = &instr->instr;
+   state->predicate = instr->has_predicate ? &instr->predicate : NULL;
+
+   nir_foreach_src(&instr->instr, rewrite_use, state);
+
+   nir_register *reg = instr->dest.dest.reg.reg;
+   unsigned index = reg->index;
+
+   if (state->states[index].stack == NULL)
+      return;
+
+   unsigned write_mask = instr->dest.write_mask;
+   if (write_mask != (1 << instr->dest.dest.reg.reg->num_components) - 1) {
+      /*
+       * Calculate the number of components the final instruction, which for
+       * per-component things is the number of output components of the
+       * instruction and non-per-component things is the number of enabled
+       * channels in the write mask.
+       */
+      unsigned num_components;
+      if (nir_op_infos[instr->op].output_size == 0) {
+         unsigned temp = (write_mask & 0x5) + ((write_mask >> 1) & 0x5);
+         num_components = (temp & 0x3) + ((temp >> 2) & 0x3);
+      } else {
+         num_components = nir_op_infos[instr->op].output_size;
+      }
+
+      char *name = NULL;
+      if (instr->dest.dest.reg.reg->name)
+         name = ralloc_asprintf(state->mem_ctx, "%s_%u",
+                                reg->name, state->states[index].num_defs);
+
+      instr->dest.write_mask = (1 << num_components) - 1;
+      instr->dest.dest.is_ssa = true;
+      instr->dest.dest.ssa.index = state->impl->ssa_alloc++;
+      instr->dest.dest.ssa.num_components = num_components;
+      instr->dest.dest.ssa.name = name;
+      instr->dest.dest.ssa.parent_instr = &instr->instr;
+      instr->dest.dest.ssa.uses = _mesa_set_create(state->mem_ctx,
+                                                   _mesa_key_pointer_equal);
+      instr->dest.dest.ssa.if_uses = _mesa_set_create(state->mem_ctx,
+                                                      _mesa_key_pointer_equal);
+
+      if (nir_op_infos[instr->op].output_size == 0) {
+         /*
+          * When we change the output writemask, we need to change the
+          * swizzles for per-component inputs too
+          */
+         for (unsigned i = 0; i < nir_op_infos[instr->op].num_inputs; i++) {
+            if (nir_op_infos[instr->op].input_sizes[i] != 0)
+               continue;
+
+            unsigned new_swizzle[4] = {0, 0, 0, 0};
+
+            /*
+             * We keep two indices:
+             * 1. The index of the original (non-SSA) component
+             * 2. The index of the post-SSA, compacted, component
+             *
+             * We need to map the swizzle component at index 1 to the swizzle
+             * component at index 2.
+             */
+
+            unsigned ssa_index = 0;
+            for (unsigned index = 0; index < 4; index++) {
+               if (!((write_mask >> index) & 1))
+                  continue;
+
+               new_swizzle[ssa_index] = instr->src[i].swizzle[index];
+               ssa_index++;
+            }
+
+            for (unsigned j = 0; j < 4; j++)
+               instr->src[i].swizzle[j] = new_swizzle[j];
+         }
+      }
+
+      nir_op op;
+      switch (reg->num_components) {
+      case 2: op = nir_op_vec2; break;
+      case 3: op = nir_op_vec3; break;
+      case 4: op = nir_op_vec4; break;
+      default: assert(0); break;
+      }
+
+      nir_alu_instr *vec = nir_alu_instr_create(state->mem_ctx, op);
+
+      vec->dest.dest.reg.reg = reg;
+      vec->dest.write_mask = (1 << reg->num_components) - 1;
+
+      nir_ssa_def *old_src = get_ssa_src(reg, state);
+      nir_ssa_def *new_src = &instr->dest.dest.ssa;
+
+      unsigned ssa_index = 0;
+      for (unsigned i = 0; i < reg->num_components; i++) {
+         vec->src[i].src.is_ssa = true;
+         if ((write_mask >> i) & 1) {
+            vec->src[i].src.ssa = new_src;
+            if (nir_op_infos[instr->op].output_size == 0)
+               vec->src[i].swizzle[0] = ssa_index;
+            else
+               vec->src[i].swizzle[0] = i;
+            ssa_index++;
+         } else {
+            vec->src[i].src.ssa = old_src;
+            vec->src[i].swizzle[0] = i;
+         }
+
+         _mesa_set_add(vec->src[i].src.ssa->uses,
+                       _mesa_hash_pointer(&vec->instr), &vec->instr);
+      }
+
+      vec->has_predicate = instr->has_predicate;
+      if (instr->has_predicate) {
+         vec->predicate = nir_src_copy(instr->predicate, state->mem_ctx);
+         if (vec->predicate.is_ssa)
+            _mesa_set_add(vec->predicate.ssa->uses,
+                          _mesa_hash_pointer(&vec->instr), &vec->instr);
+      }
+
+      nir_instr_insert_after(&instr->instr, &vec->instr);
+
+      state->parent_instr = &vec->instr;
+      state->predicate = vec->has_predicate ? &vec->predicate : NULL;
+      rewrite_def_forwards(&vec->dest.dest, state);
+   } else {
+      rewrite_def_forwards(&instr->dest.dest, state);
+   }
+}
+
+static void
+rewrite_phi_instr(nir_phi_instr *instr, rewrite_state *state)
+{
+   state->parent_instr = &instr->instr;
+   state->predicate = NULL;
+   rewrite_def_forwards(&instr->dest, state);
+}
+
+static nir_src *
+get_instr_predicate(nir_instr *instr)
+{
+   nir_alu_instr *alu_instr;
+   nir_load_const_instr *load_const_instr;
+   nir_intrinsic_instr *intrinsic_instr;
+   nir_tex_instr *tex_instr;
+
+   switch (instr->type) {
+   case nir_instr_type_alu:
+      alu_instr = nir_instr_as_alu(instr);
+      if (alu_instr->has_predicate)
+         return &alu_instr->predicate;
+      else
+         return NULL;
+
+   case nir_instr_type_load_const:
+      load_const_instr = nir_instr_as_load_const(instr);
+      if (load_const_instr->has_predicate)
+         return &load_const_instr->predicate;
+      else
+         return NULL;
+
+   case nir_instr_type_intrinsic:
+      intrinsic_instr = nir_instr_as_intrinsic(instr);
+      if (intrinsic_instr->has_predicate)
+         return &intrinsic_instr->predicate;
+      else
+         return NULL;
+
+   case nir_instr_type_texture:
+      tex_instr = nir_instr_as_texture(instr);
+      if (tex_instr->has_predicate)
+         return &tex_instr->predicate;
+      else
+         return NULL;
+
+   default:
+      break;
+   }
+
+   return NULL;
+}
+
+static void
+rewrite_instr_forward(nir_instr *instr, rewrite_state *state)
+{
+   if (instr->type == nir_instr_type_alu) {
+      rewrite_alu_instr_forward(nir_instr_as_alu(instr), state);
+      return;
+   }
+
+   if (instr->type == nir_instr_type_phi) {
+      rewrite_phi_instr(nir_instr_as_phi(instr), state);
+      return;
+   }
+
+   state->parent_instr = instr;
+   state->predicate = get_instr_predicate(instr);
+
+   nir_foreach_src(instr, rewrite_use, state);
+   nir_foreach_dest(instr, rewrite_def_forwards, state);
+}
+
+static void
+rewrite_phi_sources(nir_block *block, nir_block *pred, rewrite_state *state)
+{
+   nir_foreach_instr(block, instr) {
+      if (instr->type != nir_instr_type_phi)
+         break;
+
+      nir_phi_instr *phi_instr = nir_instr_as_phi(instr);
+
+      state->parent_instr = instr;
+
+      foreach_list_typed(nir_phi_src, src, node, &phi_instr->srcs) {
+         if (src->pred == pred) {
+            rewrite_use(&src->src, state);
+            break;
+         }
+      }
+   }
+}
+
+static bool
+rewrite_def_backwards(nir_dest *dest, void *_state)
+{
+   rewrite_state *state = (rewrite_state *) _state;
+
+   if (!dest->is_ssa)
+      return true;
+
+   struct hash_entry *entry =
+      _mesa_hash_table_search(state->ssa_map, &dest->ssa);
+
+   if (!entry)
+      return true;
+
+   nir_register *reg = (nir_register *) entry->data;
+   unsigned index = reg->index;
+
+   state->states[index].index--;
+   assert(state->states[index].index >= -1);
+
+   return true;
+}
+
+static void
+rewrite_instr_backwards(nir_instr *instr, rewrite_state *state)
+{
+   nir_foreach_dest(instr, rewrite_def_backwards, state);
+}
+
+static void
+rewrite_block(nir_block *block, rewrite_state *state)
+{
+   /* This will skip over any instructions after the current one, which is
+    * what we want because those instructions (vector gather, conditional
+    * select) will already be in SSA form.
+    */
+   nir_foreach_instr_safe(block, instr) {
+      rewrite_instr_forward(instr, state);
+   }
+
+   if (block != state->impl->end_block &&
+       !nir_cf_node_is_last(&block->cf_node) &&
+       nir_cf_node_next(&block->cf_node)->type == nir_cf_node_if) {
+      nir_if *if_stmt = nir_cf_node_as_if(nir_cf_node_next(&block->cf_node));
+      state->parent_instr = NULL;
+      state->parent_if = if_stmt;
+      rewrite_use(&if_stmt->condition, state);
+   }
+
+   if (block->successors[0])
+      rewrite_phi_sources(block->successors[0], block, state);
+   if (block->successors[1])
+      rewrite_phi_sources(block->successors[1], block, state);
+
+   for (unsigned i = 0; i < block->num_dom_children; i++)
+      rewrite_block(block->dom_children[i], state);
+
+   nir_foreach_instr_reverse(block, instr) {
+      rewrite_instr_backwards(instr, state);
+   }
+}
+
+static void
+remove_unused_regs(nir_function_impl *impl, rewrite_state *state)
+{
+   foreach_list_typed_safe(nir_register, reg, node, &impl->registers) {
+      if (state->states[reg->index].stack != NULL)
+         exec_node_remove(&reg->node);
+   }
+}
+
+static void
+init_rewrite_state(nir_function_impl *impl, rewrite_state *state)
+{
+   state->impl = impl;
+   state->mem_ctx = ralloc_parent(impl);
+   state->ssa_map = _mesa_hash_table_create(NULL, _mesa_hash_pointer,
+                                            _mesa_key_pointer_equal);
+   state->states = ralloc_array(NULL, reg_state, impl->reg_alloc);
+
+   foreach_list_typed(nir_register, reg, node, &impl->registers) {
+      assert(reg->index < impl->reg_alloc);
+      if (reg->num_array_elems > 0) {
+         state->states[reg->index].stack = NULL;
+      } else {
+         /*
+          * Calculate a conservative estimate of the stack size based on the
+          * number of definitions there are. Note that this function *must* be
+          * called after phi nodes are inserted so we can count phi node
+          * definitions too.
+          */
+         unsigned stack_size = 0;
+         struct set_entry *entry;
+         set_foreach(reg->defs, entry) {
+            nir_instr *def = (nir_instr *) entry->key;
+
+            stack_size++;
+
+            /*
+             * predicates generate an additional predicate destination that
+             * gets pushed on the stack
+             *
+             * Note: ALU instructions generate an additional instruction too,
+             * but as of now only the additional instruction is pushed onto
+             * the stack, and not the original instruction because it doesn't
+             * need to be (actually, we could do the same with predicates,
+             * but it was easier to just use the existing codepath).
+             */
+
+            if (def->type == nir_instr_type_intrinsic) {
+               nir_intrinsic_instr *intrinsic_instr =
+                  nir_instr_as_intrinsic(def);
+               if (nir_intrinsic_infos[intrinsic_instr->intrinsic].has_dest &&
+                   intrinsic_instr->has_predicate)
+                  stack_size++;
+            } else {
+               if (get_instr_predicate(def) != NULL)
+                  stack_size++;
+            }
+         }
+
+         state->states[reg->index].stack = ralloc_array(state->states,
+                                                        nir_ssa_def *,
+                                                        stack_size);
+#ifdef DEBUG
+         state->states[reg->index].stack_size = stack_size;
+#endif
+         state->states[reg->index].index = -1;
+         state->states[reg->index].num_defs = 0;
+      }
+   }
+}
+
+static void
+destroy_rewrite_state(rewrite_state *state)
+{
+   _mesa_hash_table_destroy(state->ssa_map, NULL);
+   ralloc_free(state->states);
+}
+
+void
+nir_convert_to_ssa_impl(nir_function_impl *impl)
+{
+   nir_calc_dominance_impl(impl);
+
+   insert_phi_nodes(impl);
+
+   rewrite_state state;
+   init_rewrite_state(impl, &state);
+
+   rewrite_block(impl->start_block, &state);
+
+   remove_unused_regs(impl, &state);
+
+   destroy_rewrite_state(&state);
+}
+
+void
+nir_convert_to_ssa(nir_shader *shader)
+{
+   nir_foreach_overload(shader, overload) {
+      if (overload->impl)
+         nir_convert_to_ssa_impl(overload->impl);
+   }
+}
