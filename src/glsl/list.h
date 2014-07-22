@@ -665,6 +665,12 @@ inline void exec_node::insert_before(exec_list *before)
 	(__node)->__field.next != NULL; 				\
 	(__node) = exec_node_data(__type, (__node)->__field.next, __field))
 
+#define foreach_list_typed_reverse(__type, __node, __field, __list)        \
+   for (__type * __node =                                                \
+           exec_node_data(__type, (__list)->tail_pred, __field);        \
+        (__node)->__field.prev != NULL;                                 \
+        (__node) = exec_node_data(__type, (__node)->__field.prev, __field))
+
 #define foreach_list_typed_safe(__type, __node, __field, __list)           \
    for (__type * __node =                                                  \
            exec_node_data(__type, (__list)->head, __field),                \
