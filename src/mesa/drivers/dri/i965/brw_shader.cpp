@@ -316,7 +316,7 @@ process_glsl_ir(gl_shader_stage stage,
    } while (progress);
 
    if (options->NirOptions != NULL)
-      lower_output_reads(shader->ir);
+      lower_output_reads(stage, shader->ir);
 
    validate_ir_tree(shader->ir);
 

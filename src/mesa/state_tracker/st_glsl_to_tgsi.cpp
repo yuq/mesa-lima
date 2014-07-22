@@ -5674,7 +5674,7 @@ get_mesa_program(struct gl_context *ctx,
                                                prog->Parameters);
 
    /* Remove reads from output registers. */
-   lower_output_reads(shader->ir);
+   lower_output_reads(shader->Stage, shader->ir);
 
    /* Emit intermediate IR for main(). */
    visit_exec_list(shader->ir, v);
