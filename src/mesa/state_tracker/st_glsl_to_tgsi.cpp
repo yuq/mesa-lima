@@ -5800,7 +5800,11 @@ get_mesa_program(struct gl_context *ctx,
 
    /* Perform optimizations on the instructions in the glsl_to_tgsi_visitor. */
    v->simplify_cmp();
-   v->copy_propagate();
+
+   if (shader->Type != GL_TESS_CONTROL_SHADER &&
+       shader->Type != GL_TESS_EVALUATION_SHADER)
+      v->copy_propagate();
+
    while (v->eliminate_dead_code());
 
    v->merge_two_dsts();
