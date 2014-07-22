@@ -265,6 +265,7 @@ ADDR_E_RETURNCODE AddrLib::Create(
         pLib->m_configFlags.checkLast2DLevel    = pCreateIn->createFlags.checkLast2DLevel;
         pLib->m_configFlags.useHtileSliceAlign  = pCreateIn->createFlags.useHtileSliceAlign;
         pLib->m_configFlags.allowLargeThickTile = pCreateIn->createFlags.allowLargeThickTile;
+        pLib->m_configFlags.disableLinearOpt    = FALSE;
 
         pLib->SetAddrChipFamily(pCreateIn->chipFamily, pCreateIn->chipRevision);
 
@@ -3554,7 +3555,9 @@ BOOL_32 AddrLib::OptimizeTileMode(
             (IsLinear(tileMode) == FALSE) &&
             (AddrElemLib::IsBlockCompressed(pIn->format) == FALSE) &&
             (pIn->flags.depth == FALSE) &&
-            (pIn->flags.stencil == FALSE))
+            (pIn->flags.stencil == FALSE) &&
+            (m_configFlags.disableLinearOpt == FALSE) &&
+            (pIn->flags.disableLinearOpt == FALSE))
         {
             tileMode = ADDR_TM_LINEAR_ALIGNED;
         }

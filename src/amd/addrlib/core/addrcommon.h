@@ -133,7 +133,8 @@ union ADDR_CONFIG_FLAGS
         UINT_32 checkLast2DLevel       : 1;    ///< Check the last 2D mip sub level
         UINT_32 useHtileSliceAlign     : 1;    ///< Do htile single slice alignment
         UINT_32 allowLargeThickTile    : 1;    ///< Allow 64*thickness*bytesPerPixel > rowSize
-        UINT_32 reserved               : 23;   ///< Reserved bits for future use
+        UINT_32 disableLinearOpt       : 1;    ///< Disallow tile modes to be optimized to linear
+        UINT_32 reserved               : 22;   ///< Reserved bits for future use
     };
 
     UINT_32 value;
