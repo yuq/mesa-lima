@@ -914,8 +914,8 @@ void
 ureg_emit_dst( struct ureg_program *ureg,
                struct ureg_dst dst )
 {
-   unsigned size = (1 + 
-                    (dst.Indirect ? 1 : 0));
+   unsigned size = 1 + (dst.Indirect ? 1 : 0) +
+                   (dst.Dimension ? (dst.DimIndirect ? 2 : 1) : 0);
 
    union tgsi_any_token *out = get_tokens( ureg, DOMAIN_INSN, size );
    unsigned n = 0;
@@ -941,6 +941,26 @@ ureg_emit_dst( struct ureg_program *ureg,
       out[n].ind.Swizzle = dst.IndirectSwizzle;
       out[n].ind.Index = dst.IndirectIndex;
       out[n].ind.ArrayID = dst.ArrayID;
+      n++;
+   }
+
+   if (dst.Dimension) {
+      out[0].dst.Dimension = 1;
+      out[n].dim.Dimension = 0;
+      out[n].dim.Padding = 0;
+      if (dst.DimIndirect) {
+         out[n].dim.Indirect = 1;
+         out[n].dim.Index = dst.DimensionIndex;
+         n++;
+         out[n].value = 0;
+         out[n].ind.File = dst.DimIndFile;
+         out[n].ind.Swizzle = dst.DimIndSwizzle;
+         out[n].ind.Index = dst.DimIndIndex;
+         out[n].ind.ArrayID = dst.ArrayID;
+      } else {
+         out[n].dim.Indirect = 0;
+         out[n].dim.Index = dst.DimensionIndex;
+      }
       n++;
    }
 
