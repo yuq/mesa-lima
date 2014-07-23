@@ -1293,6 +1293,9 @@ void nir_convert_to_ssa(nir_shader *shader);
 
 bool nir_opt_global_to_local(nir_shader *shader);
 
+bool nir_copy_prop_impl(nir_function_impl *impl);
+bool nir_copy_prop(nir_shader *shader);
+
 #ifdef __cplusplus
 } /* extern "C" */
 #endif
