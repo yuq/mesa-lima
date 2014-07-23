@@ -240,6 +240,8 @@ CodeEmitterGM107::emitSYS(int pos, const Value *val)
    int id = val ? val->reg.data.id : -1;
 
    switch (id) {
+   case SV_LANEID         : id = 0x00; break;
+   case SV_VERTEX_COUNT   : id = 0x10; break;
    case SV_INVOCATION_ID  : id = 0x11; break;
    case SV_INVOCATION_INFO: id = 0x1d; break;
    default:
