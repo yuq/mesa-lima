@@ -109,7 +109,7 @@ GL 4.0, GLSL 4.00:
   - Enhanced per-sample shading                        DONE (r600)
   - Interpolation functions                            DONE (r600)
   - New overload resolution rules                      DONE
-  GL_ARB_gpu_shader_fp64                               DONE (softpipe)
+  GL_ARB_gpu_shader_fp64                               DONE (nvc0, softpipe)
   GL_ARB_sample_shading                                DONE (i965, nv50, nvc0, r600, radeonsi)
   GL_ARB_shader_subroutine                             not started
   GL_ARB_tessellation_shader                           started (Chris, Ilia)
