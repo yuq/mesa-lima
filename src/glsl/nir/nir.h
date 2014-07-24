@@ -397,6 +397,9 @@ typedef struct {
    struct exec_node node;
    nir_instr_type type;
    struct nir_block *block;
+
+   /* flag for dead code elimination (see nir_opt_dce.c) */
+   bool live;
 } nir_instr;
 
 #define nir_instr_next(instr) \
@@ -1295,6 +1298,9 @@ bool nir_opt_global_to_local(nir_shader *shader);
 
 bool nir_copy_prop_impl(nir_function_impl *impl);
 bool nir_copy_prop(nir_shader *shader);
+
+bool nir_opt_dce_impl(nir_function_impl *impl);
+bool nir_opt_dce(nir_shader *shader);
 
 #ifdef __cplusplus
 } /* extern "C" */
