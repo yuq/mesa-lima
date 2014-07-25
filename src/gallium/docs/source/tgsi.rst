@@ -1861,6 +1861,45 @@ two-component vectors with doubled precision in each component.
 
   dst.zw = src.zw - \lfloor src.zw\rfloor
 
+.. opcode:: DTRUNC - Truncate
+
+.. math::
+
+  dst.xy = trunc(src.xy)
+
+  dst.zw = trunc(src.zw)
+
+.. opcode:: DCEIL - Ceiling
+
+.. math::
+
+  dst.xy = \lceil src.xy\rceil
+
+  dst.zw = \lceil src.zw\rceil
+
+.. opcode:: DFLR - Floor
+
+.. math::
+
+  dst.xy = \lfloor src.xy\rfloor
+
+  dst.zw = \lfloor src.zw\rfloor
+
+.. opcode:: DROUND - Fraction
+
+.. math::
+
+  dst.xy = round(src.xy)
+
+  dst.zw = round(src.zw)
+
+.. opcode:: DSSG - Set Sign
+
+.. math::
+
+  dst.xy = (src.xy > 0) ? 1.0 : (src.xy < 0) ? -1.0 : 0.0
+
+  dst.zw = (src.zw > 0) ? 1.0 : (src.zw < 0) ? -1.0 : 0.0
 
 .. opcode:: DFRACEXP - Convert Number to Fractional and Integral Components
 

@@ -519,7 +519,12 @@ struct tgsi_property_data {
 #define TGSI_OPCODE_D2U                 215
 #define TGSI_OPCODE_U2D                 216
 #define TGSI_OPCODE_DRSQ                217 /* eg, cayman also has DRSQ */
-#define TGSI_OPCODE_LAST                218
+#define TGSI_OPCODE_DTRUNC              218 /* nvc0 */
+#define TGSI_OPCODE_DCEIL               219 /* nvc0 */
+#define TGSI_OPCODE_DFLR                220 /* nvc0 */
+#define TGSI_OPCODE_DROUND              221 /* nvc0 */
+#define TGSI_OPCODE_DSSG                222
+#define TGSI_OPCODE_LAST                223
 
 #define TGSI_SAT_NONE            0  /* do not saturate */
 #define TGSI_SAT_ZERO_ONE        1  /* clamp to [0,1] */

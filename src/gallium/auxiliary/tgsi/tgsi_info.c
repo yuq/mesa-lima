@@ -257,6 +257,11 @@ static const struct tgsi_opcode_info opcode_info[TGSI_OPCODE_LAST] =
    { 1, 1, 0, 0, 0, 0, COMP, "D2U", TGSI_OPCODE_D2U },
    { 1, 1, 0, 0, 0, 0, COMP, "U2D", TGSI_OPCODE_U2D },
    { 1, 1, 0, 0 ,0, 0, COMP, "DRSQ", TGSI_OPCODE_DRSQ },
+   { 1, 1, 0, 0, 0, 0, COMP, "DTRUNC", TGSI_OPCODE_DTRUNC },
+   { 1, 1, 0, 0, 0, 0, COMP, "DCEIL", TGSI_OPCODE_DCEIL },
+   { 1, 1, 0, 0, 0, 0, COMP, "DFLR", TGSI_OPCODE_DFLR },
+   { 1, 1, 0, 0, 0, 0, COMP, "DROUND", TGSI_OPCODE_DROUND },
+   { 1, 1, 0, 0, 0, 0, COMP, "DSSG", TGSI_OPCODE_DSSG },
 };
 
 const struct tgsi_opcode_info *
