@@ -848,7 +848,7 @@ glsl_to_tgsi_visitor::get_opcode(ir_instruction *ir, unsigned op,
 
       case2iu(ISHR, USHR);
 
-      case2fi(SSG, ISSG);
+      case3fid(SSG, ISSG, DSSG);
       case3fid(ABS, IABS, DABS);
 
       case2iu(IBFE, UBFE);
@@ -861,6 +861,10 @@ glsl_to_tgsi_visitor::get_opcode(ir_instruction *ir, unsigned op,
       case3fid(RSQ, RSQ, DRSQ);
 
       case3fid(FRC, FRC, DFRAC);
+      case3fid(TRUNC, TRUNC, DTRUNC);
+      case3fid(CEIL, CEIL, DCEIL);
+      case3fid(FLR, FLR, DFLR);
+      case3fid(ROUND, ROUND, DROUND);
 
       default: break;
    }
