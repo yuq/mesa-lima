@@ -332,6 +332,8 @@ to be 0.
   sampler views. Must not be lower than PIPE_SHADER_CAP_MAX_TEXTURE_SAMPLERS.
 * ``PIPE_SHADER_CAP_DOUBLES``: Whether double precision floating-point
   operations are supported.
+* ``PIPE_SHADER_CAP_TGSI_DROUND_SUPPORTED``: Whether double precision rounding
+  is supported. If it is, DTRUNC/DCEIL/DFLR/DROUND opcodes may be used.
 
 
 .. _pipe_compute_cap:

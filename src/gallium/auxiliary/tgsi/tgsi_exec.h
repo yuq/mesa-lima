@@ -457,6 +457,8 @@ tgsi_exec_get_shader_param(enum pipe_shader_cap param)
       return 1;
    case PIPE_SHADER_CAP_DOUBLES:
       return 1;
+   case PIPE_SHADER_CAP_TGSI_DROUND_SUPPORTED:
+      return 0;
    }
    /* if we get here, we missed a shader cap above (and should have seen
     * a compiler warning.)
