@@ -1587,7 +1587,6 @@ glsl_to_tgsi_visitor::visit(ir_expression *ir)
       emit(ir, TGSI_OPCODE_ABS, result_dst, op[0]);
       break;
    case ir_unop_sign:
-      assert(ir->operands[0]->type->base_type != GLSL_TYPE_DOUBLE);
       emit(ir, TGSI_OPCODE_SSG, result_dst, op[0]);
       break;
    case ir_unop_rcp:
@@ -2063,19 +2062,15 @@ glsl_to_tgsi_visitor::visit(ir_expression *ir)
          emit(ir, TGSI_OPCODE_SNE, result_dst, op[0], st_src_reg_for_float(0.0));
       break;
    case ir_unop_trunc:
-      assert(ir->operands[0]->type->base_type != GLSL_TYPE_DOUBLE);
       emit(ir, TGSI_OPCODE_TRUNC, result_dst, op[0]);
       break;
    case ir_unop_ceil:
-      assert(ir->operands[0]->type->base_type != GLSL_TYPE_DOUBLE);
       emit(ir, TGSI_OPCODE_CEIL, result_dst, op[0]);
       break;
    case ir_unop_floor:
-      assert(ir->operands[0]->type->base_type != GLSL_TYPE_DOUBLE);
       emit(ir, TGSI_OPCODE_FLR, result_dst, op[0]);
       break;
    case ir_unop_round_even:
-      assert(ir->operands[0]->type->base_type != GLSL_TYPE_DOUBLE);
       emit(ir, TGSI_OPCODE_ROUND, result_dst, op[0]);
       break;
    case ir_unop_fract:
@@ -5706,8 +5701,12 @@ st_link_shader(struct gl_context *ctx, struct gl_shader_program *prog)
 
       bool progress;
       exec_list *ir = prog->_LinkedShaders[i]->ir;
+      gl_shader_stage stage = _mesa_shader_enum_to_shader_stage(prog->_LinkedShaders[i]->Type);
       const struct gl_shader_compiler_options *options =
-            &ctx->Const.ShaderCompilerOptions[_mesa_shader_enum_to_shader_stage(prog->_LinkedShaders[i]->Type)];
+            &ctx->Const.ShaderCompilerOptions[stage];
+      unsigned ptarget = shader_stage_to_ptarget(stage);
+      bool have_dround = pscreen->get_shader_param(pscreen, ptarget,
+                                                   PIPE_SHADER_CAP_TGSI_DROUND_SUPPORTED);
 
       /* If there are forms of indirect addressing that the driver
        * cannot handle, perform the lowering pass.
@@ -5747,7 +5746,7 @@ st_link_shader(struct gl_context *ctx, struct gl_shader_program *prog)
                          LDEXP_TO_ARITH |
                          CARRY_TO_ARITH |
                          BORROW_TO_ARITH |
-                         DOPS_TO_DFRAC |
+                         (have_dround ? 0 : DOPS_TO_DFRAC) |
                          (options->EmitNoPow ? POW_TO_EXP2 : 0) |
                          (!ctx->Const.NativeIntegers ? INT_DIV_TO_MUL_RCP : 0) |
                          (options->EmitNoSat ? SAT_TO_CLAMP : 0));
