@@ -374,6 +374,7 @@ static int svga_get_shader_param(struct pipe_screen *screen, unsigned shader, en
          return PIPE_SHADER_IR_TGSI;
       case PIPE_SHADER_CAP_DOUBLES:
       case PIPE_SHADER_CAP_TGSI_DROUND_SUPPORTED:
+      case PIPE_SHADER_CAP_TGSI_DFRACEXP_DLDEXP_SUPPORTED
          return 0;
       }
       /* If we get here, we failed to handle a cap above */

@@ -424,6 +424,7 @@ static int si_get_shader_param(struct pipe_screen* pscreen, unsigned shader, enu
 		return PIPE_SHADER_IR_TGSI;
 	case PIPE_SHADER_CAP_DOUBLES:
 	case PIPE_SHADER_CAP_TGSI_DROUND_SUPPORTED:
+	case PIPE_SHADER_CAP_TGSI_DFRACEXP_DLDEXP_SUPPORTED:
 		return 0;
 	}
 	return 0;

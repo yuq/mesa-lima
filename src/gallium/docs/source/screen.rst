@@ -334,6 +334,8 @@ to be 0.
   operations are supported.
 * ``PIPE_SHADER_CAP_TGSI_DROUND_SUPPORTED``: Whether double precision rounding
   is supported. If it is, DTRUNC/DCEIL/DFLR/DROUND opcodes may be used.
+* ``PIPE_SHADER_CAP_TGSI_DFRACEXP_DLDEXP_SUPPORTED``: Whether DFRACEXP and
+  DLDEXP are supported.
 
 
 .. _pipe_compute_cap:
