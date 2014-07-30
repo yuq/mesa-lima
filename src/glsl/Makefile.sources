@@ -21,6 +21,7 @@ NIR_FILES = \
 	$(GLSL_SRCDIR)/nir/nir_opcodes.c \
 	$(GLSL_SRCDIR)/nir/nir_opcodes.h \
 	$(GLSL_SRCDIR)/nir/nir_print.c \
+	$(GLSL_SRCDIR)/nir/nir_validate.c \
 	$(GLSL_SRCDIR)/nir/nir_types.cpp
 
 # libglsl
