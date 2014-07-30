@@ -1238,6 +1238,8 @@ void nir_index_ssa_defs(nir_function_impl *impl);
 
 void nir_index_blocks(nir_function_impl *impl);
 
+void nir_print_shader(nir_shader *shader, FILE *fp);
+
 #ifdef __cplusplus
 } /* extern "C" */
 #endif
