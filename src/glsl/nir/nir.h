@@ -1252,6 +1252,8 @@ void nir_lower_variables_scalar(nir_shader *shader, bool lower_globals,
                                 bool lower_io, bool add_names,
                                 bool native_integers);
 
+void nir_remove_dead_variables(nir_shader *shader);
+
 #ifdef __cplusplus
 } /* extern "C" */
 #endif
