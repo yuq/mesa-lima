@@ -1259,6 +1259,8 @@ void nir_lower_samplers(nir_shader *shader,
                         struct gl_shader_program *shader_program,
                         struct gl_program *prog);
 
+void nir_lower_system_values(nir_shader *shader);
+
 #ifdef __cplusplus
 } /* extern "C" */
 #endif
