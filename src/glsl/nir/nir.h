@@ -32,6 +32,7 @@
 #include "../list.h"
 #include "GL/gl.h" /* GLenum */
 #include "util/ralloc.h"
+#include "main/mtypes.h"
 #include "nir_types.h"
 #include <stdio.h>
 
@@ -1253,6 +1254,10 @@ void nir_lower_variables_scalar(nir_shader *shader, bool lower_globals,
                                 bool native_integers);
 
 void nir_remove_dead_variables(nir_shader *shader);
+
+void nir_lower_samplers(nir_shader *shader,
+                        struct gl_shader_program *shader_program,
+                        struct gl_program *prog);
 
 #ifdef __cplusplus
 } /* extern "C" */
