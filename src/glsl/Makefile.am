@@ -126,7 +126,8 @@ libglsl_la_SOURCES =					\
 	glsl_lexer.cpp					\
 	glsl_parser.cpp					\
 	glsl_parser.h					\
-	$(LIBGLSL_FILES)
+	$(LIBGLSL_FILES)				\
+	$(NIR_FILES)
 
 glsl_compiler_SOURCES = \
 	$(top_srcdir)/src/mesa/main/imports.c \

@@ -13,6 +13,9 @@ LIBGLCPP_GENERATED_FILES = \
 	$(GLSL_BUILDDIR)/glcpp/glcpp-lex.c \
 	$(GLSL_BUILDDIR)/glcpp/glcpp-parse.c
 
+NIR_FILES = \
+        $(GLSL_SRCDIR)/nir/nir_types.cpp
+
 # libglsl
 
 LIBGLSL_FILES = \
