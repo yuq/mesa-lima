@@ -11,10 +11,10 @@ The rules-ng-ng source files this header was generated from are:
 - /home/robclark/src/freedreno/envytools/rnndb/adreno.xml               (    364 bytes, from 2013-11-30 14:47:15)
 - /home/robclark/src/freedreno/envytools/rnndb/freedreno_copyright.xml  (   1453 bytes, from 2013-03-31 16:51:27)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/a2xx.xml          (  32901 bytes, from 2014-06-02 15:21:30)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_common.xml (  10347 bytes, from 2014-10-01 18:55:57)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_pm4.xml    (  14960 bytes, from 2014-07-27 17:22:13)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/a3xx.xml          (  60533 bytes, from 2014-10-15 18:32:43)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/a4xx.xml          (  41068 bytes, from 2014-08-01 12:22:48)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_common.xml (  10551 bytes, from 2014-11-13 22:44:30)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_pm4.xml    (  15053 bytes, from 2014-11-09 15:45:47)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/a3xx.xml          (  63169 bytes, from 2014-11-13 22:44:18)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/a4xx.xml          (  49097 bytes, from 2014-11-14 15:38:00)
 
 Copyright (C) 2013-2014 by the following authors:
 - Rob Clark <robdclark@gmail.com> (robclark)
@@ -122,6 +122,7 @@ enum a3xx_tex_fmt {
 	TFMT_NORM_USHORT_4444 = 7,
 	TFMT_NORM_USHORT_Z16 = 9,
 	TFMT_NORM_UINT_X8Z24 = 10,
+	TFMT_FLOAT_Z32 = 11,
 	TFMT_NORM_UINT_NV12_UV_TILED = 17,
 	TFMT_NORM_UINT_NV12_Y_TILED = 19,
 	TFMT_NORM_UINT_NV12_UV = 21,
@@ -130,18 +131,38 @@ enum a3xx_tex_fmt {
 	TFMT_NORM_UINT_I420_U = 26,
 	TFMT_NORM_UINT_I420_V = 27,
 	TFMT_NORM_UINT_2_10_10_10 = 41,
+	TFMT_FLOAT_9_9_9_E5 = 42,
+	TFMT_FLOAT_10_11_11 = 43,
 	TFMT_NORM_UINT_A8 = 44,
 	TFMT_NORM_UINT_L8_A8 = 47,
 	TFMT_NORM_UINT_8 = 48,
 	TFMT_NORM_UINT_8_8 = 49,
 	TFMT_NORM_UINT_8_8_8 = 50,
 	TFMT_NORM_UINT_8_8_8_8 = 51,
+	TFMT_NORM_SINT_8_8 = 53,
+	TFMT_NORM_SINT_8_8_8_8 = 55,
+	TFMT_UINT_8_8 = 57,
+	TFMT_UINT_8_8_8_8 = 59,
+	TFMT_SINT_8_8 = 61,
+	TFMT_SINT_8_8_8_8 = 63,
 	TFMT_FLOAT_16 = 64,
 	TFMT_FLOAT_16_16 = 65,
 	TFMT_FLOAT_16_16_16_16 = 67,
+	TFMT_UINT_16 = 68,
+	TFMT_UINT_16_16 = 69,
+	TFMT_UINT_16_16_16_16 = 71,
+	TFMT_SINT_16 = 72,
+	TFMT_SINT_16_16 = 73,
+	TFMT_SINT_16_16_16_16 = 75,
 	TFMT_FLOAT_32 = 84,
 	TFMT_FLOAT_32_32 = 85,
 	TFMT_FLOAT_32_32_32_32 = 87,
+	TFMT_UINT_32 = 88,
+	TFMT_UINT_32_32 = 89,
+	TFMT_UINT_32_32_32_32 = 91,
+	TFMT_SINT_32 = 92,
+	TFMT_SINT_32_32 = 93,
+	TFMT_SINT_32_32_32_32 = 95,
 };
 
 enum a3xx_tex_fetchsize {
@@ -154,20 +175,34 @@ enum a3xx_tex_fetchsize {
 };
 
 enum a3xx_color_fmt {
+	RB_R5G6B5_UNORM = 0,
+	RB_R5G5B5A1_UNORM = 1,
+	RB_R4G4B4A4_UNORM = 3,
 	RB_R8G8B8_UNORM = 4,
 	RB_R8G8B8A8_UNORM = 8,
-	RB_Z16_UNORM = 12,
+	RB_R8G8B8A8_UINT = 10,
+	RB_R8G8B8A8_SINT = 11,
+	RB_R8G8_UNORM = 12,
+	RB_R8_UINT = 14,
+	RB_R8_SINT = 15,
+	RB_R10G10B10A2_UNORM = 16,
 	RB_A8_UNORM = 20,
 	RB_R8_UNORM = 21,
 	RB_R16G16B16A16_FLOAT = 27,
+	RB_R11G11B10_FLOAT = 28,
+	RB_R16_SINT = 40,
+	RB_R16G16_SINT = 41,
+	RB_R16G16B16A16_SINT = 43,
+	RB_R16_UINT = 44,
+	RB_R16G16_UINT = 45,
+	RB_R16G16B16A16_UINT = 47,
 	RB_R32G32B32A32_FLOAT = 51,
-};
-
-enum a3xx_color_swap {
-	WZYX = 0,
-	WXYZ = 1,
-	ZYXW = 2,
-	XYZW = 3,
+	RB_R32_SINT = 52,
+	RB_R32G32_SINT = 53,
+	RB_R32G32B32A32_SINT = 55,
+	RB_R32_UINT = 56,
+	RB_R32G32_UINT = 57,
+	RB_R32G32B32A32_UINT = 59,
 };
 
 enum a3xx_sp_perfcounter_select {
@@ -551,6 +586,10 @@ enum a3xx_tex_type {
 
 #define REG_A3XX_CP_MEQ_DATA					0x000001db
 
+#define REG_A3XX_CP_WFI_PEND_CTR				0x000001f5
+
+#define REG_A3XX_RBBM_PM_OVERRIDE2				0x0000039d
+
 #define REG_A3XX_CP_PERFCOUNTER_SELECT				0x00000445
 
 #define REG_A3XX_CP_HW_FAULT					0x0000045c
@@ -564,6 +603,12 @@ static inline uint32_t REG_A3XX_CP_PROTECT(uint32_t i0) { return 0x00000460 + 0x
 static inline uint32_t REG_A3XX_CP_PROTECT_REG(uint32_t i0) { return 0x00000460 + 0x1*i0; }
 
 #define REG_A3XX_CP_AHB_FAULT					0x0000054d
+
+#define REG_A3XX_SQ_GPR_MANAGEMENT				0x00000d00
+
+#define REG_A3XX_SQ_INST_STORE_MANAGMENT			0x00000d02
+
+#define REG_A3XX_TP0_CHICKEN					0x00000e1e
 
 #define REG_A3XX_SP_GLOBAL_MEM_SIZE				0x00000e22
 
@@ -878,6 +923,7 @@ static inline uint32_t A3XX_RB_MRT_BUF_INFO_COLOR_SWAP(enum a3xx_color_swap val)
 {
 	return ((val) << A3XX_RB_MRT_BUF_INFO_COLOR_SWAP__SHIFT) & A3XX_RB_MRT_BUF_INFO_COLOR_SWAP__MASK;
 }
+#define A3XX_RB_MRT_BUF_INFO_COLOR_SRGB				0x00004000
 #define A3XX_RB_MRT_BUF_INFO_COLOR_BUF_PITCH__MASK		0xfffe0000
 #define A3XX_RB_MRT_BUF_INFO_COLOR_BUF_PITCH__SHIFT		17
 static inline uint32_t A3XX_RB_MRT_BUF_INFO_COLOR_BUF_PITCH(uint32_t val)
@@ -1016,6 +1062,7 @@ static inline uint32_t A3XX_RB_COPY_CONTROL_FASTCLEAR(uint32_t val)
 {
 	return ((val) << A3XX_RB_COPY_CONTROL_FASTCLEAR__SHIFT) & A3XX_RB_COPY_CONTROL_FASTCLEAR__MASK;
 }
+#define A3XX_RB_COPY_CONTROL_UNK12				0x00001000
 #define A3XX_RB_COPY_CONTROL_GMEM_BASE__MASK			0xffffc000
 #define A3XX_RB_COPY_CONTROL_GMEM_BASE__SHIFT			14
 static inline uint32_t A3XX_RB_COPY_CONTROL_GMEM_BASE(uint32_t val)
@@ -1094,7 +1141,7 @@ static inline uint32_t A3XX_RB_DEPTH_CONTROL_ZFUNC(enum adreno_compare_func val)
 #define REG_A3XX_RB_DEPTH_CLEAR					0x00002101
 
 #define REG_A3XX_RB_DEPTH_INFO					0x00002102
-#define A3XX_RB_DEPTH_INFO_DEPTH_FORMAT__MASK			0x00000001
+#define A3XX_RB_DEPTH_INFO_DEPTH_FORMAT__MASK			0x00000003
 #define A3XX_RB_DEPTH_INFO_DEPTH_FORMAT__SHIFT			0
 static inline uint32_t A3XX_RB_DEPTH_INFO_DEPTH_FORMAT(enum adreno_rb_depth_format val)
 {
@@ -1502,6 +1549,8 @@ static inline uint32_t A3XX_VFD_CONTROL_1_REGID4INST(uint32_t val)
 #define REG_A3XX_VFD_INDEX_MAX					0x00002243
 
 #define REG_A3XX_VFD_INSTANCEID_OFFSET				0x00002244
+
+#define REG_A3XX_VFD_INDEX_OFFSET				0x00002245
 
 #define REG_A3XX_VFD_INDEX_OFFSET				0x00002245
 
@@ -2046,6 +2095,8 @@ static inline uint32_t A3XX_SP_FS_MRT_REG_REGID(uint32_t val)
 	return ((val) << A3XX_SP_FS_MRT_REG_REGID__SHIFT) & A3XX_SP_FS_MRT_REG_REGID__MASK;
 }
 #define A3XX_SP_FS_MRT_REG_HALF_PRECISION			0x00000100
+#define A3XX_SP_FS_MRT_REG_SINT					0x00000400
+#define A3XX_SP_FS_MRT_REG_UINT					0x00000800
 
 static inline uint32_t REG_A3XX_SP_FS_IMAGE_OUTPUT(uint32_t i0) { return 0x000022f4 + 0x1*i0; }
 
@@ -2064,6 +2115,8 @@ static inline uint32_t A3XX_SP_FS_LENGTH_REG_SHADERLENGTH(uint32_t val)
 {
 	return ((val) << A3XX_SP_FS_LENGTH_REG_SHADERLENGTH__SHIFT) & A3XX_SP_FS_LENGTH_REG_SHADERLENGTH__MASK;
 }
+
+#define REG_A3XX_PA_SC_AA_CONFIG				0x00002301
 
 #define REG_A3XX_TPL1_TP_VS_TEX_OFFSET				0x00002340
 #define A3XX_TPL1_TP_VS_TEX_OFFSET_SAMPLEROFFSET__MASK		0x000000ff
@@ -2415,11 +2468,11 @@ static inline uint32_t A3XX_VGT_DRAW_INITIATOR_INDEX_SIZE(enum pc_di_index_size 
 #define A3XX_VGT_DRAW_INITIATOR_NOT_EOP				0x00001000
 #define A3XX_VGT_DRAW_INITIATOR_SMALL_INDEX			0x00002000
 #define A3XX_VGT_DRAW_INITIATOR_PRE_DRAW_INITIATOR_ENABLE	0x00004000
-#define A3XX_VGT_DRAW_INITIATOR_NUM_INDICES__MASK		0xffff0000
-#define A3XX_VGT_DRAW_INITIATOR_NUM_INDICES__SHIFT		16
-static inline uint32_t A3XX_VGT_DRAW_INITIATOR_NUM_INDICES(uint32_t val)
+#define A3XX_VGT_DRAW_INITIATOR_NUM_INSTANCES__MASK		0xff000000
+#define A3XX_VGT_DRAW_INITIATOR_NUM_INSTANCES__SHIFT		24
+static inline uint32_t A3XX_VGT_DRAW_INITIATOR_NUM_INSTANCES(uint32_t val)
 {
-	return ((val) << A3XX_VGT_DRAW_INITIATOR_NUM_INDICES__SHIFT) & A3XX_VGT_DRAW_INITIATOR_NUM_INDICES__MASK;
+	return ((val) << A3XX_VGT_DRAW_INITIATOR_NUM_INSTANCES__SHIFT) & A3XX_VGT_DRAW_INITIATOR_NUM_INSTANCES__MASK;
 }
 
 #define REG_A3XX_VGT_IMMED_DATA					0x000021fd

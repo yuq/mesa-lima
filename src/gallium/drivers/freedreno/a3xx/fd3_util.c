@@ -341,7 +341,7 @@ fd3_pipe2color(enum pipe_format format)
 		return RB_R8G8B8A8_UNORM;
 
 	case PIPE_FORMAT_Z16_UNORM:
-		return RB_Z16_UNORM;
+		return RB_R8G8_UNORM;
 
 	case PIPE_FORMAT_Z24X8_UNORM:
 	case PIPE_FORMAT_Z24_UNORM_S8_UINT:

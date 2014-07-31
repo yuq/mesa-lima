@@ -11,10 +11,10 @@ The rules-ng-ng source files this header was generated from are:
 - /home/robclark/src/freedreno/envytools/rnndb/adreno.xml               (    364 bytes, from 2013-11-30 14:47:15)
 - /home/robclark/src/freedreno/envytools/rnndb/freedreno_copyright.xml  (   1453 bytes, from 2013-03-31 16:51:27)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/a2xx.xml          (  32901 bytes, from 2014-06-02 15:21:30)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_common.xml (  10347 bytes, from 2014-10-01 18:55:57)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_pm4.xml    (  14960 bytes, from 2014-07-27 17:22:13)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/a3xx.xml          (  60533 bytes, from 2014-10-15 18:32:43)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/a4xx.xml          (  41068 bytes, from 2014-08-01 12:22:48)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_common.xml (  10551 bytes, from 2014-11-13 22:44:30)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_pm4.xml    (  15053 bytes, from 2014-11-09 15:45:47)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/a3xx.xml          (  63169 bytes, from 2014-11-13 22:44:18)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/a4xx.xml          (  49097 bytes, from 2014-11-14 15:38:00)
 
 Copyright (C) 2013-2014 by the following authors:
 - Rob Clark <robdclark@gmail.com> (robclark)
@@ -926,11 +926,11 @@ static inline uint32_t A2XX_VGT_DRAW_INITIATOR_INDEX_SIZE(enum pc_di_index_size 
 #define A2XX_VGT_DRAW_INITIATOR_NOT_EOP				0x00001000
 #define A2XX_VGT_DRAW_INITIATOR_SMALL_INDEX			0x00002000
 #define A2XX_VGT_DRAW_INITIATOR_PRE_DRAW_INITIATOR_ENABLE	0x00004000
-#define A2XX_VGT_DRAW_INITIATOR_NUM_INDICES__MASK		0xffff0000
-#define A2XX_VGT_DRAW_INITIATOR_NUM_INDICES__SHIFT		16
-static inline uint32_t A2XX_VGT_DRAW_INITIATOR_NUM_INDICES(uint32_t val)
+#define A2XX_VGT_DRAW_INITIATOR_NUM_INSTANCES__MASK		0xff000000
+#define A2XX_VGT_DRAW_INITIATOR_NUM_INSTANCES__SHIFT		24
+static inline uint32_t A2XX_VGT_DRAW_INITIATOR_NUM_INSTANCES(uint32_t val)
 {
-	return ((val) << A2XX_VGT_DRAW_INITIATOR_NUM_INDICES__SHIFT) & A2XX_VGT_DRAW_INITIATOR_NUM_INDICES__MASK;
+	return ((val) << A2XX_VGT_DRAW_INITIATOR_NUM_INSTANCES__SHIFT) & A2XX_VGT_DRAW_INITIATOR_NUM_INSTANCES__MASK;
 }
 
 #define REG_A2XX_VGT_IMMED_DATA					0x000021fd
