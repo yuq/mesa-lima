@@ -1145,6 +1145,99 @@ typedef struct nir_shader {
       foreach_list_typed(nir_function_overload, overload, node, \
                          &(func)->overload_list)
 
+nir_shader *nir_shader_create(void *mem_ctx);
+
+/** creates a register, including assigning it an index and adding it to the list */
+nir_register *nir_global_reg_create(nir_shader *shader);
+
+nir_register *nir_local_reg_create(nir_function_impl *impl);
+
+void nir_reg_remove(nir_register *reg);
+
+/** creates a function and adds it to the shader's list of functions */
+nir_function *nir_function_create(nir_shader *shader, const char *name);
+
+/** creates a null function returning null */
+nir_function_overload *nir_function_overload_create(nir_function *func);
+
+nir_function_impl *nir_function_impl_create(nir_function_overload *func);
+
+nir_block *nir_block_create(void *mem_ctx);
+nir_if *nir_if_create(void *mem_ctx);
+nir_loop *nir_loop_create(void *mem_ctx);
+
+nir_function_impl *nir_cf_node_get_function(nir_cf_node *node);
+
+/** puts a control flow node immediately after another control flow node */
+void nir_cf_node_insert_after(nir_cf_node *node, nir_cf_node *after);
+
+/** puts a control flow node immediately before another control flow node */
+void nir_cf_node_insert_before(nir_cf_node *node, nir_cf_node *before);
+
+/** puts a control flow node at the beginning of a list from an if, loop, or function */
+void nir_cf_node_insert_begin(struct exec_list *list, nir_cf_node *node);
+
+/** puts a control flow node at the end of a list from an if, loop, or function */
+void nir_cf_node_insert_end(struct exec_list *list, nir_cf_node *node);
+
+/** removes a control flow node, doing any cleanup necessary */
+void nir_cf_node_remove(nir_cf_node *node);
+
+/** creates an instruction with default swizzle/writemask/etc. with NULL registers */
+nir_alu_instr *nir_alu_instr_create(void *mem_ctx, nir_op op);
+
+nir_jump_instr *nir_jump_instr_create(void *mem_ctx, nir_jump_type type);
+
+nir_load_const_instr *nir_load_const_instr_create(void *mem_ctx);
+
+nir_intrinsic_instr *nir_intrinsic_instr_create(void *mem_ctx,
+                                                nir_intrinsic_op op);
+
+nir_call_instr *nir_call_instr_create(void *mem_ctx,
+                                      nir_function_overload *callee);
+
+nir_tex_instr *nir_tex_instr_create(void *mem_ctx, unsigned num_srcs);
+
+nir_phi_instr *nir_phi_instr_create(void *mem_ctx);
+
+nir_ssa_undef_instr *nir_ssa_undef_instr_create(void *mem_ctx);
+
+nir_deref_var *nir_deref_var_create(void *mem_ctx, nir_variable *var);
+nir_deref_array *nir_deref_array_create(void *mem_ctx);
+nir_deref_struct *nir_deref_struct_create(void *mem_ctx, const char *field);
+
+nir_deref *nir_copy_deref(void *mem_ctx, nir_deref *deref);
+
+void nir_instr_insert_before(nir_instr *instr, nir_instr *before);
+void nir_instr_insert_after(nir_instr *instr, nir_instr *after);
+
+void nir_instr_insert_before_block(nir_block *block, nir_instr *before);
+void nir_instr_insert_after_block(nir_block *block, nir_instr *after);
+
+void nir_instr_insert_before_cf(nir_cf_node *node, nir_instr *before);
+void nir_instr_insert_after_cf(nir_cf_node *node, nir_instr *after);
+
+void nir_instr_insert_before_cf_list(struct exec_list *list, nir_instr *before);
+void nir_instr_insert_after_cf_list(struct exec_list *list, nir_instr *after);
+
+void nir_instr_remove(nir_instr *instr);
+
+typedef bool (*nir_foreach_dest_cb)(nir_dest *dest, void *state);
+typedef bool (*nir_foreach_src_cb)(nir_src *src, void *state);
+bool nir_foreach_dest(nir_instr *instr, nir_foreach_dest_cb cb, void *state);
+bool nir_foreach_src(nir_instr *instr, nir_foreach_src_cb cb, void *state);
+
+/* visits basic blocks in source-code order */
+typedef bool (*nir_foreach_block_cb)(nir_block *block, void *state);
+bool nir_foreach_block(nir_function_impl *impl, nir_foreach_block_cb cb,
+                       void *state);
+
+void nir_index_local_regs(nir_function_impl *impl);
+void nir_index_global_regs(nir_shader *shader);
+void nir_index_ssa_defs(nir_function_impl *impl);
+
+void nir_index_blocks(nir_function_impl *impl);
+
 #ifdef __cplusplus
 } /* extern "C" */
 #endif

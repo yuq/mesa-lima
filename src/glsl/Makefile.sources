@@ -14,9 +14,13 @@ LIBGLCPP_GENERATED_FILES = \
 	$(GLSL_BUILDDIR)/glcpp/glcpp-parse.c
 
 NIR_FILES = \
-        $(GLSL_SRCDIR)/nir/nir_intrinsics.c \
-        $(GLSL_SRCDIR)/nir/nir_opcodes.c \
-        $(GLSL_SRCDIR)/nir/nir_types.cpp
+	$(GLSL_SRCDIR)/nir/nir.c \
+	$(GLSL_SRCDIR)/nir/nir.h \
+	$(GLSL_SRCDIR)/nir/nir_intrinsics.c \
+	$(GLSL_SRCDIR)/nir/nir_intrinsics.h \
+	$(GLSL_SRCDIR)/nir/nir_opcodes.c \
+	$(GLSL_SRCDIR)/nir/nir_opcodes.h \
+	$(GLSL_SRCDIR)/nir/nir_types.cpp
 
 # libglsl
 
