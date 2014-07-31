@@ -38,6 +38,23 @@
 #include "brw_defines.h"
 #include "brw_wm.h"
 
+/**
+ * Convert an swizzle enumeration (i.e. SWIZZLE_X) to one of the Gen7.5+
+ * "Shader Channel Select" enumerations (i.e. HSW_SCS_RED).  The mappings are
+ *
+ * SWIZZLE_X, SWIZZLE_Y, SWIZZLE_Z, SWIZZLE_W, SWIZZLE_ZERO, SWIZZLE_ONE
+ *         0          1          2          3             4            5
+ *         4          5          6          7             0            1
+ *   SCS_RED, SCS_GREEN,  SCS_BLUE, SCS_ALPHA,     SCS_ZERO,     SCS_ONE
+ *
+ * which is simply adding 4 then modding by 8 (or anding with 7).
+ */
+static unsigned
+swizzle_to_scs(unsigned swizzle)
+{
+   return (swizzle + 4) & 7;
+}
+
 static uint32_t
 surface_tiling_mode(uint32_t tiling)
 {
@@ -231,10 +248,10 @@ gen8_update_texture_surface(struct gl_context *ctx,
    const int swizzle =
       unlikely(alpha_depth) ? SWIZZLE_XYZW : brw_get_texture_swizzle(ctx, tObj);
    surf[7] |=
-      SET_FIELD(brw_swizzle_to_scs(GET_SWZ(swizzle, 0), false), GEN7_SURFACE_SCS_R) |
-      SET_FIELD(brw_swizzle_to_scs(GET_SWZ(swizzle, 1), false), GEN7_SURFACE_SCS_G) |
-      SET_FIELD(brw_swizzle_to_scs(GET_SWZ(swizzle, 2), false), GEN7_SURFACE_SCS_B) |
-      SET_FIELD(brw_swizzle_to_scs(GET_SWZ(swizzle, 3), false), GEN7_SURFACE_SCS_A);
+      SET_FIELD(swizzle_to_scs(GET_SWZ(swizzle, 0)), GEN7_SURFACE_SCS_R) |
+      SET_FIELD(swizzle_to_scs(GET_SWZ(swizzle, 1)), GEN7_SURFACE_SCS_G) |
+      SET_FIELD(swizzle_to_scs(GET_SWZ(swizzle, 2)), GEN7_SURFACE_SCS_B) |
+      SET_FIELD(swizzle_to_scs(GET_SWZ(swizzle, 3)), GEN7_SURFACE_SCS_A);
 
    *((uint64_t *) &surf[8]) = mt->bo->offset64 + mt->offset; /* reloc */
 

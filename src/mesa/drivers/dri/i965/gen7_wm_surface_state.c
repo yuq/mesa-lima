@@ -39,27 +39,23 @@
 
 /**
  * Convert an swizzle enumeration (i.e. SWIZZLE_X) to one of the Gen7.5+
- * "Shader Channel Select" enumerations (i.e. HSW_SCS_RED)
+ * "Shader Channel Select" enumerations (i.e. HSW_SCS_RED).  The mappings are
+ *
+ * SWIZZLE_X, SWIZZLE_Y, SWIZZLE_Z, SWIZZLE_W, SWIZZLE_ZERO, SWIZZLE_ONE
+ *         0          1          2          3             4            5
+ *         4          5          6          7             0            1
+ *   SCS_RED, SCS_GREEN,  SCS_BLUE, SCS_ALPHA,     SCS_ZERO,     SCS_ONE
+ *
+ * which is simply adding 4 then modding by 8 (or anding with 7).
+ *
+ * We then may need to apply workarounds for textureGather hardware bugs.
  */
-unsigned
-brw_swizzle_to_scs(GLenum swizzle, bool need_green_to_blue)
+static unsigned
+swizzle_to_scs(GLenum swizzle, bool need_green_to_blue)
 {
-   switch (swizzle) {
-   case SWIZZLE_X:
-      return HSW_SCS_RED;
-   case SWIZZLE_Y:
-      return need_green_to_blue ? HSW_SCS_BLUE : HSW_SCS_GREEN;
-   case SWIZZLE_Z:
-      return HSW_SCS_BLUE;
-   case SWIZZLE_W:
-      return HSW_SCS_ALPHA;
-   case SWIZZLE_ZERO:
-      return HSW_SCS_ZERO;
-   case SWIZZLE_ONE:
-      return HSW_SCS_ONE;
-   }
+   unsigned scs = (swizzle + 4) & 7;
 
-   unreachable("Should not get here: invalid swizzle mode");
+   return (need_green_to_blue && scs == HSW_SCS_GREEN) ? HSW_SCS_BLUE : scs;
 }
 
 uint32_t
@@ -353,10 +349,10 @@ gen7_update_texture_surface(struct gl_context *ctx,
       const bool need_scs_green_to_blue = for_gather && tex_format == BRW_SURFACEFORMAT_R32G32_FLOAT_LD;
 
       surf[7] |=
-         SET_FIELD(brw_swizzle_to_scs(GET_SWZ(swizzle, 0), need_scs_green_to_blue), GEN7_SURFACE_SCS_R) |
-         SET_FIELD(brw_swizzle_to_scs(GET_SWZ(swizzle, 1), need_scs_green_to_blue), GEN7_SURFACE_SCS_G) |
-         SET_FIELD(brw_swizzle_to_scs(GET_SWZ(swizzle, 2), need_scs_green_to_blue), GEN7_SURFACE_SCS_B) |
-         SET_FIELD(brw_swizzle_to_scs(GET_SWZ(swizzle, 3), need_scs_green_to_blue), GEN7_SURFACE_SCS_A);
+         SET_FIELD(swizzle_to_scs(GET_SWZ(swizzle, 0), need_scs_green_to_blue), GEN7_SURFACE_SCS_R) |
+         SET_FIELD(swizzle_to_scs(GET_SWZ(swizzle, 1), need_scs_green_to_blue), GEN7_SURFACE_SCS_G) |
+         SET_FIELD(swizzle_to_scs(GET_SWZ(swizzle, 2), need_scs_green_to_blue), GEN7_SURFACE_SCS_B) |
+         SET_FIELD(swizzle_to_scs(GET_SWZ(swizzle, 3), need_scs_green_to_blue), GEN7_SURFACE_SCS_A);
    }
 
    if (mt->mcs_mt) {
