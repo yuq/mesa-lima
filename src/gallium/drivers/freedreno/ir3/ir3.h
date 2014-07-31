@@ -264,7 +264,7 @@ struct ir3_block {
 struct ir3 * ir3_create(void);
 void ir3_destroy(struct ir3 *shader);
 void * ir3_assemble(struct ir3 *shader,
-		struct ir3_info *info);
+		struct ir3_info *info, uint32_t gpu_id);
 void * ir3_alloc(struct ir3 *shader, int sz);
 
 struct ir3_block * ir3_block_create(struct ir3 *shader,

@@ -540,7 +540,8 @@ static int (*emit[])(struct ir3_instruction *instr, void *ptr,
 	emit_cat0, emit_cat1, emit_cat2, emit_cat3, emit_cat4, emit_cat5, emit_cat6,
 };
 
-void * ir3_assemble(struct ir3 *shader, struct ir3_info *info)
+void * ir3_assemble(struct ir3 *shader, struct ir3_info *info,
+		uint32_t gpu_id)
 {
 	uint32_t *ptr, *dwords;
 	uint32_t i;
@@ -550,11 +551,15 @@ void * ir3_assemble(struct ir3 *shader, struct ir3_info *info)
 	info->max_const     = -1;
 	info->instrs_count  = 0;
 
-	/* need a integer number of instruction "groups" (sets of four
-	 * instructions), so pad out w/ NOPs if needed:
-	 * (each instruction is 64bits)
+	/* need a integer number of instruction "groups" (sets of 16
+	 * instructions on a4xx or sets of 4 instructions on a3xx),
+	 * so pad out w/ NOPs if needed: (NOTE each instruction is 64bits)
 	 */
-	info->sizedwords = 2 * align(shader->instrs_count, 4);
+	if (gpu_id >= 400) {
+		info->sizedwords = 2 * align(shader->instrs_count, 16);
+	} else {
+		info->sizedwords = 2 * align(shader->instrs_count, 4);
+	}
 
 	ptr = dwords = calloc(4, info->sizedwords);
 

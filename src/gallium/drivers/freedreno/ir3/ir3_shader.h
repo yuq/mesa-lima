@@ -111,7 +111,8 @@ struct ir3_shader_variant {
 	struct ir3 *ir;
 
 	/* the instructions length is in units of instruction groups
-	 * (4 instructions, 8 dwords):
+	 * (4 instructions for a3xx, 16 instructions for a4xx.. each
+	 * instruction is 2 dwords):
 	 */
 	unsigned instrlen;
 
@@ -203,7 +204,7 @@ struct ir3_shader {
 	/* so far, only used for blit_prog shader.. values for
 	 * VPC_VARYING_PS_REPL[i].MODE
 	 */
-	uint32_t vpsrepl[4];
+	uint32_t vpsrepl[8];
 };
 
 

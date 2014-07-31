@@ -56,7 +56,7 @@ assemble_variant(struct ir3_shader_variant *v)
 	struct fd_context *ctx = fd_context(v->shader->pctx);
 	uint32_t sz, *bin;
 
-	bin = ir3_assemble(v->ir, &v->info);
+	bin = ir3_assemble(v->ir, &v->info, ctx->screen->gpu_id);
 	sz = v->info.sizedwords * 4;
 
 	v->bo = fd_bo_new(ctx->dev, sz,
@@ -67,7 +67,11 @@ assemble_variant(struct ir3_shader_variant *v)
 
 	free(bin);
 
-	v->instrlen = v->info.sizedwords / 8;
+	if (ctx->screen->gpu_id >= 400) {
+		v->instrlen = v->info.sizedwords / (2 * 16);
+	} else {
+		v->instrlen = v->info.sizedwords / (2 * 4);
+	}
 
 	/* NOTE: if relative addressing is used, we set constlen in
 	 * the compiler (to worst-case value) since we don't know in

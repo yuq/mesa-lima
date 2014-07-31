@@ -49,7 +49,8 @@ static void dump_info(struct ir3_shader_variant *so, const char *str)
 	const char *type = (so->type == SHADER_VERTEX) ? "VERT" : "FRAG";
 
 	// for debug, dump some before/after info:
-	bin = ir3_assemble(so->ir, &info);
+	// TODO make gpu_id configurable on cmdline
+	bin = ir3_assemble(so->ir, &info, 320);
 	if (fd_mesa_debug & FD_DBG_DISASM) {
 		struct ir3_block *block = so->ir->block;
 		struct ir3_register *reg;

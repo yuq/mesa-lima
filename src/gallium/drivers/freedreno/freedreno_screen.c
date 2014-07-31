@@ -52,6 +52,7 @@
 
 #include "a2xx/fd2_screen.h"
 #include "a3xx/fd3_screen.h"
+#include "a4xx/fd4_screen.h"
 
 /* XXX this should go away */
 #include "state_tracker/drm_driver.h"
@@ -514,7 +515,7 @@ fd_screen_create(struct fd_device *dev)
 	 * before enabling:
 	 *
 	 * If you have a different adreno version, feel free to add it to one
-	 * of the two cases below and see what happens.  And if it works, please
+	 * of the cases below and see what happens.  And if it works, please
 	 * send a patch ;-)
 	 */
 	switch (screen->gpu_id) {
@@ -524,6 +525,9 @@ fd_screen_create(struct fd_device *dev)
 	case 320:
 	case 330:
 		fd3_screen_init(pscreen);
+		break;
+	case 420:
+		fd4_screen_init(pscreen);
 		break;
 	default:
 		debug_printf("unsupported GPU: a%03d\n", screen->gpu_id);
