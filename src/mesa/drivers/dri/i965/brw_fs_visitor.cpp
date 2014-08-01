@@ -1689,7 +1689,7 @@ fs_visitor::emit_texture_gen7(ir_texture *ir, fs_reg dst, fs_reg coordinate,
 }
 
 fs_reg
-fs_visitor::rescale_texcoord(ir_texture *ir, fs_reg coordinate,
+fs_visitor::rescale_texcoord(fs_reg coordinate, const glsl_type *coord_type,
                              bool is_rect, uint32_t sampler, int texunit)
 {
    fs_inst *inst = NULL;
@@ -1751,7 +1751,7 @@ fs_visitor::rescale_texcoord(ir_texture *ir, fs_reg coordinate,
     * tracking to get the scaling factor.
     */
    if (brw->gen < 6 && is_rect) {
-      fs_reg dst = fs_reg(this, ir->coordinate->type);
+      fs_reg dst = fs_reg(this, coord_type);
       fs_reg src = coordinate;
       coordinate = dst;
 
@@ -1791,9 +1791,8 @@ fs_visitor::rescale_texcoord(ir_texture *ir, fs_reg coordinate,
       }
    }
 
-   if (ir->coordinate && needs_gl_clamp) {
-      for (unsigned int i = 0;
-	   i < MIN2(ir->coordinate->type->vector_elements, 3); i++) {
+   if (coord_type && needs_gl_clamp) {
+      for (unsigned int i = 0; i < MIN2(coord_type->vector_elements, 3); i++) {
 	 if (tex->gl_clamp_mask[i] & (1 << sampler)) {
 	    fs_reg chan = coordinate;
 	    chan = offset(chan, i);
@@ -1923,7 +1922,8 @@ fs_visitor::visit(ir_texture *ir)
    if (ir->coordinate) {
       ir->coordinate->accept(this);
 
-      coordinate = rescale_texcoord(ir, this->result,
+      coordinate = rescale_texcoord(this->result,
+                                    ir->coordinate->type,
                                     ir->sampler->type->sampler_dimensionality ==
                                     GLSL_SAMPLER_DIM_RECT,
                                     sampler, texunit);

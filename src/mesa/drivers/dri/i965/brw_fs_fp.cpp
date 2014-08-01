@@ -482,7 +482,7 @@ fs_visitor::emit_fragment_program_code()
          if (fpi->TexShadow)
             shadow_c = offset(coordinate, 2);
 
-         coordinate = rescale_texcoord(ir, coordinate,
+         coordinate = rescale_texcoord(coordinate, coordinate_type,
                                        fpi->TexSrcTarget == TEXTURE_RECT_INDEX,
                                        fpi->TexSrcUnit, fpi->TexSrcUnit);
 
