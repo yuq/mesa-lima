@@ -487,11 +487,11 @@ fs_visitor::emit_fragment_program_code()
 
          fs_inst *inst;
          if (brw->gen >= 7) {
-            inst = emit_texture_gen7(ir, dst, coordinate, coord_components, shadow_c, lod, dpdy, 0, sample_index, fs_reg(0u), fs_reg(fpi->TexSrcUnit), texel_offset);
+            inst = emit_texture_gen7(ir->op, dst, coordinate, coord_components, shadow_c, lod, dpdy, 0, sample_index, fs_reg(0u), fs_reg(fpi->TexSrcUnit), texel_offset);
          } else if (brw->gen >= 5) {
-            inst = emit_texture_gen5(ir, dst, coordinate, coord_components, shadow_c, lod, dpdy, 0, sample_index, fpi->TexSrcUnit, false);
+            inst = emit_texture_gen5(ir->op, dst, coordinate, coord_components, shadow_c, lod, dpdy, 0, sample_index, fpi->TexSrcUnit, false);
          } else {
-            inst = emit_texture_gen4(ir, dst, coordinate, coord_components, shadow_c, lod, dpdy, 0, fpi->TexSrcUnit);
+            inst = emit_texture_gen4(ir->op, dst, coordinate, coord_components, shadow_c, lod, dpdy, 0, fpi->TexSrcUnit);
          }
 
          inst->shadow_compare = fpi->TexShadow;

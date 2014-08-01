@@ -1166,7 +1166,7 @@ fs_visitor::visit(ir_assignment *ir)
 }
 
 fs_inst *
-fs_visitor::emit_texture_gen4(ir_texture *ir, fs_reg dst,
+fs_visitor::emit_texture_gen4(ir_texture_opcode op, fs_reg dst,
                               fs_reg coordinate, int coord_components,
                               fs_reg shadow_c,
                               fs_reg lod, fs_reg dPdy, int grad_components,
@@ -1194,13 +1194,13 @@ fs_visitor::emit_texture_gen4(ir_texture *ir, fs_reg dst,
       }
       mlen += 3;
 
-      if (ir->op == ir_tex) {
+      if (op == ir_tex) {
 	 /* There's no plain shadow compare message, so we use shadow
 	  * compare with a bias of 0.0.
 	  */
 	 emit(MOV(fs_reg(MRF, base_mrf + mlen), fs_reg(0.0f)));
 	 mlen++;
-      } else if (ir->op == ir_txb || ir->op == ir_txl) {
+      } else if (op == ir_txb || op == ir_txl) {
 	 emit(MOV(fs_reg(MRF, base_mrf + mlen), lod));
 	 mlen++;
       } else {
@@ -1209,7 +1209,7 @@ fs_visitor::emit_texture_gen4(ir_texture *ir, fs_reg dst,
 
       emit(MOV(fs_reg(MRF, base_mrf + mlen), shadow_c));
       mlen++;
-   } else if (ir->op == ir_tex) {
+   } else if (op == ir_tex) {
       for (int i = 0; i < coord_components; i++) {
 	 emit(MOV(fs_reg(MRF, base_mrf + mlen + i), coordinate));
 	 coordinate = offset(coordinate, 1);
@@ -1220,7 +1220,7 @@ fs_visitor::emit_texture_gen4(ir_texture *ir, fs_reg dst,
       }
       /* gen4's SIMD8 sampler always has the slots for u,v,r present. */
       mlen += 3;
-   } else if (ir->op == ir_txd) {
+   } else if (op == ir_txd) {
       fs_reg &dPdx = lod;
 
       for (int i = 0; i < coord_components; i++) {
@@ -1255,7 +1255,7 @@ fs_visitor::emit_texture_gen4(ir_texture *ir, fs_reg dst,
 	 dPdy = offset(dPdy, 1);
       }
       mlen += MAX2(grad_components, 2);
-   } else if (ir->op == ir_txs) {
+   } else if (op == ir_txs) {
       /* There's no SIMD8 resinfo message on Gen4.  Use SIMD16 instead. */
       simd16 = true;
       emit(MOV(fs_reg(MRF, base_mrf + mlen, BRW_REGISTER_TYPE_UD), lod));
@@ -1265,7 +1265,7 @@ fs_visitor::emit_texture_gen4(ir_texture *ir, fs_reg dst,
        * instructions.  We'll need to do SIMD16 here.
        */
       simd16 = true;
-      assert(ir->op == ir_txb || ir->op == ir_txl || ir->op == ir_txf);
+      assert(op == ir_txb || op == ir_txl || op == ir_txf);
 
       for (int i = 0; i < coord_components; i++) {
 	 emit(MOV(fs_reg(MRF, base_mrf + mlen + i * 2, coordinate.type),
@@ -1300,8 +1300,7 @@ fs_visitor::emit_texture_gen4(ir_texture *ir, fs_reg dst,
    }
 
    enum opcode opcode;
-
-   switch (ir->op) {
+   switch (op) {
    case ir_tex: opcode = SHADER_OPCODE_TEX; break;
    case ir_txb: opcode = FS_OPCODE_TXB; break;
    case ir_txl: opcode = SHADER_OPCODE_TXL; break;
@@ -1338,7 +1337,7 @@ fs_visitor::emit_texture_gen4(ir_texture *ir, fs_reg dst,
  * surprising in the disassembly.
  */
 fs_inst *
-fs_visitor::emit_texture_gen5(ir_texture *ir, fs_reg dst,
+fs_visitor::emit_texture_gen5(ir_texture_opcode op, fs_reg dst,
                               fs_reg coordinate, int vector_elements,
                               fs_reg shadow_c,
                               fs_reg lod, fs_reg lod2, int grad_components,
@@ -1374,7 +1373,7 @@ fs_visitor::emit_texture_gen5(ir_texture *ir, fs_reg dst,
    }
 
    enum opcode opcode;
-   switch (ir->op) {
+   switch (op) {
    case ir_tex:
       opcode = SHADER_OPCODE_TEX;
       break;
@@ -1479,7 +1478,7 @@ is_high_sampler(struct brw_context *brw, fs_reg sampler)
 }
 
 fs_inst *
-fs_visitor::emit_texture_gen7(ir_texture *ir, fs_reg dst,
+fs_visitor::emit_texture_gen7(ir_texture_opcode op, fs_reg dst,
                               fs_reg coordinate, int coord_components,
                               fs_reg shadow_c,
                               fs_reg lod, fs_reg lod2, int grad_components,
@@ -1495,7 +1494,7 @@ fs_visitor::emit_texture_gen7(ir_texture *ir, fs_reg dst,
    }
    int length = 0;
 
-   if (ir->op == ir_tg4 || offset_value.file != BAD_FILE ||
+   if (op == ir_tg4 || offset_value.file != BAD_FILE ||
        is_high_sampler(brw, sampler)) {
       /* For general texture offsets (no txf workaround), we need a header to
        * put them in.  Note that for SIMD16 we're making space for two actual
@@ -1522,7 +1521,7 @@ fs_visitor::emit_texture_gen7(ir_texture *ir, fs_reg dst,
    bool coordinate_done = false;
 
    /* Set up the LOD info */
-   switch (ir->op) {
+   switch (op) {
    case ir_tex:
    case ir_lod:
       break;
@@ -1656,7 +1655,7 @@ fs_visitor::emit_texture_gen7(ir_texture *ir, fs_reg dst,
 
    /* Generate the SEND */
    enum opcode opcode;
-   switch (ir->op) {
+   switch (op) {
    case ir_tex: opcode = SHADER_OPCODE_TEX; break;
    case ir_txb: opcode = FS_OPCODE_TXB; break;
    case ir_txl: opcode = SHADER_OPCODE_TXL; break;
@@ -2003,19 +2002,19 @@ fs_visitor::visit(ir_texture *ir)
    fs_reg dst = fs_reg(this, glsl_type::get_instance(ir->type->base_type, 4, 1));
 
    if (brw->gen >= 7) {
-      inst = emit_texture_gen7(ir, dst, coordinate, coord_components,
+      inst = emit_texture_gen7(ir->op, dst, coordinate, coord_components,
                                shadow_comparitor,
                                lod, lod2, grad_components,
                                sample_index, mcs, sampler_reg,
                                offset_value);
    } else if (brw->gen >= 5) {
-      inst = emit_texture_gen5(ir, dst, coordinate, coord_components,
+      inst = emit_texture_gen5(ir->op, dst, coordinate, coord_components,
                                shadow_comparitor,
                                lod, lod2, grad_components,
                                sample_index, sampler,
                                ir->offset != NULL);
    } else {
-      inst = emit_texture_gen4(ir, dst, coordinate, coord_components,
+      inst = emit_texture_gen4(ir->op, dst, coordinate, coord_components,
                                shadow_comparitor,
                                lod, lod2, grad_components,
                                sampler);
