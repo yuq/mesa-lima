@@ -1168,7 +1168,8 @@ fs_visitor::visit(ir_assignment *ir)
 fs_inst *
 fs_visitor::emit_texture_gen4(ir_texture *ir, fs_reg dst,
                               fs_reg coordinate, int coord_components,
-                              fs_reg shadow_c, fs_reg lod, fs_reg dPdy,
+                              fs_reg shadow_c,
+                              fs_reg lod, fs_reg dPdy, int grad_components,
                               uint32_t sampler)
 {
    int mlen;
@@ -1243,17 +1244,17 @@ fs_visitor::emit_texture_gen4(ir_texture *ir, fs_reg dst,
        *        dPdx.x dPdx.y dPdx.z dPdy.x dPdy.y dPdy.z
        *        m5     m6     m7     m8     m9     m10
        */
-      for (int i = 0; i < ir->lod_info.grad.dPdx->type->vector_elements; i++) {
+      for (int i = 0; i < grad_components; i++) {
 	 emit(MOV(fs_reg(MRF, base_mrf + mlen), dPdx));
 	 dPdx = offset(dPdx, 1);
       }
-      mlen += MAX2(ir->lod_info.grad.dPdx->type->vector_elements, 2);
+      mlen += MAX2(grad_components, 2);
 
-      for (int i = 0; i < ir->lod_info.grad.dPdy->type->vector_elements; i++) {
+      for (int i = 0; i < grad_components; i++) {
 	 emit(MOV(fs_reg(MRF, base_mrf + mlen), dPdy));
 	 dPdy = offset(dPdy, 1);
       }
-      mlen += MAX2(ir->lod_info.grad.dPdy->type->vector_elements, 2);
+      mlen += MAX2(grad_components, 2);
    } else if (ir->op == ir_txs) {
       /* There's no SIMD8 resinfo message on Gen4.  Use SIMD16 instead. */
       simd16 = true;
@@ -1342,7 +1343,8 @@ fs_visitor::emit_texture_gen4(ir_texture *ir, fs_reg dst,
 fs_inst *
 fs_visitor::emit_texture_gen5(ir_texture *ir, fs_reg dst,
                               fs_reg coordinate, int vector_elements,
-                              fs_reg shadow_c, fs_reg lod, fs_reg lod2,
+                              fs_reg shadow_c,
+                              fs_reg lod, fs_reg lod2, int grad_components,
                               fs_reg sample_index, uint32_t sampler,
                               bool has_offset)
 {
@@ -1402,7 +1404,7 @@ fs_visitor::emit_texture_gen5(ir_texture *ir, fs_reg dst,
        * - dPdx.x dPdy.x dPdx.y dPdy.y dPdx.z dPdy.z
        */
       msg_end = msg_lod;
-      for (int i = 0; i < ir->lod_info.grad.dPdx->type->vector_elements; i++) {
+      for (int i = 0; i < grad_components; i++) {
          emit(MOV(msg_end, lod));
          lod = offset(lod, 1);
          msg_end = offset(msg_end, 1);
@@ -1482,7 +1484,8 @@ is_high_sampler(struct brw_context *brw, fs_reg sampler)
 fs_inst *
 fs_visitor::emit_texture_gen7(ir_texture *ir, fs_reg dst,
                               fs_reg coordinate, int coord_components,
-                              fs_reg shadow_c, fs_reg lod, fs_reg lod2,
+                              fs_reg shadow_c,
+                              fs_reg lod, fs_reg lod2, int grad_components,
                               fs_reg sample_index, fs_reg mcs, fs_reg sampler,
                               fs_reg offset_value)
 {
@@ -1548,7 +1551,7 @@ fs_visitor::emit_texture_gen7(ir_texture *ir, fs_reg dst,
          /* For cube map array, the coordinate is (u,v,r,ai) but there are
           * only derivatives for (u, v, r).
           */
-         if (i < ir->lod_info.grad.dPdx->type->vector_elements) {
+         if (i < grad_components) {
             emit(MOV(sources[length], lod));
             lod = offset(lod, 1);
             length++;
@@ -1957,6 +1960,7 @@ fs_visitor::visit(ir_texture *ir)
    }
 
    fs_reg lod, lod2, sample_index, mcs;
+   int grad_components = 0;
    switch (ir->op) {
    case ir_tex:
    case ir_lod:
@@ -1973,6 +1977,8 @@ fs_visitor::visit(ir_texture *ir)
 
       ir->lod_info.grad.dPdy->accept(this);
       lod2 = this->result;
+
+      grad_components = ir->lod_info.grad.dPdx->type->vector_elements;
       break;
    case ir_txf:
    case ir_txl:
@@ -2002,16 +2008,20 @@ fs_visitor::visit(ir_texture *ir)
    if (brw->gen >= 7) {
       inst = emit_texture_gen7(ir, dst, coordinate, coord_components,
                                shadow_comparitor,
-                               lod, lod2, sample_index, mcs, sampler_reg,
+                               lod, lod2, grad_components,
+                               sample_index, mcs, sampler_reg,
                                offset_value);
    } else if (brw->gen >= 5) {
       inst = emit_texture_gen5(ir, dst, coordinate, coord_components,
                                shadow_comparitor,
-                               lod, lod2, sample_index, sampler,
+                               lod, lod2, grad_components,
+                               sample_index, sampler,
                                ir->offset != NULL);
    } else {
       inst = emit_texture_gen4(ir, dst, coordinate, coord_components,
-                               shadow_comparitor, lod, lod2, sampler);
+                               shadow_comparitor,
+                               lod, lod2, grad_components,
+                               sampler);
    }
 
    if (offset_value.file == IMM)
