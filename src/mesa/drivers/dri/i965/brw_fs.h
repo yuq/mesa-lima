@@ -475,7 +475,8 @@ public:
                               uint32_t sampler);
    fs_inst *emit_texture_gen5(ir_texture *ir, fs_reg dst, fs_reg coordinate,
                               fs_reg shadow_comp, fs_reg lod, fs_reg lod2,
-                              fs_reg sample_index, uint32_t sampler);
+                              fs_reg sample_index, uint32_t sampler,
+                              bool has_offset);
    fs_inst *emit_texture_gen7(ir_texture *ir, fs_reg dst, fs_reg coordinate,
                               fs_reg shadow_comp, fs_reg lod, fs_reg lod2,
                               fs_reg sample_index, fs_reg mcs, fs_reg sampler,

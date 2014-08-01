@@ -1341,7 +1341,8 @@ fs_visitor::emit_texture_gen4(ir_texture *ir, fs_reg dst, fs_reg coordinate,
 fs_inst *
 fs_visitor::emit_texture_gen5(ir_texture *ir, fs_reg dst, fs_reg coordinate,
                               fs_reg shadow_c, fs_reg lod, fs_reg lod2,
-                              fs_reg sample_index, uint32_t sampler)
+                              fs_reg sample_index, uint32_t sampler,
+                              bool has_offset)
 {
    int reg_width = dispatch_width / 8;
    bool header_present = false;
@@ -1351,7 +1352,7 @@ fs_visitor::emit_texture_gen5(ir_texture *ir, fs_reg dst, fs_reg coordinate,
    fs_reg message(MRF, 2, BRW_REGISTER_TYPE_F, dispatch_width);
    fs_reg msg_coords = message;
 
-   if (ir->offset) {
+   if (has_offset) {
       /* The offsets set up by the ir_texture visitor are in the
        * m1 header, so we can't go headerless.
        */
@@ -1998,7 +1999,8 @@ fs_visitor::visit(ir_texture *ir)
                                offset_value);
    } else if (brw->gen >= 5) {
       inst = emit_texture_gen5(ir, dst, coordinate, shadow_comparitor,
-                               lod, lod2, sample_index, sampler);
+                               lod, lod2, sample_index, sampler,
+                               ir->offset != NULL);
    } else {
       inst = emit_texture_gen4(ir, dst, coordinate, shadow_comparitor,
                                lod, lod2, sampler);
