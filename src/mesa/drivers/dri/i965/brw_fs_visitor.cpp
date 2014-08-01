@@ -1166,7 +1166,8 @@ fs_visitor::visit(ir_assignment *ir)
 }
 
 fs_inst *
-fs_visitor::emit_texture_gen4(ir_texture *ir, fs_reg dst, fs_reg coordinate,
+fs_visitor::emit_texture_gen4(ir_texture *ir, fs_reg dst,
+                              fs_reg coordinate, int coord_components,
                               fs_reg shadow_c, fs_reg lod, fs_reg dPdy,
                               uint32_t sampler)
 {
@@ -1179,7 +1180,7 @@ fs_visitor::emit_texture_gen4(ir_texture *ir, fs_reg dst, fs_reg coordinate,
    mlen = 1;
 
    if (shadow_c.file != BAD_FILE) {
-      for (int i = 0; i < ir->coordinate->type->vector_elements; i++) {
+      for (int i = 0; i < coord_components; i++) {
 	 emit(MOV(fs_reg(MRF, base_mrf + mlen + i), coordinate));
 	 coordinate = offset(coordinate, 1);
       }
@@ -1187,7 +1188,7 @@ fs_visitor::emit_texture_gen4(ir_texture *ir, fs_reg dst, fs_reg coordinate,
       /* gen4's SIMD8 sampler always has the slots for u,v,r present.
        * the unused slots must be zeroed.
        */
-      for (int i = ir->coordinate->type->vector_elements; i < 3; i++) {
+      for (int i = coord_components; i < 3; i++) {
          emit(MOV(fs_reg(MRF, base_mrf + mlen + i), fs_reg(0.0f)));
       }
       mlen += 3;
@@ -1208,12 +1209,12 @@ fs_visitor::emit_texture_gen4(ir_texture *ir, fs_reg dst, fs_reg coordinate,
       emit(MOV(fs_reg(MRF, base_mrf + mlen), shadow_c));
       mlen++;
    } else if (ir->op == ir_tex) {
-      for (int i = 0; i < ir->coordinate->type->vector_elements; i++) {
+      for (int i = 0; i < coord_components; i++) {
 	 emit(MOV(fs_reg(MRF, base_mrf + mlen + i), coordinate));
 	 coordinate = offset(coordinate, 1);
       }
       /* zero the others. */
-      for (int i = ir->coordinate->type->vector_elements; i<3; i++) {
+      for (int i = coord_components; i<3; i++) {
          emit(MOV(fs_reg(MRF, base_mrf + mlen + i), fs_reg(0.0f)));
       }
       /* gen4's SIMD8 sampler always has the slots for u,v,r present. */
@@ -1221,12 +1222,12 @@ fs_visitor::emit_texture_gen4(ir_texture *ir, fs_reg dst, fs_reg coordinate,
    } else if (ir->op == ir_txd) {
       fs_reg &dPdx = lod;
 
-      for (int i = 0; i < ir->coordinate->type->vector_elements; i++) {
+      for (int i = 0; i < coord_components; i++) {
 	 emit(MOV(fs_reg(MRF, base_mrf + mlen + i), coordinate));
 	 coordinate = offset(coordinate, 1);
       }
       /* the slots for u and v are always present, but r is optional */
-      mlen += MAX2(ir->coordinate->type->vector_elements, 2);
+      mlen += MAX2(coord_components, 2);
 
       /*  P   = u, v, r
        * dPdx = dudx, dvdx, drdx
@@ -1265,7 +1266,7 @@ fs_visitor::emit_texture_gen4(ir_texture *ir, fs_reg dst, fs_reg coordinate,
       simd16 = true;
       assert(ir->op == ir_txb || ir->op == ir_txl || ir->op == ir_txf);
 
-      for (int i = 0; i < ir->coordinate->type->vector_elements; i++) {
+      for (int i = 0; i < coord_components; i++) {
 	 emit(MOV(fs_reg(MRF, base_mrf + mlen + i * 2, coordinate.type),
                   coordinate));
 	 coordinate = offset(coordinate, 1);
@@ -1274,7 +1275,7 @@ fs_visitor::emit_texture_gen4(ir_texture *ir, fs_reg dst, fs_reg coordinate,
       /* Initialize the rest of u/v/r with 0.0.  Empirically, this seems to
        * be necessary for TXF (ld), but seems wise to do for all messages.
        */
-      for (int i = ir->coordinate->type->vector_elements; i < 3; i++) {
+      for (int i = coord_components; i < 3; i++) {
 	 emit(MOV(fs_reg(MRF, base_mrf + mlen + i * 2), fs_reg(0.0f)));
       }
 
@@ -1339,15 +1340,14 @@ fs_visitor::emit_texture_gen4(ir_texture *ir, fs_reg dst, fs_reg coordinate,
  * surprising in the disassembly.
  */
 fs_inst *
-fs_visitor::emit_texture_gen5(ir_texture *ir, fs_reg dst, fs_reg coordinate,
+fs_visitor::emit_texture_gen5(ir_texture *ir, fs_reg dst,
+                              fs_reg coordinate, int vector_elements,
                               fs_reg shadow_c, fs_reg lod, fs_reg lod2,
                               fs_reg sample_index, uint32_t sampler,
                               bool has_offset)
 {
    int reg_width = dispatch_width / 8;
    bool header_present = false;
-   const int vector_elements =
-      ir->coordinate ? ir->coordinate->type->vector_elements : 0;
 
    fs_reg message(MRF, 2, BRW_REGISTER_TYPE_F, dispatch_width);
    fs_reg msg_coords = message;
@@ -1480,7 +1480,8 @@ is_high_sampler(struct brw_context *brw, fs_reg sampler)
 }
 
 fs_inst *
-fs_visitor::emit_texture_gen7(ir_texture *ir, fs_reg dst, fs_reg coordinate,
+fs_visitor::emit_texture_gen7(ir_texture *ir, fs_reg dst,
+                              fs_reg coordinate, int coord_components,
                               fs_reg shadow_c, fs_reg lod, fs_reg lod2,
                               fs_reg sample_index, fs_reg mcs, fs_reg sampler,
                               fs_reg offset_value)
@@ -1539,7 +1540,7 @@ fs_visitor::emit_texture_gen7(ir_texture *ir, fs_reg dst, fs_reg coordinate,
       /* Load dPdx and the coordinate together:
        * [hdr], [ref], x, dPdx.x, dPdy.x, y, dPdx.y, dPdy.y, z, dPdx.z, dPdy.z
        */
-      for (int i = 0; i < ir->coordinate->type->vector_elements; i++) {
+      for (int i = 0; i < coord_components; i++) {
 	 emit(MOV(sources[length], coordinate));
 	 coordinate = offset(coordinate, 1);
 	 length++;
@@ -1578,7 +1579,7 @@ fs_visitor::emit_texture_gen7(ir_texture *ir, fs_reg dst, fs_reg coordinate,
       emit(MOV(retype(sources[length], BRW_REGISTER_TYPE_D), lod));
       length++;
 
-      for (int i = 1; i < ir->coordinate->type->vector_elements; i++) {
+      for (int i = 1; i < coord_components; i++) {
 	 emit(MOV(retype(sources[length], BRW_REGISTER_TYPE_D), coordinate));
 	 coordinate = offset(coordinate, 1);
 	 length++;
@@ -1597,7 +1598,7 @@ fs_visitor::emit_texture_gen7(ir_texture *ir, fs_reg dst, fs_reg coordinate,
       /* there is no offsetting for this message; just copy in the integer
        * texture coordinates
        */
-      for (int i = 0; i < ir->coordinate->type->vector_elements; i++) {
+      for (int i = 0; i < coord_components; i++) {
          emit(MOV(retype(sources[length], BRW_REGISTER_TYPE_D), coordinate));
          coordinate = offset(coordinate, 1);
          length++;
@@ -1623,7 +1624,7 @@ fs_visitor::emit_texture_gen7(ir_texture *ir, fs_reg dst, fs_reg coordinate,
             length++;
          }
 
-         if (ir->coordinate->type->vector_elements == 3) { /* r if present */
+         if (coord_components == 3) { /* r if present */
             emit(MOV(sources[length], coordinate));
             coordinate = offset(coordinate, 1);
             length++;
@@ -1635,8 +1636,8 @@ fs_visitor::emit_texture_gen7(ir_texture *ir, fs_reg dst, fs_reg coordinate,
    }
 
    /* Set up the coordinate (except for cases where it was done above) */
-   if (ir->coordinate && !coordinate_done) {
-      for (int i = 0; i < ir->coordinate->type->vector_elements; i++) {
+   if (!coordinate_done) {
+      for (int i = 0; i < coord_components; i++) {
          emit(MOV(sources[length], coordinate));
          coordinate = offset(coordinate, 1);
          length++;
@@ -1929,6 +1930,9 @@ fs_visitor::visit(ir_texture *ir)
                                     sampler, texunit);
    }
 
+   int coord_components =
+      ir->coordinate ? ir->coordinate->type->vector_elements : 0;
+
    fs_reg shadow_comparitor;
    if (ir->shadow_comparitor) {
       ir->shadow_comparitor->accept(this);
@@ -1996,16 +2000,18 @@ fs_visitor::visit(ir_texture *ir)
    fs_reg dst = fs_reg(this, glsl_type::get_instance(ir->type->base_type, 4, 1));
 
    if (brw->gen >= 7) {
-      inst = emit_texture_gen7(ir, dst, coordinate, shadow_comparitor,
+      inst = emit_texture_gen7(ir, dst, coordinate, coord_components,
+                               shadow_comparitor,
                                lod, lod2, sample_index, mcs, sampler_reg,
                                offset_value);
    } else if (brw->gen >= 5) {
-      inst = emit_texture_gen5(ir, dst, coordinate, shadow_comparitor,
+      inst = emit_texture_gen5(ir, dst, coordinate, coord_components,
+                               shadow_comparitor,
                                lod, lod2, sample_index, sampler,
                                ir->offset != NULL);
    } else {
-      inst = emit_texture_gen4(ir, dst, coordinate, shadow_comparitor,
-                               lod, lod2, sampler);
+      inst = emit_texture_gen4(ir, dst, coordinate, coord_components,
+                               shadow_comparitor, lod, lod2, sampler);
    }
 
    if (offset_value.file == IMM)

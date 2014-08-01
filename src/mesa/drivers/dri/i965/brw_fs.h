@@ -470,14 +470,17 @@ public:
    void compute_sample_position(fs_reg dst, fs_reg int_sample_pos);
    fs_reg rescale_texcoord(fs_reg coordinate, const glsl_type *coord_type,
                            bool is_rect, uint32_t sampler, int texunit);
-   fs_inst *emit_texture_gen4(ir_texture *ir, fs_reg dst, fs_reg coordinate,
+   fs_inst *emit_texture_gen4(ir_texture *ir, fs_reg dst,
+                              fs_reg coordinate, int coord_components,
                               fs_reg shadow_comp, fs_reg lod, fs_reg lod2,
                               uint32_t sampler);
-   fs_inst *emit_texture_gen5(ir_texture *ir, fs_reg dst, fs_reg coordinate,
+   fs_inst *emit_texture_gen5(ir_texture *ir, fs_reg dst,
+                              fs_reg coordinate, int coord_components,
                               fs_reg shadow_comp, fs_reg lod, fs_reg lod2,
                               fs_reg sample_index, uint32_t sampler,
                               bool has_offset);
-   fs_inst *emit_texture_gen7(ir_texture *ir, fs_reg dst, fs_reg coordinate,
+   fs_inst *emit_texture_gen7(ir_texture *ir, fs_reg dst,
+                              fs_reg coordinate, int coord_components,
                               fs_reg shadow_comp, fs_reg lod, fs_reg lod2,
                               fs_reg sample_index, fs_reg mcs, fs_reg sampler,
                               fs_reg offset_value);
