@@ -525,24 +525,14 @@ BOOL_32 EgBasedAddrLib::ComputeSurfaceInfoMacroTiled(
                       &expNumSlices, microTileThickness);
 
         if (pIn->flags.qbStereo &&
-            (pOut->pStereoInfo != NULL) &&
-            HwlStereoCheckRightOffsetPadding())
+            (pOut->pStereoInfo != NULL))
         {
-            // Eye height's bank bits are different from y == 0?
-            // Since 3D rendering treats right eye buffer starting from y == "eye height" while
-            // display engine treats it to be 0, so the bank bits may be different, we pad
-            // more in height to make sure y == "eye height" has the same bank bits as y == 0.
-            UINT_32 checkMask = pOut->pTileInfo->banks - 1;
-            UINT_32 bankBits = 0;
-            do
-            {
-                bankBits = (paddedHeight / 8 / pOut->pTileInfo->bankHeight) & checkMask;
+            UINT_32 stereoHeightAlign = HwlStereoCheckRightOffsetPadding(pOut->pTileInfo);
 
-                if (bankBits)
-                {
-                   paddedHeight += pOut->heightAlign;
-                }
-            } while (bankBits);
+            if (stereoHeightAlign != 0)
+            {
+                paddedHeight = PowTwoAlign(paddedHeight, stereoHeightAlign);
+            }
         }
 
         //
@@ -4591,3 +4581,37 @@ UINT_64 EgBasedAddrLib::HwlGetSizeAdjustmentMicroTiled(
     return logicalSliceSize;
 }
 
+/**
+***************************************************************************************************
+*   EgBasedAddrLib::HwlStereoCheckRightOffsetPadding
+*
+*   @brief
+*       check if the height needs extra padding for stereo right eye offset, to avoid swizzling
+*
+*   @return
+*       TRUE is the extra padding is needed
+*
+***************************************************************************************************
+*/
+UINT_32 EgBasedAddrLib::HwlStereoCheckRightOffsetPadding(
+    ADDR_TILEINFO* pTileInfo    ///< Tiling info
+    ) const
+{
+    UINT_32 stereoHeightAlign = 0;
+
+    if (pTileInfo->macroAspectRatio > 2)
+    {
+        // Since 3D rendering treats right eye surface starting from y == "eye height" while
+        // display engine treats it to be 0, so the bank bits may be different.
+        // Additional padding in height is required to make sure it's possible
+        // to achieve synonym by adjusting bank swizzle of right eye surface.
+
+        static const UINT_32 StereoAspectRatio = 2;
+        stereoHeightAlign = pTileInfo->banks *
+            pTileInfo->bankHeight *
+            MicroTileHeight /
+            StereoAspectRatio;
+    }
+
+    return stereoHeightAlign;
+}

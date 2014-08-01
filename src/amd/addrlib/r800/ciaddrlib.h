@@ -146,8 +146,6 @@ protected:
         AddrTileMode* pTileMode,
         AddrTileType* pTileType) const;
 
-    virtual BOOL_32 HwlStereoCheckRightOffsetPadding() const;
-
     virtual ADDR_E_RETURNCODE HwlComputeDccInfo(
         const ADDR_COMPUTE_DCCINFO_INPUT* pIn,
         ADDR_COMPUTE_DCCINFO_OUTPUT* pOut) const;

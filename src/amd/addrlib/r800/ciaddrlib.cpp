@@ -1614,36 +1614,6 @@ VOID CiAddrLib::HwlComputeTileDataWidthAndHeightLinear(
 
 /**
 ***************************************************************************************************
-*   CiAddrLib::HwlStereoCheckRightOffsetPadding
-*
-*   @brief
-*       check if the height needs extra padding for stereo right eye offset, to avoid swizzling
-*
-*   @return
-*       TRUE is the extra padding is needed
-*
-*   @note
-*       Kalindi (Kabini) is the only one that needs this padding as there is a uncertain
-*       possible HW issue where the right eye displays incorrectly with some type of swizzles, if
-*       the right eye offset is not 64KB aligned - EPR#366461
-*       Other Kaveri APUs also need the padding according to DXX team's report otherwise
-*       corruption observed. - EPR#374788
-***************************************************************************************************
-*/
-BOOL_32 CiAddrLib::HwlStereoCheckRightOffsetPadding() const
-{
-    BOOL_32 bNeedPadding = FALSE;
-
-    if (m_settings.isKaveri)
-    {
-        bNeedPadding = TRUE;
-    }
-
-    return bNeedPadding;
-}
-
-/**
-***************************************************************************************************
 *   CiAddrLib::HwlComputeMetadataNibbleAddress
 *
 *   @brief

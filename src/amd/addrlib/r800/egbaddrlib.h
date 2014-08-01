@@ -224,12 +224,7 @@ protected:
     {
     }
 
-    /// Virtual function to check if the height needs extra padding
-    /// for stereo right eye offset, to avoid bank pipe swizzle
-    virtual BOOL_32 HwlStereoCheckRightOffsetPadding() const
-    {
-        return FALSE;
-    }
+    virtual UINT_32 HwlStereoCheckRightOffsetPadding(ADDR_TILEINFO* pTileInfo) const;
 
     virtual BOOL_32 HwlReduceBankWidthHeight(
         UINT_32 tileSize, UINT_32 bpp, ADDR_SURFACE_FLAGS flags, UINT_32 numSamples,
