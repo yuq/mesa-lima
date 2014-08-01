@@ -1296,10 +1296,7 @@ fs_visitor::emit_texture_gen4(ir_texture *ir, fs_reg dst,
        * this weirdness around to the expected layout.
        */
       orig_dst = dst;
-      dst = fs_reg(GRF, virtual_grf_alloc(8),
-                   (brw->is_g4x ?
-                    brw_type_for_base_type(ir->type) :
-                    BRW_REGISTER_TYPE_F));
+      dst = fs_reg(GRF, virtual_grf_alloc(8), orig_dst.type);
    }
 
    enum opcode opcode;
