@@ -1808,10 +1808,9 @@ fs_visitor::rescale_texcoord(ir_texture *ir, fs_reg coordinate,
 
 /* Sample from the MCS surface attached to this multisample texture. */
 fs_reg
-fs_visitor::emit_mcs_fetch(ir_texture *ir, fs_reg coordinate, fs_reg sampler)
+fs_visitor::emit_mcs_fetch(fs_reg coordinate, int components, fs_reg sampler)
 {
    int reg_width = dispatch_width / 8;
-   int components = ir->coordinate->type->vector_elements;
    fs_reg payload = fs_reg(GRF, virtual_grf_alloc(components * reg_width),
                            BRW_REGISTER_TYPE_F);
    fs_reg dest = fs_reg(this, glsl_type::uvec4_type);
@@ -1982,7 +1981,8 @@ fs_visitor::visit(ir_texture *ir)
       sample_index = this->result;
 
       if (brw->gen >= 7 && tex->compressed_multisample_layout_mask & (1<<sampler))
-         mcs = emit_mcs_fetch(ir, coordinate, sampler_reg);
+         mcs = emit_mcs_fetch(coordinate, ir->coordinate->type->vector_elements,
+                              sampler_reg);
       else
          mcs = fs_reg(0u);
       break;
