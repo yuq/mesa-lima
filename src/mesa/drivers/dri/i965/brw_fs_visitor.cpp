@@ -2024,7 +2024,7 @@ fs_visitor::visit(ir_texture *ir)
       inst->texture_offset = offset_value.fixed_hw_reg.dw1.ud;
 
    if (ir->op == ir_tg4)
-      inst->texture_offset |= gather_channel(ir, sampler) << 16; // M0.2:16-17
+      inst->texture_offset |= gather_channel(ir->lod_info.component->as_constant()->value.i[0], sampler) << 16; // M0.2:16-17
 
    if (ir->shadow_comparitor)
       inst->shadow_compare = true;
@@ -2092,14 +2092,13 @@ fs_visitor::emit_gen6_gather_wa(uint8_t wa, fs_reg dst)
  * Set up the gather channel based on the swizzle, for gather4.
  */
 uint32_t
-fs_visitor::gather_channel(ir_texture *ir, uint32_t sampler)
+fs_visitor::gather_channel(int orig_chan, uint32_t sampler)
 {
    const struct brw_sampler_prog_key_data *tex =
       (stage == MESA_SHADER_FRAGMENT) ?
       &((brw_wm_prog_key*) this->key)->tex : NULL;
    assert(tex);
-   ir_constant *chan = ir->lod_info.component->as_constant();
-   int swiz = GET_SWZ(tex->swizzles[sampler], chan->value.i[0]);
+   int swiz = GET_SWZ(tex->swizzles[sampler], orig_chan);
    switch (swiz) {
       case SWIZZLE_X: return 0;
       case SWIZZLE_Y:
