@@ -2055,7 +2055,7 @@ fs_visitor::visit(ir_texture *ir)
       emit_gen6_gather_wa(tex->gen6_gather_wa[sampler], dst);
    }
 
-   swizzle_result(ir, dst, sampler);
+   swizzle_result(ir->op, ir->type->vector_elements, dst, sampler);
 }
 
 /**
@@ -2121,9 +2121,10 @@ fs_visitor::gather_channel(ir_texture *ir, uint32_t sampler)
  * EXT_texture_swizzle as well as DEPTH_TEXTURE_MODE for shadow comparisons.
  */
 void
-fs_visitor::swizzle_result(ir_texture *ir, fs_reg orig_val, uint32_t sampler)
+fs_visitor::swizzle_result(ir_texture_opcode op, int dest_components,
+                           fs_reg orig_val, uint32_t sampler)
 {
-   if (ir->op == ir_query_levels) {
+   if (op == ir_query_levels) {
       /* # levels is in .w */
       this->result = offset(orig_val, 3);
       return;
@@ -2134,7 +2135,7 @@ fs_visitor::swizzle_result(ir_texture *ir, fs_reg orig_val, uint32_t sampler)
    /* txs,lod don't actually sample the texture, so swizzling the result
     * makes no sense.
     */
-   if (ir->op == ir_txs || ir->op == ir_lod || ir->op == ir_tg4)
+   if (op == ir_txs || op == ir_lod || op == ir_tg4)
       return;
 
    const struct brw_sampler_prog_key_data *tex =
@@ -2142,9 +2143,8 @@ fs_visitor::swizzle_result(ir_texture *ir, fs_reg orig_val, uint32_t sampler)
       &((brw_wm_prog_key*) this->key)->tex : NULL;
    assert(tex);
 
-   if (ir->type == glsl_type::float_type) {
+   if (dest_components == 1) {
       /* Ignore DEPTH_TEXTURE_MODE swizzling. */
-      assert(ir->sampler->type->sampler_shadow);
    } else if (tex->swizzles[sampler] != SWIZZLE_NOOP) {
       fs_reg swizzled_result = fs_reg(this, glsl_type::vec4_type);
       swizzled_result.type = orig_val.type;

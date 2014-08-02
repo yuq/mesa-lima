@@ -497,7 +497,7 @@ fs_visitor::emit_fragment_program_code()
          inst->shadow_compare = fpi->TexShadow;
 
          /* Reuse the GLSL swizzle_result() handler. */
-         swizzle_result(ir, dst, fpi->TexSrcUnit);
+         swizzle_result(ir->op, 4, dst, fpi->TexSrcUnit);
          dst = this->result;
 
          break;

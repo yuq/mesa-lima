@@ -335,7 +335,8 @@ public:
    void visit(ir_end_primitive *);
 
    uint32_t gather_channel(ir_texture *ir, uint32_t sampler);
-   void swizzle_result(ir_texture *ir, fs_reg orig_val, uint32_t sampler);
+   void swizzle_result(ir_texture_opcode op, int dest_components,
+                       fs_reg orig_val, uint32_t sampler);
 
    fs_inst *emit(fs_inst *inst);
    void emit(exec_list list);
