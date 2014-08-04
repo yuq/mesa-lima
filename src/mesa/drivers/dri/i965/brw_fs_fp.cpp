@@ -391,14 +391,7 @@ fs_visitor::emit_fragment_program_code()
       case OPCODE_TEX:
       case OPCODE_TXB:
       case OPCODE_TXP: {
-         /* We piggy-back on the GLSL IR support for texture setup.  To do so,
-          * we have to cook up an ir_texture that has the coordinate field
-          * with appropriate type, and shadow_comparitor set or not.  All the
-          * other properties of ir_texture are passed in as arguments to the
-          * emit_texture_gen* function.
-          */
-         ir_texture *ir = NULL;
-
+         ir_texture_opcode op;
          fs_reg lod;
          fs_reg dpdy;
          fs_reg coordinate = src[0];
@@ -408,10 +401,10 @@ fs_visitor::emit_fragment_program_code()
 
          switch (fpi->Opcode) {
          case OPCODE_TEX:
-            ir = new(mem_ctx) ir_texture(ir_tex);
+            op = ir_tex;
             break;
          case OPCODE_TXP: {
-            ir = new(mem_ctx) ir_texture(ir_tex);
+            op = ir_tex;
 
             coordinate = fs_reg(this, glsl_type::vec3_type);
             fs_reg invproj = fs_reg(this, glsl_type::float_type);
@@ -423,14 +416,12 @@ fs_visitor::emit_fragment_program_code()
             break;
          }
          case OPCODE_TXB:
-            ir = new(mem_ctx) ir_texture(ir_txb);
+            op = ir_txb;
             lod = offset(src[0], 3);
             break;
          default:
             unreachable("not reached");
          }
-
-         ir->type = glsl_type::vec4_type;
 
          const glsl_type *coordinate_type;
          switch (fpi->TexSrcTarget) {
@@ -479,7 +470,7 @@ fs_visitor::emit_fragment_program_code()
          if (fpi->TexShadow)
             shadow_c = offset(coordinate, 2);
 
-         emit_texture(ir->op, glsl_type::vec4_type, coordinate, coordinate_type,
+         emit_texture(op, glsl_type::vec4_type, coordinate, coordinate_type,
                       shadow_c, lod, dpdy, 0, sample_index,
                       reg_undef, 0, /* offset, components */
                       reg_undef, /* mcs */
