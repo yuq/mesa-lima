@@ -182,7 +182,8 @@ public:
    virtual void invalidate_live_intervals() = 0;
 };
 
-uint32_t brw_texture_offset(struct gl_context *ctx, ir_constant *offset);
+uint32_t brw_texture_offset(struct gl_context *ctx, int *offsets,
+                            unsigned num_components);
 
 #endif /* __cplusplus */
 

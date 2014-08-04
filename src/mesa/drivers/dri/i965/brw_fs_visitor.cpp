@@ -1944,7 +1944,9 @@ fs_visitor::visit(ir_texture *ir)
           * use offset_value.file to distinguish between no offset, a constant
           * offset, and a non-constant offset.
           */
-         offset_value = fs_reg(brw_texture_offset(ctx, const_offset));
+         offset_value =
+            fs_reg(brw_texture_offset(ctx, const_offset->value.i,
+                                      const_offset->type->vector_elements));
       } else {
          ir->offset->accept(this);
          offset_value = this->result;

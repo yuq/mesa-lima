@@ -358,18 +358,15 @@ brw_math_function(enum opcode op)
 }
 
 uint32_t
-brw_texture_offset(struct gl_context *ctx, ir_constant *offset)
+brw_texture_offset(struct gl_context *ctx, int *offsets,
+                   unsigned num_components)
 {
    /* If the driver does not support GL_ARB_gpu_shader5, the offset
     * must be constant.
     */
-   assert(offset != NULL || ctx->Extensions.ARB_gpu_shader5);
+   assert(offsets != NULL || ctx->Extensions.ARB_gpu_shader5);
 
-   if (!offset) return 0;  /* nonconstant offset; caller will handle it. */
-
-   signed char offsets[3];
-   for (unsigned i = 0; i < offset->type->vector_elements; i++)
-      offsets[i] = (signed char) offset->value.i[i];
+   if (!offsets) return 0;  /* nonconstant offset; caller will handle it. */
 
    /* Combine all three offsets into a single unsigned dword:
     *
@@ -378,7 +375,7 @@ brw_texture_offset(struct gl_context *ctx, ir_constant *offset)
     *    bits  3:0 - R Offset (Z component)
     */
    unsigned offset_bits = 0;
-   for (unsigned i = 0; i < offset->type->vector_elements; i++) {
+   for (unsigned i = 0; i < num_components; i++) {
       const unsigned shift = 4 * (2 - i);
       offset_bits |= (offsets[i] << shift) & (0xF << shift);
    }
