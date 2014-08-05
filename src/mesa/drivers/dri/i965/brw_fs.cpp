@@ -1203,16 +1203,17 @@ fs_visitor::setup_builtin_uniform_values(ir_variable *ir)
 }
 
 fs_reg *
-fs_visitor::emit_fragcoord_interpolation(ir_variable *ir)
+fs_visitor::emit_fragcoord_interpolation(bool pixel_center_integer,
+                                         bool origin_upper_left)
 {
    assert(stage == MESA_SHADER_FRAGMENT);
    brw_wm_prog_key *key = (brw_wm_prog_key*) this->key;
-   fs_reg *reg = new(this->mem_ctx) fs_reg(this, ir->type);
+   fs_reg *reg = new(this->mem_ctx) fs_reg(this, glsl_type::vec4_type);
    fs_reg wpos = *reg;
-   bool flip = !ir->data.origin_upper_left ^ key->render_to_fbo;
+   bool flip = !origin_upper_left ^ key->render_to_fbo;
 
    /* gl_FragCoord.x */
-   if (ir->data.pixel_center_integer) {
+   if (pixel_center_integer) {
       emit(MOV(wpos, this->pixel_x));
    } else {
       emit(ADD(wpos, this->pixel_x, fs_reg(0.5f)));
@@ -1220,11 +1221,11 @@ fs_visitor::emit_fragcoord_interpolation(ir_variable *ir)
    wpos = offset(wpos, 1);
 
    /* gl_FragCoord.y */
-   if (!flip && ir->data.pixel_center_integer) {
+   if (!flip && pixel_center_integer) {
       emit(MOV(wpos, this->pixel_y));
    } else {
       fs_reg pixel_y = this->pixel_y;
-      float offset = (ir->data.pixel_center_integer ? 0.0 : 0.5);
+      float offset = (pixel_center_integer ? 0.0 : 0.5);
 
       if (flip) {
 	 pixel_y.negate = true;

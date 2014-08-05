@@ -93,7 +93,8 @@ fs_visitor::visit(ir_variable *ir)
             fs_reg(ATTR, ir->data.location,
                    brw_type_for_base_type(ir->type->get_scalar_type()));
       } else if (!strcmp(ir->name, "gl_FragCoord")) {
-	 reg = emit_fragcoord_interpolation(ir);
+         reg = emit_fragcoord_interpolation(ir->data.pixel_center_integer,
+                                            ir->data.origin_upper_left);
       } else if (!strcmp(ir->name, "gl_FrontFacing")) {
 	 reg = emit_frontfacing_interpolation();
       } else {
