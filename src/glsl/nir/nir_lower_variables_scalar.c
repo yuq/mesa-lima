@@ -75,7 +75,7 @@ type_size(const struct glsl_type *type)
  */
 
 static void
-assign_var_locations(struct hash_table *ht)
+assign_var_locations(struct hash_table *ht, unsigned *size)
 {
    unsigned location = 0;
 
@@ -93,14 +93,16 @@ assign_var_locations(struct hash_table *ht)
       var->data.driver_location = location;
       location += type_size(var->type);
    }
+
+   *size = location;
 }
 
 static void
 assign_var_locations_shader(nir_shader *shader)
 {
-   assign_var_locations(shader->inputs);
-   assign_var_locations(shader->outputs);
-   assign_var_locations(shader->uniforms);
+   assign_var_locations(shader->inputs, &shader->num_inputs);
+   assign_var_locations(shader->outputs, &shader->num_outputs);
+   assign_var_locations(shader->uniforms, &shader->num_uniforms);
 }
 
 static void

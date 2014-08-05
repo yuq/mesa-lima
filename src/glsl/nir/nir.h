@@ -1138,6 +1138,12 @@ typedef struct nir_shader {
 
    /** next available global register index */
    unsigned reg_alloc;
+
+   /**
+    * the highest index a load_input_*, load_uniform_*, etc. intrinsic can
+    * access plus one
+    */
+   unsigned num_inputs, num_uniforms, num_outputs;
 } nir_shader;
 
 #define nir_foreach_overload(shader, overload) \

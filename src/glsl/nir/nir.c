@@ -49,6 +49,10 @@ nir_shader_create(void *mem_ctx)
    exec_list_make_empty(&shader->system_values);
    shader->reg_alloc = 0;
 
+   shader->num_inputs = 0;
+   shader->num_outputs = 0;
+   shader->num_uniforms = 0;
+
    return shader;
 }
 
