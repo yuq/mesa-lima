@@ -290,7 +290,28 @@ intel_miptree_create_layout(struct brw_context *brw,
       /* Adjust width/height/depth for MSAA */
       mt->msaa_layout = compute_msaa_layout(brw, format, mt->target);
       if (mt->msaa_layout == INTEL_MSAA_LAYOUT_IMS) {
-         /* In the Sandy Bridge PRM, volume 4, part 1, page 31, it says:
+         /* From the Ivybridge PRM, Volume 1, Part 1, page 108:
+          * "If the surface is multisampled and it is a depth or stencil
+          *  surface or Multisampled Surface StorageFormat in SURFACE_STATE is
+          *  MSFMT_DEPTH_STENCIL, WL and HL must be adjusted as follows before
+          *  proceeding:
+          *
+          *  +----------------------------------------------------------------+
+          *  | Num Multisamples |        W_l =         |        H_l =         |
+          *  +----------------------------------------------------------------+
+          *  |         2        | ceiling(W_l / 2) * 4 | H_l (no adjustment)  |
+          *  |         4        | ceiling(W_l / 2) * 4 | ceiling(H_l / 2) * 4 |
+          *  |         8        | ceiling(W_l / 2) * 8 | ceiling(H_l / 2) * 4 |
+          *  |        16        | ceiling(W_l / 2) * 8 | ceiling(H_l / 2) * 8 |
+          *  +----------------------------------------------------------------+
+          * "
+          *
+          * Note that MSFMT_DEPTH_STENCIL just means the IMS (interleaved)
+          * format rather than UMS/CMS (array slices).  The Sandybridge PRM,
+          * Volume 1, Part 1, Page 111 has the same formula for 4x MSAA.
+          *
+          * Another more complicated explanation for these adjustments comes
+          * from the Sandybridge PRM, volume 4, part 1, page 31:
           *
           *     "Any of the other messages (sample*, LOD, load4) used with a
           *      (4x) multisampled surface will in-effect sample a surface with
