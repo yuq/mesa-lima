@@ -413,7 +413,6 @@ static nv50_ir::DataFile translateFile(uint file)
    case TGSI_FILE_OUTPUT:          return nv50_ir::FILE_SHADER_OUTPUT;
    case TGSI_FILE_TEMPORARY:       return nv50_ir::FILE_GPR;
    case TGSI_FILE_ADDRESS:         return nv50_ir::FILE_ADDRESS;
-   case TGSI_FILE_PREDICATE:       return nv50_ir::FILE_PREDICATE;
    case TGSI_FILE_IMMEDIATE:       return nv50_ir::FILE_IMMEDIATE;
    case TGSI_FILE_SYSTEM_VALUE:    return nv50_ir::FILE_SYSTEM_VALUE;
    case TGSI_FILE_BUFFER:          return nv50_ir::FILE_MEMORY_BUFFER;
@@ -1484,7 +1483,6 @@ bool Source::scanDeclaration(const struct tgsi_full_declaration *decl)
    case TGSI_FILE_ADDRESS:
    case TGSI_FILE_CONSTANT:
    case TGSI_FILE_IMMEDIATE:
-   case TGSI_FILE_PREDICATE:
    case TGSI_FILE_SAMPLER:
    case TGSI_FILE_BUFFER:
       break;
@@ -1745,7 +1743,6 @@ private:
    DataArray tData; // TGSI_FILE_TEMPORARY
    DataArray lData; // TGSI_FILE_TEMPORARY, for indirect arrays
    DataArray aData; // TGSI_FILE_ADDRESS
-   DataArray pData; // TGSI_FILE_PREDICATE
    DataArray oData; // TGSI_FILE_OUTPUT (if outputs in registers)
 
    Value *zero;
@@ -1968,8 +1965,6 @@ Converter::getArrayForFile(unsigned file, int idx)
    switch (file) {
    case TGSI_FILE_TEMPORARY:
       return idx == 0 ? &tData : &lData;
-   case TGSI_FILE_PREDICATE:
-      return &pData;
    case TGSI_FILE_ADDRESS:
       return &aData;
    case TGSI_FILE_OUTPUT:
@@ -2138,7 +2133,6 @@ Converter::storeDst(const tgsi::Instruction::DstRegister dst, int c,
       }
    } else
    if (f == TGSI_FILE_TEMPORARY ||
-       f == TGSI_FILE_PREDICATE ||
        f == TGSI_FILE_ADDRESS ||
        f == TGSI_FILE_OUTPUT) {
       if (f == TGSI_FILE_TEMPORARY) {
@@ -4197,18 +4191,16 @@ Converter::exportOutputs()
 Converter::Converter(Program *ir, const tgsi::Source *code) : BuildUtil(ir),
      code(code),
      tgsi(NULL),
-     tData(this), lData(this), aData(this), pData(this), oData(this)
+     tData(this), lData(this), aData(this), oData(this)
 {
    info = code->info;
 
    const unsigned tSize = code->fileSize(TGSI_FILE_TEMPORARY);
-   const unsigned pSize = code->fileSize(TGSI_FILE_PREDICATE);
    const unsigned aSize = code->fileSize(TGSI_FILE_ADDRESS);
    const unsigned oSize = code->fileSize(TGSI_FILE_OUTPUT);
 
    tData.setup(TGSI_FILE_TEMPORARY, 0, 0, tSize, 4, 4, FILE_GPR, 0);
    lData.setup(TGSI_FILE_TEMPORARY, 1, 0, tSize, 4, 4, FILE_MEMORY_LOCAL, 0);
-   pData.setup(TGSI_FILE_PREDICATE, 0, 0, pSize, 4, 4, FILE_PREDICATE, 0);
    aData.setup(TGSI_FILE_ADDRESS, 0, 0, aSize, 4, 4, FILE_GPR, 0);
    oData.setup(TGSI_FILE_OUTPUT, 0, 0, oSize, 4, 4, FILE_GPR, 0);
 

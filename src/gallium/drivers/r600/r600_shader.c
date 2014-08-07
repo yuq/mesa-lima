@@ -397,10 +397,6 @@ static int tgsi_is_supported(struct r600_shader_ctx *ctx)
 		R600_ERR("too many dst (%d)\n", i->Instruction.NumDstRegs);
 		return -EINVAL;
 	}
-	if (i->Instruction.Predicate) {
-		R600_ERR("predicate unsupported\n");
-		return -EINVAL;
-	}
 #if 0
 	if (i->Instruction.Label) {
 		R600_ERR("label unsupported\n");

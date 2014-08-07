@@ -256,10 +256,6 @@ lp_emit_store_aos(
       ptr = bld->addr[reg->Indirect.Index];
       break;
 
-   case TGSI_FILE_PREDICATE:
-      ptr = bld->preds[reg->Register.Index];
-      break;
-
    default:
       assert(0);
       return;
@@ -267,43 +263,6 @@ lp_emit_store_aos(
 
    if (!ptr)
       return;
-   /*
-    * Predicate
-    */
-
-   if (inst->Instruction.Predicate) {
-      LLVMValueRef pred;
-
-      assert(inst->Predicate.Index < LP_MAX_TGSI_PREDS);
-
-      pred = LLVMBuildLoad(builder,
-                           bld->preds[inst->Predicate.Index], "");
-
-      /*
-       * Convert the value to an integer mask.
-       */
-      pred = lp_build_compare(bld->bld_base.base.gallivm,
-                               bld->bld_base.base.type,
-                               PIPE_FUNC_NOTEQUAL,
-                               pred,
-                               bld->bld_base.base.zero);
-
-      if (inst->Predicate.Negate) {
-         pred = LLVMBuildNot(builder, pred, "");
-      }
-
-      pred = bld->bld_base.emit_swizzle(&bld->bld_base, pred,
-                         inst->Predicate.SwizzleX,
-                         inst->Predicate.SwizzleY,
-                         inst->Predicate.SwizzleZ,
-                         inst->Predicate.SwizzleW);
-
-      if (mask) {
-         mask = LLVMBuildAnd(builder, mask, pred, "");
-      } else {
-         mask = pred;
-      }
-   }
 
    /*
     * Writemask
@@ -440,11 +399,6 @@ lp_emit_declaration_aos(
       case TGSI_FILE_ADDRESS:
          assert(idx < LP_MAX_TGSI_ADDRS);
          bld->addr[idx] = lp_build_alloca(gallivm, vec_type, "");
-         break;
-
-      case TGSI_FILE_PREDICATE:
-         assert(idx < LP_MAX_TGSI_PREDS);
-         bld->preds[idx] = lp_build_alloca(gallivm, vec_type, "");
          break;
 
       case TGSI_FILE_SAMPLER_VIEW:

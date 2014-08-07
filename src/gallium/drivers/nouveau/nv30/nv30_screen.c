@@ -294,7 +294,6 @@ nv30_screen_get_shader_param(struct pipe_screen *pscreen,
       case PIPE_SHADER_CAP_MAX_TEXTURE_SAMPLERS:
       case PIPE_SHADER_CAP_MAX_SAMPLER_VIEWS:
          return 0;
-      case PIPE_SHADER_CAP_MAX_PREDS:
       case PIPE_SHADER_CAP_TGSI_CONT_SUPPORTED:
       case PIPE_SHADER_CAP_TGSI_SQRT_SUPPORTED:
       case PIPE_SHADER_CAP_INDIRECT_INPUT_ADDR:
@@ -342,7 +341,6 @@ nv30_screen_get_shader_param(struct pipe_screen *pscreen,
          return 32;
       case PIPE_SHADER_CAP_PREFERRED_IR:
          return PIPE_SHADER_IR_TGSI;
-      case PIPE_SHADER_CAP_MAX_PREDS:
       case PIPE_SHADER_CAP_TGSI_CONT_SUPPORTED:
       case PIPE_SHADER_CAP_TGSI_SQRT_SUPPORTED:
       case PIPE_SHADER_CAP_INDIRECT_INPUT_ADDR:

@@ -52,7 +52,6 @@ static const char *tgsi_file_names[] =
    "SAMP",
    "ADDR",
    "IMM",
-   "PRED",
    "SV",
    "IMAGE",
    "SVIEW",

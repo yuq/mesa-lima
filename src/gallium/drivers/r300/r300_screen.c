@@ -331,8 +331,6 @@ static int r300_get_shader_param(struct pipe_screen *pscreen,
             return 1;
         case PIPE_SHADER_CAP_MAX_TEMPS:
             return is_r500 ? 128 : is_r400 ? 64 : 32;
-        case PIPE_SHADER_CAP_MAX_PREDS:
-            return 0; /* unused */
         case PIPE_SHADER_CAP_MAX_TEXTURE_SAMPLERS:
         case PIPE_SHADER_CAP_MAX_SAMPLER_VIEWS:
            return r300screen->caps.num_tex_units;
@@ -390,8 +388,6 @@ static int r300_get_shader_param(struct pipe_screen *pscreen,
             return 1;
         case PIPE_SHADER_CAP_MAX_TEMPS:
             return 32;
-        case PIPE_SHADER_CAP_MAX_PREDS:
-            return 0; /* unused */
         case PIPE_SHADER_CAP_INDIRECT_CONST_ADDR:
         case PIPE_SHADER_CAP_TGSI_ANY_INOUT_DECL_RANGE:
             return 1;

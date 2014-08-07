@@ -1291,7 +1291,6 @@ tgsi_exec_machine_create(enum pipe_shader_type shader_type)
    mach->ShaderType = shader_type;
    mach->Addrs = &mach->Temps[TGSI_EXEC_TEMP_ADDR];
    mach->MaxGeometryShaderOutputs = TGSI_MAX_TOTAL_VERTICES;
-   mach->Predicates = &mach->Temps[TGSI_EXEC_TEMP_P0];
 
    if (shader_type != PIPE_SHADER_COMPUTE) {
       mach->Inputs = align_malloc(sizeof(struct tgsi_exec_vector) * PIPE_MAX_SHADER_INPUTS, 16);
@@ -1559,15 +1558,6 @@ fetch_src_file_channel(const struct tgsi_exec_machine *mach,
       }
       break;
 
-   case TGSI_FILE_PREDICATE:
-      for (i = 0; i < TGSI_QUAD_SIZE; i++) {
-         assert(index->i[i] >= 0 && index->i[i] < TGSI_EXEC_NUM_PREDS);
-         assert(index2D->i[i] == 0);
-
-         chan->u[i] = mach->Predicates[0].xyzw[swizzle].u[i];
-      }
-      break;
-
    case TGSI_FILE_OUTPUT:
       /* vertex/fragment output vars can be read too */
       for (i = 0; i < TGSI_QUAD_SIZE; i++) {
@@ -1770,11 +1760,9 @@ store_dest_dstret(struct tgsi_exec_machine *mach,
                  uint chan_index,
                  enum tgsi_exec_datatype dst_datatype)
 {
-   uint i;
    static union tgsi_exec_channel null;
    union tgsi_exec_channel *dst;
    union tgsi_exec_channel index2D;
-   uint execmask = mach->ExecMask;
    int offset = 0;  /* indirection offset */
    int index;
 
@@ -1926,56 +1914,9 @@ store_dest_dstret(struct tgsi_exec_machine *mach,
       dst = &mach->Addrs[index].xyzw[chan_index];
       break;
 
-   case TGSI_FILE_PREDICATE:
-      index = reg->Register.Index;
-      assert(index < TGSI_EXEC_NUM_PREDS);
-      dst = &mach->Predicates[index].xyzw[chan_index];
-      break;
-
    default:
       assert( 0 );
       return NULL;
-   }
-
-   if (inst->Instruction.Predicate) {
-      uint swizzle;
-      union tgsi_exec_channel *pred;
-
-      switch (chan_index) {
-      case TGSI_CHAN_X:
-         swizzle = inst->Predicate.SwizzleX;
-         break;
-      case TGSI_CHAN_Y:
-         swizzle = inst->Predicate.SwizzleY;
-         break;
-      case TGSI_CHAN_Z:
-         swizzle = inst->Predicate.SwizzleZ;
-         break;
-      case TGSI_CHAN_W:
-         swizzle = inst->Predicate.SwizzleW;
-         break;
-      default:
-         assert(0);
-         return NULL;
-      }
-
-      assert(inst->Predicate.Index == 0);
-
-      pred = &mach->Predicates[inst->Predicate.Index].xyzw[swizzle];
-
-      if (inst->Predicate.Negate) {
-         for (i = 0; i < TGSI_QUAD_SIZE; i++) {
-            if (pred->u[i]) {
-               execmask &= ~(1 << i);
-            }
-         }
-      } else {
-         for (i = 0; i < TGSI_QUAD_SIZE; i++) {
-            if (!pred->u[i]) {
-               execmask &= ~(1 << i);
-            }
-         }
-      }
    }
 
    return dst;

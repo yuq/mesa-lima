@@ -396,8 +396,6 @@ etna_screen_get_shader_param(struct pipe_screen *pscreen,
       return 64; /* Max native temporaries. */
    case PIPE_SHADER_CAP_MAX_CONST_BUFFERS:
       return 1;
-   case PIPE_SHADER_CAP_MAX_PREDS:
-      return 0; /* nothing uses this */
    case PIPE_SHADER_CAP_TGSI_CONT_SUPPORTED:
       return 1;
    case PIPE_SHADER_CAP_INDIRECT_INPUT_ADDR:

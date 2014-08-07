@@ -327,8 +327,6 @@ nv50_screen_get_shader_param(struct pipe_screen *pscreen,
    case PIPE_SHADER_CAP_INDIRECT_TEMP_ADDR:
    case PIPE_SHADER_CAP_INDIRECT_CONST_ADDR:
       return 1;
-   case PIPE_SHADER_CAP_MAX_PREDS:
-      return 0;
    case PIPE_SHADER_CAP_MAX_TEMPS:
       return nv50_screen(pscreen)->max_tls_space / ONE_TEMP_SIZE;
    case PIPE_SHADER_CAP_TGSI_CONT_SUPPORTED:

@@ -311,8 +311,6 @@ virgl_get_shader_param(struct pipe_screen *screen,
          return vscreen->caps.caps.v1.max_uniform_blocks;
     //  case PIPE_SHADER_CAP_MAX_ADDRS:
      //    return 1;
-      case PIPE_SHADER_CAP_MAX_PREDS:
-         return 0;
       case PIPE_SHADER_CAP_SUBROUTINES:
          return 1;
       case PIPE_SHADER_CAP_MAX_TEXTURE_SAMPLERS:
