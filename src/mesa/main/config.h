@@ -274,6 +274,12 @@
 #define MAX_VERTEX_STREAMS                  4
 /*@}*/
 
+/** For GL_ARB_shader_subroutine */
+/*@{*/
+#define MAX_SUBROUTINES                   256
+#define MAX_SUBROUTINE_UNIFORM_LOCATIONS  1024
+/*@}*/
+
 /** For GL_INTEL_performance_query */
 /*@{*/
 #define MAX_PERFQUERY_QUERY_NAME_LENGTH     256

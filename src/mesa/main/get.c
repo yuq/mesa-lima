@@ -414,6 +414,7 @@ EXTRA_EXT(ARB_clip_control);
 EXTRA_EXT(EXT_polygon_offset_clamp);
 EXTRA_EXT(ARB_framebuffer_no_attachments);
 EXTRA_EXT(ARB_tessellation_shader);
+EXTRA_EXT(ARB_shader_subroutine);
 
 static const int
 extra_ARB_color_buffer_float_or_glcore[] = {

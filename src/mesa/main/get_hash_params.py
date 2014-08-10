@@ -852,6 +852,10 @@ descriptor=[
   [ "MAX_TESS_EVALUATION_ATOMIC_COUNTERS", "CONTEXT_INT(Const.Program[MESA_SHADER_TESS_EVAL].MaxAtomicCounters), extra_ARB_shader_atomic_counters_and_tessellation" ],
   [ "MAX_TESS_CONTROL_IMAGE_UNIFORMS", "CONTEXT_INT(Const.Program[MESA_SHADER_TESS_CTRL].MaxImageUniforms), extra_ARB_shader_image_load_store_and_tessellation"],
   [ "MAX_TESS_EVALUATION_IMAGE_UNIFORMS", "CONTEXT_INT(Const.Program[MESA_SHADER_TESS_EVAL].MaxImageUniforms), extra_ARB_shader_image_load_store_and_tessellation"],
+
+# GL_ARB_shader_subroutine
+  [ "MAX_SUBROUTINES", "CONST(MAX_SUBROUTINES), extra_ARB_shader_subroutine" ],
+  [ "MAX_SUBROUTINE_UNIFORM_LOCATIONS", "CONST(MAX_SUBROUTINE_UNIFORM_LOCATIONS), extra_ARB_shader_subroutine" ],
 ]}
 
 ]
