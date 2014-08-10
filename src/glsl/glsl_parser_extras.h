@@ -496,6 +496,8 @@ struct _mesa_glsl_parse_state {
    bool ARB_shader_stencil_export_warn;
    bool ARB_shader_storage_buffer_object_enable;
    bool ARB_shader_storage_buffer_object_warn;
+   bool ARB_shader_subroutine_enable;
+   bool ARB_shader_subroutine_warn;
    bool ARB_shader_texture_lod_enable;
    bool ARB_shader_texture_lod_warn;
    bool ARB_shading_language_420pack_enable;
