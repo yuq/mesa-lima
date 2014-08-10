@@ -271,6 +271,40 @@ _mesa_PatchParameteri(GLenum pname, GLint value);
 extern void GLAPIENTRY
 _mesa_PatchParameterfv(GLenum pname, const GLfloat *values);
 
+/* GL_ARB_shader_subroutine */
+extern GLint GLAPIENTRY
+_mesa_GetSubroutineUniformLocation(GLuint program, GLenum shadertype,
+                                   const GLchar *name);
+
+extern GLuint GLAPIENTRY
+_mesa_GetSubroutineIndex(GLuint program, GLenum shadertype,
+                         const GLchar *name);
+
+extern GLvoid GLAPIENTRY
+_mesa_GetActiveSubroutineUniformiv(GLuint program, GLenum shadertype,
+                                   GLuint index, GLenum pname, GLint *values);
+
+extern GLvoid GLAPIENTRY
+_mesa_GetActiveSubroutineUniformName(GLuint program, GLenum shadertype,
+                                     GLuint index, GLsizei bufsize,
+                                     GLsizei *length, GLchar *name);
+
+extern GLvoid GLAPIENTRY
+_mesa_GetActiveSubroutineName(GLuint program, GLenum shadertype,
+                              GLuint index, GLsizei bufsize,
+                              GLsizei *length, GLchar *name);
+
+extern GLvoid GLAPIENTRY
+_mesa_UniformSubroutinesuiv(GLenum shadertype, GLsizei count,
+                            const GLuint *indices);
+
+extern GLvoid GLAPIENTRY
+_mesa_GetUniformSubroutineuiv(GLenum shadertype, GLint location,
+                              GLuint *params);
+
+extern GLvoid GLAPIENTRY
+_mesa_GetProgramStageiv(GLuint program, GLenum shadertype,
+                        GLenum pname, GLint *values);
 
 #ifdef __cplusplus
 }

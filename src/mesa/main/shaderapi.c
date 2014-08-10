@@ -2158,3 +2158,64 @@ _mesa_PatchParameterfv(GLenum pname, const GLfloat *values)
    }
 }
 
+/**
+ * ARB_shader_subroutine
+ */
+GLint GLAPIENTRY
+_mesa_GetSubroutineUniformLocation(GLuint program, GLenum shadertype,
+                                   const GLchar *name)
+{
+   return -1;
+}
+
+
+GLuint GLAPIENTRY
+_mesa_GetSubroutineIndex(GLuint program, GLenum shadertype,
+                         const GLchar *name)
+{
+   return GL_INVALID_INDEX;
+}
+
+
+GLvoid GLAPIENTRY
+_mesa_GetActiveSubroutineUniformiv(GLuint program, GLenum shadertype,
+                                   GLuint index, GLenum pname, GLint *values)
+{
+}
+
+
+GLvoid GLAPIENTRY
+_mesa_GetActiveSubroutineUniformName(GLuint program, GLenum shadertype,
+                                     GLuint index, GLsizei bufsize,
+                                     GLsizei *length, GLchar *name)
+{
+}
+
+
+GLvoid GLAPIENTRY
+_mesa_GetActiveSubroutineName(GLuint program, GLenum shadertype,
+                              GLuint index, GLsizei bufsize,
+                              GLsizei *length, GLchar *name)
+{
+}
+
+
+GLvoid GLAPIENTRY
+_mesa_UniformSubroutinesuiv(GLenum shadertype, GLsizei count,
+                            const GLuint *indices)
+{
+}
+
+
+GLvoid GLAPIENTRY
+_mesa_GetUniformSubroutineuiv(GLenum shadertype, GLint location,
+                              GLuint *params)
+{
+}
+
+
+GLvoid GLAPIENTRY
+_mesa_GetProgramStageiv(GLuint program, GLenum shadertype,
+                        GLenum pname, GLint *values)
+{
+}
