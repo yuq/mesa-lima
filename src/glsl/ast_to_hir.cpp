@@ -3621,6 +3621,51 @@ ast_declarator_list::hir(exec_list *instructions,
 
             handle_geometry_shader_input_decl(state, loc, var);
          }
+      } else if (var->data.mode == ir_var_shader_out) {
+         const glsl_type *check_type = var->type->without_array();
+
+         /* From section 4.3.6 (Output variables) of the GLSL 4.40 spec:
+          *
+          *     It is a compile-time error to declare a vertex, tessellation
+          *     evaluation, tessellation control, or geometry shader output
+          *     that contains any of the following:
+          *
+          *     * A Boolean type (bool, bvec2 ...)
+          *     * An opaque type
+          */
+         if (check_type->is_boolean() || check_type->contains_opaque())
+            _mesa_glsl_error(&loc, state,
+                             "%s shader output cannot have type %s",
+                             _mesa_shader_stage_to_string(state->stage),
+                             check_type->name);
+
+         /* From section 4.3.6 (Output variables) of the GLSL 4.40 spec:
+          *
+          *     It is a compile-time error to declare a fragment shader output
+          *     that contains any of the following:
+          *
+          *     * A Boolean type (bool, bvec2 ...)
+          *     * A double-precision scalar or vector (double, dvec2 ...)
+          *     * An opaque type
+          *     * Any matrix type
+          *     * A structure
+          */
+         if (state->stage == MESA_SHADER_FRAGMENT) {
+            if (check_type->is_record() || check_type->is_matrix())
+               _mesa_glsl_error(&loc, state,
+                                "fragment shader output "
+                                "cannot have struct or array type");
+            switch (check_type->base_type) {
+            case GLSL_TYPE_UINT:
+            case GLSL_TYPE_INT:
+            case GLSL_TYPE_FLOAT:
+               break;
+            default:
+               _mesa_glsl_error(&loc, state,
+                                "fragment shader output cannot have "
+                                "type %s", check_type->name);
+            }
+         }
       }
 
       /* Integer fragment inputs must be qualified with 'flat'.  In GLSL ES,
