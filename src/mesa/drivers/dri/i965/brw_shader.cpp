@@ -308,6 +308,7 @@ brw_type_for_base_type(const struct glsl_type *type)
    case GLSL_TYPE_VOID:
    case GLSL_TYPE_ERROR:
    case GLSL_TYPE_INTERFACE:
+   case GLSL_TYPE_DOUBLE:
       unreachable("not reached");
    }
 

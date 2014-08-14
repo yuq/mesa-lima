@@ -445,6 +445,19 @@ ir_channel_expressions_visitor::visit_leave(ir_assignment *ir)
    case ir_binop_interpolate_at_offset:
    case ir_binop_interpolate_at_sample:
       unreachable("not reached: expression operates on scalars only");
+
+   case ir_unop_pack_double_2x32:
+   case ir_unop_unpack_double_2x32:
+   case ir_unop_frexp_sig:
+   case ir_unop_frexp_exp:
+   case ir_unop_d2f:
+   case ir_unop_f2d:
+   case ir_unop_d2i:
+   case ir_unop_i2d:
+   case ir_unop_d2u:
+   case ir_unop_u2d:
+   case ir_unop_d2b:
+      unreachable("no fp64 support yet");
    }
 
    ir->remove();
