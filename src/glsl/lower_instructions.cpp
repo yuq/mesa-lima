@@ -42,6 +42,7 @@
  * - CARRY_TO_ARITH
  * - BORROW_TO_ARITH
  * - SAT_TO_CLAMP
+ * - DOPS_TO_DFRAC
  *
  * SUB_TO_ADD_NEG:
  * ---------------
@@ -112,6 +113,9 @@
  * -------------
  * Converts ir_unop_saturate into min(max(x, 0.0), 1.0)
  *
+ * DOPS_TO_DFRAC:
+ * --------------
+ * Converts double trunc, ceil, floor, round to fract
  */
 
 #include "main/core.h" /* for M_LOG2E */
@@ -151,6 +155,11 @@ private:
    void sat_to_clamp(ir_expression *);
    void double_dot_to_fma(ir_expression *);
    void double_lrp(ir_expression *);
+   void dceil_to_dfrac(ir_expression *);
+   void dfloor_to_dfrac(ir_expression *);
+   void dround_even_to_dfrac(ir_expression *);
+   void dtrunc_to_dfrac(ir_expression *);
+   void dsign_to_csel(ir_expression *);
 };
 
 } /* anonymous namespace */
@@ -314,6 +323,9 @@ lower_instructions_visitor::mod_to_floor(ir_expression *ir)
 
    ir_expression *const floor_expr =
       new(ir) ir_expression(ir_unop_floor, x->type, div_expr);
+
+   if (lowering(DOPS_TO_DFRAC) && ir->type->is_double())
+      dfloor_to_dfrac(floor_expr);
 
    ir_expression *const mul_expr =
       new(ir) ir_expression(ir_binop_mul,
@@ -578,6 +590,145 @@ lower_instructions_visitor::double_lrp(ir_expression *ir)
    this->progress = true;
 }
 
+void
+lower_instructions_visitor::dceil_to_dfrac(ir_expression *ir)
+{
+   /*
+    * frtemp = frac(x);
+    * temp = sub(x, frtemp);
+    * result = temp + ((frtemp != 0.0) ? 1.0 : 0.0);
+    */
+   ir_instruction &i = *base_ir;
+   ir_constant *zero = new(ir) ir_constant(0.0, ir->operands[0]->type->vector_elements);
+   ir_constant *one = new(ir) ir_constant(1.0, ir->operands[0]->type->vector_elements);
+   ir_variable *frtemp = new(ir) ir_variable(ir->operands[0]->type, "frtemp",
+                                             ir_var_temporary);
+
+   i.insert_before(frtemp);
+   i.insert_before(assign(frtemp, fract(ir->operands[0])));
+
+   ir->operation = ir_binop_add;
+   ir->operands[0] = sub(ir->operands[0]->clone(ir, NULL), frtemp);
+   ir->operands[1] = csel(nequal(frtemp, zero), one, zero->clone(ir, NULL));
+
+   this->progress = true;
+}
+
+void
+lower_instructions_visitor::dfloor_to_dfrac(ir_expression *ir)
+{
+   /*
+    * frtemp = frac(x);
+    * result = sub(x, frtemp);
+    */
+   ir->operation = ir_binop_sub;
+   ir->operands[1] = fract(ir->operands[0]->clone(ir, NULL));
+
+   this->progress = true;
+}
+void
+lower_instructions_visitor::dround_even_to_dfrac(ir_expression *ir)
+{
+   /*
+    * insane but works
+    * temp = x + 0.5;
+    * frtemp = frac(temp);
+    * t2 = sub(temp, frtemp);
+    * if (frac(x) == 0.5)
+    *     result = frac(t2 * 0.5) == 0 ? t2 : t2 - 1;
+    *  else
+    *     result = t2;
+
+    */
+   ir_instruction &i = *base_ir;
+   ir_variable *frtemp = new(ir) ir_variable(ir->operands[0]->type, "frtemp",
+                                             ir_var_temporary);
+   ir_variable *temp = new(ir) ir_variable(ir->operands[0]->type, "temp",
+                                           ir_var_temporary);
+   ir_variable *t2 = new(ir) ir_variable(ir->operands[0]->type, "t2",
+                                           ir_var_temporary);
+   ir_constant *p5 = new(ir) ir_constant(0.5, ir->operands[0]->type->vector_elements);
+   ir_constant *one = new(ir) ir_constant(1.0, ir->operands[0]->type->vector_elements);
+   ir_constant *zero = new(ir) ir_constant(0.0, ir->operands[0]->type->vector_elements);
+
+   i.insert_before(temp);
+   i.insert_before(assign(temp, add(ir->operands[0], p5)));
+
+   i.insert_before(frtemp);
+   i.insert_before(assign(frtemp, fract(temp)));
+
+   i.insert_before(t2);
+   i.insert_before(assign(t2, sub(temp, frtemp)));
+
+   ir->operation = ir_triop_csel;
+   ir->operands[0] = equal(fract(ir->operands[0]->clone(ir, NULL)),
+                           p5->clone(ir, NULL));
+   ir->operands[1] = csel(equal(fract(mul(t2, p5->clone(ir, NULL))),
+                                zero),
+                          t2,
+                          sub(t2, one));
+   ir->operands[2] = new(ir) ir_dereference_variable(t2);
+
+   this->progress = true;
+}
+
+void
+lower_instructions_visitor::dtrunc_to_dfrac(ir_expression *ir)
+{
+   /*
+    * frtemp = frac(x);
+    * temp = sub(x, frtemp);
+    * result = x >= 0 ? temp : temp + (frtemp == 0.0) ? 0 : 1;
+    */
+   ir_rvalue *arg = ir->operands[0];
+   ir_instruction &i = *base_ir;
+
+   ir_constant *zero = new(ir) ir_constant(0.0, arg->type->vector_elements);
+   ir_constant *one = new(ir) ir_constant(1.0, arg->type->vector_elements);
+   ir_variable *frtemp = new(ir) ir_variable(arg->type, "frtemp",
+                                             ir_var_temporary);
+   ir_variable *temp = new(ir) ir_variable(ir->operands[0]->type, "temp",
+                                           ir_var_temporary);
+
+   i.insert_before(frtemp);
+   i.insert_before(assign(frtemp, fract(arg)));
+   i.insert_before(temp);
+   i.insert_before(assign(temp, sub(arg->clone(ir, NULL), frtemp)));
+
+   ir->operation = ir_triop_csel;
+   ir->operands[0] = gequal(arg->clone(ir, NULL), zero);
+   ir->operands[1] = new (ir) ir_dereference_variable(temp);
+   ir->operands[2] = add(temp,
+                         csel(equal(frtemp, zero->clone(ir, NULL)),
+                              zero->clone(ir, NULL),
+                              one));
+
+   this->progress = true;
+}
+
+void
+lower_instructions_visitor::dsign_to_csel(ir_expression *ir)
+{
+   /*
+    * temp = x > 0.0 ? 1.0 : 0.0;
+    * result = x < 0.0 ? -1.0 : temp;
+    */
+   ir_rvalue *arg = ir->operands[0];
+   ir_constant *zero = new(ir) ir_constant(0.0, arg->type->vector_elements);
+   ir_constant *one = new(ir) ir_constant(1.0, arg->type->vector_elements);
+   ir_constant *neg_one = new(ir) ir_constant(-1.0, arg->type->vector_elements);
+
+   ir->operation = ir_triop_csel;
+   ir->operands[0] = less(arg->clone(ir, NULL),
+                          zero->clone(ir, NULL));
+   ir->operands[1] = neg_one;
+   ir->operands[2] = csel(greater(arg, zero),
+                          one,
+                          zero->clone(ir, NULL));
+
+   this->progress = true;
+}
+
 ir_visitor_status
 lower_instructions_visitor::visit_leave(ir_expression *ir)
 {
@@ -647,6 +798,30 @@ lower_instructions_visitor::visit_leave(ir_expression *ir)
          sat_to_clamp(ir);
       break;
 
+   case ir_unop_trunc:
+      if (lowering(DOPS_TO_DFRAC) && ir->type->is_double())
+         dtrunc_to_dfrac(ir);
+      break;
+
+   case ir_unop_ceil:
+      if (lowering(DOPS_TO_DFRAC) && ir->type->is_double())
+         dceil_to_dfrac(ir);
+      break;
+
+   case ir_unop_floor:
+      if (lowering(DOPS_TO_DFRAC) && ir->type->is_double())
+         dfloor_to_dfrac(ir);
+      break;
+
+   case ir_unop_round_even:
+      if (lowering(DOPS_TO_DFRAC) && ir->type->is_double())
+         dround_even_to_dfrac(ir);
+      break;
+
+   case ir_unop_sign:
+      if (lowering(DOPS_TO_DFRAC) && ir->type->is_double())
+         dsign_to_csel(ir);
+      break;
    default:
       return visit_continue;
    }

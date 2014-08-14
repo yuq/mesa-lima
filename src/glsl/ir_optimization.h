@@ -41,6 +41,7 @@
 #define CARRY_TO_ARITH     0x200
 #define BORROW_TO_ARITH    0x400
 #define SAT_TO_CLAMP       0x800
+#define DOPS_TO_DFRAC      0x1000
 
 /**
  * \see class lower_packing_builtins_visitor
