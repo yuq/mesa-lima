@@ -115,6 +115,7 @@
  */
 
 #include "main/core.h" /* for M_LOG2E */
+#include "program/prog_instruction.h" /* for swizzle */
 #include "glsl_types.h"
 #include "ir.h"
 #include "ir_builder.h"
@@ -148,6 +149,8 @@ private:
    void carry_to_arith(ir_expression *);
    void borrow_to_arith(ir_expression *);
    void sat_to_clamp(ir_expression *);
+   void double_dot_to_fma(ir_expression *);
+   void double_lrp(ir_expression *);
 };
 
 } /* anonymous namespace */
@@ -521,10 +524,72 @@ lower_instructions_visitor::sat_to_clamp(ir_expression *ir)
    this->progress = true;
 }
 
+void
+lower_instructions_visitor::double_dot_to_fma(ir_expression *ir)
+{
+   ir_variable *temp = new(ir) ir_variable(ir->operands[0]->type->get_base_type(), "dot_res",
+					   ir_var_temporary);
+   this->base_ir->insert_before(temp);
+
+   int nc = ir->operands[0]->type->components();
+   for (int i = nc - 1; i >= 1; i--) {
+      ir_assignment *assig;
+      if (i == (nc - 1)) {
+         assig = assign(temp, mul(swizzle(ir->operands[0]->clone(ir, NULL), i, 1),
+                                  swizzle(ir->operands[1]->clone(ir, NULL), i, 1)));
+      } else {
+         assig = assign(temp, fma(swizzle(ir->operands[0]->clone(ir, NULL), i, 1),
+                                  swizzle(ir->operands[1]->clone(ir, NULL), i, 1),
+                                  temp));
+      }
+      this->base_ir->insert_before(assig);
+   }
+
+   ir->operation = ir_triop_fma;
+   ir->operands[0] = swizzle(ir->operands[0], 0, 1);
+   ir->operands[1] = swizzle(ir->operands[1], 0, 1);
+   ir->operands[2] = new(ir) ir_dereference_variable(temp);
+
+   this->progress = true;
+
+}
+
+void
+lower_instructions_visitor::double_lrp(ir_expression *ir)
+{
+   int swizval;
+   ir_rvalue *op0 = ir->operands[0], *op2 = ir->operands[2];
+   ir_constant *one = new(ir) ir_constant(1.0, op2->type->vector_elements);
+
+   switch (op2->type->vector_elements) {
+   case 1:
+      swizval = SWIZZLE_XXXX;
+      break;
+   default:
+      assert(op0->type->vector_elements == op2->type->vector_elements);
+      swizval = SWIZZLE_XYZW;
+      break;
+   }
+
+   ir->operation = ir_triop_fma;
+   ir->operands[0] = swizzle(op2, swizval, op0->type->vector_elements);
+   ir->operands[2] = mul(sub(one, op2->clone(ir, NULL)), op0);
+
+   this->progress = true;
+}
+
 ir_visitor_status
 lower_instructions_visitor::visit_leave(ir_expression *ir)
 {
    switch (ir->operation) {
+   case ir_binop_dot:
+      if (ir->operands[0]->type->is_double())
+         double_dot_to_fma(ir);
+      break;
+   case ir_triop_lrp:
+      if (ir->operands[0]->type->is_double())
+         double_lrp(ir);
+      break;
    case ir_binop_sub:
       if (lowering(SUB_TO_ADD_NEG))
 	 sub_to_add_neg(ir);
