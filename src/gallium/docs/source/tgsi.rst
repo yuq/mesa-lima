@@ -1808,7 +1808,10 @@ Double ISA
 The double-precision opcodes reinterpret four-component vectors into
 two-component vectors with doubled precision in each component.
 
-Support for these opcodes is XXX undecided. :T
+.. opcode:: DABS - Absolute
+
+  dst.xy = |src0.xy|
+  dst.zw = |src0.zw|
 
 .. opcode:: DADD - Add
 
@@ -1818,30 +1821,37 @@ Support for these opcodes is XXX undecided. :T
 
   dst.zw = src0.zw + src1.zw
 
-
-.. opcode:: DDIV - Divide
-
-.. math::
-
-  dst.xy = src0.xy / src1.xy
-
-  dst.zw = src0.zw / src1.zw
-
 .. opcode:: DSEQ - Set on Equal
 
 .. math::
 
-  dst.xy = src0.xy == src1.xy ? 1.0F : 0.0F
+  dst.x = src0.xy == src1.xy ? \sim 0 : 0
 
-  dst.zw = src0.zw == src1.zw ? 1.0F : 0.0F
+  dst.z = src0.zw == src1.zw ? \sim 0 : 0
+
+.. opcode:: DSNE - Set on Equal
+
+.. math::
+
+  dst.x = src0.xy != src1.xy ? \sim 0 : 0
+
+  dst.z = src0.zw != src1.zw ? \sim 0 : 0
 
 .. opcode:: DSLT - Set on Less than
 
 .. math::
 
-  dst.xy = src0.xy < src1.xy ? 1.0F : 0.0F
+  dst.x = src0.xy < src1.xy ? \sim 0 : 0
 
-  dst.zw = src0.zw < src1.zw ? 1.0F : 0.0F
+  dst.z = src0.zw < src1.zw ? \sim 0 : 0
+
+.. opcode:: DSGE - Set on Greater equal
+
+.. math::
+
+  dst.x = src0.xy >= src1.xy ? \sim 0 : 0
+
+  dst.z = src0.zw >= src1.zw ? \sim 0 : 0
 
 .. opcode:: DFRAC - Fraction
 
@@ -1870,13 +1880,14 @@ exponent of its source to ``dst0``, and the significand to ``dst1``, such that
 
 .. opcode:: DLDEXP - Multiply Number by Integral Power of 2
 
-This opcode is the inverse of :opcode:`DFRACEXP`.
+This opcode is the inverse of :opcode:`DFRACEXP`. The second
+source is an integer.
 
 .. math::
 
-  dst.xy = src0.xy \times 2^{src1.xy}
+  dst.xy = src0.xy \times 2^{src1.x}
 
-  dst.zw = src0.zw \times 2^{src1.zw}
+  dst.zw = src0.zw \times 2^{src1.y}
 
 .. opcode:: DMIN - Minimum
 
@@ -1928,6 +1939,61 @@ This opcode is the inverse of :opcode:`DFRACEXP`.
 
    dst.zw = \sqrt{src.zw}
 
+.. opcode:: DRSQ - Reciprocal Square Root
+
+.. math::
+
+   dst.xy = \frac{1}{\sqrt{src.xy}}
+
+   dst.zw = \frac{1}{\sqrt{src.zw}}
+
+.. opcode:: F2D - Float to Double
+
+.. math::
+
+   dst.xy = double(src0.x)
+
+   dst.zw = double(src0.y)
+
+.. opcode:: D2F - Double to Float
+
+.. math::
+
+   dst.x = float(src0.xy)
+
+   dst.y = float(src0.zw)
+
+.. opcode:: I2D - Int to Double
+
+.. math::
+
+   dst.xy = double(src0.x)
+
+   dst.zw = double(src0.y)
+
+.. opcode:: D2I - Double to Int
+
+.. math::
+
+   dst.x = int(src0.xy)
+
+   dst.y = int(src0.zw)
+
+.. opcode:: U2D - Unsigned Int to Double
+
+.. math::
+
+   dst.xy = double(src0.x)
+
+   dst.zw = double(src0.y)
+
+.. opcode:: D2U - Double to Unsigned Int
+
+.. math::
+
+   dst.x = unsigned(src0.xy)
+
+   dst.y = unsigned(src0.zw)
 
 .. _samplingopcodes:
 
