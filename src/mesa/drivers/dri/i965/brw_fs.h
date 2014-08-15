@@ -484,7 +484,7 @@ public:
    void emit_interpolation_setup_gen4();
    void emit_interpolation_setup_gen6();
    void compute_sample_position(fs_reg dst, fs_reg int_sample_pos);
-   fs_reg rescale_texcoord(fs_reg coordinate, const glsl_type *coord_type,
+   fs_reg rescale_texcoord(fs_reg coordinate, int coord_components,
                            bool is_rect, uint32_t sampler, int texunit);
    fs_inst *emit_texture_gen4(ir_texture_opcode op, fs_reg dst,
                               fs_reg coordinate, int coord_components,
@@ -505,7 +505,7 @@ public:
                               fs_reg offset_value);
    void emit_texture(ir_texture_opcode op,
                      const glsl_type *dest_type,
-                     fs_reg coordinate, const struct glsl_type *coord_type,
+                     fs_reg coordinate, int components,
                      fs_reg shadow_c,
                      fs_reg lod, fs_reg dpdy, int grad_components,
                      fs_reg sample_index,

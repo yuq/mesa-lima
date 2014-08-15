@@ -421,26 +421,26 @@ fs_visitor::emit_fragment_program_code()
             unreachable("not reached");
          }
 
-         const glsl_type *coordinate_type;
+         int coord_components;
          switch (fpi->TexSrcTarget) {
          case TEXTURE_1D_INDEX:
-            coordinate_type = glsl_type::float_type;
+            coord_components = 1;
             break;
 
          case TEXTURE_2D_INDEX:
          case TEXTURE_1D_ARRAY_INDEX:
          case TEXTURE_RECT_INDEX:
          case TEXTURE_EXTERNAL_INDEX:
-            coordinate_type = glsl_type::vec2_type;
+            coord_components = 2;
             break;
 
          case TEXTURE_3D_INDEX:
          case TEXTURE_2D_ARRAY_INDEX:
-            coordinate_type = glsl_type::vec3_type;
+            coord_components = 3;
             break;
 
          case TEXTURE_CUBE_INDEX: {
-            coordinate_type = glsl_type::vec3_type;
+            coord_components = 4;
 
             fs_reg temp = fs_reg(this, glsl_type::float_type);
             fs_reg cubecoord = fs_reg(this, glsl_type::vec3_type);
@@ -468,7 +468,7 @@ fs_visitor::emit_fragment_program_code()
          if (fpi->TexShadow)
             shadow_c = offset(coordinate, 2);
 
-         emit_texture(op, glsl_type::vec4_type, coordinate, coordinate_type,
+         emit_texture(op, glsl_type::vec4_type, coordinate, coord_components,
                       shadow_c, lod, dpdy, 0, sample_index,
                       reg_undef, 0, /* offset, components */
                       reg_undef, /* mcs */
