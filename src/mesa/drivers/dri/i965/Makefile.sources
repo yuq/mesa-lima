@@ -48,6 +48,7 @@ i965_FILES = \
 	brw_fs.h \
 	brw_fs_live_variables.cpp \
 	brw_fs_live_variables.h \
+	brw_fs_nir.cpp \
 	brw_fs_peephole_predicated_break.cpp \
 	brw_fs_reg_allocate.cpp \
 	brw_fs_register_coalesce.cpp \

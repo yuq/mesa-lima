@@ -49,6 +49,7 @@ extern "C" {
 }
 #include "glsl/glsl_types.h"
 #include "glsl/ir.h"
+#include "glsl/nir/nir.h"
 #include "program/sampler.h"
 
 #define MAX_SAMPLER_MESSAGE_SIZE 11
@@ -563,6 +564,45 @@ public:
                     const struct prog_instruction *fpi,
                     fs_reg dst, fs_reg src0, fs_reg src1, fs_reg one);
 
+   void emit_nir_code();
+   void nir_setup_inputs(nir_shader *shader);
+   void nir_setup_outputs(nir_shader *shader);
+   void nir_setup_uniforms(nir_shader *shader);
+   void nir_setup_registers(exec_list *regs);
+   void nir_emit_interpolation(nir_variable *var, fs_reg *reg);
+   void nir_setup_uniform(nir_variable *var);
+   void nir_setup_builtin_uniform(nir_variable *var);
+   void nir_emit_impl(nir_function_impl *impl);
+   void nir_emit_cf_list(exec_list *list);
+   void nir_emit_if(nir_if *if_stmt);
+   void nir_emit_loop(nir_loop *loop);
+   void nir_emit_block(nir_block *block);
+   void nir_emit_instr(nir_instr *instr);
+   void nir_emit_alu(nir_alu_instr *instr);
+   void nir_emit_intrinsic(nir_intrinsic_instr *instr);
+   void nir_emit_texture(nir_tex_instr *instr);
+   void nir_emit_load_const(nir_load_const_instr *instr);
+   void nir_emit_jump(nir_jump_instr *instr);
+   fs_reg get_nir_src(nir_src src);
+   fs_reg get_nir_alu_src(nir_alu_instr *instr, unsigned src);
+   fs_reg get_nir_dest(nir_dest dest);
+   void emit_percomp(fs_inst *inst, unsigned wr_mask);
+   void emit_percomp(enum opcode op, fs_reg dest, fs_reg src0,
+                     unsigned wr_mask, bool saturate = false,
+                     enum brw_predicate predicate = BRW_PREDICATE_NONE,
+                     enum brw_conditional_mod mod = BRW_CONDITIONAL_NONE);
+   void emit_percomp(enum opcode op, fs_reg dest, fs_reg src0, fs_reg src1,
+                     unsigned wr_mask, bool saturate = false,
+                     enum brw_predicate predicate = BRW_PREDICATE_NONE,
+                     enum brw_conditional_mod mod = BRW_CONDITIONAL_NONE);
+   void emit_math_percomp(enum opcode op, fs_reg dest, fs_reg src0,
+                          unsigned wr_mask, bool saturate = false);
+   void emit_math_percomp(enum opcode op, fs_reg dest, fs_reg src0,
+                          fs_reg src1, unsigned wr_mask,
+                          bool saturate = false);
+   void emit_reduction(enum opcode op, fs_reg dest, fs_reg src,
+                       unsigned num_components);
+
    int setup_color_payload(fs_reg *dst, fs_reg color, unsigned components);
    void emit_alpha_test();
    fs_inst *emit_single_fb_write(fs_reg color1, fs_reg color2,
@@ -654,6 +694,11 @@ public:
 
    fs_reg *fp_temp_regs;
    fs_reg *fp_input_regs;
+
+   struct hash_table *nir_reg_ht;
+   fs_reg nir_inputs;
+   fs_reg nir_outputs;
+   fs_reg nir_uniforms;
 
    /** @{ debug annotation info */
    const char *current_annotation;
