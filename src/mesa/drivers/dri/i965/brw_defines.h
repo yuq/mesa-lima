@@ -1680,4 +1680,10 @@ enum brw_pixel_shader_coverage_mask_mode {
 # define GEN8_L3CNTLREG_ALL_ALLOC_SHIFT    25
 # define GEN8_L3CNTLREG_ALL_ALLOC_MASK     INTEL_MASK(31, 25)
 
+#define INSTPM                             0x20c0
+# define INSTPM_CONSTANT_BUFFER_ADDRESS_OFFSET_DISABLE (1 << 6)
+
+#define CS_DEBUG_MODE2                     0x20d8 /* Gen9+ */
+# define CSDBG2_CONSTANT_BUFFER_ADDRESS_OFFSET_DISABLE (1 << 4)
+
 #endif
