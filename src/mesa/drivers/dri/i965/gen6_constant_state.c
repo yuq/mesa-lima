@@ -25,6 +25,7 @@
 #include "brw_state.h"
 #include "brw_defines.h"
 #include "intel_batchbuffer.h"
+#include "intel_buffer_objects.h"
 #include "program/prog_parameter.h"
 
 /**
@@ -60,12 +61,16 @@ gen6_upload_push_constants(struct brw_context *brw,
       if (prog)
          _mesa_load_state_parameters(ctx, prog->Parameters);
 
-      gl_constant_value *param;
       int i;
-
-      param = brw_state_batch(brw,
-                              prog_data->nr_params * sizeof(gl_constant_value),
-                              32, &stage_state->push_const_offset);
+      const int size = prog_data->nr_params * sizeof(gl_constant_value);
+      gl_constant_value *param;
+      if (brw->gen >= 9) {
+         param = intel_upload_space(brw, size, 32, &brw->curbe.curbe_bo,
+                                    &stage_state->push_const_offset);
+      } else {
+         param = brw_state_batch(brw, size, 32,
+                                 &stage_state->push_const_offset);
+      }
 
       STATIC_ASSERT(sizeof(gl_constant_value) == sizeof(float));
 

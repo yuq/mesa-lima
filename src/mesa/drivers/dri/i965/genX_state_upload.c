@@ -2601,7 +2601,7 @@ upload_constant_state(struct brw_context *brw,
          pkt.ConstantBody.ConstantBuffer2ReadLength =
             stage_state->push_const_size;
          pkt.ConstantBody.PointerToConstantBuffer2 =
-            render_ro_bo(brw->batch.bo, stage_state->push_const_offset);
+            render_ro_bo(brw->curbe.curbe_bo, stage_state->push_const_offset);
 #else
          pkt.ConstantBody.ConstantBuffer0ReadLength =
             stage_state->push_const_size;
