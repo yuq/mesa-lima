@@ -2700,7 +2700,14 @@ __DRIconfig **intelInitScreen2(__DRIscreen *dri_screen)
    screen->compiler = brw_compiler_create(screen, devinfo);
    screen->compiler->shader_debug_log = shader_debug_log_mesa;
    screen->compiler->shader_perf_log = shader_perf_log_mesa;
-   screen->compiler->constant_buffer_0_is_relative = true;
+
+   /* Changing the meaning of constant buffer pointers from a dynamic state
+    * offset to an absolute address is only safe if the kernel isolates other
+    * contexts from our changes.
+    */
+   screen->compiler->constant_buffer_0_is_relative = devinfo->gen < 8 ||
+      !(screen->kernel_features & KERNEL_ALLOWS_CONTEXT_ISOLATION);
+
    screen->compiler->supports_pull_constants = true;
 
    screen->has_exec_fence =
