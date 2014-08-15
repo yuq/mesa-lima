@@ -1508,6 +1508,10 @@ vec4_generator::generate_code(const cfg_t *cfg)
           *
           * where they pack the four bytes from the low and high four DW.
           */
+         assert(is_power_of_two(dst.dw1.bits.writemask) &&
+                dst.dw1.bits.writemask != 0);
+         unsigned offset = __builtin_ctz(dst.dw1.bits.writemask);
+
          dst.type = BRW_REGISTER_TYPE_UB;
 
          brw_set_default_access_mode(p, BRW_ALIGN_1);
@@ -1516,14 +1520,17 @@ vec4_generator::generate_code(const cfg_t *cfg)
          src[0].vstride = BRW_VERTICAL_STRIDE_4;
          src[0].width = BRW_WIDTH_1;
          src[0].hstride = BRW_HORIZONTAL_STRIDE_0;
+         dst.subnr = offset * 4;
          struct brw_inst *insn = brw_MOV(p, dst, src[0]);
          brw_inst_set_exec_size(brw, insn, BRW_EXECUTE_4);
          brw_inst_set_no_dd_clear(brw, insn, true);
+         brw_inst_set_no_dd_check(brw, insn, inst->no_dd_check);
 
          src[0].subnr = 16;
-         dst.subnr = 16;
+         dst.subnr = 16 + offset * 4;
          insn = brw_MOV(p, dst, src[0]);
          brw_inst_set_exec_size(brw, insn, BRW_EXECUTE_4);
+         brw_inst_set_no_dd_clear(brw, insn, inst->no_dd_clear);
          brw_inst_set_no_dd_check(brw, insn, true);
 
          brw_set_default_access_mode(p, BRW_ALIGN_16);
@@ -1540,7 +1547,11 @@ vec4_generator::generate_code(const cfg_t *cfg)
          abort();
       }
 
-      if (inst->no_dd_clear || inst->no_dd_check || inst->conditional_mod) {
+      if (inst->opcode == VEC4_OPCODE_PACK_BYTES) {
+         /* Handled dependency hints in the generator. */
+
+         assert(!inst->conditional_mod);
+      } else if (inst->no_dd_clear || inst->no_dd_check || inst->conditional_mod) {
          assert(p->nr_insn == pre_emit_nr_insn + 1 ||
                 !"conditional_mod, no_dd_check, or no_dd_clear set for IR "
                  "emitting more than 1 instruction");
