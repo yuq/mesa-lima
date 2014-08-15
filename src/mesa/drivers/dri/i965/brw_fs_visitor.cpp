@@ -2147,6 +2147,7 @@ fs_visitor::swizzle_result(ir_texture *ir, fs_reg orig_val, uint32_t sampler)
       assert(ir->sampler->type->sampler_shadow);
    } else if (tex->swizzles[sampler] != SWIZZLE_NOOP) {
       fs_reg swizzled_result = fs_reg(this, glsl_type::vec4_type);
+      swizzled_result.type = orig_val.type;
 
       for (int i = 0; i < 4; i++) {
 	 int swiz = GET_SWZ(tex->swizzles[sampler], i);
