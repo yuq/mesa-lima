@@ -360,6 +360,8 @@ struct _mesa_glsl_parse_state {
 
       /* ARB_shader_atomic_counters */
       unsigned MaxVertexAtomicCounters;
+      unsigned MaxTessControlAtomicCounters;
+      unsigned MaxTessEvaluationAtomicCounters;
       unsigned MaxGeometryAtomicCounters;
       unsigned MaxFragmentAtomicCounters;
       unsigned MaxCombinedAtomicCounters;
@@ -370,6 +372,8 @@ struct _mesa_glsl_parse_state {
        * 3.10.
        */
       unsigned MaxVertexAtomicCounterBuffers;
+      unsigned MaxTessControlAtomicCounterBuffers;
+      unsigned MaxTessEvaluationAtomicCounterBuffers;
       unsigned MaxGeometryAtomicCounterBuffers;
       unsigned MaxFragmentAtomicCounterBuffers;
       unsigned MaxCombinedAtomicCounterBuffers;
@@ -384,6 +388,8 @@ struct _mesa_glsl_parse_state {
       unsigned MaxCombinedImageUnitsAndFragmentOutputs;
       unsigned MaxImageSamples;
       unsigned MaxVertexImageUniforms;
+      unsigned MaxTessControlImageUniforms;
+      unsigned MaxTessEvaluationImageUniforms;
       unsigned MaxGeometryImageUniforms;
       unsigned MaxFragmentImageUniforms;
       unsigned MaxCombinedImageUniforms;
@@ -393,6 +399,17 @@ struct _mesa_glsl_parse_state {
 
       /* ARB_tessellation_shader */
       unsigned MaxPatchVertices;
+      unsigned MaxTessGenLevel;
+      unsigned MaxTessControlInputComponents;
+      unsigned MaxTessControlOutputComponents;
+      unsigned MaxTessControlTextureImageUnits;
+      unsigned MaxTessEvaluationInputComponents;
+      unsigned MaxTessEvaluationOutputComponents;
+      unsigned MaxTessEvaluationTextureImageUnits;
+      unsigned MaxTessPatchComponents;
+      unsigned MaxTessControlTotalOutputComponents;
+      unsigned MaxTessControlUniformComponents;
+      unsigned MaxTessEvaluationUniformComponents;
    } Const;
 
    /**

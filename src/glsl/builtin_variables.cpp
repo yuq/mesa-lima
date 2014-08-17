@@ -672,8 +672,14 @@ builtin_variable_generator::generate_constants()
       if (!state->es_shader) {
          add_const("gl_MaxGeometryAtomicCounters",
                    state->Const.MaxGeometryAtomicCounters);
-         add_const("gl_MaxTessControlAtomicCounters", 0);
-         add_const("gl_MaxTessEvaluationAtomicCounters", 0);
+
+	 if (state->is_version(400, 0) ||
+             state->ARB_tessellation_shader_enable) {
+		 add_const("gl_MaxTessControlAtomicCounters",
+                           state->Const.MaxTessControlAtomicCounters);
+		 add_const("gl_MaxTessEvaluationAtomicCounters",
+                           state->Const.MaxTessEvaluationAtomicCounters);
+	 }
       }
    }
 
@@ -693,8 +699,10 @@ builtin_variable_generator::generate_constants()
       if (!state->es_shader) {
          add_const("gl_MaxGeometryAtomicCounterBuffers",
                    state->Const.MaxGeometryAtomicCounterBuffers);
-         add_const("gl_MaxTessControlAtomicCounterBuffers", 0);
-         add_const("gl_MaxTessEvaluationAtomicCounterBuffers", 0);
+         add_const("gl_MaxTessControlAtomicCounterBuffers",
+                   state->Const.MaxTessControlAtomicCounterBuffers);
+         add_const("gl_MaxTessEvaluationAtomicCounterBuffers",
+                   state->Const.MaxTessEvaluationAtomicCounterBuffers);
       }
    }
 
@@ -753,11 +761,35 @@ builtin_variable_generator::generate_constants()
                 state->Const.MaxFragmentImageUniforms);
       add_const("gl_MaxCombinedImageUniforms",
                 state->Const.MaxCombinedImageUniforms);
+
+      if (state->is_version(400, 0) ||
+          state->ARB_tessellation_shader_enable) {
+         add_const("gl_MaxTessControlImageUniforms",
+                   state->Const.MaxTessControlImageUniforms);
+         add_const("gl_MaxTessEvaluationImageUniforms",
+                   state->Const.MaxTessEvaluationImageUniforms);
+      }
    }
 
    if (state->is_version(410, 0) ||
        state->ARB_viewport_array_enable)
       add_const("gl_MaxViewports", state->Const.MaxViewports);
+
+   if (state->is_version(400, 0) ||
+       state->ARB_tessellation_shader_enable) {
+      add_const("gl_MaxPatchVertices", state->Const.MaxPatchVertices);
+      add_const("gl_MaxTessGenLevel", state->Const.MaxTessGenLevel);
+      add_const("gl_MaxTessControlInputComponents", state->Const.MaxTessControlInputComponents);
+      add_const("gl_MaxTessControlOutputComponents", state->Const.MaxTessControlOutputComponents);
+      add_const("gl_MaxTessControlTextureImageUnits", state->Const.MaxTessControlTextureImageUnits);
+      add_const("gl_MaxTessEvaluationInputComponents", state->Const.MaxTessEvaluationInputComponents);
+      add_const("gl_MaxTessEvaluationOutputComponents", state->Const.MaxTessEvaluationOutputComponents);
+      add_const("gl_MaxTessEvaluationTextureImageUnits", state->Const.MaxTessEvaluationTextureImageUnits);
+      add_const("gl_MaxTessPatchComponents", state->Const.MaxTessPatchComponents);
+      add_const("gl_MaxTessControlTotalOutputComponents", state->Const.MaxTessControlTotalOutputComponents);
+      add_const("gl_MaxTessControlUniformComponents", state->Const.MaxTessControlUniformComponents);
+      add_const("gl_MaxTessEvaluationUniformComponents", state->Const.MaxTessEvaluationUniformComponents);
+   }
 }
 
 
