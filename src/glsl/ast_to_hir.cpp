@@ -5959,16 +5959,39 @@ ast_interface_block::hir(exec_list *instructions,
           *     geometry shader inputs. All other input and output block
           *     arrays must specify an array size.
           *
+          * The same applies to tessellation shaders.
+          *
           * The upshot of this is that the only circumstance where an
           * interface array size *doesn't* need to be specified is on a
-          * geometry shader input.
+          * geometry shader input, tessellation control shader input,
+          * tessellation control shader output, and tessellation evaluation
+          * shader input.
           */
-         if (this->array_specifier->is_unsized_array &&
-             (state->stage != MESA_SHADER_GEOMETRY || !this->layout.flags.q.in)) {
-            _mesa_glsl_error(&loc, state,
-                             "only geometry shader inputs may be unsized "
-                             "instance block arrays");
+         if (this->array_specifier->is_unsized_array) {
+            bool allow_inputs = state->stage == MESA_SHADER_GEOMETRY ||
+                                state->stage == MESA_SHADER_TESS_CTRL ||
+                                state->stage == MESA_SHADER_TESS_EVAL;
+            bool allow_outputs = state->stage == MESA_SHADER_TESS_CTRL;
 
+            if (this->layout.flags.q.in) {
+               if (!allow_inputs)
+                  _mesa_glsl_error(&loc, state,
+                                   "unsized input block arrays not allowed in "
+                                   "%s shader",
+                                   _mesa_shader_stage_to_string(state->stage));
+            } else if (this->layout.flags.q.out) {
+               if (!allow_outputs)
+                  _mesa_glsl_error(&loc, state,
+                                   "unsized output block arrays not allowed in "
+                                   "%s shader",
+                                   _mesa_shader_stage_to_string(state->stage));
+            } else {
+               /* by elimination, this is a uniform block array */
+               _mesa_glsl_error(&loc, state,
+                                "unsized uniform block arrays not allowed in "
+                                "%s shader",
+                                _mesa_shader_stage_to_string(state->stage));
+            }
          }
 
          const glsl_type *block_array_type =
