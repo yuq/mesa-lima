@@ -2415,17 +2415,20 @@ fs_visitor::visit(ir_swizzle *ir)
 void
 fs_visitor::visit(ir_discard *ir)
 {
-   assert(ir->condition == NULL); /* FINISHME */
-
    /* We track our discarded pixels in f0.1.  By predicating on it, we can
-    * update just the flag bits that aren't yet discarded.  By emitting a
-    * CMP of g0 != g0, all our currently executing channels will get turned
-    * off.
+    * update just the flag bits that aren't yet discarded.  If there's no
+    * condition, we emit a CMP of g0 != g0, so all currently executing
+    * channels will get turned off.
     */
-   fs_reg some_reg = fs_reg(retype(brw_vec8_grf(0, 0),
-                                   BRW_REGISTER_TYPE_UW));
-   fs_inst *cmp = emit(CMP(reg_null_f, some_reg, some_reg,
-                           BRW_CONDITIONAL_NZ));
+   fs_inst *cmp;
+   if (ir->condition) {
+      ir->condition->accept(this);
+      cmp = emit(CMP(reg_null_f, this->result, fs_reg(0), BRW_CONDITIONAL_Z));
+   } else {
+      fs_reg some_reg = fs_reg(retype(brw_vec8_grf(0, 0),
+                                      BRW_REGISTER_TYPE_UW));
+      cmp = emit(CMP(reg_null_f, some_reg, some_reg, BRW_CONDITIONAL_NZ));
+   }
    cmp->predicate = BRW_PREDICATE_NORMAL;
    cmp->flag_subreg = 1;
 
