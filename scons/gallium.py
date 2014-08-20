@@ -301,6 +301,10 @@ def generate(env):
             cppdefines += ['HAVE_ALIAS']
         else:
             cppdefines += ['GLX_ALIAS_UNSUPPORTED']
+
+        if env['platform'] in ('linux', 'darwin'):
+            cppdefines += ['HAVE_XLOCALE_H']
+
     if env['platform'] == 'haiku':
         cppdefines += [
             'HAVE_PTHREAD',

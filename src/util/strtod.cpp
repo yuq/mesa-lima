@@ -28,7 +28,7 @@
 
 #ifdef _GNU_SOURCE
 #include <locale.h>
-#ifdef __APPLE__
+#ifdef HAVE_XLOCALE_H
 #include <xlocale.h>
 #endif
 #endif
@@ -44,9 +44,7 @@
 double
 _mesa_strtod(const char *s, char **end)
 {
-#if defined(_GNU_SOURCE) && !defined(__CYGWIN__) && !defined(__FreeBSD__) && \
-   !defined(ANDROID) && !defined(__HAIKU__) && !defined(__UCLIBC__) && \
-   !defined(__NetBSD__)
+#if defined(_GNU_SOURCE) && defined(HAVE_XLOCALE_H)
    static locale_t loc = NULL;
    if (!loc) {
       loc = newlocale(LC_CTYPE_MASK, "C", NULL);
@@ -65,15 +63,13 @@ _mesa_strtod(const char *s, char **end)
 float
 _mesa_strtof(const char *s, char **end)
 {
-#if defined(_GNU_SOURCE) && !defined(__CYGWIN__) && !defined(__FreeBSD__) && \
-   !defined(ANDROID) && !defined(__HAIKU__) && !defined(__UCLIBC__) && \
-   !defined(__NetBSD__)
+#if defined(_GNU_SOURCE) && defined(HAVE_XLOCALE_H)
    static locale_t loc = NULL;
    if (!loc) {
       loc = newlocale(LC_CTYPE_MASK, "C", NULL);
    }
    return strtof_l(s, end, loc);
-#elif defined(_ISOC99_SOURCE) || (defined(_XOPEN_SOURCE) && _XOPEN_SOURCE >= 600)
+#elif defined(HAVE_STRTOF)
    return strtof(s, end);
 #else
    return (float) strtod(s, end);
