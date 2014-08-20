@@ -1819,3 +1819,43 @@ VOID CiAddrLib::HwlPadDimensions(
     }
 }
 
+/**
+***************************************************************************************************
+*   CiAddrLib::HwlGetMaxAlignments
+*
+*   @brief
+*       Gets maximum alignments
+*   @return
+*       ADDR_E_RETURNCODE
+***************************************************************************************************
+*/
+ADDR_E_RETURNCODE CiAddrLib::HwlGetMaxAlignments(
+    ADDR_GET_MAX_ALINGMENTS_OUTPUT* pOut    ///< [out] output structure
+    ) const
+{
+    const UINT_32 pipes = HwlGetPipes(&m_tileTable[0].info);
+
+    // Initial size is 64 KiB for PRT.
+    UINT_64 maxBaseAlign = 64 * 1024;
+
+    for (UINT_32 i = 0; i < m_noOfMacroEntries; i++)
+    {
+        // The maximum tile size is 16 byte-per-pixel and either 8-sample or 8-slice.
+        UINT_32 tileSize = m_macroTileTable[i].tileSplitBytes;
+
+        UINT_64 baseAlign = tileSize * pipes * m_macroTileTable[i].banks *
+                            m_macroTileTable[i].bankWidth * m_macroTileTable[i].bankHeight;
+
+        if (baseAlign > maxBaseAlign)
+        {
+            maxBaseAlign = baseAlign;
+        }
+    }
+
+    if (pOut != NULL)
+    {
+        pOut->baseAlign = maxBaseAlign;
+    }
+
+    return ADDR_OK;
+}

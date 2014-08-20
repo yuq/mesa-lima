@@ -312,6 +312,8 @@ public:
     BOOL_32 GetExportNorm(
         const ELEM_GETEXPORTNORM_INPUT* pIn) const;
 
+    ADDR_E_RETURNCODE GetMaxAlignments(ADDR_GET_MAX_ALINGMENTS_OUTPUT* pOut) const;
+
 protected:
     AddrLib();  // Constructor is protected
     AddrLib(const AddrClient* pClient);
@@ -419,6 +421,10 @@ protected:
     {
         return ADDR_NOTSUPPORTED;
     }
+
+    /// Pure virtual function to get max alignments
+    virtual ADDR_E_RETURNCODE HwlGetMaxAlignments(ADDR_GET_MAX_ALINGMENTS_OUTPUT* pOut) const = 0;
+
     // Compute attributes
 
     // HTILE

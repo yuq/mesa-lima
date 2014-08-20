@@ -2816,3 +2816,48 @@ BOOL_32 SiAddrLib::HwlOverrideTileMode(
     return bOverrided;
 }
 
+/**
+***************************************************************************************************
+*   SiAddrLib::HwlGetMaxAlignments
+*
+*   @brief
+*       Gets maximum alignments
+*   @return
+*       ADDR_E_RETURNCODE
+***************************************************************************************************
+*/
+ADDR_E_RETURNCODE SiAddrLib::HwlGetMaxAlignments(
+    ADDR_GET_MAX_ALINGMENTS_OUTPUT* pOut    ///< [out] output structure
+    ) const
+{
+    const UINT_32 pipes = HwlGetPipes(&m_tileTable[0].info);
+
+    // Initial size is 64 KiB for PRT.
+    UINT_64 maxBaseAlign = 64 * 1024;
+
+    for (UINT_32 i = 0; i < m_noOfEntries; i++)
+    {
+        if ((IsMacroTiled(m_tileTable[i].mode) == TRUE) &&
+            (IsPrtTileMode(m_tileTable[i].mode) == FALSE))
+        {
+            // The maximum tile size is 16 byte-per-pixel and either 8-sample or 8-slice.
+            UINT_32 tileSize = Min(m_tileTable[i].info.tileSplitBytes,
+                                   MicroTilePixels * 8 * 16);
+
+            UINT_64 baseAlign = tileSize * pipes * m_tileTable[i].info.banks *
+                                m_tileTable[i].info.bankWidth * m_tileTable[i].info.bankHeight;
+
+            if (baseAlign > maxBaseAlign)
+            {
+                maxBaseAlign = baseAlign;
+            }
+        }
+    }
+
+    if (pOut != NULL)
+    {
+        pOut->baseAlign = maxBaseAlign;
+    }
+
+    return ADDR_OK;
+}

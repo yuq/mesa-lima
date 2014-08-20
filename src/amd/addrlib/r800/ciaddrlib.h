@@ -154,7 +154,8 @@ protected:
         const ADDR_COMPUTE_CMASK_ADDRFROMCOORD_INPUT* pIn,
         ADDR_COMPUTE_CMASK_ADDRFROMCOORD_OUTPUT* pOut) const;
 
-protected:
+    virtual ADDR_E_RETURNCODE HwlGetMaxAlignments(ADDR_GET_MAX_ALINGMENTS_OUTPUT* pOut) const;
+
     virtual VOID HwlPadDimensions(
         AddrTileMode tileMode, UINT_32 bpp, ADDR_SURFACE_FLAGS flags,
         UINT_32 numSamples, ADDR_TILEINFO* pTileInfo, UINT_32 padDims, UINT_32 mipLevel,

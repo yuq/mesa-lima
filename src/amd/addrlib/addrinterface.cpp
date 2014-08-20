@@ -1006,3 +1006,33 @@ ADDR_E_RETURNCODE ADDR_API AddrComputePrtInfo(
     return returnCode;
 }
 
+/**
+***************************************************************************************************
+*   AddrGetMaxAlignments
+*
+*   @brief
+*       Convert maximum alignments
+*
+*   @return
+*       ADDR_OK if successful, otherwise an error code of ADDR_E_RETURNCODE
+***************************************************************************************************
+*/
+ADDR_E_RETURNCODE ADDR_API AddrGetMaxAlignments(
+    ADDR_HANDLE                     hLib, ///< [in] address lib handle
+    ADDR_GET_MAX_ALINGMENTS_OUTPUT* pOut) ///< [out] output structure
+{
+    AddrLib* pLib = AddrLib::GetAddrLib(hLib);
+
+    ADDR_E_RETURNCODE returnCode = ADDR_OK;
+
+    if (pLib != NULL)
+    {
+        returnCode = pLib->GetMaxAlignments(pOut);
+    }
+    else
+    {
+        returnCode = ADDR_ERROR;
+    }
+
+    return returnCode;
+}

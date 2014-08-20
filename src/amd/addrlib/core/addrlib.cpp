@@ -1872,6 +1872,39 @@ ADDR_E_RETURNCODE AddrLib::ComputeCmaskCoordFromAddr(
 
 /**
 ***************************************************************************************************
+*   AddrLib::GetMaxAlignments
+*
+*   @brief
+*       Gets maximum alignments
+*
+*   @return
+*       ADDR_E_RETURNCODE
+***************************************************************************************************
+*/
+ADDR_E_RETURNCODE AddrLib::GetMaxAlignments(
+    ADDR_GET_MAX_ALINGMENTS_OUTPUT* pOut    ///< [out] output structure
+    ) const
+{
+    ADDR_E_RETURNCODE returnCode = ADDR_OK;
+
+    if (GetFillSizeFieldsFlags() == TRUE)
+    {
+        if (pOut->size != sizeof(ADDR_GET_MAX_ALINGMENTS_OUTPUT))
+        {
+            returnCode = ADDR_PARAMSIZEMISMATCH;
+        }
+    }
+
+    if (returnCode == ADDR_OK)
+    {
+        returnCode = HwlGetMaxAlignments(pOut);
+    }
+
+    return returnCode;
+}
+
+/**
+***************************************************************************************************
 *   AddrLib::ComputeTileDataWidthAndHeight
 *
 *   @brief
