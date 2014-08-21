@@ -424,8 +424,8 @@ intel_bufferobj_map_range(struct gl_context * ctx,
                                                           intel_obj->map_extra[index],
                                                           alignment);
       if (brw->has_llc) {
-         drm_intel_bo_map(intel_obj->range_map_bo[index],
-                          (access & GL_MAP_WRITE_BIT) != 0);
+         brw_bo_map(brw, intel_obj->range_map_bo[index],
+                    (access & GL_MAP_WRITE_BIT) != 0, "range-map");
       } else {
          drm_intel_gem_bo_map_gtt(intel_obj->range_map_bo[index]);
       }
@@ -441,7 +441,8 @@ intel_bufferobj_map_range(struct gl_context * ctx,
       drm_intel_gem_bo_map_gtt(intel_obj->buffer);
       intel_bufferobj_mark_inactive(intel_obj);
    } else {
-      drm_intel_bo_map(intel_obj->buffer, (access & GL_MAP_WRITE_BIT) != 0);
+      brw_bo_map(brw, intel_obj->buffer, (access & GL_MAP_WRITE_BIT) != 0,
+                 "MapBufferRange");
       intel_bufferobj_mark_inactive(intel_obj);
    }
 
