@@ -93,8 +93,8 @@ MAIN_FILES = \
 	$(SRCDIR)main/ffvertex_prog.h \
 	$(SRCDIR)main/fog.c \
 	$(SRCDIR)main/fog.h \
-	$(SRCDIR)main/format_pack.c \
 	$(SRCDIR)main/format_pack.h \
+	$(BUILDDIR)main/format_pack.c \
 	$(SRCDIR)main/formatquery.c \
 	$(SRCDIR)main/formatquery.h \
 	$(SRCDIR)main/formats.c \
