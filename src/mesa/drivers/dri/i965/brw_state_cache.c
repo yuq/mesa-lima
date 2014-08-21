@@ -241,6 +241,8 @@ brw_upload_item_data(struct brw_cache *cache,
 		     struct brw_cache_item *item,
 		     const void *data)
 {
+   struct brw_context *brw = cache->brw;
+
    /* Allocate space in the cache BO for our new program. */
    if (cache->next_offset + item->size > cache->bo->size) {
       uint32_t new_size = cache->bo->size * 2;
@@ -255,6 +257,7 @@ brw_upload_item_data(struct brw_cache *cache,
     * recreate it.
     */
    if (cache->bo_used_by_gpu) {
+      perf_debug("Copying busy program cache buffer.\n");
       brw_cache_new_bo(cache, cache->bo->size);
    }
 
