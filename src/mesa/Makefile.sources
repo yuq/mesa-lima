@@ -95,12 +95,12 @@ MAIN_FILES = \
 	$(SRCDIR)main/fog.h \
 	$(SRCDIR)main/format_pack.h \
 	$(BUILDDIR)main/format_pack.c \
+	$(SRCDIR)main/format_unpack.h \
+	$(BUILDDIR)main/format_unpack.c \
 	$(SRCDIR)main/formatquery.c \
 	$(SRCDIR)main/formatquery.h \
 	$(SRCDIR)main/formats.c \
 	$(SRCDIR)main/formats.h \
-	$(SRCDIR)main/format_unpack.c \
-	$(SRCDIR)main/format_unpack.h \
 	$(SRCDIR)main/format_utils.c \
 	$(SRCDIR)main/format_utils.h \
 	$(SRCDIR)main/framebuffer.c \
