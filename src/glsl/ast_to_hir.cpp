@@ -1597,13 +1597,11 @@ ast_expression::do_hir(exec_list *instructions,
       }
 
       ir_constant *cond_val = op[0]->constant_expression_value();
-      ir_constant *then_val = op[1]->constant_expression_value();
-      ir_constant *else_val = op[2]->constant_expression_value();
 
       if (then_instructions.is_empty()
           && else_instructions.is_empty()
-          && (cond_val != NULL) && (then_val != NULL) && (else_val != NULL)) {
-         result = (cond_val->value.b[0]) ? then_val : else_val;
+          && cond_val != NULL) {
+         result = cond_val->value.b[0] ? op[1] : op[2];
       } else {
          ir_variable *const tmp =
             new(ctx) ir_variable(type, "conditional_tmp", ir_var_temporary);
