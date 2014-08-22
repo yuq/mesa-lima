@@ -458,17 +458,11 @@ pack_row_float_B5G6R5_UNORM(GLuint n, const GLfloat src[][4], void *dst)
 }
 
 
-/*
- * MESA_FORMAT_R5G6B5_UNORM
- * Warning: these functions do not match the current Mesa definition
- * of MESA_FORMAT_R5G6B5_UNORM.
- */
-
 static void
 pack_ubyte_R5G6B5_UNORM(const GLubyte src[4], void *dst)
 {
    GLushort *d = ((GLushort *) dst);
-   *d = PACK_COLOR_565_REV(src[RCOMP], src[GCOMP], src[BCOMP]);
+   *d = PACK_COLOR_565(src[BCOMP], src[GCOMP], src[RCOMP]);
 }
 
 static void
@@ -479,7 +473,7 @@ pack_float_R5G6B5_UNORM(const GLfloat src[4], void *dst)
    UNCLAMPED_FLOAT_TO_UBYTE(r, src[RCOMP]);
    UNCLAMPED_FLOAT_TO_UBYTE(g, src[GCOMP]);
    UNCLAMPED_FLOAT_TO_UBYTE(b, src[BCOMP]);
-   *d = PACK_COLOR_565_REV(r, g, b);
+   *d = PACK_COLOR_565(b, g, r);
 }
 
 static void

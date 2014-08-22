@@ -417,10 +417,10 @@ FETCH(R5G6B5_UNORM)(const struct swrast_texture_image *texImage,
                     GLint i, GLint j, GLint k, GLfloat *texel)
 {
    const GLushort *src = TEXEL_ADDR(GLushort, texImage, i, j, k, 1);
-   const GLushort s = (*src >> 8) | (*src << 8); /* byte swap */
-   texel[RCOMP] = UBYTE_TO_FLOAT( ((s >> 8) & 0xf8) | ((s >> 13) & 0x7) );
-   texel[GCOMP] = UBYTE_TO_FLOAT( ((s >> 3) & 0xfc) | ((s >>  9) & 0x3) );
-   texel[BCOMP] = UBYTE_TO_FLOAT( ((s << 3) & 0xf8) | ((s >>  2) & 0x7) );
+   const GLushort s = *src;
+   texel[RCOMP] = ((s      ) & 0x1f) * (1.0F / 31.0F);
+   texel[GCOMP] = ((s >> 5 ) & 0x3f) * (1.0F / 63.0F);
+   texel[BCOMP] = ((s >> 11) & 0x1f) * (1.0F / 31.0F);
    texel[ACOMP] = 1.0F;
 }
 

@@ -2764,16 +2764,13 @@ unpack_ubyte_B5G6R5_UNORM(const void *src, GLubyte dst[][4], GLuint n)
 static void
 unpack_ubyte_R5G6B5_UNORM(const void *src, GLubyte dst[][4], GLuint n)
 {
-   /* Warning: this function does not match the current Mesa definition
-    * of MESA_FORMAT_R5G6B5_UNORM.
-    */
    const GLushort *s = ((const GLushort *) src);
    GLuint i;
    for (i = 0; i < n; i++) {
       GLuint t = (s[i] >> 8) | (s[i] << 8); /* byte swap */
-      dst[i][RCOMP] = EXPAND_5_8((t >> 11) & 0x1f);
+      dst[i][RCOMP] = EXPAND_5_8( t        & 0x1f);
       dst[i][GCOMP] = EXPAND_6_8((t >> 5 ) & 0x3f);
-      dst[i][BCOMP] = EXPAND_5_8( t        & 0x1f);
+      dst[i][BCOMP] = EXPAND_5_8((t >> 11) & 0x1f);
       dst[i][ACOMP] = 0xff;
    }
 }

@@ -1462,14 +1462,14 @@ _mesa_format_matches_format_and_type(mesa_format mesa_format,
       return format == GL_RGB && type == GL_UNSIGNED_BYTE && littleEndian;
 
    case MESA_FORMAT_B5G6R5_UNORM:
-      return format == GL_RGB && type == GL_UNSIGNED_SHORT_5_6_5 && !swapBytes;
+      return ((format == GL_RGB && type == GL_UNSIGNED_SHORT_5_6_5) ||
+              (format == GL_BGR && type == GL_UNSIGNED_SHORT_5_6_5_REV)) &&
+              !swapBytes;
 
    case MESA_FORMAT_R5G6B5_UNORM:
-      /* Some of the 16-bit MESA_FORMATs that would seem to correspond to
-       * GL_UNSIGNED_SHORT_* are byte-swapped instead of channel-reversed,
-       * according to formats.h, so they can't be matched.
-       */
-      return GL_FALSE;
+      return ((format == GL_BGR && type == GL_UNSIGNED_SHORT_5_6_5) ||
+              (format == GL_RGB && type == GL_UNSIGNED_SHORT_5_6_5_REV)) &&
+              !swapBytes;
 
    case MESA_FORMAT_B4G4R4A4_UNORM:
       return format == GL_BGRA && type == GL_UNSIGNED_SHORT_4_4_4_4_REV &&

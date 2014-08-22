@@ -139,9 +139,9 @@ typedef enum
     *   ** when type applies to all components
     *
     *  examples:                   msb <------ TEXEL BITS -----------> lsb
-    *  MESA_FORMAT_A8B8G8R8_UNORM, AAAA AAAA BBBB BBBB GGGG GGGG RRRR RRRR
-    *  MESA_FORMAT_R5G6B5_UNORM                        RRRR RGGG GGGB BBBB
-    *  MESA_FORMAT_B4G4R4X4_UNORM                      BBBB GGGG RRRR XXXX
+    *  MESA_FORMAT_A8B8G8R8_UNORM, RRRR RRRR GGGG GGGG BBBB BBBB AAAA AAAA
+    *  MESA_FORMAT_R5G6B5_UNORM                        BBBB BGGG GGGR RRRR
+    *  MESA_FORMAT_B4G4R4X4_UNORM                      XXXX RRRR GGGG BBBB
     *  MESA_FORMAT_Z32_FLOAT_S8X24_UINT
     *  MESA_FORMAT_R10G10B10A2_UINT
     *  MESA_FORMAT_R9G9B9E5_FLOAT
