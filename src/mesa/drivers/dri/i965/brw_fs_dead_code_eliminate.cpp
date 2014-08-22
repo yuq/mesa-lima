@@ -85,6 +85,17 @@ fs_visitor::dead_code_eliminate()
             }
          }
 
+         if ((inst->opcode != BRW_OPCODE_IF &&
+              inst->opcode != BRW_OPCODE_WHILE) &&
+             inst->dst.is_null() &&
+             !inst->has_side_effects() &&
+             !inst->writes_flag() &&
+             !inst->writes_accumulator) {
+            inst->opcode = BRW_OPCODE_NOP;
+            progress = true;
+            continue;
+         }
+
          if (inst->dst.file == GRF) {
             if (!inst->is_partial_write()) {
                int var = live_intervals->var_from_reg(inst->dst);
