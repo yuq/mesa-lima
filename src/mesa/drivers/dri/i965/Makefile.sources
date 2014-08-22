@@ -39,6 +39,7 @@ i965_FILES = \
 	brw_ff_gs_emit.c \
 	brw_ff_gs.h \
 	brw_fs_channel_expressions.cpp \
+	brw_fs_cmod_propagation.cpp \
 	brw_fs_copy_propagation.cpp \
 	brw_fs.cpp \
 	brw_fs_cse.cpp \

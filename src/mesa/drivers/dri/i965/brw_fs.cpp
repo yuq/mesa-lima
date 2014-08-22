@@ -3583,6 +3583,7 @@ fs_visitor::optimize()
       OPT(opt_cse);
       OPT(opt_copy_propagate);
       OPT(opt_peephole_predicated_break);
+      OPT(opt_cmod_propagation);
       OPT(dead_code_eliminate);
       OPT(opt_peephole_sel);
       OPT(dead_control_flow_eliminate, this);
