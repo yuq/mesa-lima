@@ -584,6 +584,16 @@ ir_algebraic_visitor::handle_expression(ir_expression *ir)
       }
       break;
 
+   case ir_binop_all_equal:
+   case ir_binop_any_nequal:
+      if (ir->operands[0]->type->is_scalar() &&
+          ir->operands[1]->type->is_scalar())
+         return new(mem_ctx) ir_expression(ir->operation == ir_binop_all_equal
+                                           ? ir_binop_equal : ir_binop_nequal,
+                                           ir->operands[0],
+                                           ir->operands[1]);
+      break;
+
    case ir_binop_rshift:
    case ir_binop_lshift:
       /* 0 >> x == 0 */
