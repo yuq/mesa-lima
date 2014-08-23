@@ -2830,17 +2830,14 @@ unpack_ubyte_B5G5R5A1_UNORM(const void *src, GLubyte dst[][4], GLuint n)
 static void
 unpack_ubyte_A1R5G5B5_UNORM(const void *src, GLubyte dst[][4], GLuint n)
 {
-   /* Warning: this function does not match the current Mesa definition
-    * of MESA_FORMAT_A1R5G5B5_UNORM.
-    */
    const GLushort *s = ((const GLushort *) src);
    GLuint i;
    for (i = 0; i < n; i++) {
       GLushort tmp = (s[i] << 8) | (s[i] >> 8); /* byteswap */
-      dst[i][RCOMP] = EXPAND_5_8((tmp >> 10) & 0x1f);
-      dst[i][GCOMP] = EXPAND_5_8((tmp >>  5) & 0x1f);
-      dst[i][BCOMP] = EXPAND_5_8((tmp >>  0) & 0x1f);
-      dst[i][ACOMP] = EXPAND_1_8((tmp >> 15) & 0x01);
+      dst[i][RCOMP] = EXPAND_5_8((tmp >>  1) & 0x1f);
+      dst[i][GCOMP] = EXPAND_5_8((tmp >>  6) & 0x1f);
+      dst[i][BCOMP] = EXPAND_5_8((tmp >> 11) & 0x1f);
+      dst[i][ACOMP] = EXPAND_1_8((tmp      ) & 0x01);
    }
 }
 
