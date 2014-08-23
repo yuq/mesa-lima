@@ -192,6 +192,22 @@ for fmat in formats:
                                        int(fmat.block_size() / 8))
 
    print '      {{ {0} }},'.format(', '.join(map(str, fmat.swizzle)))
+   if fmat.is_array():
+      chan = fmat.array_element()
+      norm = chan.norm or chan.type == parser.FLOAT
+      print '      MESA_ARRAY_FORMAT({0}),'.format(', '.join([
+         str(chan.size / 8),
+         str(int(chan.sign)),
+         str(int(chan.type == parser.FLOAT)),
+         str(int(norm)),
+         str(len(fmat.channels)),
+         str(fmat.swizzle[0]),
+         str(fmat.swizzle[1]),
+         str(fmat.swizzle[2]),
+         str(fmat.swizzle[3]),
+      ]))
+   else:
+      print '      0,'
    print '   },'
 
 print '};'
