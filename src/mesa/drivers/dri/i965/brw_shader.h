@@ -87,6 +87,7 @@ struct backend_instruction : public exec_node {
    bool is_control_flow() const;
    bool can_do_source_mods() const;
    bool can_do_saturate() const;
+   bool can_do_cmod() const;
    bool reads_accumulator_implicitly() const;
    bool writes_accumulator_implicitly(struct brw_context *brw) const;
 
