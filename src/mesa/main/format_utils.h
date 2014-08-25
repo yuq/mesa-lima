@@ -34,6 +34,11 @@
 #include "imports.h"
 #include "macros.h"
 
+extern const mesa_array_format RGBA8888_FLOAT;
+extern const mesa_array_format RGBA8888_UBYTE;
+extern const mesa_array_format RGBA8888_UINT;
+extern const mesa_array_format RGBA8888_INT;
+
 /* Only guaranteed to work for BITS <= 32 */
 #define MAX_UINT(BITS) ((BITS) == 32 ? UINT32_MAX : ((1u << (BITS)) - 1))
 #define MAX_INT(BITS) ((int)MAX_UINT((BITS) - 1))
@@ -206,5 +211,10 @@ void
 _mesa_swizzle_and_convert(void *dst, GLenum dst_type, int num_dst_channels,
                           const void *src, GLenum src_type, int num_src_channels,
                           const uint8_t swizzle[4], bool normalized, int count);
+
+void
+_mesa_format_convert(void *void_dst, uint32_t dst_format, size_t dst_stride,
+                     void *void_src, uint32_t src_format, size_t src_stride,
+                     size_t width, size_t height);
 
 #endif
