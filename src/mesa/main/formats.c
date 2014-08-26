@@ -472,6 +472,25 @@ _mesa_is_format_integer(mesa_format format)
    return (info->DataType == GL_INT || info->DataType == GL_UNSIGNED_INT);
 }
 
+
+/**
+ * Return true if the given format is a color format.
+ */
+GLenum
+_mesa_is_format_color_format(mesa_format format)
+{
+   const struct gl_format_info *info = _mesa_get_format_info(format);
+   switch (info->BaseFormat) {
+   case GL_DEPTH_COMPONENT:
+   case GL_STENCIL_INDEX:
+   case GL_DEPTH_STENCIL:
+      return false;
+   default:
+      return true;
+   }
+}
+
+
 /**
  * Return color encoding for given format.
  * \return GL_LINEAR or GL_SRGB
