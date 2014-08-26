@@ -622,7 +622,48 @@ ureg_DECL_sampler_view(struct ureg_program *ureg,
 }
 
 static int
+match_or_expand_immediate64( const unsigned *v,
+                             int type,
+                             unsigned nr,
+                             unsigned *v2,
+                             unsigned *pnr2,
+                             unsigned *swizzle )
+{
+   unsigned nr2 = *pnr2;
+   unsigned i, j;
+   *swizzle = 0;
+
+   for (i = 0; i < nr; i += 2) {
+      boolean found = FALSE;
+
+      for (j = 0; j < nr2 && !found; j += 2) {
+         if (v[i] == v2[j] && v[i + 1] == v2[j + 1]) {
+            *swizzle |= (j << (i * 2)) | ((j + 1) << ((i + 1) * 2));
+            found = TRUE;
+         }
+      }
+      if (!found) {
+         if ((nr2) >= 4) {
+            return FALSE;
+         }
+
+         v2[nr2] = v[i];
+         v2[nr2 + 1] = v[i + 1];
+
+         *swizzle |= (nr2 << (i * 2)) | ((nr2 + 1) << ((i + 1) * 2));
+         nr2 += 2;
+      }
+   }
+
+   /* Actually expand immediate only when fully succeeded.
+    */
+   *pnr2 = nr2;
+   return TRUE;
+}
+
+static int
 match_or_expand_immediate( const unsigned *v,
+                           int type,
                            unsigned nr,
                            unsigned *v2,
                            unsigned *pnr2,
@@ -630,6 +671,9 @@ match_or_expand_immediate( const unsigned *v,
 {
    unsigned nr2 = *pnr2;
    unsigned i, j;
+
+   if (type == TGSI_IMM_FLOAT64)
+      return match_or_expand_immediate64(v, type, nr, v2, pnr2, swizzle);
 
    *swizzle = 0;
 
@@ -679,6 +723,7 @@ decl_immediate( struct ureg_program *ureg,
          continue;
       }
       if (match_or_expand_immediate(v,
+                                    type,
                                     nr,
                                     ureg->immediate[i].value.u,
                                     &ureg->immediate[i].nr,
@@ -691,6 +736,7 @@ decl_immediate( struct ureg_program *ureg,
       i = ureg->nr_immediates++;
       ureg->immediate[i].type = type;
       if (match_or_expand_immediate(v,
+                                    type,
                                     nr,
                                     ureg->immediate[i].value.u,
                                     &ureg->immediate[i].nr,
@@ -705,10 +751,15 @@ out:
    /* Make sure that all referenced elements are from this immediate.
     * Has the effect of making size-one immediates into scalars.
     */
-   for (j = nr; j < 4; j++) {
-      swizzle |= (swizzle & 0x3) << (j * 2);
+   if (type == TGSI_IMM_FLOAT64) {
+      for (j = nr; j < 4; j+=2) {
+         swizzle |= (swizzle & 0xf) << (j * 2);
+      }
+   } else {
+      for (j = nr; j < 4; j++) {
+         swizzle |= (swizzle & 0x3) << (j * 2);
+      }
    }
-
    return ureg_swizzle(ureg_src_register(TGSI_FILE_IMMEDIATE, i),
                        (swizzle >> 0) & 0x3,
                        (swizzle >> 2) & 0x3,
@@ -735,6 +786,24 @@ ureg_DECL_immediate( struct ureg_program *ureg,
    return decl_immediate(ureg, fu.u, nr, TGSI_IMM_FLOAT32);
 }
 
+struct ureg_src
+ureg_DECL_immediate_f64( struct ureg_program *ureg,
+                         const double *v,
+                         unsigned nr )
+{
+   union {
+      unsigned u[4];
+      double d[2];
+   } fu;
+   unsigned int i;
+
+   assert((nr / 2) < 3);
+   for (i = 0; i < nr / 2; i++) {
+      fu.d[i] = v[i];
+   }
+
+   return decl_immediate(ureg, fu.u, nr, TGSI_IMM_FLOAT64);
+}
 
 struct ureg_src
 ureg_DECL_immediate_uint( struct ureg_program *ureg,

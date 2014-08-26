@@ -229,6 +229,11 @@ ureg_DECL_immediate( struct ureg_program *,
                      unsigned nr );
 
 struct ureg_src
+ureg_DECL_immediate_f64( struct ureg_program *,
+                         const double *v,
+                         unsigned nr );
+
+struct ureg_src
 ureg_DECL_immediate_uint( struct ureg_program *,
                           const unsigned *v,
                           unsigned nr );
