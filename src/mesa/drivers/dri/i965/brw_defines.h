@@ -1103,6 +1103,11 @@ enum opcode {
     *   and number of SO primitives needed.
     */
    GS_OPCODE_FF_SYNC_SET_PRIMITIVES,
+
+   /**
+    * Terminate the compute shader.
+    */
+   CS_OPCODE_CS_TERMINATE,
 };
 
 enum brw_urb_write_flags {

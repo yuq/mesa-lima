@@ -610,6 +610,8 @@ brw_instruction_name(enum opcode op)
       return "gs_svb_set_dst_index";
    case GS_OPCODE_FF_SYNC_SET_PRIMITIVES:
       return "gs_ff_sync_set_primitives";
+   case CS_OPCODE_CS_TERMINATE:
+      return "cs_terminate";
    }
 
    unreachable("not reached");
