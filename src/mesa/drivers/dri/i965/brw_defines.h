@@ -744,17 +744,21 @@ enum PACKED brw_conditional_mod {
 #define BRW_DEPENDENCY_NOTCHECKED     2
 #define BRW_DEPENDENCY_DISABLE        3
 
-#define BRW_EXECUTE_1     0
-#define BRW_EXECUTE_2     1
-#define BRW_EXECUTE_4     2
-#define BRW_EXECUTE_8     3
-#define BRW_EXECUTE_16    4
-#define BRW_EXECUTE_32    5
+enum PACKED brw_execution_size {
+   BRW_EXECUTE_1  = 0,
+   BRW_EXECUTE_2  = 1,
+   BRW_EXECUTE_4  = 2,
+   BRW_EXECUTE_8  = 3,
+   BRW_EXECUTE_16 = 4,
+   BRW_EXECUTE_32 = 5,
+};
 
-#define BRW_HORIZONTAL_STRIDE_0   0
-#define BRW_HORIZONTAL_STRIDE_1   1
-#define BRW_HORIZONTAL_STRIDE_2   2
-#define BRW_HORIZONTAL_STRIDE_4   3
+enum PACKED brw_horizontal_stride {
+   BRW_HORIZONTAL_STRIDE_0 = 0,
+   BRW_HORIZONTAL_STRIDE_1 = 1,
+   BRW_HORIZONTAL_STRIDE_2 = 2,
+   BRW_HORIZONTAL_STRIDE_4 = 3,
+};
 
 #define BRW_INSTRUCTION_NORMAL    0
 #define BRW_INSTRUCTION_SATURATE  1
@@ -1248,23 +1252,24 @@ enum PACKED brw_predicate {
 #define BRW_THREAD_ATOMIC     1
 #define BRW_THREAD_SWITCH     2
 
-#define BRW_VERTICAL_STRIDE_0                 0
-#define BRW_VERTICAL_STRIDE_1                 1
-#define BRW_VERTICAL_STRIDE_2                 2
-#define BRW_VERTICAL_STRIDE_4                 3
-#define BRW_VERTICAL_STRIDE_8                 4
-#define BRW_VERTICAL_STRIDE_16                5
-#define BRW_VERTICAL_STRIDE_32                6
-#define BRW_VERTICAL_STRIDE_64                7
-#define BRW_VERTICAL_STRIDE_128               8
-#define BRW_VERTICAL_STRIDE_256               9
-#define BRW_VERTICAL_STRIDE_ONE_DIMENSIONAL   0xF
+enum PACKED brw_vertical_stride {
+   BRW_VERTICAL_STRIDE_0               = 0,
+   BRW_VERTICAL_STRIDE_1               = 1,
+   BRW_VERTICAL_STRIDE_2               = 2,
+   BRW_VERTICAL_STRIDE_4               = 3,
+   BRW_VERTICAL_STRIDE_8               = 4,
+   BRW_VERTICAL_STRIDE_16              = 5,
+   BRW_VERTICAL_STRIDE_32              = 6,
+   BRW_VERTICAL_STRIDE_ONE_DIMENSIONAL = 0xF,
+};
 
-#define BRW_WIDTH_1       0
-#define BRW_WIDTH_2       1
-#define BRW_WIDTH_4       2
-#define BRW_WIDTH_8       3
-#define BRW_WIDTH_16      4
+enum PACKED brw_width {
+   BRW_WIDTH_1  = 0,
+   BRW_WIDTH_2  = 1,
+   BRW_WIDTH_4  = 2,
+   BRW_WIDTH_8  = 3,
+   BRW_WIDTH_16 = 4,
+};
 
 #define BRW_STATELESS_BUFFER_BOUNDARY_1K      0
 #define BRW_STATELESS_BUFFER_BOUNDARY_2K      1
