@@ -273,6 +273,8 @@ public:
    void emit_urb_writes();
    void emit_cs_terminate();
 
+   void emit_barrier();
+
    void emit_shader_time_begin();
    void emit_shader_time_end();
    void SHADER_TIME_ADD(const brw::fs_builder &bld,
@@ -418,6 +420,7 @@ private:
    void generate_fb_write(fs_inst *inst, struct brw_reg payload);
    void generate_urb_write(fs_inst *inst, struct brw_reg payload);
    void generate_cs_terminate(fs_inst *inst, struct brw_reg payload);
+   void generate_barrier(fs_inst *inst, struct brw_reg src);
    void generate_blorp_fb_write(fs_inst *inst);
    void generate_linterp(fs_inst *inst, struct brw_reg dst,
 			 struct brw_reg *src);

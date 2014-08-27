@@ -631,6 +631,8 @@ brw_instruction_name(enum opcode op)
       return "gs_ff_sync_set_primitives";
    case CS_OPCODE_CS_TERMINATE:
       return "cs_terminate";
+   case SHADER_OPCODE_BARRIER:
+      return "barrier";
    }
 
    unreachable("not reached");
@@ -1058,6 +1060,7 @@ backend_instruction::has_side_effects() const
    case SHADER_OPCODE_MEMORY_FENCE:
    case SHADER_OPCODE_URB_WRITE_SIMD8:
    case FS_OPCODE_FB_WRITE:
+   case SHADER_OPCODE_BARRIER:
       return true;
    default:
       return false;

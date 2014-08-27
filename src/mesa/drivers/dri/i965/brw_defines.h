@@ -1135,6 +1135,11 @@ enum opcode {
     * Terminate the compute shader.
     */
    CS_OPCODE_CS_TERMINATE,
+
+   /**
+    * GLSL barrier()
+    */
+   SHADER_OPCODE_BARRIER,
 };
 
 enum brw_urb_write_flags {

@@ -401,6 +401,13 @@ fs_generator::generate_cs_terminate(fs_inst *inst, struct brw_reg payload)
 }
 
 void
+fs_generator::generate_barrier(fs_inst *inst, struct brw_reg src)
+{
+   brw_barrier(p, src);
+   brw_WAIT(p);
+}
+
+void
 fs_generator::generate_blorp_fb_write(fs_inst *inst)
 {
    brw_fb_WRITE(p,
@@ -2116,6 +2123,10 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
       case CS_OPCODE_CS_TERMINATE:
          generate_cs_terminate(inst, src[0]);
          break;
+
+      case SHADER_OPCODE_BARRIER:
+	 generate_barrier(inst, src[0]);
+	 break;
 
       default:
          unreachable("Unsupported opcode");
