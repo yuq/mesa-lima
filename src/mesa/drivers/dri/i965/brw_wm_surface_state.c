@@ -997,6 +997,31 @@ const struct brw_tracked_state brw_wm_abo_surfaces = {
    .emit = brw_upload_wm_abo_surfaces,
 };
 
+static void
+brw_upload_cs_abo_surfaces(struct brw_context *brw)
+{
+   struct gl_context *ctx = &brw->ctx;
+   /* _NEW_PROGRAM */
+   struct gl_shader_program *prog =
+      ctx->_Shader->CurrentProgram[MESA_SHADER_COMPUTE];
+
+   if (prog) {
+      /* BRW_NEW_CS_PROG_DATA */
+      brw_upload_abo_surfaces(brw, prog, &brw->cs.base,
+                              &brw->cs.prog_data->base);
+   }
+}
+
+const struct brw_tracked_state brw_cs_abo_surfaces = {
+   .dirty = {
+      .mesa = _NEW_PROGRAM,
+      .brw = BRW_NEW_ATOMIC_BUFFER |
+             BRW_NEW_BATCH |
+             BRW_NEW_CS_PROG_DATA,
+   },
+   .emit = brw_upload_cs_abo_surfaces,
+};
+
 void
 gen4_init_vtable_surface_functions(struct brw_context *brw)
 {
