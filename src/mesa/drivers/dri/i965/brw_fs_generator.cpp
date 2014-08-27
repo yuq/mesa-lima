@@ -370,6 +370,37 @@ fs_generator::generate_urb_write(fs_inst *inst, struct brw_reg payload)
 }
 
 void
+fs_generator::generate_cs_terminate(fs_inst *inst, struct brw_reg payload)
+{
+   struct brw_inst *insn;
+
+   insn = brw_next_insn(p, BRW_OPCODE_SEND);
+
+   brw_set_dest(p, insn, brw_null_reg());
+   brw_set_src0(p, insn, payload);
+   brw_set_src1(p, insn, brw_imm_d(0));
+
+   /* Terminate a compute shader by sending a message to the thread spawner.
+    */
+   brw_inst_set_sfid(devinfo, insn, BRW_SFID_THREAD_SPAWNER);
+   brw_inst_set_mlen(devinfo, insn, 1);
+   brw_inst_set_rlen(devinfo, insn, 0);
+   brw_inst_set_eot(devinfo, insn, inst->eot);
+   brw_inst_set_header_present(devinfo, insn, false);
+
+   brw_inst_set_ts_opcode(devinfo, insn, 0); /* Dereference resource */
+   brw_inst_set_ts_request_type(devinfo, insn, 0); /* Root thread */
+
+   /* Note that even though the thread has a URB resource associated with it,
+    * we set the "do not dereference URB" bit, because the URB resource is
+    * managed by the fixed-function unit, so it will free it automatically.
+    */
+   brw_inst_set_ts_resource_select(devinfo, insn, 1); /* Do not dereference URB */
+
+   brw_inst_set_mask_control(devinfo, insn, BRW_MASK_DISABLE);
+}
+
+void
 fs_generator::generate_blorp_fb_write(fs_inst *inst)
 {
    brw_fb_WRITE(p,
@@ -2072,6 +2103,10 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
       case FS_OPCODE_INTERPOLATE_AT_PER_SLOT_OFFSET:
          generate_pixel_interpolator_query(inst, dst, src[0], src[1],
                                            GEN7_PIXEL_INTERPOLATOR_LOC_PER_SLOT_OFFSET);
+         break;
+
+      case CS_OPCODE_CS_TERMINATE:
+         generate_cs_terminate(inst, src[0]);
          break;
 
       default:
