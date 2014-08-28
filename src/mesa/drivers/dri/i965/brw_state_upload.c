@@ -40,6 +40,7 @@
 #include "brw_ff_gs.h"
 #include "brw_gs.h"
 #include "brw_wm.h"
+#include "brw_cs.h"
 
 static const struct brw_tracked_state *gen4_atoms[] =
 {
@@ -618,6 +619,8 @@ brw_upload_programs(struct brw_context *brw,
          brw_upload_gs_prog(brw);
 
       brw_upload_wm_prog(brw);
+   } else if (pipeline == BRW_COMPUTE_PIPELINE) {
+      brw_upload_cs_prog(brw);
    }
 }
 

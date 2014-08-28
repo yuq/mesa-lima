@@ -148,6 +148,7 @@ struct brw_vs_prog_key;
 struct brw_vue_prog_key;
 struct brw_wm_prog_key;
 struct brw_wm_prog_data;
+struct brw_cs_prog_key;
 struct brw_cs_prog_data;
 
 enum brw_pipeline {
