@@ -282,3 +282,89 @@ brw_cs_precompile(struct gl_context *ctx,
 
    return success;
 }
+
+
+static void
+brw_upload_cs_state(struct brw_context *brw)
+{
+   if (!brw->cs.prog_data)
+      return;
+
+   uint32_t offset;
+   uint32_t *desc = (uint32_t*) brw_state_batch(brw, AUB_TRACE_SURFACE_STATE,
+                                                8 * 4, 64, &offset);
+   struct brw_stage_state *stage_state = &brw->cs.base;
+   struct brw_cs_prog_data *cs_prog_data = brw->cs.prog_data;
+   struct brw_stage_prog_data *prog_data = &cs_prog_data->base;
+
+   uint32_t *bind = (uint32_t*) brw_state_batch(brw, AUB_TRACE_BINDING_TABLE,
+                                            prog_data->binding_table.size_bytes,
+                                            32, &stage_state->bind_bo_offset);
+
+   uint32_t dwords = brw->gen < 8 ? 8 : 9;
+   BEGIN_BATCH(dwords);
+   OUT_BATCH(MEDIA_VFE_STATE << 16 | (dwords - 2));
+
+   if (prog_data->total_scratch) {
+      if (brw->gen >= 8)
+         OUT_RELOC64(stage_state->scratch_bo,
+                     I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER,
+                     ffs(prog_data->total_scratch) - 11);
+      else
+         OUT_RELOC(stage_state->scratch_bo,
+                   I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER,
+                   ffs(prog_data->total_scratch) - 11);
+   } else {
+      OUT_BATCH(0);
+      if (brw->gen >= 8)
+         OUT_BATCH(0);
+   }
+
+   const uint32_t vfe_num_urb_entries = brw->gen >= 8 ? 2 : 0;
+   const uint32_t vfe_gpgpu_mode =
+      brw->gen == 7 ? SET_FIELD(1, GEN7_MEDIA_VFE_STATE_GPGPU_MODE) : 0;
+   OUT_BATCH(SET_FIELD(brw->max_cs_threads - 1, MEDIA_VFE_STATE_MAX_THREADS) |
+             SET_FIELD(vfe_num_urb_entries, MEDIA_VFE_STATE_URB_ENTRIES) |
+             SET_FIELD(1, MEDIA_VFE_STATE_RESET_GTW_TIMER) |
+             SET_FIELD(1, MEDIA_VFE_STATE_BYPASS_GTW) |
+             vfe_gpgpu_mode);
+
+   OUT_BATCH(0);
+   const uint32_t vfe_urb_allocation = brw->gen >= 8 ? 2 : 0;
+   OUT_BATCH(SET_FIELD(vfe_urb_allocation, MEDIA_VFE_STATE_URB_ALLOC));
+   OUT_BATCH(0);
+   OUT_BATCH(0);
+   OUT_BATCH(0);
+   ADVANCE_BATCH();
+
+   /* BRW_NEW_SURFACES and BRW_NEW_*_CONSTBUF */
+   memcpy(bind, stage_state->surf_offset,
+          prog_data->binding_table.size_bytes);
+
+   memset(desc, 0, 8 * 4);
+
+   int dw = 0;
+   desc[dw++] = brw->cs.base.prog_offset;
+   if (brw->gen >= 8)
+      desc[dw++] = 0; /* Kernel Start Pointer High */
+   desc[dw++] = 0;
+   desc[dw++] = 0;
+   desc[dw++] = stage_state->bind_bo_offset;
+
+   BEGIN_BATCH(4);
+   OUT_BATCH(MEDIA_INTERFACE_DESCRIPTOR_LOAD << 16 | (4 - 2));
+   OUT_BATCH(0);
+   OUT_BATCH(8 * 4);
+   OUT_BATCH(offset);
+   ADVANCE_BATCH();
+}
+
+
+extern "C"
+const struct brw_tracked_state brw_cs_state = {
+   .dirty = {
+      .mesa  = 0,
+      .brw   = BRW_NEW_CS_PROG_DATA,
+   },
+   .emit = brw_upload_cs_state
+};

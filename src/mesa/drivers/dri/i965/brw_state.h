@@ -93,6 +93,7 @@ extern const struct brw_tracked_state brw_drawing_rect;
 extern const struct brw_tracked_state brw_indices;
 extern const struct brw_tracked_state brw_vertices;
 extern const struct brw_tracked_state brw_index_buffer;
+extern const struct brw_tracked_state brw_cs_state;
 extern const struct brw_tracked_state gen6_binding_table_pointers;
 extern const struct brw_tracked_state gen6_blend_state;
 extern const struct brw_tracked_state gen6_cc_state_pointers;
