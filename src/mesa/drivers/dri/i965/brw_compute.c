@@ -74,6 +74,11 @@ brw_emit_gpgpu_walker(struct brw_context *brw, const GLuint *num_groups)
    OUT_BATCH(right_mask);               /* Right Execution Mask */
    OUT_BATCH(0xffffffff);               /* Bottom Execution Mask */
    ADVANCE_BATCH();
+
+   BEGIN_BATCH(2);
+   OUT_BATCH(MEDIA_STATE_FLUSH << 16 | (2 - 2));
+   OUT_BATCH(0);
+   ADVANCE_BATCH();
 }
 
 

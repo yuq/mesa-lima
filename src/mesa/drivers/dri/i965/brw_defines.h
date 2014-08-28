@@ -2469,6 +2469,7 @@ enum brw_wm_barycentric_interp_mode {
 # define MEDIA_VFE_STATE_CURBE_ALLOC_MASK       INTEL_MASK(15, 0)
 
 #define MEDIA_INTERFACE_DESCRIPTOR_LOAD         0x7002
+#define MEDIA_STATE_FLUSH                       0x7004
 #define GPGPU_WALKER                            0x7105
 /* GEN8+ DW2 */
 # define GPGPU_WALKER_INDIRECT_LENGTH_SHIFT     0
