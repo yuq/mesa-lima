@@ -31,12 +31,49 @@
 #include "brw_draw.h"
 #include "brw_state.h"
 #include "intel_batchbuffer.h"
+#include "brw_defines.h"
 
 
 static void
 brw_emit_gpgpu_walker(struct brw_context *brw, const GLuint *num_groups)
 {
-   _mesa_problem(&brw->ctx, "TODO: implement brw_emit_gpgpu_walker");
+   const struct brw_cs_prog_data *prog_data = brw->cs.prog_data;
+
+   const unsigned simd_size = prog_data->simd_size;
+   unsigned group_size = prog_data->local_size[0] *
+      prog_data->local_size[1] * prog_data->local_size[2];
+   unsigned thread_width_max =
+      (group_size + simd_size - 1) / simd_size;
+
+   uint32_t right_mask = (1u << simd_size) - 1;
+   const unsigned right_non_aligned = group_size & (simd_size - 1);
+   if (right_non_aligned != 0)
+      right_mask >>= (simd_size - right_non_aligned);
+
+   uint32_t dwords = brw->gen < 8 ? 11 : 15;
+   BEGIN_BATCH(dwords);
+   OUT_BATCH(GPGPU_WALKER << 16 | (dwords - 2));
+   OUT_BATCH(0);
+   if (brw->gen >= 8) {
+      OUT_BATCH(0);                     /* Indirect Data Length */
+      OUT_BATCH(0);                     /* Indirect Data Start Address */
+   }
+   assert(thread_width_max <= brw->max_cs_threads);
+   OUT_BATCH(SET_FIELD(simd_size / 16, GPGPU_WALKER_SIMD_SIZE) |
+             SET_FIELD(thread_width_max - 1, GPGPU_WALKER_THREAD_WIDTH_MAX));
+   OUT_BATCH(0);                        /* Thread Group ID Starting X */
+   if (brw->gen >= 8)
+      OUT_BATCH(0);                     /* MBZ */
+   OUT_BATCH(num_groups[0]);            /* Thread Group ID X Dimension */
+   OUT_BATCH(0);                        /* Thread Group ID Starting Y */
+   if (brw->gen >= 8)
+      OUT_BATCH(0);                     /* MBZ */
+   OUT_BATCH(num_groups[1]);            /* Thread Group ID Y Dimension */
+   OUT_BATCH(0);                        /* Thread Group ID Starting/Resume Z */
+   OUT_BATCH(num_groups[2]);            /* Thread Group ID Z Dimension */
+   OUT_BATCH(right_mask);               /* Right Execution Mask */
+   OUT_BATCH(0xffffffff);               /* Bottom Execution Mask */
+   ADVANCE_BATCH();
 }
 
 
