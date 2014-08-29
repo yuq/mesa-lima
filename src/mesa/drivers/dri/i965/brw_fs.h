@@ -202,6 +202,10 @@ static inline fs_reg
 half(fs_reg reg, unsigned idx)
 {
    assert(idx < 2);
+
+   if (reg.file == UNIFORM)
+      return reg;
+
    assert(idx == 0 || (reg.file != HW_REG && reg.file != IMM));
    assert(reg.width == 16);
    reg.width = 8;
