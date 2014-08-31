@@ -89,6 +89,14 @@ public:
               struct gl_vertex_program *cp,
               unsigned dispatch_width);
 
+   fs_visitor(struct brw_context *brw,
+              void *mem_ctx,
+              const struct brw_cs_prog_key *key,
+              struct brw_cs_prog_data *prog_data,
+              struct gl_shader_program *shader_prog,
+              struct gl_compute_program *cp,
+              unsigned dispatch_width);
+
    ~fs_visitor();
    void init();
 
@@ -189,12 +197,14 @@ public:
 
    bool run_fs();
    bool run_vs();
+   bool run_cs();
    void optimize();
    void allocate_registers();
    void assign_binding_table_offsets();
    void setup_payload_gen4();
    void setup_payload_gen6();
    void setup_vs_payload();
+   void setup_cs_payload();
    void fixup_3src_null_dest();
    void assign_curb_setup();
    void calculate_urb_setup();

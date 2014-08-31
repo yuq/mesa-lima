@@ -1719,9 +1719,15 @@ fs_visitor::assign_curb_setup()
    if (dispatch_width == 8) {
       prog_data->dispatch_grf_start_reg = payload.num_regs;
    } else {
-      assert(stage == MESA_SHADER_FRAGMENT);
-      brw_wm_prog_data *prog_data = (brw_wm_prog_data*) this->prog_data;
-      prog_data->dispatch_grf_start_reg_16 = payload.num_regs;
+      if (stage == MESA_SHADER_FRAGMENT) {
+         brw_wm_prog_data *prog_data = (brw_wm_prog_data*) this->prog_data;
+         prog_data->dispatch_grf_start_reg_16 = payload.num_regs;
+      } else if (stage == MESA_SHADER_COMPUTE) {
+         brw_cs_prog_data *prog_data = (brw_cs_prog_data*) this->prog_data;
+         prog_data->dispatch_grf_start_reg_16 = payload.num_regs;
+      } else {
+         unreachable("Unsupported shader type!");
+      }
    }
 
    prog_data->curb_read_length = ALIGN(stage_prog_data->nr_params, 8) / 8;
@@ -3777,6 +3783,14 @@ fs_visitor::setup_vs_payload()
 }
 
 void
+fs_visitor::setup_cs_payload()
+{
+   assert(brw->gen >= 7);
+
+   payload.num_regs = 1;
+}
+
+void
 fs_visitor::assign_binding_table_offsets()
 {
    assert(stage == MESA_SHADER_FRAGMENT);
@@ -4102,6 +4116,47 @@ fs_visitor::run_fs()
       wm_prog_data->reg_blocks = brw_register_blocks(grf_used);
    else
       wm_prog_data->reg_blocks_16 = brw_register_blocks(grf_used);
+
+   /* If any state parameters were appended, then ParameterValues could have
+    * been realloced, in which case the driver uniform storage set up by
+    * _mesa_associate_uniform_storage() would point to freed memory.  Make
+    * sure that didn't happen.
+    */
+   assert(sanity_param_count == prog->Parameters->NumParameters);
+
+   return !failed;
+}
+
+bool
+fs_visitor::run_cs()
+{
+   assert(stage == MESA_SHADER_COMPUTE);
+   assert(shader);
+
+   sanity_param_count = prog->Parameters->NumParameters;
+
+   assign_common_binding_table_offsets(0);
+
+   setup_cs_payload();
+
+   emit_nir_code();
+
+   if (failed)
+      return false;
+
+   emit_cs_terminate();
+
+   calculate_cfg();
+
+   optimize();
+
+   assign_curb_setup();
+
+   fixup_3src_null_dest();
+   allocate_registers();
+
+   if (failed)
+      return false;
 
    /* If any state parameters were appended, then ParameterValues could have
     * been realloced, in which case the driver uniform storage set up by

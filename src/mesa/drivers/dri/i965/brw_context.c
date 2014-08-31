@@ -594,6 +594,8 @@ brw_initialize_context_constants(struct brw_context *brw)
    if (brw_env_var_as_boolean("INTEL_USE_NIR", true))
       ctx->Const.ShaderCompilerOptions[MESA_SHADER_FRAGMENT].NirOptions = &nir_options;
 
+   ctx->Const.ShaderCompilerOptions[MESA_SHADER_COMPUTE].NirOptions = &nir_options;
+
    /* ARB_viewport_array */
    if (brw->gen >= 7 && ctx->API == API_OPENGL_CORE) {
       ctx->Const.MaxViewports = GEN7_NUM_VIEWPORTS;

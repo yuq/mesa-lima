@@ -39,6 +39,7 @@
 #include "brw_context.h"
 #include "brw_eu.h"
 #include "brw_wm.h"
+#include "brw_cs.h"
 #include "brw_vec4.h"
 #include "brw_fs.h"
 #include "main/uniforms.h"
@@ -4237,6 +4238,25 @@ fs_visitor::fs_visitor(struct brw_context *brw,
    init();
 }
 
+fs_visitor::fs_visitor(struct brw_context *brw,
+                       void *mem_ctx,
+                       const struct brw_cs_prog_key *key,
+                       struct brw_cs_prog_data *prog_data,
+                       struct gl_shader_program *shader_prog,
+                       struct gl_compute_program *cp,
+                       unsigned dispatch_width)
+   : backend_visitor(brw, shader_prog, &cp->Base, &prog_data->base,
+                     MESA_SHADER_COMPUTE),
+     reg_null_f(retype(brw_null_vec(dispatch_width), BRW_REGISTER_TYPE_F)),
+     reg_null_d(retype(brw_null_vec(dispatch_width), BRW_REGISTER_TYPE_D)),
+     reg_null_ud(retype(brw_null_vec(dispatch_width), BRW_REGISTER_TYPE_UD)),
+     key(key), prog_data(&prog_data->base),
+     dispatch_width(dispatch_width)
+{
+   this->mem_ctx = mem_ctx;
+   init();
+}
+
 void
 fs_visitor::init()
 {
@@ -4247,6 +4267,9 @@ fs_visitor::init()
    case MESA_SHADER_VERTEX:
    case MESA_SHADER_GEOMETRY:
       key_tex = &((const brw_vue_prog_key *) key)->tex;
+      break;
+   case MESA_SHADER_COMPUTE:
+      key_tex = &((const brw_cs_prog_key*) key)->tex;
       break;
    default:
       unreachable("unhandled shader stage");
