@@ -640,6 +640,34 @@ shift_result_type(const struct glsl_type *type_a,
 }
 
 /**
+ * Returns the innermost array index expression in an rvalue tree.
+ * This is the largest indexing level -- if an array of blocks, then
+ * it is the block index rather than an indexing expression for an
+ * array-typed member of an array of blocks.
+ */
+static ir_rvalue *
+find_innermost_array_index(ir_rvalue *rv)
+{
+   ir_dereference_array *last = NULL;
+   while (rv) {
+      if (rv->as_dereference_array()) {
+         last = rv->as_dereference_array();
+         rv = last->array;
+      } else if (rv->as_dereference_record())
+         rv = rv->as_dereference_record()->record;
+      else if (rv->as_swizzle())
+         rv = rv->as_swizzle()->val;
+      else
+         rv = NULL;
+   }
+
+   if (last)
+      return last->array_index;
+
+   return NULL;
+}
+
+/**
  * Validates that a value can be assigned to a location with a specified type
  *
  * Validates that \c rhs can be assigned to some location.  If the types are
@@ -655,9 +683,9 @@ shift_result_type(const struct glsl_type *type_a,
  * In addition to being used for assignments, this function is used to
  * type-check return values.
  */
-ir_rvalue *
+static ir_rvalue *
 validate_assignment(struct _mesa_glsl_parse_state *state,
-                    YYLTYPE loc, const glsl_type *lhs_type,
+                    YYLTYPE loc, ir_rvalue *lhs,
                     ir_rvalue *rhs, bool is_initializer)
 {
    /* If there is already some error in the RHS, just return it.  Anything
@@ -666,9 +694,28 @@ validate_assignment(struct _mesa_glsl_parse_state *state,
    if (rhs->type->is_error())
       return rhs;
 
+   /* In the Tessellation Control Shader:
+    * If a per-vertex output variable is used as an l-value, it is an error
+    * if the expression indicating the vertex number is not the identifier
+    * `gl_InvocationID`.
+    */
+   if (state->stage == MESA_SHADER_TESS_CTRL) {
+      ir_variable *var = lhs->variable_referenced();
+      if (var->data.mode == ir_var_shader_out && !var->data.patch) {
+         ir_rvalue *index = find_innermost_array_index(lhs);
+         ir_variable *index_var = index ? index->variable_referenced() : NULL;
+         if (!index_var || strcmp(index_var->name, "gl_InvocationID") != 0) {
+            _mesa_glsl_error(&loc, state,
+                             "Tessellation control shader outputs can only "
+                             "be indexed by gl_InvocationID");
+            return NULL;
+         }
+      }
+   }
+
    /* If the types are identical, the assignment can trivially proceed.
     */
-   if (rhs->type == lhs_type)
+   if (rhs->type == lhs->type)
       return rhs;
 
    /* If the array element types are the same and the LHS is unsized,
@@ -678,8 +725,8 @@ validate_assignment(struct _mesa_glsl_parse_state *state,
     * Note: Whole-array assignments are not permitted in GLSL 1.10, but this
     * is handled by ir_dereference::is_lvalue.
     */
-   if (lhs_type->is_unsized_array() && rhs->type->is_array()
-       && (lhs_type->fields.array == rhs->type->fields.array)) {
+   if (lhs->type->is_unsized_array() && rhs->type->is_array()
+       && (lhs->type->fields.array == rhs->type->fields.array)) {
       if (is_initializer) {
          return rhs;
       } else {
@@ -690,8 +737,8 @@ validate_assignment(struct _mesa_glsl_parse_state *state,
    }
 
    /* Check for implicit conversion in GLSL 1.20 */
-   if (apply_implicit_conversion(lhs_type, rhs, state)) {
-      if (rhs->type == lhs_type)
+   if (apply_implicit_conversion(lhs->type, rhs, state)) {
+      if (rhs->type == lhs->type)
 	 return rhs;
    }
 
@@ -699,7 +746,7 @@ validate_assignment(struct _mesa_glsl_parse_state *state,
                     "%s of type %s cannot be assigned to "
                     "variable of type %s",
                     is_initializer ? "initializer" : "value",
-                    rhs->type->name, lhs_type->name);
+                    rhs->type->name, lhs->type->name);
 
    return NULL;
 }
@@ -734,7 +781,7 @@ do_assignment(exec_list *instructions, struct _mesa_glsl_parse_state *state,
 
       if (unlikely(lhs_expr->operation == ir_binop_vector_extract)) {
          ir_rvalue *new_rhs =
-            validate_assignment(state, lhs_loc, lhs->type,
+            validate_assignment(state, lhs_loc, lhs,
                                 rhs, is_initializer);
 
          if (new_rhs == NULL) {
@@ -796,7 +843,7 @@ do_assignment(exec_list *instructions, struct _mesa_glsl_parse_state *state,
    }
 
    ir_rvalue *new_rhs =
-      validate_assignment(state, lhs_loc, lhs->type, rhs, is_initializer);
+      validate_assignment(state, lhs_loc, lhs, rhs, is_initializer);
    if (new_rhs != NULL) {
       rhs = new_rhs;
 
@@ -3058,7 +3105,7 @@ process_initializer(ir_variable *var, ast_declaration *decl,
    if (type->qualifier.flags.q.constant
        || type->qualifier.flags.q.uniform) {
       ir_rvalue *new_rhs = validate_assignment(state, initializer_loc,
-                                               var->type, rhs, true);
+                                               lhs, rhs, true);
       if (new_rhs != NULL) {
          rhs = new_rhs;
 
