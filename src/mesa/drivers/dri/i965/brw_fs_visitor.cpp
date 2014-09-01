@@ -1811,24 +1811,24 @@ fs_reg
 fs_visitor::emit_mcs_fetch(ir_texture *ir, fs_reg coordinate, fs_reg sampler)
 {
    int reg_width = dispatch_width / 8;
-   int length = ir->coordinate->type->vector_elements;
-   fs_reg payload = fs_reg(GRF, virtual_grf_alloc(length * reg_width),
+   int components = ir->coordinate->type->vector_elements;
+   fs_reg payload = fs_reg(GRF, virtual_grf_alloc(components * reg_width),
                            BRW_REGISTER_TYPE_F);
    fs_reg dest = fs_reg(this, glsl_type::uvec4_type);
-   fs_reg *sources = ralloc_array(mem_ctx, fs_reg, length);
+   fs_reg *sources = ralloc_array(mem_ctx, fs_reg, components);
 
    /* parameters are: u, v, r; missing parameters are treated as zero */
-   for (int i = 0; i < length; i++) {
+   for (int i = 0; i < components; i++) {
       sources[i] = fs_reg(this, glsl_type::float_type);
       emit(MOV(retype(sources[i], BRW_REGISTER_TYPE_D), coordinate));
       coordinate = offset(coordinate, 1);
    }
 
-   emit(LOAD_PAYLOAD(payload, sources, length));
+   emit(LOAD_PAYLOAD(payload, sources, components));
 
    fs_inst *inst = emit(SHADER_OPCODE_TXF_MCS, dest, payload, sampler);
    inst->base_mrf = -1;
-   inst->mlen = length * reg_width;
+   inst->mlen = components * reg_width;
    inst->header_present = false;
    inst->regs_written = 4 * reg_width; /* we only care about one reg of
                                         * response, but the sampler always
