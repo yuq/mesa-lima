@@ -3276,6 +3276,33 @@ handle_tess_ctrl_shader_output_decl(struct _mesa_glsl_parse_state *state,
 }
 
 /**
+ * Do additional processing necessary for tessellation control/evaluation shader
+ * input declarations. This covers both interface block arrays and bare input
+ * variables.
+ */
+static void
+handle_tess_shader_input_decl(struct _mesa_glsl_parse_state *state,
+                              YYLTYPE loc, ir_variable *var)
+{
+   if (!var->type->is_array() && !var->data.patch) {
+      _mesa_glsl_error(&loc, state,
+                       "per-vertex tessellation shader inputs must be arrays");
+      /* Avoid cascading failures. */
+      return;
+   }
+
+   if (var->data.patch)
+      return;
+
+   /* Unsized arrays are implicitly sized to gl_MaxPatchVertices. */
+   if (var->type->is_unsized_array()) {
+      var->type = glsl_type::get_array_instance(var->type->fields.array,
+            state->Const.MaxPatchVertices);
+   }
+}
+
+
+/**
  * Do additional processing necessary for geometry shader input declarations
  * (this covers both interface blocks arrays and bare input variables).
  */
@@ -3797,6 +3824,9 @@ ast_declarator_list::hir(exec_list *instructions,
                   }
                }
             }
+         } else if (state->stage == MESA_SHADER_TESS_CTRL ||
+                    state->stage == MESA_SHADER_TESS_EVAL) {
+            handle_tess_shader_input_decl(state, loc, var);
          }
       } else if (var->data.mode == ir_var_shader_out) {
          const glsl_type *check_type = var->type->without_array();
@@ -5959,7 +5989,17 @@ ast_interface_block::hir(exec_list *instructions,
    if (state->stage == MESA_SHADER_GEOMETRY && this->array_specifier == NULL &&
        var_mode == ir_var_shader_in) {
       _mesa_glsl_error(&loc, state, "geometry shader inputs must be arrays");
+   } else if ((state->stage == MESA_SHADER_TESS_CTRL ||
+               state->stage == MESA_SHADER_TESS_EVAL) &&
+              this->array_specifier == NULL &&
+              var_mode == ir_var_shader_in) {
+      _mesa_glsl_error(&loc, state, "per-vertex tessellation shader inputs must be arrays");
+   } else if (state->stage == MESA_SHADER_TESS_CTRL &&
+              this->array_specifier == NULL &&
+              var_mode == ir_var_shader_out) {
+      _mesa_glsl_error(&loc, state, "tessellation control shader outputs must be arrays");
    }
+
 
    /* Page 39 (page 45 of the PDF) of section 4.3.7 in the GLSL ES 3.00 spec
     * says:
@@ -6072,6 +6112,11 @@ ast_interface_block::hir(exec_list *instructions,
 
       if (state->stage == MESA_SHADER_GEOMETRY && var_mode == ir_var_shader_in)
          handle_geometry_shader_input_decl(state, loc, var);
+      else if ((state->stage == MESA_SHADER_TESS_CTRL ||
+           state->stage == MESA_SHADER_TESS_EVAL) && var_mode == ir_var_shader_in)
+         handle_tess_shader_input_decl(state, loc, var);
+      else if (state->stage == MESA_SHADER_TESS_CTRL && var_mode == ir_var_shader_out)
+         handle_tess_ctrl_shader_output_decl(state, loc, var);
 
       if (ir_variable *earlier =
           state->symbols->get_variable(this->instance_name)) {
@@ -6254,8 +6299,8 @@ ast_tcs_output_layout::hir(exec_list *instructions,
 	 continue;
 
       /* Note: Not all tessellation control shader output are arrays. */
-      if (!var->type->is_unsized_array())
-	 continue;
+      if (!var->type->is_unsized_array() || var->data.patch)
+         continue;
 
       if (var->data.max_array_access >= num_vertices) {
 	 _mesa_glsl_error(&loc, state,
