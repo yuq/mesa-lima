@@ -1492,8 +1492,7 @@ fs_visitor::emit_texture_gen7(ir_texture *ir, fs_reg dst, fs_reg coordinate,
    }
    int length = 0;
 
-   if (ir->op == ir_tg4 || (ir->offset && ir->op != ir_txf) ||
-       is_high_sampler(brw, sampler)) {
+   if (ir->op == ir_tg4 || ir->offset || is_high_sampler(brw, sampler)) {
       /* For general texture offsets (no txf workaround), we need a header to
        * put them in.  Note that for SIMD16 we're making space for two actual
        * hardware registers here, so the emit will have to fix up for this.
@@ -1989,7 +1988,7 @@ fs_visitor::visit(ir_texture *ir)
                                lod, lod2, sampler);
    }
 
-   if (ir->offset != NULL && ir->op != ir_txf)
+   if (ir->offset != NULL)
       inst->texture_offset = brw_texture_offset(ctx, ir->offset->as_constant());
 
    if (ir->op == ir_tg4)

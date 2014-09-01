@@ -2552,7 +2552,7 @@ vec4_visitor::visit(ir_texture *ir)
 
    vec4_instruction *inst = new(mem_ctx) vec4_instruction(this, opcode);
 
-   if (ir->offset != NULL && ir->op != ir_txf)
+   if (ir->offset != NULL)
       inst->texture_offset = brw_texture_offset(ctx, ir->offset->as_constant());
 
    /* Stuff the channel select bits in the top of the texture offset */
