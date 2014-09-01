@@ -404,6 +404,7 @@ fs_visitor::emit_fragment_program_code()
          fs_reg coordinate = src[0];
          fs_reg shadow_c;
          fs_reg sample_index;
+         fs_reg texel_offset; /* No offsets; leave as BAD_FILE. */
 
          switch (fpi->Opcode) {
          case OPCODE_TEX:
@@ -487,7 +488,7 @@ fs_visitor::emit_fragment_program_code()
 
          fs_inst *inst;
          if (brw->gen >= 7) {
-            inst = emit_texture_gen7(ir, dst, coordinate, shadow_c, lod, dpdy, sample_index, fs_reg(0u), fs_reg(fpi->TexSrcUnit));
+            inst = emit_texture_gen7(ir, dst, coordinate, shadow_c, lod, dpdy, sample_index, fs_reg(0u), fs_reg(fpi->TexSrcUnit), texel_offset);
          } else if (brw->gen >= 5) {
             inst = emit_texture_gen5(ir, dst, coordinate, shadow_c, lod, dpdy, sample_index, fpi->TexSrcUnit);
          } else {

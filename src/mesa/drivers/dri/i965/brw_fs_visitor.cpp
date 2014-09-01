@@ -1481,7 +1481,8 @@ is_high_sampler(struct brw_context *brw, fs_reg sampler)
 fs_inst *
 fs_visitor::emit_texture_gen7(ir_texture *ir, fs_reg dst, fs_reg coordinate,
                               fs_reg shadow_c, fs_reg lod, fs_reg lod2,
-                              fs_reg sample_index, fs_reg mcs, fs_reg sampler)
+                              fs_reg sample_index, fs_reg mcs, fs_reg sampler,
+                              fs_reg offset_value)
 {
    int reg_width = dispatch_width / 8;
    bool header_present = false;
@@ -1492,7 +1493,8 @@ fs_visitor::emit_texture_gen7(ir_texture *ir, fs_reg dst, fs_reg coordinate,
    }
    int length = 0;
 
-   if (ir->op == ir_tg4 || ir->offset || is_high_sampler(brw, sampler)) {
+   if (ir->op == ir_tg4 || offset_value.file != BAD_FILE ||
+       is_high_sampler(brw, sampler)) {
       /* For general texture offsets (no txf workaround), we need a header to
        * put them in.  Note that for SIMD16 we're making space for two actual
        * hardware registers here, so the emit will have to fix up for this.
@@ -1513,7 +1515,8 @@ fs_visitor::emit_texture_gen7(ir_texture *ir, fs_reg dst, fs_reg coordinate,
       length++;
    }
 
-   bool has_nonconstant_offset = ir->offset && !ir->offset->as_constant();
+   bool has_nonconstant_offset =
+      offset_value.file != BAD_FILE && offset_value.file != IMM;
    bool coordinate_done = false;
 
    /* Set up the LOD info */
@@ -1607,9 +1610,6 @@ fs_visitor::emit_texture_gen7(ir_texture *ir, fs_reg dst, fs_reg coordinate,
             no16("Gen7 does not support gather4_po_c in SIMD16 mode.");
 
          /* More crazy intermixing */
-         ir->offset->accept(this);
-         fs_reg offset_value = this->result;
-
          for (int i = 0; i < 2; i++) { /* u, v */
             emit(MOV(sources[length], coordinate));
             coordinate = offset(coordinate, 1);
@@ -1935,6 +1935,21 @@ fs_visitor::visit(ir_texture *ir)
       shadow_comparitor = this->result;
    }
 
+   fs_reg offset_value;
+   if (ir->offset) {
+      ir_constant *const_offset = ir->offset->as_constant();
+      if (const_offset) {
+         /* Store the header bitfield in an IMM register.  This allows us to
+          * use offset_value.file to distinguish between no offset, a constant
+          * offset, and a non-constant offset.
+          */
+         offset_value = fs_reg(brw_texture_offset(ctx, const_offset));
+      } else {
+         ir->offset->accept(this);
+         offset_value = this->result;
+      }
+   }
+
    fs_reg lod, lod2, sample_index, mcs;
    switch (ir->op) {
    case ir_tex:
@@ -1979,7 +1994,8 @@ fs_visitor::visit(ir_texture *ir)
 
    if (brw->gen >= 7) {
       inst = emit_texture_gen7(ir, dst, coordinate, shadow_comparitor,
-                               lod, lod2, sample_index, mcs, sampler_reg);
+                               lod, lod2, sample_index, mcs, sampler_reg,
+                               offset_value);
    } else if (brw->gen >= 5) {
       inst = emit_texture_gen5(ir, dst, coordinate, shadow_comparitor,
                                lod, lod2, sample_index, sampler);
@@ -1988,8 +2004,8 @@ fs_visitor::visit(ir_texture *ir)
                                lod, lod2, sampler);
    }
 
-   if (ir->offset != NULL)
-      inst->texture_offset = brw_texture_offset(ctx, ir->offset->as_constant());
+   if (offset_value.file == IMM)
+      inst->texture_offset = offset_value.fixed_hw_reg.dw1.ud;
 
    if (ir->op == ir_tg4)
       inst->texture_offset |= gather_channel(ir, sampler) << 16; // M0.2:16-17
