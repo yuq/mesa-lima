@@ -690,5 +690,8 @@ struct pipe_screen *radeonsi_screen_create(struct radeon_winsys *ws)
 	/* Create the auxiliary context. This must be done last. */
 	sscreen->b.aux_context = sscreen->b.b.context_create(&sscreen->b.b, NULL, 0);
 
+	if (sscreen->b.debug_flags & DBG_TEST_DMA)
+		r600_test_dma(&sscreen->b);
+
 	return &sscreen->b.b;
 }

@@ -77,6 +77,8 @@
 #define DBG_NO_TGSI		(1 << 13)
 #define DBG_NO_ASM		(1 << 14)
 #define DBG_PREOPT_IR		(1 << 15)
+/* gaps */
+#define DBG_TEST_DMA		(1 << 20)
 /* Bits 21-31 are reserved for the r600g driver. */
 /* features */
 #define DBG_NO_ASYNC_DMA	(1llu << 32)
@@ -484,6 +486,7 @@ struct r600_common_context {
 	unsigned			max_db; /* for OQ */
 	/* Misc stats. */
 	unsigned			num_draw_calls;
+	unsigned			num_dma_calls;
 
 	/* Render condition. */
 	struct r600_atom		render_cond_atom;
@@ -621,6 +624,9 @@ void r600_emit_streamout_end(struct r600_common_context *rctx);
 void r600_update_prims_generated_query_state(struct r600_common_context *rctx,
 					     unsigned type, int diff);
 void r600_streamout_init(struct r600_common_context *rctx);
+
+/* r600_test_dma.c */
+void r600_test_dma(struct r600_common_screen *rscreen);
 
 /* r600_texture.c */
 bool r600_prepare_for_dma_blit(struct r600_common_context *rctx,

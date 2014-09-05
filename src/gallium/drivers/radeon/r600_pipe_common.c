@@ -384,6 +384,8 @@ static const struct debug_named_value common_debug_options[] = {
 	{ "noasm", DBG_NO_ASM, "Don't print disassembled shaders"},
 	{ "preoptir", DBG_PREOPT_IR, "Print the LLVM IR before initial optimizations" },
 
+	{ "testdma", DBG_TEST_DMA, "Invoke SDMA tests and exit." },
+
 	/* features */
 	{ "nodma", DBG_NO_ASYNC_DMA, "Disable asynchronous DMA" },
 	{ "nohyperz", DBG_NO_HYPERZ, "Disable Hyper-Z" },
