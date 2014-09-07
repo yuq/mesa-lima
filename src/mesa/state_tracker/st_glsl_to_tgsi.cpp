@@ -3478,7 +3478,10 @@ glsl_to_tgsi_visitor::visit(ir_end_primitive *ir)
 void
 glsl_to_tgsi_visitor::visit(ir_barrier *ir)
 {
-   unreachable("Not implemented!");
+   assert(this->prog->Target == GL_TESS_CONTROL_PROGRAM_NV ||
+          this->prog->Target == GL_COMPUTE_PROGRAM_NV);
+
+   emit_asm(ir, TGSI_OPCODE_BARRIER);
 }
 
 glsl_to_tgsi_visitor::glsl_to_tgsi_visitor()
