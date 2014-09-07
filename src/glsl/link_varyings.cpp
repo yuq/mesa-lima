@@ -1356,9 +1356,6 @@ canonicalize_shader_io(exec_list *ir, enum ir_variable_mode io_mode)
  *        each of these objects that matches one of the outputs of the
  *        producer.
  *
- * \param gs_input_vertices: if \c consumer is a geometry shader, this is the
- *        number of input vertices it accepts.  Otherwise zero.
- *
  * When num_tfeedback_decls is nonzero, it is permissible for the consumer to
  * be NULL.  In this case, varying locations are assigned solely based on the
  * requirements of transform feedback.
@@ -1369,8 +1366,7 @@ assign_varying_locations(struct gl_context *ctx,
 			 struct gl_shader_program *prog,
 			 gl_shader *producer, gl_shader *consumer,
                          unsigned num_tfeedback_decls,
-                         tfeedback_decl *tfeedback_decls,
-                         unsigned gs_input_vertices)
+                         tfeedback_decl *tfeedback_decls)
 {
    varying_matches matches(ctx->Const.DisableVaryingPacking,
                            consumer && consumer->Stage == MESA_SHADER_FRAGMENT);
@@ -1383,6 +1379,10 @@ assign_varying_locations(struct gl_context *ctx,
    ir_variable *consumer_inputs_with_locations[VARYING_SLOT_MAX] = {
       NULL,
    };
+
+   unsigned consumer_vertices = 0;
+   if (consumer && consumer->Stage == MESA_SHADER_GEOMETRY)
+      consumer_vertices = prog->Geom.VerticesIn;
 
    /* Operate in a total of four passes.
     *
@@ -1523,7 +1523,7 @@ assign_varying_locations(struct gl_context *ctx,
       }
       if (consumer) {
          lower_packed_varyings(mem_ctx, slots_used, ir_var_shader_in,
-                               gs_input_vertices, consumer);
+                               consumer_vertices, consumer);
       }
    }
 
