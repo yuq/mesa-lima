@@ -65,6 +65,7 @@ public:
    virtual void visit(ir_dereference_variable *);
    virtual void visit(ir_dereference_record *);
    virtual void visit(ir_dereference_array *);
+   virtual void visit(ir_barrier *);
 
    void create_function(ir_function *ir);
 
@@ -1888,4 +1889,10 @@ nir_visitor::visit(ir_dereference_array *ir)
    this->deref_tail->child = &deref->deref;
    ralloc_steal(this->deref_tail, deref);
    this->deref_tail = &deref->deref;
+}
+
+void
+nir_visitor::visit(ir_barrier *ir)
+{
+   unreachable("Not implemented!");
 }

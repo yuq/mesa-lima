@@ -262,6 +262,7 @@ public:
    virtual void visit(ir_if *);
    virtual void visit(ir_emit_vertex *);
    virtual void visit(ir_end_primitive *);
+   virtual void visit(ir_barrier *);
    /*@}*/
 
    src_reg result;
@@ -2115,6 +2116,12 @@ void
 ir_to_mesa_visitor::visit(ir_end_primitive *)
 {
    assert(!"Geometry shaders not supported.");
+}
+
+void
+ir_to_mesa_visitor::visit(ir_barrier *)
+{
+   unreachable("GLSL barrier() not supported.");
 }
 
 ir_to_mesa_visitor::ir_to_mesa_visitor()
