@@ -296,17 +296,40 @@ vc4_generate_code(struct vc4_context *vc4, struct vc4_compile *c)
 
                         break;
 
-                case QOP_PACK_COLORS:
+                case QOP_PACK_COLORS: {
+                        /* We have to be careful not to start writing over one
+                         * of our source values when incrementally writing the
+                         * destination.  So, if the dst is one of the srcs, we
+                         * pack that one first (and we pack 4 channels at once
+                         * for the first pack).
+                         */
+                        struct qpu_reg first_pack = src[0];
                         for (int i = 0; i < 4; i++) {
-                                queue(c, qpu_m_MOV(qpu_r3(), src[i]));
+                                if (src[i].mux == dst.mux &&
+                                    src[i].addr == dst.addr) {
+                                        first_pack = dst;
+                                        break;
+                                }
+                        }
+                        queue(c, qpu_m_MOV(dst, first_pack));
+                        *last_inst(c) |= QPU_PM;
+                        *last_inst(c) |= QPU_SET_FIELD(QPU_PACK_MUL_8888,
+                                                       QPU_PACK);
+
+                        for (int i = 0; i < 4; i++) {
+                                if (src[i].mux == first_pack.mux &&
+                                    src[i].addr == first_pack.addr) {
+                                        continue;
+                                }
+
+                                queue(c, qpu_m_MOV(dst, src[i]));
                                 *last_inst(c) |= QPU_PM;
                                 *last_inst(c) |= QPU_SET_FIELD(QPU_PACK_MUL_8A + i,
                                                                QPU_PACK);
                         }
 
-                        queue(c, qpu_a_MOV(dst, qpu_r3()));
-
                         break;
+                }
 
                 case QOP_FRAG_X:
                         queue(c, qpu_a_ITOF(dst,
