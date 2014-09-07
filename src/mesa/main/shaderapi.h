@@ -43,6 +43,9 @@ struct gl_shader_program;
 extern GLbitfield
 _mesa_get_shader_flags(void);
 
+extern const char *
+_mesa_get_shader_capture_path(void);
+
 extern void
 _mesa_copy_string(GLchar *dst, GLsizei maxLength,
                   GLsizei *length, const GLchar *src);

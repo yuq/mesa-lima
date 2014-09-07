@@ -96,6 +96,29 @@ _mesa_get_shader_flags(void)
    return flags;
 }
 
+/**
+ * Memoized version of getenv("MESA_SHADER_CAPTURE_PATH").
+ */
+const char *
+_mesa_get_shader_capture_path(void)
+{
+   static bool read_env_var = false;
+   static const char *path = NULL;
+
+   if (!read_env_var) {
+      path = getenv("MESA_SHADER_CAPTURE_PATH");
+      read_env_var = true;
+      if (path &&
+          strlen(path) > PATH_MAX - strlen("/fp-4294967295.shader_test")) {
+         GET_CURRENT_CONTEXT(ctx);
+         _mesa_warning(ctx, "MESA_SHADER_CAPTURE_PATH too long; ignoring "
+                            "request to capture shaders");
+         path = NULL;
+      }
+   }
+
+   return path;
+}
 
 /**
  * Initialize context's shader state.
@@ -1045,6 +1068,35 @@ _mesa_link_program(struct gl_context *ctx, struct gl_shader_program *shProg)
    FLUSH_VERTICES(ctx, _NEW_PROGRAM);
 
    _mesa_glsl_link_shader(ctx, shProg);
+
+   /* Capture .shader_test files. */
+   const char *capture_path = _mesa_get_shader_capture_path();
+   if (shProg->Name != 0 && capture_path != NULL) {
+      FILE *file;
+      char filename[PATH_MAX];
+
+      _mesa_snprintf(filename, sizeof(filename), "%s/%u.shader_test",
+                     capture_path, shProg->Name);
+
+      file = fopen(filename, "w");
+      if (file) {
+         fprintf(file, "[require]\nGLSL%s >= %u.%02u\n",
+                 shProg->IsES ? " ES" : "",
+                 shProg->Version / 100, shProg->Version % 100);
+         if (shProg->SeparateShader)
+            fprintf(file, "GL_ARB_separate_shader_objects\nSSO ENABLED\n");
+         fprintf(file, "\n");
+
+         for (unsigned i = 0; i < shProg->NumShaders; i++) {
+            fprintf(file, "[%s shader]\n%s\n",
+                    _mesa_shader_stage_to_string(shProg->Shaders[i]->Stage),
+                    shProg->Shaders[i]->Source);
+         }
+         fclose(file);
+      } else {
+         _mesa_warning(ctx, "Failed to open %s", filename);
+      }
+   }
 
    if (shProg->LinkStatus == GL_FALSE &&
        (ctx->_Shader->Flags & GLSL_REPORT_ERRORS)) {
