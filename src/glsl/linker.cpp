@@ -297,6 +297,97 @@ public:
    }
 };
 
+class barrier_use_visitor : public ir_hierarchical_visitor {
+public:
+   barrier_use_visitor(gl_shader_program *prog)
+      : prog(prog), in_main(false), after_return(false), control_flow(0)
+   {
+   }
+
+   virtual ~barrier_use_visitor()
+   {
+      /* empty */
+   }
+
+   virtual ir_visitor_status visit_enter(ir_function *ir)
+   {
+      if (strcmp(ir->name, "main") == 0)
+         in_main = true;
+
+      return visit_continue;
+   }
+
+   virtual ir_visitor_status visit_leave(ir_function *ir)
+   {
+      in_main = false;
+      after_return = false;
+      return visit_continue;
+   }
+
+   virtual ir_visitor_status visit_leave(ir_return *ir)
+   {
+      after_return = true;
+      return visit_continue;
+   }
+
+   virtual ir_visitor_status visit_enter(ir_if *ir)
+   {
+      ++control_flow;
+      return visit_continue;
+   }
+
+   virtual ir_visitor_status visit_leave(ir_if *ir)
+   {
+      --control_flow;
+      return visit_continue;
+   }
+
+   virtual ir_visitor_status visit_enter(ir_loop *ir)
+   {
+      ++control_flow;
+      return visit_continue;
+   }
+
+   virtual ir_visitor_status visit_leave(ir_loop *ir)
+   {
+      --control_flow;
+      return visit_continue;
+   }
+
+   /* FINISHME: `switch` is not expressed at the IR level -- it's already
+    * been lowered to a mess of `if`s. We'll correctly disallow any use of
+    * barrier() in a conditional path within the switch, but not in a path
+    * which is always hit.
+    */
+
+   virtual ir_visitor_status visit_enter(ir_call *ir)
+   {
+      if (ir->use_builtin && strcmp(ir->callee_name(), "barrier") == 0) {
+         /* Use of barrier(); determine if it is legal: */
+         if (!in_main) {
+            linker_error(prog, "Builtin barrier() may only be used in main");
+            return visit_stop;
+         }
+
+         if (after_return) {
+            linker_error(prog, "Builtin barrier() may not be used after return");
+            return visit_stop;
+         }
+
+         if (control_flow != 0) {
+            linker_error(prog, "Builtin barrier() may not be used inside control flow");
+            return visit_stop;
+         }
+      }
+      return visit_continue;
+   }
+
+private:
+   gl_shader_program *prog;
+   bool in_main, after_return;
+   int control_flow;
+};
+
 /**
  * Visitor that determines the highest stream id to which a (geometry) shader
  * emits vertices. It also checks whether End{Stream}Primitive is ever called.
@@ -2049,6 +2140,14 @@ link_intrastage_shaders(void *mem_ctx,
 
    if (ctx->Const.VertexID_is_zero_based)
       lower_vertex_id(linked);
+
+   /* Validate correct usage of barrier() in the tess control shader */
+   if (linked->Stage == MESA_SHADER_TESS_CTRL) {
+      barrier_use_visitor visitor(prog);
+      foreach_in_list(ir_instruction, ir, linked->ir) {
+         ir->accept(&visitor);
+      }
+   }
 
    /* Make a pass over all variable declarations to ensure that arrays with
     * unspecified sizes have a size specified.  The size is inferred from the
