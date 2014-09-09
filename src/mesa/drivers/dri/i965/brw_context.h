@@ -1008,6 +1008,8 @@ struct brw_context
    struct {
       GLuint vsize;		/* vertex size plus header in urb registers */
       GLuint gsize;	        /* GS output size in urb registers */
+      GLuint hsize;             /* Tessellation control output size in urb registers */
+      GLuint dsize;             /* Tessellation evaluation output size in urb registers */
       GLuint csize;		/* constant buffer size in urb registers */
       GLuint sfsize;		/* setup data size in urb registers */
 
@@ -1020,12 +1022,16 @@ struct brw_context
       GLuint max_gs_entries;	/* Maximum number of GS entries */
 
       GLuint nr_vs_entries;
+      GLuint nr_hs_entries;
+      GLuint nr_ds_entries;
       GLuint nr_gs_entries;
       GLuint nr_clip_entries;
       GLuint nr_sf_entries;
       GLuint nr_cs_entries;
 
       GLuint vs_start;
+      GLuint hs_start;
+      GLuint ds_start;
       GLuint gs_start;
       GLuint clip_start;
       GLuint sf_start;
@@ -1042,6 +1048,11 @@ struct brw_context
        * URB space for the GS.
        */
       bool gs_present;
+
+      /* True if the most recently sent _3DSTATE_URB message allocated
+       * URB space for the HS and DS.
+       */
+      bool tess_present;
    } urb;
 
 
@@ -1648,12 +1659,18 @@ void gen8_emit_3dstate_sample_pattern(struct brw_context *brw);
 /* gen7_urb.c */
 void
 gen7_emit_push_constant_state(struct brw_context *brw, unsigned vs_size,
+                              unsigned hs_size, unsigned ds_size,
                               unsigned gs_size, unsigned fs_size);
 
 void
 gen7_emit_urb_state(struct brw_context *brw,
-                    unsigned nr_vs_entries, unsigned vs_size,
-                    unsigned vs_start, unsigned nr_gs_entries,
+                    unsigned nr_vs_entries,
+                    unsigned vs_size, unsigned vs_start,
+                    unsigned nr_hs_entries,
+                    unsigned hs_size, unsigned hs_start,
+                    unsigned nr_ds_entries,
+                    unsigned ds_size, unsigned ds_start,
+                    unsigned nr_gs_entries,
                     unsigned gs_size, unsigned gs_start);
 
 
