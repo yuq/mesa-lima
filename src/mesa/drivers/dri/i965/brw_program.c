@@ -95,6 +95,28 @@ static struct gl_program *brwNewProgram( struct gl_context *ctx,
       }
    }
 
+   case GL_TESS_CONTROL_PROGRAM_NV: {
+      struct brw_tess_ctrl_program *prog = CALLOC_STRUCT(brw_tess_ctrl_program);
+      if (prog) {
+         prog->id = get_new_program_id(brw->intelScreen);
+
+         return _mesa_init_gl_program(&prog->program.Base, target, id);
+      } else {
+         return NULL;
+      }
+   }
+
+   case GL_TESS_EVALUATION_PROGRAM_NV: {
+      struct brw_tess_eval_program *prog = CALLOC_STRUCT(brw_tess_eval_program);
+      if (prog) {
+         prog->id = get_new_program_id(brw->intelScreen);
+
+         return _mesa_init_gl_program(&prog->program.Base, target, id);
+      } else {
+         return NULL;
+      }
+   }
+
    case GL_COMPUTE_PROGRAM_NV: {
       struct brw_compute_program *prog = CALLOC_STRUCT(brw_compute_program);
       if (prog) {

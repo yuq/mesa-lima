@@ -722,6 +722,14 @@ brw_upload_pipeline_state(struct brw_context *brw,
          brw->ctx.NewDriverState |= BRW_NEW_FRAGMENT_PROGRAM;
       }
 
+      if (brw->tess_eval_program != ctx->TessEvalProgram._Current) {
+         brw->tess_eval_program = ctx->TessEvalProgram._Current;
+      }
+
+      if (brw->tess_ctrl_program != ctx->TessCtrlProgram._Current) {
+         brw->tess_ctrl_program = ctx->TessCtrlProgram._Current;
+      }
+
       if (brw->geometry_program != ctx->GeometryProgram._Current) {
          brw->geometry_program = ctx->GeometryProgram._Current;
          brw->ctx.NewDriverState |= BRW_NEW_GEOMETRY_PROGRAM;

@@ -548,6 +548,24 @@ struct brw_vs_prog_data {
    bool uses_instanceid;
 };
 
+struct brw_tcs_prog_data
+{
+   struct brw_vue_prog_data base;
+
+   /** Number vertices in output patch */
+   int instances;
+};
+
+
+struct brw_tes_prog_data
+{
+   struct brw_vue_prog_data base;
+
+   enum brw_tess_partitioning partitioning;
+   enum brw_tess_output_topology output_topology;
+   enum brw_tess_domain domain;
+};
+
 struct brw_gs_prog_data
 {
    struct brw_vue_prog_data base;

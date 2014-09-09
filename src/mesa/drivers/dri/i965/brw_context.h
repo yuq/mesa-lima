@@ -110,6 +110,12 @@ extern "C" {
  * enabled, it first passes them to a VS thread which is a good place
  * for the driver to implement any active vertex shader.
  *
+ * HS - Hull Shader (Tessellation Control Shader)
+ *
+ * TE - Tessellation Engine (Tessellation Primitive Generation)
+ *
+ * DS - Domain Shader (Tessellation Evaluation Shader)
+ *
  * GS - Geometry Shader.  This corresponds to a new DX10 concept.  If
  * enabled, incoming strips etc are passed to GS threads in individual
  * line/triangle/point units.  The GS thread may perform arbitary
@@ -301,6 +307,20 @@ struct brw_state_flags {
 struct brw_vertex_program {
    struct gl_vertex_program program;
    GLuint id;
+};
+
+
+/** Subclass of Mesa tessellation control program */
+struct brw_tess_ctrl_program {
+   struct gl_tess_ctrl_program program;
+   unsigned id;  /**< serial no. to identify tess ctrl progs, never re-used */
+};
+
+
+/** Subclass of Mesa tessellation evaluation program */
+struct brw_tess_eval_program {
+   struct gl_tess_eval_program program;
+   unsigned id;  /**< serial no. to identify tess eval progs, never re-used */
 };
 
 
@@ -938,6 +958,8 @@ struct brw_context
     */
    const struct gl_vertex_program *vertex_program;
    const struct gl_geometry_program *geometry_program;
+   const struct gl_tess_ctrl_program *tess_ctrl_program;
+   const struct gl_tess_eval_program *tess_eval_program;
    const struct gl_fragment_program *fragment_program;
    const struct gl_compute_program *compute_program;
 
@@ -1026,6 +1048,28 @@ struct brw_context
       struct brw_stage_state base;
       struct brw_vs_prog_data *prog_data;
    } vs;
+
+   struct {
+      struct brw_stage_state base;
+      struct brw_tcs_prog_data *prog_data;
+
+      /**
+       * True if the 3DSTATE_HS command most recently emitted to the 3D
+       * pipeline enabled the HS; false otherwise.
+       */
+      bool enabled;
+   } tcs;
+
+   struct {
+      struct brw_stage_state base;
+      struct brw_tes_prog_data *prog_data;
+
+      /**
+       * True if the 3DSTATE_DS command most recently emitted to the 3D
+       * pipeline enabled the DS; false otherwise.
+       */
+      bool enabled;
+   } tes;
 
    struct {
       struct brw_stage_state base;

@@ -425,6 +425,10 @@ brw_try_draw_prims(struct gl_context *ctx,
       _mesa_fls(ctx->FragmentProgram._Current->Base.SamplersUsed);
    brw->gs.base.sampler_count = ctx->GeometryProgram._Current ?
       _mesa_fls(ctx->GeometryProgram._Current->Base.SamplersUsed) : 0;
+   brw->tes.base.sampler_count = ctx->TessEvalProgram._Current ?
+      _mesa_fls(ctx->TessEvalProgram._Current->Base.SamplersUsed) : 0;
+   brw->tcs.base.sampler_count = ctx->TessCtrlProgram._Current ?
+      _mesa_fls(ctx->TessCtrlProgram._Current->Base.SamplersUsed) : 0;
    brw->vs.base.sampler_count =
       _mesa_fls(ctx->VertexProgram._Current->Base.SamplersUsed);
 
