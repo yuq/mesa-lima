@@ -1192,6 +1192,8 @@ struct brw_context
     * for each pipeline stage.
     */
    int max_vs_threads;
+   int max_hs_threads;
+   int max_ds_threads;
    int max_gs_threads;
    int max_wm_threads;
 
@@ -1207,6 +1209,8 @@ struct brw_context
 
       GLuint min_vs_entries;    /* Minimum number of VS entries */
       GLuint max_vs_entries;	/* Maximum number of VS entries */
+      GLuint max_hs_entries;	/* Maximum number of HS entries */
+      GLuint max_ds_entries;	/* Maximum number of DS entries */
       GLuint max_gs_entries;	/* Maximum number of GS entries */
 
       GLuint nr_vs_entries;

@@ -811,11 +811,15 @@ brwCreateContext(gl_api api,
    brw_init_surface_formats(brw);
 
    brw->max_vs_threads = devinfo->max_vs_threads;
+   brw->max_hs_threads = devinfo->max_hs_threads;
+   brw->max_ds_threads = devinfo->max_ds_threads;
    brw->max_gs_threads = devinfo->max_gs_threads;
    brw->max_wm_threads = devinfo->max_wm_threads;
    brw->urb.size = devinfo->urb.size;
    brw->urb.min_vs_entries = devinfo->urb.min_vs_entries;
    brw->urb.max_vs_entries = devinfo->urb.max_vs_entries;
+   brw->urb.max_hs_entries = devinfo->urb.max_hs_entries;
+   brw->urb.max_ds_entries = devinfo->urb.max_ds_entries;
    brw->urb.max_gs_entries = devinfo->urb.max_gs_entries;
 
    /* Estimate the size of the mappable aperture into the GTT.  There's an
