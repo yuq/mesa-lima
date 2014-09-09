@@ -144,14 +144,17 @@ gen6_set_prim(struct brw_context *brw, const struct _mesa_prim *prim)
 
    DBG("PRIM: %s\n", _mesa_enum_to_string(prim->mode));
 
-   if (prim->mode == GL_PATCHES)
+   if (prim->mode == GL_PATCHES) {
       hw_prim = _3DPRIM_PATCHLIST(ctx->TessCtrlProgram.patch_vertices);
-   else
+   } else {
       hw_prim = get_hw_prim_for_gl_prim(prim->mode);
+   }
 
    if (hw_prim != brw->primitive) {
       brw->primitive = hw_prim;
       brw->ctx.NewDriverState |= BRW_NEW_PRIMITIVE;
+      if (prim->mode == GL_PATCHES)
+         brw->ctx.NewDriverState |= BRW_NEW_PATCH_PRIMITIVE;
    }
 }
 
