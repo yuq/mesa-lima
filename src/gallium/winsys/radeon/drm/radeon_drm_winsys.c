@@ -325,6 +325,9 @@ static boolean do_winsys_init(struct radeon_drm_winsys *ws)
                          &ws->info.max_sclk);
     ws->info.max_sclk /= 1000;
 
+    radeon_get_drm_value(ws->fd, RADEON_INFO_SI_BACKEND_ENABLED_MASK, NULL,
+                         &ws->info.si_backend_enabled_mask);
+
     ws->num_cpus = sysconf(_SC_NPROCESSORS_ONLN);
 
     /* Generation-specific queries. */

@@ -231,6 +231,7 @@ struct radeon_info {
 
     boolean                     si_tile_mode_array_valid;
     uint32_t                    si_tile_mode_array[32];
+    uint32_t                    si_backend_enabled_mask;
 
     boolean                     cik_macrotile_mode_array_valid;
     uint32_t                    cik_macrotile_mode_array[16];

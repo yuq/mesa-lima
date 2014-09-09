@@ -204,7 +204,13 @@
  * 6. COMMAND [29:22] | BYTE_COUNT [20:0]
  */
 
-
+#define GRBM_GFX_INDEX                                                  0x802C
+#define         INSTANCE_INDEX(x)                                     ((x) << 0)
+#define         SH_INDEX(x)                                           ((x) << 8)
+#define         SE_INDEX(x)                                           ((x) << 16)
+#define         SH_BROADCAST_WRITES                                   (1 << 29)
+#define         INSTANCE_BROADCAST_WRITES                             (1 << 30)
+#define         SE_BROADCAST_WRITES                                   (1 << 31)
 #define R_0084FC_CP_STRMOUT_CNTL		                        0x0084FC
 #define   S_0084FC_OFFSET_UPDATE_DONE(x)		              (((x) & 0x1) << 0)
 #define R_0085F0_CP_COHER_CNTL                                          0x0085F0

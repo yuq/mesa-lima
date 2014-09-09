@@ -3081,6 +3081,110 @@ void si_init_state_functions(struct si_context *sctx)
 	sctx->b.b.draw_vbo = si_draw_vbo;
 }
 
+static void
+si_write_harvested_raster_configs(struct si_context *sctx,
+				  struct si_pm4_state *pm4,
+				  unsigned raster_config)
+{
+	unsigned sh_per_se = MAX2(sctx->screen->b.info.max_sh_per_se, 1);
+	unsigned num_se = MAX2(sctx->screen->b.info.max_se, 1);
+	unsigned rb_mask = sctx->screen->b.info.si_backend_enabled_mask;
+	unsigned num_rb = sctx->screen->b.info.r600_num_backends;
+	unsigned rb_per_pkr = num_rb / num_se / sh_per_se;
+	unsigned rb_per_se = num_rb / num_se;
+	unsigned se0_mask = (1 << rb_per_se) - 1;
+	unsigned se1_mask = se0_mask << rb_per_se;
+	unsigned se;
+
+	assert(num_se == 1 || num_se == 2);
+	assert(sh_per_se == 1 || sh_per_se == 2);
+	assert(rb_per_pkr == 1 || rb_per_pkr == 2);
+
+	/* XXX: I can't figure out what the *_XSEL and *_YSEL
+	 * fields are for, so I'm leaving them as their default
+	 * values. */
+
+	se0_mask &= rb_mask;
+	se1_mask &= rb_mask;
+	if (num_se == 2 && (!se0_mask || !se1_mask)) {
+		raster_config &= C_028350_SE_MAP;
+
+		if (!se0_mask) {
+			raster_config |=
+				S_028350_SE_MAP(V_028350_RASTER_CONFIG_SE_MAP_3);
+		} else {
+			raster_config |=
+				S_028350_SE_MAP(V_028350_RASTER_CONFIG_SE_MAP_0);
+		}
+	}
+
+	for (se = 0; se < num_se; se++) {
+		unsigned raster_config_se = raster_config;
+		unsigned pkr0_mask = ((1 << rb_per_pkr) - 1) << (se * rb_per_se);
+		unsigned pkr1_mask = pkr0_mask << rb_per_pkr;
+
+		pkr0_mask &= rb_mask;
+		pkr1_mask &= rb_mask;
+		if (sh_per_se == 2 && (!pkr0_mask || !pkr1_mask)) {
+			raster_config_se &= C_028350_PKR_MAP;
+
+			if (!pkr0_mask) {
+				raster_config_se |=
+					S_028350_PKR_MAP(V_028350_RASTER_CONFIG_PKR_MAP_3);
+			} else {
+				raster_config_se |=
+					S_028350_PKR_MAP(V_028350_RASTER_CONFIG_PKR_MAP_0);
+			}
+		}
+
+		if (rb_per_pkr == 2) {
+			unsigned rb0_mask = 1 << (se * rb_per_se);
+			unsigned rb1_mask = rb0_mask << 1;
+
+			rb0_mask &= rb_mask;
+			rb1_mask &= rb_mask;
+			if (!rb0_mask || !rb1_mask) {
+				raster_config_se &= C_028350_RB_MAP_PKR0;
+
+				if (!rb0_mask) {
+					raster_config_se |=
+						S_028350_RB_MAP_PKR0(V_028350_RASTER_CONFIG_RB_MAP_3);
+				} else {
+					raster_config_se |=
+						S_028350_RB_MAP_PKR0(V_028350_RASTER_CONFIG_RB_MAP_0);
+				}
+			}
+
+			if (sh_per_se == 2) {
+				rb0_mask = 1 << (se * rb_per_se + rb_per_pkr);
+				rb1_mask = rb0_mask << 1;
+				rb0_mask &= rb_mask;
+				rb1_mask &= rb_mask;
+				if (!rb0_mask || !rb1_mask) {
+					raster_config_se &= C_028350_RB_MAP_PKR1;
+
+					if (!rb0_mask) {
+						raster_config_se |=
+							S_028350_RB_MAP_PKR1(V_028350_RASTER_CONFIG_RB_MAP_3);
+					} else {
+						raster_config_se |=
+							S_028350_RB_MAP_PKR1(V_028350_RASTER_CONFIG_RB_MAP_0);
+					}
+				}
+			}
+		}
+
+		si_pm4_set_reg(pm4, GRBM_GFX_INDEX,
+			       SE_INDEX(se) | SH_BROADCAST_WRITES |
+			       INSTANCE_BROADCAST_WRITES);
+		si_pm4_set_reg(pm4, R_028350_PA_SC_RASTER_CONFIG, raster_config_se);
+	}
+
+	si_pm4_set_reg(pm4, GRBM_GFX_INDEX,
+		       SE_BROADCAST_WRITES | SH_BROADCAST_WRITES |
+		       INSTANCE_BROADCAST_WRITES);
+}
+
 void si_init_config(struct si_context *sctx)
 {
 	struct si_pm4_state *pm4 = CALLOC_STRUCT(si_pm4_state);
@@ -3152,23 +3256,37 @@ void si_init_config(struct si_context *sctx)
 			break;
 		}
 	} else {
+		unsigned rb_mask = sctx->screen->b.info.si_backend_enabled_mask;
+		unsigned num_rb = sctx->screen->b.info.r600_num_backends;
+		unsigned raster_config;
+
 		switch (sctx->screen->b.family) {
 		case CHIP_TAHITI:
 		case CHIP_PITCAIRN:
-			si_pm4_set_reg(pm4, R_028350_PA_SC_RASTER_CONFIG, 0x2a00126a);
+			raster_config = 0x2a00126a;
 			break;
 		case CHIP_VERDE:
-			si_pm4_set_reg(pm4, R_028350_PA_SC_RASTER_CONFIG, 0x0000124a);
+			raster_config = 0x0000124a;
 			break;
 		case CHIP_OLAND:
-			si_pm4_set_reg(pm4, R_028350_PA_SC_RASTER_CONFIG, 0x00000082);
+			raster_config = 0x00000082;
 			break;
 		case CHIP_HAINAN:
-			si_pm4_set_reg(pm4, R_028350_PA_SC_RASTER_CONFIG, 0x00000000);
+			raster_config = 0x00000000;
 			break;
 		default:
-			si_pm4_set_reg(pm4, R_028350_PA_SC_RASTER_CONFIG, 0x00000000);
+			fprintf(stderr,
+				"radeonsi: Unknown GPU, using 0 for raster_config\n");
+			raster_config = 0x00000000;
 			break;
+		}
+
+		/* Always use the default config when all backends are enabled. */
+		if (rb_mask && util_bitcount(rb_mask) >= num_rb) {
+			si_pm4_set_reg(pm4, R_028350_PA_SC_RASTER_CONFIG,
+				       raster_config);
+		} else {
+			si_write_harvested_raster_configs(sctx, pm4, raster_config);
 		}
 	}
 
