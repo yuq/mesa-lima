@@ -2057,6 +2057,7 @@ _mesa_copy_linked_program_data(gl_shader_stage type,
       dst_tep->Spacing = src->TessEval.Spacing;
       dst_tep->VertexOrder = src->TessEval.VertexOrder;
       dst_tep->PointMode = src->TessEval.PointMode;
+      dst->UsesClipDistanceOut = src->TessEval.UsesClipDistance;
       break;
    }
    case MESA_SHADER_GEOMETRY: {

@@ -666,6 +666,17 @@ validate_vertex_shader_executable(struct gl_shader_program *prog,
                       &prog->Vert.ClipDistanceArraySize);
 }
 
+void
+validate_tess_eval_shader_executable(struct gl_shader_program *prog,
+                                     struct gl_shader *shader)
+{
+   if (shader == NULL)
+      return;
+
+   analyze_clip_usage(prog, shader, &prog->TessEval.UsesClipDistance,
+                      &prog->TessEval.ClipDistanceArraySize);
+}
+
 
 /**
  * Verify that a fragment shader executable meets all semantic requirements
@@ -3215,6 +3226,12 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
          case MESA_SHADER_VERTEX:
             validate_vertex_shader_executable(prog, sh);
             break;
+         case MESA_SHADER_TESS_CTRL:
+            /* nothing to be done */
+            break;
+         case MESA_SHADER_TESS_EVAL:
+            validate_tess_eval_shader_executable(prog, sh);
+            break;
          case MESA_SHADER_GEOMETRY:
             validate_geometry_shader_executable(prog, sh);
             break;
@@ -3234,6 +3251,8 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
 
    if (num_shaders[MESA_SHADER_GEOMETRY] > 0)
       prog->LastClipDistanceArraySize = prog->Geom.ClipDistanceArraySize;
+   else if (num_shaders[MESA_SHADER_TESS_EVAL] > 0)
+      prog->LastClipDistanceArraySize = prog->TessEval.ClipDistanceArraySize;
    else if (num_shaders[MESA_SHADER_VERTEX] > 0)
       prog->LastClipDistanceArraySize = prog->Vert.ClipDistanceArraySize;
    else

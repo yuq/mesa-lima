@@ -2781,6 +2781,13 @@ struct gl_shader_program
       /** GL_CW or GL_CCW */
       GLenum VertexOrder;
       bool PointMode;
+      /**
+       * True if gl_ClipDistance is written to.  Copied into
+       * gl_tess_eval_program by _mesa_copy_linked_program_data().
+       */
+      GLboolean UsesClipDistance;
+      GLuint ClipDistanceArraySize; /**< Size of the gl_ClipDistance array, or
+                                         0 if not present. */
    } TessEval;
 
    /**
