@@ -327,8 +327,8 @@ brw_initialize_context_constants(struct brw_context *brw)
 
    const bool stage_exists[MESA_SHADER_STAGES] = {
       [MESA_SHADER_VERTEX] = true,
-      [MESA_SHADER_TESS_CTRL] = false,
-      [MESA_SHADER_TESS_EVAL] = false,
+      [MESA_SHADER_TESS_CTRL] = brw->gen >= 8,
+      [MESA_SHADER_TESS_EVAL] = brw->gen >= 8,
       [MESA_SHADER_GEOMETRY] = brw->gen >= 6,
       [MESA_SHADER_FRAGMENT] = true,
       [MESA_SHADER_COMPUTE] = _mesa_extension_override_enables.ARB_compute_shader,
@@ -585,6 +585,10 @@ brw_initialize_context_constants(struct brw_context *brw)
       ctx->Const.Program[MESA_SHADER_GEOMETRY].MaxInputComponents = 64;
       ctx->Const.Program[MESA_SHADER_GEOMETRY].MaxOutputComponents = 128;
       ctx->Const.Program[MESA_SHADER_FRAGMENT].MaxInputComponents = 128;
+      ctx->Const.Program[MESA_SHADER_TESS_CTRL].MaxInputComponents = 128;
+      ctx->Const.Program[MESA_SHADER_TESS_CTRL].MaxOutputComponents = 128;
+      ctx->Const.Program[MESA_SHADER_TESS_EVAL].MaxInputComponents = 128;
+      ctx->Const.Program[MESA_SHADER_TESS_EVAL].MaxOutputComponents = 128;
    }
 
    /* We want the GLSL compiler to emit code that uses condition codes */
