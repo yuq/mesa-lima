@@ -33,7 +33,7 @@ struct r600_shader_io {
 	int			spi_sid;
 	unsigned		interpolate;
 	unsigned		ij_index;
-	boolean                 centroid;
+	unsigned        interpolate_location; //  TGSI_INTERPOLATE_LOC_CENTER, CENTROID, SAMPLE
 	unsigned		lds_pos; /* for evergreen */
 	unsigned		back_color_input;
 	unsigned		write_mask;
@@ -114,5 +114,9 @@ struct r600_pipe_shader {
 	unsigned		db_shader_control;
 	unsigned		ps_depth_export;
 };
+
+/* return the table index 0-5 for TGSI_INTERPOLATE_LINEAR/PERSPECTIVE and
+ TGSI_INTERPOLATE_LOC_CENTER/SAMPLE/COUNT. Other input values return -1. */
+int eg_get_interpolator_index(unsigned interpolate, unsigned location);
 
 #endif

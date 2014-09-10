@@ -1085,6 +1085,26 @@ static void r600_setup_txq_cube_array_constants(struct r600_context *rctx, int s
 	pipe_resource_reference(&cb.buffer, NULL);
 }
 
+/* set sample xy locations as array of fragment shader constants */
+void r600_set_sample_locations_constant_buffer(struct r600_context *rctx)
+{
+	struct pipe_constant_buffer constbuf = {0};
+	float values[4*16] = {0.0f};
+	int i;
+	struct pipe_context *ctx = &rctx->b.b;
+
+	assert(rctx->framebuffer.nr_samples <= Elements(values)/4);
+	for (i = 0; i < rctx->framebuffer.nr_samples; i++) {
+		ctx->get_sample_position(ctx, rctx->framebuffer.nr_samples, i, &values[4*i]);
+	}
+
+	constbuf.user_buffer = values;
+	constbuf.buffer_size = rctx->framebuffer.nr_samples * 4 * 4;
+	ctx->set_constant_buffer(ctx, PIPE_SHADER_FRAGMENT,
+		R600_SAMPLE_POSITIONS_CONST_BUFFER, &constbuf);
+	pipe_resource_reference(&constbuf.buffer, NULL);
+}
+
 static void update_shader_atom(struct pipe_context *ctx,
 			       struct r600_shader_state *state,
 			       struct r600_pipe_shader *shader)

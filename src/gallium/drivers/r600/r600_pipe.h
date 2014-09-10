@@ -52,6 +52,14 @@
 #define R600_TXQ_CONST_BUFFER (R600_MAX_USER_CONST_BUFFERS + 1)
 #define R600_BUFFER_INFO_CONST_BUFFER (R600_MAX_USER_CONST_BUFFERS + 2)
 #define R600_GS_RING_CONST_BUFFER (R600_MAX_USER_CONST_BUFFERS + 3)
+/* Currently R600_MAX_CONST_BUFFERS is too large, the hardware only has 16 buffers, but the driver is
+ * trying to use 17. Avoid accidentally aliasing with user UBOs for SAMPLE_POSITIONS by using an id<16.
+ * UCP/SAMPLE_POSITIONS are never accessed by same shader stage so they can use the same id.
+ *
+ * Fixing this properly would require the driver to combine its buffers into a single hardware buffer,
+ * which would also allow supporting the d3d 11 mandated minimum of 15 user const buffers.
+ */
+#define R600_SAMPLE_POSITIONS_CONST_BUFFER (R600_MAX_USER_CONST_BUFFERS)
 
 #define R600_MAX_CONST_BUFFER_SIZE (4096 * sizeof(float[4]))
 
@@ -452,6 +460,7 @@ struct r600_context {
 	bool				force_blend_disable;
 	boolean				dual_src_blend;
 	unsigned			zwritemask;
+	int					ps_iter_samples;
 
 	/* Index buffer. */
 	struct pipe_index_buffer	index_buffer;
@@ -639,6 +648,7 @@ void r600_sampler_views_dirty(struct r600_context *rctx,
 void r600_sampler_states_dirty(struct r600_context *rctx,
 			       struct r600_sampler_states *state);
 void r600_constant_buffers_dirty(struct r600_context *rctx, struct r600_constbuf_state *state);
+void r600_set_sample_locations_constant_buffer(struct r600_context *rctx);
 uint32_t r600_translate_stencil_op(int s_op);
 uint32_t r600_translate_fill(uint32_t func);
 unsigned r600_tex_wrap(unsigned wrap);

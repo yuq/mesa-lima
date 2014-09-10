@@ -64,6 +64,7 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 				 struct r600_pipe_shader *pipeshader,
 				 struct r600_shader_key key);
 
+
 static void r600_add_gpr_array(struct r600_shader *ps, int start_gpr,
                            int size, unsigned comp_mask) {
 
@@ -267,6 +268,11 @@ struct r600_shader_src {
 	uint32_t				value[4];
 };
 
+struct eg_interp {
+	boolean					enabled;
+	unsigned				ij_index;
+};
+
 struct r600_shader_ctx {
 	struct tgsi_shader_info			info;
 	struct tgsi_parse_context		parse;
@@ -283,13 +289,11 @@ struct r600_shader_ctx {
 	uint32_t				max_driver_temp_used;
 	boolean use_llvm;
 	/* needed for evergreen interpolation */
-	boolean                                 input_centroid;
-	boolean                                 input_linear;
-	boolean                                 input_perspective;
-	int					num_interp_gpr;
+	struct eg_interp		eg_interpolators[6]; // indexed by Persp/Linear * 3 + sample/center/centroid
 	/* evergreen/cayman also store sample mask in face register */
 	int					face_gpr;
-	boolean					has_samplemask;
+	/* sample id is .w component stored in fixed point position register */
+	int					fixed_pt_position_gpr;
 	int					colors_used;
 	boolean                 clip_vertex_write;
 	unsigned                cv_output;
@@ -320,6 +324,12 @@ static int tgsi_endif(struct r600_shader_ctx *ctx);
 static int tgsi_bgnloop(struct r600_shader_ctx *ctx);
 static int tgsi_endloop(struct r600_shader_ctx *ctx);
 static int tgsi_loop_brk_cont(struct r600_shader_ctx *ctx);
+static int tgsi_fetch_rel_const(struct r600_shader_ctx *ctx,
+                                unsigned int cb_idx, unsigned int offset, unsigned ar_chan,
+                                unsigned int dst_reg);
+static void r600_bytecode_src(struct r600_bytecode_alu_src *bc_src,
+			const struct r600_shader_src *shader_src,
+			unsigned chan);
 
 static int tgsi_is_supported(struct r600_shader_ctx *ctx)
 {
@@ -364,27 +374,41 @@ static int tgsi_is_supported(struct r600_shader_ctx *ctx)
 	return 0;
 }
 
+int eg_get_interpolator_index(unsigned interpolate, unsigned location)
+{
+	if (interpolate == TGSI_INTERPOLATE_COLOR ||
+		interpolate == TGSI_INTERPOLATE_LINEAR ||
+		interpolate == TGSI_INTERPOLATE_PERSPECTIVE)
+	{
+		int is_linear = interpolate == TGSI_INTERPOLATE_LINEAR;
+		int loc;
+
+		switch(location) {
+		case TGSI_INTERPOLATE_LOC_CENTER:
+			loc = 1;
+			break;
+		case TGSI_INTERPOLATE_LOC_CENTROID:
+			loc = 2;
+			break;
+		case TGSI_INTERPOLATE_LOC_SAMPLE:
+		default:
+			loc = 0; break;
+		}
+
+		return is_linear * 3 + loc;
+	}
+
+	return -1;
+}
+
 static void evergreen_interp_assign_ij_index(struct r600_shader_ctx *ctx,
 		int input)
 {
-	int ij_index = 0;
-
-	if (ctx->shader->input[input].interpolate == TGSI_INTERPOLATE_PERSPECTIVE) {
-		if (ctx->shader->input[input].centroid)
-			ij_index++;
-	} else if (ctx->shader->input[input].interpolate == TGSI_INTERPOLATE_LINEAR) {
-		/* if we have perspective add one */
-		if (ctx->input_perspective)  {
-			ij_index++;
-			/* if we have perspective centroid */
-			if (ctx->input_centroid)
-				ij_index++;
-		}
-		if (ctx->shader->input[input].centroid)
-			ij_index++;
-	}
-
-	ctx->shader->input[input].ij_index = ij_index;
+	int i = eg_get_interpolator_index(
+		ctx->shader->input[input].interpolate,
+		ctx->shader->input[input].interpolate_location);
+	assert(i >= 0);
+	ctx->shader->input[input].ij_index = ctx->eg_interpolators[i].ij_index;
 }
 
 static int evergreen_interp_alu(struct r600_shader_ctx *ctx, int input)
@@ -582,13 +606,15 @@ static int tgsi_declaration(struct r600_shader_ctx *ctx)
 		ctx->shader->input[i].name = d->Semantic.Name;
 		ctx->shader->input[i].sid = d->Semantic.Index;
 		ctx->shader->input[i].interpolate = d->Interp.Interpolate;
-		ctx->shader->input[i].centroid = d->Interp.Location == TGSI_INTERPOLATE_LOC_CENTROID;
+		ctx->shader->input[i].interpolate_location = d->Interp.Location;
 		ctx->shader->input[i].gpr = ctx->file_offset[TGSI_FILE_INPUT] + d->Range.First;
 		if (ctx->type == TGSI_PROCESSOR_FRAGMENT) {
 			ctx->shader->input[i].spi_sid = r600_spi_sid(&ctx->shader->input[i]);
 			switch (ctx->shader->input[i].name) {
 			case TGSI_SEMANTIC_FACE:
-				if (ctx->face_gpr == -1)
+				if (ctx->face_gpr != -1)
+					ctx->shader->input[i].gpr = ctx->face_gpr; /* already allocated by allocate_system_value_inputs */
+				else
 					ctx->face_gpr = ctx->shader->input[i].gpr;
 				break;
 			case TGSI_SEMANTIC_COLOR:
@@ -679,14 +705,11 @@ static int tgsi_declaration(struct r600_shader_ctx *ctx)
 		break;
 
 	case TGSI_FILE_SYSTEM_VALUE:
-		if (d->Semantic.Name == TGSI_SEMANTIC_SAMPLEMASK) {
-			ctx->has_samplemask = true;
-			/* lives in Front Face GPR */
-			if (ctx->face_gpr == -1)
-				ctx->face_gpr = ctx->file_offset[TGSI_FILE_SYSTEM_VALUE] + d->Range.First;
-			break;
-		}
-		else if (d->Semantic.Name == TGSI_SEMANTIC_INSTANCEID) {
+		if (d->Semantic.Name == TGSI_SEMANTIC_SAMPLEMASK ||
+			d->Semantic.Name == TGSI_SEMANTIC_SAMPLEID ||
+			d->Semantic.Name == TGSI_SEMANTIC_SAMPLEPOS) {
+			break; /* Already handled from allocate_system_value_inputs */
+		} else if (d->Semantic.Name == TGSI_SEMANTIC_INSTANCEID) {
 			if (!ctx->native_integers) {
 				struct r600_bytecode_alu alu;
 				memset(&alu, 0, sizeof(struct r600_bytecode_alu));
@@ -720,12 +743,69 @@ static int r600_get_temp(struct r600_shader_ctx *ctx)
 	return ctx->temp_reg + ctx->max_driver_temp_used++;
 }
 
+static int allocate_system_value_inputs(struct r600_shader_ctx *ctx, int gpr_offset)
+{
+	struct tgsi_parse_context parse;
+	struct {
+		boolean enabled;
+		int *reg;
+		unsigned name, alternate_name;
+	} inputs[2] = {
+		{ false, &ctx->face_gpr, TGSI_SEMANTIC_SAMPLEMASK, ~0u }, /* lives in Front Face GPR.z */
+
+		{ false, &ctx->fixed_pt_position_gpr, TGSI_SEMANTIC_SAMPLEID, TGSI_SEMANTIC_SAMPLEPOS } /* SAMPLEID is in Fixed Point Position GPR.w */
+	};
+	int i, k, num_regs = 0;
+
+	if (tgsi_parse_init(&parse, ctx->tokens) != TGSI_PARSE_OK) {
+		return 0;
+	}
+
+	while (!tgsi_parse_end_of_tokens(&parse)) {
+		tgsi_parse_token(&parse);
+
+		if (parse.FullToken.Token.Type == TGSI_TOKEN_TYPE_DECLARATION) {
+			struct tgsi_full_declaration *d = &parse.FullToken.FullDeclaration;
+			if (d->Declaration.File == TGSI_FILE_SYSTEM_VALUE) {
+				for (k = 0; k < Elements(inputs); k++) {
+					if (d->Semantic.Name == inputs[k].name ||
+						d->Semantic.Name == inputs[k].alternate_name) {
+						inputs[k].enabled = true;
+					}
+				}
+			}
+		}
+	}
+
+	tgsi_parse_free(&parse);
+
+	for (i = 0; i < Elements(inputs); i++) {
+		boolean enabled = inputs[i].enabled;
+		int *reg = inputs[i].reg;
+		unsigned name = inputs[i].name;
+
+		if (enabled) {
+			int gpr = gpr_offset + num_regs++;
+
+			// add to inputs, allocate a gpr
+			k = ctx->shader->ninput ++;
+			ctx->shader->input[k].name = name;
+			ctx->shader->input[k].sid = 0;
+			ctx->shader->input[k].interpolate = TGSI_INTERPOLATE_CONSTANT;
+			ctx->shader->input[k].interpolate_location = TGSI_INTERPOLATE_LOC_CENTER;
+			*reg = ctx->shader->input[k].gpr = gpr;
+		}
+	}
+
+	return gpr_offset + num_regs;
+}
+
 /*
  * for evergreen we need to scan the shader to find the number of GPRs we need to
- * reserve for interpolation.
+ * reserve for interpolation and system values
  *
  * we need to know if we are going to emit
- * any centroid inputs
+ * any sample or centroid inputs
  * if perspective and linear are required
 */
 static int evergreen_gpr_count(struct r600_shader_ctx *ctx)
@@ -733,39 +813,92 @@ static int evergreen_gpr_count(struct r600_shader_ctx *ctx)
 	int i;
 	int num_baryc;
 
-	ctx->input_linear = FALSE;
-	ctx->input_perspective = FALSE;
-	ctx->input_centroid = FALSE;
-	ctx->num_interp_gpr = 1;
+	memset(&ctx->eg_interpolators, 0, sizeof(ctx->eg_interpolators));
 
-	/* any centroid inputs */
 	for (i = 0; i < ctx->info.num_inputs; i++) {
-		/* skip position/face */
+		int k;
+		/* skip position/face/mask/sampleid */
 		if (ctx->info.input_semantic_name[i] == TGSI_SEMANTIC_POSITION ||
 		    ctx->info.input_semantic_name[i] == TGSI_SEMANTIC_FACE ||
-		    ctx->info.input_semantic_name[i] == TGSI_SEMANTIC_SAMPLEMASK)
+		    ctx->info.input_semantic_name[i] == TGSI_SEMANTIC_SAMPLEMASK ||
+		    ctx->info.input_semantic_name[i] == TGSI_SEMANTIC_SAMPLEID)
 			continue;
-		if (ctx->info.input_interpolate[i] == TGSI_INTERPOLATE_LINEAR)
-			ctx->input_linear = TRUE;
-		if (ctx->info.input_interpolate[i] == TGSI_INTERPOLATE_PERSPECTIVE)
-			ctx->input_perspective = TRUE;
-		if (ctx->info.input_interpolate_loc[i] == TGSI_INTERPOLATE_LOC_CENTROID)
-			ctx->input_centroid = TRUE;
+
+		k = eg_get_interpolator_index(
+			ctx->info.input_interpolate[i],
+			ctx->info.input_interpolate_loc[i]);
+		if (k >= 0)
+			ctx->eg_interpolators[k].enabled = TRUE;
 	}
 
+	/* assign gpr to each interpolator according to priority */
 	num_baryc = 0;
-	/* ignoring sample for now */
-	if (ctx->input_perspective)
-		num_baryc++;
-	if (ctx->input_linear)
-		num_baryc++;
-	if (ctx->input_centroid)
-		num_baryc *= 2;
+	for (i = 0; i < Elements(ctx->eg_interpolators); i++) {
+		if (ctx->eg_interpolators[i].enabled) {
+			ctx->eg_interpolators[i].ij_index = num_baryc;
+			num_baryc ++;
+		}
+	}
 
-	ctx->num_interp_gpr += (num_baryc + 1) >> 1;
+	/* XXX PULL MODEL and LINE STIPPLE */
 
-	/* XXX PULL MODEL and LINE STIPPLE, FIXED PT POS */
-	return ctx->num_interp_gpr;
+	num_baryc = (num_baryc + 1) >> 1;
+	return allocate_system_value_inputs(ctx, num_baryc);
+}
+
+/* sample_id_sel == NULL means fetch for current sample */
+static int load_sample_position(struct r600_shader_ctx *ctx, struct r600_shader_src *sample_id, int chan_sel)
+{
+	struct r600_bytecode_vtx vtx;
+	int r, t1;
+
+	assert(ctx->fixed_pt_position_gpr != -1);
+
+	t1 = r600_get_temp(ctx);
+
+	memset(&vtx, 0, sizeof(struct r600_bytecode_vtx));
+	vtx.op = FETCH_OP_VFETCH;
+	vtx.buffer_id = R600_SAMPLE_POSITIONS_CONST_BUFFER;
+	vtx.fetch_type = 2;	/* VTX_FETCH_NO_INDEX_OFFSET */
+	if (sample_id == NULL) {
+		vtx.src_gpr = ctx->fixed_pt_position_gpr; // SAMPLEID is in .w;
+		vtx.src_sel_x = 3;
+	}
+	else {
+		struct r600_bytecode_alu alu;
+
+		memset(&alu, 0, sizeof(struct r600_bytecode_alu));
+		alu.op = ALU_OP1_MOV;
+		r600_bytecode_src(&alu.src[0], sample_id, chan_sel);
+		alu.dst.sel = t1;
+		alu.dst.write = 1;
+		alu.last = 1;
+		r = r600_bytecode_add_alu(ctx->bc, &alu);
+		if (r)
+			return r;
+
+		vtx.src_gpr = t1;
+		vtx.src_sel_x = 0;
+	}
+	vtx.mega_fetch_count = 16;
+	vtx.dst_gpr = t1;
+	vtx.dst_sel_x = 0;
+	vtx.dst_sel_y = 1;
+	vtx.dst_sel_z = 7;
+	vtx.dst_sel_w = 7;
+	vtx.data_format = FMT_32_32_32_32_FLOAT;
+	vtx.num_format_all = 2;
+	vtx.format_comp_all = 1;
+	vtx.use_const_fields = 0;
+	vtx.offset = 1; // first element is size of buffer
+	vtx.endian = r600_endian_swap(32);
+	vtx.srf_mode_all = 1; /* SRF_MODE_NO_ZERO */
+
+	r = r600_bytecode_add_vtx(ctx->bc, &vtx);
+	if (r)
+		return r;
+
+	return t1;
 }
 
 static void tgsi_src(struct r600_shader_ctx *ctx,
@@ -797,10 +930,22 @@ static void tgsi_src(struct r600_shader_ctx *ctx,
 	} else if (tgsi_src->Register.File == TGSI_FILE_SYSTEM_VALUE) {
 		if (ctx->info.system_value_semantic_name[tgsi_src->Register.Index] == TGSI_SEMANTIC_SAMPLEMASK) {
 			r600_src->swizzle[0] = 2; // Z value
-			r600_src->swizzle[0] = 2;
-			r600_src->swizzle[0] = 2;
-			r600_src->swizzle[0] = 2;
+			r600_src->swizzle[1] = 2;
+			r600_src->swizzle[2] = 2;
+			r600_src->swizzle[3] = 2;
 			r600_src->sel = ctx->face_gpr;
+		} else if (ctx->info.system_value_semantic_name[tgsi_src->Register.Index] == TGSI_SEMANTIC_SAMPLEID) {
+			r600_src->swizzle[0] = 3; // W value
+			r600_src->swizzle[1] = 3;
+			r600_src->swizzle[2] = 3;
+			r600_src->swizzle[3] = 3;
+			r600_src->sel = ctx->fixed_pt_position_gpr;
+		} else if (ctx->info.system_value_semantic_name[tgsi_src->Register.Index] == TGSI_SEMANTIC_SAMPLEPOS) {
+			r600_src->swizzle[0] = 0;
+			r600_src->swizzle[1] = 1;
+			r600_src->swizzle[2] = 4;
+			r600_src->swizzle[3] = 4;
+			r600_src->sel = load_sample_position(ctx, NULL, -1);
 		} else if (ctx->info.system_value_semantic_name[tgsi_src->Register.Index] == TGSI_SEMANTIC_INSTANCEID) {
 			r600_src->swizzle[0] = 3;
 			r600_src->swizzle[1] = 3;
@@ -1612,7 +1757,7 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 	ctx.gs_next_vertex = 0;
 
 	ctx.face_gpr = -1;
-	ctx.has_samplemask = false;
+	ctx.fixed_pt_position_gpr = -1;
 	ctx.fragcoord_input = -1;
 	ctx.colors_used = 0;
 	ctx.clip_vertex_write = 0;
@@ -1661,8 +1806,11 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 			r600_bytecode_add_cfinst(ctx.bc, CF_OP_CALL_FS);
 		}
 	}
-	if (ctx.type == TGSI_PROCESSOR_FRAGMENT && ctx.bc->chip_class >= EVERGREEN) {
-		ctx.file_offset[TGSI_FILE_INPUT] = evergreen_gpr_count(&ctx);
+	if (ctx.type == TGSI_PROCESSOR_FRAGMENT) {
+		if (ctx.bc->chip_class >= EVERGREEN)
+			ctx.file_offset[TGSI_FILE_INPUT] = evergreen_gpr_count(&ctx);
+		else
+			ctx.file_offset[TGSI_FILE_INPUT] = allocate_system_value_inputs(&ctx, ctx.file_offset[TGSI_FILE_INPUT]);
 	}
 	if (ctx.type == TGSI_PROCESSOR_GEOMETRY) {
 		/* FIXME 1 would be enough in some cases (3 or less input vertices) */
@@ -1775,14 +1923,6 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 	
 	shader->ring_item_size = ctx.next_ring_offset;
 
-	/* Need to tell setup to program FACE register */
-	if (ctx.has_samplemask && ctx.face_gpr != -1) {
-		i = ctx.shader->ninput++;
-		ctx.shader->input[i].name = TGSI_SEMANTIC_SAMPLEMASK;
-		ctx.shader->input[i].spi_sid = 0;
-		ctx.shader->input[i].gpr = ctx.face_gpr;
-	}
-
 	/* Process two side if needed */
 	if (shader->two_side && ctx.colors_used) {
 		int i, count = ctx.shader->ninput;
@@ -1795,6 +1935,7 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 		int gpr = ctx.file_offset[TGSI_FILE_INPUT] +
 				ctx.info.file_max[TGSI_FILE_INPUT] + 1;
 
+		/* if two sided and neither face or sample mask is used by shader, ensure face_gpr is emitted */
 		if (ctx.face_gpr == -1) {
 			i = ctx.shader->ninput++;
 			ctx.shader->input[i].name = TGSI_SEMANTIC_FACE;
@@ -2161,6 +2302,13 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 					output[j].swizzle_x = 7;
 					output[j].swizzle_y = 1;
 					output[j].swizzle_z = output[j].swizzle_w = 7;
+					output[j].type = V_SQ_CF_ALLOC_EXPORT_WORD0_SQ_EXPORT_PIXEL;
+				} else if (shader->output[i].name == TGSI_SEMANTIC_SAMPLEMASK) {
+					output[j].array_base = 61;
+					output[j].swizzle_x = 7;
+					output[j].swizzle_y = 7;
+					output[j].swizzle_z = 0;
+					output[j].swizzle_w = 7;
 					output[j].type = V_SQ_CF_ALLOC_EXPORT_WORD0_SQ_EXPORT_PIXEL;
 				} else {
 					R600_ERR("unsupported fragment output name %d\n", shader->output[i].name);

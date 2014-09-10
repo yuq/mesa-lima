@@ -1400,7 +1400,7 @@ static void evergreen_set_framebuffer_state(struct pipe_context *ctx,
 
 	/* MSAA. */
 	if (rctx->b.chip_class == EVERGREEN)
-		rctx->framebuffer.atom.num_dw += 14; /* Evergreen */
+		rctx->framebuffer.atom.num_dw += 17; /* Evergreen */
 	else
 		rctx->framebuffer.atom.num_dw += 28; /* Cayman */
 
@@ -1420,8 +1420,22 @@ static void evergreen_set_framebuffer_state(struct pipe_context *ctx,
 	}
 
 	rctx->framebuffer.atom.dirty = true;
+
+	r600_set_sample_locations_constant_buffer(rctx);
 }
 
+static void evergreen_set_min_samples(struct pipe_context *ctx, unsigned min_samples)
+{
+	struct r600_context *rctx = (struct r600_context *)ctx;
+
+	if (rctx->ps_iter_samples == min_samples)
+		return;
+
+	rctx->ps_iter_samples = min_samples;
+	if (rctx->framebuffer.nr_samples > 1) {
+		rctx->framebuffer.atom.dirty = true;
+	}
+}
 
 /* 8xMSAA */
 static uint32_t sample_locs_8x[] = {
@@ -1475,7 +1489,7 @@ static void evergreen_get_sample_position(struct pipe_context *ctx,
 	}
 }
 
-static void evergreen_emit_msaa_state(struct r600_context *rctx, int nr_samples)
+static void evergreen_emit_msaa_state(struct r600_context *rctx, int nr_samples, int ps_iter_samples)
 {
 
 	struct radeon_winsys_cs *cs = rctx->b.rings.gfx.cs;
@@ -1508,10 +1522,12 @@ static void evergreen_emit_msaa_state(struct r600_context *rctx, int nr_samples)
 				     S_028C00_EXPAND_LINE_WIDTH(1)); /* R_028C00_PA_SC_LINE_CNTL */
 		radeon_emit(cs, S_028C04_MSAA_NUM_SAMPLES(util_logbase2(nr_samples)) |
 				     S_028C04_MAX_SAMPLE_DIST(max_dist)); /* R_028C04_PA_SC_AA_CONFIG */
+		r600_write_context_reg(cs, EG_R_028A4C_PA_SC_MODE_CNTL_1, EG_S_028A4C_PS_ITER_SAMPLE(ps_iter_samples > 1));
 	} else {
 		r600_write_context_reg_seq(cs, R_028C00_PA_SC_LINE_CNTL, 2);
 		radeon_emit(cs, S_028C00_LAST_PIXEL(1)); /* R_028C00_PA_SC_LINE_CNTL */
 		radeon_emit(cs, 0); /* R_028C04_PA_SC_AA_CONFIG */
+		r600_write_context_reg(cs, EG_R_028A4C_PA_SC_MODE_CNTL_1, 0);
 	}
 }
 
@@ -1672,10 +1688,10 @@ static void evergreen_emit_framebuffer_state(struct r600_context *rctx, struct r
 	radeon_emit(cs, br); /* R_028208_PA_SC_WINDOW_SCISSOR_BR */
 
 	if (rctx->b.chip_class == EVERGREEN) {
-		evergreen_emit_msaa_state(rctx, rctx->framebuffer.nr_samples);
+		evergreen_emit_msaa_state(rctx, rctx->framebuffer.nr_samples, rctx->ps_iter_samples);
 	} else {
 		cayman_emit_msaa_sample_locs(cs, rctx->framebuffer.nr_samples);
-		cayman_emit_msaa_config(cs, rctx->framebuffer.nr_samples, 1);
+		cayman_emit_msaa_config(cs, rctx->framebuffer.nr_samples, rctx->ps_iter_samples);
 	}
 }
 
@@ -2432,8 +2448,6 @@ void evergreen_init_common_regs(struct r600_command_buffer *cb,
 		r600_store_value(cb, tmp); /* R_008C0C_SQ_GPR_RESOURCE_MGMT_3 */
 	}
 
-	r600_store_context_reg(cb, R_028A4C_PA_SC_MODE_CNTL_1, 0);
-
 	/* The cs checker requires this register to be set. */
 	r600_store_context_reg(cb, R_028800_DB_DEPTH_CONTROL, 0);
 
@@ -2786,11 +2800,19 @@ void evergreen_update_ps_state(struct pipe_context *ctx, struct r600_pipe_shader
 	struct r600_command_buffer *cb = &shader->command_buffer;
 	struct r600_shader *rshader = &shader->shader;
 	unsigned i, exports_ps, num_cout, spi_ps_in_control_0, spi_input_z, spi_ps_in_control_1, db_shader_control = 0;
-	int pos_index = -1, face_index = -1;
+	int pos_index = -1, face_index = -1, fixed_pt_position_index = -1;
 	int ninterp = 0;
-	boolean have_linear = FALSE, have_centroid = FALSE, have_perspective = FALSE;
-	unsigned spi_baryc_cntl, sid, tmp, num = 0;
-	unsigned z_export = 0, stencil_export = 0;
+	boolean have_perspective = FALSE, have_linear = FALSE;
+	static const unsigned spi_baryc_enable_bit[6] = {
+		S_0286E0_PERSP_SAMPLE_ENA(1),
+		S_0286E0_PERSP_CENTER_ENA(1),
+		S_0286E0_PERSP_CENTROID_ENA(1),
+		S_0286E0_LINEAR_SAMPLE_ENA(1),
+		S_0286E0_LINEAR_CENTER_ENA(1),
+		S_0286E0_LINEAR_CENTROID_ENA(1)
+	};
+	unsigned spi_baryc_cntl = 0, sid, tmp, num = 0;
+	unsigned z_export = 0, stencil_export = 0, mask_export = 0;
 	unsigned sprite_coord_enable = rctx->rasterizer ? rctx->rasterizer->sprite_coord_enable : 0;
 	uint32_t spi_ps_input_cntl[32];
 
@@ -2813,14 +2835,19 @@ void evergreen_update_ps_state(struct pipe_context *ctx, struct r600_pipe_shader
 			if (face_index == -1)
 				face_index = i; /* lives in same register, same enable bit */
 		}
+		else if (rshader->input[i].name == TGSI_SEMANTIC_SAMPLEID) {
+			fixed_pt_position_index = i;
+		}
 		else {
 			ninterp++;
-			if (rshader->input[i].interpolate == TGSI_INTERPOLATE_LINEAR)
-				have_linear = TRUE;
-			if (rshader->input[i].interpolate == TGSI_INTERPOLATE_PERSPECTIVE)
-				have_perspective = TRUE;
-			if (rshader->input[i].centroid)
-				have_centroid = TRUE;
+			int k = eg_get_interpolator_index(
+				rshader->input[i].interpolate,
+				rshader->input[i].interpolate_location);
+			if (k >= 0) {
+				spi_baryc_cntl |= spi_baryc_enable_bit[k];
+				have_perspective |= k < 3;
+				have_linear |= !(k < 3);
+			}
 		}
 
 		sid = rshader->input[i].spi_sid;
@@ -2852,17 +2879,22 @@ void evergreen_update_ps_state(struct pipe_context *ctx, struct r600_pipe_shader
 			z_export = 1;
 		if (rshader->output[i].name == TGSI_SEMANTIC_STENCIL)
 			stencil_export = 1;
+		if (rshader->output[i].name == TGSI_SEMANTIC_SAMPLEMASK &&
+			rctx->framebuffer.nr_samples > 1 && rctx->ps_iter_samples > 0)
+			mask_export = 1;
 	}
 	if (rshader->uses_kill)
 		db_shader_control |= S_02880C_KILL_ENABLE(1);
 
 	db_shader_control |= S_02880C_Z_EXPORT_ENABLE(z_export);
 	db_shader_control |= S_02880C_STENCIL_EXPORT_ENABLE(stencil_export);
+	db_shader_control |= S_02880C_MASK_EXPORT_ENABLE(mask_export);
 
 	exports_ps = 0;
 	for (i = 0; i < rshader->noutput; i++) {
 		if (rshader->output[i].name == TGSI_SEMANTIC_POSITION ||
-		    rshader->output[i].name == TGSI_SEMANTIC_STENCIL)
+		    rshader->output[i].name == TGSI_SEMANTIC_STENCIL ||
+		    rshader->output[i].name == TGSI_SEMANTIC_SAMPLEMASK)
 			exports_ps |= 1;
 	}
 
@@ -2878,6 +2910,8 @@ void evergreen_update_ps_state(struct pipe_context *ctx, struct r600_pipe_shader
 		ninterp = 1;
 		have_perspective = TRUE;
 	}
+	if (!spi_baryc_cntl)
+		spi_baryc_cntl |= spi_baryc_enable_bit[0];
 
 	if (!have_perspective && !have_linear)
 		have_perspective = TRUE;
@@ -2888,7 +2922,7 @@ void evergreen_update_ps_state(struct pipe_context *ctx, struct r600_pipe_shader
 	spi_input_z = 0;
 	if (pos_index != -1) {
 		spi_ps_in_control_0 |=  S_0286CC_POSITION_ENA(1) |
-			S_0286CC_POSITION_CENTROID(rshader->input[pos_index].centroid) |
+			S_0286CC_POSITION_CENTROID(rshader->input[pos_index].interpolate_location == TGSI_INTERPOLATE_LOC_CENTROID) |
 			S_0286CC_POSITION_ADDR(rshader->input[pos_index].gpr);
 		spi_input_z |= S_0286D8_PROVIDE_Z_TO_SPI(1);
 	}
@@ -2898,14 +2932,10 @@ void evergreen_update_ps_state(struct pipe_context *ctx, struct r600_pipe_shader
 		spi_ps_in_control_1 |= S_0286D0_FRONT_FACE_ENA(1) |
 			S_0286D0_FRONT_FACE_ADDR(rshader->input[face_index].gpr);
 	}
-
-	spi_baryc_cntl = 0;
-	if (have_perspective)
-		spi_baryc_cntl |= S_0286E0_PERSP_CENTER_ENA(1) |
-				  S_0286E0_PERSP_CENTROID_ENA(have_centroid);
-	if (have_linear)
-		spi_baryc_cntl |= S_0286E0_LINEAR_CENTER_ENA(1) |
-				  S_0286E0_LINEAR_CENTROID_ENA(have_centroid);
+	if (fixed_pt_position_index != -1) {
+		spi_ps_in_control_1 |= S_0286D0_FIXED_PT_POSITION_ENA(1) |
+			S_0286D0_FIXED_PT_POSITION_ADDR(rshader->input[fixed_pt_position_index].gpr);
+	}
 
 	r600_store_context_reg_seq(cb, R_0286CC_SPI_PS_IN_CONTROL_0, 2);
 	r600_store_value(cb, spi_ps_in_control_0); /* R_0286CC_SPI_PS_IN_CONTROL_0 */
@@ -2924,7 +2954,7 @@ void evergreen_update_ps_state(struct pipe_context *ctx, struct r600_pipe_shader
 	/* After that, the NOP relocation packet must be emitted (shader->bo, RADEON_USAGE_READ). */
 
 	shader->db_shader_control = db_shader_control;
-	shader->ps_depth_export = z_export | stencil_export;
+	shader->ps_depth_export = z_export | stencil_export | mask_export;
 
 	shader->sprite_coord_enable = sprite_coord_enable;
 	if (rctx->rasterizer)
@@ -3446,6 +3476,7 @@ void evergreen_init_state_functions(struct r600_context *rctx)
 	rctx->b.b.create_sampler_view = evergreen_create_sampler_view;
 	rctx->b.b.set_framebuffer_state = evergreen_set_framebuffer_state;
 	rctx->b.b.set_polygon_stipple = evergreen_set_polygon_stipple;
+	rctx->b.b.set_min_samples = evergreen_set_min_samples;
 	rctx->b.b.set_scissor_states = evergreen_set_scissor_states;
 
 	if (rctx->b.chip_class == EVERGREEN)
