@@ -5892,16 +5892,28 @@ ast_interface_block::hir(exec_list *instructions,
          if (ir_variable *earlier_gl_Position =
              state->symbols->get_variable("gl_Position")) {
             earlier_per_vertex = earlier_gl_Position->get_interface_type();
+         } else if (ir_variable *earlier_gl_out =
+               state->symbols->get_variable("gl_out")) {
+            earlier_per_vertex = earlier_gl_out->get_interface_type();
          } else {
             _mesa_glsl_error(&loc, state,
                              "redeclaration of gl_PerVertex output not "
                              "allowed in the %s shader",
                              _mesa_shader_stage_to_string(state->stage));
          }
-         if (this->instance_name != NULL) {
-            _mesa_glsl_error(&loc, state,
-                             "gl_PerVertex output may not be redeclared with "
-                             "an instance name");
+         if (state->stage == MESA_SHADER_TESS_CTRL) {
+            if (this->instance_name == NULL ||
+                strcmp(this->instance_name, "gl_out") != 0 || this->array_specifier == NULL) {
+               _mesa_glsl_error(&loc, state,
+                                "gl_PerVertex output must be redeclared as "
+                                "gl_out[]");
+            }
+         } else {
+            if (this->instance_name != NULL) {
+               _mesa_glsl_error(&loc, state,
+                                "gl_PerVertex output may not be redeclared with "
+                                "an instance name");
+            }
          }
          break;
       default:
