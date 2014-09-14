@@ -469,6 +469,8 @@ ilo_get_param(struct pipe_screen *screen, enum pipe_cap param)
    }
    case PIPE_CAP_UMA:
       return true;
+   case PIPE_CAP_CLIP_HALFZ:
+      return true;
 
    default:
       return 0;

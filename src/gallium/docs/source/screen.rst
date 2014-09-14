@@ -230,6 +230,9 @@ The integer capabilities:
   different than the underlying resource's, as permitted by
   ARB_texture_view. For example a 2d array texture may be reinterpreted as a
   cube (array) texture and vice-versa.
+* ``PIPE_CAP_CLIP_HALFZ``: Whether the driver supports the
+  pipe_rasterizer_state::clip_halfz being set to true. This is required
+  for enabling ARB_clip_control.
 
 
 .. _pipe_capf:
