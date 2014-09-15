@@ -141,7 +141,7 @@ static void si_emit_cp_dma_clear_buffer(struct si_context *sctx,
 
 static void si_init_descriptors(struct si_context *sctx,
 				struct si_descriptors *desc,
-				unsigned shader_userdata_reg,
+				unsigned shader_userdata_index,
 				unsigned element_dw_size,
 				unsigned num_elements,
 				void (*emit_func)(struct si_context *ctx, struct r600_atom *state))
@@ -150,7 +150,7 @@ static void si_init_descriptors(struct si_context *sctx,
 	assert(num_elements <= sizeof(desc->dirty_mask)*8);
 
 	desc->atom.emit = (void*)emit_func;
-	desc->shader_userdata_reg = shader_userdata_reg;
+	desc->shader_userdata_offset = shader_userdata_index * 4;
 	desc->element_dw_size = element_dw_size;
 	desc->num_elements = num_elements;
 	desc->context_size = num_elements * element_dw_size * 4;
@@ -181,14 +181,11 @@ static void si_update_descriptors(struct si_context *sctx,
 	if (desc->dirty_mask) {
 		desc->atom.num_dw =
 			7 + /* copy */
-			(4 + desc->element_dw_size) * util_bitcount64(desc->dirty_mask) + /* update */
-			4; /* pointer update */
-
-		if (desc->shader_userdata_reg >= R_00B130_SPI_SHADER_USER_DATA_VS_0 &&
-		    desc->shader_userdata_reg < R_00B230_SPI_SHADER_USER_DATA_GS_0)
-			desc->atom.num_dw += 4; /* second pointer update */
+			(4 + desc->element_dw_size) * util_bitcount(desc->dirty_mask); /* update */
 
 		desc->atom.dirty = true;
+		desc->pointer_dirty = true;
+		sctx->shader_userdata.atom.dirty = true;
 
 		/* TODO: Investigate if these flushes can be removed after
 		 * adding CE support. */
@@ -203,32 +200,6 @@ static void si_update_descriptors(struct si_context *sctx,
 			sctx->b.flags |= SI_CONTEXT_INV_TC_L2;
 	} else {
 		desc->atom.dirty = false;
-	}
-}
-
-static void si_emit_shader_pointer(struct si_context *sctx,
-				   struct r600_atom *atom)
-{
-	struct si_descriptors *desc = (struct si_descriptors*)atom;
-	struct radeon_winsys_cs *cs = sctx->b.rings.gfx.cs;
-	uint64_t va = desc->buffer->gpu_address +
-		      desc->current_context_id * desc->context_size +
-		      desc->buffer_offset;
-
-	radeon_emit(cs, PKT3(PKT3_SET_SH_REG, 2, 0));
-	radeon_emit(cs, (desc->shader_userdata_reg - SI_SH_REG_OFFSET) >> 2);
-	radeon_emit(cs, va);
-	radeon_emit(cs, va >> 32);
-
-	if (desc->shader_userdata_reg >= R_00B130_SPI_SHADER_USER_DATA_VS_0 &&
-	    desc->shader_userdata_reg < R_00B230_SPI_SHADER_USER_DATA_GS_0) {
-		radeon_emit(cs, PKT3(PKT3_SET_SH_REG, 2, 0));
-		radeon_emit(cs, (desc->shader_userdata_reg +
-				 (R_00B330_SPI_SHADER_USER_DATA_ES_0 -
-				  R_00B130_SPI_SHADER_USER_DATA_VS_0) -
-				 SI_SH_REG_OFFSET) >> 2);
-		radeon_emit(cs, va);
-		radeon_emit(cs, va >> 32);
 	}
 }
 
@@ -295,24 +266,6 @@ static void si_emit_descriptors(struct si_context *sctx,
 
 	desc->dirty_mask = 0;
 	desc->current_context_id = new_context_id;
-
-	/* Now update the shader userdata pointer. */
-	si_emit_shader_pointer(sctx, &desc->atom);
-}
-
-static unsigned si_get_shader_user_data_base(unsigned shader)
-{
-	switch (shader) {
-	case PIPE_SHADER_VERTEX:
-		return R_00B130_SPI_SHADER_USER_DATA_VS_0;
-	case PIPE_SHADER_GEOMETRY:
-		return R_00B230_SPI_SHADER_USER_DATA_GS_0;
-	case PIPE_SHADER_FRAGMENT:
-		return R_00B030_SPI_SHADER_USER_DATA_PS_0;
-	default:
-		assert(0);
-		return 0;
-	}
 }
 
 /* SAMPLER VIEWS */
@@ -325,14 +278,11 @@ static void si_emit_sampler_views(struct si_context *sctx, struct r600_atom *ato
 }
 
 static void si_init_sampler_views(struct si_context *sctx,
-				  struct si_sampler_views *views,
-				  unsigned shader)
+				  struct si_sampler_views *views)
 {
 	int i;
 
-	si_init_descriptors(sctx, &views->desc,
-			    si_get_shader_user_data_base(shader) +
-			    SI_SGPR_RESOURCE * 4,
+	si_init_descriptors(sctx, &views->desc, SI_SGPR_RESOURCE,
 			    8, SI_NUM_SAMPLER_VIEWS, si_emit_sampler_views);
 
 	for (i = 0; i < views->desc.num_elements; i++) {
@@ -384,8 +334,6 @@ static void si_sampler_views_begin_new_cs(struct si_context *sctx,
 
 	r600_context_bo_reloc(&sctx->b, &sctx->b.rings.gfx, views->desc.buffer,
 			      RADEON_USAGE_READWRITE, RADEON_PRIO_SHADER_DATA);
-
-	si_emit_shader_pointer(sctx, &views->desc.atom);
 }
 
 static void si_set_sampler_view(struct si_context *sctx, unsigned shader,
@@ -493,7 +441,6 @@ static void si_sampler_states_begin_new_cs(struct si_context *sctx,
 {
 	r600_context_bo_reloc(&sctx->b, &sctx->b.rings.gfx, states->desc.buffer,
 			      RADEON_USAGE_READWRITE, RADEON_PRIO_SHADER_DATA);
-	si_emit_shader_pointer(sctx, &states->desc.atom);
 }
 
 void si_set_sampler_descriptors(struct si_context *sctx, unsigned shader,
@@ -536,7 +483,7 @@ static void si_emit_buffer_resources(struct si_context *sctx, struct r600_atom *
 
 static void si_init_buffer_resources(struct si_context *sctx,
 				     struct si_buffer_resources *buffers,
-				     unsigned num_buffers, unsigned shader,
+				     unsigned num_buffers,
 				     unsigned shader_userdata_index,
 				     enum radeon_bo_usage shader_usage,
 				     enum radeon_bo_priority priority)
@@ -556,10 +503,8 @@ static void si_init_buffer_resources(struct si_context *sctx,
 		buffers->desc_data[i] = &buffers->desc_storage[i*4];
 	}
 
-	si_init_descriptors(sctx, &buffers->desc,
-			    si_get_shader_user_data_base(shader) +
-			    shader_userdata_index*4, 4, num_buffers,
-			    si_emit_buffer_resources);
+	si_init_descriptors(sctx, &buffers->desc, shader_userdata_index, 4,
+			    num_buffers, si_emit_buffer_resources);
 }
 
 static void si_release_buffer_resources(struct si_buffer_resources *buffers)
@@ -593,8 +538,6 @@ static void si_buffer_resources_begin_new_cs(struct si_context *sctx,
 	r600_context_bo_reloc(&sctx->b, &sctx->b.rings.gfx,
 			      buffers->desc.buffer, RADEON_USAGE_READWRITE,
 			      RADEON_PRIO_SHADER_DATA);
-
-	si_emit_shader_pointer(sctx, &buffers->desc.atom);
 }
 
 /* VERTEX BUFFERS */
@@ -620,8 +563,6 @@ static void si_vertex_buffers_begin_new_cs(struct si_context *sctx)
 	r600_context_bo_reloc(&sctx->b, &sctx->b.rings.gfx,
 			      desc->buffer, RADEON_USAGE_READ,
 			      RADEON_PRIO_SHADER_DATA);
-
-	si_emit_shader_pointer(sctx, &desc->atom);
 }
 
 void si_update_vertex_buffers(struct si_context *sctx)
@@ -693,13 +634,12 @@ void si_update_vertex_buffers(struct si_context *sctx)
 		}
 	}
 
-	desc->atom.num_dw = 8; /* update 2 shader pointers (VS+ES) */
-	desc->atom.dirty = true;
-
 	/* Don't flush the const cache. It would have a very negative effect
 	 * on performance (confirmed by testing). New descriptors are always
 	 * uploaded to a fresh new buffer, so I don't think flushing the const
 	 * cache is needed. */
+	desc->pointer_dirty = true;
+	sctx->shader_userdata.atom.dirty = true;
 }
 
 
@@ -1277,6 +1217,112 @@ void si_copy_buffer(struct si_context *sctx,
 		r600_resource(dst)->TC_L2_dirty = true;
 }
 
+/* SHADER USER DATA */
+
+static void si_mark_shader_pointers_dirty(struct si_context *sctx,
+					  unsigned shader)
+{
+	sctx->const_buffers[shader].desc.pointer_dirty = true;
+	sctx->rw_buffers[shader].desc.pointer_dirty = true;
+	sctx->samplers[shader].views.desc.pointer_dirty = true;
+	sctx->samplers[shader].states.desc.pointer_dirty = true;
+
+	if (shader == PIPE_SHADER_VERTEX)
+		sctx->vertex_buffers.pointer_dirty = true;
+
+	sctx->shader_userdata.atom.dirty = true;
+}
+
+static void si_shader_userdata_begin_new_cs(struct si_context *sctx)
+{
+	int i;
+
+	for (i = 0; i < SI_NUM_SHADERS; i++) {
+		si_mark_shader_pointers_dirty(sctx, i);
+	}
+}
+
+/* Set a base register address for user data constants in the given shader.
+ * This assigns a mapping from PIPE_SHADER_* to SPI_SHADER_USER_DATA_*.
+ */
+static void si_set_user_data_base(struct si_context *sctx,
+				  unsigned shader, uint32_t new_base)
+{
+	uint32_t *base = &sctx->shader_userdata.sh_base[shader];
+
+	if (*base != new_base) {
+		*base = new_base;
+
+		if (new_base)
+			si_mark_shader_pointers_dirty(sctx, shader);
+	}
+}
+
+/* This must be called when these shaders are changed from non-NULL to NULL
+ * and vice versa:
+ * - geometry shader
+ * - tessellation control shader
+ * - tessellation evaluation shader
+ */
+void si_shader_change_notify(struct si_context *sctx)
+{
+	/* VS can be bound as VS or ES. */
+	if (sctx->gs_shader)
+		si_set_user_data_base(sctx, PIPE_SHADER_VERTEX,
+				      R_00B330_SPI_SHADER_USER_DATA_ES_0);
+	else
+		si_set_user_data_base(sctx, PIPE_SHADER_VERTEX,
+				      R_00B130_SPI_SHADER_USER_DATA_VS_0);
+}
+
+static void si_emit_shader_pointer(struct si_context *sctx,
+				   struct si_descriptors *desc,
+				   unsigned sh_base, bool keep_dirty)
+{
+	struct radeon_winsys_cs *cs = sctx->b.rings.gfx.cs;
+	uint64_t va;
+
+	if (!desc->pointer_dirty)
+		return;
+
+	va = desc->buffer->gpu_address +
+	     desc->current_context_id * desc->context_size +
+	     desc->buffer_offset;
+
+	radeon_emit(cs, PKT3(PKT3_SET_SH_REG, 2, 0));
+	radeon_emit(cs, (sh_base + desc->shader_userdata_offset - SI_SH_REG_OFFSET) >> 2);
+	radeon_emit(cs, va);
+	radeon_emit(cs, va >> 32);
+
+	desc->pointer_dirty = keep_dirty;
+}
+
+static void si_emit_shader_userdata(struct si_context *sctx,
+				    struct r600_atom *atom)
+{
+	unsigned i;
+	uint32_t *sh_base = sctx->shader_userdata.sh_base;
+
+	/* The VS copy shader needs these for clipping, streamout, and rings. */
+	if (sctx->gs_shader) {
+		unsigned base = R_00B130_SPI_SHADER_USER_DATA_VS_0;
+		unsigned i = PIPE_SHADER_VERTEX;
+
+		si_emit_shader_pointer(sctx, &sctx->const_buffers[i].desc, base, true);
+		si_emit_shader_pointer(sctx, &sctx->rw_buffers[i].desc, base, true);
+	}
+
+	for (i = 0; i < SI_NUM_SHADERS; i++) {
+		unsigned base = sh_base[i];
+
+		si_emit_shader_pointer(sctx, &sctx->const_buffers[i].desc, base, false);
+		si_emit_shader_pointer(sctx, &sctx->rw_buffers[i].desc, base, false);
+		si_emit_shader_pointer(sctx, &sctx->samplers[i].views.desc, base, false);
+		si_emit_shader_pointer(sctx, &sctx->samplers[i].states.desc, base, false);
+	}
+	si_emit_shader_pointer(sctx, &sctx->vertex_buffers, sh_base[PIPE_SHADER_VERTEX], false);
+}
+
 /* INIT/DEINIT */
 
 void si_init_all_descriptors(struct si_context *sctx)
@@ -1285,19 +1331,17 @@ void si_init_all_descriptors(struct si_context *sctx)
 
 	for (i = 0; i < SI_NUM_SHADERS; i++) {
 		si_init_buffer_resources(sctx, &sctx->const_buffers[i],
-					 SI_NUM_CONST_BUFFERS, i, SI_SGPR_CONST,
+					 SI_NUM_CONST_BUFFERS, SI_SGPR_CONST,
 					 RADEON_USAGE_READ, RADEON_PRIO_SHADER_BUFFER_RO);
 		si_init_buffer_resources(sctx, &sctx->rw_buffers[i],
-					 i == PIPE_SHADER_VERTEX ?
-					 SI_NUM_RW_BUFFERS : SI_NUM_RING_BUFFERS,
-					 i, SI_SGPR_RW_BUFFERS,
+					 SI_NUM_RW_BUFFERS, SI_SGPR_RW_BUFFERS,
 					 RADEON_USAGE_READWRITE, RADEON_PRIO_SHADER_RESOURCE_RW);
 
-		si_init_sampler_views(sctx, &sctx->samplers[i].views, i);
+		si_init_sampler_views(sctx, &sctx->samplers[i].views);
 
 		si_init_descriptors(sctx, &sctx->samplers[i].states.desc,
-				    si_get_shader_user_data_base(i) + SI_SGPR_SAMPLER * 4,
-				    4, SI_NUM_SAMPLER_STATES, si_emit_sampler_states);
+				    SI_SGPR_SAMPLER, 4, SI_NUM_SAMPLER_STATES,
+				    si_emit_sampler_states);
 
 		sctx->atoms.s.const_buffers[i] = &sctx->const_buffers[i].desc.atom;
 		sctx->atoms.s.rw_buffers[i] = &sctx->rw_buffers[i].desc.atom;
@@ -1305,11 +1349,8 @@ void si_init_all_descriptors(struct si_context *sctx)
 		sctx->atoms.s.sampler_states[i] = &sctx->samplers[i].states.desc.atom;
 	}
 
-	si_init_descriptors(sctx, &sctx->vertex_buffers,
-			    si_get_shader_user_data_base(PIPE_SHADER_VERTEX) +
-			    SI_SGPR_VERTEX_BUFFER*4, 4, SI_NUM_VERTEX_BUFFERS,
-			    si_emit_shader_pointer);
-	sctx->atoms.s.vertex_buffers = &sctx->vertex_buffers.atom;
+	si_init_descriptors(sctx, &sctx->vertex_buffers, SI_SGPR_VERTEX_BUFFER,
+			    4, SI_NUM_VERTEX_BUFFERS, NULL);
 
 	/* Set pipe_context functions. */
 	sctx->b.b.set_constant_buffer = si_set_constant_buffer;
@@ -1317,6 +1358,18 @@ void si_init_all_descriptors(struct si_context *sctx)
 	sctx->b.b.set_stream_output_targets = si_set_streamout_targets;
 	sctx->b.clear_buffer = si_clear_buffer;
 	sctx->b.invalidate_buffer = si_invalidate_buffer;
+
+	/* Shader user data. */
+	sctx->atoms.s.shader_userdata = &sctx->shader_userdata.atom;
+	sctx->shader_userdata.atom.emit = (void*)si_emit_shader_userdata;
+
+	/* Upper bound, 4 pointers per shader, +1 for vertex buffers, +2 for the VS copy shader. */
+	sctx->shader_userdata.atom.num_dw = (SI_NUM_SHADERS * 4 + 1 + 2) * 4;
+
+	/* Set default and immutable mappings. */
+	si_set_user_data_base(sctx, PIPE_SHADER_VERTEX, R_00B130_SPI_SHADER_USER_DATA_VS_0);
+	si_set_user_data_base(sctx, PIPE_SHADER_GEOMETRY, R_00B230_SPI_SHADER_USER_DATA_GS_0);
+	si_set_user_data_base(sctx, PIPE_SHADER_FRAGMENT, R_00B030_SPI_SHADER_USER_DATA_PS_0);
 }
 
 void si_release_all_descriptors(struct si_context *sctx)
@@ -1343,4 +1396,5 @@ void si_all_descriptors_begin_new_cs(struct si_context *sctx)
 		si_sampler_states_begin_new_cs(sctx, &sctx->samplers[i].states);
 	}
 	si_vertex_buffers_begin_new_cs(sctx);
+	si_shader_userdata_begin_new_cs(sctx);
 }

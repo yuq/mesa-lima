@@ -125,8 +125,6 @@ struct si_framebuffer {
 
 #define SI_NUM_ATOMS(sctx) (sizeof((sctx)->atoms)/sizeof((sctx)->atoms.array[0]))
 
-#define SI_NUM_SHADERS (PIPE_SHADER_GEOMETRY+1)
-
 struct si_context {
 	struct r600_common_context	b;
 	struct blitter_context		*blitter;
@@ -142,7 +140,6 @@ struct si_context {
 	union {
 		struct {
 			/* The order matters. */
-			struct r600_atom *vertex_buffers;
 			struct r600_atom *const_buffers[SI_NUM_SHADERS];
 			struct r600_atom *rw_buffers[SI_NUM_SHADERS];
 			struct r600_atom *sampler_views[SI_NUM_SHADERS];
@@ -157,6 +154,7 @@ struct si_context {
 			struct r600_atom *db_render_state;
 			struct r600_atom *msaa_config;
 			struct r600_atom *clip_regs;
+			struct r600_atom *shader_userdata;
 		} s;
 		struct r600_atom *array[0];
 	} atoms;
@@ -170,6 +168,7 @@ struct si_context {
 	struct si_shader_selector	*gs_shader;
 	struct si_shader_selector	*vs_shader;
 	struct si_cs_shader_state	cs_shader_state;
+	struct si_shader_data		shader_userdata;
 	/* shader information */
 	unsigned			sprite_coord_enable;
 	bool				flatshade;

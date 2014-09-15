@@ -249,8 +249,7 @@ static void si_emit_draw_packets(struct si_context *sctx,
 				 const struct pipe_index_buffer *ib)
 {
 	struct radeon_winsys_cs *cs = sctx->b.rings.gfx.cs;
-	unsigned sh_base_reg = (sctx->gs_shader ? R_00B330_SPI_SHADER_USER_DATA_ES_0 :
-						  R_00B130_SPI_SHADER_USER_DATA_VS_0);
+	unsigned sh_base_reg = sctx->shader_userdata.sh_base[PIPE_SHADER_VERTEX];
 
 	if (info->count_from_stream_output) {
 		struct r600_so_target *t =

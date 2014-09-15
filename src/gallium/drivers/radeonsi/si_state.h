@@ -30,6 +30,8 @@
 #include "si_pm4.h"
 #include "radeon/r600_pipe_common.h"
 
+#define SI_NUM_SHADERS (PIPE_SHADER_GEOMETRY+1)
+
 struct si_screen;
 struct si_shader;
 
@@ -111,6 +113,11 @@ union si_state {
 	struct si_pm4_state	*array[0];
 };
 
+struct si_shader_data {
+	struct r600_atom	atom;
+	uint32_t		sh_base[SI_NUM_SHADERS];
+};
+
 #define SI_NUM_USER_SAMPLERS            16 /* AKA OpenGL textures units per shader */
 #define SI_POLY_STIPPLE_SAMPLER         SI_NUM_USER_SAMPLERS
 #define SI_NUM_SAMPLERS                 (SI_POLY_STIPPLE_SAMPLER + 1)
@@ -172,9 +179,10 @@ struct si_descriptors {
 	/* The size of a context, should be equal to 4*element_dw_size*num_elements. */
 	unsigned context_size;
 
-	/* The shader userdata register where the 64-bit pointer to the descriptor
+	/* The shader userdata offset within a shader where the 64-bit pointer to the descriptor
 	 * array will be stored. */
-	unsigned shader_userdata_reg;
+	unsigned shader_userdata_offset;
+	bool pointer_dirty;
 };
 
 struct si_sampler_views {
@@ -246,6 +254,7 @@ void si_copy_buffer(struct si_context *sctx,
 		    uint64_t dst_offset, uint64_t src_offset, unsigned size, bool is_framebuffer);
 void si_upload_const_buffer(struct si_context *sctx, struct r600_resource **rbuffer,
 			    const uint8_t *ptr, unsigned size, uint32_t *const_offset);
+void si_shader_change_notify(struct si_context *sctx);
 
 /* si_state.c */
 struct si_shader_selector;
