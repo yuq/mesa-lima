@@ -57,6 +57,8 @@ static void si_blitter_begin(struct pipe_context *ctx, enum si_blitter_op op)
 	util_blitter_save_rasterizer(sctx->blitter, sctx->queued.named.rasterizer);
 	util_blitter_save_fragment_shader(sctx->blitter, sctx->ps_shader);
 	util_blitter_save_geometry_shader(sctx->blitter, sctx->gs_shader);
+	util_blitter_save_tessctrl_shader(sctx->blitter, sctx->tcs_shader);
+	util_blitter_save_tesseval_shader(sctx->blitter, sctx->tes_shader);
 	util_blitter_save_vertex_shader(sctx->blitter, sctx->vs_shader);
 	util_blitter_save_vertex_elements(sctx->blitter, sctx->vertex_elements);
 	if (sctx->queued.named.sample_mask) {

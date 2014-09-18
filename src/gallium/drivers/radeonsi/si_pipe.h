@@ -167,6 +167,8 @@ struct si_context {
 	struct si_shader_selector	*ps_shader;
 	struct si_shader_selector	*gs_shader;
 	struct si_shader_selector	*vs_shader;
+	struct si_shader_selector	*tcs_shader;
+	struct si_shader_selector	*tes_shader;
 	struct si_cs_shader_state	cs_shader_state;
 	struct si_shader_data		shader_userdata;
 	/* shader information */
