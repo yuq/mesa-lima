@@ -196,11 +196,12 @@ struct si_context {
 	/* With rasterizer discard, there doesn't have to be a pixel shader.
 	 * In that case, we bind this one: */
 	void			*dummy_pixel_shader;
-	struct si_pm4_state	*gs_on;
-	struct si_pm4_state	*gs_off;
-	struct si_pm4_state	*gs_rings;
 	struct r600_atom	cache_flush;
 	struct pipe_constant_buffer null_const_buf; /* used for set_constant_buffer(NULL) on CIK */
+
+	/* VGT states. */
+	struct si_pm4_state	*vgt_shader_config[4];
+	struct si_pm4_state	*gs_rings;
 	struct pipe_resource	*esgs_ring;
 	struct pipe_resource	*gsvs_ring;
 

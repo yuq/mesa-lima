@@ -922,6 +922,41 @@ static void si_update_spi_tmpring_size(struct si_context *sctx)
 				S_0286E8_WAVESIZE(scratch_bytes_per_wave >> 10);
 }
 
+static void si_update_vgt_shader_config(struct si_context *sctx)
+{
+	/* Calculate the index of the config.
+	 * 0 = VS, 1 = VS+GS, 2 = VS+Tess, 3 = VS+Tess+GS */
+	unsigned index = 2*!!sctx->tes_shader + !!sctx->gs_shader;
+	struct si_pm4_state **pm4 = &sctx->vgt_shader_config[index];
+
+	if (!*pm4) {
+		uint32_t stages = 0;
+
+		*pm4 = CALLOC_STRUCT(si_pm4_state);
+
+		if (sctx->tes_shader) {
+			stages |= S_028B54_LS_EN(V_028B54_LS_STAGE_ON) |
+				  S_028B54_HS_EN(1);
+
+			if (sctx->gs_shader)
+				stages |= S_028B54_ES_EN(V_028B54_ES_STAGE_DS) |
+					  S_028B54_GS_EN(1) |
+				          S_028B54_VS_EN(V_028B54_VS_STAGE_COPY_SHADER);
+			else
+				stages |= S_028B54_VS_EN(V_028B54_VS_STAGE_DS);
+		} else if (sctx->gs_shader) {
+			stages |= S_028B54_ES_EN(V_028B54_ES_STAGE_REAL) |
+				  S_028B54_GS_EN(1) |
+			          S_028B54_VS_EN(V_028B54_VS_STAGE_COPY_SHADER);
+		}
+
+		si_pm4_set_reg(*pm4, R_028B54_VGT_SHADER_STAGES_EN, stages);
+		if (!sctx->gs_shader)
+			si_pm4_set_reg(*pm4, R_028A40_VGT_GS_MODE, 0);
+	}
+	si_pm4_bind_state(sctx, vgt_shader_config, *pm4);
+}
+
 void si_update_shaders(struct si_context *sctx)
 {
 	struct pipe_context *ctx = (struct pipe_context*)sctx;
@@ -948,33 +983,18 @@ void si_update_shaders(struct si_context *sctx)
 				   sctx->gs_shader->gs_max_out_vertices *
 				   sctx->gs_shader->info.num_outputs * 16,
 				   64, true, true, 4, 16);
-
-		if (!sctx->gs_on) {
-			sctx->gs_on = CALLOC_STRUCT(si_pm4_state);
-
-			si_pm4_set_reg(sctx->gs_on, R_028B54_VGT_SHADER_STAGES_EN,
-				       S_028B54_ES_EN(V_028B54_ES_STAGE_REAL) |
-				       S_028B54_GS_EN(1) |
-				       S_028B54_VS_EN(V_028B54_VS_STAGE_COPY_SHADER));
-		}
-		si_pm4_bind_state(sctx, gs_onoff, sctx->gs_on);
 	} else {
 		si_shader_select(ctx, sctx->vs_shader);
 		si_pm4_bind_state(sctx, vs, sctx->vs_shader->current->pm4);
 
 		sctx->b.streamout.stride_in_dw = sctx->vs_shader->so.stride;
 
-		if (!sctx->gs_off) {
-			sctx->gs_off = CALLOC_STRUCT(si_pm4_state);
-
-			si_pm4_set_reg(sctx->gs_off, R_028A40_VGT_GS_MODE, 0);
-			si_pm4_set_reg(sctx->gs_off, R_028B54_VGT_SHADER_STAGES_EN, 0);
-		}
-		si_pm4_bind_state(sctx, gs_onoff, sctx->gs_off);
 		si_pm4_bind_state(sctx, gs_rings, NULL);
 		si_pm4_bind_state(sctx, gs, NULL);
 		si_pm4_bind_state(sctx, es, NULL);
 	}
+
+	si_update_vgt_shader_config(sctx);
 
 	si_shader_select(ctx, sctx->ps_shader);
 
