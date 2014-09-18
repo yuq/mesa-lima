@@ -1266,13 +1266,28 @@ static void si_set_user_data_base(struct si_context *sctx,
  */
 void si_shader_change_notify(struct si_context *sctx)
 {
-	/* VS can be bound as VS or ES. */
-	if (sctx->gs_shader)
+	/* VS can be bound as VS, ES, or LS. */
+	if (sctx->tes_shader)
+		si_set_user_data_base(sctx, PIPE_SHADER_VERTEX,
+				      R_00B530_SPI_SHADER_USER_DATA_LS_0);
+	else if (sctx->gs_shader)
 		si_set_user_data_base(sctx, PIPE_SHADER_VERTEX,
 				      R_00B330_SPI_SHADER_USER_DATA_ES_0);
 	else
 		si_set_user_data_base(sctx, PIPE_SHADER_VERTEX,
 				      R_00B130_SPI_SHADER_USER_DATA_VS_0);
+
+	/* TES can be bound as ES, VS, or not bound. */
+	if (sctx->tes_shader) {
+		if (sctx->gs_shader)
+			si_set_user_data_base(sctx, PIPE_SHADER_TESS_EVAL,
+					      R_00B330_SPI_SHADER_USER_DATA_ES_0);
+		else
+			si_set_user_data_base(sctx, PIPE_SHADER_TESS_EVAL,
+					      R_00B130_SPI_SHADER_USER_DATA_VS_0);
+	} else {
+		si_set_user_data_base(sctx, PIPE_SHADER_TESS_EVAL, 0);
+	}
 }
 
 static void si_emit_shader_pointer(struct si_context *sctx,
@@ -1303,20 +1318,33 @@ static void si_emit_shader_userdata(struct si_context *sctx,
 	unsigned i;
 	uint32_t *sh_base = sctx->shader_userdata.sh_base;
 
-	/* The VS copy shader needs these for clipping, streamout, and rings. */
 	if (sctx->gs_shader) {
-		unsigned base = R_00B130_SPI_SHADER_USER_DATA_VS_0;
+		/* The VS copy shader needs these for clipping, streamout, and rings. */
+		unsigned vs_base = R_00B130_SPI_SHADER_USER_DATA_VS_0;
 		unsigned i = PIPE_SHADER_VERTEX;
 
-		si_emit_shader_pointer(sctx, &sctx->const_buffers[i].desc, base, true);
-		si_emit_shader_pointer(sctx, &sctx->rw_buffers[i].desc, base, true);
+		si_emit_shader_pointer(sctx, &sctx->const_buffers[i].desc, vs_base, true);
+		si_emit_shader_pointer(sctx, &sctx->rw_buffers[i].desc, vs_base, true);
+
+		/* The TESSEVAL shader needs this for the ESGS ring buffer. */
+		si_emit_shader_pointer(sctx, &sctx->rw_buffers[i].desc,
+				       R_00B330_SPI_SHADER_USER_DATA_ES_0, true);
+	} else if (sctx->tes_shader) {
+		/* The TESSEVAL shader needs this for streamout. */
+		si_emit_shader_pointer(sctx, &sctx->rw_buffers[PIPE_SHADER_VERTEX].desc,
+				       R_00B130_SPI_SHADER_USER_DATA_VS_0, true);
 	}
 
 	for (i = 0; i < SI_NUM_SHADERS; i++) {
 		unsigned base = sh_base[i];
 
+		if (!base)
+			continue;
+
+		if (i != PIPE_SHADER_TESS_EVAL)
+			si_emit_shader_pointer(sctx, &sctx->rw_buffers[i].desc, base, false);
+
 		si_emit_shader_pointer(sctx, &sctx->const_buffers[i].desc, base, false);
-		si_emit_shader_pointer(sctx, &sctx->rw_buffers[i].desc, base, false);
 		si_emit_shader_pointer(sctx, &sctx->samplers[i].views.desc, base, false);
 		si_emit_shader_pointer(sctx, &sctx->samplers[i].states.desc, base, false);
 	}
@@ -1368,6 +1396,7 @@ void si_init_all_descriptors(struct si_context *sctx)
 
 	/* Set default and immutable mappings. */
 	si_set_user_data_base(sctx, PIPE_SHADER_VERTEX, R_00B130_SPI_SHADER_USER_DATA_VS_0);
+	si_set_user_data_base(sctx, PIPE_SHADER_TESS_CTRL, R_00B430_SPI_SHADER_USER_DATA_HS_0);
 	si_set_user_data_base(sctx, PIPE_SHADER_GEOMETRY, R_00B230_SPI_SHADER_USER_DATA_GS_0);
 	si_set_user_data_base(sctx, PIPE_SHADER_FRAGMENT, R_00B030_SPI_SHADER_USER_DATA_PS_0);
 }

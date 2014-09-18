@@ -30,7 +30,7 @@
 #include "si_pm4.h"
 #include "radeon/r600_pipe_common.h"
 
-#define SI_NUM_SHADERS (PIPE_SHADER_GEOMETRY+1)
+#define SI_NUM_SHADERS (PIPE_SHADER_TESS_EVAL+1)
 
 struct si_screen;
 struct si_shader;
