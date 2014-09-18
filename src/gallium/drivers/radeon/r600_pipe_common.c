@@ -333,6 +333,8 @@ static const struct debug_named_value common_debug_options[] = {
 	{ "gs", DBG_GS, "Print geometry shaders" },
 	{ "ps", DBG_PS, "Print pixel shaders" },
 	{ "cs", DBG_CS, "Print compute shaders" },
+	{ "tcs", DBG_TCS, "Print tessellation control shaders" },
+	{ "tes", DBG_TES, "Print tessellation evaluation shaders" },
 
 	/* features */
 	{ "nodma", DBG_NO_ASYNC_DMA, "Disable asynchronous DMA" },
@@ -956,6 +958,10 @@ bool r600_can_dump_shader(struct r600_common_screen *rscreen,
 	switch (tgsi_get_processor_type(tokens)) {
 	case TGSI_PROCESSOR_VERTEX:
 		return (rscreen->debug_flags & DBG_VS) != 0;
+	case TGSI_PROCESSOR_TESS_CTRL:
+		return (rscreen->debug_flags & DBG_TCS) != 0;
+	case TGSI_PROCESSOR_TESS_EVAL:
+		return (rscreen->debug_flags & DBG_TES) != 0;
 	case TGSI_PROCESSOR_GEOMETRY:
 		return (rscreen->debug_flags & DBG_GS) != 0;
 	case TGSI_PROCESSOR_FRAGMENT:

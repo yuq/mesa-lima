@@ -79,16 +79,18 @@
 #define DBG_GS			(1 << 7)
 #define DBG_PS			(1 << 8)
 #define DBG_CS			(1 << 9)
+#define DBG_TCS			(1 << 10)
+#define DBG_TES			(1 << 11)
 /* features */
-#define DBG_NO_ASYNC_DMA	(1 << 10)
-#define DBG_NO_HYPERZ		(1 << 11)
-#define DBG_NO_DISCARD_RANGE	(1 << 12)
-#define DBG_NO_2D_TILING	(1 << 13)
-#define DBG_NO_TILING		(1 << 14)
-#define DBG_SWITCH_ON_EOP	(1 << 15)
-#define DBG_FORCE_DMA		(1 << 16)
-#define DBG_PRECOMPILE		(1 << 17)
-#define DBG_INFO		(1 << 18)
+#define DBG_NO_ASYNC_DMA	(1 << 12)
+#define DBG_NO_HYPERZ		(1 << 13)
+#define DBG_NO_DISCARD_RANGE	(1 << 14)
+#define DBG_NO_2D_TILING	(1 << 15)
+#define DBG_NO_TILING		(1 << 16)
+#define DBG_SWITCH_ON_EOP	(1 << 17)
+#define DBG_FORCE_DMA		(1 << 18)
+#define DBG_PRECOMPILE		(1 << 19)
+#define DBG_INFO		(1 << 20)
 /* The maximum allowed bit is 20. */
 
 #define R600_MAP_BUFFER_ALIGNMENT 64
