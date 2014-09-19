@@ -935,8 +935,10 @@ intelDestroyContext(__DRIcontext * driContextPriv)
 
    intel_batchbuffer_free(brw);
 
-   drm_intel_bo_unreference(brw->first_post_swapbuffers_batch);
-   brw->first_post_swapbuffers_batch = NULL;
+   drm_intel_bo_unreference(brw->throttle_batch[1]);
+   drm_intel_bo_unreference(brw->throttle_batch[0]);
+   brw->throttle_batch[1] = NULL;
+   brw->throttle_batch[0] = NULL;
 
    driDestroyOptionCache(&brw->optionCache);
 
@@ -1245,11 +1247,14 @@ intel_prepare_render(struct brw_context *brw)
     * the swap, and getting our hands on that doesn't seem worth it,
     * so we just us the first batch we emitted after the last swap.
     */
-   if (brw->need_swap_throttle && brw->first_post_swapbuffers_batch) {
-      if (!brw->disable_throttling)
-         drm_intel_bo_wait_rendering(brw->first_post_swapbuffers_batch);
-      drm_intel_bo_unreference(brw->first_post_swapbuffers_batch);
-      brw->first_post_swapbuffers_batch = NULL;
+   if (brw->need_swap_throttle && brw->throttle_batch[0]) {
+      if (brw->throttle_batch[1]) {
+         if (!brw->disable_throttling)
+            drm_intel_bo_wait_rendering(brw->throttle_batch[1]);
+         drm_intel_bo_unreference(brw->throttle_batch[1]);
+      }
+      brw->throttle_batch[1] = brw->throttle_batch[0];
+      brw->throttle_batch[0] = NULL;
       brw->need_swap_throttle = false;
       /* Throttling here is more precise than the throttle ioctl, so skip it */
       brw->need_flush_throttle = false;

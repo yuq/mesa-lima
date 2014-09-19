@@ -1030,7 +1030,7 @@ struct brw_context
    bool front_buffer_dirty;
 
    /** Framerate throttling: @{ */
-   drm_intel_bo *first_post_swapbuffers_batch;
+   drm_intel_bo *throttle_batch[2];
 
    /* Limit the number of outstanding SwapBuffers by waiting for an earlier
     * frame of rendering to complete. This gives a very precise cap to the

@@ -168,6 +168,7 @@ static void
 brw_new_batch(struct brw_context *brw)
 {
    /* Create a new batchbuffer and reset the associated state: */
+   drm_intel_gem_bo_clear_relocs(brw->batch.bo, 0);
    intel_batchbuffer_reset(brw);
 
    /* If the kernel supports hardware contexts, then most hardware state is
@@ -289,9 +290,9 @@ _intel_batchbuffer_flush(struct brw_context *brw,
    if (brw->batch.used == 0)
       return 0;
 
-   if (brw->first_post_swapbuffers_batch == NULL) {
-      brw->first_post_swapbuffers_batch = brw->batch.bo;
-      drm_intel_bo_reference(brw->first_post_swapbuffers_batch);
+   if (brw->throttle_batch[0] == NULL) {
+      brw->throttle_batch[0] = brw->batch.bo;
+      drm_intel_bo_reference(brw->throttle_batch[0]);
    }
 
    if (unlikely(INTEL_DEBUG & DEBUG_BATCH)) {
