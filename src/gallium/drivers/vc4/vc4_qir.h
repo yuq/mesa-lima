@@ -459,6 +459,7 @@ void qir_remove_instruction(struct vc4_compile *c, struct qinst *qinst);
 struct qreg qir_uniform(struct vc4_compile *c,
                         enum quniform_contents contents,
                         uint32_t data);
+void qir_schedule_instructions(struct vc4_compile *c);
 void qir_reorder_uniforms(struct vc4_compile *c);
 
 void qir_emit(struct vc4_compile *c, struct qinst *inst);

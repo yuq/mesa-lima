@@ -1848,12 +1848,15 @@ vc4_shader_ntq(struct vc4_context *vc4, enum qstage stage,
         qir_optimize(c);
         qir_lower_uniforms(c);
 
+        qir_schedule_instructions(c);
+
         if (vc4_debug & VC4_DEBUG_QIR) {
                 fprintf(stderr, "%s prog %d/%d QIR:\n",
                         qir_get_stage_name(c->stage),
                         c->program_id, c->variant_id);
                 qir_dump(c);
         }
+
         qir_reorder_uniforms(c);
         vc4_generate_code(vc4, c);
 
