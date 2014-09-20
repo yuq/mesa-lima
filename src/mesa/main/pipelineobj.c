@@ -244,14 +244,13 @@ _mesa_UseProgramStages(GLuint pipeline, GLbitfield stages, GLuint program)
     *
     *     "If stages is not the special value ALL_SHADER_BITS, and has a bit
     *     set that is not recognized, the error INVALID_VALUE is generated."
-    *
-    * NOT YET SUPPORTED:
-    * GL_TESS_CONTROL_SHADER_BIT
-    * GL_TESS_EVALUATION_SHADER_BIT
     */
    any_valid_stages = GL_VERTEX_SHADER_BIT | GL_FRAGMENT_SHADER_BIT;
    if (_mesa_has_geometry_shaders(ctx))
       any_valid_stages |= GL_GEOMETRY_SHADER_BIT;
+   if (_mesa_has_tessellation(ctx))
+      any_valid_stages |= GL_TESS_CONTROL_SHADER_BIT |
+                          GL_TESS_EVALUATION_SHADER_BIT;
 
    if (stages != GL_ALL_SHADER_BITS && (stages & ~any_valid_stages) != 0) {
       _mesa_error(ctx, GL_INVALID_VALUE, "glUseProgramStages(Stages)");
@@ -327,6 +326,12 @@ _mesa_UseProgramStages(GLuint pipeline, GLbitfield stages, GLuint program)
 
    if ((stages & GL_GEOMETRY_SHADER_BIT) != 0)
       _mesa_use_shader_program(ctx, GL_GEOMETRY_SHADER, shProg, pipe);
+
+   if ((stages & GL_TESS_CONTROL_SHADER_BIT) != 0)
+      _mesa_use_shader_program(ctx, GL_TESS_CONTROL_SHADER, shProg, pipe);
+
+   if ((stages & GL_TESS_EVALUATION_SHADER_BIT) != 0)
+      _mesa_use_shader_program(ctx, GL_TESS_EVALUATION_SHADER, shProg, pipe);
 }
 
 /**
