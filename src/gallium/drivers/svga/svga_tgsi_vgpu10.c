@@ -2298,11 +2298,13 @@ emit_vgpu10_declaration(struct svga_shader_emitter_v10 *emit,
       emit->num_samplers = MAX2(emit->num_samplers, decl->Range.Last + 1);
       return TRUE;
 
+#if 0
    case TGSI_FILE_RESOURCE:
       /*opcode0.opcodeType = VGPU10_OPCODE_DCL_RESOURCE;*/
       /* XXX more, VGPU10_RETURN_TYPE_FLOAT */
       assert(!"TGSI_FILE_RESOURCE not handled yet");
       return FALSE;
+#endif
 
    case TGSI_FILE_ADDRESS:
       emit->num_address_regs = MAX2(emit->num_address_regs,

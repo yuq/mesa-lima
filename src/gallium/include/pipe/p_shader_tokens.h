@@ -76,7 +76,7 @@ enum tgsi_file_type {
    TGSI_FILE_IMMEDIATE           =7,
    TGSI_FILE_PREDICATE           =8,
    TGSI_FILE_SYSTEM_VALUE        =9,
-   TGSI_FILE_RESOURCE            =10,
+   TGSI_FILE_IMAGE               =10,
    TGSI_FILE_SAMPLER_VIEW        =11,
    TGSI_FILE_COUNT      /**< how many TGSI_FILE_ types */
 };
@@ -197,11 +197,12 @@ struct tgsi_declaration_semantic
    unsigned Padding        : 8;
 };
 
-struct tgsi_declaration_resource {
+struct tgsi_declaration_image {
    unsigned Resource    : 8; /**< one of TGSI_TEXTURE_ */
    unsigned Raw         : 1;
    unsigned Writable    : 1;
-   unsigned Padding     : 22;
+   unsigned Format      : 10; /**< one of PIPE_FORMAT_ */
+   unsigned Padding     : 12;
 };
 
 enum tgsi_return_type {

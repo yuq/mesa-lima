@@ -50,6 +50,7 @@ union tgsi_any_token {
    struct tgsi_declaration_range decl_range;
    struct tgsi_declaration_dimension decl_dim;
    struct tgsi_declaration_interp decl_interp;
+   struct tgsi_declaration_image decl_image;
    struct tgsi_declaration_semantic decl_semantic;
    struct tgsi_declaration_sampler_view decl_sampler_view;
    struct tgsi_declaration_array array;
@@ -153,6 +154,15 @@ struct ureg_program
       unsigned return_type_w;
    } sampler_view[PIPE_MAX_SHADER_SAMPLER_VIEWS];
    unsigned nr_sampler_views;
+
+   struct {
+      unsigned index;
+      unsigned target;
+      unsigned format;
+      boolean wr;
+      boolean raw;
+   } image[PIPE_MAX_SHADER_IMAGES];
+   unsigned nr_images;
 
    struct util_bitmask *free_temps;
    struct util_bitmask *local_temps;
@@ -649,6 +659,37 @@ ureg_DECL_sampler_view(struct ureg_program *ureg,
       ureg->sampler_view[i].return_type_z = return_type_z;
       ureg->sampler_view[i].return_type_w = return_type_w;
       ureg->nr_sampler_views++;
+      return reg;
+   }
+
+   assert(0);
+   return reg;
+}
+
+/* Allocate a new image.
+ */
+struct ureg_src
+ureg_DECL_image(struct ureg_program *ureg,
+                unsigned index,
+                unsigned target,
+                unsigned format,
+                boolean wr,
+                boolean raw)
+{
+   struct ureg_src reg = ureg_src_register(TGSI_FILE_IMAGE, index);
+   unsigned i;
+
+   for (i = 0; i < ureg->nr_images; i++)
+      if (ureg->image[i].index == index)
+         return reg;
+
+   if (i < PIPE_MAX_SHADER_IMAGES) {
+      ureg->image[i].index = index;
+      ureg->image[i].target = target;
+      ureg->image[i].wr = wr;
+      ureg->image[i].raw = raw;
+      ureg->image[i].format = format;
+      ureg->nr_images++;
       return reg;
    }
 
@@ -1486,6 +1527,33 @@ emit_decl_sampler_view(struct ureg_program *ureg,
 }
 
 static void
+emit_decl_image(struct ureg_program *ureg,
+                unsigned index,
+                unsigned target,
+                unsigned format,
+                boolean wr,
+                boolean raw)
+{
+   union tgsi_any_token *out = get_tokens(ureg, DOMAIN_DECL, 3);
+
+   out[0].value = 0;
+   out[0].decl.Type = TGSI_TOKEN_TYPE_DECLARATION;
+   out[0].decl.NrTokens = 3;
+   out[0].decl.File = TGSI_FILE_IMAGE;
+   out[0].decl.UsageMask = 0xf;
+
+   out[1].value = 0;
+   out[1].decl_range.First = index;
+   out[1].decl_range.Last = index;
+
+   out[2].value = 0;
+   out[2].decl_image.Resource = target;
+   out[2].decl_image.Writable = wr;
+   out[2].decl_image.Raw      = raw;
+   out[2].decl_image.Format   = format;
+}
+
+static void
 emit_immediate( struct ureg_program *ureg,
                 const unsigned *v,
                 unsigned type )
@@ -1642,6 +1710,15 @@ static void emit_decls( struct ureg_program *ureg )
                              ureg->sampler_view[i].return_type_y,
                              ureg->sampler_view[i].return_type_z,
                              ureg->sampler_view[i].return_type_w);
+   }
+
+   for (i = 0; i < ureg->nr_images; i++) {
+      emit_decl_image(ureg,
+                      ureg->image[i].index,
+                      ureg->image[i].target,
+                      ureg->image[i].format,
+                      ureg->image[i].wr,
+                      ureg->image[i].raw);
    }
 
    if (ureg->const_decls.nr_constant_ranges) {

@@ -54,8 +54,8 @@ static const char *tgsi_file_names[] =
    "IMM",
    "PRED",
    "SV",
-   "RES",
-   "SVIEW"
+   "IMAGE",
+   "SVIEW",
 };
 
 const char *tgsi_semantic_names[TGSI_SEMANTIC_COUNT] =

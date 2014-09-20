@@ -352,7 +352,7 @@ static nv50_ir::DataFile translateFile(uint file)
    case TGSI_FILE_PREDICATE:       return nv50_ir::FILE_PREDICATE;
    case TGSI_FILE_IMMEDIATE:       return nv50_ir::FILE_IMMEDIATE;
    case TGSI_FILE_SYSTEM_VALUE:    return nv50_ir::FILE_SYSTEM_VALUE;
-   case TGSI_FILE_RESOURCE:        return nv50_ir::FILE_MEMORY_GLOBAL;
+   //case TGSI_FILE_RESOURCE:        return nv50_ir::FILE_MEMORY_GLOBAL;
    case TGSI_FILE_SAMPLER:
    case TGSI_FILE_NULL:
    default:
@@ -871,7 +871,7 @@ bool Source::scanSource()
    clipVertexOutput = -1;
 
    textureViews.resize(scan.file_max[TGSI_FILE_SAMPLER_VIEW] + 1);
-   resources.resize(scan.file_max[TGSI_FILE_RESOURCE] + 1);
+   //resources.resize(scan.file_max[TGSI_FILE_RESOURCE] + 1);
 
    info->immd.bufSize = 0;
 
@@ -1159,6 +1159,7 @@ bool Source::scanDeclaration(const struct tgsi_full_declaration *decl)
          }
       }
       break;
+/*
    case TGSI_FILE_RESOURCE:
       for (i = first; i <= last; ++i) {
          resources[i].target = decl->Resource.Resource;
@@ -1166,6 +1167,7 @@ bool Source::scanDeclaration(const struct tgsi_full_declaration *decl)
          resources[i].slot = i;
       }
       break;
+*/
    case TGSI_FILE_SAMPLER_VIEW:
       for (i = first; i <= last; ++i)
          textureViews[i].target = decl->SamplerView.Resource;
@@ -1231,11 +1233,13 @@ bool Source::scanInstruction(const struct tgsi_full_instruction *inst)
          if (src.isIndirect(0))
             mainTempsInLMem = true;
       } else
+/*
       if (src.getFile() == TGSI_FILE_RESOURCE) {
          if (src.getIndex(0) == TGSI_RESOURCE_GLOBAL)
             info->io.globalAccess |= (insn.getOpcode() == TGSI_OPCODE_LOAD) ?
                0x1 : 0x2;
       } else
+*/
       if (src.getFile() == TGSI_FILE_OUTPUT) {
          if (src.isIndirect(0)) {
             // We don't know which one is accessed, just mark everything for
@@ -1286,9 +1290,11 @@ Instruction::getTexture(const tgsi::Source *code, int s) const
    unsigned int r;
 
    switch (getSrc(s).getFile()) {
+/*
    case TGSI_FILE_RESOURCE:
       r = getSrc(s).getIndex(0);
       return translateTexture(code->resources.at(r).target);
+*/
    case TGSI_FILE_SAMPLER_VIEW:
       r = getSrc(s).getIndex(0);
       return translateTexture(code->textureViews.at(r).target);
@@ -1696,7 +1702,7 @@ Converter::acquireDst(int d, int c)
    const int idx = dst.getIndex(0);
    const int idx2d = dst.is2D() ? dst.getIndex(1) : 0;
 
-   if (dst.isMasked(c) || f == TGSI_FILE_RESOURCE)
+   if (dst.isMasked(c)/* || f == TGSI_FILE_RESOURCE*/)
       return NULL;
 
    if (dst.isIndirect(0) ||

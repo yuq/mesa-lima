@@ -259,36 +259,39 @@ tgsi_build_declaration_semantic(
    return ds;
 }
 
-static struct tgsi_declaration_resource
-tgsi_default_declaration_resource(void)
+static struct tgsi_declaration_image
+tgsi_default_declaration_image(void)
 {
-   struct tgsi_declaration_resource dr;
+   struct tgsi_declaration_image di;
 
-   dr.Resource = TGSI_TEXTURE_BUFFER;
-   dr.Raw = 0;
-   dr.Writable = 0;
-   dr.Padding = 0;
+   di.Resource = TGSI_TEXTURE_BUFFER;
+   di.Raw = 0;
+   di.Writable = 0;
+   di.Format = 0;
+   di.Padding = 0;
 
-   return dr;
+   return di;
 }
 
-static struct tgsi_declaration_resource
-tgsi_build_declaration_resource(unsigned texture,
-                                unsigned raw,
-                                unsigned writable,
-                                struct tgsi_declaration *declaration,
-                                struct tgsi_header *header)
+static struct tgsi_declaration_image
+tgsi_build_declaration_image(unsigned texture,
+                             unsigned format,
+                             unsigned raw,
+                             unsigned writable,
+                             struct tgsi_declaration *declaration,
+                             struct tgsi_header *header)
 {
-   struct tgsi_declaration_resource dr;
+   struct tgsi_declaration_image di;
 
-   dr = tgsi_default_declaration_resource();
-   dr.Resource = texture;
-   dr.Raw = raw;
-   dr.Writable = writable;
+   di = tgsi_default_declaration_image();
+   di.Resource = texture;
+   di.Format = format;
+   di.Raw = raw;
+   di.Writable = writable;
 
    declaration_grow(declaration, header);
 
-   return dr;
+   return di;
 }
 
 static struct tgsi_declaration_sampler_view
@@ -364,7 +367,7 @@ tgsi_default_full_declaration( void )
    full_declaration.Range = tgsi_default_declaration_range();
    full_declaration.Semantic = tgsi_default_declaration_semantic();
    full_declaration.Interp = tgsi_default_declaration_interp();
-   full_declaration.Resource = tgsi_default_declaration_resource();
+   full_declaration.Image = tgsi_default_declaration_image();
    full_declaration.SamplerView = tgsi_default_declaration_sampler_view();
    full_declaration.Array = tgsi_default_declaration_array();
 
@@ -454,20 +457,21 @@ tgsi_build_full_declaration(
          header );
    }
 
-   if (full_decl->Declaration.File == TGSI_FILE_RESOURCE) {
-      struct tgsi_declaration_resource *dr;
+   if (full_decl->Declaration.File == TGSI_FILE_IMAGE) {
+      struct tgsi_declaration_image *di;
 
       if (maxsize <= size) {
          return  0;
       }
-      dr = (struct tgsi_declaration_resource *)&tokens[size];
+      di = (struct tgsi_declaration_image *)&tokens[size];
       size++;
 
-      *dr = tgsi_build_declaration_resource(full_decl->Resource.Resource,
-                                            full_decl->Resource.Raw,
-                                            full_decl->Resource.Writable,
-                                            declaration,
-                                            header);
+      *di = tgsi_build_declaration_image(full_decl->Image.Resource,
+                                         full_decl->Image.Format,
+                                         full_decl->Image.Raw,
+                                         full_decl->Image.Writable,
+                                         declaration,
+                                         header);
    }
 
    if (full_decl->Declaration.File == TGSI_FILE_SAMPLER_VIEW) {

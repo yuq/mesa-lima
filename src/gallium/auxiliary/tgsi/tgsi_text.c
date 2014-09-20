@@ -1251,10 +1251,10 @@ static boolean parse_declaration( struct translate_ctx *ctx )
 
       cur++;
       eat_opt_white( &cur );
-      if (file == TGSI_FILE_RESOURCE) {
+      if (file == TGSI_FILE_IMAGE) {
          for (i = 0; i < TGSI_TEXTURE_COUNT; i++) {
             if (str_match_nocase_whole(&cur, tgsi_texture_names[i])) {
-               decl.Resource.Resource = i;
+               decl.Image.Resource = i;
                break;
             }
          }
@@ -1263,16 +1263,18 @@ static boolean parse_declaration( struct translate_ctx *ctx )
             return FALSE;
          }
 
+         /* XXX format */
+
          cur2 = cur;
          eat_opt_white(&cur2);
          while (*cur2 == ',') {
             cur2++;
             eat_opt_white(&cur2);
             if (str_match_nocase_whole(&cur2, "RAW")) {
-               decl.Resource.Raw = 1;
+               decl.Image.Raw = 1;
 
             } else if (str_match_nocase_whole(&cur2, "WR")) {
-               decl.Resource.Writable = 1;
+               decl.Image.Writable = 1;
 
             } else {
                break;

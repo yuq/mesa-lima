@@ -348,12 +348,14 @@ iter_declaration(
       }
    }
 
-   if (decl->Declaration.File == TGSI_FILE_RESOURCE) {
+   if (decl->Declaration.File == TGSI_FILE_IMAGE) {
       TXT(", ");
-      ENM(decl->Resource.Resource, tgsi_texture_names);
-      if (decl->Resource.Writable)
+      ENM(decl->Image.Resource, tgsi_texture_names);
+      TXT(", ");
+      UID(decl->Image.Format);
+      if (decl->Image.Writable)
          TXT(", WR");
-      if (decl->Resource.Raw)
+      if (decl->Image.Raw)
          TXT(", RAW");
    }
 
