@@ -75,6 +75,11 @@ static const struct st_tracked_state *atoms[] =
    &st_bind_tes_ubos,
    &st_bind_fs_ubos,
    &st_bind_gs_ubos,
+   &st_bind_vs_atomics,
+   &st_bind_tcs_atomics,
+   &st_bind_tes_atomics,
+   &st_bind_fs_atomics,
+   &st_bind_gs_atomics,
    &st_update_pixel_transfer,
    &st_update_tess,
 

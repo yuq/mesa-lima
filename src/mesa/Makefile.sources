@@ -393,6 +393,7 @@ VBO_FILES = \
 
 STATETRACKER_FILES = \
 	state_tracker/st_atom_array.c \
+	state_tracker/st_atom_atomicbuf.c \
 	state_tracker/st_atom_blend.c \
 	state_tracker/st_atom.c \
 	state_tracker/st_atom_clip.c \

@@ -218,6 +218,10 @@ void st_init_limits(struct pipe_screen *screen,
                                           c->MaxUniformBlockSize / 4 *
                                           pc->MaxUniformBlocks);
 
+      pc->MaxAtomicCounters = MAX_ATOMIC_COUNTERS;
+      pc->MaxAtomicBuffers = screen->get_shader_param(
+            screen, sh, PIPE_SHADER_CAP_MAX_SHADER_BUFFERS);
+
       /* Gallium doesn't really care about local vs. env parameters so use the
        * same limits.
        */
@@ -333,6 +337,19 @@ void st_init_limits(struct pipe_screen *screen,
       screen->get_param(screen, PIPE_CAP_TGSI_FS_POSITION_IS_SYSVAL);
    c->GLSLFrontFacingIsSysVal =
       screen->get_param(screen, PIPE_CAP_TGSI_FS_FACE_IS_INTEGER_SYSVAL);
+
+   c->MaxAtomicBufferBindings =
+         c->Program[MESA_SHADER_FRAGMENT].MaxAtomicBuffers;
+   c->MaxCombinedAtomicBuffers =
+         c->Program[MESA_SHADER_VERTEX].MaxAtomicBuffers +
+         c->Program[MESA_SHADER_TESS_CTRL].MaxAtomicBuffers +
+         c->Program[MESA_SHADER_TESS_EVAL].MaxAtomicBuffers +
+         c->Program[MESA_SHADER_GEOMETRY].MaxAtomicBuffers +
+         c->Program[MESA_SHADER_FRAGMENT].MaxAtomicBuffers;
+   assert(c->MaxCombinedAtomicBuffers <= MAX_COMBINED_ATOMIC_BUFFERS);
+
+   if (c->MaxCombinedAtomicBuffers > 0)
+      extensions->ARB_shader_atomic_counters = GL_TRUE;
 }
 
 

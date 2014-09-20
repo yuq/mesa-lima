@@ -350,6 +350,7 @@ static void st_init_driver_flags(struct gl_driver_flags *f)
    f->NewUniformBuffer = ST_NEW_UNIFORM_BUFFER;
    f->NewDefaultTessLevels = ST_NEW_TESS_STATE;
    f->NewTextureBuffer = ST_NEW_SAMPLER_VIEWS;
+   f->NewAtomicBuffer = ST_NEW_ATOMIC_BUFFER;
 }
 
 struct st_context *st_create_context(gl_api api, struct pipe_context *pipe,

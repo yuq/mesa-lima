@@ -62,6 +62,7 @@ struct u_upload_mgr;
 #define ST_NEW_TESSCTRL_PROGRAM        (1 << 9)
 #define ST_NEW_TESSEVAL_PROGRAM        (1 << 10)
 #define ST_NEW_SAMPLER_VIEWS           (1 << 11)
+#define ST_NEW_ATOMIC_BUFFER           (1 << 12)
 
 
 struct st_state_flags {
