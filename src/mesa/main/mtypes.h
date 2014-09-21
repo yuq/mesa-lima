@@ -3745,6 +3745,12 @@ struct gl_constants
    GLenum ContextReleaseBehavior;
 
    struct gl_shader_compiler_options ShaderCompilerOptions[MESA_SHADER_STAGES];
+
+   /** GL_ARB_tessellation_shader */
+   GLuint MaxPatchVertices;
+   GLuint MaxTessGenLevel;
+   GLuint MaxTessPatchComponents;
+   GLuint MaxTessControlTotalOutputComponents;
 };
 
 

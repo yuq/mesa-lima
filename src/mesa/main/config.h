@@ -296,6 +296,14 @@
 /** For GL_ARB_pipeline_statistics_query */
 #define MAX_PIPELINE_STATISTICS             11
 
+/** For GL_ARB_tessellation_shader */
+/*@{*/
+#define MAX_TESS_GEN_LEVEL 64
+#define MAX_PATCH_VERTICES 32
+#define MAX_TESS_PATCH_COMPONENTS 120
+#define MAX_TESS_CONTROL_TOTAL_OUTPUT_COMPONENTS 4096
+/*@}*/
+
 /*
  * Color channel component order
  * 

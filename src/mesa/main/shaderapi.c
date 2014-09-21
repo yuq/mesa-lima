@@ -110,6 +110,7 @@ _mesa_init_shader_state(struct gl_context *ctx)
     */
    struct gl_shader_compiler_options options;
    gl_shader_stage sh;
+   int i;
 
    memset(&options, 0, sizeof(options));
    options.MaxUnrollIterations = 32;
@@ -126,6 +127,12 @@ _mesa_init_shader_state(struct gl_context *ctx)
    /* Extended for ARB_separate_shader_objects */
    ctx->Shader.RefCount = 1;
    mtx_init(&ctx->Shader.Mutex, mtx_plain);
+
+   ctx->TessCtrlProgram.patch_vertices = 3;
+   for (i = 0; i < 4; ++i)
+      ctx->TessCtrlProgram.patch_default_outer_level[i] = 1.0;
+   for (i = 0; i < 2; ++i)
+      ctx->TessCtrlProgram.patch_default_inner_level[i] = 1.0;
 }
 
 
