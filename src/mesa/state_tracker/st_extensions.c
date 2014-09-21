@@ -463,6 +463,7 @@ void st_init_extensions(struct pipe_screen *screen,
       { o(ARB_derivative_control),           PIPE_CAP_TGSI_FS_FINE_DERIVATIVE          },
       { o(ARB_conditional_render_inverted),  PIPE_CAP_CONDITIONAL_RENDER_INVERTED      },
       { o(ARB_texture_view),                 PIPE_CAP_SAMPLER_VIEW_TARGET              },
+      { o(ARB_clip_control),                 PIPE_CAP_CLIP_HALFZ                       },
    };
 
    /* Required: render target and sampler support */
