@@ -673,6 +673,38 @@ program_stages_all_active(struct gl_pipeline_object *pipe,
    return status;
 }
 
+static bool
+program_stages_interleaved_illegally(const struct gl_pipeline_object *pipe)
+{
+   struct gl_shader_program *prev = NULL;
+   unsigned i, j;
+
+   /* Look for programs bound to stages: A -> B -> A, with any intervening
+    * sequence of unrelated programs or empty stages.
+    */
+   for (i = 0; i < MESA_SHADER_STAGES; i++) {
+      struct gl_shader_program *cur = pipe->CurrentProgram[i];
+
+      /* Empty stages anywhere in the pipe are OK */
+      if (!cur || cur == prev)
+         continue;
+
+      if (prev) {
+         /* We've seen an A -> B transition; look at the rest of the pipe
+          * to see if we ever see A again.
+          */
+         for (j = i + 1; j < MESA_SHADER_STAGES; j++) {
+            if (pipe->CurrentProgram[j] == prev)
+               return true;
+         }
+      }
+
+      prev = cur;
+   }
+
+   return false;
+}
+
 extern GLboolean
 _mesa_validate_program_pipeline(struct gl_context* ctx,
                                 struct gl_pipeline_object *pipe,
@@ -721,24 +753,13 @@ _mesa_validate_program_pipeline(struct gl_context* ctx,
     *         - One program object is active for at least two shader stages
     *           and a second program is active for a shader stage between two
     *           stages for which the first program was active."
-    *
-    * Without Tesselation, the only case where this can occur is the geometry
-    * shader between the fragment shader and vertex shader.
     */
-   if (pipe->CurrentProgram[MESA_SHADER_GEOMETRY]
-       && pipe->CurrentProgram[MESA_SHADER_FRAGMENT]
-       && pipe->CurrentProgram[MESA_SHADER_VERTEX]) {
-      if (pipe->CurrentProgram[MESA_SHADER_VERTEX]->Name == pipe->CurrentProgram[MESA_SHADER_FRAGMENT]->Name &&
-          pipe->CurrentProgram[MESA_SHADER_GEOMETRY]->Name != pipe->CurrentProgram[MESA_SHADER_VERTEX]->Name) {
-         pipe->InfoLog =
-            ralloc_asprintf(pipe,
-                            "Program %d is active for geometry stage between "
-                            "two stages for which another program %d is "
-                            "active",
-                            pipe->CurrentProgram[MESA_SHADER_GEOMETRY]->Name,
-                            pipe->CurrentProgram[MESA_SHADER_VERTEX]->Name);
-         goto err;
-      }
+   if (program_stages_interleaved_illegally(pipe)) {
+      pipe->InfoLog =
+         ralloc_strdup(pipe,
+                       "Program is active for multiple shader stages with an "
+                       "intervening stage provided by another program");
+      goto err;
    }
 
    /* Section 2.11.11 (Shader Execution), subheading "Validation," of the
