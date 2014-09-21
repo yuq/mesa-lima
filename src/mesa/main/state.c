@@ -292,6 +292,19 @@ update_viewport_matrix(struct gl_context *ctx)
 
 
 /**
+ * Update the ctx->Polygon._FrontBit flag.
+ */
+static void
+update_frontbit(struct gl_context *ctx)
+{
+   if (ctx->Transform.ClipOrigin == GL_LOWER_LEFT)
+      ctx->Polygon._FrontBit = (ctx->Polygon.FrontFace == GL_CW);
+   else
+      ctx->Polygon._FrontBit = (ctx->Polygon.FrontFace == GL_CCW);
+}
+
+
+/**
  * Update derived multisample state.
  */
 static void
@@ -372,6 +385,9 @@ _mesa_update_state_locked( struct gl_context *ctx )
 
    if (new_state & (_NEW_PROGRAM|_NEW_TEXTURE|_NEW_TEXTURE_MATRIX))
       _mesa_update_texture( ctx, new_state );
+
+   if (new_state & _NEW_POLYGON)
+      update_frontbit( ctx );
 
    if (new_state & _NEW_BUFFERS)
       _mesa_update_framebuffer(ctx);

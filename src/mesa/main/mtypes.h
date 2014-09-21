@@ -1430,6 +1430,9 @@ struct gl_transform_attrib
    GLboolean RescaleNormals;			/**< GL_EXT_rescale_normal */
    GLboolean RasterPositionUnclipped;           /**< GL_IBM_rasterpos_clip */
    GLboolean DepthClamp;			/**< GL_ARB_depth_clamp */
+   /** GL_ARB_clip_control */
+   GLenum ClipOrigin;     /**< GL_LOWER_LEFT or GL_UPPER_LEFT */
+   GLenum ClipDepthMode;  /**< GL_NEGATIVE_ONE_TO_ONE or GL_ZERO_TO_ONE */
 };
 
 
@@ -3698,6 +3701,7 @@ struct gl_extensions
    GLboolean ARB_blend_func_extended;
    GLboolean ARB_buffer_storage;
    GLboolean ARB_clear_texture;
+   GLboolean ARB_clip_control;
    GLboolean ARB_color_buffer_float;
    GLboolean ARB_compute_shader;
    GLboolean ARB_conditional_render_inverted;

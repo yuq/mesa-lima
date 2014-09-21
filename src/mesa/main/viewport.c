@@ -30,6 +30,7 @@
 
 
 #include "context.h"
+#include "enums.h"
 #include "macros.h"
 #include "mtypes.h"
 #include "viewport.h"
@@ -390,6 +391,9 @@ void _mesa_init_viewport(struct gl_context *ctx)
    GLfloat depthMax = 65535.0F; /* sorf of arbitrary */
    unsigned i;
 
+   ctx->Transform.ClipOrigin = GL_LOWER_LEFT;
+   ctx->Transform.ClipDepthMode = GL_NEGATIVE_ONE_TO_ONE;
+
    /* Note: ctx->Const.MaxViewports may not have been set by the driver yet,
     * so just initialize all of them.
     */
@@ -424,6 +428,62 @@ void _mesa_free_viewport_data(struct gl_context *ctx)
       _math_matrix_dtr(&ctx->ViewportArray[i]._WindowMap);
 }
 
+extern void GLAPIENTRY
+_mesa_ClipControl(GLenum origin, GLenum depth)
+{
+   GET_CURRENT_CONTEXT(ctx);
+
+   if (MESA_VERBOSE&VERBOSE_API)
+      _mesa_debug(ctx, "glClipControl(%s, %s)\n",
+	          _mesa_lookup_enum_by_nr(origin),
+                  _mesa_lookup_enum_by_nr(depth));
+
+   ASSERT_OUTSIDE_BEGIN_END(ctx);
+
+   if (!ctx->Extensions.ARB_clip_control) {
+      _mesa_error(ctx, GL_INVALID_OPERATION, "glClipControl");
+      return;
+   }
+
+   if (origin != GL_LOWER_LEFT && origin != GL_UPPER_LEFT) {
+      _mesa_error(ctx, GL_INVALID_ENUM, "glClipControl");
+      return;
+   }
+
+   if (depth != GL_NEGATIVE_ONE_TO_ONE && depth != GL_ZERO_TO_ONE) {
+      _mesa_error(ctx, GL_INVALID_ENUM, "glClipControl");
+      return;
+   }
+
+   if (ctx->Transform.ClipOrigin == origin &&
+       ctx->Transform.ClipDepthMode == depth)
+      return;
+
+   FLUSH_VERTICES(ctx, 0);
+
+   if (ctx->Transform.ClipOrigin != origin) {
+      ctx->Transform.ClipOrigin = origin;
+
+      /* Affects the winding order of the front face. */
+      ctx->NewState |= _NEW_POLYGON;
+      /* Affects the y component of the viewport transform. */
+      ctx->NewState |= _NEW_VIEWPORT;
+
+      if (ctx->Driver.FrontFace)
+         ctx->Driver.FrontFace(ctx, ctx->Polygon.FrontFace);
+   }
+
+   if (ctx->Transform.ClipDepthMode != depth) {
+      ctx->Transform.ClipDepthMode = depth;
+
+      /* Affects the z part of the viewpoint transform. */
+      ctx->NewState |= _NEW_VIEWPORT;
+
+      if (ctx->Driver.DepthRange)
+         ctx->Driver.DepthRange(ctx);
+   }
+}
+
 /**
  * Computes the scaling and the translation part of the
  * viewport transform matrix of the \param i-th viewport
@@ -442,8 +502,18 @@ _mesa_get_viewport_xform(struct gl_context *ctx, unsigned i,
 
    scale[0] = half_width;
    translate[0] = half_width + x;
-   scale[1] = half_height;
-   translate[1] = half_height + y;
-   scale[2] = 0.5*(f - n);
-   translate[2] = 0.5*(n + f);
+   if (ctx->Transform.ClipOrigin == GL_UPPER_LEFT) {
+      scale[1] = -half_height;
+      translate[1] = half_height - y;
+   } else {
+      scale[1] = half_height;
+      translate[1] = half_height + y;
+   }
+   if (ctx->Transform.ClipDepthMode == GL_NEGATIVE_ONE_TO_ONE) {
+      scale[2] = 0.5*(f - n);
+      translate[2] = 0.5*(n + f);
+   } else {
+      scale[2] = f - n;
+      translate[2] = n;
+   }
 }
