@@ -54,10 +54,16 @@ cross_validate_types_and_qualifiers(struct gl_shader_program *prog,
    /* Check that the types match between stages.
     */
    const glsl_type *type_to_match = input->type;
-   if (consumer_stage == MESA_SHADER_GEOMETRY) {
-      assert(type_to_match->is_array()); /* Enforced by ast_to_hir */
+
+   /* VS -> GS, VS -> TCS, VS -> TES, TES -> GS */
+   const bool extra_array_level = (producer_stage == MESA_SHADER_VERTEX &&
+                                   consumer_stage != MESA_SHADER_FRAGMENT) ||
+                                  consumer_stage == MESA_SHADER_GEOMETRY;
+   if (extra_array_level) {
+      assert(type_to_match->is_array());
       type_to_match = type_to_match->fields.array;
    }
+
    if (type_to_match != output->type) {
       /* There is a bit of a special case for gl_TexCoord.  This
        * built-in is unsized by default.  Applications that variable

@@ -134,9 +134,9 @@ intrastage_match(interface_block_definition *a,
  * Check if two interfaces match, according to interstage (in/out) interface
  * matching rules.
  *
- * If \c extra_array_level is true, then vertex-to-geometry shader matching
- * rules are enforced (i.e. a successful match requires the consumer interface
- * to be an array and the producer interface to be a non-array).
+ * If \c extra_array_level is true, the consumer interface is required to be
+ * an array and the producer interface is required to be a non-array.
+ * This is used for tessellation control and geometry shader consumers.
  */
 bool
 interstage_match(const interface_block_definition *producer,
@@ -318,7 +318,10 @@ validate_interstage_inout_blocks(struct gl_shader_program *prog,
                                  const gl_shader *consumer)
 {
    interface_block_definitions definitions;
-   const bool extra_array_level = consumer->Stage == MESA_SHADER_GEOMETRY;
+   /* VS -> GS, VS -> TCS, VS -> TES, TES -> GS */
+   const bool extra_array_level = (producer->Stage == MESA_SHADER_VERTEX &&
+                                   consumer->Stage != MESA_SHADER_FRAGMENT) ||
+                                  consumer->Stage == MESA_SHADER_GEOMETRY;
 
    /* Add input interfaces from the consumer to the symbol table. */
    foreach_in_list(ir_instruction, node, consumer->ir) {
