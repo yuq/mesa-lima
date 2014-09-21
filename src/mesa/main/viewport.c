@@ -39,6 +39,8 @@ set_viewport_no_notify(struct gl_context *ctx, unsigned idx,
                        GLfloat x, GLfloat y,
                        GLfloat width, GLfloat height)
 {
+   double scale[3], translate[3];
+
    /* clamp width and height to the implementation dependent range */
    width  = MIN2(width, (GLfloat) ctx->Const.MaxViewportWidth);
    height = MIN2(height, (GLfloat) ctx->Const.MaxViewportHeight);
@@ -75,14 +77,9 @@ set_viewport_no_notify(struct gl_context *ctx, unsigned idx,
     * the WindowMap matrix being up to date in the driver's Viewport
     * and DepthRange functions.
     */
+   _mesa_get_viewport_xform(ctx, idx, scale, translate);
    _math_matrix_viewport(&ctx->ViewportArray[idx]._WindowMap,
-                         ctx->ViewportArray[idx].X,
-                         ctx->ViewportArray[idx].Y,
-                         ctx->ViewportArray[idx].Width,
-                         ctx->ViewportArray[idx].Height,
-                         ctx->ViewportArray[idx].Near,
-                         ctx->ViewportArray[idx].Far,
-                         ctx->DrawBuffer->_DepthMaxF);
+                         scale, translate, ctx->DrawBuffer->_DepthMaxF);
 #endif
 }
 
@@ -248,6 +245,8 @@ static void
 set_depth_range_no_notify(struct gl_context *ctx, unsigned idx,
                           GLclampd nearval, GLclampd farval)
 {
+   double scale[3], translate[3];
+
    if (ctx->ViewportArray[idx].Near == nearval &&
        ctx->ViewportArray[idx].Far == farval)
       return;
@@ -261,14 +260,9 @@ set_depth_range_no_notify(struct gl_context *ctx, unsigned idx,
     * the WindowMap matrix being up to date in the driver's Viewport
     * and DepthRange functions.
     */
+   _mesa_get_viewport_xform(ctx, idx, scale, translate);
    _math_matrix_viewport(&ctx->ViewportArray[idx]._WindowMap,
-                         ctx->ViewportArray[idx].X,
-                         ctx->ViewportArray[idx].Y,
-                         ctx->ViewportArray[idx].Width,
-                         ctx->ViewportArray[idx].Height,
-                         ctx->ViewportArray[idx].Near,
-                         ctx->ViewportArray[idx].Far,
-                         ctx->DrawBuffer->_DepthMaxF);
+                         scale, translate, ctx->DrawBuffer->_DepthMaxF);
 #endif
 }
 
@@ -400,6 +394,8 @@ void _mesa_init_viewport(struct gl_context *ctx)
     * so just initialize all of them.
     */
    for (i = 0; i < MAX_VIEWPORTS; i++) {
+      double scale[3], translate[3];
+
       /* Viewport group */
       ctx->ViewportArray[i].X = 0;
       ctx->ViewportArray[i].Y = 0;
@@ -409,8 +405,9 @@ void _mesa_init_viewport(struct gl_context *ctx)
       ctx->ViewportArray[i].Far = 1.0;
       _math_matrix_ctr(&ctx->ViewportArray[i]._WindowMap);
 
-      _math_matrix_viewport(&ctx->ViewportArray[i]._WindowMap, 0, 0, 0, 0,
-                            0.0F, 1.0F, depthMax);
+      _mesa_get_viewport_xform(ctx, i, scale, translate);
+      _math_matrix_viewport(&ctx->ViewportArray[i]._WindowMap,
+                            scale, translate, depthMax);
    }
 }
 
@@ -427,3 +424,26 @@ void _mesa_free_viewport_data(struct gl_context *ctx)
       _math_matrix_dtr(&ctx->ViewportArray[i]._WindowMap);
 }
 
+/**
+ * Computes the scaling and the translation part of the
+ * viewport transform matrix of the \param i-th viewport
+ * and writes that into \param scale and \param translate.
+ */
+void
+_mesa_get_viewport_xform(struct gl_context *ctx, unsigned i,
+                         double scale[3], double translate[3])
+{
+   double x = ctx->ViewportArray[i].X;
+   double y = ctx->ViewportArray[i].Y;
+   double half_width = 0.5*ctx->ViewportArray[i].Width;
+   double half_height = 0.5*ctx->ViewportArray[i].Height;
+   double n = ctx->ViewportArray[i].Near;
+   double f = ctx->ViewportArray[i].Far;
+
+   scale[0] = half_width;
+   translate[0] = half_width + x;
+   scale[1] = half_height;
+   translate[1] = half_height + y;
+   scale[2] = 0.5*(f - n);
+   translate[2] = 0.5*(n + f);
+}
