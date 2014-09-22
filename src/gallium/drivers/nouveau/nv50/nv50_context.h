@@ -178,8 +178,9 @@ struct nv50_context {
    uint32_t rt_array_mode;
 
    struct pipe_query *cond_query;
-   boolean cond_cond;
+   boolean cond_cond; /* inverted rendering condition */
    uint cond_mode;
+   uint32_t cond_condmode; /* the calculated condition */
 
    struct nv50_blitctx *blit;
 };

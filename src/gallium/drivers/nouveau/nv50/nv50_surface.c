@@ -1297,7 +1297,7 @@ nv50_blit_eng2d(struct nv50_context *nv50, const struct pipe_blit_info *info)
 
    if (nv50->cond_query && info->render_condition_enable) {
       BEGIN_NV04(push, NV50_2D(COND_MODE), 1);
-      PUSH_DATA (push, NV50_2D_COND_MODE_RES_NON_ZERO);
+      PUSH_DATA (push, nv50->cond_condmode);
    }
 
    if (mask != 0xffffffff) {
