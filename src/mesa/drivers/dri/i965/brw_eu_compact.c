@@ -1265,6 +1265,7 @@ brw_init_compaction_tables(struct brw_context *brw)
    assert(gen8_src_index_table[ARRAY_SIZE(gen8_src_index_table) - 1] != 0);
 
    switch (brw->gen) {
+   case 9:
    case 8:
       control_index_table = gen8_control_index_table;
       datatype_table = gen8_datatype_table;
