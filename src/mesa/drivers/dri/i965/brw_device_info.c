@@ -251,6 +251,35 @@ static const struct brw_device_info brw_device_info_chv = {
    }
 };
 
+/* Thread counts and URB limits are placeholders, and may not be accurate. */
+#define GEN9_FEATURES                               \
+   .gen = 9,                                        \
+   .has_hiz_and_separate_stencil = true,            \
+   .must_use_separate_stencil = true,               \
+   .has_llc = true,                                 \
+   .has_pln = true,                                 \
+   .max_vs_threads = 280,                           \
+   .max_gs_threads = 256,                           \
+   .max_wm_threads = 408,                           \
+   .urb = {                                         \
+      .size = 128,                                  \
+      .min_vs_entries = 64,                         \
+      .max_vs_entries = 1664,                       \
+      .max_gs_entries = 640,                        \
+   }
+
+static const struct brw_device_info brw_device_info_skl_gt1 = {
+   GEN9_FEATURES, .gt = 1
+};
+
+static const struct brw_device_info brw_device_info_skl_gt2 = {
+   GEN9_FEATURES, .gt = 2
+};
+
+static const struct brw_device_info brw_device_info_skl_gt3 = {
+   GEN9_FEATURES, .gt = 3
+};
+
 const struct brw_device_info *
 brw_get_device_info(int devid)
 {
