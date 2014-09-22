@@ -105,8 +105,7 @@ NineVertexShader9_dtor( struct NineVertexShader9 *This )
     }
     nine_shader_variants_free(&This->variant);
 
-    if (This->byte_code.tokens)
-        FREE((void *)This->byte_code.tokens); /* const_cast */
+    FREE((void *)This->byte_code.tokens); /* const_cast */
 
     FREE(This->lconstf.data);
     FREE(This->lconstf.ranges);

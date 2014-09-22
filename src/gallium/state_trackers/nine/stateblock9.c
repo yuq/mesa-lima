@@ -60,12 +60,12 @@ NineStateBlock9_dtor( struct NineStateBlock9 *This )
 
     nine_state_clear(state, FALSE);
 
-    if (state->vs_const_f) FREE(state->vs_const_f);
-    if (state->ps_const_f) FREE(state->ps_const_f);
+    FREE(state->vs_const_f);
+    FREE(state->ps_const_f);
 
-    if (state->ff.light) FREE(state->ff.light);
+    FREE(state->ff.light);
 
-    if (state->ff.transform) FREE(state->ff.transform);
+    FREE(state->ff.transform);
 
     if (This->state.changed.ps_const_f) {
         for (r = This->state.changed.ps_const_f; r->next; r = r->next);

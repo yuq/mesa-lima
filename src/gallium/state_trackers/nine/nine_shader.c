@@ -2767,10 +2767,8 @@ tx_dtor(struct shader_translator *tx)
 {
     if (tx->num_inst_labels)
         FREE(tx->inst_labels);
-    if (tx->lconstf)
-        FREE(tx->lconstf);
-    if (tx->regs.r)
-        FREE(tx->regs.r);
+    FREE(tx->lconstf);
+    FREE(tx->regs.r);
     FREE(tx);
 }
 

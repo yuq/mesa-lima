@@ -177,7 +177,7 @@ NineSwapChain9_Resize( struct NineSwapChain9 *This,
     } else if (mode) {
         This->mode = malloc(sizeof(D3DDISPLAYMODEEX));
         memcpy(This->mode, mode, sizeof(D3DDISPLAYMODEEX));
-    } else if (This->mode) {
+    } else {
         free(This->mode);
         This->mode = NULL;
     }

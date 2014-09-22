@@ -1501,8 +1501,7 @@ nvc0_blitctx_create(struct nvc0_context *nvc0)
 void
 nvc0_blitctx_destroy(struct nvc0_context *nvc0)
 {
-   if (nvc0->blit)
-      FREE(nvc0->blit);
+   FREE(nvc0->blit);
 }
 
 void

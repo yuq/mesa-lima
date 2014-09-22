@@ -214,8 +214,7 @@ hgl_destroy_st_manager(struct st_manager *manager)
 {
 	CALLED();
 
-	if (manager)
-		FREE(manager);
+	FREE(manager);
 }
 
 
@@ -313,6 +312,5 @@ hgl_destroy_st_visual(struct st_visual* visual)
 {
 	CALLED();
 
-	if (visual)
-		FREE(visual);
+	FREE(visual);
 }

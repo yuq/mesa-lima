@@ -220,12 +220,9 @@ NineVertexDeclaration9_ctor( struct NineVertexDeclaration9 *This,
 void
 NineVertexDeclaration9_dtor( struct NineVertexDeclaration9 *This )
 {
-    if (This->decls)
-        FREE(This->decls);
-    if (This->elems)
-        FREE(This->elems);
-    if (This->usage_map)
-        FREE(This->usage_map);
+    FREE(This->decls);
+    FREE(This->elems);
+    FREE(This->usage_map);
 
     NineUnknown_dtor(&This->base);
 }

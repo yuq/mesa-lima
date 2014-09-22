@@ -2296,10 +2296,8 @@ add_imm(struct toy_tgsi *tgsi, enum toy_type type, const uint32_t *buf)
             cur_size * sizeof(new_types[0]),
             new_size * sizeof(new_types[0]));
       if (!new_buf || !new_types) {
-         if (new_buf)
-            FREE(new_buf);
-         if (new_types)
-            FREE(new_types);
+         FREE(new_buf);
+         FREE(new_types);
          return -1;
       }
 
