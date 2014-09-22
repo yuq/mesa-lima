@@ -87,13 +87,7 @@ struct prog_instruction *
 _mesa_realloc_instructions(struct prog_instruction *oldInst,
                            GLuint numOldInst, GLuint numNewInst)
 {
-   struct prog_instruction *newInst;
-
-   newInst = (struct prog_instruction *)
-      realloc(oldInst,
-              numNewInst * sizeof(struct prog_instruction));
-
-   return newInst;
+   return realloc(oldInst, numNewInst * sizeof(struct prog_instruction));
 }
 
 
