@@ -143,6 +143,7 @@ gen8_update_texture_surface(struct gl_context *ctx,
    struct intel_mipmap_tree *aux_mt = NULL;
    uint32_t aux_mode = 0;
    mesa_format format = intelObj->_Format;
+   uint32_t mocs_wb = brw->gen >= 9 ? SKL_MOCS_WB : BDW_MOCS_WB;
 
    if (tObj->Target == GL_TEXTURE_BUFFER) {
       brw_update_buffer_texture_surface(ctx, unit, surf_offset);
@@ -193,7 +194,7 @@ gen8_update_texture_surface(struct gl_context *ctx,
    if (mt->logical_depth0 > 1 && tObj->Target != GL_TEXTURE_3D)
       surf[0] |= GEN8_SURFACE_IS_ARRAY;
 
-   surf[1] = SET_FIELD(BDW_MOCS_WB, GEN8_SURFACE_MOCS) | mt->qpitch >> 2;
+   surf[1] = SET_FIELD(mocs_wb, GEN8_SURFACE_MOCS) | mt->qpitch >> 2;
 
    surf[2] = SET_FIELD(mt->logical_width0 - 1, GEN7_SURFACE_WIDTH) |
              SET_FIELD(mt->logical_height0 - 1, GEN7_SURFACE_HEIGHT);
@@ -328,9 +329,10 @@ gen8_update_renderbuffer_surface(struct brw_context *brw,
       irb->mt_layer : (irb->mt_layer / MAX2(mt->num_samples, 1));
    GLenum gl_target =
       rb->TexImage ? rb->TexImage->TexObject->Target : GL_TEXTURE_2D;
-
    uint32_t surf_index =
       brw->wm.prog_data->binding_table.render_target_start + unit;
+   /* FINISHME: Use PTE MOCS on Skylake. */
+   uint32_t mocs = brw->gen >= 9 ? SKL_MOCS_WT : BDW_MOCS_PTE;
 
    intel_miptree_used_for_rendering(mt);
 
@@ -383,7 +385,7 @@ gen8_update_renderbuffer_surface(struct brw_context *brw,
              horizontal_alignment(mt) |
              surface_tiling_mode(tiling);
 
-   surf[1] = SET_FIELD(BDW_MOCS_PTE, GEN8_SURFACE_MOCS) | mt->qpitch >> 2;
+   surf[1] = SET_FIELD(mocs, GEN8_SURFACE_MOCS) | mt->qpitch >> 2;
 
    surf[2] = SET_FIELD(width - 1, GEN7_SURFACE_WIDTH) |
              SET_FIELD(height - 1, GEN7_SURFACE_HEIGHT);

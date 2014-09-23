@@ -31,6 +31,8 @@
  */
 static void upload_state_base_address(struct brw_context *brw)
 {
+   uint32_t mocs_wb = brw->gen >= 9 ? SKL_MOCS_WB : BDW_MOCS_WB;
+
    perf_debug("Missing MOCS setup for STATE_BASE_ADDRESS.");
 
    int pkt_len = brw->gen >= 9 ? 19 : 16;
@@ -38,22 +40,22 @@ static void upload_state_base_address(struct brw_context *brw)
    BEGIN_BATCH(pkt_len);
    OUT_BATCH(CMD_STATE_BASE_ADDRESS << 16 | (pkt_len - 2));
    /* General state base address: stateless DP read/write requests */
-   OUT_BATCH(BDW_MOCS_WB << 4 | 1);
+   OUT_BATCH(mocs_wb << 4 | 1);
    OUT_BATCH(0);
-   OUT_BATCH(BDW_MOCS_WB << 16);
+   OUT_BATCH(mocs_wb << 16);
    /* Surface state base address: */
    OUT_RELOC64(brw->batch.bo, I915_GEM_DOMAIN_SAMPLER, 0,
-               BDW_MOCS_WB << 4 | 1);
+               mocs_wb << 4 | 1);
    /* Dynamic state base address: */
    OUT_RELOC64(brw->batch.bo,
                I915_GEM_DOMAIN_RENDER | I915_GEM_DOMAIN_INSTRUCTION, 0,
-               BDW_MOCS_WB << 4 | 1);
+               mocs_wb << 4 | 1);
    /* Indirect object base address: MEDIA_OBJECT data */
-   OUT_BATCH(BDW_MOCS_WB << 4 | 1);
+   OUT_BATCH(mocs_wb << 4 | 1);
    OUT_BATCH(0);
    /* Instruction base address: shader kernels (incl. SIP) */
    OUT_RELOC64(brw->cache.bo, I915_GEM_DOMAIN_INSTRUCTION, 0,
-               BDW_MOCS_WB << 4 | 1);
+               mocs_wb << 4 | 1);
 
    /* General state buffer size */
    OUT_BATCH(0xfffff001);

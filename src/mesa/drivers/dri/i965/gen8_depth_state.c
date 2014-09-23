@@ -48,6 +48,8 @@ emit_depth_packets(struct brw_context *brw,
                    uint32_t lod,
                    uint32_t min_array_element)
 {
+   uint32_t mocs_wb = brw->gen >= 9 ? SKL_MOCS_WB : BDW_MOCS_WB;
+
    /* Skip repeated NULL depth/stencil emits (think 2D rendering). */
    if (!depth_mt && !stencil_mt && brw->no_depth_or_stencil) {
       assert(brw->hw_ctx);
@@ -73,7 +75,7 @@ emit_depth_packets(struct brw_context *brw,
       OUT_BATCH(0);
    }
    OUT_BATCH(((width - 1) << 4) | ((height - 1) << 18) | lod);
-   OUT_BATCH(((depth - 1) << 21) | (min_array_element << 10) | BDW_MOCS_WB);
+   OUT_BATCH(((depth - 1) << 21) | (min_array_element << 10) | mocs_wb);
    OUT_BATCH(0);
    OUT_BATCH(((depth - 1) << 21) | (depth_mt ? depth_mt->qpitch >> 2 : 0));
    ADVANCE_BATCH();
@@ -89,7 +91,7 @@ emit_depth_packets(struct brw_context *brw,
    } else {
       BEGIN_BATCH(5);
       OUT_BATCH(GEN7_3DSTATE_HIER_DEPTH_BUFFER << 16 | (5 - 2));
-      OUT_BATCH((depth_mt->hiz_mt->pitch - 1) | BDW_MOCS_WB << 25);
+      OUT_BATCH((depth_mt->hiz_mt->pitch - 1) | mocs_wb << 25);
       OUT_RELOC64(depth_mt->hiz_mt->bo,
                   I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER, 0);
       OUT_BATCH(depth_mt->hiz_mt->qpitch >> 2);
@@ -97,7 +99,7 @@ emit_depth_packets(struct brw_context *brw,
    }
 
    if (stencil_mt == NULL) {
-      BEGIN_BATCH(5);
+     BEGIN_BATCH(5);
       OUT_BATCH(GEN7_3DSTATE_STENCIL_BUFFER << 16 | (5 - 2));
       OUT_BATCH(0);
       OUT_BATCH(0);
@@ -121,7 +123,7 @@ emit_depth_packets(struct brw_context *brw,
        * page (which would imply that it does).  Experiments with the hardware
        * indicate that it does.
        */
-      OUT_BATCH(HSW_STENCIL_ENABLED | BDW_MOCS_WB << 22 |
+      OUT_BATCH(HSW_STENCIL_ENABLED | mocs_wb << 22 |
                 (2 * stencil_mt->pitch - 1));
       OUT_RELOC64(stencil_mt->bo,
                   I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER,
