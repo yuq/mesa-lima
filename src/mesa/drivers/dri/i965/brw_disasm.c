@@ -434,6 +434,7 @@ static const char *const dp_dc0_msg_type_gen7[16] = {
    [GEN7_DATAPORT_DC_OWORD_DUAL_BLOCK_READ] = "DC OWORD dual block read",
    [GEN7_DATAPORT_DC_DWORD_SCATTERED_READ] = "DC DWORD scattered read",
    [GEN7_DATAPORT_DC_BYTE_SCATTERED_READ] = "DC byte scattered read",
+   [GEN7_DATAPORT_DC_UNTYPED_SURFACE_READ] = "DC untyped surface read",
    [GEN7_DATAPORT_DC_UNTYPED_ATOMIC_OP] = "DC untyped atomic",
    [GEN7_DATAPORT_DC_MEMORY_FENCE] = "DC mfence",
    [GEN7_DATAPORT_DC_OWORD_BLOCK_WRITE] = "DC OWORD block write",
