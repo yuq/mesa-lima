@@ -919,7 +919,7 @@ brw_upload_abo_surfaces(struct brw_context *brw,
                                    &surf_offsets[i], true);
    }
 
-   if (prog->NumUniformBlocks)
+   if (prog->NumAtomicBuffers)
       brw->state.dirty.brw |= BRW_NEW_SURFACES;
 }
 
