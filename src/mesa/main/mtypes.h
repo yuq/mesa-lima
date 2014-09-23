@@ -3680,6 +3680,9 @@ struct gl_constants
 
    GLboolean FakeSWMSAA;
 
+   /** GL_KHR_context_flush_control */
+   GLenum ContextReleaseBehavior;
+
    struct gl_shader_compiler_options ShaderCompilerOptions[MESA_SHADER_STAGES];
 };
 

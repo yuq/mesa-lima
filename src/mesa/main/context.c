@@ -719,6 +719,9 @@ _mesa_init_constants(struct gl_constants *consts, gl_api api)
    /** GL_ARB_gpu_shader5 */
    consts->MinFragmentInterpolationOffset = MIN_FRAGMENT_INTERPOLATION_OFFSET;
    consts->MaxFragmentInterpolationOffset = MAX_FRAGMENT_INTERPOLATION_OFFSET;
+
+   /** GL_KHR_context_flush_control */
+   consts->ContextReleaseBehavior = GL_CONTEXT_RELEASE_BEHAVIOR_FLUSH;
 }
 
 
@@ -1622,9 +1625,11 @@ _mesa_make_current( struct gl_context *newCtx,
    }
 
    if (curCtx && 
-      (curCtx->WinSysDrawBuffer || curCtx->WinSysReadBuffer) &&
+       (curCtx->WinSysDrawBuffer || curCtx->WinSysReadBuffer) &&
        /* make sure this context is valid for flushing */
-      curCtx != newCtx)
+       curCtx != newCtx &&
+       curCtx->Const.ContextReleaseBehavior ==
+       GL_CONTEXT_RELEASE_BEHAVIOR_FLUSH)
       _mesa_flush(curCtx);
 
    /* We used to call _glapi_check_multithread() here.  Now do it in drivers */
