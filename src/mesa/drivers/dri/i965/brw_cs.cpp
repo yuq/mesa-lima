@@ -331,6 +331,10 @@ brw_upload_cs_state(struct brw_context *brw)
                                             prog_data->binding_table.size_bytes,
                                             32, &stage_state->bind_bo_offset);
 
+   unsigned push_constant_data_size =
+      prog_data->nr_params * sizeof(gl_constant_value);
+   unsigned reg_aligned_constant_size = ALIGN(push_constant_data_size, 32);
+   unsigned push_constant_regs = reg_aligned_constant_size / 32;
    unsigned threads = get_cs_thread_count(cs_prog_data);
 
    uint32_t dwords = brw->gen < 8 ? 8 : 9;
@@ -363,11 +367,40 @@ brw_upload_cs_state(struct brw_context *brw)
 
    OUT_BATCH(0);
    const uint32_t vfe_urb_allocation = brw->gen >= 8 ? 2 : 0;
-   OUT_BATCH(SET_FIELD(vfe_urb_allocation, MEDIA_VFE_STATE_URB_ALLOC));
+
+   /* We are uploading duplicated copies of push constant uniforms for each
+    * thread. Although the local id data needs to vary per thread, it won't
+    * change for other uniform data. Unfortunately this duplication is
+    * required for gen7. As of Haswell, this duplication can be avoided, but
+    * this older mechanism with duplicated data continues to work.
+    *
+    * FINISHME: As of Haswell, we could make use of the
+    * INTERFACE_DESCRIPTOR_DATA "Cross-Thread Constant Data Read Length" field
+    * to only store one copy of uniform data.
+    *
+    * FINISHME: Broadwell adds a new alternative "Indirect Payload Storage"
+    * which is described in the GPGPU_WALKER command and in the Broadwell PRM
+    * Volume 7: 3D Media GPGPU, under Media GPGPU Pipeline => Mode of
+    * Operations => GPGPU Mode => Indirect Payload Storage.
+    *
+    * Note: The constant data is built in brw_upload_cs_push_constants below.
+    */
+   const uint32_t vfe_curbe_allocation = push_constant_regs * threads;
+   OUT_BATCH(SET_FIELD(vfe_urb_allocation, MEDIA_VFE_STATE_URB_ALLOC) |
+             SET_FIELD(vfe_curbe_allocation, MEDIA_VFE_STATE_CURBE_ALLOC));
    OUT_BATCH(0);
    OUT_BATCH(0);
    OUT_BATCH(0);
    ADVANCE_BATCH();
+
+   if (reg_aligned_constant_size > 0) {
+      BEGIN_BATCH(4);
+      OUT_BATCH(MEDIA_CURBE_LOAD << 16 | (4 - 2));
+      OUT_BATCH(0);
+      OUT_BATCH(reg_aligned_constant_size * threads);
+      OUT_BATCH(stage_state->push_const_offset);
+      ADVANCE_BATCH();
+   }
 
    /* BRW_NEW_SURFACES and BRW_NEW_*_CONSTBUF */
    memcpy(bind, stage_state->surf_offset,
@@ -382,7 +415,7 @@ brw_upload_cs_state(struct brw_context *brw)
    desc[dw++] = 0;
    desc[dw++] = 0;
    desc[dw++] = stage_state->bind_bo_offset;
-   desc[dw++] = 0;
+   desc[dw++] = SET_FIELD(push_constant_regs, MEDIA_CURBE_READ_LENGTH);
    const uint32_t media_threads =
       brw->gen >= 8 ?
       SET_FIELD(threads, GEN8_MEDIA_GPGPU_THREAD_COUNT) :
@@ -404,8 +437,99 @@ const struct brw_tracked_state brw_cs_state = {
    /* explicit initialisers aren't valid C++, comment
     * them for documentation purposes */
    /* .dirty = */{
-      /* .mesa = */ 0,
-      /* .brw = */  BRW_NEW_CS_PROG_DATA,
+      /* .mesa = */ _NEW_PROGRAM_CONSTANTS,
+      /* .brw = */  BRW_NEW_CS_PROG_DATA |
+                    BRW_NEW_PUSH_CONSTANT_ALLOCATION,
    },
    /* .emit = */ brw_upload_cs_state
+};
+
+
+/**
+ * Creates a region containing the push constants for the CS on gen7+.
+ *
+ * Push constants are constant values (such as GLSL uniforms) that are
+ * pre-loaded into a shader stage's register space at thread spawn time.
+ *
+ * For other stages, see brw_curbe.c:brw_upload_constant_buffer for the
+ * equivalent gen4/5 code and gen6_vs_state.c:gen6_upload_push_constants for
+ * gen6+.
+ */
+static void
+brw_upload_cs_push_constants(struct brw_context *brw,
+                             const struct gl_program *prog,
+                             const struct brw_cs_prog_data *cs_prog_data,
+                             struct brw_stage_state *stage_state,
+                             enum aub_state_struct_type type)
+{
+   struct gl_context *ctx = &brw->ctx;
+   const struct brw_stage_prog_data *prog_data =
+      (brw_stage_prog_data*) cs_prog_data;
+
+   /* Updates the ParamaterValues[i] pointers for all parameters of the
+    * basic type of PROGRAM_STATE_VAR.
+    */
+   /* XXX: Should this happen somewhere before to get our state flag set? */
+   _mesa_load_state_parameters(ctx, prog->Parameters);
+
+   if (prog_data->nr_params == 0) {
+      stage_state->push_const_size = 0;
+   } else {
+      gl_constant_value *param;
+      unsigned i, t;
+
+      const unsigned push_constant_data_size =
+         prog_data->nr_params * sizeof(gl_constant_value);
+      const unsigned reg_aligned_constant_size = ALIGN(push_constant_data_size, 32);
+      const unsigned param_aligned_count =
+         reg_aligned_constant_size / sizeof(*param);
+
+      unsigned threads = get_cs_thread_count(cs_prog_data);
+
+      param = (gl_constant_value*)
+         brw_state_batch(brw, type,
+                         reg_aligned_constant_size * threads,
+                         32, &stage_state->push_const_offset);
+      assert(param);
+
+      STATIC_ASSERT(sizeof(gl_constant_value) == sizeof(float));
+
+      /* _NEW_PROGRAM_CONSTANTS */
+      for (t = 0; t < threads; t++) {
+         for (i = 0; i < prog_data->nr_params; i++) {
+            param[t * param_aligned_count + i] = *prog_data->param[i];
+         }
+      }
+
+      stage_state->push_const_size = ALIGN(prog_data->nr_params, 8) / 8;
+   }
+}
+
+
+static void
+gen7_upload_cs_push_constants(struct brw_context *brw)
+{
+   struct brw_stage_state *stage_state = &brw->cs.base;
+
+   /* BRW_NEW_COMPUTE_PROGRAM */
+   const struct brw_compute_program *cp =
+      (struct brw_compute_program *) brw->compute_program;
+
+   if (cp) {
+      /* CACHE_NEW_CS_PROG */
+      struct brw_cs_prog_data *cs_prog_data = brw->cs.prog_data;
+
+      brw_upload_cs_push_constants(brw, &cp->program.Base, cs_prog_data,
+                                   stage_state, AUB_TRACE_WM_CONSTANTS);
+   }
+}
+
+
+const struct brw_tracked_state gen7_cs_push_constants = {
+   /* .dirty = */{
+      /* .mesa  = */ _NEW_PROGRAM_CONSTANTS,
+      /* .brw   = */ BRW_NEW_COMPUTE_PROGRAM |
+                     BRW_NEW_PUSH_CONSTANT_ALLOCATION,
+   },
+   /* .emit = */ gen7_upload_cs_push_constants,
 };

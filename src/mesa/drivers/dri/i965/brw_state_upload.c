@@ -258,6 +258,7 @@ static const struct brw_tracked_state *gen7_compute_atoms[] =
 {
    &brw_state_base_address,
    &brw_cs_image_surfaces,
+   &gen7_cs_push_constants,
    &brw_cs_abo_surfaces,
    &brw_cs_state,
 };
@@ -348,6 +349,7 @@ static const struct brw_tracked_state *gen8_compute_atoms[] =
 {
    &gen8_state_base_address,
    &brw_cs_image_surfaces,
+   &gen7_cs_push_constants,
    &brw_cs_abo_surfaces,
    &brw_cs_state,
 };
