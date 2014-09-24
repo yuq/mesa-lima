@@ -1661,8 +1661,10 @@ glsl_to_tgsi_visitor::visit_expression(ir_expression* ir, st_src_reg *op)
       emit_scalar(ir, TGSI_OPCODE_EX2, result_dst, op[0]);
       break;
    case ir_unop_exp:
+      assert(!"not reached: should be handled by exp_to_exp2");
+      break;
    case ir_unop_log:
-      assert(!"not reached: should be handled by ir_explog_to_explog2");
+      assert(!"not reached: should be handled by log_to_log2");
       break;
    case ir_unop_log2:
       emit_scalar(ir, TGSI_OPCODE_LG2, result_dst, op[0]);
