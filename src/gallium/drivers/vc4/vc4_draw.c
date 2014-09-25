@@ -120,8 +120,12 @@ vc4_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
                            &vc4->constbuf[PIPE_SHADER_VERTEX],
                            &vc4->verttex);
 
+        /* The simulator throws a fit if VS or CS don't read an attribute, so
+         * we emit a dummy read.
+         */
+        uint32_t num_elements_emit = MAX2(vtx->num_elements, 1);
         /* Emit the shader record. */
-        cl_start_shader_reloc(&vc4->shader_rec, 3 + vtx->num_elements);
+        cl_start_shader_reloc(&vc4->shader_rec, 3 + num_elements_emit);
         cl_u16(&vc4->shader_rec,
                VC4_SHADER_FLAG_ENABLE_CLIPPING |
                ((info->mode == PIPE_PRIM_POINTS &&
@@ -133,14 +137,14 @@ vc4_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
         cl_u32(&vc4->shader_rec, 0); /* UBO offset written by kernel */
 
         cl_u16(&vc4->shader_rec, 0); /* vs num uniforms */
-        cl_u8(&vc4->shader_rec, (1 << vtx->num_elements) - 1); /* vs attribute array bitfield */
-        cl_u8(&vc4->shader_rec, 16 * vtx->num_elements); /* vs total attribute size */
+        cl_u8(&vc4->shader_rec, (1 << num_elements_emit) - 1); /* vs attribute array bitfield */
+        cl_u8(&vc4->shader_rec, 16 * num_elements_emit); /* vs total attribute size */
         cl_reloc(vc4, &vc4->shader_rec, vc4->prog.vs->bo, 0);
         cl_u32(&vc4->shader_rec, 0); /* UBO offset written by kernel */
 
         cl_u16(&vc4->shader_rec, 0); /* cs num uniforms */
-        cl_u8(&vc4->shader_rec, (1 << vtx->num_elements) - 1); /* cs attribute array bitfield */
-        cl_u8(&vc4->shader_rec, 16 * vtx->num_elements); /* cs total attribute size */
+        cl_u8(&vc4->shader_rec, (1 << num_elements_emit) - 1); /* cs attribute array bitfield */
+        cl_u8(&vc4->shader_rec, 16 * num_elements_emit); /* cs total attribute size */
         cl_reloc(vc4, &vc4->shader_rec, vc4->prog.cs->bo, 0);
         cl_u32(&vc4->shader_rec, 0); /* UBO offset written by kernel */
 
@@ -167,13 +171,24 @@ vc4_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
                 }
         }
 
+        if (vtx->num_elements == 0) {
+                assert(num_elements_emit == 1);
+                struct vc4_bo *bo = vc4_bo_alloc(vc4->screen, 4096, "scratch VBO");
+                cl_reloc(vc4, &vc4->shader_rec, bo, 0);
+                cl_u8(&vc4->shader_rec, 16 - 1); /* element size */
+                cl_u8(&vc4->shader_rec, 0); /* stride */
+                cl_u8(&vc4->shader_rec, 0); /* VS VPM offset */
+                cl_u8(&vc4->shader_rec, 0); /* CS VPM offset */
+                vc4_bo_unreference(&bo);
+        }
+
         /* the actual draw call. */
         cl_u8(&vc4->bcl, VC4_PACKET_GL_SHADER_STATE);
         assert(vtx->num_elements <= 8);
         /* Note that number of attributes == 0 in the packet means 8
          * attributes.  This field also contains the offset into shader_rec.
          */
-        cl_u32(&vc4->bcl, vtx->num_elements & 0x7);
+        cl_u32(&vc4->bcl, num_elements_emit & 0x7);
 
         /* Note that the primitive type fields match with OpenGL/gallium
          * definitions, up to but not including QUADS.

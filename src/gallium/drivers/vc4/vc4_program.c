@@ -1619,6 +1619,29 @@ emit_point_size_write(struct vc4_compile *c)
         qir_VPM_WRITE(c, point_size);
 }
 
+/**
+ * Emits a VPM read of the stub vertex attribute set up by vc4_draw.c.
+ *
+ * The simulator insists that there be at least one vertex attribute, so
+ * vc4_draw.c will emit one if it wouldn't have otherwise.  The simulator also
+ * insists that all vertex attributes loaded get read by the VS/CS, so we have
+ * to consume it here.
+ */
+static void
+emit_stub_vpm_read(struct vc4_compile *c)
+{
+        if (c->num_inputs)
+                return;
+
+        for (int i = 0; i < 4; i++) {
+                qir_emit(c, qir_inst(QOP_VPM_READ,
+                                     qir_get_temp(c),
+                                     c->undef,
+                                     c->undef));
+                c->num_inputs++;
+        }
+}
+
 static void
 emit_vert_end(struct vc4_compile *c,
               struct vc4_varying_semantic *fs_inputs,
@@ -1626,6 +1649,7 @@ emit_vert_end(struct vc4_compile *c,
 {
         struct qreg rcp_w = qir_RCP(c, c->outputs[3]);
 
+        emit_stub_vpm_read(c);
         emit_scaled_viewport_write(c, rcp_w);
         emit_zs_write(c, rcp_w);
         emit_rcp_wc_write(c, rcp_w);
@@ -1657,6 +1681,8 @@ static void
 emit_coord_end(struct vc4_compile *c)
 {
         struct qreg rcp_w = qir_RCP(c, c->outputs[3]);
+
+        emit_stub_vpm_read(c);
 
         for (int i = 0; i < 4; i++)
                 qir_VPM_WRITE(c, c->outputs[i]);
