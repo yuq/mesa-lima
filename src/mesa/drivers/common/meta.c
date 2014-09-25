@@ -680,6 +680,10 @@ _mesa_meta_begin(struct gl_context *ctx, GLbitfield state)
          _mesa_Ortho(0.0, ctx->DrawBuffer->Width,
                      0.0, ctx->DrawBuffer->Height,
                      -1.0, 1.0);
+
+      save->ClipOrigin = ctx->Transform.ClipOrigin;
+      save->ClipDepthMode = ctx->Transform.ClipDepthMode;
+      _mesa_ClipControl(GL_LOWER_LEFT, GL_NEGATIVE_ONE_TO_ONE);
    }
 
    if (state & MESA_META_CLIP) {
@@ -1081,6 +1085,8 @@ _mesa_meta_end(struct gl_context *ctx)
       _mesa_LoadMatrixf(save->ProjectionMatrix);
 
       _mesa_MatrixMode(save->MatrixMode);
+
+      _mesa_ClipControl(save->ClipOrigin, save->ClipDepthMode);
    }
 
    if (state & MESA_META_CLIP) {
