@@ -293,6 +293,105 @@ namespace {
       PM.run(*mod);
    }
 
+   compat::vector<module::argument>
+   get_kernel_args(const llvm::Module *mod, const std::string &kernel_name,
+                   const clang::LangAS::Map &address_spaces) {
+
+      compat::vector<module::argument> args;
+      llvm::Function *kernel_func = mod->getFunction(kernel_name);
+
+#if HAVE_LLVM < 0x0302
+         llvm::TargetData TD(kernel_func->getParent());
+#elif HAVE_LLVM < 0x0305
+         llvm::DataLayout TD(kernel_func->getParent()->getDataLayout());
+#else
+         llvm::DataLayout TD(mod);
+#endif
+
+      for (llvm::Function::const_arg_iterator I = kernel_func->arg_begin(),
+                                      E = kernel_func->arg_end(); I != E; ++I) {
+         const llvm::Argument &arg = *I;
+
+         llvm::Type *arg_type = arg.getType();
+         const unsigned arg_store_size = TD.getTypeStoreSize(arg_type);
+
+         // OpenCL 1.2 specification, Ch. 6.1.5: "A built-in data
+         // type that is not a power of two bytes in size must be
+         // aligned to the next larger power of two".  We need this
+         // alignment for three element vectors, which have
+         // non-power-of-2 store size.
+         const unsigned arg_api_size = util_next_power_of_two(arg_store_size);
+
+         llvm::Type *target_type = arg_type->isIntegerTy() ?
+               TD.getSmallestLegalIntType(mod->getContext(), arg_store_size * 8)
+               : arg_type;
+         unsigned target_size = TD.getTypeStoreSize(target_type);
+         unsigned target_align = TD.getABITypeAlignment(target_type);
+
+         if (llvm::isa<llvm::PointerType>(arg_type) && arg.hasByValAttr()) {
+            arg_type =
+                  llvm::dyn_cast<llvm::PointerType>(arg_type)->getElementType();
+         }
+
+         if (arg_type->isPointerTy()) {
+            unsigned address_space = llvm::cast<llvm::PointerType>(arg_type)->getAddressSpace();
+            if (address_space == address_spaces[clang::LangAS::opencl_local
+                                                     - clang::LangAS::Offset]) {
+               args.push_back(module::argument(module::argument::local,
+                                               arg_api_size, target_size,
+                                               target_align,
+                                               module::argument::zero_ext));
+            } else {
+               // XXX: Correctly handle constant address space.  There is no
+               // way for r600g to pass a handle for constant buffers back
+               // to clover like it can for global buffers, so
+               // creating constant arguments will break r600g.  For now,
+               // continue treating constant buffers as global buffers
+               // until we can come up with a way to create handles for
+               // constant buffers.
+               args.push_back(module::argument(module::argument::global,
+                                               arg_api_size, target_size,
+                                               target_align,
+                                               module::argument::zero_ext));
+           }
+
+         } else {
+            llvm::AttributeSet attrs = kernel_func->getAttributes();
+            enum module::argument::ext_type ext_type =
+                  (attrs.hasAttribute(arg.getArgNo() + 1,
+                                     llvm::Attribute::SExt) ?
+                   module::argument::sign_ext :
+                   module::argument::zero_ext);
+
+            args.push_back(
+               module::argument(module::argument::scalar, arg_api_size,
+                                target_size, target_align, ext_type));
+         }
+      }
+
+      // Append implicit arguments.  XXX - The types, ordering and
+      // vector size of the implicit arguments should depend on the
+      // target according to the selected calling convention.
+      llvm::Type *size_type =
+         TD.getSmallestLegalIntType(mod->getContext(), sizeof(cl_uint) * 8);
+
+      args.push_back(
+         module::argument(module::argument::scalar, sizeof(cl_uint),
+                          TD.getTypeStoreSize(size_type),
+                          TD.getABITypeAlignment(size_type),
+                          module::argument::zero_ext,
+                          module::argument::grid_dimension));
+
+      args.push_back(
+         module::argument(module::argument::scalar, sizeof(cl_uint),
+                          TD.getTypeStoreSize(size_type),
+                          TD.getABITypeAlignment(size_type),
+                          module::argument::zero_ext,
+                          module::argument::grid_offset));
+
+      return args;
+   }
+
    module
    build_module_llvm(llvm::Module *mod,
                      const std::vector<llvm::Function *> &kernels,
@@ -308,97 +407,9 @@ namespace {
       bitcode_ostream.flush();
 
       for (unsigned i = 0; i < kernels.size(); ++i) {
-         llvm::Function *kernel_func = kernels[i];
-         const std::string kernel_name = kernel_func->getName();
-#if HAVE_LLVM < 0x0302
-         llvm::TargetData TD(kernel_func->getParent());
-#elif HAVE_LLVM < 0x0305
-         llvm::DataLayout TD(kernel_func->getParent()->getDataLayout());
-#else
-         llvm::DataLayout TD(mod);
-#endif
-         compat::vector<module::argument> args;
-
-         for (llvm::Function::arg_iterator I = kernel_func->arg_begin(),
-                                      E = kernel_func->arg_end(); I != E; ++I) {
-            llvm::Argument &arg = *I;
-            llvm::Type *arg_type = arg.getType();
-            const unsigned arg_store_size = TD.getTypeStoreSize(arg_type);
-
-            // OpenCL 1.2 specification, Ch. 6.1.5: "A built-in data
-            // type that is not a power of two bytes in size must be
-            // aligned to the next larger power of two".  We need this
-            // alignment for three element vectors, which have
-            // non-power-of-2 store size.
-            const unsigned arg_api_size =
-               util_next_power_of_two(arg_store_size);
-
-            llvm::Type *target_type = arg_type->isIntegerTy() ?
-               TD.getSmallestLegalIntType(mod->getContext(), arg_store_size * 8)
-               : arg_type;
-            unsigned target_size = TD.getTypeStoreSize(target_type);
-            unsigned target_align = TD.getABITypeAlignment(target_type);
-
-            if (llvm::isa<llvm::PointerType>(arg_type) && arg.hasByValAttr()) {
-               arg_type =
-                  llvm::dyn_cast<llvm::PointerType>(arg_type)->getElementType();
-            }
-
-            if (arg_type->isPointerTy()) {
-               unsigned address_space = llvm::cast<llvm::PointerType>(arg_type)->getAddressSpace();
-               if (address_space == address_spaces[clang::LangAS::opencl_local
-                                                     - clang::LangAS::Offset]) {
-                  args.push_back(module::argument(module::argument::local,
-                                                  arg_api_size, target_size,
-                                                  target_align,
-                                                  module::argument::zero_ext));
-               } else {
-                  // XXX: Correctly handle constant address space.  There is no
-                  // way for r600g to pass a handle for constant buffers back
-                  // to clover like it can for global buffers, so
-                  // creating constant arguments will break r600g.  For now,
-                  // continue treating constant buffers as global buffers
-                  // until we can come up with a way to create handles for
-                  // constant buffers.
-                  args.push_back(module::argument(module::argument::global,
-                                                  arg_api_size, target_size,
-                                                  target_align,
-                                                  module::argument::zero_ext));
-              }
-
-            } else {
-               llvm::AttributeSet attrs = kernel_func->getAttributes();
-               enum module::argument::ext_type ext_type =
-                  (attrs.hasAttribute(arg.getArgNo() + 1,
-                                     llvm::Attribute::SExt) ?
-                   module::argument::sign_ext :
-                   module::argument::zero_ext);
-
-               args.push_back(
-                  module::argument(module::argument::scalar, arg_api_size,
-                                   target_size, target_align, ext_type));
-            }
-         }
-
-         // Append implicit arguments.  XXX - The types, ordering and
-         // vector size of the implicit arguments should depend on the
-         // target according to the selected calling convention.
-         llvm::Type *size_type =
-            TD.getSmallestLegalIntType(mod->getContext(), sizeof(cl_uint) * 8);
-
-         args.push_back(
-            module::argument(module::argument::scalar, sizeof(cl_uint),
-                             TD.getTypeStoreSize(size_type),
-                             TD.getABITypeAlignment(size_type),
-                             module::argument::zero_ext,
-                             module::argument::grid_dimension));
-
-         args.push_back(
-            module::argument(module::argument::scalar, sizeof(cl_uint),
-                             TD.getTypeStoreSize(size_type),
-                             TD.getABITypeAlignment(size_type),
-                             module::argument::zero_ext,
-                             module::argument::grid_offset));
+         std::string kernel_name = kernels[i]->getName();
+         compat::vector<module::argument> args =
+               get_kernel_args(mod, kernel_name, address_spaces);
 
          m.syms.push_back(module::symbol(kernel_name, 0, i, args ));
       }
