@@ -45,12 +45,18 @@
 #include <llvm/Support/SourceMgr.h>
 #include <llvm/IRReader/IRReader.h>
 #endif
+#if HAVE_LLVM < 0x0305
+#include <llvm/ADT/OwningPtr.h>
+#endif
 #include <llvm/PassManager.h>
+#include <llvm/Support/CodeGen.h>
 #include <llvm/Support/TargetSelect.h>
 #include <llvm/Support/MemoryBuffer.h>
 #if HAVE_LLVM < 0x0303
 #include <llvm/Support/PathV1.h>
 #endif
+#include <llvm/Support/FormattedStream.h>
+#include <llvm/Support/TargetRegistry.h>
 #include <llvm/Transforms/IPO.h>
 #include <llvm/Transforms/IPO/PassManagerBuilder.h>
 
@@ -61,6 +67,13 @@
 #else
 #include <llvm/IR/DataLayout.h>
 #endif
+#include <llvm/Target/TargetLibraryInfo.h>
+#include <llvm/Target/TargetMachine.h>
+#include <llvm/Target/TargetOptions.h>
+
+#include <llvm-c/Target.h>
+#include <llvm-c/TargetMachine.h>
+#include <llvm-c/Core.h>
 
 #include "pipe/p_state.h"
 #include "util/u_memory.h"
@@ -71,6 +84,8 @@
 #include <fstream>
 #include <cstdio>
 #include <sstream>
+#include <libelf.h>
+#include <gelf.h>
 
 using namespace clover;
 
@@ -117,10 +132,11 @@ namespace {
 #endif
 
    llvm::Module *
-   compile(llvm::LLVMContext &llvm_ctx, const std::string &source,
+   compile_llvm(llvm::LLVMContext &llvm_ctx, const std::string &source,
            const std::string &name, const std::string &triple,
            const std::string &processor, const std::string &opts,
-           clang::LangAS::Map& address_spaces, compat::string &r_log) {
+           clang::LangAS::Map& address_spaces, unsigned &optimization_level,
+	   compat::string &r_log) {
 
       clang::CompilerInstance c;
       clang::EmitLLVMOnlyAction act(&llvm_ctx);
@@ -228,6 +244,8 @@ namespace {
       // that is no executed by all threads) during its optimizaton passes.
       c.getCodeGenOpts().LinkBitcodeFile = libclc_path;
 
+      optimization_level = c.getCodeGenOpts().OptimizationLevel;
+
       // Compile the code
       bool ExecSuccess = c.ExecuteAction(act);
       r_log = log;
@@ -264,8 +282,8 @@ namespace {
    }
 
    void
-   internalize_functions(llvm::Module *mod,
-        const std::vector<llvm::Function *> &kernels) {
+   optimize(llvm::Module *mod, unsigned optimization_level,
+            const std::vector<llvm::Function *> &kernels) {
 
       llvm::PassManager PM;
       // Add a function internalizer pass.
@@ -289,7 +307,18 @@ namespace {
          llvm::Function *kernel = *I;
          export_list.push_back(kernel->getName().data());
       }
+#if HAVE_LLVM < 0x0306
+      PM.add(new llvm::DataLayoutPass(mod));
+#else
+      PM.add(new llvm::DataLayoutPass());
+#endif
       PM.add(llvm::createInternalizePass(export_list));
+
+      llvm::PassManagerBuilder PMB;
+      PMB.OptLevel = optimization_level;
+      PMB.LibraryInfo = new llvm::TargetLibraryInfo(
+            llvm::Triple(mod->getTargetTriple()));
+      PMB.populateModulePassManager(PM);
       PM.run(*mod);
    }
 
@@ -424,6 +453,163 @@ namespace {
 
       return m;
    }
+
+   std::vector<char>
+   compile_native(const llvm::Module *mod, const std::string &triple,
+                  const std::string &processor, compat::string &r_log) {
+
+      std::string log;
+      LLVMTargetRef target;
+      char *error_message;
+      LLVMMemoryBufferRef out_buffer;
+      unsigned buffer_size;
+      const char *buffer_data;
+      LLVMBool err;
+      LLVMModuleRef mod_ref = wrap(mod);
+
+      if (LLVMGetTargetFromTriple(triple.c_str(), &target, &error_message)) {
+         r_log = std::string(error_message);
+         LLVMDisposeMessage(error_message);
+         throw build_error();
+      }
+
+      LLVMTargetMachineRef tm = LLVMCreateTargetMachine(
+            target, triple.c_str(), processor.c_str(), "",
+            LLVMCodeGenLevelDefault, LLVMRelocDefault, LLVMCodeModelDefault);
+
+      if (!tm) {
+         r_log = "Could not create TargetMachine: " + triple;
+         throw build_error();
+      }
+
+      err = LLVMTargetMachineEmitToMemoryBuffer(tm, mod_ref, LLVMObjectFile,
+                                                &error_message, &out_buffer);
+
+      if (err) {
+         LLVMDisposeTargetMachine(tm);
+         r_log = std::string(error_message);
+         LLVMDisposeMessage(error_message);
+         throw build_error();
+      }
+
+      buffer_size = LLVMGetBufferSize(out_buffer);
+      buffer_data = LLVMGetBufferStart(out_buffer);
+
+      std::vector<char> code(buffer_data, buffer_data + buffer_size);
+
+      LLVMDisposeMemoryBuffer(out_buffer);
+      LLVMDisposeTargetMachine(tm);
+
+      return code;
+   }
+
+   std::map<std::string, unsigned>
+   get_kernel_offsets(std::vector<char> &code,
+                      const std::vector<llvm::Function *> &kernels,
+                      compat::string &r_log) {
+
+      // One of the libelf implementations
+      // (http://www.mr511.de/software/english.htm) requires calling
+      // elf_version() before elf_memory().
+      //
+      elf_version(EV_CURRENT);
+
+      Elf *elf = elf_memory(&code[0], code.size());
+      size_t section_str_index;
+      elf_getshdrstrndx(elf, &section_str_index);
+      Elf_Scn *section = NULL;
+      Elf_Scn *symtab = NULL;
+      GElf_Shdr symtab_header;
+
+      // Find the symbol table
+      try {
+         while ((section = elf_nextscn(elf, section))) {
+            const char *name;
+            if (gelf_getshdr(section, &symtab_header) != &symtab_header) {
+               r_log = "Failed to read ELF section header.";
+               throw build_error();
+            }
+            name = elf_strptr(elf, section_str_index, symtab_header.sh_name);
+           if (!strcmp(name, ".symtab")) {
+               symtab = section;
+               break;
+           }
+         }
+         if (!symtab) {
+            r_log = "Unable to find symbol table.";
+            throw build_error();
+         }
+      } catch (build_error &e) {
+         elf_end(elf);
+         throw e;
+      }
+
+
+      // Extract symbol information from the table
+      Elf_Data *symtab_data = NULL;
+      GElf_Sym *symbol;
+      GElf_Sym s;
+
+      std::map<std::string, unsigned> kernel_offsets;
+      symtab_data = elf_getdata(symtab, symtab_data);
+
+      // Determine the offsets for each kernel
+      for (int i = 0; (symbol = gelf_getsym(symtab_data, i, &s)); i++) {
+         char *name = elf_strptr(elf, symtab_header.sh_link, symbol->st_name);
+         for (std::vector<llvm::Function*>::const_iterator it = kernels.begin(),
+              e = kernels.end(); it != e; ++it) {
+            llvm::Function *f = *it;
+            if (f->getName() == std::string(name))
+               kernel_offsets[f->getName()] = symbol->st_value;
+         }
+      }
+      elf_end(elf);
+      return kernel_offsets;
+   }
+
+   module
+   build_module_native(std::vector<char> &code,
+                       const llvm::Module *mod,
+                       const std::vector<llvm::Function *> &kernels,
+                       const clang::LangAS::Map &address_spaces,
+                       compat::string &r_log) {
+
+      std::map<std::string, unsigned> kernel_offsets =
+            get_kernel_offsets(code, kernels, r_log);
+
+      // Begin building the clover module
+      module m;
+      struct pipe_llvm_program_header header;
+
+      // Store the generated ELF binary in the module's text section.
+      header.num_bytes = code.size();
+      std::string data;
+      data.append((char*)(&header), sizeof(header));
+      data.append(code.begin(), code.end());
+      m.secs.push_back(module::section(0, module::section::text,
+                                       header.num_bytes, data));
+
+      for (std::map<std::string, unsigned>::iterator i = kernel_offsets.begin(),
+           e = kernel_offsets.end(); i != e; ++i) {
+         compat::vector<module::argument> args =
+               get_kernel_args(mod, i->first, address_spaces);
+         m.syms.push_back(module::symbol(i->first, 0, i->second, args ));
+      }
+
+      return m;
+   }
+
+   void
+   init_targets() {
+      static bool targets_initialized = false;
+      if (!targets_initialized) {
+         LLVMInitializeAllTargets();
+         LLVMInitializeAllTargetInfos();
+         LLVMInitializeAllTargetMCs();
+         LLVMInitializeAllAsmPrinters();
+         targets_initialized = true;
+      }
+   }
 } // End anonymous namespace
 
 module
@@ -433,23 +619,26 @@ clover::compile_program_llvm(const compat::string &source,
                              const compat::string &opts,
                              compat::string &r_log) {
 
+   init_targets();
+
    std::vector<llvm::Function *> kernels;
    size_t processor_str_len = std::string(target.begin()).find_first_of("-");
    std::string processor(target.begin(), 0, processor_str_len);
    std::string triple(target.begin(), processor_str_len + 1,
                       target.size() - processor_str_len - 1);
    clang::LangAS::Map address_spaces;
-
    llvm::LLVMContext llvm_ctx;
+   unsigned optimization_level;
 
    // The input file name must have the .cl extension in order for the
    // CompilerInvocation class to recognize it as an OpenCL source file.
-   llvm::Module *mod = compile(llvm_ctx, source, "input.cl", triple, processor,
-                               opts, address_spaces, r_log);
+   llvm::Module *mod = compile_llvm(llvm_ctx, source, "input.cl", triple,
+                                    processor, opts, address_spaces,
+                                    optimization_level, r_log);
 
    find_kernels(mod, kernels);
 
-   internalize_functions(mod, kernels);
+   optimize(mod, optimization_level, kernels);
 
    module m;
    // Build the clover::module
@@ -459,9 +648,14 @@ clover::compile_program_llvm(const compat::string &source,
          assert(0);
          m = module();
          break;
-      default:
+      case PIPE_SHADER_IR_LLVM:
          m = build_module_llvm(mod, kernels, address_spaces);
          break;
+      case PIPE_SHADER_IR_NATIVE: {
+         std::vector<char> code = compile_native(mod, triple, processor, r_log);
+         m = build_module_native(code, mod, kernels, address_spaces, r_log);
+         break;
+      }
    }
 #if HAVE_LLVM >= 0x0306
    // LLVM 3.6 and newer, the user takes ownership of the module.
