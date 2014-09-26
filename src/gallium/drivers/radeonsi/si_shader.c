@@ -182,32 +182,35 @@ static int get_param_index(unsigned semantic_name, unsigned index,
 }
 
 /**
- * Build an LLVM bytecode indexed load using LLVMBuildGEP + LLVMBuildLoad
+ * Build an LLVM bytecode indexed load using LLVMBuildGEP + LLVMBuildLoad.
+ * It's equivalent to doing a load from &base_ptr[index].
  *
- * @param offset The offset parameter specifies the number of
- * elements to offset, not the number of bytes or dwords.  An element is the
- * the type pointed to by the base_ptr parameter (e.g. int is the element of
- * an int* pointer)
- *
- * When LLVM lowers the load instruction, it will convert the element offset
- * into a dword offset automatically.
- *
+ * \param base_ptr  Where the array starts.
+ * \param index     The element index into the array.
  */
-static LLVMValueRef build_indexed_load(
-	struct si_shader_context * si_shader_ctx,
-	LLVMValueRef base_ptr,
-	LLVMValueRef offset)
+static LLVMValueRef build_indexed_load(struct si_shader_context *si_shader_ctx,
+				       LLVMValueRef base_ptr, LLVMValueRef index)
 {
-	struct lp_build_context * base = &si_shader_ctx->radeon_bld.soa.bld_base.base;
+	struct lp_build_tgsi_context *bld_base = &si_shader_ctx->radeon_bld.soa.bld_base;
+	struct gallivm_state *gallivm = bld_base->base.gallivm;
+	LLVMValueRef indices[2], pointer;
 
-	LLVMValueRef indices[2] = {
-		LLVMConstInt(LLVMInt64TypeInContext(base->gallivm->context), 0, false),
-		offset
-	};
-	LLVMValueRef computed_ptr = LLVMBuildGEP(
-		base->gallivm->builder, base_ptr, indices, 2, "");
+	indices[0] = bld_base->uint_bld.zero;
+	indices[1] = index;
 
-	LLVMValueRef result = LLVMBuildLoad(base->gallivm->builder, computed_ptr, "");
+	pointer = LLVMBuildGEP(gallivm->builder, base_ptr, indices, 2, "");
+	return LLVMBuildLoad(gallivm->builder, pointer, "");
+}
+
+/**
+ * Do a load from &base_ptr[index], but also add a flag that it's loading
+ * a constant.
+ */
+static LLVMValueRef build_indexed_load_const(
+	struct si_shader_context * si_shader_ctx,
+	LLVMValueRef base_ptr, LLVMValueRef index)
+{
+	LLVMValueRef result = build_indexed_load(si_shader_ctx, base_ptr, index);
 	LLVMSetMetadata(result, 1, si_shader_ctx->const_md);
 	return result;
 }
@@ -259,7 +262,7 @@ static void declare_input_vs(
 
 	t_offset = lp_build_const_int32(gallivm, input_index);
 
-	t_list = build_indexed_load(si_shader_ctx, t_list_ptr, t_offset);
+	t_list = build_indexed_load_const(si_shader_ctx, t_list_ptr, t_offset);
 
 	/* Build the attribute offset */
 	attribute_offset = lp_build_const_int32(gallivm, 0);
@@ -354,7 +357,7 @@ static LLVMValueRef fetch_input_gs(
 	/* Load the ESGS ring resource descriptor */
 	t_list_ptr = LLVMGetParam(si_shader_ctx->radeon_bld.main_fn,
 				  SI_PARAM_RW_BUFFERS);
-	t_list = build_indexed_load(si_shader_ctx, t_list_ptr,
+	t_list = build_indexed_load_const(si_shader_ctx, t_list_ptr,
 				    lp_build_const_int32(gallivm, SI_RING_ESGS));
 
 	args[0] = t_list;
@@ -562,8 +565,11 @@ static LLVMValueRef get_sample_id(struct radeon_llvm_context *radeon_bld)
 	return value;
 }
 
-static LLVMValueRef load_const(LLVMBuilderRef builder, LLVMValueRef resource,
-			       LLVMValueRef offset, LLVMTypeRef return_type)
+/**
+ * Load a dword from a constant buffer.
+ */
+static LLVMValueRef buffer_load_const(LLVMBuilderRef builder, LLVMValueRef resource,
+				      LLVMValueRef offset, LLVMTypeRef return_type)
 {
 	LLVMValueRef args[2] = {resource, offset};
 
@@ -602,15 +608,15 @@ static void declare_system_value(
 		LLVMBuilderRef builder = gallivm->builder;
 		LLVMValueRef desc = LLVMGetParam(si_shader_ctx->radeon_bld.main_fn, SI_PARAM_CONST);
 		LLVMValueRef buf_index = lp_build_const_int32(gallivm, SI_DRIVER_STATE_CONST_BUF);
-		LLVMValueRef resource = build_indexed_load(si_shader_ctx, desc, buf_index);
+		LLVMValueRef resource = build_indexed_load_const(si_shader_ctx, desc, buf_index);
 
 		/* offset = sample_id * 8  (8 = 2 floats containing samplepos.xy) */
 		LLVMValueRef offset0 = lp_build_mul_imm(uint_bld, get_sample_id(radeon_bld), 8);
 		LLVMValueRef offset1 = LLVMBuildAdd(builder, offset0, lp_build_const_int32(gallivm, 4), "");
 
 		LLVMValueRef pos[4] = {
-			load_const(builder, resource, offset0, radeon_bld->soa.bld_base.base.elem_type),
-			load_const(builder, resource, offset1, radeon_bld->soa.bld_base.base.elem_type),
+			buffer_load_const(builder, resource, offset0, radeon_bld->soa.bld_base.base.elem_type),
+			buffer_load_const(builder, resource, offset1, radeon_bld->soa.bld_base.base.elem_type),
 			lp_build_const_float(gallivm, 0),
 			lp_build_const_float(gallivm, 0)
 		};
@@ -661,7 +667,7 @@ static LLVMValueRef fetch_constant(
 	addr = lp_build_add(&bld_base->uint_bld, addr,
 			    lp_build_const_int32(base->gallivm, idx * 4));
 
-	result = load_const(base->gallivm->builder, si_shader_ctx->const_resource[buf],
+	result = buffer_load_const(base->gallivm->builder, si_shader_ctx->const_resource[buf],
 			    addr, base->elem_type);
 
 	return bitcast(bld_base, type, result);
@@ -812,7 +818,7 @@ static void si_llvm_emit_clipvertex(struct lp_build_tgsi_context * bld_base,
 	LLVMValueRef base_elt;
 	LLVMValueRef ptr = LLVMGetParam(si_shader_ctx->radeon_bld.main_fn, SI_PARAM_CONST);
 	LLVMValueRef constbuf_index = lp_build_const_int32(base->gallivm, SI_DRIVER_STATE_CONST_BUF);
-	LLVMValueRef const_resource = build_indexed_load(si_shader_ctx, ptr, constbuf_index);
+	LLVMValueRef const_resource = build_indexed_load_const(si_shader_ctx, ptr, constbuf_index);
 
 	for (reg_index = 0; reg_index < 2; reg_index ++) {
 		LLVMValueRef *args = pos[2 + reg_index];
@@ -830,7 +836,7 @@ static void si_llvm_emit_clipvertex(struct lp_build_tgsi_context * bld_base,
 				args[1] = lp_build_const_int32(base->gallivm,
 							       ((reg_index * 4 + chan) * 4 +
 								const_chan) * 4);
-				base_elt = load_const(base->gallivm->builder, const_resource,
+				base_elt = buffer_load_const(base->gallivm->builder, const_resource,
 						      args[1], base->elem_type);
 				args[5 + chan] =
 					lp_build_add(base, args[5 + chan],
@@ -1242,7 +1248,7 @@ static void si_llvm_emit_es_epilogue(struct lp_build_tgsi_context * bld_base)
 	/* Load the ESGS ring resource descriptor */
 	t_list_ptr = LLVMGetParam(si_shader_ctx->radeon_bld.main_fn,
 				  SI_PARAM_RW_BUFFERS);
-	t_list = build_indexed_load(si_shader_ctx, t_list_ptr,
+	t_list = build_indexed_load_const(si_shader_ctx, t_list_ptr,
 				    lp_build_const_int32(gallivm, SI_RING_ESGS));
 
 	for (i = 0; i < info->num_outputs; i++) {
@@ -2153,7 +2159,7 @@ static void si_llvm_emit_vertex(
 	/* Load the GSVS ring resource descriptor */
 	t_list_ptr = LLVMGetParam(si_shader_ctx->radeon_bld.main_fn,
 				  SI_PARAM_RW_BUFFERS);
-	t_list = build_indexed_load(si_shader_ctx, t_list_ptr,
+	t_list = build_indexed_load_const(si_shader_ctx, t_list_ptr,
 				    lp_build_const_int32(gallivm, SI_RING_GSVS));
 
 	/* Write vertex attribute values to GSVS ring */
@@ -2408,12 +2414,12 @@ static void preload_constants(struct si_shader_context *si_shader_ctx)
 
 		/* Load the resource descriptor */
 		si_shader_ctx->const_resource[buf] =
-			build_indexed_load(si_shader_ctx, ptr, lp_build_const_int32(gallivm, buf));
+			build_indexed_load_const(si_shader_ctx, ptr, lp_build_const_int32(gallivm, buf));
 
 		/* Load the constants, we rely on the code sinking to do the rest */
 		for (i = 0; i < num_const * 4; ++i) {
 			si_shader_ctx->constants[buf][i] =
-				load_const(gallivm->builder,
+				buffer_load_const(gallivm->builder,
 					si_shader_ctx->const_resource[buf],
 					lp_build_const_int32(gallivm, i * 4),
 					bld_base->base.elem_type);
@@ -2442,17 +2448,17 @@ static void preload_samplers(struct si_shader_context *si_shader_ctx)
 	for (i = 0; i < num_samplers; ++i) {
 		/* Resource */
 		offset = lp_build_const_int32(gallivm, i);
-		si_shader_ctx->resources[i] = build_indexed_load(si_shader_ctx, res_ptr, offset);
+		si_shader_ctx->resources[i] = build_indexed_load_const(si_shader_ctx, res_ptr, offset);
 
 		/* Sampler */
 		offset = lp_build_const_int32(gallivm, i);
-		si_shader_ctx->samplers[i] = build_indexed_load(si_shader_ctx, samp_ptr, offset);
+		si_shader_ctx->samplers[i] = build_indexed_load_const(si_shader_ctx, samp_ptr, offset);
 
 		/* FMASK resource */
 		if (info->is_msaa_sampler[i]) {
 			offset = lp_build_const_int32(gallivm, SI_FMASK_TEX_OFFSET + i);
 			si_shader_ctx->resources[SI_FMASK_TEX_OFFSET + i] =
-				build_indexed_load(si_shader_ctx, res_ptr, offset);
+				build_indexed_load_const(si_shader_ctx, res_ptr, offset);
 		}
 	}
 }
@@ -2477,7 +2483,7 @@ static void preload_streamout_buffers(struct si_shader_context *si_shader_ctx)
 			LLVMValueRef offset = lp_build_const_int32(gallivm,
 								   SI_SO_BUF_OFFSET + i);
 
-			si_shader_ctx->so_buffers[i] = build_indexed_load(si_shader_ctx, buf_ptr, offset);
+			si_shader_ctx->so_buffers[i] = build_indexed_load_const(si_shader_ctx, buf_ptr, offset);
 		}
 	}
 }
@@ -2599,7 +2605,7 @@ static int si_generate_gs_copy_shader(struct si_screen *sscreen,
 	/* Load the GSVS ring resource descriptor */
 	t_list_ptr = LLVMGetParam(si_shader_ctx->radeon_bld.main_fn,
 				  SI_PARAM_RW_BUFFERS);
-	t_list = build_indexed_load(si_shader_ctx, t_list_ptr,
+	t_list = build_indexed_load_const(si_shader_ctx, t_list_ptr,
 				    lp_build_const_int32(gallivm, SI_RING_GSVS));
 
 	args[0] = t_list;
