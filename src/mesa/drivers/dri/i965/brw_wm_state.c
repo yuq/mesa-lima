@@ -154,7 +154,7 @@ brw_upload_wm_unit(struct brw_context *brw)
    }
 
    if (brw->wm.base.sampler_count) {
-      /* CACHE_NEW_SAMPLER - reloc */
+      /* BRW_NEW_SAMPLER_STATE_TABLE - reloc */
       wm->wm4.sampler_state_pointer = (brw->batch.bo->offset64 +
 				       brw->wm.base.sampler_offset) >> 5;
    } else {
@@ -256,9 +256,9 @@ const struct brw_tracked_state brw_wm_unit = {
              BRW_NEW_CURBE_OFFSETS |
              BRW_NEW_FRAGMENT_PROGRAM |
              BRW_NEW_PROGRAM_CACHE |
+             BRW_NEW_SAMPLER_STATE_TABLE |
              BRW_NEW_STATS_WM,
-      .cache = CACHE_NEW_SAMPLER |
-               CACHE_NEW_WM_PROG,
+      .cache = CACHE_NEW_WM_PROG,
    },
    .emit = brw_upload_wm_unit,
 };
