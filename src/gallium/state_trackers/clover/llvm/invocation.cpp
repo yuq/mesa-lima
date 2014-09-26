@@ -33,6 +33,8 @@
 #include <llvm/Linker.h>
 #else
 #include <llvm/Linker/Linker.h>
+#include <llvm/IR/DiagnosticInfo.h>
+#include <llvm/IR/DiagnosticPrinter.h>
 #endif
 #if HAVE_LLVM < 0x0303
 #include <llvm/DerivedTypes.h>
@@ -599,6 +601,24 @@ namespace {
       return m;
    }
 
+#if HAVE_LLVM >= 0x0305
+
+   void
+   diagnostic_handler(const llvm::DiagnosticInfo &di, void *data) {
+      if (di.getSeverity() == llvm::DS_Error) {
+         std::string message = *(compat::string*)data;
+         llvm::raw_string_ostream stream(message);
+         llvm::DiagnosticPrinterRawOStream dp(stream);
+         di.print(dp);
+         stream.flush();
+         *(compat::string*)data = message;
+
+         throw build_error();
+      }
+   }
+
+#endif
+
    void
    init_targets() {
       static bool targets_initialized = false;
@@ -629,6 +649,10 @@ clover::compile_program_llvm(const compat::string &source,
    clang::LangAS::Map address_spaces;
    llvm::LLVMContext llvm_ctx;
    unsigned optimization_level;
+
+#if HAVE_LLVM >= 0x0305
+   llvm_ctx.setDiagnosticHandler(diagnostic_handler, &r_log);
+#endif
 
    // The input file name must have the .cl extension in order for the
    // CompilerInvocation class to recognize it as an OpenCL source file.
@@ -661,5 +685,6 @@ clover::compile_program_llvm(const compat::string &source,
    // LLVM 3.6 and newer, the user takes ownership of the module.
    delete mod;
 #endif
+
    return m;
 }
