@@ -158,7 +158,7 @@ brw_upload_clip_unit(struct brw_context *brw)
    clip->viewport_ymin = -1;
    clip->viewport_ymax = 1;
 
-   brw->state.dirty.cache |= CACHE_NEW_CLIP_UNIT;
+   brw->state.dirty.brw |= BRW_NEW_GEN4_UNIT_STATE;
 }
 
 const struct brw_tracked_state brw_clip_unit = {

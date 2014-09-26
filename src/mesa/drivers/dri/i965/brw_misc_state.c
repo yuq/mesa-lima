@@ -117,15 +117,10 @@ const struct brw_tracked_state brw_psp_urb_cbs = {
    .dirty = {
       .mesa = 0,
       .brw = BRW_NEW_BATCH |
+             BRW_NEW_GEN4_UNIT_STATE |
              BRW_NEW_STATE_BASE_ADDRESS |
              BRW_NEW_URB_FENCE,
-      .cache = CACHE_NEW_CC_UNIT |
-               CACHE_NEW_CLIP_UNIT |
-               CACHE_NEW_FF_GS_PROG |
-               CACHE_NEW_FF_GS_UNIT |
-               CACHE_NEW_SF_UNIT |
-               CACHE_NEW_VS_UNIT |
-               CACHE_NEW_WM_UNIT,
+      .cache = CACHE_NEW_FF_GS_PROG,
    },
    .emit = upload_psp_urb_cbs,
 };
