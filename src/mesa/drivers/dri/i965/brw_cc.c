@@ -62,7 +62,14 @@ brw_upload_cc_vp(struct brw_context *brw)
       }
    }
 
-   brw->state.dirty.cache |= CACHE_NEW_CC_VP;
+   if (brw->gen >= 7) {
+      BEGIN_BATCH(2);
+      OUT_BATCH(_3DSTATE_VIEWPORT_STATE_POINTERS_CC << 16 | (2 - 2));
+      OUT_BATCH(brw->cc.vp_offset);
+      ADVANCE_BATCH();
+   } else {
+      brw->state.dirty.cache |= CACHE_NEW_CC_VP;
+   }
 }
 
 const struct brw_tracked_state brw_cc_vp = {

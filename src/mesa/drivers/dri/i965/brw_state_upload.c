@@ -190,7 +190,6 @@ static const struct brw_tracked_state *gen7_atoms[] =
    &brw_state_base_address,
 
    &brw_cc_vp,
-   &gen7_cc_viewport_state_pointer, /* must do after brw_cc_vp */
    &gen7_sf_clip_viewport,
 
    &gen7_push_constant_space,
@@ -265,7 +264,6 @@ static const struct brw_tracked_state *gen8_atoms[] =
    &gen8_state_base_address,
 
    &brw_cc_vp,
-   &gen7_cc_viewport_state_pointer, /* must do after brw_cc_vp */
    &gen8_sf_clip_viewport,
 
    &gen7_push_constant_space,
