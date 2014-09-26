@@ -1060,6 +1060,7 @@ CodeEmitterGM107::emitDSET()
 
    emitABS  (0x36, insn->src(0));
    emitNEG  (0x35, insn->src(1));
+   emitField(0x34, 1, insn->dType == TYPE_F32);
    emitCond4(0x30, insn->setCond);
    emitCC   (0x2f);
    emitABS  (0x2c, insn->src(1));
