@@ -122,7 +122,7 @@ static void compile_clip_prog( struct brw_context *brw,
    }
 
    brw_upload_cache(&brw->cache,
-		    BRW_CLIP_PROG,
+		    BRW_CACHE_CLIP_PROG,
 		    &c.key, sizeof(c.key),
 		    program, program_size,
 		    &c.prog_data, sizeof(c.prog_data),
@@ -248,7 +248,7 @@ brw_upload_clip_prog(struct brw_context *brw)
       }
    }
 
-   if (!brw_search_cache(&brw->cache, BRW_CLIP_PROG,
+   if (!brw_search_cache(&brw->cache, BRW_CACHE_CLIP_PROG,
 			 &key, sizeof(key),
 			 &brw->clip.prog_offset, &brw->clip.prog_data)) {
       compile_clip_prog( brw, &key );

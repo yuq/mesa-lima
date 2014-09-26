@@ -123,7 +123,7 @@ static void compile_sf_prog( struct brw_context *brw,
       fprintf(stderr, "\n");
    }
 
-   brw_upload_cache(&brw->cache, BRW_SF_PROG,
+   brw_upload_cache(&brw->cache, BRW_CACHE_SF_PROG,
 		    &c.key, sizeof(c.key),
 		    program, program_size,
 		    &c.prog_data, sizeof(c.prog_data),
@@ -207,7 +207,7 @@ brw_upload_sf_prog(struct brw_context *brw)
       key.frontface_ccw = (ctx->Polygon.FrontFace == GL_CCW) != render_to_fbo;
    }
 
-   if (!brw_search_cache(&brw->cache, BRW_SF_PROG,
+   if (!brw_search_cache(&brw->cache, BRW_CACHE_SF_PROG,
 			 &key, sizeof(key),
 			 &brw->sf.prog_offset, &brw->sf.prog_data)) {
       compile_sf_prog( brw, &key );

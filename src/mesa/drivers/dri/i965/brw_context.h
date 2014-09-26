@@ -693,13 +693,13 @@ struct brw_gs_prog_data
 #define SHADER_TIME_STRIDE 64
 
 enum brw_cache_id {
-   BRW_WM_PROG,
-   BRW_BLORP_BLIT_PROG,
-   BRW_SF_PROG,
-   BRW_VS_PROG,
-   BRW_FF_GS_PROG,
-   BRW_GS_PROG,
-   BRW_CLIP_PROG,
+   BRW_CACHE_FS_PROG,
+   BRW_CACHE_BLORP_BLIT_PROG,
+   BRW_CACHE_SF_PROG,
+   BRW_CACHE_VS_PROG,
+   BRW_CACHE_FF_GS_PROG,
+   BRW_CACHE_GS_PROG,
+   BRW_CACHE_CLIP_PROG,
 
    BRW_MAX_CACHE
 };
@@ -777,13 +777,13 @@ enum shader_time_shader_type {
 
 /* Flags for brw->state.cache.
  */
-#define CACHE_NEW_WM_PROG                (1<<BRW_WM_PROG)
-#define CACHE_NEW_BLORP_BLIT_PROG        (1<<BRW_BLORP_BLIT_PROG)
-#define CACHE_NEW_SF_PROG                (1<<BRW_SF_PROG)
-#define CACHE_NEW_VS_PROG                (1<<BRW_VS_PROG)
-#define CACHE_NEW_FF_GS_PROG             (1<<BRW_FF_GS_PROG)
-#define CACHE_NEW_GS_PROG                (1<<BRW_GS_PROG)
-#define CACHE_NEW_CLIP_PROG              (1<<BRW_CLIP_PROG)
+#define CACHE_NEW_WM_PROG                (1 << BRW_CACHE_FS_PROG)
+#define CACHE_NEW_BLORP_BLIT_PROG        (1 << BRW_CACHE_BLORP_BLIT_PROG)
+#define CACHE_NEW_SF_PROG                (1 << BRW_CACHE_SF_PROG)
+#define CACHE_NEW_VS_PROG                (1 << BRW_CACHE_VS_PROG)
+#define CACHE_NEW_FF_GS_PROG             (1 << BRW_CACHE_FF_GS_PROG)
+#define CACHE_NEW_GS_PROG                (1 << BRW_CACHE_GS_PROG)
+#define CACHE_NEW_CLIP_PROG              (1 << BRW_CACHE_CLIP_PROG)
 
 struct brw_vertex_buffer {
    /** Buffer object containing the uploaded vertex data */

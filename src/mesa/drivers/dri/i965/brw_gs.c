@@ -282,7 +282,7 @@ do_gs_prog(struct brw_context *brw,
                          brw->max_gs_threads);
    }
 
-   brw_upload_cache(&brw->cache, BRW_GS_PROG,
+   brw_upload_cache(&brw->cache, BRW_CACHE_GS_PROG,
                     &c.key, sizeof(c.key),
                     program, program_size,
                     &c.prog_data, sizeof(c.prog_data),
@@ -343,7 +343,7 @@ brw_upload_gs_prog(struct brw_context *brw)
    /* BRW_NEW_VUE_MAP_VS */
    key.input_varyings = brw->vue_map_vs.slots_valid;
 
-   if (!brw_search_cache(&brw->cache, BRW_GS_PROG,
+   if (!brw_search_cache(&brw->cache, BRW_CACHE_GS_PROG,
                          &key, sizeof(key),
                          &stage_state->prog_offset, &brw->gs.prog_data)) {
       bool success =

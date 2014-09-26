@@ -312,7 +312,7 @@ do_vs_prog(struct brw_context *brw,
                          brw->max_vs_threads);
    }
 
-   brw_upload_cache(&brw->cache, BRW_VS_PROG,
+   brw_upload_cache(&brw->cache, BRW_CACHE_VS_PROG,
 		    &c.key, sizeof(c.key),
 		    program, program_size,
 		    &prog_data, sizeof(prog_data),
@@ -345,7 +345,7 @@ brw_vs_debug_recompile(struct brw_context *brw,
 
    for (unsigned int i = 0; i < brw->cache.size; i++) {
       for (c = brw->cache.items[i]; c; c = c->next) {
-         if (c->cache_id == BRW_VS_PROG) {
+         if (c->cache_id == BRW_CACHE_VS_PROG) {
             old_key = c->key;
 
             if (old_key->base.program_string_id == key->base.program_string_id)
@@ -483,7 +483,7 @@ static void brw_upload_vs_prog(struct brw_context *brw)
       }
    }
 
-   if (!brw_search_cache(&brw->cache, BRW_VS_PROG,
+   if (!brw_search_cache(&brw->cache, BRW_CACHE_VS_PROG,
 			 &key, sizeof(key),
 			 &brw->vs.base.prog_offset, &brw->vs.prog_data)) {
       bool success =

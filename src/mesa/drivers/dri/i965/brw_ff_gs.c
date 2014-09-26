@@ -139,7 +139,7 @@ static void compile_ff_gs_prog(struct brw_context *brw,
       fprintf(stderr, "\n");
     }
 
-   brw_upload_cache(&brw->cache, BRW_FF_GS_PROG,
+   brw_upload_cache(&brw->cache, BRW_CACHE_FF_GS_PROG,
 		    &c.key, sizeof(c.key),
 		    program, program_size,
 		    &c.prog_data, sizeof(c.prog_data),
@@ -235,7 +235,7 @@ brw_upload_ff_gs_prog(struct brw_context *brw)
    }
 
    if (brw->ff_gs.prog_active) {
-      if (!brw_search_cache(&brw->cache, BRW_FF_GS_PROG,
+      if (!brw_search_cache(&brw->cache, BRW_CACHE_FF_GS_PROG,
 			    &key, sizeof(key),
 			    &brw->ff_gs.prog_offset, &brw->ff_gs.prog_data)) {
 	 compile_ff_gs_prog( brw, &key );

@@ -199,7 +199,7 @@ bool do_wm_prog(struct brw_context *brw,
    if (unlikely(INTEL_DEBUG & DEBUG_WM))
       fprintf(stderr, "\n");
 
-   brw_upload_cache(&brw->cache, BRW_WM_PROG,
+   brw_upload_cache(&brw->cache, BRW_CACHE_FS_PROG,
 		    key, sizeof(struct brw_wm_prog_key),
 		    program, program_size,
 		    &prog_data, sizeof(prog_data),
@@ -257,7 +257,7 @@ brw_wm_debug_recompile(struct brw_context *brw,
 
    for (unsigned int i = 0; i < brw->cache.size; i++) {
       for (c = brw->cache.items[i]; c; c = c->next) {
-         if (c->cache_id == BRW_WM_PROG) {
+         if (c->cache_id == BRW_CACHE_FS_PROG) {
             old_key = c->key;
 
             if (old_key->program_string_id == key->program_string_id)
@@ -573,7 +573,7 @@ brw_upload_wm_prog(struct brw_context *brw)
 
    brw_wm_populate_key(brw, &key);
 
-   if (!brw_search_cache(&brw->cache, BRW_WM_PROG,
+   if (!brw_search_cache(&brw->cache, BRW_CACHE_FS_PROG,
 			 &key, sizeof(key),
 			 &brw->wm.base.prog_offset, &brw->wm.prog_data)) {
       bool success = do_wm_prog(brw, ctx->_Shader->_CurrentFragmentProgram, fp,

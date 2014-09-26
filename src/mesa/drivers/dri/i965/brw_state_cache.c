@@ -360,12 +360,12 @@ brw_init_caches(struct brw_context *brw)
    if (brw->has_llc)
       drm_intel_gem_bo_map_unsynchronized(cache->bo);
 
-   cache->aux_compare[BRW_VS_PROG] = brw_vs_prog_data_compare;
-   cache->aux_compare[BRW_GS_PROG] = brw_gs_prog_data_compare;
-   cache->aux_compare[BRW_WM_PROG] = brw_wm_prog_data_compare;
-   cache->aux_free[BRW_VS_PROG] = brw_stage_prog_data_free;
-   cache->aux_free[BRW_GS_PROG] = brw_stage_prog_data_free;
-   cache->aux_free[BRW_WM_PROG] = brw_stage_prog_data_free;
+   cache->aux_compare[BRW_CACHE_VS_PROG] = brw_vs_prog_data_compare;
+   cache->aux_compare[BRW_CACHE_GS_PROG] = brw_gs_prog_data_compare;
+   cache->aux_compare[BRW_CACHE_FS_PROG] = brw_wm_prog_data_compare;
+   cache->aux_free[BRW_CACHE_VS_PROG] = brw_stage_prog_data_free;
+   cache->aux_free[BRW_CACHE_GS_PROG] = brw_stage_prog_data_free;
+   cache->aux_free[BRW_CACHE_FS_PROG] = brw_stage_prog_data_free;
 }
 
 static void
