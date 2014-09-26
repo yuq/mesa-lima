@@ -924,15 +924,15 @@ CodeEmitterGM107::emitDMUL()
 {
    switch (insn->src(1).getFile()) {
    case FILE_GPR:
-      emitInsn(0x5c680000);
+      emitInsn(0x5c800000);
       emitGPR (0x14, insn->src(1));
       break;
    case FILE_MEMORY_CONST:
-      emitInsn(0x4c680000);
+      emitInsn(0x4c800000);
       emitCBUF(0x22, -1, 0x14, 16, 2, insn->src(1));
       break;
    case FILE_IMMEDIATE:
-      emitInsn(0x38680000);
+      emitInsn(0x38800000);
       emitIMMD(0x14, 19, insn->src(1));
       break;
    default:
