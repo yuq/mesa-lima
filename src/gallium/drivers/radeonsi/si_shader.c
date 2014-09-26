@@ -33,6 +33,7 @@
 #include "gallivm/lp_bld_arit.h"
 #include "gallivm/lp_bld_flow.h"
 #include "radeon/radeon_llvm.h"
+#include "radeon/radeon_elf_util.h"
 #include "radeon/radeon_llvm_emit.h"
 #include "util/u_memory.h"
 #include "tgsi/tgsi_parse.h"
@@ -2500,52 +2501,34 @@ static void preload_ring_buffers(struct si_shader_context *si_shader_ctx)
 	}
 }
 
-int si_compile_llvm(struct si_screen *sscreen, struct si_shader *shader,
-		    LLVMModuleRef mod)
+void si_shader_binary_read_config(const struct radeon_shader_binary *binary,
+				struct si_shader *shader,
+				unsigned symbol_offset)
 {
-	unsigned r; /* llvm_compile result */
 	unsigned i;
-	unsigned char *ptr;
-	struct radeon_shader_binary binary;
-	bool dump = r600_can_dump_shader(&sscreen->b,
-			shader->selector ? shader->selector->tokens : NULL);
-	const char * gpu_family = r600_get_llvm_processor_name(sscreen->b.family);
-	unsigned code_size;
-
-	/* Use LLVM to compile shader */
-	memset(&binary, 0, sizeof(binary));
-	r = radeon_llvm_compile(mod, &binary, gpu_family, dump);
-
-	/* Output binary dump if rscreen->debug_flags are set */
-	if (dump && ! binary.disassembled) {
-		fprintf(stderr, "SI CODE:\n");
-		for (i = 0; i < binary.code_size; i+=4 ) {
-			fprintf(stderr, "%02x%02x%02x%02x\n", binary.code[i + 3],
-				binary.code[i + 2], binary.code[i + 1],
-				binary.code[i]);
-		}
-	}
+	const unsigned char *config =
+		radeon_shader_binary_config_start(binary, symbol_offset);
 
 	/* XXX: We may be able to emit some of these values directly rather than
 	 * extracting fields to be emitted later.
 	 */
-	/* Parse config data in compiled binary */
-	for (i = 0; i < binary.config_size; i+= 8) {
-		unsigned reg = util_le32_to_cpu(*(uint32_t*)(binary.config + i));
-		unsigned value = util_le32_to_cpu(*(uint32_t*)(binary.config + i + 4));
+
+	for (i = 0; i < binary->config_size_per_symbol; i+= 8) {
+		unsigned reg = util_le32_to_cpu(*(uint32_t*)(config + i));
+		unsigned value = util_le32_to_cpu(*(uint32_t*)(config + i + 4));
 		switch (reg) {
 		case R_00B028_SPI_SHADER_PGM_RSRC1_PS:
 		case R_00B128_SPI_SHADER_PGM_RSRC1_VS:
 		case R_00B228_SPI_SHADER_PGM_RSRC1_GS:
 		case R_00B848_COMPUTE_PGM_RSRC1:
-			shader->num_sgprs = (G_00B028_SGPRS(value) + 1) * 8;
-			shader->num_vgprs = (G_00B028_VGPRS(value) + 1) * 4;
+			shader->num_sgprs = MAX2(shader->num_sgprs, (G_00B028_SGPRS(value) + 1) * 8);
+			shader->num_vgprs = MAX2(shader->num_vgprs, (G_00B028_VGPRS(value) + 1) * 4);
 			break;
 		case R_00B02C_SPI_SHADER_PGM_RSRC2_PS:
-			shader->lds_size = G_00B02C_EXTRA_LDS_SIZE(value);
+			shader->lds_size = MAX2(shader->lds_size, G_00B02C_EXTRA_LDS_SIZE(value));
 			break;
 		case R_00B84C_COMPUTE_PGM_RSRC2:
-			shader->lds_size = G_00B84C_LDS_SIZE(value);
+			shader->lds_size = MAX2(shader->lds_size, G_00B84C_LDS_SIZE(value));
 			break;
 		case R_0286CC_SPI_PS_INPUT_ENA:
 			shader->spi_ps_input_ena = value;
@@ -2561,9 +2544,32 @@ int si_compile_llvm(struct si_screen *sscreen, struct si_shader *shader,
 			break;
 		}
 	}
+}
+
+int si_shader_binary_read(struct si_screen *sscreen,
+			struct si_shader *shader,
+			const struct radeon_shader_binary *binary)
+{
+
+	unsigned i;
+	unsigned code_size;
+	unsigned char *ptr;
+	bool dump  = r600_can_dump_shader(&sscreen->b,
+		shader->selector ? shader->selector->tokens : NULL);
+
+	if (dump && !binary->disassembled) {
+		fprintf(stderr, "SI CODE:\n");
+		for (i = 0; i < binary->code_size; i+=4 ) {
+			fprintf(stderr, "@0x%x: %02x%02x%02x%02x\n", i, binary->code[i + 3],
+				binary->code[i + 2], binary->code[i + 1],
+				binary->code[i]);
+		}
+	}
+
+	si_shader_binary_read_config(binary, shader, 0);
 
 	/* copy new shader */
-	code_size = binary.code_size + binary.rodata_size;
+	code_size = binary->code_size + binary->rodata_size;
 	r600_resource_reference(&shader->bo, NULL);
 	shader->bo = si_resource_create_custom(&sscreen->b.b, PIPE_USAGE_IMMUTABLE,
 					       code_size);
@@ -2571,19 +2577,37 @@ int si_compile_llvm(struct si_screen *sscreen, struct si_shader *shader,
 		return -ENOMEM;
 	}
 
-	ptr = sscreen->b.ws->buffer_map(shader->bo->cs_buf, NULL, PIPE_TRANSFER_WRITE);
-	util_memcpy_cpu_to_le32(ptr, binary.code, binary.code_size);
-	if (binary.rodata_size > 0) {
-		ptr += binary.code_size;
-		util_memcpy_cpu_to_le32(ptr, binary.rodata, binary.rodata_size);
+
+	ptr = sscreen->b.ws->buffer_map(shader->bo->cs_buf, NULL, PIPE_TRANSFER_READ_WRITE);
+	util_memcpy_cpu_to_le32(ptr, binary->code, binary->code_size);
+	if (binary->rodata_size > 0) {
+		ptr += binary->code_size;
+		util_memcpy_cpu_to_le32(ptr, binary->rodata, binary->rodata_size);
 	}
 
 	sscreen->b.ws->buffer_unmap(shader->bo->cs_buf);
 
-	free(binary.code);
-	free(binary.config);
-	free(binary.rodata);
+	return 0;
+}
 
+int si_compile_llvm(struct si_screen *sscreen, struct si_shader *shader,
+							LLVMModuleRef mod)
+{
+	int r = 0;
+	struct radeon_shader_binary binary;
+	bool dump = r600_can_dump_shader(&sscreen->b,
+			shader->selector ? shader->selector->tokens : NULL);
+	memset(&binary, 0, sizeof(binary));
+	r = radeon_llvm_compile(mod, &binary,
+		r600_get_llvm_processor_name(sscreen->b.family), dump);
+
+	if (r) {
+		return r;
+	}
+	r = si_shader_binary_read(sscreen, shader, &binary);
+	FREE(binary.code);
+	FREE(binary.config);
+	FREE(binary.rodata);
 	return r;
 }
 

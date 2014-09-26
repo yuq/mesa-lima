@@ -23,13 +23,14 @@
  */
 
 #include "util/u_memory.h"
+#include "radeon/r600_pipe_common.h"
+#include "radeon/radeon_elf_util.h"
+#include "radeon/radeon_llvm_util.h"
 
 #include "radeon/r600_cs.h"
 #include "si_pipe.h"
 #include "si_shader.h"
 #include "sid.h"
-
-#include "radeon/radeon_llvm_util.h"
 
 #define MAX_GLOBAL_BUFFERS 20
 #if HAVE_LLVM < 0x0305
@@ -44,14 +45,18 @@ struct si_compute {
 	unsigned local_size;
 	unsigned private_size;
 	unsigned input_size;
-	unsigned num_kernels;
-	struct si_shader *kernels;
+	struct radeon_shader_binary binary;
+	struct si_shader program;
 	unsigned num_user_sgprs;
 
 	struct r600_resource *input_buffer;
 	struct pipe_resource *global_buffers[MAX_GLOBAL_BUFFERS];
 
+#if HAVE_LLVM < 0x0306
+	unsigned num_kernels;
+	struct si_shader *kernels;
 	LLVMContextRef llvm_ctx;
+#endif
 };
 
 static void *si_create_compute_state(
@@ -61,10 +66,7 @@ static void *si_create_compute_state(
 	struct si_context *sctx = (struct si_context *)ctx;
 	struct si_compute *program = CALLOC_STRUCT(si_compute);
 	const struct pipe_llvm_program_header *header;
-	const unsigned char *code;
-	unsigned i;
-
-	program->llvm_ctx = LLVMContextCreate();
+	const char *code;
 
 	header = cso->prog;
 	code = cso->prog + sizeof(struct pipe_llvm_program_header);
@@ -74,17 +76,27 @@ static void *si_create_compute_state(
 	program->private_size = cso->req_private_mem;
 	program->input_size = cso->req_input_mem;
 
-	program->num_kernels = radeon_llvm_get_num_kernels(program->llvm_ctx, code,
-							header->num_bytes);
-	program->kernels = CALLOC(sizeof(struct si_shader),
-							program->num_kernels);
-	for (i = 0; i < program->num_kernels; i++) {
-		LLVMModuleRef mod = radeon_llvm_get_kernel_module(program->llvm_ctx, i,
-							code, header->num_bytes);
-		si_compile_llvm(sctx->screen, &program->kernels[i], mod);
-		LLVMDisposeModule(mod);
+#if HAVE_LLVM < 0x0306
+	{
+		unsigned i;
+		program->llvm_ctx = LLVMContextCreate();
+	        program->num_kernels = radeon_llvm_get_num_kernels(program->llvm_ctx,
+					code, header->num_bytes);
+	        program->kernels = CALLOC(sizeof(struct si_shader),
+                                                        program->num_kernels);
+	        for (i = 0; i < program->num_kernels; i++) {
+		        LLVMModuleRef mod = radeon_llvm_get_kernel_module(program->llvm_ctx, i,
+                                                        code, header->num_bytes);
+			si_compile_llvm(sctx->screen, &program->kernels[i], mod);
+			LLVMDisposeModule(mod);
+		}
 	}
+#else
 
+	radeon_elf_read(code, header->num_bytes, &program->binary, true);
+	si_shader_binary_read(sctx->screen, &program->program, &program->binary);
+
+#endif
 	program->input_buffer =	si_resource_create_custom(sctx->b.b.screen,
 		PIPE_USAGE_IMMUTABLE, program->input_size);
 
@@ -181,9 +193,14 @@ static void si_launch_grid(
 	uint64_t shader_va;
 	unsigned arg_user_sgpr_count = NUM_USER_SGPRS;
 	unsigned i;
-	struct si_shader *shader = &program->kernels[pc];
+	struct si_shader *shader = &program->program;
 	unsigned lds_blocks;
 	unsigned num_waves_for_scratch;
+
+#if HAVE_LLVM < 0x0306
+	shader = &program->kernels[pc];
+#endif
+
 
 	radeon_emit(cs, PKT3(PKT3_CONTEXT_CONTROL, 1, 0) | PKT3_SHADER_TYPE_S(1));
 	radeon_emit(cs, 0x80000000);
@@ -197,6 +214,11 @@ static void si_launch_grid(
 	si_emit_cache_flush(&sctx->b, NULL);
 
 	pm4->compute_pkt = true;
+
+#if HAVE_LLVM >= 0x0306
+	/* Read the config information */
+	si_shader_binary_read_config(&program->binary, &program->program, pc);
+#endif
 
 	/* Upload the kernel arguments */
 
@@ -290,6 +312,10 @@ static void si_launch_grid(
 	}
 
 	shader_va = shader->bo->gpu_address;
+
+#if HAVE_LLVM >= 0x0306
+	shader_va += pc;
+#endif
 	si_pm4_add_bo(pm4, shader->bo, RADEON_USAGE_READ, RADEON_PRIO_SHADER_DATA);
 	si_pm4_set_reg(pm4, R_00B830_COMPUTE_PGM_LO, (shader_va >> 8) & 0xffffffff);
 	si_pm4_set_reg(pm4, R_00B834_COMPUTE_PGM_HI, shader_va >> 40);
@@ -388,6 +414,7 @@ static void si_delete_compute_state(struct pipe_context *ctx, void* state){
 		return;
 	}
 
+#if HAVE_LLVM < 0x0306
 	if (program->kernels) {
 		for (int i = 0; i < program->num_kernels; i++){
 			if (program->kernels[i].bo){
@@ -400,10 +427,16 @@ static void si_delete_compute_state(struct pipe_context *ctx, void* state){
 	if (program->llvm_ctx){
 		LLVMContextDispose(program->llvm_ctx);
 	}
+#else
+	si_shader_destroy(ctx, &program->program);
+#endif
+
 	pipe_resource_reference(
 		(struct pipe_resource **)&program->input_buffer, NULL);
 
-	//And then free the program itself.
+	FREE(program->binary.code);
+	FREE(program->binary.config);
+	FREE(program->binary.rodata);
 	FREE(program);
 }
 

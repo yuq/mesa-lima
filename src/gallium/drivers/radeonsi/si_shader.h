@@ -33,6 +33,8 @@
 #include "tgsi/tgsi_scan.h"
 #include "si_state.h"
 
+struct radeon_shader_binary;
+
 #define SI_SGPR_RW_BUFFERS	0  /* rings (& stream-out, VS only) */
 #define SI_SGPR_CONST		2
 #define SI_SGPR_SAMPLER		4
@@ -180,5 +182,10 @@ int si_compile_llvm(struct si_screen *sscreen, struct si_shader *shader,
 		    LLVMModuleRef mod);
 void si_shader_destroy(struct pipe_context *ctx, struct si_shader *shader);
 unsigned si_shader_io_get_unique_index(unsigned semantic_name, unsigned index);
+int si_shader_binary_read(struct si_screen *sscreen, struct si_shader *shader,
+		const struct radeon_shader_binary *binary);
+void si_shader_binary_read_config(const struct radeon_shader_binary *binary,
+				struct si_shader *shader,
+				unsigned symbol_offset);
 
 #endif
