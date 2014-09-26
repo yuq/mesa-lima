@@ -472,7 +472,11 @@ static int r600_get_shader_param(struct pipe_screen* pscreen, unsigned shader, e
 		return 16;
         case PIPE_SHADER_CAP_PREFERRED_IR:
 		if (shader == PIPE_SHADER_COMPUTE) {
+#if HAVE_LLVM < 0x0306
 			return PIPE_SHADER_IR_LLVM;
+#else
+			return PIPE_SHADER_IR_NATIVE;
+#endif
 		} else {
 			return PIPE_SHADER_IR_TGSI;
 		}

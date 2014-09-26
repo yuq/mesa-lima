@@ -146,6 +146,7 @@ struct r600_clip_state {
 struct r600_cs_shader_state {
 	struct r600_atom atom;
 	unsigned kernel_index;
+	unsigned pc;
 	struct r600_pipe_compute *shader;
 };
 
