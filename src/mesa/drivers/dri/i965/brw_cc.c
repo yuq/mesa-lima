@@ -68,7 +68,7 @@ brw_upload_cc_vp(struct brw_context *brw)
       OUT_BATCH(brw->cc.vp_offset);
       ADVANCE_BATCH();
    } else {
-      brw->state.dirty.cache |= CACHE_NEW_CC_VP;
+      brw->state.dirty.brw |= BRW_NEW_CC_VP;
    }
 }
 
@@ -227,7 +227,7 @@ static void upload_cc_unit(struct brw_context *brw)
    if (brw->stats_wm || unlikely(INTEL_DEBUG & DEBUG_STATS))
       cc->cc5.statistics_enable = 1;
 
-   /* CACHE_NEW_CC_VP */
+   /* BRW_NEW_CC_VP */
    cc->cc4.cc_viewport_state_offset = (brw->batch.bo->offset64 +
 				       brw->cc.vp_offset) >> 5; /* reloc */
 
@@ -248,8 +248,9 @@ const struct brw_tracked_state brw_cc_unit = {
               _NEW_DEPTH |
               _NEW_STENCIL,
       .brw = BRW_NEW_BATCH |
+             BRW_NEW_CC_VP |
              BRW_NEW_STATS_WM,
-      .cache = CACHE_NEW_CC_VP
+      .cache = 0
    },
    .emit = upload_cc_unit,
 };

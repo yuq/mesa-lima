@@ -109,7 +109,7 @@ static void upload_sf_vp(struct brw_context *brw)
       sfv->scissor.ymax = ctx->DrawBuffer->Height - ctx->DrawBuffer->_Ymin - 1;
    }
 
-   brw->state.dirty.cache |= CACHE_NEW_SF_VP;
+   brw->state.dirty.brw |= BRW_NEW_SF_VP;
 }
 
 const struct brw_tracked_state brw_sf_vp = {
@@ -172,7 +172,7 @@ static void upload_sf_unit( struct brw_context *brw )
    if (unlikely(INTEL_DEBUG & DEBUG_STATS))
       sf->thread4.stats_enable = 1;
 
-   /* CACHE_NEW_SF_VP */
+   /* BRW_NEW_SF_VP */
    sf->sf5.sf_viewport_state_offset = (brw->batch.bo->offset64 +
 				       brw->sf.vp_offset) >> 5; /* reloc */
 
@@ -306,9 +306,9 @@ const struct brw_tracked_state brw_sf_unit = {
                _NEW_SCISSOR,
       .brw   = BRW_NEW_BATCH |
                BRW_NEW_PROGRAM_CACHE |
+               BRW_NEW_SF_VP |
                BRW_NEW_URB_FENCE,
-      .cache = CACHE_NEW_SF_PROG |
-               CACHE_NEW_SF_VP,
+      .cache = CACHE_NEW_SF_PROG,
    },
    .emit = upload_sf_unit,
 };

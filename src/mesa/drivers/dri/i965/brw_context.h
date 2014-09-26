@@ -184,6 +184,9 @@ enum brw_state_id {
    BRW_STATE_NUM_SAMPLES,
    BRW_STATE_TEXTURE_BUFFER,
    BRW_STATE_GEN4_UNIT_STATE,
+   BRW_STATE_CC_VP,
+   BRW_STATE_SF_VP,
+   BRW_STATE_CLIP_VP,
    BRW_NUM_STATE_BITS
 };
 
@@ -226,6 +229,9 @@ enum brw_state_id {
 #define BRW_NEW_NUM_SAMPLES             (1ull << BRW_STATE_NUM_SAMPLES)
 #define BRW_NEW_TEXTURE_BUFFER          (1ull << BRW_STATE_TEXTURE_BUFFER)
 #define BRW_NEW_GEN4_UNIT_STATE         (1ull << BRW_STATE_GEN4_UNIT_STATE)
+#define BRW_NEW_CC_VP                   (1ull << BRW_STATE_CC_VP)
+#define BRW_NEW_SF_VP                   (1ull << BRW_STATE_SF_VP)
+#define BRW_NEW_CLIP_VP                 (1ull << BRW_STATE_CLIP_VP)
 
 struct brw_state_flags {
    /** State update flags signalled by mesa internals */
@@ -685,16 +691,13 @@ struct brw_gs_prog_data
 #define SHADER_TIME_STRIDE 64
 
 enum brw_cache_id {
-   BRW_CC_VP,
    BRW_WM_PROG,
    BRW_BLORP_BLIT_PROG,
    BRW_SAMPLER,
    BRW_SF_PROG,
-   BRW_SF_VP,
    BRW_VS_PROG,
    BRW_FF_GS_PROG,
    BRW_GS_PROG,
-   BRW_CLIP_VP,
    BRW_CLIP_PROG,
 
    BRW_MAX_CACHE
@@ -773,16 +776,13 @@ enum shader_time_shader_type {
 
 /* Flags for brw->state.cache.
  */
-#define CACHE_NEW_CC_VP                  (1<<BRW_CC_VP)
 #define CACHE_NEW_WM_PROG                (1<<BRW_WM_PROG)
 #define CACHE_NEW_BLORP_BLIT_PROG        (1<<BRW_BLORP_BLIT_PROG)
 #define CACHE_NEW_SAMPLER                (1<<BRW_SAMPLER)
 #define CACHE_NEW_SF_PROG                (1<<BRW_SF_PROG)
-#define CACHE_NEW_SF_VP                  (1<<BRW_SF_VP)
 #define CACHE_NEW_VS_PROG                (1<<BRW_VS_PROG)
 #define CACHE_NEW_FF_GS_PROG             (1<<BRW_FF_GS_PROG)
 #define CACHE_NEW_GS_PROG                (1<<BRW_GS_PROG)
-#define CACHE_NEW_CLIP_VP                (1<<BRW_CLIP_VP)
 #define CACHE_NEW_CLIP_PROG              (1<<BRW_CLIP_PROG)
 
 struct brw_vertex_buffer {
