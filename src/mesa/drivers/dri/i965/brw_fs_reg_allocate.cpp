@@ -404,6 +404,10 @@ fs_visitor::setup_payload_interference(struct ra_graph *g,
          }
          break;
 
+      case CS_OPCODE_CS_TERMINATE:
+         payload_last_use_ip[0] = use_ip;
+         break;
+
       default:
          if (inst->eot) {
             /* We could omit this for the !inst->header_present case, except
