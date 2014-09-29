@@ -120,10 +120,18 @@ struct radeon_shader_binary {
 	unsigned char *config;
 	unsigned config_size;
 
+	/** The number of bytes of config information for each global symbol.
+	 */
+	unsigned config_size_per_symbol;
+
 	/** Constant data accessed by the shader.  This will be uploaded
 	 * into a constant buffer. */
 	unsigned char *rodata;
 	unsigned rodata_size;
+
+	/** List of symbol offsets for the shader */
+	uint64_t *global_symbol_offsets;
+	unsigned global_symbol_count;
 
 	/** Set to 1 if the disassembly for this binary has been dumped to
 	 *  stderr. */
