@@ -61,6 +61,8 @@
 #include <llvm/Support/TargetRegistry.h>
 #include <llvm/Transforms/IPO.h>
 #include <llvm/Transforms/IPO/PassManagerBuilder.h>
+#include <llvm/Transforms/Utils/Cloning.h>
+
 
 #if HAVE_LLVM < 0x0302
 #include <llvm/Target/TargetData.h>
@@ -132,6 +134,15 @@ namespace {
       return module::deserialize(cs);
    }
 #endif
+   void debug_log(const std::string &msg, const std::string &suffix) {
+      const char *dbg_file = debug_get_option("CLOVER_DEBUG_FILE", "stderr");
+      if (!strcmp("stderr", dbg_file)) {
+         std::cerr << msg;
+       } else {
+        std::ofstream file(dbg_file + suffix, std::ios::app);
+        file << msg;
+       }
+   }
 
    llvm::Module *
    compile_llvm(llvm::LLVMContext &llvm_ctx, const std::string &source,
@@ -456,9 +467,32 @@ namespace {
       return m;
    }
 
+   void
+   emit_code(LLVMTargetMachineRef tm, LLVMModuleRef mod,
+             LLVMCodeGenFileType file_type,
+             LLVMMemoryBufferRef *out_buffer,
+             compat::string &r_log) {
+      LLVMBool err;
+      char *err_message = NULL;
+
+      err = LLVMTargetMachineEmitToMemoryBuffer(tm, mod, file_type,
+                                                &err_message, out_buffer);
+
+      if (err) {
+         r_log = std::string(err_message);
+      }
+
+      LLVMDisposeMessage(err_message);
+
+      if (err) {
+         throw build_error();
+      }
+   }
+
    std::vector<char>
    compile_native(const llvm::Module *mod, const std::string &triple,
-                  const std::string &processor, compat::string &r_log) {
+                  const std::string &processor, unsigned dump_asm,
+                  compat::string &r_log) {
 
       std::string log;
       LLVMTargetRef target;
@@ -466,7 +500,6 @@ namespace {
       LLVMMemoryBufferRef out_buffer;
       unsigned buffer_size;
       const char *buffer_data;
-      LLVMBool err;
       LLVMModuleRef mod_ref = wrap(mod);
 
       if (LLVMGetTargetFromTriple(triple.c_str(), &target, &error_message)) {
@@ -484,15 +517,20 @@ namespace {
          throw build_error();
       }
 
-      err = LLVMTargetMachineEmitToMemoryBuffer(tm, mod_ref, LLVMObjectFile,
-                                                &error_message, &out_buffer);
+      if (dump_asm) {
+         LLVMSetTargetMachineAsmVerbosity(tm, true);
+         LLVMModuleRef debug_mod = wrap(llvm::CloneModule(mod));
+         emit_code(tm, debug_mod, LLVMAssemblyFile, &out_buffer, r_log);
+         buffer_size = LLVMGetBufferSize(out_buffer);
+         buffer_data = LLVMGetBufferStart(out_buffer);
+         debug_log(std::string(buffer_data, buffer_size), ".asm");
 
-      if (err) {
-         LLVMDisposeTargetMachine(tm);
-         r_log = std::string(error_message);
-         LLVMDisposeMessage(error_message);
-         throw build_error();
+         LLVMSetTargetMachineAsmVerbosity(tm, false);
+         LLVMDisposeMemoryBuffer(out_buffer);
+         LLVMDisposeModule(debug_mod);
       }
+
+      emit_code(tm, mod_ref, LLVMObjectFile, &out_buffer, r_log);
 
       buffer_size = LLVMGetBufferSize(out_buffer);
       buffer_data = LLVMGetBufferStart(out_buffer);
@@ -632,6 +670,18 @@ namespace {
    }
 } // End anonymous namespace
 
+#define DBG_CLC  (1 << 0)
+#define DBG_LLVM (1 << 1)
+#define DBG_ASM  (1 << 2)
+
+static const struct debug_named_value debug_options[] = {
+   {"clc", DBG_CLC, "Dump the OpenCL C code for all kernels."},
+   {"llvm", DBG_LLVM, "Dump the generated LLVM IR for all kernels."},
+   {"asm", DBG_ASM, "Dump kernel assembly code for targets specifying "
+                    "PIPE_SHADER_IR_NATIVE"},
+	DEBUG_NAMED_VALUE_END // must be last
+};
+
 module
 clover::compile_program_llvm(const compat::string &source,
                              enum pipe_shader_ir ir,
@@ -640,6 +690,8 @@ clover::compile_program_llvm(const compat::string &source,
                              compat::string &r_log) {
 
    init_targets();
+   static unsigned debug_flags = debug_get_flags_option("CLOVER_DEBUG",
+                                                         debug_options, 0);
 
    std::vector<llvm::Function *> kernels;
    size_t processor_str_len = std::string(target.begin()).find_first_of("-");
@@ -664,6 +716,17 @@ clover::compile_program_llvm(const compat::string &source,
 
    optimize(mod, optimization_level, kernels);
 
+   if (debug_flags & DBG_CLC)
+      debug_log(source, ".cl");
+
+   if (debug_flags & DBG_LLVM) {
+      std::string log;
+      llvm::raw_string_ostream s_log(log);
+      mod->print(s_log, NULL);
+      s_log.flush();
+      debug_log(log, ".ll");
+    }
+
    module m;
    // Build the clover::module
    switch (ir) {
@@ -676,7 +739,8 @@ clover::compile_program_llvm(const compat::string &source,
          m = build_module_llvm(mod, kernels, address_spaces);
          break;
       case PIPE_SHADER_IR_NATIVE: {
-         std::vector<char> code = compile_native(mod, triple, processor, r_log);
+         std::vector<char> code = compile_native(mod, triple, processor,
+	                                         debug_flags & DBG_ASM, r_log);
          m = build_module_native(code, mod, kernels, address_spaces, r_log);
          break;
       }
