@@ -825,6 +825,7 @@ const struct brw_tracked_state brw_texture_surfaces = {
       .mesa = _NEW_TEXTURE,
       .brw = BRW_NEW_BATCH |
              BRW_NEW_UNIFORM_BUFFER |
+             BRW_NEW_TEXTURE_BUFFER |
              BRW_NEW_VERTEX_PROGRAM |
              BRW_NEW_GEOMETRY_PROGRAM |
              BRW_NEW_FRAGMENT_PROGRAM,
