@@ -42,14 +42,10 @@
 
 GLboolean
 dri_create_context(gl_api api, const struct gl_config * visual,
-		   __DRIcontext * cPriv,
-		   unsigned major_version,
-		   unsigned minor_version,
-		   uint32_t flags,
-                   bool notify_reset,
-                   unsigned priority,
-		   unsigned *error,
-		   void *sharedContextPrivate)
+                   __DRIcontext * cPriv,
+                   const struct __DriverContextConfig *ctx_config,
+                   unsigned *error,
+                   void *sharedContextPrivate)
 {
    __DRIscreen *sPriv = cPriv->driScreenPriv;
    struct dri_screen *screen = dri_screen(sPriv);
@@ -61,18 +57,21 @@ dri_create_context(gl_api api, const struct gl_config * visual,
    unsigned allowed_flags = __DRI_CTX_FLAG_DEBUG |
                             __DRI_CTX_FLAG_FORWARD_COMPATIBLE |
                             __DRI_CTX_FLAG_NO_ERROR;
+   unsigned allowed_attribs = 0;
    const __DRIbackgroundCallableExtension *backgroundCallable =
       screen->sPriv->dri2.backgroundCallable;
 
-   if (screen->has_reset_status_query)
+   if (screen->has_reset_status_query) {
       allowed_flags |= __DRI_CTX_FLAG_ROBUST_BUFFER_ACCESS;
+      allowed_attribs |= __DRIVER_CONTEXT_ATTRIB_RESET_STRATEGY;
+   }
 
-   if (flags & ~allowed_flags) {
+   if (ctx_config->flags & ~allowed_flags) {
       *error = __DRI_CTX_ERROR_UNKNOWN_FLAG;
       goto fail;
    }
 
-   if (!screen->has_reset_status_query && notify_reset) {
+   if (ctx_config->attribute_mask & ~allowed_attribs) {
       *error = __DRI_CTX_ERROR_UNKNOWN_ATTRIBUTE;
       goto fail;
    }
@@ -89,10 +88,10 @@ dri_create_context(gl_api api, const struct gl_config * visual,
    case API_OPENGL_CORE:
       attribs.profile = api == API_OPENGL_COMPAT ? ST_PROFILE_DEFAULT
                                                  : ST_PROFILE_OPENGL_CORE;
-      attribs.major = major_version;
-      attribs.minor = minor_version;
+      attribs.major = ctx_config->major_version;
+      attribs.minor = ctx_config->minor_version;
 
-      if ((flags & __DRI_CTX_FLAG_FORWARD_COMPATIBLE) != 0)
+      if ((ctx_config->flags & __DRI_CTX_FLAG_FORWARD_COMPATIBLE) != 0)
 	 attribs.flags |= ST_CONTEXT_FLAG_FORWARD_COMPATIBLE;
       break;
    default:
@@ -100,16 +99,17 @@ dri_create_context(gl_api api, const struct gl_config * visual,
       goto fail;
    }
 
-   if ((flags & __DRI_CTX_FLAG_DEBUG) != 0)
+   if ((ctx_config->flags & __DRI_CTX_FLAG_DEBUG) != 0)
       attribs.flags |= ST_CONTEXT_FLAG_DEBUG;
 
-   if (flags & __DRI_CTX_FLAG_ROBUST_BUFFER_ACCESS)
+   if (ctx_config->flags & __DRI_CTX_FLAG_ROBUST_BUFFER_ACCESS)
       attribs.flags |= ST_CONTEXT_FLAG_ROBUST_ACCESS;
 
-   if (notify_reset)
-      attribs.flags |= ST_CONTEXT_FLAG_RESET_NOTIFICATION_ENABLED;
+   if (ctx_config->attribute_mask & __DRIVER_CONTEXT_ATTRIB_RESET_STRATEGY)
+      if (ctx_config->reset_strategy != __DRI_CTX_RESET_NO_NOTIFICATION)
+         attribs.flags |= ST_CONTEXT_FLAG_RESET_NOTIFICATION_ENABLED;
 
-   if (flags & __DRI_CTX_FLAG_NO_ERROR)
+   if (ctx_config->flags & __DRI_CTX_FLAG_NO_ERROR)
       attribs.flags |= ST_CONTEXT_FLAG_NO_ERROR;
 
    if (sharedContextPrivate) {
