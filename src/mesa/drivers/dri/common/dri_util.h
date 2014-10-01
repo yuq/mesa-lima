@@ -67,6 +67,7 @@ extern const __DRIswrastExtension driSWRastExtension;
 extern const __DRIdri2Extension driDRI2Extension;
 extern const __DRI2configQueryExtension dri2ConfigQueryExtension;
 extern const __DRIcopySubBufferExtension driCopySubBufferExtension;
+extern const __DRI2flushControlExtension dri2FlushControlExtension;
 
 /**
  * Description of the attributes used to create a config.
@@ -93,10 +94,14 @@ struct __DriverContextConfig {
 
     /* Only valid if __DRIVER_CONTEXT_PRIORITY is set */
     unsigned priority;
+
+    /* Only valid if __DRIVER_CONTEXT_ATTRIB_RELEASE_BEHAVIOR is set */
+    int release_behavior;
 };
 
-#define __DRIVER_CONTEXT_ATTRIB_RESET_STRATEGY  (1 << 0)
-#define __DRIVER_CONTEXT_ATTRIB_PRIORITY        (1 << 1)
+#define __DRIVER_CONTEXT_ATTRIB_RESET_STRATEGY   (1 << 0)
+#define __DRIVER_CONTEXT_ATTRIB_PRIORITY         (1 << 1)
+#define __DRIVER_CONTEXT_ATTRIB_RELEASE_BEHAVIOR (1 << 2)
 
 /**
  * Driver callback functions.

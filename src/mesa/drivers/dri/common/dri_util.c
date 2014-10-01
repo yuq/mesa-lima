@@ -361,6 +361,16 @@ driCreateContextAttribs(__DRIscreen *screen, int api,
             ctx_config.attribute_mask |= __DRIVER_CONTEXT_ATTRIB_PRIORITY;
 	    ctx_config.priority = attribs[i * 2 + 1];
 	    break;
+        case __DRI_CTX_ATTRIB_RELEASE_BEHAVIOR:
+            if (attribs[i * 2 + 1] != __DRI_CTX_RELEASE_BEHAVIOR_FLUSH) {
+                ctx_config.attribute_mask |=
+                    __DRIVER_CONTEXT_ATTRIB_RELEASE_BEHAVIOR;
+                ctx_config.release_behavior = attribs[i * 2 + 1];
+            } else {
+                ctx_config.attribute_mask &=
+                    ~__DRIVER_CONTEXT_ATTRIB_RELEASE_BEHAVIOR;
+            }
+            break;
 	default:
 	    /* We can't create a context that satisfies the requirements of an
 	     * attribute that we don't understand.  Return failure.
@@ -831,6 +841,10 @@ const __DRI2configQueryExtension dri2ConfigQueryExtension = {
    .configQueryb        = dri2ConfigQueryb,
    .configQueryi        = dri2ConfigQueryi,
    .configQueryf        = dri2ConfigQueryf,
+};
+
+const __DRI2flushControlExtension dri2FlushControlExtension = {
+   .base = { __DRI2_FLUSH_CONTROL, 1 }
 };
 
 void
