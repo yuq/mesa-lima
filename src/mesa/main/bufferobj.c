@@ -2652,6 +2652,12 @@ set_ubo_binding(struct gl_context *ctx,
    binding->Offset = offset;
    binding->Size = size;
    binding->AutomaticSize = autoSize;
+
+   /* If this is a real buffer object, mark it has having been used
+    * at some point as a UBO.
+    */
+   if (size >= 0)
+      bufObj->UsageHistory |= USAGE_UNIFORM_BUFFER;
 }
 
 /**
