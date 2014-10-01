@@ -908,6 +908,12 @@ intelDestroyContext(__DRIcontext * driContextPriv)
    brw_draw_destroy(brw);
 
    drm_intel_bo_unreference(brw->curbe.curbe_bo);
+   if (brw->vs.base.scratch_bo)
+      drm_intel_bo_unreference(brw->vs.base.scratch_bo);
+   if (brw->gs.base.scratch_bo)
+      drm_intel_bo_unreference(brw->gs.base.scratch_bo);
+   if (brw->wm.base.scratch_bo)
+      drm_intel_bo_unreference(brw->wm.base.scratch_bo);
 
    drm_intel_gem_context_destroy(brw->hw_ctx);
 
