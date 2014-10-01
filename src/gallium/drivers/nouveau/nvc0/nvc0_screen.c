@@ -259,6 +259,8 @@ nvc0_screen_get_shader_param(struct pipe_screen *pscreen, unsigned shader,
        * and excludes 0x60 per-patch inputs.
        */
       return 0x200 / 16;
+   case PIPE_SHADER_CAP_MAX_OUTPUTS:
+      return 32;
    case PIPE_SHADER_CAP_MAX_CONST_BUFFER_SIZE:
       return 65536;
    case PIPE_SHADER_CAP_MAX_CONST_BUFFERS:

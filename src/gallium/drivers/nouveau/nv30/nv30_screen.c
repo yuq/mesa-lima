@@ -222,6 +222,7 @@ nv30_screen_get_shader_param(struct pipe_screen *pscreen, unsigned shader,
       case PIPE_SHADER_CAP_MAX_CONTROL_FLOW_DEPTH:
          return 0;
       case PIPE_SHADER_CAP_MAX_INPUTS:
+      case PIPE_SHADER_CAP_MAX_OUTPUTS:
          return 16;
       case PIPE_SHADER_CAP_MAX_CONST_BUFFER_SIZE:
          return ((eng3d->oclass >= NV40_3D_CLASS) ? (468 - 6): (256 - 6)) * sizeof(float[4]);
@@ -258,6 +259,8 @@ nv30_screen_get_shader_param(struct pipe_screen *pscreen, unsigned shader,
          return 0;
       case PIPE_SHADER_CAP_MAX_INPUTS:
          return 8; /* should be possible to do 10 with nv4x */
+      case PIPE_SHADER_CAP_MAX_OUTPUTS:
+         return 4;
       case PIPE_SHADER_CAP_MAX_CONST_BUFFER_SIZE:
          return ((eng3d->oclass >= NV40_3D_CLASS) ? 224 : 32) * sizeof(float[4]);
       case PIPE_SHADER_CAP_MAX_CONST_BUFFERS:

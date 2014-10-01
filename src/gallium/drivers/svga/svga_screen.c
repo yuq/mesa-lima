@@ -330,6 +330,8 @@ static int svga_get_shader_param(struct pipe_screen *screen, unsigned shader, en
          return SVGA3D_MAX_NESTING_LEVEL;
       case PIPE_SHADER_CAP_MAX_INPUTS:
          return 10;
+      case PIPE_SHADER_CAP_MAX_OUTPUTS:
+         return svgascreen->max_color_buffers;
       case PIPE_SHADER_CAP_MAX_CONST_BUFFER_SIZE:
          return 224 * sizeof(float[4]);
       case PIPE_SHADER_CAP_MAX_CONST_BUFFERS:
@@ -387,6 +389,8 @@ static int svga_get_shader_param(struct pipe_screen *screen, unsigned shader, en
          return SVGA3D_MAX_NESTING_LEVEL;
       case PIPE_SHADER_CAP_MAX_INPUTS:
          return 16;
+      case PIPE_SHADER_CAP_MAX_OUTPUTS:
+         return 10;
       case PIPE_SHADER_CAP_MAX_CONST_BUFFER_SIZE:
          return 256 * sizeof(float[4]);
       case PIPE_SHADER_CAP_MAX_CONST_BUFFERS:
