@@ -417,7 +417,8 @@ drisw_create_context_attribs(struct glx_screen *base,
    uint32_t flags;
    unsigned api;
    int reset;
-   uint32_t ctx_attribs[2 * 4];
+   int release;
+   uint32_t ctx_attribs[2 * 5];
    unsigned num_ctx_attribs = 0;
 
    if (!psc->base.driScreen)
@@ -430,7 +431,7 @@ drisw_create_context_attribs(struct glx_screen *base,
     */
    if (!dri2_convert_glx_attribs(num_attribs, attribs,
                                  &major_ver, &minor_ver, &renderType, &flags,
-                                 &api, &reset, error))
+                                 &api, &reset, &release, error))
       return NULL;
 
    /* Check the renderType value */
@@ -439,6 +440,10 @@ drisw_create_context_attribs(struct glx_screen *base,
    }
 
    if (reset != __DRI_CTX_RESET_NO_NOTIFICATION)
+      return NULL;
+
+   if (release != __DRI_CTX_RELEASE_BEHAVIOR_FLUSH &&
+       release != __DRI_CTX_RELEASE_BEHAVIOR_NONE)
       return NULL;
 
    if (shareList) {
@@ -459,6 +464,10 @@ drisw_create_context_attribs(struct glx_screen *base,
    ctx_attribs[num_ctx_attribs++] = major_ver;
    ctx_attribs[num_ctx_attribs++] = __DRI_CTX_ATTRIB_MINOR_VERSION;
    ctx_attribs[num_ctx_attribs++] = minor_ver;
+   if (release != __DRI_CTX_RELEASE_BEHAVIOR_FLUSH) {
+       ctx_attribs[num_ctx_attribs++] = __DRI_CTX_ATTRIB_RELEASE_BEHAVIOR;
+       ctx_attribs[num_ctx_attribs++] = release;
+   }
 
    if (flags != 0) {
       ctx_attribs[num_ctx_attribs++] = __DRI_CTX_ATTRIB_FLAGS;
@@ -646,6 +655,10 @@ driswBindExtensions(struct drisw_screen *psc, const __DRIextension **extensions)
           && strcmp(extensions[i]->name, __DRI2_RENDERER_QUERY) == 0) {
          psc->rendererQuery = (__DRI2rendererQueryExtension *) extensions[i];
          __glXEnableDirectExtension(&psc->base, "GLX_MESA_query_renderer");
+      }
+      if (strcmp(extensions[i]->name, __DRI2_FLUSH_CONTROL) == 0) {
+	  __glXEnableDirectExtension(&psc->base,
+				     "GLX_ARB_context_flush_control");
       }
    }
 }
