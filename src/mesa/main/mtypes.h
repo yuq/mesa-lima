@@ -1469,6 +1469,7 @@ struct gl_buffer_mapping {
  */
 typedef enum {
    USAGE_UNIFORM_BUFFER = 0x1,
+   USAGE_TEXTURE_BUFFER = 0x2,
 } gl_buffer_usage;
 
 
@@ -4068,6 +4069,8 @@ struct gl_driver_flags
     * gl_shader_program::UniformBlocks
     */
    uint64_t NewUniformBuffer;
+
+   uint64_t NewTextureBuffer;
 
    /**
     * gl_context::AtomicBufferBindings
