@@ -37,7 +37,6 @@
 #include "tgsi/tgsi_dump.h"
 
 #include "freedreno_util.h"
-#include "freedreno_lowering.h"
 
 #include "ir3_compiler.h"
 #include "instr-a3xx.h"

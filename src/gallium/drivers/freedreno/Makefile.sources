@@ -10,8 +10,6 @@ C_SOURCES := \
 	freedreno_fence.h \
 	freedreno_gmem.c \
 	freedreno_gmem.h \
-	freedreno_lowering.c \
-	freedreno_lowering.h \
 	freedreno_program.c \
 	freedreno_program.h \
 	freedreno_query.c \

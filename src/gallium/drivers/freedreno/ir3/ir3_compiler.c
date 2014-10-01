@@ -32,6 +32,7 @@
 #include "util/u_string.h"
 #include "util/u_memory.h"
 #include "util/u_inlines.h"
+#include "tgsi/tgsi_lowering.h"
 #include "tgsi/tgsi_parse.h"
 #include "tgsi/tgsi_ureg.h"
 #include "tgsi/tgsi_info.h"
@@ -39,7 +40,6 @@
 #include "tgsi/tgsi_dump.h"
 #include "tgsi/tgsi_scan.h"
 
-#include "freedreno_lowering.h"
 #include "freedreno_util.h"
 
 #include "ir3_compiler.h"
@@ -135,7 +135,7 @@ compile_init(struct ir3_compile_context *ctx, struct ir3_shader_variant *so,
 {
 	unsigned ret;
 	struct tgsi_shader_info *info = &ctx->info;
-	struct fd_lowering_config lconfig = {
+	struct tgsi_lowering_config lconfig = {
 			.color_two_side = so->key.color_two_side,
 			.lower_DST  = true,
 			.lower_XPD  = true,
@@ -167,7 +167,7 @@ compile_init(struct ir3_compile_context *ctx, struct ir3_shader_variant *so,
 		break;
 	}
 
-	ctx->tokens = fd_transform_lowering(&lconfig, tokens, &ctx->info);
+	ctx->tokens = tgsi_transform_lowering(&lconfig, tokens, &ctx->info);
 	ctx->free_tokens = !!ctx->tokens;
 	if (!ctx->tokens) {
 		/* no lowering */

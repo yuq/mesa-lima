@@ -34,7 +34,6 @@
 #include "tgsi/tgsi_dump.h"
 #include "tgsi/tgsi_parse.h"
 
-#include "freedreno_lowering.h"
 #include "freedreno_program.h"
 
 #include "fd3_program.h"

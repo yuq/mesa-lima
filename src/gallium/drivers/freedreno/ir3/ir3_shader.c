@@ -35,7 +35,6 @@
 #include "tgsi/tgsi_parse.h"
 
 #include "freedreno_context.h"
-#include "freedreno_lowering.h"
 #include "freedreno_util.h"
 
 #include "ir3_shader.h"
