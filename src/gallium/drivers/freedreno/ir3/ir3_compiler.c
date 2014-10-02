@@ -83,6 +83,9 @@ struct ir3_compile_context {
 	 */
 	struct ir3_instruction *frag_pos, *frag_face, *frag_coord[4];
 
+	/* For vertex shaders, keep track of the system values sources */
+	struct ir3_instruction *vertex_id, *basevertex, *instance_id;
+
 	struct tgsi_parse_context parser;
 	unsigned type;
 
@@ -104,6 +107,9 @@ struct ir3_compile_context {
 
 	unsigned num_internal_temps;
 	struct tgsi_src_register internal_temps[8];
+
+	/* for looking up which system value is which */
+	unsigned sysval_semantics[8];
 
 	/* idx/slot for last compiler generated immediate */
 	unsigned immediate_idx;
@@ -222,6 +228,8 @@ compile_init(struct ir3_compile_context *ctx, struct ir3_shader_variant *so,
 	ctx->atomic = false;
 	ctx->frag_pos = NULL;
 	ctx->frag_face = NULL;
+	ctx->vertex_id = NULL;
+	ctx->instance_id = NULL;
 	ctx->tmp_src = NULL;
 	ctx->using_tmp_dst = false;
 
@@ -239,7 +247,7 @@ compile_init(struct ir3_compile_context *ctx, struct ir3_shader_variant *so,
 	 * the assembler what the max addr reg value can be:
 	 */
 	if (info->indirect_files & FM(CONSTANT))
-		so->constlen = 4 * (ctx->info.file_max[TGSI_FILE_CONSTANT] + 1);
+		so->constlen = ctx->info.file_max[TGSI_FILE_CONSTANT] + 1;
 
 	i = 0;
 	i += setup_arrays(ctx, TGSI_FILE_INPUT, i);
@@ -248,7 +256,12 @@ compile_init(struct ir3_compile_context *ctx, struct ir3_shader_variant *so,
 	/* any others? we don't track arrays for const..*/
 
 	/* Immediates go after constants: */
-	so->first_immediate = info->file_max[TGSI_FILE_CONSTANT] + 1;
+	if (so->type == SHADER_VERTEX) {
+		so->first_driver_param = info->file_max[TGSI_FILE_CONSTANT] + 1;
+		so->first_immediate = so->first_driver_param + 1;
+	} else {
+		so->first_immediate = info->file_max[TGSI_FILE_CONSTANT] + 1;
+	}
 	ctx->immediate_idx = 4 * (ctx->info.file_max[TGSI_FILE_IMMEDIATE] + 1);
 
 	ret = tgsi_parse_init(&ctx->parser, ctx->tokens);
@@ -355,7 +368,7 @@ push_block(struct ir3_compile_context *ctx)
 	ntmp += 8 * 4;
 
 	nout = SCALAR_REGS(OUTPUT);
-	nin  = SCALAR_REGS(INPUT);
+	nin  = SCALAR_REGS(INPUT) + SCALAR_REGS(SYSTEM_VALUE);
 
 	/* for outermost block, 'inputs' are the actual shader INPUT
 	 * register file.  Reads from INPUT registers always go back to
@@ -555,6 +568,19 @@ ssa_instr(struct ir3_compile_context *ctx, unsigned file, unsigned n)
 			block->temporaries[n] = instr;
 		}
 		break;
+	case TGSI_FILE_SYSTEM_VALUE:
+		switch (ctx->sysval_semantics[n >> 2]) {
+		case TGSI_SEMANTIC_VERTEXID_NOBASE:
+			instr = ctx->vertex_id;
+			break;
+		case TGSI_SEMANTIC_BASEVERTEX:
+			instr = ctx->basevertex;
+			break;
+		case TGSI_SEMANTIC_INSTANCEID:
+			instr = ctx->instance_id;
+			break;
+		}
+		break;
 	}
 
 	return instr;
@@ -735,6 +761,7 @@ add_src_reg_wrmask(struct ir3_compile_context *ctx,
 		 */
 	case TGSI_FILE_INPUT:
 	case TGSI_FILE_TEMPORARY:
+	case TGSI_FILE_SYSTEM_VALUE:
 		/* uses SSA */
 		break;
 	default:
@@ -2935,6 +2962,51 @@ decl_in(struct ir3_compile_context *ctx, struct tgsi_full_declaration *decl)
 }
 
 static void
+decl_sv(struct ir3_compile_context *ctx, struct tgsi_full_declaration *decl)
+{
+	struct ir3_shader_variant *so = ctx->so;
+	unsigned r = regid(so->inputs_count, 0);
+	unsigned n = so->inputs_count++;
+
+	DBG("decl sv -> r%d", n);
+
+	compile_assert(ctx, n < ARRAY_SIZE(so->inputs));
+	compile_assert(ctx, decl->Range.First < ARRAY_SIZE(ctx->sysval_semantics));
+
+	ctx->sysval_semantics[decl->Range.First] = decl->Semantic.Name;
+	so->inputs[n].semantic = decl_semantic(&decl->Semantic);
+	so->inputs[n].compmask = 1;
+	so->inputs[n].regid = r;
+	so->inputs[n].inloc = ctx->next_inloc;
+	so->inputs[n].interpolate = false;
+
+	struct ir3_instruction *instr = NULL;
+
+	switch (decl->Semantic.Name) {
+	case TGSI_SEMANTIC_VERTEXID_NOBASE:
+		ctx->vertex_id = instr = create_input(ctx->block, NULL, r);
+		break;
+	case TGSI_SEMANTIC_BASEVERTEX:
+		ctx->basevertex = instr = instr_create(ctx, 1, 0);
+		instr->cat1.src_type = get_stype(ctx);
+		instr->cat1.dst_type = get_stype(ctx);
+		ir3_reg_create(instr, 0, 0);
+		ir3_reg_create(instr, regid(so->first_driver_param, 0), IR3_REG_CONST);
+		break;
+	case TGSI_SEMANTIC_INSTANCEID:
+		ctx->instance_id = instr = create_input(ctx->block, NULL, r);
+		break;
+	default:
+		compile_error(ctx, "Unknown semantic: %s\n",
+					  tgsi_semantic_names[decl->Semantic.Name]);
+	}
+
+	ctx->block->inputs[r] = instr;
+	ctx->next_inloc++;
+	so->total_in++;
+}
+
+static void
 decl_out(struct ir3_compile_context *ctx, struct tgsi_full_declaration *decl)
 {
 	struct ir3_shader_variant *so = ctx->so;
@@ -3099,6 +3171,8 @@ compile_instructions(struct ir3_compile_context *ctx)
 				decl_out(ctx, decl);
 			} else if (file == TGSI_FILE_INPUT) {
 				decl_in(ctx, decl);
+			} else if (decl->Declaration.File == TGSI_FILE_SYSTEM_VALUE) {
+				decl_sv(ctx, decl);
 			}
 
 			if ((file != TGSI_FILE_CONSTANT) && decl->Declaration.Array) {

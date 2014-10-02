@@ -182,6 +182,7 @@ struct ir3_shader_variant {
 	 * (not regid, because TGSI thinks in terms of vec4 registers,
 	 * not scalar registers)
 	 */
+	unsigned first_driver_param;
 	unsigned first_immediate;
 	unsigned immediates_count;
 	struct {

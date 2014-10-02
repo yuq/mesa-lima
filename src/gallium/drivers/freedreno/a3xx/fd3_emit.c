@@ -351,21 +351,31 @@ fd3_emit_gmem_restore_tex(struct fd_ringbuffer *ring, struct pipe_surface *psurf
 void
 fd3_emit_vertex_bufs(struct fd_ringbuffer *ring, struct fd3_emit *emit)
 {
-	uint32_t i, j, last = 0;
+	int32_t i, j, last = -1;
 	uint32_t total_in = 0;
 	const struct fd_vertex_state *vtx = emit->vtx;
 	struct ir3_shader_variant *vp = fd3_emit_get_vp(emit);
-	unsigned n = MIN2(vtx->vtx->num_elements, vp->inputs_count);
+	unsigned vertex_regid = regid(63, 0), instance_regid = regid(63, 0);
+
+	for (i = 0; i < vp->inputs_count; i++) {
+		uint8_t semantic = sem2name(vp->inputs[i].semantic);
+		if (semantic == TGSI_SEMANTIC_VERTEXID_NOBASE)
+			vertex_regid = vp->inputs[i].regid;
+		else if (semantic == TGSI_SEMANTIC_INSTANCEID)
+			instance_regid = vp->inputs[i].regid;
+		else if (i < vtx->vtx->num_elements && vp->inputs[i].compmask)
+			last = i;
+	}
 
 	/* hw doesn't like to be configured for zero vbo's, it seems: */
-	if (vtx->vtx->num_elements == 0)
+	if (vtx->vtx->num_elements == 0 &&
+		vertex_regid == regid(63, 0) &&
+		instance_regid == regid(63, 0))
 		return;
 
-	for (i = 0; i < n; i++)
-		if (vp->inputs[i].compmask)
-			last = i;
-
 	for (i = 0, j = 0; i <= last; i++) {
+		uint8_t semantic = sem2name(vp->inputs[i].semantic);
+		assert(semantic == 0);
 		if (vp->inputs[i].compmask) {
 			struct pipe_vertex_element *elem = &vtx->vtx->pipe[i];
 			const struct pipe_vertex_buffer *vb =
@@ -373,7 +383,9 @@ fd3_emit_vertex_bufs(struct fd_ringbuffer *ring, struct fd3_emit *emit)
 			struct fd_resource *rsc = fd_resource(vb->buffer);
 			enum pipe_format pfmt = elem->src_format;
 			enum a3xx_vtx_fmt fmt = fd3_pipe2vtx(pfmt);
-			bool switchnext = (i != last);
+			bool switchnext = (i != last) ||
+				vertex_regid != regid(63, 0) ||
+				instance_regid != regid(63, 0);
 			bool isint = util_format_is_pure_integer(pfmt);
 			uint32_t fs = util_format_get_blocksize(pfmt);
 
@@ -409,8 +421,8 @@ fd3_emit_vertex_bufs(struct fd_ringbuffer *ring, struct fd3_emit *emit)
 			A3XX_VFD_CONTROL_0_STRMDECINSTRCNT(j) |
 			A3XX_VFD_CONTROL_0_STRMFETCHINSTRCNT(j));
 	OUT_RING(ring, A3XX_VFD_CONTROL_1_MAXSTORAGE(1) | // XXX
-			A3XX_VFD_CONTROL_1_REGID4VTX(regid(63,0)) |
-			A3XX_VFD_CONTROL_1_REGID4INST(regid(63,0)));
+			A3XX_VFD_CONTROL_1_REGID4VTX(vertex_regid) |
+			A3XX_VFD_CONTROL_1_REGID4INST(instance_regid));
 }
 
 void
@@ -577,6 +589,20 @@ fd3_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 			emit_constants(ring, SB_FRAG_SHADER,
 					&ctx->constbuf[PIPE_SHADER_FRAGMENT],
 					(emit->prog->dirty & FD_SHADER_DIRTY_FP) ? fp : NULL);
+		}
+	}
+
+	/* emit driver params every time */
+	if (emit->info && emit->prog == &ctx->prog) {
+		uint32_t vertex_params[4] = {
+			emit->info->indexed ? emit->info->index_bias : emit->info->start,
+			0,
+			0,
+			0
+		};
+		if (vp->constlen > vp->first_driver_param) {
+			fd3_emit_constant(ring, SB_VERT_SHADER, vp->first_driver_param * 4,
+							  0, 4, vertex_params, NULL);
 		}
 	}
 
