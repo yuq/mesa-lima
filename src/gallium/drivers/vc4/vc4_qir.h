@@ -122,6 +122,16 @@ enum qop {
         QOP_TEX_R,
         /** Texture LOD bias parameter write */
         QOP_TEX_B,
+
+        /**
+         * Texture-unit 4-byte read with address provided direct in S
+         * cooordinate.
+         *
+         * The first operand is the offset from the start of the UBO, and the
+         * second is the uniform that has the UBO's base pointer.
+         */
+        QOP_TEX_DIRECT,
+
         /**
          * Signal of texture read being necessary and then reading r4 into
          * the destination
@@ -207,6 +217,8 @@ enum quniform_contents {
         /** A reference to a texture config parameter 2 cubemap stride uniform */
         QUNIFORM_TEXTURE_CONFIG_P2,
 
+        QUNIFORM_UBO_ADDR,
+
         QUNIFORM_TEXRECT_SCALE_X,
         QUNIFORM_TEXRECT_SCALE_Y,
 
@@ -224,6 +236,31 @@ struct vc4_varying_semantic {
         uint8_t swizzle;
 };
 
+struct vc4_compiler_ubo_range {
+        /**
+         * offset in bytes from the start of the ubo where this range is
+         * uploaded.
+         *
+         * Only set once used is set.
+         */
+        uint32_t dst_offset;
+
+        /**
+         * offset in bytes from the start of the gallium uniforms where the
+         * data comes from.
+         */
+        uint32_t src_offset;
+
+        /** size in bytes of this ubo range */
+        uint32_t size;
+
+        /**
+         * Set if this range is used by the shader for indirect uniforms
+         * access.
+         */
+        bool used;
+};
+
 struct vc4_compile {
         struct vc4_context *vc4;
         struct tgsi_parse_context parser;
@@ -236,12 +273,19 @@ struct vc4_compile {
         struct qreg *inputs;
         struct qreg *outputs;
         struct qreg *consts;
+        struct qreg addr[4]; /* TGSI ARL destination. */
         uint32_t temps_array_size;
         uint32_t inputs_array_size;
         uint32_t outputs_array_size;
         uint32_t uniforms_array_size;
         uint32_t consts_array_size;
         uint32_t num_consts;
+
+        struct vc4_compiler_ubo_range *ubo_ranges;
+        uint32_t ubo_ranges_array_size;
+        uint32_t num_ubo_ranges;
+        uint32_t next_ubo_dst_offset;
+
         struct qreg line_x, point_x, point_y;
         struct qreg discard;
 
@@ -409,6 +453,7 @@ QIR_NODST_2(TEX_S)
 QIR_NODST_2(TEX_T)
 QIR_NODST_2(TEX_R)
 QIR_NODST_2(TEX_B)
+QIR_NODST_2(TEX_DIRECT)
 QIR_ALU0(FRAG_X)
 QIR_ALU0(FRAG_Y)
 QIR_ALU0(FRAG_Z)

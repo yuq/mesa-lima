@@ -93,6 +93,7 @@ static const struct qir_op_info qir_op_info[] = {
         [QOP_TEX_T] = { "tex_t", 0, 2 },
         [QOP_TEX_R] = { "tex_r", 0, 2 },
         [QOP_TEX_B] = { "tex_b", 0, 2 },
+        [QOP_TEX_DIRECT] = { "tex_direct", 0, 2 },
         [QOP_TEX_RESULT] = { "tex_result", 1, 0, true },
         [QOP_R4_UNPACK_A] = { "r4_unpack_a", 1, 1 },
         [QOP_R4_UNPACK_B] = { "r4_unpack_b", 1, 1 },

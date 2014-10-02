@@ -87,11 +87,34 @@ struct vc4_uncompiled_shader {
         const struct tgsi_token *twoside_tokens;
 };
 
+struct vc4_ubo_range {
+        /**
+         * offset in bytes from the start of the ubo where this range is
+         * uploaded.
+         *
+         * Only set once used is set.
+         */
+        uint32_t dst_offset;
+
+        /**
+         * offset in bytes from the start of the gallium uniforms where the
+         * data comes from.
+         */
+        uint32_t src_offset;
+
+        /** size in bytes of this ubo range */
+        uint32_t size;
+};
+
 struct vc4_compiled_shader {
         uint64_t program_id;
         struct vc4_bo *bo;
 
         struct vc4_shader_uniform_info uniforms;
+
+        struct vc4_ubo_range *ubo_ranges;
+        uint32_t num_ubo_ranges;
+        uint32_t ubo_size;
 
         /** bitmask of which inputs are color inputs, for flat shade handling. */
         uint32_t color_inputs;

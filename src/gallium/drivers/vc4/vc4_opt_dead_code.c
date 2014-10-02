@@ -92,7 +92,8 @@ qir_opt_dead_code(struct vc4_compile *c)
                 if (dce_tex && (inst->op == QOP_TEX_S ||
                                 inst->op == QOP_TEX_T ||
                                 inst->op == QOP_TEX_R ||
-                                inst->op == QOP_TEX_B)) {
+                                inst->op == QOP_TEX_B ||
+                                inst->op == QOP_TEX_DIRECT)) {
                         dce(c, inst);
                         progress = true;
                         continue;

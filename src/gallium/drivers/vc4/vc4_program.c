@@ -164,9 +164,41 @@ qir_uniform_f(struct vc4_compile *c, float f)
 }
 
 static struct qreg
-get_src(struct vc4_compile *c, unsigned tgsi_op,
-        struct tgsi_src_register *src, int i)
+indirect_uniform_load(struct vc4_compile *c,
+                      struct tgsi_full_src_register *src, int swiz)
 {
+        struct tgsi_ind_register *indirect = &src->Indirect;
+        struct vc4_compiler_ubo_range *range = &c->ubo_ranges[indirect->ArrayID];
+        if (!range->used) {
+                range->used = true;
+                range->dst_offset = c->next_ubo_dst_offset;
+                c->next_ubo_dst_offset += range->size;
+                c->num_ubo_ranges++;
+        };
+
+        assert(src->Register.Indirect);
+        assert(indirect->File == TGSI_FILE_ADDRESS);
+
+        struct qreg addr_val = c->addr[indirect->Swizzle];
+        struct qreg indirect_offset =
+                qir_ADD(c, addr_val, qir_uniform_ui(c,
+                                                    range->dst_offset +
+                                                    (src->Register.Index * 16)+
+                                                    swiz * 4));
+        indirect_offset = qir_MIN(c, indirect_offset, qir_uniform_ui(c, (range->dst_offset +
+                                                                         range->size - 4)));
+
+        qir_TEX_DIRECT(c, indirect_offset, add_uniform(c, QUNIFORM_UBO_ADDR, 0));
+        struct qreg r4 = qir_TEX_RESULT(c);
+        c->num_texture_samples++;
+        return qir_MOV(c, r4);
+}
+
+static struct qreg
+get_src(struct vc4_compile *c, unsigned tgsi_op,
+        struct tgsi_full_src_register *full_src, int i)
+{
+        struct tgsi_src_register *src = &full_src->Register;
         struct qreg r = c->undef;
 
         uint32_t s = i;
@@ -187,8 +219,6 @@ get_src(struct vc4_compile *c, unsigned tgsi_op,
                 abort();
         }
 
-        assert(!src->Indirect);
-
         switch (src->File) {
         case TGSI_FILE_NULL:
                 return r;
@@ -199,8 +229,12 @@ get_src(struct vc4_compile *c, unsigned tgsi_op,
                 r = c->consts[src->Index * 4 + s];
                 break;
         case TGSI_FILE_CONSTANT:
-                r = get_temp_for_uniform(c, QUNIFORM_UNIFORM,
-                                         src->Index * 4 + s);
+                if (src->Indirect) {
+                        r = indirect_uniform_load(c, full_src, s);
+                } else {
+                        r = get_temp_for_uniform(c, QUNIFORM_UNIFORM,
+                                                 src->Index * 4 + s);
+                }
                 break;
         case TGSI_FILE_INPUT:
                 r = c->inputs[src->Index * 4 + s];
@@ -249,6 +283,10 @@ update_dst(struct vc4_compile *c, struct tgsi_full_instruction *tgsi_inst,
                 c->outputs[tgsi_dst->Index * 4 + i] = val;
                 c->num_outputs = MAX2(c->num_outputs,
                                       tgsi_dst->Index * 4 + i + 1);
+                break;
+        case TGSI_FILE_ADDRESS:
+                assert(tgsi_dst->Index == 0);
+                c->addr[i] = val;
                 break;
         default:
                 fprintf(stderr, "unknown dst file %d\n", tgsi_dst->File);
@@ -906,6 +944,29 @@ tgsi_to_qir_ssg(struct vc4_compile *c,
                               qir_uniform_f(c, -1.0));
 }
 
+/* Compare to tgsi_to_qir_flr() for the floor logic. */
+static struct qreg
+tgsi_to_qir_arl(struct vc4_compile *c,
+                struct tgsi_full_instruction *tgsi_inst,
+                enum qop op, struct qreg *src, int i)
+{
+        struct qreg trunc = qir_FTOI(c, src[0 * 4 + i]);
+        struct qreg scaled = qir_SHL(c, trunc, qir_uniform_ui(c, 4));
+
+        qir_SF(c, qir_FSUB(c, src[0 * 4 + i], qir_ITOF(c, trunc)));
+
+        return qir_SEL_X_Y_NS(c, qir_SUB(c, scaled, qir_uniform_ui(c, 4)),
+                              scaled);
+}
+
+static struct qreg
+tgsi_to_qir_uarl(struct vc4_compile *c,
+                struct tgsi_full_instruction *tgsi_inst,
+                enum qop op, struct qreg *src, int i)
+{
+        return qir_SHL(c, src[0 * 4 + i], qir_uniform_ui(c, 4));
+}
+
 static void
 emit_vertex_input(struct vc4_compile *c, int attr)
 {
@@ -1087,6 +1148,24 @@ add_output(struct vc4_compile *c,
 }
 
 static void
+add_array_info(struct vc4_compile *c, uint32_t array_id,
+               uint32_t start, uint32_t size)
+{
+        if (array_id >= c->ubo_ranges_array_size) {
+                c->ubo_ranges_array_size = MAX2(c->ubo_ranges_array_size * 2,
+                                                array_id + 1);
+                c->ubo_ranges = reralloc(c, c->ubo_ranges,
+                                         struct vc4_compiler_ubo_range,
+                                         c->ubo_ranges_array_size);
+        }
+
+        c->ubo_ranges[array_id].dst_offset = 0;
+        c->ubo_ranges[array_id].src_offset = start;
+        c->ubo_ranges[array_id].size = size;
+        c->ubo_ranges[array_id].used = false;
+}
+
+static void
 emit_tgsi_declaration(struct vc4_compile *c,
                       struct tgsi_full_declaration *decl)
 {
@@ -1151,6 +1230,14 @@ emit_tgsi_declaration(struct vc4_compile *c,
                         break;
                 }
 
+                break;
+
+        case TGSI_FILE_CONSTANT:
+                add_array_info(c,
+                               decl->Array.ArrayID,
+                               decl->Range.First * 16,
+                               (decl->Range.Last -
+                                decl->Range.First + 1) * 16);
                 break;
         }
         }
@@ -1219,6 +1306,8 @@ emit_tgsi_instruction(struct vc4_compile *c,
                 [TGSI_OPCODE_COS] = { 0, tgsi_to_qir_cos },
                 [TGSI_OPCODE_CLAMP] = { 0, tgsi_to_qir_clamp },
                 [TGSI_OPCODE_SSG] = { 0, tgsi_to_qir_ssg },
+                [TGSI_OPCODE_ARL] = { 0, tgsi_to_qir_arl },
+                [TGSI_OPCODE_UARL] = { 0, tgsi_to_qir_uarl },
         };
         static int asdf = 0;
         uint32_t tgsi_op = tgsi_inst->Instruction.Opcode;
@@ -1231,7 +1320,7 @@ emit_tgsi_instruction(struct vc4_compile *c,
                 for (int i = 0; i < 4; i++) {
                         src_regs[4 * s + i] =
                                 get_src(c, tgsi_inst->Instruction.Opcode,
-                                        &tgsi_inst->Src[s].Register, i);
+                                        &tgsi_inst->Src[s], i);
                 }
         }
 
@@ -1833,6 +1922,9 @@ vc4_shader_tgsi_to_qir(struct vc4_context *vc4, enum qstage stage,
         int ret;
 
         c->stage = stage;
+        for (int i = 0; i < 4; i++)
+                c->addr[i] = qir_uniform_f(c, 0.0);
+
         c->shader_state = &key->shader_state->base;
         c->program_id = key->shader_state->program_id;
         c->variant_id = key->shader_state->compiled_variant_count++;
@@ -2064,6 +2156,31 @@ vc4_get_compiled_shader(struct vc4_context *vc4, enum qstage stage,
         shader->bo = vc4_bo_alloc_mem(vc4->screen, c->qpu_insts,
                                       c->qpu_inst_count * sizeof(uint64_t),
                                       "code");
+
+        /* Copy the compiler UBO range state to the compiled shader, dropping
+         * out arrays that were never referenced by an indirect load.
+         *
+         * (Note that QIR dead code elimination of an array access still
+         * leaves that array alive, though)
+         */
+        if (c->num_ubo_ranges) {
+                shader->num_ubo_ranges = c->num_ubo_ranges;
+                shader->ubo_ranges = ralloc_array(shader, struct vc4_ubo_range,
+                                                  c->num_ubo_ranges);
+                uint32_t j = 0;
+                for (int i = 0; i < c->ubo_ranges_array_size; i++) {
+                        struct vc4_compiler_ubo_range *range =
+                                &c->ubo_ranges[i];
+                        if (!range->used)
+                                continue;
+
+                        shader->ubo_ranges[j].dst_offset = range->dst_offset;
+                        shader->ubo_ranges[j].src_offset = range->src_offset;
+                        shader->ubo_ranges[j].size = range->size;
+                        shader->ubo_size += c->ubo_ranges[i].size;
+                        j++;
+                }
+        }
 
         qir_compile_destroy(c);
 
@@ -2461,6 +2578,24 @@ get_texrect_scale(struct vc4_texture_stateobj *texstate,
         return fui(1.0f / dim);
 }
 
+static struct vc4_bo *
+vc4_upload_ubo(struct vc4_context *vc4, struct vc4_compiled_shader *shader,
+               const uint32_t *gallium_uniforms)
+{
+        if (!shader->ubo_size)
+                return NULL;
+
+        struct vc4_bo *ubo = vc4_bo_alloc(vc4->screen, shader->ubo_size, "ubo");
+        uint32_t *data = vc4_bo_map(ubo);
+        for (uint32_t i = 0; i < shader->num_ubo_ranges; i++) {
+                memcpy(data + shader->ubo_ranges[i].dst_offset,
+                       gallium_uniforms + shader->ubo_ranges[i].src_offset,
+                       shader->ubo_ranges[i].size);
+        }
+
+        return ubo;
+}
+
 void
 vc4_write_uniforms(struct vc4_context *vc4, struct vc4_compiled_shader *shader,
                    struct vc4_constbuf_stateobj *cb,
@@ -2468,6 +2603,7 @@ vc4_write_uniforms(struct vc4_context *vc4, struct vc4_compiled_shader *shader,
 {
         struct vc4_shader_uniform_info *uinfo = &shader->uniforms;
         const uint32_t *gallium_uniforms = cb->cb[0].user_buffer;
+        struct vc4_bo *ubo = vc4_upload_ubo(vc4, shader, gallium_uniforms);
 
         cl_start_shader_reloc(&vc4->uniforms, uinfo->num_texture_samples);
 
@@ -2510,6 +2646,10 @@ vc4_write_uniforms(struct vc4_context *vc4, struct vc4_compiled_shader *shader,
 
                 case QUNIFORM_TEXTURE_CONFIG_P2:
                         write_texture_p2(vc4, texstate, uinfo->data[i]);
+                        break;
+
+                case QUNIFORM_UBO_ADDR:
+                        cl_reloc(vc4, &vc4->uniforms, ubo, 0);
                         break;
 
                 case QUNIFORM_TEXTURE_BORDER_COLOR:

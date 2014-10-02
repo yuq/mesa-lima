@@ -517,6 +517,11 @@ vc4_generate_code(struct vc4_context *vc4, struct vc4_compile *c)
                                            src[0]));
                         break;
 
+                case QOP_TEX_DIRECT:
+                        fixup_raddr_conflict(c, &src[0], &src[1]);
+                        queue(c, qpu_a_ADD(qpu_rb(QPU_W_TMU0_S), src[0], src[1]));
+                        break;
+
                 case QOP_TEX_RESULT:
                         queue(c, qpu_NOP());
                         *last_inst(c) = qpu_set_sig(*last_inst(c),
