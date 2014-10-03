@@ -1461,8 +1461,12 @@ assign_varying_locations(struct gl_context *ctx,
          /* If a matching input variable was found, add this ouptut (and the
           * input) to the set.  If this is a separable program and there is no
           * consumer stage, add the output.
+          *
+          * Always add TCS outputs. They are shared by all invocations
+          * within a patch and can be used as shared memory.
           */
-         if (input_var || (prog->SeparateShader && consumer == NULL)) {
+         if (input_var || (prog->SeparateShader && consumer == NULL) ||
+             producer->Type == GL_TESS_CONTROL_SHADER) {
             matches.record(output_var, input_var);
          }
 
