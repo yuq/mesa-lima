@@ -2112,7 +2112,7 @@ trans_cov(const struct instr_translater *t,
  *  madsh.m16 tmp1, a, b, tmp0 (mul-add shift high mix, i.e. ah * bl << 16)
  *  madsh.m16 dst, b, a, tmp1 (i.e. al * bh << 16)
  *
- * For UMAD, replace first mull.u with mad.u16.
+ * For UMAD, add in the extra argument after mull.u.
  */
 static void
 trans_umul(const struct instr_translater *t,
@@ -2135,16 +2135,16 @@ trans_umul(const struct instr_translater *t,
 	if (is_rel_or_const(b))
 		b = get_unconst(ctx, b);
 
-	if (t->tgsi_opc == TGSI_OPCODE_UMUL) {
-		/* mull.u tmp0, a, b */
-		instr = instr_create(ctx, 2, OPC_MULL_U);
-		vectorize(ctx, instr, &tmp0_dst, 2, a, 0, b, 0);
-	} else {
+	/* mull.u tmp0, a, b */
+	instr = instr_create(ctx, 2, OPC_MULL_U);
+	vectorize(ctx, instr, &tmp0_dst, 2, a, 0, b, 0);
+
+	if (t->tgsi_opc == TGSI_OPCODE_UMAD) {
 		struct tgsi_src_register *c = &inst->Src[2].Register;
 
-		/* mad.u16 tmp0, a, b, c */
-		instr = instr_create(ctx, 3, OPC_MAD_U16);
-		vectorize(ctx, instr, &tmp0_dst, 3, a, 0, b, 0, c, 0);
+		/* add.u tmp0, tmp0, c */
+		instr = instr_create(ctx, 2, OPC_ADD_U);
+		vectorize(ctx, instr, &tmp0_dst, 2, tmp0_src, 0, c, 0);
 	}
 
 	/* madsh.m16 tmp1, a, b, tmp0 */
