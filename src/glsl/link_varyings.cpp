@@ -1368,7 +1368,26 @@ assign_varying_locations(struct gl_context *ctx,
                          unsigned num_tfeedback_decls,
                          tfeedback_decl *tfeedback_decls)
 {
-   varying_matches matches(ctx->Const.DisableVaryingPacking,
+   if (ctx->Const.DisableVaryingPacking) {
+      /* Transform feedback code assumes varyings are packed, so if the driver
+       * has disabled varying packing, make sure it does not support transform
+       * feedback.
+       */
+      assert(!ctx->Extensions.EXT_transform_feedback);
+   }
+
+   /* Tessellation shaders treat inputs and outputs as shared memory and can
+    * access inputs and outputs of other invocations.
+    * Therefore, they can't be lowered to temps easily (and definitely not
+    * efficiently).
+    */
+   bool disable_varying_packing =
+      ctx->Const.DisableVaryingPacking ||
+      (consumer && consumer->Stage == MESA_SHADER_TESS_EVAL) ||
+      (consumer && consumer->Stage == MESA_SHADER_TESS_CTRL) ||
+      (producer && producer->Stage == MESA_SHADER_TESS_CTRL);
+
+   varying_matches matches(disable_varying_packing,
                            consumer && consumer->Stage == MESA_SHADER_FRAGMENT);
    hash_table *tfeedback_candidates
       = hash_table_ctor(0, hash_table_string_hash, hash_table_string_compare);
@@ -1510,13 +1529,7 @@ assign_varying_locations(struct gl_context *ctx,
    hash_table_dtor(consumer_inputs);
    hash_table_dtor(consumer_interface_inputs);
 
-   if (ctx->Const.DisableVaryingPacking) {
-      /* Transform feedback code assumes varyings are packed, so if the driver
-       * has disabled varying packing, make sure it does not support transform
-       * feedback.
-       */
-      assert(!ctx->Extensions.EXT_transform_feedback);
-   } else {
+   if (!disable_varying_packing) {
       if (producer) {
          lower_packed_varyings(mem_ctx, slots_used, ir_var_shader_out,
                                0, producer);
