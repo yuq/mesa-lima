@@ -253,6 +253,12 @@ vc4_setup_rcl(struct vc4_context *vc4)
                         assert(!coords_emitted);
                 }
         }
+
+        if (vc4->resolve & PIPE_CLEAR_COLOR0)
+                ctex->writes++;
+
+        if (vc4->resolve & (PIPE_CLEAR_DEPTH | PIPE_CLEAR_STENCIL))
+                ztex->writes++;
 }
 
 void

@@ -2265,7 +2265,8 @@ write_texture_p0(struct vc4_context *vc4,
 
         cl_reloc(vc4, &vc4->uniforms, rsc->bo,
                  VC4_SET_FIELD(rsc->slices[0].offset >> 12, VC4_TEX_P0_OFFSET) |
-                 VC4_SET_FIELD(texture->u.tex.last_level, VC4_TEX_P0_MIPLVLS) |
+                 VC4_SET_FIELD(texture->u.tex.last_level -
+                               texture->u.tex.first_level, VC4_TEX_P0_MIPLVLS) |
                  VC4_SET_FIELD(texture->target == PIPE_TEXTURE_CUBE,
                                VC4_TEX_P0_CMMODE) |
                  VC4_SET_FIELD(rsc->vc4_format & 7, VC4_TEX_P0_TYPE));

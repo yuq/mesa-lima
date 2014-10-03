@@ -83,6 +83,9 @@ vc4_resource_transfer_map(struct pipe_context *pctx,
         if (!(usage & PIPE_TRANSFER_UNSYNCHRONIZED))
                 vc4_flush_for_bo(pctx, rsc->bo);
 
+        if (usage & PIPE_TRANSFER_WRITE)
+                rsc->writes++;
+
         trans = util_slab_alloc(&vc4->transfer_pool);
         if (!trans)
                 return NULL;
@@ -168,6 +171,7 @@ vc4_resource_destroy(struct pipe_screen *pscreen,
                      struct pipe_resource *prsc)
 {
         struct vc4_resource *rsc = vc4_resource(prsc);
+        pipe_resource_reference(&rsc->shadow_parent, NULL);
         vc4_bo_unreference(&rsc->bo);
         free(rsc);
 }
@@ -297,7 +301,7 @@ get_resource_texture_format(struct pipe_resource *prsc)
         return format;
 }
 
-static struct pipe_resource *
+struct pipe_resource *
 vc4_resource_create(struct pipe_screen *pscreen,
                     const struct pipe_resource *tmpl)
 {
@@ -475,6 +479,37 @@ vc4_blit(struct pipe_context *pctx, const struct pipe_blit_info *blit_info)
         }
 
         render_blit(pctx, &info);
+}
+
+void
+vc4_update_shadow_baselevel_texture(struct pipe_context *pctx,
+                                    struct pipe_sampler_view *view)
+{
+        struct vc4_resource *shadow = vc4_resource(view->texture);
+        struct vc4_resource *orig = vc4_resource(shadow->shadow_parent);
+        assert(orig);
+
+        if (shadow->writes == orig->writes)
+                return;
+
+        for (int i = 0; i <= shadow->base.b.last_level; i++) {
+                struct pipe_box box = {
+                        .x = 0,
+                        .y = 0,
+                        .z = 0,
+                        .width = u_minify(shadow->base.b.width0, i),
+                        .height = u_minify(shadow->base.b.height0, i),
+                        .depth = 1,
+                };
+
+                util_resource_copy_region(pctx,
+                                          &shadow->base.b, i, 0, 0, 0,
+                                          &orig->base.b,
+                                          view->u.tex.first_level + i,
+                                          &box);
+        }
+
+        shadow->writes = orig->writes;
 }
 
 void

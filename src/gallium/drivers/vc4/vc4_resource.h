@@ -61,6 +61,16 @@ struct vc4_resource {
         bool tiled;
         /** One of VC4_TEXTURE_TYPE_* */
         enum vc4_texture_data_type vc4_format;
+
+        /**
+         * Number of times the resource has been written to.
+         *
+         * This is used to track when we need to update this shadow resource
+         * from its parent in the case of GL_TEXTURE_BASE_LEVEL (which we
+         * can't support in hardware).
+         */
+        uint64_t writes;
+        struct pipe_resource *shadow_parent;
 };
 
 static INLINE struct vc4_resource *
@@ -83,5 +93,9 @@ vc4_transfer(struct pipe_transfer *ptrans)
 
 void vc4_resource_screen_init(struct pipe_screen *pscreen);
 void vc4_resource_context_init(struct pipe_context *pctx);
+struct pipe_resource *vc4_resource_create(struct pipe_screen *pscreen,
+                                          const struct pipe_resource *tmpl);
+void vc4_update_shadow_baselevel_texture(struct pipe_context *pctx,
+                                         struct pipe_sampler_view *view);
 
 #endif /* VC4_RESOURCE_H */

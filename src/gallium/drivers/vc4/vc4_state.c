@@ -483,7 +483,28 @@ vc4_create_sampler_view(struct pipe_context *pctx, struct pipe_resource *prsc,
                 return NULL;
 
         *so = *cso;
+
         pipe_reference(NULL, &prsc->reference);
+
+        /* There is no hardware level clamping, and the start address of a
+         * texture may be misaligned, so in that case we have to copy to a
+         * temporary.
+         */
+        if (so->u.tex.first_level) {
+                struct vc4_resource *shadow_parent = vc4_resource(prsc);
+                struct pipe_resource tmpl = shadow_parent->base.b;
+                struct vc4_resource *clone;
+
+                tmpl.width0 = u_minify(tmpl.width0, so->u.tex.first_level);
+                tmpl.height0 = u_minify(tmpl.height0, so->u.tex.first_level);
+                tmpl.last_level = so->u.tex.last_level - so->u.tex.first_level;
+
+                prsc = vc4_resource_create(pctx->screen, &tmpl);
+                clone = vc4_resource(prsc);
+                clone->shadow_parent = &shadow_parent->base.b;
+                /* Flag it as needing update of the contents from the parent. */
+                clone->writes = shadow_parent->writes - 1;
+        }
         so->texture = prsc;
         so->reference.count = 1;
         so->context = pctx;
@@ -514,8 +535,11 @@ vc4_set_sampler_views(struct pipe_context *pctx, unsigned shader,
         vc4->dirty |= VC4_DIRTY_TEXSTATE;
 
         for (i = 0; i < nr; i++) {
-                if (views[i])
+                if (views[i]) {
                         new_nr = i + 1;
+                        if (views[i]->u.tex.first_level != 0)
+                                vc4_update_shadow_baselevel_texture(pctx, views[i]);
+                }
                 pipe_sampler_view_reference(&stage_tex->textures[i], views[i]);
                 stage_tex->dirty_samplers |= (1 << i);
         }
