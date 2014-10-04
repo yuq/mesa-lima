@@ -1308,38 +1308,25 @@ static void si_llvm_emit_vs_epilogue(struct lp_build_tgsi_context * bld_base)
 {
 	struct si_shader_context *si_shader_ctx = si_shader_context(bld_base);
 	struct gallivm_state *gallivm = bld_base->base.gallivm;
-	struct tgsi_parse_context *parse = &si_shader_ctx->parse;
+	struct tgsi_shader_info *info = &si_shader_ctx->shader->selector->info;
 	struct si_shader_output_values *outputs = NULL;
-	unsigned noutput = 0;
-	int i;
+	int i,j;
 
-	while (!tgsi_parse_end_of_tokens(parse)) {
-		struct tgsi_full_declaration *d =
-					&parse->FullToken.FullDeclaration;
-		unsigned index;
+	outputs = MALLOC(info->num_outputs * sizeof(outputs[0]));
 
-		tgsi_parse_token(parse);
+	for (i = 0; i < info->num_outputs; i++) {
+		outputs[i].name = info->output_semantic_name[i];
+		outputs[i].sid = info->output_semantic_index[i];
+		outputs[i].index = i;
 
-		if (parse->FullToken.Token.Type != TGSI_TOKEN_TYPE_DECLARATION)
-			continue;
-
-		outputs = REALLOC(outputs, noutput * sizeof(outputs[0]),
-				  (noutput + 1) * sizeof(outputs[0]));
-		for (index = d->Range.First; index <= d->Range.Last; index++) {
-			outputs[noutput].index = index;
-			outputs[noutput].name = d->Semantic.Name;
-			outputs[noutput].sid = d->Semantic.Index;
-
-			for (i = 0; i < 4; i++)
-				outputs[noutput].values[i] =
-					LLVMBuildLoad(gallivm->builder,
-						      si_shader_ctx->radeon_bld.soa.outputs[index][i],
-						      "");
-		}
-		noutput++;
+		for (j = 0; j < 4; j++)
+			outputs[i].values[j] =
+				LLVMBuildLoad(gallivm->builder,
+					      si_shader_ctx->radeon_bld.soa.outputs[i][j],
+					      "");
 	}
 
-	si_llvm_export_vs(bld_base, outputs, noutput);
+	si_llvm_export_vs(bld_base, outputs, info->num_outputs);
 	FREE(outputs);
 }
 
