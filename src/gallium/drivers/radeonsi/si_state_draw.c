@@ -493,11 +493,15 @@ static void si_update_spi_map(struct si_context *sctx)
 {
 	struct si_shader *ps = sctx->ps_shader->current;
 	struct si_shader *vs = si_get_vs_state(sctx);
+	struct tgsi_shader_info *psinfo = &ps->selector->info;
+	struct tgsi_shader_info *vsinfo = &vs->selector->info;
 	struct si_pm4_state *pm4 = si_pm4_alloc_state(sctx);
 	unsigned i, j, tmp;
 
-	for (i = 0; i < ps->ninput; i++) {
-		unsigned name = ps->input[i].name;
+	for (i = 0; i < psinfo->num_inputs; i++) {
+		unsigned name = psinfo->input_semantic_name[i];
+		unsigned index = psinfo->input_semantic_index[i];
+		unsigned interpolate = psinfo->input_interpolate[i];
 		unsigned param_offset = ps->input[i].param_offset;
 
 		if (name == TGSI_SEMANTIC_POSITION)
@@ -507,26 +511,26 @@ static void si_update_spi_map(struct si_context *sctx)
 bcolor:
 		tmp = 0;
 
-		if (ps->input[i].interpolate == TGSI_INTERPOLATE_CONSTANT ||
-		    (ps->input[i].interpolate == TGSI_INTERPOLATE_COLOR &&
+		if (interpolate == TGSI_INTERPOLATE_CONSTANT ||
+		    (interpolate == TGSI_INTERPOLATE_COLOR &&
 		     ps->key.ps.flatshade)) {
 			tmp |= S_028644_FLAT_SHADE(1);
 		}
 
 		if (name == TGSI_SEMANTIC_GENERIC &&
-		    sctx->sprite_coord_enable & (1 << ps->input[i].sid)) {
+		    sctx->sprite_coord_enable & (1 << index)) {
 			tmp |= S_028644_PT_SPRITE_TEX(1);
 		}
 
-		for (j = 0; j < vs->noutput; j++) {
-			if (name == vs->output[j].name &&
-			    ps->input[i].sid == vs->output[j].sid) {
+		for (j = 0; j < vsinfo->num_outputs; j++) {
+			if (name == vsinfo->output_semantic_name[j] &&
+			    index == vsinfo->output_semantic_index[j]) {
 				tmp |= S_028644_OFFSET(vs->output[j].param_offset);
 				break;
 			}
 		}
 
-		if (j == vs->noutput) {
+		if (j == vsinfo->num_outputs) {
 			/* No corresponding output found, load defaults into input */
 			tmp |= S_028644_OFFSET(0x20);
 		}
