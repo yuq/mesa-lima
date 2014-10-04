@@ -1394,6 +1394,9 @@ fs_visitor::assign_curb_setup()
 	 }
       }
    }
+
+   /* This may be updated in assign_urb_setup or assign_vs_urb_setup. */
+   this->first_non_payload_grf = payload.num_regs + prog_data->curb_read_length;
 }
 
 void
@@ -1508,8 +1511,7 @@ fs_visitor::assign_urb_setup()
    }
 
    /* Each attribute is 4 setup channels, each of which is half a reg. */
-   this->first_non_payload_grf =
-      urb_start + prog_data->num_varying_inputs * 2;
+   this->first_non_payload_grf += prog_data->num_varying_inputs * 2;
 }
 
 void
@@ -1524,8 +1526,7 @@ fs_visitor::assign_vs_urb_setup()
       count++;
 
    /* Each attribute is 4 regs. */
-   this->first_non_payload_grf =
-      payload.num_regs + prog_data->curb_read_length + count * 4;
+   this->first_non_payload_grf += count * 4;
 
    unsigned vue_entries =
       MAX2(count, vs_prog_data->base.vue_map.num_slots);
