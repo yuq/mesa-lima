@@ -145,7 +145,6 @@ union si_shader_key {
 		/* The mask of "get_unique_index" bits, needed for ES,
 		 * it describes how the ES->GS ring buffer is laid out. */
 		uint64_t	gs_used_inputs;
-		unsigned	ucps_enabled:2;
 		unsigned	as_es:1;
 	} vs;
 };

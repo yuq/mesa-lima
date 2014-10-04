@@ -870,9 +870,6 @@ static void si_llvm_emit_clipvertex(struct lp_build_tgsi_context * bld_base,
 	for (reg_index = 0; reg_index < 2; reg_index ++) {
 		LLVMValueRef *args = pos[2 + reg_index];
 
-		if (!(shader->key.vs.ucps_enabled & (1 << reg_index)))
-			continue;
-
 		shader->clip_dist_write |= 0xf << (4 * reg_index);
 
 		args[5] =
@@ -1175,9 +1172,6 @@ handle_semantic:
 			param_count++;
 			break;
 		case TGSI_SEMANTIC_CLIPDIST:
-			if (!(si_shader_ctx->shader->key.vs.ucps_enabled &
-			      (1 << semantic_index)))
-				continue;
 			shader->clip_dist_write |=
 				0xf << (semantic_index * 4);
 			target = V_008DFC_SQ_EXP_POS + 2 + semantic_index;
