@@ -509,7 +509,7 @@ bcolor:
 
 		if (ps->input[i].interpolate == TGSI_INTERPOLATE_CONSTANT ||
 		    (ps->input[i].interpolate == TGSI_INTERPOLATE_COLOR &&
-		     sctx->ps_shader->current->key.ps.flatshade)) {
+		     ps->key.ps.flatshade)) {
 			tmp |= S_028644_FLAT_SHADE(1);
 		}
 
@@ -536,7 +536,7 @@ bcolor:
 			       tmp);
 
 		if (name == TGSI_SEMANTIC_COLOR &&
-		    sctx->ps_shader->current->key.ps.color_two_side) {
+		    ps->key.ps.color_two_side) {
 			name = TGSI_SEMANTIC_BCOLOR;
 			param_offset++;
 			goto bcolor;
