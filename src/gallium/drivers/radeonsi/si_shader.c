@@ -2232,6 +2232,7 @@ static void si_llvm_emit_vertex(
 	struct si_shader_context *si_shader_ctx = si_shader_context(bld_base);
 	struct lp_build_context *uint = &bld_base->uint_bld;
 	struct si_shader *shader = si_shader_ctx->shader;
+	struct tgsi_shader_info *info = &shader->selector->info;
 	struct gallivm_state *gallivm = bld_base->base.gallivm;
 	LLVMTypeRef i32 = LLVMInt32TypeInContext(gallivm->context);
 	LLVMValueRef soffset = LLVMGetParam(si_shader_ctx->radeon_bld.main_fn,
@@ -2282,9 +2283,9 @@ static void si_llvm_emit_vertex(
 	build_intrinsic(gallivm->builder, "llvm.AMDGPU.kill",
 			LLVMVoidTypeInContext(gallivm->context), &kill, 1, 0);
 
-	for (i = 0; i < shader->noutput; i++) {
+	for (i = 0; i < info->num_outputs; i++) {
 		LLVMValueRef *out_ptr =
-			si_shader_ctx->radeon_bld.soa.outputs[shader->output[i].index];
+			si_shader_ctx->radeon_bld.soa.outputs[i];
 
 		for (chan = 0; chan < 4; chan++) {
 			LLVMValueRef out_val = LLVMBuildLoad(gallivm->builder, out_ptr[chan], "");
@@ -2693,11 +2694,12 @@ static int si_generate_gs_copy_shader(struct si_screen *sscreen,
 	struct lp_build_context *uint = &bld_base->uint_bld;
 	struct si_shader *shader = si_shader_ctx->shader;
 	struct si_shader_output_values *outputs;
+	struct tgsi_shader_info *gsinfo = &gs->selector->info;
 	LLVMValueRef t_list_ptr, t_list;
 	LLVMValueRef args[9];
 	int i, r;
 
-	outputs = MALLOC(gs->noutput * sizeof(outputs[0]));
+	outputs = MALLOC(gsinfo->num_outputs * sizeof(outputs[0]));
 
 	si_shader_ctx->type = TGSI_PROCESSOR_VERTEX;
 	shader->is_gs_copy_shader = true;
@@ -2727,15 +2729,12 @@ static int si_generate_gs_copy_shader(struct si_screen *sscreen,
 	args[8] = uint->zero; /* TFE */
 
 	/* Fetch vertex data from GSVS ring */
-	for (i = 0; i < gs->noutput; ++i) {
-		struct si_shader_output *out = gs->output + i;
+	for (i = 0; i < gsinfo->num_outputs; ++i) {
 		unsigned chan;
 
-		shader->output[i] = *out;
-
-		outputs[i].name = out->name;
-		outputs[i].index = out->index;
-		outputs[i].sid = out->sid;
+		outputs[i].name = gsinfo->output_semantic_name[i];
+		outputs[i].index = i;
+		outputs[i].sid = gsinfo->output_semantic_index[i];
 
 		for (chan = 0; chan < 4; chan++) {
 			args[2] = lp_build_const_int32(gallivm,
@@ -2752,9 +2751,8 @@ static int si_generate_gs_copy_shader(struct si_screen *sscreen,
 						 base->elem_type, "");
 		}
 	}
-	shader->noutput = gs->noutput;
 
-	si_llvm_export_vs(bld_base, outputs, gs->noutput);
+	si_llvm_export_vs(bld_base, outputs, gsinfo->num_outputs);
 
 	radeon_llvm_finalize_module(&si_shader_ctx->radeon_bld);
 

@@ -80,7 +80,7 @@ static void si_shader_es(struct pipe_context *ctx, struct si_shader *shader)
 static void si_shader_gs(struct pipe_context *ctx, struct si_shader *shader)
 {
 	struct si_context *sctx = (struct si_context *)ctx;
-	unsigned gs_vert_itemsize = shader->noutput * (16 >> 2);
+	unsigned gs_vert_itemsize = shader->selector->info.num_outputs * (16 >> 2);
 	unsigned gs_max_vert_out = shader->selector->gs_max_out_vertices;
 	unsigned gsvs_itemsize = gs_vert_itemsize * gs_max_vert_out;
 	unsigned cut_mode;
@@ -633,7 +633,7 @@ static void si_update_derived_state(struct si_context *sctx)
 		si_set_ring_buffer(ctx, PIPE_SHADER_GEOMETRY, SI_RING_GSVS,
 				   sctx->gsvs_ring,
 				   sctx->gs_shader->gs_max_out_vertices *
-				   sctx->gs_shader->current->noutput * 16,
+				   sctx->gs_shader->info.num_outputs * 16,
 				   64, true, true, 4, 16);
 
 		if (!sctx->gs_on) {
