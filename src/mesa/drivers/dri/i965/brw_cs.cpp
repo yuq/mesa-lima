@@ -225,11 +225,17 @@ brw_codegen_cs_prog(struct brw_context *brw,
 static void
 brw_cs_populate_key(struct brw_context *brw, struct brw_cs_prog_key *key)
 {
+   struct gl_context *ctx = &brw->ctx;
    /* BRW_NEW_COMPUTE_PROGRAM */
    const struct brw_compute_program *cp =
       (struct brw_compute_program *) brw->compute_program;
+   const struct gl_program *prog = (struct gl_program *) cp;
 
    memset(key, 0, sizeof(*key));
+
+   /* _NEW_TEXTURE */
+   brw_populate_sampler_prog_key_data(ctx, prog, brw->cs.base.sampler_count,
+                                      &key->tex);
 
    /* The unique compute program ID */
    key->program_string_id = cp->id;
@@ -248,8 +254,11 @@ brw_upload_cs_prog(struct brw_context *brw)
    if (!cp)
       return;
 
-   if (!brw_state_dirty(brw, 0, BRW_NEW_COMPUTE_PROGRAM))
+   if (!brw_state_dirty(brw, _NEW_TEXTURE, BRW_NEW_COMPUTE_PROGRAM))
       return;
+
+   brw->cs.base.sampler_count =
+      _mesa_fls(ctx->ComputeProgram._Current->Base.SamplersUsed);
 
    brw_cs_populate_key(brw, &key);
 
@@ -413,7 +422,8 @@ brw_upload_cs_state(struct brw_context *brw)
    if (brw->gen >= 8)
       desc[dw++] = 0; /* Kernel Start Pointer High */
    desc[dw++] = 0;
-   desc[dw++] = 0;
+   desc[dw++] = stage_state->sampler_offset |
+      ((stage_state->sampler_count + 3) / 4);
    desc[dw++] = stage_state->bind_bo_offset;
    desc[dw++] = SET_FIELD(push_constant_regs, MEDIA_CURBE_READ_LENGTH);
    const uint32_t media_threads =
