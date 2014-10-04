@@ -195,6 +195,7 @@ is_scalar_shader_stage(struct brw_context *brw, int stage)
 {
    switch (stage) {
    case MESA_SHADER_FRAGMENT:
+   case MESA_SHADER_COMPUTE:
       return true;
    case MESA_SHADER_VERTEX:
       return brw->intelScreen->compiler->scalar_vs;
