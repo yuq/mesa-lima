@@ -1291,7 +1291,7 @@ static void si_llvm_emit_es_epilogue(struct lp_build_tgsi_context * bld_base)
 	struct si_shader_context *si_shader_ctx = si_shader_context(bld_base);
 	struct gallivm_state *gallivm = bld_base->base.gallivm;
 	struct si_shader *es = si_shader_ctx->shader;
-	struct tgsi_parse_context *parse = &si_shader_ctx->parse;
+	struct tgsi_shader_info *info = &es->selector->info;
 	LLVMTypeRef i32 = LLVMInt32TypeInContext(gallivm->context);
 	LLVMValueRef soffset = LLVMGetParam(si_shader_ctx->radeon_bld.main_fn,
 					    SI_PARAM_ES2GS_OFFSET);
@@ -1300,29 +1300,17 @@ static void si_llvm_emit_es_epilogue(struct lp_build_tgsi_context * bld_base)
 	unsigned chan;
 	int i;
 
-	while (!tgsi_parse_end_of_tokens(parse)) {
-		struct tgsi_full_declaration *d =
-					&parse->FullToken.FullDeclaration;
-
-		tgsi_parse_token(parse);
-
-		if (parse->FullToken.Token.Type != TGSI_TOKEN_TYPE_DECLARATION)
-			continue;
-
-		si_store_shader_io_attribs(es, d);
-	}
-
 	/* Load the ESGS ring resource descriptor */
 	t_list_ptr = LLVMGetParam(si_shader_ctx->radeon_bld.main_fn,
 				  SI_PARAM_RW_BUFFERS);
 	t_list = build_indexed_load(si_shader_ctx, t_list_ptr,
 				    lp_build_const_int32(gallivm, SI_RING_ESGS));
 
-	for (i = 0; i < es->noutput; i++) {
+	for (i = 0; i < info->num_outputs; i++) {
 		LLVMValueRef *out_ptr =
-			si_shader_ctx->radeon_bld.soa.outputs[es->output[i].index];
-		int param_index = get_param_index(es->output[i].name,
-						  es->output[i].sid,
+			si_shader_ctx->radeon_bld.soa.outputs[i];
+		int param_index = get_param_index(info->output_semantic_name[i],
+						  info->output_semantic_index[i],
 						  es->key.vs.gs_used_inputs);
 
 		if (param_index < 0)
