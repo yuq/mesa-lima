@@ -1479,8 +1479,8 @@ static void si_llvm_emit_fs_epilogue(struct lp_build_tgsi_context * bld_base)
 				/* Handle FS_COLOR0_WRITES_ALL_CBUFS. */
 				if (shader->selector->info.properties[TGSI_PROPERTY_FS_COLOR0_WRITES_ALL_CBUFS] &&
                                     shader->output[i].sid == 0 &&
-				    si_shader_ctx->shader->key.ps.nr_cbufs > 1) {
-					for (int c = 1; c < si_shader_ctx->shader->key.ps.nr_cbufs; c++) {
+				    si_shader_ctx->shader->key.ps.last_cbuf > 0) {
+					for (int c = 1; c <= si_shader_ctx->shader->key.ps.last_cbuf; c++) {
 						si_llvm_init_export_args_load(bld_base,
 									      si_shader_ctx->radeon_bld.soa.outputs[index],
 									      V_008DFC_SQ_EXP_MRT + c, args);

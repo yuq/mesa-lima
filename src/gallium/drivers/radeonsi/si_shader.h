@@ -134,7 +134,7 @@ struct si_shader_selector {
 union si_shader_key {
 	struct {
 		unsigned	export_16bpc:8;
-		unsigned	nr_cbufs:4;
+		unsigned	last_cbuf:3;
 		unsigned	color_two_side:1;
 		unsigned	alpha_func:3;
 		unsigned	flatshade:1;
