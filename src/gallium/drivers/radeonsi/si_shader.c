@@ -354,10 +354,11 @@ static LLVMValueRef fetch_input_gs(
 	LLVMValueRef t_list;
 	LLVMValueRef args[9];
 	unsigned vtx_offset_param;
-	struct si_shader_input *input = &shader->input[reg->Register.Index];
+	struct tgsi_shader_info *info = &shader->selector->info;
+	unsigned semantic_name = info->input_semantic_name[reg->Register.Index];
+	unsigned semantic_index = info->input_semantic_index[reg->Register.Index];
 
-	if (swizzle != ~0 &&
-	    shader->input[reg->Register.Index].name == TGSI_SEMANTIC_PRIMID) {
+	if (swizzle != ~0 && semantic_name == TGSI_SEMANTIC_PRIMID) {
 		if (swizzle == 0)
 			return LLVMGetParam(si_shader_ctx->radeon_bld.main_fn,
 					    SI_PARAM_PRIMITIVE_ID);
@@ -400,7 +401,7 @@ static LLVMValueRef fetch_input_gs(
 	args[0] = t_list;
 	args[1] = vtx_offset;
 	args[2] = lp_build_const_int32(gallivm,
-				       (get_param_index(input->name, input->sid,
+				       (get_param_index(semantic_name, semantic_index,
 							shader->selector->gs_used_inputs) * 4 +
 					swizzle) * 256);
 	args[3] = uint->zero;
