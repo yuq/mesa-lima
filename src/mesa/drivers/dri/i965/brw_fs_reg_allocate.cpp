@@ -152,6 +152,13 @@ brw_alloc_reg_set(struct intel_screen *screen, int reg_width)
    int *classes = ralloc_array(screen, int, class_count);
    int aligned_pairs_class = -1;
 
+   /* Allocate space for q values.  We allocate class_count + 1 because we
+    * want to leave room for the aligned pairs class if we have it. */
+   unsigned int **q_values = ralloc_array(screen, unsigned int *,
+                                          class_count + 1);
+   for (int i = 0; i < class_count + 1; ++i)
+      q_values[i] = ralloc_array(q_values, unsigned int, class_count + 1);
+
    /* Now, add the registers to their classes, and add the conflicts
     * between them and the base GRF registers (and also each other).
     */
@@ -162,8 +169,41 @@ brw_alloc_reg_set(struct intel_screen *screen, int reg_width)
       int class_reg_count;
       if (devinfo->gen <= 5 && reg_width == 2) {
          class_reg_count = (base_reg_count - (class_sizes[i] - 1)) / 2;
+
+         /* See comment below.  The only difference here is that we are
+          * dealing with pairs of registers instead of single registers.
+          * Registers of odd sizes simply get rounded up. */
+         for (int j = 0; j < class_count; j++)
+            q_values[i][j] = (class_sizes[i] + 1) / 2 +
+                             (class_sizes[j] + 1) / 2 - 1;
       } else {
          class_reg_count = base_reg_count - (class_sizes[i] - 1);
+
+         /* From register_allocate.c:
+          *
+          * q(B,C) (indexed by C, B is this register class) in
+          * Runeson/Nyström paper.  This is "how many registers of B could
+          * the worst choice register from C conflict with".
+          *
+          * If we just let the register allocation algorithm compute these
+          * values, is extremely expensive.  However, since all of our
+          * registers are laid out, we can very easily compute them
+          * ourselves.  View the register from C as fixed starting at GRF n
+          * somwhere in the middle, and the register from B as sliding back
+          * and forth.  Then the first register to conflict from B is the
+          * one starting at n - class_size[B] + 1 and the last register to
+          * conflict will start at n + class_size[B] - 1.  Therefore, the
+          * number of conflicts from B is class_size[B] + class_size[C] - 1.
+          *
+          *   +-+-+-+-+-+-+     +-+-+-+-+-+-+
+          * B | | | | | |n| --> | | | | | | |
+          *   +-+-+-+-+-+-+     +-+-+-+-+-+-+
+          *             +-+-+-+-+-+
+          * C           |n| | | | |
+          *             +-+-+-+-+-+
+          */
+         for (int j = 0; j < class_count; j++)
+            q_values[i][j] = class_sizes[i] + class_sizes[j] - 1;
       }
       classes[i] = ra_alloc_reg_class(regs);
 
@@ -208,7 +248,7 @@ brw_alloc_reg_set(struct intel_screen *screen, int reg_width)
    /* Add a special class for aligned pairs, which we'll put delta_x/y
     * in on gen5 so that we can do PLN.
     */
-   if (devinfo->has_pln && devinfo->gen < 6) {
+   if (devinfo->has_pln && reg_width == 1 && devinfo->gen < 6) {
       aligned_pairs_class = ra_alloc_reg_class(regs);
 
       for (int i = 0; i < pairs_reg_count; i++) {
@@ -216,9 +256,23 @@ brw_alloc_reg_set(struct intel_screen *screen, int reg_width)
 	    ra_class_add_reg(regs, aligned_pairs_class, pairs_base_reg + i);
 	 }
       }
+
+      for (int i = 0; i < class_count; i++) {
+         /* These are a little counter-intuitive because the pair registers
+          * are required to be aligned while the register they are
+          * potentially interferring with are not.  In the case where the
+          * size is even, the worst-case is that the register is
+          * odd-aligned.  In the odd-size case, it doesn't matter.
+          */
+         q_values[class_count][i] = class_sizes[i] / 2 + 1;
+         q_values[i][class_count] = class_sizes[i] + 1;
+      }
+      q_values[class_count][class_count] = 1;
    }
 
-   ra_set_finalize(regs, NULL);
+   ra_set_finalize(regs, q_values);
+
+   ralloc_free(q_values);
 
    screen->wm_reg_sets[index].regs = regs;
    for (unsigned i = 0; i < ARRAY_SIZE(screen->wm_reg_sets[index].classes); i++)
