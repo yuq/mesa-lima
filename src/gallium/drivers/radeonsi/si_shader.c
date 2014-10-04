@@ -233,33 +233,6 @@ static LLVMValueRef get_instance_index_for_fetch(
 	return result;
 }
 
-static int si_store_shader_io_attribs(struct si_shader *shader,
-				      const struct tgsi_full_declaration *d)
-{
-	int i = -1;
-
-	switch (d->Declaration.File) {
-	case TGSI_FILE_INPUT:
-		i = shader->ninput++;
-		assert(i < Elements(shader->input));
-		shader->input[i].name = d->Semantic.Name;
-		shader->input[i].sid = d->Semantic.Index;
-		shader->input[i].index = d->Range.First;
-		shader->input[i].interpolate = d->Interp.Interpolate;
-		return -1;
-
-	case TGSI_FILE_OUTPUT:
-		i = shader->noutput++;
-		assert(i < Elements(shader->output));
-		shader->output[i].name = d->Semantic.Name;
-		shader->output[i].sid = d->Semantic.Index;
-		shader->output[i].index = d->Range.First;
-		break;
-	}
-
-	return i;
-}
-
 static void declare_input_vs(
 	struct radeon_llvm_context *radeon_bld,
 	unsigned input_index,
@@ -322,18 +295,6 @@ static void declare_input_vs(
 				LLVMBuildExtractElement(gallivm->builder,
 				input, llvm_chan, "");
 	}
-}
-
-static void declare_input_gs(
-	struct radeon_llvm_context *radeon_bld,
-	unsigned input_index,
-	const struct tgsi_full_declaration *decl)
-{
-	struct si_shader_context *si_shader_ctx =
-		si_shader_context(&radeon_bld->soa.bld_base);
-	struct si_shader *shader = si_shader_ctx->shader;
-
-	si_store_shader_io_attribs(shader, decl);
 }
 
 static LLVMValueRef fetch_input_gs(
@@ -1347,7 +1308,6 @@ static void si_llvm_emit_vs_epilogue(struct lp_build_tgsi_context * bld_base)
 {
 	struct si_shader_context *si_shader_ctx = si_shader_context(bld_base);
 	struct gallivm_state *gallivm = bld_base->base.gallivm;
-	struct si_shader *shader = si_shader_ctx->shader;
 	struct tgsi_parse_context *parse = &si_shader_ctx->parse;
 	struct si_shader_output_values *outputs = NULL;
 	unsigned noutput = 0;
@@ -1361,10 +1321,6 @@ static void si_llvm_emit_vs_epilogue(struct lp_build_tgsi_context * bld_base)
 		tgsi_parse_token(parse);
 
 		if (parse->FullToken.Token.Type != TGSI_TOKEN_TYPE_DECLARATION)
-			continue;
-
-		i = si_store_shader_io_attribs(shader, d);
-		if (i < 0)
 			continue;
 
 		outputs = REALLOC(outputs, noutput * sizeof(outputs[0]),
@@ -1399,7 +1355,6 @@ static void si_llvm_emit_fs_epilogue(struct lp_build_tgsi_context * bld_base)
 	LLVMValueRef last_args[9] = { 0 };
 	unsigned semantic_name;
 	int depth_index = -1, stencil_index = -1, samplemask_index = -1;
-	int i;
 
 	while (!tgsi_parse_end_of_tokens(parse)) {
 		struct tgsi_full_declaration *d =
@@ -1410,10 +1365,6 @@ static void si_llvm_emit_fs_epilogue(struct lp_build_tgsi_context * bld_base)
 		tgsi_parse_token(parse);
 
 		if (parse->FullToken.Token.Type != TGSI_TOKEN_TYPE_DECLARATION)
-			continue;
-
-		i = si_store_shader_io_attribs(shader, d);
-		if (i < 0)
 			continue;
 
 		semantic_name = d->Semantic.Name;
@@ -2251,21 +2202,6 @@ static void si_llvm_emit_vertex(
 	t_list = build_indexed_load(si_shader_ctx, t_list_ptr,
 				    lp_build_const_int32(gallivm, SI_RING_GSVS));
 
-	if (shader->noutput == 0) {
-		struct tgsi_parse_context *parse = &si_shader_ctx->parse;
-
-		while (!tgsi_parse_end_of_tokens(parse)) {
-			tgsi_parse_token(parse);
-
-			if (parse->FullToken.Token.Type == TGSI_TOKEN_TYPE_DECLARATION) {
-				struct tgsi_full_declaration *d = &parse->FullToken.FullDeclaration;
-
-				if (d->Declaration.File == TGSI_FILE_OUTPUT)
-					si_store_shader_io_attribs(shader, d);
-			}
-		}
-	}
-
 	/* Write vertex attribute values to GSVS ring */
 	gs_next_vertex = LLVMBuildLoad(gallivm->builder, si_shader_ctx->gs_next_vertex, "");
 
@@ -2784,9 +2720,7 @@ int si_shader_create(struct si_screen *sscreen, struct si_shader *shader)
 		si_dump_streamout(&sel->so);
 	}
 
-	assert(shader->noutput == 0);
 	assert(shader->nparam == 0);
-	assert(shader->ninput == 0);
 
 	memset(&si_shader_ctx, 0, sizeof(si_shader_ctx));
 	radeon_llvm_context_init(&si_shader_ctx.radeon_bld);
@@ -2834,7 +2768,6 @@ int si_shader_create(struct si_screen *sscreen, struct si_shader *shader)
 		}
 		break;
 	case TGSI_PROCESSOR_GEOMETRY:
-		si_shader_ctx.radeon_bld.load_input = declare_input_gs;
 		bld_base->emit_fetch_funcs[TGSI_FILE_INPUT] = fetch_input_gs;
 		bld_base->emit_epilogue = si_llvm_emit_gs_epilogue;
 		break;

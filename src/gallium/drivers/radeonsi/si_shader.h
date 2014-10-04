@@ -96,21 +96,6 @@
 
 #define SI_NUM_PARAMS (SI_PARAM_POS_FIXED_PT + 1)
 
-struct si_shader_input {
-	unsigned		name;
-	int			sid;
-	unsigned		param_offset;
-	unsigned		index;
-	unsigned		interpolate;
-};
-
-struct si_shader_output {
-	unsigned		name;
-	int			sid;
-	unsigned		param_offset;
-	unsigned		index;
-};
-
 struct si_shader;
 
 struct si_shader_selector {
@@ -166,12 +151,6 @@ struct si_shader {
 	unsigned			db_shader_control;
 	unsigned			cb_shader_mask;
 	union si_shader_key		key;
-
-	unsigned		ninput;
-	struct si_shader_input	input[40];
-
-	unsigned		noutput;
-	struct si_shader_output	output[40];
 
 	unsigned		nparam;
 	unsigned		vs_output_param_offset[PIPE_MAX_SHADER_OUTPUTS];

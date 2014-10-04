@@ -275,7 +275,8 @@ static void emit_declaration(
 	{
 		unsigned idx;
 		for (idx = decl->Range.First; idx <= decl->Range.Last; idx++) {
-			ctx->load_input(ctx, idx, decl);
+			if (ctx->load_input)
+				ctx->load_input(ctx, idx, decl);
 		}
 	}
 	break;
