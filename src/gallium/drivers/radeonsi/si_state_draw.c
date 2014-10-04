@@ -150,6 +150,7 @@ static void si_shader_gs(struct pipe_context *ctx, struct si_shader *shader)
 static void si_shader_vs(struct pipe_context *ctx, struct si_shader *shader)
 {
 	struct si_context *sctx = (struct si_context *)ctx;
+	struct tgsi_shader_info *info = &shader->selector->info;
 	struct si_pm4_state *pm4;
 	unsigned num_sgprs, num_user_sgprs;
 	unsigned nparams, i, vgpr_comp_cnt;
@@ -182,8 +183,8 @@ static void si_shader_vs(struct pipe_context *ctx, struct si_shader *shader)
 	 * VS is required to export at least one param and r600_shader_from_tgsi()
 	 * takes care of adding a dummy export.
 	 */
-	for (nparams = 0, i = 0 ; i < shader->noutput; i++) {
-		switch (shader->output[i].name) {
+	for (nparams = 0, i = 0 ; i < info->num_outputs; i++) {
+		switch (info->output_semantic_name[i]) {
 		case TGSI_SEMANTIC_CLIPVERTEX:
 		case TGSI_SEMANTIC_POSITION:
 		case TGSI_SEMANTIC_PSIZE:
