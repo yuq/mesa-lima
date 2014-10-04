@@ -1325,93 +1325,83 @@ static void si_llvm_emit_fs_epilogue(struct lp_build_tgsi_context * bld_base)
 	struct si_shader_context * si_shader_ctx = si_shader_context(bld_base);
 	struct si_shader * shader = si_shader_ctx->shader;
 	struct lp_build_context * base = &bld_base->base;
-	struct lp_build_context * uint =
-				&si_shader_ctx->radeon_bld.soa.bld_base.uint_bld;
-	struct tgsi_parse_context *parse = &si_shader_ctx->parse;
+	struct lp_build_context * uint = &bld_base->uint_bld;
+	struct tgsi_shader_info *info = &shader->selector->info;
 	LLVMValueRef args[9];
 	LLVMValueRef last_args[9] = { 0 };
-	unsigned semantic_name;
 	int depth_index = -1, stencil_index = -1, samplemask_index = -1;
+	int i;
 
-	while (!tgsi_parse_end_of_tokens(parse)) {
-		struct tgsi_full_declaration *d =
-					&parse->FullToken.FullDeclaration;
+	for (i = 0; i < info->num_outputs; i++) {
+		unsigned semantic_name = info->output_semantic_name[i];
+		unsigned semantic_index = info->output_semantic_index[i];
 		unsigned target;
-		unsigned index;
 
-		tgsi_parse_token(parse);
-
-		if (parse->FullToken.Token.Type != TGSI_TOKEN_TYPE_DECLARATION)
+		/* Select the correct target */
+		switch (semantic_name) {
+		case TGSI_SEMANTIC_POSITION:
+			depth_index = i;
 			continue;
+		case TGSI_SEMANTIC_STENCIL:
+			stencil_index = i;
+			continue;
+		case TGSI_SEMANTIC_SAMPLEMASK:
+			samplemask_index = i;
+			continue;
+		case TGSI_SEMANTIC_COLOR:
+			target = V_008DFC_SQ_EXP_MRT + semantic_index;
+			if (si_shader_ctx->shader->key.ps.alpha_to_one)
+				LLVMBuildStore(bld_base->base.gallivm->builder,
+					       bld_base->base.one,
+					       si_shader_ctx->radeon_bld.soa.outputs[i][3]);
 
-		semantic_name = d->Semantic.Name;
-		for (index = d->Range.First; index <= d->Range.Last; index++) {
-			/* Select the correct target */
-			switch(semantic_name) {
-			case TGSI_SEMANTIC_POSITION:
-				depth_index = index;
-				continue;
-			case TGSI_SEMANTIC_STENCIL:
-				stencil_index = index;
-				continue;
-			case TGSI_SEMANTIC_SAMPLEMASK:
-				samplemask_index = index;
-				continue;
-			case TGSI_SEMANTIC_COLOR:
-				target = V_008DFC_SQ_EXP_MRT + d->Semantic.Index;
-				if (si_shader_ctx->shader->key.ps.alpha_to_one)
-					LLVMBuildStore(bld_base->base.gallivm->builder,
-						       bld_base->base.one,
-						       si_shader_ctx->radeon_bld.soa.outputs[index][3]);
+			if (semantic_index == 0 &&
+			    si_shader_ctx->shader->key.ps.alpha_func != PIPE_FUNC_ALWAYS)
+				si_alpha_test(bld_base,
+					      si_shader_ctx->radeon_bld.soa.outputs[i]);
+			break;
+		default:
+			target = 0;
+			fprintf(stderr,
+				"Warning: SI unhandled fs output type:%d\n",
+				semantic_name);
+		}
 
-				if (d->Semantic.Index == 0 &&
-				    si_shader_ctx->shader->key.ps.alpha_func != PIPE_FUNC_ALWAYS)
-					si_alpha_test(bld_base,
-						      si_shader_ctx->radeon_bld.soa.outputs[index]);
-				break;
-			default:
-				target = 0;
-				fprintf(stderr,
-					"Warning: SI unhandled fs output type:%d\n",
-					semantic_name);
-			}
+		si_llvm_init_export_args_load(bld_base,
+					      si_shader_ctx->radeon_bld.soa.outputs[i],
+					      target, args);
 
-			si_llvm_init_export_args_load(bld_base,
-						      si_shader_ctx->radeon_bld.soa.outputs[index],
-						      target, args);
-
-			if (semantic_name == TGSI_SEMANTIC_COLOR) {
-				/* If there is an export instruction waiting to be emitted, do so now. */
-				if (last_args[0]) {
-					lp_build_intrinsic(base->gallivm->builder,
-							   "llvm.SI.export",
-							   LLVMVoidTypeInContext(base->gallivm->context),
-							   last_args, 9);
-				}
-
-				/* This instruction will be emitted at the end of the shader. */
-				memcpy(last_args, args, sizeof(args));
-
-				/* Handle FS_COLOR0_WRITES_ALL_CBUFS. */
-				if (shader->selector->info.properties[TGSI_PROPERTY_FS_COLOR0_WRITES_ALL_CBUFS] &&
-				    d->Semantic.Index == 0 &&
-				    si_shader_ctx->shader->key.ps.last_cbuf > 0) {
-					for (int c = 1; c <= si_shader_ctx->shader->key.ps.last_cbuf; c++) {
-						si_llvm_init_export_args_load(bld_base,
-									      si_shader_ctx->radeon_bld.soa.outputs[index],
-									      V_008DFC_SQ_EXP_MRT + c, args);
-						lp_build_intrinsic(base->gallivm->builder,
-								   "llvm.SI.export",
-								   LLVMVoidTypeInContext(base->gallivm->context),
-								   args, 9);
-					}
-				}
-			} else {
+		if (semantic_name == TGSI_SEMANTIC_COLOR) {
+			/* If there is an export instruction waiting to be emitted, do so now. */
+			if (last_args[0]) {
 				lp_build_intrinsic(base->gallivm->builder,
 						   "llvm.SI.export",
 						   LLVMVoidTypeInContext(base->gallivm->context),
-						   args, 9);
+						   last_args, 9);
 			}
+
+			/* This instruction will be emitted at the end of the shader. */
+			memcpy(last_args, args, sizeof(args));
+
+			/* Handle FS_COLOR0_WRITES_ALL_CBUFS. */
+			if (shader->selector->info.properties[TGSI_PROPERTY_FS_COLOR0_WRITES_ALL_CBUFS] &&
+			    semantic_index == 0 &&
+			    si_shader_ctx->shader->key.ps.last_cbuf > 0) {
+				for (int c = 1; c <= si_shader_ctx->shader->key.ps.last_cbuf; c++) {
+					si_llvm_init_export_args_load(bld_base,
+								      si_shader_ctx->radeon_bld.soa.outputs[i],
+								      V_008DFC_SQ_EXP_MRT + c, args);
+					lp_build_intrinsic(base->gallivm->builder,
+							   "llvm.SI.export",
+							   LLVMVoidTypeInContext(base->gallivm->context),
+							   args, 9);
+				}
+			}
+		} else {
+			lp_build_intrinsic(base->gallivm->builder,
+					   "llvm.SI.export",
+					   LLVMVoidTypeInContext(base->gallivm->context),
+					   args, 9);
 		}
 	}
 
