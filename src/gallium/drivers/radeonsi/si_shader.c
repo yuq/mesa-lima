@@ -490,9 +490,9 @@ static void declare_input_fs(
 		return;
 	}
 
-	shader->input[input_index].param_offset = shader->nparam++;
+	shader->ps_input_param_offset[input_index] = shader->nparam++;
 	attr_number = lp_build_const_int32(gallivm,
-					   shader->input[input_index].param_offset);
+					   shader->ps_input_param_offset[input_index]);
 
 	switch (decl->Interp.Interpolate) {
 	case TGSI_INTERPOLATE_CONSTANT:
@@ -534,7 +534,7 @@ static void declare_input_fs(
 		LLVMValueRef face, is_face_positive;
 		LLVMValueRef back_attr_number =
 			lp_build_const_int32(gallivm,
-					     shader->input[input_index].param_offset + 1);
+					     shader->ps_input_param_offset[input_index] + 1);
 
 		face = LLVMGetParam(main_fn, SI_PARAM_FRONT_FACE);
 
@@ -1168,7 +1168,7 @@ handle_semantic:
 		case TGSI_SEMANTIC_COLOR:
 		case TGSI_SEMANTIC_BCOLOR:
 			target = V_008DFC_SQ_EXP_PARAM + param_count;
-			shader->output[i].param_offset = param_count;
+			shader->vs_output_param_offset[i] = param_count;
 			param_count++;
 			break;
 		case TGSI_SEMANTIC_CLIPDIST:
@@ -1183,7 +1183,7 @@ handle_semantic:
 		case TGSI_SEMANTIC_FOG:
 		case TGSI_SEMANTIC_GENERIC:
 			target = V_008DFC_SQ_EXP_PARAM + param_count;
-			shader->output[i].param_offset = param_count;
+			shader->vs_output_param_offset[i] = param_count;
 			param_count++;
 			break;
 		default:

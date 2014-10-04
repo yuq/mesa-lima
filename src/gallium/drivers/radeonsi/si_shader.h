@@ -174,6 +174,9 @@ struct si_shader {
 	struct si_shader_output	output[40];
 
 	unsigned		nparam;
+	unsigned		vs_output_param_offset[PIPE_MAX_SHADER_OUTPUTS];
+	unsigned		ps_input_param_offset[PIPE_MAX_SHADER_INPUTS];
+
 	bool			uses_instanceid;
 	bool			vs_out_misc_write;
 	bool			vs_out_point_size;

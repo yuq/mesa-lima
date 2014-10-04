@@ -502,7 +502,7 @@ static void si_update_spi_map(struct si_context *sctx)
 		unsigned name = psinfo->input_semantic_name[i];
 		unsigned index = psinfo->input_semantic_index[i];
 		unsigned interpolate = psinfo->input_interpolate[i];
-		unsigned param_offset = ps->input[i].param_offset;
+		unsigned param_offset = ps->ps_input_param_offset[i];
 
 		if (name == TGSI_SEMANTIC_POSITION)
 			/* Read from preloaded VGPRs, not parameters */
@@ -525,7 +525,7 @@ bcolor:
 		for (j = 0; j < vsinfo->num_outputs; j++) {
 			if (name == vsinfo->output_semantic_name[j] &&
 			    index == vsinfo->output_semantic_index[j]) {
-				tmp |= S_028644_OFFSET(vs->output[j].param_offset);
+				tmp |= S_028644_OFFSET(vs->vs_output_param_offset[j]);
 				break;
 			}
 		}
