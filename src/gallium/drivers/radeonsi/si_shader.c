@@ -49,7 +49,6 @@ struct si_shader_output_values
 {
 	LLVMValueRef values[4];
 	unsigned name;
-	unsigned index;
 	unsigned sid;
 };
 
@@ -1031,23 +1030,15 @@ static void si_llvm_emit_streamout(struct si_shader_context *shader,
 			if (!num_comps || num_comps > 4)
 				continue;
 
+			if (reg >= noutput)
+				continue;
+
 			/* Load the output as int. */
 			for (j = 0; j < num_comps; j++) {
-				unsigned outidx = 0;
-
-				while (outidx < noutput && outputs[outidx].index != reg)
-					outidx++;
-
-				if (outidx < noutput)
-					out[j] = LLVMBuildBitCast(builder,
-								  outputs[outidx].values[start+j],
-								  i32, "");
-				else
-					out[j] = NULL;
+				out[j] = LLVMBuildBitCast(builder,
+							  outputs[reg].values[start+j],
+						i32, "");
 			}
-
-			if (!out[0])
-				continue;
 
 			/* Pack the output. */
 			LLVMValueRef vdata = NULL;
@@ -1317,7 +1308,6 @@ static void si_llvm_emit_vs_epilogue(struct lp_build_tgsi_context * bld_base)
 	for (i = 0; i < info->num_outputs; i++) {
 		outputs[i].name = info->output_semantic_name[i];
 		outputs[i].sid = info->output_semantic_index[i];
-		outputs[i].index = i;
 
 		for (j = 0; j < 4; j++)
 			outputs[i].values[j] =
@@ -2656,7 +2646,6 @@ static int si_generate_gs_copy_shader(struct si_screen *sscreen,
 		unsigned chan;
 
 		outputs[i].name = gsinfo->output_semantic_name[i];
-		outputs[i].index = i;
 		outputs[i].sid = gsinfo->output_semantic_index[i];
 
 		for (chan = 0; chan < 4; chan++) {
