@@ -51,7 +51,6 @@ struct si_shader_output_values
 	unsigned name;
 	unsigned index;
 	unsigned sid;
-	unsigned usage;
 };
 
 struct si_shader_context
@@ -256,7 +255,6 @@ static int si_store_shader_io_attribs(struct si_shader *shader,
 		shader->output[i].name = d->Semantic.Name;
 		shader->output[i].sid = d->Semantic.Index;
 		shader->output[i].index = d->Range.First;
-		shader->output[i].usage = d->Declaration.UsageMask;
 		break;
 	}
 
@@ -1135,7 +1133,7 @@ static void si_llvm_export_vs(struct lp_build_tgsi_context *bld_base,
 	LLVMValueRef args[9];
 	LLVMValueRef pos_args[4][9] = { { 0 } };
 	LLVMValueRef psize_value = NULL, edgeflag_value = NULL, layer_value = NULL;
-	unsigned semantic_name, semantic_index, semantic_usage;
+	unsigned semantic_name, semantic_index;
 	unsigned target;
 	unsigned param_count = 0;
 	unsigned pos_idx;
@@ -1148,7 +1146,6 @@ static void si_llvm_export_vs(struct lp_build_tgsi_context *bld_base,
 	for (i = 0; i < noutput; i++) {
 		semantic_name = outputs[i].name;
 		semantic_index = outputs[i].sid;
-		semantic_usage = outputs[i].usage;
 
 handle_semantic:
 		/* Select the correct target */
@@ -1182,7 +1179,7 @@ handle_semantic:
 			      (1 << semantic_index)))
 				continue;
 			shader->clip_dist_write |=
-				semantic_usage << (semantic_index << 2);
+				0xf << (semantic_index * 4);
 			target = V_008DFC_SQ_EXP_POS + 2 + semantic_index;
 			break;
 		case TGSI_SEMANTIC_CLIPVERTEX:
@@ -1394,7 +1391,6 @@ static void si_llvm_emit_vs_epilogue(struct lp_build_tgsi_context * bld_base)
 			outputs[noutput].index = index;
 			outputs[noutput].name = d->Semantic.Name;
 			outputs[noutput].sid = d->Semantic.Index;
-			outputs[noutput].usage = d->Declaration.UsageMask;
 
 			for (i = 0; i < 4; i++)
 				outputs[noutput].values[i] =
@@ -2758,7 +2754,6 @@ static int si_generate_gs_copy_shader(struct si_screen *sscreen,
 		outputs[i].name = out->name;
 		outputs[i].index = out->index;
 		outputs[i].sid = out->sid;
-		outputs[i].usage = out->usage;
 
 		for (chan = 0; chan < 4; chan++) {
 			args[2] = lp_build_const_int32(gallivm,

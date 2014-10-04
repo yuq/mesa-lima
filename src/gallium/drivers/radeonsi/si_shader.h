@@ -110,7 +110,6 @@ struct si_shader_output {
 	int			sid;
 	unsigned		param_offset;
 	unsigned		index;
-	unsigned		usage;
 };
 
 struct si_shader;
