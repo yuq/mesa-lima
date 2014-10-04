@@ -228,6 +228,7 @@ static void si_shader_vs(struct pipe_context *ctx, struct si_shader *shader)
 static void si_shader_ps(struct pipe_context *ctx, struct si_shader *shader)
 {
 	struct si_context *sctx = (struct si_context *)ctx;
+	struct tgsi_shader_info *info = &shader->selector->info;
 	struct si_pm4_state *pm4;
 	unsigned i, spi_ps_in_control;
 	unsigned num_sgprs, num_user_sgprs;
@@ -240,10 +241,11 @@ static void si_shader_ps(struct pipe_context *ctx, struct si_shader *shader)
 	if (pm4 == NULL)
 		return;
 
-	for (i = 0; i < shader->ninput; i++) {
-		switch (shader->input[i].name) {
+	for (i = 0; i < info->num_inputs; i++) {
+		switch (info->input_semantic_name[i]) {
 		case TGSI_SEMANTIC_POSITION:
-			if (shader->input[i].centroid) {
+			if (info->input_interpolate_loc[i] ==
+			    TGSI_INTERPOLATE_LOC_CENTROID) {
 				/* SPI_BARYC_CNTL.POS_FLOAT_LOCATION
 				 * Possible vaules:
 				 * 0 -> Position = pixel center (default)

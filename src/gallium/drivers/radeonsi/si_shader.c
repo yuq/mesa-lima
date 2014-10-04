@@ -246,7 +246,6 @@ static int si_store_shader_io_attribs(struct si_shader *shader,
 		shader->input[i].sid = d->Semantic.Index;
 		shader->input[i].index = d->Range.First;
 		shader->input[i].interpolate = d->Interp.Interpolate;
-		shader->input[i].centroid = d->Interp.Location == TGSI_INTERPOLATE_LOC_CENTROID;
 		return -1;
 
 	case TGSI_FILE_OUTPUT:

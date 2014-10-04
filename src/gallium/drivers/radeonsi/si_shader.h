@@ -102,7 +102,6 @@ struct si_shader_input {
 	unsigned		param_offset;
 	unsigned		index;
 	unsigned		interpolate;
-	bool			centroid;
 };
 
 struct si_shader_output {
