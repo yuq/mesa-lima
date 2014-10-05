@@ -33,6 +33,7 @@
 #include "main/macros.h"
 #include "st_context.h"
 #include "st_atom.h"
+#include "st_debug.h"
 #include "st_program.h"
 #include "pipe/p_context.h"
 #include "pipe/p_defines.h"
@@ -119,8 +120,14 @@ static void update_raster_state( struct st_context *st )
    /* _NEW_POLYGON
     */
    {
-      raster->fill_front = translate_fill( ctx->Polygon.FrontMode );
-      raster->fill_back = translate_fill( ctx->Polygon.BackMode );
+      if (ST_DEBUG & DEBUG_WIREFRAME) {
+         raster->fill_front = PIPE_POLYGON_MODE_LINE;
+         raster->fill_back = PIPE_POLYGON_MODE_LINE;
+      }
+      else {
+         raster->fill_front = translate_fill( ctx->Polygon.FrontMode );
+         raster->fill_back = translate_fill( ctx->Polygon.BackMode );
+      }
 
       /* Simplify when culling is active:
        */
