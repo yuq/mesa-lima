@@ -72,6 +72,7 @@ struct si_shader_context
 	int param_streamout_offset[4];
 	int param_vertex_id;
 	int param_instance_id;
+	int param_es2gs_offset;
 	LLVMTargetMachineRef tm;
 	LLVMValueRef const_md;
 	LLVMValueRef const_resource[SI_NUM_CONST_BUFFERS];
@@ -1332,7 +1333,7 @@ static void si_llvm_emit_es_epilogue(struct lp_build_tgsi_context * bld_base)
 	struct tgsi_shader_info *info = &es->selector->info;
 	LLVMTypeRef i32 = LLVMInt32TypeInContext(gallivm->context);
 	LLVMValueRef soffset = LLVMGetParam(si_shader_ctx->radeon_bld.main_fn,
-					    SI_PARAM_ES2GS_OFFSET);
+					    si_shader_ctx->param_es2gs_offset);
 	unsigned chan;
 	int i;
 
@@ -2385,8 +2386,7 @@ static void create_function(struct si_shader_context *si_shader_ctx)
 		num_params = SI_PARAM_START_INSTANCE+1;
 
 		if (shader->key.vs.as_es) {
-			params[SI_PARAM_ES2GS_OFFSET] = i32;
-			num_params++;
+			params[si_shader_ctx->param_es2gs_offset = num_params++] = i32;
 		} else {
 			if (shader->is_gs_copy_shader) {
 				last_array_pointer = SI_PARAM_CONST;

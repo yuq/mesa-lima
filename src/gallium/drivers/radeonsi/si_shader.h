@@ -62,9 +62,6 @@ struct radeon_shader_reloc;
 #define SI_PARAM_START_INSTANCE	6
 /* the other VS parameters are assigned dynamically */
 
-/* ES only parameters */
-#define SI_PARAM_ES2GS_OFFSET	7
-
 /* GS only parameters */
 #define SI_PARAM_GS2VS_OFFSET	4
 #define SI_PARAM_GS_WAVE_ID	5
