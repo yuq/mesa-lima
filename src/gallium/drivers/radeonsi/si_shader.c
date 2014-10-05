@@ -68,8 +68,8 @@ struct si_shader_context
 	LLVMValueRef const_resource[SI_NUM_CONST_BUFFERS];
 	LLVMValueRef ddxy_lds;
 	LLVMValueRef *constants[SI_NUM_CONST_BUFFERS];
-	LLVMValueRef *resources;
-	LLVMValueRef *samplers;
+	LLVMValueRef resources[SI_NUM_SAMPLER_VIEWS];
+	LLVMValueRef samplers[SI_NUM_SAMPLER_STATES];
 	LLVMValueRef so_buffers[4];
 	LLVMValueRef gs_next_vertex;
 };
@@ -2435,10 +2435,6 @@ static void preload_samplers(struct si_shader_context *si_shader_ctx)
 	if (num_samplers == 0)
 		return;
 
-	/* Allocate space for the values */
-	si_shader_ctx->resources = CALLOC(SI_NUM_SAMPLER_VIEWS, sizeof(LLVMValueRef));
-	si_shader_ctx->samplers = CALLOC(num_samplers, sizeof(LLVMValueRef));
-
 	res_ptr = LLVMGetParam(si_shader_ctx->radeon_bld.main_fn, SI_PARAM_RESOURCE);
 	samp_ptr = LLVMGetParam(si_shader_ctx->radeon_bld.main_fn, SI_PARAM_SAMPLER);
 
@@ -2790,8 +2786,6 @@ int si_shader_create(struct si_screen *sscreen, struct si_shader *shader)
 out:
 	for (int i = 0; i < SI_NUM_CONST_BUFFERS; i++)
 		FREE(si_shader_ctx.constants[i]);
-	FREE(si_shader_ctx.resources);
-	FREE(si_shader_ctx.samplers);
 
 	return r;
 }
