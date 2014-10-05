@@ -371,8 +371,8 @@ static void emit_declaration(
 	}
 }
 
-static LLVMValueRef radeon_llvm_saturate(struct lp_build_tgsi_context *bld_base,
-                                         LLVMValueRef value)
+LLVMValueRef radeon_llvm_saturate(struct lp_build_tgsi_context *bld_base,
+                                  LLVMValueRef value)
 {
 	struct lp_build_emit_data clamp_emit_data;
 
@@ -386,8 +386,7 @@ static LLVMValueRef radeon_llvm_saturate(struct lp_build_tgsi_context *bld_base,
 				  &clamp_emit_data);
 }
 
-static void
-emit_store(
+void radeon_llvm_emit_store(
 	struct lp_build_tgsi_context * bld_base,
 	const struct tgsi_full_instruction * inst,
 	const struct tgsi_opcode_info * info,
@@ -1542,7 +1541,7 @@ void radeon_llvm_context_init(struct radeon_llvm_context * ctx)
 	}
 
 	bld_base->soa = 1;
-	bld_base->emit_store = emit_store;
+	bld_base->emit_store = radeon_llvm_emit_store;
 	bld_base->emit_swizzle = emit_swizzle;
 	bld_base->emit_declaration = emit_declaration;
 	bld_base->emit_immediate = emit_immediate;
