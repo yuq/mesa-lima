@@ -2338,6 +2338,17 @@ static void si_llvm_emit_primitive(
 			LLVMNoUnwindAttribute);
 }
 
+static void si_llvm_emit_barrier(const struct lp_build_tgsi_action *action,
+				 struct lp_build_tgsi_context *bld_base,
+				 struct lp_build_emit_data *emit_data)
+{
+	struct gallivm_state *gallivm = bld_base->base.gallivm;
+
+	build_intrinsic(gallivm->builder, "llvm.AMDGPU.barrier.local",
+			LLVMVoidTypeInContext(gallivm->context), NULL, 0,
+			LLVMNoUnwindAttribute);
+}
+
 static const struct lp_build_tgsi_action tex_action = {
 	.fetch_args = tex_fetch_args,
 	.emit = build_tex_intrinsic,
@@ -2966,6 +2977,7 @@ int si_shader_create(struct si_screen *sscreen, LLVMTargetMachineRef tm,
 
 	bld_base->op_actions[TGSI_OPCODE_EMIT].emit = si_llvm_emit_vertex;
 	bld_base->op_actions[TGSI_OPCODE_ENDPRIM].emit = si_llvm_emit_primitive;
+	bld_base->op_actions[TGSI_OPCODE_BARRIER].emit = si_llvm_emit_barrier;
 
 	if (HAVE_LLVM >= 0x0306) {
 		bld_base->op_actions[TGSI_OPCODE_MAX].emit = build_tgsi_intrinsic_nomem;
