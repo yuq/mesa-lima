@@ -5214,6 +5214,7 @@ get_mesa_program(struct gl_context *ctx,
    v->have_sqrt = pscreen->get_shader_param(pscreen, ptarget,
                                             PIPE_SHADER_CAP_TGSI_SQRT_SUPPORTED);
 
+   _mesa_copy_linked_program_data(shader->Stage, shader_program, prog);
    _mesa_generate_parameters_list_for_uniforms(shader_program, shader,
 					       prog->Parameters);
 
@@ -5319,10 +5320,6 @@ get_mesa_program(struct gl_context *ctx,
    case GL_GEOMETRY_SHADER:
       stgp = (struct st_geometry_program *)prog;
       stgp->glsl_to_tgsi = v;
-      stgp->Base.InputType = shader_program->Geom.InputType;
-      stgp->Base.OutputType = shader_program->Geom.OutputType;
-      stgp->Base.VerticesOut = shader_program->Geom.VerticesOut;
-      stgp->Base.Invocations = shader_program->Geom.Invocations;
       break;
    default:
       assert(!"should not be reached");
