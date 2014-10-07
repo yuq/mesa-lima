@@ -1126,14 +1126,13 @@ if test "x$enable_dri" = xyes; then
     fi
 
     # Check for expat
-    PKG_CHECK_EXISTS([expat], [have_expat=yes], [have_expat=no])
-    if test "x$have_expat" = "xyes"; then
-       PKG_CHECK_MODULES([EXPAT], [expat], [],
-                         AC_MSG_ERROR([Expat required for DRI.]))
-    else
-       # expat version 2.0 and earlier do not provide expat.pc
-       EXPAT_LIBS=-lexpat
-    fi
+    PKG_CHECK_MODULES([EXPAT], [expat], [],
+        # expat version 2.0 and earlier do not provide expat.pc
+        [AC_CHECK_HEADER([expat.h],[],
+                         [AC_MSG_ERROR([Expat headers required for DRI not found])])
+         AC_CHECK_LIB([expat],[XML_ParserCreate],[],
+                     [AC_MSG_ERROR([Expat library required for DRI not found])])
+         EXPAT_LIBS="-lexpat"])
 
     DRICOMMON_NEED_LIBDRM=no
     # If we are building any DRI driver other than swrast.
