@@ -179,8 +179,8 @@ brw_alloc_reg_set(struct intel_screen *screen, int reg_width)
 
             ra_reg_to_grf[reg] = j * 2;
 
-            for (int base_reg = j * 2;
-                 base_reg < j * 2 + class_sizes[i];
+            for (int base_reg = j;
+                 base_reg < j + (class_sizes[i] + 1) / 2;
                  base_reg++) {
                ra_add_transitive_reg_conflict(regs, base_reg, reg);
             }
