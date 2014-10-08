@@ -80,8 +80,10 @@ namespace clover {
 
          template<typename C>
          vector(const C &v) :
-            p(alloc(v.size(), &*v.begin(), v.size())),
-            _size(v.size()) , _capacity(v.size()) {
+            p(alloc(v.size(), NULL, 0)), _size(0),
+            _capacity(v.size()) {
+            for (typename C::const_iterator it = v.begin(); it != v.end(); ++it)
+               new(&p[_size++]) T(*it);
          }
 
          ~vector() {
