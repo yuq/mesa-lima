@@ -36,6 +36,21 @@ namespace clover {
       //       source.  Get rid of this as soon as everything can be
       //       compiled as C++11.
 
+      namespace detail {
+         template<typename R, typename S>
+         bool
+         ranges_equal(const R &a, const S &b) {
+            if (a.size() != b.size())
+               return false;
+
+            for (size_t i = 0; i < a.size(); ++i)
+               if (a[i] != b[i])
+                  return false;
+
+            return true;
+         }
+      }
+
       template<typename T>
       class vector {
       protected:
@@ -99,6 +114,11 @@ namespace clover {
             _capacity = v._size;
 
             return *this;
+         }
+
+         bool
+         operator==(const vector &v) const {
+            return detail::ranges_equal(*this, v);
          }
 
          void
@@ -197,6 +217,11 @@ namespace clover {
 
          template<typename C>
          vector_ref(C &v) : p(&*v.begin()), n(v.size()) {
+         }
+
+         bool
+         operator==(const vector_ref &v) const {
+            return detail::ranges_equal(*this, v);
          }
 
          size_type
@@ -306,6 +331,11 @@ namespace clover {
             return std::string(v.begin(), v.end());
          }
 
+         bool
+         operator==(const string &s) const {
+            return this->v == s.v;
+         }
+
          void
          reserve(size_type n) {
             v.reserve(n);
@@ -381,19 +411,6 @@ namespace clover {
       private:
          mutable vector<char> v;
       };
-
-      template<typename T>
-      bool
-      operator==(const vector_ref<T> &a, const vector_ref<T> &b) {
-         if (a.size() != b.size())
-            return false;
-
-         for (size_t i = 0; i < a.size(); ++i)
-            if (a[i] != b[i])
-               return false;
-
-         return true;
-      }
 
       class exception {
       public:
