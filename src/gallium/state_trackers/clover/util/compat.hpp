@@ -412,6 +412,15 @@ namespace clover {
          mutable vector<char> v;
       };
 
+      template<typename T, typename S>
+      struct pair {
+         pair(T first, S second) :
+            first(first), second(second) {}
+
+         S first;
+         T second;
+      };
+
       class exception {
       public:
          exception() {}
