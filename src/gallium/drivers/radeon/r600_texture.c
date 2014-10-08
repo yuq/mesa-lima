@@ -924,7 +924,7 @@ static void *r600_texture_transfer_map(struct pipe_context *ctx,
 	 * the CPU is much happier reading out of cached system memory
 	 * than uncached VRAM.
 	 */
-	if (rtex->surface.level[level].mode >= RADEON_SURF_MODE_1D)
+	if (rtex->surface.level[0].mode >= RADEON_SURF_MODE_1D)
 		use_staging_texture = TRUE;
 
 	/* Untiled buffers in VRAM, which is slow for CPU reads */
