@@ -32,6 +32,7 @@
 #include "core/error.hpp"
 #include "core/property.hpp"
 #include "api/dispatch.hpp"
+#include "util/macros.h"
 
 ///
 /// Main namespace of the CL state tracker.
