@@ -1010,6 +1010,50 @@ _mesa_format_to_type_and_comps(mesa_format format,
       *comps = 1;
       return;
 
+   case MESA_FORMAT_R3G3B2_UNORM:
+      *datatype = GL_UNSIGNED_BYTE_2_3_3_REV;
+      *comps = 3;
+      return;
+   case MESA_FORMAT_A4B4G4R4_UNORM:
+      *datatype = GL_UNSIGNED_SHORT_4_4_4_4;
+      *comps = 4;
+      return;
+
+   case MESA_FORMAT_R4G4B4A4_UNORM:
+      *datatype = GL_UNSIGNED_SHORT_4_4_4_4;
+      *comps = 4;
+      return;
+   case MESA_FORMAT_R1G5B5A5_UNORM:
+      *datatype = GL_UNSIGNED_SHORT_5_5_5_1;
+      *comps = 4;
+      return;
+   case MESA_FORMAT_R5G5B5A1_UNORM:
+      *datatype = GL_UNSIGNED_SHORT_1_5_5_5_REV;
+      *comps = 4;
+      return;
+   case MESA_FORMAT_A5B5G5R1_UNORM:
+      *datatype = GL_UNSIGNED_SHORT_1_5_5_5_REV;
+      *comps = 4;
+      return;
+   case MESA_FORMAT_A2B10G10R10_UNORM:
+   case MESA_FORMAT_A2B10G10R10_UINT:
+      *datatype = GL_UNSIGNED_INT_10_10_10_2;
+      *comps = 4;
+      return;
+   case MESA_FORMAT_A2R10G10B10_UNORM:
+   case MESA_FORMAT_A2R10G10B10_UINT:
+      *datatype = GL_UNSIGNED_INT_10_10_10_2;
+      *comps = 4;
+      return;
+   case MESA_FORMAT_R2G10B10A10_UNORM:
+      *datatype = GL_UNSIGNED_INT_10_10_10_2;
+      *comps = 4;
+      return;
+   case MESA_FORMAT_A10B10G10R2_UNORM:
+      *datatype = GL_UNSIGNED_INT_2_10_10_10_REV;
+      *comps = 4;
+      return;
+
    case MESA_FORMAT_B2G3R3_UNORM:
       *datatype = GL_UNSIGNED_BYTE_3_3_2;
       *comps = 3;
@@ -1652,6 +1696,66 @@ _mesa_format_matches_format_and_type(mesa_format mesa_format,
 
    case MESA_FORMAT_B2G3R3_UNORM:
       return format == GL_RGB && type == GL_UNSIGNED_BYTE_3_3_2;
+
+   case MESA_FORMAT_R3G3B2_UNORM:
+      return format == GL_RGB && type == GL_UNSIGNED_BYTE_2_3_3_REV;
+
+   case MESA_FORMAT_A4B4G4R4_UNORM:
+      if (format == GL_RGBA && type == GL_UNSIGNED_SHORT_4_4_4_4 && !swapBytes)
+         return GL_TRUE;
+
+      if (format == GL_RGBA && type == GL_UNSIGNED_SHORT_4_4_4_4_REV && swapBytes)
+         return GL_TRUE;
+
+      if (format == GL_ABGR_EXT && type == GL_UNSIGNED_SHORT_4_4_4_4_REV && !swapBytes)
+         return GL_TRUE;
+
+      if (format == GL_ABGR_EXT && type == GL_UNSIGNED_SHORT_4_4_4_4 && swapBytes)
+         return GL_TRUE;
+
+      return GL_FALSE;
+
+   case MESA_FORMAT_R4G4B4A4_UNORM:
+      if (format == GL_ABGR_EXT && type == GL_UNSIGNED_SHORT_4_4_4_4 && !swapBytes)
+         return GL_TRUE;
+
+      if (format == GL_ABGR_EXT && type == GL_UNSIGNED_SHORT_4_4_4_4_REV && swapBytes)
+         return GL_TRUE;
+
+      if (format == GL_RGBA && type == GL_UNSIGNED_SHORT_4_4_4_4_REV && !swapBytes)
+         return GL_TRUE;
+
+      if (format == GL_RGBA && type == GL_UNSIGNED_SHORT_4_4_4_4 && swapBytes)
+         return GL_TRUE;
+
+      return GL_FALSE;
+
+   case MESA_FORMAT_R1G5B5A5_UNORM:
+      return format == GL_ABGR_EXT && type == GL_UNSIGNED_SHORT_5_5_5_1;
+
+   case MESA_FORMAT_R5G5B5A1_UNORM:
+      return format == GL_RGBA && type == GL_UNSIGNED_SHORT_1_5_5_5_REV;
+
+   case MESA_FORMAT_A5B5G5R1_UNORM:
+      return format == GL_ABGR_EXT && type == GL_UNSIGNED_SHORT_1_5_5_5_REV;
+
+   case MESA_FORMAT_A2B10G10R10_UNORM:
+      return format == GL_RGBA && type == GL_UNSIGNED_INT_10_10_10_2;
+
+   case MESA_FORMAT_A2B10G10R10_UINT:
+      return format == GL_RGBA_INTEGER_EXT && type == GL_UNSIGNED_INT_10_10_10_2;
+
+   case MESA_FORMAT_A2R10G10B10_UNORM:
+      return format == GL_BGRA && type == GL_UNSIGNED_INT_10_10_10_2;
+
+   case MESA_FORMAT_A2R10G10B10_UINT:
+      return format == GL_BGRA_INTEGER_EXT && type == GL_UNSIGNED_INT_10_10_10_2;
+
+   case MESA_FORMAT_R2G10B10A10_UNORM:
+      return format == GL_ABGR_EXT && type == GL_UNSIGNED_INT_10_10_10_2;
+
+   case MESA_FORMAT_A10B10G10R2_UNORM:
+      return format == GL_ABGR_EXT && type == GL_UNSIGNED_INT_2_10_10_10_REV;
 
    case MESA_FORMAT_A_UNORM8:
       return format == GL_ALPHA && type == GL_UNSIGNED_BYTE;

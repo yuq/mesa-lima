@@ -88,6 +88,17 @@ MESA_FORMAT_X8_UINT_Z24_UNORM             , packed, 1, 1, un24, x8  ,     ,     
 MESA_FORMAT_Z24_UNORM_S8_UINT             , packed, 1, 1, u8  , un24,     ,     , yx__, zs
 MESA_FORMAT_Z24_UNORM_X8_UINT             , packed, 1, 1, x8  , un24,     ,     , y___, zs
 
+MESA_FORMAT_R3G3B2_UNORM                  , packed, 1, 1, un3 , un3 , un2 ,     , xyz1, rgb
+MESA_FORMAT_A4B4G4R4_UNORM                , packed, 1, 1, un4 , un4 , un4 , un4 , wzyx, rgb
+MESA_FORMAT_R4G4B4A4_UNORM                , packed, 1, 1, un4 , un4 , un4 , un4 , xyzw, rgb
+MESA_FORMAT_R1G5B5A5_UNORM                , packed, 1, 1, un1 , un5 , un5 , un5 , xyzw, rgb
+MESA_FORMAT_R5G5B5A1_UNORM                , packed, 1, 1, un5 , un5 , un5 , un1 , xyzw, rgb
+MESA_FORMAT_A5B5G5R1_UNORM                , packed, 1, 1, un5 , un5 , un5 , un1 , wzyx, rgb
+MESA_FORMAT_A2B10G10R10_UNORM             , packed, 1, 1, un2 , un10, un10, un10, wzyx, rgb
+MESA_FORMAT_A2R10G10B10_UNORM             , packed, 1, 1, un2 , un10, un10, un10, yzwx, rgb
+MESA_FORMAT_R2G10B10A10_UNORM             , packed, 1, 1, un2 , un10, un10, un10, xyzw, rgb
+MESA_FORMAT_A10B10G10R2_UNORM             , packed, 1, 1, un10, un10, un10, un2 , wzyx, rgb
+
 MESA_FORMAT_YCBCR                         , other , 1, 1, x16 ,     ,     ,     , xyzw, yuv
 MESA_FORMAT_YCBCR_REV                     , other , 1, 1, x16 ,     ,     ,     , xyzw, yuv
 
@@ -180,6 +191,8 @@ MESA_FORMAT_Z_FLOAT32                     , array , 1, 1, f32 ,     ,     ,     
 # Packed signed/unsigned non-normalized integer formats
 MESA_FORMAT_B10G10R10A2_UINT              , packed, 1, 1, u10 , u10 , u10 , u2  , zyxw, rgb
 MESA_FORMAT_R10G10B10A2_UINT              , packed, 1, 1, u10 , u10 , u10 , u2  , xyzw, rgb
+MESA_FORMAT_A2B10G10R10_UINT              , packed, 1, 1, u2  , u10 , u10 , u10 , wzyx, rgb
+MESA_FORMAT_A2R10G10B10_UINT              , packed, 1, 1, u2  , u10 , u10 , u10 , yzwx, rgb
 
 # Array signed/unsigned non-normalized integer formats
 MESA_FORMAT_A_UINT8                       , array , 1, 1, u8  ,     ,     ,     , 000x, rgb
