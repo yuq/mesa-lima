@@ -308,24 +308,20 @@ namespace {
       bitcode_ostream.flush();
 
       for (unsigned i = 0; i < kernels.size(); ++i) {
-         llvm::Function *kernel_func;
-         std::string kernel_name;
+         llvm::Function *kernel_func = kernels[i];
+         const std::string kernel_name = kernel_func->getName();
+#if HAVE_LLVM < 0x0302
+         llvm::TargetData TD(kernel_func->getParent());
+#elif HAVE_LLVM < 0x0305
+         llvm::DataLayout TD(kernel_func->getParent()->getDataLayout());
+#else
+         llvm::DataLayout TD(mod);
+#endif
          compat::vector<module::argument> args;
-
-         kernel_func = kernels[i];
-         kernel_name = kernel_func->getName();
 
          for (llvm::Function::arg_iterator I = kernel_func->arg_begin(),
                                       E = kernel_func->arg_end(); I != E; ++I) {
             llvm::Argument &arg = *I;
-#if HAVE_LLVM < 0x0302
-            llvm::TargetData TD(kernel_func->getParent());
-#elif HAVE_LLVM < 0x0305
-            llvm::DataLayout TD(kernel_func->getParent()->getDataLayout());
-#else
-            llvm::DataLayout TD(mod);
-#endif
-
             llvm::Type *arg_type = arg.getType();
             const unsigned arg_store_size = TD.getTypeStoreSize(arg_type);
 
@@ -383,6 +379,26 @@ namespace {
                                    target_size, target_align, ext_type));
             }
          }
+
+         // Append implicit arguments.  XXX - The types, ordering and
+         // vector size of the implicit arguments should depend on the
+         // target according to the selected calling convention.
+         llvm::Type *size_type =
+            TD.getSmallestLegalIntType(mod->getContext(), sizeof(cl_uint) * 8);
+
+         args.push_back(
+            module::argument(module::argument::scalar, sizeof(cl_uint),
+                             TD.getTypeStoreSize(size_type),
+                             TD.getABITypeAlignment(size_type),
+                             module::argument::zero_ext,
+                             module::argument::grid_dimension));
+
+         args.push_back(
+            module::argument(module::argument::scalar, sizeof(cl_uint),
+                             TD.getTypeStoreSize(size_type),
+                             TD.getABITypeAlignment(size_type),
+                             module::argument::zero_ext,
+                             module::argument::grid_offset));
 
          m.syms.push_back(module::symbol(kernel_name, 0, i, args ));
       }
