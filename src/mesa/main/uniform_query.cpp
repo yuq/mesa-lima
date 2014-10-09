@@ -583,12 +583,12 @@ _mesa_propagate_uniforms_to_driver_storage(struct gl_uniform_storage *uni,
 extern "C" void
 _mesa_uniform(struct gl_context *ctx, struct gl_shader_program *shProg,
 	      GLint location, GLsizei count,
-              const GLvoid *values, GLenum type)
+              const GLvoid *values,
+              enum glsl_base_type basicType,
+              unsigned src_components)
 {
    unsigned offset;
    unsigned components;
-   unsigned src_components;
-   enum glsl_base_type basicType;
 
    struct gl_uniform_storage *const uni =
       validate_uniform_parameters(ctx, shProg, location, count,
@@ -598,73 +598,6 @@ _mesa_uniform(struct gl_context *ctx, struct gl_shader_program *shProg,
 
    /* Verify that the types are compatible.
     */
-   switch (type) {
-   case GL_FLOAT:
-      basicType = GLSL_TYPE_FLOAT;
-      src_components = 1;
-      break;
-   case GL_FLOAT_VEC2:
-      basicType = GLSL_TYPE_FLOAT;
-      src_components = 2;
-      break;
-   case GL_FLOAT_VEC3:
-      basicType = GLSL_TYPE_FLOAT;
-      src_components = 3;
-      break;
-   case GL_FLOAT_VEC4:
-      basicType = GLSL_TYPE_FLOAT;
-      src_components = 4;
-      break;
-   case GL_UNSIGNED_INT:
-      basicType = GLSL_TYPE_UINT;
-      src_components = 1;
-      break;
-   case GL_UNSIGNED_INT_VEC2:
-      basicType = GLSL_TYPE_UINT;
-      src_components = 2;
-      break;
-   case GL_UNSIGNED_INT_VEC3:
-      basicType = GLSL_TYPE_UINT;
-      src_components = 3;
-      break;
-   case GL_UNSIGNED_INT_VEC4:
-      basicType = GLSL_TYPE_UINT;
-      src_components = 4;
-      break;
-   case GL_INT:
-      basicType = GLSL_TYPE_INT;
-      src_components = 1;
-      break;
-   case GL_INT_VEC2:
-      basicType = GLSL_TYPE_INT;
-      src_components = 2;
-      break;
-   case GL_INT_VEC3:
-      basicType = GLSL_TYPE_INT;
-      src_components = 3;
-      break;
-   case GL_INT_VEC4:
-      basicType = GLSL_TYPE_INT;
-      src_components = 4;
-      break;
-   case GL_BOOL:
-   case GL_BOOL_VEC2:
-   case GL_BOOL_VEC3:
-   case GL_BOOL_VEC4:
-   case GL_FLOAT_MAT2:
-   case GL_FLOAT_MAT2x3:
-   case GL_FLOAT_MAT2x4:
-   case GL_FLOAT_MAT3x2:
-   case GL_FLOAT_MAT3:
-   case GL_FLOAT_MAT3x4:
-   case GL_FLOAT_MAT4x2:
-   case GL_FLOAT_MAT4x3:
-   case GL_FLOAT_MAT4:
-   default:
-      _mesa_problem(NULL, "Invalid type in %s", __func__);
-      return;
-   }
-
    if (uni->type->is_sampler()) {
       components = 1;
    } else {
