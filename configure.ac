@@ -1806,9 +1806,9 @@ dnl Directory for VA libs
 
 AC_ARG_WITH([va-libdir],
     [AS_HELP_STRING([--with-va-libdir=DIR],
-        [directory for the VA libraries @<:@default=`pkg-config libva --variable=driverdir`@:>@])],
+        [directory for the VA libraries @<:@${libdir}/dri@:>@])],
     [VA_LIB_INSTALL_DIR="$withval"],
-    [VA_LIB_INSTALL_DIR=`pkg-config libva --variable=driverdir`])
+    [VA_LIB_INSTALL_DIR="${libdir}/dri"])
 AC_SUBST([VA_LIB_INSTALL_DIR])
 
 dnl
