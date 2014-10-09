@@ -1438,7 +1438,6 @@ AM_CONDITIONAL(HAVE_ST_OMX, test "x$enable_omx" = xyes)
 if test "x$enable_va" = xyes; then
     PKG_CHECK_MODULES([VA], [libva >= 0.35.0 x11-xcb xcb-dri2 >= $XCBDRI2_REQUIRED],
                       [VA_LIBS="`$PKG_CONFIG --libs x11-xcb xcb-dri2`"])
-    GALLIUM_STATE_TRACKERS_DIRS="$GALLIUM_STATE_TRACKERS_DIRS va"
     enable_gallium_loader=$enable_shared_pipe_drivers
 fi
 AM_CONDITIONAL(HAVE_ST_VA, test "x$enable_va" = xyes)
