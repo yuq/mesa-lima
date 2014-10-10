@@ -31,6 +31,79 @@ FN_NAME(struct gl_context *ctx,
    int i;
 
    switch (dstFormat) {
+#ifdef FLOAT_SRC_CONVERT
+   case GL_RED:
+      for (i=0;i<n;i++)
+         dst[i] = FLOAT_SRC_CONVERT(rgba[i][RCOMP]);
+      break;
+   case GL_GREEN:
+      for (i=0;i<n;i++)
+         dst[i] = FLOAT_SRC_CONVERT(rgba[i][GCOMP]);
+      break;
+   case GL_BLUE:
+      for (i=0;i<n;i++)
+         dst[i] = FLOAT_SRC_CONVERT(rgba[i][BCOMP]);
+      break;
+   case GL_ALPHA:
+      for (i=0;i<n;i++)
+                     dst[i] = FLOAT_SRC_CONVERT(rgba[i][ACOMP]);
+      break;
+   case GL_LUMINANCE:
+      for (i=0;i<n;i++)
+         dst[i] = FLOAT_SRC_CONVERT(luminance[i]);
+      break;
+   case GL_LUMINANCE_ALPHA:
+      for (i=0;i<n;i++) {
+         dst[i*2+0] = FLOAT_SRC_CONVERT(luminance[i]);
+         dst[i*2+1] = FLOAT_SRC_CONVERT(rgba[i][ACOMP]);
+      }
+      break;
+   case GL_RG:
+      for (i=0;i<n;i++) {
+         dst[i*2+0] = FLOAT_SRC_CONVERT(rgba[i][RCOMP]);
+         dst[i*2+1] = FLOAT_SRC_CONVERT(rgba[i][GCOMP]);
+      }
+      break;
+   case GL_RGB:
+      for (i=0;i<n;i++) {
+         dst[i*3+0] = FLOAT_SRC_CONVERT(rgba[i][RCOMP]);
+         dst[i*3+1] = FLOAT_SRC_CONVERT(rgba[i][GCOMP]);
+         dst[i*3+2] = FLOAT_SRC_CONVERT(rgba[i][BCOMP]);
+      }
+      break;
+   case GL_RGBA:
+      for (i=0;i<n;i++) {
+         dst[i*4+0] = FLOAT_SRC_CONVERT(rgba[i][RCOMP]);
+         dst[i*4+1] = FLOAT_SRC_CONVERT(rgba[i][GCOMP]);
+         dst[i*4+2] = FLOAT_SRC_CONVERT(rgba[i][BCOMP]);
+         dst[i*4+3] = FLOAT_SRC_CONVERT(rgba[i][ACOMP]);
+      }
+      break;
+   case GL_BGR:
+      for (i=0;i<n;i++) {
+         dst[i*3+0] = FLOAT_SRC_CONVERT(rgba[i][BCOMP]);
+         dst[i*3+1] = FLOAT_SRC_CONVERT(rgba[i][GCOMP]);
+         dst[i*3+2] = FLOAT_SRC_CONVERT(rgba[i][RCOMP]);
+      }
+      break;
+   case GL_BGRA:
+      for (i=0;i<n;i++) {
+         dst[i*4+0] = FLOAT_SRC_CONVERT(rgba[i][BCOMP]);
+         dst[i*4+1] = FLOAT_SRC_CONVERT(rgba[i][GCOMP]);
+         dst[i*4+2] = FLOAT_SRC_CONVERT(rgba[i][RCOMP]);
+         dst[i*4+3] = FLOAT_SRC_CONVERT(rgba[i][ACOMP]);
+      }
+      break;
+   case GL_ABGR_EXT:
+      for (i=0;i<n;i++) {
+         dst[i*4+0] = FLOAT_SRC_CONVERT(rgba[i][ACOMP]);
+         dst[i*4+1] = FLOAT_SRC_CONVERT(rgba[i][BCOMP]);
+         dst[i*4+2] = FLOAT_SRC_CONVERT(rgba[i][GCOMP]);
+         dst[i*4+3] = FLOAT_SRC_CONVERT(rgba[i][RCOMP]);
+      }
+      break;
+#endif
+#ifdef SRC_CONVERT
    case GL_RED_INTEGER_EXT:
       for (i=0;i<n;i++) {
 	 dst[i] = SRC_CONVERT(rgba[i][RCOMP]);
@@ -112,7 +185,7 @@ FN_NAME(struct gl_context *ctx,
 	 dst[i*2+1] = SRC_CONVERT(rgba[i][ACOMP]);
       }
       break;
-
+#endif
    default:
       _mesa_problem(ctx,
          "Unsupported format (%s)",
