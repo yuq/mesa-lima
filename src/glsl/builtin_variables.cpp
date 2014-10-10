@@ -1055,6 +1055,7 @@ builtin_variable_generator::generate_cs_special_vars()
 {
    add_system_value(SYSTEM_VALUE_LOCAL_INVOCATION_ID, uvec3_t,
                     "gl_LocalInvocationID");
+   add_system_value(SYSTEM_VALUE_WORK_GROUP_ID, uvec3_t, "gl_WorkGroupID");
    /* TODO: finish this. */
 }
 
