@@ -238,6 +238,8 @@ typedef enum
 #define SYSTEM_BIT_SAMPLE_ID ((uint64_t)1 << SYSTEM_VALUE_SAMPLE_ID)
 #define SYSTEM_BIT_SAMPLE_POS ((uint64_t)1 << SYSTEM_VALUE_SAMPLE_POS)
 #define SYSTEM_BIT_SAMPLE_MASK_IN ((uint64_t)1 << SYSTEM_VALUE_SAMPLE_MASK_IN)
+#define SYSTEM_BIT_LOCAL_INVOCATION_ID ((uint64_t)1 << SYSTEM_VALUE_LOCAL_INVOCATION_ID)
+
 /**
  * If the gl_register_file is PROGRAM_SYSTEM_VALUE, the register index will be
  * one of these values.  If a NIR variable's mode is nir_var_system_value, it
@@ -361,6 +363,13 @@ typedef enum
    SYSTEM_VALUE_PRIMITIVE_ID,   /**< (currently not used by GS) */
    SYSTEM_VALUE_TESS_LEVEL_OUTER, /**< TES input */
    SYSTEM_VALUE_TESS_LEVEL_INNER, /**< TES input */
+   /*@}*/
+
+   /**
+    * \name Compute shader system values
+    */
+   /*@{*/
+   SYSTEM_VALUE_LOCAL_INVOCATION_ID,
    /*@}*/
 
    SYSTEM_VALUE_MAX             /**< Number of values */

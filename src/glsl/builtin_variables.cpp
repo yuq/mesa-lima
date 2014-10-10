@@ -402,6 +402,7 @@ private:
    const glsl_type * const vec2_t;
    const glsl_type * const vec3_t;
    const glsl_type * const vec4_t;
+   const glsl_type * const uvec3_t;
    const glsl_type * const mat3_t;
    const glsl_type * const mat4_t;
 
@@ -417,6 +418,7 @@ builtin_variable_generator::builtin_variable_generator(
      bool_t(glsl_type::bool_type), int_t(glsl_type::int_type),
      float_t(glsl_type::float_type), vec2_t(glsl_type::vec2_type),
      vec3_t(glsl_type::vec3_type), vec4_t(glsl_type::vec4_type),
+     uvec3_t(glsl_type::uvec3_type),
      mat3_t(glsl_type::mat3_type), mat4_t(glsl_type::mat4_type)
 {
 }
@@ -1051,6 +1053,8 @@ builtin_variable_generator::generate_fs_special_vars()
 void
 builtin_variable_generator::generate_cs_special_vars()
 {
+   add_system_value(SYSTEM_VALUE_LOCAL_INVOCATION_ID, uvec3_t,
+                    "gl_LocalInvocationID");
    /* TODO: finish this. */
 }
 
