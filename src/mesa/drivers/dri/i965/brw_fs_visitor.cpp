@@ -1837,13 +1837,117 @@ fs_visitor::emit_mcs_fetch(fs_reg coordinate, int components, fs_reg sampler)
 }
 
 void
-fs_visitor::visit(ir_texture *ir)
+fs_visitor::emit_texture(ir_texture_opcode op,
+                         const glsl_type *dest_type,
+                         fs_reg coordinate, const struct glsl_type *coord_type,
+                         fs_reg shadow_c,
+                         fs_reg lod, fs_reg lod2, int grad_components,
+                         fs_reg sample_index,
+                         fs_reg offset_value, unsigned offset_components,
+                         fs_reg mcs,
+                         int gather_component,
+                         bool is_cube_array,
+                         bool is_rect,
+                         uint32_t sampler,
+                         fs_reg sampler_reg, int texunit)
 {
    const struct brw_sampler_prog_key_data *tex =
       (stage == MESA_SHADER_FRAGMENT) ?
       &((brw_wm_prog_key*) this->key)->tex : NULL;
    assert(tex);
    fs_inst *inst = NULL;
+
+   if (op == ir_tg4) {
+      /* When tg4 is used with the degenerate ZERO/ONE swizzles, don't bother
+       * emitting anything other than setting up the constant result.
+       */
+      int swiz = GET_SWZ(tex->swizzles[sampler], gather_component);
+      if (swiz == SWIZZLE_ZERO || swiz == SWIZZLE_ONE) {
+
+         fs_reg res = fs_reg(this, glsl_type::vec4_type);
+         this->result = res;
+
+         for (int i=0; i<4; i++) {
+            emit(MOV(res, fs_reg(swiz == SWIZZLE_ZERO ? 0.0f : 1.0f)));
+            res = offset(res, 1);
+         }
+         return;
+      }
+   }
+
+   if (coordinate.file != BAD_FILE) {
+      /* FINISHME: Texture coordinate rescaling doesn't work with non-constant
+       * samplers.  This should only be a problem with GL_CLAMP on Gen7.
+       */
+      coordinate = rescale_texcoord(coordinate, coord_type, is_rect,
+                                    sampler, texunit);
+   }
+
+   /* Writemasking doesn't eliminate channels on SIMD8 texture
+    * samples, so don't worry about them.
+    */
+   fs_reg dst(this, glsl_type::get_instance(dest_type->base_type, 4, 1));
+
+   int coord_components = coord_type ? coord_type->vector_elements : 0;
+
+   if (brw->gen >= 7) {
+      inst = emit_texture_gen7(op, dst, coordinate, coord_components,
+                               shadow_c, lod, lod2, grad_components,
+                               sample_index, mcs, sampler_reg,
+                               offset_value);
+   } else if (brw->gen >= 5) {
+      inst = emit_texture_gen5(op, dst, coordinate, coord_components,
+                               shadow_c, lod, lod2, grad_components,
+                               sample_index, sampler,
+                               offset_value.file != BAD_FILE);
+   } else {
+      inst = emit_texture_gen4(op, dst, coordinate, coord_components,
+                               shadow_c, lod, lod2, grad_components,
+                               sampler);
+   }
+
+   if (shadow_c.file != BAD_FILE)
+      inst->shadow_compare = true;
+
+   if (offset_value.file == IMM)
+      inst->texture_offset = offset_value.fixed_hw_reg.dw1.ud;
+
+   if (op == ir_tg4) {
+      inst->texture_offset |=
+         gather_channel(gather_component, sampler) << 16; /* M0.2:16-17 */
+
+      if (brw->gen == 6)
+         emit_gen6_gather_wa(tex->gen6_gather_wa[sampler], dst);
+   }
+
+   /* fixup #layers for cube map arrays */
+   if (op == ir_txs && is_cube_array) {
+      fs_reg depth = offset(dst, 2);
+      fs_reg fixed_depth = fs_reg(this, glsl_type::int_type);
+      emit_math(SHADER_OPCODE_INT_QUOTIENT, fixed_depth, depth, fs_reg(6));
+
+      fs_reg *fixed_payload = ralloc_array(mem_ctx, fs_reg, inst->regs_written);
+      int components = inst->regs_written / (dst.width / 8);
+      for (int i = 0; i < components; i++) {
+         if (i == 2) {
+            fixed_payload[i] = fixed_depth;
+         } else {
+            fixed_payload[i] = offset(dst, i);
+         }
+      }
+      emit(LOAD_PAYLOAD(dst, fixed_payload, components));
+   }
+
+   swizzle_result(op, dest_type->vector_elements, dst, sampler);
+}
+
+void
+fs_visitor::visit(ir_texture *ir)
+{
+   const struct brw_sampler_prog_key_data *tex =
+      (stage == MESA_SHADER_FRAGMENT) ?
+      &((brw_wm_prog_key*) this->key)->tex : NULL;
+   assert(tex);
 
    uint32_t sampler =
       _mesa_get_sampler_uniform_value(ir->sampler, shader_prog, prog);
@@ -1889,25 +1993,6 @@ fs_visitor::visit(ir_texture *ir)
     */
    int texunit = prog->SamplerUnits[sampler];
 
-   if (ir->op == ir_tg4) {
-      /* When tg4 is used with the degenerate ZERO/ONE swizzles, don't bother
-       * emitting anything other than setting up the constant result.
-       */
-      ir_constant *chan = ir->lod_info.component->as_constant();
-      int swiz = GET_SWZ(tex->swizzles[sampler], chan->value.i[0]);
-      if (swiz == SWIZZLE_ZERO || swiz == SWIZZLE_ONE) {
-
-         fs_reg res = fs_reg(this, glsl_type::vec4_type);
-         this->result = res;
-
-         for (int i=0; i<4; i++) {
-            emit(MOV(res, fs_reg(swiz == SWIZZLE_ZERO ? 0.0f : 1.0f)));
-            res = offset(res, 1);
-         }
-         return;
-      }
-   }
-
    /* Should be lowered by do_lower_texture_projection */
    assert(!ir->projector);
 
@@ -1919,18 +2004,12 @@ fs_visitor::visit(ir_texture *ir)
     * generating these values may involve SEND messages that need the MRFs.
     */
    fs_reg coordinate;
+   const glsl_type *coord_type = NULL;
    if (ir->coordinate) {
+      coord_type = ir->coordinate->type;
       ir->coordinate->accept(this);
-
-      coordinate = rescale_texcoord(this->result,
-                                    ir->coordinate->type,
-                                    ir->sampler->type->sampler_dimensionality ==
-                                    GLSL_SAMPLER_DIM_RECT,
-                                    sampler, texunit);
+      coordinate = this->result;
    }
-
-   int coord_components =
-      ir->coordinate ? ir->coordinate->type->vector_elements : 0;
 
    fs_reg shadow_comparitor;
    if (ir->shadow_comparitor) {
@@ -1939,6 +2018,7 @@ fs_visitor::visit(ir_texture *ir)
    }
 
    fs_reg offset_value;
+   int offset_components = 0;
    if (ir->offset) {
       ir_constant *const_offset = ir->offset->as_constant();
       if (const_offset) {
@@ -1953,6 +2033,7 @@ fs_visitor::visit(ir_texture *ir)
          ir->offset->accept(this);
          offset_value = this->result;
       }
+      offset_components = ir->offset->type->vector_elements;
    }
 
    fs_reg lod, lod2, sample_index, mcs;
@@ -1996,66 +2077,21 @@ fs_visitor::visit(ir_texture *ir)
       unreachable("Unrecognized texture opcode");
    };
 
-   /* Writemasking doesn't eliminate channels on SIMD8 texture
-    * samples, so don't worry about them.
-    */
-   fs_reg dst = fs_reg(this, glsl_type::get_instance(ir->type->base_type, 4, 1));
-
-   if (brw->gen >= 7) {
-      inst = emit_texture_gen7(ir->op, dst, coordinate, coord_components,
-                               shadow_comparitor,
-                               lod, lod2, grad_components,
-                               sample_index, mcs, sampler_reg,
-                               offset_value);
-   } else if (brw->gen >= 5) {
-      inst = emit_texture_gen5(ir->op, dst, coordinate, coord_components,
-                               shadow_comparitor,
-                               lod, lod2, grad_components,
-                               sample_index, sampler,
-                               ir->offset != NULL);
-   } else {
-      inst = emit_texture_gen4(ir->op, dst, coordinate, coord_components,
-                               shadow_comparitor,
-                               lod, lod2, grad_components,
-                               sampler);
-   }
-
-   if (offset_value.file == IMM)
-      inst->texture_offset = offset_value.fixed_hw_reg.dw1.ud;
-
+   int gather_component = 0;
    if (ir->op == ir_tg4)
-      inst->texture_offset |= gather_channel(ir->lod_info.component->as_constant()->value.i[0], sampler) << 16; // M0.2:16-17
+      gather_component = ir->lod_info.component->as_constant()->value.i[0];
 
-   if (ir->shadow_comparitor)
-      inst->shadow_compare = true;
+   bool is_rect =
+      ir->sampler->type->sampler_dimensionality == GLSL_SAMPLER_DIM_RECT;
 
-   /* fixup #layers for cube map arrays */
-   if (ir->op == ir_txs) {
-      glsl_type const *type = ir->sampler->type;
-      if (type->sampler_dimensionality == GLSL_SAMPLER_DIM_CUBE &&
-          type->sampler_array) {
-         fs_reg depth = offset(dst, 2);
-         fs_reg fixed_depth = fs_reg(this, glsl_type::int_type);
-         emit_math(SHADER_OPCODE_INT_QUOTIENT, fixed_depth, depth, fs_reg(6));
+   bool is_cube_array =
+      ir->sampler->type->sampler_dimensionality == GLSL_SAMPLER_DIM_CUBE &&
+      ir->sampler->type->sampler_array;
 
-         fs_reg *fixed_payload = ralloc_array(mem_ctx, fs_reg, inst->regs_written);
-         int components = inst->regs_written / (dst.width / 8);
-         for (int i = 0; i < components; i++) {
-            if (i == 2) {
-               fixed_payload[i] = fixed_depth;
-            } else {
-               fixed_payload[i] = offset(dst, i);
-            }
-         }
-         emit(LOAD_PAYLOAD(dst, fixed_payload, components));
-      }
-   }
-
-   if (brw->gen == 6 && ir->op == ir_tg4) {
-      emit_gen6_gather_wa(tex->gen6_gather_wa[sampler], dst);
-   }
-
-   swizzle_result(ir->op, ir->type->vector_elements, dst, sampler);
+   emit_texture(ir->op, ir->type, coordinate, coord_type, shadow_comparitor,
+                lod, lod2, grad_components, sample_index, offset_value,
+                offset_components, mcs, gather_component,
+                is_cube_array, is_rect, sampler, sampler_reg, texunit);
 }
 
 /**
