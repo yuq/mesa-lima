@@ -587,7 +587,6 @@ _mesa_uniform(struct gl_context *ctx, struct gl_shader_program *shProg,
               unsigned src_components)
 {
    unsigned offset;
-   unsigned components;
 
    struct gl_uniform_storage *const uni =
       validate_uniform_parameters(ctx, shProg, location, count,
@@ -597,11 +596,8 @@ _mesa_uniform(struct gl_context *ctx, struct gl_shader_program *shProg,
 
    /* Verify that the types are compatible.
     */
-   if (uni->type->is_sampler()) {
-      components = 1;
-   } else {
-      components = uni->type->vector_elements;
-   }
+   const unsigned components = uni->type->is_sampler()
+      ? 1 : uni->type->vector_elements;
 
    bool match;
    switch (uni->type->base_type) {
@@ -645,9 +641,7 @@ _mesa_uniform(struct gl_context *ctx, struct gl_shader_program *shProg,
     * GL_INVALID_VALUE error and ignore the command.
     */
    if (uni->type->is_sampler()) {
-      int i;
-
-      for (i = 0; i < count; i++) {
+      for (int i = 0; i < count; i++) {
 	 const unsigned texUnit = ((unsigned *) values)[i];
 
          /* check that the sampler (tex unit index) is legal */
@@ -662,9 +656,7 @@ _mesa_uniform(struct gl_context *ctx, struct gl_shader_program *shProg,
    }
 
    if (uni->type->is_image()) {
-      int i;
-
-      for (i = 0; i < count; i++) {
+      for (int i = 0; i < count; i++) {
          const int unit = ((GLint *) values)[i];
 
          /* check that the image unit is legal */
@@ -704,9 +696,8 @@ _mesa_uniform(struct gl_context *ctx, struct gl_shader_program *shProg,
 	 (const union gl_constant_value *) values;
       union gl_constant_value *dst = &uni->storage[components * offset];
       const unsigned elems = components * count;
-      unsigned i;
 
-      for (i = 0; i < elems; i++) {
+      for (unsigned i = 0; i < elems; i++) {
 	 if (basicType == GLSL_TYPE_FLOAT) {
             dst[i].i = src[i].f != 0.0f ? ctx->Const.UniformBooleanTrue : 0;
 	 } else {
@@ -723,19 +714,16 @@ _mesa_uniform(struct gl_context *ctx, struct gl_shader_program *shProg,
     * the changes through.
     */
    if (uni->type->is_sampler()) {
-      int i;
-
       bool flushed = false;
-      for (i = 0; i < MESA_SHADER_STAGES; i++) {
+      for (int i = 0; i < MESA_SHADER_STAGES; i++) {
 	 struct gl_shader *const sh = shProg->_LinkedShaders[i];
-         int j;
 
 	 /* If the shader stage doesn't use the sampler uniform, skip this.
 	  */
 	 if (sh == NULL || !uni->sampler[i].active)
 	    continue;
 
-         for (j = 0; j < count; j++) {
+         for (int j = 0; j < count; j++) {
             sh->SamplerUnits[uni->sampler[i].index + offset + j] =
                ((unsigned *) values)[j];
          }
@@ -777,13 +765,11 @@ _mesa_uniform(struct gl_context *ctx, struct gl_shader_program *shProg,
     * uniforms to image units present in the shader data structure.
     */
    if (uni->type->is_image()) {
-      int i, j;
-
-      for (i = 0; i < MESA_SHADER_STAGES; i++) {
+      for (int i = 0; i < MESA_SHADER_STAGES; i++) {
 	 if (uni->image[i].active) {
             struct gl_shader *sh = shProg->_LinkedShaders[i];
 
-            for (j = 0; j < count; j++)
+            for (int j = 0; j < count; j++)
                sh->ImageUnits[uni->image[i].index + offset + j] =
                   ((GLint *) values)[j];
          }
