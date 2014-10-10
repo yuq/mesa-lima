@@ -531,22 +531,22 @@ _mesa_pack_rgba_span_from_uints(struct gl_context *ctx, GLuint n, GLuint rgba[][
 {
    switch(dstType) {
    case GL_UNSIGNED_INT:
-      pack_uint_from_uint_rgba(ctx, dstAddr, dstFormat, rgba, n);
+      pack_uint_from_uint_rgba(ctx, dstAddr, dstFormat, rgba, NULL, n);
       break;
    case GL_INT:
-      pack_int_from_uint_rgba(ctx, dstAddr, dstFormat, rgba, n);
+      pack_int_from_uint_rgba(ctx, dstAddr, dstFormat, rgba, NULL, n);
       break;
    case GL_UNSIGNED_SHORT:
-      pack_ushort_from_uint_rgba(ctx, dstAddr, dstFormat, rgba, n);
+      pack_ushort_from_uint_rgba(ctx, dstAddr, dstFormat, rgba, NULL, n);
       break;
    case GL_SHORT:
-      pack_short_from_uint_rgba(ctx, dstAddr, dstFormat, rgba, n);
+      pack_short_from_uint_rgba(ctx, dstAddr, dstFormat, rgba, NULL, n);
       break;
    case GL_UNSIGNED_BYTE:
-      pack_ubyte_from_uint_rgba(ctx, dstAddr, dstFormat, rgba, n);
+      pack_ubyte_from_uint_rgba(ctx, dstAddr, dstFormat, rgba, NULL, n);
       break;
    case GL_BYTE:
-      pack_byte_from_uint_rgba(ctx, dstAddr, dstFormat, rgba, n);
+      pack_byte_from_uint_rgba(ctx, dstAddr, dstFormat, rgba, NULL, n);
       break;
    case GL_UNSIGNED_BYTE_3_3_2:
       if ((dstFormat == GL_RGB) || (dstFormat == GL_RGB_INTEGER))
@@ -722,23 +722,23 @@ _mesa_pack_rgba_span_from_ints(struct gl_context *ctx, GLuint n, GLint rgba[][4]
 {
    switch(dstType) {
    case GL_UNSIGNED_INT:
-      pack_uint_from_int_rgba(ctx, dstAddr, dstFormat, rgba, n);
+      pack_uint_from_int_rgba(ctx, dstAddr, dstFormat, rgba, NULL, n);
       break;
    case GL_INT:
       /* No conversion necessary. */
-      pack_uint_from_uint_rgba(ctx, dstAddr, dstFormat, (GLuint (*)[4]) rgba, n);
+      pack_uint_from_uint_rgba(ctx, dstAddr, dstFormat, (GLuint (*)[4]) rgba, NULL, n);
       break;
    case GL_UNSIGNED_SHORT:
-      pack_ushort_from_int_rgba(ctx, dstAddr, dstFormat, rgba, n);
+      pack_ushort_from_int_rgba(ctx, dstAddr, dstFormat, rgba, NULL, n);
       break;
    case GL_SHORT:
-      pack_short_from_int_rgba(ctx, dstAddr, dstFormat, rgba, n);
+      pack_short_from_int_rgba(ctx, dstAddr, dstFormat, rgba, NULL, n);
       break;
    case GL_UNSIGNED_BYTE:
-      pack_ubyte_from_int_rgba(ctx, dstAddr, dstFormat, rgba, n);
+      pack_ubyte_from_int_rgba(ctx, dstAddr, dstFormat, rgba, NULL, n);
       break;
    case GL_BYTE:
-      pack_byte_from_int_rgba(ctx, dstAddr, dstFormat, rgba, n);
+      pack_byte_from_int_rgba(ctx, dstAddr, dstFormat, rgba, NULL, n);
       break;
    case GL_UNSIGNED_BYTE_3_3_2:
       if ((dstFormat == GL_RGB) || (dstFormat == GL_RGB_INTEGER))
@@ -850,6 +850,80 @@ _mesa_pack_rgba_span_from_ints(struct gl_context *ctx, GLuint n, GLint rgba[][4]
    }
 }
 
+/* Customization of float packing.
+ */
+#define SRC_TYPE GLfloat
+
+#define DST_TYPE GLuint
+#define FLOAT_SRC_CONVERT(x) FLOAT_TO_UINT(x)
+#define SRC_CONVERT(x) (GLuint) x
+#define FN_NAME pack_uint_from_float_rgba
+#include "pack_tmp.h"
+#undef DST_TYPE
+#undef SRC_CONVERT
+#undef FLOAT_SRC_CONVERT
+#undef FN_NAME
+
+#define DST_TYPE GLint
+#define FLOAT_SRC_CONVERT(x) FLOAT_TO_INT(x)
+#define SRC_CONVERT(x) (GLint) x
+#define FN_NAME pack_int_from_float_rgba
+#include "pack_tmp.h"
+#undef DST_TYPE
+#undef SRC_CONVERT
+#undef FLOAT_SRC_CONVERT
+#undef FN_NAME
+
+#define DST_TYPE GLshort
+#define FLOAT_SRC_CONVERT(x) FLOAT_TO_SHORT_TEX(x)
+#define SRC_CONVERT(x) (GLshort) x
+#define FN_NAME pack_short_from_float_rgba
+#include "pack_tmp.h"
+#undef DST_TYPE
+#undef SRC_CONVERT
+#undef FLOAT_SRC_CONVERT
+#undef FN_NAME
+
+#define DST_TYPE GLubyte
+#define FLOAT_SRC_CONVERT(x) FLOAT_TO_UBYTE(x)
+#define SRC_CONVERT(x) (GLubyte) x
+#define FN_NAME pack_ubyte_from_float_rgba
+#include "pack_tmp.h"
+#undef DST_TYPE
+#undef SRC_CONVERT
+#undef FLOAT_SRC_CONVERT
+#undef FN_NAME
+
+#define DST_TYPE GLbyte
+#define FLOAT_SRC_CONVERT(x) FLOAT_TO_BYTE_TEX(x)
+#define SRC_CONVERT(x) (GLbyte) x
+#define FN_NAME pack_byte_from_float_rgba
+#include "pack_tmp.h"
+#undef DST_TYPE
+#undef SRC_CONVERT
+#undef FLOAT_SRC_CONVERT
+#undef FN_NAME
+
+#define DST_TYPE GLfloat
+#define FLOAT_SRC_CONVERT(x) x
+#define SRC_CONVERT(x) x
+#define FN_NAME pack_float_from_float_rgba
+#include "pack_tmp.h"
+#undef DST_TYPE
+#undef SRC_CONVERT
+#undef FLOAT_SRC_CONVERT
+#undef FN_NAME
+
+#define DST_TYPE GLhalfARB
+#define FLOAT_SRC_CONVERT(x) _mesa_float_to_half(x)
+#define FN_NAME pack_half_float_from_float_rgba
+#include "pack_tmp.h"
+#undef DST_TYPE
+#undef SRC_CONVERT
+#undef FLOAT_SRC_CONVERT
+#undef FN_NAME
+
+#undef SRC_TYPE
 
 /**
  * Used to pack an array [][4] of RGBA float colors as specified
@@ -935,304 +1009,10 @@ _mesa_pack_rgba_span_float(struct gl_context *ctx, GLuint n, GLfloat rgba[][4],
     */
    switch (dstType) {
       case GL_UNSIGNED_BYTE:
-         {
-            GLubyte *dst = (GLubyte *) dstAddr;
-            switch (dstFormat) {
-               case GL_RED:
-                  for (i=0;i<n;i++)
-                     dst[i] = FLOAT_TO_UBYTE(rgba[i][RCOMP]);
-                  break;
-               case GL_GREEN:
-                  for (i=0;i<n;i++)
-                     dst[i] = FLOAT_TO_UBYTE(rgba[i][GCOMP]);
-                  break;
-               case GL_BLUE:
-                  for (i=0;i<n;i++)
-                     dst[i] = FLOAT_TO_UBYTE(rgba[i][BCOMP]);
-                  break;
-               case GL_ALPHA:
-                  for (i=0;i<n;i++)
-                     dst[i] = FLOAT_TO_UBYTE(rgba[i][ACOMP]);
-                  break;
-               case GL_LUMINANCE:
-                  for (i=0;i<n;i++)
-                     dst[i] = FLOAT_TO_UBYTE(luminance[i]);
-                  break;
-               case GL_LUMINANCE_ALPHA:
-                  for (i=0;i<n;i++) {
-                     dst[i*2+0] = FLOAT_TO_UBYTE(luminance[i]);
-                     dst[i*2+1] = FLOAT_TO_UBYTE(rgba[i][ACOMP]);
-                  }
-                  break;
-               case GL_RG:
-                  for (i=0;i<n;i++) {
-                     dst[i*2+0] = FLOAT_TO_UBYTE(rgba[i][RCOMP]);
-                     dst[i*2+1] = FLOAT_TO_UBYTE(rgba[i][GCOMP]);
-                  }
-                  break;
-               case GL_RGB:
-                  for (i=0;i<n;i++) {
-                     dst[i*3+0] = FLOAT_TO_UBYTE(rgba[i][RCOMP]);
-                     dst[i*3+1] = FLOAT_TO_UBYTE(rgba[i][GCOMP]);
-                     dst[i*3+2] = FLOAT_TO_UBYTE(rgba[i][BCOMP]);
-                  }
-                  break;
-               case GL_RGBA:
-                  for (i=0;i<n;i++) {
-                     dst[i*4+0] = FLOAT_TO_UBYTE(rgba[i][RCOMP]);
-                     dst[i*4+1] = FLOAT_TO_UBYTE(rgba[i][GCOMP]);
-                     dst[i*4+2] = FLOAT_TO_UBYTE(rgba[i][BCOMP]);
-                     dst[i*4+3] = FLOAT_TO_UBYTE(rgba[i][ACOMP]);
-                  }
-                  break;
-               case GL_BGR:
-                  for (i=0;i<n;i++) {
-                     dst[i*3+0] = FLOAT_TO_UBYTE(rgba[i][BCOMP]);
-                     dst[i*3+1] = FLOAT_TO_UBYTE(rgba[i][GCOMP]);
-                     dst[i*3+2] = FLOAT_TO_UBYTE(rgba[i][RCOMP]);
-                  }
-                  break;
-               case GL_BGRA:
-                  for (i=0;i<n;i++) {
-                     dst[i*4+0] = FLOAT_TO_UBYTE(rgba[i][BCOMP]);
-                     dst[i*4+1] = FLOAT_TO_UBYTE(rgba[i][GCOMP]);
-                     dst[i*4+2] = FLOAT_TO_UBYTE(rgba[i][RCOMP]);
-                     dst[i*4+3] = FLOAT_TO_UBYTE(rgba[i][ACOMP]);
-                  }
-                  break;
-               case GL_ABGR_EXT:
-                  for (i=0;i<n;i++) {
-                     dst[i*4+0] = FLOAT_TO_UBYTE(rgba[i][ACOMP]);
-                     dst[i*4+1] = FLOAT_TO_UBYTE(rgba[i][BCOMP]);
-                     dst[i*4+2] = FLOAT_TO_UBYTE(rgba[i][GCOMP]);
-                     dst[i*4+3] = FLOAT_TO_UBYTE(rgba[i][RCOMP]);
-                  }
-                  break;
-               case GL_RED_INTEGER_EXT:
-                  for (i=0;i<n;i++) {
-                     dst[i] = (GLubyte) rgba[i][RCOMP];
-                  }
-                  break;
-               case GL_GREEN_INTEGER_EXT:
-                  for (i=0;i<n;i++) {
-                     dst[i] = (GLubyte) rgba[i][GCOMP];
-                  }
-                  break;
-               case GL_BLUE_INTEGER_EXT:
-                  for (i=0;i<n;i++) {
-                     dst[i] = (GLubyte) rgba[i][BCOMP];
-                  }
-                  break;
-               case GL_ALPHA_INTEGER_EXT:
-                  for (i=0;i<n;i++) {
-                     dst[i] = (GLubyte) rgba[i][ACOMP];
-                  }
-                  break;
-               case GL_RG_INTEGER:
-                  for (i=0;i<n;i++) {
-                     dst[i*2+0] = (GLubyte) rgba[i][RCOMP];
-                     dst[i*2+1] = (GLubyte) rgba[i][GCOMP];
-                  }
-                  break;
-               case GL_RGB_INTEGER_EXT:
-                  for (i=0;i<n;i++) {
-                     dst[i*3+0] = (GLubyte) rgba[i][RCOMP];
-                     dst[i*3+1] = (GLubyte) rgba[i][GCOMP];
-                     dst[i*3+2] = (GLubyte) rgba[i][BCOMP];
-                  }
-                  break;
-               case GL_RGBA_INTEGER_EXT:
-                  for (i=0;i<n;i++) {
-                     dst[i*4+0] = (GLubyte) rgba[i][RCOMP];
-                     dst[i*4+1] = (GLubyte) rgba[i][GCOMP];
-                     dst[i*4+2] = (GLubyte) rgba[i][BCOMP];
-                     dst[i*4+3] = (GLubyte) rgba[i][ACOMP];
-                  }
-                  break;
-               case GL_BGR_INTEGER_EXT:
-                  for (i=0;i<n;i++) {
-                     dst[i*3+0] = (GLubyte) rgba[i][BCOMP];
-                     dst[i*3+1] = (GLubyte) rgba[i][GCOMP];
-                     dst[i*3+2] = (GLubyte) rgba[i][RCOMP];
-                  }
-                  break;
-               case GL_BGRA_INTEGER_EXT:
-                  for (i=0;i<n;i++) {
-                     dst[i*4+0] = (GLubyte) rgba[i][BCOMP];
-                     dst[i*4+1] = (GLubyte) rgba[i][GCOMP];
-                     dst[i*4+2] = (GLubyte) rgba[i][RCOMP];
-                     dst[i*4+3] = (GLubyte) rgba[i][ACOMP];
-                  }
-                  break;
-               case GL_LUMINANCE_INTEGER_EXT:
-                  for (i=0;i<n;i++) {
-                     dst[i*2+0] = (GLubyte) (rgba[i][RCOMP] +
-                                             rgba[i][GCOMP] +
-                                             rgba[i][BCOMP]);
-                     dst[i*2+1] = (GLubyte) rgba[i][ACOMP];
-                  }
-                  break;
-               case GL_LUMINANCE_ALPHA_INTEGER_EXT:
-                  for (i=0;i<n;i++) {
-                     dst[i] = (GLubyte) (rgba[i][RCOMP] +
-                                         rgba[i][GCOMP] +
-                                         rgba[i][BCOMP]);
-                  }
-                  break;
-               default:
-                  _mesa_problem(ctx, "bad format in _mesa_pack_rgba_span\n");
-            }
-         }
+         pack_ubyte_from_float_rgba(ctx, dstAddr, dstFormat, rgba, luminance, n);
          break;
       case GL_BYTE:
-         {
-            GLbyte *dst = (GLbyte *) dstAddr;
-            switch (dstFormat) {
-               case GL_RED:
-                  for (i=0;i<n;i++)
-                     dst[i] = FLOAT_TO_BYTE_TEX(rgba[i][RCOMP]);
-                  break;
-               case GL_GREEN:
-                  for (i=0;i<n;i++)
-                     dst[i] = FLOAT_TO_BYTE_TEX(rgba[i][GCOMP]);
-                  break;
-               case GL_BLUE:
-                  for (i=0;i<n;i++)
-                     dst[i] = FLOAT_TO_BYTE_TEX(rgba[i][BCOMP]);
-                  break;
-               case GL_ALPHA:
-                  for (i=0;i<n;i++)
-                     dst[i] = FLOAT_TO_BYTE_TEX(rgba[i][ACOMP]);
-                  break;
-               case GL_LUMINANCE:
-                  for (i=0;i<n;i++)
-                     dst[i] = FLOAT_TO_BYTE_TEX(luminance[i]);
-                  break;
-               case GL_LUMINANCE_ALPHA:
-                  for (i=0;i<n;i++) {
-                     dst[i*2+0] = FLOAT_TO_BYTE_TEX(luminance[i]);
-                     dst[i*2+1] = FLOAT_TO_BYTE_TEX(rgba[i][ACOMP]);
-                  }
-                  break;
-               case GL_RG:
-                  for (i=0;i<n;i++) {
-                     dst[i*2+0] = FLOAT_TO_BYTE_TEX(rgba[i][RCOMP]);
-                     dst[i*2+1] = FLOAT_TO_BYTE_TEX(rgba[i][GCOMP]);
-                  }
-                  break;
-               case GL_RGB:
-                  for (i=0;i<n;i++) {
-                     dst[i*3+0] = FLOAT_TO_BYTE_TEX(rgba[i][RCOMP]);
-                     dst[i*3+1] = FLOAT_TO_BYTE_TEX(rgba[i][GCOMP]);
-                     dst[i*3+2] = FLOAT_TO_BYTE_TEX(rgba[i][BCOMP]);
-                  }
-                  break;
-               case GL_RGBA:
-                  for (i=0;i<n;i++) {
-                     dst[i*4+0] = FLOAT_TO_BYTE_TEX(rgba[i][RCOMP]);
-                     dst[i*4+1] = FLOAT_TO_BYTE_TEX(rgba[i][GCOMP]);
-                     dst[i*4+2] = FLOAT_TO_BYTE_TEX(rgba[i][BCOMP]);
-                     dst[i*4+3] = FLOAT_TO_BYTE_TEX(rgba[i][ACOMP]);
-                  }
-                  break;
-               case GL_BGR:
-                  for (i=0;i<n;i++) {
-                     dst[i*3+0] = FLOAT_TO_BYTE_TEX(rgba[i][BCOMP]);
-                     dst[i*3+1] = FLOAT_TO_BYTE_TEX(rgba[i][GCOMP]);
-                     dst[i*3+2] = FLOAT_TO_BYTE_TEX(rgba[i][RCOMP]);
-                  }
-                  break;
-               case GL_BGRA:
-                  for (i=0;i<n;i++) {
-                     dst[i*4+0] = FLOAT_TO_BYTE_TEX(rgba[i][BCOMP]);
-                     dst[i*4+1] = FLOAT_TO_BYTE_TEX(rgba[i][GCOMP]);
-                     dst[i*4+2] = FLOAT_TO_BYTE_TEX(rgba[i][RCOMP]);
-                     dst[i*4+3] = FLOAT_TO_BYTE_TEX(rgba[i][ACOMP]);
-                  }
-		  break;
-               case GL_ABGR_EXT:
-                  for (i=0;i<n;i++) {
-                     dst[i*4+0] = FLOAT_TO_BYTE_TEX(rgba[i][ACOMP]);
-                     dst[i*4+1] = FLOAT_TO_BYTE_TEX(rgba[i][BCOMP]);
-                     dst[i*4+2] = FLOAT_TO_BYTE_TEX(rgba[i][GCOMP]);
-                     dst[i*4+3] = FLOAT_TO_BYTE_TEX(rgba[i][RCOMP]);
-                  }
-                  break;
-               case GL_RED_INTEGER_EXT:
-                  for (i=0;i<n;i++) {
-                     dst[i] = (GLbyte) rgba[i][RCOMP];
-                  }
-                  break;
-               case GL_GREEN_INTEGER_EXT:
-                  for (i=0;i<n;i++) {
-                     dst[i] = (GLbyte) rgba[i][GCOMP];
-                  }
-                  break;
-               case GL_BLUE_INTEGER_EXT:
-                  for (i=0;i<n;i++) {
-                     dst[i] = (GLbyte) rgba[i][BCOMP];
-                  }
-                  break;
-               case GL_ALPHA_INTEGER_EXT:
-                  for (i=0;i<n;i++) {
-                     dst[i] = (GLbyte) rgba[i][ACOMP];
-                  }
-                  break;
-               case GL_RG_INTEGER:
-                  for (i=0;i<n;i++) {
-                     dst[i*2+0] = (GLbyte) rgba[i][RCOMP];
-                     dst[i*2+1] = (GLbyte) rgba[i][GCOMP];
-                  }
-                  break;
-               case GL_RGB_INTEGER_EXT:
-                  for (i=0;i<n;i++) {
-                     dst[i*3+0] = (GLbyte) rgba[i][RCOMP];
-                     dst[i*3+1] = (GLbyte) rgba[i][GCOMP];
-                     dst[i*3+2] = (GLbyte) rgba[i][BCOMP];
-                  }
-                  break;
-               case GL_RGBA_INTEGER_EXT:
-                  for (i=0;i<n;i++) {
-                     dst[i*4+0] = (GLbyte) rgba[i][RCOMP];
-                     dst[i*4+1] = (GLbyte) rgba[i][GCOMP];
-                     dst[i*4+2] = (GLbyte) rgba[i][BCOMP];
-                     dst[i*4+3] = (GLbyte) rgba[i][ACOMP];
-                  }
-                  break;
-               case GL_BGR_INTEGER_EXT:
-                  for (i=0;i<n;i++) {
-                     dst[i*3+0] = (GLbyte) rgba[i][BCOMP];
-                     dst[i*3+1] = (GLbyte) rgba[i][GCOMP];
-                     dst[i*3+2] = (GLbyte) rgba[i][RCOMP];
-                  }
-                  break;
-               case GL_BGRA_INTEGER_EXT:
-                  for (i=0;i<n;i++) {
-                     dst[i*4+0] = (GLbyte) rgba[i][BCOMP];
-                     dst[i*4+1] = (GLbyte) rgba[i][GCOMP];
-                     dst[i*4+2] = (GLbyte) rgba[i][RCOMP];
-                     dst[i*4+3] = (GLbyte) rgba[i][ACOMP];
-                  }
-                  break;
-               case GL_LUMINANCE_INTEGER_EXT:
-                  for (i=0;i<n;i++) {
-                     dst[i*2+0] = (GLbyte) (rgba[i][RCOMP] +
-                                            rgba[i][GCOMP] +
-                                            rgba[i][BCOMP]);
-                     dst[i*2+1] = (GLbyte) rgba[i][ACOMP];
-                  }
-                  break;
-               case GL_LUMINANCE_ALPHA_INTEGER_EXT:
-                  for (i=0;i<n;i++) {
-                     dst[i] = (GLbyte) (rgba[i][RCOMP] +
-                                        rgba[i][GCOMP] +
-                                        rgba[i][BCOMP]);
-                  }
-                  break;
-               default:
-                  _mesa_problem(ctx, "bad format in _mesa_pack_rgba_span\n");
-            }
-         }
+         pack_byte_from_float_rgba(ctx, dstAddr, dstFormat, rgba, luminance, n);
          break;
       case GL_UNSIGNED_SHORT:
          {
@@ -1385,900 +1165,106 @@ _mesa_pack_rgba_span_float(struct gl_context *ctx, GLuint n, GLfloat rgba[][4],
          }
          break;
       case GL_SHORT:
-         {
-            GLshort *dst = (GLshort *) dstAddr;
-            switch (dstFormat) {
-               case GL_RED:
-                  for (i=0;i<n;i++)
-                     dst[i] = FLOAT_TO_SHORT_TEX(rgba[i][RCOMP]);
-                  break;
-               case GL_GREEN:
-                  for (i=0;i<n;i++)
-                     dst[i] = FLOAT_TO_SHORT_TEX(rgba[i][GCOMP]);
-                  break;
-               case GL_BLUE:
-                  for (i=0;i<n;i++)
-                     dst[i] = FLOAT_TO_SHORT_TEX(rgba[i][BCOMP]);
-                  break;
-               case GL_ALPHA:
-                  for (i=0;i<n;i++)
-                     dst[i] = FLOAT_TO_SHORT_TEX(rgba[i][ACOMP]);
-                  break;
-               case GL_LUMINANCE:
-                  for (i=0;i<n;i++)
-                     dst[i] = FLOAT_TO_SHORT_TEX(luminance[i]);
-                  break;
-               case GL_LUMINANCE_ALPHA:
-                  for (i=0;i<n;i++) {
-                     dst[i*2+0] = FLOAT_TO_SHORT_TEX(luminance[i]);
-                     dst[i*2+1] = FLOAT_TO_SHORT_TEX(rgba[i][ACOMP]);
-                  }
-                  break;
-               case GL_RG:
-                  for (i=0;i<n;i++) {
-                     dst[i*2+0] = FLOAT_TO_SHORT_TEX(rgba[i][RCOMP]);
-                     dst[i*2+1] = FLOAT_TO_SHORT_TEX(rgba[i][GCOMP]);
-                  }
-                  break;
-               case GL_RGB:
-                  for (i=0;i<n;i++) {
-                     dst[i*3+0] = FLOAT_TO_SHORT_TEX(rgba[i][RCOMP]);
-                     dst[i*3+1] = FLOAT_TO_SHORT_TEX(rgba[i][GCOMP]);
-                     dst[i*3+2] = FLOAT_TO_SHORT_TEX(rgba[i][BCOMP]);
-                  }
-                  break;
-               case GL_RGBA:
-                  for (i=0;i<n;i++) {
-                     dst[i*4+0] = FLOAT_TO_SHORT_TEX(rgba[i][RCOMP]);
-                     dst[i*4+1] = FLOAT_TO_SHORT_TEX(rgba[i][GCOMP]);
-                     dst[i*4+2] = FLOAT_TO_SHORT_TEX(rgba[i][BCOMP]);
-                     dst[i*4+3] = FLOAT_TO_SHORT_TEX(rgba[i][ACOMP]);
-                  }
-                  break;
-               case GL_BGR:
-                  for (i=0;i<n;i++) {
-                     dst[i*3+0] = FLOAT_TO_SHORT_TEX(rgba[i][BCOMP]);
-                     dst[i*3+1] = FLOAT_TO_SHORT_TEX(rgba[i][GCOMP]);
-                     dst[i*3+2] = FLOAT_TO_SHORT_TEX(rgba[i][RCOMP]);
-                  }
-                  break;
-               case GL_BGRA:
-                  for (i=0;i<n;i++) {
-                     dst[i*4+0] = FLOAT_TO_SHORT_TEX(rgba[i][BCOMP]);
-                     dst[i*4+1] = FLOAT_TO_SHORT_TEX(rgba[i][GCOMP]);
-                     dst[i*4+2] = FLOAT_TO_SHORT_TEX(rgba[i][RCOMP]);
-                     dst[i*4+3] = FLOAT_TO_SHORT_TEX(rgba[i][ACOMP]);
-                  }
-		  break;
-               case GL_ABGR_EXT:
-                  for (i=0;i<n;i++) {
-                     dst[i*4+0] = FLOAT_TO_SHORT_TEX(rgba[i][ACOMP]);
-                     dst[i*4+1] = FLOAT_TO_SHORT_TEX(rgba[i][BCOMP]);
-                     dst[i*4+2] = FLOAT_TO_SHORT_TEX(rgba[i][GCOMP]);
-                     dst[i*4+3] = FLOAT_TO_SHORT_TEX(rgba[i][RCOMP]);
-                  }
-                  break;
-               case GL_RED_INTEGER_EXT:
-                  for (i=0;i<n;i++) {
-                     dst[i] = (GLshort) rgba[i][RCOMP];
-                  }
-                  break;
-               case GL_GREEN_INTEGER_EXT:
-                  for (i=0;i<n;i++) {
-                     dst[i] = (GLshort) rgba[i][GCOMP];
-                  }
-                  break;
-               case GL_BLUE_INTEGER_EXT:
-                  for (i=0;i<n;i++) {
-                     dst[i] = (GLshort) rgba[i][BCOMP];
-                  }
-                  break;
-               case GL_ALPHA_INTEGER_EXT:
-                  for (i=0;i<n;i++) {
-                     dst[i] = (GLshort) rgba[i][ACOMP];
-                  }
-                  break;
-               case GL_RG_INTEGER:
-                  for (i=0;i<n;i++) {
-                     dst[i*2+0] = (GLshort) rgba[i][RCOMP];
-                     dst[i*2+1] = (GLshort) rgba[i][GCOMP];
-                  }
-                  break;
-               case GL_RGB_INTEGER_EXT:
-                  for (i=0;i<n;i++) {
-                     dst[i*3+0] = (GLshort) rgba[i][RCOMP];
-                     dst[i*3+1] = (GLshort) rgba[i][GCOMP];
-                     dst[i*3+2] = (GLshort) rgba[i][BCOMP];
-                  }
-                  break;
-               case GL_RGBA_INTEGER_EXT:
-                  for (i=0;i<n;i++) {
-                     dst[i*4+0] = (GLshort) rgba[i][RCOMP];
-                     dst[i*4+1] = (GLshort) rgba[i][GCOMP];
-                     dst[i*4+2] = (GLshort) rgba[i][BCOMP];
-                     dst[i*4+3] = (GLshort) rgba[i][ACOMP];
-                  }
-                  break;
-               case GL_BGR_INTEGER_EXT:
-                  for (i=0;i<n;i++) {
-                     dst[i*3+0] = (GLshort) rgba[i][BCOMP];
-                     dst[i*3+1] = (GLshort) rgba[i][GCOMP];
-                     dst[i*3+2] = (GLshort) rgba[i][RCOMP];
-                  }
-                  break;
-               case GL_BGRA_INTEGER_EXT:
-                  for (i=0;i<n;i++) {
-                     dst[i*4+0] = (GLshort) rgba[i][BCOMP];
-                     dst[i*4+1] = (GLshort) rgba[i][GCOMP];
-                     dst[i*4+2] = (GLshort) rgba[i][RCOMP];
-                     dst[i*4+3] = (GLshort) rgba[i][ACOMP];
-                  }
-                  break;
-               case GL_LUMINANCE_INTEGER_EXT:
-                  for (i=0;i<n;i++) {
-                     dst[i*2+0] = (GLshort) (rgba[i][RCOMP] +
-                                             rgba[i][GCOMP] +
-                                             rgba[i][BCOMP]);
-                     dst[i*2+1] = (GLshort) rgba[i][ACOMP];
-                  }
-                  break;
-               case GL_LUMINANCE_ALPHA_INTEGER_EXT:
-                  for (i=0;i<n;i++) {
-                     dst[i] = (GLshort) (rgba[i][RCOMP] +
-                                         rgba[i][GCOMP] +
-                                         rgba[i][BCOMP]);
-                  }
-                  break;
-               default:
-                  _mesa_problem(ctx, "bad format in _mesa_pack_rgba_span\n");
-            }
-         }
+         pack_short_from_float_rgba(ctx, dstAddr, dstFormat, rgba, luminance, n);
          break;
       case GL_UNSIGNED_INT:
-         {
-            GLuint *dst = (GLuint *) dstAddr;
-            switch (dstFormat) {
-               case GL_RED:
-                  for (i=0;i<n;i++)
-                     dst[i] = FLOAT_TO_UINT(rgba[i][RCOMP]);
-                  break;
-               case GL_GREEN:
-                  for (i=0;i<n;i++)
-                     dst[i] = FLOAT_TO_UINT(rgba[i][GCOMP]);
-                  break;
-               case GL_BLUE:
-                  for (i=0;i<n;i++)
-                     dst[i] = FLOAT_TO_UINT(rgba[i][BCOMP]);
-                  break;
-               case GL_ALPHA:
-                  for (i=0;i<n;i++)
-                     dst[i] = FLOAT_TO_UINT(rgba[i][ACOMP]);
-                  break;
-               case GL_LUMINANCE:
-                  for (i=0;i<n;i++)
-                     dst[i] = FLOAT_TO_UINT(luminance[i]);
-                  break;
-               case GL_LUMINANCE_ALPHA:
-                  for (i=0;i<n;i++) {
-                     dst[i*2+0] = FLOAT_TO_UINT(luminance[i]);
-                     dst[i*2+1] = FLOAT_TO_UINT(rgba[i][ACOMP]);
-                  }
-                  break;
-               case GL_RG:
-                  for (i=0;i<n;i++) {
-                     dst[i*2+0] = FLOAT_TO_UINT(rgba[i][RCOMP]);
-                     dst[i*2+1] = FLOAT_TO_UINT(rgba[i][GCOMP]);
-                  }
-                  break;
-               case GL_RGB:
-                  for (i=0;i<n;i++) {
-                     dst[i*3+0] = FLOAT_TO_UINT(rgba[i][RCOMP]);
-                     dst[i*3+1] = FLOAT_TO_UINT(rgba[i][GCOMP]);
-                     dst[i*3+2] = FLOAT_TO_UINT(rgba[i][BCOMP]);
-                  }
-                  break;
-               case GL_RGBA:
-                  for (i=0;i<n;i++) {
-                     dst[i*4+0] = FLOAT_TO_UINT(rgba[i][RCOMP]);
-                     dst[i*4+1] = FLOAT_TO_UINT(rgba[i][GCOMP]);
-                     dst[i*4+2] = FLOAT_TO_UINT(rgba[i][BCOMP]);
-                     dst[i*4+3] = FLOAT_TO_UINT(rgba[i][ACOMP]);
-                  }
-                  break;
-               case GL_BGR:
-                  for (i=0;i<n;i++) {
-                     dst[i*3+0] = FLOAT_TO_UINT(rgba[i][BCOMP]);
-                     dst[i*3+1] = FLOAT_TO_UINT(rgba[i][GCOMP]);
-                     dst[i*3+2] = FLOAT_TO_UINT(rgba[i][RCOMP]);
-                  }
-                  break;
-               case GL_BGRA:
-                  for (i=0;i<n;i++) {
-                     dst[i*4+0] = FLOAT_TO_UINT(rgba[i][BCOMP]);
-                     dst[i*4+1] = FLOAT_TO_UINT(rgba[i][GCOMP]);
-                     dst[i*4+2] = FLOAT_TO_UINT(rgba[i][RCOMP]);
-                     dst[i*4+3] = FLOAT_TO_UINT(rgba[i][ACOMP]);
-                  }
-                  break;
-               case GL_ABGR_EXT:
-                  for (i=0;i<n;i++) {
-                     dst[i*4+0] = FLOAT_TO_UINT(rgba[i][ACOMP]);
-                     dst[i*4+1] = FLOAT_TO_UINT(rgba[i][BCOMP]);
-                     dst[i*4+2] = FLOAT_TO_UINT(rgba[i][GCOMP]);
-                     dst[i*4+3] = FLOAT_TO_UINT(rgba[i][RCOMP]);
-                  }
-                  break;
-               case GL_RED_INTEGER_EXT:
-                  for (i=0;i<n;i++) {
-                     dst[i] = (GLuint) rgba[i][RCOMP];
-                  }
-                  break;
-               case GL_GREEN_INTEGER_EXT:
-                  for (i=0;i<n;i++) {
-                     dst[i] = (GLuint) rgba[i][GCOMP];
-                  }
-                  break;
-               case GL_BLUE_INTEGER_EXT:
-                  for (i=0;i<n;i++) {
-                     dst[i] = (GLuint) rgba[i][BCOMP];
-                  }
-                  break;
-               case GL_ALPHA_INTEGER_EXT:
-                  for (i=0;i<n;i++) {
-                     dst[i] = (GLuint) rgba[i][ACOMP];
-                  }
-                  break;
-               case GL_RG_INTEGER:
-                  for (i=0;i<n;i++) {
-                     dst[i*2+0] = (GLuint) rgba[i][RCOMP];
-                     dst[i*2+1] = (GLuint) rgba[i][GCOMP];
-                  }
-                  break;
-               case GL_RGB_INTEGER_EXT:
-                  for (i=0;i<n;i++) {
-                     dst[i*3+0] = (GLuint) rgba[i][RCOMP];
-                     dst[i*3+1] = (GLuint) rgba[i][GCOMP];
-                     dst[i*3+2] = (GLuint) rgba[i][BCOMP];
-                  }
-                  break;
-               case GL_RGBA_INTEGER_EXT:
-                  for (i=0;i<n;i++) {
-                     dst[i*4+0] = (GLuint) rgba[i][RCOMP];
-                     dst[i*4+1] = (GLuint) rgba[i][GCOMP];
-                     dst[i*4+2] = (GLuint) rgba[i][BCOMP];
-                     dst[i*4+3] = (GLuint) rgba[i][ACOMP];
-                  }
-                  break;
-               case GL_BGR_INTEGER_EXT:
-                  for (i=0;i<n;i++) {
-                     dst[i*3+0] = (GLuint) rgba[i][BCOMP];
-                     dst[i*3+1] = (GLuint) rgba[i][GCOMP];
-                     dst[i*3+2] = (GLuint) rgba[i][RCOMP];
-                  }
-                  break;
-               case GL_BGRA_INTEGER_EXT:
-                  for (i=0;i<n;i++) {
-                     dst[i*4+0] = (GLuint) rgba[i][BCOMP];
-                     dst[i*4+1] = (GLuint) rgba[i][GCOMP];
-                     dst[i*4+2] = (GLuint) rgba[i][RCOMP];
-                     dst[i*4+3] = (GLuint) rgba[i][ACOMP];
-                  }
-                  break;
-               case GL_LUMINANCE_INTEGER_EXT:
-                  for (i=0;i<n;i++) {
-                     dst[i*2+0] = (GLuint) (rgba[i][RCOMP] +
-                                            rgba[i][GCOMP] +
-                                            rgba[i][BCOMP]);
-                     dst[i*2+1] = (GLuint) rgba[i][ACOMP];
-                  }
-                  break;
-               case GL_LUMINANCE_ALPHA_INTEGER_EXT:
-                  for (i=0;i<n;i++) {
-                     dst[i] = (GLuint) (rgba[i][RCOMP] +
-                                        rgba[i][GCOMP] +
-                                        rgba[i][BCOMP]);
-                  }
-                  break;
-               default:
-                  _mesa_problem(ctx, "bad format in _mesa_pack_rgba_span\n");
-            }
-         }
+         pack_uint_from_float_rgba(ctx, dstAddr, dstFormat, rgba, luminance, n);
          break;
       case GL_INT:
-         {
-            GLint *dst = (GLint *) dstAddr;
-            switch (dstFormat) {
-               case GL_RED:
-                  for (i=0;i<n;i++)
-                     dst[i] = FLOAT_TO_INT(rgba[i][RCOMP]);
-                  break;
-               case GL_GREEN:
-                  for (i=0;i<n;i++)
-                     dst[i] = FLOAT_TO_INT(rgba[i][GCOMP]);
-                  break;
-               case GL_BLUE:
-                  for (i=0;i<n;i++)
-                     dst[i] = FLOAT_TO_INT(rgba[i][BCOMP]);
-                  break;
-               case GL_ALPHA:
-                  for (i=0;i<n;i++)
-                     dst[i] = FLOAT_TO_INT(rgba[i][ACOMP]);
-                  break;
-               case GL_LUMINANCE:
-                  for (i=0;i<n;i++)
-                     dst[i] = FLOAT_TO_INT(luminance[i]);
-                  break;
-               case GL_LUMINANCE_ALPHA:
-                  for (i=0;i<n;i++) {
-                     dst[i*2+0] = FLOAT_TO_INT(luminance[i]);
-                     dst[i*2+1] = FLOAT_TO_INT(rgba[i][ACOMP]);
-                  }
-                  break;
-               case GL_RG:
-                  for (i=0;i<n;i++) {
-                     dst[i*2+0] = FLOAT_TO_INT(rgba[i][RCOMP]);
-                     dst[i*2+1] = FLOAT_TO_INT(rgba[i][GCOMP]);
-                  }
-                  break;
-               case GL_RGB:
-                  for (i=0;i<n;i++) {
-                     dst[i*3+0] = FLOAT_TO_INT(rgba[i][RCOMP]);
-                     dst[i*3+1] = FLOAT_TO_INT(rgba[i][GCOMP]);
-                     dst[i*3+2] = FLOAT_TO_INT(rgba[i][BCOMP]);
-                  }
-                  break;
-               case GL_RGBA:
-                  for (i=0;i<n;i++) {
-                     dst[i*4+0] = FLOAT_TO_INT(rgba[i][RCOMP]);
-                     dst[i*4+1] = FLOAT_TO_INT(rgba[i][GCOMP]);
-                     dst[i*4+2] = FLOAT_TO_INT(rgba[i][BCOMP]);
-                     dst[i*4+3] = FLOAT_TO_INT(rgba[i][ACOMP]);
-                  }
-                  break;
-               case GL_BGR:
-                  for (i=0;i<n;i++) {
-                     dst[i*3+0] = FLOAT_TO_INT(rgba[i][BCOMP]);
-                     dst[i*3+1] = FLOAT_TO_INT(rgba[i][GCOMP]);
-                     dst[i*3+2] = FLOAT_TO_INT(rgba[i][RCOMP]);
-                  }
-                  break;
-               case GL_BGRA:
-                  for (i=0;i<n;i++) {
-                     dst[i*4+0] = FLOAT_TO_INT(rgba[i][BCOMP]);
-                     dst[i*4+1] = FLOAT_TO_INT(rgba[i][GCOMP]);
-                     dst[i*4+2] = FLOAT_TO_INT(rgba[i][RCOMP]);
-                     dst[i*4+3] = FLOAT_TO_INT(rgba[i][ACOMP]);
-                  }
-                  break;
-               case GL_ABGR_EXT:
-                  for (i=0;i<n;i++) {
-                     dst[i*4+0] = FLOAT_TO_INT(rgba[i][ACOMP]);
-                     dst[i*4+1] = FLOAT_TO_INT(rgba[i][BCOMP]);
-                     dst[i*4+2] = FLOAT_TO_INT(rgba[i][GCOMP]);
-                     dst[i*4+3] = FLOAT_TO_INT(rgba[i][RCOMP]);
-                  }
-                  break;
-               case GL_RED_INTEGER_EXT:
-                  for (i=0;i<n;i++) {
-                     dst[i] = (GLint) rgba[i][RCOMP];
-                  }
-                  break;
-               case GL_GREEN_INTEGER_EXT:
-                  for (i=0;i<n;i++) {
-                     dst[i] = (GLint) rgba[i][GCOMP];
-                  }
-                  break;
-               case GL_BLUE_INTEGER_EXT:
-                  for (i=0;i<n;i++) {
-                     dst[i] = (GLint) rgba[i][BCOMP];
-                  }
-                  break;
-               case GL_ALPHA_INTEGER_EXT:
-                  for (i=0;i<n;i++) {
-                     dst[i] = (GLint) rgba[i][ACOMP];
-                  }
-                  break;
-               case GL_RG_INTEGER:
-                  for (i=0;i<n;i++) {
-                     dst[i*2+0] = (GLint) rgba[i][RCOMP];
-                     dst[i*2+1] = (GLint) rgba[i][GCOMP];
-                  }
-                  break;
-               case GL_RGB_INTEGER_EXT:
-                  for (i=0;i<n;i++) {
-                     dst[i*3+0] = (GLint) rgba[i][RCOMP];
-                     dst[i*3+1] = (GLint) rgba[i][GCOMP];
-                     dst[i*3+2] = (GLint) rgba[i][BCOMP];
-                  }
-                  break;
-               case GL_RGBA_INTEGER_EXT:
-                  for (i=0;i<n;i++) {
-                     dst[i*4+0] = (GLint) rgba[i][RCOMP];
-                     dst[i*4+1] = (GLint) rgba[i][GCOMP];
-                     dst[i*4+2] = (GLint) rgba[i][BCOMP];
-                     dst[i*4+3] = (GLint) rgba[i][ACOMP];
-                  }
-                  break;
-               case GL_BGR_INTEGER_EXT:
-                  for (i=0;i<n;i++) {
-                     dst[i*3+0] = (GLint) rgba[i][BCOMP];
-                     dst[i*3+1] = (GLint) rgba[i][GCOMP];
-                     dst[i*3+2] = (GLint) rgba[i][RCOMP];
-                  }
-                  break;
-               case GL_BGRA_INTEGER_EXT:
-                  for (i=0;i<n;i++) {
-                     dst[i*4+0] = (GLint) rgba[i][BCOMP];
-                     dst[i*4+1] = (GLint) rgba[i][GCOMP];
-                     dst[i*4+2] = (GLint) rgba[i][RCOMP];
-                     dst[i*4+3] = (GLint) rgba[i][ACOMP];
-                  }
-                  break;
-               case GL_LUMINANCE_INTEGER_EXT:
-                  for (i=0;i<n;i++) {
-                     dst[i*2+0] = (GLint) (rgba[i][RCOMP] +
-                                           rgba[i][GCOMP] +
-                                           rgba[i][BCOMP]);
-                     dst[i*2+1] = (GLint) rgba[i][ACOMP];
-                  }
-                  break;
-               case GL_LUMINANCE_ALPHA_INTEGER_EXT:
-                  for (i=0;i<n;i++) {
-                     dst[i] = (GLint) (rgba[i][RCOMP] +
-                                       rgba[i][GCOMP] +
-                                       rgba[i][BCOMP]);
-                  }
-                  break;
-               default:
-                  _mesa_problem(ctx, "bad format in _mesa_pack_rgba_span\n");
-            }
-         }
+         pack_int_from_float_rgba(ctx, dstAddr, dstFormat, rgba, luminance, n);
          break;
       case GL_FLOAT:
-         {
-            GLfloat *dst = (GLfloat *) dstAddr;
-            switch (dstFormat) {
-               case GL_RED:
-                  for (i=0;i<n;i++)
-                     dst[i] = rgba[i][RCOMP];
-                  break;
-               case GL_GREEN:
-                  for (i=0;i<n;i++)
-                     dst[i] = rgba[i][GCOMP];
-                  break;
-               case GL_BLUE:
-                  for (i=0;i<n;i++)
-                     dst[i] = rgba[i][BCOMP];
-                  break;
-               case GL_ALPHA:
-                  for (i=0;i<n;i++)
-                     dst[i] = rgba[i][ACOMP];
-                  break;
-               case GL_LUMINANCE:
-                  for (i=0;i<n;i++)
-                     dst[i] = luminance[i];
-                  break;
-               case GL_LUMINANCE_ALPHA:
-                  for (i=0;i<n;i++) {
-                     dst[i*2+0] = luminance[i];
-                     dst[i*2+1] = rgba[i][ACOMP];
-                  }
-                  break;
-               case GL_RG:
-                  for (i=0;i<n;i++) {
-                     dst[i*2+0] = rgba[i][RCOMP];
-                     dst[i*2+1] = rgba[i][GCOMP];
-                  }
-                  break;
-               case GL_RGB:
-                  for (i=0;i<n;i++) {
-                     dst[i*3+0] = rgba[i][RCOMP];
-                     dst[i*3+1] = rgba[i][GCOMP];
-                     dst[i*3+2] = rgba[i][BCOMP];
-                  }
-                  break;
-               case GL_RGBA:
-                  for (i=0;i<n;i++) {
-                     dst[i*4+0] = rgba[i][RCOMP];
-                     dst[i*4+1] = rgba[i][GCOMP];
-                     dst[i*4+2] = rgba[i][BCOMP];
-                     dst[i*4+3] = rgba[i][ACOMP];
-                  }
-                  break;
-               case GL_BGR:
-                  for (i=0;i<n;i++) {
-                     dst[i*3+0] = rgba[i][BCOMP];
-                     dst[i*3+1] = rgba[i][GCOMP];
-                     dst[i*3+2] = rgba[i][RCOMP];
-                  }
-                  break;
-               case GL_BGRA:
-                  for (i=0;i<n;i++) {
-                     dst[i*4+0] = rgba[i][BCOMP];
-                     dst[i*4+1] = rgba[i][GCOMP];
-                     dst[i*4+2] = rgba[i][RCOMP];
-                     dst[i*4+3] = rgba[i][ACOMP];
-                  }
-                  break;
-               case GL_ABGR_EXT:
-                  for (i=0;i<n;i++) {
-                     dst[i*4+0] = rgba[i][ACOMP];
-                     dst[i*4+1] = rgba[i][BCOMP];
-                     dst[i*4+2] = rgba[i][GCOMP];
-                     dst[i*4+3] = rgba[i][RCOMP];
-                  }
-                  break;
-               default:
-                  _mesa_problem(ctx, "bad format in _mesa_pack_rgba_span\n");
-            }
-         }
+         /* No conversion necessary. */
+         pack_float_from_float_rgba(ctx, dstAddr, dstFormat, rgba, luminance, n);
          break;
       case GL_HALF_FLOAT_ARB:
-         {
-            GLhalfARB *dst = (GLhalfARB *) dstAddr;
-            switch (dstFormat) {
-               case GL_RED:
-                  for (i=0;i<n;i++)
-                     dst[i] = _mesa_float_to_half(rgba[i][RCOMP]);
-                  break;
-               case GL_GREEN:
-                  for (i=0;i<n;i++)
-                     dst[i] = _mesa_float_to_half(rgba[i][GCOMP]);
-                  break;
-               case GL_BLUE:
-                  for (i=0;i<n;i++)
-                     dst[i] = _mesa_float_to_half(rgba[i][BCOMP]);
-                  break;
-               case GL_ALPHA:
-                  for (i=0;i<n;i++)
-                     dst[i] = _mesa_float_to_half(rgba[i][ACOMP]);
-                  break;
-               case GL_LUMINANCE:
-                  for (i=0;i<n;i++)
-                     dst[i] = _mesa_float_to_half(luminance[i]);
-                  break;
-               case GL_LUMINANCE_ALPHA:
-                  for (i=0;i<n;i++) {
-                     dst[i*2+0] = _mesa_float_to_half(luminance[i]);
-                     dst[i*2+1] = _mesa_float_to_half(rgba[i][ACOMP]);
-                  }
-                  break;
-               case GL_RG:
-                  for (i=0;i<n;i++) {
-                     dst[i*2+0] = _mesa_float_to_half(rgba[i][RCOMP]);
-                     dst[i*2+1] = _mesa_float_to_half(rgba[i][GCOMP]);
-                  }
-                  break;
-               case GL_RGB:
-                  for (i=0;i<n;i++) {
-                     dst[i*3+0] = _mesa_float_to_half(rgba[i][RCOMP]);
-                     dst[i*3+1] = _mesa_float_to_half(rgba[i][GCOMP]);
-                     dst[i*3+2] = _mesa_float_to_half(rgba[i][BCOMP]);
-                  }
-                  break;
-               case GL_RGBA:
-                  for (i=0;i<n;i++) {
-                     dst[i*4+0] = _mesa_float_to_half(rgba[i][RCOMP]);
-                     dst[i*4+1] = _mesa_float_to_half(rgba[i][GCOMP]);
-                     dst[i*4+2] = _mesa_float_to_half(rgba[i][BCOMP]);
-                     dst[i*4+3] = _mesa_float_to_half(rgba[i][ACOMP]);
-                  }
-                  break;
-               case GL_BGR:
-                  for (i=0;i<n;i++) {
-                     dst[i*3+0] = _mesa_float_to_half(rgba[i][BCOMP]);
-                     dst[i*3+1] = _mesa_float_to_half(rgba[i][GCOMP]);
-                     dst[i*3+2] = _mesa_float_to_half(rgba[i][RCOMP]);
-                  }
-                  break;
-               case GL_BGRA:
-                  for (i=0;i<n;i++) {
-                     dst[i*4+0] = _mesa_float_to_half(rgba[i][BCOMP]);
-                     dst[i*4+1] = _mesa_float_to_half(rgba[i][GCOMP]);
-                     dst[i*4+2] = _mesa_float_to_half(rgba[i][RCOMP]);
-                     dst[i*4+3] = _mesa_float_to_half(rgba[i][ACOMP]);
-                  }
-                  break;
-               case GL_ABGR_EXT:
-                  for (i=0;i<n;i++) {
-                     dst[i*4+0] = _mesa_float_to_half(rgba[i][ACOMP]);
-                     dst[i*4+1] = _mesa_float_to_half(rgba[i][BCOMP]);
-                     dst[i*4+2] = _mesa_float_to_half(rgba[i][GCOMP]);
-                     dst[i*4+3] = _mesa_float_to_half(rgba[i][RCOMP]);
-                  }
-                  break;
-               default:
-                  _mesa_problem(ctx, "bad format in _mesa_pack_rgba_span\n");
-            }
-         }
+         pack_half_float_from_float_rgba(ctx, dstAddr, dstFormat, rgba, luminance, n);
          break;
       case GL_UNSIGNED_BYTE_3_3_2:
-         if (dstFormat == GL_RGB) {
-            GLubyte *dst = (GLubyte *) dstAddr;
-            for (i=0;i<n;i++) {
-               dst[i] = (F_TO_I(rgba[i][RCOMP] * 7.0F) << 5)
-                      | (F_TO_I(rgba[i][GCOMP] * 7.0F) << 2)
-                      | (F_TO_I(rgba[i][BCOMP] * 3.0F)     );
-            }
-         }
+         if (dstFormat == GL_RGB)
+            _mesa_pack_float_rgba_row(MESA_FORMAT_B2G3R3_UNORM, n, (void *)rgba[0], (void *)dstAddr);
          break;
       case GL_UNSIGNED_BYTE_2_3_3_REV:
-         if (dstFormat == GL_RGB) {
-            GLubyte *dst = (GLubyte *) dstAddr;
-            for (i=0;i<n;i++) {
-               dst[i] = (F_TO_I(rgba[i][RCOMP] * 7.0F)     )
-                      | (F_TO_I(rgba[i][GCOMP] * 7.0F) << 3)
-                      | (F_TO_I(rgba[i][BCOMP] * 3.0F) << 6);
-            }
-         }
+         if (dstFormat == GL_RGB)
+            _mesa_pack_float_rgba_row(MESA_FORMAT_R3G3B2_UNORM, n, (void *)rgba[0], (void *)dstAddr);
          break;
       case GL_UNSIGNED_SHORT_5_6_5:
-         if (dstFormat == GL_RGB) {
-            GLushort *dst = (GLushort *) dstAddr;
-            for (i=0;i<n;i++) {
-               dst[i] = (F_TO_I(rgba[i][RCOMP] * 31.0F) << 11)
-                      | (F_TO_I(rgba[i][GCOMP] * 63.0F) <<  5)
-                      | (F_TO_I(rgba[i][BCOMP] * 31.0F)      );
-            }
-         }
+         if (dstFormat == GL_RGB)
+            _mesa_pack_float_rgba_row(MESA_FORMAT_B5G6R5_UNORM, n, (void *)rgba[0], (void *)dstAddr);
          break;
       case GL_UNSIGNED_SHORT_5_6_5_REV:
-         if (dstFormat == GL_RGB) {
-            GLushort *dst = (GLushort *) dstAddr;
-            for (i=0;i<n;i++) {
-               dst[i] = (F_TO_I(rgba[i][RCOMP] * 31.0F)      )
-                      | (F_TO_I(rgba[i][GCOMP] * 63.0F) <<  5)
-                      | (F_TO_I(rgba[i][BCOMP] * 31.0F) << 11);
-            }
-         }
+         if (dstFormat == GL_RGB)
+            _mesa_pack_float_rgba_row(MESA_FORMAT_R5G6B5_UNORM, n, (void *)rgba[0], (void *)dstAddr);
          break;
       case GL_UNSIGNED_SHORT_4_4_4_4:
-         if (dstFormat == GL_RGBA) {
-            GLushort *dst = (GLushort *) dstAddr;
-            for (i=0;i<n;i++) {
-               dst[i] = (F_TO_I(rgba[i][RCOMP] * 15.0F) << 12)
-                      | (F_TO_I(rgba[i][GCOMP] * 15.0F) <<  8)
-                      | (F_TO_I(rgba[i][BCOMP] * 15.0F) <<  4)
-                      | (F_TO_I(rgba[i][ACOMP] * 15.0F)      );
-            }
-         }
-         else if (dstFormat == GL_BGRA) {
-            GLushort *dst = (GLushort *) dstAddr;
-            for (i=0;i<n;i++) {
-               dst[i] = (F_TO_I(rgba[i][BCOMP] * 15.0F) << 12)
-                      | (F_TO_I(rgba[i][GCOMP] * 15.0F) <<  8)
-                      | (F_TO_I(rgba[i][RCOMP] * 15.0F) <<  4)
-                      | (F_TO_I(rgba[i][ACOMP] * 15.0F)      );
-            }
-         }
-         else if (dstFormat == GL_ABGR_EXT) {
-            GLushort *dst = (GLushort *) dstAddr;
-            for (i=0;i<n;i++) {
-               dst[i] = (F_TO_I(rgba[i][ACOMP] * 15.0F) << 12)
-                      | (F_TO_I(rgba[i][BCOMP] * 15.0F) <<  8)
-                      | (F_TO_I(rgba[i][GCOMP] * 15.0F) <<  4)
-                      | (F_TO_I(rgba[i][RCOMP] * 15.0F)      );
-            }
-         }
+         if (dstFormat == GL_RGBA)
+            _mesa_pack_float_rgba_row(MESA_FORMAT_A4B4G4R4_UNORM, n, (void *)rgba[0], (void *)dstAddr);
+         else if (dstFormat == GL_BGRA)
+            _mesa_pack_float_rgba_row(MESA_FORMAT_A4R4G4B4_UNORM, n, (void *)rgba[0], (void *)dstAddr);
+         else if (dstFormat == GL_ABGR_EXT)
+            _mesa_pack_float_rgba_row(MESA_FORMAT_R4G4B4A4_UNORM, n, (void *)rgba[0], (void *)dstAddr);
          break;
       case GL_UNSIGNED_SHORT_4_4_4_4_REV:
-         if (dstFormat == GL_RGBA) {
-            GLushort *dst = (GLushort *) dstAddr;
-            for (i=0;i<n;i++) {
-               dst[i] = (F_TO_I(rgba[i][RCOMP] * 15.0F)      )
-                      | (F_TO_I(rgba[i][GCOMP] * 15.0F) <<  4)
-                      | (F_TO_I(rgba[i][BCOMP] * 15.0F) <<  8)
-                      | (F_TO_I(rgba[i][ACOMP] * 15.0F) << 12);
-            }
-         }
-         else if (dstFormat == GL_BGRA) {
-            GLushort *dst = (GLushort *) dstAddr;
-            for (i=0;i<n;i++) {
-               dst[i] = (F_TO_I(rgba[i][BCOMP] * 15.0F)      )
-                      | (F_TO_I(rgba[i][GCOMP] * 15.0F) <<  4)
-                      | (F_TO_I(rgba[i][RCOMP] * 15.0F) <<  8)
-                      | (F_TO_I(rgba[i][ACOMP] * 15.0F) << 12);
-            }
-         }
-         else if (dstFormat == GL_ABGR_EXT) {
-            GLushort *dst = (GLushort *) dstAddr;
-            for (i=0;i<n;i++) {
-               dst[i] = (F_TO_I(rgba[i][ACOMP] * 15.0F)      )
-                      | (F_TO_I(rgba[i][BCOMP] * 15.0F) <<  4)
-                      | (F_TO_I(rgba[i][GCOMP] * 15.0F) <<  8)
-                      | (F_TO_I(rgba[i][RCOMP] * 15.0F) << 12);
-            }
-         }
+         if (dstFormat == GL_RGBA)
+            _mesa_pack_float_rgba_row(MESA_FORMAT_R4G4B4A4_UNORM, n, (void *)rgba[0], (void *)dstAddr);
+         else if (dstFormat == GL_BGRA)
+            _mesa_pack_float_rgba_row(MESA_FORMAT_B4G4R4A4_UNORM, n, (void *)rgba[0], (void *)dstAddr);
+         else if (dstFormat == GL_ABGR_EXT)
+            _mesa_pack_float_rgba_row(MESA_FORMAT_A4B4G4R4_UNORM, n, (void *)rgba[0], (void *)dstAddr);
          break;
       case GL_UNSIGNED_SHORT_5_5_5_1:
-         if (dstFormat == GL_RGBA) {
-            GLushort *dst = (GLushort *) dstAddr;
-            for (i=0;i<n;i++) {
-               dst[i] = (F_TO_I(rgba[i][RCOMP] * 31.0F) << 11)
-                      | (F_TO_I(rgba[i][GCOMP] * 31.0F) <<  6)
-                      | (F_TO_I(rgba[i][BCOMP] * 31.0F) <<  1)
-                      | (F_TO_I(rgba[i][ACOMP] *  1.0F)      );
-            }
-         }
-         else if (dstFormat == GL_BGRA) {
-            GLushort *dst = (GLushort *) dstAddr;
-            for (i=0;i<n;i++) {
-               dst[i] = (F_TO_I(rgba[i][BCOMP] * 31.0F) << 11)
-                      | (F_TO_I(rgba[i][GCOMP] * 31.0F) <<  6)
-                      | (F_TO_I(rgba[i][RCOMP] * 31.0F) <<  1)
-                      | (F_TO_I(rgba[i][ACOMP] *  1.0F)      );
-            }
-         }
-         else if (dstFormat == GL_ABGR_EXT) {
-            GLushort *dst = (GLushort *) dstAddr;
-            for (i=0;i<n;i++) {
-               dst[i] = (F_TO_I(rgba[i][ACOMP] * 31.0F) << 11)
-                      | (F_TO_I(rgba[i][BCOMP] * 31.0F) <<  6)
-                      | (F_TO_I(rgba[i][GCOMP] * 31.0F) <<  1)
-                      | (F_TO_I(rgba[i][RCOMP] *  1.0F)      );
-            }
-         }
+         if (dstFormat == GL_RGBA)
+            _mesa_pack_float_rgba_row(MESA_FORMAT_A1B5G5R5_UNORM, n, (void *)rgba[0], (void *)dstAddr);
+         else if (dstFormat == GL_BGRA)
+            _mesa_pack_float_rgba_row(MESA_FORMAT_A1R5G5B5_UNORM, n, (void *)rgba[0], (void *)dstAddr);
+         else if (dstFormat == GL_ABGR_EXT)
+            _mesa_pack_float_rgba_row(MESA_FORMAT_R1G5B5A5_UNORM, n, (void *)rgba[0], (void *)dstAddr);
          break;
       case GL_UNSIGNED_SHORT_1_5_5_5_REV:
-         if (dstFormat == GL_RGBA) {
-            GLushort *dst = (GLushort *) dstAddr;
-            for (i=0;i<n;i++) {
-               dst[i] = (F_TO_I(rgba[i][RCOMP] * 31.0F)      )
-                      | (F_TO_I(rgba[i][GCOMP] * 31.0F) <<  5)
-                      | (F_TO_I(rgba[i][BCOMP] * 31.0F) << 10)
-                      | (F_TO_I(rgba[i][ACOMP] *  1.0F) << 15);
-            }
-         }
-         else if (dstFormat == GL_BGRA) {
-            GLushort *dst = (GLushort *) dstAddr;
-            for (i=0;i<n;i++) {
-               dst[i] = (F_TO_I(rgba[i][BCOMP] * 31.0F)      )
-                      | (F_TO_I(rgba[i][GCOMP] * 31.0F) <<  5)
-                      | (F_TO_I(rgba[i][RCOMP] * 31.0F) << 10)
-                      | (F_TO_I(rgba[i][ACOMP] *  1.0F) << 15);
-            }
-         }
-         else if (dstFormat == GL_ABGR_EXT) {
-            GLushort *dst = (GLushort *) dstAddr;
-            for (i=0;i<n;i++) {
-               dst[i] = (F_TO_I(rgba[i][ACOMP] * 31.0F)      )
-                      | (F_TO_I(rgba[i][BCOMP] * 31.0F) <<  5)
-                      | (F_TO_I(rgba[i][GCOMP] * 31.0F) << 10)
-                      | (F_TO_I(rgba[i][RCOMP] *  1.0F) << 15);
-            }
-         }
+         if (dstFormat == GL_RGBA)
+            _mesa_pack_float_rgba_row(MESA_FORMAT_R5G5B5A1_UNORM, n, (void *)rgba[0], (void *)dstAddr);
+         else if (dstFormat == GL_BGRA)
+            _mesa_pack_float_rgba_row(MESA_FORMAT_B5G5R5A1_UNORM, n, (void *)rgba[0], (void *)dstAddr);
+         else if (dstFormat == GL_ABGR_EXT)
+            _mesa_pack_float_rgba_row(MESA_FORMAT_A5B5G5R1_UNORM, n, (void *)rgba[0], (void *)dstAddr);
          break;
       case GL_UNSIGNED_INT_8_8_8_8:
-         if (dstFormat == GL_RGBA) {
-            GLuint *dst = (GLuint *) dstAddr;
-            for (i=0;i<n;i++) {
-               dst[i] = (F_TO_I(rgba[i][RCOMP] * 255.F) << 24)
-                      | (F_TO_I(rgba[i][GCOMP] * 255.F) << 16)
-                      | (F_TO_I(rgba[i][BCOMP] * 255.F) <<  8)
-                      | (F_TO_I(rgba[i][ACOMP] * 255.F)      );
-            }
-         }
-         else if (dstFormat == GL_BGRA) {
-            GLuint *dst = (GLuint *) dstAddr;
-            for (i=0;i<n;i++) {
-               dst[i] = (F_TO_I(rgba[i][BCOMP] * 255.F) << 24)
-                      | (F_TO_I(rgba[i][GCOMP] * 255.F) << 16)
-                      | (F_TO_I(rgba[i][RCOMP] * 255.F) <<  8)
-                      | (F_TO_I(rgba[i][ACOMP] * 255.F)      );
-            }
-         }
-         else if (dstFormat == GL_ABGR_EXT) {
-            GLuint *dst = (GLuint *) dstAddr;
-            for (i=0;i<n;i++) {
-               dst[i] = (F_TO_I(rgba[i][ACOMP] * 255.F) << 24)
-                      | (F_TO_I(rgba[i][BCOMP] * 255.F) << 16)
-                      | (F_TO_I(rgba[i][GCOMP] * 255.F) <<  8)
-                      | (F_TO_I(rgba[i][RCOMP] * 255.F)      );
-            }
-         }
+         if (dstFormat == GL_RGBA)
+            _mesa_pack_float_rgba_row(MESA_FORMAT_A8B8G8R8_UNORM, n, (void *)rgba[0], (void *)dstAddr);
+         else if (dstFormat == GL_BGRA)
+            _mesa_pack_float_rgba_row(MESA_FORMAT_A8R8G8B8_UNORM, n, (void *)rgba[0], (void *)dstAddr);
+         else if (dstFormat == GL_ABGR_EXT)
+            _mesa_pack_float_rgba_row(MESA_FORMAT_R8G8B8A8_UNORM, n, (void *)rgba[0], (void *)dstAddr);
          break;
       case GL_UNSIGNED_INT_8_8_8_8_REV:
-         if (dstFormat == GL_RGBA) {
-            GLuint *dst = (GLuint *) dstAddr;
-            for (i=0;i<n;i++) {
-               dst[i] = (F_TO_I(rgba[i][RCOMP] * 255.0F)      )
-                      | (F_TO_I(rgba[i][GCOMP] * 255.0F) <<  8)
-                      | (F_TO_I(rgba[i][BCOMP] * 255.0F) << 16)
-                      | (F_TO_I(rgba[i][ACOMP] * 255.0F) << 24);
-            }
-         }
-         else if (dstFormat == GL_BGRA) {
-            GLuint *dst = (GLuint *) dstAddr;
-            for (i=0;i<n;i++) {
-               dst[i] = (F_TO_I(rgba[i][BCOMP] * 255.0F)      )
-                      | (F_TO_I(rgba[i][GCOMP] * 255.0F) <<  8)
-                      | (F_TO_I(rgba[i][RCOMP] * 255.0F) << 16)
-                      | (F_TO_I(rgba[i][ACOMP] * 255.0F) << 24);
-            }
-         }
-         else if (dstFormat == GL_ABGR_EXT) {
-            GLuint *dst = (GLuint *) dstAddr;
-            for (i=0;i<n;i++) {
-               dst[i] = (F_TO_I(rgba[i][ACOMP] * 255.0F)      )
-                      | (F_TO_I(rgba[i][BCOMP] * 255.0F) <<  8)
-                      | (F_TO_I(rgba[i][GCOMP] * 255.0F) << 16)
-                      | (F_TO_I(rgba[i][RCOMP] * 255.0F) << 24);
-            }
-         }
+         if (dstFormat == GL_RGBA)
+            _mesa_pack_float_rgba_row(MESA_FORMAT_R8G8B8A8_UNORM, n, (void *)rgba[0], (void *)dstAddr);
+         else if (dstFormat == GL_BGRA)
+            _mesa_pack_float_rgba_row(MESA_FORMAT_B8G8R8A8_UNORM, n, (void *)rgba[0], (void *)dstAddr);
+         else if (dstFormat == GL_ABGR_EXT)
+            _mesa_pack_float_rgba_row(MESA_FORMAT_A8B8G8R8_UNORM, n, (void *)rgba[0], (void *)dstAddr);
          break;
       case GL_UNSIGNED_INT_10_10_10_2:
-         if (dstFormat == GL_RGBA) {
-            GLuint *dst = (GLuint *) dstAddr;
-            for (i=0;i<n;i++) {
-               dst[i] = (F_TO_I(rgba[i][RCOMP] * 1023.0F) << 22)
-                      | (F_TO_I(rgba[i][GCOMP] * 1023.0F) << 12)
-                      | (F_TO_I(rgba[i][BCOMP] * 1023.0F) <<  2)
-                      | (F_TO_I(rgba[i][ACOMP] *    3.0F)      );
-            }
-         }
-         else if (dstFormat == GL_BGRA) {
-            GLuint *dst = (GLuint *) dstAddr;
-            for (i=0;i<n;i++) {
-               dst[i] = (F_TO_I(rgba[i][BCOMP] * 1023.0F) << 22)
-                      | (F_TO_I(rgba[i][GCOMP] * 1023.0F) << 12)
-                      | (F_TO_I(rgba[i][RCOMP] * 1023.0F) <<  2)
-                      | (F_TO_I(rgba[i][ACOMP] *    3.0F)      );
-            }
-         }
-         else if (dstFormat == GL_ABGR_EXT) {
-            GLuint *dst = (GLuint *) dstAddr;
-            for (i=0;i<n;i++) {
-               dst[i] = (F_TO_I(rgba[i][ACOMP] * 1023.0F) << 22)
-                      | (F_TO_I(rgba[i][BCOMP] * 1023.0F) << 12)
-                      | (F_TO_I(rgba[i][GCOMP] * 1023.0F) <<  2)
-                      | (F_TO_I(rgba[i][RCOMP] *    3.0F)      );
-            }
-         }
+         if (dstFormat == GL_RGBA)
+            _mesa_pack_float_rgba_row(MESA_FORMAT_A2B10G10R10_UNORM, n, (void *)rgba[0], (void *)dstAddr);
+         else if (dstFormat == GL_BGRA)
+            _mesa_pack_float_rgba_row(MESA_FORMAT_A2R10G10B10_UNORM, n, (void *)rgba[0], (void *)dstAddr);
+         else if (dstFormat == GL_ABGR_EXT)
+            _mesa_pack_float_rgba_row(MESA_FORMAT_R2G10B10A10_UNORM, n, (void *)rgba[0], (void *)dstAddr);
          break;
       case GL_UNSIGNED_INT_2_10_10_10_REV:
-         if (dstFormat == GL_RGBA) {
-            GLuint *dst = (GLuint *) dstAddr;
-            for (i=0;i<n;i++) {
-               dst[i] = (F_TO_I(rgba[i][RCOMP] * 1023.0F)      )
-                      | (F_TO_I(rgba[i][GCOMP] * 1023.0F) << 10)
-                      | (F_TO_I(rgba[i][BCOMP] * 1023.0F) << 20)
-                      | (F_TO_I(rgba[i][ACOMP] *    3.0F) << 30);
-            }
-         }
-         else if (dstFormat == GL_BGRA) {
-            GLuint *dst = (GLuint *) dstAddr;
-            for (i=0;i<n;i++) {
-               dst[i] = (F_TO_I(rgba[i][BCOMP] * 1023.0F)      )
-                      | (F_TO_I(rgba[i][GCOMP] * 1023.0F) << 10)
-                      | (F_TO_I(rgba[i][RCOMP] * 1023.0F) << 20)
-                      | (F_TO_I(rgba[i][ACOMP] *    3.0F) << 30);
-            }
-         }
-         else if (dstFormat == GL_ABGR_EXT) {
-            GLuint *dst = (GLuint *) dstAddr;
-            for (i=0;i<n;i++) {
-               dst[i] = (F_TO_I(rgba[i][ACOMP] * 1023.0F)      )
-                      | (F_TO_I(rgba[i][BCOMP] * 1023.0F) << 10)
-                      | (F_TO_I(rgba[i][GCOMP] * 1023.0F) << 20)
-                      | (F_TO_I(rgba[i][RCOMP] *    3.0F) << 30);
-            }
-         }
+         if (dstFormat == GL_RGBA)
+            _mesa_pack_float_rgba_row(MESA_FORMAT_R10G10B10A2_UNORM, n, (void *)rgba[0], (void *)dstAddr);
+         else if (dstFormat == GL_BGRA)
+            _mesa_pack_float_rgba_row(MESA_FORMAT_B10G10R10A2_UNORM, n, (void *)rgba[0], (void *)dstAddr);
+         else if (dstFormat == GL_ABGR_EXT)
+            _mesa_pack_float_rgba_row(MESA_FORMAT_A10B10G10R2_UNORM, n, (void *)rgba[0], (void *)dstAddr);
          break;
       case GL_UNSIGNED_INT_5_9_9_9_REV:
-         {
-            GLuint *dst = (GLuint *) dstAddr;
-            for (i = 0; i < n; i++) {
-               dst[i] = float3_to_rgb9e5(rgba[i]);
-            }
-         }
+         _mesa_pack_float_rgba_row(MESA_FORMAT_R9G9B9E5_FLOAT, n, (void *)rgba[0], (void *)dstAddr);
          break;
       case GL_UNSIGNED_INT_10F_11F_11F_REV:
-         {
-            GLuint *dst = (GLuint *) dstAddr;
-            for (i = 0; i < n; i++) {
-               dst[i] = float3_to_r11g11b10f(rgba[i]);
-            }
-         }
+         _mesa_pack_float_rgba_row(MESA_FORMAT_R11G11B10_FLOAT, n, (void *)rgba[0], (void *)dstAddr);
          break;
       default:
          _mesa_problem(ctx, "bad type in _mesa_pack_rgba_span_float");

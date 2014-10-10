@@ -26,6 +26,7 @@ FN_NAME(struct gl_context *ctx,
 	DST_TYPE *dst,
 	GLenum dstFormat,
 	SRC_TYPE rgba[][4],
+	GLfloat *luminance,
 	int n)
 {
    int i;
