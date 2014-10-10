@@ -643,3 +643,22 @@ const struct brw_tracked_state gen7_cs_push_constants = {
    },
    /* .emit = */ gen7_upload_cs_push_constants,
 };
+
+
+fs_reg *
+fs_visitor::emit_cs_work_group_id_setup()
+{
+   assert(stage == MESA_SHADER_COMPUTE);
+
+   fs_reg *reg = new(this->mem_ctx) fs_reg(vgrf(glsl_type::uvec3_type));
+
+   struct brw_reg r0_1(retype(brw_vec1_grf(0, 1), BRW_REGISTER_TYPE_UD));
+   struct brw_reg r0_6(retype(brw_vec1_grf(0, 6), BRW_REGISTER_TYPE_UD));
+   struct brw_reg r0_7(retype(brw_vec1_grf(0, 7), BRW_REGISTER_TYPE_UD));
+
+   bld.MOV(*reg, r0_1);
+   bld.MOV(offset(*reg, bld, 1), r0_6);
+   bld.MOV(offset(*reg, bld, 2), r0_7);
+
+   return reg;
+}
