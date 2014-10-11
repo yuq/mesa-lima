@@ -197,7 +197,7 @@ clCompileProgram(cl_program d_prog, cl_uint num_devs,
                                  name, header.source()));
       },
       range(header_names, num_headers),
-      objs(d_header_progs, num_headers));
+      objs<allow_empty_tag>(d_header_progs, num_headers));
 
    prog.build(devs, opts, headers);
    return CL_SUCCESS;
