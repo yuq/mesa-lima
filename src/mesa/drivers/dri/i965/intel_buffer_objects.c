@@ -114,6 +114,8 @@ intel_bufferobj_alloc_buffer(struct brw_context *brw,
       brw->state.dirty.brw |= BRW_NEW_UNIFORM_BUFFER;
    if (intel_obj->Base.UsageHistory & USAGE_TEXTURE_BUFFER)
       brw->state.dirty.brw |= BRW_NEW_TEXTURE_BUFFER;
+   if (intel_obj->Base.UsageHistory & USAGE_ATOMIC_COUNTER_BUFFER)
+      brw->state.dirty.brw |= BRW_NEW_ATOMIC_BUFFER;
 
    intel_bufferobj_mark_inactive(intel_obj);
 }
