@@ -2770,6 +2770,7 @@ set_atomic_buffer_binding(struct gl_context *ctx,
    } else {
       binding->Offset = offset;
       binding->Size = size;
+      bufObj->UsageHistory |= USAGE_ATOMIC_COUNTER_BUFFER;
    }
 }
 

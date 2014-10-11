@@ -1470,6 +1470,7 @@ struct gl_buffer_mapping {
 typedef enum {
    USAGE_UNIFORM_BUFFER = 0x1,
    USAGE_TEXTURE_BUFFER = 0x2,
+   USAGE_ATOMIC_COUNTER_BUFFER = 0x4,
 } gl_buffer_usage;
 
 
