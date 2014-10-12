@@ -163,6 +163,7 @@ kernel::exec_context::bind(intrusive_ptr<command_queue> _q,
       switch (marg.semantic) {
       case module::argument::general:
          (*(explicit_arg++))->bind(*this, marg);
+         break;
 
       case module::argument::grid_dimension: {
          const cl_uint dimension = grid_offset.size();
@@ -170,6 +171,7 @@ kernel::exec_context::bind(intrusive_ptr<command_queue> _q,
 
          arg->set(sizeof(dimension), &dimension);
          arg->bind(*this, marg);
+         break;
       }
       case module::argument::grid_offset: {
          for (cl_uint x : pad_vector(*q, grid_offset, 1)) {
@@ -178,6 +180,7 @@ kernel::exec_context::bind(intrusive_ptr<command_queue> _q,
             arg->set(sizeof(x), &x);
             arg->bind(*this, marg);
          }
+         break;
       }
       }
    }
