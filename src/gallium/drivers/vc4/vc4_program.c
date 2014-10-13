@@ -722,6 +722,27 @@ tgsi_to_qir_flr(struct vc4_compile *c,
                               trunc);
 }
 
+/**
+ * Computes ceil(x), which is tricky because our FTOI truncates (rounds to
+ * zero).
+ */
+static struct qreg
+tgsi_to_qir_ceil(struct vc4_compile *c,
+                 struct tgsi_full_instruction *tgsi_inst,
+                 enum qop op, struct qreg *src, int i)
+{
+        struct qreg trunc = qir_ITOF(c, qir_FTOI(c, src[0 * 4 + i]));
+
+        /* This will be < 0 if we truncated and the truncation was of a value
+         * that was > 0 in the first place.
+         */
+        qir_SF(c, qir_FSUB(c, trunc, src[0 * 4 + i]));
+
+        return qir_SEL_X_Y_NS(c,
+                              qir_FADD(c, trunc, qir_uniform_f(c, 1.0)),
+                              trunc);
+}
+
 static struct qreg
 tgsi_to_qir_abs(struct vc4_compile *c,
                 struct tgsi_full_instruction *tgsi_inst,
@@ -1083,6 +1104,7 @@ emit_tgsi_instruction(struct vc4_compile *c,
                 [TGSI_OPCODE_LG2] = { QOP_LOG2, tgsi_to_qir_scalar },
                 [TGSI_OPCODE_LRP] = { 0, tgsi_to_qir_lrp },
                 [TGSI_OPCODE_TRUNC] = { 0, tgsi_to_qir_trunc },
+                [TGSI_OPCODE_CEIL] = { 0, tgsi_to_qir_ceil },
                 [TGSI_OPCODE_FRC] = { 0, tgsi_to_qir_frc },
                 [TGSI_OPCODE_FLR] = { 0, tgsi_to_qir_flr },
                 [TGSI_OPCODE_SIN] = { 0, tgsi_to_qir_sin },
