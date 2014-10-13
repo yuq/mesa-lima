@@ -83,6 +83,7 @@ struct vc4_uncompiled_shader {
 };
 
 struct vc4_compiled_shader {
+        uint64_t program_id;
         struct vc4_bo *bo;
 
         struct vc4_shader_uniform_info uniforms;
@@ -91,6 +92,14 @@ struct vc4_compiled_shader {
         uint32_t color_inputs;
 
         uint8_t num_inputs;
+
+        /**
+         * Array of the meanings of the VPM inputs this shader needs.
+         *
+         * It doesn't include those that aren't part of the VPM, like
+         * point/line coordinates.
+         */
+        struct vc4_varying_semantic *input_semantics;
 };
 
 struct vc4_program_stateobj {
@@ -173,6 +182,7 @@ struct vc4_context {
         struct primconvert_context *primconvert;
 
         struct util_hash_table *fs_cache, *vs_cache;
+        uint64_t next_compiled_program_id;
 
         struct ra_regs *regs;
         unsigned int reg_class_any;

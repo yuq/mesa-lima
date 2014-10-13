@@ -216,9 +216,21 @@ enum quniform_contents {
         QUNIFORM_ALPHA_REF,
 };
 
+struct vc4_varying_semantic {
+        uint8_t semantic;
+        uint8_t index;
+        uint8_t swizzle;
+};
+
 struct vc4_compile {
+        struct vc4_context *vc4;
         struct tgsi_parse_context parser;
         struct qreg *temps;
+        /**
+         * Inputs to the shader, arranged by TGSI declaration order.
+         *
+         * Not all fragment shader QFILE_VARY reads are present in this array.
+         */
         struct qreg *inputs;
         struct qreg *outputs;
         struct qreg *consts;
@@ -230,6 +242,23 @@ struct vc4_compile {
         uint32_t num_consts;
         struct qreg line_x, point_x, point_y;
         struct qreg discard;
+
+        /**
+         * Array of the TGSI semantics of all FS QFILE_VARY reads.
+         *
+         * This includes those that aren't part of the VPM varyings, like
+         * point/line coordinates.
+         */
+        struct vc4_varying_semantic *input_semantics;
+        uint32_t num_input_semantics;
+        uint32_t input_semantics_array_size;
+
+        /**
+         * An entry per outputs[] in the VS indicating what the semantic of
+         * the output is.  Used to emit from the VS in the order that the FS
+         * needs.
+         */
+        struct vc4_varying_semantic *output_semantics;
 
         struct pipe_shader_state *shader_state;
         struct vc4_key *key;
@@ -257,7 +286,6 @@ struct vc4_compile {
         uint32_t qpu_inst_count;
         uint32_t qpu_inst_size;
         uint32_t num_inputs;
-        uint32_t color_inputs;
 };
 
 struct vc4_compile *qir_compile_init(void);

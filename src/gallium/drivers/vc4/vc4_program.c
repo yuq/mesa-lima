@@ -75,6 +75,13 @@ struct vc4_fs_key {
 
 struct vc4_vs_key {
         struct vc4_key base;
+
+        /**
+         * This is a proxy for the array of FS input semantics, which is
+         * larger than we would want to put in the key.
+         */
+        uint64_t compiled_fs_id;
+
         enum pipe_format attr_formats[8];
         bool is_coord;
         bool per_vertex_point_size;
@@ -948,12 +955,27 @@ emit_point_coord_input(struct vc4_compile *c, int attr)
 }
 
 static struct qreg
-emit_fragment_varying(struct vc4_compile *c, int index)
+emit_fragment_varying(struct vc4_compile *c, uint8_t semantic,
+                      uint8_t index, uint8_t swizzle)
 {
+        uint32_t i = c->num_input_semantics++;
         struct qreg vary = {
                 QFILE_VARY,
-                index
+                i
         };
+
+        if (c->num_input_semantics >= c->input_semantics_array_size) {
+                c->input_semantics_array_size =
+                        MAX2(4, c->input_semantics_array_size * 2);
+
+                c->input_semantics = reralloc(c, c->input_semantics,
+                                              struct vc4_varying_semantic,
+                                              c->input_semantics_array_size);
+        }
+
+        c->input_semantics[i].semantic = semantic;
+        c->input_semantics[i].index = index;
+        c->input_semantics[i].swizzle = swizzle;
 
         return qir_VARY_ADD_C(c, qir_FMUL(c, vary, qir_FRAG_W(c)));
 }
@@ -964,12 +986,11 @@ emit_fragment_input(struct vc4_compile *c, int attr,
 {
         for (int i = 0; i < 4; i++) {
                 c->inputs[attr * 4 + i] =
-                        emit_fragment_varying(c, attr * 4 + i);
+                        emit_fragment_varying(c,
+                                              decl->Semantic.Name,
+                                              decl->Semantic.Index,
+                                              i);
                 c->num_inputs++;
-
-                if (decl->Semantic.Name == TGSI_SEMANTIC_COLOR ||
-                    decl->Semantic.Name == TGSI_SEMANTIC_BCOLOR)
-                        c->color_inputs |= 1 << i;
         }
 }
 
@@ -1027,9 +1048,25 @@ emit_tgsi_declaration(struct vc4_compile *c,
                 }
                 break;
 
-        case TGSI_FILE_OUTPUT:
+        case TGSI_FILE_OUTPUT: {
+                uint32_t old_array_size = c->outputs_array_size;
                 resize_qreg_array(c, &c->outputs, &c->outputs_array_size,
                                   (decl->Range.Last + 1) * 4);
+
+                if (old_array_size != c->outputs_array_size) {
+                        c->output_semantics = reralloc(c,
+                                                       c->output_semantics,
+                                                       struct vc4_varying_semantic,
+                                                       c->outputs_array_size);
+                }
+
+                struct vc4_varying_semantic *sem =
+                        &c->output_semantics[decl->Range.First * 4];
+                for (int i = 0; i < 4; i++) {
+                        sem[i].semantic = decl->Semantic.Name;
+                        sem[i].index = decl->Semantic.Index;
+                        sem[i].swizzle = i;
+                }
 
                 switch (decl->Semantic.Name) {
                 case TGSI_SEMANTIC_POSITION:
@@ -1044,6 +1081,7 @@ emit_tgsi_declaration(struct vc4_compile *c,
                 }
 
                 break;
+        }
         }
 }
 
@@ -1568,7 +1606,9 @@ emit_point_size_write(struct vc4_compile *c)
 }
 
 static void
-emit_vert_end(struct vc4_compile *c)
+emit_vert_end(struct vc4_compile *c,
+              struct vc4_varying_semantic *fs_inputs,
+              uint32_t num_fs_inputs)
 {
         struct qreg rcp_w = qir_RCP(c, c->outputs[3]);
 
@@ -1578,8 +1618,24 @@ emit_vert_end(struct vc4_compile *c)
         if (c->vs_key->per_vertex_point_size)
                 emit_point_size_write(c);
 
-        for (int i = 4; i < c->num_outputs; i++) {
-                qir_VPM_WRITE(c, c->outputs[i]);
+        for (int i = 0; i < num_fs_inputs; i++) {
+                struct vc4_varying_semantic *input = &fs_inputs[i];
+                int j;
+                for (j = 0; j < c->num_outputs; j++) {
+                        struct vc4_varying_semantic *output =
+                                &c->output_semantics[j];
+                        if (input->semantic == output->semantic &&
+                            input->index == output->index &&
+                            input->swizzle == output->swizzle) {
+                                qir_VPM_WRITE(c, c->outputs[j]);
+                                break;
+                        }
+                }
+                /* Emit padding if we didn't find a declared VS output for
+                 * this FS input.
+                 */
+                if (j == c->num_outputs)
+                        qir_VPM_WRITE(c, qir_uniform_f(c, 0.0));
         }
 }
 
@@ -1613,10 +1669,10 @@ vc4_shader_tgsi_to_qir(struct vc4_context *vc4, enum qstage stage,
         case QSTAGE_FRAG:
                 c->fs_key = (struct vc4_fs_key *)key;
                 if (c->fs_key->is_points) {
-                        c->point_x = emit_fragment_varying(c, 0);
-                        c->point_y = emit_fragment_varying(c, 0);
+                        c->point_x = emit_fragment_varying(c, ~0, ~0, 0);
+                        c->point_y = emit_fragment_varying(c, ~0, ~0, 0);
                 } else if (c->fs_key->is_lines) {
-                        c->line_x = emit_fragment_varying(c, 0);
+                        c->line_x = emit_fragment_varying(c, ~0, ~0, 0);
                 }
                 break;
         case QSTAGE_VERT:
@@ -1684,7 +1740,9 @@ vc4_shader_tgsi_to_qir(struct vc4_context *vc4, enum qstage stage,
                 emit_frag_end(c);
                 break;
         case QSTAGE_VERT:
-                emit_vert_end(c);
+                emit_vert_end(c,
+                              vc4->prog.fs->input_semantics,
+                              vc4->prog.fs->num_inputs);
                 break;
         case QSTAGE_COORD:
                 emit_coord_end(c);
@@ -1782,8 +1840,28 @@ vc4_get_compiled_shader(struct vc4_context *vc4, enum qstage stage,
         struct vc4_compile *c = vc4_shader_tgsi_to_qir(vc4, stage, key);
         shader = rzalloc(NULL, struct vc4_compiled_shader);
 
-        shader->num_inputs = c->num_inputs;
-        shader->color_inputs = c->color_inputs;
+        shader->program_id = vc4->next_compiled_program_id++;
+        if (stage == QSTAGE_FRAG) {
+                shader->input_semantics = ralloc_array(shader,
+                                                       struct vc4_varying_semantic,
+                                                       c->num_input_semantics);
+
+                for (int i = 0; i < c->num_input_semantics; i++) {
+                        struct vc4_varying_semantic *sem = &c->input_semantics[i];
+
+                        /* Skip non-VS-output inputs. */
+                        if (sem->semantic == (uint8_t)~0)
+                                continue;
+
+                        if (sem->semantic == TGSI_SEMANTIC_COLOR)
+                                shader->color_inputs |= (1 << shader->num_inputs);
+                        shader->input_semantics[shader->num_inputs] = *sem;
+                        shader->num_inputs++;
+                }
+        } else {
+                shader->num_inputs = c->num_inputs;
+        }
+
         copy_uniform_state_to_shader(shader, c);
         shader->bo = vc4_bo_alloc_mem(vc4->screen, c->qpu_insts,
                                       c->qpu_inst_count * sizeof(uint64_t),
@@ -1898,6 +1976,7 @@ vc4_update_compiled_vs(struct vc4_context *vc4, uint8_t prim_mode)
         memset(key, 0, sizeof(*key));
         vc4_setup_shared_key(&key->base, &vc4->verttex);
         key->base.shader_state = vc4->prog.bind_vs;
+        key->compiled_fs_id = vc4->prog.fs->program_id;
 
         for (int i = 0; i < ARRAY_SIZE(key->attr_formats); i++)
                 key->attr_formats[i] = vc4->vtx->pipe[i].src_format;
