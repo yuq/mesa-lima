@@ -528,6 +528,7 @@ tgsi_to_qir_tex(struct vc4_compile *c,
         struct qreg t = src[0 * 4 + 1];
         struct qreg r = src[0 * 4 + 2];
         uint32_t unit = tgsi_inst->Src[1].Register.Index;
+        bool is_txl = tgsi_inst->Instruction.Opcode == TGSI_OPCODE_TXL;
 
         struct qreg proj = c->undef;
         if (tgsi_inst->Instruction.Opcode == TGSI_OPCODE_TXP) {
@@ -561,14 +562,19 @@ tgsi_to_qir_tex(struct vc4_compile *c,
         }
 
         if (tgsi_inst->Texture.Texture == TGSI_TEXTURE_CUBE ||
+            tgsi_inst->Texture.Texture == TGSI_TEXTURE_SHADOWCUBE ||
+            is_txl) {
+                texture_u[2] = add_uniform(c, QUNIFORM_TEXTURE_CONFIG_P2,
+                                           unit | (is_txl << 16));
+        }
+
+        if (tgsi_inst->Texture.Texture == TGSI_TEXTURE_CUBE ||
                    tgsi_inst->Texture.Texture == TGSI_TEXTURE_SHADOWCUBE) {
                 struct qreg ma = qir_FMAXABS(c, qir_FMAXABS(c, s, t), r);
                 struct qreg rcp_ma = qir_RCP(c, ma);
                 s = qir_FMUL(c, s, rcp_ma);
                 t = qir_FMUL(c, t, rcp_ma);
                 r = qir_FMUL(c, r, rcp_ma);
-
-                texture_u[2] = add_uniform(c, QUNIFORM_TEXTURE_CONFIG_P2, unit);
 
                 qir_TEX_R(c, r, texture_u[next_texture_u++]);
         } else if (c->key->tex[unit].wrap_s == PIPE_TEX_WRAP_CLAMP_TO_BORDER ||
@@ -591,7 +597,8 @@ tgsi_to_qir_tex(struct vc4_compile *c,
 
         qir_TEX_T(c, t, texture_u[next_texture_u++]);
 
-        if (tgsi_inst->Instruction.Opcode == TGSI_OPCODE_TXB)
+        if (tgsi_inst->Instruction.Opcode == TGSI_OPCODE_TXB ||
+            tgsi_inst->Instruction.Opcode == TGSI_OPCODE_TXL)
                 qir_TEX_B(c, src[0 * 4 + 3], texture_u[next_texture_u++]);
 
         qir_TEX_S(c, s, texture_u[next_texture_u++]);
@@ -1175,6 +1182,7 @@ emit_tgsi_instruction(struct vc4_compile *c,
         case TGSI_OPCODE_TEX:
         case TGSI_OPCODE_TXP:
         case TGSI_OPCODE_TXB:
+        case TGSI_OPCODE_TXL:
                 tgsi_to_qir_tex(c, tgsi_inst,
                                 op_trans[tgsi_op].op, src_regs);
                 return;
@@ -2163,15 +2171,17 @@ write_texture_p1(struct vc4_context *vc4,
 static void
 write_texture_p2(struct vc4_context *vc4,
                  struct vc4_texture_stateobj *texstate,
-                 uint32_t unit)
+                 uint32_t data)
 {
+        uint32_t unit = data & 0xffff;
         struct pipe_sampler_view *texture = texstate->textures[unit];
         struct vc4_resource *rsc = vc4_resource(texture->texture);
 
         cl_u32(&vc4->uniforms,
                VC4_SET_FIELD(VC4_TEX_P2_PTYPE_CUBE_MAP_STRIDE,
                              VC4_TEX_P2_PTYPE) |
-               VC4_SET_FIELD(rsc->cube_map_stride >> 12, VC4_TEX_P2_CMST));
+               VC4_SET_FIELD(rsc->cube_map_stride >> 12, VC4_TEX_P2_CMST) |
+               VC4_SET_FIELD((data >> 16) & 1, VC4_TEX_P2_BSLOD));
 }
 
 
