@@ -766,10 +766,11 @@ tgsi_to_qir_sin(struct vc4_compile *c,
                 enum qop op, struct qreg *src, int i)
 {
         float coeff[] = {
-                2.0 * M_PI,
-                -pow(2.0 * M_PI, 3) / (3 * 2 * 1),
-                pow(2.0 * M_PI, 5) / (5 * 4 * 3 * 2 * 1),
-                -pow(2.0 * M_PI, 7) / (7 * 6 * 5 * 4 * 3 * 2 * 1),
+                -2.0 * M_PI,
+                pow(2.0 * M_PI, 3) / (3 * 2 * 1),
+                -pow(2.0 * M_PI, 5) / (5 * 4 * 3 * 2 * 1),
+                pow(2.0 * M_PI, 7) / (7 * 6 * 5 * 4 * 3 * 2 * 1),
+                -pow(2.0 * M_PI, 9) / (9 * 8 * 7 * 6 * 5 * 4 * 3 * 2 * 1),
         };
 
         struct qreg scaled_x =
@@ -777,8 +778,9 @@ tgsi_to_qir_sin(struct vc4_compile *c,
                          src[0 * 4 + 0],
                          qir_uniform_f(c, 1.0f / (M_PI * 2.0f)));
 
-
-        struct qreg x = tgsi_to_qir_frc(c, NULL, 0, &scaled_x, 0);
+        struct qreg x = qir_FADD(c,
+                                 tgsi_to_qir_frc(c, NULL, 0, &scaled_x, 0),
+                                 qir_uniform_f(c, -0.5));
         struct qreg x2 = qir_FMUL(c, x, x);
         struct qreg sum = qir_FMUL(c, x, qir_uniform_f(c, coeff[0]));
         for (int i = 1; i < ARRAY_SIZE(coeff); i++) {
@@ -799,16 +801,20 @@ tgsi_to_qir_cos(struct vc4_compile *c,
                 enum qop op, struct qreg *src, int i)
 {
         float coeff[] = {
-                1.0f,
-                -pow(2.0 * M_PI, 2) / (2 * 1),
-                pow(2.0 * M_PI, 4) / (4 * 3 * 2 * 1),
-                -pow(2.0 * M_PI, 6) / (6 * 5 * 4 * 3 * 2 * 1),
+                -1.0f,
+                pow(2.0 * M_PI, 2) / (2 * 1),
+                -pow(2.0 * M_PI, 4) / (4 * 3 * 2 * 1),
+                pow(2.0 * M_PI, 6) / (6 * 5 * 4 * 3 * 2 * 1),
+                -pow(2.0 * M_PI, 8) / (8 * 7 * 6 * 5 * 4 * 3 * 2 * 1),
+                pow(2.0 * M_PI, 10) / (10 * 9 * 8 * 7 * 6 * 5 * 4 * 3 * 2 * 1),
         };
 
         struct qreg scaled_x =
                 qir_FMUL(c, src[0 * 4 + 0],
                          qir_uniform_f(c, 1.0f / (M_PI * 2.0f)));
-        struct qreg x_frac = tgsi_to_qir_frc(c, NULL, 0, &scaled_x, 0);
+        struct qreg x_frac = qir_FADD(c,
+                                      tgsi_to_qir_frc(c, NULL, 0, &scaled_x, 0),
+                                      qir_uniform_f(c, -0.5));
 
         struct qreg sum = qir_uniform_f(c, coeff[0]);
         struct qreg x2 = qir_FMUL(c, x_frac, x_frac);
