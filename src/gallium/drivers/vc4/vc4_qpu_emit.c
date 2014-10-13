@@ -238,15 +238,30 @@ vc4_generate_code(struct vc4_context *vc4, struct vc4_compile *c)
 {
         struct qpu_reg *temp_registers = vc4_register_allocate(vc4, c);
         bool discard = false;
+        uint32_t inputs_remaining = c->num_inputs;
+        uint32_t vpm_read_fifo_count = 0;
+        uint32_t vpm_read_offset = 0;
 
         make_empty_list(&c->qpu_inst_list);
 
         switch (c->stage) {
         case QSTAGE_VERT:
         case QSTAGE_COORD:
-                queue(c, qpu_load_imm_ui(qpu_vrsetup(),
-                                         (0x00001a00 +
-                                          0x00100000 * c->num_inputs)));
+                /* There's a 4-entry FIFO for VPMVCD reads, each of which can
+                 * load up to 16 dwords (4 vec4s) per vertex.
+                 */
+                while (inputs_remaining) {
+                        uint32_t num_entries = MIN2(inputs_remaining, 16);
+                        queue(c, qpu_load_imm_ui(qpu_vrsetup(),
+                                                 vpm_read_offset |
+                                                 0x00001a00 |
+                                                 ((num_entries & 0xf) << 20)));
+                        inputs_remaining -= num_entries;
+                        vpm_read_offset += num_entries;
+                        vpm_read_fifo_count++;
+                }
+                assert(vpm_read_fifo_count <= 4);
+
                 queue(c, qpu_load_imm_ui(qpu_vwsetup(), 0x00001a00));
                 break;
         case QSTAGE_FRAG:
