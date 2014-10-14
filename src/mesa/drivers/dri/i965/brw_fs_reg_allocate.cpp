@@ -390,7 +390,16 @@ fs_visitor::setup_payload_interference(struct ra_graph *g,
        * The alternative would be to have per-physical-register classes, which
        * would just be silly.
        */
-      ra_set_node_reg(g, first_payload_node + i, i);
+      if (brw->intelScreen->devinfo->gen <= 5 && dispatch_width == 16) {
+         /* We have to divide by 2 here because we only have even numbered
+          * registers.  Some of the payload registers will be odd, but
+          * that's ok because their physical register numbers have already
+          * been assigned.  The only thing this is used for is interference.
+          */
+         ra_set_node_reg(g, first_payload_node + i, i / 2);
+      } else {
+         ra_set_node_reg(g, first_payload_node + i, i);
+      }
    }
 }
 
