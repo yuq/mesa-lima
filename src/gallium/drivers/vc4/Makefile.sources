@@ -36,7 +36,4 @@ C_SOURCES := \
 	vc4_state.c \
 	vc4_tiling.c \
 	vc4_tiling.h \
-	kernel/vc4_gem.c \
-	kernel/vc4_validate.c \
-	kernel/vc4_validate_shaders.c \
 	$()
