@@ -56,8 +56,8 @@ emit_cacheflush(struct fd_ringbuffer *ring)
 static void
 emit_vertexbufs(struct fd_context *ctx)
 {
-	struct fd_vertex_stateobj *vtx = ctx->vtx;
-	struct fd_vertexbuf_stateobj *vertexbuf = &ctx->vertexbuf;
+	struct fd_vertex_stateobj *vtx = ctx->vtx.vtx;
+	struct fd_vertexbuf_stateobj *vertexbuf = &ctx->vtx.vertexbuf;
 	struct fd2_vertex_buf bufs[PIPE_MAX_ATTRIBS];
 	unsigned i;
 

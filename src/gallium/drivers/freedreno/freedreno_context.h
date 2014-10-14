@@ -82,6 +82,15 @@ struct fd_vertex_stateobj {
 	unsigned num_elements;
 };
 
+/* group together the vertex and vertexbuf state.. for ease of passing
+ * around, and because various internal operations (gmem<->mem, etc)
+ * need their own vertex state:
+ */
+struct fd_vertex_state {
+	struct fd_vertex_stateobj *vtx;
+	struct fd_vertexbuf_stateobj vertexbuf;
+};
+
 /* Bitmask of stages in rendering that a particular query query is
  * active.  Queries will be automatically started/stopped (generating
  * additional fd_hw_sample_period's) on entrance/exit from stages that
@@ -304,7 +313,7 @@ struct fd_context {
 
 	struct fd_program_stateobj prog;
 
-	struct fd_vertex_stateobj *vtx;
+	struct fd_vertex_state vtx;
 
 	struct pipe_blend_color blend_color;
 	struct pipe_stencil_ref stencil_ref;
@@ -313,7 +322,6 @@ struct fd_context {
 	struct pipe_poly_stipple stipple;
 	struct pipe_viewport_state viewport;
 	struct fd_constbuf_stateobj constbuf[PIPE_SHADER_TYPES];
-	struct fd_vertexbuf_stateobj vertexbuf;
 	struct pipe_index_buffer indexbuf;
 
 	/* GMEM/tile handling fxns: */

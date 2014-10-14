@@ -331,13 +331,15 @@ fd3_emit_gmem_restore_tex(struct fd_ringbuffer *ring, struct pipe_surface *psurf
 
 void
 fd3_emit_vertex_bufs(struct fd_ringbuffer *ring,
-		struct ir3_shader_variant *vp,
-		struct fd3_vertex_buf *vbufs, uint32_t n)
+		struct ir3_shader_variant *vp, struct fd_vertex_state *vtx)
 {
 	uint32_t i, j, last = 0;
 	uint32_t total_in = 0;
+	unsigned n = MIN2(vtx->vtx->num_elements, vp->inputs_count);
 
-	n = MIN2(n, vp->inputs_count);
+	/* hw doesn't like to be configured for zero vbo's, it seems: */
+	if (vtx->vtx->num_elements == 0)
+		return;
 
 	for (i = 0; i < n; i++)
 		if (vp->inputs[i].compmask)
@@ -345,9 +347,11 @@ fd3_emit_vertex_bufs(struct fd_ringbuffer *ring,
 
 	for (i = 0, j = 0; i <= last; i++) {
 		if (vp->inputs[i].compmask) {
-			struct pipe_resource *prsc = vbufs[i].prsc;
-			struct fd_resource *rsc = fd_resource(prsc);
-			enum pipe_format pfmt = vbufs[i].format;
+			struct pipe_vertex_element *elem = &vtx->vtx->pipe[i];
+			struct pipe_vertex_buffer *vb =
+					&vtx->vertexbuf.vb[elem->vertex_buffer_index];
+			struct fd_resource *rsc = fd_resource(vb->buffer);
+			enum pipe_format pfmt = elem->src_format;
 			enum a3xx_vtx_fmt fmt = fd3_pipe2vtx(pfmt);
 			bool switchnext = (i != last);
 			bool isint = util_format_is_pure_integer(pfmt);
@@ -357,11 +361,11 @@ fd3_emit_vertex_bufs(struct fd_ringbuffer *ring,
 
 			OUT_PKT0(ring, REG_A3XX_VFD_FETCH(j), 2);
 			OUT_RING(ring, A3XX_VFD_FETCH_INSTR_0_FETCHSIZE(fs - 1) |
-					A3XX_VFD_FETCH_INSTR_0_BUFSTRIDE(vbufs[i].stride) |
+					A3XX_VFD_FETCH_INSTR_0_BUFSTRIDE(vb->stride) |
 					COND(switchnext, A3XX_VFD_FETCH_INSTR_0_SWITCHNEXT) |
 					A3XX_VFD_FETCH_INSTR_0_INDEXCODE(j) |
 					A3XX_VFD_FETCH_INSTR_0_STEPRATE(1));
-			OUT_RELOC(ring, rsc->bo, vbufs[i].offset, 0, 0);
+			OUT_RELOC(ring, rsc->bo, vb->buffer_offset + elem->src_offset, 0, 0);
 
 			OUT_PKT0(ring, REG_A3XX_VFD_DECODE_INSTR(j), 1);
 			OUT_RING(ring, A3XX_VFD_DECODE_INSTR_CONSTFILL |

@@ -449,8 +449,8 @@ fd_blit(struct pipe_context *pctx, const struct pipe_blit_info *blit_info)
 static void
 fd_blitter_pipe_begin(struct fd_context *ctx)
 {
-	util_blitter_save_vertex_buffer_slot(ctx->blitter, ctx->vertexbuf.vb);
-	util_blitter_save_vertex_elements(ctx->blitter, ctx->vtx);
+	util_blitter_save_vertex_buffer_slot(ctx->blitter, ctx->vtx.vertexbuf.vb);
+	util_blitter_save_vertex_elements(ctx->blitter, ctx->vtx.vtx);
 	util_blitter_save_vertex_shader(ctx->blitter, ctx->prog.vp);
 	util_blitter_save_rasterizer(ctx->blitter, ctx->rasterizer);
 	util_blitter_save_viewport(ctx->blitter, &ctx->viewport);

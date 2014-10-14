@@ -46,21 +46,13 @@ void fd3_emit_constant(struct fd_ringbuffer *ring,
 void fd3_emit_gmem_restore_tex(struct fd_ringbuffer *ring,
 		struct pipe_surface *psurf);
 
-/* NOTE: this just exists because we don't have proper vertex/vertexbuf
- * state objs for clear, and mem2gmem/gmem2mem operations..
- */
-struct fd3_vertex_buf {
-	unsigned offset, stride;
-	struct pipe_resource *prsc;
-	enum pipe_format format;
-};
-
 void fd3_emit_vertex_bufs(struct fd_ringbuffer *ring,
-		struct ir3_shader_variant *vp,
-		struct fd3_vertex_buf *vbufs, uint32_t n);
+		struct ir3_shader_variant *vp, struct fd_vertex_state *vtx);
+
 void fd3_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 		const struct pipe_draw_info *info,  struct fd_program_stateobj *prog,
 		struct ir3_shader_key key, uint32_t dirty);
+
 void fd3_emit_restore(struct fd_context *ctx);
 
 #endif /* FD3_EMIT_H */

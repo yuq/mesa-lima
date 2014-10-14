@@ -177,7 +177,7 @@ fd_set_vertex_buffers(struct pipe_context *pctx,
 		const struct pipe_vertex_buffer *vb)
 {
 	struct fd_context *ctx = fd_context(pctx);
-	struct fd_vertexbuf_stateobj *so = &ctx->vertexbuf;
+	struct fd_vertexbuf_stateobj *so = &ctx->vtx.vertexbuf;
 	int i;
 
 	/* on a2xx, pitch is encoded in the vtx fetch instruction, so
@@ -286,7 +286,7 @@ static void
 fd_vertex_state_bind(struct pipe_context *pctx, void *hwcso)
 {
 	struct fd_context *ctx = fd_context(pctx);
-	ctx->vtx = hwcso;
+	ctx->vtx.vtx = hwcso;
 	ctx->dirty |= FD_DIRTY_VTXSTATE;
 }
 

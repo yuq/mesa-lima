@@ -47,26 +47,7 @@ static void
 emit_vertexbufs(struct fd_context *ctx, struct fd_ringbuffer *ring,
 		struct ir3_shader_key key)
 {
-	struct fd_vertex_stateobj *vtx = ctx->vtx;
-	struct fd_vertexbuf_stateobj *vertexbuf = &ctx->vertexbuf;
-	struct fd3_vertex_buf bufs[PIPE_MAX_ATTRIBS];
-	unsigned i;
-
-	if (!vtx->num_elements)
-		return;
-
-	for (i = 0; i < vtx->num_elements; i++) {
-		struct pipe_vertex_element *elem = &vtx->pipe[i];
-		struct pipe_vertex_buffer *vb =
-				&vertexbuf->vb[elem->vertex_buffer_index];
-		bufs[i].offset = vb->buffer_offset + elem->src_offset;
-		bufs[i].stride = vb->stride;
-		bufs[i].prsc   = vb->buffer;
-		bufs[i].format = elem->src_format;
-	}
-
-	fd3_emit_vertex_bufs(ring, fd3_shader_variant(ctx->prog.vp, key),
-			bufs, vtx->num_elements);
+	fd3_emit_vertex_bufs(ring, fd3_shader_variant(ctx->prog.vp, key), &ctx->vtx);
 }
 
 static void
@@ -75,7 +56,7 @@ draw_impl(struct fd_context *ctx, const struct pipe_draw_info *info,
 {
 	fd3_emit_state(ctx, ring, info, &ctx->prog, key, dirty);
 
-	if (dirty & FD_DIRTY_VTXBUF)
+	if (dirty & (FD_DIRTY_VTXBUF | FD_DIRTY_VTXSTATE))
 		emit_vertexbufs(ctx, ring, key);
 
 	OUT_PKT0(ring, REG_A3XX_PC_VERTEX_REUSE_BLOCK_CNTL, 1);
@@ -185,11 +166,7 @@ fd3_clear_binning(struct fd_context *ctx, unsigned dirty)
 	fd3_emit_state(ctx, ring, NULL, &ctx->solid_prog, key, dirty);
 
 	fd3_emit_vertex_bufs(ring, fd3_shader_variant(ctx->solid_prog.vp, key),
-			(struct fd3_vertex_buf[]) {{
-				.prsc = fd3_ctx->solid_vbuf,
-				.stride = 12,
-				.format = PIPE_FORMAT_R32G32B32_FLOAT,
-			}}, 1);
+			&fd3_ctx->solid_vbuf_state);
 
 	OUT_PKT0(ring, REG_A3XX_PC_PRIM_VTX_CNTL, 1);
 	OUT_RING(ring, A3XX_PC_PRIM_VTX_CNTL_STRIDE_IN_VPC(0) |
@@ -320,11 +297,7 @@ fd3_clear(struct fd_context *ctx, unsigned buffers,
 	OUT_RING(ring, A3XX_GRAS_SU_MODE_CONTROL_LINEHALFWIDTH(0));
 
 	fd3_emit_vertex_bufs(ring, fd3_shader_variant(ctx->solid_prog.vp, key),
-			(struct fd3_vertex_buf[]) {{
-				.prsc = fd3_ctx->solid_vbuf,
-				.stride = 12,
-				.format = PIPE_FORMAT_R32G32B32_FLOAT,
-			}}, 1);
+			&fd3_ctx->solid_vbuf_state);
 
 	fd3_emit_constant(ring, SB_FRAG_SHADER, 0, 0, 4, color->ui, NULL);
 
