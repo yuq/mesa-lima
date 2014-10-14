@@ -51,6 +51,8 @@ libxatracker_la_LDFLAGS += \
 	-Wl,--version-script=$(top_srcdir)/src/gallium/targets/xa/xa.sym
 endif
 
+EXTRA_libxatracker_la_DEPENDENCIES = xa.sym
+
 if HAVE_GALLIUM_STATIC_TARGETS
 
 TARGET_DRIVERS =

@@ -30,6 +30,8 @@ libomx_mesa_la_LIBADD = \
 	$(OMX_LIBS) \
 	$(GALLIUM_COMMON_LIB_DEPS)
 
+EXTRA_libomx_mesa_la_DEPENDENCIES = omx.sym
+
 if HAVE_GALLIUM_STATIC_TARGETS
 
 TARGET_DRIVERS =

@@ -50,6 +50,9 @@ gbm_gallium_drm_la_LDFLAGS += \
 	-Wl,--version-script=$(top_srcdir)/src/gallium/targets/gbm/gbm.sym
 endif
 
+EXTRA_gbm_gallium_drm_la_DEPENDENCIES = gbm.sym
+EXTRA_DIST = gallium-gbm-symbols-check
+
 if HAVE_GALLIUM_STATIC_TARGETS
 
 TARGET_DRIVERS =

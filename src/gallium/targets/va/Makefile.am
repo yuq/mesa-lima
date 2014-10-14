@@ -30,6 +30,8 @@ gallium_drv_video_la_LIBADD = \
 	$(VA_LIBS) \
 	$(GALLIUM_COMMON_LIB_DEPS)
 
+EXTRA_gallium_drv_video_la_DEPENDENCIES = va.sym
+
 if HAVE_GALLIUM_STATIC_TARGETS
 
 TARGET_DRIVERS =

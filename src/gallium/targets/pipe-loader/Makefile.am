@@ -193,3 +193,5 @@ pipe_swrast_la_LIBADD += \
 	$(top_builddir)/src/gallium/drivers/llvmpipe/libllvmpipe.la
 endif
 endif
+
+EXTRA_DIST = pipe.sym

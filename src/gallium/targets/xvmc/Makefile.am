@@ -31,6 +31,7 @@ libXvMCgallium_la_LIBADD = \
 	$(LIBDRM_LIBS) \
 	$(GALLIUM_COMMON_LIB_DEPS)
 
+EXTRA_libXvMCgallium_la_DEPENDENCIES = xvmc.sym
 
 TARGET_DRIVERS =
 TARGET_CPPFLAGS =

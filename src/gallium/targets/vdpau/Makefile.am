@@ -36,6 +36,10 @@ libvdpau_gallium_la_LIBADD = \
 	$(LIBDRM_LIBS) \
 	$(GALLIUM_COMMON_LIB_DEPS)
 
+EXTRA_libvdpau_gallium_la_DEPENDENCIES = \
+	vdpau.sym \
+	$(top_srcdir)/src/gallium/targets/dri-vdpau.dyn
+
 TARGET_DRIVERS =
 TARGET_CPPFLAGS =
 TARGET_LIB_DEPS = $(top_builddir)/src/loader/libloader.la

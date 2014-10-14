@@ -75,6 +75,8 @@ lib@OSMESA_LIB@_la_LDFLAGS += $(LLVM_LDFLAGS)
 lib@OSMESA_LIB@_la_LIBADD += $(top_builddir)/src/gallium/drivers/llvmpipe/libllvmpipe.la $(LLVM_LIBS)
 endif
 
+EXTRA_lib@OSMESA_LIB@_la_DEPENDENCIES = osmesa.sym
+
 include $(top_srcdir)/install-gallium-links.mk
 
 pkgconfigdir = $(libdir)/pkgconfig

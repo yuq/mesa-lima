@@ -59,6 +59,11 @@ gallium_dri_la_LIBADD = \
 gallium_dri_la_LDFLAGS += \
 	-Wl,--allow-multiple-definition
 
+EXTRA_gallium_dri_la_DEPENDENCIES = \
+	dri.sym \
+	$(top_srcdir)/src/gallium/targets/dri-vdpau.dyn
+EXTRA_DIST = SConscript
+
 TARGET_DRIVERS =
 TARGET_CPPFLAGS =
 TARGET_LIB_DEPS = $(top_builddir)/src/loader/libloader.la
