@@ -232,7 +232,9 @@ nvc0_invalidate_resource_storage(struct nouveau_context *ctx,
 
    if (res->bind & PIPE_BIND_CONSTANT_BUFFER) {
       for (s = 0; s < 5; ++s) {
-      for (i = 0; i < nvc0->num_vtxbufs; ++i) {
+      for (i = 0; i < NVC0_MAX_PIPE_CONSTBUFS; ++i) {
+         if (!(nvc0->constbuf_valid[s] & (1 << i)))
+            continue;
          if (!nvc0->constbuf[s][i].user &&
              nvc0->constbuf[s][i].u.buf == res) {
             nvc0->dirty |= NVC0_NEW_CONSTBUF;
