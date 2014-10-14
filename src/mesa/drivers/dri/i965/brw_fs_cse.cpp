@@ -99,7 +99,7 @@ is_expression(const fs_inst *const inst)
    case SHADER_OPCODE_INT_REMAINDER:
    case SHADER_OPCODE_SIN:
    case SHADER_OPCODE_COS:
-      return inst->mlen == 0;
+      return inst->mlen < 2;
    case SHADER_OPCODE_LOAD_PAYLOAD:
       return !is_copy_payload(inst);
    default:
