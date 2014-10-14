@@ -54,35 +54,53 @@ static inline uint16_t sem2idx(ir3_semantic sem)
  * in hw (two sided color), binning-pass vertex shader, etc.
  */
 struct ir3_shader_key {
+	union {
+		struct {
+			/* do we need to check {v,f}saturate_{s,t,r}? */
+			unsigned has_per_samp : 1;
+
+			/*
+			 * Vertex shader variant parameters:
+			 */
+			unsigned binning_pass : 1;
+
+			/*
+			 * Fragment shader variant parameters:
+			 */
+			unsigned color_two_side : 1;
+			unsigned half_precision : 1;
+			/* For rendering to alpha, we need a bit of special handling
+			 * since the hw always takes gl_FragColor starting from x
+			 * component, rather than figuring out to take the w component.
+			 * We could be more clever and generate variants for other
+			 * render target formats (ie. luminance formats are xxx1), but
+			 * let's start with this and see how it goes:
+			 */
+			unsigned alpha : 1;
+		};
+		uint32_t global;
+	};
+
 	/* bitmask of sampler which needs coords clamped for vertex
 	 * shader:
 	 */
-	unsigned vsaturate_s, vsaturate_t, vsaturate_r;
+	uint16_t vsaturate_s, vsaturate_t, vsaturate_r;
 
 	/* bitmask of sampler which needs coords clamped for frag
 	 * shader:
 	 */
-	unsigned fsaturate_s, fsaturate_t, fsaturate_r;
+	uint16_t fsaturate_s, fsaturate_t, fsaturate_r;
 
-	/*
-	 * Vertex shader variant parameters:
-	 */
-	unsigned binning_pass : 1;
-
-	/*
-	 * Fragment shader variant parameters:
-	 */
-	unsigned color_two_side : 1;
-	unsigned half_precision : 1;
-	/* For rendering to alpha, we need a bit of special handling
-	 * since the hw always takes gl_FragColor starting from x
-	 * component, rather than figuring out to take the w component.
-	 * We could be more clever and generate variants for other
-	 * render target formats (ie. luminance formats are xxx1), but
-	 * let's start with this and see how it goes:
-	 */
-	unsigned alpha : 1;
 };
+
+static inline bool
+ir3_shader_key_equal(struct ir3_shader_key *a, struct ir3_shader_key *b)
+{
+	/* slow-path if we need to check {v,f}saturate_{s,t,r} */
+	if (a->has_per_samp || b->has_per_samp)
+		return memcmp(a, b, sizeof(struct ir3_shader_key)) == 0;
+	return a->global == b->global;
+}
 
 struct ir3_shader_variant {
 	struct fd_bo *bo;

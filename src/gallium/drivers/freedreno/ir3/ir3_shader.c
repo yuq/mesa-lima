@@ -182,23 +182,30 @@ ir3_shader_variant(struct ir3_shader *shader, struct ir3_shader_key key)
 	 * so normalize the key to avoid constructing multiple identical
 	 * variants:
 	 */
-	if (shader->type == SHADER_FRAGMENT) {
+	switch (shader->type) {
+	case SHADER_FRAGMENT:
+	case SHADER_COMPUTE:
 		key.binning_pass = false;
-		key.vsaturate_s = 0;
-		key.vsaturate_t = 0;
-		key.vsaturate_r = 0;
-	}
-	if (shader->type == SHADER_VERTEX) {
+		if (key.has_per_samp) {
+			key.vsaturate_s = 0;
+			key.vsaturate_t = 0;
+			key.vsaturate_r = 0;
+		}
+		break;
+	case SHADER_VERTEX:
 		key.color_two_side = false;
 		key.half_precision = false;
 		key.alpha = false;
-		key.fsaturate_s = 0;
-		key.fsaturate_t = 0;
-		key.fsaturate_r = 0;
+		if (key.has_per_samp) {
+			key.fsaturate_s = 0;
+			key.fsaturate_t = 0;
+			key.fsaturate_r = 0;
+		}
+		break;
 	}
 
 	for (v = shader->variants; v; v = v->next)
-		if (!memcmp(&key, &v->key, sizeof(key)))
+		if (ir3_shader_key_equal(&key, &v->key))
 			return v;
 
 	/* compile new variant if it doesn't exist already: */

@@ -143,7 +143,7 @@ fd3_sampler_states_bind(struct pipe_context *pctx,
 {
 	struct fd_context *ctx = fd_context(pctx);
 	struct fd3_context *fd3_ctx = fd3_context(ctx);
-	unsigned saturate_s = 0, saturate_t = 0, saturate_r = 0;
+	uint16_t saturate_s = 0, saturate_t = 0, saturate_r = 0;
 	unsigned i;
 
 	for (i = 0; i < nr; i++) {
@@ -162,10 +162,18 @@ fd3_sampler_states_bind(struct pipe_context *pctx,
 	fd_sampler_states_bind(pctx, shader, start, nr, hwcso);
 
 	if (shader == PIPE_SHADER_FRAGMENT) {
+		fd3_ctx->fsaturate =
+			(saturate_s != 0) ||
+			(saturate_t != 0) ||
+			(saturate_r != 0);
 		fd3_ctx->fsaturate_s = saturate_s;
 		fd3_ctx->fsaturate_t = saturate_t;
 		fd3_ctx->fsaturate_r = saturate_r;
 	} else if (shader == PIPE_SHADER_VERTEX) {
+		fd3_ctx->vsaturate =
+			(saturate_s != 0) ||
+			(saturate_t != 0) ||
+			(saturate_r != 0);
 		fd3_ctx->vsaturate_s = saturate_s;
 		fd3_ctx->vsaturate_t = saturate_t;
 		fd3_ctx->vsaturate_r = saturate_r;
