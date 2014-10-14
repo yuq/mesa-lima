@@ -75,12 +75,26 @@ _mesa_update_shader_textures_used(struct gl_shader_program *shProg,
    memcpy(prog->SamplerUnits, shader->SamplerUnits, sizeof(prog->SamplerUnits));
    memset(prog->TexturesUsed, 0, sizeof(prog->TexturesUsed));
 
+   shProg->SamplersValidated = GL_TRUE;
+
    for (s = 0; s < MAX_SAMPLERS; s++) {
       if (prog->SamplersUsed & (1 << s)) {
          GLuint unit = shader->SamplerUnits[s];
          GLuint tgt = shader->SamplerTargets[s];
          assert(unit < Elements(prog->TexturesUsed));
          assert(tgt < NUM_TEXTURE_TARGETS);
+
+         /* The types of the samplers associated with a particular texture
+          * unit must be an exact match.  Page 74 (page 89 of the PDF) of the
+          * OpenGL 3.3 core spec says:
+          *
+          *     "It is not allowed to have variables of different sampler
+          *     types pointing to the same texture image unit within a program
+          *     object."
+          */
+         if (prog->TexturesUsed[unit] & ~(1 << tgt))
+            shProg->SamplersValidated = GL_FALSE;
+
          prog->TexturesUsed[unit] |= (1 << tgt);
       }
    }
