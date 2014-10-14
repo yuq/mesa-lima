@@ -31,6 +31,7 @@
 #include "radeon/r600_pipe_common.h"
 
 struct si_screen;
+struct si_shader;
 
 struct si_state_blend {
 	struct si_pm4_state	pm4;
@@ -270,6 +271,7 @@ unsigned si_tile_mode_index(struct r600_texture *rtex, unsigned level, bool sten
 /* si_state_draw.c */
 extern const struct r600_atom si_atom_cache_flush;
 extern const struct r600_atom si_atom_msaa_config;
+void si_shader_init_pm4_state(struct si_shader *shader);
 void si_emit_cache_flush(struct r600_common_context *sctx, struct r600_atom *atom);
 void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *dinfo);
 

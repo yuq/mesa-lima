@@ -2283,6 +2283,7 @@ int si_shader_select(struct pipe_context *ctx,
 			FREE(shader);
 			return r;
 		}
+		si_shader_init_pm4_state(shader);
 		sel->num_shaders++;
 	}
 

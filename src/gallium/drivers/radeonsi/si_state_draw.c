@@ -300,6 +300,27 @@ static void si_shader_ps(struct si_shader *shader)
 		       S_00B02C_USER_SGPR(num_user_sgprs));
 }
 
+void si_shader_init_pm4_state(struct si_shader *shader)
+{
+	switch (shader->selector->type) {
+	case PIPE_SHADER_VERTEX:
+		if (shader->key.vs.as_es)
+			si_shader_es(shader);
+		else
+			si_shader_vs(shader);
+		break;
+	case PIPE_SHADER_GEOMETRY:
+		si_shader_gs(shader);
+		si_shader_vs(shader->gs_copy_shader);
+		break;
+	case PIPE_SHADER_FRAGMENT:
+		si_shader_ps(shader);
+		break;
+	default:
+		assert(0);
+	}
+}
+
 /*
  * Drawing
  */
@@ -598,22 +619,12 @@ static void si_update_derived_state(struct si_context *sctx)
 
 	if (sctx->gs_shader) {
 		si_shader_select(ctx, sctx->gs_shader);
-
-		if (!sctx->gs_shader->current->pm4) {
-			si_shader_gs(sctx->gs_shader->current);
-			si_shader_vs(sctx->gs_shader->current->gs_copy_shader);
-		}
-
 		si_pm4_bind_state(sctx, gs, sctx->gs_shader->current->pm4);
 		si_pm4_bind_state(sctx, vs, sctx->gs_shader->current->gs_copy_shader->pm4);
 
 		sctx->b.streamout.stride_in_dw = sctx->gs_shader->so.stride;
 
 		si_shader_select(ctx, sctx->vs_shader);
-
-		if (!sctx->vs_shader->current->pm4)
-			si_shader_es(sctx->vs_shader->current);
-
 		si_pm4_bind_state(sctx, es, sctx->vs_shader->current->pm4);
 
 		if (!sctx->gs_rings)
@@ -639,10 +650,6 @@ static void si_update_derived_state(struct si_context *sctx)
 		si_pm4_bind_state(sctx, gs_onoff, sctx->gs_on);
 	} else {
 		si_shader_select(ctx, sctx->vs_shader);
-
-		if (!sctx->vs_shader->current->pm4)
-			si_shader_vs(sctx->vs_shader->current);
-
 		si_pm4_bind_state(sctx, vs, sctx->vs_shader->current->pm4);
 
 		sctx->b.streamout.stride_in_dw = sctx->vs_shader->so.stride;
@@ -670,9 +677,6 @@ static void si_update_derived_state(struct si_context *sctx)
 		si_shader_select(ctx, sel);
 		sctx->ps_shader->current = sel->current;
 	}
-
-	if (!sctx->ps_shader->current->pm4)
-		si_shader_ps(sctx->ps_shader->current);
 
 	si_pm4_bind_state(sctx, ps, sctx->ps_shader->current->pm4);
 
