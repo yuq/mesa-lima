@@ -387,11 +387,8 @@ static enum rc_reg_class variable_get_class(
 						 * instructions can't be
 						 * swizzle on r300/r400 GPUs.
 						 */
-						if (!variable->C->is_r500) {
-							can_change_writemask = 0;
-							break;
-						}
-						old_swizzle = r.U.I.Src->Swizzle;
+						can_change_writemask = 0;
+						break;
 					}
 					new_swizzle = rc_adjust_channels(
 						old_swizzle, conversion_swizzle);
