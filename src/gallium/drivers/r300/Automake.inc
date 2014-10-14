@@ -7,7 +7,7 @@ TARGET_LIB_DEPS += \
 	$(RADEON_LIBS) \
 	$(INTEL_LIBS)
 
-TARGET_RADEON_WINSYS ?= \
+TARGET_RADEON_WINSYS = \
 	$(top_builddir)/src/gallium/winsys/radeon/drm/libradeonwinsys.la
 
 endif

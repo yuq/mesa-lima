@@ -7,10 +7,10 @@ TARGET_LIB_DEPS += \
 	$(RADEON_LIBS) \
 	$(LIBDRM_LIBS)
 
-TARGET_RADEON_WINSYS ?= \
+TARGET_RADEON_WINSYS = \
 	$(top_builddir)/src/gallium/winsys/radeon/drm/libradeonwinsys.la
 
-TARGET_RADEON_COMMON ?= \
+TARGET_RADEON_COMMON = \
 	$(top_builddir)/src/gallium/drivers/radeon/libradeon.la
 
 endif
