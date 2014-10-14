@@ -640,6 +640,7 @@ fs_visitor::emit_unspill(bblock_t *block, fs_inst *inst, fs_reg dst,
       unspill_inst->offset = spill_offset;
       unspill_inst->ir = inst->ir;
       unspill_inst->annotation = inst->annotation;
+      unspill_inst->regs_written = reg_size;
 
       if (!gen7_read) {
          unspill_inst->base_mrf = 14;
