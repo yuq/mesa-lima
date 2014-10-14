@@ -680,14 +680,8 @@ static void si_update_derived_state(struct si_context *sctx)
 
 	si_pm4_bind_state(sctx, ps, sctx->ps_shader->current->pm4);
 
-	if (si_pm4_state_changed(sctx, ps) || si_pm4_state_changed(sctx, vs)) {
-		/* XXX: Emitting the PS state even when only the VS changed
-		 * fixes random failures with piglit glsl-max-varyings.
-		 * Not sure why...
-		 */
-		sctx->emitted.named.ps = NULL;
+	if (si_pm4_state_changed(sctx, ps) || si_pm4_state_changed(sctx, vs))
 		si_update_spi_map(sctx);
-	}
 
 	if (sctx->ps_db_shader_control != sctx->ps_shader->current->db_shader_control) {
 		sctx->ps_db_shader_control = sctx->ps_shader->current->db_shader_control;
