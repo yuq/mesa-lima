@@ -171,6 +171,7 @@ endif
 ##
 
 EXTRA_DIST += \
+	include \
 	state_trackers/README \
 	state_trackers/wgl targets/libgl-gdi \
 	targets/graw-gdi targets/graw-null  targets/graw-xlib \
