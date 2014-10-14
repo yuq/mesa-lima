@@ -39,15 +39,13 @@
  * Shaders
  */
 
-static void si_shader_es(struct pipe_context *ctx, struct si_shader *shader)
+static void si_shader_es(struct si_shader *shader)
 {
-	struct si_context *sctx = (struct si_context *)ctx;
 	struct si_pm4_state *pm4;
 	unsigned num_sgprs, num_user_sgprs;
 	unsigned vgpr_comp_cnt;
 	uint64_t va;
 
-	si_pm4_delete_state(sctx, es, shader->pm4);
 	pm4 = shader->pm4 = CALLOC_STRUCT(si_pm4_state);
 
 	if (pm4 == NULL)
@@ -77,9 +75,8 @@ static void si_shader_es(struct pipe_context *ctx, struct si_shader *shader)
 		       S_00B32C_USER_SGPR(num_user_sgprs));
 }
 
-static void si_shader_gs(struct pipe_context *ctx, struct si_shader *shader)
+static void si_shader_gs(struct si_shader *shader)
 {
-	struct si_context *sctx = (struct si_context *)ctx;
 	unsigned gs_vert_itemsize = shader->selector->info.num_outputs * (16 >> 2);
 	unsigned gs_max_vert_out = shader->selector->gs_max_out_vertices;
 	unsigned gsvs_itemsize = gs_vert_itemsize * gs_max_vert_out;
@@ -91,7 +88,6 @@ static void si_shader_gs(struct pipe_context *ctx, struct si_shader *shader)
 	/* The GSVS_RING_ITEMSIZE register takes 15 bits */
 	assert(gsvs_itemsize < (1 << 15));
 
-	si_pm4_delete_state(sctx, gs, shader->pm4);
 	pm4 = shader->pm4 = CALLOC_STRUCT(si_pm4_state);
 
 	if (pm4 == NULL)
@@ -147,16 +143,14 @@ static void si_shader_gs(struct pipe_context *ctx, struct si_shader *shader)
 		       S_00B22C_USER_SGPR(num_user_sgprs));
 }
 
-static void si_shader_vs(struct pipe_context *ctx, struct si_shader *shader)
+static void si_shader_vs(struct si_shader *shader)
 {
-	struct si_context *sctx = (struct si_context *)ctx;
 	struct tgsi_shader_info *info = &shader->selector->info;
 	struct si_pm4_state *pm4;
 	unsigned num_sgprs, num_user_sgprs;
 	unsigned nparams, i, vgpr_comp_cnt;
 	uint64_t va;
 
-	si_pm4_delete_state(sctx, vs, shader->pm4);
 	pm4 = shader->pm4 = CALLOC_STRUCT(si_pm4_state);
 
 	if (pm4 == NULL)
@@ -226,9 +220,8 @@ static void si_shader_vs(struct pipe_context *ctx, struct si_shader *shader)
 		       S_00B12C_SO_EN(!!shader->selector->so.num_outputs));
 }
 
-static void si_shader_ps(struct pipe_context *ctx, struct si_shader *shader)
+static void si_shader_ps(struct si_shader *shader)
 {
-	struct si_context *sctx = (struct si_context *)ctx;
 	struct tgsi_shader_info *info = &shader->selector->info;
 	struct si_pm4_state *pm4;
 	unsigned i, spi_ps_in_control;
@@ -236,7 +229,6 @@ static void si_shader_ps(struct pipe_context *ctx, struct si_shader *shader)
 	unsigned spi_baryc_cntl = 0, spi_ps_input_ena;
 	uint64_t va;
 
-	si_pm4_delete_state(sctx, ps, shader->pm4);
 	pm4 = shader->pm4 = CALLOC_STRUCT(si_pm4_state);
 
 	if (pm4 == NULL)
@@ -608,8 +600,8 @@ static void si_update_derived_state(struct si_context *sctx)
 		si_shader_select(ctx, sctx->gs_shader);
 
 		if (!sctx->gs_shader->current->pm4) {
-			si_shader_gs(ctx, sctx->gs_shader->current);
-			si_shader_vs(ctx, sctx->gs_shader->current->gs_copy_shader);
+			si_shader_gs(sctx->gs_shader->current);
+			si_shader_vs(sctx->gs_shader->current->gs_copy_shader);
 		}
 
 		si_pm4_bind_state(sctx, gs, sctx->gs_shader->current->pm4);
@@ -620,7 +612,7 @@ static void si_update_derived_state(struct si_context *sctx)
 		si_shader_select(ctx, sctx->vs_shader);
 
 		if (!sctx->vs_shader->current->pm4)
-			si_shader_es(ctx, sctx->vs_shader->current);
+			si_shader_es(sctx->vs_shader->current);
 
 		si_pm4_bind_state(sctx, es, sctx->vs_shader->current->pm4);
 
@@ -649,7 +641,7 @@ static void si_update_derived_state(struct si_context *sctx)
 		si_shader_select(ctx, sctx->vs_shader);
 
 		if (!sctx->vs_shader->current->pm4)
-			si_shader_vs(ctx, sctx->vs_shader->current);
+			si_shader_vs(sctx->vs_shader->current);
 
 		si_pm4_bind_state(sctx, vs, sctx->vs_shader->current->pm4);
 
@@ -680,7 +672,7 @@ static void si_update_derived_state(struct si_context *sctx)
 	}
 
 	if (!sctx->ps_shader->current->pm4)
-		si_shader_ps(ctx, sctx->ps_shader->current);
+		si_shader_ps(sctx->ps_shader->current);
 
 	si_pm4_bind_state(sctx, ps, sctx->ps_shader->current->pm4);
 
