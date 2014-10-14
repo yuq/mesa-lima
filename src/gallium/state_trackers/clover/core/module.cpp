@@ -157,6 +157,7 @@ namespace {
          _proc(s, x.target_size);
          _proc(s, x.target_align);
          _proc(s, x.ext_type);
+         _proc(s, x.semantic);
       }
    };
 
