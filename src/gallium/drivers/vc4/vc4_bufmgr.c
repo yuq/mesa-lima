@@ -24,6 +24,7 @@
 #include <errno.h>
 #include <err.h>
 #include <sys/mman.h>
+#include <fcntl.h>
 #include <xf86drm.h>
 #include <xf86drmMode.h>
 
@@ -88,26 +89,19 @@ vc4_bo_free(struct vc4_bo *bo)
         free(bo);
 }
 
-struct vc4_bo *
-vc4_bo_open_name(struct vc4_screen *screen, uint32_t name,
-                 uint32_t winsys_stride)
+static struct vc4_bo *
+vc4_bo_open_handle(struct vc4_screen *screen,
+                   uint32_t winsys_stride,
+                   uint32_t handle, uint32_t size)
 {
         struct vc4_bo *bo = CALLOC_STRUCT(vc4_bo);
 
-        struct drm_gem_open o;
-        o.name = name;
-        int ret = drmIoctl(screen->fd, DRM_IOCTL_GEM_OPEN, &o);
-        if (ret) {
-                fprintf(stderr, "Failed to open bo %d: %s\n",
-                        name, strerror(errno));
-                free(bo);
-                return NULL;
-        }
+        assert(size);
 
         pipe_reference_init(&bo->reference, 1);
         bo->screen = screen;
-        bo->handle = o.handle;
-        bo->size = o.size;
+        bo->handle = handle;
+        bo->size = size;
         bo->name = "winsys";
 
 #ifdef USE_VC4_SIMULATOR
@@ -118,6 +112,59 @@ vc4_bo_open_name(struct vc4_screen *screen, uint32_t name,
 #endif
 
         return bo;
+}
+
+struct vc4_bo *
+vc4_bo_open_name(struct vc4_screen *screen, uint32_t name,
+                 uint32_t winsys_stride)
+{
+        struct drm_gem_open o = {
+                .name = name
+        };
+        int ret = drmIoctl(screen->fd, DRM_IOCTL_GEM_OPEN, &o);
+        if (ret) {
+                fprintf(stderr, "Failed to open bo %d: %s\n",
+                        name, strerror(errno));
+                return NULL;
+        }
+
+        return vc4_bo_open_handle(screen, winsys_stride, o.handle, o.size);
+}
+
+struct vc4_bo *
+vc4_bo_open_dmabuf(struct vc4_screen *screen, int fd, uint32_t winsys_stride)
+{
+        uint32_t handle;
+        int ret = drmPrimeFDToHandle(screen->fd, fd, &handle);
+        int size;
+        if (ret) {
+                fprintf(stderr, "Failed to get vc4 handle for dmabuf %d\n", fd);
+                return NULL;
+        }
+
+        /* Determine the size of the bo we were handed. */
+        size = lseek(fd, 0, SEEK_END);
+        if (size == -1) {
+                fprintf(stderr, "Couldn't get size of dmabuf fd %d.\n", fd);
+                return NULL;
+        }
+
+        return vc4_bo_open_handle(screen, winsys_stride, handle, size);
+}
+
+int
+vc4_bo_get_dmabuf(struct vc4_bo *bo)
+{
+        int fd;
+        int ret = drmPrimeHandleToFD(bo->screen->fd, bo->handle,
+                                     O_CLOEXEC, &fd);
+        if (ret != 0) {
+                fprintf(stderr, "Failed to export gem bo %d to dmabuf\n",
+                        bo->handle);
+                return -1;
+        }
+
+        return fd;
 }
 
 struct vc4_bo *

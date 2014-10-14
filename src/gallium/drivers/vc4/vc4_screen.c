@@ -482,6 +482,9 @@ vc4_screen_bo_get_handle(struct pipe_screen *pscreen,
         case DRM_API_HANDLE_TYPE_KMS:
                 whandle->handle = bo->handle;
                 return TRUE;
+        case DRM_API_HANDLE_TYPE_FD:
+                whandle->handle = vc4_bo_get_dmabuf(bo);
+                return whandle->handle != -1;
         }
 
         return FALSE;
@@ -492,20 +495,16 @@ vc4_screen_bo_from_handle(struct pipe_screen *pscreen,
                           struct winsys_handle *whandle)
 {
         struct vc4_screen *screen = vc4_screen(pscreen);
-        struct vc4_bo *bo;
 
-        if (whandle->type != DRM_API_HANDLE_TYPE_SHARED) {
+        switch (whandle->type) {
+        case DRM_API_HANDLE_TYPE_SHARED:
+                return vc4_bo_open_name(screen, whandle->handle, whandle->stride);
+        case DRM_API_HANDLE_TYPE_FD:
+                return vc4_bo_open_dmabuf(screen, whandle->handle, whandle->stride);
+        default:
                 fprintf(stderr,
                         "Attempt to import unsupported handle type %d\n",
                         whandle->type);
                 return NULL;
         }
-
-        bo = vc4_bo_open_name(screen, whandle->handle, whandle->stride);
-        if (!bo) {
-                fprintf(stderr, "Open name %d failed\n", whandle->handle);
-                return NULL;
-        }
-
-        return bo;
 }

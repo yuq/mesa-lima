@@ -50,7 +50,10 @@ struct vc4_bo *vc4_bo_alloc_mem(struct vc4_screen *screen, const void *data,
 void vc4_bo_free(struct vc4_bo *bo);
 struct vc4_bo *vc4_bo_open_name(struct vc4_screen *screen, uint32_t name,
                                 uint32_t winsys_stride);
+struct vc4_bo *vc4_bo_open_dmabuf(struct vc4_screen *screen, int fd,
+                                  uint32_t winsys_stride);
 bool vc4_bo_flink(struct vc4_bo *bo, uint32_t *name);
+int vc4_bo_get_dmabuf(struct vc4_bo *bo);
 
 static inline void
 vc4_bo_set_reference(struct vc4_bo **old_bo, struct vc4_bo *new_bo)
