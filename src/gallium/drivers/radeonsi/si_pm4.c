@@ -120,11 +120,6 @@ void si_pm4_free_state(struct si_context *sctx,
 	FREE(state);
 }
 
-struct si_pm4_state * si_pm4_alloc_state(struct si_context *sctx)
-{
-	return CALLOC_STRUCT(si_pm4_state);
-}
-
 unsigned si_pm4_dirty_dw(struct si_context *sctx)
 {
 	unsigned count = 0;

@@ -225,7 +225,7 @@ static void si_update_fb_blend_state(struct si_context *sctx)
 	if (blend == NULL)
 		return;
 
-	pm4 = si_pm4_alloc_state(sctx);
+	pm4 = CALLOC_STRUCT(si_pm4_state);
 	if (pm4 == NULL)
 		return;
 
@@ -406,7 +406,7 @@ static void si_set_blend_color(struct pipe_context *ctx,
 			       const struct pipe_blend_color *state)
 {
 	struct si_context *sctx = (struct si_context *)ctx;
-	struct si_pm4_state *pm4 = si_pm4_alloc_state(sctx);
+	struct si_pm4_state *pm4 = CALLOC_STRUCT(si_pm4_state);
 
         if (pm4 == NULL)
                 return;
@@ -427,7 +427,7 @@ static void si_set_clip_state(struct pipe_context *ctx,
 			      const struct pipe_clip_state *state)
 {
 	struct si_context *sctx = (struct si_context *)ctx;
-	struct si_pm4_state *pm4 = si_pm4_alloc_state(sctx);
+	struct si_pm4_state *pm4 = CALLOC_STRUCT(si_pm4_state);
 	struct pipe_constant_buffer cb;
 
 	if (pm4 == NULL)
@@ -530,7 +530,7 @@ static void si_update_fb_rs_state(struct si_context *sctx)
 		return;
 	}
 
-	pm4 = si_pm4_alloc_state(sctx);
+	pm4 = CALLOC_STRUCT(si_pm4_state);
 
 	if (pm4 == NULL)
 		return;
@@ -696,7 +696,7 @@ static void si_delete_rs_state(struct pipe_context *ctx, void *state)
  */
 static void si_update_dsa_stencil_ref(struct si_context *sctx)
 {
-	struct si_pm4_state *pm4 = si_pm4_alloc_state(sctx);
+	struct si_pm4_state *pm4 = CALLOC_STRUCT(si_pm4_state);
 	struct pipe_stencil_ref *ref = &sctx->stencil_ref;
         struct si_state_dsa *dsa = sctx->queued.named.dsa;
 
@@ -2834,7 +2834,7 @@ static void si_set_border_colors(struct si_context *sctx, unsigned count,
 	}
 
 	if (border_color_table) {
-		struct si_pm4_state *pm4 = si_pm4_alloc_state(sctx);
+		struct si_pm4_state *pm4 = CALLOC_STRUCT(si_pm4_state);
 
 		uint64_t va_offset = sctx->border_color_table->gpu_address;
 
@@ -3081,7 +3081,7 @@ void si_init_state_functions(struct si_context *sctx)
 
 void si_init_config(struct si_context *sctx)
 {
-	struct si_pm4_state *pm4 = si_pm4_alloc_state(sctx);
+	struct si_pm4_state *pm4 = CALLOC_STRUCT(si_pm4_state);
 
 	if (pm4 == NULL)
 		return;

@@ -48,7 +48,7 @@ static void si_shader_es(struct pipe_context *ctx, struct si_shader *shader)
 	uint64_t va;
 
 	si_pm4_delete_state(sctx, es, shader->pm4);
-	pm4 = shader->pm4 = si_pm4_alloc_state(sctx);
+	pm4 = shader->pm4 = CALLOC_STRUCT(si_pm4_state);
 
 	if (pm4 == NULL)
 		return;
@@ -92,7 +92,7 @@ static void si_shader_gs(struct pipe_context *ctx, struct si_shader *shader)
 	assert(gsvs_itemsize < (1 << 15));
 
 	si_pm4_delete_state(sctx, gs, shader->pm4);
-	pm4 = shader->pm4 = si_pm4_alloc_state(sctx);
+	pm4 = shader->pm4 = CALLOC_STRUCT(si_pm4_state);
 
 	if (pm4 == NULL)
 		return;
@@ -157,7 +157,7 @@ static void si_shader_vs(struct pipe_context *ctx, struct si_shader *shader)
 	uint64_t va;
 
 	si_pm4_delete_state(sctx, vs, shader->pm4);
-	pm4 = shader->pm4 = si_pm4_alloc_state(sctx);
+	pm4 = shader->pm4 = CALLOC_STRUCT(si_pm4_state);
 
 	if (pm4 == NULL)
 		return;
@@ -237,7 +237,7 @@ static void si_shader_ps(struct pipe_context *ctx, struct si_shader *shader)
 	uint64_t va;
 
 	si_pm4_delete_state(sctx, ps, shader->pm4);
-	pm4 = shader->pm4 = si_pm4_alloc_state(sctx);
+	pm4 = shader->pm4 = CALLOC_STRUCT(si_pm4_state);
 
 	if (pm4 == NULL)
 		return;
@@ -421,7 +421,7 @@ static bool si_update_draw_info_state(struct si_context *sctx,
 				      const struct pipe_draw_info *info,
 				      const struct pipe_index_buffer *ib)
 {
-	struct si_pm4_state *pm4 = si_pm4_alloc_state(sctx);
+	struct si_pm4_state *pm4 = CALLOC_STRUCT(si_pm4_state);
 	struct si_shader *vs = si_get_vs_state(sctx);
 	unsigned prim = si_conv_pipe_prim(info->mode);
 	unsigned gs_out_prim =
@@ -495,7 +495,7 @@ static void si_update_spi_map(struct si_context *sctx)
 	struct si_shader *vs = si_get_vs_state(sctx);
 	struct tgsi_shader_info *psinfo = &ps->selector->info;
 	struct tgsi_shader_info *vsinfo = &vs->selector->info;
-	struct si_pm4_state *pm4 = si_pm4_alloc_state(sctx);
+	struct si_pm4_state *pm4 = CALLOC_STRUCT(si_pm4_state);
 	unsigned i, j, tmp;
 
 	for (i = 0; i < psinfo->num_inputs; i++) {
@@ -557,7 +557,7 @@ static void si_init_gs_rings(struct si_context *sctx)
 	unsigned gsvs_ring_size = 64 * 1024 * 1024;
 
 	assert(!sctx->gs_rings);
-	sctx->gs_rings = si_pm4_alloc_state(sctx);
+	sctx->gs_rings = CALLOC_STRUCT(si_pm4_state);
 
 	sctx->esgs_ring = pipe_buffer_create(sctx->b.b.screen, PIPE_BIND_CUSTOM,
 				       PIPE_USAGE_DEFAULT, esgs_ring_size);
@@ -637,7 +637,7 @@ static void si_update_derived_state(struct si_context *sctx)
 				   64, true, true, 4, 16);
 
 		if (!sctx->gs_on) {
-			sctx->gs_on = si_pm4_alloc_state(sctx);
+			sctx->gs_on = CALLOC_STRUCT(si_pm4_state);
 
 			si_pm4_set_reg(sctx->gs_on, R_028B54_VGT_SHADER_STAGES_EN,
 				       S_028B54_ES_EN(V_028B54_ES_STAGE_REAL) |
@@ -656,7 +656,7 @@ static void si_update_derived_state(struct si_context *sctx)
 		sctx->b.streamout.stride_in_dw = sctx->vs_shader->so.stride;
 
 		if (!sctx->gs_off) {
-			sctx->gs_off = si_pm4_alloc_state(sctx);
+			sctx->gs_off = CALLOC_STRUCT(si_pm4_state);
 
 			si_pm4_set_reg(sctx->gs_off, R_028A40_VGT_GS_MODE, 0);
 			si_pm4_set_reg(sctx->gs_off, R_028B54_VGT_SHADER_STAGES_EN, 0);
@@ -705,7 +705,7 @@ static void si_state_draw(struct si_context *sctx,
 {
 	unsigned sh_base_reg = (sctx->gs_shader ? R_00B330_SPI_SHADER_USER_DATA_ES_0 :
 						  R_00B130_SPI_SHADER_USER_DATA_VS_0);
-	struct si_pm4_state *pm4 = si_pm4_alloc_state(sctx);
+	struct si_pm4_state *pm4 = CALLOC_STRUCT(si_pm4_state);
 
 	if (pm4 == NULL)
 		return;

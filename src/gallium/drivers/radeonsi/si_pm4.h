@@ -74,7 +74,6 @@ void si_pm4_add_bo(struct si_pm4_state *state,
 void si_pm4_free_state(struct si_context *sctx,
 		       struct si_pm4_state *state,
 		       unsigned idx);
-struct si_pm4_state * si_pm4_alloc_state(struct si_context *sctx);
 
 unsigned si_pm4_dirty_dw(struct si_context *sctx);
 void si_pm4_emit(struct si_context *sctx, struct si_pm4_state *state);
