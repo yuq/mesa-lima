@@ -44,20 +44,15 @@
 
 
 static void
-emit_vertexbufs(struct fd_context *ctx, struct fd_ringbuffer *ring,
-		struct ir3_shader_key key)
+draw_impl(struct fd_context *ctx, struct fd_ringbuffer *ring,
+		struct fd3_emit *emit)
 {
-	fd3_emit_vertex_bufs(ring, fd3_shader_variant(ctx->prog.vp, key), &ctx->vtx);
-}
+	const struct pipe_draw_info *info = emit->info;
 
-static void
-draw_impl(struct fd_context *ctx, const struct pipe_draw_info *info,
-		struct fd_ringbuffer *ring, unsigned dirty, struct ir3_shader_key key)
-{
-	fd3_emit_state(ctx, ring, info, &ctx->prog, key, dirty);
+	fd3_emit_state(ctx, ring, emit);
 
-	if (dirty & (FD_DIRTY_VTXBUF | FD_DIRTY_VTXSTATE))
-		emit_vertexbufs(ctx, ring, key);
+	if (emit->dirty & (FD_DIRTY_VTXBUF | FD_DIRTY_VTXSTATE))
+		fd3_emit_vertex_bufs(ring, emit);
 
 	OUT_PKT0(ring, REG_A3XX_PC_VERTEX_REUSE_BLOCK_CNTL, 1);
 	OUT_RING(ring, 0x0000000b);             /* PC_VERTEX_REUSE_BLOCK_CNTL */
@@ -73,7 +68,7 @@ draw_impl(struct fd_context *ctx, const struct pipe_draw_info *info,
 			info->restart_index : 0xffffffff);
 
 	fd_draw_emit(ctx, ring,
-			key.binning_pass ? IGNORE_VISIBILITY : USE_VISIBILITY,
+			emit->key.binning_pass ? IGNORE_VISIBILITY : USE_VISIBILITY,
 			info);
 }
 
@@ -117,7 +112,11 @@ static void
 fd3_draw(struct fd_context *ctx, const struct pipe_draw_info *info)
 {
 	struct fd3_context *fd3_ctx = fd3_context(ctx);
-	struct ir3_shader_key key = {
+	struct fd3_emit emit = {
+		.vtx  = &ctx->vtx,
+		.prog = &ctx->prog,
+		.info = info,
+		.key = {
 			/* do binning pass first: */
 			.binning_pass = true,
 			.color_two_side = ctx->rasterizer ? ctx->rasterizer->light_twoside : false,
@@ -131,18 +130,22 @@ fd3_draw(struct fd_context *ctx, const struct pipe_draw_info *info)
 			.fsaturate_s = fd3_ctx->fsaturate_s,
 			.fsaturate_t = fd3_ctx->fsaturate_t,
 			.fsaturate_r = fd3_ctx->fsaturate_r,
+		},
+		.rasterflat = ctx->rasterizer && ctx->rasterizer->flatshade,
 	};
 	unsigned dirty;
 
-	fixup_shader_state(ctx, &key);
+	fixup_shader_state(ctx, &emit.key);
 
 	dirty = ctx->dirty;
+	emit.dirty = dirty & ~(FD_DIRTY_BLEND);
+	draw_impl(ctx, ctx->binning_ring, &emit);
 
-	draw_impl(ctx, info, ctx->binning_ring,
-			dirty & ~(FD_DIRTY_BLEND), key);
 	/* and now regular (non-binning) pass: */
-	key.binning_pass = false;
-	draw_impl(ctx, info, ctx->ring, dirty, key);
+	emit.key.binning_pass = false;
+	emit.dirty = dirty;
+	emit.vp = NULL;   /* we changed key so need to refetch vp */
+	draw_impl(ctx, ctx->ring, &emit);
 }
 
 /* binning pass cmds for a clear:
@@ -158,15 +161,18 @@ fd3_clear_binning(struct fd_context *ctx, unsigned dirty)
 {
 	struct fd3_context *fd3_ctx = fd3_context(ctx);
 	struct fd_ringbuffer *ring = ctx->binning_ring;
-	struct ir3_shader_key key = {
+	struct fd3_emit emit = {
+		.vtx  = &fd3_ctx->solid_vbuf_state,
+		.prog = &ctx->solid_prog,
+		.key = {
 			.binning_pass = true,
 			.half_precision = true,
+		},
+		.dirty = dirty,
 	};
 
-	fd3_emit_state(ctx, ring, NULL, &ctx->solid_prog, key, dirty);
-
-	fd3_emit_vertex_bufs(ring, fd3_shader_variant(ctx->solid_prog.vp, key),
-			&fd3_ctx->solid_vbuf_state);
+	fd3_emit_state(ctx, ring, &emit);
+	fd3_emit_vertex_bufs(ring, &emit);
 
 	OUT_PKT0(ring, REG_A3XX_PC_PRIM_VTX_CNTL, 1);
 	OUT_RING(ring, A3XX_PC_PRIM_VTX_CNTL_STRIDE_IN_VPC(0) |
@@ -195,17 +201,22 @@ fd3_clear(struct fd_context *ctx, unsigned buffers,
 	struct fd_ringbuffer *ring = ctx->ring;
 	unsigned dirty = ctx->dirty;
 	unsigned ce, i;
-	struct ir3_shader_key key = {
+	struct fd3_emit emit = {
+		.vtx  = &fd3_ctx->solid_vbuf_state,
+		.prog = &ctx->solid_prog,
+		.key = {
 			.half_precision = true,
+		},
 	};
 
 	dirty &= FD_DIRTY_VIEWPORT | FD_DIRTY_FRAMEBUFFER | FD_DIRTY_SCISSOR;
 	dirty |= FD_DIRTY_PROG;
+	emit.dirty = dirty;
 
 	fd3_clear_binning(ctx, dirty);
 
 	/* emit generic state now: */
-	fd3_emit_state(ctx, ring, NULL, &ctx->solid_prog, key, dirty);
+	fd3_emit_state(ctx, ring, &emit);
 
 	OUT_PKT0(ring, REG_A3XX_RB_BLEND_ALPHA, 1);
 	OUT_RING(ring, A3XX_RB_BLEND_ALPHA_UINT(0xff) |
@@ -296,8 +307,7 @@ fd3_clear(struct fd_context *ctx, unsigned buffers,
 	OUT_PKT0(ring, REG_A3XX_GRAS_SU_MODE_CONTROL, 1);
 	OUT_RING(ring, A3XX_GRAS_SU_MODE_CONTROL_LINEHALFWIDTH(0));
 
-	fd3_emit_vertex_bufs(ring, fd3_shader_variant(ctx->solid_prog.vp, key),
-			&fd3_ctx->solid_vbuf_state);
+	fd3_emit_vertex_bufs(ring, &emit);
 
 	fd3_emit_constant(ring, SB_FRAG_SHADER, 0, 0, 4, color->ui, NULL);
 

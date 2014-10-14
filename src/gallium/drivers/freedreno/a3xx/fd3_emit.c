@@ -330,11 +330,12 @@ fd3_emit_gmem_restore_tex(struct fd_ringbuffer *ring, struct pipe_surface *psurf
 }
 
 void
-fd3_emit_vertex_bufs(struct fd_ringbuffer *ring,
-		struct ir3_shader_variant *vp, struct fd_vertex_state *vtx)
+fd3_emit_vertex_bufs(struct fd_ringbuffer *ring, struct fd3_emit *emit)
 {
 	uint32_t i, j, last = 0;
 	uint32_t total_in = 0;
+	const struct fd_vertex_state *vtx = emit->vtx;
+	struct ir3_shader_variant *vp = fd3_emit_get_vp(emit);
 	unsigned n = MIN2(vtx->vtx->num_elements, vp->inputs_count);
 
 	/* hw doesn't like to be configured for zero vbo's, it seems: */
@@ -348,7 +349,7 @@ fd3_emit_vertex_bufs(struct fd_ringbuffer *ring,
 	for (i = 0, j = 0; i <= last; i++) {
 		if (vp->inputs[i].compmask) {
 			struct pipe_vertex_element *elem = &vtx->vtx->pipe[i];
-			struct pipe_vertex_buffer *vb =
+			const struct pipe_vertex_buffer *vb =
 					&vtx->vertexbuf.vb[elem->vertex_buffer_index];
 			struct fd_resource *rsc = fd_resource(vb->buffer);
 			enum pipe_format pfmt = elem->src_format;
@@ -395,14 +396,11 @@ fd3_emit_vertex_bufs(struct fd_ringbuffer *ring,
 
 void
 fd3_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
-		const struct pipe_draw_info *info,  struct fd_program_stateobj *prog,
-		struct ir3_shader_key key, uint32_t dirty)
+		struct fd3_emit *emit)
 {
-	struct ir3_shader_variant *vp;
-	struct ir3_shader_variant *fp;
-
-	fp = fd3_shader_variant(prog->fp, key);
-	vp = fd3_shader_variant(prog->vp, key);
+	struct ir3_shader_variant *vp = fd3_emit_get_vp(emit);
+	struct ir3_shader_variant *fp = fd3_emit_get_fp(emit);
+	uint32_t dirty = emit->dirty;
 
 	emit_marker(ring, 5);
 
@@ -413,7 +411,7 @@ fd3_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 				A3XX_RB_MSAA_CONTROL_SAMPLE_MASK(ctx->sample_mask));
 	}
 
-	if ((dirty & (FD_DIRTY_ZSA | FD_DIRTY_PROG)) && !key.binning_pass) {
+	if ((dirty & (FD_DIRTY_ZSA | FD_DIRTY_PROG)) && !emit->key.binning_pass) {
 		uint32_t val = fd3_zsa_stateobj(ctx->zsa)->rb_render_control;
 
 		val |= COND(fp->frag_face, A3XX_RB_RENDER_CONTROL_FACENESS);
@@ -490,18 +488,19 @@ fd3_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 	 * PRIM_VTX_CNTL.. either that or be more clever and detect
 	 * when it changes.
 	 */
-	if (info) {
+	if (emit->info) {
+		const struct pipe_draw_info *info = emit->info;
 		uint32_t val = fd3_rasterizer_stateobj(ctx->rasterizer)
 				->pc_prim_vtx_cntl;
 
-		if (!key.binning_pass) {
+		if (!emit->key.binning_pass) {
 			uint32_t stride_in_vpc = align(fp->total_in, 4) / 4;
 			if (stride_in_vpc > 0)
 				stride_in_vpc = MAX2(stride_in_vpc, 2);
 			val |= A3XX_PC_PRIM_VTX_CNTL_STRIDE_IN_VPC(stride_in_vpc);
 		}
 
-		if (info && info->indexed && info->primitive_restart) {
+		if (info->indexed && info->primitive_restart) {
 			val |= A3XX_PC_PRIM_VTX_CNTL_PRIMITIVE_RESTART;
 		}
 
@@ -537,10 +536,8 @@ fd3_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 		OUT_RING(ring, A3XX_GRAS_CL_VPORT_ZSCALE(ctx->viewport.scale[2]));
 	}
 
-	if (dirty & FD_DIRTY_PROG) {
-		bool flat = ctx->rasterizer && ctx->rasterizer->flatshade;
-		fd3_program_emit(ring, prog, key, flat);
-	}
+	if (dirty & FD_DIRTY_PROG)
+		fd3_program_emit(ring, emit);
 
 	/* TODO we should not need this or fd_wfi() before emit_constants():
 	 */
@@ -549,15 +546,15 @@ fd3_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 
 	if ((dirty & (FD_DIRTY_PROG | FD_DIRTY_CONSTBUF)) &&
 			/* evil hack to deal sanely with clear path: */
-			(prog == &ctx->prog)) {
+			(emit->prog == &ctx->prog)) {
 		fd_wfi(ctx, ring);
 		emit_constants(ring,  SB_VERT_SHADER,
 				&ctx->constbuf[PIPE_SHADER_VERTEX],
-				(prog->dirty & FD_SHADER_DIRTY_VP) ? vp : NULL);
-		if (!key.binning_pass) {
+				(emit->prog->dirty & FD_SHADER_DIRTY_VP) ? vp : NULL);
+		if (!emit->key.binning_pass) {
 			emit_constants(ring, SB_FRAG_SHADER,
 					&ctx->constbuf[PIPE_SHADER_FRAGMENT],
-					(prog->dirty & FD_SHADER_DIRTY_FP) ? fp : NULL);
+					(emit->prog->dirty & FD_SHADER_DIRTY_FP) ? fp : NULL);
 		}
 	}
 

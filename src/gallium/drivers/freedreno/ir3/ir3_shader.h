@@ -52,11 +52,6 @@ static inline uint16_t sem2idx(ir3_semantic sem)
 /* Configuration key used to identify a shader variant.. different
  * shader variants can be used to implement features not supported
  * in hw (two sided color), binning-pass vertex shader, etc.
- *
- * TODO since shader key is starting to get larger (than 32bit)
- * we probably should pass it around by ptr rather than value more
- * of the places.. but watch out in ir3_shader_variant() where the
- * key gets normalized, we need to make a copy there.
  */
 struct ir3_shader_key {
 	/* bitmask of sampler which needs coords clamped for vertex

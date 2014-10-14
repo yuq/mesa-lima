@@ -179,10 +179,7 @@ find_output_regid(const struct ir3_shader_variant *so, ir3_semantic semantic)
 }
 
 void
-fd3_program_emit(struct fd_ringbuffer *ring,
-		struct fd_program_stateobj *prog,
-		struct ir3_shader_key key,
-		boolean rasterflat)
+fd3_program_emit(struct fd_ringbuffer *ring, struct fd3_emit *emit)
 {
 	const struct ir3_shader_variant *vp, *fp;
 	const struct ir3_info *vsi, *fsi;
@@ -191,14 +188,14 @@ fd3_program_emit(struct fd_ringbuffer *ring,
 	uint32_t pos_regid, posz_regid, psize_regid, color_regid;
 	int i, j, k;
 
-	vp = fd3_shader_variant(prog->vp, key);
+	vp = fd3_emit_get_vp(emit);
 
-	if (key.binning_pass) {
+	if (emit->key.binning_pass) {
 		/* use dummy stateobj to simplify binning vs non-binning: */
 		static const struct ir3_shader_variant binning_fp = {};
 		fp = &binning_fp;
 	} else {
-		fp = fd3_shader_variant(prog->fp, key);
+		fp = fd3_emit_get_fp(emit);
 	}
 
 	vsi = &vp->info;
@@ -279,7 +276,7 @@ fd3_program_emit(struct fd_ringbuffer *ring,
 
 	OUT_PKT0(ring, REG_A3XX_SP_SP_CTRL_REG, 1);
 	OUT_RING(ring, A3XX_SP_SP_CTRL_REG_CONSTMODE(0) |
-			COND(key.binning_pass, A3XX_SP_SP_CTRL_REG_BINNING) |
+			COND(emit->key.binning_pass, A3XX_SP_SP_CTRL_REG_BINNING) |
 			A3XX_SP_SP_CTRL_REG_SLEEPMODE(1) |
 			A3XX_SP_SP_CTRL_REG_L0MODE(0));
 
@@ -352,7 +349,7 @@ fd3_program_emit(struct fd_ringbuffer *ring,
 			A3XX_SP_VS_OBJ_OFFSET_REG_SHADEROBJOFFSET(0));
 	OUT_RELOC(ring, vp->bo, 0, 0, 0);  /* SP_VS_OBJ_START_REG */
 
-	if (key.binning_pass) {
+	if (emit->key.binning_pass) {
 		OUT_PKT0(ring, REG_A3XX_SP_FS_LENGTH_REG, 1);
 		OUT_RING(ring, 0x00000000);
 
@@ -408,7 +405,7 @@ fd3_program_emit(struct fd_ringbuffer *ring,
 	OUT_RING(ring, A3XX_SP_FS_MRT_REG_REGID(0));
 	OUT_RING(ring, A3XX_SP_FS_MRT_REG_REGID(0));
 
-	if (key.binning_pass) {
+	if (emit->key.binning_pass) {
 		OUT_PKT0(ring, REG_A3XX_VPC_ATTR, 2);
 		OUT_RING(ring, A3XX_VPC_ATTR_THRDASSIGN(1) |
 				A3XX_VPC_ATTR_LMSIZE(1) |
@@ -421,7 +418,7 @@ fd3_program_emit(struct fd_ringbuffer *ring,
 		for (j = -1; (j = next_varying(fp, j)) < (int)fp->inputs_count; ) {
 			uint32_t interp = fp->inputs[j].interpolate;
 			if ((interp == TGSI_INTERPOLATE_CONSTANT) ||
-					((interp == TGSI_INTERPOLATE_COLOR) && rasterflat)) {
+					((interp == TGSI_INTERPOLATE_COLOR) && emit->rasterflat)) {
 				/* TODO might be cleaner to just +8 in SP_VS_VPC_DST_REG
 				 * instead.. rather than -8 everywhere else..
 				 */
@@ -474,7 +471,7 @@ fd3_program_emit(struct fd_ringbuffer *ring,
 	OUT_PKT0(ring, REG_A3XX_VFD_PERFCOUNTER0_SELECT, 1);
 	OUT_RING(ring, 0x00000000);        /* VFD_PERFCOUNTER0_SELECT */
 
-	if (!key.binning_pass) {
+	if (!emit->key.binning_pass) {
 		if (fpbuffer == BUFFER)
 			emit_shader(ring, fp);
 
