@@ -529,6 +529,7 @@ ilo_builder_writer_decode_items(struct ilo_builder *builder,
    }
 
    intel_bo_unmap(writer->bo);
+   writer->ptr = NULL;
 }
 
 static void
