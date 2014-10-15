@@ -1325,9 +1325,20 @@ fs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
       break;
    }
 
-   case nir_intrinsic_load_sample_pos:
-   case nir_intrinsic_load_sample_id:
-      assert(!"TODO");
+   case nir_intrinsic_load_sample_pos: {
+      fs_reg *reg = emit_samplepos_setup();
+      dest.type = reg->type;
+      emit(MOV(dest, *reg));
+      emit(MOV(offset(dest, 1), offset(*reg, 1)));
+      break;
+   }
+
+   case nir_intrinsic_load_sample_id: {
+      fs_reg *reg = emit_sampleid_setup();
+      dest.type = reg->type;
+      emit(MOV(dest, *reg));
+      break;
+   }
 
    case nir_intrinsic_load_uniform_vec1:
    case nir_intrinsic_load_uniform_vec2:
