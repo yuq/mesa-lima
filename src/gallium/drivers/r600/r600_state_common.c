@@ -1103,6 +1103,9 @@ void r600_set_sample_locations_constant_buffer(struct r600_context *rctx)
 	assert(rctx->framebuffer.nr_samples <= Elements(values)/4);
 	for (i = 0; i < rctx->framebuffer.nr_samples; i++) {
 		ctx->get_sample_position(ctx, rctx->framebuffer.nr_samples, i, &values[4*i]);
+		/* Also fill in center-zeroed positions used for interpolateAtSample */
+		values[4*i + 2] = values[4*i + 0] - 0.5f;
+		values[4*i + 3] = values[4*i + 1] - 0.5f;
 	}
 
 	constbuf.user_buffer = values;
