@@ -53,6 +53,7 @@ struct vc4_key {
                 unsigned wrap_t:3;
                 uint8_t swizzle[4];
         } tex[VC4_MAX_TEXTURE_SAMPLERS];
+        uint8_t ucp_enables;
 };
 
 struct vc4_fs_key {
@@ -1097,6 +1098,9 @@ emit_tgsi_declaration(struct vc4_compile *c,
                 case TGSI_SEMANTIC_POSITION:
                         c->output_position_index = decl->Range.First * 4;
                         break;
+                case TGSI_SEMANTIC_CLIPVERTEX:
+                        c->output_clipvertex_index = decl->Range.First * 4;
+                        break;
                 case TGSI_SEMANTIC_COLOR:
                         c->output_color_index = decl->Range.First * 4;
                         break;
@@ -1398,6 +1402,28 @@ vc4_blend(struct vc4_compile *c, struct qreg *result,
 }
 
 static void
+clip_distance_discard(struct vc4_compile *c)
+{
+        for (int i = 0; i < PIPE_MAX_CLIP_PLANES; i++) {
+                if (!(c->key->ucp_enables & (1 << i)))
+                        continue;
+
+                struct qreg dist = emit_fragment_varying(c,
+                                                         TGSI_SEMANTIC_CLIPDIST,
+                                                         i,
+                                                         TGSI_SWIZZLE_X);
+
+                qir_SF(c, dist);
+
+                if (c->discard.file == QFILE_NULL)
+                        c->discard = qir_uniform_f(c, 0.0);
+
+                c->discard = qir_SEL_X_Y_NS(c, qir_uniform_f(c, 1.0),
+                                            c->discard);
+        }
+}
+
+static void
 alpha_test_discard(struct vc4_compile *c)
 {
         struct qreg src_alpha;
@@ -1456,6 +1482,7 @@ alpha_test_discard(struct vc4_compile *c)
 static void
 emit_frag_end(struct vc4_compile *c)
 {
+        clip_distance_discard(c);
         alpha_test_discard(c);
 
         enum pipe_format color_format = c->fs_key->color_format;
@@ -1655,6 +1682,45 @@ emit_stub_vpm_read(struct vc4_compile *c)
 }
 
 static void
+emit_ucp_clipdistance(struct vc4_compile *c)
+{
+        struct qreg *clipvertex;
+
+        if (c->output_clipvertex_index != -1)
+                clipvertex = &c->outputs[c->output_clipvertex_index];
+        else if (c->output_position_index != -1)
+                clipvertex = &c->outputs[c->output_position_index];
+        else
+                return;
+
+        for (int plane = 0; plane < PIPE_MAX_CLIP_PLANES; plane++) {
+                if (!(c->key->ucp_enables & (1 << plane)))
+                        continue;
+
+                /* Pick the next outputs[] that hasn't been written to, since
+                 * there are no other program writes left to be processed at
+                 * this point.  If something had been declared but not written
+                 * (like a w component), we'll just smash over the top of it.
+                 */
+                uint32_t output_index = c->num_outputs++;
+                add_output(c, output_index,
+                           TGSI_SEMANTIC_CLIPDIST,
+                           plane,
+                           TGSI_SWIZZLE_X);
+
+                struct qreg dist = qir_uniform_f(c, 0.0);
+                for (int i = 0; i < 4; i++) {
+                        struct qreg ucp =
+                                add_uniform(c, QUNIFORM_USER_CLIP_PLANE,
+                                            plane * 4 + i);
+                        dist = qir_FADD(c, dist, qir_FMUL(c, clipvertex[i], ucp));
+                }
+
+                c->outputs[output_index] = dist;
+        }
+}
+
+static void
 emit_vert_end(struct vc4_compile *c,
               struct vc4_varying_semantic *fs_inputs,
               uint32_t num_fs_inputs)
@@ -1662,6 +1728,8 @@ emit_vert_end(struct vc4_compile *c,
         struct qreg rcp_w = qir_RCP(c, c->outputs[3]);
 
         emit_stub_vpm_read(c);
+        emit_ucp_clipdistance(c);
+
         emit_scaled_viewport_write(c, rcp_w);
         emit_zs_write(c, rcp_w);
         emit_rcp_wc_write(c, rcp_w);
@@ -1671,9 +1739,11 @@ emit_vert_end(struct vc4_compile *c,
         for (int i = 0; i < num_fs_inputs; i++) {
                 struct vc4_varying_semantic *input = &fs_inputs[i];
                 int j;
+
                 for (j = 0; j < c->num_outputs; j++) {
                         struct vc4_varying_semantic *output =
                                 &c->output_semantics[j];
+
                         if (input->semantic == output->semantic &&
                             input->index == output->index &&
                             input->swizzle == output->swizzle) {
@@ -1930,7 +2000,8 @@ vc4_get_compiled_shader(struct vc4_context *vc4, enum qstage stage,
 }
 
 static void
-vc4_setup_shared_key(struct vc4_key *key, struct vc4_texture_stateobj *texstate)
+vc4_setup_shared_key(struct vc4_context *vc4, struct vc4_key *key,
+                     struct vc4_texture_stateobj *texstate)
 {
         for (int i = 0; i < texstate->num_textures; i++) {
                 struct pipe_sampler_view *sampler = texstate->textures[i];
@@ -1949,6 +2020,8 @@ vc4_setup_shared_key(struct vc4_key *key, struct vc4_texture_stateobj *texstate)
                         key->tex[i].wrap_t = sampler_state->wrap_t;
                 }
         }
+
+        key->ucp_enables = vc4->rasterizer->base.clip_plane_enable;
 }
 
 static void
@@ -1969,7 +2042,7 @@ vc4_update_compiled_fs(struct vc4_context *vc4, uint8_t prim_mode)
         }
 
         memset(key, 0, sizeof(*key));
-        vc4_setup_shared_key(&key->base, &vc4->fragtex);
+        vc4_setup_shared_key(vc4, &key->base, &vc4->fragtex);
         key->base.shader_state = vc4->prog.bind_fs;
         key->is_points = (prim_mode == PIPE_PRIM_POINTS);
         key->is_lines = (prim_mode >= PIPE_PRIM_LINES &&
@@ -2026,7 +2099,7 @@ vc4_update_compiled_vs(struct vc4_context *vc4, uint8_t prim_mode)
         }
 
         memset(key, 0, sizeof(*key));
-        vc4_setup_shared_key(&key->base, &vc4->verttex);
+        vc4_setup_shared_key(vc4, &key->base, &vc4->verttex);
         key->base.shader_state = vc4->prog.bind_vs;
         key->compiled_fs_id = vc4->prog.fs->program_id;
 
@@ -2343,6 +2416,11 @@ vc4_write_uniforms(struct vc4_context *vc4, struct vc4_compiled_shader *shader,
                         break;
                 case QUNIFORM_VIEWPORT_Z_SCALE:
                         cl_f(&vc4->uniforms, vc4->viewport.scale[2]);
+                        break;
+
+                case QUNIFORM_USER_CLIP_PLANE:
+                        cl_f(&vc4->uniforms,
+                             vc4->clip.ucp[uinfo->data[i] / 4][uinfo->data[i] % 4]);
                         break;
 
                 case QUNIFORM_TEXTURE_CONFIG_P0:
