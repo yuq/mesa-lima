@@ -186,7 +186,7 @@ BINOP(isub, nir_type_int)
 BINOP(fmul, nir_type_float)
 BINOP(imul, nir_type_int) /* low 32-bits of signed/unsigned integer multiply */
 BINOP(imul_high, nir_type_int) /* high 32-bits of signed integer multiply */
-BINOP(umul_high, nir_type_int) /* high 32-bits of unsigned integer multiply */
+BINOP(umul_high, nir_type_unsigned) /* high 32-bits of unsigned integer multiply */
 
 BINOP(fdiv, nir_type_float)
 BINOP(idiv, nir_type_int)
@@ -223,8 +223,8 @@ BINOP_COMPARE(ilt, nir_type_int)
 BINOP_COMPARE(ige, nir_type_int)
 BINOP_COMPARE(ieq, nir_type_int)
 BINOP_COMPARE(ine, nir_type_int)
-BINOP_COMPARE(ult, nir_type_int)
-BINOP_COMPARE(uge, nir_type_int)
+BINOP_COMPARE(ult, nir_type_unsigned)
+BINOP_COMPARE(uge, nir_type_unsigned)
 
 /** integer-aware GLSL-style comparisons that compare floats and ints */
 BINOP_REDUCE(ball_fequal,  1, nir_type_bool, nir_type_float)
