@@ -2466,7 +2466,7 @@ vc4_write_uniforms(struct vc4_context *vc4, struct vc4_compiled_shader *shader,
                 }
 #if 0
                 uint32_t written_val = *(uint32_t *)(vc4->uniforms.next - 4);
-                fprintf(stderr, "%p/%d: %d: 0x%08x (%f)\n",
+                fprintf(stderr, "%p: %d / 0x%08x (%f)\n",
                         shader, i, written_val, uif(written_val));
 #endif
         }
