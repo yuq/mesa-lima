@@ -1540,7 +1540,7 @@ void
 fs_visitor::nir_emit_texture(nir_tex_instr *instr)
 {
    brw_wm_prog_key *key = (brw_wm_prog_key*) this->key;
-   int sampler = instr->sampler_index;
+   unsigned sampler = instr->sampler_index;
 
    /* FINISHME: We're failing to recompile our programs when the sampler is
     * updated.  This only matters for the texture rectangle scale parameters
@@ -1582,7 +1582,7 @@ fs_visitor::nir_emit_texture(nir_tex_instr *instr)
          lod = src;
          break;
       case nir_tex_src_ms_index:
-         sample_index = src;
+         sample_index = retype(src, BRW_REGISTER_TYPE_UD);
          break;
       case nir_tex_src_offset:
          offset = src;
