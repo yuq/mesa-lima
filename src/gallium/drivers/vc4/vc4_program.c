@@ -1021,6 +1021,29 @@ emit_face_input(struct vc4_compile *c, int attr)
 }
 
 static void
+add_output(struct vc4_compile *c,
+           uint32_t decl_offset,
+           uint8_t semantic_name,
+           uint8_t semantic_index,
+           uint8_t semantic_swizzle)
+{
+        uint32_t old_array_size = c->outputs_array_size;
+        resize_qreg_array(c, &c->outputs, &c->outputs_array_size,
+                          decl_offset + 1);
+
+        if (old_array_size != c->outputs_array_size) {
+                c->output_semantics = reralloc(c,
+                                               c->output_semantics,
+                                               struct vc4_varying_semantic,
+                                               c->outputs_array_size);
+        }
+
+        c->output_semantics[decl_offset].semantic = semantic_name;
+        c->output_semantics[decl_offset].index = semantic_index;
+        c->output_semantics[decl_offset].swizzle = semantic_swizzle;
+}
+
+static void
 emit_tgsi_declaration(struct vc4_compile *c,
                       struct tgsi_full_declaration *decl)
 {
@@ -1062,23 +1085,12 @@ emit_tgsi_declaration(struct vc4_compile *c,
                 break;
 
         case TGSI_FILE_OUTPUT: {
-                uint32_t old_array_size = c->outputs_array_size;
-                resize_qreg_array(c, &c->outputs, &c->outputs_array_size,
-                                  (decl->Range.Last + 1) * 4);
-
-                if (old_array_size != c->outputs_array_size) {
-                        c->output_semantics = reralloc(c,
-                                                       c->output_semantics,
-                                                       struct vc4_varying_semantic,
-                                                       c->outputs_array_size);
-                }
-
-                struct vc4_varying_semantic *sem =
-                        &c->output_semantics[decl->Range.First * 4];
                 for (int i = 0; i < 4; i++) {
-                        sem[i].semantic = decl->Semantic.Name;
-                        sem[i].index = decl->Semantic.Index;
-                        sem[i].swizzle = i;
+                        add_output(c,
+                                   decl->Range.First * 4 + i,
+                                   decl->Semantic.Name,
+                                   decl->Semantic.Index,
+                                   i);
                 }
 
                 switch (decl->Semantic.Name) {
