@@ -1078,8 +1078,12 @@ nir_visitor::visit(ir_expression *ir)
    case ir_unop_cos_reduced:
       emit(nir_op_fcos_reduced, dest_size, srcs);
       break;
-   case ir_unop_dFdx:  emit(nir_op_fddx,   dest_size, srcs); break;
-   case ir_unop_dFdy:  emit(nir_op_fddy,   dest_size, srcs); break;
+   case ir_unop_dFdx:        emit(nir_op_fddx,        dest_size, srcs); break;
+   case ir_unop_dFdy:        emit(nir_op_fddy,        dest_size, srcs); break;
+   case ir_unop_dFdx_fine:   emit(nir_op_fddx_fine,   dest_size, srcs); break;
+   case ir_unop_dFdy_fine:   emit(nir_op_fddy_fine,   dest_size, srcs); break;
+   case ir_unop_dFdx_coarse: emit(nir_op_fddx_coarse, dest_size, srcs); break;
+   case ir_unop_dFdy_coarse: emit(nir_op_fddy_coarse, dest_size, srcs); break;
    case ir_unop_pack_snorm_2x16:
       emit(nir_op_pack_snorm_2x16, dest_size, srcs);
       break;
