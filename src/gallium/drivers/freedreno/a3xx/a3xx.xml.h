@@ -13,7 +13,7 @@ The rules-ng-ng source files this header was generated from are:
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/a2xx.xml          (  32901 bytes, from 2014-06-02 15:21:30)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_common.xml (  10347 bytes, from 2014-10-01 18:55:57)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_pm4.xml    (  14960 bytes, from 2014-07-27 17:22:13)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/a3xx.xml          (  60542 bytes, from 2014-10-01 18:56:14)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/a3xx.xml          (  60533 bytes, from 2014-10-15 18:32:43)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/a4xx.xml          (  41068 bytes, from 2014-08-01 12:22:48)
 
 Copyright (C) 2013-2014 by the following authors:
@@ -1297,7 +1297,12 @@ static inline uint32_t A3XX_HLSQ_CONTROL_0_REG_FSTHREADSIZE(enum a3xx_threadsize
 #define A3XX_HLSQ_CONTROL_0_REG_SPSHADERRESTART			0x00000200
 #define A3XX_HLSQ_CONTROL_0_REG_RESERVED2			0x00000400
 #define A3XX_HLSQ_CONTROL_0_REG_CHUNKDISABLE			0x04000000
-#define A3XX_HLSQ_CONTROL_0_REG_CONSTSWITCHMODE			0x08000000
+#define A3XX_HLSQ_CONTROL_0_REG_CONSTMODE__MASK			0x08000000
+#define A3XX_HLSQ_CONTROL_0_REG_CONSTMODE__SHIFT		27
+static inline uint32_t A3XX_HLSQ_CONTROL_0_REG_CONSTMODE(uint32_t val)
+{
+	return ((val) << A3XX_HLSQ_CONTROL_0_REG_CONSTMODE__SHIFT) & A3XX_HLSQ_CONTROL_0_REG_CONSTMODE__MASK;
+}
 #define A3XX_HLSQ_CONTROL_0_REG_LAZYUPDATEDISABLE		0x10000000
 #define A3XX_HLSQ_CONTROL_0_REG_SPCONSTFULLUPDATE		0x20000000
 #define A3XX_HLSQ_CONTROL_0_REG_TPFULLUPDATE			0x40000000
