@@ -69,6 +69,8 @@ struct r600_shader {
 	boolean			has_txq_cube_array_z_comp;
 	boolean			uses_tex_buffers;
 	boolean                 gs_prim_id_input;
+	/* Temporarily workaround SB not handling CF_INDEX_[01] index registers */
+	boolean			uses_index_registers;
 
 	/* geometry shader properties */
 	unsigned		gs_input_prim;

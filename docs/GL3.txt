@@ -98,8 +98,8 @@ GL 4.0, GLSL 4.00:
   GL_ARB_draw_indirect                                 DONE (i965, nvc0, radeonsi, llvmpipe, softpipe)
   GL_ARB_gpu_shader5                                   DONE (i965, nvc0)
   - 'precise' qualifier                                DONE
-  - Dynamically uniform sampler array indices          DONE ()
-  - Dynamically uniform UBO array indices              DONE ()
+  - Dynamically uniform sampler array indices          DONE (r600)
+  - Dynamically uniform UBO array indices              DONE (r600)
   - Implicit signed -> unsigned conversions            DONE
   - Fused multiply-add                                 DONE ()
   - Packing/bitfield/conversion functions              DONE (r600)
