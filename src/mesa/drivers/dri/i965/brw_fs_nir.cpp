@@ -1625,11 +1625,10 @@ fs_visitor::nir_emit_texture(nir_tex_instr *instr)
          mcs = fs_reg(0u);
    }
 
-   for (unsigned i = 0; i < 4; i++) {
+   for (unsigned i = 0; i < 3; i++) {
       if (instr->const_offset[i] != 0) {
          assert(offset_components == 0);
-         offset = fs_reg(instr->const_offset[i]);
-         offset_components = 1;
+         offset = fs_reg(brw_texture_offset(ctx, instr->const_offset, 3));
          break;
       }
    }
@@ -1671,7 +1670,7 @@ fs_visitor::nir_emit_texture(nir_tex_instr *instr)
 
    emit_texture(op, dest_type, coordinate, instr->coord_components,
                 shadow_comparitor, lod, lod2, lod_components, sample_index,
-                offset,offset_components, mcs, gather_component,
+                offset, offset_components, mcs, gather_component,
                 is_cube_array, is_rect, sampler, fs_reg(sampler), texunit);
 
    fs_reg dest = get_nir_dest(instr->dest);
