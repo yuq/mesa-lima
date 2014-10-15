@@ -111,6 +111,10 @@ UNOP(fcos_reduced, nir_type_float)
 /*@{*/
 UNOP(fddx, nir_type_float)
 UNOP(fddy, nir_type_float)
+UNOP(fddx_fine, nir_type_float)
+UNOP(fddy_fine, nir_type_float)
+UNOP(fddx_coarse, nir_type_float)
+UNOP(fddy_coarse, nir_type_float)
 /*@}*/
 
 /**
