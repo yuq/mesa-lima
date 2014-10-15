@@ -1007,6 +1007,11 @@ nir_visitor::visit(ir_expression *ir)
                    dest_size, srcs);
       instr->src[0].abs = true;
       break;
+   case ir_unop_saturate:
+      assert(types[0] == GLSL_TYPE_FLOAT);
+      instr = emit(nir_op_fmov, dest_size, srcs);
+      instr->dest.saturate = true;
+      break;
    case ir_unop_sign:
       emit(types[0] == GLSL_TYPE_FLOAT ? nir_op_fsign : nir_op_isign,
            dest_size, srcs);
