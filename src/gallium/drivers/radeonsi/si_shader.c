@@ -2590,7 +2590,7 @@ int si_compile_llvm(struct si_screen *sscreen, struct si_shader *shader,
 			shader->selector ? shader->selector->tokens : NULL);
 	memset(&binary, 0, sizeof(binary));
 	r = radeon_llvm_compile(mod, &binary,
-		r600_get_llvm_processor_name(sscreen->b.family), dump);
+		r600_get_llvm_processor_name(sscreen->b.family), dump, sscreen->tm);
 
 	if (r) {
 		return r;

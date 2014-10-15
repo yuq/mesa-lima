@@ -28,6 +28,8 @@
 
 #include "si_state.h"
 
+#include <llvm-c/TargetMachine.h>
+
 #ifdef PIPE_ARCH_BIG_ENDIAN
 #define SI_BIG_ENDIAN 1
 #else
@@ -50,6 +52,7 @@ struct si_compute;
 
 struct si_screen {
 	struct r600_common_screen	b;
+	LLVMTargetMachineRef		tm;
 };
 
 struct si_sampler_view {

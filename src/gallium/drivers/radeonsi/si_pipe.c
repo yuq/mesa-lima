@@ -25,9 +25,13 @@
 #include "si_public.h"
 #include "sid.h"
 
+#include "radeon/radeon_llvm_emit.h"
 #include "radeon/radeon_uvd.h"
 #include "util/u_memory.h"
 #include "vl/vl_decoder.h"
+
+#include <llvm-c/Target.h>
+#include <llvm-c/TargetMachine.h>
 
 /*
  * pipe_context
@@ -420,6 +424,10 @@ static void si_destroy_screen(struct pipe_screen* pscreen)
 		return;
 
 	r600_destroy_common_screen(&sscreen->b);
+
+#if HAVE_LLVM >= 0x0306
+	LLVMDisposeTargetMachine(sscreen->tm);
+#endif
 }
 
 #define SI_TILE_MODE_COLOR_2D_8BPP  14
@@ -476,6 +484,7 @@ static bool si_initialize_pipe_config(struct si_screen *sscreen)
 struct pipe_screen *radeonsi_screen_create(struct radeon_winsys *ws)
 {
 	struct si_screen *sscreen = CALLOC_STRUCT(si_screen);
+	LLVMTargetRef r600_target;
 	if (sscreen == NULL) {
 		return NULL;
 	}
@@ -503,5 +512,13 @@ struct pipe_screen *radeonsi_screen_create(struct radeon_winsys *ws)
 	/* Create the auxiliary context. This must be done last. */
 	sscreen->b.aux_context = sscreen->b.b.context_create(&sscreen->b.b, NULL);
 
+#if HAVE_LLVM >= 0x0306
+	/* Initialize LLVM TargetMachine */
+	r600_target = radeon_llvm_get_r600_target();
+	sscreen->tm = LLVMCreateTargetMachine(r600_target, "r600--",
+				r600_get_llvm_processor_name(sscreen->b.family),
+				"+DumpCode", LLVMCodeGenLevelDefault, LLVMRelocDefault,
+				LLVMCodeModelDefault);
+#endif
 	return &sscreen->b.b;
 }
