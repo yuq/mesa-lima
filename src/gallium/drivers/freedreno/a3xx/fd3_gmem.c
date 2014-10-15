@@ -609,8 +609,11 @@ fd3_emit_sysmem_prep(struct fd_context *ctx)
 	struct fd_ringbuffer *ring = ctx->ring;
 	uint32_t pitch = 0;
 
-	if (pfb->cbufs[0])
-		pitch = fd_resource(pfb->cbufs[0]->texture)->slices[0].pitch;
+	if (pfb->cbufs[0]) {
+		struct pipe_surface *psurf = pfb->cbufs[0];
+		unsigned lvl = psurf->u.tex.level;
+		pitch = fd_resource(psurf->texture)->slices[lvl].pitch;
+	}
 
 	fd3_emit_restore(ctx);
 

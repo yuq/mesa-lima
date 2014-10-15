@@ -282,7 +282,12 @@ void
 fd3_emit_gmem_restore_tex(struct fd_ringbuffer *ring, struct pipe_surface *psurf)
 {
 	struct fd_resource *rsc = fd_resource(psurf->texture);
+	unsigned lvl = psurf->u.tex.level;
+	struct fd_resource_slice *slice = &rsc->slices[lvl];
+	uint32_t layer_offset = slice->size0 * psurf->u.tex.first_layer;
 	enum pipe_format format = fd3_gmem_restore_format(psurf->format);
+
+	debug_assert(psurf->u.tex.first_layer == psurf->u.tex.last_layer);
 
 	/* output sampler state: */
 	OUT_PKT3(ring, CP_LOAD_STATE, 4);
@@ -314,7 +319,7 @@ fd3_emit_gmem_restore_tex(struct fd_ringbuffer *ring, struct pipe_surface *psurf
 	OUT_RING(ring, A3XX_TEX_CONST_1_FETCHSIZE(TFETCH_DISABLE) |
 			A3XX_TEX_CONST_1_WIDTH(psurf->width) |
 			A3XX_TEX_CONST_1_HEIGHT(psurf->height));
-	OUT_RING(ring, A3XX_TEX_CONST_2_PITCH(rsc->slices[0].pitch * rsc->cpp) |
+	OUT_RING(ring, A3XX_TEX_CONST_2_PITCH(slice->pitch * rsc->cpp) |
 			A3XX_TEX_CONST_2_INDX(0));
 	OUT_RING(ring, 0x00000000);
 
@@ -326,7 +331,7 @@ fd3_emit_gmem_restore_tex(struct fd_ringbuffer *ring, struct pipe_surface *psurf
 			CP_LOAD_STATE_0_NUM_UNIT(1));
 	OUT_RING(ring, CP_LOAD_STATE_1_STATE_TYPE(ST_CONSTANTS) |
 			CP_LOAD_STATE_1_EXT_SRC_ADDR(0));
-	OUT_RELOC(ring, rsc->bo, 0, 0, 0);
+	OUT_RELOC(ring, rsc->bo, layer_offset, 0, 0);
 }
 
 void
