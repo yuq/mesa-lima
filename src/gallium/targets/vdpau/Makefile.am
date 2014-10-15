@@ -42,6 +42,7 @@ TARGET_LIB_DEPS = $(top_builddir)/src/loader/libloader.la
 
 include $(top_srcdir)/src/gallium/drivers/nouveau/Automake.inc
 
+include $(top_srcdir)/src/gallium/drivers/r300/Automake.inc
 include $(top_srcdir)/src/gallium/drivers/r600/Automake.inc
 include $(top_srcdir)/src/gallium/drivers/radeonsi/Automake.inc
 
