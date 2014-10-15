@@ -600,11 +600,6 @@ add_src_reg_wrmask(struct ir3_compile_context *ctx,
 	struct ir3_register *reg;
 	struct ir3_instruction *orig = NULL;
 
-	/* TODO we need to use a mov to temp for const >= 64.. or maybe
-	 * we could use relative addressing..
-	 */
-	compile_assert(ctx, src->Index < 64);
-
 	switch (src->File) {
 	case TGSI_FILE_IMMEDIATE:
 		/* TODO if possible, use actual immediate instead of const.. but
@@ -631,6 +626,24 @@ add_src_reg_wrmask(struct ir3_compile_context *ctx,
 			tgsi_file_name(src->File));
 		break;
 	}
+
+	/* We seem to have 8 bits (6.2) for dst register always, so I think
+	 * it is safe to assume GPR cannot be >=64
+	 *
+	 * cat3 instructions only have 8 bits for src2, but cannot take a
+	 * const for src2
+	 *
+	 * cat5 and cat6 in some cases only has 8 bits, but cannot take a
+	 * const for any src.
+	 *
+	 * Other than that we seem to have 12 bits to encode const src,
+	 * except for cat1 which may only have 11 bits (but that seems like
+	 * a bug)
+	 */
+	if (flags & IR3_REG_CONST)
+		compile_assert(ctx, src->Index < (1 << 9));
+	else
+		compile_assert(ctx, src->Index < (1 << 6));
 
 	if (src->Absolute)
 		flags |= IR3_REG_ABS;

@@ -186,6 +186,7 @@ fd3_program_emit(struct fd_ringbuffer *ring, struct fd3_emit *emit)
 	enum a3xx_instrbuffermode fpbuffer, vpbuffer;
 	uint32_t fpbuffersz, vpbuffersz, fsoff;
 	uint32_t pos_regid, posz_regid, psize_regid, color_regid;
+	int constmode;
 	int i, j, k;
 
 	vp = fd3_emit_get_vp(emit);
@@ -241,6 +242,9 @@ fd3_program_emit(struct fd_ringbuffer *ring, struct fd3_emit *emit)
 		fsoff = 256 - fpbuffersz;
 	}
 
+	/* seems like vs->constlen + fs->constlen > 256, then CONSTMODE=1 */
+	constmode = ((vp->constlen + fp->constlen) > 256) ? 1 : 0;
+
 	pos_regid = find_output_regid(vp,
 		ir3_semantic_name(TGSI_SEMANTIC_POSITION, 0));
 	posz_regid = find_output_regid(fp,
@@ -256,6 +260,7 @@ fd3_program_emit(struct fd_ringbuffer *ring, struct fd3_emit *emit)
 
 	OUT_PKT0(ring, REG_A3XX_HLSQ_CONTROL_0_REG, 6);
 	OUT_RING(ring, A3XX_HLSQ_CONTROL_0_REG_FSTHREADSIZE(FOUR_QUADS) |
+			A3XX_HLSQ_CONTROL_0_REG_CONSTMODE(constmode) |
 			/* NOTE:  I guess SHADERRESTART and CONSTFULLUPDATE maybe
 			 * flush some caches? I think we only need to set those
 			 * bits if we have updated const or shader..
@@ -275,7 +280,7 @@ fd3_program_emit(struct fd_ringbuffer *ring, struct fd3_emit *emit)
 			A3XX_HLSQ_FS_CONTROL_REG_INSTRLENGTH(fpbuffersz));
 
 	OUT_PKT0(ring, REG_A3XX_SP_SP_CTRL_REG, 1);
-	OUT_RING(ring, A3XX_SP_SP_CTRL_REG_CONSTMODE(0) |
+	OUT_RING(ring, A3XX_SP_SP_CTRL_REG_CONSTMODE(constmode) |
 			COND(emit->key.binning_pass, A3XX_SP_SP_CTRL_REG_BINNING) |
 			A3XX_SP_SP_CTRL_REG_SLEEPMODE(1) |
 			A3XX_SP_SP_CTRL_REG_L0MODE(0));
@@ -381,11 +386,9 @@ fd3_program_emit(struct fd_ringbuffer *ring, struct fd3_emit *emit)
 				A3XX_SP_FS_CTRL_REG1_CONSTFOOTPRINT(MAX2(fp->constlen + 1, 0)) |
 				A3XX_SP_FS_CTRL_REG1_HALFPRECVAROFFSET(63));
 
-		/* NOTE: I believe VS.CONSTLEN should be <= FS.CONSTOBJOFFSET*/
-		debug_assert(vp->constlen <= 128);
-
 		OUT_PKT0(ring, REG_A3XX_SP_FS_OBJ_OFFSET_REG, 2);
-		OUT_RING(ring, A3XX_SP_FS_OBJ_OFFSET_REG_CONSTOBJECTOFFSET(128) |
+		OUT_RING(ring, A3XX_SP_FS_OBJ_OFFSET_REG_CONSTOBJECTOFFSET(
+					MAX2(128, vp->constlen)) |
 				A3XX_SP_FS_OBJ_OFFSET_REG_SHADEROBJOFFSET(fsoff));
 		OUT_RELOC(ring, fp->bo, 0, 0, 0);  /* SP_FS_OBJ_START_REG */
 	}

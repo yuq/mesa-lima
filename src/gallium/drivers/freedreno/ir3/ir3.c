@@ -104,7 +104,7 @@ static uint32_t reg(struct ir3_register *reg, struct ir3_info *info,
 		val.iim_val = reg->iim_val;
 	} else {
 		int8_t components = util_last_bit(reg->wrmask);
-		int8_t max = (reg->num + repeat + components - 1) >> 2;
+		int16_t max = (reg->num + repeat + components - 1) >> 2;
 
 		val.comp = reg->num & 0x3;
 		val.num  = reg->num >> 2;
