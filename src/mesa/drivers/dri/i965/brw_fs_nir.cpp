@@ -1424,7 +1424,7 @@ fs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
       for (unsigned i = 0;
            i < nir_intrinsic_infos[instr->intrinsic].dest_components; i++) {
          exec_list list = VARYING_PULL_CONSTANT_LOAD(dest, surf_index,
-                                                      dest, base_offset + i);
+                                                     offset, base_offset + i);
          fs_inst *last_inst = (fs_inst *) list.get_tail();
          if (instr->has_predicate)
                last_inst->predicate = BRW_PREDICATE_NORMAL;
