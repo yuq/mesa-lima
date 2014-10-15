@@ -116,7 +116,7 @@ fd_resource_transfer_map(struct pipe_context *pctx,
 	ptrans->usage = usage;
 	ptrans->box = *box;
 	ptrans->stride = slice->pitch * rsc->cpp;
-	ptrans->layer_stride = ptrans->stride;
+	ptrans->layer_stride = slice->size0;
 
 	if (usage & PIPE_TRANSFER_READ)
 		op |= DRM_FREEDRENO_PREP_READ;
