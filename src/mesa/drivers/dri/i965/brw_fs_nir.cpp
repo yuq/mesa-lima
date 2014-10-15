@@ -1563,29 +1563,47 @@ fs_visitor::nir_emit_texture(nir_tex_instr *instr)
       fs_reg src = get_nir_src(instr->src[i]);
       switch (instr->src_type[i]) {
       case nir_tex_src_bias:
-         lod = src;
+         lod = retype(src, BRW_REGISTER_TYPE_F);
          break;
       case nir_tex_src_comparitor:
-         shadow_comparitor = src;
+         shadow_comparitor = retype(src, BRW_REGISTER_TYPE_F);
          break;
       case nir_tex_src_coord:
-         coordinate = src;
+         switch (instr->op) {
+         case nir_texop_txf:
+         case nir_texop_txf_ms:
+            coordinate = retype(src, BRW_REGISTER_TYPE_D);
+            break;
+         default:
+            coordinate = retype(src, BRW_REGISTER_TYPE_F);
+            break;
+         }
          break;
       case nir_tex_src_ddx:
-         lod = src;
+         lod = retype(src, BRW_REGISTER_TYPE_F);
          lod_components = nir_tex_instr_src_size(instr, i);
          break;
       case nir_tex_src_ddy:
-         lod2 = src;
+         lod2 = retype(src, BRW_REGISTER_TYPE_F);
          break;
       case nir_tex_src_lod:
-         lod = src;
+         switch (instr->op) {
+         case nir_texop_txs:
+            lod = retype(src, BRW_REGISTER_TYPE_UD);
+            break;
+         case nir_texop_txf:
+            lod = retype(src, BRW_REGISTER_TYPE_D);
+            break;
+         default:
+            lod = retype(src, BRW_REGISTER_TYPE_F);
+            break;
+         }
          break;
       case nir_tex_src_ms_index:
          sample_index = retype(src, BRW_REGISTER_TYPE_UD);
          break;
       case nir_tex_src_offset:
-         offset = src;
+         offset = retype(src, BRW_REGISTER_TYPE_D);
          if (instr->is_array)
             offset_components = instr->coord_components - 1;
          else
