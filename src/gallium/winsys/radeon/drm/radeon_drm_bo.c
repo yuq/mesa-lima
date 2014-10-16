@@ -816,21 +816,24 @@ radeon_winsys_bo_create(struct radeon_winsys *rws,
     memset(&desc, 0, sizeof(desc));
     desc.base.alignment = alignment;
 
-    /* Additional criteria for the cache manager. */
-    desc.base.usage = domain;
+    /* Only set one usage bit each for domains and flags, or the cache manager
+     * might consider different sets of domains / flags compatible
+     */
+    if (domain == RADEON_DOMAIN_VRAM_GTT)
+        desc.base.usage = 1 << 2;
+    else
+        desc.base.usage = domain >> 1;
+    assert(flags < sizeof(desc.base.usage) * 8 - 3);
+    desc.base.usage |= 1 << (flags + 3);
+
     desc.initial_domains = domain;
     desc.flags = flags;
 
     /* Assign a buffer manager. */
-    assert(flags < RADEON_NUM_CACHE_MANAGERS);
-    if (use_reusable_pool) {
-        if (domain == RADEON_DOMAIN_VRAM)
-            provider = ws->cman_vram[flags];
-        else
-            provider = ws->cman_gtt[flags];
-    } else {
+    if (use_reusable_pool)
+        provider = ws->cman;
+    else
         provider = ws->kman;
-    }
 
     buffer = provider->create_buffer(provider, size, &desc.base);
     if (!buffer)
