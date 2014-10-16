@@ -1289,14 +1289,6 @@ vec4_visitor::visit(ir_expression *ir)
       assert(!ir->operands[operand]->type->is_matrix());
    }
 
-   int vector_elements = ir->operands[0]->type->vector_elements;
-   if (ir->operands[1]) {
-      vector_elements = MAX2(vector_elements,
-			     ir->operands[1]->type->vector_elements);
-   }
-
-   this->result.file = BAD_FILE;
-
    /* Storage for our result.  Ideally for an assignment we'd be using
     * the actual storage for the result here, instead.
     */
