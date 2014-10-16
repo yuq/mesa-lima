@@ -1316,7 +1316,7 @@ vec4_visitor::visit(ir_expression *ir)
       if (ctx->Const.UniformBooleanTrue != 1) {
          emit(NOT(result_dst, op[0]));
       } else {
-         emit(XOR(result_dst, op[0], src_reg(1)));
+         emit(XOR(result_dst, op[0], src_reg(1u)));
       }
       break;
    case ir_unop_neg:
@@ -1506,7 +1506,7 @@ vec4_visitor::visit(ir_expression *ir)
       emit(CMP(result_dst, op[0], op[1],
 	       brw_conditional_for_comparison(ir->operation)));
       if (ctx->Const.UniformBooleanTrue == 1) {
-         emit(AND(result_dst, result_src, src_reg(1)));
+         emit(AND(result_dst, result_src, src_reg(1u)));
       }
       break;
    }
@@ -1522,7 +1522,7 @@ vec4_visitor::visit(ir_expression *ir)
       } else {
 	 emit(CMP(result_dst, op[0], op[1], BRW_CONDITIONAL_Z));
          if (ctx->Const.UniformBooleanTrue == 1) {
-            emit(AND(result_dst, result_src, src_reg(1)));
+            emit(AND(result_dst, result_src, src_reg(1u)));
          }
       }
       break;
@@ -1538,7 +1538,7 @@ vec4_visitor::visit(ir_expression *ir)
       } else {
 	 emit(CMP(result_dst, op[0], op[1], BRW_CONDITIONAL_NZ));
          if (ctx->Const.UniformBooleanTrue == 1) {
-            emit(AND(result_dst, result_src, src_reg(1)));
+            emit(AND(result_dst, result_src, src_reg(1u)));
          }
       }
       break;
@@ -1602,7 +1602,7 @@ vec4_visitor::visit(ir_expression *ir)
       break;
    case ir_unop_b2i:
       if (ctx->Const.UniformBooleanTrue != 1) {
-         emit(AND(result_dst, op[0], src_reg(1)));
+         emit(AND(result_dst, op[0], src_reg(1u)));
       } else {
          emit(MOV(result_dst, op[0]));
       }
@@ -1621,7 +1621,7 @@ vec4_visitor::visit(ir_expression *ir)
    case ir_unop_i2b:
       emit(CMP(result_dst, op[0], src_reg(0.0f), BRW_CONDITIONAL_NZ));
       if (ctx->Const.UniformBooleanTrue == 1) {
-         emit(AND(result_dst, result_src, src_reg(1)));
+         emit(AND(result_dst, result_src, src_reg(1u)));
       }
       break;
 
@@ -1769,7 +1769,7 @@ vec4_visitor::visit(ir_expression *ir)
          emit(CMP(result_dst, packed_consts, src_reg(0u),
                   BRW_CONDITIONAL_NZ));
          if (ctx->Const.UniformBooleanTrue == 1) {
-            emit(AND(result_dst, result, src_reg(1)));
+            emit(AND(result_dst, result, src_reg(1u)));
          }
       } else {
          emit(MOV(result_dst, packed_consts));
@@ -2296,7 +2296,7 @@ vec4_visitor::emit_constant_values(dst_reg *dst, ir_constant *ir)
       case GLSL_TYPE_BOOL:
          emit(MOV(*dst,
                   src_reg(ir->value.b[i] != 0 ? ctx->Const.UniformBooleanTrue
-                                              : 0)));
+                                              : 0u)));
 	 break;
       default:
 	 unreachable("Non-float/uint/int/bool constant");

@@ -526,7 +526,7 @@ fs_visitor::visit(ir_expression *ir)
       if (ctx->Const.UniformBooleanTrue != 1) {
          emit(NOT(this->result, op[0]));
       } else {
-         emit(XOR(this->result, op[0], fs_reg(1)));
+         emit(XOR(this->result, op[0], fs_reg(1u)));
       }
       break;
    case ir_unop_neg:
@@ -801,7 +801,7 @@ fs_visitor::visit(ir_expression *ir)
          this->result.type = BRW_REGISTER_TYPE_F;
       } else {
          temp = fs_reg(this, glsl_type::int_type);
-         emit(AND(temp, op[0], fs_reg(1)));
+         emit(AND(temp, op[0], fs_reg(1u)));
          emit(MOV(this->result, temp));
       }
       break;
@@ -2329,7 +2329,7 @@ fs_visitor::visit(ir_constant *ir)
 	 case GLSL_TYPE_BOOL:
             emit(MOV(dst_reg,
                      fs_reg(ir->value.b[i] != 0 ? ctx->Const.UniformBooleanTrue
-                                                : 0)));
+                                                : 0u)));
 	    break;
 	 default:
 	    unreachable("Non-float/uint/int/bool constant");
@@ -2377,7 +2377,7 @@ fs_visitor::emit_bool_to_cond_code(ir_rvalue *ir)
       if (ctx->Const.UniformBooleanTrue == 1) {
          fs_reg dst = fs_reg(this, glsl_type::uint_type);
          emit(XOR(dst, op[0], op[1]));
-         inst = emit(AND(reg_null_d, dst, fs_reg(1)));
+         inst = emit(AND(reg_null_d, dst, fs_reg(1u)));
          inst->conditional_mod = BRW_CONDITIONAL_NZ;
       } else {
          inst = emit(XOR(reg_null_d, op[0], op[1]));
@@ -2389,7 +2389,7 @@ fs_visitor::emit_bool_to_cond_code(ir_rvalue *ir)
       if (ctx->Const.UniformBooleanTrue == 1) {
          fs_reg dst = fs_reg(this, glsl_type::uint_type);
          emit(OR(dst, op[0], op[1]));
-         inst = emit(AND(reg_null_d, dst, fs_reg(1)));
+         inst = emit(AND(reg_null_d, dst, fs_reg(1u)));
          inst->conditional_mod = BRW_CONDITIONAL_NZ;
       } else {
          inst = emit(OR(reg_null_d, op[0], op[1]));
@@ -2401,7 +2401,7 @@ fs_visitor::emit_bool_to_cond_code(ir_rvalue *ir)
       if (ctx->Const.UniformBooleanTrue == 1) {
          fs_reg dst = fs_reg(this, glsl_type::uint_type);
          emit(AND(dst, op[0], op[1]));
-         inst = emit(AND(reg_null_d, dst, fs_reg(1)));
+         inst = emit(AND(reg_null_d, dst, fs_reg(1u)));
          inst->conditional_mod = BRW_CONDITIONAL_NZ;
       } else {
          inst = emit(AND(reg_null_d, op[0], op[1]));
@@ -3404,7 +3404,7 @@ fs_visitor::resolve_bool_comparison(ir_rvalue *rvalue, fs_reg *reg)
       return;
 
    fs_reg temp = fs_reg(this, glsl_type::bool_type);
-   emit(AND(temp, *reg, fs_reg(1)));
+   emit(AND(temp, *reg, fs_reg(1u)));
    *reg = temp;
 }
 
