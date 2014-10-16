@@ -533,8 +533,7 @@ _mesa_propagate_uniforms_to_driver_storage(struct gl_uniform_storage *uni,
       dst += array_index * store->element_stride;
 
       switch (store->format) {
-      case uniform_native:
-      case uniform_bool_int_0_1: {
+      case uniform_native: {
 	 unsigned j;
 	 unsigned v;
 
@@ -550,8 +549,7 @@ _mesa_propagate_uniforms_to_driver_storage(struct gl_uniform_storage *uni,
 	 break;
       }
 
-      case uniform_int_float:
-      case uniform_bool_float: {
+      case uniform_int_float: {
 	 const int *isrc = (const int *) src;
 	 unsigned j;
 	 unsigned v;
@@ -561,27 +559,6 @@ _mesa_propagate_uniforms_to_driver_storage(struct gl_uniform_storage *uni,
 	    for (v = 0; v < vectors; v++) {
 	       for (c = 0; c < components; c++) {
 		  ((float *) dst)[c] = (float) *isrc;
-		  isrc++;
-	       }
-
-	       dst += store->vector_stride;
-	    }
-
-	    dst += extra_stride;
-	 }
-	 break;
-      }
-
-      case uniform_bool_int_0_not0: {
-	 const int *isrc = (const int *) src;
-	 unsigned j;
-	 unsigned v;
-	 unsigned c;
-
-	 for (j = 0; j < count; j++) {
-	    for (v = 0; v < vectors; v++) {
-	       for (c = 0; c < components; c++) {
-		  ((int *) dst)[c] = *isrc == 0 ? 0 : ~0;
 		  isrc++;
 	       }
 
