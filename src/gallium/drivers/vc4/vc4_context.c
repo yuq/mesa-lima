@@ -36,6 +36,49 @@
 #include "vc4_context.h"
 #include "vc4_resource.h"
 
+/**
+ * Emits a no-op STORE_TILE_BUFFER_GENERAL.
+ *
+ * If we emit a PACKET_TILE_COORDINATES, it must be followed by a store of
+ * some sort before another load is triggered.
+ */
+static void
+vc4_store_before_load(struct vc4_context *vc4, bool *coords_emitted)
+{
+        if (!*coords_emitted)
+                return;
+
+        cl_u8(&vc4->rcl, VC4_PACKET_STORE_TILE_BUFFER_GENERAL);
+        cl_u8(&vc4->rcl, VC4_LOADSTORE_TILE_BUFFER_NONE);
+        cl_u8(&vc4->rcl, (VC4_STORE_TILE_BUFFER_DISABLE_COLOR_CLEAR |
+                          VC4_STORE_TILE_BUFFER_DISABLE_ZS_CLEAR |
+                          VC4_STORE_TILE_BUFFER_DISABLE_VG_MASK_CLEAR));
+        cl_u32(&vc4->rcl, 0); /* no address, since we're in None mode */
+
+        *coords_emitted = false;
+}
+
+/**
+ * Emits a PACKET_TILE_COORDINATES if one isn't already pending.
+ *
+ * The tile coordinates packet triggers a pending load if there is one, are
+ * used for clipping during rendering, and determine where loads/stores happen
+ * relative to their base address.
+ */
+static void
+vc4_tile_coordinates(struct vc4_context *vc4, uint32_t x, uint32_t y,
+                       bool *coords_emitted)
+{
+        if (*coords_emitted)
+                return;
+
+        cl_u8(&vc4->rcl, VC4_PACKET_TILE_COORDINATES);
+        cl_u8(&vc4->rcl, x);
+        cl_u8(&vc4->rcl, y);
+
+        *coords_emitted = true;
+}
+
 static void
 vc4_setup_rcl(struct vc4_context *vc4)
 {
@@ -116,9 +159,12 @@ vc4_setup_rcl(struct vc4_context *vc4)
                         bool coords_emitted = false;
 
                         /* Note that the load doesn't actually occur until the
-                         * tile coords packet is processed.
+                         * tile coords packet is processed, and only one load
+                         * may be outstanding at a time.
                          */
                         if (resolve_uncleared & PIPE_CLEAR_COLOR) {
+                                vc4_store_before_load(vc4, &coords_emitted);
+
                                 cl_start_reloc(&vc4->rcl, 1);
                                 cl_u8(&vc4->rcl, VC4_PACKET_LOAD_TILE_BUFFER_GENERAL);
                                 cl_u8(&vc4->rcl,
@@ -132,13 +178,12 @@ vc4_setup_rcl(struct vc4_context *vc4)
                                 cl_reloc(vc4, &vc4->rcl, ctex->bo,
                                          csurf->offset);
 
-                                cl_u8(&vc4->rcl, VC4_PACKET_TILE_COORDINATES);
-                                cl_u8(&vc4->rcl, x);
-                                cl_u8(&vc4->rcl, y);
-                                coords_emitted = true;
+                                vc4_tile_coordinates(vc4, x, y, &coords_emitted);
                         }
 
                         if (resolve_uncleared & (PIPE_CLEAR_DEPTH | PIPE_CLEAR_STENCIL)) {
+                                vc4_store_before_load(vc4, &coords_emitted);
+
                                 cl_start_reloc(&vc4->rcl, 1);
                                 cl_u8(&vc4->rcl, VC4_PACKET_LOAD_TILE_BUFFER_GENERAL);
                                 cl_u8(&vc4->rcl,
@@ -149,21 +194,14 @@ vc4_setup_rcl(struct vc4_context *vc4)
                                 cl_reloc(vc4, &vc4->rcl, ztex->bo,
                                          zsurf->offset);
 
-                                cl_u8(&vc4->rcl, VC4_PACKET_TILE_COORDINATES);
-                                cl_u8(&vc4->rcl, x);
-                                cl_u8(&vc4->rcl, y);
-                                coords_emitted = true;
+                                vc4_tile_coordinates(vc4, x, y, &coords_emitted);
                         }
 
                         /* Clipping depends on tile coordinates having been
                          * emitted, so make sure it's happened even if
                          * everything was cleared to start.
                          */
-                        if (!coords_emitted) {
-                                cl_u8(&vc4->rcl, VC4_PACKET_TILE_COORDINATES);
-                                cl_u8(&vc4->rcl, x);
-                                cl_u8(&vc4->rcl, y);
-                        }
+                        vc4_tile_coordinates(vc4, x, y, &coords_emitted);
 
                         cl_start_reloc(&vc4->rcl, 1);
                         cl_u8(&vc4->rcl, VC4_PACKET_BRANCH_TO_SUB_LIST);
@@ -171,6 +209,8 @@ vc4_setup_rcl(struct vc4_context *vc4)
                                  (y * xtiles + x) * 32);
 
                         if (vc4->resolve & (PIPE_CLEAR_DEPTH | PIPE_CLEAR_STENCIL)) {
+                                vc4_tile_coordinates(vc4, x, y, &coords_emitted);
+
                                 cl_start_reloc(&vc4->rcl, 1);
                                 cl_u8(&vc4->rcl, VC4_PACKET_STORE_TILE_BUFFER_GENERAL);
                                 cl_u8(&vc4->rcl,
@@ -184,9 +224,12 @@ vc4_setup_rcl(struct vc4_context *vc4)
                                          ((end_of_frame &&
                                            !(vc4->resolve & PIPE_CLEAR_COLOR0)) ?
                                           VC4_LOADSTORE_TILE_BUFFER_EOF : 0));
+
+                                coords_emitted = false;
                         }
 
                         if (vc4->resolve & PIPE_CLEAR_COLOR0) {
+                                vc4_tile_coordinates(vc4, x, y, &coords_emitted);
                                 if (end_of_frame) {
                                         cl_u8(&vc4->rcl,
                                               VC4_PACKET_STORE_MS_TILE_BUFFER_AND_EOF);
@@ -194,14 +237,20 @@ vc4_setup_rcl(struct vc4_context *vc4)
                                         cl_u8(&vc4->rcl,
                                               VC4_PACKET_STORE_MS_TILE_BUFFER);
                                 }
+
+                                coords_emitted = false;
                         }
 
                         /* One of the bits needs to have been set that would
-                         * have triggered an EOFq
+                         * have triggered an EOF.
                          */
                         assert(vc4->resolve & (PIPE_CLEAR_COLOR0 |
                                                PIPE_CLEAR_DEPTH |
                                                PIPE_CLEAR_STENCIL));
+                        /* Any coords emitted must also have been consumed by
+                         * a store.
+                         */
+                        assert(!coords_emitted);
                 }
         }
 }
