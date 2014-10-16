@@ -487,6 +487,19 @@ fs_visitor::visit(ir_expression *ir)
          return;
       break;
 
+   case ir_triop_csel:
+      ir->operands[1]->accept(this);
+      op[1] = this->result;
+      ir->operands[2]->accept(this);
+      op[2] = this->result;
+
+      emit_bool_to_cond_code(ir->operands[0]);
+
+      this->result = fs_reg(this, ir->type);
+      inst = emit(SEL(this->result, op[1], op[2]));
+      inst->predicate = BRW_PREDICATE_NORMAL;
+      return;
+
    case ir_unop_interpolate_at_centroid:
    case ir_binop_interpolate_at_offset:
    case ir_binop_interpolate_at_sample:
@@ -1023,11 +1036,6 @@ fs_visitor::visit(ir_expression *ir)
       break;
 
    case ir_triop_csel:
-      emit(CMP(reg_null_d, op[0], fs_reg(0), BRW_CONDITIONAL_NZ));
-      inst = emit(BRW_OPCODE_SEL, this->result, op[1], op[2]);
-      inst->predicate = BRW_PREDICATE_NORMAL;
-      break;
-
    case ir_unop_interpolate_at_centroid:
    case ir_binop_interpolate_at_offset:
    case ir_binop_interpolate_at_sample:
