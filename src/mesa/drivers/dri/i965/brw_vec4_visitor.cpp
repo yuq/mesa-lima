@@ -1277,6 +1277,20 @@ vec4_visitor::visit(ir_expression *ir)
    dst_reg result_dst(this, ir->type);
    src_reg result_src(result_dst);
 
+   if (ir->operation == ir_triop_csel) {
+      ir->operands[1]->accept(this);
+      op[1] = this->result;
+      ir->operands[2]->accept(this);
+      op[2] = this->result;
+
+      enum brw_predicate predicate;
+      emit_bool_to_cond_code(ir->operands[0], &predicate);
+      inst = emit(BRW_OPCODE_SEL, result_dst, op[1], op[2]);
+      inst->predicate = predicate;
+      this->result = result_src;
+      return;
+   }
+
    for (operand = 0; operand < ir->get_num_operands(); operand++) {
       this->result.file = BAD_FILE;
       ir->operands[operand]->accept(this);
@@ -1780,9 +1794,7 @@ vec4_visitor::visit(ir_expression *ir)
       break;
 
    case ir_triop_csel:
-      emit(CMP(dst_null_d(), op[0], src_reg(0), BRW_CONDITIONAL_NZ));
-      inst = emit(BRW_OPCODE_SEL, result_dst, op[1], op[2]);
-      inst->predicate = BRW_PREDICATE_NORMAL;
+      unreachable("already handled above");
       break;
 
    case ir_triop_bfi:
