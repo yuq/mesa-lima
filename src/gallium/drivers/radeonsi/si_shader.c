@@ -426,21 +426,8 @@ static void declare_input_fs(
 	}
 
 	if (decl->Semantic.Name == TGSI_SEMANTIC_FACE) {
-		LLVMValueRef face, is_face_positive;
-
-		face = LLVMGetParam(main_fn, SI_PARAM_FRONT_FACE);
-
-		is_face_positive = LLVMBuildFCmp(gallivm->builder,
-						 LLVMRealUGT, face,
-						 lp_build_const_float(gallivm, 0.0f),
-						 "");
-
 		radeon_bld->inputs[radeon_llvm_reg_index_soa(input_index, 0)] =
-			LLVMBuildSelect(gallivm->builder,
-					is_face_positive,
-					lp_build_const_float(gallivm, 1.0f),
-					lp_build_const_float(gallivm, 0.0f),
-					"");
+			LLVMGetParam(main_fn, SI_PARAM_FRONT_FACE);
 		radeon_bld->inputs[radeon_llvm_reg_index_soa(input_index, 1)] =
 		radeon_bld->inputs[radeon_llvm_reg_index_soa(input_index, 2)] =
 			lp_build_const_float(gallivm, 0.0f);
