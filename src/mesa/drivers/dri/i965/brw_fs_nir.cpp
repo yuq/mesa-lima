@@ -1324,9 +1324,28 @@ fs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
 
    case nir_intrinsic_atomic_counter_inc:
    case nir_intrinsic_atomic_counter_dec:
-   case nir_intrinsic_atomic_counter_read:
-      assert(!"TODO");
+   case nir_intrinsic_atomic_counter_read: {
+      unsigned surf_index = prog_data->binding_table.abo_start +
+                            (unsigned) instr->const_index[0];
+      fs_reg offset = fs_reg(get_nir_src(instr->src[0]));
 
+      switch (instr->intrinsic) {
+         case nir_intrinsic_atomic_counter_inc:
+            emit_untyped_atomic(BRW_AOP_INC, surf_index, dest, offset,
+                                fs_reg(), fs_reg());
+            break;
+         case nir_intrinsic_atomic_counter_dec:
+            emit_untyped_atomic(BRW_AOP_PREDEC, surf_index, dest, offset,
+                                fs_reg(), fs_reg());
+            break;
+         case nir_intrinsic_atomic_counter_read:
+            emit_untyped_surface_read(surf_index, dest, offset);
+            break;
+         default:
+            unreachable("Unreachable");
+      }
+      break;
+   }
 
    case nir_intrinsic_load_front_face:
       assert(!"TODO");
