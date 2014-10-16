@@ -433,8 +433,7 @@ fs_visitor::try_constant_propagate(fs_inst *inst, acp_entry *entry)
          continue;
 
       assert(entry->dst.file == GRF);
-      if (inst->src[i].reg != entry->dst.reg ||
-          inst->src[i].type != entry->dst.type)
+      if (inst->src[i].reg != entry->dst.reg)
          continue;
 
       /* Bail if inst is reading a range that isn't contained in the range
@@ -454,6 +453,7 @@ fs_visitor::try_constant_propagate(fs_inst *inst, acp_entry *entry)
 
       fs_reg val = entry->src;
       val.effective_width = inst->src[i].effective_width;
+      val.type = inst->src[i].type;
 
       switch (inst->opcode) {
       case BRW_OPCODE_MOV:
