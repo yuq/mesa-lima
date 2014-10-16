@@ -234,6 +234,12 @@ enum vc4_packet {
 #define VC4_RENDER_CONFIG_TILE_BUFFER_64BIT        (1 << 1)
 #define VC4_RENDER_CONFIG_MS_MODE_4X               (1 << 0)
 
+#define VC4_PRIMITIVE_LIST_FORMAT_16_INDEX         (1 << 4)
+#define VC4_PRIMITIVE_LIST_FORMAT_32_XY            (3 << 4)
+#define VC4_PRIMITIVE_LIST_FORMAT_TYPE_POINTS      (0 << 0)
+#define VC4_PRIMITIVE_LIST_FORMAT_TYPE_LINES       (1 << 0)
+#define VC4_PRIMITIVE_LIST_FORMAT_TYPE_TRIANGLES   (2 << 0)
+#define VC4_PRIMITIVE_LIST_FORMAT_TYPE_RHT         (3 << 0)
 
 enum vc4_texture_data_type {
         VC4_TEXTURE_TYPE_RGBA8888 = 0,

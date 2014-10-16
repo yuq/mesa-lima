@@ -85,6 +85,15 @@ vc4_start_draw(struct vc4_context *vc4)
          */
         cl_u8(&vc4->bcl, VC4_PACKET_START_TILE_BINNING);
 
+        /* Reset the current compressed primitives format.  This gets modified
+         * by VC4_PACKET_GL_INDEXED_PRIMITIVE and
+         * VC4_PACKET_GL_ARRAY_PRIMITIVE, so it needs to be reset at the start
+         * of every tile.
+         */
+        cl_u8(&vc4->bcl, VC4_PACKET_PRIMITIVE_LIST_FORMAT);
+        cl_u8(&vc4->bcl, (VC4_PRIMITIVE_LIST_FORMAT_16_INDEX |
+                          VC4_PRIMITIVE_LIST_FORMAT_TYPE_TRIANGLES));
+
         vc4->needs_flush = true;
         vc4->draw_call_queued = true;
 }
