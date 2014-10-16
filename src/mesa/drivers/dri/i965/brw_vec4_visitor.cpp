@@ -1259,8 +1259,6 @@ vec4_visitor::visit(ir_expression *ir)
 {
    unsigned int operand;
    src_reg op[Elements(ir->operands)];
-   src_reg result_src;
-   dst_reg result_dst;
    vec4_instruction *inst;
 
    if (ir->operation == ir_binop_add) {
@@ -1272,6 +1270,12 @@ vec4_visitor::visit(ir_expression *ir)
       if (try_emit_b2f_of_compare(ir))
 	 return;
    }
+
+   /* Storage for our result.  Ideally for an assignment we'd be using
+    * the actual storage for the result here, instead.
+    */
+   dst_reg result_dst(this, ir->type);
+   src_reg result_src(result_dst);
 
    for (operand = 0; operand < ir->get_num_operands(); operand++) {
       this->result.file = BAD_FILE;
@@ -1289,19 +1293,8 @@ vec4_visitor::visit(ir_expression *ir)
       assert(!ir->operands[operand]->type->is_matrix());
    }
 
-   /* Storage for our result.  Ideally for an assignment we'd be using
-    * the actual storage for the result here, instead.
-    */
-   result_src = src_reg(this, ir->type);
-   /* convenience for the emit functions below. */
-   result_dst = dst_reg(result_src);
    /* If nothing special happens, this is the result. */
    this->result = result_src;
-   /* Limit writes to the channels that will be used by result_src later.
-    * This does limit this temp's use as a temporary for multi-instruction
-    * sequences.
-    */
-   result_dst.writemask = (1 << ir->type->vector_elements) - 1;
 
    switch (ir->operation) {
    case ir_unop_logic_not:
