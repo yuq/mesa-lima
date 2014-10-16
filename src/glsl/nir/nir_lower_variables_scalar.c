@@ -352,13 +352,24 @@ get_deref_tail(nir_deref *deref)
 /* helper for reg_const_load which emits a single instruction */
 static void
 reg_const_load_single_instr(nir_reg_dest reg, nir_constant *constant,
+                            enum glsl_base_type base_type,
                             unsigned num_components, unsigned offset,
                             nir_function_impl *impl, void *mem_ctx)
 {
    nir_load_const_instr *instr = nir_load_const_instr_create(mem_ctx);
    instr->num_components = num_components;
    for (unsigned i = 0; i < num_components; i++) {
-      instr->value.u[i] = constant->value.u[i + offset];
+      switch (base_type) {
+      case GLSL_TYPE_FLOAT:
+      case GLSL_TYPE_INT:
+      case GLSL_TYPE_UINT:
+         instr->value.u[i] = constant->value.u[i + offset];
+         break;
+      case GLSL_TYPE_BOOL:
+         instr->value.u[i] = constant->value.u[i + offset] ?
+                             NIR_TRUE : NIR_FALSE;
+         break;
+      }
    }
    instr->dest.reg = reg;
    instr->dest.reg.base_offset += offset;
@@ -376,20 +387,21 @@ reg_const_load(nir_reg_dest reg, nir_constant *constant,
    const struct glsl_type *subtype;
    unsigned subtype_size;
 
-   switch (glsl_get_base_type(type)) {
+   enum glsl_base_type base_type = glsl_get_base_type(type);
+   switch (base_type) {
       case GLSL_TYPE_FLOAT:
       case GLSL_TYPE_INT:
       case GLSL_TYPE_UINT:
       case GLSL_TYPE_BOOL:
          if (glsl_type_is_matrix(type)) {
             for (unsigned i = 0; i < glsl_get_matrix_columns(type); i++) {
-               reg_const_load_single_instr(reg, constant,
+               reg_const_load_single_instr(reg, constant, base_type,
                                            glsl_get_vector_elements(type),
                                            i * glsl_get_vector_elements(type),
                                            impl, mem_ctx);
             }
          } else {
-            reg_const_load_single_instr(reg, constant,
+            reg_const_load_single_instr(reg, constant, base_type,
                                         glsl_get_vector_elements(type), 0,
                                         impl, mem_ctx);
          }

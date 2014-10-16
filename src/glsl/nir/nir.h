@@ -40,6 +40,9 @@
 extern "C" {
 #endif
 
+#define NIR_FALSE 0u
+#define NIR_TRUE (~0u)
+
 struct nir_function_overload;
 struct nir_function;
 
