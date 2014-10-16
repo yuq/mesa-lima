@@ -87,11 +87,27 @@ lower_instr(nir_intrinsic_instr *instr, nir_function_impl *impl)
       offset_const->value.u[0] += deref_array->base_offset;
 
       if (deref_array->has_indirect) {
+         nir_load_const_instr *atomic_counter_size =
+               nir_load_const_instr_create(mem_ctx);
+         atomic_counter_size->num_components = 1;
+         atomic_counter_size->value.u[0] = ATOMIC_COUNTER_SIZE;
+         atomic_counter_size->dest.reg.reg = nir_local_reg_create(impl);
+         atomic_counter_size->dest.reg.reg->num_components = 1;
+         nir_instr_insert_before(&instr->instr, &atomic_counter_size->instr);
+
+         nir_alu_instr *mul = nir_alu_instr_create(mem_ctx, nir_op_imul);
+         mul->dest.dest.reg.reg = nir_local_reg_create(impl);
+         mul->dest.dest.reg.reg->num_components = 1;
+         mul->dest.write_mask = 0x1;
+         mul->src[0].src = nir_src_copy(deref_array->indirect, mem_ctx);
+         mul->src[1].src.reg.reg = atomic_counter_size->dest.reg.reg;
+         nir_instr_insert_before(&instr->instr, &mul->instr);
+
          nir_alu_instr *add = nir_alu_instr_create(mem_ctx, nir_op_iadd);
          add->dest.dest.reg.reg = nir_local_reg_create(impl);
          add->dest.dest.reg.reg->num_components = 1;
          add->dest.write_mask = 0x1;
-         add->src[0].src = nir_src_copy(deref_array->indirect, mem_ctx);
+         add->src[0].src.reg.reg = mul->dest.dest.reg.reg;
          add->src[1].src.reg.reg = offset_const->dest.reg.reg;
          nir_instr_insert_before(&instr->instr, &add->instr);
 
