@@ -297,6 +297,22 @@ tgsi_to_qir_scalar(struct vc4_compile *c,
 }
 
 static struct qreg
+tgsi_to_qir_rcp(struct vc4_compile *c,
+                struct tgsi_full_instruction *tgsi_inst,
+                enum qop op, struct qreg *src, int i)
+{
+        struct qreg x = src[0 * 4 + 0];
+        struct qreg r = qir_RCP(c, x);
+
+        /* Apply a Newton-Raphson step to improve the accuracy. */
+        r = qir_FMUL(c, r, qir_FSUB(c,
+                                    qir_uniform_f(c, 2.0),
+                                    qir_FMUL(c, x, r)));
+
+        return r;
+}
+
+static struct qreg
 qir_srgb_decode(struct vc4_compile *c, struct qreg srgb)
 {
         struct qreg low = qir_FMUL(c, srgb, qir_uniform_f(c, 1.0 / 12.92));
@@ -1165,7 +1181,7 @@ emit_tgsi_instruction(struct vc4_compile *c,
 
                 [TGSI_OPCODE_CMP] = { 0, tgsi_to_qir_cmp },
                 [TGSI_OPCODE_MAD] = { 0, tgsi_to_qir_mad },
-                [TGSI_OPCODE_RCP] = { QOP_RCP, tgsi_to_qir_scalar },
+                [TGSI_OPCODE_RCP] = { QOP_RCP, tgsi_to_qir_rcp },
                 [TGSI_OPCODE_RSQ] = { QOP_RSQ, tgsi_to_qir_scalar },
                 [TGSI_OPCODE_EX2] = { QOP_EXP2, tgsi_to_qir_scalar },
                 [TGSI_OPCODE_LG2] = { QOP_LOG2, tgsi_to_qir_scalar },
