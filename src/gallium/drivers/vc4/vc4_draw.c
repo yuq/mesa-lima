@@ -78,6 +78,11 @@ vc4_start_draw(struct vc4_context *vc4)
               VC4_BIN_CONFIG_ALLOC_BLOCK_SIZE_32 |
               VC4_BIN_CONFIG_ALLOC_INIT_BLOCK_SIZE_32);
 
+        /* START_TILE_BINNING resets the statechange counters in the hardware,
+         * which are what is used when a primitive is binned to a tile to
+         * figure out what new state packets need to be written to that tile's
+         * command list.
+         */
         cl_u8(&vc4->bcl, VC4_PACKET_START_TILE_BINNING);
 
         vc4->needs_flush = true;

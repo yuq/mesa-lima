@@ -319,6 +319,12 @@ vc4_flush(struct pipe_context *pctx)
 
         vc4->needs_flush = false;
         vc4->draw_call_queued = false;
+
+        /* We have no hardware context saved between our draw calls, so we
+         * need to flag the next draw as needing all state emitted.  Emitting
+         * all state at the start of our draws is also what ensures that we
+         * return to the state we need after a previous tile has finished.
+         */
         vc4->dirty = ~0;
         vc4->resolve = 0;
         vc4->cleared = 0;
