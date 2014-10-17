@@ -108,6 +108,7 @@ vc4_simulator_unpin_bos(struct exec_info *exec)
 int
 vc4_simulator_flush(struct vc4_context *vc4, struct drm_vc4_submit_cl *args)
 {
+        struct vc4_screen *screen = vc4->screen;
         struct vc4_surface *csurf = vc4_surface(vc4->framebuffer.cbufs[0]);
         struct vc4_resource *ctex = csurf ? vc4_resource(csurf->base.texture) : NULL;
         uint32_t winsys_stride = ctex ? ctex->bo->simulator_winsys_stride : 0;
@@ -149,8 +150,24 @@ vc4_simulator_flush(struct vc4_context *vc4, struct drm_vc4_submit_cl *args)
         if (ret)
                 return ret;
 
-        simpenrose_do_binning(exec.ct0ca, exec.ct0ea);
-        simpenrose_do_rendering(exec.ct1ca, exec.ct1ea);
+        int bfc = simpenrose_do_binning(exec.ct0ca, exec.ct0ea);
+        if (bfc != 1) {
+                fprintf(stderr, "Binning returned %d flushes, should be 1.\n",
+                        bfc);
+                fprintf(stderr, "Relocated binning command list:\n");
+                vc4_dump_cl(screen->simulator_mem_base + exec.ct0ca,
+                            exec.ct0ea - exec.ct0ca, false);
+                abort();
+        }
+        int rfc = simpenrose_do_rendering(exec.ct1ca, exec.ct1ea);
+        if (rfc != 1) {
+                fprintf(stderr, "Rendering returned %d frames, should be 1.\n",
+                        rfc);
+                fprintf(stderr, "Relocated render command list:\n");
+                vc4_dump_cl(screen->simulator_mem_base + exec.ct1ca,
+                            exec.ct1ea - exec.ct1ca, true);
+                abort();
+        }
 
         ret = vc4_simulator_unpin_bos(&exec);
         if (ret)

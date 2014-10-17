@@ -273,9 +273,9 @@ vc4_flush(struct pipe_context *pctx)
 
         if (vc4_debug & VC4_DEBUG_CL) {
                 fprintf(stderr, "BCL:\n");
-                vc4_dump_cl(&vc4->bcl, false);
+                vc4_dump_cl(vc4->bcl.base, vc4->bcl.end - vc4->bcl.base, false);
                 fprintf(stderr, "RCL:\n");
-                vc4_dump_cl(&vc4->rcl, true);
+                vc4_dump_cl(vc4->rcl.base, vc4->rcl.end - vc4->rcl.base, true);
         }
 
         struct drm_vc4_submit_cl submit;

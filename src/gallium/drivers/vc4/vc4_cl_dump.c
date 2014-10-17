@@ -83,12 +83,12 @@ static const struct packet_info {
 };
 
 void
-vc4_dump_cl(struct vc4_cl *cl, bool is_render)
+vc4_dump_cl(void *cl, uint32_t size, bool is_render)
 {
         uint32_t offset = 0, hw_offset = 0;
-        uint8_t *cmds = cl->base;
+        uint8_t *cmds = cl;
 
-        while (offset < cl->end - cl->base) {
+        while (offset < size) {
                 uint8_t header = cmds[offset];
 
                 if (header > ARRAY_SIZE(packet_info) ||
@@ -105,7 +105,7 @@ vc4_dump_cl(struct vc4_cl *cl, bool is_render)
                         header, p->name);
 
                 for (uint32_t i = 1; i < p->size; i++) {
-                        if (offset + i >= cl->end - cl->base) {
+                        if (offset + i >= size) {
                                 fprintf(stderr, "0x%08x 0x%08x: CL overflow!\n",
                                         offset + i, hw_offset + i);
                                 return;
