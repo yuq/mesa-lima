@@ -164,6 +164,16 @@ nouveau_screen_init(struct nouveau_screen *screen, struct nouveau_device *dev)
 		size = sizeof(nvc0_data);
 	}
 
+	/*
+	 * Set default VRAM domain if not overridden
+	 */
+	if (!screen->vram_domain) {
+		if (dev->vram_size > 0)
+			screen->vram_domain = NOUVEAU_BO_VRAM;
+		else
+			screen->vram_domain = NOUVEAU_BO_GART;
+	}
+
 	ret = nouveau_object_new(&dev->object, 0, NOUVEAU_FIFO_CHANNEL_CLASS,
 				 data, size, &screen->channel);
 	if (ret)
