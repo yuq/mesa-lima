@@ -1505,14 +1505,14 @@ fs_visitor::emit_samplepos_setup()
 }
 
 fs_reg *
-fs_visitor::emit_sampleid_setup(ir_variable *ir)
+fs_visitor::emit_sampleid_setup()
 {
    assert(stage == MESA_SHADER_FRAGMENT);
    brw_wm_prog_key *key = (brw_wm_prog_key*) this->key;
    assert(brw->gen >= 6);
 
    this->current_annotation = "compute sample id";
-   fs_reg *reg = new(this->mem_ctx) fs_reg(this, ir->type);
+   fs_reg *reg = new(this->mem_ctx) fs_reg(this, glsl_type::int_type);
 
    if (key->compute_sample_id) {
       fs_reg t1 = fs_reg(this, glsl_type::int_type);

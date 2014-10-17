@@ -464,7 +464,7 @@ public:
                          bool is_centroid, bool is_sample);
    fs_reg *emit_frontfacing_interpolation();
    fs_reg *emit_samplepos_setup();
-   fs_reg *emit_sampleid_setup(ir_variable *ir);
+   fs_reg *emit_sampleid_setup();
    fs_reg *emit_general_interpolation(ir_variable *ir);
    void emit_interpolation_setup_gen4();
    void emit_interpolation_setup_gen6();

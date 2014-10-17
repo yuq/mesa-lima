@@ -137,7 +137,7 @@ fs_visitor::visit(ir_variable *ir)
       if (ir->data.location == SYSTEM_VALUE_SAMPLE_POS) {
 	 reg = emit_samplepos_setup();
       } else if (ir->data.location == SYSTEM_VALUE_SAMPLE_ID) {
-	 reg = emit_sampleid_setup(ir);
+	 reg = emit_sampleid_setup();
       } else if (ir->data.location == SYSTEM_VALUE_SAMPLE_MASK_IN) {
          assert(brw->gen >= 7);
          reg = new(mem_ctx)
