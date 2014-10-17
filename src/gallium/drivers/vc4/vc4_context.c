@@ -263,7 +263,9 @@ vc4_flush(struct pipe_context *pctx)
         if (!vc4->needs_flush)
                 return;
 
-        cl_u8(&vc4->bcl, VC4_PACKET_FLUSH_ALL);
+        /* The FLUSH caps all of our bin lists with a VC4_PACKET_RETURN. */
+        cl_u8(&vc4->bcl, VC4_PACKET_FLUSH);
+
         cl_u8(&vc4->bcl, VC4_PACKET_NOP);
         cl_u8(&vc4->bcl, VC4_PACKET_HALT);
 
