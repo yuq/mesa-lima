@@ -735,12 +735,12 @@ nvc0_program_upload_code(struct nvc0_context *nvc0, struct nvc0_program *prog)
 
    if (!is_cp)
       nvc0->base.push_data(&nvc0->base, screen->text, prog->code_base,
-                           NOUVEAU_BO_VRAM, NVC0_SHADER_HEADER_SIZE, prog->hdr);
+                           NV_VRAM_DOMAIN(&screen->base), NVC0_SHADER_HEADER_SIZE, prog->hdr);
    nvc0->base.push_data(&nvc0->base, screen->text, code_pos,
-                        NOUVEAU_BO_VRAM, prog->code_size, prog->code);
+                        NV_VRAM_DOMAIN(&screen->base), prog->code_size, prog->code);
    if (prog->immd_size)
       nvc0->base.push_data(&nvc0->base,
-                           screen->text, prog->immd_base, NOUVEAU_BO_VRAM,
+                           screen->text, prog->immd_base, NV_VRAM_DOMAIN(&screen->base),
                            prog->immd_size, prog->immd_data);
 
    BEGIN_NVC0(nvc0->base.pushbuf, NVC0_3D(MEM_BARRIER), 1);
@@ -771,7 +771,7 @@ nvc0_program_library_upload(struct nvc0_context *nvc0)
       return;
 
    nvc0->base.push_data(&nvc0->base,
-                        screen->text, screen->lib_code->start, NOUVEAU_BO_VRAM,
+                        screen->text, screen->lib_code->start, NV_VRAM_DOMAIN(&screen->base),
                         size, code);
    /* no need for a memory barrier, will be emitted with first program */
 }

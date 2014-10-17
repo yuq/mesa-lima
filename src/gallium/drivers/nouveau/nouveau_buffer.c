@@ -658,13 +658,13 @@ nouveau_buffer_create(struct pipe_screen *pscreen,
       switch (buffer->base.usage) {
       case PIPE_USAGE_DEFAULT:
       case PIPE_USAGE_IMMUTABLE:
-         buffer->domain = NOUVEAU_BO_VRAM;
+         buffer->domain = NV_VRAM_DOMAIN(screen);
          break;
       case PIPE_USAGE_DYNAMIC:
          /* For most apps, we'd have to do staging transfers to avoid sync
           * with this usage, and GART -> GART copies would be suboptimal.
           */
-         buffer->domain = NOUVEAU_BO_VRAM;
+         buffer->domain = NV_VRAM_DOMAIN(screen);
          break;
       case PIPE_USAGE_STAGING:
       case PIPE_USAGE_STREAM:
@@ -676,7 +676,7 @@ nouveau_buffer_create(struct pipe_screen *pscreen,
       }
    } else {
       if (buffer->base.bind & screen->vidmem_bindings)
-         buffer->domain = NOUVEAU_BO_VRAM;
+         buffer->domain = NV_VRAM_DOMAIN(screen);
       else
       if (buffer->base.bind & screen->sysmem_bindings)
          buffer->domain = NOUVEAU_BO_GART;

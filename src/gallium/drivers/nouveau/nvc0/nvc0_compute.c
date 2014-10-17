@@ -57,7 +57,7 @@ nvc0_screen_compute_setup(struct nvc0_screen *screen,
       return ret;
    }
 
-   ret = nouveau_bo_new(dev, NOUVEAU_BO_VRAM, 0, 1 << 12, NULL,
+   ret = nouveau_bo_new(dev, NV_VRAM_DOMAIN(&screen->base), 0, 1 << 12, NULL,
                         &screen->parm);
    if (ret)
       return ret;

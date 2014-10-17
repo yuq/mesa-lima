@@ -329,7 +329,7 @@ nvc0_create(struct pipe_screen *pscreen, void *priv)
 
    /* add permanently resident buffers to bufctxts */
 
-   flags = NOUVEAU_BO_VRAM | NOUVEAU_BO_RD;
+   flags = NV_VRAM_DOMAIN(&screen->base) | NOUVEAU_BO_RD;
 
    BCTX_REFN_bo(nvc0->bufctx_3d, SCREEN, flags, screen->text);
    BCTX_REFN_bo(nvc0->bufctx_3d, SCREEN, flags, screen->uniform_bo);
@@ -340,7 +340,7 @@ nvc0_create(struct pipe_screen *pscreen, void *priv)
       BCTX_REFN_bo(nvc0->bufctx_cp, CP_SCREEN, flags, screen->parm);
    }
 
-   flags = NOUVEAU_BO_VRAM | NOUVEAU_BO_RDWR;
+   flags = NV_VRAM_DOMAIN(&screen->base) | NOUVEAU_BO_RDWR;
 
    if (screen->poly_cache)
       BCTX_REFN_bo(nvc0->bufctx_3d, SCREEN, flags, screen->poly_cache);
