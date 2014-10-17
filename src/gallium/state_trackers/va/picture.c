@@ -272,51 +272,56 @@ handleSliceParameterBuffer(vlVaContext *context, vlVaBuffer *buf)
    }
 }
 
+static unsigned int
+bufHasStartcode(vlVaBuffer *buf, unsigned int code, unsigned int bits)
+{
+   struct vl_vlc vlc = {0};
+   int i;
+
+   /* search the first 64 bytes for a startcode */
+   vl_vlc_init(&vlc, 1, (const void * const*)&buf->data, &buf->size);
+   for (i = 0; i < 64 && vl_vlc_bits_left(&vlc) >= bits; ++i) {
+      if (vl_vlc_peekbits(&vlc, bits) == code)
+         return 1;
+      vl_vlc_eatbits(&vlc, 8);
+      vl_vlc_fillbits(&vlc);
+   }
+
+   return 0;
+}
+
 static void
 handleVASliceDataBufferType(vlVaContext *context, vlVaBuffer *buf)
 {
+   enum pipe_video_format format;
    unsigned num_buffers = 0;
    void * const *buffers[2];
    unsigned sizes[2];
-   enum pipe_video_format format;
+   static const uint8_t start_code_h264[] = { 0x00, 0x00, 0x01 };
+   static const uint8_t start_code_vc1[] = { 0x00, 0x00, 0x01, 0x0d };
 
    format = u_reduce_video_profile(context->decoder->profile);
-   if (format == PIPE_VIDEO_FORMAT_MPEG4_AVC ||
-       format == PIPE_VIDEO_FORMAT_VC1) {
-      struct vl_vlc vlc = {0};
-      bool found = false;
-      int peek_bits, i;
-
-      /* search the first 64 bytes for a startcode */
-      vl_vlc_init(&vlc, 1, (const void * const*)&buf->data, &buf->size);
-      peek_bits = (format == PIPE_VIDEO_FORMAT_MPEG4_AVC) ? 24 : 32;
-      for (i = 0; i < 64 && vl_vlc_bits_left(&vlc) >= peek_bits; ++i) {
-         uint32_t value = vl_vlc_peekbits(&vlc, peek_bits);
-         if ((format == PIPE_VIDEO_FORMAT_MPEG4_AVC && value == 0x000001) ||
-            (format == PIPE_VIDEO_FORMAT_VC1 && (value == 0x0000010d ||
-            value == 0x0000010c || value == 0x0000010b))) {
-            found = true;
+   switch (format) {
+   case PIPE_VIDEO_FORMAT_MPEG4_AVC:
+         if (bufHasStartcode(buf, 0x000001, 24))
             break;
-         }
-         vl_vlc_eatbits(&vlc, 8);
-         vl_vlc_fillbits(&vlc);
-      }
-      /* none found, ok add one manually */
-      if (!found) {
-         static const uint8_t start_code_h264[] = { 0x00, 0x00, 0x01 };
-         static const uint8_t start_code_vc1[] = { 0x00, 0x00, 0x01, 0x0d };
 
-         if (format == PIPE_VIDEO_FORMAT_MPEG4_AVC) {
-            buffers[num_buffers] = (void *const)&start_code_h264;
-            sizes[num_buffers] = sizeof(start_code_h264);
-         }
-         else {
-            buffers[num_buffers] = (void *const)&start_code_vc1;
-            sizes[num_buffers] = sizeof(start_code_vc1);
-         }
-         ++num_buffers;
-      }
+         buffers[num_buffers] = (void *const)&start_code_h264;
+         sizes[num_buffers++] = sizeof(start_code_h264);
+      break;
+   case PIPE_VIDEO_FORMAT_VC1:
+      if (bufHasStartcode(buf, 0x0000010d, 32) ||
+          bufHasStartcode(buf, 0x0000010c, 32) ||
+          bufHasStartcode(buf, 0x0000010b, 32))
+         break;
+
+         buffers[num_buffers] = (void *const)&start_code_vc1;
+         sizes[num_buffers++] = sizeof(start_code_vc1);
+      break;
+   default:
+      break;
    }
+
    buffers[num_buffers] = buf->data;
    sizes[num_buffers] = buf->size;
    ++num_buffers;
