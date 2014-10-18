@@ -2047,6 +2047,8 @@ trans_kill(const struct instr_translater *t,
 	ir3_reg_create(instr, 0, IR3_REG_SSA)->instr = cond;
 
 	ctx->kill[ctx->kill_count++] = instr;
+
+	ctx->so->has_kill = true;
 }
 
 /*
@@ -2080,6 +2082,8 @@ trans_killif(const struct instr_translater *t,
 	ir3_reg_create(instr, 0, IR3_REG_SSA)->instr = cond;
 
 	ctx->kill[ctx->kill_count++] = instr;
+
+	ctx->so->has_kill = true;
 
 }
 /*

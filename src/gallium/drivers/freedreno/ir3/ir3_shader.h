@@ -171,6 +171,9 @@ struct ir3_shader_variant {
 	/* do we have one or more texture sample instructions: */
 	bool has_samp;
 
+	/* do we have kill instructions: */
+	bool has_kill;
+
 	/* const reg # of first immediate, ie. 1 == c1
 	 * (not regid, because TGSI thinks in terms of vec4 registers,
 	 * not scalar registers)
