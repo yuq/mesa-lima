@@ -749,14 +749,14 @@ _mesa_validate_DrawTransformFeedback(struct gl_context *ctx,
       return GL_FALSE;
    }
 
-   if (!obj->EndedAnytime) {
-      _mesa_error(ctx, GL_INVALID_OPERATION, "glDrawTransformFeedback*");
-      return GL_FALSE;
-   }
-
    if (stream >= ctx->Const.MaxVertexStreams) {
       _mesa_error(ctx, GL_INVALID_VALUE,
                   "glDrawTransformFeedbackStream*(index>=MaxVertexStream)");
+      return GL_FALSE;
+   }
+
+   if (!obj->EndedAnytime) {
+      _mesa_error(ctx, GL_INVALID_OPERATION, "glDrawTransformFeedback*");
       return GL_FALSE;
    }
 
