@@ -94,24 +94,26 @@ SYSTEM_VALUE(sample_pos, 2)
 SYSTEM_VALUE(sample_mask_in, 1)
 SYSTEM_VALUE(invocation_id, 1)
 
-#define LOAD(name, num_indices, flags) \
-   INTRINSIC(load_##name##_vec1, 0, ARR(), true, 1, 0, num_indices, \
-             NIR_INTRINSIC_CAN_ELIMINATE | flags) \
-   INTRINSIC(load_##name##_vec2, 0, ARR(), true, 2, 0, num_indices, \
-             NIR_INTRINSIC_CAN_ELIMINATE | flags) \
-   INTRINSIC(load_##name##_vec3, 0, ARR(), true, 3, 0, num_indices, \
-             NIR_INTRINSIC_CAN_ELIMINATE | flags) \
-   INTRINSIC(load_##name##_vec4, 0, ARR(), true, 4, 0, num_indices, \
-             NIR_INTRINSIC_CAN_ELIMINATE | flags) \
-   INTRINSIC(load_##name##_vec1_indirect, 1, ARR(1), true, 1, 0, num_indices, \
-             NIR_INTRINSIC_CAN_ELIMINATE | flags) \
-   INTRINSIC(load_##name##_vec2_indirect, 1, ARR(1), true, 2, 0, num_indices, \
-             NIR_INTRINSIC_CAN_ELIMINATE | flags) \
-   INTRINSIC(load_##name##_vec3_indirect, 1, ARR(1), true, 3, 0, num_indices, \
-             NIR_INTRINSIC_CAN_ELIMINATE | flags) \
-   INTRINSIC(load_##name##_vec4_indirect, 1, ARR(1), true, 4, 0, num_indices, \
-             NIR_INTRINSIC_CAN_ELIMINATE | flags) \
+#define LOAD_OR_INTERP(name, num_srcs, src_comps, num_indices, flags) \
+   INTRINSIC(name##_vec1, num_srcs, ARR(src_comps), true, 1, \
+             0, num_indices, NIR_INTRINSIC_CAN_ELIMINATE | flags) \
+   INTRINSIC(name##_vec2, num_srcs, ARR(src_comps), true, 2, \
+             0, num_indices, NIR_INTRINSIC_CAN_ELIMINATE | flags) \
+   INTRINSIC(name##_vec3, num_srcs, ARR(src_comps), true, 3, \
+             0, num_indices, NIR_INTRINSIC_CAN_ELIMINATE | flags) \
+   INTRINSIC(name##_vec4, num_srcs, ARR(src_comps), true, 4, \
+             0, num_indices, NIR_INTRINSIC_CAN_ELIMINATE | flags) \
+   INTRINSIC(name##_vec1_indirect, 1 + num_srcs, ARR(1, src_comps), true, 1, \
+             0, num_indices, NIR_INTRINSIC_CAN_ELIMINATE | flags) \
+   INTRINSIC(name##_vec2_indirect, 1 + num_srcs, ARR(1, src_comps), true, 2, \
+             0, num_indices, NIR_INTRINSIC_CAN_ELIMINATE | flags) \
+   INTRINSIC(name##_vec3_indirect, 1 + num_srcs, ARR(1, src_comps), true, 3, \
+             0, num_indices, NIR_INTRINSIC_CAN_ELIMINATE | flags) \
+   INTRINSIC(name##_vec4_indirect, 1 + num_srcs, ARR(1, src_comps), true, 4, \
+             0, num_indices, NIR_INTRINSIC_CAN_ELIMINATE | flags)
 
+#define LOAD(name, num_indices, flags) \
+   LOAD_OR_INTERP(load_##name, 0, 0, num_indices, flags)
 
 /*
  * The first index is the address to load from, and the second index is the
@@ -131,6 +133,22 @@ LOAD(uniform, 2, NIR_INTRINSIC_CAN_REORDER)
 LOAD(ubo, 3, NIR_INTRINSIC_CAN_REORDER)
 LOAD(input, 2, NIR_INTRINSIC_CAN_REORDER)
 /* LOAD(ssbo, 2, 0) */
+
+/*
+ * Interpolation of input.  These are similar to the load_input* intrinsics
+ * except they interpolate differently.  The interp_at_offset* and
+ * interp_at_offset* intrinsics take a second source that is either a
+ * sample id or a vec2 position offset.
+ */
+#define INTERP(name, flags) \
+   LOAD_OR_INTERP(interp_##name, 0, 0, 2, flags)
+
+#define INTERP_WITH_ARG(name, src_comps, flags) \
+   LOAD_OR_INTERP(interp_##name, 1, src_comps, 2, flags)
+
+INTERP(at_centroid, NIR_INTRINSIC_CAN_REORDER)
+INTERP_WITH_ARG(at_sample, 1, NIR_INTRINSIC_CAN_REORDER)
+INTERP_WITH_ARG(at_offset, 1, NIR_INTRINSIC_CAN_REORDER)
 
 #define STORE(name, num_indices, flags) \
    INTRINSIC(store_##name##_vec1, 1, ARR(1), false, 0, 0, num_indices, flags) \
