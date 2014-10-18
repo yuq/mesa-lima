@@ -210,7 +210,11 @@ struct ir3_instruction {
 		 * result of moving a const to a reg would have a low cost,  so to
 		 * it could make sense to duplicate the instruction at various
 		 * points where the result is needed to reduce register footprint.
+		 *
+		 * DEPTH_UNUSED used to mark unused instructions after depth
+		 * calculation pass.
 		 */
+#define DEPTH_UNUSED  ~0
 		unsigned depth;
 	};
 	struct ir3_instruction *next;
@@ -224,6 +228,8 @@ struct ir3_heap_chunk;
 struct ir3 {
 	unsigned instrs_count, instrs_sz;
 	struct ir3_instruction **instrs;
+	unsigned baryfs_count, baryfs_sz;
+	struct ir3_instruction **baryfs;
 	unsigned heap_idx;
 	struct ir3_heap_chunk *chunk;
 };
@@ -272,6 +278,10 @@ static inline void ir3_clear_mark(struct ir3 *shader)
 	/* TODO would be nice to drop the instruction array.. for
 	 * new compiler, _clear_mark() is all we use it for, and
 	 * we could probably manage a linked list instead..
+	 *
+	 * Also, we'll probably want to mark instructions within
+	 * a block, so tracking the list of instrs globally is
+	 * unlikely to be what we want.
 	 */
 	unsigned i;
 	for (i = 0; i < shader->instrs_count; i++) {

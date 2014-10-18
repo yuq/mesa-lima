@@ -242,6 +242,32 @@ static int trysched(struct ir3_sched_ctx *ctx,
 	if (delay)
 		return delay;
 
+	/* if the instruction is a kill, we need to ensure *every*
+	 * bary.f is scheduled.  The hw seems unhappy if the thread
+	 * gets killed before the end-input (ei) flag is hit.
+	 *
+	 * We could do this by adding each bary.f instruction as
+	 * virtual ssa src for the kill instruction.  But we have
+	 * fixed length instr->regs[].
+	 *
+	 * TODO this wouldn't be quite right if we had multiple
+	 * basic blocks, if any block was conditional.  We'd need
+	 * to schedule the bary.f's outside of any block which
+	 * was conditional that contained a kill.. I think..
+	 */
+	if (is_kill(instr)) {
+		struct ir3 *ir = instr->block->shader;
+		unsigned i;
+
+		for (i = 0; i < ir->baryfs_count; i++) {
+			if (ir->baryfs[i]->depth == DEPTH_UNUSED)
+				continue;
+			delay = trysched(ctx, ir->baryfs[i]);
+			if (delay)
+				return delay;
+		}
+	}
+
 	/* if this is a write to address/predicate register, and that
 	 * register is currently in use, we need to defer until it is
 	 * free:

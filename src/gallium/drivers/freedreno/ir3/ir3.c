@@ -81,6 +81,8 @@ void ir3_destroy(struct ir3 *shader)
 		shader->chunk = chunk->next;
 		free(chunk);
 	}
+	free(shader->instrs);
+	free(shader->baryfs);
 	free(shader);
 }
 
@@ -596,6 +598,15 @@ static void insert_instr(struct ir3 *shader,
 				shader->instrs_sz * sizeof(shader->instrs[0]));
 	}
 	shader->instrs[shader->instrs_count++] = instr;
+
+	if (is_input(instr)) {
+		if (shader->baryfs_count == shader->baryfs_sz) {
+			shader->baryfs_sz = MAX2(2 * shader->baryfs_sz, 16);
+			shader->baryfs = realloc(shader->baryfs,
+					shader->baryfs_sz * sizeof(shader->baryfs[0]));
+		}
+		shader->baryfs[shader->baryfs_count++] = instr;
+	}
 }
 
 struct ir3_block * ir3_block_create(struct ir3 *shader,
