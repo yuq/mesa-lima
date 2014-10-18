@@ -553,6 +553,33 @@ ir_algebraic_visitor::handle_expression(ir_expression *ir)
 	 }
 	 return new(mem_ctx) ir_swizzle(ir->operands[0], component, 0, 0, 0, 1);
       }
+
+      for (int i = 0; i < 2; i++) {
+         if (!op_const[i])
+            continue;
+
+         unsigned components[4] = { 0 }, count = 0;
+
+         for (unsigned c = 0; c < op_const[i]->type->vector_elements; c++) {
+            if (op_const[i]->value.f[c] == 0.0)
+               continue;
+
+            components[count] = c;
+            count++;
+         }
+
+         /* No channels had zero values; bail. */
+         if (count >= op_const[i]->type->vector_elements)
+            break;
+
+         /* Swizzle both operands to remove the channels that were zero. */
+         return new(mem_ctx)
+            ir_expression(ir_binop_dot, glsl_type::float_type,
+                          new(mem_ctx) ir_swizzle(ir->operands[0],
+                                                  components, count),
+                          new(mem_ctx) ir_swizzle(ir->operands[1],
+                                                  components, count));
+      }
       break;
 
    case ir_binop_less:
