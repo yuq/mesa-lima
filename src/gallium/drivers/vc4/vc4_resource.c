@@ -512,6 +512,52 @@ vc4_update_shadow_baselevel_texture(struct pipe_context *pctx,
         shadow->writes = orig->writes;
 }
 
+/**
+ * Converts a 4-byte index buffer to 2 bytes.
+ *
+ * Since GLES2 only has support for 1 and 2-byte indices, the hardware doesn't
+ * include 4-byte index support, and we have to shrink it down.
+ *
+ * There's no fallback support for when indices end up being larger than 2^16,
+ * though it will at least assertion fail.  Also, if the original index data
+ * was in user memory, it would be nice to not have uploaded it to a VBO
+ * before translating.
+ */
+void
+vc4_update_shadow_index_buffer(struct pipe_context *pctx,
+                               const struct pipe_index_buffer *ib)
+{
+        struct vc4_resource *shadow = vc4_resource(ib->buffer);
+        struct vc4_resource *orig = vc4_resource(shadow->shadow_parent);
+        uint32_t count = shadow->base.b.width0 / 2;
+
+        if (shadow->writes == orig->writes)
+                return;
+
+        struct pipe_transfer *src_transfer;
+        uint32_t *src = pipe_buffer_map_range(pctx, &orig->base.b,
+                                              ib->offset,
+                                              count * 4,
+                                              PIPE_TRANSFER_READ, &src_transfer);
+
+        struct pipe_transfer *dst_transfer;
+        uint16_t *dst = pipe_buffer_map_range(pctx, &shadow->base.b,
+                                              0,
+                                              count * 2,
+                                              PIPE_TRANSFER_WRITE, &dst_transfer);
+
+        for (int i = 0; i < count; i++) {
+                uint32_t src_index = src[i];
+                assert(src_index <= 0xffff);
+                dst[i] = src_index;
+        }
+
+        pctx->transfer_unmap(pctx, dst_transfer);
+        pctx->transfer_unmap(pctx, src_transfer);
+
+        shadow->writes = orig->writes;
+}
+
 void
 vc4_resource_screen_init(struct pipe_screen *pscreen)
 {
