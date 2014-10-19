@@ -344,7 +344,9 @@ namespace {
          llvm::Function *kernel = *I;
          export_list.push_back(kernel->getName().data());
       }
-#if HAVE_LLVM < 0x0306
+#if HAVE_LLVM < 0x0305
+      PM.add(new llvm::DataLayout(mod));
+#elif HAVE_LLVM < 0x0306
       PM.add(new llvm::DataLayoutPass(mod));
 #else
       PM.add(new llvm::DataLayoutPass());
