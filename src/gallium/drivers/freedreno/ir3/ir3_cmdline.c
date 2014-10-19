@@ -133,6 +133,7 @@ static void print_usage(void)
 	printf("    --saturate-s MASK - bitmask of samplers to saturate S coord\n");
 	printf("    --saturate-t MASK - bitmask of samplers to saturate T coord\n");
 	printf("    --saturate-r MASK - bitmask of samplers to saturate R coord\n");
+	printf("    --nocp            - disable copy propagation\n");
 	printf("    --help            - show this message\n");
 }
 
@@ -196,6 +197,12 @@ int main(int argc, char **argv)
 		if (!strcmp(argv[n], "--saturate-r")) {
 			key.vsaturate_r = key.fsaturate_r = strtol(argv[n+1], NULL, 0);
 			n += 2;
+			continue;
+		}
+
+		if (!strcmp(argv[n], "--nocp")) {
+			fd_mesa_debug |= FD_DBG_NOCP;
+			n++;
 			continue;
 		}
 

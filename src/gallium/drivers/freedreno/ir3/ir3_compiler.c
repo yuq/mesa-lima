@@ -3175,7 +3175,7 @@ ir3_compile_shader(struct ir3_shader_variant *so,
 		ir3_dump_instr_list(block->head);
 	}
 
-	if (cp)
+	if (cp && !(fd_mesa_debug & FD_DBG_NOCP))
 		ir3_block_cp(block);
 
 	if (fd_mesa_debug & FD_DBG_OPTDUMP)

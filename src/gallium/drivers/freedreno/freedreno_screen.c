@@ -70,6 +70,7 @@ static const struct debug_named_value debug_options[] = {
 		{"optmsgs",   FD_DBG_OPTMSGS,"Enable optimizater debug messages"},
 		{"optdump",   FD_DBG_OPTDUMP,"Dump shader DAG to .dot files"},
 		{"glsl130",   FD_DBG_GLSL130,"Temporary flag to enable GLSL 130 on a3xx+"},
+		{"nocp",      FD_DBG_NOCP,   "Disable copy-propagation"},
 		DEBUG_NAMED_VALUE_END
 };
 
