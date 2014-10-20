@@ -5347,18 +5347,6 @@ st_new_shader(struct gl_context *ctx, GLuint name, GLuint type)
    return shader;
 }
 
-struct gl_shader_program *
-st_new_shader_program(struct gl_context *ctx, GLuint name)
-{
-   struct gl_shader_program *shProg;
-   shProg = rzalloc(NULL, struct gl_shader_program);
-   if (shProg) {
-      shProg->Name = name;
-      _mesa_init_shader_program(ctx, shProg);
-   }
-   return shProg;
-}
-
 /**
  * Link a shader.
  * Called via ctx->Driver.LinkShader()
