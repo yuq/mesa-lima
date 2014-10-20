@@ -632,7 +632,7 @@ brw_gs_emit(struct brw_context *brw,
       struct brw_shader *shader =
          (brw_shader *) prog->_LinkedShaders[MESA_SHADER_GEOMETRY];
 
-      brw_dump_ir(brw, "geometry", prog, &shader->base, NULL);
+      brw_dump_ir("geometry", prog, &shader->base, NULL);
    }
 
    if (brw->gen >= 7) {

@@ -3697,7 +3697,7 @@ brw_wm_fs_emit(struct brw_context *brw,
       shader = (brw_shader *) prog->_LinkedShaders[MESA_SHADER_FRAGMENT];
 
    if (unlikely(INTEL_DEBUG & DEBUG_WM))
-      brw_dump_ir(brw, "fragment", prog, &shader->base, &fp->Base);
+      brw_dump_ir("fragment", prog, &shader->base, &fp->Base);
 
    /* Now the main event: Visit the shader IR and generate our FS IR for it.
     */

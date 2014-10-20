@@ -1875,7 +1875,7 @@ brw_vs_emit(struct brw_context *brw,
       shader = (brw_shader *) prog->_LinkedShaders[MESA_SHADER_VERTEX];
 
    if (unlikely(INTEL_DEBUG & DEBUG_VS))
-      brw_dump_ir(brw, "vertex", prog, &shader->base, &c->vp->program.Base);
+      brw_dump_ir("vertex", prog, &shader->base, &c->vp->program.Base);
 
    vec4_vs_visitor v(brw, c, prog_data, prog, mem_ctx);
    if (!v.run()) {
