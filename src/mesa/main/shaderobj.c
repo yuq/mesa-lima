@@ -261,7 +261,7 @@ init_shader_program(struct gl_shader_program *prog)
  * Called via ctx->Driver.NewShaderProgram()
  */
 static struct gl_shader_program *
-_mesa_new_shader_program(struct gl_context *ctx, GLuint name)
+_mesa_new_shader_program(GLuint name)
 {
    struct gl_shader_program *shProg;
    shProg = rzalloc(NULL, struct gl_shader_program);
