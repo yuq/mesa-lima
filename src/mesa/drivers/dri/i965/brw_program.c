@@ -120,14 +120,6 @@ static void brwDeleteProgram( struct gl_context *ctx,
 
 
 static GLboolean
-brwIsProgramNative(struct gl_context *ctx,
-		   GLenum target,
-		   struct gl_program *prog)
-{
-   return true;
-}
-
-static GLboolean
 brwProgramStringNotify(struct gl_context *ctx,
 		       GLenum target,
 		       struct gl_program *prog)
@@ -233,7 +225,6 @@ void brwInitFragProgFuncs( struct dd_function_table *functions )
 
    functions->NewProgram = brwNewProgram;
    functions->DeleteProgram = brwDeleteProgram;
-   functions->IsProgramNative = brwIsProgramNative;
    functions->ProgramStringNotify = brwProgramStringNotify;
 
    functions->NewShader = brw_new_shader;
