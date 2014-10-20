@@ -235,8 +235,8 @@ _mesa_reference_shader_program(struct gl_context *ctx,
    }
 }
 
-void
-_mesa_init_shader_program(struct gl_shader_program *prog)
+static void
+init_shader_program(struct gl_shader_program *prog)
 {
    prog->Type = GL_SHADER_PROGRAM_MESA;
    prog->RefCount = 1;
@@ -267,7 +267,7 @@ _mesa_new_shader_program(struct gl_context *ctx, GLuint name)
    shProg = rzalloc(NULL, struct gl_shader_program);
    if (shProg) {
       shProg->Name = name;
-      _mesa_init_shader_program(shProg);
+      init_shader_program(shProg);
    }
    return shProg;
 }
