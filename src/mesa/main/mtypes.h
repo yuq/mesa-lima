@@ -2775,7 +2775,7 @@ struct gl_shader_program
     * Transform feedback varyings last specified by
     * glTransformFeedbackVaryings().
     *
-    * For the current set of transform feeedback varyings used for transform
+    * For the current set of transform feedback varyings used for transform
     * feedback output, see LinkedTransformFeedback.
     */
    struct {
