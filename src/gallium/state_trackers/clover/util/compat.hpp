@@ -417,8 +417,8 @@ namespace clover {
          pair(T first, S second) :
             first(first), second(second) {}
 
-         S first;
-         T second;
+         T first;
+         S second;
       };
 
       class exception {
