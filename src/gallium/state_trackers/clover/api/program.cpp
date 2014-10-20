@@ -152,14 +152,30 @@ CLOVER_API cl_int
 clBuildProgram(cl_program d_prog, cl_uint num_devs,
                const cl_device_id *d_devs, const char *p_opts,
                void (*pfn_notify)(cl_program, void *),
-               void *user_data) try {
+               void *user_data) {
+   cl_int ret = clCompileProgram(d_prog, num_devs, d_devs, p_opts,
+                                 0, NULL, NULL, pfn_notify, user_data);
+
+   return (ret == CL_COMPILE_PROGRAM_FAILURE ?
+           CL_BUILD_PROGRAM_FAILURE : ret);
+}
+
+CLOVER_API cl_int
+clCompileProgram(cl_program d_prog, cl_uint num_devs,
+                 const cl_device_id *d_devs, const char *p_opts,
+                 cl_uint num_headers, const cl_program *d_header_progs,
+                 const char **header_names,
+                 void (*pfn_notify)(cl_program, void *),
+                 void *user_data) try {
    auto &prog = obj(d_prog);
    auto devs = (d_devs ? objs(d_devs, num_devs) :
                 ref_vector<device>(prog.context().devices()));
    auto opts = (p_opts ? p_opts : "");
+   header_map headers;
 
    if (bool(num_devs) != bool(d_devs) ||
-       (!pfn_notify && user_data))
+       (!pfn_notify && user_data) ||
+       bool(num_headers) != bool(header_names))
       throw error(CL_INVALID_VALUE);
 
    if (any_of([&](const device &dev) {
@@ -167,10 +183,23 @@ clBuildProgram(cl_program d_prog, cl_uint num_devs,
          }, devs))
       throw error(CL_INVALID_DEVICE);
 
-   if (prog.kernel_ref_count())
+   if (prog.kernel_ref_count() ||
+       !prog.has_source)
       throw error(CL_INVALID_OPERATION);
 
-   prog.build(devs, opts);
+
+   for_each([&](const char *name, const program &header) {
+         if (!header.has_source)
+            throw error(CL_INVALID_OPERATION);
+
+         if (!any_of(key_equals(name), headers))
+            headers.push_back(compat::pair<compat::string, compat::string>(
+                                 name, header.source()));
+      },
+      range(header_names, num_headers),
+      objs(d_header_progs, num_headers));
+
+   prog.build(devs, opts, headers);
    return CL_SUCCESS;
 
 } catch (error &e) {

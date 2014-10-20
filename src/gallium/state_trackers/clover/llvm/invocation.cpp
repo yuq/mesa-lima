@@ -146,10 +146,11 @@ namespace {
 
    llvm::Module *
    compile_llvm(llvm::LLVMContext &llvm_ctx, const std::string &source,
-           const std::string &name, const std::string &triple,
-           const std::string &processor, const std::string &opts,
-           clang::LangAS::Map& address_spaces, unsigned &optimization_level,
-	   compat::string &r_log) {
+                const header_map &headers,
+                const std::string &name, const std::string &triple,
+                const std::string &processor, const std::string &opts,
+                clang::LangAS::Map& address_spaces, unsigned &optimization_level,
+                compat::string &r_log) {
 
       clang::CompilerInstance c;
       clang::EmitLLVMOnlyAction act(&llvm_ctx);
@@ -247,6 +248,29 @@ namespace {
       c.getPreprocessorOpts().addRemappedFile(name,
                                       llvm::MemoryBuffer::getMemBuffer(source));
 #endif
+
+      if (headers.size()) {
+         const std::string tmp_header_path = "/tmp/clover/";
+
+         c.getHeaderSearchOpts().AddPath(tmp_header_path,
+                                         clang::frontend::Angled,
+                                         false, false
+#if HAVE_LLVM < 0x0303
+                                         , false
+#endif
+                                         );
+
+         for (header_map::const_iterator it = headers.begin();
+              it != headers.end(); ++it) {
+            const std::string path = tmp_header_path + std::string(it->first);
+            c.getPreprocessorOpts().addRemappedFile(path,
+#if HAVE_LLVM >= 0x0306
+                    llvm::MemoryBuffer::getMemBuffer(it->second.c_str()).release());
+#else
+                    llvm::MemoryBuffer::getMemBuffer(it->second.c_str()));
+#endif
+         }
+      }
 
       // Setting this attribute tells clang to link this file before
       // performing any optimizations.  This is required so that
@@ -684,6 +708,7 @@ static const struct debug_named_value debug_options[] = {
 
 module
 clover::compile_program_llvm(const compat::string &source,
+                             const header_map &headers,
                              enum pipe_shader_ir ir,
                              const compat::string &target,
                              const compat::string &opts,
@@ -708,8 +733,8 @@ clover::compile_program_llvm(const compat::string &source,
 
    // The input file name must have the .cl extension in order for the
    // CompilerInvocation class to recognize it as an OpenCL source file.
-   llvm::Module *mod = compile_llvm(llvm_ctx, source, "input.cl", triple,
-                                    processor, opts, address_spaces,
+   llvm::Module *mod = compile_llvm(llvm_ctx, source, headers, "input.cl",
+                                    triple, processor, opts, address_spaces,
                                     optimization_level, r_log);
 
    find_kernels(mod, kernels);
