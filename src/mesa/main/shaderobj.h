@@ -72,7 +72,7 @@ extern struct gl_shader *
 _mesa_new_shader(struct gl_context *ctx, GLuint name, GLenum type);
 
 extern void
-_mesa_init_shader_program(struct gl_context *ctx, struct gl_shader_program *prog);
+_mesa_init_shader_program(struct gl_shader_program *prog);
 
 extern struct gl_shader_program *
 _mesa_lookup_shader_program(struct gl_context *ctx, GLuint name);
