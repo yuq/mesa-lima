@@ -280,8 +280,9 @@ void
 _mesa_clear_shader_program_data(struct gl_context *ctx,
                                 struct gl_shader_program *shProg)
 {
+   unsigned i;
+
    if (shProg->UniformStorage) {
-      unsigned i;
       for (i = 0; i < shProg->NumUserUniformStorage; ++i)
          _mesa_uniform_detach_all_driver_storage(&shProg->UniformStorage[i]);
       ralloc_free(shProg->UniformStorage);
@@ -303,6 +304,18 @@ _mesa_clear_shader_program_data(struct gl_context *ctx,
    assert(shProg->InfoLog != NULL);
    ralloc_free(shProg->InfoLog);
    shProg->InfoLog = ralloc_strdup(shProg, "");
+
+   ralloc_free(shProg->UniformBlocks);
+   shProg->UniformBlocks = NULL;
+   shProg->NumUniformBlocks = 0;
+   for (i = 0; i < MESA_SHADER_STAGES; i++) {
+      ralloc_free(shProg->UniformBlockStageIndex[i]);
+      shProg->UniformBlockStageIndex[i] = NULL;
+   }
+
+   ralloc_free(shProg->AtomicBuffers);
+   shProg->AtomicBuffers = NULL;
+   shProg->NumAtomicBuffers = 0;
 }
 
 
