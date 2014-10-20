@@ -277,8 +277,7 @@ _mesa_new_shader_program(struct gl_context *ctx, GLuint name)
  * Clear (free) the shader program state that gets produced by linking.
  */
 void
-_mesa_clear_shader_program_data(struct gl_context *ctx,
-                                struct gl_shader_program *shProg)
+_mesa_clear_shader_program_data(struct gl_shader_program *shProg)
 {
    unsigned i;
 
@@ -332,7 +331,7 @@ _mesa_free_shader_program_data(struct gl_context *ctx,
 
    assert(shProg->Type == GL_SHADER_PROGRAM_MESA);
 
-   _mesa_clear_shader_program_data(ctx, shProg);
+   _mesa_clear_shader_program_data(shProg);
 
    if (shProg->AttributeBindings) {
       string_to_uint_map_dtor(shProg->AttributeBindings);

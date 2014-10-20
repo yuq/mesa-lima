@@ -403,7 +403,7 @@ main(int argc, char **argv)
    }
 
    if ((status == EXIT_SUCCESS) && do_link)  {
-      _mesa_clear_shader_program_data(ctx, whole_program);
+      _mesa_clear_shader_program_data(whole_program);
 
       link_shaders(ctx, whole_program);
       status = (whole_program->LinkStatus) ? EXIT_SUCCESS : EXIT_FAILURE;
