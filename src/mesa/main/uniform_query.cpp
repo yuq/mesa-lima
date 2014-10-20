@@ -973,8 +973,7 @@ _mesa_uniform_matrix(struct gl_context *ctx, struct gl_shader_program *shProg,
  * array offset in *offset, or GL_INVALID_INDEX (-1).
  */
 extern "C" unsigned
-_mesa_get_uniform_location(struct gl_context *ctx,
-                           struct gl_shader_program *shProg,
+_mesa_get_uniform_location(struct gl_shader_program *shProg,
                            const GLchar *name,
                            unsigned *out_offset)
 {
