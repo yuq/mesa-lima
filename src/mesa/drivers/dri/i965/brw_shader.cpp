@@ -49,17 +49,6 @@ brw_new_shader(struct gl_context *ctx, GLuint name, GLuint type)
    return &shader->base;
 }
 
-struct gl_shader_program *
-brw_new_shader_program(struct gl_context *ctx, GLuint name)
-{
-   struct gl_shader_program *prog = rzalloc(NULL, struct gl_shader_program);
-   if (prog) {
-      prog->Name = name;
-      _mesa_init_shader_program(ctx, prog);
-   }
-   return prog;
-}
-
 /**
  * Performs a compile of the shader stages even when we don't know
  * what non-orthogonal state will be set, in the hope that it reflects
