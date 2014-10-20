@@ -176,43 +176,10 @@ validate_uniform_parameters(struct gl_context *ctx,
 			    struct gl_shader_program *shProg,
 			    GLint location, GLsizei count,
 			    unsigned *array_index,
-			    const char *caller,
-			    bool negative_one_is_not_valid)
+			    const char *caller)
 {
    if (!shProg || !shProg->LinkStatus) {
       _mesa_error(ctx, GL_INVALID_OPERATION, "%s(program not linked)", caller);
-      return NULL;
-   }
-
-   if (location == -1) {
-      /* For glGetUniform, page 264 (page 278 of the PDF) of the OpenGL 2.1
-       * spec says:
-       *
-       *     "The error INVALID_OPERATION is generated if program has not been
-       *     linked successfully, or if location is not a valid location for
-       *     program."
-       *
-       * For glUniform, page 82 (page 96 of the PDF) of the OpenGL 2.1 spec
-       * says:
-       *
-       *     "If the value of location is -1, the Uniform* commands will
-       *     silently ignore the data passed in, and the current uniform
-       *     values will not be changed."
-       *
-       * Allowing -1 for the location parameter of glUniform allows
-       * applications to avoid error paths in the case that, for example, some
-       * uniform variable is removed by the compiler / linker after
-       * optimization.  In this case, the new value of the uniform is dropped
-       * on the floor.  For the case of glGetUniform, there is nothing
-       * sensible to do for a location of -1.
-       *
-       * The negative_one_is_not_valid flag selects between the two behaviors.
-       */
-      if (negative_one_is_not_valid) {
-	 _mesa_error(ctx, GL_INVALID_OPERATION, "%s(location=%d)",
-		     caller, location);
-      }
-
       return NULL;
    }
 
@@ -232,6 +199,9 @@ validate_uniform_parameters(struct gl_context *ctx,
                   caller, location);
       return NULL;
    }
+
+   if (location == -1)
+      return NULL;
 
    /* Page 82 (page 96 of the PDF) of the OpenGL 2.1 spec says:
     *
@@ -308,9 +278,39 @@ _mesa_get_uniform(struct gl_context *ctx, GLuint program, GLint location,
 
    struct gl_uniform_storage *const uni =
       validate_uniform_parameters(ctx, shProg, location, 1,
-                                  &offset, "glGetUniform", true);
-   if (uni == NULL)
+                                  &offset, "glGetUniform");
+   if (uni == NULL) {
+      /* For glGetUniform, page 264 (page 278 of the PDF) of the OpenGL 2.1
+       * spec says:
+       *
+       *     "The error INVALID_OPERATION is generated if program has not been
+       *     linked successfully, or if location is not a valid location for
+       *     program."
+       *
+       * For glUniform, page 82 (page 96 of the PDF) of the OpenGL 2.1 spec
+       * says:
+       *
+       *     "If the value of location is -1, the Uniform* commands will
+       *     silently ignore the data passed in, and the current uniform
+       *     values will not be changed."
+       *
+       * Allowing -1 for the location parameter of glUniform allows
+       * applications to avoid error paths in the case that, for example, some
+       * uniform variable is removed by the compiler / linker after
+       * optimization.  In this case, the new value of the uniform is dropped
+       * on the floor.  For the case of glGetUniform, there is nothing
+       * sensible to do for a location of -1.
+       *
+       * If the location was -1, validate_unfirom_parameters will return NULL
+       * without raising an error.  Raise the error here.
+       */
+      if (location == -1) {
+         _mesa_error(ctx, GL_INVALID_OPERATION, "glGetUniform(location=%d)",
+                     location);
+      }
+
       return;
+   }
 
    {
       unsigned elements = (uni->type->is_sampler())
@@ -590,7 +590,7 @@ _mesa_uniform(struct gl_context *ctx, struct gl_shader_program *shProg,
 
    struct gl_uniform_storage *const uni =
       validate_uniform_parameters(ctx, shProg, location, count,
-                                  &offset, "glUniform", false);
+                                  &offset, "glUniform");
    if (uni == NULL)
       return;
 
@@ -796,7 +796,7 @@ _mesa_uniform_matrix(struct gl_context *ctx, struct gl_shader_program *shProg,
 
    struct gl_uniform_storage *const uni =
       validate_uniform_parameters(ctx, shProg, location, count,
-                                  &offset, "glUniformMatrix", false);
+                                  &offset, "glUniformMatrix");
    if (uni == NULL)
       return;
 
