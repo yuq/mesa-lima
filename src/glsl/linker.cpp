@@ -2484,20 +2484,6 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
    prog->Validated = false;
    prog->_Used = false;
 
-   ralloc_free(prog->InfoLog);
-   prog->InfoLog = ralloc_strdup(NULL, "");
-
-   ralloc_free(prog->UniformBlocks);
-   prog->UniformBlocks = NULL;
-   prog->NumUniformBlocks = 0;
-   for (int i = 0; i < MESA_SHADER_STAGES; i++) {
-      ralloc_free(prog->UniformBlockStageIndex[i]);
-      prog->UniformBlockStageIndex[i] = NULL;
-   }
-
-   ralloc_free(prog->AtomicBuffers);
-   prog->AtomicBuffers = NULL;
-   prog->NumAtomicBuffers = 0;
    prog->ARB_fragment_coord_conventions_enable = false;
 
    /* Separate the shaders into groups based on their type.
