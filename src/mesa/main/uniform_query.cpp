@@ -836,10 +836,10 @@ _mesa_uniform_matrix(struct gl_context *ctx, struct gl_shader_program *shProg,
    }
 
    /* GL_INVALID_VALUE is generated if `transpose' is not GL_FALSE.
-    * http://www.khronos.org/opengles/sdk/docs/man/xhtml/glUniform.xml */
-   if (ctx->API == API_OPENGLES
-       || (ctx->API == API_OPENGLES2 && ctx->Version < 30)) {
-      if (transpose) {
+    * http://www.khronos.org/opengles/sdk/docs/man/xhtml/glUniform.xml
+    */
+   if (transpose) {
+      if (ctx->API == API_OPENGLES2 && ctx->Version < 30) {
 	 _mesa_error(ctx, GL_INVALID_VALUE,
 		     "glUniformMatrix(matrix transpose is not GL_FALSE)");
 	 return;
