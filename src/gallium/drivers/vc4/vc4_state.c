@@ -223,8 +223,8 @@ vc4_create_depth_stencil_alpha_state(struct pipe_context *pctx,
 
                 if (front_writemask_bits == 0xff ||
                     back_writemask_bits == 0xff) {
-                        so->stencil_uniforms[2] = (front_writemask_bits |
-                                                   (back_writemask_bits << 8));
+                        so->stencil_uniforms[2] = (front->writemask |
+                                                   (back_writemask << 8));
                 }
         }
 
