@@ -5331,22 +5331,6 @@ get_mesa_program(struct gl_context *ctx,
 
 extern "C" {
 
-struct gl_shader *
-st_new_shader(struct gl_context *ctx, GLuint name, GLuint type)
-{
-   struct gl_shader *shader;
-   assert(type == GL_FRAGMENT_SHADER || type == GL_VERTEX_SHADER ||
-          type == GL_GEOMETRY_SHADER_ARB);
-   shader = rzalloc(NULL, struct gl_shader);
-   if (shader) {
-      shader->Type = type;
-      shader->Stage = _mesa_shader_enum_to_shader_stage(type);
-      shader->Name = name;
-      _mesa_init_shader(ctx, shader);
-   }
-   return shader;
-}
-
 /**
  * Link a shader.
  * Called via ctx->Driver.LinkShader()
