@@ -178,7 +178,7 @@ validate_uniform_parameters(struct gl_context *ctx,
 			    unsigned *array_index,
 			    const char *caller)
 {
-   if (!shProg || !shProg->LinkStatus) {
+   if (shProg == NULL) {
       _mesa_error(ctx, GL_INVALID_OPERATION, "%s(program not linked)", caller);
       return NULL;
    }
@@ -193,15 +193,28 @@ validate_uniform_parameters(struct gl_context *ctx,
       return NULL;
    }
 
-   /* Check that the given location is in bounds of uniform remap table. */
-   if (location >= (GLint) shProg->NumUniformRemapTable) {
-      _mesa_error(ctx, GL_INVALID_OPERATION, "%s(location=%d)",
-                  caller, location);
+   /* Check that the given location is in bounds of uniform remap table.
+    * Unlinked programs will have NumUniformRemapTable == 0, so we can take
+    * the shProg->LinkStatus check out of the main path.
+    */
+   if (unlikely(location >= (GLint) shProg->NumUniformRemapTable)) {
+      if (!shProg->LinkStatus)
+         _mesa_error(ctx, GL_INVALID_OPERATION, "%s(program not linked)",
+                     caller);
+      else
+         _mesa_error(ctx, GL_INVALID_OPERATION, "%s(location=%d)",
+                     caller, location);
+
       return NULL;
    }
 
-   if (location == -1)
+   if (location == -1) {
+      if (!shProg->LinkStatus)
+         _mesa_error(ctx, GL_INVALID_OPERATION, "%s(program not linked)",
+                     caller);
+
       return NULL;
+   }
 
    /* Page 82 (page 96 of the PDF) of the OpenGL 2.1 spec says:
     *
