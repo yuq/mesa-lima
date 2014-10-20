@@ -252,27 +252,30 @@ validate_uniform_parameters(struct gl_context *ctx,
 
    struct gl_uniform_storage *const uni = shProg->UniformRemapTable[location];
 
-   if (uni->array_elements == 0 && count > 1) {
-      _mesa_error(ctx, GL_INVALID_OPERATION,
-		  "%s(count > 1 for non-array, location=%d)",
-		  caller, location);
-      return NULL;
-   }
+   if (uni->array_elements == 0) {
+      if (count > 1) {
+         _mesa_error(ctx, GL_INVALID_OPERATION,
+                     "%s(count > 1 for non-array, location=%d)",
+                     caller, location);
+         return NULL;
+      }
 
-   /* The array index specified by the uniform location is just the uniform
-    * location minus the base location of of the uniform.
-    */
-   *array_index = location - uni->remap_location;
+      assert((location - uni->remap_location) == 0);
+      *array_index = 0;
+   } else {
+      /* The array index specified by the uniform location is just the uniform
+       * location minus the base location of of the uniform.
+       */
+      *array_index = location - uni->remap_location;
 
-   /* If the uniform is an array, check that array_index is in bounds.
-    * If not an array, check that array_index is zero.
-    * array_index is unsigned so no need to check for less than zero.
-    */
-   const unsigned limit = MAX2(uni->array_elements, 1);
-   if (*array_index >= limit) {
-      _mesa_error(ctx, GL_INVALID_OPERATION, "%s(location=%d)",
-		  caller, location);
-      return NULL;
+      /* If the uniform is an array, check that array_index is in bounds.
+       * array_index is unsigned so no need to check for less than zero.
+       */
+      if (*array_index >= uni->array_elements) {
+         _mesa_error(ctx, GL_INVALID_OPERATION, "%s(location=%d)",
+                     caller, location);
+         return NULL;
+      }
    }
    return uni;
 }
