@@ -942,30 +942,6 @@ void r300_mark_fb_state_dirty(struct r300_context *r300,
     /* The size of the rest of atoms stays the same. */
 }
 
-static unsigned r300_get_num_samples(struct r300_context *r300)
-{
-    struct pipe_framebuffer_state* fb =
-            (struct pipe_framebuffer_state*)r300->fb_state.state;
-    unsigned i, num_samples;
-
-    if (!fb->nr_cbufs && !fb->zsbuf)
-        return 1;
-
-    num_samples = 6;
-
-    for (i = 0; i < fb->nr_cbufs; i++)
-        if (fb->cbufs[i])
-            num_samples = MIN2(num_samples, fb->cbufs[i]->texture->nr_samples);
-
-    if (fb->zsbuf)
-        num_samples = MIN2(num_samples, fb->zsbuf->texture->nr_samples);
-
-    if (!num_samples)
-        num_samples = 1;
-
-    return num_samples;
-}
-
 static void
 r300_set_framebuffer_state(struct pipe_context* pipe,
                            const struct pipe_framebuffer_state* state)
@@ -1073,7 +1049,7 @@ r300_set_framebuffer_state(struct pipe_context* pipe,
         }
     }
 
-    r300->num_samples = r300_get_num_samples(r300);
+    r300->num_samples = util_framebuffer_get_num_samples(state);
 
     /* Set up AA config. */
     if (r300->num_samples > 1) {
