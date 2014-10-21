@@ -1756,6 +1756,17 @@ fs_visitor::emit_texture_gen7(ir_texture_opcode op, fs_reg dst,
    return inst;
 }
 
+static struct brw_sampler_prog_key_data *
+get_tex(gl_shader_stage stage, const void *key)
+{
+   switch (stage) {
+   case MESA_SHADER_FRAGMENT:
+      return &((brw_wm_prog_key*) key)->tex;
+   default:
+      unreachable("unhandled shader stage");
+   }
+}
+
 fs_reg
 fs_visitor::rescale_texcoord(fs_reg coordinate, const glsl_type *coord_type,
                              bool is_rect, uint32_t sampler, int texunit)
@@ -1763,10 +1774,7 @@ fs_visitor::rescale_texcoord(fs_reg coordinate, const glsl_type *coord_type,
    fs_inst *inst = NULL;
    bool needs_gl_clamp = true;
    fs_reg scale_x, scale_y;
-   const struct brw_sampler_prog_key_data *tex =
-      (stage == MESA_SHADER_FRAGMENT) ?
-      &((brw_wm_prog_key*) this->key)->tex : NULL;
-   assert(tex);
+   struct brw_sampler_prog_key_data *tex = get_tex(stage, this->key);
 
    /* The 965 requires the EU to do the normalization of GL rectangle
     * texture coordinates.  We use the program parameter state
@@ -1919,10 +1927,7 @@ fs_visitor::emit_texture(ir_texture_opcode op,
                          uint32_t sampler,
                          fs_reg sampler_reg, int texunit)
 {
-   const struct brw_sampler_prog_key_data *tex =
-      (stage == MESA_SHADER_FRAGMENT) ?
-      &((brw_wm_prog_key*) this->key)->tex : NULL;
-   assert(tex);
+   struct brw_sampler_prog_key_data *tex = get_tex(stage, this->key);
    fs_inst *inst = NULL;
 
    if (op == ir_tg4) {
@@ -2012,11 +2017,7 @@ fs_visitor::emit_texture(ir_texture_opcode op,
 void
 fs_visitor::visit(ir_texture *ir)
 {
-   const struct brw_sampler_prog_key_data *tex =
-      (stage == MESA_SHADER_FRAGMENT) ?
-      &((brw_wm_prog_key*) this->key)->tex : NULL;
-   assert(tex);
-
+   const struct brw_sampler_prog_key_data *tex = get_tex(stage, this->key);
    uint32_t sampler =
       _mesa_get_sampler_uniform_value(ir->sampler, shader_prog, prog);
 
@@ -2198,10 +2199,7 @@ fs_visitor::emit_gen6_gather_wa(uint8_t wa, fs_reg dst)
 uint32_t
 fs_visitor::gather_channel(int orig_chan, uint32_t sampler)
 {
-   const struct brw_sampler_prog_key_data *tex =
-      (stage == MESA_SHADER_FRAGMENT) ?
-      &((brw_wm_prog_key*) this->key)->tex : NULL;
-   assert(tex);
+   struct brw_sampler_prog_key_data *tex = get_tex(stage, this->key);
    int swiz = GET_SWZ(tex->swizzles[sampler], orig_chan);
    switch (swiz) {
       case SWIZZLE_X: return 0;
@@ -2241,10 +2239,7 @@ fs_visitor::swizzle_result(ir_texture_opcode op, int dest_components,
    if (op == ir_txs || op == ir_lod || op == ir_tg4)
       return;
 
-   const struct brw_sampler_prog_key_data *tex =
-      (stage == MESA_SHADER_FRAGMENT) ?
-      &((brw_wm_prog_key*) this->key)->tex : NULL;
-   assert(tex);
+   struct brw_sampler_prog_key_data *tex = get_tex(stage, this->key);
 
    if (dest_components == 1) {
       /* Ignore DEPTH_TEXTURE_MODE swizzling. */
