@@ -107,8 +107,6 @@ brw_reg_from_fs_reg(fs_reg *reg)
       /* Probably unused. */
       brw_reg = brw_null_reg();
       break;
-   case UNIFORM:
-      unreachable("not reached");
    default:
       unreachable("not reached");
    }

@@ -140,6 +140,7 @@ byte_offset(fs_reg reg, unsigned delta)
    case BAD_FILE:
       break;
    case GRF:
+   case ATTR:
       reg.reg_offset += delta / 32;
       break;
    case MRF:
@@ -165,6 +166,7 @@ horiz_offset(fs_reg reg, unsigned delta)
       break;
    case GRF:
    case MRF:
+   case ATTR:
       return byte_offset(reg, delta * reg.stride * type_sz(reg.type));
    default:
       assert(delta == 0);
@@ -181,6 +183,7 @@ offset(fs_reg reg, unsigned delta)
       break;
    case GRF:
    case MRF:
+   case ATTR:
       return byte_offset(reg, delta * reg.width * reg.stride * type_sz(reg.type));
    case UNIFORM:
       reg.reg_offset += delta;

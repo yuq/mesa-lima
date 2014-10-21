@@ -76,7 +76,7 @@ fs_inst::init(enum opcode opcode, uint8_t exec_size, const fs_reg &dst,
          this->exec_size = dst.width;
       } else {
          for (int i = 0; i < sources; ++i) {
-            if (src[i].file != GRF)
+            if (src[i].file != GRF && src[i].file != ATTR)
                continue;
 
             if (this->exec_size <= 1)
@@ -97,6 +97,7 @@ fs_inst::init(enum opcode opcode, uint8_t exec_size, const fs_reg &dst,
          break;
       case GRF:
       case HW_REG:
+      case ATTR:
          assert(this->src[i].width > 0);
          if (this->src[i].width == 1) {
             this->src[i].effective_width = this->exec_size;
@@ -121,6 +122,7 @@ fs_inst::init(enum opcode opcode, uint8_t exec_size, const fs_reg &dst,
    case GRF:
    case HW_REG:
    case MRF:
+   case ATTR:
       this->regs_written = (dst.width * dst.stride * type_sz(dst.type) + 31) / 32;
       break;
    case BAD_FILE:
@@ -3132,6 +3134,9 @@ fs_visitor::dump_instruction(backend_instruction *be_inst, FILE *file)
    case UNIFORM:
       fprintf(file, "***u%d***", inst->dst.reg + inst->dst.reg_offset);
       break;
+   case ATTR:
+      fprintf(file, "***attr%d***", inst->dst.reg + inst->dst.reg_offset);
+      break;
    case HW_REG:
       if (inst->dst.fixed_hw_reg.file == BRW_ARCHITECTURE_REGISTER_FILE) {
          switch (inst->dst.fixed_hw_reg.nr) {
@@ -3182,6 +3187,9 @@ fs_visitor::dump_instruction(backend_instruction *be_inst, FILE *file)
          break;
       case MRF:
          fprintf(file, "***m%d***", inst->src[i].reg);
+         break;
+      case ATTR:
+         fprintf(file, "attr%d", inst->src[i].reg + inst->src[i].reg_offset);
          break;
       case UNIFORM:
          fprintf(file, "u%d", inst->src[i].reg + inst->src[i].reg_offset);

@@ -197,8 +197,15 @@ fs_visitor::visit(ir_dereference_array *ir)
    src.type = brw_type_for_base_type(ir->type);
 
    if (constant_index) {
-      assert(src.file == UNIFORM || src.file == GRF || src.file == HW_REG);
-      src = offset(src, constant_index->value.i[0] * element_size);
+      if (src.file == ATTR) {
+         /* Attribute arrays get loaded as one vec4 per element.  In that case
+          * offset the source register.
+          */
+         src.reg += constant_index->value.i[0];
+      } else {
+         assert(src.file == UNIFORM || src.file == GRF || src.file == HW_REG);
+         src = offset(src, constant_index->value.i[0] * element_size);
+      }
    } else {
       /* Variable index array dereference.  We attach the variable index
        * component to the reg as a pointer to a register containing the
@@ -571,7 +578,8 @@ fs_visitor::visit(ir_expression *ir)
 	 ir->operands[operand]->fprint(stderr);
          fprintf(stderr, "\n");
       }
-      assert(this->result.file == GRF || this->result.file == UNIFORM);
+      assert(this->result.file == GRF ||
+             this->result.file == UNIFORM || this->result.file == ATTR);
       op[operand] = this->result;
 
       /* Matrix expression operands should have been broken down to vector
