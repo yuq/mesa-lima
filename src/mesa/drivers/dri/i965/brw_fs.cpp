@@ -3716,7 +3716,7 @@ brw_wm_fs_emit(struct brw_context *brw,
       prog_data->no_8 = false;
    }
 
-   fs_generator g(brw, mem_ctx, key, prog_data, prog, fp,
+   fs_generator g(brw, mem_ctx, (void *) key, &prog_data->base, prog, &fp->Base,
                   v.runtime_check_aads_emit, INTEL_DEBUG & DEBUG_WM);
    if (simd8_cfg)
       g.generate_code(simd8_cfg, 8);

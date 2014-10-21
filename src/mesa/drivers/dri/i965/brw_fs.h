@@ -689,10 +689,10 @@ class fs_generator
 public:
    fs_generator(struct brw_context *brw,
                 void *mem_ctx,
-                const struct brw_wm_prog_key *key,
-                struct brw_wm_prog_data *prog_data,
+                const void *key,
+                struct brw_stage_prog_data *prog_data,
                 struct gl_shader_program *shader_prog,
-                struct gl_fragment_program *fp,
+                struct gl_program *fp,
                 bool runtime_check_aads_emit,
                 bool debug_flag);
    ~fs_generator();
@@ -794,7 +794,6 @@ private:
    struct gl_context *ctx;
 
    struct brw_compile *p;
-   gl_shader_stage stage;
    const void * const key;
    struct brw_stage_prog_data * const prog_data;
 

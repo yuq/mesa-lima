@@ -122,16 +122,16 @@ brw_reg_from_fs_reg(fs_reg *reg)
 
 fs_generator::fs_generator(struct brw_context *brw,
                            void *mem_ctx,
-                           const struct brw_wm_prog_key *key,
-                           struct brw_wm_prog_data *prog_data,
+                           const void *key,
+                           struct brw_stage_prog_data *prog_data,
                            struct gl_shader_program *shader_prog,
-                           struct gl_fragment_program *fp,
+                           struct gl_program *prog,
                            bool runtime_check_aads_emit,
                            bool debug_flag)
 
-   : brw(brw), stage(MESA_SHADER_FRAGMENT), key(key),
-     prog_data(&prog_data->base), shader_prog(shader_prog),
-     prog(&fp->Base), runtime_check_aads_emit(runtime_check_aads_emit),
+   : brw(brw), key(key),
+     prog_data(prog_data), shader_prog(shader_prog),
+     prog(prog), runtime_check_aads_emit(runtime_check_aads_emit),
      debug_flag(debug_flag), mem_ctx(mem_ctx)
 {
    ctx = &brw->ctx;
@@ -201,7 +201,6 @@ fs_generator::fire_fb_write(fs_inst *inst,
 {
    uint32_t msg_control;
 
-   assert(stage == MESA_SHADER_FRAGMENT);
    brw_wm_prog_data *prog_data = (brw_wm_prog_data*) this->prog_data;
 
    if (brw->gen < 6) {
@@ -242,7 +241,6 @@ fs_generator::fire_fb_write(fs_inst *inst,
 void
 fs_generator::generate_fb_write(fs_inst *inst, struct brw_reg payload)
 {
-   assert(stage == MESA_SHADER_FRAGMENT);
    brw_wm_prog_data *prog_data = (brw_wm_prog_data*) this->prog_data;
    const brw_wm_prog_key * const key = (brw_wm_prog_key * const) this->key;
    struct brw_reg implied_header;
