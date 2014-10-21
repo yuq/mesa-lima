@@ -158,6 +158,22 @@ fd3_draw(struct fd_context *ctx, const struct pipe_draw_info *info)
 	draw_impl(ctx, ctx->ring, &emit);
 }
 
+/* clear operations ignore viewport state, so we need to reset it
+ * based on framebuffer state:
+ */
+static void
+reset_viewport(struct fd_ringbuffer *ring, struct pipe_framebuffer_state *pfb)
+{
+	float half_width = pfb->width * 0.5f;
+	float half_height = pfb->height * 0.5f;
+
+	OUT_PKT0(ring, REG_A3XX_GRAS_CL_VPORT_XOFFSET, 4);
+	OUT_RING(ring, A3XX_GRAS_CL_VPORT_XOFFSET(half_width - 0.5));
+	OUT_RING(ring, A3XX_GRAS_CL_VPORT_XSCALE(half_width));
+	OUT_RING(ring, A3XX_GRAS_CL_VPORT_YOFFSET(half_height - 0.5));
+	OUT_RING(ring, A3XX_GRAS_CL_VPORT_YSCALE(-half_height));
+}
+
 /* binning pass cmds for a clear:
  * NOTE: newer blob drivers don't use binning for clear, which is probably
  * preferable since it is low vtx count.  However that doesn't seem to
@@ -183,6 +199,7 @@ fd3_clear_binning(struct fd_context *ctx, unsigned dirty)
 
 	fd3_emit_state(ctx, ring, &emit);
 	fd3_emit_vertex_bufs(ring, &emit);
+	reset_viewport(ring, &ctx->framebuffer);
 
 	OUT_PKT0(ring, REG_A3XX_PC_PRIM_VTX_CNTL, 1);
 	OUT_RING(ring, A3XX_PC_PRIM_VTX_CNTL_STRIDE_IN_VPC(0) |
@@ -219,7 +236,7 @@ fd3_clear(struct fd_context *ctx, unsigned buffers,
 		},
 	};
 
-	dirty &= FD_DIRTY_VIEWPORT | FD_DIRTY_FRAMEBUFFER | FD_DIRTY_SCISSOR;
+	dirty &= FD_DIRTY_FRAMEBUFFER | FD_DIRTY_SCISSOR;
 	dirty |= FD_DIRTY_PROG;
 	emit.dirty = dirty;
 
@@ -227,6 +244,7 @@ fd3_clear(struct fd_context *ctx, unsigned buffers,
 
 	/* emit generic state now: */
 	fd3_emit_state(ctx, ring, &emit);
+	reset_viewport(ring, &ctx->framebuffer);
 
 	OUT_PKT0(ring, REG_A3XX_RB_BLEND_ALPHA, 1);
 	OUT_RING(ring, A3XX_RB_BLEND_ALPHA_UINT(0xff) |
