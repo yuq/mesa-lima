@@ -361,7 +361,7 @@ static void bind_fs_empty(struct blitter_context_priv *ctx)
       ctx->fs_empty = util_make_empty_fragment_shader(pipe);
    }
 
-   pipe->bind_fs_state(pipe, ctx->fs_empty);
+   ctx->bind_fs_state(pipe, ctx->fs_empty);
 }
 
 static void bind_fs_write_one_cbuf(struct blitter_context_priv *ctx)
@@ -375,7 +375,7 @@ static void bind_fs_write_one_cbuf(struct blitter_context_priv *ctx)
                                                TGSI_INTERPOLATE_CONSTANT, FALSE);
    }
 
-   pipe->bind_fs_state(pipe, ctx->fs_write_one_cbuf);
+   ctx->bind_fs_state(pipe, ctx->fs_write_one_cbuf);
 }
 
 static void bind_fs_write_all_cbufs(struct blitter_context_priv *ctx)
@@ -389,7 +389,7 @@ static void bind_fs_write_all_cbufs(struct blitter_context_priv *ctx)
                                                TGSI_INTERPOLATE_CONSTANT, TRUE);
    }
 
-   pipe->bind_fs_state(pipe, ctx->fs_write_all_cbufs);
+   ctx->bind_fs_state(pipe, ctx->fs_write_all_cbufs);
 }
 
 void util_blitter_destroy(struct blitter_context *blitter)
