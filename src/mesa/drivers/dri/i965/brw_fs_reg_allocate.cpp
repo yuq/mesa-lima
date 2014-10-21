@@ -385,6 +385,7 @@ fs_visitor::setup_payload_interference(struct ra_graph *g,
 
       /* Special case instructions which have extra implied registers used. */
       switch (inst->opcode) {
+      case SHADER_OPCODE_URB_WRITE_SIMD8:
       case FS_OPCODE_FB_WRITE:
          /* We could omit this for the !inst->header_present case, except that
           * the simulator apparently incorrectly reads from g0/g1 instead of
@@ -522,6 +523,19 @@ fs_visitor::setup_mrf_hack_interference(struct ra_graph *g, int first_mrf_node)
    }
 }
 
+static bool
+is_last_send(fs_inst *inst)
+{
+   switch (inst->opcode) {
+   case SHADER_OPCODE_URB_WRITE_SIMD8:
+   case FS_OPCODE_FB_WRITE:
+      return inst->eot;
+   default:
+      assert(!inst->eot);
+      return false;
+   }
+}
+
 bool
 fs_visitor::assign_regs(bool allow_spilling)
 {
@@ -594,7 +608,7 @@ fs_visitor::assign_regs(bool allow_spilling)
           * We could just do "something high".  Instead, we just pick the
           * highest register that works.
           */
-         if (inst->opcode == FS_OPCODE_FB_WRITE && inst->eot) {
+         if (is_last_send(inst)) {
             int size = virtual_grf_sizes[inst->src[0].reg];
             int reg = screen->wm_reg_sets[rsi].class_to_ra_reg_range[size] - 1;
             ra_set_node_reg(g, inst->src[0].reg, reg);

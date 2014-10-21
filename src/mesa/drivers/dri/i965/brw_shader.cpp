@@ -453,6 +453,8 @@ brw_instruction_name(enum opcode op)
       return "gen4_scratch_write";
    case SHADER_OPCODE_GEN7_SCRATCH_READ:
       return "gen7_scratch_read";
+   case SHADER_OPCODE_URB_WRITE_SIMD8:
+      return "gen8_urb_write_simd8";
 
    case VEC4_OPCODE_PACK_BYTES:
       return "pack_bytes";
@@ -754,6 +756,7 @@ backend_instruction::has_side_effects() const
 {
    switch (opcode) {
    case SHADER_OPCODE_UNTYPED_ATOMIC:
+   case SHADER_OPCODE_URB_WRITE_SIMD8:
    case FS_OPCODE_FB_WRITE:
       return true;
    default:

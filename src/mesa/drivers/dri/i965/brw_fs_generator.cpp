@@ -336,6 +336,27 @@ fs_generator::generate_fb_write(fs_inst *inst, struct brw_reg payload)
 }
 
 void
+fs_generator::generate_urb_write(fs_inst *inst, struct brw_reg payload)
+{
+   brw_inst *insn;
+
+   insn = brw_next_insn(p, BRW_OPCODE_SEND);
+
+   brw_set_dest(p, insn, brw_null_reg());
+   brw_set_src0(p, insn, payload);
+   brw_set_src1(p, insn, brw_imm_d(0));
+
+   brw_inst_set_sfid(brw, insn, BRW_SFID_URB);
+   brw_inst_set_urb_opcode(brw, insn, GEN8_URB_OPCODE_SIMD8_WRITE);
+
+   brw_inst_set_mlen(brw, insn, inst->mlen);
+   brw_inst_set_rlen(brw, insn, 0);
+   brw_inst_set_eot(brw, insn, inst->eot);
+   brw_inst_set_header_present(brw, insn, true);
+   brw_inst_set_urb_global_offset(brw, insn, inst->offset);
+}
+
+void
 fs_generator::generate_blorp_fb_write(fs_inst *inst)
 {
    brw_fb_WRITE(p,
@@ -1885,6 +1906,10 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
 
       case SHADER_OPCODE_GEN7_SCRATCH_READ:
 	 generate_scratch_read_gen7(inst, dst);
+	 break;
+
+      case SHADER_OPCODE_URB_WRITE_SIMD8:
+	 generate_urb_write(inst, src[0]);
 	 break;
 
       case FS_OPCODE_UNIFORM_PULL_CONSTANT_LOAD:
