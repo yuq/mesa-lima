@@ -566,10 +566,10 @@ fd3_emit_tile_mem2gmem(struct fd_context *ctx, struct fd_tile *tile)
 	bin_w = gmem->bin_w;
 	bin_h = gmem->bin_h;
 
-	if (ctx->restore & (FD_BUFFER_DEPTH | FD_BUFFER_STENCIL))
+	if (fd_gmem_needs_restore(ctx, tile, FD_BUFFER_DEPTH | FD_BUFFER_STENCIL))
 		emit_mem2gmem_surf(ctx, depth_base(ctx), pfb->zsbuf, bin_w);
 
-	if (ctx->restore & FD_BUFFER_COLOR)
+	if (fd_gmem_needs_restore(ctx, tile, FD_BUFFER_COLOR))
 		emit_mem2gmem_surf(ctx, 0, pfb->cbufs[0], bin_w);
 
 	OUT_PKT0(ring, REG_A3XX_GRAS_SC_CONTROL, 1);

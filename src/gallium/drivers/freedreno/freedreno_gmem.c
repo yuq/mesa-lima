@@ -314,9 +314,8 @@ render_sysmem(struct fd_context *ctx)
 }
 
 void
-fd_gmem_render_tiles(struct pipe_context *pctx)
+fd_gmem_render_tiles(struct fd_context *ctx)
 {
-	struct fd_context *ctx = fd_context(pctx);
 	struct pipe_framebuffer_state *pfb = &ctx->framebuffer;
 	uint32_t timestamp = 0;
 	bool sysmem = false;
@@ -382,4 +381,49 @@ fd_gmem_render_tiles(struct pipe_context *pctx)
 	ctx->max_scissor.maxx = ctx->max_scissor.maxy = 0;
 
 	ctx->dirty = ~0;
+}
+
+/* tile needs restore if it isn't completely contained within the
+ * cleared scissor:
+ */
+static bool
+skip_restore(struct pipe_scissor_state *scissor, struct fd_tile *tile)
+{
+	unsigned minx = tile->xoff;
+	unsigned maxx = tile->xoff + tile->bin_w;
+	unsigned miny = tile->yoff;
+	unsigned maxy = tile->yoff + tile->bin_h;
+	return (minx >= scissor->minx) && (maxx <= scissor->maxx) &&
+			(miny >= scissor->miny) && (maxy <= scissor->maxy);
+}
+
+/* When deciding whether a tile needs mem2gmem, we need to take into
+ * account the scissor rect(s) that were cleared.  To simplify we only
+ * consider the last scissor rect for each buffer, since the common
+ * case would be a single clear.
+ */
+bool
+fd_gmem_needs_restore(struct fd_context *ctx, struct fd_tile *tile,
+		uint32_t buffers)
+{
+	if (!(ctx->restore & buffers))
+		return false;
+
+	/* if buffers partially cleared, then slow-path to figure out
+	 * if this particular tile needs restoring:
+	 */
+	if ((buffers & FD_BUFFER_COLOR) &&
+			(ctx->partial_cleared & FD_BUFFER_COLOR) &&
+			skip_restore(&ctx->cleared_scissor.color, tile))
+		return false;
+	if ((buffers & FD_BUFFER_DEPTH) &&
+			(ctx->partial_cleared & FD_BUFFER_DEPTH) &&
+			skip_restore(&ctx->cleared_scissor.depth, tile))
+		return false;
+	if ((buffers & FD_BUFFER_STENCIL) &&
+			(ctx->partial_cleared & FD_BUFFER_STENCIL) &&
+			skip_restore(&ctx->cleared_scissor.stencil, tile))
+		return false;
+
+	return true;
 }

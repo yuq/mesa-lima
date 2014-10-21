@@ -182,6 +182,10 @@ struct fd_context {
 	 * there was a glClear() that invalidated the entire previous buffer
 	 * contents.  Keep track of which buffer(s) are cleared, or needs
 	 * restore.  Masks of PIPE_CLEAR_*
+	 *
+	 * The 'cleared' bits will be set for buffers which are *entirely*
+	 * cleared, and 'partial_cleared' bits will be set if you must
+	 * check cleared_scissor.
 	 */
 	enum {
 		/* align bitmask values w/ PIPE_CLEAR_*.. since that is convenient.. */
@@ -189,7 +193,7 @@ struct fd_context {
 		FD_BUFFER_DEPTH   = PIPE_CLEAR_DEPTH,
 		FD_BUFFER_STENCIL = PIPE_CLEAR_STENCIL,
 		FD_BUFFER_ALL     = FD_BUFFER_COLOR | FD_BUFFER_DEPTH | FD_BUFFER_STENCIL,
-	} cleared, restore, resolve;
+	} cleared, partial_cleared, restore, resolve;
 
 	bool needs_flush;
 
@@ -275,6 +279,14 @@ struct fd_context {
 	 * mem2gmem/gmem2mem) to avoid needlessly moving data in/out of gmem.
 	 */
 	struct pipe_scissor_state max_scissor;
+
+	/* Track the cleared scissor for color/depth/stencil, so we know
+	 * which, if any, tiles need to be restored (mem2gmem).  Only valid
+	 * if the corresponding bit in ctx->cleared is set.
+	 */
+	struct {
+		struct pipe_scissor_state color, depth, stencil;
+	} cleared_scissor;
 
 	/* Current gmem/tiling configuration.. gets updated on render_tiles()
 	 * if out of date with current maximal-scissor/cpp:

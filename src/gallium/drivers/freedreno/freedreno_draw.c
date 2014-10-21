@@ -107,7 +107,7 @@ fd_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 	ctx->stats.prims_emitted +=
 		u_reduced_prims_for_vertices(info->mode, info->count);
 
-	/* any buffers that haven't been cleared, we need to restore: */
+	/* any buffers that haven't been cleared yet, we need to restore: */
 	ctx->restore |= buffers & (FD_BUFFER_ALL & ~ctx->cleared);
 	/* and any buffers used, need to be resolved: */
 	ctx->resolve |= buffers;
@@ -145,8 +145,30 @@ fd_clear(struct pipe_context *pctx, unsigned buffers,
 {
 	struct fd_context *ctx = fd_context(pctx);
 	struct pipe_framebuffer_state *pfb = &ctx->framebuffer;
+	struct pipe_scissor_state *scissor = fd_context_get_scissor(ctx);
+	unsigned cleared_buffers;
 
-	ctx->cleared |= buffers;
+	/* for bookkeeping about which buffers have been cleared (and thus
+	 * can fully or partially skip mem2gmem) we need to ignore buffers
+	 * that have already had a draw, in case apps do silly things like
+	 * clear after draw (ie. if you only clear the color buffer, but
+	 * something like alpha-test causes side effects from the draw in
+	 * the depth buffer, etc)
+	 */
+	cleared_buffers = buffers & (FD_BUFFER_ALL & ~ctx->restore);
+
+	/* do we have full-screen scissor? */
+	if (!memcmp(scissor, &ctx->disabled_scissor, sizeof(*scissor))) {
+		ctx->cleared |= cleared_buffers;
+	} else {
+		ctx->partial_cleared |= cleared_buffers;
+		if (cleared_buffers & PIPE_CLEAR_COLOR)
+			ctx->cleared_scissor.color = *scissor;
+		if (cleared_buffers & PIPE_CLEAR_DEPTH)
+			ctx->cleared_scissor.depth = *scissor;
+		if (cleared_buffers & PIPE_CLEAR_STENCIL)
+			ctx->cleared_scissor.stencil = *scissor;
+	}
 	ctx->resolve |= buffers;
 	ctx->needs_flush = true;
 

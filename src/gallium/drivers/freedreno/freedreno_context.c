@@ -100,7 +100,7 @@ fd_context_render(struct pipe_context *pctx)
 	if (!ctx->needs_flush)
 		return;
 
-	fd_gmem_render_tiles(pctx);
+	fd_gmem_render_tiles(ctx);
 
 	DBG("%p/%p/%p", ctx->ring->start, ctx->ring->cur, ctx->ring->end);
 
@@ -111,7 +111,7 @@ fd_context_render(struct pipe_context *pctx)
 		fd_context_next_rb(pctx);
 
 	ctx->needs_flush = false;
-	ctx->cleared = ctx->restore = ctx->resolve = 0;
+	ctx->cleared = ctx->partial_cleared = ctx->restore = ctx->resolve = 0;
 	ctx->gmem_reason = 0;
 	ctx->num_draws = 0;
 
