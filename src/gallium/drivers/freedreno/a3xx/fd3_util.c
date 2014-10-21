@@ -264,6 +264,9 @@ fd3_pipe2tex(enum pipe_format format)
 	case PIPE_FORMAT_I8_UNORM:
 		return TFMT_NORM_UINT_8;
 
+	case PIPE_FORMAT_R8G8_UNORM:
+		return TFMT_NORM_UINT_8_8;
+
 	case PIPE_FORMAT_B8G8R8A8_UNORM:
 	case PIPE_FORMAT_B8G8R8X8_UNORM:
 	case PIPE_FORMAT_R8G8B8A8_UNORM:
@@ -378,8 +381,9 @@ fd3_gmem_restore_format(enum pipe_format format)
 	switch (format) {
 	case PIPE_FORMAT_Z24X8_UNORM:
 	case PIPE_FORMAT_Z24_UNORM_S8_UINT:
+		return PIPE_FORMAT_R8G8B8A8_UNORM;
 	case PIPE_FORMAT_Z16_UNORM:
-		return PIPE_FORMAT_B8G8R8A8_UNORM;
+		return PIPE_FORMAT_R8G8_UNORM;
 	default:
 		return format;
 	}
