@@ -171,12 +171,20 @@ CLOVER_API cl_int
 clBuildProgram(cl_program d_prog, cl_uint num_devs,
                const cl_device_id *d_devs, const char *p_opts,
                void (*pfn_notify)(cl_program, void *),
-               void *user_data) {
-   cl_int ret = clCompileProgram(d_prog, num_devs, d_devs, p_opts,
-                                 0, NULL, NULL, pfn_notify, user_data);
+               void *user_data) try {
+   auto &prog = obj(d_prog);
+   auto devs = (d_devs ? objs(d_devs, num_devs) :
+                ref_vector<device>(prog.context().devices()));
+   auto opts = (p_opts ? p_opts : "");
 
-   return (ret == CL_COMPILE_PROGRAM_FAILURE ?
-           CL_BUILD_PROGRAM_FAILURE : ret);
+   validate_build_program_common(prog, num_devs, devs, pfn_notify, user_data);
+
+   prog.build(devs, opts);
+   return CL_SUCCESS;
+} catch (error &e) {
+   if (e.get() == CL_COMPILE_PROGRAM_FAILURE)
+      return CL_BUILD_PROGRAM_FAILURE;
+   return e.get();
 }
 
 CLOVER_API cl_int
