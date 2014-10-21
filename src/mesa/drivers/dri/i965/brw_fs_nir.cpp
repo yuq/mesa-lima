@@ -24,20 +24,6 @@
 #include "glsl/nir/glsl_to_nir.h"
 #include "brw_fs.h"
 
-static glsl_interp_qualifier
-determine_interpolation_mode(nir_variable *var, bool flat_shade)
-{
-   if (var->data.interpolation != INTERP_QUALIFIER_NONE)
-      return (glsl_interp_qualifier) var->data.interpolation;
-   int location = var->data.location;
-   bool is_gl_Color =
-      location == VARYING_SLOT_COL0 || location == VARYING_SLOT_COL1;
-   if (flat_shade && is_gl_Color)
-      return INTERP_QUALIFIER_FLAT;
-   else
-      return INTERP_QUALIFIER_SMOOTH;
-}
-
 void
 fs_visitor::emit_nir_code()
 {
@@ -118,101 +104,10 @@ fs_visitor::nir_setup_inputs(nir_shader *shader)
          reg = *emit_frontfacing_interpolation();
          emit(MOV(retype(varying, BRW_REGISTER_TYPE_UD), reg));
       } else {
-         nir_emit_interpolation(var, &varying);
-      }
-   }
-}
-
-void
-fs_visitor::nir_emit_interpolation(nir_variable *var, fs_reg *varying)
-{
-   brw_wm_prog_data *prog_data = (brw_wm_prog_data*) this->prog_data;
-   brw_wm_prog_key *key = (brw_wm_prog_key*) this->key;
-   fs_reg reg = *varying;
-   reg.type = brw_type_for_base_type(var->type->get_scalar_type());
-
-   unsigned int array_elements;
-   const glsl_type *type;
-
-   if (var->type->is_array()) {
-      array_elements = var->type->length;
-      if (array_elements == 0) {
-         fail("dereferenced array '%s' has length 0\n", var->name);
-      }
-      type = var->type->fields.array;
-   } else {
-      array_elements = 1;
-      type = var->type;
-   }
-
-   glsl_interp_qualifier interpolation_mode =
-      determine_interpolation_mode(var, key->flat_shade);
-
-   int location = var->data.location;
-   for (unsigned int i = 0; i < array_elements; i++) {
-      for (unsigned int j = 0; j < type->matrix_columns; j++) {
-         if (prog_data->urb_setup[location] == -1) {
-            /* If there's no incoming setup data for this slot, don't
-             * emit interpolation for it.
-             */
-            reg.reg_offset += type->vector_elements;
-            location++;
-            continue;
-         }
-
-         if (interpolation_mode == INTERP_QUALIFIER_FLAT) {
-            /* Constant interpolation (flat shading) case. The SF has
-             * handed us defined values in only the constant offset
-             * field of the setup reg.
-             */
-            for (unsigned int k = 0; k < type->vector_elements; k++) {
-               struct brw_reg interp = interp_reg(location, k);
-               interp = suboffset(interp, 3);
-               interp.type = reg.type;
-               emit(FS_OPCODE_CINTERP, reg, fs_reg(interp));
-               reg.reg_offset++;
-            }
-         } else {
-            /* Smooth/noperspective interpolation case. */
-            for (unsigned int k = 0; k < type->vector_elements; k++) {
-               struct brw_reg interp = interp_reg(location, k);
-               if (brw->needs_unlit_centroid_workaround && var->data.centroid) {
-                  /* Get the pixel/sample mask into f0 so that we know
-                   * which pixels are lit.  Then, for each channel that is
-                   * unlit, replace the centroid data with non-centroid
-                   * data.
-                   */
-                  emit(FS_OPCODE_MOV_DISPATCH_TO_FLAGS);
-
-                  fs_inst *inst;
-                  inst = emit_linterp(reg, fs_reg(interp), interpolation_mode,
-                                      false, false);
-                  inst->predicate = BRW_PREDICATE_NORMAL;
-                  inst->predicate_inverse = true;
-                  if (brw->has_pln)
-                     inst->no_dd_clear = true;
-
-                  inst = emit_linterp(reg, fs_reg(interp), interpolation_mode,
-                                      var->data.centroid && !key->persample_shading,
-                                      var->data.sample || key->persample_shading);
-                  inst->predicate = BRW_PREDICATE_NORMAL;
-                  inst->predicate_inverse = false;
-                  if (brw->has_pln)
-                     inst->no_dd_check = true;
-
-               } else {
-                  emit_linterp(reg, fs_reg(interp), interpolation_mode,
-                               var->data.centroid && !key->persample_shading,
-                               var->data.sample || key->persample_shading);
-               }
-               if (brw->gen < 6 && interpolation_mode == INTERP_QUALIFIER_SMOOTH) {
-                  emit(BRW_OPCODE_MUL, reg, reg, this->pixel_w);
-               }
-              reg.reg_offset++;
-            }
-
-         }
-         location++;
+         emit_general_interpolation(varying, var->name, var->type,
+                                    (glsl_interp_qualifier) var->data.interpolation,
+                                    var->data.location, var->data.centroid,
+                                    var->data.sample);
       }
    }
 }

@@ -573,7 +573,6 @@ public:
    void nir_setup_outputs(nir_shader *shader);
    void nir_setup_uniforms(nir_shader *shader);
    void nir_setup_registers(exec_list *regs);
-   void nir_emit_interpolation(nir_variable *var, fs_reg *reg);
    void nir_setup_uniform(nir_variable *var);
    void nir_setup_builtin_uniform(nir_variable *var);
    void nir_emit_impl(nir_function_impl *impl);
