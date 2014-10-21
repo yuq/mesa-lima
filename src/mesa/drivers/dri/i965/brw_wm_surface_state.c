@@ -835,7 +835,8 @@ void
 brw_upload_ubo_surfaces(struct brw_context *brw,
 			struct gl_shader *shader,
                         struct brw_stage_state *stage_state,
-                        struct brw_stage_prog_data *prog_data)
+                        struct brw_stage_prog_data *prog_data,
+                        bool dword_pitch)
 {
    struct gl_context *ctx = &brw->ctx;
 
@@ -863,7 +864,7 @@ brw_upload_ubo_surfaces(struct brw_context *brw,
       brw_create_constant_surface(brw, bo, binding->Offset,
                                   bo->size - binding->Offset,
                                   &surf_offsets[i],
-                                  shader->Stage == MESA_SHADER_FRAGMENT);
+                                  dword_pitch);
    }
 
    if (shader->NumUniformBlocks)
@@ -882,7 +883,7 @@ brw_upload_wm_ubo_surfaces(struct brw_context *brw)
 
    /* BRW_NEW_FS_PROG_DATA */
    brw_upload_ubo_surfaces(brw, prog->_LinkedShaders[MESA_SHADER_FRAGMENT],
-                           &brw->wm.base, &brw->wm.prog_data->base);
+                           &brw->wm.base, &brw->wm.prog_data->base, true);
 }
 
 const struct brw_tracked_state brw_wm_ubo_surfaces = {

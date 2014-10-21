@@ -595,6 +595,8 @@ struct brw_vec4_prog_data {
     * is the size of the URB entry used for output.
     */
    GLuint urb_entry_size;
+
+   bool simd8;
 };
 
 
@@ -1618,7 +1620,8 @@ brw_update_sol_surface(struct brw_context *brw,
 void brw_upload_ubo_surfaces(struct brw_context *brw,
 			     struct gl_shader *shader,
                              struct brw_stage_state *stage_state,
-                             struct brw_stage_prog_data *prog_data);
+                             struct brw_stage_prog_data *prog_data,
+                             bool dword_pitch);
 void brw_upload_abo_surfaces(struct brw_context *brw,
                              struct gl_shader_program *prog,
                              struct brw_stage_state *stage_state,

@@ -66,8 +66,10 @@ upload_vs_state(struct brw_context *brw)
              (prog_data->urb_read_length << GEN6_VS_URB_READ_LENGTH_SHIFT) |
              (0 << GEN6_VS_URB_ENTRY_READ_OFFSET_SHIFT));
 
+   uint32_t simd8_enable = prog_data->simd8 ? GEN8_VS_SIMD8_ENABLE : 0;
    OUT_BATCH(((brw->max_vs_threads - 1) << HSW_VS_MAX_THREADS_SHIFT) |
              GEN6_VS_STATISTICS_ENABLE |
+             simd8_enable |
              GEN6_VS_ENABLE);
 
    /* _NEW_TRANSFORM */

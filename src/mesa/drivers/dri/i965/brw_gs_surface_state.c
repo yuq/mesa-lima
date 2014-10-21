@@ -78,7 +78,7 @@ brw_upload_gs_ubo_surfaces(struct brw_context *brw)
 
    /* BRW_NEW_GS_PROG_DATA */
    brw_upload_ubo_surfaces(brw, prog->_LinkedShaders[MESA_SHADER_GEOMETRY],
-			   &brw->gs.base, &brw->gs.prog_data->base.base);
+			   &brw->gs.base, &brw->gs.prog_data->base.base, false);
 }
 
 const struct brw_tracked_state brw_gs_ubo_surfaces = {
