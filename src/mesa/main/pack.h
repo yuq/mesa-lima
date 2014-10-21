@@ -41,10 +41,6 @@ _mesa_pack_polygon_stipple(const GLuint pattern[32], GLubyte *dest,
                            const struct gl_pixelstore_attrib *packing);
 
 
-extern GLvoid *
-_mesa_unpack_bitmap(GLint width, GLint height, const GLubyte *pixels,
-                    const struct gl_pixelstore_attrib *packing);
-
 extern void
 _mesa_pack_bitmap(GLint width, GLint height, const GLubyte *source,
                   GLubyte *dest, const struct gl_pixelstore_attrib *packing);

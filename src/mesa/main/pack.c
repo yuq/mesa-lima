@@ -100,7 +100,8 @@ void
 _mesa_unpack_polygon_stipple( const GLubyte *pattern, GLuint dest[32],
                               const struct gl_pixelstore_attrib *unpacking )
 {
-   GLubyte *ptrn = (GLubyte *) _mesa_unpack_bitmap(32, 32, pattern, unpacking);
+   GLubyte *ptrn = (GLubyte *) _mesa_unpack_image(2, 32, 32, 1, GL_COLOR_INDEX,
+                                                  GL_BITMAP, pattern, unpacking);
    if (ptrn) {
       /* Convert pattern from GLubytes to GLuints and handle big/little
        * endian differences
@@ -140,108 +141,6 @@ _mesa_pack_polygon_stipple( const GLuint pattern[32], GLubyte *dest,
    }
 
    _mesa_pack_bitmap(32, 32, ptrn, dest, packing);
-}
-
-
-/*
- * Unpack bitmap data.  Resulting data will be in most-significant-bit-first
- * order with row alignment = 1 byte.
- */
-GLvoid *
-_mesa_unpack_bitmap( GLint width, GLint height, const GLubyte *pixels,
-                     const struct gl_pixelstore_attrib *packing )
-{
-   GLint bytes, row, width_in_bytes;
-   GLubyte *buffer, *dst;
-
-   if (!pixels)
-      return NULL;
-
-   /* Alloc dest storage */
-   bytes = ((width + 7) / 8 * height);
-   buffer = malloc( bytes );
-   if (!buffer)
-      return NULL;
-
-   width_in_bytes = CEILING( width, 8 );
-   dst = buffer;
-   for (row = 0; row < height; row++) {
-      const GLubyte *src = (const GLubyte *)
-         _mesa_image_address2d(packing, pixels, width, height,
-                               GL_COLOR_INDEX, GL_BITMAP, row, 0);
-      if (!src) {
-         free(buffer);
-         return NULL;
-      }
-
-      if ((packing->SkipPixels & 7) == 0) {
-         memcpy( dst, src, width_in_bytes );
-         if (packing->LsbFirst) {
-            flip_bytes( dst, width_in_bytes );
-         }
-      }
-      else {
-         /* handling SkipPixels is a bit tricky (no pun intended!) */
-         GLint i;
-         if (packing->LsbFirst) {
-            GLubyte srcMask = 1 << (packing->SkipPixels & 0x7);
-            GLubyte dstMask = 128;
-            const GLubyte *s = src;
-            GLubyte *d = dst;
-            *d = 0;
-            for (i = 0; i < width; i++) {
-               if (*s & srcMask) {
-                  *d |= dstMask;
-               }
-               if (srcMask == 128) {
-                  srcMask = 1;
-                  s++;
-               }
-               else {
-                  srcMask = srcMask << 1;
-               }
-               if (dstMask == 1) {
-                  dstMask = 128;
-                  d++;
-                  *d = 0;
-               }
-               else {
-                  dstMask = dstMask >> 1;
-               }
-            }
-         }
-         else {
-            GLubyte srcMask = 128 >> (packing->SkipPixels & 0x7);
-            GLubyte dstMask = 128;
-            const GLubyte *s = src;
-            GLubyte *d = dst;
-            *d = 0;
-            for (i = 0; i < width; i++) {
-               if (*s & srcMask) {
-                  *d |= dstMask;
-               }
-               if (srcMask == 1) {
-                  srcMask = 128;
-                  s++;
-               }
-               else {
-                  srcMask = srcMask >> 1;
-               }
-               if (dstMask == 1) {
-                  dstMask = 128;
-                  d++;
-                  *d = 0;
-               }
-               else {
-                  dstMask = dstMask >> 1;
-               }
-            }
-         }
-      }
-      dst += width_in_bytes;
-   }
-
-   return buffer;
 }
 
 

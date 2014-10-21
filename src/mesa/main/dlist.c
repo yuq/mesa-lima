@@ -957,11 +957,8 @@ unpack_image(struct gl_context *ctx, GLuint dimensions,
       /* no PBO */
       GLvoid *image;
 
-      if (type == GL_BITMAP)
-         image = _mesa_unpack_bitmap(width, height, pixels, unpack);
-      else
-         image = _mesa_unpack_image(dimensions, width, height, depth,
-                                    format, type, pixels, unpack);
+      image = _mesa_unpack_image(dimensions, width, height, depth,
+                                 format, type, pixels, unpack);
       if (pixels && !image) {
          _mesa_error(ctx, GL_OUT_OF_MEMORY, "display list construction");
       }
@@ -983,11 +980,8 @@ unpack_image(struct gl_context *ctx, GLuint dimensions,
       }
 
       src = ADD_POINTERS(map, pixels);
-      if (type == GL_BITMAP)
-         image = _mesa_unpack_bitmap(width, height, src, unpack);
-      else
-         image = _mesa_unpack_image(dimensions, width, height, depth,
-                                    format, type, src, unpack);
+      image = _mesa_unpack_image(dimensions, width, height, depth,
+                                 format, type, src, unpack);
 
       ctx->Driver.UnmapBuffer(ctx, unpack->BufferObj, MAP_INTERNAL);
 
