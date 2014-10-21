@@ -63,6 +63,7 @@ extern uint64_t INTEL_DEBUG;
 #define DEBUG_OPTIMIZER           (1 << 27)
 #define DEBUG_ANNOTATION          (1 << 28)
 #define DEBUG_NO8                 (1 << 29)
+#define DEBUG_VEC4VS              (1 << 30)
 
 #ifdef HAVE_ANDROID_PLATFORM
 #define LOG_TAG "INTEL-MESA"

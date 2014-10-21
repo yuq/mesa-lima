@@ -74,6 +74,19 @@ brw_shader_precompile(struct gl_context *ctx,
    return true;
 }
 
+static inline bool
+is_scalar_shader_stage(struct brw_context *brw, int stage)
+{
+   switch (stage) {
+   case MESA_SHADER_FRAGMENT:
+      return true;
+   case MESA_SHADER_VERTEX:
+      return brw->scalar_vs;
+   default:
+      return false;
+   }
+}
+
 static void
 brw_lower_packing_builtins(struct brw_context *brw,
                            gl_shader_stage shader_type,
@@ -84,7 +97,7 @@ brw_lower_packing_builtins(struct brw_context *brw,
            | LOWER_PACK_UNORM_2x16
            | LOWER_UNPACK_UNORM_2x16;
 
-   if (shader_type == MESA_SHADER_FRAGMENT) {
+   if (is_scalar_shader_stage(brw, shader_type)) {
       ops |= LOWER_UNPACK_UNORM_4x8
            | LOWER_UNPACK_SNORM_4x8
            | LOWER_PACK_UNORM_4x8
@@ -97,7 +110,7 @@ brw_lower_packing_builtins(struct brw_context *brw,
        * lowering is needed. For SOA code, the Half2x16 ops must be
        * scalarized.
        */
-      if (shader_type == MESA_SHADER_FRAGMENT) {
+      if (is_scalar_shader_stage(brw, shader_type)) {
          ops |= LOWER_PACK_HALF_2x16_TO_SPLIT
              |  LOWER_UNPACK_HALF_2x16_TO_SPLIT;
       }
@@ -185,7 +198,7 @@ brw_link_shader(struct gl_context *ctx, struct gl_shader_program *shProg)
       do {
 	 progress = false;
 
-	 if (stage == MESA_SHADER_FRAGMENT) {
+	 if (is_scalar_shader_stage(brw, stage)) {
 	    brw_do_channel_expressions(shader->base.ir);
 	    brw_do_vector_splitting(shader->base.ir);
 	 }

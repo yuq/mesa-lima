@@ -22,6 +22,7 @@
  */
 
 #include "brw_vec4.h"
+#include "brw_fs.h"
 #include "brw_cfg.h"
 #include "brw_vs.h"
 #include "brw_dead_control_flow.h"
@@ -1767,6 +1768,7 @@ brw_vs_emit(struct brw_context *brw,
 {
    bool start_busy = false;
    double start_time = 0;
+   const unsigned *assembly = NULL;
 
    if (unlikely(brw->perf_debug)) {
       start_busy = (brw->batch.last_bo &&
@@ -1781,23 +1783,54 @@ brw_vs_emit(struct brw_context *brw,
    if (unlikely(INTEL_DEBUG & DEBUG_VS))
       brw_dump_ir("vertex", prog, &shader->base, &c->vp->program.Base);
 
-   vec4_vs_visitor v(brw, c, prog_data, prog, mem_ctx);
-   if (!v.run()) {
-      if (prog) {
-         prog->LinkStatus = false;
-         ralloc_strcat(&prog->InfoLog, v.fail_msg);
+   if (prog && brw->gen >= 8 && brw->scalar_vs) {
+      fs_visitor v(brw, mem_ctx, &c->key, prog_data, prog, &c->vp->program, 8);
+      if (!v.run_vs()) {
+         if (prog) {
+            prog->LinkStatus = false;
+            ralloc_strcat(&prog->InfoLog, v.fail_msg);
+         }
+
+         _mesa_problem(NULL, "Failed to compile vertex shader: %s\n",
+                       v.fail_msg);
+
+         return NULL;
       }
 
-      _mesa_problem(NULL, "Failed to compile vertex shader: %s\n",
-                    v.fail_msg);
+      fs_generator g(brw, mem_ctx, (void *) &c->key, &prog_data->base.base,
+                     &c->vp->program.Base, v.runtime_check_aads_emit);
+      if (INTEL_DEBUG & DEBUG_VS) {
+         char *name = ralloc_asprintf(mem_ctx, "%s vertex shader %d",
+                                      prog->Label ? prog->Label : "unnamed",
+                                      prog->Name);
+         g.enable_debug(name);
+      }
+      g.generate_code(v.cfg, 8);
+      assembly = g.get_assembly(final_assembly_size);
 
-      return NULL;
+      if (assembly)
+         prog_data->base.simd8 = true;
+      c->base.last_scratch = v.last_scratch;
    }
 
-   const unsigned *assembly = NULL;
-   vec4_generator g(brw, prog, &c->vp->program.Base, &prog_data->base,
-                    mem_ctx, INTEL_DEBUG & DEBUG_VS);
-   assembly = g.generate_assembly(v.cfg, final_assembly_size);
+   if (!assembly) {
+      vec4_vs_visitor v(brw, c, prog_data, prog, mem_ctx);
+      if (!v.run()) {
+         if (prog) {
+            prog->LinkStatus = false;
+            ralloc_strcat(&prog->InfoLog, v.fail_msg);
+         }
+
+         _mesa_problem(NULL, "Failed to compile vertex shader: %s\n",
+                       v.fail_msg);
+
+         return NULL;
+      }
+
+      vec4_generator g(brw, prog, &c->vp->program.Base, &prog_data->base,
+                       mem_ctx, INTEL_DEBUG & DEBUG_VS);
+      assembly = g.generate_assembly(v.cfg, final_assembly_size);
+   }
 
    if (unlikely(brw->perf_debug) && shader) {
       if (shader->compiled_once) {

@@ -559,6 +559,15 @@ brw_initialize_context_constants(struct brw_context *brw)
    ctx->Const.ShaderCompilerOptions[MESA_SHADER_VERTEX].OptimizeForAOS = true;
    ctx->Const.ShaderCompilerOptions[MESA_SHADER_GEOMETRY].OptimizeForAOS = true;
 
+   if (brw->scalar_vs) {
+      /* If we're using the scalar backend for vertex shaders, we need to
+       * configure these accordingly.
+       */
+      ctx->Const.ShaderCompilerOptions[MESA_SHADER_VERTEX].EmitNoIndirectOutput = true;
+      ctx->Const.ShaderCompilerOptions[MESA_SHADER_VERTEX].EmitNoIndirectTemp = true;
+      ctx->Const.ShaderCompilerOptions[MESA_SHADER_VERTEX].OptimizeForAOS = false;
+   }
+
    /* ARB_viewport_array */
    if (brw->gen >= 7 && ctx->API == API_OPENGL_CORE) {
       ctx->Const.MaxViewports = GEN7_NUM_VIEWPORTS;
@@ -754,6 +763,10 @@ brwCreateContext(gl_api api,
 
    brw_process_driconf_options(brw);
    brw_process_intel_debug_variable(brw);
+
+   if (brw->gen >= 8 && !(INTEL_DEBUG & DEBUG_VEC4VS))
+      brw->scalar_vs = true;
+
    brw_initialize_context_constants(brw);
 
    ctx->Const.ResetStrategy = notify_reset
