@@ -1308,9 +1308,17 @@ vc4_blend_channel(struct vc4_compile *c,
         case PIPE_BLENDFACTOR_DST_COLOR:
                 return qir_FMUL(c, val, dst[channel]);
         case PIPE_BLENDFACTOR_SRC_ALPHA_SATURATE:
-                return qir_FMIN(c, src[3], qir_FSUB(c,
-                                                    qir_uniform_f(c, 1.0),
-                                                    dst[3]));
+                if (channel != 3) {
+                        return qir_FMUL(c,
+                                        val,
+                                        qir_FMIN(c,
+                                                 src[3],
+                                                 qir_FSUB(c,
+                                                          qir_uniform_f(c, 1.0),
+                                                          dst[3])));
+                } else {
+                        return val;
+                }
         case PIPE_BLENDFACTOR_CONST_COLOR:
                 return qir_FMUL(c, val,
                                 get_temp_for_uniform(c,
