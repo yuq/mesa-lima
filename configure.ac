@@ -1970,7 +1970,7 @@ if test -n "$with_gallium_drivers"; then
 fi
 
 dnl Set LLVM_LIBS - This is done after the driver configuration so
-dnl that drivers can add additonal components to LLVM_COMPONENTS.
+dnl that drivers can add additional components to LLVM_COMPONENTS.
 dnl Previously, gallium drivers were updating LLVM_LIBS directly
 dnl by calling llvm-config --libs ${DRIVER_LLVM_COMPONENTS}, but
 dnl this was causing the same libraries to be appear multiple times
@@ -2003,7 +2003,7 @@ if test "x$MESA_LLVM" != x0; then
 	invocation and rebuild.])])
 
            dnl We don't need to update LLVM_LIBS in this case because the LLVM
-           dnl install uses a shared object for each compoenent and we have
+           dnl install uses a shared object for each component and we have
            dnl already added all of these objects to LLVM_LIBS.
         fi
     else
