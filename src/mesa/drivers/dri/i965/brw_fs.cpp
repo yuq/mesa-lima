@@ -1288,35 +1288,41 @@ fs_visitor::emit_linterp(const fs_reg &attr, const fs_reg &interp,
                this->delta_y[barycoord_mode], interp);
 }
 
-fs_reg *
-fs_visitor::emit_general_interpolation(ir_variable *ir)
+void
+fs_visitor::emit_general_interpolation(fs_reg attr, const char *name,
+                                       const glsl_type *type,
+                                       glsl_interp_qualifier interpolation_mode,
+                                       int location, bool mod_centroid,
+                                       bool mod_sample)
 {
-   fs_reg *reg = new(this->mem_ctx) fs_reg(this, ir->type);
-   reg->type = brw_type_for_base_type(ir->type->get_scalar_type());
-   fs_reg attr = *reg;
+   attr.type = brw_type_for_base_type(type->get_scalar_type());
 
    assert(stage == MESA_SHADER_FRAGMENT);
    brw_wm_prog_data *prog_data = (brw_wm_prog_data*) this->prog_data;
    brw_wm_prog_key *key = (brw_wm_prog_key*) this->key;
 
    unsigned int array_elements;
-   const glsl_type *type;
 
-   if (ir->type->is_array()) {
-      array_elements = ir->type->length;
+   if (type->is_array()) {
+      array_elements = type->length;
       if (array_elements == 0) {
-	 fail("dereferenced array '%s' has length 0\n", ir->name);
+         fail("dereferenced array '%s' has length 0\n", name);
       }
-      type = ir->type->fields.array;
+      type = type->fields.array;
    } else {
       array_elements = 1;
-      type = ir->type;
    }
 
-   glsl_interp_qualifier interpolation_mode =
-      ir->determine_interpolation_mode(key->flat_shade);
+   if (interpolation_mode == INTERP_QUALIFIER_NONE) {
+      bool is_gl_Color =
+         location == VARYING_SLOT_COL0 || location == VARYING_SLOT_COL1;
+      if (key->flat_shade && is_gl_Color) {
+         interpolation_mode = INTERP_QUALIFIER_FLAT;
+      } else {
+         interpolation_mode = INTERP_QUALIFIER_SMOOTH;
+      }
+   }
 
-   int location = ir->data.location;
    for (unsigned int i = 0; i < array_elements; i++) {
       for (unsigned int j = 0; j < type->matrix_columns; j++) {
 	 if (prog_data->urb_setup[location] == -1) {
@@ -1336,7 +1342,7 @@ fs_visitor::emit_general_interpolation(ir_variable *ir)
 	    for (unsigned int k = 0; k < type->vector_elements; k++) {
 	       struct brw_reg interp = interp_reg(location, k);
 	       interp = suboffset(interp, 3);
-               interp.type = reg->type;
+               interp.type = attr.type;
 	       emit(FS_OPCODE_CINTERP, attr, fs_reg(interp));
 	       attr = offset(attr, 1);
 	    }
@@ -1344,7 +1350,7 @@ fs_visitor::emit_general_interpolation(ir_variable *ir)
 	    /* Smooth/noperspective interpolation case. */
 	    for (unsigned int k = 0; k < type->vector_elements; k++) {
                struct brw_reg interp = interp_reg(location, k);
-               if (brw->needs_unlit_centroid_workaround && ir->data.centroid) {
+               if (brw->needs_unlit_centroid_workaround && mod_centroid) {
                   /* Get the pixel/sample mask into f0 so that we know
                    * which pixels are lit.  Then, for each channel that is
                    * unlit, replace the centroid data with non-centroid
@@ -1361,8 +1367,8 @@ fs_visitor::emit_general_interpolation(ir_variable *ir)
                      inst->no_dd_clear = true;
 
                   inst = emit_linterp(attr, fs_reg(interp), interpolation_mode,
-                                      ir->data.centroid && !key->persample_shading,
-                                      ir->data.sample || key->persample_shading);
+                                      mod_centroid && !key->persample_shading,
+                                      mod_sample || key->persample_shading);
                   inst->predicate = BRW_PREDICATE_NORMAL;
                   inst->predicate_inverse = false;
                   if (brw->has_pln)
@@ -1370,8 +1376,8 @@ fs_visitor::emit_general_interpolation(ir_variable *ir)
 
                } else {
                   emit_linterp(attr, fs_reg(interp), interpolation_mode,
-                               ir->data.centroid && !key->persample_shading,
-                               ir->data.sample || key->persample_shading);
+                               mod_centroid && !key->persample_shading,
+                               mod_sample || key->persample_shading);
                }
                if (brw->gen < 6 && interpolation_mode == INTERP_QUALIFIER_SMOOTH) {
                   emit(BRW_OPCODE_MUL, attr, attr, this->pixel_w);
@@ -1383,8 +1389,6 @@ fs_visitor::emit_general_interpolation(ir_variable *ir)
 	 location++;
       }
    }
-
-   return reg;
 }
 
 fs_reg *

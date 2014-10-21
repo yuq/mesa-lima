@@ -566,14 +566,6 @@ fs_visitor::setup_fp_regs()
    fp_input_regs = rzalloc_array(mem_ctx, fs_reg, VARYING_SLOT_MAX);
    for (int i = 0; i < VARYING_SLOT_MAX; i++) {
       if (prog->InputsRead & BITFIELD64_BIT(i)) {
-         /* Make up a dummy instruction to reuse code for emitting
-          * interpolation.
-          */
-         ir_variable *ir = new(mem_ctx) ir_variable(glsl_type::vec4_type,
-                                                    "fp_input",
-                                                    ir_var_shader_in);
-         ir->data.location = i;
-
          this->current_annotation = ralloc_asprintf(ctx, "interpolate input %d",
                                                     i);
 
@@ -582,8 +574,6 @@ fs_visitor::setup_fp_regs()
             {
                assert(stage == MESA_SHADER_FRAGMENT);
                gl_fragment_program *fp = (gl_fragment_program*) prog;
-               ir->data.pixel_center_integer = fp->PixelCenterInteger;
-               ir->data.origin_upper_left = fp->OriginUpperLeft;
                fp_input_regs[i] =
                   *emit_fragcoord_interpolation(fp->PixelCenterInteger,
                                                 fp->OriginUpperLeft);
@@ -593,7 +583,11 @@ fs_visitor::setup_fp_regs()
             fp_input_regs[i] = *emit_frontfacing_interpolation();
             break;
          default:
-            fp_input_regs[i] = *emit_general_interpolation(ir);
+            fp_input_regs[i] = fs_reg(this, glsl_type::vec4_type);
+            emit_general_interpolation(fp_input_regs[i], "fp_input",
+                                       glsl_type::vec4_type,
+                                       INTERP_QUALIFIER_NONE,
+                                       i, false, false);
 
             if (i == VARYING_SLOT_FOGC) {
                emit(MOV(offset(fp_input_regs[i], 1), fs_reg(0.0f)));

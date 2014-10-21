@@ -98,7 +98,11 @@ fs_visitor::visit(ir_variable *ir)
       } else if (!strcmp(ir->name, "gl_FrontFacing")) {
 	 reg = emit_frontfacing_interpolation();
       } else {
-	 reg = emit_general_interpolation(ir);
+         reg = new(this->mem_ctx) fs_reg(this, ir->type);
+         emit_general_interpolation(*reg, ir->name, ir->type,
+                                    (glsl_interp_qualifier) ir->data.interpolation,
+                                    ir->data.location, ir->data.centroid,
+                                    ir->data.sample);
       }
       assert(reg);
       hash_table_insert(this->variable_ht, reg, ir);
