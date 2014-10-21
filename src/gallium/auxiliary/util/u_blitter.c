@@ -1012,7 +1012,8 @@ void *blitter_get_fs_texfetch_stencil(struct blitter_context_priv *ctx,
 void util_blitter_cache_all_shaders(struct blitter_context *blitter)
 {
    struct blitter_context_priv *ctx = (struct blitter_context_priv*)blitter;
-   struct pipe_screen *screen = blitter->pipe->screen;
+   struct pipe_context *pipe = blitter->pipe;
+   struct pipe_screen *screen = pipe->screen;
    unsigned samples, j, f, target, max_samples;
    boolean has_arraytex, has_cubearraytex;
 
@@ -1072,6 +1073,16 @@ void util_blitter_cache_all_shaders(struct blitter_context *blitter)
          }
       }
    }
+
+   ctx->fs_empty = util_make_empty_fragment_shader(pipe);
+
+   ctx->fs_write_one_cbuf =
+      util_make_fragment_passthrough_shader(pipe, TGSI_SEMANTIC_GENERIC,
+                                            TGSI_INTERPOLATE_CONSTANT, FALSE);
+
+   ctx->fs_write_all_cbufs =
+      util_make_fragment_passthrough_shader(pipe, TGSI_SEMANTIC_GENERIC,
+                                            TGSI_INTERPOLATE_CONSTANT, TRUE);
 
    ctx->cached_all_shaders = TRUE;
 }
