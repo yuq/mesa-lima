@@ -25,6 +25,25 @@
 
 using namespace clover;
 
+namespace {
+   void validate_build_program_common(const program &prog, cl_uint num_devs,
+                                      const ref_vector<device> &devs,
+                                      void (*pfn_notify)(cl_program, void *),
+                                      void *user_data) {
+
+      if ((!pfn_notify && user_data))
+         throw error(CL_INVALID_VALUE);
+
+      if (prog.kernel_ref_count())
+         throw error(CL_INVALID_OPERATION);
+
+      if (any_of([&](const device &dev) {
+               return !count(dev, prog.context().devices());
+            }, devs))
+         throw error(CL_INVALID_DEVICE);
+   }
+}
+
 CLOVER_API cl_program
 clCreateProgramWithSource(cl_context d_ctx, cl_uint count,
                           const char **strings, const size_t *lengths,
@@ -173,18 +192,12 @@ clCompileProgram(cl_program d_prog, cl_uint num_devs,
    auto opts = (p_opts ? p_opts : "");
    header_map headers;
 
-   if (bool(num_devs) != bool(d_devs) ||
-       (!pfn_notify && user_data) ||
-       bool(num_headers) != bool(header_names))
+   validate_build_program_common(prog, num_devs, devs, pfn_notify, user_data);
+
+   if (bool(num_headers) != bool(header_names))
       throw error(CL_INVALID_VALUE);
 
-   if (any_of([&](const device &dev) {
-            return !count(dev, prog.context().devices());
-         }, devs))
-      throw error(CL_INVALID_DEVICE);
-
-   if (prog.kernel_ref_count() ||
-       !prog.has_source)
+   if (!prog.has_source)
       throw error(CL_INVALID_OPERATION);
 
 
