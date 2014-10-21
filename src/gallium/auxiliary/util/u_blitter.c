@@ -1009,6 +1009,13 @@ void *blitter_get_fs_texfetch_stencil(struct blitter_context_priv *ctx,
    }
 }
 
+
+/**
+ * Generate and save all fragment shaders that we will ever need for
+ * blitting.  Drivers which use the 'draw' fallbacks will typically use
+ * this to make sure we generate/use shaders that don't go through the
+ * draw module's wrapper functions.
+ */
 void util_blitter_cache_all_shaders(struct blitter_context *blitter)
 {
    struct blitter_context_priv *ctx = (struct blitter_context_priv*)blitter;
