@@ -53,8 +53,8 @@
 #ifndef HAVE_LLVM
 #error "HAVE_LLVM should be set with LLVM's version number, e.g. (0x0207 for 2.7)"
 #endif
-#if HAVE_LLVM < 0x301
-#error "LLVM 3.1 or newer required"
+#if HAVE_LLVM < 0x303
+#error "LLVM 3.3 or newer required"
 #endif
 
 

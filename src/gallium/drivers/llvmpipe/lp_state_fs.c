@@ -1666,15 +1666,7 @@ generate_unswizzled_blend(struct gallivm_state *gallivm,
    partial_mask |= !variant->opaque;
    i32_zero = lp_build_const_int32(gallivm, 0);
 
-#if HAVE_LLVM < 0x0302
-   /*
-    * undef triggers a crash in LLVMBuildTrunc in convert_from_blend_type in some
-    * cases (seen with r10g10b10a2, 128bit wide vectors) (only used for 1d case).
-    */
-   undef_src_val = lp_build_zero(gallivm, fs_type);
-#else
    undef_src_val = lp_build_undef(gallivm, fs_type);
-#endif
 
    row_type.length = fs_type.length;
    vector_width    = dst_type.floating ? lp_native_vector_width : lp_integer_vector_width;

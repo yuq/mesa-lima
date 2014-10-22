@@ -36,17 +36,11 @@
 #include <llvm/IR/DiagnosticInfo.h>
 #include <llvm/IR/DiagnosticPrinter.h>
 #endif
-#if HAVE_LLVM < 0x0303
-#include <llvm/DerivedTypes.h>
-#include <llvm/LLVMContext.h>
-#include <llvm/Module.h>
-#else
 #include <llvm/IR/DerivedTypes.h>
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Module.h>
 #include <llvm/Support/SourceMgr.h>
 #include <llvm/IRReader/IRReader.h>
-#endif
 #if HAVE_LLVM < 0x0305
 #include <llvm/ADT/OwningPtr.h>
 #endif
@@ -54,9 +48,6 @@
 #include <llvm/Support/CodeGen.h>
 #include <llvm/Support/TargetSelect.h>
 #include <llvm/Support/MemoryBuffer.h>
-#if HAVE_LLVM < 0x0303
-#include <llvm/Support/PathV1.h>
-#endif
 #include <llvm/Support/FormattedStream.h>
 #include <llvm/Support/TargetRegistry.h>
 #include <llvm/Transforms/IPO.h>
@@ -64,13 +55,7 @@
 #include <llvm/Transforms/Utils/Cloning.h>
 
 
-#if HAVE_LLVM < 0x0302
-#include <llvm/Target/TargetData.h>
-#elif HAVE_LLVM < 0x0303
-#include <llvm/DataLayout.h>
-#else
 #include <llvm/IR/DataLayout.h>
-#endif
 #include <llvm/Target/TargetLibraryInfo.h>
 #include <llvm/Target/TargetMachine.h>
 #include <llvm/Target/TargetOptions.h>
@@ -203,9 +188,6 @@ namespace {
       c.getHeaderSearchOpts().AddPath(LIBCLC_INCLUDEDIR,
                                       clang::frontend::Angled,
                                       false, false
-#if HAVE_LLVM < 0x0303
-                                      , false
-#endif
                                       );
 
       // Add libclc include
@@ -223,23 +205,12 @@ namespace {
       // of warnings and errors to be printed to stderr.
       // http://www.llvm.org/bugs/show_bug.cgi?id=19735
       c.getDiagnosticOpts().ShowCarets = false;
-#if HAVE_LLVM <= 0x0301
-      c.getInvocation().setLangDefaults(clang::IK_OpenCL);
-#else
       c.getInvocation().setLangDefaults(c.getLangOpts(), clang::IK_OpenCL,
                                         clang::LangStandard::lang_opencl11);
-#endif
       c.createDiagnostics(
-#if HAVE_LLVM < 0x0303
-                          0, NULL,
-#endif
                           new clang::TextDiagnosticPrinter(
                                  s_log,
-#if HAVE_LLVM <= 0x0301
-                                 c.getDiagnosticOpts()));
-#else
                                  &c.getDiagnosticOpts()));
-#endif
 
 #if HAVE_LLVM >= 0x0306
       c.getPreprocessorOpts().addRemappedFile(name,
@@ -255,9 +226,6 @@ namespace {
          c.getHeaderSearchOpts().AddPath(tmp_header_path,
                                          clang::frontend::Angled,
                                          false, false
-#if HAVE_LLVM < 0x0303
-                                         , false
-#endif
                                          );
 
          for (header_map::const_iterator it = headers.begin();
@@ -368,9 +336,7 @@ namespace {
       compat::vector<module::argument> args;
       llvm::Function *kernel_func = mod->getFunction(kernel_name);
 
-#if HAVE_LLVM < 0x0302
-         llvm::TargetData TD(kernel_func->getParent());
-#elif HAVE_LLVM < 0x0305
+#if HAVE_LLVM < 0x0305
          llvm::DataLayout TD(kernel_func->getParent()->getDataLayout());
 #else
          llvm::DataLayout TD(mod);

@@ -45,34 +45,12 @@
 
 /* Only MCJIT is available as of LLVM SVN r216982 */
 #if HAVE_LLVM >= 0x0306
-
-#define USE_MCJIT 1
-#define HAVE_AVX 1
-
-#else
-
-/**
- * AVX is supported in:
- * - standard JIT from LLVM 3.2 onwards
- * - MC-JIT from LLVM 3.1
- *   - MC-JIT supports limited OSes (MacOSX and Linux)
- * - standard JIT in LLVM 3.1, with backports
- */
-#if defined(PIPE_ARCH_PPC_64) || defined(PIPE_ARCH_S390) || defined(PIPE_ARCH_ARM) || defined(PIPE_ARCH_AARCH64)
 #  define USE_MCJIT 1
-#  define HAVE_AVX 0
-#elif HAVE_LLVM >= 0x0302 || (HAVE_LLVM == 0x0301 && defined(HAVE_JIT_AVX_SUPPORT))
-#  define USE_MCJIT 0
-#  define HAVE_AVX 1
-#elif HAVE_LLVM == 0x0301 && (defined(PIPE_OS_LINUX) || defined(PIPE_OS_APPLE))
+#elif defined(PIPE_ARCH_PPC_64) || defined(PIPE_ARCH_S390) || defined(PIPE_ARCH_ARM) || defined(PIPE_ARCH_AARCH64)
 #  define USE_MCJIT 1
-#  define HAVE_AVX 1
 #else
 #  define USE_MCJIT 0
-#  define HAVE_AVX 0
 #endif
-
-#endif /* HAVE_LLVM >= 0x0306 */
 
 #if USE_MCJIT
 void LLVMLinkInMCJIT();
@@ -414,8 +392,7 @@ lp_build_init(void)
     * See also:
     * - http://www.anandtech.com/show/4955/the-bulldozer-review-amd-fx8150-tested/2
     */
-   if (HAVE_AVX &&
-       util_cpu_caps.has_avx &&
+   if (util_cpu_caps.has_avx &&
        util_cpu_caps.has_intel) {
       lp_native_vector_width = 256;
    } else {
@@ -438,16 +415,6 @@ lp_build_init(void)
        */
       util_cpu_caps.has_avx = 0;
       util_cpu_caps.has_avx2 = 0;
-   }
-
-   if (!HAVE_AVX) {
-      /*
-       * note these instructions are VEX-only, so can only emit if we use
-       * avx (don't want to base it on has_avx & has_f16c later as that would
-       * omit it unnecessarily on amd cpus, see above).
-       */
-      util_cpu_caps.has_f16c = 0;
-      util_cpu_caps.has_xop = 0;
    }
 
 #ifdef PIPE_ARCH_PPC_64

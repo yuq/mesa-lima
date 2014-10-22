@@ -64,11 +64,9 @@
 
 #include <llvm/Support/TargetSelect.h>
 
-#if HAVE_LLVM >= 0x0303
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/Module.h>
 #include <llvm/Support/CBindingWrapping.h>
-#endif
 
 #include "pipe/p_config.h"
 #include "util/u_debug.h"
@@ -82,15 +80,9 @@ class LLVMEnsureMultithreaded {
 public:
    LLVMEnsureMultithreaded()
    {
-#if HAVE_LLVM < 0x0303
-      if (!llvm::llvm_is_multithreaded()) {
-         llvm::llvm_start_multithreaded();
-      }
-#else
       if (!LLVMIsMultithreaded()) {
          LLVMStartMultithreaded();
       }
-#endif
    }
 };
 
@@ -260,7 +252,6 @@ class DelegatingJITMemoryManager : public llvm::JITMemoryManager {
          return mgr()->allocateCodeSection(Size, Alignment, SectionID);
       }
 #endif
-#if HAVE_LLVM >= 0x0303
       virtual uint8_t *allocateDataSection(uintptr_t Size,
                                            unsigned Alignment,
                                            unsigned SectionID,
@@ -286,22 +277,15 @@ class DelegatingJITMemoryManager : public llvm::JITMemoryManager {
          mgr()->registerEHFrames(SectionData);
       }
 #endif
-#else
-      virtual uint8_t *allocateDataSection(uintptr_t Size,
-                                           unsigned Alignment,
-                                           unsigned SectionID) {
-         return mgr()->allocateDataSection(Size, Alignment, SectionID);
-      }
-#endif
       virtual void *getPointerToNamedFunction(const std::string &Name,
                                               bool AbortOnFailure=true) {
          return mgr()->getPointerToNamedFunction(Name, AbortOnFailure);
       }
-#if HAVE_LLVM == 0x0303
+#if HAVE_LLVM <= 0x0303
       virtual bool applyPermissions(std::string *ErrMsg = 0) {
          return mgr()->applyPermissions(ErrMsg);
       }
-#elif HAVE_LLVM > 0x0303
+#else
       virtual bool finalizeMemory(std::string *ErrMsg = 0) {
          return mgr()->finalizeMemory(ErrMsg);
       }
@@ -509,17 +493,7 @@ lp_build_create_jit_compiler_for_module(LLVMExecutionEngineRef *OutJIT,
 
    ExecutionEngine *JIT;
 
-#if HAVE_LLVM >= 0x0302
    JIT = builder.create();
-#else
-   /*
-    * Workaround http://llvm.org/PR12833
-    */
-   StringRef MArch = "";
-   StringRef MCPU = "";
-   Triple TT(unwrap(M)->getTargetTriple());
-   JIT = builder.create(builder.selectTarget(TT, MArch, MCPU, MAttrs));
-#endif
    if (JIT) {
       *OutJIT = wrap(JIT);
       return 0;

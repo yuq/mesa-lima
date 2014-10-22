@@ -43,11 +43,7 @@
 
 #include <llvm/Support/Host.h>
 
-#if HAVE_LLVM >= 0x0303
 #include <llvm/IR/Module.h>
-#else
-#include <llvm/Module.h>
-#endif
 
 #include <llvm/MC/MCDisassembler.h>
 #include <llvm/MC/MCAsmInfo.h>
@@ -57,7 +53,7 @@
 
 #if HAVE_LLVM >= 0x0305
 #define OwningPtr std::unique_ptr
-#elif HAVE_LLVM >= 0x0303
+#else
 #include <llvm/ADT/OwningPtr.h>
 #endif
 

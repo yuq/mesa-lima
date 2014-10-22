@@ -551,12 +551,6 @@ llvmpipe_create_screen(struct sw_winsys *winsys)
 
    util_cpu_detect();
 
-#if defined(PIPE_ARCH_X86) && HAVE_LLVM < 0x0302
-   /* require SSE2 due to LLVM PR6960. */
-   if (!util_cpu_caps.has_sse2)
-       return NULL;
-#endif
-
 #ifdef DEBUG
    LP_DEBUG = debug_get_flags_option("LP_DEBUG", lp_debug_flags, 0 );
 #endif
