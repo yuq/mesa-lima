@@ -17,6 +17,7 @@ NIR_FILES = \
 	$(GLSL_SRCDIR)/nir/nir.c \
 	$(GLSL_SRCDIR)/nir/nir.h \
 	$(GLSL_SRCDIR)/nir/nir_dominance.c \
+	$(GLSL_SRCDIR)/nir/nir_from_ssa.c \
 	$(GLSL_SRCDIR)/nir/nir_intrinsics.c \
 	$(GLSL_SRCDIR)/nir/nir_intrinsics.h \
 	$(GLSL_SRCDIR)/nir/nir_lower_atomics.c \
