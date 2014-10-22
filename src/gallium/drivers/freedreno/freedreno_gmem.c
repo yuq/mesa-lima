@@ -105,7 +105,7 @@ calculate_tiles(struct fd_context *ctx)
 		max_width /= 2;
 	}
 
-	if (fd_mesa_debug & FD_DBG_DSCIS) {
+	if (fd_mesa_debug & FD_DBG_NOSCIS) {
 		minx = 0;
 		miny = 0;
 		width = pfb->width;
@@ -324,7 +324,7 @@ fd_gmem_render_tiles(struct fd_context *ctx)
 		if (ctx->cleared || ctx->gmem_reason || (ctx->num_draws > 5)) {
 			DBG("GMEM: cleared=%x, gmem_reason=%x, num_draws=%u",
 				ctx->cleared, ctx->gmem_reason, ctx->num_draws);
-		} else if (!(fd_mesa_debug & FD_DBG_DBYPASS)) {
+		} else if (!(fd_mesa_debug & FD_DBG_NOBYPASS)) {
 			sysmem = true;
 		}
 	}

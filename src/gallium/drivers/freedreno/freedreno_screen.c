@@ -61,9 +61,9 @@ static const struct debug_named_value debug_options[] = {
 		{"disasm",    FD_DBG_DISASM, "Dump TGSI and adreno shader disassembly"},
 		{"dclear",    FD_DBG_DCLEAR, "Mark all state dirty after clear"},
 		{"flush",     FD_DBG_FLUSH,  "Force flush after every draw"},
-		{"dscis",     FD_DBG_DSCIS,  "Disable scissor optimization"},
+		{"noscis",    FD_DBG_NOSCIS, "Disable scissor optimization"},
 		{"direct",    FD_DBG_DIRECT, "Force inline (SS_DIRECT) state loads"},
-		{"dbypass",   FD_DBG_DBYPASS,"Disable GMEM bypass"},
+		{"nobypass",  FD_DBG_NOBYPASS, "Disable GMEM bypass"},
 		{"fraghalf",  FD_DBG_FRAGHALF, "Use half-precision in fragment shader"},
 		{"nobin",     FD_DBG_NOBIN,  "Disable hw binning"},
 		{"noopt",     FD_DBG_NOOPT , "Disable optimization passes in compiler"},
@@ -352,7 +352,7 @@ fd_screen_get_shader_param(struct pipe_screen *pscreen, unsigned shader,
 	case PIPE_SHADER_CAP_MAX_CONTROL_FLOW_DEPTH:
 		return 8; /* XXX */
 	case PIPE_SHADER_CAP_MAX_INPUTS:
-        case PIPE_SHADER_CAP_MAX_OUTPUTS:
+	case PIPE_SHADER_CAP_MAX_OUTPUTS:
 		return 16;
 	case PIPE_SHADER_CAP_MAX_TEMPS:
 		return 64; /* Max native temporaries. */
