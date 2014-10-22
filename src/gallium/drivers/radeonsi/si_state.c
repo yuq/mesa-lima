@@ -607,6 +607,7 @@ static void *si_create_rs_state(struct pipe_context *ctx,
 		S_028814_POLYMODE_BACK_PTYPE(si_translate_fill(state->fill_back));
 	rs->pa_cl_clip_cntl =
 		S_028810_PS_UCP_MODE(3) |
+		S_028810_DX_CLIP_SPACE_DEF(state->clip_halfz) |
 		S_028810_ZCLIP_NEAR_DISABLE(!state->depth_clip) |
 		S_028810_ZCLIP_FAR_DISABLE(!state->depth_clip) |
 		S_028810_DX_RASTERIZATION_KILL(state->rasterizer_discard) |
