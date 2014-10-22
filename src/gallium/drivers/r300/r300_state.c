@@ -1390,6 +1390,7 @@ static void r300_bind_rs_state(struct pipe_context* pipe, void* state)
     boolean last_two_sided_color = r300->two_sided_color;
     boolean last_msaa_enable = r300->msaa_enable;
     boolean last_flatshade = r300->flatshade;
+    boolean last_clip_halfz = r300->clip_halfz;
 
     if (r300->draw && rs) {
         draw_set_rasterizer_state(r300->draw, &rs->rs_draw, state);
@@ -1401,12 +1402,14 @@ static void r300_bind_rs_state(struct pipe_context* pipe, void* state)
         r300->two_sided_color = rs->rs.light_twoside;
         r300->msaa_enable = rs->rs.multisample;
         r300->flatshade = rs->rs.flatshade;
+        r300->clip_halfz = rs->rs.clip_halfz;
     } else {
         r300->polygon_offset_enabled = FALSE;
         r300->sprite_coord_enable = 0;
         r300->two_sided_color = FALSE;
         r300->msaa_enable = FALSE;
         r300->flatshade = FALSE;
+        r300->clip_halfz = FALSE;
     }
 
     UPDATE_STATE(state, r300->rs_state);
@@ -1427,6 +1430,10 @@ static void r300_bind_rs_state(struct pipe_context* pipe, void* state)
             r300->fs_status == FRAGMENT_SHADER_VALID) {
             r300->fs_status = FRAGMENT_SHADER_MAYBE_DIRTY;
         }
+    }
+
+    if (last_clip_halfz != r300->clip_halfz) {
+        r300_mark_atom_dirty(r300, &r300->vs_state);
     }
 }
 
