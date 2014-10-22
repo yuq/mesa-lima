@@ -54,6 +54,15 @@ fs_visitor::emit_nir_code()
    if (1)
       nir_print_shader(nir, stderr);
 
+   nir_convert_to_ssa(nir);
+   nir_copy_prop(nir);
+   nir_opt_dce(nir);
+   nir_print_shader(nir, stderr);
+
+   nir_convert_from_ssa(nir);
+   nir_lower_vec_to_movs(nir);
+   nir_print_shader(nir, stderr);
+
    /* emit the arrays used for inputs and outputs - load/store intrinsics will
     * be converted to reads/writes of these arrays
     */
