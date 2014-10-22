@@ -132,7 +132,7 @@ lp_set_load_alignment(LLVMValueRef Inst,
 extern "C"
 void
 lp_set_store_alignment(LLVMValueRef Inst,
-		       unsigned Align)
+                       unsigned Align)
 {
    llvm::unwrap<llvm::StoreInst>(Inst)->setAlignment(Align);
 }
@@ -322,14 +322,14 @@ class ShaderMemoryManager : public DelegatingJITMemoryManager {
           * Deallocate things as previously requested and
           * free shared manager when no longer used.
           */
-	 Vec::iterator i;
+         Vec::iterator i;
 
-	 assert(TheMM);
-	 for ( i = FunctionBody.begin(); i != FunctionBody.end(); ++i )
-	    TheMM->deallocateFunctionBody(*i);
+         assert(TheMM);
+         for ( i = FunctionBody.begin(); i != FunctionBody.end(); ++i )
+            TheMM->deallocateFunctionBody(*i);
 #if HAVE_LLVM < 0x0304
-	 for ( i = ExceptionTable.begin(); i != ExceptionTable.end(); ++i )
-	    TheMM->deallocateExceptionTable(*i);
+         for ( i = ExceptionTable.begin(); i != ExceptionTable.end(); ++i )
+            TheMM->deallocateExceptionTable(*i);
 #endif
       }
    };
