@@ -619,6 +619,8 @@ brw_init_surface_formats(struct brw_context *brw)
    brw->format_supported_as_render_target[MESA_FORMAT_S_UINT8] = true;
    brw->format_supported_as_render_target[MESA_FORMAT_Z_FLOAT32] = true;
    brw->format_supported_as_render_target[MESA_FORMAT_Z32_FLOAT_S8X24_UINT] = true;
+   if (brw->gen >= 8)
+      brw->format_supported_as_render_target[MESA_FORMAT_Z_UNORM16] = true;
 
    /* We remap depth formats to a supported texturing format in
     * translate_tex_format().
@@ -638,7 +640,12 @@ brw_init_surface_formats(struct brw_context *brw)
     *
     * Other speculation is that we may be hitting increased fragment shader
     * execution from GL_LEQUAL/GL_EQUAL depth tests at reduced precision.
+    *
+    * With the PMA stall workaround in place, Z16 is faster than Z24, as it
+    * should be.
     */
+   if (brw->gen >= 8)
+      ctx->TextureFormatSupported[MESA_FORMAT_Z_UNORM16] = true;
 
    /* On hardware that lacks support for ETC1, we map ETC1 to RGBX
     * during glCompressedTexImage2D(). See intel_mipmap_tree::wraps_etc1.
