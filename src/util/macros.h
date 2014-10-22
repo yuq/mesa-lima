@@ -69,6 +69,12 @@ do {                        \
    assert(!str);            \
    __builtin_unreachable(); \
 } while (0)
+#elif _MSC_VER >= 1200
+#define unreachable(str)    \
+do {                        \
+   assert(!str);            \
+   __assume(0);             \
+} while (0)
 #endif
 
 #ifndef unreachable
