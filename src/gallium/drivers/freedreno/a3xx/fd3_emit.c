@@ -781,7 +781,7 @@ fd3_emit_restore(struct fd_context *ctx)
 		OUT_PKT3(ring, CP_DRAW_INDX, 3);
 		OUT_RING(ring, 0x00000000);
 		OUT_RING(ring, DRAW(1, DI_SRC_SEL_AUTO_INDEX,
-				INDEX_SIZE_IGN, IGNORE_VISIBILITY));
+							INDEX_SIZE_IGN, IGNORE_VISIBILITY, 0));
 		OUT_RING(ring, 0);					/* NumIndices */
 	}
 

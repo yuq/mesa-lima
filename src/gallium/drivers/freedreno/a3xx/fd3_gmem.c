@@ -274,7 +274,7 @@ emit_binning_workaround(struct fd_context *ctx)
 	OUT_PKT3(ring, CP_DRAW_INDX_2, 5);
 	OUT_RING(ring, 0x00000000);   /* viz query info. */
 	OUT_RING(ring, DRAW(DI_PT_RECTLIST, DI_SRC_SEL_IMMEDIATE,
-			INDEX_SIZE_32_BIT, IGNORE_VISIBILITY));
+						INDEX_SIZE_32_BIT, IGNORE_VISIBILITY, 0));
 	OUT_RING(ring, 2);            /* NumIndices */
 	OUT_RING(ring, 2);
 	OUT_RING(ring, 1);
@@ -329,7 +329,7 @@ emit_gmem2mem_surf(struct fd_context *ctx,
 			A3XX_RB_COPY_DEST_INFO_SWAP(fd3_pipe2swap(psurf->format)));
 
 	fd_draw(ctx, ring, DI_PT_RECTLIST, IGNORE_VISIBILITY,
-			DI_SRC_SEL_AUTO_INDEX, 2, INDEX_SIZE_IGN, 0, 0, NULL);
+			DI_SRC_SEL_AUTO_INDEX, 2, 0, INDEX_SIZE_IGN, 0, 0, NULL);
 }
 
 static void
@@ -454,7 +454,7 @@ emit_mem2gmem_surf(struct fd_context *ctx, uint32_t base,
 	fd3_emit_gmem_restore_tex(ring, psurf);
 
 	fd_draw(ctx, ring, DI_PT_RECTLIST, IGNORE_VISIBILITY,
-			DI_SRC_SEL_AUTO_INDEX, 2, INDEX_SIZE_IGN, 0, 0, NULL);
+			DI_SRC_SEL_AUTO_INDEX, 2, 0, INDEX_SIZE_IGN, 0, 0, NULL);
 }
 
 static void
@@ -593,7 +593,7 @@ patch_draws(struct fd_context *ctx, enum pc_di_vis_cull_mode vismode)
 	unsigned i;
 	for (i = 0; i < fd_patch_num_elements(&ctx->draw_patches); i++) {
 		struct fd_cs_patch *patch = fd_patch_element(&ctx->draw_patches, i);
-		*patch->cs = patch->val | DRAW(0, 0, 0, vismode);
+		*patch->cs = patch->val | DRAW(0, 0, 0, vismode, 0);
 	}
 	util_dynarray_resize(&ctx->draw_patches, 0);
 }
@@ -786,7 +786,7 @@ emit_binning_pass(struct fd_context *ctx)
 		OUT_PKT3(ring, CP_DRAW_INDX, 3);
 		OUT_RING(ring, 0x00000000);
 		OUT_RING(ring, DRAW(1, DI_SRC_SEL_AUTO_INDEX,
-				INDEX_SIZE_IGN, IGNORE_VISIBILITY));
+							INDEX_SIZE_IGN, IGNORE_VISIBILITY, 0));
 		OUT_RING(ring, 0);             /* NumIndices */
 		fd_reset_wfi(ctx);
 	}

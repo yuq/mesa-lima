@@ -85,14 +85,16 @@ extern bool fd_binning_enabled;
 
 static inline uint32_t DRAW(enum pc_di_primtype prim_type,
 		enum pc_di_src_sel source_select, enum pc_di_index_size index_size,
-		enum pc_di_vis_cull_mode vis_cull_mode)
+		enum pc_di_vis_cull_mode vis_cull_mode,
+		uint8_t instances)
 {
 	return (prim_type         << 0) |
 			(source_select     << 6) |
 			((index_size & 1)  << 11) |
 			((index_size >> 1) << 13) |
 			(vis_cull_mode     << 9) |
-			(1                 << 14);
+			(1                 << 14) |
+			(instances         << 24);
 }
 
 /* for tracking cmdstream positions that need to be patched: */

@@ -227,7 +227,7 @@ fd3_clear_binning(struct fd_context *ctx, unsigned dirty)
 	fd_event_write(ctx, ring, PERFCOUNTER_STOP);
 
 	fd_draw(ctx, ring, DI_PT_RECTLIST, IGNORE_VISIBILITY,
-			DI_SRC_SEL_AUTO_INDEX, 2, INDEX_SIZE_IGN, 0, 0, NULL);
+			DI_SRC_SEL_AUTO_INDEX, 2, 0, INDEX_SIZE_IGN, 0, 0, NULL);
 }
 
 static void
@@ -367,7 +367,7 @@ fd3_clear(struct fd_context *ctx, unsigned buffers,
 	fd_event_write(ctx, ring, PERFCOUNTER_STOP);
 
 	fd_draw(ctx, ring, DI_PT_RECTLIST, USE_VISIBILITY,
-			DI_SRC_SEL_AUTO_INDEX, 2, INDEX_SIZE_IGN, 0, 0, NULL);
+			DI_SRC_SEL_AUTO_INDEX, 2, 0, INDEX_SIZE_IGN, 0, 0, NULL);
 }
 
 void
