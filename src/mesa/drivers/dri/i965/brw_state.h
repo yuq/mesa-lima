@@ -137,6 +137,7 @@ extern const struct brw_tracked_state gen8_disable_stages;
 extern const struct brw_tracked_state gen8_gs_state;
 extern const struct brw_tracked_state gen8_index_buffer;
 extern const struct brw_tracked_state gen8_multisample_state;
+extern const struct brw_tracked_state gen8_pma_fix;
 extern const struct brw_tracked_state gen8_ps_blend;
 extern const struct brw_tracked_state gen8_ps_extra;
 extern const struct brw_tracked_state gen8_ps_state;

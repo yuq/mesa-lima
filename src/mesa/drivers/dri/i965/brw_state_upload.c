@@ -333,6 +333,7 @@ static const struct brw_tracked_state *gen8_atoms[] =
    &gen8_vertices,
 
    &haswell_cut_index,
+   &gen8_pma_fix,
 };
 
 static void
@@ -389,6 +390,11 @@ void brw_init_state( struct brw_context *brw )
 
    brw->state.dirty.mesa = ~0;
    brw->state.dirty.brw = ~0ull;
+
+   /* ~0 is a nonsensical value which won't match anything we program, so
+    * the programming will take effect on the first time around.
+    */
+   brw->pma_stall_bits = ~0;
 
    /* Make sure that brw->state.dirty.brw has enough bits to hold all possible
     * dirty flags.

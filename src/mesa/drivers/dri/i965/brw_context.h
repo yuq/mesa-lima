@@ -1092,6 +1092,9 @@ struct brw_context
    /* Whether the last depth/stencil packets were both NULL. */
    bool no_depth_or_stencil;
 
+   /* The last PMA stall bits programmed. */
+   uint32_t pma_stall_bits;
+
    struct {
       /** Does the current draw use the index buffer? */
       bool indexed;
