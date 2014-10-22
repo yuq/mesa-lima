@@ -293,13 +293,9 @@ init_gallivm_state(struct gallivm_state *gallivm, const char *name,
    if (!gallivm->builder)
       goto fail;
 
-#if HAVE_LLVM < 0x0306
    gallivm->memorymgr = lp_get_default_memory_manager();
    if (!gallivm->memorymgr)
       goto fail;
-#else
-   gallivm->memorymgr = 0;
-#endif
 
    /* FIXME: MC-JIT only allows compiling one module at a time, and it must be
     * complete when MC-JIT is created. So defer the MC-JIT engine creation for
@@ -363,13 +359,6 @@ lp_build_init(void)
 {
    if (gallivm_initialized)
       return TRUE;
-
-   /* XXX: Remove this once lp_bld_misc.cpp has been adapted to the removal
-    * of JITMemoryManager
-    */
-#if HAVE_LLVM >= 0x0306
-   return FALSE;
-#endif
 
 #ifdef DEBUG
    gallivm_debug = debug_get_option_gallivm_debug();
