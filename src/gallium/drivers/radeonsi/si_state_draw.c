@@ -750,7 +750,7 @@ static void si_state_draw(struct si_context *sctx,
 
 	if (info->indexed) {
 		uint32_t max_size = (ib->buffer->width0 - ib->offset) /
-				 sctx->index_buffer.index_size;
+				    ib->index_size;
 		uint64_t va = r600_resource(ib->buffer)->gpu_address + ib->offset;
 
 		si_pm4_add_bo(pm4, (struct r600_resource *)ib->buffer, RADEON_USAGE_READ,
