@@ -104,6 +104,8 @@ fd_resource_transfer_map(struct pipe_context *pctx,
 	char *buf;
 	int ret = 0;
 
+	DBG("prsc=%p, level=%u, usage=%x", prsc, level, usage);
+
 	ptrans = util_slab_alloc(&ctx->transfer_pool);
 	if (!ptrans)
 		return NULL;
@@ -124,18 +126,15 @@ fd_resource_transfer_map(struct pipe_context *pctx,
 	if (usage & PIPE_TRANSFER_WRITE)
 		op |= DRM_FREEDRENO_PREP_WRITE;
 
-	if (usage & PIPE_TRANSFER_DISCARD_WHOLE_RESOURCE)
-		op |= DRM_FREEDRENO_PREP_NOSYNC;
-
 	/* some state trackers (at least XA) don't do this.. */
 	if (!(usage & (PIPE_TRANSFER_FLUSH_EXPLICIT | PIPE_TRANSFER_DISCARD_WHOLE_RESOURCE)))
 		fd_resource_transfer_flush_region(pctx, ptrans, box);
 
-	if (!(usage & PIPE_TRANSFER_UNSYNCHRONIZED)) {
+	if (usage & PIPE_TRANSFER_DISCARD_WHOLE_RESOURCE) {
+		realloc_bo(rsc, fd_bo_size(rsc->bo));
+	} else if (!(usage & PIPE_TRANSFER_UNSYNCHRONIZED)) {
 		ret = fd_bo_cpu_prep(rsc->bo, ctx->screen->pipe, op);
-		if ((ret == -EBUSY) && (usage & PIPE_TRANSFER_DISCARD_WHOLE_RESOURCE))
-			realloc_bo(rsc, fd_bo_size(rsc->bo));
-		else if (ret)
+		if (ret)
 			goto fail;
 	}
 
