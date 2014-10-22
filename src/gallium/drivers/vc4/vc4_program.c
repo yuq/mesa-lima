@@ -1827,6 +1827,8 @@ vc4_shader_tgsi_to_qir(struct vc4_context *vc4, enum qstage stage,
 
         c->stage = stage;
         c->shader_state = &key->shader_state->base;
+        c->program_id = key->shader_state->program_id;
+        c->variant_id = key->shader_state->compiled_variant_count++;
 
         c->key = key;
         switch (stage) {
@@ -1874,7 +1876,9 @@ vc4_shader_tgsi_to_qir(struct vc4_context *vc4, enum qstage stage,
         assert(ret == TGSI_PARSE_OK);
 
         if (vc4_debug & VC4_DEBUG_TGSI) {
-                fprintf(stderr, "TGSI:\n");
+                fprintf(stderr, "%s prog %d/%d TGSI:\n",
+                        qir_get_stage_name(c->stage),
+                        c->program_id, c->variant_id);
                 tgsi_dump(tokens, 0);
         }
 
@@ -1918,17 +1922,23 @@ vc4_shader_tgsi_to_qir(struct vc4_context *vc4, enum qstage stage,
         qir_optimize(c);
 
         if (vc4_debug & VC4_DEBUG_QIR) {
-                fprintf(stderr, "QIR:\n");
+                fprintf(stderr, "%s prog %d/%d QIR:\n",
+                        qir_get_stage_name(c->stage),
+                        c->program_id, c->variant_id);
                 qir_dump(c);
         }
         qir_reorder_uniforms(c);
         vc4_generate_code(vc4, c);
 
         if (vc4_debug & VC4_DEBUG_SHADERDB) {
-                fprintf(stderr, "SHADER-DB: %s: %d instructions\n",
-                        qir_get_stage_name(c->stage), c->qpu_inst_count);
-                fprintf(stderr, "SHADER-DB: %s: %d uniforms\n",
-                        qir_get_stage_name(c->stage), c->num_uniforms);
+                fprintf(stderr, "SHADER-DB: %s prog %d/%d: %d instructions\n",
+                        qir_get_stage_name(c->stage),
+                        c->program_id, c->variant_id,
+                        c->qpu_inst_count);
+                fprintf(stderr, "SHADER-DB: %s prog %d/%d: %d uniforms\n",
+                        qir_get_stage_name(c->stage),
+                        c->program_id, c->variant_id,
+                        c->num_uniforms);
         }
 
         return c;
@@ -1938,6 +1948,7 @@ static void *
 vc4_shader_state_create(struct pipe_context *pctx,
                         const struct pipe_shader_state *cso)
 {
+        struct vc4_context *vc4 = vc4_context(pctx);
         struct vc4_uncompiled_shader *so = CALLOC_STRUCT(vc4_uncompiled_shader);
         if (!so)
                 return NULL;
@@ -1961,6 +1972,7 @@ vc4_shader_state_create(struct pipe_context *pctx,
         so->base.tokens = tgsi_transform_lowering(&lowering_config, cso->tokens, &info);
         if (!so->base.tokens)
                 so->base.tokens = tgsi_dup_tokens(cso->tokens);
+        so->program_id = vc4->next_uncompiled_program_id++;
 
         return so;
 }

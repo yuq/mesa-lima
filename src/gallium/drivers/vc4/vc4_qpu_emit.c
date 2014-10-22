@@ -30,7 +30,9 @@
 static void
 vc4_dump_program(struct vc4_compile *c)
 {
-        fprintf(stderr, "%s:\n", qir_get_stage_name(c->stage));
+        fprintf(stderr, "%s prog %d/%d QPU:\n",
+                qir_get_stage_name(c->stage),
+                c->program_id, c->variant_id);
 
         for (int i = 0; i < c->qpu_inst_count; i++) {
                 fprintf(stderr, "0x%016"PRIx64" ", c->qpu_insts[i]);
