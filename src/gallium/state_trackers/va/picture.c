@@ -503,6 +503,13 @@ handleVASliceDataBufferType(vlVaContext *context, vlVaBuffer *buf)
          buffers[num_buffers] = (void *const)&start_code_vc1;
          sizes[num_buffers++] = sizeof(start_code_vc1);
       break;
+   case PIPE_VIDEO_FORMAT_MPEG4:
+      if (bufHasStartcode(buf, 0x000001, 24))
+         break;
+
+      vlVaDecoderFixMPEG4Startcode(context);
+      buffers[num_buffers] = (void *)context->mpeg4.start_code;
+      sizes[num_buffers++] = context->mpeg4.start_code_size;
    default:
       break;
    }
