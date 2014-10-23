@@ -590,7 +590,6 @@ static int r600_get_compute_param(struct pipe_screen *screen,
 
 	case PIPE_COMPUTE_CAP_MAX_MEM_ALLOC_SIZE:
 		if (ret) {
-			uint64_t max_global_size;
 			uint64_t *max_mem_alloc_size = ret;
 
 			/* XXX: The limit in older kernels is 256 MB.  We
