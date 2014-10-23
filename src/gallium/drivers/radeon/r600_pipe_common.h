@@ -97,7 +97,7 @@
 #define DBG_CS			(1 << 9)
 /* features */
 #define DBG_NO_ASYNC_DMA	(1 << 10)
-#define DBG_HYPERZ		(1 << 11)
+#define DBG_NO_HYPERZ		(1 << 11)
 #define DBG_NO_DISCARD_RANGE	(1 << 12)
 #define DBG_NO_2D_TILING	(1 << 13)
 #define DBG_NO_TILING		(1 << 14)
