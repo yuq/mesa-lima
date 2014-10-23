@@ -296,6 +296,7 @@ handleIQMatrixBuffer(vlVaContext *context, vlVaBuffer *buf)
 {
    VAIQMatrixBufferMPEG2 *mpeg2;
    VAIQMatrixBufferH264 *h264;
+   VAIQMatrixBufferMPEG4 *mpeg4;
 
    switch (u_reduce_video_profile(context->decoder->profile)) {
    case PIPE_VIDEO_FORMAT_MPEG12:
@@ -317,6 +318,21 @@ handleIQMatrixBuffer(vlVaContext *context, vlVaBuffer *buf)
       h264 = buf->data;
       memcpy(&context->desc.h264.pps->ScalingList4x4, h264->ScalingList4x4, 6 * 16);
       memcpy(&context->desc.h264.pps->ScalingList8x8, h264->ScalingList8x8, 2 * 64);
+      break;
+
+   case PIPE_VIDEO_FORMAT_MPEG4:
+      assert(buf->size >= sizeof(VAIQMatrixBufferMPEG4) && buf->num_elements == 1);
+      mpeg4 = buf->data;
+
+      if (mpeg4->load_intra_quant_mat)
+         context->desc.mpeg4.intra_matrix = mpeg4->intra_quant_mat;
+      else
+         context->desc.mpeg4.intra_matrix = NULL;
+
+      if (mpeg4->load_non_intra_quant_mat)
+         context->desc.mpeg4.non_intra_matrix = mpeg4->non_intra_quant_mat;
+      else
+         context->desc.mpeg4.non_intra_matrix = NULL;
       break;
 
    default:
