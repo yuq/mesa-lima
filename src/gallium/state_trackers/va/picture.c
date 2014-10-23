@@ -344,6 +344,7 @@ static void
 handleSliceParameterBuffer(vlVaContext *context, vlVaBuffer *buf)
 {
    VASliceParameterBufferH264 *h264;
+   VASliceParameterBufferMPEG4 *mpeg4;
 
    switch (u_reduce_video_profile(context->decoder->profile)) {
    case PIPE_VIDEO_FORMAT_MPEG4_AVC:
@@ -354,7 +355,12 @@ handleSliceParameterBuffer(vlVaContext *context, vlVaBuffer *buf)
       context->desc.h264.num_ref_idx_l1_active_minus1 =
          h264->num_ref_idx_l1_active_minus1;
       break;
+   case PIPE_VIDEO_FORMAT_MPEG4:
+      assert(buf->size >= sizeof(VASliceParameterBufferMPEG4) && buf->num_elements == 1);
+      mpeg4 = buf->data;
 
+      context->mpeg4.quant_scale = mpeg4->quant_scale;
+      break;
    default:
       break;
    }
