@@ -2601,6 +2601,7 @@ fs_visitor::emit_repclear_shader()
       write->header_present = false;
       write->mlen = 1;
    } else {
+      assume(key->nr_color_regions > 0);
       for (int i = 0; i < key->nr_color_regions; ++i) {
          write = emit(FS_OPCODE_REP_FB_WRITE);
          write->saturate = key->clamp_fragment_color;
