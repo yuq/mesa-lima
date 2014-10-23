@@ -666,6 +666,7 @@ static EGLBoolean
 dri2_terminate(_EGLDriver *drv, _EGLDisplay *disp)
 {
    struct dri2_egl_display *dri2_dpy = dri2_egl_display(disp);
+   unsigned i;
 
    _eglReleaseDisplayResources(drv, disp);
    _eglCleanupDisplay(disp);
@@ -706,6 +707,9 @@ dri2_terminate(_EGLDriver *drv, _EGLDisplay *disp)
       break;
    }
 
+   for (i = 0; dri2_dpy->driver_configs[i]; i++)
+      free((__DRIconfig *) dri2_dpy->driver_configs[i]);
+   free(dri2_dpy->driver_configs);
    free(dri2_dpy);
    disp->DriverData = NULL;
 
