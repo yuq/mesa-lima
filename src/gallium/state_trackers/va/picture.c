@@ -366,6 +366,97 @@ handleSliceParameterBuffer(vlVaContext *context, vlVaBuffer *buf)
    }
 }
 
+struct bit_stream
+{
+   uint8_t *data;
+   unsigned int length; /* bits */
+   unsigned int pos;    /* bits */
+};
+
+static inline void
+write_bit(struct bit_stream *writer, unsigned int bit)
+{
+   assert(writer->length > (writer)->pos);
+   writer->data[writer->pos>>3] |= ((bit & 1)<<(7 - (writer->pos & 7)));
+   writer->pos++;
+}
+
+static inline void
+write_bits(struct bit_stream *writer, unsigned int bits, unsigned int len)
+{
+   int i;
+   assert(len <= sizeof(bits)*8);
+   for (i = len - 1; i >= 0; i--)
+      write_bit(writer, bits>>i);
+}
+
+static void
+vlVaDecoderFixMPEG4Startcode(vlVaContext *context)
+{
+   uint8_t vop[] = { 0x00, 0x00, 0x01, 0xb6, 0x00, 0x00, 0x00, 0x00, 0x00 };
+   struct bit_stream bs_vop = {vop, sizeof(vop)*8, 32};
+   unsigned int vop_time_inc;
+   int mod_time;
+   unsigned int vop_size;
+   unsigned int vop_coding_type = context->desc.mpeg4.vop_coding_type;
+
+   context->mpeg4.start_code_size = 0;
+   memset(context->mpeg4.start_code, 0, sizeof(context->mpeg4.start_code));
+   if (vop_coding_type+1 == PIPE_MPEG12_PICTURE_CODING_TYPE_I) {
+      unsigned int vop_time = context->mpeg4.frame_num/
+            context->desc.mpeg4.vop_time_increment_resolution;
+      unsigned int vop_hour = vop_time / 3600;
+      unsigned int vop_minute = (vop_time / 60) % 60;
+      unsigned int vop_second = vop_time % 60;
+      uint8_t group_of_vop[] = { 0x00, 0x00, 0x01, 0xb3, 0x00, 0x00, 0x00 };
+      struct bit_stream bs_gvop = {group_of_vop, sizeof(group_of_vop)*8, 32};
+
+      write_bits(&bs_gvop, vop_hour, 5);
+      write_bits(&bs_gvop, vop_minute, 6);
+      write_bit(&bs_gvop, 1); /* marker_bit */
+      write_bits(&bs_gvop, vop_second, 6);
+      write_bit(&bs_gvop, 0); /* closed_gov */ /* TODO replace magic */
+      write_bit(&bs_gvop, 0); /* broken_link */
+      write_bit(&bs_gvop, 0); /* padding */
+      write_bits(&bs_gvop, 7, 3); /* padding */
+
+      memcpy(context->mpeg4.start_code, group_of_vop, sizeof(group_of_vop));
+      context->mpeg4.start_code_size += sizeof(group_of_vop);
+   }
+
+   write_bits(&bs_vop, vop_coding_type, 2);
+   mod_time = context->mpeg4.frame_num %
+         context->desc.mpeg4.vop_time_increment_resolution == 0 &&
+         vop_coding_type+1 != PIPE_MPEG12_PICTURE_CODING_TYPE_I;
+   while (mod_time--)
+      write_bit(&bs_vop, 1); /* modulo_time_base */
+   write_bit(&bs_vop, 0); /* modulo_time_base */
+
+   write_bit(&bs_vop, 1); /* marker_bit */
+   vop_time_inc = context->mpeg4.frame_num %
+         context->desc.mpeg4.vop_time_increment_resolution;
+   write_bits(&bs_vop, vop_time_inc, context->mpeg4.vti_bits);
+   write_bit(&bs_vop, 1); /* marker_bit */
+   write_bit(&bs_vop, 1); /* vop_coded */
+   if (vop_coding_type+1 == PIPE_MPEG12_PICTURE_CODING_TYPE_P)
+      write_bit(&bs_vop, context->mpeg4.pps.vop_fields.bits.vop_rounding_type);
+   write_bits(&bs_vop, context->mpeg4.pps.vop_fields.bits.intra_dc_vlc_thr, 3);
+   if (context->mpeg4.pps.vol_fields.bits.interlaced) {
+      write_bit(&bs_vop, context->mpeg4.pps.vop_fields.bits.top_field_first);
+      write_bit(&bs_vop, context->mpeg4.pps.vop_fields.bits.alternate_vertical_scan_flag);
+   }
+
+   write_bits(&bs_vop, context->mpeg4.quant_scale, context->mpeg4.pps.quant_precision);
+   if (vop_coding_type+1 != PIPE_MPEG12_PICTURE_CODING_TYPE_I)
+      write_bits(&bs_vop, context->desc.mpeg4.vop_fcode_forward, 3);
+   if (vop_coding_type+1 == PIPE_MPEG12_PICTURE_CODING_TYPE_B)
+      write_bits(&bs_vop, context->desc.mpeg4.vop_fcode_backward, 3);
+
+   vop_size = bs_vop.pos/8;
+   memcpy(context->mpeg4.start_code + context->mpeg4.start_code_size, vop, vop_size);
+   context->mpeg4.start_code_size += vop_size;
+}
+
 static unsigned int
 bufHasStartcode(vlVaBuffer *buf, unsigned int code, unsigned int bits)
 {
@@ -489,6 +580,7 @@ vlVaEndPicture(VADriverContextP ctx, VAContextID context_id)
    if (!context)
       return VA_STATUS_ERROR_INVALID_CONTEXT;
 
+   context->mpeg4.frame_num++;
    context->decoder->end_frame(context->decoder, context->target, &context->desc.base);
 
    return VA_STATUS_SUCCESS;
