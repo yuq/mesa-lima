@@ -162,6 +162,15 @@ typedef struct {
       struct pipe_vc1_picture_desc vc1;
       struct pipe_h264_picture_desc h264;
    } desc;
+
+   struct {
+      unsigned long long int frame_num;
+      unsigned int start_code_size;
+      unsigned int vti_bits;
+      unsigned int quant_scale;
+      VAPictureParameterBufferMPEG4 pps;
+      uint8_t start_code[32];
+   } mpeg4;
 } vlVaContext;
 
 typedef struct {
