@@ -599,9 +599,9 @@ static void *si_create_rs_state(struct pipe_context *ctx,
 		S_028814_CULL_FRONT(state->rasterizer_discard || (state->cull_face & PIPE_FACE_FRONT) ? 1 : 0) |
 		S_028814_CULL_BACK(state->rasterizer_discard || (state->cull_face & PIPE_FACE_BACK) ? 1 : 0) |
 		S_028814_FACE(!state->front_ccw) |
-		S_028814_POLY_OFFSET_FRONT_ENABLE(state->offset_tri) |
-		S_028814_POLY_OFFSET_BACK_ENABLE(state->offset_tri) |
-		S_028814_POLY_OFFSET_PARA_ENABLE(state->offset_tri) |
+		S_028814_POLY_OFFSET_FRONT_ENABLE(util_get_offset(state, state->fill_front)) |
+		S_028814_POLY_OFFSET_BACK_ENABLE(util_get_offset(state, state->fill_back)) |
+		S_028814_POLY_OFFSET_PARA_ENABLE(state->offset_point || state->offset_line) |
 		S_028814_POLY_MODE(polygon_dual_mode) |
 		S_028814_POLYMODE_FRONT_PTYPE(si_translate_fill(state->fill_front)) |
 		S_028814_POLYMODE_BACK_PTYPE(si_translate_fill(state->fill_back));
