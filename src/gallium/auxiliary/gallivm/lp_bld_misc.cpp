@@ -493,11 +493,13 @@ lp_build_create_jit_compiler_for_module(LLVMExecutionEngineRef *OutJIT,
 
    ShaderMemoryManager *MM;
    if (useMCJIT) {
+#if HAVE_LLVM > 0x0303
        BaseMemoryManager* JMM = reinterpret_cast<BaseMemoryManager*>(CMM);
        MM = new ShaderMemoryManager(JMM);
        *OutCode = MM->getGeneratedCode();
 
        builder.setMCJITMemoryManager(MM);
+#endif
    } else {
 #if HAVE_LLVM < 0x0306
        BaseMemoryManager* JMM = reinterpret_cast<BaseMemoryManager*>(CMM);
