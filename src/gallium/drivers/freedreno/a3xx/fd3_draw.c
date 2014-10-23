@@ -136,20 +136,13 @@ fd3_draw(struct fd_context *ctx, const struct pipe_draw_info *info)
 		},
 		.rasterflat = ctx->rasterizer && ctx->rasterizer->flatshade,
 	};
-	uint32_t dirty, vconst;
+	unsigned dirty;
 
 	fixup_shader_state(ctx, &emit.key);
-
-	/* save/restore vertex const state too, so that vertex
-	 * shader consts also get emitted for render pass:
-	 */
-	vconst = ctx->constbuf[PIPE_SHADER_VERTEX].dirty_mask;
 
 	dirty = ctx->dirty;
 	emit.dirty = dirty & ~(FD_DIRTY_BLEND);
 	draw_impl(ctx, ctx->binning_ring, &emit);
-
-	ctx->constbuf[PIPE_SHADER_VERTEX].dirty_mask = vconst;
 
 	/* and now regular (non-binning) pass: */
 	emit.key.binning_pass = false;
@@ -337,7 +330,6 @@ fd3_clear(struct fd_context *ctx, unsigned buffers,
 
 	fd3_emit_vertex_bufs(ring, &emit);
 
-	ctx->constbuf[PIPE_SHADER_FRAGMENT].dirty_mask = ~0;
 	fd3_emit_constant(ring, SB_FRAG_SHADER, 0, 0, 4, color->ui, NULL);
 
 	OUT_PKT0(ring, REG_A3XX_PC_PRIM_VTX_CNTL, 1);

@@ -93,6 +93,10 @@ emit_constants(struct fd_ringbuffer *ring,
 	uint32_t first_immediate;
 	uint32_t base = 0;
 
+	// XXX TODO only emit dirty consts.. but we need to keep track if
+	// they are clobbered by a clear, gmem2mem, or mem2gmem..
+	constbuf->dirty_mask = enabled_mask;
+
 	/* in particular, with binning shader we may end up with unused
 	 * consts, ie. we could end up w/ constlen that is smaller
 	 * than first_immediate.  In that case truncate the user consts
