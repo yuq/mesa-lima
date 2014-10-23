@@ -2007,7 +2007,12 @@ if test "x$MESA_LLVM" != x0; then
            dnl already added all of these objects to LLVM_LIBS.
         fi
     else
-        AC_MSG_WARN([Building mesa with staticly linked LLVM may cause compilation issues])
+        AC_MSG_WARN([Building mesa with statically linked LLVM may cause compilation issues])
+        dnl We need to link to llvm system libs when using static libs
+        dnl However, only llvm 3.5+ provides --system-libs
+        if test $LLVM_VERSION_MAJOR -eq 3 -a $LLVM_VERSION_MINOR -ge 5; then
+            LLVM_LIBS="$LLVM_LIBS `$LLVM_CONFIG --system-libs`"
+        fi
     fi
 fi
 
