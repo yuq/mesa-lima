@@ -476,9 +476,8 @@ intel_bufferobj_flush_mapped_range(struct gl_context *ctx,
 {
    struct brw_context *brw = brw_context(ctx);
    struct intel_buffer_object *intel_obj = intel_buffer_object(obj);
-   GLbitfield access = obj->Mappings[index].AccessFlags;
 
-   assert(access & GL_MAP_FLUSH_EXPLICIT_BIT);
+   assert(obj->Mappings[index].AccessFlags & GL_MAP_FLUSH_EXPLICIT_BIT);
 
    /* If we gave a direct mapping of the buffer instead of using a temporary,
     * then there's nothing to do.
