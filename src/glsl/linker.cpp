@@ -1679,7 +1679,7 @@ link_intrastage_shaders(void *mem_ctx,
 
    populate_symbol_table(linked);
 
-   /* The a pointer to the main function in the final linked shader (i.e., the
+   /* The pointer to the main function in the final linked shader (i.e., the
     * copy of the original shader that contained the main function).
     */
    ir_function_signature *const main_sig =
@@ -1882,7 +1882,7 @@ find_available_slots(unsigned used_mask, unsigned needed_count)
 
 
 /**
- * Assign locations for either VS inputs for FS outputs
+ * Assign locations for either VS inputs or FS outputs
  *
  * \param prog          Shader program whose variables need locations assigned
  * \param target_index  Selector for the program target to receive location
