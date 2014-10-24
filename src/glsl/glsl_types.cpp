@@ -326,7 +326,7 @@ glsl_type::glsl_type(const glsl_type *array, unsigned length) :
    sampler_dimensionality(0), sampler_shadow(0), sampler_array(0),
    sampler_type(0), interface_packing(0),
    vector_elements(0), matrix_columns(0),
-   name(NULL), length(length)
+   length(length), name(NULL)
 {
    this->fields.array = array;
    /* Inherit the gl type of the base. The GL type is used for

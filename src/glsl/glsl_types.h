@@ -158,19 +158,19 @@ struct glsl_type {
    /*@}*/
 
    /**
-    * Name of the data type
-    *
-    * Will never be \c NULL.
-    */
-   const char *name;
-
-   /**
     * For \c GLSL_TYPE_ARRAY, this is the length of the array.  For
     * \c GLSL_TYPE_STRUCT or \c GLSL_TYPE_INTERFACE, it is the number of
     * elements in the structure and the number of values pointed to by
     * \c fields.structure (below).
     */
    unsigned length;
+
+   /**
+    * Name of the data type
+    *
+    * Will never be \c NULL.
+    */
+   const char *name;
 
    /**
     * Subtype of composite data types.
