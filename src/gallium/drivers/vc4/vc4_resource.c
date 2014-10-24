@@ -34,6 +34,20 @@
 #include "vc4_tiling.h"
 
 static void
+vc4_resource_bo_alloc(struct vc4_resource *rsc)
+{
+        struct pipe_resource *prsc = &rsc->base.b;
+        struct pipe_screen *pscreen = prsc->screen;
+
+        vc4_bo_unreference(&rsc->bo);
+        rsc->bo = vc4_bo_alloc(vc4_screen(pscreen),
+                               rsc->slices[0].offset +
+                               rsc->slices[0].size +
+                               rsc->cube_map_stride * (prsc->array_size - 1),
+                               "resource");
+}
+
+static void
 vc4_resource_transfer_unmap(struct pipe_context *pctx,
                             struct pipe_transfer *ptrans)
 {
@@ -75,14 +89,19 @@ vc4_resource_transfer_map(struct pipe_context *pctx,
         char *buf;
 
         if (usage & PIPE_TRANSFER_DISCARD_WHOLE_RESOURCE) {
-                uint32_t size = rsc->bo->size;
-                vc4_bo_unreference(&rsc->bo);
-                rsc->bo = vc4_bo_alloc(vc4->screen, size, "resource");
-        }
-
-        if (!(usage & PIPE_TRANSFER_UNSYNCHRONIZED)) {
-                if (vc4_cl_references_bo(pctx, rsc->bo))
-                        vc4_flush(pctx);
+                vc4_resource_bo_alloc(rsc);
+        } else if (!(usage & PIPE_TRANSFER_UNSYNCHRONIZED)) {
+                if (vc4_cl_references_bo(pctx, rsc->bo)) {
+                        if ((usage & PIPE_TRANSFER_DISCARD_RANGE) &&
+                            prsc->last_level == 0 &&
+                            prsc->width0 == box->width &&
+                            prsc->height0 == box->height &&
+                            prsc->depth0 == box->depth) {
+                                vc4_resource_bo_alloc(rsc);
+                        } else {
+                                vc4_flush(pctx);
+                        }
+                }
         }
 
         if (usage & PIPE_TRANSFER_WRITE)
@@ -324,12 +343,7 @@ vc4_resource_create(struct pipe_screen *pscreen,
         }
 
         vc4_setup_slices(rsc);
-
-        rsc->bo = vc4_bo_alloc(vc4_screen(pscreen),
-                               rsc->slices[0].offset +
-                               rsc->slices[0].size +
-                               rsc->cube_map_stride * (prsc->array_size - 1),
-                               "resource");
+        vc4_resource_bo_alloc(rsc);
         if (!rsc->bo)
                 goto fail;
 
