@@ -688,8 +688,10 @@ fs_visitor::emit_unspill(bblock_t *block, fs_inst *inst, fs_reg dst,
                          uint32_t spill_offset, int count)
 {
    int reg_size = 1;
-   if (count % 2 == 0)
+   if (dispatch_width == 16 && count % 2 == 0) {
       reg_size = 2;
+      dst.width = 16;
+   }
 
    for (int i = 0; i < count / reg_size; i++) {
       /* The gen7 descriptor-based offset is 12 bits of HWORD units. */
@@ -722,7 +724,7 @@ fs_visitor::emit_spill(bblock_t *block, fs_inst *inst, fs_reg src,
 {
    int reg_size = 1;
    int spill_base_mrf = 14;
-   if (count % 2 == 0) {
+   if (dispatch_width == 16 && count % 2 == 0) {
       spill_base_mrf = 13;
       reg_size = 2;
    }
