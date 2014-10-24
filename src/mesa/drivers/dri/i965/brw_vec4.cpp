@@ -562,6 +562,13 @@ vec4_visitor::opt_algebraic()
 
    foreach_block_and_inst(block, vec4_instruction, inst, cfg) {
       switch (inst->opcode) {
+      case VEC4_OPCODE_UNPACK_UNIFORM:
+         if (inst->src[0].file != UNIFORM) {
+            inst->opcode = BRW_OPCODE_MOV;
+            progress = true;
+         }
+         break;
+
       case BRW_OPCODE_ADD:
 	 if (inst->src[1].is_zero()) {
 	    inst->opcode = BRW_OPCODE_MOV;

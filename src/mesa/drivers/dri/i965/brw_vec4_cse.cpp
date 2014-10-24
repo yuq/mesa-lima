@@ -69,6 +69,7 @@ is_expression(const vec4_instruction *const inst)
    case BRW_OPCODE_PLN:
    case BRW_OPCODE_MAD:
    case BRW_OPCODE_LRP:
+   case VEC4_OPCODE_UNPACK_UNIFORM:
       return true;
    case SHADER_OPCODE_RCP:
    case SHADER_OPCODE_RSQ:

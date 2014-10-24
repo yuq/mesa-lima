@@ -302,7 +302,7 @@ vec4_visitor::fix_3src_operand(src_reg src)
 
    dst_reg expanded = dst_reg(this, glsl_type::vec4_type);
    expanded.type = src.type;
-   emit(MOV(expanded, src));
+   emit(VEC4_OPCODE_UNPACK_UNIFORM, expanded, src);
    return src_reg(expanded);
 }
 

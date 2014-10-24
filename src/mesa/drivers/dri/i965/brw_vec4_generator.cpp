@@ -1183,6 +1183,7 @@ vec4_generator::generate_code(const cfg_t *cfg)
       }
 
       switch (inst->opcode) {
+      case VEC4_OPCODE_UNPACK_UNIFORM:
       case BRW_OPCODE_MOV:
          brw_MOV(p, dst, src[0]);
          break;
