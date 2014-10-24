@@ -206,8 +206,10 @@ _mesa_lock_context_textures( struct gl_context *ctx );
 /*@{*/
 
 extern void GLAPIENTRY
-_mesa_GenTextures( GLsizei n, GLuint *textures );
+_mesa_GenTextures(GLsizei n, GLuint *textures);
 
+extern void GLAPIENTRY
+_mesa_CreateTextures(GLenum target, GLsizei n, GLuint *textures);
 
 extern void GLAPIENTRY
 _mesa_DeleteTextures( GLsizei n, const GLuint *textures );

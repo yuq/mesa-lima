@@ -1118,38 +1118,25 @@ invalidate_tex_image_error_check(struct gl_context *ctx, GLuint texture,
    return t;
 }
 
-/*@}*/
-
-
-/***********************************************************************/
-/** \name API functions */
-/*@{*/
-
-
 /**
- * Generate texture names.
- *
- * \param n number of texture names to be generated.
- * \param textures an array in which will hold the generated texture names.
- *
- * \sa glGenTextures().
- *
- * Calls _mesa_HashFindFreeKeyBlock() to find a block of free texture
- * IDs which are stored in \p textures.  Corresponding empty texture
- * objects are also generated.
+ * Helper function for glCreateTextures and glGenTextures. Need this because
+ * glCreateTextures should throw errors if target = 0. This is not exposed to
+ * the rest of Mesa to encourage Mesa internals to use nameless textures,
+ * which do not require expensive hash lookups.
  */
-void GLAPIENTRY
-_mesa_GenTextures( GLsizei n, GLuint *textures )
+static void
+create_textures(struct gl_context *ctx, GLenum target,
+                GLsizei n, GLuint *textures, bool dsa)
 {
-   GET_CURRENT_CONTEXT(ctx);
    GLuint first;
    GLint i;
+   const char *func = dsa ? "Create" : "Gen";
 
    if (MESA_VERBOSE & (VERBOSE_API|VERBOSE_TEXTURE))
-      _mesa_debug(ctx, "glGenTextures %d\n", n);
+      _mesa_debug(ctx, "gl%sTextures %d\n", func, n);
 
    if (n < 0) {
-      _mesa_error( ctx, GL_INVALID_VALUE, "glGenTextures" );
+      _mesa_error( ctx, GL_INVALID_VALUE, "gl%sTextures(n < 0)", func );
       return;
    }
 
@@ -1166,13 +1153,26 @@ _mesa_GenTextures( GLsizei n, GLuint *textures )
    /* Allocate new, empty texture objects */
    for (i = 0; i < n; i++) {
       struct gl_texture_object *texObj;
+      GLint targetIndex;
       GLuint name = first + i;
-      GLenum target = 0;
       texObj = ctx->Driver.NewTextureObject(ctx, name, target);
       if (!texObj) {
          mtx_unlock(&ctx->Shared->Mutex);
-         _mesa_error(ctx, GL_OUT_OF_MEMORY, "glGenTextures");
+         _mesa_error(ctx, GL_OUT_OF_MEMORY, "gl%sTextures", func);
          return;
+      }
+
+      /* Initialize the target index if target is non-zero. */
+      if (target != 0) {
+         targetIndex = _mesa_tex_target_to_index(ctx, texObj->Target);
+         if (targetIndex < 0) { /* Bad Target */
+            mtx_unlock(&ctx->Shared->Mutex);
+            _mesa_error(ctx, GL_INVALID_ENUM, "gl%sTextures(target = %s)",
+                        func, _mesa_lookup_enum_by_nr(texObj->Target));
+            return;
+         }
+         assert(targetIndex < NUM_TEXTURE_TARGETS);
+         texObj->TargetIndex = targetIndex;
       }
 
       /* insert into hash table */
@@ -1184,6 +1184,65 @@ _mesa_GenTextures( GLsizei n, GLuint *textures )
    mtx_unlock(&ctx->Shared->Mutex);
 }
 
+/*@}*/
+
+
+/***********************************************************************/
+/** \name API functions */
+/*@{*/
+
+
+/**
+ * Generate texture names.
+ *
+ * \param n number of texture names to be generated.
+ * \param textures an array in which will hold the generated texture names.
+ *
+ * \sa glGenTextures(), glCreateTextures().
+ *
+ * Calls _mesa_HashFindFreeKeyBlock() to find a block of free texture
+ * IDs which are stored in \p textures.  Corresponding empty texture
+ * objects are also generated.
+ */
+void GLAPIENTRY
+_mesa_GenTextures(GLsizei n, GLuint *textures)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   create_textures(ctx, 0, n, textures, false);
+}
+
+/**
+ * Create texture objects.
+ *
+ * \param target the texture target for each name to be generated.
+ * \param n number of texture names to be generated.
+ * \param textures an array in which will hold the generated texture names.
+ *
+ * \sa glCreateTextures(), glGenTextures().
+ *
+ * Calls _mesa_HashFindFreeKeyBlock() to find a block of free texture
+ * IDs which are stored in \p textures.  Corresponding empty texture
+ * objects are also generated.
+ */
+void GLAPIENTRY
+_mesa_CreateTextures(GLenum target, GLsizei n, GLuint *textures)
+{
+   GLint targetIndex;
+   GET_CURRENT_CONTEXT(ctx);
+
+   /*
+    * The 4.5 core profile spec (30.10.2014) doesn't specify what
+    * glCreateTextures should do with invalid targets, which was probably an
+    * oversight.  This conforms to the spec for glBindTexture.
+    */
+   targetIndex = _mesa_tex_target_to_index(ctx, target);
+   if (targetIndex < 0) {
+      _mesa_error(ctx, GL_INVALID_ENUM, "glCreateTextures(target)");
+      return;
+   }
+
+   create_textures(ctx, target, n, textures, true);
+}
 
 /**
  * Check if the given texture object is bound to the current draw or
