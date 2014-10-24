@@ -230,6 +230,7 @@ struct ir3 {
 	struct ir3_instruction **instrs;
 	unsigned baryfs_count, baryfs_sz;
 	struct ir3_instruction **baryfs;
+	struct ir3_block *block;
 	unsigned heap_idx;
 	struct ir3_heap_chunk *chunk;
 };

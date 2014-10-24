@@ -42,7 +42,7 @@
 #include "instr-a3xx.h"
 #include "ir3.h"
 
-static void dump_info(struct ir3_shader_variant *so)
+static void dump_info(struct ir3_shader_variant *so, const char *str)
 {
 	struct ir3_info info;
 	uint32_t *bin;
@@ -51,12 +51,32 @@ static void dump_info(struct ir3_shader_variant *so)
 	// for debug, dump some before/after info:
 	bin = ir3_assemble(so->ir, &info);
 	if (fd_mesa_debug & FD_DBG_DISASM) {
+		struct ir3_block *block = so->ir->block;
 		unsigned i;
 
-		debug_printf("%s: disasm:\n", type);
+		debug_printf("; %s: %s\n", type, str);
+
+		for (i = 0; i < block->ninputs; i++) {
+			uint8_t regid;
+			if (!block->inputs[i])
+				continue;
+			regid = block->inputs[i]->regs[0]->num;
+			debug_printf("@in(r%d.%c)\tin%d\n",
+					(regid >> 2), "xyzw"[regid & 0x3], i);
+		}
+
+		for (i = 0; i < block->noutputs; i++) {
+			uint8_t regid;
+			if (!block->outputs[i])
+				continue;
+			regid = block->outputs[i]->regs[0]->num;
+			debug_printf("@out(r%d.%c)\tout%d\n",
+					(regid >> 2), "xyzw"[regid & 0x3], i);
+		}
+
 		disasm_a3xx(bin, info.sizedwords, 0, so->type);
 
-		debug_printf("%s: outputs:", type);
+		debug_printf("; %s: outputs:", type);
 		for (i = 0; i < so->outputs_count; i++) {
 			uint8_t regid = so->outputs[i].regid;
 			ir3_semantic sem = so->outputs[i].semantic;
@@ -65,7 +85,7 @@ static void dump_info(struct ir3_shader_variant *so)
 					sem2name(sem), sem2idx(sem));
 		}
 		debug_printf("\n");
-		debug_printf("%s: inputs:", type);
+		debug_printf("; %s: inputs:", type);
 		for (i = 0; i < so->inputs_count; i++) {
 			uint8_t regid = so->inputs[i].regid;
 			ir3_semantic sem = so->inputs[i].semantic;
@@ -78,7 +98,7 @@ static void dump_info(struct ir3_shader_variant *so)
 		}
 		debug_printf("\n");
 	}
-	debug_printf("%s: %u instructions, %d half, %d full\n\n",
+	debug_printf("; %s: %u instructions, %d half, %d full\n\n",
 			type, info.instrs_count, info.max_half_reg + 1, info.max_reg + 1);
 	free(bin);
 }
@@ -144,12 +164,19 @@ int main(int argc, char **argv)
 	struct tgsi_token toks[65536];
 	struct tgsi_parse_context parse;
 	struct ir3_shader_variant v;
-	struct ir3_shader_key key = {
-	};
+	struct ir3_shader_key key = {};
+	const char *info;
 	void *ptr;
 	size_t size;
 
 	fd_mesa_debug |= FD_DBG_DISASM;
+
+	/* cmdline args which impact shader variant get spit out in a
+	 * comment on the first line..  a quick/dirty way to preserve
+	 * that info so when ir3test recompiles the shader with a new
+	 * compiler version, we use the same shader-key settings:
+	 */
+	debug_printf("; options:");
 
 	while (n < argc) {
 		if (!strcmp(argv[n], "--verbose")) {
@@ -159,42 +186,49 @@ int main(int argc, char **argv)
 		}
 
 		if (!strcmp(argv[n], "--binning-pass")) {
+			debug_printf(" %s", argv[n]);
 			key.binning_pass = true;
 			n++;
 			continue;
 		}
 
 		if (!strcmp(argv[n], "--color-two-side")) {
+			debug_printf(" %s", argv[n]);
 			key.color_two_side = true;
 			n++;
 			continue;
 		}
 
 		if (!strcmp(argv[n], "--half-precision")) {
+			debug_printf(" %s", argv[n]);
 			key.half_precision = true;
 			n++;
 			continue;
 		}
 
 		if (!strcmp(argv[n], "--alpha")) {
+			debug_printf(" %s", argv[n]);
 			key.alpha = true;
 			n++;
 			continue;
 		}
 
 		if (!strcmp(argv[n], "--saturate-s")) {
+			debug_printf(" %s %s", argv[n], argv[n+1]);
 			key.vsaturate_s = key.fsaturate_s = strtol(argv[n+1], NULL, 0);
 			n += 2;
 			continue;
 		}
 
 		if (!strcmp(argv[n], "--saturate-t")) {
+			debug_printf(" %s %s", argv[n], argv[n+1]);
 			key.vsaturate_t = key.fsaturate_t = strtol(argv[n+1], NULL, 0);
 			n += 2;
 			continue;
 		}
 
 		if (!strcmp(argv[n], "--saturate-r")) {
+			debug_printf(" %s %s", argv[n], argv[n+1]);
 			key.vsaturate_r = key.fsaturate_r = strtol(argv[n+1], NULL, 0);
 			n += 2;
 			continue;
@@ -213,6 +247,7 @@ int main(int argc, char **argv)
 
 		break;
 	}
+	debug_printf("\n");
 
 	filename = argv[n];
 
@@ -243,22 +278,26 @@ int main(int argc, char **argv)
 
 	if (!(fd_mesa_debug & FD_DBG_NOOPT)) {
 		/* with new compiler: */
+		info = "new compiler";
 		ret = ir3_compile_shader(&v, toks, key, true);
 
 		if (ret) {
 			reset_variant(&v, "new compiler failed, trying without copy propagation!");
+			info = "new compiler (no copy propagation)";
 			ret = ir3_compile_shader(&v, toks, key, false);
 			if (ret)
 				reset_variant(&v, "new compiler failed, trying fallback!\n");
 		}
 	}
 
-	if (ret)
+	if (ret) {
+		info = "old compiler";
 		ret = ir3_compile_shader_old(&v, toks, key);
+	}
 
 	if (ret) {
 		fprintf(stderr, "old compiler failed!\n");
 		return ret;
 	}
-	dump_info(&v);
+	dump_info(&v, info);
 }

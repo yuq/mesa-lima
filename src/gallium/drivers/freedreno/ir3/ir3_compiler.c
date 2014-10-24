@@ -3102,6 +3102,7 @@ ir3_compile_shader(struct ir3_shader_variant *so,
 	compile_instructions(&ctx);
 
 	block = ctx.block;
+	so->ir->block = block;
 
 	/* keep track of the inputs from TGSI perspective.. */
 	inputs = block->inputs;
