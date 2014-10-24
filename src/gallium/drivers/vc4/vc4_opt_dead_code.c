@@ -63,7 +63,7 @@ qir_opt_dead_code(struct vc4_compile *c)
 
                 if (inst->dst.file == QFILE_TEMP &&
                     !used[inst->dst.index] &&
-                    (!qir_has_side_effects(inst) ||
+                    (!qir_has_side_effects(c, inst) ||
                      inst->op == QOP_TEX_RESULT)) {
                         if (inst->op == QOP_TEX_RESULT) {
                                 dce_tex = true;

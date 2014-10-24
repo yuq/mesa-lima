@@ -2018,12 +2018,27 @@ vc4_get_compiled_shader(struct vc4_context *vc4, enum qstage stage,
 
         shader->program_id = vc4->next_compiled_program_id++;
         if (stage == QSTAGE_FRAG) {
+                bool input_live[c->num_input_semantics];
+                struct simple_node *node;
+
+                memset(input_live, 0, sizeof(input_live));
+                foreach(node, &c->instructions) {
+                        struct qinst *inst = (struct qinst *)node;
+                        for (int i = 0; i < qir_get_op_nsrc(inst->op); i++) {
+                                if (inst->src[i].file == QFILE_VARY)
+                                        input_live[inst->src[i].index] = true;
+                        }
+                }
+
                 shader->input_semantics = ralloc_array(shader,
                                                        struct vc4_varying_semantic,
                                                        c->num_input_semantics);
 
                 for (int i = 0; i < c->num_input_semantics; i++) {
                         struct vc4_varying_semantic *sem = &c->input_semantics[i];
+
+                        if (!input_live[i])
+                                continue;
 
                         /* Skip non-VS-output inputs. */
                         if (sem->semantic == (uint8_t)~0)
