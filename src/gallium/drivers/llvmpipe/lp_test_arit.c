@@ -395,6 +395,7 @@ test_unary(unsigned verbose, FILE *fp, const struct unary_test_t *test)
             printf("%s(%.9g): ref = %.9g, out = %.9g, precision = %f bits, %s\n",
                   test->name, in[i], ref, out[i], precision,
                   pass ? "PASS" : "FAIL");
+            fflush(stdout);
          }
 
          if (!pass) {

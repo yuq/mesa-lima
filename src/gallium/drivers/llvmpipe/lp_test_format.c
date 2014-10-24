@@ -156,6 +156,7 @@ test_format_float(unsigned verbose, FILE *fp,
          if (first) {
             printf("Testing %s (float) ...\n",
                    desc->name);
+            fflush(stdout);
             first = FALSE;
          }
 
@@ -194,6 +195,7 @@ test_format_float(unsigned verbose, FILE *fp,
                          test->unpacked[i][j][1],
                          test->unpacked[i][j][2],
                          test->unpacked[i][j][3]);
+                  fflush(stdout);
                   success = FALSE;
                }
             }
