@@ -732,7 +732,7 @@ fs_visitor::emit_spill(bblock_t *block, fs_inst *inst, fs_reg src,
    for (int i = 0; i < count / reg_size; i++) {
       fs_inst *spill_inst =
          new(mem_ctx) fs_inst(SHADER_OPCODE_GEN4_SCRATCH_WRITE,
-                              reg_null_f, src);
+                              reg_size * 8, reg_null_f, src);
       src.reg_offset += reg_size;
       spill_inst->offset = spill_offset + i * reg_size * REG_SIZE;
       spill_inst->ir = inst->ir;
