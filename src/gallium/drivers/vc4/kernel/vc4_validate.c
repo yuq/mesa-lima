@@ -478,7 +478,7 @@ validate_tile_binning_config(VALIDATE_ARGS)
 	}
 	tile_allocation_size = *(uint32_t *)(untrusted + 4);
 	if (tile_allocation_size > tile_allocation->base.size) {
-		DRM_ERROR("tile allocation size %d > BO size %d",
+		DRM_ERROR("tile allocation size %d > BO size %d\n",
 			  tile_allocation_size, tile_allocation->base.size);
 		return -EINVAL;
 	}

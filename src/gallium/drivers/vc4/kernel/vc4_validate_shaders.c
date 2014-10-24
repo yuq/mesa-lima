@@ -210,7 +210,7 @@ check_instruction_reads(uint64_t inst,
 	    raddr_b == QPU_R_UNIF) {
 		if (is_tmu_write(waddr_add) || is_tmu_write(waddr_mul)) {
 			DRM_ERROR("uniform read in the same instruction as "
-				  "texture setup");
+				  "texture setup\n");
 			return false;
 		}
 
