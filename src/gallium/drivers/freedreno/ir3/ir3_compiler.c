@@ -1222,64 +1222,40 @@ get_tex_coord(struct ir3_compile_context *ctx,
 	struct tgsi_src_register *coord = &inst->Src[0].Register;
 	struct ir3_instruction *instr;
 	unsigned tex = inst->Texture.Texture;
-	bool needs_mov = false;
+	struct tgsi_dst_register tmp_dst;
+	struct tgsi_src_register *tmp_src;
+	type_t type_mov = get_ftype(ctx);
+	unsigned j;
 
-	/* cat5 instruction cannot seem to handle const or relative: */
-	if (is_rel_or_const(coord))
-		needs_mov = true;
+	/* need to move things around: */
+	tmp_src = get_internal_temp(ctx, &tmp_dst);
 
-	/* 1D textures we fix up w/ 0.5 as 2nd coord: */
-	if (is_1d(tex))
-		needs_mov = true;
-
-	/* The texture sample instructions need to coord in successive
-	 * registers/components (ie. src.xy but not src.yx).  And TXP
-	 * needs the .w component in .z for 2D..  so in some cases we
-	 * might need to emit some mov instructions to shuffle things
-	 * around:
-	 */
-	if (!needs_mov)
-		needs_mov = !check_swiz(coord, tinf->order);
-
-	if (needs_mov) {
-		struct tgsi_dst_register tmp_dst;
-		struct tgsi_src_register *tmp_src;
-		unsigned j;
-
-		type_t type_mov = get_ftype(ctx);
-
-		/* need to move things around: */
-		tmp_src = get_internal_temp(ctx, &tmp_dst);
-
-		for (j = 0; j < 4; j++) {
-			if (tinf->order[j] < 0)
-				continue;
-			instr = instr_create(ctx, 1, 0);  /* mov */
-			instr->cat1.src_type = type_mov;
-			instr->cat1.dst_type = type_mov;
-			add_dst_reg(ctx, instr, &tmp_dst, j);
-			add_src_reg(ctx, instr, coord,
-					src_swiz(coord, tinf->order[j]));
-		}
-
-		/* fix up .y coord: */
-		if (is_1d(tex)) {
-			struct ir3_register *imm;
-			instr = instr_create(ctx, 1, 0);  /* mov */
-			instr->cat1.src_type = type_mov;
-			instr->cat1.dst_type = type_mov;
-			add_dst_reg(ctx, instr, &tmp_dst, 1);  /* .y */
-			imm = ir3_reg_create(instr, 0, IR3_REG_IMMED);
-			if (inst->Instruction.Opcode == TGSI_OPCODE_TXF)
-				imm->iim_val = 0;
-			else
-				imm->fim_val = 0.5;
-		}
-
-		coord = tmp_src;
+	for (j = 0; j < 4; j++) {
+		if (tinf->order[j] < 0)
+			continue;
+		instr = instr_create(ctx, 1, 0);  /* mov */
+		instr->cat1.src_type = type_mov;
+		instr->cat1.dst_type = type_mov;
+		add_dst_reg(ctx, instr, &tmp_dst, j);
+		add_src_reg(ctx, instr, coord,
+				src_swiz(coord, tinf->order[j]));
 	}
 
-	return coord;
+	/* fix up .y coord: */
+	if (is_1d(tex)) {
+		struct ir3_register *imm;
+		instr = instr_create(ctx, 1, 0);  /* mov */
+		instr->cat1.src_type = type_mov;
+		instr->cat1.dst_type = type_mov;
+		add_dst_reg(ctx, instr, &tmp_dst, 1);  /* .y */
+		imm = ir3_reg_create(instr, 0, IR3_REG_IMMED);
+		if (inst->Instruction.Opcode == TGSI_OPCODE_TXF)
+			imm->iim_val = 0;
+		else
+			imm->fim_val = 0.5;
+	}
+
+	return tmp_src;
 }
 
 static void
