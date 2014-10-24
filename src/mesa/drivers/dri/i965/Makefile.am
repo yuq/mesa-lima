@@ -53,10 +53,17 @@ TEST_LIBS = \
 
 TESTS = \
         test_eu_compact \
+	test_vf_float_conversions \
         test_vec4_copy_propagation \
         test_vec4_register_coalesce
 
 check_PROGRAMS = $(TESTS)
+
+test_vf_float_conversions_SOURCES = \
+	test_vf_float_conversions.cpp
+test_vf_float_conversions_LDADD = \
+	$(TEST_LIBS) \
+	$(top_builddir)/src/gtest/libgtest.la
 
 test_vec4_register_coalesce_SOURCES = \
 	test_vec4_register_coalesce.cpp
