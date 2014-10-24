@@ -114,6 +114,13 @@ add_uniform(struct vc4_compile *c,
             enum quniform_contents contents,
             uint32_t data)
 {
+        for (int i = 0; i < c->num_uniforms; i++) {
+                if (c->uniform_contents[i] == contents &&
+                    c->uniform_data[i] == data) {
+                        return (struct qreg) { QFILE_UNIF, i };
+                }
+        }
+
         uint32_t uniform = c->num_uniforms++;
         struct qreg u = { QFILE_UNIF, uniform };
 
