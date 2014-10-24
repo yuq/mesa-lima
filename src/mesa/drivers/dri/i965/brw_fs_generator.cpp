@@ -851,10 +851,10 @@ fs_generator::generate_scratch_write(fs_inst *inst, struct brw_reg src)
    assert(inst->mlen != 0);
 
    brw_MOV(p,
-	   retype(brw_message_reg(inst->base_mrf + 1), BRW_REGISTER_TYPE_UD),
+	   brw_uvec_mrf(inst->exec_size, (inst->base_mrf + 1), 0),
 	   retype(src, BRW_REGISTER_TYPE_UD));
    brw_oword_block_write_scratch(p, brw_message_reg(inst->base_mrf),
-                                 dispatch_width / 8, inst->offset);
+                                 inst->exec_size / 8, inst->offset);
 }
 
 void
@@ -863,13 +863,13 @@ fs_generator::generate_scratch_read(fs_inst *inst, struct brw_reg dst)
    assert(inst->mlen != 0);
 
    brw_oword_block_read_scratch(p, dst, brw_message_reg(inst->base_mrf),
-                                dispatch_width / 8, inst->offset);
+                                inst->exec_size / 8, inst->offset);
 }
 
 void
 fs_generator::generate_scratch_read_gen7(fs_inst *inst, struct brw_reg dst)
 {
-   gen7_block_read_scratch(p, dst, dispatch_width / 8, inst->offset);
+   gen7_block_read_scratch(p, dst, inst->exec_size / 8, inst->offset);
 }
 
 void
