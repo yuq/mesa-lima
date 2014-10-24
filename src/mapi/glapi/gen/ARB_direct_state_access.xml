@@ -15,5 +15,29 @@
       <param name="textures" type="GLuint *" />
    </function>
 
+   <function name="TextureStorage1D" offset="assign">
+      <param name="texture" type="GLuint" />
+      <param name="levels" type="GLsizei" />
+      <param name="internalformat" type="GLenum" />
+      <param name="width" type="GLsizei" />
+   </function>
+
+   <function name="TextureStorage2D" offset="assign">
+      <param name="texture" type="GLuint" />
+      <param name="levels" type="GLsizei" />
+      <param name="internalformat" type="GLenum" />
+      <param name="width" type="GLsizei" />
+      <param name="height" type="GLsizei" />
+   </function>
+
+   <function name="TextureStorage3D" offset="assign">
+      <param name="texture" type="GLuint" />
+      <param name="levels" type="GLsizei" />
+      <param name="internalformat" type="GLenum" />
+      <param name="width" type="GLsizei" />
+      <param name="height" type="GLsizei" />
+      <param name="depth" type="GLsizei" />
+   </function>
+
 </category>
 </OpenGLAPI>
