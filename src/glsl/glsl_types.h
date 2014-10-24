@@ -153,8 +153,8 @@ struct glsl_type {
     * these will be 0.
     */
    /*@{*/
-   unsigned vector_elements:3; /**< 1, 2, 3, or 4 vector elements. */
-   unsigned matrix_columns:3;  /**< 1, 2, 3, or 4 matrix columns. */
+   uint8_t vector_elements;    /**< 1, 2, 3, or 4 vector elements. */
+   uint8_t matrix_columns;     /**< 1, 2, 3, or 4 matrix columns. */
    /*@}*/
 
    /**
