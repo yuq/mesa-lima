@@ -714,7 +714,7 @@ fs_visitor::emit_unspill(bblock_t *block, fs_inst *inst, fs_reg dst,
       inst->insert_before(block, unspill_inst);
 
       dst.reg_offset += reg_size;
-      spill_offset += reg_size * 8 * sizeof(float);
+      spill_offset += reg_size * REG_SIZE;
    }
 }
 
@@ -734,7 +734,7 @@ fs_visitor::emit_spill(bblock_t *block, fs_inst *inst, fs_reg src,
          new(mem_ctx) fs_inst(SHADER_OPCODE_GEN4_SCRATCH_WRITE,
                               reg_null_f, src);
       src.reg_offset += reg_size;
-      spill_inst->offset = spill_offset + i * reg_size;
+      spill_inst->offset = spill_offset + i * reg_size * REG_SIZE;
       spill_inst->ir = inst->ir;
       spill_inst->annotation = inst->annotation;
       spill_inst->mlen = 1 + reg_size; /* header, value */
@@ -822,7 +822,6 @@ fs_visitor::choose_spill_reg(struct ra_graph *g)
 void
 fs_visitor::spill_reg(int spill_reg)
 {
-   int reg_size = dispatch_width * sizeof(float);
    int size = virtual_grf_sizes[spill_reg];
    unsigned int spill_offset = last_scratch;
    assert(ALIGN(spill_offset, 16) == spill_offset); /* oword read/write req. */
@@ -849,7 +848,7 @@ fs_visitor::spill_reg(int spill_reg)
       spilled_any_registers = true;
    }
 
-   last_scratch += size * reg_size;
+   last_scratch += size * REG_SIZE;
 
    /* Generate spill/unspill instructions for the objects being
     * spilled.  Right now, we spill or unspill the whole thing to a
@@ -862,7 +861,7 @@ fs_visitor::spill_reg(int spill_reg)
 	     inst->src[i].reg == spill_reg) {
             int regs_read = inst->regs_read(this, i);
             int subset_spill_offset = (spill_offset +
-                                       reg_size * inst->src[i].reg_offset);
+                                       REG_SIZE * inst->src[i].reg_offset);
             fs_reg unspill_dst(GRF, virtual_grf_alloc(regs_read));
 
             inst->src[i].reg = unspill_dst.reg;
@@ -876,7 +875,7 @@ fs_visitor::spill_reg(int spill_reg)
       if (inst->dst.file == GRF &&
 	  inst->dst.reg == spill_reg) {
          int subset_spill_offset = (spill_offset +
-                                    reg_size * inst->dst.reg_offset);
+                                    REG_SIZE * inst->dst.reg_offset);
          fs_reg spill_src(GRF, virtual_grf_alloc(inst->regs_written));
 
          inst->dst.reg = spill_src.reg;
