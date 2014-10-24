@@ -569,14 +569,18 @@ static int driUnbindContext(__DRIcontext *pcp)
     if (pcp == NULL)
 	return GL_FALSE;
 
+    /*
+    ** Call driUnbindContext before checking for valid drawables
+    ** to handle surfaceless contexts properly.
+    */
+    pcp->driScreenPriv->driver->UnbindContext(pcp);
+
     pdp = pcp->driDrawablePriv;
     prp = pcp->driReadablePriv;
 
     /* already unbound */
     if (!pdp && !prp)
 	return GL_TRUE;
-
-    pcp->driScreenPriv->driver->UnbindContext(pcp);
 
     assert(pdp);
     if (pdp->refcount == 0) {
