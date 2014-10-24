@@ -216,6 +216,19 @@ struct ir3_instruction {
 		 */
 #define DEPTH_UNUSED  ~0
 		unsigned depth;
+
+		/* Used just during cp stage, which comes before depth pass.
+		 * For fanin, where we need a sequence of consecutive registers,
+		 * keep track of each src instructions left (ie 'n-1') and right
+		 * (ie 'n+1') neighbor.  The front-end must insert enough mov's
+		 * to ensure that each instruction has at most one left and at
+		 * most one right neighbor.  During the copy-propagation pass,
+		 * we only remove mov's when we can preserve this constraint.
+		 */
+		struct {
+			struct ir3_instruction *left, *right;
+			uint16_t left_cnt, right_cnt;
+		} cp;
 	};
 	struct ir3_instruction *next;
 #ifdef DEBUG
