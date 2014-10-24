@@ -350,13 +350,13 @@ vc4_pipe_flush(struct pipe_context *pctx, struct pipe_fence_handle **fence,
  *
  * This helps avoid flushing the command buffers when unnecessary.
  */
-void
-vc4_flush_for_bo(struct pipe_context *pctx, struct vc4_bo *bo)
+bool
+vc4_cl_references_bo(struct pipe_context *pctx, struct vc4_bo *bo)
 {
         struct vc4_context *vc4 = vc4_context(pctx);
 
         if (!vc4->needs_flush)
-                return;
+                return false;
 
         /* Walk all the referenced BOs in the drawing command list to see if
          * they match.
@@ -365,8 +365,7 @@ vc4_flush_for_bo(struct pipe_context *pctx, struct vc4_bo *bo)
         for (int i = 0; i < (vc4->bo_handles.next -
                              vc4->bo_handles.base) / 4; i++) {
                 if (referenced_bos[i] == bo) {
-                        vc4_flush(pctx);
-                        return;
+                        return true;
                 }
         }
 
@@ -377,8 +376,7 @@ vc4_flush_for_bo(struct pipe_context *pctx, struct vc4_bo *bo)
         if (csurf) {
                 struct vc4_resource *ctex = vc4_resource(csurf->base.texture);
                 if (ctex->bo == bo) {
-                        vc4_flush(pctx);
-                        return;
+                        return true;
                 }
         }
 
@@ -387,10 +385,11 @@ vc4_flush_for_bo(struct pipe_context *pctx, struct vc4_bo *bo)
                 struct vc4_resource *ztex =
                         vc4_resource(zsurf->base.texture);
                 if (ztex->bo == bo) {
-                        vc4_flush(pctx);
-                        return;
+                        return true;
                 }
         }
+
+        return false;
 }
 
 static void

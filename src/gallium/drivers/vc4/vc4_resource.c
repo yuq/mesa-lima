@@ -80,8 +80,10 @@ vc4_resource_transfer_map(struct pipe_context *pctx,
                 rsc->bo = vc4_bo_alloc(vc4->screen, size, "resource");
         }
 
-        if (!(usage & PIPE_TRANSFER_UNSYNCHRONIZED))
-                vc4_flush_for_bo(pctx, rsc->bo);
+        if (!(usage & PIPE_TRANSFER_UNSYNCHRONIZED)) {
+                if (vc4_cl_references_bo(pctx, rsc->bo))
+                        vc4_flush(pctx);
+        }
 
         if (usage & PIPE_TRANSFER_WRITE)
                 rsc->writes++;
