@@ -79,21 +79,44 @@ writer_decode_blob(const struct ilo_builder *builder,
                    enum ilo_builder_writer_type which,
                    const struct ilo_builder_item *item)
 {
-   const unsigned state_size = sizeof(uint32_t) * 4;
+   const unsigned state_size = sizeof(uint32_t);
    const unsigned count = item->size / state_size;
    unsigned offset = item->offset;
    unsigned i;
 
-   for (i = 0; i < count; i++) {
+   for (i = 0; i < count; i += 4) {
       const uint32_t *dw = writer_pointer(builder, which, offset);
 
-      writer_dw(builder, which, offset, 0, "BLOB%d", i);
-      /* output a single line for all four DWords */
-      ilo_printf("(% f, % f, % f, % f) (0x%08x, 0x%08x, 0x%08x, 0x%08x)\n",
-               uif(dw[0]), uif(dw[1]), uif(dw[2]), uif(dw[3]),
-               dw[0], dw[1], dw[2], dw[3]);
+      writer_dw(builder, which, offset, 0, "BLOB%d", i / 4);
 
-      offset += state_size;
+      switch (count - i) {
+      case 1:
+         ilo_printf("(%10.4f, %10c, %10c, %10c) "
+                    "(0x%08x, %10c, %10c, %10c)\n",
+                    uif(dw[0]), 'X', 'X', 'X',
+                        dw[0],  'X', 'X', 'X');
+         break;
+      case 2:
+         ilo_printf("(%10.4f, %10.4f, %10c, %10c) "
+                    "(0x%08x, 0x%08x, %10c, %10c)\n",
+                    uif(dw[0]), uif(dw[1]), 'X', 'X',
+                        dw[0],      dw[1],  'X', 'X');
+         break;
+      case 3:
+         ilo_printf("(%10.4f, %10.4f, %10.4f, %10c) "
+                    "(0x%08x, 0x%08x, 0x%08x, %10c)\n",
+                    uif(dw[0]), uif(dw[1]), uif(dw[2]), 'X',
+                        dw[0],      dw[1],      dw[2],  'X');
+         break;
+      default:
+         ilo_printf("(%10.4f, %10.4f, %10.4f, %10.4f) "
+                    "(0x%08x, 0x%08x, 0x%08x, 0x%08x)\n",
+                    uif(dw[0]), uif(dw[1]), uif(dw[2]), uif(dw[3]),
+                        dw[0],      dw[1],      dw[2],      dw[3]);
+         break;
+      }
+
+      offset += state_size * 4;
    }
 }
 
