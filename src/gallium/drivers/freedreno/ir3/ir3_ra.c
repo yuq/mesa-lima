@@ -62,6 +62,22 @@ struct ir3_ra_ctx {
 	bool error;
 };
 
+#define ra_debug 0
+
+#define ra_dump_list(msg, n) do { \
+		if (ra_debug) { \
+			debug_printf("-- " msg); \
+			ir3_dump_instr_list(n); \
+		} \
+	} while (0)
+
+#define ra_dump_instr(msg, n) do { \
+		if (ra_debug) { \
+			debug_printf(">> " msg); \
+			ir3_dump_instr_single(n); \
+		} \
+	} while (0)
+
 /* sorta ugly way to retrofit half-precision support.. rather than
  * passing extra param around, just OR in a high bit.  All the low
  * value arithmetic (ie. +/- offset within a contiguous vec4, etc)
@@ -92,7 +108,8 @@ static struct ir3_ra_assignment ra_calc(struct ir3_instruction *instr);
 /* check that the register exists, is a GPR and is not special (a0/p0) */
 static struct ir3_register * reg_check(struct ir3_instruction *instr, unsigned n)
 {
-	if ((n < instr->regs_count) && reg_gpr(instr->regs[n]))
+	if ((n < instr->regs_count) && reg_gpr(instr->regs[n]) &&
+			!(instr->regs[n]->flags & IR3_REG_SSA))
 		return instr->regs[n];
 	return NULL;
 }
@@ -444,9 +461,6 @@ static void ra_assign_reg(struct ir3_visitor *v,
 {
 	struct ra_assign_visitor *a = ra_assign_visitor(v);
 
-	if (is_flow(instr) && (instr->opc == OPC_KILL))
-		return;
-
 	reg->flags &= ~IR3_REG_SSA;
 	reg->num = a->num & ~REG_HALF;
 
@@ -582,7 +596,8 @@ static void ir3_instr_ra(struct ir3_ra_ctx *ctx,
 		num = regid(REG_A0, 0) | REG_HALF;
 	} else {
 		/* predicate register (p0).. etc */
-		return;
+		num = regid(REG_P0, 0);
+		debug_assert(dst->num == num);
 	}
 
 	ra_assign(ctx, instr, num);
@@ -735,6 +750,8 @@ static int block_ra(struct ir3_ra_ctx *ctx, struct ir3_block *block)
 {
 	struct ir3_instruction *n;
 
+	ra_dump_list("before:\n", block->head);
+
 	if (!block->parent) {
 		unsigned i, j;
 		int base, off = output_base(ctx);
@@ -765,14 +782,16 @@ static int block_ra(struct ir3_ra_ctx *ctx, struct ir3_block *block)
 		}
 	}
 
+	ra_dump_list("after:\n", block->head);
+
 	/* then loop over instruction list and assign registers:
 	 */
-	n = block->head;
-	while (n) {
+	for (n = block->head; n; n = n->next) {
+		ra_dump_instr("ASSIGN: ", n);
 		ir3_instr_ra(ctx, n);
 		if (ctx->error)
 			return -1;
-		n = n->next;
+		ra_dump_list("-------", block->head);
 	}
 
 	legalize(ctx, block);
@@ -784,6 +803,7 @@ int ir3_block_ra(struct ir3_block *block, enum shader_t type,
 		bool half_precision, bool frag_coord, bool frag_face,
 		bool *has_samp, int *max_bary)
 {
+	struct ir3_instruction *n;
 	struct ir3_ra_ctx ctx = {
 			.block = block,
 			.type = type,
@@ -793,6 +813,13 @@ int ir3_block_ra(struct ir3_block *block, enum shader_t type,
 			.max_bary = -1,
 	};
 	int ret;
+
+	/* mark dst registers w/ SSA flag so we can see which
+	 * have been assigned so far:
+	 */
+	for (n = block->head; n; n = n->next)
+		if (n->regs_count > 0)
+			n->regs[0]->flags |= IR3_REG_SSA;
 
 	ir3_clear_mark(block->shader);
 	ret = block_ra(&ctx, block);
