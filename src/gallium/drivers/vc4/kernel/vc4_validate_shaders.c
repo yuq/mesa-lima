@@ -94,9 +94,6 @@ check_tmu_write(struct vc4_validated_shader_info *validated_shader,
 {
 	int tmu = waddr > QPU_W_TMU0_B;
 
-	if (!is_tmu_write(waddr))
-		return true;
-
 	if (validation_state->tmu_write_count[tmu] >= 4) {
 		DRM_ERROR("TMU%d got too many parameters before dispatch\n",
 			  tmu);
