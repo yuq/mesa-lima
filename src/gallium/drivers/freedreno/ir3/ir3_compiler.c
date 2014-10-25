@@ -3193,11 +3193,13 @@ ir3_compile_shader(struct ir3_shader_variant *so,
 	}
 
 	ret = ir3_block_ra(block, so->type, key.half_precision,
-			so->frag_coord, so->frag_face, &so->has_samp, &max_bary);
+			so->frag_coord, so->frag_face);
 	if (ret) {
 		DBG("RA failed!");
 		goto out;
 	}
+
+	ir3_block_legalize(block, &so->has_samp, &max_bary);
 
 	if (fd_mesa_debug & FD_DBG_OPTMSGS) {
 		printf("AFTER RA:\n");

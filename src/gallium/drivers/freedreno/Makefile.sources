@@ -128,6 +128,7 @@ ir3_SOURCES := \
 	ir3/ir3_dump.c \
 	ir3/ir3_flatten.c \
 	ir3/ir3.h \
+	ir3/ir3_legalize.c \
 	ir3/ir3_ra.c \
 	ir3/ir3_sched.c \
 	ir3/ir3_shader.c \

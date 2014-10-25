@@ -438,7 +438,10 @@ int ir3_block_sched(struct ir3_block *block);
 
 /* register assignment: */
 int ir3_block_ra(struct ir3_block *block, enum shader_t type,
-		bool half_precision, bool frag_coord, bool frag_face,
+		bool half_precision, bool frag_coord, bool frag_face);
+
+/* legalize: */
+void ir3_block_legalize(struct ir3_block *block,
 		bool *has_samp, int *max_bary);
 
 #ifndef ARRAY_SIZE
