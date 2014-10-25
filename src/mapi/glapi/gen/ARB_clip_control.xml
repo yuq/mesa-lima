@@ -17,7 +17,7 @@
     <function name="ClipControl" offset="assign">
         <param name="origin" type="GLenum"/>
         <param name="depth" type="GLenum"/>
-        <glx rop="1340"/>
+        <!-- <glx rop="1340"/> -->
     </function>
 
 </category>
