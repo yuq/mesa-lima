@@ -61,8 +61,10 @@ static void dump_info(struct ir3_shader_variant *so, const char *str)
 
 if (block) {
 		for (i = 0; i < block->ninputs; i++) {
-			if (!block->inputs[i])
+			if (!block->inputs[i]) {
+				debug_printf("; in%d unused\n", i);
 				continue;
+			}
 			reg = block->inputs[i]->regs[0];
 			regid = reg->num;
 			debug_printf("@in(%sr%d.%c)\tin%d\n",
@@ -71,8 +73,10 @@ if (block) {
 		}
 
 		for (i = 0; i < block->noutputs; i++) {
-			if (!block->outputs[i])
+			if (!block->outputs[i]) {
+				debug_printf("; out%d unused\n", i);
 				continue;
+			}
 			/* kill shows up as a virtual output.. skip it! */
 			if (is_kill(block->outputs[i]))
 				continue;

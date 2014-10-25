@@ -228,25 +228,61 @@ struct ir3_instruction {
 		 */
 #define DEPTH_UNUSED  ~0
 		unsigned depth;
-
-		/* Used just during cp stage, which comes before depth pass.
-		 * For fanin, where we need a sequence of consecutive registers,
-		 * keep track of each src instructions left (ie 'n-1') and right
-		 * (ie 'n+1') neighbor.  The front-end must insert enough mov's
-		 * to ensure that each instruction has at most one left and at
-		 * most one right neighbor.  During the copy-propagation pass,
-		 * we only remove mov's when we can preserve this constraint.
-		 */
-		struct {
-			struct ir3_instruction *left, *right;
-			uint16_t left_cnt, right_cnt;
-		} cp;
 	};
+
+	/* Used during CP and RA stages.  For fanin and shader inputs/
+	 * outputs where we need a sequence of consecutive registers,
+	 * keep track of each src instructions left (ie 'n-1') and right
+	 * (ie 'n+1') neighbor.  The front-end must insert enough mov's
+	 * to ensure that each instruction has at most one left and at
+	 * most one right neighbor.  During the copy-propagation pass,
+	 * we only remove mov's when we can preserve this constraint.
+	 * And during the RA stage, we use the neighbor information to
+	 * allocate a block of registers in one shot.
+	 *
+	 * TODO: maybe just add something like:
+	 *   struct ir3_instruction_ref {
+	 *       struct ir3_instruction *instr;
+	 *       unsigned cnt;
+	 *   }
+	 *
+	 * Or can we get away without the refcnt stuff?  It seems like
+	 * it should be overkill..  the problem is if, potentially after
+	 * already eliminating some mov's, if you have a single mov that
+	 * needs to be grouped with it's neighbors in two different
+	 * places (ex. shader output and a fanin).
+	 */
+	struct {
+		struct ir3_instruction *left, *right;
+		uint16_t left_cnt, right_cnt;
+	} cp;
 	struct ir3_instruction *next;
 #ifdef DEBUG
 	uint32_t serialno;
 #endif
 };
+
+static inline struct ir3_instruction *
+ir3_neighbor_first(struct ir3_instruction *instr)
+{
+	while (instr->cp.left)
+		instr = instr->cp.left;
+	return instr;
+}
+
+static inline int ir3_neighbor_count(struct ir3_instruction *instr)
+{
+	int num = 1;
+
+	debug_assert(!instr->cp.left);
+
+	while (instr->cp.right) {
+		num++;
+		instr = instr->cp.right;
+	}
+
+	return num;
+}
 
 struct ir3_heap_chunk;
 
@@ -415,6 +451,15 @@ static inline bool writes_pred(struct ir3_instruction *instr)
 	return false;
 }
 
+/* returns defining instruction for reg */
+/* TODO better name */
+static inline struct ir3_instruction *ssa(struct ir3_register *reg)
+{
+	if (reg->flags & IR3_REG_SSA)
+		return reg->instr;
+	return NULL;
+}
+
 static inline bool reg_gpr(struct ir3_register *r)
 {
 	if (r->flags & (IR3_REG_CONST | IR3_REG_IMMED | IR3_REG_RELATIV | IR3_REG_ADDR))
@@ -443,12 +488,15 @@ void ir3_block_depth(struct ir3_block *block);
 /* copy-propagate: */
 void ir3_block_cp(struct ir3_block *block);
 
+/* group neightbors and insert mov's to resolve conflicts: */
+void ir3_block_group(struct ir3_block *block);
+
 /* scheduling: */
 int ir3_block_sched(struct ir3_block *block);
 
 /* register assignment: */
 int ir3_block_ra(struct ir3_block *block, enum shader_t type,
-		bool half_precision, bool frag_coord, bool frag_face);
+		bool frag_coord, bool frag_face);
 
 /* legalize: */
 void ir3_block_legalize(struct ir3_block *block,

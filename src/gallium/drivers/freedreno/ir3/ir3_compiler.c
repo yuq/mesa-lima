@@ -571,23 +571,40 @@ add_dst_reg_wrmask(struct ir3_compile_context *ctx,
 	} else if ((dst->File == TGSI_FILE_TEMPORARY) ||
 			(dst->File == TGSI_FILE_OUTPUT) ||
 			(dst->File == TGSI_FILE_ADDRESS)) {
+		struct ir3_instruction *prev = NULL;
 		unsigned i;
 
 		/* if instruction writes multiple, we need to create
 		 * some place-holder collect the registers:
 		 */
 		for (i = 0; i < 4; i++) {
-			if (wrmask & (1 << i)) {
-				struct ir3_instruction *collect =
-						ir3_instr_create(ctx->block, -1, OPC_META_FO);
-				collect->fo.off = i;
-				/* unused dst reg: */
-				ir3_reg_create(collect, 0, 0);
-				/* and src reg used to hold original instr */
-				ir3_reg_create(collect, 0, IR3_REG_SSA)->instr = instr;
-				if (!ctx->atomic)
-					ssa_dst(ctx, collect, dst, chan+i);
+			/* NOTE: slightly ugly that we setup neighbor ptrs
+			 * for FO here, but handle FI in CP pass.. we should
+			 * probably just always setup neighbor ptrs in the
+			 * frontend?
+			 */
+			struct ir3_instruction *split =
+					ir3_instr_create(ctx->block, -1, OPC_META_FO);
+			split->fo.off = i;
+			/* unused dst reg: */
+			/* NOTE: set SSA flag on dst here, because unused FO's
+			 * which don't get scheduled will end up not in the
+			 * instruction list when RA sets SSA flag on each dst.
+			 * Slight hack.  We really should set SSA flag on
+			 * every dst register in the frontend.
+			 */
+			ir3_reg_create(split, 0, IR3_REG_SSA);
+			/* and src reg used to hold original instr */
+			ir3_reg_create(split, 0, IR3_REG_SSA)->instr = instr;
+			if (prev) {
+				split->cp.left = prev;
+				split->cp.left_cnt++;
+				prev->cp.right = split;
+				prev->cp.right_cnt++;
 			}
+			if ((wrmask & (1 << i)) && !ctx->atomic)
+				ssa_dst(ctx, split, dst, chan+i);
+			prev = split;
 		}
 	}
 
@@ -3120,6 +3137,17 @@ ir3_compile_shader(struct ir3_shader_variant *so,
 		}
 	}
 
+	/* if we want half-precision outputs, mark the output registers
+	 * as half:
+	 */
+	if (key.half_precision) {
+		for (i = 0; i < block->noutputs; i++) {
+			if (!block->outputs[i])
+				continue;
+			block->outputs[i]->regs[0]->flags |= IR3_REG_HALF;
+		}
+	}
+
 	/* at this point, we want the kill's in the outputs array too,
 	 * so that they get scheduled (since they have no dst).. we've
 	 * already ensured that the array is big enough in push_block():
@@ -3145,8 +3173,25 @@ ir3_compile_shader(struct ir3_shader_variant *so,
 		ir3_dump_instr_list(block->head);
 	}
 
+	ir3_block_depth(block);
+
+	/* First remove all the extra mov's (which we could skip if the
+	 * front-end was clever enough not to insert them in the first
+	 * place).  Then figure out left/right neighbors, re-inserting
+	 * extra mov's when needed to avoid conflicts.
+	 */
 	if (cp && !(fd_mesa_debug & FD_DBG_NOCP))
 		ir3_block_cp(block);
+
+	if (fd_mesa_debug & FD_DBG_OPTMSGS) {
+		printf("BEFORE GROUPING:\n");
+		ir3_dump_instr_list(block->head);
+	}
+
+	/* Group left/right neighbors, inserting mov's where needed to
+	 * solve conflicts:
+	 */
+	ir3_block_group(block);
 
 	if (fd_mesa_debug & FD_DBG_OPTDUMP)
 		compile_dump(&ctx);
@@ -3169,19 +3214,18 @@ ir3_compile_shader(struct ir3_shader_variant *so,
 		ir3_dump_instr_list(block->head);
 	}
 
-	ret = ir3_block_ra(block, so->type, key.half_precision,
-			so->frag_coord, so->frag_face);
+	ret = ir3_block_ra(block, so->type, so->frag_coord, so->frag_face);
 	if (ret) {
 		DBG("RA failed!");
 		goto out;
 	}
 
-	ir3_block_legalize(block, &so->has_samp, &max_bary);
-
 	if (fd_mesa_debug & FD_DBG_OPTMSGS) {
 		printf("AFTER RA:\n");
 		ir3_dump_instr_list(block->head);
 	}
+
+	ir3_block_legalize(block, &so->has_samp, &max_bary);
 
 	/* fixup input/outputs: */
 	for (i = 0; i < so->outputs_count; i++) {
