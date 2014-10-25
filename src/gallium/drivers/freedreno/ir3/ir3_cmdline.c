@@ -69,6 +69,9 @@ static void dump_info(struct ir3_shader_variant *so, const char *str)
 			uint8_t regid;
 			if (!block->outputs[i])
 				continue;
+			/* kill shows up as a virtual output.. skip it! */
+			if (is_kill(block->outputs[i]))
+				continue;
 			regid = block->outputs[i]->regs[0]->num;
 			debug_printf("@out(r%d.%c)\tout%d\n",
 					(regid >> 2), "xyzw"[regid & 0x3], i);
