@@ -128,7 +128,11 @@ operands_match(fs_inst *a, fs_inst *b)
    fs_reg *xs = a->src;
    fs_reg *ys = b->src;
 
-   if (!is_expression_commutative(a->opcode)) {
+   if (a->opcode == BRW_OPCODE_MAD) {
+      return xs[0].equals(ys[0]) &&
+             ((xs[1].equals(ys[1]) && xs[2].equals(ys[2])) ||
+              (xs[2].equals(ys[1]) && xs[1].equals(ys[2])));
+   } else if (!is_expression_commutative(a->opcode)) {
       bool match = true;
       for (int i = 0; i < a->sources; i++) {
          if (!xs[i].equals(ys[i])) {
