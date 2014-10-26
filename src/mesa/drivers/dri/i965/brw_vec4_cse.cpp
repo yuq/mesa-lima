@@ -104,7 +104,11 @@ is_expression_commutative(enum opcode op)
 static bool
 operands_match(enum opcode op, src_reg *xs, src_reg *ys)
 {
-   if (!is_expression_commutative(op)) {
+   if (op == BRW_OPCODE_MAD) {
+      return xs[0].equals(ys[0]) &&
+             ((xs[1].equals(ys[1]) && xs[2].equals(ys[2])) ||
+              (xs[2].equals(ys[1]) && xs[1].equals(ys[2])));
+   } else if (!is_expression_commutative(op)) {
       return xs[0].equals(ys[0]) && xs[1].equals(ys[1]) && xs[2].equals(ys[2]);
    } else {
       return (xs[0].equals(ys[0]) && xs[1].equals(ys[1])) ||
