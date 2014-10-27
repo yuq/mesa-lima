@@ -316,9 +316,14 @@ fs_visitor::emit_fragment_program_code()
       case OPCODE_MAD:
          for (int i = 0; i < 4; i++) {
             if (fpi->DstReg.WriteMask & (1 << i)) {
-               fs_reg temp = vgrf(glsl_type::float_type);
-               emit(MUL(temp, offset(src[0], i), offset(src[1], i)));
-               emit(ADD(offset(dst, i), temp, offset(src[2], i)));
+               if (brw->gen >= 6) {
+                  emit(MAD(offset(dst, i), offset(src[2], i),
+                           offset(src[1], i), offset(src[0], i)));
+               } else {
+                  fs_reg temp = vgrf(glsl_type::float_type);
+                  emit(MUL(temp, offset(src[0], i), offset(src[1], i)));
+                  emit(ADD(offset(dst, i), temp, offset(src[2], i)));
+               }
             }
          }
          break;

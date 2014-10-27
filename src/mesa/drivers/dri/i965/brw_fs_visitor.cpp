@@ -456,11 +456,6 @@ fs_visitor::try_emit_mad(ir_expression *ir)
          return false;
    }
 
-   if (nonmul->as_constant() ||
-       mul->operands[0]->as_constant() ||
-       mul->operands[1]->as_constant())
-      return false;
-
    nonmul->accept(this);
    fs_reg src0 = this->result;
 
