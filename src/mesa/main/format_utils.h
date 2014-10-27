@@ -32,10 +32,12 @@
 #define FORMAT_UTILS_H
 
 #include "imports.h"
+#include "macros.h"
 
 /* Only guaranteed to work for BITS <= 32 */
 #define MAX_UINT(BITS) ((BITS) == 32 ? UINT32_MAX : ((1u << (BITS)) - 1))
 #define MAX_INT(BITS) ((int)MAX_UINT((BITS) - 1))
+#define MIN_INT(BITS) ((BITS) == 32 ? INT32_MIN : (-(1 << (BITS - 1))))
 
 /* Extends an integer of size SRC_BITS to one of size DST_BITS linearly */
 #define EXTEND_NORMALIZED_INT(X, SRC_BITS, DST_BITS) \
@@ -136,6 +138,64 @@ _mesa_snorm_to_snorm(int x, unsigned src_bits, unsigned dst_bits)
       return EXTEND_NORMALIZED_INT(x, src_bits - 1, dst_bits - 1);
    else
       return x >> (src_bits - dst_bits);
+}
+
+static inline unsigned
+_mesa_unsigned_to_unsigned(unsigned src, unsigned dst_size)
+{
+   return MIN2(src, MAX_UINT(dst_size));
+}
+
+static inline int
+_mesa_unsigned_to_signed(unsigned src, unsigned dst_size)
+{
+   return MIN2(src, MAX_INT(dst_size));
+}
+
+static inline int
+_mesa_signed_to_signed(int src, unsigned dst_size)
+{
+   return CLAMP(src, MIN_INT(dst_size), MAX_INT(dst_size));
+}
+
+static inline unsigned
+_mesa_signed_to_unsigned(int src, unsigned dst_size)
+{
+   return CLAMP(src, 0, MAX_UINT(dst_size));
+}
+
+static inline unsigned
+_mesa_float_to_unsigned(float src, unsigned dst_bits)
+{
+   if (src < 0.0f)
+      return 0;
+   if (src > (float)MAX_UINT(dst_bits))
+       return MAX_UINT(dst_bits);
+   return _mesa_signed_to_unsigned(src, dst_bits);
+}
+
+static inline unsigned
+_mesa_float_to_signed(float src, unsigned dst_bits)
+{
+   if (src < (float)(-MAX_INT(dst_bits)))
+      return -MAX_INT(dst_bits);
+   if (src > (float)MAX_INT(dst_bits))
+       return MAX_INT(dst_bits);
+   return _mesa_signed_to_signed(src, dst_bits);
+}
+
+static inline unsigned
+_mesa_half_to_unsigned(uint16_t src, unsigned dst_bits)
+{
+   if (_mesa_half_is_negative(src))
+      return 0;
+   return _mesa_unsigned_to_unsigned(_mesa_float_to_half(src), dst_bits);
+}
+
+static inline unsigned
+_mesa_half_to_signed(uint16_t src, unsigned dst_bits)
+{
+   return _mesa_float_to_signed(_mesa_half_to_float(src), dst_bits);
 }
 
 bool

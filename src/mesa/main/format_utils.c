@@ -132,24 +132,6 @@ _mesa_format_to_array(mesa_format format, GLenum *type, int *num_components,
    }
 }
 
-static inline unsigned
-float_to_uint(float x)
-{
-   if (x < 0.0f)
-      return 0;
-   else
-      return x;
-}
-
-static inline unsigned
-half_to_uint(uint16_t x)
-{
-   if (_mesa_half_is_negative(x))
-      return 0;
-   else
-      return _mesa_float_to_half(x);
-}
-
 /**
  * Attempts to perform the given swizzle-and-convert operation with memcpy
  *
@@ -449,7 +431,6 @@ convert_half_float(void *void_dst, int num_dst_channels,
    }
 }
 
-
 static void
 convert_ubyte(void *void_dst, int num_dst_channels,
               const void *void_src, GLenum src_type, int num_src_channels,
@@ -462,14 +443,14 @@ convert_ubyte(void *void_dst, int num_dst_channels,
       if (normalized) {
          SWIZZLE_CONVERT(uint8_t, float, _mesa_float_to_unorm(src, 8));
       } else {
-         SWIZZLE_CONVERT(uint8_t, float, (src < 0) ? 0 : src);
+         SWIZZLE_CONVERT(uint8_t, float, _mesa_float_to_unsigned(src, 8));
       }
       break;
    case GL_HALF_FLOAT:
       if (normalized) {
          SWIZZLE_CONVERT(uint8_t, uint16_t, _mesa_half_to_unorm(src, 8));
       } else {
-         SWIZZLE_CONVERT(uint8_t, uint16_t, half_to_uint(src));
+         SWIZZLE_CONVERT(uint8_t, uint16_t, _mesa_half_to_unsigned(src, 8));
       }
       break;
    case GL_UNSIGNED_BYTE:
@@ -479,35 +460,35 @@ convert_ubyte(void *void_dst, int num_dst_channels,
       if (normalized) {
          SWIZZLE_CONVERT(uint8_t, int8_t, _mesa_snorm_to_unorm(src, 8, 8));
       } else {
-         SWIZZLE_CONVERT(uint8_t, int8_t, (src < 0) ? 0 : src);
+         SWIZZLE_CONVERT(uint8_t, int8_t, _mesa_signed_to_unsigned(src, 8));
       }
       break;
    case GL_UNSIGNED_SHORT:
       if (normalized) {
          SWIZZLE_CONVERT(uint8_t, uint16_t, _mesa_unorm_to_unorm(src, 16, 8));
       } else {
-         SWIZZLE_CONVERT(uint8_t, uint16_t, src);
+         SWIZZLE_CONVERT(uint8_t, uint16_t, _mesa_unsigned_to_unsigned(src, 8));
       }
       break;
    case GL_SHORT:
       if (normalized) {
          SWIZZLE_CONVERT(uint8_t, int16_t, _mesa_snorm_to_unorm(src, 16, 8));
       } else {
-         SWIZZLE_CONVERT(uint8_t, int16_t, (src < 0) ? 0 : src);
+         SWIZZLE_CONVERT(uint8_t, int16_t, _mesa_signed_to_unsigned(src, 8));
       }
       break;
    case GL_UNSIGNED_INT:
       if (normalized) {
          SWIZZLE_CONVERT(uint8_t, uint32_t, _mesa_unorm_to_unorm(src, 32, 8));
       } else {
-         SWIZZLE_CONVERT(uint8_t, uint32_t, src);
+         SWIZZLE_CONVERT(uint8_t, uint32_t, _mesa_unsigned_to_unsigned(src, 8));
       }
       break;
    case GL_INT:
       if (normalized) {
          SWIZZLE_CONVERT(uint8_t, int32_t, _mesa_snorm_to_unorm(src, 32, 8));
       } else {
-         SWIZZLE_CONVERT(uint8_t, int32_t, (src < 0) ? 0 : src);
+         SWIZZLE_CONVERT(uint8_t, int32_t, _mesa_signed_to_unsigned(src, 8));
       }
       break;
    default:
@@ -528,21 +509,21 @@ convert_byte(void *void_dst, int num_dst_channels,
       if (normalized) {
          SWIZZLE_CONVERT(uint8_t, float, _mesa_float_to_snorm(src, 8));
       } else {
-         SWIZZLE_CONVERT(uint8_t, float, src);
+         SWIZZLE_CONVERT(uint8_t, float, _mesa_float_to_signed(src, 8));
       }
       break;
    case GL_HALF_FLOAT:
       if (normalized) {
          SWIZZLE_CONVERT(uint8_t, uint16_t, _mesa_half_to_snorm(src, 8));
       } else {
-         SWIZZLE_CONVERT(uint8_t, uint16_t, _mesa_half_to_float(src));
+         SWIZZLE_CONVERT(uint8_t, uint16_t, _mesa_half_to_signed(src, 8));
       }
       break;
    case GL_UNSIGNED_BYTE:
       if (normalized) {
          SWIZZLE_CONVERT(int8_t, uint8_t, _mesa_unorm_to_snorm(src, 8, 8));
       } else {
-         SWIZZLE_CONVERT(int8_t, uint8_t, src);
+         SWIZZLE_CONVERT(int8_t, uint8_t, _mesa_unsigned_to_signed(src, 8));
       }
       break;
    case GL_BYTE:
@@ -552,28 +533,28 @@ convert_byte(void *void_dst, int num_dst_channels,
       if (normalized) {
          SWIZZLE_CONVERT(int8_t, uint16_t, _mesa_unorm_to_snorm(src, 16, 8));
       } else {
-         SWIZZLE_CONVERT(int8_t, uint16_t, src);
+         SWIZZLE_CONVERT(int8_t, uint16_t, _mesa_unsigned_to_signed(src, 8));
       }
       break;
    case GL_SHORT:
       if (normalized) {
          SWIZZLE_CONVERT(int8_t, int16_t, _mesa_snorm_to_snorm(src, 16, 8));
       } else {
-         SWIZZLE_CONVERT(int8_t, int16_t, src);
+         SWIZZLE_CONVERT(int8_t, int16_t, _mesa_signed_to_signed(src, 8));
       }
       break;
    case GL_UNSIGNED_INT:
       if (normalized) {
          SWIZZLE_CONVERT(int8_t, uint32_t, _mesa_unorm_to_snorm(src, 32, 8));
       } else {
-         SWIZZLE_CONVERT(int8_t, uint32_t, src);
+         SWIZZLE_CONVERT(int8_t, uint32_t, _mesa_unsigned_to_signed(src, 8));
       }
       break;
    case GL_INT:
       if (normalized) {
          SWIZZLE_CONVERT(int8_t, int32_t, _mesa_snorm_to_snorm(src, 32, 8));
       } else {
-         SWIZZLE_CONVERT(int8_t, int32_t, src);
+         SWIZZLE_CONVERT(int8_t, int32_t, _mesa_signed_to_signed(src, 8));
       }
       break;
    default:
@@ -594,14 +575,14 @@ convert_ushort(void *void_dst, int num_dst_channels,
       if (normalized) {
          SWIZZLE_CONVERT(uint16_t, float, _mesa_float_to_unorm(src, 16));
       } else {
-         SWIZZLE_CONVERT(uint16_t, float, (src < 0) ? 0 : src);
+         SWIZZLE_CONVERT(uint16_t, float, _mesa_float_to_unsigned(src, 16));
       }
       break;
    case GL_HALF_FLOAT:
       if (normalized) {
          SWIZZLE_CONVERT(uint16_t, uint16_t, _mesa_half_to_unorm(src, 16));
       } else {
-         SWIZZLE_CONVERT(uint16_t, uint16_t, half_to_uint(src));
+         SWIZZLE_CONVERT(uint16_t, uint16_t, _mesa_half_to_unsigned(src, 16));
       }
       break;
    case GL_UNSIGNED_BYTE:
@@ -615,7 +596,7 @@ convert_ushort(void *void_dst, int num_dst_channels,
       if (normalized) {
          SWIZZLE_CONVERT(uint16_t, int8_t, _mesa_snorm_to_unorm(src, 8, 16));
       } else {
-         SWIZZLE_CONVERT(uint16_t, int8_t, (src < 0) ? 0 : src);
+         SWIZZLE_CONVERT(uint16_t, int8_t, _mesa_signed_to_unsigned(src, 16));
       }
       break;
    case GL_UNSIGNED_SHORT:
@@ -625,21 +606,21 @@ convert_ushort(void *void_dst, int num_dst_channels,
       if (normalized) {
          SWIZZLE_CONVERT(uint16_t, int16_t, _mesa_snorm_to_unorm(src, 16, 16));
       } else {
-         SWIZZLE_CONVERT(uint16_t, int16_t, (src < 0) ? 0 : src);
+         SWIZZLE_CONVERT(uint16_t, int16_t, _mesa_signed_to_unsigned(src, 16));
       }
       break;
    case GL_UNSIGNED_INT:
       if (normalized) {
          SWIZZLE_CONVERT(uint16_t, uint32_t, _mesa_unorm_to_unorm(src, 32, 16));
       } else {
-         SWIZZLE_CONVERT(uint16_t, uint32_t, src);
+         SWIZZLE_CONVERT(uint16_t, uint32_t, _mesa_unsigned_to_unsigned(src, 16));
       }
       break;
    case GL_INT:
       if (normalized) {
          SWIZZLE_CONVERT(uint16_t, int32_t, _mesa_snorm_to_unorm(src, 32, 16));
       } else {
-         SWIZZLE_CONVERT(uint16_t, int32_t, (src < 0) ? 0 : src);
+         SWIZZLE_CONVERT(uint16_t, int32_t, _mesa_signed_to_unsigned(src, 16));
       }
       break;
    default:
@@ -660,14 +641,14 @@ convert_short(void *void_dst, int num_dst_channels,
       if (normalized) {
          SWIZZLE_CONVERT(uint16_t, float, _mesa_float_to_snorm(src, 16));
       } else {
-         SWIZZLE_CONVERT(uint16_t, float, src);
+         SWIZZLE_CONVERT(uint16_t, float, _mesa_float_to_signed(src, 16));
       }
       break;
    case GL_HALF_FLOAT:
       if (normalized) {
          SWIZZLE_CONVERT(uint16_t, uint16_t, _mesa_half_to_snorm(src, 16));
       } else {
-         SWIZZLE_CONVERT(uint16_t, uint16_t, _mesa_half_to_float(src));
+         SWIZZLE_CONVERT(uint16_t, uint16_t, _mesa_half_to_signed(src, 16));
       }
       break;
    case GL_UNSIGNED_BYTE:
@@ -688,7 +669,7 @@ convert_short(void *void_dst, int num_dst_channels,
       if (normalized) {
          SWIZZLE_CONVERT(int16_t, uint16_t, _mesa_unorm_to_snorm(src, 16, 16));
       } else {
-         SWIZZLE_CONVERT(int16_t, uint16_t, src);
+         SWIZZLE_CONVERT(int16_t, uint16_t, _mesa_unsigned_to_signed(src, 16));
       }
       break;
    case GL_SHORT:
@@ -698,14 +679,14 @@ convert_short(void *void_dst, int num_dst_channels,
       if (normalized) {
          SWIZZLE_CONVERT(int16_t, uint32_t, _mesa_unorm_to_snorm(src, 32, 16));
       } else {
-         SWIZZLE_CONVERT(int16_t, uint32_t, src);
+         SWIZZLE_CONVERT(int16_t, uint32_t, _mesa_unsigned_to_signed(src, 16));
       }
       break;
    case GL_INT:
       if (normalized) {
          SWIZZLE_CONVERT(int16_t, int32_t, _mesa_snorm_to_snorm(src, 32, 16));
       } else {
-         SWIZZLE_CONVERT(int16_t, int32_t, src);
+         SWIZZLE_CONVERT(int16_t, int32_t, _mesa_signed_to_signed(src, 16));
       }
       break;
    default:
@@ -725,14 +706,14 @@ convert_uint(void *void_dst, int num_dst_channels,
       if (normalized) {
          SWIZZLE_CONVERT(uint32_t, float, _mesa_float_to_unorm(src, 32));
       } else {
-         SWIZZLE_CONVERT(uint32_t, float, (src < 0) ? 0 : src);
+         SWIZZLE_CONVERT(uint32_t, float, _mesa_float_to_unsigned(src, 32));
       }
       break;
    case GL_HALF_FLOAT:
       if (normalized) {
          SWIZZLE_CONVERT(uint32_t, uint16_t, _mesa_half_to_unorm(src, 32));
       } else {
-         SWIZZLE_CONVERT(uint32_t, uint16_t, half_to_uint(src));
+         SWIZZLE_CONVERT(uint32_t, uint16_t, _mesa_half_to_unsigned(src, 32));
       }
       break;
    case GL_UNSIGNED_BYTE:
@@ -746,7 +727,7 @@ convert_uint(void *void_dst, int num_dst_channels,
       if (normalized) {
          SWIZZLE_CONVERT(uint32_t, int8_t, _mesa_snorm_to_unorm(src, 8, 32));
       } else {
-         SWIZZLE_CONVERT(uint32_t, int8_t, (src < 0) ? 0 : src);
+         SWIZZLE_CONVERT(uint32_t, int8_t, _mesa_signed_to_unsigned(src, 32));
       }
       break;
    case GL_UNSIGNED_SHORT:
@@ -760,7 +741,7 @@ convert_uint(void *void_dst, int num_dst_channels,
       if (normalized) {
          SWIZZLE_CONVERT(uint32_t, int16_t, _mesa_snorm_to_unorm(src, 16, 32));
       } else {
-         SWIZZLE_CONVERT(uint32_t, int16_t, (src < 0) ? 0 : src);
+         SWIZZLE_CONVERT(uint32_t, int16_t, _mesa_signed_to_unsigned(src, 32));
       }
       break;
    case GL_UNSIGNED_INT:
@@ -770,7 +751,7 @@ convert_uint(void *void_dst, int num_dst_channels,
       if (normalized) {
          SWIZZLE_CONVERT(uint32_t, int32_t, _mesa_snorm_to_unorm(src, 32, 32));
       } else {
-         SWIZZLE_CONVERT(uint32_t, int32_t, (src < 0) ? 0 : src);
+         SWIZZLE_CONVERT(uint32_t, int32_t, _mesa_signed_to_unsigned(src, 32));
       }
       break;
    default:
@@ -784,21 +765,21 @@ convert_int(void *void_dst, int num_dst_channels,
             const void *void_src, GLenum src_type, int num_src_channels,
             const uint8_t swizzle[4], bool normalized, int count)
 {
-   const int32_t one = normalized ? INT32_MAX : 12;
+   const int32_t one = normalized ? INT32_MAX : 1;
 
    switch (src_type) {
    case GL_FLOAT:
       if (normalized) {
          SWIZZLE_CONVERT(uint32_t, float, _mesa_float_to_snorm(src, 32));
       } else {
-         SWIZZLE_CONVERT(uint32_t, float, src);
+         SWIZZLE_CONVERT(uint32_t, float, _mesa_float_to_signed(src, 32));
       }
       break;
    case GL_HALF_FLOAT:
       if (normalized) {
          SWIZZLE_CONVERT(uint32_t, uint16_t, _mesa_half_to_snorm(src, 32));
       } else {
-         SWIZZLE_CONVERT(uint32_t, uint16_t, _mesa_half_to_float(src));
+         SWIZZLE_CONVERT(uint32_t, uint16_t, _mesa_half_to_signed(src, 32));
       }
       break;
    case GL_UNSIGNED_BYTE:
@@ -833,7 +814,7 @@ convert_int(void *void_dst, int num_dst_channels,
       if (normalized) {
          SWIZZLE_CONVERT(int32_t, uint32_t, _mesa_unorm_to_snorm(src, 32, 32));
       } else {
-         SWIZZLE_CONVERT(int32_t, uint32_t, src);
+         SWIZZLE_CONVERT(int32_t, uint32_t, _mesa_unsigned_to_signed(src, 32));
       }
       break;
    case GL_INT:
