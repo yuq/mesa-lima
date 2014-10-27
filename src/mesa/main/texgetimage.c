@@ -46,7 +46,8 @@
 #include "teximage.h"
 #include "texobj.h"
 #include "texstore.h"
-
+#include "format_utils.h"
+#include "pixeltransfer.h"
 
 /**
  * Can the given type represent negative values?
@@ -376,145 +377,160 @@ get_tex_rgba_uncompressed(struct gl_context *ctx, GLuint dimensions,
    const mesa_format texFormat =
       _mesa_get_srgb_format_linear(texImage->TexFormat);
    const GLuint width = texImage->Width;
-   GLenum destBaseFormat = _mesa_base_pack_format(format);
-   GLenum rebaseFormat = GL_NONE;
    GLuint height = texImage->Height;
    GLuint depth = texImage->Depth;
-   GLuint img, row;
-   GLfloat (*rgba)[4];
-   GLuint (*rgba_uint)[4];
-   GLboolean tex_is_integer = _mesa_is_format_integer_color(texImage->TexFormat);
-   GLboolean tex_is_uint = _mesa_is_format_unsigned(texImage->TexFormat);
-   GLenum texBaseFormat = _mesa_get_format_base_format(texImage->TexFormat);
-
-   /* Allocate buffer for one row of texels */
-   rgba = malloc(4 * width * sizeof(GLfloat));
-   rgba_uint = (GLuint (*)[4]) rgba;
-   if (!rgba) {
-      _mesa_error(ctx, GL_OUT_OF_MEMORY, "glGetTexImage()");
-      return;
-   }
+   GLuint img;
+   GLboolean dst_is_integer = _mesa_is_enum_format_integer(format);
+   uint32_t dst_format;
+   int dst_stride;
+   uint8_t rebaseSwizzle[4];
+   bool needsRebase;
+   void *rgba = NULL;
 
    if (texImage->TexObject->Target == GL_TEXTURE_1D_ARRAY) {
       depth = height;
       height = 1;
    }
 
+   /* Depending on the base format involved we may need to apply a rebase
+    * tranaform (for example: if we download to a Luminance format we want
+    * G=0 and B=0).
+    */
    if (texImage->_BaseFormat == GL_LUMINANCE ||
-       texImage->_BaseFormat == GL_INTENSITY ||
-       texImage->_BaseFormat == GL_LUMINANCE_ALPHA) {
-      /* If a luminance (or intensity) texture is read back as RGB(A), the
-       * returned value should be (L,0,0,1), not (L,L,L,1).  Set rebaseFormat
-       * here to get G=B=0.
-       */
-      rebaseFormat = texImage->_BaseFormat;
-   }
-   else if ((texImage->_BaseFormat == GL_RGBA ||
-             texImage->_BaseFormat == GL_RGB ||
-             texImage->_BaseFormat == GL_RG) &&
-            (destBaseFormat == GL_LUMINANCE ||
-             destBaseFormat == GL_LUMINANCE_ALPHA ||
-             destBaseFormat == GL_LUMINANCE_INTEGER_EXT ||
-             destBaseFormat == GL_LUMINANCE_ALPHA_INTEGER_EXT)) {
-      /* If we're reading back an RGB(A) texture as luminance then we need
-       * to return L=tex(R).  Note, that's different from glReadPixels which
-       * returns L=R+G+B.
-       */
-      rebaseFormat = GL_LUMINANCE_ALPHA; /* this covers GL_LUMINANCE too */
-   }
-   else if (texImage->_BaseFormat != texBaseFormat) {
-      /* The internal format and the real format differ, so we can't rely
-       * on the unpack functions setting the correct constant values.
-       * (e.g. reading back GL_RGB8 which is actually RGBA won't set alpha=1)
-       */
-      switch (texImage->_BaseFormat) {
-      case GL_RED:
-         if ((texBaseFormat == GL_RGBA ||
-              texBaseFormat == GL_RGB ||
-              texBaseFormat == GL_RG) &&
-             (destBaseFormat == GL_RGBA ||
-              destBaseFormat == GL_RGB ||
-              destBaseFormat == GL_RG ||
-              destBaseFormat == GL_GREEN)) {
-            rebaseFormat = texImage->_BaseFormat;
-            break;
-         }
-         /* fall through */
-      case GL_RG:
-         if ((texBaseFormat == GL_RGBA ||
-              texBaseFormat == GL_RGB) &&
-             (destBaseFormat == GL_RGBA ||
-              destBaseFormat == GL_RGB ||
-              destBaseFormat == GL_BLUE)) {
-            rebaseFormat = texImage->_BaseFormat;
-            break;
-         }
-         /* fall through */
-      case GL_RGB:
-         if (texBaseFormat == GL_RGBA &&
-             (destBaseFormat == GL_RGBA ||
-              destBaseFormat == GL_ALPHA ||
-              destBaseFormat == GL_LUMINANCE_ALPHA)) {
-            rebaseFormat = texImage->_BaseFormat;
-         }
-         break;
+       texImage->_BaseFormat == GL_INTENSITY) {
+      needsRebase = true;
+      rebaseSwizzle[0] = MESA_FORMAT_SWIZZLE_X;
+      rebaseSwizzle[1] = MESA_FORMAT_SWIZZLE_ZERO;
+      rebaseSwizzle[2] = MESA_FORMAT_SWIZZLE_ZERO;
+      rebaseSwizzle[3] = MESA_FORMAT_SWIZZLE_ONE;
+   } else if (texImage->_BaseFormat == GL_LUMINANCE_ALPHA) {
+      needsRebase = true;
+      rebaseSwizzle[0] = MESA_FORMAT_SWIZZLE_X;
+      rebaseSwizzle[1] = MESA_FORMAT_SWIZZLE_ZERO;
+      rebaseSwizzle[2] = MESA_FORMAT_SWIZZLE_ZERO;
+      rebaseSwizzle[3] = MESA_FORMAT_SWIZZLE_W;
+    } else if (texImage->_BaseFormat != _mesa_get_format_base_format(texFormat)) {
+      needsRebase =
+         _mesa_compute_rgba2base2rgba_component_mapping(texImage->_BaseFormat,
+                                                        rebaseSwizzle);
+    } else {
+      needsRebase = false;
+    }
 
-      case GL_ALPHA:
-         if (destBaseFormat != GL_ALPHA) {
-            rebaseFormat = texImage->_BaseFormat;
-         }
-         break;
-      }
-   }
+   /* Describe the dst format */
+   dst_is_integer = _mesa_is_enum_format_integer(format);
+   dst_format = _mesa_format_from_format_and_type(format, type);
+   dst_stride = _mesa_image_row_stride(&ctx->Pack, width, format, type);
+
+   /* Since _mesa_format_convert does not handle transferOps we need to handle
+    * them before we call the function. This requires to convert to RGBA float
+    * first so we can call _mesa_apply_rgba_transfer_ops. If the dst format is
+    * integer then transferOps do not apply.
+    */
+   assert(!transferOps || (transferOps && !dst_is_integer));
 
    for (img = 0; img < depth; img++) {
       GLubyte *srcMap;
       GLint rowstride;
+      GLubyte *img_src;
+      void *dest;
+      void *src;
+      int src_stride;
+      uint32_t src_format;
 
       /* map src texture buffer */
       ctx->Driver.MapTextureImage(ctx, texImage, img,
                                   0, 0, width, height, GL_MAP_READ_BIT,
                                   &srcMap, &rowstride);
-      if (srcMap) {
-         for (row = 0; row < height; row++) {
-            const GLubyte *src = srcMap + row * rowstride;
-            void *dest = _mesa_image_address(dimensions, &ctx->Pack, pixels,
-                                             width, height, format, type,
-                                             img, row, 0);
-
-	    if (tex_is_integer) {
-	       _mesa_unpack_uint_rgba_row(texFormat, width, src, rgba_uint);
-               if (rebaseFormat)
-                  _mesa_rebase_rgba_uint(width, rgba_uint, rebaseFormat);
-               if (tex_is_uint) {
-                  _mesa_pack_rgba_span_from_uints(ctx, width,
-                                                  (GLuint (*)[4]) rgba_uint,
-                                                  format, type, dest);
-               } else {
-                  _mesa_pack_rgba_span_from_ints(ctx, width,
-                                                 (GLint (*)[4]) rgba_uint,
-                                                 format, type, dest);
-               }
-	    } else {
-	       _mesa_unpack_rgba_row(texFormat, width, src, rgba);
-               if (rebaseFormat)
-                  _mesa_rebase_rgba_float(width, rgba, rebaseFormat);
-	       _mesa_pack_rgba_span_float(ctx, width, (GLfloat (*)[4]) rgba,
-					  format, type, dest,
-					  &ctx->Pack, transferOps);
-	    }
-	 }
-
-         /* Unmap the src texture buffer */
-         ctx->Driver.UnmapTextureImage(ctx, texImage, img);
-      }
-      else {
+      if (!srcMap) {
          _mesa_error(ctx, GL_OUT_OF_MEMORY, "glGetTexImage");
-         break;
+         goto done;
       }
+
+      img_src = srcMap;
+      dest = _mesa_image_address(dimensions, &ctx->Pack, pixels,
+                                 width, height, format, type,
+                                 img, 0, 0);
+
+      if (transferOps) {
+         uint32_t rgba_format;
+         int rgba_stride;
+         bool need_convert;
+
+         /* We will convert to RGBA float */
+         rgba_format = RGBA8888_FLOAT;
+         rgba_stride = width * 4 * sizeof(GLfloat);
+
+         /* If we are lucky and the dst format matches the RGBA format we need
+          * to convert to, then we can convert directly into the dst buffer
+          * and avoid the final conversion/copy from the rgba buffer to the dst
+          * buffer.
+          */
+         if (format == rgba_format) {
+            need_convert = false;
+            rgba = dest;
+         } else if (rgba == NULL) { /* Allocate the RGBA buffer only once */
+            need_convert = true;
+            rgba = malloc(height * rgba_stride);
+            if (!rgba) {
+               _mesa_error(ctx, GL_OUT_OF_MEMORY, "glGetTexImage()");
+               ctx->Driver.UnmapTextureImage(ctx, texImage, img);
+               return;
+            }
+         }
+
+         _mesa_format_convert(rgba, rgba_format, rgba_stride,
+                              img_src, texFormat, rowstride,
+                              width, height,
+                              needsRebase ? rebaseSwizzle : NULL);
+
+         /* Handle transfer ops now */
+         _mesa_apply_rgba_transfer_ops(ctx, transferOps, width * height, rgba);
+
+         /* If we had to rebase, we have already handled that */
+         needsRebase = false;
+
+         /* If we were lucky and our RGBA conversion matches the dst format, then
+          * we are done.
+          */
+         if (!need_convert)
+            goto do_swap;
+
+         /* Otherwise, we need to convert from RGBA to dst next */
+         src = rgba;
+         src_format = rgba_format;
+         src_stride = rgba_stride;
+      } else {
+         /* No RGBA conversion needed, convert directly to dst */
+         src = img_src;
+         src_format = texFormat;
+         src_stride = rowstride;
+      }
+
+      /* Do the conversion to destination format */
+      _mesa_format_convert(dest, dst_format, dst_stride,
+                           src, src_format, src_stride,
+                           width, height,
+                           needsRebase ? rebaseSwizzle : NULL);
+
+   do_swap:
+      /* Handle byte swapping if required */
+      if (ctx->Pack.SwapBytes) {
+         int components = _mesa_components_in_format(format);
+         GLint swapSize = _mesa_sizeof_packed_type(type);
+         if (swapSize == 2)
+            _mesa_swap2((GLushort *) dest, width * height * components);
+         else if (swapSize == 4)
+            _mesa_swap4((GLuint *) dest, width * height * components);
+      }
+
+      /* Unmap the src texture buffer */
+      ctx->Driver.UnmapTextureImage(ctx, texImage, img);
    }
 
-   free(rgba);
+done:
+   if (rgba)
+      free(rgba);
 }
 
 
