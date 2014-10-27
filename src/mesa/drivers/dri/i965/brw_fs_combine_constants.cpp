@@ -58,6 +58,21 @@ could_coissue(const struct brw_context *brw, const fs_inst *inst)
    }
 }
 
+/**
+ * Returns true for instructions that don't support immediate sources.
+ */
+static bool
+must_promote_imm(const fs_inst *inst)
+{
+   switch (inst->opcode) {
+   case BRW_OPCODE_MAD:
+   case BRW_OPCODE_LRP:
+      return true;
+   default:
+      return false;
+   }
+}
+
 /** A box for putting fs_regs in a linked list. */
 struct reg_link {
    DECLARE_RALLOC_CXX_OPERATORS(reg_link)
@@ -106,6 +121,12 @@ struct imm {
 
    /** The number of coissuable instructions using this immediate. */
    uint16_t uses_by_coissue;
+
+   /**
+    * Whether this constant is used by an instruction that can't handle an
+    * immediate source (and already has to be promoted to a GRF).
+    */
+   bool must_promote;
 
    uint16_t first_use_ip;
    uint16_t last_use_ip;
@@ -180,12 +201,13 @@ fs_visitor::opt_combine_constants()
    unsigned ip = -1;
 
    /* Make a pass through all instructions and count the number of times each
-    * constant is used by coissueable instructions.
+    * constant is used by coissueable instructions or instructions that cannot
+    * take immediate arguments.
     */
    foreach_block_and_inst(block, fs_inst, inst, cfg) {
       ip++;
 
-      if (!could_coissue(brw, inst))
+      if (!could_coissue(brw, inst) && !must_promote_imm(inst))
          continue;
 
       for (int i = 0; i < inst->sources; i++) {
@@ -203,6 +225,7 @@ fs_visitor::opt_combine_constants()
             imm->block = intersection;
             imm->uses->push_tail(link(const_ctx, &inst->src[i]));
             imm->uses_by_coissue += could_coissue(brw, inst);
+            imm->must_promote = imm->must_promote || must_promote_imm(inst);
             imm->last_use_ip = ip;
          } else {
             imm = new_imm(&table, const_ctx);
@@ -212,6 +235,7 @@ fs_visitor::opt_combine_constants()
             imm->uses->push_tail(link(const_ctx, &inst->src[i]));
             imm->val = val;
             imm->uses_by_coissue = could_coissue(brw, inst);
+            imm->must_promote = must_promote_imm(inst);
             imm->first_use_ip = ip;
             imm->last_use_ip = ip;
          }
@@ -224,7 +248,7 @@ fs_visitor::opt_combine_constants()
    for (int i = 0; i < table.len;) {
       struct imm *imm = &table.imm[i];
 
-      if (imm->uses_by_coissue < 4) {
+      if (!imm->must_promote && imm->uses_by_coissue < 4) {
          table.imm[i] = table.imm[table.len - 1];
          table.len--;
          continue;
