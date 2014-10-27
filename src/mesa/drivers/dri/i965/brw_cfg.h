@@ -71,6 +71,12 @@ struct bblock_t {
    const bblock_t *next() const;
    bblock_t *prev();
    const bblock_t *prev() const;
+
+   bool starts_with_control_flow() const;
+   bool ends_with_control_flow() const;
+
+   backend_instruction *first_non_control_flow_inst();
+   backend_instruction *last_non_control_flow_inst();
 #endif
 
    struct exec_node link;
@@ -141,6 +147,50 @@ bblock_prev_const(const struct bblock_t *block)
    return (const struct bblock_t *)block->link.prev;
 }
 
+static inline bool
+bblock_starts_with_control_flow(const struct bblock_t *block)
+{
+   enum opcode op = bblock_start_const(block)->opcode;
+   return op == BRW_OPCODE_DO || op == BRW_OPCODE_ENDIF;
+}
+
+static inline bool
+bblock_ends_with_control_flow(const struct bblock_t *block)
+{
+   enum opcode op = bblock_end_const(block)->opcode;
+   return op == BRW_OPCODE_IF ||
+          op == BRW_OPCODE_ELSE ||
+          op == BRW_OPCODE_WHILE ||
+          op == BRW_OPCODE_BREAK ||
+          op == BRW_OPCODE_CONTINUE;
+}
+
+static inline struct backend_instruction *
+bblock_first_non_control_flow_inst(struct bblock_t *block)
+{
+   struct backend_instruction *inst = bblock_start(block);
+   if (bblock_starts_with_control_flow(block))
+#ifdef __cplusplus
+      inst = (struct backend_instruction *)inst->next;
+#else
+      inst = (struct backend_instruction *)inst->link.next;
+#endif
+   return inst;
+}
+
+static inline struct backend_instruction *
+bblock_last_non_control_flow_inst(struct bblock_t *block)
+{
+   struct backend_instruction *inst = bblock_end(block);
+   if (bblock_ends_with_control_flow(block))
+#ifdef __cplusplus
+      inst = (struct backend_instruction *)inst->prev;
+#else
+      inst = (struct backend_instruction *)inst->link.prev;
+#endif
+   return inst;
+}
+
 #ifdef __cplusplus
 inline backend_instruction *
 bblock_t::start()
@@ -188,6 +238,30 @@ inline const bblock_t *
 bblock_t::prev() const
 {
    return bblock_prev_const(this);
+}
+
+inline bool
+bblock_t::starts_with_control_flow() const
+{
+   return bblock_starts_with_control_flow(this);
+}
+
+inline bool
+bblock_t::ends_with_control_flow() const
+{
+   return bblock_ends_with_control_flow(this);
+}
+
+inline backend_instruction *
+bblock_t::first_non_control_flow_inst()
+{
+   return bblock_first_non_control_flow_inst(this);
+}
+
+inline backend_instruction *
+bblock_t::last_non_control_flow_inst()
+{
+   return bblock_last_non_control_flow_inst(this);
 }
 #endif
 
