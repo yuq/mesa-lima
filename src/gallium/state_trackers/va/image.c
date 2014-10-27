@@ -171,6 +171,7 @@ vlVaDestroyImage(VADriverContextP ctx, VAImageID image)
    if (!vaimage)
       return VA_STATUS_ERROR_INVALID_IMAGE;
 
+   handle_table_remove(VL_VA_DRIVER(ctx)->htab, image);
    return vlVaDestroyBuffer(ctx, vaimage->buf);
 }
 
