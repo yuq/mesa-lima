@@ -2843,6 +2843,7 @@ struct gl_shader_program
 
    /* post-link info: */
    unsigned NumUserUniformStorage;
+   unsigned NumHiddenUniforms;
    struct gl_uniform_storage *UniformStorage;
 
    /**
