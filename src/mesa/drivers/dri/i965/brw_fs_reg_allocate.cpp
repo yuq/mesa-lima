@@ -881,6 +881,14 @@ fs_visitor::spill_reg(int spill_reg)
          inst->dst.reg = spill_src.reg;
          inst->dst.reg_offset = 0;
 
+         /* If we're immediately spilling the register, we should not use
+          * destination dependency hints.  Doing so will cause the GPU do
+          * try to read and write the register at the same time and may
+          * hang the GPU.
+          */
+         inst->no_dd_clear = false;
+         inst->no_dd_check = false;
+
 	 /* If our write is going to affect just part of the
           * inst->regs_written(), then we need to unspill the destination
           * since we write back out all of the regs_written().
