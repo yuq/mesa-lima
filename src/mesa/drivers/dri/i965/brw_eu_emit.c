@@ -227,7 +227,7 @@ static void
 validate_reg(const struct brw_context *brw, brw_inst *inst, struct brw_reg reg)
 {
    int hstride_for_reg[] = {0, 1, 2, 4};
-   int vstride_for_reg[] = {0, 1, 2, 4, 8, 16, 32, 64, 128, 256};
+   int vstride_for_reg[] = {0, 1, 2, 4, 8, 16, 32};
    int width_for_reg[] = {1, 2, 4, 8, 16};
    int execsize_for_reg[] = {1, 2, 4, 8, 16};
    int width, hstride, vstride, execsize;
