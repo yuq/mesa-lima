@@ -43,10 +43,39 @@ extern "C" {
 #include "brw_eu.h"
 #include "brw_wm.h"
 }
+#include "brw_vec4.h"
 #include "brw_fs.h"
 #include "main/uniforms.h"
 #include "glsl/glsl_types.h"
 #include "glsl/ir_optimization.h"
+
+fs_reg *
+fs_visitor::emit_vs_system_value(enum brw_reg_type type, int location)
+{
+   fs_reg *reg = new(this->mem_ctx)
+      fs_reg(ATTR, VERT_ATTRIB_MAX, type);
+   brw_vs_prog_data *vs_prog_data = (brw_vs_prog_data *) prog_data;
+
+   switch (location) {
+   case SYSTEM_VALUE_BASE_VERTEX:
+      reg->reg_offset = 0;
+      vs_prog_data->uses_vertexid = true;
+      break;
+   case SYSTEM_VALUE_VERTEX_ID:
+   case SYSTEM_VALUE_VERTEX_ID_ZERO_BASE:
+      reg->reg_offset = 2;
+      vs_prog_data->uses_vertexid = true;
+      break;
+   case SYSTEM_VALUE_INSTANCE_ID:
+      reg->reg_offset = 3;
+      vs_prog_data->uses_instanceid = true;
+      break;
+   default:
+      unreachable("not reached");
+   }
+
+   return reg;
+}
 
 void
 fs_visitor::visit(ir_variable *ir)
@@ -58,7 +87,11 @@ fs_visitor::visit(ir_variable *ir)
 
    if (ir->data.mode == ir_var_shader_in) {
       assert(ir->data.location != -1);
-      if (!strcmp(ir->name, "gl_FragCoord")) {
+      if (stage == MESA_SHADER_VERTEX) {
+         reg = new(this->mem_ctx)
+            fs_reg(ATTR, ir->data.location,
+                   brw_type_for_base_type(ir->type->get_scalar_type()));
+      } else if (!strcmp(ir->name, "gl_FragCoord")) {
 	 reg = emit_fragcoord_interpolation(ir);
       } else if (!strcmp(ir->name, "gl_FrontFacing")) {
 	 reg = emit_frontfacing_interpolation();
@@ -71,7 +104,19 @@ fs_visitor::visit(ir_variable *ir)
    } else if (ir->data.mode == ir_var_shader_out) {
       reg = new(this->mem_ctx) fs_reg(this, ir->type);
 
-      if (ir->data.index > 0) {
+      if (stage == MESA_SHADER_VERTEX) {
+	 int vector_elements =
+	    ir->type->is_array() ? ir->type->fields.array->vector_elements
+				 : ir->type->vector_elements;
+
+	 for (int i = 0; i < (type_size(ir->type) + 3) / 4; i++) {
+	    int output = ir->data.location + i;
+	    this->outputs[output] = *reg;
+	    this->outputs[output].reg_offset = i * 4;
+	    this->output_components[output] = vector_elements;
+	 }
+
+      } else if (ir->data.index > 0) {
 	 assert(ir->data.location == FRAG_RESULT_DATA0);
 	 assert(ir->data.index == 1);
 	 this->dual_src_output = *reg;
@@ -135,15 +180,26 @@ fs_visitor::visit(ir_variable *ir)
       reg->type = brw_type_for_base_type(ir->type);
 
    } else if (ir->data.mode == ir_var_system_value) {
-      if (ir->data.location == SYSTEM_VALUE_SAMPLE_POS) {
+      switch (ir->data.location) {
+      case SYSTEM_VALUE_BASE_VERTEX:
+      case SYSTEM_VALUE_VERTEX_ID:
+      case SYSTEM_VALUE_VERTEX_ID_ZERO_BASE:
+      case SYSTEM_VALUE_INSTANCE_ID:
+         reg = emit_vs_system_value(brw_type_for_base_type(ir->type),
+                                    ir->data.location);
+         break;
+      case SYSTEM_VALUE_SAMPLE_POS:
 	 reg = emit_samplepos_setup();
-      } else if (ir->data.location == SYSTEM_VALUE_SAMPLE_ID) {
+         break;
+      case SYSTEM_VALUE_SAMPLE_ID:
 	 reg = emit_sampleid_setup();
-      } else if (ir->data.location == SYSTEM_VALUE_SAMPLE_MASK_IN) {
+         break;
+      case SYSTEM_VALUE_SAMPLE_MASK_IN:
          assert(brw->gen >= 7);
          reg = new(mem_ctx)
             fs_reg(retype(brw_vec8_grf(payload.sample_mask_in_reg, 0),
                           BRW_REGISTER_TYPE_D));
+         break;
       }
    }
 
@@ -1770,6 +1826,8 @@ get_tex(gl_shader_stage stage, const void *key)
    switch (stage) {
    case MESA_SHADER_FRAGMENT:
       return &((brw_wm_prog_key*) key)->tex;
+   case MESA_SHADER_VERTEX:
+      return &((brw_vue_prog_key*) key)->tex;
    default:
       unreachable("unhandled shader stage");
    }
@@ -3449,6 +3507,236 @@ fs_visitor::emit_fb_writes()
 }
 
 void
+fs_visitor::setup_uniform_clipplane_values()
+{
+   gl_clip_plane *clip_planes = brw_select_clip_planes(ctx);
+   const struct brw_vue_prog_key *key =
+      (const struct brw_vue_prog_key *) this->key;
+
+   for (int i = 0; i < key->nr_userclip_plane_consts; i++) {
+      this->userplane[i] = fs_reg(UNIFORM, uniforms);
+      for (int j = 0; j < 4; ++j) {
+         stage_prog_data->param[uniforms + j] =
+            (gl_constant_value *) &clip_planes[i][j];
+      }
+      uniforms += 4;
+   }
+}
+
+void fs_visitor::compute_clip_distance()
+{
+   struct brw_vue_prog_data *vue_prog_data =
+      (struct brw_vue_prog_data *) prog_data;
+   const struct brw_vue_prog_key *key =
+      (const struct brw_vue_prog_key *) this->key;
+
+   /* From the GLSL 1.30 spec, section 7.1 (Vertex Shader Special Variables):
+    *
+    *     "If a linked set of shaders forming the vertex stage contains no
+    *     static write to gl_ClipVertex or gl_ClipDistance, but the
+    *     application has requested clipping against user clip planes through
+    *     the API, then the coordinate written to gl_Position is used for
+    *     comparison against the user clip planes."
+    *
+    * This function is only called if the shader didn't write to
+    * gl_ClipDistance.  Accordingly, we use gl_ClipVertex to perform clipping
+    * if the user wrote to it; otherwise we use gl_Position.
+    */
+
+   gl_varying_slot clip_vertex = VARYING_SLOT_CLIP_VERTEX;
+   if (!(vue_prog_data->vue_map.slots_valid & VARYING_BIT_CLIP_VERTEX))
+      clip_vertex = VARYING_SLOT_POS;
+
+   /* If the clip vertex isn't written, skip this.  Typically this means
+    * the GS will set up clipping. */
+   if (outputs[clip_vertex].file == BAD_FILE)
+      return;
+
+   setup_uniform_clipplane_values();
+
+   current_annotation = "user clip distances";
+
+   this->outputs[VARYING_SLOT_CLIP_DIST0] = fs_reg(this, glsl_type::vec4_type);
+   this->outputs[VARYING_SLOT_CLIP_DIST1] = fs_reg(this, glsl_type::vec4_type);
+
+   for (int i = 0; i < key->nr_userclip_plane_consts; i++) {
+      fs_reg u = userplane[i];
+      fs_reg output = outputs[VARYING_SLOT_CLIP_DIST0 + i / 4];
+      output.reg_offset = i & 3;
+
+      emit(MUL(output, outputs[clip_vertex], u));
+      for (int j = 1; j < 4; j++) {
+         u.reg = userplane[i].reg + j;
+         emit(MAD(output, output, offset(outputs[clip_vertex], j), u));
+      }
+   }
+}
+
+void
+fs_visitor::emit_urb_writes()
+{
+   int slot, urb_offset, length;
+   struct brw_vs_prog_data *vs_prog_data =
+      (struct brw_vs_prog_data *) prog_data;
+   const struct brw_vs_prog_key *key =
+      (const struct brw_vs_prog_key *) this->key;
+   const GLbitfield64 psiz_mask =
+      VARYING_BIT_LAYER | VARYING_BIT_VIEWPORT | VARYING_BIT_PSIZ;
+   const struct brw_vue_map *vue_map = &vs_prog_data->base.vue_map;
+   bool flush;
+   fs_reg sources[8];
+
+   /* Lower legacy ff and ClipVertex clipping to clip distances */
+   if (key->base.userclip_active && !prog->UsesClipDistanceOut)
+      compute_clip_distance();
+
+   /* If we don't have any valid slots to write, just do a minimal urb write
+    * send to terminate the shader. */
+   if (vue_map->slots_valid == 0) {
+
+      fs_reg payload = fs_reg(GRF, virtual_grf_alloc(1), BRW_REGISTER_TYPE_UD);
+      fs_inst *inst = emit(MOV(payload, fs_reg(retype(brw_vec8_grf(1, 0),
+                                                      BRW_REGISTER_TYPE_UD))));
+      inst->force_writemask_all = true;
+
+      inst = emit(SHADER_OPCODE_URB_WRITE_SIMD8, reg_undef, payload);
+      inst->eot = true;
+      inst->mlen = 1;
+      inst->offset = 1;
+      return;
+   }
+
+   length = 0;
+   urb_offset = 0;
+   flush = false;
+   for (slot = 0; slot < vue_map->num_slots; slot++) {
+      fs_reg reg, src, zero;
+
+      int varying = vue_map->slot_to_varying[slot];
+      switch (varying) {
+      case VARYING_SLOT_PSIZ:
+
+         /* The point size varying slot is the vue header and is always in the
+          * vue map.  But often none of the special varyings that live there
+          * are written and in that case we can skip writing to the vue
+          * header, provided the corresponding state properly clamps the
+          * values further down the pipeline. */
+         if ((vue_map->slots_valid & psiz_mask) == 0) {
+            assert(length == 0);
+            urb_offset++;
+            break;
+         }
+
+         zero = fs_reg(GRF, virtual_grf_alloc(1), BRW_REGISTER_TYPE_UD);
+         emit(MOV(zero, fs_reg(0u)));
+
+         sources[length++] = zero;
+         if (vue_map->slots_valid & VARYING_BIT_LAYER)
+            sources[length++] = this->outputs[VARYING_SLOT_LAYER];
+         else
+            sources[length++] = zero;
+
+         if (vue_map->slots_valid & VARYING_BIT_VIEWPORT)
+            sources[length++] = this->outputs[VARYING_SLOT_VIEWPORT];
+         else
+            sources[length++] = zero;
+
+         if (vue_map->slots_valid & VARYING_BIT_PSIZ)
+            sources[length++] = this->outputs[VARYING_SLOT_PSIZ];
+         else
+            sources[length++] = zero;
+         break;
+
+      case BRW_VARYING_SLOT_NDC:
+      case VARYING_SLOT_EDGE:
+         unreachable("unexpected scalar vs output");
+         break;
+
+      case BRW_VARYING_SLOT_PAD:
+         break;
+
+      default:
+         /* gl_Position is always in the vue map, but isn't always written by
+          * the shader.  Other varyings (clip distances) get added to the vue
+          * map but don't always get written.  In those cases, the
+          * corresponding this->output[] slot will be invalid we and can skip
+          * the urb write for the varying.  If we've already queued up a vue
+          * slot for writing we flush a mlen 5 urb write, otherwise we just
+          * advance the urb_offset.
+          */
+         if (this->outputs[varying].file == BAD_FILE) {
+            if (length > 0)
+               flush = true;
+            else
+               urb_offset++;
+            break;
+         }
+
+         if ((varying == VARYING_SLOT_COL0 ||
+              varying == VARYING_SLOT_COL1 ||
+              varying == VARYING_SLOT_BFC0 ||
+              varying == VARYING_SLOT_BFC1) &&
+             key->clamp_vertex_color) {
+            /* We need to clamp these guys, so do a saturating MOV into a
+             * temp register and use that for the payload.
+             */
+            for (int i = 0; i < 4; i++) {
+               reg = fs_reg(GRF, virtual_grf_alloc(1), outputs[varying].type);
+               src = offset(this->outputs[varying], i);
+               fs_inst *inst = emit(MOV(reg, src));
+               inst->saturate = true;
+               sources[length++] = reg;
+            }
+         } else {
+            for (int i = 0; i < 4; i++)
+               sources[length++] = offset(this->outputs[varying], i);
+         }
+         break;
+      }
+
+      current_annotation = "URB write";
+
+      /* If we've queued up 8 registers of payload (2 VUE slots), if this is
+       * the last slot or if we need to flush (see BAD_FILE varying case
+       * above), emit a URB write send now to flush out the data.
+       */
+      int last = slot == vue_map->num_slots - 1;
+      if (length == 8 || last)
+         flush = true;
+      if (flush) {
+         if (last && (INTEL_DEBUG & DEBUG_SHADER_TIME))
+            emit_shader_time_end();
+
+         fs_reg *payload_sources = ralloc_array(mem_ctx, fs_reg, length + 1);
+         fs_reg payload = fs_reg(GRF, virtual_grf_alloc(length + 1),
+                                 BRW_REGISTER_TYPE_F);
+
+         /* We need WE_all on the MOV for the message header (the URB handles)
+          * so do a MOV to a dummy register and set force_writemask_all on the
+          * MOV.  LOAD_PAYLOAD will preserve that.
+          */
+         fs_reg dummy = fs_reg(GRF, virtual_grf_alloc(1),
+                               BRW_REGISTER_TYPE_UD);
+         fs_inst *inst = emit(MOV(dummy, fs_reg(retype(brw_vec8_grf(1, 0),
+                                                       BRW_REGISTER_TYPE_UD))));
+         inst->force_writemask_all = true;
+         payload_sources[0] = dummy;
+
+         memcpy(&payload_sources[1], sources, length * sizeof sources[0]);
+         emit(LOAD_PAYLOAD(payload, payload_sources, length + 1));
+
+         inst = emit(SHADER_OPCODE_URB_WRITE_SIMD8, reg_undef, payload);
+         inst->eot = last;
+         inst->mlen = length + 1;
+         inst->offset = urb_offset;
+         urb_offset = slot + 1;
+         length = 0;
+         flush = false;
+      }
+   }
+}
+
+void
 fs_visitor::resolve_ud_negate(fs_reg *reg)
 {
    if (reg->type != BRW_REGISTER_TYPE_UD ||
@@ -3494,6 +3782,25 @@ fs_visitor::fs_visitor(struct brw_context *brw,
      reg_null_d(retype(brw_null_vec(dispatch_width), BRW_REGISTER_TYPE_D)),
      reg_null_ud(retype(brw_null_vec(dispatch_width), BRW_REGISTER_TYPE_UD)),
      key(key), prog_data(&prog_data->base),
+     dispatch_width(dispatch_width)
+{
+   this->mem_ctx = mem_ctx;
+   init();
+}
+
+fs_visitor::fs_visitor(struct brw_context *brw,
+                       void *mem_ctx,
+                       const struct brw_vs_prog_key *key,
+                       struct brw_vs_prog_data *prog_data,
+                       struct gl_shader_program *shader_prog,
+                       struct gl_vertex_program *cp,
+                       unsigned dispatch_width)
+   : backend_visitor(brw, shader_prog, &cp->Base, &prog_data->base.base,
+                     MESA_SHADER_VERTEX),
+     reg_null_f(retype(brw_null_vec(dispatch_width), BRW_REGISTER_TYPE_F)),
+     reg_null_d(retype(brw_null_vec(dispatch_width), BRW_REGISTER_TYPE_D)),
+     reg_null_ud(retype(brw_null_vec(dispatch_width), BRW_REGISTER_TYPE_UD)),
+     key(key), prog_data(&prog_data->base.base),
      dispatch_width(dispatch_width)
 {
    this->mem_ctx = mem_ctx;

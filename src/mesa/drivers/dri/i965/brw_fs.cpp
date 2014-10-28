@@ -1808,6 +1808,61 @@ fs_visitor::assign_urb_setup()
       urb_start + prog_data->num_varying_inputs * 2;
 }
 
+void
+fs_visitor::assign_vs_urb_setup()
+{
+   brw_vs_prog_data *vs_prog_data = (brw_vs_prog_data *) prog_data;
+   int grf, count, slot, channel, attr;
+
+   assert(stage == MESA_SHADER_VERTEX);
+   count = _mesa_bitcount_64(vs_prog_data->inputs_read);
+   if (vs_prog_data->uses_vertexid || vs_prog_data->uses_instanceid)
+      count++;
+
+   /* Each attribute is 4 regs. */
+   this->first_non_payload_grf =
+      payload.num_regs + prog_data->curb_read_length + count * 4;
+
+   unsigned vue_entries =
+      MAX2(count, vs_prog_data->base.vue_map.num_slots);
+
+   vs_prog_data->base.urb_entry_size = ALIGN(vue_entries, 4) / 4;
+   vs_prog_data->base.urb_read_length = (count + 1) / 2;
+
+   assert(vs_prog_data->base.urb_read_length <= 15);
+
+   /* Rewrite all ATTR file references to the hw grf that they land in. */
+   foreach_block_and_inst(block, fs_inst, inst, cfg) {
+      for (int i = 0; i < inst->sources; i++) {
+         if (inst->src[i].file == ATTR) {
+
+            if (inst->src[i].reg == VERT_ATTRIB_MAX) {
+               slot = count - 1;
+            } else {
+               /* Attributes come in in a contiguous block, ordered by their
+                * gl_vert_attrib value.  That means we can compute the slot
+                * number for an attribute by masking out the enabled
+                * attributes before it and counting the bits.
+                */
+               attr = inst->src[i].reg + inst->src[i].reg_offset / 4;
+               slot = _mesa_bitcount_64(vs_prog_data->inputs_read &
+                                        BITFIELD64_MASK(attr));
+            }
+
+            channel = inst->src[i].reg_offset & 3;
+
+            grf = payload.num_regs +
+               prog_data->curb_read_length +
+               slot * 4 + channel;
+
+            inst->src[i].file = HW_REG;
+            inst->src[i].fixed_hw_reg =
+               retype(brw_vec8_grf(grf, 0), inst->src[i].type);
+         }
+      }
+   }
+}
+
 /**
  * Split large virtual GRFs into separate components if we can.
  *
@@ -3396,6 +3451,13 @@ fs_visitor::setup_payload_gen6()
 }
 
 void
+fs_visitor::setup_vs_payload()
+{
+   /* R0: thread header, R1: urb handles */
+   payload.num_regs = 2;
+}
+
+void
 fs_visitor::assign_binding_table_offsets()
 {
    assert(stage == MESA_SHADER_FRAGMENT);
@@ -3433,6 +3495,8 @@ fs_visitor::calculate_register_pressure()
 void
 fs_visitor::optimize()
 {
+   const char *stage_name = stage == MESA_SHADER_VERTEX ? "vs" : "fs";
+
    calculate_cfg();
 
    split_virtual_grfs();
@@ -3447,8 +3511,8 @@ fs_visitor::optimize()
                                                                         \
       if (unlikely(INTEL_DEBUG & DEBUG_OPTIMIZER) && this_progress) {   \
          char filename[64];                                             \
-         snprintf(filename, 64, "fs%d-%04d-%02d-%02d-" #pass,           \
-                  dispatch_width, shader_prog ? shader_prog->Name : 0, iteration, pass_num); \
+         snprintf(filename, 64, "%s%d-%04d-%02d-%02d-" #pass,              \
+                  stage_name, dispatch_width, shader_prog ? shader_prog->Name : 0, iteration, pass_num); \
                                                                         \
          backend_visitor::dump_instructions(filename);                  \
       }                                                                 \
@@ -3458,8 +3522,8 @@ fs_visitor::optimize()
 
    if (unlikely(INTEL_DEBUG & DEBUG_OPTIMIZER)) {
       char filename[64];
-      snprintf(filename, 64, "fs%d-%04d-00-start",
-               dispatch_width, shader_prog ? shader_prog->Name : 0);
+      snprintf(filename, 64, "%s%d-%04d-00-start",
+               stage_name, dispatch_width, shader_prog ? shader_prog->Name : 0);
 
       backend_visitor::dump_instructions(filename);
    }
@@ -3527,6 +3591,9 @@ fs_visitor::allocate_registers()
    }
 
    if (!allocated_without_spills) {
+      const char *stage_name = stage == MESA_SHADER_VERTEX ?
+         "Vertex" : "Fragment";
+
       /* We assume that any spilling is worse than just dropping back to
        * SIMD8.  There's probably actually some intermediate point where
        * SIMD16 with a couple of spills is still better.
@@ -3535,9 +3602,9 @@ fs_visitor::allocate_registers()
          fail("Failure to register allocate.  Reduce number of "
               "live scalar values to avoid this.");
       } else {
-         perf_debug("Fragment shader triggered register spilling.  "
+         perf_debug("%s shader triggered register spilling.  "
                     "Try reducing the number of live scalar values to "
-                    "improve performance.\n");
+                    "improve performance.\n", stage_name);
       }
 
       /* Since we're out of heuristics, just go spill registers until we
@@ -3563,6 +3630,38 @@ fs_visitor::allocate_registers()
 
    if (last_scratch > 0)
       prog_data->total_scratch = brw_get_scratch_size(last_scratch);
+}
+
+bool
+fs_visitor::run_vs()
+{
+   assert(stage == MESA_SHADER_VERTEX);
+
+   assign_common_binding_table_offsets(0);
+   setup_vs_payload();
+
+   if (INTEL_DEBUG & DEBUG_SHADER_TIME)
+      emit_shader_time_begin();
+
+   foreach_in_list(ir_instruction, ir, shader->base.ir) {
+      base_ir = ir;
+      this->result = reg_undef;
+      ir->accept(this);
+   }
+   base_ir = NULL;
+   if (failed)
+      return false;
+
+   emit_urb_writes();
+
+   optimize();
+
+   assign_curb_setup();
+   assign_vs_urb_setup();
+
+   allocate_registers();
+
+   return !failed;
 }
 
 bool

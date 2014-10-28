@@ -308,12 +308,23 @@ public:
               struct gl_shader_program *shader_prog,
               struct gl_fragment_program *fp,
               unsigned dispatch_width);
+
+   fs_visitor(struct brw_context *brw,
+              void *mem_ctx,
+              const struct brw_vs_prog_key *key,
+              struct brw_vs_prog_data *prog_data,
+              struct gl_shader_program *shader_prog,
+              struct gl_vertex_program *cp,
+              unsigned dispatch_width);
+
    ~fs_visitor();
    void init();
 
    fs_reg *variable_storage(ir_variable *var);
    int virtual_grf_alloc(int size);
    void import_uniforms(fs_visitor *v);
+   void setup_uniform_clipplane_values();
+   void compute_clip_distance();
 
    void visit(ir_variable *ir);
    void visit(ir_assignment *ir);
@@ -404,14 +415,17 @@ public:
                                         uint32_t const_offset);
 
    bool run();
+   bool run_vs();
    void optimize();
    void allocate_registers();
    void assign_binding_table_offsets();
    void setup_payload_gen4();
    void setup_payload_gen6();
+   void setup_vs_payload();
    void assign_curb_setup();
    void calculate_urb_setup();
    void assign_urb_setup();
+   void assign_vs_urb_setup();
    bool assign_regs(bool allow_spilling);
    void assign_regs_trivial();
    void get_used_mrfs(bool *mrf_used);
@@ -465,6 +479,7 @@ public:
    fs_reg *emit_samplepos_setup();
    fs_reg *emit_sampleid_setup();
    fs_reg *emit_general_interpolation(ir_variable *ir);
+   fs_reg *emit_vs_system_value(enum brw_reg_type type, int location);
    void emit_interpolation_setup_gen4();
    void emit_interpolation_setup_gen6();
    void compute_sample_position(fs_reg dst, fs_reg int_sample_pos);
@@ -552,6 +567,7 @@ public:
    fs_inst *emit_single_fb_write(fs_reg color1, fs_reg color2,
                                  fs_reg src0_alpha, unsigned components);
    void emit_fb_writes();
+   void emit_urb_writes();
 
    void emit_shader_time_begin();
    void emit_shader_time_end();
@@ -627,8 +643,8 @@ public:
    struct hash_table *variable_ht;
    fs_reg frag_depth;
    fs_reg sample_mask;
-   fs_reg outputs[BRW_MAX_DRAW_BUFFERS];
-   unsigned output_components[BRW_MAX_DRAW_BUFFERS];
+   fs_reg outputs[VARYING_SLOT_MAX];
+   unsigned output_components[VARYING_SLOT_MAX];
    fs_reg dual_src_output;
    bool do_dual_src;
    int first_non_payload_grf;
@@ -675,6 +691,7 @@ public:
    fs_reg delta_x[BRW_WM_BARYCENTRIC_INTERP_MODE_COUNT];
    fs_reg delta_y[BRW_WM_BARYCENTRIC_INTERP_MODE_COUNT];
    fs_reg shader_start_time;
+   fs_reg userplane[MAX_CLIP_PLANES];
 
    int grf_used;
    bool spilled_any_registers;
