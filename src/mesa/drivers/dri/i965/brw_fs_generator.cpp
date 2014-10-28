@@ -124,12 +124,11 @@ fs_generator::fs_generator(struct brw_context *brw,
                            void *mem_ctx,
                            const void *key,
                            struct brw_stage_prog_data *prog_data,
-                           struct gl_shader_program *shader_prog,
                            struct gl_program *prog,
                            bool runtime_check_aads_emit)
 
    : brw(brw), key(key),
-     prog_data(prog_data), shader_prog(shader_prog),
+     prog_data(prog_data),
      prog(prog), runtime_check_aads_emit(runtime_check_aads_emit),
      debug_flag(false), mem_ctx(mem_ctx)
 {

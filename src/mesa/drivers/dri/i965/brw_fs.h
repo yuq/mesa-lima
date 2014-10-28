@@ -691,7 +691,6 @@ public:
                 void *mem_ctx,
                 const void *key,
                 struct brw_stage_prog_data *prog_data,
-                struct gl_shader_program *shader_prog,
                 struct gl_program *fp,
                 bool runtime_check_aads_emit);
    ~fs_generator();
@@ -797,7 +796,6 @@ private:
    const void * const key;
    struct brw_stage_prog_data * const prog_data;
 
-   struct gl_shader_program * const shader_prog;
    const struct gl_program *prog;
 
    unsigned dispatch_width; /**< 8 or 16 */
