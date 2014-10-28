@@ -3665,8 +3665,13 @@ fs_visitor::run_vs()
 }
 
 bool
-fs_visitor::run()
+fs_visitor::run_fs()
 {
+   brw_wm_prog_data *wm_prog_data = (brw_wm_prog_data *) this->prog_data;
+   brw_wm_prog_key *wm_key = (brw_wm_prog_key *) this->key;
+
+   assert(stage == MESA_SHADER_FRAGMENT);
+
    sanity_param_count = prog->Parameters->NumParameters;
 
    assign_binding_table_offsets();
@@ -3695,13 +3700,7 @@ fs_visitor::run()
       /* We handle discards by keeping track of the still-live pixels in f0.1.
        * Initialize it with the dispatched pixels.
        */
-      bool uses_kill =
-         (stage == MESA_SHADER_FRAGMENT) &&
-         ((brw_wm_prog_data*) this->prog_data)->uses_kill;
-      bool alpha_test_func =
-         (stage == MESA_SHADER_FRAGMENT) &&
-         ((brw_wm_prog_key*) this->key)->alpha_test_func;
-      if (uses_kill) {
+      if (wm_prog_data->uses_kill) {
          fs_inst *discard_init = emit(FS_OPCODE_MOV_DISPATCH_TO_FLAGS);
          discard_init->flag_subreg = 1;
       }
@@ -3724,7 +3723,7 @@ fs_visitor::run()
 
       emit(FS_OPCODE_PLACEHOLDER_HALT);
 
-      if (alpha_test_func)
+      if (wm_key->alpha_test_func)
          emit_alpha_test();
 
       emit_fb_writes();
@@ -3740,13 +3739,10 @@ fs_visitor::run()
          return false;
    }
 
-   if (stage == MESA_SHADER_FRAGMENT) {
-      brw_wm_prog_data *prog_data = (brw_wm_prog_data*) this->prog_data;
-      if (dispatch_width == 8)
-         prog_data->reg_blocks = brw_register_blocks(grf_used);
-      else
-         prog_data->reg_blocks_16 = brw_register_blocks(grf_used);
-   }
+   if (dispatch_width == 8)
+      wm_prog_data->reg_blocks = brw_register_blocks(grf_used);
+   else
+      wm_prog_data->reg_blocks_16 = brw_register_blocks(grf_used);
 
    /* If any state parameters were appended, then ParameterValues could have
     * been realloced, in which case the driver uniform storage set up by
@@ -3786,7 +3782,7 @@ brw_wm_fs_emit(struct brw_context *brw,
    /* Now the main event: Visit the shader IR and generate our FS IR for it.
     */
    fs_visitor v(brw, mem_ctx, key, prog_data, prog, fp, 8);
-   if (!v.run()) {
+   if (!v.run_fs()) {
       if (prog) {
          prog->LinkStatus = false;
          ralloc_strcat(&prog->InfoLog, v.fail_msg);
@@ -3805,7 +3801,7 @@ brw_wm_fs_emit(struct brw_context *brw,
       if (!v.simd16_unsupported) {
          /* Try a SIMD16 compile */
          v2.import_uniforms(&v);
-         if (!v2.run()) {
+         if (!v2.run_fs()) {
             perf_debug("SIMD16 shader failed to compile, falling back to "
                        "SIMD8 at a 10-20%% performance cost: %s", v2.fail_msg);
          } else {

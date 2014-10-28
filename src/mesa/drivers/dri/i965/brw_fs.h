@@ -414,7 +414,7 @@ public:
                                         const fs_reg &varying_offset,
                                         uint32_t const_offset);
 
-   bool run();
+   bool run_fs();
    bool run_vs();
    void optimize();
    void allocate_registers();
