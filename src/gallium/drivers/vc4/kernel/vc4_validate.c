@@ -778,14 +778,14 @@ reloc_tex(struct exec_info *exec,
 		if ((p3 & (3 << 30)) == (1 << 30)) {
 			if (cube_map_stride) {
 				DRM_ERROR("Cube map stride set twice\n");
-				return -EINVAL;
+				return false;
 			}
 
 			cube_map_stride = p3 & 0x3ffff000;
 		}
 		if (!cube_map_stride) {
 			DRM_ERROR("Cube map stride not set\n");
-			return -EINVAL;
+			return false;
 		}
 	}
 
