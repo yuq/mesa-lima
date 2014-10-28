@@ -271,25 +271,6 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define GEN75_SCS_GREEN						0x5
 #define GEN75_SCS_BLUE						0x6
 #define GEN75_SCS_ALPHA						0x7
-#define GEN6_MOCS_LLC__MASK					0x00000003
-#define GEN6_MOCS_LLC__SHIFT					0
-#define GEN6_MOCS_LLC_PTE					0x0
-#define GEN6_MOCS_LLC_UC					0x1
-#define GEN6_MOCS_LLC_ON					0x2
-#define GEN7_MOCS_LLC__MASK					0x00000002
-#define GEN7_MOCS_LLC__SHIFT					1
-#define GEN7_MOCS_LLC_PTE					(0x0 << 1)
-#define GEN7_MOCS_LLC_ON					(0x1 << 1)
-#define GEN75_MOCS_LLC__MASK					0x00000006
-#define GEN75_MOCS_LLC__SHIFT					1
-#define GEN75_MOCS_LLC_PTE					(0x0 << 1)
-#define GEN75_MOCS_LLC_UC					(0x1 << 1)
-#define GEN75_MOCS_LLC_ON					(0x2 << 1)
-#define GEN75_MOCS_LLC_ELLC					(0x3 << 1)
-#define GEN7_MOCS_L3__MASK					0x00000001
-#define GEN7_MOCS_L3__SHIFT					0
-#define GEN7_MOCS_L3_UC						0x0
-#define GEN7_MOCS_L3_ON						0x1
 #define GEN6_SURFACE_STATE__SIZE				8
 
 #define GEN6_SURFACE_DW0_TYPE__MASK				0xe0000000

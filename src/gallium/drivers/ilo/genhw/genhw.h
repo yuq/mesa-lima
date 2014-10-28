@@ -31,9 +31,11 @@
 #include "gen_regs.xml.h"
 #include "gen_mi.xml.h"
 #include "gen_blitter.xml.h"
+#include "gen_render.xml.h"
 #include "gen_render_surface.xml.h"
 #include "gen_render_dynamic.xml.h"
 #include "gen_render_3d.xml.h"
+#include "gen_render_media.xml.h"
 #include "gen_eu_isa.xml.h"
 #include "gen_eu_message.xml.h"
 
