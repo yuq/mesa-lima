@@ -1432,7 +1432,7 @@ static void r300_bind_rs_state(struct pipe_context* pipe, void* state)
         }
     }
 
-    if (last_clip_halfz != r300->clip_halfz) {
+    if (r300->screen->caps.has_tcl && last_clip_halfz != r300->clip_halfz) {
         r300_mark_atom_dirty(r300, &r300->vs_state);
     }
 }
