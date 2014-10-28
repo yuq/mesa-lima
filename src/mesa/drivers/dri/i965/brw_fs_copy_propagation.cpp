@@ -425,6 +425,8 @@ fs_visitor::try_constant_propagate(fs_inst *inst, acp_entry *entry)
 
    if (entry->src.file != IMM)
       return false;
+   if (entry->saturate)
+      return false;
 
    for (int i = inst->sources - 1; i >= 0; i--) {
       if (inst->src[i].file != GRF)
