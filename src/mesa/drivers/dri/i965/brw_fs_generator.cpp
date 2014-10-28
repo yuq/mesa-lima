@@ -126,13 +126,12 @@ fs_generator::fs_generator(struct brw_context *brw,
                            struct brw_stage_prog_data *prog_data,
                            struct gl_shader_program *shader_prog,
                            struct gl_program *prog,
-                           bool runtime_check_aads_emit,
-                           bool debug_flag)
+                           bool runtime_check_aads_emit)
 
    : brw(brw), key(key),
      prog_data(prog_data), shader_prog(shader_prog),
      prog(prog), runtime_check_aads_emit(runtime_check_aads_emit),
-     debug_flag(debug_flag), mem_ctx(mem_ctx)
+     debug_flag(false), mem_ctx(mem_ctx)
 {
    ctx = &brw->ctx;
 
@@ -1512,6 +1511,13 @@ fs_generator::generate_untyped_surface_read(fs_inst *inst, struct brw_reg dst,
    brw_mark_surface_used(prog_data, surf_index.dw1.ud);
 }
 
+void
+fs_generator::enable_debug(const char *shader_name)
+{
+   debug_flag = true;
+   this->shader_name = shader_name;
+}
+
 int
 fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
 {
@@ -2015,21 +2021,10 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
    int after_size = p->next_insn_offset - start_offset;
 
    if (unlikely(debug_flag)) {
-      if (shader_prog) {
-         fprintf(stderr,
-                 "Native code for %s fragment shader %d (SIMD%d dispatch):\n",
-                 shader_prog->Label ? shader_prog->Label : "unnamed",
-                 shader_prog->Name, dispatch_width);
-      } else if (prog) {
-         fprintf(stderr,
-                 "Native code for fragment program %d (SIMD%d dispatch):\n",
-                 prog->Id, dispatch_width);
-      } else {
-         fprintf(stderr, "Native code for blorp program (SIMD%d dispatch):\n",
-                 dispatch_width);
-      }
-      fprintf(stderr, "SIMD%d shader: %d instructions. %d loops. Compacted %d to %d"
-                      " bytes (%.0f%%)\n",
+      fprintf(stderr, "Native code for %s\n"
+              "SIMD%d shader: %d instructions. %d loops. Compacted %d to %d"
+              " bytes (%.0f%%)\n",
+              shader_name,
               dispatch_width, before_size / 16, loop_count, before_size, after_size,
               100.0f * (before_size - after_size) / before_size);
 

@@ -3716,8 +3716,21 @@ brw_wm_fs_emit(struct brw_context *brw,
       prog_data->no_8 = false;
    }
 
-   fs_generator g(brw, mem_ctx, (void *) key, &prog_data->base, prog, &fp->Base,
-                  v.runtime_check_aads_emit, INTEL_DEBUG & DEBUG_WM);
+   fs_generator g(brw, mem_ctx, (void *) key, &prog_data->base, prog,
+                  &fp->Base, v.runtime_check_aads_emit);
+
+   if (unlikely(INTEL_DEBUG & DEBUG_WM)) {
+      char *name;
+      if (prog)
+         name = ralloc_asprintf(mem_ctx, "%s fragment shader %d",
+                                prog->Label ? prog->Label : "unnamed",
+                                prog->Name);
+      else
+         name = ralloc_asprintf(mem_ctx, "fragment program %d", fp->Base.Id);
+
+      g.enable_debug(name);
+   }
+
    if (simd8_cfg)
       g.generate_code(simd8_cfg, 8);
    if (simd16_cfg)

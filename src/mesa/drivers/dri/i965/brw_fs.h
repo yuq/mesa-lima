@@ -693,10 +693,10 @@ public:
                 struct brw_stage_prog_data *prog_data,
                 struct gl_shader_program *shader_prog,
                 struct gl_program *fp,
-                bool runtime_check_aads_emit,
-                bool debug_flag);
+                bool runtime_check_aads_emit);
    ~fs_generator();
 
+   void enable_debug(const char *shader_name);
    int generate_code(const cfg_t *cfg, int dispatch_width);
    const unsigned *get_assembly(unsigned int *assembly_size);
 
@@ -804,7 +804,8 @@ private:
 
    exec_list discard_halt_patches;
    bool runtime_check_aads_emit;
-   const bool debug_flag;
+   bool debug_flag;
+   const char *shader_name;
    void *mem_ctx;
 };
 
