@@ -682,39 +682,85 @@ init_dev(struct ilo_dev_info *dev, const struct intel_winsys_info *info)
       ilo_warn("PPGTT disabled\n");
    }
 
-   /*
-    * From the Sandy Bridge PRM, volume 4 part 2, page 18:
-    *
-    *     "[DevSNB]: The GT1 product's URB provides 32KB of storage, arranged
-    *      as 1024 256-bit rows. The GT2 product's URB provides 64KB of
-    *      storage, arranged as 2048 256-bit rows. A row corresponds in size
-    *      to an EU GRF register. Read/write access to the URB is generally
-    *      supported on a row-granular basis."
-    *
-    * From the Ivy Bridge PRM, volume 4 part 2, page 17:
-    *
-    *     "URB Size    URB Rows    URB Rows when SLM Enabled
-    *      128k        4096        2048
-    *      256k        8096        4096"
-    */
-
    if (gen_is_hsw(info->devid)) {
+      /*
+       * From the Haswell PRM, volume 4, page 8:
+       *
+       *     "Description                    GT3      GT2      GT1.5    GT1
+       *      (...)
+       *      EUs (Total)                    40       20       12       10
+       *      Threads (Total)                280      140      84       70
+       *      (...)
+       *      URB Size (max, within L3$)     512KB    256KB    256KB    128KB
+       */
       dev->gen_opaque = ILO_GEN(7.5);
       dev->gt = gen_get_hsw_gt(info->devid);
-      dev->urb_size = ((dev->gt == 3) ? 512 :
-                       (dev->gt == 2) ? 256 : 128) * 1024;
-   }
-   else if (gen_is_ivb(info->devid) || gen_is_vlv(info->devid)) {
+      if (dev->gt == 3) {
+         dev->eu_count = 40;
+         dev->thread_count = 280;
+         dev->urb_size = 512 * 1024;
+      } else if (dev->gt == 2) {
+         dev->eu_count = 20;
+         dev->thread_count = 140;
+         dev->urb_size = 256 * 1024;
+      } else {
+         dev->eu_count = 10;
+         dev->thread_count = 70;
+         dev->urb_size = 128 * 1024;
+      }
+   } else if (gen_is_ivb(info->devid) || gen_is_vlv(info->devid)) {
+      /*
+       * From the Ivy Bridge PRM, volume 1 part 1, page 18:
+       *
+       *     "Device             # of EUs        #Threads/EU
+       *      Ivy Bridge (GT2)   16              8
+       *      Ivy Bridge (GT1)   6               6"
+       *
+       * From the Ivy Bridge PRM, volume 4 part 2, page 17:
+       *
+       *     "URB Size    URB Rows    URB Rows when SLM Enabled
+       *      128k        4096        2048
+       *      256k        8096        4096"
+       */
       dev->gen_opaque = ILO_GEN(7);
       dev->gt = (gen_is_ivb(info->devid)) ? gen_get_ivb_gt(info->devid) : 1;
-      dev->urb_size = ((dev->gt == 2) ? 256 : 128) * 1024;
-   }
-   else if (gen_is_snb(info->devid)) {
+      if (dev->gt == 2) {
+         dev->eu_count = 16;
+         dev->thread_count = 128;
+         dev->urb_size = 256 * 1024;
+      } else {
+         dev->eu_count = 6;
+         dev->thread_count = 36;
+         dev->urb_size = 128 * 1024;
+      }
+   } else if (gen_is_snb(info->devid)) {
+      /*
+       * From the Sandy Bridge PRM, volume 1 part 1, page 22:
+       *
+       *     "Device             # of EUs        #Threads/EU
+       *      SNB GT2            12              5
+       *      SNB GT1            6               4"
+       *
+       * From the Sandy Bridge PRM, volume 4 part 2, page 18:
+       *
+       *     "[DevSNB]: The GT1 product's URB provides 32KB of storage,
+       *      arranged as 1024 256-bit rows. The GT2 product's URB provides
+       *      64KB of storage, arranged as 2048 256-bit rows. A row
+       *      corresponds in size to an EU GRF register. Read/write access to
+       *      the URB is generally supported on a row-granular basis."
+       */
       dev->gen_opaque = ILO_GEN(6);
       dev->gt = gen_get_snb_gt(info->devid);
-      dev->urb_size = ((dev->gt == 2) ? 64 : 32) * 1024;
-   }
-   else {
+      if (dev->gt == 2) {
+         dev->eu_count = 12;
+         dev->thread_count = 60;
+         dev->urb_size = 64 * 1024;
+      } else {
+         dev->eu_count = 6;
+         dev->thread_count = 24;
+         dev->urb_size = 32 * 1024;
+      }
+   } else {
       ilo_err("unknown GPU generation\n");
       return false;
    }

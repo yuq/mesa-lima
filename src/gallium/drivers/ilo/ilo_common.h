@@ -86,6 +86,8 @@ struct ilo_dev_info {
    int gen_opaque;
 
    int gt;
+   int eu_count;
+   int thread_count;
    int urb_size;
 };
 

@@ -434,35 +434,9 @@ ilo_gpe_init_vs_cso(const struct ilo_dev_info *dev,
    if (!vue_read_len)
       vue_read_len = 1;
 
-   switch (ilo_dev_gen(dev)) {
-   case ILO_GEN(6):
-      /*
-       * From the Sandy Bridge PRM, volume 1 part 1, page 22:
-       *
-       *     "Device             # of EUs        #Threads/EU
-       *      SNB GT2            12              5
-       *      SNB GT1            6               4"
-       */
-      max_threads = (dev->gt == 2) ? 60 : 24;
-      break;
-   case ILO_GEN(7):
-      /*
-       * From the Ivy Bridge PRM, volume 1 part 1, page 18:
-       *
-       *     "Device             # of EUs        #Threads/EU
-       *      Ivy Bridge (GT2)   16              8
-       *      Ivy Bridge (GT1)   6               6"
-       */
-      max_threads = (dev->gt == 2) ? 128 : 36;
-      break;
-   case ILO_GEN(7.5):
-      /* see brwCreateContext() */
-      max_threads = (dev->gt >= 2) ? 280 : 70;
-      break;
-   default:
-      max_threads = 1;
-      break;
-   }
+   max_threads = dev->thread_count;
+   if (ilo_dev_gen(dev) == ILO_GEN(7.5) && dev->gt == 2)
+      max_threads *= 2;
 
    dw2 = (true) ? 0 : GEN6_THREADDISP_FP_MODE_ALT;
    dw2 |= ((sampler_count + 3) / 4) << GEN6_THREADDISP_SAMPLER_COUNT__SHIFT;
