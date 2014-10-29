@@ -43,15 +43,16 @@ fs_visitor::dead_code_eliminate()
 
    int num_vars = live_intervals->num_vars;
    BITSET_WORD *live = ralloc_array(NULL, BITSET_WORD, BITSET_WORDS(num_vars));
+   BITSET_WORD *flag_live = ralloc_array(NULL, BITSET_WORD, 1);
 
    foreach_block (block, cfg) {
       memcpy(live, live_intervals->block_data[block->num].liveout,
              sizeof(BITSET_WORD) * BITSET_WORDS(num_vars));
+      memcpy(flag_live, live_intervals->block_data[block->num].flag_liveout,
+             sizeof(BITSET_WORD));
 
       foreach_inst_in_block_reverse(fs_inst, inst, block) {
-         if (inst->dst.file == GRF &&
-             !inst->has_side_effects() &&
-             !inst->writes_flag()) {
+         if (inst->dst.file == GRF && !inst->has_side_effects()) {
             bool result_live = false;
 
             if (inst->regs_written == 1) {
@@ -67,12 +68,20 @@ fs_visitor::dead_code_eliminate()
             if (!result_live) {
                progress = true;
 
-               if (inst->writes_accumulator) {
+               if (inst->writes_accumulator || inst->writes_flag()) {
                   inst->dst = fs_reg(retype(brw_null_reg(), inst->dst.type));
                } else {
                   inst->opcode = BRW_OPCODE_NOP;
                   continue;
                }
+            }
+         }
+
+         if (inst->dst.is_null() && inst->writes_flag()) {
+            if (!BITSET_TEST(flag_live, inst->flag_subreg)) {
+               inst->opcode = BRW_OPCODE_NOP;
+               progress = true;
+               continue;
             }
          }
 
@@ -85,6 +94,10 @@ fs_visitor::dead_code_eliminate()
             }
          }
 
+         if (inst->writes_flag()) {
+            BITSET_CLEAR(flag_live, inst->flag_subreg);
+         }
+
          for (int i = 0; i < inst->sources; i++) {
             if (inst->src[i].file == GRF) {
                int var = live_intervals->var_from_reg(&inst->src[i]);
@@ -94,10 +107,15 @@ fs_visitor::dead_code_eliminate()
                }
             }
          }
+
+         if (inst->reads_flag()) {
+            BITSET_SET(flag_live, inst->flag_subreg);
+         }
       }
    }
 
    ralloc_free(live);
+   ralloc_free(flag_live);
 
    if (progress) {
       foreach_block_and_inst_safe (block, backend_instruction, inst, cfg) {
