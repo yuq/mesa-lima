@@ -41,7 +41,7 @@
 #include "brw_eu.h"
 #include "brw_util.h"
 #include "brw_state.h"
-#include "brw_gs.h"
+#include "brw_ff_gs.h"
 
 #include "util/ralloc.h"
 

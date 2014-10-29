@@ -50,6 +50,8 @@ i965_FILES = \
 	brw_eu_compact.c \
 	brw_eu_emit.c \
 	brw_eu_util.c \
+	brw_ff_gs.c \
+	brw_ff_gs_emit.c \
 	brw_fs.cpp \
 	brw_fs_channel_expressions.cpp \
 	brw_fs_copy_propagation.cpp \
@@ -65,8 +67,6 @@ i965_FILES = \
 	brw_fs_sel_peephole.cpp \
 	brw_fs_vector_splitting.cpp \
 	brw_fs_visitor.cpp \
-	brw_gs.c \
-	brw_gs_emit.c \
 	brw_gs_state.c \
 	brw_gs_surface_state.c \
 	brw_interpolation_map.c \
