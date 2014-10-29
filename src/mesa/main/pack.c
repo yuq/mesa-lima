@@ -4334,4 +4334,218 @@ _mesa_rebase_rgba_uint(GLuint n, GLuint rgba[][4], GLenum baseFormat)
    }
 }
 
+void
+_mesa_pack_luminance_from_rgba_float(GLuint n, GLfloat rgba[][4],
+                                     GLvoid *dstAddr, GLenum dst_format,
+                                     GLbitfield transferOps)
+{
+   int i;
+   GLfloat *dst = (GLfloat *) dstAddr;
+
+   switch (dst_format) {
+   case GL_LUMINANCE:
+      if (transferOps & IMAGE_CLAMP_BIT) {
+         for (i = 0; i < n; i++) {
+            GLfloat sum = rgba[i][RCOMP] + rgba[i][GCOMP] + rgba[i][BCOMP];
+            dst[i] = CLAMP(sum, 0.0F, 1.0F);
+         }
+      } else {
+         for (i = 0; i < n; i++) {
+            dst[i] = rgba[i][RCOMP] + rgba[i][GCOMP] + rgba[i][BCOMP];
+         }
+      }
+      return;
+   case GL_LUMINANCE_ALPHA:
+      if (transferOps & IMAGE_CLAMP_BIT) {
+         for (i = 0; i < n; i++) {
+            GLfloat sum = rgba[i][RCOMP] + rgba[i][GCOMP] + rgba[i][BCOMP];
+            dst[2*i] = CLAMP(sum, 0.0F, 1.0F);
+            dst[2*i+1] = rgba[i][ACOMP];
+         }
+      } else {
+         for (i = 0; i < n; i++) {
+            dst[2*i] = rgba[i][RCOMP] + rgba[i][GCOMP] + rgba[i][BCOMP];
+            dst[2*i+1] = rgba[i][ACOMP];
+         }
+      }
+      return;
+   default:
+      assert(!"Unsupported format");
+   }
+}
+
+static int32_t
+clamp_sint64_to_sint32(int64_t src)
+{
+   return CLAMP(src, INT32_MIN, INT32_MAX);
+}
+
+static int32_t
+clamp_sint64_to_uint32(int64_t src)
+{
+   return CLAMP(src, 0, UINT32_MAX);
+}
+
+static int32_t
+clamp_uint64_to_uint32(uint64_t src)
+{
+   return MIN2(src, UINT32_MAX);
+}
+
+static int32_t
+clamp_uint64_to_sint32(uint64_t src)
+{
+   return MIN2(src, INT32_MAX);
+}
+
+static int32_t
+convert_integer_luminance64(int64_t src64, int bits,
+                            bool dst_is_signed, bool src_is_signed)
+{
+   int32_t src32;
+
+   /* Clamp Luminance value from 64-bit to 32-bit. Consider if we need
+    * any signed<->unsigned conversion too.
+    */
+   if (src_is_signed && dst_is_signed)
+      src32 = clamp_sint64_to_sint32(src64);
+   else if (src_is_signed && !dst_is_signed)
+      src32 = clamp_sint64_to_uint32(src64);
+   else if (!src_is_signed && dst_is_signed)
+      src32 = clamp_uint64_to_sint32(src64);
+   else
+      src32 = clamp_uint64_to_uint32(src64);
+
+   /* If the dst type is < 32-bit, we need an extra clamp */
+   if (bits == 32) {
+      return src32;
+   } else {
+      if (dst_is_signed)
+         return _mesa_signed_to_signed(src32, bits);
+      else
+         return _mesa_unsigned_to_unsigned(src32, bits);
+   }
+}
+
+static int32_t
+convert_integer(int32_t src, int bits, bool dst_is_signed, bool src_is_signed)
+{
+   if (src_is_signed && dst_is_signed)
+      return _mesa_signed_to_signed(src, bits);
+   else if (src_is_signed && !dst_is_signed)
+      return _mesa_signed_to_unsigned(src, bits);
+   else if (!src_is_signed && dst_is_signed)
+      return _mesa_unsigned_to_signed(src, bits);
+   else
+      return _mesa_unsigned_to_unsigned(src, bits);
+}
+
+void
+_mesa_pack_luminance_from_rgba_integer(GLuint n,
+                                       GLuint rgba[][4], bool rgba_is_signed,
+                                       GLvoid *dstAddr,
+                                       GLenum dst_format,
+                                       GLenum dst_type)
+{
+   assert(dst_format == GL_LUMINANCE_INTEGER_EXT ||
+          dst_format == GL_LUMINANCE_ALPHA_INTEGER_EXT);
+
+   int i;
+   int64_t lum64;
+   int32_t lum32, alpha;
+   bool dst_is_signed;
+   int dst_bits;
+
+   /* We first compute luminance values as a 64-bit addition of the
+    * 32-bit R,G,B components, then we clamp the result to the dst type size.
+    *
+    * Notice that this operation involves casting the 32-bit R,G,B components
+    * to 64-bit before the addition. Since rgba is defined as a GLuint array
+    * we need to be careful when rgba packs signed data and make sure
+    * that we cast to a 32-bit signed integer values before casting them to
+    * 64-bit signed integers.
+    */
+   dst_is_signed = (dst_type == GL_BYTE || dst_type == GL_SHORT ||
+                    dst_type == GL_INT);
+
+   dst_bits = _mesa_sizeof_type(dst_type) * 8;
+   assert(dst_bits > 0);
+
+   switch (dst_format) {
+   case GL_LUMINANCE_INTEGER_EXT:
+      for (i = 0; i < n; i++) {
+         if (!rgba_is_signed) {
+            lum64 = (uint64_t) rgba[i][RCOMP] +
+                    (uint64_t) rgba[i][GCOMP] +
+                    (uint64_t) rgba[i][BCOMP];
+         } else {
+            lum64 = (int64_t) ((int32_t) rgba[i][RCOMP]) +
+                    (int64_t) ((int32_t) rgba[i][GCOMP]) +
+                    (int64_t) ((int32_t) rgba[i][BCOMP]);
+         }
+         lum32 = convert_integer_luminance64(lum64, dst_bits,
+                                             dst_is_signed, rgba_is_signed);
+         switch (dst_type) {
+         case GL_BYTE:
+         case GL_UNSIGNED_BYTE: {
+            GLbyte *dst = (GLbyte *) dstAddr;
+            dst[i] = lum32;
+         }
+         break;
+         case GL_SHORT:
+         case GL_UNSIGNED_SHORT: {
+            GLshort *dst = (GLshort *) dstAddr;
+            dst[i] = lum32;
+         }
+         break;
+         case GL_INT:
+         case GL_UNSIGNED_INT: {
+            GLint *dst = (GLint *) dstAddr;
+            dst[i] = lum32;
+         }
+         break;
+         }
+      }
+      return;
+   case GL_LUMINANCE_ALPHA_INTEGER_EXT:
+      for (i = 0; i < n; i++) {
+         if (!rgba_is_signed) {
+            lum64 = (uint64_t) rgba[i][RCOMP] +
+                    (uint64_t) rgba[i][GCOMP] +
+                    (uint64_t) rgba[i][BCOMP];
+         } else {
+            lum64 = (int64_t) ((int32_t) rgba[i][RCOMP]) +
+                    (int64_t) ((int32_t) rgba[i][GCOMP]) +
+                    (int64_t) ((int32_t) rgba[i][BCOMP]);
+         }
+         lum32 = convert_integer_luminance64(lum64, dst_bits,
+                                             dst_is_signed, rgba_is_signed);
+         alpha = convert_integer(rgba[i][ACOMP], dst_bits,
+                                 dst_is_signed, rgba_is_signed);
+         switch (dst_type) {
+         case GL_BYTE:
+         case GL_UNSIGNED_BYTE: {
+            GLbyte *dst = (GLbyte *) dstAddr;
+            dst[2*i] = lum32;
+            dst[2*i+1] = alpha;
+         }
+         case GL_SHORT:
+         case GL_UNSIGNED_SHORT: {
+            GLshort *dst = (GLshort *) dstAddr;
+            dst[i] = lum32;
+            dst[2*i+1] = alpha;
+         }
+         break;
+         case GL_INT:
+         case GL_UNSIGNED_INT: {
+            GLint *dst = (GLint *) dstAddr;
+            dst[i] = lum32;
+            dst[2*i+1] = alpha;
+         }
+         break;
+         }
+      }
+      return;
+   }
+}
 
