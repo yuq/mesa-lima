@@ -1277,6 +1277,11 @@ bool nir_foreach_block(nir_function_impl *impl, nir_foreach_block_cb cb,
 bool nir_foreach_block_reverse(nir_function_impl *impl, nir_foreach_block_cb cb,
                                void *state);
 
+/* If the following CF node is an if, this function returns that if.
+ * Otherwise, it returns NULL.
+ */
+nir_if *nir_block_following_if(nir_block *block);
+
 void nir_index_local_regs(nir_function_impl *impl);
 void nir_index_global_regs(nir_shader *shader);
 void nir_index_ssa_defs(nir_function_impl *impl);

@@ -1692,6 +1692,23 @@ nir_foreach_block_reverse(nir_function_impl *impl, nir_foreach_block_cb cb,
    return true;
 }
 
+nir_if *
+nir_block_following_if(nir_block *block)
+{
+   if (exec_node_is_tail_sentinel(&block->cf_node.node))
+      return NULL;
+
+   if (nir_cf_node_is_last(&block->cf_node))
+      return NULL;
+
+   nir_cf_node *next_node = nir_cf_node_next(&block->cf_node);
+
+   if (next_node->type != nir_cf_node_if)
+      return NULL;
+
+   return nir_cf_node_as_if(next_node);
+}
+
 static bool
 index_block(nir_block *block, void *state)
 {

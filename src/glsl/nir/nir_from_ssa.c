@@ -107,12 +107,9 @@ convert_from_ssa_block(nir_block *block, void *void_state)
       }
    }
 
-   if (block->cf_node.node.next != NULL && /* check that we aren't the end node */
-       !nir_cf_node_is_last(&block->cf_node) &&
-       nir_cf_node_next(&block->cf_node)->type == nir_cf_node_if) {
-      nir_if *if_stmt = nir_cf_node_as_if(nir_cf_node_next(&block->cf_node));
-      rewrite_ssa_src(&if_stmt->condition, state);
-   }
+   nir_if *following_if = nir_block_following_if(block);
+   if (following_if)
+      rewrite_ssa_src(&following_if->condition, state);
 
    return true;
 }

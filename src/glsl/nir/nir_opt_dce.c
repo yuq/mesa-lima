@@ -123,13 +123,11 @@ init_block_cb(nir_block *block, void *_state)
    nir_foreach_instr(block, instr)
       init_instr(instr, worklist);
 
-   if (block->cf_node.node.next != NULL && /* check that we aren't the end node */
-       !nir_cf_node_is_last(&block->cf_node) &&
-       nir_cf_node_next(&block->cf_node)->type == nir_cf_node_if) {
-      nir_if *if_stmt = nir_cf_node_as_if(nir_cf_node_next(&block->cf_node));
-      if (if_stmt->condition.is_ssa &&
-          !if_stmt->condition.ssa->parent_instr->live)
-         worklist_push(worklist, if_stmt->condition.ssa->parent_instr);
+   nir_if *following_if = nir_block_following_if(block);
+   if (following_if) {
+      if (following_if->condition.is_ssa &&
+          !following_if->condition.ssa->parent_instr->live)
+         worklist_push(worklist, following_if->condition.ssa->parent_instr);
    }
 
    return true;
