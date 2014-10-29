@@ -49,28 +49,6 @@ struct brw_vec4_compile {
    GLuint last_scratch; /**< measured in 32-byte (register size) units */
 };
 
-
-struct brw_vec4_prog_key {
-   GLuint program_string_id;
-
-   /**
-    * True if at least one clip flag is enabled, regardless of whether the
-    * shader uses clip planes or gl_ClipDistance.
-    */
-   GLuint userclip_active:1;
-
-   /**
-    * How many user clipping planes are being uploaded to the vertex shader as
-    * push constants.
-    */
-   GLuint nr_userclip_plane_consts:4;
-
-   GLuint clamp_vertex_color:1;
-
-   struct brw_sampler_prog_key_data tex;
-};
-
-
 #ifdef __cplusplus
 extern "C" {
 #endif

@@ -24,11 +24,25 @@
 #ifndef BRW_PROGRAM_H
 #define BRW_PROGRAM_H
 
-enum gen6_gather_sampler_wa {
-   WA_SIGN = 1,      /* whether we need to sign extend */
-   WA_8BIT = 2,      /* if we have an 8bit format needing wa */
-   WA_16BIT = 4,     /* if we have a 16bit format needing wa */
-};
+/**
+ * Program key structures.
+ *
+ * When drawing, we look for the currently bound shaders in the program
+ * cache.  This is essentially a hash table lookup, and these are the keys.
+ *
+ * Sometimes OpenGL features specified as state need to be simulated via
+ * shader code, due to a mismatch between the API and the hardware.  This
+ * is often referred to as "non-orthagonal state" or "NOS".  We store NOS
+ * in the program key so it's considered when searching for a program.  If
+ * we haven't seen a particular combination before, we have to recompile a
+ * new specialized version.
+ *
+ * Shader compilation should not look up state in gl_context directly, but
+ * instead use the copy in the program key.  This guarantees recompiles will
+ * happen correctly.
+ *
+ *  @{
+ */
 
 /**
  * Sampler information needed by VS, WM, and GS program cache keys.
@@ -55,6 +69,90 @@ struct brw_sampler_prog_key_data {
     * For Sandybridge, which shader w/a we need for gather quirks.
     */
    uint8_t gen6_gather_wa[MAX_SAMPLERS];
+};
+
+
+struct brw_vec4_prog_key {
+   GLuint program_string_id;
+
+   /**
+    * True if at least one clip flag is enabled, regardless of whether the
+    * shader uses clip planes or gl_ClipDistance.
+    */
+   GLuint userclip_active:1;
+
+   /**
+    * How many user clipping planes are being uploaded to the vertex shader as
+    * push constants.
+    */
+   GLuint nr_userclip_plane_consts:4;
+
+   GLuint clamp_vertex_color:1;
+
+   struct brw_sampler_prog_key_data tex;
+};
+
+/** The program key for Vertex Shaders. */
+struct brw_vs_prog_key {
+   struct brw_vec4_prog_key base;
+
+   /*
+    * Per-attribute workaround flags
+    */
+   uint8_t gl_attrib_wa_flags[VERT_ATTRIB_MAX];
+
+   GLuint copy_edgeflag:1;
+
+   /**
+    * For pre-Gen6 hardware, a bitfield indicating which texture coordinates
+    * are going to be replaced with point coordinates (as a consequence of a
+    * call to glTexEnvi(GL_POINT_SPRITE, GL_COORD_REPLACE, GL_TRUE)).  Because
+    * our SF thread requires exact matching between VS outputs and FS inputs,
+    * these texture coordinates will need to be unconditionally included in
+    * the VUE, even if they aren't written by the vertex shader.
+    */
+   GLuint point_coord_replace:8;
+};
+
+/** The program key for Geometry Shaders. */
+struct brw_gs_prog_key
+{
+   struct brw_vec4_prog_key base;
+
+   GLbitfield64 input_varyings;
+};
+
+/** The program key for Fragment/Pixel Shaders. */
+struct brw_wm_prog_key {
+   uint8_t iz_lookup;
+   GLuint stats_wm:1;
+   GLuint flat_shade:1;
+   GLuint persample_shading:1;
+   GLuint persample_2x:1;
+   GLuint nr_color_regions:5;
+   GLuint replicate_alpha:1;
+   GLuint render_to_fbo:1;
+   GLuint clamp_fragment_color:1;
+   GLuint compute_pos_offset:1;
+   GLuint compute_sample_id:1;
+   GLuint line_aa:2;
+   GLuint high_quality_derivatives:1;
+
+   GLushort drawable_height;
+   GLbitfield64 input_slots_valid;
+   GLuint program_string_id:32;
+   GLenum alpha_test_func;          /* < For Gen4/5 MRT alpha test */
+   float alpha_test_ref;
+
+   struct brw_sampler_prog_key_data tex;
+};
+
+/** @} */
+
+enum gen6_gather_sampler_wa {
+   WA_SIGN = 1,      /* whether we need to sign extend */
+   WA_8BIT = 2,      /* if we have an 8bit format needing wa */
+   WA_16BIT = 4,     /* if we have a 16bit format needing wa */
 };
 
 #ifdef __cplusplus
