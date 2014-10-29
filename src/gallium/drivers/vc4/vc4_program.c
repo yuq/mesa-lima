@@ -1247,7 +1247,7 @@ static void
 emit_tgsi_instruction(struct vc4_compile *c,
                       struct tgsi_full_instruction *tgsi_inst)
 {
-        struct {
+        static const struct {
                 enum qop op;
                 struct qreg (*func)(struct vc4_compile *c,
                                     struct tgsi_full_instruction *tgsi_inst,
