@@ -62,7 +62,7 @@ public:
    int bitset_words;
 
    /** Per-basic-block information on live variables */
-   struct block_data *bd;
+   struct block_data *block_data;
 
 protected:
    void setup_def_use();
