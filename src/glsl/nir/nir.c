@@ -109,6 +109,7 @@ nir_function_create(nir_shader *shader, const char *name)
    exec_list_push_tail(&shader->functions, &func->node);
    exec_list_make_empty(&func->overload_list);
    func->name = name;
+   func->shader = shader;
 
    return func;
 }
@@ -247,8 +248,7 @@ nir_function_impl_create(nir_function_overload *overload)
    impl->return_var = NULL;
    impl->reg_alloc = 0;
    impl->ssa_alloc = 0;
-   impl->block_index_dirty = true;
-   impl->dominance_dirty = true;
+   impl->valid_metadata = nir_metadata_none;
 
    /* create start & end blocks */
    nir_block *start_block = nir_block_create(mem_ctx);
@@ -821,7 +821,7 @@ handle_jump(nir_block *block)
    unlink_block_successors(block);
 
    nir_function_impl *impl = nir_cf_node_get_function(&block->cf_node);
-   impl->dominance_dirty = true;
+   nir_metadata_dirty(impl, nir_metadata_none);
 
    if (jump_instr->type == nir_jump_break ||
        jump_instr->type == nir_jump_continue) {
@@ -919,7 +919,7 @@ handle_remove_jump(nir_block *block, nir_jump_type type)
    }
 
    nir_function_impl *impl = nir_cf_node_get_function(&block->cf_node);
-   impl->dominance_dirty = true;
+   nir_metadata_dirty(impl, nir_metadata_none);
 }
 
 /**
@@ -1026,8 +1026,7 @@ nir_cf_node_insert_after(nir_cf_node *node, nir_cf_node *after)
    }
 
    nir_function_impl *impl = nir_cf_node_get_function(node);
-   impl->block_index_dirty = true;
-   impl->dominance_dirty = true;
+   nir_metadata_dirty(impl, nir_metadata_none);
 }
 
 void
@@ -1069,8 +1068,7 @@ nir_cf_node_insert_before(nir_cf_node *node, nir_cf_node *before)
    }
 
    nir_function_impl *impl = nir_cf_node_get_function(node);
-   impl->block_index_dirty = true;
-   impl->dominance_dirty = true;
+   nir_metadata_dirty(impl, nir_metadata_none);
 }
 
 void
@@ -1116,7 +1114,7 @@ void
 nir_cf_node_remove(nir_cf_node *node)
 {
    nir_function_impl *impl = nir_cf_node_get_function(node);
-   impl->block_index_dirty = true;
+   nir_metadata_dirty(impl, nir_metadata_none);
 
    if (node->type == nir_cf_node_block) {
       /*
@@ -1680,13 +1678,12 @@ nir_index_blocks(nir_function_impl *impl)
 {
    unsigned index = 0;
 
-   if (!impl->block_index_dirty)
+   if (impl->valid_metadata & nir_metadata_block_index)
       return;
 
    nir_foreach_block(impl, index_block, &index);
 
    impl->num_blocks = index;
-   impl->block_index_dirty = false;
 }
 
 static void

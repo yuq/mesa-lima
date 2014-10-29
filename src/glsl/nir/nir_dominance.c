@@ -181,10 +181,10 @@ calc_dom_children(nir_function_impl* impl)
 void
 nir_calc_dominance_impl(nir_function_impl *impl)
 {
-   if (!impl->dominance_dirty)
+   if (impl->valid_metadata & nir_metadata_dominance)
       return;
 
-   nir_index_blocks(impl);
+   nir_metadata_require(impl, nir_metadata_block_index);
 
    dom_state state;
    state.impl = impl;
@@ -202,8 +202,6 @@ nir_calc_dominance_impl(nir_function_impl *impl)
    impl->start_block->imm_dom = NULL;
 
    calc_dom_children(impl);
-
-   impl->dominance_dirty = false;
 }
 
 void

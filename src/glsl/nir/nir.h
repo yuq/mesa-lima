@@ -33,6 +33,7 @@
 #include "GL/gl.h" /* GLenum */
 #include "util/ralloc.h"
 #include "main/mtypes.h"
+#include "main/bitset.h"
 #include "nir_types.h"
 #include <stdio.h>
 
@@ -45,6 +46,7 @@ extern "C" {
 
 struct nir_function_overload;
 struct nir_function;
+struct nir_shader;
 
 
 /**
@@ -1037,6 +1039,16 @@ typedef struct {
 #define nir_loop_last_cf_node(loop) \
    exec_node_data(nir_cf_node, exec_list_get_tail(&(loop)->body), node)
 
+/**
+ * Various bits of metadata that can may be created or required by
+ * optimization and analysis passes
+ */
+typedef enum {
+   nir_metadata_none = 0x0,
+   nir_metadata_block_index = 0x1,
+   nir_metadata_dominance = 0x2,
+} nir_metadata;
+
 typedef struct {
    nir_cf_node cf_node;
 
@@ -1069,8 +1081,7 @@ typedef struct {
    /* total number of basic blocks, only valid when block_index_dirty = false */
    unsigned num_blocks;
 
-   bool block_index_dirty;
-   bool dominance_dirty;
+   nir_metadata valid_metadata;
 } nir_function_impl;
 
 #define nir_cf_node_next(_node) \
@@ -1126,6 +1137,7 @@ typedef struct nir_function {
 
    struct exec_list overload_list;
    const char *name;
+   struct nir_shader *shader;
 } nir_function;
 
 #define nir_function_first_overload(func) \
@@ -1208,6 +1220,11 @@ void nir_cf_node_insert_end(struct exec_list *list, nir_cf_node *node);
 
 /** removes a control flow node, doing any cleanup necessary */
 void nir_cf_node_remove(nir_cf_node *node);
+
+/** requests that the given pieces of metadata be generated */
+void nir_metadata_require(nir_function_impl *impl, nir_metadata required);
+/** dirties all but the preserved metadata */
+void nir_metadata_dirty(nir_function_impl *impl, nir_metadata preserved);
 
 /** creates an instruction with default swizzle/writemask/etc. with NULL registers */
 nir_alu_instr *nir_alu_instr_create(void *mem_ctx, nir_op op);
