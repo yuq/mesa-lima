@@ -1274,6 +1274,8 @@ bool nir_foreach_src(nir_instr *instr, nir_foreach_src_cb cb, void *state);
 typedef bool (*nir_foreach_block_cb)(nir_block *block, void *state);
 bool nir_foreach_block(nir_function_impl *impl, nir_foreach_block_cb cb,
                        void *state);
+bool nir_foreach_block_reverse(nir_function_impl *impl, nir_foreach_block_cb cb,
+                               void *state);
 
 void nir_index_local_regs(nir_function_impl *impl);
 void nir_index_global_regs(nir_shader *shader);

@@ -1597,51 +1597,65 @@ nir_foreach_src(nir_instr *instr, nir_foreach_src_cb cb, void *state)
 
 
 static bool foreach_cf_node(nir_cf_node *node, nir_foreach_block_cb cb,
-                            void *state);
+                            bool reverse, void *state);
 
-static bool
-foreach_block(nir_block *block, nir_foreach_block_cb cb, void *state)
+static inline bool
+foreach_if(nir_if *if_stmt, nir_foreach_block_cb cb, bool reverse, void *state)
 {
-   return cb(block, state);
-}
+   if (reverse) {
+      foreach_list_typed_reverse(nir_cf_node, node, node, &if_stmt->else_list) {
+         if (!foreach_cf_node(node, cb, reverse, state))
+            return false;
+      }
 
-static bool
-foreach_if(nir_if *if_stmt, nir_foreach_block_cb cb, void *state)
-{
-   foreach_list_typed(nir_cf_node, node, node, &if_stmt->then_list) {
-      if (!foreach_cf_node(node, cb, state))
-         return false;
+      foreach_list_typed_reverse(nir_cf_node, node, node, &if_stmt->then_list) {
+         if (!foreach_cf_node(node, cb, reverse, state))
+            return false;
+      }
+   } else {
+      foreach_list_typed(nir_cf_node, node, node, &if_stmt->then_list) {
+         if (!foreach_cf_node(node, cb, reverse, state))
+            return false;
+      }
+
+      foreach_list_typed(nir_cf_node, node, node, &if_stmt->else_list) {
+         if (!foreach_cf_node(node, cb, reverse, state))
+            return false;
+      }
    }
 
-   foreach_list_typed(nir_cf_node, node, node, &if_stmt->else_list) {
-      if (!foreach_cf_node(node, cb, state))
-         return false;
+   return true;
+}
+
+static inline bool
+foreach_loop(nir_loop *loop, nir_foreach_block_cb cb, bool reverse, void *state)
+{
+   if (reverse) {
+      foreach_list_typed_reverse(nir_cf_node, node, node, &loop->body) {
+         if (!foreach_cf_node(node, cb, reverse, state))
+            return false;
+      }
+   } else {
+      foreach_list_typed(nir_cf_node, node, node, &loop->body) {
+         if (!foreach_cf_node(node, cb, reverse, state))
+            return false;
+      }
    }
 
    return true;
 }
 
 static bool
-foreach_loop(nir_loop *loop, nir_foreach_block_cb cb, void *state)
-{
-   foreach_list_typed(nir_cf_node, node, node, &loop->body) {
-      if (!foreach_cf_node(node, cb, state))
-         return false;
-   }
-
-   return true;
-}
-
-static bool
-foreach_cf_node(nir_cf_node *node, nir_foreach_block_cb cb, void *state)
+foreach_cf_node(nir_cf_node *node, nir_foreach_block_cb cb,
+                bool reverse, void *state)
 {
    switch (node->type) {
    case nir_cf_node_block:
-      return foreach_block(nir_cf_node_as_block(node), cb, state);
+      return cb(nir_cf_node_as_block(node), state);
    case nir_cf_node_if:
-      return foreach_if(nir_cf_node_as_if(node), cb, state);
+      return foreach_if(nir_cf_node_as_if(node), cb, reverse, state);
    case nir_cf_node_loop:
-      return foreach_loop(nir_cf_node_as_loop(node), cb, state);
+      return foreach_loop(nir_cf_node_as_loop(node), cb, reverse, state);
       break;
 
    default:
@@ -1656,11 +1670,26 @@ bool
 nir_foreach_block(nir_function_impl *impl, nir_foreach_block_cb cb, void *state)
 {
    foreach_list_typed(nir_cf_node, node, node, &impl->body) {
-      if (!foreach_cf_node(node, cb, state))
+      if (!foreach_cf_node(node, cb, false, state))
          return false;
    }
 
    return cb(impl->end_block, state);
+}
+
+bool
+nir_foreach_block_reverse(nir_function_impl *impl, nir_foreach_block_cb cb,
+                          void *state)
+{
+   if (!cb(impl->end_block, state))
+      return false;
+
+   foreach_list_typed_reverse(nir_cf_node, node, node, &impl->body) {
+      if (!foreach_cf_node(node, cb, true, state))
+         return false;
+   }
+
+   return true;
 }
 
 static bool
