@@ -57,8 +57,17 @@ gen6_PIPELINE_SELECT(struct ilo_builder *builder, int pipeline)
 
    ILO_DEV_ASSERT(builder->dev, 6, 7.5);
 
-   /* 3D or media */
-   assert(pipeline == 0x0 || pipeline == 0x1);
+   switch (pipeline) {
+   case GEN6_PIPELINE_SELECT_DW0_SELECT_3D:
+   case GEN6_PIPELINE_SELECT_DW0_SELECT_MEDIA:
+      break;
+   case GEN7_PIPELINE_SELECT_DW0_SELECT_GPGPU:
+      assert(ilo_dev_gen(builder->dev) >= ILO_GEN(7));
+      break;
+   default:
+      assert(!"unknown pipeline");
+      break;
+   }
 
    ilo_builder_batch_write(builder, cmd_len, &dw0);
 }

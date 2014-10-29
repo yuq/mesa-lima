@@ -30,6 +30,7 @@
 
 #include "ilo_common.h"
 
+struct pipe_constant_buffer;
 struct ilo_blitter;
 struct ilo_builder;
 struct ilo_query;
@@ -86,5 +87,18 @@ ilo_render_get_draw_len(const struct ilo_render *render,
 void
 ilo_render_emit_draw(struct ilo_render *render,
                      const struct ilo_state_vector *vec);
+
+int
+ilo_render_get_launch_grid_len(const struct ilo_render *render,
+                               const struct ilo_state_vector *vec);
+
+void
+ilo_render_emit_launch_grid(struct ilo_render *render,
+                            const struct ilo_state_vector *vec,
+                            const unsigned thread_group_offset[3],
+                            const unsigned thread_group_dim[3],
+                            unsigned thread_group_size,
+                            const struct pipe_constant_buffer *input,
+                            uint32_t pc);
 
 #endif /* ILO_RENDER_H */

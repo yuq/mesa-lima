@@ -456,3 +456,42 @@ ilo_render_emit_draw(struct ilo_render *render,
 
    draw_session_end(render, vec, &session);
 }
+
+int
+ilo_render_get_launch_grid_len(const struct ilo_render *render,
+                               const struct ilo_state_vector *vec)
+{
+   ILO_DEV_ASSERT(render->dev, 7, 7.5);
+
+   return ilo_render_get_launch_grid_surface_states_len(render, vec) +
+          ilo_render_get_launch_grid_dynamic_states_len(render, vec) +
+          ilo_render_get_launch_grid_commands_len(render, vec);
+}
+
+void
+ilo_render_emit_launch_grid(struct ilo_render *render,
+                            const struct ilo_state_vector *vec,
+                            const unsigned thread_group_offset[3],
+                            const unsigned thread_group_dim[3],
+                            unsigned thread_group_size,
+                            const struct pipe_constant_buffer *input,
+                            uint32_t pc)
+{
+   struct ilo_render_launch_grid_session session;
+
+   ILO_DEV_ASSERT(render->dev, 7, 7.5);
+
+   assert(input->buffer);
+
+   memset(&session, 0, sizeof(session));
+
+   session.thread_group_offset = thread_group_offset;
+   session.thread_group_dim = thread_group_dim;
+   session.thread_group_size = thread_group_size;
+   session.input = input;
+   session.pc = pc;
+
+   ilo_render_emit_launch_grid_surface_states(render, vec, &session);
+   ilo_render_emit_launch_grid_dynamic_states(render, vec, &session);
+   ilo_render_emit_launch_grid_commands(render, vec, &session);
+}

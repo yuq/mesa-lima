@@ -118,6 +118,15 @@ struct ilo_render {
          uint32_t PUSH_CONSTANT_BUFFER;
          int PUSH_CONSTANT_BUFFER_size;
       } wm;
+
+      struct {
+         uint32_t BINDING_TABLE_STATE;
+         uint32_t SURFACE_STATE[ILO_MAX_SURFACES];
+         uint32_t SAMPLER_STATE;
+         uint32_t SAMPLER_BORDER_COLOR_STATE[ILO_MAX_SAMPLERS];
+         uint32_t PUSH_CONSTANT_BUFFER;
+         int PUSH_CONSTANT_BUFFER_size;
+      } cs;
    } state;
 };
 
@@ -155,6 +164,17 @@ struct ilo_render_draw_session {
 struct ilo_render_rectlist_session {
    uint32_t vb_start;
    uint32_t vb_end;
+};
+
+struct ilo_render_launch_grid_session {
+   const unsigned *thread_group_offset;
+   const unsigned *thread_group_dim;
+   unsigned thread_group_size;
+   const struct pipe_constant_buffer *input;
+   uint32_t pc;
+
+   uint32_t idrt;
+   int idrt_size;
 };
 
 int
@@ -239,6 +259,15 @@ ilo_render_emit_rectlist_commands(struct ilo_render *render,
 }
 
 int
+ilo_render_get_launch_grid_commands_len(const struct ilo_render *render,
+                                        const struct ilo_state_vector *vec);
+
+void
+ilo_render_emit_launch_grid_commands(struct ilo_render *render,
+                                     const struct ilo_state_vector *vec,
+                                     const struct ilo_render_launch_grid_session *session);
+
+int
 ilo_render_get_draw_dynamic_states_len(const struct ilo_render *render,
                                        const struct ilo_state_vector *vec);
 
@@ -257,6 +286,15 @@ ilo_render_emit_rectlist_dynamic_states(struct ilo_render *render,
                                         struct ilo_render_rectlist_session *session);
 
 int
+ilo_render_get_launch_grid_dynamic_states_len(const struct ilo_render *render,
+                                              const struct ilo_state_vector *vec);
+
+void
+ilo_render_emit_launch_grid_dynamic_states(struct ilo_render *render,
+                                           const struct ilo_state_vector *vec,
+                                           struct ilo_render_launch_grid_session *session);
+
+int
 ilo_render_get_draw_surface_states_len(const struct ilo_render *render,
                                        const struct ilo_state_vector *vec);
 
@@ -264,6 +302,15 @@ void
 ilo_render_emit_draw_surface_states(struct ilo_render *render,
                                     const struct ilo_state_vector *vec,
                                     struct ilo_render_draw_session *session);
+
+int
+ilo_render_get_launch_grid_surface_states_len(const struct ilo_render *render,
+                                              const struct ilo_state_vector *vec);
+
+void
+ilo_render_emit_launch_grid_surface_states(struct ilo_render *render,
+                                           const struct ilo_state_vector *vec,
+                                           struct ilo_render_launch_grid_session *session);
 
 void
 gen6_wa_pre_pipe_control(struct ilo_render *r, uint32_t dw1);

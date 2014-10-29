@@ -28,6 +28,7 @@
 #include "ilo_common.h"
 #include "ilo_blitter.h"
 #include "ilo_builder_3d.h"
+#include "ilo_builder_media.h"
 #include "ilo_state.h"
 #include "ilo_render_gen.h"
 
@@ -439,4 +440,109 @@ ilo_render_emit_rectlist_dynamic_states(struct ilo_render *render,
 
    assert(ilo_builder_dynamic_used(render->builder) <= dynamic_used +
          ilo_render_get_rectlist_dynamic_states_len(render, blitter));
+}
+
+static void
+gen6_emit_launch_grid_dynamic_samplers(struct ilo_render *r,
+                                       const struct ilo_state_vector *vec,
+                                       struct ilo_render_launch_grid_session *session)
+{
+   const unsigned shader_type = PIPE_SHADER_COMPUTE;
+   const struct ilo_shader_state *cs = vec->cs;
+   const struct ilo_sampler_cso * const *samplers =
+      vec->sampler[shader_type].cso;
+   const struct pipe_sampler_view * const *views =
+      (const struct pipe_sampler_view **) vec->view[shader_type].states;
+   int sampler_count, i;
+
+   ILO_DEV_ASSERT(r->dev, 7, 7.5);
+
+   sampler_count = ilo_shader_get_kernel_param(cs, ILO_KERNEL_SAMPLER_COUNT);
+
+   assert(sampler_count <= Elements(vec->view[shader_type].states) &&
+          sampler_count <= Elements(vec->sampler[shader_type].cso));
+
+   for (i = 0; i < sampler_count; i++) {
+      r->state.cs.SAMPLER_BORDER_COLOR_STATE[i] = (samplers[i]) ?
+         gen6_SAMPLER_BORDER_COLOR_STATE(r->builder, samplers[i]) : 0;
+   }
+
+   r->state.cs.SAMPLER_STATE = gen6_SAMPLER_STATE(r->builder, samplers, views,
+         r->state.cs.SAMPLER_BORDER_COLOR_STATE, sampler_count);
+}
+
+static void
+gen6_emit_launch_grid_dynamic_pcb(struct ilo_render *r,
+                                  const struct ilo_state_vector *vec,
+                                  struct ilo_render_launch_grid_session *session)
+{
+   r->state.cs.PUSH_CONSTANT_BUFFER = 0;
+   r->state.cs.PUSH_CONSTANT_BUFFER_size = 0;
+}
+
+static void
+gen6_emit_launch_grid_dynamic_idrt(struct ilo_render *r,
+                                   const struct ilo_state_vector *vec,
+                                   struct ilo_render_launch_grid_session *session)
+{
+   const struct ilo_shader_state *cs = vec->cs;
+   struct gen6_idrt_data data;
+
+   ILO_DEV_ASSERT(r->dev, 7, 7.5);
+
+   memset(&data, 0, sizeof(data));
+
+   data.cs = cs;
+   data.sampler_offset = r->state.cs.SAMPLER_STATE;
+   data.binding_table_offset = r->state.cs.BINDING_TABLE_STATE;
+
+   data.curbe_size = r->state.cs.PUSH_CONSTANT_BUFFER_size;
+   data.thread_group_size = session->thread_group_size;
+
+   session->idrt = gen6_INTERFACE_DESCRIPTOR_DATA(r->builder, &data, 1);
+   session->idrt_size = 32;
+}
+
+int
+ilo_render_get_launch_grid_dynamic_states_len(const struct ilo_render *render,
+                                              const struct ilo_state_vector *vec)
+{
+   const int alignment = 32 / 4;
+   int num_samplers;
+   int len = 0;
+
+   ILO_DEV_ASSERT(render->dev, 7, 7.5);
+
+   num_samplers = ilo_shader_get_kernel_param(vec->cs,
+         ILO_KERNEL_SAMPLER_COUNT);
+
+   /* SAMPLER_STATE array and SAMPLER_BORDER_COLORs */
+   if (num_samplers) {
+      /* prefetches are done in multiples of 4 */
+      num_samplers = align(num_samplers, 4);
+
+      len += align(GEN6_SAMPLER_STATE__SIZE * num_samplers, alignment) +
+         align(GEN6_SAMPLER_BORDER_COLOR__SIZE, alignment) * num_samplers;
+   }
+
+   len += GEN6_INTERFACE_DESCRIPTOR_DATA__SIZE;
+
+   return len;
+}
+
+void
+ilo_render_emit_launch_grid_dynamic_states(struct ilo_render *render,
+                                           const struct ilo_state_vector *vec,
+                                           struct ilo_render_launch_grid_session *session)
+{
+   const unsigned dynamic_used = ilo_builder_dynamic_used(render->builder);
+
+   ILO_DEV_ASSERT(render->dev, 7, 7.5);
+
+   gen6_emit_launch_grid_dynamic_samplers(render, vec, session);
+   gen6_emit_launch_grid_dynamic_pcb(render, vec, session);
+   gen6_emit_launch_grid_dynamic_idrt(render, vec, session);
+
+   assert(ilo_builder_dynamic_used(render->builder) <= dynamic_used +
+         ilo_render_get_launch_grid_dynamic_states_len(render, vec));
 }

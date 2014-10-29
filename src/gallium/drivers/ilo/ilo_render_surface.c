@@ -381,3 +381,177 @@ ilo_render_emit_draw_surface_states(struct ilo_render *render,
    assert(ilo_builder_surface_used(render->builder) <= surface_used +
          ilo_render_get_draw_surface_states_len(render, vec));
 }
+
+static void
+gen6_emit_launch_grid_surface_view(struct ilo_render *r,
+                                   const struct ilo_state_vector *vec,
+                                   struct ilo_render_launch_grid_session *session)
+{
+   const struct ilo_shader_state *cs = vec->cs;
+   const struct ilo_view_state *view = &vec->view[PIPE_SHADER_COMPUTE];
+   uint32_t *surface_state = r->state.cs.SURFACE_STATE;
+   int base, count, i;
+
+   ILO_DEV_ASSERT(r->dev, 7, 7.5);
+
+   base = ilo_shader_get_kernel_param(cs, ILO_KERNEL_SURFACE_TEX_BASE);
+   count = ilo_shader_get_kernel_param(cs, ILO_KERNEL_SURFACE_TEX_COUNT);
+
+   /* SURFACE_STATEs for sampler views */
+   surface_state += base;
+   for (i = 0; i < count; i++) {
+      if (i < view->count && view->states[i]) {
+         const struct ilo_view_cso *cso =
+            (const struct ilo_view_cso *) view->states[i];
+
+         surface_state[i] =
+            gen6_SURFACE_STATE(r->builder, &cso->surface, false);
+      } else {
+         surface_state[i] = 0;
+      }
+   }
+}
+
+static void
+gen6_emit_launch_grid_surface_const(struct ilo_render *r,
+                                    const struct ilo_state_vector *vec,
+                                    struct ilo_render_launch_grid_session *session)
+{
+   const struct ilo_shader_state *cs = vec->cs;
+   uint32_t *surface_state = r->state.cs.SURFACE_STATE;
+   struct ilo_view_surface view;
+   int base, count;
+
+   ILO_DEV_ASSERT(r->dev, 7, 7.5);
+
+   base = ilo_shader_get_kernel_param(cs, ILO_KERNEL_SURFACE_CONST_BASE);
+   count = ilo_shader_get_kernel_param(cs, ILO_KERNEL_SURFACE_CONST_COUNT);
+
+   if (!count)
+      return;
+
+   ilo_gpe_init_view_surface_for_buffer(r->dev,
+         ilo_buffer(session->input->buffer),
+         session->input->buffer_offset,
+         session->input->buffer_size,
+         1, PIPE_FORMAT_NONE,
+         false, false, &view);
+
+   assert(count == 1 && session->input->buffer);
+   surface_state[base] = gen6_SURFACE_STATE(r->builder, &view, false);
+}
+
+static void
+gen6_emit_launch_grid_surface_cs_resource(struct ilo_render *r,
+                                          const struct ilo_state_vector *vec,
+                                          struct ilo_render_launch_grid_session *session)
+{
+   ILO_DEV_ASSERT(r->dev, 7, 7.5);
+
+   /* TODO */
+   assert(!vec->cs_resource.count);
+}
+
+static void
+gen6_emit_launch_grid_surface_global(struct ilo_render *r,
+                                          const struct ilo_state_vector *vec,
+                                          struct ilo_render_launch_grid_session *session)
+{
+   const struct ilo_shader_state *cs = vec->cs;
+   const struct ilo_global_binding_cso *bindings =
+      util_dynarray_begin(&vec->global_binding.bindings);
+   uint32_t *surface_state = r->state.cs.SURFACE_STATE;
+   int base, count, i;
+
+   ILO_DEV_ASSERT(r->dev, 7, 7.5);
+
+   base = ilo_shader_get_kernel_param(cs, ILO_KERNEL_CS_SURFACE_GLOBAL_BASE);
+   count = ilo_shader_get_kernel_param(cs, ILO_KERNEL_CS_SURFACE_GLOBAL_COUNT);
+
+   if (!count)
+      return;
+
+   if (base + count > Elements(r->state.cs.SURFACE_STATE)) {
+      ilo_warn("too many global bindings\n");
+      count = Elements(r->state.cs.SURFACE_STATE) - base;
+   }
+
+   /* SURFACE_STATEs for global bindings */
+   surface_state += base;
+   for (i = 0; i < count; i++) {
+      if (i < vec->global_binding.count && bindings[i].resource) {
+         const struct ilo_buffer *buf = ilo_buffer(bindings[i].resource);
+         struct ilo_view_surface view;
+
+         assert(bindings[i].resource->target == PIPE_BUFFER);
+
+         ilo_gpe_init_view_surface_for_buffer(r->dev, buf, 0, buf->bo_size,
+               1, PIPE_FORMAT_NONE, true, true, &view);
+         surface_state[i] =
+            gen6_SURFACE_STATE(r->builder, &view, true);
+      } else {
+         surface_state[i] = 0;
+      }
+   }
+}
+
+static void
+gen6_emit_launch_grid_surface_binding_table(struct ilo_render *r,
+                                            const struct ilo_state_vector *vec,
+                                            struct ilo_render_launch_grid_session *session)
+{
+   const struct ilo_shader_state *cs = vec->cs;
+   int count;
+
+   ILO_DEV_ASSERT(r->dev, 7, 7.5);
+
+   count = ilo_shader_get_kernel_param(cs, ILO_KERNEL_SURFACE_TOTAL_COUNT);
+   if (count) {
+      r->state.cs.BINDING_TABLE_STATE = gen6_BINDING_TABLE_STATE(r->builder,
+            r->state.cs.SURFACE_STATE, count);
+   }
+}
+
+int
+ilo_render_get_launch_grid_surface_states_len(const struct ilo_render *render,
+                                              const struct ilo_state_vector *vec)
+{
+   const int alignment = 32 / 4;
+   int num_surfaces;
+   int len = 0;
+
+   ILO_DEV_ASSERT(render->dev, 7, 7.5);
+
+   num_surfaces = ilo_shader_get_kernel_param(vec->cs,
+         ILO_KERNEL_SURFACE_TOTAL_COUNT);
+
+   /* BINDING_TABLE_STATE and SURFACE_STATEs */
+   if (num_surfaces) {
+      len += align(num_surfaces, alignment) +
+         align(GEN6_SURFACE_STATE__SIZE, alignment) * num_surfaces;
+   }
+
+   return len;
+}
+
+void
+ilo_render_emit_launch_grid_surface_states(struct ilo_render *render,
+                                           const struct ilo_state_vector *vec,
+                                           struct ilo_render_launch_grid_session *session)
+{
+   const unsigned surface_used = ilo_builder_surface_used(render->builder);
+
+   ILO_DEV_ASSERT(render->dev, 7, 7.5);
+
+   /* idrt depends on the binding table */
+   assert(!session->idrt_size);
+
+   gen6_emit_launch_grid_surface_view(render, vec, session);
+   gen6_emit_launch_grid_surface_const(render, vec, session);
+   gen6_emit_launch_grid_surface_cs_resource(render, vec, session);
+   gen6_emit_launch_grid_surface_global(render, vec, session);
+   gen6_emit_launch_grid_surface_binding_table(render, vec, session);
+
+   assert(ilo_builder_surface_used(render->builder) <= surface_used +
+         ilo_render_get_launch_grid_surface_states_len(render, vec));
+}
