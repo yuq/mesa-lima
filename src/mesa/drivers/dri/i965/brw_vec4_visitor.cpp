@@ -3571,7 +3571,7 @@ vec4_visitor::vec4_visitor(struct brw_context *brw,
    this->virtual_grf_reg_map = NULL;
    this->virtual_grf_reg_count = 0;
    this->virtual_grf_array_size = 0;
-   this->live_intervals_valid = false;
+   this->live_intervals = NULL;
 
    this->max_grf = brw->gen >= 7 ? GEN7_MRF_HACK_START : BRW_MAX_GRF;
 

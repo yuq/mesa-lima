@@ -87,6 +87,8 @@ namespace brw {
 
 class dst_reg;
 
+class vec4_live_variables;
+
 unsigned
 swizzle_for_size(int size);
 
@@ -301,6 +303,7 @@ public:
    unsigned int max_grf;
    int *virtual_grf_start;
    int *virtual_grf_end;
+   brw::vec4_live_variables *live_intervals;
    dst_reg userplane[MAX_CLIP_PLANES];
 
    /**
@@ -310,8 +313,6 @@ public:
    int virtual_grf_reg_count;
    /** Per-virtual-grf indices into an array of size virtual_grf_reg_count */
    int *virtual_grf_reg_map;
-
-   bool live_intervals_valid;
 
    dst_reg *variable_storage(ir_variable *var);
 

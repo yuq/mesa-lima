@@ -195,7 +195,7 @@ vec4_live_variables::~vec4_live_variables()
 void
 vec4_visitor::calculate_live_intervals()
 {
-   if (this->live_intervals_valid)
+   if (this->live_intervals)
       return;
 
    int *start = ralloc_array(mem_ctx, int, this->virtual_grf_count * 4);
@@ -247,29 +247,28 @@ vec4_visitor::calculate_live_intervals()
     * The control flow-aware analysis was done at a channel level, while at
     * this point we're distilling it down to vgrfs.
     */
-   vec4_live_variables livevars(this, cfg);
+   this->live_intervals = new(mem_ctx) vec4_live_variables(this, cfg);
 
    foreach_block (block, cfg) {
-      for (int i = 0; i < livevars.num_vars; i++) {
-	 if (BITSET_TEST(livevars.bd[block->num].livein, i)) {
+      for (int i = 0; i < live_intervals->num_vars; i++) {
+	 if (BITSET_TEST(live_intervals->bd[block->num].livein, i)) {
 	    start[i] = MIN2(start[i], block->start_ip);
 	    end[i] = MAX2(end[i], block->start_ip);
 	 }
 
-	 if (BITSET_TEST(livevars.bd[block->num].liveout, i)) {
+	 if (BITSET_TEST(live_intervals->bd[block->num].liveout, i)) {
 	    start[i] = MIN2(start[i], block->end_ip);
 	    end[i] = MAX2(end[i], block->end_ip);
 	 }
       }
    }
-
-   this->live_intervals_valid = true;
 }
 
 void
 vec4_visitor::invalidate_live_intervals()
 {
-   live_intervals_valid = false;
+   ralloc_free(live_intervals);
+   live_intervals = NULL;
 }
 
 bool
