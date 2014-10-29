@@ -157,6 +157,19 @@ fs_live_variables::setup_def_use()
                reg.reg_offset++;
             }
 	 }
+         if (inst->reads_flag()) {
+            /* The vertical combination predicates read f0.0 and f0.1. */
+            if (inst->predicate == BRW_PREDICATE_ALIGN1_ANYV ||
+                inst->predicate == BRW_PREDICATE_ALIGN1_ALLV) {
+               assert(inst->flag_subreg == 0);
+               if (!BITSET_TEST(bd->flag_def, 1)) {
+                  BITSET_SET(bd->flag_use, 1);
+               }
+            }
+            if (!BITSET_TEST(bd->flag_def, inst->flag_subreg)) {
+               BITSET_SET(bd->flag_use, inst->flag_subreg);
+            }
+         }
 
          /* Set def[] for this instruction */
          if (inst->dst.file == GRF) {
@@ -166,6 +179,11 @@ fs_live_variables::setup_def_use()
                reg.reg_offset++;
             }
 	 }
+         if (inst->writes_flag()) {
+            if (!BITSET_TEST(bd->flag_use, inst->flag_subreg)) {
+               BITSET_SET(bd->flag_def, inst->flag_subreg);
+            }
+         }
 
 	 ip++;
       }
@@ -199,6 +217,13 @@ fs_live_variables::compute_live_variables()
                cont = true;
 	    }
 	 }
+         BITSET_WORD new_livein = (bd->flag_use[0] |
+                                   (bd->flag_liveout[0] &
+                                    ~bd->flag_def[0]));
+         if (new_livein & ~bd->flag_livein[0]) {
+            bd->flag_livein[0] |= new_livein;
+            cont = true;
+         }
 
 	 /* Update liveout */
 	 foreach_list_typed(bblock_link, child_link, link, &block->children) {
@@ -212,6 +237,12 @@ fs_live_variables::compute_live_variables()
                   cont = true;
                }
 	    }
+            BITSET_WORD new_liveout = (child_bd->flag_livein[0] &
+                                       ~bd->flag_liveout[0]);
+            if (new_liveout) {
+               bd->flag_liveout[0] |= new_liveout;
+               cont = true;
+            }
 	 }
       }
    }
@@ -283,6 +314,11 @@ fs_live_variables::fs_live_variables(fs_visitor *v, const cfg_t *cfg)
       block_data[i].use = rzalloc_array(mem_ctx, BITSET_WORD, bitset_words);
       block_data[i].livein = rzalloc_array(mem_ctx, BITSET_WORD, bitset_words);
       block_data[i].liveout = rzalloc_array(mem_ctx, BITSET_WORD, bitset_words);
+
+      block_data[i].flag_def[0] = 0;
+      block_data[i].flag_use[0] = 0;
+      block_data[i].flag_livein[0] = 0;
+      block_data[i].flag_liveout[0] = 0;
    }
 
    setup_def_use();
