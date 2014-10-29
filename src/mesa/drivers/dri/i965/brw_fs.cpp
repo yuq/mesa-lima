@@ -2427,6 +2427,10 @@ fs_visitor::compute_to_mrf()
    bool progress = false;
    int next_ip = 0;
 
+   /* No MRFs on Gen >= 7. */
+   if (brw->gen >= 7)
+      return false;
+
    calculate_live_intervals();
 
    foreach_block_and_inst_safe(block, fs_inst, inst, cfg) {
