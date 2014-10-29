@@ -73,21 +73,21 @@ struct brw_sampler_prog_key_data {
 
 
 struct brw_vec4_prog_key {
-   GLuint program_string_id;
+   unsigned program_string_id;
 
    /**
     * True if at least one clip flag is enabled, regardless of whether the
     * shader uses clip planes or gl_ClipDistance.
     */
-   GLuint userclip_active:1;
+   bool userclip_active:1;
 
    /**
     * How many user clipping planes are being uploaded to the vertex shader as
     * push constants.
     */
-   GLuint nr_userclip_plane_consts:4;
+   unsigned nr_userclip_plane_consts:4;
 
-   GLuint clamp_vertex_color:1;
+   bool clamp_vertex_color:1;
 
    struct brw_sampler_prog_key_data tex;
 };
@@ -101,7 +101,7 @@ struct brw_vs_prog_key {
     */
    uint8_t gl_attrib_wa_flags[VERT_ATTRIB_MAX];
 
-   GLuint copy_edgeflag:1;
+   bool copy_edgeflag:1;
 
    /**
     * For pre-Gen6 hardware, a bitfield indicating which texture coordinates
@@ -111,7 +111,7 @@ struct brw_vs_prog_key {
     * these texture coordinates will need to be unconditionally included in
     * the VUE, even if they aren't written by the vertex shader.
     */
-   GLuint point_coord_replace:8;
+   uint8_t point_coord_replace;
 };
 
 /** The program key for Geometry Shaders. */
@@ -119,28 +119,28 @@ struct brw_gs_prog_key
 {
    struct brw_vec4_prog_key base;
 
-   GLbitfield64 input_varyings;
+   uint64_t input_varyings;
 };
 
 /** The program key for Fragment/Pixel Shaders. */
 struct brw_wm_prog_key {
    uint8_t iz_lookup;
-   GLuint stats_wm:1;
-   GLuint flat_shade:1;
-   GLuint persample_shading:1;
-   GLuint persample_2x:1;
-   GLuint nr_color_regions:5;
-   GLuint replicate_alpha:1;
-   GLuint render_to_fbo:1;
-   GLuint clamp_fragment_color:1;
-   GLuint compute_pos_offset:1;
-   GLuint compute_sample_id:1;
-   GLuint line_aa:2;
-   GLuint high_quality_derivatives:1;
+   bool stats_wm:1;
+   bool flat_shade:1;
+   bool persample_shading:1;
+   bool persample_2x:1;
+   unsigned nr_color_regions:5;
+   bool replicate_alpha:1;
+   bool render_to_fbo:1;
+   bool clamp_fragment_color:1;
+   bool compute_pos_offset:1;
+   bool compute_sample_id:1;
+   unsigned line_aa:2;
+   bool high_quality_derivatives:1;
 
-   GLushort drawable_height;
-   GLbitfield64 input_slots_valid;
-   GLuint program_string_id:32;
+   uint16_t drawable_height;
+   uint64_t input_slots_valid;
+   unsigned program_string_id;
    GLenum alpha_test_func;          /* < For Gen4/5 MRT alpha test */
    float alpha_test_ref;
 
