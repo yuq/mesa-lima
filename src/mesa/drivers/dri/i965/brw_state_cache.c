@@ -49,8 +49,7 @@
 #include "brw_state.h"
 #include "brw_vs.h"
 #include "brw_wm.h"
-#include "brw_vs.h"
-#include "brw_vec4_gs.h"
+#include "brw_gs.h"
 
 #define FILE_DEBUG_FLAG DEBUG_STATE
 

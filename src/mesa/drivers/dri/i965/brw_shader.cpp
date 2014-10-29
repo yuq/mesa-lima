@@ -26,7 +26,7 @@ extern "C" {
 #include "brw_context.h"
 }
 #include "brw_vs.h"
-#include "brw_vec4_gs.h"
+#include "brw_gs.h"
 #include "brw_fs.h"
 #include "brw_cfg.h"
 #include "glsl/ir_optimization.h"

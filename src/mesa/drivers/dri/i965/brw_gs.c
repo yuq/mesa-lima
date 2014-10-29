@@ -27,7 +27,7 @@
  * State atom for client-programmable geometry shaders, and support code.
  */
 
-#include "brw_vec4_gs.h"
+#include "brw_gs.h"
 #include "brw_context.h"
 #include "brw_vec4_gs_visitor.h"
 #include "brw_state.h"
