@@ -369,6 +369,8 @@ reg_const_load_single_instr(nir_reg_dest reg, nir_constant *constant,
          instr->value.u[i] = constant->value.u[i + offset] ?
                              NIR_TRUE : NIR_FALSE;
          break;
+      default:
+         unreachable("Invalid immediate type");
       }
    }
    instr->dest.reg = reg;
