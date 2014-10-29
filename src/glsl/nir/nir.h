@@ -420,6 +420,9 @@ typedef struct {
    /** generic SSA definition index. */
    unsigned index;
 
+   /** Index into the live_in and live_out bitfields */
+   unsigned live_index;
+
    nir_instr *parent_instr;
 
    struct set *uses;
@@ -999,6 +1002,10 @@ typedef struct nir_block {
    struct nir_block **dom_children;
 
    struct set *dom_frontier;
+
+   /* live in and out for this block; used for liveness analysis */
+   BITSET_WORD *live_in;
+   BITSET_WORD *live_out;
 } nir_block;
 
 #define nir_block_first_instr(block) \
@@ -1047,6 +1054,7 @@ typedef enum {
    nir_metadata_none = 0x0,
    nir_metadata_block_index = 0x1,
    nir_metadata_dominance = 0x2,
+   nir_metadata_live_variables = 0x4,
 } nir_metadata;
 
 typedef struct {
@@ -1319,6 +1327,9 @@ void nir_lower_samplers(nir_shader *shader,
 void nir_lower_system_values(nir_shader *shader);
 
 void nir_lower_atomics(nir_shader *shader);
+
+void nir_live_variables_impl(nir_function_impl *impl);
+bool nir_ssa_defs_interfere(nir_ssa_def *a, nir_ssa_def *b);
 
 void nir_convert_to_ssa_impl(nir_function_impl *impl);
 void nir_convert_to_ssa(nir_shader *shader);

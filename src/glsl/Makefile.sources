@@ -20,6 +20,7 @@ NIR_FILES = \
 	$(GLSL_SRCDIR)/nir/nir_from_ssa.c \
 	$(GLSL_SRCDIR)/nir/nir_intrinsics.c \
 	$(GLSL_SRCDIR)/nir/nir_intrinsics.h \
+	$(GLSL_SRCDIR)/nir/nir_live_variables.c \
 	$(GLSL_SRCDIR)/nir/nir_lower_atomics.c \
 	$(GLSL_SRCDIR)/nir/nir_lower_samplers.cpp \
 	$(GLSL_SRCDIR)/nir/nir_lower_system_values.c \
