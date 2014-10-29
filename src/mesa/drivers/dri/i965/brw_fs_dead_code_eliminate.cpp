@@ -56,10 +56,10 @@ fs_visitor::dead_code_eliminate()
             bool result_live = false;
 
             if (inst->regs_written == 1) {
-               int var = live_intervals->var_from_reg(&inst->dst);
+               int var = live_intervals->var_from_reg(inst->dst);
                result_live = BITSET_TEST(live, var);
             } else {
-               int var = live_intervals->var_from_reg(&inst->dst);
+               int var = live_intervals->var_from_reg(inst->dst);
                for (int i = 0; i < inst->regs_written; i++) {
                   result_live = result_live || BITSET_TEST(live, var + i);
                }
@@ -87,7 +87,7 @@ fs_visitor::dead_code_eliminate()
 
          if (inst->dst.file == GRF) {
             if (!inst->is_partial_write()) {
-               int var = live_intervals->var_from_reg(&inst->dst);
+               int var = live_intervals->var_from_reg(inst->dst);
                for (int i = 0; i < inst->regs_written; i++) {
                   BITSET_CLEAR(live, var + i);
                }
@@ -100,7 +100,7 @@ fs_visitor::dead_code_eliminate()
 
          for (int i = 0; i < inst->sources; i++) {
             if (inst->src[i].file == GRF) {
-               int var = live_intervals->var_from_reg(&inst->src[i]);
+               int var = live_intervals->var_from_reg(inst->src[i]);
 
                for (int j = 0; j < inst->regs_read(this, i); j++) {
                   BITSET_SET(live, var + j);

@@ -45,7 +45,7 @@ opt_saturate_propagation_local(fs_visitor *v, bblock_t *block)
           !inst->saturate)
          continue;
 
-      int src_var = v->live_intervals->var_from_reg(&inst->src[0]);
+      int src_var = v->live_intervals->var_from_reg(inst->src[0]);
       int src_end_ip = v->live_intervals->end[src_var];
 
       bool interfered = false;

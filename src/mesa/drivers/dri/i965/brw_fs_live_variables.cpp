@@ -54,9 +54,9 @@ using namespace brw;
 
 void
 fs_live_variables::setup_one_read(struct block_data *bd, fs_inst *inst,
-                                  int ip, fs_reg reg)
+                                  int ip, const fs_reg &reg)
 {
-   int var = var_from_reg(&reg);
+   int var = var_from_reg(reg);
    assert(var < num_vars);
 
    /* In most cases, a register can be written over safely by the
@@ -106,9 +106,9 @@ fs_live_variables::setup_one_read(struct block_data *bd, fs_inst *inst,
 
 void
 fs_live_variables::setup_one_write(struct block_data *bd, fs_inst *inst,
-                                   int ip, fs_reg reg)
+                                   int ip, const fs_reg &reg)
 {
-   int var = var_from_reg(&reg);
+   int var = var_from_reg(reg);
    assert(var < num_vars);
 
    start[var] = MIN2(start[var], ip);
@@ -271,12 +271,6 @@ fs_live_variables::compute_start_end()
 
       }
    }
-}
-
-int
-fs_live_variables::var_from_reg(fs_reg *reg)
-{
-   return var_from_vgrf[reg->reg] + reg->reg_offset;
 }
 
 fs_live_variables::fs_live_variables(fs_visitor *v, const cfg_t *cfg)
