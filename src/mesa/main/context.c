@@ -732,6 +732,8 @@ _mesa_init_constants(struct gl_constants *consts, gl_api api)
 static void
 check_context_limits(struct gl_context *ctx)
 {
+   (void) ctx;
+
    /* check that we don't exceed the size of various bitfields */
    assert(VARYING_SLOT_MAX <=
 	  (8 * sizeof(ctx->VertexProgram._Current->Base.OutputsWritten)));
