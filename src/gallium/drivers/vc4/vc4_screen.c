@@ -43,6 +43,8 @@ static const struct debug_named_value debug_options[] = {
           "Dump generated QPU instructions" },
         { "qir",      VC4_DEBUG_QIR,
           "Dump QPU IR during program compile" },
+        { "nir",      VC4_DEBUG_NIR,
+          "Dump NIR during program compile" },
         { "tgsi",     VC4_DEBUG_TGSI,
           "Dump TGSI during program compile" },
         { "shaderdb", VC4_DEBUG_SHADERDB,

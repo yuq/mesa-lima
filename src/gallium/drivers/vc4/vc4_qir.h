@@ -32,9 +32,9 @@
 #include <string.h>
 
 #include "util/macros.h"
+#include "glsl/nir/nir.h"
 #include "util/simple_list.h"
 #include "util/u_math.h"
-#include "tgsi/tgsi_parse.h"
 
 enum qfile {
         QFILE_NULL,
@@ -282,11 +282,20 @@ struct vc4_compiler_ubo_range {
 
 struct vc4_compile {
         struct vc4_context *vc4;
-        struct tgsi_parse_context parser;
-        struct qreg *temps;
+        nir_shader *s;
+        nir_function_impl *impl;
+        struct exec_list *cf_node_list;
+
+        /**
+         * Mapping from nir_register * or nir_ssa_def * to array of struct
+         * qreg for the values.
+         */
+        struct hash_table *def_ht;
+
         /* For each temp, the instruction generating its value. */
         struct qinst **defs;
         uint32_t defs_array_size;
+
         /**
          * Inputs to the shader, arranged by TGSI declaration order.
          *
@@ -294,17 +303,15 @@ struct vc4_compile {
          */
         struct qreg *inputs;
         struct qreg *outputs;
-        struct qreg *consts;
-        struct qreg addr[4]; /* TGSI ARL destination. */
-        uint32_t temps_array_size;
         uint32_t inputs_array_size;
         uint32_t outputs_array_size;
         uint32_t uniforms_array_size;
-        uint32_t consts_array_size;
-        uint32_t num_consts;
 
         struct vc4_compiler_ubo_range *ubo_ranges;
         uint32_t ubo_ranges_array_size;
+        /** Number of uniform areas declared in ubo_ranges. */
+        uint32_t num_uniform_ranges;
+        /** Number of uniform areas used for indirect addressed loads. */
         uint32_t num_ubo_ranges;
         uint32_t next_ubo_dst_offset;
 

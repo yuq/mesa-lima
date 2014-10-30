@@ -391,6 +391,9 @@ qir_compile_init(void)
         c->output_color_index = -1;
         c->output_point_size_index = -1;
 
+        c->def_ht = _mesa_hash_table_create(c, _mesa_hash_pointer,
+                                            _mesa_key_pointer_equal);
+
         return c;
 }
 
