@@ -97,13 +97,11 @@ static boolean radeon_set_fd_access(struct radeon_drm_cs *applier,
     if (enable) {
         if (value) {
             *owner = applier;
-            printf("radeon: Acquired access to %s.\n", request_name);
             pipe_mutex_unlock(*mutex);
             return TRUE;
         }
     } else {
         *owner = NULL;
-        printf("radeon: Released access to %s.\n", request_name);
     }
 
     pipe_mutex_unlock(*mutex);
