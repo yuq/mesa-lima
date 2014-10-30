@@ -428,6 +428,9 @@ ilo_finalize_3d_states(struct ilo_context *ilo,
                        const struct pipe_draw_info *draw);
 
 void
+ilo_finalize_compute_states(struct ilo_context *ilo);
+
+void
 ilo_state_vector_init(const struct ilo_dev_info *dev,
                       struct ilo_state_vector *vec);
 

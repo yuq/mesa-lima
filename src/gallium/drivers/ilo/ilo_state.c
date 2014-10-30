@@ -262,6 +262,40 @@ ilo_finalize_3d_states(struct ilo_context *ilo,
    u_upload_unmap(ilo->uploader);
 }
 
+static void
+finalize_global_binding(struct ilo_state_vector *vec)
+{
+   struct ilo_shader_state *cs = vec->cs;
+   int base, count, shift;
+   int i;
+
+   count = ilo_shader_get_kernel_param(cs,
+         ILO_KERNEL_CS_SURFACE_GLOBAL_COUNT);
+   if (!count)
+      return;
+
+   base = ilo_shader_get_kernel_param(cs, ILO_KERNEL_CS_SURFACE_GLOBAL_BASE);
+   shift = 32 - util_last_bit(base + count - 1);
+
+   if (count > vec->global_binding.count)
+      count = vec->global_binding.count;
+
+   for (i = 0; i < count; i++) {
+      struct ilo_global_binding_cso *cso =
+         util_dynarray_element(&vec->global_binding.bindings,
+               struct ilo_global_binding_cso, i);
+      const uint32_t offset = *cso->handle & ((1 << shift) - 1);
+
+      *cso->handle = ((base + i) << shift) | offset;
+   }
+}
+
+void
+ilo_finalize_compute_states(struct ilo_context *ilo)
+{
+   finalize_global_binding(&ilo->state_vector);
+}
+
 static void *
 ilo_create_blend_state(struct pipe_context *pipe,
                        const struct pipe_blend_state *state)
