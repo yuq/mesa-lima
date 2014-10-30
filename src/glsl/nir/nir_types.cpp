@@ -136,8 +136,20 @@ glsl_type_is_matrix(const struct glsl_type *type)
    return type->is_matrix();
 }
 
-const glsl_type*
+const glsl_type *
 glsl_void_type(void)
 {
    return glsl_type::void_type;
+}
+
+const glsl_type *
+glsl_vec4_type(void)
+{
+   return glsl_type::vec4_type;
+}
+
+const glsl_type *
+glsl_array_type(const glsl_type *base, unsigned elements)
+{
+   return glsl_type::get_array_instance(base, elements);
 }
