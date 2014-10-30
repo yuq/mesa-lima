@@ -105,12 +105,6 @@ is_vec_negative_one(ir_constant *ir)
 }
 
 static inline bool
-is_vec_basis(ir_constant *ir)
-{
-   return (ir == NULL) ? false : ir->is_basis();
-}
-
-static inline bool
 is_valid_vec_const(ir_constant *ir)
 {
    if (ir == NULL)
@@ -536,23 +530,6 @@ ir_algebraic_visitor::handle_expression(ir_expression *ir)
    case ir_binop_dot:
       if (is_vec_zero(op_const[0]) || is_vec_zero(op_const[1]))
 	 return ir_constant::zero(mem_ctx, ir->type);
-
-      if (is_vec_basis(op_const[0])) {
-	 unsigned component = 0;
-	 for (unsigned c = 0; c < op_const[0]->type->vector_elements; c++) {
-	    if (op_const[0]->value.f[c] == 1.0)
-	       component = c;
-	 }
-	 return new(mem_ctx) ir_swizzle(ir->operands[1], component, 0, 0, 0, 1);
-      }
-      if (is_vec_basis(op_const[1])) {
-	 unsigned component = 0;
-	 for (unsigned c = 0; c < op_const[1]->type->vector_elements; c++) {
-	    if (op_const[1]->value.f[c] == 1.0)
-	       component = c;
-	 }
-	 return new(mem_ctx) ir_swizzle(ir->operands[0], component, 0, 0, 0, 1);
-      }
 
       for (int i = 0; i < 2; i++) {
          if (!op_const[i])
