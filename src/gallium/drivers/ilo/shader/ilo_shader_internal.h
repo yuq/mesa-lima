@@ -138,8 +138,11 @@ struct ilo_shader {
       int rt_base, rt_count;
       int tex_base, tex_count;
       int const_base, const_count;
+      int res_base, res_count;
 
       int gen6_so_base, gen6_so_count;
+
+      int global_base, global_count;
 
       int total_count;
    } bt;

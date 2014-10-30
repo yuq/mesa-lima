@@ -1036,6 +1036,12 @@ ilo_shader_get_kernel_param(const struct ilo_shader_state *shader,
    case ILO_KERNEL_SURFACE_CONST_COUNT:
       val = kernel->bt.const_count;
       break;
+   case ILO_KERNEL_SURFACE_RES_BASE:
+      val = kernel->bt.res_base;
+      break;
+   case ILO_KERNEL_SURFACE_RES_COUNT:
+      val = kernel->bt.res_count;
+      break;
 
    case ILO_KERNEL_VS_INPUT_INSTANCEID:
       val = shader->info.has_instanceid;
@@ -1109,6 +1115,25 @@ ilo_shader_get_kernel_param(const struct ilo_shader_state *shader,
       break;
    case ILO_KERNEL_FS_SURFACE_RT_COUNT:
       val = kernel->bt.rt_count;
+      break;
+
+   case ILO_KERNEL_CS_LOCAL_SIZE:
+      val = shader->info.compute.req_local_mem;
+      break;
+   case ILO_KERNEL_CS_PRIVATE_SIZE:
+      val = shader->info.compute.req_private_mem;
+      break;
+   case ILO_KERNEL_CS_INPUT_SIZE:
+      val = shader->info.compute.req_input_mem;
+      break;
+   case ILO_KERNEL_CS_SIMD_SIZE:
+      val = 16;
+      break;
+   case ILO_KERNEL_CS_SURFACE_GLOBAL_BASE:
+      val = kernel->bt.global_base;
+      break;
+   case ILO_KERNEL_CS_SURFACE_GLOBAL_COUNT:
+      val = kernel->bt.global_count;
       break;
 
    default:
