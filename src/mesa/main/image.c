@@ -41,36 +41,45 @@
 
 
 /**
- * Flip the order of the 2 bytes in each word in the given array.
+ * Flip the order of the 2 bytes in each word in the given array (src) and
+ * store the result in another array (dst). For in-place byte-swapping this
+ * function can be called with the same array for src and dst.
  *
- * \param p array.
+ * \param dst the array where byte-swapped data will be stored.
+ * \param src the array with the source data we want to byte-swap.
  * \param n number of words.
  */
 void
-_mesa_swap2( GLushort *p, GLuint n )
+_mesa_swap2_copy( GLushort *dst, GLushort *src, GLuint n )
 {
    GLuint i;
    for (i = 0; i < n; i++) {
-      p[i] = (p[i] >> 8) | ((p[i] << 8) & 0xff00);
+      dst[i] = (src[i] >> 8) | ((src[i] << 8) & 0xff00);
    }
 }
 
 
 
 /*
- * Flip the order of the 4 bytes in each word in the given array.
+ * Flip the order of the 4 bytes in each word in the given array (src) and
+ * store the result in another array (dst). For in-place byte-swapping this
+ * function can be called with the same array for src and dst.
+ *
+ * \param dst the array where byte-swapped data will be stored.
+ * \param src the array with the source data we want to byte-swap.
+ * \param n number of words.
  */
 void
-_mesa_swap4( GLuint *p, GLuint n )
+_mesa_swap4_copy( GLuint *dst, GLuint *src, GLuint n )
 {
    GLuint i, a, b;
    for (i = 0; i < n; i++) {
-      b = p[i];
+      b = src[i];
       a =  (b >> 24)
 	| ((b >> 8) & 0xff00)
 	| ((b << 8) & 0xff0000)
 	| ((b << 24) & 0xff000000);
-      p[i] = a;
+      dst[i] = a;
    }
 }
 
