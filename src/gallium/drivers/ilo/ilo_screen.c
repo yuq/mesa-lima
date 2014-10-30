@@ -194,6 +194,7 @@ ilo_get_compute_param(struct pipe_screen *screen,
                       enum pipe_compute_cap param,
                       void *ret)
 {
+   struct ilo_screen *is = ilo_screen(screen);
    union {
       const char *ir_target;
       uint64_t grid_dimension;
@@ -205,11 +206,13 @@ ilo_get_compute_param(struct pipe_screen *screen,
       uint64_t max_private_size;
       uint64_t max_input_size;
       uint64_t max_mem_alloc_size;
+      uint32_t max_clock_frequency;
+      uint32_t max_compute_units;
+      uint32_t images_supported;
    } val;
    const void *ptr;
    int size;
 
-   /* XXX some randomly chosen values */
    switch (param) {
    case PIPE_COMPUTE_CAP_IR_TARGET:
       val.ir_target = "ilog";
@@ -224,57 +227,78 @@ ilo_get_compute_param(struct pipe_screen *screen,
       size = sizeof(val.grid_dimension);
       break;
    case PIPE_COMPUTE_CAP_MAX_GRID_SIZE:
-      val.max_grid_size[0] = 65535;
-      val.max_grid_size[1] = 65535;
-      val.max_grid_size[2] = 1;
+      val.max_grid_size[0] = 0xffffffffu;
+      val.max_grid_size[1] = 0xffffffffu;
+      val.max_grid_size[2] = 0xffffffffu;
 
       ptr = &val.max_grid_size;
       size = sizeof(val.max_grid_size);
       break;
    case PIPE_COMPUTE_CAP_MAX_BLOCK_SIZE:
-      val.max_block_size[0] = 512;
-      val.max_block_size[1] = 512;
-      val.max_block_size[2] = 512;
+      val.max_block_size[0] = 1024;
+      val.max_block_size[1] = 1024;
+      val.max_block_size[2] = 1024;
 
       ptr = &val.max_block_size;
       size = sizeof(val.max_block_size);
       break;
 
    case PIPE_COMPUTE_CAP_MAX_THREADS_PER_BLOCK:
-      val.max_threads_per_block = 512;
+      val.max_threads_per_block = 1024;
 
       ptr = &val.max_threads_per_block;
       size = sizeof(val.max_threads_per_block);
       break;
    case PIPE_COMPUTE_CAP_MAX_GLOBAL_SIZE:
-      val.max_global_size = 4;
+      /* \see ilo_max_resource_size */
+      val.max_global_size = 1u << 31;
 
       ptr = &val.max_global_size;
       size = sizeof(val.max_global_size);
       break;
    case PIPE_COMPUTE_CAP_MAX_LOCAL_SIZE:
+      /* Shared Local Memory Size of INTERFACE_DESCRIPTOR_DATA */
       val.max_local_size = 64 * 1024;
 
       ptr = &val.max_local_size;
       size = sizeof(val.max_local_size);
       break;
    case PIPE_COMPUTE_CAP_MAX_PRIVATE_SIZE:
-      val.max_private_size = 32768;
+      /* scratch size */
+      val.max_private_size = 12 * 1024;
 
       ptr = &val.max_private_size;
       size = sizeof(val.max_private_size);
       break;
    case PIPE_COMPUTE_CAP_MAX_INPUT_SIZE:
-      val.max_input_size = 256;
+      val.max_input_size = 1024;
 
       ptr = &val.max_input_size;
       size = sizeof(val.max_input_size);
       break;
    case PIPE_COMPUTE_CAP_MAX_MEM_ALLOC_SIZE:
-      val.max_mem_alloc_size = 128 * 1024 * 1024;
+      val.max_mem_alloc_size = 1u << 31;
 
       ptr = &val.max_mem_alloc_size;
       size = sizeof(val.max_mem_alloc_size);
+      break;
+   case PIPE_COMPUTE_CAP_MAX_CLOCK_FREQUENCY:
+      val.max_clock_frequency = 1000;
+
+      ptr = &val.max_clock_frequency;
+      size = sizeof(val.max_clock_frequency);
+      break;
+   case PIPE_COMPUTE_CAP_MAX_COMPUTE_UNITS:
+      val.max_compute_units = is->dev.eu_count;
+
+      ptr = &val.max_compute_units;
+      size = sizeof(val.max_compute_units);
+      break;
+   case PIPE_COMPUTE_CAP_IMAGES_SUPPORTED:
+      val.images_supported = 1;
+
+      ptr = &val.images_supported;
+      size = sizeof(val.images_supported);
       break;
    default:
       ptr = NULL;
