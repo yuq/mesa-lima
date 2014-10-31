@@ -481,6 +481,18 @@ nir_phi_instr_create(void *mem_ctx)
    return instr;
 }
 
+nir_parallel_copy_instr *
+nir_parallel_copy_instr_create(void *mem_ctx)
+{
+   nir_parallel_copy_instr *instr = ralloc(mem_ctx, nir_parallel_copy_instr);
+   instr_init(&instr->instr, nir_instr_type_parallel_copy);
+
+   instr->at_end = false;
+   exec_list_make_empty(&instr->copies);
+
+   return instr;
+}
+
 nir_ssa_undef_instr *
 nir_ssa_undef_instr_create(void *mem_ctx)
 {
@@ -1383,6 +1395,18 @@ visit_phi_dest(nir_phi_instr *instr, nir_foreach_dest_cb cb, void *state)
    return cb(&instr->dest, state);
 }
 
+static bool
+visit_parallel_copy_dest(nir_parallel_copy_instr *instr,
+                         nir_foreach_dest_cb cb, void *state)
+{
+   foreach_list_typed(nir_parallel_copy_copy, copy, node, &instr->copies) {
+      if (!cb(&copy->dest, state))
+         return false;
+   }
+
+   return true;
+}
+
 bool
 nir_foreach_dest(nir_instr *instr, nir_foreach_dest_cb cb, void *state)
 {
@@ -1397,7 +1421,9 @@ nir_foreach_dest(nir_instr *instr, nir_foreach_dest_cb cb, void *state)
       return visit_load_const_dest(nir_instr_as_load_const(instr), cb, state);
    case nir_instr_type_phi:
       return visit_phi_dest(nir_instr_as_phi(instr), cb, state);
-      break;
+   case nir_instr_type_parallel_copy:
+      return visit_parallel_copy_dest(nir_instr_as_parallel_copy(instr),
+                                      cb, state);
 
    case nir_instr_type_ssa_undef:
    case nir_instr_type_call:
@@ -1532,6 +1558,18 @@ visit_phi_src(nir_phi_instr *instr, nir_foreach_src_cb cb, void *state)
    return true;
 }
 
+static bool
+visit_parallel_copy_src(nir_parallel_copy_instr *instr,
+                        nir_foreach_src_cb cb, void *state)
+{
+   foreach_list_typed(nir_parallel_copy_copy, copy, node, &instr->copies) {
+      if (!visit_src(&copy->src, cb, state))
+         return false;
+   }
+
+   return true;
+}
+
 typedef struct {
    void *state;
    nir_foreach_src_cb cb;
@@ -1574,6 +1612,11 @@ nir_foreach_src(nir_instr *instr, nir_foreach_src_cb cb, void *state)
       break;
    case nir_instr_type_phi:
       if (!visit_phi_src(nir_instr_as_phi(instr), cb, state))
+         return false;
+      break;
+   case nir_instr_type_parallel_copy:
+      if (!visit_parallel_copy_src(nir_instr_as_parallel_copy(instr),
+                                   cb, state))
          return false;
       break;
    case nir_instr_type_jump:

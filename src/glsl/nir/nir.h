@@ -396,6 +396,7 @@ typedef enum {
    nir_instr_type_jump,
    nir_instr_type_ssa_undef,
    nir_instr_type_phi,
+   nir_instr_type_parallel_copy,
 } nir_instr_type;
 
 typedef struct {
@@ -933,6 +934,24 @@ typedef struct {
    nir_dest dest;
 } nir_phi_instr;
 
+typedef struct {
+   struct exec_node node;
+   nir_src src;
+   nir_dest dest;
+} nir_parallel_copy_copy;
+
+typedef struct {
+   nir_instr instr;
+
+   /* Indicates that this is the parallel copy at the end of the block.
+    * When isolating phi nodes, we create 2 parallel copies in most blocks;
+    * this flag helps tell them apart.
+    */
+   bool at_end;
+
+   struct exec_list copies;
+} nir_parallel_copy_instr;
+
 #define nir_instr_as_alu(_instr) exec_node_data(nir_alu_instr, _instr, instr)
 #define nir_instr_as_call(_instr) exec_node_data(nir_call_instr, _instr, instr)
 #define nir_instr_as_jump(_instr) exec_node_data(nir_jump_instr, _instr, instr)
@@ -946,6 +965,8 @@ typedef struct {
    exec_node_data(nir_ssa_undef_instr, _instr, instr)
 #define nir_instr_as_phi(_instr) \
    exec_node_data(nir_phi_instr, _instr, instr)
+#define nir_instr_as_parallel_copy(_instr) \
+   exec_node_data(nir_parallel_copy_instr, _instr, instr)
 
 
 /*
@@ -1250,6 +1271,8 @@ nir_call_instr *nir_call_instr_create(void *mem_ctx,
 nir_tex_instr *nir_tex_instr_create(void *mem_ctx, unsigned num_srcs);
 
 nir_phi_instr *nir_phi_instr_create(void *mem_ctx);
+
+nir_parallel_copy_instr *nir_parallel_copy_instr_create(void *mem_ctx);
 
 nir_ssa_undef_instr *nir_ssa_undef_instr_create(void *mem_ctx);
 

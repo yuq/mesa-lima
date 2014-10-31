@@ -606,6 +606,23 @@ print_phi_instr(nir_phi_instr *instr, FILE *fp)
 }
 
 static void
+print_parallel_copy_instr(nir_parallel_copy_instr *instr, FILE *fp)
+{
+   bool first = true;
+   fprintf(fp, "pcopy: ");
+   foreach_list_typed(nir_parallel_copy_copy, copy, node, &instr->copies) {
+      if (!first)
+         fprintf(fp, "; ");
+
+      print_dest(&copy->dest, fp);
+      fprintf(fp, " = ");
+      print_src(&copy->src, fp);
+
+      first = false;
+   }
+}
+
+static void
 print_instr(nir_instr *instr, print_var_state *state, unsigned tabs, FILE *fp)
 {
    print_tabs(tabs, fp);
@@ -641,6 +658,10 @@ print_instr(nir_instr *instr, print_var_state *state, unsigned tabs, FILE *fp)
 
    case nir_instr_type_phi:
       print_phi_instr(nir_instr_as_phi(instr), fp);
+      break;
+
+   case nir_instr_type_parallel_copy:
+      print_parallel_copy_instr(nir_instr_as_parallel_copy(instr), fp);
       break;
 
    default:
