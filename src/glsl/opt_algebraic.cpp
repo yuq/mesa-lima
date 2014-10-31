@@ -572,9 +572,12 @@ ir_algebraic_visitor::handle_expression(ir_expression *ir)
          if (count >= op_const[i]->type->vector_elements)
             break;
 
+         ir_expression_operation op = count == 1 ?
+            ir_binop_mul : ir_binop_dot;
+
          /* Swizzle both operands to remove the channels that were zero. */
          return new(mem_ctx)
-            ir_expression(ir_binop_dot, glsl_type::float_type,
+            ir_expression(op, glsl_type::float_type,
                           new(mem_ctx) ir_swizzle(ir->operands[0],
                                                   components, count),
                           new(mem_ctx) ir_swizzle(ir->operands[1],
