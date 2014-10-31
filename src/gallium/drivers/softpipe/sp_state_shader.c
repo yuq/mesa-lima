@@ -132,7 +132,7 @@ softpipe_create_fs_state(struct pipe_context *pipe,
    state->draw_shader = draw_create_fragment_shader(softpipe->draw,
                                                     &state->shader);
    if (!state->draw_shader) {
-      FREE((void *) state->shader.tokens);
+      tgsi_free_tokens(state->shader.tokens);
       FREE(state);
       return NULL;
    }
@@ -194,7 +194,7 @@ softpipe_delete_fs_state(struct pipe_context *pipe, void *fs)
 
    draw_delete_fragment_shader(softpipe->draw, state->draw_shader);
 
-   FREE((void *) state->shader.tokens);
+   tgsi_free_tokens(state->shader.tokens);
    FREE(state);
 }
 
@@ -226,7 +226,7 @@ softpipe_create_vs_state(struct pipe_context *pipe,
 
 fail:
    if (state) {
-      FREE( (void *)state->shader.tokens );
+      tgsi_free_tokens(state->shader.tokens);
       FREE( state->draw_data );
       FREE( state );
    }
@@ -256,7 +256,7 @@ softpipe_delete_vs_state(struct pipe_context *pipe, void *vs)
    struct sp_vertex_shader *state = (struct sp_vertex_shader *) vs;
 
    draw_delete_vertex_shader(softpipe->draw, state->draw_data);
-   FREE( (void *)state->shader.tokens );
+   tgsi_free_tokens(state->shader.tokens);
    FREE( state );
 }
 
@@ -296,7 +296,7 @@ softpipe_create_gs_state(struct pipe_context *pipe,
 
 fail:
    if (state) {
-      FREE( (void *)state->shader.tokens );
+      tgsi_free_tokens(state->shader.tokens);
       FREE( state->draw_data );
       FREE( state );
    }
@@ -329,7 +329,7 @@ softpipe_delete_gs_state(struct pipe_context *pipe, void *gs)
    draw_delete_geometry_shader(softpipe->draw,
                                (state) ? state->draw_data : 0);
 
-   FREE((void *) state->shader.tokens);
+   tgsi_free_tokens(state->shader.tokens);
    FREE(state);
 }
 
