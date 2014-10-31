@@ -433,7 +433,9 @@ lp_build_create_jit_compiler_for_module(LLVMExecutionEngineRef *OutJIT,
    options.JITEmitDebugInfo = true;
 #endif
 
-#if defined(DEBUG) || defined(PROFILE)
+   /* XXX: Workaround http://llvm.org/PR21435 */
+#if defined(DEBUG) || defined(PROFILE) || \
+    (HAVE_LLVM >= 0x0303 && (defined(PIPE_ARCH_X86) || defined(PIPE_ARCH_X86_64)))
 #if HAVE_LLVM < 0x0304
    options.NoFramePointerElimNonLeaf = true;
 #endif
