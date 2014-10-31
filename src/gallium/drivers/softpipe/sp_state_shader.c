@@ -64,7 +64,7 @@ create_fs_variant(struct softpipe_context *softpipe,
 #endif
 
    /* codegen, create variant object */
-   var = softpipe_create_fs_variant_exec(softpipe, curfs);
+   var = softpipe_create_fs_variant_exec(softpipe);
 
    if (var) {
       var->key = *key;
