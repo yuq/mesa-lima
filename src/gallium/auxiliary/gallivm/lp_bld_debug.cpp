@@ -410,6 +410,7 @@ disassemble(const void* func, llvm::raw_ostream & Out)
 extern "C" void
 lp_disassemble(LLVMValueRef func, const void *code) {
    raw_debug_ostream Out;
+   Out << LLVMGetValueName(func) << ":\n";
    disassemble(code, Out);
 }
 
