@@ -180,7 +180,6 @@ struct pstip_transform_context {
    int maxInput;
    uint samplersUsed;  /**< bitfield of samplers used */
    int freeSampler;  /** an available sampler for the pstipple */
-   int texTemp;  /**< temp registers */
    int numImmed;
    boolean firstInstruction;
    uint coordOrigin;
@@ -261,14 +260,14 @@ pstip_transform_inst(struct tgsi_transform_context *ctx,
 {
    struct pstip_transform_context *pctx =
       (struct pstip_transform_context *) ctx;
+   int wincoordInput;
+   int texTemp;
 
    if (pctx->firstInstruction) {
       /* emit our new declarations before the first instruction */
 
       struct tgsi_full_declaration decl;
       struct tgsi_full_instruction newInst;
-      uint i;
-      int wincoordInput;
 
       /* find free texture sampler */
       pctx->freeSampler = free_bit(pctx->samplersUsed);
@@ -279,18 +278,6 @@ pstip_transform_inst(struct tgsi_transform_context *ctx,
          wincoordInput = pctx->maxInput + 1;
       else
          wincoordInput = pctx->wincoordInput;
-
-      /* find one free temp register */
-      for (i = 0; i < 32; i++) {
-         if ((pctx->tempsUsed & (1 << i)) == 0) {
-            /* found a free temp */
-            if (pctx->texTemp < 0)
-               pctx->texTemp  = i;
-            else
-               break;
-         }
-      }
-      assert(pctx->texTemp >= 0);
 
       if (pctx->wincoordInput < 0) {
          /* declare new position input reg */
@@ -313,12 +300,18 @@ pstip_transform_inst(struct tgsi_transform_context *ctx,
       decl.Range.Last = pctx->freeSampler;
       ctx->emit_declaration(ctx, &decl);
 
-      /* declare new temp regs */
-      decl = tgsi_default_full_declaration();
-      decl.Declaration.File = TGSI_FILE_TEMPORARY;
-      decl.Range.First = 
-      decl.Range.Last = pctx->texTemp;
-      ctx->emit_declaration(ctx, &decl);
+      /* Declare temp[0] reg if not already declared.
+       * We can always use temp[0] since this code is before
+       * the rest of the shader.
+       */
+      texTemp = 0;
+      if ((pctx->tempsUsed & (1 << texTemp)) == 0) {
+         decl = tgsi_default_full_declaration();
+         decl.Declaration.File = TGSI_FILE_TEMPORARY;
+         decl.Range.First = 
+            decl.Range.Last = texTemp;
+         ctx->emit_declaration(ctx, &decl);
+      }
 
       /* emit immediate = {1/32, 1/32, 1, 1}
        * The index/position of this immediate will be pctx->numImmed
@@ -356,7 +349,7 @@ pstip_transform_inst(struct tgsi_transform_context *ctx,
       newInst.Instruction.Opcode = TGSI_OPCODE_MUL;
       newInst.Instruction.NumDstRegs = 1;
       newInst.Dst[0].Register.File = TGSI_FILE_TEMPORARY;
-      newInst.Dst[0].Register.Index = pctx->texTemp;
+      newInst.Dst[0].Register.Index = texTemp;
       newInst.Instruction.NumSrcRegs = 2;
       newInst.Src[0].Register.File = TGSI_FILE_INPUT;
       newInst.Src[0].Register.Index = wincoordInput;
@@ -369,12 +362,12 @@ pstip_transform_inst(struct tgsi_transform_context *ctx,
       newInst.Instruction.Opcode = TGSI_OPCODE_TEX;
       newInst.Instruction.NumDstRegs = 1;
       newInst.Dst[0].Register.File = TGSI_FILE_TEMPORARY;
-      newInst.Dst[0].Register.Index = pctx->texTemp;
+      newInst.Dst[0].Register.Index = texTemp;
       newInst.Instruction.NumSrcRegs = 2;
       newInst.Instruction.Texture = TRUE;
       newInst.Texture.Texture = TGSI_TEXTURE_2D;
       newInst.Src[0].Register.File = TGSI_FILE_TEMPORARY;
-      newInst.Src[0].Register.Index = pctx->texTemp;
+      newInst.Src[0].Register.Index = texTemp;
       newInst.Src[1].Register.File = TGSI_FILE_SAMPLER;
       newInst.Src[1].Register.Index = pctx->freeSampler;
       ctx->emit_instruction(ctx, &newInst);
@@ -385,7 +378,7 @@ pstip_transform_inst(struct tgsi_transform_context *ctx,
       newInst.Instruction.NumDstRegs = 0;
       newInst.Instruction.NumSrcRegs = 1;
       newInst.Src[0].Register.File = TGSI_FILE_TEMPORARY;
-      newInst.Src[0].Register.Index = pctx->texTemp;
+      newInst.Src[0].Register.Index = texTemp;
       newInst.Src[0].Register.Negate = 1;
       ctx->emit_instruction(ctx, &newInst);
    }
@@ -419,8 +412,6 @@ util_pstipple_create_fragment_shader(const struct tgsi_token *tokens,
    memset(&transform, 0, sizeof(transform));
    transform.wincoordInput = -1;
    transform.maxInput = -1;
-   transform.texTemp = -1;
-   transform.firstInstruction = TRUE;
    transform.coordOrigin = TGSI_FS_COORD_ORIGIN_UPPER_LEFT;
    transform.base.transform_instruction = pstip_transform_inst;
    transform.base.transform_declaration = pstip_transform_decl;
