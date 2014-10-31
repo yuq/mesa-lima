@@ -198,6 +198,11 @@ _mesa_unlock_context_textures( struct gl_context *ctx );
 extern void
 _mesa_lock_context_textures( struct gl_context *ctx );
 
+extern void
+_mesa_bind_texture_unit(struct gl_context *ctx,
+                        GLuint unit,
+                        struct gl_texture_object *texObj);
+
 /*@}*/
 
 /**
@@ -218,6 +223,8 @@ _mesa_DeleteTextures( GLsizei n, const GLuint *textures );
 extern void GLAPIENTRY
 _mesa_BindTexture( GLenum target, GLuint texture );
 
+extern void GLAPIENTRY
+_mesa_BindTextureUnit(GLuint unit, GLuint texture);
 
 extern void GLAPIENTRY
 _mesa_BindTextures( GLuint first, GLsizei count, const GLuint *textures );

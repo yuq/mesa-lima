@@ -290,9 +290,7 @@ _mesa_ActiveTexture(GLenum texture)
    GLuint k;
    GET_CURRENT_CONTEXT(ctx);
 
-   /* See OpenGL spec for glActiveTexture: */
-   k = MAX2(ctx->Const.MaxCombinedTextureImageUnits,
-            ctx->Const.MaxTextureCoordUnits);
+   k = _mesa_max_tex_unit(ctx);
 
    ASSERT(k <= Elements(ctx->Texture.Unit));
 

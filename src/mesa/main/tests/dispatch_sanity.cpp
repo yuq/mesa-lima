@@ -962,6 +962,7 @@ const struct function gl_core_functions_possible[] = {
    { "glTextureSubImage1D", 45, -1 },
    { "glTextureSubImage2D", 45, -1 },
    { "glTextureSubImage3D", 45, -1 },
+   { "glBindTextureUnit", 45, -1 },
 
    { NULL, 0, -1 }
 };

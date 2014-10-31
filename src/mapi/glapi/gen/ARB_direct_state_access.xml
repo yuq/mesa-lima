@@ -75,5 +75,10 @@
       <param name="pixels" type="const GLvoid *" />
    </function>
 
+   <function name="BindTextureUnit" offset="assign">
+      <param name="unit" type="GLuint" />
+      <param name="texture" type="GLuint" />
+   </function>
+
 </category>
 </OpenGLAPI>
