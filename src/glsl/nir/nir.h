@@ -357,7 +357,7 @@ typedef struct {
    unsigned num_components; /** < number of vector components */
    unsigned num_array_elems; /** < size of array (0 for no array) */
 
-   /** for liveness analysis, the index in the bit-array of live variables */
+   /** generic register index. */
    unsigned index;
 
    /** only for debug purposes, can be NULL */
@@ -417,7 +417,7 @@ typedef struct {
    /** for debugging only, can be NULL */
    const char* name;
 
-   /** index into the bit-array for liveness analysis */
+   /** generic SSA definition index. */
    unsigned index;
 
    nir_instr *parent_instr;
