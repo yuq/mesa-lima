@@ -745,7 +745,7 @@ fs_visitor::emit_shader_time_end()
    push_force_uncompressed();
    fs_reg start = shader_start_time;
    start.negate = true;
-   fs_reg diff = fs_reg(this, glsl_type::uint_type);
+   fs_reg diff = fs_reg(GRF, virtual_grf_alloc(1), BRW_REGISTER_TYPE_UD, 1);
    emit(ADD(diff, start, shader_end_time));
 
    /* If there were no instructions between the two timestamp gets, the diff
