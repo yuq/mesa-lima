@@ -679,19 +679,18 @@ fs_visitor::get_timestamp()
 {
    assert(brw->gen >= 7);
 
-   fs_reg ts = fs_reg(retype(brw_vec1_reg(BRW_ARCHITECTURE_REGISTER_FILE,
+   fs_reg ts = fs_reg(retype(brw_vec4_reg(BRW_ARCHITECTURE_REGISTER_FILE,
                                           BRW_ARF_TIMESTAMP,
                                           0),
                              BRW_REGISTER_TYPE_UD));
 
-   fs_reg dst = fs_reg(this, glsl_type::uint_type);
+   fs_reg dst = fs_reg(GRF, virtual_grf_alloc(1), BRW_REGISTER_TYPE_UD, 4);
 
    fs_inst *mov = emit(MOV(dst, ts));
-   /* We want to read the 3 fields we care about (mostly field 0, but also 2)
-    * even if it's not enabled in the dispatch.
+   /* We want to read the 3 fields we care about even if it's not enabled in
+    * the dispatch.
     */
    mov->force_writemask_all = true;
-   mov->exec_size = 8;
 
    /* The caller wants the low 32 bits of the timestamp.  Since it's running
     * at the GPU clock rate of ~1.2ghz, it will roll over every ~3 seconds,
