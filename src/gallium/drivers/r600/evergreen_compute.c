@@ -47,9 +47,9 @@
 #include "compute_memory_pool.h"
 #include "sb/sb_public.h"
 #ifdef HAVE_OPENCL
-#include "radeon_llvm_util.h"
+#include "radeon/radeon_llvm_util.h"
 #endif
-#include "radeon_elf_util.h"
+#include "radeon/radeon_elf_util.h"
 #include <inttypes.h>
 
 /**
@@ -199,6 +199,7 @@ void *evergreen_create_compute_state(
 {
 	struct r600_context *ctx = (struct r600_context *)ctx_;
 	struct r600_pipe_compute *shader = CALLOC_STRUCT(r600_pipe_compute);
+#ifdef HAVE_OPENCL
 	const struct pipe_llvm_program_header * header;
 	const char *code;
 	void *p;
@@ -208,7 +209,6 @@ void *evergreen_create_compute_state(
 	header = cso->prog;
 	code = cso->prog + sizeof(struct pipe_llvm_program_header);
 #if HAVE_LLVM < 0x0306
-#ifdef HAVE_OPENCL
         (void)use_kill;
 	(void)p;
 	shader->llvm_ctx = LLVMContextCreate();
@@ -224,7 +224,6 @@ void *evergreen_create_compute_state(
 				shader->llvm_ctx, i, code, header->num_bytes);
 		}
 	}
-#endif
 #else
 	memset(&shader->binary, 0, sizeof(shader->binary));
 	radeon_elf_read(code, header->num_bytes, &shader->binary, true);
@@ -235,6 +234,7 @@ void *evergreen_create_compute_state(
 	p = r600_buffer_map_sync_with_rings(&ctx->b, shader->code_bo, PIPE_TRANSFER_WRITE);
 	memcpy(p, shader->bc.bytecode, shader->bc.ndw * 4);
 	ctx->b.ws->buffer_unmap(shader->code_bo->cs_buf);
+#endif
 #endif
 
 	shader->ctx = (struct r600_context*)ctx;
@@ -569,11 +569,11 @@ static void evergreen_launch_grid(
 		uint32_t pc, const void *input)
 {
 	struct r600_context *ctx = (struct r600_context *)ctx_;
+#ifdef HAVE_OPENCL
 	struct r600_pipe_compute *shader = ctx->cs_shader_state.shader;
 	boolean use_kill;
 
 #if HAVE_LLVM < 0x0306
-#ifdef HAVE_OPENCL
 	struct r600_kernel *kernel = &shader->kernels[pc];
 	(void)use_kill;
         if (!kernel->code_bo) {
@@ -605,13 +605,13 @@ static void evergreen_launch_grid(
                 memcpy(p, kernel->bc.bytecode, kernel->bc.ndw * 4);
                 ctx->b.ws->buffer_unmap(kernel->code_bo->cs_buf);
         }
-#endif
 	shader->active_kernel = kernel;
 	ctx->cs_shader_state.kernel_index = pc;
 #else
 	ctx->cs_shader_state.pc = pc;
 	/* Get the config information for this kernel. */
 	r600_shader_binary_read_config(&shader->binary, &shader->bc, pc, &use_kill);
+#endif
 #endif
 
 	COMPUTE_DBG(ctx->screen, "*** evergreen_launch_grid: pc = %u\n", pc);
