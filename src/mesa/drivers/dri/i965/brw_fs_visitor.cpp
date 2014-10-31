@@ -2921,9 +2921,6 @@ fs_visitor::emit_untyped_surface_read(unsigned surf_index, fs_reg dst,
 fs_inst *
 fs_visitor::emit(fs_inst *inst)
 {
-   if (force_uncompressed_stack > 0)
-      inst->exec_size = 8;
-
    if (dispatch_width == 16 && inst->exec_size == 8)
       inst->force_uncompressed = true;
 
@@ -3468,8 +3465,6 @@ fs_visitor::init()
    this->last_scratch = 0;
    this->pull_constant_loc = NULL;
    this->push_constant_loc = NULL;
-
-   this->force_uncompressed_stack = 0;
 
    this->spilled_any_registers = false;
    this->do_dual_src = false;

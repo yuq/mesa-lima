@@ -742,7 +742,6 @@ fs_visitor::emit_shader_time_end()
    test->conditional_mod = BRW_CONDITIONAL_Z;
    emit(IF(BRW_PREDICATE_NORMAL));
 
-   push_force_uncompressed();
    fs_reg start = shader_start_time;
    start.negate = true;
    fs_reg diff = fs_reg(GRF, virtual_grf_alloc(1), BRW_REGISTER_TYPE_UD, 1);
@@ -759,8 +758,6 @@ fs_visitor::emit_shader_time_end()
    emit(BRW_OPCODE_ELSE);
    emit_shader_time_write(reset_type, fs_reg(1u));
    emit(BRW_OPCODE_ENDIF);
-
-   pop_force_uncompressed();
 }
 
 void
@@ -880,19 +877,6 @@ fs_visitor::emit(enum opcode opcode, const fs_reg &dst,
                  fs_reg src[], int sources)
 {
    return emit(new(mem_ctx) fs_inst(opcode, dst, src, sources));
-}
-
-void
-fs_visitor::push_force_uncompressed()
-{
-   force_uncompressed_stack++;
-}
-
-void
-fs_visitor::pop_force_uncompressed()
-{
-   force_uncompressed_stack--;
-   assert(force_uncompressed_stack >= 0);
 }
 
 /**
@@ -3641,7 +3625,6 @@ fs_visitor::run()
          }
       }
    }
-   assert(force_uncompressed_stack == 0);
 
    /* This must come after all optimization and register allocation, since
     * it inserts dead code that happens to have side effects, and it does

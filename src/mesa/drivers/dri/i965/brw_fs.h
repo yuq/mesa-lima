@@ -453,9 +453,6 @@ public:
    void lower_uniform_pull_constant_loads();
    bool lower_load_payload();
 
-   void push_force_uncompressed();
-   void pop_force_uncompressed();
-
    void emit_dummy_fs();
    void emit_repclear_shader();
    fs_reg *emit_fragcoord_interpolation(ir_variable *ir);
@@ -680,8 +677,6 @@ public:
    bool spilled_any_registers;
 
    const unsigned dispatch_width; /**< 8 or 16 */
-
-   int force_uncompressed_stack;
 };
 
 /**
