@@ -398,23 +398,19 @@ pstip_transform_inst(struct tgsi_transform_context *ctx,
 /**
  * Given a fragment shader, return a new fragment shader which
  * samples a stipple texture and executes KILL.
+ * \param samplerUnitOut  returns the index of the sampler unit which
+ *                        will be used to sample the stipple texture
  */
-struct pipe_shader_state *
-util_pstipple_create_fragment_shader(struct pipe_context *pipe,
-                                     struct pipe_shader_state *fs,
+struct tgsi_token *
+util_pstipple_create_fragment_shader(const struct tgsi_token *tokens,
                                      unsigned *samplerUnitOut)
 {
-   struct pipe_shader_state *new_fs;
    struct pstip_transform_context transform;
-   const uint newLen = tgsi_num_tokens(fs->tokens) + NUM_NEW_TOKENS;
+   const uint newLen = tgsi_num_tokens(tokens) + NUM_NEW_TOKENS;
+   struct tgsi_token *new_tokens;
 
-   new_fs = MALLOC(sizeof(*new_fs));
-   if (!new_fs)
-      return NULL;
-
-   new_fs->tokens = tgsi_alloc_tokens(newLen);
-   if (!new_fs->tokens) {
-      FREE(new_fs);
+   new_tokens = tgsi_alloc_tokens(newLen);
+   if (!new_tokens) {
       return NULL;
    }
 
@@ -430,14 +426,12 @@ util_pstipple_create_fragment_shader(struct pipe_context *pipe,
    transform.base.transform_declaration = pstip_transform_decl;
    transform.base.transform_immediate = pstip_transform_immed;
 
-   tgsi_scan_shader(fs->tokens, &transform.info);
+   tgsi_scan_shader(tokens, &transform.info);
 
    transform.coordOrigin =
       transform.info.properties[TGSI_PROPERTY_FS_COORD_ORIGIN];
 
-   tgsi_transform_shader(fs->tokens,
-                         (struct tgsi_token *) new_fs->tokens,
-                         newLen, &transform.base);
+   tgsi_transform_shader(tokens, new_tokens, newLen, &transform.base);
 
 #if 0 /* DEBUG */
    tgsi_dump(fs->tokens, 0);
@@ -447,6 +441,6 @@ util_pstipple_create_fragment_shader(struct pipe_context *pipe,
    assert(transform.freeSampler < PIPE_MAX_SAMPLERS);
    *samplerUnitOut = transform.freeSampler;
 
-   return new_fs;
+   return new_tokens;
 }
 
