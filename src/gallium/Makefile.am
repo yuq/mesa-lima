@@ -138,14 +138,6 @@ if HAVE_OPENVG
 SUBDIRS += state_trackers/vega
 endif
 
-if HAVE_GALLIUM_EGL
-SUBDIRS += state_trackers/egl targets/egl-static
-endif
-
-if HAVE_GALLIUM_GBM
-SUBDIRS += state_trackers/gbm targets/gbm
-endif
-
 if HAVE_X11_DRIVER
 SUBDIRS += state_trackers/glx/xlib targets/libgl-xlib
 endif

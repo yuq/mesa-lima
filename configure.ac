@@ -697,20 +697,6 @@ AC_ARG_ENABLE([xlib-glx],
         [make GLX library Xlib-based instead of DRI-based @<:@default=disabled@:>@])],
     [enable_xlib_glx="$enableval"],
     [enable_xlib_glx=no])
-AC_ARG_ENABLE([gallium-egl],
-    [AS_HELP_STRING([--enable-gallium-egl],
-        [enable optional EGL state tracker (not required
-         for EGL support in Gallium with OpenGL and OpenGL ES)
-         @<:@default=disabled@:>@])],
-    [enable_gallium_egl="$enableval"],
-    [enable_gallium_egl=no])
-AC_ARG_ENABLE([gallium-gbm],
-    [AS_HELP_STRING([--enable-gallium-gbm],
-        [enable optional gbm state tracker (not required for
-         gbm support in Gallium)
-         @<:@default=auto@:>@])],
-    [enable_gallium_gbm="$enableval"],
-    [enable_gallium_gbm=auto])
 
 AC_ARG_ENABLE([r600-llvm-compiler],
     [AS_HELP_STRING([--enable-r600-llvm-compiler],
@@ -1314,51 +1300,6 @@ AM_CONDITIONAL(HAVE_EGL, test "x$enable_egl" = xyes)
 AC_SUBST([EGL_LIB_DEPS])
 
 dnl
-dnl EGL Gallium configuration
-dnl
-if test "x$enable_gallium_egl" = xyes; then
-    if test -z "$with_gallium_drivers"; then
-        AC_MSG_ERROR([cannot enable egl_gallium without Gallium])
-    fi
-    if test "x$enable_egl" = xno; then
-        AC_MSG_ERROR([cannot enable egl_gallium without EGL])
-    fi
-    if test "x$have_libdrm" != xyes; then
-        AC_MSG_ERROR([egl_gallium requires libdrm >= $LIBDRM_REQUIRED])
-    fi
-# XXX: Uncomment once converted to use static/shared pipe-drivers
-#    enable_gallium_loader=$enable_shared_pipe_drivers
-fi
-AM_CONDITIONAL(HAVE_GALLIUM_EGL, test "x$enable_gallium_egl" = xyes)
-
-dnl
-dnl gbm Gallium configuration
-dnl
-if test "x$enable_gallium_gbm" = xauto; then
-    case "$enable_gbm$enable_gallium_egl$enable_dri$with_egl_platforms" in
-        yesyesyes*drm*)
-            enable_gallium_gbm=yes ;;
-         *)
-            enable_gallium_gbm=no ;;
-    esac
-fi
-if test "x$enable_gallium_gbm" = xyes; then
-    if test -z "$with_gallium_drivers"; then
-        AC_MSG_ERROR([cannot enable gbm_gallium without Gallium])
-    fi
-    if test "x$enable_gbm" = xno; then
-        AC_MSG_ERROR([cannot enable gbm_gallium without gbm])
-    fi
-
-    if test "x$enable_gallium_egl" != xyes; then
-        AC_MSG_ERROR([gbm_gallium is only used by egl_gallium])
-    fi
-
-    enable_gallium_loader=$enable_shared_pipe_drivers
-fi
-AM_CONDITIONAL(HAVE_GALLIUM_GBM, test "x$enable_gallium_gbm" = xyes)
-
-dnl
 dnl XA configuration
 dnl
 if test "x$enable_xa" = xyes; then
@@ -1386,9 +1327,9 @@ if test "x$enable_openvg" = xyes; then
     if test -z "$with_gallium_drivers"; then
         AC_MSG_ERROR([cannot enable OpenVG without Gallium])
     fi
-    if test "x$enable_gallium_egl" = xno; then
-        AC_MSG_ERROR([cannot enable OpenVG without egl_gallium])
-    fi
+
+    AC_MSG_ERROR([Cannot enable OpenVG, because egl_gallium has been removed and
+                  OpenVG hasn't been integrated into standard libEGL yet])
 
     EGL_CLIENT_APIS="$EGL_CLIENT_APIS "'$(VG_LIB)'
     VG_LIB_DEPS="$VG_LIB_DEPS $SELINUX_LIBS $PTHREAD_LIBS"
@@ -2170,8 +2111,6 @@ AC_CONFIG_FILES([Makefile
 		src/gallium/drivers/vc4/kernel/Makefile
 		src/gallium/state_trackers/clover/Makefile
 		src/gallium/state_trackers/dri/Makefile
-		src/gallium/state_trackers/egl/Makefile
-		src/gallium/state_trackers/gbm/Makefile
 		src/gallium/state_trackers/glx/xlib/Makefile
 		src/gallium/state_trackers/omx/Makefile
 		src/gallium/state_trackers/osmesa/Makefile
@@ -2307,12 +2246,7 @@ if test "$enable_egl" = yes; then
         egl_drivers="$egl_drivers builtin:egl_dri2"
     fi
 
-    if test "x$enable_gallium_egl" = xyes; then
-        echo "        EGL drivers:    ${egl_drivers} egl_gallium"
-        echo "        EGL Gallium STs:$EGL_CLIENT_APIS"
-    else
-        echo "        EGL drivers:    $egl_drivers"
-    fi
+    echo "        EGL drivers:    $egl_drivers"
 fi
 
 echo ""
