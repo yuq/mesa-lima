@@ -240,8 +240,8 @@ static const struct brw_device_info brw_device_info_bdw_gt3 = {
 static const struct brw_device_info brw_device_info_chv = {
    GEN8_FEATURES, .is_cherryview = 1, .gt = 1,
    .has_llc = false,
-   .max_vs_threads = 70,
-   .max_gs_threads = 70,
+   .max_vs_threads = 80,
+   .max_gs_threads = 80,
    .max_wm_threads = 102,
    .urb = {
       .size = 128,
