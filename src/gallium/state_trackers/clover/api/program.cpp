@@ -27,7 +27,7 @@ using namespace clover;
 
 namespace {
    void validate_build_program_common(const program &prog, cl_uint num_devs,
-                                      const ref_vector<device> &devs,
+                                      const cl_device_id *d_devs,
                                       void (*pfn_notify)(cl_program, void *),
                                       void *user_data) {
 
@@ -39,7 +39,7 @@ namespace {
 
       if (any_of([&](const device &dev) {
                return !count(dev, prog.context().devices());
-            }, devs))
+            }, objs<allow_empty_tag>(d_devs, num_devs)))
          throw error(CL_INVALID_DEVICE);
    }
 }
@@ -177,7 +177,7 @@ clBuildProgram(cl_program d_prog, cl_uint num_devs,
                 ref_vector<device>(prog.context().devices()));
    auto opts = (p_opts ? p_opts : "");
 
-   validate_build_program_common(prog, num_devs, devs, pfn_notify, user_data);
+   validate_build_program_common(prog, num_devs, d_devs, pfn_notify, user_data);
 
    prog.build(devs, opts);
    return CL_SUCCESS;
@@ -200,7 +200,7 @@ clCompileProgram(cl_program d_prog, cl_uint num_devs,
    auto opts = (p_opts ? p_opts : "");
    header_map headers;
 
-   validate_build_program_common(prog, num_devs, devs, pfn_notify, user_data);
+   validate_build_program_common(prog, num_devs, d_devs, pfn_notify, user_data);
 
    if (bool(num_headers) != bool(header_names))
       throw error(CL_INVALID_VALUE);
