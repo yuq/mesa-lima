@@ -85,6 +85,11 @@ vec4_live_variables::setup_def_use()
                }
 	    }
 	 }
+         if (inst->reads_flag()) {
+            if (!BITSET_TEST(bd->flag_def, 0)) {
+               BITSET_SET(bd->flag_use, 0);
+            }
+         }
 
 	 /* Check for unconditional writes to whole registers. These
 	  * are the things that screen off preceding definitions of a
@@ -99,6 +104,11 @@ vec4_live_variables::setup_def_use()
                   if (!BITSET_TEST(bd->use, reg * 4 + c))
                      BITSET_SET(bd->def, reg * 4 + c);
                }
+            }
+         }
+         if (inst->writes_flag()) {
+            if (!BITSET_TEST(bd->flag_use, 0)) {
+               BITSET_SET(bd->flag_def, 0);
             }
          }
 
@@ -134,6 +144,13 @@ vec4_live_variables::compute_live_variables()
                cont = true;
 	    }
 	 }
+         BITSET_WORD new_livein = (bd->flag_use[0] |
+                                   (bd->flag_liveout[0] &
+                                    ~bd->flag_def[0]));
+         if (new_livein & ~bd->flag_livein[0]) {
+            bd->flag_livein[0] |= new_livein;
+            cont = true;
+         }
 
 	 /* Update liveout */
 	 foreach_list_typed(bblock_link, child_link, link, &block->children) {
@@ -147,6 +164,12 @@ vec4_live_variables::compute_live_variables()
 		  cont = true;
 	       }
 	    }
+            BITSET_WORD new_liveout = (child_bd->flag_livein[0] &
+                                       ~bd->flag_liveout[0]);
+            if (new_liveout) {
+               bd->flag_liveout[0] |= new_liveout;
+               cont = true;
+            }
 	 }
       }
    }
@@ -166,6 +189,11 @@ vec4_live_variables::vec4_live_variables(vec4_visitor *v, cfg_t *cfg)
       block_data[i].use = rzalloc_array(mem_ctx, BITSET_WORD, bitset_words);
       block_data[i].livein = rzalloc_array(mem_ctx, BITSET_WORD, bitset_words);
       block_data[i].liveout = rzalloc_array(mem_ctx, BITSET_WORD, bitset_words);
+
+      block_data[i].flag_def[0] = 0;
+      block_data[i].flag_use[0] = 0;
+      block_data[i].flag_livein[0] = 0;
+      block_data[i].flag_liveout[0] = 0;
    }
 
    setup_def_use();
