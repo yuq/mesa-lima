@@ -44,7 +44,7 @@
 #define VL_VA_DRIVER(ctx) ((vlVaDriver *)ctx->pDriverData)
 #define VL_VA_PSCREEN(ctx) (VL_VA_DRIVER(ctx)->vscreen->pscreen)
 
-#define VL_VA_MAX_IMAGE_FORMATS 5
+#define VL_VA_MAX_IMAGE_FORMATS 6
 
 static inline enum pipe_video_chroma_format
 ChromaToPipe(int format)
@@ -76,6 +76,8 @@ YCbCrToPipe(unsigned format)
       return PIPE_FORMAT_YUYV;
    case VA_FOURCC('U','Y','V','Y'):
       return PIPE_FORMAT_UYVY;
+   case VA_FOURCC('B','G','R','A'):
+      return PIPE_FORMAT_B8G8R8A8_UNORM;
    default:
       assert(0);
       return PIPE_FORMAT_NONE;
