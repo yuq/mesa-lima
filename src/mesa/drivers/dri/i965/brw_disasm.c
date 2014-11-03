@@ -697,6 +697,12 @@ reg(FILE *file, unsigned _reg_file, unsigned _reg_nr)
          string(file, "ip");
          return -1;
          break;
+      case BRW_ARF_TDR:
+         format(file, "tdr0");
+         return -1;
+      case BRW_ARF_TIMESTAMP:
+         format(file, "tm%d", _reg_nr & 0x0f);
+         break;
       default:
          format(file, "ARF%d", _reg_nr);
          break;
