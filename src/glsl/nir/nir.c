@@ -1597,6 +1597,20 @@ nir_foreach_src(nir_instr *instr, nir_foreach_src_cb cb, void *state)
    return nir_foreach_dest(instr, visit_dest_indirect, &dest_state);
 }
 
+void
+nir_ssa_def_init(nir_function_impl *impl, nir_instr *instr, nir_ssa_def *def,
+                 unsigned num_components, const char *name)
+{
+   void *mem_ctx = ralloc_parent(instr);
+
+   def->name = name;
+   def->index = impl->ssa_alloc++;
+   def->parent_instr = instr;
+   def->uses = _mesa_set_create(mem_ctx, _mesa_key_pointer_equal);
+   def->if_uses = _mesa_set_create(mem_ctx, _mesa_key_pointer_equal);
+   def->num_components = num_components;
+}
+
 
 static bool foreach_cf_node(nir_cf_node *node, nir_foreach_block_cb cb,
                             bool reverse, void *state);

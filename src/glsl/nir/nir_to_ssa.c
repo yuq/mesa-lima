@@ -163,12 +163,9 @@ static nir_ssa_def *get_ssa_src(nir_register *reg, rewrite_state *state)
        * to preserve the information that this source is undefined
        */
       nir_ssa_undef_instr *instr = nir_ssa_undef_instr_create(state->mem_ctx);
-      instr->def.index = state->impl->ssa_alloc++;
-      instr->def.num_components = reg->num_components;
-      instr->def.uses = _mesa_set_create(state->mem_ctx,
-                                         _mesa_key_pointer_equal);
-      instr->def.if_uses = _mesa_set_create(state->mem_ctx,
-                                            _mesa_key_pointer_equal);
+      nir_ssa_def_init(state->impl, &instr->instr, &instr->def,
+                       reg->num_components, NULL);
+
       /*
        * We could just insert the undefined instruction before the instruction
        * we're rewriting, but we could be rewriting a phi source in which case
@@ -254,13 +251,8 @@ rewrite_def_forwards(nir_dest *dest, void *_state)
       name = ralloc_asprintf(state->mem_ctx, "%s_%u", dest->reg.reg->name,
                              state->states[index].num_defs);
 
-   dest->ssa.index = state->impl->ssa_alloc++;
-   dest->ssa.num_components = reg->num_components;
-   dest->ssa.parent_instr = state->parent_instr;
-   dest->ssa.uses = _mesa_set_create(state->mem_ctx, _mesa_key_pointer_equal);
-   dest->ssa.if_uses = _mesa_set_create(state->mem_ctx,
-                                        _mesa_key_pointer_equal);
-   dest->ssa.name = name;
+   nir_ssa_def_init(state->impl, state->parent_instr, &dest->ssa,
+                    reg->num_components, name);
 
    /* push our SSA destination on the stack */
    state->states[index].index++;
@@ -327,14 +319,8 @@ rewrite_alu_instr_forward(nir_alu_instr *instr, rewrite_state *state)
 
       instr->dest.write_mask = (1 << num_components) - 1;
       instr->dest.dest.is_ssa = true;
-      instr->dest.dest.ssa.index = state->impl->ssa_alloc++;
-      instr->dest.dest.ssa.num_components = num_components;
-      instr->dest.dest.ssa.name = name;
-      instr->dest.dest.ssa.parent_instr = &instr->instr;
-      instr->dest.dest.ssa.uses = _mesa_set_create(state->mem_ctx,
-                                                   _mesa_key_pointer_equal);
-      instr->dest.dest.ssa.if_uses = _mesa_set_create(state->mem_ctx,
-                                                      _mesa_key_pointer_equal);
+      nir_ssa_def_init(state->impl, &instr->instr, &instr->dest.dest.ssa,
+                       num_components, name);
 
       if (nir_op_infos[instr->op].output_size == 0) {
          /*
