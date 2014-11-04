@@ -178,6 +178,7 @@ static void brw_emit_prim(struct brw_context *brw,
    int verts_per_instance;
    int vertex_access_type;
    int indirect_flag;
+   int predicate_enable;
 
    DBG("PRIM: %s %d %d\n", _mesa_lookup_enum_by_nr(prim->mode),
        prim->start, prim->count);
@@ -258,10 +259,14 @@ static void brw_emit_prim(struct brw_context *brw,
       indirect_flag = 0;
    }
 
-
    if (brw->gen >= 7) {
+      if (brw->predicate.state == BRW_PREDICATE_STATE_USE_BIT)
+         predicate_enable = GEN7_3DPRIM_PREDICATE_ENABLE;
+      else
+         predicate_enable = 0;
+
       BEGIN_BATCH(7);
-      OUT_BATCH(CMD_3D_PRIM << 16 | (7 - 2) | indirect_flag);
+      OUT_BATCH(CMD_3D_PRIM << 16 | (7 - 2) | indirect_flag | predicate_enable);
       OUT_BATCH(hw_prim | vertex_access_type);
    } else {
       BEGIN_BATCH(6);
@@ -561,12 +566,7 @@ void brw_draw_prims( struct gl_context *ctx,
 
    assert(unused_tfb_object == NULL);
 
-   if (ctx->Query.CondRenderQuery) {
-      perf_debug("Conditional rendering is implemented in software and may "
-                 "stall.  This should be fixed in the driver.\n");
-   }
-
-   if (!_mesa_check_conditional_render(ctx))
+   if (!brw_check_conditional_render(brw))
       return;
 
    /* Handle primitive restart if needed */

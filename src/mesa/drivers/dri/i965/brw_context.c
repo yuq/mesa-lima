@@ -289,6 +289,8 @@ brw_init_driver_functions(struct brw_context *brw,
    else
       gen4_init_queryobj_functions(functions);
    brw_init_compute_functions(functions);
+   if (brw->gen >= 7)
+      brw_init_conditional_render_functions(functions);
 
    functions->QuerySamplesForFormat = brw_query_samples_for_format;
 
@@ -890,6 +892,8 @@ brwCreateContext(gl_api api,
    brw->prim_restart.enable_cut_index = false;
    brw->gs.enabled = false;
    brw->sf.viewport_transform_enable = true;
+
+   brw->predicate.state = BRW_PREDICATE_STATE_RENDER;
 
    ctx->VertexProgram._MaintainTnlProgram = true;
    ctx->FragmentProgram._MaintainTexEnvProgram = true;

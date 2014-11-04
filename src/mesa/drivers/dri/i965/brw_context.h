@@ -966,6 +966,20 @@ struct brw_stage_state
    uint32_t sampler_offset;
 };
 
+enum brw_predicate_state {
+   /* The first two states are used if we can determine whether to draw
+    * without having to look at the values in the query object buffer. This
+    * will happen if there is no conditional render in progress, if the query
+    * object is already completed or if something else has already added
+    * samples to the preliminary result such as via a BLT command.
+    */
+   BRW_PREDICATE_STATE_RENDER,
+   BRW_PREDICATE_STATE_DONT_RENDER,
+   /* In this case whether to draw or not depends on the result of an
+    * MI_PREDICATE command so the predicate enable bit needs to be checked.
+    */
+   BRW_PREDICATE_STATE_USE_BIT
+};
 
 /**
  * brw_context is derived from gl_context.
@@ -1402,6 +1416,11 @@ struct brw_context
    } query;
 
    struct {
+      enum brw_predicate_state state;
+      bool supported;
+   } predicate;
+
+   struct {
       /** A map from pipeline statistics counter IDs to MMIO addresses. */
       const int *statistics_registers;
 
@@ -1599,6 +1618,10 @@ void brw_write_timestamp(struct brw_context *brw, drm_intel_bo *bo, int idx);
 void brw_write_depth_count(struct brw_context *brw, drm_intel_bo *bo, int idx);
 void brw_store_register_mem64(struct brw_context *brw,
                               drm_intel_bo *bo, uint32_t reg, int idx);
+
+/** brw_conditional_render.c */
+void brw_init_conditional_render_functions(struct dd_function_table *functions);
+bool brw_check_conditional_render(struct brw_context *brw);
 
 /** intel_batchbuffer.c */
 void brw_load_register_mem(struct brw_context *brw,
