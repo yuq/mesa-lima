@@ -795,7 +795,7 @@ set_3src_control_index(struct brw_context *brw, brw_compact_inst *dst, brw_inst 
       (brw_inst_bits(src, 34, 32) << 21) | /*  3b */
       (brw_inst_bits(src, 28,  8));        /* 21b */
 
-   if (brw->is_cherryview)
+   if (brw->gen >= 9 || brw->is_cherryview)
       uncompacted |= brw_inst_bits(src, 36, 35) << 24; /* 2b */
 
    for (int i = 0; i < ARRAY_SIZE(gen8_3src_control_index_table); i++) {
@@ -820,7 +820,7 @@ set_3src_source_index(struct brw_context *brw, brw_compact_inst *dst, brw_inst *
       (brw_inst_bits(src,  72,  65) << 19) | /*  8b */
       (brw_inst_bits(src,  55,  37));        /* 19b */
 
-   if (brw->is_cherryview) {
+   if (brw->gen >= 9 || brw->is_cherryview) {
       uncompacted |=
          (brw_inst_bits(src, 126, 125) << 47) | /* 2b */
          (brw_inst_bits(src, 105, 104) << 45) | /* 2b */
@@ -1057,7 +1057,7 @@ set_uncompacted_3src_control_index(struct brw_context *brw, brw_inst *dst,
    brw_inst_set_bits(dst, 34, 32, (uncompacted >> 21) & 0x7);
    brw_inst_set_bits(dst, 28,  8, (uncompacted >>  0) & 0x1fffff);
 
-   if (brw->is_cherryview)
+   if (brw->gen >= 9 || brw->is_cherryview)
       brw_inst_set_bits(dst, 36, 35, (uncompacted >> 24) & 0x3);
 }
 
@@ -1076,7 +1076,7 @@ set_uncompacted_3src_source_index(struct brw_context *brw, brw_inst *dst,
    brw_inst_set_bits(dst,  72,  65, (uncompacted >> 19) & 0xff);
    brw_inst_set_bits(dst,  55,  37, (uncompacted >>  0) & 0x7ffff);
 
-   if (brw->is_cherryview) {
+   if (brw->gen >= 9 || brw->is_cherryview) {
       brw_inst_set_bits(dst, 126, 125, (uncompacted >> 47) & 0x3);
       brw_inst_set_bits(dst, 105, 104, (uncompacted >> 45) & 0x3);
       brw_inst_set_bits(dst,  84,  84, (uncompacted >> 44) & 0x1);
