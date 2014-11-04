@@ -421,7 +421,11 @@ brw_initialize_context_constants(struct brw_context *brw)
 
    ctx->Const.MinLineWidth = 1.0;
    ctx->Const.MinLineWidthAA = 1.0;
-   if (brw->gen >= 6) {
+   if (brw->gen >= 9 || brw->is_cherryview) {
+      ctx->Const.MaxLineWidth = 40.0;
+      ctx->Const.MaxLineWidthAA = 40.0;
+      ctx->Const.LineWidthGranularity = 0.125;
+   } else if (brw->gen >= 6) {
       ctx->Const.MaxLineWidth = 7.875;
       ctx->Const.MaxLineWidthAA = 7.875;
       ctx->Const.LineWidthGranularity = 0.125;
