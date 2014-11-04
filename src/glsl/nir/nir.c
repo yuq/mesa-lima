@@ -1144,12 +1144,9 @@ add_use_cb(nir_src *src, void *state)
 {
    nir_instr *instr = (nir_instr *) state;
 
-   if (src->is_ssa)
-      return true;
+   struct set *uses_set = src->is_ssa ? src->ssa->uses : src->reg.reg->uses;
 
-   nir_register *reg = src->reg.reg;
-
-   _mesa_set_add(reg->uses, _mesa_hash_pointer(instr), instr);
+   _mesa_set_add(uses_set, _mesa_hash_pointer(instr), instr);
 
    return true;
 }
@@ -1280,16 +1277,13 @@ remove_use_cb(nir_src *src, void *state)
 {
    nir_instr *instr = (nir_instr *) state;
 
-   if (src->is_ssa)
-      return true;
+   struct set *uses_set = src->is_ssa ? src->ssa->uses : src->reg.reg->uses;
 
-   nir_register *reg = src->reg.reg;
-
-   struct set_entry *entry = _mesa_set_search(reg->uses,
+   struct set_entry *entry = _mesa_set_search(uses_set,
                                               _mesa_hash_pointer(instr),
                                               instr);
    if (entry)
-      _mesa_set_remove(reg->uses, entry);
+      _mesa_set_remove(uses_set, entry);
 
    return true;
 }

@@ -235,13 +235,8 @@ rewrite_def_forwards(nir_dest *dest, void *_state)
       csel->dest.dest.reg.reg = dest->reg.reg;
       csel->dest.write_mask = (1 << dest->reg.reg->num_components) - 1;
       csel->src[0].src = nir_src_copy(*state->predicate, state->mem_ctx);
-      if (csel->src[0].src.is_ssa)
-         _mesa_set_add(csel->src[0].src.ssa->uses,
-                       _mesa_hash_pointer(&csel->instr), &csel->instr);
       csel->src[2].src.is_ssa = true;
       csel->src[2].src.ssa = get_ssa_src(dest->reg.reg, state);
-      _mesa_set_add(csel->src[2].src.ssa->uses,
-                    _mesa_hash_pointer(&csel->instr), &csel->instr);
    }
 
    dest->is_ssa = true;
@@ -265,8 +260,6 @@ rewrite_def_forwards(nir_dest *dest, void *_state)
    if (state->predicate) {
       csel->src[1].src.is_ssa = true;
       csel->src[1].src.ssa = &dest->ssa;
-      _mesa_set_add(dest->ssa.uses, _mesa_hash_pointer(&csel->instr),
-                    &csel->instr);
 
       nir_instr *old_parent_instr = state->parent_instr;
       nir_src *old_predicate = state->predicate;
@@ -386,18 +379,11 @@ rewrite_alu_instr_forward(nir_alu_instr *instr, rewrite_state *state)
             vec->src[i].src.ssa = old_src;
             vec->src[i].swizzle[0] = i;
          }
-
-         _mesa_set_add(vec->src[i].src.ssa->uses,
-                       _mesa_hash_pointer(&vec->instr), &vec->instr);
       }
 
       vec->has_predicate = instr->has_predicate;
-      if (instr->has_predicate) {
+      if (instr->has_predicate)
          vec->predicate = nir_src_copy(instr->predicate, state->mem_ctx);
-         if (vec->predicate.is_ssa)
-            _mesa_set_add(vec->predicate.ssa->uses,
-                          _mesa_hash_pointer(&vec->instr), &vec->instr);
-      }
 
       nir_instr_insert_after(&instr->instr, &vec->instr);
 
