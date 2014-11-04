@@ -331,7 +331,18 @@ pragma_statement:
    | PRAGMA_OPTIMIZE_OFF EOL
    | PRAGMA_INVARIANT_ALL EOL
    {
-      if (!state->is_version(120, 100)) {
+      /* Pragma invariant(all) cannot be used in a fragment shader.
+       *
+       * Page 27 of the GLSL 1.20 spec, Page 53 of the GLSL ES 3.00 spec:
+       *
+       *     "It is an error to use this pragma in a fragment shader."
+       */
+      if (state->is_version(120, 300) &&
+          state->stage == MESA_SHADER_FRAGMENT) {
+         _mesa_glsl_error(& @1, state,
+                          "pragma `invariant(all)' cannot be used "
+                          "in a fragment shader.");
+      } else if (!state->is_version(120, 100)) {
          _mesa_glsl_warning(& @1, state,
                             "pragma `invariant(all)' not supported in %s "
                             "(GLSL ES 1.00 or GLSL 1.20 required)",
