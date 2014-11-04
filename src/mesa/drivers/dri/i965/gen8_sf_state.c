@@ -152,7 +152,11 @@ upload_sf(struct brw_context *brw)
    uint32_t line_width_u3_7 = U_FIXED(CLAMP(ctx->Line.Width, 0.0, 7.99), 7);
    if (line_width_u3_7 == 0)
       line_width_u3_7 = 1;
-   dw2 |= line_width_u3_7 << GEN6_SF_LINE_WIDTH_SHIFT;
+   if (brw->gen >= 9 || brw->is_cherryview) {
+      dw1 |= line_width_u3_7 << GEN9_SF_LINE_WIDTH_SHIFT;
+   } else {
+      dw2 |= line_width_u3_7 << GEN6_SF_LINE_WIDTH_SHIFT;
+   }
 
    if (ctx->Line.SmoothFlag) {
       dw2 |= GEN6_SF_LINE_END_CAP_WIDTH_1_0;
