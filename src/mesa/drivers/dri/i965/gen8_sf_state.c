@@ -149,7 +149,8 @@ upload_sf(struct brw_context *brw)
        dw1 |= GEN6_SF_VIEWPORT_TRANSFORM_ENABLE;
 
    /* _NEW_LINE */
-   uint32_t line_width_u3_7 = U_FIXED(CLAMP(ctx->Line.Width, 0.0, 7.99), 7);
+   uint32_t line_width_u3_7 =
+      U_FIXED(CLAMP(ctx->Line.Width, 0.0, ctx->Const.MaxLineWidth), 7);
    if (line_width_u3_7 == 0)
       line_width_u3_7 = 1;
    if (brw->gen >= 9 || brw->is_cherryview) {
