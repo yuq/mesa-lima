@@ -2409,7 +2409,7 @@ void brw_adjust_sampler_state_pointer(struct brw_compile *p,
 
       struct brw_reg temp = vec1(retype(scratch, BRW_REGISTER_TYPE_UD));
 
-      brw_AND(p, temp, sampler_index, brw_imm_ud(0x0f0));
+      brw_AND(p, temp, get_element_ud(sampler_index, 0), brw_imm_ud(0x0f0));
       brw_SHL(p, temp, temp, brw_imm_ud(4));
       brw_ADD(p,
               get_element_ud(header, 3),
