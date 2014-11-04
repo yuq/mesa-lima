@@ -421,9 +421,15 @@ brw_initialize_context_constants(struct brw_context *brw)
 
    ctx->Const.MinLineWidth = 1.0;
    ctx->Const.MinLineWidthAA = 1.0;
-   ctx->Const.MaxLineWidth = 5.0;
-   ctx->Const.MaxLineWidthAA = 5.0;
-   ctx->Const.LineWidthGranularity = 0.5;
+   if (brw->gen >= 6) {
+      ctx->Const.MaxLineWidth = 7.875;
+      ctx->Const.MaxLineWidthAA = 7.875;
+      ctx->Const.LineWidthGranularity = 0.125;
+   } else {
+      ctx->Const.MaxLineWidth = 7.0;
+      ctx->Const.MaxLineWidthAA = 7.0;
+      ctx->Const.LineWidthGranularity = 0.5;
+   }
 
    ctx->Const.MinPointSize = 1.0;
    ctx->Const.MinPointSizeAA = 1.0;
