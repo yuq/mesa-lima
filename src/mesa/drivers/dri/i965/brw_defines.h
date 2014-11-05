@@ -2690,6 +2690,8 @@ enum brw_wm_barycentric_interp_mode {
 # define MEDIA_CURBE_READ_OFFSET_SHIFT          0
 # define MEDIA_CURBE_READ_OFFSET_MASK           INTEL_MASK(15, 0)
 /* GEN7 DW5, GEN8+ DW6 */
+# define MEDIA_BARRIER_ENABLE_SHIFT             21
+# define MEDIA_BARRIER_ENABLE_MASK              INTEL_MASK(21, 21)
 # define MEDIA_GPGPU_THREAD_COUNT_SHIFT         0
 # define MEDIA_GPGPU_THREAD_COUNT_MASK          INTEL_MASK(7, 0)
 # define GEN8_MEDIA_GPGPU_THREAD_COUNT_SHIFT    0

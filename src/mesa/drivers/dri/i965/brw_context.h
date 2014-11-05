@@ -498,6 +498,7 @@ struct brw_cs_prog_data {
    GLuint dispatch_grf_start_reg_16;
    unsigned local_size[3];
    unsigned simd_size;
+   bool uses_barrier;
 };
 
 /**

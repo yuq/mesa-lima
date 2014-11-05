@@ -1705,6 +1705,8 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
 
    case nir_intrinsic_barrier:
       emit_barrier();
+      if (stage == MESA_SHADER_COMPUTE)
+         ((struct brw_cs_prog_data *) prog_data)->uses_barrier = true;
       break;
 
    default:

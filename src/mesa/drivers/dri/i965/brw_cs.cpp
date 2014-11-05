@@ -431,7 +431,9 @@ brw_upload_cs_state(struct brw_context *brw)
       SET_FIELD(threads, GEN8_MEDIA_GPGPU_THREAD_COUNT) :
       SET_FIELD(threads, MEDIA_GPGPU_THREAD_COUNT);
    assert(threads <= brw->max_cs_threads);
-   desc[dw++] = media_threads;
+   desc[dw++] =
+      SET_FIELD(cs_prog_data->uses_barrier, MEDIA_BARRIER_ENABLE) |
+      media_threads;
 
    BEGIN_BATCH(4);
    OUT_BATCH(MEDIA_INTERFACE_DESCRIPTOR_LOAD << 16 | (4 - 2));
