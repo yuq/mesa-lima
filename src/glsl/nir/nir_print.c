@@ -621,8 +621,6 @@ print_instr(nir_instr *instr, print_var_state *state, unsigned tabs, FILE *fp)
       unreachable("Invalid instruction type");
       break;
    }
-
-   fprintf(fp, "\n");
 }
 
 static int
@@ -668,6 +666,7 @@ print_block(nir_block *block, print_var_state *state, unsigned tabs, FILE *fp)
 
    nir_foreach_instr(block, instr) {
       print_instr(instr, state, tabs, fp);
+      fprintf(fp, "\n");
    }
 
    print_tabs(tabs, fp);
@@ -880,4 +879,10 @@ nir_print_shader(nir_shader *shader, FILE *fp)
    }
 
    destroy_print_state(&state);
+}
+
+void
+nir_print_instr(nir_instr *instr, FILE *fp)
+{
+   print_instr(instr, NULL, 0, fp);
 }
