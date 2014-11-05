@@ -1219,6 +1219,38 @@ disasm_printer_add_mdesc_urb(struct disasm_printer *printer,
 }
 
 static void
+disasm_printer_add_mdesc_spawner(struct disasm_printer *printer,
+                                 const struct disasm_inst *inst,
+                                 uint32_t mdesc)
+{
+   const char *from;
+
+   switch (mdesc & GEN6_MSG_TS_REQUESTER_TYPE__MASK) {
+   case GEN6_MSG_TS_REQUESTER_TYPE_ROOT:  from = "root";    break;
+   case GEN6_MSG_TS_REQUESTER_TYPE_CHILD: from = "child";   break;
+   default:                               from = "BAD";     break;
+   }
+
+   disasm_printer_add(printer, "(%s thread ", from);
+
+   switch (mdesc & GEN6_MSG_TS_OPCODE__MASK) {
+   case GEN6_MSG_TS_OPCODE_DEREF:
+      disasm_printer_add(printer, "%sderef",
+            (mdesc & GEN6_MSG_TS_RESOURCE_SELECT_NO_DEREF) ? "no " : "");
+      break;
+   case GEN6_MSG_TS_OPCODE_SPAWN:
+      disasm_printer_add(printer, "spawn %s)",
+            (mdesc & GEN6_MSG_TS_RESOURCE_SELECT_ROOT) ? "root" : "child");
+      break;
+   default:
+      disasm_printer_add(printer, "BAD");
+      break;
+   }
+
+   disasm_printer_add(printer, ")");
+}
+
+static void
 disasm_printer_add_mdesc_dp_sampler(struct disasm_printer *printer,
                                     const struct disasm_inst *inst,
                                     uint32_t mdesc)
@@ -1337,6 +1369,9 @@ disasm_printer_add_mdesc(struct disasm_printer *printer,
       break;
    case GEN6_SFID_URB:
       disasm_printer_add_mdesc_urb(printer, inst, mdesc);
+      break;
+   case GEN6_SFID_SPAWNER:
+      disasm_printer_add_mdesc_spawner(printer, inst, mdesc);
       break;
    case GEN6_SFID_DP_CC:
    case GEN7_SFID_DP_DC0:
