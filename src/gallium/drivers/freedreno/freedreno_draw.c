@@ -117,7 +117,7 @@ fd_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 		util_format_short_name(pipe_surface_format(pfb->zsbuf)));
 
 	fd_hw_query_set_stage(ctx, ctx->ring, FD_STAGE_DRAW);
-	ctx->draw(ctx, info);
+	ctx->draw_vbo(ctx, info);
 
 	/* if an app (or, well, piglit test) does many thousands of draws
 	 * without flush (or anything which implicitly flushes, like

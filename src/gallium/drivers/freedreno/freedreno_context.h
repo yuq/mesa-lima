@@ -347,7 +347,7 @@ struct fd_context {
 	void (*emit_sysmem_prep)(struct fd_context *ctx);
 
 	/* draw: */
-	void (*draw)(struct fd_context *pctx, const struct pipe_draw_info *info);
+	void (*draw_vbo)(struct fd_context *pctx, const struct pipe_draw_info *info);
 	void (*clear)(struct fd_context *ctx, unsigned buffers,
 			const union pipe_color_union *color, double depth, unsigned stencil);
 };

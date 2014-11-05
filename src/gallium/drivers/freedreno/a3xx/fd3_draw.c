@@ -111,7 +111,7 @@ fixup_shader_state(struct fd_context *ctx, struct ir3_shader_key *key)
 }
 
 static void
-fd3_draw(struct fd_context *ctx, const struct pipe_draw_info *info)
+fd3_draw_vbo(struct fd_context *ctx, const struct pipe_draw_info *info)
 {
 	struct fd3_context *fd3_ctx = fd3_context(ctx);
 	struct fd3_emit emit = {
@@ -355,6 +355,6 @@ void
 fd3_draw_init(struct pipe_context *pctx)
 {
 	struct fd_context *ctx = fd_context(pctx);
-	ctx->draw = fd3_draw;
+	ctx->draw_vbo = fd3_draw_vbo;
 	ctx->clear = fd3_clear;
 }
