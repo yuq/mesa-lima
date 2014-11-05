@@ -610,7 +610,13 @@ intel_bo_wait(struct intel_bo *bo, int64_t timeout)
 {
    int err;
 
-   err = drm_intel_gem_bo_wait(gem_bo(bo), timeout);
+   if (timeout >= 0) {
+      err = drm_intel_gem_bo_wait(gem_bo(bo), timeout);
+   } else {
+      drm_intel_bo_wait_rendering(gem_bo(bo));
+      err = 0;
+   }
+
    /* consider the bo idle on errors */
    if (err && err != -ETIME)
       err = 0;
