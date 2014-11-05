@@ -402,6 +402,16 @@ static const char *const gen6_sfid[16] = {
    [HSW_SFID_CRE]                      = "cre",
 };
 
+static const char *const gen7_gateway_subfuncid[8] = {
+   [BRW_MESSAGE_GATEWAY_SFID_OPEN_GATEWAY] = "open",
+   [BRW_MESSAGE_GATEWAY_SFID_CLOSE_GATEWAY] = "close",
+   [BRW_MESSAGE_GATEWAY_SFID_FORWARD_MSG] = "forward msg",
+   [BRW_MESSAGE_GATEWAY_SFID_GET_TIMESTAMP] = "get timestamp",
+   [BRW_MESSAGE_GATEWAY_SFID_BARRIER_MSG] = "barrier msg",
+   [BRW_MESSAGE_GATEWAY_SFID_UPDATE_GATEWAY_STATE] = "update state",
+   [BRW_MESSAGE_GATEWAY_SFID_MMIO_READ_WRITE] = "mmio read/write",
+};
+
 static const char *const dp_write_port_msg_type[8] = {
    [0b000] = "OWord block write",
    [0b001] = "OWord dual block write",
@@ -1498,6 +1508,12 @@ brw_disassemble_inst(FILE *file, const struct brw_device_info *devinfo,
             break;
          case BRW_SFID_THREAD_SPAWNER:
             break;
+
+         case BRW_SFID_MESSAGE_GATEWAY:
+            format(file, " (%s)",
+                   gen7_gateway_subfuncid[brw_inst_gateway_subfuncid(devinfo, inst)]);
+            break;
+
          case GEN7_SFID_DATAPORT_DATA_CACHE:
             if (devinfo->gen >= 7) {
                format(file, " (");
