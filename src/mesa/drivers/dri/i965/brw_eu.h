@@ -390,6 +390,8 @@ brw_inst *brw_JMPI(struct brw_codegen *p, struct brw_reg index,
 
 void brw_NOP(struct brw_codegen *p);
 
+void brw_WAIT(struct brw_codegen *p);
+
 /* Special case: there is never a destination, execution size will be
  * taken from src0:
  */

@@ -3406,3 +3406,24 @@ void brw_shader_time_add(struct brw_codegen *p,
 
    brw_pop_insn_state(p);
 }
+
+
+/**
+ * Emit the wait instruction for a barrier
+ */
+void
+brw_WAIT(struct brw_codegen *p)
+{
+   const struct brw_device_info *devinfo = p->devinfo;
+   struct brw_inst *insn;
+
+   struct brw_reg src = brw_notification_reg();
+
+   insn = next_insn(p, BRW_OPCODE_WAIT);
+   brw_set_dest(p, insn, src);
+   brw_set_src0(p, insn, src);
+   brw_set_src1(p, insn, brw_null_reg());
+
+   brw_inst_set_exec_size(devinfo, insn, BRW_EXECUTE_1);
+   brw_inst_set_mask_control(devinfo, insn, BRW_MASK_DISABLE);
+}
