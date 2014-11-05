@@ -126,58 +126,6 @@ emit_shader(struct fd_ringbuffer *ring, const struct ir3_shader_variant *so)
 	}
 }
 
-static int
-find_output(const struct ir3_shader_variant *so, ir3_semantic semantic)
-{
-	int j;
-
-	for (j = 0; j < so->outputs_count; j++)
-		if (so->outputs[j].semantic == semantic)
-			return j;
-
-	/* it seems optional to have a OUT.BCOLOR[n] for each OUT.COLOR[n]
-	 * in the vertex shader.. but the fragment shader doesn't know this
-	 * so  it will always have both IN.COLOR[n] and IN.BCOLOR[n].  So
-	 * at link time if there is no matching OUT.BCOLOR[n], we must map
-	 * OUT.COLOR[n] to IN.BCOLOR[n].  And visa versa if there is only
-	 * a OUT.BCOLOR[n] but no matching OUT.COLOR[n]
-	 */
-	if (sem2name(semantic) == TGSI_SEMANTIC_BCOLOR) {
-		unsigned idx = sem2idx(semantic);
-		semantic = ir3_semantic_name(TGSI_SEMANTIC_COLOR, idx);
-	} else if (sem2name(semantic) == TGSI_SEMANTIC_COLOR) {
-		unsigned idx = sem2idx(semantic);
-		semantic = ir3_semantic_name(TGSI_SEMANTIC_BCOLOR, idx);
-	}
-
-	for (j = 0; j < so->outputs_count; j++)
-		if (so->outputs[j].semantic == semantic)
-			return j;
-
-	debug_assert(0);
-
-	return 0;
-}
-
-static int
-next_varying(const struct ir3_shader_variant *so, int i)
-{
-	while (++i < so->inputs_count)
-		if (so->inputs[i].compmask && so->inputs[i].bary)
-			break;
-	return i;
-}
-
-static uint32_t
-find_output_regid(const struct ir3_shader_variant *so, ir3_semantic semantic)
-{
-	int j;
-	for (j = 0; j < so->outputs_count; j++)
-		if (so->outputs[j].semantic == semantic)
-			return so->outputs[j].regid;
-	return regid(63, 0);
-}
-
 void
 fd3_program_emit(struct fd_ringbuffer *ring, struct fd3_emit *emit)
 {
@@ -245,13 +193,13 @@ fd3_program_emit(struct fd_ringbuffer *ring, struct fd3_emit *emit)
 	/* seems like vs->constlen + fs->constlen > 256, then CONSTMODE=1 */
 	constmode = ((vp->constlen + fp->constlen) > 256) ? 1 : 0;
 
-	pos_regid = find_output_regid(vp,
+	pos_regid = ir3_find_output_regid(vp,
 		ir3_semantic_name(TGSI_SEMANTIC_POSITION, 0));
-	posz_regid = find_output_regid(fp,
+	posz_regid = ir3_find_output_regid(fp,
 		ir3_semantic_name(TGSI_SEMANTIC_POSITION, 0));
-	psize_regid = find_output_regid(vp,
+	psize_regid = ir3_find_output_regid(vp,
 		ir3_semantic_name(TGSI_SEMANTIC_PSIZE, 0));
-	color_regid = find_output_regid(fp,
+	color_regid = ir3_find_output_regid(fp,
 		ir3_semantic_name(TGSI_SEMANTIC_COLOR, 0));
 
 	/* we could probably divide this up into things that need to be
@@ -311,16 +259,16 @@ fd3_program_emit(struct fd_ringbuffer *ring, struct fd3_emit *emit)
 
 		OUT_PKT0(ring, REG_A3XX_SP_VS_OUT_REG(i), 1);
 
-		j = next_varying(fp, j);
+		j = ir3_next_varying(fp, j);
 		if (j < fp->inputs_count) {
-			k = find_output(vp, fp->inputs[j].semantic);
+			k = ir3_find_output(vp, fp->inputs[j].semantic);
 			reg |= A3XX_SP_VS_OUT_REG_A_REGID(vp->outputs[k].regid);
 			reg |= A3XX_SP_VS_OUT_REG_A_COMPMASK(fp->inputs[j].compmask);
 		}
 
-		j = next_varying(fp, j);
+		j = ir3_next_varying(fp, j);
 		if (j < fp->inputs_count) {
-			k = find_output(vp, fp->inputs[j].semantic);
+			k = ir3_find_output(vp, fp->inputs[j].semantic);
 			reg |= A3XX_SP_VS_OUT_REG_B_REGID(vp->outputs[k].regid);
 			reg |= A3XX_SP_VS_OUT_REG_B_COMPMASK(fp->inputs[j].compmask);
 		}
@@ -333,16 +281,16 @@ fd3_program_emit(struct fd_ringbuffer *ring, struct fd3_emit *emit)
 
 		OUT_PKT0(ring, REG_A3XX_SP_VS_VPC_DST_REG(i), 1);
 
-		j = next_varying(fp, j);
+		j = ir3_next_varying(fp, j);
 		if (j < fp->inputs_count)
 			reg |= A3XX_SP_VS_VPC_DST_REG_OUTLOC0(fp->inputs[j].inloc);
-		j = next_varying(fp, j);
+		j = ir3_next_varying(fp, j);
 		if (j < fp->inputs_count)
 			reg |= A3XX_SP_VS_VPC_DST_REG_OUTLOC1(fp->inputs[j].inloc);
-		j = next_varying(fp, j);
+		j = ir3_next_varying(fp, j);
 		if (j < fp->inputs_count)
 			reg |= A3XX_SP_VS_VPC_DST_REG_OUTLOC2(fp->inputs[j].inloc);
-		j = next_varying(fp, j);
+		j = ir3_next_varying(fp, j);
 		if (j < fp->inputs_count)
 			reg |= A3XX_SP_VS_VPC_DST_REG_OUTLOC3(fp->inputs[j].inloc);
 
@@ -418,7 +366,7 @@ fd3_program_emit(struct fd_ringbuffer *ring, struct fd3_emit *emit)
 		uint32_t vinterp[4] = {0}, flatshade[2] = {0};
 
 		/* figure out VARYING_INTERP / FLAT_SHAD register values: */
-		for (j = -1; (j = next_varying(fp, j)) < (int)fp->inputs_count; ) {
+		for (j = -1; (j = ir3_next_varying(fp, j)) < (int)fp->inputs_count; ) {
 			uint32_t interp = fp->inputs[j].interpolate;
 			if ((interp == TGSI_INTERPOLATE_CONSTANT) ||
 					((interp == TGSI_INTERPOLATE_COLOR) && emit->rasterflat)) {
