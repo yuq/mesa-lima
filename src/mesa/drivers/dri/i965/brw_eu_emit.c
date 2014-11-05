@@ -3409,6 +3409,36 @@ void brw_shader_time_add(struct brw_codegen *p,
 
 
 /**
+ * Emit the SEND message for a barrier
+ */
+void
+brw_barrier(struct brw_codegen *p, struct brw_reg src)
+{
+   const struct brw_device_info *devinfo = p->devinfo;
+   struct brw_inst *inst;
+
+   assert(devinfo->gen >= 7);
+
+   inst = next_insn(p, BRW_OPCODE_SEND);
+   brw_set_dest(p, inst, brw_null_reg());
+   brw_set_src0(p, inst, src);
+   brw_set_src1(p, inst, brw_null_reg());
+
+   brw_set_message_descriptor(p, inst, BRW_SFID_MESSAGE_GATEWAY,
+                              1 /* msg_length */,
+                              0 /* response_length */,
+                              false /* header_present */,
+                              false /* end_of_thread */);
+
+   brw_inst_set_gateway_notify(devinfo, inst, 1);
+   brw_inst_set_gateway_subfuncid(devinfo, inst,
+                                  BRW_MESSAGE_GATEWAY_SFID_BARRIER_MSG);
+
+   brw_inst_set_mask_control(devinfo, inst, BRW_MASK_DISABLE);
+}
+
+
+/**
  * Emit the wait instruction for a barrier
  */
 void

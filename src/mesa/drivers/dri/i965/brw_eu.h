@@ -361,6 +361,8 @@ brw_jump_scale(const struct brw_device_info *devinfo)
    return 1;
 }
 
+void brw_barrier(struct brw_codegen *p, struct brw_reg src);
+
 /* If/else/endif.  Works by manipulating the execution flags on each
  * channel.
  */
