@@ -765,6 +765,22 @@ brw_ip_reg(void)
 }
 
 static inline struct brw_reg
+brw_notification_reg(void)
+{
+   return brw_reg(BRW_ARCHITECTURE_REGISTER_FILE,
+                  BRW_ARF_NOTIFICATION_COUNT,
+                  0,
+                  0,
+                  0,
+                  BRW_REGISTER_TYPE_UD,
+                  BRW_VERTICAL_STRIDE_0,
+                  BRW_WIDTH_1,
+                  BRW_HORIZONTAL_STRIDE_0,
+                  BRW_SWIZZLE_XXXX,
+                  WRITEMASK_X);
+}
+
+static inline struct brw_reg
 brw_acc_reg(unsigned width)
 {
    return brw_vecn_reg(width, BRW_ARCHITECTURE_REGISTER_FILE,
