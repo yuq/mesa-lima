@@ -55,6 +55,8 @@ fd3_context_destroy(struct pipe_context *pctx)
 	pipe_resource_reference(&fd3_ctx->solid_vbuf, NULL);
 	pipe_resource_reference(&fd3_ctx->blit_texcoord_vbuf, NULL);
 
+	u_upload_destroy(fd3_ctx->border_color_uploader);
+
 	fd_context_destroy(pctx);
 }
 
