@@ -1267,6 +1267,140 @@ disasm_printer_add_mdesc_dp_sampler(struct disasm_printer *printer,
 }
 
 static void
+disasm_printer_add_mdesc_dp_dc0(struct disasm_printer *printer,
+                                const struct disasm_inst *inst,
+                                uint32_t mdesc)
+{
+   const int op = GEN_EXTRACT(mdesc, GEN7_MSG_DP_OP);
+   const char *str;
+
+   ILO_DEV_ASSERT(inst->dev, 7, 7.5);
+
+   if (ilo_dev_gen(inst->dev) >= ILO_GEN(7.5)) {
+      switch (op) {
+      case GEN75_MSG_DP_DC0_OWORD_BLOCK_READ:             str = "OWORD block read";           break;
+      case GEN75_MSG_DP_DC0_UNALIGNED_OWORD_BLOCK_READ:   str = "unaligned OWORD block read"; break;
+      case GEN75_MSG_DP_DC0_OWORD_DUAL_BLOCK_READ:        str = "OWORD dual block read";      break;
+      case GEN75_MSG_DP_DC0_DWORD_SCATTERED_READ:         str = "DWORD scattered read";       break;
+      case GEN75_MSG_DP_DC0_BYTE_SCATTERED_READ:          str = "BYTE scattered read";        break;
+      case GEN75_MSG_DP_DC0_MEMORY_FENCE:                 str = "memory fence";               break;
+      case GEN75_MSG_DP_DC0_OWORD_BLOCK_WRITE:            str = "OWORD block write";          break;
+      case GEN75_MSG_DP_DC0_OWORD_DUAL_BLOCK_WRITE:       str = "OWORD dual block write";     break;
+      case GEN75_MSG_DP_DC0_DWORD_SCATTERED_WRITE:        str = "OWORD scattered write";      break;
+      case GEN75_MSG_DP_DC0_BYTE_SCATTERED_WRITE:         str = "BYTE scattered write";       break;
+      default:                                            str = "BAD";                        break;
+      }
+   } else {
+      switch (op) {
+      case GEN7_MSG_DP_DC0_OWORD_BLOCK_READ:             str = "OWORD block read";           break;
+      case GEN7_MSG_DP_DC0_UNALIGNED_OWORD_BLOCK_READ:   str = "unaligned OWORD block read"; break;
+      case GEN7_MSG_DP_DC0_OWORD_DUAL_BLOCK_READ:        str = "OWORD dual block read";      break;
+      case GEN7_MSG_DP_DC0_DWORD_SCATTERED_READ:         str = "DWORD scattered read";       break;
+      case GEN7_MSG_DP_DC0_BYTE_SCATTERED_READ:          str = "BYTE scattered read";        break;
+      case GEN7_MSG_DP_DC0_UNTYPED_SURFACE_READ:         str = "untyped surface read";       break;
+      case GEN7_MSG_DP_DC0_UNTYPED_ATOMIC_OP:            str = "untyped atomic op";          break;
+      case GEN7_MSG_DP_DC0_MEMORY_FENCE:                 str = "memory fence";               break;
+      case GEN7_MSG_DP_DC0_OWORD_BLOCK_WRITE:            str = "OWORD block write";          break;
+      case GEN7_MSG_DP_DC0_OWORD_DUAL_BLOCK_WRITE:       str = "OWORD dual block write";     break;
+      case GEN7_MSG_DP_DC0_DWORD_SCATTERED_WRITE:        str = "OWORD scattered write";      break;
+      case GEN7_MSG_DP_DC0_BYTE_SCATTERED_WRITE:         str = "BYTE scattered write";       break;
+      case GEN7_MSG_DP_DC0_UNTYPED_SURFACE_WRITE:        str = "untyped surface write";      break;
+      default:                                           str = "BAD";                        break;
+      }
+   }
+
+   disasm_printer_add(printer, "(%s, Surface = %d, ",
+         str, GEN_EXTRACT(mdesc, GEN6_MSG_DP_SURFACE));
+
+   if (ilo_dev_gen(inst->dev) >= ILO_GEN(7.5)) {
+      disasm_printer_add(printer, "0x%x",
+            GEN_EXTRACT(mdesc, GEN6_MSG_DP_CTRL));
+   } else {
+      switch (op) {
+      case GEN7_MSG_DP_DC0_UNTYPED_SURFACE_READ:
+      case GEN7_MSG_DP_DC0_UNTYPED_SURFACE_WRITE:
+         switch (mdesc & GEN7_MSG_DP_UNTYPED_MODE__MASK) {
+         case GEN7_MSG_DP_UNTYPED_MODE_SIMD4X2: str = "4x2";   break;
+         case GEN7_MSG_DP_UNTYPED_MODE_SIMD16:  str = "16";    break;
+         case GEN7_MSG_DP_UNTYPED_MODE_SIMD8:   str = "8";     break;
+         default:                               str = "BAD";   break;
+         }
+
+         disasm_printer_add(printer, "SIMD%s, Mask = 0x%x",
+               str, GEN_EXTRACT(mdesc, GEN7_MSG_DP_UNTYPED_MASK));
+         break;
+      default:
+         disasm_printer_add(printer, "0x%x",
+               GEN_EXTRACT(mdesc, GEN6_MSG_DP_CTRL));
+         break;
+      }
+   }
+
+   disasm_printer_add(printer, ")");
+}
+
+static void
+disasm_printer_add_mdesc_dp_dc1(struct disasm_printer *printer,
+                                const struct disasm_inst *inst,
+                                uint32_t mdesc)
+{
+   const int op = GEN_EXTRACT(mdesc, GEN7_MSG_DP_OP);
+   const char *str;
+
+   ILO_DEV_ASSERT(inst->dev, 7.5, 7.5);
+
+   switch (op) {
+   case GEN75_MSG_DP_DC1_UNTYPED_SURFACE_READ:        str = "untyped surface read";       break;
+   case GEN75_MSG_DP_DC1_UNTYPED_ATOMIC_OP:           str = "DC untyped atomic op";       break;
+   case GEN75_MSG_DP_DC1_UNTYPED_ATOMIC_OP_SIMD4X2:   str = "DC untyped 4x2 atomic op";   break;
+   case GEN75_MSG_DP_DC1_MEDIA_BLOCK_READ:            str = "DC media block read";        break;
+   case GEN75_MSG_DP_DC1_TYPED_SURFACE_READ:          str = "DC typed surface read";      break;
+   case GEN75_MSG_DP_DC1_TYPED_ATOMIC_OP:             str = "DC typed atomic";            break;
+   case GEN75_MSG_DP_DC1_TYPED_ATOMIC_OP_SIMD4X2:     str = "DC typed 4x2 atomic op";     break;
+   case GEN75_MSG_DP_DC1_UNTYPED_SURFACE_WRITE:       str = "DC untyped surface write";   break;
+   case GEN75_MSG_DP_DC1_MEDIA_BLOCK_WRITE:           str = "DC media block write";       break;
+   case GEN75_MSG_DP_DC1_ATOMIC_COUNTER_OP:           str = "DC atomic counter op";       break;
+   case GEN75_MSG_DP_DC1_ATOMIC_COUNTER_OP_SIMD4X2:   str = "DC 4x2 atomic counter op";   break;
+   case GEN75_MSG_DP_DC1_TYPED_SURFACE_WRITE:         str = "DC typed surface write";     break;
+   default:                                           str = "BAD";                        break;
+   }
+
+   disasm_printer_add(printer, "(%s, Surface = %d, ",
+         str, GEN_EXTRACT(mdesc, GEN6_MSG_DP_SURFACE));
+
+   switch (op) {
+   case GEN75_MSG_DP_DC1_UNTYPED_SURFACE_READ:
+   case GEN75_MSG_DP_DC1_UNTYPED_SURFACE_WRITE:
+      switch (mdesc & GEN7_MSG_DP_UNTYPED_MODE__MASK) {
+      case GEN7_MSG_DP_UNTYPED_MODE_SIMD4X2: str = "4x2";   break;
+      case GEN7_MSG_DP_UNTYPED_MODE_SIMD16:  str = "16";    break;
+      case GEN7_MSG_DP_UNTYPED_MODE_SIMD8:   str = "8";     break;
+      default:                               str = "BAD";   break;
+      }
+
+      disasm_printer_add(printer, "SIMD%s, Mask = 0x%x",
+            str, GEN_EXTRACT(mdesc, GEN7_MSG_DP_UNTYPED_MASK));
+      break;
+   case GEN75_MSG_DP_DC1_UNTYPED_ATOMIC_OP:
+   case GEN75_MSG_DP_DC1_UNTYPED_ATOMIC_OP_SIMD4X2:
+   case GEN75_MSG_DP_DC1_MEDIA_BLOCK_READ:
+   case GEN75_MSG_DP_DC1_TYPED_SURFACE_READ:
+   case GEN75_MSG_DP_DC1_TYPED_ATOMIC_OP:
+   case GEN75_MSG_DP_DC1_TYPED_ATOMIC_OP_SIMD4X2:
+   case GEN75_MSG_DP_DC1_MEDIA_BLOCK_WRITE:
+   case GEN75_MSG_DP_DC1_ATOMIC_COUNTER_OP:
+   case GEN75_MSG_DP_DC1_ATOMIC_COUNTER_OP_SIMD4X2:
+   case GEN75_MSG_DP_DC1_TYPED_SURFACE_WRITE:
+   default:
+      disasm_printer_add(printer, "0x%x",
+            GEN_EXTRACT(mdesc, GEN6_MSG_DP_CTRL));
+      break;
+   }
+
+   disasm_printer_add(printer, ")");
+}
+
+static void
 disasm_printer_add_mdesc_dp_rc(struct disasm_printer *printer,
                                const struct disasm_inst *inst,
                                uint32_t mdesc)
@@ -1373,10 +1507,14 @@ disasm_printer_add_mdesc(struct disasm_printer *printer,
    case GEN6_SFID_SPAWNER:
       disasm_printer_add_mdesc_spawner(printer, inst, mdesc);
       break;
-   case GEN6_SFID_DP_CC:
    case GEN7_SFID_DP_DC0:
-   case GEN7_SFID_PI:
+      disasm_printer_add_mdesc_dp_dc0(printer, inst, mdesc);
+      break;
    case GEN75_SFID_DP_DC1:
+      disasm_printer_add_mdesc_dp_dc1(printer, inst, mdesc);
+      break;
+   case GEN6_SFID_DP_CC:
+   case GEN7_SFID_PI:
    default:
       break;
    }
