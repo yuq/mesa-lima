@@ -107,10 +107,14 @@ fs_visitor::opt_peephole_predicated_break()
       }
       endif_inst->remove(endif_block);
 
-      earlier_block->children.make_empty();
-      later_block->parents.make_empty();
+      if (!earlier_block->ends_with_control_flow()) {
+         earlier_block->children.make_empty();
+         earlier_block->add_successor(cfg->mem_ctx, jump_block);
+      }
 
-      earlier_block->add_successor(cfg->mem_ctx, jump_block);
+      if (!later_block->starts_with_control_flow()) {
+         later_block->parents.make_empty();
+      }
       jump_block->add_successor(cfg->mem_ctx, later_block);
 
       if (earlier_block->can_combine_with(jump_block)) {
