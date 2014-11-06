@@ -805,8 +805,6 @@ print_function_impl(nir_function_impl *impl, print_var_state *state, FILE *fp)
       print_var_decl(var, state, fp);
    }
 
-   nir_index_local_regs(impl);
-
    foreach_list_typed(nir_register, reg, node, &impl->registers) {
       fprintf(fp, "\t");
       print_register_decl(reg, fp);
@@ -918,8 +916,6 @@ nir_print_shader(nir_shader *shader, FILE *fp)
    foreach_list_typed(nir_variable, var, node, &shader->system_values) {
       print_var_decl(var, &state, fp);
    }
-
-   nir_index_global_regs(shader);
 
    foreach_list_typed(nir_register, reg, node, &shader->registers) {
       print_register_decl(reg, fp);
