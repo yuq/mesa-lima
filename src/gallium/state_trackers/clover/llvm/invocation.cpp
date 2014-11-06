@@ -282,7 +282,11 @@ namespace {
 
       for (unsigned i = 0; i < kernel_node->getNumOperands(); ++i) {
          kernels.push_back(llvm::dyn_cast<llvm::Function>(
+#if HAVE_LLVM >= 0x0306
+                                    kernel_node->getOperandAsMDNode(i)->getOperand(0)));
+#else
                                     kernel_node->getOperand(i)->getOperand(0)));
+#endif
       }
    }
 
