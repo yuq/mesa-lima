@@ -89,204 +89,6 @@ enum {
 typedef GLboolean (*StoreTexImageFunc)(TEXSTORE_PARAMS);
 
 
-enum {
-   IDX_LUMINANCE = 0,
-   IDX_ALPHA,
-   IDX_INTENSITY,
-   IDX_LUMINANCE_ALPHA,
-   IDX_RGB,
-   IDX_RGBA,
-   IDX_RED,
-   IDX_GREEN,
-   IDX_BLUE,
-   IDX_BGR,
-   IDX_BGRA,
-   IDX_ABGR,
-   IDX_RG,
-   MAX_IDX
-};
-
-#define MAP1(x)       MAP4(x, ZERO, ZERO, ZERO)
-#define MAP2(x,y)     MAP4(x, y, ZERO, ZERO)
-#define MAP3(x,y,z)   MAP4(x, y, z, ZERO)
-#define MAP4(x,y,z,w) { x, y, z, w, ZERO, ONE }
-
-
-static const struct {
-   GLubyte format_idx;
-   GLubyte to_rgba[6];
-   GLubyte from_rgba[6];
-} mappings[MAX_IDX] = 
-{
-   {
-      IDX_LUMINANCE,
-      MAP4(0,0,0,ONE),
-      MAP1(0)
-   },
-
-   {
-      IDX_ALPHA,
-      MAP4(ZERO, ZERO, ZERO, 0),
-      MAP1(3)
-   },
-
-   {
-      IDX_INTENSITY,
-      MAP4(0, 0, 0, 0),
-      MAP1(0),
-   },
-
-   {
-      IDX_LUMINANCE_ALPHA,
-      MAP4(0,0,0,1),
-      MAP2(0,3)
-   },
-
-   {
-      IDX_RGB,
-      MAP4(0,1,2,ONE),
-      MAP3(0,1,2)
-   },
-
-   {
-      IDX_RGBA,
-      MAP4(0,1,2,3),
-      MAP4(0,1,2,3),
-   },
-
-   {
-      IDX_RED,
-      MAP4(0, ZERO, ZERO, ONE),
-      MAP1(0),
-   },
-
-   {
-      IDX_GREEN,
-      MAP4(ZERO, 0, ZERO, ONE),
-      MAP1(1),
-   },
-
-   {
-      IDX_BLUE,
-      MAP4(ZERO, ZERO, 0, ONE),
-      MAP1(2),
-   },
-
-   {
-      IDX_BGR,
-      MAP4(2,1,0,ONE),
-      MAP3(2,1,0)
-   },
-
-   {
-      IDX_BGRA,
-      MAP4(2,1,0,3),
-      MAP4(2,1,0,3)
-   },
-
-   {
-      IDX_ABGR,
-      MAP4(3,2,1,0),
-      MAP4(3,2,1,0)
-   },
-
-   {
-      IDX_RG,
-      MAP4(0, 1, ZERO, ONE),
-      MAP2(0, 1)
-   },
-};
-
-
-
-/**
- * Convert a GL image format enum to an IDX_* value (see above).
- */
-static int
-get_map_idx(GLenum value)
-{
-   switch (value) {
-   case GL_LUMINANCE:
-   case GL_LUMINANCE_INTEGER_EXT:
-      return IDX_LUMINANCE;
-   case GL_ALPHA:
-   case GL_ALPHA_INTEGER:
-      return IDX_ALPHA;
-   case GL_INTENSITY:
-      return IDX_INTENSITY;
-   case GL_LUMINANCE_ALPHA:
-   case GL_LUMINANCE_ALPHA_INTEGER_EXT:
-      return IDX_LUMINANCE_ALPHA;
-   case GL_RGB:
-   case GL_RGB_INTEGER:
-      return IDX_RGB;
-   case GL_RGBA:
-   case GL_RGBA_INTEGER:
-      return IDX_RGBA;
-   case GL_RED:
-   case GL_RED_INTEGER:
-      return IDX_RED;
-   case GL_GREEN:
-      return IDX_GREEN;
-   case GL_BLUE:
-      return IDX_BLUE;
-   case GL_BGR:
-   case GL_BGR_INTEGER:
-      return IDX_BGR;
-   case GL_BGRA:
-   case GL_BGRA_INTEGER:
-      return IDX_BGRA;
-   case GL_ABGR_EXT:
-      return IDX_ABGR;
-   case GL_RG:
-   case GL_RG_INTEGER:
-      return IDX_RG;
-   default:
-      _mesa_problem(NULL, "Unexpected inFormat %s",
-                    _mesa_lookup_enum_by_nr(value));
-      return 0;
-   }
-}   
-
-
-/**
- * When promoting texture formats (see below) we need to compute the
- * mapping of dest components back to source components.
- * This function does that.
- * \param inFormat  the incoming format of the texture
- * \param outFormat  the final texture format
- * \return map[6]  a full 6-component map
- */
-static void
-compute_component_mapping(GLenum inFormat, GLenum outFormat, 
-			  GLubyte *map)
-{
-   const int inFmt = get_map_idx(inFormat);
-   const int outFmt = get_map_idx(outFormat);
-   const GLubyte *in2rgba = mappings[inFmt].to_rgba;
-   const GLubyte *rgba2out = mappings[outFmt].from_rgba;
-   int i;
-   
-   for (i = 0; i < 4; i++)
-      map[i] = in2rgba[rgba2out[i]];
-
-   map[ZERO] = ZERO;
-   map[ONE] = ONE;   
-
-#if 0
-   printf("from %x/%s to %x/%s map %d %d %d %d %d %d\n",
-	  inFormat, _mesa_lookup_enum_by_nr(inFormat),
-	  outFormat, _mesa_lookup_enum_by_nr(outFormat),
-	  map[0], 
-	  map[1], 
-	  map[2], 
-	  map[3], 
-	  map[4], 
-	  map[5]); 
-#endif
-}
-
-
 /**
  * Make a temporary (color) texture image with GLfloat components.
  * Apply all needed pixel unpacking and pixel transfer operations.
@@ -394,7 +196,7 @@ _mesa_make_temp_float_image(struct gl_context *ctx, GLuint dims,
          return NULL;
       }
 
-      compute_component_mapping(logicalBaseFormat, textureBaseFormat, map);
+      _mesa_compute_component_mapping(logicalBaseFormat, textureBaseFormat, map);
 
       n = srcWidth * srcHeight * srcDepth;
       for (i = 0; i < n; i++) {
@@ -503,7 +305,7 @@ make_temp_uint_image(struct gl_context *ctx, GLuint dims,
          return NULL;
       }
 
-      compute_component_mapping(logicalBaseFormat, textureBaseFormat, map);
+      _mesa_compute_component_mapping(logicalBaseFormat, textureBaseFormat, map);
 
       n = srcWidth * srcHeight * srcDepth;
       for (i = 0; i < n; i++) {
@@ -634,7 +436,7 @@ _mesa_make_temp_ubyte_image(struct gl_context *ctx, GLuint dims,
          return NULL;
       }
 
-      compute_component_mapping(logicalBaseFormat, textureBaseFormat, map);
+      _mesa_compute_component_mapping(logicalBaseFormat, textureBaseFormat, map);
 
       n = srcWidth * srcHeight * srcDepth;
       for (i = 0; i < n; i++) {
@@ -1532,8 +1334,8 @@ texstore_swizzle(TEXSTORE_PARAMS)
    }
    swap = need_swap ? map_3210 : map_identity;
 
-   compute_component_mapping(srcFormat, baseInternalFormat, base2src);
-   compute_component_mapping(baseInternalFormat, GL_RGBA, rgba2base);
+   _mesa_compute_component_mapping(srcFormat, baseInternalFormat, base2src);
+   _mesa_compute_component_mapping(baseInternalFormat, GL_RGBA, rgba2base);
    invert_swizzle(dst2rgba, rgba2dst);
 
    for (i = 0; i < 4; i++) {
@@ -1603,8 +1405,8 @@ texstore_via_float(TEXSTORE_PARAMS)
 
    need_convert = false;
    if (baseInternalFormat != _mesa_get_format_base_format(dstFormat)) {
-      compute_component_mapping(GL_RGBA, baseInternalFormat, base2rgba);
-      compute_component_mapping(baseInternalFormat, GL_RGBA, rgba2base);
+      _mesa_compute_component_mapping(GL_RGBA, baseInternalFormat, base2rgba);
+      _mesa_compute_component_mapping(baseInternalFormat, GL_RGBA, rgba2base);
       for (i = 0; i < 4; ++i) {
          map[i] = base2rgba[rgba2base[i]];
          if (map[i] != i)
@@ -1673,8 +1475,8 @@ texstore_rgba_integer(TEXSTORE_PARAMS)
    }
 
    invert_swizzle(dst2rgba, rgba2dst);
-   compute_component_mapping(GL_RGBA, baseInternalFormat, base2rgba);
-   compute_component_mapping(baseInternalFormat, GL_RGBA, rgba2base);
+   _mesa_compute_component_mapping(GL_RGBA, baseInternalFormat, base2rgba);
+   _mesa_compute_component_mapping(baseInternalFormat, GL_RGBA, rgba2base);
 
    for (i = 0; i < 4; ++i) {
       if (dst2rgba[i] == MESA_FORMAT_SWIZZLE_NONE)

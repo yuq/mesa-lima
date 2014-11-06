@@ -27,7 +27,204 @@
 
 #include "context.h"
 #include "glformats.h"
+#include "enums.h"
 
+enum {
+   ZERO = 4,
+   ONE = 5
+};
+
+enum {
+   IDX_LUMINANCE = 0,
+   IDX_ALPHA,
+   IDX_INTENSITY,
+   IDX_LUMINANCE_ALPHA,
+   IDX_RGB,
+   IDX_RGBA,
+   IDX_RED,
+   IDX_GREEN,
+   IDX_BLUE,
+   IDX_BGR,
+   IDX_BGRA,
+   IDX_ABGR,
+   IDX_RG,
+   MAX_IDX
+};
+
+#define MAP1(x)       MAP4(x, ZERO, ZERO, ZERO)
+#define MAP2(x,y)     MAP4(x, y, ZERO, ZERO)
+#define MAP3(x,y,z)   MAP4(x, y, z, ZERO)
+#define MAP4(x,y,z,w) { x, y, z, w, ZERO, ONE }
+
+static const struct {
+   GLubyte format_idx;
+   GLubyte to_rgba[6];
+   GLubyte from_rgba[6];
+} mappings[MAX_IDX] =
+{
+   {
+      IDX_LUMINANCE,
+      MAP4(0,0,0,ONE),
+      MAP1(0)
+   },
+
+   {
+      IDX_ALPHA,
+      MAP4(ZERO, ZERO, ZERO, 0),
+      MAP1(3)
+   },
+
+   {
+      IDX_INTENSITY,
+      MAP4(0, 0, 0, 0),
+      MAP1(0),
+   },
+
+   {
+      IDX_LUMINANCE_ALPHA,
+      MAP4(0,0,0,1),
+      MAP2(0,3)
+   },
+
+   {
+      IDX_RGB,
+      MAP4(0,1,2,ONE),
+      MAP3(0,1,2)
+   },
+
+   {
+      IDX_RGBA,
+      MAP4(0,1,2,3),
+      MAP4(0,1,2,3),
+   },
+
+   {
+      IDX_RED,
+      MAP4(0, ZERO, ZERO, ONE),
+      MAP1(0),
+   },
+
+   {
+      IDX_GREEN,
+      MAP4(ZERO, 0, ZERO, ONE),
+      MAP1(1),
+   },
+
+   {
+      IDX_BLUE,
+      MAP4(ZERO, ZERO, 0, ONE),
+      MAP1(2),
+   },
+
+   {
+      IDX_BGR,
+      MAP4(2,1,0,ONE),
+      MAP3(2,1,0)
+   },
+
+   {
+      IDX_BGRA,
+      MAP4(2,1,0,3),
+      MAP4(2,1,0,3)
+   },
+
+   {
+      IDX_ABGR,
+      MAP4(3,2,1,0),
+      MAP4(3,2,1,0)
+   },
+
+   {
+      IDX_RG,
+      MAP4(0, 1, ZERO, ONE),
+      MAP2(0, 1)
+   },
+};
+
+/**
+ * Convert a GL image format enum to an IDX_* value (see above).
+ */
+static int
+get_map_idx(GLenum value)
+{
+   switch (value) {
+   case GL_LUMINANCE:
+   case GL_LUMINANCE_INTEGER_EXT:
+      return IDX_LUMINANCE;
+   case GL_ALPHA:
+   case GL_ALPHA_INTEGER:
+      return IDX_ALPHA;
+   case GL_INTENSITY:
+      return IDX_INTENSITY;
+   case GL_LUMINANCE_ALPHA:
+   case GL_LUMINANCE_ALPHA_INTEGER_EXT:
+      return IDX_LUMINANCE_ALPHA;
+   case GL_RGB:
+   case GL_RGB_INTEGER:
+      return IDX_RGB;
+   case GL_RGBA:
+   case GL_RGBA_INTEGER:
+      return IDX_RGBA;
+   case GL_RED:
+   case GL_RED_INTEGER:
+      return IDX_RED;
+   case GL_GREEN:
+      return IDX_GREEN;
+   case GL_BLUE:
+      return IDX_BLUE;
+   case GL_BGR:
+   case GL_BGR_INTEGER:
+      return IDX_BGR;
+   case GL_BGRA:
+   case GL_BGRA_INTEGER:
+      return IDX_BGRA;
+   case GL_ABGR_EXT:
+      return IDX_ABGR;
+   case GL_RG:
+   case GL_RG_INTEGER:
+      return IDX_RG;
+   default:
+      _mesa_problem(NULL, "Unexpected inFormat %s",
+                    _mesa_lookup_enum_by_nr(value));
+      return 0;
+   }
+}
+
+/**
+ * When promoting texture formats (see below) we need to compute the
+ * mapping of dest components back to source components.
+ * This function does that.
+ * \param inFormat  the incoming format of the texture
+ * \param outFormat  the final texture format
+ * \return map[6]  a full 6-component map
+ */
+void
+_mesa_compute_component_mapping(GLenum inFormat, GLenum outFormat, GLubyte *map)
+{
+   const int inFmt = get_map_idx(inFormat);
+   const int outFmt = get_map_idx(outFormat);
+   const GLubyte *in2rgba = mappings[inFmt].to_rgba;
+   const GLubyte *rgba2out = mappings[outFmt].from_rgba;
+   int i;
+
+   for (i = 0; i < 4; i++)
+      map[i] = in2rgba[rgba2out[i]];
+
+   map[ZERO] = ZERO;
+   map[ONE] = ONE;
+
+#if 0
+   printf("from %x/%s to %x/%s map %d %d %d %d %d %d\n",
+	  inFormat, _mesa_lookup_enum_by_nr(inFormat),
+	  outFormat, _mesa_lookup_enum_by_nr(outFormat),
+	  map[0],
+	  map[1],
+	  map[2],
+	  map[3],
+	  map[4],
+	  map[5]);
+#endif
+}
 
 /**
  * \return GL_TRUE if type is packed pixel type, GL_FALSE otherwise.
