@@ -83,6 +83,8 @@ GENHW_FILES := \
 	genhw/genhw.h \
 	genhw/gen_mi.xml.h \
 	genhw/gen_regs.xml.h \
+	genhw/gen_render.xml.h \
 	genhw/gen_render_3d.xml.h \
 	genhw/gen_render_dynamic.xml.h \
+	genhw/gen_render_media.xml.h \
 	genhw/gen_render_surface.xml.h
