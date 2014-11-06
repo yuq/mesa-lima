@@ -572,15 +572,15 @@ static const char *const gen5_urb_opcode[] = {
 };
 
 static const char *const gen7_urb_opcode[] = {
-   [0] = "write HWord",
-   [1] = "write OWord",
-   [2] = "read HWord",
-   [3] = "read OWord",
-   [4] = "atomic mov",  /* Gen7+ */
-   [5] = "atomic inc",  /* Gen7+ */
-   [6] = "atomic add",  /* Gen8+ */
-   [7] = "SIMD8 write", /* Gen8+ */
-   [8] = "SIMD8 read",  /* Gen8+ */
+   [BRW_URB_OPCODE_WRITE_HWORD] = "write HWord",
+   [BRW_URB_OPCODE_WRITE_OWORD] = "write OWord",
+   [BRW_URB_OPCODE_READ_HWORD] = "read HWord",
+   [BRW_URB_OPCODE_READ_OWORD] = "read OWord",
+   [GEN7_URB_OPCODE_ATOMIC_MOV] = "atomic mov",  /* Gen7+ */
+   [GEN7_URB_OPCODE_ATOMIC_INC] = "atomic inc",  /* Gen7+ */
+   [GEN8_URB_OPCODE_ATOMIC_ADD] = "atomic add",  /* Gen8+ */
+   [GEN8_URB_OPCODE_SIMD8_WRITE] = "SIMD8 write", /* Gen8+ */
+   [GEN8_URB_OPCODE_SIMD8_READ] = "SIMD8 read",  /* Gen8+ */
    /* [9-15] - reserved */
 };
 
