@@ -985,11 +985,10 @@ _mesa_uniform(struct gl_context *ctx, struct gl_shader_program *shProg,
  * Note: cols=2, rows=4  ==>  array[2] of vec4
  */
 extern "C" void
-_mesa_uniform_matrix(struct gl_context *ctx, struct gl_shader_program *shProg,
-		     GLuint cols, GLuint rows,
-                     GLint location, GLsizei count,
-                     GLboolean transpose,
-                     const GLvoid *values, enum glsl_base_type basicType)
+_mesa_uniform_matrix(GLint location, GLsizei count,
+                     GLboolean transpose, const void *values,
+                     struct gl_context *ctx, struct gl_shader_program *shProg,
+                     GLuint cols, GLuint rows, enum glsl_base_type basicType)
 {
    unsigned offset;
    struct gl_uniform_storage *const uni =

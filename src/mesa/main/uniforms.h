@@ -437,11 +437,10 @@ _mesa_uniform(struct gl_context *ctx, struct gl_shader_program *shader_program,
               unsigned src_components);
 
 void
-_mesa_uniform_matrix(struct gl_context *ctx, struct gl_shader_program *shProg,
-		     GLuint cols, GLuint rows,
-                     GLint location, GLsizei count,
-                     GLboolean transpose,
-                     const GLvoid *values, enum glsl_base_type basicType);
+_mesa_uniform_matrix(GLint location, GLsizei count,
+                     GLboolean transpose, const void *values,
+                     struct gl_context *, struct gl_shader_program *,
+                     GLuint cols, GLuint rows, enum glsl_base_type basicType);
 
 void
 _mesa_get_uniform(struct gl_context *ctx, GLuint program, GLint location,
