@@ -430,11 +430,9 @@ void GLAPIENTRY
 _mesa_ProgramUniform4ui64vARB(GLuint, GLint, GLsizei, const GLuint64 *);
 
 void
-_mesa_uniform(struct gl_context *ctx, struct gl_shader_program *shader_program,
-	      GLint location, GLsizei count,
-              const GLvoid *values,
-              enum glsl_base_type basicType,
-              unsigned src_components);
+_mesa_uniform(GLint location, GLsizei count, const GLvoid *values,
+              struct gl_context *, struct gl_shader_program *,
+              enum glsl_base_type basicType, unsigned src_components);
 
 void
 _mesa_uniform_matrix(GLint location, GLsizei count,
