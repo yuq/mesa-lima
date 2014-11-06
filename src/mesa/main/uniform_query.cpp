@@ -156,11 +156,11 @@ _mesa_GetActiveUniformsiv(GLuint program,
 }
 
 static struct gl_uniform_storage *
-validate_uniform_parameters(struct gl_context *ctx,
-			    struct gl_shader_program *shProg,
-			    GLint location, GLsizei count,
-			    unsigned *array_index,
-			    const char *caller)
+validate_uniform_parameters(GLint location, GLsizei count,
+                            unsigned *array_index,
+                            struct gl_context *ctx,
+                            struct gl_shader_program *shProg,
+                            const char *caller)
 {
    if (shProg == NULL) {
       _mesa_error(ctx, GL_INVALID_OPERATION, "%s(program not linked)", caller);
@@ -284,8 +284,8 @@ _mesa_get_uniform(struct gl_context *ctx, GLuint program, GLint location,
    unsigned offset;
 
    struct gl_uniform_storage *const uni =
-      validate_uniform_parameters(ctx, shProg, location, 1,
-                                  &offset, "glGetUniform");
+      validate_uniform_parameters(location, 1, &offset,
+                                  ctx, shProg, "glGetUniform");
    if (uni == NULL) {
       /* For glGetUniform, page 264 (page 278 of the PDF) of the OpenGL 2.1
        * spec says:
@@ -779,8 +779,8 @@ _mesa_uniform(GLint location, GLsizei count, const GLvoid *values,
    int size_mul = glsl_base_type_is_64bit(basicType) ? 2 : 1;
 
    struct gl_uniform_storage *const uni =
-      validate_uniform_parameters(ctx, shProg, location, count,
-                                  &offset, "glUniform");
+      validate_uniform_parameters(location, count, &offset,
+                                  ctx, shProg, "glUniform");
    if (uni == NULL)
       return;
 
@@ -990,8 +990,8 @@ _mesa_uniform_matrix(GLint location, GLsizei count,
 {
    unsigned offset;
    struct gl_uniform_storage *const uni =
-      validate_uniform_parameters(ctx, shProg, location, count,
-                                  &offset, "glUniformMatrix");
+      validate_uniform_parameters(location, count, &offset,
+                                  ctx, shProg, "glUniformMatrix");
    if (uni == NULL)
       return;
 
