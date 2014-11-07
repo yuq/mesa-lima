@@ -4549,3 +4549,88 @@ _mesa_pack_luminance_from_rgba_integer(GLuint n,
    }
 }
 
+GLfloat *
+_mesa_unpack_color_index_to_rgba_float(struct gl_context *ctx, GLuint dims,
+                                       const void *src, GLenum srcFormat, GLenum srcType,
+                                       int srcWidth, int srcHeight, int srcDepth,
+                                       const struct gl_pixelstore_attrib *srcPacking,
+                                       GLbitfield transferOps)
+{
+   int count, img;
+   GLuint *indexes;
+   GLfloat *rgba, *dstPtr;
+
+   count = srcWidth * srcHeight;
+   indexes = malloc(count * sizeof(GLuint));
+   if (!indexes) {
+      _mesa_error(ctx, GL_OUT_OF_MEMORY, "pixel unpacking");
+      return NULL;
+   }
+
+   rgba = malloc(4 * count * srcDepth * sizeof(GLfloat));
+   if (!rgba) {
+      free(indexes);
+      _mesa_error(ctx, GL_OUT_OF_MEMORY, "pixel unpacking");
+      return NULL;
+   }
+
+   /* Convert indexes to RGBA float */
+   dstPtr = rgba;
+   for (img = 0; img < srcDepth; img++) {
+      const GLubyte *srcPtr =
+         (const GLubyte *) _mesa_image_address(dims, srcPacking, src,
+                                               srcWidth, srcHeight,
+                                               srcFormat, srcType,
+                                               img, 0, 0);
+
+      extract_uint_indexes(count, indexes, srcFormat, srcType, srcPtr, srcPacking);
+
+      if (transferOps & IMAGE_SHIFT_OFFSET_BIT)
+         _mesa_shift_and_offset_ci(ctx, count, indexes);
+
+      _mesa_map_ci_to_rgba(ctx, count, indexes, (float (*)[4])dstPtr);
+
+      /* Don't do RGBA scale/bias or RGBA->RGBA mapping if starting
+       * with color indexes.
+       */
+      transferOps &= ~(IMAGE_SCALE_BIAS_BIT | IMAGE_MAP_COLOR_BIT);
+      _mesa_apply_rgba_transfer_ops(ctx, transferOps, count, (float (*)[4])dstPtr);
+
+      dstPtr += srcHeight * srcWidth * 4;
+   }
+
+   free(indexes);
+
+   return rgba;
+}
+
+GLubyte *
+_mesa_unpack_color_index_to_rgba_ubyte(struct gl_context *ctx, GLuint dims,
+                                       const void *src, GLenum srcFormat, GLenum srcType,
+                                       int srcWidth, int srcHeight, int srcDepth,
+                                       const struct gl_pixelstore_attrib *srcPacking,
+                                       GLbitfield transferOps)
+{
+   GLfloat *rgba;
+   GLubyte *dst;
+   int count, i;
+
+   transferOps |= IMAGE_CLAMP_BIT;
+   rgba = _mesa_unpack_color_index_to_rgba_float(ctx, dims,
+                                                 src, srcFormat, srcType,
+                                                 srcWidth, srcHeight, srcDepth,
+                                                 srcPacking, transferOps);
+
+   count = srcWidth * srcHeight * srcDepth;
+   dst = malloc(count * 4 * sizeof(GLubyte));
+   for (i = 0; i < count; i++) {
+      CLAMPED_FLOAT_TO_UBYTE(dst[i * 4 + 0], rgba[i * 4 + 0]);
+      CLAMPED_FLOAT_TO_UBYTE(dst[i * 4 + 1], rgba[i * 4 + 1]);
+      CLAMPED_FLOAT_TO_UBYTE(dst[i * 4 + 2], rgba[i * 4 + 2]);
+      CLAMPED_FLOAT_TO_UBYTE(dst[i * 4 + 3], rgba[i * 4 + 3]);
+   }
+
+   free(rgba);
+
+   return dst;
+}
