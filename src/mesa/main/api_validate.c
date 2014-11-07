@@ -113,27 +113,21 @@ check_valid_to_render(struct gl_context *ctx, const char *function)
 bool
 _mesa_is_valid_prim_mode(struct gl_context *ctx, GLenum mode)
 {
-   switch (mode) {
-   case GL_POINTS:
-   case GL_LINES:
-   case GL_LINE_LOOP:
-   case GL_LINE_STRIP:
-   case GL_TRIANGLES:
-   case GL_TRIANGLE_STRIP:
-   case GL_TRIANGLE_FAN:
+   /* The overwhelmingly common case is (mode <= GL_TRIANGLE_FAN).  Test that
+    * first and exit.  You would think that a switch-statement would be the
+    * right approach, but at least GCC 4.7.2 generates some pretty dire code
+    * for the common case.
+    */
+   if (likely(mode <= GL_TRIANGLE_FAN))
       return true;
-   case GL_QUADS:
-   case GL_QUAD_STRIP:
-   case GL_POLYGON:
+
+   if (mode <= GL_POLYGON)
       return (ctx->API == API_OPENGL_COMPAT);
-   case GL_LINES_ADJACENCY:
-   case GL_LINE_STRIP_ADJACENCY:
-   case GL_TRIANGLES_ADJACENCY:
-   case GL_TRIANGLE_STRIP_ADJACENCY:
+
+   if (mode <= GL_TRIANGLE_STRIP_ADJACENCY)
       return _mesa_has_geometry_shaders(ctx);
-   default:
-      return false;
-   }
+
+   return false;
 }
 
 
