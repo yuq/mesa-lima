@@ -241,34 +241,6 @@ static union tgsi_any_token *retrieve_token( struct ureg_program *ureg,
    return &ureg->domain[domain].tokens[nr];
 }
 
-
-
-static INLINE struct ureg_dst
-ureg_dst_register( unsigned file,
-                   unsigned index )
-{
-   struct ureg_dst dst;
-
-   dst.File      = file;
-   dst.WriteMask = TGSI_WRITEMASK_XYZW;
-   dst.Indirect  = 0;
-   dst.IndirectFile = TGSI_FILE_NULL;
-   dst.IndirectIndex = 0;
-   dst.IndirectSwizzle = 0;
-   dst.Saturate  = 0;
-   dst.Predicate = 0;
-   dst.PredNegate = 0;
-   dst.PredSwizzleX = TGSI_SWIZZLE_X;
-   dst.PredSwizzleY = TGSI_SWIZZLE_Y;
-   dst.PredSwizzleZ = TGSI_SWIZZLE_Z;
-   dst.PredSwizzleW = TGSI_SWIZZLE_W;
-   dst.Index     = index;
-   dst.ArrayID = 0;
-
-   return dst;
-}
-
-
 void
 ureg_property(struct ureg_program *ureg, unsigned name, unsigned value)
 {
