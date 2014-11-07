@@ -707,9 +707,15 @@ dri2_terminate(_EGLDriver *drv, _EGLDisplay *disp)
       break;
    }
 
-   for (i = 0; dri2_dpy->driver_configs[i]; i++)
-      free((__DRIconfig *) dri2_dpy->driver_configs[i]);
-   free(dri2_dpy->driver_configs);
+   /* The drm platform does not create the screen/driver_configs but reuses
+    * the ones from the gbm device. As such the gbm itself is responsible
+    * for the cleanup.
+    */
+   if (disp->Platform != _EGL_PLATFORM_DRM) {
+      for (i = 0; dri2_dpy->driver_configs[i]; i++)
+         free((__DRIconfig *) dri2_dpy->driver_configs[i]);
+      free(dri2_dpy->driver_configs);
+   }
    free(dri2_dpy);
    disp->DriverData = NULL;
 
