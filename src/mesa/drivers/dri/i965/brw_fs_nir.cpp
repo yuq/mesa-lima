@@ -876,19 +876,21 @@ fs_visitor::nir_emit_alu(nir_alu_instr *instr)
       emit_percomp(CBIT(result, op[0]), instr->dest.write_mask);
       break;
 
-   case nir_op_find_msb: {
-      fs_reg temp = fs_reg(this, glsl_type::uvec4_type);
-      emit_percomp(FBH(temp, op[0]), instr->dest.write_mask);
+   case nir_op_ufind_msb:
+   case nir_op_ifind_msb: {
+      emit_percomp(FBH(retype(result, BRW_REGISTER_TYPE_UD), op[0]),
+                   instr->dest.write_mask);
 
       /* FBH counts from the MSB side, while GLSL's findMSB() wants the count
        * from the LSB side. If FBH didn't return an error (0xFFFFFFFF), then
        * subtract the result from 31 to convert the MSB count into an LSB count.
        */
 
-      emit_percomp(CMP(reg_null_d, temp, fs_reg(~0), BRW_CONDITIONAL_NZ),
+      emit_percomp(CMP(reg_null_d, result, fs_reg(-1), BRW_CONDITIONAL_NZ),
                    instr->dest.write_mask);
-      temp.negate = true;
-      fs_inst *inst = ADD(result, temp, fs_reg(31));
+      fs_reg neg_result(result);
+      neg_result.negate = true;
+      fs_inst *inst = ADD(result, neg_result, fs_reg(31));
       inst->predicate = BRW_PREDICATE_NORMAL;
       emit_percomp(inst, instr->dest.write_mask);
       break;

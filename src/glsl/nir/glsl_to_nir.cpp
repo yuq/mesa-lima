@@ -1123,9 +1123,25 @@ nir_visitor::visit(ir_expression *ir)
    case ir_unop_bitfield_reverse:
       emit(nir_op_bitfield_reverse, dest_size, srcs);
       break;
-   case ir_unop_bit_count: emit(nir_op_bit_count, dest_size, srcs); break;
-   case ir_unop_find_msb:  emit(nir_op_find_msb,  dest_size, srcs); break;
-   case ir_unop_find_lsb:  emit(nir_op_find_lsb,  dest_size, srcs); break;
+   case ir_unop_bit_count:
+      emit(nir_op_bit_count, dest_size, srcs);
+      break;
+   case ir_unop_find_msb:
+      switch (types[0]) {
+      case GLSL_TYPE_UINT:
+         emit(nir_op_ufind_msb, dest_size, srcs);
+         break;
+      case GLSL_TYPE_INT:
+         emit(nir_op_ifind_msb, dest_size, srcs);
+         break;
+      default:
+         unreachable("Invalid type for findMSB()");
+      }
+      break;
+   case ir_unop_find_lsb:
+      emit(nir_op_find_lsb,  dest_size, srcs);
+      break;
+
    case ir_unop_noise:
       switch (ir->type->vector_elements) {
       case 1:

@@ -147,8 +147,9 @@ UNOP_HORIZ(unpack_half_2x16_split_y, 1, nir_type_float, 1, nir_type_unsigned)
 /*@{*/
 UNOP(bitfield_reverse, nir_type_unsigned)
 UNOP(bit_count, nir_type_unsigned)
-UNOP(find_msb, nir_type_unsigned)
-UNOP(find_lsb, nir_type_unsigned)
+UNOP_CONVERT(ufind_msb, nir_type_unsigned, nir_type_int)
+UNOP(ifind_msb, nir_type_int)
+UNOP(find_lsb, nir_type_int)
 /*@}*/
 
 UNOP_HORIZ(fnoise1_1, 1, nir_type_float, 1, nir_type_float)
