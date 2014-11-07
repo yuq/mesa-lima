@@ -543,6 +543,10 @@ dri2_setup_screen(_EGLDisplay *disp)
    }
 }
 
+/* All platforms but DRM call this function to create the screen, query the
+ * dri extensions, setup the vtables and populate the driver_configs.
+ * DRM inherits all that information from its display - GBM.
+ */
 EGLBoolean
 dri2_create_screen(_EGLDisplay *disp)
 {
