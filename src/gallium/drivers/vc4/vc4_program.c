@@ -1751,7 +1751,7 @@ emit_scaled_viewport_write(struct vc4_compile *c, struct qreg rcp_w)
 
                 xyi[i] = qir_FTOI(c, qir_FMUL(c,
                                               qir_FMUL(c,
-                                                       c->outputs[i],
+                                                       c->outputs[c->output_position_index + i],
                                                        scale),
                                               rcp_w));
         }
@@ -1766,7 +1766,7 @@ emit_zs_write(struct vc4_compile *c, struct qreg rcp_w)
         struct qreg zoffset = add_uniform(c, QUNIFORM_VIEWPORT_Z_OFFSET, 0);
 
         qir_VPM_WRITE(c, qir_FMUL(c, qir_FADD(c, qir_FMUL(c,
-                                                          c->outputs[2],
+                                                          c->outputs[c->output_position_index + 2],
                                                           zscale),
                                               zoffset),
                                   rcp_w));
@@ -1863,7 +1863,7 @@ emit_vert_end(struct vc4_compile *c,
               struct vc4_varying_semantic *fs_inputs,
               uint32_t num_fs_inputs)
 {
-        struct qreg rcp_w = qir_RCP(c, c->outputs[3]);
+        struct qreg rcp_w = qir_RCP(c, c->outputs[c->output_position_index + 3]);
 
         emit_stub_vpm_read(c);
         emit_ucp_clipdistance(c);
@@ -1900,12 +1900,12 @@ emit_vert_end(struct vc4_compile *c,
 static void
 emit_coord_end(struct vc4_compile *c)
 {
-        struct qreg rcp_w = qir_RCP(c, c->outputs[3]);
+        struct qreg rcp_w = qir_RCP(c, c->outputs[c->output_position_index + 3]);
 
         emit_stub_vpm_read(c);
 
         for (int i = 0; i < 4; i++)
-                qir_VPM_WRITE(c, c->outputs[i]);
+                qir_VPM_WRITE(c, c->outputs[c->output_position_index + i]);
 
         emit_scaled_viewport_write(c, rcp_w);
         emit_zs_write(c, rcp_w);
