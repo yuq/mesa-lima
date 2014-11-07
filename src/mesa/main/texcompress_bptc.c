@@ -1587,7 +1587,6 @@ texstore_bptc_rgb_float(TEXSTORE_PARAMS,
 {
    const float *pixels;
    const float *tempImage = NULL;
-   GLenum baseFormat;
    int rowstride;
 
    if (srcFormat != GL_RGB ||
@@ -1595,16 +1594,19 @@ texstore_bptc_rgb_float(TEXSTORE_PARAMS,
        ctx->_ImageTransferState ||
        srcPacking->SwapBytes) {
       /* convert image to RGB/float */
-      baseFormat = _mesa_get_format_base_format(dstFormat);
-      tempImage = _mesa_make_temp_float_image(ctx, dims,
-                                              baseInternalFormat,
-                                              baseFormat,
-                                              srcWidth, srcHeight, srcDepth,
-                                              srcFormat, srcType, srcAddr,
-                                              srcPacking,
-                                              ctx->_ImageTransferState);
+      GLfloat *tempImageSlices[1];
+      int rgbRowStride = 3 * srcWidth * sizeof(GLfloat);
+      tempImage = malloc(srcWidth * srcHeight * 3 * sizeof(GLfloat));
       if (!tempImage)
          return GL_FALSE; /* out of memory */
+      tempImageSlices[0] = (GLfloat *) tempImage;
+      _mesa_texstore(ctx, dims,
+                     baseInternalFormat,
+                     MESA_FORMAT_RGB_FLOAT32,
+                     rgbRowStride, (GLubyte **)tempImageSlices,
+                     srcWidth, srcHeight, srcDepth,
+                     srcFormat, srcType, srcAddr,
+                     srcPacking);
 
       pixels = tempImage;
       rowstride = srcWidth * sizeof(float) * 3;
