@@ -1407,6 +1407,13 @@ __DRIconfig **intelInitScreen2(__DRIscreen *psp)
          (ret != -1 || errno != EINVAL);
    }
 
+   struct drm_i915_getparam getparam;
+   getparam.param = I915_PARAM_CMD_PARSER_VERSION;
+   getparam.value = &intelScreen->cmd_parser_version;
+   const int ret = drmIoctl(psp->fd, DRM_IOCTL_I915_GETPARAM, &getparam);
+   if (ret == -1)
+      intelScreen->cmd_parser_version = 0;
+
    psp->extensions = !intelScreen->has_context_reset_notification
       ? intelScreenExtensions : intelRobustScreenExtensions;
 

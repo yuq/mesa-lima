@@ -72,7 +72,13 @@ struct intel_screen
    * Configuration cache with default values for all contexts
    */
    driOptionCache optionCache;
-};
+
+   /**
+    * Version of the command parser reported by the
+    * I915_PARAM_CMD_PARSER_VERSION parameter
+    */
+   int cmd_parser_version;
+ };
 
 extern void intelDestroyContext(__DRIcontext * driContextPriv);
 
