@@ -393,6 +393,45 @@ writer_decode_sampler(const struct ilo_builder *builder,
 }
 
 static void
+writer_decode_interface_descriptor(const struct ilo_builder *builder,
+                                   enum ilo_builder_writer_type which,
+                                   const struct ilo_builder_item *item)
+{
+   const unsigned state_size = sizeof(uint32_t) * 8;
+   const unsigned count = item->size / state_size;
+   unsigned offset = item->offset;
+   unsigned i;
+
+   for (i = 0; i < count; i++) {
+      writer_dw(builder, which, offset, 0, "IDRT[%d]", i);
+      ilo_printf("kernel\n");
+
+      writer_dw(builder, which, offset, 1, "IDRT[%d]", i);
+      ilo_printf("spf, fp mode\n");
+
+      writer_dw(builder, which, offset, 2, "IDRT[%d]", i);
+      ilo_printf("sampler\n");
+
+      writer_dw(builder, which, offset, 3, "IDRT[%d]", i);
+      ilo_printf("binding table\n");
+
+      writer_dw(builder, which, offset, 4, "IDRT[%d]", i);
+      ilo_printf("curbe read len\n");
+
+      writer_dw(builder, which, offset, 5, "IDRT[%d]", i);
+      ilo_printf("rounding mode, slm size\n");
+
+      writer_dw(builder, which, offset, 6, "IDRT[%d]", i);
+      ilo_printf("cross-thread curbe read len\n");
+
+      writer_dw(builder, which, offset, 7, "IDRT[%d]", i);
+      ilo_printf("mbz\n");
+
+      offset += state_size;
+   }
+}
+
+static void
 writer_decode_surface_gen7(const struct ilo_builder *builder,
                            enum ilo_builder_writer_type which,
                            const struct ilo_builder_item *item)
@@ -526,6 +565,7 @@ static const struct {
    [ILO_BUILDER_ITEM_DEPTH_STENCIL]       = { writer_decode_depth_stencil },
    [ILO_BUILDER_ITEM_BLEND]               = { writer_decode_blend },
    [ILO_BUILDER_ITEM_SAMPLER]             = { writer_decode_sampler },
+   [ILO_BUILDER_ITEM_INTERFACE_DESCRIPTOR] = { writer_decode_interface_descriptor },
    [ILO_BUILDER_ITEM_SURFACE]             = { writer_decode_surface },
    [ILO_BUILDER_ITEM_BINDING_TABLE]       = { writer_decode_binding_table },
    [ILO_BUILDER_ITEM_KERNEL]              = { writer_decode_kernel },

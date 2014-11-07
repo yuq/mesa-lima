@@ -217,7 +217,7 @@ gen6_INTERFACE_DESCRIPTOR_DATA(struct ilo_builder *builder,
    ILO_DEV_ASSERT(builder->dev, 7, 7.5);
 
    state_offset = ilo_builder_dynamic_pointer(builder,
-         ILO_BUILDER_ITEM_BLOB, state_align, state_len, &dw);
+         ILO_BUILDER_ITEM_INTERFACE_DESCRIPTOR, state_align, state_len, &dw);
 
    for (i = 0; i < idrt_count; i++) {
       const struct gen6_idrt_data *idrt = &data[i];
