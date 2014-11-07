@@ -220,135 +220,6 @@ _mesa_make_temp_float_image(struct gl_context *ctx, GLuint dims,
 }
 
 
-/**
- * Make a temporary (color) texture image with GLubyte components.
- * Apply all needed pixel unpacking and pixel transfer operations.
- * Note that there are both logicalBaseFormat and textureBaseFormat parameters.
- * Suppose the user specifies GL_LUMINANCE as the internal texture format
- * but the graphics hardware doesn't support luminance textures.  So, we might
- * use an RGB hardware format instead.
- * If logicalBaseFormat != textureBaseFormat we have some extra work to do.
- *
- * \param ctx  the rendering context
- * \param dims  image dimensions: 1, 2 or 3
- * \param logicalBaseFormat  basic texture derived from the user's
- *    internal texture format value
- * \param textureBaseFormat  the actual basic format of the texture
- * \param srcWidth  source image width
- * \param srcHeight  source image height
- * \param srcDepth  source image depth
- * \param srcFormat  source image format
- * \param srcType  source image type
- * \param srcAddr  source image address
- * \param srcPacking  source image pixel packing
- * \return resulting image with format = textureBaseFormat and type = GLubyte.
- */
-GLubyte *
-_mesa_make_temp_ubyte_image(struct gl_context *ctx, GLuint dims,
-                            GLenum logicalBaseFormat,
-                            GLenum textureBaseFormat,
-                            GLint srcWidth, GLint srcHeight, GLint srcDepth,
-                            GLenum srcFormat, GLenum srcType,
-                            const GLvoid *srcAddr,
-                            const struct gl_pixelstore_attrib *srcPacking)
-{
-   GLuint transferOps = ctx->_ImageTransferState;
-   const GLint components = _mesa_components_in_format(logicalBaseFormat);
-   GLint img, row;
-   GLubyte *tempImage, *dst;
-
-   ASSERT(dims >= 1 && dims <= 3);
-
-   ASSERT(logicalBaseFormat == GL_RGBA ||
-          logicalBaseFormat == GL_RGB ||
-          logicalBaseFormat == GL_RG ||
-          logicalBaseFormat == GL_RED ||
-          logicalBaseFormat == GL_LUMINANCE_ALPHA ||
-          logicalBaseFormat == GL_LUMINANCE ||
-          logicalBaseFormat == GL_ALPHA ||
-          logicalBaseFormat == GL_INTENSITY);
-
-   ASSERT(textureBaseFormat == GL_RGBA ||
-          textureBaseFormat == GL_RGB ||
-          textureBaseFormat == GL_RG ||
-          textureBaseFormat == GL_RED ||
-          textureBaseFormat == GL_LUMINANCE_ALPHA ||
-          textureBaseFormat == GL_LUMINANCE ||
-          textureBaseFormat == GL_ALPHA ||
-          textureBaseFormat == GL_INTENSITY);
-
-   /* unpack and transfer the source image */
-   tempImage = malloc(srcWidth * srcHeight * srcDepth
-                                       * components * sizeof(GLubyte));
-   if (!tempImage) {
-      return NULL;
-   }
-
-   dst = tempImage;
-   for (img = 0; img < srcDepth; img++) {
-      const GLint srcStride =
-         _mesa_image_row_stride(srcPacking, srcWidth, srcFormat, srcType);
-      const GLubyte *src =
-         (const GLubyte *) _mesa_image_address(dims, srcPacking, srcAddr,
-                                               srcWidth, srcHeight,
-                                               srcFormat, srcType,
-                                               img, 0, 0);
-      for (row = 0; row < srcHeight; row++) {
-         _mesa_unpack_color_span_ubyte(ctx, srcWidth, logicalBaseFormat, dst,
-                                       srcFormat, srcType, src, srcPacking,
-                                       transferOps);
-         dst += srcWidth * components;
-         src += srcStride;
-      }
-   }
-
-   if (logicalBaseFormat != textureBaseFormat) {
-      /* one more conversion step */
-      GLint texComponents = _mesa_components_in_format(textureBaseFormat);
-      GLint logComponents = _mesa_components_in_format(logicalBaseFormat);
-      GLubyte *newImage;
-      GLint i, n;
-      GLubyte map[6];
-
-      /* we only promote up to RGB, RGBA and LUMINANCE_ALPHA formats for now */
-      ASSERT(textureBaseFormat == GL_RGB || textureBaseFormat == GL_RGBA ||
-             textureBaseFormat == GL_LUMINANCE_ALPHA);
-
-      /* The actual texture format should have at least as many components
-       * as the logical texture format.
-       */
-      ASSERT(texComponents >= logComponents);
-
-      newImage = malloc(srcWidth * srcHeight * srcDepth
-                                         * texComponents * sizeof(GLubyte));
-      if (!newImage) {
-         free(tempImage);
-         return NULL;
-      }
-
-      _mesa_compute_component_mapping(logicalBaseFormat, textureBaseFormat, map);
-
-      n = srcWidth * srcHeight * srcDepth;
-      for (i = 0; i < n; i++) {
-         GLint k;
-         for (k = 0; k < texComponents; k++) {
-            GLint j = map[k];
-            if (j == ZERO)
-               newImage[i * texComponents + k] = 0;
-            else if (j == ONE)
-               newImage[i * texComponents + k] = 255;
-            else
-               newImage[i * texComponents + k] = tempImage[i * logComponents + j];
-         }
-      }
-
-      free(tempImage);
-      tempImage = newImage;
-   }
-
-   return tempImage;
-}
-
 
 static const GLubyte map_identity[6] = { 0, 1, 2, 3, ZERO, ONE };
 static const GLubyte map_3210[6] = { 3, 2, 1, 0, ZERO, ONE };
@@ -963,12 +834,12 @@ texstore_rgba(TEXSTORE_PARAMS)
     */
    if (srcFormat == GL_COLOR_INDEX) {
       /* Notice that this will already handle byte swapping if necessary */
-      tempImage  = _mesa_make_temp_ubyte_image(ctx, dims,
-                                               baseInternalFormat,
-                                               GL_RGBA,
-                                               srcWidth, srcHeight, srcDepth,
-                                               srcFormat, srcType, srcAddr,
-                                               srcPacking);
+      tempImage =
+         _mesa_unpack_color_index_to_rgba_ubyte(ctx, dims,
+                                                srcAddr, srcFormat, srcType,
+                                                srcWidth, srcHeight, srcDepth,
+                                                srcPacking,
+                                                ctx->_ImageTransferState);
       if (!tempImage)
          return GL_FALSE;
 
