@@ -4795,9 +4795,9 @@ get_texbuffer_format(const struct gl_context *ctx, GLenum internalFormat)
       case GL_LUMINANCE_ALPHA8I_EXT:
          return MESA_FORMAT_LA_SINT8;
       case GL_LUMINANCE_ALPHA16I_EXT:
-         return MESA_FORMAT_LA_SINT8;
-      case GL_LUMINANCE_ALPHA32I_EXT:
          return MESA_FORMAT_LA_SINT16;
+      case GL_LUMINANCE_ALPHA32I_EXT:
+         return MESA_FORMAT_LA_SINT32;
       case GL_LUMINANCE_ALPHA8UI_EXT:
          return MESA_FORMAT_LA_UINT8;
       case GL_LUMINANCE_ALPHA16UI_EXT:
