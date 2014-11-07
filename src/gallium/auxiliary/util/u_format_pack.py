@@ -207,9 +207,36 @@ def get_one_shift(type):
     assert False
 
 
+def truncate_mantissa(x, bits):
+    '''Truncate an integer so it can be represented exactly with a floating
+    point mantissa'''
+
+    assert isinstance(x, (int, long))
+
+    s = 1
+    if x < 0:
+        s = -1
+        x = -x
+
+    # We can represent integers up to mantissa + 1 bits exactly
+    mask = (1 << (bits + 1)) - 1
+
+    # Slide the mask until the MSB matches
+    shift = 0
+    while (x >> shift) & ~mask:
+        shift += 1
+
+    x &= mask << shift
+    x *= s
+    return x
+
+
 def value_to_native(type, value):
     '''Get the value of unity for this type.'''
     if type.type == FLOAT:
+        if type.size <= 32 \
+            and isinstance(value, (int, long)):
+            return truncate_mantissa(value, 23)
         return value
     if type.type == FIXED:
         return int(value * (1 << (type.size/2)))
