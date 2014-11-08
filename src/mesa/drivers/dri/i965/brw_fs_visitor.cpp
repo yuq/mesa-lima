@@ -471,6 +471,7 @@ fs_visitor::visit(ir_expression *ir)
    unsigned int operand;
    fs_reg op[3], temp;
    fs_inst *inst;
+   struct brw_wm_prog_key *fs_key = (struct brw_wm_prog_key *) this->key;
 
    assert(ir->get_num_operands() <= 3);
 
@@ -601,22 +602,35 @@ fs_visitor::visit(ir_expression *ir)
       break;
 
    case ir_unop_dFdx:
-      emit(FS_OPCODE_DDX, this->result, op[0], fs_reg(BRW_DERIVATIVE_BY_HINT));
+      /* Select one of the two opcodes based on the glHint value. */
+      if (fs_key->high_quality_derivatives)
+         emit(FS_OPCODE_DDX_FINE, this->result, op[0]);
+      else
+         emit(FS_OPCODE_DDX_COARSE, this->result, op[0]);
       break;
+
    case ir_unop_dFdx_coarse:
-      emit(FS_OPCODE_DDX, this->result, op[0], fs_reg(BRW_DERIVATIVE_COARSE));
+      emit(FS_OPCODE_DDX_COARSE, this->result, op[0]);
       break;
+
    case ir_unop_dFdx_fine:
-      emit(FS_OPCODE_DDX, this->result, op[0], fs_reg(BRW_DERIVATIVE_FINE));
+      emit(FS_OPCODE_DDX_FINE, this->result, op[0]);
       break;
+
    case ir_unop_dFdy:
-      emit(FS_OPCODE_DDY, this->result, op[0], fs_reg(BRW_DERIVATIVE_BY_HINT));
+      /* Select one of the two opcodes based on the glHint value. */
+      if (fs_key->high_quality_derivatives)
+         emit(FS_OPCODE_DDY_FINE, this->result, op[0]);
+      else
+         emit(FS_OPCODE_DDY_COARSE, this->result, op[0]);
       break;
+
    case ir_unop_dFdy_coarse:
-      emit(FS_OPCODE_DDY, this->result, op[0], fs_reg(BRW_DERIVATIVE_COARSE));
+      emit(FS_OPCODE_DDY_COARSE, this->result, op[0]);
       break;
+
    case ir_unop_dFdy_fine:
-      emit(FS_OPCODE_DDY, this->result, op[0], fs_reg(BRW_DERIVATIVE_FINE));
+      emit(FS_OPCODE_DDY_FINE, this->result, op[0]);
       break;
 
    case ir_binop_add:

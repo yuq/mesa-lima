@@ -450,10 +450,14 @@ brw_instruction_name(enum opcode op)
    case VEC4_OPCODE_PACK_BYTES:
       return "pack_bytes";
 
-   case FS_OPCODE_DDX:
-      return "ddx";
-   case FS_OPCODE_DDY:
-      return "ddy";
+   case FS_OPCODE_DDX_COARSE:
+      return "ddx_coarse";
+   case FS_OPCODE_DDX_FINE:
+      return "ddx_fine";
+   case FS_OPCODE_DDY_COARSE:
+      return "ddy_coarse";
+   case FS_OPCODE_DDY_FINE:
+      return "ddy_fine";
 
    case FS_OPCODE_PIXEL_X:
       return "pixel_x";
@@ -724,7 +728,7 @@ backend_instruction::writes_accumulator_implicitly(struct brw_context *brw) cons
    return writes_accumulator ||
           (brw->gen < 6 &&
            ((opcode >= BRW_OPCODE_ADD && opcode < BRW_OPCODE_NOP) ||
-            (opcode >= FS_OPCODE_DDX && opcode <= FS_OPCODE_LINTERP &&
+            (opcode >= FS_OPCODE_DDX_COARSE && opcode <= FS_OPCODE_LINTERP &&
              opcode != FS_OPCODE_CINTERP)));
 }
 

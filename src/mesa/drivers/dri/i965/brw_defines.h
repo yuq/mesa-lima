@@ -910,8 +910,10 @@ enum opcode {
 
    VEC4_OPCODE_PACK_BYTES,
 
-   FS_OPCODE_DDX,
-   FS_OPCODE_DDY,
+   FS_OPCODE_DDX_COARSE,
+   FS_OPCODE_DDX_FINE,
+   FS_OPCODE_DDY_COARSE,
+   FS_OPCODE_DDY_FINE,
    FS_OPCODE_PIXEL_X,
    FS_OPCODE_PIXEL_Y,
    FS_OPCODE_CINTERP,
@@ -1091,12 +1093,6 @@ enum opcode {
     *   and number of SO primitives needed.
     */
    GS_OPCODE_FF_SYNC_SET_PRIMITIVES,
-};
-
-enum brw_derivative_quality {
-   BRW_DERIVATIVE_BY_HINT = 0,
-   BRW_DERIVATIVE_FINE = 1,
-   BRW_DERIVATIVE_COARSE = 2,
 };
 
 enum brw_urb_write_flags {

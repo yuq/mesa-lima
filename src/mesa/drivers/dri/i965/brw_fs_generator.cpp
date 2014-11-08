@@ -705,25 +705,16 @@ fs_generator::generate_tex(fs_inst *inst, struct brw_reg dst, struct brw_reg src
  * appropriate swizzling.
  */
 void
-fs_generator::generate_ddx(fs_inst *inst, struct brw_reg dst, struct brw_reg src,
-                           struct brw_reg quality)
+fs_generator::generate_ddx(enum opcode opcode,
+                           struct brw_reg dst, struct brw_reg src)
 {
    unsigned vstride, width;
-   assert(quality.file == BRW_IMMEDIATE_VALUE);
-   assert(quality.type == BRW_REGISTER_TYPE_D);
 
-   assert(stage == MESA_SHADER_FRAGMENT);
-   const brw_wm_prog_key * const key = (brw_wm_prog_key * const) this->key;
-
-   int quality_value = quality.dw1.d;
-
-   if (quality_value == BRW_DERIVATIVE_FINE ||
-      (key->high_quality_derivatives && quality_value != BRW_DERIVATIVE_COARSE)) {
+   if (opcode == FS_OPCODE_DDX_FINE) {
       /* produce accurate derivatives */
       vstride = BRW_VERTICAL_STRIDE_2;
       width = BRW_WIDTH_2;
-   }
-   else {
+   } else {
       /* replicate the derivative at the top-left pixel to other pixels */
       vstride = BRW_VERTICAL_STRIDE_4;
       width = BRW_WIDTH_4;
@@ -749,19 +740,11 @@ fs_generator::generate_ddx(fs_inst *inst, struct brw_reg dst, struct brw_reg src
  * left.
  */
 void
-fs_generator::generate_ddy(fs_inst *inst, struct brw_reg dst, struct brw_reg src,
-                         struct brw_reg quality, bool negate_value)
+fs_generator::generate_ddy(enum opcode opcode,
+                           struct brw_reg dst, struct brw_reg src,
+                           bool negate_value)
 {
-   assert(quality.file == BRW_IMMEDIATE_VALUE);
-   assert(quality.type == BRW_REGISTER_TYPE_D);
-
-   assert(stage == MESA_SHADER_FRAGMENT);
-   const brw_wm_prog_key * const key = (brw_wm_prog_key * const) this->key;
-
-   int quality_value = quality.dw1.d;
-
-   if (quality_value == BRW_DERIVATIVE_FINE ||
-      (key->high_quality_derivatives && quality_value != BRW_DERIVATIVE_COARSE)) {
+   if (opcode == FS_OPCODE_DDY_FINE) {
       /* From the Ivy Bridge PRM, volume 4 part 3, section 3.3.9 (Register
        * Region Restrictions):
        *
@@ -1871,16 +1854,18 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
       case SHADER_OPCODE_TG4_OFFSET:
 	 generate_tex(inst, dst, src[0], src[1]);
 	 break;
-      case FS_OPCODE_DDX:
-	 generate_ddx(inst, dst, src[0], src[1]);
-	 break;
-      case FS_OPCODE_DDY:
+      case FS_OPCODE_DDX_COARSE:
+      case FS_OPCODE_DDX_FINE:
+         generate_ddx(inst->opcode, dst, src[0]);
+         break;
+      case FS_OPCODE_DDY_COARSE:
+      case FS_OPCODE_DDY_FINE:
          /* Make sure fp->UsesDFdy flag got set (otherwise there's no
           * guarantee that key->render_to_fbo is set).
           */
          assert(stage == MESA_SHADER_FRAGMENT &&
                 ((gl_fragment_program *) prog)->UsesDFdy);
-         generate_ddy(inst, dst, src[0], src[1],
+         generate_ddy(inst->opcode, dst, src[0],
                       ((brw_wm_prog_key * const) this->key)->render_to_fbo);
 	 break;
 
