@@ -179,7 +179,7 @@ fs_generator::generate_fb_write(fs_inst *inst, struct brw_reg payload)
       /* On HSW, the GPU will use the predicate on SENDC, unless the header is
        * present.
        */
-      if (prog_data->uses_kill || key->alpha_test_func) {
+      if (prog_data->uses_kill) {
          struct brw_reg pixel_mask;
 
          if (brw->gen >= 6)

@@ -3620,7 +3620,7 @@ fs_visitor::run()
       bool alpha_test_func =
          (stage == MESA_SHADER_FRAGMENT) &&
          ((brw_wm_prog_key*) this->key)->alpha_test_func;
-      if (uses_kill || alpha_test_func) {
+      if (uses_kill) {
          fs_inst *discard_init = emit(FS_OPCODE_MOV_DISPATCH_TO_FLAGS);
          discard_init->flag_subreg = 1;
       }
