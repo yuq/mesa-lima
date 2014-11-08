@@ -175,7 +175,8 @@ brw_upload_wm_unit(struct brw_context *brw)
       wm->wm5.program_computes_depth = 0;
 
    /* _NEW_COLOR */
-   wm->wm5.program_uses_killpixel = fp->UsesKill || ctx->Color.AlphaEnabled;
+   wm->wm5.program_uses_killpixel =
+      prog_data->uses_kill || ctx->Color.AlphaEnabled;
 
    wm->wm5.enable_8_pix = 1;
    if (prog_data->prog_offset_16)

@@ -188,7 +188,7 @@ upload_wm_state(struct brw_context *brw)
       GEN6_WM_BARYCENTRIC_INTERPOLATION_MODE_SHIFT;
 
    /* _NEW_COLOR, _NEW_MULTISAMPLE */
-   if (fp->program.UsesKill || ctx->Color.AlphaEnabled ||
+   if (prog_data->uses_kill || ctx->Color.AlphaEnabled ||
        ctx->Multisample.SampleAlphaToCoverage ||
        prog_data->uses_omask)
       dw5 |= GEN6_WM_KILL_ENABLE;

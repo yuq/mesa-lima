@@ -86,7 +86,7 @@ upload_wm_state(struct brw_context *brw)
    /* _NEW_COLOR, _NEW_MULTISAMPLE */
    /* Enable if the pixel shader kernel generates and outputs oMask.
     */
-   if (fp->program.UsesKill || ctx->Color.AlphaEnabled ||
+   if (prog_data->uses_kill || ctx->Color.AlphaEnabled ||
        ctx->Multisample.SampleAlphaToCoverage ||
        prog_data->uses_omask) {
       dw1 |= GEN7_WM_KILL_ENABLE;

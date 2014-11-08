@@ -40,7 +40,7 @@ upload_ps_extra(struct brw_context *brw)
 
    dw1 |= GEN8_PSX_PIXEL_SHADER_VALID;
 
-   if (fp->program.UsesKill)
+   if (prog_data->uses_kill)
       dw1 |= GEN8_PSX_KILL_ENABLE;
 
    if (prog_data->num_varying_inputs != 0)

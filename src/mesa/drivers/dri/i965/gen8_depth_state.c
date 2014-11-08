@@ -286,7 +286,7 @@ pma_fix_enable(const struct brw_context *brw)
       (fp->Base.OutputsWritten & BITFIELD64_BIT(FRAG_RESULT_DEPTH)) &&
       fp->FragDepthLayout != FRAG_DEPTH_LAYOUT_UNCHANGED;
 
-   /* BRW_NEW_FRAGMENT_PROGRAM: 3DSTATE_PS_EXTRA::PixelShaderKillsPixels
+   /* CACHE_NEW_WM_PROG:        3DSTATE_PS_EXTRA::PixelShaderKillsPixels
     * CACHE_NEW_WM_PROG:        3DSTATE_PS_EXTRA::oMask Present to RenderTarget
     * _NEW_MULTISAMPLE:         3DSTATE_PS_BLEND::AlphaToCoverageEnable
     * _NEW_COLOR:               3DSTATE_PS_BLEND::AlphaTestEnable
@@ -295,7 +295,7 @@ pma_fix_enable(const struct brw_context *brw)
     * 3DSTATE_WM::ForceKillPix != ForceOff is always true.
     */
    const bool kill_pixel =
-      fp->UsesKill ||
+      brw->wm.prog_data->uses_kill ||
       brw->wm.prog_data->uses_omask ||
       (ctx->Multisample._Enabled && ctx->Multisample.SampleAlphaToCoverage) ||
       ctx->Color.AlphaEnabled;
