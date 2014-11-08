@@ -620,17 +620,17 @@ fs_visitor::visit(ir_expression *ir)
    case ir_unop_dFdy:
       /* Select one of the two opcodes based on the glHint value. */
       if (fs_key->high_quality_derivatives)
-         emit(FS_OPCODE_DDY_FINE, this->result, op[0]);
+         emit(FS_OPCODE_DDY_FINE, result, op[0], fs_reg(fs_key->render_to_fbo));
       else
-         emit(FS_OPCODE_DDY_COARSE, this->result, op[0]);
+         emit(FS_OPCODE_DDY_COARSE, result, op[0], fs_reg(fs_key->render_to_fbo));
       break;
 
    case ir_unop_dFdy_coarse:
-      emit(FS_OPCODE_DDY_COARSE, this->result, op[0]);
+      emit(FS_OPCODE_DDY_COARSE, result, op[0], fs_reg(fs_key->render_to_fbo));
       break;
 
    case ir_unop_dFdy_fine:
-      emit(FS_OPCODE_DDY_FINE, this->result, op[0]);
+      emit(FS_OPCODE_DDY_FINE, result, op[0], fs_reg(fs_key->render_to_fbo));
       break;
 
    case ir_binop_add:

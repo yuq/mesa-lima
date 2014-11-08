@@ -1860,13 +1860,8 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
          break;
       case FS_OPCODE_DDY_COARSE:
       case FS_OPCODE_DDY_FINE:
-         /* Make sure fp->UsesDFdy flag got set (otherwise there's no
-          * guarantee that key->render_to_fbo is set).
-          */
-         assert(stage == MESA_SHADER_FRAGMENT &&
-                ((gl_fragment_program *) prog)->UsesDFdy);
-         generate_ddy(inst->opcode, dst, src[0],
-                      ((brw_wm_prog_key * const) this->key)->render_to_fbo);
+         assert(src[1].file == BRW_IMMEDIATE_VALUE);
+         generate_ddy(inst->opcode, dst, src[0], src[1].dw1.ud);
 	 break;
 
       case SHADER_OPCODE_GEN4_SCRATCH_WRITE:
