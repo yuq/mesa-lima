@@ -41,7 +41,7 @@ upload_ps_extra(struct brw_context *brw)
    if (fp->program.UsesKill)
       dw1 |= GEN8_PSX_KILL_ENABLE;
 
-   /* BRW_NEW_FRAGMENT_PROGRAM */
+   /* CACHE_NEW_WM_PROG */
    if (brw->wm.prog_data->num_varying_inputs != 0)
       dw1 |= GEN8_PSX_ATTRIBUTE_ENABLE;
 
@@ -87,7 +87,7 @@ const struct brw_tracked_state gen8_ps_extra = {
    .dirty = {
       .mesa  = _NEW_MULTISAMPLE,
       .brw   = BRW_NEW_CONTEXT | BRW_NEW_FRAGMENT_PROGRAM | BRW_NEW_NUM_SAMPLES,
-      .cache = 0,
+      .cache = CACHE_NEW_WM_PROG,
    },
    .emit = upload_ps_extra,
 };
