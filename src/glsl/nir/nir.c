@@ -730,6 +730,23 @@ split_block_beginning(nir_block *block)
    return new_block;
 }
 
+static void
+rewrite_phi_preds(nir_block *block, nir_block *old_pred, nir_block *new_pred)
+{
+   nir_foreach_instr_safe(block, instr) {
+      if (instr->type != nir_instr_type_phi)
+         break;
+
+      nir_phi_instr *phi = nir_instr_as_phi(instr);
+      foreach_list_typed_safe(nir_phi_src, src, node, &phi->srcs) {
+         if (src->pred == old_pred) {
+            src->pred = new_pred;
+            break;
+         }
+      }
+   }
+}
+
 /**
  * Moves the successors of source to the successors of dest, leaving both
  * successors of source NULL.
@@ -741,11 +758,15 @@ move_successors(nir_block *source, nir_block *dest)
    nir_block *succ1 = source->successors[0];
    nir_block *succ2 = source->successors[1];
 
-   if (succ1)
+   if (succ1) {
       unlink_blocks(source, succ1);
+      rewrite_phi_preds(succ1, source, dest);
+   }
 
-   if (succ2)
+   if (succ2) {
       unlink_blocks(source, succ2);
+      rewrite_phi_preds(succ2, source, dest);
+   }
 
    unlink_block_successors(dest);
    link_blocks(dest, succ1, succ2);
