@@ -769,7 +769,8 @@ st_Bitmap(struct gl_context *ctx, GLint x, GLint y,
       const uint semantic_indexes[] = { 0, 0, 0 };
       st->bitmap.vs = util_make_vertex_passthrough_shader(st->pipe, 3,
                                                           semantic_names,
-                                                          semantic_indexes);
+                                                          semantic_indexes,
+                                                          FALSE);
    }
 
    if (UseBitmapCache && accum_bitmap(ctx, x, y, width, height, unpack, bitmap))

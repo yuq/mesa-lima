@@ -91,7 +91,7 @@ lookup_shader(struct pipe_context *pipe,
       util_make_vertex_passthrough_shader(pipe,
                                           num_attribs,
                                           semantic_names,
-                                          semantic_indexes);
+                                          semantic_indexes, FALSE);
    NumCachedShaders++;
 
    return CachedShaders[i].handle;

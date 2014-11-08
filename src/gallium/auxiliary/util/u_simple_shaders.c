@@ -59,11 +59,13 @@ void *
 util_make_vertex_passthrough_shader(struct pipe_context *pipe,
                                     uint num_attribs,
                                     const uint *semantic_names,
-                                    const uint *semantic_indexes)
+                                    const uint *semantic_indexes,
+                                    bool window_space)
 {
    return util_make_vertex_passthrough_shader_with_so(pipe, num_attribs,
                                                       semantic_names,
-                                                      semantic_indexes, NULL);
+                                                      semantic_indexes,
+                                                      window_space, NULL);
 }
 
 void *
@@ -71,6 +73,7 @@ util_make_vertex_passthrough_shader_with_so(struct pipe_context *pipe,
                                     uint num_attribs,
                                     const uint *semantic_names,
                                     const uint *semantic_indexes,
+                                    bool window_space,
 				    const struct pipe_stream_output_info *so)
 {
    struct ureg_program *ureg;
@@ -79,6 +82,9 @@ util_make_vertex_passthrough_shader_with_so(struct pipe_context *pipe,
    ureg = ureg_create( TGSI_PROCESSOR_VERTEX );
    if (ureg == NULL)
       return NULL;
+
+   if (window_space)
+      ureg_property_vs_window_space_position(ureg, TRUE);
 
    for (i = 0; i < num_attribs; i++) {
       struct ureg_src src;

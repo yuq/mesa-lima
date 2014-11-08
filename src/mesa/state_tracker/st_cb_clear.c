@@ -123,7 +123,8 @@ set_vertex_shader(struct st_context *st)
       const uint semantic_indexes[] = { 0, 0 };
       st->clear.vs = util_make_vertex_passthrough_shader(st->pipe, 2,
                                                          semantic_names,
-                                                         semantic_indexes);
+                                                         semantic_indexes,
+                                                         FALSE);
    }
 
    cso_set_vertex_shader_handle(st->cso_context, st->clear.vs);
