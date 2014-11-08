@@ -36,8 +36,11 @@ static void
 upload_wm_state(struct brw_context *brw)
 {
    struct gl_context *ctx = &brw->ctx;
+   /* BRW_NEW_FRAGMENT_PROGRAM */
    const struct brw_fragment_program *fp =
       brw_fragment_program_const(brw->fragment_program);
+   /* CACHE_NEW_WM_PROG */
+   const struct brw_wm_prog_data *prog_data = brw->wm.prog_data;
    bool writes_depth = false;
    uint32_t dw1, dw2;
 
@@ -57,7 +60,6 @@ upload_wm_state(struct brw_context *brw)
    if (ctx->Polygon.StippleFlag)
       dw1 |= GEN7_WM_POLYGON_STIPPLE_ENABLE;
 
-   /* BRW_NEW_FRAGMENT_PROGRAM */
    if (fp->program.Base.InputsRead & VARYING_BIT_POS)
       dw1 |= GEN7_WM_USES_SOURCE_DEPTH | GEN7_WM_USES_SOURCE_W;
    if (fp->program.Base.OutputsWritten & BITFIELD64_BIT(FRAG_RESULT_DEPTH)) {
@@ -78,8 +80,7 @@ upload_wm_state(struct brw_context *brw)
             break;
       }
    }
-   /* CACHE_NEW_WM_PROG */
-   dw1 |= brw->wm.prog_data->barycentric_interp_modes <<
+   dw1 |= prog_data->barycentric_interp_modes <<
       GEN7_WM_BARYCENTRIC_INTERPOLATION_MODE_SHIFT;
 
    /* _NEW_COLOR, _NEW_MULTISAMPLE */
@@ -87,7 +88,7 @@ upload_wm_state(struct brw_context *brw)
     */
    if (fp->program.UsesKill || ctx->Color.AlphaEnabled ||
        ctx->Multisample.SampleAlphaToCoverage ||
-       brw->wm.prog_data->uses_omask) {
+       prog_data->uses_omask) {
       dw1 |= GEN7_WM_KILL_ENABLE;
    }
 
@@ -143,13 +144,15 @@ upload_ps_state(struct brw_context *brw)
    const int max_threads_shift = brw->is_haswell ?
       HSW_PS_MAX_THREADS_SHIFT : IVB_PS_MAX_THREADS_SHIFT;
 
+   /* CACHE_NEW_WM_PROG */
+   const struct brw_wm_prog_data *prog_data = brw->wm.prog_data;
+
    dw2 = dw4 = dw5 = ksp2 = 0;
 
    dw2 |=
       (ALIGN(brw->wm.base.sampler_count, 4) / 4) << GEN7_PS_SAMPLER_COUNT_SHIFT;
 
-   /* CACHE_NEW_WM_PROG */
-   dw2 |= ((brw->wm.prog_data->base.binding_table.size_bytes / 4) <<
+   dw2 |= ((prog_data->base.binding_table.size_bytes / 4) <<
            GEN7_PS_BINDING_TABLE_ENTRY_COUNT_SHIFT);
 
    /* Use ALT floating point mode for ARB fragment programs, because they
@@ -169,8 +172,7 @@ upload_ps_state(struct brw_context *brw)
 
    dw4 |= (brw->max_wm_threads - 1) << max_threads_shift;
 
-   /* CACHE_NEW_WM_PROG */
-   if (brw->wm.prog_data->base.nr_params > 0)
+   if (prog_data->base.nr_params > 0)
       dw4 |= GEN7_PS_PUSH_CONSTANT_ENABLE;
 
    /* From the IVB PRM, volume 2 part 1, page 287:
@@ -180,7 +182,7 @@ upload_ps_state(struct brw_context *brw)
     * Target Write messages. If present, the oMask data is used to mask off
     * samples."
     */
-   if (brw->wm.prog_data->uses_omask)
+   if (prog_data->uses_omask)
       dw4 |= GEN7_PS_OMASK_TO_RENDER_TARGET;
 
    /* From the IVB PRM, volume 2 part 1, page 287:
@@ -194,7 +196,7 @@ upload_ps_state(struct brw_context *brw)
     * We only require XY sample offsets. So, this recommendation doesn't
     * look useful at the moment. We might need this in future.
     */
-   if (brw->wm.prog_data->uses_pos_offset)
+   if (prog_data->uses_pos_offset)
       dw4 |= GEN7_PS_POSOFFSET_SAMPLE;
    else
       dw4 |= GEN7_PS_POSOFFSET_NONE;
@@ -204,14 +206,14 @@ upload_ps_state(struct brw_context *brw)
     * The hardware wedges if you have this bit set but don't turn on any dual
     * source blend factors.
     */
-   if (brw->wm.prog_data->dual_src_blend &&
+   if (prog_data->dual_src_blend &&
        (ctx->Color.BlendEnabled & 1) &&
        ctx->Color.Blend[0]._UsesDualSrc) {
       dw4 |= GEN7_PS_DUAL_SOURCE_BLEND_ENABLE;
    }
 
    /* CACHE_NEW_WM_PROG */
-   if (brw->wm.prog_data->num_varying_inputs != 0)
+   if (prog_data->num_varying_inputs != 0)
       dw4 |= GEN7_PS_ATTRIBUTE_ENABLE;
 
    /* In case of non 1x per sample shading, only one of SIMD8 and SIMD16
@@ -223,25 +225,25 @@ upload_ps_state(struct brw_context *brw)
       _mesa_get_min_invocations_per_fragment(ctx, brw->fragment_program, false);
    assert(min_inv_per_frag >= 1);
 
-   if (brw->wm.prog_data->prog_offset_16 || brw->wm.prog_data->no_8) {
+   if (prog_data->prog_offset_16 || prog_data->no_8) {
       dw4 |= GEN7_PS_16_DISPATCH_ENABLE;
-      if (!brw->wm.prog_data->no_8 && min_inv_per_frag == 1) {
+      if (!prog_data->no_8 && min_inv_per_frag == 1) {
          dw4 |= GEN7_PS_8_DISPATCH_ENABLE;
-         dw5 |= (brw->wm.prog_data->base.dispatch_grf_start_reg <<
+         dw5 |= (prog_data->base.dispatch_grf_start_reg <<
                  GEN7_PS_DISPATCH_START_GRF_SHIFT_0);
-         dw5 |= (brw->wm.prog_data->dispatch_grf_start_reg_16 <<
+         dw5 |= (prog_data->dispatch_grf_start_reg_16 <<
                  GEN7_PS_DISPATCH_START_GRF_SHIFT_2);
          ksp0 = brw->wm.base.prog_offset;
-         ksp2 = brw->wm.base.prog_offset + brw->wm.prog_data->prog_offset_16;
+         ksp2 = brw->wm.base.prog_offset + prog_data->prog_offset_16;
       } else {
-         dw5 |= (brw->wm.prog_data->dispatch_grf_start_reg_16 <<
+         dw5 |= (prog_data->dispatch_grf_start_reg_16 <<
                  GEN7_PS_DISPATCH_START_GRF_SHIFT_0);
-         ksp0 = brw->wm.base.prog_offset + brw->wm.prog_data->prog_offset_16;
+         ksp0 = brw->wm.base.prog_offset + prog_data->prog_offset_16;
       }
    }
    else {
       dw4 |= GEN7_PS_8_DISPATCH_ENABLE;
-      dw5 |= (brw->wm.prog_data->base.dispatch_grf_start_reg <<
+      dw5 |= (prog_data->base.dispatch_grf_start_reg <<
               GEN7_PS_DISPATCH_START_GRF_SHIFT_0);
       ksp0 = brw->wm.base.prog_offset;
    }
@@ -252,10 +254,10 @@ upload_ps_state(struct brw_context *brw)
    OUT_BATCH(_3DSTATE_PS << 16 | (8 - 2));
    OUT_BATCH(ksp0);
    OUT_BATCH(dw2);
-   if (brw->wm.prog_data->base.total_scratch) {
+   if (prog_data->base.total_scratch) {
       OUT_RELOC(brw->wm.base.scratch_bo,
 		I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER,
-		ffs(brw->wm.prog_data->base.total_scratch) - 11);
+		ffs(prog_data->base.total_scratch) - 11);
    } else {
       OUT_BATCH(0);
    }

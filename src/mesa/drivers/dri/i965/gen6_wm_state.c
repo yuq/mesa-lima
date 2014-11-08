@@ -69,22 +69,23 @@ static void
 upload_wm_state(struct brw_context *brw)
 {
    struct gl_context *ctx = &brw->ctx;
+   /* BRW_NEW_FRAGMENT_PROGRAM */
    const struct brw_fragment_program *fp =
       brw_fragment_program_const(brw->fragment_program);
+   /* CACHE_NEW_WM_PROG */
+   const struct brw_wm_prog_data *prog_data = brw->wm.prog_data;
    uint32_t dw2, dw4, dw5, dw6, ksp0, ksp2;
 
    /* _NEW_BUFFERS */
    bool multisampled_fbo = ctx->DrawBuffer->Visual.samples > 1;
 
-   /* CACHE_NEW_WM_PROG
-    *
-    * We can't fold this into gen6_upload_wm_push_constants(), because
+   /* We can't fold this into gen6_upload_wm_push_constants(), because
     * according to the SNB PRM, vol 2 part 1 section 7.2.2
     * (3DSTATE_CONSTANT_PS [DevSNB]):
     *
     *     "[DevSNB]: This packet must be followed by WM_STATE."
     */
-   if (brw->wm.prog_data->base.nr_params == 0) {
+   if (prog_data->base.nr_params == 0) {
       /* Disable the push constant buffers. */
       BEGIN_BATCH(5);
       OUT_BATCH(_3DSTATE_CONSTANT_PS << 16 | (5 - 2));
@@ -125,13 +126,10 @@ upload_wm_state(struct brw_context *brw)
    dw2 |= (ALIGN(brw->wm.base.sampler_count, 4) / 4) <<
            GEN6_WM_SAMPLER_COUNT_SHIFT;
 
-   /* CACHE_NEW_WM_PROG */
-   dw2 |= ((brw->wm.prog_data->base.binding_table.size_bytes / 4) <<
+   dw2 |= ((prog_data->base.binding_table.size_bytes / 4) <<
            GEN6_WM_BINDING_TABLE_ENTRY_COUNT_SHIFT);
 
    dw5 |= (brw->max_wm_threads - 1) << GEN6_WM_MAX_THREADS_SHIFT;
-
-   /* CACHE_NEW_WM_PROG */
 
    /* In case of non 1x per sample shading, only one of SIMD8 and SIMD16
     * should be enabled. We do 'SIMD16 only' dispatch if a SIMD16 shader
@@ -142,32 +140,32 @@ upload_wm_state(struct brw_context *brw)
       _mesa_get_min_invocations_per_fragment(ctx, brw->fragment_program, false);
    assert(min_inv_per_frag >= 1);
 
-   if (brw->wm.prog_data->prog_offset_16) {
+   if (prog_data->prog_offset_16) {
       dw5 |= GEN6_WM_16_DISPATCH_ENABLE;
 
       if (min_inv_per_frag == 1) {
          dw5 |= GEN6_WM_8_DISPATCH_ENABLE;
-         dw4 |= (brw->wm.prog_data->base.dispatch_grf_start_reg <<
+         dw4 |= (prog_data->base.dispatch_grf_start_reg <<
                  GEN6_WM_DISPATCH_START_GRF_SHIFT_0);
-         dw4 |= (brw->wm.prog_data->dispatch_grf_start_reg_16 <<
+         dw4 |= (prog_data->dispatch_grf_start_reg_16 <<
                  GEN6_WM_DISPATCH_START_GRF_SHIFT_2);
          ksp0 = brw->wm.base.prog_offset;
-         ksp2 = brw->wm.base.prog_offset + brw->wm.prog_data->prog_offset_16;
+         ksp2 = brw->wm.base.prog_offset + prog_data->prog_offset_16;
       } else {
-         dw4 |= (brw->wm.prog_data->dispatch_grf_start_reg_16 <<
+         dw4 |= (prog_data->dispatch_grf_start_reg_16 <<
                 GEN6_WM_DISPATCH_START_GRF_SHIFT_0);
-         ksp0 = brw->wm.base.prog_offset + brw->wm.prog_data->prog_offset_16;
+         ksp0 = brw->wm.base.prog_offset + prog_data->prog_offset_16;
       }
    }
    else {
       dw5 |= GEN6_WM_8_DISPATCH_ENABLE;
-      dw4 |= (brw->wm.prog_data->base.dispatch_grf_start_reg <<
+      dw4 |= (prog_data->base.dispatch_grf_start_reg <<
               GEN6_WM_DISPATCH_START_GRF_SHIFT_0);
       ksp0 = brw->wm.base.prog_offset;
    }
 
    /* CACHE_NEW_WM_PROG | _NEW_COLOR */
-   if (brw->wm.prog_data->dual_src_blend &&
+   if (prog_data->dual_src_blend &&
        (ctx->Color.BlendEnabled & 1) &&
        ctx->Color.Blend[0]._UsesDualSrc) {
       dw5 |= GEN6_WM_DUAL_SOURCE_BLEND_ENABLE;
@@ -186,14 +184,13 @@ upload_wm_state(struct brw_context *brw)
       dw5 |= GEN6_WM_USES_SOURCE_DEPTH | GEN6_WM_USES_SOURCE_W;
    if (fp->program.Base.OutputsWritten & BITFIELD64_BIT(FRAG_RESULT_DEPTH))
       dw5 |= GEN6_WM_COMPUTED_DEPTH;
-   /* CACHE_NEW_WM_PROG */
-   dw6 |= brw->wm.prog_data->barycentric_interp_modes <<
+   dw6 |= prog_data->barycentric_interp_modes <<
       GEN6_WM_BARYCENTRIC_INTERPOLATION_MODE_SHIFT;
 
    /* _NEW_COLOR, _NEW_MULTISAMPLE */
    if (fp->program.UsesKill || ctx->Color.AlphaEnabled ||
        ctx->Multisample.SampleAlphaToCoverage ||
-       brw->wm.prog_data->uses_omask)
+       prog_data->uses_omask)
       dw5 |= GEN6_WM_KILL_ENABLE;
 
    /* _NEW_BUFFERS | _NEW_COLOR */
@@ -209,11 +206,10 @@ upload_wm_state(struct brw_context *brw)
     * Target Write messages. If present, the oMask data is used to mask off
     * samples."
     */
-    if(brw->wm.prog_data->uses_omask)
+    if (prog_data->uses_omask)
       dw5 |= GEN6_WM_OMASK_TO_RENDER_TARGET;
 
-   /* CACHE_NEW_WM_PROG */
-   dw6 |= brw->wm.prog_data->num_varying_inputs <<
+   dw6 |= prog_data->num_varying_inputs <<
       GEN6_WM_NUM_SF_OUTPUTS_SHIFT;
    if (multisampled_fbo) {
       /* _NEW_MULTISAMPLE */
@@ -275,7 +271,7 @@ upload_wm_state(struct brw_context *brw)
     * We only require XY sample offsets. So, this recommendation doesn't
     * look useful at the moment. We might need this in future.
     */
-   if (brw->wm.prog_data->uses_pos_offset)
+   if (prog_data->uses_pos_offset)
       dw6 |= GEN6_WM_POSOFFSET_SAMPLE;
    else
       dw6 |= GEN6_WM_POSOFFSET_NONE;
@@ -284,10 +280,10 @@ upload_wm_state(struct brw_context *brw)
    OUT_BATCH(_3DSTATE_WM << 16 | (9 - 2));
    OUT_BATCH(ksp0);
    OUT_BATCH(dw2);
-   if (brw->wm.prog_data->base.total_scratch) {
+   if (prog_data->base.total_scratch) {
       OUT_RELOC(brw->wm.base.scratch_bo,
                 I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER,
-		ffs(brw->wm.prog_data->base.total_scratch) - 11);
+		ffs(prog_data->base.total_scratch) - 11);
    } else {
       OUT_BATCH(0);
    }
