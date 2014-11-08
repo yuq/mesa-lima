@@ -739,10 +739,11 @@ static void
 move_successors(nir_block *source, nir_block *dest)
 {
    nir_block *succ1 = source->successors[0];
+   nir_block *succ2 = source->successors[1];
+
    if (succ1)
       unlink_blocks(source, succ1);
 
-   nir_block *succ2 = source->successors[1];
    if (succ2)
       unlink_blocks(source, succ2);
 
