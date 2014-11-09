@@ -559,11 +559,9 @@ util_blit_pixels_tex(struct blit_state *ctx,
    ctx->viewport.scale[0] = 0.5f * dst->width;
    ctx->viewport.scale[1] = 0.5f * dst->height;
    ctx->viewport.scale[2] = 0.5f;
-   ctx->viewport.scale[3] = 1.0f;
    ctx->viewport.translate[0] = 0.5f * dst->width;
    ctx->viewport.translate[1] = 0.5f * dst->height;
    ctx->viewport.translate[2] = 0.5f;
-   ctx->viewport.translate[3] = 0.0f;
    cso_set_viewport(ctx->cso, &ctx->viewport);
 
    /* texture */

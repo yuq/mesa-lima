@@ -65,11 +65,9 @@ void r600_draw_rectangle(struct blitter_context *blitter,
 	viewport.scale[0] = 1.0f;
 	viewport.scale[1] = 1.0f;
 	viewport.scale[2] = 1.0f;
-	viewport.scale[3] = 1.0f;
 	viewport.translate[0] = 0.0f;
 	viewport.translate[1] = 0.0f;
 	viewport.translate[2] = 0.0f;
-	viewport.translate[3] = 0.0f;
 	rctx->b.set_viewport_states(&rctx->b, 0, 1, &viewport);
 
 	/* Upload vertices. The hw rectangle has only 3 vertices,

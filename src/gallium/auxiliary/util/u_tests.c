@@ -114,11 +114,9 @@ util_set_max_viewport(struct cso_context *cso, struct pipe_resource *tex)
    viewport.scale[0] = 0.5f * tex->width0;
    viewport.scale[1] = 0.5f * tex->height0;
    viewport.scale[2] = 1.0f;
-   viewport.scale[3] = 1.0f;
    viewport.translate[0] = 0.5f * tex->width0;
    viewport.translate[1] = 0.5f * tex->height0;
    viewport.translate[2] = 0.0f;
-   viewport.translate[3] = 0.0f;
 
    cso_set_viewport(cso, &viewport);
 }

@@ -166,8 +166,8 @@ struct pipe_poly_stipple
 
 struct pipe_viewport_state
 {
-   float scale[4];
-   float translate[4];
+   float scale[3];
+   float translate[3];
 };
 
 

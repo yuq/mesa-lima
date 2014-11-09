@@ -373,11 +373,9 @@ void draw_set_viewport_states( struct draw_context *draw,
       (viewport->scale[0] == 1.0f &&
        viewport->scale[1] == 1.0f &&
        viewport->scale[2] == 1.0f &&
-       viewport->scale[3] == 1.0f &&
        viewport->translate[0] == 0.0f &&
        viewport->translate[1] == 0.0f &&
-       viewport->translate[2] == 0.0f &&
-       viewport->translate[3] == 0.0f);
+       viewport->translate[2] == 0.0f);
 }
 
 

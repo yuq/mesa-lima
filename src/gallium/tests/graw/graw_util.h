@@ -196,12 +196,10 @@ graw_util_viewport(struct graw_info *info,
    vp.scale[0] = half_width;
    vp.scale[1] = half_height;
    vp.scale[2] = half_depth;
-   vp.scale[3] = 1.0f;
 
    vp.translate[0] = half_width + x;
    vp.translate[1] = half_height + y;
    vp.translate[2] = half_depth + z;
-   vp.translate[3] = 0.0f;
 
    info->ctx->set_viewport_states(info->ctx, 0, 1, &vp);
 }

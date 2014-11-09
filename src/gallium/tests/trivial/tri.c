@@ -188,12 +188,10 @@ static void init_prog(struct program *p)
 		p->viewport.scale[0] = half_width;
 		p->viewport.scale[1] = half_height * scale;
 		p->viewport.scale[2] = half_depth;
-		p->viewport.scale[3] = 1.0f;
 
 		p->viewport.translate[0] = half_width + x;
 		p->viewport.translate[1] = (half_height + y) * scale + bias;
 		p->viewport.translate[2] = half_depth + z;
-		p->viewport.translate[3] = 0.0f;
 	}
 
 	/* vertex elements state */

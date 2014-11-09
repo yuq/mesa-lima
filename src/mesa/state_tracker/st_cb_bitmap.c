@@ -504,11 +504,9 @@ draw_bitmap_quad(struct gl_context *ctx, GLint x, GLint y, GLfloat z,
       vp.scale[0] =  0.5f * width;
       vp.scale[1] = height * (invert ? -0.5f : 0.5f);
       vp.scale[2] = 0.5f;
-      vp.scale[3] = 1.0f;
       vp.translate[0] = 0.5f * width;
       vp.translate[1] = 0.5f * height;
       vp.translate[2] = 0.5f;
-      vp.translate[3] = 0.0f;
       cso_set_viewport(cso, &vp);
    }
 
