@@ -1,6 +1,7 @@
 include $(top_srcdir)/src/gallium/Automake.inc
 
 AM_CFLAGS = \
+	$(VL_CFLAGS) \
 	$(GALLIUM_TARGET_CFLAGS)
 
 vadir = $(VA_LIB_INSTALL_DIR)
@@ -23,11 +24,13 @@ gallium_drv_video_la_LDFLAGS += \
 	-Wl,--version-script=$(top_srcdir)/src/gallium/targets/va/va.sym
 endif # HAVE_LD_VERSION_SCRIPT
 
+# NOTE: gallium_drv_video does not use(link against) libva
 gallium_drv_video_la_LIBADD = \
 	$(top_builddir)/src/gallium/state_trackers/va/libvatracker.la \
 	$(top_builddir)/src/gallium/auxiliary/libgallium.la \
 	$(top_builddir)/src/util/libmesautil.la \
-	$(VA_LIBS) \
+	$(VL_LIBS) \
+	$(LIBDRM_LIBS) \
 	$(GALLIUM_COMMON_LIB_DEPS)
 
 EXTRA_gallium_drv_video_la_DEPENDENCIES = va.sym

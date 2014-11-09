@@ -1,6 +1,7 @@
 include $(top_srcdir)/src/gallium/Automake.inc
 
 AM_CFLAGS = \
+	$(VL_CFLAGS) \
 	$(GALLIUM_TARGET_CFLAGS)
 
 vdpaudir = $(VDPAU_LIB_INSTALL_DIR)
@@ -28,11 +29,12 @@ libvdpau_gallium_la_LDFLAGS += \
 	-Wl,--dynamic-list=$(top_srcdir)/src/gallium/targets/dri-vdpau.dyn
 endif # HAVE_LD_DYNAMIC_LIST
 
+# NOTE: libvdpau_gallium does not use(link against) libvdpau
 libvdpau_gallium_la_LIBADD = \
 	$(top_builddir)/src/gallium/state_trackers/vdpau/libvdpautracker.la \
 	$(top_builddir)/src/gallium/auxiliary/libgallium.la \
 	$(top_builddir)/src/util/libmesautil.la \
-	$(VDPAU_LIBS) \
+	$(VL_LIBS) \
 	$(LIBDRM_LIBS) \
 	$(GALLIUM_COMMON_LIB_DEPS)
 

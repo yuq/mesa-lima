@@ -1,6 +1,7 @@
 include $(top_srcdir)/src/gallium/Automake.inc
 
 AM_CFLAGS = \
+	$(VL_CFLAGS) \
 	$(GALLIUM_TARGET_CFLAGS)
 
 omxdir = $(OMX_LIB_INSTALL_DIR)
@@ -28,6 +29,8 @@ libomx_mesa_la_LIBADD = \
 	$(top_builddir)/src/gallium/auxiliary/libgallium.la \
 	$(top_builddir)/src/util/libmesautil.la \
 	$(OMX_LIBS) \
+	$(VL_LIBS) \
+	$(LIBDRM_LIBS) \
 	$(GALLIUM_COMMON_LIB_DEPS)
 
 EXTRA_libomx_mesa_la_DEPENDENCIES = omx.sym

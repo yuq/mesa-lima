@@ -1375,28 +1375,35 @@ if test -n "$with_gallium_drivers" -a "x$with_gallium_drivers" != xswrast; then
     fi
 fi
 
+if test "x$enable_xvmc" = xyes -o \
+        "x$enable_vdpau" = xyes -o \
+        "x$enable_omx" = xyes -o \
+        "x$enable_va" = xyes; then
+    PKG_CHECK_MODULES([VL], [x11-xcb xcb xcb-dri2 >= $XCBDRI2_REQUIRED])
+    need_gallium_vl=yes
+fi
+AM_CONDITIONAL(NEED_GALLIUM_VL, test "x$need_gallium_vl" = xyes)
+
 if test "x$enable_xvmc" = xyes; then
-    PKG_CHECK_MODULES([XVMC], [xvmc >= $XVMC_REQUIRED x11-xcb xcb xcb-dri2 >= $XCBDRI2_REQUIRED])
+    PKG_CHECK_MODULES([XVMC], [xvmc >= $XVMC_REQUIRED])
     enable_gallium_loader=$enable_shared_pipe_drivers
 fi
 AM_CONDITIONAL(HAVE_ST_XVMC, test "x$enable_xvmc" = xyes)
 
 if test "x$enable_vdpau" = xyes; then
-    PKG_CHECK_MODULES([VDPAU], [vdpau >= $VDPAU_REQUIRED x11-xcb xcb xcb-dri2 >= $XCBDRI2_REQUIRED],
-                      [VDPAU_LIBS="`$PKG_CONFIG --libs x11-xcb xcb xcb-dri2`"])
+    PKG_CHECK_MODULES([VDPAU], [vdpau >= $VDPAU_REQUIRED])
     enable_gallium_loader=$enable_shared_pipe_drivers
 fi
 AM_CONDITIONAL(HAVE_ST_VDPAU, test "x$enable_vdpau" = xyes)
 
 if test "x$enable_omx" = xyes; then
-    PKG_CHECK_MODULES([OMX], [libomxil-bellagio >= $LIBOMXIL_BELLAGIO_REQUIRED x11-xcb xcb xcb-dri2 >= $XCBDRI2_REQUIRED])
+    PKG_CHECK_MODULES([OMX], [libomxil-bellagio >= $LIBOMXIL_BELLAGIO_REQUIRED])
     enable_gallium_loader=$enable_shared_pipe_drivers
 fi
 AM_CONDITIONAL(HAVE_ST_OMX, test "x$enable_omx" = xyes)
 
 if test "x$enable_va" = xyes; then
-    PKG_CHECK_MODULES([VA], [libva >= $LIBVA_REQUIRED x11-xcb xcb-dri2 >= $XCBDRI2_REQUIRED],
-                      [VA_LIBS="`$PKG_CONFIG --libs x11-xcb xcb-dri2`"])
+    PKG_CHECK_MODULES([VA], [libva >= $LIBVA_REQUIRED])
     enable_gallium_loader=$enable_shared_pipe_drivers
 fi
 AM_CONDITIONAL(HAVE_ST_VA, test "x$enable_va" = xyes)
