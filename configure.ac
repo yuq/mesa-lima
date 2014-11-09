@@ -39,6 +39,7 @@ PRESENTPROTO_REQUIRED=1.0
 LIBUDEV_REQUIRED=151
 GLPROTO_REQUIRED=1.4.14
 LIBOMXIL_BELLAGIO_REQUIRED=0.0
+LIBVA_REQUIRED=0.35.0
 VDPAU_REQUIRED=0.4.1
 WAYLAND_REQUIRED=1.2.0
 XCB_REQUIRED=1.9.3
@@ -1358,19 +1359,19 @@ dnl Gallium G3DVL configuration
 dnl
 if test -n "$with_gallium_drivers" -a "x$with_gallium_drivers" != xswrast; then
     if test "x$enable_xvmc" = xauto; then
-	PKG_CHECK_EXISTS([xvmc], [enable_xvmc=yes], [enable_xvmc=no])
+	PKG_CHECK_EXISTS([xvmc >= $XVMC_REQUIRED], [enable_xvmc=yes], [enable_xvmc=no])
     fi
 
     if test "x$enable_vdpau" = xauto; then
-	PKG_CHECK_EXISTS([vdpau], [enable_vdpau=yes], [enable_vdpau=no])
+	PKG_CHECK_EXISTS([vdpau >= $VDPAU_REQUIRED], [enable_vdpau=yes], [enable_vdpau=no])
     fi
 
     if test "x$enable_omx" = xauto; then
-	PKG_CHECK_EXISTS([libomxil-bellagio], [enable_omx=yes], [enable_omx=no])
+	PKG_CHECK_EXISTS([libomxil-bellagio >= $LIBOMXIL_BELLAGIO_REQUIRED], [enable_omx=yes], [enable_omx=no])
     fi
 
     if test "x$enable_va" = xauto; then
-        PKG_CHECK_EXISTS([libva], [enable_va=yes], [enable_va=no])
+        PKG_CHECK_EXISTS([libva >= $LIBVA_REQUIRED], [enable_va=yes], [enable_va=no])
     fi
 fi
 
@@ -1394,7 +1395,7 @@ fi
 AM_CONDITIONAL(HAVE_ST_OMX, test "x$enable_omx" = xyes)
 
 if test "x$enable_va" = xyes; then
-    PKG_CHECK_MODULES([VA], [libva >= 0.35.0 x11-xcb xcb-dri2 >= $XCBDRI2_REQUIRED],
+    PKG_CHECK_MODULES([VA], [libva >= $LIBVA_REQUIRED x11-xcb xcb-dri2 >= $XCBDRI2_REQUIRED],
                       [VA_LIBS="`$PKG_CONFIG --libs x11-xcb xcb-dri2`"])
     enable_gallium_loader=$enable_shared_pipe_drivers
 fi
