@@ -4721,7 +4721,8 @@ emit_wpos(struct st_context *st,
       }
       else if (pscreen->get_param(pscreen, PIPE_CAP_TGSI_FS_COORD_ORIGIN_LOWER_LEFT)) {
          /* the driver supports lower-left origin, need to invert Y */
-         ureg_property_fs_coord_origin(ureg, TGSI_FS_COORD_ORIGIN_LOWER_LEFT);
+         ureg_property(ureg, TGSI_PROPERTY_FS_COORD_ORIGIN,
+                       TGSI_FS_COORD_ORIGIN_LOWER_LEFT);
          invert = TRUE;
       }
       else
@@ -4731,7 +4732,8 @@ emit_wpos(struct st_context *st,
       /* Fragment shader wants origin in lower-left */
       if (pscreen->get_param(pscreen, PIPE_CAP_TGSI_FS_COORD_ORIGIN_LOWER_LEFT))
          /* the driver supports lower-left origin */
-         ureg_property_fs_coord_origin(ureg, TGSI_FS_COORD_ORIGIN_LOWER_LEFT);
+         ureg_property(ureg, TGSI_PROPERTY_FS_COORD_ORIGIN,
+                       TGSI_FS_COORD_ORIGIN_LOWER_LEFT);
       else if (pscreen->get_param(pscreen, PIPE_CAP_TGSI_FS_COORD_ORIGIN_UPPER_LEFT))
          /* the driver supports upper-left origin, need to invert Y */
          invert = TRUE;
@@ -4744,7 +4746,8 @@ emit_wpos(struct st_context *st,
       if (pscreen->get_param(pscreen, PIPE_CAP_TGSI_FS_COORD_PIXEL_CENTER_INTEGER)) {
          /* the driver supports pixel center integer */
          adjY[1] = 1.0f;
-         ureg_property_fs_coord_pixel_center(ureg, TGSI_FS_COORD_PIXEL_CENTER_INTEGER);
+         ureg_property(ureg, TGSI_PROPERTY_FS_COORD_PIXEL_CENTER,
+                       TGSI_FS_COORD_PIXEL_CENTER_INTEGER);
       }
       else if (pscreen->get_param(pscreen, PIPE_CAP_TGSI_FS_COORD_PIXEL_CENTER_HALF_INTEGER)) {
          /* the driver supports pixel center half integer, need to bias X,Y */
@@ -4763,7 +4766,8 @@ emit_wpos(struct st_context *st,
       else if (pscreen->get_param(pscreen, PIPE_CAP_TGSI_FS_COORD_PIXEL_CENTER_INTEGER)) {
          /* the driver supports pixel center integer, need to bias X,Y */
          adjX = adjY[0] = adjY[1] = 0.5f;
-         ureg_property_fs_coord_pixel_center(ureg, TGSI_FS_COORD_PIXEL_CENTER_INTEGER);
+         ureg_property(ureg, TGSI_PROPERTY_FS_COORD_PIXEL_CENTER,
+                       TGSI_FS_COORD_PIXEL_CENTER_INTEGER);
       }
       else
          assert(0);

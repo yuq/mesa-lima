@@ -84,7 +84,7 @@ util_make_vertex_passthrough_shader_with_so(struct pipe_context *pipe,
       return NULL;
 
    if (window_space)
-      ureg_property_vs_window_space_position(ureg, TRUE);
+      ureg_property(ureg, TGSI_PROPERTY_VS_WINDOW_SPACE_POSITION, TRUE);
 
    for (i = 0; i < num_attribs; i++) {
       struct ureg_src src;
