@@ -46,6 +46,11 @@ util/u_format_table.c: $(srcdir)/util/u_format_table.py $(srcdir)/util/u_format_
 	$(AM_V_at)$(MKDIR_P) util
 	$(AM_V_GEN) $(PYTHON2) $(srcdir)/util/u_format_table.py $(srcdir)/util/u_format.csv > $@
 
+
+noinst_LTLIBRARIES += libgalliumvl_stub.la
+libgalliumvl_stub_la_SOURCES = \
+	$(VL_STUB_SOURCES)
+
 EXTRA_DIST = \
 	Android.mk SConscript \
 	indices/u_indices.c \

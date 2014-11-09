@@ -336,6 +336,9 @@ C_SOURCES := \
 	vl/vl_zscan.c \
 	vl/vl_zscan.h
 
+VL_STUB_SOURCES := \
+	vl/vl_stubs.c
+
 GENERATED_SOURCES := \
 	indices/u_indices_gen.c \
 	indices/u_unfilled_gen.c \
