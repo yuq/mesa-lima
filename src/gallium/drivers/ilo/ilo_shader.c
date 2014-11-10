@@ -32,7 +32,7 @@
 #include "shader/ilo_shader_internal.h"
 #include "ilo_builder.h"
 #include "ilo_state.h"
-#include "ilo_state_gen.h"
+#include "ilo_state_3d.h"
 #include "ilo_shader.h"
 
 struct ilo_shader_cache {

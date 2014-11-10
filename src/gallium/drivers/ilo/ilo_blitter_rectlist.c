@@ -30,7 +30,7 @@
 
 #include "ilo_draw.h"
 #include "ilo_state.h"
-#include "ilo_state_gen.h"
+#include "ilo_state_3d.h"
 #include "ilo_blit.h"
 #include "ilo_blitter.h"
 

@@ -48,9 +48,9 @@ C_SOURCES := \
 	ilo_shader.h \
 	ilo_state.c \
 	ilo_state.h \
-	ilo_state_gen.h \
-	ilo_state_gen6.c \
-	ilo_state_gen7.c \
+	ilo_state_3d.h \
+	ilo_state_3d_bottom.c \
+	ilo_state_3d_top.c \
 	ilo_transfer.c \
 	ilo_transfer.h \
 	ilo_video.c \

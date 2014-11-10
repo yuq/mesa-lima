@@ -1,7 +1,7 @@
 /*
  * Mesa 3-D graphics library
  *
- * Copyright (C) 2012-2013 LunarG, Inc.
+ * Copyright (C) 2012-2014 LunarG, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -25,8 +25,8 @@
  *    Chia-I Wu <olv@lunarg.com>
  */
 
-#ifndef ILO_STATE_GEN_H
-#define ILO_STATE_GEN_H
+#ifndef ILO_STATE_3D_H
+#define ILO_STATE_3D_H
 
 #include "genhw/genhw.h"
 #include "intel_winsys.h"
@@ -333,4 +333,4 @@ ilo_gpe_set_fb(const struct ilo_dev_info *dev,
                const struct pipe_framebuffer_state *state,
                struct ilo_fb_state *fb);
 
-#endif /* ILO_STATE_GEN_H */
+#endif /* ILO_STATE_3D_H */
