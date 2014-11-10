@@ -118,18 +118,6 @@ _mesa_unpack_image(GLuint dimensions,
                    const struct gl_pixelstore_attrib *unpack);
 
 
-void
-_mesa_pack_rgba_span_from_uints(struct gl_context *ctx, GLuint n, GLuint rgba[][4],
-                                GLenum dstFormat, GLenum dstType,
-                                GLvoid *dstAddr);
-
-
-void
-_mesa_pack_rgba_span_from_ints(struct gl_context *ctx, GLuint n, GLint rgba[][4],
-                               GLenum dstFormat, GLenum dstType,
-                               GLvoid *dstAddr);
-
-
 extern void
 _mesa_rebase_rgba_float(GLuint n, GLfloat rgba[][4], GLenum baseFormat);
 
