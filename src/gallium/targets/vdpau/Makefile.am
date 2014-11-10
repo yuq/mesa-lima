@@ -1,15 +1,13 @@
 include $(top_srcdir)/src/gallium/Automake.inc
 
 AM_CFLAGS = \
-	$(VL_CFLAGS) \
 	$(GALLIUM_TARGET_CFLAGS)
 
 vdpaudir = $(VDPAU_LIB_INSTALL_DIR)
 vdpau_LTLIBRARIES = libvdpau_gallium.la
 
 nodist_EXTRA_libvdpau_gallium_la_SOURCES = dummy.cpp
-libvdpau_gallium_la_SOURCES = \
-	$(top_srcdir)/src/gallium/auxiliary/vl/vl_winsys_dri.c
+libvdpau_gallium_la_SOURCES =
 
 libvdpau_gallium_la_LDFLAGS = \
 	-shared \
@@ -32,6 +30,7 @@ endif # HAVE_LD_DYNAMIC_LIST
 # NOTE: libvdpau_gallium does not use(link against) libvdpau
 libvdpau_gallium_la_LIBADD = \
 	$(top_builddir)/src/gallium/state_trackers/vdpau/libvdpautracker.la \
+	$(top_builddir)/src/gallium/auxiliary/libgalliumvl.la \
 	$(top_builddir)/src/gallium/auxiliary/libgallium.la \
 	$(top_builddir)/src/util/libmesautil.la \
 	$(VL_LIBS) \
@@ -55,15 +54,11 @@ include $(top_srcdir)/src/gallium/drivers/radeonsi/Automake.inc
 if HAVE_GALLIUM_STATIC_TARGETS
 
 libvdpau_gallium_la_SOURCES += target.c
-libvdpau_gallium_la_CPPFLAGS = $(TARGET_CPPFLAGS) -DGALLIUM_STATIC_TARGETS=1
+libvdpau_gallium_la_CPPFLAGS = $(TARGET_CPPFLAGS)
 libvdpau_gallium_la_LIBADD += $(TARGET_LIB_DEPS) \
 	$(TARGET_RADEON_WINSYS) $(TARGET_RADEON_COMMON)
 
 else # HAVE_GALLIUM_STATIC_TARGETS
-
-libvdpau_gallium_la_CPPFLAGS = \
-	$(GALLIUM_PIPE_LOADER_DEFINES) \
-	-DPIPE_SEARCH_DIR=\"$(libdir)/gallium-pipe\"
 
 libvdpau_gallium_la_LIBADD += \
 	$(top_builddir)/src/gallium/auxiliary/pipe-loader/libpipe_loader.la \

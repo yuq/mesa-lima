@@ -1,15 +1,13 @@
 include $(top_srcdir)/src/gallium/Automake.inc
 
 AM_CFLAGS = \
-	$(VL_CFLAGS) \
 	$(GALLIUM_TARGET_CFLAGS)
 
 vadir = $(VA_LIB_INSTALL_DIR)
 va_LTLIBRARIES = gallium_drv_video.la
 
 nodist_EXTRA_gallium_drv_video_la_SOURCES = dummy.cpp
-gallium_drv_video_la_SOURCES = \
-	$(top_srcdir)/src/gallium/auxiliary/vl/vl_winsys_dri.c
+gallium_drv_video_la_SOURCES =
 
 gallium_drv_video_la_LDFLAGS = \
 	-shared \
@@ -27,6 +25,7 @@ endif # HAVE_LD_VERSION_SCRIPT
 # NOTE: gallium_drv_video does not use(link against) libva
 gallium_drv_video_la_LIBADD = \
 	$(top_builddir)/src/gallium/state_trackers/va/libvatracker.la \
+	$(top_builddir)/src/gallium/auxiliary/libgalliumvl.la \
 	$(top_builddir)/src/gallium/auxiliary/libgallium.la \
 	$(top_builddir)/src/util/libmesautil.la \
 	$(VL_LIBS) \
@@ -45,15 +44,11 @@ include $(top_srcdir)/src/gallium/drivers/r600/Automake.inc
 include $(top_srcdir)/src/gallium/drivers/radeonsi/Automake.inc
 
 gallium_drv_video_la_SOURCES += target.c
-gallium_drv_video_la_CPPFLAGS = $(TARGET_CPPFLAGS) -DGALLIUM_STATIC_TARGETS=1
+gallium_drv_video_la_CPPFLAGS = $(TARGET_CPPFLAGS)
 gallium_drv_video_la_LIBADD += $(TARGET_LIB_DEPS) \
 	$(TARGET_RADEON_WINSYS) $(TARGET_RADEON_COMMON)
 
 else # HAVE_GALLIUM_STATIC_TARGETS
-
-gallium_drv_video_la_CPPFLAGS = \
-	$(GALLIUM_PIPE_LOADER_DEFINES) \
-	-DPIPE_SEARCH_DIR=\"$(libdir)/gallium-pipe\"
 
 gallium_drv_video_la_LIBADD += \
 	$(top_builddir)/src/gallium/auxiliary/pipe-loader/libpipe_loader.la \

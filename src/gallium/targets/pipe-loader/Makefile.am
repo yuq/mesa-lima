@@ -36,9 +36,19 @@ AM_CPPFLAGS = \
 pipedir = $(libdir)/gallium-pipe
 pipe_LTLIBRARIES =
 
-PIPE_LIBS = \
+PIPE_LIBS =
+
+if NEED_GALLIUM_VL
+PIPE_LIBS += \
+	$(top_builddir)/src/gallium/auxiliary/libgalliumvl.la
+else
+PIPE_LIBS += \
+	$(top_builddir)/src/gallium/auxiliary/libgalliumvl_stub.la
+endif
+
+PIPE_LIBS += \
 	$(top_builddir)/src/gallium/auxiliary/libgallium.la \
-        $(top_builddir)/src/util/libmesautil.la \
+	$(top_builddir)/src/util/libmesautil.la \
 	$(top_builddir)/src/gallium/drivers/rbug/librbug.la \
 	$(top_builddir)/src/gallium/drivers/trace/libtrace.la \
 	$(top_builddir)/src/gallium/drivers/galahad/libgalahad.la \

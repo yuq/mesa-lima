@@ -36,7 +36,7 @@ env.Depends('util/u_format_table.c', [
 
 source = env.ParseSourceList('Makefile.sources', [
     'C_SOURCES',
-    'VL_SOURCES',
+    'VL_STUB_SOURCES',
     'GENERATED_SOURCES'
 ])
 

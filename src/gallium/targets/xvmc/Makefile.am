@@ -1,15 +1,13 @@
 include $(top_srcdir)/src/gallium/Automake.inc
 
 AM_CFLAGS = \
-	$(VL_CFLAGS) \
 	$(GALLIUM_TARGET_CFLAGS)
 
 xvmcdir = $(XVMC_LIB_INSTALL_DIR)
 xvmc_LTLIBRARIES = libXvMCgallium.la
 
 nodist_EXTRA_libXvMCgallium_la_SOURCES = dummy.cpp
-libXvMCgallium_la_SOURCES = \
-	$(top_srcdir)/src/gallium/auxiliary/vl/vl_winsys_dri.c
+libXvMCgallium_la_SOURCES =
 
 libXvMCgallium_la_LDFLAGS = \
 	-shared \
@@ -26,6 +24,7 @@ endif # HAVE_LD_VERSION_SCRIPT
 
 libXvMCgallium_la_LIBADD = \
 	$(top_builddir)/src/gallium/state_trackers/xvmc/libxvmctracker.la \
+	$(top_builddir)/src/gallium/auxiliary/libgalliumvl.la \
 	$(top_builddir)/src/gallium/auxiliary/libgallium.la \
 	$(top_builddir)/src/util/libmesautil.la \
 	$(XVMC_LIBS) \
@@ -46,16 +45,11 @@ include $(top_srcdir)/src/gallium/drivers/r600/Automake.inc
 if HAVE_GALLIUM_STATIC_TARGETS
 
 libXvMCgallium_la_SOURCES += target.c
-libXvMCgallium_la_CPPFLAGS = $(TARGET_CPPFLAGS) -DGALLIUM_STATIC_TARGETS=1
+libXvMCgallium_la_CPPFLAGS = $(TARGET_CPPFLAGS)
 libXvMCgallium_la_LIBADD += $(TARGET_LIB_DEPS) \
 	$(TARGET_RADEON_WINSYS) $(TARGET_RADEON_COMMON)
 
 else # HAVE_GALLIUM_STATIC_TARGETS
-
-libXvMCgallium_la_CPPFLAGS = \
-	$(GALLIUM_PIPE_LOADER_DEFINES) \
-	-DPIPE_SEARCH_DIR=\"$(libdir)/gallium-pipe\"
-
 # XXX: Use the pipe-loader-client over pipe-loader ?
 libXvMCgallium_la_LIBADD += \
 	$(top_builddir)/src/gallium/auxiliary/pipe-loader/libpipe_loader.la \

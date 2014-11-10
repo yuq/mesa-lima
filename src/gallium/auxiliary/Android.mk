@@ -30,7 +30,7 @@ include $(CLEAR_VARS)
 
 LOCAL_SRC_FILES := \
 	$(C_SOURCES) \
-	$(VL_SOURCES)
+	$(VL_STUB_SOURCES)
 
 LOCAL_C_INCLUDES := \
 	$(GALLIUM_TOP)/auxiliary/util \
