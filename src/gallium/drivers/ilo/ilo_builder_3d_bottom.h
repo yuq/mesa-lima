@@ -1224,70 +1224,34 @@ gen6_BLEND_STATE(struct ilo_builder *builder,
          ILO_BUILDER_ITEM_BLEND, state_align, state_len, &dw);
 
    for (i = 0; i < num_targets; i++) {
-      const unsigned idx = (blend->independent_blend_enable) ? i : 0;
-      const struct ilo_blend_cso *cso = &blend->cso[idx];
-      const int num_samples = fb->num_samples;
-      const struct util_format_description *format_desc =
-         (idx < fb->state.nr_cbufs && fb->state.cbufs[idx]) ?
-         util_format_description(fb->state.cbufs[idx]->format) : NULL;
-      bool rt_is_unorm, rt_is_pure_integer, rt_dst_alpha_forced_one;
-
-      rt_is_unorm = true;
-      rt_is_pure_integer = false;
-      rt_dst_alpha_forced_one = false;
-
-      if (format_desc) {
-         int ch;
-
-         switch (format_desc->format) {
-         case PIPE_FORMAT_B8G8R8X8_UNORM:
-            /* force alpha to one when the HW format has alpha */
-            assert(ilo_translate_render_format(builder->dev,
-                     PIPE_FORMAT_B8G8R8X8_UNORM) ==
-                  GEN6_FORMAT_B8G8R8A8_UNORM);
-            rt_dst_alpha_forced_one = true;
-            break;
-         default:
-            break;
-         }
-
-         for (ch = 0; ch < 4; ch++) {
-            if (format_desc->channel[ch].type == UTIL_FORMAT_TYPE_VOID)
-               continue;
-
-            if (format_desc->channel[ch].pure_integer) {
-               rt_is_unorm = false;
-               rt_is_pure_integer = true;
-               break;
-            }
-
-            if (!format_desc->channel[ch].normalized ||
-                format_desc->channel[ch].type != UTIL_FORMAT_TYPE_UNSIGNED)
-               rt_is_unorm = false;
-         }
-      }
+      const struct ilo_blend_cso *cso =
+         &blend->cso[(blend->independent_blend_enable) ? i : 0];
 
       dw[0] = cso->payload[0];
       dw[1] = cso->payload[1];
 
-      if (!rt_is_pure_integer) {
-         if (rt_dst_alpha_forced_one)
-            dw[0] |= cso->dw_blend_dst_alpha_forced_one;
-         else
-            dw[0] |= cso->dw_blend;
-      }
+      if (i < fb->state.nr_cbufs && fb->state.cbufs[i]) {
+         const struct ilo_fb_blend_caps *caps = &fb->blend_caps[i];
 
-      /*
-       * From the Sandy Bridge PRM, volume 2 part 1, page 365:
-       *
-       *     "Logic Ops are only supported on *_UNORM surfaces (excluding
-       *      _SRGB variants), otherwise Logic Ops must be DISABLED."
-       *
-       * Since logicop is ignored for non-UNORM color buffers, no special care
-       * is needed.
-       */
-      if (rt_is_unorm)
-         dw[1] |= cso->dw_logicop;
+         if (caps->can_blend) {
+            if (caps->dst_alpha_forced_one)
+               dw[0] |= cso->dw_blend_dst_alpha_forced_one;
+            else
+               dw[0] |= cso->dw_blend;
+         }
+
+         if (caps->can_logicop)
+            dw[1] |= cso->dw_logicop;
+
+         if (caps->can_alpha_test)
+            dw[1] |= dsa->dw_alpha;
+      } else {
+         dw[1] |= GEN6_BLEND_DW1_WRITE_DISABLE_A |
+                  GEN6_BLEND_DW1_WRITE_DISABLE_R |
+                  GEN6_BLEND_DW1_WRITE_DISABLE_G |
+                  GEN6_BLEND_DW1_WRITE_DISABLE_B |
+                  dsa->dw_alpha;
+      }
 
       /*
        * From the Sandy Bridge PRM, volume 2 part 1, page 356:
@@ -1298,17 +1262,8 @@ gen6_BLEND_STATE(struct ilo_builder *builder,
        * There is no such limitation on GEN7, or for AlphaToOne.  But GL
        * requires that anyway.
        */
-      if (num_samples > 1)
+      if (fb->num_samples > 1)
          dw[1] |= cso->dw_alpha_mod;
-
-      /*
-       * From the Sandy Bridge PRM, volume 2 part 1, page 382:
-       *
-       *     "Alpha Test can only be enabled if Pixel Shader outputs a float
-       *      alpha value."
-       */
-      if (!rt_is_pure_integer)
-         dw[1] |= dsa->dw_alpha;
 
       dw += 2;
    }

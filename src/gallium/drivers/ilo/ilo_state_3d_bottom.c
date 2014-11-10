@@ -1540,13 +1540,70 @@ ilo_gpe_set_scissor_null(const struct ilo_dev_info *dev,
    }
 }
 
+static void
+fb_set_blend_caps(const struct ilo_dev_info *dev,
+                  enum pipe_format format,
+                  struct ilo_fb_blend_caps *caps)
+{
+   const struct util_format_description *desc =
+      util_format_description(format);
+   const int ch = util_format_get_first_non_void_channel(format);
+
+   memset(caps, 0, sizeof(*caps));
+
+   if (format == PIPE_FORMAT_NONE || desc->is_mixed)
+      return;
+
+   /*
+    * From the Sandy Bridge PRM, volume 2 part 1, page 365:
+    *
+    *     "Logic Ops are only supported on *_UNORM surfaces (excluding _SRGB
+    *      variants), otherwise Logic Ops must be DISABLED."
+    */
+   caps->can_logicop = (ch >= 0 && desc->channel[ch].normalized &&
+                        desc->channel[ch].type == UTIL_FORMAT_TYPE_UNSIGNED &&
+                        desc->colorspace == UTIL_FORMAT_COLORSPACE_RGB);
+
+   /* no blending for pure integer formats */
+   caps->can_blend = !util_format_is_pure_integer(format);
+
+   /*
+    * From the Sandy Bridge PRM, volume 2 part 1, page 382:
+    *
+    *     "Alpha Test can only be enabled if Pixel Shader outputs a float
+    *      alpha value."
+    */
+   caps->can_alpha_test = !util_format_is_pure_integer(format);
+
+   caps->dst_alpha_forced_one =
+      (ilo_translate_render_format(dev, format) !=
+       ilo_translate_color_format(dev, format));
+
+   /* sanity check */
+   if (caps->dst_alpha_forced_one) {
+      enum pipe_format render_format;
+
+      switch (format) {
+      case PIPE_FORMAT_B8G8R8X8_UNORM:
+         render_format = PIPE_FORMAT_B8G8R8A8_UNORM;
+         break;
+      default:
+         render_format = PIPE_FORMAT_NONE;
+         break;
+      }
+
+      assert(ilo_translate_render_format(dev, format) ==
+             ilo_translate_color_format(dev, render_format));
+   }
+}
+
 void
 ilo_gpe_set_fb(const struct ilo_dev_info *dev,
                const struct pipe_framebuffer_state *state,
                struct ilo_fb_state *fb)
 {
-   const struct pipe_surface *first;
-   unsigned first_idx;
+   const struct pipe_surface *first_surf = NULL;
+   int i;
 
    ILO_DEV_ASSERT(dev, 6, 7.5);
 
@@ -1557,17 +1614,21 @@ ilo_gpe_set_fb(const struct ilo_dev_info *dev,
          (state->height) ? state->height : 1,
          1, 0, &fb->null_rt);
 
-   first = NULL;
-   for (first_idx = 0; first_idx < state->nr_cbufs; first_idx++) {
-      if (state->cbufs[first_idx]) {
-         first = state->cbufs[first_idx];
-         break;
+   for (i = 0; i < state->nr_cbufs; i++) {
+      if (state->cbufs[i]) {
+         fb_set_blend_caps(dev, state->cbufs[i]->format, &fb->blend_caps[i]);
+
+         if (!first_surf)
+            first_surf = state->cbufs[i];
+      } else {
+         fb_set_blend_caps(dev, PIPE_FORMAT_NONE, &fb->blend_caps[i]);
       }
    }
-   if (!first)
-      first = state->zsbuf;
 
-   fb->num_samples = (first) ? first->texture->nr_samples : 1;
+   if (!first_surf && state->zsbuf)
+      first_surf = state->zsbuf;
+
+   fb->num_samples = (first_surf) ? first_surf->texture->nr_samples : 1;
    if (!fb->num_samples)
       fb->num_samples = 1;
 

@@ -347,6 +347,13 @@ struct ilo_fb_state {
    struct ilo_view_surface null_rt;
    struct ilo_zs_surface null_zs;
 
+   struct ilo_fb_blend_caps {
+      bool can_logicop;
+      bool can_blend;
+      bool can_alpha_test;
+      bool dst_alpha_forced_one;
+   } blend_caps[PIPE_MAX_COLOR_BUFS];
+
    unsigned num_samples;
 };
 
