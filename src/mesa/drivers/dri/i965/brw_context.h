@@ -1601,7 +1601,27 @@ gl_clip_plane *brw_select_clip_planes(struct gl_context *ctx);
 /* brw_draw_upload.c */
 unsigned brw_get_vertex_surface_type(struct brw_context *brw,
                                      const struct gl_client_array *glarray);
-unsigned brw_get_index_type(GLenum type);
+
+static inline unsigned
+brw_get_index_type(GLenum type)
+{
+   assert((type == GL_UNSIGNED_BYTE)
+          || (type == GL_UNSIGNED_SHORT)
+          || (type == GL_UNSIGNED_INT));
+
+   /* The possible values for type are GL_UNSIGNED_BYTE (0x1401),
+    * GL_UNSIGNED_SHORT (0x1403), and GL_UNSIGNED_INT (0x1405) which we want
+    * to map to scale factors of 0, 1, and 2, respectively.  These scale
+    * factors are then left-shfited by 8 to be in the correct position in the
+    * CMD_INDEX_BUFFER packet.
+    *
+    * Subtracting 0x1401 gives 0, 2, and 4.  Shifting left by 7 afterwards
+    * gives 0x00000000, 0x00000100, and 0x00000200.  These just happen to be
+    * the values the need to be written in the CMD_INDEX_BUFFER packet.
+    */
+   return (type - 0x1401) << 7;
+}
+
 void brw_prepare_vertices(struct brw_context *brw);
 
 /* brw_wm_surface_state.c */

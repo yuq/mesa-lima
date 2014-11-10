@@ -344,17 +344,6 @@ brw_get_vertex_surface_type(struct brw_context *brw,
    }
 }
 
-unsigned
-brw_get_index_type(GLenum type)
-{
-   switch (type) {
-   case GL_UNSIGNED_BYTE:  return BRW_INDEX_BYTE;
-   case GL_UNSIGNED_SHORT: return BRW_INDEX_WORD;
-   case GL_UNSIGNED_INT:   return BRW_INDEX_DWORD;
-   default: unreachable("not reached");
-   }
-}
-
 static void
 copy_array_to_vbo_array(struct brw_context *brw,
 			struct brw_vertex_element *element,
@@ -963,7 +952,7 @@ static void brw_emit_index_buffer(struct brw_context *brw)
    BEGIN_BATCH(3);
    OUT_BATCH(CMD_INDEX_BUFFER << 16 |
              cut_index_setting |
-             brw_get_index_type(index_buffer->type) << 8 |
+             brw_get_index_type(index_buffer->type) |
              1);
    OUT_RELOC(brw->ib.bo,
              I915_GEM_DOMAIN_VERTEX, 0,
