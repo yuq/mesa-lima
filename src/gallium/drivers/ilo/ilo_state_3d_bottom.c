@@ -37,10 +37,10 @@
 #include "ilo_state.h"
 #include "ilo_state_3d.h"
 
-void
-ilo_gpe_init_rasterizer_clip(const struct ilo_dev_info *dev,
-                             const struct pipe_rasterizer_state *state,
-                             struct ilo_rasterizer_clip *clip)
+static void
+rasterizer_init_clip(const struct ilo_dev_info *dev,
+                     const struct pipe_rasterizer_state *state,
+                     struct ilo_rasterizer_clip *clip)
 {
    uint32_t dw1, dw2, dw3;
 
@@ -125,10 +125,10 @@ ilo_gpe_init_rasterizer_clip(const struct ilo_dev_info *dev,
       clip->can_enable_guardband = false;
 }
 
-void
-ilo_gpe_init_rasterizer_sf(const struct ilo_dev_info *dev,
-                           const struct pipe_rasterizer_state *state,
-                           struct ilo_rasterizer_sf *sf)
+static void
+rasterizer_init_sf(const struct ilo_dev_info *dev,
+                   const struct pipe_rasterizer_state *state,
+                   struct ilo_rasterizer_sf *sf)
 {
    float offset_const, offset_scale, offset_clamp;
    int line_width, point_width;
@@ -332,10 +332,10 @@ ilo_gpe_init_rasterizer_sf(const struct ilo_dev_info *dev,
    }
 }
 
-void
-ilo_gpe_init_rasterizer_wm_gen6(const struct ilo_dev_info *dev,
-                                const struct pipe_rasterizer_state *state,
-                                struct ilo_rasterizer_wm *wm)
+static void
+rasterizer_init_wm_gen6(const struct ilo_dev_info *dev,
+                        const struct pipe_rasterizer_state *state,
+                        struct ilo_rasterizer_wm *wm)
 {
    uint32_t dw5, dw6;
 
@@ -380,10 +380,10 @@ ilo_gpe_init_rasterizer_wm_gen6(const struct ilo_dev_info *dev,
    wm->payload[1] = dw6;
 }
 
-void
-ilo_gpe_init_rasterizer_wm_gen7(const struct ilo_dev_info *dev,
-                                const struct pipe_rasterizer_state *state,
-                                struct ilo_rasterizer_wm *wm)
+static void
+rasterizer_init_wm_gen7(const struct ilo_dev_info *dev,
+                        const struct pipe_rasterizer_state *state,
+                        struct ilo_rasterizer_wm *wm)
 {
    uint32_t dw1, dw2;
 
@@ -428,9 +428,23 @@ ilo_gpe_init_rasterizer_wm_gen7(const struct ilo_dev_info *dev,
 }
 
 void
-ilo_gpe_init_fs_cso_gen6(const struct ilo_dev_info *dev,
-                         const struct ilo_shader_state *fs,
-                         struct ilo_shader_cso *cso)
+ilo_gpe_init_rasterizer(const struct ilo_dev_info *dev,
+                        const struct pipe_rasterizer_state *state,
+                        struct ilo_rasterizer_state *rasterizer)
+{
+   rasterizer_init_clip(dev, state, &rasterizer->clip);
+   rasterizer_init_sf(dev, state, &rasterizer->sf);
+
+   if (ilo_dev_gen(dev) >= ILO_GEN(7))
+      rasterizer_init_wm_gen7(dev, state, &rasterizer->wm);
+   else
+      rasterizer_init_wm_gen6(dev, state, &rasterizer->wm);
+}
+
+static void
+fs_init_cso_gen6(const struct ilo_dev_info *dev,
+                 const struct ilo_shader_state *fs,
+                 struct ilo_shader_cso *cso)
 {
    int start_grf, input_count, sampler_count, interps, max_threads;
    uint32_t dw2, dw4, dw5, dw6;
@@ -524,10 +538,10 @@ ilo_gpe_init_fs_cso_gen6(const struct ilo_dev_info *dev,
    cso->payload[3] = dw6;
 }
 
-void
-ilo_gpe_init_fs_cso_gen7(const struct ilo_dev_info *dev,
-                         const struct ilo_shader_state *fs,
-                         struct ilo_shader_cso *cso)
+static void
+fs_init_cso_gen7(const struct ilo_dev_info *dev,
+                 const struct ilo_shader_state *fs,
+                 struct ilo_shader_cso *cso)
 {
    int start_grf, sampler_count, max_threads;
    uint32_t dw2, dw4, dw5;
@@ -630,6 +644,17 @@ ilo_gpe_init_fs_cso_gen7(const struct ilo_dev_info *dev,
    cso->payload[1] = dw4;
    cso->payload[2] = dw5;
    cso->payload[3] = wm_dw1;
+}
+
+void
+ilo_gpe_init_fs_cso(const struct ilo_dev_info *dev,
+                    const struct ilo_shader_state *fs,
+                    struct ilo_shader_cso *cso)
+{
+   if (ilo_dev_gen(dev) >= ILO_GEN(7))
+      fs_init_cso_gen7(dev, fs, cso);
+   else
+      fs_init_cso_gen6(dev, fs, cso);
 }
 
 struct ilo_zs_surface_info {

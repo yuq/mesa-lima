@@ -683,7 +683,7 @@ gen6_3DSTATE_GS(struct ilo_builder *builder,
          ilo_shader_get_kernel_param(vs, param);
 
       /* cannot use VS's CSO */
-      ilo_gpe_init_gs_cso_gen6(builder->dev, vs, &cso);
+      ilo_gpe_init_gs_cso(builder->dev, vs, &cso);
       dw2 = cso.payload[0];
       dw4 = cso.payload[1];
       dw5 = cso.payload[2];
@@ -1388,7 +1388,7 @@ gen6_so_SURFACE_STATE(struct ilo_builder *builder,
       break;
    }
 
-   ilo_gpe_init_view_surface_for_buffer_gen6(builder->dev, buf, bo_offset,
+   ilo_gpe_init_view_surface_for_buffer(builder->dev, buf, bo_offset,
          so->buffer_size, struct_size, elem_format, false, true, &surf);
 
    return gen6_SURFACE_STATE(builder, &surf, false);

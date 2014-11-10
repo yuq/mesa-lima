@@ -250,10 +250,10 @@ ilo_gpe_init_vs_cso(const struct ilo_dev_info *dev,
    cso->payload[2] = dw5;
 }
 
-void
-ilo_gpe_init_gs_cso_gen6(const struct ilo_dev_info *dev,
-                         const struct ilo_shader_state *gs,
-                         struct ilo_shader_cso *cso)
+static void
+gs_init_cso_gen6(const struct ilo_dev_info *dev,
+                 const struct ilo_shader_state *gs,
+                 struct ilo_shader_cso *cso)
 {
    int start_grf, vue_read_len, max_threads;
    uint32_t dw2, dw4, dw5, dw6;
@@ -352,10 +352,10 @@ ilo_gpe_init_gs_cso_gen6(const struct ilo_dev_info *dev,
    cso->payload[3] = dw6;
 }
 
-void
-ilo_gpe_init_gs_cso_gen7(const struct ilo_dev_info *dev,
-                         const struct ilo_shader_state *gs,
-                         struct ilo_shader_cso *cso)
+static void
+gs_init_cso_gen7(const struct ilo_dev_info *dev,
+                 const struct ilo_shader_state *gs,
+                 struct ilo_shader_cso *cso)
 {
    int start_grf, vue_read_len, sampler_count, max_threads;
    uint32_t dw2, dw4, dw5;
@@ -400,10 +400,21 @@ ilo_gpe_init_gs_cso_gen7(const struct ilo_dev_info *dev,
 }
 
 void
-ilo_gpe_init_view_surface_null_gen6(const struct ilo_dev_info *dev,
-                                    unsigned width, unsigned height,
-                                    unsigned depth, unsigned level,
-                                    struct ilo_view_surface *surf)
+ilo_gpe_init_gs_cso(const struct ilo_dev_info *dev,
+                    const struct ilo_shader_state *gs,
+                    struct ilo_shader_cso *cso)
+{
+   if (ilo_dev_gen(dev) >= ILO_GEN(7))
+      gs_init_cso_gen7(dev, gs, cso);
+   else
+      gs_init_cso_gen6(dev, gs, cso);
+}
+
+static void
+view_init_null_gen6(const struct ilo_dev_info *dev,
+                    unsigned width, unsigned height,
+                    unsigned depth, unsigned level,
+                    struct ilo_view_surface *surf)
 {
    uint32_t *dw;
 
@@ -455,14 +466,14 @@ ilo_gpe_init_view_surface_null_gen6(const struct ilo_dev_info *dev,
    surf->bo = NULL;
 }
 
-void
-ilo_gpe_init_view_surface_for_buffer_gen6(const struct ilo_dev_info *dev,
-                                          const struct ilo_buffer *buf,
-                                          unsigned offset, unsigned size,
-                                          unsigned struct_size,
-                                          enum pipe_format elem_format,
-                                          bool is_rt, bool render_cache_rw,
-                                          struct ilo_view_surface *surf)
+static void
+view_init_for_buffer_gen6(const struct ilo_dev_info *dev,
+                          const struct ilo_buffer *buf,
+                          unsigned offset, unsigned size,
+                          unsigned struct_size,
+                          enum pipe_format elem_format,
+                          bool is_rt, bool render_cache_rw,
+                          struct ilo_view_surface *surf)
 {
    const int elem_size = util_format_get_blocksize(elem_format);
    int width, height, depth, pitch;
@@ -549,16 +560,16 @@ ilo_gpe_init_view_surface_for_buffer_gen6(const struct ilo_dev_info *dev,
    surf->bo = buf->bo;
 }
 
-void
-ilo_gpe_init_view_surface_for_texture_gen6(const struct ilo_dev_info *dev,
-                                           const struct ilo_texture *tex,
-                                           enum pipe_format format,
-                                           unsigned first_level,
-                                           unsigned num_levels,
-                                           unsigned first_layer,
-                                           unsigned num_layers,
-                                           bool is_rt,
-                                           struct ilo_view_surface *surf)
+static void
+view_init_for_texture_gen6(const struct ilo_dev_info *dev,
+                           const struct ilo_texture *tex,
+                           enum pipe_format format,
+                           unsigned first_level,
+                           unsigned num_levels,
+                           unsigned first_layer,
+                           unsigned num_layers,
+                           bool is_rt,
+                           struct ilo_view_surface *surf)
 {
    int surface_type, surface_format;
    int width, height, depth, pitch, lod;
@@ -715,11 +726,11 @@ ilo_gpe_init_view_surface_for_texture_gen6(const struct ilo_dev_info *dev,
    surf->bo = tex->bo;
 }
 
-void
-ilo_gpe_init_view_surface_null_gen7(const struct ilo_dev_info *dev,
-                                    unsigned width, unsigned height,
-                                    unsigned depth, unsigned level,
-                                    struct ilo_view_surface *surf)
+static void
+view_init_null_gen7(const struct ilo_dev_info *dev,
+                    unsigned width, unsigned height,
+                    unsigned depth, unsigned level,
+                    struct ilo_view_surface *surf)
 {
    uint32_t *dw;
 
@@ -781,14 +792,14 @@ ilo_gpe_init_view_surface_null_gen7(const struct ilo_dev_info *dev,
    surf->bo = NULL;
 }
 
-void
-ilo_gpe_init_view_surface_for_buffer_gen7(const struct ilo_dev_info *dev,
-                                          const struct ilo_buffer *buf,
-                                          unsigned offset, unsigned size,
-                                          unsigned struct_size,
-                                          enum pipe_format elem_format,
-                                          bool is_rt, bool render_cache_rw,
-                                          struct ilo_view_surface *surf)
+static void
+view_init_for_buffer_gen7(const struct ilo_dev_info *dev,
+                          const struct ilo_buffer *buf,
+                          unsigned offset, unsigned size,
+                          unsigned struct_size,
+                          enum pipe_format elem_format,
+                          bool is_rt, bool render_cache_rw,
+                          struct ilo_view_surface *surf)
 {
    const bool typed = (elem_format != PIPE_FORMAT_NONE);
    const bool structured = (!typed && struct_size > 1);
@@ -906,16 +917,16 @@ ilo_gpe_init_view_surface_for_buffer_gen7(const struct ilo_dev_info *dev,
    surf->bo = buf->bo;
 }
 
-void
-ilo_gpe_init_view_surface_for_texture_gen7(const struct ilo_dev_info *dev,
-                                           const struct ilo_texture *tex,
-                                           enum pipe_format format,
-                                           unsigned first_level,
-                                           unsigned num_levels,
-                                           unsigned first_layer,
-                                           unsigned num_layers,
-                                           bool is_rt,
-                                           struct ilo_view_surface *surf)
+static void
+view_init_for_texture_gen7(const struct ilo_dev_info *dev,
+                           const struct ilo_texture *tex,
+                           enum pipe_format format,
+                           unsigned first_level,
+                           unsigned num_levels,
+                           unsigned first_layer,
+                           unsigned num_layers,
+                           bool is_rt,
+                           struct ilo_view_surface *surf)
 {
    int surface_type, surface_format;
    int width, height, depth, pitch, lod;
@@ -1117,6 +1128,61 @@ ilo_gpe_init_view_surface_for_texture_gen7(const struct ilo_dev_info *dev,
 
    /* do not increment reference count */
    surf->bo = tex->bo;
+}
+
+void
+ilo_gpe_init_view_surface_null(const struct ilo_dev_info *dev,
+                               unsigned width, unsigned height,
+                               unsigned depth, unsigned level,
+                               struct ilo_view_surface *surf)
+{
+   if (ilo_dev_gen(dev) >= ILO_GEN(7)) {
+      view_init_null_gen7(dev,
+            width, height, depth, level, surf);
+   } else {
+      view_init_null_gen6(dev,
+            width, height, depth, level, surf);
+   }
+}
+
+void
+ilo_gpe_init_view_surface_for_buffer(const struct ilo_dev_info *dev,
+                                     const struct ilo_buffer *buf,
+                                     unsigned offset, unsigned size,
+                                     unsigned struct_size,
+                                     enum pipe_format elem_format,
+                                     bool is_rt, bool render_cache_rw,
+                                     struct ilo_view_surface *surf)
+{
+   if (ilo_dev_gen(dev) >= ILO_GEN(7)) {
+      view_init_for_buffer_gen7(dev, buf, offset, size,
+            struct_size, elem_format, is_rt, render_cache_rw, surf);
+   } else {
+      view_init_for_buffer_gen6(dev, buf, offset, size,
+            struct_size, elem_format, is_rt, render_cache_rw, surf);
+   }
+}
+
+void
+ilo_gpe_init_view_surface_for_texture(const struct ilo_dev_info *dev,
+                                      const struct ilo_texture *tex,
+                                      enum pipe_format format,
+                                      unsigned first_level,
+                                      unsigned num_levels,
+                                      unsigned first_layer,
+                                      unsigned num_layers,
+                                      bool is_rt,
+                                      struct ilo_view_surface *surf)
+{
+   if (ilo_dev_gen(dev) >= ILO_GEN(7)) {
+      view_init_for_texture_gen7(dev, tex, format,
+            first_level, num_levels, first_layer, num_layers,
+            is_rt, surf);
+   } else {
+      view_init_for_texture_gen6(dev, tex, format,
+            first_level, num_levels, first_layer, num_layers,
+            is_rt, surf);
+   }
 }
 
 static void
