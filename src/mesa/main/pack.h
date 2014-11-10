@@ -55,15 +55,6 @@ _mesa_pack_rgba_span_float(struct gl_context *ctx, GLuint n,
 
 
 extern void
-_mesa_unpack_color_span_ubyte(struct gl_context *ctx,
-                             GLuint n, GLenum dstFormat, GLubyte dest[],
-                             GLenum srcFormat, GLenum srcType,
-                             const GLvoid *source,
-                             const struct gl_pixelstore_attrib *srcPacking,
-                             GLbitfield transferOps);
-
-
-extern void
 _mesa_unpack_color_span_float(struct gl_context *ctx,
                               GLuint n, GLenum dstFormat, GLfloat dest[],
                               GLenum srcFormat, GLenum srcType,
