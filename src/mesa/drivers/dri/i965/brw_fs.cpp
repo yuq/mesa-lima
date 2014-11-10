@@ -2343,6 +2343,14 @@ fs_visitor::opt_algebraic()
             break;
          }
 
+         if (inst->src[0].file == IMM) {
+            assert(inst->src[0].type == BRW_REGISTER_TYPE_F);
+            inst->opcode = BRW_OPCODE_MOV;
+            inst->src[0].fixed_hw_reg.dw1.f *= inst->src[1].fixed_hw_reg.dw1.f;
+            inst->src[1] = reg_undef;
+            progress = true;
+            break;
+         }
 	 break;
       case BRW_OPCODE_ADD:
          if (inst->src[1].file != IMM)
@@ -2351,6 +2359,15 @@ fs_visitor::opt_algebraic()
          /* a + 0.0 = a */
          if (inst->src[1].is_zero()) {
             inst->opcode = BRW_OPCODE_MOV;
+            inst->src[1] = reg_undef;
+            progress = true;
+            break;
+         }
+
+         if (inst->src[0].file == IMM) {
+            assert(inst->src[0].type == BRW_REGISTER_TYPE_F);
+            inst->opcode = BRW_OPCODE_MOV;
+            inst->src[0].fixed_hw_reg.dw1.f += inst->src[1].fixed_hw_reg.dw1.f;
             inst->src[1] = reg_undef;
             progress = true;
             break;
@@ -2427,6 +2444,32 @@ fs_visitor::opt_algebraic()
             default:
                break;
             }
+         }
+         break;
+      case BRW_OPCODE_MAD:
+         if (inst->src[1].is_zero() || inst->src[2].is_zero()) {
+            inst->opcode = BRW_OPCODE_MOV;
+            inst->src[1] = reg_undef;
+            inst->src[2] = reg_undef;
+            progress = true;
+         } else if (inst->src[0].is_zero()) {
+            inst->opcode = BRW_OPCODE_MUL;
+            inst->src[0] = inst->src[2];
+            inst->src[2] = reg_undef;
+         } else if (inst->src[1].is_one()) {
+            inst->opcode = BRW_OPCODE_ADD;
+            inst->src[1] = inst->src[2];
+            inst->src[2] = reg_undef;
+            progress = true;
+         } else if (inst->src[2].is_one()) {
+            inst->opcode = BRW_OPCODE_ADD;
+            inst->src[2] = reg_undef;
+            progress = true;
+         } else if (inst->src[1].file == IMM && inst->src[2].file == IMM) {
+            inst->opcode = BRW_OPCODE_ADD;
+            inst->src[1].fixed_hw_reg.dw1.f *= inst->src[2].fixed_hw_reg.dw1.f;
+            inst->src[2] = reg_undef;
+            progress = true;
          }
          break;
       case SHADER_OPCODE_RCP: {
