@@ -216,6 +216,7 @@ BUILT_SOURCES =						\
 	glsl_lexer.cpp					\
 	glcpp/glcpp-parse.c				\
 	glcpp/glcpp-lex.c				\
+	nir/nir_builder_opcodes.h				\
 	nir/nir_constant_expressions.c			\
 	nir/nir_opcodes.c				\
 	nir/nir_opcodes.h				\
@@ -231,6 +232,10 @@ clean-local:
 dist-hook:
 	$(RM) glcpp/tests/*.out
 	$(RM) glcpp/tests/subtest*/*.out
+
+nir/nir_builder_opcodes.h: nir/nir_opcodes.py nir/nir_builder_opcodes_h.py
+	$(MKDIR_P) nir;							\
+	$(PYTHON2) $(PYTHON_FLAGS) $(srcdir)/nir/nir_builder_opcodes_h.py > $@
 
 nir/nir_constant_expressions.c: nir/nir_opcodes.py nir/nir_constant_expressions.py nir/nir_constant_expressions.h
 	$(MKDIR_P) nir;							\

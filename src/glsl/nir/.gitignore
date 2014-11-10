@@ -1,3 +1,4 @@
+nir_builder_opcodes.h
 nir_opt_algebraic.c
 nir_opcodes.c
 nir_opcodes.h
