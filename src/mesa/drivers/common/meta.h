@@ -446,8 +446,11 @@ _mesa_meta_begin(struct gl_context *ctx, GLbitfield state);
 extern void
 _mesa_meta_end(struct gl_context *ctx);
 
-extern GLboolean
-_mesa_meta_in_progress(struct gl_context *ctx);
+static inline bool
+_mesa_meta_in_progress(struct gl_context *ctx)
+{
+   return ctx->Meta->SaveStackDepth != 0;
+}
 
 extern void
 _mesa_meta_fb_tex_blit_begin(const struct gl_context *ctx,
