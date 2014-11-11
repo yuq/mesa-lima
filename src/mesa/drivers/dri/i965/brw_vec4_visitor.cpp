@@ -310,6 +310,9 @@ vec4_visitor::fix_3src_operand(src_reg src)
 src_reg
 vec4_visitor::fix_math_operand(src_reg src)
 {
+   if (brw->gen < 6 || brw->gen >= 8 || src.file == BAD_FILE)
+      return src;
+
    /* The gen6 math instruction ignores the source modifiers --
     * swizzle, abs, negate, and at least some parts of the register
     * region description.
@@ -331,107 +334,21 @@ vec4_visitor::fix_math_operand(src_reg src)
 }
 
 void
-vec4_visitor::emit_math1_gen6(enum opcode opcode, dst_reg dst, src_reg src)
-{
-   src = fix_math_operand(src);
-
-   if (brw->gen == 6 && dst.writemask != WRITEMASK_XYZW) {
-      /* The gen6 math instruction must be align1, so we can't do
-       * writemasks.
-       */
-      dst_reg temp_dst = dst_reg(this, glsl_type::vec4_type);
-
-      emit(opcode, temp_dst, src);
-
-      emit(MOV(dst, src_reg(temp_dst)));
-   } else {
-      emit(opcode, dst, src);
-   }
-}
-
-void
-vec4_visitor::emit_math1_gen4(enum opcode opcode, dst_reg dst, src_reg src)
-{
-   vec4_instruction *inst = emit(opcode, dst, src);
-   inst->base_mrf = 1;
-   inst->mlen = 1;
-}
-
-void
-vec4_visitor::emit_math(opcode opcode, dst_reg dst, src_reg src)
-{
-   switch (opcode) {
-   case SHADER_OPCODE_RCP:
-   case SHADER_OPCODE_RSQ:
-   case SHADER_OPCODE_SQRT:
-   case SHADER_OPCODE_EXP2:
-   case SHADER_OPCODE_LOG2:
-   case SHADER_OPCODE_SIN:
-   case SHADER_OPCODE_COS:
-      break;
-   default:
-      unreachable("not reached: bad math opcode");
-   }
-
-   if (brw->gen >= 8) {
-      emit(opcode, dst, src);
-   } else if (brw->gen >= 6) {
-      emit_math1_gen6(opcode, dst, src);
-   } else {
-      emit_math1_gen4(opcode, dst, src);
-   }
-}
-
-void
-vec4_visitor::emit_math2_gen6(enum opcode opcode,
-			      dst_reg dst, src_reg src0, src_reg src1)
-{
-   src0 = fix_math_operand(src0);
-   src1 = fix_math_operand(src1);
-
-   if (brw->gen == 6 && dst.writemask != WRITEMASK_XYZW) {
-      /* The gen6 math instruction must be align1, so we can't do
-       * writemasks.
-       */
-      dst_reg temp_dst = dst_reg(this, glsl_type::vec4_type);
-      temp_dst.type = dst.type;
-
-      emit(opcode, temp_dst, src0, src1);
-
-      emit(MOV(dst, src_reg(temp_dst)));
-   } else {
-      emit(opcode, dst, src0, src1);
-   }
-}
-
-void
-vec4_visitor::emit_math2_gen4(enum opcode opcode,
-			      dst_reg dst, src_reg src0, src_reg src1)
-{
-   vec4_instruction *inst = emit(opcode, dst, src0, src1);
-   inst->base_mrf = 1;
-   inst->mlen = 2;
-}
-
-void
 vec4_visitor::emit_math(enum opcode opcode,
-			dst_reg dst, src_reg src0, src_reg src1)
+                        const dst_reg &dst,
+                        const src_reg &src0, const src_reg &src1)
 {
-   switch (opcode) {
-   case SHADER_OPCODE_POW:
-   case SHADER_OPCODE_INT_QUOTIENT:
-   case SHADER_OPCODE_INT_REMAINDER:
-      break;
-   default:
-      unreachable("not reached: unsupported binary math opcode");
-   }
+   vec4_instruction *math =
+      emit(opcode, dst, fix_math_operand(src0), fix_math_operand(src1));
 
-   if (brw->gen >= 8) {
-      emit(opcode, dst, src0, src1);
-   } else if (brw->gen >= 6) {
-      emit_math2_gen6(opcode, dst, src0, src1);
-   } else {
-      emit_math2_gen4(opcode, dst, src0, src1);
+   if (brw->gen == 6 && dst.writemask != WRITEMASK_XYZW) {
+      /* MATH on Gen6 must be align1, so we can't do writemasks. */
+      math->dst = dst_reg(this, glsl_type::vec4_type);
+      math->dst.type = dst.type;
+      emit(MOV(dst, src_reg(math->dst)));
+   } else if (brw->gen < 6) {
+      math->base_mrf = 1;
+      math->mlen = src1.file == BAD_FILE ? 1 : 2;
    }
 }
 

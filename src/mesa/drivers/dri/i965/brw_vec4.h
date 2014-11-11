@@ -503,12 +503,8 @@ public:
 
    src_reg fix_3src_operand(src_reg src);
 
-   void emit_math1_gen6(enum opcode opcode, dst_reg dst, src_reg src);
-   void emit_math1_gen4(enum opcode opcode, dst_reg dst, src_reg src);
-   void emit_math(enum opcode opcode, dst_reg dst, src_reg src);
-   void emit_math2_gen6(enum opcode opcode, dst_reg dst, src_reg src0, src_reg src1);
-   void emit_math2_gen4(enum opcode opcode, dst_reg dst, src_reg src0, src_reg src1);
-   void emit_math(enum opcode opcode, dst_reg dst, src_reg src0, src_reg src1);
+   void emit_math(enum opcode opcode, const dst_reg &dst, const src_reg &src0,
+                  const src_reg &src1 = src_reg());
    src_reg fix_math_operand(src_reg src);
 
    void emit_pack_half_2x16(dst_reg dst, src_reg src0);
