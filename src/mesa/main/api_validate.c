@@ -113,7 +113,7 @@ check_valid_to_render(struct gl_context *ctx, const char *function)
       break;
 
    default:
-      assert(!"Invalid API value in check_valid_to_render()");
+      unreachable("Invalid API value in check_valid_to_render()");
    }
 
    return GL_TRUE;
