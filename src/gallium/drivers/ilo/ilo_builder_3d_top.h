@@ -649,69 +649,94 @@ gen7_3DSTATE_DS(struct ilo_builder *builder,
 
 static inline void
 gen6_3DSTATE_GS(struct ilo_builder *builder,
-                const struct ilo_shader_state *gs,
-                const struct ilo_shader_state *vs,
-                int verts_per_prim)
+                const struct ilo_shader_state *gs)
 {
    const uint8_t cmd_len = 7;
-   uint32_t dw1, dw2, dw4, dw5, dw6, *dw;
+   const struct ilo_shader_cso *cso;
+   uint32_t dw2, dw4, dw5, dw6, *dw;
 
    ILO_DEV_ASSERT(builder->dev, 6, 6);
 
-   if (gs) {
-      const struct ilo_shader_cso *cso;
-
-      dw1 = ilo_shader_get_kernel_offset(gs);
-
-      cso = ilo_shader_get_kernel_cso(gs);
-      dw2 = cso->payload[0];
-      dw4 = cso->payload[1];
-      dw5 = cso->payload[2];
-      dw6 = cso->payload[3];
-   }
-   else if (vs && ilo_shader_get_kernel_param(vs, ILO_KERNEL_VS_GEN6_SO)) {
-      struct ilo_shader_cso cso;
-      enum ilo_kernel_param param;
-
-      switch (verts_per_prim) {
-      case 1:
-         param = ILO_KERNEL_VS_GEN6_SO_POINT_OFFSET;
-         break;
-      case 2:
-         param = ILO_KERNEL_VS_GEN6_SO_LINE_OFFSET;
-         break;
-      default:
-         param = ILO_KERNEL_VS_GEN6_SO_TRI_OFFSET;
-         break;
-      }
-
-      dw1 = ilo_shader_get_kernel_offset(vs) +
-         ilo_shader_get_kernel_param(vs, param);
-
-      /* cannot use VS's CSO */
-      ilo_gpe_init_gs_cso(builder->dev, vs, &cso);
-      dw2 = cso.payload[0];
-      dw4 = cso.payload[1];
-      dw5 = cso.payload[2];
-      dw6 = cso.payload[3];
-   }
-   else {
-      dw1 = 0;
-      dw2 = 0;
-      dw4 = 1 << GEN6_GS_DW4_URB_READ_LEN__SHIFT;
-      dw5 = GEN6_GS_DW5_STATISTICS;
-      dw6 = 0;
-   }
+   cso = ilo_shader_get_kernel_cso(gs);
+   dw2 = cso->payload[0];
+   dw4 = cso->payload[1];
+   dw5 = cso->payload[2];
+   dw6 = cso->payload[3];
 
    ilo_builder_batch_pointer(builder, cmd_len, &dw);
 
    dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_GS) | (cmd_len - 2);
-   dw[1] = dw1;
+   dw[1] = ilo_shader_get_kernel_offset(gs);
+   dw[2] = dw2;
+   dw[3] = 0; /* scratch */
+   dw[4] = dw4;
+   dw[5] = dw5;
+   dw[6] = dw6;
+}
+
+static inline void
+gen6_so_3DSTATE_GS(struct ilo_builder *builder,
+                   const struct ilo_shader_state *vs,
+                   int verts_per_prim)
+{
+   const uint8_t cmd_len = 7;
+   struct ilo_shader_cso cso;
+   enum ilo_kernel_param param;
+   uint32_t dw2, dw4, dw5, dw6, *dw;
+
+   ILO_DEV_ASSERT(builder->dev, 6, 6);
+
+   assert(ilo_shader_get_kernel_param(vs, ILO_KERNEL_VS_GEN6_SO));
+
+   switch (verts_per_prim) {
+   case 1:
+      param = ILO_KERNEL_VS_GEN6_SO_POINT_OFFSET;
+      break;
+   case 2:
+      param = ILO_KERNEL_VS_GEN6_SO_LINE_OFFSET;
+      break;
+   default:
+      param = ILO_KERNEL_VS_GEN6_SO_TRI_OFFSET;
+      break;
+   }
+
+   /* cannot use VS's CSO */
+   ilo_gpe_init_gs_cso(builder->dev, vs, &cso);
+   dw2 = cso.payload[0];
+   dw4 = cso.payload[1];
+   dw5 = cso.payload[2];
+   dw6 = cso.payload[3];
+
+   ilo_builder_batch_pointer(builder, cmd_len, &dw);
+
+   dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_GS) | (cmd_len - 2);
+   dw[1] = ilo_shader_get_kernel_offset(vs) +
+           ilo_shader_get_kernel_param(vs, param);
    dw[2] = dw2;
    dw[3] = 0;
    dw[4] = dw4;
    dw[5] = dw5;
    dw[6] = dw6;
+}
+
+static inline void
+gen6_disable_3DSTATE_GS(struct ilo_builder *builder)
+{
+   const uint8_t cmd_len = 7;
+   uint32_t *dw;
+
+   ILO_DEV_ASSERT(builder->dev, 6, 6);
+
+   ilo_builder_batch_pointer(builder, cmd_len, &dw);
+
+   dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_GS) | (cmd_len - 2);
+   dw[1] = 0;
+   dw[2] = 0;
+   dw[3] = 0;
+   /* honor the valid range of URB read length */
+   dw[4] = 1 << GEN6_GS_DW4_URB_READ_LEN__SHIFT;
+   dw[5] = GEN6_GS_DW5_STATISTICS;
+   dw[6] = 0;
 }
 
 static inline void
@@ -743,23 +768,10 @@ gen7_3DSTATE_GS(struct ilo_builder *builder,
                 const struct ilo_shader_state *gs)
 {
    const uint8_t cmd_len = 7;
-   const uint32_t dw0 = GEN6_RENDER_CMD(3D, 3DSTATE_GS) | (cmd_len - 2);
    const struct ilo_shader_cso *cso;
    uint32_t dw2, dw4, dw5, *dw;
 
    ILO_DEV_ASSERT(builder->dev, 7, 7.5);
-
-   if (!gs) {
-      ilo_builder_batch_pointer(builder, cmd_len, &dw);
-      dw[0] = dw0;
-      dw[1] = 0;
-      dw[2] = 0;
-      dw[3] = 0;
-      dw[4] = 0;
-      dw[5] = GEN7_GS_DW5_STATISTICS;
-      dw[6] = 0;
-      return;
-   }
 
    cso = ilo_shader_get_kernel_cso(gs);
    dw2 = cso->payload[0];
@@ -768,12 +780,31 @@ gen7_3DSTATE_GS(struct ilo_builder *builder,
 
    ilo_builder_batch_pointer(builder, cmd_len, &dw);
 
-   dw[0] = dw0;
+   dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_GS) | (cmd_len - 2);
    dw[1] = ilo_shader_get_kernel_offset(gs);
    dw[2] = dw2;
    dw[3] = 0; /* scratch */
    dw[4] = dw4;
    dw[5] = dw5;
+   dw[6] = 0;
+}
+
+static inline void
+gen7_disable_3DSTATE_GS(struct ilo_builder *builder)
+{
+   const uint8_t cmd_len = 7;
+   uint32_t *dw;
+
+   ILO_DEV_ASSERT(builder->dev, 7, 7.5);
+
+   ilo_builder_batch_pointer(builder, cmd_len, &dw);
+
+   dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_GS) | (cmd_len - 2);
+   dw[1] = 0;
+   dw[2] = 0;
+   dw[3] = 0;
+   dw[4] = 0;
+   dw[5] = GEN7_GS_DW5_STATISTICS;
    dw[6] = 0;
 }
 

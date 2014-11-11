@@ -421,7 +421,7 @@ gen7_draw_gs(struct ilo_render *r,
    /* 3DSTATE_CONSTANT_GS and 3DSTATE_GS */
    if (r->hw_ctx_changed) {
       gen7_3DSTATE_CONSTANT_GS(r->builder, 0, 0, 0);
-      gen7_3DSTATE_GS(r->builder, NULL);
+      gen7_disable_3DSTATE_GS(r->builder);
    }
 
    /* 3DSTATE_BINDING_TABLE_POINTERS_GS */
@@ -732,7 +732,7 @@ gen7_rectlist_vs_to_sf(struct ilo_render *r,
    gen7_3DSTATE_DS(r->builder, NULL);
 
    gen7_3DSTATE_CONSTANT_GS(r->builder, NULL, NULL, 0);
-   gen7_3DSTATE_GS(r->builder, NULL);
+   gen7_disable_3DSTATE_GS(r->builder);
 
    gen7_3DSTATE_STREAMOUT(r->builder, 0x0, 0, false);
 

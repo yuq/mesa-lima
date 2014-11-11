@@ -534,9 +534,15 @@ gen6_draw_gs(struct ilo_render *r,
    /* 3DSTATE_GS */
    if (DIRTY(GS) || DIRTY(VS) ||
        session->prim_changed || r->instruction_bo_changed) {
-      const int verts_per_prim = u_vertices_per_prim(session->reduced_prim);
-
-      gen6_3DSTATE_GS(r->builder, vec->gs, vec->vs, verts_per_prim);
+      if (vec->gs) {
+         gen6_3DSTATE_GS(r->builder, vec->gs);
+      } else if (vec->vs &&
+            ilo_shader_get_kernel_param(vec->vs, ILO_KERNEL_VS_GEN6_SO)) {
+         const int verts_per_prim = u_vertices_per_prim(session->reduced_prim);
+         gen6_so_3DSTATE_GS(r->builder, vec->vs, verts_per_prim);
+      } else {
+         gen6_disable_3DSTATE_GS(r->builder);
+      }
    }
 }
 
@@ -849,7 +855,7 @@ gen6_rectlist_vs_to_sf(struct ilo_render *r,
    gen6_wa_post_3dstate_constant_vs(r);
 
    gen6_3DSTATE_CONSTANT_GS(r->builder, NULL, NULL, 0);
-   gen6_3DSTATE_GS(r->builder, NULL, NULL, 0);
+   gen6_disable_3DSTATE_GS(r->builder);
 
    gen6_disable_3DSTATE_CLIP(r->builder);
    gen6_3DSTATE_SF(r->builder, NULL, NULL);
