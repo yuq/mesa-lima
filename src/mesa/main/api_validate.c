@@ -48,9 +48,7 @@ check_valid_to_render(struct gl_context *ctx, const char *function)
    switch (ctx->API) {
    case API_OPENGLES2:
       /* For ES2, we can draw if we have a vertex program/shader). */
-      if (!ctx->VertexProgram._Current)
-	 return false;
-      break;
+      return ctx->VertexProgram._Current != NULL;
 
    case API_OPENGLES:
       /* For OpenGL ES, only draw if we have vertex positions
@@ -83,13 +81,8 @@ check_valid_to_render(struct gl_context *ctx, const char *function)
        */
       return ctx->VertexProgram._Current != NULL;
 
-   case API_OPENGL_COMPAT: {
-      const struct gl_shader_program *const vsProg =
-         ctx->_Shader->CurrentProgram[MESA_SHADER_VERTEX];
-      const bool haveVertexShader = (vsProg && vsProg->LinkStatus);
-      const bool haveVertexProgram = ctx->VertexProgram._Enabled;
-
-      if (haveVertexShader || haveVertexProgram) {
+   case API_OPENGL_COMPAT:
+      if (ctx->VertexProgram._Current != NULL) {
          /* Draw regardless of whether or not we have any vertex arrays.
           * (Ex: could draw a point using a constant vertex pos)
           */
@@ -102,7 +95,6 @@ check_valid_to_render(struct gl_context *ctx, const char *function)
                  ctx->Array.VAO->VertexAttrib[VERT_ATTRIB_GENERIC0].Enabled);
       }
       break;
-   }
 
    default:
       unreachable("Invalid API value in check_valid_to_render()");
