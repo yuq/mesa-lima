@@ -483,28 +483,8 @@ gen6_3DSTATE_CONSTANT_PS(struct ilo_builder *builder,
                          const uint32_t *bufs, const int *sizes,
                          int num_bufs)
 {
-   const uint8_t cmd_len = 5;
-   uint32_t buf_dw[4], buf_enabled;
-   uint32_t *dw;
-
-   ILO_DEV_ASSERT(builder->dev, 6, 6);
-   assert(num_bufs <= 4);
-
-   /*
-    * From the Sandy Bridge PRM, volume 2 part 1, page 287:
-    *
-    *     "The sum of all four read length fields (each incremented to
-    *      represent the actual read length) must be less than or equal to 64"
-    */
-   buf_enabled = gen6_fill_3dstate_constant(builder->dev,
-         bufs, sizes, num_bufs, 64, buf_dw, Elements(buf_dw));
-
-   ilo_builder_batch_pointer(builder, cmd_len, &dw);
-
-   dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_CONSTANT_PS) |
-           buf_enabled << 12 |
-           (cmd_len - 2);
-   memcpy(&dw[1], buf_dw, sizeof(buf_dw));
+   gen6_3dstate_constant(builder, GEN6_RENDER_OPCODE_3DSTATE_CONSTANT_PS,
+         bufs, sizes, num_bufs);
 }
 
 static inline void
