@@ -2565,6 +2565,25 @@ enum brw_wm_barycentric_interp_mode {
 #define _3DSTATE_CONSTANT_HS                  0x7819 /* GEN7+ */
 #define _3DSTATE_CONSTANT_DS                  0x781A /* GEN7+ */
 
+/* Resource streamer gather constants */
+#define _3DSTATE_GATHER_POOL_ALLOC            0x791A /* GEN7.5+ */
+#define HSW_GATHER_POOL_ALLOC_MUST_BE_ONE     (3 << 4) /* GEN7.5 only */
+
+#define _3DSTATE_GATHER_CONSTANT_VS           0x7834 /* GEN7.5+ */
+#define _3DSTATE_GATHER_CONSTANT_GS           0x7835
+#define _3DSTATE_GATHER_CONSTANT_HS           0x7836
+#define _3DSTATE_GATHER_CONSTANT_DS           0x7837
+#define _3DSTATE_GATHER_CONSTANT_PS           0x7838
+#define HSW_GATHER_CONSTANT_ENABLE            (1 << 11)
+#define HSW_GATHER_CONSTANT_BUFFER_VALID_SHIFT         16
+#define HSW_GATHER_CONSTANT_BUFFER_VALID_MASK          INTEL_MASK(31, 16)
+#define HSW_GATHER_CONSTANT_BINDING_TABLE_BLOCK_SHIFT  12
+#define HSW_GATHER_CONSTANT_BINDING_TABLE_BLOCK_MASK   INTEL_MASK(15, 12)
+#define HSW_GATHER_CONSTANT_CONST_BUFFER_OFFSET_SHIFT  8
+#define HSW_GATHER_CONSTANT_CONST_BUFFER_OFFSET_MASK   INTEL_MASK(15, 8)
+#define HSW_GATHER_CONSTANT_CHANNEL_MASK_SHIFT         4
+#define HSW_GATHER_CONSTANT_CHANNEL_MASK_MASK          INTEL_MASK(7, 4)
+
 #define _3DSTATE_STREAMOUT                    0x781e /* GEN7+ */
 /* DW1 */
 # define SO_FUNCTION_ENABLE				(1 << 31)
