@@ -698,7 +698,7 @@ gen6_draw_wm(struct ilo_render *r,
          gen6_wa_pre_3dstate_wm_max_threads(r);
 
       gen6_3DSTATE_WM(r->builder, vec->fs,
-            vec->rasterizer, dual_blend, cc_may_kill, 0);
+            vec->rasterizer, dual_blend, cc_may_kill);
    }
 }
 
@@ -879,7 +879,7 @@ gen6_rectlist_wm(struct ilo_render *r,
    gen6_3DSTATE_CONSTANT_PS(r->builder, NULL, NULL, 0);
 
    gen6_wa_pre_3dstate_wm_max_threads(r);
-   gen6_3DSTATE_WM(r->builder, NULL, NULL, false, false, hiz_op);
+   gen6_hiz_3DSTATE_WM(r->builder, hiz_op);
 }
 
 static void

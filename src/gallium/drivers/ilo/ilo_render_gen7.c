@@ -512,8 +512,7 @@ gen7_draw_wm(struct ilo_render *r,
       const bool cc_may_kill = (vec->dsa->dw_alpha ||
                                 vec->blend->alpha_to_coverage);
 
-      gen7_3DSTATE_WM(r->builder, vec->fs,
-            vec->rasterizer, cc_may_kill, 0);
+      gen7_3DSTATE_WM(r->builder, vec->fs, vec->rasterizer, cc_may_kill);
    }
 
    /* 3DSTATE_BINDING_TABLE_POINTERS_PS */
@@ -766,7 +765,7 @@ gen7_rectlist_wm(struct ilo_render *r,
       break;
    }
 
-   gen7_3DSTATE_WM(r->builder, NULL, NULL, false, hiz_op);
+   gen7_hiz_3DSTATE_WM(r->builder, hiz_op);
 
    gen7_3DSTATE_CONSTANT_PS(r->builder, NULL, NULL, 0);
 

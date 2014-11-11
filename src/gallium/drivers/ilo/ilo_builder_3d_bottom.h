@@ -282,41 +282,20 @@ static inline void
 gen6_3DSTATE_WM(struct ilo_builder *builder,
                 const struct ilo_shader_state *fs,
                 const struct ilo_rasterizer_state *rasterizer,
-                bool dual_blend, bool cc_may_kill,
-                uint32_t hiz_op)
+                bool dual_blend, bool cc_may_kill)
 {
    const uint8_t cmd_len = 9;
-   const uint32_t dw0 = GEN6_RENDER_CMD(3D, 3DSTATE_WM) | (cmd_len - 2);
    const int num_samples = 1;
-   const struct ilo_shader_cso *fs_cso;
+   const struct ilo_shader_cso *cso;
    uint32_t dw2, dw4, dw5, dw6, *dw;
 
    ILO_DEV_ASSERT(builder->dev, 6, 6);
 
-   if (!fs) {
-      /* see brwCreateContext() */
-      const int max_threads = (builder->dev->gt == 2) ? 80 : 40;
-
-      ilo_builder_batch_pointer(builder, cmd_len, &dw);
-      dw[0] = dw0;
-      dw[1] = 0;
-      dw[2] = 0;
-      dw[3] = 0;
-      dw[4] = hiz_op;
-      /* honor the valid range even if dispatching is disabled */
-      dw[5] = (max_threads - 1) << GEN6_WM_DW5_MAX_THREADS__SHIFT;
-      dw[6] = 0;
-      dw[7] = 0;
-      dw[8] = 0;
-
-      return;
-   }
-
-   fs_cso = ilo_shader_get_kernel_cso(fs);
-   dw2 = fs_cso->payload[0];
-   dw4 = fs_cso->payload[1];
-   dw5 = fs_cso->payload[2];
-   dw6 = fs_cso->payload[3];
+   cso = ilo_shader_get_kernel_cso(fs);
+   dw2 = cso->payload[0];
+   dw4 = cso->payload[1];
+   dw5 = cso->payload[2];
+   dw6 = cso->payload[3];
 
    /*
     * From the Sandy Bridge PRM, volume 2 part 1, page 248:
@@ -325,7 +304,6 @@ gen6_3DSTATE_WM(struct ilo_builder *builder,
     *      bits is set: Depth Buffer Clear , Hierarchical Depth Buffer Resolve
     *      Enable or Depth Buffer Resolve Enable."
     */
-   assert(!hiz_op);
    dw4 |= GEN6_WM_DW4_STATISTICS;
 
    if (cc_may_kill)
@@ -344,7 +322,8 @@ gen6_3DSTATE_WM(struct ilo_builder *builder,
    }
 
    ilo_builder_batch_pointer(builder, cmd_len, &dw);
-   dw[0] = dw0;
+
+   dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_WM) | (cmd_len - 2);
    dw[1] = ilo_shader_get_kernel_offset(fs);
    dw[2] = dw2;
    dw[3] = 0; /* scratch */
@@ -356,36 +335,50 @@ gen6_3DSTATE_WM(struct ilo_builder *builder,
 }
 
 static inline void
+gen6_hiz_3DSTATE_WM(struct ilo_builder *builder, uint32_t hiz_op)
+{
+   const uint8_t cmd_len = 9;
+   const int max_threads = (builder->dev->gt == 2) ? 80 : 40;
+   uint32_t *dw;
+
+   ILO_DEV_ASSERT(builder->dev, 6, 6);
+
+   ilo_builder_batch_pointer(builder, cmd_len, &dw);
+
+   dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_WM) | (cmd_len - 2);
+   dw[1] = 0;
+   dw[2] = 0;
+   dw[3] = 0;
+   dw[4] = hiz_op;
+   /* honor the valid range even if dispatching is disabled */
+   dw[5] = (max_threads - 1) << GEN6_WM_DW5_MAX_THREADS__SHIFT;
+   dw[6] = 0;
+   dw[7] = 0;
+   dw[8] = 0;
+}
+
+static inline void
 gen7_3DSTATE_WM(struct ilo_builder *builder,
                 const struct ilo_shader_state *fs,
                 const struct ilo_rasterizer_state *rasterizer,
-                bool cc_may_kill, uint32_t hiz_op)
+                bool cc_may_kill)
 {
    const uint8_t cmd_len = 3;
-   const uint32_t dw0 = GEN6_RENDER_CMD(3D, 3DSTATE_WM) | (cmd_len - 2);
    const int num_samples = 1;
+   const struct ilo_shader_cso *cso;
    uint32_t dw1, dw2, *dw;
 
    ILO_DEV_ASSERT(builder->dev, 7, 7.5);
 
-   /* see ilo_gpe_init_rasterizer_wm() */
-   if (rasterizer) {
-      dw1 = rasterizer->wm.payload[0];
-      dw2 = rasterizer->wm.payload[1];
+   /* see rasterizer_init_wm_gen7() */
+   dw1 = rasterizer->wm.payload[0];
+   dw2 = rasterizer->wm.payload[1];
 
-      assert(!hiz_op);
-      dw1 |= GEN7_WM_DW1_STATISTICS;
-   }
-   else {
-      dw1 = hiz_op;
-      dw2 = 0;
-   }
+   /* see fs_init_cso_gen7() */
+   cso = ilo_shader_get_kernel_cso(fs);
+   dw1 |= cso->payload[3];
 
-   if (fs) {
-      const struct ilo_shader_cso *fs_cso = ilo_shader_get_kernel_cso(fs);
-
-      dw1 |= fs_cso->payload[3];
-   }
+   dw1 |= GEN7_WM_DW1_STATISTICS;
 
    if (cc_may_kill)
       dw1 |= GEN7_WM_DW1_PS_ENABLE | GEN7_WM_DW1_PS_KILL;
@@ -396,9 +389,24 @@ gen7_3DSTATE_WM(struct ilo_builder *builder,
    }
 
    ilo_builder_batch_pointer(builder, cmd_len, &dw);
-   dw[0] = dw0;
+
+   dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_WM) | (cmd_len - 2);
    dw[1] = dw1;
    dw[2] = dw2;
+}
+
+static inline void
+gen7_hiz_3DSTATE_WM(struct ilo_builder *builder, uint32_t hiz_op)
+{
+   const uint8_t cmd_len = 3;
+   uint32_t *dw;
+
+   ILO_DEV_ASSERT(builder->dev, 7, 7.5);
+
+   ilo_builder_batch_pointer(builder, cmd_len, &dw);
+   dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_WM) | (cmd_len - 2);
+   dw[1] = hiz_op;
+   dw[2] = 0;
 }
 
 static inline void
