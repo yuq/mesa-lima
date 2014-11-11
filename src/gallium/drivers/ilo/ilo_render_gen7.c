@@ -721,7 +721,7 @@ gen7_rectlist_vs_to_sf(struct ilo_render *r,
                        const struct ilo_blitter *blitter)
 {
    gen7_3DSTATE_CONSTANT_VS(r->builder, NULL, NULL, 0);
-   gen6_3DSTATE_VS(r->builder, NULL);
+   gen6_disable_3DSTATE_VS(r->builder);
 
    gen7_3DSTATE_CONSTANT_HS(r->builder, NULL, NULL, 0);
    gen7_3DSTATE_HS(r->builder, NULL);
