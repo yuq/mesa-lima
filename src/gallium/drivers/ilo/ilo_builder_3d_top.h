@@ -867,90 +867,96 @@ static inline void
 gen7_3DSTATE_SO_DECL_LIST(struct ilo_builder *builder,
                           const struct pipe_stream_output_info *so_info)
 {
+   /*
+    * Note that "DWord Length" has 9 bits for this command and the type of
+    * cmd_len cannot be uint8_t.
+    */
    uint16_t cmd_len;
-   int buffer_selects, num_entries, i;
-   uint16_t so_decls[128];
+   struct {
+      int buf_selects;
+      int decl_count;
+      uint16_t decls[128];
+   } streams[4];
+   unsigned buf_offsets[PIPE_MAX_SO_BUFFERS];
+   int hw_decl_count, i;
    uint32_t *dw;
 
    ILO_DEV_ASSERT(builder->dev, 7, 7.5);
 
-   buffer_selects = 0;
-   num_entries = 0;
+   memset(streams, 0, sizeof(streams));
+   memset(buf_offsets, 0, sizeof(buf_offsets));
 
-   if (so_info) {
-      int buffer_offsets[PIPE_MAX_SO_BUFFERS];
+   for (i = 0; i < so_info->num_outputs; i++) {
+      unsigned decl, st, buf, reg, mask;
 
-      memset(buffer_offsets, 0, sizeof(buffer_offsets));
+      st = so_info->output[i].stream;
+      buf = so_info->output[i].output_buffer;
 
-      for (i = 0; i < so_info->num_outputs; i++) {
-         unsigned decl, buf, reg, mask;
+      /* pad with holes */
+      while (buf_offsets[buf] < so_info->output[i].dst_offset) {
+         int num_dwords;
 
-         buf = so_info->output[i].output_buffer;
-
-         /* pad with holes */
-         assert(buffer_offsets[buf] <= so_info->output[i].dst_offset);
-         while (buffer_offsets[buf] < so_info->output[i].dst_offset) {
-            int num_dwords;
-
-            num_dwords = so_info->output[i].dst_offset - buffer_offsets[buf];
-            if (num_dwords > 4)
-               num_dwords = 4;
-
-            decl = buf << GEN7_SO_DECL_OUTPUT_SLOT__SHIFT |
-                   GEN7_SO_DECL_HOLE_FLAG |
-                   ((1 << num_dwords) - 1) << GEN7_SO_DECL_COMPONENT_MASK__SHIFT;
-
-            so_decls[num_entries++] = decl;
-            buffer_offsets[buf] += num_dwords;
-         }
-
-         reg = so_info->output[i].register_index;
-         mask = ((1 << so_info->output[i].num_components) - 1) <<
-            so_info->output[i].start_component;
+         num_dwords = so_info->output[i].dst_offset - buf_offsets[buf];
+         if (num_dwords > 4)
+            num_dwords = 4;
 
          decl = buf << GEN7_SO_DECL_OUTPUT_SLOT__SHIFT |
-                reg << GEN7_SO_DECL_REG_INDEX__SHIFT |
-                mask << GEN7_SO_DECL_COMPONENT_MASK__SHIFT;
+                GEN7_SO_DECL_HOLE_FLAG |
+                ((1 << num_dwords) - 1) << GEN7_SO_DECL_COMPONENT_MASK__SHIFT;
 
-         so_decls[num_entries++] = decl;
-         buffer_selects |= 1 << buf;
-         buffer_offsets[buf] += so_info->output[i].num_components;
+         assert(streams[st].decl_count < Elements(streams[st].decls));
+         streams[st].decls[streams[st].decl_count++] = decl;
+         buf_offsets[buf] += num_dwords;
       }
+      assert(buf_offsets[buf] == so_info->output[i].dst_offset);
+
+      reg = so_info->output[i].register_index;
+      mask = ((1 << so_info->output[i].num_components) - 1) <<
+         so_info->output[i].start_component;
+
+      decl = buf << GEN7_SO_DECL_OUTPUT_SLOT__SHIFT |
+             reg << GEN7_SO_DECL_REG_INDEX__SHIFT |
+             mask << GEN7_SO_DECL_COMPONENT_MASK__SHIFT;
+
+      assert(streams[st].decl_count < Elements(streams[st].decls));
+
+      streams[st].buf_selects |= 1 << buf;
+      streams[st].decls[streams[st].decl_count++] = decl;
+      buf_offsets[buf] += so_info->output[i].num_components;
    }
 
-   /*
-    * From the Ivy Bridge PRM, volume 2 part 1, page 201:
-    *
-    *     "Errata: All 128 decls for all four streams must be included
-    *      whenever this command is issued. The "Num Entries [n]" fields still
-    *      contain the actual numbers of valid decls."
-    *
-    * Also note that "DWord Length" has 9 bits for this command, and the type
-    * of cmd_len is thus uint16_t.
-    */
-   cmd_len = 2 * 128 + 3;
+   if (ilo_dev_gen(builder->dev) >= ILO_GEN(7.5)) {
+      hw_decl_count = MAX4(streams[0].decl_count, streams[1].decl_count,
+                           streams[2].decl_count, streams[3].decl_count);
+   } else {
+      /*
+       * From the Ivy Bridge PRM, volume 2 part 1, page 201:
+       *
+       *     "Errata: All 128 decls for all four streams must be included
+       *      whenever this command is issued. The "Num Entries [n]" fields
+       *      still contain the actual numbers of valid decls."
+       */
+      hw_decl_count = 128;
+   }
+
+   cmd_len = 3 + 2 * hw_decl_count;
 
    ilo_builder_batch_pointer(builder, cmd_len, &dw);
 
    dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_SO_DECL_LIST) | (cmd_len - 2);
-   dw[1] = 0 << GEN7_SO_DECL_DW1_STREAM3_BUFFER_SELECTS__SHIFT |
-           0 << GEN7_SO_DECL_DW1_STREAM2_BUFFER_SELECTS__SHIFT |
-           0 << GEN7_SO_DECL_DW1_STREAM1_BUFFER_SELECTS__SHIFT |
-           buffer_selects << GEN7_SO_DECL_DW1_STREAM0_BUFFER_SELECTS__SHIFT;
-   dw[2] = 0 << GEN7_SO_DECL_DW2_STREAM3_ENTRY_COUNT__SHIFT |
-           0 << GEN7_SO_DECL_DW2_STREAM2_ENTRY_COUNT__SHIFT |
-           0 << GEN7_SO_DECL_DW2_STREAM1_ENTRY_COUNT__SHIFT |
-           num_entries << GEN7_SO_DECL_DW2_STREAM0_ENTRY_COUNT__SHIFT;
+   dw[1] = streams[3].buf_selects << GEN7_SO_DECL_DW1_STREAM3_BUFFER_SELECTS__SHIFT |
+           streams[2].buf_selects << GEN7_SO_DECL_DW1_STREAM2_BUFFER_SELECTS__SHIFT |
+           streams[1].buf_selects << GEN7_SO_DECL_DW1_STREAM1_BUFFER_SELECTS__SHIFT |
+           streams[0].buf_selects << GEN7_SO_DECL_DW1_STREAM0_BUFFER_SELECTS__SHIFT;
+   dw[2] = streams[3].decl_count << GEN7_SO_DECL_DW2_STREAM3_ENTRY_COUNT__SHIFT |
+           streams[2].decl_count << GEN7_SO_DECL_DW2_STREAM2_ENTRY_COUNT__SHIFT |
+           streams[1].decl_count << GEN7_SO_DECL_DW2_STREAM1_ENTRY_COUNT__SHIFT |
+           streams[0].decl_count << GEN7_SO_DECL_DW2_STREAM0_ENTRY_COUNT__SHIFT;
    dw += 3;
 
-   for (i = 0; i < num_entries; i++) {
-      dw[0] = so_decls[i];
-      dw[1] = 0;
-      dw += 2;
-   }
-   for (; i < 128; i++) {
-      dw[0] = 0;
-      dw[1] = 0;
+   for (i = 0; i < hw_decl_count; i++) {
+      dw[0] = streams[1].decls[i] << 16 | streams[0].decls[i];
+      dw[1] = streams[3].decls[i] << 16 | streams[2].decls[i];
       dw += 2;
    }
 }
