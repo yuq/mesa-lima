@@ -63,6 +63,8 @@ fs_visitor::emit_nir_code()
       nir_validate_shader(nir);
       nir_opt_peephole_select(nir);
       nir_validate_shader(nir);
+      nir_opt_peephole_ffma(nir);
+      nir_validate_shader(nir);
       nir_print_shader(nir, stderr);
 
       nir_convert_from_ssa(nir);

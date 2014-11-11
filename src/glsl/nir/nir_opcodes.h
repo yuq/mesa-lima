@@ -307,6 +307,7 @@ BINOP_HORIZ(vec2, 2, nir_type_unsigned, 1, nir_type_unsigned, 1, nir_type_unsign
    ARR(src1_size, src2_size, src3_size), \
    ARR(nir_type_unsigned, nir_type_unsigned, nir_type_unsigned))
 
+/* fma(a, b, c) = (a * b) + c */
 TRIOP(ffma, nir_type_float)
 
 TRIOP(flrp, nir_type_float)
