@@ -1295,7 +1295,7 @@ nir_instr_insert_before_cf(nir_cf_node *node, nir_instr *before)
 void
 nir_instr_insert_after_cf(nir_cf_node *node, nir_instr *after)
 {
-      if (node->type == nir_cf_node_block) {
+   if (node->type == nir_cf_node_block) {
       nir_instr_insert_after_block(nir_cf_node_as_block(node), after);
    } else {
       nir_cf_node *next = nir_cf_node_next(node);
