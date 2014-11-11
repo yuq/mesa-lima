@@ -47,21 +47,6 @@ _mesa_pack_bitmap(GLint width, GLint height, const GLubyte *source,
 
 
 extern void
-_mesa_unpack_index_span(struct gl_context *ctx, GLuint n,
-                        GLenum dstType, GLvoid *dest,
-                        GLenum srcType, const GLvoid *source,
-                        const struct gl_pixelstore_attrib *srcPacking,
-                        GLbitfield transferOps);
-
-
-extern void
-_mesa_pack_index_span(struct gl_context *ctx, GLuint n,
-                      GLenum dstType, GLvoid *dest, const GLuint *source,
-                      const struct gl_pixelstore_attrib *dstPacking,
-                      GLbitfield transferOps);
-
-
-extern void
 _mesa_unpack_stencil_span(struct gl_context *ctx, GLuint n,
                           GLenum dstType, GLvoid *dest,
                           GLenum srcType, const GLvoid *source,
