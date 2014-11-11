@@ -250,6 +250,21 @@ void si_dma_copy(struct pipe_context *ctx,
 		return;
 	}
 
+	/* XXX: Using the asynchronous DMA engine for multi-dimensional
+	 * operations seems to cause random GPU lockups for various people.
+	 * While the root cause for this might need to be fixed in the kernel,
+	 * let's disable it for now.
+	 *
+	 * Before re-enabling this, please make sure you can hit all newly
+	 * enabled paths in your testing, preferably with both piglit and real
+	 * world apps, and get in touch with people on the bug reports below
+	 * for stability testing.
+	 *
+	 * https://bugs.freedesktop.org/show_bug.cgi?id=85647
+	 * https://bugs.freedesktop.org/show_bug.cgi?id=83500
+	 */
+	goto fallback;
+
 	if (src->format != dst->format || src_box->depth > 1 ||
 	    rdst->dirty_level_mask != 0 ||
 	    rdst->cmask.size || rdst->fmask.size ||
