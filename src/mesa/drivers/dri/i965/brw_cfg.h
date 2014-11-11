@@ -89,14 +89,6 @@ struct bblock_t {
    struct exec_list parents;
    struct exec_list children;
    int num;
-
-   /* If the current basic block ends in an IF or ELSE instruction, these will
-    * point to the basic blocks containing the other associated instruction.
-    *
-    * Otherwise they are NULL.
-    */
-   struct bblock_t *if_block;
-   struct bblock_t *else_block;
 };
 
 static inline struct backend_instruction *

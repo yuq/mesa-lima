@@ -51,8 +51,7 @@ link(void *mem_ctx, bblock_t *block)
 }
 
 bblock_t::bblock_t(cfg_t *cfg) :
-   cfg(cfg), start_ip(0), end_ip(0), num(0),
-   if_block(NULL), else_block(NULL)
+   cfg(cfg), start_ip(0), end_ip(0), num(0)
 {
    instructions.make_empty();
    parents.make_empty();
@@ -136,7 +135,6 @@ bblock_t::combine_with(bblock_t *that)
    }
 
    this->end_ip = that->end_ip;
-   this->else_block = that->else_block;
    this->instructions.append_list(&that->instructions);
 
    this->cfg->remove_block(that);
@@ -237,17 +235,6 @@ cfg_t::cfg_t(exec_list *instructions)
 
          assert(cur_if->end()->opcode == BRW_OPCODE_IF);
          assert(!cur_else || cur_else->end()->opcode == BRW_OPCODE_ELSE);
-
-         cur_if->if_block = cur_if;
-         cur_if->else_block = cur_else;
-
-	 if (cur_else) {
-            cur_else->if_block = cur_if;
-            cur_else->else_block = cur_else;
-         }
-
-         cur->if_block = cur_if;
-         cur->else_block = cur_else;
 
 	 /* Pop the stack so we're in the previous if/else/endif */
 	 cur_if = pop_stack(&if_stack);
