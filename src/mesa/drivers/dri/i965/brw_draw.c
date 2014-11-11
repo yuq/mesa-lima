@@ -347,7 +347,7 @@ static void brw_postdraw_set_buffers_need_resolve(struct brw_context *brw)
 /* May fail if out of video memory for texture or vbo upload, or on
  * fallback conditions.
  */
-static bool brw_try_draw_prims( struct gl_context *ctx,
+static void brw_try_draw_prims( struct gl_context *ctx,
 				     const struct gl_client_array *arrays[],
 				     const struct _mesa_prim *prims,
 				     GLuint nr_prims,
@@ -357,7 +357,6 @@ static bool brw_try_draw_prims( struct gl_context *ctx,
 				     struct gl_buffer_object *indirect)
 {
    struct brw_context *brw = brw_context(ctx);
-   bool retval = true;
    GLuint i;
    bool fail_next = false;
 
@@ -487,8 +486,6 @@ retry:
 			  "available aperture space\n");
 		  warned = true;
 	       }
-
-	       retval = false;
 	    }
 	 }
       }
@@ -506,7 +503,7 @@ retry:
    brw_state_cache_check_size(brw);
    brw_postdraw_set_buffers_need_resolve(brw);
 
-   return retval;
+   return;
 }
 
 void brw_draw_prims( struct gl_context *ctx,
