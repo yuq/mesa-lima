@@ -458,14 +458,12 @@ gen7_draw_sol(struct ilo_render *r,
 
       for (i = 0; i < vec->so.count; i++) {
          const int stride = so_info->stride[i] * 4; /* in bytes */
-         int base = 0;
 
-         gen7_3DSTATE_SO_BUFFER(r->builder, i, base, stride,
-               vec->so.states[i]);
+         gen7_3DSTATE_SO_BUFFER(r->builder, i, stride, vec->so.states[i]);
       }
 
       for (; i < 4; i++)
-         gen7_3DSTATE_SO_BUFFER(r->builder, i, 0, 0, NULL);
+         gen7_disable_3DSTATE_SO_BUFFER(r->builder, i);
    }
 
    /* 3DSTATE_SO_DECL_LIST */

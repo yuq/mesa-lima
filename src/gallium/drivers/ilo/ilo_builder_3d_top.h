@@ -956,50 +956,53 @@ gen7_3DSTATE_SO_DECL_LIST(struct ilo_builder *builder,
 }
 
 static inline void
-gen7_3DSTATE_SO_BUFFER(struct ilo_builder *builder,
-                       int index, int base, int stride,
+gen7_3DSTATE_SO_BUFFER(struct ilo_builder *builder, int index, int stride,
                        const struct pipe_stream_output_target *so_target)
 {
    const uint8_t cmd_len = 4;
-   const uint32_t dw0 = GEN7_RENDER_CMD(3D, 3DSTATE_SO_BUFFER) |
-                        (cmd_len - 2);
    struct ilo_buffer *buf;
-   int end;
+   int start, end;
    uint32_t *dw;
    unsigned pos;
 
    ILO_DEV_ASSERT(builder->dev, 7, 7.5);
 
-   if (!so_target || !so_target->buffer) {
-      ilo_builder_batch_pointer(builder, cmd_len, &dw);
-      dw[0] = dw0;
-      dw[1] = index << GEN7_SO_BUF_DW1_INDEX__SHIFT;
-      dw[2] = 0;
-      dw[3] = 0;
-
-      return;
-   }
-
    buf = ilo_buffer(so_target->buffer);
 
    /* DWord-aligned */
-   assert(stride % 4 == 0 && base % 4 == 0);
+   assert(stride % 4 == 0);
    assert(so_target->buffer_offset % 4 == 0);
 
    stride &= ~3;
-   base = (base + so_target->buffer_offset) & ~3;
-   end = (base + so_target->buffer_size) & ~3;
+   start = so_target->buffer_offset & ~3;
+   end = (start + so_target->buffer_size) & ~3;
 
    pos = ilo_builder_batch_pointer(builder, cmd_len, &dw);
 
-   dw[0] = dw0;
+   dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_SO_BUFFER) | (cmd_len - 2);
    dw[1] = index << GEN7_SO_BUF_DW1_INDEX__SHIFT |
            stride;
 
    ilo_builder_batch_reloc(builder, pos + 2,
-         buf->bo, base, INTEL_RELOC_WRITE);
+         buf->bo, start, INTEL_RELOC_WRITE);
    ilo_builder_batch_reloc(builder, pos + 3,
          buf->bo, end, INTEL_RELOC_WRITE);
+}
+
+static inline void
+gen7_disable_3DSTATE_SO_BUFFER(struct ilo_builder *builder, int index)
+{
+   const uint8_t cmd_len = 4;
+   uint32_t *dw;
+
+   ILO_DEV_ASSERT(builder->dev, 7, 7.5);
+
+   ilo_builder_batch_pointer(builder, cmd_len, &dw);
+
+   dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_SO_BUFFER) | (cmd_len - 2);
+   dw[1] = index << GEN7_SO_BUF_DW1_INDEX__SHIFT;
+   dw[2] = 0;
+   dw[3] = 0;
 }
 
 static inline void
