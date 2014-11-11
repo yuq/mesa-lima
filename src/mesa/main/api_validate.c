@@ -89,7 +89,19 @@ check_valid_to_render(struct gl_context *ctx, const char *function)
          _mesa_error(ctx, GL_INVALID_OPERATION, "%s(no VAO bound)", function);
          return false;
       }
-      /* fallthrough */
+
+      /* Section 7.3 (Program Objects) of the OpenGL 4.5 Core Profile spec
+       * says:
+       *
+       *     "If there is no active program for the vertex or fragment shader
+       *     stages, the results of vertex and/or fragment processing will be
+       *     undefined. However, this is not an error."
+       *
+       * The fragment shader is not tested here because other state (e.g.,
+       * GL_RASTERIZER_DISCARD) affects whether or not we actually care.
+       */
+      return ctx->VertexProgram._Current != NULL;
+
    case API_OPENGL_COMPAT: {
       const struct gl_shader_program *const vsProg =
          ctx->_Shader->CurrentProgram[MESA_SHADER_VERTEX];
