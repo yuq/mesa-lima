@@ -57,25 +57,25 @@ index_bytes(GLenum type, GLsizei count)
 /**
  * Check if OK to draw arrays/elements.
  */
-static GLboolean
+static bool
 check_valid_to_render(struct gl_context *ctx, const char *function)
 {
    if (!_mesa_valid_to_render(ctx, function)) {
-      return GL_FALSE;
+      return false;
    }
 
    switch (ctx->API) {
    case API_OPENGLES2:
       /* For ES2, we can draw if we have a vertex program/shader). */
       if (!ctx->VertexProgram._Current)
-	 return GL_FALSE;
+	 return false;
       break;
 
    case API_OPENGLES:
       /* For OpenGL ES, only draw if we have vertex positions
        */
       if (!ctx->Array.VAO->VertexAttrib[VERT_ATTRIB_POS].Enabled)
-	 return GL_FALSE;
+	 return false;
       break;
 
    case API_OPENGL_CORE:
@@ -87,36 +87,35 @@ check_valid_to_render(struct gl_context *ctx, const char *function)
        */
       if (ctx->Array.VAO == ctx->Array.DefaultVAO) {
          _mesa_error(ctx, GL_INVALID_OPERATION, "%s(no VAO bound)", function);
-         return GL_FALSE;
+         return false;
       }
       /* fallthrough */
-   case API_OPENGL_COMPAT:
-      {
-         const struct gl_shader_program *vsProg =
-            ctx->_Shader->CurrentProgram[MESA_SHADER_VERTEX];
-         GLboolean haveVertexShader = (vsProg && vsProg->LinkStatus);
-         GLboolean haveVertexProgram = ctx->VertexProgram._Enabled;
-         if (haveVertexShader || haveVertexProgram) {
-            /* Draw regardless of whether or not we have any vertex arrays.
-             * (Ex: could draw a point using a constant vertex pos)
-             */
-            return GL_TRUE;
-         }
-         else {
-            /* Draw if we have vertex positions (GL_VERTEX_ARRAY or generic
-             * array [0]).
-             */
-            return (ctx->Array.VAO->VertexAttrib[VERT_ATTRIB_POS].Enabled ||
-                    ctx->Array.VAO->VertexAttrib[VERT_ATTRIB_GENERIC0].Enabled);
-         }
+   case API_OPENGL_COMPAT: {
+      const struct gl_shader_program *const vsProg =
+         ctx->_Shader->CurrentProgram[MESA_SHADER_VERTEX];
+      const bool haveVertexShader = (vsProg && vsProg->LinkStatus);
+      const bool haveVertexProgram = ctx->VertexProgram._Enabled;
+
+      if (haveVertexShader || haveVertexProgram) {
+         /* Draw regardless of whether or not we have any vertex arrays.
+          * (Ex: could draw a point using a constant vertex pos)
+          */
+         return true;
+      } else {
+         /* Draw if we have vertex positions (GL_VERTEX_ARRAY or generic
+          * array [0]).
+          */
+         return (ctx->Array.VAO->VertexAttrib[VERT_ATTRIB_POS].Enabled ||
+                 ctx->Array.VAO->VertexAttrib[VERT_ATTRIB_GENERIC0].Enabled);
       }
       break;
+   }
 
    default:
       unreachable("Invalid API value in check_valid_to_render()");
    }
 
-   return GL_TRUE;
+   return true;
 }
 
 
