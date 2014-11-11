@@ -381,7 +381,7 @@ validate_DrawElements_common(struct gl_context *ctx,
 GLboolean
 _mesa_validate_DrawElements(struct gl_context *ctx,
 			    GLenum mode, GLsizei count, GLenum type,
-			    const GLvoid *indices, GLint basevertex)
+			    const GLvoid *indices)
 {
    FLUSH_CURRENT(ctx, 0);
 
@@ -399,7 +399,7 @@ GLboolean
 _mesa_validate_MultiDrawElements(struct gl_context *ctx,
                                  GLenum mode, const GLsizei *count,
                                  GLenum type, const GLvoid * const *indices,
-                                 GLuint primcount, const GLint *basevertex)
+                                 GLuint primcount)
 {
    unsigned i;
 
@@ -457,7 +457,7 @@ GLboolean
 _mesa_validate_DrawRangeElements(struct gl_context *ctx, GLenum mode,
 				 GLuint start, GLuint end,
 				 GLsizei count, GLenum type,
-				 const GLvoid *indices, GLint basevertex)
+				 const GLvoid *indices)
 {
    FLUSH_CURRENT(ctx, 0);
 
@@ -477,8 +477,7 @@ _mesa_validate_DrawRangeElements(struct gl_context *ctx, GLenum mode,
  * \return GL_TRUE if OK to render, GL_FALSE if error found
  */
 GLboolean
-_mesa_validate_DrawArrays(struct gl_context *ctx,
-			  GLenum mode, GLint start, GLsizei count)
+_mesa_validate_DrawArrays(struct gl_context *ctx, GLenum mode, GLsizei count)
 {
    struct gl_transform_feedback_object *xfb_obj
       = ctx->TransformFeedback.CurrentObject;
@@ -594,8 +593,7 @@ _mesa_validate_DrawArraysInstanced(struct gl_context *ctx, GLenum mode, GLint fi
 GLboolean
 _mesa_validate_DrawElementsInstanced(struct gl_context *ctx,
                                      GLenum mode, GLsizei count, GLenum type,
-                                     const GLvoid *indices, GLsizei numInstances,
-                                     GLint basevertex)
+                                     const GLvoid *indices, GLsizei numInstances)
 {
    FLUSH_CURRENT(ctx, 0);
 
