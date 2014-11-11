@@ -804,61 +804,50 @@ gen7_disable_3DSTATE_GS(struct ilo_builder *builder)
 
 static inline void
 gen7_3DSTATE_STREAMOUT(struct ilo_builder *builder,
+                       int render_stream,
+                       bool render_disable,
                        unsigned buffer_mask,
-                       int vertex_attrib_count,
-                       bool rasterizer_discard)
+                       int vertex_attrib_count)
 {
    const uint8_t cmd_len = 3;
-   const bool enable = (buffer_mask != 0);
-   const uint32_t dw0 = GEN7_RENDER_CMD(3D, 3DSTATE_STREAMOUT) |
-                        (cmd_len - 2);
    uint32_t dw1, dw2, *dw;
-   int read_len;
 
    ILO_DEV_ASSERT(builder->dev, 7, 7.5);
 
-   if (!enable) {
-      dw1 = 0 << GEN7_SO_DW1_RENDER_STREAM_SELECT__SHIFT;
-      if (rasterizer_discard)
-         dw1 |= GEN7_SO_DW1_RENDER_DISABLE;
-
-      dw2 = 0;
-
-      ilo_builder_batch_pointer(builder, cmd_len, &dw);
-      dw[0] = dw0;
-      dw[1] = dw1;
-      dw[2] = dw2;
-      return;
-   }
-
-   read_len = (vertex_attrib_count + 1) / 2;
-   if (!read_len)
-      read_len = 1;
-
-   dw1 = GEN7_SO_DW1_SO_ENABLE |
-         0 << GEN7_SO_DW1_RENDER_STREAM_SELECT__SHIFT |
-         GEN7_SO_DW1_STATISTICS |
-         buffer_mask << 8;
-
-   if (rasterizer_discard)
+   dw1 = render_stream << GEN7_SO_DW1_RENDER_STREAM_SELECT__SHIFT;
+   if (render_disable)
       dw1 |= GEN7_SO_DW1_RENDER_DISABLE;
 
-   /* API_OPENGL */
-   if (true)
-      dw1 |= GEN7_SO_DW1_REORDER_TRAILING;
+   dw2 = 0;
 
-   dw2 = 0 << GEN7_SO_DW2_STREAM3_READ_OFFSET__SHIFT |
-         0 << GEN7_SO_DW2_STREAM3_READ_LEN__SHIFT |
-         0 << GEN7_SO_DW2_STREAM2_READ_OFFSET__SHIFT |
-         0 << GEN7_SO_DW2_STREAM2_READ_LEN__SHIFT |
-         0 << GEN7_SO_DW2_STREAM1_READ_OFFSET__SHIFT |
-         0 << GEN7_SO_DW2_STREAM1_READ_LEN__SHIFT |
-         0 << GEN7_SO_DW2_STREAM0_READ_OFFSET__SHIFT |
-         (read_len - 1) << GEN7_SO_DW2_STREAM0_READ_LEN__SHIFT;
+   if (buffer_mask) {
+      int read_len;
+
+      read_len = (vertex_attrib_count + 1) / 2;
+      if (!read_len)
+         read_len = 1;
+
+      dw1 |= GEN7_SO_DW1_SO_ENABLE |
+             GEN7_SO_DW1_STATISTICS |
+             buffer_mask << GEN7_SO_DW1_BUFFER_ENABLES__SHIFT;
+
+      /* API_OPENGL */
+      if (true)
+         dw1 |= GEN7_SO_DW1_REORDER_TRAILING;
+
+      dw2 = 0 << GEN7_SO_DW2_STREAM3_READ_OFFSET__SHIFT |
+            (read_len - 1) << GEN7_SO_DW2_STREAM3_READ_LEN__SHIFT |
+            0 << GEN7_SO_DW2_STREAM2_READ_OFFSET__SHIFT |
+            (read_len - 1) << GEN7_SO_DW2_STREAM2_READ_LEN__SHIFT |
+            0 << GEN7_SO_DW2_STREAM1_READ_OFFSET__SHIFT |
+            (read_len - 1) << GEN7_SO_DW2_STREAM1_READ_LEN__SHIFT |
+            0 << GEN7_SO_DW2_STREAM0_READ_OFFSET__SHIFT |
+            (read_len - 1) << GEN7_SO_DW2_STREAM0_READ_LEN__SHIFT;
+   }
 
    ilo_builder_batch_pointer(builder, cmd_len, &dw);
 
-   dw[0] = dw0;
+   dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_STREAMOUT) | (cmd_len - 2);
    dw[1] = dw1;
    dw[2] = dw2;
 }

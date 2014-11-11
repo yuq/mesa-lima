@@ -476,8 +476,9 @@ gen7_draw_sol(struct ilo_render *r,
       const int output_count = ilo_shader_get_kernel_param(shader,
             ILO_KERNEL_OUTPUT_COUNT);
 
-      gen7_3DSTATE_STREAMOUT(r->builder, buffer_mask, output_count,
-            vec->rasterizer->state.rasterizer_discard);
+      gen7_3DSTATE_STREAMOUT(r->builder, 0,
+            vec->rasterizer->state.rasterizer_discard,
+            buffer_mask, output_count);
    }
 }
 
@@ -732,7 +733,7 @@ gen7_rectlist_vs_to_sf(struct ilo_render *r,
    gen7_3DSTATE_CONSTANT_GS(r->builder, NULL, NULL, 0);
    gen7_disable_3DSTATE_GS(r->builder);
 
-   gen7_3DSTATE_STREAMOUT(r->builder, 0x0, 0, false);
+   gen7_3DSTATE_STREAMOUT(r->builder, 0, false, 0x0, 0);
 
    gen6_disable_3DSTATE_CLIP(r->builder);
 
