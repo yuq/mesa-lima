@@ -132,16 +132,21 @@ fs_visitor::opt_peephole_sel()
       if (if_inst->opcode != BRW_OPCODE_IF)
          continue;
 
-      if (!block->else_block)
-         continue;
-
-      assert(block->else_block->end()->opcode == BRW_OPCODE_ELSE);
-
       fs_inst *else_mov[MAX_MOVS] = { NULL };
       fs_inst *then_mov[MAX_MOVS] = { NULL };
 
       bblock_t *then_block = block->next();
-      bblock_t *else_block = block->else_block->next();
+      bblock_t *else_block = NULL;
+      foreach_list_typed(bblock_link, child, link, &block->children) {
+         if (child->block != then_block) {
+            if (child->block->prev()->end()->opcode == BRW_OPCODE_ELSE) {
+               else_block = child->block;
+            }
+            break;
+         }
+      }
+      if (else_block == NULL)
+         continue;
 
       int movs = count_movs_from_if(then_mov, else_mov, then_block, else_block);
 
