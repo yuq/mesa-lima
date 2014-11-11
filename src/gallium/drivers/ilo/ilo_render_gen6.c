@@ -447,7 +447,7 @@ gen6_draw_vf(struct ilo_render *r,
 
       /* 3DSTATE_VF */
       if (session->primitive_restart_changed) {
-         gen7_3DSTATE_VF(r->builder, vec->draw->primitive_restart,
+         gen75_3DSTATE_VF(r->builder, vec->draw->primitive_restart,
                vec->draw->restart_index);
       }
    }

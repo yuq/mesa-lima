@@ -311,9 +311,9 @@ gen7_3DSTATE_URB_GS(struct ilo_builder *builder,
 }
 
 static inline void
-gen7_3DSTATE_VF(struct ilo_builder *builder,
-                bool enable_cut_index,
-                uint32_t cut_index)
+gen75_3DSTATE_VF(struct ilo_builder *builder,
+                 bool enable_cut_index,
+                 uint32_t cut_index)
 {
    const uint8_t cmd_len = 2;
    uint32_t *dw;
