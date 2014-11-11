@@ -737,7 +737,7 @@ gen7_rectlist_vs_to_sf(struct ilo_render *r,
 
    gen7_3DSTATE_STREAMOUT(r->builder, 0x0, 0, false);
 
-   gen6_3DSTATE_CLIP(r->builder, NULL, NULL, false, 0);
+   gen6_disable_3DSTATE_CLIP(r->builder);
 
    gen7_wa_pre_3dstate_sf_depth_bias(r);
 

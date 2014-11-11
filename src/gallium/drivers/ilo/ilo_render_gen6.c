@@ -851,7 +851,7 @@ gen6_rectlist_vs_to_sf(struct ilo_render *r,
    gen6_3DSTATE_CONSTANT_GS(r->builder, NULL, NULL, 0);
    gen6_3DSTATE_GS(r->builder, NULL, NULL, 0);
 
-   gen6_3DSTATE_CLIP(r->builder, NULL, NULL, false, 0);
+   gen6_disable_3DSTATE_CLIP(r->builder);
    gen6_3DSTATE_SF(r->builder, NULL, NULL);
 }
 

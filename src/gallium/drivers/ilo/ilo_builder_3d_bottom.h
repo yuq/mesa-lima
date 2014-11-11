@@ -46,35 +46,27 @@ gen6_3DSTATE_CLIP(struct ilo_builder *builder,
 {
    const uint8_t cmd_len = 4;
    uint32_t dw1, dw2, dw3, *dw;
+   int interps;
 
    ILO_DEV_ASSERT(builder->dev, 6, 7.5);
 
-   if (rasterizer) {
-      int interps;
+   dw1 = rasterizer->clip.payload[0];
+   dw2 = rasterizer->clip.payload[1];
+   dw3 = rasterizer->clip.payload[2];
 
-      dw1 = rasterizer->clip.payload[0];
-      dw2 = rasterizer->clip.payload[1];
-      dw3 = rasterizer->clip.payload[2];
+   if (enable_guardband && rasterizer->clip.can_enable_guardband)
+      dw2 |= GEN6_CLIP_DW2_GB_TEST_ENABLE;
 
-      if (enable_guardband && rasterizer->clip.can_enable_guardband)
-         dw2 |= GEN6_CLIP_DW2_GB_TEST_ENABLE;
+   interps = (fs) ?  ilo_shader_get_kernel_param(fs,
+         ILO_KERNEL_FS_BARYCENTRIC_INTERPOLATIONS) : 0;
 
-      interps = (fs) ?  ilo_shader_get_kernel_param(fs,
-            ILO_KERNEL_FS_BARYCENTRIC_INTERPOLATIONS) : 0;
+   if (interps & (GEN6_INTERP_NONPERSPECTIVE_PIXEL |
+                  GEN6_INTERP_NONPERSPECTIVE_CENTROID |
+                  GEN6_INTERP_NONPERSPECTIVE_SAMPLE))
+      dw2 |= GEN6_CLIP_DW2_NONPERSPECTIVE_BARYCENTRIC_ENABLE;
 
-      if (interps & (GEN6_INTERP_NONPERSPECTIVE_PIXEL |
-                     GEN6_INTERP_NONPERSPECTIVE_CENTROID |
-                     GEN6_INTERP_NONPERSPECTIVE_SAMPLE))
-         dw2 |= GEN6_CLIP_DW2_NONPERSPECTIVE_BARYCENTRIC_ENABLE;
-
-      dw3 |= GEN6_CLIP_DW3_RTAINDEX_FORCED_ZERO |
-             (num_viewports - 1);
-   }
-   else {
-      dw1 = 0;
-      dw2 = 0;
-      dw3 = 0;
-   }
+   dw3 |= GEN6_CLIP_DW3_RTAINDEX_FORCED_ZERO |
+          (num_viewports - 1);
 
    ilo_builder_batch_pointer(builder, cmd_len, &dw);
 
@@ -82,6 +74,22 @@ gen6_3DSTATE_CLIP(struct ilo_builder *builder,
    dw[1] = dw1;
    dw[2] = dw2;
    dw[3] = dw3;
+}
+
+static inline void
+gen6_disable_3DSTATE_CLIP(struct ilo_builder *builder)
+{
+   const uint8_t cmd_len = 4;
+   uint32_t *dw;
+
+   ILO_DEV_ASSERT(builder->dev, 6, 7.5);
+
+   ilo_builder_batch_pointer(builder, cmd_len, &dw);
+
+   dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_CLIP) | (cmd_len - 2);
+   dw[1] = 0;
+   dw[2] = 0;
+   dw[3] = 0;
 }
 
 /**
