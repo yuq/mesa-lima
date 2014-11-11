@@ -36,25 +36,6 @@
 
 
 /**
- * \return  number of bytes in array [count] of type.
- */
-static GLsizei
-index_bytes(GLenum type, GLsizei count)
-{
-   if (type == GL_UNSIGNED_INT) {
-      return count * sizeof(GLuint);
-   }
-   else if (type == GL_UNSIGNED_BYTE) {
-      return count * sizeof(GLubyte);
-   }
-   else {
-      ASSERT(type == GL_UNSIGNED_SHORT);
-      return count * sizeof(GLushort);
-   }
-}
-
-
-/**
  * Check if OK to draw arrays/elements.
  */
 static bool
@@ -363,20 +344,10 @@ validate_DrawElements_common(struct gl_context *ctx,
    if (!check_valid_to_render(ctx, caller))
       return false;
 
-   /* Vertex buffer object tests */
-   if (_mesa_is_bufferobj(ctx->Array.VAO->IndexBufferObj)) {
-      /* use indices in the buffer object */
-      /* make sure count doesn't go outside buffer bounds */
-      if (index_bytes(type, count) > ctx->Array.VAO->IndexBufferObj->Size) {
-         _mesa_warning(ctx, "%s index out of buffer bounds", caller);
-         return false;
-      }
-   }
-   else {
-      /* not using a VBO */
-      if (!indices)
-         return false;
-   }
+   /* Not using a VBO for indices, so avoid NULL pointer derefs later.
+    */
+   if (!_mesa_is_bufferobj(ctx->Array.VAO->IndexBufferObj) && indices == NULL)
+      return false;
 
    if (count == 0)
       return false;
@@ -434,21 +405,9 @@ _mesa_validate_MultiDrawElements(struct gl_context *ctx,
    if (!check_valid_to_render(ctx, "glMultiDrawElements"))
       return GL_FALSE;
 
-   /* Vertex buffer object tests */
-   if (_mesa_is_bufferobj(ctx->Array.VAO->IndexBufferObj)) {
-      /* use indices in the buffer object */
-      /* make sure count doesn't go outside buffer bounds */
-      for (i = 0; i < primcount; i++) {
-         if (index_bytes(type, count[i]) >
-             ctx->Array.VAO->IndexBufferObj->Size) {
-            _mesa_warning(ctx,
-                          "glMultiDrawElements index out of buffer bounds");
-            return GL_FALSE;
-         }
-      }
-   }
-   else {
-      /* not using a VBO */
+   /* Not using a VBO for indices, so avoid NULL pointer derefs later.
+    */
+   if (!_mesa_is_bufferobj(ctx->Array.VAO->IndexBufferObj)) {
       for (i = 0; i < primcount; i++) {
          if (!indices[i])
             return GL_FALSE;
