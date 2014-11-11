@@ -378,7 +378,7 @@ gen7_draw_hs(struct ilo_render *r,
    /* 3DSTATE_CONSTANT_HS and 3DSTATE_HS */
    if (r->hw_ctx_changed) {
       gen7_3DSTATE_CONSTANT_HS(r->builder, 0, 0, 0);
-      gen7_3DSTATE_HS(r->builder, NULL);
+      gen7_disable_3DSTATE_HS(r->builder);
    }
 
    /* 3DSTATE_BINDING_TABLE_POINTERS_HS */
@@ -404,7 +404,7 @@ gen7_draw_ds(struct ilo_render *r,
    /* 3DSTATE_CONSTANT_DS and 3DSTATE_DS */
    if (r->hw_ctx_changed) {
       gen7_3DSTATE_CONSTANT_DS(r->builder, 0, 0, 0);
-      gen7_3DSTATE_DS(r->builder, NULL);
+      gen7_disable_3DSTATE_DS(r->builder);
    }
 
    /* 3DSTATE_BINDING_TABLE_POINTERS_DS */
@@ -724,12 +724,12 @@ gen7_rectlist_vs_to_sf(struct ilo_render *r,
    gen6_disable_3DSTATE_VS(r->builder);
 
    gen7_3DSTATE_CONSTANT_HS(r->builder, NULL, NULL, 0);
-   gen7_3DSTATE_HS(r->builder, NULL);
+   gen7_disable_3DSTATE_HS(r->builder);
 
    gen7_3DSTATE_TE(r->builder);
 
    gen7_3DSTATE_CONSTANT_DS(r->builder, NULL, NULL, 0);
-   gen7_3DSTATE_DS(r->builder, NULL);
+   gen7_disable_3DSTATE_DS(r->builder);
 
    gen7_3DSTATE_CONSTANT_GS(r->builder, NULL, NULL, 0);
    gen7_disable_3DSTATE_GS(r->builder);

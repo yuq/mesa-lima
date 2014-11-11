@@ -589,15 +589,12 @@ gen6_disable_3DSTATE_VS(struct ilo_builder *builder)
 }
 
 static inline void
-gen7_3DSTATE_HS(struct ilo_builder *builder,
-                const struct ilo_shader_state *hs)
+gen7_disable_3DSTATE_HS(struct ilo_builder *builder)
 {
    const uint8_t cmd_len = 7;
    uint32_t *dw;
 
    ILO_DEV_ASSERT(builder->dev, 7, 7.5);
-
-   assert(!hs);
 
    ilo_builder_batch_pointer(builder, cmd_len, &dw);
 
@@ -627,15 +624,12 @@ gen7_3DSTATE_TE(struct ilo_builder *builder)
 }
 
 static inline void
-gen7_3DSTATE_DS(struct ilo_builder *builder,
-                const struct ilo_shader_state *ds)
+gen7_disable_3DSTATE_DS(struct ilo_builder *builder)
 {
    const uint8_t cmd_len = 6;
    uint32_t *dw;
 
    ILO_DEV_ASSERT(builder->dev, 7, 7.5);
-
-   assert(!ds);
 
    ilo_builder_batch_pointer(builder, cmd_len, &dw);
 
