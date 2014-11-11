@@ -1383,7 +1383,7 @@ struct brw_context
    } perfmon;
 
    int num_atoms;
-   const struct brw_tracked_state **atoms;
+   const struct brw_tracked_state atoms[57];
 
    /* If (INTEL_DEBUG & DEBUG_BATCH) */
    struct {
