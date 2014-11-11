@@ -770,7 +770,7 @@ gen7_rectlist_wm(struct ilo_render *r,
    gen7_3DSTATE_CONSTANT_PS(r->builder, NULL, NULL, 0);
 
    gen7_wa_pre_3dstate_ps_max_threads(r);
-   gen7_3DSTATE_PS(r->builder, NULL, false);
+   gen7_disable_3DSTATE_PS(r->builder);
 }
 
 static void

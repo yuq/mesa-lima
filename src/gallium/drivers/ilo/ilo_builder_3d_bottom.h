@@ -415,44 +415,10 @@ gen7_3DSTATE_PS(struct ilo_builder *builder,
                 bool dual_blend)
 {
    const uint8_t cmd_len = 8;
-   const uint32_t dw0 = GEN7_RENDER_CMD(3D, 3DSTATE_PS) | (cmd_len - 2);
    const struct ilo_shader_cso *cso;
    uint32_t dw2, dw4, dw5, *dw;
 
    ILO_DEV_ASSERT(builder->dev, 7, 7.5);
-
-   if (!fs) {
-      int max_threads;
-
-      /* GPU hangs if none of the dispatch enable bits is set */
-      dw4 = GEN7_PS_DW4_8_PIXEL_DISPATCH;
-
-      /* see brwCreateContext() */
-      switch (ilo_dev_gen(builder->dev)) {
-      case ILO_GEN(7.5):
-         max_threads = (builder->dev->gt == 3) ? 408 :
-                       (builder->dev->gt == 2) ? 204 : 102;
-         dw4 |= (max_threads - 1) << GEN75_PS_DW4_MAX_THREADS__SHIFT;
-         break;
-      case ILO_GEN(7):
-      default:
-         max_threads = (builder->dev->gt == 2) ? 172 : 48;
-         dw4 |= (max_threads - 1) << GEN7_PS_DW4_MAX_THREADS__SHIFT;
-         break;
-      }
-
-      ilo_builder_batch_pointer(builder, cmd_len, &dw);
-      dw[0] = dw0;
-      dw[1] = 0;
-      dw[2] = 0;
-      dw[3] = 0;
-      dw[4] = dw4;
-      dw[5] = 0;
-      dw[6] = 0;
-      dw[7] = 0;
-
-      return;
-   }
 
    cso = ilo_shader_get_kernel_cso(fs);
    dw2 = cso->payload[0];
@@ -463,7 +429,8 @@ gen7_3DSTATE_PS(struct ilo_builder *builder,
       dw4 |= GEN7_PS_DW4_DUAL_SOURCE_BLEND;
 
    ilo_builder_batch_pointer(builder, cmd_len, &dw);
-   dw[0] = dw0;
+
+   dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_PS) | (cmd_len - 2);
    dw[1] = ilo_shader_get_kernel_offset(fs);
    dw[2] = dw2;
    dw[3] = 0; /* scratch */
@@ -471,6 +438,44 @@ gen7_3DSTATE_PS(struct ilo_builder *builder,
    dw[5] = dw5;
    dw[6] = 0; /* kernel 1 */
    dw[7] = 0; /* kernel 2 */
+}
+
+static inline void
+gen7_disable_3DSTATE_PS(struct ilo_builder *builder)
+{
+   const uint8_t cmd_len = 8;
+   int max_threads;
+   uint32_t dw4, *dw;
+
+   ILO_DEV_ASSERT(builder->dev, 7, 7.5);
+
+   /* GPU hangs if none of the dispatch enable bits is set */
+   dw4 = GEN7_PS_DW4_8_PIXEL_DISPATCH;
+
+   /* see brwCreateContext() */
+   switch (ilo_dev_gen(builder->dev)) {
+   case ILO_GEN(7.5):
+      max_threads = (builder->dev->gt == 3) ? 408 :
+                    (builder->dev->gt == 2) ? 204 : 102;
+      dw4 |= (max_threads - 1) << GEN75_PS_DW4_MAX_THREADS__SHIFT;
+      break;
+   case ILO_GEN(7):
+   default:
+      max_threads = (builder->dev->gt == 2) ? 172 : 48;
+      dw4 |= (max_threads - 1) << GEN7_PS_DW4_MAX_THREADS__SHIFT;
+      break;
+   }
+
+   ilo_builder_batch_pointer(builder, cmd_len, &dw);
+
+   dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_PS) | (cmd_len - 2);
+   dw[1] = 0;
+   dw[2] = 0;
+   dw[3] = 0;
+   dw[4] = dw4;
+   dw[5] = 0;
+   dw[6] = 0;
+   dw[7] = 0;
 }
 
 static inline void
