@@ -49,6 +49,9 @@ typedef struct {
    /* map of register -> validation state (struct above) */
    struct hash_table *regs;
 
+   /* the current shader being validated */
+   nir_shader *shader;
+
    /* the current instruction being validated */
    nir_instr *instr;
 
@@ -66,6 +69,12 @@ typedef struct {
 
    /* map of SSA value -> function implementation where it is defined */
    struct hash_table *ssa_defs;
+
+   /* bitset of ssa definitions we have found; used to check uniqueness */
+   BITSET_WORD *ssa_defs_found;
+
+   /* bitset of registers we have currently found; used to check uniqueness */
+   BITSET_WORD *regs_found;
 
    /* map of local variable -> function implementation where it is defined */
    struct hash_table *var_defs;
@@ -203,6 +212,10 @@ validate_reg_dest(nir_reg_dest *dest, validate_state *state)
 static void
 validate_ssa_def(nir_ssa_def *def, validate_state *state)
 {
+   assert(def->index < state->impl->ssa_alloc);
+   assert(!BITSET_TEST(state->ssa_defs_found, def->index));
+   BITSET_SET(state->ssa_defs_found, def->index);
+
    assert(def->num_components <= 4);
    _mesa_hash_table_insert(state->ssa_defs, def, state->impl);
 }
@@ -614,6 +627,13 @@ prevalidate_reg_decl(nir_register *reg, bool is_global, validate_state *state)
 {
    assert(reg->is_global == is_global);
 
+   if (is_global)
+      assert(reg->index < state->shader->reg_alloc);
+   else
+      assert(reg->index < state->impl->reg_alloc);
+   assert(!BITSET_TEST(state->regs_found, reg->index));
+   BITSET_SET(state->regs_found, reg->index);
+
    reg_validate_state *reg_state = ralloc(state->regs, reg_validate_state);
    reg_state->uses = _mesa_set_create(reg_state, _mesa_key_pointer_equal);
    reg_state->defs = _mesa_set_create(reg_state, _mesa_key_pointer_equal);
@@ -705,11 +725,21 @@ validate_function_impl(nir_function_impl *impl, validate_state *state)
       validate_var_decl(var, false, state);
    }
 
+   state->regs_found = realloc(state->regs_found,
+                               BITSET_WORDS(impl->reg_alloc) *
+                               sizeof(BITSET_WORD));
+   memset(state->regs_found, 0, BITSET_WORDS(impl->reg_alloc) *
+                                sizeof(BITSET_WORD));
    exec_list_validate(&impl->registers);
    foreach_list_typed(nir_register, reg, node, &impl->registers) {
       prevalidate_reg_decl(reg, false, state);
    }
 
+   state->ssa_defs_found = realloc(state->ssa_defs_found,
+                                   BITSET_WORDS(impl->ssa_alloc) *
+                                   sizeof(BITSET_WORD));
+   memset(state->ssa_defs_found, 0, BITSET_WORDS(impl->ssa_alloc) *
+                                    sizeof(BITSET_WORD));
    exec_list_validate(&impl->body);
    foreach_list_typed(nir_cf_node, node, node, &impl->body) {
       validate_cf_node(node, state);
@@ -745,6 +775,8 @@ init_validate_state(validate_state *state)
                                          _mesa_key_pointer_equal);
    state->ssa_defs = _mesa_hash_table_create(NULL, _mesa_hash_pointer,
                                              _mesa_key_pointer_equal);
+   state->ssa_defs_found = NULL;
+   state->regs_found = NULL;
    state->var_defs = _mesa_hash_table_create(NULL, _mesa_hash_pointer,
                                              _mesa_key_pointer_equal);
 }
@@ -754,6 +786,8 @@ destroy_validate_state(validate_state *state)
 {
    _mesa_hash_table_destroy(state->regs, NULL);
    _mesa_hash_table_destroy(state->ssa_defs, NULL);
+   free(state->ssa_defs_found);
+   free(state->regs_found);
    _mesa_hash_table_destroy(state->var_defs, NULL);
 }
 
@@ -762,6 +796,8 @@ nir_validate_shader(nir_shader *shader)
 {
    validate_state state;
    init_validate_state(&state);
+
+   state.shader = shader;
 
    struct hash_entry *entry;
    hash_table_foreach(shader->uniforms, entry) {
@@ -786,6 +822,11 @@ nir_validate_shader(nir_shader *shader)
      validate_var_decl(var, true, &state);
    }
 
+   state.regs_found = realloc(state.regs_found,
+                              BITSET_WORDS(shader->reg_alloc) *
+                              sizeof(BITSET_WORD));
+   memset(state.regs_found, 0, BITSET_WORDS(shader->reg_alloc) *
+                               sizeof(BITSET_WORD));
    exec_list_validate(&shader->registers);
    foreach_list_typed(nir_register, reg, node, &shader->registers) {
       prevalidate_reg_decl(reg, true, &state);
