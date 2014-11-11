@@ -399,16 +399,14 @@ public:
    vec4_instruction *emit(vec4_instruction *inst);
 
    vec4_instruction *emit(enum opcode opcode);
-
-   vec4_instruction *emit(enum opcode opcode, dst_reg dst);
-
-   vec4_instruction *emit(enum opcode opcode, dst_reg dst, src_reg src0);
-
-   vec4_instruction *emit(enum opcode opcode, dst_reg dst,
-			  src_reg src0, src_reg src1);
-
-   vec4_instruction *emit(enum opcode opcode, dst_reg dst,
-			  src_reg src0, src_reg src1, src_reg src2);
+   vec4_instruction *emit(enum opcode opcode, const dst_reg &dst);
+   vec4_instruction *emit(enum opcode opcode, const dst_reg &dst,
+                          const src_reg &src0);
+   vec4_instruction *emit(enum opcode opcode, const dst_reg &dst,
+                          const src_reg &src0, const src_reg &src1);
+   vec4_instruction *emit(enum opcode opcode, const dst_reg &dst,
+                          const src_reg &src0, const src_reg &src1,
+                          const src_reg &src2);
 
    vec4_instruction *emit_before(bblock_t *block,
                                  vec4_instruction *inst,

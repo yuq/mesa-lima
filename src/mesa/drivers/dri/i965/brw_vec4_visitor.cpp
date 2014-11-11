@@ -79,8 +79,8 @@ vec4_visitor::emit_before(bblock_t *block, vec4_instruction *inst,
 }
 
 vec4_instruction *
-vec4_visitor::emit(enum opcode opcode, dst_reg dst,
-		   src_reg src0, src_reg src1, src_reg src2)
+vec4_visitor::emit(enum opcode opcode, const dst_reg &dst, const src_reg &src0,
+                   const src_reg &src1, const src_reg &src2)
 {
    return emit(new(mem_ctx) vec4_instruction(this, opcode, dst,
 					     src0, src1, src2));
@@ -88,19 +88,20 @@ vec4_visitor::emit(enum opcode opcode, dst_reg dst,
 
 
 vec4_instruction *
-vec4_visitor::emit(enum opcode opcode, dst_reg dst, src_reg src0, src_reg src1)
+vec4_visitor::emit(enum opcode opcode, const dst_reg &dst, const src_reg &src0,
+                   const src_reg &src1)
 {
    return emit(new(mem_ctx) vec4_instruction(this, opcode, dst, src0, src1));
 }
 
 vec4_instruction *
-vec4_visitor::emit(enum opcode opcode, dst_reg dst, src_reg src0)
+vec4_visitor::emit(enum opcode opcode, const dst_reg &dst, const src_reg &src0)
 {
    return emit(new(mem_ctx) vec4_instruction(this, opcode, dst, src0));
 }
 
 vec4_instruction *
-vec4_visitor::emit(enum opcode opcode, dst_reg dst)
+vec4_visitor::emit(enum opcode opcode, const dst_reg &dst)
 {
    return emit(new(mem_ctx) vec4_instruction(this, opcode, dst));
 }
