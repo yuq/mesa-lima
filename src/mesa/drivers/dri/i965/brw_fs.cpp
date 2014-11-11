@@ -933,7 +933,9 @@ fs_inst::reads_flag() const
 bool
 fs_inst::writes_flag() const
 {
-   return (conditional_mod && opcode != BRW_OPCODE_SEL) ||
+   return (conditional_mod && (opcode != BRW_OPCODE_SEL &&
+                               opcode != BRW_OPCODE_IF &&
+                               opcode != BRW_OPCODE_WHILE)) ||
           opcode == FS_OPCODE_MOV_DISPATCH_TO_FLAGS;
 }
 
