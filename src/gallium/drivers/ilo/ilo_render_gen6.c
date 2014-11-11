@@ -661,8 +661,10 @@ gen6_draw_sf(struct ilo_render *r,
              struct ilo_render_draw_session *session)
 {
    /* 3DSTATE_SF */
-   if (DIRTY(RASTERIZER) || DIRTY(FS))
-      gen6_3DSTATE_SF(r->builder, vec->rasterizer, vec->fs);
+   if (DIRTY(RASTERIZER) || DIRTY(FS) || DIRTY(FB)) {
+      gen6_3DSTATE_SF(r->builder, vec->rasterizer, vec->fs,
+            vec->fb.num_samples);
+   }
 }
 
 void
@@ -858,7 +860,7 @@ gen6_rectlist_vs_to_sf(struct ilo_render *r,
    gen6_disable_3DSTATE_GS(r->builder);
 
    gen6_disable_3DSTATE_CLIP(r->builder);
-   gen6_3DSTATE_SF(r->builder, NULL, NULL);
+   gen6_3DSTATE_SF(r->builder, NULL, NULL, blitter->fb.num_samples);
 }
 
 static void

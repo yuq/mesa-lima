@@ -488,16 +488,20 @@ gen7_draw_sf(struct ilo_render *r,
              struct ilo_render_draw_session *session)
 {
    /* 3DSTATE_SBE */
-   if (DIRTY(RASTERIZER) || DIRTY(FS))
-      gen7_3DSTATE_SBE(r->builder, vec->rasterizer, vec->fs);
+   if (DIRTY(RASTERIZER) || DIRTY(FS)) {
+      gen7_3DSTATE_SBE(r->builder, vec->fs, (vec->rasterizer) ?
+            vec->rasterizer->state.sprite_coord_mode : 0);
+   }
 
    /* 3DSTATE_SF */
    if (DIRTY(RASTERIZER) || DIRTY(FB)) {
       struct pipe_surface *zs = vec->fb.state.zsbuf;
 
       gen7_wa_pre_3dstate_sf_depth_bias(r);
-      gen7_3DSTATE_SF(r->builder, vec->rasterizer,
-            (zs) ? zs->format : PIPE_FORMAT_NONE);
+      gen7_3DSTATE_SF(r->builder,
+            (vec->rasterizer) ? &vec->rasterizer->sf : NULL,
+            (zs) ? zs->format : PIPE_FORMAT_NONE,
+            vec->fb.num_samples);
    }
 }
 
@@ -739,8 +743,9 @@ gen7_rectlist_vs_to_sf(struct ilo_render *r,
 
    gen7_wa_pre_3dstate_sf_depth_bias(r);
 
-   gen7_3DSTATE_SF(r->builder, NULL, blitter->fb.dst.base.format);
-   gen7_3DSTATE_SBE(r->builder, NULL, NULL);
+   gen7_3DSTATE_SF(r->builder, NULL, blitter->fb.dst.base.format,
+         blitter->fb.num_samples);
+   gen7_3DSTATE_SBE(r->builder, NULL, 0);
 }
 
 static void
