@@ -534,9 +534,7 @@ exec_list_validate(const struct exec_list *list)
     * either require C++ or assume the exec_node is embedded in a structure
     * which is not the case for this function.
     */
-   for (node = exec_list_get_head_const(list);
-        !exec_node_is_tail_sentinel(node);
-        node = exec_node_get_next_const(node)) {
+   for (node = list->head; node->next != NULL; node = node->next) {
       assert(node->next->prev == node);
       assert(node->prev->next == node);
    }
