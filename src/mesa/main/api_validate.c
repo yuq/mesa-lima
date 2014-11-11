@@ -79,8 +79,16 @@ check_valid_to_render(struct gl_context *ctx, const char *function)
       break;
 
    case API_OPENGL_CORE:
-      if (ctx->Array.VAO == ctx->Array.DefaultVAO)
+      /* Section 10.4 (Drawing Commands Using Vertex Arrays) of the OpenGL 4.5
+       * Core Profile spec says:
+       *
+       *     "An INVALID_OPERATION error is generated if no vertex array
+       *     object is bound (see section 10.3.1)."
+       */
+      if (ctx->Array.VAO == ctx->Array.DefaultVAO) {
+         _mesa_error(ctx, GL_INVALID_OPERATION, "%s(no VAO bound)", function);
          return GL_FALSE;
+      }
       /* fallthrough */
    case API_OPENGL_COMPAT:
       {
