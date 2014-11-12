@@ -226,10 +226,7 @@ void
 fs_visitor::emit_lrp(const fs_reg &dst, const fs_reg &x, const fs_reg &y,
                      const fs_reg &a)
 {
-   if (brw->gen < 6 ||
-       !x.is_valid_3src() ||
-       !y.is_valid_3src() ||
-       !a.is_valid_3src()) {
+   if (brw->gen < 6) {
       /* We can't use the LRP instruction.  Emit x*(1-a) + y*a. */
       fs_reg y_times_a           = fs_reg(this, glsl_type::float_type);
       fs_reg one_minus_a         = fs_reg(this, glsl_type::float_type);
