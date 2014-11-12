@@ -240,6 +240,9 @@ i915_get_param(struct pipe_screen *screen, enum pipe_cap cap)
    case PIPE_CAP_SAMPLER_VIEW_TARGET:
       return 0;
 
+   case PIPE_CAP_MAX_VIEWPORTS:
+      return 1;
+
    case PIPE_CAP_MIN_MAP_BUFFER_ALIGNMENT:
       return 64;
 
