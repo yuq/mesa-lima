@@ -69,10 +69,6 @@ _mesa_get_pack_ubyte_stencil_func(mesa_format format);
 
 
 extern void
-_mesa_pack_int_rgba_row(mesa_format format, GLuint n,
-                          const GLint src[][4], void *dst);
-
-extern void
 _mesa_pack_float_rgba_row(mesa_format format, GLuint n,
                           const GLfloat src[][4], void *dst);
 

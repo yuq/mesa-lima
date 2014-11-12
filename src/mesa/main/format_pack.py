@@ -214,59 +214,6 @@ pack_uint_${f.short_name()}(const GLuint src[4], void *dst)
 }
 %endfor
 
-/* int packing functions */
-
-%for f in rgb_formats:
-   %if not f.is_int():
-      <% continue %>
-   %elif f.is_normalized():
-      <% continue %>
-   %elif f.is_compressed():
-      <% continue %>
-   %endif
-
-static inline void
-pack_int_${f.short_name()}(const GLint src[4], void *dst)
-{
-   %for (i, c) in enumerate(f.channels):
-      <% i = f.swizzle.inverse()[i] %>
-      %if c.type == 'x':
-         <% continue %>
-      %endif
-
-      ${c.datatype()} ${c.name} =
-      %if c.type == parser.SIGNED:
-         _mesa_signed_to_signed(src[${i}], ${c.size});
-      %elif c.type == parser.UNSIGNED:
-         _mesa_unsigned_to_unsigned(src[${i}], ${c.size});
-      %else:
-         assert(!"Invalid type: only integer types are allowed");
-      %endif
-   %endfor
-
-   %if f.layout == parser.ARRAY:
-      ${f.datatype()} *d = (${f.datatype()} *)dst;
-      %for (i, c) in enumerate(f.channels):
-         %if c.type == 'x':
-            <% continue %>
-         %endif
-         d[${i}] = ${c.name};
-      %endfor
-   %elif f.layout == parser.PACKED:
-      ${f.datatype()} d = 0;
-      %for (i, c) in enumerate(f.channels):
-         %if c.type == 'x':
-            <% continue %>
-         %endif
-         d |= PACK(${c.name}, ${c.shift}, ${c.size});
-      %endfor
-      (*(${f.datatype()} *)dst) = d;
-   %else:
-      <% assert False %>
-   %endif
-}
-%endfor
-
 /* float packing functions */
 
 %for f in rgb_formats:
@@ -440,38 +387,6 @@ _mesa_pack_uint_rgba_row(mesa_format format, GLuint n,
    case ${f.name}:
       for (i = 0; i < n; ++i) {
          pack_uint_${f.short_name()}(src[i], d);
-         d += ${f.block_size() / 8};
-      }
-      break;
-%endfor
-   default:
-      assert(!"Invalid format");
-   }
-}
-
-/**
- * Pack a row of GLint rgba[4] values to the destination.
- */
-void
-_mesa_pack_int_rgba_row(mesa_format format, GLuint n,
-                          const GLint src[][4], void *dst)
-{
-   GLuint i;
-   GLubyte *d = dst;
-
-   switch (format) {
-%for f in rgb_formats:
-   %if not f.is_int():
-      <% continue %>
-   %elif f.is_normalized():
-      <% continue %>
-   %elif f.is_compressed():
-      <% continue %>
-   %endif
-
-   case ${f.name}:
-      for (i = 0; i < n; ++i) {
-         pack_int_${f.short_name()}(src[i], d);
          d += ${f.block_size() / 8};
       }
       break;
