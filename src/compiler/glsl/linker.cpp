@@ -2098,14 +2098,13 @@ link_intrastage_shaders(void *mem_ctx,
 	       continue;
 
 	    foreach_in_list(ir_function_signature, sig, &f->signatures) {
-	       if (!sig->is_defined || sig->is_builtin())
+	       if (!sig->is_defined)
 		  continue;
 
 	       ir_function_signature *other_sig =
 		  other->exact_matching_signature(NULL, &sig->parameters);
 
-	       if ((other_sig != NULL) && other_sig->is_defined
-		   && !other_sig->is_builtin()) {
+	       if (other_sig != NULL && other_sig->is_defined) {
 		  linker_error(prog, "function `%s' is multiply defined\n",
 			       f->name);
 		  return NULL;
@@ -2171,42 +2170,7 @@ link_intrastage_shaders(void *mem_ctx,
 					      insertion_point, true, linked);
    }
 
-   /* Check if any shader needs built-in functions. */
-   bool need_builtins = false;
-   for (unsigned i = 0; i < num_shaders; i++) {
-      if (shader_list[i]->info.uses_builtin_functions) {
-         need_builtins = true;
-         break;
-      }
-   }
-
-   bool ok;
-   if (need_builtins) {
-      /* Make a temporary array one larger than shader_list, which will hold
-       * the built-in function shader as well.
-       */
-      gl_shader **linking_shaders = (gl_shader **)
-         calloc(num_shaders + 1, sizeof(gl_shader *));
-
-      ok = linking_shaders != NULL;
-
-      if (ok) {
-         memcpy(linking_shaders, shader_list, num_shaders * sizeof(gl_shader *));
-         _mesa_glsl_initialize_builtin_functions();
-         linking_shaders[num_shaders] = _mesa_glsl_get_builtin_function_shader();
-
-         ok = link_function_calls(prog, linked, linking_shaders, num_shaders + 1);
-
-         free(linking_shaders);
-      } else {
-         _mesa_error_no_memory(__func__);
-      }
-   } else {
-      ok = link_function_calls(prog, linked, shader_list, num_shaders);
-   }
-
-
-   if (!ok) {
+   if (!link_function_calls(prog, linked, shader_list, num_shaders)) {
       _mesa_delete_linked_shader(ctx, linked);
       return NULL;
    }

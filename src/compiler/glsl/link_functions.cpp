@@ -32,7 +32,7 @@
 
 static ir_function_signature *
 find_matching_signature(const char *name, const exec_list *actual_parameters,
-                        glsl_symbol_table *symbols, bool use_builtin);
+                        glsl_symbol_table *symbols);
 
 namespace {
 
@@ -74,12 +74,15 @@ public:
       assert(callee != NULL);
       const char *const name = callee->function_name();
 
+      /* We don't actually need to find intrinsics; they're not real */
+      if (callee->is_intrinsic)
+         return visit_continue;
+
       /* Determine if the requested function signature already exists in the
        * final linked shader.  If it does, use it as the target of the call.
        */
       ir_function_signature *sig =
-         find_matching_signature(name, &callee->parameters, linked->symbols,
-                                 ir->use_builtin);
+         find_matching_signature(name, &callee->parameters, linked->symbols);
       if (sig != NULL) {
 	 ir->callee = sig;
 	 return visit_continue;
@@ -90,8 +93,7 @@ public:
        */
       for (unsigned i = 0; i < num_shaders; i++) {
          sig = find_matching_signature(name, &ir->actual_parameters,
-                                       shader_list[i]->symbols,
-                                       ir->use_builtin);
+                                       shader_list[i]->symbols);
          if (sig)
             break;
       }
@@ -122,9 +124,7 @@ public:
 
       ir_function_signature *linked_sig =
 	 f->exact_matching_signature(NULL, &callee->parameters);
-      if ((linked_sig == NULL)
-	  || ((linked_sig != NULL)
-	      && (linked_sig->is_builtin() != ir->use_builtin))) {
+      if (linked_sig == NULL) {
 	 linked_sig = new(linked) ir_function_signature(callee->return_type);
 	 f->add_signature(linked_sig);
       }
@@ -314,22 +314,16 @@ private:
  */
 ir_function_signature *
 find_matching_signature(const char *name, const exec_list *actual_parameters,
-                        glsl_symbol_table *symbols, bool use_builtin)
+                        glsl_symbol_table *symbols)
 {
    ir_function *const f = symbols->get_function(name);
 
    if (f) {
       ir_function_signature *sig =
-         f->matching_signature(NULL, actual_parameters, use_builtin);
+         f->matching_signature(NULL, actual_parameters, false);
 
-      if (sig && (sig->is_defined || sig->is_intrinsic)) {
-         /* If this function expects to bind to a built-in function and the
-          * signature that we found isn't a built-in, keep looking.  Also keep
-          * looking if we expect a non-built-in but found a built-in.
-          */
-         if (use_builtin == sig->is_builtin())
-            return sig;
-      }
+      if (sig && (sig->is_defined || sig->is_intrinsic))
+         return sig;
    }
 
    return NULL;
