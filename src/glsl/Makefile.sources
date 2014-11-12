@@ -30,6 +30,7 @@ NIR_FILES = \
 	$(GLSL_SRCDIR)/nir/nir_opcodes.c \
 	$(GLSL_SRCDIR)/nir/nir_opcodes.h \
 	$(GLSL_SRCDIR)/nir/nir_opt_copy_propagate.c \
+	$(GLSL_SRCDIR)/nir/nir_opt_cse.c \
 	$(GLSL_SRCDIR)/nir/nir_opt_dce.c \
 	$(GLSL_SRCDIR)/nir/nir_opt_global_to_local.c \
 	$(GLSL_SRCDIR)/nir/nir_opt_peephole_ffma.c \
