@@ -41,6 +41,8 @@
 #include "vl/vl_compositor.h"
 #include "vl/vl_csc.h"
 
+#include "util/u_dynarray.h"
+
 #define VL_VA_DRIVER(ctx) ((vlVaDriver *)ctx->pDriverData)
 #define VL_VA_PSCREEN(ctx) (VL_VA_DRIVER(ctx)->vscreen->pscreen)
 
@@ -155,6 +157,15 @@ typedef struct {
 } vlVaDriver;
 
 typedef struct {
+   VAImage *image;
+
+   struct u_rect src_rect;
+   struct u_rect dst_rect;
+
+   struct pipe_sampler_view *sampler;
+} vlVaSubpicture;
+
+typedef struct {
    struct pipe_video_codec *decoder;
    struct pipe_video_buffer *target;
    union {
@@ -185,6 +196,7 @@ typedef struct {
 typedef struct {
    struct pipe_video_buffer templat, *buffer;
    struct pipe_fence_handle *fence;
+   struct util_dynarray subpics; /* vlVaSubpicture */
 } vlVaSurface;
 
 // Public functions:
