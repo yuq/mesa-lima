@@ -86,7 +86,6 @@ public:
    bool is_valid_3src() const;
    bool is_contiguous() const;
 
-   fs_reg &apply_stride(unsigned stride);
    /** Smear a channel of the reg to all channels. */
    fs_reg &set_smear(unsigned subreg);
 

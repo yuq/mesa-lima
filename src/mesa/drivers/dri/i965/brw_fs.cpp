@@ -608,16 +608,6 @@ fs_reg::equals(const fs_reg &r) const
 }
 
 fs_reg &
-fs_reg::apply_stride(unsigned stride)
-{
-   assert((this->stride * stride) <= 4 &&
-          (is_power_of_two(stride) || stride == 0) &&
-          file != HW_REG && file != IMM);
-   this->stride *= stride;
-   return *this;
-}
-
-fs_reg &
 fs_reg::set_smear(unsigned subreg)
 {
    assert(file != HW_REG && file != IMM);
