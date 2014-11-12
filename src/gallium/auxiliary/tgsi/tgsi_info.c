@@ -83,12 +83,12 @@ static const struct tgsi_opcode_info opcode_info[TGSI_OPCODE_LAST] =
    { 1, 1, 0, 0, 0, 0, COMP, "PK4UB", TGSI_OPCODE_PK4UB },
    { 0, 1, 0, 0, 0, 1, NONE, "", 44 },      /* removed */
    { 1, 2, 0, 0, 0, 0, COMP, "SEQ", TGSI_OPCODE_SEQ },
-   { 1, 2, 0, 0, 0, 0, REPL, "SFL", TGSI_OPCODE_SFL },
+   { 0, 1, 0, 0, 0, 1, NONE, "", 46 },      /* removed */
    { 1, 2, 0, 0, 0, 0, COMP, "SGT", TGSI_OPCODE_SGT },
    { 1, 1, 0, 0, 0, 0, REPL, "SIN", TGSI_OPCODE_SIN },
    { 1, 2, 0, 0, 0, 0, COMP, "SLE", TGSI_OPCODE_SLE },
    { 1, 2, 0, 0, 0, 0, COMP, "SNE", TGSI_OPCODE_SNE },
-   { 1, 2, 0, 0, 0, 0, REPL, "STR", TGSI_OPCODE_STR },
+   { 0, 1, 0, 0, 0, 1, NONE, "", 51 },      /* removed */
    { 1, 2, 1, 0, 0, 0, OTHR, "TEX", TGSI_OPCODE_TEX },
    { 1, 4, 1, 0, 0, 0, OTHR, "TXD", TGSI_OPCODE_TXD },
    { 1, 2, 1, 0, 0, 0, OTHR, "TXP", TGSI_OPCODE_TXP },

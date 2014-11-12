@@ -715,9 +715,6 @@ nvfx_fragprog_parse_instruction(struct nvfx_fpc *fpc,
    case TGSI_OPCODE_SEQ:
       nvfx_fp_emit(fpc, arith(sat, SEQ, dst, mask, src[0], src[1], none));
       break;
-   case TGSI_OPCODE_SFL:
-      nvfx_fp_emit(fpc, arith(sat, SFL, dst, mask, src[0], src[1], none));
-      break;
    case TGSI_OPCODE_SGE:
       nvfx_fp_emit(fpc, arith(sat, SGE, dst, mask, src[0], src[1], none));
       break;
@@ -755,9 +752,6 @@ nvfx_fragprog_parse_instruction(struct nvfx_fpc *fpc,
       }
       break;
    }
-   case TGSI_OPCODE_STR:
-      nvfx_fp_emit(fpc, arith(sat, STR, dst, mask, src[0], src[1], none));
-      break;
    case TGSI_OPCODE_SUB:
       nvfx_fp_emit(fpc, arith(sat, ADD, dst, mask, src[0], neg(src[1]), none));
       break;

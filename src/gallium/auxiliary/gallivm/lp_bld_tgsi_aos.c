@@ -722,10 +722,6 @@ lp_emit_instruction_aos(
       dst0 = lp_build_select(&bld->bld_base.base, tmp0, bld->bld_base.base.one, bld->bld_base.base.zero);
       break;
 
-   case TGSI_OPCODE_SFL:
-      dst0 = bld->bld_base.base.zero;
-      break;
-
    case TGSI_OPCODE_SGT:
       src0 = lp_build_emit_fetch(&bld->bld_base, inst, 0, LP_CHAN_ALL);
       src1 = lp_build_emit_fetch(&bld->bld_base, inst, 1, LP_CHAN_ALL);
@@ -751,10 +747,6 @@ lp_emit_instruction_aos(
       src1 = lp_build_emit_fetch(&bld->bld_base, inst, 1, LP_CHAN_ALL);
       tmp0 = lp_build_cmp(&bld->bld_base.base, PIPE_FUNC_NOTEQUAL, src0, src1);
       dst0 = lp_build_select(&bld->bld_base.base, tmp0, bld->bld_base.base.one, bld->bld_base.base.zero);
-      break;
-
-   case TGSI_OPCODE_STR:
-      dst0 = bld->bld_base.base.one;
       break;
 
    case TGSI_OPCODE_TEX:

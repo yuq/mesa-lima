@@ -489,19 +489,6 @@ while DDY is allowed to be the same for the entire 2x2 quad.
   dst.w = (src0.w == src1.w) ? 1.0F : 0.0F
 
 
-.. opcode:: SFL - Set On False
-
-This instruction replicates its result.
-
-.. math::
-
-  dst = 0.0F
-
-.. note::
-
-   Considered for removal.
-
-
 .. opcode:: SGT - Set On Greater Than
 
 .. math::

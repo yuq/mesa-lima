@@ -651,28 +651,6 @@ aos_PK2H(struct toy_compiler *tc,
 }
 
 static void
-aos_SFL(struct toy_compiler *tc,
-        const struct tgsi_full_instruction *tgsi_inst,
-        struct toy_dst *dst,
-        struct toy_src *src)
-{
-   assert(!"SFL untested");
-
-   tc_MOV(tc, dst[0], tsrc_imm_f(0.0f));
-}
-
-static void
-aos_STR(struct toy_compiler *tc,
-        const struct tgsi_full_instruction *tgsi_inst,
-        struct toy_dst *dst,
-        struct toy_src *src)
-{
-   assert(!"STR untested");
-
-   tc_MOV(tc, dst[0], tsrc_imm_f(1.0f));
-}
-
-static void
 aos_UP2H(struct toy_compiler *tc,
          const struct tgsi_full_instruction *tgsi_inst,
          struct toy_dst *dst,
@@ -839,12 +817,10 @@ static const toy_tgsi_translate aos_translate_table[TGSI_OPCODE_LAST] = {
    [TGSI_OPCODE_PK4B]         = aos_unsupported,
    [TGSI_OPCODE_PK4UB]        = aos_unsupported,
    [TGSI_OPCODE_SEQ]          = aos_set_on_cond,
-   [TGSI_OPCODE_SFL]          = aos_SFL,
    [TGSI_OPCODE_SGT]          = aos_set_on_cond,
    [TGSI_OPCODE_SIN]          = aos_simple,
    [TGSI_OPCODE_SLE]          = aos_set_on_cond,
    [TGSI_OPCODE_SNE]          = aos_set_on_cond,
-   [TGSI_OPCODE_STR]          = aos_STR,
    [TGSI_OPCODE_TEX]          = aos_tex,
    [TGSI_OPCODE_TXD]          = aos_tex,
    [TGSI_OPCODE_TXP]          = aos_tex,
@@ -1386,12 +1362,10 @@ static const toy_tgsi_translate soa_translate_table[TGSI_OPCODE_LAST] = {
    [TGSI_OPCODE_PK4B]         = soa_unsupported,
    [TGSI_OPCODE_PK4UB]        = soa_unsupported,
    [TGSI_OPCODE_SEQ]          = soa_per_channel,
-   [TGSI_OPCODE_SFL]          = soa_per_channel,
    [TGSI_OPCODE_SGT]          = soa_per_channel,
    [TGSI_OPCODE_SIN]          = soa_scalar_replicate,
    [TGSI_OPCODE_SLE]          = soa_per_channel,
    [TGSI_OPCODE_SNE]          = soa_per_channel,
-   [TGSI_OPCODE_STR]          = soa_per_channel,
    [TGSI_OPCODE_TEX]          = soa_passthrough,
    [TGSI_OPCODE_TXD]          = soa_passthrough,
    [TGSI_OPCODE_TXP]          = soa_passthrough,

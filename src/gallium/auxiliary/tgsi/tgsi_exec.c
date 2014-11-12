@@ -452,24 +452,6 @@ micro_sne(union tgsi_exec_channel *dst,
 }
 
 static void
-micro_sfl(union tgsi_exec_channel *dst)
-{
-   dst->f[0] = 0.0f;
-   dst->f[1] = 0.0f;
-   dst->f[2] = 0.0f;
-   dst->f[3] = 0.0f;
-}
-
-static void
-micro_str(union tgsi_exec_channel *dst)
-{
-   dst->f[0] = 1.0f;
-   dst->f[1] = 1.0f;
-   dst->f[2] = 1.0f;
-   dst->f[3] = 1.0f;
-}
-
-static void
 micro_trunc(union tgsi_exec_channel *dst,
             const union tgsi_exec_channel *src)
 {
@@ -2446,27 +2428,6 @@ exec_declaration(struct tgsi_exec_machine *mach,
    }
 }
 
-
-typedef void (* micro_op)(union tgsi_exec_channel *dst);
-
-static void
-exec_vector(struct tgsi_exec_machine *mach,
-            const struct tgsi_full_instruction *inst,
-            micro_op op,
-            enum tgsi_exec_datatype dst_datatype)
-{
-   unsigned int chan;
-
-   for (chan = 0; chan < TGSI_NUM_CHANNELS; chan++) {
-      if (inst->Dst[0].Register.WriteMask & (1 << chan)) {
-         union tgsi_exec_channel dst;
-
-         op(&dst);
-         store_dest(mach, &dst, &inst->Dst[0], inst, chan, dst_datatype);
-      }
-   }
-}
-
 typedef void (* micro_unary_op)(union tgsi_exec_channel *dst,
                                 const union tgsi_exec_channel *src);
 
@@ -3734,10 +3695,6 @@ exec_instruction(
       exec_vector_binary(mach, inst, micro_seq, TGSI_EXEC_DATA_FLOAT, TGSI_EXEC_DATA_FLOAT);
       break;
 
-   case TGSI_OPCODE_SFL:
-      exec_vector(mach, inst, micro_sfl, TGSI_EXEC_DATA_FLOAT);
-      break;
-
    case TGSI_OPCODE_SGT:
       exec_vector_binary(mach, inst, micro_sgt, TGSI_EXEC_DATA_FLOAT, TGSI_EXEC_DATA_FLOAT);
       break;
@@ -3752,10 +3709,6 @@ exec_instruction(
 
    case TGSI_OPCODE_SNE:
       exec_vector_binary(mach, inst, micro_sne, TGSI_EXEC_DATA_FLOAT, TGSI_EXEC_DATA_FLOAT);
-      break;
-
-   case TGSI_OPCODE_STR:
-      exec_vector(mach, inst, micro_str, TGSI_EXEC_DATA_FLOAT);
       break;
 
    case TGSI_OPCODE_TEX:

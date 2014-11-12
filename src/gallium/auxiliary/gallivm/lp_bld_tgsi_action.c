@@ -691,28 +691,6 @@ const struct lp_build_tgsi_action scs_action = {
    scs_emit	 /* emit */
 };
 
-/* TGSI_OPCODE_SFL */
-
-static void
-sfl_emit(
-   const struct lp_build_tgsi_action * action,
-   struct lp_build_tgsi_context * bld_base,
-   struct lp_build_emit_data * emit_data)
-{
-   emit_data->output[emit_data->chan] = bld_base->base.zero;
-}
-
-/* TGSI_OPCODE_STR */
-
-static void
-str_emit(
-   const struct lp_build_tgsi_action * action,
-   struct lp_build_tgsi_context * bld_base,
-   struct lp_build_emit_data * emit_data)
-{
-   emit_data->output[emit_data->chan] = bld_base->base.one;
-}
-
 /* TGSI_OPCODE_SUB */
 static void
 sub_emit(
@@ -958,8 +936,6 @@ lp_set_default_actions(struct lp_build_tgsi_context * bld_base)
    bld_base->op_actions[TGSI_OPCODE_MUL].emit = mul_emit;
    bld_base->op_actions[TGSI_OPCODE_DIV].emit = fdiv_emit;
    bld_base->op_actions[TGSI_OPCODE_RCP].emit = rcp_emit;
-   bld_base->op_actions[TGSI_OPCODE_SFL].emit = sfl_emit;
-   bld_base->op_actions[TGSI_OPCODE_STR].emit = str_emit;
    bld_base->op_actions[TGSI_OPCODE_SUB].emit = sub_emit;
 
    bld_base->op_actions[TGSI_OPCODE_UARL].emit = mov_emit;
