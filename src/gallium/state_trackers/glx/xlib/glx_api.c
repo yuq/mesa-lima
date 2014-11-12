@@ -56,6 +56,8 @@
    "GLX_ARB_create_context " \
    "GLX_ARB_create_context_profile " \
    "GLX_ARB_get_proc_address " \
+   "GLX_EXT_create_context_es_profile " \
+   "GLX_EXT_create_context_es2_profile " \
    "GLX_EXT_texture_from_pixmap " \
    "GLX_EXT_visual_info " \
    "GLX_EXT_visual_rating " \
@@ -2718,7 +2720,8 @@ glXCreateContextAttribsARB(Display *dpy, GLXFBConfig config,
 
    /* check profileMask */
    if (profileMask != GLX_CONTEXT_CORE_PROFILE_BIT_ARB &&
-       profileMask != GLX_CONTEXT_COMPATIBILITY_PROFILE_BIT_ARB) {
+       profileMask != GLX_CONTEXT_COMPATIBILITY_PROFILE_BIT_ARB &&
+       profileMask != GLX_CONTEXT_ES_PROFILE_BIT_EXT) {
       return NULL; /* generate BadValue X Error */
    }
 
