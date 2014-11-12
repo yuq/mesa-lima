@@ -352,7 +352,7 @@ struct tgsi_property_data {
 #define TGSI_OPCODE_CMP                 66
 #define TGSI_OPCODE_SCS                 67
 #define TGSI_OPCODE_TXB                 68
-#define TGSI_OPCODE_NRM                 69
+                                /* gap */
 #define TGSI_OPCODE_DIV                 70
 #define TGSI_OPCODE_DP2                 71
 #define TGSI_OPCODE_TXL                 72
@@ -396,7 +396,7 @@ struct tgsi_property_data {
 #define TGSI_OPCODE_FSLT                110
 #define TGSI_OPCODE_FSNE                111
 
-#define TGSI_OPCODE_NRM4                112
+                                /* gap */
 #define TGSI_OPCODE_CALLNZ              113
                                 /* gap */
 #define TGSI_OPCODE_BREAKC              115

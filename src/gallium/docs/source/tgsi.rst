@@ -834,40 +834,6 @@ This instruction replicates its result.
   dst = texture\_sample(unit, coord, bias)
 
 
-.. opcode:: NRM - 3-component Vector Normalise
-
-.. math::
-  
-  u = src.x \times src.x + src.y \times src.y + src.z \times src.z
-
-  v = \frac{1}{\sqrt{u}}
-
-  dst.x = src.x \times v
-
-  dst.y = src.y \times v
-
-  dst.z = src.z \times v
-
-  dst.w = 1
-
-
-.. opcode:: NRM4 - 4-component Vector Normalise
-
-.. math::
-  
-  u = src.x \times src.x + src.y \times src.y + src.z \times src.z + src.w \times src.w
-
-  v = \frac{1}{\sqrt{u}}
-
-  dst.x = src.x \times v
-
-  dst.y = src.y \times v
-
-  dst.z = src.z \times v
-
-  dst.w = src.w \times v
-
-
 .. opcode:: DIV - Divide
 
 .. math::

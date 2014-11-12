@@ -852,11 +852,6 @@ lp_emit_instruction_aos(
       dst0 = emit_tex(bld, inst, LP_BLD_TEX_MODIFIER_LOD_BIAS);
       break;
 
-   case TGSI_OPCODE_NRM:
-      /* fall-through */
-   case TGSI_OPCODE_NRM4:
-      return FALSE;
-
    case TGSI_OPCODE_DIV:
       assert(0);
       return FALSE;
