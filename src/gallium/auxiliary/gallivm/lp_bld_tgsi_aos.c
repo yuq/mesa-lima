@@ -786,12 +786,6 @@ lp_emit_instruction_aos(
       dst0 = lp_build_round(&bld->bld_base.base, src0);
       break;
 
-   case TGSI_OPCODE_BRA:
-      /* deprecated */
-      assert(0);
-      return FALSE;
-      break;
-
    case TGSI_OPCODE_CAL:
       return FALSE;
 

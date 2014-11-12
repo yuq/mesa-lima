@@ -712,7 +712,6 @@ nvfx_vertprog_parse_instruction(struct nvfx_vpc *vpc,
       nvfx_vp_emit(vpc, insn);
       break;
    case TGSI_OPCODE_ELSE:
-   case TGSI_OPCODE_BRA:
    case TGSI_OPCODE_CAL:
       reloc.location = vpc->vp->nr_insns;
       reloc.target = finst->Label.Label;

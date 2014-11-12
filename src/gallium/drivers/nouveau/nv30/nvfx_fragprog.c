@@ -821,13 +821,6 @@ nvfx_fragprog_parse_instruction(struct nvfx_fpc *fpc,
       break;
    }
 
-   case TGSI_OPCODE_BRA:
-      /* This can in limited cases be implemented with an IF with the else and endif labels pointing to the target */
-      /* no state tracker uses this, so don't implement this for now */
-      assert(0);
-      nv40_fp_bra(fpc, finst->Label.Label);
-      break;
-
    case TGSI_OPCODE_BGNSUB:
    case TGSI_OPCODE_ENDSUB:
       /* nothing to do here */

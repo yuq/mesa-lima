@@ -344,7 +344,7 @@ struct tgsi_property_data {
 #define TGSI_OPCODE_UP4UB               58
                                 /* gap */
 #define TGSI_OPCODE_ARR                 61
-#define TGSI_OPCODE_BRA                 62
+                                /* gap */
 #define TGSI_OPCODE_CAL                 63
 #define TGSI_OPCODE_RET                 64
 #define TGSI_OPCODE_SSG                 65 /* SGN */

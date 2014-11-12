@@ -3768,10 +3768,6 @@ exec_instruction(
       exec_vector_unary(mach, inst, micro_arr, TGSI_EXEC_DATA_INT, TGSI_EXEC_DATA_FLOAT);
       break;
 
-   case TGSI_OPCODE_BRA:
-      assert (0);
-      break;
-
    case TGSI_OPCODE_CAL:
       /* skip the call if no execution channels are enabled */
       if (mach->ExecMask) {

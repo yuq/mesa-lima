@@ -868,15 +868,6 @@ This instruction replicates its result.
    Considered for removal.
 
 
-.. opcode:: BRA - Branch
-
-  pc = target
-
-.. note::
-
-   Considered for removal.
-
-
 .. opcode:: CALLNZ - Subroutine Call If Not Zero
 
    TBD
