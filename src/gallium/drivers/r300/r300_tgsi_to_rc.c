@@ -53,7 +53,6 @@ static unsigned translate_opcode(unsigned opcode)
         case TGSI_OPCODE_LRP: return RC_OPCODE_LRP;
         case TGSI_OPCODE_CND: return RC_OPCODE_CND;
      /* case TGSI_OPCODE_DP2A: return RC_OPCODE_DP2A; */
-                                        /* gap */
         case TGSI_OPCODE_FRC: return RC_OPCODE_FRC;
         case TGSI_OPCODE_CLAMP: return RC_OPCODE_CLAMP;
         case TGSI_OPCODE_FLR: return RC_OPCODE_FLR;
@@ -62,7 +61,6 @@ static unsigned translate_opcode(unsigned opcode)
         case TGSI_OPCODE_LG2: return RC_OPCODE_LG2;
         case TGSI_OPCODE_POW: return RC_OPCODE_POW;
         case TGSI_OPCODE_XPD: return RC_OPCODE_XPD;
-                                        /* gap */
         case TGSI_OPCODE_ABS: return RC_OPCODE_ABS;
      /* case TGSI_OPCODE_RCC: return RC_OPCODE_RCC; */
         case TGSI_OPCODE_DPH: return RC_OPCODE_DPH;
@@ -132,7 +130,6 @@ static unsigned translate_opcode(unsigned opcode)
      /* case TGSI_OPCODE_ENDLOOP2: return RC_OPCODE_ENDLOOP2; */
      /* case TGSI_OPCODE_ENDSUB: return RC_OPCODE_ENDSUB; */
         case TGSI_OPCODE_NOP: return RC_OPCODE_NOP;
-                                        /* gap */
      /* case TGSI_OPCODE_NRM4: return RC_OPCODE_NRM4; */
      /* case TGSI_OPCODE_CALLNZ: return RC_OPCODE_CALLNZ; */
      /* case TGSI_OPCODE_BREAKC: return RC_OPCODE_BREAKC; */
