@@ -54,25 +54,30 @@ fs_visitor::emit_nir_code()
    if (1)
       nir_print_shader(nir, stderr);
 
-   if (1) {
-      nir_convert_to_ssa(nir);
-      nir_validate_shader(nir);
-      nir_copy_prop(nir);
-      nir_validate_shader(nir);
-      nir_opt_dce(nir);
-      nir_validate_shader(nir);
-      nir_opt_peephole_select(nir);
-      nir_validate_shader(nir);
-      nir_opt_peephole_ffma(nir);
-      nir_validate_shader(nir);
-      nir_print_shader(nir, stderr);
+   nir_convert_to_ssa(nir);
+   nir_validate_shader(nir);
 
-      nir_convert_from_ssa(nir);
-      nir_print_shader(nir, stderr);
+   bool progress;
+   do {
+      progress = false;
+      progress |= nir_copy_prop(nir);
       nir_validate_shader(nir);
-      nir_lower_vec_to_movs(nir);
+      progress |= nir_opt_dce(nir);
       nir_validate_shader(nir);
-   }
+      progress |= nir_opt_cse(nir);
+      nir_validate_shader(nir);
+      progress |= nir_opt_peephole_select(nir);
+      nir_validate_shader(nir);
+      progress |= nir_opt_peephole_ffma(nir);
+      nir_validate_shader(nir);
+   } while (progress);
+   nir_print_shader(nir, stderr);
+
+   nir_convert_from_ssa(nir);
+   nir_validate_shader(nir);
+   nir_print_shader(nir, stderr);
+   nir_lower_vec_to_movs(nir);
+   nir_validate_shader(nir);
 
    /* emit the arrays used for inputs and outputs - load/store intrinsics will
     * be converted to reads/writes of these arrays
