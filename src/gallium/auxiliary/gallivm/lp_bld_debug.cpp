@@ -32,10 +32,11 @@
 #include <llvm/Target/TargetInstrInfo.h>
 #include <llvm/Support/raw_ostream.h>
 #include <llvm/Support/Format.h>
-#include <llvm/Support/MemoryObject.h>
 
 #if HAVE_LLVM >= 0x0306
 #include <llvm/Target/TargetSubtargetInfo.h>
+#else
+#include <llvm/Support/MemoryObject.h>
 #endif
 
 #include <llvm/Support/TargetRegistry.h>
@@ -142,6 +143,8 @@ lp_debug_dump_value(LLVMValueRef value)
 }
 
 
+#if HAVE_LLVM < 0x0306
+
 /*
  * MemoryObject wrapper around a buffer of memory, to be used by MC
  * disassembler.
@@ -176,6 +179,8 @@ public:
       return 0;
    }
 };
+
+#endif /* HAVE_LLVM < 0x0306 */
 
 
 /*
@@ -280,7 +285,11 @@ disassemble(const void* func, llvm::raw_ostream & Out)
    /*
     * Wrap the data in a MemoryObject
     */
+#if HAVE_LLVM >= 0x0306
+   ArrayRef<uint8_t> memoryObject((const uint8_t *)bytes, extent);
+#else
    BufferMemoryObject memoryObject((const uint8_t *)bytes, extent);
+#endif
 
    uint64_t pc;
    pc = 0;
