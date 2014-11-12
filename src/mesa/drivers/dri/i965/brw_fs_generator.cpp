@@ -556,7 +556,7 @@ fs_generator::generate_tex(fs_inst *inst, struct brw_reg dst, struct brw_reg src
     * Otherwise, we can use an implied move from g0 to the first message reg.
     */
    if (inst->header_present) {
-      if (brw->gen < 6 && !inst->texture_offset) {
+      if (brw->gen < 6 && !inst->offset) {
          /* Set up an implied move from g0 to the MRF. */
          src = retype(brw_vec8_grf(0, 0), BRW_REGISTER_TYPE_UW);
       } else {
@@ -575,10 +575,10 @@ fs_generator::generate_tex(fs_inst *inst, struct brw_reg dst, struct brw_reg src
          /* Explicitly set up the message header by copying g0 to the MRF. */
          brw_MOV(p, header_reg, brw_vec8_grf(0, 0));
 
-         if (inst->texture_offset) {
+         if (inst->offset) {
             /* Set the offset bits in DWord 2. */
             brw_MOV(p, get_element_ud(header_reg, 2),
-                       brw_imm_ud(inst->texture_offset));
+                       brw_imm_ud(inst->offset));
          }
 
          brw_adjust_sampler_state_pointer(p, header_reg, sampler_index, dst);

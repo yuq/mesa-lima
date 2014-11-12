@@ -319,7 +319,7 @@ vec4_generator::generate_tex(vec4_instruction *inst,
     * use an implied move from g0 to the first message register.
     */
    if (inst->header_present) {
-      if (brw->gen < 6 && !inst->texture_offset) {
+      if (brw->gen < 6 && !inst->offset) {
          /* Set up an implied move from g0 to the MRF. */
          src = brw_vec8_grf(0, 0);
       } else {
@@ -333,10 +333,10 @@ vec4_generator::generate_tex(vec4_instruction *inst,
 
          brw_set_default_access_mode(p, BRW_ALIGN_1);
 
-         if (inst->texture_offset) {
+         if (inst->offset) {
             /* Set the texel offset bits in DWord 2. */
             brw_MOV(p, get_element_ud(header, 2),
-                    brw_imm_ud(inst->texture_offset));
+                    brw_imm_ud(inst->offset));
          }
 
          brw_adjust_sampler_state_pointer(p, header, sampler_index, dst);

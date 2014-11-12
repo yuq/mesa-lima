@@ -46,7 +46,6 @@ vec4_instruction::vec4_instruction(vec4_visitor *v,
    this->no_dd_check = false;
    this->writes_accumulator = false;
    this->conditional_mod = BRW_CONDITIONAL_NONE;
-   this->texture_offset = 0;
    this->target = 0;
    this->shadow_compare = false;
    this->ir = v->base_ir;
@@ -2468,14 +2467,14 @@ vec4_visitor::visit(ir_texture *ir)
    vec4_instruction *inst = new(mem_ctx) vec4_instruction(this, opcode);
 
    if (ir->offset != NULL && !has_nonconstant_offset) {
-      inst->texture_offset =
+      inst->offset =
          brw_texture_offset(ctx, ir->offset->as_constant()->value.i,
                             ir->offset->type->vector_elements);
    }
 
    /* Stuff the channel select bits in the top of the texture offset */
    if (ir->op == ir_tg4)
-      inst->texture_offset |= gather_channel(ir, sampler) << 16;
+      inst->offset |= gather_channel(ir, sampler) << 16;
 
    /* The message header is necessary for:
     * - Gen4 (always)
@@ -2484,7 +2483,7 @@ vec4_visitor::visit(ir_texture *ir)
     * - Sampler indices too large to fit in a 4-bit value.
     */
    inst->header_present =
-      brw->gen < 5 || inst->texture_offset != 0 || ir->op == ir_tg4 ||
+      brw->gen < 5 || inst->offset != 0 || ir->op == ir_tg4 ||
       is_high_sampler(brw, sampler_reg);
    inst->base_mrf = 2;
    inst->mlen = inst->header_present + 1; /* always at least one */

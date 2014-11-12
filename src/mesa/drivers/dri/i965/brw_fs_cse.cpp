@@ -157,7 +157,7 @@ instructions_match(fs_inst *a, fs_inst *b)
           a->conditional_mod == b->conditional_mod &&
           a->dst.type == b->dst.type &&
           a->sources == b->sources &&
-          (a->is_tex() ? (a->texture_offset == b->texture_offset &&
+          (a->is_tex() ? (a->offset == b->offset &&
                           a->mlen == b->mlen &&
                           a->regs_written == b->regs_written &&
                           a->base_mrf == b->base_mrf &&

@@ -1918,10 +1918,10 @@ fs_visitor::emit_texture(ir_texture_opcode op,
       inst->shadow_compare = true;
 
    if (offset_value.file == IMM)
-      inst->texture_offset = offset_value.fixed_hw_reg.dw1.ud;
+      inst->offset = offset_value.fixed_hw_reg.dw1.ud;
 
    if (op == ir_tg4) {
-      inst->texture_offset |=
+      inst->offset |=
          gather_channel(gather_component, sampler) << 16; /* M0.2:16-17 */
 
       if (brw->gen == 6)
