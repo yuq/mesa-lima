@@ -30,6 +30,10 @@
 #include "glheader.h"
 #include "formats.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct gl_context;
 
 /**
@@ -57,5 +61,9 @@ _mesa_BindImageTextures(GLuint first, GLsizei count, const GLuint *textures);
 
 void GLAPIENTRY
 _mesa_MemoryBarrier(GLbitfield barriers);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
