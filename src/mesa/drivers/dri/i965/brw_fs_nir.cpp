@@ -98,7 +98,13 @@ fs_visitor::emit_nir_code()
       nir_setup_uniforms(nir);
    }
 
-   nir_setup_registers(&nir->registers);
+   nir_globals = ralloc_array(mem_ctx, fs_reg, nir->reg_alloc);
+   foreach_list_typed(nir_register, reg, node, &nir->registers) {
+      unsigned array_elems =
+         reg->num_array_elems == 0 ? 1 : reg->num_array_elems;
+      unsigned size = array_elems * reg->num_components;
+      nir_globals[reg->index] = fs_reg(GRF, virtual_grf_alloc(size));
+   }
 
    /* get the main function and emit it */
    nir_foreach_overload(nir, overload) {
@@ -276,21 +282,16 @@ fs_visitor::nir_setup_builtin_uniform(nir_variable *var)
 }
 
 void
-fs_visitor::nir_setup_registers(exec_list *list)
-{
-   foreach_list_typed(nir_register, nir_reg, node, list) {
-      unsigned array_elems =
-         nir_reg->num_array_elems == 0 ? 1 : nir_reg->num_array_elems;
-      unsigned size = array_elems * nir_reg->num_components;
-      fs_reg *reg = new(mem_ctx) fs_reg(GRF, virtual_grf_alloc(size));
-      _mesa_hash_table_insert(this->nir_reg_ht, nir_reg, reg);
-   }
-}
-
-void
 fs_visitor::nir_emit_impl(nir_function_impl *impl)
 {
-   nir_setup_registers(&impl->registers);
+   nir_locals = reralloc(mem_ctx, nir_locals, fs_reg, impl->reg_alloc);
+   foreach_list_typed(nir_register, reg, node, &impl->registers) {
+      unsigned array_elems =
+         reg->num_array_elems == 0 ? 1 : reg->num_array_elems;
+      unsigned size = array_elems * reg->num_components;
+      nir_locals[reg->index] = fs_reg(GRF, virtual_grf_alloc(size));
+   }
+
    nir_emit_cf_list(&impl->body);
 }
 
@@ -980,9 +981,12 @@ fs_visitor::nir_emit_alu(nir_alu_instr *instr)
 fs_reg
 fs_visitor::get_nir_src(nir_src src)
 {
-   struct hash_entry *entry =
-      _mesa_hash_table_search(this->nir_reg_ht, src.reg.reg);
-   fs_reg reg = *((fs_reg *) entry->data);
+   fs_reg reg;
+   if (src.reg.reg->is_global)
+      reg = nir_globals[src.reg.reg->index];
+   else
+      reg = nir_locals[src.reg.reg->index];
+
    /* to avoid floating-point denorm flushing problems, set the type by
     * default to D - instructions that need floating point semantics will set
     * this to F if they need to
@@ -1040,9 +1044,12 @@ fs_visitor::get_nir_alu_src(nir_alu_instr *instr, unsigned src)
 fs_reg
 fs_visitor::get_nir_dest(nir_dest dest)
 {
-   struct hash_entry *entry =
-      _mesa_hash_table_search(this->nir_reg_ht, dest.reg.reg);
-   fs_reg reg = *((fs_reg *) entry->data);
+   fs_reg reg;
+   if (dest.reg.reg->is_global)
+      reg = nir_globals[dest.reg.reg->index];
+   else
+      reg = nir_locals[dest.reg.reg->index];
+
    reg.reg_offset = dest.reg.base_offset;
    if (dest.reg.indirect) {
       reg.reladdr = new(mem_ctx) fs_reg();
