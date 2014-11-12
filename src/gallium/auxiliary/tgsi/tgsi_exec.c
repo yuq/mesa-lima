@@ -911,22 +911,6 @@ micro_div(
 }
 
 static void
-micro_rcc(union tgsi_exec_channel *dst,
-          const union tgsi_exec_channel *src)
-{
-   uint i;
-
-   for (i = 0; i < 4; i++) {
-      float recip = 1.0f / src->f[i];
-
-      if (recip > 0.0f)
-         dst->f[i] = CLAMP(recip, 5.42101e-020f, 1.84467e+019f);
-      else
-         dst->f[i] = CLAMP(recip, -1.84467e+019f, -5.42101e-020f);
-   }
-}
-
-static void
 micro_lt(
    union tgsi_exec_channel *dst,
    const union tgsi_exec_channel *src0,
@@ -3797,10 +3781,6 @@ exec_instruction(
 
    case TGSI_OPCODE_ABS:
       exec_vector_unary(mach, inst, micro_abs, TGSI_EXEC_DATA_FLOAT, TGSI_EXEC_DATA_FLOAT);
-      break;
-
-   case TGSI_OPCODE_RCC:
-      exec_scalar_unary(mach, inst, micro_rcc, TGSI_EXEC_DATA_FLOAT, TGSI_EXEC_DATA_FLOAT);
       break;
 
    case TGSI_OPCODE_DPH:

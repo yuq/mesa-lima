@@ -679,11 +679,6 @@ lp_emit_instruction_aos(
    case TGSI_OPCODE_XPD:
       return FALSE;
 
-   case TGSI_OPCODE_RCC:
-      /* deprecated? */
-      assert(0);
-      return FALSE;
-
    case TGSI_OPCODE_DPH:
       return FALSE;
 

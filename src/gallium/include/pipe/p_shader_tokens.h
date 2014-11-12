@@ -317,7 +317,7 @@ struct tgsi_property_data {
 #define TGSI_OPCODE_XPD                 31
                                 /* gap */
 #define TGSI_OPCODE_ABS                 33
-#define TGSI_OPCODE_RCC                 34
+                                /* gap */
 #define TGSI_OPCODE_DPH                 35
 #define TGSI_OPCODE_COS                 36
 #define TGSI_OPCODE_DDX                 37

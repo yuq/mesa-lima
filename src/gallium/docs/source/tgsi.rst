@@ -404,17 +404,6 @@ This instruction replicates its result.
   dst.w = |src.w|
 
 
-.. opcode:: RCC - Reciprocal Clamped
-
-This instruction replicates its result.
-
-XXX cleanup on aisle three
-
-.. math::
-
-  dst = (1 / src.x) > 0 ? clamp(1 / src.x, 5.42101e-020, 1.84467e+019) : clamp(1 / src.x, -1.84467e+019, -5.42101e-020)
-
-
 .. opcode:: DPH - Homogeneous Dot Product
 
 This instruction replicates its result.
