@@ -514,7 +514,7 @@ fs_visitor::visit(ir_expression *ir)
 	 ir->operands[operand]->fprint(stderr);
          fprintf(stderr, "\n");
       }
-      assert(this->result.is_valid_3src());
+      assert(this->result.file == GRF || this->result.file == UNIFORM);
       op[operand] = this->result;
 
       /* Matrix expression operands should have been broken down to vector

@@ -622,12 +622,6 @@ fs_reg::is_contiguous() const
    return stride == 1;
 }
 
-bool
-fs_reg::is_valid_3src() const
-{
-   return file == GRF || file == UNIFORM;
-}
-
 int
 fs_visitor::type_size(const struct glsl_type *type)
 {

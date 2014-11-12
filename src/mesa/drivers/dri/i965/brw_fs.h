@@ -83,7 +83,6 @@ public:
    fs_reg(fs_visitor *v, const struct glsl_type *type);
 
    bool equals(const fs_reg &r) const;
-   bool is_valid_3src() const;
    bool is_contiguous() const;
 
    /** Smear a channel of the reg to all channels. */
