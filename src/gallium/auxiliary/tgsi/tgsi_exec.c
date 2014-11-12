@@ -2784,58 +2784,6 @@ exec_scs(struct tgsi_exec_machine *mach,
 }
 
 static void
-exec_rfl(struct tgsi_exec_machine *mach,
-         const struct tgsi_full_instruction *inst)
-{
-   union tgsi_exec_channel r[9];
-
-   if (inst->Dst[0].Register.WriteMask & TGSI_WRITEMASK_XYZ) {
-      /* r0 = dp3(src0, src0) */
-      fetch_source(mach, &r[2], &inst->Src[0], TGSI_CHAN_X, TGSI_EXEC_DATA_FLOAT);
-      micro_mul(&r[0], &r[2], &r[2]);
-      fetch_source(mach, &r[4], &inst->Src[0], TGSI_CHAN_Y, TGSI_EXEC_DATA_FLOAT);
-      micro_mul(&r[8], &r[4], &r[4]);
-      micro_add(&r[0], &r[0], &r[8]);
-      fetch_source(mach, &r[6], &inst->Src[0], TGSI_CHAN_Z, TGSI_EXEC_DATA_FLOAT);
-      micro_mul(&r[8], &r[6], &r[6]);
-      micro_add(&r[0], &r[0], &r[8]);
-
-      /* r1 = dp3(src0, src1) */
-      fetch_source(mach, &r[3], &inst->Src[1], TGSI_CHAN_X, TGSI_EXEC_DATA_FLOAT);
-      micro_mul(&r[1], &r[2], &r[3]);
-      fetch_source(mach, &r[5], &inst->Src[1], TGSI_CHAN_Y, TGSI_EXEC_DATA_FLOAT);
-      micro_mul(&r[8], &r[4], &r[5]);
-      micro_add(&r[1], &r[1], &r[8]);
-      fetch_source(mach, &r[7], &inst->Src[1], TGSI_CHAN_Z, TGSI_EXEC_DATA_FLOAT);
-      micro_mul(&r[8], &r[6], &r[7]);
-      micro_add(&r[1], &r[1], &r[8]);
-
-      /* r1 = 2 * r1 / r0 */
-      micro_add(&r[1], &r[1], &r[1]);
-      micro_div(&r[1], &r[1], &r[0]);
-
-      if (inst->Dst[0].Register.WriteMask & TGSI_WRITEMASK_X) {
-         micro_mul(&r[2], &r[2], &r[1]);
-         micro_sub(&r[2], &r[2], &r[3]);
-         store_dest(mach, &r[2], &inst->Dst[0], inst, TGSI_CHAN_X, TGSI_EXEC_DATA_FLOAT);
-      }
-      if (inst->Dst[0].Register.WriteMask & TGSI_WRITEMASK_Y) {
-         micro_mul(&r[4], &r[4], &r[1]);
-         micro_sub(&r[4], &r[4], &r[5]);
-         store_dest(mach, &r[4], &inst->Dst[0], inst, TGSI_CHAN_Y, TGSI_EXEC_DATA_FLOAT);
-      }
-      if (inst->Dst[0].Register.WriteMask & TGSI_WRITEMASK_Z) {
-         micro_mul(&r[6], &r[6], &r[1]);
-         micro_sub(&r[6], &r[6], &r[7]);
-         store_dest(mach, &r[6], &inst->Dst[0], inst, TGSI_CHAN_Z, TGSI_EXEC_DATA_FLOAT);
-      }
-   }
-   if (inst->Dst[0].Register.WriteMask & TGSI_WRITEMASK_W) {
-      store_dest(mach, &OneVec, &inst->Dst[0], inst, TGSI_CHAN_W, TGSI_EXEC_DATA_FLOAT);
-   }
-}
-
-static void
 exec_xpd(struct tgsi_exec_machine *mach,
          const struct tgsi_full_instruction *inst)
 {
@@ -3780,10 +3728,6 @@ exec_instruction(
 
    case TGSI_OPCODE_PK4UB:
       assert (0);
-      break;
-
-   case TGSI_OPCODE_RFL:
-      exec_rfl(mach, inst);
       break;
 
    case TGSI_OPCODE_SEQ:

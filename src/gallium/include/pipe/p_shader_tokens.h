@@ -327,7 +327,7 @@ struct tgsi_property_data {
 #define TGSI_OPCODE_PK2US               41
 #define TGSI_OPCODE_PK4B                42
 #define TGSI_OPCODE_PK4UB               43
-#define TGSI_OPCODE_RFL                 44
+                                /* gap */
 #define TGSI_OPCODE_SEQ                 45
 #define TGSI_OPCODE_SFL                 46
 #define TGSI_OPCODE_SGT                 47

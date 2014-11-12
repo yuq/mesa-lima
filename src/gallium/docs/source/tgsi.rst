@@ -476,23 +476,6 @@ while DDY is allowed to be the same for the entire 2x2 quad.
   TBD
 
 
-.. opcode:: RFL - Reflection Vector
-
-.. math::
-
-  dst.x = 2 \times (src0.x \times src1.x + src0.y \times src1.y + src0.z \times src1.z) / (src0.x \times src0.x + src0.y \times src0.y + src0.z \times src0.z) \times src0.x - src1.x
-
-  dst.y = 2 \times (src0.x \times src1.x + src0.y \times src1.y + src0.z \times src1.z) / (src0.x \times src0.x + src0.y \times src0.y + src0.z \times src0.z) \times src0.y - src1.y
-
-  dst.z = 2 \times (src0.x \times src1.x + src0.y \times src1.y + src0.z \times src1.z) / (src0.x \times src0.x + src0.y \times src0.y + src0.z \times src0.z) \times src0.z - src1.z
-
-  dst.w = 1
-
-.. note::
-
-   Considered for removal.
-
-
 .. opcode:: SEQ - Set On Equal
 
 .. math::

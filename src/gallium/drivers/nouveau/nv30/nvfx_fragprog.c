@@ -684,19 +684,6 @@ nvfx_fragprog_parse_instruction(struct nvfx_fpc *fpc,
    case TGSI_OPCODE_RCP:
       nvfx_fp_emit(fpc, arith(sat, RCP, dst, mask, src[0], none, none));
       break;
-   case TGSI_OPCODE_RFL:
-      if(!fpc->is_nv4x)
-         nvfx_fp_emit(fpc, arith(0, RFL_NV30, dst, mask, src[0], src[1], none));
-      else {
-         tmp = nvfx_src(temp(fpc));
-         nvfx_fp_emit(fpc, arith(0, DP3, tmp.reg, NVFX_FP_MASK_X, src[0], src[0], none));
-         nvfx_fp_emit(fpc, arith(0, DP3, tmp.reg, NVFX_FP_MASK_Y, src[0], src[1], none));
-         insn = arith(0, DIV, tmp.reg, NVFX_FP_MASK_Z, swz(tmp, Y, Y, Y, Y), swz(tmp, X, X, X, X), none);
-         insn.scale = NVFX_FP_OP_DST_SCALE_2X;
-         nvfx_fp_emit(fpc, insn);
-         nvfx_fp_emit(fpc, arith(sat, MAD, dst, mask, swz(tmp, Z, Z, Z, Z), src[0], neg(src[1])));
-      }
-      break;
    case TGSI_OPCODE_RSQ:
       if(!fpc->is_nv4x)
          nvfx_fp_emit(fpc, arith(sat, RSQ_NV30, dst, mask, abs(swz(src[0], X, X, X, X)), none, none));

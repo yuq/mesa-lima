@@ -715,9 +715,6 @@ lp_emit_instruction_aos(
    case TGSI_OPCODE_PK4UB:
       return FALSE;
 
-   case TGSI_OPCODE_RFL:
-      return FALSE;
-
    case TGSI_OPCODE_SEQ:
       src0 = lp_build_emit_fetch(&bld->bld_base, inst, 0, LP_CHAN_ALL);
       src1 = lp_build_emit_fetch(&bld->bld_base, inst, 1, LP_CHAN_ALL);
