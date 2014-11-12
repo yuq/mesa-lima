@@ -215,10 +215,7 @@ public:
    dst_reg dst;
    src_reg src[3];
 
-   bool shadow_compare;
-
    enum brw_urb_write_flags urb_write_flags;
-   bool header_present;
 
    unsigned sol_binding; /**< gen6: SOL binding table index */
    bool sol_final_write; /**< gen6: send commit message */

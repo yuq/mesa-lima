@@ -281,8 +281,6 @@ public:
 
    uint8_t regs_written; /**< Number of vgrfs written by a SEND message, or 1 */
    bool eot:1;
-   bool header_present:1;
-   bool shadow_compare:1;
    bool force_uncompressed:1;
    bool force_sechalf:1;
    bool pi_noperspective:1;   /**< Pixel interpolator noperspective flag */

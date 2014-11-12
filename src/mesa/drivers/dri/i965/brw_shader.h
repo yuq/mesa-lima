@@ -126,6 +126,8 @@ struct backend_instruction {
    bool no_dd_clear:1;
    bool no_dd_check:1;
    bool saturate:1;
+   bool shadow_compare:1;
+   bool header_present:1;
 };
 
 #ifdef __cplusplus
