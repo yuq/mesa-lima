@@ -792,12 +792,6 @@ lp_emit_instruction_aos(
       return FALSE;
       break;
 
-   case TGSI_OPCODE_X2D:
-      /* deprecated? */
-      assert(0);
-      return FALSE;
-      break;
-
    case TGSI_OPCODE_ARR:
       src0 = lp_build_emit_fetch(&bld->bld_base, inst, 0, LP_CHAN_ALL);
       dst0 = lp_build_round(&bld->bld_base.base, src0);

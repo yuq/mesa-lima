@@ -2784,47 +2784,6 @@ exec_scs(struct tgsi_exec_machine *mach,
 }
 
 static void
-exec_x2d(struct tgsi_exec_machine *mach,
-         const struct tgsi_full_instruction *inst)
-{
-   union tgsi_exec_channel r[4];
-   union tgsi_exec_channel d[2];
-
-   fetch_source(mach, &r[0], &inst->Src[1], TGSI_CHAN_X, TGSI_EXEC_DATA_FLOAT);
-   fetch_source(mach, &r[1], &inst->Src[1], TGSI_CHAN_Y, TGSI_EXEC_DATA_FLOAT);
-   if (inst->Dst[0].Register.WriteMask & TGSI_WRITEMASK_XZ) {
-      fetch_source(mach, &r[2], &inst->Src[2], TGSI_CHAN_X, TGSI_EXEC_DATA_FLOAT);
-      micro_mul(&r[2], &r[2], &r[0]);
-      fetch_source(mach, &r[3], &inst->Src[2], TGSI_CHAN_Y, TGSI_EXEC_DATA_FLOAT);
-      micro_mul(&r[3], &r[3], &r[1]);
-      micro_add(&r[2], &r[2], &r[3]);
-      fetch_source(mach, &r[3], &inst->Src[0], TGSI_CHAN_X, TGSI_EXEC_DATA_FLOAT);
-      micro_add(&d[0], &r[2], &r[3]);
-   }
-   if (inst->Dst[0].Register.WriteMask & TGSI_WRITEMASK_YW) {
-      fetch_source(mach, &r[2], &inst->Src[2], TGSI_CHAN_Z, TGSI_EXEC_DATA_FLOAT);
-      micro_mul(&r[2], &r[2], &r[0]);
-      fetch_source(mach, &r[3], &inst->Src[2], TGSI_CHAN_W, TGSI_EXEC_DATA_FLOAT);
-      micro_mul(&r[3], &r[3], &r[1]);
-      micro_add(&r[2], &r[2], &r[3]);
-      fetch_source(mach, &r[3], &inst->Src[0], TGSI_CHAN_Y, TGSI_EXEC_DATA_FLOAT);
-      micro_add(&d[1], &r[2], &r[3]);
-   }
-   if (inst->Dst[0].Register.WriteMask & TGSI_WRITEMASK_X) {
-      store_dest(mach, &d[0], &inst->Dst[0], inst, TGSI_CHAN_X, TGSI_EXEC_DATA_FLOAT);
-   }
-   if (inst->Dst[0].Register.WriteMask & TGSI_WRITEMASK_Y) {
-      store_dest(mach, &d[1], &inst->Dst[0], inst, TGSI_CHAN_Y, TGSI_EXEC_DATA_FLOAT);
-   }
-   if (inst->Dst[0].Register.WriteMask & TGSI_WRITEMASK_Z) {
-      store_dest(mach, &d[0], &inst->Dst[0], inst, TGSI_CHAN_Z, TGSI_EXEC_DATA_FLOAT);
-   }
-   if (inst->Dst[0].Register.WriteMask & TGSI_WRITEMASK_W) {
-      store_dest(mach, &d[1], &inst->Dst[0], inst, TGSI_CHAN_W, TGSI_EXEC_DATA_FLOAT);
-   }
-}
-
-static void
 exec_rfl(struct tgsi_exec_machine *mach,
          const struct tgsi_full_instruction *inst)
 {
@@ -3906,10 +3865,6 @@ exec_instruction(
 
    case TGSI_OPCODE_UP4UB:
       assert (0);
-      break;
-
-   case TGSI_OPCODE_X2D:
-      exec_x2d(mach, inst);
       break;
 
    case TGSI_OPCODE_ARR:

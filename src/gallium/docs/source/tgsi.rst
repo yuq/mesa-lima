@@ -684,22 +684,6 @@ This instruction replicates its result.
 
    Considered for removal.
 
-.. opcode:: X2D - 2D Coordinate Transformation
-
-.. math::
-
-  dst.x = src0.x + src1.x \times src2.x + src1.y \times src2.y
-
-  dst.y = src0.y + src1.x \times src2.z + src1.y \times src2.w
-
-  dst.z = src0.x + src1.x \times src2.x + src1.y \times src2.y
-
-  dst.w = src0.y + src1.x \times src2.z + src1.y \times src2.w
-
-.. note::
-
-   Considered for removal.
-
 
 .. opcode:: ARR - Address Register Load With Round
 
