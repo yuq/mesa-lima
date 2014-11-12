@@ -60,6 +60,18 @@ fs_generator::~fs_generator()
 {
 }
 
+class ip_record : public exec_node {
+public:
+   DECLARE_RALLOC_CXX_OPERATORS(ip_record)
+
+   ip_record(int ip)
+   {
+      this->ip = ip;
+   }
+
+   int ip;
+};
+
 bool
 fs_generator::patch_discard_jumps_to_fb_writes()
 {

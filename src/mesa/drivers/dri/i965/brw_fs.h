@@ -210,18 +210,6 @@ half(fs_reg reg, unsigned idx)
 
 static const fs_reg reg_undef;
 
-class ip_record : public exec_node {
-public:
-   DECLARE_RALLOC_CXX_OPERATORS(ip_record)
-
-   ip_record(int ip)
-   {
-      this->ip = ip;
-   }
-
-   int ip;
-};
-
 class fs_inst : public backend_instruction {
    fs_inst &operator=(const fs_inst &);
 
