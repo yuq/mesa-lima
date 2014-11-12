@@ -1822,12 +1822,11 @@ emit_stub_vpm_read(struct vc4_compile *c)
 static void
 emit_ucp_clipdistance(struct vc4_compile *c)
 {
-        struct qreg *clipvertex;
-
+        unsigned cv;
         if (c->output_clipvertex_index != -1)
-                clipvertex = &c->outputs[c->output_clipvertex_index];
+                cv = c->output_clipvertex_index;
         else if (c->output_position_index != -1)
-                clipvertex = &c->outputs[c->output_position_index];
+                cv = c->output_position_index;
         else
                 return;
 
@@ -1846,12 +1845,14 @@ emit_ucp_clipdistance(struct vc4_compile *c)
                            plane,
                            TGSI_SWIZZLE_X);
 
+
                 struct qreg dist = qir_uniform_f(c, 0.0);
                 for (int i = 0; i < 4; i++) {
+                        struct qreg pos_chan = c->outputs[cv + i];
                         struct qreg ucp =
                                 add_uniform(c, QUNIFORM_USER_CLIP_PLANE,
                                             plane * 4 + i);
-                        dist = qir_FADD(c, dist, qir_FMUL(c, clipvertex[i], ucp));
+                        dist = qir_FADD(c, dist, qir_FMUL(c, pos_chan, ucp));
                 }
 
                 c->outputs[output_index] = dist;
