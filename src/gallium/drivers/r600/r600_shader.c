@@ -7210,7 +7210,6 @@ static struct r600_shader_tgsi_instruction r600_shader_tgsi_instruction[] = {
 	{TGSI_OPCODE_CND,	0, ALU_OP0_NOP, tgsi_unsupported},
 	{TGSI_OPCODE_SQRT,	0, ALU_OP1_SQRT_IEEE, tgsi_trans_srcx_replicate},
 	{TGSI_OPCODE_DP2A,	0, ALU_OP0_NOP, tgsi_unsupported},
-	/* gap */
 	{22,			0, ALU_OP0_NOP, tgsi_unsupported},
 	{23,			0, ALU_OP0_NOP, tgsi_unsupported},
 	{TGSI_OPCODE_FRC,	0, ALU_OP1_FRACT, tgsi_op2},
@@ -7221,7 +7220,6 @@ static struct r600_shader_tgsi_instruction r600_shader_tgsi_instruction[] = {
 	{TGSI_OPCODE_LG2,	0, ALU_OP1_LOG_IEEE, tgsi_trans_srcx_replicate},
 	{TGSI_OPCODE_POW,	0, ALU_OP0_NOP, tgsi_pow},
 	{TGSI_OPCODE_XPD,	0, ALU_OP0_NOP, tgsi_xpd},
-	/* gap */
 	{32,			0, ALU_OP0_NOP, tgsi_unsupported},
 	{TGSI_OPCODE_ABS,	0, ALU_OP1_MOV, tgsi_op2},
 	{TGSI_OPCODE_RCC,	0, ALU_OP0_NOP, tgsi_unsupported},
@@ -7278,7 +7276,6 @@ static struct r600_shader_tgsi_instruction r600_shader_tgsi_instruction[] = {
 	{TGSI_OPCODE_NOT,	0, ALU_OP1_NOT_INT, tgsi_op2},
 	{TGSI_OPCODE_TRUNC,	0, ALU_OP1_TRUNC, tgsi_op2},
 	{TGSI_OPCODE_SHL,	0, ALU_OP2_LSHL_INT, tgsi_op2_trans},
-	/* gap */
 	{88,			0, ALU_OP0_NOP, tgsi_unsupported},
 	{TGSI_OPCODE_AND,	0, ALU_OP2_AND_INT, tgsi_op2},
 	{TGSI_OPCODE_OR,	0, ALU_OP2_OR_INT, tgsi_op2},
@@ -7295,7 +7292,6 @@ static struct r600_shader_tgsi_instruction r600_shader_tgsi_instruction[] = {
 	{TGSI_OPCODE_ENDLOOP,	0, ALU_OP0_NOP, tgsi_endloop},
 	{TGSI_OPCODE_ENDSUB,	0, ALU_OP0_NOP, tgsi_unsupported},
 	{TGSI_OPCODE_TXQ_LZ,	0, FETCH_OP_GET_TEXTURE_RESINFO, tgsi_tex},
-	/* gap */
 	{104,			0, ALU_OP0_NOP, tgsi_unsupported},
 	{105,			0, ALU_OP0_NOP, tgsi_unsupported},
 	{106,			0, ALU_OP0_NOP, tgsi_unsupported},
@@ -7306,12 +7302,10 @@ static struct r600_shader_tgsi_instruction r600_shader_tgsi_instruction[] = {
 	{TGSI_OPCODE_FSNE,	0, ALU_OP2_SETNE_DX10, tgsi_op2_swap},
 	{TGSI_OPCODE_NRM4,	0, ALU_OP0_NOP, tgsi_unsupported},
 	{TGSI_OPCODE_CALLNZ,	0, ALU_OP0_NOP, tgsi_unsupported},
-	/* gap */
 	{114,			0, ALU_OP0_NOP, tgsi_unsupported},
 	{TGSI_OPCODE_BREAKC,	0, ALU_OP0_NOP, tgsi_loop_breakc},
 	{TGSI_OPCODE_KILL_IF,	0, ALU_OP2_KILLGT, tgsi_kill},  /* conditional kill */
 	{TGSI_OPCODE_END,	0, ALU_OP0_NOP, tgsi_end},  /* aka HALT */
-	/* gap */
 	{118,			0, ALU_OP0_NOP, tgsi_unsupported},
 	{TGSI_OPCODE_F2I,	0, ALU_OP1_FLT_TO_INT, tgsi_op2_trans},
 	{TGSI_OPCODE_IDIV,	0, ALU_OP0_NOP, tgsi_idiv},
@@ -7415,7 +7409,6 @@ static struct r600_shader_tgsi_instruction eg_shader_tgsi_instruction[] = {
 	{TGSI_OPCODE_CND,	0, ALU_OP0_NOP, tgsi_unsupported},
 	{TGSI_OPCODE_SQRT,	0, ALU_OP1_SQRT_IEEE, tgsi_trans_srcx_replicate},
 	{TGSI_OPCODE_DP2A,	0, ALU_OP0_NOP, tgsi_unsupported},
-	/* gap */
 	{22,			0, ALU_OP0_NOP, tgsi_unsupported},
 	{23,			0, ALU_OP0_NOP, tgsi_unsupported},
 	{TGSI_OPCODE_FRC,	0, ALU_OP1_FRACT, tgsi_op2},
@@ -7426,7 +7419,6 @@ static struct r600_shader_tgsi_instruction eg_shader_tgsi_instruction[] = {
 	{TGSI_OPCODE_LG2,	0, ALU_OP1_LOG_IEEE, tgsi_trans_srcx_replicate},
 	{TGSI_OPCODE_POW,	0, ALU_OP0_NOP, tgsi_pow},
 	{TGSI_OPCODE_XPD,	0, ALU_OP0_NOP, tgsi_xpd},
-	/* gap */
 	{32,			0, ALU_OP0_NOP, tgsi_unsupported},
 	{TGSI_OPCODE_ABS,	0, ALU_OP1_MOV, tgsi_op2},
 	{TGSI_OPCODE_RCC,	0, ALU_OP0_NOP, tgsi_unsupported},
@@ -7483,7 +7475,6 @@ static struct r600_shader_tgsi_instruction eg_shader_tgsi_instruction[] = {
 	{TGSI_OPCODE_NOT,	0, ALU_OP1_NOT_INT, tgsi_op2},
 	{TGSI_OPCODE_TRUNC,	0, ALU_OP1_TRUNC, tgsi_op2},
 	{TGSI_OPCODE_SHL,	0, ALU_OP2_LSHL_INT, tgsi_op2},
-	/* gap */
 	{88,			0, ALU_OP0_NOP, tgsi_unsupported},
 	{TGSI_OPCODE_AND,	0, ALU_OP2_AND_INT, tgsi_op2},
 	{TGSI_OPCODE_OR,	0, ALU_OP2_OR_INT, tgsi_op2},
@@ -7500,7 +7491,6 @@ static struct r600_shader_tgsi_instruction eg_shader_tgsi_instruction[] = {
 	{TGSI_OPCODE_ENDLOOP,	0, ALU_OP0_NOP, tgsi_endloop},
 	{TGSI_OPCODE_ENDSUB,	0, ALU_OP0_NOP, tgsi_unsupported},
 	{TGSI_OPCODE_TXQ_LZ,	0, FETCH_OP_GET_TEXTURE_RESINFO, tgsi_tex},
-	/* gap */
 	{104,			0, ALU_OP0_NOP, tgsi_unsupported},
 	{105,			0, ALU_OP0_NOP, tgsi_unsupported},
 	{106,			0, ALU_OP0_NOP, tgsi_unsupported},
@@ -7511,12 +7501,10 @@ static struct r600_shader_tgsi_instruction eg_shader_tgsi_instruction[] = {
 	{TGSI_OPCODE_FSNE,	0, ALU_OP2_SETNE_DX10, tgsi_op2_swap},
 	{TGSI_OPCODE_NRM4,	0, ALU_OP0_NOP, tgsi_unsupported},
 	{TGSI_OPCODE_CALLNZ,	0, ALU_OP0_NOP, tgsi_unsupported},
-	/* gap */
 	{114,			0, ALU_OP0_NOP, tgsi_unsupported},
 	{TGSI_OPCODE_BREAKC,	0, ALU_OP0_NOP, tgsi_unsupported},
 	{TGSI_OPCODE_KILL_IF,	0, ALU_OP2_KILLGT, tgsi_kill},  /* conditional kill */
 	{TGSI_OPCODE_END,	0, ALU_OP0_NOP, tgsi_end},  /* aka HALT */
-	/* gap */
 	{118,			0, ALU_OP0_NOP, tgsi_unsupported},
 	{TGSI_OPCODE_F2I,	0, ALU_OP1_FLT_TO_INT, tgsi_f2i},
 	{TGSI_OPCODE_IDIV,	0, ALU_OP0_NOP, tgsi_idiv},
@@ -7620,7 +7608,6 @@ static struct r600_shader_tgsi_instruction cm_shader_tgsi_instruction[] = {
 	{TGSI_OPCODE_CND,	0, ALU_OP0_NOP, tgsi_unsupported},
 	{TGSI_OPCODE_SQRT,	0, ALU_OP1_SQRT_IEEE, cayman_emit_float_instr},
 	{TGSI_OPCODE_DP2A,	0, ALU_OP0_NOP, tgsi_unsupported},
-	/* gap */
 	{22,			0, ALU_OP0_NOP, tgsi_unsupported},
 	{23,			0, ALU_OP0_NOP, tgsi_unsupported},
 	{TGSI_OPCODE_FRC,	0, ALU_OP1_FRACT, tgsi_op2},
@@ -7631,7 +7618,6 @@ static struct r600_shader_tgsi_instruction cm_shader_tgsi_instruction[] = {
 	{TGSI_OPCODE_LG2,	0, ALU_OP1_LOG_IEEE, cayman_emit_float_instr},
 	{TGSI_OPCODE_POW,	0, ALU_OP0_NOP, cayman_pow},
 	{TGSI_OPCODE_XPD,	0, ALU_OP0_NOP, tgsi_xpd},
-	/* gap */
 	{32,			0, ALU_OP0_NOP, tgsi_unsupported},
 	{TGSI_OPCODE_ABS,	0, ALU_OP1_MOV, tgsi_op2},
 	{TGSI_OPCODE_RCC,	0, ALU_OP0_NOP, tgsi_unsupported},
@@ -7688,7 +7674,6 @@ static struct r600_shader_tgsi_instruction cm_shader_tgsi_instruction[] = {
 	{TGSI_OPCODE_NOT,	0, ALU_OP1_NOT_INT, tgsi_op2},
 	{TGSI_OPCODE_TRUNC,	0, ALU_OP1_TRUNC, tgsi_op2},
 	{TGSI_OPCODE_SHL,	0, ALU_OP2_LSHL_INT, tgsi_op2},
-	/* gap */
 	{88,			0, ALU_OP0_NOP, tgsi_unsupported},
 	{TGSI_OPCODE_AND,	0, ALU_OP2_AND_INT, tgsi_op2},
 	{TGSI_OPCODE_OR,	0, ALU_OP2_OR_INT, tgsi_op2},
@@ -7705,24 +7690,20 @@ static struct r600_shader_tgsi_instruction cm_shader_tgsi_instruction[] = {
 	{TGSI_OPCODE_ENDLOOP,	0, ALU_OP0_NOP, tgsi_endloop},
 	{TGSI_OPCODE_ENDSUB,	0, ALU_OP0_NOP, tgsi_unsupported},
 	{TGSI_OPCODE_TXQ_LZ,	0, FETCH_OP_GET_TEXTURE_RESINFO, tgsi_tex},
-	/* gap */
 	{104,			0, ALU_OP0_NOP, tgsi_unsupported},
 	{105,			0, ALU_OP0_NOP, tgsi_unsupported},
 	{106,			0, ALU_OP0_NOP, tgsi_unsupported},
 	{TGSI_OPCODE_NOP,	0, ALU_OP0_NOP, tgsi_unsupported},
-	/* gap */
 	{TGSI_OPCODE_FSEQ,	0, ALU_OP2_SETE_DX10, tgsi_op2},
 	{TGSI_OPCODE_FSGE,	0, ALU_OP2_SETGE_DX10, tgsi_op2},
 	{TGSI_OPCODE_FSLT,	0, ALU_OP2_SETGT_DX10, tgsi_op2_swap},
 	{TGSI_OPCODE_FSNE,	0, ALU_OP2_SETNE_DX10, tgsi_op2_swap},
 	{TGSI_OPCODE_NRM4,	0, ALU_OP0_NOP, tgsi_unsupported},
 	{TGSI_OPCODE_CALLNZ,	0, ALU_OP0_NOP, tgsi_unsupported},
-	/* gap */
 	{114,			0, ALU_OP0_NOP, tgsi_unsupported},
 	{TGSI_OPCODE_BREAKC,	0, ALU_OP0_NOP, tgsi_unsupported},
 	{TGSI_OPCODE_KILL_IF,	0, ALU_OP2_KILLGT, tgsi_kill},  /* conditional kill */
 	{TGSI_OPCODE_END,	0, ALU_OP0_NOP, tgsi_end},  /* aka HALT */
-	/* gap */
 	{118,			0, ALU_OP0_NOP, tgsi_unsupported},
 	{TGSI_OPCODE_F2I,	0, ALU_OP1_FLT_TO_INT, tgsi_op2},
 	{TGSI_OPCODE_IDIV,	0, ALU_OP0_NOP, tgsi_idiv},
