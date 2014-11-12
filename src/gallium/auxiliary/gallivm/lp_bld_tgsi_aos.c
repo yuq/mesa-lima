@@ -620,15 +620,6 @@ lp_emit_instruction_aos(
       dst0 = lp_build_add(&bld->bld_base.base, tmp0, src2);
       break;
 
-   case TGSI_OPCODE_CND:
-      src0 = lp_build_emit_fetch(&bld->bld_base, inst, 0, LP_CHAN_ALL);
-      src1 = lp_build_emit_fetch(&bld->bld_base, inst, 1, LP_CHAN_ALL);
-      src2 = lp_build_emit_fetch(&bld->bld_base, inst, 2, LP_CHAN_ALL);
-      tmp1 = lp_build_const_vec(bld->bld_base.base.gallivm, bld->bld_base.base.type, 0.5);
-      tmp0 = lp_build_cmp(&bld->bld_base.base, PIPE_FUNC_GREATER, src2, tmp1);
-      dst0 = lp_build_select(&bld->bld_base.base, tmp0, src0, src1);
-      break;
-
    case TGSI_OPCODE_DP2A:
       return FALSE;
 

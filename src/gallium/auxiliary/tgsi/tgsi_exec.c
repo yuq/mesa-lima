@@ -137,18 +137,6 @@ micro_cmp(union tgsi_exec_channel *dst,
 }
 
 static void
-micro_cnd(union tgsi_exec_channel *dst,
-          const union tgsi_exec_channel *src0,
-          const union tgsi_exec_channel *src1,
-          const union tgsi_exec_channel *src2)
-{
-   dst->f[0] = src2->f[0] > 0.5f ? src0->f[0] : src1->f[0];
-   dst->f[1] = src2->f[1] > 0.5f ? src0->f[1] : src1->f[1];
-   dst->f[2] = src2->f[2] > 0.5f ? src0->f[2] : src1->f[2];
-   dst->f[3] = src2->f[3] > 0.5f ? src0->f[3] : src1->f[3];
-}
-
-static void
 micro_cos(union tgsi_exec_channel *dst,
           const union tgsi_exec_channel *src)
 {
@@ -3601,10 +3589,6 @@ exec_instruction(
 
    case TGSI_OPCODE_LRP:
       exec_vector_trinary(mach, inst, micro_lrp, TGSI_EXEC_DATA_FLOAT, TGSI_EXEC_DATA_FLOAT);
-      break;
-
-   case TGSI_OPCODE_CND:
-      exec_vector_trinary(mach, inst, micro_cnd, TGSI_EXEC_DATA_FLOAT, TGSI_EXEC_DATA_FLOAT);
       break;
 
    case TGSI_OPCODE_SQRT:

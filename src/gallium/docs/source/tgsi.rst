@@ -272,19 +272,6 @@ This instruction replicates its result.
   dst.w = src0.w \times src1.w + (1 - src0.w) \times src2.w
 
 
-.. opcode:: CND - Condition
-
-.. math::
-
-  dst.x = (src2.x > 0.5) ? src0.x : src1.x
-
-  dst.y = (src2.y > 0.5) ? src0.y : src1.y
-
-  dst.z = (src2.z > 0.5) ? src0.z : src1.z
-
-  dst.w = (src2.w > 0.5) ? src0.w : src1.w
-
-
 .. opcode:: DP2A - 2-component Dot Product And Add
 
 .. math::

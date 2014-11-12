@@ -569,21 +569,6 @@ aos_LRP(struct toy_compiler *tc,
 }
 
 static void
-aos_CND(struct toy_compiler *tc,
-        const struct tgsi_full_instruction *tgsi_inst,
-        struct toy_dst *dst,
-        struct toy_src *src)
-{
-   struct toy_inst *inst;
-
-   assert(!"CND untested");
-
-   tc_CMP(tc, tdst_null(), src[2], tsrc_imm_f(0.5f), GEN6_COND_G);
-   inst = tc_SEL(tc, dst[0], src[0], src[1], GEN6_COND_NONE);
-   inst->pred_ctrl = GEN6_PREDCTRL_NORMAL;
-}
-
-static void
 aos_DP2A(struct toy_compiler *tc,
          const struct tgsi_full_instruction *tgsi_inst,
          struct toy_dst *dst,
@@ -795,7 +780,6 @@ static const toy_tgsi_translate aos_translate_table[TGSI_OPCODE_LAST] = {
    [TGSI_OPCODE_MAD]          = aos_simple,
    [TGSI_OPCODE_SUB]          = aos_simple,
    [TGSI_OPCODE_LRP]          = aos_LRP,
-   [TGSI_OPCODE_CND]          = aos_CND,
    [TGSI_OPCODE_SQRT]         = aos_simple,
    [TGSI_OPCODE_DP2A]         = aos_DP2A,
    [TGSI_OPCODE_FRC]          = aos_simple,
@@ -1339,7 +1323,6 @@ static const toy_tgsi_translate soa_translate_table[TGSI_OPCODE_LAST] = {
    [TGSI_OPCODE_MAD]          = soa_per_channel,
    [TGSI_OPCODE_SUB]          = soa_per_channel,
    [TGSI_OPCODE_LRP]          = soa_per_channel,
-   [TGSI_OPCODE_CND]          = soa_per_channel,
    [TGSI_OPCODE_SQRT]         = soa_scalar_replicate,
    [TGSI_OPCODE_DP2A]         = soa_dot_product,
    [TGSI_OPCODE_FRC]          = soa_per_channel,
