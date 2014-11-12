@@ -1122,6 +1122,27 @@ invalidate_tex_image_error_check(struct gl_context *ctx, GLuint texture,
 }
 
 /**
+ * Wrapper for the driver function. Need this because _mesa_new_texture_object
+ * permits a target of 0 and does not initialize targetIndex.
+ */
+struct gl_texture_object *
+_mesa_create_nameless_texture(struct gl_context *ctx, GLenum target)
+{
+      struct gl_texture_object *texObj = NULL;
+      GLint targetIndex;
+
+      if (target == 0)
+         return texObj;
+
+      texObj = ctx->Driver.NewTextureObject(ctx, 0, target);
+      targetIndex = _mesa_tex_target_to_index(ctx, texObj->Target);
+      assert(targetIndex < NUM_TEXTURE_TARGETS);
+      texObj->TargetIndex = targetIndex;
+
+      return texObj;
+}
+
+/**
  * Helper function for glCreateTextures and glGenTextures. Need this because
  * glCreateTextures should throw errors if target = 0. This is not exposed to
  * the rest of Mesa to encourage Mesa internals to use nameless textures,
@@ -1428,6 +1449,47 @@ _mesa_DeleteTextures( GLsizei n, const GLuint *textures)
          }
       }
    }
+}
+
+/**
+ * This deletes a texObj without altering the hash table.
+ */
+void
+_mesa_delete_nameless_texture(struct gl_context *ctx,
+                              struct gl_texture_object *texObj)
+{
+   if (!texObj)
+      return;
+
+   FLUSH_VERTICES(ctx, 0);
+
+   _mesa_lock_texture(ctx, texObj);
+   {
+      /* Check if texture is bound to any framebuffer objects.
+       * If so, unbind.
+       * See section 4.4.2.3 of GL_EXT_framebuffer_object.
+       */
+      unbind_texobj_from_fbo(ctx, texObj);
+
+      /* Check if this texture is currently bound to any texture units.
+       * If so, unbind it.
+       */
+      unbind_texobj_from_texunits(ctx, texObj);
+
+      /* Check if this texture is currently bound to any shader
+       * image unit.  If so, unbind it.
+       * See section 3.9.X of GL_ARB_shader_image_load_store.
+       */
+      unbind_texobj_from_image_units(ctx, texObj);
+   }
+   _mesa_unlock_texture(ctx, texObj);
+
+   ctx->NewState |= _NEW_TEXTURE;
+
+   /* Unreference the texobj.  If refcount hits zero, the texture
+    * will be deleted.
+    */
+   _mesa_reference_texobj(&texObj, NULL);
 }
 
 
