@@ -868,6 +868,8 @@ struct intel_batchbuffer {
    enum brw_gpu_ring ring;
    bool needs_sol_reset;
 
+   uint8_t pipe_controls_since_last_cs_stall;
+
    struct {
       uint16_t used;
       int reloc_count;
