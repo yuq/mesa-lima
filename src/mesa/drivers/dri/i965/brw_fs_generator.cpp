@@ -163,6 +163,10 @@ fs_generator::generate_fb_write(fs_inst *inst, struct brw_reg payload)
    const brw_wm_prog_key * const key = (brw_wm_prog_key * const) this->key;
    struct brw_reg implied_header;
 
+   if (brw->gen < 8 && !brw->is_haswell) {
+      brw_set_default_predicate_control(p, BRW_PREDICATE_NONE);
+   }
+
    if (inst->base_mrf >= 0)
       payload = brw_message_reg(inst->base_mrf);
 

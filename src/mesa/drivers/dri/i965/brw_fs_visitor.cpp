@@ -3334,7 +3334,7 @@ fs_visitor::emit_single_fb_write(fs_reg color0, fs_reg color1,
 
    write->mlen = load->regs_written;
    write->header_present = header_present;
-   if ((brw->gen >= 8 || brw->is_haswell) && prog_data->uses_kill) {
+   if (prog_data->uses_kill) {
       write->predicate = BRW_PREDICATE_NORMAL;
       write->flag_subreg = 1;
    }
