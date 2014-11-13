@@ -981,25 +981,37 @@ fs_visitor::nir_emit_alu(nir_alu_instr *instr)
 fs_reg
 fs_visitor::get_nir_src(nir_src src)
 {
-   fs_reg reg;
-   if (src.reg.reg->is_global)
-      reg = nir_globals[src.reg.reg->index];
-   else
-      reg = nir_locals[src.reg.reg->index];
+   if (src.is_ssa) {
+      assert(src.ssa->parent_instr->type == nir_instr_type_load_const);
+      nir_load_const_instr *load = nir_instr_as_load_const(src.ssa->parent_instr);
+      fs_reg reg(GRF, virtual_grf_alloc(src.ssa->num_components),
+                 BRW_REGISTER_TYPE_D);
 
-   /* to avoid floating-point denorm flushing problems, set the type by
-    * default to D - instructions that need floating point semantics will set
-    * this to F if they need to
-    */
-   reg.type = BRW_REGISTER_TYPE_D;
-   reg.reg_offset = src.reg.base_offset;
-   if (src.reg.indirect) {
-      reg.reladdr = new(mem_ctx) fs_reg();
-      *reg.reladdr = retype(get_nir_src(*src.reg.indirect),
-                            BRW_REGISTER_TYPE_D);
+      for (unsigned i = 0; i < src.ssa->num_components; ++i)
+         emit(MOV(offset(reg, i), fs_reg(load->value.i[i])));
+
+      return reg;
+   } else {
+      fs_reg reg;
+      if (src.reg.reg->is_global)
+         reg = nir_globals[src.reg.reg->index];
+      else
+         reg = nir_locals[src.reg.reg->index];
+
+      /* to avoid floating-point denorm flushing problems, set the type by
+       * default to D - instructions that need floating point semantics will set
+       * this to F if they need to
+       */
+      reg.type = BRW_REGISTER_TYPE_D;
+      reg.reg_offset = src.reg.base_offset;
+      if (src.reg.indirect) {
+         reg.reladdr = new(mem_ctx) fs_reg();
+         *reg.reladdr = retype(get_nir_src(*src.reg.indirect),
+                               BRW_REGISTER_TYPE_D);
+      }
+
+      return reg;
    }
-
-   return reg;
 }
 
 fs_reg
@@ -1652,6 +1664,10 @@ fs_visitor::nir_emit_texture(nir_tex_instr *instr)
 void
 fs_visitor::nir_emit_load_const(nir_load_const_instr *instr)
 {
+   /* Bail on SSA constant loads.  These are used for immediates. */
+   if (instr->dest.is_ssa)
+      return;
+
    fs_reg dest = get_nir_dest(instr->dest);
    dest.type = BRW_REGISTER_TYPE_UD;
    if (instr->array_elems == 0) {
