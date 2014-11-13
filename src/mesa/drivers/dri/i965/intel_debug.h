@@ -61,7 +61,7 @@ extern uint64_t INTEL_DEBUG;
 #define DEBUG_VUE                 (1 << 25)
 #define DEBUG_NO_DUAL_OBJECT_GS   (1 << 26)
 #define DEBUG_OPTIMIZER           (1 << 27)
-#define DEBUG_NO_ANNOTATION       (1 << 28)
+#define DEBUG_ANNOTATION          (1 << 28)
 #define DEBUG_NO8                 (1 << 29)
 
 #ifdef HAVE_ANDROID_PLATFORM
