@@ -3912,10 +3912,6 @@ exec_instruction(
       exec_x2d(mach, inst);
       break;
 
-   case TGSI_OPCODE_ARA:
-      assert (0);
-      break;
-
    case TGSI_OPCODE_ARR:
       exec_vector_unary(mach, inst, micro_arr, TGSI_EXEC_DATA_INT, TGSI_EXEC_DATA_FLOAT);
       break;

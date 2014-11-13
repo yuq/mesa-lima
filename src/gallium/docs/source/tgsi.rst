@@ -701,14 +701,6 @@ This instruction replicates its result.
    Considered for removal.
 
 
-.. opcode:: ARA - Address Register Add
-
-  TBD
-
-.. note::
-
-   Considered for removal.
-
 .. opcode:: ARR - Address Register Load With Round
 
 .. math::
