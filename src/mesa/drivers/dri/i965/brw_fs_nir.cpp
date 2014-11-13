@@ -66,6 +66,11 @@ fs_visitor::emit_nir_code()
 
    nir_remove_dead_variables(nir);
    nir_validate_shader(nir);
+
+   nir_lower_to_source_mods(nir);
+   nir_validate_shader(nir);
+   nir_copy_prop(nir);
+   nir_validate_shader(nir);
    nir_convert_from_ssa(nir);
    nir_validate_shader(nir);
    nir_lower_vec_to_movs(nir);

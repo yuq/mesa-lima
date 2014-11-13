@@ -1389,6 +1389,7 @@ void nir_lower_samplers(nir_shader *shader,
 void nir_lower_system_values(nir_shader *shader);
 
 void nir_lower_atomics(nir_shader *shader);
+void nir_lower_to_source_mods(nir_shader *shader);
 
 void nir_live_variables_impl(nir_function_impl *impl);
 bool nir_ssa_defs_interfere(nir_ssa_def *a, nir_ssa_def *b);
