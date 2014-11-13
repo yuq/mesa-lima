@@ -198,7 +198,6 @@ typedef enum prog_opcode {
    OPCODE_RSQ,       /*   X        X       X       X         X   */
    OPCODE_SCS,       /*            X                         X   */
    OPCODE_SEQ,       /*                    2       X         X   */
-   OPCODE_SFL,       /*                    2       X             */
    OPCODE_SGE,       /*   X        X       X       X         X   */
    OPCODE_SGT,       /*                    2       X         X   */
    OPCODE_SIN,       /*            X       2       X         X   */
@@ -206,7 +205,6 @@ typedef enum prog_opcode {
    OPCODE_SLT,       /*   X        X       X       X         X   */
    OPCODE_SNE,       /*                    2       X         X   */
    OPCODE_SSG,       /*                    2                 X   */
-   OPCODE_STR,       /*                    2       X             */
    OPCODE_SUB,       /*   X        X       1.1     X         X   */
    OPCODE_SWZ,       /*   X        X                         X   */
    OPCODE_TEX,       /*            X       3       X         X   */

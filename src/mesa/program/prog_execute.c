@@ -1279,12 +1279,6 @@ _mesa_execute_program(struct gl_context * ctx,
             }
          }
          break;
-      case OPCODE_SFL:         /* set false, operands ignored */
-         {
-            static const GLfloat result[4] = { 0.0F, 0.0F, 0.0F, 0.0F };
-            store_vector4(inst, machine, result);
-         }
-         break;
       case OPCODE_SGE:         /* set on greater or equal */
          {
             GLfloat a[4], b[4], result[4];
@@ -1392,12 +1386,6 @@ _mesa_execute_program(struct gl_context * ctx,
             result[1] = (GLfloat) ((a[1] > 0.0F) - (a[1] < 0.0F));
             result[2] = (GLfloat) ((a[2] > 0.0F) - (a[2] < 0.0F));
             result[3] = (GLfloat) ((a[3] > 0.0F) - (a[3] < 0.0F));
-            store_vector4(inst, machine, result);
-         }
-         break;
-      case OPCODE_STR:         /* set true, operands ignored */
-         {
-            static const GLfloat result[4] = { 1.0F, 1.0F, 1.0F, 1.0F };
             store_vector4(inst, machine, result);
          }
          break;
