@@ -303,6 +303,76 @@ read_uniform_remap_table(struct blob_reader *metadata,
    }
 }
 
+struct whte_closure
+{
+   struct blob *blob;
+   size_t num_entries;
+};
+
+static void
+write_hash_table_entry(const char *key, unsigned value, void *closure)
+{
+   struct whte_closure *whte = (struct whte_closure *) closure;
+
+   blob_write_string(whte->blob, key);
+   blob_write_uint32(whte->blob, value);
+
+   whte->num_entries++;
+}
+
+static void
+write_hash_table(struct blob *metadata, struct string_to_uint_map *hash)
+{
+   size_t offset;
+   struct whte_closure whte;
+
+   whte.blob = metadata;
+   whte.num_entries = 0;
+
+   offset = metadata->size;
+
+   /* Write a placeholder for the hashtable size. */
+   blob_write_uint32 (metadata, 0);
+
+   hash->iterate(write_hash_table_entry, &whte);
+
+   /* Overwrite with the computed number of entries written. */
+   blob_overwrite_uint32 (metadata, offset, whte.num_entries);
+}
+
+static void
+read_hash_table(struct blob_reader *metadata, struct string_to_uint_map *hash)
+{
+   size_t i, num_entries;
+   const char *key;
+   uint32_t value;
+
+   num_entries = blob_read_uint32 (metadata);
+
+   for (i = 0; i < num_entries; i++) {
+      key = blob_read_string(metadata);
+      value = blob_read_uint32(metadata);
+
+      hash->put(value, key);
+   }
+}
+
+static void
+write_hash_tables(struct blob *metadata, struct gl_shader_program *prog)
+{
+   write_hash_table(metadata, prog->AttributeBindings);
+   write_hash_table(metadata, prog->FragDataBindings);
+   write_hash_table(metadata, prog->FragDataIndexBindings);
+}
+
+static void
+read_hash_tables(struct blob_reader *metadata, struct gl_shader_program *prog)
+{
+   read_hash_table(metadata, prog->AttributeBindings);
+   read_hash_table(metadata, prog->FragDataBindings);
+   read_hash_table(metadata, prog->FragDataIndexBindings);
+}
+
 static void
 write_shader_parameters(struct blob *metadata,
                         struct gl_program_parameter_list *params)
@@ -441,6 +511,8 @@ shader_cache_write_program_metadata(struct gl_context *ctx,
 
    write_uniforms(metadata, prog);
 
+   write_hash_tables(metadata, prog);
+
    blob_write_uint32(metadata, prog->data->Version);
    blob_write_uint32(metadata, prog->data->linked_stages);
 
@@ -550,6 +622,8 @@ shader_cache_read_program_metadata(struct gl_context *ctx,
    assert(prog->data->UniformStorage == NULL);
 
    read_uniforms(&metadata, prog);
+
+   read_hash_tables(&metadata, prog);
 
    prog->data->Version = blob_read_uint32(&metadata);
    prog->data->linked_stages = blob_read_uint32(&metadata);
