@@ -2411,7 +2411,7 @@ reserve_explicit_locations(struct gl_shader_program *prog,
           *     or linker error will be generated."
           */
          linker_error(prog,
-                      "location qualifier for uniform %s overlaps"
+                      "location qualifier for uniform %s overlaps "
                       "previously used location",
                       var->name);
          return false;
