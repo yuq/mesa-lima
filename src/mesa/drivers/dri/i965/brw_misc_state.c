@@ -929,8 +929,7 @@ brw_upload_invariant_state(struct brw_context *brw)
    const uint32_t _3DSTATE_VF_STATISTICS =
       is_965 ? GEN4_3DSTATE_VF_STATISTICS : GM45_3DSTATE_VF_STATISTICS;
    BEGIN_BATCH(1);
-   OUT_BATCH(_3DSTATE_VF_STATISTICS << 16 |
-	     (unlikely(INTEL_DEBUG & DEBUG_STATS) ? 1 : 0));
+   OUT_BATCH(_3DSTATE_VF_STATISTICS << 16 | 1);
    ADVANCE_BATCH();
 }
 
