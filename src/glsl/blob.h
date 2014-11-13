@@ -108,6 +108,24 @@ uint8_t *
 blob_reserve_bytes (struct blob *blob, size_t to_write);
 
 /**
+ * Overwrite some data previously written to the blob.
+ *
+ * Writes data to an existing portion of the blob at an offset of \offset.
+ * This data range must have previously been written to the blob by one of the
+ * blob_write_* calls.
+ *
+ * For example usage, see blob_overwrite_uint32
+ *
+ * \return True unless the requested offset or offset+to_write lie outside
+ * the current blob's size.
+ */
+bool
+blob_overwrite_bytes (struct blob *blob,
+                      size_t offset,
+                      const void *bytes,
+                      size_t to_write);
+
+/**
  * Add a uint32_t to a blob.
  *
  * \note This function will only write to a uint32_t-aligned offset from the
@@ -119,6 +137,31 @@ blob_reserve_bytes (struct blob *blob, size_t to_write);
  */
 bool
 blob_write_uint32 (struct blob *blob, uint32_t value);
+
+/**
+ * Overwrite a uint32_t previously written to the blob.
+ *
+ * Writes a uint32_t value to an existing portion of the blob at an offset of
+ * \offset.  This data range must have previously been written to the blob by
+ * one of the blob_write_* calls.
+ *
+ *
+ * The expected usage is something like the following pattern:
+ *
+ *	size_t offset;
+ *
+ *	offset = blob->size;
+ *	blob_write_uint32 (blob, 0); // placeholder
+ *	... various blob write calls, writing N items ...
+ *	blob_overwrite_uint32 (blob, offset, N);
+ *
+ * \return True unless the requested position or position+to_write lie outside
+ * the current blob's size.
+ */
+bool
+blob_overwrite_uint32 (struct blob *blob,
+                       size_t offset,
+                       uint32_t value);
 
 /**
  * Add a uint64_t to a blob.

@@ -101,6 +101,21 @@ blob_create(void *mem_ctx)
 }
 
 bool
+blob_overwrite_bytes(struct blob *blob,
+                     size_t offset,
+                     const void *bytes,
+                     size_t to_write)
+{
+   /* Detect an attempt to overwrite data out of bounds. */
+   if (offset < 0 || blob->size - offset < to_write)
+      return false;
+
+   memcpy(blob->data + offset, bytes, to_write);
+
+   return true;
+}
+
+bool
 blob_write_bytes(struct blob *blob, const void *bytes, size_t to_write)
 {
    if (! grow_to_fit(blob, to_write))
@@ -132,6 +147,14 @@ blob_write_uint32(struct blob *blob, uint32_t value)
    align_blob(blob, sizeof(value));
 
    return blob_write_bytes(blob, &value, sizeof(value));
+}
+
+bool
+blob_overwrite_uint32 (struct blob *blob,
+                       size_t offset,
+                       uint32_t value)
+{
+   return blob_overwrite_bytes(blob, offset, &value, sizeof(value));
 }
 
 bool
