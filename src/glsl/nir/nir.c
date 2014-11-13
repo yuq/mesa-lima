@@ -542,6 +542,7 @@ static nir_deref_var *
 copy_deref_var(void *mem_ctx, nir_deref_var *deref)
 {
    nir_deref_var *ret = nir_deref_var_create(mem_ctx, deref->var);
+   ret->deref.type = deref->deref.type;
    if (deref->deref.child)
       ret->deref.child = nir_copy_deref(mem_ctx, deref->deref.child);
    return ret;
@@ -552,8 +553,10 @@ copy_deref_array(void *mem_ctx, nir_deref_array *deref)
 {
    nir_deref_array *ret = nir_deref_array_create(mem_ctx);
    ret->base_offset = deref->base_offset;
-   if (deref->has_indirect)
+   if (deref->has_indirect) {
+      ret->has_indirect = true;
       ret->indirect = deref->indirect;
+   }
    ret->deref.type = deref->deref.type;
    if (deref->deref.child)
       ret->deref.child = nir_copy_deref(mem_ctx, deref->deref.child);
