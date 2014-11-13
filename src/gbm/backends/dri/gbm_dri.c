@@ -774,6 +774,7 @@ create_dumb(struct gbm_device *gbm,
    if (bo == NULL)
       return NULL;
 
+   memset(&create_arg, 0, sizeof(create_arg));
    create_arg.bpp = 32;
    create_arg.width = width;
    create_arg.height = height;
