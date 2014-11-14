@@ -58,15 +58,15 @@ gen6_upload_push_constants(struct brw_context *brw,
 {
    struct gl_context *ctx = &brw->ctx;
 
-   /* Updates the ParamaterValues[i] pointers for all parameters of the
-    * basic type of PROGRAM_STATE_VAR.
-    */
-   /* XXX: Should this happen somewhere before to get our state flag set? */
-   _mesa_load_state_parameters(ctx, prog->Parameters);
-
    if (prog_data->nr_params == 0) {
       stage_state->push_const_size = 0;
    } else {
+      /* Updates the ParamaterValues[i] pointers for all parameters of the
+       * basic type of PROGRAM_STATE_VAR.
+       */
+      /* XXX: Should this happen somewhere before to get our state flag set? */
+      _mesa_load_state_parameters(ctx, prog->Parameters);
+
       gl_constant_value *param;
       int i;
 

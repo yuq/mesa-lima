@@ -59,11 +59,6 @@ brw_upload_pull_constants(struct brw_context *brw,
    int i;
    uint32_t surf_index = prog_data->binding_table.pull_constants_start;
 
-   /* Updates the ParamaterValues[i] pointers for all parameters of the
-    * basic type of PROGRAM_STATE_VAR.
-    */
-   _mesa_load_state_parameters(&brw->ctx, prog->Parameters);
-
    if (!prog_data->nr_pull_params) {
       if (stage_state->surf_offset[surf_index]) {
 	 stage_state->surf_offset[surf_index] = 0;
@@ -71,6 +66,11 @@ brw_upload_pull_constants(struct brw_context *brw,
       }
       return;
    }
+
+   /* Updates the ParamaterValues[i] pointers for all parameters of the
+    * basic type of PROGRAM_STATE_VAR.
+    */
+   _mesa_load_state_parameters(&brw->ctx, prog->Parameters);
 
    /* CACHE_NEW_*_PROG | _NEW_PROGRAM_CONSTANTS */
    uint32_t size = prog_data->nr_pull_params * 4;
