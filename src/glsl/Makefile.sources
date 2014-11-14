@@ -41,6 +41,8 @@ NIR_FILES = \
 	$(GLSL_SRCDIR)/nir/nir_opt_peephole_select.c \
 	$(GLSL_SRCDIR)/nir/nir_print.c \
 	$(GLSL_SRCDIR)/nir/nir_remove_dead_variables.c \
+	$(GLSL_SRCDIR)/nir/nir_search.c \
+	$(GLSL_SRCDIR)/nir/nir_search.h \
 	$(GLSL_SRCDIR)/nir/nir_split_var_copies.c \
 	$(GLSL_SRCDIR)/nir/nir_to_ssa.c \
 	$(GLSL_SRCDIR)/nir/nir_validate.c \
