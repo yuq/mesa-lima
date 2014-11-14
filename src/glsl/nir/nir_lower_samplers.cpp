@@ -124,7 +124,16 @@ lower_sampler(nir_tex_instr *instr, struct gl_shader_program *shader_program,
 {
    if (instr->sampler) {
       instr->sampler_index = get_sampler_index(instr->sampler, shader_program,
-                                             prog);
+                                               prog);
+      nir_src empty_src;
+      memset(&empty_src, 0, sizeof empty_src);
+      for (nir_deref *deref = &instr->sampler->deref; deref; deref = deref->child) {
+         if (deref->deref_type == nir_deref_type_array) {
+            nir_deref_array *arr = nir_deref_as_array(deref);
+            nir_instr_rewrite_src(&instr->instr, &arr->indirect, empty_src);
+         }
+      }
+
       instr->sampler = NULL;
    }
 }
