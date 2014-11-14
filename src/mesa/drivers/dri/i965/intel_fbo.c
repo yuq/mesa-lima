@@ -638,6 +638,7 @@ intel_render_texture(struct gl_context * ctx,
       static GLuint msg_id = 0;                                               \
       if (unlikely(ctx->Const.ContextFlags & GL_CONTEXT_FLAG_DEBUG_BIT)) {    \
          _mesa_gl_debug(ctx, &msg_id,                                         \
+                        MESA_DEBUG_SOURCE_API,                                \
                         MESA_DEBUG_TYPE_OTHER,                                \
                         MESA_DEBUG_SEVERITY_MEDIUM,                           \
                         __VA_ARGS__);                                         \

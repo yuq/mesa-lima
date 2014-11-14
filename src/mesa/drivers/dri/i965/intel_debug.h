@@ -86,6 +86,7 @@ extern uint64_t INTEL_DEBUG;
       dbg_printf(__VA_ARGS__);                                  \
    if (brw->perf_debug)                                         \
       _mesa_gl_debug(&brw->ctx, &msg_id,                        \
+                     MESA_DEBUG_SOURCE_API,                     \
                      MESA_DEBUG_TYPE_PERFORMANCE,               \
                      MESA_DEBUG_SEVERITY_MEDIUM,                \
                      __VA_ARGS__);                              \
@@ -101,6 +102,7 @@ extern uint64_t INTEL_DEBUG;
          _warned = true;                                        \
                                                                 \
          _mesa_gl_debug(ctx, &msg_id,                           \
+                        MESA_DEBUG_SOURCE_API,                  \
                         MESA_DEBUG_TYPE_OTHER,                  \
                         MESA_DEBUG_SEVERITY_HIGH, fmt);         \
       }                                                         \

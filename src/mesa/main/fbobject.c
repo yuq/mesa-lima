@@ -599,6 +599,7 @@ fbo_incomplete(struct gl_context *ctx, const char *msg, int index)
    static GLuint msg_id;
 
    _mesa_gl_debug(ctx, &msg_id,
+                  MESA_DEBUG_SOURCE_API,
                   MESA_DEBUG_TYPE_OTHER,
                   MESA_DEBUG_SEVERITY_MEDIUM,
                   "FBO incomplete: %s [%d]\n", msg, index);
