@@ -2035,6 +2035,16 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
       ralloc_free(annotation.ann);
    }
 
+   static GLuint msg_id = 0;
+   _mesa_gl_debug(&brw->ctx, &msg_id,
+                  MESA_DEBUG_SOURCE_SHADER_COMPILER,
+                  MESA_DEBUG_TYPE_OTHER,
+                  MESA_DEBUG_SEVERITY_NOTIFICATION,
+                  "FS SIMD%d shader: %d inst, %d loops, "
+                  "compacted %d to %d bytes.\n",
+                  dispatch_width, before_size / 16, loop_count,
+                  before_size, after_size);
+
    return start_offset;
 }
 
