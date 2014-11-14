@@ -572,7 +572,7 @@ fs_visitor::nir_emit_alu(nir_alu_instr *instr)
    case nir_op_fmul: {
       fs_inst *inst = MUL(result, op[0], op[1]);
       inst->saturate = instr->dest.saturate;
-      emit_percomp(MUL(result, op[0], op[1]), instr->dest.write_mask);
+      emit_percomp(inst, instr->dest.write_mask);
       break;
    }
 
