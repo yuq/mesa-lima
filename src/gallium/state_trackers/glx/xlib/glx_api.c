@@ -33,6 +33,9 @@
 #define GLX_GLXEXT_PROTOTYPES
 #include "GL/glx.h"
 
+#include <X11/Xmd.h>
+#include <GL/glxproto.h>
+
 #include "xm_api.h"
 
 
@@ -644,6 +647,52 @@ register_with_display(Display *dpy)
       ext->name = _mesa_strdup(extName);
       ext->close_display = close_display_callback;
    }
+}
+
+
+/**
+ * Fake an error.
+ */
+static int
+generate_error(Display *dpy,
+               unsigned char error_code,
+               XID resourceid,
+               unsigned char minor_code,
+               Bool core)
+{
+   XErrorHandler handler;
+   int major_opcode;
+   int first_event;
+   int first_error;
+   XEvent event;
+
+   handler = XSetErrorHandler(NULL);
+   XSetErrorHandler(handler);
+   if (!handler) {
+      return 0;
+   }
+
+   if (!XQueryExtension(dpy, GLX_EXTENSION_NAME, &major_opcode, &first_event, &first_error)) {
+      major_opcode = 0;
+      first_event = 0;
+      first_error = 0;
+   }
+
+   if (!core) {
+      error_code += first_error;
+   }
+
+   memset(&event, 0, sizeof event);
+
+   event.xerror.type = X_Error;
+   event.xerror.display = dpy;
+   event.xerror.resourceid = resourceid;
+   event.xerror.serial = NextRequest(dpy) - 1;
+   event.xerror.error_code = error_code;
+   event.xerror.request_code = major_opcode;
+   event.xerror.minor_code = minor_code;
+
+   return handler(dpy, &event.xerror);
 }
 
 
@@ -2082,8 +2131,10 @@ glXQueryDrawable(Display *dpy, GLXDrawable draw, int attribute,
 {
    GLuint width, height;
    XMesaBuffer xmbuf = XMesaFindBuffer(dpy, draw);
-   if (!xmbuf)
+   if (!xmbuf) {
+      generate_error(dpy, GLXBadDrawable, draw, X_GLXGetDrawableAttributes, False);
       return;
+   }
 
    /* make sure buffer's dimensions are up to date */
    xmesa_get_window_size(dpy, xmbuf, &width, &height);
@@ -2117,7 +2168,8 @@ glXQueryDrawable(Display *dpy, GLXDrawable draw, int attribute,
 #endif
 
       default:
-         return; /* raise BadValue error */
+         generate_error(dpy, BadValue, 0, X_GLXCreateContextAtrribsARB, true);
+         return;
    }
 }
 
@@ -2669,6 +2721,7 @@ glXReleaseTexImageEXT(Display *dpy, GLXDrawable drawable, int buffer)
 
 /*** GLX_ARB_create_context ***/
 
+
 GLXContext
 glXCreateContextAttribsARB(Display *dpy, GLXFBConfig config,
                            GLXContext shareCtx, Bool direct,
@@ -2683,6 +2736,7 @@ glXCreateContextAttribsARB(Display *dpy, GLXFBConfig config,
    Bool done = False;
    const int contextFlagsAll = (GLX_CONTEXT_DEBUG_BIT_ARB |
                                 GLX_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB);
+   GLXContext ctx;
 
    /* parse attrib_list */
    for (i = 0; !done && attrib_list && attrib_list[i]; i++) {
@@ -2708,37 +2762,76 @@ glXCreateContextAttribsARB(Display *dpy, GLXFBConfig config,
          break;
       default:
          /* bad attribute */
-         /* XXX generate BadValue X Error */
+         generate_error(dpy, BadValue, 0, X_GLXCreateContextAtrribsARB, True);
          return NULL;
       }
    }
 
    /* check contextFlags */
    if (contextFlags & ~contextFlagsAll) {
-      return NULL; /* generate BadValue X Error */
+      generate_error(dpy, BadValue, 0, X_GLXCreateContextAtrribsARB, True);
+      return NULL;
    }
 
    /* check profileMask */
    if (profileMask != GLX_CONTEXT_CORE_PROFILE_BIT_ARB &&
        profileMask != GLX_CONTEXT_COMPATIBILITY_PROFILE_BIT_ARB &&
        profileMask != GLX_CONTEXT_ES_PROFILE_BIT_EXT) {
-      return NULL; /* generate BadValue X Error */
+      generate_error(dpy, GLXBadProfileARB, 0, X_GLXCreateContextAtrribsARB, False);
+      return NULL;
    }
 
-   /* check version (generate BadMatch if bad) */
-   if (majorVersion < 0 || minorVersion < 0)
+   /* check renderType */
+   if (renderType != GLX_RGBA_TYPE &&
+       renderType != GLX_COLOR_INDEX_TYPE) {
+      generate_error(dpy, BadValue, 0, X_GLXCreateContextAtrribsARB, True);
       return NULL;
+   }
+
+   /* check version */
+   if (majorVersion <= 0 ||
+       minorVersion < 0 ||
+       (profileMask != GLX_CONTEXT_ES_PROFILE_BIT_EXT &&
+        ((majorVersion == 1 && minorVersion > 5) ||
+         (majorVersion == 2 && minorVersion > 1) ||
+         (majorVersion == 3 && minorVersion > 3) ||
+         (majorVersion == 4 && minorVersion > 5) ||
+         majorVersion > 4))) {
+      generate_error(dpy, BadMatch, 0, X_GLXCreateContextAtrribsARB, True);
+      return NULL;
+   }
+   if (profileMask == GLX_CONTEXT_ES_PROFILE_BIT_EXT &&
+       ((majorVersion == 1 && minorVersion > 1) ||
+        (majorVersion == 2 && minorVersion > 0) ||
+        (majorVersion == 3 && minorVersion > 1) ||
+        majorVersion > 3)) {
+      /* GLX_EXT_create_context_es2_profile says nothing to justifying a
+       * different error code for invalid ES versions, but this is what NVIDIA
+       * does and piglit expects.
+       */
+      generate_error(dpy, GLXBadProfileARB, 0, X_GLXCreateContextAtrribsARB, False);
+      return NULL;
+   }
 
    if ((contextFlags & GLX_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB) &&
-       majorVersion < 3)
-      return NULL; /* generate GLXBadProfileARB */
+       majorVersion < 3) {
+      generate_error(dpy, BadMatch, 0, X_GLXCreateContextAtrribsARB, True);
+      return NULL;
+   }
 
-   if (renderType == GLX_COLOR_INDEX_TYPE && majorVersion >= 3)
-      return NULL; /* generate BadMatch */
+   if (renderType == GLX_COLOR_INDEX_TYPE && majorVersion >= 3) {
+      generate_error(dpy, BadMatch, 0, X_GLXCreateContextAtrribsARB, True);
+      return NULL;
+   }
 
-   return create_context(dpy, xmvis,
-                         shareCtx ? shareCtx->xmesaContext : NULL,
-                         direct,
-                         majorVersion, minorVersion,
-                         profileMask, contextFlags);
+   ctx = create_context(dpy, xmvis,
+                        shareCtx ? shareCtx->xmesaContext : NULL,
+                        direct,
+                        majorVersion, minorVersion,
+                        profileMask, contextFlags);
+   if (!ctx) {
+      generate_error(dpy, GLXBadFBConfig, 0, X_GLXCreateContextAtrribsARB, False);
+   }
+
+   return ctx;
 }
