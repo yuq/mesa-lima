@@ -59,10 +59,15 @@
 UNOP(fmov, nir_type_float)
 UNOP(imov, nir_type_int)
 
+UNOP(ineg, nir_type_int)
+UNOP(fneg, nir_type_float)
 UNOP(inot, nir_type_int) /* invert every bit of the integer */
 UNOP(fnot, nir_type_float) /* (src == 0.0) ? 1.0 : 0.0 */
 UNOP(fsign, nir_type_float)
 UNOP(isign, nir_type_int)
+UNOP(iabs, nir_type_int)
+UNOP(fabs, nir_type_float)
+UNOP(fsat, nir_type_float)
 UNOP(frcp, nir_type_float)
 UNOP(frsq, nir_type_float)
 UNOP(fsqrt, nir_type_float)
