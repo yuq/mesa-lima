@@ -74,7 +74,6 @@ struct si_state_dsa {
 	struct si_pm4_state	pm4;
 	float			alpha_ref;
 	unsigned		alpha_func;
-	unsigned		db_render_control;
 	uint8_t			valuemask[2];
 	uint8_t			writemask[2];
 };
