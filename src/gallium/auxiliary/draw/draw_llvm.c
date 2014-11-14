@@ -54,7 +54,7 @@
 #include "util/u_math.h"
 #include "util/u_pointer.h"
 #include "util/u_string.h"
-#include "util/u_simple_list.h"
+#include "util/simple_list.h"
 
 
 #define DEBUG_STORE 0

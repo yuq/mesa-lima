@@ -22,7 +22,7 @@
  */
 
 #include "util/u_memory.h"
-#include "util/u_simple_list.h"
+#include "util/simple_list.h"
 #include "util/ralloc.h"
 
 #include "vc4_qir.h"

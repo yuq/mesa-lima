@@ -31,7 +31,7 @@
 #include <string.h>
 
 #include "util/macros.h"
-#include "util/u_simple_list.h"
+#include "util/simple_list.h"
 #include "tgsi/tgsi_parse.h"
 
 enum qfile {
@@ -160,11 +160,6 @@ enum qop {
         QOP_R4_UNPACK_B,
         QOP_R4_UNPACK_C,
         QOP_R4_UNPACK_D
-};
-
-struct simple_node {
-        struct simple_node *next;
-        struct simple_node *prev;
 };
 
 struct queued_qpu_inst {

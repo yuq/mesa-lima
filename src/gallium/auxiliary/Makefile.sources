@@ -273,7 +273,6 @@ C_SOURCES := \
 	util/u_ringbuffer.h \
 	util/u_sampler.c \
 	util/u_sampler.h \
-	util/u_simple_list.h \
 	util/u_simple_shaders.c \
 	util/u_simple_shaders.h \
 	util/u_slab.c \

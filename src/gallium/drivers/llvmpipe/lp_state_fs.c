@@ -65,7 +65,7 @@
 #include "util/u_format.h"
 #include "util/u_dump.h"
 #include "util/u_string.h"
-#include "util/u_simple_list.h"
+#include "util/simple_list.h"
 #include "util/u_dual_blend.h"
 #include "os/os_time.h"
 #include "pipe/p_shader_tokens.h"
