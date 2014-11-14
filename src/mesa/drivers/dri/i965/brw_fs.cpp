@@ -3624,22 +3624,21 @@ fs_visitor::run()
                break;
          }
       }
-   }
 
-   /* This must come after all optimization and register allocation, since
-    * it inserts dead code that happens to have side effects, and it does
-    * so based on the actual physical registers in use.
-    */
-   insert_gen4_send_dependency_workarounds();
+      /* This must come after all optimization and register allocation, since
+       * it inserts dead code that happens to have side effects, and it does
+       * so based on the actual physical registers in use.
+       */
+      insert_gen4_send_dependency_workarounds();
 
-   if (failed)
-      return false;
+      if (failed)
+         return false;
 
-   if (!allocated_without_spills)
-      schedule_instructions(SCHEDULE_POST);
+      if (!allocated_without_spills)
+         schedule_instructions(SCHEDULE_POST);
 
-   if (last_scratch > 0) {
-      prog_data->total_scratch = brw_get_scratch_size(last_scratch);
+      if (last_scratch > 0)
+         prog_data->total_scratch = brw_get_scratch_size(last_scratch);
    }
 
    if (stage == MESA_SHADER_FRAGMENT) {
