@@ -3513,11 +3513,77 @@ fs_visitor::optimize()
    lower_uniform_pull_constant_loads();
 }
 
+void
+fs_visitor::allocate_registers()
+{
+   bool allocated_without_spills;
+
+   static enum instruction_scheduler_mode pre_modes[] = {
+      SCHEDULE_PRE,
+      SCHEDULE_PRE_NON_LIFO,
+      SCHEDULE_PRE_LIFO,
+   };
+
+   /* Try each scheduling heuristic to see if it can successfully register
+    * allocate without spilling.  They should be ordered by decreasing
+    * performance but increasing likelihood of allocating.
+    */
+   for (unsigned i = 0; i < ARRAY_SIZE(pre_modes); i++) {
+      schedule_instructions(pre_modes[i]);
+
+      if (0) {
+         assign_regs_trivial();
+         allocated_without_spills = true;
+      } else {
+         allocated_without_spills = assign_regs(false);
+      }
+      if (allocated_without_spills)
+         break;
+   }
+
+   if (!allocated_without_spills) {
+      /* We assume that any spilling is worse than just dropping back to
+       * SIMD8.  There's probably actually some intermediate point where
+       * SIMD16 with a couple of spills is still better.
+       */
+      if (dispatch_width == 16) {
+         fail("Failure to register allocate.  Reduce number of "
+              "live scalar values to avoid this.");
+      } else {
+         perf_debug("Fragment shader triggered register spilling.  "
+                    "Try reducing the number of live scalar values to "
+                    "improve performance.\n");
+      }
+
+      /* Since we're out of heuristics, just go spill registers until we
+       * get an allocation.
+       */
+      while (!assign_regs(true)) {
+         if (failed)
+            break;
+      }
+   }
+
+   /* This must come after all optimization and register allocation, since
+    * it inserts dead code that happens to have side effects, and it does
+    * so based on the actual physical registers in use.
+    */
+   insert_gen4_send_dependency_workarounds();
+
+   if (failed)
+      return;
+
+   if (!allocated_without_spills)
+      schedule_instructions(SCHEDULE_POST);
+
+   if (last_scratch > 0)
+      prog_data->total_scratch = brw_get_scratch_size(last_scratch);
+}
+
 bool
 fs_visitor::run()
 {
    sanity_param_count = prog->Parameters->NumParameters;
-   bool allocated_without_spills;
 
    assign_binding_table_offsets();
 
@@ -3530,7 +3596,6 @@ fs_visitor::run()
       emit_dummy_fs();
    } else if (brw->use_rep_send && dispatch_width == 16) {
       emit_repclear_shader();
-      allocated_without_spills = true;
    } else {
       if (INTEL_DEBUG & DEBUG_SHADER_TIME)
          emit_shader_time_begin();
@@ -3585,66 +3650,10 @@ fs_visitor::run()
       assign_curb_setup();
       assign_urb_setup();
 
-      static enum instruction_scheduler_mode pre_modes[] = {
-         SCHEDULE_PRE,
-         SCHEDULE_PRE_NON_LIFO,
-         SCHEDULE_PRE_LIFO,
-      };
-
-      /* Try each scheduling heuristic to see if it can successfully register
-       * allocate without spilling.  They should be ordered by decreasing
-       * performance but increasing likelihood of allocating.
-       */
-      for (unsigned i = 0; i < ARRAY_SIZE(pre_modes); i++) {
-         schedule_instructions(pre_modes[i]);
-
-         if (0) {
-            assign_regs_trivial();
-            allocated_without_spills = true;
-         } else {
-            allocated_without_spills = assign_regs(false);
-         }
-         if (allocated_without_spills)
-            break;
-      }
-
-      if (!allocated_without_spills) {
-         /* We assume that any spilling is worse than just dropping back to
-          * SIMD8.  There's probably actually some intermediate point where
-          * SIMD16 with a couple of spills is still better.
-          */
-         if (dispatch_width == 16) {
-            fail("Failure to register allocate.  Reduce number of "
-                 "live scalar values to avoid this.");
-         } else {
-            perf_debug("Fragment shader triggered register spilling.  "
-                       "Try reducing the number of live scalar values to "
-                       "improve performance.\n");
-         }
-
-         /* Since we're out of heuristics, just go spill registers until we
-          * get an allocation.
-          */
-         while (!assign_regs(true)) {
-            if (failed)
-               break;
-         }
-      }
-
-      /* This must come after all optimization and register allocation, since
-       * it inserts dead code that happens to have side effects, and it does
-       * so based on the actual physical registers in use.
-       */
-      insert_gen4_send_dependency_workarounds();
+      allocate_registers();
 
       if (failed)
          return false;
-
-      if (!allocated_without_spills)
-         schedule_instructions(SCHEDULE_POST);
-
-      if (last_scratch > 0)
-         prog_data->total_scratch = brw_get_scratch_size(last_scratch);
    }
 
    if (stage == MESA_SHADER_FRAGMENT) {

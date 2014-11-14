@@ -404,6 +404,7 @@ public:
 
    bool run();
    void optimize();
+   void allocate_registers();
    void assign_binding_table_offsets();
    void setup_payload_gen4();
    void setup_payload_gen6();
