@@ -1036,19 +1036,16 @@ nir_visitor::visit(ir_expression *ir)
       emit(supports_ints ? nir_op_inot : nir_op_fnot, dest_size, srcs);
       break;
    case ir_unop_neg:
-      instr = emit(types[0] == GLSL_TYPE_FLOAT ? nir_op_fmov : nir_op_imov,
+      instr = emit(types[0] == GLSL_TYPE_FLOAT ? nir_op_fneg : nir_op_ineg,
                    dest_size, srcs);
-      instr->src[0].negate = true;
       break;
    case ir_unop_abs:
-      instr = emit(types[0] == GLSL_TYPE_FLOAT ? nir_op_fmov : nir_op_imov,
+      instr = emit(types[0] == GLSL_TYPE_FLOAT ? nir_op_fabs : nir_op_iabs,
                    dest_size, srcs);
-      instr->src[0].abs = true;
       break;
    case ir_unop_saturate:
       assert(types[0] == GLSL_TYPE_FLOAT);
-      instr = emit(nir_op_fmov, dest_size, srcs);
-      instr->dest.saturate = true;
+      instr = emit(nir_op_fsat, dest_size, srcs);
       break;
    case ir_unop_sign:
       emit(types[0] == GLSL_TYPE_FLOAT ? nir_op_fsign : nir_op_isign,
