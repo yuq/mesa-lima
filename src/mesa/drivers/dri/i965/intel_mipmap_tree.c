@@ -488,6 +488,13 @@ intel_miptree_choose_tiling(struct brw_context *brw,
        base_format == GL_DEPTH_STENCIL_EXT)
       return I915_TILING_Y;
 
+   /* 1D textures (and 1D array textures) don't get any benefit from tiling,
+    * in fact it leads to a less efficient use of memory space and bandwidth
+    * due to tile alignment.
+    */
+   if (mt->logical_height0 == 1)
+      return I915_TILING_NONE;
+
    int minimum_pitch = mt->total_width * mt->cpp;
 
    /* If the width is much smaller than a tile, don't bother tiling. */
