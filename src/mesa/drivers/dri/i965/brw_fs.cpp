@@ -3443,6 +3443,76 @@ fs_visitor::opt_drop_redundant_mov_to_flags()
    }
 }
 
+void
+fs_visitor::optimize()
+{
+   calculate_cfg();
+
+   split_virtual_grfs();
+
+   move_uniform_array_access_to_pull_constants();
+   assign_constant_locations();
+   demote_pull_constants();
+
+   opt_drop_redundant_mov_to_flags();
+
+#define OPT(pass, args...) do {                                         \
+      pass_num++;                                                       \
+      bool this_progress = pass(args);                                  \
+                                                                        \
+      if (unlikely(INTEL_DEBUG & DEBUG_OPTIMIZER) && this_progress) {   \
+         char filename[64];                                             \
+         snprintf(filename, 64, "fs%d-%04d-%02d-%02d-" #pass,           \
+                  dispatch_width, shader_prog ? shader_prog->Name : 0, iteration, pass_num); \
+                                                                        \
+         backend_visitor::dump_instructions(filename);                  \
+      }                                                                 \
+                                                                        \
+      progress = progress || this_progress;                             \
+   } while (false)
+
+   if (unlikely(INTEL_DEBUG & DEBUG_OPTIMIZER)) {
+      char filename[64];
+      snprintf(filename, 64, "fs%d-%04d-00-start",
+               dispatch_width, shader_prog ? shader_prog->Name : 0);
+
+      backend_visitor::dump_instructions(filename);
+   }
+
+   bool progress;
+   int iteration = 0;
+   do {
+      progress = false;
+      iteration++;
+      int pass_num = 0;
+
+      OPT(remove_duplicate_mrf_writes);
+
+      OPT(opt_algebraic);
+      OPT(opt_cse);
+      OPT(opt_copy_propagate);
+      OPT(opt_peephole_predicated_break);
+      OPT(dead_code_eliminate);
+      OPT(opt_peephole_sel);
+      OPT(dead_control_flow_eliminate, this);
+      OPT(opt_register_renaming);
+      OPT(opt_saturate_propagation);
+      OPT(register_coalesce);
+      OPT(compute_to_mrf);
+
+      OPT(compact_virtual_grfs);
+   } while (progress);
+
+   if (lower_load_payload()) {
+      split_virtual_grfs();
+      register_coalesce();
+      compute_to_mrf();
+      dead_code_eliminate();
+   }
+
+   lower_uniform_pull_constant_loads();
+}
+
 bool
 fs_visitor::run()
 {
@@ -3510,71 +3580,7 @@ fs_visitor::run()
 
       emit_fb_writes();
 
-      calculate_cfg();
-
-      split_virtual_grfs();
-
-      move_uniform_array_access_to_pull_constants();
-      assign_constant_locations();
-      demote_pull_constants();
-
-      opt_drop_redundant_mov_to_flags();
-
-#define OPT(pass, args...) do {                                            \
-      pass_num++;                                                          \
-      bool this_progress = pass(args);                                     \
-                                                                           \
-      if (unlikely(INTEL_DEBUG & DEBUG_OPTIMIZER) && this_progress) {      \
-         char filename[64];                                                \
-         snprintf(filename, 64, "fs%d-%04d-%02d-%02d-" #pass,              \
-                  dispatch_width, shader_prog ? shader_prog->Name : 0, iteration, pass_num); \
-                                                                           \
-         backend_visitor::dump_instructions(filename);                     \
-      }                                                                    \
-                                                                           \
-      progress = progress || this_progress;                                \
-   } while (false)
-
-      if (unlikely(INTEL_DEBUG & DEBUG_OPTIMIZER)) {
-         char filename[64];
-         snprintf(filename, 64, "fs%d-%04d-00-start",
-                  dispatch_width, shader_prog ? shader_prog->Name : 0);
-
-         backend_visitor::dump_instructions(filename);
-      }
-
-      bool progress;
-      int iteration = 0;
-      do {
-	 progress = false;
-         iteration++;
-         int pass_num = 0;
-
-         OPT(remove_duplicate_mrf_writes);
-
-         OPT(opt_algebraic);
-         OPT(opt_cse);
-         OPT(opt_copy_propagate);
-         OPT(opt_peephole_predicated_break);
-         OPT(dead_code_eliminate);
-         OPT(opt_peephole_sel);
-         OPT(dead_control_flow_eliminate, this);
-         OPT(opt_register_renaming);
-         OPT(opt_saturate_propagation);
-         OPT(register_coalesce);
-         OPT(compute_to_mrf);
-
-         OPT(compact_virtual_grfs);
-      } while (progress);
-
-      if (lower_load_payload()) {
-         split_virtual_grfs();
-         register_coalesce();
-         compute_to_mrf();
-         dead_code_eliminate();
-      }
-
-      lower_uniform_pull_constant_loads();
+      optimize();
 
       assign_curb_setup();
       assign_urb_setup();

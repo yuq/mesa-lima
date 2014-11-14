@@ -403,6 +403,7 @@ public:
                                         uint32_t const_offset);
 
    bool run();
+   void optimize();
    void assign_binding_table_offsets();
    void setup_payload_gen4();
    void setup_payload_gen6();
