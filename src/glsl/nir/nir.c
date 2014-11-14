@@ -1683,6 +1683,67 @@ nir_srcs_equal(nir_src src1, nir_src src2)
    }
 }
 
+static bool
+src_does_not_use_def(nir_src *src, void *void_def)
+{
+   nir_ssa_def *def = void_def;
+
+   if (src->is_ssa) {
+      return src->ssa != def;
+   } else {
+      return true;
+   }
+}
+
+static bool
+src_does_not_use_reg(nir_src *src, void *void_reg)
+{
+   nir_register *reg = void_reg;
+
+   if (src->is_ssa) {
+      return true;
+   } else {
+      return src->reg.reg != reg;
+   }
+}
+
+void
+nir_instr_rewrite_src(nir_instr *instr, nir_src *src, nir_src new_src)
+{
+   if (src->is_ssa) {
+      nir_ssa_def *old_ssa = src->ssa;
+      *src = new_src;
+      if (old_ssa && nir_foreach_src(instr, src_does_not_use_def, old_ssa)) {
+         struct set_entry *entry = _mesa_set_search(old_ssa->uses,
+                                                    _mesa_hash_pointer(instr),
+                                                    instr);
+         assert(entry);
+         _mesa_set_remove(old_ssa->uses, entry);
+      }
+   } else {
+      if (src->reg.indirect)
+         nir_instr_rewrite_src(instr, src->reg.indirect, new_src);
+
+      nir_register *old_reg = src->reg.reg;
+      *src = new_src;
+      if (old_reg && nir_foreach_src(instr, src_does_not_use_reg, old_reg)) {
+         struct set_entry *entry = _mesa_set_search(old_reg->uses,
+                                                    _mesa_hash_pointer(instr),
+                                                    instr);
+         assert(entry);
+         _mesa_set_remove(old_reg->uses, entry);
+      }
+   }
+
+   if (new_src.is_ssa) {
+      if (new_src.ssa)
+         _mesa_set_add(new_src.ssa->uses, _mesa_hash_pointer(instr), instr);
+   } else {
+      if (new_src.reg.reg)
+         _mesa_set_add(new_src.reg.reg->uses, _mesa_hash_pointer(instr), instr);
+   }
+}
+
 void
 nir_ssa_def_init(nir_function_impl *impl, nir_instr *instr, nir_ssa_def *def,
                  unsigned num_components, const char *name)
