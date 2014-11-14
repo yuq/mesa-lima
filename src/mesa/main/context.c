@@ -118,7 +118,7 @@
 #include "scissor.h"
 #include "shared.h"
 #include "shaderobj.h"
-#include "simple_list.h"
+#include "util/simple_list.h"
 #include "state.h"
 #include "stencil.h"
 #include "texcompress_s3tc.h"

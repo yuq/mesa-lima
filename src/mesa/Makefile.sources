@@ -176,7 +176,6 @@ MAIN_FILES = \
 	main/shader_query.cpp \
 	main/shared.c \
 	main/shared.h \
-	main/simple_list.h \
 	main/state.c \
 	main/state.h \
 	main/stencil.c \

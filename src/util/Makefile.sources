@@ -15,6 +15,7 @@ MESA_UTIL_FILES :=	\
 	rgtc.h \
 	set.c \
 	set.h \
+	simple_list.h \
 	strtod.cpp \
 	strtod.h \
 	texcompress_rgtc_tmp.h \

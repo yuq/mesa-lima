@@ -40,7 +40,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "main/context.h"
 #include "main/framebuffer.h"
 #include "main/fbobject.h"
-#include "main/simple_list.h"
+#include "util/simple_list.h"
 #include "main/state.h"
 #include "main/core.h"
 #include "main/stencil.h"
