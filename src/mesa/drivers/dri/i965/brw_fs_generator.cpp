@@ -1512,9 +1512,17 @@ fs_generator::generate_untyped_surface_read(fs_inst *inst, struct brw_reg dst,
    brw_mark_surface_used(prog_data, surf_index.dw1.ud);
 }
 
-void
-fs_generator::generate_code(const cfg_t *cfg)
+int
+fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
 {
+   /* align to 64 byte boundary. */
+   while (p->next_insn_offset % 64)
+      brw_NOP(p);
+
+   this->dispatch_width = dispatch_width;
+   if (dispatch_width == 16)
+      brw_set_default_compression_control(p, BRW_COMPRESSION_COMPRESSED);
+
    int start_offset = p->next_insn_offset;
    int loop_count = 0;
 
@@ -2024,37 +2032,12 @@ fs_generator::generate_code(const cfg_t *cfg)
       dump_assembly(p->store, annotation.ann_count, annotation.ann, brw, prog);
       ralloc_free(annotation.ann);
    }
+
+   return start_offset;
 }
 
 const unsigned *
-fs_generator::generate_assembly(const cfg_t *simd8_cfg,
-                                const cfg_t *simd16_cfg,
-                                unsigned *assembly_size)
+fs_generator::get_assembly(unsigned int *assembly_size)
 {
-   assert(simd8_cfg || simd16_cfg);
-
-   if (simd8_cfg) {
-      dispatch_width = 8;
-      generate_code(simd8_cfg);
-   }
-
-   if (simd16_cfg) {
-      /* align to 64 byte boundary. */
-      while (p->next_insn_offset % 64) {
-         brw_NOP(p);
-      }
-
-      assert(stage == MESA_SHADER_FRAGMENT);
-      brw_wm_prog_data *prog_data = (brw_wm_prog_data*) this->prog_data;
-
-      /* Save off the start of this SIMD16 program */
-      prog_data->prog_offset_16 = p->next_insn_offset;
-
-      brw_set_default_compression_control(p, BRW_COMPRESSION_COMPRESSED);
-
-      dispatch_width = 16;
-      generate_code(simd16_cfg);
-   }
-
    return brw_get_program(p, assembly_size);
 }

@@ -3729,11 +3729,12 @@ brw_wm_fs_emit(struct brw_context *brw,
       prog_data->no_8 = false;
    }
 
-   const unsigned *assembly = NULL;
    fs_generator g(brw, mem_ctx, key, prog_data, prog, fp,
                   v.runtime_check_aads_emit, INTEL_DEBUG & DEBUG_WM);
-   assembly = g.generate_assembly(simd8_cfg, simd16_cfg,
-                                  final_assembly_size);
+   if (simd8_cfg)
+      g.generate_code(simd8_cfg, 8);
+   if (simd16_cfg)
+      prog_data->prog_offset_16 = g.generate_code(simd16_cfg, 16);
 
    if (unlikely(brw->perf_debug) && shader) {
       if (shader->compiled_once)
@@ -3746,7 +3747,7 @@ brw_wm_fs_emit(struct brw_context *brw,
       }
    }
 
-   return assembly;
+   return g.get_assembly(final_assembly_size);
 }
 
 bool

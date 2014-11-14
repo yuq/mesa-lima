@@ -697,12 +697,10 @@ public:
                 bool debug_flag);
    ~fs_generator();
 
-   const unsigned *generate_assembly(const cfg_t *simd8_cfg,
-                                     const cfg_t *simd16_cfg,
-                                     unsigned *assembly_size);
+   int generate_code(const cfg_t *cfg, int dispatch_width);
+   const unsigned *get_assembly(unsigned int *assembly_size);
 
 private:
-   void generate_code(const cfg_t *cfg);
    void fire_fb_write(fs_inst *inst,
                       struct brw_reg payload,
                       struct brw_reg implied_header,

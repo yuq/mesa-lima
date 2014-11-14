@@ -45,7 +45,9 @@ const unsigned *
 brw_blorp_eu_emitter::get_program(unsigned *program_size)
 {
    cfg_t cfg(&insts);
-   return generator.generate_assembly(NULL, &cfg, program_size);
+   generator.generate_code(&cfg, 16);
+
+   return generator.get_assembly(program_size);
 }
 
 /**
