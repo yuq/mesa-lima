@@ -383,20 +383,6 @@ fd4_program_emit(struct fd_ringbuffer *ring, struct fd4_emit *emit)
 		OUT_RING(ring, 0x00000001);
 	}
 
-	OUT_PKT0(ring, REG_A4XX_SP_FS_MRT_REG(0), 8);
-	OUT_RING(ring, A4XX_SP_FS_MRT_REG_REGID(color_regid) |
-// XXX do we need to patch? or update when RT format changes..  maybe
-// move this to emit??
-			A4XX_SP_FS_MRT_REG_MRTFORMAT(RB4_R8G8B8A8_UNORM) |  // XXX patch?
-			COND(s[FS].v->key.half_precision, A4XX_SP_FS_MRT_REG_HALF_PRECISION));
-	OUT_RING(ring, A4XX_SP_FS_MRT_REG_REGID(0));
-	OUT_RING(ring, A4XX_SP_FS_MRT_REG_REGID(0));
-	OUT_RING(ring, A4XX_SP_FS_MRT_REG_REGID(0));
-	OUT_RING(ring, A4XX_SP_FS_MRT_REG_REGID(0));
-	OUT_RING(ring, A4XX_SP_FS_MRT_REG_REGID(0));
-	OUT_RING(ring, A4XX_SP_FS_MRT_REG_REGID(0));
-	OUT_RING(ring, A4XX_SP_FS_MRT_REG_REGID(0));
-
 	if (emit->key.binning_pass) {
 		OUT_PKT0(ring, REG_A4XX_VPC_ATTR, 2);
 		OUT_RING(ring, A4XX_VPC_ATTR_THRDASSIGN(1) |
