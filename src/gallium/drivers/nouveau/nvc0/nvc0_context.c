@@ -196,7 +196,12 @@ nvc0_invalidate_resource_storage(struct nouveau_context *ctx,
       }
    }
 
-   if (res->bind & PIPE_BIND_VERTEX_BUFFER) {
+   if (res->bind & (PIPE_BIND_VERTEX_BUFFER |
+                    PIPE_BIND_INDEX_BUFFER |
+                    PIPE_BIND_CONSTANT_BUFFER |
+                    PIPE_BIND_STREAM_OUTPUT |
+                    PIPE_BIND_COMMAND_ARGS_BUFFER |
+                    PIPE_BIND_SAMPLER_VIEW)) {
       for (i = 0; i < nvc0->num_vtxbufs; ++i) {
          if (nvc0->vtxbuf[i].buffer == res) {
             nvc0->dirty |= NVC0_NEW_ARRAYS;
@@ -205,17 +210,14 @@ nvc0_invalidate_resource_storage(struct nouveau_context *ctx,
                return ref;
          }
       }
-   }
-   if (res->bind & PIPE_BIND_INDEX_BUFFER) {
+
       if (nvc0->idxbuf.buffer == res) {
          nvc0->dirty |= NVC0_NEW_IDXBUF;
          nouveau_bufctx_reset(nvc0->bufctx_3d, NVC0_BIND_IDX);
          if (!--ref)
             return ref;
       }
-   }
 
-   if (res->bind & PIPE_BIND_SAMPLER_VIEW) {
       for (s = 0; s < 5; ++s) {
       for (i = 0; i < nvc0->num_textures[s]; ++i) {
          if (nvc0->textures[s][i] &&
@@ -228,9 +230,7 @@ nvc0_invalidate_resource_storage(struct nouveau_context *ctx,
          }
       }
       }
-   }
 
-   if (res->bind & PIPE_BIND_CONSTANT_BUFFER) {
       for (s = 0; s < 5; ++s) {
       for (i = 0; i < NVC0_MAX_PIPE_CONSTBUFS; ++i) {
          if (!(nvc0->constbuf_valid[s] & (1 << i)))

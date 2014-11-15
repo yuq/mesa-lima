@@ -180,7 +180,12 @@ nv50_invalidate_resource_storage(struct nouveau_context *ctx,
       }
    }
 
-   if (res->bind & PIPE_BIND_VERTEX_BUFFER) {
+   if (res->bind & (PIPE_BIND_VERTEX_BUFFER |
+                    PIPE_BIND_INDEX_BUFFER |
+                    PIPE_BIND_CONSTANT_BUFFER |
+                    PIPE_BIND_STREAM_OUTPUT |
+                    PIPE_BIND_SAMPLER_VIEW)) {
+
       assert(nv50->num_vtxbufs <= PIPE_MAX_ATTRIBS);
       for (i = 0; i < nv50->num_vtxbufs; ++i) {
          if (nv50->vtxbuf[i].buffer == res) {
@@ -190,14 +195,11 @@ nv50_invalidate_resource_storage(struct nouveau_context *ctx,
                return ref;
          }
       }
-   }
-   if (res->bind & PIPE_BIND_INDEX_BUFFER) {
+
       if (nv50->idxbuf.buffer == res)
          if (!--ref)
             return ref;
-   }
 
-   if (res->bind & PIPE_BIND_SAMPLER_VIEW) {
       for (s = 0; s < 3; ++s) {
       assert(nv50->num_textures[s] <= PIPE_MAX_SAMPLERS);
       for (i = 0; i < nv50->num_textures[s]; ++i) {
@@ -210,9 +212,7 @@ nv50_invalidate_resource_storage(struct nouveau_context *ctx,
          }
       }
       }
-   }
 
-   if (res->bind & PIPE_BIND_CONSTANT_BUFFER) {
       for (s = 0; s < 3; ++s) {
       for (i = 0; i < NV50_MAX_PIPE_CONSTBUFS; ++i) {
          if (!(nv50->constbuf_valid[s] & (1 << i)))
