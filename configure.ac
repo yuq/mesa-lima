@@ -252,7 +252,16 @@ AC_SUBST([VISIBILITY_CXXFLAGS])
 dnl
 dnl Optional flags, check for compiler support
 dnl
-AX_CHECK_COMPILE_FLAG([-msse4.1], [SSE41_SUPPORTED=1], [SSE41_SUPPORTED=0])
+save_CFLAGS="$CFLAGS"
+CFLAGS="-msse4.1 $CFLAGS"
+AC_COMPILE_IFELSE([AC_LANG_SOURCE([[
+#include <smmintrin.h>
+int main () {
+    __m128i a = _mm_set1_epi32 (0), b = _mm_set1_epi32 (0), c;
+    c = _mm_max_epu32(a, b);
+    return 0;
+}]])], SSE41_SUPPORTED=1)
+CFLAGS="$save_CFLAGS"
 if test "x$SSE41_SUPPORTED" = x1; then
     DEFINES="$DEFINES -DUSE_SSE41"
 fi
