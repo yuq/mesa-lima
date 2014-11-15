@@ -55,6 +55,8 @@ fs_visitor::emit_nir_code()
       nir_validate_shader(nir);
       progress |= nir_opt_algebraic(nir);
       nir_validate_shader(nir);
+      progress |= nir_opt_constant_folding(nir);
+      nir_validate_shader(nir);
    } while (progress);
 
    /* Lower a bunch of stuff */
