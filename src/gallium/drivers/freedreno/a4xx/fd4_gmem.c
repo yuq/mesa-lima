@@ -242,9 +242,164 @@ fd4_emit_tile_gmem2mem(struct fd_context *ctx, struct fd_tile *tile)
 /* transfer from system memory to gmem */
 
 static void
+emit_mem2gmem_surf(struct fd_context *ctx, struct fd4_emit *emit,
+		uint32_t base, struct pipe_surface *psurf, uint32_t bin_w)
+{
+	struct ir3_shader_variant *fp = fd4_emit_get_fp(emit);
+	struct fd_ringbuffer *ring = ctx->ring;
+	uint32_t color_regid = ir3_find_output_regid(fp,
+			ir3_semantic_name(TGSI_SEMANTIC_COLOR, 0));
+
+	OUT_PKT0(ring, REG_A4XX_SP_FS_MRT_REG(0), 8);
+	OUT_RING(ring, A4XX_SP_FS_MRT_REG_REGID(color_regid) |
+			A4XX_SP_FS_MRT_REG_MRTFORMAT(fd4_pipe2color(psurf->format)) |
+			COND(fp->key.half_precision, A4XX_SP_FS_MRT_REG_HALF_PRECISION));
+	OUT_RING(ring, A4XX_SP_FS_MRT_REG_REGID(0));
+	OUT_RING(ring, A4XX_SP_FS_MRT_REG_REGID(0));
+	OUT_RING(ring, A4XX_SP_FS_MRT_REG_REGID(0));
+	OUT_RING(ring, A4XX_SP_FS_MRT_REG_REGID(0));
+	OUT_RING(ring, A4XX_SP_FS_MRT_REG_REGID(0));
+	OUT_RING(ring, A4XX_SP_FS_MRT_REG_REGID(0));
+	OUT_RING(ring, A4XX_SP_FS_MRT_REG_REGID(0));
+
+	emit_mrt(ring, 1, &psurf, &base, bin_w);
+
+	fd4_emit_gmem_restore_tex(ring, psurf);
+
+	fd4_draw(ctx, ring, DI_PT_RECTLIST, IGNORE_VISIBILITY,
+			DI_SRC_SEL_AUTO_INDEX, 2, INDEX_SIZE_IGN, 0, 0, NULL);
+}
+
+static void
 fd4_emit_tile_mem2gmem(struct fd_context *ctx, struct fd_tile *tile)
 {
-	/* TODO */
+	struct fd4_context *fd4_ctx = fd4_context(ctx);
+	struct fd_gmem_stateobj *gmem = &ctx->gmem;
+	struct fd_ringbuffer *ring = ctx->ring;
+	struct pipe_framebuffer_state *pfb = &ctx->framebuffer;
+	struct fd4_emit emit = {
+			.vtx = &fd4_ctx->blit_vbuf_state,
+			.prog = &ctx->blit_prog,
+			.key = key,
+	};
+	float x0, y0, x1, y1;
+	unsigned bin_w = tile->bin_w;
+	unsigned bin_h = tile->bin_h;
+	unsigned i;
+
+	/* write texture coordinates to vertexbuf: */
+	x0 = ((float)tile->xoff) / ((float)pfb->width);
+	x1 = ((float)tile->xoff + bin_w) / ((float)pfb->width);
+	y0 = ((float)tile->yoff) / ((float)pfb->height);
+	y1 = ((float)tile->yoff + bin_h) / ((float)pfb->height);
+
+	OUT_PKT3(ring, CP_MEM_WRITE, 5);
+	OUT_RELOCW(ring, fd_resource(fd4_ctx->blit_texcoord_vbuf)->bo, 0, 0, 0);
+	OUT_RING(ring, fui(x0));
+	OUT_RING(ring, fui(y0));
+	OUT_RING(ring, fui(x1));
+	OUT_RING(ring, fui(y1));
+
+	for (i = 0; i < 8; i++) {
+		OUT_PKT0(ring, REG_A4XX_RB_MRT_CONTROL(i), 1);
+		OUT_RING(ring, A4XX_RB_MRT_CONTROL_FASTCLEAR |
+				A4XX_RB_MRT_CONTROL_B11 |
+				A4XX_RB_MRT_CONTROL_COMPONENT_ENABLE(0xf));
+
+		OUT_PKT0(ring, REG_A4XX_RB_MRT_BLEND_CONTROL(i), 1);
+		OUT_RING(ring, A4XX_RB_MRT_BLEND_CONTROL_RGB_SRC_FACTOR(FACTOR_ONE) |
+				A4XX_RB_MRT_BLEND_CONTROL_RGB_BLEND_OPCODE(BLEND_DST_PLUS_SRC) |
+				A4XX_RB_MRT_BLEND_CONTROL_RGB_DEST_FACTOR(FACTOR_ZERO) |
+				A4XX_RB_MRT_BLEND_CONTROL_ALPHA_SRC_FACTOR(FACTOR_ONE) |
+				A4XX_RB_MRT_BLEND_CONTROL_ALPHA_BLEND_OPCODE(BLEND_DST_PLUS_SRC) |
+				A4XX_RB_MRT_BLEND_CONTROL_ALPHA_DEST_FACTOR(FACTOR_ZERO));
+	}
+
+	OUT_PKT0(ring, REG_A4XX_RB_RENDER_CONTROL, 1);
+	OUT_RING(ring, 0x8);          /* XXX RB_RENDER_CONTROL */
+
+	OUT_PKT0(ring, REG_A4XX_RB_DEPTH_CONTROL, 1);
+	OUT_RING(ring, A4XX_RB_DEPTH_CONTROL_ZFUNC(FUNC_LESS));
+
+	OUT_PKT0(ring, REG_A4XX_GRAS_CL_CLIP_CNTL, 1);
+	OUT_RING(ring, 0x280000);     /* XXX GRAS_CL_CLIP_CNTL */
+
+	OUT_PKT0(ring, REG_A4XX_GRAS_SU_MODE_CONTROL, 1);
+	OUT_RING(ring, A4XX_GRAS_SU_MODE_CONTROL_LINEHALFWIDTH(0) |
+			A4XX_GRAS_SU_MODE_CONTROL_RENDERING_PASS);
+
+	OUT_PKT0(ring, REG_A4XX_GRAS_CL_VPORT_XOFFSET_0, 6);
+	OUT_RING(ring, A4XX_GRAS_CL_VPORT_XOFFSET_0((float)bin_w/2.0));
+	OUT_RING(ring, A4XX_GRAS_CL_VPORT_XSCALE_0((float)bin_w/2.0));
+	OUT_RING(ring, A4XX_GRAS_CL_VPORT_YOFFSET_0((float)bin_h/2.0));
+	OUT_RING(ring, A4XX_GRAS_CL_VPORT_YSCALE_0(-(float)bin_h/2.0));
+	OUT_RING(ring, A4XX_GRAS_CL_VPORT_ZOFFSET_0(0.0));
+	OUT_RING(ring, A4XX_GRAS_CL_VPORT_ZSCALE_0(1.0));
+
+	OUT_PKT0(ring, REG_A4XX_GRAS_SC_WINDOW_SCISSOR_BR, 2);
+	OUT_RING(ring, A4XX_GRAS_SC_WINDOW_SCISSOR_BR_X(bin_w - 1) |
+			A4XX_GRAS_SC_WINDOW_SCISSOR_BR_Y(bin_h - 1));
+	OUT_RING(ring, A4XX_GRAS_SC_WINDOW_SCISSOR_TL_X(0) |
+			A4XX_GRAS_SC_WINDOW_SCISSOR_TL_Y(0));
+
+	OUT_PKT0(ring, REG_A4XX_GRAS_SC_SCREEN_SCISSOR_TL, 2);
+	OUT_RING(ring, A4XX_GRAS_SC_SCREEN_SCISSOR_TL_X(0) |
+			A4XX_GRAS_SC_SCREEN_SCISSOR_TL_Y(0));
+	OUT_RING(ring, A4XX_GRAS_SC_SCREEN_SCISSOR_BR_X(bin_w - 1) |
+			A4XX_GRAS_SC_SCREEN_SCISSOR_BR_Y(bin_h - 1));
+
+	OUT_PKT0(ring, REG_A4XX_RB_MODE_CONTROL, 1);
+	OUT_RING(ring, A4XX_RB_MODE_CONTROL_WIDTH(gmem->bin_w) |
+			A4XX_RB_MODE_CONTROL_HEIGHT(gmem->bin_h));
+
+	OUT_PKT0(ring, REG_A4XX_RB_STENCIL_CONTROL, 1);
+	OUT_RING(ring, A4XX_RB_STENCIL_CONTROL_FUNC(FUNC_ALWAYS) |
+			A4XX_RB_STENCIL_CONTROL_FAIL(STENCIL_KEEP) |
+			A4XX_RB_STENCIL_CONTROL_ZPASS(STENCIL_KEEP) |
+			A4XX_RB_STENCIL_CONTROL_ZFAIL(STENCIL_KEEP) |
+			A4XX_RB_STENCIL_CONTROL_FUNC_BF(FUNC_ALWAYS) |
+			A4XX_RB_STENCIL_CONTROL_FAIL_BF(STENCIL_KEEP) |
+			A4XX_RB_STENCIL_CONTROL_ZPASS_BF(STENCIL_KEEP) |
+			A4XX_RB_STENCIL_CONTROL_ZFAIL_BF(STENCIL_KEEP));
+
+	OUT_PKT0(ring, REG_A4XX_GRAS_SC_CONTROL, 1);
+	OUT_RING(ring, A4XX_GRAS_SC_CONTROL_RENDER_MODE(RB_RENDERING_PASS) |
+			A4XX_GRAS_SC_CONTROL_MSAA_DISABLE |
+			A4XX_GRAS_SC_CONTROL_MSAA_SAMPLES(MSAA_ONE) |
+			A4XX_GRAS_SC_CONTROL_RASTER_MODE(1));
+
+	OUT_PKT0(ring, REG_A4XX_PC_PRIM_VTX_CNTL, 1);
+	OUT_RING(ring, A4XX_PC_PRIM_VTX_CNTL_PROVOKING_VTX_LAST |
+			A4XX_PC_PRIM_VTX_CNTL_VAROUT);
+
+	OUT_PKT0(ring, REG_A4XX_VFD_INDEX_OFFSET, 2);
+	OUT_RING(ring, 0);            /* VFD_INDEX_OFFSET */
+	OUT_RING(ring, 0);            /* ??? UNKNOWN_2209 */
+
+	fd4_program_emit(ring, &emit);
+	fd4_emit_vertex_bufs(ring, &emit);
+
+	/* for gmem pitch/base calculations, we need to use the non-
+	 * truncated tile sizes:
+	 */
+	bin_w = gmem->bin_w;
+	bin_h = gmem->bin_h;
+
+	if (fd_gmem_needs_restore(ctx, tile, FD_BUFFER_DEPTH | FD_BUFFER_STENCIL))
+		emit_mem2gmem_surf(ctx, &emit, depth_base(ctx), pfb->zsbuf, bin_w);
+
+	if (fd_gmem_needs_restore(ctx, tile, FD_BUFFER_COLOR))
+		emit_mem2gmem_surf(ctx, &emit, 0, pfb->cbufs[0], bin_w);
+
+	OUT_PKT0(ring, REG_A4XX_GRAS_SC_CONTROL, 1);
+	OUT_RING(ring, A4XX_GRAS_SC_CONTROL_RENDER_MODE(RB_RENDERING_PASS) |
+			A4XX_GRAS_SC_CONTROL_MSAA_SAMPLES(MSAA_ONE) |
+			A4XX_GRAS_SC_CONTROL_RASTER_MODE(0));
+
+	OUT_PKT0(ring, REG_A4XX_RB_MODE_CONTROL, 1);
+	OUT_RING(ring, A4XX_RB_MODE_CONTROL_WIDTH(gmem->bin_w) |
+			A4XX_RB_MODE_CONTROL_HEIGHT(gmem->bin_h) |
+			0x00010000);  /* XXX */
 }
 
 static void

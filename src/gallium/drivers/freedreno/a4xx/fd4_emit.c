@@ -218,9 +218,50 @@ emit_textures(struct fd_context *ctx, struct fd_ringbuffer *ring,
 void
 fd4_emit_gmem_restore_tex(struct fd_ringbuffer *ring, struct pipe_surface *psurf)
 {
-	/* TODO */
-}
+	struct fd_resource *rsc = fd_resource(psurf->texture);
+	unsigned lvl = psurf->u.tex.level;
+	struct fd_resource_slice *slice = &rsc->slices[lvl];
+	uint32_t layer_offset = slice->size0 * psurf->u.tex.first_layer;
+	enum pipe_format format = fd4_gmem_restore_format(psurf->format);
 
+	debug_assert(psurf->u.tex.first_layer == psurf->u.tex.last_layer);
+
+	/* output sampler state: */
+	OUT_PKT3(ring, CP_LOAD_STATE, 4);
+	OUT_RING(ring, CP_LOAD_STATE_0_DST_OFF(0) |
+			CP_LOAD_STATE_0_STATE_SRC(SS_DIRECT) |
+			CP_LOAD_STATE_0_STATE_BLOCK(SB_FRAG_TEX) |
+			CP_LOAD_STATE_0_NUM_UNIT(1));
+	OUT_RING(ring, CP_LOAD_STATE_1_STATE_TYPE(ST_SHADER) |
+			CP_LOAD_STATE_1_EXT_SRC_ADDR(0));
+	OUT_RING(ring, A4XX_TEX_SAMP_0_XY_MAG(A4XX_TEX_NEAREST) |
+			A4XX_TEX_SAMP_0_XY_MIN(A4XX_TEX_NEAREST) |
+			A4XX_TEX_SAMP_0_WRAP_S(A4XX_TEX_CLAMP_TO_EDGE) |
+			A4XX_TEX_SAMP_0_WRAP_T(A4XX_TEX_CLAMP_TO_EDGE) |
+			A4XX_TEX_SAMP_0_WRAP_R(A4XX_TEX_REPEAT));
+	OUT_RING(ring, 0x00000000);
+
+	/* emit texture state: */
+	OUT_PKT3(ring, CP_LOAD_STATE, 10);
+	OUT_RING(ring, CP_LOAD_STATE_0_DST_OFF(0) |
+			CP_LOAD_STATE_0_STATE_SRC(SS_DIRECT) |
+			CP_LOAD_STATE_0_STATE_BLOCK(SB_FRAG_TEX) |
+			CP_LOAD_STATE_0_NUM_UNIT(1));
+	OUT_RING(ring, CP_LOAD_STATE_1_STATE_TYPE(ST_CONSTANTS) |
+			CP_LOAD_STATE_1_EXT_SRC_ADDR(0));
+	OUT_RING(ring, A4XX_TEX_CONST_0_FMT(fd4_pipe2tex(format)) |
+			A4XX_TEX_CONST_0_TYPE(A4XX_TEX_2D) |
+			fd4_tex_swiz(format,  PIPE_SWIZZLE_RED, PIPE_SWIZZLE_GREEN,
+					PIPE_SWIZZLE_BLUE, PIPE_SWIZZLE_ALPHA));
+	OUT_RING(ring, A4XX_TEX_CONST_1_WIDTH(psurf->width) |
+			A4XX_TEX_CONST_1_HEIGHT(psurf->height));
+	OUT_RING(ring, A4XX_TEX_CONST_2_PITCH(slice->pitch * rsc->cpp));
+	OUT_RING(ring, 0x00000000);
+	OUT_RELOC(ring, rsc->bo, layer_offset, 0, 0);
+	OUT_RING(ring, 0x00000000);
+	OUT_RING(ring, 0x00000000);
+	OUT_RING(ring, 0x00000000);
+}
 
 void
 fd4_emit_vertex_bufs(struct fd_ringbuffer *ring, struct fd4_emit *emit)
