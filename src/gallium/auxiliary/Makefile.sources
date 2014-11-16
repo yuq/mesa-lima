@@ -14,9 +14,6 @@ C_SOURCES := \
 	draw/draw_gs.c \
 	draw/draw_gs.h \
 	draw/draw_gs_tmp.h \
-	draw/draw_llvm.c \
-	draw/draw_llvm.h \
-	draw/draw_llvm_sample.c \
 	draw/draw_pipe_aaline.c \
 	draw/draw_pipe_aapoint.c \
 	draw/draw_pipe.c \
@@ -45,7 +42,6 @@ C_SOURCES := \
 	draw/draw_pt_fetch_emit.c \
 	draw/draw_pt_fetch_shade_emit.c \
 	draw/draw_pt_fetch_shade_pipeline.c \
-	draw/draw_pt_fetch_shade_pipeline_llvm.c \
 	draw/draw_pt.h \
 	draw/draw_pt_post_vs.c \
 	draw/draw_pt_so_emit.c \
@@ -60,7 +56,6 @@ C_SOURCES := \
 	draw/draw_vs.c \
 	draw/draw_vs_exec.c \
 	draw/draw_vs.h \
-	draw/draw_vs_llvm.c \
 	draw/draw_vs_variant.c \
 	hud/font.c \
 	hud/font.h \
@@ -405,4 +400,9 @@ GALLIVM_SOURCES := \
 	gallivm/lp_bld_tgsi_info.c \
 	gallivm/lp_bld_tgsi_soa.c \
 	gallivm/lp_bld_type.c \
-	gallivm/lp_bld_type.h
+	gallivm/lp_bld_type.h \
+	draw/draw_llvm.c \
+	draw/draw_llvm.h \
+	draw/draw_llvm_sample.c \
+	draw/draw_pt_fetch_shade_pipeline_llvm.c \
+	draw/draw_vs_llvm.c
