@@ -46,3 +46,16 @@ indices/u_unfilled_gen.c: $(srcdir)/indices/u_unfilled_gen.py
 util/u_format_table.c: $(srcdir)/util/u_format_table.py $(srcdir)/util/u_format_pack.py $(srcdir)/util/u_format_parse.py $(srcdir)/util/u_format.csv
 	$(AM_V_at)$(MKDIR_P) util
 	$(AM_V_GEN) $(PYTHON2) $(srcdir)/util/u_format_table.py $(srcdir)/util/u_format.csv > $@
+
+EXTRA_DIST = \
+	Android.mk SConscript \
+	indices/u_indices.c \
+	indices/u_unfilled_indices.c \
+	indices/u_indices_gen.py \
+	indices/u_unfilled_gen.py \
+	target-helpers \
+	util/u_format.csv \
+	util/u_format_pack.py \
+	util/u_format_parse.py \
+	util/u_format_table.py \
+	vl/vl_winsys_dri.c
