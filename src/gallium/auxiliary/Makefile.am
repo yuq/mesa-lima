@@ -30,8 +30,7 @@ AM_CXXFLAGS += \
 	$(LLVM_CXXFLAGS)
 
 libgallium_la_SOURCES += \
-	$(GALLIVM_SOURCES) \
-	$(GALLIVM_CPP_SOURCES)
+	$(GALLIVM_SOURCES)
 
 endif
 

@@ -406,9 +406,3 @@ GALLIVM_SOURCES := \
 	gallivm/lp_bld_tgsi_soa.c \
 	gallivm/lp_bld_type.c \
 	gallivm/lp_bld_type.h
-
-GALLIVM_CPP_SOURCES := \
-	gallivm/lp_bld_debug.cpp \
-	gallivm/lp_bld_debug.h \
-	gallivm/lp_bld_misc.cpp \
-	gallivm/lp_bld_misc.h
