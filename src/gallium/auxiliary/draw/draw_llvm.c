@@ -225,7 +225,7 @@ create_jit_context_type(struct gallivm_state *gallivm,
                                  LP_MAX_TGSI_CONST_BUFFERS);
    elem_types[2] = LLVMPointerType(LLVMArrayType(LLVMArrayType(float_type, 4),
                                                  DRAW_TOTAL_CLIP_PLANES), 0);
-   elem_types[3] = LLVMPointerType(float_type, 0); /* viewport */
+   elem_types[3] = LLVMPointerType(float_type, 0); /* viewports */
    elem_types[4] = LLVMArrayType(texture_type,
                                  PIPE_MAX_SHADER_SAMPLER_VIEWS); /* textures */
    elem_types[5] = LLVMArrayType(sampler_type,
@@ -238,7 +238,7 @@ create_jit_context_type(struct gallivm_state *gallivm,
                           target, context_type, DRAW_JIT_CTX_NUM_CONSTANTS);
    LP_CHECK_MEMBER_OFFSET(struct draw_jit_context, planes,
                           target, context_type, DRAW_JIT_CTX_PLANES);
-   LP_CHECK_MEMBER_OFFSET(struct draw_jit_context, viewport,
+   LP_CHECK_MEMBER_OFFSET(struct draw_jit_context, viewports,
                           target, context_type, DRAW_JIT_CTX_VIEWPORT);
    LP_CHECK_MEMBER_OFFSET(struct draw_jit_context, textures,
                           target, context_type,
@@ -274,7 +274,7 @@ create_gs_jit_context_type(struct gallivm_state *gallivm,
                                  LP_MAX_TGSI_CONST_BUFFERS);
    elem_types[2] = LLVMPointerType(LLVMArrayType(LLVMArrayType(float_type, 4),
                                                  DRAW_TOTAL_CLIP_PLANES), 0);
-   elem_types[3] = LLVMPointerType(float_type, 0); /* viewport */
+   elem_types[3] = LLVMPointerType(float_type, 0); /* viewports */
 
    elem_types[4] = LLVMArrayType(texture_type,
                                  PIPE_MAX_SHADER_SAMPLER_VIEWS); /* textures */
@@ -296,7 +296,7 @@ create_gs_jit_context_type(struct gallivm_state *gallivm,
                           target, context_type, DRAW_GS_JIT_CTX_NUM_CONSTANTS);
    LP_CHECK_MEMBER_OFFSET(struct draw_gs_jit_context, planes,
                           target, context_type, DRAW_GS_JIT_CTX_PLANES);
-   LP_CHECK_MEMBER_OFFSET(struct draw_gs_jit_context, viewport,
+   LP_CHECK_MEMBER_OFFSET(struct draw_gs_jit_context, viewports,
                           target, context_type, DRAW_GS_JIT_CTX_VIEWPORT);
    LP_CHECK_MEMBER_OFFSET(struct draw_gs_jit_context, textures,
                           target, context_type,
@@ -1080,7 +1080,7 @@ generate_viewport(struct draw_llvm_variant *variant,
    LLVMTypeRef vs_type_llvm = lp_build_vec_type(gallivm, vs_type);
    LLVMValueRef out3 = LLVMBuildLoad(builder, outputs[pos][3], ""); /*w0 w1 .. wn*/
    LLVMValueRef const1 = lp_build_const_vec(gallivm, f32_type, 1.0);       /*1.0 1.0 1.0 1.0*/
-   LLVMValueRef vp_ptr = draw_jit_context_viewport(gallivm, context_ptr);
+   LLVMValueRef vp_ptr = draw_jit_context_viewports(gallivm, context_ptr);
 
    /* We treat pipe_viewport_state as a float array */
    const int scale_index_offset = offsetof(struct pipe_viewport_state, scale) / sizeof(float);
