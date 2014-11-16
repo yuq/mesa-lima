@@ -1082,6 +1082,10 @@ generate_viewport(struct draw_llvm_variant *variant,
    LLVMValueRef const1 = lp_build_const_vec(gallivm, f32_type, 1.0);       /*1.0 1.0 1.0 1.0*/
    LLVMValueRef vp_ptr = draw_jit_context_viewport(gallivm, context_ptr);
 
+   /* We treat pipe_viewport_state as a float array */
+   const int scale_index_offset = offsetof(struct pipe_viewport_state, scale) / sizeof(float);
+   const int trans_index_offset = offsetof(struct pipe_viewport_state, translate) / sizeof(float);
+
    /* for 1/w convention*/
    out3 = LLVMBuildFDiv(builder, const1, out3, "");
    LLVMBuildStore(builder, out3, outputs[pos][3]);
@@ -1095,10 +1099,10 @@ generate_viewport(struct draw_llvm_variant *variant,
       LLVMValueRef trans_i;
       LLVMValueRef index;
 
-      index = lp_build_const_int32(gallivm, i);
+      index = lp_build_const_int32(gallivm, i + scale_index_offset);
       scale_i = LLVMBuildGEP(builder, vp_ptr, &index, 1, "");
 
-      index = lp_build_const_int32(gallivm, i+4);
+      index = lp_build_const_int32(gallivm, i + trans_index_offset);
       trans_i = LLVMBuildGEP(builder, vp_ptr, &index, 1, "");
 
       scale = lp_build_broadcast(gallivm, vs_type_llvm,
