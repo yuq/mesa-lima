@@ -90,18 +90,31 @@ a3xx_SOURCES := \
 	a3xx/fd3_zsa.h
 
 a4xx_SOURCES := \
+	a4xx/a4xx.xml.h \
 	a4xx/fd4_blend.c \
+	a4xx/fd4_blend.h \
 	a4xx/fd4_context.c \
+	a4xx/fd4_context.h \
 	a4xx/fd4_draw.c \
+	a4xx/fd4_draw.h \
 	a4xx/fd4_emit.c \
+	a4xx/fd4_emit.h \
 	a4xx/fd4_gmem.c \
+	a4xx/fd4_gmem.h \
 	a4xx/fd4_program.c \
+	a4xx/fd4_program.h \
 	a4xx/fd4_query.c \
+	a4xx/fd4_query.h \
 	a4xx/fd4_rasterizer.c \
+	a4xx/fd4_rasterizer.h \
 	a4xx/fd4_screen.c \
+	a4xx/fd4_screen.h \
 	a4xx/fd4_texture.c \
+	a4xx/fd4_texture.h \
 	a4xx/fd4_util.c \
-	a4xx/fd4_zsa.c
+	a4xx/fd4_util.h \
+	a4xx/fd4_zsa.c \
+	a4xx/fd4_zsa.h
 
 ir3_SOURCES := \
 	ir3/disasm-a3xx.c \
