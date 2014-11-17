@@ -2728,8 +2728,10 @@ static int cayman_mul_int_instr(struct r600_shader_ctx *ctx)
 	struct tgsi_full_instruction *inst = &ctx->parse.FullToken.FullInstruction;
 	int i, j, k, r;
 	struct r600_bytecode_alu alu;
-	int last_slot = (inst->Dst[0].Register.WriteMask & 0x8) ? 4 : 3;
-	for (k = 0; k < last_slot; k++) {
+	int lasti = tgsi_last_instruction(inst->Dst[0].Register.WriteMask);
+	int t1 = ctx->temp_reg;
+
+	for (k = 0; k <= lasti; k++) {
 		if (!(inst->Dst[0].Register.WriteMask & (1 << k)))
 			continue;
 
@@ -2739,7 +2741,8 @@ static int cayman_mul_int_instr(struct r600_shader_ctx *ctx)
 			for (j = 0; j < inst->Instruction.NumSrcRegs; j++) {
 				r600_bytecode_src(&alu.src[j], &ctx->src[j], k);
 			}
-			tgsi_dst(ctx, &inst->Dst[0], i, &alu.dst);
+			alu.dst.sel = t1;
+			alu.dst.chan = i;
 			alu.dst.write = (i == k);
 			if (i == 3)
 				alu.last = 1;
@@ -2748,6 +2751,23 @@ static int cayman_mul_int_instr(struct r600_shader_ctx *ctx)
 				return r;
 		}
 	}
+
+	for (i = 0 ; i <= lasti; i++) {
+		if (!(inst->Dst[0].Register.WriteMask & (1 << i)))
+			continue;
+		memset(&alu, 0, sizeof(struct r600_bytecode_alu));
+		alu.op = ALU_OP1_MOV;
+		alu.src[0].sel = t1;
+		alu.src[0].chan = i;
+		tgsi_dst(ctx, &inst->Dst[0], i, &alu.dst);
+		alu.dst.write = 1;
+		if (i == lasti)
+			alu.last = 1;
+		r = r600_bytecode_add_alu(ctx->bc, &alu);
+		if (r)
+			return r;
+	}
+
 	return 0;
 }
 
