@@ -38,6 +38,7 @@ struct d3dadapter9_context
     BOOL throttling;
     int throttling_value;
     int vblank_mode;
+    BOOL thread_submit;
 
     void (*destroy)( struct d3dadapter9_context *ctx );
 };

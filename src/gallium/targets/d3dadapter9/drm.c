@@ -59,6 +59,7 @@ DRI_CONF_BEGIN
     DRI_CONF_SECTION_END
     DRI_CONF_SECTION_NINE
         DRI_CONF_NINE_THROTTLE(-2)
+        DRI_CONF_NINE_THREADSUBMIT("false")
     DRI_CONF_SECTION_END
 DRI_CONF_END;
 
@@ -244,7 +245,7 @@ drm_create_adapter( int fd,
     const struct drm_conf_ret *dmabuf_ret = NULL;
     driOptionCache defaultInitOptions;
     driOptionCache userInitOptions;
-    int throttling_value_user;
+    int throttling_value_user = -2;
 
 #if !GALLIUM_STATIC_TARGETS
     const char *paths[] = {
@@ -321,6 +322,19 @@ drm_create_adapter( int fd,
         ctx->base.vblank_mode = driQueryOptioni(&userInitOptions, "vblank_mode");
     else
         ctx->base.vblank_mode = 1;
+
+    if (driCheckOption(&userInitOptions, "thread_submit", DRI_BOOL)) {
+        ctx->base.thread_submit = driQueryOptionb(&userInitOptions, "thread_submit");
+        if (ctx->base.thread_submit && (throttling_value_user == -2 || throttling_value_user == 0)) {
+            ctx->base.throttling_value = 0;
+        } else if (ctx->base.thread_submit) {
+            DBG("You have set a non standard throttling value in combination with thread_submit."
+                "We advise to use a throttling value of -2/0");
+        }
+        if (ctx->base.thread_submit && !different_device)
+            DBG("You have set thread_submit but do not use a different device than the server."
+                "You should not expect any benefit.");
+    }
 
     driDestroyOptionCache(&userInitOptions);
     driDestroyOptionInfo(&defaultInitOptions);

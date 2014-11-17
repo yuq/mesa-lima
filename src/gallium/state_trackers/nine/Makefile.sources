@@ -59,6 +59,8 @@ C_SOURCES := \
 	swapchain9.h \
 	texture9.c \
 	texture9.h \
+	threadpool.c \
+	threadpool.h \
 	vertexbuffer9.c \
 	vertexbuffer9.h \
 	vertexdeclaration9.c \

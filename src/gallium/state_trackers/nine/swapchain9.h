@@ -28,6 +28,8 @@
 
 #include "d3dadapter/d3dadapter9.h"
 
+#include "threadpool.h"
+
 struct NineDevice9;
 struct NineSurface9;
 struct nine_winsys_swapchain;
@@ -68,7 +70,12 @@ struct NineSwapChain9
     struct NineSurface9 *zsbuf;
 
     D3DGAMMARAMP gamma;
+
+    struct threadpool *pool;
+    struct threadpool_task **tasks;
+    BOOL enable_threadpool;
 };
+
 static INLINE struct NineSwapChain9 *
 NineSwapChain9( void *data )
 {
