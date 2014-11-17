@@ -177,7 +177,6 @@ static int r300_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
         case PIPE_CAP_FAKE_SW_MSAA:
         case PIPE_CAP_SAMPLE_SHADING:
         case PIPE_CAP_TEXTURE_GATHER_OFFSETS:
-        case PIPE_CAP_TGSI_VS_WINDOW_SPACE_POSITION:
         case PIPE_CAP_DRAW_INDIRECT:
         case PIPE_CAP_TGSI_FS_FINE_DERIVATIVE:
         case PIPE_CAP_CONDITIONAL_RENDER_INVERTED:
@@ -187,6 +186,7 @@ static int r300_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
         /* SWTCL-only features. */
         case PIPE_CAP_PRIMITIVE_RESTART:
         case PIPE_CAP_USER_VERTEX_BUFFERS:
+        case PIPE_CAP_TGSI_VS_WINDOW_SPACE_POSITION:
             return !r300screen->caps.has_tcl;
 
         /* HWTCL-only features / limitations. */

@@ -1836,7 +1836,7 @@ draw_llvm_make_variant_key(struct draw_llvm *llvm, char *store)
    key->clip_xy = llvm->draw->clip_xy;
    key->clip_z = llvm->draw->clip_z;
    key->clip_user = llvm->draw->clip_user;
-   key->bypass_viewport = llvm->draw->identity_viewport;
+   key->bypass_viewport = llvm->draw->bypass_viewport;
    key->clip_halfz = llvm->draw->rasterizer->clip_halfz;
    key->need_edgeflags = (llvm->draw->vs.edgeflag_output ? TRUE : FALSE);
    key->ucp_enable = llvm->draw->rasterizer->clip_plane_enable;

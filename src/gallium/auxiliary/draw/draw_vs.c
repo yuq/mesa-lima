@@ -122,6 +122,8 @@ draw_bind_vertex_shader(struct draw_context *draw,
       draw->vs.clipdistance_output[0] = dvs->clipdistance_output[0];
       draw->vs.clipdistance_output[1] = dvs->clipdistance_output[1];
       dvs->prepare( dvs, draw );
+      draw_update_clip_flags(draw);
+      draw_update_viewport_flags(draw);
    }
    else {
       draw->vs.vertex_shader = NULL;

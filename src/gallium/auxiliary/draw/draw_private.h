@@ -252,6 +252,7 @@ struct draw_context
 
    struct pipe_viewport_state viewports[PIPE_MAX_VIEWPORTS];
    boolean identity_viewport;
+   boolean bypass_viewport;
 
    /** Vertex shader state */
    struct {
@@ -477,6 +478,9 @@ draw_get_rasterizer_no_cull( struct draw_context *draw,
 void
 draw_stats_clipper_primitives(struct draw_context *draw,
                               const struct draw_prim_info *prim_info);
+
+void draw_update_clip_flags(struct draw_context *draw);
+void draw_update_viewport_flags(struct draw_context *draw);
 
 /** 
  * Return index i from the index buffer.

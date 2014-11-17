@@ -254,20 +254,47 @@ void draw_set_zs_format(struct draw_context *draw, enum pipe_format format)
 }
 
 
-static void update_clip_flags( struct draw_context *draw )
+static bool
+draw_is_vs_window_space(struct draw_context *draw)
 {
-   draw->clip_xy = !draw->driver.bypass_clip_xy;
+   if (draw->vs.vertex_shader) {
+      struct tgsi_shader_info *info = &draw->vs.vertex_shader->info;
+
+      return info->properties[TGSI_PROPERTY_VS_WINDOW_SPACE_POSITION] != 0;
+   }
+   return false;
+}
+
+
+void
+draw_update_clip_flags(struct draw_context *draw)
+{
+   bool window_space = draw_is_vs_window_space(draw);
+
+   draw->clip_xy = !draw->driver.bypass_clip_xy && !window_space;
    draw->guard_band_xy = (!draw->driver.bypass_clip_xy &&
                           draw->driver.guard_band_xy);
    draw->clip_z = (!draw->driver.bypass_clip_z &&
-                   draw->rasterizer && draw->rasterizer->depth_clip);
+                   draw->rasterizer && draw->rasterizer->depth_clip) &&
+                  !window_space;
    draw->clip_user = draw->rasterizer &&
-                     draw->rasterizer->clip_plane_enable != 0;
+                     draw->rasterizer->clip_plane_enable != 0 &&
+                     !window_space;
    draw->guard_band_points_xy = draw->guard_band_xy ||
                                 (draw->driver.bypass_clip_points &&
                                 (draw->rasterizer &&
                                  draw->rasterizer->point_tri_clip));
 }
+
+
+void
+draw_update_viewport_flags(struct draw_context *draw)
+{
+   bool window_space = draw_is_vs_window_space(draw);
+
+   draw->bypass_viewport = window_space || draw->identity_viewport;
+}
+
 
 /**
  * Register new primitive rasterization/rendering state.
@@ -282,7 +309,7 @@ void draw_set_rasterizer_state( struct draw_context *draw,
 
       draw->rasterizer = raster;
       draw->rast_handle = rast_handle;
-      update_clip_flags(draw);
+      draw_update_clip_flags(draw);
    }
 }
 
@@ -309,7 +336,7 @@ void draw_set_driver_clipping( struct draw_context *draw,
    draw->driver.bypass_clip_z = bypass_clip_z;
    draw->driver.guard_band_xy = guard_band_xy;
    draw->driver.bypass_clip_points = bypass_clip_points;
-   update_clip_flags(draw);
+   draw_update_clip_flags(draw);
 }
 
 
@@ -363,6 +390,7 @@ void draw_set_viewport_states( struct draw_context *draw,
        viewport->translate[0] == 0.0f &&
        viewport->translate[1] == 0.0f &&
        viewport->translate[2] == 0.0f);
+   draw_update_viewport_flags(draw);
 }
 
 
