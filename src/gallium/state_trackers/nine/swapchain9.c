@@ -164,6 +164,11 @@ NineSwapChain9_Resize( struct NineSwapChain9 *This,
     if (This->desired_fences > DRI_SWAP_FENCES_MAX)
         This->desired_fences = DRI_SWAP_FENCES_MAX;
 
+    if (This->actx->vblank_mode == 0)
+        pParams->PresentationInterval = D3DPRESENT_INTERVAL_IMMEDIATE;
+    else if (This->actx->vblank_mode == 3)
+        pParams->PresentationInterval = D3DPRESENT_INTERVAL_ONE;
+
     if (mode && This->mode) {
         *(This->mode) = *mode;
     } else if (mode) {

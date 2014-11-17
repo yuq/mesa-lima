@@ -37,6 +37,7 @@ struct d3dadapter9_context
     BOOL linear_framebuffer;
     BOOL throttling;
     int throttling_value;
+    int vblank_mode;
 
     void (*destroy)( struct d3dadapter9_context *ctx );
 };

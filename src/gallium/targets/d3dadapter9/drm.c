@@ -36,6 +36,9 @@
 #include "d3dadapter/d3dadapter9.h"
 #include "d3dadapter/drm.h"
 
+#include "xmlconfig.h"
+#include "xmlpool.h"
+
 #include <libdrm/drm.h>
 #include <sys/ioctl.h>
 #include <fcntl.h>
@@ -48,6 +51,16 @@
         ((DWORD)((hi) & 0xFFFF) << 16) | \
          (DWORD)((lo) & 0xFFFF) \
     ))
+
+const char __driConfigOptionsNine[] =
+DRI_CONF_BEGIN
+    DRI_CONF_SECTION_PERFORMANCE
+         DRI_CONF_VBLANK_MODE(DRI_CONF_VBLANK_DEF_INTERVAL_1)
+    DRI_CONF_SECTION_END
+    DRI_CONF_SECTION_NINE
+        DRI_CONF_NINE_THROTTLE(-2)
+    DRI_CONF_SECTION_END
+DRI_CONF_END;
 
 /* Regarding os versions, we should not define our own as that would simply be
  * weird. Defaulting to Win2k/XP seems sane considering the origin of D3D9. The
@@ -229,6 +242,9 @@ drm_create_adapter( int fd,
     int i, different_device;
     const struct drm_conf_ret *throttle_ret = NULL;
     const struct drm_conf_ret *dmabuf_ret = NULL;
+    driOptionCache defaultInitOptions;
+    driOptionCache userInitOptions;
+    int throttling_value_user;
 
 #if !GALLIUM_STATIC_TARGETS
     const char *paths[] = {
@@ -289,6 +305,25 @@ drm_create_adapter( int fd,
     } else
         ctx->base.throttling = FALSE;
 
+    driParseOptionInfo(&defaultInitOptions, __driConfigOptionsNine);
+    driParseConfigFiles(&userInitOptions, &defaultInitOptions, 0, "nine");
+    if (driCheckOption(&userInitOptions, "throttle_value", DRI_INT)) {
+        throttling_value_user = driQueryOptioni(&userInitOptions, "throttle_value");
+        if (throttling_value_user == -1)
+            ctx->base.throttling = FALSE;
+        else if (throttling_value_user >= 0) {
+            ctx->base.throttling = TRUE;
+            ctx->base.throttling_value = throttling_value_user;
+        }
+    }
+
+    if (driCheckOption(&userInitOptions, "vblank_mode", DRI_ENUM))
+        ctx->base.vblank_mode = driQueryOptioni(&userInitOptions, "vblank_mode");
+    else
+        ctx->base.vblank_mode = 1;
+
+    driDestroyOptionCache(&userInitOptions);
+    driDestroyOptionInfo(&defaultInitOptions);
 
 #if GALLIUM_STATIC_TARGETS
     ctx->base.ref = ninesw_create_screen(ctx->base.hal);
