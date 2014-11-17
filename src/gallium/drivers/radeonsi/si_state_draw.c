@@ -248,20 +248,21 @@ static void si_shader_ps(struct si_shader *shader)
 	for (i = 0; i < info->num_inputs; i++) {
 		switch (info->input_semantic_name[i]) {
 		case TGSI_SEMANTIC_POSITION:
-			if (info->input_interpolate_loc[i] ==
-			    TGSI_INTERPOLATE_LOC_CENTROID) {
-				/* SPI_BARYC_CNTL.POS_FLOAT_LOCATION
-				 * Possible vaules:
-				 * 0 -> Position = pixel center (default)
-				 * 1 -> Position = pixel centroid
-				 * 2 -> Position = iterated sample number XXX:
-				 *                        What does this mean?
-			 	 */
+			/* SPI_BARYC_CNTL.POS_FLOAT_LOCATION
+			 * Possible vaules:
+			 * 0 -> Position = pixel center (default)
+			 * 1 -> Position = pixel centroid
+			 * 2 -> Position = at sample position
+			 */
+			switch (info->input_interpolate_loc[i]) {
+			case TGSI_INTERPOLATE_LOC_CENTROID:
 				spi_baryc_cntl |= S_0286E0_POS_FLOAT_LOCATION(1);
+				break;
+			case TGSI_INTERPOLATE_LOC_SAMPLE:
+				spi_baryc_cntl |= S_0286E0_POS_FLOAT_LOCATION(2);
+				break;
 			}
-			/* Fall through */
-		case TGSI_SEMANTIC_FACE:
-			continue;
+			break;
 		}
 	}
 
