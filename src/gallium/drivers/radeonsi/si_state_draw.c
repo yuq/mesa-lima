@@ -262,6 +262,10 @@ static void si_shader_ps(struct si_shader *shader)
 				spi_baryc_cntl |= S_0286E0_POS_FLOAT_LOCATION(2);
 				break;
 			}
+
+			if (info->properties[TGSI_PROPERTY_FS_COORD_PIXEL_CENTER] ==
+			    TGSI_FS_COORD_PIXEL_CENTER_INTEGER)
+				spi_baryc_cntl |= S_0286E0_POS_FLOAT_ULC(1);
 			break;
 		}
 	}
