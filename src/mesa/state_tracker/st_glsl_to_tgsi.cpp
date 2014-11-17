@@ -4022,6 +4022,7 @@ get_pixel_transfer_visitor(struct st_fragment_program *fp,
 
       newinst = v->emit(NULL, inst->op, inst->dst, src_regs[0], src_regs[1], src_regs[2]);
       newinst->tex_target = inst->tex_target;
+      newinst->sampler_array_size = inst->sampler_array_size;
    }
 
    /* Make modifications to fragment program info. */
@@ -4101,6 +4102,7 @@ get_bitmap_visitor(struct st_fragment_program *fp,
 
       newinst = v->emit(NULL, inst->op, inst->dst, src_regs[0], src_regs[1], src_regs[2]);
       newinst->tex_target = inst->tex_target;
+      newinst->sampler_array_size = inst->sampler_array_size;
    }
 
    /* Make modifications to fragment program info. */
@@ -4524,8 +4526,10 @@ compile_tgsi_instruction(struct st_translate *t,
                              inst->saturate,
                              clamp_dst_color_output);
 
-   for (i = 0; i < num_src; i++) 
+   for (i = 0; i < num_src; i++) {
+      assert(inst->src[i].file != PROGRAM_UNDEFINED);
       src[i] = translate_src(t, &inst->src[i]);
+   }
 
    switch(inst->op) {
    case TGSI_OPCODE_BGNLOOP:
@@ -4555,6 +4559,7 @@ compile_tgsi_instruction(struct st_translate *t,
    case TGSI_OPCODE_TG4:
    case TGSI_OPCODE_LODQ:
       src[num_src] = t->samplers[inst->sampler.index];
+      assert(src[num_src].File != TGSI_FILE_NULL);
       if (inst->sampler.reladdr)
          src[num_src] =
             ureg_src_indirect(src[num_src], ureg_src(t->address[2]));
