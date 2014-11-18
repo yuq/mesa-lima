@@ -203,6 +203,12 @@ vc4_setup_rcl(struct vc4_context *vc4)
                          */
                         vc4_tile_coordinates(vc4, x, y, &coords_emitted);
 
+                        /* Wait for the binner before jumping to the first
+                         * tile's lists.
+                         */
+                        if (x == 0 && y == 0)
+                                cl_u8(&vc4->rcl, VC4_PACKET_WAIT_ON_SEMAPHORE);
+
                         cl_start_reloc(&vc4->rcl, 1);
                         cl_u8(&vc4->rcl, VC4_PACKET_BRANCH_TO_SUB_LIST);
                         cl_reloc(vc4, &vc4->rcl, vc4->tile_alloc,
@@ -269,11 +275,13 @@ vc4_flush(struct pipe_context *pctx)
         if (!vc4->needs_flush)
                 return;
 
+        /* Increment the semaphore indicating that binning is done and
+         * unblocking the render thread.  Note that this doesn't act until the
+         * FLUSH completes.
+         */
+        cl_u8(&vc4->bcl, VC4_PACKET_INCREMENT_SEMAPHORE);
         /* The FLUSH caps all of our bin lists with a VC4_PACKET_RETURN. */
         cl_u8(&vc4->bcl, VC4_PACKET_FLUSH);
-
-        cl_u8(&vc4->bcl, VC4_PACKET_NOP);
-        cl_u8(&vc4->bcl, VC4_PACKET_HALT);
 
         vc4_setup_rcl(vc4);
 
