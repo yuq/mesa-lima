@@ -58,8 +58,8 @@
 # define MESA_FORMAT_SIGNED_RG_8 MESA_FORMAT_R8G8_SNORM
 #endif
 
-static mesa_format
-get_image_format(GLenum format)
+mesa_format
+_mesa_get_shader_image_format(GLenum format)
 {
    switch (format) {
    case GL_RGBA32F:
@@ -421,7 +421,7 @@ validate_bind_image_texture(struct gl_context *ctx, GLuint unit,
       return GL_FALSE;
    }
 
-   if (!get_image_format(format)) {
+   if (!_mesa_get_shader_image_format(format)) {
       _mesa_error(ctx, GL_INVALID_VALUE, "glBindImageTexture(format)");
       return GL_FALSE;
    }
@@ -458,7 +458,7 @@ _mesa_BindImageTexture(GLuint unit, GLuint texture, GLint level,
       u->Level = level;
       u->Access = access;
       u->Format = format;
-      u->_ActualFormat = get_image_format(format);
+      u->_ActualFormat = _mesa_get_shader_image_format(format);
 
       if (_mesa_tex_target_is_layered(t->Target)) {
          u->Layered = layered;
@@ -573,7 +573,7 @@ _mesa_BindImageTextures(GLuint first, GLsizei count, const GLuint *textures)
             continue;
          }
 
-         actualFormat = get_image_format(image->InternalFormat);
+         actualFormat = _mesa_get_shader_image_format(image->InternalFormat);
 
          if (actualFormat == MESA_FORMAT_NONE) {
             /* The ARB_multi_bind spec says:

@@ -28,8 +28,15 @@
 #define SHADERIMAGE_H
 
 #include "glheader.h"
+#include "formats.h"
 
 struct gl_context;
+
+/**
+ * Get the matching mesa_format for a shader image format GL enum.
+ */
+mesa_format
+_mesa_get_shader_image_format(GLenum format);
 
 /**
  * Recalculate the \c _Valid flag of a context's shader image units.
