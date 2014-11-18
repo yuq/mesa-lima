@@ -1522,8 +1522,12 @@ draw_llvm_generate(struct draw_llvm *llvm, struct draw_llvm_variant *variant,
    /* If geometry shader is present we need to skip both the viewport
     * transformation and clipping otherwise the inputs to the geometry
     * shader will be incorrect.
+    * The code can't handle vp transform when vs writes vp index neither
+    * (though this would be fixable here, but couldn't just broadcast
+    * the values).
     */
-   const boolean bypass_viewport = key->has_gs || key->bypass_viewport;
+   const boolean bypass_viewport = key->has_gs || key->bypass_viewport ||
+                                   llvm->draw->vs.vertex_shader->info.writes_viewport_index;
    const boolean enable_cliptest = !key->has_gs && (key->clip_xy ||
                                                     key->clip_z  ||
                                                     key->clip_user);

@@ -232,6 +232,12 @@ tgsi_scan_shader(const struct tgsi_token *tokens,
                         info->num_written_culldistance +=
                            util_bitcount(fulldecl->Declaration.UsageMask);
                      }
+                     else if (semName == TGSI_SEMANTIC_VIEWPORT_INDEX) {
+                        info->writes_viewport_index = TRUE;
+                     }
+                     else if (semName == TGSI_SEMANTIC_LAYER) {
+                        info->writes_layer = TRUE;
+                     }
                   }
 
                   if (procType == TGSI_PROCESSOR_FRAGMENT) {
@@ -246,15 +252,6 @@ tgsi_scan_shader(const struct tgsi_token *tokens,
                   if (procType == TGSI_PROCESSOR_VERTEX) {
                      if (semName == TGSI_SEMANTIC_EDGEFLAG) {
                         info->writes_edgeflag = TRUE;
-                     }
-                  }
-
-                  if (procType == TGSI_PROCESSOR_GEOMETRY) {
-                     if (semName == TGSI_SEMANTIC_VIEWPORT_INDEX) {
-                        info->writes_viewport_index = TRUE;
-                     }
-                     else if (semName == TGSI_SEMANTIC_LAYER) {
-                        info->writes_layer = TRUE;
                      }
                   }
                }

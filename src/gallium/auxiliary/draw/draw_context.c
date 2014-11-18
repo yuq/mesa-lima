@@ -806,7 +806,7 @@ draw_current_shader_viewport_index_output(const struct draw_context *draw)
 {
    if (draw->gs.geometry_shader)
       return draw->gs.geometry_shader->viewport_index_output;
-   return 0;
+   return draw->vs.vertex_shader->viewport_index_output;
 }
 
 /**
@@ -818,7 +818,7 @@ draw_current_shader_uses_viewport_index(const struct draw_context *draw)
 {
    if (draw->gs.geometry_shader)
       return draw->gs.geometry_shader->info.writes_viewport_index;
-   return FALSE;
+   return draw->vs.vertex_shader->info.writes_viewport_index;
 }
 
 

@@ -169,8 +169,7 @@ llvm_middle_end_prepare( struct draw_pt_middle_end *middle,
    draw_pt_so_emit_prepare( fpme->so_emit, gs == NULL );
 
    if (!(opt & PT_PIPELINE)) {
-      draw_pt_emit_prepare( fpme->emit,
-			    out_prim,
+      draw_pt_emit_prepare( fpme->emit, out_prim,
                             max_vertices );
 
       *max_vertices = MAX2( *max_vertices, 4096 );
@@ -442,7 +441,8 @@ llvm_pipeline_generic(struct draw_pt_middle_end *middle,
     * will try to access non-existent position output.
     */
    if (draw_current_shader_position_output(draw) != -1) {
-      if ((opt & PT_SHADE) && gshader) {
+      if ((opt & PT_SHADE) && (gshader ||
+                               draw->vs.vertex_shader->info.writes_viewport_index)) {
          clipped = draw_pt_post_vs_run( fpme->post_vs, vert_info, prim_info );
       }
       if (clipped) {
