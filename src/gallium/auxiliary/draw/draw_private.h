@@ -499,7 +499,7 @@ draw_clamp_viewport_idx(int idx)
 /**
  * Adds two unsigned integers and if the addition
  * overflows then it returns the value from
- * from the overflow_value variable.
+ * the overflow_value variable.
  */
 static INLINE unsigned
 draw_overflow_uadd(unsigned a, unsigned b,
