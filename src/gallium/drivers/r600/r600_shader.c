@@ -5110,11 +5110,37 @@ static int tgsi_tex(struct r600_shader_ctx *ctx)
 	}
 
 	if (inst->Instruction.Opcode == TGSI_OPCODE_TXD) {
+		int temp_h, temp_v;
 		/* TGSI moves the sampler to src reg 3 for TXD */
 		sampler_src_reg = 3;
 
 		sampler_index_mode = inst->Src[sampler_src_reg].Indirect.Index == 2 ? 2 : 0; // CF_INDEX_1 : CF_INDEX_NONE
 
+		src_loaded = TRUE;
+		for (i = 0; i < 3; i++) {
+			int treg = r600_get_temp(ctx);
+
+			if (i == 0)
+				src_gpr = treg;
+			else if (i == 1)
+				temp_h = treg;
+			else
+				temp_v = treg;
+
+			for (j = 0; j < 4; j++) {
+				memset(&alu, 0, sizeof(struct r600_bytecode_alu));
+				alu.op = ALU_OP1_MOV;
+                                r600_bytecode_src(&alu.src[0], &ctx->src[i], j);
+                                alu.dst.sel = treg;
+                                alu.dst.chan = j;
+                                if (j == 3)
+                                   alu.last = 1;
+                                alu.dst.write = 1;
+                                r = r600_bytecode_add_alu(ctx->bc, &alu);
+                                if (r)
+                                    return r;
+			}
+		}
 		for (i = 1; i < 3; i++) {
 			/* set gradients h/v */
 			memset(&tex, 0, sizeof(struct r600_bytecode_tex));
@@ -5125,35 +5151,12 @@ static int tgsi_tex(struct r600_shader_ctx *ctx)
 			tex.resource_id = tex.sampler_id + R600_MAX_CONST_BUFFERS;
 			tex.resource_index_mode = sampler_index_mode;
 
-			if (tgsi_tex_src_requires_loading(ctx, i)) {
-				tex.src_gpr = r600_get_temp(ctx);
-				tex.src_sel_x = 0;
-				tex.src_sel_y = 1;
-				tex.src_sel_z = 2;
-				tex.src_sel_w = 3;
+			tex.src_gpr = (i == 1) ? temp_h : temp_v;
+			tex.src_sel_x = 0;
+			tex.src_sel_y = 1;
+			tex.src_sel_z = 2;
+			tex.src_sel_w = 3;
 
-				for (j = 0; j < 4; j++) {
-					memset(&alu, 0, sizeof(struct r600_bytecode_alu));
-					alu.op = ALU_OP1_MOV;
-                                        r600_bytecode_src(&alu.src[0], &ctx->src[i], j);
-                                        alu.dst.sel = tex.src_gpr;
-                                        alu.dst.chan = j;
-                                        if (j == 3)
-                                                alu.last = 1;
-                                        alu.dst.write = 1;
-                                        r = r600_bytecode_add_alu(ctx->bc, &alu);
-                                        if (r)
-                                                return r;
-				}
-
-			} else {
-				tex.src_gpr = tgsi_tex_get_src_gpr(ctx, i);
-				tex.src_sel_x = ctx->src[i].swizzle[0];
-				tex.src_sel_y = ctx->src[i].swizzle[1];
-				tex.src_sel_z = ctx->src[i].swizzle[2];
-				tex.src_sel_w = ctx->src[i].swizzle[3];
-				tex.src_rel = ctx->src[i].rel;
-			}
 			tex.dst_gpr = ctx->temp_reg; /* just to avoid confusing the asm scheduler */
 			tex.dst_sel_x = tex.dst_sel_y = tex.dst_sel_z = tex.dst_sel_w = 7;
 			if (inst->Texture.Texture != TGSI_TEXTURE_RECT) {
