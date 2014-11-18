@@ -3353,6 +3353,7 @@ vec4_visitor::move_uniform_array_access_to_pull_constants()
 {
    int pull_constant_loc[this->uniforms];
    memset(pull_constant_loc, -1, sizeof(pull_constant_loc));
+   bool nested_reladdr;
 
    /* Walk through and find array access of uniforms.  Put a copy of that
     * uniform in the pull constant buffer.
@@ -3360,44 +3361,51 @@ vec4_visitor::move_uniform_array_access_to_pull_constants()
     * Note that we don't move constant-indexed accesses to arrays.  No
     * testing has been done of the performance impact of this choice.
     */
-   foreach_block_and_inst_safe(block, vec4_instruction, inst, cfg) {
-      for (int i = 0 ; i < 3; i++) {
-	 if (inst->src[i].file != UNIFORM || !inst->src[i].reladdr)
-	    continue;
+   do {
+      nested_reladdr = false;
 
-	 int uniform = inst->src[i].reg;
+      foreach_block_and_inst_safe(block, vec4_instruction, inst, cfg) {
+         for (int i = 0 ; i < 3; i++) {
+            if (inst->src[i].file != UNIFORM || !inst->src[i].reladdr)
+               continue;
 
-	 /* If this array isn't already present in the pull constant buffer,
-	  * add it.
-	  */
-	 if (pull_constant_loc[uniform] == -1) {
-	    const gl_constant_value **values =
-               &stage_prog_data->param[uniform * 4];
+            int uniform = inst->src[i].reg;
 
-	    pull_constant_loc[uniform] = stage_prog_data->nr_pull_params / 4;
+            if (inst->src[i].reladdr->reladdr)
+               nested_reladdr = true;  /* will need another pass */
 
-	    assert(uniform < uniform_array_size);
-	    for (int j = 0; j < uniform_size[uniform] * 4; j++) {
-	       stage_prog_data->pull_param[stage_prog_data->nr_pull_params++]
-                  = values[j];
-	    }
-	 }
+            /* If this array isn't already present in the pull constant buffer,
+             * add it.
+             */
+            if (pull_constant_loc[uniform] == -1) {
+               const gl_constant_value **values =
+                  &stage_prog_data->param[uniform * 4];
 
-	 /* Set up the annotation tracking for new generated instructions. */
-	 base_ir = inst->ir;
-	 current_annotation = inst->annotation;
+               pull_constant_loc[uniform] = stage_prog_data->nr_pull_params / 4;
 
-	 dst_reg temp = dst_reg(this, glsl_type::vec4_type);
+               assert(uniform < uniform_array_size);
+               for (int j = 0; j < uniform_size[uniform] * 4; j++) {
+                  stage_prog_data->pull_param[stage_prog_data->nr_pull_params++]
+                     = values[j];
+               }
+            }
 
-	 emit_pull_constant_load(block, inst, temp, inst->src[i],
-				 pull_constant_loc[uniform]);
+            /* Set up the annotation tracking for new generated instructions. */
+            base_ir = inst->ir;
+            current_annotation = inst->annotation;
 
-	 inst->src[i].file = temp.file;
-	 inst->src[i].reg = temp.reg;
-	 inst->src[i].reg_offset = temp.reg_offset;
-	 inst->src[i].reladdr = NULL;
+            dst_reg temp = dst_reg(this, glsl_type::vec4_type);
+
+            emit_pull_constant_load(block, inst, temp, inst->src[i],
+                                    pull_constant_loc[uniform]);
+
+            inst->src[i].file = temp.file;
+            inst->src[i].reg = temp.reg;
+            inst->src[i].reg_offset = temp.reg_offset;
+            inst->src[i].reladdr = NULL;
+         }
       }
-   }
+   } while (nested_reladdr);
 
    /* Now there are no accesses of the UNIFORM file with a reladdr, so
     * no need to track them as larger-than-vec4 objects.  This will be
