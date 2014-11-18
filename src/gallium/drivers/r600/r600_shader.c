@@ -7095,7 +7095,7 @@ static int tgsi_umad(struct r600_shader_ctx *ctx)
 				for (k = 0; k < inst->Instruction.NumSrcRegs; k++) {
 					r600_bytecode_src(&alu.src[k], &ctx->src[k], i);
 				}
-				tgsi_dst(ctx, &inst->Dst[0], j, &alu.dst);
+				alu.dst.chan = j;
 				alu.dst.sel = ctx->temp_reg;
 				alu.dst.write = (j == i);
 				if (j == 3)
