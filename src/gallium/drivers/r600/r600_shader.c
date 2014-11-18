@@ -4919,7 +4919,8 @@ static inline boolean tgsi_tex_src_requires_loading(struct r600_shader_ctx *ctx,
 	return 	(inst->Src[index].Register.File != TGSI_FILE_TEMPORARY &&
 		inst->Src[index].Register.File != TGSI_FILE_INPUT &&
 		inst->Src[index].Register.File != TGSI_FILE_OUTPUT) ||
-		ctx->src[index].neg || ctx->src[index].abs;
+		ctx->src[index].neg || ctx->src[index].abs ||
+		(inst->Src[index].Register.File == TGSI_FILE_INPUT && ctx->type == TGSI_PROCESSOR_GEOMETRY);
 }
 
 static inline unsigned tgsi_tex_get_src_gpr(struct r600_shader_ctx *ctx,
