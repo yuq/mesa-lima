@@ -83,14 +83,18 @@ int bc_finalizer::run() {
 		last_cf = c;
 	}
 
-	if (last_cf->bc.op_ptr->flags & CF_ALU) {
+	if (!ctx.is_cayman() && last_cf->bc.op_ptr->flags & CF_ALU) {
 		last_cf = sh.create_cf(CF_OP_NOP);
 		sh.root->push_back(last_cf);
 	}
 
-	if (ctx.is_cayman())
-		last_cf->insert_after(sh.create_cf(CF_OP_CF_END));
-	else
+	if (ctx.is_cayman()) {
+		if (!last_cf) {
+			cf_node *c = sh.create_cf(CF_OP_CF_END);
+			sh.root->push_back(c);
+		} else
+			last_cf->insert_after(sh.create_cf(CF_OP_CF_END));
+	} else
 		last_cf->bc.end_of_program = 1;
 
 	for (unsigned t = EXP_PIXEL; t < EXP_TYPE_COUNT; ++t) {
