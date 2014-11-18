@@ -742,6 +742,7 @@ generate_fetch(struct gallivm_state *gallivm,
       val = lp_build_fetch_rgba_aos(gallivm,
                                     format_desc,
                                     lp_float32_vec4_type(),
+                                    FALSE,
                                     map_ptr,
                                     zero, zero, zero);
       LLVMBuildStore(builder, val, temp_ptr);
