@@ -131,6 +131,17 @@ has_uip(struct brw_context *brw, enum opcode opcode)
 }
 
 static bool
+has_branch_ctrl(struct brw_context *brw, enum opcode opcode)
+{
+   if (brw->gen < 8)
+      return false;
+
+   return opcode == BRW_OPCODE_IF ||
+          opcode == BRW_OPCODE_ELSE ||
+          opcode == BRW_OPCODE_GOTO;
+}
+
+static bool
 is_logic_instruction(unsigned opcode)
 {
    return opcode == BRW_OPCODE_AND ||
@@ -215,6 +226,11 @@ static const char *const cmpt_ctrl[2] = {
 static const char *const accwr[2] = {
    [0] = "",
    [1] = "AccWrEnable"
+};
+
+static const char *const branch_ctrl[2] = {
+   [0] = "",
+   [1] = "BranchCtrl"
 };
 
 static const char *const wectrl[2] = {
@@ -1544,9 +1560,13 @@ brw_disassemble_inst(FILE *file, struct brw_context *brw, brw_inst *inst,
       err |= control(file, "compaction", cmpt_ctrl, is_compacted, &space);
       err |= control(file, "thread control", thread_ctrl,
                      brw_inst_thread_control(brw, inst), &space);
-      if (brw->gen >= 6)
+      if (has_branch_ctrl(brw, opcode)) {
+         err |= control(file, "branch ctrl", branch_ctrl,
+                        brw_inst_branch_control(brw, inst), &space);
+      } else if (brw->gen >= 6) {
          err |= control(file, "acc write control", accwr,
                         brw_inst_acc_wr_control(brw, inst), &space);
+      }
       if (opcode == BRW_OPCODE_SEND || opcode == BRW_OPCODE_SENDC)
          err |= control(file, "end of thread", end_of_thread,
                         brw_inst_eot(brw, inst), &space);

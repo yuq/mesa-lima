@@ -820,6 +820,7 @@ enum opcode {
    BRW_OPCODE_MSAVE =	44,  /**< Pre-Gen6 */
    BRW_OPCODE_MRESTORE = 45, /**< Pre-Gen6 */
    BRW_OPCODE_PUSH =	46,  /**< Pre-Gen6 */
+   BRW_OPCODE_GOTO =	46,  /**< Gen8+    */
    BRW_OPCODE_POP =	47,  /**< Pre-Gen6 */
    BRW_OPCODE_WAIT =	48,
    BRW_OPCODE_SEND =	49,
