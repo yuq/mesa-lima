@@ -5535,9 +5535,24 @@ static int tgsi_tex(struct r600_shader_ctx *ctx)
 				/* texture offsets do not apply to other texture targets */
 			}
 		} else {
-			offset_x = ctx->literals[4 * inst->TexOffsets[0].Index + inst->TexOffsets[0].SwizzleX] << 1;
-			offset_y = ctx->literals[4 * inst->TexOffsets[0].Index + inst->TexOffsets[0].SwizzleY] << 1;
-			offset_z = ctx->literals[4 * inst->TexOffsets[0].Index + inst->TexOffsets[0].SwizzleZ] << 1;
+			switch (inst->Texture.Texture) {
+			case TGSI_TEXTURE_3D:
+				offset_z = ctx->literals[4 * inst->TexOffsets[0].Index + inst->TexOffsets[0].SwizzleZ] << 1;
+				/* fallthrough */
+			case TGSI_TEXTURE_2D:
+			case TGSI_TEXTURE_SHADOW2D:
+			case TGSI_TEXTURE_RECT:
+			case TGSI_TEXTURE_SHADOWRECT:
+			case TGSI_TEXTURE_2D_ARRAY:
+			case TGSI_TEXTURE_SHADOW2D_ARRAY:
+				offset_y = ctx->literals[4 * inst->TexOffsets[0].Index + inst->TexOffsets[0].SwizzleY] << 1;
+				/* fallthrough */
+			case TGSI_TEXTURE_1D:
+			case TGSI_TEXTURE_SHADOW1D:
+			case TGSI_TEXTURE_1D_ARRAY:
+			case TGSI_TEXTURE_SHADOW1D_ARRAY:
+				offset_x = ctx->literals[4 * inst->TexOffsets[0].Index + inst->TexOffsets[0].SwizzleX] << 1;
+			}
 		}
 	}
 
