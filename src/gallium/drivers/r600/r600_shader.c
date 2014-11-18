@@ -5763,11 +5763,18 @@ static int tgsi_tex(struct r600_shader_ctx *ctx)
 		int8_t texture_component_select = ctx->literals[4 * inst->Src[1].Register.Index + inst->Src[1].Register.SwizzleX];
 		tex.inst_mod = texture_component_select;
 
+		if (ctx->bc->chip_class == CAYMAN) {
 		/* GATHER4 result order is different from TGSI TG4 */
-		tex.dst_sel_x = (inst->Dst[0].Register.WriteMask & 2) ? 1 : 7;
-		tex.dst_sel_y = (inst->Dst[0].Register.WriteMask & 4) ? 2 : 7;
-		tex.dst_sel_z = (inst->Dst[0].Register.WriteMask & 1) ? 0 : 7;
-		tex.dst_sel_w = (inst->Dst[0].Register.WriteMask & 8) ? 3 : 7;
+			tex.dst_sel_x = (inst->Dst[0].Register.WriteMask & 2) ? 0 : 7;
+			tex.dst_sel_y = (inst->Dst[0].Register.WriteMask & 4) ? 1 : 7;
+			tex.dst_sel_z = (inst->Dst[0].Register.WriteMask & 1) ? 2 : 7;
+			tex.dst_sel_w = (inst->Dst[0].Register.WriteMask & 8) ? 3 : 7;
+		} else {
+			tex.dst_sel_x = (inst->Dst[0].Register.WriteMask & 2) ? 1 : 7;
+			tex.dst_sel_y = (inst->Dst[0].Register.WriteMask & 4) ? 2 : 7;
+			tex.dst_sel_z = (inst->Dst[0].Register.WriteMask & 1) ? 0 : 7;
+			tex.dst_sel_w = (inst->Dst[0].Register.WriteMask & 8) ? 3 : 7;
+		}
 	}
 	else if (inst->Instruction.Opcode == TGSI_OPCODE_LODQ) {
 		tex.dst_sel_x = (inst->Dst[0].Register.WriteMask & 2) ? 1 : 7;
