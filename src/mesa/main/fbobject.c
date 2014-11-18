@@ -3074,6 +3074,14 @@ invalidate_framebuffer_storage(GLenum target, GLsizei numAttachments,
          case GL_DEPTH_ATTACHMENT:
          case GL_STENCIL_ATTACHMENT:
             break;
+         case GL_DEPTH_STENCIL_ATTACHMENT:
+            /* GL_DEPTH_STENCIL_ATTACHMENT is a valid attachment point only
+             * in desktop and ES 3.0 profiles. Note that OES_packed_depth_stencil
+             * extension does not make this attachment point valid on ES 2.0.
+             */
+            if (_mesa_is_desktop_gl(ctx) || _mesa_is_gles3(ctx))
+               break;
+            /* fallthrough */
          case GL_COLOR_ATTACHMENT0:
          case GL_COLOR_ATTACHMENT1:
          case GL_COLOR_ATTACHMENT2:
