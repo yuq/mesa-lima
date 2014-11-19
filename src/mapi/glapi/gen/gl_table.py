@@ -26,8 +26,7 @@
 # Authors:
 #    Ian Romanick <idr@us.ibm.com>
 
-import sys
-import getopt
+import argparse
 
 import gl_XML
 import license
@@ -203,45 +202,42 @@ class PrintRemapTable(gl_XML.gl_print_base):
         return
 
 
-def show_usage():
-    print "Usage: %s [-f input_file_name] [-m mode] [-c ver]" % sys.argv[0]
-    print "    -m mode   Mode can be 'table' or 'remap_table'."
-    print "    -c ver    Version can be 'es1' or 'es2'."
-    sys.exit(1)
+def _parser():
+    """Parse arguments and return a namespace."""
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-f', '--filename',
+                        type=gl_XML.parse_GL_API,
+                        default='gl_API.xml',
+                        metavar="input_file_name",
+                        dest='api',
+                        help="Path to an XML description of OpenGL API.")
+    parser.add_argument('-m', '--mode',
+                        choices=['table', 'remap_table'],
+                        default='table',
+                        metavar="mode",
+                        help="Generate either a table or a remap_table")
+    parser.add_argument('-c', '--es-version',
+                        choices=[None, 'es1', 'es2'],
+                        default=None,
+                        metavar="ver",
+                        dest='es',
+                        help="filter functions for es")
+    return parser.parse_args()
 
 
 def main():
     """Main function."""
-    file_name = "gl_API.xml"
+    args = _parser()
 
-    try:
-        args, _ = getopt.getopt(sys.argv[1:], "f:m:c:")
-    except Exception:
-        show_usage()
+    if args.mode == "table":
+        printer = PrintGlTable(args.es)
+    elif args.mode == "remap_table":
+        printer = PrintRemapTable(args.es)
 
-    mode = "table"
-    es = None
-    for (arg, val) in args:
-        if arg == "-f":
-            file_name = val
-        elif arg == "-m":
-            mode = val
-        elif arg == "-c":
-            es = val
+    if args.es is not None:
+        args.api.filter_functions_by_api(args.es)
 
-    if mode == "table":
-        printer = PrintGlTable(es)
-    elif mode == "remap_table":
-        printer = PrintRemapTable(es)
-    else:
-        show_usage()
-
-    api = gl_XML.parse_GL_API(file_name)
-
-    if es is not None:
-        api.filter_functions_by_api(es)
-
-    printer.Print(api)
+    printer.Print(args.api)
 
 
 if __name__ == '__main__':
