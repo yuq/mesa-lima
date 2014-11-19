@@ -1111,7 +1111,7 @@ intel_miptree_copy_slice_sw(struct brw_context *brw,
                             int height)
 {
    void *src, *dst;
-   int src_stride, dst_stride;
+   ptrdiff_t src_stride, dst_stride;
    int cpp = dst_mt->cpp;
 
    intel_miptree_map(brw, src_mt,
@@ -1129,7 +1129,7 @@ intel_miptree_copy_slice_sw(struct brw_context *brw,
                      BRW_MAP_DIRECT_BIT,
                      &dst, &dst_stride);
 
-   DBG("sw blit %s mt %p %p/%d -> %s mt %p %p/%d (%dx%d)\n",
+   DBG("sw blit %s mt %p %p/%"PRIdPTR" -> %s mt %p %p/%"PRIdPTR" (%dx%d)\n",
        _mesa_get_format_name(src_mt->format),
        src_mt, src, src_stride,
        _mesa_get_format_name(dst_mt->format),
@@ -2259,6 +2259,17 @@ can_blit_slice(struct intel_mipmap_tree *mt,
    return true;
 }
 
+/**
+ * Parameter \a out_stride has type ptrdiff_t not because the buffer stride may
+ * exceed 32 bits but to diminish the likelihood subtle bugs in pointer
+ * arithmetic overflow.
+ *
+ * If you call this function and use \a out_stride, then you're doing pointer
+ * arithmetic on \a out_ptr. The type of \a out_stride doesn't prevent all
+ * bugs.  The caller must still take care to avoid 32-bit overflow errors in
+ * all arithmetic expressions that contain buffer offsets and pixel sizes,
+ * which usually have type uint32_t or GLuint.
+ */
 void
 intel_miptree_map(struct brw_context *brw,
                   struct intel_mipmap_tree *mt,
@@ -2270,7 +2281,7 @@ intel_miptree_map(struct brw_context *brw,
                   unsigned int h,
                   GLbitfield mode,
                   void **out_ptr,
-                  int *out_stride)
+                  ptrdiff_t *out_stride)
 {
    struct intel_miptree_map *map;
 

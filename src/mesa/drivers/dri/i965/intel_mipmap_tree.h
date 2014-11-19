@@ -733,7 +733,7 @@ intel_miptree_map(struct brw_context *brw,
 		  unsigned int h,
 		  GLbitfield mode,
 		  void **out_ptr,
-		  int *out_stride);
+		  ptrdiff_t *out_stride);
 
 void
 intel_miptree_unmap(struct brw_context *brw,

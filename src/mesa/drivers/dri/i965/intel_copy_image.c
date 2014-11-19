@@ -145,7 +145,7 @@ copy_image_with_memcpy(struct brw_context *brw,
 {
    bool same_slice;
    void *mapped, *src_mapped, *dst_mapped;
-   int src_stride, dst_stride, i, cpp;
+   ptrdiff_t src_stride, dst_stride, cpp;
    int map_x1, map_y1, map_x2, map_y2;
    GLuint src_bw, src_bh;
 
@@ -197,7 +197,7 @@ copy_image_with_memcpy(struct brw_context *brw,
    src_width /= (int)src_bw;
    src_height /= (int)src_bh;
 
-   for (i = 0; i < src_height; ++i) {
+   for (int i = 0; i < src_height; ++i) {
       memcpy(dst_mapped, src_mapped, src_width * cpp);
       src_mapped += src_stride;
       dst_mapped += dst_stride;

@@ -205,11 +205,12 @@ intel_map_texture_image(struct gl_context *ctx,
 			GLuint x, GLuint y, GLuint w, GLuint h,
 			GLbitfield mode,
 			GLubyte **map,
-			GLint *stride)
+			GLint *out_stride)
 {
    struct brw_context *brw = brw_context(ctx);
    struct intel_texture_image *intel_image = intel_texture_image(tex_image);
    struct intel_mipmap_tree *mt = intel_image->mt;
+   ptrdiff_t stride;
 
    /* Our texture data is always stored in a miptree. */
    assert(mt);
@@ -228,7 +229,9 @@ intel_map_texture_image(struct gl_context *ctx,
                      tex_image->Level + tex_image->TexObject->MinLevel,
                      slice + tex_image->TexObject->MinLayer,
                      x, y, w, h, mode,
-                     (void **)map, stride);
+                     (void **)map, &stride);
+
+   *out_stride = stride;
 }
 
 static void

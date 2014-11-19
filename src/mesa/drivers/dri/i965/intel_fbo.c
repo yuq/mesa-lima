@@ -127,7 +127,7 @@ intel_map_renderbuffer(struct gl_context *ctx,
    struct intel_renderbuffer *irb = intel_renderbuffer(rb);
    struct intel_mipmap_tree *mt;
    void *map;
-   int stride;
+   ptrdiff_t stride;
 
    if (srb->Buffer) {
       /* this is a malloc'd renderbuffer (accum buffer), not an irb */
@@ -189,7 +189,7 @@ intel_map_renderbuffer(struct gl_context *ctx,
       stride = -stride;
    }
 
-   DBG("%s: rb %d (%s) mt mapped: (%d, %d) (%dx%d) -> %p/%d\n",
+   DBG("%s: rb %d (%s) mt mapped: (%d, %d) (%dx%d) -> %p/%"PRIdPTR"\n",
        __FUNCTION__, rb->Name, _mesa_get_format_name(rb->Format),
        x, y, w, h, map, stride);
 
