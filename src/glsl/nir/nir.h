@@ -1356,6 +1356,8 @@ void nir_dump_dom_frontier(nir_shader *shader, FILE *fp);
 void nir_dump_cfg_impl(nir_function_impl *impl, FILE *fp);
 void nir_dump_cfg(nir_shader *shader, FILE *fp);
 
+void nir_split_var_copies(nir_shader *shader);
+
 void nir_lower_variables_scalar(nir_shader *shader, bool lower_globals,
                                 bool lower_io, bool add_names,
                                 bool native_integers);
