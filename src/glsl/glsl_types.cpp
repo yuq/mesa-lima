@@ -1225,8 +1225,13 @@ glsl_type::coordinate_components() const
       break;
    }
 
-   /* Array textures need an additional component for the array index. */
-   if (sampler_array)
+   /* Array textures need an additional component for the array index, except
+    * for cubemap array images that behave like a 2D array of interleaved
+    * cubemap faces.
+    */
+   if (sampler_array &&
+       !(base_type == GLSL_TYPE_IMAGE &&
+         sampler_dimensionality == GLSL_SAMPLER_DIM_CUBE))
       size += 1;
 
    return size;
