@@ -5095,6 +5095,14 @@ static int tgsi_tex(struct r600_shader_ctx *ctx)
 	    inst->Instruction.Opcode == TGSI_OPCODE_TG4)
 		sampler_src_reg = 2;
 
+	/* TGSI moves the sampler to src reg 3 for TXD */
+	if (inst->Instruction.Opcode == TGSI_OPCODE_TXD)
+		sampler_src_reg = 3;
+
+	sampler_index_mode = inst->Src[sampler_src_reg].Indirect.Index == 2 ? 2 : 0; // CF_INDEX_1 : CF_INDEX_NONE
+	if (sampler_index_mode)
+		ctx->shader->uses_index_registers = true;
+
 	src_gpr = tgsi_tex_get_src_gpr(ctx, 0);
 
 	if (inst->Texture.Texture == TGSI_TEXTURE_BUFFER) {
@@ -5109,67 +5117,7 @@ static int tgsi_tex(struct r600_shader_ctx *ctx)
 		}
 	}
 
-	if (inst->Instruction.Opcode == TGSI_OPCODE_TXD) {
-		int temp_h, temp_v;
-		/* TGSI moves the sampler to src reg 3 for TXD */
-		sampler_src_reg = 3;
-
-		sampler_index_mode = inst->Src[sampler_src_reg].Indirect.Index == 2 ? 2 : 0; // CF_INDEX_1 : CF_INDEX_NONE
-
-		src_loaded = TRUE;
-		for (i = 0; i < 3; i++) {
-			int treg = r600_get_temp(ctx);
-
-			if (i == 0)
-				src_gpr = treg;
-			else if (i == 1)
-				temp_h = treg;
-			else
-				temp_v = treg;
-
-			for (j = 0; j < 4; j++) {
-				memset(&alu, 0, sizeof(struct r600_bytecode_alu));
-				alu.op = ALU_OP1_MOV;
-                                r600_bytecode_src(&alu.src[0], &ctx->src[i], j);
-                                alu.dst.sel = treg;
-                                alu.dst.chan = j;
-                                if (j == 3)
-                                   alu.last = 1;
-                                alu.dst.write = 1;
-                                r = r600_bytecode_add_alu(ctx->bc, &alu);
-                                if (r)
-                                    return r;
-			}
-		}
-		for (i = 1; i < 3; i++) {
-			/* set gradients h/v */
-			memset(&tex, 0, sizeof(struct r600_bytecode_tex));
-			tex.op = (i == 1) ? FETCH_OP_SET_GRADIENTS_H :
-				FETCH_OP_SET_GRADIENTS_V;
-			tex.sampler_id = tgsi_tex_get_src_gpr(ctx, sampler_src_reg);
-			tex.sampler_index_mode = sampler_index_mode;
-			tex.resource_id = tex.sampler_id + R600_MAX_CONST_BUFFERS;
-			tex.resource_index_mode = sampler_index_mode;
-
-			tex.src_gpr = (i == 1) ? temp_h : temp_v;
-			tex.src_sel_x = 0;
-			tex.src_sel_y = 1;
-			tex.src_sel_z = 2;
-			tex.src_sel_w = 3;
-
-			tex.dst_gpr = ctx->temp_reg; /* just to avoid confusing the asm scheduler */
-			tex.dst_sel_x = tex.dst_sel_y = tex.dst_sel_z = tex.dst_sel_w = 7;
-			if (inst->Texture.Texture != TGSI_TEXTURE_RECT) {
-				tex.coord_type_x = 1;
-				tex.coord_type_y = 1;
-				tex.coord_type_z = 1;
-				tex.coord_type_w = 1;
-			}
-			r = r600_bytecode_add_tex(ctx->bc, &tex);
-			if (r)
-				return r;
-		}
-	} else if (inst->Instruction.Opcode == TGSI_OPCODE_TXP) {
+	if (inst->Instruction.Opcode == TGSI_OPCODE_TXP) {
 		int out_chan;
 		/* Add perspective divide */
 		if (ctx->bc->chip_class == CAYMAN) {
@@ -5233,9 +5181,6 @@ static int tgsi_tex(struct r600_shader_ctx *ctx)
 		src_gpr = ctx->temp_reg;
 	}
 
-	sampler_index_mode = inst->Src[sampler_src_reg].Indirect.Index == 2 ? 2 : 0; // CF_INDEX_1 : CF_INDEX_NONE
-	if (sampler_index_mode)
-		ctx->shader->uses_index_registers = true;
 
 	if ((inst->Texture.Texture == TGSI_TEXTURE_CUBE ||
 	     inst->Texture.Texture == TGSI_TEXTURE_CUBE_ARRAY ||
@@ -5452,6 +5397,69 @@ static int tgsi_tex(struct r600_shader_ctx *ctx)
 
 		src_loaded = TRUE;
 		src_gpr = ctx->temp_reg;
+	}
+
+	if (inst->Instruction.Opcode == TGSI_OPCODE_TXD) {
+		int temp_h = 0, temp_v = 0;
+		int start_val = 0;
+
+		/* if we've already loaded the src (i.e. CUBE don't reload it). */
+		if (src_loaded == TRUE)
+			start_val = 1;
+		else
+			src_loaded = TRUE;
+		for (i = start_val; i < 3; i++) {
+			int treg = r600_get_temp(ctx);
+
+			if (i == 0)
+				src_gpr = treg;
+			else if (i == 1)
+				temp_h = treg;
+			else
+				temp_v = treg;
+
+			for (j = 0; j < 4; j++) {
+				memset(&alu, 0, sizeof(struct r600_bytecode_alu));
+				alu.op = ALU_OP1_MOV;
+                                r600_bytecode_src(&alu.src[0], &ctx->src[i], j);
+                                alu.dst.sel = treg;
+                                alu.dst.chan = j;
+                                if (j == 3)
+                                   alu.last = 1;
+                                alu.dst.write = 1;
+                                r = r600_bytecode_add_alu(ctx->bc, &alu);
+                                if (r)
+                                    return r;
+			}
+		}
+		for (i = 1; i < 3; i++) {
+			/* set gradients h/v */
+			memset(&tex, 0, sizeof(struct r600_bytecode_tex));
+			tex.op = (i == 1) ? FETCH_OP_SET_GRADIENTS_H :
+				FETCH_OP_SET_GRADIENTS_V;
+			tex.sampler_id = tgsi_tex_get_src_gpr(ctx, sampler_src_reg);
+			tex.sampler_index_mode = sampler_index_mode;
+			tex.resource_id = tex.sampler_id + R600_MAX_CONST_BUFFERS;
+			tex.resource_index_mode = sampler_index_mode;
+
+			tex.src_gpr = (i == 1) ? temp_h : temp_v;
+			tex.src_sel_x = 0;
+			tex.src_sel_y = 1;
+			tex.src_sel_z = 2;
+			tex.src_sel_w = 3;
+
+			tex.dst_gpr = r600_get_temp(ctx); /* just to avoid confusing the asm scheduler */
+			tex.dst_sel_x = tex.dst_sel_y = tex.dst_sel_z = tex.dst_sel_w = 7;
+			if (inst->Texture.Texture != TGSI_TEXTURE_RECT) {
+				tex.coord_type_x = 1;
+				tex.coord_type_y = 1;
+				tex.coord_type_z = 1;
+				tex.coord_type_w = 1;
+			}
+			r = r600_bytecode_add_tex(ctx->bc, &tex);
+			if (r)
+				return r;
+		}
 	}
 
 	if (src_requires_loading && !src_loaded) {
