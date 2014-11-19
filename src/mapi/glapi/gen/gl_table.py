@@ -2,6 +2,7 @@
 
 # (C) Copyright IBM Corporation 2004
 # All Rights Reserved.
+# Copyright (c) 2014 Intel Corporation
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -25,9 +26,12 @@
 # Authors:
 #    Ian Romanick <idr@us.ibm.com>
 
+import sys
+import getopt
+
 import gl_XML
 import license
-import sys, getopt
+
 
 class PrintGlTable(gl_XML.gl_print_base):
     def __init__(self, es=False):
@@ -39,9 +43,8 @@ class PrintGlTable(gl_XML.gl_print_base):
         self.license = license.bsd_license_template % ( \
 """Copyright (C) 1999-2003  Brian Paul   All Rights Reserved.
 (C) Copyright IBM Corporation 2004""", "BRIAN PAUL, IBM")
-        self.ifdef_emitted = False;
+        self.ifdef_emitted = False
         return
-
 
     def printBody(self, api):
         for f in api.functionIterateByOffset():
@@ -49,10 +52,10 @@ class PrintGlTable(gl_XML.gl_print_base):
                 print '#if !defined HAVE_SHARED_GLAPI'
                 self.ifdef_emitted = True
             arg_string = f.get_parameter_string()
-            print '   %s (GLAPIENTRYP %s)(%s); /* %d */' % (f.return_type, f.name, arg_string, f.offset)
+            print '   %s (GLAPIENTRYP %s)(%s); /* %d */' % (
+                f.return_type, f.name, arg_string, f.offset)
 
         print '#endif /* !defined HAVE_SHARED_GLAPI */'
-
 
     def printRealHeader(self):
         print '#ifndef GLAPIENTRYP'
@@ -68,7 +71,6 @@ class PrintGlTable(gl_XML.gl_print_base):
         print '{'
         return
 
-
     def printRealFooter(self):
         print '};'
         return
@@ -81,7 +83,8 @@ class PrintRemapTable(gl_XML.gl_print_base):
         self.es = es
         self.header_tag = '_DISPATCH_H_'
         self.name = "gl_table.py (from Mesa)"
-        self.license = license.bsd_license_template % ("(C) Copyright IBM Corporation 2005", "IBM")
+        self.license = license.bsd_license_template % (
+            "(C) Copyright IBM Corporation 2005", "IBM")
         return
 
 
@@ -99,6 +102,7 @@ class PrintRemapTable(gl_XML.gl_print_base):
  */
 """
         return
+
 
     def printBody(self, api):
         print '#define CALL_by_offset(disp, cast, offset, parameters) \\'
@@ -124,10 +128,10 @@ class PrintRemapTable(gl_XML.gl_print_base):
         count = 0
         for f in api.functionIterateByOffset():
             if not f.is_abi():
-                functions.append( [f, count] )
+                functions.append([f, count])
                 count += 1
             else:
-                abi_functions.append( [f, -1] )
+                abi_functions.append([f, -1])
 
             if self.es:
                 # remember functions with aliases
@@ -165,7 +169,7 @@ class PrintRemapTable(gl_XML.gl_print_base):
         print ''
 
         for f, index in abi_functions + functions:
-            arg_string = gl_XML.create_parameter_string( f.parameters, 0 )
+            arg_string = gl_XML.create_parameter_string(f.parameters, 0)
 
             print 'typedef %s (GLAPIENTRYP _glptr_%s)(%s);' % (f.return_type, f.name, arg_string)
             print '#define CALL_%s(disp, parameters) \\' % (f.name)
@@ -205,17 +209,19 @@ def show_usage():
     print "    -c ver    Version can be 'es1' or 'es2'."
     sys.exit(1)
 
-if __name__ == '__main__':
+
+def main():
+    """Main function."""
     file_name = "gl_API.xml"
 
     try:
-        (args, trail) = getopt.getopt(sys.argv[1:], "f:m:c:")
-    except Exception,e:
+        args, _ = getopt.getopt(sys.argv[1:], "f:m:c:")
+    except Exception:
         show_usage()
 
     mode = "table"
     es = None
-    for (arg,val) in args:
+    for (arg, val) in args:
         if arg == "-f":
             file_name = val
         elif arg == "-m":
@@ -230,9 +236,13 @@ if __name__ == '__main__':
     else:
         show_usage()
 
-    api = gl_XML.parse_GL_API( file_name )
+    api = gl_XML.parse_GL_API(file_name)
 
     if es is not None:
         api.filter_functions_by_api(es)
 
-    printer.Print( api )
+    printer.Print(api)
+
+
+if __name__ == '__main__':
+    main()
