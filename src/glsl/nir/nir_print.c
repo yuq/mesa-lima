@@ -274,6 +274,9 @@ print_deref_array(nir_deref_array *deref, print_var_state *state, FILE *fp)
          fprintf(fp, "%u + ", deref->base_offset);
       print_src(&deref->indirect, fp);
       break;
+   case nir_deref_array_type_wildcard:
+      fprintf(fp, "*");
+      break;
    }
    fprintf(fp, "]");
 }
