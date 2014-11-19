@@ -86,7 +86,7 @@ lower_instr(nir_intrinsic_instr *instr, nir_function_impl *impl)
 
       offset_const->value.u[0] += deref_array->base_offset;
 
-      if (deref_array->has_indirect) {
+      if (deref_array->deref_array_type == nir_deref_array_type_indirect) {
          nir_load_const_instr *atomic_counter_size =
                nir_load_const_instr_create(mem_ctx);
          atomic_counter_size->num_components = 1;

@@ -51,7 +51,7 @@ get_deref_name_offset(nir_deref_var *deref_var,
       switch (deref->deref_type) {
          case nir_deref_type_array:
             deref_array = nir_deref_as_array(deref);
-            if (deref_array->has_indirect) {
+            if (deref_array->deref_array_type == nir_deref_array_type_indirect) {
                /* GLSL 1.10 and 1.20 allowed variable sampler array indices,
                 * while GLSL 1.30 requires that the array indices be
                 * constant integer expressions.  We don't expect any driver

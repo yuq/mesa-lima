@@ -625,11 +625,16 @@ typedef struct {
    nir_variable *var;
 } nir_deref_var;
 
+typedef enum {
+   nir_deref_array_type_direct,
+   nir_deref_array_type_indirect,
+} nir_deref_array_type;
+
 typedef struct {
    nir_deref deref;
 
+   nir_deref_array_type deref_array_type;
    unsigned base_offset;
-   bool has_indirect;
    nir_src indirect;
 } nir_deref_array;
 

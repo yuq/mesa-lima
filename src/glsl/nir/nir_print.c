@@ -265,12 +265,15 @@ static void
 print_deref_array(nir_deref_array *deref, print_var_state *state, FILE *fp)
 {
    fprintf(fp, "[");
-   if (!deref->has_indirect || deref->base_offset != 0)
+   switch (deref->deref_array_type) {
+   case nir_deref_array_type_direct:
       fprintf(fp, "%u", deref->base_offset);
-   if (deref->has_indirect) {
+      break;
+   case nir_deref_array_type_indirect:
       if (deref->base_offset != 0)
-         fprintf(fp, " + ");
+         fprintf(fp, "%u + ", deref->base_offset);
       print_src(&deref->indirect, fp);
+      break;
    }
    fprintf(fp, "]");
 }

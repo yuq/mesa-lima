@@ -522,7 +522,7 @@ nir_deref_array_create(void *mem_ctx)
    nir_deref_array *deref = ralloc(mem_ctx, nir_deref_array);
    deref->deref.deref_type = nir_deref_type_array;
    deref->deref.child = NULL;
-   deref->has_indirect = false;
+   deref->deref_array_type = nir_deref_array_type_direct;
    src_init(&deref->indirect);
    deref->base_offset = 0;
    return deref;
@@ -553,9 +553,9 @@ copy_deref_array(void *mem_ctx, nir_deref_array *deref)
 {
    nir_deref_array *ret = nir_deref_array_create(mem_ctx);
    ret->base_offset = deref->base_offset;
-   if (deref->has_indirect) {
-      ret->has_indirect = true;
-      ret->indirect = deref->indirect;
+   ret->deref_array_type = deref->deref_array_type;
+   if (deref->deref_array_type == nir_deref_array_type_indirect) {
+      ret->indirect = nir_src_copy(deref->indirect, mem_ctx);
    }
    ret->deref.type = deref->deref.type;
    if (deref->deref.child)
@@ -1477,7 +1477,7 @@ static bool
 visit_deref_array_src(nir_deref_array *deref, nir_foreach_src_cb cb,
                       void *state)
 {
-   if (deref->has_indirect)
+   if (deref->deref_array_type == nir_deref_array_type_indirect)
       return visit_src(&deref->indirect, cb, state);
    return true;
 }

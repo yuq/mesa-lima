@@ -267,7 +267,8 @@ validate_deref_chain(nir_deref *deref, validate_state *state)
       switch (deref->deref_type) {
       case nir_deref_type_array:
          assert(deref->type == glsl_get_array_element(parent->type));
-         if (nir_deref_as_array(deref)->has_indirect)
+         if (nir_deref_as_array(deref)->deref_array_type ==
+             nir_deref_array_type_indirect)
             validate_src(&nir_deref_as_array(deref)->indirect, state);
          break;
 

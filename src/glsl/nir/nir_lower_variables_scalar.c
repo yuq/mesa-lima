@@ -169,7 +169,7 @@ deref_has_indirect(nir_deref_var *deref_var)
       deref = deref->child;
       if (deref->deref_type == nir_deref_type_array) {
          nir_deref_array *deref_array = nir_deref_as_array(deref);
-         if (deref_array->has_indirect)
+         if (deref_array->deref_array_type == nir_deref_array_type_indirect)
             return true;
       }
    }
@@ -198,7 +198,7 @@ get_deref_offset(nir_deref_var *deref_var, nir_instr *instr,
 
          base_offset += size * deref_array->base_offset;
 
-         if (deref_array->has_indirect) {
+         if (deref_array->deref_array_type == nir_deref_array_type_indirect) {
             nir_src src;
             if (size == 1) {
                src = deref_array->indirect;

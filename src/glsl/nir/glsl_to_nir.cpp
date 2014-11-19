@@ -1767,9 +1767,10 @@ nir_visitor::visit(ir_dereference_array *ir)
 
    ir_constant *const_index = ir->array_index->as_constant();
    if (const_index != NULL) {
+      deref->deref_array_type = nir_deref_array_type_direct;
       deref->base_offset = const_index->value.u[0];
    } else {
-      deref->has_indirect = true;
+      deref->deref_array_type = nir_deref_array_type_indirect;
       deref->indirect = evaluate_rvalue(ir->array_index);
    }
 
