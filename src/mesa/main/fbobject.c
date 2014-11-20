@@ -1430,6 +1430,9 @@ _mesa_base_fbo_format(struct gl_context *ctx, GLenum internalFormat)
    case GL_RGB8:
       return GL_RGB;
    case GL_RGB:
+      if (_mesa_is_gles3(ctx))
+         return GL_RGB;
+      /* fallthrough */
    case GL_R3_G3_B2:
    case GL_RGB4:
    case GL_RGB5:
@@ -1444,6 +1447,9 @@ _mesa_base_fbo_format(struct gl_context *ctx, GLenum internalFormat)
    case GL_RGBA8:
       return GL_RGBA;
    case GL_RGBA:
+      if (_mesa_is_gles3(ctx))
+         return GL_RGBA;
+      /* fallthrough */
    case GL_RGBA2:
    case GL_RGBA12:
    case GL_RGBA16:
