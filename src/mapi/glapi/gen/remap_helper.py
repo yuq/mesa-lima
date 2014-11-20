@@ -24,8 +24,7 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
-import sys
-import getopt
+import argparse
 
 import license
 import gl_XML
@@ -167,34 +166,33 @@ class PrintGlRemap(gl_XML.gl_print_base):
         return
 
 
-def show_usage():
-    print "Usage: %s [-f input_file_name] [-c ver]" % sys.argv[0]
-    print "    -c ver    Version can be 'es1' or 'es2'."
-    sys.exit(1)
+def _parser():
+    """Parse input options and return a namsepace."""
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-f', '--filename',
+                        type=gl_XML.parse_GL_API,
+                        default="gl_API.xml",
+                        metavar="input_file_name",
+                        dest='api',
+                        help="An xml description file.")
+    parser.add_argument('-c', '--es-version',
+                        choices=[None, 'es1', 'es2'],
+                        default=None,
+                        metavar='ver',
+                        dest='es',
+                        help='A GLES version to support')
+    return parser.parse_args()
 
 
 def main():
-    file_name = "gl_API.xml"
+    """Main function."""
+    args = _parser()
 
-    try:
-        (args, trail) = getopt.getopt(sys.argv[1:], "f:c:")
-    except Exception:
-        show_usage()
-
-    es = None
-    for (arg,val) in args:
-        if arg == "-f":
-            file_name = val
-        elif arg == "-c":
-            es = val
-
-    api = gl_XML.parse_GL_API( file_name )
-
-    if es is not None:
-        api.filter_functions_by_api(es)
+    if args.es is not None:
+        args.api.filter_functions_by_api(args.es)
 
     printer = PrintGlRemap()
-    printer.Print( api )
+    printer.Print(args.api)
 
 
 if __name__ == '__main__':
