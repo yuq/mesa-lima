@@ -1374,7 +1374,6 @@ DECL_SPECIAL(CND)
     }
 
     cnd = tx_src_param(tx, &tx->insn.src[0]);
-#ifdef NINE_TGSI_LAZY_R600
     cgt = tx_scratch(tx);
 
     if (tx->version.major == 1 && tx->version.minor < 4) {
@@ -1387,13 +1386,6 @@ DECL_SPECIAL(CND)
     ureg_CMP(tx->ureg, dst,
              tx_src_param(tx, &tx->insn.src[1]),
              tx_src_param(tx, &tx->insn.src[2]), ureg_negate(cnd));
-#else
-    if (tx->version.major == 1 && tx->version.minor < 4)
-        cnd = ureg_scalar(cnd, TGSI_SWIZZLE_W);
-    ureg_CND(tx->ureg, dst,
-             tx_src_param(tx, &tx->insn.src[1]),
-             tx_src_param(tx, &tx->insn.src[2]), cnd);
-#endif
     return D3D_OK;
 }
 
@@ -2356,7 +2348,7 @@ struct sm1_op_info inst_table[] =
     _OPI(EXPP, EXP, V(0,0), V(1,1), V(0,0), V(0,0), 1, 1, NULL),
     _OPI(EXPP, EX2, V(2,0), V(3,0), V(0,0), V(0,0), 1, 1, NULL),
     _OPI(LOGP, LG2, V(0,0), V(3,0), V(0,0), V(0,0), 1, 1, NULL),
-    _OPI(CND,  CND, V(0,0), V(0,0), V(0,0), V(1,4), 1, 3, SPECIAL(CND)),
+    _OPI(CND,  NOP, V(0,0), V(0,0), V(0,0), V(1,4), 1, 3, SPECIAL(CND)),
 
     _OPI(DEF, NOP, V(0,0), V(3,0), V(0,0), V(3,0), 1, 0, SPECIAL(DEF)),
 
