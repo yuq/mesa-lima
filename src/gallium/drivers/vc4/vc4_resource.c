@@ -126,7 +126,10 @@ vc4_resource_transfer_map(struct pipe_context *pctx,
          * need to do syncing stuff here yet.
          */
 
-        buf = vc4_bo_map(rsc->bo);
+        if (usage & PIPE_TRANSFER_UNSYNCHRONIZED)
+                buf = vc4_bo_map_unsynchronized(rsc->bo);
+        else
+                buf = vc4_bo_map(rsc->bo);
         if (!buf) {
                 fprintf(stderr, "Failed to map bo\n");
                 goto fail;

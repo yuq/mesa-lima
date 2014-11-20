@@ -47,6 +47,13 @@ struct vc4_screen {
 
         void *simulator_mem_base;
         uint32_t simulator_mem_size;
+
+        /** The last seqno we've completed a wait for.
+         *
+         * This lets us slightly optimize our waits by skipping wait syscalls
+         * if we know the job's already done.
+         */
+        uint64_t finished_seqno;
 };
 
 static inline struct vc4_screen *
@@ -66,5 +73,11 @@ vc4_screen_bo_from_handle(struct pipe_screen *pscreen,
                           unsigned *out_stride);
 
 extern uint32_t vc4_debug;
+
+void
+vc4_fence_init(struct vc4_screen *screen);
+
+struct vc4_fence *
+vc4_fence_create(struct vc4_screen *screen, uint64_t seqno);
 
 #endif /* VC4_SCREEN_H */

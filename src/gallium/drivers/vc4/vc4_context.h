@@ -219,6 +219,9 @@ struct vc4_context {
 
         uint8_t prim_mode;
 
+        /** Seqno of the last CL flush's job. */
+        uint64_t last_emit_seqno;
+
         /** @{ Current pipeline state objects */
         struct pipe_scissor_state scissor;
         struct pipe_blend_state *blend;

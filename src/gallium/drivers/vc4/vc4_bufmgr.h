@@ -78,9 +78,17 @@ vc4_bo_unreference(struct vc4_bo **bo)
         *bo = NULL;
 }
 
-
 void *
 vc4_bo_map(struct vc4_bo *bo);
+
+void *
+vc4_bo_map_unsynchronized(struct vc4_bo *bo);
+
+bool
+vc4_bo_wait(struct vc4_bo *bo, uint64_t timeout_ns);
+
+bool
+vc4_wait_seqno(struct vc4_screen *screen, uint64_t seqno, uint64_t timeout_ns);
 
 #endif /* VC4_BUFMGR_H */
 

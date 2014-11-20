@@ -322,6 +322,8 @@ vc4_flush(struct pipe_context *pctx)
                 }
         }
 
+        vc4->last_emit_seqno = submit.seqno;
+
         vc4_reset_cl(&vc4->bcl);
         vc4_reset_cl(&vc4->rcl);
         vc4_reset_cl(&vc4->shader_rec);
@@ -350,7 +352,15 @@ static void
 vc4_pipe_flush(struct pipe_context *pctx, struct pipe_fence_handle **fence,
                unsigned flags)
 {
+        struct vc4_context *vc4 = vc4_context(pctx);
+
         vc4_flush(pctx);
+
+        if (fence) {
+                struct vc4_fence *f = vc4_fence_create(vc4->screen,
+                                                       vc4->last_emit_seqno);
+                *fence = (struct pipe_fence_handle *)f;
+        }
 }
 
 /**

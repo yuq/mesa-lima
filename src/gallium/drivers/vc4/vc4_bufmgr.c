@@ -152,8 +152,57 @@ vc4_bo_flink(struct vc4_bo *bo, uint32_t *name)
         return true;
 }
 
+bool
+vc4_wait_seqno(struct vc4_screen *screen, uint64_t seqno, uint64_t timeout_ns)
+{
+#ifndef USE_VC4_SIMULATOR
+        struct drm_vc4_wait_seqno wait;
+        memset(&wait, 0, sizeof(wait));
+        wait.seqno = seqno;
+        wait.timeout_ns = timeout_ns;
+
+        int ret = drmIoctl(screen->fd, DRM_IOCTL_VC4_WAIT_SEQNO, &wait);
+        if (ret == -ETIME) {
+                return false;
+        } else if (ret != 0) {
+                fprintf(stderr, "wait failed\n");
+                abort();
+        } else {
+                screen->finished_seqno = wait.seqno;
+                return true;
+        }
+#else
+        return true;
+#endif
+}
+
+bool
+vc4_bo_wait(struct vc4_bo *bo, uint64_t timeout_ns)
+{
+#ifndef USE_VC4_SIMULATOR
+        struct vc4_screen *screen = bo->screen;
+
+        struct drm_vc4_wait_bo wait;
+        memset(&wait, 0, sizeof(wait));
+        wait.handle = bo->handle;
+        wait.timeout_ns = timeout_ns;
+
+        int ret = drmIoctl(screen->fd, DRM_IOCTL_VC4_WAIT_BO, &wait);
+        if (ret == -ETIME) {
+                return false;
+        } else if (ret != 0) {
+                fprintf(stderr, "wait failed\n");
+                abort();
+        } else {
+                return true;
+        }
+#else
+        return true;
+#endif
+}
+
 void *
-vc4_bo_map(struct vc4_bo *bo)
+vc4_bo_map_unsynchronized(struct vc4_bo *bo)
 {
         int ret;
 
@@ -178,4 +227,18 @@ vc4_bo_map(struct vc4_bo *bo)
         }
 
         return bo->map;
+}
+
+void *
+vc4_bo_map(struct vc4_bo *bo)
+{
+        void *map = vc4_bo_map_unsynchronized(bo);
+
+        bool ok = vc4_bo_wait(bo, PIPE_TIMEOUT_INFINITE);
+        if (!ok) {
+                fprintf(stderr, "BO wait for map failed\n");
+                abort();
+        }
+
+        return map;
 }
