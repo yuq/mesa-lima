@@ -1188,17 +1188,27 @@ add_use_cb(nir_src *src, void *state)
    return true;
 }
 
+static void
+add_ssa_def(nir_instr *instr, nir_ssa_def *def)
+{
+   if (instr->block && def->index == UINT_MAX) {
+      nir_function_impl *impl =
+         nir_cf_node_get_function(&instr->block->cf_node);
+
+      def->index = impl->ssa_alloc++;
+   }
+}
+
 static bool
 add_def_cb(nir_dest *dest, void *state)
 {
    nir_instr *instr = (nir_instr *) state;
 
-   if (dest->is_ssa)
-      return true;
-
-   nir_register *reg = dest->reg.reg;
-
-   _mesa_set_add(reg->defs, _mesa_hash_pointer(instr), instr);
+   if (dest->is_ssa) {
+      add_ssa_def(instr, &dest->ssa);
+   } else {
+      _mesa_set_add(dest->reg.reg->defs, _mesa_hash_pointer(instr), instr);
+   }
 
    return true;
 }
@@ -1206,8 +1216,12 @@ add_def_cb(nir_dest *dest, void *state)
 static void
 add_defs_uses(nir_instr *instr)
 {
-   nir_foreach_src(instr, add_use_cb, instr);
-   nir_foreach_dest(instr, add_def_cb, instr);
+   if (instr->type == nir_instr_type_ssa_undef) {
+      add_ssa_def(instr, &nir_instr_as_ssa_undef(instr)->def);
+   } else {
+      nir_foreach_src(instr, add_use_cb, instr);
+      nir_foreach_dest(instr, add_def_cb, instr);
+   }
 }
 
 void
@@ -1748,17 +1762,25 @@ nir_instr_rewrite_src(nir_instr *instr, nir_src *src, nir_src new_src)
 }
 
 void
-nir_ssa_def_init(nir_function_impl *impl, nir_instr *instr, nir_ssa_def *def,
+nir_ssa_def_init(nir_instr *instr, nir_ssa_def *def,
                  unsigned num_components, const char *name)
 {
    void *mem_ctx = ralloc_parent(instr);
 
    def->name = name;
-   def->index = impl->ssa_alloc++;
    def->parent_instr = instr;
    def->uses = _mesa_set_create(mem_ctx, _mesa_key_pointer_equal);
    def->if_uses = _mesa_set_create(mem_ctx, _mesa_key_pointer_equal);
    def->num_components = num_components;
+
+   if (instr->block) {
+      nir_function_impl *impl =
+         nir_cf_node_get_function(&instr->block->cf_node);
+
+      def->index = impl->ssa_alloc++;
+   } else {
+      def->index = UINT_MAX;
+   }
 }
 
 struct ssa_def_rewrite_state {

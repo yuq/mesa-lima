@@ -1318,9 +1318,8 @@ bool nir_foreach_src(nir_instr *instr, nir_foreach_src_cb cb, void *state);
 bool nir_srcs_equal(nir_src src1, nir_src src2);
 void nir_instr_rewrite_src(nir_instr *instr, nir_src *src, nir_src new_src);
 
-void nir_ssa_def_init(nir_function_impl *impl, nir_instr *instr,
-                      nir_ssa_def *def, unsigned num_components,
-                      const char *name);
+void nir_ssa_def_init(nir_instr *instr, nir_ssa_def *def,
+                      unsigned num_components, const char *name);
 void nir_ssa_def_rewrite_uses(nir_ssa_def *def, nir_src new_src, void *mem_ctx);
 
 /* visits basic blocks in source-code order */

@@ -163,7 +163,7 @@ static nir_ssa_def *get_ssa_src(nir_register *reg, rewrite_state *state)
        * to preserve the information that this source is undefined
        */
       nir_ssa_undef_instr *instr = nir_ssa_undef_instr_create(state->mem_ctx);
-      nir_ssa_def_init(state->impl, &instr->instr, &instr->def,
+      nir_ssa_def_init(&instr->instr, &instr->def,
                        reg->num_components, NULL);
 
       /*
@@ -246,7 +246,7 @@ rewrite_def_forwards(nir_dest *dest, void *_state)
       name = ralloc_asprintf(state->mem_ctx, "%s_%u", dest->reg.reg->name,
                              state->states[index].num_defs);
 
-   nir_ssa_def_init(state->impl, state->parent_instr, &dest->ssa,
+   nir_ssa_def_init(state->parent_instr, &dest->ssa,
                     reg->num_components, name);
 
    /* push our SSA destination on the stack */
@@ -312,7 +312,7 @@ rewrite_alu_instr_forward(nir_alu_instr *instr, rewrite_state *state)
 
       instr->dest.write_mask = (1 << num_components) - 1;
       instr->dest.dest.is_ssa = true;
-      nir_ssa_def_init(state->impl, &instr->instr, &instr->dest.dest.ssa,
+      nir_ssa_def_init(&instr->instr, &instr->dest.dest.ssa,
                        num_components, name);
 
       if (nir_op_infos[instr->op].output_size == 0) {

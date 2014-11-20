@@ -34,7 +34,6 @@
 
 struct peephole_ffma_state {
    void *mem_ctx;
-   nir_function_impl *impl;
    bool progress;
 };
 
@@ -135,7 +134,7 @@ nir_opt_peephole_ffma_block(nir_block *block, void *void_state)
 
       if (add->dest.dest.is_ssa) {
          ffma->dest.dest.is_ssa = true;
-         nir_ssa_def_init(state->impl, &ffma->instr, &ffma->dest.dest.ssa,
+         nir_ssa_def_init(&ffma->instr, &ffma->dest.dest.ssa,
                           add->dest.dest.ssa.num_components,
                           add->dest.dest.ssa.name);
 
@@ -165,7 +164,6 @@ nir_opt_peephole_ffma_impl(nir_function_impl *impl)
    struct peephole_ffma_state state;
 
    state.mem_ctx = ralloc_parent(impl);
-   state.impl = impl;
    state.progress = false;
 
    nir_foreach_block(impl, nir_opt_peephole_ffma_block, &state);

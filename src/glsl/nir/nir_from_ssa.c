@@ -314,7 +314,7 @@ isolate_phi_nodes_block(nir_block *block, void *void_state)
                        _mesa_hash_pointer(&pcopy->instr), &pcopy->instr);
 
          copy->dest.is_ssa = true;
-         nir_ssa_def_init(state->impl, &pcopy->instr, &copy->dest.ssa,
+         nir_ssa_def_init(&pcopy->instr, &copy->dest.ssa,
                           phi->dest.ssa.num_components, src->src.ssa->name);
 
          struct set_entry *entry = _mesa_set_search(src->src.ssa->uses,
@@ -339,7 +339,7 @@ isolate_phi_nodes_block(nir_block *block, void *void_state)
       exec_list_push_tail(&block_pcopy->copies, &copy->node);
 
       copy->dest.is_ssa = true;
-      nir_ssa_def_init(state->impl, &block_pcopy->instr, &copy->dest.ssa,
+      nir_ssa_def_init(&block_pcopy->instr, &copy->dest.ssa,
                        phi->dest.ssa.num_components, phi->dest.ssa.name);
 
       nir_src copy_dest_src = {
