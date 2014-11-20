@@ -2316,7 +2316,7 @@ struct sm1_op_info inst_table[] =
     _OPI(CRS, XPD, V(0,0), V(3,0), V(0,0), V(3,0), 1, 2, NULL), /* XXX: .w */
     _OPI(SGN, SSG, V(2,0), V(3,0), V(0,0), V(0,0), 1, 3, SPECIAL(SGN)), /* ignore src1,2 */
     _OPI(ABS, ABS, V(0,0), V(3,0), V(0,0), V(3,0), 1, 1, NULL),
-    _OPI(NRM, NRM, V(0,0), V(3,0), V(0,0), V(3,0), 1, 1, SPECIAL(NRM)), /* NRM doesn't fit */
+    _OPI(NRM, NOP, V(0,0), V(3,0), V(0,0), V(3,0), 1, 1, SPECIAL(NRM)), /* NRM doesn't fit */
 
     _OPI(SINCOS, SCS, V(2,0), V(2,1), V(2,0), V(2,1), 1, 3, SPECIAL(SINCOS)),
     _OPI(SINCOS, SCS, V(3,0), V(3,0), V(3,0), V(3,0), 1, 1, SPECIAL(SINCOS)),
