@@ -1615,7 +1615,7 @@ sm1_insn_flags_to_tgsi_setop(BYTE flags)
     case NINED3DSHADER_REL_OP_LE: return TGSI_OPCODE_SLE;
     default:
         assert(!"invalid comparison flags");
-        return TGSI_OPCODE_SFL;
+        return TGSI_OPCODE_SGT;
     }
 }
 
