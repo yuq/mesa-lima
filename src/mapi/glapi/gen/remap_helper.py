@@ -24,9 +24,12 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
-import gl_XML
+import sys
+import getopt
+
 import license
-import sys, getopt, string
+import gl_XML
+
 
 def get_function_spec(func):
     sig = ""
@@ -53,6 +56,7 @@ def get_function_spec(func):
     spec.append('')
 
     return spec
+
 
 class PrintGlRemap(gl_XML.gl_print_base):
     def __init__(self):
@@ -168,12 +172,13 @@ def show_usage():
     print "    -c ver    Version can be 'es1' or 'es2'."
     sys.exit(1)
 
-if __name__ == '__main__':
+
+def main():
     file_name = "gl_API.xml"
 
     try:
         (args, trail) = getopt.getopt(sys.argv[1:], "f:c:")
-    except Exception,e:
+    except Exception:
         show_usage()
 
     es = None
@@ -190,3 +195,7 @@ if __name__ == '__main__':
 
     printer = PrintGlRemap()
     printer.Print( api )
+
+
+if __name__ == '__main__':
+    main()
