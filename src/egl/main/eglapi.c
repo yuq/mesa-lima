@@ -357,6 +357,23 @@ eglInitialize(EGLDisplay dpy, EGLint *major, EGLint *minor)
 
       /* limit to APIs supported by core */
       disp->ClientAPIs &= _EGL_API_ALL_BITS;
+
+      /* EGL_KHR_get_all_proc_addresses is a corner-case extension. The spec
+       * classifies it as an EGL display extension, though conceptually it's an
+       * EGL client extension.
+       *
+       * From the EGL_KHR_get_all_proc_addresses spec:
+       *
+       *    The EGL implementation must expose the name
+       *    EGL_KHR_client_get_all_proc_addresses if and only if it exposes
+       *    EGL_KHR_get_all_proc_addresses and supports
+       *    EGL_EXT_client_extensions.
+       *
+       * Mesa unconditionally exposes both client extensions mentioned above,
+       * so the spec requires that each EGLDisplay unconditionally expose
+       * EGL_KHR_get_all_proc_addresses also.
+       */
+      disp->Extensions.KHR_get_all_proc_addresses = EGL_TRUE;
    }
 
    /* Update applications version of major and minor if not NULL */

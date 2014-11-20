@@ -97,6 +97,7 @@ struct _egl_extensions
    EGLBoolean KHR_image_base;
    EGLBoolean KHR_image_pixmap;
    EGLBoolean KHR_vg_parent_image;
+   EGLBoolean KHR_get_all_proc_addresses;
    EGLBoolean KHR_gl_texture_2D_image;
    EGLBoolean KHR_gl_texture_cubemap_image;
    EGLBoolean KHR_gl_texture_3D_image;
