@@ -76,6 +76,8 @@ if test "x$INDENT" != "xcat"; then
     AC_SUBST(INDENT_FLAGS, '-i4 -nut -br -brs -npcs -ce -TGLubyte -TGLbyte -TBool')
 fi
 
+AX_CHECK_PYTHON_MAKO_MODULE(0.7.3)
+
 AC_PROG_INSTALL
 
 dnl We need a POSIX shell for parts of the build. Assume we have one
