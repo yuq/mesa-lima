@@ -48,6 +48,10 @@ vc4_start_draw(struct vc4_context *vc4)
          * BO allocations align to that anyway), then for some reason the
          * simulator wants an extra page available, even if you have overflow
          * memory set up.
+         *
+         * XXX: The binner only does 28-bit addressing math, so the tile alloc
+         * and tile state should be in the same BO and that BO needs to not
+         * cross a 256MB boundary, somehow.
          */
         uint32_t tile_alloc_size = 32 * tilew * tileh;
         tile_alloc_size = align(tile_alloc_size, 4096);
