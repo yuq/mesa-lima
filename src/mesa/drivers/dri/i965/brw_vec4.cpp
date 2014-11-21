@@ -840,6 +840,32 @@ vec4_visitor::move_push_constants_to_pull_constants()
    pack_uniform_registers();
 }
 
+/* Conditions for which we want to avoid setting the dependency control bits */
+static bool
+is_dep_ctrl_unsafe(const vec4_instruction *inst)
+{
+   /*
+    * mlen:
+    * In the presence of send messages, totally interrupt dependency
+    * control. They're long enough that the chance of dependency
+    * control around them just doesn't matter.
+    *
+    * predicate:
+    * From the Ivy Bridge PRM, volume 4 part 3.7, page 80:
+    * When a sequence of NoDDChk and NoDDClr are used, the last instruction that
+    * completes the scoreboard clear must have a non-zero execution mask. This
+    * means, if any kind of predication can change the execution mask or channel
+    * enable of the last instruction, the optimization must be avoided. This is
+    * to avoid instructions being shot down the pipeline when no writes are
+    * required.
+    *
+    * math:
+    * Dependency control does not work well over math instructions.
+    * NB: Discovered empirically
+    */
+   return (inst->mlen || inst->predicate || inst->is_math());
+}
+
 /**
  * Sets the dependency control fields on instructions after register
  * allocation and before the generator is run.
@@ -885,28 +911,7 @@ vec4_visitor::opt_set_dependency_control()
             assert(inst->src[i].file != MRF);
          }
 
-         /* In the presence of send messages, totally interrupt dependency
-          * control.  They're long enough that the chance of dependency
-          * control around them just doesn't matter.
-          */
-         if (inst->mlen) {
-            memset(last_grf_write, 0, sizeof(last_grf_write));
-            memset(last_mrf_write, 0, sizeof(last_mrf_write));
-            continue;
-         }
-
-         /* It looks like setting dependency control on a predicated
-          * instruction hangs the GPU.
-          */
-         if (inst->predicate) {
-            memset(last_grf_write, 0, sizeof(last_grf_write));
-            memset(last_mrf_write, 0, sizeof(last_mrf_write));
-            continue;
-         }
-
-         /* Dependency control does not work well over math instructions.
-          */
-         if (inst->is_math()) {
+         if (is_dep_ctrl_unsafe(inst)) {
             memset(last_grf_write, 0, sizeof(last_grf_write));
             memset(last_mrf_write, 0, sizeof(last_mrf_write));
             continue;
