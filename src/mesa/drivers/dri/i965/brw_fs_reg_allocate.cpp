@@ -544,8 +544,8 @@ fs_visitor::assign_regs(bool allow_spilling)
    int first_mrf_hack_node = node_count;
    if (brw->gen >= 7)
       node_count += BRW_MAX_GRF - GEN7_MRF_HACK_START;
-   struct ra_graph *g = ra_alloc_interference_graph(screen->wm_reg_sets[rsi].regs,
-                                                    node_count);
+   struct ra_graph *g =
+      ra_alloc_interference_graph(screen->wm_reg_sets[rsi].regs, node_count);
 
    for (int i = 0; i < this->virtual_grf_count; i++) {
       unsigned size = this->virtual_grf_sizes[i];
