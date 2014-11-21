@@ -1509,7 +1509,8 @@ vec4_generator::generate_code(const cfg_t *cfg)
 
          brw_inst *last = &p->store[pre_emit_nr_insn];
 
-         brw_inst_set_cond_modifier(brw, last, inst->conditional_mod);
+         if (inst->conditional_mod)
+            brw_inst_set_cond_modifier(brw, last, inst->conditional_mod);
          brw_inst_set_no_dd_clear(brw, last, inst->no_dd_clear);
          brw_inst_set_no_dd_check(brw, last, inst->no_dd_check);
       }
