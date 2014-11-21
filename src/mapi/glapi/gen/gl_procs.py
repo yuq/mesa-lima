@@ -25,9 +25,13 @@
 # Authors:
 #    Ian Romanick <idr@us.ibm.com>
 
+import sys
+import getopt
+
 import license
-import gl_XML, glX_XML
-import sys, getopt
+import gl_XML
+import glX_XML
+
 
 class PrintGlProcs(gl_XML.gl_print_base):
     def __init__(self, es=False):
@@ -38,7 +42,6 @@ class PrintGlProcs(gl_XML.gl_print_base):
         self.license = license.bsd_license_template % ( \
 """Copyright (C) 1999-2001  Brian Paul   All Rights Reserved.
 (C) Copyright IBM Corporation 2004, 2006""", "BRIAN PAUL, IBM")
-
 
     def printRealHeader(self):
         print """
@@ -166,16 +169,18 @@ def show_usage():
     print "-c          Enable compatibility with OpenGL ES."
     sys.exit(1)
 
-if __name__ == '__main__':
+
+def main():
+    """Main function."""
     file_name = "gl_API.xml"
 
     try:
-        (args, trail) = getopt.getopt(sys.argv[1:], "f:c")
-    except Exception,e:
+        args, _ = getopt.getopt(sys.argv[1:], "f:c")
+    except Exception:
         show_usage()
 
     es = False
-    for (arg,val) in args:
+    for arg, val in args:
         if arg == "-f":
             file_name = val
         elif arg == "-c":
@@ -184,3 +189,7 @@ if __name__ == '__main__':
     api = gl_XML.parse_GL_API(file_name, glX_XML.glx_item_factory())
     printer = PrintGlProcs(es)
     printer.Print(api)
+
+
+if __name__ == '__main__':
+    main()
