@@ -841,9 +841,25 @@ vec4_visitor::move_push_constants_to_pull_constants()
 }
 
 /* Conditions for which we want to avoid setting the dependency control bits */
-static bool
-is_dep_ctrl_unsafe(const vec4_instruction *inst)
+bool
+vec4_visitor::is_dep_ctrl_unsafe(const vec4_instruction *inst)
 {
+#define IS_DWORD(reg) \
+   (reg.type == BRW_REGISTER_TYPE_UD || \
+    reg.type == BRW_REGISTER_TYPE_D)
+
+   /* From the destination hazard section of the spec:
+    * > Instructions other than send, may use this control as long as operations
+    * > that have different pipeline latencies are not mixed.
+    */
+   if (brw->gen >= 8) {
+      if (inst->opcode == BRW_OPCODE_MUL &&
+         IS_DWORD(inst->src[0]) &&
+         IS_DWORD(inst->src[1]))
+         return true;
+   }
+#undef IS_DWORD
+
    /*
     * mlen:
     * In the presence of send messages, totally interrupt dependency

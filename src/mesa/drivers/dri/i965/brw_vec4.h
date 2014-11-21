@@ -390,6 +390,7 @@ public:
    bool opt_cse();
    bool opt_algebraic();
    bool opt_register_coalesce();
+   bool is_dep_ctrl_unsafe(const vec4_instruction *inst);
    void opt_set_dependency_control();
    void opt_schedule_instructions();
 
