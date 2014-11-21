@@ -9,26 +9,23 @@
 #ifndef U_ATOMIC_H
 #define U_ATOMIC_H
 
-#include "pipe/p_compiler.h"
-#include "pipe/p_defines.h"
-
 /* Favor OS-provided implementations.
  *
  * Where no OS-provided implementation is available, fall back to
  * locally coded assembly, compiler intrinsic or ultimately a
  * mutex-based implementation.
  */
-#if defined(PIPE_OS_SOLARIS)
+#if defined(__sun)
 #define PIPE_ATOMIC_OS_SOLARIS
-#elif defined(PIPE_CC_MSVC)
+#elif defined(_MSC_VER)
 #define PIPE_ATOMIC_MSVC_INTRINSIC
-#elif (defined(PIPE_CC_MSVC) && defined(PIPE_ARCH_X86))
+#elif (defined(_MSC_VER) && (defined(__i386__) || defined(_M_IX86))
 #define PIPE_ATOMIC_ASM_MSVC_X86                
-#elif defined(PIPE_CC_GCC) && (PIPE_CC_GCC_VERSION >= 401)
+#elif defined(__GNUC__) && ((__GNUC__ * 100 + __GNUC_MINOR__) >= 401)
 #define PIPE_ATOMIC_GCC_INTRINSIC
-#elif (defined(PIPE_CC_GCC) && defined(PIPE_ARCH_X86))
+#elif (defined(__GNUC__) && defined(__i386__))
 #define PIPE_ATOMIC_ASM_GCC_X86
-#elif (defined(PIPE_CC_GCC) && defined(PIPE_ARCH_X86_64))
+#elif (defined(__GNUC__) && defined(__x86_64__))
 #define PIPE_ATOMIC_ASM_GCC_X86_64
 #else
 #error "Unsupported platform"
