@@ -1817,6 +1817,7 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
       case SHADER_OPCODE_SIN:
       case SHADER_OPCODE_COS:
          assert(brw->gen < 6 || inst->mlen == 0);
+         assert(inst->conditional_mod == BRW_CONDITIONAL_NONE);
 	 if (brw->gen >= 7) {
             gen6_math(p, dst, brw_math_function(inst->opcode), src[0],
                       brw_null_reg());
@@ -1832,6 +1833,7 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
       case SHADER_OPCODE_INT_REMAINDER:
       case SHADER_OPCODE_POW:
          assert(brw->gen < 6 || inst->mlen == 0);
+         assert(inst->conditional_mod == BRW_CONDITIONAL_NONE);
 	 if (brw->gen >= 7 && inst->opcode == SHADER_OPCODE_POW) {
             gen6_math(p, dst, brw_math_function(inst->opcode), src[0], src[1]);
 	 } else if (brw->gen >= 6) {

@@ -1361,6 +1361,7 @@ vec4_generator::generate_code(const cfg_t *cfg)
       case SHADER_OPCODE_LOG2:
       case SHADER_OPCODE_SIN:
       case SHADER_OPCODE_COS:
+         assert(inst->conditional_mod == BRW_CONDITIONAL_NONE);
          if (brw->gen >= 7) {
             gen6_math(p, dst, brw_math_function(inst->opcode), src[0],
                       brw_null_reg());
@@ -1374,6 +1375,7 @@ vec4_generator::generate_code(const cfg_t *cfg)
       case SHADER_OPCODE_POW:
       case SHADER_OPCODE_INT_QUOTIENT:
       case SHADER_OPCODE_INT_REMAINDER:
+         assert(inst->conditional_mod == BRW_CONDITIONAL_NONE);
          if (brw->gen >= 7) {
             gen6_math(p, dst, brw_math_function(inst->opcode), src[0], src[1]);
          } else if (brw->gen == 6) {
