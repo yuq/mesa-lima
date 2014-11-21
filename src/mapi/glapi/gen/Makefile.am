@@ -74,7 +74,6 @@ EXTRA_DIST= \
 	glX_proto_send.py \
 	glX_proto_size.py \
 	glX_server_table.py \
-	mesadef.py \
 	remap_helper.py \
 	gl_API.dtd
 
