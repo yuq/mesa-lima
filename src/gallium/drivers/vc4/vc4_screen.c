@@ -414,6 +414,8 @@ vc4_screen_create(int fd)
 
         screen->fd = fd;
 
+        vc4_fence_init(screen);
+
 	vc4_debug = debug_get_option_vc4_debug();
         if (vc4_debug & VC4_DEBUG_SHADERDB)
                 vc4_debug |= VC4_DEBUG_NORAST;
