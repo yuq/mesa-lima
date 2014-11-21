@@ -374,7 +374,7 @@ ra_alloc_interference_graph(struct ra_regs *regs, unsigned int count)
    struct ra_graph *g;
    unsigned int i;
 
-   g = rzalloc(regs, struct ra_graph);
+   g = rzalloc(NULL, struct ra_graph);
    g->regs = regs;
    g->nodes = rzalloc_array(g, struct ra_node, count);
    g->count = count;
