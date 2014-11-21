@@ -456,18 +456,29 @@ _mesa_bytes_per_pixel(GLenum format, GLenum type)
          return -1;  /* error */
    case GL_UNSIGNED_SHORT_4_4_4_4:
    case GL_UNSIGNED_SHORT_4_4_4_4_REV:
+      if (format == GL_RGBA || format == GL_BGRA || format == GL_ABGR_EXT ||
+          format == GL_RGBA_INTEGER_EXT || format == GL_BGRA_INTEGER_EXT)
+         return sizeof(GLushort);
+      else
+         return -1;
    case GL_UNSIGNED_SHORT_5_5_5_1:
    case GL_UNSIGNED_SHORT_1_5_5_5_REV:
-      if (format == GL_RGBA || format == GL_BGRA || format == GL_ABGR_EXT ||
+      if (format == GL_RGBA || format == GL_BGRA ||
           format == GL_RGBA_INTEGER_EXT || format == GL_BGRA_INTEGER_EXT)
          return sizeof(GLushort);
       else
          return -1;
    case GL_UNSIGNED_INT_8_8_8_8:
    case GL_UNSIGNED_INT_8_8_8_8_REV:
+      if (format == GL_RGBA || format == GL_BGRA || format == GL_ABGR_EXT ||
+          format == GL_RGBA_INTEGER_EXT || format == GL_BGRA_INTEGER_EXT ||
+          format == GL_RGB)
+         return sizeof(GLuint);
+      else
+         return -1;
    case GL_UNSIGNED_INT_10_10_10_2:
    case GL_UNSIGNED_INT_2_10_10_10_REV:
-      if (format == GL_RGBA || format == GL_BGRA || format == GL_ABGR_EXT ||
+      if (format == GL_RGBA || format == GL_BGRA ||
           format == GL_RGBA_INTEGER_EXT || format == GL_BGRA_INTEGER_EXT ||
           format == GL_RGB)
          return sizeof(GLuint);
@@ -1601,15 +1612,25 @@ _mesa_error_check_format_and_type(const struct gl_context *ctx,
 
    case GL_UNSIGNED_SHORT_4_4_4_4:
    case GL_UNSIGNED_SHORT_4_4_4_4_REV:
-   case GL_UNSIGNED_SHORT_5_5_5_1:
-   case GL_UNSIGNED_SHORT_1_5_5_5_REV:
    case GL_UNSIGNED_INT_8_8_8_8:
    case GL_UNSIGNED_INT_8_8_8_8_REV:
-   case GL_UNSIGNED_INT_10_10_10_2:
-   case GL_UNSIGNED_INT_2_10_10_10_REV:
       if (format == GL_RGBA ||
           format == GL_BGRA ||
           format == GL_ABGR_EXT) {
+         break; /* OK */
+      }
+      if ((format == GL_RGBA_INTEGER_EXT || format == GL_BGRA_INTEGER_EXT) &&
+          ctx->Extensions.ARB_texture_rgb10_a2ui) {
+         break; /* OK */
+      }
+      return GL_INVALID_OPERATION;
+
+   case GL_UNSIGNED_SHORT_5_5_5_1:
+   case GL_UNSIGNED_SHORT_1_5_5_5_REV:
+   case GL_UNSIGNED_INT_10_10_10_2:
+   case GL_UNSIGNED_INT_2_10_10_10_REV:
+      if (format == GL_RGBA ||
+          format == GL_BGRA) {
          break; /* OK */
       }
       if ((format == GL_RGBA_INTEGER_EXT || format == GL_BGRA_INTEGER_EXT) &&
@@ -1759,7 +1780,6 @@ _mesa_error_check_format_and_type(const struct gl_context *ctx,
 
       case GL_RGBA:
       case GL_BGRA:
-      case GL_ABGR_EXT:
          switch (type) {
             case GL_BYTE:
             case GL_UNSIGNED_BYTE:
@@ -1776,6 +1796,25 @@ _mesa_error_check_format_and_type(const struct gl_context *ctx,
             case GL_UNSIGNED_INT_8_8_8_8_REV:
             case GL_UNSIGNED_INT_10_10_10_2:
             case GL_UNSIGNED_INT_2_10_10_10_REV:
+            case GL_HALF_FLOAT:
+               return GL_NO_ERROR;
+            default:
+               return GL_INVALID_ENUM;
+         }
+
+      case GL_ABGR_EXT:
+         switch (type) {
+            case GL_BYTE:
+            case GL_UNSIGNED_BYTE:
+            case GL_SHORT:
+            case GL_UNSIGNED_SHORT:
+            case GL_INT:
+            case GL_UNSIGNED_INT:
+            case GL_FLOAT:
+            case GL_UNSIGNED_SHORT_4_4_4_4:
+            case GL_UNSIGNED_SHORT_4_4_4_4_REV:
+            case GL_UNSIGNED_INT_8_8_8_8:
+            case GL_UNSIGNED_INT_8_8_8_8_REV:
             case GL_HALF_FLOAT:
                return GL_NO_ERROR;
             default:
@@ -2597,16 +2636,12 @@ _mesa_format_from_format_and_type(GLenum format, GLenum type)
          return MESA_FORMAT_A1B5G5R5_UNORM;
       else if (format == GL_BGRA)
          return MESA_FORMAT_A1R5G5B5_UNORM;
-      else if (format == GL_ABGR_EXT)
-         return MESA_FORMAT_R1G5B5A5_UNORM;
       break;
    case GL_UNSIGNED_SHORT_1_5_5_5_REV:
       if (format == GL_RGBA)
          return MESA_FORMAT_R5G5B5A1_UNORM;
       else if (format == GL_BGRA)
          return MESA_FORMAT_B5G5R5A1_UNORM;
-      else if (format == GL_ABGR_EXT)
-         return MESA_FORMAT_A5B5G5R1_UNORM;
       break;
    case GL_UNSIGNED_BYTE_3_3_2:
       if (format == GL_RGB)
@@ -2629,8 +2664,6 @@ _mesa_format_from_format_and_type(GLenum format, GLenum type)
          return MESA_FORMAT_A2R10G10B10_UNORM;
       else if (format == GL_BGRA_INTEGER)
          return MESA_FORMAT_A2R10G10B10_UINT;
-      else if (format == GL_ABGR_EXT)
-         return MESA_FORMAT_R2G10B10A10_UNORM;
       break;
    case GL_UNSIGNED_INT_2_10_10_10_REV:
       if (format == GL_RGBA)
@@ -2641,8 +2674,6 @@ _mesa_format_from_format_and_type(GLenum format, GLenum type)
          return MESA_FORMAT_B10G10R10A2_UNORM;
       else if (format == GL_BGRA_INTEGER)
          return MESA_FORMAT_B10G10R10A2_UINT;
-      else if (format == GL_ABGR_EXT)
-         return MESA_FORMAT_A10B10G10R2_UNORM;
       break;
    case GL_UNSIGNED_INT_8_8_8_8:
       if (format == GL_RGBA)
