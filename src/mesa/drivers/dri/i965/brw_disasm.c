@@ -275,7 +275,7 @@ static const char *const pred_ctrl_align1[16] = {
    [BRW_PREDICATE_ALIGN1_ANY16H] = ".any16h",
    [BRW_PREDICATE_ALIGN1_ALL16H] = ".all16h",
    [BRW_PREDICATE_ALIGN1_ANY32H] = ".any32h",
-   [BRW_PREDICATE_ALIGN1_ANY32H] = ".all32h",
+   [BRW_PREDICATE_ALIGN1_ALL32H] = ".all32h",
 };
 
 static const char *const thread_ctrl[4] = {
