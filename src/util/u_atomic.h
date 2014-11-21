@@ -19,8 +19,6 @@
 #define PIPE_ATOMIC_OS_SOLARIS
 #elif defined(_MSC_VER)
 #define PIPE_ATOMIC_MSVC_INTRINSIC
-#elif (defined(_MSC_VER) && (defined(__i386__) || defined(_M_IX86))
-#define PIPE_ATOMIC_ASM_MSVC_X86                
 #elif defined(__GNUC__) && ((__GNUC__ * 100 + __GNUC_MINOR__) >= 401)
 #define PIPE_ATOMIC_GCC_INTRINSIC
 #elif (defined(__GNUC__) && defined(__i386__))
@@ -222,74 +220,6 @@ p_atomic_cmpxchg(int32_t *v, int32_t old, int32_t _new)
 #define p_atomic_inc_return(_v) ((*(_v))++)
 #define p_atomic_dec_return(_v) ((*(_v))--)
 #define p_atomic_cmpxchg(_v, old, _new) (*(_v) == old ? *(_v) = (_new) : *(_v))
-
-#endif
-
-
-/* Locally coded assembly for MSVC on x86:
- */
-#if defined(PIPE_ATOMIC_ASM_MSVC_X86)
-
-#define PIPE_ATOMIC "MSVC x86 assembly"
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-#define p_atomic_set(_v, _i) (*(_v) = (_i))
-#define p_atomic_read(_v) (*(_v))
-
-static inline boolean
-p_atomic_dec_zero(int32_t *v)
-{
-   unsigned char c;
-
-   __asm {
-      mov       eax, [v]
-      lock dec  dword ptr [eax]
-      sete      byte ptr [c]
-   }
-
-   return c != 0;
-}
-
-static inline void
-p_atomic_inc(int32_t *v)
-{
-   __asm {
-      mov       eax, [v]
-      lock inc  dword ptr [eax]
-   }
-}
-
-static inline void
-p_atomic_dec(int32_t *v)
-{
-   __asm {
-      mov       eax, [v]
-      lock dec  dword ptr [eax]
-   }
-}
-
-static inline int32_t
-p_atomic_cmpxchg(int32_t *v, int32_t old, int32_t _new)
-{
-   int32_t orig;
-
-   __asm {
-      mov ecx, [v]
-      mov eax, [old]
-      mov edx, [_new]
-      lock cmpxchg [ecx], edx
-      mov [orig], eax
-   }
-
-   return orig;
-}
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif
 
