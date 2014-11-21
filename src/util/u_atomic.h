@@ -45,7 +45,7 @@ extern "C" {
 #define p_atomic_set(_v, _i) (*(_v) = (_i))
 #define p_atomic_read(_v) (*(_v))
 
-static INLINE boolean
+static inline boolean
 p_atomic_dec_zero(int32_t *v)
 {
    unsigned char c;
@@ -56,31 +56,31 @@ p_atomic_dec_zero(int32_t *v)
    return c != 0;
 }
 
-static INLINE void
+static inline void
 p_atomic_inc(int32_t *v)
 {
    __asm__ __volatile__("lock; incl %0":"+m"(*v));
 }
 
-static INLINE void
+static inline void
 p_atomic_dec(int32_t *v)
 {
    __asm__ __volatile__("lock; decl %0":"+m"(*v));
 }
 
-static INLINE int32_t
+static inline int32_t
 p_atomic_inc_return(int32_t *v)
 {
    return __sync_add_and_fetch(v, 1);
 }
 
-static INLINE int32_t
+static inline int32_t
 p_atomic_dec_return(int32_t *v)
 {
    return __sync_sub_and_fetch(v, 1);
 }
 
-static INLINE int32_t
+static inline int32_t
 p_atomic_cmpxchg(int32_t *v, int32_t old, int32_t _new)
 {
    return __sync_val_compare_and_swap(v, old, _new);
@@ -104,7 +104,7 @@ extern "C" {
 #define p_atomic_set(_v, _i) (*(_v) = (_i))
 #define p_atomic_read(_v) (*(_v))
 
-static INLINE boolean
+static inline boolean
 p_atomic_dec_zero(int32_t *v)
 {
    unsigned char c;
@@ -115,31 +115,31 @@ p_atomic_dec_zero(int32_t *v)
    return c != 0;
 }
 
-static INLINE void
+static inline void
 p_atomic_inc(int32_t *v)
 {
    __asm__ __volatile__("lock; incl %0":"+m"(*v));
 }
 
-static INLINE void
+static inline void
 p_atomic_dec(int32_t *v)
 {
    __asm__ __volatile__("lock; decl %0":"+m"(*v));
 }
 
-static INLINE int32_t
+static inline int32_t
 p_atomic_inc_return(int32_t *v)
 {
    return __sync_add_and_fetch(v, 1);
 }
 
-static INLINE int32_t
+static inline int32_t
 p_atomic_dec_return(int32_t *v)
 {
    return __sync_sub_and_fetch(v, 1);
 }
 
-static INLINE int32_t
+static inline int32_t
 p_atomic_cmpxchg(int32_t *v, int32_t old, int32_t _new)
 {
    return __sync_val_compare_and_swap(v, old, _new);
@@ -166,37 +166,37 @@ extern "C" {
 #define p_atomic_set(_v, _i) (*(_v) = (_i))
 #define p_atomic_read(_v) (*(_v))
 
-static INLINE boolean
+static inline boolean
 p_atomic_dec_zero(int32_t *v)
 {
    return (__sync_sub_and_fetch(v, 1) == 0);
 }
 
-static INLINE void
+static inline void
 p_atomic_inc(int32_t *v)
 {
    (void) __sync_add_and_fetch(v, 1);
 }
 
-static INLINE void
+static inline void
 p_atomic_dec(int32_t *v)
 {
    (void) __sync_sub_and_fetch(v, 1);
 }
 
-static INLINE int32_t
+static inline int32_t
 p_atomic_inc_return(int32_t *v)
 {
    return __sync_add_and_fetch(v, 1);
 }
 
-static INLINE int32_t
+static inline int32_t
 p_atomic_dec_return(int32_t *v)
 {
    return __sync_sub_and_fetch(v, 1);
 }
 
-static INLINE int32_t
+static inline int32_t
 p_atomic_cmpxchg(int32_t *v, int32_t old, int32_t _new)
 {
    return __sync_val_compare_and_swap(v, old, _new);
@@ -242,7 +242,7 @@ extern "C" {
 #define p_atomic_set(_v, _i) (*(_v) = (_i))
 #define p_atomic_read(_v) (*(_v))
 
-static INLINE boolean
+static inline boolean
 p_atomic_dec_zero(int32_t *v)
 {
    unsigned char c;
@@ -256,7 +256,7 @@ p_atomic_dec_zero(int32_t *v)
    return c != 0;
 }
 
-static INLINE void
+static inline void
 p_atomic_inc(int32_t *v)
 {
    __asm {
@@ -265,7 +265,7 @@ p_atomic_inc(int32_t *v)
    }
 }
 
-static INLINE void
+static inline void
 p_atomic_dec(int32_t *v)
 {
    __asm {
@@ -274,7 +274,7 @@ p_atomic_dec(int32_t *v)
    }
 }
 
-static INLINE int32_t
+static inline int32_t
 p_atomic_cmpxchg(int32_t *v, int32_t old, int32_t _new)
 {
    int32_t orig;
@@ -314,37 +314,37 @@ extern "C" {
 #define p_atomic_set(_v, _i) (*(_v) = (_i))
 #define p_atomic_read(_v) (*(_v))
 
-static INLINE boolean
+static inline boolean
 p_atomic_dec_zero(int32_t *v)
 {
    return _InterlockedDecrement((long *)v) == 0;
 }
 
-static INLINE void
+static inline void
 p_atomic_inc(int32_t *v)
 {
    _InterlockedIncrement((long *)v);
 }
 
-static INLINE int32_t
+static inline int32_t
 p_atomic_inc_return(int32_t *v)
 {
    return _InterlockedIncrement((long *)v);
 }
 
-static INLINE void
+static inline void
 p_atomic_dec(int32_t *v)
 {
    _InterlockedDecrement((long *)v);
 }
 
-static INLINE int32_t
+static inline int32_t
 p_atomic_dec_return(int32_t *v)
 {
    return _InterlockedDecrement((long *)v);
 }
 
-static INLINE int32_t
+static inline int32_t
 p_atomic_cmpxchg(int32_t *v, int32_t old, int32_t _new)
 {
    return _InterlockedCompareExchange((long *)v, _new, old);
@@ -369,7 +369,7 @@ extern "C" {
 #define p_atomic_set(_v, _i) (*(_v) = (_i))
 #define p_atomic_read(_v) (*(_v))
 
-static INLINE boolean
+static inline boolean
 p_atomic_dec_zero(int32_t *v)
 {
    uint32_t n = atomic_dec_32_nv((uint32_t *) v);
