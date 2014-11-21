@@ -284,8 +284,8 @@ vc4_screen_get_shader_param(struct pipe_screen *pscreen, unsigned shader,
                         return 8;
                 else
                         return 16;
-	case PIPE_SHADER_CAP_MAX_OUTPUTS:
-		return shader == PIPE_SHADER_FRAGMENT ? 1 : 8;
+        case PIPE_SHADER_CAP_MAX_OUTPUTS:
+                return shader == PIPE_SHADER_FRAGMENT ? 1 : 8;
         case PIPE_SHADER_CAP_MAX_TEMPS:
                 return 256; /* GL_MAX_PROGRAM_TEMPORARIES_ARB */
         case PIPE_SHADER_CAP_MAX_CONST_BUFFER_SIZE:
@@ -386,12 +386,12 @@ vc4_screen_is_format_supported(struct pipe_screen *pscreen,
                 retval |= PIPE_BIND_TRANSFER_WRITE;
 
 #if 0
-	if (retval != usage) {
-		fprintf(stderr,
+        if (retval != usage) {
+                fprintf(stderr,
                         "not supported: format=%s, target=%d, sample_count=%d, "
                         "usage=0x%x, retval=0x%x\n", util_format_name(format),
                         target, sample_count, usage, retval);
-	}
+        }
 #endif
 
         return retval == usage;
@@ -416,7 +416,7 @@ vc4_screen_create(int fd)
 
         vc4_fence_init(screen);
 
-	vc4_debug = debug_get_option_vc4_debug();
+        vc4_debug = debug_get_option_vc4_debug();
         if (vc4_debug & VC4_DEBUG_SHADERDB)
                 vc4_debug |= VC4_DEBUG_NORAST;
 
