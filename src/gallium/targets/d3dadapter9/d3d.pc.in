@@ -6,6 +6,6 @@ moduledir=@D3D_DRIVER_INSTALL_DIR@
 
 Name: d3d
 Description: Native D3D driver modules
-Version: @VERSION@
+Version: @NINE_VERSION@
 Requires.private: @DRI_PC_REQ_PRIV@
 Cflags: -I${includedir}

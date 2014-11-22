@@ -62,7 +62,7 @@ d3dadapter9_la_LDFLAGS = \
 	-shrext .so \
 	-module \
 	-no-undefined \
-	-version-number $(NINE_MAJOR):$(NINE_MINOR) \
+	-version-number $(NINE_MAJOR):$(NINE_MINOR):$(NINE_TINY) \
 	$(GC_SECTIONS) \
 	$(LD_NO_UNDEFINED)
 
