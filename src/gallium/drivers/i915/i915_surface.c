@@ -90,9 +90,8 @@ i915_surface_copy_render(struct pipe_context *pipe,
    struct pipe_sampler_view src_templ, *src_view;
    struct pipe_surface dst_templ, *dst_view;
 
-   /* Fallback for buffers and npot. */
-   if ((dst->target == PIPE_BUFFER && src->target == PIPE_BUFFER) ||
-       !util_is_power_of_two(src_width0) || !util_is_power_of_two(src_height0))
+   /* Fallback for buffers. */
+   if ((dst->target == PIPE_BUFFER && src->target == PIPE_BUFFER))
       goto fallback;
 
    util_blitter_default_dst_texture(&dst_templ, dst, dst_level, dstz);
