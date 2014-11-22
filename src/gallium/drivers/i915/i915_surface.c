@@ -89,9 +89,19 @@ i915_surface_copy_render(struct pipe_context *pipe,
    struct pipe_box dstbox;
    struct pipe_sampler_view src_templ, *src_view;
    struct pipe_surface dst_templ, *dst_view;
+   const struct util_format_description *desc;
 
    /* Fallback for buffers. */
-   if ((dst->target == PIPE_BUFFER && src->target == PIPE_BUFFER))
+   if (dst->target == PIPE_BUFFER && src->target == PIPE_BUFFER)
+      goto fallback;
+
+   /* Fallback for depth&stencil. XXX: see if we can use a proxy format */
+   desc = util_format_description(src->format);
+   if (desc->colorspace == UTIL_FORMAT_COLORSPACE_ZS)
+      goto fallback;
+
+   desc = util_format_description(dst->format);
+   if (desc->colorspace == UTIL_FORMAT_COLORSPACE_ZS)
       goto fallback;
 
    util_blitter_default_dst_texture(&dst_templ, dst, dst_level, dstz);
