@@ -9,6 +9,8 @@
 #ifndef U_ATOMIC_H
 #define U_ATOMIC_H
 
+#include <stdbool.h>
+
 /* Favor OS-provided implementations.
  *
  * Where no OS-provided implementation is available, fall back to
@@ -92,7 +94,7 @@ p_atomic_cmpxchg(int32_t *v, int32_t old, int32_t _new)
 
 #define p_atomic_set(_v, _i) (*(_v) = (_i))
 #define p_atomic_read(_v) (*(_v))
-#define p_atomic_dec_zero(_v) ((boolean) --(*(_v)))
+#define p_atomic_dec_zero(_v) ((bool) --(*(_v)))
 #define p_atomic_inc(_v) ((void) (*(_v))++)
 #define p_atomic_dec(_v) ((void) (*(_v))--)
 #define p_atomic_inc_return(_v) ((*(_v))++)
@@ -119,7 +121,7 @@ extern "C" {
 #define p_atomic_set(_v, _i) (*(_v) = (_i))
 #define p_atomic_read(_v) (*(_v))
 
-static inline boolean
+static inline bool
 p_atomic_dec_zero(int32_t *v)
 {
    return _InterlockedDecrement((long *)v) == 0;
@@ -174,7 +176,7 @@ extern "C" {
 #define p_atomic_set(_v, _i) (*(_v) = (_i))
 #define p_atomic_read(_v) (*(_v))
 
-static inline boolean
+static inline bool
 p_atomic_dec_zero(int32_t *v)
 {
    uint32_t n = atomic_dec_32_nv((uint32_t *) v);
