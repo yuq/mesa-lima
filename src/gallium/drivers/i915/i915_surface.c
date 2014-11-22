@@ -73,7 +73,7 @@ i915_util_blitter_save_states(struct i915_context *i915)
                                             i915->num_fragment_sampler_views,
                                             i915->fragment_sampler_views);
 }
-#
+
 static void
 i915_surface_copy_render(struct pipe_context *pipe,
                          struct pipe_resource *dst, unsigned dst_level,
@@ -117,7 +117,7 @@ i915_surface_copy_render(struct pipe_context *pipe,
 fallback:
    util_resource_copy_region(pipe, dst, dst_level, dstx, dsty, dstz,
                              src, src_level, src_box);
- }
+}
 
 static void
 i915_clear_render_target_render(struct pipe_context *pipe,
