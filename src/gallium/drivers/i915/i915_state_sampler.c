@@ -304,11 +304,11 @@ static void update_map(struct i915_context *i915,
 {
    const struct pipe_resource *pt = &tex->b.b;
    uint width = pt->width0, height = pt->height0, depth = pt->depth0;
-   const uint num_levels = pt->last_level;
-   uint format, pitch;
-   unsigned max_lod = num_levels * 4;
    int first_level = view->u.tex.first_level;
+   const uint num_levels = pt->last_level - first_level;
+   unsigned max_lod = num_levels * 4;
    bool is_npot = (!util_is_power_of_two(pt->width0) || !util_is_power_of_two(pt->height0)); 
+   uint format, pitch;
 
    /*
     * This is a bit messy. i915 doesn't support NPOT with mipmaps, but we can
