@@ -93,10 +93,12 @@ upload_sbe(struct brw_context *brw)
          if (!(brw->fragment_program->Base.InputsRead & BITFIELD64_BIT(attr)))
             continue;
 
+         assert(input_index < 32);
+
          if (input_index < 16)
             dw4 |= (GEN9_SBE_ACTIVE_COMPONENT_XYZW << (input_index << 1));
          else
-            dw5 |= (GEN9_SBE_ACTIVE_COMPONENT_XYZW << (input_index << 1));
+            dw5 |= (GEN9_SBE_ACTIVE_COMPONENT_XYZW << ((input_index - 16) << 1));
 
          ++input_index;
       }
