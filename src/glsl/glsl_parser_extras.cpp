@@ -29,6 +29,7 @@ extern "C" {
 #include "main/core.h" /* for struct gl_context */
 #include "main/context.h"
 #include "main/shaderobj.h"
+#include "util/u_atomic.h" /* for p_atomic_cmpxchg */
 }
 
 #include "util/ralloc.h"
@@ -1447,7 +1448,8 @@ _mesa_glsl_compile_shader(struct gl_context *ctx, struct gl_shader *shader,
    const char *source = shader->Source;
 
    if (ctx->Const.GenerateTemporaryNames)
-      ir_variable::temporaries_allocate_names = true;
+      (void) p_atomic_cmpxchg(&ir_variable::temporaries_allocate_names,
+                              false, true);
 
    state->error = glcpp_preprocess(state, &source, &state->info_log,
                              &ctx->Extensions, ctx);
