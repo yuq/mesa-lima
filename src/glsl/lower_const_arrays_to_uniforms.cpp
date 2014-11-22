@@ -72,7 +72,11 @@ lower_const_array_visitor::handle_rvalue(ir_rvalue **rvalue)
    if (!*rvalue)
       return;
 
-   ir_constant *con = (*rvalue)->as_constant();
+   ir_dereference_array *dra = (*rvalue)->as_dereference_array();
+   if (!dra)
+      return;
+
+   ir_constant *con = dra->array->as_constant();
    if (!con || !con->type->is_array())
       return;
 
@@ -91,7 +95,8 @@ lower_const_array_visitor::handle_rvalue(ir_rvalue **rvalue)
    uni->data.max_array_access = uni->type->length - 1;
    instructions->push_head(uni);
 
-   *rvalue = new(mem_ctx) ir_dereference_variable(uni);
+   ir_dereference_variable *varref = new(mem_ctx) ir_dereference_variable(uni);
+   *rvalue = new(mem_ctx) ir_dereference_array(varref, dra->array_index);
 
    progress = true;
 }
