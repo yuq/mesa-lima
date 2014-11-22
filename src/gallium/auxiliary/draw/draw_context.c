@@ -53,20 +53,7 @@
 boolean
 draw_get_option_use_llvm(void)
 {
-   static boolean first = TRUE;
-   static boolean value;
-   if (first) {
-      first = FALSE;
-      value = debug_get_bool_option("DRAW_USE_LLVM", TRUE);
-
-#ifdef PIPE_ARCH_X86
-      util_cpu_detect();
-      /* require SSE2 due to LLVM PR6960. XXX Might be fixed by now? */
-      if (!util_cpu_caps.has_sse2)
-         value = FALSE;
-#endif
-   }
-   return value;
+   return debug_get_bool_option("DRAW_USE_LLVM", TRUE);
 }
 #else
 boolean
