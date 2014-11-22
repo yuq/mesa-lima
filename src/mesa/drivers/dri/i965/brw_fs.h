@@ -275,6 +275,7 @@ public:
    void emit_fb_writes();
    void emit_urb_writes();
    void emit_cs_terminate();
+   fs_reg *emit_cs_local_invocation_id_setup();
 
    void emit_barrier();
 

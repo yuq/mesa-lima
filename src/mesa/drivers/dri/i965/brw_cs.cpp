@@ -473,8 +473,9 @@ const struct brw_tracked_state brw_cs_state = {
  * Therefore, for SIMD8, we use 3 full registers, and for SIMD16 we use 6
  * registers worth of push constant space.
  *
- * Note: Any updates to brw_cs_prog_local_id_payload_dwords or
- * fill_local_id_payload need to coordinated.
+ * Note: Any updates to brw_cs_prog_local_id_payload_dwords,
+ * fill_local_id_payload or fs_visitor::emit_cs_local_invocation_id_setup need
+ * to coordinated.
  *
  * FINISHME: There are a few easy optimizations to consider.
  *
@@ -519,6 +520,26 @@ fill_local_id_payload(const struct brw_cs_prog_data *cs_prog_data,
          }
       }
    }
+}
+
+
+fs_reg *
+fs_visitor::emit_cs_local_invocation_id_setup()
+{
+   assert(stage == MESA_SHADER_COMPUTE);
+
+   fs_reg *reg = new(this->mem_ctx) fs_reg(vgrf(glsl_type::uvec3_type));
+
+   struct brw_reg src =
+      brw_vec8_grf(payload.local_invocation_id_reg, 0);
+   src = retype(src, BRW_REGISTER_TYPE_UD);
+   bld.MOV(*reg, src);
+   src.nr += dispatch_width / 8;
+   bld.MOV(offset(*reg, bld, 1), src);
+   src.nr += dispatch_width / 8;
+   bld.MOV(offset(*reg, bld, 2), src);
+
+   return reg;
 }
 
 
