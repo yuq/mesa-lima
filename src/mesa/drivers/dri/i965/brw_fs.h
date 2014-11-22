@@ -364,6 +364,7 @@ public:
       uint8_t sample_pos_reg;
       uint8_t sample_mask_in_reg;
       uint8_t barycentric_coord_reg[BRW_WM_BARYCENTRIC_INTERP_MODE_COUNT];
+      uint8_t local_invocation_id_reg;
 
       /** The number of thread payload registers the hardware will supply. */
       uint8_t num_regs;

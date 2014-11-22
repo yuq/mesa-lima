@@ -458,6 +458,35 @@ const struct brw_tracked_state brw_cs_state = {
 
 
 /**
+ * We are building the local ID push constant data using the simplest possible
+ * method. We simply push the local IDs directly as they should appear in the
+ * registers for the uvec3 gl_LocalInvocationID variable.
+ *
+ * Therefore, for SIMD8, we use 3 full registers, and for SIMD16 we use 6
+ * registers worth of push constant space.
+ *
+ * FINISHME: There are a few easy optimizations to consider.
+ *
+ * 1. If gl_WorkGroupSize x, y or z is 1, we can just use zero, and there is
+ *    no need for using push constant space for that dimension.
+ *
+ * 2. Since GL_MAX_COMPUTE_WORK_GROUP_SIZE is currently 1024 or less, we can
+ *    easily use 16-bit words rather than 32-bit dwords in the push constant
+ *    data.
+ *
+ * 3. If gl_WorkGroupSize x, y or z is small, then we can use bytes for
+ *    conveying the data, and thereby reduce push constant usage.
+ *
+ */
+unsigned
+brw_cs_prog_local_id_payload_dwords(const struct gl_program *prog,
+                                    unsigned dispatch_width)
+{
+   return 3 * dispatch_width;
+}
+
+
+/**
  * Creates a region containing the push constants for the CS on gen7+.
  *
  * Push constants are constant values (such as GLSL uniforms) that are

@@ -42,6 +42,11 @@ void
 brw_upload_cs_prog(struct brw_context *brw);
 
 #ifdef __cplusplus
+
+unsigned
+brw_cs_prog_local_id_payload_dwords(const struct gl_program *prog,
+                                    unsigned dispatch_width);
+
 }
 #endif
 

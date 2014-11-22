@@ -42,6 +42,7 @@
 #include "brw_eu.h"
 #include "brw_wm.h"
 #include "brw_fs.h"
+#include "brw_cs.h"
 #include "brw_cfg.h"
 #include "brw_dead_control_flow.h"
 #include "main/uniforms.h"
@@ -4731,6 +4732,15 @@ fs_visitor::setup_cs_payload()
    assert(devinfo->gen >= 7);
 
    payload.num_regs = 1;
+
+   if (prog->SystemValuesRead & SYSTEM_BIT_LOCAL_INVOCATION_ID) {
+      const unsigned local_id_dwords =
+         brw_cs_prog_local_id_payload_dwords(prog, dispatch_width);
+      assert((local_id_dwords & 0x7) == 0);
+      const unsigned local_id_regs = local_id_dwords / 8;
+      payload.local_invocation_id_reg = payload.num_regs;
+      payload.num_regs += local_id_regs;
+   }
 }
 
 void
