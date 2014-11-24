@@ -239,7 +239,7 @@ struct sm1_dst_param
     BYTE file;
     BYTE mask;
     BYTE mod;
-    BYTE shift; /* sint4 */
+    int8_t shift; /* sint4 */
     BYTE type;
 };
 
@@ -2527,6 +2527,7 @@ sm1_parse_get_param(struct shader_translator *tx, DWORD *reg, DWORD *rel)
 static void
 sm1_parse_dst_param(struct sm1_dst_param *dst, DWORD tok)
 {
+    uint8_t shift;
     dst->file =
         (tok & D3DSP_REGTYPE_MASK)  >> D3DSP_REGTYPE_SHIFT |
         (tok & D3DSP_REGTYPE_MASK2) >> D3DSP_REGTYPE_SHIFT2;
@@ -2535,7 +2536,8 @@ sm1_parse_dst_param(struct sm1_dst_param *dst, DWORD tok)
     dst->rel = NULL;
     dst->mask = (tok & NINED3DSP_WRITEMASK_MASK) >> NINED3DSP_WRITEMASK_SHIFT;
     dst->mod = (tok & D3DSP_DSTMOD_MASK) >> D3DSP_DSTMOD_SHIFT;
-    dst->shift = (tok & D3DSP_DSTSHIFT_MASK) >> D3DSP_DSTSHIFT_SHIFT;
+    shift = (tok & D3DSP_DSTSHIFT_MASK) >> D3DSP_DSTSHIFT_SHIFT;
+    dst->shift = (shift & 0x8) ? -(shift & 0x7) : shift & 0x7;
 }
 
 static void
