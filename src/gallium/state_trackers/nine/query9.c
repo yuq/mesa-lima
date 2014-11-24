@@ -174,10 +174,12 @@ NineQuery9_Issue( struct NineQuery9 *This,
         pipe->begin_query(pipe, This->pq);
         This->state = NINE_QUERY_STATE_RUNNING;
     } else {
-        if (This->state == NINE_QUERY_STATE_RUNNING) {
-            pipe->end_query(pipe, This->pq);
-            This->state = NINE_QUERY_STATE_ENDED;
-        }
+        if (This->state != NINE_QUERY_STATE_RUNNING &&
+            This->type != D3DQUERYTYPE_EVENT &&
+            This->type != D3DQUERYTYPE_TIMESTAMP)
+            pipe->begin_query(pipe, This->pq);
+        pipe->end_query(pipe, This->pq);
+        This->state = NINE_QUERY_STATE_ENDED;
     }
     return D3D_OK;
 }
