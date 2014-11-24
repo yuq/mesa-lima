@@ -990,7 +990,7 @@ NineAdapter9_CreateDevice( struct NineAdapter9 *This,
     params.BehaviorFlags = BehaviorFlags;
 
     hr = NineDevice9_new(screen, &params, &caps, pPresentationParameters,
-                         pD3D9, pPresentationGroup, This->ctx,
+                         pD3D9, pPresentationGroup, This->ctx, FALSE, NULL,
                          (struct NineDevice9 **)ppReturnedDeviceInterface);
     if (FAILED(hr)) {
         DBG("Failed to create device.\n");

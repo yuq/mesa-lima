@@ -139,7 +139,9 @@ NineDevice9_ctor( struct NineDevice9 *This,
                   D3DPRESENT_PARAMETERS *pPresentationParameters,
                   IDirect3D9 *pD3D9,
                   ID3DPresentGroup *pPresentationGroup,
-                  struct d3dadapter9_context *pCTX )
+                  struct d3dadapter9_context *pCTX,
+                  boolean ex,
+                  D3DDISPLAYMODEEX *pFullscreenDisplayMode )
 {
     unsigned i;
     HRESULT hr = NineUnknown_ctor(&This->base, pParams);
@@ -151,6 +153,7 @@ NineDevice9_ctor( struct NineDevice9 *This,
     This->caps = *pCaps;
     This->d3d9 = pD3D9;
     This->params = *pCreationParameters;
+    This->ex = ex;
     This->present = pPresentationGroup;
     IDirect3D9_AddRef(This->d3d9);
     ID3DPresentGroup_AddRef(This->present);
@@ -177,12 +180,12 @@ NineDevice9_ctor( struct NineDevice9 *This,
         if (FAILED(hr))
             return hr;
 
-        if (This->ex) {
+        if (ex) {
             D3DDISPLAYMODEEX *mode = NULL;
             struct NineSwapChain9Ex **ret =
                 (struct NineSwapChain9Ex **)&This->swapchains[i];
 
-            if (This->pFullscreenDisplayMode) mode = &(This->pFullscreenDisplayMode[i]);
+            if (pFullscreenDisplayMode) mode = &(pFullscreenDisplayMode[i]);
             /* when this is a Device9Ex, it should create SwapChain9Exs */
             hr = NineSwapChain9Ex_new(This, TRUE, present,
                                       &pPresentationParameters[i], pCTX,
@@ -309,9 +312,6 @@ NineDevice9_ctor( struct NineDevice9 *This,
 
     This->update = &This->state;
     nine_update_state(This, ~0);
-
-    /* Is just used to pass the parameter from NineDevice9Ex_ctor */
-    This->pFullscreenDisplayMode = NULL;
 
     ID3DPresentGroup_Release(This->present);
 
@@ -974,7 +974,7 @@ create_zs_or_rt_surface(struct NineDevice9 *This,
     } else {
         resource = NULL;
     }
-    hr = NineSurface9_new(This, NULL, resource, 0, 0, 0, &desc, &surface);
+    hr = NineSurface9_new(This, NULL, resource, NULL, 0, 0, 0, &desc, &surface);
     pipe_resource_reference(&resource, NULL);
 
     if (SUCCEEDED(hr))
@@ -3447,6 +3447,8 @@ NineDevice9_new( struct pipe_screen *pScreen,
                  IDirect3D9 *pD3D9,
                  ID3DPresentGroup *pPresentationGroup,
                  struct d3dadapter9_context *pCTX,
+                 boolean ex,
+                 D3DDISPLAYMODEEX *pFullscreenDisplayMode,
                  struct NineDevice9 **ppOut )
 {
     BOOL lock;
@@ -3454,5 +3456,6 @@ NineDevice9_new( struct pipe_screen *pScreen,
 
     NINE_NEW(Device9, ppOut, lock, /* args */
              pScreen, pCreationParameters, pCaps,
-             pPresentationParameters, pD3D9, pPresentationGroup, pCTX);
+             pPresentationParameters, pD3D9, pPresentationGroup, pCTX,
+             ex, pFullscreenDisplayMode);
 }

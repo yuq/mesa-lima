@@ -48,7 +48,6 @@ struct NineDevice9
 {
     struct NineUnknown base;
     boolean ex;
-    D3DDISPLAYMODEEX *pFullscreenDisplayMode;
 
     /* G3D context */
     struct pipe_screen *screen;
@@ -134,6 +133,8 @@ NineDevice9_new( struct pipe_screen *pScreen,
                  IDirect3D9 *pD3D9,
                  ID3DPresentGroup *pPresentationGroup,
                  struct d3dadapter9_context *pCTX,
+                 boolean ex,
+                 D3DDISPLAYMODEEX *pFullscreenDisplayMode,
                  struct NineDevice9 **ppOut );
 
 HRESULT
@@ -145,7 +146,9 @@ NineDevice9_ctor( struct NineDevice9 *This,
                   D3DPRESENT_PARAMETERS *pPresentationParameters,
                   IDirect3D9 *pD3D9,
                   ID3DPresentGroup *pPresentationGroup,
-                  struct d3dadapter9_context *pCTX );
+                  struct d3dadapter9_context *pCTX,
+                  boolean ex,
+                  D3DDISPLAYMODEEX *pFullscreenDisplayMode );
 
 void
 NineDevice9_dtor( struct NineDevice9 *This );

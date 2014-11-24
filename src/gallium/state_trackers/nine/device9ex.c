@@ -39,13 +39,11 @@ NineDevice9Ex_ctor( struct NineDevice9Ex *This,
                     ID3DPresentGroup *pPresentationGroup,
                     struct d3dadapter9_context *pCTX )
 {
-    This->base.ex = TRUE;
-    This->base.pFullscreenDisplayMode = pFullscreenDisplayMode;
-
     return NineDevice9_ctor(&This->base, pParams,
                             pScreen, pCreationParameters, pCaps,
                             pPresentationParameters,
-                            (IDirect3D9 *)pD3D9Ex, pPresentationGroup, pCTX);
+                            (IDirect3D9 *)pD3D9Ex, pPresentationGroup, pCTX,
+                            TRUE, pFullscreenDisplayMode);
 }
 
 static void
