@@ -58,6 +58,8 @@ NineDevice9_SetDefaultState( struct NineDevice9 *This, boolean is_reset )
 {
     struct NineSurface9 *refSurf = NULL;
 
+    DBG("This=%p is_reset=%d\n", This, (int) is_reset);
+
     assert(!This->is_recording);
 
     nine_state_set_defaults(&This->state, &This->caps, is_reset);
@@ -93,6 +95,8 @@ void
 NineDevice9_RestoreNonCSOState( struct NineDevice9 *This, unsigned mask )
 {
     struct pipe_context *pipe = This->pipe;
+
+    DBG("This=%p mask=%u\n", This, mask);
 
     if (mask & 0x1) {
         struct pipe_constant_buffer cb;
@@ -145,6 +149,12 @@ NineDevice9_ctor( struct NineDevice9 *This,
 {
     unsigned i;
     HRESULT hr = NineUnknown_ctor(&This->base, pParams);
+
+    DBG("This=%p pParams=%p pScreen=%p pCreationParameters=%p pCaps=%p pPresentationParameters=%p "
+        "pD3D9=%p pPresentationGroup=%p pCTX=%p ex=%d pFullscreenDisplayMode=%p\n",
+        This, pParams, pScreen, pCreationParameters, pCaps, pPresentationParameters, pD3D9,
+        pPresentationGroup, pCTX, (int) ex, pFullscreenDisplayMode);
+
     if (FAILED(hr)) { return hr; }
 
     list_inithead(&This->update_textures);
@@ -536,6 +546,8 @@ NineDevice9_SetCursorPosition( struct NineDevice9 *This,
 {
     struct NineSwapChain9 *swap = This->swapchains[0];
 
+    DBG("This=%p X=%d Y=%d Flags=%d\n", This, X, Y, Flags);
+
     This->cursor.pos.x = X;
     This->cursor.pos.y = Y;
 
@@ -548,6 +560,9 @@ NineDevice9_ShowCursor( struct NineDevice9 *This,
                         BOOL bShow )
 {
     BOOL old = This->cursor.visible;
+
+    DBG("This=%p bShow=%d\n", This, (int) bShow);
+
     This->cursor.visible = bShow && (This->cursor.hotspot.x != -1);
     if (!This->cursor.software)
         ID3DPresent_SetCursor(This->swapchains[0]->present, NULL, NULL, bShow);
@@ -563,6 +578,9 @@ NineDevice9_CreateAdditionalSwapChain( struct NineDevice9 *This,
     struct NineSwapChain9 *swapchain, *tmplt = This->swapchains[0];
     ID3DPresent *present;
     HRESULT hr;
+
+    DBG("This=%p pPresentationParameters=%p pSwapChain=%p\n",
+        This, pPresentationParameters, pSwapChain);
 
     user_assert(pPresentationParameters, D3DERR_INVALIDCALL);
 
@@ -640,6 +658,9 @@ NineDevice9_Present( struct NineDevice9 *This,
 {
     unsigned i;
     HRESULT hr;
+
+    DBG("This=%p pSourceRect=%p pDestRect=%p hDestWindowOverride=%p pDirtyRegion=%p\n",
+        This, pSourceRect, pDestRect, hDestWindowOverride, pDirtyRegion);
 
     /* XXX is this right? */
     for (i = 0; i < This->nswapchains; ++i) {
@@ -1710,6 +1731,9 @@ NineDevice9_SetTransform( struct NineDevice9 *This,
 {
     struct nine_state *state = This->update;
     D3DMATRIX *M = nine_state_access_transform(state, State, TRUE);
+
+    DBG("This=%p State=%d pMatrix=%p\n", This, State, pMatrix);
+
     user_assert(M, D3DERR_INVALIDCALL);
 
     *M = *pMatrix;
@@ -1738,6 +1762,9 @@ NineDevice9_MultiplyTransform( struct NineDevice9 *This,
     struct nine_state *state = This->update;
     D3DMATRIX T;
     D3DMATRIX *M = nine_state_access_transform(state, State, TRUE);
+
+    DBG("This=%p State=%d pMatrix=%p\n", This, State, pMatrix);
+
     user_assert(M, D3DERR_INVALIDCALL);
 
     nine_d3d_matrix_matrix_mul(&T, pMatrix, M);
@@ -2648,6 +2675,11 @@ NineDevice9_ProcessVertices( struct NineDevice9 *This,
     HRESULT hr;
     unsigned buffer_offset, buffer_size;
 
+    DBG("This=%p SrcStartIndex=%u DestIndex=%u VertexCount=%u "
+        "pDestBuffer=%p pVertexDecl=%p Flags=%d\n",
+        This, SrcStartIndex, DestIndex, VertexCount, pDestBuffer,
+        pVertexDecl, Flags);
+
     if (!screen->get_param(screen, PIPE_CAP_MAX_STREAM_OUTPUT_BUFFERS))
         STUB(D3DERR_INVALIDCALL);
 
@@ -2725,6 +2757,9 @@ NineDevice9_CreateVertexDeclaration( struct NineDevice9 *This,
 {
     struct NineVertexDeclaration9 *vdecl;
 
+    DBG("This=%p pVertexElements=%p ppDecl=%p\n",
+        This, pVertexElements, ppDecl);
+
     HRESULT hr = NineVertexDeclaration9_new(This, pVertexElements, &vdecl);
     if (SUCCEEDED(hr))
         *ppDecl = (IDirect3DVertexDeclaration9 *)vdecl;
@@ -2800,6 +2835,8 @@ NineDevice9_CreateVertexShader( struct NineDevice9 *This,
 {
     struct NineVertexShader9 *vs;
     HRESULT hr;
+
+    DBG("This=%p pFunction=%p ppShader=%p\n", This, pFunction, ppShader);
 
     hr = NineVertexShader9_new(This, &vs, pFunction, NULL);
     if (FAILED(hr))
@@ -2981,6 +3018,9 @@ NineDevice9_SetStreamSource( struct NineDevice9 *This,
     struct NineVertexBuffer9 *pVBuf9 = NineVertexBuffer9(pStreamData);
     const unsigned i = StreamNumber;
 
+    DBG("This=%p StreamNumber=%u pStreamData=%p OffsetInBytes=%u Stride=%u\n",
+        This, StreamNumber, pStreamData, OffsetInBytes, Stride);
+
     user_assert(StreamNumber < This->caps.MaxStreams, D3DERR_INVALIDCALL);
     user_assert(Stride <= This->caps.MaxStreamStride, D3DERR_INVALIDCALL);
 
@@ -3068,6 +3108,8 @@ NineDevice9_SetIndices( struct NineDevice9 *This,
 {
     struct nine_state *state = This->update;
 
+    DBG("This=%p pIndexData=%p\n", This, pIndexData);
+
     if (likely(!This->is_recording))
         if (state->idxbuf == NineIndexBuffer9(pIndexData))
             return D3D_OK;
@@ -3098,6 +3140,8 @@ NineDevice9_CreatePixelShader( struct NineDevice9 *This,
 {
     struct NinePixelShader9 *ps;
     HRESULT hr;
+
+    DBG("This=%p pFunction=%p ppShader=%p\n", This, pFunction, ppShader);
 
     hr = NinePixelShader9_new(This, &ps, pFunction, NULL);
     if (FAILED(hr))
@@ -3300,6 +3344,8 @@ NineDevice9_CreateQuery( struct NineDevice9 *This,
 {
     struct NineQuery9 *query;
     HRESULT hr;
+
+    DBG("This=%p Type=%d ppQuery=%p\n", This, Type, ppQuery);
 
     if (!ppQuery)
         return nine_is_query_supported(Type);

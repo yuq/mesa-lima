@@ -51,6 +51,9 @@ NineBaseTexture9_ctor( struct NineBaseTexture9 *This,
         (format != D3DFMT_NULL);
     HRESULT hr;
 
+    DBG("This=%p, pParams=%p initResource=%p Type=%d format=%d Pool=%d Usage=%d\n",
+        This, pParams, initResource, Type, format, Pool, Usage);
+
     user_assert(!(Usage & (D3DUSAGE_RENDERTARGET | D3DUSAGE_DEPTHSTENCIL)) ||
                 Pool == D3DPOOL_DEFAULT, D3DERR_INVALIDCALL);
     user_assert(!(Usage & D3DUSAGE_DYNAMIC) ||
@@ -93,6 +96,8 @@ NineBaseTexture9_SetLOD( struct NineBaseTexture9 *This,
 {
     DWORD old = This->lod;
 
+    DBG("This=%p LODNew=%d\n", This, LODNew);
+
     user_assert(This->base.pool == D3DPOOL_MANAGED, 0);
 
     This->lod = MIN2(LODNew, This->base.info.last_level);
@@ -106,12 +111,16 @@ NineBaseTexture9_SetLOD( struct NineBaseTexture9 *This,
 DWORD WINAPI
 NineBaseTexture9_GetLOD( struct NineBaseTexture9 *This )
 {
+    DBG("This=%p\n", This);
+
     return This->lod;
 }
 
 DWORD WINAPI
 NineBaseTexture9_GetLevelCount( struct NineBaseTexture9 *This )
 {
+    DBG("This=%p\n", This);
+
     if (This->base.usage & D3DUSAGE_AUTOGENMIPMAP)
         return 1;
     return This->base.info.last_level + 1;
@@ -121,6 +130,8 @@ HRESULT WINAPI
 NineBaseTexture9_SetAutoGenFilterType( struct NineBaseTexture9 *This,
                                        D3DTEXTUREFILTERTYPE FilterType )
 {
+    DBG("This=%p FilterType=%d\n", This, FilterType);
+
     if (!(This->base.usage & D3DUSAGE_AUTOGENMIPMAP))
         return D3D_OK;
     user_assert(FilterType != D3DTEXF_NONE, D3DERR_INVALIDCALL);
@@ -133,6 +144,8 @@ NineBaseTexture9_SetAutoGenFilterType( struct NineBaseTexture9 *This,
 D3DTEXTUREFILTERTYPE WINAPI
 NineBaseTexture9_GetAutoGenFilterType( struct NineBaseTexture9 *This )
 {
+    DBG("This=%p\n", This);
+
     return This->mipfilter;
 }
 
@@ -433,6 +446,8 @@ NineBaseTexture9_UpdateSamplerView( struct NineBaseTexture9 *This,
     struct pipe_sampler_view templ;
     uint8_t swizzle[4];
 
+    DBG("This=%p sRGB=%d\n", This, sRGB);
+
     if (unlikely(!resource)) {
 	if (unlikely(This->format == D3DFMT_NULL))
             return D3D_OK;
@@ -485,6 +500,8 @@ NineBaseTexture9_UpdateSamplerView( struct NineBaseTexture9 *This,
 void WINAPI
 NineBaseTexture9_PreLoad( struct NineBaseTexture9 *This )
 {
+    DBG("This=%p\n", This);
+
     if (This->dirty && This->base.pool == D3DPOOL_MANAGED)
         NineBaseTexture9_UploadSelf(This);
 }

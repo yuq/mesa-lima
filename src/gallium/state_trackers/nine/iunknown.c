@@ -58,6 +58,8 @@ NineUnknown_QueryInterface( struct NineUnknown *This,
 {
     unsigned i = 0;
 
+    DBG("This=%p riid=%p ppvObject=%p\n", This, riid, ppvObject);
+
     if (!ppvObject) return E_POINTER;
 
     do {

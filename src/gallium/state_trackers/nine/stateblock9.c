@@ -35,6 +35,9 @@ NineStateBlock9_ctor( struct NineStateBlock9 *This,
                       enum nine_stateblock_type type )
 {
     HRESULT hr = NineUnknown_ctor(&This->base, pParams);
+
+    DBG("This=%p pParams=%p type=%d\n", This, pParams, type);
+
     if (FAILED(hr))
         return hr;
 

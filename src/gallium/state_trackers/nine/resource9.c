@@ -47,6 +47,14 @@ NineResource9_ctor( struct NineResource9 *This,
     struct pipe_screen *screen;
     HRESULT hr;
 
+    DBG("This=%p pParams=%p initResource=%p Allocate=%d "
+        "Type=%d Pool=%d Usage=%d\n",
+        This, pParams, initResource, (int) Allocate,
+        Type, Pool, Usage);
+
+    DBG("This=%p pParams=%p initResource=%p Allocate=%d Type=%d Pool=%d usage=%d\n",
+        This, pParams, initResource, Allocate, Type, Pool, Usage);
+
     hr = NineUnknown_ctor(&This->base, pParams);
     if (FAILED(hr))
         return hr;
@@ -202,6 +210,9 @@ NineResource9_SetPriority( struct NineResource9 *This,
                            DWORD PriorityNew )
 {
     DWORD prev = This->priority;
+
+    DBG("This=%p, PriorityNew=%d\n", This, PriorityNew);
+
     This->priority = PriorityNew;
     return prev;
 }

@@ -210,6 +210,8 @@ NineVertexDeclaration9_ctor( struct NineVertexDeclaration9 *This,
     const D3DCAPS9 *caps;
     unsigned i;
 
+    DBG("This=%p pParams=%p pElements=%p\n", This, pParams, pElements);
+
     HRESULT hr = NineUnknown_ctor(&This->base, pParams);
     if (FAILED(hr)) { return hr; }
 
@@ -459,6 +461,9 @@ NineVertexDeclaration9_ConvertStreamOutput(
     unsigned i;
     void *src_map;
     void *dst_map;
+
+    DBG("This=%p pDstBuf=%p DestIndex=%u VertexCount=%u pSrcBuf=%p so=%p\n",
+        This, pDstBuf, DestIndex, VertexCount, pSrcBuf, so);
 
     transkey.output_stride = 0;
     for (i = 0; i < This->nelems; ++i) {

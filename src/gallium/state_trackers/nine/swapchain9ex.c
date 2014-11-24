@@ -37,6 +37,10 @@ NineSwapChain9Ex_ctor( struct NineSwapChain9Ex *This,
                        HWND hFocusWindow,
                        D3DDISPLAYMODEEX *mode )
 {
+    DBG("This=%p pParams=%p implicit=%d pPresent=%p pPresentationParameters=%p "
+        "pCTX=%p hFocusWindow=%p mode=%p",
+        This, pParams, (int) implicit, pPresent, pPresentationParameters, pCTX, hFocusWindow, mode);
+
     return NineSwapChain9_ctor(&This->base, pParams, implicit, pPresent,
                                pPresentationParameters, pCTX, hFocusWindow, mode);
 }

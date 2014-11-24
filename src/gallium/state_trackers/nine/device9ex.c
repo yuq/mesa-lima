@@ -39,6 +39,13 @@ NineDevice9Ex_ctor( struct NineDevice9Ex *This,
                     ID3DPresentGroup *pPresentationGroup,
                     struct d3dadapter9_context *pCTX )
 {
+    DBG("This=%p pParams=%p pScreen=%p pCreationParameters=%p pCaps=%p "
+        "pPresentationParameters=%p pFullscreenDisplayMode=%p "
+        "pD3D9Ex=%p pPresentationGroup=%p pCTX=%p\n",
+        This, pParams, pScreen, pCreationParameters, pCaps,
+        pPresentationParameters, pFullscreenDisplayMode,
+        pD3D9Ex, pPresentationGroup, pCTX);
+
     return NineDevice9_ctor(&This->base, pParams,
                             pScreen, pCreationParameters, pCaps,
                             pPresentationParameters,
@@ -86,6 +93,11 @@ NineDevice9Ex_PresentEx( struct NineDevice9Ex *This,
 {
     unsigned i;
     HRESULT hr;
+
+    DBG("This=%p pSourceRect=%p pDestRect=%p hDestWindowOverride=%p "
+        "pDirtyRegion=%p dwFlags=%d\n",
+        This, pSourceRect, pDestRect, hDestWindowOverride,
+        pDirtyRegion, dwFlags);
 
     for (i = 0; i < This->base.nswapchains; i++) {
         hr = NineSwapChain9_Present(This->base.swapchains[i], pSourceRect, pDestRect,
@@ -226,6 +238,9 @@ NineDevice9Ex_GetDisplayModeEx( struct NineDevice9Ex *This,
                                 D3DDISPLAYROTATION *pRotation )
 {
     struct NineSwapChain9Ex *swapchain;
+
+    DBG("This=%p iSwapChain=%u pMode=%p pRotation=%p\n",
+        This, iSwapChain, pMode, pRotation);
 
     user_assert(iSwapChain < This->base.nswapchains, D3DERR_INVALIDCALL);
 

@@ -250,6 +250,8 @@ NineSurface9_AddDirtyRect( struct NineSurface9 *This,
     float area[2];
     struct u_rect rect, cover_a, cover_b;
 
+    DBG("This=%p box=%p\n", This, box);
+
     if (!box) {
         This->dirty_rects[0].x0 = 0;
         This->dirty_rects[0].y0 = 0;
@@ -471,6 +473,9 @@ NineSurface9_CopySurface( struct NineSurface9 *This,
     uint8_t *p_dst;
     const uint8_t *p_src;
 
+    DBG("This=%p From=%p pDestPoint=%p pSourceRect=%p\n",
+        This, From, pDestPoint, pSourceRect);
+
     user_assert(This->desc.Format == From->desc.Format, D3DERR_INVALIDCALL);
 
     dst_box.x = pDestPoint ? pDestPoint->x : 0;
@@ -585,6 +590,8 @@ NineSurface9_UploadSelf( struct NineSurface9 *This )
     struct pipe_resource *res = This->base.resource;
     uint8_t *ptr;
     unsigned i;
+
+    DBG("This=%p\n", This);
 
     assert(This->base.pool == D3DPOOL_MANAGED);
 

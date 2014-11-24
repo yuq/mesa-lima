@@ -342,6 +342,9 @@ NineVolume9_CopyVolume( struct NineVolume9 *This,
     uint8_t *p_dst;
     const uint8_t *p_src;
 
+    DBG("This=%p From=%p dstx=%u dsty=%u dstz=%u pSrcBox=%p\n",
+        This, From, dstx, dsty, dstz, pSrcBox);
+
     user_assert(This->desc.Format == From->desc.Format, D3DERR_INVALIDCALL);
 
     dst_box.x = dstx;
@@ -527,6 +530,9 @@ NineVolume9_SetPrivateData( struct NineVolume9 *This,
     struct pheader *header;
     const void *user_data = pData;
 
+    DBG("This=%p refguid=%p pData=%p SizeOfData=%d Flags=%d\n",
+        This, refguid, pData, SizeOfData, Flags);
+
     if (Flags & D3DSPD_IUNKNOWN)
         user_assert(SizeOfData == sizeof(IUnknown *), D3DERR_INVALIDCALL);
 
@@ -592,6 +598,8 @@ NineVolume9_FreePrivateData( struct NineVolume9 *This,
                              REFGUID refguid )
 {
     struct pheader *header;
+
+    DBG("This=%p refguid=%p\n", This, refguid);
 
     header = util_hash_table_get(This->pdata, refguid);
     if (!header) { return D3DERR_NOTFOUND; }

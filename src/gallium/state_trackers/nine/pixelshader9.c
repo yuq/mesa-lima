@@ -39,6 +39,8 @@ NinePixelShader9_ctor( struct NinePixelShader9 *This,
     struct nine_shader_info info;
     HRESULT hr;
 
+    DBG("This=%p pParams=%p pFunction=%p cso=%p\n", This, pParams, pFunction, cso);
+
     hr = NineUnknown_ctor(&This->base, pParams);
     if (FAILED(hr))
         return hr;
@@ -110,6 +112,8 @@ NinePixelShader9_GetFunction( struct NinePixelShader9 *This,
                               void *pData,
                               UINT *pSizeOfData )
 {
+    DBG("This=%p pData=%p pSizeOfData=%p\n", This, pData, pSizeOfData);
+
     user_assert(pSizeOfData, D3DERR_INVALIDCALL);
 
     if (!pData) {

@@ -107,6 +107,8 @@ NineQuery9_ctor( struct NineQuery9 *This,
     const unsigned ptype = d3dquerytype_to_pipe_query(Type);
     HRESULT hr;
 
+    DBG("This=%p pParams=%p Type=%d\n", This, pParams, Type);
+
     hr = NineUnknown_ctor(&This->base, pParams);
     if (FAILED(hr))
         return hr;
@@ -170,6 +172,8 @@ NineQuery9_Issue( struct NineQuery9 *This,
 {
     struct pipe_context *pipe = This->base.device->pipe;
 
+    DBG("This=%p dwIssueFlags=%d\n", This, dwIssueFlags);
+
     user_assert((dwIssueFlags == D3DISSUE_BEGIN && !This->instant) ||
                 (dwIssueFlags == 0) ||
                 (dwIssueFlags == D3DISSUE_END), D3DERR_INVALIDCALL);
@@ -220,6 +224,9 @@ NineQuery9_GetData( struct NineQuery9 *This,
     unsigned i;
     union pipe_query_result presult;
     union nine_query_result nresult;
+
+    DBG("This=%p pData=%p dwSize=%d dwGetDataFlags=%d\n",
+        This, pData, dwSize, dwGetDataFlags);
 
     user_assert(This->state != NINE_QUERY_STATE_RUNNING, D3DERR_INVALIDCALL);
     user_assert(dwSize == 0 || pData, D3DERR_INVALIDCALL);

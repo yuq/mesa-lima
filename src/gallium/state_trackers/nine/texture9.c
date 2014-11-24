@@ -226,6 +226,9 @@ NineTexture9_LockRect( struct NineTexture9 *This,
                        const RECT *pRect,
                        DWORD Flags )
 {
+    DBG("This=%p Level=%u pLockedRect=%p pRect=%p Flags=%d\n",
+        This, Level, pLockedRect, pRect, Flags);
+
     user_assert(Level <= This->base.base.info.last_level, D3DERR_INVALIDCALL);
     user_assert(Level == 0 || !(This->base.base.usage & D3DUSAGE_AUTOGENMIPMAP),
                 D3DERR_INVALIDCALL);
@@ -238,6 +241,8 @@ HRESULT WINAPI
 NineTexture9_UnlockRect( struct NineTexture9 *This,
                          UINT Level )
 {
+    DBG("This=%p Level=%u\n", This, Level);
+
     user_assert(Level <= This->base.base.info.last_level, D3DERR_INVALIDCALL);
 
     return NineSurface9_UnlockRect(This->surfaces[Level]);

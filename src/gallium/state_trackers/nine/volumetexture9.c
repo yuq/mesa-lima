@@ -41,6 +41,11 @@ NineVolumeTexture9_ctor( struct NineVolumeTexture9 *This,
     D3DVOLUME_DESC voldesc;
     HRESULT hr;
 
+    DBG("This=%p pParams=%p Width=%u Height=%u Depth=%u Levels=%u "
+        "Usage=%d Format=%d Pool=%d pSharedHandle=%p\n",
+        This, pParams, Width, Height, Depth, Levels,
+        Usage, Format, Pool, pSharedHandle);
+
     /* An IDirect3DVolume9 cannot be bound as a render target can it ? */
     user_assert(!(Usage & (D3DUSAGE_RENDERTARGET | D3DUSAGE_DEPTHSTENCIL)),
                 D3DERR_INVALIDCALL);
@@ -156,6 +161,9 @@ NineVolumeTexture9_LockBox( struct NineVolumeTexture9 *This,
                             const D3DBOX *pBox,
                             DWORD Flags )
 {
+    DBG("This=%p Level=%u pLockedVolume=%p pBox=%p Flags=%d\n",
+        This, Level, pLockedVolume, pBox, Flags);
+
     user_assert(Level <= This->base.base.info.last_level, D3DERR_INVALIDCALL);
     user_assert(Level == 0 || !(This->base.base.usage & D3DUSAGE_AUTOGENMIPMAP),
                 D3DERR_INVALIDCALL);
@@ -168,6 +176,8 @@ HRESULT WINAPI
 NineVolumeTexture9_UnlockBox( struct NineVolumeTexture9 *This,
                               UINT Level )
 {
+    DBG("This=%p Level=%u\n", This, Level);
+
     user_assert(Level <= This->base.base.info.last_level, D3DERR_INVALIDCALL);
 
     return NineVolume9_UnlockBox(This->volumes[Level]);
@@ -177,6 +187,8 @@ HRESULT WINAPI
 NineVolumeTexture9_AddDirtyBox( struct NineVolumeTexture9 *This,
                                 const D3DBOX *pDirtyBox )
 {
+    DBG("This=%p pDirtybox=%p\n", This, pDirtyBox);
+
     if (This->base.base.pool != D3DPOOL_MANAGED) {
         if (This->base.base.usage & D3DUSAGE_AUTOGENMIPMAP)
             This->base.dirty_mip = TRUE;

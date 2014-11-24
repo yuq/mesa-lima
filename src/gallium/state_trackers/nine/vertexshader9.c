@@ -40,6 +40,9 @@ NineVertexShader9_ctor( struct NineVertexShader9 *This,
     HRESULT hr;
     unsigned i;
 
+    DBG("This=%p pParams=%p pFunction=%p cso=%p\n",
+        This, pParams, pFunction, cso);
+
     hr = NineUnknown_ctor(&This->base, pParams);
     if (FAILED(hr))
         return hr;

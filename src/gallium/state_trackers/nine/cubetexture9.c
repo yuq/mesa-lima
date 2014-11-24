@@ -42,6 +42,11 @@ NineCubeTexture9_ctor( struct NineCubeTexture9 *This,
     D3DSURFACE_DESC sfdesc;
     HRESULT hr;
 
+    DBG("This=%p pParams=%p EdgeLength=%u Levels=%u Usage=%d "
+        "Format=%d Pool=%d pSharedHandle=%p\n",
+        This, pParams, EdgeLength, Levels, Usage,
+        Format, Pool, pSharedHandle);
+
     user_assert(!(Usage & D3DUSAGE_AUTOGENMIPMAP) ||
                 (Pool != D3DPOOL_SYSTEMMEM && Levels <= 1), D3DERR_INVALIDCALL);
 
@@ -135,6 +140,8 @@ NineCubeTexture9_GetLevelDesc( struct NineCubeTexture9 *This,
                                UINT Level,
                                D3DSURFACE_DESC *pDesc )
 {
+    DBG("This=%p Level=%u pDesc=%p\n", This, Level, pDesc);
+
     user_assert(Level <= This->base.base.info.last_level, D3DERR_INVALIDCALL);
     user_assert(Level == 0 || !(This->base.base.usage & D3DUSAGE_AUTOGENMIPMAP),
                 D3DERR_INVALIDCALL);
@@ -151,6 +158,9 @@ NineCubeTexture9_GetCubeMapSurface( struct NineCubeTexture9 *This,
                                     IDirect3DSurface9 **ppCubeMapSurface )
 {
     const unsigned s = Level * 6 + FaceType;
+
+    DBG("This=%p FaceType=%d Level=%u ppCubeMapSurface=%p\n",
+        This, FaceType, Level, ppCubeMapSurface);
 
     user_assert(Level <= This->base.base.info.last_level, D3DERR_INVALIDCALL);
     user_assert(Level == 0 || !(This->base.base.usage & D3DUSAGE_AUTOGENMIPMAP),
@@ -173,6 +183,9 @@ NineCubeTexture9_LockRect( struct NineCubeTexture9 *This,
 {
     const unsigned s = Level * 6 + FaceType;
 
+    DBG("This=%p FaceType=%d Level=%u pLockedRect=%p pRect=%p Flags=%d\n",
+        This, FaceType, Level, pLockedRect, pRect, Flags);
+
     user_assert(Level <= This->base.base.info.last_level, D3DERR_INVALIDCALL);
     user_assert(Level == 0 || !(This->base.base.usage & D3DUSAGE_AUTOGENMIPMAP),
                 D3DERR_INVALIDCALL);
@@ -188,6 +201,8 @@ NineCubeTexture9_UnlockRect( struct NineCubeTexture9 *This,
 {
     const unsigned s = Level * 6 + FaceType;
 
+    DBG("This=%p FaceType=%d Level=%u\n", This, FaceType, Level);
+
     user_assert(Level <= This->base.base.info.last_level, D3DERR_INVALIDCALL);
     user_assert(FaceType < 6, D3DERR_INVALIDCALL);
 
@@ -199,6 +214,8 @@ NineCubeTexture9_AddDirtyRect( struct NineCubeTexture9 *This,
                                D3DCUBEMAP_FACES FaceType,
                                const RECT *pDirtyRect )
 {
+    DBG("This=%p FaceType=%d pDirtyRect=%p\n", This, FaceType, pDirtyRect);
+
     user_assert(FaceType < 6, D3DERR_INVALIDCALL);
 
     if (This->base.base.pool != D3DPOOL_MANAGED) {

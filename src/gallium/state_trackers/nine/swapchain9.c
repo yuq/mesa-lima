@@ -737,6 +737,11 @@ NineSwapChain9_Present( struct NineSwapChain9 *This,
     HRESULT hr = present(This, pSourceRect, pDestRect,
                          hDestWindowOverride, pDirtyRegion, dwFlags);
 
+    DBG("This=%p pSourceRect=%p pDestRect=%p hDestWindowOverride=%p "
+        "pDirtyRegion=%p dwFlags=%d\n",
+        This, pSourceRect, pDestRect, hDestWindowOverride,
+        pDirtyRegion,dwFlags);
+
     if (hr == D3DERR_WASSTILLDRAWING)
         return hr;
 
