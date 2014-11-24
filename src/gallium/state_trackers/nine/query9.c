@@ -163,9 +163,14 @@ NineQuery9_Issue( struct NineQuery9 *This,
 
     DBG("This=%p dwIssueFlags=%d\n", This, dwIssueFlags);
 
-    user_assert((dwIssueFlags == D3DISSUE_BEGIN && !This->instant) ||
+    user_assert((dwIssueFlags == D3DISSUE_BEGIN) ||
                 (dwIssueFlags == 0) ||
                 (dwIssueFlags == D3DISSUE_END), D3DERR_INVALIDCALL);
+
+    /* Wine tests: always return D3D_OK on D3DISSUE_BEGIN
+     * even when the call is supposed to be forbidden */
+    if (dwIssueFlags == D3DISSUE_BEGIN && This->instant)
+        return D3D_OK;
 
     if (dwIssueFlags == D3DISSUE_BEGIN) {
         if (This->state == NINE_QUERY_STATE_RUNNING) {
