@@ -189,13 +189,10 @@ static void nine_ureg_tgsi_dump(struct ureg_program *ureg, boolean override)
 
 /* AL should contain base address of lights table. */
 #define LIGHT_CONST(i)                                                \
-    ureg_src_indirect(ureg_src_register(TGSI_FILE_CONSTANT, (i)), _X(AL))
+    ureg_src_indirect(ureg_DECL_constant(ureg, i), _X(AL))
 
 #define MATERIAL_CONST(i) \
-    ureg_src_register(TGSI_FILE_CONSTANT, 19 + (i))
-
-#define MISC_CONST(i) \
-    ureg_src_register(TGSI_FILE_CONSTANT, (i))
+    ureg_DECL_constant(ureg, 19 + (i))
 
 #define _CONST(n) ureg_DECL_constant(ureg, n)
 
