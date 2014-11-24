@@ -25,8 +25,7 @@
 # Authors:
 #    Ian Romanick <idr@us.ibm.com>
 
-import sys
-import getopt
+import argparse
 
 import license
 import gl_XML
@@ -164,31 +163,28 @@ typedef struct {
         return
 
 
-def show_usage():
-    print "Usage: %s [-f input_file_name] [-c]" % sys.argv[0]
-    print "-c          Enable compatibility with OpenGL ES."
-    sys.exit(1)
+def _parser():
+    """Parse arguments and return a namepsace."""
+    api_type = lambda x: gl_XML.parse_GL_API(x, glX_XML.glx_item_factory())
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-f', '--filename',
+                        type=api_type,
+                        default='gl_API.xml',
+                        metavar="input_file_name",
+                        dest='api',
+                        help="Path to an XML description of OpenGL API.")
+    parser.add_argument('-c', '--es-version',
+                        dest='es',
+                        action="store_true",
+                        help="filter functions for es")
+    return parser.parse_args()
 
 
 def main():
     """Main function."""
-    file_name = "gl_API.xml"
-
-    try:
-        args, _ = getopt.getopt(sys.argv[1:], "f:c")
-    except Exception:
-        show_usage()
-
-    es = False
-    for arg, val in args:
-        if arg == "-f":
-            file_name = val
-        elif arg == "-c":
-            es = True
-
-    api = gl_XML.parse_GL_API(file_name, glX_XML.glx_item_factory())
-    printer = PrintGlProcs(es)
-    printer.Print(api)
+    args = _parser()
+    PrintGlProcs(args.es).Print(args.api)
 
 
 if __name__ == '__main__':
