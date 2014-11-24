@@ -51,7 +51,7 @@ glsl_compute_version_string(void *mem_ctx, bool is_es, unsigned version)
 
 
 static const unsigned known_desktop_glsl_versions[] =
-   { 110, 120, 130, 140, 150, 330, 400, 410, 420, 430, 440 };
+   { 110, 120, 130, 140, 150, 330, 400, 410, 420, 430, 440, 450 };
 
 
 _mesa_glsl_parse_state::_mesa_glsl_parse_state(struct gl_context *_ctx,
@@ -142,6 +142,12 @@ _mesa_glsl_parse_state::_mesa_glsl_parse_state(struct gl_context *_ctx,
    this->user_structures = NULL;
    this->num_user_structures = 0;
 
+   /* supported_versions should be large enough to support the known desktop
+    * GLSL versions plus 2 GLES versions (ES2 & ES3)
+    */
+   STATIC_ASSERT((ARRAY_SIZE(known_desktop_glsl_versions) + 2) ==
+                 ARRAY_SIZE(this->supported_versions));
+
    /* Populate the list of supported GLSL versions */
    /* FINISHME: Once the OpenGL 3.0 'forward compatible' context or
     * the OpenGL 3.2 Core context is supported, this logic will need
@@ -169,8 +175,6 @@ _mesa_glsl_parse_state::_mesa_glsl_parse_state(struct gl_context *_ctx,
       this->supported_versions[this->num_supported_versions].es = true;
       this->num_supported_versions++;
    }
-   assert(this->num_supported_versions
-          <= ARRAY_SIZE(this->supported_versions));
 
    /* Create a string for use in error messages to tell the user which GLSL
     * versions are supported.
