@@ -523,7 +523,9 @@ const struct brw_tracked_state brw_vs_prog = {
 };
 
 bool
-brw_vs_precompile(struct gl_context *ctx, struct gl_shader_program *prog)
+brw_vs_precompile(struct gl_context *ctx,
+                  struct gl_shader_program *shader_prog,
+                  struct gl_program *prog)
 {
    struct brw_context *brw = brw_context(ctx);
    struct brw_vs_prog_key key;
@@ -531,18 +533,14 @@ brw_vs_precompile(struct gl_context *ctx, struct gl_shader_program *prog)
    struct brw_vs_prog_data *old_prog_data = brw->vs.prog_data;
    bool success;
 
-   if (!prog->_LinkedShaders[MESA_SHADER_VERTEX])
-      return true;
-
-   struct gl_vertex_program *vp = (struct gl_vertex_program *)
-      prog->_LinkedShaders[MESA_SHADER_VERTEX]->Program;
+   struct gl_vertex_program *vp = (struct gl_vertex_program *) prog;
    struct brw_vertex_program *bvp = brw_vertex_program(vp);
 
    memset(&key, 0, sizeof(key));
 
    brw_vec4_setup_prog_key_for_precompile(ctx, &key.base, bvp->id, &vp->Base);
 
-   success = do_vs_prog(brw, prog, bvp, &key);
+   success = do_vs_prog(brw, shader_prog, bvp, &key);
 
    brw->vs.base.prog_offset = old_prog_offset;
    brw->vs.prog_data = old_prog_data;

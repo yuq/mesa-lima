@@ -374,7 +374,9 @@ const struct brw_tracked_state brw_gs_prog = {
 
 
 bool
-brw_gs_precompile(struct gl_context *ctx, struct gl_shader_program *prog)
+brw_gs_precompile(struct gl_context *ctx,
+                  struct gl_shader_program *shader_prog,
+                  struct gl_program *prog)
 {
    struct brw_context *brw = brw_context(ctx);
    struct brw_gs_prog_key key;
@@ -382,11 +384,7 @@ brw_gs_precompile(struct gl_context *ctx, struct gl_shader_program *prog)
    struct brw_gs_prog_data *old_prog_data = brw->gs.prog_data;
    bool success;
 
-   if (!prog->_LinkedShaders[MESA_SHADER_GEOMETRY])
-      return true;
-
-   struct gl_geometry_program *gp = (struct gl_geometry_program *)
-      prog->_LinkedShaders[MESA_SHADER_GEOMETRY]->Program;
+   struct gl_geometry_program *gp = (struct gl_geometry_program *) prog;
    struct brw_geometry_program *bgp = brw_geometry_program(gp);
 
    memset(&key, 0, sizeof(key));
@@ -398,7 +396,7 @@ brw_gs_precompile(struct gl_context *ctx, struct gl_shader_program *prog)
     */
    key.input_varyings = gp->Base.InputsRead;
 
-   success = do_gs_prog(brw, prog, bgp, &key);
+   success = do_gs_prog(brw, shader_prog, bgp, &key);
 
    brw->gs.base.prog_offset = old_prog_offset;
    brw->gs.prog_data = old_prog_data;

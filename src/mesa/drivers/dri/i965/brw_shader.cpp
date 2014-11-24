@@ -55,17 +55,20 @@ brw_new_shader(struct gl_context *ctx, GLuint name, GLuint type)
  * the eventual NOS used, and thus allows us to produce link failures.
  */
 static bool
-brw_shader_precompile(struct gl_context *ctx, struct gl_shader_program *prog)
+brw_shader_precompile(struct gl_context *ctx,
+                      struct gl_shader_program *sh_prog)
 {
-   struct brw_context *brw = brw_context(ctx);
+   struct gl_shader *vs = sh_prog->_LinkedShaders[MESA_SHADER_VERTEX];
+   struct gl_shader *gs = sh_prog->_LinkedShaders[MESA_SHADER_GEOMETRY];
+   struct gl_shader *fs = sh_prog->_LinkedShaders[MESA_SHADER_FRAGMENT];
 
-   if (!brw_fs_precompile(ctx, prog))
+   if (fs && !brw_fs_precompile(ctx, sh_prog, fs->Program))
       return false;
 
-   if (!brw_gs_precompile(ctx, prog))
+   if (gs && !brw_gs_precompile(ctx, sh_prog, gs->Program))
       return false;
 
-   if (!brw_vs_precompile(ctx, prog))
+   if (vs && !brw_vs_precompile(ctx, sh_prog, vs->Program))
       return false;
 
    return true;

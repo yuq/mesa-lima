@@ -3749,16 +3749,14 @@ brw_wm_fs_emit(struct brw_context *brw,
 }
 
 bool
-brw_fs_precompile(struct gl_context *ctx, struct gl_shader_program *prog)
+brw_fs_precompile(struct gl_context *ctx,
+                  struct gl_shader_program *shader_prog,
+                  struct gl_program *prog)
 {
    struct brw_context *brw = brw_context(ctx);
    struct brw_wm_prog_key key;
 
-   if (!prog->_LinkedShaders[MESA_SHADER_FRAGMENT])
-      return true;
-
-   struct gl_fragment_program *fp = (struct gl_fragment_program *)
-      prog->_LinkedShaders[MESA_SHADER_FRAGMENT]->Program;
+   struct gl_fragment_program *fp = (struct gl_fragment_program *) prog;
    struct brw_fragment_program *bfp = brw_fragment_program(fp);
    bool program_uses_dfdy = fp->UsesDFdy;
 
@@ -3816,7 +3814,7 @@ brw_fs_precompile(struct gl_context *ctx, struct gl_shader_program *prog)
    uint32_t old_prog_offset = brw->wm.base.prog_offset;
    struct brw_wm_prog_data *old_prog_data = brw->wm.prog_data;
 
-   bool success = do_wm_prog(brw, prog, bfp, &key);
+   bool success = do_wm_prog(brw, shader_prog, bfp, &key);
 
    brw->wm.base.prog_offset = old_prog_offset;
    brw->wm.prog_data = old_prog_data;
