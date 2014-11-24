@@ -423,7 +423,11 @@ NineDevice9_TestCooperativeLevel( struct NineDevice9 *This )
 UINT WINAPI
 NineDevice9_GetAvailableTextureMem( struct NineDevice9 *This )
 {
-    return This->screen->get_param(This->screen, PIPE_CAP_VIDEO_MEMORY);
+   const unsigned mem = This->screen->get_param(This->screen, PIPE_CAP_VIDEO_MEMORY);
+   if (mem < 4096)
+      return mem << 20;
+   else
+      return UINT_MAX;
 }
 
 HRESULT WINAPI
