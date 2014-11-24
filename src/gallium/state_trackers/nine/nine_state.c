@@ -141,11 +141,9 @@ update_viewport(struct NineDevice9 *device)
     pvport.scale[0] = (float)vport->Width * 0.5f;
     pvport.scale[1] = (float)vport->Height * -0.5f;
     pvport.scale[2] = vport->MaxZ - vport->MinZ;
-    pvport.scale[3] = 1.0f;
     pvport.translate[0] = (float)vport->Width * 0.5f + (float)vport->X;
     pvport.translate[1] = (float)vport->Height * 0.5f + (float)vport->Y;
     pvport.translate[2] = vport->MinZ;
-    pvport.translate[3] = 0.0f;
 
     pipe->set_viewport_states(pipe, 0, 1, &pvport);
 }
