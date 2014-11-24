@@ -59,13 +59,13 @@ brw_shader_precompile(struct gl_context *ctx, struct gl_shader_program *prog)
 {
    struct brw_context *brw = brw_context(ctx);
 
-   if (brw->precompile && !brw_fs_precompile(ctx, prog))
+   if (!brw_fs_precompile(ctx, prog))
       return false;
 
-   if (brw->precompile && !brw_gs_precompile(ctx, prog))
+   if (!brw_gs_precompile(ctx, prog))
       return false;
 
-   if (brw->precompile && !brw_vs_precompile(ctx, prog))
+   if (!brw_vs_precompile(ctx, prog))
       return false;
 
    return true;
@@ -255,7 +255,7 @@ brw_link_shader(struct gl_context *ctx, struct gl_shader_program *shProg)
       }
    }
 
-   if (!brw_shader_precompile(ctx, shProg))
+   if (brw->precompile && !brw_shader_precompile(ctx, shProg))
       return false;
 
    return true;
