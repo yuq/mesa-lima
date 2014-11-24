@@ -649,7 +649,6 @@ static void r600_set_sampler_views(struct pipe_context *pipe, unsigned shader,
 	dst->views.dirty_mask |= new_mask;
 	dst->views.compressed_depthtex_mask &= dst->views.enabled_mask;
 	dst->views.compressed_colortex_mask &= dst->views.enabled_mask;
-	dst->views.dirty_txq_constants = TRUE;
 	dst->views.dirty_buffer_constants = TRUE;
 	r600_sampler_views_dirty(rctx, &dst->views);
 

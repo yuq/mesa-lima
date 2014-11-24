@@ -315,7 +315,6 @@ struct r600_samplerview_state {
 	uint32_t			dirty_mask;
 	uint32_t			compressed_depthtex_mask; /* which textures are depth */
 	uint32_t			compressed_colortex_mask;
-	boolean                         dirty_txq_constants;
 	boolean				dirty_buffer_constants;
 };
 
