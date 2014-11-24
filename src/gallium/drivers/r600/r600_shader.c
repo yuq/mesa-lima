@@ -5035,8 +5035,9 @@ static int r600_do_buffer_txq(struct r600_shader_ctx *ctx)
 	alu.op = ALU_OP1_MOV;
 
 	if (ctx->bc->chip_class >= EVERGREEN) {
-		alu.src[0].sel = 512 + (id / 4);
-		alu.src[0].chan = id % 4;
+		/* channel 0 or 2 of each word */
+		alu.src[0].sel = 512 + (id / 2);
+		alu.src[0].chan = (id % 2) * 2;
 	} else {
 		/* r600 we have them at channel 2 of the second dword */
 		alu.src[0].sel = 512 + (id * 2) + 1;
@@ -5697,9 +5698,16 @@ static int tgsi_tex(struct r600_shader_ctx *ctx)
 		memset(&alu, 0, sizeof(struct r600_bytecode_alu));
 		alu.op = ALU_OP1_MOV;
 
-		alu.src[0].sel = 512 + (id / 4);
-		alu.src[0].kc_bank = R600_TXQ_CONST_BUFFER;
-		alu.src[0].chan = id % 4;
+		if (ctx->bc->chip_class >= EVERGREEN) {
+			/* channel 1 or 3 of each word */
+			alu.src[0].sel = 512 + (id / 2);
+			alu.src[0].chan = ((id % 2) * 2) + 1;
+		} else {
+			/* r600 we have them at channel 2 of the second dword */
+			alu.src[0].sel = 512 + (id * 2) + 1;
+			alu.src[0].chan = 2;
+		}
+		alu.src[0].kc_bank = R600_BUFFER_INFO_CONST_BUFFER;
 		tgsi_dst(ctx, &inst->Dst[0], 2, &alu.dst);
 		alu.last = 1;
 		r = r600_bytecode_add_alu(ctx->bc, &alu);

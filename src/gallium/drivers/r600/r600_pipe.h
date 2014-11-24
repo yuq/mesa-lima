@@ -44,20 +44,19 @@
 #define R600_TRACE_CS_DWORDS		7
 
 #define R600_MAX_USER_CONST_BUFFERS 13
-#define R600_MAX_DRIVER_CONST_BUFFERS 4
+#define R600_MAX_DRIVER_CONST_BUFFERS 3
 #define R600_MAX_CONST_BUFFERS (R600_MAX_USER_CONST_BUFFERS + R600_MAX_DRIVER_CONST_BUFFERS)
 
 /* start driver buffers after user buffers */
 #define R600_UCP_CONST_BUFFER (R600_MAX_USER_CONST_BUFFERS)
-#define R600_TXQ_CONST_BUFFER (R600_MAX_USER_CONST_BUFFERS + 1)
-#define R600_BUFFER_INFO_CONST_BUFFER (R600_MAX_USER_CONST_BUFFERS + 2)
-#define R600_GS_RING_CONST_BUFFER (R600_MAX_USER_CONST_BUFFERS + 3)
-/* Currently R600_MAX_CONST_BUFFERS is too large, the hardware only has 16 buffers, but the driver is
- * trying to use 17. Avoid accidentally aliasing with user UBOs for SAMPLE_POSITIONS by using an id<16.
+#define R600_BUFFER_INFO_CONST_BUFFER (R600_MAX_USER_CONST_BUFFERS + 1)
+#define R600_GS_RING_CONST_BUFFER (R600_MAX_USER_CONST_BUFFERS + 2)
+/* Currently R600_MAX_CONST_BUFFERS just fits on the hw, which has a limit
+ * of 16 const buffers.
  * UCP/SAMPLE_POSITIONS are never accessed by same shader stage so they can use the same id.
  *
- * Fixing this properly would require the driver to combine its buffers into a single hardware buffer,
- * which would also allow supporting the d3d 11 mandated minimum of 15 user const buffers.
+ * In order to support d3d 11 mandated minimum of 15 user const buffers
+ * we'd have to squash all use cases into one driver buffer.
  */
 #define R600_SAMPLE_POSITIONS_CONST_BUFFER (R600_MAX_USER_CONST_BUFFERS)
 

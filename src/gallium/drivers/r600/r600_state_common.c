@@ -984,6 +984,7 @@ static void r600_set_sample_mask(struct pipe_context *pipe, unsigned sample_mask
  * then in the shader, we AND the 4 components with 0xffffffff or 0,
  * then OR the alpha with the value given here.
  * We use a 6th constant to store the txq buffer size in
+ * we use 7th slot for number of cube layers in a cube map array.
  */
 static void r600_setup_buffer_constants(struct r600_context *rctx, int shader_type)
 {
@@ -1022,6 +1023,7 @@ static void r600_setup_buffer_constants(struct r600_context *rctx, int shader_ty
 				samplers->buffer_constants[offset + 4] = 0;
 
 			samplers->buffer_constants[offset + 5] = samplers->views.views[i]->base.texture->width0 / util_format_get_blocksize(samplers->views.views[i]->base.format);
+			samplers->buffer_constants[offset + 6] = samplers->views.views[i]->base.texture->array_size / 6;
 		}
 	}
 
@@ -1033,7 +1035,10 @@ static void r600_setup_buffer_constants(struct r600_context *rctx, int shader_ty
 	pipe_resource_reference(&cb.buffer, NULL);
 }
 
-/* On evergreen we only need to store the buffer size for TXQ */
+/* On evergreen we store two values
+ * 1. buffer size for TXQ
+ * 2. number of cube layers in a cube map array.
+ */
 static void eg_setup_buffer_constants(struct r600_context *rctx, int shader_type)
 {
 	struct r600_textures_info *samplers = &rctx->samplers[shader_type];
@@ -1048,47 +1053,22 @@ static void eg_setup_buffer_constants(struct r600_context *rctx, int shader_type
 	samplers->views.dirty_buffer_constants = FALSE;
 
 	bits = util_last_bit(samplers->views.enabled_mask);
-	array_size = bits * sizeof(uint32_t) * 4;
+	array_size = bits * 2 * sizeof(uint32_t) * 4;
 	samplers->buffer_constants = realloc(samplers->buffer_constants, array_size);
 	memset(samplers->buffer_constants, 0, array_size);
-	for (i = 0; i < bits; i++)
-		if (samplers->views.enabled_mask & (1 << i))
-		   samplers->buffer_constants[i] = samplers->views.views[i]->base.texture->width0 / util_format_get_blocksize(samplers->views.views[i]->base.format);
+	for (i = 0; i < bits; i++) {
+		if (samplers->views.enabled_mask & (1 << i)) {
+			uint32_t offset = i * 2;
+			samplers->buffer_constants[offset] = samplers->views.views[i]->base.texture->width0 / util_format_get_blocksize(samplers->views.views[i]->base.format);
+			samplers->buffer_constants[offset + 1] = samplers->views.views[i]->base.texture->array_size / 6;
+		}
+	}
 
 	cb.buffer = NULL;
 	cb.user_buffer = samplers->buffer_constants;
 	cb.buffer_offset = 0;
 	cb.buffer_size = array_size;
 	rctx->b.b.set_constant_buffer(&rctx->b.b, shader_type, R600_BUFFER_INFO_CONST_BUFFER, &cb);
-	pipe_resource_reference(&cb.buffer, NULL);
-}
-
-static void r600_setup_txq_cube_array_constants(struct r600_context *rctx, int shader_type)
-{
-	struct r600_textures_info *samplers = &rctx->samplers[shader_type];
-	int bits;
-	uint32_t array_size;
-	struct pipe_constant_buffer cb;
-	int i;
-
-	if (!samplers->views.dirty_txq_constants)
-		return;
-
-	samplers->views.dirty_txq_constants = FALSE;
-
-	bits = util_last_bit(samplers->views.enabled_mask);
-	array_size = bits * sizeof(uint32_t) * 4;
-	samplers->txq_constants = realloc(samplers->txq_constants, array_size);
-	memset(samplers->txq_constants, 0, array_size);
-	for (i = 0; i < bits; i++)
-		if (samplers->views.enabled_mask & (1 << i))
-			samplers->txq_constants[i] = samplers->views.views[i]->base.texture->array_size / 6;
-
-	cb.buffer = NULL;
-	cb.user_buffer = samplers->txq_constants;
-	cb.buffer_offset = 0;
-	cb.buffer_size = array_size;
-	rctx->b.b.set_constant_buffer(&rctx->b.b, shader_type, R600_TXQ_CONST_BUFFER, &cb);
 	pipe_resource_reference(&cb.buffer, NULL);
 }
 
@@ -1175,7 +1155,7 @@ static bool r600_update_derived_state(struct r600_context *rctx)
 	struct pipe_context * ctx = (struct pipe_context*)rctx;
 	bool ps_dirty = false, vs_dirty = false, gs_dirty = false;
 	bool blend_disable;
-
+	bool need_buf_const;
 	if (!rctx->blitter->running) {
 		unsigned i;
 
@@ -1296,29 +1276,35 @@ static bool r600_update_derived_state(struct r600_context *rctx)
 
 	/* on R600 we stuff masks + txq info into one constant buffer */
 	/* on evergreen we only need a txq info one */
-	if (rctx->b.chip_class < EVERGREEN) {
-		if (rctx->ps_shader && rctx->ps_shader->current->shader.uses_tex_buffers)
-			r600_setup_buffer_constants(rctx, PIPE_SHADER_FRAGMENT);
-		if (rctx->vs_shader && rctx->vs_shader->current->shader.uses_tex_buffers)
-			r600_setup_buffer_constants(rctx, PIPE_SHADER_VERTEX);
-		if (rctx->gs_shader && rctx->gs_shader->current->shader.uses_tex_buffers)
-			r600_setup_buffer_constants(rctx, PIPE_SHADER_GEOMETRY);
-	} else {
-		if (rctx->ps_shader && rctx->ps_shader->current->shader.uses_tex_buffers)
-			eg_setup_buffer_constants(rctx, PIPE_SHADER_FRAGMENT);
-		if (rctx->vs_shader && rctx->vs_shader->current->shader.uses_tex_buffers)
-			eg_setup_buffer_constants(rctx, PIPE_SHADER_VERTEX);
-		if (rctx->gs_shader && rctx->gs_shader->current->shader.uses_tex_buffers)
-			eg_setup_buffer_constants(rctx, PIPE_SHADER_GEOMETRY);
+	if (rctx->ps_shader) {
+		need_buf_const = rctx->ps_shader->current->shader.uses_tex_buffers || rctx->ps_shader->current->shader.has_txq_cube_array_z_comp;
+		if (need_buf_const) {
+			if (rctx->b.chip_class < EVERGREEN)
+				r600_setup_buffer_constants(rctx, PIPE_SHADER_FRAGMENT);
+			else
+				eg_setup_buffer_constants(rctx, PIPE_SHADER_FRAGMENT);
+		}
 	}
 
+	if (rctx->vs_shader) {
+		need_buf_const = rctx->vs_shader->current->shader.uses_tex_buffers || rctx->vs_shader->current->shader.has_txq_cube_array_z_comp;
+		if (need_buf_const) {
+			if (rctx->b.chip_class < EVERGREEN)
+				r600_setup_buffer_constants(rctx, PIPE_SHADER_VERTEX);
+			else
+				eg_setup_buffer_constants(rctx, PIPE_SHADER_VERTEX);
+		}
+	}
 
-	if (rctx->ps_shader && rctx->ps_shader->current->shader.has_txq_cube_array_z_comp)
-		r600_setup_txq_cube_array_constants(rctx, PIPE_SHADER_FRAGMENT);
-	if (rctx->vs_shader && rctx->vs_shader->current->shader.has_txq_cube_array_z_comp)
-		r600_setup_txq_cube_array_constants(rctx, PIPE_SHADER_VERTEX);
-	if (rctx->gs_shader && rctx->gs_shader->current->shader.has_txq_cube_array_z_comp)
-		r600_setup_txq_cube_array_constants(rctx, PIPE_SHADER_GEOMETRY);
+	if (rctx->gs_shader) {
+		need_buf_const = rctx->gs_shader->current->shader.uses_tex_buffers || rctx->gs_shader->current->shader.has_txq_cube_array_z_comp;
+		if (need_buf_const) {
+			if (rctx->b.chip_class < EVERGREEN)
+				r600_setup_buffer_constants(rctx, PIPE_SHADER_GEOMETRY);
+			else
+				eg_setup_buffer_constants(rctx, PIPE_SHADER_GEOMETRY);
+		}
+	}
 
 	if (rctx->b.chip_class < EVERGREEN && rctx->ps_shader && rctx->vs_shader) {
 		if (!r600_adjust_gprs(rctx)) {
