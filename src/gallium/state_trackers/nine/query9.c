@@ -23,34 +23,35 @@
 #include "device9.h"
 #include "query9.h"
 #include "nine_helpers.h"
+#include "pipe/p_screen.h"
 #include "pipe/p_context.h"
 #include "util/u_math.h"
 #include "nine_dump.h"
 
 #define DBG_CHANNEL DBG_QUERY
 
-#define QUERY_TYPE_MAP_CASE(a, b) case D3DQUERYTYPE_##a: return PIPE_QUERY_##b
 static inline unsigned
-d3dquerytype_to_pipe_query(D3DQUERYTYPE type)
+d3dquerytype_to_pipe_query(struct pipe_screen *screen, D3DQUERYTYPE type)
 {
     switch (type) {
-    QUERY_TYPE_MAP_CASE(EVENT, GPU_FINISHED);
-    QUERY_TYPE_MAP_CASE(OCCLUSION, OCCLUSION_COUNTER);
-    QUERY_TYPE_MAP_CASE(TIMESTAMP, TIMESTAMP);
-    QUERY_TYPE_MAP_CASE(TIMESTAMPDISJOINT, TIMESTAMP_DISJOINT);
-    QUERY_TYPE_MAP_CASE(TIMESTAMPFREQ, TIMESTAMP_DISJOINT);
-    QUERY_TYPE_MAP_CASE(VERTEXSTATS, PIPELINE_STATISTICS);
-    case D3DQUERYTYPE_VCACHE:
-    case D3DQUERYTYPE_RESOURCEMANAGER:
-    case D3DQUERYTYPE_PIPELINETIMINGS:
-    case D3DQUERYTYPE_INTERFACETIMINGS:
-    case D3DQUERYTYPE_VERTEXTIMINGS:
-    case D3DQUERYTYPE_PIXELTIMINGS:
-    case D3DQUERYTYPE_BANDWIDTHTIMINGS:
-    case D3DQUERYTYPE_CACHEUTILIZATION:
-       return PIPE_QUERY_TYPES;
+    case D3DQUERYTYPE_EVENT:
+        return PIPE_QUERY_GPU_FINISHED;
+    case D3DQUERYTYPE_OCCLUSION:
+        return screen->get_param(screen, PIPE_CAP_OCCLUSION_QUERY) ?
+               PIPE_QUERY_OCCLUSION_COUNTER : PIPE_QUERY_TYPES;
+    case D3DQUERYTYPE_TIMESTAMP:
+        return screen->get_param(screen, PIPE_CAP_QUERY_TIMESTAMP) ?
+               PIPE_QUERY_TIMESTAMP : PIPE_QUERY_TYPES;
+    case D3DQUERYTYPE_TIMESTAMPDISJOINT:
+    case D3DQUERYTYPE_TIMESTAMPFREQ:
+        return screen->get_param(screen, PIPE_CAP_QUERY_TIMESTAMP) ?
+               PIPE_QUERY_TIMESTAMP_DISJOINT : PIPE_QUERY_TYPES;
+    case D3DQUERYTYPE_VERTEXSTATS:
+        return screen->get_param(screen,
+                                 PIPE_CAP_QUERY_PIPELINE_STATISTICS) ?
+               PIPE_QUERY_PIPELINE_STATISTICS : PIPE_QUERY_TYPES;
     default:
-        return ~0;
+        return PIPE_QUERY_TYPES; /* Query not supported */
     }
 }
 
@@ -73,9 +74,9 @@ nine_query_result_size(D3DQUERYTYPE type)
 }
 
 HRESULT
-nine_is_query_supported(D3DQUERYTYPE type)
+nine_is_query_supported(struct pipe_screen *screen, D3DQUERYTYPE type)
 {
-    const unsigned ptype = d3dquerytype_to_pipe_query(type);
+    const unsigned ptype = d3dquerytype_to_pipe_query(screen, type);
 
     user_assert(ptype != ~0, D3DERR_INVALIDCALL);
 
@@ -93,7 +94,7 @@ NineQuery9_ctor( struct NineQuery9 *This,
                  D3DQUERYTYPE Type )
 {
     struct pipe_context *pipe = pParams->device->pipe;
-    const unsigned ptype = d3dquerytype_to_pipe_query(Type);
+    const unsigned ptype = d3dquerytype_to_pipe_query(pParams->device->screen, Type);
     HRESULT hr;
 
     DBG("This=%p pParams=%p Type=%d\n", This, pParams, Type);

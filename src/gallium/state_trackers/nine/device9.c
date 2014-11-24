@@ -3359,7 +3359,7 @@ NineDevice9_CreateQuery( struct NineDevice9 *This,
 
     DBG("This=%p Type=%d ppQuery=%p\n", This, Type, ppQuery);
 
-    hr = nine_is_query_supported(Type);
+    hr = nine_is_query_supported(This->screen, Type);
     if (!ppQuery || hr != D3D_OK)
         return hr;
 
