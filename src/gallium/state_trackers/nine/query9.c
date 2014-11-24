@@ -212,15 +212,12 @@ NineQuery9_GetData( struct NineQuery9 *This,
     if (This->state == NINE_QUERY_STATE_FRESH)
         return S_OK;
 
+    /* Note: We ignore dwGetDataFlags, because get_query_result will
+     * flush automatically if needed */
+
     ok = pipe->get_query_result(pipe, This->pq, FALSE, &presult);
-    if (!ok) {
-        if (dwGetDataFlags) {
-            if (This->state != NINE_QUERY_STATE_FLUSHED)
-                pipe->flush(pipe, NULL, 0);
-            This->state = NINE_QUERY_STATE_FLUSHED;
-        }
-        return S_FALSE;
-    }
+
+    if (!ok) return S_FALSE;
 
     if (!dwSize)
         return S_OK;

@@ -30,7 +30,6 @@ enum nine_query_state
     NINE_QUERY_STATE_FRESH = 0,
     NINE_QUERY_STATE_RUNNING,
     NINE_QUERY_STATE_ENDED,
-    NINE_QUERY_STATE_FLUSHED
 };
 
 struct NineQuery9
