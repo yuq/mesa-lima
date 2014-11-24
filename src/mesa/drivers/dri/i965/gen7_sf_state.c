@@ -92,7 +92,9 @@ const struct brw_tracked_state gen7_sbe_state = {
 		_NEW_POINT |
 		_NEW_PROGRAM),
       .brw   = (BRW_NEW_CONTEXT |
-		BRW_NEW_FRAGMENT_PROGRAM |
+                BRW_NEW_FRAGMENT_PROGRAM |
+                BRW_NEW_GEOMETRY_PROGRAM |
+                BRW_NEW_PRIMITIVE |
                 BRW_NEW_VUE_MAP_GEOM_OUT),
       .cache = CACHE_NEW_WM_PROG
    },
