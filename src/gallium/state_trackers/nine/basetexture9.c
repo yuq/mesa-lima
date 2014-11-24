@@ -493,9 +493,9 @@ NineBaseTexture9_PreLoad( struct NineBaseTexture9 *This )
 void
 NineBaseTexture9_Dump( struct NineBaseTexture9 *This )
 {
-    DBG("\nNineBaseTexture9(%p->%p/%p): Pool=%s Type=%s Usage=%s\n"
+    DBG("\nNineBaseTexture9(%p->NULL/%p): Pool=%s Type=%s Usage=%s\n"
         "Format=%s Dims=%ux%ux%u/%u LastLevel=%u Lod=%u(%u)\n", This,
-        This->base.resource, This->base.data,
+        This->base.resource,
         nine_D3DPOOL_to_str(This->base.pool),
         nine_D3DRTYPE_to_str(This->base.type),
         nine_D3DUSAGE_to_str(This->base.usage),

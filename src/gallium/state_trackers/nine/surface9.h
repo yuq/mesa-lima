@@ -47,6 +47,8 @@ struct NineSurface9
     unsigned layer;
     D3DSURFACE_DESC desc;
 
+    uint8_t *data; /* system memory backing */
+    boolean manage_data;
     unsigned stride; /* for system memory backing */
 
     /* wine doesn't even use these, 2 will be enough */
@@ -62,6 +64,7 @@ HRESULT
 NineSurface9_new( struct NineDevice9 *pDevice,
                   struct NineUnknown *pContainer,
                   struct pipe_resource *pResource,
+                  void *user_buffer,
                   uint8_t TextureType, /* 0 if pContainer isn't BaseTexure9 */
                   unsigned Level,
                   unsigned Layer,
@@ -73,6 +76,7 @@ NineSurface9_ctor( struct NineSurface9 *This,
                    struct NineUnknownParams *pParams,
                    struct NineUnknown *pContainer,
                    struct pipe_resource *pResource,
+                   void *user_buffer,
                    uint8_t TextureType,
                    unsigned Level,
                    unsigned Layer,
@@ -123,9 +127,6 @@ NineSurface9_ClearDirtyRects( struct NineSurface9 *This )
 {
     memset(&This->dirty_rects, 0, sizeof(This->dirty_rects));
 }
-
-HRESULT
-NineSurface9_AllocateData( struct NineSurface9 *This );
 
 HRESULT
 NineSurface9_UploadSelf( struct NineSurface9 *This );

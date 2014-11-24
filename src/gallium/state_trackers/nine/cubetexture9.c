@@ -102,7 +102,7 @@ NineCubeTexture9_ctor( struct NineCubeTexture9 *This,
         sfdesc.Width = sfdesc.Height = u_minify(EdgeLength, i / 6);
 
         hr = NineSurface9_new(This->base.base.base.device, NineUnknown(This),
-                              This->base.base.resource, D3DRTYPE_CUBETEXTURE,
+                              This->base.base.resource, NULL, D3DRTYPE_CUBETEXTURE,
                               i / 6, i % 6,
                               &sfdesc, &This->surfaces[i]);
         if (FAILED(hr))

@@ -43,6 +43,7 @@ NineSurface9_ctor( struct NineSurface9 *This,
                    struct NineUnknownParams *pParams,
                    struct NineUnknown *pContainer,
                    struct pipe_resource *pResource,
+                   void *user_buffer,
                    uint8_t TextureType,
                    unsigned Level,
                    unsigned Layer,
@@ -61,6 +62,8 @@ NineSurface9_ctor( struct NineSurface9 *This,
 
     assert(pResource ||
            pDesc->Pool != D3DPOOL_DEFAULT || pDesc->Format == D3DFMT_NULL);
+
+    assert(!pResource || !user_buffer);
 
     This->base.info.screen = pParams->device->screen;
     This->base.info.target = PIPE_TEXTURE_2D;
@@ -82,9 +85,8 @@ NineSurface9_ctor( struct NineSurface9 *This,
 
     if (pDesc->Pool == D3DPOOL_SYSTEMMEM) {
         This->base.info.usage = PIPE_USAGE_STAGING;
-        if (pResource)
-            This->base.data = (uint8_t *)pResource; /* this is *pSharedHandle */
-        pResource = NULL;
+        This->data = (uint8_t *)user_buffer; /* this is *pSharedHandle */
+        assert(!pResource);
     } else {
         if (pResource && (pDesc->Usage & D3DUSAGE_DYNAMIC))
             pResource->flags |= NINE_RESOURCE_FLAG_LOCKABLE;
@@ -107,13 +109,20 @@ NineSurface9_ctor( struct NineSurface9 *This,
     This->stride = util_format_get_stride(This->base.info.format, pDesc->Width);
     This->stride = align(This->stride, 4);
 
-    if (!pResource && !This->base.data) {
-        hr = NineSurface9_AllocateData(This);
-        if (FAILED(hr))
-            return hr;
+    if (!pResource && !This->data) {
+        const unsigned size = This->stride *
+            util_format_get_nblocksy(This->base.info.format, This->desc.Height);
+
+        DBG("(%p(This=%p),level=%u) Allocating 0x%x bytes of system memory.\n",
+            This->base.base.container, This, This->level, size);
+
+        This->data = (uint8_t *)MALLOC(size);
+        if (!This->data)
+            return E_OUTOFMEMORY;
+        This->manage_data = TRUE;
     } else {
         if (pResource && NineSurface9_IsOffscreenPlain(This))
-            pResource->flags |= NINE_RESOURCE_FLAG_LOCKABLE;
+            pResource->flags |= NINE_RESOURCE_FLAG_LOCKABLE; /* why setting this flag there ? too late ? should be before NineResource9_ctor call perhaps ? */
     }
 
     NineSurface9_Dump(This);
@@ -131,6 +140,9 @@ NineSurface9_dtor( struct NineSurface9 *This )
     pipe_surface_reference(&This->surface[0], NULL);
     pipe_surface_reference(&This->surface[1], NULL);
 
+    /* release allocated system memory for non-D3DPOOL_DEFAULT resources */
+    if (This->manage_data && This->data)
+        FREE(This->data);
     NineResource9_dtor(&This->base);
 }
 
@@ -165,7 +177,7 @@ NineSurface9_Dump( struct NineSurface9 *This )
 
     DBG("\nNineSurface9(%p->%p/%p): Pool=%s Type=%s Usage=%s\n"
         "Dims=%ux%u Format=%s Stride=%u Lockable=%i\n"
-        "Level=%u(%u), Layer=%u\n", This, This->base.resource, This->base.data,
+        "Level=%u(%u), Layer=%u\n", This, This->base.resource, This->data,
         nine_D3DPOOL_to_str(This->desc.Pool),
         nine_D3DRTYPE_to_str(This->desc.Type),
         nine_D3DUSAGE_to_str(This->desc.Usage),
@@ -284,8 +296,8 @@ NineSurface9_GetSystemMemPointer(struct NineSurface9 *This, int x, int y)
 
     y = util_format_get_nblocksy(This->base.info.format, y);
 
-    assert(This->base.data);
-    return This->base.data + (y * This->stride + x_offset);
+    assert(This->data);
+    return This->data + (y * This->stride + x_offset);
 }
 
 HRESULT WINAPI
@@ -358,7 +370,7 @@ NineSurface9_LockRect( struct NineSurface9 *This,
 
     user_warn(This->desc.Format == D3DFMT_NULL);
 
-    if (This->base.data) {
+    if (This->data) {
         DBG("returning system memory\n");
 
         pLockedRect->Pitch = This->stride;
@@ -415,73 +427,6 @@ NineSurface9_ReleaseDC( struct NineSurface9 *This,
                         HDC hdc )
 {
     STUB(D3DERR_INVALIDCALL);
-}
-
-/* nine private */
-
-HRESULT
-NineSurface9_AllocateData( struct NineSurface9 *This )
-{
-#if 0
-    struct pipe_screen *screen = This->base.info.screen;
-    /* XXX: Can't use staging resource because apparently apps expect
-     * memory offsets to be the same across locks.
-     * NV50 doesn't support direct mapping yet so only enable this if
-     * everything else works.
-     */
-    if (This->base.pool == D3DPOOL_SYSTEMMEM) {
-        /* Allocate a staging resource to save a copy:
-         * user -> staging resource
-         * staging resource -> (blit) -> video memory
-         *
-         * Instead of:
-         * user -> system memory
-         * system memory -> transfer staging area
-         * transfer -> video memory
-         *
-         * Does this work if we "lose" the device ?
-         */
-        struct pipe_resource *resource;
-        struct pipe_resource templ;
-
-        templ.target = PIPE_TEXTURE_2D;
-        templ.format = This->base.info.format;
-        templ.width0 = This->desc.Width;
-        templ.height0 = This->desc.Height;
-        templ.depth0 = 1;
-        templ.array_size = 1;
-        templ.last_level = 0;
-        templ.nr_samples = 0;
-        templ.usage = PIPE_USAGE_STAGING;
-        templ.bind =
-            PIPE_BIND_SAMPLER_VIEW |
-            PIPE_BIND_TRANSFER_WRITE |
-            PIPE_BIND_TRANSFER_READ;
-        templ.flags = 0;
-
-        DBG("(%p(This=%p),level=%u) Allocating staging resource.\n",
-            This->base.base.container, This, This->level);
-
-        resource = screen->resource_create(screen, &templ);
-        if (!resource)
-            DBG("Failed to allocate staging resource.\n");
-
-        /* Also deallocate old staging resource. */
-        pipe_resource_reference(&This->base.resource, resource);
-    }
-#endif
-    if (!This->base.resource) {
-        const unsigned size = This->stride *
-            util_format_get_nblocksy(This->base.info.format, This->desc.Height);
-
-        DBG("(%p(This=%p),level=%u) Allocating 0x%x bytes of system memory.\n",
-            This->base.base.container, This, This->level, size);
-
-        This->base.data = (uint8_t *)MALLOC(size);
-        if (!This->base.data)
-            return E_OUTOFMEMORY;
-    }
-    return D3D_OK;
 }
 
 IDirect3DSurface9Vtbl NineSurface9_vtable = {
@@ -697,6 +642,7 @@ HRESULT
 NineSurface9_new( struct NineDevice9 *pDevice,
                   struct NineUnknown *pContainer,
                   struct pipe_resource *pResource,
+                  void *user_buffer,
                   uint8_t TextureType,
                   unsigned Level,
                   unsigned Layer,
@@ -704,6 +650,6 @@ NineSurface9_new( struct NineDevice9 *pDevice,
                   struct NineSurface9 **ppOut )
 {
     NINE_DEVICE_CHILD_NEW(Surface9, ppOut, pDevice, /* args */
-                          pContainer, pResource,
+                          pContainer, pResource, user_buffer,
                           TextureType, Level, Layer, pDesc);
 }

@@ -63,7 +63,6 @@ NineResource9_ctor( struct NineResource9 *This,
             return D3DERR_OUTOFVIDEOMEMORY;
     }
 
-    This->data = NULL; /* FIXME remove, rather set it to null in surface9.c*/
     This->type = Type;
     This->pool = Pool;
     This->usage = Usage;
@@ -87,10 +86,6 @@ NineResource9_dtor( struct NineResource9 *This )
     /* NOTE: We do have to use refcounting, the driver might
      * still hold a reference. */
     pipe_resource_reference(&This->resource, NULL);
-
-    /* release allocated system memory for non-D3DPOOL_DEFAULT resources */
-    if (This->data)
-        FREE(This->data);
 
     NineUnknown_dtor(&This->base);
 }

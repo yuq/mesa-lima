@@ -304,7 +304,7 @@ NineSwapChain9_Resize( struct NineSwapChain9 *This,
         } else {
             desc.Format = pParams->BackBufferFormat;
             desc.Usage = D3DUSAGE_RENDERTARGET;
-            hr = NineSurface9_new(pDevice, NineUnknown(This), resource, 0,
+            hr = NineSurface9_new(pDevice, NineUnknown(This), resource, NULL, 0,
                                   0, 0, &desc, &This->buffers[i]);
             if (has_present_buffers)
                 pipe_resource_reference(&resource, NULL);
@@ -347,7 +347,7 @@ NineSwapChain9_Resize( struct NineSwapChain9 *This,
             /* XXX wine thinks the container of this should be the device */
             desc.Format = pParams->AutoDepthStencilFormat;
             desc.Usage = D3DUSAGE_DEPTHSTENCIL;
-            hr = NineSurface9_new(pDevice, NineUnknown(pDevice), resource, 0,
+            hr = NineSurface9_new(pDevice, NineUnknown(pDevice), resource, NULL, 0,
                                   0, 0, &desc, &This->zsbuf);
             pipe_resource_reference(&resource, NULL);
             if (FAILED(hr)) {
@@ -832,7 +832,7 @@ NineSwapChain9_GetFrontBufferData( struct NineSwapChain9 *This,
     /* NineSurface9_CopySurface needs same format. */
     desc.Format = dest_surface->desc.Format;
     desc.Usage = D3DUSAGE_RENDERTARGET;
-    hr = NineSurface9_new(pDevice, NineUnknown(This), temp_resource, 0,
+    hr = NineSurface9_new(pDevice, NineUnknown(This), temp_resource, NULL, 0,
                           0, 0, &desc, &temp_surface);
     pipe_resource_reference(&temp_resource, NULL);
     if (FAILED(hr)) {

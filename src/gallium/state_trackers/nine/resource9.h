@@ -36,8 +36,6 @@ struct NineResource9
 
     struct pipe_resource *resource; /* device resource */
 
-    uint8_t *data; /* system memory backing */
-
     D3DRESOURCETYPE type;
     D3DPOOL pool;
     DWORD priority;

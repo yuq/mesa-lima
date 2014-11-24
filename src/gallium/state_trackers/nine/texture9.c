@@ -46,10 +46,11 @@ NineTexture9_ctor( struct NineTexture9 *This,
 {
     struct pipe_screen *screen = pParams->device->screen;
     struct pipe_resource *info = &This->base.base.info;
+    struct pipe_resource *resource;
     unsigned l;
     D3DSURFACE_DESC sfdesc;
     HRESULT hr;
-    const boolean shared_create = pSharedHandle && !*pSharedHandle;
+    void *user_buffer = NULL;
 
     DBG("(%p) Width=%u Height=%u Levels=%u Usage=%s Format=%s Pool=%s "
         "pSharedHandle=%p\n", This, Width, Height, Levels,
@@ -77,10 +78,7 @@ NineTexture9_ctor( struct NineTexture9 *This,
                 Pool == D3DPOOL_DEFAULT, D3DERR_INVALIDCALL);
 
     if (pSharedHandle && Pool == D3DPOOL_DEFAULT) {
-        /* Note: Below there is some implementation to support buffer sharing in
-         * this case, but it won't work for cross-process. Thus just ignore
-         * that code. */
-        if (shared_create) {
+        if (!*pSharedHandle) {
             DBG("Creating Texture with invalid handle. Importing will fail\n.");
             *pSharedHandle = (HANDLE)1; /* Wine would keep it NULL */
             pSharedHandle = NULL;
@@ -127,18 +125,8 @@ NineTexture9_ctor( struct NineTexture9 *This,
     if (Pool == D3DPOOL_SYSTEMMEM)
         info->usage = PIPE_USAGE_STAGING;
 
-    if (pSharedHandle && !shared_create) {
-        if (Pool == D3DPOOL_SYSTEMMEM) {
-            /* Hack for surface creation. */
-            This->base.base.resource = (struct pipe_resource *)*pSharedHandle;
-        } else {
-            struct pipe_resource *res;
-            res = screen->resource_from_handle(screen, info,
-                                      (struct winsys_handle *)pSharedHandle);
-            if (!res)
-                return D3DERR_NOTFOUND;
-            This->base.base.resource = res;
-        }
+    if (pSharedHandle && *pSharedHandle) { /* Pool == D3DPOOL_SYSTEMMEM */
+        user_buffer = (void *)*pSharedHandle;
     }
 
     This->surfaces = CALLOC(info->last_level + 1, sizeof(*This->surfaces));
@@ -160,12 +148,19 @@ NineTexture9_ctor( struct NineTexture9 *This,
     sfdesc.Pool = Pool;
     sfdesc.MultiSampleType = D3DMULTISAMPLE_NONE;
     sfdesc.MultiSampleQuality = 0;
+
+    if (Pool == D3DPOOL_SYSTEMMEM)
+        resource = NULL;
+    else
+        resource = This->base.base.resource;
+
     for (l = 0; l <= info->last_level; ++l) {
         sfdesc.Width = u_minify(Width, l);
         sfdesc.Height = u_minify(Height, l);
 
         hr = NineSurface9_new(This->base.base.base.device, NineUnknown(This),
-                              This->base.base.resource, D3DRTYPE_TEXTURE, l, 0,
+                              resource, user_buffer,
+                              D3DRTYPE_TEXTURE, l, 0,
                               &sfdesc, &This->surfaces[l]);
         if (FAILED(hr))
             return hr;
@@ -173,19 +168,8 @@ NineTexture9_ctor( struct NineTexture9 *This,
 
     This->dirty_rect.depth = 1; /* widht == 0 means empty, depth stays 1 */
 
-    if (pSharedHandle) {
-        if (Pool == D3DPOOL_SYSTEMMEM) {
-            This->base.base.resource = NULL;
-            if (shared_create)
-                *pSharedHandle = This->surfaces[0]->base.data;
-        } else
-        if (shared_create) {
-            boolean ok;
-            ok = screen->resource_get_handle(screen, This->base.base.resource,
-                                         (struct winsys_handle *)pSharedHandle);
-            if (!ok)
-                return D3DERR_DRIVERINTERNALERROR;
-        }
+    if (pSharedHandle && !*pSharedHandle) {/* Pool == D3DPOOL_SYSTEMMEM */
+        *pSharedHandle = This->surfaces[0]->data;
     }
 
     return D3D_OK;
