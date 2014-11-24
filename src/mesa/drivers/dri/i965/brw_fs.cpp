@@ -3748,7 +3748,7 @@ brw_wm_fs_emit(struct brw_context *brw,
    return g.get_assembly(final_assembly_size);
 }
 
-bool
+extern "C" bool
 brw_fs_precompile(struct gl_context *ctx,
                   struct gl_shader_program *shader_prog,
                   struct gl_program *prog)

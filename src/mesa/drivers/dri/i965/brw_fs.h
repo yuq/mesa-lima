@@ -797,8 +797,5 @@ private:
 
 bool brw_do_channel_expressions(struct exec_list *instructions);
 bool brw_do_vector_splitting(struct exec_list *instructions);
-bool brw_fs_precompile(struct gl_context *ctx,
-                       struct gl_shader_program *shader_prog,
-                       struct gl_program *prog);
 
 struct brw_reg brw_reg_from_fs_reg(fs_reg *reg);
