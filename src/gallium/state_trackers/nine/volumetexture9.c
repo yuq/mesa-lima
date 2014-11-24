@@ -52,9 +52,6 @@ NineVolumeTexture9_ctor( struct NineVolumeTexture9 *This,
     if (Usage & D3DUSAGE_AUTOGENMIPMAP)
         Levels = 0;
 
-    This->base.format = Format;
-    This->base.base.usage = Usage;
-
     info->screen = pParams->device->screen;
     info->target = PIPE_TEXTURE_3D;
     info->format = d3d9_to_pipe_format(Format);
@@ -83,8 +80,8 @@ NineVolumeTexture9_ctor( struct NineVolumeTexture9 *This,
         return E_OUTOFMEMORY;
     This->base.pstype = 3;
 
-    hr = NineBaseTexture9_ctor(&This->base, pParams,
-                               D3DRTYPE_VOLUMETEXTURE, Pool);
+    hr = NineBaseTexture9_ctor(&This->base, pParams, NULL,
+                               D3DRTYPE_VOLUMETEXTURE, Format, Pool, Usage);
     if (FAILED(hr))
         return hr;
 

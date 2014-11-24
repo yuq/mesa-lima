@@ -41,25 +41,28 @@
 HRESULT
 NineBaseTexture9_ctor( struct NineBaseTexture9 *This,
                        struct NineUnknownParams *pParams,
+                       struct pipe_resource *initResource,
                        D3DRESOURCETYPE Type,
-                       D3DPOOL Pool )
+                       D3DFORMAT format,
+                       D3DPOOL Pool,
+                       DWORD Usage)
 {
-    BOOL alloc = (Pool == D3DPOOL_DEFAULT) && !This->base.resource &&
-        (This->format != D3DFMT_NULL);
+    BOOL alloc = (Pool == D3DPOOL_DEFAULT) && !initResource &&
+        (format != D3DFMT_NULL);
     HRESULT hr;
-    DWORD usage = This->base.usage;
 
-    user_assert(!(usage & (D3DUSAGE_RENDERTARGET | D3DUSAGE_DEPTHSTENCIL)) ||
+    user_assert(!(Usage & (D3DUSAGE_RENDERTARGET | D3DUSAGE_DEPTHSTENCIL)) ||
                 Pool == D3DPOOL_DEFAULT, D3DERR_INVALIDCALL);
-    user_assert(!(usage & D3DUSAGE_DYNAMIC) ||
+    user_assert(!(Usage & D3DUSAGE_DYNAMIC) ||
                 Pool != D3DPOOL_MANAGED, D3DERR_INVALIDCALL);
 
-    hr = NineResource9_ctor(&This->base, pParams, alloc, Type, Pool);
+    hr = NineResource9_ctor(&This->base, pParams, initResource, alloc, Type, Pool, Usage);
     if (FAILED(hr))
         return hr;
 
+    This->format = format;
     This->pipe = pParams->device->pipe;
-    This->mipfilter = (This->base.usage & D3DUSAGE_AUTOGENMIPMAP) ?
+    This->mipfilter = (Usage & D3DUSAGE_AUTOGENMIPMAP) ?
         D3DTEXF_LINEAR : D3DTEXF_NONE;
     This->lod = 0;
     This->lod_resident = -1;

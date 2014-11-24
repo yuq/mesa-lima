@@ -88,14 +88,12 @@ NineSurface9_ctor( struct NineSurface9 *This,
     } else {
         if (pResource && (pDesc->Usage & D3DUSAGE_DYNAMIC))
             pResource->flags |= NINE_RESOURCE_FLAG_LOCKABLE;
-        pipe_resource_reference(&This->base.resource, pResource);
     }
 
-    hr = NineResource9_ctor(&This->base, pParams, FALSE, D3DRTYPE_SURFACE,
-                            pDesc->Pool);
+    hr = NineResource9_ctor(&This->base, pParams, pResource, FALSE, D3DRTYPE_SURFACE,
+                            pDesc->Pool, pDesc->Usage);
     if (FAILED(hr))
         return hr;
-    This->base.usage = pDesc->Usage;
 
     This->pipe = This->base.base.device->pipe;
     This->transfer = NULL;

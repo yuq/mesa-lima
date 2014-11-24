@@ -94,9 +94,6 @@ NineTexture9_ctor( struct NineTexture9 *This,
     if (Usage & D3DUSAGE_AUTOGENMIPMAP)
         Levels = 0;
 
-    This->base.format = Format;
-    This->base.base.usage = Usage;
-
     info->screen = screen;
     info->target = PIPE_TEXTURE_2D;
     info->format = d3d9_to_pipe_format(Format);
@@ -148,7 +145,7 @@ NineTexture9_ctor( struct NineTexture9 *This,
     if (!This->surfaces)
         return E_OUTOFMEMORY;
 
-    hr = NineBaseTexture9_ctor(&This->base, pParams, D3DRTYPE_TEXTURE, Pool);
+    hr = NineBaseTexture9_ctor(&This->base, pParams, NULL, D3DRTYPE_TEXTURE, Format, Pool, Usage);
     if (FAILED(hr))
         return hr;
     This->base.pstype = (Height == 1) ? 1 : 0;

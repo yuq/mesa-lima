@@ -85,8 +85,8 @@ NineVertexBuffer9_ctor( struct NineVertexBuffer9 *This,
     info->last_level = 0;
     info->nr_samples = 0;
 
-    hr = NineResource9_ctor(&This->base, pParams, TRUE, D3DRTYPE_VERTEXBUFFER,
-                            pDesc->Pool);
+    hr = NineResource9_ctor(&This->base, pParams, NULL, TRUE,
+                            D3DRTYPE_VERTEXBUFFER, pDesc->Pool, pDesc->Usage);
     if (FAILED(hr))
         return hr;
 

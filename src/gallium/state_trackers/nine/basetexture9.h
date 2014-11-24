@@ -59,8 +59,11 @@ NineBaseTexture9( void *data )
 HRESULT
 NineBaseTexture9_ctor( struct NineBaseTexture9 *This,
                        struct NineUnknownParams *pParams,
+                       struct pipe_resource *initResource,
                        D3DRESOURCETYPE Type,
-                       D3DPOOL Pool );
+                       D3DFORMAT format,
+                       D3DPOOL Pool,
+                       DWORD Usage);
 
 void
 NineBaseTexture9_dtor( struct NineBaseTexture9 *This );
