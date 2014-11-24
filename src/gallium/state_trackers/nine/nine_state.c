@@ -400,7 +400,7 @@ update_constants(struct NineDevice9 *device, unsigned shader_type)
         const_i = &device->state.ps_const_i[0][0];
 
         dirty_b = device->state.changed.ps_const_b;
-        device->state.changed.vs_const_b = 0;
+        device->state.changed.ps_const_b = 0;
         const_b = device->state.ps_const_b;
         b_true = device->ps_bool_true;
 
