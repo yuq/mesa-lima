@@ -91,10 +91,10 @@ gen6_update_sol_surfaces(struct brw_context *brw)
 const struct brw_tracked_state gen6_sol_surface = {
    .dirty = {
       .mesa = 0,
-      .brw = (BRW_NEW_BATCH |
-              BRW_NEW_VERTEX_PROGRAM |
-              BRW_NEW_GEOMETRY_PROGRAM |
-              BRW_NEW_TRANSFORM_FEEDBACK),
+      .brw = BRW_NEW_BATCH |
+             BRW_NEW_GEOMETRY_PROGRAM |
+             BRW_NEW_VERTEX_PROGRAM |
+             BRW_NEW_TRANSFORM_FEEDBACK,
       .cache = 0
    },
    .emit = gen6_update_sol_surfaces,
@@ -186,10 +186,10 @@ brw_gs_upload_binding_table(struct brw_context *brw)
 const struct brw_tracked_state gen6_gs_binding_table = {
    .dirty = {
       .mesa = 0,
-      .brw = (BRW_NEW_BATCH |
-              BRW_NEW_VERTEX_PROGRAM |
-              BRW_NEW_GEOMETRY_PROGRAM |
-              BRW_NEW_SURFACES),
+      .brw = BRW_NEW_BATCH |
+             BRW_NEW_GEOMETRY_PROGRAM |
+             BRW_NEW_VERTEX_PROGRAM |
+             BRW_NEW_SURFACES,
       .cache = 0
    },
    .emit = brw_gs_upload_binding_table,

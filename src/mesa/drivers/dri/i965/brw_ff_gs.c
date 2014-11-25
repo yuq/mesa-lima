@@ -250,9 +250,9 @@ void gen6_brw_upload_ff_gs_prog(struct brw_context *brw)
 
 const struct brw_tracked_state brw_ff_gs_prog = {
    .dirty = {
-      .mesa  = (_NEW_LIGHT),
-      .brw   = (BRW_NEW_PRIMITIVE |
-                BRW_NEW_TRANSFORM_FEEDBACK),
+      .mesa  = _NEW_LIGHT,
+      .brw   = BRW_NEW_PRIMITIVE |
+               BRW_NEW_TRANSFORM_FEEDBACK,
       .cache = CACHE_NEW_VS_PROG
    },
    .emit = brw_upload_ff_gs_prog

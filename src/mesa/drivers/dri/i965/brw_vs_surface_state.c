@@ -127,8 +127,9 @@ brw_upload_vs_pull_constants(struct brw_context *brw)
 
 const struct brw_tracked_state brw_vs_pull_constants = {
    .dirty = {
-      .mesa = (_NEW_PROGRAM_CONSTANTS),
-      .brw = (BRW_NEW_BATCH | BRW_NEW_VERTEX_PROGRAM),
+      .mesa = _NEW_PROGRAM_CONSTANTS,
+      .brw = BRW_NEW_BATCH |
+             BRW_NEW_VERTEX_PROGRAM,
       .cache = CACHE_NEW_VS_PROG,
    },
    .emit = brw_upload_vs_pull_constants,
@@ -153,7 +154,8 @@ brw_upload_vs_ubo_surfaces(struct brw_context *brw)
 const struct brw_tracked_state brw_vs_ubo_surfaces = {
    .dirty = {
       .mesa = _NEW_PROGRAM,
-      .brw = BRW_NEW_BATCH | BRW_NEW_UNIFORM_BUFFER,
+      .brw = BRW_NEW_BATCH |
+             BRW_NEW_UNIFORM_BUFFER,
       .cache = CACHE_NEW_VS_PROG,
    },
    .emit = brw_upload_vs_ubo_surfaces,
@@ -177,7 +179,8 @@ brw_upload_vs_abo_surfaces(struct brw_context *brw)
 const struct brw_tracked_state brw_vs_abo_surfaces = {
    .dirty = {
       .mesa = _NEW_PROGRAM,
-      .brw = BRW_NEW_BATCH | BRW_NEW_ATOMIC_BUFFER,
+      .brw = BRW_NEW_ATOMIC_BUFFER |
+             BRW_NEW_BATCH,
       .cache = CACHE_NEW_VS_PROG,
    },
    .emit = brw_upload_vs_abo_surfaces,

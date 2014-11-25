@@ -314,8 +314,10 @@ gen7_emit_urb_state(struct brw_context *brw,
 const struct brw_tracked_state gen7_urb = {
    .dirty = {
       .mesa = 0,
-      .brw = BRW_NEW_CONTEXT | BRW_NEW_GEOMETRY_PROGRAM,
-      .cache = (CACHE_NEW_VS_PROG | CACHE_NEW_GS_PROG),
+      .brw = BRW_NEW_CONTEXT |
+             BRW_NEW_GEOMETRY_PROGRAM,
+      .cache = CACHE_NEW_VS_PROG |
+               CACHE_NEW_GS_PROG,
    },
    .emit = gen7_upload_urb,
 };

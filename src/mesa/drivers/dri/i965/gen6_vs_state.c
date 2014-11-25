@@ -147,10 +147,11 @@ gen6_upload_vs_push_constants(struct brw_context *brw)
 
 const struct brw_tracked_state gen6_vs_push_constants = {
    .dirty = {
-      .mesa  = _NEW_TRANSFORM | _NEW_PROGRAM_CONSTANTS,
-      .brw   = (BRW_NEW_BATCH |
-                BRW_NEW_VERTEX_PROGRAM |
-                BRW_NEW_PUSH_CONSTANT_ALLOCATION),
+      .mesa  = _NEW_PROGRAM_CONSTANTS |
+               _NEW_TRANSFORM,
+      .brw   = BRW_NEW_BATCH |
+               BRW_NEW_PUSH_CONSTANT_ALLOCATION |
+               BRW_NEW_VERTEX_PROGRAM,
       .cache = CACHE_NEW_VS_PROG,
    },
    .emit = gen6_upload_vs_push_constants,
@@ -259,11 +260,12 @@ upload_vs_state(struct brw_context *brw)
 
 const struct brw_tracked_state gen6_vs_state = {
    .dirty = {
-      .mesa  = _NEW_TRANSFORM | _NEW_PROGRAM_CONSTANTS,
-      .brw   = (BRW_NEW_CONTEXT |
-		BRW_NEW_VERTEX_PROGRAM |
-		BRW_NEW_BATCH |
-                BRW_NEW_PUSH_CONSTANT_ALLOCATION),
+      .mesa  = _NEW_PROGRAM_CONSTANTS |
+               _NEW_TRANSFORM,
+      .brw   = BRW_NEW_BATCH |
+               BRW_NEW_CONTEXT |
+               BRW_NEW_PUSH_CONSTANT_ALLOCATION |
+               BRW_NEW_VERTEX_PROGRAM,
       .cache = CACHE_NEW_VS_PROG
    },
    .emit = upload_vs_state,

@@ -587,21 +587,21 @@ brw_upload_wm_prog(struct brw_context *brw)
 
 const struct brw_tracked_state brw_wm_prog = {
    .dirty = {
-      .mesa  = (_NEW_COLOR |
-		_NEW_DEPTH |
-		_NEW_STENCIL |
-		_NEW_POLYGON |
-		_NEW_LINE |
-		_NEW_HINT |
-		_NEW_LIGHT |
-		_NEW_FRAG_CLAMP |
-		_NEW_BUFFERS |
-		_NEW_TEXTURE |
-		_NEW_MULTISAMPLE),
-      .brw   = (BRW_NEW_FRAGMENT_PROGRAM |
-		BRW_NEW_REDUCED_PRIMITIVE |
-                BRW_NEW_VUE_MAP_GEOM_OUT |
-                BRW_NEW_STATS_WM)
+      .mesa  = _NEW_BUFFERS |
+               _NEW_COLOR |
+               _NEW_DEPTH |
+               _NEW_FRAG_CLAMP |
+               _NEW_HINT |
+               _NEW_LIGHT |
+               _NEW_LINE |
+               _NEW_MULTISAMPLE |
+               _NEW_POLYGON |
+               _NEW_STENCIL |
+               _NEW_TEXTURE,
+      .brw   = BRW_NEW_FRAGMENT_PROGRAM |
+               BRW_NEW_REDUCED_PRIMITIVE |
+               BRW_NEW_STATS_WM |
+               BRW_NEW_VUE_MAP_GEOM_OUT,
    },
    .emit = brw_upload_wm_prog
 };

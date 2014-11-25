@@ -116,16 +116,16 @@ static void upload_psp_urb_cbs(struct brw_context *brw )
 const struct brw_tracked_state brw_psp_urb_cbs = {
    .dirty = {
       .mesa = 0,
-      .brw = (BRW_NEW_URB_FENCE |
-	      BRW_NEW_BATCH |
-	      BRW_NEW_STATE_BASE_ADDRESS),
-      .cache = (CACHE_NEW_VS_UNIT |
-		CACHE_NEW_FF_GS_UNIT |
-		CACHE_NEW_FF_GS_PROG |
-		CACHE_NEW_CLIP_UNIT |
-		CACHE_NEW_SF_UNIT |
-		CACHE_NEW_WM_UNIT |
-		CACHE_NEW_CC_UNIT)
+      .brw = BRW_NEW_BATCH |
+             BRW_NEW_STATE_BASE_ADDRESS |
+             BRW_NEW_URB_FENCE,
+      .cache = CACHE_NEW_CC_UNIT |
+               CACHE_NEW_CLIP_UNIT |
+               CACHE_NEW_FF_GS_PROG |
+               CACHE_NEW_FF_GS_UNIT |
+               CACHE_NEW_SF_UNIT |
+               CACHE_NEW_VS_UNIT |
+               CACHE_NEW_WM_UNIT,
    },
    .emit = upload_psp_urb_cbs,
 };
@@ -753,8 +753,8 @@ static void upload_polygon_stipple(struct brw_context *brw)
 
 const struct brw_tracked_state brw_polygon_stipple = {
    .dirty = {
-      .mesa = (_NEW_POLYGONSTIPPLE |
-	       _NEW_POLYGON),
+      .mesa = _NEW_POLYGON |
+              _NEW_POLYGONSTIPPLE,
       .brw = BRW_NEW_CONTEXT,
       .cache = 0
    },
@@ -797,8 +797,8 @@ static void upload_polygon_stipple_offset(struct brw_context *brw)
 
 const struct brw_tracked_state brw_polygon_stipple_offset = {
    .dirty = {
-      .mesa = (_NEW_BUFFERS |
-	       _NEW_POLYGON),
+      .mesa = _NEW_BUFFERS |
+              _NEW_POLYGON,
       .brw = BRW_NEW_CONTEXT,
       .cache = 0
    },
@@ -1059,8 +1059,8 @@ static void upload_state_base_address( struct brw_context *brw )
 const struct brw_tracked_state brw_state_base_address = {
    .dirty = {
       .mesa = 0,
-      .brw = (BRW_NEW_BATCH |
-	      BRW_NEW_PROGRAM_CACHE),
+      .brw = BRW_NEW_BATCH |
+             BRW_NEW_PROGRAM_CACHE,
       .cache = 0,
    },
    .emit = upload_state_base_address

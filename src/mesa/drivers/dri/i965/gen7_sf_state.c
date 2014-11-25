@@ -87,15 +87,15 @@ upload_sbe_state(struct brw_context *brw)
 
 const struct brw_tracked_state gen7_sbe_state = {
    .dirty = {
-      .mesa  = (_NEW_BUFFERS |
-		_NEW_LIGHT |
-		_NEW_POINT |
-		_NEW_PROGRAM),
-      .brw   = (BRW_NEW_CONTEXT |
-                BRW_NEW_FRAGMENT_PROGRAM |
-                BRW_NEW_GEOMETRY_PROGRAM |
-                BRW_NEW_PRIMITIVE |
-                BRW_NEW_VUE_MAP_GEOM_OUT),
+      .mesa  = _NEW_BUFFERS |
+               _NEW_LIGHT |
+               _NEW_POINT |
+               _NEW_PROGRAM,
+      .brw   = BRW_NEW_CONTEXT |
+               BRW_NEW_FRAGMENT_PROGRAM |
+               BRW_NEW_GEOMETRY_PROGRAM |
+               BRW_NEW_PRIMITIVE |
+               BRW_NEW_VUE_MAP_GEOM_OUT,
       .cache = CACHE_NEW_WM_PROG
    },
    .emit = upload_sbe_state,
@@ -248,14 +248,14 @@ upload_sf_state(struct brw_context *brw)
 
 const struct brw_tracked_state gen7_sf_state = {
    .dirty = {
-      .mesa  = (_NEW_LIGHT |
-		_NEW_PROGRAM |
-		_NEW_POLYGON |
-		_NEW_LINE |
-		_NEW_SCISSOR |
-		_NEW_BUFFERS |
-		_NEW_POINT |
-                _NEW_MULTISAMPLE),
+      .mesa  = _NEW_BUFFERS |
+               _NEW_LIGHT |
+               _NEW_LINE |
+               _NEW_MULTISAMPLE |
+               _NEW_POINT |
+               _NEW_POLYGON |
+               _NEW_PROGRAM |
+               _NEW_SCISSOR,
       .brw   = BRW_NEW_CONTEXT,
       .cache = 0,
    },

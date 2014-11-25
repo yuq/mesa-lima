@@ -127,7 +127,10 @@ upload_sbe(struct brw_context *brw)
 
 const struct brw_tracked_state gen8_sbe_state = {
    .dirty = {
-      .mesa  = _NEW_BUFFERS | _NEW_LIGHT | _NEW_POINT | _NEW_PROGRAM,
+      .mesa  = _NEW_BUFFERS |
+               _NEW_LIGHT |
+               _NEW_POINT |
+               _NEW_PROGRAM,
       .brw   = BRW_NEW_CONTEXT |
                BRW_NEW_FRAGMENT_PROGRAM |
                BRW_NEW_VUE_MAP_GEOM_OUT,

@@ -126,11 +126,13 @@ upload_wm_state(struct brw_context *brw)
 
 const struct brw_tracked_state gen7_wm_state = {
    .dirty = {
-      .mesa  = (_NEW_LINE | _NEW_POLYGON |
-	        _NEW_COLOR | _NEW_BUFFERS |
-                _NEW_MULTISAMPLE),
-      .brw   = (BRW_NEW_FRAGMENT_PROGRAM |
-		BRW_NEW_BATCH),
+      .mesa  = _NEW_BUFFERS |
+               _NEW_COLOR |
+               _NEW_LINE |
+               _NEW_MULTISAMPLE |
+               _NEW_POLYGON,
+      .brw   = BRW_NEW_BATCH |
+               BRW_NEW_FRAGMENT_PROGRAM,
       .cache = CACHE_NEW_WM_PROG,
    },
    .emit = upload_wm_state,
@@ -270,12 +272,12 @@ upload_ps_state(struct brw_context *brw)
 
 const struct brw_tracked_state gen7_ps_state = {
    .dirty = {
-      .mesa  = (_NEW_COLOR |
-                _NEW_BUFFERS |
-                _NEW_MULTISAMPLE),
-      .brw   = (BRW_NEW_FRAGMENT_PROGRAM |
-                BRW_NEW_BATCH),
-      .cache = (CACHE_NEW_WM_PROG)
+      .mesa  = _NEW_BUFFERS |
+               _NEW_COLOR |
+               _NEW_MULTISAMPLE,
+      .brw   = BRW_NEW_BATCH |
+               BRW_NEW_FRAGMENT_PROGRAM,
+      .cache = CACHE_NEW_WM_PROG
    },
    .emit = upload_ps_state,
 };

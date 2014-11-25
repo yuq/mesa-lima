@@ -248,20 +248,18 @@ brw_upload_wm_unit(struct brw_context *brw)
 
 const struct brw_tracked_state brw_wm_unit = {
    .dirty = {
-      .mesa = (_NEW_POLYGON |
-	       _NEW_POLYGONSTIPPLE |
-	       _NEW_LINE |
-	       _NEW_COLOR |
-	       _NEW_BUFFERS),
-
-      .brw = (BRW_NEW_BATCH |
-	      BRW_NEW_PROGRAM_CACHE |
-	      BRW_NEW_FRAGMENT_PROGRAM |
-	      BRW_NEW_CURBE_OFFSETS |
-              BRW_NEW_STATS_WM),
-
-      .cache = (CACHE_NEW_WM_PROG |
-		CACHE_NEW_SAMPLER)
+      .mesa = _NEW_BUFFERS |
+              _NEW_COLOR |
+              _NEW_LINE |
+              _NEW_POLYGON |
+              _NEW_POLYGONSTIPPLE,
+      .brw = BRW_NEW_BATCH |
+             BRW_NEW_CURBE_OFFSETS |
+             BRW_NEW_FRAGMENT_PROGRAM |
+             BRW_NEW_PROGRAM_CACHE |
+             BRW_NEW_STATS_WM,
+      .cache = CACHE_NEW_SAMPLER |
+               CACHE_NEW_WM_PROG,
    },
    .emit = brw_upload_wm_unit,
 };

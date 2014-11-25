@@ -111,7 +111,8 @@ gen6_upload_sf_vp(struct brw_context *brw)
 
 const struct brw_tracked_state gen6_sf_vp = {
    .dirty = {
-      .mesa = _NEW_VIEWPORT | _NEW_BUFFERS,
+      .mesa = _NEW_BUFFERS |
+              _NEW_VIEWPORT,
       .brw = BRW_NEW_BATCH,
       .cache = 0,
    },
@@ -134,11 +135,11 @@ static void upload_viewport_state_pointers(struct brw_context *brw)
 const struct brw_tracked_state gen6_viewport_state = {
    .dirty = {
       .mesa = 0,
-      .brw = (BRW_NEW_BATCH |
-	      BRW_NEW_STATE_BASE_ADDRESS),
-      .cache = (CACHE_NEW_CLIP_VP |
-		CACHE_NEW_SF_VP |
-		CACHE_NEW_CC_VP)
+      .brw = BRW_NEW_BATCH |
+             BRW_NEW_STATE_BASE_ADDRESS,
+      .cache = CACHE_NEW_CC_VP |
+               CACHE_NEW_CLIP_VP |
+               CACHE_NEW_SF_VP,
    },
    .emit = upload_viewport_state_pointers,
 };

@@ -183,7 +183,9 @@ upload_clip_state(struct brw_context *brw)
 
 const struct brw_tracked_state gen6_clip_state = {
    .dirty = {
-      .mesa  = _NEW_TRANSFORM | _NEW_LIGHT | _NEW_BUFFERS,
+      .mesa  = _NEW_BUFFERS |
+               _NEW_LIGHT |
+               _NEW_TRANSFORM,
       .brw   = BRW_NEW_CONTEXT |
                BRW_NEW_META_IN_PROGRESS |
                BRW_NEW_RASTERIZER_DISCARD,
@@ -194,7 +196,10 @@ const struct brw_tracked_state gen6_clip_state = {
 
 const struct brw_tracked_state gen7_clip_state = {
    .dirty = {
-      .mesa  = _NEW_BUFFERS | _NEW_LIGHT | _NEW_POLYGON | _NEW_TRANSFORM,
+      .mesa  = _NEW_BUFFERS |
+               _NEW_LIGHT |
+               _NEW_POLYGON |
+               _NEW_TRANSFORM,
       .brw   = BRW_NEW_CONTEXT |
                BRW_NEW_META_IN_PROGRESS |
                BRW_NEW_RASTERIZER_DISCARD,

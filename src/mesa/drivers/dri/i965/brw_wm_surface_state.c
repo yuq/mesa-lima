@@ -493,8 +493,9 @@ brw_upload_wm_pull_constants(struct brw_context *brw)
 
 const struct brw_tracked_state brw_wm_pull_constants = {
    .dirty = {
-      .mesa = (_NEW_PROGRAM_CONSTANTS),
-      .brw = (BRW_NEW_BATCH | BRW_NEW_FRAGMENT_PROGRAM),
+      .mesa = _NEW_PROGRAM_CONSTANTS,
+      .brw = BRW_NEW_BATCH |
+             BRW_NEW_FRAGMENT_PROGRAM,
       .cache = CACHE_NEW_WM_PROG,
    },
    .emit = brw_upload_wm_pull_constants,
@@ -734,8 +735,8 @@ brw_update_renderbuffer_surfaces(struct brw_context *brw)
 
 const struct brw_tracked_state brw_renderbuffer_surfaces = {
    .dirty = {
-      .mesa = (_NEW_COLOR |
-               _NEW_BUFFERS),
+      .mesa = _NEW_BUFFERS |
+              _NEW_COLOR,
       .brw = BRW_NEW_BATCH,
       .cache = 0
    },
@@ -824,10 +825,10 @@ const struct brw_tracked_state brw_texture_surfaces = {
    .dirty = {
       .mesa = _NEW_TEXTURE,
       .brw = BRW_NEW_BATCH |
-             BRW_NEW_TEXTURE_BUFFER |
-             BRW_NEW_VERTEX_PROGRAM |
+             BRW_NEW_FRAGMENT_PROGRAM |
              BRW_NEW_GEOMETRY_PROGRAM |
-             BRW_NEW_FRAGMENT_PROGRAM,
+             BRW_NEW_TEXTURE_BUFFER |
+             BRW_NEW_VERTEX_PROGRAM,
       .cache = 0
    },
    .emit = brw_update_texture_surfaces,
@@ -890,7 +891,8 @@ brw_upload_wm_ubo_surfaces(struct brw_context *brw)
 const struct brw_tracked_state brw_wm_ubo_surfaces = {
    .dirty = {
       .mesa = _NEW_PROGRAM,
-      .brw = BRW_NEW_BATCH | BRW_NEW_UNIFORM_BUFFER,
+      .brw = BRW_NEW_BATCH |
+             BRW_NEW_UNIFORM_BUFFER,
       .cache = CACHE_NEW_WM_PROG,
    },
    .emit = brw_upload_wm_ubo_surfaces,
@@ -940,7 +942,8 @@ brw_upload_wm_abo_surfaces(struct brw_context *brw)
 const struct brw_tracked_state brw_wm_abo_surfaces = {
    .dirty = {
       .mesa = _NEW_PROGRAM,
-      .brw = BRW_NEW_BATCH | BRW_NEW_ATOMIC_BUFFER,
+      .brw = BRW_NEW_ATOMIC_BUFFER |
+             BRW_NEW_BATCH,
       .cache = CACHE_NEW_WM_PROG,
    },
    .emit = brw_upload_wm_abo_surfaces,

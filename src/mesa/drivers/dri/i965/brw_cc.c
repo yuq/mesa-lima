@@ -67,7 +67,8 @@ brw_upload_cc_vp(struct brw_context *brw)
 
 const struct brw_tracked_state brw_cc_vp = {
    .dirty = {
-      .mesa = _NEW_VIEWPORT | _NEW_TRANSFORM,
+      .mesa = _NEW_TRANSFORM |
+              _NEW_VIEWPORT,
       .brw = BRW_NEW_BATCH,
       .cache = 0
    },
@@ -235,8 +236,12 @@ static void upload_cc_unit(struct brw_context *brw)
 
 const struct brw_tracked_state brw_cc_unit = {
    .dirty = {
-      .mesa = _NEW_STENCIL | _NEW_COLOR | _NEW_DEPTH | _NEW_BUFFERS,
-      .brw = BRW_NEW_BATCH | BRW_NEW_STATS_WM,
+      .mesa = _NEW_BUFFERS |
+              _NEW_COLOR |
+              _NEW_DEPTH |
+              _NEW_STENCIL,
+      .brw = BRW_NEW_BATCH |
+             BRW_NEW_STATS_WM,
       .cache = CACHE_NEW_CC_VP
    },
    .emit = upload_cc_unit,

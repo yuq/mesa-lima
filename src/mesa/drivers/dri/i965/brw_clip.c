@@ -258,13 +258,13 @@ brw_upload_clip_prog(struct brw_context *brw)
 
 const struct brw_tracked_state brw_clip_prog = {
    .dirty = {
-      .mesa  = (_NEW_LIGHT |
-		_NEW_TRANSFORM |
-		_NEW_POLYGON |
-		_NEW_BUFFERS),
-      .brw   = (BRW_NEW_REDUCED_PRIMITIVE |
-                BRW_NEW_VUE_MAP_GEOM_OUT |
-                BRW_NEW_INTERPOLATION_MAP)
+      .mesa  = _NEW_BUFFERS |
+               _NEW_LIGHT |
+               _NEW_POLYGON |
+               _NEW_TRANSFORM,
+      .brw   = BRW_NEW_INTERPOLATION_MAP |
+               BRW_NEW_REDUCED_PRIMITIVE |
+               BRW_NEW_VUE_MAP_GEOM_OUT,
    },
    .emit = brw_upload_clip_prog
 };

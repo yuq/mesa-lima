@@ -217,11 +217,16 @@ brw_upload_sf_prog(struct brw_context *brw)
 
 const struct brw_tracked_state brw_sf_prog = {
    .dirty = {
-      .mesa  = (_NEW_HINT | _NEW_LIGHT | _NEW_POLYGON | _NEW_POINT |
-                _NEW_TRANSFORM | _NEW_BUFFERS | _NEW_PROGRAM),
-      .brw   = (BRW_NEW_REDUCED_PRIMITIVE |
-                BRW_NEW_VUE_MAP_GEOM_OUT |
-                BRW_NEW_INTERPOLATION_MAP)
+      .mesa  = _NEW_BUFFERS |
+               _NEW_HINT |
+               _NEW_LIGHT |
+               _NEW_POINT |
+               _NEW_POLYGON |
+               _NEW_PROGRAM |
+               _NEW_TRANSFORM,
+      .brw   = BRW_NEW_INTERPOLATION_MAP |
+               BRW_NEW_REDUCED_PRIMITIVE |
+               BRW_NEW_VUE_MAP_GEOM_OUT,
    },
    .emit = brw_upload_sf_prog
 };

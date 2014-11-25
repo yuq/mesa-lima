@@ -130,7 +130,8 @@ brw_upload_wm_binding_table(struct brw_context *brw)
 const struct brw_tracked_state brw_wm_binding_table = {
    .dirty = {
       .mesa = 0,
-      .brw = BRW_NEW_BATCH | BRW_NEW_SURFACES,
+      .brw = BRW_NEW_BATCH |
+             BRW_NEW_SURFACES,
       .cache = CACHE_NEW_WM_PROG
    },
    .emit = brw_upload_wm_binding_table,
@@ -189,11 +190,11 @@ gen4_upload_binding_table_pointers(struct brw_context *brw)
 const struct brw_tracked_state brw_binding_table_pointers = {
    .dirty = {
       .mesa = 0,
-      .brw = (BRW_NEW_BATCH |
-              BRW_NEW_STATE_BASE_ADDRESS |
-              BRW_NEW_VS_BINDING_TABLE |
-              BRW_NEW_GS_BINDING_TABLE |
-              BRW_NEW_PS_BINDING_TABLE),
+      .brw = BRW_NEW_BATCH |
+             BRW_NEW_GS_BINDING_TABLE |
+             BRW_NEW_PS_BINDING_TABLE |
+             BRW_NEW_STATE_BASE_ADDRESS |
+             BRW_NEW_VS_BINDING_TABLE,
       .cache = 0,
    },
    .emit = gen4_upload_binding_table_pointers,
@@ -226,11 +227,11 @@ gen6_upload_binding_table_pointers(struct brw_context *brw)
 const struct brw_tracked_state gen6_binding_table_pointers = {
    .dirty = {
       .mesa = 0,
-      .brw = (BRW_NEW_BATCH |
-              BRW_NEW_STATE_BASE_ADDRESS |
-              BRW_NEW_VS_BINDING_TABLE |
-              BRW_NEW_GS_BINDING_TABLE |
-              BRW_NEW_PS_BINDING_TABLE),
+      .brw = BRW_NEW_BATCH |
+             BRW_NEW_GS_BINDING_TABLE |
+             BRW_NEW_PS_BINDING_TABLE |
+             BRW_NEW_STATE_BASE_ADDRESS |
+             BRW_NEW_VS_BINDING_TABLE,
       .cache = 0,
    },
    .emit = gen6_upload_binding_table_pointers,

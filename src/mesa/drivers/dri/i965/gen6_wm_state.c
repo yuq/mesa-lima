@@ -57,9 +57,9 @@ gen6_upload_wm_push_constants(struct brw_context *brw)
 const struct brw_tracked_state gen6_wm_push_constants = {
    .dirty = {
       .mesa  = _NEW_PROGRAM_CONSTANTS,
-      .brw   = (BRW_NEW_BATCH |
-                BRW_NEW_FRAGMENT_PROGRAM |
-                BRW_NEW_PUSH_CONSTANT_ALLOCATION),
+      .brw   = BRW_NEW_BATCH |
+               BRW_NEW_FRAGMENT_PROGRAM |
+               BRW_NEW_PUSH_CONSTANT_ALLOCATION,
       .cache = CACHE_NEW_WM_PROG,
    },
    .emit = gen6_upload_wm_push_constants,
@@ -297,16 +297,16 @@ upload_wm_state(struct brw_context *brw)
 
 const struct brw_tracked_state gen6_wm_state = {
    .dirty = {
-      .mesa  = (_NEW_LINE |
-		_NEW_COLOR |
-		_NEW_BUFFERS |
-		_NEW_PROGRAM_CONSTANTS |
-		_NEW_POLYGON |
-                _NEW_MULTISAMPLE),
-      .brw   = (BRW_NEW_FRAGMENT_PROGRAM |
-		BRW_NEW_BATCH |
-                BRW_NEW_PUSH_CONSTANT_ALLOCATION),
-      .cache = (CACHE_NEW_WM_PROG)
+      .mesa  = _NEW_BUFFERS |
+               _NEW_COLOR |
+               _NEW_LINE |
+               _NEW_MULTISAMPLE |
+               _NEW_POLYGON |
+               _NEW_PROGRAM_CONSTANTS,
+      .brw   = BRW_NEW_BATCH |
+               BRW_NEW_FRAGMENT_PROGRAM |
+               BRW_NEW_PUSH_CONSTANT_ALLOCATION,
+      .cache = CACHE_NEW_WM_PROG
    },
    .emit = upload_wm_state,
 };

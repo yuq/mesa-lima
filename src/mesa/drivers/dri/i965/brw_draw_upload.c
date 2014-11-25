@@ -869,7 +869,8 @@ static void brw_emit_vertices(struct brw_context *brw)
 const struct brw_tracked_state brw_vertices = {
    .dirty = {
       .mesa = _NEW_POLYGON,
-      .brw = BRW_NEW_BATCH | BRW_NEW_VERTICES,
+      .brw = BRW_NEW_BATCH |
+             BRW_NEW_VERTICES,
       .cache = CACHE_NEW_VS_PROG,
    },
    .emit = brw_emit_vertices,
@@ -987,7 +988,8 @@ static void brw_emit_index_buffer(struct brw_context *brw)
 const struct brw_tracked_state brw_index_buffer = {
    .dirty = {
       .mesa = 0,
-      .brw = BRW_NEW_BATCH | BRW_NEW_INDEX_BUFFER,
+      .brw = BRW_NEW_BATCH |
+             BRW_NEW_INDEX_BUFFER,
       .cache = 0,
    },
    .emit = brw_emit_index_buffer,

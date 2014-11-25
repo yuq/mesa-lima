@@ -364,10 +364,12 @@ brw_upload_gs_prog(struct brw_context *brw)
 
 const struct brw_tracked_state brw_gs_prog = {
    .dirty = {
-      .mesa  = (_NEW_LIGHT | _NEW_BUFFERS | _NEW_TEXTURE),
-      .brw   = (BRW_NEW_GEOMETRY_PROGRAM |
-                BRW_NEW_VUE_MAP_VS |
-                BRW_NEW_TRANSFORM_FEEDBACK),
+      .mesa  = _NEW_BUFFERS |
+               _NEW_LIGHT |
+               _NEW_TEXTURE,
+      .brw   = BRW_NEW_GEOMETRY_PROGRAM |
+               BRW_NEW_TRANSFORM_FEEDBACK |
+               BRW_NEW_VUE_MAP_VS,
    },
    .emit = brw_upload_gs_prog
 };

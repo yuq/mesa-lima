@@ -114,9 +114,9 @@ static void upload_sf_vp(struct brw_context *brw)
 
 const struct brw_tracked_state brw_sf_vp = {
    .dirty = {
-      .mesa  = (_NEW_VIEWPORT |
-		_NEW_SCISSOR |
-		_NEW_BUFFERS),
+      .mesa  = _NEW_BUFFERS |
+               _NEW_SCISSOR |
+               _NEW_VIEWPORT,
       .brw   = BRW_NEW_BATCH,
       .cache = 0
    },
@@ -297,18 +297,18 @@ static void upload_sf_unit( struct brw_context *brw )
 
 const struct brw_tracked_state brw_sf_unit = {
    .dirty = {
-      .mesa  = (_NEW_POLYGON |
-		_NEW_PROGRAM |
-		_NEW_LIGHT |
-		_NEW_LINE |
-		_NEW_POINT |
-		_NEW_SCISSOR |
-		_NEW_BUFFERS),
-      .brw   = (BRW_NEW_BATCH |
-		BRW_NEW_PROGRAM_CACHE |
-		BRW_NEW_URB_FENCE),
-      .cache = (CACHE_NEW_SF_VP |
-		CACHE_NEW_SF_PROG)
+      .mesa  = _NEW_BUFFERS |
+               _NEW_LIGHT |
+               _NEW_LINE |
+               _NEW_POINT |
+               _NEW_POLYGON |
+               _NEW_PROGRAM |
+               _NEW_SCISSOR,
+      .brw   = BRW_NEW_BATCH |
+               BRW_NEW_PROGRAM_CACHE |
+               BRW_NEW_URB_FENCE,
+      .cache = CACHE_NEW_SF_PROG |
+               CACHE_NEW_SF_VP,
    },
    .emit = upload_sf_unit,
 };

@@ -78,7 +78,8 @@ static void upload_state_base_address(struct brw_context *brw)
 const struct brw_tracked_state gen8_state_base_address = {
    .dirty = {
       .mesa = 0,
-      .brw = BRW_NEW_BATCH | BRW_NEW_PROGRAM_CACHE,
+      .brw = BRW_NEW_BATCH |
+             BRW_NEW_PROGRAM_CACHE,
       .cache = 0,
    },
    .emit = upload_state_base_address

@@ -56,8 +56,9 @@ brw_upload_gs_pull_constants(struct brw_context *brw)
 
 const struct brw_tracked_state brw_gs_pull_constants = {
    .dirty = {
-      .mesa = (_NEW_PROGRAM_CONSTANTS),
-      .brw = (BRW_NEW_BATCH | BRW_NEW_GEOMETRY_PROGRAM),
+      .mesa = _NEW_PROGRAM_CONSTANTS,
+      .brw = BRW_NEW_BATCH |
+             BRW_NEW_GEOMETRY_PROGRAM,
       .cache = CACHE_NEW_GS_PROG,
    },
    .emit = brw_upload_gs_pull_constants,
@@ -83,7 +84,8 @@ brw_upload_gs_ubo_surfaces(struct brw_context *brw)
 const struct brw_tracked_state brw_gs_ubo_surfaces = {
    .dirty = {
       .mesa = _NEW_PROGRAM,
-      .brw = BRW_NEW_BATCH | BRW_NEW_UNIFORM_BUFFER,
+      .brw = BRW_NEW_BATCH |
+             BRW_NEW_UNIFORM_BUFFER,
       .cache = CACHE_NEW_GS_PROG,
    },
    .emit = brw_upload_gs_ubo_surfaces,
@@ -107,7 +109,8 @@ brw_upload_gs_abo_surfaces(struct brw_context *brw)
 const struct brw_tracked_state brw_gs_abo_surfaces = {
    .dirty = {
       .mesa = _NEW_PROGRAM,
-      .brw = BRW_NEW_BATCH | BRW_NEW_ATOMIC_BUFFER,
+      .brw = BRW_NEW_ATOMIC_BUFFER |
+             BRW_NEW_BATCH,
       .cache = CACHE_NEW_GS_PROG,
    },
    .emit = brw_upload_gs_abo_surfaces,
