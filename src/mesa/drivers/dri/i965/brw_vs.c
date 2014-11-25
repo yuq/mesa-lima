@@ -396,9 +396,9 @@ brw_vs_debug_recompile(struct brw_context *brw,
 
 
 void
-brw_setup_vec4_key_clip_info(struct brw_context *brw,
-                             struct brw_vec4_prog_key *key,
-                             bool program_uses_clip_distance)
+brw_setup_vue_key_clip_info(struct brw_context *brw,
+                            struct brw_vue_prog_key *key,
+                            bool program_uses_clip_distance)
 {
    struct gl_context *ctx = &brw->ctx;
 
@@ -426,8 +426,8 @@ static void brw_upload_vs_prog(struct brw_context *brw)
     * the inputs it asks for, whether they are varying or not.
     */
    key.base.program_string_id = vp->id;
-   brw_setup_vec4_key_clip_info(brw, &key.base,
-                                vp->program.Base.UsesClipDistanceOut);
+   brw_setup_vue_key_clip_info(brw, &key.base,
+                               vp->program.Base.UsesClipDistanceOut);
 
    /* _NEW_POLYGON */
    if (brw->gen < 6) {
@@ -514,7 +514,7 @@ brw_vs_precompile(struct gl_context *ctx,
 
    memset(&key, 0, sizeof(key));
 
-   brw_vec4_setup_prog_key_for_precompile(ctx, &key.base, bvp->id, &vp->Base);
+   brw_vue_setup_prog_key_for_precompile(ctx, &key.base, bvp->id, &vp->Base);
    key.clamp_vertex_color =
       (prog->OutputsWritten & (VARYING_BIT_COL0 | VARYING_BIT_COL1 |
                                VARYING_BIT_BFC0 | VARYING_BIT_BFC1));

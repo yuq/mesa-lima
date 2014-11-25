@@ -35,7 +35,7 @@ upload_gs_state(struct brw_context *brw)
    /* BRW_NEW_GEOMETRY_PROGRAM */
    bool active = brw->geometry_program;
    /* BRW_NEW_GS_PROG_DATA */
-   const struct brw_vec4_prog_data *prog_data = &brw->gs.prog_data->base;
+   const struct brw_vue_prog_data *prog_data = &brw->gs.prog_data->base;
 
    /**
     * From Graphics BSpec: 3D-Media-GPGPU Engine > 3D Pipeline Stages >

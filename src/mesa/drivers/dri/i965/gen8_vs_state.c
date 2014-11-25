@@ -37,7 +37,7 @@ upload_vs_state(struct brw_context *brw)
    uint32_t floating_point_mode = 0;
 
    /* BRW_NEW_VS_PROG_DATA */
-   const struct brw_vec4_prog_data *prog_data = &brw->vs.prog_data->base;
+   const struct brw_vue_prog_data *prog_data = &brw->vs.prog_data->base;
 
    if (prog_data->base.use_alt_mode)
       floating_point_mode = GEN6_VS_FLOATING_POINT_MODE_ALT;

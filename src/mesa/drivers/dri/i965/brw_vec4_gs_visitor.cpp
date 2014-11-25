@@ -611,7 +611,7 @@ static const unsigned *
 generate_assembly(struct brw_context *brw,
                   struct gl_shader_program *shader_prog,
                   struct gl_program *prog,
-                  struct brw_vec4_prog_data *prog_data,
+                  struct brw_vue_prog_data *prog_data,
                   void *mem_ctx,
                   const cfg_t *cfg,
                   unsigned *final_assembly_size)

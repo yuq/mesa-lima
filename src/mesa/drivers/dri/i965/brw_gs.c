@@ -330,8 +330,8 @@ brw_upload_gs_prog(struct brw_context *brw)
    memset(&key, 0, sizeof(key));
 
    key.base.program_string_id = gp->id;
-   brw_setup_vec4_key_clip_info(brw, &key.base,
-                                gp->program.Base.UsesClipDistanceOut);
+   brw_setup_vue_key_clip_info(brw, &key.base,
+                               gp->program.Base.UsesClipDistanceOut);
 
    /* _NEW_TEXTURE */
    brw_populate_sampler_prog_key_data(ctx, prog, stage_state->sampler_count,
@@ -386,7 +386,7 @@ brw_gs_precompile(struct gl_context *ctx,
 
    memset(&key, 0, sizeof(key));
 
-   brw_vec4_setup_prog_key_for_precompile(ctx, &key.base, bgp->id, &gp->Base);
+   brw_vue_setup_prog_key_for_precompile(ctx, &key.base, bgp->id, &gp->Base);
 
    /* Assume that the set of varyings coming in from the vertex shader exactly
     * matches what the geometry shader requires.

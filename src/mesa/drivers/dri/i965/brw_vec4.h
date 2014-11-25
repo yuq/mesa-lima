@@ -54,9 +54,9 @@ extern "C" {
 #endif
 
 void
-brw_vec4_setup_prog_key_for_precompile(struct gl_context *ctx,
-                                       struct brw_vec4_prog_key *key,
-                                       GLuint id, struct gl_program *prog);
+brw_vue_setup_prog_key_for_precompile(struct gl_context *ctx,
+                                      struct brw_vue_prog_key *key,
+                                      GLuint id, struct gl_program *prog);
 
 #ifdef __cplusplus
 } /* extern "C" */
@@ -191,7 +191,7 @@ public:
                     const src_reg &src2 = src_reg());
 
    struct brw_reg get_dst(void);
-   struct brw_reg get_src(const struct brw_vec4_prog_data *prog_data, int i);
+   struct brw_reg get_src(const struct brw_vue_prog_data *prog_data, int i);
 
    dst_reg dst;
    src_reg src[3];
@@ -232,8 +232,8 @@ public:
    vec4_visitor(struct brw_context *brw,
                 struct brw_vec4_compile *c,
                 struct gl_program *prog,
-                const struct brw_vec4_prog_key *key,
-                struct brw_vec4_prog_data *prog_data,
+                const struct brw_vue_prog_key *key,
+                struct brw_vue_prog_data *prog_data,
 		struct gl_shader_program *shader_prog,
                 gl_shader_stage stage,
 		void *mem_ctx,
@@ -260,8 +260,8 @@ public:
    }
 
    struct brw_vec4_compile * const c;
-   const struct brw_vec4_prog_key * const key;
-   struct brw_vec4_prog_data * const prog_data;
+   const struct brw_vue_prog_key * const key;
+   struct brw_vue_prog_data * const prog_data;
    unsigned int sanity_param_count;
 
    char *fail_msg;
@@ -587,7 +587,7 @@ public:
    vec4_generator(struct brw_context *brw,
                   struct gl_shader_program *shader_prog,
                   struct gl_program *prog,
-                  struct brw_vec4_prog_data *prog_data,
+                  struct brw_vue_prog_data *prog_data,
                   void *mem_ctx,
                   bool debug_flag);
    ~vec4_generator();
@@ -679,7 +679,7 @@ private:
    struct gl_shader_program *shader_prog;
    const struct gl_program *prog;
 
-   struct brw_vec4_prog_data *prog_data;
+   struct brw_vue_prog_data *prog_data;
 
    void *mem_ctx;
    const bool debug_flag;

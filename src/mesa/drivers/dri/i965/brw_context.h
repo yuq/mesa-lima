@@ -145,7 +145,7 @@ extern "C" {
 struct brw_context;
 struct brw_inst;
 struct brw_vs_prog_key;
-struct brw_vec4_prog_key;
+struct brw_vue_prog_key;
 struct brw_wm_prog_key;
 struct brw_wm_prog_data;
 
@@ -580,10 +580,10 @@ struct brw_ff_gs_prog_data {
 };
 
 
-/* Note: brw_vec4_prog_data_compare() must be updated when adding fields to
+/* Note: brw_vue_prog_data_compare() must be updated when adding fields to
  * this struct!
  */
-struct brw_vec4_prog_data {
+struct brw_vue_prog_data {
    struct brw_stage_prog_data base;
    struct brw_vue_map vue_map;
 
@@ -604,7 +604,7 @@ struct brw_vec4_prog_data {
  * struct!
  */
 struct brw_vs_prog_data {
-   struct brw_vec4_prog_data base;
+   struct brw_vue_prog_data base;
 
    GLbitfield64 inputs_read;
 
@@ -662,7 +662,7 @@ struct brw_vs_prog_data {
  */
 struct brw_gs_prog_data
 {
-   struct brw_vec4_prog_data base;
+   struct brw_vue_prog_data base;
 
    /**
     * Size of an output vertex, measured in HWORDS (32 bytes).
@@ -1872,9 +1872,9 @@ void gen8_hiz_exec(struct brw_context *brw, struct intel_mipmap_tree *mt,
 uint32_t get_hw_prim_for_gl_prim(int mode);
 
 void
-brw_setup_vec4_key_clip_info(struct brw_context *brw,
-                             struct brw_vec4_prog_key *key,
-                             bool program_uses_clip_distance);
+brw_setup_vue_key_clip_info(struct brw_context *brw,
+                            struct brw_vue_prog_key *key,
+                            bool program_uses_clip_distance);
 
 void
 gen6_upload_push_constants(struct brw_context *brw,

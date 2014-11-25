@@ -78,7 +78,7 @@ struct brw_sampler_prog_key_data {
 };
 
 
-struct brw_vec4_prog_key {
+struct brw_vue_prog_key {
    unsigned program_string_id;
 
    /**
@@ -98,7 +98,7 @@ struct brw_vec4_prog_key {
 
 /** The program key for Vertex Shaders. */
 struct brw_vs_prog_key {
-   struct brw_vec4_prog_key base;
+   struct brw_vue_prog_key base;
 
    /*
     * Per-attribute workaround flags
@@ -123,7 +123,7 @@ struct brw_vs_prog_key {
 /** The program key for Geometry Shaders. */
 struct brw_gs_prog_key
 {
-   struct brw_vec4_prog_key base;
+   struct brw_vue_prog_key base;
 
    uint64_t input_varyings;
 };

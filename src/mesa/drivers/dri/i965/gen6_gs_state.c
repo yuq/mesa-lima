@@ -91,7 +91,7 @@ upload_gs_state(struct brw_context *brw)
    /* BRW_NEW_GEOMETRY_PROGRAM */
    bool active = brw->geometry_program;
    /* BRW_NEW_GS_PROG_DATA */
-   const struct brw_vec4_prog_data *prog_data = &brw->gs.prog_data->base;
+   const struct brw_vue_prog_data *prog_data = &brw->gs.prog_data->base;
    const struct brw_stage_state *stage_state = &brw->gs.base;
 
    if (!active || stage_state->push_const_size == 0) {
