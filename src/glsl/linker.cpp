@@ -731,8 +731,27 @@ cross_validate_globals(struct gl_shader_program *prog,
 		   && ((var->type->length == 0)
 		       || (existing->type->length == 0))) {
 		  if (var->type->length != 0) {
+                     if (var->type->length <= existing->data.max_array_access) {
+                        linker_error(prog, "%s `%s' declared as type "
+                                     "`%s' but outermost dimension has an index"
+                                     " of `%i'\n",
+                                     mode_string(var),
+                                     var->name, var->type->name,
+                                     existing->data.max_array_access);
+                        return;
+                     }
 		     existing->type = var->type;
-		  }
+		  } else if (existing->type->length != 0
+                             && existing->type->length <=
+                                var->data.max_array_access) {
+                     linker_error(prog, "%s `%s' declared as type "
+                                  "`%s' but outermost dimension has an index"
+                                  " of `%i'\n",
+                                  mode_string(var),
+                                  var->name, existing->type->name,
+                                  var->data.max_array_access);
+                     return;
+                  }
                } else if (var->type->is_record()
 		   && existing->type->is_record()
 		   && existing->type->record_compare(var->type)) {
