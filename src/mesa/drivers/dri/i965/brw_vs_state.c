@@ -47,7 +47,7 @@ brw_upload_vs_unit(struct brw_context *brw)
 			sizeof(*vs), 32, &stage_state->state_offset);
    memset(vs, 0, sizeof(*vs));
 
-   /* BRW_NEW_PROGRAM_CACHE | CACHE_NEW_VS_PROG */
+   /* BRW_NEW_PROGRAM_CACHE | BRW_NEW_VS_PROG_DATA */
    vs->thread0.grf_reg_count =
       ALIGN(brw->vs.prog_data->base.total_grf, 16) / 16 - 1;
    vs->thread0.kernel_start_pointer =
@@ -193,7 +193,7 @@ const struct brw_tracked_state brw_vs_unit = {
                BRW_NEW_SAMPLER_STATE_TABLE |
                BRW_NEW_URB_FENCE |
                BRW_NEW_VERTEX_PROGRAM,
-      .cache = CACHE_NEW_VS_PROG,
+      .cache = BRW_NEW_VS_PROG_DATA,
    },
    .emit = brw_upload_vs_unit,
 };

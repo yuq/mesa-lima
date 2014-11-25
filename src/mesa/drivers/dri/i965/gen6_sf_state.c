@@ -190,7 +190,7 @@ calculate_attr_overrides(const struct brw_context *brw,
       enum glsl_interp_qualifier interp_qualifier =
          brw->fragment_program->InterpQualifier[attr];
       bool is_gl_Color = attr == VARYING_SLOT_COL0 || attr == VARYING_SLOT_COL1;
-      /* CACHE_NEW_WM_PROG */
+      /* BRW_NEW_FS_PROG_DATA */
       int input_index = brw->wm.prog_data->urb_setup[attr];
 
       if (input_index < 0)
@@ -259,7 +259,7 @@ static void
 upload_sf_state(struct brw_context *brw)
 {
    struct gl_context *ctx = &brw->ctx;
-   /* CACHE_NEW_WM_PROG */
+   /* BRW_NEW_FS_PROG_DATA */
    uint32_t num_outputs = brw->wm.prog_data->num_varying_inputs;
    uint32_t dw1, dw2, dw3, dw4;
    uint32_t point_sprite_enables;
@@ -405,7 +405,7 @@ upload_sf_state(struct brw_context *brw)
    }
 
    /* BRW_NEW_VUE_MAP_GEOM_OUT | BRW_NEW_FRAGMENT_PROGRAM |
-    * _NEW_POINT | _NEW_LIGHT | _NEW_PROGRAM | CACHE_NEW_WM_PROG
+    * _NEW_POINT | _NEW_LIGHT | _NEW_PROGRAM | BRW_NEW_FS_PROG_DATA
     */
    uint32_t urb_entry_read_length;
    calculate_attr_overrides(brw, attr_overrides, &point_sprite_enables,
@@ -447,7 +447,7 @@ const struct brw_tracked_state gen6_sf_state = {
                BRW_NEW_GEOMETRY_PROGRAM |
                BRW_NEW_PRIMITIVE |
                BRW_NEW_VUE_MAP_GEOM_OUT,
-      .cache = CACHE_NEW_WM_PROG
+      .cache = BRW_NEW_FS_PROG_DATA
    },
    .emit = upload_sf_state,
 };

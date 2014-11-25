@@ -235,7 +235,7 @@ const struct brw_tracked_state gen8_vertices = {
       .mesa = _NEW_POLYGON,
       .brw = BRW_NEW_BATCH |
              BRW_NEW_VERTICES,
-      .cache = CACHE_NEW_VS_PROG,
+      .cache = BRW_NEW_VS_PROG_DATA,
    },
    .emit = gen8_emit_vertices,
 };

@@ -286,8 +286,8 @@ pma_fix_enable(const struct brw_context *brw)
       (fp->Base.OutputsWritten & BITFIELD64_BIT(FRAG_RESULT_DEPTH)) &&
       fp->FragDepthLayout != FRAG_DEPTH_LAYOUT_UNCHANGED;
 
-   /* CACHE_NEW_WM_PROG:        3DSTATE_PS_EXTRA::PixelShaderKillsPixels
-    * CACHE_NEW_WM_PROG:        3DSTATE_PS_EXTRA::oMask Present to RenderTarget
+   /* BRW_NEW_FS_PROG_DATA:        3DSTATE_PS_EXTRA::PixelShaderKillsPixels
+    * BRW_NEW_FS_PROG_DATA:        3DSTATE_PS_EXTRA::oMask Present to RenderTarget
     * _NEW_MULTISAMPLE:         3DSTATE_PS_BLEND::AlphaToCoverageEnable
     * _NEW_COLOR:               3DSTATE_PS_BLEND::AlphaTestEnable
     *
@@ -373,7 +373,7 @@ const struct brw_tracked_state gen8_pma_fix = {
               _NEW_MULTISAMPLE |
               _NEW_STENCIL,
       .brw = BRW_NEW_FRAGMENT_PROGRAM,
-      .cache = CACHE_NEW_WM_PROG,
+      .cache = BRW_NEW_FS_PROG_DATA,
    },
    .emit = gen8_emit_pma_stall_workaround
 };

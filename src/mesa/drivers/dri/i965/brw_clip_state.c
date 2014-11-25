@@ -67,7 +67,7 @@ brw_upload_clip_unit(struct brw_context *brw)
 			  sizeof(*clip), 32, &brw->clip.state_offset);
    memset(clip, 0, sizeof(*clip));
 
-   /* BRW_NEW_PROGRAM_CACHE | CACHE_NEW_CLIP_PROG */
+   /* BRW_NEW_PROGRAM_CACHE | BRW_NEW_CLIP_PROG_DATA */
    clip->thread0.grf_reg_count = (ALIGN(brw->clip.prog_data->total_grf, 16) /
 				 16 - 1);
    clip->thread0.kernel_start_pointer =
@@ -170,7 +170,7 @@ const struct brw_tracked_state brw_clip_unit = {
                BRW_NEW_CURBE_OFFSETS |
                BRW_NEW_PROGRAM_CACHE |
                BRW_NEW_URB_FENCE,
-      .cache = CACHE_NEW_CLIP_PROG
+      .cache = BRW_NEW_CLIP_PROG_DATA
    },
    .emit = brw_upload_clip_unit,
 };

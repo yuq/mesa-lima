@@ -483,7 +483,7 @@ brw_upload_wm_pull_constants(struct brw_context *brw)
    /* BRW_NEW_FRAGMENT_PROGRAM */
    struct brw_fragment_program *fp =
       (struct brw_fragment_program *) brw->fragment_program;
-   /* CACHE_NEW_WM_PROG */
+   /* BRW_NEW_FS_PROG_DATA */
    struct brw_stage_prog_data *prog_data = &brw->wm.prog_data->base;
 
    /* _NEW_PROGRAM_CONSTANTS */
@@ -496,7 +496,7 @@ const struct brw_tracked_state brw_wm_pull_constants = {
       .mesa = _NEW_PROGRAM_CONSTANTS,
       .brw = BRW_NEW_BATCH |
              BRW_NEW_FRAGMENT_PROGRAM,
-      .cache = CACHE_NEW_WM_PROG,
+      .cache = BRW_NEW_FS_PROG_DATA,
    },
    .emit = brw_upload_wm_pull_constants,
 };
@@ -883,7 +883,7 @@ brw_upload_wm_ubo_surfaces(struct brw_context *brw)
    if (!prog)
       return;
 
-   /* CACHE_NEW_WM_PROG */
+   /* BRW_NEW_FS_PROG_DATA */
    brw_upload_ubo_surfaces(brw, prog->_LinkedShaders[MESA_SHADER_FRAGMENT],
                            &brw->wm.base, &brw->wm.prog_data->base);
 }
@@ -893,7 +893,7 @@ const struct brw_tracked_state brw_wm_ubo_surfaces = {
       .mesa = _NEW_PROGRAM,
       .brw = BRW_NEW_BATCH |
              BRW_NEW_UNIFORM_BUFFER,
-      .cache = CACHE_NEW_WM_PROG,
+      .cache = BRW_NEW_FS_PROG_DATA,
    },
    .emit = brw_upload_wm_ubo_surfaces,
 };
@@ -933,7 +933,7 @@ brw_upload_wm_abo_surfaces(struct brw_context *brw)
    struct gl_shader_program *prog = ctx->Shader._CurrentFragmentProgram;
 
    if (prog) {
-      /* CACHE_NEW_WM_PROG */
+      /* BRW_NEW_FS_PROG_DATA */
       brw_upload_abo_surfaces(brw, prog, &brw->wm.base,
                               &brw->wm.prog_data->base);
    }
@@ -944,7 +944,7 @@ const struct brw_tracked_state brw_wm_abo_surfaces = {
       .mesa = _NEW_PROGRAM,
       .brw = BRW_NEW_ATOMIC_BUFFER |
              BRW_NEW_BATCH,
-      .cache = CACHE_NEW_WM_PROG,
+      .cache = BRW_NEW_FS_PROG_DATA,
    },
    .emit = brw_upload_wm_abo_surfaces,
 };

@@ -248,7 +248,7 @@ struct brw_state_flags {
     *
     * Now almost all of that state is just streamed out on demand, but the
     * flags for those state blobs updating have stayed in the same bitfield.
-    * brw_state_cache.c still flags CACHE_NEW_*_PROG.
+    * brw_state_cache.c still flags BRW_NEW_*_PROG_DATA.
     */
    GLuint cache;
 };
@@ -777,13 +777,13 @@ enum shader_time_shader_type {
 
 /* Flags for brw->state.cache.
  */
-#define CACHE_NEW_WM_PROG                (1 << BRW_CACHE_FS_PROG)
-#define CACHE_NEW_BLORP_BLIT_PROG        (1 << BRW_CACHE_BLORP_BLIT_PROG)
-#define CACHE_NEW_SF_PROG                (1 << BRW_CACHE_SF_PROG)
-#define CACHE_NEW_VS_PROG                (1 << BRW_CACHE_VS_PROG)
-#define CACHE_NEW_FF_GS_PROG             (1 << BRW_CACHE_FF_GS_PROG)
-#define CACHE_NEW_GS_PROG                (1 << BRW_CACHE_GS_PROG)
-#define CACHE_NEW_CLIP_PROG              (1 << BRW_CACHE_CLIP_PROG)
+#define BRW_NEW_FS_PROG_DATA                (1 << BRW_CACHE_FS_PROG)
+#define BRW_NEW_BLORP_BLIT_PROG_DATA        (1 << BRW_CACHE_BLORP_BLIT_PROG)
+#define BRW_NEW_SF_PROG_DATA                (1 << BRW_CACHE_SF_PROG)
+#define BRW_NEW_VS_PROG_DATA                (1 << BRW_CACHE_VS_PROG)
+#define BRW_NEW_FF_GS_PROG_DATA             (1 << BRW_CACHE_FF_GS_PROG)
+#define BRW_NEW_GS_PROG_DATA                (1 << BRW_CACHE_GS_PROG)
+#define BRW_NEW_CLIP_PROG_DATA              (1 << BRW_CACHE_CLIP_PROG)
 
 struct brw_vertex_buffer {
    /** Buffer object containing the uploaded vertex data */

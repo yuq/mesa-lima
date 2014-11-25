@@ -34,7 +34,7 @@ upload_gs_state(struct brw_context *brw)
       HSW_GS_MAX_THREADS_SHIFT : GEN6_GS_MAX_THREADS_SHIFT;
    /* BRW_NEW_GEOMETRY_PROGRAM */
    bool active = brw->geometry_program;
-   /* CACHE_NEW_GS_PROG */
+   /* BRW_NEW_GS_PROG_DATA */
    const struct brw_vec4_prog_data *prog_data = &brw->gs.prog_data->base;
 
    /**
@@ -157,7 +157,7 @@ const struct brw_tracked_state gen7_gs_state = {
       .brw   = BRW_NEW_BATCH |
                BRW_NEW_CONTEXT |
                BRW_NEW_GEOMETRY_PROGRAM,
-      .cache = CACHE_NEW_GS_PROG
+      .cache = BRW_NEW_GS_PROG_DATA
    },
    .emit = upload_gs_state,
 };

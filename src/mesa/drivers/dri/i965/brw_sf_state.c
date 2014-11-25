@@ -136,7 +136,7 @@ static void upload_sf_unit( struct brw_context *brw )
 
    memset(sf, 0, sizeof(*sf));
 
-   /* BRW_NEW_PROGRAM_CACHE | CACHE_NEW_SF_PROG */
+   /* BRW_NEW_PROGRAM_CACHE | BRW_NEW_SF_PROG_DATA */
    sf->thread0.grf_reg_count = ALIGN(brw->sf.prog_data->total_grf, 16) / 16 - 1;
    sf->thread0.kernel_start_pointer =
       brw_program_reloc(brw,
@@ -150,7 +150,7 @@ static void upload_sf_unit( struct brw_context *brw )
    sf->thread3.dispatch_grf_start_reg = 3;
    sf->thread3.urb_entry_read_offset = BRW_SF_URB_ENTRY_READ_OFFSET;
 
-   /* CACHE_NEW_SF_PROG */
+   /* BRW_NEW_SF_PROG_DATA */
    sf->thread3.urb_entry_read_length = brw->sf.prog_data->urb_read_length;
 
    /* BRW_NEW_URB_FENCE */
@@ -308,7 +308,7 @@ const struct brw_tracked_state brw_sf_unit = {
                BRW_NEW_PROGRAM_CACHE |
                BRW_NEW_SF_VP |
                BRW_NEW_URB_FENCE,
-      .cache = CACHE_NEW_SF_PROG,
+      .cache = BRW_NEW_SF_PROG_DATA,
    },
    .emit = upload_sf_unit,
 };

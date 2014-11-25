@@ -36,7 +36,7 @@ upload_vs_state(struct brw_context *brw)
    const struct brw_stage_state *stage_state = &brw->vs.base;
    uint32_t floating_point_mode = 0;
 
-   /* CACHE_NEW_VS_PROG */
+   /* BRW_NEW_VS_PROG_DATA */
    const struct brw_vec4_prog_data *prog_data = &brw->vs.prog_data->base;
 
    /* Use ALT floating point mode for ARB vertex programs, because they
@@ -85,7 +85,7 @@ const struct brw_tracked_state gen8_vs_state = {
       .brw   = BRW_NEW_BATCH |
                BRW_NEW_CONTEXT |
                BRW_NEW_VERTEX_PROGRAM,
-      .cache = CACHE_NEW_VS_PROG
+      .cache = BRW_NEW_VS_PROG_DATA
    },
    .emit = upload_vs_state,
 };

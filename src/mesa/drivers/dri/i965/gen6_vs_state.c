@@ -130,7 +130,7 @@ gen6_upload_vs_push_constants(struct brw_context *brw)
    /* _BRW_NEW_VERTEX_PROGRAM */
    const struct brw_vertex_program *vp =
       brw_vertex_program_const(brw->vertex_program);
-   /* CACHE_NEW_VS_PROG */
+   /* BRW_NEW_VS_PROG_DATA */
    const struct brw_stage_prog_data *prog_data = &brw->vs.prog_data->base.base;
 
    gen6_upload_push_constants(brw, &vp->program.Base, prog_data,
@@ -152,7 +152,7 @@ const struct brw_tracked_state gen6_vs_push_constants = {
       .brw   = BRW_NEW_BATCH |
                BRW_NEW_PUSH_CONSTANT_ALLOCATION |
                BRW_NEW_VERTEX_PROGRAM,
-      .cache = CACHE_NEW_VS_PROG,
+      .cache = BRW_NEW_VS_PROG_DATA,
    },
    .emit = gen6_upload_vs_push_constants,
 };
@@ -266,7 +266,7 @@ const struct brw_tracked_state gen6_vs_state = {
                BRW_NEW_CONTEXT |
                BRW_NEW_PUSH_CONSTANT_ALLOCATION |
                BRW_NEW_VERTEX_PROGRAM,
-      .cache = CACHE_NEW_VS_PROG
+      .cache = BRW_NEW_VS_PROG_DATA
    },
    .emit = upload_vs_state,
 };

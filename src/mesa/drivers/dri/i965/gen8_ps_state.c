@@ -34,7 +34,7 @@ upload_ps_extra(struct brw_context *brw)
    /* BRW_NEW_FRAGMENT_PROGRAM */
    const struct brw_fragment_program *fp =
       brw_fragment_program_const(brw->fragment_program);
-   /* CACHE_NEW_WM_PROG */
+   /* BRW_NEW_FS_PROG_DATA */
    const struct brw_wm_prog_data *prog_data = brw->wm.prog_data;
    uint32_t dw1 = 0;
 
@@ -90,7 +90,7 @@ const struct brw_tracked_state gen8_ps_extra = {
       .brw   = BRW_NEW_CONTEXT |
                BRW_NEW_FRAGMENT_PROGRAM |
                BRW_NEW_NUM_SAMPLES,
-      .cache = CACHE_NEW_WM_PROG,
+      .cache = BRW_NEW_FS_PROG_DATA,
    },
    .emit = upload_ps_extra,
 };
@@ -114,7 +114,7 @@ upload_wm_state(struct brw_context *brw)
    if (ctx->Polygon.StippleFlag)
       dw1 |= GEN7_WM_POLYGON_STIPPLE_ENABLE;
 
-   /* CACHE_NEW_WM_PROG */
+   /* BRW_NEW_FS_PROG_DATA */
    dw1 |= brw->wm.prog_data->barycentric_interp_modes <<
       GEN7_WM_BARYCENTRIC_INTERPOLATION_MODE_SHIFT;
 
@@ -129,7 +129,7 @@ const struct brw_tracked_state gen8_wm_state = {
       .mesa  = _NEW_LINE |
                _NEW_POLYGON,
       .brw   = BRW_NEW_CONTEXT,
-      .cache = CACHE_NEW_WM_PROG,
+      .cache = BRW_NEW_FS_PROG_DATA,
    },
    .emit = upload_wm_state,
 };
@@ -140,7 +140,7 @@ upload_ps_state(struct brw_context *brw)
    struct gl_context *ctx = &brw->ctx;
    uint32_t dw3 = 0, dw6 = 0, dw7 = 0, ksp0, ksp2 = 0;
 
-   /* CACHE_NEW_WM_PROG */
+   /* BRW_NEW_FS_PROG_DATA */
    const struct brw_wm_prog_data *prog_data = brw->wm.prog_data;
 
    /* Initialize the execution mask with VMask.  Otherwise, derivatives are
@@ -152,7 +152,7 @@ upload_ps_state(struct brw_context *brw)
    dw3 |=
       (ALIGN(brw->wm.base.sampler_count, 4) / 4) << GEN7_PS_SAMPLER_COUNT_SHIFT;
 
-   /* CACHE_NEW_WM_PROG */
+   /* BRW_NEW_FS_PROG_DATA */
    dw3 |=
       ((prog_data->base.binding_table.size_bytes / 4) <<
        GEN7_PS_BINDING_TABLE_ENTRY_COUNT_SHIFT);
@@ -253,7 +253,7 @@ const struct brw_tracked_state gen8_ps_state = {
       .mesa  = _NEW_MULTISAMPLE,
       .brw   = BRW_NEW_BATCH |
                BRW_NEW_FRAGMENT_PROGRAM,
-      .cache = CACHE_NEW_WM_PROG
+      .cache = BRW_NEW_FS_PROG_DATA
    },
    .emit = upload_ps_state,
 };

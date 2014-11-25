@@ -142,10 +142,10 @@ gen7_upload_urb(struct brw_context *brw)
    const int push_size_kB =
       (brw->gen >= 8 || (brw->is_haswell && brw->gt == 3)) ? 32 : 16;
 
-   /* CACHE_NEW_VS_PROG */
+   /* BRW_NEW_VS_PROG_DATA */
    unsigned vs_size = MAX2(brw->vs.prog_data->base.urb_entry_size, 1);
    unsigned vs_entry_size_bytes = vs_size * 64;
-   /* BRW_NEW_GEOMETRY_PROGRAM, CACHE_NEW_GS_PROG */
+   /* BRW_NEW_GEOMETRY_PROGRAM, BRW_NEW_GS_PROG_DATA */
    bool gs_present = brw->geometry_program;
    unsigned gs_size = gs_present ? brw->gs.prog_data->base.urb_entry_size : 1;
    unsigned gs_entry_size_bytes = gs_size * 64;
@@ -316,8 +316,8 @@ const struct brw_tracked_state gen7_urb = {
       .mesa = 0,
       .brw = BRW_NEW_CONTEXT |
              BRW_NEW_GEOMETRY_PROGRAM,
-      .cache = CACHE_NEW_VS_PROG |
-               CACHE_NEW_GS_PROG,
+      .cache = BRW_NEW_VS_PROG_DATA |
+               BRW_NEW_GS_PROG_DATA,
    },
    .emit = gen7_upload_urb,
 };

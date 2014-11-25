@@ -39,7 +39,7 @@ upload_wm_state(struct brw_context *brw)
    /* BRW_NEW_FRAGMENT_PROGRAM */
    const struct brw_fragment_program *fp =
       brw_fragment_program_const(brw->fragment_program);
-   /* CACHE_NEW_WM_PROG */
+   /* BRW_NEW_FS_PROG_DATA */
    const struct brw_wm_prog_data *prog_data = brw->wm.prog_data;
    bool writes_depth = false;
    uint32_t dw1, dw2;
@@ -133,7 +133,7 @@ const struct brw_tracked_state gen7_wm_state = {
                _NEW_POLYGON,
       .brw   = BRW_NEW_BATCH |
                BRW_NEW_FRAGMENT_PROGRAM,
-      .cache = CACHE_NEW_WM_PROG,
+      .cache = BRW_NEW_FS_PROG_DATA,
    },
    .emit = upload_wm_state,
 };
@@ -146,7 +146,7 @@ upload_ps_state(struct brw_context *brw)
    const int max_threads_shift = brw->is_haswell ?
       HSW_PS_MAX_THREADS_SHIFT : IVB_PS_MAX_THREADS_SHIFT;
 
-   /* CACHE_NEW_WM_PROG */
+   /* BRW_NEW_FS_PROG_DATA */
    const struct brw_wm_prog_data *prog_data = brw->wm.prog_data;
 
    dw2 = dw4 = dw5 = ksp2 = 0;
@@ -203,7 +203,7 @@ upload_ps_state(struct brw_context *brw)
    else
       dw4 |= GEN7_PS_POSOFFSET_NONE;
 
-   /* CACHE_NEW_WM_PROG | _NEW_COLOR
+   /* BRW_NEW_FS_PROG_DATA | _NEW_COLOR
     *
     * The hardware wedges if you have this bit set but don't turn on any dual
     * source blend factors.
@@ -214,7 +214,7 @@ upload_ps_state(struct brw_context *brw)
       dw4 |= GEN7_PS_DUAL_SOURCE_BLEND_ENABLE;
    }
 
-   /* CACHE_NEW_WM_PROG */
+   /* BRW_NEW_FS_PROG_DATA */
    if (prog_data->num_varying_inputs != 0)
       dw4 |= GEN7_PS_ATTRIBUTE_ENABLE;
 
@@ -277,7 +277,7 @@ const struct brw_tracked_state gen7_ps_state = {
                _NEW_MULTISAMPLE,
       .brw   = BRW_NEW_BATCH |
                BRW_NEW_FRAGMENT_PROGRAM,
-      .cache = CACHE_NEW_WM_PROG
+      .cache = BRW_NEW_FS_PROG_DATA
    },
    .emit = upload_ps_state,
 };

@@ -42,7 +42,7 @@ gen6_upload_wm_push_constants(struct brw_context *brw)
    /* BRW_NEW_FRAGMENT_PROGRAM */
    const struct brw_fragment_program *fp =
       brw_fragment_program_const(brw->fragment_program);
-   /* CACHE_NEW_WM_PROG */
+   /* BRW_NEW_FS_PROG_DATA */
    const struct brw_wm_prog_data *prog_data = brw->wm.prog_data;
 
    gen6_upload_push_constants(brw, &fp->program.Base, &prog_data->base,
@@ -60,7 +60,7 @@ const struct brw_tracked_state gen6_wm_push_constants = {
       .brw   = BRW_NEW_BATCH |
                BRW_NEW_FRAGMENT_PROGRAM |
                BRW_NEW_PUSH_CONSTANT_ALLOCATION,
-      .cache = CACHE_NEW_WM_PROG,
+      .cache = BRW_NEW_FS_PROG_DATA,
    },
    .emit = gen6_upload_wm_push_constants,
 };
@@ -72,7 +72,7 @@ upload_wm_state(struct brw_context *brw)
    /* BRW_NEW_FRAGMENT_PROGRAM */
    const struct brw_fragment_program *fp =
       brw_fragment_program_const(brw->fragment_program);
-   /* CACHE_NEW_WM_PROG */
+   /* BRW_NEW_FS_PROG_DATA */
    const struct brw_wm_prog_data *prog_data = brw->wm.prog_data;
    uint32_t dw2, dw4, dw5, dw6, ksp0, ksp2;
 
@@ -164,7 +164,7 @@ upload_wm_state(struct brw_context *brw)
       ksp0 = brw->wm.base.prog_offset;
    }
 
-   /* CACHE_NEW_WM_PROG | _NEW_COLOR */
+   /* BRW_NEW_FS_PROG_DATA | _NEW_COLOR */
    if (prog_data->dual_src_blend &&
        (ctx->Color.BlendEnabled & 1) &&
        ctx->Color.Blend[0]._UsesDualSrc) {
@@ -306,7 +306,7 @@ const struct brw_tracked_state gen6_wm_state = {
       .brw   = BRW_NEW_BATCH |
                BRW_NEW_FRAGMENT_PROGRAM |
                BRW_NEW_PUSH_CONSTANT_ALLOCATION,
-      .cache = CACHE_NEW_WM_PROG
+      .cache = BRW_NEW_FS_PROG_DATA
    },
    .emit = upload_wm_state,
 };

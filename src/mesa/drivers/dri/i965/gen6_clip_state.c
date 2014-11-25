@@ -43,7 +43,7 @@ upload_clip_state(struct brw_context *brw)
    /* _NEW_BUFFERS */
    struct gl_framebuffer *fb = ctx->DrawBuffer;
 
-   /* CACHE_NEW_WM_PROG */
+   /* BRW_NEW_FS_PROG_DATA */
    if (brw->wm.prog_data->barycentric_interp_modes &
        BRW_WM_NONPERSPECTIVE_BARYCENTRIC_BITS) {
       dw2 |= GEN6_CLIP_NON_PERSPECTIVE_BARYCENTRIC_ENABLE;
@@ -189,7 +189,7 @@ const struct brw_tracked_state gen6_clip_state = {
       .brw   = BRW_NEW_CONTEXT |
                BRW_NEW_META_IN_PROGRESS |
                BRW_NEW_RASTERIZER_DISCARD,
-      .cache = CACHE_NEW_WM_PROG
+      .cache = BRW_NEW_FS_PROG_DATA
    },
    .emit = upload_clip_state,
 };
@@ -203,7 +203,7 @@ const struct brw_tracked_state gen7_clip_state = {
       .brw   = BRW_NEW_CONTEXT |
                BRW_NEW_META_IN_PROGRESS |
                BRW_NEW_RASTERIZER_DISCARD,
-      .cache = CACHE_NEW_WM_PROG
+      .cache = BRW_NEW_FS_PROG_DATA
    },
    .emit = upload_clip_state,
 };

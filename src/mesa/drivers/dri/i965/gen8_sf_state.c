@@ -33,7 +33,7 @@ static void
 upload_sbe(struct brw_context *brw)
 {
    struct gl_context *ctx = &brw->ctx;
-   /* CACHE_NEW_WM_PROG */
+   /* BRW_NEW_FS_PROG_DATA */
    uint32_t num_outputs = brw->wm.prog_data->num_varying_inputs;
    uint16_t attr_overrides[VARYING_SLOT_MAX];
    uint32_t urb_entry_read_length;
@@ -61,7 +61,7 @@ upload_sbe(struct brw_context *brw)
       dw1 |= GEN6_SF_POINT_SPRITE_UPPERLEFT;
 
    /* BRW_NEW_VUE_MAP_GEOM_OUT | BRW_NEW_FRAGMENT_PROGRAM |
-    * _NEW_POINT | _NEW_LIGHT | _NEW_PROGRAM | CACHE_NEW_WM_PROG
+    * _NEW_POINT | _NEW_LIGHT | _NEW_PROGRAM | BRW_NEW_FS_PROG_DATA
     */
    calculate_attr_overrides(brw, attr_overrides,
                             &point_sprite_enables,
@@ -134,7 +134,7 @@ const struct brw_tracked_state gen8_sbe_state = {
       .brw   = BRW_NEW_CONTEXT |
                BRW_NEW_FRAGMENT_PROGRAM |
                BRW_NEW_VUE_MAP_GEOM_OUT,
-      .cache = CACHE_NEW_WM_PROG,
+      .cache = BRW_NEW_FS_PROG_DATA,
    },
    .emit = upload_sbe,
 };

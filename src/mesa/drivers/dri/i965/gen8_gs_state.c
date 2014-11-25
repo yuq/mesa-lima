@@ -33,7 +33,7 @@ gen8_upload_gs_state(struct brw_context *brw)
    const struct brw_stage_state *stage_state = &brw->gs.base;
    /* BRW_NEW_GEOMETRY_PROGRAM */
    bool active = brw->geometry_program;
-   /* CACHE_NEW_GS_PROG */
+   /* BRW_NEW_GS_PROG_DATA */
    const struct brw_vec4_prog_data *prog_data = &brw->gs.prog_data->base;
 
    if (active) {
@@ -123,7 +123,7 @@ const struct brw_tracked_state gen8_gs_state = {
       .brw   = BRW_NEW_BATCH |
                BRW_NEW_CONTEXT |
                BRW_NEW_GEOMETRY_PROGRAM,
-      .cache = CACHE_NEW_GS_PROG
+      .cache = BRW_NEW_GS_PROG_DATA
    },
    .emit = gen8_upload_gs_state,
 };

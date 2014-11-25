@@ -120,7 +120,7 @@ const struct brw_tracked_state brw_psp_urb_cbs = {
              BRW_NEW_GEN4_UNIT_STATE |
              BRW_NEW_STATE_BASE_ADDRESS |
              BRW_NEW_URB_FENCE,
-      .cache = CACHE_NEW_FF_GS_PROG,
+      .cache = BRW_NEW_FF_GS_PROG_DATA,
    },
    .emit = upload_psp_urb_cbs,
 };
