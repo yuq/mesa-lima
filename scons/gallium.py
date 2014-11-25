@@ -390,7 +390,7 @@ def generate(env):
                 ccflags += [
                     '-mstackrealign', # ensure stack is aligned
                     '-msse', '-msse2', # enable SIMD intrinsics
-                    #'-mfpmath=sse',
+                    '-mfpmath=sse', # generate SSE floating-point arithmetic
                 ]
             if platform in ['windows', 'darwin']:
                 # Workaround http://gcc.gnu.org/bugzilla/show_bug.cgi?id=37216
@@ -469,7 +469,7 @@ def generate(env):
         ]
         if env['machine'] == 'x86':
             ccflags += [
-                #'/arch:SSE2', # use the SSE2 instructions
+                '/arch:SSE2', # use the SSE2 instructions (default since MSVC 2012)
             ]
         if platform == 'windows':
             ccflags += [
