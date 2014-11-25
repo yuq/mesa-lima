@@ -378,21 +378,18 @@ def generate(env):
                 #'-march=pentium4',
             ]
             if distutils.version.LooseVersion(ccversion) >= distutils.version.LooseVersion('4.2') \
-               and (platform != 'windows' or env['build'] == 'debug' or True) \
                and platform != 'haiku':
                 # NOTE: We need to ensure stack is realigned given that we
                 # produce shared objects, and have no control over the stack
                 # alignment policy of the application. Therefore we need
                 # -mstackrealign ore -mincoming-stack-boundary=2.
                 #
-                # XXX: -O and -mstackrealign causes stack corruption on MinGW
-                #
                 # XXX: We could have SSE without -mstackrealign if we always used
                 # __attribute__((force_align_arg_pointer)), but that's not
                 # always the case.
                 ccflags += [
                     '-mstackrealign', # ensure stack is aligned
-                    '-mmmx', '-msse', '-msse2', # enable SIMD intrinsics
+                    '-msse', '-msse2', # enable SIMD intrinsics
                     #'-mfpmath=sse',
                 ]
             if platform in ['windows', 'darwin']:
