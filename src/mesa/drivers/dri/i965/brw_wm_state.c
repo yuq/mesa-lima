@@ -150,12 +150,11 @@ brw_upload_wm_unit(struct brw_context *brw)
    if (brw->gen == 5)
       wm->wm4.sampler_count = 0; /* hardware requirement */
    else {
-      /* CACHE_NEW_SAMPLER */
       wm->wm4.sampler_count = (brw->wm.base.sampler_count + 1) / 4;
    }
 
    if (brw->wm.base.sampler_count) {
-      /* reloc */
+      /* CACHE_NEW_SAMPLER - reloc */
       wm->wm4.sampler_state_pointer = (brw->batch.bo->offset64 +
 				       brw->wm.base.sampler_offset) >> 5;
    } else {

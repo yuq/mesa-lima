@@ -145,7 +145,6 @@ brw_upload_vs_unit(struct brw_context *brw)
    if (brw->gen == 5)
       vs->vs5.sampler_count = 0; /* hardware requirement */
    else {
-      /* CACHE_NEW_SAMPLER */
       vs->vs5.sampler_count = (stage_state->sampler_count + 3) / 4;
    }
 
@@ -160,6 +159,7 @@ brw_upload_vs_unit(struct brw_context *brw)
    /* Set the sampler state pointer, and its reloc
     */
    if (stage_state->sampler_count) {
+      /* CACHE_NEW_SAMPLER - reloc */
       vs->vs5.sampler_state_pointer =
          (brw->batch.bo->offset64 + stage_state->sampler_offset) >> 5;
       drm_intel_bo_emit_reloc(brw->batch.bo,
