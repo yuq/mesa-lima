@@ -1602,6 +1602,17 @@ type_qualifier:
 
       $$ = $2;
       $$.flags.q.invariant = 1;
+
+      /* GLSL ES 3.00 spec, section 4.6.1 "The Invariant Qualifier":
+       *
+       * "Only variables output from a shader can be candidates for invariance.
+       * This includes user-defined output variables and the built-in output
+       * variables. As only outputs can be declared as invariant, an invariant
+       * output from one shader stage will still match an input of a subsequent
+       * stage without the input being declared as invariant."
+       */
+      if (state->es_shader && state->language_version >= 300 && $$.flags.q.in)
+         _mesa_glsl_error(&@1, state, "invariant qualifiers cannot be used with shader inputs");
    }
    | interpolation_qualifier type_qualifier
    {
