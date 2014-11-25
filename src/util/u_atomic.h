@@ -57,12 +57,12 @@
 
 #define p_atomic_set(_v, _i) (*(_v) = (_i))
 #define p_atomic_read(_v) (*(_v))
-#define p_atomic_dec_zero(_v) ((bool) --(*(_v)))
-#define p_atomic_inc(_v) ((void) (*(_v))++)
-#define p_atomic_dec(_v) ((void) (*(_v))--)
-#define p_atomic_inc_return(_v) ((*(_v))++)
-#define p_atomic_dec_return(_v) ((*(_v))--)
-#define p_atomic_cmpxchg(_v, old, _new) (*(_v) == old ? *(_v) = (_new) : *(_v))
+#define p_atomic_dec_zero(_v) (p_atomic_dec_return(_v) == 0)
+#define p_atomic_inc(_v) ((void) p_atomic_inc_return(_v))
+#define p_atomic_dec(_v) ((void) p_atomic_dec_return(_v))
+#define p_atomic_inc_return(_v) (++(*(_v)))
+#define p_atomic_dec_return(_v) (--(*(_v)))
+#define p_atomic_cmpxchg(_v, _old, _new) (*(_v) == (_old) ? (*(_v) = (_new), (_old)) : *(_v))
 
 #endif
 
