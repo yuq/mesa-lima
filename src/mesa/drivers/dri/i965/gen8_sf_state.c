@@ -209,7 +209,6 @@ const struct brw_tracked_state gen8_sf_state = {
                _NEW_MULTISAMPLE |
                _NEW_POINT,
       .brw   = BRW_NEW_CONTEXT,
-      .cache = 0,
    },
    .emit = upload_sf,
 };
@@ -327,7 +326,6 @@ const struct brw_tracked_state gen8_raster_state = {
                _NEW_SCISSOR |
                _NEW_TRANSFORM,
       .brw   = BRW_NEW_CONTEXT,
-      .cache = 0,
    },
    .emit = upload_raster,
 };

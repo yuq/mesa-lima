@@ -952,7 +952,6 @@ const struct brw_tracked_state brw_indices = {
    .dirty = {
       .mesa = 0,
       .brw = BRW_NEW_INDICES,
-      .cache = 0,
    },
    .emit = brw_upload_indices,
 };
@@ -990,7 +989,6 @@ const struct brw_tracked_state brw_index_buffer = {
       .mesa = 0,
       .brw = BRW_NEW_BATCH |
              BRW_NEW_INDEX_BUFFER,
-      .cache = 0,
    },
    .emit = brw_emit_index_buffer,
 };

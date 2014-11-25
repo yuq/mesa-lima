@@ -95,7 +95,6 @@ const struct brw_tracked_state gen7_sf_clip_viewport = {
       .mesa = _NEW_BUFFERS |
               _NEW_VIEWPORT,
       .brw = BRW_NEW_BATCH,
-      .cache = 0,
    },
    .emit = gen7_upload_sf_clip_viewport,
 };

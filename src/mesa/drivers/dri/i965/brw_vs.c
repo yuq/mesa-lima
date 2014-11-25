@@ -520,7 +520,6 @@ const struct brw_tracked_state brw_vs_prog = {
                _NEW_TRANSFORM,
       .brw   = BRW_NEW_VERTEX_PROGRAM |
                BRW_NEW_VERTICES,
-      .cache = 0
    },
    .emit = brw_upload_vs_prog
 };

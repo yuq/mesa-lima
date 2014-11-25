@@ -205,7 +205,6 @@ const struct brw_tracked_state gen7_depthbuffer = {
               _NEW_DEPTH |
               _NEW_STENCIL,
       .brw = BRW_NEW_BATCH,
-      .cache = 0,
    },
    .emit = brw_emit_depthbuffer,
 };

@@ -262,7 +262,6 @@ const struct brw_tracked_state gen8_index_buffer = {
       .mesa = 0,
       .brw = BRW_NEW_BATCH |
              BRW_NEW_INDEX_BUFFER,
-      .cache = 0,
    },
    .emit = gen8_emit_index_buffer,
 };
@@ -280,7 +279,6 @@ const struct brw_tracked_state gen8_vf_topology = {
    .dirty = {
       .mesa = 0,
       .brw = BRW_NEW_PRIMITIVE,
-      .cache = 0,
    },
    .emit = gen8_emit_vf_topology,
 };

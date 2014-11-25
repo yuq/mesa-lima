@@ -96,7 +96,6 @@ const struct brw_tracked_state gen6_scissor_state = {
               _NEW_SCISSOR |
               _NEW_VIEWPORT,
       .brw = BRW_NEW_BATCH,
-      .cache = 0,
    },
    .emit = gen6_upload_scissor_state,
 };

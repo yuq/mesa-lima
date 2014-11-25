@@ -118,7 +118,6 @@ const struct brw_tracked_state brw_sf_vp = {
                _NEW_SCISSOR |
                _NEW_VIEWPORT,
       .brw   = BRW_NEW_BATCH,
-      .cache = 0
    },
    .emit = upload_sf_vp
 };

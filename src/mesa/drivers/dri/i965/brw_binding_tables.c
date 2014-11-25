@@ -195,7 +195,6 @@ const struct brw_tracked_state brw_binding_table_pointers = {
              BRW_NEW_PS_BINDING_TABLE |
              BRW_NEW_STATE_BASE_ADDRESS |
              BRW_NEW_VS_BINDING_TABLE,
-      .cache = 0,
    },
    .emit = gen4_upload_binding_table_pointers,
 };
@@ -232,7 +231,6 @@ const struct brw_tracked_state gen6_binding_table_pointers = {
              BRW_NEW_PS_BINDING_TABLE |
              BRW_NEW_STATE_BASE_ADDRESS |
              BRW_NEW_VS_BINDING_TABLE,
-      .cache = 0,
    },
    .emit = gen6_upload_binding_table_pointers,
 };

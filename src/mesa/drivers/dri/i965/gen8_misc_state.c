@@ -80,7 +80,6 @@ const struct brw_tracked_state gen8_state_base_address = {
       .mesa = 0,
       .brw = BRW_NEW_BATCH |
              BRW_NEW_PROGRAM_CACHE,
-      .cache = 0,
    },
    .emit = upload_state_base_address
 };

@@ -246,7 +246,6 @@ const struct brw_tracked_state gen6_blend_state = {
               _NEW_MULTISAMPLE,
       .brw = BRW_NEW_BATCH |
              BRW_NEW_STATE_BASE_ADDRESS,
-      .cache = 0,
    },
    .emit = gen6_upload_blend_state,
 };
@@ -300,7 +299,6 @@ const struct brw_tracked_state gen6_color_calc_state = {
               _NEW_STENCIL,
       .brw = BRW_NEW_BATCH |
              BRW_NEW_STATE_BASE_ADDRESS,
-      .cache = 0,
    },
    .emit = gen6_upload_color_calc_state,
 };

@@ -738,7 +738,6 @@ const struct brw_tracked_state brw_renderbuffer_surfaces = {
       .mesa = _NEW_BUFFERS |
               _NEW_COLOR,
       .brw = BRW_NEW_BATCH,
-      .cache = 0
    },
    .emit = brw_update_renderbuffer_surfaces,
 };
@@ -747,7 +746,6 @@ const struct brw_tracked_state gen6_renderbuffer_surfaces = {
    .dirty = {
       .mesa = _NEW_BUFFERS,
       .brw = BRW_NEW_BATCH,
-      .cache = 0
    },
    .emit = brw_update_renderbuffer_surfaces,
 };
@@ -829,7 +827,6 @@ const struct brw_tracked_state brw_texture_surfaces = {
              BRW_NEW_GEOMETRY_PROGRAM |
              BRW_NEW_TEXTURE_BUFFER |
              BRW_NEW_VERTEX_PROGRAM,
-      .cache = 0
    },
    .emit = brw_update_texture_surfaces,
 };

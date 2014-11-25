@@ -70,7 +70,6 @@ const struct brw_tracked_state gen6_clip_vp = {
    .dirty = {
       .mesa = _NEW_VIEWPORT,
       .brw = BRW_NEW_BATCH,
-      .cache = 0,
    },
    .emit = gen6_upload_clip_vp,
 };
@@ -114,7 +113,6 @@ const struct brw_tracked_state gen6_sf_vp = {
       .mesa = _NEW_BUFFERS |
               _NEW_VIEWPORT,
       .brw = BRW_NEW_BATCH,
-      .cache = 0,
    },
    .emit = gen6_upload_sf_vp,
 };
@@ -140,7 +138,6 @@ const struct brw_tracked_state gen6_viewport_state = {
              BRW_NEW_CLIP_VP |
              BRW_NEW_SF_VP |
              BRW_NEW_STATE_BASE_ADDRESS,
-      .cache = 0,
    },
    .emit = upload_viewport_state_pointers,
 };

@@ -529,7 +529,6 @@ const struct brw_tracked_state brw_fs_samplers = {
       .mesa = _NEW_TEXTURE,
       .brw = BRW_NEW_BATCH |
              BRW_NEW_FRAGMENT_PROGRAM,
-      .cache = 0
    },
    .emit = brw_upload_fs_samplers,
 };
@@ -548,7 +547,6 @@ const struct brw_tracked_state brw_vs_samplers = {
       .mesa = _NEW_TEXTURE,
       .brw = BRW_NEW_BATCH |
              BRW_NEW_VERTEX_PROGRAM,
-      .cache = 0
    },
    .emit = brw_upload_vs_samplers,
 };
@@ -571,7 +569,6 @@ const struct brw_tracked_state brw_gs_samplers = {
       .mesa = _NEW_TEXTURE,
       .brw = BRW_NEW_BATCH |
              BRW_NEW_GEOMETRY_PROGRAM,
-      .cache = 0
    },
    .emit = brw_upload_gs_samplers,
 };

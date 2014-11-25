@@ -287,15 +287,6 @@ struct brw_state_flags {
     * State update flags signalled as the result of brw_tracked_state updates
     */
    uint64_t brw;
-   /**
-    * State update flags that used to be signalled by brw_state_cache.c
-    * searches.
-    *
-    * Now almost all of that state is just streamed out on demand, but the
-    * flags for those state blobs updating have stayed in the same bitfield.
-    * brw_state_cache.c still flags BRW_NEW_*_PROG_DATA.
-    */
-   GLuint cache;
 };
 
 /** Subclass of Mesa vertex program */
@@ -740,8 +731,7 @@ struct brw_gs_prog_data
 struct brw_cache_item {
    /**
     * Effectively part of the key, cache_id identifies what kind of state
-    * buffer is involved, and also which brw->state.dirty.cache flag should
-    * be set when this cache item is chosen.
+    * buffer is involved, and also which dirty flag should set.
     */
    enum brw_cache_id cache_id;
    /** 32-bit hash of the key data */

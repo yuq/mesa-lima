@@ -112,7 +112,6 @@ const struct brw_tracked_state gen8_wm_depth_stencil = {
               _NEW_DEPTH |
               _NEW_STENCIL,
       .brw  = BRW_NEW_CONTEXT,
-      .cache = 0,
    },
    .emit = gen8_upload_wm_depth_stencil,
 };

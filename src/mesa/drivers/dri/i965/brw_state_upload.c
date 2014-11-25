@@ -377,9 +377,7 @@ void brw_init_state( struct brw_context *brw )
    brw->num_atoms = num_atoms;
 
    while (num_atoms--) {
-      assert((*atoms)->dirty.mesa |
-	     (*atoms)->dirty.brw |
-	     (*atoms)->dirty.cache);
+      assert((*atoms)->dirty.mesa | (*atoms)->dirty.brw);
       assert((*atoms)->emit);
       atoms++;
    }
@@ -419,9 +417,7 @@ void brw_destroy_state( struct brw_context *brw )
 static bool
 check_state(const struct brw_state_flags *a, const struct brw_state_flags *b)
 {
-   return ((a->mesa & b->mesa) |
-	   (a->brw & b->brw) |
-	   (a->cache & b->cache)) != 0;
+   return ((a->mesa & b->mesa) | (a->brw & b->brw)) != 0;
 }
 
 static void accumulate_state( struct brw_state_flags *a,
@@ -429,7 +425,6 @@ static void accumulate_state( struct brw_state_flags *a,
 {
    a->mesa |= b->mesa;
    a->brw |= b->brw;
-   a->cache |= b->cache;
 }
 
 
@@ -439,7 +434,6 @@ static void xor_states( struct brw_state_flags *result,
 {
    result->mesa = a->mesa ^ b->mesa;
    result->brw = a->brw ^ b->brw;
-   result->cache = a->cache ^ b->cache;
 }
 
 struct dirty_bit_map {
@@ -534,11 +528,6 @@ static struct dirty_bit_map brw_bits[] = {
    {0, 0, 0}
 };
 
-static struct dirty_bit_map cache_bits[] = {
-   {0, 0, 0}
-};
-
-
 static void
 brw_update_dirty_count(struct dirty_bit_map *bit_map, uint64_t bits)
 {
@@ -577,7 +566,6 @@ void brw_upload_state(struct brw_context *brw)
       /* Always re-emit all state. */
       state->mesa |= ~0;
       state->brw |= ~0ull;
-      state->cache |= ~0;
    }
 
    if (brw->fragment_program != ctx->FragmentProgram._Current) {
@@ -605,7 +593,7 @@ void brw_upload_state(struct brw_context *brw)
       brw->state.dirty.brw |= BRW_NEW_NUM_SAMPLES;
    }
 
-   if ((state->mesa | state->cache | state->brw) == 0)
+   if ((state->mesa | state->brw) == 0)
       return;
 
    if (unlikely(INTEL_DEBUG)) {
@@ -651,11 +639,9 @@ void brw_upload_state(struct brw_context *brw)
 
       brw_update_dirty_count(mesa_bits, state->mesa);
       brw_update_dirty_count(brw_bits, state->brw);
-      brw_update_dirty_count(cache_bits, state->cache);
       if (dirty_count++ % 1000 == 0) {
 	 brw_print_dirty_count(mesa_bits);
 	 brw_print_dirty_count(brw_bits);
-	 brw_print_dirty_count(cache_bits);
 	 fprintf(stderr, "\n");
       }
    }

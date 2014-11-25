@@ -85,7 +85,6 @@ const struct brw_tracked_state gen8_multisample_state = {
       .mesa = _NEW_MULTISAMPLE,
       .brw = BRW_NEW_CONTEXT |
              BRW_NEW_NUM_SAMPLES,
-      .cache = 0
    },
    .emit = upload_multisample_state
 };
