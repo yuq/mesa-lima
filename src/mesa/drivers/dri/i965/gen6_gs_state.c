@@ -57,8 +57,8 @@ const struct brw_tracked_state gen6_gs_push_constants = {
                _NEW_TRANSFORM,
       .brw   = BRW_NEW_BATCH |
                BRW_NEW_GEOMETRY_PROGRAM |
+               BRW_NEW_GS_PROG_DATA |
                BRW_NEW_PUSH_CONSTANT_ALLOCATION,
-      .cache = BRW_NEW_GS_PROG_DATA,
    },
    .emit = gen6_upload_gs_push_constants,
 };
@@ -200,10 +200,10 @@ const struct brw_tracked_state gen6_gs_state = {
                _NEW_TRANSFORM,
       .brw   = BRW_NEW_BATCH |
                BRW_NEW_CONTEXT |
+               BRW_NEW_FF_GS_PROG_DATA |
                BRW_NEW_GEOMETRY_PROGRAM |
+               BRW_NEW_GS_PROG_DATA |
                BRW_NEW_PUSH_CONSTANT_ALLOCATION,
-      .cache = BRW_NEW_FF_GS_PROG_DATA |
-               BRW_NEW_GS_PROG_DATA,
    },
    .emit = upload_gs_state,
 };

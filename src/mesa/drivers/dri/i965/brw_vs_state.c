@@ -192,8 +192,8 @@ const struct brw_tracked_state brw_vs_unit = {
                BRW_NEW_PROGRAM_CACHE |
                BRW_NEW_SAMPLER_STATE_TABLE |
                BRW_NEW_URB_FENCE |
-               BRW_NEW_VERTEX_PROGRAM,
-      .cache = BRW_NEW_VS_PROG_DATA,
+               BRW_NEW_VERTEX_PROGRAM |
+               BRW_NEW_VS_PROG_DATA,
    },
    .emit = brw_upload_vs_unit,
 };

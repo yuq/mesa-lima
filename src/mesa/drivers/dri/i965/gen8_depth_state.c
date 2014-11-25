@@ -372,8 +372,8 @@ const struct brw_tracked_state gen8_pma_fix = {
               _NEW_DEPTH |
               _NEW_MULTISAMPLE |
               _NEW_STENCIL,
-      .brw = BRW_NEW_FRAGMENT_PROGRAM,
-      .cache = BRW_NEW_FS_PROG_DATA,
+      .brw = BRW_NEW_FRAGMENT_PROGRAM |
+             BRW_NEW_FS_PROG_DATA,
    },
    .emit = gen8_emit_pma_stall_workaround
 };

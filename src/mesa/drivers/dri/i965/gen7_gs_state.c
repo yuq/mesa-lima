@@ -156,8 +156,8 @@ const struct brw_tracked_state gen7_gs_state = {
       .mesa  = _NEW_TRANSFORM,
       .brw   = BRW_NEW_BATCH |
                BRW_NEW_CONTEXT |
-               BRW_NEW_GEOMETRY_PROGRAM,
-      .cache = BRW_NEW_GS_PROG_DATA
+               BRW_NEW_GEOMETRY_PROGRAM |
+               BRW_NEW_GS_PROG_DATA,
    },
    .emit = upload_gs_state,
 };

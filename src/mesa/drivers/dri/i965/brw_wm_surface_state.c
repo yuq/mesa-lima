@@ -495,8 +495,8 @@ const struct brw_tracked_state brw_wm_pull_constants = {
    .dirty = {
       .mesa = _NEW_PROGRAM_CONSTANTS,
       .brw = BRW_NEW_BATCH |
-             BRW_NEW_FRAGMENT_PROGRAM,
-      .cache = BRW_NEW_FS_PROG_DATA,
+             BRW_NEW_FRAGMENT_PROGRAM |
+             BRW_NEW_FS_PROG_DATA,
    },
    .emit = brw_upload_wm_pull_constants,
 };
@@ -892,8 +892,8 @@ const struct brw_tracked_state brw_wm_ubo_surfaces = {
    .dirty = {
       .mesa = _NEW_PROGRAM,
       .brw = BRW_NEW_BATCH |
+             BRW_NEW_FS_PROG_DATA |
              BRW_NEW_UNIFORM_BUFFER,
-      .cache = BRW_NEW_FS_PROG_DATA,
    },
    .emit = brw_upload_wm_ubo_surfaces,
 };
@@ -943,8 +943,8 @@ const struct brw_tracked_state brw_wm_abo_surfaces = {
    .dirty = {
       .mesa = _NEW_PROGRAM,
       .brw = BRW_NEW_ATOMIC_BUFFER |
-             BRW_NEW_BATCH,
-      .cache = BRW_NEW_FS_PROG_DATA,
+             BRW_NEW_BATCH |
+             BRW_NEW_FS_PROG_DATA,
    },
    .emit = brw_upload_wm_abo_surfaces,
 };

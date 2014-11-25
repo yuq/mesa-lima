@@ -111,8 +111,8 @@ const struct brw_tracked_state brw_vs_binding_table = {
       .mesa = 0,
       .brw = BRW_NEW_BATCH |
              BRW_NEW_VS_CONSTBUF |
+             BRW_NEW_VS_PROG_DATA |
              BRW_NEW_SURFACES,
-      .cache = BRW_NEW_VS_PROG_DATA
    },
    .emit = brw_vs_upload_binding_table,
 };
@@ -131,8 +131,8 @@ const struct brw_tracked_state brw_wm_binding_table = {
    .dirty = {
       .mesa = 0,
       .brw = BRW_NEW_BATCH |
+             BRW_NEW_FS_PROG_DATA |
              BRW_NEW_SURFACES,
-      .cache = BRW_NEW_FS_PROG_DATA
    },
    .emit = brw_upload_wm_binding_table,
 };
@@ -155,8 +155,8 @@ const struct brw_tracked_state brw_gs_binding_table = {
       .mesa = 0,
       .brw = BRW_NEW_BATCH |
              BRW_NEW_GS_CONSTBUF |
+             BRW_NEW_GS_PROG_DATA |
              BRW_NEW_SURFACES,
-      .cache = BRW_NEW_GS_PROG_DATA
    },
    .emit = brw_gs_upload_binding_table,
 };

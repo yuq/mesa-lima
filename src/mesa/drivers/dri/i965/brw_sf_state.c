@@ -306,9 +306,9 @@ const struct brw_tracked_state brw_sf_unit = {
                _NEW_SCISSOR,
       .brw   = BRW_NEW_BATCH |
                BRW_NEW_PROGRAM_CACHE |
+               BRW_NEW_SF_PROG_DATA |
                BRW_NEW_SF_VP |
                BRW_NEW_URB_FENCE,
-      .cache = BRW_NEW_SF_PROG_DATA,
    },
    .emit = upload_sf_unit,
 };

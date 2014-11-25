@@ -167,10 +167,10 @@ const struct brw_tracked_state brw_clip_unit = {
                _NEW_TRANSFORM |
                _NEW_VIEWPORT,
       .brw   = BRW_NEW_BATCH |
+               BRW_NEW_CLIP_PROG_DATA |
                BRW_NEW_CURBE_OFFSETS |
                BRW_NEW_PROGRAM_CACHE |
                BRW_NEW_URB_FENCE,
-      .cache = BRW_NEW_CLIP_PROG_DATA
    },
    .emit = brw_upload_clip_unit,
 };

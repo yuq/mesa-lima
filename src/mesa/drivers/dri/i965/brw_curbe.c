@@ -142,9 +142,9 @@ static void calculate_curbe_offsets( struct brw_context *brw )
 const struct brw_tracked_state brw_curbe_offsets = {
    .dirty = {
       .mesa = _NEW_TRANSFORM,
-      .brw  = BRW_NEW_CONTEXT,
-      .cache = BRW_NEW_VS_PROG_DATA |
-               BRW_NEW_FS_PROG_DATA
+      .brw  = BRW_NEW_CONTEXT |
+              BRW_NEW_FS_PROG_DATA |
+              BRW_NEW_VS_PROG_DATA,
    },
    .emit = calculate_curbe_offsets
 };
@@ -311,10 +311,10 @@ const struct brw_tracked_state brw_constant_buffer = {
       .mesa = _NEW_PROGRAM_CONSTANTS,
       .brw  = BRW_NEW_BATCH |
               BRW_NEW_CURBE_OFFSETS |
+              BRW_NEW_FS_PROG_DATA |
               BRW_NEW_PSP | /* Implicit - hardware requires this, not used above */
-              BRW_NEW_URB_FENCE,
-      .cache = BRW_NEW_VS_PROG_DATA |
-               BRW_NEW_FS_PROG_DATA
+              BRW_NEW_URB_FENCE |
+              BRW_NEW_VS_PROG_DATA,
    },
    .emit = brw_upload_constant_buffer,
 };

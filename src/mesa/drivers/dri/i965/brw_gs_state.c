@@ -93,9 +93,9 @@ const struct brw_tracked_state brw_gs_unit = {
       .mesa  = 0,
       .brw   = BRW_NEW_BATCH |
                BRW_NEW_CURBE_OFFSETS |
+               BRW_NEW_FF_GS_PROG_DATA |
                BRW_NEW_PROGRAM_CACHE |
                BRW_NEW_URB_FENCE,
-      .cache = BRW_NEW_FF_GS_PROG_DATA
    },
    .emit = brw_upload_gs_unit,
 };

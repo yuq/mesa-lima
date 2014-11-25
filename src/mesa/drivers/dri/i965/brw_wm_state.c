@@ -255,10 +255,10 @@ const struct brw_tracked_state brw_wm_unit = {
       .brw = BRW_NEW_BATCH |
              BRW_NEW_CURBE_OFFSETS |
              BRW_NEW_FRAGMENT_PROGRAM |
+             BRW_NEW_FS_PROG_DATA |
              BRW_NEW_PROGRAM_CACHE |
              BRW_NEW_SAMPLER_STATE_TABLE |
              BRW_NEW_STATS_WM,
-      .cache = BRW_NEW_FS_PROG_DATA,
    },
    .emit = brw_upload_wm_unit,
 };

@@ -870,8 +870,8 @@ const struct brw_tracked_state brw_vertices = {
    .dirty = {
       .mesa = _NEW_POLYGON,
       .brw = BRW_NEW_BATCH |
-             BRW_NEW_VERTICES,
-      .cache = BRW_NEW_VS_PROG_DATA,
+             BRW_NEW_VERTICES |
+             BRW_NEW_VS_PROG_DATA,
    },
    .emit = brw_emit_vertices,
 };

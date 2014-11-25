@@ -486,6 +486,13 @@ static struct dirty_bit_map mesa_bits[] = {
 };
 
 static struct dirty_bit_map brw_bits[] = {
+   DEFINE_BIT(BRW_NEW_FS_PROG_DATA),
+   DEFINE_BIT(BRW_NEW_BLORP_BLIT_PROG_DATA),
+   DEFINE_BIT(BRW_NEW_SF_PROG_DATA),
+   DEFINE_BIT(BRW_NEW_VS_PROG_DATA),
+   DEFINE_BIT(BRW_NEW_FF_GS_PROG_DATA),
+   DEFINE_BIT(BRW_NEW_GS_PROG_DATA),
+   DEFINE_BIT(BRW_NEW_CLIP_PROG_DATA),
    DEFINE_BIT(BRW_NEW_URB_FENCE),
    DEFINE_BIT(BRW_NEW_FRAGMENT_PROGRAM),
    DEFINE_BIT(BRW_NEW_GEOMETRY_PROGRAM),
@@ -528,13 +535,6 @@ static struct dirty_bit_map brw_bits[] = {
 };
 
 static struct dirty_bit_map cache_bits[] = {
-   DEFINE_BIT(BRW_NEW_FS_PROG_DATA),
-   DEFINE_BIT(BRW_NEW_BLORP_BLIT_PROG_DATA),
-   DEFINE_BIT(BRW_NEW_SF_PROG_DATA),
-   DEFINE_BIT(BRW_NEW_VS_PROG_DATA),
-   DEFINE_BIT(BRW_NEW_FF_GS_PROG_DATA),
-   DEFINE_BIT(BRW_NEW_GS_PROG_DATA),
-   DEFINE_BIT(BRW_NEW_CLIP_PROG_DATA),
    {0, 0, 0}
 };
 
@@ -648,7 +648,6 @@ void brw_upload_state(struct brw_context *brw)
 
    if (unlikely(INTEL_DEBUG & DEBUG_STATE)) {
       STATIC_ASSERT(ARRAY_SIZE(brw_bits) == BRW_NUM_STATE_BITS + 1);
-      STATIC_ASSERT(ARRAY_SIZE(cache_bits) == BRW_MAX_CACHE + 1);
 
       brw_update_dirty_count(mesa_bits, state->mesa);
       brw_update_dirty_count(brw_bits, state->brw);

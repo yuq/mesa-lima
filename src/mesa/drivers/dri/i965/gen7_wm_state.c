@@ -132,8 +132,8 @@ const struct brw_tracked_state gen7_wm_state = {
                _NEW_MULTISAMPLE |
                _NEW_POLYGON,
       .brw   = BRW_NEW_BATCH |
-               BRW_NEW_FRAGMENT_PROGRAM,
-      .cache = BRW_NEW_FS_PROG_DATA,
+               BRW_NEW_FRAGMENT_PROGRAM |
+               BRW_NEW_FS_PROG_DATA,
    },
    .emit = upload_wm_state,
 };
@@ -276,8 +276,8 @@ const struct brw_tracked_state gen7_ps_state = {
                _NEW_COLOR |
                _NEW_MULTISAMPLE,
       .brw   = BRW_NEW_BATCH |
-               BRW_NEW_FRAGMENT_PROGRAM,
-      .cache = BRW_NEW_FS_PROG_DATA
+               BRW_NEW_FRAGMENT_PROGRAM |
+               BRW_NEW_FS_PROG_DATA,
    },
    .emit = upload_ps_state,
 };

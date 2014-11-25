@@ -187,9 +187,9 @@ const struct brw_tracked_state gen6_clip_state = {
                _NEW_LIGHT |
                _NEW_TRANSFORM,
       .brw   = BRW_NEW_CONTEXT |
+               BRW_NEW_FS_PROG_DATA |
                BRW_NEW_META_IN_PROGRESS |
                BRW_NEW_RASTERIZER_DISCARD,
-      .cache = BRW_NEW_FS_PROG_DATA
    },
    .emit = upload_clip_state,
 };
@@ -201,9 +201,9 @@ const struct brw_tracked_state gen7_clip_state = {
                _NEW_POLYGON |
                _NEW_TRANSFORM,
       .brw   = BRW_NEW_CONTEXT |
+               BRW_NEW_FS_PROG_DATA |
                BRW_NEW_META_IN_PROGRESS |
                BRW_NEW_RASTERIZER_DISCARD,
-      .cache = BRW_NEW_FS_PROG_DATA
    },
    .emit = upload_clip_state,
 };
