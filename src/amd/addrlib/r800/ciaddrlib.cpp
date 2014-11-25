@@ -247,6 +247,7 @@ ADDR_E_RETURNCODE CiAddrLib::HwlComputeDccInfo(
                                     HwlGetPipes(&pIn->tileInfo) *
                                     m_pipeInterleaveBytes;
         pOut->dccFastClearSize    = dccFastClearSize;
+        pOut->dccRamSizeAligned   = TRUE;
 
         ADDR_ASSERT(IsPow2(pOut->dccRamBaseAlign));
 
@@ -261,6 +262,10 @@ ADDR_E_RETURNCODE CiAddrLib::HwlComputeDccInfo(
             if (pOut->dccRamSize == pOut->dccFastClearSize)
             {
                 pOut->dccFastClearSize = PowTwoAlign(pOut->dccRamSize, dccRamSizeAlign);
+            }
+            if ((pOut->dccRamSize & (dccRamSizeAlign - 1)) != 0)
+            {
+                pOut->dccRamSizeAligned = FALSE;
             }
             pOut->dccRamSize          = PowTwoAlign(pOut->dccRamSize, dccRamSizeAlign);
             pOut->subLvlCompressible  = FALSE;

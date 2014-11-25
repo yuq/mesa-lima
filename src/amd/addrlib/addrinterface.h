@@ -2128,7 +2128,8 @@ typedef struct _ADDR_COMPUTE_DCCINFO_OUTPUT
     UINT_64 dccRamBaseAlign;      ///< Base alignment of dcc key
     UINT_64 dccRamSize;           ///< Size of dcc key
     UINT_64 dccFastClearSize;     ///< Size of dcc key portion that can be fast cleared
-    BOOL_32 subLvlCompressible;   ///< whether sub resource is compressiable
+    BOOL_32 subLvlCompressible;   ///< Whether sub resource is compressiable
+    BOOL_32 dccRamSizeAligned;    ///< Whether the dcc key size is aligned
 } ADDR_COMPUTE_DCCINFO_OUTPUT;
 
 /**
