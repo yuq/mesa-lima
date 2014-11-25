@@ -827,15 +827,18 @@ _mesa_meta_end(struct gl_context *ctx)
    const GLbitfield state = save->SavedState;
    int i;
 
-   /* After starting a new occlusion query, initialize the results to the
-    * values saved previously. The driver will then continue to increment
-    * these values.
-    */
+   /* Grab the result of the old occlusion query before starting it again. The
+    * old result is added to the result of the new query so the driver will
+    * continue adding where it left off. */
    if (state & MESA_META_OCCLUSION_QUERY) {
       if (save->CurrentOcclusionObject) {
-         _mesa_BeginQuery(save->CurrentOcclusionObject->Target,
-                          save->CurrentOcclusionObject->Id);
-         ctx->Query.CurrentOcclusionObject->Result = save->CurrentOcclusionObject->Result;
+         struct gl_query_object *q = save->CurrentOcclusionObject;
+         GLuint64EXT result;
+         if (!q->Ready)
+            ctx->Driver.WaitQuery(ctx, q);
+         result = q->Result;
+         _mesa_BeginQuery(q->Target, q->Id);
+         ctx->Query.CurrentOcclusionObject->Result += result;
       }
    }
 
