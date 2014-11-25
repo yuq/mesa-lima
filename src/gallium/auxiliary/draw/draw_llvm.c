@@ -1269,7 +1269,7 @@ generate_clipmask(struct draw_llvm *llvm,
             test = lp_build_compare(gallivm, f32_type, PIPE_FUNC_GREATER, zero, clipdist);
             is_nan_or_inf = lp_build_is_inf_or_nan(gallivm, vs_type, clipdist);
             test = LLVMBuildOr(builder, test, is_nan_or_inf, "");
-            temp = lp_build_const_int_vec(gallivm, i32_type, 1 << plane_idx);
+            temp = lp_build_const_int_vec(gallivm, i32_type, 1LL << plane_idx);
             test = LLVMBuildAnd(builder, test, temp, "");
             mask = LLVMBuildOr(builder, mask, test, "");
          } else {
@@ -1305,7 +1305,7 @@ generate_clipmask(struct draw_llvm *llvm,
             sum = LLVMBuildFAdd(builder, sum, test, "");
 
             test = lp_build_compare(gallivm, f32_type, PIPE_FUNC_GREATER, zero, sum);
-            temp = lp_build_const_int_vec(gallivm, i32_type, 1 << plane_idx);
+            temp = lp_build_const_int_vec(gallivm, i32_type, 1LL << plane_idx);
             test = LLVMBuildAnd(builder, test, temp, "");
             mask = LLVMBuildOr(builder, mask, test, "");
          }

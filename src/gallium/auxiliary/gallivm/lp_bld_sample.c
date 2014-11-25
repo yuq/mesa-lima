@@ -1641,7 +1641,7 @@ lp_build_cube_lookup(struct lp_build_sample_context *bld,
    LLVMValueRef ma, mai, signma, signmabit, imahalfpos;
    LLVMValueRef posHalf = lp_build_const_vec(gallivm, coord_bld->type, 0.5);
    LLVMValueRef signmask = lp_build_const_int_vec(gallivm, intctype,
-                                                  1 << (intctype.width - 1));
+                                                  1LL << (intctype.width - 1));
    LLVMValueRef signshift = lp_build_const_int_vec(gallivm, intctype,
                                                    intctype.width -1);
    LLVMValueRef facex = lp_build_const_int_vec(gallivm, intctype, PIPE_TEX_FACE_POS_X);
