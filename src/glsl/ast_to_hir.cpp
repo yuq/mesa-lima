@@ -4205,6 +4205,27 @@ ast_function::hir(exec_list *instructions,
       emit_function(state, f);
    }
 
+   /* From GLSL ES 3.0 spec, chapter 6.1 "Function Definitions", page 71:
+    *
+    * "A shader cannot redefine or overload built-in functions."
+    *
+    * While in GLSL ES 1.0 specification, chapter 8 "Built-in Functions":
+    *
+    * "User code can overload the built-in functions but cannot redefine
+    * them."
+    */
+   if (state->es_shader && state->language_version >= 300) {
+      /* Local shader has no exact candidates; check the built-ins. */
+      _mesa_glsl_initialize_builtin_functions();
+      if (_mesa_glsl_find_builtin_function_by_name(state, name)) {
+         YYLTYPE loc = this->get_location();
+         _mesa_glsl_error(& loc, state,
+                          "A shader cannot redefine or overload built-in "
+                          "function `%s' in GLSL ES 3.00", name);
+         return NULL;
+      }
+   }
+
    /* Verify that this function's signature either doesn't match a previously
     * seen signature for a function with the same name, or, if a match is found,
     * that the previously seen signature does not have an associated definition.

@@ -4851,6 +4851,17 @@ _mesa_glsl_find_builtin_function(_mesa_glsl_parse_state *state,
    return s;
 }
 
+ir_function *
+_mesa_glsl_find_builtin_function_by_name(_mesa_glsl_parse_state *state,
+                                         const char *name)
+{
+   ir_function *f;
+   mtx_lock(&builtins_lock);
+   f = builtins.shader->symbols->get_function(name);
+   mtx_unlock(&builtins_lock);
+   return f;
+}
+
 gl_shader *
 _mesa_glsl_get_builtin_function_shader()
 {
