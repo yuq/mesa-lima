@@ -157,6 +157,18 @@ copy_prop_src(nir_src *src, nir_instr *parent_instr, nir_if *parent_if)
    if (!is_swizzleless_move(alu_instr))
       return false;
 
+   /* Don't let copy propagation land us with a phi that has more
+    * components in its source than it has in its destination.  That badly
+    * messes up out-of-ssa.
+    */
+   if (parent_instr && parent_instr->type == nir_instr_type_phi) {
+      nir_phi_instr *phi = nir_instr_as_phi(parent_instr);
+      assert(phi->dest.is_ssa);
+      if (phi->dest.ssa.num_components !=
+          alu_instr->src[0].src.ssa->num_components)
+         return false;
+   }
+
    if (parent_instr)
       rewrite_src_instr(src, alu_instr->src[0].src.ssa, parent_instr);
    else
