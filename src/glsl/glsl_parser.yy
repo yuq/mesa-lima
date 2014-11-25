@@ -2564,6 +2564,28 @@ basic_interface_block:
                              "interface block member does not match "
                              "the interface block");
          }
+
+         /* From GLSL ES 3.0, chapter 4.3.7 "Interface Blocks":
+          *
+          * "GLSL ES 3.0 does not support interface blocks for shader inputs or
+          * outputs."
+          *
+          * And from GLSL ES 3.0, chapter 4.6.1 "The invariant qualifier":.
+          *
+          * "Only variables output from a shader can be candidates for
+          * invariance."
+          *
+          * From GLSL 4.40 and GLSL 1.50, section "Interface Blocks":
+          *
+          * "If optional qualifiers are used, they can include interpolation
+          * qualifiers, auxiliary storage qualifiers, and storage qualifiers
+          * and they must declare an input, output, or uniform member
+          * consistent with the interface qualifier of the block"
+          */
+         if (qualifier.flags.q.invariant)
+            _mesa_glsl_error(&@1, state,
+                             "invariant qualifiers cannot be used "
+                             "with interface blocks members");
       }
 
       $$ = block;
