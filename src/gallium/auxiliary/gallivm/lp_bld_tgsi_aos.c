@@ -492,7 +492,7 @@ lp_emit_instruction_aos(
    int *pc)
 {
    LLVMValueRef src0, src1, src2;
-   LLVMValueRef tmp0, tmp1;
+   LLVMValueRef tmp0;
    LLVMValueRef dst0 = NULL;
 
    /*
