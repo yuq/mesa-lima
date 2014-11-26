@@ -466,10 +466,6 @@ layout		{
 			    yylval->real = _mesa_strtof(yytext, NULL);
 			    return FLOATCONSTANT;
 			}
-[0-9]+[fF]		{
-			    yylval->real = _mesa_strtof(yytext, NULL);
-			    return FLOATCONSTANT;
-			}
 
 true			{
 			    yylval->n = 1;
