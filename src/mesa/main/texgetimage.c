@@ -242,13 +242,15 @@ get_tex_rgba_compressed(struct gl_context *ctx, GLuint dimensions,
    const mesa_format texFormat =
       _mesa_get_srgb_format_linear(texImage->TexFormat);
    const GLenum baseFormat = _mesa_get_format_base_format(texFormat);
-   const GLenum destBaseFormat = _mesa_base_tex_format(ctx, format);
-   GLenum rebaseFormat = GL_NONE;
    const GLuint width = texImage->Width;
    const GLuint height = texImage->Height;
    const GLuint depth = texImage->Depth;
-   GLfloat *tempImage, *tempSlice, *srcRow;
-   GLuint row, slice;
+   GLfloat *tempImage, *tempSlice;
+   GLuint slice;
+   int srcStride, dstStride;
+   uint32_t dstFormat;
+   bool needsRebase;
+   uint8_t rebaseSwizzle[4];
 
    /* Decompress into temp float buffer, then pack into user buffer */
    tempImage = malloc(width * height * depth
@@ -282,46 +284,39 @@ get_tex_rgba_compressed(struct gl_context *ctx, GLuint dimensions,
       }
    }
 
+   /* Depending on the base format involved we may need to apply a rebase
+    * tranaform (for example: if we download to a Luminance format we want
+    * G=0 and B=0).
+    */
    if (baseFormat == GL_LUMINANCE ||
-       baseFormat == GL_INTENSITY ||
-       baseFormat == GL_LUMINANCE_ALPHA) {
-      /* If a luminance (or intensity) texture is read back as RGB(A), the
-       * returned value should be (L,0,0,1), not (L,L,L,1).  Set rebaseFormat
-       * here to get G=B=0.
-       */
-      rebaseFormat = texImage->_BaseFormat;
-   }
-   else if ((baseFormat == GL_RGBA ||
-             baseFormat == GL_RGB  ||
-             baseFormat == GL_RG) &&
-            (destBaseFormat == GL_LUMINANCE ||
-             destBaseFormat == GL_LUMINANCE_ALPHA ||
-             destBaseFormat == GL_LUMINANCE_INTEGER_EXT ||
-             destBaseFormat == GL_LUMINANCE_ALPHA_INTEGER_EXT)) {
-      /* If we're reading back an RGB(A) texture as luminance then we need
-       * to return L=tex(R).  Note, that's different from glReadPixels which
-       * returns L=R+G+B.
-       */
-      rebaseFormat = GL_LUMINANCE_ALPHA; /* this covers GL_LUMINANCE too */
+       baseFormat == GL_INTENSITY) {
+      needsRebase = true;
+      rebaseSwizzle[0] = MESA_FORMAT_SWIZZLE_X;
+      rebaseSwizzle[1] = MESA_FORMAT_SWIZZLE_ZERO;
+      rebaseSwizzle[2] = MESA_FORMAT_SWIZZLE_ZERO;
+      rebaseSwizzle[3] = MESA_FORMAT_SWIZZLE_ONE;
+   } else if (baseFormat == GL_LUMINANCE_ALPHA) {
+      needsRebase = true;
+      rebaseSwizzle[0] = MESA_FORMAT_SWIZZLE_X;
+      rebaseSwizzle[1] = MESA_FORMAT_SWIZZLE_ZERO;
+      rebaseSwizzle[2] = MESA_FORMAT_SWIZZLE_ZERO;
+      rebaseSwizzle[3] = MESA_FORMAT_SWIZZLE_W;
+   } else {
+      needsRebase = false;
    }
 
-   if (rebaseFormat) {
-      _mesa_rebase_rgba_float(width * height, (GLfloat (*)[4]) tempImage,
-                              rebaseFormat);
-   }
-
+   srcStride = 4 * width * sizeof(GLfloat);
+   dstStride = _mesa_image_row_stride(&ctx->Pack, width, format, type);
+   dstFormat = _mesa_format_from_format_and_type(format, type);
    tempSlice = tempImage;
    for (slice = 0; slice < depth; slice++) {
-      srcRow = tempSlice;
-      for (row = 0; row < height; row++) {
-         void *dest = _mesa_image_address(dimensions, &ctx->Pack, pixels,
-                                          width, height, format, type,
-                                          slice, row, 0);
-
-         _mesa_pack_rgba_span_float(ctx, width, (GLfloat (*)[4]) srcRow,
-                                    format, type, dest, &ctx->Pack, transferOps);
-         srcRow += 4 * width;
-      }
+      void *dest = _mesa_image_address(dimensions, &ctx->Pack, pixels,
+                                       width, height, format, type,
+                                       slice, 0, 0);
+      _mesa_format_convert(dest, dstFormat, dstStride,
+                           tempSlice, RGBA8888_FLOAT, srcStride,
+                           width, height,
+                           needsRebase ? rebaseSwizzle : NULL);
       tempSlice += 4 * width * height;
    }
 
