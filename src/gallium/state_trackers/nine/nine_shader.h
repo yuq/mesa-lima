@@ -48,7 +48,7 @@ struct nine_shader_info
 
     void *cso; /* out, pipe cso for bind_vs,fs_state */
 
-    uint8_t input_map[PIPE_MAX_ATTRIBS]; /* VS input -> NINE_DECLUSAGE_x */
+    uint16_t input_map[PIPE_MAX_ATTRIBS]; /* VS input -> NINE_DECLUSAGE_x */
     uint8_t num_inputs; /* there may be unused inputs (NINE_DECLUSAGE_NONE) */
 
     boolean position_t; /* out, true if VP writes pre-transformed position */

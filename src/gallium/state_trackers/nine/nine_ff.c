@@ -275,7 +275,7 @@ struct vs_build_ctx
     struct ureg_program *ureg;
     const struct nine_ff_vs_key *key;
 
-    unsigned input[PIPE_MAX_ATTRIBS];
+    uint16_t input[PIPE_MAX_ATTRIBS];
     unsigned num_inputs;
 
     struct ureg_src aVtx;
@@ -304,7 +304,7 @@ get_texcoord_sn(struct pipe_screen *screen)
 }
 
 static INLINE struct ureg_src
-build_vs_add_input(struct vs_build_ctx *vs, unsigned ndecl)
+build_vs_add_input(struct vs_build_ctx *vs, uint16_t ndecl)
 {
     const unsigned i = vs->num_inputs++;
     assert(i < PIPE_MAX_ATTRIBS);
@@ -370,10 +370,10 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
      * (texture coordinates handled later)
      */
     vs->aVtx = build_vs_add_input(vs,
-        key->position_t ? NINE_DECLUSAGE_POSITIONT : NINE_DECLUSAGE_POSITION(0));
+        key->position_t ? NINE_DECLUSAGE_POSITIONT : NINE_DECLUSAGE_POSITION);
 
     if (need_rNrm)
-        vs->aNrm = build_vs_add_input(vs, NINE_DECLUSAGE_NORMAL(0));
+        vs->aNrm = build_vs_add_input(vs, NINE_DECLUSAGE_NORMAL);
 
     vs->aCol[0] = ureg_imm1f(ureg, 1.0f);
     vs->aCol[1] = ureg_imm1f(ureg, 1.0f);
@@ -382,9 +382,9 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
         const unsigned mask = key->mtl_diffuse | key->mtl_specular |
                               key->mtl_ambient | key->mtl_emissive;
         if ((mask & 0x1) && !key->color0in_one)
-            vs->aCol[0] = build_vs_add_input(vs, NINE_DECLUSAGE_COLOR(0));
+            vs->aCol[0] = build_vs_add_input(vs, NINE_DECLUSAGE_i(COLOR, 0));
         if ((mask & 0x2) && !key->color1in_one)
-            vs->aCol[1] = build_vs_add_input(vs, NINE_DECLUSAGE_COLOR(1));
+            vs->aCol[1] = build_vs_add_input(vs, NINE_DECLUSAGE_i(COLOR, 1));
 
         vs->mtlD = MATERIAL_CONST(1);
         vs->mtlA = MATERIAL_CONST(2);
@@ -399,20 +399,20 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
         if (key->mtl_emissive == 1) vs->mtlE = vs->aCol[0]; else
         if (key->mtl_emissive == 2) vs->mtlE = vs->aCol[1];
     } else {
-        if (!key->color0in_one) vs->aCol[0] = build_vs_add_input(vs, NINE_DECLUSAGE_COLOR(0));
-        if (!key->color1in_one) vs->aCol[1] = build_vs_add_input(vs, NINE_DECLUSAGE_COLOR(1));
+        if (!key->color0in_one) vs->aCol[0] = build_vs_add_input(vs, NINE_DECLUSAGE_i(COLOR, 0));
+        if (!key->color1in_one) vs->aCol[1] = build_vs_add_input(vs, NINE_DECLUSAGE_i(COLOR, 1));
     }
 
     if (key->vertexpointsize)
         vs->aPsz = build_vs_add_input(vs, NINE_DECLUSAGE_PSIZE);
 
     if (key->vertexblend_indexed)
-        vs->aInd = build_vs_add_input(vs, NINE_DECLUSAGE_BLENDINDICES(0));
+        vs->aInd = build_vs_add_input(vs, NINE_DECLUSAGE_BLENDINDICES);
     if (key->vertexblend)
-        vs->aWgt = build_vs_add_input(vs, NINE_DECLUSAGE_BLENDWEIGHT(0));
+        vs->aWgt = build_vs_add_input(vs, NINE_DECLUSAGE_BLENDWEIGHT);
     if (key->vertextween) {
-        vs->aVtx1 = build_vs_add_input(vs, NINE_DECLUSAGE_POSITION(1));
-        vs->aNrm1 = build_vs_add_input(vs, NINE_DECLUSAGE_NORMAL(1));
+        vs->aVtx1 = build_vs_add_input(vs, NINE_DECLUSAGE_i(POSITION,1));
+        vs->aNrm1 = build_vs_add_input(vs, NINE_DECLUSAGE_i(NORMAL,1));
     }
 
     /* Declare outputs:
@@ -596,7 +596,7 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
         oTex[i] = ureg_DECL_output(ureg, texcoord_sn, i);
 
         if (tci == NINED3DTSS_TCI_PASSTHRU)
-            vs->aTex[idx] = build_vs_add_input(vs, NINE_DECLUSAGE_TEXCOORD(idx));
+            vs->aTex[idx] = build_vs_add_input(vs, NINE_DECLUSAGE_i(TEXCOORD,idx));
 
         if (!dim) {
             dst[c = 4] = oTex[i];
@@ -1374,7 +1374,7 @@ nine_ff_get_vs(struct NineDevice9 *device)
     enum pipe_error err;
     struct vs_build_ctx bld;
     struct nine_ff_vs_key key;
-    unsigned s;
+    unsigned s, i;
 
     assert(sizeof(key) <= sizeof(key.value32));
 
@@ -1385,14 +1385,19 @@ nine_ff_get_vs(struct NineDevice9 *device)
 
     /* FIXME: this shouldn't be NULL, but it is on init */
     if (state->vdecl) {
-        if (state->vdecl->usage_map[NINE_DECLUSAGE_POSITIONT] != 0xff)
-            key.position_t = 1;
-        if (state->vdecl->usage_map[NINE_DECLUSAGE_COLOR(0)] == 0xff)
-            key.color0in_one = 1;
-        if (state->vdecl->usage_map[NINE_DECLUSAGE_COLOR(1)] == 0xff)
-            key.color1in_one = 1;
-        if (state->vdecl->usage_map[NINE_DECLUSAGE_PSIZE] != 0xff)
-            key.vertexpointsize = 1;
+        key.color0in_one = 1;
+        key.color1in_one = 1;
+        for (i = 0; i < state->vdecl->nelems; i++) {
+            uint16_t usage = state->vdecl->usage_map[i];
+            if (usage == NINE_DECLUSAGE_POSITIONT)
+                key.position_t = 1;
+            else if (usage == NINE_DECLUSAGE_i(COLOR, 0))
+                key.color0in_one = 0;
+            else if (usage == NINE_DECLUSAGE_i(COLOR, 1))
+                key.color1in_one = 0;
+            else if (usage == NINE_DECLUSAGE_PSIZE)
+                key.vertexpointsize = 1;
+        }
     }
     if (!key.vertexpointsize)
         key.pointscale = !!state->rs[D3DRS_POINTSCALEENABLE];

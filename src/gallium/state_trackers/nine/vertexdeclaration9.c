@@ -95,21 +95,20 @@ nine_d3ddeclusage_check(unsigned usage, unsigned usage_idx)
 {
     switch (usage) {
     case D3DDECLUSAGE_POSITIONT:
-    case D3DDECLUSAGE_PSIZE:
     case D3DDECLUSAGE_TESSFACTOR:
     case D3DDECLUSAGE_DEPTH:
-    case D3DDECLUSAGE_FOG:
-    case D3DDECLUSAGE_SAMPLE:
-        return usage_idx <= 0;
     case D3DDECLUSAGE_NORMAL:
     case D3DDECLUSAGE_TANGENT:
     case D3DDECLUSAGE_BINORMAL:
-        return usage_idx <= 1;
     case D3DDECLUSAGE_POSITION:
     case D3DDECLUSAGE_BLENDWEIGHT:
     case D3DDECLUSAGE_BLENDINDICES:
     case D3DDECLUSAGE_COLOR:
-        return usage_idx <= 4;
+        return TRUE;
+    case D3DDECLUSAGE_PSIZE:
+    case D3DDECLUSAGE_FOG:
+    case D3DDECLUSAGE_SAMPLE:
+        return usage_idx <= 0;
     case D3DDECLUSAGE_TEXCOORD:
         return usage_idx <= 15;
     default:
@@ -118,8 +117,8 @@ nine_d3ddeclusage_check(unsigned usage, unsigned usage_idx)
 }
 
 #define NINE_DECLUSAGE_CASE0(n) case D3DDECLUSAGE_##n: return NINE_DECLUSAGE_##n
-#define NINE_DECLUSAGE_CASEi(n) case D3DDECLUSAGE_##n: return NINE_DECLUSAGE_##n(usage_idx)
-INLINE unsigned
+#define NINE_DECLUSAGE_CASEi(n) case D3DDECLUSAGE_##n: return NINE_DECLUSAGE_i(n, usage_idx)
+uint16_t
 nine_d3d9_to_nine_declusage(unsigned usage, unsigned usage_idx)
 {
     if (!nine_d3ddeclusage_check(usage, usage_idx))
@@ -135,7 +134,7 @@ nine_d3d9_to_nine_declusage(unsigned usage, unsigned usage_idx)
     NINE_DECLUSAGE_CASEi(TANGENT);
     NINE_DECLUSAGE_CASEi(BINORMAL);
     NINE_DECLUSAGE_CASE0(TESSFACTOR);
-    NINE_DECLUSAGE_CASE0(POSITIONT);
+    NINE_DECLUSAGE_CASEi(POSITIONT);
     NINE_DECLUSAGE_CASEi(COLOR);
     NINE_DECLUSAGE_CASE0(DEPTH);
     NINE_DECLUSAGE_CASE0(FOG);
@@ -148,58 +147,25 @@ nine_d3d9_to_nine_declusage(unsigned usage, unsigned usage_idx)
 
 static const char *nine_declusage_names[] =
 {
-    [NINE_DECLUSAGE_POSITION(0)]     = "POSITION",
-    [NINE_DECLUSAGE_POSITION(1)]     = "POSITION1",
-    [NINE_DECLUSAGE_POSITION(2)]     = "POSITION2",
-    [NINE_DECLUSAGE_POSITION(3)]     = "POSITION3",
-    [NINE_DECLUSAGE_POSITION(4)]     = "POSITION4",
-    [NINE_DECLUSAGE_BLENDWEIGHT(0)]  = "BLENDWEIGHT",
-    [NINE_DECLUSAGE_BLENDWEIGHT(1)]  = "BLENDWEIGHT1",
-    [NINE_DECLUSAGE_BLENDWEIGHT(2)]  = "BLENDWEIGHT2",
-    [NINE_DECLUSAGE_BLENDWEIGHT(3)]  = "BLENDWEIGHT3",
-    [NINE_DECLUSAGE_BLENDINDICES(0)] = "BLENDINDICES",
-    [NINE_DECLUSAGE_BLENDINDICES(1)] = "BLENDINDICES1",
-    [NINE_DECLUSAGE_BLENDINDICES(2)] = "BLENDINDICES2",
-    [NINE_DECLUSAGE_BLENDINDICES(3)] = "BLENDINDICES3",
-    [NINE_DECLUSAGE_NORMAL(0)]       = "NORMAL",
-    [NINE_DECLUSAGE_NORMAL(1)]       = "NORMAL1",
+    [NINE_DECLUSAGE_POSITION]        = "POSITION",
+    [NINE_DECLUSAGE_BLENDWEIGHT]     = "BLENDWEIGHT",
+    [NINE_DECLUSAGE_BLENDINDICES]    = "BLENDINDICES",
+    [NINE_DECLUSAGE_NORMAL]          = "NORMAL",
     [NINE_DECLUSAGE_PSIZE]           = "PSIZE",
-    [NINE_DECLUSAGE_TEXCOORD(0)]     = "TEXCOORD0",
-    [NINE_DECLUSAGE_TEXCOORD(1)]     = "TEXCOORD1",
-    [NINE_DECLUSAGE_TEXCOORD(2)]     = "TEXCOORD2",
-    [NINE_DECLUSAGE_TEXCOORD(3)]     = "TEXCOORD3",
-    [NINE_DECLUSAGE_TEXCOORD(4)]     = "TEXCOORD4",
-    [NINE_DECLUSAGE_TEXCOORD(5)]     = "TEXCOORD5",
-    [NINE_DECLUSAGE_TEXCOORD(6)]     = "TEXCOORD6",
-    [NINE_DECLUSAGE_TEXCOORD(7)]     = "TEXCOORD7",
-    [NINE_DECLUSAGE_TEXCOORD(8)]     = "TEXCOORD8",
-    [NINE_DECLUSAGE_TEXCOORD(9)]     = "TEXCOORD9",
-    [NINE_DECLUSAGE_TEXCOORD(10)]    = "TEXCOORD10",
-    [NINE_DECLUSAGE_TEXCOORD(11)]    = "TEXCOORD11",
-    [NINE_DECLUSAGE_TEXCOORD(12)]    = "TEXCOORD12",
-    [NINE_DECLUSAGE_TEXCOORD(13)]    = "TEXCOORD13",
-    [NINE_DECLUSAGE_TEXCOORD(14)]    = "TEXCOORD14",
-    [NINE_DECLUSAGE_TEXCOORD(15)]    = "TEXCOORD15",
-    [NINE_DECLUSAGE_TANGENT(0)]      = "TANGENT",
-    [NINE_DECLUSAGE_TANGENT(1)]      = "TANGENT1",
-    [NINE_DECLUSAGE_BINORMAL(0)]     = "BINORMAL",
-    [NINE_DECLUSAGE_BINORMAL(1)]     = "BINORMAL1",
+    [NINE_DECLUSAGE_TEXCOORD]        = "TEXCOORD",
+    [NINE_DECLUSAGE_TANGENT]         = "TANGENT",
+    [NINE_DECLUSAGE_BINORMAL]        = "BINORMAL",
     [NINE_DECLUSAGE_TESSFACTOR]      = "TESSFACTOR",
     [NINE_DECLUSAGE_POSITIONT]       = "POSITIONT",
-    [NINE_DECLUSAGE_COLOR(0)]        = "DIFFUSE",
-    [NINE_DECLUSAGE_COLOR(1)]        = "SPECULAR",
-    [NINE_DECLUSAGE_COLOR(2)]        = "COLOR2",
-    [NINE_DECLUSAGE_COLOR(3)]        = "COLOR3",
-    [NINE_DECLUSAGE_COLOR(4)]        = "COLOR4",
+    [NINE_DECLUSAGE_COLOR]           = "DIFFUSE",
     [NINE_DECLUSAGE_DEPTH]           = "DEPTH",
     [NINE_DECLUSAGE_FOG]             = "FOG",
     [NINE_DECLUSAGE_NONE]            = "(NONE)",
-    [NINE_DECLUSAGE_COUNT]           = "(OOB)"
 };
 static INLINE const char *
 nine_declusage_name(unsigned ndcl)
 {
-    return nine_declusage_names[MIN2(ndcl, Elements(nine_declusage_names) - 1)];
+    return nine_declusage_names[ndcl % NINE_DECLUSAGE_COUNT];
 }
 
 HRESULT
@@ -225,15 +191,14 @@ NineVertexDeclaration9_ctor( struct NineVertexDeclaration9 *This,
 
     This->decls = CALLOC(This->nelems+1, sizeof(D3DVERTEXELEMENT9));
     This->elems = CALLOC(This->nelems, sizeof(struct pipe_vertex_element));
+    This->usage_map = CALLOC(This->nelems, sizeof(uint16_t));
     if (!This->decls || !This->elems) { return E_OUTOFMEMORY; }
     memcpy(This->decls, pElements, sizeof(D3DVERTEXELEMENT9)*(This->nelems+1));
 
-    memset(This->usage_map, 0xff, sizeof(This->usage_map));
-
     for (i = 0; i < This->nelems; ++i) {
-        uint8_t usage = nine_d3d9_to_nine_declusage(This->decls[i].Usage,
-                                                    This->decls[i].UsageIndex);
-        This->usage_map[usage] = i;
+        uint16_t usage = nine_d3d9_to_nine_declusage(This->decls[i].Usage,
+                                                     This->decls[i].UsageIndex);
+        This->usage_map[i] = usage;
 
         This->elems[i].src_offset = This->decls[i].Offset;
         This->elems[i].instance_divisor = 0;
@@ -241,11 +206,12 @@ NineVertexDeclaration9_ctor( struct NineVertexDeclaration9 *This,
         This->elems[i].src_format = decltype_format(This->decls[i].Type);
         /* XXX Remember Method (tesselation), Usage, UsageIndex */
 
-        DBG("VERTEXELEMENT[%u]: Stream=%u Offset=%u Type=%s DeclUsage=%s\n", i,
+        DBG("VERTEXELEMENT[%u]: Stream=%u Offset=%u Type=%s DeclUsage=%s%d\n", i,
             This->decls[i].Stream,
             This->decls[i].Offset,
             util_format_name(This->elems[i].src_format),
-            nine_declusage_name(usage));
+            nine_declusage_name(usage),
+            usage / NINE_DECLUSAGE_COUNT);
     }
 
     return D3D_OK;
@@ -258,6 +224,8 @@ NineVertexDeclaration9_dtor( struct NineVertexDeclaration9 *This )
         FREE(This->decls);
     if (This->elems)
         FREE(This->elems);
+    if (This->usage_map)
+        FREE(This->usage_map);
 
     NineUnknown_dtor(&This->base);
 }

@@ -184,7 +184,8 @@ update_vertex_elements(struct NineDevice9 *device)
     struct nine_state *state = &device->state;
     const struct NineVertexDeclaration9 *vdecl = device->state.vdecl;
     const struct NineVertexShader9 *vs;
-    unsigned n, l, b;
+    unsigned n, b, i;
+    int index;
     struct pipe_vertex_element ve[PIPE_MAX_ATTRIBS];
 
     state->stream_usage_mask = 0;
@@ -197,11 +198,16 @@ update_vertex_elements(struct NineDevice9 *device)
         DBG("looking up input %u (usage %u) from vdecl(%p)\n",
             n, vs->input_map[n].ndecl, vdecl);
 
-        assert(vs->input_map[n].ndecl < Elements(vdecl->usage_map));
-        l = vdecl->usage_map[vs->input_map[n].ndecl];
+        index = -1;
+        for (i = 0; i < vdecl->nelems; i++) {
+            if (vdecl->usage_map[i] == vs->input_map[n].ndecl) {
+                index = i;
+                break;
+            }
+        }
 
-        if (likely(l < vdecl->nelems)) {
-            ve[n] = vdecl->elems[l];
+        if (index >= 0) {
+            ve[n] = vdecl->elems[index];
             b = ve[n].vertex_buffer_index;
             state->stream_usage_mask |= 1 << b;
             /* XXX wine just uses 1 here: */

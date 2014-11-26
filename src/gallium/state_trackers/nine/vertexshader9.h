@@ -32,7 +32,7 @@ struct NineVertexShader9
     struct nine_shader_variant variant;
 
     struct {
-        uint8_t ndecl; /* NINE_DECLUSAGE_x */
+        uint16_t ndecl; /* NINE_DECLUSAGE_x */
     } input_map[PIPE_MAX_ATTRIBS];
     unsigned num_inputs;
 

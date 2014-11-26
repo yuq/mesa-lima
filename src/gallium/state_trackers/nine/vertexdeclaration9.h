@@ -40,9 +40,9 @@ struct NineVertexDeclaration9
     struct pipe_vertex_element *elems;
     unsigned nelems;
 
-    /* DECLUSAGE -> element index, for selecting the vertex element
+    /* index -> DECLUSAGE, for selecting the vertex element
      * for each VS input */
-    uint8_t usage_map[NINE_DECLUSAGE_COUNT];
+    uint16_t *usage_map;
 
     D3DVERTEXELEMENT9 *decls;
     DWORD fvf;
