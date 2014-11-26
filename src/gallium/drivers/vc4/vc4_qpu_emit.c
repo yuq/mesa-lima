@@ -130,7 +130,6 @@ static void
 serialize_insts(struct vc4_compile *c)
 {
         int last_sfu_write = -10;
-        bool scoreboard_wait_emitted = false;
 
         while (!is_empty_list(&c->qpu_inst_list)) {
                 struct queued_qpu_inst *q =
@@ -210,22 +209,18 @@ serialize_insts(struct vc4_compile *c)
                  *  explicit Wait for Scoreboard signal or an implicit wait
                  *  with the first tile-buffer read or write instruction."
                  */
-                if (!scoreboard_wait_emitted &&
-                    (waddr_a == QPU_W_TLB_Z || waddr_m == QPU_W_TLB_Z ||
-                     waddr_a == QPU_W_TLB_COLOR_MS ||
-                     waddr_m == QPU_W_TLB_COLOR_MS ||
-                     waddr_a == QPU_W_TLB_COLOR_ALL ||
-                     waddr_m == QPU_W_TLB_COLOR_ALL ||
-                     QPU_GET_FIELD(q->inst, QPU_SIG) == QPU_SIG_COLOR_LOAD)) {
+                if (waddr_a == QPU_W_TLB_Z ||
+                    waddr_m == QPU_W_TLB_Z ||
+                    waddr_a == QPU_W_TLB_COLOR_MS ||
+                    waddr_m == QPU_W_TLB_COLOR_MS ||
+                    waddr_a == QPU_W_TLB_COLOR_ALL ||
+                    waddr_m == QPU_W_TLB_COLOR_ALL ||
+                    QPU_GET_FIELD(q->inst, QPU_SIG) == QPU_SIG_COLOR_LOAD) {
                         while (c->qpu_inst_count < 3 ||
                                QPU_GET_FIELD(c->qpu_insts[c->qpu_inst_count - 1],
                                              QPU_SIG) != QPU_SIG_NONE) {
                                 serialize_one_inst(c, qpu_NOP());
                         }
-                        c->qpu_insts[c->qpu_inst_count - 1] =
-                                qpu_set_sig(c->qpu_insts[c->qpu_inst_count - 1],
-                                            QPU_SIG_WAIT_FOR_SCOREBOARD);
-                        scoreboard_wait_emitted = true;
                 }
 
                 serialize_one_inst(c, q->inst);
@@ -615,6 +610,10 @@ vc4_generate_code(struct vc4_context *vc4, struct vc4_compile *c)
                           QPU_RADDR_B) == QPU_R_UNIF) {
                 serialize_one_inst(c, qpu_NOP());
         }
+
+        /* thread end can't have TLB operations */
+        if (qpu_inst_is_tlb(c->qpu_insts[c->qpu_inst_count - 1]))
+                serialize_one_inst(c, qpu_NOP());
 
         c->qpu_insts[c->qpu_inst_count - 1] =
                 qpu_set_sig(c->qpu_insts[c->qpu_inst_count - 1],
