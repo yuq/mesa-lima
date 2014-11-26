@@ -151,6 +151,61 @@ compute_src2dst_component_mapping(uint8_t *src2rgba, uint8_t *rgba2dst,
 }
 
 /**
+ * This function is used by clients of _mesa_format_convert to obtain
+ * the rebase swizzle to use in a format conversion based on the base
+ * format involved.
+ *
+ * \param baseFormat  the base internal format involved in the conversion.
+ * \param map  the rebase swizzle to consider
+ *
+ * This function computes 'map' as rgba -> baseformat -> rgba and returns true
+ * if the resulting swizzle transform is not the identity transform (thus, a
+ * rebase is needed). If the function returns false then a rebase swizzle
+ * is not necessary and the value of 'map' is undefined. In this situation
+ * clients of _mesa_format_convert should pass NULL in the 'rebase_swizzle'
+ * parameter.
+ */
+bool
+_mesa_compute_rgba2base2rgba_component_mapping(GLenum baseFormat, uint8_t *map)
+{
+   uint8_t rgba2base[6], base2rgba[6];
+   int i;
+
+   switch (baseFormat) {
+   case GL_ALPHA:
+   case GL_RED:
+   case GL_GREEN:
+   case GL_BLUE:
+   case GL_RG:
+   case GL_RGB:
+   case GL_BGR:
+   case GL_RGBA:
+   case GL_BGRA:
+   case GL_ABGR_EXT:
+   case GL_LUMINANCE:
+   case GL_INTENSITY:
+   case GL_LUMINANCE_ALPHA:
+      {
+         bool needRebase = false;
+         _mesa_compute_component_mapping(GL_RGBA, baseFormat, rgba2base);
+         _mesa_compute_component_mapping(baseFormat, GL_RGBA, base2rgba);
+         for (i = 0; i < 4; i++) {
+            if (base2rgba[i] > MESA_FORMAT_SWIZZLE_W) {
+               map[i] = base2rgba[i];
+            } else {
+               map[i] = rgba2base[base2rgba[i]];
+            }
+            if (map[i] != i)
+               needRebase = true;
+         }
+         return needRebase;
+      }
+   default:
+      assert(!"Unexpected base format");
+   }
+}
+
+/**
  * This can be used to convert between most color formats.
  *
  * Limitations:
