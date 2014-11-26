@@ -2350,6 +2350,9 @@ trans_idiv(const struct instr_translater *t,
 	if (t->tgsi_opc == TGSI_OPCODE_MOD || t->tgsi_opc == TGSI_OPCODE_UMOD) {
 		/* The division result will have ended up in q. */
 
+		if (is_rel_or_const(b))
+			b = get_unconst(ctx, b);
+
 		/* mull.u r, q, b */
 		instr = instr_create(ctx, 2, OPC_MULL_U);
 		vectorize(ctx, instr, &r_dst, 2, q_src, 0, b, 0);
