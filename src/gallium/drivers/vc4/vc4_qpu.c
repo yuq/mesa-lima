@@ -22,6 +22,7 @@
  */
 
 #include <stdbool.h>
+#include "vc4_qir.h"
 #include "vc4_qpu.h"
 
 static uint64_t
@@ -266,4 +267,15 @@ qpu_inst_is_tlb(uint64_t inst)
                 qpu_waddr_is_tlb(QPU_GET_FIELD(inst, QPU_WADDR_MUL)) ||
                 sig == QPU_SIG_COLOR_LOAD ||
                 sig == QPU_SIG_WAIT_FOR_SCOREBOARD);
+}
+
+void
+qpu_serialize_one_inst(struct vc4_compile *c, uint64_t inst)
+{
+        if (c->qpu_inst_count >= c->qpu_inst_size) {
+                c->qpu_inst_size = MAX2(16, c->qpu_inst_size * 2);
+                c->qpu_insts = realloc(c->qpu_insts,
+                                       c->qpu_inst_size * sizeof(uint64_t));
+        }
+        c->qpu_insts[c->qpu_inst_count++] = inst;
 }

@@ -41,11 +41,6 @@ vc4_dump_program(struct vc4_compile *c)
         }
 }
 
-struct queued_qpu_inst {
-        struct simple_node link;
-        uint64_t inst;
-};
-
 static void
 queue(struct vc4_compile *c, uint64_t inst)
 {
@@ -113,121 +108,6 @@ fixup_raddr_conflict(struct vc4_compile *c,
 
         queue(c, qpu_a_MOV(qpu_r3(), *src1));
         *src1 = qpu_r3();
-}
-
-static void
-serialize_one_inst(struct vc4_compile *c, uint64_t inst)
-{
-        if (c->qpu_inst_count >= c->qpu_inst_size) {
-                c->qpu_inst_size = MAX2(16, c->qpu_inst_size * 2);
-                c->qpu_insts = realloc(c->qpu_insts,
-                                       c->qpu_inst_size * sizeof(uint64_t));
-        }
-        c->qpu_insts[c->qpu_inst_count++] = inst;
-}
-
-static void
-serialize_insts(struct vc4_compile *c)
-{
-        int last_sfu_write = -10;
-
-        while (!is_empty_list(&c->qpu_inst_list)) {
-                struct queued_qpu_inst *q =
-                        (struct queued_qpu_inst *)first_elem(&c->qpu_inst_list);
-                uint32_t last_waddr_a = QPU_W_NOP, last_waddr_b = QPU_W_NOP;
-                uint32_t raddr_a = QPU_GET_FIELD(q->inst, QPU_RADDR_A);
-                uint32_t raddr_b = QPU_GET_FIELD(q->inst, QPU_RADDR_B);
-
-                if (c->qpu_inst_count > 0) {
-                        uint64_t last_inst = c->qpu_insts[c->qpu_inst_count -
-                                                          1];
-                        uint32_t last_waddr_add = QPU_GET_FIELD(last_inst,
-                                                                QPU_WADDR_ADD);
-                        uint32_t last_waddr_mul = QPU_GET_FIELD(last_inst,
-                                                                QPU_WADDR_MUL);
-
-                        if (last_inst & QPU_WS) {
-                                last_waddr_a = last_waddr_mul;
-                                last_waddr_b = last_waddr_add;
-                        } else {
-                                last_waddr_a = last_waddr_add;
-                                last_waddr_b = last_waddr_mul;
-                        }
-                }
-
-                uint32_t src_muxes[] = {
-                        QPU_GET_FIELD(q->inst, QPU_ADD_A),
-                        QPU_GET_FIELD(q->inst, QPU_ADD_B),
-                        QPU_GET_FIELD(q->inst, QPU_MUL_A),
-                        QPU_GET_FIELD(q->inst, QPU_MUL_B),
-                };
-
-                /* "An instruction must not read from a location in physical
-                 *  regfile A or B that was written to by the previous
-                 *  instruction."
-                 */
-                bool needs_raddr_vs_waddr_nop = false;
-                bool reads_r4 = false;
-                for (int i = 0; i < ARRAY_SIZE(src_muxes); i++) {
-                        if ((raddr_a < 32 &&
-                             src_muxes[i] == QPU_MUX_A &&
-                             last_waddr_a == raddr_a) ||
-                            (raddr_b < 32 &&
-                             src_muxes[i] == QPU_MUX_B &&
-                             last_waddr_b == raddr_b)) {
-                                needs_raddr_vs_waddr_nop = true;
-                        }
-                        if (src_muxes[i] == QPU_MUX_R4)
-                                reads_r4 = true;
-                }
-
-                if (needs_raddr_vs_waddr_nop) {
-                        serialize_one_inst(c, qpu_NOP());
-                }
-
-                /* "After an SFU lookup instruction, accumulator r4 must not
-                 *  be read in the following two instructions. Any other
-                 *  instruction that results in r4 being written (that is, TMU
-                 *  read, TLB read, SFU lookup) cannot occur in the two
-                 *  instructions following an SFU lookup."
-                 */
-                if (reads_r4) {
-                        while (c->qpu_inst_count - last_sfu_write < 3) {
-                                serialize_one_inst(c, qpu_NOP());
-                        }
-                }
-
-                uint32_t waddr_a = QPU_GET_FIELD(q->inst, QPU_WADDR_ADD);
-                uint32_t waddr_m = QPU_GET_FIELD(q->inst, QPU_WADDR_MUL);
-                if ((waddr_a >= QPU_W_SFU_RECIP && waddr_a <= QPU_W_SFU_LOG) ||
-                    (waddr_m >= QPU_W_SFU_RECIP && waddr_m <= QPU_W_SFU_LOG)) {
-                        last_sfu_write = c->qpu_inst_count;
-                }
-
-                /* "A scoreboard wait must not occur in the first two
-                 *  instructions of a fragment shader. This is either the
-                 *  explicit Wait for Scoreboard signal or an implicit wait
-                 *  with the first tile-buffer read or write instruction."
-                 */
-                if (waddr_a == QPU_W_TLB_Z ||
-                    waddr_m == QPU_W_TLB_Z ||
-                    waddr_a == QPU_W_TLB_COLOR_MS ||
-                    waddr_m == QPU_W_TLB_COLOR_MS ||
-                    waddr_a == QPU_W_TLB_COLOR_ALL ||
-                    waddr_m == QPU_W_TLB_COLOR_ALL ||
-                    QPU_GET_FIELD(q->inst, QPU_SIG) == QPU_SIG_COLOR_LOAD) {
-                        while (c->qpu_inst_count < 3 ||
-                               QPU_GET_FIELD(c->qpu_insts[c->qpu_inst_count - 1],
-                                             QPU_SIG) != QPU_SIG_NONE) {
-                                serialize_one_inst(c, qpu_NOP());
-                        }
-                }
-
-                serialize_one_inst(c, q->inst);
-
-                remove_from_list(&q->link);
-                free(q);
-        }
 }
 
 void
@@ -589,7 +469,7 @@ vc4_generate_code(struct vc4_context *vc4, struct vc4_compile *c)
                 }
         }
 
-        serialize_insts(c);
+        qpu_schedule_instructions(c);
 
         /* thread end can't have VPM write or read */
         if (QPU_GET_FIELD(c->qpu_insts[c->qpu_inst_count - 1],
@@ -600,7 +480,7 @@ vc4_generate_code(struct vc4_context *vc4, struct vc4_compile *c)
                           QPU_RADDR_A) == QPU_R_VPM ||
             QPU_GET_FIELD(c->qpu_insts[c->qpu_inst_count - 1],
                           QPU_RADDR_B) == QPU_R_VPM) {
-                serialize_one_inst(c, qpu_NOP());
+                qpu_serialize_one_inst(c, qpu_NOP());
         }
 
         /* thread end can't have uniform read */
@@ -608,18 +488,18 @@ vc4_generate_code(struct vc4_context *vc4, struct vc4_compile *c)
                           QPU_RADDR_A) == QPU_R_UNIF ||
             QPU_GET_FIELD(c->qpu_insts[c->qpu_inst_count - 1],
                           QPU_RADDR_B) == QPU_R_UNIF) {
-                serialize_one_inst(c, qpu_NOP());
+                qpu_serialize_one_inst(c, qpu_NOP());
         }
 
         /* thread end can't have TLB operations */
         if (qpu_inst_is_tlb(c->qpu_insts[c->qpu_inst_count - 1]))
-                serialize_one_inst(c, qpu_NOP());
+                qpu_serialize_one_inst(c, qpu_NOP());
 
         c->qpu_insts[c->qpu_inst_count - 1] =
                 qpu_set_sig(c->qpu_insts[c->qpu_inst_count - 1],
                             QPU_SIG_PROG_END);
-        serialize_one_inst(c, qpu_NOP());
-        serialize_one_inst(c, qpu_NOP());
+        qpu_serialize_one_inst(c, qpu_NOP());
+        qpu_serialize_one_inst(c, qpu_NOP());
 
         switch (c->stage) {
         case QSTAGE_VERT:

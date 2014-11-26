@@ -148,6 +148,11 @@ struct simple_node {
         struct simple_node *prev;
 };
 
+struct queued_qpu_inst {
+        struct simple_node link;
+        uint64_t inst;
+};
+
 struct qinst {
         struct simple_node link;
 
@@ -367,6 +372,8 @@ bool qir_opt_algebraic(struct vc4_compile *c);
 bool qir_opt_copy_propagation(struct vc4_compile *c);
 bool qir_opt_cse(struct vc4_compile *c);
 bool qir_opt_dead_code(struct vc4_compile *c);
+
+void qpu_schedule_instructions(struct vc4_compile *c);
 
 #define QIR_ALU0(name)                                                   \
 static inline struct qreg                                                \

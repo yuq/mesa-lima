@@ -30,6 +30,8 @@
 
 #include "vc4_qpu_defines.h"
 
+struct vc4_compile;
+
 struct qpu_reg {
         enum qpu_mux mux;
         uint8_t addr;
@@ -135,6 +137,7 @@ uint64_t qpu_set_cond_mul(uint64_t inst, uint32_t cond);
 
 bool qpu_waddr_is_tlb(uint32_t waddr);
 bool qpu_inst_is_tlb(uint64_t inst);
+void qpu_serialize_one_inst(struct vc4_compile *c, uint64_t inst);
 
 static inline uint64_t
 qpu_load_imm_f(struct qpu_reg dst, float val)
