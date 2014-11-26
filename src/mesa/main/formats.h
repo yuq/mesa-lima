@@ -587,7 +587,7 @@ extern GLenum
 _mesa_get_format_datatype(mesa_format format);
 
 extern GLenum
-_mesa_get_format_base_format(mesa_format format);
+_mesa_get_format_base_format(uint32_t format);
 
 extern void
 _mesa_get_format_block_size(mesa_format format, GLuint *bw, GLuint *bh);
