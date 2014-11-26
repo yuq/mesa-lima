@@ -275,7 +275,7 @@ validate_deref_chain(nir_deref *deref, validate_state *state)
       case nir_deref_type_struct:
          assert(deref->type ==
                 glsl_get_struct_field(parent->type,
-                                      nir_deref_as_struct(deref)->elem));
+                                      nir_deref_as_struct(deref)->index));
          break;
 
       case nir_deref_type_var:

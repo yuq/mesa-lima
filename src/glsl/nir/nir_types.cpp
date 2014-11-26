@@ -65,15 +65,9 @@ glsl_get_array_element(const glsl_type* type)
 }
 
 const glsl_type *
-glsl_get_struct_field(const glsl_type *type, const char *field)
+glsl_get_struct_field(const glsl_type *type, unsigned index)
 {
-   for (unsigned i = 0; i < type->length; i++) {
-      if (strcmp(type->fields.structure[i].name, field) == 0) {
-         return type->fields.structure[i].type;
-      }
-   }
-
-   return NULL;
+   return type->fields.structure[index].type;
 }
 
 const struct glsl_type *
@@ -110,12 +104,6 @@ unsigned
 glsl_get_length(const struct glsl_type *type)
 {
    return type->length;
-}
-
-const struct glsl_type *
-glsl_get_struct_elem_type(const struct glsl_type *type, unsigned index)
-{
-   return type->fields.structure[index].type;
 }
 
 const char *

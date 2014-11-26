@@ -650,7 +650,7 @@ typedef struct {
 typedef struct {
    nir_deref deref;
 
-   const char *elem;
+   unsigned index;
 } nir_deref_struct;
 
 #define nir_deref_as_var(_deref) exec_node_data(nir_deref_var, _deref, deref)
@@ -1292,7 +1292,7 @@ nir_ssa_undef_instr *nir_ssa_undef_instr_create(void *mem_ctx);
 
 nir_deref_var *nir_deref_var_create(void *mem_ctx, nir_variable *var);
 nir_deref_array *nir_deref_array_create(void *mem_ctx);
-nir_deref_struct *nir_deref_struct_create(void *mem_ctx, const char *field);
+nir_deref_struct *nir_deref_struct_create(void *mem_ctx, unsigned field_index);
 
 nir_deref *nir_copy_deref(void *mem_ctx, nir_deref *deref);
 

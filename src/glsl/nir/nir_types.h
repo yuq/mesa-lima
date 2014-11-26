@@ -43,7 +43,7 @@ void glsl_print_type(const struct glsl_type *type, FILE *fp);
 void glsl_print_struct(const struct glsl_type *type, FILE *fp);
 
 const struct glsl_type *glsl_get_struct_field(const struct glsl_type *type,
-                                              const char *field);
+                                              unsigned index);
 
 const struct glsl_type *glsl_get_array_element(const struct glsl_type *type);
 
@@ -58,9 +58,6 @@ unsigned glsl_get_components(const struct glsl_type *type);
 unsigned glsl_get_matrix_columns(const struct glsl_type *type);
 
 unsigned glsl_get_length(const struct glsl_type *type);
-
-const struct glsl_type *glsl_get_struct_elem_type(const struct glsl_type *type,
-                                                  unsigned index);
 
 const char *glsl_get_struct_elem_name(const struct glsl_type *type,
                                       unsigned index);

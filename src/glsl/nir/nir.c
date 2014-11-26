@@ -529,12 +529,12 @@ nir_deref_array_create(void *mem_ctx)
 }
 
 nir_deref_struct *
-nir_deref_struct_create(void *mem_ctx, const char *field)
+nir_deref_struct_create(void *mem_ctx, unsigned field_index)
 {
    nir_deref_struct *deref = ralloc(mem_ctx, nir_deref_struct);
    deref->deref.deref_type = nir_deref_type_struct;
    deref->deref.child = NULL;
-   deref->elem = ralloc_strdup(deref, field);
+   deref->index = field_index;
    return deref;
 }
 
@@ -566,7 +566,7 @@ copy_deref_array(void *mem_ctx, nir_deref_array *deref)
 static nir_deref_struct *
 copy_deref_struct(void *mem_ctx, nir_deref_struct *deref)
 {
-   nir_deref_struct *ret = nir_deref_struct_create(mem_ctx, deref->elem);
+   nir_deref_struct *ret = nir_deref_struct_create(mem_ctx, deref->index);
    ret->deref.type = deref->deref.type;
    if (deref->deref.child)
       ret->deref.child = nir_copy_deref(mem_ctx, deref->deref.child);

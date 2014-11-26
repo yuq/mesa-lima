@@ -47,38 +47,41 @@ get_deref_name_offset(nir_deref_var *deref_var,
    *name = ralloc_strdup(mem_ctx, deref_var->var->name);
 
    while (deref->child != NULL) {
-      deref = deref->child;
-      switch (deref->deref_type) {
-         case nir_deref_type_array:
-            deref_array = nir_deref_as_array(deref);
-            if (deref_array->deref_array_type == nir_deref_array_type_indirect) {
-               /* GLSL 1.10 and 1.20 allowed variable sampler array indices,
-                * while GLSL 1.30 requires that the array indices be
-                * constant integer expressions.  We don't expect any driver
-                * to actually work with a really variable array index, so
-                * all that would work would be an unrolled loop counter that
-                * ends up being constant.
-                */
-               ralloc_strcat(&shader_program->InfoLog,
-                           "warning: Variable sampler array index unsupported.\n"
-                           "This feature of the language was removed in GLSL 1.20 "
-                           "and is unlikely to be supported for 1.10 in Mesa.\n");
-            }
-            if (deref->child == NULL) {
-               return deref_array->base_offset;
-            }
-            ralloc_asprintf_append(name, "[%u]", deref_array->base_offset);
-            break;
+      switch (deref->child->deref_type) {
+      case nir_deref_type_array:
+         deref_array = nir_deref_as_array(deref->child);
+         if (deref_array->deref_array_type == nir_deref_array_type_indirect) {
+            /* GLSL 1.10 and 1.20 allowed variable sampler array indices,
+             * while GLSL 1.30 requires that the array indices be
+             * constant integer expressions.  We don't expect any driver
+             * to actually work with a really variable array index, so
+             * all that would work would be an unrolled loop counter that
+             * ends up being constant.
+             */
+            ralloc_strcat(&shader_program->InfoLog,
+                        "warning: Variable sampler array index unsupported.\n"
+                        "This feature of the language was removed in GLSL 1.20 "
+                        "and is unlikely to be supported for 1.10 in Mesa.\n");
+         }
+         if (deref_array->deref.child == NULL) {
+            return deref_array->base_offset;
+         }
+         ralloc_asprintf_append(name, "[%u]", deref_array->base_offset);
+         break;
 
-         case nir_deref_type_struct:
-            deref_struct = nir_deref_as_struct(deref);
-            ralloc_asprintf_append(name, ".%s", deref_struct->elem);
-            break;
-
-         default:
-            assert(0);
-            break;
+      case nir_deref_type_struct: {
+         deref_struct = nir_deref_as_struct(deref->child);
+         const char *field = glsl_get_struct_elem_name(deref->type,
+                                                       deref_struct->index);
+         ralloc_asprintf_append(name, ".%s", field);
+         break;
       }
+
+      default:
+         assert(0);
+         break;
+      }
+      deref = deref->child;
    }
 
    return 0;

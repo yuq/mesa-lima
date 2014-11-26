@@ -282,33 +282,42 @@ print_deref_array(nir_deref_array *deref, print_var_state *state, FILE *fp)
 }
 
 static void
-print_deref_struct(nir_deref_struct *deref, print_var_state *state, FILE *fp)
+print_deref_struct(nir_deref_struct *deref, const struct glsl_type *parent_type,
+                   print_var_state *state, FILE *fp)
 {
-   fprintf(fp, ".%s", deref->elem);
+   fprintf(fp, ".%s", glsl_get_struct_elem_name(parent_type, deref->index));
 }
 
 static void
-print_deref(nir_deref *deref, print_var_state *state, FILE *fp)
+print_deref(nir_deref_var *deref, print_var_state *state, FILE *fp)
 {
-   while (deref != NULL) {
-      switch (deref->deref_type) {
+   nir_deref *tail = &deref->deref;
+   nir_deref *pretail = NULL;
+   while (tail != NULL) {
+      switch (tail->deref_type) {
       case nir_deref_type_var:
-         print_deref_var(nir_deref_as_var(deref), state, fp);
+         assert(pretail == NULL);
+         assert(tail == &deref->deref);
+         print_deref_var(deref, state, fp);
          break;
 
       case nir_deref_type_array:
-         print_deref_array(nir_deref_as_array(deref), state, fp);
+         assert(pretail != NULL);
+         print_deref_array(nir_deref_as_array(tail), state, fp);
          break;
 
       case nir_deref_type_struct:
-         print_deref_struct(nir_deref_as_struct(deref), state, fp);
+         assert(pretail != NULL);
+         print_deref_struct(nir_deref_as_struct(tail),
+                            pretail->type, state, fp);
          break;
 
       default:
          unreachable("Invalid deref type");
       }
 
-      deref = deref->child;
+      pretail = tail;
+      tail = pretail->child;
    }
 }
 
@@ -350,7 +359,7 @@ print_intrinsic_instr(nir_intrinsic_instr *instr, print_var_state *state,
       if (!first)
          fprintf(fp, ", ");
 
-      print_deref(&instr->variables[i]->deref, state, fp);
+      print_deref(instr->variables[i], state, fp);
 
       first = false;
    }
@@ -485,7 +494,7 @@ print_tex_instr(nir_tex_instr *instr, print_var_state *state, FILE *fp)
    }
 
    if (instr->sampler) {
-      print_deref(&instr->sampler->deref, state, fp);
+      print_deref(instr->sampler, state, fp);
    } else {
       fprintf(fp, "%u", instr->sampler_index);
    }
@@ -508,14 +517,14 @@ print_call_instr(nir_call_instr *instr, print_var_state *state, FILE *fp)
       if (i != 0)
          fprintf(fp, ", ");
 
-      print_deref(&instr->params[i]->deref, state, fp);
+      print_deref(instr->params[i], state, fp);
    }
 
    if (instr->return_deref != NULL) {
       if (instr->num_params != 0)
          fprintf(fp, ", ");
       fprintf(fp, "returning ");
-      print_deref(&instr->return_deref->deref, state, fp);
+      print_deref(instr->return_deref, state, fp);
    }
 }
 

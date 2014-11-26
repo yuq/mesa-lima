@@ -1753,7 +1753,10 @@ nir_visitor::visit(ir_dereference_record *ir)
 {
    ir->record->accept(this);
 
-   nir_deref_struct *deref = nir_deref_struct_create(this->shader, ir->field);
+   int field_index = this->deref_tail->type->field_index(ir->field);
+   assert(field_index >= 0);
+
+   nir_deref_struct *deref = nir_deref_struct_create(this->shader, field_index);
    deref->deref.type = ir->type;
    this->deref_tail->child = &deref->deref;
    this->deref_tail = &deref->deref;

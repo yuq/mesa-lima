@@ -51,7 +51,7 @@ type_size(const struct glsl_type *type)
    case GLSL_TYPE_STRUCT:
       size = 0;
       for (i = 0; i < glsl_get_length(type); i++) {
-         size += type_size(glsl_get_struct_elem_type(type, i));
+         size += type_size(glsl_get_struct_field(type, i));
       }
       return size;
    case GLSL_TYPE_SAMPLER:
@@ -267,12 +267,8 @@ get_deref_offset(nir_deref_var *deref_var, nir_instr *instr,
       } else {
          nir_deref_struct *deref_struct = nir_deref_as_struct(deref);
 
-         unsigned i = 0;
-         while(strcmp(glsl_get_struct_elem_name(parent_type, i),
-                      deref_struct->elem) != 0) {
-            base_offset += type_size(glsl_get_struct_elem_type(parent_type, i));
-            i++;
-         }
+         for (unsigned i = 0; i < deref_struct->index; i++)
+            base_offset += type_size(glsl_get_struct_field(parent_type, i));
       }
    }
 
@@ -411,7 +407,7 @@ reg_const_load(nir_reg_dest reg, nir_constant *constant,
 
       case GLSL_TYPE_STRUCT:
          for (unsigned i = 0; i < glsl_get_length(type); i++) {
-            const struct glsl_type *field = glsl_get_struct_elem_type(type, i);
+            const struct glsl_type *field = glsl_get_struct_field(type, i);
             nir_reg_dest new_reg = reg;
             new_reg.base_offset += offset;
             reg_const_load(new_reg, constant->elements[i], field, impl,
@@ -528,14 +524,10 @@ var_reg_block_copy_impl(nir_reg_src reg, nir_deref_var *deref_head,
       case GLSL_TYPE_STRUCT:
          offset = 0;
          for (unsigned i = 0; i < glsl_get_length(type); i++) {
-            const struct glsl_type *field_type =
-               glsl_get_struct_elem_type(type, i);
-            const char *field_name = glsl_get_struct_elem_name(type, i);
+            const struct glsl_type *field_type = glsl_get_struct_field(type, i);
 
-            nir_deref_struct *deref_struct =
-               nir_deref_struct_create(mem_ctx, field_name);
+            nir_deref_struct *deref_struct = nir_deref_struct_create(mem_ctx, i);
             deref_struct->deref.type = field_type;
-            deref_struct->elem = field_name;
 
             nir_deref_var *new_deref_head =
                nir_deref_as_var(nir_copy_deref(mem_ctx, &deref_head->deref));
