@@ -482,6 +482,12 @@ brw_initialize_context_constants(struct brw_context *brw)
    ctx->Const.Program[MESA_SHADER_FRAGMENT].HighInt = ctx->Const.Program[MESA_SHADER_FRAGMENT].LowInt;
    ctx->Const.Program[MESA_SHADER_FRAGMENT].MediumInt = ctx->Const.Program[MESA_SHADER_FRAGMENT].LowInt;
 
+   ctx->Const.Program[MESA_SHADER_VERTEX].LowInt.RangeMin = 31;
+   ctx->Const.Program[MESA_SHADER_VERTEX].LowInt.RangeMax = 30;
+   ctx->Const.Program[MESA_SHADER_VERTEX].LowInt.Precision = 0;
+   ctx->Const.Program[MESA_SHADER_VERTEX].HighInt = ctx->Const.Program[MESA_SHADER_VERTEX].LowInt;
+   ctx->Const.Program[MESA_SHADER_VERTEX].MediumInt = ctx->Const.Program[MESA_SHADER_VERTEX].LowInt;
+
    if (brw->gen >= 7) {
       ctx->Const.Program[MESA_SHADER_FRAGMENT].MaxAtomicCounters = MAX_ATOMIC_COUNTERS;
       ctx->Const.Program[MESA_SHADER_VERTEX].MaxAtomicCounters = MAX_ATOMIC_COUNTERS;
