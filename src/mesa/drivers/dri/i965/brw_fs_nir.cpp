@@ -21,6 +21,8 @@
  * IN THE SOFTWARE.
  */
 
+#include "glsl/ir.h"
+#include "glsl/ir_optimization.h"
 #include "glsl/nir/glsl_to_nir.h"
 #include "brw_fs.h"
 
@@ -28,35 +30,21 @@ void
 fs_visitor::emit_nir_code()
 {
    /* first, lower the GLSL IR shader to NIR */
+   lower_output_reads(shader->base.ir);
    nir_shader *nir = glsl_to_nir(shader->base.ir, NULL, true);
    nir_validate_shader(nir);
 
-   /* lower some of the GLSL-isms into NIR-isms - after this point, we no
-    * longer have to deal with variables inside the shader
-    */
-
-   nir_lower_variables_scalar(nir, true, true, true, true);
+   nir_lower_global_vars_to_local(nir);
    nir_validate_shader(nir);
 
-   nir_lower_samplers(nir, shader_prog, shader->base.Program);
-   nir_validate_shader(nir);
-
-   nir_lower_system_values(nir);
-   nir_validate_shader(nir);
-
-   nir_lower_atomics(nir);
-   nir_validate_shader(nir);
-
-   nir_remove_dead_variables(nir);
-   nir_opt_global_to_local(nir);
-   nir_validate_shader(nir);
-
-   nir_convert_to_ssa(nir);
+   nir_split_var_copies(nir);
    nir_validate_shader(nir);
 
    bool progress;
    do {
       progress = false;
+      nir_lower_variables(nir);
+      nir_validate_shader(nir);
       progress |= nir_copy_prop(nir);
       nir_validate_shader(nir);
       progress |= nir_opt_dce(nir);
@@ -69,9 +57,27 @@ fs_visitor::emit_nir_code()
       nir_validate_shader(nir);
    } while (progress);
 
+   /* Lower a bunch of stuff */
+   nir_lower_io(nir);
+   nir_validate_shader(nir);
+
+   nir_lower_locals_to_regs(nir);
+   nir_validate_shader(nir);
+
+   nir_remove_dead_variables(nir);
+   nir_validate_shader(nir);
    nir_convert_from_ssa(nir);
    nir_validate_shader(nir);
    nir_lower_vec_to_movs(nir);
+   nir_validate_shader(nir);
+
+   nir_lower_samplers(nir, shader_prog, shader->base.Program);
+   nir_validate_shader(nir);
+
+   nir_lower_system_values(nir);
+   nir_validate_shader(nir);
+
+   nir_lower_atomics(nir);
    nir_validate_shader(nir);
 
    /* emit the arrays used for inputs and outputs - load/store intrinsics will
