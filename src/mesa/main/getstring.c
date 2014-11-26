@@ -74,7 +74,7 @@ shading_language_version(struct gl_context *ctx)
    case API_OPENGLES2:
       return (ctx->Version < 30)
          ? (const GLubyte *) "OpenGL ES GLSL ES 1.0.16"
-         : (const GLubyte *) "OpenGL ES GLSL ES 3.0";
+         : (const GLubyte *) "OpenGL ES GLSL ES 3.00";
 
    case API_OPENGLES:
       /* fall-through */
