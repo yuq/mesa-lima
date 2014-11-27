@@ -91,17 +91,28 @@ writes_sfu(uint64_t inst)
 void
 vc4_qpu_validate(uint64_t *insts, uint32_t num_inst)
 {
+        bool scoreboard_locked = false;
+
         for (int i = 0; i < num_inst; i++) {
                 uint64_t inst = insts[i];
 
-                if (QPU_GET_FIELD(inst, QPU_SIG) != QPU_SIG_PROG_END)
+                if (QPU_GET_FIELD(inst, QPU_SIG) != QPU_SIG_PROG_END) {
+                        if (qpu_inst_is_tlb(inst))
+                                scoreboard_locked = true;
+
                         continue;
+                }
 
                 /* "The Thread End instruction must not write to either physical
                  *  regfile A or B."
                  */
                 assert(QPU_GET_FIELD(inst, QPU_WADDR_ADD) >= 32);
                 assert(QPU_GET_FIELD(inst, QPU_WADDR_MUL) >= 32);
+
+                /* Can't trigger an implicit wait on scoreboard in the program
+                 * end instruction.
+                 */
+                assert(!qpu_inst_is_tlb(inst) || scoreboard_locked);
 
                 /* Two delay slots will be executed. */
                 assert(i + 2 <= num_inst);
@@ -141,13 +152,7 @@ vc4_qpu_validate(uint64_t *insts, uint32_t num_inst)
         for (int i = 0; i < 2; i++) {
                 uint64_t inst = insts[i];
 
-                assert(QPU_GET_FIELD(inst, QPU_SIG) != QPU_SIG_COLOR_LOAD);
-                assert(QPU_GET_FIELD(inst, QPU_SIG) !=
-                       QPU_SIG_WAIT_FOR_SCOREBOARD);
-                assert(!writes_reg(inst, QPU_W_TLB_COLOR_MS));
-                assert(!writes_reg(inst, QPU_W_TLB_COLOR_ALL));
-                assert(!writes_reg(inst, QPU_W_TLB_Z));
-
+                assert(!qpu_inst_is_tlb(inst));
         }
 
         /* "If TMU_NOSWAP is written, the write must be three instructions

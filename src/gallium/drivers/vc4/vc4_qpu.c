@@ -244,3 +244,26 @@ qpu_set_cond_mul(uint64_t inst, uint32_t sig)
         return (inst & ~QPU_COND_MUL_MASK) | QPU_SET_FIELD(sig, QPU_COND_MUL);
 }
 
+bool
+qpu_waddr_is_tlb(uint32_t waddr)
+{
+        switch (waddr) {
+        case QPU_W_TLB_COLOR_ALL:
+        case QPU_W_TLB_COLOR_MS:
+        case QPU_W_TLB_Z:
+                return true;
+        default:
+                return false;
+        }
+}
+
+bool
+qpu_inst_is_tlb(uint64_t inst)
+{
+        uint32_t sig = QPU_GET_FIELD(inst, QPU_SIG);
+
+        return (qpu_waddr_is_tlb(QPU_GET_FIELD(inst, QPU_WADDR_ADD)) ||
+                qpu_waddr_is_tlb(QPU_GET_FIELD(inst, QPU_WADDR_MUL)) ||
+                sig == QPU_SIG_COLOR_LOAD ||
+                sig == QPU_SIG_WAIT_FOR_SCOREBOARD);
+}

@@ -133,6 +133,9 @@ uint64_t qpu_set_sig(uint64_t inst, uint32_t sig);
 uint64_t qpu_set_cond_add(uint64_t inst, uint32_t cond);
 uint64_t qpu_set_cond_mul(uint64_t inst, uint32_t cond);
 
+bool qpu_waddr_is_tlb(uint32_t waddr);
+bool qpu_inst_is_tlb(uint64_t inst);
+
 static inline uint64_t
 qpu_load_imm_f(struct qpu_reg dst, float val)
 {
