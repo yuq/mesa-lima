@@ -689,7 +689,7 @@ static void llvm_emit_tex(
 		if (emit_data->inst->Dst[0].Register.WriteMask & 4) {
 			LLVMValueRef offset = lp_build_const_int32(bld_base->base.gallivm, 0);
 			LLVMValueRef ZLayer = LLVMBuildExtractElement(gallivm->builder,
-				llvm_load_const_buffer(bld_base, offset, LLVM_R600_BUFFER_INFO_CONST_BUFFER,
+				llvm_load_const_buffer(bld_base, offset, LLVM_R600_BUFFER_INFO_CONST_BUFFER),
 				lp_build_const_int32(gallivm, 0), "");
 
 			emit_data->output[0] = LLVMBuildInsertElement(gallivm->builder, emit_data->output[0], ZLayer, lp_build_const_int32(gallivm, 2), "");
