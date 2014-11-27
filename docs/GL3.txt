@@ -18,7 +18,7 @@ are exposed in the 3.0 context as extensions.
 Feature                                               Status
 ----------------------------------------------------- ------------------------
 
-GL 3.0, GLSL 1.30 --- all DONE: i965, nv50, nvc0, r600, radeonsi, llvmpipe (*), softpipe (*)
+GL 3.0, GLSL 1.30 --- all DONE: i965, nv50, nvc0, r600, radeonsi, llvmpipe, softpipe
 
   glBindFragDataLocation, glGetFragDataLocation         DONE
   Conditional rendering (GL_NV_conditional_render)      DONE (r300, swrast)
@@ -45,7 +45,7 @@ GL 3.0, GLSL 1.30 --- all DONE: i965, nv50, nvc0, r600, radeonsi, llvmpipe (*), 
   glVertexAttribI commands                              DONE
   Depth format cube textures                            DONE ()
   GLX_ARB_create_context (GLX 1.4 is required)          DONE
-  Multisample anti-aliasing                             DONE (r300)
+  Multisample anti-aliasing                             DONE (llvmpipe (*), softpipe (*), r300)
 
 (*) llvmpipe and softpipe have fake Multisample anti-aliasing support
 
