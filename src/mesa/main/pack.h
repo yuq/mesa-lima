@@ -85,13 +85,6 @@ _mesa_unpack_image(GLuint dimensions,
                    GLenum format, GLenum type, const GLvoid *pixels,
                    const struct gl_pixelstore_attrib *unpack);
 
-
-extern void
-_mesa_rebase_rgba_float(GLuint n, GLfloat rgba[][4], GLenum baseFormat);
-
-extern void
-_mesa_rebase_rgba_uint(GLuint n, GLuint rgba[][4], GLenum baseFormat);
-
 extern void
 _mesa_pack_luminance_from_rgba_float(GLuint n, GLfloat rgba[][4],
                                      GLvoid *dstAddr, GLenum dst_format,
