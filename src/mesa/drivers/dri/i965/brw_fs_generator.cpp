@@ -36,6 +36,76 @@ extern "C" {
 #include "brw_fs.h"
 #include "brw_cfg.h"
 
+static struct brw_reg
+brw_reg_from_fs_reg(fs_reg *reg)
+{
+   struct brw_reg brw_reg;
+
+   switch (reg->file) {
+   case GRF:
+   case MRF:
+      if (reg->stride == 0) {
+         brw_reg = brw_vec1_reg(brw_file_from_reg(reg), reg->reg, 0);
+      } else if (reg->width < 8) {
+         brw_reg = brw_vec8_reg(brw_file_from_reg(reg), reg->reg, 0);
+         brw_reg = stride(brw_reg, reg->width * reg->stride,
+                          reg->width, reg->stride);
+      } else {
+         /* From the Haswell PRM:
+          *
+          * VertStride must be used to cross GRF register boundaries. This
+          * rule implies that elements within a 'Width' cannot cross GRF
+          * boundaries.
+          *
+          * So, for registers with width > 8, we have to use a width of 8
+          * and trust the compression state to sort out the exec size.
+          */
+         brw_reg = brw_vec8_reg(brw_file_from_reg(reg), reg->reg, 0);
+         brw_reg = stride(brw_reg, 8 * reg->stride, 8, reg->stride);
+      }
+
+      brw_reg = retype(brw_reg, reg->type);
+      brw_reg = byte_offset(brw_reg, reg->subreg_offset);
+      break;
+   case IMM:
+      switch (reg->type) {
+      case BRW_REGISTER_TYPE_F:
+	 brw_reg = brw_imm_f(reg->fixed_hw_reg.dw1.f);
+	 break;
+      case BRW_REGISTER_TYPE_D:
+	 brw_reg = brw_imm_d(reg->fixed_hw_reg.dw1.d);
+	 break;
+      case BRW_REGISTER_TYPE_UD:
+	 brw_reg = brw_imm_ud(reg->fixed_hw_reg.dw1.ud);
+	 break;
+      case BRW_REGISTER_TYPE_VF:
+         brw_reg = brw_imm_vf(reg->fixed_hw_reg.dw1.ud);
+         break;
+      default:
+	 unreachable("not reached");
+      }
+      break;
+   case HW_REG:
+      assert(reg->type == reg->fixed_hw_reg.type);
+      brw_reg = reg->fixed_hw_reg;
+      break;
+   case BAD_FILE:
+      /* Probably unused. */
+      brw_reg = brw_null_reg();
+      break;
+   case UNIFORM:
+      unreachable("not reached");
+   default:
+      unreachable("not reached");
+   }
+   if (reg->abs)
+      brw_reg = brw_abs(brw_reg);
+   if (reg->negate)
+      brw_reg = negate(brw_reg);
+
+   return brw_reg;
+}
+
 fs_generator::fs_generator(struct brw_context *brw,
                            void *mem_ctx,
                            const struct brw_wm_prog_key *key,
@@ -1198,76 +1268,6 @@ static uint32_t brw_file_from_reg(fs_reg *reg)
    default:
       unreachable("not reached");
    }
-}
-
-struct brw_reg
-brw_reg_from_fs_reg(fs_reg *reg)
-{
-   struct brw_reg brw_reg;
-
-   switch (reg->file) {
-   case GRF:
-   case MRF:
-      if (reg->stride == 0) {
-         brw_reg = brw_vec1_reg(brw_file_from_reg(reg), reg->reg, 0);
-      } else if (reg->width < 8) {
-         brw_reg = brw_vec8_reg(brw_file_from_reg(reg), reg->reg, 0);
-         brw_reg = stride(brw_reg, reg->width * reg->stride,
-                          reg->width, reg->stride);
-      } else {
-         /* From the Haswell PRM:
-          *
-          * VertStride must be used to cross GRF register boundaries. This
-          * rule implies that elements within a 'Width' cannot cross GRF
-          * boundaries.
-          *
-          * So, for registers with width > 8, we have to use a width of 8
-          * and trust the compression state to sort out the exec size.
-          */
-         brw_reg = brw_vec8_reg(brw_file_from_reg(reg), reg->reg, 0);
-         brw_reg = stride(brw_reg, 8 * reg->stride, 8, reg->stride);
-      }
-
-      brw_reg = retype(brw_reg, reg->type);
-      brw_reg = byte_offset(brw_reg, reg->subreg_offset);
-      break;
-   case IMM:
-      switch (reg->type) {
-      case BRW_REGISTER_TYPE_F:
-	 brw_reg = brw_imm_f(reg->fixed_hw_reg.dw1.f);
-	 break;
-      case BRW_REGISTER_TYPE_D:
-	 brw_reg = brw_imm_d(reg->fixed_hw_reg.dw1.d);
-	 break;
-      case BRW_REGISTER_TYPE_UD:
-	 brw_reg = brw_imm_ud(reg->fixed_hw_reg.dw1.ud);
-	 break;
-      case BRW_REGISTER_TYPE_VF:
-         brw_reg = brw_imm_vf(reg->fixed_hw_reg.dw1.ud);
-         break;
-      default:
-	 unreachable("not reached");
-      }
-      break;
-   case HW_REG:
-      assert(reg->type == reg->fixed_hw_reg.type);
-      brw_reg = reg->fixed_hw_reg;
-      break;
-   case BAD_FILE:
-      /* Probably unused. */
-      brw_reg = brw_null_reg();
-      break;
-   case UNIFORM:
-      unreachable("not reached");
-   default:
-      unreachable("not reached");
-   }
-   if (reg->abs)
-      brw_reg = brw_abs(brw_reg);
-   if (reg->negate)
-      brw_reg = negate(brw_reg);
-
-   return brw_reg;
 }
 
 /**

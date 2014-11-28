@@ -810,5 +810,3 @@ private:
 
 bool brw_do_channel_expressions(struct exec_list *instructions);
 bool brw_do_vector_splitting(struct exec_list *instructions);
-
-struct brw_reg brw_reg_from_fs_reg(fs_reg *reg);
