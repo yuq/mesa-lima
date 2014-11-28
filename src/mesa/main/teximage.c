@@ -1230,7 +1230,7 @@ init_teximage_fields_ms(struct gl_context *ctx,
 
    target = img->TexObject->Target;
    img->_BaseFormat = _mesa_base_tex_format( ctx, internalFormat );
-   ASSERT(img->_BaseFormat > 0);
+   ASSERT(img->_BaseFormat != -1);
    img->InternalFormat = internalFormat;
    img->Border = border;
    img->Width = width;
