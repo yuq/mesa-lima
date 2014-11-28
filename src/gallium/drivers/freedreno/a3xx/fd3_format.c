@@ -29,7 +29,7 @@
 #include "pipe/p_defines.h"
 #include "util/u_format.h"
 
-#include "fd3_util.h"
+#include "fd3_format.h"
 
 /* convert pipe format to vertex buffer format: */
 enum a3xx_vtx_fmt

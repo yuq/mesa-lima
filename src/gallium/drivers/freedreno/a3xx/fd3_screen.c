@@ -31,7 +31,7 @@
 
 #include "fd3_screen.h"
 #include "fd3_context.h"
-#include "fd3_util.h"
+#include "fd3_format.h"
 
 static boolean
 fd3_screen_is_format_supported(struct pipe_screen *pscreen,

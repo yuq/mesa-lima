@@ -39,7 +39,7 @@
 #include "fd3_program.h"
 #include "fd3_emit.h"
 #include "fd3_texture.h"
-#include "fd3_util.h"
+#include "fd3_format.h"
 
 static void
 delete_shader_stateobj(struct fd3_shader_stateobj *so)

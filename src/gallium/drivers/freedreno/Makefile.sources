@@ -72,6 +72,8 @@ a3xx_SOURCES := \
 	a3xx/fd3_draw.h \
 	a3xx/fd3_emit.c \
 	a3xx/fd3_emit.h \
+	a3xx/fd3_format.c \
+	a3xx/fd3_format.h \
 	a3xx/fd3_gmem.c \
 	a3xx/fd3_gmem.h \
 	a3xx/fd3_program.c \
@@ -84,8 +86,6 @@ a3xx_SOURCES := \
 	a3xx/fd3_screen.h \
 	a3xx/fd3_texture.c \
 	a3xx/fd3_texture.h \
-	a3xx/fd3_util.c \
-	a3xx/fd3_util.h \
 	a3xx/fd3_zsa.c \
 	a3xx/fd3_zsa.h
 

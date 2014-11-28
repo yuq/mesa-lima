@@ -33,7 +33,7 @@
 #include "util/u_format.h"
 
 #include "fd3_texture.h"
-#include "fd3_util.h"
+#include "fd3_format.h"
 
 static enum a3xx_tex_clamp
 tex_clamp(unsigned wrap, bool clamp_to_edge)

@@ -1,5 +1,3 @@
-/* -*- mode: C; c-file-style: "k&r"; tab-width 4; indent-tabs-mode: t; -*- */
-
 /*
  * Copyright (C) 2013 Rob Clark <robclark@freedesktop.org>
  *
@@ -22,12 +20,10 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  *
- * Authors:
- *    Rob Clark <robclark@freedesktop.org>
  */
 
-#ifndef FD3_UTIL_H_
-#define FD3_UTIL_H_
+#ifndef FD3_FORMAT_H_
+#define FD3_FORMAT_H_
 
 #include "freedreno_util.h"
 
@@ -43,4 +39,4 @@ enum a3xx_color_swap fd3_pipe2swap(enum pipe_format format);
 uint32_t fd3_tex_swiz(enum pipe_format format, unsigned swizzle_r,
 		unsigned swizzle_g, unsigned swizzle_b, unsigned swizzle_a);
 
-#endif /* FD3_UTIL_H_ */
+#endif /* FD3_FORMAT_H_ */

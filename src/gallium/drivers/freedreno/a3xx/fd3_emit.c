@@ -40,7 +40,7 @@
 #include "fd3_program.h"
 #include "fd3_rasterizer.h"
 #include "fd3_texture.h"
-#include "fd3_util.h"
+#include "fd3_format.h"
 #include "fd3_zsa.h"
 
 /* regid:          base const register

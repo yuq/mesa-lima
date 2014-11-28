@@ -32,7 +32,7 @@
 
 #include "fd3_blend.h"
 #include "fd3_context.h"
-#include "fd3_util.h"
+#include "fd3_format.h"
 
 
 static enum a3xx_rb_blend_opcode

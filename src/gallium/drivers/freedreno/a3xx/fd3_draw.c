@@ -39,7 +39,7 @@
 #include "fd3_context.h"
 #include "fd3_emit.h"
 #include "fd3_program.h"
-#include "fd3_util.h"
+#include "fd3_format.h"
 #include "fd3_zsa.h"
 
 
