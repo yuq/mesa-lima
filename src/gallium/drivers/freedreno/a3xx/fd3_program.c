@@ -351,7 +351,9 @@ fd3_program_emit(struct fd_ringbuffer *ring, struct fd3_emit *emit)
 
 	OUT_PKT0(ring, REG_A3XX_SP_FS_MRT_REG(0), 4);
 	OUT_RING(ring, A3XX_SP_FS_MRT_REG_REGID(color_regid) |
-			COND(fp->key.half_precision, A3XX_SP_FS_MRT_REG_HALF_PRECISION));
+			COND(fp->key.half_precision, A3XX_SP_FS_MRT_REG_HALF_PRECISION) |
+			COND(util_format_is_pure_uint(emit->format), A3XX_SP_FS_MRT_REG_UINT) |
+			COND(util_format_is_pure_sint(emit->format), A3XX_SP_FS_MRT_REG_SINT));
 	OUT_RING(ring, A3XX_SP_FS_MRT_REG_REGID(0));
 	OUT_RING(ring, A3XX_SP_FS_MRT_REG_REGID(0));
 	OUT_RING(ring, A3XX_SP_FS_MRT_REG_REGID(0));
