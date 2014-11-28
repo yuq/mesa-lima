@@ -59,6 +59,7 @@ emit_mrt(struct fd_ringbuffer *ring, unsigned nr_bufs,
 	for (i = 0; i < 4; i++) {
 		enum a3xx_color_fmt format = 0;
 		enum a3xx_color_swap swap = WZYX;
+		bool srgb = false;
 		struct fd_resource *rsc = NULL;
 		struct fd_resource_slice *slice = NULL;
 		uint32_t stride = 0;
@@ -72,6 +73,7 @@ emit_mrt(struct fd_ringbuffer *ring, unsigned nr_bufs,
 			slice = &rsc->slices[psurf->u.tex.level];
 			format = fd3_pipe2color(psurf->format);
 			swap = fd3_pipe2swap(psurf->format);
+			srgb = util_format_is_srgb(psurf->format);
 
 			debug_assert(psurf->u.tex.first_layer == psurf->u.tex.last_layer);
 
@@ -92,7 +94,8 @@ emit_mrt(struct fd_ringbuffer *ring, unsigned nr_bufs,
 		OUT_RING(ring, A3XX_RB_MRT_BUF_INFO_COLOR_FORMAT(format) |
 				A3XX_RB_MRT_BUF_INFO_COLOR_TILE_MODE(tile_mode) |
 				A3XX_RB_MRT_BUF_INFO_COLOR_BUF_PITCH(stride) |
-				A3XX_RB_MRT_BUF_INFO_COLOR_SWAP(swap));
+				A3XX_RB_MRT_BUF_INFO_COLOR_SWAP(swap) |
+				COND(srgb, A3XX_RB_MRT_BUF_INFO_COLOR_SRGB));
 		if (bin_w || (i >= nr_bufs)) {
 			OUT_RING(ring, A3XX_RB_MRT_BUF_BASE_COLOR_BUF_BASE(base));
 		} else {
