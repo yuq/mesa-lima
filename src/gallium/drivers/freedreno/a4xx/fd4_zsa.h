@@ -42,6 +42,7 @@ struct fd4_zsa_stateobj {
 	uint32_t rb_render_control;
 	uint32_t rb_depth_control;
 	uint32_t rb_stencil_control;
+	uint32_t rb_stencil_control2;
 	uint32_t rb_stencilrefmask;
 	uint32_t rb_stencilrefmask_bf;
 };

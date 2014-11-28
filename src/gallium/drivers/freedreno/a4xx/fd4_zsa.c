@@ -68,6 +68,8 @@ fd4_zsa_state_create(struct pipe_context *pctx,
 			A4XX_RB_STENCIL_CONTROL_FAIL(fd_stencil_op(s->fail_op)) |
 			A4XX_RB_STENCIL_CONTROL_ZPASS(fd_stencil_op(s->zpass_op)) |
 			A4XX_RB_STENCIL_CONTROL_ZFAIL(fd_stencil_op(s->zfail_op));
+		so->rb_stencil_control2 |=
+			A4XX_RB_STENCIL_CONTROL2_STENCIL_BUFFER;
 		so->rb_stencilrefmask |=
 			0xff000000 | /* ??? */
 			A4XX_RB_STENCILREFMASK_STENCILWRITEMASK(s->writemask) |

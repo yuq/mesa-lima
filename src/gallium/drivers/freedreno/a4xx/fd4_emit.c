@@ -360,8 +360,9 @@ fd4_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 		OUT_PKT0(ring, REG_A4XX_GRAS_ALPHA_CONTROL, 1);
 		OUT_RING(ring, zsa->gras_alpha_control);
 
-		OUT_PKT0(ring, REG_A4XX_RB_STENCIL_CONTROL, 1);
+		OUT_PKT0(ring, REG_A4XX_RB_STENCIL_CONTROL, 2);
 		OUT_RING(ring, zsa->rb_stencil_control);
+		OUT_RING(ring, zsa->rb_stencil_control2);
 
 		OUT_PKT0(ring, REG_A4XX_RB_STENCILREFMASK, 2);
 		OUT_RING(ring, zsa->rb_stencilrefmask |

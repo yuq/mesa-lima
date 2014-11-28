@@ -73,7 +73,7 @@ fd4_screen_is_format_supported(struct pipe_screen *pscreen,
 	}
 
 	if ((usage & PIPE_BIND_DEPTH_STENCIL) &&
-			(fd_pipe2depth(format) != ~0) &&
+			(fd4_pipe2depth(format) != ~0) &&
 			(fd4_pipe2tex(format) != ~0)) {
 		retval |= PIPE_BIND_DEPTH_STENCIL;
 	}

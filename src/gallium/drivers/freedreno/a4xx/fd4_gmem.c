@@ -159,7 +159,7 @@ fd4_emit_tile_gmem2mem(struct fd_context *ctx, struct fd_tile *tile)
 	OUT_PKT0(ring, REG_A4XX_RB_DEPTH_CONTROL, 1);
 	OUT_RING(ring, A4XX_RB_DEPTH_CONTROL_ZFUNC(FUNC_NEVER));
 
-	OUT_PKT0(ring, REG_A4XX_RB_STENCIL_CONTROL, 1);
+	OUT_PKT0(ring, REG_A4XX_RB_STENCIL_CONTROL, 2);
 	OUT_RING(ring, A4XX_RB_STENCIL_CONTROL_FUNC(FUNC_NEVER) |
 			A4XX_RB_STENCIL_CONTROL_FAIL(STENCIL_KEEP) |
 			A4XX_RB_STENCIL_CONTROL_ZPASS(STENCIL_KEEP) |
@@ -168,6 +168,7 @@ fd4_emit_tile_gmem2mem(struct fd_context *ctx, struct fd_tile *tile)
 			A4XX_RB_STENCIL_CONTROL_FAIL_BF(STENCIL_KEEP) |
 			A4XX_RB_STENCIL_CONTROL_ZPASS_BF(STENCIL_KEEP) |
 			A4XX_RB_STENCIL_CONTROL_ZFAIL_BF(STENCIL_KEEP));
+	OUT_RING(ring, 0x00000000); /* RB_STENCIL_CONTROL2 */
 
 	OUT_PKT0(ring, REG_A4XX_RB_STENCILREFMASK, 2);
 	OUT_RING(ring, 0xff000000 |
@@ -339,7 +340,7 @@ fd4_emit_tile_mem2gmem(struct fd_context *ctx, struct fd_tile *tile)
 	OUT_RING(ring, A4XX_RB_MODE_CONTROL_WIDTH(gmem->bin_w) |
 			A4XX_RB_MODE_CONTROL_HEIGHT(gmem->bin_h));
 
-	OUT_PKT0(ring, REG_A4XX_RB_STENCIL_CONTROL, 1);
+	OUT_PKT0(ring, REG_A4XX_RB_STENCIL_CONTROL, 2);
 	OUT_RING(ring, A4XX_RB_STENCIL_CONTROL_FUNC(FUNC_ALWAYS) |
 			A4XX_RB_STENCIL_CONTROL_FAIL(STENCIL_KEEP) |
 			A4XX_RB_STENCIL_CONTROL_ZPASS(STENCIL_KEEP) |
@@ -348,6 +349,7 @@ fd4_emit_tile_mem2gmem(struct fd_context *ctx, struct fd_tile *tile)
 			A4XX_RB_STENCIL_CONTROL_FAIL_BF(STENCIL_KEEP) |
 			A4XX_RB_STENCIL_CONTROL_ZPASS_BF(STENCIL_KEEP) |
 			A4XX_RB_STENCIL_CONTROL_ZFAIL_BF(STENCIL_KEEP));
+	OUT_RING(ring, 0x00000000); /* RB_STENCIL_CONTROL2 */
 
 	OUT_PKT0(ring, REG_A4XX_GRAS_SC_CONTROL, 1);
 	OUT_RING(ring, A4XX_GRAS_SC_CONTROL_RENDER_MODE(RB_RENDERING_PASS) |
@@ -486,12 +488,13 @@ fd4_emit_tile_prep(struct fd_context *ctx, struct fd_tile *tile)
 	OUT_PKT0(ring, REG_A4XX_RB_DEPTH_INFO, 3);
 	reg = A4XX_RB_DEPTH_INFO_DEPTH_BASE(depth_base(ctx));
 	if (pfb->zsbuf) {
-		reg |= A4XX_RB_DEPTH_INFO_DEPTH_FORMAT(fd_pipe2depth(pfb->zsbuf->format));
+		reg |= A4XX_RB_DEPTH_INFO_DEPTH_FORMAT(fd4_pipe2depth(pfb->zsbuf->format));
 	}
 	OUT_RING(ring, reg);
 	if (pfb->zsbuf) {
-		OUT_RING(ring, A4XX_RB_DEPTH_PITCH(gmem->bin_w));
-		OUT_RING(ring, A4XX_RB_DEPTH_PITCH2(gmem->bin_w));
+		uint32_t cpp = util_format_get_blocksize(pfb->zsbuf->format);
+		OUT_RING(ring, A4XX_RB_DEPTH_PITCH(cpp * gmem->bin_w));
+		OUT_RING(ring, A4XX_RB_DEPTH_PITCH2(cpp * gmem->bin_w));
 	} else {
 		OUT_RING(ring, 0x00000000);
 		OUT_RING(ring, 0x00000000);
@@ -500,7 +503,7 @@ fd4_emit_tile_prep(struct fd_context *ctx, struct fd_tile *tile)
 	if (pfb->zsbuf) {
 		OUT_PKT0(ring, REG_A4XX_GRAS_DEPTH_CONTROL, 1);
 		OUT_RING(ring, A4XX_GRAS_DEPTH_CONTROL_FORMAT(
-				fd_pipe2depth(pfb->zsbuf->format)));
+				fd4_pipe2depth(pfb->zsbuf->format)));
 	}
 
 	if (ctx->needs_rb_fbd) {
