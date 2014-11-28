@@ -566,16 +566,20 @@ fd3_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 		}
 	}
 
-	if ((dirty & FD_DIRTY_BLEND) && ctx->blend) {
+	if ((dirty & (FD_DIRTY_BLEND | FD_DIRTY_FRAMEBUFFER)) && ctx->blend) {
 		struct fd3_blend_stateobj *blend = fd3_blend_stateobj(ctx->blend);
 		uint32_t i;
 
 		for (i = 0; i < ARRAY_SIZE(blend->rb_mrt); i++) {
+			bool is_float = util_format_is_float(
+					pipe_surface_format(ctx->framebuffer.cbufs[i]));
+
 			OUT_PKT0(ring, REG_A3XX_RB_MRT_CONTROL(i), 1);
 			OUT_RING(ring, blend->rb_mrt[i].control);
 
 			OUT_PKT0(ring, REG_A3XX_RB_MRT_BLEND_CONTROL(i), 1);
-			OUT_RING(ring, blend->rb_mrt[i].blend_control);
+			OUT_RING(ring, blend->rb_mrt[i].blend_control |
+					COND(!is_float, A3XX_RB_MRT_BLEND_CONTROL_CLAMP_ENABLE));
 		}
 	}
 
