@@ -153,6 +153,7 @@ fd4_emit_tile_gmem2mem(struct fd_context *ctx, struct fd_tile *tile)
 			.vtx = &fd4_ctx->solid_vbuf_state,
 			.prog = &ctx->solid_prog,
 			.key = key,
+			.format = fd4_emit_format(pfb->cbufs[0]),
 	};
 
 	OUT_PKT0(ring, REG_A4XX_RB_DEPTH_CONTROL, 1);
@@ -242,25 +243,10 @@ fd4_emit_tile_gmem2mem(struct fd_context *ctx, struct fd_tile *tile)
 /* transfer from system memory to gmem */
 
 static void
-emit_mem2gmem_surf(struct fd_context *ctx, struct fd4_emit *emit,
-		uint32_t base, struct pipe_surface *psurf, uint32_t bin_w)
+emit_mem2gmem_surf(struct fd_context *ctx, uint32_t base,
+		struct pipe_surface *psurf, uint32_t bin_w)
 {
-	struct ir3_shader_variant *fp = fd4_emit_get_fp(emit);
 	struct fd_ringbuffer *ring = ctx->ring;
-	uint32_t color_regid = ir3_find_output_regid(fp,
-			ir3_semantic_name(TGSI_SEMANTIC_COLOR, 0));
-
-	OUT_PKT0(ring, REG_A4XX_SP_FS_MRT_REG(0), 8);
-	OUT_RING(ring, A4XX_SP_FS_MRT_REG_REGID(color_regid) |
-			A4XX_SP_FS_MRT_REG_MRTFORMAT(fd4_pipe2color(psurf->format)) |
-			COND(fp->key.half_precision, A4XX_SP_FS_MRT_REG_HALF_PRECISION));
-	OUT_RING(ring, A4XX_SP_FS_MRT_REG_REGID(0));
-	OUT_RING(ring, A4XX_SP_FS_MRT_REG_REGID(0));
-	OUT_RING(ring, A4XX_SP_FS_MRT_REG_REGID(0));
-	OUT_RING(ring, A4XX_SP_FS_MRT_REG_REGID(0));
-	OUT_RING(ring, A4XX_SP_FS_MRT_REG_REGID(0));
-	OUT_RING(ring, A4XX_SP_FS_MRT_REG_REGID(0));
-	OUT_RING(ring, A4XX_SP_FS_MRT_REG_REGID(0));
 
 	emit_mrt(ring, 1, &psurf, &base, bin_w);
 
@@ -281,6 +267,7 @@ fd4_emit_tile_mem2gmem(struct fd_context *ctx, struct fd_tile *tile)
 			.vtx = &fd4_ctx->blit_vbuf_state,
 			.prog = &ctx->blit_prog,
 			.key = key,
+			.format = fd4_emit_format(pfb->cbufs[0]),
 	};
 	float x0, y0, x1, y1;
 	unsigned bin_w = tile->bin_w;
@@ -386,10 +373,10 @@ fd4_emit_tile_mem2gmem(struct fd_context *ctx, struct fd_tile *tile)
 	bin_h = gmem->bin_h;
 
 	if (fd_gmem_needs_restore(ctx, tile, FD_BUFFER_DEPTH | FD_BUFFER_STENCIL))
-		emit_mem2gmem_surf(ctx, &emit, depth_base(ctx), pfb->zsbuf, bin_w);
+		emit_mem2gmem_surf(ctx, depth_base(ctx), pfb->zsbuf, bin_w);
 
 	if (fd_gmem_needs_restore(ctx, tile, FD_BUFFER_COLOR))
-		emit_mem2gmem_surf(ctx, &emit, 0, pfb->cbufs[0], bin_w);
+		emit_mem2gmem_surf(ctx, 0, pfb->cbufs[0], bin_w);
 
 	OUT_PKT0(ring, REG_A4XX_GRAS_SC_CONTROL, 1);
 	OUT_RING(ring, A4XX_GRAS_SC_CONTROL_RENDER_MODE(RB_RENDERING_PASS) |

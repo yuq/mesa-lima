@@ -53,6 +53,7 @@ struct fd4_emit {
 	const struct fd_program_stateobj *prog;
 	const struct pipe_draw_info *info;
 	struct ir3_shader_key key;
+	enum a4xx_color_fmt format;
 	uint32_t dirty;
 	bool rasterflat;
 
@@ -60,6 +61,13 @@ struct fd4_emit {
 	struct ir3_shader_variant *vp, *fp;
 	/* TODO: other shader stages.. */
 };
+
+static inline enum a4xx_color_fmt fd4_emit_format(struct pipe_surface *surf)
+{
+	if (!surf)
+		return 0;
+	return fd4_pipe2color(surf->format);
+}
 
 static inline struct ir3_shader_variant *
 fd4_emit_get_vp(struct fd4_emit *emit)

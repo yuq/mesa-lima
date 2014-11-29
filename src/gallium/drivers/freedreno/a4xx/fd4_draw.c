@@ -108,6 +108,7 @@ static void
 fd4_draw_vbo(struct fd_context *ctx, const struct pipe_draw_info *info)
 {
 	struct fd4_context *fd4_ctx = fd4_context(ctx);
+	struct pipe_framebuffer_state *pfb = &ctx->framebuffer;
 	struct fd4_emit emit = {
 		.vtx  = &ctx->vtx,
 		.prog = &ctx->prog,
@@ -116,7 +117,7 @@ fd4_draw_vbo(struct fd_context *ctx, const struct pipe_draw_info *info)
 			/* do binning pass first: */
 			.binning_pass = true,
 			.color_two_side = ctx->rasterizer ? ctx->rasterizer->light_twoside : false,
-			.alpha = util_format_is_alpha(pipe_surface_format(ctx->framebuffer.cbufs[0])),
+			.alpha = util_format_is_alpha(pipe_surface_format(pfb->cbufs[0])),
 			// TODO set .half_precision based on render target format,
 			// ie. float16 and smaller use half, float32 use full..
 			.half_precision = !!(fd_mesa_debug & FD_DBG_FRAGHALF),
@@ -128,6 +129,7 @@ fd4_draw_vbo(struct fd_context *ctx, const struct pipe_draw_info *info)
 			.fsaturate_t = fd4_ctx->fsaturate_t,
 			.fsaturate_r = fd4_ctx->fsaturate_r,
 		},
+		.format = fd4_emit_format(pfb->cbufs[0]),
 		.rasterflat = ctx->rasterizer && ctx->rasterizer->flatshade,
 	};
 	unsigned dirty;
@@ -176,6 +178,7 @@ fd4_clear(struct fd_context *ctx, unsigned buffers,
 		.key = {
 			.half_precision = true,
 		},
+		.format = fd4_emit_format(pfb->cbufs[0]),
 	};
 	uint32_t colr = 0;
 

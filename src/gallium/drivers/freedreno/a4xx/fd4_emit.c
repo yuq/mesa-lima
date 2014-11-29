@@ -453,28 +453,6 @@ fd4_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 	if (dirty & FD_DIRTY_PROG)
 		fd4_program_emit(ring, emit);
 
-	if (dirty & (FD_DIRTY_PROG | FD_DIRTY_FRAMEBUFFER)) {
-		struct pipe_framebuffer_state *pfb = &ctx->framebuffer;
-		uint32_t color_regid = ir3_find_output_regid(fp,
-				ir3_semantic_name(TGSI_SEMANTIC_COLOR, 0));
-		enum a4xx_color_fmt format = 0;
-
-		if (pfb->cbufs[0])
-			format = fd4_pipe2color(pfb->cbufs[0]->format);
-
-		OUT_PKT0(ring, REG_A4XX_SP_FS_MRT_REG(0), 8);
-		OUT_RING(ring, A4XX_SP_FS_MRT_REG_REGID(color_regid) |
-				A4XX_SP_FS_MRT_REG_MRTFORMAT(format) |
-				COND(fp->key.half_precision, A4XX_SP_FS_MRT_REG_HALF_PRECISION));
-		OUT_RING(ring, A4XX_SP_FS_MRT_REG_REGID(0));
-		OUT_RING(ring, A4XX_SP_FS_MRT_REG_REGID(0));
-		OUT_RING(ring, A4XX_SP_FS_MRT_REG_REGID(0));
-		OUT_RING(ring, A4XX_SP_FS_MRT_REG_REGID(0));
-		OUT_RING(ring, A4XX_SP_FS_MRT_REG_REGID(0));
-		OUT_RING(ring, A4XX_SP_FS_MRT_REG_REGID(0));
-		OUT_RING(ring, A4XX_SP_FS_MRT_REG_REGID(0));
-	}
-
 	if ((dirty & (FD_DIRTY_PROG | FD_DIRTY_CONSTBUF)) &&
 			/* evil hack to deal sanely with clear path: */
 			(emit->prog == &ctx->prog)) {
