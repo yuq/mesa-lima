@@ -43,12 +43,6 @@
 #include "fd3_format.h"
 #include "fd3_zsa.h"
 
-static const struct ir3_shader_key key = {
-		// XXX should set this based on render target format!  We don't
-		// want half_precision if float32 render target!!!
-		.half_precision = true,
-};
-
 static void
 emit_mrt(struct fd_ringbuffer *ring, unsigned nr_bufs,
 		struct pipe_surface **bufs, uint32_t *bases, uint32_t bin_w)
@@ -161,7 +155,9 @@ emit_binning_workaround(struct fd_context *ctx)
 	struct fd3_emit emit = {
 			.vtx = &fd3_ctx->solid_vbuf_state,
 			.prog = &ctx->solid_prog,
-			.key = key,
+			.key = {
+				.half_precision = true,
+			},
 	};
 
 	OUT_PKT0(ring, REG_A3XX_RB_MODE_CONTROL, 2);
@@ -336,10 +332,14 @@ fd3_emit_tile_gmem2mem(struct fd_context *ctx, struct fd_tile *tile)
 	struct fd3_context *fd3_ctx = fd3_context(ctx);
 	struct fd_ringbuffer *ring = ctx->ring;
 	struct pipe_framebuffer_state *pfb = &ctx->framebuffer;
+	enum pipe_format format = pipe_surface_format(pfb->cbufs[0]);
 	struct fd3_emit emit = {
 			.vtx = &fd3_ctx->solid_vbuf_state,
 			.prog = &ctx->solid_prog,
-			.key = key,
+			.key = {
+				.half_precision = fd3_half_precision(format),
+			},
+			.format = format,
 	};
 
 	OUT_PKT0(ring, REG_A3XX_RB_DEPTH_CONTROL, 1);
@@ -458,10 +458,14 @@ fd3_emit_tile_mem2gmem(struct fd_context *ctx, struct fd_tile *tile)
 	struct fd_gmem_stateobj *gmem = &ctx->gmem;
 	struct fd_ringbuffer *ring = ctx->ring;
 	struct pipe_framebuffer_state *pfb = &ctx->framebuffer;
+	enum pipe_format format = pipe_surface_format(pfb->cbufs[0]);
 	struct fd3_emit emit = {
 			.vtx = &fd3_ctx->blit_vbuf_state,
 			.prog = &ctx->blit_prog,
-			.key = key,
+			.key = {
+				.half_precision = fd3_half_precision(format),
+			},
+			.format = format,
 	};
 	float x0, y0, x1, y1;
 	unsigned bin_w = tile->bin_w;

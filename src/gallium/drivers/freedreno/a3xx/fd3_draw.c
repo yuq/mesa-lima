@@ -220,6 +220,8 @@ fd3_clear(struct fd_context *ctx, unsigned buffers,
 		const union pipe_color_union *color, double depth, unsigned stencil)
 {
 	struct fd3_context *fd3_ctx = fd3_context(ctx);
+	struct pipe_framebuffer_state *pfb = &ctx->framebuffer;
+	enum pipe_format format = pipe_surface_format(pfb->cbufs[0]);
 	struct fd_ringbuffer *ring = ctx->ring;
 	unsigned dirty = ctx->dirty;
 	unsigned ce, i;
@@ -227,8 +229,9 @@ fd3_clear(struct fd_context *ctx, unsigned buffers,
 		.vtx  = &fd3_ctx->solid_vbuf_state,
 		.prog = &ctx->solid_prog,
 		.key = {
-			.half_precision = true,
+			.half_precision = fd3_half_precision(format),
 		},
+		.format = format,
 	};
 
 	dirty &= FD_DIRTY_FRAMEBUFFER | FD_DIRTY_SCISSOR;
