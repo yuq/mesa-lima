@@ -63,13 +63,16 @@ fd3_screen_is_format_supported(struct pipe_screen *pscreen,
 	if ((usage & (PIPE_BIND_RENDER_TARGET |
 				PIPE_BIND_DISPLAY_TARGET |
 				PIPE_BIND_SCANOUT |
-				PIPE_BIND_SHARED)) &&
+				PIPE_BIND_SHARED |
+				PIPE_BIND_BLENDABLE)) &&
 			(fd3_pipe2color(format) != ~0) &&
 			(fd3_pipe2tex(format) != ~0)) {
 		retval |= usage & (PIPE_BIND_RENDER_TARGET |
 				PIPE_BIND_DISPLAY_TARGET |
 				PIPE_BIND_SCANOUT |
 				PIPE_BIND_SHARED);
+		if (!util_format_is_pure_integer(format))
+			retval |= usage & PIPE_BIND_BLENDABLE;
 	}
 
 	if ((usage & PIPE_BIND_DEPTH_STENCIL) &&

@@ -573,9 +573,18 @@ fd3_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 		for (i = 0; i < ARRAY_SIZE(blend->rb_mrt); i++) {
 			bool is_float = util_format_is_float(
 					pipe_surface_format(ctx->framebuffer.cbufs[i]));
+			bool is_int = util_format_is_pure_integer(
+					pipe_surface_format(ctx->framebuffer.cbufs[i]));
+			uint32_t control = blend->rb_mrt[i].control;
+
+			if (is_int) {
+				control &= (A3XX_RB_MRT_CONTROL_COMPONENT_ENABLE__MASK |
+							A3XX_RB_MRT_CONTROL_DITHER_MODE__MASK);
+				control |= A3XX_RB_MRT_CONTROL_ROP_CODE(ROP_COPY);
+			}
 
 			OUT_PKT0(ring, REG_A3XX_RB_MRT_CONTROL(i), 1);
-			OUT_RING(ring, blend->rb_mrt[i].control);
+			OUT_RING(ring, control);
 
 			OUT_PKT0(ring, REG_A3XX_RB_MRT_BLEND_CONTROL(i), 1);
 			OUT_RING(ring, blend->rb_mrt[i].blend_control |
