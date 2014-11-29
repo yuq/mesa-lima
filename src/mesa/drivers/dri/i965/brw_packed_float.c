@@ -29,7 +29,7 @@ union fu {
       unsigned mantissa:23;
       unsigned exponent:8;
       unsigned sign:1;
-   };
+   } s;
 };
 
 int
@@ -39,11 +39,11 @@ brw_float_to_vf(float f)
 
    /* ±0.0f is special cased. */
    if (f == 0.0f)
-      return fu.sign << 7;
+      return fu.s.sign << 7;
 
-   unsigned mantissa = fu.mantissa >> (23 - 4);
-   unsigned exponent = fu.exponent - (127 - 3);
-   unsigned vf = (fu.sign << 7) | (exponent << 4) | mantissa;
+   unsigned mantissa = fu.s.mantissa >> (23 - 4);
+   unsigned exponent = fu.s.exponent - (127 - 3);
+   unsigned vf = (fu.s.sign << 7) | (exponent << 4) | mantissa;
 
    /* 0.125 would have had the same representation as 0.0, so reject it. */
    if ((vf & 0x7f) == 0)
@@ -67,9 +67,9 @@ brw_vf_to_float(unsigned char vf)
       return fu.f;
    }
 
-   fu.sign = vf >> 7;
-   fu.exponent = ((vf & 0x70) >> 4) + (127 - 3);
-   fu.mantissa = (vf & 0xf) << (23 - 4);
+   fu.s.sign = vf >> 7;
+   fu.s.exponent = ((vf & 0x70) >> 4) + (127 - 3);
+   fu.s.mantissa = (vf & 0xf) << (23 - 4);
 
    return fu.f;
 }
