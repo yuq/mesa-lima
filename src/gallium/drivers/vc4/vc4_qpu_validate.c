@@ -202,12 +202,13 @@ vc4_qpu_validate(uint64_t *insts, uint32_t num_inst)
         int last_sfu_inst = -10;
         for (int i = 0; i < num_inst - 1; i++) {
                 uint64_t inst = insts[i];
+                uint32_t sig = QPU_GET_FIELD(inst, QPU_SIG);
 
                 assert(i - last_sfu_inst > 2 ||
                        (!writes_sfu(inst) &&
-                        !writes_reg(inst, QPU_W_TMU0_S) &&
-                        !writes_reg(inst, QPU_W_TMU1_S) &&
-                        QPU_GET_FIELD(inst, QPU_SIG) != QPU_SIG_COLOR_LOAD));
+                        sig != QPU_SIG_LOAD_TMU0 &&
+                        sig != QPU_SIG_LOAD_TMU1 &&
+                        sig != QPU_SIG_COLOR_LOAD));
 
                 if (writes_sfu(inst))
                         last_sfu_inst = i;
