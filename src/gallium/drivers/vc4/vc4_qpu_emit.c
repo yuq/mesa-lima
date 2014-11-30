@@ -596,11 +596,15 @@ vc4_generate_code(struct vc4_context *vc4, struct vc4_compile *c)
 
         serialize_insts(c);
 
-        /* thread end can't have VPM write */
+        /* thread end can't have VPM write or read */
         if (QPU_GET_FIELD(c->qpu_insts[c->qpu_inst_count - 1],
                           QPU_WADDR_ADD) == QPU_W_VPM ||
             QPU_GET_FIELD(c->qpu_insts[c->qpu_inst_count - 1],
-                          QPU_WADDR_MUL) == QPU_W_VPM) {
+                          QPU_WADDR_MUL) == QPU_W_VPM ||
+            QPU_GET_FIELD(c->qpu_insts[c->qpu_inst_count - 1],
+                          QPU_RADDR_A) == QPU_R_VPM ||
+            QPU_GET_FIELD(c->qpu_insts[c->qpu_inst_count - 1],
+                          QPU_RADDR_B) == QPU_R_VPM) {
                 serialize_one_inst(c, qpu_NOP());
         }
 
