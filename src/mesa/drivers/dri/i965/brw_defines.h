@@ -2051,16 +2051,20 @@ enum brw_message_target {
 # define GEN9_WM_DS_BF_STENCIL_REF_MASK                 INTEL_MASK(7, 0)
 # define GEN9_WM_DS_BF_STENCIL_REF_SHIFT                0
 
+enum brw_pixel_shader_computed_depth_mode {
+   BRW_PSCDEPTH_OFF   = 0, /* PS does not compute depth */
+   BRW_PSCDEPTH_ON    = 1, /* PS computes depth; no guarantee about value */
+   BRW_PSCDEPTH_ON_GE = 2, /* PS guarantees output depth >= source depth */
+   BRW_PSCDEPTH_ON_LE = 3, /* PS guarantees output depth <= source depth */
+};
+
 #define _3DSTATE_PS_EXTRA                       0x784F /* GEN8+ */
 /* DW1 */
 # define GEN8_PSX_PIXEL_SHADER_VALID                    (1 << 31)
 # define GEN8_PSX_PIXEL_SHADER_NO_RT_WRITE              (1 << 30)
 # define GEN8_PSX_OMASK_TO_RENDER_TARGET                (1 << 29)
 # define GEN8_PSX_KILL_ENABLE                           (1 << 28)
-# define GEN8_PSX_PSCDEPTH_OFF                          (0 << 26)
-# define GEN8_PSX_PSCDEPTH_ON                           (1 << 26)
-# define GEN8_PSX_PSCDEPTH_ON_GE                        (2 << 26)
-# define GEN8_PSX_PSCDEPTH_ON_LE                        (3 << 26)
+# define GEN8_PSX_COMPUTED_DEPTH_MODE_SHIFT             26
 # define GEN8_PSX_FORCE_COMPUTED_DEPTH                  (1 << 25)
 # define GEN8_PSX_USES_SOURCE_DEPTH                     (1 << 24)
 # define GEN8_PSX_USES_SOURCE_W                         (1 << 23)
@@ -2202,10 +2206,7 @@ enum brw_wm_barycentric_interp_mode {
 # define GEN7_WM_DEPTH_RESOLVE				(1 << 28)
 # define GEN7_WM_HIERARCHICAL_DEPTH_RESOLVE		(1 << 27)
 # define GEN7_WM_KILL_ENABLE				(1 << 25)
-# define GEN7_WM_PSCDEPTH_OFF			        (0 << 23)
-# define GEN7_WM_PSCDEPTH_ON			        (1 << 23)
-# define GEN7_WM_PSCDEPTH_ON_GE			        (2 << 23)
-# define GEN7_WM_PSCDEPTH_ON_LE			        (3 << 23)
+# define GEN7_WM_COMPUTED_DEPTH_MODE_SHIFT              23
 # define GEN7_WM_USES_SOURCE_DEPTH			(1 << 20)
 # define GEN7_WM_USES_SOURCE_W			        (1 << 19)
 # define GEN7_WM_POSITION_ZW_PIXEL			(0 << 17)

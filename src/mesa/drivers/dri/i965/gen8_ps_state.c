@@ -39,29 +39,13 @@ upload_ps_extra(struct brw_context *brw)
    uint32_t dw1 = 0;
 
    dw1 |= GEN8_PSX_PIXEL_SHADER_VALID;
+   dw1 |= prog_data->computed_depth_mode << GEN8_PSX_COMPUTED_DEPTH_MODE_SHIFT;
 
    if (prog_data->uses_kill)
       dw1 |= GEN8_PSX_KILL_ENABLE;
 
    if (prog_data->num_varying_inputs != 0)
       dw1 |= GEN8_PSX_ATTRIBUTE_ENABLE;
-
-   if (fp->program.Base.OutputsWritten & BITFIELD64_BIT(FRAG_RESULT_DEPTH)) {
-      switch (fp->program.FragDepthLayout) {
-         case FRAG_DEPTH_LAYOUT_NONE:
-         case FRAG_DEPTH_LAYOUT_ANY:
-            dw1 |= GEN8_PSX_PSCDEPTH_ON;
-            break;
-         case FRAG_DEPTH_LAYOUT_GREATER:
-            dw1 |= GEN8_PSX_PSCDEPTH_ON_GE;
-            break;
-         case FRAG_DEPTH_LAYOUT_LESS:
-            dw1 |= GEN8_PSX_PSCDEPTH_ON_LE;
-            break;
-         case FRAG_DEPTH_LAYOUT_UNCHANGED:
-            break;
-      }
-   }
 
    if (fp->program.Base.InputsRead & VARYING_BIT_POS)
       dw1 |= GEN8_PSX_USES_SOURCE_DEPTH | GEN8_PSX_USES_SOURCE_W;

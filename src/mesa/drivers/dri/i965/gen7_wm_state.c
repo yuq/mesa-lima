@@ -41,7 +41,7 @@ upload_wm_state(struct brw_context *brw)
       brw_fragment_program_const(brw->fragment_program);
    /* BRW_NEW_FS_PROG_DATA */
    const struct brw_wm_prog_data *prog_data = brw->wm.prog_data;
-   bool writes_depth = false;
+   bool writes_depth = prog_data->computed_depth_mode != BRW_PSCDEPTH_OFF;
    uint32_t dw1, dw2;
 
    /* _NEW_BUFFERS */
@@ -62,24 +62,8 @@ upload_wm_state(struct brw_context *brw)
 
    if (fp->program.Base.InputsRead & VARYING_BIT_POS)
       dw1 |= GEN7_WM_USES_SOURCE_DEPTH | GEN7_WM_USES_SOURCE_W;
-   if (fp->program.Base.OutputsWritten & BITFIELD64_BIT(FRAG_RESULT_DEPTH)) {
-      writes_depth = fp->program.FragDepthLayout != FRAG_DEPTH_LAYOUT_UNCHANGED;
 
-      switch (fp->program.FragDepthLayout) {
-         case FRAG_DEPTH_LAYOUT_NONE:
-         case FRAG_DEPTH_LAYOUT_ANY:
-            dw1 |= GEN7_WM_PSCDEPTH_ON;
-            break;
-         case FRAG_DEPTH_LAYOUT_GREATER:
-            dw1 |= GEN7_WM_PSCDEPTH_ON_GE;
-            break;
-         case FRAG_DEPTH_LAYOUT_LESS:
-            dw1 |= GEN7_WM_PSCDEPTH_ON_LE;
-            break;
-         case FRAG_DEPTH_LAYOUT_UNCHANGED:
-            break;
-      }
-   }
+   dw1 |= prog_data->computed_depth_mode << GEN7_WM_COMPUTED_DEPTH_MODE_SHIFT;
    dw1 |= prog_data->barycentric_interp_modes <<
       GEN7_WM_BARYCENTRIC_INTERPOLATION_MODE_SHIFT;
 

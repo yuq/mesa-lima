@@ -225,8 +225,6 @@ static bool
 pma_fix_enable(const struct brw_context *brw)
 {
    const struct gl_context *ctx = &brw->ctx;
-   /* BRW_NEW_FRAGMENT_PROGRAM */
-   const struct gl_fragment_program *fp = brw->fragment_program;
    /* _NEW_BUFFERS */
    struct intel_renderbuffer *depth_irb =
       intel_get_renderbuffer(ctx->DrawBuffer, BUFFER_DEPTH);
@@ -279,12 +277,11 @@ pma_fix_enable(const struct brw_context *brw)
     */
    const bool stencil_writes_enabled = ctx->Stencil._WriteEnabled;
 
-   /* BRW_NEW_FRAGMENT_PROGRAM:
-    * 3DSTATE_PS_EXTRA::Pixel Shader Computed Depth Mode == PSCDEPTH_OFF
+   /* BRW_NEW_FS_PROG_DATA:
+    * 3DSTATE_PS_EXTRA::Pixel Shader Computed Depth Mode != PSCDEPTH_OFF
     */
    const bool ps_computes_depth =
-      (fp->Base.OutputsWritten & BITFIELD64_BIT(FRAG_RESULT_DEPTH)) &&
-      fp->FragDepthLayout != FRAG_DEPTH_LAYOUT_UNCHANGED;
+      brw->wm.prog_data->computed_depth_mode != BRW_PSCDEPTH_OFF;
 
    /* BRW_NEW_FS_PROG_DATA:        3DSTATE_PS_EXTRA::PixelShaderKillsPixels
     * BRW_NEW_FS_PROG_DATA:        3DSTATE_PS_EXTRA::oMask Present to RenderTarget
@@ -372,8 +369,7 @@ const struct brw_tracked_state gen8_pma_fix = {
               _NEW_DEPTH |
               _NEW_MULTISAMPLE |
               _NEW_STENCIL,
-      .brw = BRW_NEW_FRAGMENT_PROGRAM |
-             BRW_NEW_FS_PROG_DATA,
+      .brw = BRW_NEW_FS_PROG_DATA,
    },
    .emit = gen8_emit_pma_stall_workaround
 };
