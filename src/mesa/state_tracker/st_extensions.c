@@ -696,6 +696,9 @@ void st_init_extensions(struct pipe_screen *screen,
 
          extensions->EXT_shader_integer_mix = GL_TRUE;
       }
+
+      /* Integer textures make no sense before GLSL 1.30 */
+      extensions->EXT_texture_integer = GL_FALSE;
    }
 
    consts->UniformBooleanTrue = consts->NativeIntegers ? ~0 : fui(1.0f);
