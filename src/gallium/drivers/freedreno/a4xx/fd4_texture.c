@@ -187,4 +187,5 @@ fd4_texture_init(struct pipe_context *pctx)
 	pctx->create_sampler_state = fd4_sampler_state_create;
 	pctx->bind_sampler_states = fd_sampler_states_bind;
 	pctx->create_sampler_view = fd4_sampler_view_create;
+	pctx->set_sampler_views = fd_set_sampler_views;
 }
