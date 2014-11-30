@@ -81,7 +81,6 @@ const struct brw_tracked_state gen8_vs_state = {
       .mesa  = _NEW_TRANSFORM,
       .brw   = BRW_NEW_BATCH |
                BRW_NEW_CONTEXT |
-               BRW_NEW_VERTEX_PROGRAM |
                BRW_NEW_VS_PROG_DATA,
    },
    .emit = upload_vs_state,
