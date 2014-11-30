@@ -115,12 +115,7 @@ upload_wm_state(struct brw_context *brw)
    dw5 |= GEN6_WM_LINE_AA_WIDTH_1_0;
    dw5 |= GEN6_WM_LINE_END_CAP_AA_WIDTH_0_5;
 
-   /* Use ALT floating point mode for ARB fragment programs, because they
-    * require 0^0 == 1.  Even though _CurrentFragmentProgram is used for
-    * rendering, CurrentProgram[MESA_SHADER_FRAGMENT] is used for this check
-    * to differentiate between the GLSL and non-GLSL cases.
-    */
-   if (ctx->_Shader->CurrentProgram[MESA_SHADER_FRAGMENT] == NULL)
+   if (prog_data->base.use_alt_mode)
       dw2 |= GEN6_WM_FLOATING_POINT_MODE_ALT;
 
    dw2 |= (ALIGN(brw->wm.base.sampler_count, 4) / 4) <<

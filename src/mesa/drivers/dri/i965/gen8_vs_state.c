@@ -39,10 +39,7 @@ upload_vs_state(struct brw_context *brw)
    /* BRW_NEW_VS_PROG_DATA */
    const struct brw_vec4_prog_data *prog_data = &brw->vs.prog_data->base;
 
-   /* Use ALT floating point mode for ARB vertex programs, because they
-    * require 0^0 == 1.
-    */
-   if (ctx->_Shader->CurrentProgram[MESA_SHADER_VERTEX] == NULL)
+   if (prog_data->base.use_alt_mode)
       floating_point_mode = GEN6_VS_FLOATING_POINT_MODE_ALT;
 
    BEGIN_BATCH(9);

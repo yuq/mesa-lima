@@ -182,6 +182,10 @@ bool do_wm_prog(struct brw_context *brw,
 
    prog_data.computed_depth_mode = computed_depth_mode(&fp->program);
 
+   /* Use ALT floating point mode for ARB programs so that 0^0 == 1. */
+   if (!prog)
+      prog_data.base.use_alt_mode = true;
+
    /* Allocate the references to the uniforms that will end up in the
     * prog_data associated with the compiled program, and which will be freed
     * by the state cache.

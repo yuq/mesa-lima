@@ -209,6 +209,10 @@ do_vs_prog(struct brw_context *brw,
    memcpy(&c.key, key, sizeof(*key));
    memset(&prog_data, 0, sizeof(prog_data));
 
+   /* Use ALT floating point mode for ARB programs so that 0^0 == 1. */
+   if (!prog)
+      stage_prog_data->use_alt_mode = true;
+
    mem_ctx = ralloc_context(NULL);
 
    c.vp = vp;

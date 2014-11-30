@@ -114,12 +114,7 @@ brw_upload_wm_unit(struct brw_context *brw)
 			(wm->wm9.grf_reg_count_2 << 1)) >> 6;
 
    wm->thread1.depth_coef_urb_read_offset = 1;
-   /* Use ALT floating point mode for ARB fragment programs, because they
-    * require 0^0 == 1.  Even though _CurrentFragmentProgram is used for
-    * rendering, CurrentProgram[MESA_SHADER_FRAGMENT] is used for this check
-    * to differentiate between the GLSL and non-GLSL cases.
-    */
-   if (ctx->_Shader->CurrentProgram[MESA_SHADER_FRAGMENT] == NULL)
+   if (prog_data->base.use_alt_mode)
       wm->thread1.floating_point_mode = BRW_FLOATING_POINT_NON_IEEE_754;
    else
       wm->thread1.floating_point_mode = BRW_FLOATING_POINT_IEEE_754;

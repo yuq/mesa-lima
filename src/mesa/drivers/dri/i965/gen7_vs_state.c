@@ -66,7 +66,6 @@ gen7_upload_constant_state(struct brw_context *brw,
 static void
 upload_vs_state(struct brw_context *brw)
 {
-   struct gl_context *ctx = &brw->ctx;
    const struct brw_stage_state *stage_state = &brw->vs.base;
    uint32_t floating_point_mode = 0;
    const int max_threads_shift = brw->is_haswell ?
@@ -75,10 +74,7 @@ upload_vs_state(struct brw_context *brw)
    if (!brw->is_haswell && !brw->is_baytrail)
       gen7_emit_vs_workaround_flush(brw);
 
-   /* Use ALT floating point mode for ARB vertex programs, because they
-    * require 0^0 == 1.
-    */
-   if (ctx->_Shader->CurrentProgram[MESA_SHADER_VERTEX] == NULL)
+   if (brw->vs.prog_data->base.base.use_alt_mode)
       floating_point_mode = GEN6_VS_FLOATING_POINT_MODE_ALT;
 
    BEGIN_BATCH(6);

@@ -141,12 +141,7 @@ upload_ps_state(struct brw_context *brw)
       ((prog_data->base.binding_table.size_bytes / 4) <<
        GEN7_PS_BINDING_TABLE_ENTRY_COUNT_SHIFT);
 
-   /* Use ALT floating point mode for ARB fragment programs, because they
-    * require 0^0 == 1.  Even though _CurrentFragmentProgram is used for
-    * rendering, CurrentFragmentProgram is used for this check to
-    * differentiate between the GLSL and non-GLSL cases.
-    */
-   if (ctx->_Shader->CurrentProgram[MESA_SHADER_FRAGMENT] == NULL)
+   if (prog_data->base.use_alt_mode)
       dw3 |= GEN7_PS_FLOATING_POINT_MODE_ALT;
 
    /* 3DSTATE_PS expects the number of threads per PSD, which is always 64;

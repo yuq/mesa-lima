@@ -355,6 +355,8 @@ struct brw_stage_prog_data {
     */
    unsigned dispatch_grf_start_reg;
 
+   bool use_alt_mode; /**< Use ALT floating point mode?  Otherwise, IEEE. */
+
    /* Pointers to tracked values (only valid once
     * _mesa_load_state_parameters has been called at runtime).
     *

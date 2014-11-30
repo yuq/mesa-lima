@@ -141,13 +141,7 @@ upload_ps_state(struct brw_context *brw)
    dw2 |= ((prog_data->base.binding_table.size_bytes / 4) <<
            GEN7_PS_BINDING_TABLE_ENTRY_COUNT_SHIFT);
 
-   /* Use ALT floating point mode for ARB fragment programs, because they
-    * require 0^0 == 1.  Even though _CurrentFragmentProgram is used for
-    * rendering, CurrentProgram[MESA_SHADER_FRAGMENT] is used for this check
-    * to differentiate between the GLSL and non-GLSL cases.
-    */
-   /* BRW_NEW_FRAGMENT_PROGRAM */
-   if (ctx->_Shader->CurrentProgram[MESA_SHADER_FRAGMENT] == NULL)
+   if (prog_data->base.use_alt_mode)
       dw2 |= GEN7_PS_FLOATING_POINT_MODE_ALT;
 
    /* Haswell requires the sample mask to be set in this packet as well as
