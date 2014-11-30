@@ -119,7 +119,7 @@ brw_upload_wm_unit(struct brw_context *brw)
     * rendering, CurrentProgram[MESA_SHADER_FRAGMENT] is used for this check
     * to differentiate between the GLSL and non-GLSL cases.
     */
-   if (ctx->Shader.CurrentProgram[MESA_SHADER_FRAGMENT] == NULL)
+   if (ctx->_Shader->CurrentProgram[MESA_SHADER_FRAGMENT] == NULL)
       wm->thread1.floating_point_mode = BRW_FLOATING_POINT_NON_IEEE_754;
    else
       wm->thread1.floating_point_mode = BRW_FLOATING_POINT_IEEE_754;

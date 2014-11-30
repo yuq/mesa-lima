@@ -146,7 +146,7 @@ upload_ps_state(struct brw_context *brw)
     * rendering, CurrentFragmentProgram is used for this check to
     * differentiate between the GLSL and non-GLSL cases.
     */
-   if (ctx->Shader.CurrentProgram[MESA_SHADER_FRAGMENT] == NULL)
+   if (ctx->_Shader->CurrentProgram[MESA_SHADER_FRAGMENT] == NULL)
       dw3 |= GEN7_PS_FLOATING_POINT_MODE_ALT;
 
    /* 3DSTATE_PS expects the number of threads per PSD, which is always 64;
