@@ -261,11 +261,44 @@ fd3_sampler_view_create(struct pipe_context *pctx, struct pipe_resource *prsc,
 	return &so->base;
 }
 
+static void
+fd3_set_sampler_views(struct pipe_context *pctx, unsigned shader,
+					  unsigned start, unsigned nr,
+					  struct pipe_sampler_view **views)
+{
+	struct fd_context *ctx = fd_context(pctx);
+	struct fd3_context *fd3_ctx = fd3_context(ctx);
+	struct fd_texture_stateobj *tex;
+	uint16_t integer_s = 0, *ptr;
+	int i;
+
+	fd_set_sampler_views(pctx, shader, start, nr, views);
+
+	switch (shader) {
+	case PIPE_SHADER_FRAGMENT:
+		tex = &ctx->fragtex;
+		ptr = &fd3_ctx->finteger_s;
+		break;
+	case PIPE_SHADER_VERTEX:
+		tex = &ctx->verttex;
+		ptr = &fd3_ctx->vinteger_s;
+		break;
+	default:
+		return;
+	}
+
+	for (i = 0; i < tex->num_textures; i++)
+		if (util_format_is_pure_integer(tex->textures[i]->format))
+			integer_s |= 1 << i;
+	*ptr = integer_s;
+}
+
+
 void
 fd3_texture_init(struct pipe_context *pctx)
 {
 	pctx->create_sampler_state = fd3_sampler_state_create;
 	pctx->bind_sampler_states = fd3_sampler_states_bind;
 	pctx->create_sampler_view = fd3_sampler_view_create;
-	pctx->set_sampler_views = fd_set_sampler_views;
+	pctx->set_sampler_views = fd3_set_sampler_views;
 }

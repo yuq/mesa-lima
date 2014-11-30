@@ -53,6 +53,7 @@ struct ir3_compile_context {
 	bool free_tokens;
 	struct ir3 *ir;
 	struct ir3_shader_variant *so;
+	uint16_t integer_s;
 
 	struct ir3_block *block;
 	struct ir3_instruction *current_instr;
@@ -159,11 +160,13 @@ compile_init(struct ir3_compile_context *ctx, struct ir3_shader_variant *so,
 		lconfig.saturate_s = so->key.fsaturate_s;
 		lconfig.saturate_t = so->key.fsaturate_t;
 		lconfig.saturate_r = so->key.fsaturate_r;
+		ctx->integer_s = so->key.finteger_s;
 		break;
 	case SHADER_VERTEX:
 		lconfig.saturate_s = so->key.vsaturate_s;
 		lconfig.saturate_t = so->key.vsaturate_t;
 		lconfig.saturate_r = so->key.vsaturate_r;
+		ctx->integer_s = so->key.vinteger_s;
 		break;
 	}
 
@@ -1345,7 +1348,10 @@ trans_samp(const struct instr_translater *t,
 	}
 
 	instr = instr_create(ctx, 5, t->opc);
-	instr->cat5.type = get_ftype(ctx);
+	if (ctx->integer_s & (1 << samp->Index))
+		instr->cat5.type = get_utype(ctx);
+	else
+		instr->cat5.type = get_ftype(ctx);
 	instr->cat5.samp = samp->Index;
 	instr->cat5.tex  = samp->Index;
 	instr->flags |= tinf.flags;
