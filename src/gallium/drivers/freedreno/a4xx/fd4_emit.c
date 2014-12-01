@@ -367,6 +367,9 @@ fd4_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 		OUT_PKT0(ring, REG_A4XX_GRAS_ALPHA_CONTROL, 1);
 		OUT_RING(ring, zsa->gras_alpha_control);
 
+		OUT_PKT0(ring, REG_A4XX_RB_ALPHA_CONTROL, 1);
+		OUT_RING(ring, zsa->rb_alpha_control);
+
 		OUT_PKT0(ring, REG_A4XX_RB_STENCIL_CONTROL, 2);
 		OUT_RING(ring, zsa->rb_stencil_control);
 		OUT_RING(ring, zsa->rb_stencil_control2);
@@ -486,6 +489,10 @@ fd4_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 			OUT_PKT0(ring, REG_A4XX_RB_MRT_BLEND_CONTROL(i), 1);
 			OUT_RING(ring, blend->rb_mrt[i].blend_control);
 		}
+
+		OUT_PKT0(ring, REG_A4XX_RB_FS_OUTPUT, 1);
+		OUT_RING(ring, blend->rb_fs_output |
+				A4XX_RB_FS_OUTPUT_SAMPLE_MASK(0xffff));
 	}
 
 	if (dirty & FD_DIRTY_VERTTEX) {

@@ -110,11 +110,13 @@ fd4_blend_state_create(struct pipe_context *pctx,
 				0xc00 | /* XXX ROP_CODE ?? */
 				A4XX_RB_MRT_CONTROL_COMPONENT_ENABLE(rt->colormask);
 
-		if (rt->blend_enable)
+		if (rt->blend_enable) {
 			so->rb_mrt[i].control |=
 					A4XX_RB_MRT_CONTROL_READ_DEST_ENABLE |
 					A4XX_RB_MRT_CONTROL_BLEND |
 					A4XX_RB_MRT_CONTROL_BLEND2;
+			so->rb_fs_output |= A4XX_RB_FS_OUTPUT_ENABLE_BLEND;
+		}
 
 		if (reads_dest)
 			so->rb_mrt[i].control |= A4XX_RB_MRT_CONTROL_READ_DEST_ENABLE;

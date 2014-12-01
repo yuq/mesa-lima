@@ -39,6 +39,7 @@ struct fd4_blend_stateobj {
 		uint32_t buf_info;
 		uint32_t blend_control;
 	} rb_mrt[8];
+	uint32_t rb_fs_output;
 };
 
 static INLINE struct fd4_blend_stateobj *
