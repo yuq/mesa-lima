@@ -51,9 +51,6 @@ fs_visitor::emit_nir_code()
    nir_opt_global_to_local(nir);
    nir_validate_shader(nir);
 
-   if (1)
-      nir_print_shader(nir, stderr);
-
    nir_convert_to_ssa(nir);
    nir_validate_shader(nir);
 
@@ -71,11 +68,9 @@ fs_visitor::emit_nir_code()
       progress |= nir_opt_peephole_ffma(nir);
       nir_validate_shader(nir);
    } while (progress);
-   nir_print_shader(nir, stderr);
 
    nir_convert_from_ssa(nir);
    nir_validate_shader(nir);
-   nir_print_shader(nir, stderr);
    nir_lower_vec_to_movs(nir);
    nir_validate_shader(nir);
 
