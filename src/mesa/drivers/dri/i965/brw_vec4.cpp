@@ -1813,7 +1813,6 @@ brw_vec4_setup_prog_key_for_precompile(struct gl_context *ctx,
                                        GLuint id, struct gl_program *prog)
 {
    key->program_string_id = id;
-   key->clamp_vertex_color = ctx->API == API_OPENGL_COMPAT;
 
    unsigned sampler_count = _mesa_fls(prog->SamplersUsed);
    for (unsigned i = 0; i < sampler_count; i++) {

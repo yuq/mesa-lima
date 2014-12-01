@@ -380,7 +380,7 @@ brw_vs_debug_recompile(struct brw_context *brw,
    found |= key_debug(brw, "PointCoord replace",
                       old_key->point_coord_replace, key->point_coord_replace);
    found |= key_debug(brw, "vertex color clamping",
-                      old_key->base.clamp_vertex_color, key->base.clamp_vertex_color);
+                      old_key->clamp_vertex_color, key->clamp_vertex_color);
 
    found |= brw_debug_recompile_sampler_key(brw, &old_key->base.tex,
                                             &key->base.tex);
@@ -432,7 +432,7 @@ static void brw_upload_vs_prog(struct brw_context *brw)
    }
 
    /* _NEW_LIGHT | _NEW_BUFFERS */
-   key.base.clamp_vertex_color = ctx->Light._ClampVertexColor;
+   key.clamp_vertex_color = ctx->Light._ClampVertexColor;
 
    /* _NEW_POINT */
    if (brw->gen < 6 && ctx->Point.PointSprite) {
@@ -541,6 +541,7 @@ brw_vs_precompile(struct gl_context *ctx,
    memset(&key, 0, sizeof(key));
 
    brw_vec4_setup_prog_key_for_precompile(ctx, &key.base, bvp->id, &vp->Base);
+   key.clamp_vertex_color = ctx->API == API_OPENGL_COMPAT;
 
    success = do_vs_prog(brw, shader_prog, bvp, &key);
 

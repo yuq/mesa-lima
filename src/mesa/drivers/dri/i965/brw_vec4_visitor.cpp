@@ -3104,8 +3104,13 @@ vec4_visitor::emit_urb_slot(dst_reg reg, int varying)
    case VARYING_SLOT_COL1:
    case VARYING_SLOT_BFC0:
    case VARYING_SLOT_BFC1: {
+      /* These built-in varyings are only supported in compatibility mode,
+       * and we only support GS in core profile.  So, this must be a vertex
+       * shader.
+       */
+      assert(stage == MESA_SHADER_VERTEX);
       vec4_instruction *inst = emit_generic_urb_slot(reg, varying);
-      if (key->clamp_vertex_color)
+      if (((struct brw_vs_prog_key *) key)->clamp_vertex_color)
          inst->saturate = true;
       break;
    }

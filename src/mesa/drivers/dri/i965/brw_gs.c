@@ -333,9 +333,6 @@ brw_upload_gs_prog(struct brw_context *brw)
    brw_setup_vec4_key_clip_info(brw, &key.base,
                                 gp->program.Base.UsesClipDistanceOut);
 
-   /* _NEW_LIGHT | _NEW_BUFFERS */
-   key.base.clamp_vertex_color = ctx->Light._ClampVertexColor;
-
    /* _NEW_TEXTURE */
    brw_populate_sampler_prog_key_data(ctx, prog, stage_state->sampler_count,
                                       &key.base.tex);
@@ -364,9 +361,7 @@ brw_upload_gs_prog(struct brw_context *brw)
 
 const struct brw_tracked_state brw_gs_prog = {
    .dirty = {
-      .mesa  = _NEW_BUFFERS |
-               _NEW_LIGHT |
-               _NEW_TEXTURE,
+      .mesa  = _NEW_TEXTURE,
       .brw   = BRW_NEW_GEOMETRY_PROGRAM |
                BRW_NEW_TRANSFORM_FEEDBACK |
                BRW_NEW_VUE_MAP_VS,

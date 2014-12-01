@@ -93,8 +93,6 @@ struct brw_vec4_prog_key {
     */
    unsigned nr_userclip_plane_consts:4;
 
-   bool clamp_vertex_color:1;
-
    struct brw_sampler_prog_key_data tex;
 };
 
@@ -108,6 +106,8 @@ struct brw_vs_prog_key {
    uint8_t gl_attrib_wa_flags[VERT_ATTRIB_MAX];
 
    bool copy_edgeflag:1;
+
+   bool clamp_vertex_color:1;
 
    /**
     * For pre-Gen6 hardware, a bitfield indicating which texture coordinates
