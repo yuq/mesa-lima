@@ -3055,22 +3055,14 @@ vec4_visitor::emit_clip_distances(dst_reg reg, int offset)
    }
 }
 
-void
+vec4_instruction *
 vec4_visitor::emit_generic_urb_slot(dst_reg reg, int varying)
 {
    assert (varying < VARYING_SLOT_MAX);
    reg.type = output_reg[varying].type;
    current_annotation = output_reg_annotation[varying];
    /* Copy the register, saturating if necessary */
-   vec4_instruction *inst = emit(MOV(reg,
-                                     src_reg(output_reg[varying])));
-   if ((varying == VARYING_SLOT_COL0 ||
-        varying == VARYING_SLOT_COL1 ||
-        varying == VARYING_SLOT_BFC0 ||
-        varying == VARYING_SLOT_BFC1) &&
-       key->clamp_vertex_color) {
-      inst->saturate = true;
-   }
+   return emit(MOV(reg, src_reg(output_reg[varying])));
 }
 
 void
@@ -3108,6 +3100,16 @@ vec4_visitor::emit_urb_slot(dst_reg reg, int varying)
    case BRW_VARYING_SLOT_PAD:
       /* No need to write to this slot */
       break;
+   case VARYING_SLOT_COL0:
+   case VARYING_SLOT_COL1:
+   case VARYING_SLOT_BFC0:
+   case VARYING_SLOT_BFC1: {
+      vec4_instruction *inst = emit_generic_urb_slot(reg, varying);
+      if (key->clamp_vertex_color)
+         inst->saturate = true;
+      break;
+   }
+
    default:
       emit_generic_urb_slot(reg, varying);
       break;
