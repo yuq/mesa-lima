@@ -38,14 +38,12 @@ void fd4_draw_init(struct pipe_context *pctx);
 /* draw packet changed on a4xx, so cannot reuse one from a2xx/a3xx.. */
 
 static inline uint32_t DRAW4(enum pc_di_primtype prim_type,
-		enum pc_di_src_sel source_select, enum pc_di_index_size index_size,
+		enum pc_di_src_sel source_select, enum a4xx_index_size index_size,
 		enum pc_di_vis_cull_mode vis_cull_mode)
 {
 	return (prim_type         << 0) |
 			(source_select     << 6) |
-			((index_size & 1)  << 11) |
-			((index_size >> 1) << 13) |
-			(vis_cull_mode     << 8);
+			(index_size        << 10);
 }
 
 static inline void
@@ -53,7 +51,7 @@ fd4_draw(struct fd_context *ctx, struct fd_ringbuffer *ring,
 		enum pc_di_primtype primtype,
 		enum pc_di_vis_cull_mode vismode,
 		enum pc_di_src_sel src_sel, uint32_t count,
-		enum pc_di_index_size idx_type,
+		enum a4xx_index_size idx_type,
 		uint32_t idx_size, uint32_t idx_offset,
 		struct fd_bo *idx_bo)
 {
@@ -88,6 +86,19 @@ fd4_draw(struct fd_context *ctx, struct fd_ringbuffer *ring,
 	fd_reset_wfi(ctx);
 }
 
+
+static inline enum pc_di_index_size
+fd4_size2indextype(unsigned index_size)
+{
+	switch (index_size) {
+	case 1: return INDEX4_SIZE_8_BIT;
+	case 2: return INDEX4_SIZE_16_BIT;
+	case 4: return INDEX4_SIZE_32_BIT;
+	}
+	DBG("unsupported index size: %d", index_size);
+	assert(0);
+	return INDEX4_SIZE_32_BIT;
+}
 static inline void
 fd4_draw_emit(struct fd_context *ctx, struct fd_ringbuffer *ring,
 		enum pc_di_vis_cull_mode vismode,
@@ -95,7 +106,7 @@ fd4_draw_emit(struct fd_context *ctx, struct fd_ringbuffer *ring,
 {
 	struct pipe_index_buffer *idx = &ctx->indexbuf;
 	struct fd_bo *idx_bo = NULL;
-	enum pc_di_index_size idx_type = INDEX_SIZE_IGN;
+	enum a4xx_index_size idx_type;
 	enum pc_di_src_sel src_sel;
 	uint32_t idx_size, idx_offset;
 
@@ -103,13 +114,13 @@ fd4_draw_emit(struct fd_context *ctx, struct fd_ringbuffer *ring,
 		assert(!idx->user_buffer);
 
 		idx_bo = fd_resource(idx->buffer)->bo;
-		idx_type = size2indextype(idx->index_size);
+		idx_type = fd4_size2indextype(idx->index_size);
 		idx_size = idx->index_size * info->count;
 		idx_offset = idx->offset + (info->start * idx->index_size);
 		src_sel = DI_SRC_SEL_DMA;
 	} else {
 		idx_bo = NULL;
-		idx_type = INDEX_SIZE_IGN;
+		idx_type = INDEX4_SIZE_32_BIT;
 		idx_size = 0;
 		idx_offset = 0;
 		src_sel = DI_SRC_SEL_AUTO_INDEX;
