@@ -614,15 +614,13 @@ nir_visitor::visit(ir_call *ir)
          assert(0);
       }
 
-      nir_register *reg = nir_local_reg_create(impl);
-      reg->num_components = 1;
-
       nir_intrinsic_instr *instr = nir_intrinsic_instr_create(shader, op);
       ir_dereference *param =
          (ir_dereference *) ir->actual_parameters.get_head();
       param->accept(this);
       instr->variables[0] = this->deref_head;
-      instr->dest.reg.reg = reg;
+      instr->dest.is_ssa = true;
+      nir_ssa_def_init(&instr->instr, &instr->dest.ssa, 1, NULL);
 
       nir_instr_insert_after_cf_list(this->cf_node_list, &instr->instr);
 
@@ -631,7 +629,8 @@ nir_visitor::visit(ir_call *ir)
 
       ir->return_deref->accept(this);
       store_instr->variables[0] = this->deref_head;
-      store_instr->src[0].reg.reg = reg;
+      store_instr->src[0].is_ssa = true;
+      store_instr->src[0].ssa = &instr->dest.ssa;
 
       nir_instr_insert_after_cf_list(this->cf_node_list, &store_instr->instr);
 
@@ -660,81 +659,11 @@ nir_visitor::visit(ir_call *ir)
 void
 nir_visitor::visit(ir_assignment *ir)
 {
-   if (ir->write_mask != (1 << ir->lhs->type->vector_elements) - 1 &&
-       ir->write_mask != 0) {
-      /*
-       * We have no good way to update only part of a variable, so just load
-       * the LHS into a register, do a writemasked move, and then store it
-       * back into the LHS. Copy propagation should get rid of the mess.
-       */
+   unsigned num_components = ir->lhs->type->vector_elements;
 
-      ir->lhs->accept(this);
-      nir_deref_var *lhs_deref = this->deref_head;
-      nir_register *reg = nir_local_reg_create(this->impl);
-      reg->num_components = ir->lhs->type->vector_elements;
-
-      nir_intrinsic_op op;
-      switch (ir->lhs->type->vector_elements) {
-         case 1: op = nir_intrinsic_load_var_vec1; break;
-         case 2: op = nir_intrinsic_load_var_vec2; break;
-         case 3: op = nir_intrinsic_load_var_vec3; break;
-         case 4: op = nir_intrinsic_load_var_vec4; break;
-         default: assert(0); break;
-      }
-
-      nir_intrinsic_instr *load = nir_intrinsic_instr_create(this->shader, op);
-      load->dest.reg.reg = reg;
-      load->variables[0] = lhs_deref;
-      nir_instr_insert_after_cf_list(this->cf_node_list, &load->instr);
-
-      nir_alu_instr *move =
-         nir_alu_instr_create(this->shader,
-                              supports_ints ? nir_op_fmov : nir_op_imov);
-      move->dest.dest.reg.reg = reg;
-      move->dest.write_mask = ir->write_mask;
-      move->src[0].src = evaluate_rvalue(ir->rhs);
-
-      /*
-       * GLSL IR will give us the input to the write-masked assignment in a
-       * single packed vector, whereas we expect each input component to be in
-       * the same channel as the writemask. So, for example, if the writemask
-       * is xzw, then we have to swizzle x -> x, y -> z, and z -> w.
-       */
-
-      unsigned component = 0;
-      for (unsigned i = 0; i < 4; i++) {
-         if ((ir->write_mask >> i) & 1) {
-            move->src[0].swizzle[i] = component++;
-         } else {
-            move->src[0].swizzle[i] = 0;
-         }
-      }
-
-      if (ir->condition != NULL) {
-         move->has_predicate = true;
-         move->predicate = evaluate_rvalue(ir->condition);
-      }
-
-      nir_instr_insert_after_cf_list(this->cf_node_list, &move->instr);
-
-      switch (ir->lhs->type->vector_elements) {
-         case 1: op = nir_intrinsic_store_var_vec1; break;
-         case 2: op = nir_intrinsic_store_var_vec2; break;
-         case 3: op = nir_intrinsic_store_var_vec3; break;
-         case 4: op = nir_intrinsic_store_var_vec4; break;
-         default: assert(0); break;
-      }
-
-      nir_intrinsic_instr *store = nir_intrinsic_instr_create(this->shader, op);
-      nir_deref *store_deref = nir_copy_deref(this->shader, &lhs_deref->deref);
-      store->variables[0] = nir_deref_as_var(store_deref);
-      store->src[0].reg.reg = reg;
-      nir_instr_insert_after_cf_list(this->cf_node_list, &store->instr);
-      return;
-   }
-
-   if (ir->rhs->as_dereference() || ir->rhs->as_constant()) {
-      /* we're copying structs or arrays, so emit a copy_var */
+   if ((ir->rhs->as_dereference() || ir->rhs->as_constant()) &&
+       (ir->write_mask == (1 << num_components) - 1 || ir->write_mask == 0)) {
+      /* We're doing a plain-as-can-be copy, so emit a copy_var */
       nir_intrinsic_instr *copy =
          nir_intrinsic_instr_create(this->shader, nir_intrinsic_copy_var);
 
@@ -744,37 +673,110 @@ nir_visitor::visit(ir_assignment *ir)
       ir->rhs->accept(this);
       copy->variables[1] = this->deref_head;
 
-      if (ir->condition != NULL) {
-         copy->has_predicate = true;
-         copy->predicate = evaluate_rvalue(ir->condition);
+
+      if (ir->condition) {
+         nir_if *if_stmt = nir_if_create(this->shader);
+         if_stmt->condition = evaluate_rvalue(ir->condition);
+         nir_cf_node_insert_end(this->cf_node_list, &if_stmt->cf_node);
+         nir_instr_insert_after_cf_list(&if_stmt->then_list, &copy->instr);
+      } else {
+         nir_instr_insert_after_cf_list(this->cf_node_list, &copy->instr);
       }
-      nir_instr_insert_after_cf_list(this->cf_node_list, &copy->instr);
       return;
    }
 
    assert(ir->rhs->type->is_scalar() || ir->rhs->type->is_vector());
 
-   nir_intrinsic_op op;
-   switch (ir->lhs->type->vector_elements) {
-      case 1: op = nir_intrinsic_store_var_vec1; break;
-      case 2: op = nir_intrinsic_store_var_vec2; break;
-      case 3: op = nir_intrinsic_store_var_vec3; break;
-      case 4: op = nir_intrinsic_store_var_vec4; break;
-      default: assert(0); break;
-   }
-
-   nir_intrinsic_instr *store = nir_intrinsic_instr_create(this->shader, op);
-
    ir->lhs->accept(this);
-   store->variables[0] = this->deref_head;
-   store->src[0] = evaluate_rvalue(ir->rhs);
+   nir_deref_var *lhs_deref = this->deref_head;
+   nir_src src = evaluate_rvalue(ir->rhs);
 
-   if (ir->condition != NULL) {
-      store->has_predicate = true;
-      store->predicate = evaluate_rvalue(ir->condition);
+   if (ir->write_mask != (1 << num_components) - 1 && ir->write_mask != 0) {
+      /*
+       * We have no good way to update only part of a variable, so just load
+       * the LHS and do a vec operation to combine the old with the new, and
+       * then store it
+       * back into the LHS. Copy propagation should get rid of the mess.
+       */
+
+      nir_intrinsic_op load_op;
+      switch (ir->lhs->type->vector_elements) {
+         case 1: load_op = nir_intrinsic_load_var_vec1; break;
+         case 2: load_op = nir_intrinsic_load_var_vec2; break;
+         case 3: load_op = nir_intrinsic_load_var_vec3; break;
+         case 4: load_op = nir_intrinsic_load_var_vec4; break;
+         default: unreachable("Invalid number of components"); break;
+      }
+
+      nir_intrinsic_instr *load = nir_intrinsic_instr_create(this->shader,
+                                                             load_op);
+      load->dest.is_ssa = true;
+      nir_ssa_def_init(&load->instr, &load->dest.ssa,
+                       num_components, NULL);
+      load->variables[0] = lhs_deref;
+      nir_instr_insert_after_cf_list(this->cf_node_list, &load->instr);
+
+      nir_op vec_op;
+      switch (ir->lhs->type->vector_elements) {
+         case 1: vec_op = nir_op_imov; break;
+         case 2: vec_op = nir_op_vec2; break;
+         case 3: vec_op = nir_op_vec3; break;
+         case 4: vec_op = nir_op_vec4; break;
+         default: unreachable("Invalid number of components"); break;
+      }
+      nir_alu_instr *vec = nir_alu_instr_create(this->shader, vec_op);
+      vec->dest.dest.is_ssa = true;
+      nir_ssa_def_init(&vec->instr, &vec->dest.dest.ssa,
+                       num_components, NULL);
+      vec->dest.write_mask = (1 << num_components) - 1;
+
+      unsigned component = 0;
+      for (unsigned i = 0; i < ir->lhs->type->vector_elements; i++) {
+         if (ir->write_mask & (1 << i)) {
+            vec->src[i].src = src;
+
+            /* GLSL IR will give us the input to the write-masked assignment
+             * in a single packed vector.  So, for example, if the
+             * writemask is xzw, then we have to swizzle x -> x, y -> z,
+             * and z -> w and get the y component from the load.
+             */
+            vec->src[i].swizzle[0] = component++;
+         } else {
+            vec->src[i].src.is_ssa = true;
+            vec->src[i].src.ssa = &load->dest.ssa;
+            vec->src[i].swizzle[0] = i;
+         }
+      }
+
+      nir_instr_insert_after_cf_list(this->cf_node_list, &vec->instr);
+
+      src.is_ssa = true;
+      src.ssa = &vec->dest.dest.ssa;
    }
 
-   nir_instr_insert_after_cf_list(this->cf_node_list, &store->instr);
+   nir_intrinsic_op store_op;
+   switch (ir->lhs->type->vector_elements) {
+      case 1: store_op = nir_intrinsic_store_var_vec1; break;
+      case 2: store_op = nir_intrinsic_store_var_vec2; break;
+      case 3: store_op = nir_intrinsic_store_var_vec3; break;
+      case 4: store_op = nir_intrinsic_store_var_vec4; break;
+      default: unreachable("Invalid number of components"); break;
+   }
+
+   nir_intrinsic_instr *store = nir_intrinsic_instr_create(this->shader,
+                                                           store_op);
+   nir_deref *store_deref = nir_copy_deref(this->shader, &lhs_deref->deref);
+   store->variables[0] = nir_deref_as_var(store_deref);
+   store->src[0] = src;
+
+   if (ir->condition) {
+      nir_if *if_stmt = nir_if_create(this->shader);
+      if_stmt->condition = evaluate_rvalue(ir->condition);
+      nir_cf_node_insert_end(this->cf_node_list, &if_stmt->cf_node);
+      nir_instr_insert_after_cf_list(&if_stmt->then_list, &store->instr);
+   } else {
+      nir_instr_insert_after_cf_list(this->cf_node_list, &store->instr);
+   }
 }
 
 /*
@@ -824,8 +826,8 @@ nir_visitor::add_instr(nir_instr *instr, unsigned num_components)
 {
    nir_dest *dest = get_instr_dest(instr);
 
-   dest->reg.reg = nir_local_reg_create(this->impl);
-   dest->reg.reg->num_components = num_components;
+   dest->is_ssa = true;
+   nir_ssa_def_init(instr, &dest->ssa, num_components, NULL);
 
    nir_instr_insert_after_cf_list(this->cf_node_list, instr);
    this->result = instr;
@@ -841,43 +843,27 @@ nir_visitor::evaluate_rvalue(ir_rvalue* ir)
        * must emit a variable load.
        */
 
-      nir_intrinsic_op op;
+      nir_intrinsic_op load_op;
       switch (ir->type->vector_elements) {
-         case 1:
-            op = nir_intrinsic_load_var_vec1;
-            break;
-         case 2:
-            op = nir_intrinsic_load_var_vec2;
-            break;
-         case 3:
-            op = nir_intrinsic_load_var_vec3;
-            break;
-         case 4:
-            op = nir_intrinsic_load_var_vec4;
-            break;
+      case 1: load_op = nir_intrinsic_load_var_vec1; break;
+      case 2: load_op = nir_intrinsic_load_var_vec2; break;
+      case 3: load_op = nir_intrinsic_load_var_vec3; break;
+      case 4: load_op = nir_intrinsic_load_var_vec4; break;
+      default: unreachable("Invalid number of components");
       }
 
       nir_intrinsic_instr *load_instr =
-         nir_intrinsic_instr_create(this->shader, op);
+         nir_intrinsic_instr_create(this->shader, load_op);
       load_instr->variables[0] = this->deref_head;
       add_instr(&load_instr->instr, ir->type->vector_elements);
    }
 
-   /*
-    * instr doesn't have a destination right now, give it one and then set up
-    * the source so that it points to it.
-    *
-    * TODO: once we support SSA plumb through a use_ssa boolean and use SSA
-    * here instead of creating a register.
-    */
    nir_dest *dest = get_instr_dest(this->result);
-   assert(dest->reg.reg);
-   nir_src src;
 
-   src.is_ssa = false;
-   src.reg.base_offset = 0;
-   src.reg.indirect = NULL;
-   src.reg.reg = dest->reg.reg;
+   assert(dest->is_ssa);
+   nir_src src;
+   src.is_ssa = true;
+   src.ssa = &dest->ssa;
 
    return src;
 }
@@ -959,13 +945,15 @@ nir_visitor::visit(ir_expression *ir)
          nir_load_const_instr *const_zero = nir_load_const_instr_create(shader);
          const_zero->num_components = 1;
          const_zero->value.u[0] = 0;
-         const_zero->dest.reg.reg = nir_local_reg_create(this->impl);
-         const_zero->dest.reg.reg->num_components = 1;
+         const_zero->dest.is_ssa = true;
+         nir_ssa_def_init(&const_zero->instr, &const_zero->dest.ssa, 1, NULL);
          nir_instr_insert_after_cf_list(this->cf_node_list, &const_zero->instr);
 
          nir_alu_instr *compare = nir_alu_instr_create(shader, nir_op_ine);
-         compare->src[0].src.reg.reg = load->dest.reg.reg;
-         compare->src[1].src.reg.reg = const_zero->dest.reg.reg;
+         compare->src[0].src.is_ssa = true;
+         compare->src[0].src.ssa = &load->dest.ssa;
+         compare->src[1].src.is_ssa = true;
+         compare->src[1].src.ssa = &const_zero->dest.ssa;
          for (unsigned i = 0; i < ir->type->vector_elements; i++)
             compare->src[1].swizzle[i] = 0;
          compare->dest.write_mask = (1 << ir->type->vector_elements) - 1;
