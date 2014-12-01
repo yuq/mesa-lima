@@ -524,15 +524,6 @@ This instruction replicates its result.
   dst.w = (src0.w != src1.w) ? 1.0F : 0.0F
 
 
-.. opcode:: STR - Set On True
-
-This instruction replicates its result.
-
-.. math::
-
-  dst = 1.0F
-
-
 .. opcode:: TEX - Texture Lookup
 
   for array textures src0.y contains the slice for 1D,
