@@ -1020,10 +1020,12 @@ vec4_visitor::visit(ir_variable *ir)
 
    switch (ir->data.mode) {
    case ir_var_shader_in:
+      assert(ir->data.location != -1);
       reg = new(mem_ctx) dst_reg(ATTR, ir->data.location);
       break;
 
    case ir_var_shader_out:
+      assert(ir->data.location != -1);
       reg = new(mem_ctx) dst_reg(this, ir->type);
 
       for (int i = 0; i < type_size(ir->type); i++) {
