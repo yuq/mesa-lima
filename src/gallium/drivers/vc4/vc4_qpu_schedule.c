@@ -465,7 +465,8 @@ get_instruction_priority(uint64_t inst)
 
 static struct schedule_node *
 choose_instruction_to_schedule(struct choose_scoreboard *scoreboard,
-                               struct simple_node *schedule_list)
+                               struct simple_node *schedule_list,
+                               uint64_t prev_inst)
 {
         struct schedule_node *chosen = NULL;
         struct simple_node *node;
@@ -489,6 +490,15 @@ choose_instruction_to_schedule(struct choose_scoreboard *scoreboard,
                  */
                 if (pixel_scoreboard_too_soon(scoreboard, inst))
                         continue;
+
+                /* If we're trying to pair with another instruction, check
+                 * that they're compatible.
+                 */
+                if (prev_inst != 0) {
+                        inst = qpu_merge_inst(prev_inst, inst);
+                        if (!inst)
+                                continue;
+                }
 
                 int prio = get_instruction_priority(inst);
 
@@ -571,6 +581,23 @@ compute_delay(struct schedule_node *n)
 }
 
 static void
+mark_instruction_scheduled(struct simple_node *schedule_list,
+                           struct schedule_node *node)
+{
+        if (!node)
+                return;
+
+        for (int i = node->child_count - 1; i >= 0; i--) {
+                struct schedule_node *child =
+                        node->children[i];
+
+                child->parent_count--;
+                if (child->parent_count == 0)
+                        insert_at_head(schedule_list, &child->link);
+        }
+}
+
+static void
 schedule_instructions(struct vc4_compile *c, struct simple_node *schedule_list)
 {
         struct simple_node *node, *t;
@@ -598,7 +625,9 @@ schedule_instructions(struct vc4_compile *c, struct simple_node *schedule_list)
         while (!is_empty_list(schedule_list)) {
                 struct schedule_node *chosen =
                         choose_instruction_to_schedule(&scoreboard,
-                                                       schedule_list);
+                                                       schedule_list,
+                                                       0);
+                struct schedule_node *merge = NULL;
 
                 /* If there are no valid instructions to schedule, drop a NOP
                  * in.
@@ -610,12 +639,38 @@ schedule_instructions(struct vc4_compile *c, struct simple_node *schedule_list)
                         dump_state(schedule_list);
                         fprintf(stderr, "chose: ");
                         vc4_qpu_disasm(&inst, 1);
-                        fprintf(stderr, "\n\n");
+                        fprintf(stderr, "\n");
                 }
 
-                /* Schedule this instruction onto the QPU list. */
-                if (chosen)
+                /* Schedule this instruction onto the QPU list. Also try to
+                 * find an instruction to pair with it.
+                 */
+                if (chosen) {
                         remove_from_list(&chosen->link);
+
+                        merge = choose_instruction_to_schedule(&scoreboard,
+                                                               schedule_list,
+                                                               inst);
+                        if (merge) {
+                                remove_from_list(&merge->link);
+                                inst = qpu_merge_inst(inst, merge->inst->inst);
+                                assert(inst != 0);
+
+                                if (debug) {
+                                        fprintf(stderr, "merging: ");
+                                        vc4_qpu_disasm(&merge->inst->inst, 1);
+                                        fprintf(stderr, "\n");
+                                        fprintf(stderr, "resulting in: ");
+                                        vc4_qpu_disasm(&inst, 1);
+                                        fprintf(stderr, "\n");
+                                }
+                        }
+                }
+
+                if (debug) {
+                        fprintf(stderr, "\n");
+                }
+
                 qpu_serialize_one_inst(c, inst);
 
                 update_scoreboard_for_chosen(&scoreboard, inst);
@@ -625,18 +680,8 @@ schedule_instructions(struct vc4_compile *c, struct simple_node *schedule_list)
                  * be scheduled.  Update the children's unblocked time for this
                  * DAG edge as we do so.
                  */
-                if (chosen) {
-                        for (int i = chosen->child_count - 1; i >= 0; i--) {
-                                struct schedule_node *child =
-                                        chosen->children[i];
-
-                                child->parent_count--;
-                                if (child->parent_count == 0) {
-                                        insert_at_head(schedule_list,
-                                                       &child->link);
-                                }
-                        }
-                }
+                mark_instruction_scheduled(schedule_list, chosen);
+                mark_instruction_scheduled(schedule_list, merge);
 
                 scoreboard.tick++;
         }

@@ -129,7 +129,7 @@ uint64_t qpu_a_alu2(enum qpu_op_add op, struct qpu_reg dst,
                     struct qpu_reg src0, struct qpu_reg src1);
 uint64_t qpu_m_alu2(enum qpu_op_mul op, struct qpu_reg dst,
                     struct qpu_reg src0, struct qpu_reg src1);
-uint64_t qpu_inst(uint64_t add, uint64_t mul);
+uint64_t qpu_merge_inst(uint64_t a, uint64_t b);
 uint64_t qpu_load_imm_ui(struct qpu_reg dst, uint32_t val);
 uint64_t qpu_set_sig(uint64_t inst, uint32_t sig);
 uint64_t qpu_set_cond_add(uint64_t inst, uint32_t cond);

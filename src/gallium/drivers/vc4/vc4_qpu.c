@@ -192,36 +192,58 @@ qpu_m_alu2(enum qpu_op_mul op,
         return inst;
 }
 
-static uint64_t
-merge_fields(uint64_t merge,
-             uint64_t add, uint64_t mul,
+static bool
+merge_fields(uint64_t *merge,
+             uint64_t a, uint64_t b,
              uint64_t mask, uint64_t ignore)
 {
-        if ((add & mask) == ignore)
-                return (merge & ~mask) | (mul & mask);
-        else if ((mul & mask) == ignore)
-                return (merge & ~mask) | (add & mask);
-        else {
-                assert((add & mask) == (mul & mask));
-                return merge;
+        if ((a & mask) == ignore) {
+                *merge = (*merge & ~mask) | (b & mask);
+        } else if ((b & mask) == ignore) {
+                *merge = (*merge & ~mask) | (a & mask);
+        } else {
+                if ((a & mask) != (b & mask))
+                        return false;
         }
+
+        return true;
 }
 
 uint64_t
-qpu_inst(uint64_t add, uint64_t mul)
+qpu_merge_inst(uint64_t a, uint64_t b)
 {
-        uint64_t merge = ((add & ~QPU_WADDR_MUL_MASK) |
-                          (mul & ~QPU_WADDR_ADD_MASK));
+        uint64_t merge = a | b;
+        bool ok = true;
 
-        merge = merge_fields(merge, add, mul, QPU_SIG_MASK,
-                             QPU_SET_FIELD(QPU_SIG_NONE, QPU_SIG));
+        if (QPU_GET_FIELD(a, QPU_OP_ADD) != QPU_A_NOP &&
+            QPU_GET_FIELD(b, QPU_OP_ADD) != QPU_A_NOP)
+                return 0;
 
-        merge = merge_fields(merge, add, mul, QPU_RADDR_A_MASK,
-                             QPU_SET_FIELD(QPU_R_NOP, QPU_RADDR_A));
-        merge = merge_fields(merge, add, mul, QPU_RADDR_B_MASK,
-                             QPU_SET_FIELD(QPU_R_NOP, QPU_RADDR_B));
+        if (QPU_GET_FIELD(a, QPU_OP_MUL) != QPU_M_NOP &&
+            QPU_GET_FIELD(b, QPU_OP_MUL) != QPU_M_NOP)
+                return 0;
 
-        return merge;
+        ok = ok && merge_fields(&merge, a, b, QPU_SIG_MASK,
+                                QPU_SET_FIELD(QPU_SIG_NONE, QPU_SIG));
+
+        /* Misc fields that have to match exactly. */
+        ok = ok && merge_fields(&merge, a, b, QPU_SF | QPU_WS | QPU_PM,
+                                ~0);
+
+        ok = ok && merge_fields(&merge, a, b, QPU_RADDR_A_MASK,
+                                QPU_SET_FIELD(QPU_R_NOP, QPU_RADDR_A));
+        ok = ok && merge_fields(&merge, a, b, QPU_RADDR_B_MASK,
+                                QPU_SET_FIELD(QPU_R_NOP, QPU_RADDR_B));
+
+        ok = ok && merge_fields(&merge, a, b, QPU_WADDR_ADD_MASK,
+                                QPU_SET_FIELD(QPU_W_NOP, QPU_WADDR_ADD));
+        ok = ok && merge_fields(&merge, a, b, QPU_WADDR_MUL_MASK,
+                                QPU_SET_FIELD(QPU_W_NOP, QPU_WADDR_MUL));
+
+        if (ok)
+                return merge;
+        else
+                return 0;
 }
 
 uint64_t
