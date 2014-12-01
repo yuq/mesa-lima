@@ -1010,13 +1010,12 @@ update_if_uses(nir_cf_node *node)
       return;
 
    nir_if *if_stmt = nir_cf_node_as_if(node);
-   if (if_stmt->condition.is_ssa)
-      return;
 
-   nir_register *reg = if_stmt->condition.reg.reg;
-   assert(reg != NULL);
+   struct set *if_uses_set = if_stmt->condition.is_ssa ?
+                             if_stmt->condition.ssa->if_uses :
+                             if_stmt->condition.reg.reg->uses;
 
-   _mesa_set_add(reg->if_uses, _mesa_hash_pointer(if_stmt), if_stmt);
+   _mesa_set_add(if_uses_set, _mesa_hash_pointer(if_stmt), if_stmt);
 }
 
 void
