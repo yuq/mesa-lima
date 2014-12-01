@@ -185,12 +185,12 @@ static INLINE void
 graw_util_viewport(struct graw_info *info,
                    float x, float y,
                    float width, float height,
-                   float near, float far)
+                   float zNear, float zFar)
 {
-   float z = near;
+   float z = zNear;
    float half_width = width / 2.0f;
    float half_height = height / 2.0f;
-   float half_depth = (far - near) / 2.0f;
+   float half_depth = (zFar - zNear) / 2.0f;
    struct pipe_viewport_state vp;
 
    vp.scale[0] = half_width;

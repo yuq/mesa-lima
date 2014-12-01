@@ -80,12 +80,12 @@ static ushort indices[3] = { 0, 2, 1 };
 
 static void set_viewport( float x, float y,
                           float width, float height,
-                          float near, float far)
+                          float zNear, float zFar)
 {
-   float z = far;
+   float z = zFar;
    float half_width = (float)width / 2.0f;
    float half_height = (float)height / 2.0f;
-   float half_depth = ((float)far - (float)near) / 2.0f;
+   float half_depth = ((float)zFar - (float)zNear) / 2.0f;
    struct pipe_viewport_state vp;
 
    vp.scale[0] = half_width;
