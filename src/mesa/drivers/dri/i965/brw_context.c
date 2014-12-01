@@ -630,9 +630,6 @@ brw_process_driconf_options(struct brw_context *brw)
       brw->disable_throttling = true;
    }
 
-   brw->disable_derivative_optimization =
-      driQueryOptionb(&brw->optionCache, "disable_derivative_optimization");
-
    brw->precompile = driQueryOptionb(&brw->optionCache, "shader_precompile");
 
    ctx->Const.ForceGLSLExtensionsWarn =

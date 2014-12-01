@@ -468,13 +468,8 @@ static void brw_wm_populate_key( struct brw_context *brw,
    key->line_aa = line_aa;
 
    /* _NEW_HINT */
-   if (brw->disable_derivative_optimization) {
-      key->high_quality_derivatives =
-         ctx->Hint.FragmentShaderDerivative != GL_FASTEST;
-   } else {
-      key->high_quality_derivatives =
-         ctx->Hint.FragmentShaderDerivative == GL_NICEST;
-   }
+   key->high_quality_derivatives =
+      ctx->Hint.FragmentShaderDerivative == GL_NICEST;
 
    if (brw->gen < 6)
       key->stats_wm = brw->stats_wm;

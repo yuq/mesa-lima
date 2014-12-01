@@ -61,10 +61,6 @@ DRI_CONF_BEGIN
       DRI_CONF_OPT_BEGIN_B(hiz, "true")
 	 DRI_CONF_DESC(en, "Enable Hierarchical Z on gen6+")
       DRI_CONF_OPT_END
-
-      DRI_CONF_OPT_BEGIN_B(disable_derivative_optimization, "false")
-	 DRI_CONF_DESC(en, "Derivatives with finer granularity by default")
-      DRI_CONF_OPT_END
    DRI_CONF_SECTION_END
 
    DRI_CONF_SECTION_QUALITY
