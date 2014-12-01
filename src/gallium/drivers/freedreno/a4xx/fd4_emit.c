@@ -328,6 +328,13 @@ fd4_emit_vertex_bufs(struct fd_ringbuffer *ring, struct fd4_emit *emit)
 	OUT_RING(ring, 0x00000000);   /* XXX VFD_CONTROL_2 */
 	OUT_RING(ring, 0x0000fc00);   /* XXX VFD_CONTROL_3 */
 	OUT_RING(ring, 0x00000000);   /* XXX VFD_CONTROL_4 */
+
+	/* cache invalidate, otherwise vertex fetch could see
+	 * stale vbo contents:
+	 */
+	OUT_PKT0(ring, REG_A4XX_UCHE_INVALIDATE0, 2);
+	OUT_RING(ring, 0x00000000);
+	OUT_RING(ring, 0x00000012);
 }
 
 void
