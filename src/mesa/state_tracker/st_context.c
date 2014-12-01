@@ -271,6 +271,8 @@ st_create_context_priv( struct gl_context *ctx, struct pipe_context *pipe,
     */
    st->ctx->Point.MaxSize = MAX2(ctx->Const.MaxPointSize,
                                  ctx->Const.MaxPointSizeAA);
+   /* For vertex shaders, make sure not to emit saturate when SM 3.0 is not supported */
+   ctx->Const.ShaderCompilerOptions[MESA_SHADER_VERTEX].EmitNoSat = !st->has_shader_model3;
 
    _mesa_compute_version(ctx);
 
