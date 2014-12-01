@@ -172,31 +172,6 @@ prim_line(struct draw_assembler *asmblr,
 }
 
 static void
-prim_line_adj(struct draw_assembler *asmblr,
-              unsigned i0, unsigned i1, unsigned i2, unsigned i3)
-{
-   unsigned indices[2];
-
-   if (asmblr->needs_primid) {
-      if (asmblr->is_strip && asmblr->is_first_prim) {
-         inject_primid(asmblr, i1, asmblr->primid++);
-         inject_primid(asmblr, i2, asmblr->primid++);
-         asmblr->is_first_prim = FALSE;
-      } else if (asmblr->is_strip) {
-         inject_primid(asmblr, i2, asmblr->primid++);
-      } else {
-         inject_primid(asmblr, i1, asmblr->primid);
-         inject_primid(asmblr, i2, asmblr->primid++);
-      }
-   }
-
-   indices[0] = i1;
-   indices[1] = i2;
-
-   copy_verts(asmblr, indices, 2);
-}
-
-static void
 prim_tri(struct draw_assembler *asmblr,
          unsigned i0, unsigned i1, unsigned i2)
 {
@@ -223,39 +198,6 @@ prim_tri(struct draw_assembler *asmblr,
    indices[0] = i0;
    indices[1] = i1;
    indices[2] = i2;
-
-   copy_verts(asmblr, indices, 3);
-}
-
-static void
-prim_tri_adj(struct draw_assembler *asmblr,
-             unsigned i0, unsigned i1, unsigned i2,
-             unsigned i3, unsigned i4, unsigned i5)
-{
-   unsigned indices[3];
-
-   if (asmblr->needs_primid) {
-      if (asmblr->is_strip && asmblr->is_first_prim) {
-         inject_primid(asmblr, i0, asmblr->primid++);
-         inject_primid(asmblr, i2, asmblr->primid++);
-         inject_primid(asmblr, i4, asmblr->primid++);
-         asmblr->is_first_prim = FALSE;
-      } else if (asmblr->is_strip) {
-         if (asmblr->num_prims & 1) {
-            inject_primid(asmblr, i2, asmblr->primid++);
-         } else {
-            inject_primid(asmblr, i4, asmblr->primid++);
-         }
-      } else {
-         inject_primid(asmblr, i0, asmblr->primid);
-         inject_primid(asmblr, i2, asmblr->primid);
-         inject_primid(asmblr, i4, asmblr->primid);
-         asmblr->primid++;
-      }
-   }
-   indices[0] = i0;
-   indices[1] = i2;
-   indices[2] = i4;
 
    copy_verts(asmblr, indices, 3);
 }
