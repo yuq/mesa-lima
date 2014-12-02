@@ -13,8 +13,8 @@ The rules-ng-ng source files this header was generated from are:
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/a2xx.xml          (  32901 bytes, from 2014-06-02 15:21:30)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_common.xml (  10551 bytes, from 2014-11-13 22:44:30)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_pm4.xml    (  15076 bytes, from 2014-12-01 22:40:01)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/a3xx.xml          (  63601 bytes, from 2014-11-30 15:38:05)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/a4xx.xml          (  49142 bytes, from 2014-12-02 01:03:04)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/a3xx.xml          (  64344 bytes, from 2014-12-03 14:14:54)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/a4xx.xml          (  49200 bytes, from 2014-12-03 14:14:54)
 
 Copyright (C) 2013-2014 by the following authors:
 - Rob Clark <robdclark@gmail.com> (robclark)
@@ -2039,6 +2039,7 @@ static inline uint32_t A4XX_TEX_SAMP_1_COMPARE_FUNC(enum adreno_compare_func val
 {
 	return ((val) << A4XX_TEX_SAMP_1_COMPARE_FUNC__SHIFT) & A4XX_TEX_SAMP_1_COMPARE_FUNC__MASK;
 }
+#define A4XX_TEX_SAMP_1_UNNORM_COORDS				0x00000020
 #define A4XX_TEX_SAMP_1_MAX_LOD__MASK				0x000fff00
 #define A4XX_TEX_SAMP_1_MAX_LOD__SHIFT				8
 static inline uint32_t A4XX_TEX_SAMP_1_MAX_LOD(float val)

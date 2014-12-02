@@ -13,8 +13,8 @@ The rules-ng-ng source files this header was generated from are:
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/a2xx.xml          (  32901 bytes, from 2014-06-02 15:21:30)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_common.xml (  10551 bytes, from 2014-11-13 22:44:30)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_pm4.xml    (  15076 bytes, from 2014-12-01 22:40:01)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/a3xx.xml          (  63601 bytes, from 2014-11-30 15:38:05)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/a4xx.xml          (  49142 bytes, from 2014-12-02 01:03:04)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/a3xx.xml          (  64344 bytes, from 2014-12-03 14:14:54)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/a4xx.xml          (  49200 bytes, from 2014-12-03 14:14:54)
 
 Copyright (C) 2013-2014 by the following authors:
 - Rob Clark <robdclark@gmail.com> (robclark)
@@ -130,6 +130,9 @@ enum a3xx_tex_fmt {
 	TFMT_I420_Y = 24,
 	TFMT_I420_U = 26,
 	TFMT_I420_V = 27,
+	TFMT_DXT1 = 36,
+	TFMT_DXT3 = 37,
+	TFMT_DXT5 = 38,
 	TFMT_10_10_10_2_UNORM = 41,
 	TFMT_9_9_9_E5_FLOAT = 42,
 	TFMT_11_11_10_FLOAT = 43,
@@ -175,6 +178,10 @@ enum a3xx_tex_fmt {
 	TFMT_32_SINT = 92,
 	TFMT_32_32_SINT = 93,
 	TFMT_32_32_32_32_SINT = 95,
+	TFMT_RGTC2_SNORM = 112,
+	TFMT_RGTC2_UNORM = 113,
+	TFMT_RGTC1_SNORM = 114,
+	TFMT_RGTC1_UNORM = 115,
 };
 
 enum a3xx_tex_fetchsize {
@@ -270,6 +277,14 @@ enum a3xx_tex_clamp {
 	A3XX_TEX_MIRROR_REPEAT = 2,
 	A3XX_TEX_CLAMP_TO_BORDER = 3,
 	A3XX_TEX_MIRROR_CLAMP = 4,
+};
+
+enum a3xx_tex_aniso {
+	A3XX_TEX_ANISO_1 = 0,
+	A3XX_TEX_ANISO_2 = 1,
+	A3XX_TEX_ANISO_4 = 2,
+	A3XX_TEX_ANISO_8 = 3,
+	A3XX_TEX_ANISO_16 = 4,
 };
 
 enum a3xx_tex_swiz {
@@ -1577,12 +1592,13 @@ static inline uint32_t A3XX_VFD_FETCH_INSTR_0_FETCHSIZE(uint32_t val)
 {
 	return ((val) << A3XX_VFD_FETCH_INSTR_0_FETCHSIZE__SHIFT) & A3XX_VFD_FETCH_INSTR_0_FETCHSIZE__MASK;
 }
-#define A3XX_VFD_FETCH_INSTR_0_BUFSTRIDE__MASK			0x0001ff80
+#define A3XX_VFD_FETCH_INSTR_0_BUFSTRIDE__MASK			0x0000ff80
 #define A3XX_VFD_FETCH_INSTR_0_BUFSTRIDE__SHIFT			7
 static inline uint32_t A3XX_VFD_FETCH_INSTR_0_BUFSTRIDE(uint32_t val)
 {
 	return ((val) << A3XX_VFD_FETCH_INSTR_0_BUFSTRIDE__SHIFT) & A3XX_VFD_FETCH_INSTR_0_BUFSTRIDE__MASK;
 }
+#define A3XX_VFD_FETCH_INSTR_0_INSTANCED			0x00010000
 #define A3XX_VFD_FETCH_INSTR_0_SWITCHNEXT			0x00020000
 #define A3XX_VFD_FETCH_INSTR_0_INDEXCODE__MASK			0x00fc0000
 #define A3XX_VFD_FETCH_INSTR_0_INDEXCODE__SHIFT			18
@@ -2522,6 +2538,12 @@ static inline uint32_t A3XX_TEX_SAMP_0_WRAP_T(enum a3xx_tex_clamp val)
 static inline uint32_t A3XX_TEX_SAMP_0_WRAP_R(enum a3xx_tex_clamp val)
 {
 	return ((val) << A3XX_TEX_SAMP_0_WRAP_R__SHIFT) & A3XX_TEX_SAMP_0_WRAP_R__MASK;
+}
+#define A3XX_TEX_SAMP_0_ANISO__MASK				0x00038000
+#define A3XX_TEX_SAMP_0_ANISO__SHIFT				15
+static inline uint32_t A3XX_TEX_SAMP_0_ANISO(enum a3xx_tex_aniso val)
+{
+	return ((val) << A3XX_TEX_SAMP_0_ANISO__SHIFT) & A3XX_TEX_SAMP_0_ANISO__MASK;
 }
 #define A3XX_TEX_SAMP_0_COMPARE_FUNC__MASK			0x00700000
 #define A3XX_TEX_SAMP_0_COMPARE_FUNC__SHIFT			20
