@@ -60,7 +60,8 @@ union fu {
 static unsigned
 f2u(float f)
 {
-   return (union fu){ .f = f }.u;
+   union fu fu = { .f = f };
+   return fu.u;
 }
 
 TEST_F(vf_float_conversion_test, test_vf_to_float)
