@@ -467,7 +467,7 @@ NineSwapChain9_dtor( struct NineSwapChain9 *This )
 
     if (This->buffers) {
         for (i = 0; i < This->params.BackBufferCount; i++) {
-            NineUnknown_Destroy(NineUnknown(This->buffers[i]));
+            NineUnknown_Release(NineUnknown(This->buffers[i]));
             ID3DPresent_DestroyD3DWindowBuffer(This->present, This->present_handles[i]);
             if (This->present_buffers)
                 pipe_resource_reference(&(This->present_buffers[i]), NULL);
