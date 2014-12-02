@@ -316,6 +316,19 @@ fd3_gmem_restore_format(enum pipe_format format)
 	}
 }
 
+enum a3xx_color_fmt
+fd3_fs_output_format(enum pipe_format format)
+{
+	if (util_format_is_srgb(format))
+		return RB_R16G16B16A16_FLOAT;
+	switch (format) {
+	case PIPE_FORMAT_R11G11B10_FLOAT:
+		return RB_R16G16B16A16_FLOAT;
+	default:
+		return fd3_pipe2color(format);
+	}
+}
+
 static inline enum a3xx_tex_swiz
 tex_swiz(unsigned swiz)
 {

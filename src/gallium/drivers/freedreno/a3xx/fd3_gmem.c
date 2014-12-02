@@ -101,7 +101,9 @@ emit_mrt(struct fd_ringbuffer *ring, unsigned nr_bufs,
 		}
 
 		OUT_PKT0(ring, REG_A3XX_SP_FS_IMAGE_OUTPUT_REG(i), 1);
-		OUT_RING(ring, A3XX_SP_FS_IMAGE_OUTPUT_REG_MRTFORMAT(format));
+		OUT_RING(ring, COND((i < nr_bufs) && bufs[i],
+							A3XX_SP_FS_IMAGE_OUTPUT_REG_MRTFORMAT(
+									fd3_fs_output_format(bufs[i]->format))));
 	}
 }
 
