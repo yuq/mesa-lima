@@ -275,8 +275,8 @@ brw_type_for_base_type(const struct glsl_type *type)
    case GLSL_TYPE_FLOAT:
       return BRW_REGISTER_TYPE_F;
    case GLSL_TYPE_INT:
-      return BRW_REGISTER_TYPE_D;
    case GLSL_TYPE_BOOL:
+      return BRW_REGISTER_TYPE_D;
    case GLSL_TYPE_UINT:
       return BRW_REGISTER_TYPE_UD;
    case GLSL_TYPE_ARRAY:

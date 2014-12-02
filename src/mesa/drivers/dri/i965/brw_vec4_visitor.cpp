@@ -1325,7 +1325,7 @@ vec4_visitor::visit(ir_expression *ir)
       if (ctx->Const.UniformBooleanTrue != 1) {
          emit(NOT(result_dst, op[0]));
       } else {
-         emit(XOR(result_dst, op[0], src_reg(1u)));
+         emit(XOR(result_dst, op[0], src_reg(1)));
       }
       break;
    case ir_unop_neg:
@@ -1515,7 +1515,7 @@ vec4_visitor::visit(ir_expression *ir)
       emit(CMP(result_dst, op[0], op[1],
 	       brw_conditional_for_comparison(ir->operation)));
       if (ctx->Const.UniformBooleanTrue == 1) {
-         emit(AND(result_dst, result_src, src_reg(1u)));
+         emit(AND(result_dst, result_src, src_reg(1)));
       }
       break;
    }
@@ -1526,12 +1526,12 @@ vec4_visitor::visit(ir_expression *ir)
 	  ir->operands[1]->type->is_vector()) {
 	 emit(CMP(dst_null_d(), op[0], op[1], BRW_CONDITIONAL_Z));
 	 emit(MOV(result_dst, src_reg(0)));
-         inst = emit(MOV(result_dst, src_reg(ctx->Const.UniformBooleanTrue)));
+         inst = emit(MOV(result_dst, src_reg((int)ctx->Const.UniformBooleanTrue)));
 	 inst->predicate = BRW_PREDICATE_ALIGN16_ALL4H;
       } else {
 	 emit(CMP(result_dst, op[0], op[1], BRW_CONDITIONAL_Z));
          if (ctx->Const.UniformBooleanTrue == 1) {
-            emit(AND(result_dst, result_src, src_reg(1u)));
+            emit(AND(result_dst, result_src, src_reg(1)));
          }
       }
       break;
@@ -1542,12 +1542,12 @@ vec4_visitor::visit(ir_expression *ir)
 	 emit(CMP(dst_null_d(), op[0], op[1], BRW_CONDITIONAL_NZ));
 
 	 emit(MOV(result_dst, src_reg(0)));
-         inst = emit(MOV(result_dst, src_reg(ctx->Const.UniformBooleanTrue)));
+         inst = emit(MOV(result_dst, src_reg((int)ctx->Const.UniformBooleanTrue)));
 	 inst->predicate = BRW_PREDICATE_ALIGN16_ANY4H;
       } else {
 	 emit(CMP(result_dst, op[0], op[1], BRW_CONDITIONAL_NZ));
          if (ctx->Const.UniformBooleanTrue == 1) {
-            emit(AND(result_dst, result_src, src_reg(1u)));
+            emit(AND(result_dst, result_src, src_reg(1)));
          }
       }
       break;
@@ -1556,7 +1556,7 @@ vec4_visitor::visit(ir_expression *ir)
       emit(CMP(dst_null_d(), op[0], src_reg(0), BRW_CONDITIONAL_NZ));
       emit(MOV(result_dst, src_reg(0)));
 
-      inst = emit(MOV(result_dst, src_reg(ctx->Const.UniformBooleanTrue)));
+      inst = emit(MOV(result_dst, src_reg((int)ctx->Const.UniformBooleanTrue)));
       inst->predicate = BRW_PREDICATE_ALIGN16_ANY4H;
       break;
 
@@ -1611,15 +1611,15 @@ vec4_visitor::visit(ir_expression *ir)
       break;
    case ir_unop_b2i:
       if (ctx->Const.UniformBooleanTrue != 1) {
-         emit(AND(result_dst, op[0], src_reg(1u)));
+         emit(AND(result_dst, op[0], src_reg(1)));
       } else {
          emit(MOV(result_dst, op[0]));
       }
       break;
    case ir_unop_b2f:
       if (ctx->Const.UniformBooleanTrue != 1) {
-         op[0].type = BRW_REGISTER_TYPE_UD;
-         result_dst.type = BRW_REGISTER_TYPE_UD;
+         op[0].type = BRW_REGISTER_TYPE_D;
+         result_dst.type = BRW_REGISTER_TYPE_D;
          emit(AND(result_dst, op[0], src_reg(0x3f800000u)));
          result_dst.type = BRW_REGISTER_TYPE_F;
       } else {
@@ -1630,7 +1630,7 @@ vec4_visitor::visit(ir_expression *ir)
    case ir_unop_i2b:
       emit(CMP(result_dst, op[0], src_reg(0.0f), BRW_CONDITIONAL_NZ));
       if (ctx->Const.UniformBooleanTrue == 1) {
-         emit(AND(result_dst, result_src, src_reg(1u)));
+         emit(AND(result_dst, result_src, src_reg(1)));
       }
       break;
 
@@ -1778,7 +1778,7 @@ vec4_visitor::visit(ir_expression *ir)
          emit(CMP(result_dst, packed_consts, src_reg(0u),
                   BRW_CONDITIONAL_NZ));
          if (ctx->Const.UniformBooleanTrue == 1) {
-            emit(AND(result_dst, result, src_reg(1u)));
+            emit(AND(result_dst, result, src_reg(1)));
          }
       } else {
          emit(MOV(result_dst, packed_consts));
@@ -2310,8 +2310,8 @@ vec4_visitor::emit_constant_values(dst_reg *dst, ir_constant *ir)
 	 break;
       case GLSL_TYPE_BOOL:
          emit(MOV(*dst,
-                  src_reg(ir->value.b[i] != 0 ? ctx->Const.UniformBooleanTrue
-                                              : 0u)));
+                  src_reg(ir->value.b[i] != 0 ? (int)ctx->Const.UniformBooleanTrue
+                                              : 0)));
 	 break;
       default:
 	 unreachable("Non-float/uint/int/bool constant");
