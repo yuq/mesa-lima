@@ -99,12 +99,13 @@ fd4_sampler_state_create(struct pipe_context *pctx,
 		A4XX_TEX_SAMP_0_WRAP_T(tex_clamp(cso->wrap_t)) |
 		A4XX_TEX_SAMP_0_WRAP_R(tex_clamp(cso->wrap_r));
 
+	so->texsamp1 =
+		COND(!cso->normalized_coords, A4XX_TEX_SAMP_1_UNNORM_COORDS);
+
 	if (cso->min_mip_filter != PIPE_TEX_MIPFILTER_NONE) {
-		so->texsamp1 =
+		so->texsamp1 |=
 			A4XX_TEX_SAMP_1_MIN_LOD(cso->min_lod) |
 			A4XX_TEX_SAMP_1_MAX_LOD(cso->max_lod);
-	} else {
-		so->texsamp1 = 0x00000000;
 	}
 
 	if (cso->compare_mode)
