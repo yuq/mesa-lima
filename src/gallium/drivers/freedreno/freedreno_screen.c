@@ -186,7 +186,6 @@ fd_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 	case PIPE_CAP_TEXTURE_BUFFER_OFFSET_ALIGNMENT:
 	case PIPE_CAP_MAX_TEXTURE_BUFFER_SIZE:
 	case PIPE_CAP_MAX_DUAL_SOURCE_RENDER_TARGETS:
-	case PIPE_CAP_VERTEX_ELEMENT_INSTANCE_DIVISOR:
 	case PIPE_CAP_START_INSTANCE:
 	case PIPE_CAP_COMPUTE:
 		return 0;
@@ -196,6 +195,7 @@ fd_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 		return is_a3xx(screen) || is_a4xx(screen);
 
 	case PIPE_CAP_TGSI_INSTANCEID:
+	case PIPE_CAP_VERTEX_ELEMENT_INSTANCE_DIVISOR:
 		return is_a3xx(screen) && glsl130;
 
 	case PIPE_CAP_CONSTANT_BUFFER_OFFSET_ALIGNMENT:

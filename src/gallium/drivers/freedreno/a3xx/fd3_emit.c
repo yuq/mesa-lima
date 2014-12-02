@@ -396,7 +396,8 @@ fd3_emit_vertex_bufs(struct fd_ringbuffer *ring, struct fd3_emit *emit)
 					A3XX_VFD_FETCH_INSTR_0_BUFSTRIDE(vb->stride) |
 					COND(switchnext, A3XX_VFD_FETCH_INSTR_0_SWITCHNEXT) |
 					A3XX_VFD_FETCH_INSTR_0_INDEXCODE(j) |
-					A3XX_VFD_FETCH_INSTR_0_STEPRATE(1));
+					COND(elem->instance_divisor, A3XX_VFD_FETCH_INSTR_0_INSTANCED) |
+					A3XX_VFD_FETCH_INSTR_0_STEPRATE(MAX2(1, elem->instance_divisor)));
 			OUT_RELOC(ring, rsc->bo, vb->buffer_offset + elem->src_offset, 0, 0);
 
 			OUT_PKT0(ring, REG_A3XX_VFD_DECODE_INSTR(j), 1);
