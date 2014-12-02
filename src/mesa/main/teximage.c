@@ -5200,7 +5200,7 @@ _mesa_texture_image_multisample(struct gl_context *ctx, GLuint dims,
          }
       }
 
-      texObj->Immutable = immutable;
+      texObj->Immutable |= immutable;
 
       if (immutable) {
          _mesa_set_texture_view_state(ctx, texObj, target, 1);
