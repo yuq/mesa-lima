@@ -223,6 +223,9 @@ NineQuery9_GetData( struct NineQuery9 *This,
         wait_query_result = TRUE;
     }
 
+    /* Wine tests: D3DQUERYTYPE_TIMESTAMP always succeeds */
+    wait_query_result |= This->type == D3DQUERYTYPE_TIMESTAMP;
+
     /* Note: We ignore dwGetDataFlags, because get_query_result will
      * flush automatically if needed */
 
