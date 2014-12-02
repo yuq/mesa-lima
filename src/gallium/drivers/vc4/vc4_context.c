@@ -324,6 +324,14 @@ vc4_flush(struct pipe_context *pctx)
 
         vc4->last_emit_seqno = submit.seqno;
 
+        if (vc4_debug & VC4_DEBUG_ALWAYS_SYNC) {
+                if (!vc4_wait_seqno(vc4->screen, vc4->last_emit_seqno,
+                                    PIPE_TIMEOUT_INFINITE)) {
+                        fprintf(stderr, "Wait failed.\n");
+                        abort();
+                }
+        }
+
         vc4_reset_cl(&vc4->bcl);
         vc4_reset_cl(&vc4->rcl);
         vc4_reset_cl(&vc4->shader_rec);

@@ -52,6 +52,8 @@ static const struct debug_named_value debug_options[] = {
           "Skip actual hardware execution of commands" },
         { "always_flush", VC4_DEBUG_ALWAYS_FLUSH,
           "Flush after each draw call" },
+        { "always_sync", VC4_DEBUG_ALWAYS_SYNC,
+          "Wait for finish after each flush" },
         { NULL }
 };
 
