@@ -40,14 +40,21 @@
 
 static bool debug;
 
+struct schedule_node_child;
+
 struct schedule_node {
         struct simple_node link;
         struct queued_qpu_inst *inst;
-        struct schedule_node **children;
+        struct schedule_node_child *children;
         uint32_t child_count;
         uint32_t child_array_size;
         uint32_t parent_count;
         uint32_t delay;
+};
+
+struct schedule_node_child {
+        struct schedule_node *node;
+        bool write_after_read;
 };
 
 /* When walking the instructions in reverse, we need to swap before/after in
@@ -71,8 +78,11 @@ struct schedule_state {
 static void
 add_dep(struct schedule_state *state,
         struct schedule_node *before,
-        struct schedule_node *after)
+        struct schedule_node *after,
+        bool write)
 {
+        bool write_after_read = !write && state->dir == R;
+
         if (!before || !after)
                 return;
 
@@ -85,20 +95,32 @@ add_dep(struct schedule_state *state,
         }
 
         for (int i = 0; i < before->child_count; i++) {
-                if (before->children[i] == after)
+                if (before->children[i].node == after &&
+                    (before->children[i].write_after_read == write_after_read)) {
                         return;
+                }
         }
 
         if (before->child_array_size <= before->child_count) {
                 before->child_array_size = MAX2(before->child_array_size * 2, 16);
                 before->children = reralloc(before, before->children,
-                                            struct schedule_node *,
+                                            struct schedule_node_child,
                                             before->child_array_size);
         }
 
-        before->children[before->child_count] = after;
+        before->children[before->child_count].node = after;
+        before->children[before->child_count].write_after_read =
+                write_after_read;
         before->child_count++;
         after->parent_count++;
+}
+
+static void
+add_read_dep(struct schedule_state *state,
+              struct schedule_node *before,
+              struct schedule_node *after)
+{
+        add_dep(state, before, after, false);
 }
 
 static void
@@ -106,7 +128,7 @@ add_write_dep(struct schedule_state *state,
               struct schedule_node **before,
               struct schedule_node *after)
 {
-        add_dep(state, *before, after);
+        add_dep(state, *before, after, true);
         *before = after;
 }
 
@@ -152,9 +174,9 @@ process_raddr_deps(struct schedule_state *state, struct schedule_node *n,
         default:
                 if (raddr < 32) {
                         if (is_a)
-                                add_dep(state, state->last_ra[raddr], n);
+                                add_read_dep(state, state->last_ra[raddr], n);
                         else
-                                add_dep(state, state->last_rb[raddr], n);
+                                add_read_dep(state, state->last_rb[raddr], n);
                 } else {
                         fprintf(stderr, "unknown raddr %d\n", raddr);
                         abort();
@@ -186,7 +208,7 @@ process_mux_deps(struct schedule_state *state, struct schedule_node *n,
                  uint32_t mux)
 {
         if (mux != QPU_MUX_A && mux != QPU_MUX_B)
-                add_dep(state, state->last_r[mux], n);
+                add_read_dep(state, state->last_r[mux], n);
 }
 
 
@@ -278,7 +300,7 @@ process_cond_deps(struct schedule_state *state, struct schedule_node *n,
         case QPU_COND_ALWAYS:
                 break;
         default:
-                add_dep(state, state->last_sf, n);
+                add_read_dep(state, state->last_sf, n);
                 break;
         }
 }
@@ -339,7 +361,7 @@ calculate_deps(struct schedule_state *state, struct schedule_node *n)
                 break;
 
         case QPU_SIG_COLOR_LOAD:
-                add_dep(state, state->last_tlb, n);
+                add_read_dep(state, state->last_tlb, n);
                 break;
 
         case QPU_SIG_PROG_END:
@@ -557,10 +579,15 @@ dump_state(struct simple_node *schedule_list)
                 fprintf(stderr, "\n");
 
                 for (int i = 0; i < n->child_count; i++) {
-                        struct schedule_node *child = n->children[i];
+                        struct schedule_node *child = n->children[i].node;
+                        if (!child)
+                                continue;
+
                         fprintf(stderr, "   - ");
                         vc4_qpu_disasm(&child->inst->inst, 1);
-                        fprintf(stderr, " (%d parents)\n", child->parent_count);
+                        fprintf(stderr, " (%d parents, %c)\n",
+                                child->parent_count,
+                                n->children[i].write_after_read ? 'w' : 'r');
                 }
         }
 }
@@ -573,27 +600,37 @@ compute_delay(struct schedule_node *n)
                 n->delay = 1;
         } else {
                 for (int i = 0; i < n->child_count; i++) {
-                        if (!n->children[i]->delay)
-                                compute_delay(n->children[i]);
-                        n->delay = MAX2(n->delay, n->children[i]->delay + 1);
+                        if (!n->children[i].node->delay)
+                                compute_delay(n->children[i].node);
+                        n->delay = MAX2(n->delay,
+                                        n->children[i].node->delay + 1);
                 }
         }
 }
 
 static void
 mark_instruction_scheduled(struct simple_node *schedule_list,
-                           struct schedule_node *node)
+                           struct schedule_node *node,
+                           bool war_only)
 {
         if (!node)
                 return;
 
         for (int i = node->child_count - 1; i >= 0; i--) {
                 struct schedule_node *child =
-                        node->children[i];
+                        node->children[i].node;
+
+                if (!child)
+                        continue;
+
+                if (war_only && !node->children[i].write_after_read)
+                        continue;
 
                 child->parent_count--;
                 if (child->parent_count == 0)
                         insert_at_head(schedule_list, &child->link);
+
+                node->children[i].node = NULL;
         }
 }
 
@@ -647,6 +684,7 @@ schedule_instructions(struct vc4_compile *c, struct simple_node *schedule_list)
                  */
                 if (chosen) {
                         remove_from_list(&chosen->link);
+                        mark_instruction_scheduled(schedule_list, chosen, true);
 
                         merge = choose_instruction_to_schedule(&scoreboard,
                                                                schedule_list,
@@ -680,8 +718,8 @@ schedule_instructions(struct vc4_compile *c, struct simple_node *schedule_list)
                  * be scheduled.  Update the children's unblocked time for this
                  * DAG edge as we do so.
                  */
-                mark_instruction_scheduled(schedule_list, chosen);
-                mark_instruction_scheduled(schedule_list, merge);
+                mark_instruction_scheduled(schedule_list, chosen, false);
+                mark_instruction_scheduled(schedule_list, merge, false);
 
                 scoreboard.tick++;
         }
