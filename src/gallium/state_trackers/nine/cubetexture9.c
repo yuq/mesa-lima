@@ -146,7 +146,7 @@ NineCubeTexture9_GetLevelDesc( struct NineCubeTexture9 *This,
     user_assert(Level == 0 || !(This->base.base.usage & D3DUSAGE_AUTOGENMIPMAP),
                 D3DERR_INVALIDCALL);
 
-    *pDesc = This->surfaces[Level]->desc;
+    *pDesc = This->surfaces[Level * 6]->desc;
 
     return D3D_OK;
 }
