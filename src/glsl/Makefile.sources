@@ -23,6 +23,7 @@ NIR_FILES = \
 	$(GLSL_SRCDIR)/nir/nir_live_variables.c \
 	$(GLSL_SRCDIR)/nir/nir_lower_atomics.c \
 	$(GLSL_SRCDIR)/nir/nir_lower_locals_to_regs.c \
+	$(GLSL_SRCDIR)/nir/nir_lower_io.c \
 	$(GLSL_SRCDIR)/nir/nir_lower_samplers.cpp \
 	$(GLSL_SRCDIR)/nir/nir_lower_system_values.c \
 	$(GLSL_SRCDIR)/nir/nir_lower_variables.c \
