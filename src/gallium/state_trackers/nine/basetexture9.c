@@ -480,8 +480,8 @@ NineBaseTexture9_UpdateSamplerView( struct NineBaseTexture9 *This,
 
     templ.format = sRGB ? util_format_srgb(resource->format) : resource->format;
     templ.u.tex.first_layer = 0;
-    templ.u.tex.last_layer = (resource->target == PIPE_TEXTURE_CUBE) ?
-        5 : (This->base.info.depth0 - 1);
+    templ.u.tex.last_layer = resource->target == PIPE_TEXTURE_3D ?
+                             resource->depth0 - 1 : resource->array_size - 1;
     templ.u.tex.first_level = 0;
     templ.u.tex.last_level = resource->last_level;
     templ.swizzle_r = swizzle[0];
