@@ -199,7 +199,7 @@ NineQuery9_GetData( struct NineQuery9 *This,
                     DWORD dwGetDataFlags )
 {
     struct pipe_context *pipe = This->base.device->pipe;
-    boolean ok;
+    boolean ok, wait_query_result = FALSE;
     unsigned i;
     union pipe_query_result presult;
     union nine_query_result nresult;
@@ -215,13 +215,18 @@ NineQuery9_GetData( struct NineQuery9 *This,
     user_assert(dwGetDataFlags == 0 ||
                 dwGetDataFlags == D3DGETDATA_FLUSH, D3DERR_INVALIDCALL);
 
-    if (This->state == NINE_QUERY_STATE_FRESH)
-        return S_OK;
+    if (This->state == NINE_QUERY_STATE_FRESH) {
+        /* App forgot calling Issue. call it for it.
+         * However Wine states that return value should
+         * be S_OK, so wait for the result to return S_OK. */
+        NineQuery9_Issue(This, D3DISSUE_END);
+        wait_query_result = TRUE;
+    }
 
     /* Note: We ignore dwGetDataFlags, because get_query_result will
      * flush automatically if needed */
 
-    ok = pipe->get_query_result(pipe, This->pq, FALSE, &presult);
+    ok = pipe->get_query_result(pipe, This->pq, wait_query_result, &presult);
 
     if (!ok) return S_FALSE;
 
