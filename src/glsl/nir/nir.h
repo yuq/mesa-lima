@@ -1358,6 +1358,8 @@ void nir_dump_cfg(nir_shader *shader, FILE *fp);
 
 void nir_split_var_copies(nir_shader *shader);
 
+void nir_lower_locals_to_regs(nir_shader *shader);
+
 void nir_lower_variables(nir_shader *shader);
 
 void nir_lower_variables_scalar(nir_shader *shader, bool lower_globals,
