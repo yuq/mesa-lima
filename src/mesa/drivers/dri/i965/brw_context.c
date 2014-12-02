@@ -516,18 +516,10 @@ brw_initialize_context_constants(struct brw_context *brw)
     *    contains meaning [sic] data, software should make sure all higher bits
     *    are masked out (e.g. by 'and-ing' an [sic] 0x01 constant)."
     *
-    * We select the representation of a true boolean uniform to match what the
-    * CMP instruction returns.
-    *
-    * The Sandybridge BSpec's description of the CMP instruction matches that
-    * of the Ivybridge PRM. (The description in the Sandybridge PRM is seems
-    * to have not been updated from Ironlake). Its CMP instruction behaves like
-    * Ivybridge and newer.
+    * We select the representation of a true boolean uniform to be ~0, and fix
+    * the results of Gen <= 5 CMP instruction's with -(result & 1).
     */
-   if (brw->gen >= 6)
-      ctx->Const.UniformBooleanTrue = ~0;
-   else
-      ctx->Const.UniformBooleanTrue = 1;
+   ctx->Const.UniformBooleanTrue = ~0;
 
    /* From the gen4 PRM, volume 4 page 127:
     *

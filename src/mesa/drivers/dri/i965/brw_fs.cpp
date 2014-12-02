@@ -1399,15 +1399,12 @@ fs_visitor::emit_frontfacing_interpolation()
        * instruction only operates on UD (or D with an abs source modifier)
        * sources without negation.
        *
-       * Instead, use ASR (which will give ~0/true or 0/false) followed by an
-       * AND 1.
+       * Instead, use ASR (which will give ~0/true or 0/false).
        */
-      fs_reg asr = fs_reg(this, glsl_type::bool_type);
       fs_reg g1_6 = fs_reg(retype(brw_vec1_grf(1, 6), BRW_REGISTER_TYPE_D));
       g1_6.negate = true;
 
-      emit(ASR(asr, g1_6, fs_reg(31)));
-      emit(AND(*reg, asr, fs_reg(1)));
+      emit(ASR(*reg, g1_6, fs_reg(31)));
    }
 
    return reg;
