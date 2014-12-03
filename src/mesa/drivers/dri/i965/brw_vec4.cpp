@@ -822,11 +822,11 @@ vec4_visitor::is_dep_ctrl_unsafe(const vec4_instruction *inst)
    (reg.type == BRW_REGISTER_TYPE_UD || \
     reg.type == BRW_REGISTER_TYPE_D)
 
-   /* From the destination hazard section of the spec:
-    * > Instructions other than send, may use this control as long as operations
-    * > that have different pipeline latencies are not mixed.
+   /* "When source or destination datatype is 64b or operation is integer DWord
+    * multiply, DepCtrl must not be used."
+    * May apply to future SoCs as well.
     */
-   if (brw->gen >= 8) {
+   if (brw->is_cherryview) {
       if (inst->opcode == BRW_OPCODE_MUL &&
          IS_DWORD(inst->src[0]) &&
          IS_DWORD(inst->src[1]))
