@@ -330,6 +330,29 @@ validate_intrinsic_instr(nir_intrinsic_instr *instr, validate_state *state)
       validate_deref_var(instr->variables[i], state);
    }
 
+   switch (instr->intrinsic) {
+   case nir_intrinsic_load_var_vec1:
+   case nir_intrinsic_load_var_vec2:
+   case nir_intrinsic_load_var_vec3:
+   case nir_intrinsic_load_var_vec4:
+      assert(instr->variables[0]->var->data.mode != nir_var_shader_out);
+      break;
+   case nir_intrinsic_store_var_vec1:
+   case nir_intrinsic_store_var_vec2:
+   case nir_intrinsic_store_var_vec3:
+   case nir_intrinsic_store_var_vec4:
+      assert(instr->variables[0]->var->data.mode != nir_var_shader_in &&
+             instr->variables[0]->var->data.mode != nir_var_uniform);
+      break;
+   case nir_intrinsic_copy_var:
+      assert(instr->variables[0]->var->data.mode != nir_var_shader_in &&
+             instr->variables[0]->var->data.mode != nir_var_uniform);
+      assert(instr->variables[1]->var->data.mode != nir_var_shader_out);
+      break;
+   default:
+      break;
+   }
+
    if (instr->has_predicate)
       validate_src(&instr->predicate, state);
 }
