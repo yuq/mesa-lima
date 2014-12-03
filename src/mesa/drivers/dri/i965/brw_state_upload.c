@@ -525,6 +525,7 @@ static struct dirty_bit_map brw_bits[] = {
    DEFINE_BIT(BRW_NEW_SF_VP),
    DEFINE_BIT(BRW_NEW_CLIP_VP),
    DEFINE_BIT(BRW_NEW_SAMPLER_STATE_TABLE),
+   DEFINE_BIT(BRW_NEW_VS_ATTRIB_WORKAROUNDS),
    {0, 0, 0}
 };
 

@@ -453,42 +453,9 @@ static void brw_upload_vs_prog(struct brw_context *brw)
    brw_populate_sampler_prog_key_data(ctx, prog, brw->vs.base.sampler_count,
                                       &key.base.tex);
 
-   /* BRW_NEW_VERTICES */
-   if (brw->gen < 8 && !brw->is_haswell) {
-      /* Prior to Haswell, the hardware can't natively support GL_FIXED or
-       * 2_10_10_10_REV vertex formats.  Set appropriate workaround flags.
-       */
-      for (i = 0; i < VERT_ATTRIB_MAX; i++) {
-         if (!(vp->program.Base.InputsRead & BITFIELD64_BIT(i)))
-            continue;
-
-         uint8_t wa_flags = 0;
-
-         switch (brw->vb.inputs[i].glarray->Type) {
-
-         case GL_FIXED:
-            wa_flags = brw->vb.inputs[i].glarray->Size;
-            break;
-
-         case GL_INT_2_10_10_10_REV:
-            wa_flags |= BRW_ATTRIB_WA_SIGN;
-            /* fallthough */
-
-         case GL_UNSIGNED_INT_2_10_10_10_REV:
-            if (brw->vb.inputs[i].glarray->Format == GL_BGRA)
-               wa_flags |= BRW_ATTRIB_WA_BGRA;
-
-            if (brw->vb.inputs[i].glarray->Normalized)
-               wa_flags |= BRW_ATTRIB_WA_NORMALIZE;
-            else if (!brw->vb.inputs[i].glarray->Integer)
-               wa_flags |= BRW_ATTRIB_WA_SCALE;
-
-            break;
-         }
-
-         key.gl_attrib_wa_flags[i] = wa_flags;
-      }
-   }
+   /* BRW_NEW_VS_ATTRIB_WORKAROUNDS */
+   memcpy(key.gl_attrib_wa_flags, brw->vb.attrib_wa_flags,
+          sizeof(brw->vb.attrib_wa_flags));
 
    if (!brw_search_cache(&brw->cache, BRW_CACHE_VS_PROG,
 			 &key, sizeof(key),
@@ -526,7 +493,7 @@ const struct brw_tracked_state brw_vs_prog = {
                _NEW_TEXTURE |
                _NEW_TRANSFORM,
       .brw   = BRW_NEW_VERTEX_PROGRAM |
-               BRW_NEW_VERTICES,
+               BRW_NEW_VS_ATTRIB_WORKAROUNDS,
    },
    .emit = brw_upload_vs_prog
 };

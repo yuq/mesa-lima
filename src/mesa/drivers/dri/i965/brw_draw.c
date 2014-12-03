@@ -46,6 +46,7 @@
 #include "brw_defines.h"
 #include "brw_context.h"
 #include "brw_state.h"
+#include "brw_vs.h"
 
 #include "intel_batchbuffer.h"
 #include "intel_buffers.h"
@@ -281,6 +282,7 @@ static void brw_emit_prim(struct brw_context *brw,
 static void brw_merge_inputs( struct brw_context *brw,
 		       const struct gl_client_array *arrays[])
 {
+   const struct gl_context *ctx = &brw->ctx;
    GLuint i;
 
    for (i = 0; i < brw->vb.nr_buffers; i++) {
@@ -292,6 +294,46 @@ static void brw_merge_inputs( struct brw_context *brw,
    for (i = 0; i < VERT_ATTRIB_MAX; i++) {
       brw->vb.inputs[i].buffer = -1;
       brw->vb.inputs[i].glarray = arrays[i];
+   }
+
+   if (brw->gen < 8 && !brw->is_haswell) {
+      struct gl_program *vp = &ctx->VertexProgram._Current->Base;
+      /* Prior to Haswell, the hardware can't natively support GL_FIXED or
+       * 2_10_10_10_REV vertex formats.  Set appropriate workaround flags.
+       */
+      for (i = 0; i < VERT_ATTRIB_MAX; i++) {
+         if (!(vp->InputsRead & BITFIELD64_BIT(i)))
+            continue;
+
+         uint8_t wa_flags = 0;
+
+         switch (brw->vb.inputs[i].glarray->Type) {
+
+         case GL_FIXED:
+            wa_flags = brw->vb.inputs[i].glarray->Size;
+            break;
+
+         case GL_INT_2_10_10_10_REV:
+            wa_flags |= BRW_ATTRIB_WA_SIGN;
+            /* fallthough */
+
+         case GL_UNSIGNED_INT_2_10_10_10_REV:
+            if (brw->vb.inputs[i].glarray->Format == GL_BGRA)
+               wa_flags |= BRW_ATTRIB_WA_BGRA;
+
+            if (brw->vb.inputs[i].glarray->Normalized)
+               wa_flags |= BRW_ATTRIB_WA_NORMALIZE;
+            else if (!brw->vb.inputs[i].glarray->Integer)
+               wa_flags |= BRW_ATTRIB_WA_SCALE;
+
+            break;
+         }
+
+         if (brw->vb.attrib_wa_flags[i] != wa_flags) {
+            brw->vb.attrib_wa_flags[i] = wa_flags;
+            brw->state.dirty.brw |= BRW_NEW_VS_ATTRIB_WORKAROUNDS;
+         }
+      }
    }
 }
 

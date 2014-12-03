@@ -201,6 +201,7 @@ enum brw_state_id {
    BRW_STATE_SF_VP,
    BRW_STATE_CLIP_VP,
    BRW_STATE_SAMPLER_STATE_TABLE,
+   BRW_STATE_VS_ATTRIB_WORKAROUNDS,
    BRW_NUM_STATE_BITS
 };
 
@@ -279,6 +280,7 @@ enum brw_state_id {
 #define BRW_NEW_SF_VP                   (1ull << BRW_STATE_SF_VP)
 #define BRW_NEW_CLIP_VP                 (1ull << BRW_STATE_CLIP_VP)
 #define BRW_NEW_SAMPLER_STATE_TABLE     (1ull << BRW_STATE_SAMPLER_STATE_TABLE)
+#define BRW_NEW_VS_ATTRIB_WORKAROUNDS   (1ull << BRW_STATE_VS_ATTRIB_WORKAROUNDS)
 
 struct brw_state_flags {
    /** State update flags signalled by mesa internals */
@@ -1133,6 +1135,14 @@ struct brw_context
        * the same VB packed over and over again.
        */
       unsigned int start_vertex_bias;
+
+      /**
+       * Certain vertex attribute formats aren't natively handled by the
+       * hardware and require special VS code to fix up their values.
+       *
+       * These bitfields indicate which workarounds are needed.
+       */
+      uint8_t attrib_wa_flags[VERT_ATTRIB_MAX];
    } vb;
 
    struct {
