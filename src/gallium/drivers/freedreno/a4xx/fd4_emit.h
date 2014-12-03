@@ -32,7 +32,7 @@
 #include "pipe/p_context.h"
 
 #include "freedreno_context.h"
-#include "fd4_util.h"
+#include "fd4_format.h"
 #include "fd4_program.h"
 #include "ir3_shader.h"
 

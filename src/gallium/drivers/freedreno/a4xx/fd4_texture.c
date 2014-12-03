@@ -33,7 +33,7 @@
 #include "util/u_format.h"
 
 #include "fd4_texture.h"
-#include "fd4_util.h"
+#include "fd4_format.h"
 
 /* TODO do we need to emulate clamp-to-edge like a3xx? */
 static enum a4xx_tex_clamp

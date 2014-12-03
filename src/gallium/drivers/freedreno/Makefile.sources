@@ -99,6 +99,8 @@ a4xx_SOURCES := \
 	a4xx/fd4_draw.h \
 	a4xx/fd4_emit.c \
 	a4xx/fd4_emit.h \
+	a4xx/fd4_format.c \
+	a4xx/fd4_format.h \
 	a4xx/fd4_gmem.c \
 	a4xx/fd4_gmem.h \
 	a4xx/fd4_program.c \
@@ -111,8 +113,6 @@ a4xx_SOURCES := \
 	a4xx/fd4_screen.h \
 	a4xx/fd4_texture.c \
 	a4xx/fd4_texture.h \
-	a4xx/fd4_util.c \
-	a4xx/fd4_util.h \
 	a4xx/fd4_zsa.c \
 	a4xx/fd4_zsa.h
 

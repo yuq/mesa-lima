@@ -39,7 +39,7 @@
 #include "fd4_program.h"
 #include "fd4_emit.h"
 #include "fd4_texture.h"
-#include "fd4_util.h"
+#include "fd4_format.h"
 
 static void
 delete_shader_stateobj(struct fd4_shader_stateobj *so)

@@ -32,7 +32,7 @@
 
 #include "fd4_blend.h"
 #include "fd4_context.h"
-#include "fd4_util.h"
+#include "fd4_format.h"
 
 static enum a4xx_rb_blend_opcode
 blend_func(unsigned func)

@@ -40,7 +40,7 @@
 #include "fd4_program.h"
 #include "fd4_rasterizer.h"
 #include "fd4_texture.h"
-#include "fd4_util.h"
+#include "fd4_format.h"
 #include "fd4_zsa.h"
 
 /* regid:          base const register

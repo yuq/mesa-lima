@@ -33,7 +33,7 @@
 
 #include "fd4_rasterizer.h"
 #include "fd4_context.h"
-#include "fd4_util.h"
+#include "fd4_format.h"
 
 void *
 fd4_rasterizer_state_create(struct pipe_context *pctx,

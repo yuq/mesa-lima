@@ -31,7 +31,7 @@
 #include "freedreno_util.h"
 
 #include "fd4_query.h"
-#include "fd4_util.h"
+#include "fd4_format.h"
 
 void fd4_query_context_init(struct pipe_context *pctx)
 {

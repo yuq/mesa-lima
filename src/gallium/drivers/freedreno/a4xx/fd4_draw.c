@@ -38,7 +38,7 @@
 #include "fd4_context.h"
 #include "fd4_emit.h"
 #include "fd4_program.h"
-#include "fd4_util.h"
+#include "fd4_format.h"
 #include "fd4_zsa.h"
 
 
