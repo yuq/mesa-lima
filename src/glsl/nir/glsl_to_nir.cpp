@@ -330,12 +330,18 @@ nir_visitor::visit(ir_variable *ir)
    var->data.max_array_access = ir->data.max_array_access;
 
    var->num_state_slots = ir->get_num_state_slots();
-   var->state_slots = ralloc_array(var, nir_state_slot, var->num_state_slots);
-   ir_state_slot *state_slots = ir->get_state_slots();
-   for (unsigned i = 0; i < var->num_state_slots; i++) {
-      for (unsigned j = 0; j < 5; j++)
-         var->state_slots[i].tokens[j] = state_slots[i].tokens[j];
-      var->state_slots[i].swizzle = state_slots[i].swizzle;
+   if (var->num_state_slots > 0) {
+      var->state_slots = ralloc_array(var, nir_state_slot,
+                                      var->num_state_slots);
+
+      ir_state_slot *state_slots = ir->get_state_slots();
+      for (unsigned i = 0; i < var->num_state_slots; i++) {
+         for (unsigned j = 0; j < 5; j++)
+            var->state_slots[i].tokens[j] = state_slots[i].tokens[j];
+         var->state_slots[i].swizzle = state_slots[i].swizzle;
+      }
+   } else {
+      var->state_slots = NULL;
    }
 
    var->constant_value = constant_copy(ir->constant_value, var);
