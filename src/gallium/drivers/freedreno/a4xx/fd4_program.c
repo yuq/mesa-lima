@@ -375,9 +375,14 @@ fd4_program_emit(struct fd_ringbuffer *ring, struct fd4_emit *emit)
 	OUT_RING(ring, A4XX_RB_MSAA_CONTROL2_MSAA_SAMPLES(0) |
 			COND(s[FS].v->total_in > 0, A4XX_RB_MSAA_CONTROL2_VARYING));
 
+	OUT_PKT0(ring, REG_A4XX_RB_FS_OUTPUT_REG, 1);
+	OUT_RING(ring, A4XX_RB_FS_OUTPUT_REG_COLOR_PIPE_ENABLE |
+			COND(s[FS].v->writes_pos, A4XX_RB_FS_OUTPUT_REG_FRAG_WRITES_Z));
+
 	OUT_PKT0(ring, REG_A4XX_SP_FS_OUTPUT_REG, 1);
 	if (s[FS].v->writes_pos) {
-		OUT_RING(ring, A4XX_SP_FS_OUTPUT_REG_DEPTH_ENABLE |
+		OUT_RING(ring, 0x00000001 |
+				A4XX_SP_FS_OUTPUT_REG_DEPTH_ENABLE |
 				A4XX_SP_FS_OUTPUT_REG_DEPTH_REGID(posz_regid));
 	} else {
 		OUT_RING(ring, 0x00000001);

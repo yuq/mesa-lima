@@ -360,12 +360,8 @@ fd4_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 		OUT_RINGP(ring, val, &fd4_context(ctx)->rbrc_patches);
 	}
 
-	if (dirty & (FD_DIRTY_ZSA | FD_DIRTY_STENCIL_REF)) {
+	if (dirty & FD_DIRTY_ZSA) {
 		struct fd4_zsa_stateobj *zsa = fd4_zsa_stateobj(ctx->zsa);
-		struct pipe_stencil_ref *sr = &ctx->stencil_ref;
-
-		OUT_PKT0(ring, REG_A4XX_GRAS_ALPHA_CONTROL, 1);
-		OUT_RING(ring, zsa->gras_alpha_control);
 
 		OUT_PKT0(ring, REG_A4XX_RB_ALPHA_CONTROL, 1);
 		OUT_RING(ring, zsa->rb_alpha_control);
@@ -373,6 +369,11 @@ fd4_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 		OUT_PKT0(ring, REG_A4XX_RB_STENCIL_CONTROL, 2);
 		OUT_RING(ring, zsa->rb_stencil_control);
 		OUT_RING(ring, zsa->rb_stencil_control2);
+	}
+
+	if (dirty & (FD_DIRTY_ZSA | FD_DIRTY_STENCIL_REF)) {
+		struct fd4_zsa_stateobj *zsa = fd4_zsa_stateobj(ctx->zsa);
+		struct pipe_stencil_ref *sr = &ctx->stencil_ref;
 
 		OUT_PKT0(ring, REG_A4XX_RB_STENCILREFMASK, 2);
 		OUT_RING(ring, zsa->rb_stencilrefmask |
@@ -382,16 +383,19 @@ fd4_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 	}
 
 	if (dirty & (FD_DIRTY_ZSA | FD_DIRTY_PROG)) {
-		uint32_t val = fd4_zsa_stateobj(ctx->zsa)->rb_depth_control;
-		if (fp->writes_pos) {
-			val |= A4XX_RB_DEPTH_CONTROL_FRAG_WRITES_Z;
-			val |= A4XX_RB_DEPTH_CONTROL_EARLY_Z_DISABLE;
-		}
-		if (fp->has_kill) {
-			val |= A4XX_RB_DEPTH_CONTROL_EARLY_Z_DISABLE;
-		}
+		struct fd4_zsa_stateobj *zsa = fd4_zsa_stateobj(ctx->zsa);
+		bool fragz = fp->has_kill | fp->writes_pos;
+
 		OUT_PKT0(ring, REG_A4XX_RB_DEPTH_CONTROL, 1);
-		OUT_RING(ring, val);
+		OUT_RING(ring, zsa->rb_depth_control |
+				COND(fragz, A4XX_RB_DEPTH_CONTROL_EARLY_Z_DISABLE));
+
+		/* maybe this register/bitfield needs a better name.. this
+		 * appears to be just disabling early-z
+		 */
+		OUT_PKT0(ring, REG_A4XX_GRAS_ALPHA_CONTROL, 1);
+		OUT_RING(ring, zsa->gras_alpha_control |
+				COND(fragz, A4XX_GRAS_ALPHA_CONTROL_ALPHA_TEST_ENABLE));
 	}
 
 	if (dirty & FD_DIRTY_RASTERIZER) {
@@ -673,9 +677,6 @@ fd4_emit_restore(struct fd_context *ctx)
 
 	OUT_PKT0(ring, REG_A4XX_RB_RENDER_CONTROL3, 1);
 	OUT_RING(ring, A4XX_RB_RENDER_CONTROL3_COMPONENT_ENABLE(0xf));
-
-	OUT_PKT0(ring, REG_A4XX_RB_FS_OUTPUT_REG, 1);
-	OUT_RING(ring, A4XX_RB_FS_OUTPUT_REG_COLOR_PIPE_ENABLE);
 
 	ctx->needs_rb_fbd = true;
 }
