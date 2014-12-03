@@ -1947,6 +1947,17 @@ DECL_SPECIAL(POW)
     return D3D_OK;
 }
 
+DECL_SPECIAL(RSQ)
+{
+    struct ureg_program *ureg = tx->ureg;
+    struct ureg_dst dst = tx_dst_param(tx, &tx->insn.dst[0]);
+    struct ureg_src src = tx_src_param(tx, &tx->insn.src[0]);
+    struct ureg_dst tmp = tx_scratch(tx);
+    ureg_RSQ(ureg, tmp, ureg_abs(src));
+    ureg_MIN(ureg, dst, ureg_imm1f(ureg, FLT_MAX), ureg_src(tmp));
+    return D3D_OK;
+}
+
 DECL_SPECIAL(NRM)
 {
     struct ureg_program *ureg = tx->ureg;
@@ -2260,7 +2271,7 @@ struct sm1_op_info inst_table[] =
     _OPI(MAD, MAD, V(0,0), V(3,0), V(0,0), V(3,0), 1, 3, NULL), /* 4 */
     _OPI(MUL, MUL, V(0,0), V(3,0), V(0,0), V(3,0), 1, 2, NULL), /* 5 */
     _OPI(RCP, RCP, V(0,0), V(3,0), V(0,0), V(3,0), 1, 1, NULL), /* 6 */
-    _OPI(RSQ, RSQ, V(0,0), V(3,0), V(0,0), V(3,0), 1, 1, NULL), /* 7 */
+    _OPI(RSQ, RSQ, V(0,0), V(3,0), V(0,0), V(3,0), 1, 1, SPECIAL(RSQ)), /* 7 */
     _OPI(DP3, DP3, V(0,0), V(3,0), V(0,0), V(3,0), 1, 2, NULL), /* 8 */
     _OPI(DP4, DP4, V(0,0), V(3,0), V(0,0), V(3,0), 1, 2, NULL), /* 9 */
     _OPI(MIN, MIN, V(0,0), V(3,0), V(0,0), V(3,0), 1, 2, NULL), /* 10 */
