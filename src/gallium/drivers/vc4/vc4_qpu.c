@@ -209,6 +209,56 @@ merge_fields(uint64_t *merge,
         return true;
 }
 
+int
+qpu_num_sf_accesses(uint64_t inst)
+{
+        int accesses = 0;
+        static const uint32_t specials[] = {
+                QPU_W_TLB_COLOR_MS,
+                QPU_W_TLB_COLOR_ALL,
+                QPU_W_TLB_Z,
+                QPU_W_TMU0_S,
+                QPU_W_TMU0_T,
+                QPU_W_TMU0_R,
+                QPU_W_TMU0_B,
+                QPU_W_TMU1_S,
+                QPU_W_TMU1_T,
+                QPU_W_TMU1_R,
+                QPU_W_TMU1_B,
+                QPU_W_SFU_RECIP,
+                QPU_W_SFU_RECIPSQRT,
+                QPU_W_SFU_EXP,
+                QPU_W_SFU_LOG,
+        };
+        uint32_t waddr_add = QPU_GET_FIELD(inst, QPU_WADDR_ADD);
+        uint32_t waddr_mul = QPU_GET_FIELD(inst, QPU_WADDR_MUL);
+        uint32_t raddr_a = QPU_GET_FIELD(inst, QPU_RADDR_A);
+        uint32_t raddr_b = QPU_GET_FIELD(inst, QPU_RADDR_B);
+
+        for (int j = 0; j < ARRAY_SIZE(specials); j++) {
+                if (waddr_add == specials[j])
+                        accesses++;
+                if (waddr_mul == specials[j])
+                        accesses++;
+        }
+
+        if (raddr_a == QPU_R_MUTEX_ACQUIRE)
+                accesses++;
+        if (raddr_b == QPU_R_MUTEX_ACQUIRE)
+                accesses++;
+
+        /* XXX: semaphore, combined color read/write? */
+        switch (QPU_GET_FIELD(inst, QPU_SIG)) {
+        case QPU_SIG_COLOR_LOAD:
+        case QPU_SIG_COLOR_LOAD_END:
+        case QPU_SIG_LOAD_TMU0:
+        case QPU_SIG_LOAD_TMU1:
+                accesses++;
+        }
+
+        return accesses;
+}
+
 uint64_t
 qpu_merge_inst(uint64_t a, uint64_t b)
 {
@@ -221,6 +271,9 @@ qpu_merge_inst(uint64_t a, uint64_t b)
 
         if (QPU_GET_FIELD(a, QPU_OP_MUL) != QPU_M_NOP &&
             QPU_GET_FIELD(b, QPU_OP_MUL) != QPU_M_NOP)
+                return 0;
+
+        if (qpu_num_sf_accesses(a) && qpu_num_sf_accesses(b))
                 return 0;
 
         ok = ok && merge_fields(&merge, a, b, QPU_SIG_MASK,

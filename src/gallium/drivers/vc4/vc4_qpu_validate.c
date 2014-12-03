@@ -255,42 +255,7 @@ vc4_qpu_validate(uint64_t *insts, uint32_t num_inst)
          */
         for (int i = 0; i < num_inst - 1; i++) {
                 uint64_t inst = insts[i];
-                int accesses = 0;
-                static const uint32_t specials[] = {
-                        QPU_W_TLB_COLOR_MS,
-                        QPU_W_TLB_COLOR_ALL,
-                        QPU_W_TLB_Z,
-                        QPU_W_TMU0_S,
-                        QPU_W_TMU0_T,
-                        QPU_W_TMU0_R,
-                        QPU_W_TMU0_B,
-                        QPU_W_TMU1_S,
-                        QPU_W_TMU1_T,
-                        QPU_W_TMU1_R,
-                        QPU_W_TMU1_B,
-                        QPU_W_SFU_RECIP,
-                        QPU_W_SFU_RECIPSQRT,
-                        QPU_W_SFU_EXP,
-                        QPU_W_SFU_LOG,
-                };
 
-                for (int j = 0; j < ARRAY_SIZE(specials); j++) {
-                        if (writes_reg(inst, specials[j]))
-                                accesses++;
-                }
-
-                if (reads_reg(inst, QPU_R_MUTEX_ACQUIRE))
-                        accesses++;
-
-                /* XXX: semaphore, combined color read/write? */
-                switch (QPU_GET_FIELD(inst, QPU_SIG)) {
-                case QPU_SIG_COLOR_LOAD:
-                case QPU_SIG_COLOR_LOAD_END:
-                case QPU_SIG_LOAD_TMU0:
-                case QPU_SIG_LOAD_TMU1:
-                        accesses++;
-                }
-
-                assert(accesses <= 1);
+                assert(qpu_num_sf_accesses(inst) <= 1);
         }
 }
