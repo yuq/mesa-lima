@@ -912,49 +912,6 @@ BOOL_32 CiAddrLib::HwlOverrideTileMode(
 
 /**
 ***************************************************************************************************
-*   CiAddrLib::GetPrtSwitchP4Threshold
-*
-*   @brief
-*       Return the threshold of switching to P4_* instead of P16_* for PRT resources
-***************************************************************************************************
-*/
-UINT_32 CiAddrLib::GetPrtSwitchP4Threshold() const
-{
-    UINT_32 threshold;
-
-    switch (m_pipes)
-    {
-        case 8:
-            threshold = 32;
-            break;
-        case 16:
-            if (m_settings.isFiji)
-            {
-                threshold = 16;
-            }
-            else if (m_settings.isHawaii)
-            {
-                threshold = 8;
-            }
-            else
-            {
-                ///@todo add for possible new ASICs.
-                ADDR_ASSERT_ALWAYS();
-                threshold = 16;
-            }
-            break;
-        default:
-            ///@todo add for possible new ASICs.
-            ADDR_ASSERT_ALWAYS();
-            threshold = 32;
-            break;
-    }
-
-    return threshold;
-}
-
-/**
-***************************************************************************************************
 *   CiAddrLib::HwlSetupTileInfo
 *
 *   @brief
@@ -1185,16 +1142,29 @@ VOID CiAddrLib::HwlSetupTileInfo(
             ADDR_ASSERT((index + 1) < static_cast<INT_32>(m_noOfEntries));
             // Only do this when tile mode table is updated.
             if (((tileMode == ADDR_TM_PRT_TILED_THIN1) || (tileMode == ADDR_TM_PRT_TILED_THICK)) &&
-                (m_tileTable[index+1].mode == tileMode))
+                (m_tileTable[index + 1].mode == tileMode))
             {
-                UINT_32 bytesXSamples = bpp * numSamples / 8;
-                UINT_32 bytesXThickness = bpp * thickness / 8;
-                UINT_32 switchP4Threshold = GetPrtSwitchP4Threshold();
+                static const UINT_32 PrtTileBytes = 0x10000;
+                ADDR_TILEINFO tileInfo = {0};
 
-                if ((bytesXSamples > switchP4Threshold) || (bytesXThickness > switchP4Threshold))
+                HwlComputeMacroModeIndex(index, flags, bpp, numSamples, &tileInfo);
+
+                UINT_32 macroTileBytes = (bpp >> 3) * 64 * numSamples * thickness *
+                                         HwlGetPipes(&tileInfo) * tileInfo.banks *
+                                         tileInfo.bankWidth * tileInfo.bankHeight;
+
+                if (macroTileBytes != PrtTileBytes)
                 {
-                    // Pick next 4 pipe entry
+                    // Switching to next tile mode entry to make sure macro tile size is 64KB
                     index += 1;
+
+                    tileInfo.pipeConfig = m_tileTable[index].info.pipeConfig;
+
+                    macroTileBytes = (bpp >> 3) * 64 * numSamples * thickness *
+                                     HwlGetPipes(&tileInfo) * tileInfo.banks *
+                                     tileInfo.bankWidth * tileInfo.bankHeight;
+
+                    ADDR_ASSERT(macroTileBytes == PrtTileBytes);
                 }
             }
         }
