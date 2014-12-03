@@ -1936,6 +1936,17 @@ DECL_SPECIAL(DEFI)
     return D3D_OK;
 }
 
+DECL_SPECIAL(POW)
+{
+    struct ureg_dst dst = tx_dst_param(tx, &tx->insn.dst[0]);
+    struct ureg_src src[2] = {
+        tx_src_param(tx, &tx->insn.src[0]),
+        tx_src_param(tx, &tx->insn.src[1])
+    };
+    ureg_POW(tx->ureg, dst, ureg_abs(src[0]), src[1]);
+    return D3D_OK;
+}
+
 DECL_SPECIAL(NRM)
 {
     struct ureg_program *ureg = tx->ureg;
@@ -2278,7 +2289,7 @@ struct sm1_op_info inst_table[] =
 
     _OPI(DCL, NOP, V(0,0), V(3,0), V(0,0), V(3,0), 0, 0, SPECIAL(DCL)),
 
-    _OPI(POW, POW, V(0,0), V(3,0), V(0,0), V(3,0), 1, 2, NULL),
+    _OPI(POW, POW, V(0,0), V(3,0), V(0,0), V(3,0), 1, 2, SPECIAL(POW)),
     _OPI(CRS, XPD, V(0,0), V(3,0), V(0,0), V(3,0), 1, 2, NULL), /* XXX: .w */
     _OPI(SGN, SSG, V(2,0), V(3,0), V(0,0), V(0,0), 1, 3, SPECIAL(SGN)), /* ignore src1,2 */
     _OPI(ABS, ABS, V(0,0), V(3,0), V(0,0), V(3,0), 1, 1, NULL),
