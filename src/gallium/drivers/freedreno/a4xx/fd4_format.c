@@ -31,300 +31,213 @@
 
 #include "fd4_format.h"
 
+
+/* Specifies the table of all the formats and their features. Also supplies
+ * the helpers that look up various data in those tables.
+ */
+
+struct fd4_format {
+	enum a4xx_vtx_fmt vtx;
+	enum a4xx_tex_fmt tex;
+	enum a4xx_color_fmt rb;
+	enum a3xx_color_swap swap;
+	boolean present;
+};
+
+#define RB4_NONE ~0
+
+/* vertex + texture */
+#define VT(pipe, fmt, rbfmt, swapfmt) \
+	[PIPE_FORMAT_ ## pipe] = { \
+		.present = 1, \
+		.vtx = VFMT4_ ## fmt, \
+		.tex = TFMT4_ ## fmt, \
+		.rb = RB4_ ## rbfmt, \
+		.swap = swapfmt \
+	}
+
+/* texture-only */
+#define _T(pipe, fmt, rbfmt, swapfmt) \
+	[PIPE_FORMAT_ ## pipe] = { \
+		.present = 1, \
+		.vtx = ~0, \
+		.tex = TFMT4_ ## fmt, \
+		.rb = RB4_ ## rbfmt, \
+		.swap = swapfmt \
+	}
+
+/* vertex-only */
+#define V_(pipe, fmt, rbfmt, swapfmt) \
+	[PIPE_FORMAT_ ## pipe] = { \
+		.present = 1, \
+		.vtx = VFMT4_ ## fmt, \
+		.tex = ~0, \
+		.rb = RB4_ ## rbfmt, \
+		.swap = swapfmt \
+	}
+
+static struct fd4_format formats[PIPE_FORMAT_COUNT] = {
+	/* 8-bit */
+	VT(R8_UNORM,   8_UNORM, NONE,     WZYX),
+	V_(R8_SNORM,   8_SNORM, NONE,     WZYX),
+	V_(R8_UINT,    8_UINT,  NONE,     WZYX),
+	V_(R8_SINT,    8_SINT,  NONE,     WZYX),
+	V_(R8_USCALED, 8_UINT,  NONE,     WZYX),
+	V_(R8_SSCALED, 8_UINT,  NONE,     WZYX),
+
+	_T(A8_UNORM,   8_UNORM, A8_UNORM, WZYX),
+	_T(L8_UNORM,   8_UNORM, NONE,     WZYX),
+	_T(I8_UNORM,   8_UNORM, NONE,     WZYX),
+
+	/* 16-bit */
+	V_(R16_UNORM,   16_UNORM, NONE,     WZYX),
+	V_(R16_SNORM,   16_SNORM, NONE,     WZYX),
+	V_(R16_UINT,    16_UINT,  NONE,     WZYX),
+	V_(R16_SINT,    16_SINT,  NONE,     WZYX),
+	V_(R16_USCALED, 16_UINT,  NONE,     WZYX),
+	V_(R16_SSCALED, 16_UINT,  NONE,     WZYX),
+	VT(R16_FLOAT,   16_FLOAT, NONE,     WZYX),
+
+	VT(R8G8_UNORM,   8_8_UNORM, NONE,       WZYX),
+	V_(R8G8_SNORM,   8_8_SNORM, NONE,       WZYX),
+	V_(R8G8_UINT,    8_8_UINT,  NONE,       WZYX),
+	V_(R8G8_SINT,    8_8_SINT,  NONE,       WZYX),
+	V_(R8G8_USCALED, 8_8_UINT,  NONE,       WZYX),
+	V_(R8G8_SSCALED, 8_8_SINT,  NONE,       WZYX),
+
+	/*_T(B5G6R5_UNORM,   5_6_5_UNORM,   R5G6B5_UNORM,   WXYZ),*/
+	_T(B5G5R5A1_UNORM, 5_5_5_1_UNORM, NONE, WXYZ),
+	_T(B5G5R5X1_UNORM, 5_5_5_1_UNORM, NONE, WXYZ),
+	_T(B4G4R4A4_UNORM, 4_4_4_4_UNORM, NONE, WXYZ),
+
+	/* 24-bit */
+	V_(R8G8B8_UNORM,   8_8_8_UNORM, NONE, WZYX),
+	V_(R8G8B8_SNORM,   8_8_8_SNORM, NONE, WZYX),
+	V_(R8G8B8_UINT,    8_8_8_UINT,  NONE, WZYX),
+	V_(R8G8B8_SINT,    8_8_8_SINT,  NONE, WZYX),
+	V_(R8G8B8_USCALED, 8_8_8_UINT,  NONE, WZYX),
+	V_(R8G8B8_SSCALED, 8_8_8_SINT,  NONE, WZYX),
+
+	/* 32-bit */
+	VT(R32_FLOAT,   32_FLOAT, NONE,     WZYX),
+	V_(R32_FIXED,   32_FIXED, NONE,     WZYX),
+
+	V_(R16G16_UNORM,   16_16_UNORM, NONE,        WZYX),
+	V_(R16G16_SNORM,   16_16_SNORM, NONE,        WZYX),
+	V_(R16G16_UINT,    16_16_UINT,  NONE,        WZYX),
+	V_(R16G16_SINT,    16_16_SINT,  NONE,        WZYX),
+	V_(R16G16_USCALED, 16_16_UINT,  NONE,        WZYX),
+	V_(R16G16_SSCALED, 16_16_SINT,  NONE,        WZYX),
+	VT(R16G16_FLOAT,   16_16_FLOAT, NONE,        WZYX),
+
+	VT(R8G8B8A8_UNORM,   8_8_8_8_UNORM, R8G8B8A8_UNORM, WZYX),
+	_T(R8G8B8X8_UNORM,   8_8_8_8_UNORM, R8G8B8A8_UNORM, WZYX),
+	_T(R8G8B8A8_SRGB,    8_8_8_8_UNORM, NONE,           WZYX),
+	_T(R8G8B8X8_SRGB,    8_8_8_8_UNORM, NONE,           WZYX),
+	V_(R8G8B8A8_SNORM,   8_8_8_8_SNORM, NONE,           WZYX),
+	V_(R8G8B8A8_UINT,    8_8_8_8_UINT,  NONE,           WZYX),
+	V_(R8G8B8A8_SINT,    8_8_8_8_SINT,  NONE,           WZYX),
+	V_(R8G8B8A8_USCALED, 8_8_8_8_UINT,  NONE,           WZYX),
+	V_(R8G8B8A8_SSCALED, 8_8_8_8_SINT,  NONE,           WZYX),
+
+	VT(B8G8R8A8_UNORM,   8_8_8_8_UNORM, R8G8B8A8_UNORM, WXYZ),
+	_T(B8G8R8X8_UNORM,   8_8_8_8_UNORM, R8G8B8A8_UNORM, WXYZ),
+	VT(B8G8R8A8_SRGB,    8_8_8_8_UNORM, NONE,           WXYZ),
+	_T(B8G8R8X8_SRGB,    8_8_8_8_UNORM, NONE,           WXYZ),
+
+	VT(A8B8G8R8_UNORM,   8_8_8_8_UNORM, R8G8B8A8_UNORM, XYZW),
+	_T(X8B8G8R8_UNORM,   8_8_8_8_UNORM, R8G8B8A8_UNORM, XYZW),
+	_T(A8B8G8R8_SRGB,    8_8_8_8_UNORM, NONE,           XYZW),
+	_T(X8B8G8R8_SRGB,    8_8_8_8_UNORM, NONE,           XYZW),
+
+	VT(A8R8G8B8_UNORM,   8_8_8_8_UNORM, R8G8B8A8_UNORM, ZYXW),
+	_T(X8R8G8B8_UNORM,   8_8_8_8_UNORM, R8G8B8A8_UNORM, ZYXW),
+	_T(A8R8G8B8_SRGB,    8_8_8_8_UNORM, NONE,           ZYXW),
+	_T(X8R8G8B8_SRGB,    8_8_8_8_UNORM, NONE,           ZYXW),
+
+	V_(R10G10B10A2_UNORM,   10_10_10_2_UNORM, NONE/*R10G10B10A2_UNORM*/, WZYX),
+	V_(R10G10B10A2_SNORM,   10_10_10_2_SNORM, NONE,              WZYX),
+	V_(R10G10B10A2_UINT,    10_10_10_2_UINT,  NONE,              WZYX),
+	V_(R10G10B10A2_USCALED, 10_10_10_2_UINT,  NONE,              WZYX),
+	V_(R10G10B10A2_SSCALED, 10_10_10_2_SINT,  NONE,              WZYX),
+
+	_T(Z24X8_UNORM,       X8Z24_UNORM, R8G8B8A8_UNORM, WZYX),
+	_T(Z24_UNORM_S8_UINT, X8Z24_UNORM, R8G8B8A8_UNORM, WZYX),
+	/*_T(Z32_FLOAT,         Z32_FLOAT,   R8G8B8A8_UNORM, WZYX),*/
+
+	/* 48-bit */
+	V_(R16G16B16_UNORM,   16_16_16_UNORM, NONE, WZYX),
+	V_(R16G16B16_SNORM,   16_16_16_SNORM, NONE, WZYX),
+	V_(R16G16B16_UINT,    16_16_16_UINT,  NONE, WZYX),
+	V_(R16G16B16_SINT,    16_16_16_SINT,  NONE, WZYX),
+	V_(R16G16B16_USCALED, 16_16_16_UINT,  NONE, WZYX),
+	V_(R16G16B16_SSCALED, 16_16_16_SINT,  NONE, WZYX),
+	V_(R16G16B16_FLOAT,   16_16_16_FLOAT, NONE, WZYX),
+
+	/* 64-bit */
+	V_(R16G16B16A16_UNORM,   16_16_16_16_UNORM, NONE,               WZYX),
+	V_(R16G16B16A16_SNORM,   16_16_16_16_SNORM, NONE,               WZYX),
+	V_(R16G16B16A16_UINT,    16_16_16_16_UINT,  NONE,               WZYX),
+	V_(R16G16B16A16_SINT,    16_16_16_16_SINT,  NONE,               WZYX),
+	V_(R16G16B16A16_USCALED, 16_16_16_16_UINT,  NONE,               WZYX),
+	V_(R16G16B16A16_SSCALED, 16_16_16_16_SINT,  NONE,               WZYX),
+	VT(R16G16B16A16_FLOAT,   16_16_16_16_FLOAT, NONE,               WZYX),
+	_T(R16G16B16X16_FLOAT,   16_16_16_16_FLOAT, NONE,               WZYX),
+
+	VT(R32G32_FLOAT,   32_32_FLOAT, NONE,        WZYX),
+	V_(R32G32_FIXED,   32_32_FIXED, NONE,        WZYX),
+
+	/* 96-bit */
+	V_(R32G32B32_FLOAT,   32_32_32_FLOAT, NONE, WZYX),
+	V_(R32G32B32_FIXED,   32_32_32_FIXED, NONE, WZYX),
+
+	/* 128-bit */
+	VT(R32G32B32A32_FLOAT,   32_32_32_32_FLOAT, NONE,               WZYX),
+	_T(R32G32B32X32_FLOAT,   32_32_32_32_FLOAT, NONE,               WZYX),
+	V_(R32G32B32A32_FIXED,   32_32_32_32_FIXED, NONE,               WZYX),
+};
+
 /* convert pipe format to vertex buffer format: */
 enum a4xx_vtx_fmt
 fd4_pipe2vtx(enum pipe_format format)
 {
-	switch (format) {
-	/* 8-bit buffers. */
-	case PIPE_FORMAT_R8_UNORM:
-		return VFMT4_8_UNORM;
-
-	case PIPE_FORMAT_R8_SNORM:
-		return VFMT4_8_SNORM;
-
-	case PIPE_FORMAT_R8_UINT:
-	case PIPE_FORMAT_R8_USCALED:
-		return VFMT4_8_UINT;
-
-	case PIPE_FORMAT_R8_SINT:
-	case PIPE_FORMAT_R8_SSCALED:
-		return VFMT4_8_SINT;
-
-	/* 16-bit buffers. */
-	case PIPE_FORMAT_R16_UNORM:
-	case PIPE_FORMAT_Z16_UNORM:
-		return VFMT4_16_UNORM;
-
-	case PIPE_FORMAT_R16_SNORM:
-		return VFMT4_16_SNORM;
-
-	case PIPE_FORMAT_R16_UINT:
-	case PIPE_FORMAT_R16_USCALED:
-		return VFMT4_16_UINT;
-
-	case PIPE_FORMAT_R16_SINT:
-	case PIPE_FORMAT_R16_SSCALED:
-		return VFMT4_16_SINT;
-
-	case PIPE_FORMAT_R16_FLOAT:
-		return VFMT4_16_FLOAT;
-
-	case PIPE_FORMAT_R8G8_UNORM:
-		return VFMT4_8_8_UNORM;
-
-	case PIPE_FORMAT_R8G8_SNORM:
-		return VFMT4_8_8_SNORM;
-
-	case PIPE_FORMAT_R8G8_UINT:
-	case PIPE_FORMAT_R8G8_USCALED:
-		return VFMT4_8_8_UINT;
-
-	case PIPE_FORMAT_R8G8_SINT:
-	case PIPE_FORMAT_R8G8_SSCALED:
-		return VFMT4_8_8_SINT;
-
-	/* 24-bit buffers. */
-	case PIPE_FORMAT_R8G8B8_UNORM:
-		return VFMT4_8_8_8_UNORM;
-
-	case PIPE_FORMAT_R8G8B8_SNORM:
-		return VFMT4_8_8_8_SNORM;
-
-	case PIPE_FORMAT_R8G8B8_UINT:
-	case PIPE_FORMAT_R8G8B8_USCALED:
-		return VFMT4_8_8_8_UINT;
-
-	case PIPE_FORMAT_R8G8B8_SINT:
-	case PIPE_FORMAT_R8G8B8_SSCALED:
-		return VFMT4_8_8_8_SINT;
-
-	/* 32-bit buffers. */
-	case PIPE_FORMAT_A8B8G8R8_UNORM:
-	case PIPE_FORMAT_A8R8G8B8_UNORM:
-	case PIPE_FORMAT_B8G8R8A8_UNORM:
-	case PIPE_FORMAT_R8G8B8A8_UNORM:
-		return VFMT4_8_8_8_8_UNORM;
-
-	case PIPE_FORMAT_R8G8B8A8_SNORM:
-		return VFMT4_8_8_8_8_SNORM;
-
-	case PIPE_FORMAT_R8G8B8A8_UINT:
-	case PIPE_FORMAT_R8G8B8A8_USCALED:
-		return VFMT4_8_8_8_8_UINT;
-
-	case PIPE_FORMAT_R8G8B8A8_SINT:
-	case PIPE_FORMAT_R8G8B8A8_SSCALED:
-		return VFMT4_8_8_8_8_SINT;
-
-	case PIPE_FORMAT_R16G16_SSCALED:
-	case PIPE_FORMAT_R16G16_SINT:
-		return VFMT4_16_16_SINT;
-
-	case PIPE_FORMAT_R16G16_FLOAT:
-		return VFMT4_16_16_FLOAT;
-
-	case PIPE_FORMAT_R16G16_UINT:
-	case PIPE_FORMAT_R16G16_USCALED:
-		return VFMT4_16_16_UINT;
-
-	case PIPE_FORMAT_R16G16_UNORM:
-		return VFMT4_16_16_UNORM;
-
-	case PIPE_FORMAT_R16G16_SNORM:
-		return VFMT4_16_16_SNORM;
-
-	case PIPE_FORMAT_R10G10B10A2_UNORM:
-		return VFMT4_10_10_10_2_UNORM;
-
-	case PIPE_FORMAT_R10G10B10A2_SNORM:
-		return VFMT4_10_10_10_2_SNORM;
-
-	case PIPE_FORMAT_R10G10B10A2_UINT:
-	case PIPE_FORMAT_R10G10B10A2_USCALED:
-		return VFMT4_10_10_10_2_UINT;
-
-	case PIPE_FORMAT_R10G10B10A2_SSCALED:
-		return VFMT4_10_10_10_2_SINT;
-
-	/* 48-bit buffers. */
-	case PIPE_FORMAT_R16G16B16_FLOAT:
-		return VFMT4_16_16_16_FLOAT;
-
-	case PIPE_FORMAT_R16G16B16_SINT:
-	case PIPE_FORMAT_R16G16B16_SSCALED:
-		return VFMT4_16_16_16_SINT;
-
-	case PIPE_FORMAT_R16G16B16_UINT:
-	case PIPE_FORMAT_R16G16B16_USCALED:
-		return VFMT4_16_16_16_UINT;
-
-	case PIPE_FORMAT_R16G16B16_SNORM:
-		return VFMT4_16_16_16_SNORM;
-
-	case PIPE_FORMAT_R16G16B16_UNORM:
-		return VFMT4_16_16_16_UNORM;
-
-	case PIPE_FORMAT_R32_FLOAT:
-	case PIPE_FORMAT_Z32_FLOAT:
-		return VFMT4_32_FLOAT;
-
-	case PIPE_FORMAT_R32_FIXED:
-		return VFMT4_32_FIXED;
-
-	/* 64-bit buffers. */
-	case PIPE_FORMAT_R16G16B16A16_UNORM:
-		return VFMT4_16_16_16_16_UNORM;
-
-	case PIPE_FORMAT_R16G16B16A16_SNORM:
-		return VFMT4_16_16_16_16_SNORM;
-
-	case PIPE_FORMAT_R16G16B16A16_UINT:
-	case PIPE_FORMAT_R16G16B16A16_USCALED:
-		return VFMT4_16_16_16_16_UINT;
-
-	case PIPE_FORMAT_R16G16B16A16_SINT:
-	case PIPE_FORMAT_R16G16B16A16_SSCALED:
-		return VFMT4_16_16_16_16_SINT;
-
-	case PIPE_FORMAT_R32G32_FLOAT:
-		return VFMT4_32_32_FLOAT;
-
-	case PIPE_FORMAT_R32G32_FIXED:
-		return VFMT4_32_32_FIXED;
-
-	case PIPE_FORMAT_R16G16B16A16_FLOAT:
-		return VFMT4_16_16_16_16_FLOAT;
-
-	/* 96-bit buffers. */
-	case PIPE_FORMAT_R32G32B32_FLOAT:
-		return VFMT4_32_32_32_FLOAT;
-
-	case PIPE_FORMAT_R32G32B32_FIXED:
-		return VFMT4_32_32_32_FIXED;
-
-	/* 128-bit buffers. */
-	case PIPE_FORMAT_R32G32B32A32_FLOAT:
-		return VFMT4_32_32_32_32_FLOAT;
-
-	case PIPE_FORMAT_R32G32B32A32_FIXED:
-		return VFMT4_32_32_32_32_FIXED;
-
-/* TODO probably need gles3 blob drivers to find the 32bit int formats:
-	case PIPE_FORMAT_R32G32B32A32_SNORM:
-	case PIPE_FORMAT_R32G32B32A32_UNORM:
-	case PIPE_FORMAT_R32G32B32A32_SINT:
-	case PIPE_FORMAT_R32G32B32A32_UINT:
-
-	case PIPE_FORMAT_R32_UINT:
-	case PIPE_FORMAT_R32_SINT:
-	case PIPE_FORMAT_A32_UINT:
-	case PIPE_FORMAT_A32_SINT:
-	case PIPE_FORMAT_L32_UINT:
-	case PIPE_FORMAT_L32_SINT:
-	case PIPE_FORMAT_I32_UINT:
-	case PIPE_FORMAT_I32_SINT:
-
-	case PIPE_FORMAT_R32G32_SINT:
-	case PIPE_FORMAT_R32G32_UINT:
-	case PIPE_FORMAT_L32A32_UINT:
-	case PIPE_FORMAT_L32A32_SINT:
-*/
-
-	default:
+	if (!formats[format].present)
 		return ~0;
-	}
+	return formats[format].vtx;
 }
 
 /* convert pipe format to texture sampler format: */
 enum a4xx_tex_fmt
 fd4_pipe2tex(enum pipe_format format)
 {
-	switch (format) {
-	case PIPE_FORMAT_L8_UNORM:
-	case PIPE_FORMAT_A8_UNORM:
-	case PIPE_FORMAT_I8_UNORM:
-		return TFMT4_8_UNORM;
-
-	case PIPE_FORMAT_R8G8_UNORM:
-		return TFMT4_8_8_UNORM;
-
-	case PIPE_FORMAT_B8G8R8A8_UNORM:
-	case PIPE_FORMAT_B8G8R8X8_UNORM:
-	case PIPE_FORMAT_R8G8B8A8_UNORM:
-	case PIPE_FORMAT_R8G8B8X8_UNORM:
-	case PIPE_FORMAT_B8G8R8A8_SRGB:
-	case PIPE_FORMAT_B8G8R8X8_SRGB:
-	case PIPE_FORMAT_R8G8B8A8_SRGB:
-	case PIPE_FORMAT_R8G8B8X8_SRGB:
-		return TFMT4_8_8_8_8_UNORM;
-
-	case PIPE_FORMAT_Z24X8_UNORM:
-		return TFMT4_X8Z24_UNORM;
-
-	case PIPE_FORMAT_Z24_UNORM_S8_UINT:
-		return TFMT4_8_8_8_8_UNORM;
-
-//	case PIPE_FORMAT_Z16_UNORM:
-//		return TFMT4_NORM_UINT_8_8;
-//
-	case PIPE_FORMAT_R16G16B16A16_FLOAT:
-	case PIPE_FORMAT_R16G16B16X16_FLOAT:
-		return TFMT4_16_16_16_16_FLOAT;
-
-	case PIPE_FORMAT_R32G32B32A32_FLOAT:
-	case PIPE_FORMAT_R32G32B32X32_FLOAT:
-		return TFMT4_32_32_32_32_FLOAT;
-
-	// TODO add more..
-
-	default:
+	if (!formats[format].present)
 		return ~0;
-	}
+	return formats[format].tex;
 }
 
 /* convert pipe format to MRT / copydest format used for render-target: */
 enum a4xx_color_fmt
 fd4_pipe2color(enum pipe_format format)
 {
-	switch (format) {
-	case PIPE_FORMAT_B8G8R8A8_UNORM:
-	case PIPE_FORMAT_B8G8R8X8_UNORM:
-	case PIPE_FORMAT_R8G8B8A8_UNORM:
-		return RB4_R8G8B8A8_UNORM;
-
-	case PIPE_FORMAT_Z16_UNORM:
-		return RB4_Z16_UNORM;
-
-	case PIPE_FORMAT_Z24X8_UNORM:
-	case PIPE_FORMAT_Z24_UNORM_S8_UINT:
-		/* for DEPTHX_24_8, blob driver also seems to use R8G8B8A8 fmt.. */
-		return RB4_R8G8B8A8_UNORM;
-
-	case PIPE_FORMAT_R8_UNORM:
-	case PIPE_FORMAT_L8_UNORM:
-	case PIPE_FORMAT_A8_UNORM:
-		return RB4_A8_UNORM;
-//
-//	case PIPE_FORMAT_R16G16B16A16_FLOAT:
-//	case PIPE_FORMAT_R16G16B16X16_FLOAT:
-//		return RB4_R16G16B16A16_FLOAT;
-//
-//	case PIPE_FORMAT_R32G32B32A32_FLOAT:
-//	case PIPE_FORMAT_R32G32B32X32_FLOAT:
-//		return RB4_R32G32B32A32_FLOAT;
-
-	// TODO add more..
-
-	default:
+	if (!formats[format].present)
 		return ~0;
-	}
+	return formats[format].rb;
+}
+
+enum a3xx_color_swap
+fd4_pipe2swap(enum pipe_format format)
+{
+	if (!formats[format].present)
+		return WZYX;
+	return formats[format].swap;
 }
 
 /* we need to special case a bit the depth/stencil restore, because we are
  * using the texture sampler to blit into the depth/stencil buffer, *not*
  * into a color buffer.  Otherwise fd4_tex_swiz() will do the wrong thing,
  * as it is assuming that you are sampling into normal render target..
+ *
+ * TODO looks like we can probably share w/ a3xx..
  */
 enum pipe_format
 fd4_gmem_restore_format(enum pipe_format format)
@@ -337,38 +250,6 @@ fd4_gmem_restore_format(enum pipe_format format)
 		return PIPE_FORMAT_R8G8_UNORM;
 	default:
 		return format;
-	}
-}
-
-/* TODO share w/ a3xx?? */
-enum a3xx_color_swap
-fd4_pipe2swap(enum pipe_format format)
-{
-	switch (format) {
-	case PIPE_FORMAT_B8G8R8A8_UNORM:
-	case PIPE_FORMAT_B8G8R8X8_UNORM:
-	case PIPE_FORMAT_B8G8R8A8_SRGB:
-	case PIPE_FORMAT_B8G8R8X8_SRGB:
-		return WXYZ;
-
-	case PIPE_FORMAT_A8R8G8B8_UNORM:
-	case PIPE_FORMAT_X8R8G8B8_UNORM:
-	case PIPE_FORMAT_A8R8G8B8_SRGB:
-	case PIPE_FORMAT_X8R8G8B8_SRGB:
-		return ZYXW;
-
-	case PIPE_FORMAT_A8B8G8R8_UNORM:
-	case PIPE_FORMAT_X8B8G8R8_UNORM:
-	case PIPE_FORMAT_A8B8G8R8_SRGB:
-	case PIPE_FORMAT_X8B8G8R8_SRGB:
-		return XYZW;
-
-	case PIPE_FORMAT_R8G8B8A8_UNORM:
-	case PIPE_FORMAT_R8G8B8X8_UNORM:
-	case PIPE_FORMAT_Z24X8_UNORM:
-	case PIPE_FORMAT_Z24_UNORM_S8_UINT:
-	default:
-		return WZYX;
 	}
 }
 
