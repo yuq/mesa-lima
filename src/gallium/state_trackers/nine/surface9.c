@@ -150,14 +150,22 @@ struct pipe_surface *
 NineSurface9_CreatePipeSurface( struct NineSurface9 *This, const int sRGB )
 {
     struct pipe_context *pipe = This->pipe;
+    struct pipe_screen *screen = pipe->screen;
     struct pipe_resource *resource = This->base.resource;
     struct pipe_surface templ;
+    enum pipe_format srgb_format;
 
     assert(This->desc.Pool == D3DPOOL_DEFAULT ||
            This->desc.Pool == D3DPOOL_MANAGED);
     assert(resource);
 
-    templ.format = sRGB ? util_format_srgb(resource->format) : resource->format;
+    srgb_format = util_format_srgb(resource->format);
+    if (sRGB && srgb_format != PIPE_FORMAT_NONE &&
+        screen->is_format_supported(screen, srgb_format,
+                                    resource->target, 0, resource->bind))
+        templ.format = srgb_format;
+    else
+        templ.format = resource->format;
     templ.u.tex.level = This->level;
     templ.u.tex.first_layer = This->layer;
     templ.u.tex.last_layer = This->layer;

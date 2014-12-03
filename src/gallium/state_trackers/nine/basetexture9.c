@@ -446,8 +446,10 @@ NineBaseTexture9_UpdateSamplerView( struct NineBaseTexture9 *This,
 {
     const struct util_format_description *desc;
     struct pipe_context *pipe = This->pipe;
+    struct pipe_screen *screen = pipe->screen;
     struct pipe_resource *resource = This->base.resource;
     struct pipe_sampler_view templ;
+    enum pipe_format srgb_format;
     unsigned i;
     uint8_t swizzle[4];
 
@@ -500,7 +502,14 @@ NineBaseTexture9_UpdateSamplerView( struct NineBaseTexture9 *This,
         }
     }
 
-    templ.format = sRGB ? util_format_srgb(resource->format) : resource->format;
+    /* if requested and supported, convert to the sRGB format */
+    srgb_format = util_format_srgb(resource->format);
+    if (sRGB && srgb_format != PIPE_FORMAT_NONE &&
+        screen->is_format_supported(screen, srgb_format,
+                                    resource->target, 0, resource->bind))
+        templ.format = srgb_format;
+    else
+        templ.format = resource->format;
     templ.u.tex.first_layer = 0;
     templ.u.tex.last_layer = resource->target == PIPE_TEXTURE_3D ?
                              resource->depth0 - 1 : resource->array_size - 1;
