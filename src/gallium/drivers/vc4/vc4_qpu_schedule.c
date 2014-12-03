@@ -439,13 +439,11 @@ get_instruction_priority(uint64_t inst)
         uint32_t baseline_score;
         uint32_t next_score = 0;
 
-        /* Schedule texture read setup early to hide their latency better. */
-        if (is_tmu_write(waddr_add) || is_tmu_write(waddr_mul))
+        /* Schedule TLB operations as late as possible, to get more
+         * parallelism between shaders.
+         */
+        if (qpu_inst_is_tlb(inst))
                 return next_score;
-        next_score++;
-
-        /* Default score for things that aren't otherwise special. */
-        baseline_score = next_score;
         next_score++;
 
         /* Schedule texture read results collection late to hide latency. */
@@ -453,10 +451,12 @@ get_instruction_priority(uint64_t inst)
                 return next_score;
         next_score++;
 
-        /* Schedule TLB operations as late as possible, to get more
-         * parallelism between shaders.
-         */
-        if (qpu_inst_is_tlb(inst))
+        /* Default score for things that aren't otherwise special. */
+        baseline_score = next_score;
+        next_score++;
+
+        /* Schedule texture read setup early to hide their latency better. */
+        if (is_tmu_write(waddr_add) || is_tmu_write(waddr_mul))
                 return next_score;
         next_score++;
 
