@@ -1011,13 +1011,13 @@ _tx_dst_param(struct shader_translator *tx, const struct sm1_dst_param *param)
         case 1:
             if (ureg_dst_is_undef(tx->regs.oFog))
                 tx->regs.oFog =
-                    ureg_DECL_output(tx->ureg, TGSI_SEMANTIC_FOG, 0);
+                    ureg_saturate(ureg_DECL_output(tx->ureg, TGSI_SEMANTIC_FOG, 0));
             dst = tx->regs.oFog;
             break;
         case 2:
             if (ureg_dst_is_undef(tx->regs.oPts))
                 tx->regs.oPts =
-                    ureg_DECL_output(tx->ureg, TGSI_SEMANTIC_PSIZE, 0);
+                    ureg_saturate(ureg_DECL_output(tx->ureg, TGSI_SEMANTIC_PSIZE, 0));
             dst = tx->regs.oPts;
             break;
         default:
