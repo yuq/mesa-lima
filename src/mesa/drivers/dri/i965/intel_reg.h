@@ -112,6 +112,7 @@
 #define CL_INVOCATION_COUNT             0x2338
 #define CL_PRIMITIVES_COUNT             0x2340
 #define PS_INVOCATION_COUNT             0x2348
+#define CS_INVOCATION_COUNT             0x2290
 #define PS_DEPTH_COUNT                  0x2350
 
 #define GEN6_SO_PRIM_STORAGE_NEEDED     0x2280
