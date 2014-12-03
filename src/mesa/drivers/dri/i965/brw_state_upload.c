@@ -542,8 +542,10 @@ static void
 brw_print_dirty_count(struct dirty_bit_map *bit_map)
 {
    for (int i = 0; bit_map[i].bit != 0; i++) {
-      fprintf(stderr, "0x%016lx: %12d (%s)\n",
-	      bit_map[i].bit, bit_map[i].count, bit_map[i].name);
+      if (bit_map[i].count > 1) {
+         fprintf(stderr, "0x%016lx: %12d (%s)\n",
+                 bit_map[i].bit, bit_map[i].count, bit_map[i].name);
+      }
    }
 }
 
