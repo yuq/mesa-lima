@@ -79,20 +79,27 @@ gen8_upload_gs_state(struct brw_context *brw)
                 (prog_data->base.dispatch_grf_start_reg <<
                  GEN6_GS_DISPATCH_START_GRF_SHIFT));
 
+      uint32_t dw7 = (brw->gs.prog_data->control_data_header_size_hwords <<
+                      GEN7_GS_CONTROL_DATA_HEADER_SIZE_SHIFT) |
+                      brw->gs.prog_data->dispatch_mode |
+                      GEN6_GS_STATISTICS_ENABLE |
+                      (brw->gs.prog_data->include_primitive_id ?
+                       GEN7_GS_INCLUDE_PRIMITIVE_ID : 0) |
+                      GEN7_GS_REORDER_TRAILING |
+                      GEN7_GS_ENABLE;
+      uint32_t dw8 = brw->gs.prog_data->control_data_format <<
+                     HSW_GS_CONTROL_DATA_FORMAT_SHIFT;
+
+      if (brw->gen < 9)
+         dw7 |= (brw->max_gs_threads / 2 - 1) << HSW_GS_MAX_THREADS_SHIFT;
+      else
+         dw8 |= brw->max_gs_threads - 1;
+
       /* DW7 */
-      OUT_BATCH(((brw->max_gs_threads / 2 - 1) << HSW_GS_MAX_THREADS_SHIFT) |
-                (brw->gs.prog_data->control_data_header_size_hwords <<
-                 GEN7_GS_CONTROL_DATA_HEADER_SIZE_SHIFT) |
-                brw->gs.prog_data->dispatch_mode |
-                GEN6_GS_STATISTICS_ENABLE |
-                (brw->gs.prog_data->include_primitive_id ?
-                 GEN7_GS_INCLUDE_PRIMITIVE_ID : 0) |
-                GEN7_GS_REORDER_TRAILING |
-                GEN7_GS_ENABLE);
+      OUT_BATCH(dw7);
 
       /* DW8 */
-      OUT_BATCH(brw->gs.prog_data->control_data_format <<
-                HSW_GS_CONTROL_DATA_FORMAT_SHIFT);
+      OUT_BATCH(dw8);
 
       /* DW9 / _NEW_TRANSFORM */
       OUT_BATCH((ctx->Transform.ClipPlanesEnabled <<
