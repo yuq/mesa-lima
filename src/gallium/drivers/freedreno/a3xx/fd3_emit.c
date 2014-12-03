@@ -202,10 +202,24 @@ emit_textures(struct fd_context *ctx, struct fd_ringbuffer *ring,
 					(BORDERCOLOR_SIZE * tex_off[sb]) +
 					(BORDERCOLOR_SIZE * i));
 
-			bcolor[0] = util_float_to_half(sampler->base.border_color.f[2]);
-			bcolor[1] = util_float_to_half(sampler->base.border_color.f[1]);
-			bcolor[2] = util_float_to_half(sampler->base.border_color.f[0]);
-			bcolor[3] = util_float_to_half(sampler->base.border_color.f[3]);
+			/*
+			 * XXX HACK ALERT XXX
+			 *
+			 * The border colors need to be swizzled in a particular
+			 * format-dependent order. Even though samplers don't know about
+			 * formats, we can assume that with a GL state tracker, there's a
+			 * 1:1 correspondence between sampler and texture. Take advantage
+			 * of that knowledge.
+			 */
+			if (i < tex->num_textures && tex->textures[i]) {
+				const struct util_format_description *desc =
+					util_format_description(tex->textures[i]->format);
+				for (j = 0; j < 4; j++) {
+					if (desc->swizzle[j] < 4)
+						bcolor[desc->swizzle[j]] =
+							util_float_to_half(sampler->base.border_color.f[j]);
+				}
+			}
 
 			OUT_RING(ring, sampler->texsamp0);
 			OUT_RING(ring, sampler->texsamp1);
