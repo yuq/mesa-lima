@@ -1963,10 +1963,12 @@ DECL_SPECIAL(NRM)
     struct ureg_program *ureg = tx->ureg;
     struct ureg_dst tmp = tx_scratch_scalar(tx);
     struct ureg_src nrm = tx_src_scalar(tmp);
+    struct ureg_dst dst = tx_dst_param(tx, &tx->insn.dst[0]);
     struct ureg_src src = tx_src_param(tx, &tx->insn.src[0]);
     ureg_DP3(ureg, tmp, src, src);
     ureg_RSQ(ureg, tmp, nrm);
-    ureg_MUL(ureg, tx_dst_param(tx, &tx->insn.dst[0]), src, nrm);
+    ureg_MIN(ureg, tmp, ureg_imm1f(ureg, FLT_MAX), nrm);
+    ureg_MUL(ureg, dst, src, nrm);
     return D3D_OK;
 }
 
