@@ -1958,6 +1958,17 @@ DECL_SPECIAL(RSQ)
     return D3D_OK;
 }
 
+DECL_SPECIAL(LOG)
+{
+    struct ureg_program *ureg = tx->ureg;
+    struct ureg_dst tmp = tx_scratch_scalar(tx);
+    struct ureg_dst dst = tx_dst_param(tx, &tx->insn.dst[0]);
+    struct ureg_src src = tx_src_param(tx, &tx->insn.src[0]);
+    ureg_LG2(ureg, tmp, ureg_abs(src));
+    ureg_MAX(ureg, dst, ureg_imm1f(ureg, -FLT_MAX), tx_src_scalar(tmp));
+    return D3D_OK;
+}
+
 DECL_SPECIAL(NRM)
 {
     struct ureg_program *ureg = tx->ureg;
@@ -2281,7 +2292,7 @@ struct sm1_op_info inst_table[] =
     _OPI(SLT, SLT, V(0,0), V(3,0), V(0,0), V(3,0), 1, 2, NULL), /* 12 */
     _OPI(SGE, SGE, V(0,0), V(3,0), V(0,0), V(3,0), 1, 2, NULL), /* 13 */
     _OPI(EXP, EX2, V(0,0), V(3,0), V(0,0), V(3,0), 1, 1, NULL), /* 14 */
-    _OPI(LOG, LG2, V(0,0), V(3,0), V(0,0), V(3,0), 1, 1, NULL), /* 15 */
+    _OPI(LOG, LG2, V(0,0), V(3,0), V(0,0), V(3,0), 1, 1, SPECIAL(LOG)), /* 15 */
     _OPI(LIT, LIT, V(0,0), V(3,0), V(0,0), V(0,0), 1, 1, NULL), /* 16 */
     _OPI(DST, DST, V(0,0), V(3,0), V(0,0), V(3,0), 1, 2, NULL), /* 17 */
     _OPI(LRP, LRP, V(0,0), V(3,0), V(0,0), V(3,0), 1, 3, NULL), /* 18 */
@@ -2345,7 +2356,7 @@ struct sm1_op_info inst_table[] =
 
     _OPI(EXPP, EXP, V(0,0), V(1,1), V(0,0), V(0,0), 1, 1, NULL),
     _OPI(EXPP, EX2, V(2,0), V(3,0), V(0,0), V(0,0), 1, 1, NULL),
-    _OPI(LOGP, LG2, V(0,0), V(3,0), V(0,0), V(0,0), 1, 1, NULL),
+    _OPI(LOGP, LG2, V(0,0), V(3,0), V(0,0), V(0,0), 1, 1, SPECIAL(LOG)),
     _OPI(CND,  NOP, V(0,0), V(0,0), V(0,0), V(1,4), 1, 3, SPECIAL(CND)),
 
     _OPI(DEF, NOP, V(0,0), V(3,0), V(0,0), V(3,0), 1, 0, SPECIAL(DEF)),
