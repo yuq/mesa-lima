@@ -15,6 +15,12 @@
       <param name="textures" type="GLuint *" />
    </function>
 
+   <function name="TextureBuffer" offset="assign">
+      <param name="texture" type="GLuint" />
+      <param name="internalformat" type="GLenum" />
+      <param name="buffer" type="GLuint" />
+   </function>
+
    <function name="TextureStorage1D" offset="assign">
       <param name="texture" type="GLuint" />
       <param name="levels" type="GLsizei" />

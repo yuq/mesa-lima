@@ -202,6 +202,14 @@ _mesa_texture_image_multisample(struct gl_context *ctx, GLuint dims,
                                 GLsizei height, GLsizei depth,
                                 GLboolean fixedsamplelocations,
                                 GLboolean immutable, const char *func);
+
+extern void
+_mesa_texture_buffer_range(struct gl_context *ctx,
+                           struct gl_texture_object *texObj, GLenum target, 
+                           GLenum internalFormat,
+                           struct gl_buffer_object *bufObj,
+                           GLintptr offset, GLsizeiptr size, bool range,
+                           bool dsa);
 /*@}*/
 
 
@@ -393,6 +401,9 @@ _mesa_TexBuffer(GLenum target, GLenum internalFormat, GLuint buffer);
 extern void GLAPIENTRY
 _mesa_TexBufferRange(GLenum target, GLenum internalFormat, GLuint buffer,
                      GLintptr offset, GLsizeiptr size);
+
+extern void GLAPIENTRY
+_mesa_TextureBuffer(GLuint texture, GLenum internalFormat, GLuint buffer);
 
 
 extern void GLAPIENTRY
