@@ -1410,6 +1410,126 @@ fs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
       break;
    }
 
+   /* Handle ARB_gpu_shader5 interpolation intrinsics
+    *
+    * It's worth a quick word of explanation as to why we handle the full
+    * variable-based interpolation intrinsic rather than a lowered version
+    * with like we do for other inputs.  We have to do that because the way
+    * we set up inputs doesn't allow us to use the already setup inputs for
+    * interpolation.  At the beginning of the shader, we go through all of
+    * the input variables and do the initial interpolation and put it in
+    * the nir_inputs array based on its location as determined in
+    * nir_lower_io.  If the input isn't used, dead code cleans up and
+    * everything works fine.  However, when we get to the ARB_gpu_shader5
+    * interpolation intrinsics, we need to reinterpolate the input
+    * differently.  If we used an intrinsic that just had an index it would
+    * only give us the offset into the nir_inputs array.  However, this is
+    * useless because that value is post-interpolation and we need
+    * pre-interpolation.  In order to get the actual location of the bits
+    * we get from the vertex fetching hardware, we need the variable.
+    */
+   case nir_intrinsic_interp_var_at_centroid:
+   case nir_intrinsic_interp_var_at_sample:
+   case nir_intrinsic_interp_var_at_offset: {
+      /* in SIMD16 mode, the pixel interpolator returns coords interleaved
+       * 8 channels at a time, same as the barycentric coords presented in
+       * the FS payload. this requires a bit of extra work to support.
+       */
+      no16("interpolate_at_* not yet supported in SIMD16 mode.");
+
+      fs_reg dst_x(GRF, virtual_grf_alloc(2), BRW_REGISTER_TYPE_F);
+      fs_reg dst_y = offset(dst_x, 1);
+
+      /* For most messages, we need one reg of ignored data; the hardware
+       * requires mlen==1 even when there is no payload. in the per-slot
+       * offset case, we'll replace this with the proper source data.
+       */
+      fs_reg src(this, glsl_type::float_type);
+      int mlen = 1;     /* one reg unless overriden */
+      fs_inst *inst;
+
+      switch (instr->intrinsic) {
+      case nir_intrinsic_interp_var_at_centroid:
+         inst = emit(FS_OPCODE_INTERPOLATE_AT_CENTROID, dst_x, src, fs_reg(0u));
+         break;
+
+      case nir_intrinsic_interp_var_at_sample: {
+         /* XXX: We should probably handle non-constant sample id's */
+         nir_const_value *const_sample = nir_src_as_const_value(instr->src[0]);
+         assert(const_sample);
+         unsigned msg_data = const_sample ? const_sample->i[0] << 4 : 0;
+         inst = emit(FS_OPCODE_INTERPOLATE_AT_SAMPLE, dst_x, src,
+                     fs_reg(msg_data));
+         break;
+      }
+
+      case nir_intrinsic_interp_var_at_offset: {
+         nir_const_value *const_offset = nir_src_as_const_value(instr->src[0]);
+
+         if (const_offset) {
+            unsigned off_x = MIN2((int)(const_offset->f[0] * 16), 7) & 0xf;
+            unsigned off_y = MIN2((int)(const_offset->f[1] * 16), 7) & 0xf;
+
+            inst = emit(FS_OPCODE_INTERPOLATE_AT_SHARED_OFFSET, dst_x, src,
+                        fs_reg(off_x | (off_y << 4)));
+         } else {
+            src = fs_reg(this, glsl_type::ivec2_type);
+            fs_reg offset_src = retype(get_nir_src(instr->src[0]),
+                                       BRW_REGISTER_TYPE_F);
+            for (int i = 0; i < 2; i++) {
+               fs_reg temp(this, glsl_type::float_type);
+               emit(MUL(temp, offset(offset_src, i), fs_reg(16.0f)));
+               fs_reg itemp(this, glsl_type::int_type);
+               emit(MOV(itemp, temp));  /* float to int */
+
+               /* Clamp the upper end of the range to +7/16.
+                * ARB_gpu_shader5 requires that we support a maximum offset
+                * of +0.5, which isn't representable in a S0.4 value -- if
+                * we didn't clamp it, we'd end up with -8/16, which is the
+                * opposite of what the shader author wanted.
+                *
+                * This is legal due to ARB_gpu_shader5's quantization
+                * rules:
+                *
+                * "Not all values of <offset> may be supported; x and y
+                * offsets may be rounded to fixed-point values with the
+                * number of fraction bits given by the
+                * implementation-dependent constant
+                * FRAGMENT_INTERPOLATION_OFFSET_BITS"
+                */
+
+               emit(BRW_OPCODE_SEL, offset(src, i), itemp, fs_reg(7))
+                   ->conditional_mod = BRW_CONDITIONAL_L; /* min(src2, 7) */
+            }
+
+            mlen = 2;
+            inst = emit(FS_OPCODE_INTERPOLATE_AT_PER_SLOT_OFFSET, dst_x, src,
+                        fs_reg(0u));
+         }
+         break;
+      }
+
+      default:
+         unreachable("Invalid intrinsic");
+      }
+
+      inst->mlen = mlen;
+      inst->regs_written = 2; /* 2 floats per slot returned */
+      inst->pi_noperspective = instr->variables[0]->var->data.interpolation ==
+                               INTERP_QUALIFIER_NOPERSPECTIVE;
+
+      for (unsigned j = 0; j < instr->num_components; j++) {
+         fs_reg src = interp_reg(instr->variables[0]->var->data.location, j);
+         src.type = dest.type;
+
+         fs_inst *inst = emit(FS_OPCODE_LINTERP, dest, dst_x, dst_y, src);
+         if (instr->has_predicate)
+            inst->predicate = BRW_PREDICATE_NORMAL;
+         dest.reg_offset++;
+      }
+      break;
+   }
+
    case nir_intrinsic_store_output_indirect:
       has_indirect = true;
    case nir_intrinsic_store_output: {
