@@ -124,6 +124,7 @@ util_primconvert_draw_vbo(struct primconvert_context *pc,
    new_info.indexed = true;
    new_info.min_index = info->min_index;
    new_info.max_index = info->max_index;
+   new_info.index_bias = info->index_bias;
 
    if (info->indexed) {
       u_index_translator(pc->primtypes_mask,
