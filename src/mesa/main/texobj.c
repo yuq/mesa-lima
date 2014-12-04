@@ -60,6 +60,22 @@ _mesa_lookup_texture(struct gl_context *ctx, GLuint id)
       _mesa_HashLookup(ctx->Shared->TexObjects, id);
 }
 
+/**
+ * Wrapper around _mesa_lookup_texture that throws GL_INVALID_OPERATION if id
+ * is not in the hash table. After calling _mesa_error, it returns NULL.
+ */
+struct gl_texture_object *
+_mesa_lookup_texture_err(struct gl_context *ctx, GLuint id, const char* func)
+{
+   struct gl_texture_object *texObj;
+
+   texObj = _mesa_lookup_texture(ctx, id); /* Returns NULL if not found. */
+
+   if (!texObj)
+      _mesa_error(ctx, GL_INVALID_OPERATION, "%s(texture)", func);
+
+   return texObj;
+}
 
 void
 _mesa_begin_texture_lookups(struct gl_context *ctx)
