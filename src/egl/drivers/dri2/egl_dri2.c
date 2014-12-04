@@ -659,6 +659,7 @@ dri2_initialize(_EGLDriver *drv, _EGLDisplay *disp)
 #endif
 
    default:
+      _eglLog(_EGL_WARNING, "No EGL platform enabled.");
       return EGL_FALSE;
    }
 }
