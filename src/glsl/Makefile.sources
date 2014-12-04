@@ -65,6 +65,8 @@ LIBGLSL_FILES = \
 	$(GLSL_SRCDIR)/ast_function.cpp \
 	$(GLSL_SRCDIR)/ast_to_hir.cpp \
 	$(GLSL_SRCDIR)/ast_type.cpp \
+	$(GLSL_SRCDIR)/blob.c \
+	$(GLSL_SRCDIR)/blob.h \
 	$(GLSL_SRCDIR)/builtin_functions.cpp \
 	$(GLSL_SRCDIR)/builtin_type_macros.h \
 	$(GLSL_SRCDIR)/builtin_types.cpp \
