@@ -47,6 +47,21 @@ INTRINSIC(store_var, 1, ARR(0), false, 0, 1, 0, 0)
 INTRINSIC(copy_var, 0, ARR(), false, 0, 2, 0, 0)
 
 /*
+ * Interpolation of input.  The interp_var_at* intrinsics are similar to the
+ * load_var intrinsic acting an a shader input except that they interpolate
+ * the input differently.  The at_sample and at_offset intrinsics take an
+ * aditional source that is a integer sample id or a vec2 position offset
+ * respectively.
+ */
+
+INTRINSIC(interp_var_at_centroid, 0, ARR(0), true, 0, 1, 0,
+          NIR_INTRINSIC_CAN_ELIMINATE | NIR_INTRINSIC_CAN_REORDER)
+INTRINSIC(interp_var_at_sample, 1, ARR(1), true, 0, 1, 0,
+          NIR_INTRINSIC_CAN_ELIMINATE | NIR_INTRINSIC_CAN_REORDER)
+INTRINSIC(interp_var_at_offset, 1, ARR(2), true, 0, 1, 0,
+          NIR_INTRINSIC_CAN_ELIMINATE | NIR_INTRINSIC_CAN_REORDER)
+
+/*
  * a barrier is an intrinsic with no inputs/outputs but which can't be moved
  * around/optimized in general
  */
@@ -108,23 +123,6 @@ LOAD(uniform, 2, NIR_INTRINSIC_CAN_REORDER)
 LOAD(ubo, 3, NIR_INTRINSIC_CAN_REORDER)
 LOAD(input, 2, NIR_INTRINSIC_CAN_REORDER)
 /* LOAD(ssbo, 2, 0) */
-
-/*
- * Interpolation of input.  These are similar to the load_input* intrinsics
- * except they interpolate differently.  The interp_at_offset* and
- * interp_at_offset* intrinsics take a second source that is either a
- * sample id or a vec2 position offset.
- */
-
-#define INTERP(name, num_srcs, src_comps) \
-   INTRINSIC(interp_##name, num_srcs, ARR(src_comps), true, \
-             0, 0, 2, NIR_INTRINSIC_CAN_ELIMINATE | NIR_INTRINSIC_CAN_REORDER) \
-   INTRINSIC(interp_##name##_indirect, 1 + num_srcs, ARR(1, src_comps), true, \
-             0, 0, 2, NIR_INTRINSIC_CAN_ELIMINATE | NIR_INTRINSIC_CAN_REORDER)
-
-INTERP(at_centroid, 0, 0)
-INTERP(at_sample, 1, 1)
-INTERP(at_offset, 1, 1)
 
 /*
  * Stores work the same way as loads, except now the first register input is
