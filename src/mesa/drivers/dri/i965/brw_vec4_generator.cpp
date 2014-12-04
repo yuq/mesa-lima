@@ -529,13 +529,17 @@ vec4_generator::generate_gs_set_write_offset(struct brw_reg dst,
     *
     * We can do this with the following EU instruction:
     *
-    *     mul(2) dst.3<1>UD src0<8;2,4>UD src1   { Align1 WE_all }
+    *     mul(2) dst.3<1>UD src0<8;2,4>UD src1<...>UW   { Align1 WE_all }
     */
    brw_push_insn_state(p);
    brw_set_default_access_mode(p, BRW_ALIGN_1);
    brw_set_default_mask_control(p, BRW_MASK_DISABLE);
+   assert(brw->gen >= 7 &&
+          src1.file == BRW_IMMEDIATE_VALUE &&
+          src1.type == BRW_REGISTER_TYPE_UD &&
+          src1.dw1.ud <= USHRT_MAX);
    brw_MUL(p, suboffset(stride(dst, 2, 2, 1), 3), stride(src0, 8, 2, 4),
-           src1);
+           retype(src1, BRW_REGISTER_TYPE_UW));
    brw_set_default_access_mode(p, BRW_ALIGN_16);
    brw_pop_insn_state(p);
 }
