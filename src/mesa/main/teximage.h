@@ -99,10 +99,6 @@ _mesa_clear_texture_image(struct gl_context *ctx,
                           struct gl_texture_image *texImage);
 
 
-extern struct gl_texture_object *
-_mesa_get_current_tex_object(struct gl_context *ctx, GLenum target);
-
-
 extern struct gl_texture_image *
 _mesa_select_tex_image(const struct gl_texture_object *texObj,
                        GLenum target, GLint level);
