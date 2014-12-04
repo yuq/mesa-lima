@@ -169,24 +169,6 @@ _mesa_legal_texture_base_format_for_target(struct gl_context *ctx,
                                            unsigned dimensions,
                                            const char *caller);
 
-/**
- * Lock a texture for updating.  See also _mesa_lock_context_textures().
- */
-static inline void
-_mesa_lock_texture(struct gl_context *ctx, struct gl_texture_object *texObj)
-{
-   mtx_lock(&ctx->Shared->TexMutex);
-   ctx->Shared->TextureStateStamp++;
-   (void) texObj;
-}
-
-static inline void
-_mesa_unlock_texture(struct gl_context *ctx, struct gl_texture_object *texObj)
-{
-   (void) texObj;
-   mtx_unlock(&ctx->Shared->TexMutex);
-}
-
 /*@}*/
 
 

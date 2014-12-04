@@ -44,8 +44,8 @@
 #include "texcompress.h"
 #include "texgetimage.h"
 #include "teximage.h"
+#include "texobj.h"
 #include "texstore.h"
-
 
 
 /**
