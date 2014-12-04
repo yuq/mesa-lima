@@ -103,7 +103,7 @@ vec4_visitor::dead_code_eliminate()
                   progress = true;
 
                   if (inst->dst.writemask == 0) {
-                     if (inst->writes_accumulator) {
+                     if (inst->writes_accumulator || inst->writes_flag()) {
                         inst->dst = dst_reg(retype(brw_null_reg(), inst->dst.type));
                      } else {
                         inst->opcode = BRW_OPCODE_NOP;
