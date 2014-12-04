@@ -693,6 +693,9 @@ typedef struct {
 
    nir_dest dest;
 
+   /** number of components if this is a vectorized intrinsic */
+   uint8_t num_components;
+
    int const_index[3];
 
    nir_deref_var *variables[2];
@@ -732,12 +735,20 @@ typedef struct {
 
    unsigned num_srcs; /** < number of register/SSA inputs */
 
-   /** number of components of each input register */
+   /** number of components of each input register
+    *
+    * If this value is 0, the number of components is given by the
+    * num_components field of nir_intrinsic_instr.
+    */
    unsigned src_components[NIR_INTRINSIC_MAX_INPUTS];
 
    bool has_dest;
 
-   /** number of components of each output register */
+   /** number of components of the output register
+    *
+    * If this value is 0, the number of components is given by the
+    * num_components field of nir_intrinsic_instr.
+    */
    unsigned dest_components;
 
    /** the number of inputs/outputs that are variables */

@@ -30,8 +30,7 @@
 static void
 convert_instr(nir_intrinsic_instr *instr)
 {
-   if (instr->intrinsic != nir_intrinsic_load_var_vec1 &&
-       instr->intrinsic != nir_intrinsic_load_var_vec2)
+   if (instr->intrinsic != nir_intrinsic_load_var)
       return;
 
    nir_variable *var = instr->variables[0]->var;

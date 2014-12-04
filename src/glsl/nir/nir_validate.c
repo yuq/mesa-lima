@@ -331,16 +331,10 @@ validate_intrinsic_instr(nir_intrinsic_instr *instr, validate_state *state)
    }
 
    switch (instr->intrinsic) {
-   case nir_intrinsic_load_var_vec1:
-   case nir_intrinsic_load_var_vec2:
-   case nir_intrinsic_load_var_vec3:
-   case nir_intrinsic_load_var_vec4:
+   case nir_intrinsic_load_var:
       assert(instr->variables[0]->var->data.mode != nir_var_shader_out);
       break;
-   case nir_intrinsic_store_var_vec1:
-   case nir_intrinsic_store_var_vec2:
-   case nir_intrinsic_store_var_vec3:
-   case nir_intrinsic_store_var_vec4:
+   case nir_intrinsic_store_var:
       assert(instr->variables[0]->var->data.mode != nir_var_shader_in &&
              instr->variables[0]->var->data.mode != nir_var_uniform);
       break;

@@ -1312,14 +1312,10 @@ fs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
       break;
    }
 
-   case nir_intrinsic_load_uniform_vec1:
-   case nir_intrinsic_load_uniform_vec2:
-   case nir_intrinsic_load_uniform_vec3:
-   case nir_intrinsic_load_uniform_vec4: {
+   case nir_intrinsic_load_uniform: {
       unsigned index = 0;
       for (int i = 0; i < instr->const_index[1]; i++) {
-         for (unsigned j = 0;
-            j < nir_intrinsic_infos[instr->intrinsic].dest_components; j++) {
+         for (unsigned j = 0; j < instr->num_components; j++) {
             fs_reg src = nir_uniforms;
             src.reg_offset = instr->const_index[0] + index;
             src.type = dest.type;
@@ -1335,14 +1331,10 @@ fs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
       break;
    }
 
-   case nir_intrinsic_load_uniform_vec1_indirect:
-   case nir_intrinsic_load_uniform_vec2_indirect:
-   case nir_intrinsic_load_uniform_vec3_indirect:
-   case nir_intrinsic_load_uniform_vec4_indirect: {
+   case nir_intrinsic_load_uniform_indirect: {
       unsigned index = 0;
       for (int i = 0; i < instr->const_index[1]; i++) {
-         for (unsigned j = 0;
-            j < nir_intrinsic_infos[instr->intrinsic].dest_components; j++) {
+         for (unsigned j = 0; j < instr->num_components; j++) {
             fs_reg src = nir_uniforms;
             src.reg_offset = instr->const_index[0] + index;
             src.reladdr = new(mem_ctx) fs_reg(get_nir_src(instr->src[0]));
@@ -1360,10 +1352,7 @@ fs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
       break;
    }
 
-   case nir_intrinsic_load_ubo_vec1:
-   case nir_intrinsic_load_ubo_vec2:
-   case nir_intrinsic_load_ubo_vec3:
-   case nir_intrinsic_load_ubo_vec4: {
+   case nir_intrinsic_load_ubo: {
       fs_reg surf_index = fs_reg(prog_data->binding_table.ubo_start +
                                  (unsigned) instr->const_index[0]);
       fs_reg packed_consts = fs_reg(this, glsl_type::float_type);
@@ -1373,8 +1362,7 @@ fs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
       emit(new(mem_ctx) fs_inst(FS_OPCODE_UNIFORM_PULL_CONSTANT_LOAD,
                                 packed_consts, surf_index, const_offset_reg));
 
-      for (unsigned i = 0;
-           i < nir_intrinsic_infos[instr->intrinsic].dest_components; i++) {
+      for (unsigned i = 0; i < instr->num_components; i++) {
          packed_consts.set_smear(instr->const_index[1] % 16 / 4 + i);
 
          /* The std140 packing rules don't allow vectors to cross 16-byte
@@ -1392,10 +1380,7 @@ fs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
       break;
    }
 
-   case nir_intrinsic_load_ubo_vec1_indirect:
-   case nir_intrinsic_load_ubo_vec2_indirect:
-   case nir_intrinsic_load_ubo_vec3_indirect:
-   case nir_intrinsic_load_ubo_vec4_indirect: {
+   case nir_intrinsic_load_ubo_indirect: {
       fs_reg surf_index = fs_reg(prog_data->binding_table.ubo_start +
                                  instr->const_index[0]);
       /* Turn the byte offset into a dword offset. */
@@ -1404,8 +1389,7 @@ fs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
       emit(SHR(offset, retype(get_nir_src(instr->src[0]), BRW_REGISTER_TYPE_D),
                fs_reg(2)));
 
-      for (unsigned i = 0;
-           i < nir_intrinsic_infos[instr->intrinsic].dest_components; i++) {
+      for (unsigned i = 0; i < instr->num_components; i++) {
          exec_list list = VARYING_PULL_CONSTANT_LOAD(dest, surf_index,
                                                      offset, base_offset + i);
          fs_inst *last_inst = (fs_inst *) list.get_tail();
@@ -1418,14 +1402,10 @@ fs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
       break;
    }
 
-   case nir_intrinsic_load_input_vec1:
-   case nir_intrinsic_load_input_vec2:
-   case nir_intrinsic_load_input_vec3:
-   case nir_intrinsic_load_input_vec4: {
+   case nir_intrinsic_load_input: {
       unsigned index = 0;
       for (int i = 0; i < instr->const_index[1]; i++) {
-         for (unsigned j = 0;
-            j < nir_intrinsic_infos[instr->intrinsic].dest_components; j++) {
+         for (unsigned j = 0; j < instr->num_components; j++) {
             fs_reg src = nir_inputs;
             src.reg_offset = instr->const_index[0] + index;
             src.type = dest.type;
@@ -1441,14 +1421,10 @@ fs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
       break;
    }
 
-   case nir_intrinsic_load_input_vec1_indirect:
-   case nir_intrinsic_load_input_vec2_indirect:
-   case nir_intrinsic_load_input_vec3_indirect:
-   case nir_intrinsic_load_input_vec4_indirect: {
+   case nir_intrinsic_load_input_indirect: {
       unsigned index = 0;
       for (int i = 0; i < instr->const_index[1]; i++) {
-         for (unsigned j = 0;
-            j < nir_intrinsic_infos[instr->intrinsic].dest_components; j++) {
+         for (unsigned j = 0; j < instr->num_components; j++) {
             fs_reg src = nir_inputs;
             src.reg_offset = instr->const_index[0] + index;
             src.reladdr = new(mem_ctx) fs_reg(get_nir_src(instr->src[0]));
@@ -1466,15 +1442,11 @@ fs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
       break;
    }
 
-   case nir_intrinsic_store_output_vec1:
-   case nir_intrinsic_store_output_vec2:
-   case nir_intrinsic_store_output_vec3:
-   case nir_intrinsic_store_output_vec4: {
+   case nir_intrinsic_store_output: {
       fs_reg src = get_nir_src(instr->src[0]);
       unsigned index = 0;
       for (int i = 0; i < instr->const_index[1]; i++) {
-         for (unsigned j = 0;
-            j < nir_intrinsic_infos[instr->intrinsic].src_components[0]; j++) {
+         for (unsigned j = 0; j < instr->num_components; j++) {
             fs_reg new_dest = nir_outputs;
             new_dest.reg_offset = instr->const_index[0] + index;
             new_dest.type = src.type;
@@ -1489,16 +1461,12 @@ fs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
       break;
    }
 
-   case nir_intrinsic_store_output_vec1_indirect:
-   case nir_intrinsic_store_output_vec2_indirect:
-   case nir_intrinsic_store_output_vec3_indirect:
-   case nir_intrinsic_store_output_vec4_indirect: {
+   case nir_intrinsic_store_output_indirect: {
       fs_reg src = get_nir_src(instr->src[0]);
       fs_reg indirect = get_nir_src(instr->src[1]);
       unsigned index = 0;
       for (int i = 0; i < instr->const_index[1]; i++) {
-         for (unsigned j = 0;
-            j < nir_intrinsic_infos[instr->intrinsic].src_components[0]; j++) {
+         for (unsigned j = 0; j < instr->num_components; j++) {
             fs_reg new_dest = nir_outputs;
             new_dest.reg_offset = instr->const_index[0] + index;
             new_dest.reladdr = new(mem_ctx) fs_reg(indirect);

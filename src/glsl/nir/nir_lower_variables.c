@@ -445,17 +445,11 @@ fill_deref_tables_block(nir_block *block, void *void_state)
       nir_intrinsic_instr *intrin = nir_instr_as_intrinsic(instr);
 
       switch (intrin->intrinsic) {
-      case nir_intrinsic_load_var_vec1:
-      case nir_intrinsic_load_var_vec2:
-      case nir_intrinsic_load_var_vec3:
-      case nir_intrinsic_load_var_vec4:
+      case nir_intrinsic_load_var:
          register_load_instr(intrin, true, state);
          break;
 
-      case nir_intrinsic_store_var_vec1:
-      case nir_intrinsic_store_var_vec2:
-      case nir_intrinsic_store_var_vec3:
-      case nir_intrinsic_store_var_vec4:
+      case nir_intrinsic_store_var:
          register_store_instr(intrin, true, state);
          break;
 
@@ -537,17 +531,9 @@ emit_copy_load_store(nir_intrinsic_instr *copy_instr,
       nir_deref *src_deref = nir_copy_deref(state->mem_ctx, &src_head->deref);
       nir_deref *dest_deref = nir_copy_deref(state->mem_ctx, &dest_head->deref);
 
-      nir_intrinsic_op load_op;
-      switch (num_components) {
-         case 1: load_op = nir_intrinsic_load_var_vec1; break;
-         case 2: load_op = nir_intrinsic_load_var_vec2; break;
-         case 3: load_op = nir_intrinsic_load_var_vec3; break;
-         case 4: load_op = nir_intrinsic_load_var_vec4; break;
-         default: unreachable("Invalid number of components"); break;
-      }
-
-      nir_intrinsic_instr *load = nir_intrinsic_instr_create(state->mem_ctx,
-                                                             load_op);
+      nir_intrinsic_instr *load =
+         nir_intrinsic_instr_create(state->mem_ctx, nir_intrinsic_load_var);
+      load->num_components = num_components;
       load->variables[0] = nir_deref_as_var(src_deref);
       load->dest.is_ssa = true;
       nir_ssa_def_init(&load->instr, &load->dest.ssa, num_components, NULL);
@@ -555,17 +541,9 @@ emit_copy_load_store(nir_intrinsic_instr *copy_instr,
       nir_instr_insert_before(&copy_instr->instr, &load->instr);
       register_load_instr(load, false, state);
 
-      nir_intrinsic_op store_op;
-      switch (num_components) {
-         case 1: store_op = nir_intrinsic_store_var_vec1; break;
-         case 2: store_op = nir_intrinsic_store_var_vec2; break;
-         case 3: store_op = nir_intrinsic_store_var_vec3; break;
-         case 4: store_op = nir_intrinsic_store_var_vec4; break;
-         default: unreachable("Invalid number of components"); break;
-      }
-
-      nir_intrinsic_instr *store = nir_intrinsic_instr_create(state->mem_ctx,
-                                                              store_op);
+      nir_intrinsic_instr *store =
+         nir_intrinsic_instr_create(state->mem_ctx, nir_intrinsic_store_var);
+      store->num_components = num_components;
       store->variables[0] = nir_deref_as_var(dest_deref);
       store->src[0].is_ssa = true;
       store->src[0].ssa = &load->dest.ssa;
@@ -776,14 +754,9 @@ lower_deref_to_ssa_block(nir_block *block, void *void_state)
          nir_intrinsic_instr *intrin = nir_instr_as_intrinsic(instr);
 
          switch (intrin->intrinsic) {
-         case nir_intrinsic_load_var_vec1:
-         case nir_intrinsic_load_var_vec2:
-         case nir_intrinsic_load_var_vec3:
-         case nir_intrinsic_load_var_vec4: {
+         case nir_intrinsic_load_var: {
             struct deref_node *node = get_deref_node(intrin->variables[0],
                                                      false, state);
-            unsigned num_chans =
-               nir_intrinsic_infos[intrin->intrinsic].dest_components;
 
             if (node == NULL) {
                /* If we hit this path then we are referencing an invalid
@@ -793,7 +766,8 @@ lower_deref_to_ssa_block(nir_block *block, void *void_state)
                 */
                nir_ssa_undef_instr *undef =
                   nir_ssa_undef_instr_create(state->mem_ctx);
-               nir_ssa_def_init(&undef->instr, &undef->def, num_chans, NULL);
+               nir_ssa_def_init(&undef->instr, &undef->def,
+                                intrin->num_components, NULL);
 
                nir_instr_insert_before(&intrin->instr, &undef->instr);
                nir_instr_remove(&intrin->instr);
@@ -815,14 +789,15 @@ lower_deref_to_ssa_block(nir_block *block, void *void_state)
                                                       nir_op_imov);
             mov->src[0].src.is_ssa = true;
             mov->src[0].src.ssa = get_ssa_def_for_block(node, block, state);
-            for (unsigned i = num_chans; i < 4; i++)
+            for (unsigned i = intrin->num_components; i < 4; i++)
                mov->src[0].swizzle[i] = 0;
 
             assert(intrin->dest.is_ssa);
 
-            mov->dest.write_mask = (1 << num_chans) - 1;
+            mov->dest.write_mask = (1 << intrin->num_components) - 1;
             mov->dest.dest.is_ssa = true;
-            nir_ssa_def_init(&mov->instr, &mov->dest.dest.ssa, num_chans, NULL);
+            nir_ssa_def_init(&mov->instr, &mov->dest.dest.ssa,
+                             intrin->num_components, NULL);
 
             nir_instr_insert_before(&intrin->instr, &mov->instr);
             nir_instr_remove(&intrin->instr);
@@ -837,10 +812,7 @@ lower_deref_to_ssa_block(nir_block *block, void *void_state)
             break;
          }
 
-         case nir_intrinsic_store_var_vec1:
-         case nir_intrinsic_store_var_vec2:
-         case nir_intrinsic_store_var_vec3:
-         case nir_intrinsic_store_var_vec4: {
+         case nir_intrinsic_store_var: {
             struct deref_node *node = get_deref_node(intrin->variables[0],
                                                      false, state);
 
@@ -854,7 +826,8 @@ lower_deref_to_ssa_block(nir_block *block, void *void_state)
             if (!node->lower_to_ssa)
                continue;
 
-            unsigned num_chans = glsl_get_vector_elements(node->type);
+            assert(intrin->num_components ==
+                   glsl_get_vector_elements(node->type));
 
             assert(intrin->src[0].is_ssa);
 
@@ -867,12 +840,12 @@ lower_deref_to_ssa_block(nir_block *block, void *void_state)
 
                mov->src[1].src.is_ssa = true;
                mov->src[1].src.ssa = intrin->src[0].ssa;
-               for (unsigned i = num_chans; i < 4; i++)
+               for (unsigned i = intrin->num_components; i < 4; i++)
                   mov->src[1].swizzle[i] = 0;
 
                mov->src[2].src.is_ssa = true;
                mov->src[2].src.ssa = get_ssa_def_for_block(node, block, state);
-               for (unsigned i = num_chans; i < 4; i++)
+               for (unsigned i = intrin->num_components; i < 4; i++)
                   mov->src[2].swizzle[i] = 0;
 
             } else {
@@ -880,13 +853,14 @@ lower_deref_to_ssa_block(nir_block *block, void *void_state)
 
                mov->src[0].src.is_ssa = true;
                mov->src[0].src.ssa = intrin->src[0].ssa;
-               for (unsigned i = num_chans; i < 4; i++)
+               for (unsigned i = intrin->num_components; i < 4; i++)
                   mov->src[0].swizzle[i] = 0;
             }
 
-            mov->dest.write_mask = (1 << num_chans) - 1;
+            mov->dest.write_mask = (1 << intrin->num_components) - 1;
             mov->dest.dest.is_ssa = true;
-            nir_ssa_def_init(&mov->instr, &mov->dest.dest.ssa, num_chans, NULL);
+            nir_ssa_def_init(&mov->instr, &mov->dest.dest.ssa,
+                             intrin->num_components, NULL);
 
             nir_instr_insert_before(&intrin->instr, &mov->instr);
             nir_instr_remove(&intrin->instr);

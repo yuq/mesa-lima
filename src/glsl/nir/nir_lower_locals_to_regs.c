@@ -219,22 +219,18 @@ lower_locals_to_regs_block(nir_block *block, void *void_state)
       nir_intrinsic_instr *intrin = nir_instr_as_intrinsic(instr);
 
       switch (intrin->intrinsic) {
-      case nir_intrinsic_load_var_vec1:
-      case nir_intrinsic_load_var_vec2:
-      case nir_intrinsic_load_var_vec3:
-      case nir_intrinsic_load_var_vec4: {
+      case nir_intrinsic_load_var: {
          if (intrin->variables[0]->var->data.mode != nir_var_local)
             continue;
 
          nir_alu_instr *mov = nir_alu_instr_create(state->mem_ctx, nir_op_imov);
          mov->src[0].src = get_deref_reg_src(intrin->variables[0],
                                              &intrin->instr, state);
-         unsigned num_components = mov->src[0].src.reg.reg->num_components;
-         mov->dest.write_mask = (1 << num_components) - 1;
+         mov->dest.write_mask = (1 << intrin->num_components) - 1;
          if (intrin->dest.is_ssa) {
             mov->dest.dest.is_ssa = true;
             nir_ssa_def_init(&mov->instr, &mov->dest.dest.ssa,
-                             num_components, NULL);
+                             intrin->num_components, NULL);
 
             nir_src new_src = {
                .is_ssa = true,
@@ -252,20 +248,16 @@ lower_locals_to_regs_block(nir_block *block, void *void_state)
          break;
       }
 
-      case nir_intrinsic_store_var_vec1:
-      case nir_intrinsic_store_var_vec2:
-      case nir_intrinsic_store_var_vec3:
-      case nir_intrinsic_store_var_vec4: {
+      case nir_intrinsic_store_var: {
          if (intrin->variables[0]->var->data.mode != nir_var_local)
             continue;
 
          nir_src reg_src = get_deref_reg_src(intrin->variables[0],
                                              &intrin->instr, state);
-         unsigned num_components = reg_src.reg.reg->num_components;
 
          nir_alu_instr *mov = nir_alu_instr_create(state->mem_ctx, nir_op_imov);
          mov->src[0].src = nir_src_copy(intrin->src[0], state->mem_ctx);
-         mov->dest.write_mask = (1 << num_components) - 1;
+         mov->dest.write_mask = (1 << intrin->num_components) - 1;
          mov->dest.dest.is_ssa = false;
          mov->dest.dest.reg.reg = reg_src.reg.reg;
          mov->dest.dest.reg.base_offset = reg_src.reg.base_offset;

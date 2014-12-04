@@ -189,66 +189,6 @@ get_io_offset(nir_deref_var *deref, nir_instr *instr, nir_src *indirect,
    return base_offset;
 }
 
-static nir_intrinsic_op
-get_load_op(nir_variable_mode mode, bool indirect, unsigned num_components)
-{
-   if (indirect) {
-      switch (mode) {
-      case nir_var_shader_in:
-         switch (num_components) {
-         case 1: return nir_intrinsic_load_input_vec1_indirect;
-         case 2: return nir_intrinsic_load_input_vec2_indirect;
-         case 3: return nir_intrinsic_load_input_vec3_indirect;
-         case 4: return nir_intrinsic_load_input_vec4_indirect;
-         default: unreachable("Invalid number of components"); break;
-         }
-         break;
-
-      case nir_var_uniform:
-         switch (num_components) {
-         case 1: return nir_intrinsic_load_uniform_vec1_indirect;
-         case 2: return nir_intrinsic_load_uniform_vec2_indirect;
-         case 3: return nir_intrinsic_load_uniform_vec3_indirect;
-         case 4: return nir_intrinsic_load_uniform_vec4_indirect;
-         default: unreachable("Invalid number of components"); break;
-         }
-         break;
-
-      default:
-         unreachable("Invalid input type");
-         break;
-      }
-   } else {
-      switch (mode) {
-      case nir_var_shader_in:
-         switch (num_components) {
-         case 1: return nir_intrinsic_load_input_vec1;
-         case 2: return nir_intrinsic_load_input_vec2;
-         case 3: return nir_intrinsic_load_input_vec3;
-         case 4: return nir_intrinsic_load_input_vec4;
-         default: unreachable("Invalid number of components"); break;
-         }
-         break;
-
-      case nir_var_uniform:
-         switch (num_components) {
-         case 1: return nir_intrinsic_load_uniform_vec1;
-         case 2: return nir_intrinsic_load_uniform_vec2;
-         case 3: return nir_intrinsic_load_uniform_vec3;
-         case 4: return nir_intrinsic_load_uniform_vec4;
-         default: unreachable("Invalid number of components"); break;
-         }
-         break;
-
-      default:
-         unreachable("Invalid input type");
-         break;
-      }
-   }
-
-   return nir_intrinsic_load_input_vec1;
-}
-
 static bool
 nir_lower_io_block(nir_block *block, void *void_state)
 {
@@ -261,22 +201,35 @@ nir_lower_io_block(nir_block *block, void *void_state)
       nir_intrinsic_instr *intrin = nir_instr_as_intrinsic(instr);
 
       switch (intrin->intrinsic) {
-      case nir_intrinsic_load_var_vec1:
-      case nir_intrinsic_load_var_vec2:
-      case nir_intrinsic_load_var_vec3:
-      case nir_intrinsic_load_var_vec4: {
+      case nir_intrinsic_load_var: {
          nir_variable_mode mode = intrin->variables[0]->var->data.mode;
          if (mode != nir_var_shader_in && mode != nir_var_uniform)
             continue;
 
          bool has_indirect = deref_has_indirect(intrin->variables[0]);
-         unsigned num_components =
-            nir_intrinsic_infos[intrin->intrinsic].dest_components;
 
-         nir_intrinsic_op load_op = get_load_op(mode, has_indirect,
-                                                num_components);
+         nir_intrinsic_op load_op;
+         switch (mode) {
+         case nir_var_shader_in:
+            if (has_indirect) {
+               load_op = nir_intrinsic_load_input_indirect;
+            } else {
+               load_op = nir_intrinsic_load_input;
+            }
+            break;
+         case nir_var_uniform:
+            if (has_indirect) {
+               load_op = nir_intrinsic_load_uniform_indirect;
+            } else {
+               load_op = nir_intrinsic_load_uniform;
+            }
+            break;
+         default:
+            unreachable("Unknown variable mode");
+         }
          nir_intrinsic_instr *load = nir_intrinsic_instr_create(state->mem_ctx,
                                                                 load_op);
+         load->num_components = intrin->num_components;
 
          nir_src indirect;
          unsigned offset = get_io_offset(intrin->variables[0],
@@ -292,7 +245,7 @@ nir_lower_io_block(nir_block *block, void *void_state)
          if (intrin->dest.is_ssa) {
             load->dest.is_ssa = true;
             nir_ssa_def_init(&load->instr, &load->dest.ssa,
-                             num_components, NULL);
+                             intrin->num_components, NULL);
 
             nir_src new_src = {
                .is_ssa = true,
@@ -310,38 +263,22 @@ nir_lower_io_block(nir_block *block, void *void_state)
          break;
       }
 
-      case nir_intrinsic_store_var_vec1:
-      case nir_intrinsic_store_var_vec2:
-      case nir_intrinsic_store_var_vec3:
-      case nir_intrinsic_store_var_vec4: {
+      case nir_intrinsic_store_var: {
          if (intrin->variables[0]->var->data.mode != nir_var_shader_out)
             continue;
 
          bool has_indirect = deref_has_indirect(intrin->variables[0]);
-         unsigned num_components =
-            nir_intrinsic_infos[intrin->intrinsic].src_components[0];
 
          nir_intrinsic_op store_op;
          if (has_indirect) {
-            switch (num_components) {
-            case 1: store_op = nir_intrinsic_store_output_vec1_indirect; break;
-            case 2: store_op = nir_intrinsic_store_output_vec2_indirect; break;
-            case 3: store_op = nir_intrinsic_store_output_vec3_indirect; break;
-            case 4: store_op = nir_intrinsic_store_output_vec4_indirect; break;
-            default: unreachable("Invalid number of components"); break;
-            }
+            store_op = nir_intrinsic_store_output_indirect;
          } else {
-            switch (num_components) {
-            case 1: store_op = nir_intrinsic_store_output_vec1; break;
-            case 2: store_op = nir_intrinsic_store_output_vec2; break;
-            case 3: store_op = nir_intrinsic_store_output_vec3; break;
-            case 4: store_op = nir_intrinsic_store_output_vec4; break;
-            default: unreachable("Invalid number of components"); break;
-            }
+            store_op = nir_intrinsic_store_output;
          }
 
          nir_intrinsic_instr *store = nir_intrinsic_instr_create(state->mem_ctx,
                                                                  store_op);
+         store->num_components = intrin->num_components;
 
          nir_src indirect;
          unsigned offset = get_io_offset(intrin->variables[0],

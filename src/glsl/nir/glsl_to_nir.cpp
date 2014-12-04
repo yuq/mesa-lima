@@ -625,7 +625,8 @@ nir_visitor::visit(ir_call *ir)
       nir_instr_insert_after_cf_list(this->cf_node_list, &instr->instr);
 
       nir_intrinsic_instr *store_instr =
-         nir_intrinsic_instr_create(shader, nir_intrinsic_store_var_vec1);
+         nir_intrinsic_instr_create(shader, nir_intrinsic_store_var);
+      store_instr->num_components = 1;
 
       ir->return_deref->accept(this);
       store_instr->variables[0] = this->deref_head;
@@ -699,17 +700,9 @@ nir_visitor::visit(ir_assignment *ir)
        * back into the LHS. Copy propagation should get rid of the mess.
        */
 
-      nir_intrinsic_op load_op;
-      switch (ir->lhs->type->vector_elements) {
-         case 1: load_op = nir_intrinsic_load_var_vec1; break;
-         case 2: load_op = nir_intrinsic_load_var_vec2; break;
-         case 3: load_op = nir_intrinsic_load_var_vec3; break;
-         case 4: load_op = nir_intrinsic_load_var_vec4; break;
-         default: unreachable("Invalid number of components"); break;
-      }
-
-      nir_intrinsic_instr *load = nir_intrinsic_instr_create(this->shader,
-                                                             load_op);
+      nir_intrinsic_instr *load =
+         nir_intrinsic_instr_create(this->shader, nir_intrinsic_load_var);
+      load->num_components = ir->lhs->type->vector_elements;
       load->dest.is_ssa = true;
       nir_ssa_def_init(&load->instr, &load->dest.ssa,
                        num_components, NULL);
@@ -754,17 +747,9 @@ nir_visitor::visit(ir_assignment *ir)
       src.ssa = &vec->dest.dest.ssa;
    }
 
-   nir_intrinsic_op store_op;
-   switch (ir->lhs->type->vector_elements) {
-      case 1: store_op = nir_intrinsic_store_var_vec1; break;
-      case 2: store_op = nir_intrinsic_store_var_vec2; break;
-      case 3: store_op = nir_intrinsic_store_var_vec3; break;
-      case 4: store_op = nir_intrinsic_store_var_vec4; break;
-      default: unreachable("Invalid number of components"); break;
-   }
-
-   nir_intrinsic_instr *store = nir_intrinsic_instr_create(this->shader,
-                                                           store_op);
+   nir_intrinsic_instr *store =
+      nir_intrinsic_instr_create(this->shader, nir_intrinsic_store_var);
+   store->num_components = ir->lhs->type->vector_elements;
    nir_deref *store_deref = nir_copy_deref(this->shader, &lhs_deref->deref);
    store->variables[0] = nir_deref_as_var(store_deref);
    store->src[0] = src;
@@ -843,17 +828,9 @@ nir_visitor::evaluate_rvalue(ir_rvalue* ir)
        * must emit a variable load.
        */
 
-      nir_intrinsic_op load_op;
-      switch (ir->type->vector_elements) {
-      case 1: load_op = nir_intrinsic_load_var_vec1; break;
-      case 2: load_op = nir_intrinsic_load_var_vec2; break;
-      case 3: load_op = nir_intrinsic_load_var_vec3; break;
-      case 4: load_op = nir_intrinsic_load_var_vec4; break;
-      default: unreachable("Invalid number of components");
-      }
-
       nir_intrinsic_instr *load_instr =
-         nir_intrinsic_instr_create(this->shader, load_op);
+         nir_intrinsic_instr_create(this->shader, nir_intrinsic_load_var);
+      load_instr->num_components = ir->type->vector_elements;
       load_instr->variables[0] = this->deref_head;
       add_instr(&load_instr->instr, ir->type->vector_elements);
    }
@@ -912,23 +889,12 @@ nir_visitor::visit(ir_expression *ir)
 
       nir_intrinsic_op op;
       if (const_index) {
-         switch (ir->type->vector_elements) {
-            case 1: op = nir_intrinsic_load_ubo_vec1; break;
-            case 2: op = nir_intrinsic_load_ubo_vec2; break;
-            case 3: op = nir_intrinsic_load_ubo_vec3; break;
-            case 4: op = nir_intrinsic_load_ubo_vec4; break;
-            default: assert(0); break;
-         }
+         op = nir_intrinsic_load_ubo;
       } else {
-         switch (ir->type->vector_elements) {
-            case 1: op = nir_intrinsic_load_ubo_vec1_indirect; break;
-            case 2: op = nir_intrinsic_load_ubo_vec2_indirect; break;
-            case 3: op = nir_intrinsic_load_ubo_vec3_indirect; break;
-            case 4: op = nir_intrinsic_load_ubo_vec4_indirect; break;
-            default: assert(0); break;
-         }
+         op = nir_intrinsic_load_ubo_indirect;
       }
       nir_intrinsic_instr *load = nir_intrinsic_instr_create(this->shader, op);
+      load->num_components = ir->type->vector_elements;
       load->const_index[0] = ir->operands[0]->as_constant()->value.u[0];
       load->const_index[1] = const_index ? const_index->value.u[0] : 0; /* base offset */
       load->const_index[2] = 1; /* number of vec4's */
