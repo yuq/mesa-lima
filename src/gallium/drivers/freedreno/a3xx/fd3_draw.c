@@ -42,6 +42,16 @@
 #include "fd3_format.h"
 #include "fd3_zsa.h"
 
+static inline uint32_t
+add_sat(uint32_t a, int32_t b)
+{
+	int64_t ret = (uint64_t)a + (int64_t)b;
+	if (ret > ~0U)
+		return ~0U;
+	if (ret < 0)
+		return 0;
+	return (uint32_t)ret;
+}
 
 static void
 draw_impl(struct fd_context *ctx, struct fd_ringbuffer *ring,
@@ -58,10 +68,10 @@ draw_impl(struct fd_context *ctx, struct fd_ringbuffer *ring,
 	OUT_RING(ring, 0x0000000b);             /* PC_VERTEX_REUSE_BLOCK_CNTL */
 
 	OUT_PKT0(ring, REG_A3XX_VFD_INDEX_MIN, 4);
-	OUT_RING(ring, info->min_index);        /* VFD_INDEX_MIN */
-	OUT_RING(ring, info->max_index);        /* VFD_INDEX_MAX */
+	OUT_RING(ring, add_sat(info->min_index, info->index_bias)); /* VFD_INDEX_MIN */
+	OUT_RING(ring, add_sat(info->max_index, info->index_bias)); /* VFD_INDEX_MAX */
 	OUT_RING(ring, info->start_instance);   /* VFD_INSTANCEID_OFFSET */
-	OUT_RING(ring, info->start);            /* VFD_INDEX_OFFSET */
+	OUT_RING(ring, info->indexed ? info->index_bias : info->start); /* VFD_INDEX_OFFSET */
 
 	OUT_PKT0(ring, REG_A3XX_PC_RESTART_INDEX, 1);
 	OUT_RING(ring, info->primitive_restart ? /* PC_RESTART_INDEX */
