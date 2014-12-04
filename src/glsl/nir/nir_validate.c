@@ -318,10 +318,36 @@ validate_intrinsic_instr(nir_intrinsic_instr *instr, validate_state *state)
 {
    unsigned num_srcs = nir_intrinsic_infos[instr->intrinsic].num_srcs;
    for (unsigned i = 0; i < num_srcs; i++) {
+      unsigned components_read =
+         nir_intrinsic_infos[instr->intrinsic].src_components[i];
+      if (components_read == 0)
+         components_read = instr->num_components;
+
+      assert(components_read > 0);
+
+      if (instr->src[i].is_ssa) {
+         assert(components_read <= instr->src[i].ssa->num_components);
+      } else if (!instr->src[i].reg.reg->is_packed) {
+         assert(components_read <= instr->src[i].reg.reg->num_components);
+      }
+
       validate_src(&instr->src[i], state);
    }
 
    if (nir_intrinsic_infos[instr->intrinsic].has_dest) {
+      unsigned components_written =
+         nir_intrinsic_infos[instr->intrinsic].dest_components;
+      if (components_written == 0)
+         components_written = instr->num_components;
+
+      assert(components_written > 0);
+
+      if (instr->dest.is_ssa) {
+         assert(components_written <= instr->dest.ssa.num_components);
+      } else if (!instr->dest.reg.reg->is_packed) {
+         assert(components_written <= instr->dest.reg.reg->num_components);
+      }
+
       validate_dest(&instr->dest, state);
    }
 
