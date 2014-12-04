@@ -1524,10 +1524,10 @@ ast_function_expression::hir(exec_list *instructions,
       }
 
 
-      /* Constructors for samplers are illegal.
+      /* Constructors for opaque types are illegal.
        */
-      if (constructor_type->is_sampler()) {
-	 _mesa_glsl_error(& loc, state, "cannot construct sampler type `%s'",
+      if (constructor_type->contains_opaque()) {
+	 _mesa_glsl_error(& loc, state, "cannot construct opaque type `%s'",
 			  constructor_type->name);
 	 return ir_rvalue::error_value(ctx);
       }
