@@ -119,6 +119,14 @@ public:
 };
 
 static inline fs_reg
+negate(fs_reg reg)
+{
+   assert(reg.file != HW_REG && reg.file != IMM);
+   reg.negate = !reg.negate;
+   return reg;
+}
+
+static inline fs_reg
 retype(fs_reg reg, enum brw_reg_type type)
 {
    reg.fixed_hw_reg.type = reg.type = type;
