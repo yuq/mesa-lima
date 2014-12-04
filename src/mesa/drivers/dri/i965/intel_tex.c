@@ -114,7 +114,7 @@ intel_alloc_texture_image_buffer(struct gl_context *ctx,
 /**
  * ctx->Driver.AllocTextureStorage() handler.
  *
- * Compare this to _mesa_alloc_texture_storage, which would call into
+ * Compare this to _mesa_AllocTextureStorage_sw, which would call into
  * intel_alloc_texture_image_buffer() above.
  */
 static GLboolean

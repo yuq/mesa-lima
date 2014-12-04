@@ -210,7 +210,7 @@ _mesa_init_driver_functions(struct dd_function_table *driver)
    driver->EndCallList = NULL;
 
    /* GL_ARB_texture_storage */
-   driver->AllocTextureStorage = _mesa_alloc_texture_storage;
+   driver->AllocTextureStorage = _mesa_AllocTextureStorage_sw;
 
    /* GL_ARB_texture_view */
    driver->TextureView = NULL;

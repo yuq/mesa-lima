@@ -242,10 +242,10 @@ _mesa_is_legal_tex_storage_format(struct gl_context *ctx, GLenum internalformat)
  * checks at glTexImage* time.
  */
 GLboolean
-_mesa_alloc_texture_storage(struct gl_context *ctx,
-                            struct gl_texture_object *texObj,
-                            GLsizei levels, GLsizei width,
-                            GLsizei height, GLsizei depth)
+_mesa_AllocTextureStorage_sw(struct gl_context *ctx,
+                             struct gl_texture_object *texObj,
+                             GLsizei levels, GLsizei width,
+                             GLsizei height, GLsizei depth)
 {
    const int numFaces = _mesa_num_tex_faces(texObj->Target);
    int face;
