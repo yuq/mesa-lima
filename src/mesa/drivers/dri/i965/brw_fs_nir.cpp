@@ -1227,6 +1227,8 @@ fs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
       inst->conditional_mod = BRW_CONDITIONAL_NZ;
    }
 
+   bool has_indirect = false;
+
    switch (instr->intrinsic) {
    case nir_intrinsic_discard: {
       /* We track our discarded pixels in f0.1.  By predicating on it, we can
@@ -1312,33 +1314,16 @@ fs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
       break;
    }
 
+   case nir_intrinsic_load_uniform_indirect:
+      has_indirect = true;
    case nir_intrinsic_load_uniform: {
       unsigned index = 0;
       for (int i = 0; i < instr->const_index[1]; i++) {
          for (unsigned j = 0; j < instr->num_components; j++) {
             fs_reg src = nir_uniforms;
             src.reg_offset = instr->const_index[0] + index;
-            src.type = dest.type;
-            index++;
-
-            fs_inst *inst = MOV(dest, src);
-            if (instr->has_predicate)
-               inst->predicate = BRW_PREDICATE_NORMAL;
-            emit(inst);
-            dest.reg_offset++;
-         }
-      }
-      break;
-   }
-
-   case nir_intrinsic_load_uniform_indirect: {
-      unsigned index = 0;
-      for (int i = 0; i < instr->const_index[1]; i++) {
-         for (unsigned j = 0; j < instr->num_components; j++) {
-            fs_reg src = nir_uniforms;
-            src.reg_offset = instr->const_index[0] + index;
-            src.reladdr = new(mem_ctx) fs_reg(get_nir_src(instr->src[0]));
-            src.reladdr->type = BRW_REGISTER_TYPE_D;
+            if (has_indirect)
+               src.reladdr = new(mem_ctx) fs_reg(get_nir_src(instr->src[0]));
             src.type = dest.type;
             index++;
 
@@ -1402,12 +1387,16 @@ fs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
       break;
    }
 
+   case nir_intrinsic_load_input_indirect:
+      has_indirect = true;
    case nir_intrinsic_load_input: {
       unsigned index = 0;
       for (int i = 0; i < instr->const_index[1]; i++) {
          for (unsigned j = 0; j < instr->num_components; j++) {
             fs_reg src = nir_inputs;
             src.reg_offset = instr->const_index[0] + index;
+            if (has_indirect)
+               src.reladdr = new(mem_ctx) fs_reg(get_nir_src(instr->src[0]));
             src.type = dest.type;
             index++;
 
@@ -1421,27 +1410,8 @@ fs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
       break;
    }
 
-   case nir_intrinsic_load_input_indirect: {
-      unsigned index = 0;
-      for (int i = 0; i < instr->const_index[1]; i++) {
-         for (unsigned j = 0; j < instr->num_components; j++) {
-            fs_reg src = nir_inputs;
-            src.reg_offset = instr->const_index[0] + index;
-            src.reladdr = new(mem_ctx) fs_reg(get_nir_src(instr->src[0]));
-            src.reladdr->type = BRW_REGISTER_TYPE_D;
-            src.type = dest.type;
-            index++;
-
-            fs_inst *inst = MOV(dest, src);
-            if (instr->has_predicate)
-               inst->predicate = BRW_PREDICATE_NORMAL;
-            emit(inst);
-            dest.reg_offset++;
-         }
-      }
-      break;
-   }
-
+   case nir_intrinsic_store_output_indirect:
+      has_indirect = true;
    case nir_intrinsic_store_output: {
       fs_reg src = get_nir_src(instr->src[0]);
       unsigned index = 0;
@@ -1449,33 +1419,14 @@ fs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
          for (unsigned j = 0; j < instr->num_components; j++) {
             fs_reg new_dest = nir_outputs;
             new_dest.reg_offset = instr->const_index[0] + index;
+            if (has_indirect)
+               src.reladdr = new(mem_ctx) fs_reg(get_nir_src(instr->src[1]));
             new_dest.type = src.type;
             index++;
             fs_inst *inst = MOV(new_dest, src);
             if (instr->has_predicate)
                inst->predicate = BRW_PREDICATE_NORMAL;
             emit(inst);
-            src.reg_offset++;
-         }
-      }
-      break;
-   }
-
-   case nir_intrinsic_store_output_indirect: {
-      fs_reg src = get_nir_src(instr->src[0]);
-      fs_reg indirect = get_nir_src(instr->src[1]);
-      unsigned index = 0;
-      for (int i = 0; i < instr->const_index[1]; i++) {
-         for (unsigned j = 0; j < instr->num_components; j++) {
-            fs_reg new_dest = nir_outputs;
-            new_dest.reg_offset = instr->const_index[0] + index;
-            new_dest.reladdr = new(mem_ctx) fs_reg(indirect);
-            new_dest.type = src.type;
-            index++;
-            fs_inst *inst = MOV(new_dest, src);
-            if (instr->has_predicate)
-               inst->predicate = BRW_PREDICATE_NORMAL;
-            emit(MOV(new_dest, src));
             src.reg_offset++;
          }
       }
