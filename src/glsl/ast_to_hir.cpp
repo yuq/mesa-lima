@@ -2802,6 +2802,20 @@ apply_type_qualifier_to_variable(const struct ast_type_qualifier *qual,
    }
 
    apply_image_qualifier_to_variable(qual, var, state, loc);
+
+   /* From section 4.4.1.3 of the GLSL 4.50 specification (Fragment Shader
+    * Inputs):
+    *
+    *  "Fragment shaders also allow the following layout qualifier on in only
+    *   (not with variable declarations)
+    *     layout-qualifier-id
+    *        early_fragment_tests
+    *   [...]"
+    */
+   if (qual->flags.q.early_fragment_tests) {
+      _mesa_glsl_error(loc, state, "early_fragment_tests layout qualifier only "
+                       "valid in fragment shader input layout declaration.");
+   }
 }
 
 /**

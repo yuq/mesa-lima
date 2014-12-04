@@ -1366,6 +1366,21 @@ layout_qualifier_id:
 
          if (!$$.flags.i &&
              match_layout_qualifier($1, "early_fragment_tests", state) == 0) {
+            /* From section 4.4.1.3 of the GLSL 4.50 specification
+             * (Fragment Shader Inputs):
+             *
+             *  "Fragment shaders also allow the following layout
+             *   qualifier on in only (not with variable declarations)
+             *     layout-qualifier-id
+             *        early_fragment_tests
+             *   [...]"
+             */
+            if (state->stage != MESA_SHADER_FRAGMENT) {
+               _mesa_glsl_error(& @1, state,
+                                "early_fragment_tests layout qualifier only "
+                                "valid in fragment shaders");
+            }
+
             $$.flags.q.early_fragment_tests = 1;
          }
       }
