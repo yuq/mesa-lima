@@ -1558,6 +1558,18 @@ ast_expression::do_hir(exec_list *instructions,
          error_emitted = true;
       }
 
+      /* From section 4.1.7 of the GLSL 4.50 spec (Opaque Types):
+       *
+       *  "Except for array indexing, structure member selection, and
+       *   parentheses, opaque variables are not allowed to be operands in
+       *   expressions; such use results in a compile-time error."
+       */
+      if (type->contains_opaque()) {
+         _mesa_glsl_error(&loc, state, "opaque variables cannot be operands "
+                          "of the ?: operator");
+         error_emitted = true;
+      }
+
       ir_constant *cond_val = op[0]->constant_expression_value();
 
       if (then_instructions.is_empty()
