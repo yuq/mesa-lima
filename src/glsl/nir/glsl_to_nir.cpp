@@ -884,7 +884,9 @@ nir_visitor::emit(nir_op op, unsigned dest_size, nir_src src1,
 void
 nir_visitor::visit(ir_expression *ir)
 {
-   if (ir->operation == ir_binop_ubo_load) {
+   /* Some special cases */
+   switch (ir->operation) {
+   case ir_binop_ubo_load: {
       ir_constant *const_index = ir->operands[1]->as_constant();
 
       nir_intrinsic_op op;
@@ -928,6 +930,82 @@ nir_visitor::visit(ir_expression *ir)
       }
 
       return;
+   }
+
+   case ir_unop_interpolate_at_centroid:
+   case ir_binop_interpolate_at_offset:
+   case ir_binop_interpolate_at_sample: {
+      ir_dereference *deref = ir->operands[0]->as_dereference();
+      ir_swizzle *swizzle = NULL;
+      if (!deref) {
+         /* the api does not allow a swizzle here, but the varying packing code
+          * may have pushed one into here.
+          */
+         swizzle = ir->operands[0]->as_swizzle();
+         assert(swizzle);
+         deref = swizzle->val->as_dereference();
+         assert(deref);
+      }
+
+      deref->accept(this);
+
+      nir_intrinsic_op op;
+      if (this->deref_head->var->data.mode == nir_var_shader_in) {
+         switch (ir->operation) {
+         case ir_unop_interpolate_at_centroid:
+            op = nir_intrinsic_interp_var_at_centroid;
+            break;
+         case ir_binop_interpolate_at_offset:
+            op = nir_intrinsic_interp_var_at_offset;
+            break;
+         case ir_binop_interpolate_at_sample:
+            op = nir_intrinsic_interp_var_at_sample;
+            break;
+         default:
+            unreachable("Invalid interpolation intrinsic");
+         }
+      } else {
+         /* This case can happen if the vertex shader does not write the
+          * given varying.  In this case, the linker will lower it to a
+          * global variable.  Since interpolating a variable makes no
+          * sense, we'll just turn it into a load which will probably
+          * eventually end up as an SSA definition.
+          */
+         assert(this->deref_head->var->data.mode == nir_var_global);
+         op = nir_intrinsic_load_var;
+      }
+
+      nir_intrinsic_instr *intrin = nir_intrinsic_instr_create(shader, op);
+      intrin->num_components = deref->type->vector_elements;
+      intrin->variables[0] = this->deref_head;
+
+      if (intrin->intrinsic == nir_intrinsic_interp_var_at_offset ||
+          intrin->intrinsic == nir_intrinsic_interp_var_at_sample)
+         intrin->src[0] = evaluate_rvalue(ir->operands[1]);
+
+      add_instr(&intrin->instr, deref->type->vector_elements);
+
+      if (swizzle) {
+         nir_alu_instr *mov = nir_alu_instr_create(shader, nir_op_imov);
+         mov->dest.write_mask = (1 << swizzle->type->vector_elements) - 1;
+         mov->src[0].src.is_ssa = true;
+         mov->src[0].src.ssa = &intrin->dest.ssa;
+
+         mov->src[0].swizzle[0] = swizzle->mask.x;
+         mov->src[0].swizzle[1] = swizzle->mask.y;
+         mov->src[0].swizzle[2] = swizzle->mask.z;
+         mov->src[0].swizzle[3] = swizzle->mask.w;
+         for (unsigned i = deref->type->vector_elements; i < 4; i++)
+            mov->src[0].swizzle[i] = 0;
+
+         add_instr(&mov->instr, swizzle->type->vector_elements);
+      }
+
+      return;
+   }
+
+   default:
+      break;
    }
 
    nir_src srcs[4];
