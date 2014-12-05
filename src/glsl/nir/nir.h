@@ -44,6 +44,21 @@ extern "C" {
 #define NIR_FALSE 0u
 #define NIR_TRUE (~0u)
 
+/** Defines a cast function
+ *
+ * This macro defines a cast function from in_type to out_type where
+ * out_type is some structure type that contains a field of type out_type.
+ *
+ * Note that you have to be a bit careful as the generated cast function
+ * destroys constness.
+ */
+#define NIR_DEFINE_CAST(name, in_type, out_type, field)  \
+static inline out_type *                                 \
+name(const in_type *parent)                              \
+{                                                        \
+   return exec_node_data(out_type, parent, field);       \
+}
+
 struct nir_function_overload;
 struct nir_function;
 struct nir_shader;
@@ -653,11 +668,9 @@ typedef struct {
    unsigned index;
 } nir_deref_struct;
 
-#define nir_deref_as_var(_deref) exec_node_data(nir_deref_var, _deref, deref)
-#define nir_deref_as_array(_deref) \
-   exec_node_data(nir_deref_array, _deref, deref)
-#define nir_deref_as_struct(_deref) \
-   exec_node_data(nir_deref_struct, _deref, deref)
+NIR_DEFINE_CAST(nir_deref_as_var, nir_deref, nir_deref_var, deref)
+NIR_DEFINE_CAST(nir_deref_as_array, nir_deref, nir_deref_array, deref)
+NIR_DEFINE_CAST(nir_deref_as_struct, nir_deref, nir_deref_struct, deref)
 
 typedef struct {
    nir_instr instr;
@@ -977,22 +990,16 @@ typedef struct {
    struct exec_list copies;
 } nir_parallel_copy_instr;
 
-#define nir_instr_as_alu(_instr) exec_node_data(nir_alu_instr, _instr, instr)
-#define nir_instr_as_call(_instr) exec_node_data(nir_call_instr, _instr, instr)
-#define nir_instr_as_jump(_instr) exec_node_data(nir_jump_instr, _instr, instr)
-#define nir_instr_as_texture(_instr) \
-   exec_node_data(nir_tex_instr, _instr, instr)
-#define nir_instr_as_intrinsic(_instr) \
-   exec_node_data(nir_intrinsic_instr, _instr, instr)
-#define nir_instr_as_load_const(_instr) \
-   exec_node_data(nir_load_const_instr, _instr, instr)
-#define nir_instr_as_ssa_undef(_instr) \
-   exec_node_data(nir_ssa_undef_instr, _instr, instr)
-#define nir_instr_as_phi(_instr) \
-   exec_node_data(nir_phi_instr, _instr, instr)
-#define nir_instr_as_parallel_copy(_instr) \
-   exec_node_data(nir_parallel_copy_instr, _instr, instr)
-
+NIR_DEFINE_CAST(nir_instr_as_alu, nir_instr, nir_alu_instr, instr)
+NIR_DEFINE_CAST(nir_instr_as_call, nir_instr, nir_call_instr, instr)
+NIR_DEFINE_CAST(nir_instr_as_jump, nir_instr, nir_jump_instr, instr)
+NIR_DEFINE_CAST(nir_instr_as_texture, nir_instr, nir_tex_instr, instr)
+NIR_DEFINE_CAST(nir_instr_as_intrinsic, nir_instr, nir_intrinsic_instr, instr)
+NIR_DEFINE_CAST(nir_instr_as_load_const, nir_instr, nir_load_const_instr, instr)
+NIR_DEFINE_CAST(nir_instr_as_ssa_undef, nir_instr, nir_ssa_undef_instr, instr)
+NIR_DEFINE_CAST(nir_instr_as_phi, nir_instr, nir_phi_instr, instr)
+NIR_DEFINE_CAST(nir_instr_as_parallel_copy, nir_instr,
+                nir_parallel_copy_instr, instr)
 
 /*
  * Control flow
@@ -1150,17 +1157,10 @@ typedef struct {
 #define nir_cf_node_is_last(_node) \
    exec_node_is_tail_sentinel((_node)->node.next)
 
-#define nir_cf_node_as_block(node) \
-   exec_node_data(nir_block, node, cf_node)
-
-#define nir_cf_node_as_if(node) \
-   exec_node_data(nir_if, node, cf_node)
-
-#define nir_cf_node_as_loop(node) \
-   exec_node_data(nir_loop, node, cf_node)
-
-#define nir_cf_node_as_function(node) \
-   exec_node_data(nir_function_impl, node, cf_node)
+NIR_DEFINE_CAST(nir_cf_node_as_block, nir_cf_node, nir_block, cf_node)
+NIR_DEFINE_CAST(nir_cf_node_as_if, nir_cf_node, nir_if, cf_node)
+NIR_DEFINE_CAST(nir_cf_node_as_loop, nir_cf_node, nir_loop, cf_node)
+NIR_DEFINE_CAST(nir_cf_node_as_function, nir_cf_node, nir_function_impl, cf_node)
 
 typedef enum {
    nir_parameter_in,
