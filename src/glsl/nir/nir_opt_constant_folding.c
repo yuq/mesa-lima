@@ -49,9 +49,8 @@ struct constant_fold_state {
    } \
 
 static bool
-constant_fold_alu_instr(nir_alu_instr *instr, void *void_state)
+constant_fold_alu_instr(nir_alu_instr *instr, void *mem_ctx)
 {
-   struct constant_fold_state *state = void_state;
    nir_load_const_instr *src[4], *dest;
 
    if (!instr->dest.dest.is_ssa)
@@ -73,7 +72,7 @@ constant_fold_alu_instr(nir_alu_instr *instr, void *void_state)
    /* We shouldn't have any saturate modifiers in the optimization loop. */
    assert(!instr->dest.saturate);
 
-   dest = nir_load_const_instr_create(state->mem_ctx);
+   dest = nir_load_const_instr_create(mem_ctx);
    dest->array_elems = 0;
    dest->num_components = instr->dest.dest.ssa.num_components;
 
@@ -228,7 +227,7 @@ constant_fold_alu_instr(nir_alu_instr *instr, void *void_state)
       .ssa = &dest->dest.ssa,
    };
 
-   nir_ssa_def_rewrite_uses(&instr->dest.dest.ssa, new_src, state->mem_ctx);
+   nir_ssa_def_rewrite_uses(&instr->dest.dest.ssa, new_src, mem_ctx);
 
    nir_instr_remove(&instr->instr);
    ralloc_free(instr);
@@ -237,15 +236,84 @@ constant_fold_alu_instr(nir_alu_instr *instr, void *void_state)
 }
 
 static bool
+constant_fold_deref(nir_instr *instr, nir_deref_var *deref)
+{
+   bool progress = false;
+
+   for (nir_deref *tail = deref->deref.child; tail; tail = tail->child) {
+      if (tail->deref_type != nir_deref_type_array)
+         continue;
+
+      nir_deref_array *arr = nir_deref_as_array(tail);
+
+      if (arr->deref_array_type == nir_deref_array_type_indirect &&
+          arr->indirect.is_ssa &&
+          arr->indirect.ssa->parent_instr->type == nir_instr_type_load_const) {
+         nir_load_const_instr *indirect =
+            nir_instr_as_load_const(arr->indirect.ssa->parent_instr);
+
+         arr->base_offset += indirect->value.u[0];
+
+         nir_src empty = {
+            .is_ssa = true,
+            .ssa = NULL,
+         };
+
+         nir_instr_rewrite_src(instr, &arr->indirect, empty);
+
+         arr->deref_array_type = nir_deref_array_type_direct;
+
+         progress = true;
+      }
+   }
+
+   return progress;
+}
+
+static bool
+constant_fold_intrinsic_instr(nir_intrinsic_instr *instr)
+{
+   bool progress = false;
+
+   unsigned num_vars = nir_intrinsic_infos[instr->intrinsic].num_variables;
+   for (unsigned i = 0; i < num_vars; i++) {
+      progress |= constant_fold_deref(&instr->instr, instr->variables[i]);
+   }
+
+   return progress;
+}
+
+static bool
+constant_fold_tex_instr(nir_tex_instr *instr)
+{
+   if (instr->sampler)
+      return constant_fold_deref(&instr->instr, instr->sampler);
+   else
+      return false;
+}
+
+static bool
 constant_fold_block(nir_block *block, void *void_state)
 {
    struct constant_fold_state *state = void_state;
 
    nir_foreach_instr_safe(block, instr) {
-      if (instr->type != nir_instr_type_alu)
-         continue;
-
-      state->progress |= constant_fold_alu_instr(nir_instr_as_alu(instr), state);
+      switch (instr->type) {
+      case nir_instr_type_alu:
+         state->progress |= constant_fold_alu_instr(nir_instr_as_alu(instr),
+                                                    state->mem_ctx);
+         break;
+      case nir_instr_type_intrinsic:
+         state->progress |=
+            constant_fold_intrinsic_instr(nir_instr_as_intrinsic(instr));
+         break;
+      case nir_instr_type_tex:
+         state->progress |= constant_fold_tex_instr(nir_instr_as_tex(instr));
+         break;
+      default:
+         /* Don't know how to constant fold */
+         break;
+      }
    }
 
    return true;
