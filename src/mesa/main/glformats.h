@@ -128,6 +128,8 @@ extern GLenum
 _mesa_es3_error_check_format_and_type(GLenum format, GLenum type,
                                       GLenum internalFormat);
 
+extern uint32_t
+_mesa_format_from_format_and_type(GLenum format, GLenum type);
 
 #ifdef __cplusplus
 }
