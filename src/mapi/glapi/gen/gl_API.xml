@@ -8375,7 +8375,11 @@
     <enum name="QUERY_BY_REGION_NO_WAIT_INVERTED"         value="0x8E1A"/>
 </category>
 
-<!-- ARB extensions 162 - 166 -->
+<!-- ARB extensions 162 - 163 -->
+
+<xi:include href="ARB_direct_state_access.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
+
+<!-- ARB extensions 165 - 166 -->
 
 <xi:include href="ARB_texture_barrier.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
 

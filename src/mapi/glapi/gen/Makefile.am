@@ -121,6 +121,7 @@ API_XML = \
 	ARB_debug_output.xml \
 	ARB_depth_buffer_float.xml \
 	ARB_depth_clamp.xml \
+	ARB_direct_state_access.xml \
 	ARB_draw_buffers.xml \
 	ARB_draw_buffers_blend.xml \
 	ARB_draw_elements_base_vertex.xml \
