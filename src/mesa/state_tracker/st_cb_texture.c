@@ -899,7 +899,7 @@ st_CompressedTexImage(struct gl_context *ctx, GLuint dims,
  * We can do arbitrary X/Y/Z/W/0/1 swizzling here as long as there is
  * a format which matches the swizzling.
  *
- * If such a format isn't available, it falls back to _mesa_get_teximage.
+ * If such a format isn't available, it falls back to _mesa_GetTexImage_sw.
  *
  * NOTE: Drivers usually do a blit to convert between tiled and linear
  *       texture layouts during texture uploads/downloads, so the blit
@@ -944,14 +944,14 @@ st_GetTexImage(struct gl_context * ctx,
       goto fallback;
    }
 
-   /* XXX Fallback to _mesa_get_teximage for depth-stencil formats
+   /* XXX Fallback to _mesa_GetTexImage_sw for depth-stencil formats
     * due to an incomplete stencil blit implementation in some drivers. */
    if (format == GL_DEPTH_STENCIL) {
       goto fallback;
    }
 
    /* If the base internal format and the texture format don't match, we have
-    * to fall back to _mesa_get_teximage. */
+    * to fall back to _mesa_GetTexImage_sw. */
    if (texImage->_BaseFormat !=
        _mesa_get_format_base_format(texImage->TexFormat)) {
       goto fallback;
@@ -1005,7 +1005,7 @@ st_GetTexImage(struct gl_context * ctx,
    if (dst_format == PIPE_FORMAT_NONE) {
       GLenum dst_glformat;
 
-      /* Fall back to _mesa_get_teximage except for compressed formats,
+      /* Fall back to _mesa_GetTexImage_sw except for compressed formats,
        * where decompression with a blit is always preferred. */
       if (!util_format_is_compressed(src->format)) {
          goto fallback;
@@ -1195,7 +1195,7 @@ end:
 
 fallback:
    if (!done) {
-      _mesa_get_teximage(ctx, format, type, pixels, texImage);
+      _mesa_GetTexImage_sw(ctx, format, type, pixels, texImage);
    }
 }
 

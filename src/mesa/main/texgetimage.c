@@ -631,9 +631,9 @@ get_tex_memcpy(struct gl_context *ctx, GLenum format, GLenum type,
  * unmap with ctx->Driver.UnmapTextureImage().
  */
 void
-_mesa_get_teximage(struct gl_context *ctx,
-                   GLenum format, GLenum type, GLvoid *pixels,
-                   struct gl_texture_image *texImage)
+_mesa_GetTexImage_sw(struct gl_context *ctx,
+                     GLenum format, GLenum type, GLvoid *pixels,
+                     struct gl_texture_image *texImage)
 {
    const GLuint dimensions =
       _mesa_get_texture_dimensions(texImage->TexObject->Target);

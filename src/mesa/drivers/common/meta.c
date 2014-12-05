@@ -3208,7 +3208,7 @@ _mesa_meta_GetTexImage(struct gl_context *ctx,
          return;
    }
 
-   _mesa_get_teximage(ctx, format, type, pixels, texImage);
+   _mesa_GetTexImage_sw(ctx, format, type, pixels, texImage);
 }
 
 

@@ -37,9 +37,9 @@ extern GLenum
 _mesa_base_pack_format(GLenum format);
 
 extern void
-_mesa_get_teximage(struct gl_context *ctx,
-                   GLenum format, GLenum type, GLvoid *pixels,
-                   struct gl_texture_image *texImage);
+_mesa_GetTexImage_sw(struct gl_context *ctx,
+                     GLenum format, GLenum type, GLvoid *pixels,
+                     struct gl_texture_image *texImage);
 
 
 extern void
