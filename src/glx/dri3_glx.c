@@ -1560,11 +1560,24 @@ dri3_swap_buffers(__GLXDRIdrawable *pdraw, int64_t target_msc, int64_t divisor,
       dri3_fence_reset(c, back);
 
       /* Compute when we want the frame shown by taking the last known successful
-       * MSC and adding in a swap interval for each outstanding swap request
+       * MSC and adding in a swap interval for each outstanding swap request.
+       * target_msc=divisor=remainder=0 means "Use glXSwapBuffers() semantic"
        */
       ++priv->send_sbc;
-      if (target_msc == 0)
+      if (target_msc == 0 && divisor == 0 && remainder == 0)
          target_msc = priv->msc + priv->swap_interval * (priv->send_sbc - priv->recv_sbc);
+      else if (divisor == 0 && remainder > 0) {
+         /* From the GLX_OML_sync_control spec:
+          *
+          *     "If <divisor> = 0, the swap will occur when MSC becomes
+          *      greater than or equal to <target_msc>."
+          *
+          * Note that there's no mention of the remainder.  The Present extension
+          * throws BadValue for remainder != 0 with divisor == 0, so just drop
+          * the passed in value.
+          */
+         remainder = 0;
+      }
 
       /* From the GLX_EXT_swap_control spec:
        *
