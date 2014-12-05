@@ -290,6 +290,55 @@ qpu_waddr_ignores_pm(uint32_t waddr)
         return false;
 }
 
+static void
+swap_ra_file_mux_helper(uint64_t *merge, uint64_t *a, uint32_t mux_shift)
+{
+        uint64_t mux_mask = (uint64_t)0x7 << mux_shift;
+        uint64_t mux_a_val = (uint64_t)QPU_MUX_A << mux_shift;
+        uint64_t mux_b_val = (uint64_t)QPU_MUX_B << mux_shift;
+
+        if ((*a & mux_mask) == mux_a_val) {
+                *a = (*a & ~mux_mask) | mux_b_val;
+                *merge = (*merge & ~mux_mask) | mux_b_val;
+        }
+}
+
+static bool
+try_swap_ra_file(uint64_t *merge, uint64_t *a, uint64_t *b)
+{
+        uint32_t raddr_a_a = QPU_GET_FIELD(*a, QPU_RADDR_A);
+        uint32_t raddr_a_b = QPU_GET_FIELD(*a, QPU_RADDR_B);
+        uint32_t raddr_b_a = QPU_GET_FIELD(*b, QPU_RADDR_A);
+        uint32_t raddr_b_b = QPU_GET_FIELD(*b, QPU_RADDR_B);
+
+        if (raddr_a_b != QPU_R_NOP)
+                return false;
+
+        switch (raddr_a_a) {
+        case QPU_R_UNIF:
+        case QPU_R_VARY:
+                break;
+        default:
+                return false;
+        }
+
+        if (raddr_b_b != QPU_R_NOP &&
+            raddr_b_b != raddr_a_a)
+                return false;
+
+        /* Move raddr A to B in instruction a. */
+        *a = (*a & ~QPU_RADDR_A_MASK) | QPU_SET_FIELD(QPU_R_NOP, QPU_RADDR_A);
+        *a = (*a & ~QPU_RADDR_B_MASK) | QPU_SET_FIELD(raddr_a_a, QPU_RADDR_B);
+        *merge = ((*merge & ~QPU_RADDR_A_MASK) | QPU_SET_FIELD(raddr_b_a, QPU_RADDR_A));
+        *merge = ((*merge & ~QPU_RADDR_B_MASK) | QPU_SET_FIELD(raddr_a_a, QPU_RADDR_B));
+        swap_ra_file_mux_helper(merge, a, QPU_ADD_A_SHIFT);
+        swap_ra_file_mux_helper(merge, a, QPU_ADD_B_SHIFT);
+        swap_ra_file_mux_helper(merge, a, QPU_MUL_A_SHIFT);
+        swap_ra_file_mux_helper(merge, a, QPU_MUL_B_SHIFT);
+
+        return true;
+}
+
 uint64_t
 qpu_merge_inst(uint64_t a, uint64_t b)
 {
@@ -314,8 +363,19 @@ qpu_merge_inst(uint64_t a, uint64_t b)
         ok = ok && merge_fields(&merge, a, b, QPU_SF | QPU_PM,
                                 ~0);
 
-        ok = ok && merge_fields(&merge, a, b, QPU_RADDR_A_MASK,
-                                QPU_SET_FIELD(QPU_R_NOP, QPU_RADDR_A));
+        if (!merge_fields(&merge, a, b, QPU_RADDR_A_MASK,
+                          QPU_SET_FIELD(QPU_R_NOP, QPU_RADDR_A))) {
+                /* Since we tend to use regfile A by default both for register
+                 * allocation and for our special values (uniforms and
+                 * varyings), try swapping uniforms and varyings to regfile B
+                 * to resolve raddr A conflicts.
+                 */
+                if (!try_swap_ra_file(&merge, &a, &b) &&
+                    !try_swap_ra_file(&merge, &b, &a)) {
+                        return 0;
+                }
+        }
+
         ok = ok && merge_fields(&merge, a, b, QPU_RADDR_B_MASK,
                                 QPU_SET_FIELD(QPU_R_NOP, QPU_RADDR_B));
 
