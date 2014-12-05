@@ -14,7 +14,7 @@ The rules-ng-ng source files this header was generated from are:
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_common.xml (  10551 bytes, from 2014-11-13 22:44:30)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_pm4.xml    (  15076 bytes, from 2014-12-01 22:40:01)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/a3xx.xml          (  64344 bytes, from 2014-12-03 14:14:54)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/a4xx.xml          (  49060 bytes, from 2014-12-03 22:36:15)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/a4xx.xml          (  50255 bytes, from 2014-12-07 18:43:56)
 
 Copyright (C) 2013-2014 by the following authors:
 - Rob Clark <robdclark@gmail.com> (robclark)
@@ -91,6 +91,7 @@ enum a4xx_vtx_fmt {
 	VFMT4_16_16_UNORM = 29,
 	VFMT4_16_16_16_UNORM = 30,
 	VFMT4_16_16_16_16_UNORM = 31,
+	VFMT4_32_32_SINT = 37,
 	VFMT4_8_UINT = 40,
 	VFMT4_8_8_UINT = 41,
 	VFMT4_8_8_8_UINT = 42,
@@ -130,6 +131,14 @@ enum a4xx_tex_fmt {
 	TFMT4_32_FLOAT = 43,
 	TFMT4_32_32_FLOAT = 56,
 	TFMT4_32_32_32_32_FLOAT = 63,
+};
+
+enum a4xx_tex_fetchsize {
+	TFETCH4_1_BYTE = 0,
+	TFETCH4_2_BYTE = 1,
+	TFETCH4_4_BYTE = 2,
+	TFETCH4_8_BYTE = 3,
+	TFETCH4_16_BYTE = 4,
 };
 
 enum a4xx_depth_format {
@@ -265,14 +274,19 @@ static inline uint32_t A4XX_RB_MSAA_CONTROL_SAMPLES(uint32_t val)
 	return ((val) << A4XX_RB_MSAA_CONTROL_SAMPLES__SHIFT) & A4XX_RB_MSAA_CONTROL_SAMPLES__MASK;
 }
 
-#define REG_A4XX_RB_MSAA_CONTROL2				0x000020a3
-#define A4XX_RB_MSAA_CONTROL2_MSAA_SAMPLES__MASK		0x00000380
-#define A4XX_RB_MSAA_CONTROL2_MSAA_SAMPLES__SHIFT		7
-static inline uint32_t A4XX_RB_MSAA_CONTROL2_MSAA_SAMPLES(uint32_t val)
+#define REG_A4XX_RB_RENDER_CONTROL2				0x000020a3
+#define A4XX_RB_RENDER_CONTROL2_XCOORD				0x00000001
+#define A4XX_RB_RENDER_CONTROL2_YCOORD				0x00000002
+#define A4XX_RB_RENDER_CONTROL2_ZCOORD				0x00000004
+#define A4XX_RB_RENDER_CONTROL2_WCOORD				0x00000008
+#define A4XX_RB_RENDER_CONTROL2_FACENESS			0x00000020
+#define A4XX_RB_RENDER_CONTROL2_MSAA_SAMPLES__MASK		0x00000380
+#define A4XX_RB_RENDER_CONTROL2_MSAA_SAMPLES__SHIFT		7
+static inline uint32_t A4XX_RB_RENDER_CONTROL2_MSAA_SAMPLES(uint32_t val)
 {
-	return ((val) << A4XX_RB_MSAA_CONTROL2_MSAA_SAMPLES__SHIFT) & A4XX_RB_MSAA_CONTROL2_MSAA_SAMPLES__MASK;
+	return ((val) << A4XX_RB_RENDER_CONTROL2_MSAA_SAMPLES__SHIFT) & A4XX_RB_RENDER_CONTROL2_MSAA_SAMPLES__MASK;
 }
-#define A4XX_RB_MSAA_CONTROL2_VARYING				0x00001000
+#define A4XX_RB_RENDER_CONTROL2_VARYING				0x00001000
 
 static inline uint32_t REG_A4XX_RB_MRT(uint32_t i0) { return 0x000020a4 + 0x5*i0; }
 
@@ -1122,7 +1136,9 @@ static inline uint32_t A4XX_SP_FS_CTRL_REG1_CONSTLENGTH(uint32_t val)
 {
 	return ((val) << A4XX_SP_FS_CTRL_REG1_CONSTLENGTH__SHIFT) & A4XX_SP_FS_CTRL_REG1_CONSTLENGTH__MASK;
 }
+#define A4XX_SP_FS_CTRL_REG1_FACENESS				0x00080000
 #define A4XX_SP_FS_CTRL_REG1_VARYING				0x00100000
+#define A4XX_SP_FS_CTRL_REG1_FRAGCOORD				0x00200000
 
 #define REG_A4XX_SP_FS_OBJ_OFFSET_REG				0x000022ea
 #define A4XX_SP_FS_OBJ_OFFSET_REG_CONSTOBJECTOFFSET__MASK	0x01ff0000
@@ -1447,6 +1463,7 @@ static inline uint32_t A4XX_VFD_DECODE_INSTR_REGID(uint32_t val)
 {
 	return ((val) << A4XX_VFD_DECODE_INSTR_REGID__SHIFT) & A4XX_VFD_DECODE_INSTR_REGID__MASK;
 }
+#define A4XX_VFD_DECODE_INSTR_INT				0x00100000
 #define A4XX_VFD_DECODE_INSTR_SWAP__MASK			0x00c00000
 #define A4XX_VFD_DECODE_INSTR_SWAP__SHIFT			22
 static inline uint32_t A4XX_VFD_DECODE_INSTR_SWAP(enum a3xx_color_swap val)
@@ -1743,6 +1760,12 @@ static inline uint32_t A4XX_HLSQ_CONTROL_1_REG_VSTHREADSIZE(enum a3xx_threadsize
 }
 #define A4XX_HLSQ_CONTROL_1_REG_VSSUPERTHREADENABLE		0x00000100
 #define A4XX_HLSQ_CONTROL_1_REG_RESERVED1			0x00000200
+#define A4XX_HLSQ_CONTROL_1_REG_COORDREGID__MASK		0x00ff0000
+#define A4XX_HLSQ_CONTROL_1_REG_COORDREGID__SHIFT		16
+static inline uint32_t A4XX_HLSQ_CONTROL_1_REG_COORDREGID(uint32_t val)
+{
+	return ((val) << A4XX_HLSQ_CONTROL_1_REG_COORDREGID__SHIFT) & A4XX_HLSQ_CONTROL_1_REG_COORDREGID__MASK;
+}
 #define A4XX_HLSQ_CONTROL_1_REG_ZWCOORD				0x02000000
 
 #define REG_A4XX_HLSQ_CONTROL_2_REG				0x000023c2
@@ -1751,6 +1774,12 @@ static inline uint32_t A4XX_HLSQ_CONTROL_1_REG_VSTHREADSIZE(enum a3xx_threadsize
 static inline uint32_t A4XX_HLSQ_CONTROL_2_REG_PRIMALLOCTHRESHOLD(uint32_t val)
 {
 	return ((val) << A4XX_HLSQ_CONTROL_2_REG_PRIMALLOCTHRESHOLD__SHIFT) & A4XX_HLSQ_CONTROL_2_REG_PRIMALLOCTHRESHOLD__MASK;
+}
+#define A4XX_HLSQ_CONTROL_2_REG_FACEREGID__MASK			0x000003fc
+#define A4XX_HLSQ_CONTROL_2_REG_FACEREGID__SHIFT		2
+static inline uint32_t A4XX_HLSQ_CONTROL_2_REG_FACEREGID(uint32_t val)
+{
+	return ((val) << A4XX_HLSQ_CONTROL_2_REG_FACEREGID__SHIFT) & A4XX_HLSQ_CONTROL_2_REG_FACEREGID__MASK;
 }
 
 #define REG_A4XX_HLSQ_CONTROL_3_REG				0x000023c3
@@ -2107,6 +2136,12 @@ static inline uint32_t A4XX_TEX_CONST_1_WIDTH(uint32_t val)
 }
 
 #define REG_A4XX_TEX_CONST_2					0x00000002
+#define A4XX_TEX_CONST_2_FETCHSIZE__MASK			0x0000000f
+#define A4XX_TEX_CONST_2_FETCHSIZE__SHIFT			0
+static inline uint32_t A4XX_TEX_CONST_2_FETCHSIZE(enum a4xx_tex_fetchsize val)
+{
+	return ((val) << A4XX_TEX_CONST_2_FETCHSIZE__SHIFT) & A4XX_TEX_CONST_2_FETCHSIZE__MASK;
+}
 #define A4XX_TEX_CONST_2_PITCH__MASK				0x3ffffe00
 #define A4XX_TEX_CONST_2_PITCH__SHIFT				9
 static inline uint32_t A4XX_TEX_CONST_2_PITCH(uint32_t val)
@@ -2121,19 +2156,31 @@ static inline uint32_t A4XX_TEX_CONST_2_SWAP(enum a3xx_color_swap val)
 }
 
 #define REG_A4XX_TEX_CONST_3					0x00000003
-#define A4XX_TEX_CONST_3_LAYERSZ__MASK				0x0000000f
+#define A4XX_TEX_CONST_3_LAYERSZ__MASK				0x00003fff
 #define A4XX_TEX_CONST_3_LAYERSZ__SHIFT				0
 static inline uint32_t A4XX_TEX_CONST_3_LAYERSZ(uint32_t val)
 {
 	return ((val >> 12) << A4XX_TEX_CONST_3_LAYERSZ__SHIFT) & A4XX_TEX_CONST_3_LAYERSZ__MASK;
 }
+#define A4XX_TEX_CONST_3_DEPTH__MASK				0x7ffc0000
+#define A4XX_TEX_CONST_3_DEPTH__SHIFT				18
+static inline uint32_t A4XX_TEX_CONST_3_DEPTH(uint32_t val)
+{
+	return ((val) << A4XX_TEX_CONST_3_DEPTH__SHIFT) & A4XX_TEX_CONST_3_DEPTH__MASK;
+}
 
 #define REG_A4XX_TEX_CONST_4					0x00000004
-#define A4XX_TEX_CONST_4_BASE__MASK				0xffffffff
-#define A4XX_TEX_CONST_4_BASE__SHIFT				0
+#define A4XX_TEX_CONST_4_LAYERSZ__MASK				0x0000000f
+#define A4XX_TEX_CONST_4_LAYERSZ__SHIFT				0
+static inline uint32_t A4XX_TEX_CONST_4_LAYERSZ(uint32_t val)
+{
+	return ((val >> 12) << A4XX_TEX_CONST_4_LAYERSZ__SHIFT) & A4XX_TEX_CONST_4_LAYERSZ__MASK;
+}
+#define A4XX_TEX_CONST_4_BASE__MASK				0xffffffe0
+#define A4XX_TEX_CONST_4_BASE__SHIFT				5
 static inline uint32_t A4XX_TEX_CONST_4_BASE(uint32_t val)
 {
-	return ((val) << A4XX_TEX_CONST_4_BASE__SHIFT) & A4XX_TEX_CONST_4_BASE__MASK;
+	return ((val >> 5) << A4XX_TEX_CONST_4_BASE__SHIFT) & A4XX_TEX_CONST_4_BASE__MASK;
 }
 
 #define REG_A4XX_TEX_CONST_5					0x00000005
