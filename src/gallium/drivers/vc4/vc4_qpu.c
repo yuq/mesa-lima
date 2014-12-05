@@ -259,6 +259,37 @@ qpu_num_sf_accesses(uint64_t inst)
         return accesses;
 }
 
+static bool
+qpu_waddr_ignores_pm(uint32_t waddr)
+{
+        switch(waddr) {
+        case QPU_W_ACC0:
+        case QPU_W_ACC1:
+        case QPU_W_ACC2:
+        case QPU_W_ACC3:
+        case QPU_W_TLB_Z:
+        case QPU_W_TLB_COLOR_MS:
+        case QPU_W_TLB_COLOR_ALL:
+        case QPU_W_TLB_ALPHA_MASK:
+        case QPU_W_VPM:
+        case QPU_W_SFU_RECIP:
+        case QPU_W_SFU_RECIPSQRT:
+        case QPU_W_SFU_EXP:
+        case QPU_W_SFU_LOG:
+        case QPU_W_TMU0_S:
+        case QPU_W_TMU0_T:
+        case QPU_W_TMU0_R:
+        case QPU_W_TMU0_B:
+        case QPU_W_TMU1_S:
+        case QPU_W_TMU1_T:
+        case QPU_W_TMU1_R:
+        case QPU_W_TMU1_B:
+                return true;
+        }
+
+        return false;
+}
+
 uint64_t
 qpu_merge_inst(uint64_t a, uint64_t b)
 {
@@ -280,7 +311,7 @@ qpu_merge_inst(uint64_t a, uint64_t b)
                                 QPU_SET_FIELD(QPU_SIG_NONE, QPU_SIG));
 
         /* Misc fields that have to match exactly. */
-        ok = ok && merge_fields(&merge, a, b, QPU_SF | QPU_WS | QPU_PM,
+        ok = ok && merge_fields(&merge, a, b, QPU_SF | QPU_PM,
                                 ~0);
 
         ok = ok && merge_fields(&merge, a, b, QPU_RADDR_A_MASK,
@@ -292,6 +323,21 @@ qpu_merge_inst(uint64_t a, uint64_t b)
                                 QPU_SET_FIELD(QPU_W_NOP, QPU_WADDR_ADD));
         ok = ok && merge_fields(&merge, a, b, QPU_WADDR_MUL_MASK,
                                 QPU_SET_FIELD(QPU_W_NOP, QPU_WADDR_MUL));
+
+        /* Allow disagreement on WS (swapping A vs B physical reg file as the
+         * destination for ADD/MUL) if one of the original instructions
+         * ignores it (probably because it's just writing to accumulators).
+         */
+        if (qpu_waddr_ignores_pm(QPU_GET_FIELD(a, QPU_WADDR_ADD)) &&
+            qpu_waddr_ignores_pm(QPU_GET_FIELD(a, QPU_WADDR_MUL))) {
+                merge = (merge & ~QPU_WS) | (b & QPU_WS);
+        } else if (qpu_waddr_ignores_pm(QPU_GET_FIELD(b, QPU_WADDR_ADD)) &&
+                   qpu_waddr_ignores_pm(QPU_GET_FIELD(b, QPU_WADDR_MUL))) {
+                merge = (merge & ~QPU_WS) | (a & QPU_WS);
+        } else {
+                if ((a & QPU_WS) != (b & QPU_WS))
+                        return 0;
+        }
 
         if (ok)
                 return merge;
