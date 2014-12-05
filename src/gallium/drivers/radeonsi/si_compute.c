@@ -371,6 +371,9 @@ static void si_launch_grid(
 		| S_00B85C_SH1_CU_EN(0xffff /* Default value */))
 		;
 
+	num_waves_for_scratch =
+		MIN2(num_waves_for_scratch,
+		     32 * sctx->screen->b.info.max_compute_units);
 	si_pm4_set_reg(pm4, R_00B860_COMPUTE_TMPRING_SIZE,
 		/* The maximum value for WAVES is 32 * num CU.
 		 * If you program this value incorrectly, the GPU will hang if
