@@ -467,6 +467,10 @@ nir_tex_instr_create(void *mem_ctx, unsigned num_srcs)
    instr->has_predicate = false;
    src_init(&instr->predicate);
 
+   instr->sampler_index = 0;
+   instr->sampler_array_size = 0;
+   instr->sampler = NULL;
+
    return instr;
 }
 

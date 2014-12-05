@@ -464,8 +464,8 @@ print_tex_instr(nir_tex_instr *instr, print_var_state *state, FILE *fp)
       case nir_tex_src_ddy:
          fprintf(fp, "(ddy)");
          break;
-      case nir_tex_src_sampler_index:
-         fprintf(fp, "(sampler_index)");
+      case nir_tex_src_sampler_offset:
+         fprintf(fp, "(sampler_offset)");
          break;
 
       default:

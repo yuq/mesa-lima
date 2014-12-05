@@ -1662,7 +1662,7 @@ fs_visitor::nir_emit_texture(nir_tex_instr *instr)
          break;
       case nir_tex_src_projector:
          unreachable("should be lowered");
-      case nir_tex_src_sampler_index:
+      case nir_tex_src_sampler_offset:
          unreachable("not yet supported");
       default:
          unreachable("unknown texture source");

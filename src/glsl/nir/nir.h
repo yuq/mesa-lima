@@ -793,7 +793,7 @@ typedef enum {
    nir_tex_src_ms_index, /* MSAA sample index */
    nir_tex_src_ddx,
    nir_tex_src_ddy,
-   nir_tex_src_sampler_index, /* < dynamically uniform indirect index */
+   nir_tex_src_sampler_offset, /* < dynamically uniform indirect offset */
    nir_num_texinput_types
 } nir_texinput_type;
 
@@ -838,7 +838,16 @@ typedef struct {
    /* gather component selector */
    unsigned component : 2;
 
+   /** The sampler index
+    *
+    * If this texture instruction has a nir_tex_src_sampler_offset source,
+    * then the sampler index is given by sampler_index + sampler_offset.
+    */
    unsigned sampler_index;
+
+   /** The size of the sampler array or 0 if it's not an array */
+   unsigned sampler_array_size;
+
    nir_deref_var *sampler; /* if this is NULL, use sampler_index instead */
 } nir_tex_instr;
 
