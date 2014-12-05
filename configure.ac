@@ -1345,7 +1345,7 @@ if test "x$enable_openvg" = xyes; then
     fi
 
     AC_MSG_ERROR([Cannot enable OpenVG, because egl_gallium has been removed and
-                  OpenVG hasn't been integrated into standard libEGL yet])
+                  OpenVG has not been integrated into standard libEGL yet])
 
     EGL_CLIENT_APIS="$EGL_CLIENT_APIS "'$(VG_LIB)'
     VG_LIB_DEPS="$VG_LIB_DEPS $SELINUX_LIBS $PTHREAD_LIBS"
