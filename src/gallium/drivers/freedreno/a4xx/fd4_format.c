@@ -232,6 +232,23 @@ fd4_pipe2swap(enum pipe_format format)
 	return formats[format].swap;
 }
 
+enum a4xx_tex_fetchsize
+fd4_pipe2fetchsize(enum pipe_format format)
+{
+	switch (util_format_get_blocksizebits(format)) {
+	case 8:   return TFETCH4_1_BYTE;
+	case 16:  return TFETCH4_2_BYTE;
+	case 32:  return TFETCH4_4_BYTE;
+	case 64:  return TFETCH4_8_BYTE;
+	case 128: return TFETCH4_16_BYTE;
+	default:
+		debug_printf("Unknown block size for format %s: %d\n",
+				util_format_name(format),
+				util_format_get_blocksizebits(format));
+		return TFETCH4_1_BYTE;
+	}
+}
+
 /* we need to special case a bit the depth/stencil restore, because we are
  * using the texture sampler to blit into the depth/stencil buffer, *not*
  * into a color buffer.  Otherwise fd4_tex_swiz() will do the wrong thing,

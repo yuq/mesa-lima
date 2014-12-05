@@ -162,12 +162,20 @@ emit_textures(struct fd_context *ctx, struct fd_ringbuffer *ring,
 	unsigned i;
 
 	if (tex->num_samplers > 0) {
+		int num_samplers;
+
+		/* not sure if this is an a420.0 workaround, but we seem
+		 * to need to emit these in pairs.. emit a final dummy
+		 * entry if odd # of samplers:
+		 */
+		num_samplers = align(tex->num_samplers, 2);
+
 		/* output sampler state: */
-		OUT_PKT3(ring, CP_LOAD_STATE, 2 + 2 + (2 * tex->num_samplers));
+		OUT_PKT3(ring, CP_LOAD_STATE, 2 + (2 * num_samplers));
 		OUT_RING(ring, CP_LOAD_STATE_0_DST_OFF(0) |
 				CP_LOAD_STATE_0_STATE_SRC(SS_DIRECT) |
 				CP_LOAD_STATE_0_STATE_BLOCK(sb) |
-				CP_LOAD_STATE_0_NUM_UNIT(tex->num_samplers));
+				CP_LOAD_STATE_0_NUM_UNIT(num_samplers));
 		OUT_RING(ring, CP_LOAD_STATE_1_STATE_TYPE(ST_SHADER) |
 				CP_LOAD_STATE_1_EXT_SRC_ADDR(0));
 		for (i = 0; i < tex->num_samplers; i++) {
@@ -178,9 +186,11 @@ emit_textures(struct fd_context *ctx, struct fd_ringbuffer *ring,
 			OUT_RING(ring, sampler->texsamp0);
 			OUT_RING(ring, sampler->texsamp1);
 		}
-		/* maybe an a420.0 (or a4xx.0) workaround?? or just driver bug? */
-		OUT_RING(ring, 0x00000000);
-		OUT_RING(ring, 0x00000000);
+
+		for (; i < num_samplers; i++) {
+			OUT_RING(ring, 0x00000000);
+			OUT_RING(ring, 0x00000000);
+		}
 	}
 
 	if (tex->num_textures > 0) {
@@ -203,7 +213,8 @@ emit_textures(struct fd_context *ctx, struct fd_ringbuffer *ring,
 			OUT_RING(ring, view->texconst1);
 			OUT_RING(ring, view->texconst2);
 			OUT_RING(ring, view->texconst3);
-			OUT_RELOC(ring, rsc->bo, slice->offset, 0, 0);
+			OUT_RELOC(ring, rsc->bo, slice->offset,
+					view->textconst4, 0);
 			OUT_RING(ring, 0x00000000);
 			OUT_RING(ring, 0x00000000);
 			OUT_RING(ring, 0x00000000);

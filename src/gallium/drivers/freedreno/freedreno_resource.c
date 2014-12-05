@@ -216,6 +216,12 @@ setup_slices(struct fd_resource *rsc, uint32_t alignment)
 static uint32_t
 slice_alignment(struct pipe_screen *pscreen, const struct pipe_resource *tmpl)
 {
+	struct fd_screen *screen = fd_screen(pscreen);
+
+	/* on a4xx, seems like everything is aligned to page: */
+	if ((screen->gpu_id >= 400) && (screen->gpu_id < 500))
+		return 4096;
+
 	/* on a3xx, 2d array and 3d textures seem to want their
 	 * layers aligned to page boundaries:
 	 */
