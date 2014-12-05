@@ -137,8 +137,9 @@ util_primconvert_draw_vbo(struct primconvert_context *pc,
       src = ib->user_buffer;
       if (!src) {
          src = pipe_buffer_map(pc->pipe, ib->buffer,
-                               PIPE_TRANSFER_READ, &src_transfer) + ib->offset;
+                               PIPE_TRANSFER_READ, &src_transfer);
       }
+      src = (const uint8_t *)src + ib->offset;
    }
    else {
       u_index_generator(pc->primtypes_mask,
