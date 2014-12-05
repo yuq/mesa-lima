@@ -529,6 +529,15 @@ dri3_wait_for_sbc(__GLXDRIdrawable *pdraw, int64_t target_sbc, int64_t *ust,
 {
    struct dri3_drawable *priv = (struct dri3_drawable *) pdraw;
 
+   /* From the GLX_OML_sync_control spec:
+    *
+    *     "If <target_sbc> = 0, the function will block until all previous
+    *      swaps requested with glXSwapBuffersMscOML for that window have
+    *      completed."
+    */
+   if (!target_sbc)
+      target_sbc = priv->send_sbc;
+
    while (priv->recv_sbc < target_sbc) {
       if (!dri3_wait_for_event(pdraw))
          return 0;
