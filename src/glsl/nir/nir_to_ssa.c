@@ -433,8 +433,8 @@ get_instr_predicate(nir_instr *instr)
       else
          return NULL;
 
-   case nir_instr_type_texture:
-      tex_instr = nir_instr_as_texture(instr);
+   case nir_instr_type_tex:
+      tex_instr = nir_instr_as_tex(instr);
       if (tex_instr->has_predicate)
          return &tex_instr->predicate;
       else

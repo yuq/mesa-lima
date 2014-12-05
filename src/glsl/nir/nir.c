@@ -456,7 +456,7 @@ nir_tex_instr *
 nir_tex_instr_create(void *mem_ctx, unsigned num_srcs)
 {
    nir_tex_instr *instr = ralloc(mem_ctx, nir_tex_instr);
-   instr_init(&instr->instr, nir_instr_type_texture);
+   instr_init(&instr->instr, nir_instr_type_tex);
 
    dest_init(&instr->dest);
 
@@ -1453,8 +1453,8 @@ nir_foreach_dest(nir_instr *instr, nir_foreach_dest_cb cb, void *state)
       return visit_alu_dest(nir_instr_as_alu(instr), cb, state);
    case nir_instr_type_intrinsic:
       return visit_intrinsic_dest(nir_instr_as_intrinsic(instr), cb, state);
-   case nir_instr_type_texture:
-      return visit_texture_dest(nir_instr_as_texture(instr), cb, state);
+   case nir_instr_type_tex:
+      return visit_texture_dest(nir_instr_as_tex(instr), cb, state);
    case nir_instr_type_load_const:
       return visit_load_const_dest(nir_instr_as_load_const(instr), cb, state);
    case nir_instr_type_phi:
@@ -1636,8 +1636,8 @@ nir_foreach_src(nir_instr *instr, nir_foreach_src_cb cb, void *state)
       if (!visit_intrinsic_src(nir_instr_as_intrinsic(instr), cb, state))
          return false;
       break;
-   case nir_instr_type_texture:
-      if (!visit_tex_src(nir_instr_as_texture(instr), cb, state))
+   case nir_instr_type_tex:
+      if (!visit_tex_src(nir_instr_as_tex(instr), cb, state))
          return false;
       break;
    case nir_instr_type_call:

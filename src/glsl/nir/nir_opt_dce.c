@@ -98,8 +98,8 @@ init_instr(nir_instr *instr, struct exec_list *worklist)
       }
       break;
 
-   case nir_instr_type_texture:
-      tex_instr = nir_instr_as_texture(instr);
+   case nir_instr_type_tex:
+      tex_instr = nir_instr_as_tex(instr);
       if (!tex_instr->dest.is_ssa)
          worklist_push(worklist, instr);
       break;

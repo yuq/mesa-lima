@@ -473,8 +473,8 @@ validate_instr(nir_instr *instr, validate_state *state)
       validate_intrinsic_instr(nir_instr_as_intrinsic(instr), state);
       break;
 
-   case nir_instr_type_texture:
-      validate_tex_instr(nir_instr_as_texture(instr), state);
+   case nir_instr_type_tex:
+      validate_tex_instr(nir_instr_as_tex(instr), state);
       break;
 
    case nir_instr_type_load_const:

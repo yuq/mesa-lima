@@ -152,8 +152,8 @@ lower_block_cb(nir_block *block, void *_state)
    lower_state *state = (lower_state *) _state;
 
    nir_foreach_instr(block, instr) {
-      if (instr->type == nir_instr_type_texture) {
-         nir_tex_instr *tex_instr = nir_instr_as_texture(instr);
+      if (instr->type == nir_instr_type_tex) {
+         nir_tex_instr *tex_instr = nir_instr_as_tex(instr);
          lower_sampler(tex_instr, state->shader_program, state->prog);
       }
    }

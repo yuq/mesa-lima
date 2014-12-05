@@ -87,7 +87,7 @@ nir_instrs_equal(nir_instr *instr1, nir_instr *instr2)
       }
       return true;
    }
-   case nir_instr_type_texture:
+   case nir_instr_type_tex:
       return false;
    case nir_instr_type_load_const: {
       nir_load_const_instr *load1 = nir_instr_as_load_const(instr1);
@@ -152,7 +152,7 @@ nir_instr_can_cse(nir_instr *instr)
    case nir_instr_type_phi:
       return nir_foreach_dest(instr, dest_is_ssa, NULL) &&
              nir_foreach_src(instr, src_is_ssa, NULL);
-   case nir_instr_type_texture:
+   case nir_instr_type_tex:
       return false; /* TODO */
    case nir_instr_type_intrinsic:
    case nir_instr_type_call:

@@ -655,8 +655,8 @@ print_instr(nir_instr *instr, print_var_state *state, unsigned tabs, FILE *fp)
       print_intrinsic_instr(nir_instr_as_intrinsic(instr), state, fp);
       break;
 
-   case nir_instr_type_texture:
-      print_tex_instr(nir_instr_as_texture(instr), state, fp);
+   case nir_instr_type_tex:
+      print_tex_instr(nir_instr_as_tex(instr), state, fp);
       break;
 
    case nir_instr_type_load_const:

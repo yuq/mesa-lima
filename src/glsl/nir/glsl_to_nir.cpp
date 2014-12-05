@@ -790,8 +790,8 @@ get_instr_dest(nir_instr *instr)
          else
             return NULL;
 
-      case nir_instr_type_texture:
-         tex_instr = nir_instr_as_texture(instr);
+      case nir_instr_type_tex:
+         tex_instr = nir_instr_as_tex(instr);
          return &tex_instr->dest;
 
       case nir_instr_type_load_const:
