@@ -133,6 +133,12 @@ static bool
 is_drawing_points(const struct brw_context *brw)
 {
    /* Determine if the primitives *reaching the SF* are points */
+   /* _NEW_POLYGON */
+   if (brw->ctx.Polygon.FrontMode == GL_POINT ||
+       brw->ctx.Polygon.BackMode == GL_POINT) {
+      return true;
+   }
+
    if (brw->geometry_program) {
       /* BRW_NEW_GEOMETRY_PROGRAM */
       return brw->geometry_program->OutputType == GL_POINTS;
