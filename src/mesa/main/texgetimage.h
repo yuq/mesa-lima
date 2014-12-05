@@ -43,9 +43,9 @@ _mesa_GetTexImage_sw(struct gl_context *ctx,
 
 
 extern void
-_mesa_get_compressed_teximage(struct gl_context *ctx,
-                              struct gl_texture_image *texImage,
-                              GLvoid *data);
+_mesa_GetCompressedTexImage_sw(struct gl_context *ctx,
+                               struct gl_texture_image *texImage,
+                               GLvoid *data);
 
 
 

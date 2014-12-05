@@ -689,9 +689,9 @@ _mesa_GetTexImage_sw(struct gl_context *ctx,
  * All error checking will have been done before this routine is called.
  */
 void
-_mesa_get_compressed_teximage(struct gl_context *ctx,
-                              struct gl_texture_image *texImage,
-                              GLvoid *img)
+_mesa_GetCompressedTexImage_sw(struct gl_context *ctx,
+                               struct gl_texture_image *texImage,
+                               GLvoid *img)
 {
    const GLuint dimensions =
       _mesa_get_texture_dimensions(texImage->TexObject->Target);
