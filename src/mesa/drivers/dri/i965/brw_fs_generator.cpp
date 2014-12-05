@@ -36,6 +36,20 @@ extern "C" {
 #include "brw_fs.h"
 #include "brw_cfg.h"
 
+static uint32_t brw_file_from_reg(fs_reg *reg)
+{
+   switch (reg->file) {
+   case GRF:
+      return BRW_GENERAL_REGISTER_FILE;
+   case MRF:
+      return BRW_MESSAGE_REGISTER_FILE;
+   case IMM:
+      return BRW_IMMEDIATE_VALUE;
+   default:
+      unreachable("not reached");
+   }
+}
+
 static struct brw_reg
 brw_reg_from_fs_reg(fs_reg *reg)
 {
@@ -1255,20 +1269,6 @@ fs_generator::generate_pixel_interpolator_query(fs_inst *inst,
          inst->regs_written);
 }
 
-
-static uint32_t brw_file_from_reg(fs_reg *reg)
-{
-   switch (reg->file) {
-   case GRF:
-      return BRW_GENERAL_REGISTER_FILE;
-   case MRF:
-      return BRW_MESSAGE_REGISTER_FILE;
-   case IMM:
-      return BRW_IMMEDIATE_VALUE;
-   default:
-      unreachable("not reached");
-   }
-}
 
 /**
  * Sets the first word of a vgrf for gen7+ simd4x2 uniform pull constant
