@@ -182,8 +182,11 @@ struct dri3_drawable {
    uint64_t send_sbc;
    uint64_t recv_sbc;
 
-   /* Last received UST/MSC values */
+   /* Last received UST/MSC values for pixmap present complete */
    uint64_t ust, msc;
+
+   /* Last received UST/MSC values from present notify msc event */
+   uint64_t notify_ust, notify_msc;
 
    /* Serial numbers for tracking wait_for_msc events */
    uint32_t send_msc_serial;

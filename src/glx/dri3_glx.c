@@ -420,11 +420,14 @@ dri3_handle_present_event(struct dri3_drawable *priv, xcb_present_generic_event_
 
          if (psc->show_fps_interval)
             show_fps(priv, ce->ust);
+
+         priv->ust = ce->ust;
+         priv->msc = ce->msc;
       } else {
          priv->recv_msc_serial = ce->serial;
+         priv->notify_ust = ce->ust;
+         priv->notify_msc = ce->msc;
       }
-      priv->ust = ce->ust;
-      priv->msc = ce->msc;
       break;
    }
    case XCB_PRESENT_EVENT_IDLE_NOTIFY: {
@@ -498,8 +501,8 @@ dri3_wait_for_msc(__GLXDRIdrawable *pdraw, int64_t target_msc, int64_t divisor,
       }
    }
 
-   *ust = priv->ust;
-   *msc = priv->msc;
+   *ust = priv->notify_ust;
+   *msc = priv->notify_msc;
    *sbc = priv->recv_sbc;
 
    return 1;
