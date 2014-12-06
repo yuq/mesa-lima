@@ -835,6 +835,7 @@ tx_src_param(struct shader_translator *tx, const struct sm1_src_param *param)
         src = ureg_src_register(TGSI_FILE_SAMPLER, param->idx);
         break;
     case D3DSPR_CONST:
+        assert(!param->rel || IS_VS);
         if (param->rel)
             tx->indirect_const_access = TRUE;
         if (param->rel || !tx_lconstf(tx, &src, param->idx)) {
@@ -858,19 +859,20 @@ tx_src_param(struct shader_translator *tx, const struct sm1_src_param *param)
         src = ureg_imm1f(ureg, 0.0f);
         break;
     case D3DSPR_CONSTINT:
-        if (param->rel || !tx_lconsti(tx, &src, param->idx)) {
-            if (!param->rel)
-                nine_info_mark_const_i_used(tx->info, param->idx);
+        /* relative adressing only possible for float constants in vs */
+        assert(!param->rel);
+        if (!tx_lconsti(tx, &src, param->idx)) {
+            nine_info_mark_const_i_used(tx->info, param->idx);
             src = ureg_src_register(TGSI_FILE_CONSTANT,
                                     tx->info->const_i_base + param->idx);
         }
         break;
     case D3DSPR_CONSTBOOL:
-        if (param->rel || !tx_lconstb(tx, &src, param->idx)) {
+        assert(!param->rel);
+        if (!tx_lconstb(tx, &src, param->idx)) {
            char r = param->idx / 4;
            char s = param->idx & 3;
-           if (!param->rel)
-               nine_info_mark_const_b_used(tx->info, param->idx);
+           nine_info_mark_const_b_used(tx->info, param->idx);
            src = ureg_src_register(TGSI_FILE_CONSTANT,
                                    tx->info->const_b_base + r);
            src = ureg_swizzle(src, s, s, s, s);
