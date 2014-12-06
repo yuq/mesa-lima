@@ -170,6 +170,14 @@ compile_init(struct ir3_compile_context *ctx, struct ir3_shader_variant *so,
 		break;
 	}
 
+	if (ir3_shader_gpuid(so->shader) >= 400) {
+		/* a4xx seems to have *no* sam.p */
+		lconfig.lower_TXP = ~0;  /* lower all txp */
+	} else {
+		/* a3xx just needs to avoid sam.p for 3d tex */
+		lconfig.lower_TXP = (1 << TGSI_TEXTURE_3D);
+	}
+
 	ctx->tokens = tgsi_transform_lowering(&lconfig, tokens, &ctx->info);
 	ctx->free_tokens = !!ctx->tokens;
 	if (!ctx->tokens) {

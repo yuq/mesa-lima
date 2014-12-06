@@ -214,7 +214,7 @@ struct ir3_shader {
 struct ir3_shader * ir3_shader_create(struct pipe_context *pctx,
 		const struct tgsi_token *tokens, enum shader_t type);
 void ir3_shader_destroy(struct ir3_shader *shader);
-
+uint32_t ir3_shader_gpuid(struct ir3_shader *shader);
 struct ir3_shader_variant * ir3_shader_variant(struct ir3_shader *shader,
 		struct ir3_shader_key key);
 

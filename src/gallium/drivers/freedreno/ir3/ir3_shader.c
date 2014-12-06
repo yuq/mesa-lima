@@ -54,9 +54,10 @@ static void
 assemble_variant(struct ir3_shader_variant *v)
 {
 	struct fd_context *ctx = fd_context(v->shader->pctx);
+	uint32_t gpu_id = ir3_shader_gpuid(v->shader);
 	uint32_t sz, *bin;
 
-	bin = ir3_assemble(v->ir, &v->info, ctx->screen->gpu_id);
+	bin = ir3_assemble(v->ir, &v->info, gpu_id);
 	sz = v->info.sizedwords * 4;
 
 	v->bo = fd_bo_new(ctx->dev, sz,
@@ -67,7 +68,7 @@ assemble_variant(struct ir3_shader_variant *v)
 
 	free(bin);
 
-	if (ctx->screen->gpu_id >= 400) {
+	if (gpu_id >= 400) {
 		v->instrlen = v->info.sizedwords / (2 * 16);
 	} else {
 		v->instrlen = v->info.sizedwords / (2 * 4);
@@ -175,6 +176,13 @@ create_variant(struct ir3_shader *shader, struct ir3_shader_key key)
 fail:
 	delete_variant(v);
 	return NULL;
+}
+
+uint32_t
+ir3_shader_gpuid(struct ir3_shader *shader)
+{
+	struct fd_context *ctx = fd_context(shader->pctx);
+	return ctx->screen->gpu_id;
 }
 
 struct ir3_shader_variant *
