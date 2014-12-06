@@ -36,80 +36,79 @@ static const struct qpu_reg vc4_regs[] = {
         { QPU_MUX_R3, 0},
         { QPU_MUX_R4, 0},
         QPU_R(A, 0),
-        QPU_R(A, 1),
-        QPU_R(A, 2),
-        QPU_R(A, 3),
-        QPU_R(A, 4),
-        QPU_R(A, 5),
-        QPU_R(A, 6),
-        QPU_R(A, 7),
-        QPU_R(A, 8),
-        QPU_R(A, 9),
-        QPU_R(A, 10),
-        QPU_R(A, 11),
-        QPU_R(A, 12),
-        QPU_R(A, 13),
-        QPU_R(A, 14),
-        QPU_R(A, 15),
-        QPU_R(A, 16),
-        QPU_R(A, 17),
-        QPU_R(A, 18),
-        QPU_R(A, 19),
-        QPU_R(A, 20),
-        QPU_R(A, 21),
-        QPU_R(A, 22),
-        QPU_R(A, 23),
-        QPU_R(A, 24),
-        QPU_R(A, 25),
-        QPU_R(A, 26),
-        QPU_R(A, 27),
-        QPU_R(A, 28),
-        QPU_R(A, 29),
-        QPU_R(A, 30),
-        QPU_R(A, 31),
         QPU_R(B, 0),
+        QPU_R(A, 1),
         QPU_R(B, 1),
+        QPU_R(A, 2),
         QPU_R(B, 2),
+        QPU_R(A, 3),
         QPU_R(B, 3),
+        QPU_R(A, 4),
         QPU_R(B, 4),
+        QPU_R(A, 5),
         QPU_R(B, 5),
+        QPU_R(A, 6),
         QPU_R(B, 6),
+        QPU_R(A, 7),
         QPU_R(B, 7),
+        QPU_R(A, 8),
         QPU_R(B, 8),
+        QPU_R(A, 9),
         QPU_R(B, 9),
+        QPU_R(A, 10),
         QPU_R(B, 10),
+        QPU_R(A, 11),
         QPU_R(B, 11),
+        QPU_R(A, 12),
         QPU_R(B, 12),
+        QPU_R(A, 13),
         QPU_R(B, 13),
+        QPU_R(A, 14),
         QPU_R(B, 14),
+        QPU_R(A, 15),
         QPU_R(B, 15),
+        QPU_R(A, 16),
         QPU_R(B, 16),
+        QPU_R(A, 17),
         QPU_R(B, 17),
+        QPU_R(A, 18),
         QPU_R(B, 18),
+        QPU_R(A, 19),
         QPU_R(B, 19),
+        QPU_R(A, 20),
         QPU_R(B, 20),
+        QPU_R(A, 21),
         QPU_R(B, 21),
+        QPU_R(A, 22),
         QPU_R(B, 22),
+        QPU_R(A, 23),
         QPU_R(B, 23),
+        QPU_R(A, 24),
         QPU_R(B, 24),
+        QPU_R(A, 25),
         QPU_R(B, 25),
+        QPU_R(A, 26),
         QPU_R(B, 26),
+        QPU_R(A, 27),
         QPU_R(B, 27),
+        QPU_R(A, 28),
         QPU_R(B, 28),
+        QPU_R(A, 29),
         QPU_R(B, 29),
+        QPU_R(A, 30),
         QPU_R(B, 30),
+        QPU_R(A, 31),
         QPU_R(B, 31),
 };
 #define ACC_INDEX     0
-#define A_INDEX       (ACC_INDEX + 5)
-#define B_INDEX       (A_INDEX + 32)
+#define AB_INDEX      (ACC_INDEX + 5)
 
 static void
 vc4_alloc_reg_set(struct vc4_context *vc4)
 {
-        assert(vc4_regs[A_INDEX].addr == 0);
-        assert(vc4_regs[B_INDEX].addr == 0);
-        STATIC_ASSERT(ARRAY_SIZE(vc4_regs) == B_INDEX + 32);
+        assert(vc4_regs[AB_INDEX].addr == 0);
+        assert(vc4_regs[AB_INDEX + 1].addr == 0);
+        STATIC_ASSERT(ARRAY_SIZE(vc4_regs) == AB_INDEX + 64);
 
         if (vc4->regs)
                 return;
@@ -134,7 +133,7 @@ vc4_alloc_reg_set(struct vc4_context *vc4)
         }
 
         vc4->reg_class_a = ra_alloc_reg_class(vc4->regs);
-        for (uint32_t i = A_INDEX; i < A_INDEX + 32; i++)
+        for (uint32_t i = AB_INDEX; i < AB_INDEX + 64; i += 2)
                 ra_class_add_reg(vc4->regs, vc4->reg_class_a, i);
 
         ra_set_finalize(vc4->regs, NULL);
@@ -191,13 +190,13 @@ vc4_register_allocate(struct vc4_context *vc4, struct vc4_compile *c)
                 case QOP_FRAG_Z:
                         def[inst->dst.index] = 0;
                         ra_set_node_reg(g, inst->dst.index,
-                                        B_INDEX + QPU_R_FRAG_PAYLOAD_ZW);
+                                        AB_INDEX + QPU_R_FRAG_PAYLOAD_ZW * 2 + 1);
                         break;
 
                 case QOP_FRAG_W:
                         def[inst->dst.index] = 0;
                         ra_set_node_reg(g, inst->dst.index,
-                                        A_INDEX + QPU_R_FRAG_PAYLOAD_ZW);
+                                        AB_INDEX + QPU_R_FRAG_PAYLOAD_ZW * 2);
                         break;
 
                 case QOP_TEX_RESULT:
