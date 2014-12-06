@@ -60,7 +60,8 @@ union fu {
 static unsigned
 f2u(float f)
 {
-   union fu fu = { .f = f };
+   union fu fu;
+   fu.f = f;
    return fu.u;
 }
 
