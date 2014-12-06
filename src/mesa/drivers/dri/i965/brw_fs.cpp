@@ -902,6 +902,8 @@ fs_inst::regs_read(fs_visitor *v, int arg) const
       return mlen;
    } else if (opcode == SHADER_OPCODE_UNTYPED_SURFACE_READ && arg == 0) {
       return mlen;
+   } else if (opcode == FS_OPCODE_INTERPOLATE_AT_PER_SLOT_OFFSET && arg == 0) {
+      return mlen;
    }
 
    switch (src[arg].file) {
