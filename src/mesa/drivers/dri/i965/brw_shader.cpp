@@ -380,12 +380,10 @@ brw_texture_offset(struct gl_context *ctx, int *offsets,
 const char *
 brw_instruction_name(enum opcode op)
 {
-   char *fallback;
-
-   if (op < ARRAY_SIZE(opcode_descs) && opcode_descs[op].name)
-      return opcode_descs[op].name;
-
    switch (op) {
+   case BRW_OPCODE_MOV ... BRW_OPCODE_NOP:
+      assert(opcode_descs[op].name);
+      return opcode_descs[op].name;
    case FS_OPCODE_FB_WRITE:
       return "fb_write";
    case FS_OPCODE_BLORP_FB_WRITE:
@@ -557,14 +555,9 @@ brw_instruction_name(enum opcode op)
       return "gs_svb_set_dst_index";
    case GS_OPCODE_FF_SYNC_SET_PRIMITIVES:
       return "gs_ff_sync_set_primitives";
-
-   default:
-      /* Yes, this leaks.  It's in debug code, it should never occur, and if
-       * it does, you should just add the case to the list above.
-       */
-      asprintf(&fallback, "op%d", op);
-      return fallback;
    }
+
+   unreachable("not reached");
 }
 
 backend_visitor::backend_visitor(struct brw_context *brw,
