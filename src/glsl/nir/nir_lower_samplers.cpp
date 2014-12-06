@@ -36,67 +36,9 @@ extern "C" {
 }
 
 static unsigned
-get_deref_name_offset(nir_deref_var *deref_var,
-                      gl_shader_program *shader_program, char **name,
-                      void *mem_ctx)
-{
-   nir_deref *deref = &deref_var->deref;
-   nir_deref_array *deref_array;
-   nir_deref_struct *deref_struct;
-
-   *name = ralloc_strdup(mem_ctx, deref_var->var->name);
-
-   while (deref->child != NULL) {
-      switch (deref->child->deref_type) {
-      case nir_deref_type_array:
-         deref_array = nir_deref_as_array(deref->child);
-         if (deref_array->deref_array_type == nir_deref_array_type_indirect) {
-            /* GLSL 1.10 and 1.20 allowed variable sampler array indices,
-             * while GLSL 1.30 requires that the array indices be
-             * constant integer expressions.  We don't expect any driver
-             * to actually work with a really variable array index, so
-             * all that would work would be an unrolled loop counter that
-             * ends up being constant.
-             */
-            ralloc_strcat(&shader_program->InfoLog,
-                        "warning: Variable sampler array index unsupported.\n"
-                        "This feature of the language was removed in GLSL 1.20 "
-                        "and is unlikely to be supported for 1.10 in Mesa.\n");
-         }
-         if (deref_array->deref.child == NULL) {
-            return deref_array->base_offset;
-         }
-         ralloc_asprintf_append(name, "[%u]", deref_array->base_offset);
-         break;
-
-      case nir_deref_type_struct: {
-         deref_struct = nir_deref_as_struct(deref->child);
-         const char *field = glsl_get_struct_elem_name(deref->type,
-                                                       deref_struct->index);
-         ralloc_asprintf_append(name, ".%s", field);
-         break;
-      }
-
-      default:
-         assert(0);
-         break;
-      }
-      deref = deref->child;
-   }
-
-   return 0;
-}
-
-static unsigned
-get_sampler_index(nir_deref_var *sampler,
-                  struct gl_shader_program *shader_program,
+get_sampler_index(struct gl_shader_program *shader_program, const char *name,
                   const struct gl_program *prog)
 {
-   void *mem_ctx = ralloc_context(NULL);
-   char *name;
-   unsigned offset = get_deref_name_offset(sampler, shader_program, &name,
-                                           mem_ctx);
-
    GLuint shader = _mesa_program_enum_to_shader_stage(prog->Target);
 
    unsigned location;
@@ -115,33 +57,90 @@ get_sampler_index(nir_deref_var *sampler,
       return 0;
    }
 
-   ralloc_free(mem_ctx);
-
-   return shader_program->UniformStorage[location].sampler[shader].index +
-          offset;
+   return shader_program->UniformStorage[location].sampler[shader].index;
 }
 
 static void
 lower_sampler(nir_tex_instr *instr, struct gl_shader_program *shader_program,
-              const struct gl_program *prog)
+              const struct gl_program *prog, void *mem_ctx)
 {
-   if (instr->sampler) {
-      instr->sampler_index = get_sampler_index(instr->sampler, shader_program,
-                                               prog);
-      nir_src empty_src;
-      memset(&empty_src, 0, sizeof empty_src);
-      for (nir_deref *deref = &instr->sampler->deref; deref; deref = deref->child) {
-         if (deref->deref_type == nir_deref_type_array) {
-            nir_deref_array *arr = nir_deref_as_array(deref);
-            nir_instr_rewrite_src(&instr->instr, &arr->indirect, empty_src);
+   if (instr->sampler == NULL)
+      return;
+
+   /* Get the name and the offset */
+   instr->sampler_index = 0;
+   bool has_indirect = false;
+   char *name = ralloc_strdup(mem_ctx, instr->sampler->var->name);
+
+   for (nir_deref *deref = &instr->sampler->deref;
+        deref->child; deref = deref->child) {
+      switch (deref->child->deref_type) {
+      case nir_deref_type_array: {
+         nir_deref_array *deref_array = nir_deref_as_array(deref->child);
+
+         /* XXX: We're assuming here that the indirect is the last array
+          * thing we have.  This should be ok for now as we don't support
+          * arrays_of_arrays yet.
+          */
+         assert(!has_indirect);
+
+         instr->sampler_index *= glsl_get_length(deref->type);
+         switch (deref_array->deref_array_type) {
+         case nir_deref_array_type_direct:
+            instr->sampler_index += deref_array->base_offset;
+            if (deref_array->deref.child)
+               ralloc_asprintf_append(&name, "[%u]", deref_array->base_offset);
+            break;
+         case nir_deref_array_type_indirect: {
+            assert(!has_indirect);
+
+            assert(instr->num_srcs < 4);
+
+            nir_instr_rewrite_src(&instr->instr, &instr->src[instr->num_srcs],
+                                  nir_src_copy(deref_array->indirect, mem_ctx));
+            instr->src_type[instr->num_srcs] = nir_tex_src_sampler_offset;
+            instr->num_srcs++;
+
+            instr->sampler_array_size = glsl_get_length(deref->type);
+
+            nir_src empty;
+            memset(&empty, 0, sizeof empty);
+            nir_instr_rewrite_src(&instr->instr, &deref_array->indirect, empty);
+
+            if (deref_array->deref.child)
+               ralloc_strcat(&name, "[0]");
+            break;
          }
+
+         case nir_deref_array_type_wildcard:
+            unreachable("Cannot copy samplers");
+         default:
+            unreachable("Invalid deref array type");
+         }
+         break;
       }
 
-      instr->sampler = NULL;
+      case nir_deref_type_struct: {
+         nir_deref_struct *deref_struct = nir_deref_as_struct(deref->child);
+         const char *field = glsl_get_struct_elem_name(deref->type,
+                                                       deref_struct->index);
+         ralloc_asprintf_append(&name, ".%s", field);
+         break;
+      }
+
+      default:
+         unreachable("Invalid deref type");
+         break;
+      }
    }
+
+   instr->sampler_index += get_sampler_index(shader_program, name, prog);
+
+   instr->sampler = NULL;
 }
 
 typedef struct {
+   void *mem_ctx;
    struct gl_shader_program *shader_program;
    struct gl_program *prog;
 } lower_state;
@@ -154,7 +153,8 @@ lower_block_cb(nir_block *block, void *_state)
    nir_foreach_instr(block, instr) {
       if (instr->type == nir_instr_type_tex) {
          nir_tex_instr *tex_instr = nir_instr_as_tex(instr);
-         lower_sampler(tex_instr, state->shader_program, state->prog);
+         lower_sampler(tex_instr, state->shader_program, state->prog,
+                       state->mem_ctx);
       }
    }
 
@@ -166,8 +166,11 @@ lower_impl(nir_function_impl *impl, struct gl_shader_program *shader_program,
            struct gl_program *prog)
 {
    lower_state state;
+
+   state.mem_ctx = ralloc_parent(impl);
    state.shader_program = shader_program;
    state.prog = prog;
+
    nir_foreach_block(impl, lower_block_cb, &state);
 }
 
