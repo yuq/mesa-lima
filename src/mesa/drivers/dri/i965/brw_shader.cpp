@@ -390,6 +390,8 @@ brw_instruction_name(enum opcode op)
       return "fb_write";
    case FS_OPCODE_BLORP_FB_WRITE:
       return "blorp_fb_write";
+   case FS_OPCODE_REP_FB_WRITE:
+      return "rep_fb_write";
 
    case SHADER_OPCODE_RCP:
       return "rcp";
@@ -430,12 +432,19 @@ brw_instruction_name(enum opcode op)
       return "txf_ums";
    case SHADER_OPCODE_TXF_MCS:
       return "txf_mcs";
+   case SHADER_OPCODE_LOD:
+      return "lod";
    case SHADER_OPCODE_TG4:
       return "tg4";
    case SHADER_OPCODE_TG4_OFFSET:
       return "tg4_offset";
    case SHADER_OPCODE_SHADER_TIME_ADD:
       return "shader_time_add";
+
+   case SHADER_OPCODE_UNTYPED_ATOMIC:
+      return "untyped_atomic";
+   case SHADER_OPCODE_UNTYPED_SURFACE_READ:
+      return "untyped_surface_read";
 
    case SHADER_OPCODE_LOAD_PAYLOAD:
       return "load_payload";
