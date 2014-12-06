@@ -500,10 +500,12 @@ fd4_emit_tile_prep(struct fd_context *ctx, struct fd_tile *tile)
 		OUT_RING(ring, 0x00000000);
 	}
 
+	OUT_PKT0(ring, REG_A4XX_GRAS_DEPTH_CONTROL, 1);
 	if (pfb->zsbuf) {
-		OUT_PKT0(ring, REG_A4XX_GRAS_DEPTH_CONTROL, 1);
 		OUT_RING(ring, A4XX_GRAS_DEPTH_CONTROL_FORMAT(
 				fd4_pipe2depth(pfb->zsbuf->format)));
+	} else {
+		OUT_RING(ring, A4XX_GRAS_DEPTH_CONTROL_FORMAT(DEPTH4_NONE));
 	}
 
 	if (ctx->needs_rb_fbd) {

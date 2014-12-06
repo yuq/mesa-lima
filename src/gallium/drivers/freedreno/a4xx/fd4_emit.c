@@ -689,5 +689,11 @@ fd4_emit_restore(struct fd_context *ctx)
 	OUT_PKT0(ring, REG_A4XX_RB_RENDER_CONTROL3, 1);
 	OUT_RING(ring, A4XX_RB_RENDER_CONTROL3_COMPONENT_ENABLE(0xf));
 
+	OUT_PKT0(ring, REG_A4XX_GRAS_CLEAR_CNTL, 1);
+	OUT_RING(ring, A4XX_GRAS_CLEAR_CNTL_NOT_FASTCLEAR);
+
+	OUT_PKT0(ring, REG_A4XX_GRAS_ALPHA_CONTROL, 1);
+	OUT_RING(ring, 0x0);
+
 	ctx->needs_rb_fbd = true;
 }
