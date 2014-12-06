@@ -431,6 +431,25 @@ fd4_program_emit(struct fd_ringbuffer *ring, struct fd4_emit *emit)
 			}
 		}
 
+		/* HACK: looks like we need to do int varyings in the frag
+		 * shader on a4xx (no flatshad reg?):
+		 *
+		 *    (sy)(ss)nop
+		 *    (sy)ldlv.u32 r0.x,l[r0.x], 1
+		 *    ldlv.u32 r0.y,l[r0.x+1], 1
+		 *    (ss)bary.f (ei)r63.x, 0, r0.x
+		 *    (ss)(rpt1)cov.s32f16 hr0.x, (r)r0.x
+		 *    (rpt5)nop
+		 *    sam (f16)(xyzw)hr0.x, hr0.x, s#0, t#0
+		 *
+		 * for now, don't set FLAT on vinterp[], since that
+		 * at least works well enough for pure float impl (ie.
+		 * pre glsl130).. we'll have to do a bit more work to
+		 * handle this properly:
+		 */
+		for (i = 0; i < ARRAY_SIZE(vinterp); i++)
+			vinterp[i] = 0;
+
 		OUT_PKT0(ring, REG_A4XX_VPC_ATTR, 2);
 		OUT_RING(ring, A4XX_VPC_ATTR_TOTALATTR(s[FS].v->total_in) |
 				A4XX_VPC_ATTR_THRDASSIGN(1) |
