@@ -31,9 +31,6 @@
 #include <stdint.h>
 
 void
-#if !defined(__x86_64__)
-   __attribute__((force_align_arg_pointer))
-#endif
 _mesa_uint_array_min_max(const unsigned *ui_indices, unsigned *min_index,
                          unsigned *max_index, const unsigned count)
 {

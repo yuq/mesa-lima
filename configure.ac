@@ -253,8 +253,16 @@ AC_SUBST([VISIBILITY_CXXFLAGS])
 dnl
 dnl Optional flags, check for compiler support
 dnl
+SSE41_CFLAGS="-msse4.1"
+dnl Code compiled by GCC with -msse* assumes a 16 byte aligned
+dnl stack, but on x86-32 such alignment is not guaranteed.
+case "$target_cpu" in
+i?86)
+    SSE41_CFLAGS="$SSE41_CFLAGS -mstackrealign"
+    ;;
+esac
 save_CFLAGS="$CFLAGS"
-CFLAGS="-msse4.1 $CFLAGS"
+CFLAGS="$SSE41_CFLAGS $CFLAGS"
 AC_COMPILE_IFELSE([AC_LANG_SOURCE([[
 #include <smmintrin.h>
 int main () {
@@ -267,6 +275,7 @@ if test "x$SSE41_SUPPORTED" = x1; then
     DEFINES="$DEFINES -DUSE_SSE41"
 fi
 AM_CONDITIONAL([SSE41_SUPPORTED], [test x$SSE41_SUPPORTED = x1])
+AC_SUBST([SSE41_CFLAGS], $SSE41_CFLAGS)
 
 dnl Can't have static and shared libraries, default to static if user
 dnl explicitly requested. If both disabled, set to static since shared
