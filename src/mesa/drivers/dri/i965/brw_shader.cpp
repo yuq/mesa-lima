@@ -485,6 +485,10 @@ brw_instruction_name(enum opcode op)
    case FS_OPCODE_DISCARD_JUMP:
       return "discard_jump";
 
+   case FS_OPCODE_SET_OMASK:
+      return "set_omask";
+   case FS_OPCODE_SET_SAMPLE_ID:
+      return "set_sample_id";
    case FS_OPCODE_SET_SIMD4X2_OFFSET:
       return "set_simd4x2_offset";
 
