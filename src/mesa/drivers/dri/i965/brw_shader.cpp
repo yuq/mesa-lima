@@ -498,6 +498,15 @@ brw_instruction_name(enum opcode op)
    case FS_OPCODE_PLACEHOLDER_HALT:
       return "placeholder_halt";
 
+   case FS_OPCODE_INTERPOLATE_AT_CENTROID:
+      return "interp_centroid";
+   case FS_OPCODE_INTERPOLATE_AT_SAMPLE:
+      return "interp_sample";
+   case FS_OPCODE_INTERPOLATE_AT_SHARED_OFFSET:
+      return "interp_shared_offset";
+   case FS_OPCODE_INTERPOLATE_AT_PER_SLOT_OFFSET:
+      return "interp_per_slot_offset";
+
    case VS_OPCODE_URB_WRITE:
       return "vs_urb_write";
    case VS_OPCODE_PULL_CONSTANT_LOAD:
