@@ -2185,8 +2185,6 @@ AC_CONFIG_FILES([Makefile
 		src/gallium/targets/d3dadapter9/Makefile
 		src/gallium/targets/d3dadapter9/d3d.pc
 		src/gallium/targets/dri/Makefile
-		src/gallium/targets/egl-static/Makefile
-		src/gallium/targets/gbm/Makefile
 		src/gallium/targets/libgl-xlib/Makefile
 		src/gallium/targets/omx/Makefile
 		src/gallium/targets/opencl/Makefile
