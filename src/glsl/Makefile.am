@@ -208,3 +208,6 @@ CLEANFILES =						\
 	glcpp/glcpp-parse.h				\
 	glsl_parser.h					\
 	$(BUILT_SOURCES)
+
+clean-local:
+	$(RM) -r subtest-cr subtest-cr-lf subtest-lf subtest-lf-cr
