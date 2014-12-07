@@ -15,19 +15,28 @@ AM_CFLAGS = \
 
 libappleglx_la_SOURCES = \
 	apple_cgl.c \
+	apple_cgl.h \
+	appledri.c \
+	appledri.h \
+	appledristr.h \
 	apple_glapi.c \
 	apple_glx.c \
 	apple_glx_context.c \
+	apple_glx_context.h \
 	apple_glx_drawable.c \
+	apple_glx_drawable.h \
+	apple_glx.h \
 	apple_glx_log.c \
+	apple_glx_log.h \
 	apple_glx_pbuffer.c \
 	apple_glx_pixmap.c \
 	apple_glx_surface.c \
 	apple_visual.c \
+	apple_visual.h \
+	apple_xgl_api.h \
 	apple_xgl_api_read.c \
 	apple_xgl_api_stereo.c \
 	apple_xgl_api_viewport.c \
-	appledri.c \
 	glx_empty.c
 
 libappleglx_la_LDFLAGS = -lXplugin -framework ApplicationServices -framework CoreFoundation
