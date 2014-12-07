@@ -192,7 +192,10 @@ static void si_emit_draw_registers(struct si_context *sctx,
 		r600_write_context_reg(cs, R_028AA8_IA_MULTI_VGT_PARAM, ia_multi_vgt_param);
 	}
 
-	r600_write_context_reg(cs, R_028A6C_VGT_GS_OUT_PRIM_TYPE, gs_out_prim);
+	if (gs_out_prim != sctx->last_gs_out_prim) {
+		r600_write_context_reg(cs, R_028A6C_VGT_GS_OUT_PRIM_TYPE, gs_out_prim);
+		sctx->last_gs_out_prim = gs_out_prim;
+	}
 
 	/* Primitive restart. */
 	if (info->primitive_restart != sctx->last_primitive_restart_en) {

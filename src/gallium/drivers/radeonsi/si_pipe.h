@@ -182,6 +182,7 @@ struct si_context {
 	int			last_sh_base_reg;
 	int			last_primitive_restart_en;
 	int			last_restart_index;
+	int			last_gs_out_prim;
 };
 
 /* si_blit.c */
