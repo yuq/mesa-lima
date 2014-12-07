@@ -113,6 +113,7 @@ SUBDIRS += winsys/sw/wrapper
 
 EXTRA_DIST = \
 	docs \
+	README.portability \
 	SConscript \
 	winsys/sw/android \
 	winsys/sw/gdi \

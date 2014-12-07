@@ -73,6 +73,9 @@ EXTRA_DIST = \
 	program/program_lexer.l \
 	program/program_parse.y \
 	SConscript \
+	swrast/NOTES \
+	swrast_setup/NOTES \
+	tnl/NOTES \
 	tnl_dd
 
 BUILT_SOURCES = \

@@ -30,7 +30,7 @@ AM_CPPFLAGS = \
 AM_CFLAGS = $(VISIBILITY_CFLAGS)
 AM_CXXFLAGS = $(VISIBILITY_CXXFLAGS)
 
-EXTRA_DIST = tests glcpp/tests README TODO		\
+EXTRA_DIST = tests glcpp/tests README TODO glcpp/README	\
 	glsl_lexer.ll					\
 	glsl_parser.yy					\
 	glcpp/glcpp-lex.l				\

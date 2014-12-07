@@ -1,3 +1,5 @@
+EXTRA_DIST = RELEASE_NOTES
+
 noinst_LTLIBRARIES = libappleglx.la
 
 AM_CFLAGS = \
