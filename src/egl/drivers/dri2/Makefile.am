@@ -36,8 +36,9 @@ AM_CFLAGS = \
 noinst_LTLIBRARIES = libegl_dri2.la
 
 libegl_dri2_la_SOURCES = \
+	egl_dri2.c \
 	egl_dri2.h \
-	egl_dri2.c
+	egl_dri2_fallbacks.h
 
 libegl_dri2_la_LIBADD = \
 	$(top_builddir)/src/loader/libloader.la \
