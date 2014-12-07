@@ -80,6 +80,8 @@ d3dadapter9_la_LIBADD = \
 	$(EXPAT_LIBS) \
 	$(GALLIUM_COMMON_LIB_DEPS)
 
+EXTRA_d3dadapter9_la_DEPENDENCIES = d3dadapter9.sym
+EXTRA_DIST = d3dadapter9.sym
 
 TARGET_DRIVERS =
 TARGET_CPPFLAGS =

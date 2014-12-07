@@ -40,6 +40,9 @@ libvdpau_gallium_la_LIBADD = \
 EXTRA_libvdpau_gallium_la_DEPENDENCIES = \
 	vdpau.sym \
 	$(top_srcdir)/src/gallium/targets/dri-vdpau.dyn
+EXTRA_DIST = \
+	vdpau.sym \
+	$(top_srcdir)/src/gallium/targets/dri-vdpau.dyn
 
 TARGET_DRIVERS =
 TARGET_CPPFLAGS =

@@ -63,7 +63,10 @@ gallium_dri_la_LDFLAGS += \
 EXTRA_gallium_dri_la_DEPENDENCIES = \
 	dri.sym \
 	$(top_srcdir)/src/gallium/targets/dri-vdpau.dyn
-EXTRA_DIST = SConscript
+EXTRA_DIST = \
+	SConscript \
+	dri.sym \
+	$(top_srcdir)/src/gallium/targets/dri-vdpau.dyn
 
 TARGET_DRIVERS =
 TARGET_CPPFLAGS =

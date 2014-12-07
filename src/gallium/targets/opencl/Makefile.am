@@ -44,7 +44,7 @@ nodist_EXTRA_lib@OPENCL_LIBNAME@_la_SOURCES = dummy.cpp
 lib@OPENCL_LIBNAME@_la_SOURCES =
 
 EXTRA_lib@OPENCL_LIBNAME@_la_DEPENDENCIES = opencl.sym
-EXTRA_DIST = mesa.icd
+EXTRA_DIST = mesa.icd opencl.sym
 
 if HAVE_CLOVER_ICD
 icddir = /etc/OpenCL/vendors/

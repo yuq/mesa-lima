@@ -76,6 +76,7 @@ lib@OSMESA_LIB@_la_LIBADD += $(top_builddir)/src/gallium/drivers/llvmpipe/libllv
 endif
 
 EXTRA_lib@OSMESA_LIB@_la_DEPENDENCIES = osmesa.sym
+EXTRA_DIST = osmesa.sym
 
 include $(top_srcdir)/install-gallium-links.mk
 

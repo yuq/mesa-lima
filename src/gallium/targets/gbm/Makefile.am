@@ -52,7 +52,7 @@ gbm_gallium_drm_la_LDFLAGS += \
 endif
 
 EXTRA_gbm_gallium_drm_la_DEPENDENCIES = gbm.sym
-EXTRA_DIST = gallium-gbm-symbols-check
+EXTRA_DIST = gallium-gbm-symbols-check gbm.sym
 
 if HAVE_GALLIUM_STATIC_TARGETS
 
