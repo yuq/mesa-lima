@@ -43,7 +43,7 @@ void si_need_cs_space(struct si_context *ctx, unsigned num_dw,
 		}
 
 		/* The number of dwords all the dirty states would take. */
-		num_dw += ctx->pm4_dirty_cdwords;
+		num_dw += si_pm4_dirty_dw(ctx);
 
 		/* The upper-bound of how much a draw command would take. */
 		num_dw += SI_MAX_DRAW_CS_DWORDS;
@@ -131,8 +131,6 @@ void si_context_gfx_flush(void *context, unsigned flags,
 
 void si_begin_new_cs(struct si_context *ctx)
 {
-	ctx->pm4_dirty_cdwords = 0;
-
 	/* Flush read caches at the beginning of CS. */
 	ctx->b.flags |= R600_CONTEXT_INV_TEX_CACHE |
 			R600_CONTEXT_INV_CONST_CACHE |

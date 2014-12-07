@@ -137,10 +137,6 @@ struct si_context {
 
 	unsigned default_ps_gprs, default_vs_gprs;
 
-	/* Below are variables from the old r600_context.
-	 */
-	unsigned		pm4_dirty_cdwords;
-
 	/* Vertex and index buffers. */
 	bool			vertex_buffers_dirty;
 	struct pipe_index_buffer index_buffer;

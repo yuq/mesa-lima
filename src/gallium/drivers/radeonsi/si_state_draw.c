@@ -1016,8 +1016,6 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 	if (!si_update_draw_info_state(sctx, info, &ib))
 		return;
 
-	sctx->pm4_dirty_cdwords += si_pm4_dirty_dw(sctx);
-
 	/* Check flush flags. */
 	if (sctx->b.flags)
 		sctx->atoms.s.cache_flush->dirty = true;
@@ -1033,8 +1031,6 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 	}
 
 	si_pm4_emit_dirty(sctx);
-	sctx->pm4_dirty_cdwords = 0;
-
 	si_emit_draw_packets(sctx, info, &ib);
 
 #if SI_TRACE_CS
