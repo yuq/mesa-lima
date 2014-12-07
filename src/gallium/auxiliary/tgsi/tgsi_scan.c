@@ -238,6 +238,9 @@ tgsi_scan_shader(const struct tgsi_token *tokens,
                      else if (semName == TGSI_SEMANTIC_LAYER) {
                         info->writes_layer = TRUE;
                      }
+                     else if (semName == TGSI_SEMANTIC_PSIZE) {
+                        info->writes_psize = TRUE;
+                     }
                   }
 
                   if (procType == TGSI_PROCESSOR_FRAGMENT) {
