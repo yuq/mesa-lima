@@ -38,7 +38,7 @@
 #define SI_TRACE_CS_DWORDS		6
 
 #define SI_MAX_DRAW_CS_DWORDS \
-	(/*clip + derived prim state:*/ 12 + /*draw regs:*/ 16 + /*draw packets:*/ 31)
+	(/*derived prim state:*/ 6 + /*draw regs:*/ 16 + /*draw packets:*/ 31)
 
 struct si_compute;
 
@@ -109,6 +109,7 @@ struct si_context {
 			struct r600_atom *framebuffer;
 			struct r600_atom *db_render_state;
 			struct r600_atom *msaa_config;
+			struct r600_atom *clip_regs;
 		} s;
 		struct r600_atom *array[0];
 	} atoms;
@@ -133,6 +134,7 @@ struct si_context {
 	struct r600_resource		*border_color_table;
 	unsigned			border_color_offset;
 
+	struct r600_atom		clip_regs;
 	struct r600_atom		msaa_config;
 	int				ps_iter_samples;
 

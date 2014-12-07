@@ -145,6 +145,7 @@ void si_begin_new_cs(struct si_context *ctx)
 	si_pm4_emit(ctx, ctx->queued.named.init);
 	ctx->emitted.named.init = ctx->queued.named.init;
 
+	ctx->clip_regs.dirty = true;
 	ctx->framebuffer.atom.dirty = true;
 	ctx->msaa_config.dirty = true;
 	ctx->db_render_state.dirty = true;

@@ -499,6 +499,7 @@ static void si_bind_vs_shader(struct pipe_context *ctx, void *state)
 		return;
 
 	sctx->vs_shader = sel;
+	sctx->clip_regs.dirty = true;
 }
 
 static void si_bind_gs_shader(struct pipe_context *ctx, void *state)
@@ -510,6 +511,7 @@ static void si_bind_gs_shader(struct pipe_context *ctx, void *state)
 		return;
 
 	sctx->gs_shader = sel;
+	sctx->clip_regs.dirty = true;
 }
 
 static void si_make_dummy_ps(struct si_context *sctx)

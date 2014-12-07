@@ -450,6 +450,36 @@ static void si_set_clip_state(struct pipe_context *ctx,
 	si_pm4_set_state(sctx, clip, pm4);
 }
 
+#define SIX_BITS 0x3F
+
+static void si_emit_clip_regs(struct si_context *sctx, struct r600_atom *atom)
+{
+	struct radeon_winsys_cs *cs = sctx->b.rings.gfx.cs;
+	struct tgsi_shader_info *info = si_get_vs_info(sctx);
+	struct si_shader *vs = si_get_vs_state(sctx);
+	unsigned window_space =
+	   vs->selector->info.properties[TGSI_PROPERTY_VS_WINDOW_SPACE_POSITION];
+	unsigned clipdist_mask =
+		info->writes_clipvertex ? SIX_BITS : info->clipdist_writemask;
+
+	r600_write_context_reg(cs, R_02881C_PA_CL_VS_OUT_CNTL,
+		S_02881C_USE_VTX_POINT_SIZE(info->writes_psize) |
+		S_02881C_USE_VTX_EDGE_FLAG(info->writes_edgeflag) |
+		S_02881C_USE_VTX_RENDER_TARGET_INDX(info->writes_layer) |
+		S_02881C_VS_OUT_CCDIST0_VEC_ENA((clipdist_mask & 0x0F) != 0) |
+		S_02881C_VS_OUT_CCDIST1_VEC_ENA((clipdist_mask & 0xF0) != 0) |
+		S_02881C_VS_OUT_MISC_VEC_ENA(info->writes_psize ||
+					    info->writes_edgeflag ||
+					    info->writes_layer) |
+		(sctx->queued.named.rasterizer->clip_plane_enable &
+		 clipdist_mask));
+	r600_write_context_reg(cs, R_028810_PA_CL_CLIP_CNTL,
+		sctx->queued.named.rasterizer->pa_cl_clip_cntl |
+		(clipdist_mask ? 0 :
+		 sctx->queued.named.rasterizer->clip_plane_enable & SIX_BITS) |
+		S_028810_CLIP_DISABLE(window_space));
+}
+
 static void si_set_scissor_states(struct pipe_context *ctx,
                                   unsigned start_slot,
                                   unsigned num_scissors,
@@ -680,6 +710,8 @@ static void si_bind_rs_state(struct pipe_context *ctx, void *state)
 
 	si_pm4_bind_state(sctx, rasterizer, rs);
 	si_update_fb_rs_state(sctx);
+
+	sctx->clip_regs.dirty = true;
 }
 
 static void si_delete_rs_state(struct pipe_context *ctx, void *state)
@@ -2738,6 +2770,7 @@ void si_init_state_functions(struct si_context *sctx)
 {
 	si_init_atom(&sctx->framebuffer.atom, &sctx->atoms.s.framebuffer, si_emit_framebuffer_state, 0);
 	si_init_atom(&sctx->db_render_state, &sctx->atoms.s.db_render_state, si_emit_db_render_state, 10);
+	si_init_atom(&sctx->clip_regs, &sctx->atoms.s.clip_regs, si_emit_clip_regs, 6);
 
 	sctx->b.b.create_blend_state = si_create_blend_state;
 	sctx->b.b.bind_blend_state = si_bind_blend_state;

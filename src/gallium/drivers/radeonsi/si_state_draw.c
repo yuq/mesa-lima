@@ -149,36 +149,6 @@ static unsigned si_get_ia_multi_vgt_param(struct si_context *sctx,
 		S_028AA8_WD_SWITCH_ON_EOP(sctx->b.chip_class >= CIK ? wd_switch_on_eop : 0);
 }
 
-#define SIX_BITS 0x3F
-
-static void si_emit_clip_state(struct si_context *sctx)
-{
-	struct radeon_winsys_cs *cs = sctx->b.rings.gfx.cs;
-	struct tgsi_shader_info *info = si_get_vs_info(sctx);
-	struct si_shader *vs = si_get_vs_state(sctx);
-	unsigned window_space =
-	   vs->selector->info.properties[TGSI_PROPERTY_VS_WINDOW_SPACE_POSITION];
-	unsigned clipdist_mask =
-		info->writes_clipvertex ? SIX_BITS : info->clipdist_writemask;
-
-	r600_write_context_reg(cs, R_02881C_PA_CL_VS_OUT_CNTL,
-		S_02881C_USE_VTX_POINT_SIZE(info->writes_psize) |
-		S_02881C_USE_VTX_EDGE_FLAG(info->writes_edgeflag) |
-		S_02881C_USE_VTX_RENDER_TARGET_INDX(info->writes_layer) |
-		S_02881C_VS_OUT_CCDIST0_VEC_ENA((clipdist_mask & 0x0F) != 0) |
-		S_02881C_VS_OUT_CCDIST1_VEC_ENA((clipdist_mask & 0xF0) != 0) |
-		S_02881C_VS_OUT_MISC_VEC_ENA(info->writes_psize ||
-					    info->writes_edgeflag ||
-					    info->writes_layer) |
-		(sctx->queued.named.rasterizer->clip_plane_enable &
-		 clipdist_mask));
-	r600_write_context_reg(cs, R_028810_PA_CL_CLIP_CNTL,
-		sctx->queued.named.rasterizer->pa_cl_clip_cntl |
-		(clipdist_mask ? 0 :
-		 sctx->queued.named.rasterizer->clip_plane_enable & SIX_BITS) |
-		S_028810_CLIP_DISABLE(window_space));
-}
-
 static void si_emit_rasterizer_prim_state(struct si_context *sctx, unsigned mode)
 {
 	struct radeon_winsys_cs *cs = sctx->b.rings.gfx.cs;
@@ -548,7 +518,6 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 	}
 
 	si_pm4_emit_dirty(sctx);
-	si_emit_clip_state(sctx);
 	si_emit_rasterizer_prim_state(sctx, info->mode);
 	si_emit_draw_registers(sctx, info, &ib);
 	si_emit_draw_packets(sctx, info, &ib);
