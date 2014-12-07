@@ -165,7 +165,6 @@ C_SOURCES := \
 	translate/translate_generic.c \
 	translate/translate_sse.c \
 	util/dbghelp.h \
-	util/u_atomic.h \
 	util/u_bitmask.c \
 	util/u_bitmask.h \
 	util/u_blend.h \

@@ -39,6 +39,7 @@ libmesautil_la_SOURCES = \
 
 BUILT_SOURCES = $(MESA_UTIL_GENERATED_FILES)
 CLEANFILES = $(BUILT_SOURCES)
+EXTRA_DIST = format_srgb.py
 
 format_srgb.c: $(srcdir)/format_srgb.py
 	$(AM_V_GEN) $(PYTHON2) $< > $@
