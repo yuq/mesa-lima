@@ -495,7 +495,6 @@ update_vs_constants_userbuf(struct NineDevice9 *device)
         state->changed.vs_const_b = 0;
     }
 
-#ifdef DEBUG
     if (device->state.vs->lconstf.ranges) {
         /* TODO: Can we make it so that we don't have to copy everything ? */
         const struct nine_lconstf *lconstf =  &device->state.vs->lconstf;
@@ -513,14 +512,11 @@ update_vs_constants_userbuf(struct NineDevice9 *device)
         }
         cb.user_buffer = dst;
     }
-#endif
 
     pipe->set_constant_buffer(pipe, PIPE_SHADER_VERTEX, 0, &cb);
 
-#ifdef DEBUG
     if (device->state.vs->lconstf.ranges)
         FREE((void *)cb.user_buffer);
-#endif
 
     if (device->state.changed.vs_const_f) {
         struct nine_range *r = device->state.changed.vs_const_f;
