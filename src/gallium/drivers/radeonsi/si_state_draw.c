@@ -179,14 +179,19 @@ static void si_emit_draw_registers(struct si_context *sctx,
 	unsigned ia_multi_vgt_param = si_get_ia_multi_vgt_param(sctx, info);
 
 	/* Draw state. */
-	if (sctx->b.chip_class >= CIK) {
-		radeon_emit(cs, PKT3(PKT3_DRAW_PREAMBLE, 2, 0));
-		radeon_emit(cs, prim); /* VGT_PRIMITIVE_TYPE */
-		radeon_emit(cs, ia_multi_vgt_param); /* IA_MULTI_VGT_PARAM */
-		radeon_emit(cs, 0); /* VGT_LS_HS_CONFIG */
-	} else {
-		r600_write_config_reg(cs, R_008958_VGT_PRIMITIVE_TYPE, prim);
-		r600_write_context_reg(cs, R_028AA8_IA_MULTI_VGT_PARAM, ia_multi_vgt_param);
+	if (prim != sctx->last_prim ||
+	    ia_multi_vgt_param != sctx->last_multi_vgt_param) {
+		if (sctx->b.chip_class >= CIK) {
+			radeon_emit(cs, PKT3(PKT3_DRAW_PREAMBLE, 2, 0));
+			radeon_emit(cs, prim); /* VGT_PRIMITIVE_TYPE */
+			radeon_emit(cs, ia_multi_vgt_param); /* IA_MULTI_VGT_PARAM */
+			radeon_emit(cs, 0); /* VGT_LS_HS_CONFIG */
+		} else {
+			r600_write_config_reg(cs, R_008958_VGT_PRIMITIVE_TYPE, prim);
+			r600_write_context_reg(cs, R_028AA8_IA_MULTI_VGT_PARAM, ia_multi_vgt_param);
+		}
+		sctx->last_prim = prim;
+		sctx->last_multi_vgt_param = ia_multi_vgt_param;
 	}
 
 	if (gs_out_prim != sctx->last_gs_out_prim) {

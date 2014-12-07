@@ -159,4 +159,6 @@ void si_begin_new_cs(struct si_context *ctx)
 	ctx->last_primitive_restart_en = -1;
 	ctx->last_restart_index = SI_RESTART_INDEX_UNKNOWN;
 	ctx->last_gs_out_prim = -1;
+	ctx->last_prim = -1;
+	ctx->last_multi_vgt_param = -1;
 }
