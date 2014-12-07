@@ -121,6 +121,12 @@ all-local: $(dri_LTLIBRARIES)
 		ln -f .libs/gallium_dri.so                              \
 			$${link_dir}/$${i}_dri.so;                      \
 	done
+
+clean-local:
+	$(AM_V_GEN)link_dir=$(top_builddir)/$(LIB_DIR)/gallium;         \
+	$(AM_V_GEN)for i in $(TARGET_DRIVERS); do                       \
+		$(RM) -f $${link_dir}/$${i}_dri.so;                     \
+	done;
 endif
 
 # hardlink each megadriver instance, but don't actually have

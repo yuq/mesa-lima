@@ -77,6 +77,12 @@ all-local: mesa_dri_drivers.la
 		ln -f $(top_builddir)/$(LIB_DIR)/mesa_dri_drivers.so \
 		      $(top_builddir)/$(LIB_DIR)/$$i; \
 	done;
+
+clean-local:
+	$(AM_V_GEN)$(RM) $(top_builddir)/$(LIB_DIR)/mesa_dri_drivers.so;
+	$(AM_V_GEN)for i in $(MEGADRIVERS); do \
+		$(RM) -f $(top_builddir)/$(LIB_DIR)/$$i; \
+	done;
 endif
 
 # hardlink each megadriver instance, but don't actually have
