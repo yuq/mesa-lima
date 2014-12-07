@@ -804,7 +804,6 @@ static void si_llvm_emit_clipvertex(struct lp_build_tgsi_context * bld_base,
 				    LLVMValueRef (*pos)[9], LLVMValueRef *out_elts)
 {
 	struct si_shader_context *si_shader_ctx = si_shader_context(bld_base);
-	struct si_shader *shader = si_shader_ctx->shader;
 	struct lp_build_context *base = &bld_base->base;
 	struct lp_build_context *uint = &si_shader_ctx->radeon_bld.soa.bld_base.uint_bld;
 	unsigned reg_index;
@@ -817,8 +816,6 @@ static void si_llvm_emit_clipvertex(struct lp_build_tgsi_context * bld_base,
 
 	for (reg_index = 0; reg_index < 2; reg_index ++) {
 		LLVMValueRef *args = pos[2 + reg_index];
-
-		shader->clip_dist_write |= 0xf << (4 * reg_index);
 
 		args[5] =
 		args[6] =
@@ -1088,18 +1085,12 @@ handle_semantic:
 		/* Select the correct target */
 		switch(semantic_name) {
 		case TGSI_SEMANTIC_PSIZE:
-			shader->vs_out_misc_write = true;
-			shader->vs_out_point_size = true;
 			psize_value = outputs[i].values[0];
 			continue;
 		case TGSI_SEMANTIC_EDGEFLAG:
-			shader->vs_out_misc_write = true;
-			shader->vs_out_edgeflag = true;
 			edgeflag_value = outputs[i].values[0];
 			continue;
 		case TGSI_SEMANTIC_LAYER:
-			shader->vs_out_misc_write = true;
-			shader->vs_out_layer = true;
 			layer_value = outputs[i].values[0];
 			continue;
 		case TGSI_SEMANTIC_POSITION:
@@ -1112,8 +1103,6 @@ handle_semantic:
 			param_count++;
 			break;
 		case TGSI_SEMANTIC_CLIPDIST:
-			shader->clip_dist_write |=
-				0xf << (semantic_index * 4);
 			target = V_008DFC_SQ_EXP_POS + 2 + semantic_index;
 			break;
 		case TGSI_SEMANTIC_CLIPVERTEX:
@@ -1166,11 +1155,13 @@ handle_semantic:
 	}
 
 	/* Write the misc vector (point size, edgeflag, layer, viewport). */
-	if (shader->vs_out_misc_write) {
+	if (shader->selector->info.writes_psize ||
+	    shader->selector->info.writes_edgeflag ||
+	    shader->selector->info.writes_layer) {
 		pos_args[1][0] = lp_build_const_int32(base->gallivm, /* writemask */
-						      shader->vs_out_point_size |
-						      (shader->vs_out_edgeflag << 1) |
-						      (shader->vs_out_layer << 2));
+						      shader->selector->info.writes_psize |
+						      (shader->selector->info.writes_edgeflag << 1) |
+						      (shader->selector->info.writes_layer << 2));
 		pos_args[1][1] = uint->zero; /* EXEC mask */
 		pos_args[1][2] = uint->zero; /* last export? */
 		pos_args[1][3] = lp_build_const_int32(base->gallivm, V_008DFC_SQ_EXP_POS + 1);
@@ -1180,10 +1171,10 @@ handle_semantic:
 		pos_args[1][7] = base->zero; /* Z */
 		pos_args[1][8] = base->zero; /* W */
 
-		if (shader->vs_out_point_size)
+		if (shader->selector->info.writes_psize)
 			pos_args[1][5] = psize_value;
 
-		if (shader->vs_out_edgeflag) {
+		if (shader->selector->info.writes_edgeflag) {
 			/* The output is a float, but the hw expects an integer
 			 * with the first bit containing the edge flag. */
 			edgeflag_value = LLVMBuildFPToUI(base->gallivm->builder,
@@ -1199,7 +1190,7 @@ handle_semantic:
 							  base->elem_type, "");
 		}
 
-		if (shader->vs_out_layer)
+		if (shader->selector->info.writes_layer)
 			pos_args[1][7] = layer_value;
 	}
 

@@ -159,14 +159,15 @@ struct si_shader {
 	unsigned		ps_input_param_offset[PIPE_MAX_SHADER_INPUTS];
 
 	bool			uses_instanceid;
-	bool			vs_out_misc_write;
-	bool			vs_out_point_size;
-	bool			vs_out_edgeflag;
-	bool			vs_out_layer;
 	unsigned		nr_pos_exports;
-	unsigned		clip_dist_write;
 	bool			is_gs_copy_shader;
 };
+
+static inline struct tgsi_shader_info *si_get_vs_info(struct si_context *sctx)
+{
+	return sctx->gs_shader ? &sctx->gs_shader->info
+                               : &sctx->vs_shader->info;
+}
 
 static inline struct si_shader* si_get_vs_state(struct si_context *sctx)
 {
