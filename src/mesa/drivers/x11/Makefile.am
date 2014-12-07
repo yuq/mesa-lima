@@ -49,6 +49,8 @@ lib@GL_LIB@_la_SOURCES = \
 	xm_api.c \
 	xm_buffer.c \
 	xm_dd.c \
+	xmesa.h \
+	xmesa_x.h \
 	xm_line.c \
 	xm_tri.c
 
