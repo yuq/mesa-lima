@@ -227,10 +227,14 @@ tgsi_scan_shader(const struct tgsi_token *tokens,
                      if (semName == TGSI_SEMANTIC_CLIPDIST) {
                         info->num_written_clipdistance +=
                            util_bitcount(fulldecl->Declaration.UsageMask);
+                        info->clipdist_writemask |=
+                           fulldecl->Declaration.UsageMask << (semIndex*4);
                      }
                      else if (semName == TGSI_SEMANTIC_CULLDIST) {
                         info->num_written_culldistance +=
                            util_bitcount(fulldecl->Declaration.UsageMask);
+                        info->culldist_writemask |=
+                           fulldecl->Declaration.UsageMask << (semIndex*4);
                      }
                      else if (semName == TGSI_SEMANTIC_VIEWPORT_INDEX) {
                         info->writes_viewport_index = TRUE;

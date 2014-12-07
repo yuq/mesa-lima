@@ -81,6 +81,8 @@ struct tgsi_shader_info
    boolean writes_layer;
    boolean is_msaa_sampler[PIPE_MAX_SAMPLERS];
 
+   unsigned clipdist_writemask;
+   unsigned culldist_writemask;
    unsigned num_written_culldistance;
    unsigned num_written_clipdistance;
    /**
