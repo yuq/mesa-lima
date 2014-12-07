@@ -37,7 +37,7 @@
 #define SI_TRACE_CS 0
 #define SI_TRACE_CS_DWORDS		6
 
-#define SI_MAX_DRAW_CS_DWORDS 18
+#define SI_MAX_DRAW_CS_DWORDS 31
 
 struct si_compute;
 
