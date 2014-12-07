@@ -106,6 +106,7 @@ API_XML = \
 	gl_API.xml \
 	es_EXT.xml \
 	gl_and_es_API.xml \
+	gl_and_glX_API.xml \
 	ARB_base_instance.xml \
 	ARB_blend_func_extended.xml \
 	ARB_clear_buffer_object.xml \
