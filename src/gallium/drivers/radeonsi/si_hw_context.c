@@ -155,4 +155,5 @@ void si_begin_new_cs(struct si_context *ctx)
 	r600_postflush_resume_features(&ctx->b);
 
 	ctx->b.initial_gfx_cs_size = ctx->b.rings.gfx.cs->cdw;
+	si_invalidate_draw_sh_constants(ctx);
 }

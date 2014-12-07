@@ -242,13 +242,29 @@ static void si_emit_draw_packets(struct si_context *sctx,
 	}
 
 	if (!info->indirect) {
+		int base_vertex;
+
 		radeon_emit(cs, PKT3(PKT3_NUM_INSTANCES, 0, 0));
 		radeon_emit(cs, info->instance_count);
 
-		si_write_sh_reg_seq(cs, sh_base_reg + SI_SGPR_BASE_VERTEX * 4, 2);
-		radeon_emit(cs, info->indexed ? info->index_bias : info->start);
-		radeon_emit(cs, info->start_instance);
+		/* Base vertex and start instance. */
+		base_vertex = info->indexed ? info->index_bias : info->start;
+
+		if (base_vertex != sctx->last_base_vertex ||
+		    sctx->last_base_vertex == SI_BASE_VERTEX_UNKNOWN ||
+		    info->start_instance != sctx->last_start_instance ||
+		    sh_base_reg != sctx->last_sh_base_reg) {
+			si_write_sh_reg_seq(cs, sh_base_reg + SI_SGPR_BASE_VERTEX * 4, 2);
+			radeon_emit(cs, base_vertex);
+			radeon_emit(cs, info->start_instance);
+
+			sctx->last_base_vertex = base_vertex;
+			sctx->last_start_instance = info->start_instance;
+			sctx->last_sh_base_reg = sh_base_reg;
+		}
 	} else {
+		si_invalidate_draw_sh_constants(sctx);
+
 		r600_context_bo_reloc(&sctx->b, &sctx->b.rings.gfx,
 				      (struct r600_resource *)info->indirect,
 				      RADEON_USAGE_READ, RADEON_PRIO_MIN);

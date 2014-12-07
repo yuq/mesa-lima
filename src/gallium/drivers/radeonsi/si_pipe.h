@@ -34,6 +34,11 @@
 #define SI_BIG_ENDIAN 0
 #endif
 
+/* The base vertex can be any number, but we must pick one which
+ * will mean "unknown" for the purpose of state tracking and the number
+ * shouldn't be a commonly-used one. */
+#define SI_BASE_VERTEX_UNKNOWN INT_MIN
+
 #define SI_TRACE_CS 0
 #define SI_TRACE_CS_DWORDS		6
 
@@ -169,6 +174,11 @@ struct si_context {
 	bool			db_depth_clear;
 	bool			db_depth_disable_expclear;
 	unsigned		ps_db_shader_control;
+
+	/* Draw state. */
+	int			last_base_vertex;
+	int			last_start_instance;
+	int			last_sh_base_reg;
 };
 
 /* si_blit.c */
@@ -225,6 +235,14 @@ si_resource_create_custom(struct pipe_screen *screen,
 	assert(size);
 	return r600_resource(pipe_buffer_create(screen,
 		PIPE_BIND_CUSTOM, usage, size));
+}
+
+static INLINE void
+si_invalidate_draw_sh_constants(struct si_context *sctx)
+{
+	sctx->last_base_vertex = SI_BASE_VERTEX_UNKNOWN;
+	sctx->last_start_instance = -1; /* reset to an unknown value */
+	sctx->last_sh_base_reg = -1; /* reset to an unknown value */
 }
 
 #endif
