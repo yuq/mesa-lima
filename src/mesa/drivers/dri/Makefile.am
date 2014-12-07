@@ -88,4 +88,9 @@ install-data-hook:
 	done;
 	$(RM) -f $(DESTDIR)$(dridir)/mesa_dri_drivers.*
 
+uninstall-hook:
+	for i in $(MEGADRIVERS); do \
+		$(RM) -f $(DESTDIR)$(dridir)/$$i; \
+	done;
+
 endif

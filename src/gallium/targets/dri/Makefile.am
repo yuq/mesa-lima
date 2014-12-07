@@ -131,3 +131,8 @@ install-data-hook:
 		      $(DESTDIR)$(dridir)/$${i}_dri.so;                 \
 	done;                                                           \
 	$(RM) -f $(DESTDIR)$(dridir)/gallium_dri.*
+
+uninstall-hook:
+	for i in $(TARGET_DRIVERS); do                                  \
+		$(RM) -f $(DESTDIR)$(dridir)/$${i}_dri.so;              \
+	done;
