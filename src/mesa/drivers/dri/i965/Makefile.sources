@@ -1,33 +1,8 @@
 i965_FILES = \
-	intel_asm_annotation.c \
-	intel_batchbuffer.c \
-	intel_blit.c \
-	intel_buffer_objects.c \
-	intel_buffers.c \
-	intel_copy_image.c \
-	intel_debug.c \
-	intel_extensions.c \
-	intel_fbo.c \
-	intel_mipmap_tree.c \
-	intel_resolve_map.c \
-	intel_screen.c \
-	intel_pixel.c \
-	intel_pixel_bitmap.c \
-	intel_pixel_copy.c \
-	intel_pixel_draw.c \
-	intel_pixel_read.c \
-	intel_state.c \
-	intel_syncobj.c \
-	intel_tex.c \
-	intel_tex_copy.c \
-	intel_tex_image.c \
-	intel_tex_subimage.c \
-	intel_tex_validate.c \
-	intel_upload.c \
 	brw_binding_tables.c \
-	brw_blorp.cpp \
 	brw_blorp_blit.cpp \
 	brw_blorp_blit_eu.cpp \
+	brw_blorp.cpp \
 	brw_cc.c \
 	brw_cfg.cpp \
 	brw_clear.c \
@@ -52,9 +27,9 @@ i965_FILES = \
 	brw_eu_util.c \
 	brw_ff_gs.c \
 	brw_ff_gs_emit.c \
-	brw_fs.cpp \
 	brw_fs_channel_expressions.cpp \
 	brw_fs_copy_propagation.cpp \
+	brw_fs.cpp \
 	brw_fs_cse.cpp \
 	brw_fs_dead_code_eliminate.cpp \
 	brw_fs_fp.cpp \
@@ -73,16 +48,16 @@ i965_FILES = \
 	brw_interpolation_map.c \
 	brw_lower_texture_gradients.cpp \
 	brw_lower_unnormalized_offset.cpp \
-	brw_meta_updownsample.c \
-	brw_meta_stencil_blit.c \
-	brw_meta_util.c \
 	brw_meta_fast_clear.c \
+	brw_meta_stencil_blit.c \
+	brw_meta_updownsample.c \
+	brw_meta_util.c \
 	brw_misc_state.c \
 	brw_object_purgeable.c \
 	brw_packed_float.c \
 	brw_performance_monitor.c \
-	brw_program.c \
 	brw_primitive_restart.c \
+	brw_program.c \
 	brw_queryobj.c \
 	brw_reset.c \
 	brw_sampler_state.c \
@@ -100,8 +75,8 @@ i965_FILES = \
 	brw_tex_layout.c \
 	brw_urb.c \
 	brw_util.c \
-	brw_vec4.cpp \
 	brw_vec4_copy_propagation.cpp \
+	brw_vec4.cpp \
 	brw_vec4_cse.cpp \
 	brw_vec4_dead_code_eliminate.cpp \
 	brw_vec4_generator.cpp \
@@ -125,12 +100,12 @@ i965_FILES = \
 	gen6_depthstencil.c \
 	gen6_gs_state.c \
 	gen6_gs_visitor.cpp \
-        gen6_multisample_state.c \
+	gen6_multisample_state.c \
 	gen6_queryobj.c \
 	gen6_sampler_state.c \
 	gen6_scissor_state.c \
 	gen6_sf_state.c \
-        gen6_sol.c \
+	gen6_sol.c \
 	gen6_surface_state.c \
 	gen6_urb.c \
 	gen6_viewport_state.c \
@@ -138,7 +113,7 @@ i965_FILES = \
 	gen6_wm_state.c \
 	gen7_blorp.cpp \
 	gen7_disable.c \
-        gen7_gs_state.c \
+	gen7_gs_state.c \
 	gen7_misc_state.c \
 	gen7_sf_state.c \
 	gen7_sol_state.c \
@@ -154,10 +129,35 @@ i965_FILES = \
 	gen8_gs_state.c \
 	gen8_misc_state.c \
 	gen8_multisample_state.c \
+	gen8_ps_state.c \
 	gen8_sf_state.c \
 	gen8_sol_state.c \
 	gen8_surface_state.c \
 	gen8_viewport_state.c \
 	gen8_vs_state.c \
 	gen8_wm_depth_stencil.c \
-	gen8_ps_state.c
+	intel_asm_annotation.c \
+	intel_batchbuffer.c \
+	intel_blit.c \
+	intel_buffer_objects.c \
+	intel_buffers.c \
+	intel_copy_image.c \
+	intel_debug.c \
+	intel_extensions.c \
+	intel_fbo.c \
+	intel_mipmap_tree.c \
+	intel_pixel_bitmap.c \
+	intel_pixel.c \
+	intel_pixel_copy.c \
+	intel_pixel_draw.c \
+	intel_pixel_read.c \
+	intel_resolve_map.c \
+	intel_screen.c \
+	intel_state.c \
+	intel_syncobj.c \
+	intel_tex.c \
+	intel_tex_copy.c \
+	intel_tex_image.c \
+	intel_tex_subimage.c \
+	intel_tex_validate.c \
+	intel_upload.c
