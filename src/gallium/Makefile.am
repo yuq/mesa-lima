@@ -112,6 +112,7 @@ SUBDIRS += winsys/sw/wrapper
 ##
 
 EXTRA_DIST = \
+	docs \
 	winsys/sw/android \
 	winsys/sw/gdi \
 	winsys/sw/hgl

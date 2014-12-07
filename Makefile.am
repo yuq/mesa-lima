@@ -23,15 +23,14 @@ SUBDIRS = src
 
 ACLOCAL_AMFLAGS = -I m4
 
-doxygen:
-	cd doxygen && $(MAKE)
-
-.PHONY: doxygen
-
 # Rules for making release tarballs
 
 PACKAGE_DIR = Mesa-$(PACKAGE_VERSION)
 PACKAGE_NAME = MesaLib-$(PACKAGE_VERSION)
+
+EXTRA_DIST = \
+	docs \
+	doxygen
 
 EXTRA_FILES = \
 	aclocal.m4					\
