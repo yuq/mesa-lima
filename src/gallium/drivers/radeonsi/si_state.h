@@ -108,7 +108,6 @@ union si_state {
 		struct si_pm4_state		*vs;
 		struct si_pm4_state		*ps;
 		struct si_pm4_state		*spi;
-		struct si_pm4_state		*draw_info;
 	} named;
 	struct si_pm4_state	*array[0];
 };

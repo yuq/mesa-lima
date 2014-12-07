@@ -37,7 +37,8 @@
 #define SI_TRACE_CS 0
 #define SI_TRACE_CS_DWORDS		6
 
-#define SI_MAX_DRAW_CS_DWORDS 31
+#define SI_MAX_DRAW_CS_DWORDS \
+	(/*clip + derived prim state:*/ 12 + /*draw regs:*/ 16 + /*draw packets:*/ 31)
 
 struct si_compute;
 

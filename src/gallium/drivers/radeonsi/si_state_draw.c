@@ -443,76 +443,6 @@ static unsigned si_get_ia_multi_vgt_param(struct si_context *sctx,
 		S_028AA8_WD_SWITCH_ON_EOP(sctx->b.chip_class >= CIK ? wd_switch_on_eop : 0);
 }
 
-static bool si_update_draw_info_state(struct si_context *sctx,
-				      const struct pipe_draw_info *info,
-				      const struct pipe_index_buffer *ib)
-{
-	struct si_pm4_state *pm4 = CALLOC_STRUCT(si_pm4_state);
-	struct si_shader *vs = si_get_vs_state(sctx);
-	unsigned window_space =
-	   vs->selector->info.properties[TGSI_PROPERTY_VS_WINDOW_SPACE_POSITION];
-	unsigned prim = si_conv_pipe_prim(info->mode);
-	unsigned gs_out_prim =
-		si_conv_prim_to_gs_out(sctx->gs_shader ?
-				       sctx->gs_shader->gs_output_prim :
-				       info->mode);
-	unsigned ls_mask = 0;
-	unsigned ia_multi_vgt_param = si_get_ia_multi_vgt_param(sctx, info);
-
-	if (pm4 == NULL)
-		return false;
-
-	if (sctx->b.chip_class >= CIK) {
-		si_pm4_set_reg(pm4, R_028B74_VGT_DISPATCH_DRAW_INDEX,
-			       ib->index_size == 4 ? 0xFC000000 : 0xFC00);
-
-		si_pm4_cmd_begin(pm4, PKT3_DRAW_PREAMBLE);
-		si_pm4_cmd_add(pm4, prim); /* VGT_PRIMITIVE_TYPE */
-		si_pm4_cmd_add(pm4, ia_multi_vgt_param); /* IA_MULTI_VGT_PARAM */
-		si_pm4_cmd_add(pm4, 0); /* VGT_LS_HS_CONFIG */
-		si_pm4_cmd_end(pm4, false);
-	} else {
-		si_pm4_set_reg(pm4, R_008958_VGT_PRIMITIVE_TYPE, prim);
-		si_pm4_set_reg(pm4, R_028AA8_IA_MULTI_VGT_PARAM, ia_multi_vgt_param);
-	}
-
-	si_pm4_set_reg(pm4, R_028A6C_VGT_GS_OUT_PRIM_TYPE, gs_out_prim);
-	si_pm4_set_reg(pm4, R_02840C_VGT_MULTI_PRIM_IB_RESET_INDX, info->restart_index);
-	si_pm4_set_reg(pm4, R_028A94_VGT_MULTI_PRIM_IB_RESET_EN, info->primitive_restart);
-
-        if (prim == V_008958_DI_PT_LINELIST)
-                ls_mask = 1;
-        else if (prim == V_008958_DI_PT_LINESTRIP)
-                ls_mask = 2;
-	si_pm4_set_reg(pm4, R_028A0C_PA_SC_LINE_STIPPLE,
-		       S_028A0C_AUTO_RESET_CNTL(ls_mask) |
-		       sctx->pa_sc_line_stipple);
-
-        if (info->mode == PIPE_PRIM_QUADS || info->mode == PIPE_PRIM_QUAD_STRIP || info->mode == PIPE_PRIM_POLYGON) {
-		si_pm4_set_reg(pm4, R_028814_PA_SU_SC_MODE_CNTL,
-			       S_028814_PROVOKING_VTX_LAST(1) | sctx->pa_su_sc_mode_cntl);
-        } else {
-		si_pm4_set_reg(pm4, R_028814_PA_SU_SC_MODE_CNTL, sctx->pa_su_sc_mode_cntl);
-        }
-	si_pm4_set_reg(pm4, R_02881C_PA_CL_VS_OUT_CNTL,
-		       S_02881C_USE_VTX_POINT_SIZE(vs->vs_out_point_size) |
-		       S_02881C_USE_VTX_EDGE_FLAG(vs->vs_out_edgeflag) |
-		       S_02881C_USE_VTX_RENDER_TARGET_INDX(vs->vs_out_layer) |
-		       S_02881C_VS_OUT_CCDIST0_VEC_ENA((vs->clip_dist_write & 0x0F) != 0) |
-		       S_02881C_VS_OUT_CCDIST1_VEC_ENA((vs->clip_dist_write & 0xF0) != 0) |
-		       S_02881C_VS_OUT_MISC_VEC_ENA(vs->vs_out_misc_write) |
-		       (sctx->queued.named.rasterizer->clip_plane_enable &
-			vs->clip_dist_write));
-	si_pm4_set_reg(pm4, R_028810_PA_CL_CLIP_CNTL,
-		       sctx->queued.named.rasterizer->pa_cl_clip_cntl |
-		       (vs->clip_dist_write ? 0 :
-			sctx->queued.named.rasterizer->clip_plane_enable & 0x3F) |
-		       S_028810_CLIP_DISABLE(window_space));
-
-	si_pm4_set_state(sctx, draw_info, pm4);
-	return true;
-}
-
 static void si_update_spi_map(struct si_context *sctx)
 {
 	struct si_shader *ps = sctx->ps_shader->current;
@@ -698,6 +628,77 @@ static void si_update_derived_state(struct si_context *sctx)
 		sctx->ps_db_shader_control = sctx->ps_shader->current->db_shader_control;
 		sctx->db_render_state.dirty = true;
 	}
+}
+
+static void si_emit_clip_state(struct si_context *sctx)
+{
+	struct radeon_winsys_cs *cs = sctx->b.rings.gfx.cs;
+	struct si_shader *vs = si_get_vs_state(sctx);
+	unsigned window_space =
+	   vs->selector->info.properties[TGSI_PROPERTY_VS_WINDOW_SPACE_POSITION];
+
+	r600_write_context_reg(cs, R_02881C_PA_CL_VS_OUT_CNTL,
+		       S_02881C_USE_VTX_POINT_SIZE(vs->vs_out_point_size) |
+		       S_02881C_USE_VTX_EDGE_FLAG(vs->vs_out_edgeflag) |
+		       S_02881C_USE_VTX_RENDER_TARGET_INDX(vs->vs_out_layer) |
+		       S_02881C_VS_OUT_CCDIST0_VEC_ENA((vs->clip_dist_write & 0x0F) != 0) |
+		       S_02881C_VS_OUT_CCDIST1_VEC_ENA((vs->clip_dist_write & 0xF0) != 0) |
+		       S_02881C_VS_OUT_MISC_VEC_ENA(vs->vs_out_misc_write) |
+		       (sctx->queued.named.rasterizer->clip_plane_enable &
+			vs->clip_dist_write));
+	r600_write_context_reg(cs, R_028810_PA_CL_CLIP_CNTL,
+		       sctx->queued.named.rasterizer->pa_cl_clip_cntl |
+		       (vs->clip_dist_write ? 0 :
+			sctx->queued.named.rasterizer->clip_plane_enable & 0x3F) |
+		       S_028810_CLIP_DISABLE(window_space));
+}
+
+static void si_emit_rasterizer_prim_state(struct si_context *sctx, unsigned mode)
+{
+	struct radeon_winsys_cs *cs = sctx->b.rings.gfx.cs;
+
+	/* TODO: this should use the GS output primitive type. */
+	r600_write_context_reg(cs, R_028A0C_PA_SC_LINE_STIPPLE,
+		sctx->pa_sc_line_stipple |
+		S_028A0C_AUTO_RESET_CNTL(mode == PIPE_PRIM_LINES ? 1 :
+					 mode == PIPE_PRIM_LINE_STRIP ? 2 : 0));
+
+	r600_write_context_reg(cs, R_028814_PA_SU_SC_MODE_CNTL,
+		sctx->pa_su_sc_mode_cntl |
+		S_028814_PROVOKING_VTX_LAST(mode == PIPE_PRIM_QUADS ||
+					    mode == PIPE_PRIM_QUAD_STRIP ||
+					    mode == PIPE_PRIM_POLYGON));
+}
+
+static void si_emit_draw_registers(struct si_context *sctx,
+				   const struct pipe_draw_info *info,
+				   const struct pipe_index_buffer *ib)
+{
+	struct radeon_winsys_cs *cs = sctx->b.rings.gfx.cs;
+	unsigned prim = si_conv_pipe_prim(info->mode);
+	unsigned gs_out_prim =
+		si_conv_prim_to_gs_out(sctx->gs_shader ?
+				       sctx->gs_shader->gs_output_prim :
+				       info->mode);
+	unsigned ia_multi_vgt_param = si_get_ia_multi_vgt_param(sctx, info);
+
+	/* Draw state. */
+	if (sctx->b.chip_class >= CIK) {
+		r600_write_context_reg(cs, R_028B74_VGT_DISPATCH_DRAW_INDEX,
+				       ib->index_size == 4 ? 0xFC000000 : 0xFC00);
+
+		radeon_emit(cs, PKT3(PKT3_DRAW_PREAMBLE, 2, 0));
+		radeon_emit(cs, prim); /* VGT_PRIMITIVE_TYPE */
+		radeon_emit(cs, ia_multi_vgt_param); /* IA_MULTI_VGT_PARAM */
+		radeon_emit(cs, 0); /* VGT_LS_HS_CONFIG */
+	} else {
+		r600_write_config_reg(cs, R_008958_VGT_PRIMITIVE_TYPE, prim);
+		r600_write_context_reg(cs, R_028AA8_IA_MULTI_VGT_PARAM, ia_multi_vgt_param);
+	}
+
+	r600_write_context_reg(cs, R_028A6C_VGT_GS_OUT_PRIM_TYPE, gs_out_prim);
+	r600_write_context_reg(cs, R_02840C_VGT_MULTI_PRIM_IB_RESET_INDX, info->restart_index);
+	r600_write_context_reg(cs, R_028A94_VGT_MULTI_PRIM_IB_RESET_EN, info->primitive_restart);
 }
 
 static void si_emit_draw_packets(struct si_context *sctx,
@@ -1005,9 +1006,6 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 		}
 	}
 
-	if (!si_update_draw_info_state(sctx, info, &ib))
-		return;
-
 	/* Check flush flags. */
 	if (sctx->b.flags)
 		sctx->atoms.s.cache_flush->dirty = true;
@@ -1023,6 +1021,9 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 	}
 
 	si_pm4_emit_dirty(sctx);
+	si_emit_clip_state(sctx);
+	si_emit_rasterizer_prim_state(sctx, info->mode);
+	si_emit_draw_registers(sctx, info, &ib);
 	si_emit_draw_packets(sctx, info, &ib);
 
 #if SI_TRACE_CS
