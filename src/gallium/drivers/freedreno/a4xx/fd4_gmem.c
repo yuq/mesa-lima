@@ -126,12 +126,15 @@ emit_gmem2mem_surf(struct fd_context *ctx,
 	struct fd_ringbuffer *ring = ctx->ring;
 	struct fd_resource *rsc = fd_resource(psurf->texture);
 	struct fd_resource_slice *slice = &rsc->slices[psurf->u.tex.level];
+	uint32_t layer_offset = slice->size0 * psurf->u.tex.first_layer;
+
+	debug_assert(psurf->u.tex.first_layer == psurf->u.tex.last_layer);
 
 	OUT_PKT0(ring, REG_A4XX_RB_COPY_CONTROL, 4);
 	OUT_RING(ring, A4XX_RB_COPY_CONTROL_MSAA_RESOLVE(MSAA_ONE) |
 			A4XX_RB_COPY_CONTROL_MODE(RB_COPY_RESOLVE) |
 			A4XX_RB_COPY_CONTROL_GMEM_BASE(base));
-	OUT_RELOCW(ring, rsc->bo, slice->offset, 0, 0);   /* RB_COPY_DEST_BASE */
+	OUT_RELOCW(ring, rsc->bo, slice->offset + layer_offset, 0, 0);   /* RB_COPY_DEST_BASE */
 	OUT_RING(ring, A4XX_RB_COPY_DEST_PITCH_PITCH(slice->pitch * rsc->cpp));
 	OUT_RING(ring, A4XX_RB_COPY_DEST_INFO_TILE(TILE4_LINEAR) |
 			A4XX_RB_COPY_DEST_INFO_FORMAT(fd4_pipe2color(psurf->format)) |
