@@ -29,6 +29,7 @@ PACKAGE_DIR = Mesa-$(PACKAGE_VERSION)
 PACKAGE_NAME = MesaLib-$(PACKAGE_VERSION)
 
 EXTRA_DIST = \
+	autogen.sh \
 	common.py \
 	docs \
 	doxygen \
