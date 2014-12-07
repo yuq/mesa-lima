@@ -302,6 +302,9 @@ NineAdapter9_CheckDeviceFormat( struct NineAdapter9 *This,
         return D3DERR_NOTAVAILABLE;
     }
 
+    /* we support ATI1 and ATI2 hack only for 2D textures */
+    if (RType != D3DRTYPE_TEXTURE && (CheckFormat == D3DFMT_ATI1 || CheckFormat == D3DFMT_ATI2))
+        return D3DERR_NOTAVAILABLE;
     /* if (Usage & D3DUSAGE_NONSECURE) { don't know the implications of this } */
     /* if (Usage & D3DUSAGE_SOFTWAREPROCESSING) { we can always support this } */
 

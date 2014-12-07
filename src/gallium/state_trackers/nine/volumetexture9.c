@@ -65,6 +65,10 @@ NineVolumeTexture9_ctor( struct NineVolumeTexture9 *This,
         return D3DERR_INVALIDCALL;
     }
 
+    /* We support ATI1 and ATI2 hacks only for 2D textures */
+    if (Format == D3DFMT_ATI1 || Format == D3DFMT_ATI2)
+        return D3DERR_INVALIDCALL;
+
     info->screen = pParams->device->screen;
     info->target = PIPE_TEXTURE_3D;
     info->format = pf;

@@ -492,9 +492,12 @@ NineBaseTexture9_UpdateSamplerView( struct NineBaseTexture9 *This,
             swizzle[2] = PIPE_SWIZZLE_RED;
             swizzle[3] = PIPE_SWIZZLE_RED;
         }
-    } else if (resource->format != PIPE_FORMAT_A8_UNORM) {
-        /* A8 is the only exception that should have 0.0 as default values
-         * for RGB. It is already what gallium does. All the other ones
+    } else if (resource->format != PIPE_FORMAT_A8_UNORM &&
+               resource->format != PIPE_FORMAT_RGTC1_UNORM) {
+        /* exceptions:
+         * A8 should have 0.0 as default values for RGB.
+         * ATI1/RGTC1 should be r 0 0 1 (tested on windows).
+         * It is already what gallium does. All the other ones
          * should have 1.0 for non-defined values */
         for (i = 0; i < 4; i++) {
             if (SWIZZLE_TO_REPLACE(desc->swizzle[i]))

@@ -38,6 +38,8 @@
 
 #define DBG_CHANNEL DBG_SURFACE
 
+#define is_ATI1_ATI2(format) (format == PIPE_FORMAT_RGTC1_UNORM || format == PIPE_FORMAT_RGTC2_UNORM)
+
 HRESULT
 NineSurface9_ctor( struct NineSurface9 *This,
                    struct NineUnknownParams *pParams,
@@ -382,10 +384,19 @@ NineSurface9_LockRect( struct NineSurface9 *This,
 
     if (This->data) {
         DBG("returning system memory\n");
-
-        pLockedRect->Pitch = This->stride;
-        pLockedRect->pBits = NineSurface9_GetSystemMemPointer(This,
-                                                              box.x, box.y);
+        /* ATI1 and ATI2 need special handling, because of d3d9 bug.
+         * We must advertise to the application as if it is uncompressed
+         * and bpp 8, and the app has a workaround to work with the fact
+         * that it is actually compressed. */
+        if (is_ATI1_ATI2(This->base.info.format)) {
+            pLockedRect->Pitch = This->desc.Height;
+            pLockedRect->pBits = This->data + box.y * This->desc.Height + box.x;
+        } else {
+            pLockedRect->Pitch = This->stride;
+            pLockedRect->pBits = NineSurface9_GetSystemMemPointer(This,
+                                                                  box.x,
+                                                                  box.y);
+        }
     } else {
         DBG("mapping pipe_resource %p (level=%u usage=%x)\n",
             resource, This->level, usage);

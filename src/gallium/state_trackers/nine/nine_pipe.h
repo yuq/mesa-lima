@@ -185,6 +185,8 @@ d3d9_to_pipe_format(D3DFORMAT format)
     case D3DFMT_DXT3: return PIPE_FORMAT_DXT3_RGBA;
     case D3DFMT_DXT4: return PIPE_FORMAT_DXT5_RGBA; /* XXX */
     case D3DFMT_DXT5: return PIPE_FORMAT_DXT5_RGBA;
+    case D3DFMT_ATI1: return PIPE_FORMAT_RGTC1_UNORM;
+    case D3DFMT_ATI2: return PIPE_FORMAT_RGTC2_UNORM;
     case D3DFMT_UYVY: return PIPE_FORMAT_UYVY;
     case D3DFMT_YUY2: return PIPE_FORMAT_YUYV; /* XXX check */
     case D3DFMT_NV12: return PIPE_FORMAT_NV12;
