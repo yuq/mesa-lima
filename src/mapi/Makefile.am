@@ -32,7 +32,10 @@ check_PROGRAMS =
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA =
 
-EXTRA_DIST = mapi_abi.py
+EXTRA_DIST = \
+	mapi_abi.py \
+	glapi/SConscript \
+	shared-glapi/SConscript
 
 AM_CFLAGS = $(PTHREAD_CFLAGS)
 AM_CPPFLAGS =							\

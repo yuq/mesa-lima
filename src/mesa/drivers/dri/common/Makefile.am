@@ -23,7 +23,7 @@ SUBDIRS = xmlpool
 
 include Makefile.sources
 
-EXTRA_DIST = drirc xmlpool.h
+EXTRA_DIST = drirc xmlpool.h SConscript
 
 AM_CFLAGS = \
 	-I$(top_srcdir)/include \

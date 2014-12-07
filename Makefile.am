@@ -29,8 +29,11 @@ PACKAGE_DIR = Mesa-$(PACKAGE_VERSION)
 PACKAGE_NAME = MesaLib-$(PACKAGE_VERSION)
 
 EXTRA_DIST = \
+	common.py \
 	docs \
-	doxygen
+	doxygen \
+	scons \
+	SConstruct
 
 EXTRA_FILES = \
 	aclocal.m4					\

@@ -23,6 +23,8 @@
 # GLX extension.  All rendering is converted to Xlib calls.  No hardware
 # acceleration.
 
+EXTRA_DIST = SConscript
+
 AM_CPPFLAGS = \
 	-I$(top_srcdir)/include \
 	-I$(top_srcdir)/src/mapi \

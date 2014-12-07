@@ -21,6 +21,8 @@
 
 include Makefile.sources
 
+EXTRA_DIST = SConscript
+
 noinst_LTLIBRARIES = libloader.la
 
 libloader_la_CPPFLAGS = \

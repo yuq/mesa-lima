@@ -75,6 +75,7 @@ EXTRA_DIST= \
 	glX_proto_size.py \
 	glX_server_table.py \
 	remap_helper.py \
+	SConscript \
 	gl_API.dtd
 
 ######################################################################

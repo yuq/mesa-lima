@@ -64,6 +64,7 @@ include Makefile.sources
 
 EXTRA_DIST = \
 	drivers/haiku \
+	drivers/SConscript \
 	main/format_info.py \
 	main/format_parser.py \
 	main/formats.csv \
@@ -71,6 +72,7 @@ EXTRA_DIST = \
 	main/get_hash_params.py \
 	program/program_lexer.l \
 	program/program_parse.y \
+	SConscript \
 	tnl_dd
 
 BUILT_SOURCES = \

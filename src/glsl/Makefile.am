@@ -34,7 +34,8 @@ EXTRA_DIST = tests glcpp/tests README TODO		\
 	glsl_lexer.ll					\
 	glsl_parser.yy					\
 	glcpp/glcpp-lex.l				\
-	glcpp/glcpp-parse.y
+	glcpp/glcpp-parse.y				\
+	SConscript
 
 include Makefile.sources
 
