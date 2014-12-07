@@ -38,6 +38,8 @@ NineCubeTexture9_ctor( struct NineCubeTexture9 *This,
                        HANDLE *pSharedHandle )
 {
     struct pipe_resource *info = &This->base.base.info;
+    struct pipe_screen *screen = pParams->device->screen;
+    enum pipe_format pf;
     unsigned i;
     D3DSURFACE_DESC sfdesc;
     HRESULT hr;
@@ -55,9 +57,15 @@ NineCubeTexture9_ctor( struct NineCubeTexture9 *This,
     if (Usage & D3DUSAGE_AUTOGENMIPMAP)
         Levels = 0;
 
+    pf = d3d9_to_pipe_format(Format);
+    if (pf == PIPE_FORMAT_NONE ||
+        !screen->is_format_supported(screen, pf, PIPE_TEXTURE_CUBE, 0, PIPE_BIND_SAMPLER_VIEW)) {
+        return D3DERR_INVALIDCALL;
+    }
+
     info->screen = pParams->device->screen;
     info->target = PIPE_TEXTURE_CUBE;
-    info->format = d3d9_to_pipe_format(Format);
+    info->format = pf;
     info->width0 = EdgeLength;
     info->height0 = EdgeLength;
     info->depth0 = 1;
