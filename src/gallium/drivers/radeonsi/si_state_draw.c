@@ -193,8 +193,20 @@ static void si_emit_draw_registers(struct si_context *sctx,
 	}
 
 	r600_write_context_reg(cs, R_028A6C_VGT_GS_OUT_PRIM_TYPE, gs_out_prim);
-	r600_write_context_reg(cs, R_02840C_VGT_MULTI_PRIM_IB_RESET_INDX, info->restart_index);
-	r600_write_context_reg(cs, R_028A94_VGT_MULTI_PRIM_IB_RESET_EN, info->primitive_restart);
+
+	/* Primitive restart. */
+	if (info->primitive_restart != sctx->last_primitive_restart_en) {
+		r600_write_context_reg(cs, R_028A94_VGT_MULTI_PRIM_IB_RESET_EN, info->primitive_restart);
+		sctx->last_primitive_restart_en = info->primitive_restart;
+
+		if (info->primitive_restart &&
+		    (info->restart_index != sctx->last_restart_index ||
+		     sctx->last_restart_index == SI_RESTART_INDEX_UNKNOWN)) {
+			r600_write_context_reg(cs, R_02840C_VGT_MULTI_PRIM_IB_RESET_INDX,
+					       info->restart_index);
+			sctx->last_restart_index = info->restart_index;
+		}
+	}
 }
 
 static void si_emit_draw_packets(struct si_context *sctx,

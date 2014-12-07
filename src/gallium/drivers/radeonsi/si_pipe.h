@@ -34,10 +34,11 @@
 #define SI_BIG_ENDIAN 0
 #endif
 
-/* The base vertex can be any number, but we must pick one which
- * will mean "unknown" for the purpose of state tracking and the number
- * shouldn't be a commonly-used one. */
+/* The base vertex and primitive restart can be any number, but we must pick
+ * one which will mean "unknown" for the purpose of state tracking and
+ * the number shouldn't be a commonly-used one. */
 #define SI_BASE_VERTEX_UNKNOWN INT_MIN
+#define SI_RESTART_INDEX_UNKNOWN INT_MIN
 
 #define SI_TRACE_CS 0
 #define SI_TRACE_CS_DWORDS		6
@@ -179,6 +180,8 @@ struct si_context {
 	int			last_base_vertex;
 	int			last_start_instance;
 	int			last_sh_base_reg;
+	int			last_primitive_restart_en;
+	int			last_restart_index;
 };
 
 /* si_blit.c */

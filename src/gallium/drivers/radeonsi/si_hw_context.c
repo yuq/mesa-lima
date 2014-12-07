@@ -156,4 +156,6 @@ void si_begin_new_cs(struct si_context *ctx)
 
 	ctx->b.initial_gfx_cs_size = ctx->b.rings.gfx.cs->cdw;
 	si_invalidate_draw_sh_constants(ctx);
+	ctx->last_primitive_restart_en = -1;
+	ctx->last_restart_index = SI_RESTART_INDEX_UNKNOWN;
 }
