@@ -19,7 +19,7 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
-SUBDIRS = gtest util mapi
+SUBDIRS = gtest util mapi/glapi/gen mapi
 
 if NEED_OPENGL_COMMON
 SUBDIRS += glsl mesa
