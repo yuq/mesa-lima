@@ -221,8 +221,7 @@ static void init_prog(struct program *p)
 
 static void close_prog(struct program *p)
 {
-	/* unset all state */
-	cso_release_all(p->cso);
+	cso_destroy_context(p->cso);
 
 	p->pipe->delete_vs_state(p->pipe, p->vs);
 	p->pipe->delete_fs_state(p->pipe, p->fs);
@@ -231,7 +230,6 @@ static void close_prog(struct program *p)
 	pipe_resource_reference(&p->target, NULL);
 	pipe_resource_reference(&p->vbuf, NULL);
 
-	cso_destroy_context(p->cso);
 	p->pipe->destroy(p->pipe);
 	p->screen->destroy(p->screen);
 	pipe_loader_release(&p->dev, 1);

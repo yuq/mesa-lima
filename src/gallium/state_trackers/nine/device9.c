@@ -360,7 +360,6 @@ NineDevice9_dtor( struct NineDevice9 *This )
     /* state stuff */
     if (This->pipe) {
         if (This->cso) {
-            cso_release_all(This->cso);
             cso_destroy_context(This->cso);
         }
         if (This->pipe->destroy) { This->pipe->destroy(This->pipe); }
