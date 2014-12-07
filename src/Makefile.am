@@ -32,7 +32,7 @@ SUBDIRS += glx
 endif
 
 if HAVE_EGL_PLATFORM_WAYLAND
-SUBDIRS += egl/wayland
+SUBDIRS += egl/wayland/wayland-egl egl/wayland/wayland-drm
 endif
 
 if HAVE_EGL_DRIVER_DRI2
