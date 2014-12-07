@@ -40,7 +40,8 @@ libloader_la_CPPFLAGS += \
 	-I$(top_builddir)/src/mesa/drivers/dri/common/ \
 	-I$(top_srcdir)/src/mesa/ \
 	-I$(top_srcdir)/src/mapi/ \
-	-DUSE_DRICONF
+	-DUSE_DRICONF \
+	$(EXPAT_CFLAGS)
 
 libloader_la_SOURCES += \
 	$(top_srcdir)/src/mesa/drivers/dri/common/xmlconfig.c
