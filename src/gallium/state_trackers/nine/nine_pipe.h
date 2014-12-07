@@ -249,6 +249,8 @@ d3dformat_to_string(D3DFORMAT fmt)
     case D3DFMT_DXT3: return "D3DFMT_DXT3";
     case D3DFMT_DXT4: return "D3DFMT_DXT4";
     case D3DFMT_DXT5: return "D3DFMT_DXT5";
+    case D3DFMT_ATI1: return "D3DFMT_ATI1";
+    case D3DFMT_ATI2: return "D3DFMT_ATI2";
     case D3DFMT_D16_LOCKABLE: return "D3DFMT_D16_LOCKABLE";
     case D3DFMT_D32: return "D3DFMT_D32";
     case D3DFMT_D15S1: return "D3DFMT_D15S1";
@@ -279,6 +281,7 @@ d3dformat_to_string(D3DFORMAT fmt)
     case D3DFMT_DF16: return "D3DFMT_DF16";
     case D3DFMT_DF24: return "D3DFMT_DF24";
     case D3DFMT_INTZ: return "D3DFMT_INTZ";
+    case D3DFMT_NVDB: return "D3DFMT_NVDB";
     case D3DFMT_NULL: return "D3DFMT_NULL";
     default:
         break;
