@@ -205,7 +205,6 @@ MAIN_FILES = \
 	$(SRCDIR)main/texcompress.h \
 	$(SRCDIR)main/texcompress_rgtc.c \
 	$(SRCDIR)main/texcompress_rgtc.h \
-	$(SRCDIR)main/texcompress_rgtc_tmp.h \
 	$(SRCDIR)main/texcompress_s3tc.c \
 	$(SRCDIR)main/texcompress_s3tc.h \
 	$(SRCDIR)main/texenv.c \
