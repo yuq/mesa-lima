@@ -118,21 +118,16 @@ all-local: $(dri_LTLIBRARIES)
 	$(AM_V_GEN)link_dir=$(top_builddir)/$(LIB_DIR)/gallium;         \
 	$(MKDIR_P) $${link_dir};                                        \
 	for i in $(TARGET_DRIVERS); do                                  \
-		j=gallium_dri.so;                                       \
-		k=$${i}_dri.so;                                         \
-		ln -f .libs/$${j}                                       \
-			$${link_dir}/$${k};                             \
+		ln -f .libs/gallium_dri.so                              \
+			$${link_dir}/$${i}_dri.so;                      \
 	done
 endif
 
 # hardlink each megadriver instance, but don't actually have
 # gallium_dri.so in the set of final installed files.
 install-data-hook:
-	$(AM_V_GEN)dest_dir=$(DESTDIR)/$(dridir);                       \
 	for i in $(TARGET_DRIVERS); do                                  \
-		j=gallium_dri.so;                                       \
-		k=$${i}_dri.so;                                         \
-		ln -f $${dest_dir}/$${j}                                \
-			$${dest_dir}/$${k};                             \
+		ln -f $(DESTDIR)$(dridir)/gallium_dri.so                \
+		      $(DESTDIR)$(dridir)/$${i}_dri.so;                 \
 	done;                                                           \
-	$(RM) -f $$dest_dir/gallium_dri.*
+	$(RM) -f $(DESTDIR)$(dridir)/gallium_dri.*
