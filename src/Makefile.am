@@ -51,4 +51,4 @@ if HAVE_GALLIUM
 SUBDIRS += gallium
 endif
 
-EXTRA_DIST = egl/docs getopt
+EXTRA_DIST = egl/docs getopt hgl

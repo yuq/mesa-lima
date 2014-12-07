@@ -63,6 +63,7 @@ BUILDDIR = $(builddir)/
 include Makefile.sources
 
 EXTRA_DIST = \
+	drivers/haiku \
 	main/format_info.py \
 	main/format_parser.py \
 	main/formats.csv \
