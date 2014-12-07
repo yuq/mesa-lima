@@ -155,7 +155,7 @@ egl_gallium_la_LIBADD += \
 endif
 
 EXTRA_egl_gallium_la_DEPENDENCIES = egl.sym
-EXTRA_DIST = Android.mk SConscript
+EXTRA_DIST = SConscript
 
 #if HAVE_GALLIUM_STATIC_TARGETS
 

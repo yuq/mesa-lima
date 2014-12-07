@@ -29,5 +29,3 @@ ir3_compiler_LDADD = \
 	$(top_builddir)/src/util/libmesautil.la \
 	$(GALLIUM_COMMON_LIB_DEPS) \
 	$(FREEDRENO_LIBS)
-
-EXTRA_DIST = Android.mk

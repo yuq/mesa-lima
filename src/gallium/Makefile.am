@@ -115,7 +115,6 @@ EXTRA_DIST = \
 	docs \
 	README.portability \
 	SConscript \
-	winsys/sw/android \
 	winsys/sw/gdi \
 	winsys/sw/hgl
 

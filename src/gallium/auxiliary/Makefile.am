@@ -74,7 +74,7 @@ libgalliumvl_la_SOURCES = \
 endif
 
 EXTRA_DIST = \
-	Android.mk SConscript \
+	SConscript \
 	indices/u_indices.c \
 	indices/u_unfilled_indices.c \
 	indices/u_indices_gen.py \
