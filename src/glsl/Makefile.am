@@ -212,3 +212,7 @@ CLEANFILES =						\
 
 clean-local:
 	$(RM) -r subtest-cr subtest-cr-lf subtest-lf subtest-lf-cr
+
+dist-hook:
+	$(RM) glcpp/tests/*.out
+	$(RM) glcpp/tests/subtest*/*.out
