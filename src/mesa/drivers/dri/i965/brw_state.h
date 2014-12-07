@@ -351,7 +351,7 @@ void gen6_init_vtable_surface_functions(struct brw_context *brw);
 /* brw_vs_surface_state.c */
 void
 brw_upload_pull_constants(struct brw_context *brw,
-                          GLbitfield brw_new_constbuf,
+                          GLbitfield64 brw_new_constbuf,
                           const struct gl_program *prog,
                           struct brw_stage_state *stage_state,
                           const struct brw_stage_prog_data *prog_data,
