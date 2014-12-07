@@ -253,9 +253,6 @@ boolean si_is_format_supported(struct pipe_screen *screen,
                                enum pipe_texture_target target,
                                unsigned sample_count,
                                unsigned usage);
-int si_shader_select(struct pipe_context *ctx,
-		     struct si_shader_selector *sel);
-void si_make_dummy_ps(struct si_context *sctx);
 void si_init_state_functions(struct si_context *sctx);
 void si_init_config(struct si_context *sctx);
 unsigned cik_bank_wh(unsigned bankwh);
@@ -265,10 +262,13 @@ unsigned cik_tile_split(unsigned tile_split);
 uint32_t si_num_banks(struct si_screen *sscreen, struct r600_texture *tex);
 unsigned si_tile_mode_index(struct r600_texture *rtex, unsigned level, bool stencil);
 
+/* si_state_shader.c */
+void si_update_shaders(struct si_context *sctx);
+void si_init_shader_functions(struct si_context *sctx);
+
 /* si_state_draw.c */
 extern const struct r600_atom si_atom_cache_flush;
 extern const struct r600_atom si_atom_msaa_config;
-void si_shader_init_pm4_state(struct si_shader *shader);
 void si_emit_cache_flush(struct r600_common_context *sctx, struct r600_atom *atom);
 void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *dinfo);
 

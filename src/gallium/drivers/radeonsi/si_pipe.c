@@ -114,6 +114,7 @@ static struct pipe_context *si_create_context(struct pipe_screen *screen, void *
 	case SI:
 	case CIK:
 		si_init_state_functions(sctx);
+		si_init_shader_functions(sctx);
 		si_init_config(sctx);
 		break;
 	default:
