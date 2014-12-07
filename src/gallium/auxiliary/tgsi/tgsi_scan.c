@@ -245,6 +245,9 @@ tgsi_scan_shader(const struct tgsi_token *tokens,
                      else if (semName == TGSI_SEMANTIC_PSIZE) {
                         info->writes_psize = TRUE;
                      }
+                     else if (semName == TGSI_SEMANTIC_CLIPVERTEX) {
+                        info->writes_clipvertex = TRUE;
+                     }
                   }
 
                   if (procType == TGSI_PROCESSOR_FRAGMENT) {

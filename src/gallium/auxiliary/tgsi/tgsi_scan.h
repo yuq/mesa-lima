@@ -77,6 +77,7 @@ struct tgsi_shader_info
    boolean uses_primid;
    boolean uses_frontface;
    boolean writes_psize;
+   boolean writes_clipvertex;
    boolean writes_viewport_index;
    boolean writes_layer;
    boolean is_msaa_sampler[PIPE_MAX_SAMPLERS];
