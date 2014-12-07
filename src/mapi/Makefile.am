@@ -33,6 +33,8 @@ pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA =
 
 EXTRA_DIST = \
+	es1api/ABI-check \
+	es2api/ABI-check \
 	mapi_abi.py \
 	glapi/SConscript \
 	shared-glapi/SConscript
