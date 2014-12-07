@@ -341,7 +341,7 @@ void si_shader_init_pm4_state(struct si_shader *shader)
  * Drawing
  */
 
-static unsigned si_conv_pipe_prim(unsigned pprim)
+static unsigned si_conv_pipe_prim(unsigned mode)
 {
         static const unsigned prim_conv[] = {
 		[PIPE_PRIM_POINTS]			= V_008958_DI_PT_POINTLIST,
@@ -360,11 +360,8 @@ static unsigned si_conv_pipe_prim(unsigned pprim)
 		[PIPE_PRIM_TRIANGLE_STRIP_ADJACENCY]	= V_008958_DI_PT_TRISTRIP_ADJ,
 		[R600_PRIM_RECTANGLE_LIST]		= V_008958_DI_PT_RECTLIST
         };
-	unsigned result = prim_conv[pprim];
-        if (result == ~0) {
-		R600_ERR("unsupported primitive type %d\n", pprim);
-        }
-	return result;
+	assert(mode < Elements(prim_conv));
+	return prim_conv[mode];
 }
 
 static unsigned si_conv_prim_to_gs_out(unsigned mode)
@@ -464,11 +461,6 @@ static bool si_update_draw_info_state(struct si_context *sctx,
 
 	if (pm4 == NULL)
 		return false;
-
-	if (prim == ~0) {
-		FREE(pm4);
-		return false;
-	}
 
 	if (sctx->b.chip_class >= CIK) {
 		si_pm4_set_reg(pm4, R_028B74_VGT_DISPATCH_DRAW_INDEX,
