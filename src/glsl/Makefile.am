@@ -19,6 +19,8 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
+AUTOMAKE_OPTIONS = subdir-objects
+
 AM_CPPFLAGS = \
 	-I$(top_srcdir)/include \
 	-I$(top_srcdir)/src \
@@ -71,10 +73,10 @@ tests_blob_test_LDADD =					\
 	$(top_builddir)/src/glsl/libglsl.la
 
 tests_general_ir_test_SOURCES =		\
-	$(top_srcdir)/src/mesa/main/imports.c		\
-	$(top_srcdir)/src/mesa/program/prog_hash_table.c\
-	$(top_srcdir)/src/mesa/program/symbol_table.c	\
-	$(GLSL_SRCDIR)/standalone_scaffolding.cpp \
+	../mesa/main/imports.c			\
+	../mesa/program/prog_hash_table.c		\
+	../mesa/program/symbol_table.c		\
+	standalone_scaffolding.cpp			\
 	tests/builtin_variable_test.cpp			\
 	tests/invalidate_locations_test.cpp		\
 	tests/general_ir_test.cpp			\
@@ -88,9 +90,9 @@ tests_general_ir_test_LDADD =				\
 	$(PTHREAD_LIBS)
 
 tests_uniform_initializer_test_SOURCES =		\
-	$(top_srcdir)/src/mesa/main/imports.c		\
-	$(top_srcdir)/src/mesa/program/prog_hash_table.c\
-	$(top_srcdir)/src/mesa/program/symbol_table.c	\
+	../mesa/main/imports.c		\
+	../mesa/program/prog_hash_table.c\
+	../mesa/program/symbol_table.c	\
 	tests/copy_constant_to_storage_tests.cpp	\
 	tests/set_uniform_initializer_tests.cpp		\
 	tests/uniform_initializer_utils.cpp		\
@@ -104,8 +106,8 @@ tests_uniform_initializer_test_LDADD =			\
 	$(PTHREAD_LIBS)
 
 tests_sampler_types_test_SOURCES =			\
-	$(top_srcdir)/src/mesa/program/prog_hash_table.c\
-	$(top_srcdir)/src/mesa/program/symbol_table.c	\
+	../mesa/program/prog_hash_table.c\
+	../mesa/program/symbol_table.c	\
 	tests/sampler_types_test.cpp			\
 	tests/common.c
 tests_sampler_types_test_CFLAGS =			\
@@ -126,7 +128,7 @@ libglcpp_la_SOURCES =					\
 glcpp_glcpp_SOURCES =					\
 	glcpp/glcpp.c					\
 	tests/common.c					\
-	$(top_srcdir)/src/mesa/program/prog_hash_table.c
+	../mesa/program/prog_hash_table.c
 glcpp_glcpp_LDADD =					\
 	libglcpp.la					\
 	-lm
@@ -140,9 +142,9 @@ libglsl_la_SOURCES =					\
 	$(NIR_FILES)
 
 glsl_compiler_SOURCES = \
-	$(top_srcdir)/src/mesa/main/imports.c \
-	$(top_srcdir)/src/mesa/program/prog_hash_table.c \
-	$(top_srcdir)/src/mesa/program/symbol_table.c \
+	../mesa/main/imports.c \
+	../mesa/program/prog_hash_table.c \
+	../mesa/program/symbol_table.c \
 	$(GLSL_COMPILER_CXX_FILES)
 
 glsl_compiler_LDADD =					\
@@ -150,10 +152,10 @@ glsl_compiler_LDADD =					\
 	$(PTHREAD_LIBS)
 
 glsl_test_SOURCES = \
-	$(top_srcdir)/src/mesa/main/imports.c \
-	$(top_srcdir)/src/mesa/program/prog_hash_table.c \
-	$(top_srcdir)/src/mesa/program/symbol_table.c \
-	$(GLSL_SRCDIR)/standalone_scaffolding.cpp \
+	../mesa/main/imports.c \
+	../mesa/program/prog_hash_table.c \
+	../mesa/program/symbol_table.c \
+	standalone_scaffolding.cpp \
 	tests/common.c \
 	test.cpp \
 	test_optpass.cpp \
@@ -194,14 +196,14 @@ am__v_YACC_0 = @echo "  YACC    " $@;
 am__v_YACC_1 =
 
 glsl_parser.cpp glsl_parser.h: glsl_parser.yy
-	$(AM_V_YACC) $(YACC) $(YFLAGS) -o $@ -p "_mesa_glsl_" --defines=$(GLSL_BUILDDIR)/glsl_parser.h $<
+	$(AM_V_YACC) $(YACC) $(YFLAGS) -o $@ -p "_mesa_glsl_" --defines=$(builddir)/glsl_parser.h $<
 
 glsl_lexer.cpp: glsl_lexer.ll
 	$(AM_V_LEX) $(LEX) $(LFLAGS) -o $@ $<
 
 glcpp/glcpp-parse.c glcpp/glcpp-parse.h: glcpp/glcpp-parse.y
 	$(AM_V_at)$(MKDIR_P) glcpp
-	$(AM_V_YACC) $(YACC) $(YFLAGS) -o $@ -p "glcpp_parser_" --defines=$(GLSL_BUILDDIR)/glcpp/glcpp-parse.h $<
+	$(AM_V_YACC) $(YACC) $(YFLAGS) -o $@ -p "glcpp_parser_" --defines=$(builddir)/glcpp/glcpp-parse.h $<
 
 glcpp/glcpp-lex.c: glcpp/glcpp-lex.l
 	$(AM_V_at)$(MKDIR_P) glcpp
