@@ -2512,8 +2512,10 @@ The Y component starts at zero and always increases but Y=0 may either
 indicate the top of the window or the bottom depending on the fragment
 coordinate origin convention (see TGSI_PROPERTY_FS_COORD_ORIGIN).
 The Z coordinate ranges from 0 to 1 to represent depth from the front
-to the back of the Z buffer.  The W component contains the reciprocol
-of the interpolated vertex position W component.
+to the back of the Z buffer.  The W component contains the interpolated
+reciprocal of the vertex position W component (corresponding to gl_Fragcoord,
+but unlike d3d10 which interpolates the same 1/w but then gives back
+the reciprocal of the interpolated value).
 
 Fragment shaders may also declare an output register with
 TGSI_SEMANTIC_POSITION.  Only the Z component is writable.  This allows
