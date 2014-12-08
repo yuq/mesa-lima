@@ -153,7 +153,9 @@ static void si_emit_rasterizer_prim_state(struct si_context *sctx, unsigned mode
 {
 	struct radeon_winsys_cs *cs = sctx->b.rings.gfx.cs;
 
-	/* TODO: this should use the GS output primitive type. */
+	if (sctx->gs_shader)
+		mode = sctx->gs_shader->gs_output_prim;
+
 	r600_write_context_reg(cs, R_028A0C_PA_SC_LINE_STIPPLE,
 		sctx->pa_sc_line_stipple |
 		S_028A0C_AUTO_RESET_CNTL(mode == PIPE_PRIM_LINES ? 1 :
