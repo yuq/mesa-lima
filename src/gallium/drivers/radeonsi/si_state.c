@@ -210,13 +210,19 @@ static unsigned si_pack_float_12p4(float x)
 }
 
 /*
- * inferred framebuffer and blender state
+ * Inferred framebuffer and blender state.
+ *
+ * One of the reasons this must be derived from the framebuffer state is that:
+ * - The blend state mask is 0xf most of the time.
+ * - The COLOR1 format isn't INVALID because of possible dual-source blending,
+ *   so COLOR1 is enabled pretty much all the time.
+ * So CB_TARGET_MASK is the only register that can disable COLOR1.
  */
 static void si_update_fb_blend_state(struct si_context *sctx)
 {
 	struct si_pm4_state *pm4;
 	struct si_state_blend *blend = sctx->queued.named.blend;
-	uint32_t mask;
+	uint32_t mask = 0, i;
 
 	if (blend == NULL)
 		return;
@@ -225,10 +231,12 @@ static void si_update_fb_blend_state(struct si_context *sctx)
 	if (pm4 == NULL)
 		return;
 
-	mask = (1ULL << ((unsigned)sctx->framebuffer.state.nr_cbufs * 4)) - 1;
+	for (i = 0; i < sctx->framebuffer.state.nr_cbufs; i++)
+		if (sctx->framebuffer.state.cbufs[i])
+			mask |= 0xf << (4*i);
 	mask &= blend->cb_target_mask;
-	si_pm4_set_reg(pm4, R_028238_CB_TARGET_MASK, mask);
 
+	si_pm4_set_reg(pm4, R_028238_CB_TARGET_MASK, mask);
 	si_pm4_set_state(sctx, fb_blend, pm4);
 }
 
