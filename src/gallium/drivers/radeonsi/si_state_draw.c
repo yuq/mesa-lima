@@ -180,9 +180,6 @@ static void si_emit_draw_registers(struct si_context *sctx,
 
 	/* Draw state. */
 	if (sctx->b.chip_class >= CIK) {
-		r600_write_context_reg(cs, R_028B74_VGT_DISPATCH_DRAW_INDEX,
-				       ib->index_size == 4 ? 0xFC000000 : 0xFC00);
-
 		radeon_emit(cs, PKT3(PKT3_DRAW_PREAMBLE, 2, 0));
 		radeon_emit(cs, prim); /* VGT_PRIMITIVE_TYPE */
 		radeon_emit(cs, ia_multi_vgt_param); /* IA_MULTI_VGT_PARAM */
