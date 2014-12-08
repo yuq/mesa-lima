@@ -466,14 +466,14 @@ struct shader_translator
         struct ureg_src vFace;
         struct ureg_src s;
         struct ureg_dst p;
-        struct ureg_dst a;
+        struct ureg_dst address;
+        struct ureg_dst a0;
         struct ureg_dst tS[8]; /* texture stage registers */
         struct ureg_dst tdst; /* scratch dst if we need extra modifiers */
         struct ureg_dst t[5]; /* scratch TEMPs */
         struct ureg_src vC[2]; /* PS color in */
         struct ureg_src vT[8]; /* PS texcoord in */
         struct ureg_dst rL[NINE_MAX_LOOP_DEPTH]; /* loop ctr */
-        struct ureg_dst aL[NINE_MAX_LOOP_DEPTH]; /* loop ctr ADDR register */
     } regs;
     unsigned num_temp; /* Elements(regs.r) */
     unsigned num_scratch;
@@ -482,6 +482,7 @@ struct shader_translator
     unsigned cond_depth;
     unsigned loop_labels[NINE_MAX_LOOP_DEPTH];
     unsigned cond_labels[NINE_MAX_COND_DEPTH];
+    boolean loop_or_rep[NINE_MAX_LOOP_DEPTH]; /* true: loop, false: rep */
 
     unsigned *inst_labels; /* LABEL op */
     unsigned num_inst_labels;
@@ -659,8 +660,10 @@ static INLINE void
 tx_addr_alloc(struct shader_translator *tx, INT idx)
 {
     assert(idx == 0);
-    if (ureg_dst_is_undef(tx->regs.a))
-        tx->regs.a = ureg_DECL_address(tx->ureg);
+    if (ureg_dst_is_undef(tx->regs.address))
+        tx->regs.address = ureg_DECL_address(tx->ureg);
+    if (ureg_dst_is_undef(tx->regs.a0))
+        tx->regs.a0 = ureg_DECL_temporary(tx->ureg);
 }
 
 static INLINE void
@@ -702,7 +705,7 @@ tx_endloop(struct shader_translator *tx)
 }
 
 static struct ureg_dst
-tx_get_loopctr(struct shader_translator *tx)
+tx_get_loopctr(struct shader_translator *tx, boolean loop_or_rep)
 {
     const unsigned l = tx->loop_depth - 1;
 
@@ -712,26 +715,32 @@ tx_get_loopctr(struct shader_translator *tx)
         return ureg_dst_undef();
     }
 
-    if (ureg_dst_is_undef(tx->regs.aL[l]))
-    {
-        struct ureg_dst rreg = ureg_DECL_local_temporary(tx->ureg);
-        struct ureg_dst areg = ureg_DECL_address(tx->ureg);
-        unsigned c;
-
-        assert(l % 4 == 0);
-        for (c = l; c < (l + 4) && c < Elements(tx->regs.aL); ++c) {
-            tx->regs.rL[c] = ureg_writemask(rreg, 1 << (c & 3));
-            tx->regs.aL[c] = ureg_writemask(areg, 1 << (c & 3));
-        }
+    if (ureg_dst_is_undef(tx->regs.rL[l])) {
+        /* loop or rep ctr creation */
+        tx->regs.rL[l] = ureg_DECL_local_temporary(tx->ureg);
+        tx->loop_or_rep[l] = loop_or_rep;
     }
+    /* loop - rep - endloop - endrep not allowed */
+    assert(tx->loop_or_rep[l] == loop_or_rep);
+
     return tx->regs.rL[l];
 }
-static struct ureg_dst
-tx_get_aL(struct shader_translator *tx)
+
+static struct ureg_src
+tx_get_loopal(struct shader_translator *tx)
 {
-    if (!ureg_dst_is_undef(tx_get_loopctr(tx)))
-        return tx->regs.aL[tx->loop_depth - 1];
-    return ureg_dst_undef();
+    int loop_level = tx->loop_depth - 1;
+
+    while (loop_level >= 0) {
+        /* handle loop - rep - endrep - endloop case */
+        if (tx->loop_or_rep[loop_level])
+            /* the value is in the loop counter y component (nine implementation) */
+            return ureg_scalar(ureg_src(tx->regs.rL[loop_level]), TGSI_SWIZZLE_Y);
+        loop_level--;
+    }
+
+    DBG("aL counter requested outside of loop\n");
+    return ureg_src_undef();
 }
 
 static INLINE unsigned *
@@ -782,8 +791,12 @@ tx_src_param(struct shader_translator *tx, const struct sm1_src_param *param)
     case D3DSPR_ADDR:
         assert(!param->rel);
         if (IS_VS) {
-            tx_addr_alloc(tx, param->idx);
-            src = ureg_src(tx->regs.a);
+            assert(param->idx == 0);
+            /* the address register (vs only) must be
+             * assigned before use */
+            assert(!ureg_dst_is_undef(tx->regs.a0));
+            ureg_ARR(ureg, tx->regs.address, ureg_src(tx->regs.a0));
+            src = ureg_src(tx->regs.address);
         } else {
             if (tx->version.major < 2 && tx->version.minor < 4) {
                 /* no subroutines, so should be defined */
@@ -857,7 +870,13 @@ tx_src_param(struct shader_translator *tx, const struct sm1_src_param *param)
         }
         break;
     case D3DSPR_LOOP:
-        src = tx_src_scalar(tx_get_aL(tx));
+        if (ureg_dst_is_undef(tx->regs.address))
+            tx->regs.address = ureg_DECL_address(ureg);
+        if (!tx->native_integers)
+            ureg_ARR(ureg, tx->regs.address, tx_get_loopal(tx));
+        else
+            ureg_UARL(ureg, tx->regs.address, tx_get_loopal(tx));
+        src = ureg_src(tx->regs.address);
         break;
     case D3DSPR_MISCTYPE:
         switch (param->idx) {
@@ -996,7 +1015,7 @@ _tx_dst_param(struct shader_translator *tx, const struct sm1_dst_param *param)
             dst = ureg_dst(tx->regs.vT[param->idx]);
         } else {
             tx_addr_alloc(tx, param->idx);
-            dst = tx->regs.a;
+            dst = tx->regs.a0;
         }
         break;
     case D3DSPR_RASTOUT:
@@ -1417,9 +1436,17 @@ DECL_SPECIAL(CALLNZ)
 DECL_SPECIAL(MOV_vs1x)
 {
     if (tx->insn.dst[0].file == D3DSPR_ADDR) {
-        ureg_ARL(tx->ureg,
+        /* Implementation note: We don't write directly
+         * to the addr register, but to an intermediate
+         * float register.
+         * Contrary to the doc, when writing to ADDR here,
+         * the rounding is not to nearest, but to lowest
+         * (wine test).
+         * Since we use ARR next, substract 0.5. */
+        ureg_SUB(tx->ureg,
                  tx_dst_param(tx, &tx->insn.dst[0]),
-                 tx_src_param(tx, &tx->insn.src[0]));
+                 tx_src_param(tx, &tx->insn.src[0]),
+                 ureg_imm1f(tx->ureg, 0.5f));
         return D3D_OK;
     }
     return NineTranslateInstruction_Generic(tx);
@@ -1430,46 +1457,36 @@ DECL_SPECIAL(LOOP)
     struct ureg_program *ureg = tx->ureg;
     unsigned *label;
     struct ureg_src src = tx_src_param(tx, &tx->insn.src[1]);
-    struct ureg_src iter = ureg_scalar(src, TGSI_SWIZZLE_X);
-    struct ureg_src init = ureg_scalar(src, TGSI_SWIZZLE_Y);
-    struct ureg_src step = ureg_scalar(src, TGSI_SWIZZLE_Z);
     struct ureg_dst ctr;
-    struct ureg_dst tmp = tx_scratch_scalar(tx);
+    struct ureg_dst tmp;
+    struct ureg_src ctrx;
 
     label = tx_bgnloop(tx);
-    ctr = tx_get_loopctr(tx);
+    ctr = tx_get_loopctr(tx, TRUE);
+    ctrx = ureg_scalar(ureg_src(ctr), TGSI_SWIZZLE_X);
 
-    ureg_MOV(tx->ureg, ctr, init);
+    /* src: num_iterations - start_value of al - step for al - 0 */
+    ureg_MOV(ureg, ctr, src);
     ureg_BGNLOOP(tx->ureg, label);
-    if (tx->native_integers) {
-        /* we'll let the backend pull up that MAD ... */
-        ureg_UMAD(ureg, tmp, iter, step, init);
-        ureg_USEQ(ureg, tmp, ureg_src(ctr), tx_src_scalar(tmp));
-#ifdef NINE_TGSI_LAZY_DEVS
-        ureg_UIF(ureg, tx_src_scalar(tmp), tx_cond(tx));
-#endif
-    } else {
-        /* can't simply use SGE for precision because step might be negative */
-        ureg_MAD(ureg, tmp, iter, step, init);
-        ureg_SEQ(ureg, tmp, ureg_src(ctr), tx_src_scalar(tmp));
-#ifdef NINE_TGSI_LAZY_DEVS
+    tmp = tx_scratch_scalar(tx);
+    /* Initially ctr.x contains the number of iterations.
+     * ctr.y will contain the updated value of al.
+     * We decrease ctr.x at the end of every iteration,
+     * and stop when it reaches 0. */
+
+    if (!tx->native_integers) {
+        /* case src and ctr contain floats */
+        /* to avoid precision issue, we stop when ctr <= 0.5 */
+        ureg_SGE(ureg, tmp, ureg_imm1f(ureg, 0.5f), ctrx);
         ureg_IF(ureg, tx_src_scalar(tmp), tx_cond(tx));
-#endif
+    } else {
+        /* case src and ctr contain integers */
+        ureg_ISGE(ureg, tmp, ureg_imm1i(ureg, 0), ctrx);
+        ureg_UIF(ureg, tx_src_scalar(tmp), tx_cond(tx));
     }
-#ifdef NINE_TGSI_LAZY_DEVS
     ureg_BRK(ureg);
     tx_endcond(tx);
     ureg_ENDIF(ureg);
-#else
-    ureg_BREAKC(ureg, tx_src_scalar(tmp));
-#endif
-    if (tx->native_integers) {
-        ureg_UARL(ureg, tx_get_aL(tx), tx_src_scalar(ctr));
-        ureg_UADD(ureg, ctr, tx_src_scalar(ctr), step);
-    } else {
-        ureg_ARL(ureg, tx_get_aL(tx), tx_src_scalar(ctr));
-        ureg_ADD(ureg, ctr, tx_src_scalar(ctr), step);
-    }
     return D3D_OK;
 }
 
@@ -1481,6 +1498,25 @@ DECL_SPECIAL(RET)
 
 DECL_SPECIAL(ENDLOOP)
 {
+    struct ureg_program *ureg = tx->ureg;
+    struct ureg_dst ctr = tx_get_loopctr(tx, TRUE);
+    struct ureg_dst dst_ctrx, dst_al;
+    struct ureg_src src_ctr, al_counter;
+
+    dst_ctrx = ureg_writemask(ctr, NINED3DSP_WRITEMASK_0);
+    dst_al = ureg_writemask(ctr, NINED3DSP_WRITEMASK_1);
+    src_ctr = ureg_src(ctr);
+    al_counter = ureg_scalar(src_ctr, TGSI_SWIZZLE_Z);
+
+    /* ctr.x -= 1
+     * ctr.y (aL) += step */
+    if (!tx->native_integers) {
+        ureg_ADD(ureg, dst_ctrx, src_ctr, ureg_imm1f(ureg, -1.0f));
+        ureg_ADD(ureg, dst_al, src_ctr, al_counter);
+    } else {
+        ureg_UADD(ureg, dst_ctrx, src_ctr, ureg_imm1i(ureg, -1));
+        ureg_UADD(ureg, dst_al, src_ctr, al_counter);
+    }
     ureg_ENDLOOP(tx->ureg, tx_endloop(tx));
     return D3D_OK;
 }
@@ -1530,7 +1566,7 @@ DECL_SPECIAL(REP)
         tx->native_integers ? ureg_imm1u(ureg, 0) : ureg_imm1f(ureg, 0.0f);
 
     label = tx_bgnloop(tx);
-    ctr = tx_get_loopctr(tx);
+    ctr = tx_get_loopctr(tx, FALSE);
 
     /* NOTE: rep must be constant, so we don't have to save the count */
     assert(rep.File == TGSI_FILE_CONSTANT || rep.File == TGSI_FILE_IMMEDIATE);
@@ -2331,8 +2367,9 @@ struct sm1_op_info inst_table[] =
     _OPI(ENDIF,  ENDIF,  V(2,0), V(3,0), V(2,1), V(3,0), 0, 0, SPECIAL(ENDIF)),
     _OPI(BREAK,  BRK,    V(2,1), V(3,0), V(2,1), V(3,0), 0, 0, NULL),
     _OPI(BREAKC, BREAKC, V(2,1), V(3,0), V(2,1), V(3,0), 0, 2, SPECIAL(BREAKC)),
-
-    _OPI(MOVA, ARR, V(2,0), V(3,0), V(0,0), V(0,0), 1, 1, NULL),
+    /* we don't write to the address register, but a normal register (copied
+     * when needed to the address register), thus we don't use ARR */
+    _OPI(MOVA, MOV, V(2,0), V(3,0), V(0,0), V(0,0), 1, 1, NULL),
 
     _OPI(DEFB, NOP, V(0,0), V(3,0) , V(0,0), V(3,0) , 1, 0, SPECIAL(DEFB)),
     _OPI(DEFI, NOP, V(0,0), V(3,0) , V(0,0), V(3,0) , 1, 0, SPECIAL(DEFI)),
@@ -2749,11 +2786,11 @@ tx_ctor(struct shader_translator *tx, struct nine_shader_info *info)
     info->lconstf.data = NULL;
     info->lconstf.ranges = NULL;
 
-    for (i = 0; i < Elements(tx->regs.aL); ++i) {
-        tx->regs.aL[i] = ureg_dst_undef();
+    for (i = 0; i < Elements(tx->regs.rL); ++i) {
         tx->regs.rL[i] = ureg_dst_undef();
     }
-    tx->regs.a = ureg_dst_undef();
+    tx->regs.address = ureg_dst_undef();
+    tx->regs.a0 = ureg_dst_undef();
     tx->regs.p = ureg_dst_undef();
     tx->regs.oDepth = ureg_dst_undef();
     tx->regs.vPos = ureg_src_undef();
