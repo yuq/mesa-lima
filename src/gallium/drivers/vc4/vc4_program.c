@@ -569,6 +569,17 @@ tgsi_to_qir_cmp(struct vc4_compile *c,
 }
 
 static struct qreg
+tgsi_to_qir_ucmp(struct vc4_compile *c,
+                 struct tgsi_full_instruction *tgsi_inst,
+                 enum qop op, struct qreg *src, int i)
+{
+        qir_SF(c, src[0 * 4 + i]);
+        return qir_SEL_X_Y_ZC(c,
+                              src[1 * 4 + i],
+                              src[2 * 4 + i]);
+}
+
+static struct qreg
 tgsi_to_qir_mad(struct vc4_compile *c,
                 struct tgsi_full_instruction *tgsi_inst,
                 enum qop op, struct qreg *src, int i)
@@ -1292,6 +1303,7 @@ emit_tgsi_instruction(struct vc4_compile *c,
                 [TGSI_OPCODE_ISLT] = { 0, tgsi_to_qir_islt },
 
                 [TGSI_OPCODE_CMP] = { 0, tgsi_to_qir_cmp },
+                [TGSI_OPCODE_UCMP] = { 0, tgsi_to_qir_ucmp },
                 [TGSI_OPCODE_MAD] = { 0, tgsi_to_qir_mad },
                 [TGSI_OPCODE_RCP] = { QOP_RCP, tgsi_to_qir_rcp },
                 [TGSI_OPCODE_RSQ] = { QOP_RSQ, tgsi_to_qir_rsq },
