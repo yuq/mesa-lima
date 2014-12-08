@@ -661,7 +661,7 @@ draw_total_vs_outputs(const struct draw_context *draw)
 {
    const struct tgsi_shader_info *info = &draw->vs.vertex_shader->info;
 
-   return info->num_outputs + draw->extra_shader_outputs.num;;
+   return info->num_outputs + draw->extra_shader_outputs.num;
 }
 
 /**
