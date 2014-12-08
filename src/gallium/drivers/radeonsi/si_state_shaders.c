@@ -512,6 +512,7 @@ static void si_bind_gs_shader(struct pipe_context *ctx, void *state)
 
 	sctx->gs_shader = sel;
 	sctx->clip_regs.dirty = true;
+	sctx->last_rast_prim = -1; /* reset this so that it gets updated */
 }
 
 static void si_make_dummy_ps(struct si_context *sctx)

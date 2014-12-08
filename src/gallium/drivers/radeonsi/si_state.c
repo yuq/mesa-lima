@@ -711,6 +711,7 @@ static void si_bind_rs_state(struct pipe_context *ctx, void *state)
 	si_update_fb_rs_state(sctx);
 
 	sctx->clip_regs.dirty = true;
+	sctx->last_rast_prim = -1; /* reset this so that it gets updated */
 }
 
 static void si_delete_rs_state(struct pipe_context *ctx, void *state)

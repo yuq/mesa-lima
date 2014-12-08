@@ -185,6 +185,7 @@ struct si_context {
 	int			last_gs_out_prim;
 	int			last_prim;
 	int			last_multi_vgt_param;
+	int			last_rast_prim;
 };
 
 /* si_blit.c */

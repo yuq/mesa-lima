@@ -161,4 +161,5 @@ void si_begin_new_cs(struct si_context *ctx)
 	ctx->last_gs_out_prim = -1;
 	ctx->last_prim = -1;
 	ctx->last_multi_vgt_param = -1;
+	ctx->last_rast_prim = -1;
 }
