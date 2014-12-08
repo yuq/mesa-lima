@@ -98,10 +98,17 @@ intel_finalize_mipmap_tree(struct brw_context *brw, GLuint unit)
       return true;
    }
 
-   /* Immutable textures should not get this far -- they should have been
-    * created in a validated state, and nothing can invalidate them.
+   /* On recent generations, immutable textures should not get this far
+    * -- they should have been created in a validated state, and nothing
+    * can invalidate them.
+    *
+    * Unfortunately, this is not true on pre-Sandybridge hardware -- when
+    * rendering into an immutable-format depth texture we may have to rebase
+    * the rendered levels to meet alignment requirements.
+    *
+    * FINISHME: Avoid doing this.
     */
-   assert(!tObj->Immutable);
+   assert(!tObj->Immutable || brw->gen < 6);
 
    firstImage = intel_texture_image(tObj->Image[0][tObj->BaseLevel]);
 
