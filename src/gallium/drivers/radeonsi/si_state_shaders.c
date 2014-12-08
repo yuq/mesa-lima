@@ -770,8 +770,11 @@ void si_update_shaders(struct si_context *sctx)
 
 	si_pm4_bind_state(sctx, ps, sctx->ps_shader->current->pm4);
 
-	if (si_pm4_state_changed(sctx, ps) || si_pm4_state_changed(sctx, vs))
+	if (si_pm4_state_changed(sctx, ps) || si_pm4_state_changed(sctx, vs) ||
+	    sctx->sprite_coord_enable != sctx->queued.named.rasterizer->sprite_coord_enable) {
+		sctx->sprite_coord_enable = sctx->queued.named.rasterizer->sprite_coord_enable;
 		si_update_spi_map(sctx);
+	}
 
 	if (sctx->ps_db_shader_control != sctx->ps_shader->current->db_shader_control) {
 		sctx->ps_db_shader_control = sctx->ps_shader->current->db_shader_control;

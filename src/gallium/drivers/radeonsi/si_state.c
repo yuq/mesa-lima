@@ -700,7 +700,6 @@ static void si_bind_rs_state(struct pipe_context *ctx, void *state)
 		return;
 
 	// TODO
-	sctx->sprite_coord_enable = rs->sprite_coord_enable;
 	sctx->pa_sc_line_stipple = rs->pa_sc_line_stipple;
 	sctx->pa_su_sc_mode_cntl = rs->pa_su_sc_mode_cntl;
 
