@@ -224,6 +224,8 @@ typedef struct _RGNDATA {
 #define D3DERR_INVALIDDEVICE             MAKE_D3DHRESULT(2155)
 #define D3DERR_INVALIDCALL               MAKE_D3DHRESULT(2156)
 #define D3DERR_DRIVERINVALIDCALL         MAKE_D3DHRESULT(2157)
+#define D3DERR_DEVICEREMOVED             MAKE_D3DHRESULT(2160)
+#define D3DERR_DEVICEHUNG                MAKE_D3DHRESULT(2164)
 
 /********************************************************
  * Bitmasks                                             *
@@ -331,6 +333,7 @@ typedef struct _RGNDATA {
 
 #define D3DPRESENT_DONOTWAIT      0x00000001
 #define D3DPRESENT_LINEAR_CONTENT 0x00000002
+#define D3DPRESENT_RATE_DEFAULT            0
 
 #define D3DCREATE_FPU_PRESERVE              0x00000002
 #define D3DCREATE_MULTITHREADED             0x00000004
@@ -343,6 +346,13 @@ typedef struct _RGNDATA {
 
 #define D3DSTREAMSOURCE_INDEXEDDATA  (1 << 30)
 #define D3DSTREAMSOURCE_INSTANCEDATA (2 << 30)
+
+/* D3DRS_COLORWRITEENABLE */
+#define D3DCOLORWRITEENABLE_RED     (1L << 0)
+#define D3DCOLORWRITEENABLE_GREEN   (1L << 1)
+#define D3DCOLORWRITEENABLE_BLUE    (1L << 2)
+#define D3DCOLORWRITEENABLE_ALPHA   (1L << 3)
+
 
 /********************************************************
  * Function macros                                      *
