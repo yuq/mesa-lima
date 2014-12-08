@@ -69,6 +69,7 @@ struct vc4_fs_key {
         bool point_coord_upper_left;
         bool light_twoside;
         uint8_t alpha_test_func;
+        uint8_t logicop_func;
         uint32_t point_sprite_mask;
 
         struct pipe_rt_blend_state blend;
@@ -1629,6 +1630,46 @@ alpha_test_discard(struct vc4_compile *c)
         }
 }
 
+static struct qreg
+vc4_logicop(struct vc4_compile *c, struct qreg src, struct qreg dst)
+{
+        switch (c->fs_key->logicop_func) {
+        case PIPE_LOGICOP_CLEAR:
+                return qir_uniform_f(c, 0.0);
+        case PIPE_LOGICOP_NOR:
+                return qir_NOT(c, qir_OR(c, src, dst));
+        case PIPE_LOGICOP_AND_INVERTED:
+                return qir_AND(c, qir_NOT(c, src), dst);
+        case PIPE_LOGICOP_COPY_INVERTED:
+                return qir_NOT(c, src);
+        case PIPE_LOGICOP_AND_REVERSE:
+                return qir_AND(c, src, qir_NOT(c, dst));
+        case PIPE_LOGICOP_INVERT:
+                return qir_NOT(c, dst);
+        case PIPE_LOGICOP_XOR:
+                return qir_XOR(c, src, dst);
+        case PIPE_LOGICOP_NAND:
+                return qir_NOT(c, qir_AND(c, src, dst));
+        case PIPE_LOGICOP_AND:
+                return qir_AND(c, src, dst);
+        case PIPE_LOGICOP_EQUIV:
+                return qir_NOT(c, qir_XOR(c, src, dst));
+        case PIPE_LOGICOP_NOOP:
+                return dst;
+        case PIPE_LOGICOP_OR_INVERTED:
+                return qir_OR(c, qir_NOT(c, src), dst);
+        case PIPE_LOGICOP_OR_REVERSE:
+                return qir_OR(c, src, qir_NOT(c, dst));
+        case PIPE_LOGICOP_OR:
+                return qir_OR(c, src, dst);
+        case PIPE_LOGICOP_SET:
+                return qir_uniform_ui(c, ~0);
+        case PIPE_LOGICOP_COPY:
+        default:
+                return src;
+        }
+}
+
 static void
 emit_frag_end(struct vc4_compile *c)
 {
@@ -1640,8 +1681,11 @@ emit_frag_end(struct vc4_compile *c)
         struct qreg tlb_read_color[4] = { c->undef, c->undef, c->undef, c->undef };
         struct qreg dst_color[4] = { c->undef, c->undef, c->undef, c->undef };
         struct qreg linear_dst_color[4] = { c->undef, c->undef, c->undef, c->undef };
+        struct qreg packed_dst_color = c->undef;
+
         if (c->fs_key->blend.blend_enable ||
-            c->fs_key->blend.colormask != 0xf) {
+            c->fs_key->blend.colormask != 0xf ||
+            c->fs_key->logicop_func != PIPE_LOGICOP_COPY) {
                 struct qreg r4 = qir_TLB_COLOR_READ(c);
                 for (int i = 0; i < 4; i++)
                         tlb_read_color[i] = qir_R4_UNPACK(c, r4, i);
@@ -1656,6 +1700,11 @@ emit_frag_end(struct vc4_compile *c)
                                 linear_dst_color[i] = dst_color[i];
                         }
                 }
+
+                /* Save the packed value for logic ops.  Can't reuse r4
+                 * becuase other things might smash it (like sRGB)
+                 */
+                packed_dst_color = qir_MOV(c, r4);
         }
 
         struct qreg blend_color[4];
@@ -1746,6 +1795,11 @@ emit_frag_end(struct vc4_compile *c)
                                       swizzled_outputs[3]));
         } else {
                 packed_color = qir_uniform_ui(c, 0);
+        }
+
+
+        if (c->fs_key->logicop_func != PIPE_LOGICOP_COPY) {
+                packed_color = vc4_logicop(c, packed_color, packed_dst_color);
         }
 
         qir_emit(c, qir_inst(QOP_TLB_COLOR_WRITE, c->undef,
@@ -2254,7 +2308,11 @@ vc4_update_compiled_fs(struct vc4_context *vc4, uint8_t prim_mode)
         key->is_lines = (prim_mode >= PIPE_PRIM_LINES &&
                          prim_mode <= PIPE_PRIM_LINE_STRIP);
         key->blend = vc4->blend->rt[0];
-
+        if (vc4->blend->logicop_enable) {
+                key->logicop_func = vc4->blend->logicop_func;
+        } else {
+                key->logicop_func = PIPE_LOGICOP_COPY;
+        }
         if (vc4->framebuffer.cbufs[0])
                 key->color_format = vc4->framebuffer.cbufs[0]->format;
 
