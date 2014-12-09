@@ -334,8 +334,11 @@ calculate_deps(struct schedule_state *state, struct schedule_node *n)
         uint32_t mul_b = QPU_GET_FIELD(inst, QPU_MUL_B);
         uint32_t sig = QPU_GET_FIELD(inst, QPU_SIG);
 
-        process_raddr_deps(state, n, raddr_a, true);
-        process_raddr_deps(state, n, raddr_b, false);
+        if (sig != QPU_SIG_LOAD_IMM) {
+                process_raddr_deps(state, n, raddr_a, true);
+                process_raddr_deps(state, n, raddr_b, false);
+        }
+
         if (add_op != QPU_A_NOP) {
                 process_mux_deps(state, n, add_a);
                 process_mux_deps(state, n, add_b);
