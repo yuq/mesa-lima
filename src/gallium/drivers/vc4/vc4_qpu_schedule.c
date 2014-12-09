@@ -49,7 +49,19 @@ struct schedule_node {
         uint32_t child_count;
         uint32_t child_array_size;
         uint32_t parent_count;
+
+        /**
+         * Minimum number of cycles from scheduling this instruction until the
+         * end of the program, based on the slowest dependency chain through
+         * the children.
+         */
         uint32_t delay;
+
+        /**
+         * cycles between this instruction being scheduled and when its result
+         * can be consumed.
+         */
+        uint32_t latency;
 };
 
 struct schedule_node_child {
@@ -548,6 +560,13 @@ choose_instruction_to_schedule(struct choose_scoreboard *scoreboard,
                 } else if (prio < chosen_prio) {
                         continue;
                 }
+
+                if (n->delay > chosen->delay) {
+                        chosen = n;
+                        chosen_prio = prio;
+                } else if (n->delay < chosen->delay) {
+                        continue;
+                }
         }
 
         return chosen;
@@ -612,7 +631,7 @@ compute_delay(struct schedule_node *n)
                         if (!n->children[i].node->delay)
                                 compute_delay(n->children[i].node);
                         n->delay = MAX2(n->delay,
-                                        n->children[i].node->delay + 1);
+                                        n->children[i].node->delay + n->latency);
                 }
         }
 }
@@ -734,6 +753,33 @@ schedule_instructions(struct vc4_compile *c, struct simple_node *schedule_list)
         }
 }
 
+static uint32_t waddr_latency(uint32_t waddr)
+{
+        if (waddr < 32)
+                return 2;
+
+        /* Some huge number, really. */
+        if (waddr >= QPU_W_TMU0_S && waddr <= QPU_W_TMU1_B)
+                return 10;
+
+        switch(waddr) {
+        case QPU_W_SFU_RECIP:
+        case QPU_W_SFU_RECIPSQRT:
+        case QPU_W_SFU_EXP:
+        case QPU_W_SFU_LOG:
+                return 3;
+        default:
+                return 1;
+        }
+}
+
+static uint32_t
+instruction_latency(uint64_t inst)
+{
+        return MAX2(waddr_latency(QPU_GET_FIELD(inst, QPU_WADDR_ADD)),
+                    waddr_latency(QPU_GET_FIELD(inst, QPU_WADDR_MUL)));
+}
+
 void
 qpu_schedule_instructions(struct vc4_compile *c)
 {
@@ -761,6 +807,8 @@ qpu_schedule_instructions(struct vc4_compile *c)
                 struct schedule_node *n = rzalloc(mem_ctx, struct schedule_node);
 
                 n->inst = inst;
+                n->latency = instruction_latency(inst->inst);
+
                 remove_from_list(&inst->link);
                 insert_at_tail(&schedule_list, &n->link);
         }
