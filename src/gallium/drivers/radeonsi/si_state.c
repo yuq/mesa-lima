@@ -3032,8 +3032,10 @@ void si_init_config(struct si_context *sctx)
 			break;
 		}
 
-		/* Always use the default config when all backends are enabled. */
-		if (rb_mask && util_bitcount(rb_mask) >= num_rb) {
+		/* Always use the default config when all backends are enabled
+		 * (or when we failed to determine the enabled backends).
+		 */
+		if (!rb_mask || util_bitcount(rb_mask) >= num_rb) {
 			si_pm4_set_reg(pm4, R_028350_PA_SC_RASTER_CONFIG,
 				       raster_config);
 		} else {
