@@ -1344,52 +1344,74 @@ fs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
       break;
    }
 
+   case nir_intrinsic_load_ubo_indirect:
+      has_indirect = true;
    case nir_intrinsic_load_ubo: {
-      fs_reg surf_index = fs_reg(prog_data->binding_table.ubo_start +
-                                 (unsigned) instr->const_index[0]);
-      fs_reg packed_consts = fs_reg(this, glsl_type::float_type);
-      packed_consts.type = dest.type;
+      nir_const_value *const_index = nir_src_as_const_value(instr->src[0]);
+      fs_reg surf_index;
 
-      fs_reg const_offset_reg = fs_reg((unsigned) instr->const_index[1] & ~15);
-      emit(new(mem_ctx) fs_inst(FS_OPCODE_UNIFORM_PULL_CONSTANT_LOAD,
-                                packed_consts, surf_index, const_offset_reg));
-
-      for (unsigned i = 0; i < instr->num_components; i++) {
-         packed_consts.set_smear(instr->const_index[1] % 16 / 4 + i);
-
-         /* The std140 packing rules don't allow vectors to cross 16-byte
-          * boundaries, and a reg is 32 bytes.
+      if (const_index) {
+         surf_index = fs_reg(stage_prog_data->binding_table.ubo_start +
+                             const_index->u[0]);
+      } else {
+         /* The block index is not a constant. Evaluate the index expression
+          * per-channel and add the base UBO index; the generator will select
+          * a value from any live channel.
           */
-         assert(packed_consts.subreg_offset < 32);
+         surf_index = fs_reg(this, glsl_type::uint_type);
+         emit(ADD(surf_index, get_nir_src(instr->src[0]),
+                  fs_reg(stage_prog_data->binding_table.ubo_start)))
+            ->force_writemask_all = true;
 
-         fs_inst *inst = MOV(dest, packed_consts);
-         if (instr->has_predicate)
-               inst->predicate = BRW_PREDICATE_NORMAL;
-         emit(inst);
-
-         dest.reg_offset++;
+         /* Assume this may touch any UBO. It would be nice to provide
+          * a tighter bound, but the array information is already lowered away.
+          */
+         brw_mark_surface_used(prog_data,
+                               stage_prog_data->binding_table.ubo_start +
+                               shader_prog->NumUniformBlocks - 1);
       }
-      break;
-   }
 
-   case nir_intrinsic_load_ubo_indirect: {
-      fs_reg surf_index = fs_reg(prog_data->binding_table.ubo_start +
-                                 instr->const_index[0]);
-      /* Turn the byte offset into a dword offset. */
-      unsigned base_offset = instr->const_index[1] / 4;
-      fs_reg offset = fs_reg(this, glsl_type::int_type);
-      emit(SHR(offset, retype(get_nir_src(instr->src[0]), BRW_REGISTER_TYPE_D),
-               fs_reg(2)));
+      if (has_indirect) {
+         /* Turn the byte offset into a dword offset. */
+         fs_reg base_offset = fs_reg(this, glsl_type::int_type);
+         emit(SHR(base_offset, retype(get_nir_src(instr->src[1]),
+                                 BRW_REGISTER_TYPE_D),
+                  fs_reg(2)));
 
-      for (unsigned i = 0; i < instr->num_components; i++) {
-         exec_list list = VARYING_PULL_CONSTANT_LOAD(dest, surf_index,
-                                                     offset, base_offset + i);
-         fs_inst *last_inst = (fs_inst *) list.get_tail();
-         if (instr->has_predicate)
-               last_inst->predicate = BRW_PREDICATE_NORMAL;
-         emit(list);
+         unsigned vec4_offset = instr->const_index[0] / 4;
+         for (int i = 0; i < instr->num_components; i++) {
+            exec_list list = VARYING_PULL_CONSTANT_LOAD(offset(dest, i),
+                                                        surf_index, base_offset,
+                                                        vec4_offset + i);
 
-         dest.reg_offset++;
+            fs_inst *last_inst = (fs_inst *) list.get_tail();
+            if (instr->has_predicate)
+                  last_inst->predicate = BRW_PREDICATE_NORMAL;
+            emit(list);
+         }
+      } else {
+         fs_reg packed_consts = fs_reg(this, glsl_type::float_type);
+         packed_consts.type = dest.type;
+
+         fs_reg const_offset_reg((unsigned) instr->const_index[0] & ~15);
+         emit(FS_OPCODE_UNIFORM_PULL_CONSTANT_LOAD, packed_consts,
+              surf_index, const_offset_reg);
+
+         for (unsigned i = 0; i < instr->num_components; i++) {
+            packed_consts.set_smear(instr->const_index[0] % 16 / 4 + i);
+
+            /* The std140 packing rules don't allow vectors to cross 16-byte
+             * boundaries, and a reg is 32 bytes.
+             */
+            assert(packed_consts.subreg_offset < 32);
+
+            fs_inst *inst = MOV(dest, packed_consts);
+            if (instr->has_predicate)
+                  inst->predicate = BRW_PREDICATE_NORMAL;
+            emit(inst);
+
+            dest.reg_offset++;
+         }
       }
       break;
    }

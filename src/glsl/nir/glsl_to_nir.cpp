@@ -897,11 +897,11 @@ nir_visitor::visit(ir_expression *ir)
       }
       nir_intrinsic_instr *load = nir_intrinsic_instr_create(this->shader, op);
       load->num_components = ir->type->vector_elements;
-      load->const_index[0] = ir->operands[0]->as_constant()->value.u[0];
-      load->const_index[1] = const_index ? const_index->value.u[0] : 0; /* base offset */
-      load->const_index[2] = 1; /* number of vec4's */
+      load->const_index[0] = const_index ? const_index->value.u[0] : 0; /* base offset */
+      load->const_index[1] = 1; /* number of vec4's */
+      load->src[0] = evaluate_rvalue(ir->operands[0]);
       if (!const_index)
-         load->src[0] = evaluate_rvalue(ir->operands[1]);
+         load->src[1] = evaluate_rvalue(ir->operands[1]);
       add_instr(&load->instr, ir->type->vector_elements);
 
       /*
