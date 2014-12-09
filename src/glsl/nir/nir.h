@@ -1326,6 +1326,7 @@ typedef bool (*nir_foreach_src_cb)(nir_src *src, void *state);
 bool nir_foreach_dest(nir_instr *instr, nir_foreach_dest_cb cb, void *state);
 bool nir_foreach_src(nir_instr *instr, nir_foreach_src_cb cb, void *state);
 
+nir_const_value *nir_src_as_const_value(nir_src src);
 bool nir_srcs_equal(nir_src src1, nir_src src2);
 void nir_instr_rewrite_src(nir_instr *instr, nir_src *src, nir_src new_src);
 

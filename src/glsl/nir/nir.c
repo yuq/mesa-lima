@@ -1672,6 +1672,25 @@ nir_foreach_src(nir_instr *instr, nir_foreach_src_cb cb, void *state)
    return nir_foreach_dest(instr, visit_dest_indirect, &dest_state);
 }
 
+nir_const_value *
+nir_src_as_const_value(nir_src src)
+{
+   if (!src.is_ssa)
+      return NULL;
+
+   if (src.ssa->parent_instr->type != nir_instr_type_load_const)
+      return NULL;
+
+   nir_load_const_instr *load = nir_instr_as_load_const(src.ssa->parent_instr);
+
+   if (load->array_elems == 0)
+      return &load->value;
+   if (load->array_elems == 1)
+      return load->array;
+   else
+      return NULL;
+}
+
 bool
 nir_srcs_equal(nir_src src1, nir_src src2)
 {
