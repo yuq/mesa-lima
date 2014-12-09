@@ -260,8 +260,14 @@ process_waddr_deps(struct schedule_state *state, struct schedule_node *n,
                         break;
 
                 case QPU_W_VPM:
-                case QPU_W_VPMVCD_SETUP:
                         add_write_dep(state, &state->last_vpm, n);
+                        break;
+
+                case QPU_W_VPMVCD_SETUP:
+                        if (is_a)
+                                add_write_dep(state, &state->last_vpm_read, n);
+                        else
+                                add_write_dep(state, &state->last_vpm, n);
                         break;
 
                 case QPU_W_SFU_RECIP:
