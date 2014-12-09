@@ -459,6 +459,7 @@ blit_texture_to_pbo(struct gl_context *ctx,
 
    if (target == GL_TEXTURE_1D_ARRAY ||
        target == GL_TEXTURE_2D_ARRAY ||
+       target == GL_TEXTURE_CUBE_MAP ||
        target == GL_TEXTURE_CUBE_MAP_ARRAY ||
        target == GL_TEXTURE_3D) {
       perf_debug("%s: no support for multiple slices, fallback to CPU mapping "
