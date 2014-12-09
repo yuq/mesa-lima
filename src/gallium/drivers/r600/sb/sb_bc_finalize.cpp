@@ -46,22 +46,15 @@ int bc_finalizer::run() {
 	for (regions_vec::reverse_iterator I = rv.rbegin(), E = rv.rend(); I != E;
 			++I) {
 		region_node *r = *I;
-		bool is_if = false;
+
 		assert(r);
 
-		assert(r->first);
-		if (r->first->is_container()) {
-			container_node *repdep1 = static_cast<container_node*>(r->first);
-			assert(repdep1->is_depart() || repdep1->is_repeat());
-			if_node *n_if = static_cast<if_node*>(repdep1->first);
-			if (n_if && n_if->is_if())
-				is_if = true;
-		}
+		bool loop = r->is_loop();
 
-		if (is_if)
-			finalize_if(r);
-		else
+		if (loop)
 			finalize_loop(r);
+		else
+			finalize_if(r);
 
 		r->expand();
 	}
@@ -119,33 +112,16 @@ void bc_finalizer::finalize_loop(region_node* r) {
 
 	cf_node *loop_start = sh.create_cf(CF_OP_LOOP_START_DX10);
 	cf_node *loop_end = sh.create_cf(CF_OP_LOOP_END);
-	bool has_instr = false;
 
-	if (!r->is_loop()) {
-		for (depart_vec::iterator I = r->departs.begin(), E = r->departs.end();
-		     I != E; ++I) {
-			depart_node *dep = *I;
-			if (!dep->empty()) {
-				has_instr = true;
-				break;
-			}
-		}
-	} else
-		has_instr = true;
-
-	if (has_instr) {
-		loop_start->jump_after(loop_end);
-		loop_end->jump_after(loop_start);
-	}
+	loop_start->jump_after(loop_end);
+	loop_end->jump_after(loop_start);
 
 	for (depart_vec::iterator I = r->departs.begin(), E = r->departs.end();
 			I != E; ++I) {
 		depart_node *dep = *I;
-		if (has_instr) {
-			cf_node *loop_break = sh.create_cf(CF_OP_LOOP_BREAK);
-			loop_break->jump(loop_end);
-			dep->push_back(loop_break);
-		}
+		cf_node *loop_break = sh.create_cf(CF_OP_LOOP_BREAK);
+		loop_break->jump(loop_end);
+		dep->push_back(loop_break);
 		dep->expand();
 	}
 
@@ -161,10 +137,8 @@ void bc_finalizer::finalize_loop(region_node* r) {
 		rep->expand();
 	}
 
-	if (has_instr) {
-		r->push_front(loop_start);
-		r->push_back(loop_end);
-	}
+	r->push_front(loop_start);
+	r->push_back(loop_end);
 }
 
 void bc_finalizer::finalize_if(region_node* r) {
