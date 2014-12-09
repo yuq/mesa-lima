@@ -117,10 +117,10 @@ vc4_alloc_reg_set(struct vc4_context *vc4)
 
         vc4->reg_class_any = ra_alloc_reg_class(vc4->regs);
         for (uint32_t i = 0; i < ARRAY_SIZE(vc4_regs); i++) {
-                /* Reserve r3 for now, since we're using it for spilling-like
-                 * operations in vc4_qpu_emit.c
+                /* Reserve rb31 for spilling fixup_raddr_conflict() in
+                 * vc4_qpu_emit.c
                  */
-                if (vc4_regs[i].mux == QPU_MUX_R3)
+                if (vc4_regs[i].mux == QPU_MUX_B && vc4_regs[i].addr == 31)
                         continue;
 
                 /* R4 can't be written as a general purpose register. (it's
