@@ -116,5 +116,19 @@
       <param name="texture" type="GLuint" />
    </function>
 
+   <function name="GetTextureLevelParameterfv" offset="assign">
+      <param name="texture" type="GLuint" />
+      <param name="level" type="GLint" />
+      <param name="pname" type="GLenum" />
+      <param name="params" type="GLfloat *" />
+   </function>
+
+   <function name="GetTextureLevelParameteriv" offset="assign">
+      <param name="texture" type="GLuint" />
+      <param name="level" type="GLint" />
+      <param name="pname" type="GLenum" />
+      <param name="params" type="GLint *" />
+   </function>
+
 </category>
 </OpenGLAPI>
