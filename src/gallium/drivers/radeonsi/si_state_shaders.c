@@ -67,7 +67,8 @@ static void si_shader_es(struct si_shader *shader)
 		       S_00B328_VGPR_COMP_CNT(vgpr_comp_cnt) |
 		       S_00B328_DX10_CLAMP(shader->dx10_clamp_mode));
 	si_pm4_set_reg(pm4, R_00B32C_SPI_SHADER_PGM_RSRC2_ES,
-		       S_00B32C_USER_SGPR(num_user_sgprs));
+		       S_00B32C_USER_SGPR(num_user_sgprs) |
+		       S_00B32C_SCRATCH_EN(shader->scratch_bytes_per_wave > 0));
 }
 
 static void si_shader_gs(struct si_shader *shader)
@@ -136,7 +137,8 @@ static void si_shader_gs(struct si_shader *shader)
 		       S_00B228_SGPRS((num_sgprs - 1) / 8) |
 		       S_00B228_DX10_CLAMP(shader->dx10_clamp_mode));
 	si_pm4_set_reg(pm4, R_00B22C_SPI_SHADER_PGM_RSRC2_GS,
-		       S_00B22C_USER_SGPR(num_user_sgprs));
+		       S_00B22C_USER_SGPR(num_user_sgprs) |
+		       S_00B22C_SCRATCH_EN(shader->scratch_bytes_per_wave > 0));
 }
 
 static void si_shader_vs(struct si_shader *shader)
@@ -216,7 +218,8 @@ static void si_shader_vs(struct si_shader *shader)
 		       S_00B12C_SO_BASE1_EN(!!shader->selector->so.stride[1]) |
 		       S_00B12C_SO_BASE2_EN(!!shader->selector->so.stride[2]) |
 		       S_00B12C_SO_BASE3_EN(!!shader->selector->so.stride[3]) |
-		       S_00B12C_SO_EN(!!shader->selector->so.num_outputs));
+		       S_00B12C_SO_EN(!!shader->selector->so.num_outputs) |
+		       S_00B12C_SCRATCH_EN(shader->scratch_bytes_per_wave > 0));
 	if (window_space)
 		si_pm4_set_reg(pm4, R_028818_PA_CL_VTE_CNTL,
 			       S_028818_VTX_XY_FMT(1) | S_028818_VTX_Z_FMT(1));
@@ -311,7 +314,8 @@ static void si_shader_ps(struct si_shader *shader)
 		       S_00B028_DX10_CLAMP(shader->dx10_clamp_mode));
 	si_pm4_set_reg(pm4, R_00B02C_SPI_SHADER_PGM_RSRC2_PS,
 		       S_00B02C_EXTRA_LDS_SIZE(shader->lds_size) |
-		       S_00B02C_USER_SGPR(num_user_sgprs));
+		       S_00B02C_USER_SGPR(num_user_sgprs) |
+		       S_00B32C_SCRATCH_EN(shader->scratch_bytes_per_wave > 0));
 }
 
 static void si_shader_init_pm4_state(struct si_shader *shader)
@@ -710,6 +714,119 @@ static void si_init_gs_rings(struct si_context *sctx)
 			   false, false, 0, 0);
 }
 
+/**
+ * @returns 1 if \p sel has been updated to use a new scratch buffer and 0
+ *          otherwise.
+ */
+static unsigned si_update_scratch_buffer(struct si_context *sctx,
+				    struct si_shader_selector *sel)
+{
+	struct si_shader *shader;
+	uint64_t scratch_va = sctx->scratch_buffer->gpu_address;
+	unsigned char *ptr;
+
+	if (!sel)
+		return 0;
+
+	shader = sel->current;
+
+	/* This shader doesn't need a scratch buffer */
+	if (shader->scratch_bytes_per_wave == 0)
+		return 0;
+
+	/* This shader is already configured to use the current
+	 * scratch buffer. */
+	if (shader->scratch_bo == sctx->scratch_buffer)
+		return 0;
+
+	assert(sctx->scratch_buffer);
+
+	si_shader_apply_scratch_relocs(sctx, shader, scratch_va);
+
+	/* Replace the shader bo with a new bo that has the relocs applied. */
+	r600_resource_reference(&shader->bo, NULL);
+	shader->bo = si_resource_create_custom(&sctx->screen->b.b, PIPE_USAGE_IMMUTABLE,
+					       shader->binary.code_size);
+	ptr = sctx->screen->b.ws->buffer_map(shader->bo->cs_buf, NULL, PIPE_TRANSFER_WRITE);
+	util_memcpy_cpu_to_le32(ptr, shader->binary.code, shader->binary.code_size);
+	sctx->screen->b.ws->buffer_unmap(shader->bo->cs_buf);
+
+	/* Update the shader state to use the new shader bo. */
+	si_shader_init_pm4_state(shader);
+
+	r600_resource_reference(&shader->scratch_bo, sctx->scratch_buffer);
+
+	return 1;
+}
+
+static unsigned si_get_current_scratch_buffer_size(struct si_context *sctx)
+{
+	if (!sctx->scratch_buffer)
+		return 0;
+
+	return sctx->scratch_buffer->b.b.width0;
+}
+
+static unsigned si_get_scratch_buffer_bytes_per_wave(struct si_context *sctx,
+					struct si_shader_selector *sel)
+{
+	if (!sel)
+		return 0;
+
+	return sel->current->scratch_bytes_per_wave;
+}
+
+static unsigned si_get_max_scratch_bytes_per_wave(struct si_context *sctx)
+{
+
+	return MAX3(si_get_scratch_buffer_bytes_per_wave(sctx, sctx->ps_shader),
+			si_get_scratch_buffer_bytes_per_wave(sctx, sctx->gs_shader),
+			si_get_scratch_buffer_bytes_per_wave(sctx, sctx->vs_shader));
+}
+
+static void si_update_spi_tmpring_size(struct si_context *sctx)
+{
+	unsigned current_scratch_buffer_size =
+		si_get_current_scratch_buffer_size(sctx);
+	unsigned scratch_bytes_per_wave =
+		si_get_max_scratch_bytes_per_wave(sctx);
+	unsigned scratch_needed_size = scratch_bytes_per_wave *
+		sctx->scratch_waves;
+
+	if (scratch_needed_size > 0) {
+
+		if (scratch_needed_size > current_scratch_buffer_size) {
+			/* Create a bigger scratch buffer */
+			pipe_resource_reference(
+					(struct pipe_resource**)&sctx->scratch_buffer,
+					NULL);
+
+			sctx->scratch_buffer =
+					si_resource_create_custom(&sctx->screen->b.b,
+	                                PIPE_USAGE_DEFAULT, scratch_needed_size);
+		}
+
+		/* Update the shaders, so they are using the latest scratch.  The
+		 * scratch buffer may have been changed since these shaders were
+		 * last used, so we still need to try to update them, even if
+		 * they require scratch buffers smaller than the current size.
+		 */
+		if (si_update_scratch_buffer(sctx, sctx->ps_shader))
+			si_pm4_bind_state(sctx, ps, sctx->ps_shader->current->pm4);
+		if (si_update_scratch_buffer(sctx, sctx->gs_shader))
+			si_pm4_bind_state(sctx, gs, sctx->gs_shader->current->pm4);
+		if (si_update_scratch_buffer(sctx, sctx->vs_shader))
+			si_pm4_bind_state(sctx, vs, sctx->vs_shader->current->pm4);
+	}
+
+	/* The LLVM shader backend should be reporting aligned scratch_sizes. */
+	assert((scratch_needed_size & ~0x3FF) == scratch_needed_size &&
+		"scratch size should already be aligned correctly.");
+
+	sctx->spi_tmpring_size = S_0286E8_WAVES(sctx->scratch_waves) |
+				S_0286E8_WAVESIZE(scratch_bytes_per_wave >> 10);
+}
+
 void si_update_shaders(struct si_context *sctx)
 {
 	struct pipe_context *ctx = (struct pipe_context*)sctx;
@@ -784,6 +901,11 @@ void si_update_shaders(struct si_context *sctx)
 		sctx->sprite_coord_enable = rs->sprite_coord_enable;
 		sctx->flatshade = rs->flatshade;
 		si_update_spi_map(sctx);
+	}
+
+	if (si_pm4_state_changed(sctx, ps) || si_pm4_state_changed(sctx, vs) ||
+	    si_pm4_state_changed(sctx, gs)) {
+		si_update_spi_tmpring_size(sctx);
 	}
 
 	if (sctx->ps_db_shader_control != sctx->ps_shader->current->db_shader_control) {

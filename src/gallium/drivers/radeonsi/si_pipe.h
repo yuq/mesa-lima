@@ -173,6 +173,7 @@ struct si_context {
 	struct si_buffer_resources	const_buffers[SI_NUM_SHADERS];
 	struct si_buffer_resources	rw_buffers[SI_NUM_SHADERS];
 	struct si_textures_info		samplers[SI_NUM_SHADERS];
+	struct r600_resource		*scratch_buffer;
 	struct r600_resource		*border_color_table;
 	unsigned			border_color_offset;
 
@@ -220,6 +221,11 @@ struct si_context {
 	int			last_prim;
 	int			last_multi_vgt_param;
 	int			last_rast_prim;
+
+	/* Scratch buffer */
+	boolean                 emit_scratch_reloc;
+	unsigned		scratch_waves;
+	unsigned		spi_tmpring_size;
 };
 
 /* si_blit.c */

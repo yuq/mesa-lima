@@ -42,12 +42,6 @@
 #define NUM_USER_SGPRS 4
 #endif
 
-static const char *scratch_rsrc_dword0_symbol =
-	"SCRATCH_RSRC_DWORD0";
-
-static const char *scratch_rsrc_dword1_symbol =
-	"SCRATCH_RSRC_DWORD1";
-
 struct si_compute {
 	struct si_context *ctx;
 
@@ -67,8 +61,6 @@ struct si_compute {
 #endif
 };
 
-static void apply_scratch_relocs(const struct si_screen *sscreen,
-			struct si_shader *shader, uint64_t scratch_va);
 static void init_scratch_buffer(struct si_context *sctx, struct si_compute *program)
 {
 	unsigned scratch_bytes = 0;
@@ -83,7 +75,7 @@ static void init_scratch_buffer(struct si_context *sctx, struct si_compute *prog
 				program->shader.binary.global_symbol_offsets[i];
 		unsigned scratch_bytes_needed;
 
-		si_shader_binary_read_config(&program->shader.binary,
+		si_shader_binary_read_config(sctx->screen,
 						&program->shader, offset);
 		scratch_bytes_needed = program->shader.scratch_bytes_per_wave;
 		scratch_bytes = MAX2(scratch_bytes, scratch_bytes_needed);
@@ -106,8 +98,8 @@ static void init_scratch_buffer(struct si_context *sctx, struct si_compute *prog
 	program->shader.scratch_bytes_per_wave = scratch_bytes;
 
 	/* Patch the shader with the scratch buffer address. */
-	apply_scratch_relocs(sctx->screen, &program->shader, scratch_buffer_va);
-
+	si_shader_apply_scratch_relocs(sctx,
+				&program->shader, scratch_buffer_va);
 }
 
 static void *si_create_compute_state(
@@ -231,30 +223,6 @@ static unsigned compute_num_waves_for_scratch(
 	return scratch_waves;
 }
 
-static void apply_scratch_relocs(const struct si_screen *sscreen,
-			struct si_shader *shader, uint64_t scratch_va) {
-	unsigned i;
-	uint32_t scratch_rsrc_dword0 = scratch_va & 0xffffffff;
-	uint32_t scratch_rsrc_dword1 =
-		S_008F04_BASE_ADDRESS_HI(scratch_va >> 32)
-		|  S_008F04_STRIDE(shader->scratch_bytes_per_wave / 64);
-
-	if (!shader->binary.reloc_count) {
-		return;
-	}
-
-	for (i = 0 ; i < shader->binary.reloc_count; i++) {
-		const struct radeon_shader_reloc *reloc = &shader->binary.relocs[i];
-		if (!strcmp(scratch_rsrc_dword0_symbol, reloc->name)) {
-			util_memcpy_cpu_to_le32(shader->binary.code + reloc->offset,
-				&scratch_rsrc_dword0, 4);
-		} else if (!strcmp(scratch_rsrc_dword1_symbol, reloc->name)) {
-			util_memcpy_cpu_to_le32(shader->binary.code + reloc->offset,
-				&scratch_rsrc_dword1, 4);
-		}
-	}
-}
-
 static void si_launch_grid(
 		struct pipe_context *ctx,
 		const uint *block_layout, const uint *grid_layout,
@@ -299,7 +267,7 @@ static void si_launch_grid(
 
 #if HAVE_LLVM >= 0x0306
 	/* Read the config information */
-	si_shader_binary_read_config(&program->shader.binary, shader, pc);
+	si_shader_binary_read_config(sctx->screen, shader, pc);
 #endif
 
 	/* Upload the kernel arguments */
@@ -510,13 +478,15 @@ static void si_delete_compute_state(struct pipe_context *ctx, void* state){
 		LLVMContextDispose(program->llvm_ctx);
 	}
 #else
+	FREE(program->shader.binary.config);
+	FREE(program->shader.binary.rodata);
+	FREE(program->shader.binary.global_symbol_offsets);
 	si_shader_destroy(ctx, &program->shader);
 #endif
 
 	pipe_resource_reference(
 		(struct pipe_resource **)&program->input_buffer, NULL);
 
-	radeon_shader_binary_free_members(&program->shader.binary, true);
 	FREE(program);
 }
 

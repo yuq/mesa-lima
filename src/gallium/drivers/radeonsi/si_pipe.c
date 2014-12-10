@@ -46,6 +46,7 @@ static void si_destroy_context(struct pipe_context *context)
 	pipe_resource_reference(&sctx->gsvs_ring, NULL);
 	pipe_resource_reference(&sctx->null_const_buf.buffer, NULL);
 	r600_resource_reference(&sctx->border_color_table, NULL);
+	r600_resource_reference(&sctx->scratch_buffer, NULL);
 
 	si_pm4_free_state(sctx, sctx->init_config, ~0);
 	si_pm4_delete_state(sctx, gs_rings, sctx->gs_rings);
@@ -157,6 +158,12 @@ static struct pipe_context *si_create_context(struct pipe_screen *screen, void *
 		sctx->b.clear_buffer(&sctx->b.b, sctx->null_const_buf.buffer, 0,
 				     sctx->null_const_buf.buffer->width0, 0, false);
 	}
+
+	/* XXX: This is the maximum value allowed.  I'm not sure how to compute
+	 * this for non-cs shaders.  Using the wrong value here can result in
+	 * GPU lockups, but the maximum value seems to always work.
+	 */
+	sctx->scratch_waves = 32 * sscreen->b.info.max_compute_units;
 
 	return &sctx->b.b;
 fail:
@@ -525,7 +532,7 @@ struct pipe_screen *radeonsi_screen_create(struct radeon_winsys *ws)
 	r600_target = radeon_llvm_get_r600_target(triple);
 	sscreen->tm = LLVMCreateTargetMachine(r600_target, triple,
 				r600_get_llvm_processor_name(sscreen->b.family),
-				"+DumpCode", LLVMCodeGenLevelDefault, LLVMRelocDefault,
+				"+DumpCode,+vgpr-spilling", LLVMCodeGenLevelDefault, LLVMRelocDefault,
 				LLVMCodeModelDefault);
 #endif
 	return &sscreen->b.b;

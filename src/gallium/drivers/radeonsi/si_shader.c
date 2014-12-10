@@ -32,6 +32,7 @@
 #include "gallivm/lp_bld_logic.h"
 #include "gallivm/lp_bld_arit.h"
 #include "gallivm/lp_bld_flow.h"
+#include "radeon/r600_cs.h"
 #include "radeon/radeon_llvm.h"
 #include "radeon/radeon_elf_util.h"
 #include "radeon/radeon_llvm_emit.h"
@@ -45,6 +46,12 @@
 #include "sid.h"
 
 #include <errno.h>
+
+static const char *scratch_rsrc_dword0_symbol =
+	"SCRATCH_RSRC_DWORD0";
+
+static const char *scratch_rsrc_dword1_symbol =
+	"SCRATCH_RSRC_DWORD1";
 
 struct si_shader_output_values
 {
@@ -2517,19 +2524,20 @@ static void preload_ring_buffers(struct si_shader_context *si_shader_ctx)
 	}
 }
 
-void si_shader_binary_read_config(const struct radeon_shader_binary *binary,
+void si_shader_binary_read_config(const struct si_screen *sscreen,
 				struct si_shader *shader,
 				unsigned symbol_offset)
 {
 	unsigned i;
 	const unsigned char *config =
-		radeon_shader_binary_config_start(binary, symbol_offset);
+		radeon_shader_binary_config_start(&shader->binary,
+						symbol_offset);
 
 	/* XXX: We may be able to emit some of these values directly rather than
 	 * extracting fields to be emitted later.
 	 */
 
-	for (i = 0; i < binary->config_size_per_symbol; i+= 8) {
+	for (i = 0; i < shader->binary.config_size_per_symbol; i+= 8) {
 		unsigned reg = util_le32_to_cpu(*(uint32_t*)(config + i));
 		unsigned value = util_le32_to_cpu(*(uint32_t*)(config + i + 4));
 		switch (reg) {
@@ -2549,6 +2557,7 @@ void si_shader_binary_read_config(const struct radeon_shader_binary *binary,
 		case R_0286CC_SPI_PS_INPUT_ENA:
 			shader->spi_ps_input_ena = value;
 			break;
+		case R_0286E8_SPI_TMPRING_SIZE:
 		case R_00B860_COMPUTE_TMPRING_SIZE:
 			/* WAVESIZE is in units of 256 dwords. */
 			shader->scratch_bytes_per_wave =
@@ -2558,6 +2567,29 @@ void si_shader_binary_read_config(const struct radeon_shader_binary *binary,
 			fprintf(stderr, "Warning: Compiler emitted unknown "
 				"config register: 0x%x\n", reg);
 			break;
+		}
+	}
+}
+
+void si_shader_apply_scratch_relocs(struct si_context *sctx,
+			struct si_shader *shader,
+			uint64_t scratch_va)
+{
+	unsigned i;
+	uint32_t scratch_rsrc_dword0 = scratch_va & 0xffffffff;
+	uint32_t scratch_rsrc_dword1 =
+		S_008F04_BASE_ADDRESS_HI(scratch_va >> 32)
+		|  S_008F04_STRIDE(shader->scratch_bytes_per_wave / 64);
+
+	for (i = 0 ; i < shader->binary.reloc_count; i++) {
+		const struct radeon_shader_reloc *reloc =
+					&shader->binary.relocs[i];
+		if (!strcmp(scratch_rsrc_dword0_symbol, reloc->name)) {
+			util_memcpy_cpu_to_le32(shader->binary.code + reloc->offset,
+			&scratch_rsrc_dword0, 4);
+		} else if (!strcmp(scratch_rsrc_dword1_symbol, reloc->name)) {
+			util_memcpy_cpu_to_le32(shader->binary.code + reloc->offset,
+			&scratch_rsrc_dword1, 4);
 		}
 	}
 }
@@ -2582,7 +2614,7 @@ int si_shader_binary_read(struct si_screen *sscreen,
 		}
 	}
 
-	si_shader_binary_read_config(binary, shader, 0);
+	si_shader_binary_read_config(sscreen, shader, 0);
 
 	/* copy new shader */
 	code_size = binary->code_size + binary->rodata_size;
@@ -2610,18 +2642,24 @@ int si_compile_llvm(struct si_screen *sscreen, struct si_shader *shader,
 							LLVMModuleRef mod)
 {
 	int r = 0;
-	struct radeon_shader_binary binary;
 	bool dump = r600_can_dump_shader(&sscreen->b,
 			shader->selector ? shader->selector->tokens : NULL);
-	memset(&binary, 0, sizeof(binary));
-	r = radeon_llvm_compile(mod, &binary,
+	r = radeon_llvm_compile(mod, &shader->binary,
 		r600_get_llvm_processor_name(sscreen->b.family), dump, sscreen->tm);
 
 	if (r) {
 		return r;
 	}
-	r = si_shader_binary_read(sscreen, shader, &binary);
-	radeon_shader_binary_free_members(&binary, true);
+	r = si_shader_binary_read(sscreen, shader, &shader->binary);
+
+	FREE(shader->binary.config);
+	FREE(shader->binary.rodata);
+	FREE(shader->binary.global_symbol_offsets);
+	if (shader->scratch_bytes_per_wave == 0) {
+		FREE(shader->binary.code);
+		FREE(shader->binary.relocs);
+		memset(&shader->binary, 0, sizeof(shader->binary));
+	}
 	return r;
 }
 
@@ -2861,4 +2899,7 @@ void si_shader_destroy(struct pipe_context *ctx, struct si_shader *shader)
 		r600_resource_reference(&shader->scratch_bo, NULL);
 
 	r600_resource_reference(&shader->bo, NULL);
+
+	FREE(shader->binary.code);
+	FREE(shader->binary.relocs);
 }

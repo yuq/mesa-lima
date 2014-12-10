@@ -571,6 +571,20 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 	if (sctx->b.flags)
 		sctx->atoms.s.cache_flush->dirty = true;
 
+	if (sctx->emit_scratch_reloc) {
+		struct radeon_winsys_cs *cs = sctx->b.rings.gfx.cs;
+		r600_write_context_reg(cs, R_0286E8_SPI_TMPRING_SIZE,
+				sctx->spi_tmpring_size);
+
+		if (sctx->scratch_buffer) {
+			 r600_context_bo_reloc(&sctx->b, &sctx->b.rings.gfx,
+				sctx->scratch_buffer, RADEON_USAGE_READWRITE,
+				RADEON_PRIO_SHADER_RESOURCE_RW);
+
+		}
+		sctx->emit_scratch_reloc = false;
+	}
+
 	si_need_cs_space(sctx, 0, TRUE);
 
 	/* Emit states. */

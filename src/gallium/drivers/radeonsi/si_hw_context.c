@@ -160,4 +160,5 @@ void si_begin_new_cs(struct si_context *ctx)
 	ctx->last_prim = -1;
 	ctx->last_multi_vgt_param = -1;
 	ctx->last_rast_prim = -1;
+	ctx->emit_scratch_reloc = true;
 }
