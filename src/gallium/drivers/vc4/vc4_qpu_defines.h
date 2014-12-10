@@ -147,8 +147,11 @@ enum qpu_mux {
         QPU_MUX_A,
         QPU_MUX_B,
 
-        /* non-hardware mux values */
-        QPU_MUX_IMM,
+        /**
+         * Non-hardware mux value, stores a small immediate field to be
+         * programmed into raddr_b in the qpu_reg.index.
+         */
+        QPU_MUX_SMALL_IMM,
 };
 
 enum qpu_cond {

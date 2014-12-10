@@ -204,16 +204,22 @@ qir_reads_r4(struct qinst *inst)
 static void
 qir_print_reg(struct vc4_compile *c, struct qreg reg)
 {
-        const char *files[] = {
+        static const char *files[] = {
                 [QFILE_TEMP] = "t",
                 [QFILE_VARY] = "v",
                 [QFILE_UNIF] = "u",
         };
 
-        if (reg.file == QFILE_NULL)
+        if (reg.file == QFILE_NULL) {
                 fprintf(stderr, "null");
-        else
+        } else if (reg.file == QFILE_SMALL_IMM) {
+                if ((int)reg.index >= -16 && (int)reg.index <= 15)
+                        fprintf(stderr, "%d", reg.index);
+                else
+                        fprintf(stderr, "%f", uif(reg.index));
+        } else {
                 fprintf(stderr, "%s%d", files[reg.file], reg.index);
+        }
 
         if (reg.file == QFILE_UNIF &&
             c->uniform_contents[reg.index] == QUNIFORM_CONSTANT) {
@@ -386,6 +392,7 @@ qir_optimize(struct vc4_compile *c)
                 OPTPASS(qir_opt_cse);
                 OPTPASS(qir_opt_copy_propagation);
                 OPTPASS(qir_opt_dead_code);
+                OPTPASS(qir_opt_small_immediates);
 
                 if (!progress)
                         break;

@@ -38,6 +38,12 @@ enum qfile {
         QFILE_TEMP,
         QFILE_VARY,
         QFILE_UNIF,
+
+        /**
+         * Stores an immediate value in the index field that can be turned
+         * into a small immediate field by qpu_encode_small_immediate().
+         */
+        QFILE_SMALL_IMM,
 };
 
 struct qreg {
@@ -382,6 +388,7 @@ bool qir_opt_algebraic(struct vc4_compile *c);
 bool qir_opt_copy_propagation(struct vc4_compile *c);
 bool qir_opt_cse(struct vc4_compile *c);
 bool qir_opt_dead_code(struct vc4_compile *c);
+bool qir_opt_small_immediates(struct vc4_compile *c);
 
 void qpu_schedule_instructions(struct vc4_compile *c);
 

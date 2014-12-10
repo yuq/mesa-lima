@@ -291,9 +291,9 @@ print_alu_src(uint64_t inst, uint32_t mux)
                 else if (si <= 39)
                         fprintf(stderr, "%.1f", (float)(1 << (si - 32)));
                 else if (si <= 47)
-                        fprintf(stderr, "%f", 1.0f / (256 / (si - 39)));
+                        fprintf(stderr, "%f", 1.0f / (1 << (48 - si)));
                 else
-                        fprintf(stderr, "???");
+                        fprintf(stderr, "<bad imm %d>", si);
         } else if (raddr <= 31)
                 fprintf(stderr, "r%s%d", file, raddr);
         else {

@@ -49,6 +49,7 @@ _reads_reg(uint64_t inst, uint32_t r, bool ignore_a, bool ignore_b)
                         return true;
 
                 if (!ignore_b &&
+                    QPU_GET_FIELD(inst, QPU_SIG) != QPU_SIG_SMALL_IMM &&
                     src_regs[i].mux == QPU_MUX_B &&
                     (QPU_GET_FIELD(inst, QPU_RADDR_B) == r))
                         return true;

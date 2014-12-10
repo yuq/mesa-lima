@@ -74,11 +74,15 @@ swap_file(struct qpu_reg *src)
         switch (src->addr) {
         case QPU_R_UNIF:
         case QPU_R_VARY:
-                if (src->mux == QPU_MUX_A)
-                        src->mux = QPU_MUX_B;
-                else
-                        src->mux = QPU_MUX_A;
-                return true;
+                if (src->mux == QPU_MUX_SMALL_IMM) {
+                        return false;
+                } else {
+                        if (src->mux == QPU_MUX_A)
+                                src->mux = QPU_MUX_B;
+                        else
+                                src->mux = QPU_MUX_A;
+                        return true;
+                }
 
         default:
                 return false;
@@ -100,16 +104,20 @@ fixup_raddr_conflict(struct vc4_compile *c,
                      struct qpu_reg *src0, struct qpu_reg *src1,
                      bool r3_live)
 {
-        if ((src0->mux != QPU_MUX_A && src0->mux != QPU_MUX_B) ||
-            src0->mux != src1->mux ||
-            src0->addr == src1->addr) {
+        uint32_t mux0 = src0->mux == QPU_MUX_SMALL_IMM ? QPU_MUX_B : src0->mux;
+        uint32_t mux1 = src1->mux == QPU_MUX_SMALL_IMM ? QPU_MUX_B : src1->mux;
+
+        if (mux0 <= QPU_MUX_R5 ||
+            mux0 != mux1 ||
+            (src0->addr == src1->addr &&
+             src0->mux == src1->mux)) {
                 return false;
         }
 
         if (swap_file(src0) || swap_file(src1))
                 return false;
 
-        if (src0->mux == QPU_MUX_A) {
+        if (mux0 == QPU_MUX_A) {
                 /* If we're conflicting over the A regfile, then we can just
                  * use the reserved rb31.
                  */
@@ -233,6 +241,14 @@ vc4_generate_code(struct vc4_context *vc4, struct vc4_compile *c)
                         case QFILE_VARY:
                                 src[i] = qpu_vary();
                                 break;
+                        case QFILE_SMALL_IMM:
+                                src[i].mux = QPU_MUX_SMALL_IMM;
+                                src[i].addr = qpu_encode_small_immediate(qinst->src[i].index);
+                                /* This should only have returned a valid
+                                 * small immediate field, not ~0 for failure.
+                                 */
+                                assert(src[i].addr <= 47);
+                                break;
                         }
                 }
 
@@ -246,6 +262,7 @@ vc4_generate_code(struct vc4_context *vc4, struct vc4_compile *c)
                         break;
                 case QFILE_VARY:
                 case QFILE_UNIF:
+                case QFILE_SMALL_IMM:
                         assert(!"not reached");
                         break;
                 }

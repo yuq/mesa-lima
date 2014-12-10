@@ -26,6 +26,9 @@
 #include "vc4_qir.h"
 #include "vc4_qpu.h"
 
+#define QPU_MUX(mux, muxfield)                                  \
+        QPU_SET_FIELD(mux != QPU_MUX_SMALL_IMM ? mux : QPU_MUX_B, muxfield)
+
 static uint64_t
 set_src_raddr(uint64_t inst, struct qpu_reg src)
 {
@@ -36,9 +39,21 @@ set_src_raddr(uint64_t inst, struct qpu_reg src)
         }
 
         if (src.mux == QPU_MUX_B) {
-                assert(QPU_GET_FIELD(inst, QPU_RADDR_B) == QPU_R_NOP ||
-                       QPU_GET_FIELD(inst, QPU_RADDR_B) == src.addr);
+                assert((QPU_GET_FIELD(inst, QPU_RADDR_B) == QPU_R_NOP ||
+                        QPU_GET_FIELD(inst, QPU_RADDR_B) == src.addr) &&
+                       QPU_GET_FIELD(inst, QPU_SIG) != QPU_SIG_SMALL_IMM);
                 return QPU_UPDATE_FIELD(inst, src.addr, QPU_RADDR_B);
+        }
+
+        if (src.mux == QPU_MUX_SMALL_IMM) {
+                if (QPU_GET_FIELD(inst, QPU_SIG) == QPU_SIG_SMALL_IMM) {
+                        assert(QPU_GET_FIELD(inst, QPU_RADDR_B) == src.addr);
+                } else {
+                        inst = qpu_set_sig(inst, QPU_SIG_SMALL_IMM);
+                        assert(QPU_GET_FIELD(inst, QPU_RADDR_B) == QPU_R_NOP);
+                }
+                return ((inst & ~QPU_RADDR_B_MASK) |
+                        QPU_SET_FIELD(src.addr, QPU_RADDR_B));
         }
 
         return inst;
@@ -101,15 +116,15 @@ qpu_a_MOV(struct qpu_reg dst, struct qpu_reg src)
 {
         uint64_t inst = 0;
 
+        inst |= QPU_SET_FIELD(QPU_SIG_NONE, QPU_SIG);
         inst |= QPU_SET_FIELD(QPU_A_OR, QPU_OP_ADD);
         inst |= QPU_SET_FIELD(QPU_R_NOP, QPU_RADDR_A);
         inst |= QPU_SET_FIELD(QPU_R_NOP, QPU_RADDR_B);
         inst |= qpu_a_dst(dst);
         inst |= QPU_SET_FIELD(QPU_COND_ALWAYS, QPU_COND_ADD);
-        inst |= QPU_SET_FIELD(src.mux, QPU_ADD_A);
-        inst |= QPU_SET_FIELD(src.mux, QPU_ADD_B);
+        inst |= QPU_MUX(src.mux, QPU_ADD_A);
+        inst |= QPU_MUX(src.mux, QPU_ADD_B);
         inst = set_src_raddr(inst, src);
-        inst |= QPU_SET_FIELD(QPU_SIG_NONE, QPU_SIG);
         inst |= QPU_SET_FIELD(QPU_W_NOP, QPU_WADDR_MUL);
 
         return inst;
@@ -120,15 +135,15 @@ qpu_m_MOV(struct qpu_reg dst, struct qpu_reg src)
 {
         uint64_t inst = 0;
 
+        inst |= QPU_SET_FIELD(QPU_SIG_NONE, QPU_SIG);
         inst |= QPU_SET_FIELD(QPU_M_V8MIN, QPU_OP_MUL);
         inst |= QPU_SET_FIELD(QPU_R_NOP, QPU_RADDR_A);
         inst |= QPU_SET_FIELD(QPU_R_NOP, QPU_RADDR_B);
         inst |= qpu_m_dst(dst);
         inst |= QPU_SET_FIELD(QPU_COND_ALWAYS, QPU_COND_MUL);
-        inst |= QPU_SET_FIELD(src.mux, QPU_MUL_A);
-        inst |= QPU_SET_FIELD(src.mux, QPU_MUL_B);
+        inst |= QPU_MUX(src.mux, QPU_MUL_A);
+        inst |= QPU_MUX(src.mux, QPU_MUL_B);
         inst = set_src_raddr(inst, src);
-        inst |= QPU_SET_FIELD(QPU_SIG_NONE, QPU_SIG);
         inst |= QPU_SET_FIELD(QPU_W_NOP, QPU_WADDR_ADD);
 
         return inst;
@@ -155,16 +170,16 @@ qpu_a_alu2(enum qpu_op_add op,
 {
         uint64_t inst = 0;
 
+        inst |= QPU_SET_FIELD(QPU_SIG_NONE, QPU_SIG);
         inst |= QPU_SET_FIELD(op, QPU_OP_ADD);
         inst |= QPU_SET_FIELD(QPU_R_NOP, QPU_RADDR_A);
         inst |= QPU_SET_FIELD(QPU_R_NOP, QPU_RADDR_B);
         inst |= qpu_a_dst(dst);
         inst |= QPU_SET_FIELD(QPU_COND_ALWAYS, QPU_COND_ADD);
-        inst |= QPU_SET_FIELD(src0.mux, QPU_ADD_A);
+        inst |= QPU_MUX(src0.mux, QPU_ADD_A);
         inst = set_src_raddr(inst, src0);
-        inst |= QPU_SET_FIELD(src1.mux, QPU_ADD_B);
+        inst |= QPU_MUX(src1.mux, QPU_ADD_B);
         inst = set_src_raddr(inst, src1);
-        inst |= QPU_SET_FIELD(QPU_SIG_NONE, QPU_SIG);
         inst |= QPU_SET_FIELD(QPU_W_NOP, QPU_WADDR_MUL);
 
         return inst;
@@ -176,16 +191,16 @@ qpu_m_alu2(enum qpu_op_mul op,
 {
         uint64_t inst = 0;
 
+        inst |= QPU_SET_FIELD(QPU_SIG_NONE, QPU_SIG);
         inst |= QPU_SET_FIELD(op, QPU_OP_MUL);
         inst |= QPU_SET_FIELD(QPU_R_NOP, QPU_RADDR_A);
         inst |= QPU_SET_FIELD(QPU_R_NOP, QPU_RADDR_B);
         inst |= qpu_m_dst(dst);
         inst |= QPU_SET_FIELD(QPU_COND_ALWAYS, QPU_COND_MUL);
-        inst |= QPU_SET_FIELD(src0.mux, QPU_MUL_A);
+        inst |= QPU_MUX(src0.mux, QPU_MUL_A);
         inst = set_src_raddr(inst, src0);
-        inst |= QPU_SET_FIELD(src1.mux, QPU_MUL_B);
+        inst |= QPU_MUX(src1.mux, QPU_MUL_B);
         inst = set_src_raddr(inst, src1);
-        inst |= QPU_SET_FIELD(QPU_SIG_NONE, QPU_SIG);
         inst |= QPU_SET_FIELD(QPU_W_NOP, QPU_WADDR_ADD);
 
         return inst;
@@ -243,7 +258,8 @@ qpu_num_sf_accesses(uint64_t inst)
 
         if (raddr_a == QPU_R_MUTEX_ACQUIRE)
                 accesses++;
-        if (raddr_b == QPU_R_MUTEX_ACQUIRE)
+        if (raddr_b == QPU_R_MUTEX_ACQUIRE &&
+            QPU_GET_FIELD(inst, QPU_SIG) != QPU_SIG_SMALL_IMM)
                 accesses++;
 
         /* XXX: semaphore, combined color read/write? */
@@ -383,6 +399,8 @@ qpu_merge_inst(uint64_t a, uint64_t b)
 {
         uint64_t merge = a | b;
         bool ok = true;
+        uint32_t a_sig = QPU_GET_FIELD(a, QPU_SIG);
+        uint32_t b_sig = QPU_GET_FIELD(b, QPU_SIG);
 
         if (QPU_GET_FIELD(a, QPU_OP_ADD) != QPU_A_NOP &&
             QPU_GET_FIELD(b, QPU_OP_ADD) != QPU_A_NOP) {
@@ -402,8 +420,10 @@ qpu_merge_inst(uint64_t a, uint64_t b)
         if (qpu_num_sf_accesses(a) && qpu_num_sf_accesses(b))
                 return 0;
 
-        if (QPU_GET_FIELD(a, QPU_SIG) == QPU_SIG_LOAD_IMM ||
-            QPU_GET_FIELD(b, QPU_SIG) == QPU_SIG_LOAD_IMM) {
+        if (a_sig == QPU_SIG_LOAD_IMM ||
+            b_sig == QPU_SIG_LOAD_IMM ||
+            a_sig == QPU_SIG_SMALL_IMM ||
+            b_sig == QPU_SIG_SMALL_IMM) {
                 return 0;
         }
 
@@ -499,6 +519,56 @@ qpu_inst_is_tlb(uint64_t inst)
                 qpu_waddr_is_tlb(QPU_GET_FIELD(inst, QPU_WADDR_MUL)) ||
                 sig == QPU_SIG_COLOR_LOAD ||
                 sig == QPU_SIG_WAIT_FOR_SCOREBOARD);
+}
+
+/**
+ * Returns the small immediate value to be encoded in to the raddr b field if
+ * the argument can be represented as one, or ~0 otherwise.
+ */
+uint32_t
+qpu_encode_small_immediate(uint32_t i)
+{
+        if (i <= 15)
+                return i;
+        if ((int)i < 0 && (int)i >= -16)
+                return i + 32;
+
+        switch (i) {
+        case 0x3f800000:
+                return 32;
+        case 0x40000000:
+                return 33;
+        case 0x40800000:
+                return 34;
+        case 0x41000000:
+                return 35;
+        case 0x41800000:
+                return 36;
+        case 0x42000000:
+                return 37;
+        case 0x42800000:
+                return 38;
+        case 0x43000000:
+                return 39;
+        case 0x3b800000:
+                return 40;
+        case 0x3c000000:
+                return 41;
+        case 0x3c800000:
+                return 42;
+        case 0x3d000000:
+                return 43;
+        case 0x3d800000:
+                return 44;
+        case 0x3e000000:
+                return 45;
+        case 0x3e800000:
+                return 46;
+        case 0x3f000000:
+                return 47;
+        }
+
+        return ~0;
 }
 
 void

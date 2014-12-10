@@ -60,23 +60,33 @@ dump_to(struct vc4_compile *c, struct qinst *inst)
 }
 
 static bool
+is_constant_value(struct vc4_compile *c, struct qinst **defs, struct qreg reg,
+                  uint32_t val)
+{
+        if (reg.file == QFILE_UNIF &&
+            c->uniform_contents[reg.index] == QUNIFORM_CONSTANT &&
+            c->uniform_data[reg.index] == val) {
+                return true;
+        }
+
+        if (reg.file == QFILE_SMALL_IMM && reg.index == val)
+                return true;
+
+        return false;
+}
+
+static bool
 is_zero(struct vc4_compile *c, struct qinst **defs, struct qreg reg)
 {
         reg = qir_follow_movs(defs, reg);
-
-        return (reg.file == QFILE_UNIF &&
-                c->uniform_contents[reg.index] == QUNIFORM_CONSTANT &&
-                c->uniform_data[reg.index] == 0);
+        return is_constant_value(c, defs, reg, 0);
 }
 
 static bool
 is_1f(struct vc4_compile *c, struct qinst **defs, struct qreg reg)
 {
         reg = qir_follow_movs(defs, reg);
-
-        return (reg.file == QFILE_UNIF &&
-                c->uniform_contents[reg.index] == QUNIFORM_CONSTANT &&
-                c->uniform_data[reg.index] == fui(1.0));
+        return is_constant_value(c, defs, reg, fui(1.0));
 }
 
 static void

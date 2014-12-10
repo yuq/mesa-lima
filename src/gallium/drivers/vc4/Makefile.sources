@@ -15,6 +15,7 @@ C_SOURCES := \
 	vc4_opt_copy_propagation.c \
 	vc4_opt_cse.c \
 	vc4_opt_dead_code.c \
+	vc4_opt_small_immediates.c \
 	vc4_packet.h \
 	vc4_program.c \
 	vc4_qir.c \

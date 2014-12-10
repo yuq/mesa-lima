@@ -224,7 +224,8 @@ reads_uniform(uint64_t inst)
                 return false;
 
         return (QPU_GET_FIELD(inst, QPU_RADDR_A) == QPU_R_UNIF ||
-                QPU_GET_FIELD(inst, QPU_RADDR_B) == QPU_R_UNIF ||
+                (QPU_GET_FIELD(inst, QPU_RADDR_B) == QPU_R_UNIF &&
+                 QPU_GET_FIELD(inst, QPU_SIG) != QPU_SIG_SMALL_IMM) ||
                 is_tmu_write(QPU_GET_FIELD(inst, QPU_WADDR_ADD)) ||
                 is_tmu_write(QPU_GET_FIELD(inst, QPU_WADDR_MUL)));
 }
@@ -343,7 +344,8 @@ calculate_deps(struct schedule_state *state, struct schedule_node *n)
 
         if (sig != QPU_SIG_LOAD_IMM) {
                 process_raddr_deps(state, n, raddr_a, true);
-                process_raddr_deps(state, n, raddr_b, false);
+                if (sig != QPU_SIG_SMALL_IMM)
+                        process_raddr_deps(state, n, raddr_b, false);
         }
 
         if (add_op != QPU_A_NOP) {
@@ -435,6 +437,7 @@ reads_too_soon_after_write(struct choose_scoreboard *scoreboard, uint64_t inst)
 {
         uint32_t raddr_a = QPU_GET_FIELD(inst, QPU_RADDR_A);
         uint32_t raddr_b = QPU_GET_FIELD(inst, QPU_RADDR_B);
+        uint32_t sig = QPU_GET_FIELD(inst, QPU_SIG);
         uint32_t src_muxes[] = {
                 QPU_GET_FIELD(inst, QPU_ADD_A),
                 QPU_GET_FIELD(inst, QPU_ADD_B),
@@ -446,6 +449,7 @@ reads_too_soon_after_write(struct choose_scoreboard *scoreboard, uint64_t inst)
                      raddr_a < 32 &&
                      scoreboard->last_waddr_a == raddr_a) ||
                     (src_muxes[i] == QPU_MUX_B &&
+                     sig != QPU_SIG_SMALL_IMM &&
                      raddr_b < 32 &&
                      scoreboard->last_waddr_b == raddr_b)) {
                         return true;
