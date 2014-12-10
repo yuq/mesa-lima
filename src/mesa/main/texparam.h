@@ -104,18 +104,19 @@ _mesa_GetTexParameterIuiv(GLenum target, GLenum pname, GLuint *params);
 
 
 extern void GLAPIENTRY
+_mesa_GetTextureParameterfv(GLuint texture, GLenum pname, GLfloat *params);
+
+extern void GLAPIENTRY
 _mesa_TexParameterfv( GLenum target, GLenum pname, const GLfloat *params );
 
 extern void GLAPIENTRY
 _mesa_TexParameterf( GLenum target, GLenum pname, GLfloat param );
-
 
 extern void GLAPIENTRY
 _mesa_TexParameteri( GLenum target, GLenum pname, GLint param );
 
 extern void GLAPIENTRY
 _mesa_TexParameteriv( GLenum target, GLenum pname, const GLint *params );
-
 
 extern void GLAPIENTRY
 _mesa_TexParameterIiv(GLenum target, GLenum pname, const GLint *params);

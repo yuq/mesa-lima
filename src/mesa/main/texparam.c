@@ -1678,16 +1678,15 @@ _mesa_GetTextureLevelParameteriv(GLuint texture, GLint level,
                              pname, params, true);
 }
 
-void GLAPIENTRY
-_mesa_GetTexParameterfv( GLenum target, GLenum pname, GLfloat *params )
+/**
+ * This isn't exposed to the rest of the driver because it is a part of the
+ * OpenGL API that is rarely used.
+ */
+static void
+get_tex_parameterfv(struct gl_context *ctx,
+                    struct gl_texture_object *obj,
+                    GLenum pname, GLfloat *params, bool dsa)
 {
-   struct gl_texture_object *obj;
-   GET_CURRENT_CONTEXT(ctx);
-
-   obj = get_texobj_by_target(ctx, target, GL_TRUE);
-   if (!obj)
-      return;
-
    _mesa_lock_context_textures(ctx);
    switch (pname) {
       case GL_TEXTURE_MAG_FILTER:
@@ -1900,7 +1899,8 @@ _mesa_GetTexParameterfv( GLenum target, GLenum pname, GLfloat *params )
 
 invalid_pname:
    _mesa_unlock_context_textures(ctx);
-   _mesa_error(ctx, GL_INVALID_ENUM, "glGetTexParameterfv(pname=0x%x)", pname);
+   _mesa_error(ctx, GL_INVALID_ENUM, "glGetTex%sParameterfv(pname=0x%x)",
+               dsa ? "ture" : "", pname);
 }
 
 
@@ -2125,6 +2125,20 @@ invalid_pname:
    _mesa_error(ctx, GL_INVALID_ENUM, "glGetTexParameteriv(pname=0x%x)", pname);
 }
 
+void GLAPIENTRY
+_mesa_GetTexParameterfv(GLenum target, GLenum pname, GLfloat *params)
+{
+   struct gl_texture_object *obj;
+   GET_CURRENT_CONTEXT(ctx);
+
+   obj = get_texobj_by_target(ctx, target, GL_TRUE);
+   if (!obj)
+      return;
+
+   get_tex_parameterfv(ctx, obj, pname, params, false);
+}
+
+
 /** New in GL 3.0 */
 void GLAPIENTRY
 _mesa_GetTexParameterIiv(GLenum target, GLenum pname, GLint *params)
@@ -2174,4 +2188,22 @@ _mesa_GetTexParameterIuiv(GLenum target, GLenum pname, GLuint *params)
          }
       }
    }
+}
+
+
+void GLAPIENTRY
+_mesa_GetTextureParameterfv(GLuint texture, GLenum pname, GLfloat *params)
+{
+   struct gl_texture_object *obj;
+   GET_CURRENT_CONTEXT(ctx);
+
+   obj = get_texobj_by_name(ctx, texture, GL_TRUE);
+   if (!obj) {
+      /* User passed a non-generated name. */
+      _mesa_error(ctx, GL_INVALID_OPERATION,
+                  "glGetTextureParameterfv(texture)");
+      return;
+   }
+
+   get_tex_parameterfv(ctx, obj, pname, params, true);
 }

@@ -130,5 +130,11 @@
       <param name="params" type="GLint *" />
    </function>
 
+   <function name="GetTextureParameterfv" offset="assign">
+      <param name="texture" type="GLuint" />
+      <param name="pname" type="GLenum" />
+      <param name="params" type="GLfloat *" />
+   </function>
+
 </category>
 </OpenGLAPI>
