@@ -89,6 +89,11 @@
 
 struct r600_common_context;
 
+struct radeon_shader_reloc {
+	char *name;
+	uint64_t offset;
+};
+
 struct radeon_shader_binary {
 	/** Shader code */
 	unsigned char *code;
@@ -112,6 +117,9 @@ struct radeon_shader_binary {
 	/** List of symbol offsets for the shader */
 	uint64_t *global_symbol_offsets;
 	unsigned global_symbol_count;
+
+	struct radeon_shader_reloc *relocs;
+	unsigned reloc_count;
 
 	/** Set to 1 if the disassembly for this binary has been dumped to
 	 *  stderr. */
