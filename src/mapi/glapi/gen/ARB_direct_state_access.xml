@@ -148,6 +148,15 @@
       <param name="texture" type="GLuint" />
    </function>
 
+   <function name="GetTextureImage" offset="assign">
+      <param name="texture" type="GLuint" />
+      <param name="level" type="GLint" />
+      <param name="format" type="GLenum" />
+      <param name="type" type="GLenum" />
+      <param name="bufSize" type="GLsizei" />
+      <param name="pixels" type="GLvoid *" />
+   </function>
+
    <function name="GetTextureLevelParameterfv" offset="assign">
       <param name="texture" type="GLuint" />
       <param name="level" type="GLint" />
