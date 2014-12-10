@@ -36,8 +36,17 @@
 #if HAVE_LLVM < 0x0305
 #define NUM_USER_SGPRS 2
 #else
+/* XXX: Even though we don't pass the scratch buffer via user sgprs any more
+ * LLVM still expects that we specify 4 USER_SGPRS so it can remain compatible
+ * with older mesa. */
 #define NUM_USER_SGPRS 4
 #endif
+
+static const char *scratch_rsrc_dword0_symbol =
+	"SCRATCH_RSRC_DWORD0";
+
+static const char *scratch_rsrc_dword1_symbol =
+	"SCRATCH_RSRC_DWORD1";
 
 struct si_compute {
 	struct si_context *ctx;
@@ -174,6 +183,35 @@ static unsigned compute_num_waves_for_scratch(
 	return scratch_waves;
 }
 
+static void apply_scratch_relocs(const struct si_screen *sscreen,
+			const struct radeon_shader_binary *binary,
+			struct si_shader *shader, uint64_t scratch_va) {
+	unsigned i;
+	char *ptr;
+	uint32_t scratch_rsrc_dword0 = scratch_va & 0xffffffff;
+	uint32_t scratch_rsrc_dword1 =
+		S_008F04_BASE_ADDRESS_HI(scratch_va >> 32)
+		|  S_008F04_STRIDE(shader->scratch_bytes_per_wave / 64);
+
+	if (!binary->reloc_count) {
+		return;
+	}
+
+	ptr = sscreen->b.ws->buffer_map(shader->bo->cs_buf, NULL,
+					PIPE_TRANSFER_READ_WRITE);
+	for (i = 0 ; i < binary->reloc_count; i++) {
+		const struct radeon_shader_reloc *reloc = &binary->relocs[i];
+		if (!strcmp(scratch_rsrc_dword0_symbol, reloc->name)) {
+			util_memcpy_cpu_to_le32(ptr + reloc->offset,
+				&scratch_rsrc_dword0, 4);
+		} else if (!strcmp(scratch_rsrc_dword1_symbol, reloc->name)) {
+			util_memcpy_cpu_to_le32(ptr + reloc->offset,
+				&scratch_rsrc_dword1, 4);
+		}
+	}
+	sscreen->b.ws->buffer_unmap(shader->bo->cs_buf);
+}
+
 static void si_launch_grid(
 		struct pipe_context *ctx,
 		const uint *block_layout, const uint *grid_layout,
@@ -255,6 +293,10 @@ static void si_launch_grid(
 		si_pm4_add_bo(pm4, shader->scratch_bo,
 				RADEON_USAGE_READWRITE,
 				RADEON_PRIO_SHADER_RESOURCE_RW);
+
+		/* Patch the shader with the scratch buffer address. */
+		apply_scratch_relocs(sctx->screen,
+			&program->binary, shader, scratch_buffer_va);
 
 	}
 
