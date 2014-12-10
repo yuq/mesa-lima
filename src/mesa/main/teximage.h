@@ -47,7 +47,7 @@ _mesa_is_cube_face(GLenum target)
            target <= GL_TEXTURE_CUBE_MAP_NEGATIVE_Z_ARB);
 }
 
-/** Is any of the dimensions of given texture equal to zero? */
+/** Are any of the dimensions of given texture equal to zero? */
 static inline GLboolean
 _mesa_is_zero_size_texture(const struct gl_texture_image *texImage)
 {
