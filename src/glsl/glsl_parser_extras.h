@@ -343,6 +343,9 @@ struct _mesa_glsl_parse_state {
       unsigned MaxGeometryImageUniforms;
       unsigned MaxFragmentImageUniforms;
       unsigned MaxCombinedImageUniforms;
+
+      /* ARB_viewport_array */
+      unsigned MaxViewports;
    } Const;
 
    /**

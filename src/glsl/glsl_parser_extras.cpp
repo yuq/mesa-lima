@@ -135,6 +135,9 @@ _mesa_glsl_parse_state::_mesa_glsl_parse_state(struct gl_context *_ctx,
    this->Const.MaxFragmentImageUniforms = ctx->Const.Program[MESA_SHADER_FRAGMENT].MaxImageUniforms;
    this->Const.MaxCombinedImageUniforms = ctx->Const.MaxCombinedImageUniforms;
 
+   /* ARB_viewport_array */
+   this->Const.MaxViewports = ctx->Const.MaxViewports;
+
    this->current_function = NULL;
    this->toplevel_ir = NULL;
    this->found_return = false;
