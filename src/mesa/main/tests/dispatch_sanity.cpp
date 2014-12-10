@@ -959,6 +959,9 @@ const struct function gl_core_functions_possible[] = {
    { "glTextureStorage1D", 45, -1 },
    { "glTextureStorage2D", 45, -1 },
    { "glTextureStorage3D", 45, -1 },
+   { "glTextureSubImage1D", 45, -1 },
+   { "glTextureSubImage2D", 45, -1 },
+   { "glTextureSubImage3D", 45, -1 },
 
    { NULL, 0, -1 }
 };

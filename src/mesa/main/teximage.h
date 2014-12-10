@@ -165,6 +165,15 @@ _mesa_legal_texture_base_format_for_target(struct gl_context *ctx,
                                            unsigned dimensions,
                                            const char *caller);
 
+extern void
+_mesa_texture_sub_image(struct gl_context *ctx, GLuint dims,
+                        struct gl_texture_object *texObj,
+                        struct gl_texture_image *texImage,
+                        GLenum target, GLint level,
+                        GLint xoffset, GLint yoffset, GLint zoffset,
+                        GLsizei width, GLsizei height, GLsizei depth,
+                        GLenum format, GLenum type, const GLvoid *pixels,
+                        bool dsa);
 /*@}*/
 
 
@@ -219,6 +228,27 @@ _mesa_TexSubImage3D( GLenum target, GLint level,
                      GLsizei width, GLsizei height, GLsizei depth,
                      GLenum format, GLenum type,
                      const GLvoid *pixels );
+
+extern void GLAPIENTRY
+_mesa_TextureSubImage1D(GLuint texture, GLint level, GLint xoffset,
+                        GLsizei width,
+                        GLenum format, GLenum type,
+                        const GLvoid *pixels);
+
+
+extern void GLAPIENTRY
+_mesa_TextureSubImage2D(GLuint texture, GLint level,
+                        GLint xoffset, GLint yoffset,
+                        GLsizei width, GLsizei height,
+                        GLenum format, GLenum type,
+                        const GLvoid *pixels);
+
+extern void GLAPIENTRY
+_mesa_TextureSubImage3D(GLuint texture, GLint level,
+                        GLint xoffset, GLint yoffset, GLint zoffset,
+                        GLsizei width, GLsizei height, GLsizei depth,
+                        GLenum format, GLenum type,
+                        const GLvoid *pixels);
 
 
 extern void GLAPIENTRY
