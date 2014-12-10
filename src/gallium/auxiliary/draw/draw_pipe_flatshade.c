@@ -145,9 +145,6 @@ static void flatshade_tri_2( struct draw_stage *stage,
 }
 
 
-
-
-
 /**
  * Flatshade line.  Required for clipping.
  */
@@ -156,6 +153,9 @@ static void flatshade_line_0( struct draw_stage *stage,
 {
    struct prim_header tmp;
 
+   tmp.det = header->det;
+   tmp.flags = header->flags;
+   tmp.pad = header->pad;
    tmp.v[0] = header->v[0];
    tmp.v[1] = dup_vert(stage, header->v[1], 0);
 
@@ -169,6 +169,9 @@ static void flatshade_line_1( struct draw_stage *stage,
 {
    struct prim_header tmp;
 
+   tmp.det = header->det;
+   tmp.flags = header->flags;
+   tmp.pad = header->pad;
    tmp.v[0] = dup_vert(stage, header->v[0], 0);
    tmp.v[1] = header->v[1];
 
