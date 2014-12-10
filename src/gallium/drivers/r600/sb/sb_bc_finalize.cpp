@@ -110,6 +110,8 @@ int bc_finalizer::run() {
 
 void bc_finalizer::finalize_loop(region_node* r) {
 
+	update_nstack(r);
+
 	cf_node *loop_start = sh.create_cf(CF_OP_LOOP_START_DX10);
 	cf_node *loop_end = sh.create_cf(CF_OP_LOOP_END);
 

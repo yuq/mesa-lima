@@ -758,6 +758,8 @@ int bc_parser::prepare_loop(cf_node* c) {
 	c->insert_before(reg);
 	rep->move(c, end->next);
 
+	reg->src_loop = true;
+
 	loop_stack.push(reg);
 	return 0;
 }
