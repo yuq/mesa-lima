@@ -50,8 +50,6 @@ struct draw_assembler
    int primid_slot;
    unsigned primid;
 
-   boolean is_strip;
-   boolean is_first_prim;
    unsigned num_prims;
 };
 
@@ -154,16 +152,8 @@ prim_line(struct draw_assembler *asmblr,
    unsigned indices[2];
 
    if (asmblr->needs_primid) {
-      if (asmblr->is_strip && asmblr->is_first_prim) {
-         inject_primid(asmblr, i0, asmblr->primid++);
-         inject_primid(asmblr, i1, asmblr->primid++);
-         asmblr->is_first_prim = FALSE;
-      } else if (asmblr->is_strip) {
-            inject_primid(asmblr, i1, asmblr->primid++);
-      } else {
-         inject_primid(asmblr, i0, asmblr->primid);
-         inject_primid(asmblr, i1, asmblr->primid++);
-      }
+      inject_primid(asmblr, i0, asmblr->primid);
+      inject_primid(asmblr, i1, asmblr->primid++);
    }
    indices[0] = i0;
    indices[1] = i1;
@@ -178,22 +168,9 @@ prim_tri(struct draw_assembler *asmblr,
    unsigned indices[3];
 
    if (asmblr->needs_primid) {
-      if (asmblr->is_strip && asmblr->is_first_prim) {
-         inject_primid(asmblr, i0, asmblr->primid++);
-         inject_primid(asmblr, i1, asmblr->primid++);
-         inject_primid(asmblr, i2, asmblr->primid++);
-         asmblr->is_first_prim = FALSE;
-      } else if (asmblr->is_strip) {
-         if (asmblr->num_prims & 1) {
-            inject_primid(asmblr, i1, asmblr->primid++);
-         } else {
-            inject_primid(asmblr, i2, asmblr->primid++);
-         }
-      } else {
-         inject_primid(asmblr, i0, asmblr->primid);
-         inject_primid(asmblr, i1, asmblr->primid);
-         inject_primid(asmblr, i2, asmblr->primid++);
-      }
+      inject_primid(asmblr, i0, asmblr->primid);
+      inject_primid(asmblr, i1, asmblr->primid);
+      inject_primid(asmblr, i2, asmblr->primid++);
    }
    indices[0] = i0;
    indices[1] = i1;
@@ -255,13 +232,7 @@ draw_prim_assembler_run(struct draw_context *draw,
    asmblr->output_verts = output_verts;
    asmblr->input_prims = input_prims;
    asmblr->input_verts = input_verts;
-   asmblr->is_strip =
-      (input_prims->prim == PIPE_PRIM_TRIANGLE_STRIP ||
-       input_prims->prim == PIPE_PRIM_TRIANGLE_STRIP_ADJACENCY) ||
-      (input_prims->prim == PIPE_PRIM_LINE_STRIP ||
-       input_prims->prim == PIPE_PRIM_LINE_STRIP_ADJACENCY);
    asmblr->needs_primid = needs_primid(asmblr->draw);
-   asmblr->is_first_prim = asmblr->is_strip;
    asmblr->primid = 0;
    asmblr->num_prims = 0;
 
