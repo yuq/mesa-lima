@@ -136,5 +136,23 @@
       <param name="params" type="GLfloat *" />
    </function>
 
+   <function name="GetTextureParameterIiv" offset="assign">
+      <param name="texture" type="GLuint" />
+      <param name="pname" type="GLenum" />
+      <param name="params" type="GLint *" />
+   </function>
+
+   <function name="GetTextureParameterIuiv" offset="assign">
+      <param name="texture" type="GLuint" />
+      <param name="pname" type="GLenum" />
+      <param name="params" type="GLuint *" />
+   </function>
+
+   <function name="GetTextureParameteriv" offset="assign">
+      <param name="texture" type="GLuint" />
+      <param name="pname" type="GLenum" />
+      <param name="params" type="GLint *" />
+   </function>
+
 </category>
 </OpenGLAPI>
