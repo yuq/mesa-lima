@@ -356,6 +356,11 @@ qpu_merge_inst(uint64_t a, uint64_t b)
         if (qpu_num_sf_accesses(a) && qpu_num_sf_accesses(b))
                 return 0;
 
+        if (QPU_GET_FIELD(a, QPU_SIG) == QPU_SIG_LOAD_IMM ||
+            QPU_GET_FIELD(b, QPU_SIG) == QPU_SIG_LOAD_IMM) {
+                return 0;
+        }
+
         ok = ok && merge_fields(&merge, a, b, QPU_SIG_MASK,
                                 QPU_SET_FIELD(QPU_SIG_NONE, QPU_SIG));
 
