@@ -2994,6 +2994,14 @@ fs_visitor::lower_uniform_pull_constant_loads()
          const_offset_reg.fixed_hw_reg.dw1.ud /= 4;
          fs_reg payload = fs_reg(this, glsl_type::uint_type);
 
+         /* We have to use a message header on Skylake to get SIMD4x2 mode.
+          * Reserve space for the register.
+          */
+         if (brw->gen >= 9) {
+            payload.reg_offset++;
+            virtual_grf_sizes[payload.reg] = 2;
+         }
+
          /* This is actually going to be a MOV, but since only the first dword
           * is accessed, we have a special opcode to do just that one.  Note
           * that this needs to be an operation that will be considered a def

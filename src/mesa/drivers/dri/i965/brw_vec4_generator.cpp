@@ -328,6 +328,7 @@ vec4_generator::generate_tex(vec4_instruction *inst,
       } else {
          struct brw_reg header =
             retype(brw_message_reg(inst->base_mrf), BRW_REGISTER_TYPE_UD);
+         uint32_t dw2 = 0;
 
          /* Explicitly set up the message header by copying g0 to the MRF. */
          brw_push_insn_state(p);
@@ -336,11 +337,18 @@ vec4_generator::generate_tex(vec4_instruction *inst,
 
          brw_set_default_access_mode(p, BRW_ALIGN_1);
 
-         if (inst->offset) {
+         if (inst->offset)
             /* Set the texel offset bits in DWord 2. */
-            brw_MOV(p, get_element_ud(header, 2),
-                    brw_imm_ud(inst->offset));
-         }
+            dw2 = inst->offset;
+
+         if (brw->gen >= 9)
+            /* SKL+ overloads BRW_SAMPLER_SIMD_MODE_SIMD4X2 to also do SIMD8D,
+             * based on bit 22 in the header.
+             */
+            dw2 |= GEN9_SAMPLER_SIMD_MODE_EXTENSION_SIMD4X2;
+
+         if (dw2)
+            brw_MOV(p, get_element_ud(header, 2), brw_imm_ud(dw2));
 
          brw_adjust_sampler_state_pointer(p, header, sampler_index, dst);
          brw_pop_insn_state(p);

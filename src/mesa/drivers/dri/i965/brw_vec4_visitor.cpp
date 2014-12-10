@@ -2586,12 +2586,14 @@ vec4_visitor::visit(ir_texture *ir)
 
    /* The message header is necessary for:
     * - Gen4 (always)
+    * - Gen9+ for selecting SIMD4x2
     * - Texel offsets
     * - Gather channel selection
     * - Sampler indices too large to fit in a 4-bit value.
     */
    inst->header_present =
-      brw->gen < 5 || inst->offset != 0 || ir->op == ir_tg4 ||
+      brw->gen < 5 || brw->gen >= 9 ||
+      inst->offset != 0 || ir->op == ir_tg4 ||
       is_high_sampler(brw, sampler_reg);
    inst->base_mrf = 2;
    inst->mlen = inst->header_present + 1; /* always at least one */

@@ -1017,6 +1017,26 @@ fs_generator::generate_uniform_pull_constant_load_gen7(fs_inst *inst,
     */
    dst.width = BRW_WIDTH_4;
 
+   struct brw_reg src = offset;
+   bool header_present = false;
+   int mlen = 1;
+
+   if (brw->gen >= 9) {
+      /* Skylake requires a message header in order to use SIMD4x2 mode. */
+      src = retype(brw_vec8_grf(offset.nr - 1, 0), BRW_REGISTER_TYPE_UD);
+      mlen = 2;
+      header_present = true;
+
+      brw_push_insn_state(p);
+      brw_set_default_mask_control(p, BRW_MASK_DISABLE);
+      brw_MOV(p, src, retype(brw_vec8_grf(0, 0), BRW_REGISTER_TYPE_UD));
+      brw_set_default_access_mode(p, BRW_ALIGN_1);
+
+      brw_MOV(p, get_element_ud(src, 2),
+              brw_imm_ud(GEN9_SAMPLER_SIMD_MODE_EXTENSION_SIMD4X2));
+      brw_pop_insn_state(p);
+   }
+
    if (index.file == BRW_IMMEDIATE_VALUE) {
 
       uint32_t surf_index = index.dw1.ud;
@@ -1028,14 +1048,14 @@ fs_generator::generate_uniform_pull_constant_load_gen7(fs_inst *inst,
       brw_pop_insn_state(p);
 
       brw_set_dest(p, send, dst);
-      brw_set_src0(p, send, offset);
+      brw_set_src0(p, send, src);
       brw_set_sampler_message(p, send,
                               surf_index,
                               0, /* LD message ignores sampler unit */
                               GEN5_SAMPLER_MESSAGE_SAMPLE_LD,
                               1, /* rlen */
-                              1, /* mlen */
-                              false, /* no header */
+                              mlen,
+                              header_present,
                               BRW_SAMPLER_SIMD_MODE_SIMD4X2,
                               0);
 
@@ -1064,8 +1084,8 @@ fs_generator::generate_uniform_pull_constant_load_gen7(fs_inst *inst,
                               0 /* sampler */,
                               GEN5_SAMPLER_MESSAGE_SAMPLE_LD,
                               1 /* rlen */,
-                              1 /* mlen */,
-                              false /* header */,
+                              mlen,
+                              header_present,
                               BRW_SAMPLER_SIMD_MODE_SIMD4X2,
                               0);
       brw_inst_set_exec_size(p->brw, insn_or, BRW_EXECUTE_1);
@@ -1077,7 +1097,7 @@ fs_generator::generate_uniform_pull_constant_load_gen7(fs_inst *inst,
       /* dst = send(offset, a0.0) */
       brw_inst *insn_send = brw_next_insn(p, BRW_OPCODE_SEND);
       brw_set_dest(p, insn_send, dst);
-      brw_set_src0(p, insn_send, offset);
+      brw_set_src0(p, insn_send, src);
       brw_set_indirect_send_descriptor(p, insn_send, BRW_SFID_SAMPLER, addr);
 
       brw_pop_insn_state(p);
