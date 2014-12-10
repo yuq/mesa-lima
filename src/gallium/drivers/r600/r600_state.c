@@ -2659,11 +2659,8 @@ void r600_update_gs_state(struct pipe_context *ctx, struct r600_pipe_shader *sha
 	r600_store_context_reg(cb, R_028A6C_VGT_GS_OUT_PRIM_TYPE,
 			       r600_conv_prim_to_gs_out(rshader->gs_output_prim));
 
-	r600_store_context_reg_seq(cb, R_0288C8_SQ_GS_VERT_ITEMSIZE, 4);
-	r600_store_value(cb, cp_shader->ring_item_size >> 2);
-	r600_store_value(cb, 0);
-	r600_store_value(cb, 0);
-	r600_store_value(cb, 0);
+	r600_store_context_reg(cb, R_0288C8_SQ_GS_VERT_ITEMSIZE,
+	                       cp_shader->ring_item_size >> 2);
 
 	r600_store_context_reg(cb, R_0288A8_SQ_ESGS_RING_ITEMSIZE,
 			       (rshader->ring_item_size) >> 2);
