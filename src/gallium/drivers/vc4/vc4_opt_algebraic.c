@@ -59,19 +59,10 @@ dump_to(struct vc4_compile *c, struct qinst *inst)
         fprintf(stderr, "\n");
 }
 
-static struct qreg
-follow_movs(struct qinst **defs, struct qreg reg)
-{
-        while (reg.file == QFILE_TEMP && defs[reg.index]->op == QOP_MOV)
-                reg = defs[reg.index]->src[0];
-
-        return reg;
-}
-
 static bool
 is_zero(struct vc4_compile *c, struct qinst **defs, struct qreg reg)
 {
-        reg = follow_movs(defs, reg);
+        reg = qir_follow_movs(defs, reg);
 
         return (reg.file == QFILE_UNIF &&
                 c->uniform_contents[reg.index] == QUNIFORM_CONSTANT &&
@@ -81,7 +72,7 @@ is_zero(struct vc4_compile *c, struct qinst **defs, struct qreg reg)
 static bool
 is_1f(struct vc4_compile *c, struct qinst **defs, struct qreg reg)
 {
-        reg = follow_movs(defs, reg);
+        reg = qir_follow_movs(defs, reg);
 
         return (reg.file == QFILE_UNIF &&
                 c->uniform_contents[reg.index] == QUNIFORM_CONSTANT &&

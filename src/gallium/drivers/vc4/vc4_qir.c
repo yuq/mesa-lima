@@ -327,6 +327,15 @@ qir_remove_instruction(struct qinst *qinst)
         free(qinst);
 }
 
+struct qreg
+qir_follow_movs(struct qinst **defs, struct qreg reg)
+{
+        while (reg.file == QFILE_TEMP && defs[reg.index]->op == QOP_MOV)
+                reg = defs[reg.index]->src[0];
+
+        return reg;
+}
+
 void
 qir_compile_destroy(struct vc4_compile *c)
 {

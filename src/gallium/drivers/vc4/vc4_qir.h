@@ -371,6 +371,7 @@ bool qir_has_side_effects(struct vc4_compile *c, struct qinst *inst);
 bool qir_depends_on_flags(struct qinst *inst);
 bool qir_writes_r4(struct qinst *inst);
 bool qir_reads_r4(struct qinst *inst);
+struct qreg qir_follow_movs(struct qinst **defs, struct qreg reg);
 
 void qir_dump(struct vc4_compile *c);
 void qir_dump_inst(struct vc4_compile *c, struct qinst *inst);
