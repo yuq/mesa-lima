@@ -62,6 +62,12 @@ struct schedule_node {
          * can be consumed.
          */
         uint32_t latency;
+
+        /**
+         * Which uniform from uniform_data[] this instruction read, or -1 if
+         * not reading a uniform.
+         */
+        int uniform;
 };
 
 struct schedule_node_child {
@@ -80,7 +86,6 @@ struct schedule_state {
         struct schedule_node *last_rb[32];
         struct schedule_node *last_sf;
         struct schedule_node *last_vpm_read;
-        struct schedule_node *last_unif_read;
         struct schedule_node *last_tmu_write;
         struct schedule_node *last_tlb;
         struct schedule_node *last_vpm;
@@ -174,9 +179,6 @@ process_raddr_deps(struct schedule_state *state, struct schedule_node *n,
                 break;
 
         case QPU_R_UNIF:
-                add_write_dep(state, &state->last_unif_read, n);
-                break;
-
         case QPU_R_NOP:
         case QPU_R_ELEM_QPU:
         case QPU_R_XY_PIXEL_COORD:
@@ -215,6 +217,18 @@ is_tmu_write(uint32_t waddr)
         }
 }
 
+static bool
+reads_uniform(uint64_t inst)
+{
+        if (QPU_GET_FIELD(inst, QPU_SIG) == QPU_SIG_LOAD_IMM)
+                return false;
+
+        return (QPU_GET_FIELD(inst, QPU_RADDR_A) == QPU_R_UNIF ||
+                QPU_GET_FIELD(inst, QPU_RADDR_B) == QPU_R_UNIF ||
+                is_tmu_write(QPU_GET_FIELD(inst, QPU_WADDR_ADD)) ||
+                is_tmu_write(QPU_GET_FIELD(inst, QPU_WADDR_MUL)));
+}
+
 static void
 process_mux_deps(struct schedule_state *state, struct schedule_node *n,
                  uint32_t mux)
@@ -223,17 +237,6 @@ process_mux_deps(struct schedule_state *state, struct schedule_node *n,
                 add_read_dep(state, state->last_r[mux], n);
 }
 
-
-static bool
-is_direct_tmu_read(uint64_t inst)
-{
-        /* If it's a direct read, we happen to structure the code such that
-         * there's an explicit uniform read in the instruction (for kernel
-         * texture reloc processing).
-         */
-        return (QPU_GET_FIELD(inst, QPU_RADDR_A) == QPU_R_UNIF ||
-                QPU_GET_FIELD(inst, QPU_RADDR_B) == QPU_R_UNIF);
-}
 
 static void
 process_waddr_deps(struct schedule_state *state, struct schedule_node *n,
@@ -250,14 +253,6 @@ process_waddr_deps(struct schedule_state *state, struct schedule_node *n,
                 }
         } else if (is_tmu_write(waddr)) {
                 add_write_dep(state, &state->last_tmu_write, n);
-
-                /* There is an implicit uniform read in texture ops in
-                 * hardware, unless this is a direct-addressed uniform read,
-                 * so we need to keep it in the same order as the other
-                 * uniforms.
-                 */
-                if (!is_direct_tmu_read(n->inst->inst))
-                        add_write_dep(state, &state->last_unif_read, n);
         } else if (qpu_waddr_is_tlb(waddr)) {
                 add_write_dep(state, &state->last_tlb, n);
         } else {
@@ -509,7 +504,7 @@ get_instruction_priority(uint64_t inst)
 static struct schedule_node *
 choose_instruction_to_schedule(struct choose_scoreboard *scoreboard,
                                struct simple_node *schedule_list,
-                               uint64_t prev_inst)
+                               struct schedule_node *prev_inst)
 {
         struct schedule_node *chosen = NULL;
         struct simple_node *node;
@@ -537,8 +532,11 @@ choose_instruction_to_schedule(struct choose_scoreboard *scoreboard,
                 /* If we're trying to pair with another instruction, check
                  * that they're compatible.
                  */
-                if (prev_inst != 0) {
-                        inst = qpu_merge_inst(prev_inst, inst);
+                if (prev_inst) {
+                        if (prev_inst->uniform != -1 && n->uniform != -1)
+                                continue;
+
+                        inst = qpu_merge_inst(prev_inst->inst->inst, inst);
                         if (!inst)
                                 continue;
                 }
@@ -668,6 +666,17 @@ schedule_instructions(struct vc4_compile *c, struct simple_node *schedule_list)
         struct simple_node *node, *t;
         struct choose_scoreboard scoreboard;
 
+        /* We reorder the uniforms as we schedule instructions, so save the
+         * old data off and replace it.
+         */
+        uint32_t *uniform_data = c->uniform_data;
+        enum quniform_contents *uniform_contents = c->uniform_contents;
+        c->uniform_contents = ralloc_array(c, enum quniform_contents,
+                                           c->num_uniforms);
+        c->uniform_data = ralloc_array(c, uint32_t, c->num_uniforms);
+        c->uniform_array_size = c->num_uniforms;
+        uint32_t next_uniform = 0;
+
         memset(&scoreboard, 0, sizeof(scoreboard));
         scoreboard.last_waddr_a = ~0;
         scoreboard.last_waddr_b = ~0;
@@ -691,7 +700,7 @@ schedule_instructions(struct vc4_compile *c, struct simple_node *schedule_list)
                 struct schedule_node *chosen =
                         choose_instruction_to_schedule(&scoreboard,
                                                        schedule_list,
-                                                       0);
+                                                       NULL);
                 struct schedule_node *merge = NULL;
 
                 /* If there are no valid instructions to schedule, drop a NOP
@@ -713,14 +722,28 @@ schedule_instructions(struct vc4_compile *c, struct simple_node *schedule_list)
                 if (chosen) {
                         remove_from_list(&chosen->link);
                         mark_instruction_scheduled(schedule_list, chosen, true);
+                        if (chosen->uniform != -1) {
+                                c->uniform_data[next_uniform] =
+                                        uniform_data[chosen->uniform];
+                                c->uniform_contents[next_uniform] =
+                                        uniform_contents[chosen->uniform];
+                                next_uniform++;
+                        }
 
                         merge = choose_instruction_to_schedule(&scoreboard,
                                                                schedule_list,
-                                                               inst);
+                                                               chosen);
                         if (merge) {
                                 remove_from_list(&merge->link);
                                 inst = qpu_merge_inst(inst, merge->inst->inst);
                                 assert(inst != 0);
+                                if (merge->uniform != -1) {
+                                        c->uniform_data[next_uniform] =
+                                                uniform_data[merge->uniform];
+                                        c->uniform_contents[next_uniform] =
+                                                uniform_contents[merge->uniform];
+                                        next_uniform++;
+                                }
 
                                 if (debug) {
                                         fprintf(stderr, "merging: ");
@@ -751,6 +774,8 @@ schedule_instructions(struct vc4_compile *c, struct simple_node *schedule_list)
 
                 scoreboard.tick++;
         }
+
+        assert(next_uniform == c->num_uniforms);
 }
 
 static uint32_t waddr_latency(uint32_t waddr)
@@ -801,6 +826,7 @@ qpu_schedule_instructions(struct vc4_compile *c)
         }
 
         /* Wrap each instruction in a scheduler structure. */
+        uint32_t next_uniform = 0;
         while (!is_empty_list(&c->qpu_inst_list)) {
                 struct queued_qpu_inst *inst =
                         (struct queued_qpu_inst *)c->qpu_inst_list.next;
@@ -809,9 +835,15 @@ qpu_schedule_instructions(struct vc4_compile *c)
                 n->inst = inst;
                 n->latency = instruction_latency(inst->inst);
 
+                if (reads_uniform(inst->inst)) {
+                        n->uniform = next_uniform++;
+                } else {
+                        n->uniform = -1;
+                }
                 remove_from_list(&inst->link);
                 insert_at_tail(&schedule_list, &n->link);
         }
+        assert(next_uniform == c->num_uniforms);
 
         calculate_forward_deps(c, &schedule_list);
         calculate_reverse_deps(c, &schedule_list);
