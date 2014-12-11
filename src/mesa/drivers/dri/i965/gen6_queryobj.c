@@ -281,6 +281,27 @@ gen6_end_query(struct gl_context *ctx, struct gl_query_object *q)
    default:
       unreachable("Unrecognized query target in brw_end_query()");
    }
+
+   /* The current batch contains the commands to handle EndQuery(),
+    * but they won't actually execute until it is flushed.
+    */
+   query->flushed = false;
+}
+
+/**
+ * Flush the batch if it still references the query object BO.
+ */
+static void
+flush_batch_if_needed(struct brw_context *brw, struct brw_query_object *query)
+{
+   /* If the batch doesn't reference the BO, it must have been flushed
+    * (for example, due to being full).  Record that it's been flushed.
+    */
+   query->flushed = query->flushed ||
+      !drm_intel_bo_references(brw->batch.bo, query->bo);
+
+   if (!query->flushed)
+      intel_batchbuffer_flush(brw);
 }
 
 /**
@@ -298,8 +319,7 @@ static void gen6_wait_query(struct gl_context *ctx, struct gl_query_object *q)
     * still contributing to it, flush it now to finish that work so the
     * result will become available (eventually).
     */
-   if (drm_intel_bo_references(brw->batch.bo, query->bo))
-      intel_batchbuffer_flush(brw);
+   flush_batch_if_needed(brw, query);
 
    gen6_queryobj_get_results(ctx, query);
 }
@@ -328,8 +348,7 @@ static void gen6_check_query(struct gl_context *ctx, struct gl_query_object *q)
     *      not ready yet on the first time it is queried.  This ensures that
     *      the async query will return true in finite time.
     */
-   if (drm_intel_bo_references(brw->batch.bo, query->bo))
-      intel_batchbuffer_flush(brw);
+   flush_batch_if_needed(brw, query);
 
    if (!drm_intel_bo_busy(query->bo)) {
       gen6_queryobj_get_results(ctx, query);

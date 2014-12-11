@@ -831,6 +831,9 @@ struct brw_query_object {
 
    /** Last index in bo with query data for this object. */
    int last_index;
+
+   /** True if we know the batch has been flushed since we ended the query. */
+   bool flushed;
 };
 
 struct intel_sync_object {
