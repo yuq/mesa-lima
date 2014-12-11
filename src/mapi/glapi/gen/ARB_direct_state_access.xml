@@ -93,6 +93,24 @@
       <param name="param" type="GLint" />
    </function>
 
+   <function name="TextureParameterIiv" offset="assign">
+      <param name="texture" type="GLuint" />
+      <param name="pname" type="GLenum" />
+      <param name="params" type="const GLint *" />
+   </function>
+
+   <function name="TextureParameterIuiv" offset="assign">
+      <param name="texture" type="GLuint" />
+      <param name="pname" type="GLenum" />
+      <param name="params" type="const GLuint *" />
+   </function>
+
+   <function name="TextureParameteriv" offset="assign">
+      <param name="texture" type="GLuint" />
+      <param name="pname" type="GLenum" />
+      <param name="param" type="const GLint *" />
+   </function>
+
    <function name="BindTextureUnit" offset="assign">
       <param name="unit" type="GLuint" />
       <param name="texture" type="GLuint" />

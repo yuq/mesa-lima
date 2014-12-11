@@ -926,16 +926,12 @@ _mesa_texture_parameteri(struct gl_context *ctx,
 }
 
 
-void GLAPIENTRY
-_mesa_TexParameteriv(GLenum target, GLenum pname, const GLint *params)
+void
+_mesa_texture_parameteriv(struct gl_context *ctx,
+                          struct gl_texture_object *texObj,
+                          GLenum pname, const GLint *params, bool dsa)
 {
    GLboolean need_update;
-   struct gl_texture_object *texObj;
-   GET_CURRENT_CONTEXT(ctx);
-
-   texObj = get_texobj_by_target(ctx, target, GL_FALSE);
-   if (!texObj)
-      return;
 
    switch (pname) {
    case GL_TEXTURE_BORDER_COLOR:
@@ -946,7 +942,7 @@ _mesa_TexParameteriv(GLenum target, GLenum pname, const GLint *params)
          fparams[1] = INT_TO_FLOAT(params[1]);
          fparams[2] = INT_TO_FLOAT(params[2]);
          fparams[3] = INT_TO_FLOAT(params[3]);
-         need_update = set_tex_parameterf(ctx, texObj, pname, fparams, false);
+         need_update = set_tex_parameterf(ctx, texObj, pname, fparams, dsa);
       }
       break;
    case GL_TEXTURE_MIN_LOD:
@@ -960,12 +956,12 @@ _mesa_TexParameteriv(GLenum target, GLenum pname, const GLint *params)
          GLfloat fparams[4];
          fparams[0] = (GLfloat) params[0];
          fparams[1] = fparams[2] = fparams[3] = 0.0F;
-         need_update = set_tex_parameterf(ctx, texObj, pname, fparams, false);
+         need_update = set_tex_parameterf(ctx, texObj, pname, fparams, dsa);
       }
       break;
    default:
       /* this will generate an error if pname is illegal */
-      need_update = set_tex_parameteri(ctx, texObj, pname, params, false);
+      need_update = set_tex_parameteri(ctx, texObj, pname, params, dsa);
    }
 
    if (ctx->Driver.TexParameter && need_update) {
@@ -979,6 +975,43 @@ _mesa_TexParameteriv(GLenum target, GLenum pname, const GLint *params)
       }
       ctx->Driver.TexParameter(ctx, texObj, pname, fparams);
    }
+}
+
+void
+_mesa_texture_parameterIiv(struct gl_context *ctx,
+                           struct gl_texture_object *texObj,
+                           GLenum pname, const GLint *params, bool dsa)
+{
+   switch (pname) {
+   case GL_TEXTURE_BORDER_COLOR:
+      FLUSH_VERTICES(ctx, _NEW_TEXTURE);
+      /* set the integer-valued border color */
+      COPY_4V(texObj->Sampler.BorderColor.i, params);
+      break;
+   default:
+      _mesa_texture_parameteriv(ctx, texObj, pname, params, dsa);
+      break;
+   }
+   /* XXX no driver hook for TexParameterIiv() yet */
+}
+
+void
+_mesa_texture_parameterIuiv(struct gl_context *ctx,
+                            struct gl_texture_object *texObj,
+                            GLenum pname, const GLuint *params, bool dsa)
+{
+   switch (pname) {
+   case GL_TEXTURE_BORDER_COLOR:
+      FLUSH_VERTICES(ctx, _NEW_TEXTURE);
+      /* set the unsigned integer-valued border color */
+      COPY_4V(texObj->Sampler.BorderColor.ui, params);
+      break;
+   default:
+      _mesa_texture_parameteriv(ctx, texObj, pname, (const GLint *) params,
+                                dsa);
+      break;
+   }
+   /* XXX no driver hook for TexParameterIuiv() yet */
 }
 
 void GLAPIENTRY
@@ -1020,6 +1053,19 @@ _mesa_TexParameteri(GLenum target, GLenum pname, GLint param)
    _mesa_texture_parameteri(ctx, texObj, pname, param, false);
 }
 
+void GLAPIENTRY
+_mesa_TexParameteriv(GLenum target, GLenum pname, const GLint *params)
+{
+   struct gl_texture_object *texObj;
+   GET_CURRENT_CONTEXT(ctx);
+
+   texObj = get_texobj_by_target(ctx, target, GL_FALSE);
+   if (!texObj)
+      return;
+
+   _mesa_texture_parameteriv(ctx, texObj, pname, params, false);
+}
+
 /**
  * Set tex parameter to integer value(s).  Primarily intended to set
  * integer-valued texture border color (for integer-valued textures).
@@ -1035,19 +1081,8 @@ _mesa_TexParameterIiv(GLenum target, GLenum pname, const GLint *params)
    if (!texObj)
       return;
 
-   switch (pname) {
-   case GL_TEXTURE_BORDER_COLOR:
-      FLUSH_VERTICES(ctx, _NEW_TEXTURE);
-      /* set the integer-valued border color */
-      COPY_4V(texObj->Sampler.BorderColor.i, params);
-      break;
-   default:
-      _mesa_TexParameteriv(target, pname, params);
-      break;
-   }
-   /* XXX no driver hook for TexParameterIiv() yet */
+   _mesa_texture_parameterIiv(ctx, texObj, pname, params, false);
 }
-
 
 /**
  * Set tex parameter to unsigned integer value(s).  Primarily intended to set
@@ -1064,17 +1099,7 @@ _mesa_TexParameterIuiv(GLenum target, GLenum pname, const GLuint *params)
    if (!texObj)
       return;
 
-   switch (pname) {
-   case GL_TEXTURE_BORDER_COLOR:
-      FLUSH_VERTICES(ctx, _NEW_TEXTURE);
-      /* set the unsigned integer-valued border color */
-      COPY_4V(texObj->Sampler.BorderColor.ui, params);
-      break;
-   default:
-      _mesa_TexParameteriv(target, pname, (const GLint *) params);
-      break;
-   }
-   /* XXX no driver hook for TexParameterIuiv() yet */
+   _mesa_texture_parameterIuiv(ctx, texObj, pname, params, false);
 }
 
 
@@ -1124,6 +1149,58 @@ _mesa_TextureParameteri(GLuint texture, GLenum pname, GLint param)
    }
 
    _mesa_texture_parameteri(ctx, texObj, pname, param, true);
+}
+
+void GLAPIENTRY
+_mesa_TextureParameteriv(GLuint texture, GLenum pname,
+                         const GLint *params)
+{
+   struct gl_texture_object *texObj;
+   GET_CURRENT_CONTEXT(ctx);
+
+   texObj = get_texobj_by_name(ctx, texture, GL_FALSE);
+   if (!texObj) {
+      /* User passed a non-generated name. */
+      _mesa_error(ctx, GL_INVALID_OPERATION, "glTextureParameteriv(texture)");
+      return;
+   }
+
+   _mesa_texture_parameteriv(ctx, texObj, pname, params, true);
+}
+
+
+void GLAPIENTRY
+_mesa_TextureParameterIiv(GLuint texture, GLenum pname, const GLint *params)
+{
+   struct gl_texture_object *texObj;
+   GET_CURRENT_CONTEXT(ctx);
+
+   texObj = get_texobj_by_name(ctx, texture, GL_FALSE);
+   if (!texObj) {
+      /* User passed a non-generated name. */
+      _mesa_error(ctx, GL_INVALID_OPERATION,
+                  "glTextureParameterIiv(texture)");
+      return;
+   }
+
+   _mesa_texture_parameterIiv(ctx, texObj, pname, params, true);
+}
+
+void GLAPIENTRY
+_mesa_TextureParameterIuiv(GLuint texture, GLenum pname, const GLuint *params)
+{
+   struct gl_texture_object *texObj;
+   GET_CURRENT_CONTEXT(ctx);
+
+   texObj = get_texobj_by_name(ctx, texture, GL_FALSE);
+   if (!texObj) {
+      /* User passed a non-generated name. */
+      _mesa_error(ctx, GL_INVALID_OPERATION,
+                  "glTextureParameterIuiv(texture)");
+      return;
+   }
+
+   _mesa_texture_parameterIuiv(ctx, texObj, pname, params, true);
 }
 
 static GLboolean
