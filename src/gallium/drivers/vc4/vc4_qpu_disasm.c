@@ -390,7 +390,7 @@ vc4_qpu_disasm(const uint64_t *instructions, int num_instructions)
 
                 switch (sig) {
                 case QPU_SIG_BRANCH:
-                        fprintf(stderr, "branch\n");
+                        fprintf(stderr, "branch");
                         break;
                 case QPU_SIG_LOAD_IMM:
                         print_load_imm(inst);
@@ -401,10 +401,10 @@ vc4_qpu_disasm(const uint64_t *instructions, int num_instructions)
                         print_add_op(inst);
                         fprintf(stderr, " ; ");
                         print_mul_op(inst);
-
-                        if (num_instructions != 1)
-                                fprintf(stderr, "\n");
                         break;
                 }
+
+                if (num_instructions != 1)
+                        fprintf(stderr, "\n");
         }
 }
