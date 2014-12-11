@@ -195,6 +195,8 @@ gen6_queryobj_get_results(struct gl_context *ctx,
     */
    drm_intel_bo_unreference(query->bo);
    query->bo = NULL;
+
+   query->Base.Ready = true;
 }
 
 /**
@@ -305,7 +307,6 @@ static void gen6_wait_query(struct gl_context *ctx, struct gl_query_object *q)
    struct brw_query_object *query = (struct brw_query_object *)q;
 
    gen6_queryobj_get_results(ctx, query);
-   query->Base.Ready = true;
 }
 
 /**
@@ -331,7 +332,6 @@ static void gen6_check_query(struct gl_context *ctx, struct gl_query_object *q)
 
    if (query->bo == NULL || !drm_intel_bo_busy(query->bo)) {
       gen6_queryobj_get_results(ctx, query);
-      query->Base.Ready = true;
    }
 }
 
