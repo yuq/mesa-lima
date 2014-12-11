@@ -320,6 +320,12 @@ static void gen6_check_query(struct gl_context *ctx, struct gl_query_object *q)
    struct brw_context *brw = brw_context(ctx);
    struct brw_query_object *query = (struct brw_query_object *)q;
 
+   /* If query->bo is NULL, we've already gathered the results - this is a
+    * redundant CheckQuery call.  Ignore it.
+    */
+   if (query->bo == NULL)
+      return;
+
    /* From the GL_ARB_occlusion_query spec:
     *
     *     "Instead of allowing for an infinite loop, performing a
@@ -327,10 +333,10 @@ static void gen6_check_query(struct gl_context *ctx, struct gl_query_object *q)
     *      not ready yet on the first time it is queried.  This ensures that
     *      the async query will return true in finite time.
     */
-   if (query->bo && drm_intel_bo_references(brw->batch.bo, query->bo))
+   if (drm_intel_bo_references(brw->batch.bo, query->bo))
       intel_batchbuffer_flush(brw);
 
-   if (query->bo == NULL || !drm_intel_bo_busy(query->bo)) {
+   if (!drm_intel_bo_busy(query->bo)) {
       gen6_queryobj_get_results(ctx, query);
    }
 }
