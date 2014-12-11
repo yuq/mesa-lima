@@ -1204,7 +1204,8 @@ _mesa_TextureParameterIuiv(GLuint texture, GLenum pname, const GLuint *params)
 }
 
 static GLboolean
-legal_get_tex_level_parameter_target(struct gl_context *ctx, GLenum target)
+legal_get_tex_level_parameter_target(struct gl_context *ctx, GLenum target,
+                                     bool dsa)
 {
    switch (target) {
    case GL_TEXTURE_1D:
@@ -1257,6 +1258,16 @@ legal_get_tex_level_parameter_target(struct gl_context *ctx, GLenum target)
    case GL_PROXY_TEXTURE_2D_MULTISAMPLE:
    case GL_PROXY_TEXTURE_2D_MULTISAMPLE_ARRAY:
       return ctx->Extensions.ARB_texture_multisample;
+
+   /*  This is a valid target for dsa, but the OpenGL 4.5 core spec
+    *  (30.10.2014) Section 8.11 Texture Queries says:
+    *       "For GetTextureLevelParameter* only, texture may also be a cube
+    *       map texture object.  In this case the query is always performed
+    *       for face zero (the TEXTURE_CUBE_MAP_POSITIVE_X face), since there
+    *       is no way to specify another face."
+    */
+   case GL_TEXTURE_CUBE_MAP:
+      return dsa;
    default:
       return GL_FALSE;
    }
@@ -1570,7 +1581,7 @@ _mesa_GetTexLevelParameteriv( GLenum target, GLint level,
       return;
    }
 
-   if (!legal_get_tex_level_parameter_target(ctx, target)) {
+   if (!legal_get_tex_level_parameter_target(ctx, target, false)) {
       _mesa_error(ctx, GL_INVALID_ENUM,
                   "glGetTexLevelParameter[if]v(target=0x%x)", target);
       return;
