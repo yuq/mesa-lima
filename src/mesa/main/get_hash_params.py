@@ -403,6 +403,11 @@ descriptor=[
   [ "TEXTURE_EXTERNAL_OES", "LOC_CUSTOM, TYPE_BOOLEAN, 0, extra_OES_EGL_image_external" ],
 ]},
 
+{ "apis": ["GL", "GL_CORE", "GLES3"], "params": [
+# GL_ARB_sampler_objects / GL 3.3 / GLES 3.0
+  [ "SAMPLER_BINDING", "LOC_CUSTOM, TYPE_INT, GL_SAMPLER_BINDING, NO_EXTRA" ],
+]},
+
 # Remaining enums are only in OpenGL
 { "apis": ["GL", "GL_CORE"], "params": [
   [ "ACCUM_RED_BITS", "BUFFER_INT(Visual.accumRedBits), NO_EXTRA" ],
@@ -694,10 +699,6 @@ descriptor=[
   [ "MAX_INTEGER_SAMPLES", "CONTEXT_INT(Const.MaxIntegerSamples), extra_ARB_texture_multisample" ],
   [ "SAMPLE_MASK", "CONTEXT_BOOL(Multisample.SampleMask), extra_ARB_texture_multisample" ],
   [ "MAX_SAMPLE_MASK_WORDS", "CONST(1), extra_ARB_texture_multisample" ],
-
-
-# GL_ARB_sampler_objects / GL 3.3
-  [ "SAMPLER_BINDING", "LOC_CUSTOM, TYPE_INT, GL_SAMPLER_BINDING, NO_EXTRA" ],
 
 # GL 3.0
   [ "CONTEXT_FLAGS", "CONTEXT_INT(Const.ContextFlags), extra_version_30" ],
