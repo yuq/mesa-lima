@@ -2203,6 +2203,11 @@ _mesa_DeleteFramebuffers(GLsizei n, const GLuint *framebuffers)
    GLint i;
    GET_CURRENT_CONTEXT(ctx);
 
+   if (n < 0) {
+      _mesa_error(ctx, GL_INVALID_VALUE, "glDeleteFramebuffers(n < 0)");
+      return;
+   }
+
    FLUSH_VERTICES(ctx, _NEW_BUFFERS);
 
    for (i = 0; i < n; i++) {
