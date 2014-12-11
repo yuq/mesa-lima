@@ -121,13 +121,6 @@ gen6_queryobj_get_results(struct gl_context *ctx,
    if (query->bo == NULL)
       return;
 
-   /* If the application has requested the query result, but this batch is
-    * still contributing to it, flush it now so the results will be present
-    * when mapped.
-    */
-   if (drm_intel_bo_references(brw->batch.bo, query->bo))
-      intel_batchbuffer_flush(brw);
-
    if (unlikely(brw->perf_debug)) {
       if (drm_intel_bo_busy(query->bo)) {
          perf_debug("Stalling on the GPU waiting for a query object.\n");
@@ -304,7 +297,15 @@ gen6_end_query(struct gl_context *ctx, struct gl_query_object *q)
  */
 static void gen6_wait_query(struct gl_context *ctx, struct gl_query_object *q)
 {
+   struct brw_context *brw = brw_context(ctx);
    struct brw_query_object *query = (struct brw_query_object *)q;
+
+   /* If the application has requested the query result, but this batch is
+    * still contributing to it, flush it now to finish that work so the
+    * result will become available (eventually).
+    */
+   if (drm_intel_bo_references(brw->batch.bo, query->bo))
+      intel_batchbuffer_flush(brw);
 
    gen6_queryobj_get_results(ctx, query);
 }
