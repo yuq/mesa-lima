@@ -81,6 +81,18 @@
       <param name="param" type="GLfloat" />
    </function>
 
+   <function name="TextureParameterfv" offset="assign">
+      <param name="texture" type="GLuint" />
+      <param name="pname" type="GLenum" />
+      <param name="param" type="const GLfloat *" />
+   </function>
+
+   <function name="TextureParameteri" offset="assign">
+      <param name="texture" type="GLuint" />
+      <param name="pname" type="GLenum" />
+      <param name="param" type="GLint" />
+   </function>
+
    <function name="BindTextureUnit" offset="assign">
       <param name="unit" type="GLuint" />
       <param name="texture" type="GLuint" />
