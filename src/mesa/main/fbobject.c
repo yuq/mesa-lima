@@ -2889,7 +2889,8 @@ _mesa_GetFramebufferAttachmentParameteriv(GLenum target, GLenum attachment,
          _mesa_error(ctx, err,
                      "glGetFramebufferAttachmentParameteriv(pname)");
       } else if (att->Type == GL_TEXTURE) {
-         if (att->Texture && att->Texture->Target == GL_TEXTURE_3D) {
+         if (att->Texture && (att->Texture->Target == GL_TEXTURE_3D ||
+             att->Texture->Target == GL_TEXTURE_2D_ARRAY)) {
             *params = att->Zoffset;
          }
          else {
