@@ -1406,6 +1406,11 @@ _mesa_DeleteTextures( GLsizei n, const GLuint *textures)
    if (MESA_VERBOSE & (VERBOSE_API|VERBOSE_TEXTURE))
       _mesa_debug(ctx, "glDeleteTextures %d\n", n);
 
+   if (n < 0) {
+      _mesa_error(ctx, GL_INVALID_VALUE, "glDeleteTextures(n < 0)");
+      return;
+   }
+
    FLUSH_VERTICES(ctx, 0); /* too complex */
 
    if (n < 0) {
