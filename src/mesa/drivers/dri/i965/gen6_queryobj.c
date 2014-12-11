@@ -121,13 +121,7 @@ gen6_queryobj_get_results(struct gl_context *ctx,
    if (query->bo == NULL)
       return;
 
-   if (unlikely(brw->perf_debug)) {
-      if (drm_intel_bo_busy(query->bo)) {
-         perf_debug("Stalling on the GPU waiting for a query object.\n");
-      }
-   }
-
-   drm_intel_bo_map(query->bo, false);
+   brw_bo_map(brw, query->bo, false, "query object");
    uint64_t *results = query->bo->virtual;
    switch (query->Base.Target) {
    case GL_TIME_ELAPSED:
