@@ -29,6 +29,23 @@
 
 #include "main/glheader.h"
 
+/**
+ * \name Internal functions
+ */
+/*@{*/
+
+extern void
+_mesa_texture_parameterf(struct gl_context *ctx,
+                         struct gl_texture_object *texObj,
+                         GLenum pname, GLfloat param, bool dsa);
+
+/*@}*/
+
+/**
+ * \name API functions
+ */
+/*@{*/
+
 
 extern void GLAPIENTRY
 _mesa_GetTexLevelParameterfv( GLenum target, GLint level,
@@ -71,5 +88,8 @@ _mesa_TexParameterIiv(GLenum target, GLenum pname, const GLint *params);
 extern void GLAPIENTRY
 _mesa_TexParameterIuiv(GLenum target, GLenum pname, const GLuint *params);
 
+
+extern void GLAPIENTRY
+_mesa_TextureParameterf(GLuint texture, GLenum pname, GLfloat param);
 
 #endif /* TEXPARAM_H */

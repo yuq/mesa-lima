@@ -75,6 +75,12 @@
       <param name="pixels" type="const GLvoid *" />
    </function>
 
+   <function name="TextureParameterf" offset="assign">
+      <param name="texture" type="GLuint" />
+      <param name="pname" type="GLenum" />
+      <param name="param" type="GLfloat" />
+   </function>
+
    <function name="BindTextureUnit" offset="assign">
       <param name="unit" type="GLuint" />
       <param name="texture" type="GLuint" />

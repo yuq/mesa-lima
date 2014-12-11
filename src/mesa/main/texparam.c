@@ -756,16 +756,12 @@ invalid_enum:
 }
 
 
-void GLAPIENTRY
-_mesa_TexParameterf(GLenum target, GLenum pname, GLfloat param)
+void
+_mesa_texture_parameterf(struct gl_context *ctx,
+                         struct gl_texture_object *texObj,
+                         GLenum pname, GLfloat param, bool dsa)
 {
    GLboolean need_update;
-   struct gl_texture_object *texObj;
-   GET_CURRENT_CONTEXT(ctx);
-
-   texObj = get_texobj_by_target(ctx, target, GL_FALSE);
-   if (!texObj)
-      return;
 
    switch (pname) {
    case GL_TEXTURE_MIN_FILTER:
@@ -793,16 +789,21 @@ _mesa_TexParameterf(GLenum target, GLenum pname, GLfloat param)
                 ((param < INT_MIN) ? INT_MIN : (GLint) (param - 0.5));
 
          p[1] = p[2] = p[3] = 0;
-         need_update = set_tex_parameteri(ctx, texObj, pname, p, false);
+         need_update = set_tex_parameteri(ctx, texObj, pname, p, dsa);
       }
       break;
+   case GL_TEXTURE_BORDER_COLOR:
+   case GL_TEXTURE_SWIZZLE_RGBA:
+      _mesa_error(ctx, GL_INVALID_ENUM, "glTex%sParameterf(non-scalar pname)",
+                  dsa ? "ture" : "");
+      return;
    default:
       {
          /* this will generate an error if pname is illegal */
          GLfloat p[4];
          p[0] = param;
          p[1] = p[2] = p[3] = 0.0F;
-         need_update = set_tex_parameterf(ctx, texObj, pname, p, false);
+         need_update = set_tex_parameterf(ctx, texObj, pname, p, dsa);
       }
    }
 
@@ -982,6 +983,19 @@ _mesa_TexParameteriv(GLenum target, GLenum pname, const GLint *params)
    }
 }
 
+void GLAPIENTRY
+_mesa_TexParameterf(GLenum target, GLenum pname, GLfloat param)
+{
+   struct gl_texture_object *texObj;
+   GET_CURRENT_CONTEXT(ctx);
+
+   texObj = get_texobj_by_target(ctx, target, GL_FALSE);
+   if (!texObj)
+      return;
+
+   _mesa_texture_parameterf(ctx, texObj, pname, param, false);
+}
+
 /**
  * Set tex parameter to integer value(s).  Primarily intended to set
  * integer-valued texture border color (for integer-valued textures).
@@ -1039,6 +1053,21 @@ _mesa_TexParameterIuiv(GLenum target, GLenum pname, const GLuint *params)
    /* XXX no driver hook for TexParameterIuiv() yet */
 }
 
+void GLAPIENTRY
+_mesa_TextureParameterf(GLuint texture, GLenum pname, GLfloat param)
+{
+   struct gl_texture_object *texObj;
+   GET_CURRENT_CONTEXT(ctx);
+
+   texObj = get_texobj_by_name(ctx, texture, GL_FALSE);
+   if (!texObj) {
+      /* User passed a non-generated name. */
+      _mesa_error(ctx, GL_INVALID_OPERATION, "glTextureParameterf(texture)");
+      return;
+   }
+
+   _mesa_texture_parameterf(ctx, texObj, pname, param, true);
+}
 
 static GLboolean
 legal_get_tex_level_parameter_target(struct gl_context *ctx, GLenum target)
