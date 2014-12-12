@@ -58,10 +58,6 @@ _mesa_ClearIndex( GLfloat c )
  * \param alpha alpha component.
  *
  * \sa glClearColor().
- *
- * Clamps the parameters and updates gl_colorbuffer_attrib::ClearColor.  On a
- * change, flushes the vertices and notifies the driver via the
- * dd_function_table::ClearColor callback.
  */
 void GLAPIENTRY
 _mesa_ClearColor( GLclampf red, GLclampf green, GLclampf blue, GLclampf alpha )
