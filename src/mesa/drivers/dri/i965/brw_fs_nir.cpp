@@ -403,8 +403,8 @@ fs_visitor::nir_emit_alu(nir_alu_instr *instr)
    struct brw_wm_prog_key *fs_key = (struct brw_wm_prog_key *) this->key;
 
    fs_reg op[3];
-   fs_reg dest = retype(get_nir_dest(instr->dest.dest),
-                        brw_type_for_nir_type(nir_op_infos[instr->op].output_type));
+   fs_reg dest = get_nir_dest(instr->dest.dest);
+   dest.type = brw_type_for_nir_type(nir_op_infos[instr->op].output_type);
 
    fs_reg result;
    if (instr->has_predicate) {
@@ -415,10 +415,8 @@ fs_visitor::nir_emit_alu(nir_alu_instr *instr)
    }
 
 
-   for (unsigned i = 0; i < nir_op_infos[instr->op].num_inputs; i++) {
-      op[i] = retype(get_nir_alu_src(instr, i),
-                     brw_type_for_nir_type(nir_op_infos[instr->op].input_types[i]));
-   }
+   for (unsigned i = 0; i < nir_op_infos[instr->op].num_inputs; i++)
+      op[i] = get_nir_alu_src(instr, i);
 
    switch (instr->op) {
    case nir_op_fmov:
@@ -987,6 +985,7 @@ fs_visitor::get_nir_alu_src(nir_alu_instr *instr, unsigned src)
 {
    fs_reg reg = get_nir_src(instr->src[src].src);
 
+   reg.type = brw_type_for_nir_type(nir_op_infos[instr->op].input_types[src]);
    reg.abs = instr->src[src].abs;
    reg.negate = instr->src[src].negate;
 
@@ -1004,20 +1003,14 @@ fs_visitor::get_nir_alu_src(nir_alu_instr *instr, unsigned src)
 
    if (needs_swizzle) {
       /* resolve the swizzle through MOV's */
-      fs_reg new_reg = fs_reg(GRF, virtual_grf_alloc(num_components));
+      fs_reg new_reg = fs_reg(GRF, virtual_grf_alloc(num_components), reg.type);
 
       for (unsigned i = 0; i < 4; i++) {
          if (!nir_alu_instr_channel_used(instr, src, i))
             continue;
 
-         fs_reg dest = new_reg;
-         dest.type = reg.type;
-         dest.reg_offset = i;
-
-         fs_reg src0 = reg;
-         src0.reg_offset += instr->src[src].swizzle[i];
-
-         emit(MOV(dest, src0));
+         emit(MOV(offset(new_reg, i),
+                  offset(reg, instr->src[src].swizzle[i])));
       }
 
       return new_reg;
