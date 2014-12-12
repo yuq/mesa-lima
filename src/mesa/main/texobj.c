@@ -1403,6 +1403,11 @@ _mesa_DeleteTextures( GLsizei n, const GLuint *textures)
 
    FLUSH_VERTICES(ctx, 0); /* too complex */
 
+   if (n < 0) {
+      _mesa_error(ctx, GL_INVALID_VALUE, "glDeleteTextures(n)");
+      return;
+   }
+
    if (!textures)
       return;
 
