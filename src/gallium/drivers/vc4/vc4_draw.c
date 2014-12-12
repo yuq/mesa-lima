@@ -218,7 +218,6 @@ vc4_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
                 if (rsc->shadow_parent) {
                         vc4_update_shadow_index_buffer(pctx, &vc4->indexbuf);
                         offset = 0;
-                        index_size = 2;
                 }
 
                 cl_start_reloc(&vc4->bcl, 1);
