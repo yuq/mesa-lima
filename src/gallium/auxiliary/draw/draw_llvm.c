@@ -1653,6 +1653,8 @@ draw_llvm_generate(struct draw_llvm *llvm, struct draw_llvm_variant *variant,
       LLVMValueRef aos_attribs[PIPE_MAX_SHADER_INPUTS][LP_MAX_VECTOR_WIDTH / 32] = { { 0 } };
       LLVMValueRef io;
       LLVMValueRef clipmask;   /* holds the clipmask value */
+      LLVMValueRef true_index_array = lp_build_zero(gallivm,
+                                                    lp_type_uint_vec(32, 32*vector_length));
       const LLVMValueRef (*ptr_aos)[TGSI_NUM_CHANNELS];
 
       io_itr = lp_loop.counter;
@@ -1662,7 +1664,6 @@ draw_llvm_generate(struct draw_llvm *llvm, struct draw_llvm_variant *variant,
       lp_build_printf(gallivm, " --- io %d = %p, loop counter %d\n",
                       io_itr, io, lp_loop.counter);
 #endif
-      system_values.vertex_id = lp_build_zero(gallivm, lp_type_uint_vec(32, 32*vector_length));
       for (i = 0; i < vector_length; ++i) {
          LLVMValueRef vert_index =
             LLVMBuildAdd(builder,
@@ -1670,7 +1671,6 @@ draw_llvm_generate(struct draw_llvm *llvm, struct draw_llvm_variant *variant,
                          lp_build_const_int32(gallivm, i), "");
          LLVMValueRef true_index =
             LLVMBuildAdd(builder, start, vert_index, "");
-         LLVMValueRef vertex_id;
 
          /* make sure we're not out of bounds which can happen
           * if fetch_count % 4 != 0, because on the last iteration
@@ -1713,22 +1713,8 @@ draw_llvm_generate(struct draw_llvm *llvm, struct draw_llvm_variant *variant,
             lp_build_endif(&if_ctx);
             true_index = LLVMBuildLoad(builder, index_ptr, "true_index");
          }
-         /* in the paths with elts vertex id has to be unaffected by the
-          * index bias and because indices inside our elements array have
-          * already had index bias applied we need to subtract it here to
-          * get back to the original index.
-          * in the linear paths vertex id has to be unaffected by the
-          * original start index and because we abuse the 'start' variable
-          * to either represent the actual start index or the index at which
-          * the primitive was split (we split rendering into chunks of at
-          * most 4095-vertices) we need to back out the original start
-          * index out of our vertex id here.
-          */
-         vertex_id = LLVMBuildSub(builder, true_index, vertex_id_offset, "");
-
-         system_values.vertex_id = LLVMBuildInsertElement(
-            gallivm->builder,
-            system_values.vertex_id, vertex_id,
+         true_index_array = LLVMBuildInsertElement(
+            gallivm->builder, true_index_array, true_index,
             lp_build_const_int32(gallivm, i), "");
 
          for (j = 0; j < draw->pt.nr_vertex_elements; ++j) {
@@ -1743,6 +1729,24 @@ draw_llvm_generate(struct draw_llvm *llvm, struct draw_llvm_variant *variant,
       }
       convert_to_soa(gallivm, aos_attribs, inputs,
                      draw->pt.nr_vertex_elements, vs_type);
+
+      /* In the paths with elts vertex id has to be unaffected by the
+       * index bias and because indices inside our elements array have
+       * already had index bias applied we need to subtract it here to
+       * get back to the original index.
+       * in the linear paths vertex id has to be unaffected by the
+       * original start index and because we abuse the 'start' variable
+       * to either represent the actual start index or the index at which
+       * the primitive was split (we split rendering into chunks of at
+       * most 4095-vertices) we need to back out the original start
+       * index out of our vertex id here.
+       */
+      system_values.basevertex = lp_build_broadcast(gallivm, lp_build_vec_type(gallivm,
+                                                       lp_type_uint_vec(32, 32*vector_length)),
+                                                    vertex_id_offset);
+      system_values.vertex_id = true_index_array;
+      system_values.vertex_id_nobase = LLVMBuildSub(builder, true_index_array,
+                                                      system_values.basevertex, "");
 
       ptr_aos = (const LLVMValueRef (*)[TGSI_NUM_CHANNELS]) inputs;
       generate_vs(variant,

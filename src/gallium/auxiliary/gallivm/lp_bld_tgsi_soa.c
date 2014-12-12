@@ -1538,6 +1538,16 @@ emit_fetch_system_value(
       atype = TGSI_TYPE_UNSIGNED;
       break;
 
+   case TGSI_SEMANTIC_VERTEXID_NOBASE:
+      res = bld->system_values.vertex_id_nobase;
+      atype = TGSI_TYPE_UNSIGNED;
+      break;
+
+   case TGSI_SEMANTIC_BASEVERTEX:
+      res = bld->system_values.basevertex;
+      atype = TGSI_TYPE_UNSIGNED;
+      break;
+
    case TGSI_SEMANTIC_PRIMID:
       res = bld->system_values.prim_id;
       atype = TGSI_TYPE_UNSIGNED;
