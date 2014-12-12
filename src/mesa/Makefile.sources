@@ -560,7 +560,6 @@ X86_FILES =			\
 	$(SRCDIR)x86/3dnow_xform2.S	\
 	$(SRCDIR)x86/3dnow_xform3.S	\
 	$(SRCDIR)x86/3dnow_xform4.S	\
-	$(SRCDIR)x86/3dnow_normal.S	\
 	$(SRCDIR)x86/sse.h		\
 	$(SRCDIR)x86/sse_xform1.S	\
 	$(SRCDIR)x86/sse_xform2.S	\
