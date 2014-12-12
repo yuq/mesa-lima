@@ -228,6 +228,7 @@ fd_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 	case PIPE_CAP_CONDITIONAL_RENDER_INVERTED:
 	case PIPE_CAP_SAMPLER_VIEW_TARGET:
 	case PIPE_CAP_CLIP_HALFZ:
+	case PIPE_CAP_VERTEXID_NOBASE:
 		return 0;
 
 	case PIPE_CAP_MAX_VIEWPORTS:

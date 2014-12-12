@@ -213,6 +213,12 @@ tgsi_scan_shader(const struct tgsi_token *tokens,
                   else if (semName == TGSI_SEMANTIC_VERTEXID) {
                      info->uses_vertexid = TRUE;
                   }
+                  else if (semName == TGSI_SEMANTIC_VERTEXID_NOBASE) {
+                     info->uses_vertexid_nobase = TRUE;
+                  }
+                  else if (semName == TGSI_SEMANTIC_BASEVERTEX) {
+                     info->uses_basevertex = TRUE;
+                  }
                   else if (semName == TGSI_SEMANTIC_PRIMID) {
                      info->uses_primid = TRUE;
                   }

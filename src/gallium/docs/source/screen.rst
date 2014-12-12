@@ -233,6 +233,14 @@ The integer capabilities:
 * ``PIPE_CAP_CLIP_HALFZ``: Whether the driver supports the
   pipe_rasterizer_state::clip_halfz being set to true. This is required
   for enabling ARB_clip_control.
+* ``PIPE_CAP_VERTEXID_NOBASE``: If true, the driver only supports
+  TGSI_SEMANTIC_VERTEXID_NOBASE (and not TGSI_SEMANTIC_VERTEXID). This means
+  state trackers for APIs whose vertexIDs are offset by basevertex (such as GL)
+  will need to lower TGSI_SEMANTIC_VERTEXID to TGSI_SEMANTIC_VERTEXID_NOBASE
+  and TGSI_SEMANTIC_BASEVERTEX, so drivers setting this must handle both these
+  semantics. Only relevant if geometry shaders are supported.
+  (Currently not possible to query availability of these two semantics outside
+  this, at least BASEVERTEX should be exposed separately too).
 
 
 .. _pipe_capf:

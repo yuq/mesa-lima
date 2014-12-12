@@ -181,6 +181,7 @@ static int r300_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
         case PIPE_CAP_TGSI_FS_FINE_DERIVATIVE:
         case PIPE_CAP_CONDITIONAL_RENDER_INVERTED:
         case PIPE_CAP_SAMPLER_VIEW_TARGET:
+        case PIPE_CAP_VERTEXID_NOBASE:
             return 0;
 
         /* SWTCL-only features. */

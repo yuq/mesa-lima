@@ -495,6 +495,8 @@ ilo_get_param(struct pipe_screen *screen, enum pipe_cap param)
       return true;
    case PIPE_CAP_CLIP_HALFZ:
       return true;
+   case PIPE_CAP_VERTEXID_NOBASE:
+      return false;
 
    default:
       return 0;

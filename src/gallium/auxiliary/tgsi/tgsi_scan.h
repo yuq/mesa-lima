@@ -74,6 +74,8 @@ struct tgsi_shader_info
    boolean uses_kill;  /**< KILL or KILL_IF instruction used? */
    boolean uses_instanceid;
    boolean uses_vertexid;
+   boolean uses_vertexid_nobase;
+   boolean uses_basevertex;
    boolean uses_primid;
    boolean uses_frontface;
    boolean writes_psize;

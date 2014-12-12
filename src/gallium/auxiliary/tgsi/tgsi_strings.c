@@ -86,6 +86,8 @@ const char *tgsi_semantic_names[TGSI_SEMANTIC_COUNT] =
    "SAMPLEPOS",
    "SAMPLEMASK",
    "INVOCATIONID",
+   "VERTEXID_NOBASE",
+   "BASEVERTEX",
 };
 
 const char *tgsi_texture_names[TGSI_TEXTURE_COUNT] =
