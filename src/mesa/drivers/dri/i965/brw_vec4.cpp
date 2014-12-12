@@ -1535,6 +1535,8 @@ vec4_visitor::get_timestamp()
    src_reg ts = src_reg(brw_reg(BRW_ARCHITECTURE_REGISTER_FILE,
                                 BRW_ARF_TIMESTAMP,
                                 0,
+                                0,
+                                0,
                                 BRW_REGISTER_TYPE_UD,
                                 BRW_VERTICAL_STRIDE_0,
                                 BRW_WIDTH_4,

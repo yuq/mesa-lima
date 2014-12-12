@@ -824,12 +824,14 @@ fs_generator::generate_ddx(enum opcode opcode,
    }
 
    struct brw_reg src0 = brw_reg(src.file, src.nr, 1,
+                                 src.negate, src.abs,
 				 BRW_REGISTER_TYPE_F,
 				 vstride,
 				 width,
 				 BRW_HORIZONTAL_STRIDE_0,
 				 BRW_SWIZZLE_XYZW, WRITEMASK_XYZW);
    struct brw_reg src1 = brw_reg(src.file, src.nr, 0,
+                                 src.negate, src.abs,
 				 BRW_REGISTER_TYPE_F,
 				 vstride,
 				 width,
@@ -874,12 +876,14 @@ fs_generator::generate_ddy(enum opcode opcode,
 
       /* produce accurate derivatives */
       struct brw_reg src0 = brw_reg(src.file, src.nr, 0,
+                                    src.negate, src.abs,
                                     BRW_REGISTER_TYPE_F,
                                     BRW_VERTICAL_STRIDE_4,
                                     BRW_WIDTH_4,
                                     BRW_HORIZONTAL_STRIDE_1,
                                     BRW_SWIZZLE_XYXY, WRITEMASK_XYZW);
       struct brw_reg src1 = brw_reg(src.file, src.nr, 0,
+                                    src.negate, src.abs,
                                     BRW_REGISTER_TYPE_F,
                                     BRW_VERTICAL_STRIDE_4,
                                     BRW_WIDTH_4,
@@ -908,12 +912,14 @@ fs_generator::generate_ddy(enum opcode opcode,
    } else {
       /* replicate the derivative at the top-left pixel to other pixels */
       struct brw_reg src0 = brw_reg(src.file, src.nr, 0,
+                                    src.negate, src.abs,
                                     BRW_REGISTER_TYPE_F,
                                     BRW_VERTICAL_STRIDE_4,
                                     BRW_WIDTH_4,
                                     BRW_HORIZONTAL_STRIDE_0,
                                     BRW_SWIZZLE_XYZW, WRITEMASK_XYZW);
       struct brw_reg src1 = brw_reg(src.file, src.nr, 2,
+                                    src.negate, src.abs,
                                     BRW_REGISTER_TYPE_F,
                                     BRW_VERTICAL_STRIDE_4,
                                     BRW_WIDTH_4,
