@@ -132,14 +132,15 @@ color_buffer_writes_enabled(const struct gl_context *ctx, unsigned idx)
 
 /**
  * Clear buffers.
- * 
+ *
  * \param mask bit-mask indicating the buffers to be cleared.
  *
- * Flushes the vertices and verifies the parameter. If __struct gl_contextRec::NewState
- * is set then calls _mesa_update_state() to update gl_frame_buffer::_Xmin,
- * etc. If the rasterization mode is set to GL_RENDER then requests the driver
- * to clear the buffers, via the dd_function_table::Clear callback.
- */ 
+ * Flushes the vertices and verifies the parameter.
+ * If __struct gl_contextRec::NewState is set then calls _mesa_update_state()
+ * to update gl_frame_buffer::_Xmin, etc.  If the rasterization mode is set to
+ * GL_RENDER then requests the driver to clear the buffers, via the
+ * dd_function_table::Clear callback.
+ */
 void GLAPIENTRY
 _mesa_Clear( GLbitfield mask )
 {
@@ -340,7 +341,8 @@ _mesa_ClearBufferiv(GLenum buffer, GLint drawbuffer, const GLint *value)
                      drawbuffer);
          return;
       }
-      else if (ctx->DrawBuffer->Attachment[BUFFER_STENCIL].Renderbuffer && !ctx->RasterDiscard) {
+      else if (ctx->DrawBuffer->Attachment[BUFFER_STENCIL].Renderbuffer
+               && !ctx->RasterDiscard) {
          /* Save current stencil clear value, set to 'value', do the
           * stencil clear and restore the clear value.
           * XXX in the future we may have a new ctx->Driver.ClearBuffer()
@@ -503,7 +505,8 @@ _mesa_ClearBufferfv(GLenum buffer, GLint drawbuffer, const GLfloat *value)
                      drawbuffer);
          return;
       }
-      else if (ctx->DrawBuffer->Attachment[BUFFER_DEPTH].Renderbuffer && !ctx->RasterDiscard) {
+      else if (ctx->DrawBuffer->Attachment[BUFFER_DEPTH].Renderbuffer
+               && !ctx->RasterDiscard) {
          /* Save current depth clear value, set to 'value', do the
           * depth clear and restore the clear value.
           * XXX in the future we may have a new ctx->Driver.ClearBuffer()
