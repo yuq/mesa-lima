@@ -26,6 +26,7 @@
 #include "vc4_context.h"
 #include "vc4_qir.h"
 #include "vc4_qpu.h"
+#include "util/ralloc.h"
 
 static void
 vc4_dump_program(struct vc4_compile *c)
@@ -44,7 +45,7 @@ vc4_dump_program(struct vc4_compile *c)
 static void
 queue(struct vc4_compile *c, uint64_t inst)
 {
-        struct queued_qpu_inst *q = calloc(1, sizeof(*q));
+        struct queued_qpu_inst *q = rzalloc(c, struct queued_qpu_inst);
         q->inst = inst;
         insert_at_tail(&c->qpu_inst_list, &q->link);
 }
