@@ -21,7 +21,7 @@
 #define PIPE_ATOMIC_OS_SOLARIS
 #elif defined(_MSC_VER)
 #define PIPE_ATOMIC_MSVC_INTRINSIC
-#elif defined(__GNUC__) && ((__GNUC__ * 100 + __GNUC_MINOR__) >= 401)
+#elif defined(__GNUC__)
 #define PIPE_ATOMIC_GCC_INTRINSIC
 #else
 #error "Unsupported platform"
