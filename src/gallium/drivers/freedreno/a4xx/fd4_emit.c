@@ -231,8 +231,8 @@ fd4_emit_gmem_restore_tex(struct fd_ringbuffer *ring, struct pipe_surface *psurf
 {
 	struct fd_resource *rsc = fd_resource(psurf->texture);
 	unsigned lvl = psurf->u.tex.level;
-	struct fd_resource_slice *slice = &rsc->slices[lvl];
-	uint32_t layer_offset = slice->size0 * psurf->u.tex.first_layer;
+	struct fd_resource_slice *slice = fd_resource_slice(rsc, lvl);
+	uint32_t offset = fd_resource_offset(rsc, lvl, psurf->u.tex.first_layer);
 	enum pipe_format format = fd4_gmem_restore_format(psurf->format);
 
 	debug_assert(psurf->u.tex.first_layer == psurf->u.tex.last_layer);
@@ -268,7 +268,7 @@ fd4_emit_gmem_restore_tex(struct fd_ringbuffer *ring, struct pipe_surface *psurf
 			A4XX_TEX_CONST_1_HEIGHT(psurf->height));
 	OUT_RING(ring, A4XX_TEX_CONST_2_PITCH(slice->pitch * rsc->cpp));
 	OUT_RING(ring, 0x00000000);
-	OUT_RELOC(ring, rsc->bo, layer_offset, 0, 0);
+	OUT_RELOC(ring, rsc->bo, offset, 0, 0);
 	OUT_RING(ring, 0x00000000);
 	OUT_RING(ring, 0x00000000);
 	OUT_RING(ring, 0x00000000);

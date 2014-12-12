@@ -67,6 +67,14 @@ fd_resource_slice(struct fd_resource *rsc, unsigned level)
 	return &rsc->slices[level];
 }
 
+/* get offset for specified mipmap level and texture/array layer */
+static INLINE uint32_t
+fd_resource_offset(struct fd_resource *rsc, unsigned level, unsigned layer)
+{
+	struct fd_resource_slice *slice = fd_resource_slice(rsc, level);
+	return slice->offset + (slice->size0 * layer);
+}
+
 void fd_resource_screen_init(struct pipe_screen *pscreen);
 void fd_resource_context_init(struct pipe_context *pctx);
 
