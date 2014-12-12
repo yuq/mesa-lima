@@ -4195,8 +4195,8 @@ const unsigned _mesa_sysval_to_semantic[SYSTEM_VALUE_MAX] = {
     */
    TGSI_SEMANTIC_VERTEXID,
    TGSI_SEMANTIC_INSTANCEID,
-   0,
-   0,
+   TGSI_SEMANTIC_VERTEXID_NOBASE,
+   TGSI_SEMANTIC_BASEVERTEX,
 
    /* Geometry shader
     */
@@ -4907,6 +4907,10 @@ st_translate_program(
           TGSI_SEMANTIC_SAMPLEMASK);
    assert(_mesa_sysval_to_semantic[SYSTEM_VALUE_INVOCATION_ID] ==
           TGSI_SEMANTIC_INVOCATIONID);
+   assert(_mesa_sysval_to_semantic[SYSTEM_VALUE_VERTEX_ID_ZERO_BASE] ==
+          TGSI_SEMANTIC_VERTEXID_NOBASE);
+   assert(_mesa_sysval_to_semantic[SYSTEM_VALUE_BASE_VERTEX] ==
+          TGSI_SEMANTIC_BASEVERTEX);
 
    t = CALLOC_STRUCT(st_translate);
    if (!t) {
