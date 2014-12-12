@@ -886,6 +886,8 @@ _mesa_test_framebuffer_completeness(struct gl_context *ctx,
    GLuint max_layer_count = 0, att_layer_count;
    bool is_layered = false;
    GLenum layer_tex_target = 0;
+   bool has_depth_attachment = false;
+   bool has_stencil_attachment = false;
 
    assert(_mesa_is_user_fbo(fb));
 
@@ -923,6 +925,8 @@ _mesa_test_framebuffer_completeness(struct gl_context *ctx,
             fb->_Status = GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT_EXT;
             fbo_incomplete(ctx, "depth attachment incomplete", -1);
             return;
+         } else if (att->Type != GL_NONE) {
+            has_depth_attachment = true;
          }
       }
       else if (i == -1) {
@@ -932,6 +936,8 @@ _mesa_test_framebuffer_completeness(struct gl_context *ctx,
             fb->_Status = GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT_EXT;
             fbo_incomplete(ctx, "stencil attachment incomplete", -1);
             return;
+         } else if (att->Type != GL_NONE) {
+            has_stencil_attachment = true;
          }
       }
       else {
@@ -1126,6 +1132,20 @@ _mesa_test_framebuffer_completeness(struct gl_context *ctx,
 	    return;
 	 }
       }
+   }
+
+   /* The OpenGL ES3 spec, in chapter 9.4. FRAMEBUFFER COMPLETENESS, says:
+    *
+    *    "Depth and stencil attachments, if present, are the same image."
+    *
+    * This restriction is not present in the OpenGL ES2 spec.
+    */
+   if (_mesa_is_gles3(ctx) &&
+       has_stencil_attachment && has_depth_attachment &&
+       !_mesa_has_depthstencil_combined(fb)) {
+      fb->_Status = GL_FRAMEBUFFER_UNSUPPORTED;
+      fbo_incomplete(ctx, "Depth and stencil attachments must be the same image", -1);
+      return;
    }
 
    /* Provisionally set status = COMPLETE ... */
