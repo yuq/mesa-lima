@@ -455,7 +455,8 @@ public:
    void renumber_registers(void);
 
    void emit_block_mov(ir_assignment *ir, const struct glsl_type *type,
-                       st_dst_reg *l, st_src_reg *r);
+                       st_dst_reg *l, st_src_reg *r,
+                       st_src_reg *cond, bool cond_swap);
 
    void *mem_ctx;
 };
@@ -2388,18 +2389,20 @@ glsl_to_tgsi_visitor::process_move_condition(ir_rvalue *ir)
 
 void
 glsl_to_tgsi_visitor::emit_block_mov(ir_assignment *ir, const struct glsl_type *type,
-                                     st_dst_reg *l, st_src_reg *r)
+                                     st_dst_reg *l, st_src_reg *r,
+                                     st_src_reg *cond, bool cond_swap)
 {
    if (type->base_type == GLSL_TYPE_STRUCT) {
       for (unsigned int i = 0; i < type->length; i++) {
-         emit_block_mov(ir, type->fields.structure[i].type, l, r);
+         emit_block_mov(ir, type->fields.structure[i].type, l, r,
+                        cond, cond_swap);
       }
       return;
    }
 
    if (type->is_array()) {
       for (unsigned int i = 0; i < type->length; i++) {
-         emit_block_mov(ir, type->fields.array, l, r);
+         emit_block_mov(ir, type->fields.array, l, r, cond, cond_swap);
       }
       return;
    }
@@ -2411,7 +2414,7 @@ glsl_to_tgsi_visitor::emit_block_mov(ir_assignment *ir, const struct glsl_type *
                                          type->vector_elements, 1);
 
       for (int i = 0; i < type->matrix_columns; i++) {
-         emit_block_mov(ir, vec_type, l, r);
+         emit_block_mov(ir, vec_type, l, r, cond, cond_swap);
       }
       return;
    }
@@ -2419,7 +2422,22 @@ glsl_to_tgsi_visitor::emit_block_mov(ir_assignment *ir, const struct glsl_type *
    assert(type->is_scalar() || type->is_vector());
 
    r->type = type->base_type;
-   emit(ir, TGSI_OPCODE_MOV, *l, *r);
+   if (cond) {
+      st_src_reg l_src = st_src_reg(*l);
+      l_src.swizzle = swizzle_for_size(type->vector_elements);
+
+      if (native_integers) {
+         emit(ir, TGSI_OPCODE_UCMP, *l, *cond,
+              cond_swap ? l_src : *r,
+              cond_swap ? *r : l_src);
+      } else {
+         emit(ir, TGSI_OPCODE_CMP, *l, *cond,
+              cond_swap ? l_src : *r,
+              cond_swap ? *r : l_src);
+      }
+   } else {
+      emit(ir, TGSI_OPCODE_MOV, *l, *r);
+   }
    l->index++;
    r->index++;
 }
@@ -2429,7 +2447,6 @@ glsl_to_tgsi_visitor::visit(ir_assignment *ir)
 {
    st_dst_reg l;
    st_src_reg r;
-   int i;
 
    ir->rhs->accept(this);
    r = this->result;
@@ -2486,29 +2503,7 @@ glsl_to_tgsi_visitor::visit(ir_assignment *ir)
       const bool switch_order = this->process_move_condition(ir->condition);
       st_src_reg condition = this->result;
 
-      for (i = 0; i < type_size(ir->lhs->type); i++) {
-         st_src_reg l_src = st_src_reg(l);
-         st_src_reg condition_temp = condition;
-         st_src_reg op1, op2;
-         l_src.swizzle = swizzle_for_size(ir->lhs->type->vector_elements);
-
-         op1 = r;
-         op2 = l_src;
-         if (switch_order) {
-            op1 = l_src;
-            op2 = r;
-         }
-
-         if (native_integers) {
-            emit(ir, TGSI_OPCODE_UCMP, l, condition_temp, op1, op2);
-         }
-         else {
-            emit(ir, TGSI_OPCODE_CMP, l, condition_temp, op1, op2);
-         }
-
-         l.index++;
-         r.index++;
-      }
+      emit_block_mov(ir, ir->lhs->type, &l, &r, &condition, switch_order);
    } else if (ir->rhs->as_expression() &&
               this->instructions.get_tail() &&
               ir->rhs == ((glsl_to_tgsi_instruction *)this->instructions.get_tail())->ir &&
@@ -2525,7 +2520,7 @@ glsl_to_tgsi_visitor::visit(ir_assignment *ir)
       new_inst->saturate = inst->saturate;
       inst->dead_mask = inst->dst.writemask;
    } else {
-      emit_block_mov(ir, ir->rhs->type, &l, &r);
+      emit_block_mov(ir, ir->rhs->type, &l, &r, NULL, false);
    }
 }
 
