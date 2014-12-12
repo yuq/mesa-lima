@@ -53,7 +53,7 @@ fs_visitor::emit_nir_code()
       nir_validate_shader(nir);
       progress |= nir_opt_peephole_select(nir);
       nir_validate_shader(nir);
-      progress |= nir_opt_peephole_ffma(nir);
+      progress |= nir_opt_algebraic(nir);
       nir_validate_shader(nir);
    } while (progress);
 

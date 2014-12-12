@@ -1398,6 +1398,8 @@ void nir_convert_to_ssa_impl(nir_function_impl *impl);
 void nir_convert_to_ssa(nir_shader *shader);
 void nir_convert_from_ssa(nir_shader *shader);
 
+bool nir_opt_algebraic(nir_shader *shader);
+
 bool nir_opt_global_to_local(nir_shader *shader);
 
 bool nir_copy_prop_impl(nir_function_impl *impl);

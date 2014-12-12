@@ -13,6 +13,9 @@ LIBGLCPP_GENERATED_FILES = \
 	$(GLSL_BUILDDIR)/glcpp/glcpp-lex.c \
 	$(GLSL_BUILDDIR)/glcpp/glcpp-parse.c
 
+NIR_GENERATED_FILES = \
+	$(GLSL_BUILDDIR)/nir/nir_opt_algebraic.c
+
 NIR_FILES = \
 	$(GLSL_SRCDIR)/nir/nir.c \
 	$(GLSL_SRCDIR)/nir/nir.h \
@@ -47,7 +50,8 @@ NIR_FILES = \
 	$(GLSL_SRCDIR)/nir/nir_to_ssa.c \
 	$(GLSL_SRCDIR)/nir/nir_validate.c \
 	$(GLSL_SRCDIR)/nir/nir_types.cpp \
-	$(GLSL_SRCDIR)/nir/glsl_to_nir.cpp
+	$(GLSL_SRCDIR)/nir/glsl_to_nir.cpp \
+	$(NIR_GENERATED_FILES)
 
 # libglsl
 
