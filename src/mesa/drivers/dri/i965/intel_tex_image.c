@@ -24,7 +24,7 @@
 #include "intel_blit.h"
 #include "intel_fbo.h"
 #include "intel_image.h"
-
+#include "intel_tiled_memcpy.h"
 #include "brw_context.h"
 
 #define FILE_DEBUG_FLAG DEBUG_TEXTURE
@@ -342,11 +342,125 @@ intel_image_target_texture_2d(struct gl_context *ctx, GLenum target,
                               image->tile_x, image->tile_y);
 }
 
+/**
+ * \brief A fast path for glGetTexImage.
+ *
+ * \see intel_readpixels_tiled_memcpy()
+ */
+bool
+intel_gettexsubimage_tiled_memcpy(struct gl_context *ctx,
+                                  struct gl_texture_image *texImage,
+                                  GLint xoffset, GLint yoffset,
+                                  GLsizei width, GLsizei height,
+                                  GLenum format, GLenum type,
+                                  GLvoid *pixels,
+                                  const struct gl_pixelstore_attrib *packing)
+{
+   struct brw_context *brw = brw_context(ctx);
+   struct intel_texture_image *image = intel_texture_image(texImage);
+   int dst_pitch;
+
+   /* The miptree's buffer. */
+   drm_intel_bo *bo;
+
+   int error = 0;
+
+   uint32_t cpp;
+   mem_copy_fn mem_copy = NULL;
+
+   /* This fastpath is restricted to specific texture types:
+    * a 2D BGRA, RGBA, L8 or A8 texture. It could be generalized to support
+    * more types.
+    *
+    * FINISHME: The restrictions below on packing alignment and packing row
+    * length are likely unneeded now because we calculate the destination stride
+    * with _mesa_image_row_stride. However, before removing the restrictions
+    * we need tests.
+    */
+   if (!brw->has_llc ||
+       !(type == GL_UNSIGNED_BYTE || type == GL_UNSIGNED_INT_8_8_8_8_REV) ||
+       !(texImage->TexObject->Target == GL_TEXTURE_2D ||
+         texImage->TexObject->Target == GL_TEXTURE_RECTANGLE) ||
+       pixels == NULL ||
+       _mesa_is_bufferobj(packing->BufferObj) ||
+       packing->Alignment > 4 ||
+       packing->SkipPixels > 0 ||
+       packing->SkipRows > 0 ||
+       (packing->RowLength != 0 && packing->RowLength != width) ||
+       packing->SwapBytes ||
+       packing->LsbFirst ||
+       packing->Invert)
+      return false;
+
+   if (!intel_get_memcpy(texImage->TexFormat, format, type, &mem_copy, &cpp))
+      return false;
+
+   /* If this is a nontrivial texture view, let another path handle it instead. */
+   if (texImage->TexObject->MinLayer)
+      return false;
+
+   if (!image->mt ||
+       (image->mt->tiling != I915_TILING_X &&
+       image->mt->tiling != I915_TILING_Y)) {
+      /* The algorithm is written only for X- or Y-tiled memory. */
+      return false;
+   }
+
+   /* Since we are going to write raw data to the miptree, we need to resolve
+    * any pending fast color clears before we start.
+    */
+   intel_miptree_resolve_color(brw, image->mt);
+
+   bo = image->mt->bo;
+
+   if (drm_intel_bo_references(brw->batch.bo, bo)) {
+      perf_debug("Flushing before mapping a referenced bo.\n");
+      intel_batchbuffer_flush(brw);
+   }
+
+   error = brw_bo_map(brw, bo, false /* write enable */, "miptree");
+   if (error) {
+      DBG("%s: failed to map bo\n", __FUNCTION__);
+      return false;
+   }
+
+   dst_pitch = _mesa_image_row_stride(packing, width, format, type);
+
+   DBG("%s: level=%d x,y=(%d,%d) (w,h)=(%d,%d) format=0x%x type=0x%x "
+       "mesa_format=0x%x tiling=%d "
+       "packing=(alignment=%d row_length=%d skip_pixels=%d skip_rows=%d)\n",
+       __FUNCTION__, texImage->Level, xoffset, yoffset, width, height,
+       format, type, texImage->TexFormat, image->mt->tiling,
+       packing->Alignment, packing->RowLength, packing->SkipPixels,
+       packing->SkipRows);
+
+   int level = texImage->Level + texImage->TexObject->MinLevel;
+
+   /* Adjust x and y offset based on miplevel */
+   xoffset += image->mt->level[level].level_x;
+   yoffset += image->mt->level[level].level_y;
+
+   tiled_to_linear(
+      xoffset * cpp, (xoffset + width) * cpp,
+      yoffset, yoffset + height,
+      pixels - (ptrdiff_t) yoffset * dst_pitch - (ptrdiff_t) xoffset * cpp,
+      bo->virtual,
+      dst_pitch, image->mt->pitch,
+      brw->has_swizzling,
+      image->mt->tiling,
+      mem_copy
+   );
+
+   drm_intel_bo_unmap(bo);
+   return true;
+}
+
 static void
 intel_get_tex_image(struct gl_context *ctx,
                     GLenum format, GLenum type, GLvoid *pixels,
                     struct gl_texture_image *texImage) {
    struct brw_context *brw = brw_context(ctx);
+   bool ok;
 
    DBG("%s\n", __FUNCTION__);
 
@@ -359,6 +473,13 @@ intel_get_tex_image(struct gl_context *ctx,
 
       perf_debug("%s: fallback to CPU mapping in PBO case\n", __FUNCTION__);
    }
+
+   ok = intel_gettexsubimage_tiled_memcpy(ctx, texImage, 0, 0,
+                                          texImage->Width, texImage->Height,
+                                          format, type, pixels, &ctx->Pack);
+
+   if(ok)
+      return;
 
    _mesa_meta_GetTexImage(ctx, format, type, pixels, texImage);
 

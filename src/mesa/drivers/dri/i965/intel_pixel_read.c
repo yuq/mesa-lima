@@ -39,14 +39,147 @@
 
 #include "brw_context.h"
 #include "intel_screen.h"
+#include "intel_batchbuffer.h"
 #include "intel_blit.h"
 #include "intel_buffers.h"
 #include "intel_fbo.h"
 #include "intel_mipmap_tree.h"
 #include "intel_pixel.h"
 #include "intel_buffer_objects.h"
+#include "intel_tiled_memcpy.h"
 
 #define FILE_DEBUG_FLAG DEBUG_PIXEL
+
+/**
+ * \brief A fast path for glReadPixels
+ *
+ * This fast path is taken when the source format is BGRA, RGBA,
+ * A or L and when the texture memory is X- or Y-tiled.  It downloads
+ * the source data by directly mapping the memory without a GTT fence.
+ * This then needs to be de-tiled on the CPU before presenting the data to
+ * the user in the linear fasion.
+ *
+ * This is a performance win over the conventional texture download path.
+ * In the conventional texture download path, the texture is either mapped
+ * through the GTT or copied to a linear buffer with the blitter before
+ * handing off to a software path.  This allows us to avoid round-tripping
+ * through the GPU (in the case where we would be blitting) and do only a
+ * single copy operation.
+ */
+static bool
+intel_readpixels_tiled_memcpy(struct gl_context * ctx,
+                              GLint xoffset, GLint yoffset,
+                              GLsizei width, GLsizei height,
+                              GLenum format, GLenum type,
+                              GLvoid * pixels,
+                              const struct gl_pixelstore_attrib *pack)
+{
+   struct brw_context *brw = brw_context(ctx);
+   struct gl_renderbuffer *rb = ctx->ReadBuffer->_ColorReadBuffer;
+
+   /* This path supports reading from color buffers only */
+   if (rb == NULL)
+      return false;
+
+   struct intel_renderbuffer *irb = intel_renderbuffer(rb);
+   int dst_pitch;
+
+   /* The miptree's buffer. */
+   drm_intel_bo *bo;
+
+   int error = 0;
+
+   uint32_t cpp;
+   mem_copy_fn mem_copy = NULL;
+
+   /* This fastpath is restricted to specific renderbuffer types:
+    * a 2D BGRA, RGBA, L8 or A8 texture. It could be generalized to support
+    * more types.
+    */
+   if (!brw->has_llc ||
+       !(type == GL_UNSIGNED_BYTE || type == GL_UNSIGNED_INT_8_8_8_8_REV) ||
+       pixels == NULL ||
+       _mesa_is_bufferobj(pack->BufferObj) ||
+       pack->Alignment > 4 ||
+       pack->SkipPixels > 0 ||
+       pack->SkipRows > 0 ||
+       (pack->RowLength != 0 && pack->RowLength != width) ||
+       pack->SwapBytes ||
+       pack->LsbFirst ||
+       pack->Invert)
+      return false;
+
+   /* This renderbuffer can come from a texture.  In this case, we impose
+    * some of the same restrictions we have for textures and adjust for
+    * miplevels.
+    */
+   if (rb->TexImage) {
+      if (rb->TexImage->TexObject->Target != GL_TEXTURE_2D &&
+          rb->TexImage->TexObject->Target != GL_TEXTURE_RECTANGLE)
+         return false;
+
+      int level = rb->TexImage->Level + rb->TexImage->TexObject->MinLevel;
+
+      /* Adjust x and y offset based on miplevel */
+      xoffset += irb->mt->level[level].level_x;
+      yoffset += irb->mt->level[level].level_y;
+   }
+
+   if (!intel_get_memcpy(rb->Format, format, type, &mem_copy, &cpp))
+      return false;
+
+   if (!irb->mt ||
+       (irb->mt->tiling != I915_TILING_X &&
+       irb->mt->tiling != I915_TILING_Y)) {
+      /* The algorithm is written only for X- or Y-tiled memory. */
+      return false;
+   }
+
+   /* Since we are going to read raw data to the miptree, we need to resolve
+    * any pending fast color clears before we start.
+    */
+   intel_miptree_resolve_color(brw, irb->mt);
+
+   bo = irb->mt->bo;
+
+   if (drm_intel_bo_references(brw->batch.bo, bo)) {
+      perf_debug("Flushing before mapping a referenced bo.\n");
+      intel_batchbuffer_flush(brw);
+   }
+
+   error = brw_bo_map(brw, bo, false /* write enable */, "miptree");
+   if (error) {
+      DBG("%s: failed to map bo\n", __FUNCTION__);
+      return false;
+   }
+
+   dst_pitch = _mesa_image_row_stride(pack, width, format, type);
+
+   /* We postponed printing this message until having committed to executing
+    * the function.
+    */
+   DBG("%s: x,y=(%d,%d) (w,h)=(%d,%d) format=0x%x type=0x%x "
+       "mesa_format=0x%x tiling=%d "
+       "pack=(alignment=%d row_length=%d skip_pixels=%d skip_rows=%d)\n",
+       __FUNCTION__, xoffset, yoffset, width, height,
+       format, type, rb->Format, irb->mt->tiling,
+       pack->Alignment, pack->RowLength, pack->SkipPixels,
+       pack->SkipRows);
+
+   tiled_to_linear(
+      xoffset * cpp, (xoffset + width) * cpp,
+      yoffset, yoffset + height,
+      pixels - (ptrdiff_t) yoffset * dst_pitch - (ptrdiff_t) xoffset * cpp,
+      bo->virtual,
+      dst_pitch, irb->mt->pitch,
+      brw->has_swizzling,
+      irb->mt->tiling,
+      mem_copy
+   );
+
+   drm_intel_bo_unmap(bo);
+   return true;
+}
 
 void
 intelReadPixels(struct gl_context * ctx,
@@ -54,6 +187,8 @@ intelReadPixels(struct gl_context * ctx,
                 GLenum format, GLenum type,
                 const struct gl_pixelstore_attrib *pack, GLvoid * pixels)
 {
+   bool ok;
+
    struct brw_context *brw = brw_context(ctx);
    bool dirty;
 
@@ -66,6 +201,11 @@ intelReadPixels(struct gl_context * ctx,
 
       perf_debug("%s: fallback to CPU mapping in PBO case\n", __FUNCTION__);
    }
+
+   ok = intel_readpixels_tiled_memcpy(ctx, x, y, width, height,
+                                      format, type, pixels, pack);
+   if(ok)
+      return;
 
    /* glReadPixels() wont dirty the front buffer, so reset the dirty
     * flag after calling intel_prepare_render(). */
