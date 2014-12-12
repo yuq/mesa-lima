@@ -13,8 +13,8 @@ The rules-ng-ng source files this header was generated from are:
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/a2xx.xml          (  32901 bytes, from 2014-06-02 15:21:30)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_common.xml (  10551 bytes, from 2014-11-13 22:44:30)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_pm4.xml    (  15076 bytes, from 2014-12-01 22:40:01)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/a3xx.xml          (  64344 bytes, from 2014-12-03 14:14:54)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/a4xx.xml          (  50255 bytes, from 2014-12-07 18:43:56)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/a3xx.xml          (  64344 bytes, from 2014-12-12 20:22:26)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/a4xx.xml          (  50461 bytes, from 2014-12-12 20:23:10)
 
 Copyright (C) 2013-2014 by the following authors:
 - Rob Clark <robdclark@gmail.com> (robclark)
@@ -2030,6 +2030,7 @@ static inline uint32_t A4XX_HLSQ_GS_CONTROL_REG_INSTRLENGTH(uint32_t val)
 #define REG_A4XX_UNKNOWN_23A0					0x000023a0
 
 #define REG_A4XX_TEX_SAMP_0					0x00000000
+#define A4XX_TEX_SAMP_0_MIPFILTER_LINEAR_NEAR			0x00000001
 #define A4XX_TEX_SAMP_0_XY_MAG__MASK				0x00000006
 #define A4XX_TEX_SAMP_0_XY_MAG__SHIFT				1
 static inline uint32_t A4XX_TEX_SAMP_0_XY_MAG(enum a4xx_tex_filter val)
@@ -2069,17 +2070,18 @@ static inline uint32_t A4XX_TEX_SAMP_1_COMPARE_FUNC(enum adreno_compare_func val
 	return ((val) << A4XX_TEX_SAMP_1_COMPARE_FUNC__SHIFT) & A4XX_TEX_SAMP_1_COMPARE_FUNC__MASK;
 }
 #define A4XX_TEX_SAMP_1_UNNORM_COORDS				0x00000020
+#define A4XX_TEX_SAMP_1_MIPFILTER_LINEAR_FAR			0x00000040
 #define A4XX_TEX_SAMP_1_MAX_LOD__MASK				0x000fff00
 #define A4XX_TEX_SAMP_1_MAX_LOD__SHIFT				8
 static inline uint32_t A4XX_TEX_SAMP_1_MAX_LOD(float val)
 {
-	return ((((uint32_t)(val * 64.0))) << A4XX_TEX_SAMP_1_MAX_LOD__SHIFT) & A4XX_TEX_SAMP_1_MAX_LOD__MASK;
+	return ((((uint32_t)(val * 256.0))) << A4XX_TEX_SAMP_1_MAX_LOD__SHIFT) & A4XX_TEX_SAMP_1_MAX_LOD__MASK;
 }
 #define A4XX_TEX_SAMP_1_MIN_LOD__MASK				0xfff00000
 #define A4XX_TEX_SAMP_1_MIN_LOD__SHIFT				20
 static inline uint32_t A4XX_TEX_SAMP_1_MIN_LOD(float val)
 {
-	return ((((uint32_t)(val * 64.0))) << A4XX_TEX_SAMP_1_MIN_LOD__SHIFT) & A4XX_TEX_SAMP_1_MIN_LOD__MASK;
+	return ((((uint32_t)(val * 256.0))) << A4XX_TEX_SAMP_1_MIN_LOD__SHIFT) & A4XX_TEX_SAMP_1_MIN_LOD__MASK;
 }
 
 #define REG_A4XX_TEX_CONST_0					0x00000000
@@ -2107,6 +2109,12 @@ static inline uint32_t A4XX_TEX_CONST_0_SWIZ_Z(enum a4xx_tex_swiz val)
 static inline uint32_t A4XX_TEX_CONST_0_SWIZ_W(enum a4xx_tex_swiz val)
 {
 	return ((val) << A4XX_TEX_CONST_0_SWIZ_W__SHIFT) & A4XX_TEX_CONST_0_SWIZ_W__MASK;
+}
+#define A4XX_TEX_CONST_0_MIPLVLS__MASK				0x000f0000
+#define A4XX_TEX_CONST_0_MIPLVLS__SHIFT				16
+static inline uint32_t A4XX_TEX_CONST_0_MIPLVLS(uint32_t val)
+{
+	return ((val) << A4XX_TEX_CONST_0_MIPLVLS__SHIFT) & A4XX_TEX_CONST_0_MIPLVLS__MASK;
 }
 #define A4XX_TEX_CONST_0_FMT__MASK				0x1fc00000
 #define A4XX_TEX_CONST_0_FMT__SHIFT				22
