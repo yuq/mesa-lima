@@ -300,12 +300,11 @@ vc4_set_index_buffer(struct pipe_context *pctx,
                         pipe_resource_reference(&vc4->indexbuf.buffer, NULL);
                         vc4->indexbuf.buffer = pshadow;
                         vc4->indexbuf.index_size = 2;
-                        vc4->indexbuf.offset = 0;
                 } else {
                         pipe_resource_reference(&vc4->indexbuf.buffer, ib->buffer);
                         vc4->indexbuf.index_size = ib->index_size;
-                        vc4->indexbuf.offset = ib->offset;
                 }
+                vc4->indexbuf.offset = ib->offset;
         } else {
                 pipe_resource_reference(&vc4->indexbuf.buffer, NULL);
         }
