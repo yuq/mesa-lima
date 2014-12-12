@@ -1301,6 +1301,8 @@ typedef bool (*nir_foreach_src_cb)(nir_src *src, void *state);
 bool nir_foreach_dest(nir_instr *instr, nir_foreach_dest_cb cb, void *state);
 bool nir_foreach_src(nir_instr *instr, nir_foreach_src_cb cb, void *state);
 
+bool nir_srcs_equal(nir_src src1, nir_src src2);
+
 void nir_ssa_def_init(nir_function_impl *impl, nir_instr *instr,
                       nir_ssa_def *def, unsigned num_components,
                       const char *name);

@@ -1634,6 +1634,33 @@ nir_foreach_src(nir_instr *instr, nir_foreach_src_cb cb, void *state)
    return nir_foreach_dest(instr, visit_dest_indirect, &dest_state);
 }
 
+bool
+nir_srcs_equal(nir_src src1, nir_src src2)
+{
+   if (src1.is_ssa) {
+      if (src2.is_ssa) {
+         return src1.ssa == src2.ssa;
+      } else {
+         return false;
+      }
+   } else {
+      if (src2.is_ssa) {
+         return false;
+      } else {
+         if ((src1.reg.indirect == NULL) != (src2.reg.indirect == NULL))
+            return false;
+
+         if (src1.reg.indirect) {
+            if (!nir_srcs_equal(*src1.reg.indirect, *src2.reg.indirect))
+               return false;
+         }
+
+         return src1.reg.reg == src2.reg.reg &&
+                src1.reg.base_offset == src2.reg.base_offset;
+      }
+   }
+}
+
 void
 nir_ssa_def_init(nir_function_impl *impl, nir_instr *instr, nir_ssa_def *def,
                  unsigned num_components, const char *name)
