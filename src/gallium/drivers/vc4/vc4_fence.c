@@ -56,6 +56,7 @@ vc4_fence_reference(struct pipe_screen *pscreen,
         if (pipe_reference(&(*p)->reference, &f->reference)) {
                 free(old);
         }
+        *p = f;
 }
 
 static boolean
