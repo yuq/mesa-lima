@@ -209,4 +209,6 @@ i965_FILES = \
 	intel_tex_obj.h \
 	intel_tex_subimage.c \
 	intel_tex_validate.c \
+	intel_tiled_memcpy.c \
+	intel_tiled_memcpy.h \
 	intel_upload.c
