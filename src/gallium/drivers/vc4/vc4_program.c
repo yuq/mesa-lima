@@ -2210,8 +2210,11 @@ vc4_get_compiled_shader(struct vc4_context *vc4, enum qstage stage,
                         if (sem->semantic == (uint8_t)~0)
                                 continue;
 
-                        if (sem->semantic == TGSI_SEMANTIC_COLOR)
+                        if (sem->semantic == TGSI_SEMANTIC_COLOR ||
+                            sem->semantic == TGSI_SEMANTIC_BCOLOR) {
                                 shader->color_inputs |= (1 << shader->num_inputs);
+                        }
+
                         shader->input_semantics[shader->num_inputs] = *sem;
                         shader->num_inputs++;
                 }
