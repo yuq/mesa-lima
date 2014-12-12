@@ -1,3 +1,7 @@
+MESA_UTIL_SHA1_FILES := \
+	sha1.c \
+	sha1.h
+
 MESA_UTIL_FILES :=	\
 	format_srgb.h \
 	hash_table.c	\
