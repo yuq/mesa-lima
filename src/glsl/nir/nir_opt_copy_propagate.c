@@ -256,10 +256,6 @@ copy_prop_instr(nir_instr *instr)
          while (copy_prop_alu_src(alu_instr, i))
             progress = true;
 
-      if (alu_instr->has_predicate)
-         while (copy_prop_src(&alu_instr->predicate, instr, NULL))
-            progress = true;
-
       if (!alu_instr->dest.dest.is_ssa && alu_instr->dest.dest.reg.indirect)
          while (copy_prop_src(alu_instr->dest.dest.reg.indirect, instr, NULL))
             progress = true;

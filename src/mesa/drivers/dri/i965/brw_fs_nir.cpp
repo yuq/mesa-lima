@@ -428,17 +428,8 @@ fs_visitor::nir_emit_alu(nir_alu_instr *instr)
    struct brw_wm_prog_key *fs_key = (struct brw_wm_prog_key *) this->key;
 
    fs_reg op[3];
-   fs_reg dest = get_nir_dest(instr->dest.dest);
-   dest.type = brw_type_for_nir_type(nir_op_infos[instr->op].output_type);
-
-   fs_reg result;
-   if (instr->has_predicate) {
-      result = fs_reg(GRF, virtual_grf_alloc(4));
-      result.type = dest.type;
-   } else {
-      result = dest;
-   }
-
+   fs_reg result = get_nir_dest(instr->dest.dest);
+   result.type = brw_type_for_nir_type(nir_op_infos[instr->op].output_type);
 
    for (unsigned i = 0; i < nir_op_infos[instr->op].num_inputs; i++)
       op[i] = get_nir_alu_src(instr, i);
@@ -978,17 +969,6 @@ fs_visitor::nir_emit_alu(nir_alu_instr *instr)
    default:
       unreachable("unhandled instruction");
    }
-
-   /* emit a predicated move if there was predication */
-   if (instr->has_predicate) {
-      fs_inst *inst = emit(MOV(reg_null_d,
-                               retype(get_nir_src(instr->predicate),
-                                   BRW_REGISTER_TYPE_UD)));
-      inst->conditional_mod = BRW_CONDITIONAL_NZ;
-      inst = MOV(dest, result);
-      inst->predicate = BRW_PREDICATE_NORMAL;
-      emit_percomp(inst, instr->dest.write_mask);
-   }
 }
 
 fs_reg
@@ -1232,12 +1212,6 @@ fs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
    fs_reg dest;
    if (nir_intrinsic_infos[instr->intrinsic].has_dest)
       dest = get_nir_dest(instr->dest);
-   if (instr->has_predicate) {
-      fs_inst *inst = emit(MOV(reg_null_d,
-                               retype(get_nir_src(instr->predicate),
-                                      BRW_REGISTER_TYPE_UD)));
-      inst->conditional_mod = BRW_CONDITIONAL_NZ;
-   }
 
    bool has_indirect = false;
 
@@ -1304,10 +1278,7 @@ fs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
       fs_reg reg = fs_reg(retype(brw_vec8_grf(payload.sample_mask_in_reg, 0),
                           BRW_REGISTER_TYPE_D));
       dest.type = reg.type;
-      fs_inst *inst = MOV(dest, reg);
-      if (instr->has_predicate)
-         inst->predicate = BRW_PREDICATE_NORMAL;
-      emit(inst);
+      emit(MOV(dest, reg));
       break;
    }
 
@@ -1339,10 +1310,7 @@ fs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
             src.type = dest.type;
             index++;
 
-            fs_inst *inst = MOV(dest, src);
-            if (instr->has_predicate)
-               inst->predicate = BRW_PREDICATE_NORMAL;
-            emit(inst);
+            emit(MOV(dest, src));
             dest.reg_offset++;
          }
       }
@@ -1384,16 +1352,9 @@ fs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
                   fs_reg(2)));
 
          unsigned vec4_offset = instr->const_index[0] / 4;
-         for (int i = 0; i < instr->num_components; i++) {
-            exec_list list = VARYING_PULL_CONSTANT_LOAD(offset(dest, i),
-                                                        surf_index, base_offset,
-                                                        vec4_offset + i);
-
-            fs_inst *last_inst = (fs_inst *) list.get_tail();
-            if (instr->has_predicate)
-                  last_inst->predicate = BRW_PREDICATE_NORMAL;
-            emit(list);
-         }
+         for (int i = 0; i < instr->num_components; i++)
+            emit(VARYING_PULL_CONSTANT_LOAD(offset(dest, i), surf_index,
+                                            base_offset, vec4_offset + i));
       } else {
          fs_reg packed_consts = fs_reg(this, glsl_type::float_type);
          packed_consts.type = dest.type;
@@ -1410,11 +1371,7 @@ fs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
              */
             assert(packed_consts.subreg_offset < 32);
 
-            fs_inst *inst = MOV(dest, packed_consts);
-            if (instr->has_predicate)
-                  inst->predicate = BRW_PREDICATE_NORMAL;
-            emit(inst);
-
+            emit(MOV(dest, packed_consts));
             dest.reg_offset++;
          }
       }
@@ -1434,10 +1391,7 @@ fs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
             src.type = dest.type;
             index++;
 
-            fs_inst *inst = MOV(dest, src);
-            if (instr->has_predicate)
-               inst->predicate = BRW_PREDICATE_NORMAL;
-            emit(inst);
+            emit(MOV(dest, src));
             dest.reg_offset++;
          }
       }
@@ -1556,9 +1510,7 @@ fs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
          fs_reg src = interp_reg(instr->variables[0]->var->data.location, j);
          src.type = dest.type;
 
-         fs_inst *inst = emit(FS_OPCODE_LINTERP, dest, dst_x, dst_y, src);
-         if (instr->has_predicate)
-            inst->predicate = BRW_PREDICATE_NORMAL;
+         emit(FS_OPCODE_LINTERP, dest, dst_x, dst_y, src);
          dest.reg_offset++;
       }
       break;
@@ -1577,10 +1529,7 @@ fs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
                src.reladdr = new(mem_ctx) fs_reg(get_nir_src(instr->src[1]));
             new_dest.type = src.type;
             index++;
-            fs_inst *inst = MOV(new_dest, src);
-            if (instr->has_predicate)
-               inst->predicate = BRW_PREDICATE_NORMAL;
-            emit(inst);
+            emit(MOV(new_dest, src));
             src.reg_offset++;
          }
       }

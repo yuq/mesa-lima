@@ -606,8 +606,6 @@ extern const nir_op_info nir_op_infos[nir_num_opcodes];
 typedef struct nir_alu_instr {
    nir_instr instr;
    nir_op op;
-   bool has_predicate;
-   nir_src predicate;
    nir_alu_dest dest;
    nir_alu_src src[];
 } nir_alu_instr;
@@ -679,9 +677,6 @@ typedef struct {
    nir_deref_var **params;
    nir_deref_var *return_deref;
 
-   bool has_predicate;
-   nir_src predicate;
-
    struct nir_function_overload *callee;
 } nir_call_instr;
 
@@ -712,9 +707,6 @@ typedef struct {
    int const_index[3];
 
    nir_deref_var *variables[2];
-
-   bool has_predicate;
-   nir_src predicate;
 
    nir_src src[];
 } nir_intrinsic_instr;
@@ -812,9 +804,6 @@ typedef enum {
 
 typedef struct {
    nir_instr instr;
-
-   bool has_predicate;
-   nir_src predicate;
 
    enum glsl_sampler_dim sampler_dim;
    nir_alu_type dest_type;
@@ -943,9 +932,6 @@ typedef struct {
     * case, and the only case for SSA destinations).
     */
    unsigned array_elems;
-
-   bool has_predicate;
-   nir_src predicate;
 
    nir_dest dest;
 } nir_load_const_instr;

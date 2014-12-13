@@ -254,9 +254,6 @@ validate_alu_instr(nir_alu_instr *instr, validate_state *state)
    for (unsigned i = 0; i < nir_op_infos[instr->op].num_inputs; i++) {
       validate_alu_src(instr, i, state);
    }
-
-   if (instr->has_predicate)
-      validate_src(&instr->predicate, state);
 }
 
 static void
@@ -372,9 +369,6 @@ validate_intrinsic_instr(nir_intrinsic_instr *instr, validate_state *state)
    default:
       break;
    }
-
-   if (instr->has_predicate)
-      validate_src(&instr->predicate, state);
 }
 
 static void
@@ -412,9 +406,6 @@ validate_call_instr(nir_call_instr *instr, validate_state *state)
    }
 
    validate_deref_var(instr->return_deref, state);
-
-   if (instr->has_predicate)
-      validate_src(&instr->predicate, state);
 }
 
 static void
@@ -427,9 +418,6 @@ validate_load_const_instr(nir_load_const_instr *instr, validate_state *state)
       assert(instr->dest.reg.base_offset + instr->array_elems <=
              instr->dest.reg.reg->num_array_elems);
    }
-
-   if (instr->has_predicate)
-      validate_src(&instr->predicate, state);
 }
 
 static void

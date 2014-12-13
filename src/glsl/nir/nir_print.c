@@ -178,12 +178,6 @@ print_alu_dest(nir_alu_dest *dest, FILE *fp)
 static void
 print_alu_instr(nir_alu_instr *instr, FILE *fp)
 {
-   if (instr->has_predicate) {
-      fprintf(fp, "(");
-      print_src(&instr->predicate, fp);
-      fprintf(fp, ") ");
-   }
-
    print_alu_dest(&instr->dest, fp);
 
    fprintf(fp, " = %s", nir_op_infos[instr->op].name);
@@ -327,12 +321,6 @@ print_intrinsic_instr(nir_intrinsic_instr *instr, print_var_state *state,
 {
    unsigned num_srcs = nir_intrinsic_infos[instr->intrinsic].num_srcs;
 
-   if (instr->has_predicate) {
-      fprintf(fp, "(");
-      print_src(&instr->predicate, fp);
-      fprintf(fp, ") ");
-   }
-
    if (nir_intrinsic_infos[instr->intrinsic].has_dest) {
       print_dest(&instr->dest, fp);
       fprintf(fp, " = ");
@@ -384,12 +372,6 @@ print_intrinsic_instr(nir_intrinsic_instr *instr, print_var_state *state,
 static void
 print_tex_instr(nir_tex_instr *instr, print_var_state *state, FILE *fp)
 {
-   if (instr->has_predicate) {
-      fprintf(fp, "(");
-      print_src(&instr->predicate, fp);
-      fprintf(fp, ") ");
-   }
-
    print_dest(&instr->dest, fp);
 
    fprintf(fp, " = ");
@@ -505,12 +487,6 @@ print_tex_instr(nir_tex_instr *instr, print_var_state *state, FILE *fp)
 static void
 print_call_instr(nir_call_instr *instr, print_var_state *state, FILE *fp)
 {
-   if (instr->has_predicate) {
-      fprintf(fp, "(");
-      print_src(&instr->predicate, fp);
-      fprintf(fp, ") ");
-   }
-
    fprintf(fp, "call %s ", instr->callee->function->name);
 
    for (unsigned i = 0; i < instr->num_params; i++) {
@@ -555,12 +531,6 @@ print_const_value(nir_const_value value, unsigned num_components, FILE *fp)
 static void
 print_load_const_instr(nir_load_const_instr *instr, unsigned tabs, FILE *fp)
 {
-   if (instr->has_predicate) {
-      fprintf(fp, "(");
-      print_src(&instr->predicate, fp);
-      fprintf(fp, ") ");
-   }
-
    print_dest(&instr->dest, fp);
 
    fprintf(fp, " = load_const ");

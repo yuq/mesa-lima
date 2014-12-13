@@ -148,9 +148,6 @@ typedef struct {
 
    /* map from SSA value -> original register */
    struct hash_table *ssa_map;
-
-   /* predicate for this instruction */
-   nir_src *predicate;
 } rewrite_state;
 
 static nir_ssa_def *get_ssa_src(nir_register *reg, rewrite_state *state)
@@ -220,27 +217,6 @@ rewrite_def_forwards(nir_dest *dest, void *_state)
    if (state->states[index].stack == NULL)
       return true;
 
-   nir_alu_instr *csel = NULL;
-   if (state->predicate) {
-         /*
-          * To capture the information that we may or may not overwrite this
-          * register due to the predicate, we need to emit a conditional select
-          * that takes the old version of the register and the new version.
-          * This is basically a watered-down version of the Psi-SSA
-          * representation, without any of the optimizations.
-          *
-          * TODO: do we actually need full-blown Psi-SSA?
-          */
-      csel = nir_alu_instr_create(state->mem_ctx, nir_op_bcsel);
-      csel->dest.dest.reg.reg = dest->reg.reg;
-      csel->dest.write_mask = (1 << dest->reg.reg->num_components) - 1;
-      csel->src[0].src = nir_src_copy(*state->predicate, state->mem_ctx);
-      /* Splat the condition to all channels */
-      memset(csel->src[0].swizzle, 0, sizeof csel->src[0].swizzle);
-      csel->src[2].src.is_ssa = true;
-      csel->src[2].src.ssa = get_ssa_src(dest->reg.reg, state);
-   }
-
    dest->is_ssa = true;
 
    char *name = NULL;
@@ -259,21 +235,6 @@ rewrite_def_forwards(nir_dest *dest, void *_state)
 
    _mesa_hash_table_insert(state->ssa_map, &dest->ssa, reg);
 
-   if (state->predicate) {
-      csel->src[1].src.is_ssa = true;
-      csel->src[1].src.ssa = &dest->ssa;
-
-      nir_instr *old_parent_instr = state->parent_instr;
-      nir_src *old_predicate = state->predicate;
-      state->parent_instr = &csel->instr;
-      state->predicate = NULL;
-      rewrite_def_forwards(&csel->dest.dest, state);
-      state->parent_instr = old_parent_instr;
-      state->predicate = old_predicate;
-
-      nir_instr_insert_after(state->parent_instr, &csel->instr);
-   }
-
    return true;
 }
 
@@ -281,7 +242,6 @@ static void
 rewrite_alu_instr_forward(nir_alu_instr *instr, rewrite_state *state)
 {
    state->parent_instr = &instr->instr;
-   state->predicate = instr->has_predicate ? &instr->predicate : NULL;
 
    nir_foreach_src(&instr->instr, rewrite_use, state);
 
@@ -383,14 +343,9 @@ rewrite_alu_instr_forward(nir_alu_instr *instr, rewrite_state *state)
          }
       }
 
-      vec->has_predicate = instr->has_predicate;
-      if (instr->has_predicate)
-         vec->predicate = nir_src_copy(instr->predicate, state->mem_ctx);
-
       nir_instr_insert_after(&instr->instr, &vec->instr);
 
       state->parent_instr = &vec->instr;
-      state->predicate = vec->has_predicate ? &vec->predicate : NULL;
       rewrite_def_forwards(&vec->dest.dest, state);
    } else {
       rewrite_def_forwards(&instr->dest.dest, state);
@@ -401,52 +356,7 @@ static void
 rewrite_phi_instr(nir_phi_instr *instr, rewrite_state *state)
 {
    state->parent_instr = &instr->instr;
-   state->predicate = NULL;
    rewrite_def_forwards(&instr->dest, state);
-}
-
-static nir_src *
-get_instr_predicate(nir_instr *instr)
-{
-   nir_alu_instr *alu_instr;
-   nir_load_const_instr *load_const_instr;
-   nir_intrinsic_instr *intrinsic_instr;
-   nir_tex_instr *tex_instr;
-
-   switch (instr->type) {
-   case nir_instr_type_alu:
-      alu_instr = nir_instr_as_alu(instr);
-      if (alu_instr->has_predicate)
-         return &alu_instr->predicate;
-      else
-         return NULL;
-
-   case nir_instr_type_load_const:
-      load_const_instr = nir_instr_as_load_const(instr);
-      if (load_const_instr->has_predicate)
-         return &load_const_instr->predicate;
-      else
-         return NULL;
-
-   case nir_instr_type_intrinsic:
-      intrinsic_instr = nir_instr_as_intrinsic(instr);
-      if (intrinsic_instr->has_predicate)
-         return &intrinsic_instr->predicate;
-      else
-         return NULL;
-
-   case nir_instr_type_tex:
-      tex_instr = nir_instr_as_tex(instr);
-      if (tex_instr->has_predicate)
-         return &tex_instr->predicate;
-      else
-         return NULL;
-
-   default:
-      break;
-   }
-
-   return NULL;
 }
 
 static void
@@ -463,7 +373,6 @@ rewrite_instr_forward(nir_instr *instr, rewrite_state *state)
    }
 
    state->parent_instr = instr;
-   state->predicate = get_instr_predicate(instr);
 
    nir_foreach_src(instr, rewrite_use, state);
    nir_foreach_dest(instr, rewrite_def_forwards, state);
@@ -580,35 +489,7 @@ init_rewrite_state(nir_function_impl *impl, rewrite_state *state)
           * called after phi nodes are inserted so we can count phi node
           * definitions too.
           */
-         unsigned stack_size = 0;
-         struct set_entry *entry;
-         set_foreach(reg->defs, entry) {
-            nir_instr *def = (nir_instr *) entry->key;
-
-            stack_size++;
-
-            /*
-             * predicates generate an additional predicate destination that
-             * gets pushed on the stack
-             *
-             * Note: ALU instructions generate an additional instruction too,
-             * but as of now only the additional instruction is pushed onto
-             * the stack, and not the original instruction because it doesn't
-             * need to be (actually, we could do the same with predicates,
-             * but it was easier to just use the existing codepath).
-             */
-
-            if (def->type == nir_instr_type_intrinsic) {
-               nir_intrinsic_instr *intrinsic_instr =
-                  nir_instr_as_intrinsic(def);
-               if (nir_intrinsic_infos[intrinsic_instr->intrinsic].has_dest &&
-                   intrinsic_instr->has_predicate)
-                  stack_size++;
-            } else {
-               if (get_instr_predicate(def) != NULL)
-                  stack_size++;
-            }
-         }
+         unsigned stack_size = reg->defs->entries;
 
          state->states[reg->index].stack = ralloc_array(state->states,
                                                         nir_ssa_def *,

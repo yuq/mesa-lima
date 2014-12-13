@@ -548,11 +548,6 @@ emit_copy_load_store(nir_intrinsic_instr *copy_instr,
       store->src[0].is_ssa = true;
       store->src[0].ssa = &load->dest.ssa;
 
-      if (copy_instr->has_predicate) {
-         store->has_predicate = true;
-         store->predicate = nir_src_copy(copy_instr->predicate, state->mem_ctx);
-      }
-
       nir_instr_insert_before(&copy_instr->instr, &store->instr);
       register_store_instr(store, false, state);
    }
@@ -831,32 +826,12 @@ lower_deref_to_ssa_block(nir_block *block, void *void_state)
 
             assert(intrin->src[0].is_ssa);
 
-            nir_alu_instr *mov;
-            if (intrin->has_predicate) {
-               mov = nir_alu_instr_create(state->mem_ctx, nir_op_bcsel);
-               mov->src[0].src = nir_src_copy(intrin->predicate,
-                                              state->mem_ctx);
-               /* Splat the condition to all channels */
-               memset(mov->src[0].swizzle, 0, sizeof mov->src[0].swizzle);
-
-               mov->src[1].src.is_ssa = true;
-               mov->src[1].src.ssa = intrin->src[0].ssa;
-               for (unsigned i = intrin->num_components; i < 4; i++)
-                  mov->src[1].swizzle[i] = 0;
-
-               mov->src[2].src.is_ssa = true;
-               mov->src[2].src.ssa = get_ssa_def_for_block(node, block, state);
-               for (unsigned i = intrin->num_components; i < 4; i++)
-                  mov->src[2].swizzle[i] = 0;
-
-            } else {
-               mov = nir_alu_instr_create(state->mem_ctx, nir_op_imov);
-
-               mov->src[0].src.is_ssa = true;
-               mov->src[0].src.ssa = intrin->src[0].ssa;
-               for (unsigned i = intrin->num_components; i < 4; i++)
-                  mov->src[0].swizzle[i] = 0;
-            }
+            nir_alu_instr *mov = nir_alu_instr_create(state->mem_ctx,
+                                                      nir_op_imov);
+            mov->src[0].src.is_ssa = true;
+            mov->src[0].src.ssa = intrin->src[0].ssa;
+            for (unsigned i = intrin->num_components; i < 4; i++)
+               mov->src[0].swizzle[i] = 0;
 
             mov->dest.write_mask = (1 << intrin->num_components) - 1;
             mov->dest.dest.is_ssa = true;

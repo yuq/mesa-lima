@@ -67,13 +67,6 @@ nir_instrs_equal(nir_instr *instr1, nir_instr *instr2)
       if (alu1->op != alu2->op)
          return false;
 
-      if (alu1->has_predicate != alu2->has_predicate)
-         return false;
-
-      if (alu1->has_predicate &&
-          !nir_srcs_equal(alu1->predicate, alu2->predicate))
-         return false;
-
       /* TODO: We can probably acutally do something more inteligent such
        * as allowing different numbers and taking a maximum or something
        * here */
