@@ -25,7 +25,9 @@
 #define VC4_SCREEN_H
 
 #include "pipe/p_screen.h"
+#include "os/os_thread.h"
 #include "state_tracker/drm_driver.h"
+#include "vc4_qir.h"
 
 struct vc4_bo;
 
@@ -55,6 +57,16 @@ struct vc4_screen {
          * if we know the job's already done.
          */
         uint64_t finished_seqno;
+
+        struct vc4_bo_cache {
+                /** List of struct vc4_bo freed, by age. */
+                struct simple_node time_list;
+                /** List of struct vc4_bo freed, per size, by age. */
+                struct simple_node *size_list;
+                uint32_t size_list_size;
+
+                pipe_mutex lock;
+        } bo_cache;
 };
 
 static inline struct vc4_screen *
