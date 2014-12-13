@@ -216,8 +216,8 @@ ${pass_name}_impl(nir_function_impl *impl)
    nir_foreach_block(impl, ${pass_name}_block, &state);
 
    if (state.progress)
-      nir_metadata_dirty(impl, nir_metadata_block_index |
-                               nir_metadata_dominance);
+      nir_metadata_preserve(impl, nir_metadata_block_index |
+                                  nir_metadata_dominance);
 
    return state.progress;
 }

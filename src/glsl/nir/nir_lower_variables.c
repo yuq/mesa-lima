@@ -1022,8 +1022,8 @@ nir_lower_variables_impl(nir_function_impl *impl)
    insert_phi_nodes(&state);
    nir_foreach_block(impl, lower_deref_to_ssa_block, &state);
 
-   nir_metadata_dirty(impl, nir_metadata_block_index |
-                            nir_metadata_dominance);
+   nir_metadata_preserve(impl, nir_metadata_block_index |
+                               nir_metadata_dominance);
 
    ralloc_free(state.dead_ctx);
 

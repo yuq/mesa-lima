@@ -48,7 +48,7 @@ nir_metadata_require(nir_function_impl *impl, nir_metadata required)
 }
 
 void
-nir_metadata_dirty(nir_function_impl *impl, nir_metadata preserved)
+nir_metadata_preserve(nir_function_impl *impl, nir_metadata preserved)
 {
    impl->valid_metadata &= preserved;
 }

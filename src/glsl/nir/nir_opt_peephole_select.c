@@ -193,7 +193,7 @@ nir_opt_peephole_select_impl(nir_function_impl *impl)
    nir_foreach_block(impl, nir_opt_peephole_select_block, &state);
 
    if (state.progress)
-      nir_metadata_dirty(impl, nir_metadata_none);
+      nir_metadata_preserve(impl, nir_metadata_none);
 
    return state.progress;
 }

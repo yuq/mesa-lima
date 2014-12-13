@@ -827,8 +827,10 @@ nir_convert_from_ssa_impl(nir_function_impl *impl)
 
    nir_foreach_block(impl, isolate_phi_nodes_block, &state);
 
-   nir_metadata_dirty(impl, nir_metadata_block_index |
-                            nir_metadata_dominance);
+   /* Mark metadata as dirty before we ask for liveness analysis */
+   nir_metadata_preserve(impl, nir_metadata_block_index |
+                               nir_metadata_dominance);
+
    nir_metadata_require(impl, nir_metadata_live_variables |
                               nir_metadata_dominance);
 
