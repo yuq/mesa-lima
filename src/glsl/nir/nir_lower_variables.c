@@ -836,6 +836,7 @@ lower_deref_to_ssa_block(nir_block *block, void *void_state)
                mov = nir_alu_instr_create(state->mem_ctx, nir_op_bcsel);
                mov->src[0].src = nir_src_copy(intrin->predicate,
                                               state->mem_ctx);
+               /* Splat the condition to all channels */
                memset(mov->src[0].swizzle, 0, sizeof mov->src[0].swizzle);
 
                mov->src[1].src.is_ssa = true;

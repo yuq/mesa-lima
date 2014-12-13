@@ -965,9 +965,14 @@ fs_visitor::nir_emit_alu(nir_alu_instr *instr)
       break;
 
    case nir_op_bcsel:
-      emit(CMP(reg_null_d, op[0], fs_reg(0), BRW_CONDITIONAL_NZ));
-      emit_percomp(BRW_OPCODE_SEL, result, op[1], op[2],
-                   instr->dest.write_mask, false, BRW_PREDICATE_NORMAL);
+      for (unsigned i = 0; i < 4; i++) {
+         if (!((instr->dest.write_mask >> i) & 1))
+            continue;
+
+         emit(CMP(reg_null_d, offset(op[0], i), fs_reg(0), BRW_CONDITIONAL_NZ));
+         emit(SEL(offset(result, i), offset(op[1], i), offset(op[2], i)))
+             ->predicate = BRW_PREDICATE_NORMAL;
+      }
       break;
 
    default:

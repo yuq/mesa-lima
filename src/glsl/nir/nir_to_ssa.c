@@ -235,6 +235,8 @@ rewrite_def_forwards(nir_dest *dest, void *_state)
       csel->dest.dest.reg.reg = dest->reg.reg;
       csel->dest.write_mask = (1 << dest->reg.reg->num_components) - 1;
       csel->src[0].src = nir_src_copy(*state->predicate, state->mem_ctx);
+      /* Splat the condition to all channels */
+      memset(csel->src[0].swizzle, 0, sizeof csel->src[0].swizzle);
       csel->src[2].src.is_ssa = true;
       csel->src[2].src.ssa = get_ssa_src(dest->reg.reg, state);
    }

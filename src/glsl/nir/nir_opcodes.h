@@ -325,9 +325,8 @@ TRIOP(flrp, nir_type_float)
  * bools (0.0 vs 1.0) and one for integer bools (0 vs ~0).
  */
 
-OPCODE(fcsel, 3, true, 0, nir_type_float, ARR(1, 0, 0),
-       ARR(nir_type_float, nir_type_float, nir_type_float))
-OPCODE(bcsel, 3, true, 0, nir_type_unsigned, ARR(1, 0, 0),
+TRIOP(fcsel, nir_type_float)
+OPCODE(bcsel, 3, true, 0, nir_type_unsigned, ARR(0, 0, 0),
        ARR(nir_type_bool, nir_type_unsigned, nir_type_unsigned))
 
 TRIOP(bfi, nir_type_unsigned)

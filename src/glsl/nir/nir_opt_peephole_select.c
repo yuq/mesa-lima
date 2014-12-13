@@ -136,6 +136,8 @@ nir_opt_peephole_select_block(nir_block *block, void *void_state)
       nir_phi_instr *phi = nir_instr_as_phi(instr);
       nir_alu_instr *sel = nir_alu_instr_create(state->mem_ctx, nir_op_bcsel);
       sel->src[0].src = nir_src_copy(if_stmt->condition, state->mem_ctx);
+      /* Splat the condition to all channels */
+      memset(sel->src[0].swizzle, 0, sizeof sel->src[0].swizzle);
 
       assert(exec_list_length(&phi->srcs) == 2);
       foreach_list_typed(nir_phi_src, src, node, &phi->srcs) {
