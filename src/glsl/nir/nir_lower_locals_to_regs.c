@@ -292,6 +292,9 @@ nir_lower_locals_to_regs_impl(nir_function_impl *impl)
 
    nir_foreach_block(impl, lower_locals_to_regs_block, &state);
 
+   nir_metadata_preserve(impl, nir_metadata_block_index |
+                               nir_metadata_dominance);
+
    _mesa_hash_table_destroy(state.regs_table, NULL);
 }
 

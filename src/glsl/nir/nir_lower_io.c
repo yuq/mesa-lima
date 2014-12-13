@@ -310,6 +310,9 @@ nir_lower_io_impl(nir_function_impl *impl)
    state.mem_ctx = ralloc_parent(impl);
 
    nir_foreach_block(impl, nir_lower_io_block, &state);
+
+   nir_metadata_preserve(impl, nir_metadata_block_index |
+                               nir_metadata_dominance);
 }
 
 void

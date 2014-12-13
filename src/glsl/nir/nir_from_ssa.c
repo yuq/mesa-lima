@@ -843,6 +843,9 @@ nir_convert_from_ssa_impl(nir_function_impl *impl)
 
    nir_foreach_block(impl, resolve_parallel_copies_block, &state);
 
+   nir_metadata_preserve(impl, nir_metadata_block_index |
+                               nir_metadata_dominance);
+
    /* Clean up dead instructions and the hash tables */
    _mesa_hash_table_destroy(state.ssa_table, NULL);
    _mesa_hash_table_destroy(state.merge_node_table, NULL);

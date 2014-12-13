@@ -166,6 +166,10 @@ nir_opt_dce_impl(nir_function_impl *impl)
    bool progress = false;
    nir_foreach_block(impl, delete_block_cb, &progress);
 
+   if (progress)
+      nir_metadata_preserve(impl, nir_metadata_block_index |
+                                  nir_metadata_dominance);
+
    return progress;
 }
 

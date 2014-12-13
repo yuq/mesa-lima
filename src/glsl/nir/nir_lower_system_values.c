@@ -91,6 +91,8 @@ static void
 convert_impl(nir_function_impl *impl)
 {
    nir_foreach_block(impl, convert_block, NULL);
+   nir_metadata_preserve(impl, nir_metadata_block_index |
+                               nir_metadata_dominance);
 }
 
 void
