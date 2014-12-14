@@ -173,6 +173,7 @@ vc4_simulator_flush(struct vc4_context *vc4, struct drm_vc4_submit_cl *args)
         if (ret)
                 return ret;
 
+        vc4_bo_unreference(&exec.exec_bo->bo);
         free(exec.exec_bo);
 
         if (ctex && ctex->bo->simulator_winsys_map) {
