@@ -30,6 +30,7 @@
 #include "util/u_debug.h"
 #include "util/u_memory.h"
 #include "util/u_format.h"
+#include "util/ralloc.h"
 
 #include "vc4_screen.h"
 #include "vc4_context.h"
@@ -75,7 +76,7 @@ vc4_screen_get_vendor(struct pipe_screen *pscreen)
 static void
 vc4_screen_destroy(struct pipe_screen *pscreen)
 {
-        free(pscreen);
+        ralloc_free(pscreen);
 }
 
 static int
@@ -402,7 +403,7 @@ vc4_screen_is_format_supported(struct pipe_screen *pscreen,
 struct pipe_screen *
 vc4_screen_create(int fd)
 {
-        struct vc4_screen *screen = CALLOC_STRUCT(vc4_screen);
+        struct vc4_screen *screen = ralloc(NULL, struct vc4_screen);
         struct pipe_screen *pscreen;
 
         pscreen = &screen->base;
