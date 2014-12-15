@@ -76,10 +76,9 @@
 #include "ir_rvalue_visitor.h"
 #include "ir_uniform.h"
 
-extern "C" {
 #include "main/shaderobj.h"
 #include "main/enums.h"
-}
+
 
 void linker_error(gl_shader_program *, const char *, ...);
 

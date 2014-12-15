@@ -25,13 +25,10 @@
 #include <string.h>
 #include <assert.h>
 
-extern "C" {
 #include "main/core.h" /* for struct gl_context */
 #include "main/context.h"
 #include "main/shaderobj.h"
 #include "util/u_atomic.h" /* for p_atomic_cmpxchg */
-}
-
 #include "util/ralloc.h"
 #include "ast.h"
 #include "glsl_parser_extras.h"
