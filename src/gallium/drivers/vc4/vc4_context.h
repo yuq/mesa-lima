@@ -209,7 +209,7 @@ struct vc4_context {
 
         struct primconvert_context *primconvert;
 
-        struct util_hash_table *fs_cache, *vs_cache;
+        struct hash_table *fs_cache, *vs_cache;
         uint32_t next_uncompiled_program_id;
         uint64_t next_compiled_program_id;
 

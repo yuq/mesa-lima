@@ -25,7 +25,6 @@
 #include <inttypes.h>
 #include "pipe/p_state.h"
 #include "util/u_format.h"
-#include "util/u_hash_table.h"
 #include "util/u_hash.h"
 #include "util/u_memory.h"
 #include "util/u_pack_color.h"
@@ -2164,7 +2163,7 @@ static struct vc4_compiled_shader *
 vc4_get_compiled_shader(struct vc4_context *vc4, enum qstage stage,
                         struct vc4_key *key)
 {
-        struct util_hash_table *ht;
+        struct hash_table *ht;
         uint32_t key_size;
         if (stage == QSTAGE_FRAG) {
                 ht = vc4->fs_cache;
@@ -2175,9 +2174,9 @@ vc4_get_compiled_shader(struct vc4_context *vc4, enum qstage stage,
         }
 
         struct vc4_compiled_shader *shader;
-        shader = util_hash_table_get(ht, key);
-        if (shader)
-                return shader;
+        struct hash_entry *entry = _mesa_hash_table_search(ht, key);
+        if (entry)
+                return entry->data;
 
         struct vc4_compile *c = vc4_shader_tgsi_to_qir(vc4, stage, key);
         shader = rzalloc(NULL, struct vc4_compiled_shader);
@@ -2257,7 +2256,7 @@ vc4_get_compiled_shader(struct vc4_context *vc4, enum qstage stage,
         struct vc4_key *dup_key;
         dup_key = malloc(key_size);
         memcpy(dup_key, key, key_size);
-        util_hash_table_set(ht, dup_key, shader);
+        _mesa_hash_table_insert(ht, dup_key, shader);
 
         return shader;
 }
@@ -2389,65 +2388,43 @@ vc4_update_compiled_shaders(struct vc4_context *vc4, uint8_t prim_mode)
         vc4_update_compiled_vs(vc4, prim_mode);
 }
 
-static unsigned
-fs_cache_hash(void *key)
+static uint32_t
+fs_cache_hash(const void *key)
 {
         return _mesa_hash_data(key, sizeof(struct vc4_fs_key));
 }
 
-static unsigned
-vs_cache_hash(void *key)
+static uint32_t
+vs_cache_hash(const void *key)
 {
         return _mesa_hash_data(key, sizeof(struct vc4_vs_key));
 }
 
-static int
-fs_cache_compare(void *key1, void *key2)
+static bool
+fs_cache_compare(const void *key1, const void *key2)
 {
-        return memcmp(key1, key2, sizeof(struct vc4_fs_key));
+        return memcmp(key1, key2, sizeof(struct vc4_fs_key)) == 0;
 }
 
-static int
-vs_cache_compare(void *key1, void *key2)
+static bool
+vs_cache_compare(const void *key1, const void *key2)
 {
-        return memcmp(key1, key2, sizeof(struct vc4_vs_key));
+        return memcmp(key1, key2, sizeof(struct vc4_vs_key)) == 0;
 }
 
-struct delete_state {
-        struct vc4_context *vc4;
-        struct vc4_uncompiled_shader *shader_state;
-};
-
-static enum pipe_error
-fs_delete_from_cache(void *in_key, void *in_value, void *data)
+static void
+delete_from_cache_if_matches(struct hash_table *ht,
+                             struct hash_entry *entry,
+                             struct vc4_uncompiled_shader *so)
 {
-        struct delete_state *del = data;
-        struct vc4_fs_key *key = in_key;
-        struct vc4_compiled_shader *shader = in_value;
+        struct vc4_key *key = entry->data;
 
-        if (key->base.shader_state == data) {
-                util_hash_table_remove(del->vc4->fs_cache, key);
+        if (key->shader_state == so) {
+                struct vc4_compiled_shader *shader = entry->data;
+                _mesa_hash_table_remove(ht, entry);
                 vc4_bo_unreference(&shader->bo);
                 ralloc_free(shader);
         }
-
-        return 0;
-}
-
-static enum pipe_error
-vs_delete_from_cache(void *in_key, void *in_value, void *data)
-{
-        struct delete_state *del = data;
-        struct vc4_vs_key *key = in_key;
-        struct vc4_compiled_shader *shader = in_value;
-
-        if (key->base.shader_state == data) {
-                util_hash_table_remove(del->vc4->vs_cache, key);
-                vc4_bo_unreference(&shader->bo);
-                ralloc_free(shader);
-        }
-
-        return 0;
 }
 
 static void
@@ -2455,12 +2432,12 @@ vc4_shader_state_delete(struct pipe_context *pctx, void *hwcso)
 {
         struct vc4_context *vc4 = vc4_context(pctx);
         struct vc4_uncompiled_shader *so = hwcso;
-        struct delete_state del;
 
-        del.vc4 = vc4;
-        del.shader_state = so;
-        util_hash_table_foreach(vc4->fs_cache, fs_delete_from_cache, &del);
-        util_hash_table_foreach(vc4->vs_cache, vs_delete_from_cache, &del);
+        struct hash_entry *entry;
+        hash_table_foreach(vc4->fs_cache, entry)
+                delete_from_cache_if_matches(vc4->fs_cache, entry, so);
+        hash_table_foreach(vc4->vs_cache, entry)
+                delete_from_cache_if_matches(vc4->vs_cache, entry, so);
 
         if (so->twoside_tokens != so->base.tokens)
                 free((void *)so->twoside_tokens);
@@ -2795,6 +2772,8 @@ vc4_program_init(struct pipe_context *pctx)
         pctx->bind_fs_state = vc4_fp_state_bind;
         pctx->bind_vs_state = vc4_vp_state_bind;
 
-        vc4->fs_cache = util_hash_table_create(fs_cache_hash, fs_cache_compare);
-        vc4->vs_cache = util_hash_table_create(vs_cache_hash, vs_cache_compare);
+        vc4->fs_cache = _mesa_hash_table_create(pctx, fs_cache_hash,
+                                                fs_cache_compare);
+        vc4->vs_cache = _mesa_hash_table_create(pctx, vs_cache_hash,
+                                                vs_cache_compare);
 }
