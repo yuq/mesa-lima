@@ -98,8 +98,8 @@ static const char *qpu_pack_mul[] = {
  */
 static const char *qpu_unpack[] = {
         [QPU_UNPACK_NOP] = "",
-        [QPU_UNPACK_F16A_TO_F32] = "f16a",
-        [QPU_UNPACK_F16B_TO_F32] = "f16b",
+        [QPU_UNPACK_16A_TO_F32] = "16a",
+        [QPU_UNPACK_16B_TO_F32] = "16b",
         [QPU_UNPACK_8D_REP] = "8d_rep",
         [QPU_UNPACK_8A] = "8a",
         [QPU_UNPACK_8B] = "8b",

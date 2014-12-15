@@ -197,8 +197,8 @@ enum qpu_pack_a {
 
 enum qpu_unpack {
         QPU_UNPACK_NOP,
-        QPU_UNPACK_F16A_TO_F32,
-        QPU_UNPACK_F16B_TO_F32,
+        QPU_UNPACK_16A_TO_F32,
+        QPU_UNPACK_16B_TO_F32,
         QPU_UNPACK_8D_REP,
         QPU_UNPACK_8A,
         QPU_UNPACK_8B,
