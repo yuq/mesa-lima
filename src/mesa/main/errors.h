@@ -38,13 +38,12 @@
 
 #include "compiler.h"
 #include "glheader.h"
+#include "mtypes.h"
 
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include "mtypes.h"
 
 struct _glapi_table;
 
