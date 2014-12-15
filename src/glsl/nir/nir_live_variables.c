@@ -47,29 +47,23 @@ struct live_variables_state {
 };
 
 static bool
-index_dest(nir_dest *dest, void *void_state)
+index_ssa_def(nir_ssa_def *def, void *void_state)
 {
    struct live_variables_state *state = void_state;
 
-   if (dest->is_ssa)
-      dest->ssa.live_index = state->num_ssa_defs++;
+   if (def->parent_instr->type == nir_instr_type_ssa_undef)
+      def->live_index = 0;
+   else
+      def->live_index = state->num_ssa_defs++;
 
    return true;
 }
 
 static bool
-index_ssa_definitions_block(nir_block *block, void *void_state)
+index_ssa_definitions_block(nir_block *block, void *state)
 {
-   struct live_variables_state *state = void_state;
-
-   nir_foreach_instr(block, instr) {
-      if (instr->type == nir_instr_type_ssa_undef) {
-         nir_ssa_undef_instr *undef = nir_instr_as_ssa_undef(instr);
-         undef->def.live_index = 0;
-      } else {
-         nir_foreach_dest(instr, index_dest, state);
-      }
-   }
+   nir_foreach_instr(block, instr)
+      nir_foreach_ssa_def(instr, index_ssa_def, state);
 
    return true;
 }
@@ -107,12 +101,11 @@ set_src_live(nir_src *src, void *void_live)
 }
 
 static bool
-set_dest_dead(nir_dest *dest, void *void_live)
+set_ssa_def_dead(nir_ssa_def *def, void *void_live)
 {
    BITSET_WORD *live = void_live;
 
-   if (dest->is_ssa)
-      BITSET_CLEAR(live, dest->ssa.live_index);
+   BITSET_CLEAR(live, def->live_index);
 
    return true;
 }
@@ -134,7 +127,8 @@ propagate_across_edge(nir_block *pred, nir_block *succ,
          break;
       nir_phi_instr *phi = nir_instr_as_phi(instr);
 
-      set_dest_dead(&phi->dest, live);
+      assert(phi->dest.is_ssa);
+      set_ssa_def_dead(&phi->dest.ssa, live);
    }
 
    nir_foreach_instr(succ, instr) {
@@ -183,7 +177,7 @@ walk_instructions_block(nir_block *block, void *void_state)
       if (instr->type == nir_instr_type_phi)
          break;
 
-      nir_foreach_dest(instr, set_dest_dead, block->live_in);
+      nir_foreach_ssa_def(instr, set_ssa_def_dead, block->live_in);
       nir_foreach_src(instr, set_src_live, block->live_in);
    }
 
