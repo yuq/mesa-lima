@@ -109,10 +109,10 @@ enum qop {
         QOP_FRAG_W,
         QOP_FRAG_REV_FLAG,
 
-        QOP_UNPACK_8A,
-        QOP_UNPACK_8B,
-        QOP_UNPACK_8C,
-        QOP_UNPACK_8D,
+        QOP_UNPACK_8A_F,
+        QOP_UNPACK_8B_F,
+        QOP_UNPACK_8C_F,
+        QOP_UNPACK_8D_F,
 
         /** Texture x coordinate parameter write */
         QOP_TEX_S,
@@ -489,10 +489,10 @@ qir_SEL_X_0_COND(struct vc4_compile *c, int i)
 }
 
 static inline struct qreg
-qir_UNPACK_8(struct vc4_compile *c, struct qreg src, int i)
+qir_UNPACK_8_F(struct vc4_compile *c, struct qreg src, int i)
 {
         struct qreg t = qir_get_temp(c);
-        qir_emit(c, qir_inst(QOP_UNPACK_8A + i, t, src, c->undef));
+        qir_emit(c, qir_inst(QOP_UNPACK_8A_F + i, t, src, c->undef));
         return t;
 }
 

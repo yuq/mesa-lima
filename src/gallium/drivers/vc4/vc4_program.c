@@ -1024,7 +1024,7 @@ emit_vertex_input(struct vc4_compile *c, int attr)
                         struct qreg vpm = vpm_reads[0];
                         if (desc->channel[swiz].type == UTIL_FORMAT_TYPE_SIGNED)
                                 vpm = qir_XOR(c, vpm, qir_uniform_ui(c, 0x80808080));
-                        result = qir_UNPACK_8(c, vpm, swiz);
+                        result = qir_UNPACK_8_F(c, vpm, swiz);
                 } else {
                         if (!format_warned) {
                                 fprintf(stderr,
