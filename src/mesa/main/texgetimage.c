@@ -1087,18 +1087,41 @@ _mesa_GetTextureImage(GLuint texture, GLint level, GLenum format,
                      "glGetTextureImage(insufficient cube map storage)");
          return;
       }
-      for (i = 0; i < 6; ++i) { /* For each face. */
-         if (!texObj->Image[i][level]) {
-            /* Not enough image planes for a cube map.  The spec does not say
-             * what should happen in this case because the user has always
-             * specified each cube face separately (using
-             * GL_TEXTURE_CUBE_MAP_POSITIVE_X+i) in previous GL versions.
-             * This is addressed in Khronos Bug 13223.
-             */
-            _mesa_error(ctx, GL_INVALID_OPERATION,
-                        "glGetTextureImage(insufficient cube map storage)");
-            return;
-         }
+
+      /*
+       * What do we do if the user created a texture with the following code
+       * and then called this function with its handle?
+       *
+       *    GLuint tex;
+       *    glCreateTextures(GL_TEXTURE_CUBE_MAP, 1, &tex);
+       *    glBindTexture(GL_TEXTURE_CUBE_MAP, tex);
+       *    glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X, 0, ...);
+       *    glTexImage2D(GL_TEXTURE_CUBE_MAP_NEGATIVE_X, 0, ...);
+       *    glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_Y, 0, ...);
+       *    // Note: GL_TEXTURE_CUBE_MAP_NEGATIVE_Y not set, or given the
+       *    // wrong format, or given the wrong size, etc.
+       *    glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_Z, 0, ...);
+       *    glTexImage2D(GL_TEXTURE_CUBE_MAP_NEGATIVE_Z, 0, ...);
+       *
+       * A bug has been filed against the spec for this case.  In the
+       * meantime, we will check for cube completeness.
+       *
+       * According to Section 8.17 Texture Completeness in the OpenGL 4.5
+       * Core Profile spec (30.10.2014):
+       *    "[A] cube map texture is cube complete if the
+       *    following conditions all hold true: The [base level] texture
+       *    images of each of the six cube map faces have identical, positive,
+       *    and square dimensions. The [base level] images were each specified
+       *    with the same internal format."
+       *
+       * It seems reasonable to check for cube completeness of an arbitrary
+       * level here so that the returned data has a consistent format and size
+       * and therefore fits in the user's buffer.
+       */
+      if (!_mesa_cube_level_complete(texObj, level)) {
+         _mesa_error(ctx, GL_INVALID_OPERATION,
+                     "glGetTextureImage(cube map incomplete)");
+         return;
       }
 
       /* Copy each face. */
