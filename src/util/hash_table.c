@@ -330,7 +330,7 @@ struct hash_entry *
 _mesa_hash_table_insert(struct hash_table *ht, const void *key, void *data)
 {
    assert(ht->key_hash_function);
-   hash_table_insert(ht, ht->key_hash_function(key), key, data);
+   return hash_table_insert(ht, ht->key_hash_function(key), key, data);
 }
 
 struct hash_entry *
@@ -338,7 +338,7 @@ _mesa_hash_table_insert_with_hash(struct hash_table *ht, uint32_t hash,
                                   const void *key, void *data)
 {
    assert(ht->key_hash_function == NULL || hash == ht->key_hash_function(key));
-   hash_table_insert(ht, hash, key, data);
+   return hash_table_insert(ht, hash, key, data);
 }
 
 /**
