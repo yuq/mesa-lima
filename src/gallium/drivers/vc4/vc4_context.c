@@ -472,7 +472,9 @@ vc4_context_create(struct pipe_screen *pscreen, void *priv)
         vc4_init_cl(vc4, &vc4->bcl);
         vc4_init_cl(vc4, &vc4->rcl);
         vc4_init_cl(vc4, &vc4->shader_rec);
+        vc4_init_cl(vc4, &vc4->uniforms);
         vc4_init_cl(vc4, &vc4->bo_handles);
+        vc4_init_cl(vc4, &vc4->bo_pointers);
 
         vc4->dirty = ~0;
         vc4->fd = screen->fd;

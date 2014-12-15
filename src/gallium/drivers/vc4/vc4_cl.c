@@ -22,11 +22,14 @@
  */
 
 #include "util/u_math.h"
+#include "util/ralloc.h"
 #include "vc4_context.h"
 
 void
 vc4_init_cl(struct vc4_context *vc4, struct vc4_cl *cl)
 {
+        cl->base = ralloc_size(vc4, 1);
+        cl->end = cl->next = cl->base;
 }
 
 void
@@ -35,7 +38,7 @@ vc4_grow_cl(struct vc4_cl *cl)
         uint32_t size = MAX2((cl->end - cl->base) * 2, 4096);
         uint32_t offset = cl->next -cl->base;
 
-        cl->base = realloc(cl->base, size);
+        cl->base = reralloc(ralloc_parent(cl->base), cl->base, uint8_t, size);
         cl->end = cl->base + size;
         cl->next = cl->base + offset;
 }
