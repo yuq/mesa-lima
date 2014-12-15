@@ -2777,3 +2777,24 @@ vc4_program_init(struct pipe_context *pctx)
         vc4->vs_cache = _mesa_hash_table_create(pctx, vs_cache_hash,
                                                 vs_cache_compare);
 }
+
+void
+vc4_program_fini(struct pipe_context *pctx)
+{
+        struct vc4_context *vc4 = vc4_context(pctx);
+
+        struct hash_entry *entry;
+        hash_table_foreach(vc4->fs_cache, entry) {
+                struct vc4_compiled_shader *shader = entry->data;
+                vc4_bo_unreference(&shader->bo);
+                ralloc_free(shader);
+                _mesa_hash_table_remove(vc4->fs_cache, entry);
+        }
+
+        hash_table_foreach(vc4->vs_cache, entry) {
+                struct vc4_compiled_shader *shader = entry->data;
+                vc4_bo_unreference(&shader->bo);
+                ralloc_free(shader);
+                _mesa_hash_table_remove(vc4->vs_cache, entry);
+        }
+}

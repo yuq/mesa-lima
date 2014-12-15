@@ -431,6 +431,8 @@ vc4_context_destroy(struct pipe_context *pctx)
 
         util_slab_destroy(&vc4->transfer_pool);
 
+        vc4_program_fini(pctx);
+
         ralloc_free(vc4);
 }
 
