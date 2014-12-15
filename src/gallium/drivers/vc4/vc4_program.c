@@ -1001,6 +1001,16 @@ get_channel_from_vpm(struct vc4_compile *c,
         else if (chan->size == 32 &&
                  chan->type == UTIL_FORMAT_TYPE_FLOAT) {
                 return get_swizzled_channel(c, vpm_reads, swiz);
+        } else if (chan->size == 32 &&
+                   chan->type == UTIL_FORMAT_TYPE_SIGNED) {
+                if (chan->normalized) {
+                        return qir_FMUL(c,
+                                        qir_ITOF(c, vpm_reads[swiz]),
+                                        qir_uniform_f(c,
+                                                      1.0 / 0x7fffffff));
+                } else {
+                        return qir_ITOF(c, vpm_reads[swiz]);
+                }
         } else if (chan->size == 8 &&
                    (chan->type == UTIL_FORMAT_TYPE_UNSIGNED ||
                     chan->type == UTIL_FORMAT_TYPE_SIGNED)) {
