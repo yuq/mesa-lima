@@ -432,6 +432,14 @@ tgsi_to_qir_umul(struct vc4_compile *c,
 }
 
 static struct qreg
+tgsi_to_qir_umad(struct vc4_compile *c,
+                 struct tgsi_full_instruction *tgsi_inst,
+                 enum qop op, struct qreg *src, int i)
+{
+        return qir_ADD(c, tgsi_to_qir_umul(c, NULL, 0, src, i), src[2 * 4 + i]);
+}
+
+static struct qreg
 tgsi_to_qir_idiv(struct vc4_compile *c,
                  struct tgsi_full_instruction *tgsi_inst,
                  enum qop op, struct qreg *src, int i)
@@ -1286,6 +1294,7 @@ emit_tgsi_instruction(struct vc4_compile *c,
                 [TGSI_OPCODE_NOT] = { QOP_NOT, tgsi_to_qir_alu },
 
                 [TGSI_OPCODE_UMUL] = { 0, tgsi_to_qir_umul },
+                [TGSI_OPCODE_UMAD] = { 0, tgsi_to_qir_umad },
                 [TGSI_OPCODE_IDIV] = { 0, tgsi_to_qir_idiv },
                 [TGSI_OPCODE_INEG] = { 0, tgsi_to_qir_ineg },
 
