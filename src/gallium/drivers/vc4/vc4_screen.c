@@ -354,6 +354,14 @@ vc4_screen_is_format_supported(struct pipe_screen *pscreen,
                 case PIPE_FORMAT_R8G8B8_SNORM:
                 case PIPE_FORMAT_R8G8_SNORM:
                 case PIPE_FORMAT_R8_SNORM:
+                case PIPE_FORMAT_R8G8B8A8_USCALED:
+                case PIPE_FORMAT_R8G8B8_USCALED:
+                case PIPE_FORMAT_R8G8_USCALED:
+                case PIPE_FORMAT_R8_USCALED:
+                case PIPE_FORMAT_R8G8B8A8_SSCALED:
+                case PIPE_FORMAT_R8G8B8_SSCALED:
+                case PIPE_FORMAT_R8G8_SSCALED:
+                case PIPE_FORMAT_R8_SSCALED:
                         retval |= PIPE_BIND_VERTEX_BUFFER;
                         break;
                 default:

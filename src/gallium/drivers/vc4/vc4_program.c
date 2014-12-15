@@ -1003,20 +1003,28 @@ get_channel_from_vpm(struct vc4_compile *c,
                 return get_swizzled_channel(c, vpm_reads, swiz);
         } else if (chan->size == 8 &&
                    (chan->type == UTIL_FORMAT_TYPE_UNSIGNED ||
-                    chan->type == UTIL_FORMAT_TYPE_SIGNED) &&
-                   chan->normalized) {
+                    chan->type == UTIL_FORMAT_TYPE_SIGNED)) {
                 struct qreg vpm = vpm_reads[0];
-                if (chan->type == UTIL_FORMAT_TYPE_SIGNED)
-                        vpm = qir_XOR(c, vpm, qir_uniform_ui(c, 0x80808080));
-                temp = qir_UNPACK_8_F(c, vpm, swiz);
-
                 if (chan->type == UTIL_FORMAT_TYPE_SIGNED) {
-                        return qir_FSUB(c, qir_FMUL(c,
-                                                    temp,
-                                                    qir_uniform_f(c, 2.0)),
-                                        qir_uniform_f(c, 1.0));
+                        temp = qir_XOR(c, vpm, qir_uniform_ui(c, 0x80808080));
+                        if (chan->normalized) {
+                                return qir_FSUB(c, qir_FMUL(c,
+                                                            qir_UNPACK_8_F(c, temp, swiz),
+                                                            qir_uniform_f(c, 2.0)),
+                                                qir_uniform_f(c, 1.0));
+                        } else {
+                                return qir_FADD(c,
+                                                qir_ITOF(c,
+                                                         qir_UNPACK_8_I(c, temp,
+                                                                        swiz)),
+                                                qir_uniform_f(c, -128.0));
+                        }
                 } else {
-                        return temp;
+                        if (chan->normalized) {
+                                return qir_UNPACK_8_F(c, vpm, swiz);
+                        } else {
+                                return qir_ITOF(c, qir_UNPACK_8_I(c, vpm, swiz));
+                        }
                 }
         } else {
                 return c->undef;
