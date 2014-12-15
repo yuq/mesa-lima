@@ -555,7 +555,16 @@ ADDR_E_RETURNCODE CiAddrLib::HwlSetupTileCfg(
     // Global flag to control usage of tileIndex
     if (UseTileIndex(index))
     {
-        if (static_cast<UINT_32>(index) >= m_noOfEntries)
+        if (index == TileIndexLinearGeneral)
+        {
+            pInfo->banks = 2;
+            pInfo->bankWidth = 1;
+            pInfo->bankHeight = 1;
+            pInfo->macroAspectRatio = 1;
+            pInfo->tileSplitBytes = 64;
+            pInfo->pipeConfig = ADDR_PIPECFG_P2;
+        }
+        else if (static_cast<UINT_32>(index) >= m_noOfEntries)
         {
             returnCode = ADDR_INVALIDPARAMS;
         }
