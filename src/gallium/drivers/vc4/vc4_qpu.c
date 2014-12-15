@@ -22,6 +22,7 @@
  */
 
 #include <stdbool.h>
+#include "util/ralloc.h"
 #include "vc4_qir.h"
 #include "vc4_qpu.h"
 
@@ -460,8 +461,8 @@ qpu_serialize_one_inst(struct vc4_compile *c, uint64_t inst)
 {
         if (c->qpu_inst_count >= c->qpu_inst_size) {
                 c->qpu_inst_size = MAX2(16, c->qpu_inst_size * 2);
-                c->qpu_insts = realloc(c->qpu_insts,
-                                       c->qpu_inst_size * sizeof(uint64_t));
+                c->qpu_insts = reralloc(c, c->qpu_insts,
+                                        uint64_t, c->qpu_inst_size);
         }
         c->qpu_insts[c->qpu_inst_count++] = inst;
 }
