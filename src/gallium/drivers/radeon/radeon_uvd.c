@@ -57,6 +57,7 @@
 
 #define FB_BUFFER_OFFSET 0x1000
 #define FB_BUFFER_SIZE 2048
+#define IT_SCALING_TABLE_SIZE 224
 
 /* UVD decoder representation */
 struct ruvd_decoder {
@@ -65,6 +66,7 @@ struct ruvd_decoder {
 	ruvd_set_dtb			set_dtb;
 
 	unsigned			stream_handle;
+	unsigned			stream_type;
 	unsigned			frame_number;
 
 	struct pipe_screen		*screen;
@@ -73,9 +75,10 @@ struct ruvd_decoder {
 
 	unsigned			cur_buffer;
 
-	struct rvid_buffer		msg_fb_buffers[NUM_BUFFERS];
+	struct rvid_buffer		msg_fb_it_buffers[NUM_BUFFERS];
 	struct ruvd_msg			*msg;
 	uint32_t			*fb;
+	uint8_t				*it;
 
 	struct rvid_buffer		bs_buffers[NUM_BUFFERS];
 	void*				bs_ptr;
@@ -121,14 +124,14 @@ static void send_cmd(struct ruvd_decoder *dec, unsigned cmd,
 	set_reg(dec, RUVD_GPCOM_VCPU_CMD, cmd << 1);
 }
 
-/* map the next available message/feedback buffer */
-static void map_msg_fb_buf(struct ruvd_decoder *dec)
+/* map the next available message/feedback/itscaling buffer */
+static void map_msg_fb_it_buf(struct ruvd_decoder *dec)
 {
 	struct rvid_buffer* buf;
 	uint8_t *ptr;
 
 	/* grab the current message/feedback buffer */
-	buf = &dec->msg_fb_buffers[dec->cur_buffer];
+	buf = &dec->msg_fb_it_buffers[dec->cur_buffer];
 
 	/* and map it for CPU access */
 	ptr = dec->ws->buffer_map(buf->res->cs_buf, dec->cs, PIPE_TRANSFER_WRITE);
@@ -136,6 +139,8 @@ static void map_msg_fb_buf(struct ruvd_decoder *dec)
 	/* calc buffer offsets */
 	dec->msg = (struct ruvd_msg *)ptr;
 	dec->fb = (uint32_t *)(ptr + FB_BUFFER_OFFSET);
+	if (dec->stream_type == RUVD_CODEC_H264_PERF)
+		dec->it = (uint8_t *)(ptr + FB_BUFFER_OFFSET + FB_BUFFER_SIZE);
 }
 
 /* unmap and send a message command to the VCPU */
@@ -148,12 +153,14 @@ static void send_msg_buf(struct ruvd_decoder *dec)
 		return;
 
 	/* grab the current message buffer */
-	buf = &dec->msg_fb_buffers[dec->cur_buffer];
+	buf = &dec->msg_fb_it_buffers[dec->cur_buffer];
 
 	/* unmap the buffer */
 	dec->ws->buffer_unmap(buf->res->cs_buf);
 	dec->msg = NULL;
 	dec->fb = NULL;
+	if (dec->stream_type == RUVD_CODEC_H264_PERF)
+		dec->it = NULL;
 
 	/* and send it to the hardware */
 	send_cmd(dec, RUVD_CMD_MSG_BUFFER, buf->res->cs_buf, 0,
@@ -168,11 +175,12 @@ static void next_buffer(struct ruvd_decoder *dec)
 }
 
 /* convert the profile into something UVD understands */
-static uint32_t profile2stream_type(enum pipe_video_profile profile)
+static uint32_t profile2stream_type(struct ruvd_decoder *dec, unsigned family)
 {
-	switch (u_reduce_video_profile(profile)) {
+	switch (u_reduce_video_profile(dec->base.profile)) {
 	case PIPE_VIDEO_FORMAT_MPEG4_AVC:
-		return RUVD_CODEC_H264;
+		return (family >= CHIP_TONGA) ?
+			RUVD_CODEC_H264_PERF : RUVD_CODEC_H264;
 
 	case PIPE_VIDEO_FORMAT_VC1:
 		return RUVD_CODEC_VC1;
@@ -565,7 +573,7 @@ static void ruvd_destroy(struct pipe_video_codec *decoder)
 
 	assert(decoder);
 
-	map_msg_fb_buf(dec);
+	map_msg_fb_it_buf(dec);
 	memset(dec->msg, 0, sizeof(*dec->msg));
 	dec->msg->size = sizeof(*dec->msg);
 	dec->msg->msg_type = RUVD_MSG_DESTROY;
@@ -577,7 +585,7 @@ static void ruvd_destroy(struct pipe_video_codec *decoder)
 	dec->ws->cs_destroy(dec->cs);
 
 	for (i = 0; i < NUM_BUFFERS; ++i) {
-		rvid_destroy_buffer(&dec->msg_fb_buffers[i]);
+		rvid_destroy_buffer(&dec->msg_fb_it_buffers[i]);
 		rvid_destroy_buffer(&dec->bs_buffers[i]);
 	}
 
@@ -679,7 +687,7 @@ static void ruvd_end_frame(struct pipe_video_codec *decoder,
 {
 	struct ruvd_decoder *dec = (struct ruvd_decoder*)decoder;
 	struct radeon_winsys_cs_handle *dt;
-	struct rvid_buffer *msg_fb_buf, *bs_buf;
+	struct rvid_buffer *msg_fb_it_buf, *bs_buf;
 	unsigned bs_size;
 
 	assert(decoder);
@@ -687,32 +695,37 @@ static void ruvd_end_frame(struct pipe_video_codec *decoder,
 	if (!dec->bs_ptr)
 		return;
 
-	msg_fb_buf = &dec->msg_fb_buffers[dec->cur_buffer];
+	msg_fb_it_buf = &dec->msg_fb_it_buffers[dec->cur_buffer];
 	bs_buf = &dec->bs_buffers[dec->cur_buffer];
 
 	bs_size = align(dec->bs_size, 128);
 	memset(dec->bs_ptr, 0, bs_size - dec->bs_size);
 	dec->ws->buffer_unmap(bs_buf->res->cs_buf);
 
-	map_msg_fb_buf(dec);
+	map_msg_fb_it_buf(dec);
 	dec->msg->size = sizeof(*dec->msg);
 	dec->msg->msg_type = RUVD_MSG_DECODE;
 	dec->msg->stream_handle = dec->stream_handle;
 	dec->msg->status_report_feedback_number = dec->frame_number;
 
-	dec->msg->body.decode.stream_type = profile2stream_type(dec->base.profile);
+	dec->msg->body.decode.stream_type = dec->stream_type;
 	dec->msg->body.decode.decode_flags = 0x1;
 	dec->msg->body.decode.width_in_samples = dec->base.width;
 	dec->msg->body.decode.height_in_samples = dec->base.height;
 
 	dec->msg->body.decode.dpb_size = dec->dpb.res->buf->size;
 	dec->msg->body.decode.bsd_size = bs_size;
+	dec->msg->body.decode.db_pitch = dec->base.width;
 
 	dt = dec->set_dtb(dec->msg, (struct vl_video_buffer *)target);
 
 	switch (u_reduce_video_profile(picture->profile)) {
 	case PIPE_VIDEO_FORMAT_MPEG4_AVC:
 		dec->msg->body.decode.codec.h264 = get_h264_msg(dec, (struct pipe_h264_picture_desc*)picture);
+		if (dec->stream_type == RUVD_CODEC_H264_PERF) {
+			memcpy(dec->it, dec->msg->body.decode.codec.h264.scaling_list_4x4, 6*16);
+			memcpy((dec->it + 96), dec->msg->body.decode.codec.h264.scaling_list_8x8, 2*64);
+		}
 		break;
 
 	case PIPE_VIDEO_FORMAT_VC1:
@@ -746,8 +759,11 @@ static void ruvd_end_frame(struct pipe_video_codec *decoder,
 		 0, RADEON_USAGE_READ, RADEON_DOMAIN_GTT);
 	send_cmd(dec, RUVD_CMD_DECODING_TARGET_BUFFER, dt, 0,
 		 RADEON_USAGE_WRITE, RADEON_DOMAIN_VRAM);
-	send_cmd(dec, RUVD_CMD_FEEDBACK_BUFFER, msg_fb_buf->res->cs_buf,
+	send_cmd(dec, RUVD_CMD_FEEDBACK_BUFFER, msg_fb_it_buf->res->cs_buf,
 		 FB_BUFFER_OFFSET, RADEON_USAGE_WRITE, RADEON_DOMAIN_GTT);
+	if (dec->stream_type == RUVD_CODEC_H264_PERF)
+		send_cmd(dec, RUVD_CMD_ITSCALING_TABLE_BUFFER, msg_fb_it_buf->res->cs_buf,
+			 FB_BUFFER_OFFSET + FB_BUFFER_SIZE, RADEON_USAGE_READ, RADEON_DOMAIN_GTT);
 	set_reg(dec, RUVD_ENGINE_CNTL, 1);
 
 	flush(dec);
@@ -816,6 +832,7 @@ struct pipe_video_codec *ruvd_create_decoder(struct pipe_context *context,
 	dec->base.end_frame = ruvd_end_frame;
 	dec->base.flush = ruvd_flush;
 
+	dec->stream_type = profile2stream_type(dec, info.family);
 	dec->set_dtb = set_dtb;
 	dec->stream_handle = rvid_alloc_stream_handle();
 	dec->screen = context->screen;
@@ -828,10 +845,12 @@ struct pipe_video_codec *ruvd_create_decoder(struct pipe_context *context,
 
 	bs_buf_size = width * height * 512 / (16 * 16);
 	for (i = 0; i < NUM_BUFFERS; ++i) {
-		unsigned msg_fb_size = FB_BUFFER_OFFSET + FB_BUFFER_SIZE;
+		unsigned msg_fb_it_size = FB_BUFFER_OFFSET + FB_BUFFER_SIZE;
 		STATIC_ASSERT(sizeof(struct ruvd_msg) <= FB_BUFFER_OFFSET);
-		if (!rvid_create_buffer(dec->screen, &dec->msg_fb_buffers[i],
-					msg_fb_size, PIPE_USAGE_STAGING)) {
+		if (dec->stream_type == RUVD_CODEC_H264_PERF)
+			msg_fb_it_size += IT_SCALING_TABLE_SIZE;
+		if (!rvid_create_buffer(dec->screen, &dec->msg_fb_it_buffers[i],
+					msg_fb_it_size, PIPE_USAGE_STAGING)) {
 			RVID_ERR("Can't allocated message buffers.\n");
 			goto error;
 		}
@@ -842,7 +861,7 @@ struct pipe_video_codec *ruvd_create_decoder(struct pipe_context *context,
 			goto error;
 		}
 
-		rvid_clear_buffer(context, &dec->msg_fb_buffers[i]);
+		rvid_clear_buffer(context, &dec->msg_fb_it_buffers[i]);
 		rvid_clear_buffer(context, &dec->bs_buffers[i]);
 	}
 
@@ -853,11 +872,11 @@ struct pipe_video_codec *ruvd_create_decoder(struct pipe_context *context,
 
 	rvid_clear_buffer(context, &dec->dpb);
 
-	map_msg_fb_buf(dec);
+	map_msg_fb_it_buf(dec);
 	dec->msg->size = sizeof(*dec->msg);
 	dec->msg->msg_type = RUVD_MSG_CREATE;
 	dec->msg->stream_handle = dec->stream_handle;
-	dec->msg->body.create.stream_type = profile2stream_type(dec->base.profile);
+	dec->msg->body.create.stream_type = dec->stream_type;
 	dec->msg->body.create.width_in_samples = dec->base.width;
 	dec->msg->body.create.height_in_samples = dec->base.height;
 	dec->msg->body.create.dpb_size = dec->dpb.res->buf->size;
@@ -871,7 +890,7 @@ error:
 	if (dec->cs) dec->ws->cs_destroy(dec->cs);
 
 	for (i = 0; i < NUM_BUFFERS; ++i) {
-		rvid_destroy_buffer(&dec->msg_fb_buffers[i]);
+		rvid_destroy_buffer(&dec->msg_fb_it_buffers[i]);
 		rvid_destroy_buffer(&dec->bs_buffers[i]);
 	}
 
