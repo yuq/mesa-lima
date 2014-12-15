@@ -1465,6 +1465,46 @@ nir_foreach_dest(nir_instr *instr, nir_foreach_dest_cb cb, void *state)
    return true;
 }
 
+struct foreach_ssa_def_state {
+   nir_foreach_ssa_def_cb cb;
+   void *client_state;
+};
+
+static inline bool
+nir_ssa_def_visitor(nir_dest *dest, void *void_state)
+{
+   struct foreach_ssa_def_state *state = void_state;
+
+   if (dest->is_ssa)
+      return state->cb(&dest->ssa, state->client_state);
+   else
+      return true;
+}
+
+bool
+nir_foreach_ssa_def(nir_instr *instr, nir_foreach_ssa_def_cb cb, void *state)
+{
+   switch (instr->type) {
+   case nir_instr_type_alu:
+   case nir_instr_type_tex:
+   case nir_instr_type_intrinsic:
+   case nir_instr_type_load_const:
+   case nir_instr_type_phi:
+   case nir_instr_type_parallel_copy: {
+      struct foreach_ssa_def_state foreach_state = {cb, state};
+      return nir_foreach_dest(instr, nir_ssa_def_visitor, &foreach_state);
+   }
+
+   case nir_instr_type_ssa_undef:
+      return cb(&nir_instr_as_ssa_undef(instr)->def, state);
+   case nir_instr_type_call:
+   case nir_instr_type_jump:
+      return true;
+   default:
+      unreachable("Invalid instruction type");
+   }
+}
+
 static bool
 visit_src(nir_src *src, nir_foreach_src_cb cb, void *state)
 {

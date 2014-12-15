@@ -1316,8 +1316,11 @@ void nir_instr_insert_after_cf_list(struct exec_list *list, nir_instr *after);
 
 void nir_instr_remove(nir_instr *instr);
 
+typedef bool (*nir_foreach_ssa_def_cb)(nir_ssa_def *def, void *state);
 typedef bool (*nir_foreach_dest_cb)(nir_dest *dest, void *state);
 typedef bool (*nir_foreach_src_cb)(nir_src *src, void *state);
+bool nir_foreach_ssa_def(nir_instr *instr, nir_foreach_ssa_def_cb cb,
+                         void *state);
 bool nir_foreach_dest(nir_instr *instr, nir_foreach_dest_cb cb, void *state);
 bool nir_foreach_src(nir_instr *instr, nir_foreach_src_cb cb, void *state);
 
