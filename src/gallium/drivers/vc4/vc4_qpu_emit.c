@@ -141,6 +141,15 @@ vc4_generate_code(struct vc4_context *vc4, struct vc4_compile *c)
         uint32_t vpm_read_offset = 0;
         bool written_r3 = false;
         bool needs_restore;
+        /* Map from the QIR ops enum order to QPU unpack bits. */
+        static const uint32_t unpack_map[] = {
+                QPU_UNPACK_8A,
+                QPU_UNPACK_8B,
+                QPU_UNPACK_8C,
+                QPU_UNPACK_8D,
+                QPU_UNPACK_16A_TO_F32,
+                QPU_UNPACK_16B_TO_F32,
+        };
 
         make_empty_list(&c->qpu_inst_list);
 
@@ -472,6 +481,8 @@ vc4_generate_code(struct vc4_context *vc4, struct vc4_compile *c)
                 case QOP_UNPACK_8B_F:
                 case QOP_UNPACK_8C_F:
                 case QOP_UNPACK_8D_F:
+                case QOP_UNPACK_16A_F:
+                case QOP_UNPACK_16B_F: {
                         assert(src[0].mux == QPU_MUX_A);
 
                         /* Since we're setting the pack bits, if the
@@ -480,20 +491,22 @@ vc4_generate_code(struct vc4_context *vc4, struct vc4_compile *c)
                         queue(c, qpu_a_FMAX((dst.mux == QPU_MUX_A ?
                                              qpu_rb(31) : dst),
                                             src[0], src[0]));
-                        *last_inst(c) |= QPU_SET_FIELD(QPU_UNPACK_8A +
-                                                       (qinst->op -
-                                                        QOP_UNPACK_8A_F),
+                        *last_inst(c) |= QPU_SET_FIELD(unpack_map[qinst->op -
+                                                                  QOP_UNPACK_8A_F],
                                                        QPU_UNPACK);
 
                         if (dst.mux == QPU_MUX_A) {
                                 queue(c, qpu_a_MOV(dst, qpu_rb(31)));
                         }
+                }
                         break;
 
                 case QOP_UNPACK_8A_I:
                 case QOP_UNPACK_8B_I:
                 case QOP_UNPACK_8C_I:
                 case QOP_UNPACK_8D_I:
+                case QOP_UNPACK_16A_I:
+                case QOP_UNPACK_16B_I: {
                         assert(src[0].mux == QPU_MUX_A);
 
                         /* Since we're setting the pack bits, if the
@@ -501,14 +514,14 @@ vc4_generate_code(struct vc4_context *vc4, struct vc4_compile *c)
                          */
                         queue(c, qpu_a_MOV((dst.mux == QPU_MUX_A ?
                                             qpu_rb(31) : dst), src[0]));
-                        *last_inst(c) |= QPU_SET_FIELD(QPU_UNPACK_8A +
-                                                       (qinst->op -
-                                                        QOP_UNPACK_8A_I),
+                        *last_inst(c) |= QPU_SET_FIELD(unpack_map[qinst->op -
+                                                                  QOP_UNPACK_8A_I],
                                                        QPU_UNPACK);
 
                         if (dst.mux == QPU_MUX_A) {
                                 queue(c, qpu_a_MOV(dst, qpu_rb(31)));
                         }
+                }
                         break;
 
                 default:

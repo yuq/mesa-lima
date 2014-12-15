@@ -346,6 +346,22 @@ vc4_screen_is_format_supported(struct pipe_screen *pscreen,
                 case PIPE_FORMAT_R32G32B32_FLOAT:
                 case PIPE_FORMAT_R32G32_FLOAT:
                 case PIPE_FORMAT_R32_FLOAT:
+                case PIPE_FORMAT_R16G16B16A16_UNORM:
+                case PIPE_FORMAT_R16G16B16_UNORM:
+                case PIPE_FORMAT_R16G16_UNORM:
+                case PIPE_FORMAT_R16_UNORM:
+                case PIPE_FORMAT_R16G16B16A16_SNORM:
+                case PIPE_FORMAT_R16G16B16_SNORM:
+                case PIPE_FORMAT_R16G16_SNORM:
+                case PIPE_FORMAT_R16_SNORM:
+                case PIPE_FORMAT_R16G16B16A16_USCALED:
+                case PIPE_FORMAT_R16G16B16_USCALED:
+                case PIPE_FORMAT_R16G16_USCALED:
+                case PIPE_FORMAT_R16_USCALED:
+                case PIPE_FORMAT_R16G16B16A16_SSCALED:
+                case PIPE_FORMAT_R16G16B16_SSCALED:
+                case PIPE_FORMAT_R16G16_SSCALED:
+                case PIPE_FORMAT_R16_SSCALED:
                 case PIPE_FORMAT_R8G8B8A8_UNORM:
                 case PIPE_FORMAT_R8G8B8_UNORM:
                 case PIPE_FORMAT_R8G8_UNORM:

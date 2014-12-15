@@ -1026,6 +1026,37 @@ get_channel_from_vpm(struct vc4_compile *c,
                                 return qir_ITOF(c, qir_UNPACK_8_I(c, vpm, swiz));
                         }
                 }
+        } else if (chan->size == 16 &&
+                   (chan->type == UTIL_FORMAT_TYPE_UNSIGNED ||
+                    chan->type == UTIL_FORMAT_TYPE_SIGNED)) {
+                struct qreg vpm = vpm_reads[swiz / 2];
+
+                /* Note that UNPACK_16F eats a half float, not ints, so we use
+                 * UNPACK_16_I for all of these.
+                 */
+                if (chan->type == UTIL_FORMAT_TYPE_SIGNED) {
+                        temp = qir_ITOF(c, qir_UNPACK_16_I(c, vpm, swiz % 2));
+                        if (chan->normalized) {
+                                return qir_FMUL(c, temp,
+                                                qir_uniform_f(c, 1/32768.0f));
+                        } else {
+                                return temp;
+                        }
+                } else {
+                        /* UNPACK_16I sign-extends, so we have to emit ANDs. */
+                        temp = vpm;
+                        if (swiz == 1 || swiz == 3)
+                                temp = qir_UNPACK_16_I(c, temp, 1);
+                        temp = qir_AND(c, temp, qir_uniform_ui(c, 0xffff));
+                        temp = qir_ITOF(c, temp);
+
+                        if (chan->normalized) {
+                                return qir_FMUL(c, temp,
+                                                qir_uniform_f(c, 1 / 65535.0));
+                        } else {
+                                return temp;
+                        }
+                }
         } else {
                 return c->undef;
         }

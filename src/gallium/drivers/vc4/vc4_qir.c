@@ -103,10 +103,14 @@ static const struct qir_op_info qir_op_info[] = {
         [QOP_UNPACK_8B_F] = { "unpack_8b_f", 1, 1 },
         [QOP_UNPACK_8C_F] = { "unpack_8c_f", 1, 1 },
         [QOP_UNPACK_8D_F] = { "unpack_8d_f", 1, 1 },
+        [QOP_UNPACK_16A_F] = { "unpack_16a_f", 1, 1 },
+        [QOP_UNPACK_16B_F] = { "unpack_16b_f", 1, 1 },
         [QOP_UNPACK_8A_I] = { "unpack_8a_i", 1, 1 },
         [QOP_UNPACK_8B_I] = { "unpack_8b_i", 1, 1 },
         [QOP_UNPACK_8C_I] = { "unpack_8c_i", 1, 1 },
         [QOP_UNPACK_8D_I] = { "unpack_8d_i", 1, 1 },
+        [QOP_UNPACK_16A_I] = { "unpack_16a_i", 1, 1 },
+        [QOP_UNPACK_16B_I] = { "unpack_16b_i", 1, 1 },
 };
 
 static const char *
