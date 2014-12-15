@@ -403,7 +403,7 @@ vc4_screen_is_format_supported(struct pipe_screen *pscreen,
 struct pipe_screen *
 vc4_screen_create(int fd)
 {
-        struct vc4_screen *screen = ralloc(NULL, struct vc4_screen);
+        struct vc4_screen *screen = rzalloc(NULL, struct vc4_screen);
         struct pipe_screen *pscreen;
 
         pscreen = &screen->base;
