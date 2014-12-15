@@ -986,6 +986,43 @@ tgsi_to_qir_uarl(struct vc4_compile *c,
         return qir_SHL(c, src[0 * 4 + i], qir_uniform_ui(c, 4));
 }
 
+static struct qreg
+get_channel_from_vpm(struct vc4_compile *c,
+                     struct qreg *vpm_reads,
+                     uint8_t swiz,
+                     const struct util_format_description *desc)
+{
+        const struct util_format_channel_description *chan =
+                &desc->channel[swiz];
+        struct qreg temp;
+
+        if (swiz > UTIL_FORMAT_SWIZZLE_W)
+                return get_swizzled_channel(c, vpm_reads, swiz);
+        else if (chan->size == 32 &&
+                 chan->type == UTIL_FORMAT_TYPE_FLOAT) {
+                return get_swizzled_channel(c, vpm_reads, swiz);
+        } else if (chan->size == 8 &&
+                   (chan->type == UTIL_FORMAT_TYPE_UNSIGNED ||
+                    chan->type == UTIL_FORMAT_TYPE_SIGNED) &&
+                   chan->normalized) {
+                struct qreg vpm = vpm_reads[0];
+                if (chan->type == UTIL_FORMAT_TYPE_SIGNED)
+                        vpm = qir_XOR(c, vpm, qir_uniform_ui(c, 0x80808080));
+                temp = qir_UNPACK_8_F(c, vpm, swiz);
+
+                if (chan->type == UTIL_FORMAT_TYPE_SIGNED) {
+                        return qir_FSUB(c, qir_FMUL(c,
+                                                    temp,
+                                                    qir_uniform_f(c, 2.0)),
+                                        qir_uniform_f(c, 1.0));
+                } else {
+                        return temp;
+                }
+        } else {
+                return c->undef;
+        }
+}
+
 static void
 emit_vertex_input(struct vc4_compile *c, int attr)
 {
@@ -1010,22 +1047,10 @@ emit_vertex_input(struct vc4_compile *c, int attr)
 
         for (int i = 0; i < 4; i++) {
                 uint8_t swiz = desc->swizzle[i];
-                struct qreg result;
+                struct qreg result = get_channel_from_vpm(c, vpm_reads,
+                                                          swiz, desc);
 
-                if (swiz > UTIL_FORMAT_SWIZZLE_W)
-                        result = get_swizzled_channel(c, vpm_reads, swiz);
-                else if (desc->channel[swiz].size == 32 &&
-                         desc->channel[swiz].type == UTIL_FORMAT_TYPE_FLOAT) {
-                        result = get_swizzled_channel(c, vpm_reads, swiz);
-                } else if (desc->channel[swiz].size == 8 &&
-                           (desc->channel[swiz].type == UTIL_FORMAT_TYPE_UNSIGNED ||
-                            desc->channel[swiz].type == UTIL_FORMAT_TYPE_SIGNED) &&
-                           desc->channel[swiz].normalized) {
-                        struct qreg vpm = vpm_reads[0];
-                        if (desc->channel[swiz].type == UTIL_FORMAT_TYPE_SIGNED)
-                                vpm = qir_XOR(c, vpm, qir_uniform_ui(c, 0x80808080));
-                        result = qir_UNPACK_8_F(c, vpm, swiz);
-                } else {
+                if (result.file == QFILE_NULL) {
                         if (!format_warned) {
                                 fprintf(stderr,
                                         "vtx element %d unsupported type: %s\n",
@@ -1034,16 +1059,6 @@ emit_vertex_input(struct vc4_compile *c, int attr)
                         }
                         result = qir_uniform_f(c, 0.0);
                 }
-
-                if (desc->channel[swiz].normalized &&
-                    desc->channel[swiz].type == UTIL_FORMAT_TYPE_SIGNED) {
-                        result = qir_FSUB(c,
-                                          qir_FMUL(c,
-                                                   result,
-                                                   qir_uniform_f(c, 2.0)),
-                                          qir_uniform_f(c, 1.0));
-                }
-
                 c->inputs[attr * 4 + i] = result;
         }
 }
