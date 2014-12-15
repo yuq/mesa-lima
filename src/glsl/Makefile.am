@@ -42,6 +42,7 @@ include Makefile.sources
 
 TESTS = glcpp/tests/glcpp-test				\
 	glcpp/tests/glcpp-test-cr-lf			\
+	tests/blob-test					\
 	tests/general-ir-test				\
 	tests/optimization-test				\
 	tests/sampler-types-test                        \
@@ -55,11 +56,17 @@ noinst_LTLIBRARIES = libglsl.la libglcpp.la
 check_PROGRAMS =					\
 	glcpp/glcpp					\
 	glsl_test					\
+	tests/blob-test					\
 	tests/general-ir-test				\
 	tests/sampler-types-test			\
 	tests/uniform-initializer-test
 
 noinst_PROGRAMS = glsl_compiler
+
+tests_blob_test_SOURCES =				\
+	tests/blob_test.c
+tests_blob_test_LDADD =					\
+	$(top_builddir)/src/glsl/libglsl.la
 
 tests_general_ir_test_SOURCES =		\
 	$(top_srcdir)/src/mesa/main/imports.c		\
