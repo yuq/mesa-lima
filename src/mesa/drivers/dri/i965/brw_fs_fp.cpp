@@ -132,8 +132,6 @@ fs_visitor::emit_fragment_program_code()
       const struct prog_instruction *fpi = &prog->Instructions[insn];
       base_ir = fpi;
 
-      //_mesa_print_instruction(fpi);
-
       fs_reg dst;
       fs_reg src[3];
 
