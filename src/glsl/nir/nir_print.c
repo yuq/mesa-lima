@@ -505,12 +505,14 @@ print_call_instr(nir_call_instr *instr, print_var_state *state, FILE *fp)
 }
 
 static void
-print_const_value(nir_const_value value, unsigned num_components, FILE *fp)
+print_load_const_instr(nir_load_const_instr *instr, unsigned tabs, FILE *fp)
 {
-   fprintf(fp, "(");
+   print_ssa_def(&instr->def, fp);
+
+   fprintf(fp, " = load_const (");
 
    bool first = true;
-   for (unsigned i = 0; i < num_components; i++) {
+   for (unsigned i = 0; i < instr->def.num_components; i++) {
       if (!first)
          fprintf(fp, ", ");
 
@@ -520,31 +522,9 @@ print_const_value(nir_const_value value, unsigned num_components, FILE *fp)
        * and then print the float in a comment for readability.
        */
 
-      fprintf(fp, "0x%08x /* %f */", value.u[i], value.f[i]);
+      fprintf(fp, "0x%08x /* %f */", instr->value.u[i], instr->value.f[i]);
 
       first = false;
-   }
-
-   fprintf(fp, ")");
-}
-
-static void
-print_load_const_instr(nir_load_const_instr *instr, unsigned tabs, FILE *fp)
-{
-   print_dest(&instr->dest, fp);
-
-   fprintf(fp, " = load_const ");
-
-   if (instr->array_elems == 0) {
-      print_const_value(instr->value, instr->num_components, fp);
-   } else {
-      fprintf(fp, "{\n");
-      for (unsigned i = 0; i < instr->array_elems; i++) {
-         print_tabs(tabs + 1, fp);
-         print_const_value(instr->array[i], instr->num_components, fp);
-         fprintf(fp, ", \n");
-      }
-      fprintf(fp, "}");
    }
 }
 

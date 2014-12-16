@@ -392,7 +392,9 @@ fs_visitor::nir_emit_instr(nir_instr *instr)
       break;
 
    case nir_instr_type_load_const:
-      nir_emit_load_const(nir_instr_as_load_const(instr));
+      /* We can hit these, but we do nothing now and use them as
+       * immediates later.
+       */
       break;
 
    case nir_instr_type_jump:
@@ -1699,30 +1701,6 @@ fs_visitor::nir_emit_texture(nir_tex_instr *instr)
    dest.type = this->result.type;
    unsigned num_components = nir_tex_instr_dest_size(instr);
    emit_percomp(MOV(dest, this->result), (1 << num_components) - 1);
-}
-
-void
-fs_visitor::nir_emit_load_const(nir_load_const_instr *instr)
-{
-   /* Bail on SSA constant loads.  These are used for immediates. */
-   if (instr->dest.is_ssa)
-      return;
-
-   fs_reg dest = get_nir_dest(instr->dest);
-   dest.type = BRW_REGISTER_TYPE_UD;
-   if (instr->array_elems == 0) {
-      for (unsigned i = 0; i < instr->num_components; i++) {
-         emit(MOV(dest, fs_reg(instr->value.u[i])));
-         dest.reg_offset++;
-      }
-   } else {
-      for (unsigned i = 0; i < instr->array_elems; i++) {
-         for (unsigned j = 0; j < instr->num_components; j++) {
-            emit(MOV(dest, fs_reg(instr->array[i].u[j])));
-            dest.reg_offset++;
-         }
-      }
-   }
 }
 
 void

@@ -275,17 +275,15 @@ construct_value(const nir_search_value *value, nir_alu_type type,
 
    case nir_search_value_constant: {
       const nir_search_constant *c = nir_search_value_as_constant(value);
-      nir_load_const_instr *load = nir_load_const_instr_create(mem_ctx);
-      load->dest.is_ssa = true;
-      nir_ssa_def_init(&load->instr, &load->dest.ssa, 1, NULL);
+      nir_load_const_instr *load = nir_load_const_instr_create(mem_ctx, 1);
 
       switch (type) {
       case nir_type_float:
-         load->dest.ssa.name = ralloc_asprintf(mem_ctx, "%f", c->data.f);
+         load->def.name = ralloc_asprintf(mem_ctx, "%f", c->data.f);
          load->value.f[0] = c->data.f;
          break;
       case nir_type_int:
-         load->dest.ssa.name = ralloc_asprintf(mem_ctx, "%d", c->data.i);
+         load->def.name = ralloc_asprintf(mem_ctx, "%d", c->data.i);
          load->value.i[0] = c->data.i;
          break;
       case nir_type_unsigned:
@@ -300,7 +298,7 @@ construct_value(const nir_search_value *value, nir_alu_type type,
 
       nir_alu_src val = {
          .src.is_ssa = true,
-         .src.ssa = &load->dest.ssa,
+         .src.ssa = &load->def,
          .negate = false,
          .abs = false,
          .swizzle = { 0, 0, 0, 0 } /* Splatted scalar */

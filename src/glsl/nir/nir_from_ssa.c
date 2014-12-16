@@ -392,6 +392,12 @@ agressive_coalesce_parallel_copy(nir_parallel_copy_instr *pcopy,
       if (!copy->src.is_ssa)
          continue;
 
+      /* Since load_const instructions are SSA only, we can't replace their
+       * destinations with registers and, therefore, can't coalesce them.
+       */
+      if (copy->src.ssa->parent_instr->type == nir_instr_type_load_const)
+         continue;
+
       /* Don't try and coalesce these */
       if (copy->dest.ssa.num_components != copy->src.ssa->num_components)
          continue;

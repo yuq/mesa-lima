@@ -583,7 +583,6 @@ public:
    void nir_emit_alu(nir_alu_instr *instr);
    void nir_emit_intrinsic(nir_intrinsic_instr *instr);
    void nir_emit_texture(nir_tex_instr *instr);
-   void nir_emit_load_const(nir_load_const_instr *instr);
    void nir_emit_jump(nir_jump_instr *instr);
    fs_reg get_nir_src(nir_src src);
    fs_reg get_nir_alu_src(nir_alu_instr *instr, unsigned src);

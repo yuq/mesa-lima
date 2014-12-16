@@ -162,17 +162,14 @@ get_deref_reg_src(nir_deref_var *deref, nir_instr *instr,
 
       if (src.reg.indirect) {
          nir_load_const_instr *load_const =
-            nir_load_const_instr_create(state->mem_ctx);
-         load_const->num_components = 1;
+            nir_load_const_instr_create(state->mem_ctx, 1);
          load_const->value.u[0] = glsl_get_length(parent_type);
-         load_const->dest.is_ssa = true;
-         nir_ssa_def_init(&load_const->instr, &load_const->dest.ssa, 1, NULL);
          nir_instr_insert_before(instr, &load_const->instr);
 
          nir_alu_instr *mul = nir_alu_instr_create(state->mem_ctx, nir_op_imul);
          mul->src[0].src = *src.reg.indirect;
          mul->src[1].src.is_ssa = true;
-         mul->src[1].src.ssa = &load_const->dest.ssa;
+         mul->src[1].src.ssa = &load_const->def;
          mul->dest.write_mask = 1;
          mul->dest.dest.is_ssa = true;
          nir_ssa_def_init(&mul->instr, &mul->dest.dest.ssa, 1, NULL);

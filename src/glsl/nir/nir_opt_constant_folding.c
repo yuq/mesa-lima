@@ -72,9 +72,8 @@ constant_fold_alu_instr(nir_alu_instr *instr, void *mem_ctx)
    /* We shouldn't have any saturate modifiers in the optimization loop. */
    assert(!instr->dest.saturate);
 
-   dest = nir_load_const_instr_create(mem_ctx);
-   dest->array_elems = 0;
-   dest->num_components = instr->dest.dest.ssa.num_components;
+   dest = nir_load_const_instr_create(mem_ctx,
+                                      instr->dest.dest.ssa.num_components);
 
    switch (instr->op) {
    case nir_op_ineg:
@@ -215,16 +214,11 @@ constant_fold_alu_instr(nir_alu_instr *instr, void *mem_ctx)
       return false;
    }
 
-   dest->dest.is_ssa = true;
-   nir_ssa_def_init(&dest->instr, &dest->dest.ssa,
-                    instr->dest.dest.ssa.num_components,
-                    instr->dest.dest.ssa.name);
-
    nir_instr_insert_before(&instr->instr, &dest->instr);
 
    nir_src new_src = {
       .is_ssa = true,
-      .ssa = &dest->dest.ssa,
+      .ssa = &dest->def,
    };
 
    nir_ssa_def_rewrite_uses(&instr->dest.dest.ssa, new_src, mem_ctx);

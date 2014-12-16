@@ -918,22 +918,9 @@ typedef struct {
 typedef struct {
    nir_instr instr;
 
-   union {
-      nir_const_value value;
-      nir_const_value *array;
-   };
+   nir_const_value value;
 
-   unsigned num_components;
-
-   /**
-    * The number of constant array elements to be copied into the variable. If
-    * this != 0, then value.array holds the array of size array_elems;
-    * otherwise, value.value holds the single vector constant (the more common
-    * case, and the only case for SSA destinations).
-    */
-   unsigned array_elems;
-
-   nir_dest dest;
+   nir_ssa_def def;
 } nir_load_const_instr;
 
 typedef enum {
@@ -1280,7 +1267,8 @@ nir_alu_instr *nir_alu_instr_create(void *mem_ctx, nir_op op);
 
 nir_jump_instr *nir_jump_instr_create(void *mem_ctx, nir_jump_type type);
 
-nir_load_const_instr *nir_load_const_instr_create(void *mem_ctx);
+nir_load_const_instr *nir_load_const_instr_create(void *mem_ctx,
+                                                  unsigned num_components);
 
 nir_intrinsic_instr *nir_intrinsic_instr_create(void *mem_ctx,
                                                 nir_intrinsic_op op);

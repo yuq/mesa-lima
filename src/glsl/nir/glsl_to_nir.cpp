@@ -776,7 +776,6 @@ get_instr_dest(nir_instr *instr)
    nir_alu_instr *alu_instr;
    nir_intrinsic_instr *intrinsic_instr;
    nir_tex_instr *tex_instr;
-   nir_load_const_instr *load_const_instr;
 
    switch (instr->type) {
       case nir_instr_type_alu:
@@ -793,10 +792,6 @@ get_instr_dest(nir_instr *instr)
       case nir_instr_type_tex:
          tex_instr = nir_instr_as_tex(instr);
          return &tex_instr->dest;
-
-      case nir_instr_type_load_const:
-         load_const_instr = nir_instr_as_load_const(instr);
-         return &load_const_instr->dest;
 
       default:
          assert(0);
@@ -910,18 +905,15 @@ nir_visitor::visit(ir_expression *ir)
        */
 
       if (ir->type->base_type == GLSL_TYPE_BOOL) {
-         nir_load_const_instr *const_zero = nir_load_const_instr_create(shader);
-         const_zero->num_components = 1;
+         nir_load_const_instr *const_zero = nir_load_const_instr_create(shader, 1);
          const_zero->value.u[0] = 0;
-         const_zero->dest.is_ssa = true;
-         nir_ssa_def_init(&const_zero->instr, &const_zero->dest.ssa, 1, NULL);
          nir_instr_insert_after_cf_list(this->cf_node_list, &const_zero->instr);
 
          nir_alu_instr *compare = nir_alu_instr_create(shader, nir_op_ine);
          compare->src[0].src.is_ssa = true;
          compare->src[0].src.ssa = &load->dest.ssa;
          compare->src[1].src.is_ssa = true;
-         compare->src[1].src.ssa = &const_zero->dest.ssa;
+         compare->src[1].src.ssa = &const_zero->def;
          for (unsigned i = 0; i < ir->type->vector_elements; i++)
             compare->src[1].swizzle[i] = 0;
          compare->dest.write_mask = (1 << ir->type->vector_elements) - 1;

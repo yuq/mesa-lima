@@ -69,7 +69,6 @@ init_instr(nir_instr *instr, struct exec_list *worklist)
    nir_alu_instr *alu_instr;
    nir_intrinsic_instr *intrin_instr;
    nir_tex_instr *tex_instr;
-   nir_load_const_instr *load_const_instr;
 
    instr->live = false;
 
@@ -101,12 +100,6 @@ init_instr(nir_instr *instr, struct exec_list *worklist)
    case nir_instr_type_tex:
       tex_instr = nir_instr_as_tex(instr);
       if (!tex_instr->dest.is_ssa)
-         worklist_push(worklist, instr);
-      break;
-
-   case nir_instr_type_load_const:
-      load_const_instr = nir_instr_as_load_const(instr);
-      if (!load_const_instr->dest.is_ssa)
          worklist_push(worklist, instr);
       break;
 

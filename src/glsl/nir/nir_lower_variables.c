@@ -621,12 +621,12 @@ get_const_initializer_load(const nir_deref_var *deref,
       tail = tail->child;
    }
 
-   nir_load_const_instr *load = nir_load_const_instr_create(state->mem_ctx);
-   load->array_elems = 0;
-   load->num_components = glsl_get_vector_elements(tail->type);
+   nir_load_const_instr *load =
+      nir_load_const_instr_create(state->mem_ctx,
+                                  glsl_get_vector_elements(tail->type));
 
-   matrix_offset *= load->num_components;
-   for (unsigned i = 0; i < load->num_components; i++) {
+   matrix_offset *= load->def.num_components;
+   for (unsigned i = 0; i < load->def.num_components; i++) {
       switch (glsl_get_base_type(tail->type)) {
       case GLSL_TYPE_FLOAT:
       case GLSL_TYPE_INT:
@@ -977,11 +977,10 @@ nir_lower_variables_impl(nir_function_impl *impl)
 
       if (deref->var->constant_initializer) {
          nir_load_const_instr *load = get_const_initializer_load(deref, &state);
-         load->dest.is_ssa = true;
-         nir_ssa_def_init(&load->instr, &load->dest.ssa,
+         nir_ssa_def_init(&load->instr, &load->def,
                           glsl_get_vector_elements(node->type), NULL);
          nir_instr_insert_before_cf_list(&impl->body, &load->instr);
-         def_stack_push(node, &load->dest.ssa, &state);
+         def_stack_push(node, &load->def, &state);
       }
 
       if (deref->var->data.mode == nir_var_shader_out)

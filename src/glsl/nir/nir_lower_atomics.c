@@ -63,15 +63,12 @@ lower_instr(nir_intrinsic_instr *instr, nir_function_impl *impl)
    new_instr->const_index[0] =
       (int) instr->variables[0]->var->data.atomic.buffer_index;
 
-   nir_load_const_instr *offset_const = nir_load_const_instr_create(mem_ctx);
-   offset_const->num_components = 1;
+   nir_load_const_instr *offset_const = nir_load_const_instr_create(mem_ctx, 1);
    offset_const->value.u[0] = instr->variables[0]->var->data.atomic.offset;
-   offset_const->dest.is_ssa = true;
-   nir_ssa_def_init(&offset_const->instr, &offset_const->dest.ssa, 1, NULL);
 
    nir_instr_insert_before(&instr->instr, &offset_const->instr);
 
-   nir_ssa_def *offset_def = &offset_const->dest.ssa;
+   nir_ssa_def *offset_def = &offset_const->def;
 
    if (instr->variables[0]->deref.child != NULL) {
       assert(instr->variables[0]->deref.child->deref_type ==
@@ -84,12 +81,8 @@ lower_instr(nir_intrinsic_instr *instr, nir_function_impl *impl)
 
       if (deref_array->deref_array_type == nir_deref_array_type_indirect) {
          nir_load_const_instr *atomic_counter_size =
-               nir_load_const_instr_create(mem_ctx);
-         atomic_counter_size->num_components = 1;
+               nir_load_const_instr_create(mem_ctx, 1);
          atomic_counter_size->value.u[0] = ATOMIC_COUNTER_SIZE;
-         atomic_counter_size->dest.is_ssa = true;
-         nir_ssa_def_init(&atomic_counter_size->instr,
-                          &atomic_counter_size->dest.ssa, 1, NULL);
          nir_instr_insert_before(&instr->instr, &atomic_counter_size->instr);
 
          nir_alu_instr *mul = nir_alu_instr_create(mem_ctx, nir_op_imul);
@@ -98,7 +91,7 @@ lower_instr(nir_intrinsic_instr *instr, nir_function_impl *impl)
          mul->dest.write_mask = 0x1;
          mul->src[0].src = nir_src_copy(deref_array->indirect, mem_ctx);
          mul->src[1].src.is_ssa = true;
-         mul->src[1].src.ssa = &atomic_counter_size->dest.ssa;
+         mul->src[1].src.ssa = &atomic_counter_size->def;
          nir_instr_insert_before(&instr->instr, &mul->instr);
 
          nir_alu_instr *add = nir_alu_instr_create(mem_ctx, nir_op_iadd);
@@ -108,7 +101,7 @@ lower_instr(nir_intrinsic_instr *instr, nir_function_impl *impl)
          add->src[0].src.is_ssa = true;
          add->src[0].src.ssa = &mul->dest.dest.ssa;
          add->src[1].src.is_ssa = true;
-         add->src[1].src.ssa = &offset_const->dest.ssa;
+         add->src[1].src.ssa = &offset_const->def;
          nir_instr_insert_before(&instr->instr, &add->instr);
 
          offset_def = &add->dest.dest.ssa;

@@ -394,14 +394,12 @@ nir_jump_instr_create(void *mem_ctx, nir_jump_type type)
 }
 
 nir_load_const_instr *
-nir_load_const_instr_create(void *mem_ctx)
+nir_load_const_instr_create(void *mem_ctx, unsigned num_components)
 {
    nir_load_const_instr *instr = ralloc(mem_ctx, nir_load_const_instr);
    instr_init(&instr->instr, nir_instr_type_load_const);
 
-   dest_init(&instr->dest);
-   instr->num_components = 0;
-   instr->array_elems = 0;
+   nir_ssa_def_init(&instr->instr, &instr->def, num_components, NULL);
 
    return instr;
 }
@@ -1407,13 +1405,6 @@ visit_texture_dest(nir_tex_instr *instr, nir_foreach_dest_cb cb,
 }
 
 static bool
-visit_load_const_dest(nir_load_const_instr *instr, nir_foreach_dest_cb cb,
-                      void *state)
-{
-   return cb(&instr->dest, state);
-}
-
-static bool
 visit_phi_dest(nir_phi_instr *instr, nir_foreach_dest_cb cb, void *state)
 {
    return cb(&instr->dest, state);
@@ -1441,14 +1432,13 @@ nir_foreach_dest(nir_instr *instr, nir_foreach_dest_cb cb, void *state)
       return visit_intrinsic_dest(nir_instr_as_intrinsic(instr), cb, state);
    case nir_instr_type_tex:
       return visit_texture_dest(nir_instr_as_tex(instr), cb, state);
-   case nir_instr_type_load_const:
-      return visit_load_const_dest(nir_instr_as_load_const(instr), cb, state);
    case nir_instr_type_phi:
       return visit_phi_dest(nir_instr_as_phi(instr), cb, state);
    case nir_instr_type_parallel_copy:
       return visit_parallel_copy_dest(nir_instr_as_parallel_copy(instr),
                                       cb, state);
 
+   case nir_instr_type_load_const:
    case nir_instr_type_ssa_undef:
    case nir_instr_type_call:
    case nir_instr_type_jump:
@@ -1485,13 +1475,14 @@ nir_foreach_ssa_def(nir_instr *instr, nir_foreach_ssa_def_cb cb, void *state)
    case nir_instr_type_alu:
    case nir_instr_type_tex:
    case nir_instr_type_intrinsic:
-   case nir_instr_type_load_const:
    case nir_instr_type_phi:
    case nir_instr_type_parallel_copy: {
       struct foreach_ssa_def_state foreach_state = {cb, state};
       return nir_foreach_dest(instr, nir_ssa_def_visitor, &foreach_state);
    }
 
+   case nir_instr_type_load_const:
+      return cb(&nir_instr_as_load_const(instr)->def, state);
    case nir_instr_type_ssa_undef:
       return cb(&nir_instr_as_ssa_undef(instr)->def, state);
    case nir_instr_type_call:
@@ -1689,12 +1680,7 @@ nir_src_as_const_value(nir_src src)
 
    nir_load_const_instr *load = nir_instr_as_load_const(src.ssa->parent_instr);
 
-   if (load->array_elems == 0)
-      return &load->value;
-   if (load->array_elems == 1)
-      return load->array;
-   else
-      return NULL;
+   return &load->value;
 }
 
 bool

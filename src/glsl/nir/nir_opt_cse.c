@@ -86,11 +86,11 @@ nir_instrs_equal(nir_instr *instr1, nir_instr *instr2)
       nir_load_const_instr *load1 = nir_instr_as_load_const(instr1);
       nir_load_const_instr *load2 = nir_instr_as_load_const(instr2);
 
-      if (load1->num_components != load2->num_components)
+      if (load1->def.num_components != load2->def.num_components)
          return false;
 
       return memcmp(load1->value.f, load2->value.f,
-                    load1->num_components * sizeof load2->value.f) == 0;
+                    load1->def.num_components * sizeof load2->value.f) == 0;
    }
    case nir_instr_type_phi: {
       nir_phi_instr *phi1 = nir_instr_as_phi(instr1);
@@ -168,8 +168,7 @@ nir_instr_get_dest_ssa_def(nir_instr *instr)
       assert(nir_instr_as_alu(instr)->dest.dest.is_ssa);
       return &nir_instr_as_alu(instr)->dest.dest.ssa;
    case nir_instr_type_load_const:
-      assert(nir_instr_as_load_const(instr)->dest.is_ssa);
-      return &nir_instr_as_load_const(instr)->dest.ssa;
+      return &nir_instr_as_load_const(instr)->def;
    case nir_instr_type_phi:
       assert(nir_instr_as_phi(instr)->dest.is_ssa);
       return &nir_instr_as_phi(instr)->dest.ssa;

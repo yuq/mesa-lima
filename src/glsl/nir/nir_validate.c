@@ -411,13 +411,7 @@ validate_call_instr(nir_call_instr *instr, validate_state *state)
 static void
 validate_load_const_instr(nir_load_const_instr *instr, validate_state *state)
 {
-   validate_dest(&instr->dest, state);
-
-   if (instr->array_elems != 0) {
-      assert(!instr->dest.is_ssa);
-      assert(instr->dest.reg.base_offset + instr->array_elems <=
-             instr->dest.reg.reg->num_array_elems);
-   }
+   validate_ssa_def(&instr->def, state);
 }
 
 static void

@@ -140,18 +140,14 @@ get_io_offset(nir_deref_var *deref, nir_instr *instr, nir_src *indirect,
 
          if (deref_array->deref_array_type == nir_deref_array_type_indirect) {
             nir_load_const_instr *load_const =
-               nir_load_const_instr_create(state->mem_ctx);
-            load_const->num_components = 1;
+               nir_load_const_instr_create(state->mem_ctx, 1);
             load_const->value.u[0] = size;
-            load_const->dest.is_ssa = true;
-            nir_ssa_def_init(&load_const->instr, &load_const->dest.ssa,
-                             1, NULL);
             nir_instr_insert_before(instr, &load_const->instr);
 
             nir_alu_instr *mul = nir_alu_instr_create(state->mem_ctx,
                                                       nir_op_imul);
             mul->src[0].src.is_ssa = true;
-            mul->src[0].src.ssa = &load_const->dest.ssa;
+            mul->src[0].src.ssa = &load_const->def;
             mul->src[1].src = nir_src_copy(deref_array->indirect,
                                            state->mem_ctx);
             mul->dest.write_mask = 1;
