@@ -43,19 +43,18 @@
 #include "linker.h"
 
 #include "main/mtypes.h"
+#include "main/shaderapi.h"
 #include "main/shaderobj.h"
 #include "main/uniforms.h"
-#include "program/hash_table.h"
 
-extern "C" {
-#include "main/shaderapi.h"
+#include "program/hash_table.h"
 #include "program/prog_instruction.h"
 #include "program/prog_optimize.h"
 #include "program/prog_print.h"
 #include "program/program.h"
 #include "program/prog_parameter.h"
 #include "program/sampler.h"
-}
+
 
 static int swizzle_for_size(int size);
 
