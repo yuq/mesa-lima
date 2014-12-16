@@ -975,7 +975,6 @@ struct brw_context
                                         unsigned surface_format,
                                         unsigned buffer_size,
                                         unsigned pitch,
-                                        unsigned mocs,
                                         bool rw);
 
       /**

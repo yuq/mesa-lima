@@ -221,7 +221,6 @@ gen4_emit_buffer_surface_state(struct brw_context *brw,
                                unsigned surface_format,
                                unsigned buffer_size,
                                unsigned pitch,
-                               unsigned mocs,
                                bool rw)
 {
    uint32_t *surf = brw_state_batch(brw, AUB_TRACE_SURFACE_STATE,
@@ -279,7 +278,6 @@ brw_update_buffer_texture_surface(struct gl_context *ctx,
                                        brw_format,
                                        size / texel_size,
                                        texel_size,
-                                       0, /* mocs */
                                        false /* rw */);
 }
 
@@ -382,7 +380,7 @@ brw_create_constant_surface(struct brw_context *brw,
 
    brw->vtbl.emit_buffer_surface_state(brw, out_offset, bo, offset,
                                        BRW_SURFACEFORMAT_R32G32B32A32_FLOAT,
-                                       elements, stride, 0, false);
+                                       elements, stride, false);
 }
 
 /**

@@ -225,7 +225,6 @@ gen7_emit_buffer_surface_state(struct brw_context *brw,
                                unsigned surface_format,
                                unsigned buffer_size,
                                unsigned pitch,
-                               unsigned mocs,
                                bool rw)
 {
    uint32_t *surf = brw_state_batch(brw, AUB_TRACE_SURFACE_STATE,
@@ -241,7 +240,7 @@ gen7_emit_buffer_surface_state(struct brw_context *brw,
    surf[3] = SET_FIELD(((buffer_size - 1) >> 21) & 0x3f, BRW_SURFACE_DEPTH) |
              (pitch - 1);
 
-   surf[5] = SET_FIELD(mocs, GEN7_SURFACE_MOCS);
+   surf[5] = SET_FIELD(GEN7_MOCS_L3, GEN7_SURFACE_MOCS);
 
    if (brw->is_haswell) {
       surf[7] |= (SET_FIELD(HSW_SCS_RED,   GEN7_SURFACE_SCS_R) |
@@ -385,7 +384,6 @@ gen7_create_raw_surface(struct brw_context *brw, drm_intel_bo *bo,
                                   BRW_SURFACEFORMAT_RAW,
                                   size,
                                   1,
-                                  0 /* mocs */,
                                   true /* rw */);
 }
 

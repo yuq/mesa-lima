@@ -116,9 +116,9 @@ gen8_emit_buffer_surface_state(struct brw_context *brw,
                                unsigned surface_format,
                                unsigned buffer_size,
                                unsigned pitch,
-                               unsigned mocs,
                                bool rw)
 {
+   const unsigned mocs = brw->gen >= 9 ? SKL_MOCS_WB : BDW_MOCS_WB;
    uint32_t *surf = allocate_surface_state(brw, out_offset);
 
    surf[0] = BRW_SURFACE_BUFFER << BRW_SURFACE_TYPE_SHIFT |
@@ -286,7 +286,6 @@ gen8_create_raw_surface(struct brw_context *brw, drm_intel_bo *bo,
                                   BRW_SURFACEFORMAT_RAW,
                                   size,
                                   1,
-                                  0 /* mocs */,
                                   true /* rw */);
 }
 
