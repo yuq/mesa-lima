@@ -69,7 +69,20 @@ convert_instr(nir_intrinsic_instr *instr)
    }
 
    nir_intrinsic_instr *new_instr = nir_intrinsic_instr_create(mem_ctx, op);
-   new_instr->dest = nir_dest_copy(instr->dest, mem_ctx);
+
+   if (instr->dest.is_ssa) {
+      new_instr->dest.is_ssa = true;
+      nir_ssa_def_init(&new_instr->instr, &new_instr->dest.ssa,
+                       instr->dest.ssa.num_components, NULL);
+      nir_src new_dest_src = {
+         .is_ssa = true,
+         .ssa = &new_instr->dest.ssa,
+      };
+      nir_ssa_def_rewrite_uses(&instr->dest.ssa, new_dest_src, mem_ctx);
+   } else {
+      new_instr->dest = nir_dest_copy(instr->dest, mem_ctx);
+   }
+
    nir_instr_insert_before(&instr->instr, &new_instr->instr);
    nir_instr_remove(&instr->instr);
 }
