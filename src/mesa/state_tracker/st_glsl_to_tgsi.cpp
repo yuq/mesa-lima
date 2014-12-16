@@ -44,10 +44,8 @@
 #include "main/mtypes.h"
 #include "main/shaderobj.h"
 #include "main/uniforms.h"
-#include "program/hash_table.h"
-
-extern "C" {
 #include "main/shaderapi.h"
+#include "program/hash_table.h"
 #include "program/prog_instruction.h"
 #include "program/prog_optimize.h"
 #include "program/prog_print.h"
@@ -67,7 +65,7 @@ extern "C" {
 #include "st_program.h"
 #include "st_glsl_to_tgsi.h"
 #include "st_mesa_to_tgsi.h"
-}
+
 
 #define PROGRAM_IMMEDIATE PROGRAM_FILE_MAX
 #define PROGRAM_ANY_CONST ((1 << PROGRAM_STATE_VAR) |    \
