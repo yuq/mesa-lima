@@ -159,9 +159,8 @@ static nir_ssa_def *get_ssa_src(nir_register *reg, rewrite_state *state)
        * We're using an undefined register, create a new undefined SSA value
        * to preserve the information that this source is undefined
        */
-      nir_ssa_undef_instr *instr = nir_ssa_undef_instr_create(state->mem_ctx);
-      nir_ssa_def_init(&instr->instr, &instr->def,
-                       reg->num_components, NULL);
+      nir_ssa_undef_instr *instr =
+         nir_ssa_undef_instr_create(state->mem_ctx, reg->num_components);
 
       /*
        * We could just insert the undefined instruction before the instruction

@@ -483,13 +483,12 @@ nir_parallel_copy_instr_create(void *mem_ctx)
 }
 
 nir_ssa_undef_instr *
-nir_ssa_undef_instr_create(void *mem_ctx)
+nir_ssa_undef_instr_create(void *mem_ctx, unsigned num_components)
 {
    nir_ssa_undef_instr *instr = ralloc(mem_ctx, nir_ssa_undef_instr);
    instr_init(&instr->instr, nir_instr_type_ssa_undef);
 
-   instr->def.name = NULL;
-   instr->def.parent_instr = &instr->instr;
+   nir_ssa_def_init(&instr->instr, &instr->def, num_components, NULL);
 
    return instr;
 }

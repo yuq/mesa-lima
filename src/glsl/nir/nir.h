@@ -1294,7 +1294,8 @@ nir_phi_instr *nir_phi_instr_create(void *mem_ctx);
 
 nir_parallel_copy_instr *nir_parallel_copy_instr_create(void *mem_ctx);
 
-nir_ssa_undef_instr *nir_ssa_undef_instr_create(void *mem_ctx);
+nir_ssa_undef_instr *nir_ssa_undef_instr_create(void *mem_ctx,
+                                                unsigned num_components);
 
 nir_deref_var *nir_deref_var_create(void *mem_ctx, nir_variable *var);
 nir_deref_array *nir_deref_array_create(void *mem_ctx);

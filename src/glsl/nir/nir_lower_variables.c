@@ -688,9 +688,9 @@ get_ssa_def_for_block(struct deref_node *node, nir_block *block,
    /* If we got here then we don't have a definition that dominates the
     * given block.  This means that we need to add an undef and use that.
     */
-   nir_ssa_undef_instr *undef = nir_ssa_undef_instr_create(state->mem_ctx);
-   nir_ssa_def_init(&undef->instr, &undef->def,
-                    glsl_get_vector_elements(node->type), NULL);
+   nir_ssa_undef_instr *undef =
+      nir_ssa_undef_instr_create(state->mem_ctx,
+                                 glsl_get_vector_elements(node->type));
    nir_instr_insert_before_cf_list(&state->impl->body, &undef->instr);
    def_stack_push(node, &undef->def, state);
    return &undef->def;
@@ -758,9 +758,8 @@ rename_variables_block(nir_block *block, struct lower_variables_state *state)
                 * should result in an undefined value.
                 */
                nir_ssa_undef_instr *undef =
-                  nir_ssa_undef_instr_create(state->mem_ctx);
-               nir_ssa_def_init(&undef->instr, &undef->def,
-                                intrin->num_components, NULL);
+                  nir_ssa_undef_instr_create(state->mem_ctx,
+                                             intrin->num_components);
 
                nir_instr_insert_before(&intrin->instr, &undef->instr);
                nir_instr_remove(&intrin->instr);
