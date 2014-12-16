@@ -69,6 +69,9 @@ fs_visitor::emit_nir_code()
    nir_remove_dead_variables(nir);
    nir_validate_shader(nir);
 
+   nir_lower_atomics(nir);
+   nir_validate_shader(nir);
+
    nir_lower_to_source_mods(nir);
    nir_validate_shader(nir);
    nir_copy_prop(nir);
@@ -82,9 +85,6 @@ fs_visitor::emit_nir_code()
    nir_validate_shader(nir);
 
    nir_lower_system_values(nir);
-   nir_validate_shader(nir);
-
-   nir_lower_atomics(nir);
    nir_validate_shader(nir);
 
    /* emit the arrays used for inputs and outputs - load/store intrinsics will
