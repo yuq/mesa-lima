@@ -33,38 +33,6 @@ struct match_state {
 };
 
 static bool
-is_commutative_binop(nir_op op)
-{
-   switch (op) {
-   case nir_op_fadd:
-   case nir_op_iadd:
-   case nir_op_fmul:
-   case nir_op_imul:
-   case nir_op_imul_high:
-   case nir_op_umul_high:
-   case nir_op_feq:
-   case nir_op_fne:
-   case nir_op_ieq:
-   case nir_op_ine:
-   case nir_op_fand:
-   case nir_op_for:
-   case nir_op_fxor:
-   case nir_op_iand:
-   case nir_op_ior:
-   case nir_op_ixor:
-   case nir_op_fmin:
-   case nir_op_fmax:
-   case nir_op_imin:
-   case nir_op_imax:
-   case nir_op_umin:
-   case nir_op_umax:
-      return true;
-   default:
-      return false;
-   }
-}
-
-static bool
 match_expression(const nir_search_expression *expr, nir_alu_instr *instr,
                  unsigned num_components, const uint8_t *swizzle,
                  struct match_state *state);
@@ -207,7 +175,8 @@ match_expression(const nir_search_expression *expr, nir_alu_instr *instr,
    if (matched)
       return true;
 
-   if (is_commutative_binop(instr->op)) {
+   if (nir_op_infos[instr->op].num_inputs == 2 &&
+       (nir_op_infos[instr->op].algebraic_properties & NIR_OP_IS_COMMUTATIVE)) {
       if (!match_value(expr->srcs[0], instr, 1, num_components,
                        swizzle, state))
          return false;
