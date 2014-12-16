@@ -261,7 +261,7 @@ qpu_num_sf_accesses(uint64_t inst)
 }
 
 static bool
-qpu_waddr_ignores_pm(uint32_t waddr)
+qpu_waddr_ignores_ws(uint32_t waddr)
 {
         switch(waddr) {
         case QPU_W_ACC0:
@@ -394,11 +394,11 @@ qpu_merge_inst(uint64_t a, uint64_t b)
          * destination for ADD/MUL) if one of the original instructions
          * ignores it (probably because it's just writing to accumulators).
          */
-        if (qpu_waddr_ignores_pm(QPU_GET_FIELD(a, QPU_WADDR_ADD)) &&
-            qpu_waddr_ignores_pm(QPU_GET_FIELD(a, QPU_WADDR_MUL))) {
+        if (qpu_waddr_ignores_ws(QPU_GET_FIELD(a, QPU_WADDR_ADD)) &&
+            qpu_waddr_ignores_ws(QPU_GET_FIELD(a, QPU_WADDR_MUL))) {
                 merge = (merge & ~QPU_WS) | (b & QPU_WS);
-        } else if (qpu_waddr_ignores_pm(QPU_GET_FIELD(b, QPU_WADDR_ADD)) &&
-                   qpu_waddr_ignores_pm(QPU_GET_FIELD(b, QPU_WADDR_MUL))) {
+        } else if (qpu_waddr_ignores_ws(QPU_GET_FIELD(b, QPU_WADDR_ADD)) &&
+                   qpu_waddr_ignores_ws(QPU_GET_FIELD(b, QPU_WADDR_MUL))) {
                 merge = (merge & ~QPU_WS) | (a & QPU_WS);
         } else {
                 if ((a & QPU_WS) != (b & QPU_WS))
