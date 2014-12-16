@@ -30,7 +30,7 @@
  * to a list of macros of the form:
  *
  * OPCODE(name, num_inputs, per_component, output_size, output_type,
- *        input_sizes, input_types)
+ *        input_sizes, input_types, algebraic_properties)
  *
  * Which should correspond one-to-one with the nir_op_info structure. It is
  * included in both ir.h to create the nir_op enum (with members of the form
@@ -40,12 +40,12 @@
 
 #define ARR(...) { __VA_ARGS__ }
 
-#define UNOP(name, type) OPCODE(name, 1, false, 0, type, ARR(0), ARR(type))
+#define UNOP(name, type) OPCODE(name, 1, false, 0, type, ARR(0), ARR(type), 0)
 #define UNOP_CONVERT(name, in_type, out_type) \
-   OPCODE(name, 1, false, 0, out_type, ARR(0), ARR(in_type))
+   OPCODE(name, 1, false, 0, out_type, ARR(0), ARR(in_type), 0)
 #define UNOP_HORIZ(name, output_size, output_type, input_size, input_type) \
    OPCODE(name, 1, true, output_size, output_type, ARR(input_size), \
-          ARR(input_type))
+          ARR(input_type), 0)
 
 #define UNOP_REDUCE(name, output_size, output_type, input_type) \
    UNOP_HORIZ(name##2, output_size, output_type, 2, input_type) \
@@ -174,48 +174,56 @@ UNOP_HORIZ(fnoise4_2, 4, nir_type_float, 2, nir_type_float)
 UNOP_HORIZ(fnoise4_3, 4, nir_type_float, 3, nir_type_float)
 UNOP_HORIZ(fnoise4_4, 4, nir_type_float, 4, nir_type_float)
 
-#define BINOP(name, type) \
-   OPCODE(name, 2, true, 0, type, ARR(0, 0), ARR(type, type))
-#define BINOP_CONVERT(name, out_type, in_type) \
-   OPCODE(name, 2, true, 0, out_type, ARR(0, 0), ARR(in_type, in_type))
-#define BINOP_COMPARE(name, type) BINOP_CONVERT(name, nir_type_bool, type)
+#define BINOP(name, type, alg_props) \
+   OPCODE(name, 2, true, 0, type, ARR(0, 0), ARR(type, type), alg_props)
+#define BINOP_CONVERT(name, out_type, in_type, alg_props) \
+   OPCODE(name, 2, true, 0, out_type, ARR(0, 0), ARR(in_type, in_type), alg_props)
+#define BINOP_COMPARE(name, type, alg_props) \
+   OPCODE(name, 2, true, 0, nir_type_bool, ARR(0, 0), ARR(type, type), alg_props)
 #define BINOP_HORIZ(name, output_size, output_type, src1_size, src1_type, \
                     src2_size, src2_type) \
    OPCODE(name, 2, true, output_size, output_type, ARR(src1_size, src2_size), \
-          ARR(src1_type, src2_type))
+          ARR(src1_type, src2_type), 0)
 #define BINOP_REDUCE(name, output_size, output_type, src_type) \
-   BINOP_HORIZ(name##2, output_size, output_type, 2, src_type, 2, src_type) \
-   BINOP_HORIZ(name##3, output_size, output_type, 3, src_type, 3, src_type) \
-   BINOP_HORIZ(name##4, output_size, output_type, 4, src_type, 4, src_type) \
+   OPCODE(name##2, 2, false, output_size, output_type, \
+          ARR(2, 2), ARR(src_type, src_type), NIR_OP_IS_COMMUTATIVE) \
+   OPCODE(name##3, 2, false, output_size, output_type, \
+          ARR(3, 3), ARR(src_type, src_type), NIR_OP_IS_COMMUTATIVE) \
+   OPCODE(name##4, 2, false, output_size, output_type, \
+          ARR(4, 4), ARR(src_type, src_type), NIR_OP_IS_COMMUTATIVE)
 
-BINOP(fadd, nir_type_float)
-BINOP(iadd, nir_type_int)
-BINOP(fsub, nir_type_float)
-BINOP(isub, nir_type_int)
+BINOP(fadd, nir_type_float, NIR_OP_IS_COMMUTATIVE | NIR_OP_IS_ASSOCIATIVE)
+BINOP(iadd, nir_type_int, NIR_OP_IS_COMMUTATIVE | NIR_OP_IS_ASSOCIATIVE)
+BINOP(fsub, nir_type_float, 0)
+BINOP(isub, nir_type_int, 0)
 
-BINOP(fmul, nir_type_float)
-BINOP(imul, nir_type_int) /* low 32-bits of signed/unsigned integer multiply */
-BINOP(imul_high, nir_type_int) /* high 32-bits of signed integer multiply */
-BINOP(umul_high, nir_type_unsigned) /* high 32-bits of unsigned integer multiply */
+BINOP(fmul, nir_type_float, NIR_OP_IS_COMMUTATIVE | NIR_OP_IS_ASSOCIATIVE)
+/* low 32-bits of signed/unsigned integer multiply */
+BINOP(imul, nir_type_int, NIR_OP_IS_COMMUTATIVE | NIR_OP_IS_ASSOCIATIVE)
+/* high 32-bits of signed integer multiply */
+BINOP(imul_high, nir_type_int, NIR_OP_IS_COMMUTATIVE)
+/* high 32-bits of unsigned integer multiply */
+BINOP(umul_high, nir_type_unsigned, NIR_OP_IS_COMMUTATIVE)
 
-BINOP(fdiv, nir_type_float)
-BINOP(idiv, nir_type_int)
-BINOP(udiv, nir_type_unsigned)
+BINOP(fdiv, nir_type_float, 0)
+BINOP(idiv, nir_type_int, 0)
+BINOP(udiv, nir_type_unsigned, 0)
 
 /**
  * returns a boolean representing the carry resulting from the addition of
  * the two unsigned arguments.
  */
-BINOP_CONVERT(uadd_carry, nir_type_bool, nir_type_unsigned)
+BINOP_CONVERT(uadd_carry, nir_type_bool, nir_type_unsigned,
+              NIR_OP_IS_COMMUTATIVE)
 
 /**
  * returns a boolean representing the borrow resulting from the subtraction
  * of the two unsigned arguments.
  */
-BINOP_CONVERT(usub_borrow, nir_type_bool, nir_type_unsigned)
+BINOP_CONVERT(usub_borrow, nir_type_bool, nir_type_unsigned, 0)
 
-BINOP(fmod, nir_type_float)
-BINOP(umod, nir_type_unsigned)
+BINOP(fmod, nir_type_float, 0)
+BINOP(umod, nir_type_unsigned, 0)
 
 /**
  * \name comparisons
@@ -225,16 +233,16 @@ BINOP(umod, nir_type_unsigned)
 /**
  * these integer-aware comparisons return a boolean (0 or ~0)
  */
-BINOP_COMPARE(flt, nir_type_float)
-BINOP_COMPARE(fge, nir_type_float)
-BINOP_COMPARE(feq, nir_type_float)
-BINOP_COMPARE(fne, nir_type_float)
-BINOP_COMPARE(ilt, nir_type_int)
-BINOP_COMPARE(ige, nir_type_int)
-BINOP_COMPARE(ieq, nir_type_int)
-BINOP_COMPARE(ine, nir_type_int)
-BINOP_COMPARE(ult, nir_type_unsigned)
-BINOP_COMPARE(uge, nir_type_unsigned)
+BINOP_COMPARE(flt, nir_type_float, 0)
+BINOP_COMPARE(fge, nir_type_float, 0)
+BINOP_COMPARE(feq, nir_type_float, NIR_OP_IS_COMMUTATIVE)
+BINOP_COMPARE(fne, nir_type_float, NIR_OP_IS_COMMUTATIVE)
+BINOP_COMPARE(ilt, nir_type_int, 0)
+BINOP_COMPARE(ige, nir_type_int, 0)
+BINOP_COMPARE(ieq, nir_type_int, NIR_OP_IS_COMMUTATIVE)
+BINOP_COMPARE(ine, nir_type_int, NIR_OP_IS_COMMUTATIVE)
+BINOP_COMPARE(ult, nir_type_unsigned, 0)
+BINOP_COMPARE(uge, nir_type_unsigned, 0)
 
 /** integer-aware GLSL-style comparisons that compare floats and ints */
 BINOP_REDUCE(ball_fequal,  1, nir_type_bool, nir_type_float)
@@ -250,16 +258,16 @@ BINOP_REDUCE(fany_nequal, 1, nir_type_float, nir_type_float)
  * These comparisons for integer-less hardware return 1.0 and 0.0 for true
  * and false respectively
  */
-BINOP(slt, nir_type_float) /* Set on Less Than */
-BINOP(sge, nir_type_float) /* Set on Greater Than or Equal */
-BINOP(seq, nir_type_float) /* Set on Equal */
-BINOP(sne, nir_type_float) /* Set on Not Equal */
+BINOP(slt, nir_type_float, 0) /* Set on Less Than */
+BINOP(sge, nir_type_float, 0) /* Set on Greater Than or Equal */
+BINOP(seq, nir_type_float, NIR_OP_IS_COMMUTATIVE) /* Set on Equal */
+BINOP(sne, nir_type_float, NIR_OP_IS_COMMUTATIVE) /* Set on Not Equal */
 
 /*@}*/
 
-BINOP(ishl, nir_type_int)
-BINOP(ishr, nir_type_int)
-BINOP(ushr, nir_type_unsigned)
+BINOP(ishl, nir_type_int, 0)
+BINOP(ishr, nir_type_int, 0)
+BINOP(ushr, nir_type_unsigned, 0)
 
 /**
  * \name bitwise logic operators
@@ -268,9 +276,9 @@ BINOP(ushr, nir_type_unsigned)
  * integers.
  */
 /*@{*/
-BINOP(iand, nir_type_unsigned)
-BINOP(ior, nir_type_unsigned)
-BINOP(ixor, nir_type_unsigned)
+BINOP(iand, nir_type_unsigned, NIR_OP_IS_COMMUTATIVE | NIR_OP_IS_ASSOCIATIVE)
+BINOP(ior, nir_type_unsigned, NIR_OP_IS_COMMUTATIVE | NIR_OP_IS_ASSOCIATIVE)
+BINOP(ixor, nir_type_unsigned, NIR_OP_IS_COMMUTATIVE | NIR_OP_IS_ASSOCIATIVE)
 /*@{*/
 
 /**
@@ -279,26 +287,26 @@ BINOP(ixor, nir_type_unsigned)
  * These use (src != 0.0) for testing the truth of the input, and output 1.0
  * for true and 0.0 for false
  */
-BINOP(fand, nir_type_float)
-BINOP(for, nir_type_float)
-BINOP(fxor, nir_type_float)
+BINOP(fand, nir_type_float, NIR_OP_IS_COMMUTATIVE)
+BINOP(for, nir_type_float, NIR_OP_IS_COMMUTATIVE)
+BINOP(fxor, nir_type_float, NIR_OP_IS_COMMUTATIVE)
 
 BINOP_REDUCE(fdot, 1, nir_type_float, nir_type_float)
 
-BINOP(fmin, nir_type_float)
-BINOP(imin, nir_type_int)
-BINOP(umin, nir_type_unsigned)
-BINOP(fmax, nir_type_float)
-BINOP(imax, nir_type_int)
-BINOP(umax, nir_type_unsigned)
+BINOP(fmin, nir_type_float, 0)
+BINOP(imin, nir_type_int, NIR_OP_IS_COMMUTATIVE | NIR_OP_IS_ASSOCIATIVE)
+BINOP(umin, nir_type_unsigned, NIR_OP_IS_COMMUTATIVE | NIR_OP_IS_ASSOCIATIVE)
+BINOP(fmax, nir_type_float, 0)
+BINOP(imax, nir_type_int, NIR_OP_IS_COMMUTATIVE | NIR_OP_IS_ASSOCIATIVE)
+BINOP(umax, nir_type_unsigned, NIR_OP_IS_COMMUTATIVE | NIR_OP_IS_ASSOCIATIVE)
 
-BINOP(fpow, nir_type_float)
+BINOP(fpow, nir_type_float, 0)
 
 BINOP_HORIZ(pack_half_2x16_split, 1, nir_type_unsigned, 1, nir_type_float, 1, nir_type_float)
 
-BINOP(bfm, nir_type_unsigned)
+BINOP(bfm, nir_type_unsigned, 0)
 
-BINOP(ldexp, nir_type_unsigned)
+BINOP(ldexp, nir_type_unsigned, 0)
 
 /**
  * Combines the first component of each input to make a 2-component vector.
@@ -306,11 +314,11 @@ BINOP(ldexp, nir_type_unsigned)
 BINOP_HORIZ(vec2, 2, nir_type_unsigned, 1, nir_type_unsigned, 1, nir_type_unsigned)
 
 #define TRIOP(name, type) \
-   OPCODE(name, 3, true, 0, type, ARR(0, 0, 0), ARR(type, type, type))
+   OPCODE(name, 3, true, 0, type, ARR(0, 0, 0), ARR(type, type, type), 0)
 #define TRIOP_HORIZ(name, output_size, src1_size, src2_size, src3_size) \
    OPCODE(name, 3, false, output_size, nir_type_unsigned, \
    ARR(src1_size, src2_size, src3_size), \
-   ARR(nir_type_unsigned, nir_type_unsigned, nir_type_unsigned))
+   ARR(nir_type_unsigned, nir_type_unsigned, nir_type_unsigned), 0)
 
 /* fma(a, b, c) = (a * b) + c */
 TRIOP(ffma, nir_type_float)
@@ -327,13 +335,13 @@ TRIOP(flrp, nir_type_float)
 
 TRIOP(fcsel, nir_type_float)
 OPCODE(bcsel, 3, true, 0, nir_type_unsigned, ARR(0, 0, 0),
-       ARR(nir_type_bool, nir_type_unsigned, nir_type_unsigned))
+       ARR(nir_type_bool, nir_type_unsigned, nir_type_unsigned), 0)
 
 TRIOP(bfi, nir_type_unsigned)
 
 TRIOP(ubitfield_extract, nir_type_unsigned)
 OPCODE(ibitfield_extract, 3, true, 0, nir_type_int, ARR(0, 0, 0),
-       ARR(nir_type_int, nir_type_unsigned, nir_type_unsigned))
+       ARR(nir_type_int, nir_type_unsigned, nir_type_unsigned), 0)
 
 /**
  * Combines the first component of each input to make a 3-component vector.
@@ -342,12 +350,14 @@ TRIOP_HORIZ(vec3, 3, 1, 1, 1)
 
 #define QUADOP(name) \
    OPCODE(name, 4, true, 0, nir_type_unsigned, ARR(0, 0, 0, 0), \
-   ARR(nir_type_unsigned, nir_type_unsigned, nir_type_unsigned, nir_type_unsigned))
+          ARR(nir_type_unsigned, nir_type_unsigned, nir_type_unsigned, nir_type_unsigned), \
+          0)
 #define QUADOP_HORIZ(name, output_size, src1_size, src2_size, src3_size, \
                      src4_size) \
    OPCODE(name, 4, false, output_size, nir_type_unsigned, \
           ARR(src1_size, src2_size, src3_size, src4_size), \
-          ARR(nir_type_unsigned, nir_type_unsigned, nir_type_unsigned, nir_type_unsigned))
+          ARR(nir_type_unsigned, nir_type_unsigned, nir_type_unsigned, nir_type_unsigned), \
+          0)
 
 QUADOP(bitfield_insert)
 

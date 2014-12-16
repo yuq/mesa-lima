@@ -28,7 +28,7 @@
 #include "nir.h"
 
 #define OPCODE(_name, _num_inputs, _per_component, _output_size, _output_type, \
-               _input_sizes, _input_types) \
+               _input_sizes, _input_types, _algebraic_props) \
 { \
    .name = #_name, \
    .num_inputs = _num_inputs, \
@@ -37,6 +37,7 @@
    .output_type = _output_type, \
    .input_sizes = _input_sizes, \
    .input_types = _input_types, \
+   .algebraic_properties = _algebraic_props, \
 },
 
 #define LAST_OPCODE(name)

@@ -534,7 +534,7 @@ typedef struct {
 } nir_alu_dest;
 
 #define OPCODE(name, num_inputs, per_component, output_size, output_type, \
-               input_sizes, input_types) \
+               input_sizes, input_types, algebraic_props) \
    nir_op_##name,
 
 #define LAST_OPCODE(name) nir_last_opcode = nir_op_##name,
@@ -553,6 +553,11 @@ typedef enum {
    nir_type_unsigned,
    nir_type_bool
 } nir_alu_type;
+
+typedef enum {
+   NIR_OP_IS_COMMUTATIVE = (1 << 0),
+   NIR_OP_IS_ASSOCIATIVE = (1 << 1),
+} nir_op_algebraic_property;
 
 typedef struct {
    const char *name;
@@ -599,6 +604,8 @@ typedef struct {
     * two, and absolute value is only allowed on float type inputs.
     */
    nir_alu_type input_types[4];
+
+   nir_op_algebraic_property algebraic_properties;
 } nir_op_info;
 
 extern const nir_op_info nir_op_infos[nir_num_opcodes];
