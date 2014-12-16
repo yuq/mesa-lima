@@ -1176,27 +1176,28 @@ add_use_cb(nir_src *src, void *state)
    return true;
 }
 
-static void
-add_ssa_def(nir_instr *instr, nir_ssa_def *def)
+static bool
+add_ssa_def_cb(nir_ssa_def *def, void *state)
 {
+   nir_instr *instr = (nir_instr *) state;
+
    if (instr->block && def->index == UINT_MAX) {
       nir_function_impl *impl =
          nir_cf_node_get_function(&instr->block->cf_node);
 
       def->index = impl->ssa_alloc++;
    }
+
+   return true;
 }
 
 static bool
-add_def_cb(nir_dest *dest, void *state)
+add_reg_def_cb(nir_dest *dest, void *state)
 {
    nir_instr *instr = (nir_instr *) state;
 
-   if (dest->is_ssa) {
-      add_ssa_def(instr, &dest->ssa);
-   } else {
+   if (!dest->is_ssa)
       _mesa_set_add(dest->reg.reg->defs, _mesa_hash_pointer(instr), instr);
-   }
 
    return true;
 }
@@ -1204,12 +1205,9 @@ add_def_cb(nir_dest *dest, void *state)
 static void
 add_defs_uses(nir_instr *instr)
 {
-   if (instr->type == nir_instr_type_ssa_undef) {
-      add_ssa_def(instr, &nir_instr_as_ssa_undef(instr)->def);
-   } else {
-      nir_foreach_src(instr, add_use_cb, instr);
-      nir_foreach_dest(instr, add_def_cb, instr);
-   }
+   nir_foreach_src(instr, add_use_cb, instr);
+   nir_foreach_dest(instr, add_reg_def_cb, instr);
+   nir_foreach_ssa_def(instr, add_ssa_def_cb, instr);
 }
 
 void
