@@ -32,15 +32,13 @@ set_src_raddr(uint64_t inst, struct qpu_reg src)
         if (src.mux == QPU_MUX_A) {
                 assert(QPU_GET_FIELD(inst, QPU_RADDR_A) == QPU_R_NOP ||
                        QPU_GET_FIELD(inst, QPU_RADDR_A) == src.addr);
-                return ((inst & ~QPU_RADDR_A_MASK) |
-                        QPU_SET_FIELD(src.addr, QPU_RADDR_A));
+                return QPU_UPDATE_FIELD(inst, src.addr, QPU_RADDR_A);
         }
 
         if (src.mux == QPU_MUX_B) {
                 assert(QPU_GET_FIELD(inst, QPU_RADDR_B) == QPU_R_NOP ||
                        QPU_GET_FIELD(inst, QPU_RADDR_B) == src.addr);
-                return ((inst & ~QPU_RADDR_B_MASK) |
-                        QPU_SET_FIELD(src.addr, QPU_RADDR_B));
+                return QPU_UPDATE_FIELD(inst, src.addr, QPU_RADDR_B);
         }
 
         return inst;
@@ -330,8 +328,8 @@ try_swap_ra_file(uint64_t *merge, uint64_t *a, uint64_t *b)
         /* Move raddr A to B in instruction a. */
         *a = (*a & ~QPU_RADDR_A_MASK) | QPU_SET_FIELD(QPU_R_NOP, QPU_RADDR_A);
         *a = (*a & ~QPU_RADDR_B_MASK) | QPU_SET_FIELD(raddr_a_a, QPU_RADDR_B);
-        *merge = ((*merge & ~QPU_RADDR_A_MASK) | QPU_SET_FIELD(raddr_b_a, QPU_RADDR_A));
-        *merge = ((*merge & ~QPU_RADDR_B_MASK) | QPU_SET_FIELD(raddr_a_a, QPU_RADDR_B));
+        *merge = QPU_UPDATE_FIELD(*merge, raddr_b_a, QPU_RADDR_A);
+        *merge = QPU_UPDATE_FIELD(*merge, raddr_a_a, QPU_RADDR_B);
         swap_ra_file_mux_helper(merge, a, QPU_ADD_A_SHIFT);
         swap_ra_file_mux_helper(merge, a, QPU_ADD_B_SHIFT);
         swap_ra_file_mux_helper(merge, a, QPU_MUL_A_SHIFT);
@@ -415,21 +413,21 @@ uint64_t
 qpu_set_sig(uint64_t inst, uint32_t sig)
 {
         assert(QPU_GET_FIELD(inst, QPU_SIG) == QPU_SIG_NONE);
-        return (inst & ~QPU_SIG_MASK) | QPU_SET_FIELD(sig, QPU_SIG);
+        return QPU_UPDATE_FIELD(inst, sig, QPU_SIG);
 }
 
 uint64_t
-qpu_set_cond_add(uint64_t inst, uint32_t sig)
+qpu_set_cond_add(uint64_t inst, uint32_t cond)
 {
         assert(QPU_GET_FIELD(inst, QPU_COND_ADD) == QPU_COND_ALWAYS);
-        return (inst & ~QPU_COND_ADD_MASK) | QPU_SET_FIELD(sig, QPU_COND_ADD);
+        return QPU_UPDATE_FIELD(inst, cond, QPU_COND_ADD);
 }
 
 uint64_t
-qpu_set_cond_mul(uint64_t inst, uint32_t sig)
+qpu_set_cond_mul(uint64_t inst, uint32_t cond)
 {
         assert(QPU_GET_FIELD(inst, QPU_COND_MUL) == QPU_COND_ALWAYS);
-        return (inst & ~QPU_COND_MUL_MASK) | QPU_SET_FIELD(sig, QPU_COND_MUL);
+        return QPU_UPDATE_FIELD(inst, cond, QPU_COND_MUL);
 }
 
 bool

@@ -217,6 +217,9 @@ enum qpu_unpack {
 
 #define QPU_GET_FIELD(word, field) ((uint32_t)(((word)  & field ## _MASK) >> field ## _SHIFT))
 
+#define QPU_UPDATE_FIELD(inst, value, field)                              \
+        (((inst) & ~(field ## _MASK)) | QPU_SET_FIELD(value, field))
+
 #define QPU_SIG_SHIFT                   60
 #define QPU_SIG_MASK                    QPU_MASK(63, 60)
 
