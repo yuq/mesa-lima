@@ -533,7 +533,7 @@ typedef struct {
    unsigned write_mask : 4; /* ignored if dest.is_ssa is true */
 } nir_alu_dest;
 
-#define OPCODE(name, num_inputs, per_component, output_size, output_type, \
+#define OPCODE(name, num_inputs, output_size, output_type, \
                input_sizes, input_types, algebraic_props) \
    nir_op_##name,
 
@@ -565,24 +565,21 @@ typedef struct {
    unsigned num_inputs;
 
    /**
-    * If true, the opcode acts in the standard, per-component manner; the
-    * operation is performed on each component (except the ones that are masked
-    * out) with the input being taken from the input swizzle for that component.
+    * The number of components in the output
     *
-    * If false, the size of the output and inputs are explicitly given; swizzle
-    * and writemask are still in effect, but if the output component is masked
-    * out, then the input component may still be in use.
+    * If non-zero, this is the size of the output and input sizes are
+    * explicitly given; swizzle and writemask are still in effect, but if
+    * the output component is masked out, then the input component may
+    * still be in use.
     *
-    * The size of some of the inputs may be given (i.e. non-zero) even though
-    * per_component is false; in that case, each component of the input acts
-    * per-component, while the rest of the inputs and the output are normal.
-    * For example, for conditional select the condition is per-component but
-    * everything else is normal.
-    */
-   bool per_component;
-
-   /**
-    * If per_component is false, the number of components in the output.
+    * If zero, the opcode acts in the standard, per-component manner; the
+    * operation is performed on each component (except the ones that are
+    * masked out) with the input being taken from the input swizzle for
+    * that component.
+    *
+    * The size of some of the inputs may be given (i.e. non-zero) even
+    * though output_size is zero; in that case, the inputs with a zero
+    * size act per-component, while the inputs with non-zero size don't.
     */
    unsigned output_size;
 
@@ -594,7 +591,7 @@ typedef struct {
    nir_alu_type output_type;
 
    /**
-    * If per_component is false, the number of components in each input.
+    * The number of components in each input
     */
    unsigned input_sizes[4];
 

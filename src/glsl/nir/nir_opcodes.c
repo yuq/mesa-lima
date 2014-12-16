@@ -27,12 +27,11 @@
 
 #include "nir.h"
 
-#define OPCODE(_name, _num_inputs, _per_component, _output_size, _output_type, \
+#define OPCODE(_name, _num_inputs, _output_size, _output_type, \
                _input_sizes, _input_types, _algebraic_props) \
 { \
    .name = #_name, \
    .num_inputs = _num_inputs, \
-   .per_component = _per_component, \
    .output_size = _output_size, \
    .output_type = _output_type, \
    .input_sizes = _input_sizes, \

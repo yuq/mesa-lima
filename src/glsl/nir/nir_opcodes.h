@@ -29,7 +29,7 @@
  * This header file defines all the available opcodes in one place. It expands
  * to a list of macros of the form:
  *
- * OPCODE(name, num_inputs, per_component, output_size, output_type,
+ * OPCODE(name, num_inputs, output_size, output_type,
  *        input_sizes, input_types, algebraic_properties)
  *
  * Which should correspond one-to-one with the nir_op_info structure. It is
@@ -40,11 +40,11 @@
 
 #define ARR(...) { __VA_ARGS__ }
 
-#define UNOP(name, type) OPCODE(name, 1, false, 0, type, ARR(0), ARR(type), 0)
+#define UNOP(name, type) OPCODE(name, 1, 0, type, ARR(0), ARR(type), 0)
 #define UNOP_CONVERT(name, in_type, out_type) \
-   OPCODE(name, 1, false, 0, out_type, ARR(0), ARR(in_type), 0)
+   OPCODE(name, 1, 0, out_type, ARR(0), ARR(in_type), 0)
 #define UNOP_HORIZ(name, output_size, output_type, input_size, input_type) \
-   OPCODE(name, 1, true, output_size, output_type, ARR(input_size), \
+   OPCODE(name, 1, output_size, output_type, ARR(input_size), \
           ARR(input_type), 0)
 
 #define UNOP_REDUCE(name, output_size, output_type, input_type) \
@@ -175,21 +175,21 @@ UNOP_HORIZ(fnoise4_3, 4, nir_type_float, 3, nir_type_float)
 UNOP_HORIZ(fnoise4_4, 4, nir_type_float, 4, nir_type_float)
 
 #define BINOP(name, type, alg_props) \
-   OPCODE(name, 2, true, 0, type, ARR(0, 0), ARR(type, type), alg_props)
+   OPCODE(name, 2, 0, type, ARR(0, 0), ARR(type, type), alg_props)
 #define BINOP_CONVERT(name, out_type, in_type, alg_props) \
-   OPCODE(name, 2, true, 0, out_type, ARR(0, 0), ARR(in_type, in_type), alg_props)
+   OPCODE(name, 2, 0, out_type, ARR(0, 0), ARR(in_type, in_type), alg_props)
 #define BINOP_COMPARE(name, type, alg_props) \
-   OPCODE(name, 2, true, 0, nir_type_bool, ARR(0, 0), ARR(type, type), alg_props)
+   OPCODE(name, 2, 0, nir_type_bool, ARR(0, 0), ARR(type, type), alg_props)
 #define BINOP_HORIZ(name, output_size, output_type, src1_size, src1_type, \
                     src2_size, src2_type) \
-   OPCODE(name, 2, true, output_size, output_type, ARR(src1_size, src2_size), \
+   OPCODE(name, 2, output_size, output_type, ARR(src1_size, src2_size), \
           ARR(src1_type, src2_type), 0)
 #define BINOP_REDUCE(name, output_size, output_type, src_type) \
-   OPCODE(name##2, 2, false, output_size, output_type, \
+   OPCODE(name##2, 2, output_size, output_type, \
           ARR(2, 2), ARR(src_type, src_type), NIR_OP_IS_COMMUTATIVE) \
-   OPCODE(name##3, 2, false, output_size, output_type, \
+   OPCODE(name##3, 2, output_size, output_type, \
           ARR(3, 3), ARR(src_type, src_type), NIR_OP_IS_COMMUTATIVE) \
-   OPCODE(name##4, 2, false, output_size, output_type, \
+   OPCODE(name##4, 2, output_size, output_type, \
           ARR(4, 4), ARR(src_type, src_type), NIR_OP_IS_COMMUTATIVE)
 
 BINOP(fadd, nir_type_float, NIR_OP_IS_COMMUTATIVE | NIR_OP_IS_ASSOCIATIVE)
@@ -314,9 +314,9 @@ BINOP(ldexp, nir_type_unsigned, 0)
 BINOP_HORIZ(vec2, 2, nir_type_unsigned, 1, nir_type_unsigned, 1, nir_type_unsigned)
 
 #define TRIOP(name, type) \
-   OPCODE(name, 3, true, 0, type, ARR(0, 0, 0), ARR(type, type, type), 0)
+   OPCODE(name, 3, 0, type, ARR(0, 0, 0), ARR(type, type, type), 0)
 #define TRIOP_HORIZ(name, output_size, src1_size, src2_size, src3_size) \
-   OPCODE(name, 3, false, output_size, nir_type_unsigned, \
+   OPCODE(name, 3, output_size, nir_type_unsigned, \
    ARR(src1_size, src2_size, src3_size), \
    ARR(nir_type_unsigned, nir_type_unsigned, nir_type_unsigned), 0)
 
@@ -334,13 +334,13 @@ TRIOP(flrp, nir_type_float)
  */
 
 TRIOP(fcsel, nir_type_float)
-OPCODE(bcsel, 3, true, 0, nir_type_unsigned, ARR(0, 0, 0),
+OPCODE(bcsel, 3, 0, nir_type_unsigned, ARR(0, 0, 0),
        ARR(nir_type_bool, nir_type_unsigned, nir_type_unsigned), 0)
 
 TRIOP(bfi, nir_type_unsigned)
 
 TRIOP(ubitfield_extract, nir_type_unsigned)
-OPCODE(ibitfield_extract, 3, true, 0, nir_type_int, ARR(0, 0, 0),
+OPCODE(ibitfield_extract, 3, 0, nir_type_int, ARR(0, 0, 0),
        ARR(nir_type_int, nir_type_unsigned, nir_type_unsigned), 0)
 
 /**
@@ -349,12 +349,12 @@ OPCODE(ibitfield_extract, 3, true, 0, nir_type_int, ARR(0, 0, 0),
 TRIOP_HORIZ(vec3, 3, 1, 1, 1)
 
 #define QUADOP(name) \
-   OPCODE(name, 4, true, 0, nir_type_unsigned, ARR(0, 0, 0, 0), \
+   OPCODE(name, 4, 0, nir_type_unsigned, ARR(0, 0, 0, 0), \
           ARR(nir_type_unsigned, nir_type_unsigned, nir_type_unsigned, nir_type_unsigned), \
           0)
 #define QUADOP_HORIZ(name, output_size, src1_size, src2_size, src3_size, \
                      src4_size) \
-   OPCODE(name, 4, false, output_size, nir_type_unsigned, \
+   OPCODE(name, 4, output_size, nir_type_unsigned, \
           ARR(src1_size, src2_size, src3_size, src4_size), \
           ARR(nir_type_unsigned, nir_type_unsigned, nir_type_unsigned, nir_type_unsigned), \
           0)
