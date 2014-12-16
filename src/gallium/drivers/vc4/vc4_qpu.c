@@ -338,6 +338,46 @@ try_swap_ra_file(uint64_t *merge, uint64_t *a, uint64_t *b)
         return true;
 }
 
+static bool
+convert_mov(uint64_t *inst)
+{
+        uint32_t add_a = QPU_GET_FIELD(*inst, QPU_ADD_A);
+        uint32_t waddr_add = QPU_GET_FIELD(*inst, QPU_WADDR_ADD);
+        uint32_t cond_add = QPU_GET_FIELD(*inst, QPU_COND_ADD);
+
+        /* Is it a MOV? */
+        if (QPU_GET_FIELD(*inst, QPU_OP_ADD) != QPU_A_OR ||
+            (add_a != QPU_GET_FIELD(*inst, QPU_ADD_B))) {
+                return false;
+        }
+
+        if (QPU_GET_FIELD(*inst, QPU_SIG) != QPU_SIG_NONE)
+                return false;
+
+        /* We could maybe support this in the .8888 and .8a-.8d cases. */
+        if (*inst & QPU_PM)
+                return false;
+
+        *inst = QPU_UPDATE_FIELD(*inst, QPU_A_NOP, QPU_OP_ADD);
+        *inst = QPU_UPDATE_FIELD(*inst, QPU_M_V8MIN, QPU_OP_MUL);
+
+        *inst = QPU_UPDATE_FIELD(*inst, add_a, QPU_MUL_A);
+        *inst = QPU_UPDATE_FIELD(*inst, add_a, QPU_MUL_B);
+        *inst = QPU_UPDATE_FIELD(*inst, QPU_MUX_R0, QPU_ADD_A);
+        *inst = QPU_UPDATE_FIELD(*inst, QPU_MUX_R0, QPU_ADD_B);
+
+        *inst = QPU_UPDATE_FIELD(*inst, waddr_add, QPU_WADDR_MUL);
+        *inst = QPU_UPDATE_FIELD(*inst, QPU_W_NOP, QPU_WADDR_ADD);
+
+        *inst = QPU_UPDATE_FIELD(*inst, cond_add, QPU_COND_MUL);
+        *inst = QPU_UPDATE_FIELD(*inst, QPU_COND_NEVER, QPU_COND_ADD);
+
+        if (!qpu_waddr_ignores_ws(waddr_add))
+                *inst ^= QPU_WS;
+
+        return true;
+}
+
 uint64_t
 qpu_merge_inst(uint64_t a, uint64_t b)
 {
@@ -345,8 +385,15 @@ qpu_merge_inst(uint64_t a, uint64_t b)
         bool ok = true;
 
         if (QPU_GET_FIELD(a, QPU_OP_ADD) != QPU_A_NOP &&
-            QPU_GET_FIELD(b, QPU_OP_ADD) != QPU_A_NOP)
-                return 0;
+            QPU_GET_FIELD(b, QPU_OP_ADD) != QPU_A_NOP) {
+                if (QPU_GET_FIELD(a, QPU_OP_MUL) != QPU_M_NOP ||
+                    QPU_GET_FIELD(b, QPU_OP_MUL) != QPU_M_NOP ||
+                    !(convert_mov(&a) || convert_mov(&b))) {
+                        return 0;
+                } else {
+                        merge = a | b;
+                }
+        }
 
         if (QPU_GET_FIELD(a, QPU_OP_MUL) != QPU_M_NOP &&
             QPU_GET_FIELD(b, QPU_OP_MUL) != QPU_M_NOP)
