@@ -37,7 +37,6 @@ extern "C" {
 #include "program/prog_print.h"
 #include "program/prog_optimize.h"
 #include "util/register_allocate.h"
-#include "program/sampler.h"
 #include "program/hash_table.h"
 #include "brw_context.h"
 #include "brw_eu.h"
@@ -48,6 +47,8 @@ extern "C" {
 #include "main/uniforms.h"
 #include "glsl/glsl_types.h"
 #include "glsl/ir_optimization.h"
+#include "program/sampler.h"
+
 
 fs_reg *
 fs_visitor::emit_vs_system_value(enum brw_reg_type type, int location)

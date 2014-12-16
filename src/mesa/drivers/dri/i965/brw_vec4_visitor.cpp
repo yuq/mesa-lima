@@ -24,9 +24,7 @@
 #include "brw_vec4.h"
 #include "brw_cfg.h"
 #include "glsl/ir_uniform.h"
-extern "C" {
 #include "program/sampler.h"
-}
 
 namespace brw {
 
