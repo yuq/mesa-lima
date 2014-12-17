@@ -1647,10 +1647,13 @@ vec4_visitor::visit(ir_expression *ir)
    case ir_unop_trunc:
       emit(RNDZ(result_dst, op[0]));
       break;
-   case ir_unop_ceil:
-      op[0].negate = !op[0].negate;
-      inst = emit(RNDD(result_dst, op[0]));
-      this->result.negate = true;
+   case ir_unop_ceil: {
+         src_reg tmp = src_reg(this, ir->type);
+         op[0].negate = !op[0].negate;
+         emit(RNDD(dst_reg(tmp), op[0]));
+         tmp.negate = true;
+         emit(MOV(result_dst, tmp));
+      }
       break;
    case ir_unop_floor:
       inst = emit(RNDD(result_dst, op[0]));

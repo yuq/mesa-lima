@@ -954,10 +954,13 @@ fs_visitor::visit(ir_expression *ir)
    case ir_unop_trunc:
       emit(RNDZ(this->result, op[0]));
       break;
-   case ir_unop_ceil:
-      op[0].negate = !op[0].negate;
-      emit(RNDD(this->result, op[0]));
-      this->result.negate = true;
+   case ir_unop_ceil: {
+         fs_reg tmp = fs_reg(this, ir->type);
+         op[0].negate = !op[0].negate;
+         emit(RNDD(tmp, op[0]));
+         tmp.negate = true;
+         emit(MOV(this->result, tmp));
+      }
       break;
    case ir_unop_floor:
       emit(RNDD(this->result, op[0]));
