@@ -119,3 +119,8 @@ install-data-hook:
 		       $${dest_dir}/$${k};				\
 	done;								\
 	$(RM) -f $${dest_dir}/libvdpau_gallium.*
+
+uninstall-hook:
+	for i in $(TARGET_DRIVERS); do					\
+		$(RM) $(DESTDIR)$(vdpaudir)/libvdpau_$${i}.so{,.$(VDPAU_MAJOR){,.$(VDPAU_MINOR){,.0}}}; \
+	done;
