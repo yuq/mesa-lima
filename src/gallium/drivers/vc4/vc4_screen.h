@@ -70,8 +70,7 @@ boolean vc4_screen_bo_get_handle(struct pipe_screen *pscreen,
                                  struct winsys_handle *whandle);
 struct vc4_bo *
 vc4_screen_bo_from_handle(struct pipe_screen *pscreen,
-                          struct winsys_handle *whandle,
-                          unsigned *out_stride);
+                          struct winsys_handle *whandle);
 
 extern uint32_t vc4_debug;
 

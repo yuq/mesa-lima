@@ -372,12 +372,14 @@ vc4_resource_from_handle(struct pipe_screen *pscreen,
                 return NULL;
 
         rsc->tiled = false;
-        rsc->bo = vc4_screen_bo_from_handle(pscreen, handle, &slice->stride);
+        rsc->bo = vc4_screen_bo_from_handle(pscreen, handle);
         if (!rsc->bo)
                 goto fail;
 
 #ifdef USE_VC4_SIMULATOR
         slice->stride = align(prsc->width0 * rsc->cpp, 16);
+#else
+        slice->stride = handle->stride;
 #endif
         slice->tiling = VC4_TILING_FORMAT_LINEAR;
 

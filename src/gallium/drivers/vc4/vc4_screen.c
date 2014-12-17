@@ -489,8 +489,7 @@ vc4_screen_bo_get_handle(struct pipe_screen *pscreen,
 
 struct vc4_bo *
 vc4_screen_bo_from_handle(struct pipe_screen *pscreen,
-                          struct winsys_handle *whandle,
-                          unsigned *out_stride)
+                          struct winsys_handle *whandle)
 {
         struct vc4_screen *screen = vc4_screen(pscreen);
         struct vc4_bo *bo;
@@ -507,8 +506,6 @@ vc4_screen_bo_from_handle(struct pipe_screen *pscreen,
                 fprintf(stderr, "Open name %d failed\n", whandle->handle);
                 return NULL;
         }
-
-        *out_stride = whandle->stride;
 
         return bo;
 }
