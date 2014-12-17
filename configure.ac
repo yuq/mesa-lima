@@ -102,7 +102,7 @@ AC_COMPILE_IFELSE(
 
 AC_MSG_RESULT([$acv_mesa_CLANG])
 
-dnl If we're using GCC, make sure that it is at least version 4.1.0.  Older
+dnl If we're using GCC, make sure that it is at least version 4.2.0.  Older
 dnl versions are explictly not supported.
 GEN_ASM_OFFSETS=no
 if test "x$GCC" = xyes -a "x$acv_mesa_CLANG" = xno; then
@@ -116,9 +116,9 @@ if test "x$GCC" = xyes -a "x$acv_mesa_CLANG" = xno; then
         GCC_VERSION_MINOR=`echo $GCC_VERSION | cut -d. -f2`
     fi
 
-    if test $GCC_VERSION_MAJOR -lt 4 -o $GCC_VERSION_MAJOR -eq 4 -a $GCC_VERSION_MINOR -lt 1 ; then
+    if test $GCC_VERSION_MAJOR -lt 4 -o $GCC_VERSION_MAJOR -eq 4 -a $GCC_VERSION_MINOR -lt 2 ; then
         AC_MSG_RESULT([no])
-        AC_MSG_ERROR([If using GCC, version 4.1.0 or later is required.])
+        AC_MSG_ERROR([If using GCC, version 4.2.0 or later is required.])
     else
         AC_MSG_RESULT([yes])
     fi
