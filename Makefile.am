@@ -21,6 +21,19 @@
 
 SUBDIRS = src
 
+DISTCHECK_CONFIGURE_FLAGS = \
+	--enable-dri3 \
+	--enable-gallium-tests \
+	--enable-gbm \
+	--enable-gles1 \
+	--enable-gles2 \
+	--enable-glx-tls \
+	--enable-va \
+	--enable-vdpau \
+	--enable-xa \
+	--enable-xvmc \
+	--with-egl-platforms=x11,wayland,drm
+
 ACLOCAL_AMFLAGS = -I m4
 
 # Rules for making release tarballs
