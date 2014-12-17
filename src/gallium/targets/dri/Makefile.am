@@ -125,7 +125,7 @@ all-local: $(dri_LTLIBRARIES)
 clean-local:
 	$(AM_V_GEN)link_dir=$(top_builddir)/$(LIB_DIR)/gallium;         \
 	$(AM_V_GEN)for i in $(TARGET_DRIVERS); do                       \
-		$(RM) -f $${link_dir}/$${i}_dri.so;                     \
+		$(RM) $${link_dir}/$${i}_dri.so;                        \
 	done;
 endif
 
@@ -136,9 +136,9 @@ install-data-hook:
 		ln -f $(DESTDIR)$(dridir)/gallium_dri.so                \
 		      $(DESTDIR)$(dridir)/$${i}_dri.so;                 \
 	done;                                                           \
-	$(RM) -f $(DESTDIR)$(dridir)/gallium_dri.*
+	$(RM) $(DESTDIR)$(dridir)/gallium_dri.*
 
 uninstall-hook:
 	for i in $(TARGET_DRIVERS); do                                  \
-		$(RM) -f $(DESTDIR)$(dridir)/$${i}_dri.so;              \
+		$(RM) $(DESTDIR)$(dridir)/$${i}_dri.so;                 \
 	done;
