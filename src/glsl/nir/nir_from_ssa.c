@@ -557,7 +557,7 @@ resolve_registers_block(nir_block *block, void *void_state)
    }
    state->instr = NULL;
 
-   nir_if *following_if = nir_block_following_if(block);
+   nir_if *following_if = nir_block_get_following_if(block);
    if (following_if && following_if->condition.is_ssa) {
       nir_register *reg = get_register_for_ssa_def(following_if->condition.ssa,
                                                    state);

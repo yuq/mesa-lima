@@ -1947,7 +1947,7 @@ nir_foreach_block_reverse(nir_function_impl *impl, nir_foreach_block_cb cb,
 }
 
 nir_if *
-nir_block_following_if(nir_block *block)
+nir_block_get_following_if(nir_block *block)
 {
    if (exec_node_is_tail_sentinel(&block->cf_node.node))
       return NULL;

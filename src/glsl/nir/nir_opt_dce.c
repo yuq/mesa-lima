@@ -116,7 +116,7 @@ init_block_cb(nir_block *block, void *_state)
    nir_foreach_instr(block, instr)
       init_instr(instr, worklist);
 
-   nir_if *following_if = nir_block_following_if(block);
+   nir_if *following_if = nir_block_get_following_if(block);
    if (following_if) {
       if (following_if->condition.is_ssa &&
           !following_if->condition.ssa->parent_instr->live)

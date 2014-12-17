@@ -165,7 +165,7 @@ walk_instructions_block(nir_block *block, void *void_state)
    memcpy(block->live_in, block->live_out,
           state->bitset_words * sizeof(BITSET_WORD));
 
-   nir_if *following_if = nir_block_following_if(block);
+   nir_if *following_if = nir_block_get_following_if(block);
    if (following_if)
       set_src_live(&following_if->condition, block->live_in);
 
