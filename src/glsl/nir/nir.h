@@ -966,13 +966,6 @@ typedef struct {
 
 typedef struct {
    nir_instr instr;
-
-   /* Indicates that this is the parallel copy at the end of the block.
-    * When isolating phi nodes, we create 2 parallel copies in most blocks;
-    * this flag helps tell them apart.
-    */
-   bool at_end;
-
    struct exec_list copies;
 } nir_parallel_copy_instr;
 

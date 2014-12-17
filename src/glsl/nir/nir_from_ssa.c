@@ -227,48 +227,90 @@ merge_sets_interfere(merge_set *a, merge_set *b)
    return false;
 }
 
-static nir_parallel_copy_instr *
-block_get_parallel_copy_at_end(nir_block *block, void *mem_ctx)
+static bool
+add_parallel_copy_to_end_of_block(nir_block *block, void *void_state)
 {
-   nir_instr *last_instr = nir_block_last_instr(block);
+   struct from_ssa_state *state = void_state;
 
-   /* First we try and find a parallel copy if it already exists.  If the
-    * last instruction is a jump, it will be right before the jump;
-    * otherwise, it will be the last instruction.
-    */
-   nir_instr *pcopy_instr;
-   if (last_instr != NULL && last_instr->type == nir_instr_type_jump)
-      pcopy_instr = nir_instr_prev(last_instr);
-   else
-      pcopy_instr = last_instr;
+   bool need_end_copy = false;
+   if (block->successors[0]) {
+      nir_instr *instr = nir_block_first_instr(block->successors[0]);
+      if (instr && instr->type == nir_instr_type_phi)
+         need_end_copy = true;
+   }
 
-   if (pcopy_instr != NULL &&
-       pcopy_instr->type == nir_instr_type_parallel_copy) {
-      /* A parallel copy already exists. */
-      nir_parallel_copy_instr *pcopy = nir_instr_as_parallel_copy(pcopy_instr);
+   if (block->successors[1]) {
+      nir_instr *instr = nir_block_first_instr(block->successors[1]);
+      if (instr && instr->type == nir_instr_type_phi)
+         need_end_copy = true;
+   }
 
-      /* This parallel copy may be the copy for the beginning of some
-       * block, so we need to check for that before we return it.
+   if (need_end_copy) {
+      /* If one of our successors has at least one phi node, we need to
+       * create a parallel copy at the end of the block but before the jump
+       * (if there is one).
        */
-      if (pcopy->at_end)
-         return pcopy;
+      nir_parallel_copy_instr *pcopy =
+         nir_parallel_copy_instr_create(state->dead_ctx);
+
+      nir_instr *last_instr = nir_block_last_instr(block);
+      if (last_instr && last_instr->type == nir_instr_type_jump) {
+         nir_instr_insert_before(last_instr, &pcopy->instr);
+      } else {
+         nir_instr_insert_after_block(block, &pcopy->instr);
+      }
    }
 
-   /* At this point, we haven't found a suitable parallel copy, so we
-    * have to create one.
-    */
-   nir_parallel_copy_instr *pcopy = nir_parallel_copy_instr_create(mem_ctx);
-   pcopy->at_end = true;
-
-   if (last_instr && last_instr->type == nir_instr_type_jump) {
-      nir_instr_insert_before(last_instr, &pcopy->instr);
-   } else {
-      nir_instr_insert_after_block(block, &pcopy->instr);
-   }
-
-   return pcopy;
+   return true;
 }
 
+static nir_parallel_copy_instr *
+get_parallel_copy_at_end_of_block(nir_block *block)
+{
+   nir_instr *last_instr = nir_block_last_instr(block);
+   if (last_instr == NULL)
+      return NULL;
+
+   /* The last instruction may be a jump in which case the parallel copy is
+    * right before it.
+    */
+   if (last_instr->type == nir_instr_type_jump)
+      last_instr = nir_instr_prev(last_instr);
+
+   if (last_instr->type == nir_instr_type_parallel_copy)
+      return nir_instr_as_parallel_copy(last_instr);
+   else
+      return NULL;
+}
+
+/** Isolate phi nodes with parallel copies
+ *
+ * In order to solve the dependency problems with the sources and
+ * destinations of phi nodes, we first isolate them by adding parallel
+ * copies to the beginnings and ends of basic blocks.  For every block with
+ * phi nodes, we add a parallel copy immediately following the last phi
+ * node that copies the destinations of all of the phi nodes to new SSA
+ * values.  We also add a parallel copy to the end of every block that has
+ * a successor with phi nodes that, for each phi node in each successor,
+ * copies the corresponding sorce of the phi node and adjust the phi to
+ * used the destination of the parallel copy.
+ *
+ * In SSA form, each value has exactly one definition.  What this does is
+ * ensure that each value used in a phi also has exactly one use.  The
+ * destinations of phis are only used by the parallel copy immediately
+ * following the phi nodes and.  Thanks to the parallel copy at the end of
+ * the predecessor block, the sources of phi nodes are are the only use of
+ * that value.  This allows us to immediately assign all the sources and
+ * destinations of any given phi node to the same register without worrying
+ * about interference at all.  We do coalescing to get rid of the parallel
+ * copies where possible.
+ *
+ * Before this pass can be run, we have to iterate over the blocks with
+ * add_parallel_copy_to_end_of_block to ensure that the parallel copies at
+ * the ends of blocks exist.  We can create the ones at the beginnings as
+ * we go, but the ones at the ends of blocks need to be created ahead of
+ * time because of potential back-edges in the CFG.
+ */
 static bool
 isolate_phi_nodes_block(nir_block *block, void *void_state)
 {
@@ -303,7 +345,8 @@ isolate_phi_nodes_block(nir_block *block, void *void_state)
       assert(phi->dest.is_ssa);
       foreach_list_typed(nir_phi_src, src, node, &phi->srcs) {
          nir_parallel_copy_instr *pcopy =
-            block_get_parallel_copy_at_end(src->pred, state->dead_ctx);
+            get_parallel_copy_at_end_of_block(src->pred);
+         assert(pcopy);
 
          nir_parallel_copy_copy *copy = ralloc(state->dead_ctx,
                                                nir_parallel_copy_copy);
@@ -418,29 +461,26 @@ agressive_coalesce_block(nir_block *block, void *void_state)
 {
    struct from_ssa_state *state = void_state;
 
+   nir_parallel_copy_instr *start_pcopy = NULL;
    nir_foreach_instr(block, instr) {
       /* Phi nodes only ever come at the start of a block */
       if (instr->type != nir_instr_type_phi) {
          if (instr->type != nir_instr_type_parallel_copy)
             break; /* The parallel copy must be right after the phis */
 
-         nir_parallel_copy_instr *pcopy = nir_instr_as_parallel_copy(instr);
+         start_pcopy = nir_instr_as_parallel_copy(instr);
 
-         agressive_coalesce_parallel_copy(pcopy, state);
-
-         if (pcopy->at_end)
-            return true;
+         agressive_coalesce_parallel_copy(start_pcopy, state);
 
          break;
       }
    }
 
-   nir_instr *last_instr = nir_block_last_instr(block);
-   if (last_instr && last_instr->type == nir_instr_type_parallel_copy) {
-      nir_parallel_copy_instr *pcopy = nir_instr_as_parallel_copy(last_instr);
-      if (pcopy->at_end)
-         agressive_coalesce_parallel_copy(pcopy, state);
-   }
+   nir_parallel_copy_instr *end_pcopy =
+      get_parallel_copy_at_end_of_block(block);
+
+   if (end_pcopy && end_pcopy != start_pcopy)
+      agressive_coalesce_parallel_copy(end_pcopy, state);
 
    return true;
 }
@@ -637,7 +677,6 @@ resolve_parallel_copy(nir_parallel_copy_instr *pcopy,
       if (!copy->src.is_ssa && copy->src.reg.reg == copy->dest.reg.reg)
          continue;
 
-      /* Set both indices equal to UINT_MAX to mark them as not indexed yet. */
       num_copies++;
    }
 
@@ -801,21 +840,15 @@ resolve_parallel_copies_block(nir_block *block, void *void_state)
       resolve_parallel_copy(pcopy, state);
    }
 
-   nir_instr *last_instr = nir_block_last_instr(block);
-   if (last_instr == NULL)
-      return true; /* Now empty, nothing to do. */
-
-   /* If the last instruction is a jump, the parallel copy will be before
-    * the jump.
+   /* It's possible that the above code already cleaned up the end parallel
+    * copy.  However, doing so removed it form the instructions list so we
+    * won't find it here.  Therefore, it's safe to go ahead and just look
+    * for one and clean it up if it exists.
     */
-   if (last_instr->type == nir_instr_type_jump)
-      last_instr = nir_instr_prev(last_instr);
-
-   if (last_instr && last_instr->type == nir_instr_type_parallel_copy) {
-      nir_parallel_copy_instr *pcopy = nir_instr_as_parallel_copy(last_instr);
-      if (pcopy->at_end)
-         resolve_parallel_copy(pcopy, state);
-   }
+   nir_parallel_copy_instr *end_pcopy =
+      get_parallel_copy_at_end_of_block(block);
+   if (end_pcopy)
+      resolve_parallel_copy(end_pcopy, state);
 
    return true;
 }
@@ -831,6 +864,7 @@ nir_convert_from_ssa_impl(nir_function_impl *impl)
    state.merge_node_table = _mesa_hash_table_create(NULL, _mesa_hash_pointer,
                                                     _mesa_key_pointer_equal);
 
+   nir_foreach_block(impl, add_parallel_copy_to_end_of_block, &state);
    nir_foreach_block(impl, isolate_phi_nodes_block, &state);
 
    /* Mark metadata as dirty before we ask for liveness analysis */

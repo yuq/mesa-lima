@@ -474,7 +474,6 @@ nir_parallel_copy_instr_create(void *mem_ctx)
    nir_parallel_copy_instr *instr = ralloc(mem_ctx, nir_parallel_copy_instr);
    instr_init(&instr->instr, nir_instr_type_parallel_copy);
 
-   instr->at_end = false;
    exec_list_make_empty(&instr->copies);
 
    return instr;
