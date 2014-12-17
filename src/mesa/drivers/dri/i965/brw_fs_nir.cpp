@@ -106,6 +106,8 @@ fs_visitor::emit_nir_code()
       nir_setup_uniforms(nir);
    }
 
+   nir_emit_system_values(nir);
+
    nir_globals = ralloc_array(mem_ctx, fs_reg, nir->reg_alloc);
    foreach_list_typed(nir_register, reg, node, &nir->registers) {
       unsigned array_elems =
@@ -286,6 +288,60 @@ fs_visitor::nir_setup_builtin_uniform(nir_variable *var)
          stage_prog_data->param[uniform_index++] =
             &prog->Parameters->ParameterValues[index][swiz];
       }
+   }
+}
+
+static bool
+emit_system_values_block(nir_block *block, void *void_visitor)
+{
+   fs_visitor *v = (fs_visitor *)void_visitor;
+   fs_reg *reg;
+
+   nir_foreach_instr(block, instr) {
+      if (instr->type != nir_instr_type_intrinsic)
+         continue;
+
+      nir_intrinsic_instr *intrin = nir_instr_as_intrinsic(instr);
+      switch (intrin->intrinsic) {
+      case nir_intrinsic_load_sample_pos:
+         assert(v->stage == MESA_SHADER_FRAGMENT);
+         reg = &v->nir_system_values[SYSTEM_VALUE_SAMPLE_POS];
+         if (reg->file == BAD_FILE)
+            *reg = *v->emit_samplepos_setup();
+         break;
+
+      case nir_intrinsic_load_sample_id:
+         assert(v->stage == MESA_SHADER_FRAGMENT);
+         reg = &v->nir_system_values[SYSTEM_VALUE_SAMPLE_ID];
+         if (reg->file == BAD_FILE)
+            *reg = *v->emit_sampleid_setup();
+         break;
+
+      case nir_intrinsic_load_sample_mask_in:
+         assert(v->stage == MESA_SHADER_FRAGMENT);
+         assert(v->brw->gen >= 7);
+         reg = &v->nir_system_values[SYSTEM_VALUE_SAMPLE_MASK_IN];
+         if (reg->file == BAD_FILE)
+            *reg = fs_reg(retype(brw_vec8_grf(v->payload.sample_mask_in_reg, 0),
+                                 BRW_REGISTER_TYPE_D));
+         break;
+
+      default:
+         break;
+      }
+   }
+
+   return true;
+}
+
+void
+fs_visitor::nir_emit_system_values(nir_shader *shader)
+{
+   nir_system_values = ralloc_array(mem_ctx, fs_reg, SYSTEM_VALUE_MAX);
+   nir_foreach_overload(shader, overload) {
+      assert(strcmp(overload->function->name, "main") == 0);
+      assert(overload->impl);
+      nir_foreach_block(overload->impl, emit_system_values_block, this);
    }
 }
 
@@ -1276,26 +1332,27 @@ fs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
       assert(!"TODO");
 
    case nir_intrinsic_load_sample_mask_in: {
-      assert(brw->gen >= 7);
-      fs_reg reg = fs_reg(retype(brw_vec8_grf(payload.sample_mask_in_reg, 0),
-                          BRW_REGISTER_TYPE_D));
-      dest.type = reg.type;
-      emit(MOV(dest, reg));
+      fs_reg sample_mask_in = nir_system_values[SYSTEM_VALUE_SAMPLE_MASK_IN];
+      assert(sample_mask_in.file != BAD_FILE);
+      dest.type = sample_mask_in.type;
+      emit(MOV(dest, sample_mask_in));
       break;
    }
 
    case nir_intrinsic_load_sample_pos: {
-      fs_reg *reg = emit_samplepos_setup();
-      dest.type = reg->type;
-      emit(MOV(dest, *reg));
-      emit(MOV(offset(dest, 1), offset(*reg, 1)));
+      fs_reg sample_pos = nir_system_values[SYSTEM_VALUE_SAMPLE_POS];
+      assert(sample_pos.file != BAD_FILE);
+      dest.type = sample_pos.type;
+      emit(MOV(dest, sample_pos));
+      emit(MOV(offset(dest, 1), offset(sample_pos, 1)));
       break;
    }
 
    case nir_intrinsic_load_sample_id: {
-      fs_reg *reg = emit_sampleid_setup();
-      dest.type = reg->type;
-      emit(MOV(dest, *reg));
+      fs_reg sample_id = nir_system_values[SYSTEM_VALUE_SAMPLE_ID];
+      assert(sample_id.file != BAD_FILE);
+      dest.type = sample_id.type;
+      emit(MOV(dest, sample_id));
       break;
    }
 

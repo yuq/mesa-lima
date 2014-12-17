@@ -574,6 +574,7 @@ public:
    void nir_setup_uniforms(nir_shader *shader);
    void nir_setup_uniform(nir_variable *var);
    void nir_setup_builtin_uniform(nir_variable *var);
+   void nir_emit_system_values(nir_shader *shader);
    void nir_emit_impl(nir_function_impl *impl);
    void nir_emit_cf_list(exec_list *list);
    void nir_emit_if(nir_if *if_stmt);
@@ -701,6 +702,7 @@ public:
    fs_reg nir_inputs;
    fs_reg nir_outputs;
    fs_reg nir_uniforms;
+   fs_reg *nir_system_values;
 
    /** @{ debug annotation info */
    const char *current_annotation;
