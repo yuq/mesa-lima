@@ -2842,9 +2842,6 @@ nine_translate_shader(struct NineDevice9 *device, struct nine_shader_info *info)
             ureg_property(tx->ureg, TGSI_PROPERTY_FS_COORD_PIXEL_CENTER, TGSI_FS_COORD_PIXEL_CENTER_INTEGER);
     }
 
-    if (!ureg_dst_is_undef(tx->regs.oPts))
-        info->point_size = TRUE;
-
     while (!sm1_parse_eof(tx))
         sm1_parse_instruction(tx);
     tx->parse++; /* for byte_size */
@@ -2859,6 +2856,9 @@ nine_translate_shader(struct NineDevice9 *device, struct nine_shader_info *info)
         ureg_property(tx->ureg, TGSI_PROPERTY_VS_WINDOW_SPACE_POSITION, TRUE);
 
     ureg_END(tx->ureg);
+
+    if (IS_VS && !ureg_dst_is_undef(tx->regs.oPts))
+        info->point_size = TRUE;
 
     if (debug_get_bool_option("NINE_TGSI_DUMP", FALSE)) {
         unsigned count;
