@@ -93,6 +93,12 @@ all-local: $(vdpau_LTLIBRARIES)
 		ln -sf $${l}						\
 		       $${link_dir}/$${k};				\
 	done
+
+clean-local:
+	$(AM_V_GEN)link_dir=$(top_builddir)/$(LIB_DIR)/gallium;		\
+	$(AM_V_GEN)for i in $(TARGET_DRIVERS); do			\
+		$(RM) $${link_dir}/libvdpau_$${i}.so{,.$(VDPAU_MAJOR){,.$(VDPAU_MINOR){,.0}}}; \
+	done;
 endif
 
 # hardlink each megadriver instance, but don't actually have
