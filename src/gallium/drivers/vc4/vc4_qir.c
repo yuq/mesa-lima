@@ -32,6 +32,7 @@ struct qir_op_info {
         const char *name;
         uint8_t ndst, nsrc;
         bool has_side_effects;
+        bool multi_instruction;
 };
 
 static const struct qir_op_info qir_op_info[] = {
@@ -59,21 +60,21 @@ static const struct qir_op_info qir_op_info[] = {
         [QOP_NOT] = { "not", 1, 1 },
 
         [QOP_SF] = { "sf", 0, 1 },
-        [QOP_SEL_X_0_NS] = { "fsel_x_0_ns", 1, 1 },
-        [QOP_SEL_X_0_NC] = { "fsel_x_0_nc", 1, 1 },
-        [QOP_SEL_X_0_ZS] = { "fsel_x_0_zs", 1, 1 },
-        [QOP_SEL_X_0_ZC] = { "fsel_x_0_zc", 1, 1 },
-        [QOP_SEL_X_Y_NS] = { "fsel_x_y_ns", 1, 2 },
-        [QOP_SEL_X_Y_NC] = { "fsel_x_y_nc", 1, 2 },
-        [QOP_SEL_X_Y_ZS] = { "fsel_x_y_zs", 1, 2 },
-        [QOP_SEL_X_Y_ZC] = { "fsel_x_y_zc", 1, 2 },
+        [QOP_SEL_X_0_NS] = { "fsel_x_0_ns", 1, 1, false, true },
+        [QOP_SEL_X_0_NC] = { "fsel_x_0_nc", 1, 1, false, true },
+        [QOP_SEL_X_0_ZS] = { "fsel_x_0_zs", 1, 1, false, true },
+        [QOP_SEL_X_0_ZC] = { "fsel_x_0_zc", 1, 1, false, true },
+        [QOP_SEL_X_Y_NS] = { "fsel_x_y_ns", 1, 2, false, true },
+        [QOP_SEL_X_Y_NC] = { "fsel_x_y_nc", 1, 2, false, true },
+        [QOP_SEL_X_Y_ZS] = { "fsel_x_y_zs", 1, 2, false, true },
+        [QOP_SEL_X_Y_ZC] = { "fsel_x_y_zc", 1, 2, false, true },
 
-        [QOP_RCP] = { "rcp", 1, 1 },
-        [QOP_RSQ] = { "rsq", 1, 1 },
-        [QOP_EXP2] = { "exp2", 1, 2 },
-        [QOP_LOG2] = { "log2", 1, 2 },
-        [QOP_PACK_COLORS] = { "pack_colors", 1, 4 },
-        [QOP_PACK_SCALED] = { "pack_scaled", 1, 2 },
+        [QOP_RCP] = { "rcp", 1, 1, false, true },
+        [QOP_RSQ] = { "rsq", 1, 1, false, true },
+        [QOP_EXP2] = { "exp2", 1, 2, false, true },
+        [QOP_LOG2] = { "log2", 1, 2, false, true },
+        [QOP_PACK_COLORS] = { "pack_colors", 1, 4, false, true },
+        [QOP_PACK_SCALED] = { "pack_scaled", 1, 2, false, true },
         [QOP_VPM_READ] = { "vpm_read", 0, 1, true },
         [QOP_TLB_DISCARD_SETUP] = { "discard", 0, 1, true },
         [QOP_TLB_STENCIL_SETUP] = { "tlb_stencil_setup", 0, 1, true },
@@ -153,6 +154,12 @@ qir_has_side_effects(struct vc4_compile *c, struct qinst *inst)
                 return true;
 
         return qir_op_info[inst->op].has_side_effects;
+}
+
+bool
+qir_is_multi_instruction(struct qinst *inst)
+{
+        return qir_op_info[inst->op].multi_instruction;
 }
 
 bool
@@ -397,6 +404,7 @@ qir_optimize(struct vc4_compile *c)
                 OPTPASS(qir_opt_copy_propagation);
                 OPTPASS(qir_opt_dead_code);
                 OPTPASS(qir_opt_small_immediates);
+                OPTPASS(qir_opt_vpm_writes);
 
                 if (!progress)
                         break;

@@ -374,6 +374,7 @@ struct qreg qir_get_temp(struct vc4_compile *c);
 int qir_get_op_nsrc(enum qop qop);
 bool qir_reg_equals(struct qreg a, struct qreg b);
 bool qir_has_side_effects(struct vc4_compile *c, struct qinst *inst);
+bool qir_is_multi_instruction(struct qinst *inst);
 bool qir_depends_on_flags(struct qinst *inst);
 bool qir_writes_r4(struct qinst *inst);
 bool qir_reads_r4(struct qinst *inst);
@@ -389,6 +390,7 @@ bool qir_opt_copy_propagation(struct vc4_compile *c);
 bool qir_opt_cse(struct vc4_compile *c);
 bool qir_opt_dead_code(struct vc4_compile *c);
 bool qir_opt_small_immediates(struct vc4_compile *c);
+bool qir_opt_vpm_writes(struct vc4_compile *c);
 
 void qpu_schedule_instructions(struct vc4_compile *c);
 
