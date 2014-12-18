@@ -1110,11 +1110,8 @@ struct brw_context
    uint32_t pma_stall_bits;
 
    struct {
-      /** Does the current draw use the index buffer? */
-      bool indexed;
-
-      int start_vertex_location;
-      int base_vertex_location;
+      /** The value of gl_BaseVertex for the current _mesa_prim. */
+      int gl_basevertex;
 
       /**
        * Buffer and offset used for GL_ARB_shader_draw_parameters
