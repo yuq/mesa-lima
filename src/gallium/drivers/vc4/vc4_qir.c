@@ -74,7 +74,6 @@ static const struct qir_op_info qir_op_info[] = {
         [QOP_LOG2] = { "log2", 1, 2 },
         [QOP_PACK_COLORS] = { "pack_colors", 1, 4 },
         [QOP_PACK_SCALED] = { "pack_scaled", 1, 2 },
-        [QOP_VPM_WRITE] = { "vpm_write", 0, 1, true },
         [QOP_VPM_READ] = { "vpm_read", 0, 1, true },
         [QOP_TLB_DISCARD_SETUP] = { "discard", 0, 1, true },
         [QOP_TLB_STENCIL_SETUP] = { "tlb_stencil_setup", 0, 1, true },
@@ -150,6 +149,9 @@ qir_has_side_effects(struct vc4_compile *c, struct qinst *inst)
                 }
         }
 
+        if (inst->dst.file == QFILE_VPM)
+                return true;
+
         return qir_op_info[inst->op].has_side_effects;
 }
 
@@ -217,6 +219,8 @@ qir_print_reg(struct vc4_compile *c, struct qreg reg)
                         fprintf(stderr, "%d", reg.index);
                 else
                         fprintf(stderr, "%f", uif(reg.index));
+        } else if (reg.file == QFILE_VPM) {
+                fprintf(stderr, "vpm");
         } else {
                 fprintf(stderr, "%s%d", files[reg.file], reg.index);
         }

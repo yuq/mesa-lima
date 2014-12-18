@@ -38,6 +38,7 @@ enum qfile {
         QFILE_TEMP,
         QFILE_VARY,
         QFILE_UNIF,
+        QFILE_VPM,
 
         /**
          * Stores an immediate value in the index field that can be turned
@@ -100,7 +101,6 @@ enum qop {
         QOP_VR_SETUP,
         QOP_PACK_SCALED,
         QOP_PACK_COLORS,
-        QOP_VPM_WRITE,
         QOP_VPM_READ,
         QOP_TLB_DISCARD_SETUP,
         QOP_TLB_STENCIL_SETUP,
@@ -472,7 +472,6 @@ QIR_ALU1(EXP2)
 QIR_ALU1(LOG2)
 QIR_ALU2(PACK_SCALED)
 QIR_ALU1(VARY_ADD_C)
-QIR_NODST_1(VPM_WRITE)
 QIR_NODST_2(TEX_S)
 QIR_NODST_2(TEX_T)
 QIR_NODST_2(TEX_R)
@@ -543,6 +542,13 @@ qir_POW(struct vc4_compile *c, struct qreg x, struct qreg y)
         return qir_EXP2(c, qir_FMUL(c,
                                     y,
                                     qir_LOG2(c, x)));
+}
+
+static inline void
+qir_VPM_WRITE(struct vc4_compile *c, struct qreg val)
+{
+        static const struct qreg vpm = { QFILE_VPM, 0 };
+        qir_emit(c, qir_inst(QOP_MOV, vpm, val, c->undef));
 }
 
 #endif /* VC4_QIR_H */

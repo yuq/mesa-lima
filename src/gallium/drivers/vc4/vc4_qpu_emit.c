@@ -249,6 +249,9 @@ vc4_generate_code(struct vc4_context *vc4, struct vc4_compile *c)
                                  */
                                 assert(src[i].addr <= 47);
                                 break;
+                        case QFILE_VPM:
+                                assert(!"not reached");
+                                break;
                         }
                 }
 
@@ -259,6 +262,9 @@ vc4_generate_code(struct vc4_context *vc4, struct vc4_compile *c)
                         break;
                 case QFILE_TEMP:
                         dst = temp_registers[qinst->dst.index];
+                        break;
+                case QFILE_VPM:
+                        dst = qpu_ra(QPU_W_VPM);
                         break;
                 case QFILE_VARY:
                 case QFILE_UNIF:
@@ -306,10 +312,6 @@ vc4_generate_code(struct vc4_context *vc4, struct vc4_compile *c)
                         set_last_cond_add(c, ((qinst->op - QOP_SEL_X_Y_ZS) ^
                                               1) + QPU_COND_ZS);
 
-                        break;
-
-                case QOP_VPM_WRITE:
-                        queue(c, qpu_a_MOV(qpu_ra(QPU_W_VPM), src[0]));
                         break;
 
                 case QOP_VPM_READ:
