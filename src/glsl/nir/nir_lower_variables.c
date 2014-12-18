@@ -751,32 +751,37 @@ def_stack_push(struct deref_node *node, nir_ssa_def *def,
    *(++node->def_stack_tail) = def;
 }
 
-/** Retrieves the SSA definition associated with the given node that
- * reaches the current point in the program
- *
- * If the SSA def on the top of the stack is in the given block or some
- * other block that dominates the given block, then the top of the stack is
- * returned.  Otherwise, the stack is popped until we get to an SSA
- * definition that dominates the given block and that is returned.  If we
- * pop the stack all the way to empty, then we return the constant
+/* Pop the top of the def stack if it's in the given block */
+static void
+def_stack_pop_if_in_block(struct deref_node *node, nir_block *block)
+{
+   /* If we're popping, then we have presumably pushed at some time in the
+    * past so this should exist.
+    */
+   assert(node->def_stack != NULL);
+
+   /* The stack is already empty.  Do nothing. */
+   if (node->def_stack_tail < node->def_stack)
+      return;
+
+   nir_ssa_def *def = *node->def_stack_tail;
+   if (def->parent_instr->block == block)
+      node->def_stack_tail--;
+}
+
+/** Retrieves the SSA definition on the top of the stack for the given
+ * node, if one exists.  If the stack is empty, then we return the constant
  * initializer (if it exists) or an SSA undef.
  */
 static nir_ssa_def *
 get_ssa_def_for_block(struct deref_node *node, nir_block *block,
                       struct lower_variables_state *state)
 {
-   if (node->def_stack) {
-      while (node->def_stack_tail >= node->def_stack) {
-         nir_ssa_def *def = *node->def_stack_tail;
-
-         for (nir_block *dom = block; dom != NULL; dom = dom->imm_dom) {
-            if (def->parent_instr->block == dom)
-               return def;
-         }
-
-         node->def_stack_tail--;
-      }
-   }
+   /* If we have something on the stack, go ahead and return it.  We're
+    * assuming that the top of the stack dominates the given block.
+    */
+   if (node->def_stack && node->def_stack_tail >= node->def_stack)
+      return *node->def_stack_tail;
 
    /* If we got here then we don't have a definition that dominates the
     * given block.  This means that we need to add an undef and use that.
@@ -825,11 +830,8 @@ add_phi_sources(nir_block *block, nir_block *pred,
  *
  * This algorithm is very similar to the one outlined in "Efficiently
  * Computing Static Single Assignment Form and the Control Dependence
- * Graph" by Cytron et. al.  The primary difference is in how the stacks of
- * SSA definitions are handled.  In the Cytron paper, they explicitly pop
- * the old elements off the stack after visiting the dominance children.
- * In our algorithm, popping old elements off the stack is implicitly
- * handled by get_ssa_def_for_block.
+ * Graph" by Cytron et. al.  The primary difference is that we only put one
+ * SSA def on the stack per block.
  */
 static bool
 rename_variables_block(nir_block *block, struct lower_variables_state *state)
@@ -943,9 +945,12 @@ rename_variables_block(nir_block *block, struct lower_variables_state *state)
                              intrin->num_components, NULL);
 
             nir_instr_insert_before(&intrin->instr, &mov->instr);
-            nir_instr_remove(&intrin->instr);
 
             def_stack_push(node, &mov->dest.dest.ssa, state);
+
+            /* We'll wait to remove the unstruction until the next pass
+             * where we pop the node we just pushed back off the stack.
+             */
             break;
          }
 
@@ -962,6 +967,44 @@ rename_variables_block(nir_block *block, struct lower_variables_state *state)
 
    for (unsigned i = 0; i < block->num_dom_children; ++i)
       rename_variables_block(block->dom_children[i], state);
+
+   /* Now we iterate over the instructions and pop off any SSA defs that we
+    * pushed in the first loop.
+    */
+   nir_foreach_instr_safe(block, instr) {
+      if (instr->type == nir_instr_type_phi) {
+         nir_phi_instr *phi = nir_instr_as_phi(instr);
+
+         struct hash_entry *entry =
+            _mesa_hash_table_search(state->phi_table, phi);
+
+         /* This can happen if we already have phi nodes in the program
+          * that were not created in this pass.
+          */
+         if (!entry)
+            continue;
+
+         struct deref_node *node = entry->data;
+
+         def_stack_pop_if_in_block(node, block);
+      } else if (instr->type == nir_instr_type_intrinsic) {
+         nir_intrinsic_instr *intrin = nir_instr_as_intrinsic(instr);
+
+         if (intrin->intrinsic != nir_intrinsic_store_var)
+            continue;
+
+         struct deref_node *node = get_deref_node(intrin->variables[0],
+                                                  false, state);
+         if (!node)
+            continue;
+
+         if (!node->lower_to_ssa)
+            continue;
+
+         def_stack_pop_if_in_block(node, block);
+         nir_instr_remove(&intrin->instr);
+      }
+   }
 
    return true;
 }
