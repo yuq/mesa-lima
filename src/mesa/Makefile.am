@@ -55,10 +55,6 @@ $(BUILDDIR)main/git_sha1.h: $(BUILDDIR)main/git_sha1.h.tmp
 		rm main/git_sha1.h.tmp ;\
 	fi
 
-# include glapi_gen.mk for generating glapi headers for GLES
-GLAPI = $(top_srcdir)/src/mapi/glapi/gen
-include $(GLAPI)/glapi_gen.mk
-
 BUILDDIR = $(builddir)/
 include Makefile.sources
 
@@ -96,7 +92,7 @@ CLEANFILES = \
 
 GET_HASH_GEN = main/get_hash_generator.py
 
-main/get_hash.h: $(GLAPI)/gl_and_es_API.xml main/get_hash_params.py 	\
+main/get_hash.h: ../mapi/glapi/gen/gl_and_es_API.xml main/get_hash_params.py 	\
 		 $(GET_HASH_GEN) Makefile
 	$(AM_V_GEN)set -e;						\
 	$(PYTHON2) $(PYTHON_FLAGS) $(srcdir)/$(GET_HASH_GEN)		\
