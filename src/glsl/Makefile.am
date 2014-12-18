@@ -73,9 +73,6 @@ tests_blob_test_LDADD =					\
 	$(top_builddir)/src/glsl/libglsl.la
 
 tests_general_ir_test_SOURCES =		\
-	../mesa/main/imports.c			\
-	../mesa/program/prog_hash_table.c		\
-	../mesa/program/symbol_table.c		\
 	standalone_scaffolding.cpp			\
 	tests/builtin_variable_test.cpp			\
 	tests/invalidate_locations_test.cpp		\
@@ -87,12 +84,10 @@ tests_general_ir_test_CFLAGS =				\
 tests_general_ir_test_LDADD =				\
 	$(top_builddir)/src/gtest/libgtest.la		\
 	$(top_builddir)/src/glsl/libglsl.la		\
+	$(top_builddir)/src/libglsl_util.la		\
 	$(PTHREAD_LIBS)
 
 tests_uniform_initializer_test_SOURCES =		\
-	../mesa/main/imports.c		\
-	../mesa/program/prog_hash_table.c\
-	../mesa/program/symbol_table.c	\
 	tests/copy_constant_to_storage_tests.cpp	\
 	tests/set_uniform_initializer_tests.cpp		\
 	tests/uniform_initializer_utils.cpp		\
@@ -103,11 +98,10 @@ tests_uniform_initializer_test_CFLAGS =			\
 tests_uniform_initializer_test_LDADD =			\
 	$(top_builddir)/src/gtest/libgtest.la		\
 	$(top_builddir)/src/glsl/libglsl.la		\
+	$(top_builddir)/src/libglsl_util.la		\
 	$(PTHREAD_LIBS)
 
 tests_sampler_types_test_SOURCES =			\
-	../mesa/program/prog_hash_table.c\
-	../mesa/program/symbol_table.c	\
 	tests/sampler_types_test.cpp			\
 	tests/common.c
 tests_sampler_types_test_CFLAGS =			\
@@ -115,6 +109,7 @@ tests_sampler_types_test_CFLAGS =			\
 tests_sampler_types_test_LDADD =			\
 	$(top_builddir)/src/gtest/libgtest.la		\
 	$(top_builddir)/src/glsl/libglsl.la		\
+	$(top_builddir)/src/libglsl_util.la		\
 	$(PTHREAD_LIBS)
 
 libglcpp_la_LIBADD =					\
@@ -127,10 +122,10 @@ libglcpp_la_SOURCES =					\
 
 glcpp_glcpp_SOURCES =					\
 	glcpp/glcpp.c					\
-	tests/common.c					\
-	../mesa/program/prog_hash_table.c
+	tests/common.c
 glcpp_glcpp_LDADD =					\
 	libglcpp.la					\
+	$(top_builddir)/src/libglsl_util.la		\
 	-lm
 
 libglsl_la_LIBADD = libglcpp.la
@@ -142,19 +137,14 @@ libglsl_la_SOURCES =					\
 	$(NIR_FILES)
 
 glsl_compiler_SOURCES = \
-	../mesa/main/imports.c \
-	../mesa/program/prog_hash_table.c \
-	../mesa/program/symbol_table.c \
 	$(GLSL_COMPILER_CXX_FILES)
 
 glsl_compiler_LDADD =					\
 	libglsl.la					\
+	$(top_builddir)/src/libglsl_util.la		\
 	$(PTHREAD_LIBS)
 
 glsl_test_SOURCES = \
-	../mesa/main/imports.c \
-	../mesa/program/prog_hash_table.c \
-	../mesa/program/symbol_table.c \
 	standalone_scaffolding.cpp \
 	tests/common.c \
 	test.cpp \
@@ -163,6 +153,7 @@ glsl_test_SOURCES = \
 
 glsl_test_LDADD =					\
 	libglsl.la					\
+	$(top_builddir)/src/libglsl_util.la		\
 	$(PTHREAD_LIBS)
 
 # We write our own rules for yacc and lex below. We'd rather use automake,
