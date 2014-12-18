@@ -214,8 +214,10 @@ endif
 es2api/glapi_mapi_tmp.h: glapi/gen/gl_and_es_API.xml $(glapi_gen_mapi_deps)
 	$(call glapi_gen_mapi,$<,es2api)
 
-if HAVE_OPENVG
-SUBDIRS += vgapi
-endif
+# XXX: Inline vgapi's Makefile.am here.
+EXTRA_DIST += vgapi
+# if HAVE_OPENVG
+# SUBDIRS += vgapi
+# endif
 
 include $(top_srcdir)/install-lib-links.mk

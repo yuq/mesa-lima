@@ -2401,8 +2401,6 @@ AC_CONFIG_FILES([Makefile
 		src/mapi/es1api/glesv1_cm.pc
 		src/mapi/es2api/glesv2.pc
 		src/mapi/glapi/gen/Makefile
-		src/mapi/vgapi/Makefile
-		src/mapi/vgapi/vg.pc
 		src/mesa/Makefile
 		src/mesa/gl.pc
 		src/mesa/drivers/dri/dri.pc
