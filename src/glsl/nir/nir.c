@@ -119,6 +119,7 @@ nir_function_overload_create(nir_function *func)
    overload->num_params = 0;
    overload->params = NULL;
    overload->return_type = glsl_void_type();
+   overload->impl = NULL;
 
    exec_list_push_tail(&func->overload_list, &overload->node);
    overload->function = func;
@@ -449,6 +450,8 @@ nir_tex_instr_create(void *mem_ctx, unsigned num_srcs)
 {
    nir_tex_instr *instr = ralloc(mem_ctx, nir_tex_instr);
    instr_init(&instr->instr, nir_instr_type_texture);
+
+   dest_init(&instr->dest);
 
    instr->num_srcs = num_srcs;
    for (unsigned i = 0; i < num_srcs; i++)
