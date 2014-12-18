@@ -52,7 +52,12 @@ struct lower_variables_state {
 
    /* A hash table mapping variables to deref_node data */
    struct hash_table *deref_var_nodes;
-   /* A hash table mapping dereference leaves to deref_node data */
+
+   /* A hash table mapping dereference leaves to deref_node data.  A deref
+    * is considered a leaf if it is fully-qualified (no wildcards) and
+    * direct.  In short, these are the derefs we can actually consider
+    * lowering to SSA values.
+    */
    struct hash_table *deref_leaves;
 
    /* A hash table mapping phi nodes to deref_state data */
@@ -63,6 +68,9 @@ struct lower_variables_state {
  * variable dreferences.  When the hash or equality function encounters an
  * array, all indirects are treated as equal and are never equal to a
  * direct dereference or a wildcard.
+ *
+ * Some of the magic numbers here were taken from _mesa_hash_data and one
+ * was just a big prime I found on the internet.
  */
 static uint32_t
 hash_deref(const void *void_deref)
@@ -170,6 +178,10 @@ deref_node_create(struct deref_node *parent,
    return node;
 }
 
+/* Gets the deref_node for the given deref chain and creates it if it
+ * doesn't yet exist.  If the deref is a leaf (fully-qualified and direct)
+ * and add_to_leaves is true, it will be added to the hash table of leaves.
+ */
 static struct deref_node *
 get_deref_node(nir_deref_var *deref, bool add_to_leaves,
                struct lower_variables_state *state)
@@ -268,6 +280,141 @@ get_deref_node(nir_deref_var *deref, bool add_to_leaves,
    return parent;
 }
 
+/* \sa foreach_deref_node_match */
+static bool
+foreach_deref_node_worker(struct deref_node *node, nir_deref *deref,
+                          bool (* cb)(struct deref_node *node,
+                                      struct lower_variables_state *state),
+                          struct lower_variables_state *state)
+{
+   if (deref->child == NULL) {
+      return cb(node, state);
+   } else {
+      switch (deref->child->deref_type) {
+      case nir_deref_type_array: {
+         nir_deref_array *arr = nir_deref_as_array(deref->child);
+         assert(arr->deref_array_type == nir_deref_array_type_direct);
+         if (node->children[arr->base_offset] &&
+             !foreach_deref_node_worker(node->children[arr->base_offset],
+                                        deref->child, cb, state))
+            return false;
+
+         if (node->wildcard &&
+             !foreach_deref_node_worker(node->wildcard,
+                                        deref->child, cb, state))
+            return false;
+
+         return true;
+      }
+
+      case nir_deref_type_struct: {
+         nir_deref_struct *str = nir_deref_as_struct(deref->child);
+         return foreach_deref_node_worker(node->children[str->index],
+                                          deref->child, cb, state);
+      }
+
+      default:
+         unreachable("Invalid deref child type");
+      }
+   }
+}
+
+/* Walks over every "matching" deref_node and calls the callback.  A node
+ * is considered to "match" if either refers to that deref or matches up t
+ * a wildcard.  In other words, the following would match a[6].foo[3].bar:
+ *
+ * a[6].foo[3].bar
+ * a[*].foo[3].bar
+ * a[6].foo[*].bar
+ * a[*].foo[*].bar
+ *
+ * The given deref must be a full-length and fully qualified (no wildcards
+ * or indirexcts) deref chain.
+ */
+static bool
+foreach_deref_node_match(nir_deref_var *deref,
+                         bool (* cb)(struct deref_node *node,
+                                     struct lower_variables_state *state),
+                         struct lower_variables_state *state)
+{
+   nir_deref_var var_deref = *deref;
+   var_deref.deref.child = NULL;
+   struct deref_node *node = get_deref_node(&var_deref, false, state);
+
+   if (node == NULL)
+      return false;
+
+   return foreach_deref_node_worker(node, &deref->deref, cb, state);
+}
+
+/* \sa deref_may_be_aliased */
+static bool
+deref_may_be_aliased_node(struct deref_node *node, nir_deref *deref,
+                          struct lower_variables_state *state)
+{
+   if (deref->child == NULL) {
+      return false;
+   } else {
+      switch (deref->child->deref_type) {
+      case nir_deref_type_array: {
+         nir_deref_array *arr = nir_deref_as_array(deref->child);
+         if (arr->deref_array_type == nir_deref_array_type_indirect)
+            return true;
+
+         assert(arr->deref_array_type == nir_deref_array_type_direct);
+
+         if (node->children[arr->base_offset] &&
+             deref_may_be_aliased_node(node->children[arr->base_offset],
+                                       deref->child, state))
+            return true;
+
+         if (node->wildcard &&
+             deref_may_be_aliased_node(node->wildcard, deref->child, state))
+            return true;
+
+         return false;
+      }
+
+      case nir_deref_type_struct: {
+         nir_deref_struct *str = nir_deref_as_struct(deref->child);
+         if (node->children[str->index]) {
+             return deref_may_be_aliased_node(node->children[str->index],
+                                              deref->child, state);
+         } else {
+            return false;
+         }
+      }
+
+      default:
+         unreachable("Invalid nir_deref child type");
+      }
+   }
+}
+
+/* Returns true if there are no indirects that can ever touch this deref.
+ * This question can only be asked about fully-qualified derefs.
+ * Obviously, it's pointless to ask this about indirects, but we also
+ * rule-out wildcards.  For example, if the given deref is a[6].foo, then
+ * any uses of a[i].foo would case this to return false, but a[i].bar would
+ * not affect it because it's a different structure member.  A var_copy
+ * involving of a[*].bar also doesn't affect it because that can be lowered
+ * to entirely direct load/stores.
+ */
+static bool
+deref_may_be_aliased(nir_deref_var *deref,
+                     struct lower_variables_state *state)
+{
+   nir_deref_var var_deref = *deref;
+   var_deref.deref.child = NULL;
+   struct deref_node *node = get_deref_node(&var_deref, false, state);
+
+   /* An invalid dereference can't be aliased. */
+   if (node == NULL)
+      return false;
+
+   return deref_may_be_aliased_node(node, &deref->deref, state);
+}
+
 static void
 register_load_instr(nir_intrinsic_instr *load_instr, bool create_node,
                     struct lower_variables_state *state)
@@ -318,123 +465,9 @@ register_copy_instr(nir_intrinsic_instr *copy_instr, bool create_node,
    }
 }
 
+/* Registers all variable uses in the given block. */
 static bool
-foreach_deref_node_worker(struct deref_node *node, nir_deref *deref,
-                          bool (* cb)(struct deref_node *node,
-                                      struct lower_variables_state *state),
-                          struct lower_variables_state *state)
-{
-   if (deref->child == NULL) {
-      return cb(node, state);
-   } else {
-      switch (deref->child->deref_type) {
-      case nir_deref_type_array: {
-         nir_deref_array *arr = nir_deref_as_array(deref->child);
-         assert(arr->deref_array_type == nir_deref_array_type_direct);
-         if (node->children[arr->base_offset] &&
-             !foreach_deref_node_worker(node->children[arr->base_offset],
-                                        deref->child, cb, state))
-            return false;
-
-         if (node->wildcard &&
-             !foreach_deref_node_worker(node->wildcard,
-                                        deref->child, cb, state))
-            return false;
-
-         return true;
-      }
-
-      case nir_deref_type_struct: {
-         nir_deref_struct *str = nir_deref_as_struct(deref->child);
-         return foreach_deref_node_worker(node->children[str->index],
-                                          deref->child, cb, state);
-      }
-
-      default:
-         unreachable("Invalid deref child type");
-      }
-   }
-}
-
-static bool
-foreach_deref_node_match(nir_deref_var *deref,
-                         bool (* cb)(struct deref_node *node,
-                                     struct lower_variables_state *state),
-                         struct lower_variables_state *state)
-{
-   nir_deref_var var_deref = *deref;
-   var_deref.deref.child = NULL;
-   struct deref_node *node = get_deref_node(&var_deref, false, state);
-
-   if (node == NULL)
-      return false;
-
-   return foreach_deref_node_worker(node, &deref->deref, cb, state);
-}
-
-/* This question can only be asked about leaves.  Searching down the tree
- * is much harder than searching up.
- */
-static bool
-deref_may_be_aliased_node(struct deref_node *node, nir_deref *deref,
-                          struct lower_variables_state *state)
-{
-   if (deref->child == NULL) {
-      return false;
-   } else {
-      switch (deref->child->deref_type) {
-      case nir_deref_type_array: {
-         nir_deref_array *arr = nir_deref_as_array(deref->child);
-         if (arr->deref_array_type == nir_deref_array_type_indirect)
-            return true;
-
-         assert(arr->deref_array_type == nir_deref_array_type_direct);
-
-         if (node->children[arr->base_offset] &&
-             deref_may_be_aliased_node(node->children[arr->base_offset],
-                                       deref->child, state))
-            return true;
-
-         if (node->wildcard &&
-             deref_may_be_aliased_node(node->wildcard, deref->child, state))
-            return true;
-
-         return false;
-      }
-
-      case nir_deref_type_struct: {
-         nir_deref_struct *str = nir_deref_as_struct(deref->child);
-         if (node->children[str->index]) {
-             return deref_may_be_aliased_node(node->children[str->index],
-                                              deref->child, state);
-         } else {
-            return false;
-         }
-      }
-
-      default:
-         unreachable("Invalid nir_deref child type");
-      }
-   }
-}
-
-static bool
-deref_may_be_aliased(nir_deref_var *deref,
-                     struct lower_variables_state *state)
-{
-   nir_deref_var var_deref = *deref;
-   var_deref.deref.child = NULL;
-   struct deref_node *node = get_deref_node(&var_deref, false, state);
-
-   /* An invalid dereference can't be aliased. */
-   if (node == NULL)
-      return false;
-
-   return deref_may_be_aliased_node(node, &deref->deref, state);
-}
-
-static bool
-fill_deref_tables_block(nir_block *block, void *void_state)
+register_variable_uses_block(nir_block *block, void *void_state)
 {
    struct lower_variables_state *state = void_state;
 
@@ -465,6 +498,11 @@ fill_deref_tables_block(nir_block *block, void *void_state)
    return true;
 }
 
+/* Walks down the deref chain and returns the next deref in the chain whose
+ * child is a wildcard.  In other words, given the chain  a[1].foo[*].bar,
+ * this function will return the deref to foo.  Calling it a second time
+ * with the [*].bar, it will return NULL.
+ */
 static nir_deref *
 deref_next_wildcard_parent(nir_deref *deref)
 {
@@ -481,6 +519,8 @@ deref_next_wildcard_parent(nir_deref *deref)
    return NULL;
 }
 
+/* Returns the last deref in the chain.
+ */
 static nir_deref *
 get_deref_tail(nir_deref *deref)
 {
@@ -490,25 +530,51 @@ get_deref_tail(nir_deref *deref)
    return deref;
 }
 
+/* This function recursively walks the given deref chain and replaces the
+ * given copy instruction with an equivalent sequence load/store
+ * operations.
+ *
+ * @copy_instr    The copy instruction to replace; new instructions will be
+ *                inserted before this one
+ *
+ * @dest_head     The head of the destination variable deref chain
+ *
+ * @src_head      The head of the source variable deref chain
+ *
+ * @dest_tail     The current tail of the destination variable deref chain;
+ *                this is used for recursion and external callers of this
+ *                function should call it with tail == head
+ *
+ * @src_tail      The current tail of the source variable deref chain;
+ *                this is used for recursion and external callers of this
+ *                function should call it with tail == head
+ *
+ * @state         The current variable lowering state
+ */
 static void
 emit_copy_load_store(nir_intrinsic_instr *copy_instr,
                      nir_deref_var *dest_head, nir_deref_var *src_head,
                      nir_deref *dest_tail, nir_deref *src_tail,
                      struct lower_variables_state *state)
 {
+   /* Find the next pair of wildcards */
    nir_deref *src_arr_parent = deref_next_wildcard_parent(src_tail);
    nir_deref *dest_arr_parent = deref_next_wildcard_parent(dest_tail);
 
    if (src_arr_parent || dest_arr_parent) {
+      /* Wildcards had better come in matched pairs */
       assert(dest_arr_parent && dest_arr_parent);
 
       nir_deref_array *src_arr = nir_deref_as_array(src_arr_parent->child);
       nir_deref_array *dest_arr = nir_deref_as_array(dest_arr_parent->child);
 
       unsigned length = type_get_length(src_arr_parent->type);
+      /* The wildcards should represent the same number of elements */
       assert(length == type_get_length(dest_arr_parent->type));
       assert(length > 0);
 
+      /* Walk over all of the elements that this wildcard refers to and
+       * call emit_copy_load_store on each one of them */
       src_arr->deref_array_type = nir_deref_array_type_direct;
       dest_arr->deref_array_type = nir_deref_array_type_direct;
       for (unsigned i = 0; i < length; i++) {
@@ -520,7 +586,8 @@ emit_copy_load_store(nir_intrinsic_instr *copy_instr,
       src_arr->deref_array_type = nir_deref_array_type_wildcard;
       dest_arr->deref_array_type = nir_deref_array_type_wildcard;
    } else {
-      /* Base case. Actually do the copy */
+      /* In this case, we have no wildcards anymore, so all we have to do
+       * is just emit the load and store operations. */
       src_tail = get_deref_tail(src_tail);
       dest_tail = get_deref_tail(dest_tail);
 
@@ -553,6 +620,9 @@ emit_copy_load_store(nir_intrinsic_instr *copy_instr,
    }
 }
 
+/* Walks over all of the copy instructions to or from the given deref_node
+ * and lowers them to load/store intrinsics.
+ */
 static bool
 lower_copies_to_load_store(struct deref_node *node,
                            struct lower_variables_state *state)
@@ -588,6 +658,10 @@ lower_copies_to_load_store(struct deref_node *node,
    return true;
 }
 
+/* Returns a load_const instruction that represents the constant
+ * initializer for the given deref chain.  The caller is responsible for
+ * ensuring that there actually is a constant initializer.
+ */
 static nir_load_const_instr *
 get_const_initializer_load(const nir_deref_var *deref,
                            struct lower_variables_state *state)
@@ -645,6 +719,15 @@ get_const_initializer_load(const nir_deref_var *deref,
    return load;
 }
 
+/** Pushes an SSA def onto the def stack for the given node
+ *
+ * Each node is potentially associated with a stack of SSA definitions.
+ * This stack is used for determining what SSA definition reaches a given
+ * point in the program for variable renaming.  The stack is always kept in
+ * dominance-order with at most one SSA def per block.  If the SSA
+ * definition on the top of the stack is in the same block as the one being
+ * pushed, the top element is replaced.
+ */
 static void
 def_stack_push(struct deref_node *node, nir_ssa_def *def,
                struct lower_variables_state *state)
@@ -668,6 +751,16 @@ def_stack_push(struct deref_node *node, nir_ssa_def *def,
    *(++node->def_stack_tail) = def;
 }
 
+/** Retrieves the SSA definition associated with the given node that
+ * reaches the current point in the program
+ *
+ * If the SSA def on the top of the stack is in the given block or some
+ * other block that dominates the given block, then the top of the stack is
+ * returned.  Otherwise, the stack is popped until we get to an SSA
+ * definition that dominates the given block and that is returned.  If we
+ * pop the stack all the way to empty, then we return the constant
+ * initializer (if it exists) or an SSA undef.
+ */
 static nir_ssa_def *
 get_ssa_def_for_block(struct deref_node *node, nir_block *block,
                       struct lower_variables_state *state)
@@ -696,6 +789,10 @@ get_ssa_def_for_block(struct deref_node *node, nir_block *block,
    return &undef->def;
 }
 
+/* Given a block and one of its predecessors, this function fills in the
+ * souces of the phi nodes to take SSA defs from the given predecessor.
+ * This function must be called exactly once per block/predecessor pair.
+ */
 static void
 add_phi_sources(nir_block *block, nir_block *pred,
                 struct lower_variables_state *state)
@@ -724,6 +821,16 @@ add_phi_sources(nir_block *block, nir_block *pred,
    }
 }
 
+/* Performs variable renaming by doing a DFS of the dominance tree
+ *
+ * This algorithm is very similar to the one outlined in "Efficiently
+ * Computing Static Single Assignment Form and the Control Dependence
+ * Graph" by Cytron et. al.  The primary difference is in how the stacks of
+ * SSA definitions are handled.  In the Cytron paper, they explicitly pop
+ * the old elements off the stack after visiting the dominance children.
+ * In our algorithm, popping old elements off the stack is implicitly
+ * handled by get_ssa_def_for_block.
+ */
 static bool
 rename_variables_block(nir_block *block, struct lower_variables_state *state)
 {
@@ -859,6 +966,12 @@ rename_variables_block(nir_block *block, struct lower_variables_state *state)
    return true;
 }
 
+/* Inserts phi nodes for all variables marked lower_to_ssa
+ *
+ * This is the same algorithm as presented in "Efficiently Computing Static
+ * Single Assignment Form and the Control Dependence Graph" by Cytron et.
+ * al.
+ */
 static void
 insert_phi_nodes(struct lower_variables_state *state)
 {
@@ -948,7 +1061,7 @@ nir_lower_variables_impl(nir_function_impl *impl)
                                              _mesa_hash_pointer,
                                              _mesa_key_pointer_equal);
 
-   nir_foreach_block(impl, fill_deref_tables_block, &state);
+   nir_foreach_block(impl, register_variable_uses_block, &state);
 
    struct set *outputs = _mesa_set_create(state.dead_ctx,
                                           _mesa_key_pointer_equal);
