@@ -19,6 +19,8 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
+AUTOMAKE_OPTIONS = subdir-objects
+
 SUBDIRS = . main/tests
 
 if HAVE_X11_DRIVER
@@ -36,8 +38,8 @@ endif
 gldir = $(includedir)/GL
 gl_HEADERS = $(top_srcdir)/include/GL/*.h
 
-.PHONY: $(BUILDDIR)main/git_sha1.h.tmp
-$(BUILDDIR)main/git_sha1.h.tmp:
+.PHONY: main/git_sha1.h.tmp
+main/git_sha1.h.tmp:
 	@touch main/git_sha1.h.tmp
 	@if test -d $(top_srcdir)/.git; then \
 		if which git > /dev/null; then \
@@ -47,7 +49,7 @@ $(BUILDDIR)main/git_sha1.h.tmp:
 		fi \
 	fi
 
-$(BUILDDIR)main/git_sha1.h: $(BUILDDIR)main/git_sha1.h.tmp
+main/git_sha1.h: main/git_sha1.h.tmp
 	@echo "updating main/git_sha1.h"
 	@if ! cmp -s main/git_sha1.h.tmp main/git_sha1.h; then \
 		mv main/git_sha1.h.tmp main/git_sha1.h ;\
@@ -55,7 +57,6 @@ $(BUILDDIR)main/git_sha1.h: $(BUILDDIR)main/git_sha1.h.tmp
 		rm main/git_sha1.h.tmp ;\
 	fi
 
-BUILDDIR = $(builddir)/
 include Makefile.sources
 
 EXTRA_DIST = \
@@ -80,15 +81,15 @@ EXTRA_DIST = \
 BUILT_SOURCES = \
 	main/get_hash.h \
         main/format_info.c \
-	$(BUILDDIR)main/git_sha1.h \
+	main/git_sha1.h \
 	main/format_pack.c \
 	main/format_unpack.c \
-	$(BUILDDIR)program/program_parse.tab.c \
-	$(BUILDDIR)program/lex.yy.c
+	program/program_parse.tab.c \
+	program/lex.yy.c
 CLEANFILES = \
 	$(BUILT_SOURCES) \
-	$(BUILDDIR)program/program_parse.tab.h \
-	$(BUILDDIR)main/git_sha1.h.tmp
+	program/program_parse.tab.h \
+	main/git_sha1.h.tmp
 
 GET_HASH_GEN = main/get_hash_generator.py
 
@@ -193,13 +194,13 @@ libmesa_sse41_la_CFLAGS = $(AM_CFLAGS) $(SSE41_CFLAGS)
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = gl.pc
 
-$(BUILDDIR)program/lex.yy.c: program/program_lexer.l
+program/lex.yy.c: program/program_lexer.l
 	$(AM_V_at)$(MKDIR_P) program
 	$(AM_V_GEN) $(LEX) --never-interactive --outfile=$@ $<
 
-$(BUILDDIR)program/program_parse.tab.c $(BUILDDIR)program/program_parse.tab.h: program/program_parse.y
+program/program_parse.tab.c program/program_parse.tab.h: program/program_parse.y
 	$(AM_V_at)$(MKDIR_P) program
-	$(AM_V_GEN) $(YACC) -p "_mesa_program_" -v -d --output=$(BUILDDIR)program/program_parse.tab.c $<
+	$(AM_V_GEN) $(YACC) -p "_mesa_program_" -v -d --output=program/program_parse.tab.c $<
 
 if GEN_ASM_OFFSETS
 matypes.h: $(gen_matypes_SOURCES)
