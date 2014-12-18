@@ -575,13 +575,13 @@ print_parallel_copy_instr(nir_parallel_copy_instr *instr, FILE *fp)
 {
    bool first = true;
    fprintf(fp, "pcopy: ");
-   foreach_list_typed(nir_parallel_copy_copy, copy, node, &instr->copies) {
+   nir_foreach_parallel_copy_entry(instr, entry) {
       if (!first)
          fprintf(fp, "; ");
 
-      print_dest(&copy->dest, fp);
+      print_dest(&entry->dest, fp);
       fprintf(fp, " = ");
-      print_src(&copy->src, fp);
+      print_src(&entry->src, fp);
 
       first = false;
    }

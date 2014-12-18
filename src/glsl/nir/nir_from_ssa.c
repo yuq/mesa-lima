@@ -348,22 +348,22 @@ isolate_phi_nodes_block(nir_block *block, void *void_state)
             get_parallel_copy_at_end_of_block(src->pred);
          assert(pcopy);
 
-         nir_parallel_copy_copy *copy = ralloc(state->dead_ctx,
-                                               nir_parallel_copy_copy);
-         exec_list_push_tail(&pcopy->copies, &copy->node);
+         nir_parallel_copy_entry *entry = ralloc(state->dead_ctx,
+                                                 nir_parallel_copy_entry);
+         exec_list_push_tail(&pcopy->entries, &entry->node);
 
-         copy->src = nir_src_copy(src->src, state->dead_ctx);
+         entry->src = nir_src_copy(src->src, state->dead_ctx);
          _mesa_set_add(src->src.ssa->uses,
                        _mesa_hash_pointer(&pcopy->instr), &pcopy->instr);
 
-         copy->dest.is_ssa = true;
-         nir_ssa_def_init(&pcopy->instr, &copy->dest.ssa,
+         entry->dest.is_ssa = true;
+         nir_ssa_def_init(&pcopy->instr, &entry->dest.ssa,
                           phi->dest.ssa.num_components, src->src.ssa->name);
 
-         struct set_entry *entry = _mesa_set_search(src->src.ssa->uses,
-                                                    _mesa_hash_pointer(instr),
-                                                    instr);
-         if (entry)
+         struct set_entry *use_entry =
+            _mesa_set_search(src->src.ssa->uses,
+                             _mesa_hash_pointer(instr), instr);
+         if (use_entry)
             /* It is possible that a phi node can use the same source twice
              * but for different basic blocks.  If that happens, entry will
              * be NULL because we already deleted it.  This is safe
@@ -371,28 +371,28 @@ isolate_phi_nodes_block(nir_block *block, void *void_state)
              * all of the sources of the phi from their respective use sets
              * and moved them to the parallel copy definitions.
              */
-            _mesa_set_remove(src->src.ssa->uses, entry);
+            _mesa_set_remove(src->src.ssa->uses, use_entry);
 
-         src->src.ssa = &copy->dest.ssa;
-         _mesa_set_add(copy->dest.ssa.uses, _mesa_hash_pointer(instr), instr);
+         src->src.ssa = &entry->dest.ssa;
+         _mesa_set_add(entry->dest.ssa.uses, _mesa_hash_pointer(instr), instr);
       }
 
-      nir_parallel_copy_copy *copy = ralloc(state->dead_ctx,
-                                            nir_parallel_copy_copy);
-      exec_list_push_tail(&block_pcopy->copies, &copy->node);
+      nir_parallel_copy_entry *entry = ralloc(state->dead_ctx,
+                                              nir_parallel_copy_entry);
+      exec_list_push_tail(&block_pcopy->entries, &entry->node);
 
-      copy->dest.is_ssa = true;
-      nir_ssa_def_init(&block_pcopy->instr, &copy->dest.ssa,
+      entry->dest.is_ssa = true;
+      nir_ssa_def_init(&block_pcopy->instr, &entry->dest.ssa,
                        phi->dest.ssa.num_components, phi->dest.ssa.name);
 
-      nir_src copy_dest_src = {
-         .ssa = &copy->dest.ssa,
+      nir_src entry_dest_src = {
+         .ssa = &entry->dest.ssa,
          .is_ssa = true,
       };
-      nir_ssa_def_rewrite_uses(&phi->dest.ssa, copy_dest_src, state->mem_ctx);
+      nir_ssa_def_rewrite_uses(&phi->dest.ssa, entry_dest_src, state->mem_ctx);
 
-      copy->src.is_ssa = true;
-      copy->src.ssa = &phi->dest.ssa;
+      entry->src.is_ssa = true;
+      entry->src.ssa = &phi->dest.ssa;
       _mesa_set_add(phi->dest.ssa.uses,
                     _mesa_hash_pointer(&block_pcopy->instr),
                     &block_pcopy->instr);
@@ -431,22 +431,22 @@ static void
 agressive_coalesce_parallel_copy(nir_parallel_copy_instr *pcopy,
                                  struct from_ssa_state *state)
 {
-   foreach_list_typed_safe(nir_parallel_copy_copy, copy, node, &pcopy->copies) {
-      if (!copy->src.is_ssa)
+   nir_foreach_parallel_copy_entry(pcopy, entry) {
+      if (!entry->src.is_ssa)
          continue;
 
       /* Since load_const instructions are SSA only, we can't replace their
        * destinations with registers and, therefore, can't coalesce them.
        */
-      if (copy->src.ssa->parent_instr->type == nir_instr_type_load_const)
+      if (entry->src.ssa->parent_instr->type == nir_instr_type_load_const)
          continue;
 
       /* Don't try and coalesce these */
-      if (copy->dest.ssa.num_components != copy->src.ssa->num_components)
+      if (entry->dest.ssa.num_components != entry->src.ssa->num_components)
          continue;
 
-      merge_node *src_node = get_merge_node(copy->src.ssa, state);
-      merge_node *dest_node = get_merge_node(&copy->dest.ssa, state);
+      merge_node *src_node = get_merge_node(entry->src.ssa, state);
+      merge_node *dest_node = get_merge_node(&entry->dest.ssa, state);
 
       if (src_node->set == dest_node->set)
          continue;
@@ -672,9 +672,9 @@ resolve_parallel_copy(nir_parallel_copy_instr *pcopy,
                       struct from_ssa_state *state)
 {
    unsigned num_copies = 0;
-   foreach_list_typed_safe(nir_parallel_copy_copy, copy, node, &pcopy->copies) {
+   nir_foreach_parallel_copy_entry(pcopy, entry) {
       /* Sources may be SSA */
-      if (!copy->src.is_ssa && copy->src.reg.reg == copy->dest.reg.reg)
+      if (!entry->src.is_ssa && entry->src.reg.reg == entry->dest.reg.reg)
          continue;
 
       num_copies++;
@@ -710,23 +710,23 @@ resolve_parallel_copy(nir_parallel_copy_instr *pcopy,
     *  - Predicessors are recorded from sources and destinations
     */
    int num_vals = 0;
-   foreach_list_typed(nir_parallel_copy_copy, copy, node, &pcopy->copies) {
+   nir_foreach_parallel_copy_entry(pcopy, entry) {
       /* Sources may be SSA */
-      if (!copy->src.is_ssa && copy->src.reg.reg == copy->dest.reg.reg)
+      if (!entry->src.is_ssa && entry->src.reg.reg == entry->dest.reg.reg)
          continue;
 
       int src_idx = -1;
       for (int i = 0; i < num_vals; ++i) {
-         if (nir_srcs_equal(values[i], copy->src))
+         if (nir_srcs_equal(values[i], entry->src))
             src_idx = i;
       }
       if (src_idx < 0) {
          src_idx = num_vals++;
-         values[src_idx] = copy->src;
+         values[src_idx] = entry->src;
       }
 
       nir_src dest_src = {
-         .reg.reg = copy->dest.reg.reg,
+         .reg.reg = entry->dest.reg.reg,
          .reg.indirect = NULL,
          .reg.base_offset = 0,
          .is_ssa = false,

@@ -474,7 +474,7 @@ nir_parallel_copy_instr_create(void *mem_ctx)
    nir_parallel_copy_instr *instr = ralloc(mem_ctx, nir_parallel_copy_instr);
    instr_init(&instr->instr, nir_instr_type_parallel_copy);
 
-   exec_list_make_empty(&instr->copies);
+   exec_list_make_empty(&instr->entries);
 
    return instr;
 }
@@ -1413,8 +1413,8 @@ static bool
 visit_parallel_copy_dest(nir_parallel_copy_instr *instr,
                          nir_foreach_dest_cb cb, void *state)
 {
-   foreach_list_typed(nir_parallel_copy_copy, copy, node, &instr->copies) {
-      if (!cb(&copy->dest, state))
+   nir_foreach_parallel_copy_entry(instr, entry) {
+      if (!cb(&entry->dest, state))
          return false;
    }
 
@@ -1596,8 +1596,8 @@ static bool
 visit_parallel_copy_src(nir_parallel_copy_instr *instr,
                         nir_foreach_src_cb cb, void *state)
 {
-   foreach_list_typed(nir_parallel_copy_copy, copy, node, &instr->copies) {
-      if (!visit_src(&copy->src, cb, state))
+   nir_foreach_parallel_copy_entry(instr, entry) {
+      if (!visit_src(&entry->src, cb, state))
          return false;
    }
 

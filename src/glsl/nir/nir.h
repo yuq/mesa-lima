@@ -962,11 +962,20 @@ typedef struct {
    struct exec_node node;
    nir_src src;
    nir_dest dest;
-} nir_parallel_copy_copy;
+} nir_parallel_copy_entry;
+
+#define nir_foreach_parallel_copy_entry(pcopy, entry) \
+   foreach_list_typed(nir_parallel_copy_entry, entry, node, &(pcopy)->entries)
 
 typedef struct {
    nir_instr instr;
-   struct exec_list copies;
+
+   /* A list of nir_parallel_copy_entry's.  The sources of all of the
+    * entries are copied to the corresponding destinations "in parallel".
+    * In other words, if we have two entries: a -> b and b -> a, the values
+    * get swapped.
+    */
+   struct exec_list entries;
 } nir_parallel_copy_instr;
 
 NIR_DEFINE_CAST(nir_instr_as_alu, nir_instr, nir_alu_instr, instr)
