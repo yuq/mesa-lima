@@ -185,14 +185,11 @@ print_alu_instr(nir_alu_instr *instr, FILE *fp)
       fprintf(fp, ".sat");
    fprintf(fp, " ");
 
-   bool first = true;
    for (unsigned i = 0; i < nir_op_infos[instr->op].num_inputs; i++) {
-      if (!first)
+      if (i != 0)
          fprintf(fp, ", ");
 
       print_alu_src(&instr->src[i], fp);
-
-      first = false;
    }
 }
 
@@ -328,42 +325,33 @@ print_intrinsic_instr(nir_intrinsic_instr *instr, print_var_state *state,
 
    fprintf(fp, "intrinsic %s (", nir_intrinsic_infos[instr->intrinsic].name);
 
-   bool first = true;
    for (unsigned i = 0; i < num_srcs; i++) {
-      if (!first)
+      if (i != 0)
          fprintf(fp, ", ");
 
       print_src(&instr->src[i], fp);
-
-      first = false;
    }
 
    fprintf(fp, ") (");
 
    unsigned num_vars = nir_intrinsic_infos[instr->intrinsic].num_variables;
 
-   first = true;
    for (unsigned i = 0; i < num_vars; i++) {
-      if (!first)
+      if (i != 0)
          fprintf(fp, ", ");
 
       print_deref(instr->variables[i], state, fp);
-
-      first = false;
    }
 
    fprintf(fp, ") (");
 
    unsigned num_indices = nir_intrinsic_infos[instr->intrinsic].num_indices;
 
-   first = true;
    for (unsigned i = 0; i < num_indices; i++) {
-      if (!first)
+      if (i != 0)
          fprintf(fp, ", ");
 
       fprintf(fp, "%u", instr->const_index[i]);
-
-      first = false;
    }
 
    fprintf(fp, ")");
@@ -458,14 +446,15 @@ print_tex_instr(nir_tex_instr *instr, print_var_state *state, FILE *fp)
       fprintf(fp, ", ");
    }
 
-   bool offset_nonzero = false;
-   for (unsigned i = 0; i < 4; i++)
+   bool has_nonzero_offset = false;
+   for (unsigned i = 0; i < 4; i++) {
       if (instr->const_offset[i] != 0) {
-         offset_nonzero = true;
+         has_nonzero_offset = true;
          break;
       }
+   }
 
-   if (offset_nonzero) {
+   if (has_nonzero_offset) {
       fprintf(fp, "[%i %i %i %i] (offset), ",
               instr->const_offset[0], instr->const_offset[1],
               instr->const_offset[2], instr->const_offset[3]);
@@ -511,9 +500,8 @@ print_load_const_instr(nir_load_const_instr *instr, unsigned tabs, FILE *fp)
 
    fprintf(fp, " = load_const (");
 
-   bool first = true;
    for (unsigned i = 0; i < instr->def.num_components; i++) {
-      if (!first)
+      if (i != 0)
          fprintf(fp, ", ");
 
       /*
@@ -523,8 +511,6 @@ print_load_const_instr(nir_load_const_instr *instr, unsigned tabs, FILE *fp)
        */
 
       fprintf(fp, "0x%08x /* %f */", instr->value.u[i], instr->value.f[i]);
-
-      first = false;
    }
 }
 
@@ -558,32 +544,25 @@ print_phi_instr(nir_phi_instr *instr, FILE *fp)
 {
    print_dest(&instr->dest, fp);
    fprintf(fp, " = phi ");
-   bool first = true;
    foreach_list_typed(nir_phi_src, src, node, &instr->srcs) {
-      if (!first)
+      if (&src->node != exec_list_get_head(&instr->srcs))
          fprintf(fp, ", ");
 
       fprintf(fp, "block_%u: ", src->pred->index);
       print_src(&src->src, fp);
-
-      first = false;
    }
 }
 
 static void
 print_parallel_copy_instr(nir_parallel_copy_instr *instr, FILE *fp)
 {
-   bool first = true;
-   fprintf(fp, "pcopy: ");
    nir_foreach_parallel_copy_entry(instr, entry) {
-      if (!first)
+      if (&entry->node != exec_list_get_head(&instr->entries))
          fprintf(fp, "; ");
 
       print_dest(&entry->dest, fp);
       fprintf(fp, " = ");
       print_src(&entry->src, fp);
-
-      first = false;
    }
 }
 
