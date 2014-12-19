@@ -413,11 +413,17 @@ typedef struct {
    bool live;
 } nir_instr;
 
-#define nir_instr_next(instr) \
-   exec_node_data(nir_instr, (instr)->node.next, node)
+static inline nir_instr *
+nir_instr_next(const nir_instr *instr)
+{
+   return exec_node_data(nir_instr, (instr)->node.next, node);
+}
 
-#define nir_instr_prev(instr) \
-   exec_node_data(nir_instr, (instr)->node.prev, node)
+static inline nir_instr *
+nir_instr_prev(const nir_instr *instr)
+{
+   return exec_node_data(nir_instr, (instr)->node.prev, node);
+}
 
 typedef struct {
    /** for debugging only, can be NULL */
@@ -1083,10 +1089,19 @@ typedef struct nir_block {
    BITSET_WORD *live_out;
 } nir_block;
 
-#define nir_block_first_instr(block) \
-   exec_node_data(nir_instr, exec_list_get_head(&(block)->instr_list), node)
-#define nir_block_last_instr(block) \
-   exec_node_data(nir_instr, exec_list_get_tail(&(block)->instr_list), node)
+static inline nir_instr *
+nir_block_first_instr(nir_block *block)
+{
+   struct exec_node *head = exec_list_get_head(&block->instr_list);
+   return exec_node_data(nir_instr, head, node);
+}
+
+static inline nir_instr *
+nir_block_last_instr(nir_block *block)
+{
+   struct exec_node *tail = exec_list_get_tail(&block->instr_list);
+   return exec_node_data(nir_instr, tail, node);
+}
 
 #define nir_foreach_instr(block, instr) \
    foreach_list_typed(nir_instr, instr, node, &(block)->instr_list)
@@ -1103,14 +1118,33 @@ typedef struct {
    struct exec_list else_list; /** < list of nir_cf_node */
 } nir_if;
 
-#define nir_if_first_then_node(if) \
-   exec_node_data(nir_cf_node, exec_list_get_head(&(if)->then_list), node)
-#define nir_if_last_then_node(if) \
-   exec_node_data(nir_cf_node, exec_list_get_tail(&(if)->then_list), node)
-#define nir_if_first_else_node(if) \
-   exec_node_data(nir_cf_node, exec_list_get_head(&(if)->else_list), node)
-#define nir_if_last_else_node(if) \
-   exec_node_data(nir_cf_node, exec_list_get_tail(&(if)->else_list), node)
+static inline nir_cf_node *
+nir_if_first_then_node(nir_if *if_stmt)
+{
+   struct exec_node *head = exec_list_get_head(&if_stmt->then_list);
+   return exec_node_data(nir_cf_node, head, node);
+}
+
+static inline nir_cf_node *
+nir_if_last_then_node(nir_if *if_stmt)
+{
+   struct exec_node *tail = exec_list_get_tail(&if_stmt->then_list);
+   return exec_node_data(nir_cf_node, tail, node);
+}
+
+static inline nir_cf_node *
+nir_if_first_else_node(nir_if *if_stmt)
+{
+   struct exec_node *head = exec_list_get_head(&if_stmt->else_list);
+   return exec_node_data(nir_cf_node, head, node);
+}
+
+static inline nir_cf_node *
+nir_if_last_else_node(nir_if *if_stmt)
+{
+   struct exec_node *tail = exec_list_get_tail(&if_stmt->else_list);
+   return exec_node_data(nir_cf_node, tail, node);
+}
 
 typedef struct {
    nir_cf_node cf_node;
@@ -1118,10 +1152,17 @@ typedef struct {
    struct exec_list body; /** < list of nir_cf_node */
 } nir_loop;
 
-#define nir_loop_first_cf_node(loop) \
-   exec_node_data(nir_cf_node, exec_list_get_head(&(loop)->body), node)
-#define nir_loop_last_cf_node(loop) \
-   exec_node_data(nir_cf_node, exec_list_get_tail(&(loop)->body), node)
+static inline nir_cf_node *
+nir_loop_first_cf_node(nir_loop *loop)
+{
+   return exec_node_data(nir_cf_node, exec_list_get_head(&loop->body), node);
+}
+
+static inline nir_cf_node *
+nir_loop_last_cf_node(nir_loop *loop)
+{
+   return exec_node_data(nir_cf_node, exec_list_get_tail(&loop->body), node);
+}
 
 /**
  * Various bits of metadata that can may be created or required by
@@ -1169,17 +1210,29 @@ typedef struct {
    nir_metadata valid_metadata;
 } nir_function_impl;
 
-#define nir_cf_node_next(_node) \
-   exec_node_data(nir_cf_node, exec_node_get_next(&(_node)->node), node)
+static inline nir_cf_node *
+nir_cf_node_next(nir_cf_node *node)
+{
+   return exec_node_data(nir_cf_node, exec_node_get_next(&node->node), node);
+}
 
-#define nir_cf_node_prev(_node) \
-   exec_node_data(nir_cf_node, exec_node_get_prev(&(_node)->node), node)
+static inline nir_cf_node *
+nir_cf_node_prev(nir_cf_node *node)
+{
+   return exec_node_data(nir_cf_node, exec_node_get_prev(&node->node), node);
+}
 
-#define nir_cf_node_is_first(_node) \
-   exec_node_is_head_sentinel((_node)->node.prev)
+static inline bool
+nir_cf_node_is_first(const nir_cf_node *node)
+{
+   return exec_node_is_head_sentinel(node->node.prev);
+}
 
-#define nir_cf_node_is_last(_node) \
-   exec_node_is_tail_sentinel((_node)->node.next)
+static inline bool
+nir_cf_node_is_last(const nir_cf_node *node)
+{
+   return exec_node_is_tail_sentinel(node->node.next);
+}
 
 NIR_DEFINE_CAST(nir_cf_node_as_block, nir_cf_node, nir_block, cf_node)
 NIR_DEFINE_CAST(nir_cf_node_as_if, nir_cf_node, nir_if, cf_node)
