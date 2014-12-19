@@ -150,7 +150,10 @@ void GLAPIENTRY
 _mesa_DeleteBuffers(GLsizei n, const GLuint * buffer);
 
 void GLAPIENTRY
-_mesa_GenBuffers(GLsizei n, GLuint * buffer);
+_mesa_GenBuffers(GLsizei n, GLuint *buffers);
+
+void GLAPIENTRY
+_mesa_CreateBuffers(GLsizei n, GLuint *buffers);
 
 GLboolean GLAPIENTRY
 _mesa_IsBuffer(GLuint buffer);

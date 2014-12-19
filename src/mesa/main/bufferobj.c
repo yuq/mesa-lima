@@ -1292,27 +1292,29 @@ _mesa_DeleteBuffers(GLsizei n, const GLuint *ids)
 
 
 /**
- * Generate a set of unique buffer object IDs and store them in \c buffer.
- * 
- * \param n       Number of IDs to generate.
- * \param buffer  Array of \c n locations to store the IDs.
+ * This is the implementation for glGenBuffers and glCreateBuffers. It is not
+ * exposed to the rest of Mesa to encourage the use of nameless buffers in
+ * driver internals.
  */
-void GLAPIENTRY
-_mesa_GenBuffers(GLsizei n, GLuint *buffer)
+static void
+create_buffers(GLsizei n, GLuint *buffers, bool dsa)
 {
    GET_CURRENT_CONTEXT(ctx);
    GLuint first;
    GLint i;
+   struct gl_buffer_object *buf;
+
+   const char *func = dsa ? "glCreateBuffers" : "glGenBuffers";
 
    if (MESA_VERBOSE & VERBOSE_API)
-      _mesa_debug(ctx, "glGenBuffers(%d)\n", n);
+      _mesa_debug(ctx, "%s(%d)\n", func, n);
 
    if (n < 0) {
-      _mesa_error(ctx, GL_INVALID_VALUE, "glGenBuffersARB");
+      _mesa_error(ctx, GL_INVALID_VALUE, "%s(n %d < 0)", func, n);
       return;
    }
 
-   if (!buffer) {
+   if (!buffers) {
       return;
    }
 
@@ -1323,14 +1325,51 @@ _mesa_GenBuffers(GLsizei n, GLuint *buffer)
 
    first = _mesa_HashFindFreeKeyBlock(ctx->Shared->BufferObjects, n);
 
-   /* Insert the ID and pointer to dummy buffer object into hash table */
+   /* Insert the ID and pointer into the hash table. If non-DSA, insert a
+    * DummyBufferObject.  Otherwise, create a new buffer object and insert
+    * it.
+    */
    for (i = 0; i < n; i++) {
-      _mesa_HashInsert(ctx->Shared->BufferObjects, first + i,
-                       &DummyBufferObject);
-      buffer[i] = first + i;
+      buffers[i] = first + i;
+      if (dsa) {
+         assert(ctx->Driver.NewBufferObject);
+         buf = ctx->Driver.NewBufferObject(ctx, buffers[i]);
+         if (!buf) {
+            _mesa_error(ctx, GL_OUT_OF_MEMORY, "%s", func);
+            return;
+         }
+      }
+      else
+         buf = &DummyBufferObject;
+
+      _mesa_HashInsert(ctx->Shared->BufferObjects, buffers[i], buf);
    }
 
    mtx_unlock(&ctx->Shared->Mutex);
+}
+
+/**
+ * Generate a set of unique buffer object IDs and store them in \c buffers.
+ *
+ * \param n        Number of IDs to generate.
+ * \param buffers  Array of \c n locations to store the IDs.
+ */
+void GLAPIENTRY
+_mesa_GenBuffers(GLsizei n, GLuint *buffers)
+{
+   create_buffers(n, buffers, false);
+}
+
+/**
+ * Create a set of buffer objects and store their unique IDs in \c buffers.
+ *
+ * \param n        Number of IDs to generate.
+ * \param buffers  Array of \c n locations to store the IDs.
+ */
+void GLAPIENTRY
+_mesa_CreateBuffers(GLsizei n, GLuint *buffers)
+{
+   create_buffers(n, buffers, true);
 }
 
 
