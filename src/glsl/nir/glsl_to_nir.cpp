@@ -344,7 +344,6 @@ nir_visitor::visit(ir_variable *ir)
       var->state_slots = NULL;
    }
 
-   var->constant_value = constant_copy(ir->constant_value, var);
    var->constant_initializer = constant_copy(ir->constant_initializer, var);
 
    var->interface_type = ir->get_interface_type();
@@ -1745,8 +1744,8 @@ nir_visitor::visit(ir_constant *ir)
 {
    /*
     * We don't know if this variable is an an array or struct that gets
-    * dereferenced, so do the safe thing an make it a variable and return a
-    * dereference.
+    * dereferenced, so do the safe thing an make it a variable with a
+    * constant initializer and return a dereference.
     */
 
    nir_variable *var = ralloc(this->shader, nir_variable);
@@ -1754,7 +1753,6 @@ nir_visitor::visit(ir_constant *ir)
    var->type = ir->type;
    var->data.mode = nir_var_local;
    var->data.read_only = true;
-   var->constant_value = constant_copy(ir, var);
    var->constant_initializer = constant_copy(ir, var);
    exec_list_push_tail(&this->impl->locals, &var->node);
 

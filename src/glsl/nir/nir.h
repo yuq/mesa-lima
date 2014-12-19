@@ -200,8 +200,8 @@ typedef struct {
       /**
        * Was an initial binding explicitly set in the shader?
        *
-       * If so, constant_value contains an integer ir_constant representing the
-       * initial binding point.
+       * If so, constant_initializer contains an integer nir_constant
+       * representing the initial binding point.
        */
       unsigned explicit_binding:1;
 
@@ -343,17 +343,7 @@ typedef struct {
    /*@}*/
 
    /**
-    * Value assigned in the initializer of a variable declared "const"
-    */
-   nir_constant *constant_value;
-
-   /**
     * Constant expression assigned in the initializer of the variable
-    *
-    * \warning
-    * This field and \c ::constant_value are distinct.  Even if the two fields
-    * refer to constants with the same value, they must point to separate
-    * objects.
     */
    nir_constant *constant_initializer;
 
