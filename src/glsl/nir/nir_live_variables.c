@@ -25,6 +25,7 @@
  */
 
 #include "nir.h"
+#include "nir_worklist.h"
 
 /*
  * Basic liveness analysis.  This works only in SSA form.
@@ -43,7 +44,8 @@
 struct live_variables_state {
    unsigned num_ssa_defs;
    unsigned bitset_words;
-   bool progress;
+
+   nir_block_worklist worklist;
 };
 
 static bool
@@ -68,6 +70,9 @@ index_ssa_definitions_block(nir_block *block, void *state)
    return true;
 }
 
+/* Initialize the liveness data to zero and add the given block to the
+ * worklist.
+ */
 static bool
 init_liveness_block(nir_block *block, void *void_state)
 {
@@ -80,6 +85,8 @@ init_liveness_block(nir_block *block, void *void_state)
    block->live_out = reralloc(block, block->live_out, BITSET_WORD,
                               state->bitset_words);
    memset(block->live_out, 0, state->bitset_words * sizeof(BITSET_WORD));
+
+   nir_block_worklist_push_head(&state->worklist, block);
 
    return true;
 }
@@ -110,12 +117,16 @@ set_ssa_def_dead(nir_ssa_def *def, void *void_live)
    return true;
 }
 
-/* Phi nodes exist "between" blocks and all the phi nodes at the start of a
+/** Propagates the live in of succ across the edge to the live out of pred
+ *
+ * Phi nodes exist "between" blocks and all the phi nodes at the start of a
  * block act "in parallel".  When we propagate from the live_in of one
  * block to the live out of the other, we have to kill any writes from phis
  * and make live any sources.
+ *
+ * Returns true if updating live out of pred added anything
  */
-static void
+static bool
 propagate_across_edge(nir_block *pred, nir_block *succ,
                       struct live_variables_state *state)
 {
@@ -144,44 +155,81 @@ propagate_across_edge(nir_block *pred, nir_block *succ,
       }
    }
 
+   BITSET_WORD progress = 0;
    for (unsigned i = 0; i < state->bitset_words; ++i) {
-      state->progress = state->progress || (live[i] & ~pred->live_out[i]) != 0;
+      progress |= live[i] & ~pred->live_out[i];
       pred->live_out[i] |= live[i];
    }
+   return progress != 0;
 }
 
-static bool
-walk_instructions_block(nir_block *block, void *void_state)
+void
+nir_live_variables_impl(nir_function_impl *impl)
 {
-   struct live_variables_state *state = void_state;
+   struct live_variables_state state;
 
-   /* The live out is the union (modulo phi nodes) of the live ins of its
-    * successors */
-   if (block->successors[0])
-      propagate_across_edge(block, block->successors[0], state);
-   if (block->successors[1])
-      propagate_across_edge(block, block->successors[1], state);
+   /* We start at 1 because we reserve the index value of 0 for ssa_undef
+    * instructions.  Those are never live, so their liveness information
+    * can be compacted into a single bit.
+    */
+   state.num_ssa_defs = 1;
+   nir_foreach_block(impl, index_ssa_definitions_block, &state);
 
-   memcpy(block->live_in, block->live_out,
-          state->bitset_words * sizeof(BITSET_WORD));
+   nir_block_worklist_init(&state.worklist, impl->num_blocks, NULL);
 
-   nir_if *following_if = nir_block_get_following_if(block);
-   if (following_if)
-      set_src_live(&following_if->condition, block->live_in);
+   /* We now know how many unique ssa definitions we have and we can go
+    * ahead and allocate live_in and live_out sets and add all of the
+    * blocks to the worklist.
+    */
+   state.bitset_words = BITSET_WORDS(state.num_ssa_defs);
+   nir_foreach_block(impl, init_liveness_block, &state);
 
-   nir_foreach_instr_reverse(block, instr) {
-      /* Phi nodes are handled seperately so we want to skip them.  Since
-       * we are going backwards and they are at the beginning, we can just
-       * break as soon as we see one.
+   /* We're now ready to work through the worklist and update the liveness
+    * sets of each of the blocks.  By the time we get to this point, every
+    * block in the function implementation has been pushed onto the
+    * worklist in reverse order.  As long as we keep the worklist
+    * up-to-date as we go, everything will get covered.
+    */
+   while (!nir_block_worklist_is_empty(&state.worklist)) {
+      /* We pop them off in the reverse order we pushed them on.  This way
+       * the first walk of the instructions is backwards so we only walk
+       * once in the case of no control flow.
        */
-      if (instr->type == nir_instr_type_phi)
-         break;
+      nir_block *block = nir_block_worklist_pop_head(&state.worklist);
 
-      nir_foreach_ssa_def(instr, set_ssa_def_dead, block->live_in);
-      nir_foreach_src(instr, set_src_live, block->live_in);
+      memcpy(block->live_in, block->live_out,
+             state.bitset_words * sizeof(BITSET_WORD));
+
+      nir_if *following_if = nir_block_get_following_if(block);
+      if (following_if)
+         set_src_live(&following_if->condition, block->live_in);
+
+      nir_foreach_instr_reverse(block, instr) {
+         /* Phi nodes are handled seperately so we want to skip them.  Since
+          * we are going backwards and they are at the beginning, we can just
+          * break as soon as we see one.
+          */
+         if (instr->type == nir_instr_type_phi)
+            break;
+
+         nir_foreach_ssa_def(instr, set_ssa_def_dead, block->live_in);
+         nir_foreach_src(instr, set_src_live, block->live_in);
+      }
+
+      /* Walk over all of the predecessors of the current block updating
+       * their live in with the live out of this one.  If anything has
+       * changed, add the predecessor to the work list so that we ensure
+       * that the new information is used.
+       */
+      struct set_entry *entry;
+      set_foreach(block->predecessors, entry) {
+         nir_block *pred = (nir_block *)entry->key;
+         if (propagate_across_edge(pred, block, &state))
+            nir_block_worklist_push_tail(&state.worklist, pred);
+      }
    }
 
-   return true;
+   nir_block_worklist_fini(&state.worklist);
 }
 
 static bool
@@ -245,32 +293,4 @@ nir_ssa_defs_interfere(nir_ssa_def *a, nir_ssa_def *b)
    } else {
       return nir_ssa_def_is_live_at(b, a->parent_instr);
    }
-}
-
-void
-nir_live_variables_impl(nir_function_impl *impl)
-{
-   struct live_variables_state state;
-
-   /* We start at 1 because we reserve the index value of 0 for ssa_undef
-    * instructions.  Those are never live, so their liveness information
-    * can be compacted into a single bit.
-    */
-   state.num_ssa_defs = 1;
-   nir_foreach_block(impl, index_ssa_definitions_block, &state);
-
-   /* We now know how many unique ssa definitions we have and we can go
-    * ahead and allocate live_in and live_out sets
-    */
-   state.bitset_words = BITSET_WORDS(state.num_ssa_defs);
-   nir_foreach_block(impl, init_liveness_block, &state);
-
-   /* We need to propagate the liveness back through the CFG.  Thanks to
-    * the wonders of SSA, this will run no more times than the depth of the
-    * deepest loop + 1.
-    */
-   do {
-      state.progress = false;
-      nir_foreach_block_reverse(impl, walk_instructions_block, &state);
-   } while (state.progress);
 }
