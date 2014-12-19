@@ -3567,7 +3567,7 @@ fs_visitor::allocate_registers()
 {
    bool allocated_without_spills;
 
-   static enum instruction_scheduler_mode pre_modes[] = {
+   static const enum instruction_scheduler_mode pre_modes[] = {
       SCHEDULE_PRE,
       SCHEDULE_PRE_NON_LIFO,
       SCHEDULE_PRE_LIFO,
