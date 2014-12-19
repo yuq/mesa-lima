@@ -754,20 +754,20 @@ typedef struct {
  *
  * \sa nir_intrinsic_info::flags
  */
-/*@{*/
-/**
- * whether the intrinsic can be safely eliminated if none of its register
- * outputs are being used.
- */
-#define NIR_INTRINSIC_CAN_ELIMINATE (1 << 0)
+typedef enum {
+   /**
+    * whether the intrinsic can be safely eliminated if none of its output
+    * value is not being used.
+    */
+   NIR_INTRINSIC_CAN_ELIMINATE = (1 << 0),
 
-/**
- * Whether the intrinsic can be reordered with respect to any other intrinsic,
- * i.e. whether the only reodering dependencies of the intrinsic are due to the
- * register reads/writes.
- */
-#define NIR_INTRINSIC_CAN_REORDER   (1 << 1)
-/*@}*/
+   /**
+    * Whether the intrinsic can be reordered with respect to any other
+    * intrinsic, i.e. whether the only reordering dependencies of the
+    * intrinsic are due to the register reads/writes.
+    */
+   NIR_INTRINSIC_CAN_REORDER = (1 << 1),
+} nir_intrinsic_semantic_flag;
 
 #define NIR_INTRINSIC_MAX_INPUTS 4
 
@@ -799,7 +799,7 @@ typedef struct {
    unsigned num_indices;
 
    /** semantic flags for calls to this intrinsic */
-   unsigned flags;
+   nir_intrinsic_semantic_flag flags;
 } nir_intrinsic_info;
 
 extern const nir_intrinsic_info nir_intrinsic_infos[nir_num_intrinsics];
