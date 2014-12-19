@@ -50,6 +50,8 @@ NIR_FILES = \
 	$(GLSL_SRCDIR)/nir/nir_split_var_copies.c \
 	$(GLSL_SRCDIR)/nir/nir_to_ssa.c \
 	$(GLSL_SRCDIR)/nir/nir_validate.c \
+	$(GLSL_SRCDIR)/nir/nir_worklist.c \
+	$(GLSL_SRCDIR)/nir/nir_worklist.h \
 	$(GLSL_SRCDIR)/nir/nir_types.cpp \
 	$(GLSL_SRCDIR)/nir/glsl_to_nir.cpp \
 	$(NIR_GENERATED_FILES)
