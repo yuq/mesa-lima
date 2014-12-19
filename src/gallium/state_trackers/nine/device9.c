@@ -1219,7 +1219,7 @@ NineDevice9_StretchRect( struct NineDevice9 *This,
             pSourceRect->left, pSourceRect->top,
             pSourceRect->right, pSourceRect->bottom);
     if (pDestRect)
-        DBG("pSourceRect=(%u,%u)-(%u,%u)\n", pDestRect->left, pDestRect->top,
+        DBG("pDestRect=(%u,%u)-(%u,%u)\n", pDestRect->left, pDestRect->top,
             pDestRect->right, pDestRect->bottom);
 
     user_assert(!zs || !This->in_scene, D3DERR_INVALIDCALL);
