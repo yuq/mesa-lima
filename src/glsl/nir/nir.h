@@ -98,7 +98,7 @@ typedef struct nir_constant {
     * Value of the constant.
     *
     * The field used to back the values supplied by the constant is determined
-    * by the type associated with the \c ir_instruction.  Constants may be
+    * by the type associated with the \c nir_variable.  Constants may be
     * scalars, vectors, or matrices.
     */
    union nir_constant_data value;
@@ -175,7 +175,7 @@ typedef struct {
       /**
        * Interpolation mode for shader inputs / outputs
        *
-       * \sa ir_variable_interpolation
+       * \sa glsl_interp_qualifier
        */
       unsigned interpolation:2;
 
@@ -398,7 +398,7 @@ typedef struct {
    /** set of nir_instr's where this register is defined (written to) */
    struct set *defs;
 
-   /** set of ifs where this register is used as a condition */
+   /** set of nir_if's where this register is used as a condition */
    struct set *if_uses;
 } nir_register;
 
@@ -441,7 +441,10 @@ typedef struct {
 
    nir_instr *parent_instr;
 
+   /** set of nir_instr's where this register is used (read from) */
    struct set *uses;
+
+   /** set of nir_if's where this register is used as a condition */
    struct set *if_uses;
 
    uint8_t num_components;
@@ -494,8 +497,8 @@ typedef struct {
     */
    /*@{*/
    /**
-    * For inputs interpreted as a floating point, flips the sign bit. For inputs
-    * interpreted as an integer, performs the two's complement negation.
+    * For inputs interpreted as floating point, flips the sign bit. For
+    * inputs interpreted as integers, performs the two's complement negation.
     */
    bool negate;
 
@@ -584,8 +587,8 @@ typedef struct {
    unsigned output_size;
 
    /**
-    * The type of vector that the instruction outputs. Note that this
-    * determines whether the saturate modifier is allowed.
+    * The type of vector that the instruction outputs. Note that the
+    * staurate modifier is only allowed on outputs with the float type.
     */
 
    nir_alu_type output_type;
@@ -596,9 +599,9 @@ typedef struct {
    unsigned input_sizes[4];
 
    /**
-    * The type of vector that each input takes. Note that negate is only
-    * allowed on inputs with int or float type, and behaves differently on the
-    * two, and absolute value is only allowed on float type inputs.
+    * The type of vector that each input takes. Note that negate and
+    * absolute value are only allowed on inputs with int or float type and
+    * behave differently on the two.
     */
    nir_alu_type input_types[4];
 
@@ -698,6 +701,32 @@ typedef enum {
 #undef INTRINSIC
 #undef LAST_INTRINSIC
 
+/** Represents an intrinsic
+ *
+ * An intrinsic is an instruction type for handling things that are
+ * more-or-less regular operations but don't just consume and produce SSA
+ * values like ALU operations do.  Intrinsics are not for things that have
+ * special semantic meaning such as phi nodes and parallel copies.
+ * Examples of intrinsics include variable load/store operations, system
+ * value loads, and the like.  Even though texturing more-or-less falls
+ * under this category, texturing is its own instruction type because
+ * trying to represent texturing with intrinsics would lead to a
+ * combinatorial explosion of intrinsic opcodes.
+ *
+ * By having a single instruction type for handling a lot of different
+ * cases, optimization passes can look for intrinsics and, for the most
+ * part, completely ignore them.  Each intrinsic type also has a few
+ * possible flags that govern whether or not they can be reordered or
+ * eliminated.  That way passes like dead code elimination can still work
+ * on intrisics without understanding the meaning of each.
+ *
+ * Each intrinsic has some number of constant indices, some number of
+ * variables, and some number of sources.  What these sources, variables,
+ * and indices mean depends on the intrinsic and is documented with the
+ * intrinsic declaration in nir_intrinsics.h.  Intrinsics and texture
+ * instructions are the only types of instruction that can operate on
+ * variables.
+ */
 typedef struct {
    nir_instr instr;
 
@@ -705,7 +734,14 @@ typedef struct {
 
    nir_dest dest;
 
-   /** number of components if this is a vectorized intrinsic */
+   /** number of components if this is a vectorized intrinsic
+    *
+    * Similarly to ALU operations, some intrinsics are vectorized.
+    * An intrinsic is vectorized if nir_intrinsic_infos.dest_components == 0.
+    * For vectorized intrinsics, the num_components field specifies the
+    * number of destination components and the number of source components
+    * for all sources with nir_intrinsic_infos.src_components[i] == 0.
+    */
    uint8_t num_components;
 
    int const_index[3];
@@ -947,14 +983,18 @@ typedef struct {
 
 typedef struct {
    struct exec_node node;
+
+   /* The predecessor block corresponding to this source */
    struct nir_block *pred;
+
    nir_src src;
 } nir_phi_src;
 
 typedef struct {
    nir_instr instr;
 
-   struct exec_list srcs;
+   struct exec_list srcs; /** < list of nir_phi_src */
+
    nir_dest dest;
 } nir_phi_instr;
 
@@ -1020,8 +1060,10 @@ typedef struct nir_cf_node {
 
 typedef struct nir_block {
    nir_cf_node cf_node;
-   struct exec_list instr_list;
 
+   struct exec_list instr_list; /** < list of nir_instr */
+
+   /** generic block index; generated by nir_index_blocks */
    unsigned index;
 
    /*
@@ -1030,6 +1072,7 @@ typedef struct nir_block {
     */
    struct nir_block *successors[2];
 
+   /* Set of nir_block predecessors in the CFG */
    struct set *predecessors;
 
    /*
@@ -1042,6 +1085,7 @@ typedef struct nir_block {
    unsigned num_dom_children;
    struct nir_block **dom_children;
 
+   /* Set of nir_block's on the dominance frontier of this block */
    struct set *dom_frontier;
 
    /* live in and out for this block; used for liveness analysis */
@@ -1064,8 +1108,9 @@ typedef struct nir_block {
 typedef struct {
    nir_cf_node cf_node;
    nir_src condition;
-   struct exec_list then_list;
-   struct exec_list else_list;
+
+   struct exec_list then_list; /** < list of nir_cf_node */
+   struct exec_list else_list; /** < list of nir_cf_node */
 } nir_if;
 
 #define nir_if_first_then_node(if) \
@@ -1079,7 +1124,8 @@ typedef struct {
 
 typedef struct {
    nir_cf_node cf_node;
-   struct exec_list body;
+
+   struct exec_list body; /** < list of nir_cf_node */
 } nir_loop;
 
 #define nir_loop_first_cf_node(loop) \
@@ -1177,7 +1223,7 @@ typedef struct nir_function_overload {
 typedef struct nir_function {
    struct exec_node node;
 
-   struct exec_list overload_list;
+   struct exec_list overload_list; /** < list of nir_function_overload */
    const char *name;
    struct nir_shader *shader;
 } nir_function;
@@ -1187,23 +1233,24 @@ typedef struct nir_function {
                   exec_list_get_head(&(func)->overload_list), node)
 
 typedef struct nir_shader {
-   /** hash table of name -> uniform */
+   /** hash table of name -> uniform nir_variable */
    struct hash_table *uniforms;
 
-   /** hash table of name -> input */
+   /** hash table of name -> input nir_variable */
    struct hash_table *inputs;
 
-   /** hash table of name -> output */
+   /** hash table of name -> output nir_variable */
    struct hash_table *outputs;
 
    /** list of global variables in the shader */
    struct exec_list globals;
 
+   /** list of system value variables in the shader */
    struct exec_list system_values;
 
-   struct exec_list functions;
+   struct exec_list functions; /** < list of nir_function */
 
-   /** list of global registers in the shader */
+   /** list of global register in the shader */
    struct exec_list registers;
 
    /** structures used in this shader */
