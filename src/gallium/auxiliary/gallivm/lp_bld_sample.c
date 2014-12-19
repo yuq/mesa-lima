@@ -411,6 +411,9 @@ lp_build_rho(struct lp_build_sample_context *bld,
          if (dims > 2) {
             ddx_ddy[1] = lp_build_abs(coord_bld, ddx_ddy[1]);
          }
+         else {
+            ddx_ddy[1] = NULL; /* silence compiler warning */
+         }
 
          if (dims < 2) {
             rho_xvec = lp_build_swizzle_aos(coord_bld, ddx_ddy[0], swizzle0);

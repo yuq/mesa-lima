@@ -952,7 +952,7 @@ build_gather(struct lp_build_context *bld,
    LLVMBuilderRef builder = bld->gallivm->builder;
    LLVMValueRef res = bld->undef;
    unsigned i;
-   LLVMValueRef temp_ptr;
+   LLVMValueRef temp_ptr = NULL;
 
    if (overflow_mask) {
       temp_ptr = lp_build_alloca(
