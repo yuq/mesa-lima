@@ -511,6 +511,19 @@ fd4_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 				A4XX_RB_FS_OUTPUT_SAMPLE_MASK(0xffff));
 	}
 
+	if (dirty & FD_DIRTY_BLEND_COLOR) {
+		struct pipe_blend_color *bcolor = &ctx->blend_color;
+		OUT_PKT0(ring, REG_A4XX_RB_BLEND_RED, 4);
+		OUT_RING(ring, A4XX_RB_BLEND_RED_UINT(bcolor->color[0] * 255.0) |
+				A4XX_RB_BLEND_RED_FLOAT(bcolor->color[0]));
+		OUT_RING(ring, A4XX_RB_BLEND_GREEN_UINT(bcolor->color[1] * 255.0) |
+				A4XX_RB_BLEND_GREEN_FLOAT(bcolor->color[1]));
+		OUT_RING(ring, A4XX_RB_BLEND_BLUE_UINT(bcolor->color[2] * 255.0) |
+				A4XX_RB_BLEND_BLUE_FLOAT(bcolor->color[2]));
+		OUT_RING(ring, A4XX_RB_BLEND_ALPHA_UINT(bcolor->color[3] * 255.0) |
+				A4XX_RB_BLEND_ALPHA_FLOAT(bcolor->color[3]));
+	}
+
 	if (dirty & FD_DIRTY_VERTTEX) {
 		if (vp->has_samp)
 			emit_textures(ctx, ring, SB_VERT_TEX, &ctx->verttex);
