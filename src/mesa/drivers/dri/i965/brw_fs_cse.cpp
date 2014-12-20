@@ -109,22 +109,29 @@ is_expression(const fs_inst *const inst)
 }
 
 static bool
-is_expression_commutative(enum opcode op)
+is_expression_commutative(const fs_inst *inst)
 {
-   switch (op) {
+   switch (inst->opcode) {
    case BRW_OPCODE_AND:
    case BRW_OPCODE_OR:
    case BRW_OPCODE_XOR:
    case BRW_OPCODE_ADD:
    case BRW_OPCODE_MUL:
       return true;
+   case BRW_OPCODE_SEL:
+      /* MIN and MAX are commutative. */
+      if (inst->conditional_mod == BRW_CONDITIONAL_GE ||
+          inst->conditional_mod == BRW_CONDITIONAL_L) {
+         return true;
+      }
+      /* fallthrough */
    default:
       return false;
    }
 }
 
 static bool
-operands_match(fs_inst *a, fs_inst *b)
+operands_match(const fs_inst *a, const fs_inst *b)
 {
    fs_reg *xs = a->src;
    fs_reg *ys = b->src;
@@ -133,7 +140,7 @@ operands_match(fs_inst *a, fs_inst *b)
       return xs[0].equals(ys[0]) &&
              ((xs[1].equals(ys[1]) && xs[2].equals(ys[2])) ||
               (xs[2].equals(ys[1]) && xs[1].equals(ys[2])));
-   } else if (!is_expression_commutative(a->opcode)) {
+   } else if (!is_expression_commutative(a)) {
       bool match = true;
       for (int i = 0; i < a->sources; i++) {
          if (!xs[i].equals(ys[i])) {

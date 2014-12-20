@@ -89,28 +89,38 @@ is_expression(const vec4_instruction *const inst)
 }
 
 static bool
-is_expression_commutative(enum opcode op)
+is_expression_commutative(const vec4_instruction *inst)
 {
-   switch (op) {
+   switch (inst->opcode) {
    case BRW_OPCODE_AND:
    case BRW_OPCODE_OR:
    case BRW_OPCODE_XOR:
    case BRW_OPCODE_ADD:
    case BRW_OPCODE_MUL:
       return true;
+   case BRW_OPCODE_SEL:
+      /* MIN and MAX are commutative. */
+      if (inst->conditional_mod == BRW_CONDITIONAL_GE ||
+          inst->conditional_mod == BRW_CONDITIONAL_L) {
+         return true;
+      }
+      /* fallthrough */
    default:
       return false;
    }
 }
 
 static bool
-operands_match(enum opcode op, src_reg *xs, src_reg *ys)
+operands_match(const vec4_instruction *a, const vec4_instruction *b)
 {
-   if (op == BRW_OPCODE_MAD) {
+   const src_reg *xs = a->src;
+   const src_reg *ys = b->src;
+
+   if (a->opcode == BRW_OPCODE_MAD) {
       return xs[0].equals(ys[0]) &&
              ((xs[1].equals(ys[1]) && xs[2].equals(ys[2])) ||
               (xs[2].equals(ys[1]) && xs[1].equals(ys[2])));
-   } else if (!is_expression_commutative(op)) {
+   } else if (!is_expression_commutative(a)) {
       return xs[0].equals(ys[0]) && xs[1].equals(ys[1]) && xs[2].equals(ys[2]);
    } else {
       return (xs[0].equals(ys[0]) && xs[1].equals(ys[1])) ||
@@ -126,7 +136,7 @@ instructions_match(vec4_instruction *a, vec4_instruction *b)
           a->conditional_mod == b->conditional_mod &&
           a->dst.type == b->dst.type &&
           a->dst.writemask == b->dst.writemask &&
-          operands_match(a->opcode, a->src, b->src);
+          operands_match(a, b);
 }
 
 bool
