@@ -336,6 +336,66 @@ src_reg::equals(const src_reg &r) const
 		  sizeof(fixed_hw_reg)) == 0);
 }
 
+bool
+vec4_visitor::opt_vector_float()
+{
+   bool progress = false;
+
+   int last_reg = -1;
+   int remaining_channels;
+   uint8_t imm[4];
+   int inst_count;
+   vec4_instruction *imm_inst[4];
+
+   foreach_block_and_inst_safe(block, vec4_instruction, inst, cfg) {
+      if (last_reg != inst->dst.reg) {
+         last_reg = inst->dst.reg;
+         remaining_channels = WRITEMASK_XYZW;
+
+         inst_count = 0;
+      }
+
+      if (inst->opcode != BRW_OPCODE_MOV ||
+          inst->dst.writemask == WRITEMASK_XYZW ||
+          inst->src[0].file != IMM)
+         continue;
+
+      int vf = brw_float_to_vf(inst->src[0].fixed_hw_reg.dw1.f);
+      if (vf == -1)
+         continue;
+
+      if ((inst->dst.writemask & WRITEMASK_X) != 0)
+         imm[0] = vf;
+      if ((inst->dst.writemask & WRITEMASK_Y) != 0)
+         imm[1] = vf;
+      if ((inst->dst.writemask & WRITEMASK_Z) != 0)
+         imm[2] = vf;
+      if ((inst->dst.writemask & WRITEMASK_W) != 0)
+         imm[3] = vf;
+
+      imm_inst[inst_count++] = inst;
+
+      remaining_channels &= ~inst->dst.writemask;
+      if (remaining_channels == 0) {
+         vec4_instruction *mov = MOV(inst->dst, imm);
+         mov->dst.type = BRW_REGISTER_TYPE_F;
+         mov->dst.writemask = WRITEMASK_XYZW;
+         inst->insert_after(block, mov);
+         last_reg = -1;
+
+         for (int i = 0; i < inst_count; i++) {
+            imm_inst[i]->remove(block);
+         }
+         progress = true;
+      }
+   }
+
+   if (progress)
+      invalidate_live_intervals();
+
+   return progress;
+}
+
 /* Replaces unused channels of a swizzle with channels that are used.
  *
  * For instance, this pass transforms
@@ -1738,6 +1798,7 @@ vec4_visitor::run()
       OPT(opt_register_coalesce);
    } while (progress);
 
+   opt_vector_float();
 
    if (failed)
       return false;
