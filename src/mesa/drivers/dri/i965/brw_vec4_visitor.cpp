@@ -1161,9 +1161,20 @@ vec4_visitor::try_emit_mad(ir_expression *ir)
    ir_rvalue *nonmul = ir->operands[1];
    ir_expression *mul = ir->operands[0]->as_expression();
 
+   bool mul_negate = false;
+   if (mul && mul->operation == ir_unop_neg) {
+      mul = mul->operands[0]->as_expression();
+      mul_negate = true;
+   }
+
    if (!mul || mul->operation != ir_binop_mul) {
       nonmul = ir->operands[0];
       mul = ir->operands[1]->as_expression();
+
+      if (mul && mul->operation == ir_unop_neg) {
+         mul = mul->operands[0]->as_expression();
+         mul_negate = true;
+      }
 
       if (!mul || mul->operation != ir_binop_mul)
          return false;
@@ -1174,6 +1185,7 @@ vec4_visitor::try_emit_mad(ir_expression *ir)
 
    mul->operands[0]->accept(this);
    src_reg src1 = fix_3src_operand(this->result);
+   src1.negate ^= mul_negate;
 
    mul->operands[1]->accept(this);
    src_reg src2 = fix_3src_operand(this->result);
