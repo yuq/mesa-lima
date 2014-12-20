@@ -1798,7 +1798,11 @@ vec4_visitor::run()
       OPT(opt_register_coalesce);
    } while (progress);
 
-   opt_vector_float();
+   if (opt_vector_float()) {
+      opt_cse();
+      opt_copy_propagation();
+      dead_code_eliminate();
+   }
 
    if (failed)
       return false;
