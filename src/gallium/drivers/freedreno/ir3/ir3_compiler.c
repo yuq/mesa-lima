@@ -170,7 +170,11 @@ compile_init(struct ir3_compile_context *ctx, struct ir3_shader_variant *so,
 		break;
 	}
 
-	if (ir3_shader_gpuid(so->shader) >= 400) {
+	if (!so->shader) {
+		/* hack for standalone compiler which does not have
+		 * screen/context:
+		 */
+	} else if (ir3_shader_gpuid(so->shader) >= 400) {
 		/* a4xx seems to have *no* sam.p */
 		lconfig.lower_TXP = ~0;  /* lower all txp */
 	} else {
