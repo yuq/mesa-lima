@@ -2008,18 +2008,13 @@ trans_kill(const struct instr_translater *t,
 	struct ir3_instruction *instr, *immed, *cond = NULL;
 	bool inv = false;
 
-	switch (t->tgsi_opc) {
-	case TGSI_OPCODE_KILL:
-		/* unconditional kill, use enclosing if condition: */
-		if (ctx->branch_count > 0) {
-			unsigned int idx = ctx->branch_count - 1;
-			cond = ctx->branch[idx].cond;
-			inv = ctx->branch[idx].inv;
-		} else {
-			cond = create_immed(ctx, 1.0);
-		}
-
-		break;
+	/* unconditional kill, use enclosing if condition: */
+	if (ctx->branch_count > 0) {
+		unsigned int idx = ctx->branch_count - 1;
+		cond = ctx->branch[idx].cond;
+		inv = ctx->branch[idx].inv;
+	} else {
+		cond = create_immed(ctx, 1.0);
 	}
 
 	compile_assert(ctx, cond);
