@@ -585,6 +585,15 @@ fs_reg::fs_reg(uint32_t u)
 }
 
 /** Vector float immediate value constructor. */
+fs_reg::fs_reg(uint8_t vf[4])
+{
+   init();
+   this->file = IMM;
+   this->type = BRW_REGISTER_TYPE_VF;
+   memcpy(&this->fixed_hw_reg.dw1.ud, vf, sizeof(unsigned));
+}
+
+/** Vector float immediate value constructor. */
 fs_reg::fs_reg(uint8_t vf0, uint8_t vf1, uint8_t vf2, uint8_t vf3)
 {
    init();

@@ -82,6 +82,7 @@ public:
    src_reg(float f);
    src_reg(uint32_t u);
    src_reg(int32_t i);
+   src_reg(uint8_t vf[4]);
    src_reg(uint8_t vf0, uint8_t vf1, uint8_t vf2, uint8_t vf3);
    src_reg(struct brw_reg reg);
 
