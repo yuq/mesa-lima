@@ -305,7 +305,7 @@ fd4_clear(struct fd_context *ctx, unsigned buffers,
 	OUT_RING(ring, 0x00000001);
 
 	fd4_draw(ctx, ring, DI_PT_RECTLIST, USE_VISIBILITY,
-			DI_SRC_SEL_AUTO_INDEX, 2, INDEX_SIZE_IGN, 0, 0, NULL);
+			DI_SRC_SEL_AUTO_INDEX, 2, 1, INDEX_SIZE_IGN, 0, 0, NULL);
 
 	OUT_PKT3(ring, CP_UNKNOWN_1A, 1);
 	OUT_RING(ring, 0x00000000);
