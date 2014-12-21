@@ -1718,6 +1718,8 @@ _mesa_GetProgramBinary(GLuint program, GLsizei bufSize, GLsizei *length,
    }
 
    *length = 0;
+   _mesa_error(ctx, GL_INVALID_OPERATION,
+               "glGetProgramBinary(driver supports zero binary formats)");
 
    (void) binaryFormat;
    (void) binary;
