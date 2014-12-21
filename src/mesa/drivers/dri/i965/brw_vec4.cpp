@@ -572,6 +572,22 @@ vec4_visitor::opt_algebraic()
 
    foreach_block_and_inst(block, vec4_instruction, inst, cfg) {
       switch (inst->opcode) {
+      case BRW_OPCODE_MOV:
+         if (inst->src[0].file != IMM)
+            break;
+
+         if (inst->saturate) {
+            if (inst->dst.type != inst->src[0].type)
+               assert(!"unimplemented: saturate mixed types");
+
+            if (brw_saturate_immediate(inst->dst.type,
+                                       &inst->src[0].fixed_hw_reg)) {
+               inst->saturate = false;
+               progress = true;
+            }
+         }
+         break;
+
       case VEC4_OPCODE_UNPACK_UNIFORM:
          if (inst->src[0].file != UNIFORM) {
             inst->opcode = BRW_OPCODE_MOV;

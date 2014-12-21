@@ -575,6 +575,53 @@ brw_instruction_name(enum opcode op)
    unreachable("not reached");
 }
 
+bool
+brw_saturate_immediate(enum brw_reg_type type, struct brw_reg *reg)
+{
+   union {
+      unsigned ud;
+      int d;
+      float f;
+   } imm = { reg->dw1.ud }, sat_imm;
+
+   switch (type) {
+   case BRW_REGISTER_TYPE_UD:
+   case BRW_REGISTER_TYPE_D:
+   case BRW_REGISTER_TYPE_UQ:
+   case BRW_REGISTER_TYPE_Q:
+      /* Nothing to do. */
+      return false;
+   case BRW_REGISTER_TYPE_UW:
+      sat_imm.ud = CLAMP(imm.ud, 0, USHRT_MAX);
+      break;
+   case BRW_REGISTER_TYPE_W:
+      sat_imm.d = CLAMP(imm.d, SHRT_MIN, SHRT_MAX);
+      break;
+   case BRW_REGISTER_TYPE_F:
+      sat_imm.f = CLAMP(imm.f, 0.0f, 1.0f);
+      break;
+   case BRW_REGISTER_TYPE_UB:
+      sat_imm.ud = CLAMP(imm.ud, 0, UCHAR_MAX);
+      break;
+   case BRW_REGISTER_TYPE_B:
+      sat_imm.d = CLAMP(imm.d, CHAR_MIN, CHAR_MAX);
+      break;
+   case BRW_REGISTER_TYPE_V:
+   case BRW_REGISTER_TYPE_UV:
+   case BRW_REGISTER_TYPE_VF:
+      assert(!"unimplemented: saturate vector immediate");
+   case BRW_REGISTER_TYPE_DF:
+   case BRW_REGISTER_TYPE_HF:
+      assert(!"unimplemented: saturate DF/HF immediate");
+   }
+
+   if (imm.ud != sat_imm.ud) {
+      reg->dw1.ud = sat_imm.ud;
+      return true;
+   }
+   return false;
+}
+
 backend_visitor::backend_visitor(struct brw_context *brw,
                                  struct gl_shader_program *shader_prog,
                                  struct gl_program *prog,

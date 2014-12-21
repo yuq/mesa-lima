@@ -2292,6 +2292,22 @@ fs_visitor::opt_algebraic()
 
    foreach_block_and_inst(block, fs_inst, inst, cfg) {
       switch (inst->opcode) {
+      case BRW_OPCODE_MOV:
+         if (inst->src[0].file != IMM)
+            break;
+
+         if (inst->saturate) {
+            if (inst->dst.type != inst->src[0].type)
+               assert(!"unimplemented: saturate mixed types");
+
+            if (brw_saturate_immediate(inst->dst.type,
+                                       &inst->src[0].fixed_hw_reg)) {
+               inst->saturate = false;
+               progress = true;
+            }
+         }
+         break;
+
       case BRW_OPCODE_MUL:
 	 if (inst->src[1].file != IMM)
 	    continue;
