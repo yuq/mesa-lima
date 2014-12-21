@@ -330,7 +330,7 @@ try_copy_propagate(struct brw_context *brw, vec4_instruction *inst,
 }
 
 bool
-vec4_visitor::opt_copy_propagation()
+vec4_visitor::opt_copy_propagation(bool do_constant_prop)
 {
    bool progress = false;
    struct copy_entry entries[virtual_grf_reg_count];
@@ -395,7 +395,7 @@ vec4_visitor::opt_copy_propagation()
 	 if (c != 4)
 	    continue;
 
-	 if (try_constant_propagate(brw, inst, i, &entry))
+         if (do_constant_prop && try_constant_propagate(brw, inst, i, &entry))
             progress = true;
 
 	 if (try_copy_propagate(brw, inst, i, &entry, reg))

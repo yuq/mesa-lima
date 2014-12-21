@@ -369,7 +369,7 @@ public:
    bool opt_reduce_swizzle();
    bool dead_code_eliminate();
    bool virtual_grf_interferes(int a, int b);
-   bool opt_copy_propagation();
+   bool opt_copy_propagation(bool do_constant_prop = true);
    bool opt_cse_local(bblock_t *block);
    bool opt_cse();
    bool opt_algebraic();
