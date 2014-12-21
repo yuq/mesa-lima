@@ -431,7 +431,7 @@ dri2_drm_swap_buffers(_EGLDriver *drv, _EGLDisplay *disp, _EGLSurface *draw)
          dri2_surf->back = NULL;
       }
 
-      (*dri2_dpy->flush->flush)(dri2_surf->dri_drawable);
+      dri2_flush_drawable_for_swapbuffers(disp, draw);
       (*dri2_dpy->flush->invalidate)(dri2_surf->dri_drawable);
    }
 

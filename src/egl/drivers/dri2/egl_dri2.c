@@ -1087,6 +1087,42 @@ dri2_swap_interval(_EGLDriver *drv, _EGLDisplay *dpy, _EGLSurface *surf,
    return dri2_dpy->vtbl->swap_interval(drv, dpy, surf, interval);
 }
 
+/**
+ * Asks the client API to flush any rendering to the drawable so that we can
+ * do our swapbuffers.
+ */
+void
+dri2_flush_drawable_for_swapbuffers(_EGLDisplay *disp, _EGLSurface *draw)
+{
+   struct dri2_egl_display *dri2_dpy = dri2_egl_display(disp);
+   struct dri2_egl_surface *dri2_surf = dri2_egl_surface(draw);
+
+   if (dri2_dpy->flush) {
+      if (dri2_dpy->flush->base.version >= 4) {
+         /* We know there's a current context because:
+          *
+          *     "If surface is not bound to the calling thread’s current
+          *      context, an EGL_BAD_SURFACE error is generated."
+         */
+         _EGLContext *ctx = _eglGetCurrentContext();
+         struct dri2_egl_context *dri2_ctx = dri2_egl_context(ctx);
+
+         /* From the EGL 1.4 spec (page 52):
+          *
+          *     "The contents of ancillary buffers are always undefined
+          *      after calling eglSwapBuffers."
+          */
+         dri2_dpy->flush->flush_with_flags(dri2_ctx->dri_context,
+                                           dri2_surf->dri_drawable,
+                                           __DRI2_FLUSH_DRAWABLE |
+                                           __DRI2_FLUSH_INVALIDATE_ANCILLARY,
+                                           __DRI2_THROTTLE_SWAPBUFFER);
+      } else {
+         dri2_dpy->flush->flush(dri2_surf->dri_drawable);
+      }
+   }
+}
+
 static EGLBoolean
 dri2_swap_buffers(_EGLDriver *drv, _EGLDisplay *dpy, _EGLSurface *surf)
 {
