@@ -1680,16 +1680,35 @@ _mesa_GetProgramBinary(GLuint program, GLsizei bufSize, GLsizei *length,
                        GLenum *binaryFormat, GLvoid *binary)
 {
    struct gl_shader_program *shProg;
+   GLsizei length_dummy;
    GET_CURRENT_CONTEXT(ctx);
 
    shProg = _mesa_lookup_shader_program_err(ctx, program, "glGetProgramBinary");
    if (!shProg)
       return;
 
+   /* The ARB_get_program_binary spec says:
+    *
+    *     "If <length> is NULL, then no length is returned."
+    *
+    * Ensure that length always points to valid storage to avoid multiple NULL
+    * pointer checks below.
+    */
+   if (length != NULL)
+      length = &length_dummy;
+
+
+   /* The ARB_get_program_binary spec says:
+    *
+    *     "When a program object's LINK_STATUS is FALSE, its program binary
+    *     length is zero, and a call to GetProgramBinary will generate an
+    *     INVALID_OPERATION error.
+    */
    if (!shProg->LinkStatus) {
       _mesa_error(ctx, GL_INVALID_OPERATION,
                   "glGetProgramBinary(program %u not linked)",
                   shProg->Name);
+      *length = 0;
       return;
    }
 
@@ -1698,12 +1717,7 @@ _mesa_GetProgramBinary(GLuint program, GLsizei bufSize, GLsizei *length,
       return;
    }
 
-   /* The ARB_get_program_binary spec says:
-    *
-    *     "If <length> is NULL, then no length is returned."
-    */
-   if (length != NULL)
-      *length = 0;
+   *length = 0;
 
    (void) binaryFormat;
    (void) binary;
