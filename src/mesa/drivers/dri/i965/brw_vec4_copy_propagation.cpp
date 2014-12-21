@@ -50,7 +50,9 @@ is_direct_copy(vec4_instruction *inst)
 	   inst->dst.file == GRF &&
 	   !inst->dst.reladdr &&
 	   !inst->src[0].reladdr &&
-	   inst->dst.type == inst->src[0].type);
+	   (inst->dst.type == inst->src[0].type ||
+            (inst->dst.type == BRW_REGISTER_TYPE_F &&
+             inst->src[0].type == BRW_REGISTER_TYPE_VF)));
 }
 
 static bool
@@ -77,6 +79,22 @@ is_channel_updated(vec4_instruction *inst, src_reg *values[4], int ch)
 	   inst->dst.writemask & (1 << BRW_GET_SWZ(src->swizzle, ch)));
 }
 
+static unsigned
+swizzle_vf_imm(unsigned vf4, unsigned swizzle)
+{
+   union {
+      unsigned vf4;
+      uint8_t vf[4];
+   } v = { vf4 }, ret;
+
+   ret.vf[0] = v.vf[BRW_GET_SWZ(swizzle, 0)];
+   ret.vf[1] = v.vf[BRW_GET_SWZ(swizzle, 1)];
+   ret.vf[2] = v.vf[BRW_GET_SWZ(swizzle, 2)];
+   ret.vf[3] = v.vf[BRW_GET_SWZ(swizzle, 3)];
+
+   return ret.vf4;
+}
+
 static bool
 try_constant_propagate(struct brw_context *brw, vec4_instruction *inst,
                        int arg, struct copy_entry *entry)
@@ -98,6 +116,8 @@ try_constant_propagate(struct brw_context *brw, vec4_instruction *inst,
    if (inst->src[arg].abs) {
       if (value.type == BRW_REGISTER_TYPE_F) {
 	 value.fixed_hw_reg.dw1.f = fabs(value.fixed_hw_reg.dw1.f);
+      } else if (value.type == BRW_REGISTER_TYPE_VF) {
+         value.fixed_hw_reg.dw1.ud &= ~0x80808080;
       } else if (value.type == BRW_REGISTER_TYPE_D) {
 	 if (value.fixed_hw_reg.dw1.d < 0)
 	    value.fixed_hw_reg.dw1.d = -value.fixed_hw_reg.dw1.d;
@@ -107,9 +127,15 @@ try_constant_propagate(struct brw_context *brw, vec4_instruction *inst,
    if (inst->src[arg].negate) {
       if (value.type == BRW_REGISTER_TYPE_F)
 	 value.fixed_hw_reg.dw1.f = -value.fixed_hw_reg.dw1.f;
+      else if (value.type == BRW_REGISTER_TYPE_VF)
+         value.fixed_hw_reg.dw1.ud ^= 0x80808080;
       else
 	 value.fixed_hw_reg.dw1.ud = -value.fixed_hw_reg.dw1.ud;
    }
+
+   if (value.type == BRW_REGISTER_TYPE_VF)
+      value.fixed_hw_reg.dw1.ud = swizzle_vf_imm(value.fixed_hw_reg.dw1.ud,
+                                                 inst->src[arg].swizzle);
 
    switch (inst->opcode) {
    case BRW_OPCODE_MOV:
