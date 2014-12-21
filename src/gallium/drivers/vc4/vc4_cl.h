@@ -117,15 +117,21 @@ cl_start_shader_reloc(struct vc4_cl *cl, uint32_t n)
 }
 
 static inline void
-cl_reloc(struct vc4_context *vc4, struct vc4_cl *cl,
-         struct vc4_bo *bo, uint32_t offset)
+cl_reloc_hindex(struct vc4_cl *cl, uint32_t hindex, uint32_t offset)
 {
-        *(uint32_t *)(cl->base + cl->reloc_next) = vc4_gem_hindex(vc4, bo);
+        *(uint32_t *)(cl->base + cl->reloc_next) = hindex;
         cl->reloc_next += 4;
 
         cl->reloc_count--;
 
         cl_u32(cl, offset);
+}
+
+static inline void
+cl_reloc(struct vc4_context *vc4, struct vc4_cl *cl,
+         struct vc4_bo *bo, uint32_t offset)
+{
+        cl_reloc_hindex(cl, vc4_gem_hindex(vc4, bo), offset);
 }
 
 #endif /* VC4_CL_H */
