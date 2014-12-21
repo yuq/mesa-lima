@@ -1800,7 +1800,8 @@ vec4_visitor::run()
 
    if (opt_vector_float()) {
       opt_cse();
-      opt_copy_propagation();
+      opt_copy_propagation(false);
+      opt_copy_propagation(true);
       dead_code_eliminate();
    }
 
