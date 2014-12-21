@@ -322,10 +322,11 @@ fd4_emit_vertex_bufs(struct fd_ringbuffer *ring, struct fd4_emit *emit)
 			OUT_PKT0(ring, REG_A4XX_VFD_FETCH(j), 4);
 			OUT_RING(ring, A4XX_VFD_FETCH_INSTR_0_FETCHSIZE(fs - 1) |
 					A4XX_VFD_FETCH_INSTR_0_BUFSTRIDE(vb->stride) |
+					COND(elem->instance_divisor, A4XX_VFD_FETCH_INSTR_0_INSTANCED) |
 					COND(switchnext, A4XX_VFD_FETCH_INSTR_0_SWITCHNEXT));
 			OUT_RELOC(ring, rsc->bo, off, 0, 0);
 			OUT_RING(ring, A4XX_VFD_FETCH_INSTR_2_SIZE(size));
-			OUT_RING(ring, 0x00000001);
+			OUT_RING(ring, A4XX_VFD_FETCH_INSTR_3_STEPRATE(MAX2(1, elem->instance_divisor)));
 
 			OUT_PKT0(ring, REG_A4XX_VFD_DECODE_INSTR(j), 1);
 			OUT_RING(ring, A4XX_VFD_DECODE_INSTR_CONSTFILL |
@@ -351,7 +352,7 @@ fd4_emit_vertex_bufs(struct fd_ringbuffer *ring, struct fd4_emit *emit)
 			A4XX_VFD_CONTROL_1_REGID4VTX(vertex_regid) |
 			A4XX_VFD_CONTROL_1_REGID4INST(instance_regid));
 	OUT_RING(ring, 0x00000000);   /* XXX VFD_CONTROL_2 */
-	OUT_RING(ring, 0x0000fc00);   /* XXX VFD_CONTROL_3 */
+	OUT_RING(ring, A4XX_VFD_CONTROL_3_REGID_VTXCNT(regid(63, 0)));
 	OUT_RING(ring, 0x00000000);   /* XXX VFD_CONTROL_4 */
 
 	/* cache invalidate, otherwise vertex fetch could see
