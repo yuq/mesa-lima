@@ -46,6 +46,10 @@ can_do_pipelined_register_writes(struct brw_context *brw)
    if (brw->gen >= 8)
       return true;
 
+   static int result = -1;
+   if (result != -1)
+      return result;
+
    /* We use SO_WRITE_OFFSET0 since you're supposed to write it (unlike the
     * statistics registers), and we already reset it to zero before using it.
     */
@@ -91,6 +95,8 @@ can_do_pipelined_register_writes(struct brw_context *brw)
    bool success = data[offset] == expected_value;
    drm_intel_bo_unmap(brw->batch.workaround_bo);
 
+   result = success;
+
    return success;
 }
 
@@ -99,6 +105,10 @@ can_write_oacontrol(struct brw_context *brw)
 {
    if (brw->gen < 6 || brw->gen >= 8)
       return false;
+
+   static int result = -1;
+   if (result != -1)
+      return result;
 
    /* Set "Select Context ID" to a particular address (which is likely not a
     * context), but leave all counting disabled.  This should be harmless.
@@ -149,6 +159,8 @@ can_write_oacontrol(struct brw_context *brw)
    data = brw->batch.workaround_bo->virtual;
    bool success = data[offset] == expected_value;
    drm_intel_bo_unmap(brw->batch.workaround_bo);
+
+   result = success;
 
    return success;
 }
