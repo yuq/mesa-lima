@@ -2729,6 +2729,9 @@ vc4_write_uniforms(struct vc4_context *vc4, struct vc4_compiled_shader *shader,
         const uint32_t *gallium_uniforms = cb->cb[0].user_buffer;
         struct vc4_bo *ubo = vc4_upload_ubo(vc4, shader, gallium_uniforms);
 
+        cl_ensure_space(&vc4->uniforms, (uinfo->count +
+                                         uinfo->num_texture_samples) * 4);
+
         cl_start_shader_reloc(&vc4->uniforms, uinfo->num_texture_samples);
 
         for (int i = 0; i < uinfo->count; i++) {

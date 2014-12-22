@@ -29,6 +29,32 @@
 #include "vc4_context.h"
 #include "vc4_resource.h"
 
+static void
+vc4_get_draw_cl_space(struct vc4_context *vc4)
+{
+        /* Binner gets our packet state -- vc4_emit.c contents,
+         * and the primitive itself.
+         */
+        cl_ensure_space(&vc4->bcl, 256);
+
+        /* Nothing for rcl -- that's covered by vc4_context.c */
+
+        /* shader_rec gets up to 12 dwords of reloc handles plus a maximally
+         * sized shader_rec (104 bytes base for 8 vattrs plus 32 bytes of
+         * vattr stride).
+         */
+        cl_ensure_space(&vc4->shader_rec, 12 * sizeof(uint32_t) + 104 + 8 * 32);
+
+        /* Uniforms are covered by vc4_write_uniforms(). */
+
+        /* There could be up to 16 textures per stage, plus misc other
+         * pointers.
+         */
+        cl_ensure_space(&vc4->bo_handles, (2 * 16 + 20) * sizeof(uint32_t));
+        cl_ensure_space(&vc4->bo_pointers,
+                        (2 * 16 + 20) * sizeof(struct vc4_bo *));
+}
+
 /**
  * Does the initial bining command list setup for drawing to a given FBO.
  */
@@ -37,6 +63,8 @@ vc4_start_draw(struct vc4_context *vc4)
 {
         if (vc4->needs_flush)
                 return;
+
+        vc4_get_draw_cl_space(vc4);
 
         uint32_t width = vc4->framebuffer.width;
         uint32_t height = vc4->framebuffer.height;
@@ -113,6 +141,8 @@ vc4_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
                 util_primconvert_draw_vbo(vc4->primconvert, info);
                 return;
         }
+
+        vc4_get_draw_cl_space(vc4);
 
         struct vc4_vertex_stateobj *vtx = vc4->vtx;
         struct vc4_vertexbuf_stateobj *vertexbuf = &vc4->vertexbuf;

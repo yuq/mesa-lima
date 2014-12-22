@@ -35,13 +35,12 @@ struct vc4_bo;
 struct vc4_cl {
         void *base;
         void *next;
-        void *end;
+        uint32_t size;
         uint32_t reloc_next;
         uint32_t reloc_count;
 };
 
 void vc4_init_cl(struct vc4_context *vc4, struct vc4_cl *cl);
-void vc4_grow_cl(struct vc4_cl *cl);
 void vc4_reset_cl(struct vc4_cl *cl);
 void vc4_dump_cl(void *cl, uint32_t size, bool is_render);
 uint32_t vc4_gem_hindex(struct vc4_context *vc4, struct vc4_bo *bo);
@@ -49,8 +48,7 @@ uint32_t vc4_gem_hindex(struct vc4_context *vc4, struct vc4_bo *bo);
 static inline void
 cl_u8(struct vc4_cl *cl, uint8_t n)
 {
-        if (cl->next + 1 > cl->end)
-                vc4_grow_cl(cl);
+        assert((cl->next - cl->base) + 1 <= cl->size);
 
         *(uint8_t *)cl->next = n;
         cl->next++;
@@ -59,8 +57,7 @@ cl_u8(struct vc4_cl *cl, uint8_t n)
 static inline void
 cl_u16(struct vc4_cl *cl, uint32_t n)
 {
-        if (cl->next + 2 > cl->end)
-                vc4_grow_cl(cl);
+        assert((cl->next - cl->base) + 2 <= cl->size);
 
         *(uint16_t *)cl->next = n;
         cl->next += 2;
@@ -69,8 +66,7 @@ cl_u16(struct vc4_cl *cl, uint32_t n)
 static inline void
 cl_u32(struct vc4_cl *cl, uint32_t n)
 {
-        if (cl->next + 4 > cl->end)
-                vc4_grow_cl(cl);
+        assert((cl->next - cl->base) + 4 <= cl->size);
 
         *(uint32_t *)cl->next = n;
         cl->next += 4;
@@ -79,8 +75,7 @@ cl_u32(struct vc4_cl *cl, uint32_t n)
 static inline void
 cl_ptr(struct vc4_cl *cl, void *ptr)
 {
-        if (cl->next + sizeof(void *) > cl->end)
-                vc4_grow_cl(cl);
+        assert((cl->next - cl->base) + sizeof(void *) <= cl->size);
 
         *(void **)cl->next = ptr;
         cl->next += sizeof(void *);
@@ -133,5 +128,7 @@ cl_reloc(struct vc4_context *vc4, struct vc4_cl *cl,
 {
         cl_reloc_hindex(cl, vc4_gem_hindex(vc4, bo), offset);
 }
+
+void cl_ensure_space(struct vc4_cl *cl, uint32_t size);
 
 #endif /* VC4_CL_H */

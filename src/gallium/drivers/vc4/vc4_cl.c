@@ -29,17 +29,21 @@ void
 vc4_init_cl(struct vc4_context *vc4, struct vc4_cl *cl)
 {
         cl->base = ralloc_size(vc4, 1);
-        cl->end = cl->next = cl->base;
+        cl->next = cl->base;
+        cl->size = 0;
 }
 
 void
-vc4_grow_cl(struct vc4_cl *cl)
+cl_ensure_space(struct vc4_cl *cl, uint32_t space)
 {
-        uint32_t size = MAX2((cl->end - cl->base) * 2, 4096);
+        if ((cl->next - cl->base) + space <= cl->size)
+                return;
+
+        uint32_t size = MAX2(cl->size + space, cl->size * 2);
         uint32_t offset = cl->next -cl->base;
 
         cl->base = reralloc(ralloc_parent(cl->base), cl->base, uint8_t, size);
-        cl->end = cl->base + size;
+        cl->size = size;
         cl->next = cl->base + offset;
 }
 

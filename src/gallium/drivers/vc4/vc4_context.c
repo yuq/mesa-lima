@@ -104,6 +104,22 @@ vc4_setup_rcl(struct vc4_context *vc4)
                 resolve_uncleared);
 #endif
 
+        uint32_t reloc_size = 9;
+        uint32_t clear_size = 14;
+        uint32_t config_size = 11 + reloc_size;
+        uint32_t loadstore_size = 7 + reloc_size;
+        uint32_t tilecoords_size = 3;
+        uint32_t branch_size = 5 + reloc_size;
+        uint32_t color_store_size = 1;
+        cl_ensure_space(&vc4->rcl,
+                        clear_size +
+                        config_size +
+                        loadstore_size +
+                        xtiles * ytiles * (loadstore_size * 4 +
+                                           tilecoords_size * 3 +
+                                           branch_size +
+                                           color_store_size));
+
         cl_u8(&vc4->rcl, VC4_PACKET_CLEAR_COLORS);
         cl_u32(&vc4->rcl, vc4->clear_color[0]);
         cl_u32(&vc4->rcl, vc4->clear_color[1]);
@@ -290,9 +306,9 @@ vc4_flush(struct pipe_context *pctx)
 
         if (vc4_debug & VC4_DEBUG_CL) {
                 fprintf(stderr, "BCL:\n");
-                vc4_dump_cl(vc4->bcl.base, vc4->bcl.end - vc4->bcl.base, false);
+                vc4_dump_cl(vc4->bcl.base, vc4->bcl.size, false);
                 fprintf(stderr, "RCL:\n");
-                vc4_dump_cl(vc4->rcl.base, vc4->rcl.end - vc4->rcl.base, true);
+                vc4_dump_cl(vc4->rcl.base, vc4->rcl.size, true);
         }
 
         struct drm_vc4_submit_cl submit;
