@@ -35,11 +35,6 @@
 
 #define DBG_CHANNEL DBG_SHADER
 
-#if 1
-#define NINE_TGSI_LAZY_DEVS /* don't use TGSI_OPCODE_BREAKC */
-#endif
-#define NINE_TGSI_LAZY_R600 /* don't use TGSI_OPCODE_DP2A */
-
 #define DUMP(args...) _nine_debug_printf(DBG_CHANNEL, NULL, args)
 
 
@@ -1542,24 +1537,16 @@ DECL_SPECIAL(REP)
     if (tx->native_integers)
     {
         ureg_USGE(ureg, tmp, tx_src_scalar(ctr), rep);
-#ifdef NINE_TGSI_LAZY_DEVS
         ureg_UIF(ureg, tx_src_scalar(tmp), tx_cond(tx));
-#endif
     }
     else
     {
         ureg_SGE(ureg, tmp, tx_src_scalar(ctr), rep);
-#ifdef NINE_TGSI_LAZY_DEVS
         ureg_IF(ureg, tx_src_scalar(tmp), tx_cond(tx));
-#endif
     }
-#ifdef NINE_TGSI_LAZY_DEVS
     ureg_BRK(ureg);
     tx_endcond(tx);
     ureg_ENDIF(ureg);
-#else
-    ureg_BREAKC(ureg, tx_src_scalar(tmp));
-#endif
 
     if (tx->native_integers) {
         ureg_UADD(ureg, ctr, tx_src_scalar(ctr), ureg_imm1u(ureg, 1));
@@ -1637,14 +1624,10 @@ DECL_SPECIAL(BREAKC)
     src[0] = tx_src_param(tx, &tx->insn.src[0]);
     src[1] = tx_src_param(tx, &tx->insn.src[1]);
     ureg_insn(tx->ureg, cmp_op, &tmp, 1, src, 2);
-#ifdef NINE_TGSI_LAZY_DEVS
     ureg_IF(tx->ureg, ureg_scalar(ureg_src(tmp), TGSI_SWIZZLE_X), tx_cond(tx));
     ureg_BRK(tx->ureg);
     tx_endcond(tx);
     ureg_ENDIF(tx->ureg);
-#else
-    ureg_BREAKC(tx->ureg, ureg_scalar(ureg_src(tmp), TGSI_SWIZZLE_X));
-#endif
     return D3D_OK;
 }
 
@@ -1964,7 +1947,6 @@ DECL_SPECIAL(NRM)
 
 DECL_SPECIAL(DP2ADD)
 {
-#ifdef NINE_TGSI_LAZY_R600
     struct ureg_dst tmp = tx_scratch_scalar(tx);
     struct ureg_src dp2 = tx_src_scalar(tmp);
     struct ureg_dst dst = tx_dst_param(tx, &tx->insn.dst[0]);
@@ -1978,9 +1960,6 @@ DECL_SPECIAL(DP2ADD)
     ureg_ADD(tx->ureg, dst, src[2], dp2);
 
     return D3D_OK;
-#else
-    return NineTranslateInstruction_Generic(tx);
-#endif
 }
 
 DECL_SPECIAL(TEXCOORD)
@@ -2355,7 +2334,7 @@ struct sm1_op_info inst_table[] =
     /* Misc */
     _OPI(CMP,    CMP,  V(0,0), V(0,0), V(1,2), V(3,0), 1, 3, SPECIAL(CMP)), /* reversed */
     _OPI(BEM,    NOP,  V(0,0), V(0,0), V(1,4), V(1,4), 0, 0, SPECIAL(BEM)),
-    _OPI(DP2ADD, DP2A, V(0,0), V(0,0), V(2,0), V(3,0), 1, 3, SPECIAL(DP2ADD)), /* for radeons */
+    _OPI(DP2ADD, NOP,  V(0,0), V(0,0), V(2,0), V(3,0), 1, 3, SPECIAL(DP2ADD)),
     _OPI(DSX,    DDX,  V(0,0), V(0,0), V(2,1), V(3,0), 1, 1, NULL),
     _OPI(DSY,    DDY,  V(0,0), V(0,0), V(2,1), V(3,0), 1, 1, NULL),
     _OPI(TEXLDD, TXD,  V(0,0), V(0,0), V(2,1), V(3,0), 1, 4, SPECIAL(TEXLDD)),
