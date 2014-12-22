@@ -2726,6 +2726,97 @@ fs_visitor::emit_if_gen6(ir_if *ir)
    emit(IF(this->result, fs_reg(0), BRW_CONDITIONAL_NZ));
 }
 
+bool
+fs_visitor::try_opt_frontfacing_ternary(ir_if *ir)
+{
+   ir_dereference_variable *deref = ir->condition->as_dereference_variable();
+   if (!deref || strcmp(deref->var->name, "gl_FrontFacing") != 0)
+      return false;
+
+   if (ir->then_instructions.length() != 1 ||
+       ir->else_instructions.length() != 1)
+      return false;
+
+   ir_assignment *then_assign =
+         ((ir_instruction *)ir->then_instructions.head)->as_assignment();
+   ir_assignment *else_assign =
+         ((ir_instruction *)ir->else_instructions.head)->as_assignment();
+
+   if (!then_assign || then_assign->condition ||
+       !else_assign || else_assign->condition ||
+       then_assign->write_mask != else_assign->write_mask ||
+       !then_assign->lhs->equals(else_assign->lhs))
+      return false;
+
+   ir_constant *then_rhs = then_assign->rhs->as_constant();
+   ir_constant *else_rhs = else_assign->rhs->as_constant();
+
+   if (!then_rhs || !else_rhs)
+      return false;
+
+   if ((then_rhs->is_one() || then_rhs->is_negative_one()) &&
+       (else_rhs->is_one() || else_rhs->is_negative_one())) {
+      assert(then_rhs->is_one() == else_rhs->is_negative_one());
+      assert(else_rhs->is_one() == then_rhs->is_negative_one());
+
+      then_assign->lhs->accept(this);
+      fs_reg dst = this->result;
+      dst.type = BRW_REGISTER_TYPE_D;
+      fs_reg tmp = vgrf(glsl_type::int_type);
+
+      if (brw->gen >= 6) {
+         /* Bit 15 of g0.0 is 0 if the polygon is front facing. */
+         fs_reg g0 = fs_reg(retype(brw_vec1_grf(0, 0), BRW_REGISTER_TYPE_W));
+
+         /* For (gl_FrontFacing ? 1.0 : -1.0), emit:
+          *
+          *    or(8)  tmp.1<2>W  g0.0<0,1,0>W  0x00003f80W
+          *    and(8) dst<1>D    tmp<8,8,1>D   0xbf800000D
+          *
+          * and negate g0.0<0,1,0>W for (gl_FrontFacing ? -1.0 : 1.0).
+          */
+
+         if (then_rhs->is_negative_one()) {
+            assert(else_rhs->is_one());
+            g0.negate = true;
+         }
+
+         tmp.type = BRW_REGISTER_TYPE_W;
+         tmp.subreg_offset = 2;
+         tmp.stride = 2;
+
+         fs_inst *or_inst = emit(OR(tmp, g0, fs_reg(0x3f80)));
+         or_inst->src[1].type = BRW_REGISTER_TYPE_UW;
+
+         tmp.type = BRW_REGISTER_TYPE_D;
+         tmp.subreg_offset = 0;
+         tmp.stride = 1;
+      } else {
+         /* Bit 31 of g1.6 is 0 if the polygon is front facing. */
+         fs_reg g1_6 = fs_reg(retype(brw_vec1_grf(1, 6), BRW_REGISTER_TYPE_D));
+
+         /* For (gl_FrontFacing ? 1.0 : -1.0), emit:
+          *
+          *    or(8)  tmp<1>D  g1.6<0,1,0>D  0x3f800000D
+          *    and(8) dst<1>D  tmp<8,8,1>D   0xbf800000D
+          *
+          * and negate g1.6<0,1,0>D for (gl_FrontFacing ? -1.0 : 1.0).
+          */
+
+         if (then_rhs->is_negative_one()) {
+            assert(else_rhs->is_one());
+            g1_6.negate = true;
+         }
+
+         emit(OR(tmp, g1_6, fs_reg(0x3f800000)));
+      }
+      emit(AND(dst, tmp, fs_reg(0xbf800000)));
+      return true;
+   }
+
+   return false;
+}
+
 /**
  * Try to replace IF/MOV/ELSE/MOV/ENDIF with SEL.
  *
@@ -2818,6 +2909,9 @@ fs_visitor::try_replace_with_sel()
 void
 fs_visitor::visit(ir_if *ir)
 {
+   if (try_opt_frontfacing_ternary(ir))
+      return;
+
    /* Don't point the annotation at the if statement, because then it plus
     * the then and else blocks get printed.
     */

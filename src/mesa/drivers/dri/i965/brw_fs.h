@@ -309,6 +309,7 @@ public:
    bool try_emit_line(ir_expression *ir);
    bool try_emit_mad(ir_expression *ir);
    bool try_replace_with_sel();
+   bool try_opt_frontfacing_ternary(ir_if *ir);
    bool opt_peephole_sel();
    bool opt_peephole_predicated_break();
    bool opt_saturate_propagation();
