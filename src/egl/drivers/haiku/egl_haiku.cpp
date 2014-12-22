@@ -51,16 +51,16 @@ _EGL_DRIVER_STANDARD_TYPECASTS(haiku_egl)
 
 struct haiku_egl_driver
 {
-   _EGLDriver base;
+	_EGLDriver base;
 
-   void *handle;
-   _EGLProc (*get_proc_address)(const char *procname);
-   void (*glFlush)(void);
+	void *handle;
+	_EGLProc (*get_proc_address)(const char *procname);
+	void (*glFlush)(void);
 };
 
 struct haiku_egl_config
 {
-   _EGLConfig         base;
+	_EGLConfig         base;
 };
 
 struct haiku_egl_context
@@ -146,7 +146,7 @@ static _EGLSurface *
 haiku_create_surface(_EGLDriver *drv, _EGLDisplay *disp, EGLint type,
 	_EGLConfig *conf, void *native_surface, const EGLint *attrib_list)
 {
-   return NULL;
+	return NULL;
 }
 
 
@@ -183,7 +183,7 @@ static _EGLSurface *
 haiku_create_pixmap_surface(_EGLDriver *drv, _EGLDisplay *disp,
 	_EGLConfig *conf, void *native_pixmap, const EGLint *attrib_list)
 {
-   return NULL;
+	return NULL;
 }
 
 
@@ -191,7 +191,7 @@ static _EGLSurface *
 haiku_create_pbuffer_surface(_EGLDriver *drv, _EGLDisplay *disp,
 	_EGLConfig *conf, const EGLint *attrib_list)
 {
-   return NULL;
+	return NULL;
 }
 
 
@@ -206,57 +206,55 @@ static EGLBoolean
 haiku_add_configs_for_visuals(_EGLDisplay *dpy)
 {
 	printf("Adding configs\n");
-	struct haiku_egl_config conf, *final;
-	//conf=CALLOC_STRUCT(haiku_egl_config);
-	memset(&conf, 0, sizeof(conf));
-	_eglInitConfig(&conf.base, dpy, 1);
-	_eglLog(_EGL_DEBUG,"Config inited\n");
-	_eglSetConfigKey(&conf.base, EGL_RED_SIZE ,8);
-	_eglSetConfigKey(&conf.base, EGL_BLUE_SIZE ,8);
-	_eglSetConfigKey(&conf.base, EGL_GREEN_SIZE ,8);
-	_eglSetConfigKey(&conf.base, EGL_LUMINANCE_SIZE ,0);
-	_eglSetConfigKey(&conf.base, EGL_ALPHA_SIZE ,8);
-	_eglSetConfigKey(&conf.base, EGL_COLOR_BUFFER_TYPE ,EGL_RGB_BUFFER);
-	EGLint r = (_eglGetConfigKey(&conf.base, EGL_RED_SIZE) 
-		+ _eglGetConfigKey(&conf.base, EGL_GREEN_SIZE)
-		+ _eglGetConfigKey(&conf.base, EGL_BLUE_SIZE)
-		+ _eglGetConfigKey(&conf.base, EGL_ALPHA_SIZE));
-	_eglSetConfigKey(&conf.base, EGL_BUFFER_SIZE, r);
-	_eglSetConfigKey(&conf.base, EGL_CONFIG_CAVEAT, EGL_NONE);
-	_eglSetConfigKey(&conf.base, EGL_CONFIG_ID, 1);
-	_eglSetConfigKey(&conf.base, EGL_BIND_TO_TEXTURE_RGB ,EGL_FALSE);
-	_eglSetConfigKey(&conf.base, EGL_BIND_TO_TEXTURE_RGBA ,EGL_FALSE);
-	_eglSetConfigKey(&conf.base, EGL_STENCIL_SIZE ,0);
-	_eglSetConfigKey(&conf.base, EGL_TRANSPARENT_TYPE ,EGL_NONE);
-	_eglSetConfigKey(&conf.base, EGL_NATIVE_RENDERABLE ,EGL_TRUE); // Let's say yes
-	_eglSetConfigKey(&conf.base, EGL_NATIVE_VISUAL_ID ,0); // No visual
-	_eglSetConfigKey(&conf.base, EGL_NATIVE_VISUAL_TYPE ,EGL_NONE); // No visual
-	_eglSetConfigKey(&conf.base, EGL_RENDERABLE_TYPE ,0x8);
-	_eglSetConfigKey(&conf.base, EGL_SAMPLE_BUFFERS ,0); // TODO: How to get the right value ?
-	_eglSetConfigKey(&conf.base, EGL_SAMPLES ,_eglGetConfigKey(&conf.base, EGL_SAMPLE_BUFFERS) == 0 ? 0 : 0);
-	_eglSetConfigKey(&conf.base, EGL_DEPTH_SIZE ,24); // TODO: How to get the right value ?
-	_eglSetConfigKey(&conf.base, EGL_LEVEL ,0);
-	_eglSetConfigKey(&conf.base, EGL_MAX_PBUFFER_WIDTH ,0); // TODO: How to get the right value ?
-	_eglSetConfigKey(&conf.base, EGL_MAX_PBUFFER_HEIGHT ,0); // TODO: How to get the right value ?
-	_eglSetConfigKey(&conf.base, EGL_MAX_PBUFFER_PIXELS ,0); // TODO: How to get the right value ?
-	_eglSetConfigKey(&conf.base, EGL_SURFACE_TYPE, EGL_WINDOW_BIT /*| EGL_PIXMAP_BIT | EGL_PBUFFER_BIT*/);
 
-	printf("Config configurated\n");
-	if (!_eglValidateConfig(&conf.base, EGL_FALSE)) {
+	struct haiku_egl_config* conf;
+	conf = CALLOC_STRUCT(haiku_egl_config);
+
+	_eglInitConfig(&conf->base, dpy, 1);
+	_eglLog(_EGL_DEBUG,"Config inited\n");
+	_eglSetConfigKey(&conf->base, EGL_RED_SIZE, 8);
+	_eglSetConfigKey(&conf->base, EGL_BLUE_SIZE, 8);
+	_eglSetConfigKey(&conf->base, EGL_GREEN_SIZE, 8);
+	_eglSetConfigKey(&conf->base, EGL_LUMINANCE_SIZE, 0);
+	_eglSetConfigKey(&conf->base, EGL_ALPHA_SIZE, 8);
+	_eglSetConfigKey(&conf->base, EGL_COLOR_BUFFER_TYPE, EGL_RGB_BUFFER);
+	EGLint r = (_eglGetConfigKey(&conf->base, EGL_RED_SIZE) 
+		+ _eglGetConfigKey(&conf->base, EGL_GREEN_SIZE)
+		+ _eglGetConfigKey(&conf->base, EGL_BLUE_SIZE)
+		+ _eglGetConfigKey(&conf->base, EGL_ALPHA_SIZE));
+	_eglSetConfigKey(&conf->base, EGL_BUFFER_SIZE, r);
+	_eglSetConfigKey(&conf->base, EGL_CONFIG_CAVEAT, EGL_NONE);
+	_eglSetConfigKey(&conf->base, EGL_CONFIG_ID, 1);
+	_eglSetConfigKey(&conf->base, EGL_BIND_TO_TEXTURE_RGB, EGL_FALSE);
+	_eglSetConfigKey(&conf->base, EGL_BIND_TO_TEXTURE_RGBA, EGL_FALSE);
+	_eglSetConfigKey(&conf->base, EGL_STENCIL_SIZE, 0);
+	_eglSetConfigKey(&conf->base, EGL_TRANSPARENT_TYPE, EGL_NONE);
+	_eglSetConfigKey(&conf->base, EGL_NATIVE_RENDERABLE, EGL_TRUE); // Let's say yes
+	_eglSetConfigKey(&conf->base, EGL_NATIVE_VISUAL_ID, 0); // No visual
+	_eglSetConfigKey(&conf->base, EGL_NATIVE_VISUAL_TYPE, EGL_NONE); // No visual
+	_eglSetConfigKey(&conf->base, EGL_RENDERABLE_TYPE, 0x8);
+	_eglSetConfigKey(&conf->base, EGL_SAMPLE_BUFFERS, 0); // TODO: How to get the right value ?
+	_eglSetConfigKey(&conf->base, EGL_SAMPLES, _eglGetConfigKey(&conf->base, EGL_SAMPLE_BUFFERS) == 0 ? 0 : 0);
+	_eglSetConfigKey(&conf->base, EGL_DEPTH_SIZE, 24); // TODO: How to get the right value ?
+	_eglSetConfigKey(&conf->base, EGL_LEVEL, 0);
+	_eglSetConfigKey(&conf->base, EGL_MAX_PBUFFER_WIDTH, 0); // TODO: How to get the right value ?
+	_eglSetConfigKey(&conf->base, EGL_MAX_PBUFFER_HEIGHT, 0); // TODO: How to get the right value ?
+	_eglSetConfigKey(&conf->base, EGL_MAX_PBUFFER_PIXELS, 0); // TODO: How to get the right value ?
+	_eglSetConfigKey(&conf->base, EGL_SURFACE_TYPE, EGL_WINDOW_BIT /*| EGL_PIXMAP_BIT | EGL_PBUFFER_BIT*/);
+
+	printf("Config configuated\n");
+	if (!_eglValidateConfig(&conf->base, EGL_FALSE)) {
 		_eglLog(_EGL_DEBUG, "Haiku failed to validate config");
 		return EGL_FALSE;
 	}
 	printf("Validated config\n");
    
-	final = CALLOC_STRUCT(haiku_egl_config);
-	memcpy(final, &conf, sizeof(conf));
-   
-	_eglLinkConfig(&final->base);
+	_eglLinkConfig(&conf->base);
 	if (!_eglGetArraySize(dpy->Configs)) {
 		_eglLog(_EGL_WARNING, "Haiku: failed to create any config");
 		return EGL_FALSE;
 	}
-	printf("Config succesfull\n");
+	printf("Config successful!\n");
    
 	return EGL_TRUE;
 }
