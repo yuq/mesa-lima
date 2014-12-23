@@ -2040,6 +2040,23 @@ DECL_SPECIAL(LOG)
     return D3D_OK;
 }
 
+DECL_SPECIAL(LIT)
+{
+    struct ureg_program *ureg = tx->ureg;
+    struct ureg_dst tmp = tx_scratch(tx);
+    struct ureg_dst dst = tx_dst_param(tx, &tx->insn.dst[0]);
+    struct ureg_src src = tx_src_param(tx, &tx->insn.src[0]);
+    ureg_LIT(ureg, tmp, src);
+    /* d3d9 LIT is the same than gallium LIT. One difference is that d3d9
+     * states that dst.z is 0 when src.y <= 0. Gallium definition can assign
+     * it 0^0 if src.w=0, which value is driver dependent. */
+    ureg_CMP(ureg, ureg_writemask(dst, TGSI_WRITEMASK_Z),
+             ureg_negate(ureg_scalar(src, TGSI_SWIZZLE_Y)),
+             ureg_src(tmp), ureg_imm1f(ureg, 0.0f));
+    ureg_MOV(ureg, ureg_writemask(dst, TGSI_WRITEMASK_XYW), ureg_src(tmp));
+    return D3D_OK;
+}
+
 DECL_SPECIAL(NRM)
 {
     struct ureg_program *ureg = tx->ureg;
@@ -2543,7 +2560,7 @@ struct sm1_op_info inst_table[] =
     _OPI(SGE, SGE, V(0,0), V(3,0), V(0,0), V(3,0), 1, 2, NULL), /* 13 */
     _OPI(EXP, EX2, V(0,0), V(3,0), V(0,0), V(3,0), 1, 1, NULL), /* 14 */
     _OPI(LOG, LG2, V(0,0), V(3,0), V(0,0), V(3,0), 1, 1, SPECIAL(LOG)), /* 15 */
-    _OPI(LIT, LIT, V(0,0), V(3,0), V(0,0), V(0,0), 1, 1, NULL), /* 16 */
+    _OPI(LIT, LIT, V(0,0), V(3,0), V(0,0), V(0,0), 1, 1, SPECIAL(LIT)), /* 16 */
     _OPI(DST, DST, V(0,0), V(3,0), V(0,0), V(3,0), 1, 2, NULL), /* 17 */
     _OPI(LRP, LRP, V(0,0), V(3,0), V(0,0), V(3,0), 1, 3, NULL), /* 18 */
     _OPI(FRC, FRC, V(0,0), V(3,0), V(0,0), V(3,0), 1, 1, NULL), /* 19 */
