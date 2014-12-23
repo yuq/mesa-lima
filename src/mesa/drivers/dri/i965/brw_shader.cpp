@@ -949,7 +949,6 @@ backend_instruction::can_do_saturate() const
    case BRW_OPCODE_LINE:
    case BRW_OPCODE_LRP:
    case BRW_OPCODE_MAC:
-   case BRW_OPCODE_MACH:
    case BRW_OPCODE_MAD:
    case BRW_OPCODE_MATH:
    case BRW_OPCODE_MOV:
