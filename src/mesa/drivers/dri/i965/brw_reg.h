@@ -902,6 +902,19 @@ brw_indirect(unsigned addr_subnr, int offset)
    return ptr;
 }
 
+static inline bool
+region_matches(struct brw_reg reg, enum brw_vertical_stride v,
+               enum brw_width w, enum brw_horizontal_stride h)
+{
+   return reg.vstride == v &&
+          reg.width == w &&
+          reg.hstride == h;
+}
+
+#define has_scalar_region(reg) \
+   region_matches(reg, BRW_VERTICAL_STRIDE_0, BRW_WIDTH_1, \
+                  BRW_HORIZONTAL_STRIDE_0)
+
 /* brw_packed_float.c */
 int brw_float_to_vf(float f);
 float brw_vf_to_float(unsigned char vf);

@@ -1893,9 +1893,7 @@ void gen4_math(struct brw_compile *p,
    struct brw_context *brw = p->brw;
    brw_inst *insn = next_insn(p, BRW_OPCODE_SEND);
    unsigned data_type;
-   if (src.vstride == BRW_VERTICAL_STRIDE_0 &&
-       src.width == BRW_WIDTH_1 &&
-       src.hstride == BRW_HORIZONTAL_STRIDE_0) {
+   if (has_scalar_region(src)) {
       data_type = BRW_MATH_DATA_SCALAR;
    } else {
       data_type = BRW_MATH_DATA_VECTOR;

@@ -1347,10 +1347,7 @@ fs_generator::generate_set_omask(fs_inst *inst,
      mask.width == BRW_WIDTH_8 &&
      mask.hstride == BRW_HORIZONTAL_STRIDE_1);
 
-   bool stride_0_1_0 =
-    (mask.vstride == BRW_VERTICAL_STRIDE_0 &&
-     mask.width == BRW_WIDTH_1 &&
-     mask.hstride == BRW_HORIZONTAL_STRIDE_0);
+   bool stride_0_1_0 = has_scalar_region(mask);
 
    assert(stride_8_8_1 || stride_0_1_0);
    assert(dst.type == BRW_REGISTER_TYPE_UW);
