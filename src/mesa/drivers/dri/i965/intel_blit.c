@@ -307,6 +307,9 @@ intelEmitCopyBlit(struct brw_context *brw,
    if ((dst_y_tiled || src_y_tiled) && brw->gen < 6)
       return false;
 
+   assert(!dst_y_tiled || (dst_pitch % 128) == 0);
+   assert(!src_y_tiled || (src_pitch % 128) == 0);
+
    /* do space check before going any further */
    do {
        aper_array[0] = brw->batch.bo;
