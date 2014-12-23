@@ -485,6 +485,11 @@ struct pipe_screen *radeonsi_screen_create(struct radeon_winsys *ws)
 {
 	struct si_screen *sscreen = CALLOC_STRUCT(si_screen);
 	LLVMTargetRef r600_target;
+#if HAVE_LLVM >= 0x0306
+	const char *triple = "amdgcn--";
+#else
+	const char *triple = "r600--";
+#endif
 	if (sscreen == NULL) {
 		return NULL;
 	}
@@ -514,8 +519,8 @@ struct pipe_screen *radeonsi_screen_create(struct radeon_winsys *ws)
 
 #if HAVE_LLVM >= 0x0306
 	/* Initialize LLVM TargetMachine */
-	r600_target = radeon_llvm_get_r600_target();
-	sscreen->tm = LLVMCreateTargetMachine(r600_target, "r600--",
+	r600_target = radeon_llvm_get_r600_target(triple);
+	sscreen->tm = LLVMCreateTargetMachine(r600_target, triple,
 				r600_get_llvm_processor_name(sscreen->b.family),
 				"+DumpCode", LLVMCodeGenLevelDefault, LLVMRelocDefault,
 				LLVMCodeModelDefault);

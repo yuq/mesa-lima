@@ -98,20 +98,19 @@ static void init_r600_target()
 	}
 }
 
-LLVMTargetRef radeon_llvm_get_r600_target()
+LLVMTargetRef radeon_llvm_get_r600_target(const char *triple)
 {
 	LLVMTargetRef target = NULL;
+	char *err_message = NULL;
+
 	init_r600_target();
 
-	for (target = LLVMGetFirstTarget(); target;
-					target = LLVMGetNextTarget(target)) {
-		if (!strncmp(LLVMGetTargetName(target), "r600", 4)) {
-			break;
+	if (LLVMGetTargetFromTriple(triple, &target, &err_message)) {
+		fprintf(stderr, "Cannot find target for triple %s ", triple);
+		if (err_message) {
+			fprintf(stderr, "%s\n", err_message);
 		}
-	}
-
-	if (!target) {
-		fprintf(stderr, "Can't find target r600\n");
+		LLVMDisposeMessage(err_message);
 		return NULL;
 	}
 	return target;
@@ -155,7 +154,8 @@ unsigned radeon_llvm_compile(LLVMModuleRef M, struct radeon_shader_binary *binar
 	LLVMBool mem_err;
 
 	if (!tm) {
-		LLVMTargetRef target = radeon_llvm_get_r600_target();
+		strncpy(triple, "r600--", TRIPLE_STRING_LEN);
+		LLVMTargetRef target = radeon_llvm_get_r600_target(triple);
 		if (!target) {
 			return 1;
 		}
@@ -165,7 +165,6 @@ unsigned radeon_llvm_compile(LLVMModuleRef M, struct radeon_shader_binary *binar
 			LLVMDumpModule(M);
 			strncpy(fs, "+DumpCode", FS_STRING_LEN);
 		}
-		strncpy(triple, "r600--", TRIPLE_STRING_LEN);
 		tm = LLVMCreateTargetMachine(target, triple, cpu, fs,
 				  LLVMCodeGenLevelDefault, LLVMRelocDefault,
 						  LLVMCodeModelDefault);
