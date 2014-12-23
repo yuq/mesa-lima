@@ -536,6 +536,7 @@ brw_update_null_renderbuffer_surface(struct brw_context *brw, unsigned int unit)
    drm_intel_bo *bo = NULL;
    unsigned pitch_minus_1 = 0;
    uint32_t multisampling_state = 0;
+   /* BRW_NEW_FS_PROG_DATA */
    uint32_t surf_index =
       brw->wm.prog_data->binding_table.render_target_start + unit;
 
@@ -621,6 +622,7 @@ brw_update_renderbuffer_surface(struct brw_context *brw,
    uint32_t format = 0;
    /* _NEW_BUFFERS */
    mesa_format rb_format = _mesa_get_render_format(ctx, intel_rb_format(irb));
+   /* BRW_NEW_FS_PROG_DATA */
    uint32_t surf_index =
       brw->wm.prog_data->binding_table.render_target_start + unit;
 
@@ -737,7 +739,8 @@ const struct brw_tracked_state brw_renderbuffer_surfaces = {
    .dirty = {
       .mesa = _NEW_BUFFERS |
               _NEW_COLOR,
-      .brw = BRW_NEW_BATCH,
+      .brw = BRW_NEW_BATCH |
+             BRW_NEW_FS_PROG_DATA,
    },
    .emit = brw_update_renderbuffer_surfaces,
 };
@@ -763,6 +766,8 @@ update_stage_texture_surfaces(struct brw_context *brw,
    struct gl_context *ctx = &brw->ctx;
 
    uint32_t *surf_offset = stage_state->surf_offset;
+
+   /* BRW_NEW_*_PROG_DATA */
    if (for_gather)
       surf_offset += stage_state->prog_data->binding_table.gather_texture_start;
    else
@@ -824,9 +829,12 @@ const struct brw_tracked_state brw_texture_surfaces = {
       .mesa = _NEW_TEXTURE,
       .brw = BRW_NEW_BATCH |
              BRW_NEW_FRAGMENT_PROGRAM |
+             BRW_NEW_FS_PROG_DATA |
              BRW_NEW_GEOMETRY_PROGRAM |
+             BRW_NEW_GS_PROG_DATA |
              BRW_NEW_TEXTURE_BUFFER |
-             BRW_NEW_VERTEX_PROGRAM,
+             BRW_NEW_VERTEX_PROGRAM |
+             BRW_NEW_VS_PROG_DATA,
    },
    .emit = brw_update_texture_surfaces,
 };
