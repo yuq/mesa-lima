@@ -171,6 +171,9 @@ static inline int
 type_sz(unsigned type)
 {
    switch(type) {
+   case BRW_REGISTER_TYPE_UQ:
+   case BRW_REGISTER_TYPE_Q:
+      return 8;
    case BRW_REGISTER_TYPE_UD:
    case BRW_REGISTER_TYPE_D:
    case BRW_REGISTER_TYPE_F:
