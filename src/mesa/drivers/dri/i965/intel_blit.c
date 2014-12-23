@@ -226,35 +226,23 @@ intel_miptree_blit(struct brw_context *brw,
    if (src_flip != dst_flip)
       src_pitch = -src_pitch;
 
-   uint32_t src_image_x, src_image_y;
+   uint32_t src_image_x, src_image_y, dst_image_x, dst_image_y;
    intel_miptree_get_image_offset(src_mt, src_level, src_slice,
                                   &src_image_x, &src_image_y);
-   src_x += src_image_x;
-   src_y += src_image_y;
-
-   /* The blitter interprets the 16-bit src x/y as a signed 16-bit value,
-    * where negative values are invalid.  The values we're working with are
-    * unsigned, so make sure we don't overflow.
-    */
-   if (src_x >= 32768 || src_y >= 32768) {
-      perf_debug("Falling back due to >=32k src offset (%d, %d)\n",
-                 src_x, src_y);
-      return false;
-   }
-
-   uint32_t dst_image_x, dst_image_y;
    intel_miptree_get_image_offset(dst_mt, dst_level, dst_slice,
                                   &dst_image_x, &dst_image_y);
+   src_x += src_image_x;
+   src_y += src_image_y;
    dst_x += dst_image_x;
    dst_y += dst_image_y;
 
    /* The blitter interprets the 16-bit destination x/y as a signed 16-bit
-    * value.  The values we're working with are unsigned, so make sure we
-    * don't overflow.
+    * value. The values we're working with are unsigned, so make sure we don't
+    * overflow.
     */
-   if (dst_x >= 32768 || dst_y >= 32768) {
-      perf_debug("Falling back due to >=32k dst offset (%d, %d)\n",
-                 dst_x, dst_y);
+   if (src_x >= 32768 || src_y >= 32768 || dst_x >= 32768 || dst_y >= 32768) {
+      perf_debug("Falling back due to >=32k offset [src(%d, %d) dst(%d, %d)]\n",
+                 src_x, src_y, dst_x, dst_y);
       return false;
    }
 
