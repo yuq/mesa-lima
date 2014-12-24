@@ -842,6 +842,13 @@ tx_src_param(struct shader_translator *tx, const struct sm1_src_param *param)
                 nine_info_mark_const_f_used(tx->info, param->idx);
             src = ureg_src_register(TGSI_FILE_CONSTANT, param->idx);
         }
+        if (!IS_VS && tx->version.major < 2) {
+            /* ps 1.X clamps constants */
+            tmp = tx_scratch(tx);
+            ureg_MIN(ureg, tmp, src, ureg_imm1f(ureg, 1.0f));
+            ureg_MAX(ureg, tmp, ureg_src(tmp), ureg_imm1f(ureg, -1.0f));
+            src = ureg_src(tmp);
+        }
         break;
     case D3DSPR_CONST2:
     case D3DSPR_CONST3:
