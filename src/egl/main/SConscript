@@ -33,10 +33,11 @@ else:
         '_EGL_NATIVE_PLATFORM=_EGL_PLATFORM_X11',
         '_EGL_OS_UNIX',
     ])
-    env.Prepend(LIBS = [
-        egl_dri2,
-        libloader,
-    ])
+    if env['dri']:
+        env.Prepend(LIBS = [
+            egl_dri2,
+            libloader,
+        ])
 
 env.Append(CPPPATH = [
     '#/include',
@@ -46,12 +47,8 @@ env.Append(CPPPATH = [
 # parse Makefile.sources
 egl_sources = env.ParseSourceList('Makefile.sources', 'LIBEGL_C_FILES')
 
-# libEGL.dll
-env['LIBPREFIX'] = 'lib'
-env['SHLIBPREFIX'] = 'lib'
-
-egl = env.SharedLibrary(
-    target = 'EGL',
+egl = env.ConvenienceLibrary(
+    target = 'egl',
     source = egl_sources,
 )
 
