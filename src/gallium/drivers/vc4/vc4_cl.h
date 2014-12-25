@@ -107,8 +107,8 @@ cl_start_shader_reloc(struct vc4_cl *cl, uint32_t n)
         cl->reloc_count = n;
         cl->reloc_next = cl->next - cl->base;
 
-        for (int i = 0; i < n; i++)
-                cl_u32(cl, 0); /* Space where hindex will be written. */
+        /* Space where hindex will be written. */
+        cl->next += n * 4;
 }
 
 static inline void
