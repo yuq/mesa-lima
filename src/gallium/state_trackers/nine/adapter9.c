@@ -549,7 +549,7 @@ NineAdapter9_GetDeviceCaps( struct NineAdapter9 *This,
                                D3DPMISCCAPS_CULLCCW |
                                D3DPMISCCAPS_COLORWRITEENABLE |
                                D3DPMISCCAPS_CLIPPLANESCALEDPOINTS |
-                               D3DPMISCCAPS_CLIPTLVERTS |
+                               /*D3DPMISCCAPS_CLIPTLVERTS |*/
                                D3DPMISCCAPS_TSSARGTEMP |
                                D3DPMISCCAPS_BLENDOP |
                                D3DPIPECAP(INDEP_BLEND_ENABLE, D3DPMISCCAPS_INDEPENDENTWRITEMASKS) |
@@ -560,6 +560,8 @@ NineAdapter9_GetDeviceCaps( struct NineAdapter9 *This,
                                D3DPIPECAP(MIXED_COLORBUFFER_FORMATS, D3DPMISCCAPS_MRTINDEPENDENTBITDEPTHS) |
                                D3DPMISCCAPS_MRTPOSTPIXELSHADERBLENDING |
                                /*D3DPMISCCAPS_FOGVERTEXCLAMPED*/0;
+    if (!screen->get_param(screen, PIPE_CAP_TGSI_VS_WINDOW_SPACE_POSITION))
+        pCaps->PrimitiveMiscCaps |= D3DPMISCCAPS_CLIPTLVERTS;
 
     pCaps->RasterCaps =
         D3DPIPECAP(ANISOTROPIC_FILTER, D3DPRASTERCAPS_ANISOTROPY) |
