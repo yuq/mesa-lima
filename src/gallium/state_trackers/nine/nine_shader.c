@@ -1384,7 +1384,13 @@ DECL_SPECIAL(CND)
     struct ureg_dst cgt;
     struct ureg_src cnd;
 
-    if (tx->insn.coissue && tx->version.major == 1 && tx->version.minor < 4) {
+    /* the coissue flag was a tip for compilers to advise to
+     * execute two operations at the same time, in cases
+     * the two executions had same dst with different channels.
+     * It has no effect on current hw. However it seems CND
+     * is affected. The handling of this very specific case
+     * handled below mimick wine behaviour */
+    if (tx->insn.coissue && tx->version.major == 1 && tx->version.minor < 4 && tx->insn.dst[0].mask != NINED3DSP_WRITEMASK_3) {
         ureg_MOV(tx->ureg,
                  dst, tx_src_param(tx, &tx->insn.src[1]));
         return D3D_OK;
@@ -1393,16 +1399,14 @@ DECL_SPECIAL(CND)
     cnd = tx_src_param(tx, &tx->insn.src[0]);
     cgt = tx_scratch(tx);
 
-    if (tx->version.major == 1 && tx->version.minor < 4) {
-        cgt.WriteMask = TGSI_WRITEMASK_W;
-        ureg_SGT(tx->ureg, cgt, cnd, ureg_imm1f(tx->ureg, 0.5f));
+    if (tx->version.major == 1 && tx->version.minor < 4)
         cnd = ureg_scalar(cnd, TGSI_SWIZZLE_W);
-    } else {
-        ureg_SGT(tx->ureg, cgt, cnd, ureg_imm1f(tx->ureg, 0.5f));
-    }
-    ureg_CMP(tx->ureg, dst,
+
+    ureg_SGT(tx->ureg, cgt, cnd, ureg_imm1f(tx->ureg, 0.5f));
+
+    ureg_CMP(tx->ureg, dst, ureg_negate(ureg_src(cgt)),
              tx_src_param(tx, &tx->insn.src[1]),
-             tx_src_param(tx, &tx->insn.src[2]), ureg_negate(cnd));
+             tx_src_param(tx, &tx->insn.src[2]));
     return D3D_OK;
 }
 
