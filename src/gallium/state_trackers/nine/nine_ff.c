@@ -1151,10 +1151,10 @@ ps_do_ts_op(struct ps_build_ctx *ps, unsigned top, struct ureg_dst dst, struct u
         ureg_MUL(ureg, ureg_saturate(dst), ureg_src(tmp), ureg_imm4f(ureg,4.0,4.0,4.0,4.0));
         break;
     case D3DTOP_MULTIPLYADD:
-        ureg_MAD(ureg, dst, arg[2], arg[0], arg[1]);
+        ureg_MAD(ureg, dst, arg[1], arg[2], arg[0]);
         break;
     case D3DTOP_LERP:
-        ureg_LRP(ureg, dst, arg[1], arg[2], arg[0]);
+        ureg_LRP(ureg, dst, arg[0], arg[1], arg[2]);
         break;
     case D3DTOP_DISABLE:
         /* no-op ? */
@@ -1278,6 +1278,8 @@ nine_ff_build_ps(struct NineDevice9 *device, struct nine_ff_ps_key *key)
             (key->ts[0].resultarg != 0 /* not current */ ||
              key->ts[0].colorop == D3DTOP_DISABLE ||
              key->ts[0].alphaop == D3DTOP_DISABLE ||
+             key->ts[0].colorop == D3DTOP_BLENDCURRENTALPHA ||
+             key->ts[0].alphaop == D3DTOP_BLENDCURRENTALPHA ||
              key->ts[0].colorarg0 == D3DTA_CURRENT ||
              key->ts[0].colorarg1 == D3DTA_CURRENT ||
              key->ts[0].colorarg2 == D3DTA_CURRENT ||
