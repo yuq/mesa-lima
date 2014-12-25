@@ -2580,7 +2580,7 @@ write_texture_p1(struct vc4_context *vc4,
                 (sampler->mag_img_filter == PIPE_TEX_MIPFILTER_NEAREST ||
                  sampler->min_img_filter == PIPE_TEX_MIPFILTER_NEAREST);
 
-        cl_u32(&vc4->uniforms,
+        cl_aligned_u32(&vc4->uniforms,
                VC4_SET_FIELD(rsc->vc4_format >> 4, VC4_TEX_P1_TYPE4) |
                VC4_SET_FIELD(texture->texture->height0 & 2047,
                              VC4_TEX_P1_HEIGHT) |
@@ -2606,7 +2606,7 @@ write_texture_p2(struct vc4_context *vc4,
         struct pipe_sampler_view *texture = texstate->textures[unit];
         struct vc4_resource *rsc = vc4_resource(texture->texture);
 
-        cl_u32(&vc4->uniforms,
+        cl_aligned_u32(&vc4->uniforms,
                VC4_SET_FIELD(VC4_TEX_P2_PTYPE_CUBE_MAP_STRIDE,
                              VC4_TEX_P2_PTYPE) |
                VC4_SET_FIELD(rsc->cube_map_stride >> 12, VC4_TEX_P2_CMST) |
@@ -2683,7 +2683,7 @@ write_texture_border_color(struct vc4_context *vc4,
                 }
         }
 
-        cl_u32(&vc4->uniforms, uc.ui[0]);
+        cl_aligned_u32(&vc4->uniforms, uc.ui[0]);
 }
 
 static uint32_t
@@ -2738,29 +2738,29 @@ vc4_write_uniforms(struct vc4_context *vc4, struct vc4_compiled_shader *shader,
 
                 switch (uinfo->contents[i]) {
                 case QUNIFORM_CONSTANT:
-                        cl_u32(&vc4->uniforms, uinfo->data[i]);
+                        cl_aligned_u32(&vc4->uniforms, uinfo->data[i]);
                         break;
                 case QUNIFORM_UNIFORM:
-                        cl_u32(&vc4->uniforms,
-                               gallium_uniforms[uinfo->data[i]]);
+                        cl_aligned_u32(&vc4->uniforms,
+                                       gallium_uniforms[uinfo->data[i]]);
                         break;
                 case QUNIFORM_VIEWPORT_X_SCALE:
-                        cl_f(&vc4->uniforms, vc4->viewport.scale[0] * 16.0f);
+                        cl_aligned_f(&vc4->uniforms, vc4->viewport.scale[0] * 16.0f);
                         break;
                 case QUNIFORM_VIEWPORT_Y_SCALE:
-                        cl_f(&vc4->uniforms, vc4->viewport.scale[1] * 16.0f);
+                        cl_aligned_f(&vc4->uniforms, vc4->viewport.scale[1] * 16.0f);
                         break;
 
                 case QUNIFORM_VIEWPORT_Z_OFFSET:
-                        cl_f(&vc4->uniforms, vc4->viewport.translate[2]);
+                        cl_aligned_f(&vc4->uniforms, vc4->viewport.translate[2]);
                         break;
                 case QUNIFORM_VIEWPORT_Z_SCALE:
-                        cl_f(&vc4->uniforms, vc4->viewport.scale[2]);
+                        cl_aligned_f(&vc4->uniforms, vc4->viewport.scale[2]);
                         break;
 
                 case QUNIFORM_USER_CLIP_PLANE:
-                        cl_f(&vc4->uniforms,
-                             vc4->clip.ucp[uinfo->data[i] / 4][uinfo->data[i] % 4]);
+                        cl_aligned_f(&vc4->uniforms,
+                                     vc4->clip.ucp[uinfo->data[i] / 4][uinfo->data[i] % 4]);
                         break;
 
                 case QUNIFORM_TEXTURE_CONFIG_P0:
@@ -2776,7 +2776,7 @@ vc4_write_uniforms(struct vc4_context *vc4, struct vc4_compiled_shader *shader,
                         break;
 
                 case QUNIFORM_UBO_ADDR:
-                        cl_reloc(vc4, &vc4->uniforms, ubo, 0);
+                        cl_aligned_reloc(vc4, &vc4->uniforms, ubo, 0);
                         break;
 
                 case QUNIFORM_TEXTURE_BORDER_COLOR:
@@ -2785,27 +2785,28 @@ vc4_write_uniforms(struct vc4_context *vc4, struct vc4_compiled_shader *shader,
 
                 case QUNIFORM_TEXRECT_SCALE_X:
                 case QUNIFORM_TEXRECT_SCALE_Y:
-                        cl_u32(&vc4->uniforms,
-                               get_texrect_scale(texstate,
-                                                 uinfo->contents[i],
-                                                 uinfo->data[i]));
+                        cl_aligned_u32(&vc4->uniforms,
+                                       get_texrect_scale(texstate,
+                                                         uinfo->contents[i],
+                                                         uinfo->data[i]));
                         break;
 
                 case QUNIFORM_BLEND_CONST_COLOR:
-                        cl_f(&vc4->uniforms,
-                             vc4->blend_color.color[uinfo->data[i]]);
+                        cl_aligned_f(&vc4->uniforms,
+                                     vc4->blend_color.color[uinfo->data[i]]);
                         break;
 
                 case QUNIFORM_STENCIL:
-                        cl_u32(&vc4->uniforms,
-                               vc4->zsa->stencil_uniforms[uinfo->data[i]] |
-                               (uinfo->data[i] <= 1 ?
-                                (vc4->stencil_ref.ref_value[uinfo->data[i]] << 8) :
-                                0));
+                        cl_aligned_u32(&vc4->uniforms,
+                                       vc4->zsa->stencil_uniforms[uinfo->data[i]] |
+                                       (uinfo->data[i] <= 1 ?
+                                        (vc4->stencil_ref.ref_value[uinfo->data[i]] << 8) :
+                                        0));
                         break;
 
                 case QUNIFORM_ALPHA_REF:
-                        cl_f(&vc4->uniforms, vc4->zsa->base.alpha.ref_value);
+                        cl_aligned_f(&vc4->uniforms,
+                                     vc4->zsa->base.alpha.ref_value);
                         break;
                 }
 #if 0

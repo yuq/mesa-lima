@@ -27,6 +27,7 @@
 #include <stdint.h>
 
 #include "util/u_math.h"
+#include "util/macros.h"
 
 #include "vc4_packet.h"
 
@@ -45,6 +46,23 @@ void vc4_reset_cl(struct vc4_cl *cl);
 void vc4_dump_cl(void *cl, uint32_t size, bool is_render);
 uint32_t vc4_gem_hindex(struct vc4_context *vc4, struct vc4_bo *bo);
 
+struct PACKED unaligned_16 { uint16_t x; };
+struct PACKED unaligned_32 { uint32_t x; };
+
+static inline void
+put_unaligned_32(void *ptr, uint32_t val)
+{
+        struct unaligned_32 *p = ptr;
+        p->x = val;
+}
+
+static inline void
+put_unaligned_16(void *ptr, uint16_t val)
+{
+        struct unaligned_16 *p = ptr;
+        p->x = val;
+}
+
 static inline void
 cl_u8(struct vc4_cl *cl, uint8_t n)
 {
@@ -59,12 +77,21 @@ cl_u16(struct vc4_cl *cl, uint16_t n)
 {
         assert((cl->next - cl->base) + 2 <= cl->size);
 
-        *(uint16_t *)cl->next = n;
+        put_unaligned_16(cl->next, n);
         cl->next += 2;
 }
 
 static inline void
 cl_u32(struct vc4_cl *cl, uint32_t n)
+{
+        assert((cl->next - cl->base) + 4 <= cl->size);
+
+        put_unaligned_32(cl->next, n);
+        cl->next += 4;
+}
+
+static inline void
+cl_aligned_u32(struct vc4_cl *cl, uint32_t n)
 {
         assert((cl->next - cl->base) + 4 <= cl->size);
 
@@ -85,6 +112,12 @@ static inline void
 cl_f(struct vc4_cl *cl, float f)
 {
         cl_u32(cl, fui(f));
+}
+
+static inline void
+cl_aligned_f(struct vc4_cl *cl, float f)
+{
+        cl_aligned_u32(cl, fui(f));
 }
 
 static inline void
@@ -123,10 +156,28 @@ cl_reloc_hindex(struct vc4_cl *cl, uint32_t hindex, uint32_t offset)
 }
 
 static inline void
+cl_aligned_reloc_hindex(struct vc4_cl *cl, uint32_t hindex, uint32_t offset)
+{
+        *(uint32_t *)(cl->base + cl->reloc_next) = hindex;
+        cl->reloc_next += 4;
+
+        cl->reloc_count--;
+
+        cl_aligned_u32(cl, offset);
+}
+
+static inline void
 cl_reloc(struct vc4_context *vc4, struct vc4_cl *cl,
          struct vc4_bo *bo, uint32_t offset)
 {
         cl_reloc_hindex(cl, vc4_gem_hindex(vc4, bo), offset);
+}
+
+static inline void
+cl_aligned_reloc(struct vc4_context *vc4, struct vc4_cl *cl,
+         struct vc4_bo *bo, uint32_t offset)
+{
+        cl_aligned_reloc_hindex(cl, vc4_gem_hindex(vc4, bo), offset);
 }
 
 void cl_ensure_space(struct vc4_cl *cl, uint32_t size);
