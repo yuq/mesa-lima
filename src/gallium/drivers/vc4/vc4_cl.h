@@ -55,7 +55,7 @@ cl_u8(struct vc4_cl *cl, uint8_t n)
 }
 
 static inline void
-cl_u16(struct vc4_cl *cl, uint32_t n)
+cl_u16(struct vc4_cl *cl, uint16_t n)
 {
         assert((cl->next - cl->base) + 2 <= cl->size);
 
