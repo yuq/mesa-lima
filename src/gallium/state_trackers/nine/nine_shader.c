@@ -1427,17 +1427,12 @@ DECL_SPECIAL(CALL)
 DECL_SPECIAL(CALLNZ)
 {
     struct ureg_program *ureg = tx->ureg;
-    struct ureg_dst tmp = tx_scratch_scalar(tx);
     struct ureg_src src = tx_src_param(tx, &tx->insn.src[1]);
 
-    /* NOTE: source should be const bool, so we can use NOT/SUB instead of [U]SNE 0 */
-    if (!tx->insn.flags) {
-        if (tx->native_integers)
-            ureg_NOT(ureg, tmp, src);
-        else
-            ureg_SUB(ureg, tmp, ureg_imm1f(ureg, 1.0f), src);
-    }
-    ureg_IF(ureg, tx->insn.flags ? src : tx_src_scalar(tmp), tx_cond(tx));
+    if (!tx->native_integers)
+        ureg_IF(ureg, src, tx_cond(tx));
+    else
+        ureg_UIF(ureg, src, tx_cond(tx));
     ureg_CAL(ureg, &tx->inst_labels[tx->insn.src[0].idx]);
     tx_endcond(tx);
     ureg_ENDIF(ureg);
