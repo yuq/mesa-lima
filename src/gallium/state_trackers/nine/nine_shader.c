@@ -1158,15 +1158,18 @@ NineTranslateInstruction_Mkxn(struct shader_translator *tx, const unsigned k, co
     struct ureg_program *ureg = tx->ureg;
     struct ureg_dst dst;
     struct ureg_src src[2];
+    struct sm1_src_param *src_mat = &tx->insn.src[1];
     unsigned i;
 
     dst = tx_dst_param(tx, &tx->insn.dst[0]);
     src[0] = tx_src_param(tx, &tx->insn.src[0]);
-    src[1] = tx_src_param(tx, &tx->insn.src[1]);
 
-    for (i = 0; i < n; i++, src[1].Index++)
+    for (i = 0; i < n; i++)
     {
         const unsigned m = (1 << i);
+
+        src[1] = tx_src_param(tx, src_mat);
+        src_mat->idx++;
 
         if (!(dst.WriteMask & m))
             continue;
