@@ -1327,7 +1327,7 @@ NineTranslateInstruction_Generic(struct shader_translator *);
 
 DECL_SPECIAL(M4x4)
 {
-    return NineTranslateInstruction_Mkxn(tx, 4, 3);
+    return NineTranslateInstruction_Mkxn(tx, 4, 4);
 }
 
 DECL_SPECIAL(M4x3)
