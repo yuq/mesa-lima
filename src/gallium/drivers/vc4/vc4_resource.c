@@ -434,11 +434,11 @@ vc4_surface_destroy(struct pipe_context *pctx, struct pipe_surface *psurf)
 static void
 vc4_flush_resource(struct pipe_context *pctx, struct pipe_resource *resource)
 {
-        struct vc4_context *vc4 = vc4_context(pctx);
-
-        /* XXX: Skip this if we don't have any queued drawing to it. */
-        vc4->base.flush(pctx, NULL, 0);
+        /* All calls to flush_resource are followed by a flush of the context,
+         * so there's nothing to do.
+         */
 }
+
 static bool
 render_blit(struct pipe_context *ctx, struct pipe_blit_info *info)
 {
