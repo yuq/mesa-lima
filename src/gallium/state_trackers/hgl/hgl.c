@@ -232,9 +232,10 @@ hgl_create_st_visual(ulong options)
 	const GLboolean alphaFlag   = ((options & BGL_ALPHA) == BGL_ALPHA);
 	const GLboolean dblFlag     = ((options & BGL_DOUBLE) == BGL_DOUBLE);
 	const GLboolean stereoFlag  = false;
-	const GLint depth           = (options & BGL_DEPTH) ? 24 : 0;
-	const GLint stencil         = (options & BGL_STENCIL) ? 8 : 0;
-	const GLint accum           = (options & BGL_ACCUM) ? 16 : 0;
+	const GLboolean depthFlag   = ((options & BGL_DEPTH) == BGL_DEPTH);
+	const GLboolean stencilFlag = ((options & BGL_STENCIL) == BGL_STENCIL);
+	const GLboolean accumFlag   = ((options & BGL_ACCUM) == BGL_ACCUM);
+
 	const GLint red             = rgbFlag ? 8 : 5;
 	const GLint green           = rgbFlag ? 8 : 5;
 	const GLint blue            = rgbFlag ? 8 : 5;
@@ -244,9 +245,9 @@ hgl_create_st_visual(ulong options)
 	TRACE("alpha    :\t%d\n", (bool)alphaFlag);
 	TRACE("dbl      :\t%d\n", (bool)dblFlag);
 	TRACE("stereo   :\t%d\n", (bool)stereoFlag);
-	TRACE("depth    :\t%d\n", depth);
-	TRACE("stencil  :\t%d\n", stencil);
-	TRACE("accum    :\t%d\n", accum);
+	TRACE("depth    :\t%d\n", (bool)depthFlag);
+	TRACE("stencil  :\t%d\n", (bool)stencilFlag);
+	TRACE("accum    :\t%d\n", (bool)accumFlag);
 	TRACE("red      :\t%d\n", red);
 	TRACE("green    :\t%d\n", green);
 	TRACE("blue     :\t%d\n", blue);
@@ -254,34 +255,23 @@ hgl_create_st_visual(ulong options)
 
 	// Determine color format
 	if (red == 8) {
+		// Color format
 		if (alpha == 8)
-			visual->color_format = PIPE_FORMAT_A8R8G8B8_UNORM;
+			visual->color_format = PIPE_FORMAT_B8G8R8A8_UNORM;
 		else
-			visual->color_format = PIPE_FORMAT_X8R8G8B8_UNORM;
-	} else {
-		// TODO: I think this should be RGB vs BGR
-		visual->color_format = PIPE_FORMAT_B5G6R5_UNORM;
-    }
+			visual->color_format = PIPE_FORMAT_B8G8R8X8_UNORM;
 
-	// Determine depth stencil format
-	switch (depth) {
-		default:
-		case 0:
-			visual->depth_stencil_format = PIPE_FORMAT_NONE;
-			break;
-		case 16:
-			visual->depth_stencil_format = PIPE_FORMAT_Z16_UNORM;
-			break;
-		case 24:
-			if ((options & BGL_STENCIL) != 0)
-				visual->depth_stencil_format = PIPE_FORMAT_S8_UINT_Z24_UNORM;
-			else
-				visual->depth_stencil_format = PIPE_FORMAT_X8Z24_UNORM;
-			break;
-		case 32:
+		// Depth buffer
+		if (depthFlag)
 			visual->depth_stencil_format = PIPE_FORMAT_Z32_UNORM;
-			break;
-	}
+		else
+			visual->depth_stencil_format = PIPE_FORMAT_NONE;
+	} else {
+		visual->color_format = PIPE_FORMAT_B5G6R5_UNORM;
+
+		// TODO: Indexed color depth buffer?
+		visual->depth_stencil_format = PIPE_FORMAT_NONE;
+    }
 
 	visual->accum_format = (options & BGL_ACCUM)
 		? PIPE_FORMAT_R16G16B16A16_SNORM : PIPE_FORMAT_NONE;
