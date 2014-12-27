@@ -15,9 +15,6 @@
 #include "bitmap_wrapper.h"
 extern "C" {
 #include "glapi/glapi.h"
-#include "main/context.h"
-#include "main/framebuffer.h"
-#include "main/renderbuffer.h"
 #include "main/viewport.h"
 #include "pipe/p_format.h"
 #include "state_tracker/st_cb_fbo.h"
@@ -42,31 +39,6 @@ extern "C" {
 #	define CALLED()
 #endif
 #define ERROR(x...) printf("GalliumContext: " x)
-
-
-static void
-hgl_viewport(struct gl_context* glContext)
-{
-	// TODO: We should try to eliminate this function
-
-	GLint x = glContext->ViewportArray[0].X;
-	GLint y = glContext->ViewportArray[0].Y;
-	GLint width = glContext->ViewportArray[0].Width;
-	GLint height = glContext->ViewportArray[0].Height;
-
-	TRACE("%s(glContext: %p, x: %d, y: %d, w: %d, h: %d\n", __func__,
-		glContext, x, y, width, height);
-
-	_mesa_check_init_viewport(glContext, width, height);
-
-	struct gl_framebuffer *draw = glContext->WinSysDrawBuffer;
-	struct gl_framebuffer *read = glContext->WinSysReadBuffer;
-
-	if (draw)
-		_mesa_resize_framebuffer(glContext, draw, width, height);
-	if (read)
-		_mesa_resize_framebuffer(glContext, read, width, height);
-}
 
 
 GalliumContext::GalliumContext(ulong options)
@@ -228,8 +200,6 @@ GalliumContext::CreateContext(Bitmap *bitmap)
 
 	struct st_context *stContext = (struct st_context*)context->st;
 	
-	stContext->ctx->Driver.Viewport = hgl_viewport;
-
 	// Init Gallium3D Post Processing
 	// TODO: no pp filters are enabled yet through postProcessEnable
 	context->postProcess = pp_init(stContext->pipe, context->postProcessEnable,
@@ -406,6 +376,7 @@ GalliumContext::ResizeViewport(int32 width, int32 height)
 	for (context_id i = 0; i < CONTEXT_MAX; i++) {
 		if (fContext[i] && fContext[i]->st) {
 			struct st_context *stContext = (struct st_context*)fContext[i]->st;
+			// TODO: _mesa_set_viewport needs to be removed for something st_api?
 			_mesa_set_viewport(stContext->ctx, 0, 0, 0, width, height);
 			st_manager_validate_framebuffers(stContext);
 		}
