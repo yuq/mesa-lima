@@ -60,7 +60,6 @@ static INLINE uint32_t r300_translate_blend_function(int blend_func,
     return 0;
 }
 
-/* XXX we can also offer the D3D versions of some of these... */
 static INLINE uint32_t r300_translate_blend_factor(int blend_fact)
 {
     switch (blend_fact) {
