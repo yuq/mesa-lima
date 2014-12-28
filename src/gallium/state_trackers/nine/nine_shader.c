@@ -2167,7 +2167,32 @@ DECL_SPECIAL(TEXDP3TEX)
 
 DECL_SPECIAL(TEXM3x2DEPTH)
 {
-    STUB(D3DERR_INVALIDCALL);
+    struct ureg_program *ureg = tx->ureg;
+    struct ureg_dst tmp;
+    const int m = tx->insn.dst[0].idx - 1;
+    const int n = tx->insn.src[0].idx;
+    assert(m >= 0 && m > n);
+
+    tx_texcoord_alloc(tx, m);
+    tx_texcoord_alloc(tx, m+1);
+
+    tmp = tx_scratch(tx);
+
+    /* performs the matrix multiplication */
+    ureg_DP3(ureg, ureg_writemask(tmp, TGSI_WRITEMASK_X), tx->regs.vT[m], ureg_src(tx->regs.tS[n]));
+    ureg_DP3(ureg, ureg_writemask(tmp, TGSI_WRITEMASK_Y), tx->regs.vT[m+1], ureg_src(tx->regs.tS[n]));
+
+    ureg_RCP(ureg, ureg_writemask(tmp, TGSI_WRITEMASK_Z), ureg_scalar(ureg_src(tmp), TGSI_SWIZZLE_Y));
+    /* tmp.x = 'z', tmp.y = 'w', tmp.z = 1/'w'. */
+    ureg_MUL(ureg, ureg_writemask(tmp, TGSI_WRITEMASK_X), ureg_scalar(ureg_src(tmp), TGSI_SWIZZLE_X), ureg_scalar(ureg_src(tmp), TGSI_SWIZZLE_Z));
+    /* res = 'w' == 0 ? 1.0 : z/w */
+    ureg_CMP(ureg, ureg_writemask(tmp, TGSI_WRITEMASK_X), ureg_negate(ureg_abs(ureg_scalar(ureg_src(tmp), TGSI_SWIZZLE_Y))),
+             ureg_scalar(ureg_src(tmp), TGSI_SWIZZLE_X), ureg_imm1f(ureg, 1.0f));
+    /* replace the depth for depth testing with the result */
+    tx->regs.oDepth = ureg_DECL_output_masked(ureg, TGSI_SEMANTIC_POSITION, 0, TGSI_WRITEMASK_Z);
+    ureg_MOV(ureg, tx->regs.oDepth, ureg_scalar(ureg_src(tmp), TGSI_SWIZZLE_X));
+    /* note that we write nothing to the destination, since it's disallowed to use it afterward */
+    return D3D_OK;
 }
 
 DECL_SPECIAL(TEXDP3)
