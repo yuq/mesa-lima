@@ -2155,11 +2155,6 @@ DECL_SPECIAL(TEXM3x3SPEC)
     STUB(D3DERR_INVALIDCALL);
 }
 
-DECL_SPECIAL(TEXM3x3VSPEC)
-{
-    STUB(D3DERR_INVALIDCALL);
-}
-
 DECL_SPECIAL(TEXREG2RGB)
 {
     STUB(D3DERR_INVALIDCALL);
@@ -2184,28 +2179,52 @@ DECL_SPECIAL(TEXM3x3)
 {
     struct ureg_program *ureg = tx->ureg;
     struct ureg_dst dst = tx_dst_param(tx, &tx->insn.dst[0]);
-    struct ureg_src src[4];
-    int s;
+    struct ureg_src sample;
+    struct ureg_dst E, tmp;
     const int m = tx->insn.dst[0].idx - 2;
     const int n = tx->insn.src[0].idx;
     assert(m >= 0 && m > n);
 
-    for (s = m; s <= (m + 2); ++s) {
-        tx_texcoord_alloc(tx, s);
-        src[s] = tx->regs.vT[s];
-    }
-    ureg_DP3(ureg, ureg_writemask(dst, TGSI_WRITEMASK_X), src[0], ureg_src(tx->regs.tS[n]));
-    ureg_DP3(ureg, ureg_writemask(dst, TGSI_WRITEMASK_Y), src[1], ureg_src(tx->regs.tS[n]));
-    ureg_DP3(ureg, ureg_writemask(dst, TGSI_WRITEMASK_Z), src[2], ureg_src(tx->regs.tS[n]));
+    tx_texcoord_alloc(tx, m);
+    tx_texcoord_alloc(tx, m+1);
+    tx_texcoord_alloc(tx, m+2);
+
+    ureg_DP3(ureg, ureg_writemask(dst, TGSI_WRITEMASK_X), tx->regs.vT[m], ureg_src(tx->regs.tS[n]));
+    ureg_DP3(ureg, ureg_writemask(dst, TGSI_WRITEMASK_Y), tx->regs.vT[m+1], ureg_src(tx->regs.tS[n]));
+    ureg_DP3(ureg, ureg_writemask(dst, TGSI_WRITEMASK_Z), tx->regs.vT[m+2], ureg_src(tx->regs.tS[n]));
 
     switch (tx->insn.opcode) {
     case D3DSIO_TEXM3x3:
         ureg_MOV(ureg, ureg_writemask(dst, TGSI_WRITEMASK_W), ureg_imm1f(ureg, 1.0f));
         break;
     case D3DSIO_TEXM3x3TEX:
-        src[3] = ureg_DECL_sampler(ureg, m + 2);
+        sample = ureg_DECL_sampler(ureg, m + 2);
         tx->info->sampler_mask |= 1 << (m + 2);
-        ureg_TEX(ureg, dst, ps1x_sampler_type(tx->info, m + 2), ureg_src(dst), src[3]);
+        ureg_TEX(ureg, dst, ps1x_sampler_type(tx->info, m + 2), ureg_src(dst), sample);
+        break;
+    case D3DSIO_TEXM3x3VSPEC:
+        sample = ureg_DECL_sampler(ureg, m + 2);
+        tx->info->sampler_mask |= 1 << (m + 2);
+        E = tx_scratch(tx);
+        tmp = ureg_writemask(tx_scratch(tx), TGSI_WRITEMASK_XYZ);
+        ureg_MOV(ureg, ureg_writemask(E, TGSI_WRITEMASK_X), ureg_scalar(tx->regs.vT[m], TGSI_SWIZZLE_W));
+        ureg_MOV(ureg, ureg_writemask(E, TGSI_WRITEMASK_Y), ureg_scalar(tx->regs.vT[m+1], TGSI_SWIZZLE_W));
+        ureg_MOV(ureg, ureg_writemask(E, TGSI_WRITEMASK_Z), ureg_scalar(tx->regs.vT[m+2], TGSI_SWIZZLE_W));
+        /* At this step, dst = N = (u', w', z').
+         * We want dst to be the texture sampled at (u'', w'', z''), with
+         * (u'', w'', z'') = 2 * (N.E / N.N) * N - E */
+        ureg_DP3(ureg, ureg_writemask(tmp, TGSI_WRITEMASK_X), ureg_src(dst), ureg_src(dst));
+        ureg_RCP(ureg, ureg_writemask(tmp, TGSI_WRITEMASK_X), ureg_scalar(ureg_src(tmp), TGSI_SWIZZLE_X));
+        /* at this step tmp.x = 1/N.N */
+        ureg_DP3(ureg, ureg_writemask(tmp, TGSI_WRITEMASK_Y), ureg_src(dst), ureg_src(E));
+        /* at this step tmp.y = N.E */
+        ureg_MUL(ureg, ureg_writemask(tmp, TGSI_WRITEMASK_X), ureg_scalar(ureg_src(tmp), TGSI_SWIZZLE_X), ureg_scalar(ureg_src(tmp), TGSI_SWIZZLE_Y));
+        /* at this step tmp.x = N.E/N.N */
+        ureg_MUL(ureg, ureg_writemask(tmp, TGSI_WRITEMASK_X), ureg_scalar(ureg_src(tmp), TGSI_SWIZZLE_X), ureg_imm1f(ureg, 2.0f));
+        ureg_MUL(ureg, tmp, ureg_scalar(ureg_src(tmp), TGSI_SWIZZLE_X), ureg_src(dst));
+        /* at this step tmp.xyz = 2 * (N.E / N.N) * N */
+        ureg_SUB(ureg, tmp, ureg_src(tmp), ureg_src(E));
+        ureg_TEX(ureg, dst, ps1x_sampler_type(tx->info, m + 2), ureg_src(tmp), sample);
         break;
     default:
         return D3DERR_INVALIDCALL;
@@ -2423,7 +2442,7 @@ struct sm1_op_info inst_table[] =
     _OPI(TEXM3x3PAD,   TEX, V(0,0), V(0,0), V(0,0), V(1,3), 1, 1, SPECIAL(TEXM3x3PAD)),
     _OPI(TEXM3x3TEX,   TEX, V(0,0), V(0,0), V(0,0), V(1,3), 1, 1, SPECIAL(TEXM3x3)),
     _OPI(TEXM3x3SPEC,  TEX, V(0,0), V(0,0), V(0,0), V(1,3), 1, 2, SPECIAL(TEXM3x3SPEC)),
-    _OPI(TEXM3x3VSPEC, TEX, V(0,0), V(0,0), V(0,0), V(1,3), 1, 1, SPECIAL(TEXM3x3VSPEC)),
+    _OPI(TEXM3x3VSPEC, TEX, V(0,0), V(0,0), V(0,0), V(1,3), 1, 1, SPECIAL(TEXM3x3)),
 
     _OPI(EXPP, EXP, V(0,0), V(1,1), V(0,0), V(0,0), 1, 1, NULL),
     _OPI(EXPP, EX2, V(2,0), V(3,0), V(0,0), V(0,0), 1, 1, NULL),
