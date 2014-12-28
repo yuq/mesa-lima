@@ -2252,7 +2252,17 @@ DECL_SPECIAL(TEXM3x2DEPTH)
 
 DECL_SPECIAL(TEXDP3)
 {
-    STUB(D3DERR_INVALIDCALL);
+    struct ureg_program *ureg = tx->ureg;
+    struct ureg_dst dst = tx_dst_param(tx, &tx->insn.dst[0]);
+    const int m = tx->insn.dst[0].idx;
+    const int n = tx->insn.src[0].idx;
+    assert(m >= 0 && m > n);
+
+    tx_texcoord_alloc(tx, m);
+
+    ureg_DP3(ureg, dst, tx->regs.vT[m], ureg_src(tx->regs.tS[n]));
+
+    return D3D_OK;
 }
 
 DECL_SPECIAL(TEXM3x3)
