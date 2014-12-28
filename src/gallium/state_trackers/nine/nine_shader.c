@@ -2314,7 +2314,28 @@ DECL_SPECIAL(TEXM3x3)
 
 DECL_SPECIAL(TEXDEPTH)
 {
-    STUB(D3DERR_INVALIDCALL);
+    struct ureg_program *ureg = tx->ureg;
+    struct ureg_dst r5;
+    struct ureg_src r5r, r5g;
+
+    assert(tx->insn.dst[0].idx == 5); /* instruction must get r5 here */
+
+    /* we must replace the depth by r5.g == 0 ? 1.0f : r5.r/r5.g.
+     * r5 won't be used afterward, thus we can use r5.ba */
+    r5 = tx->regs.r[5];
+    r5r = ureg_scalar(ureg_src(r5), TGSI_SWIZZLE_X);
+    r5g = ureg_scalar(ureg_src(r5), TGSI_SWIZZLE_Y);
+
+    ureg_RCP(ureg, ureg_writemask(r5, TGSI_WRITEMASK_Z), r5g);
+    ureg_MUL(ureg, ureg_writemask(r5, TGSI_WRITEMASK_X), r5r, ureg_scalar(ureg_src(r5), TGSI_SWIZZLE_Z));
+    /* r5.r = r/g */
+    ureg_CMP(ureg, ureg_writemask(r5, TGSI_WRITEMASK_X), ureg_negate(ureg_abs(r5g)),
+             r5r, ureg_imm1f(ureg, 1.0f));
+    /* replace the depth for depth testing with the result */
+    tx->regs.oDepth = ureg_DECL_output_masked(ureg, TGSI_SEMANTIC_POSITION, 0, TGSI_WRITEMASK_Z);
+    ureg_MOV(ureg, tx->regs.oDepth, r5r);
+
+    return D3D_OK;
 }
 
 DECL_SPECIAL(BEM)
