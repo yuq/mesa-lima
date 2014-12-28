@@ -205,7 +205,6 @@ NineQuery9_GetData( struct NineQuery9 *This,
 {
     struct pipe_context *pipe = This->base.device->pipe;
     boolean ok, wait_query_result = FALSE;
-    unsigned i;
     union pipe_query_result presult;
     union nine_query_result nresult;
 
