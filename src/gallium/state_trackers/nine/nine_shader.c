@@ -2127,12 +2127,34 @@ DECL_SPECIAL(TEXBEML)
 
 DECL_SPECIAL(TEXREG2AR)
 {
-    STUB(D3DERR_INVALIDCALL);
+    struct ureg_program *ureg = tx->ureg;
+    struct ureg_dst dst = tx_dst_param(tx, &tx->insn.dst[0]);
+    struct ureg_src sample;
+    const int m = tx->insn.dst[0].idx;
+    const int n = tx->insn.src[0].idx;
+    assert(m >= 0 && m > n);
+
+    sample = ureg_DECL_sampler(ureg, m);
+    tx->info->sampler_mask |= 1 << m;
+    ureg_TEX(ureg, dst, ps1x_sampler_type(tx->info, m), ureg_swizzle(ureg_src(tx->regs.tS[n]), NINE_SWIZZLE4(W,X,X,X)), sample);
+
+    return D3D_OK;
 }
 
 DECL_SPECIAL(TEXREG2GB)
 {
-    STUB(D3DERR_INVALIDCALL);
+    struct ureg_program *ureg = tx->ureg;
+    struct ureg_dst dst = tx_dst_param(tx, &tx->insn.dst[0]);
+    struct ureg_src sample;
+    const int m = tx->insn.dst[0].idx;
+    const int n = tx->insn.src[0].idx;
+    assert(m >= 0 && m > n);
+
+    sample = ureg_DECL_sampler(ureg, m);
+    tx->info->sampler_mask |= 1 << m;
+    ureg_TEX(ureg, dst, ps1x_sampler_type(tx->info, m), ureg_swizzle(ureg_src(tx->regs.tS[n]), NINE_SWIZZLE4(Y,Z,Z,Z)), sample);
+
+    return D3D_OK;
 }
 
 DECL_SPECIAL(TEXM3x2PAD)
@@ -2212,7 +2234,18 @@ DECL_SPECIAL(TEXM3x3SPEC)
 
 DECL_SPECIAL(TEXREG2RGB)
 {
-    STUB(D3DERR_INVALIDCALL);
+    struct ureg_program *ureg = tx->ureg;
+    struct ureg_dst dst = tx_dst_param(tx, &tx->insn.dst[0]);
+    struct ureg_src sample;
+    const int m = tx->insn.dst[0].idx;
+    const int n = tx->insn.src[0].idx;
+    assert(m >= 0 && m > n);
+
+    sample = ureg_DECL_sampler(ureg, m);
+    tx->info->sampler_mask |= 1 << m;
+    ureg_TEX(ureg, dst, ps1x_sampler_type(tx->info, m), ureg_src(tx->regs.tS[n]), sample);
+
+    return D3D_OK;
 }
 
 DECL_SPECIAL(TEXDP3TEX)
