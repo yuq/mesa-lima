@@ -2217,7 +2217,25 @@ DECL_SPECIAL(TEXREG2RGB)
 
 DECL_SPECIAL(TEXDP3TEX)
 {
-    STUB(D3DERR_INVALIDCALL);
+    struct ureg_program *ureg = tx->ureg;
+    struct ureg_dst dst = tx_dst_param(tx, &tx->insn.dst[0]);
+    struct ureg_dst tmp;
+    struct ureg_src sample;
+    const int m = tx->insn.dst[0].idx;
+    const int n = tx->insn.src[0].idx;
+    assert(m >= 0 && m > n);
+
+    tx_texcoord_alloc(tx, m);
+
+    tmp = tx_scratch(tx);
+    ureg_DP3(ureg, ureg_writemask(tmp, TGSI_WRITEMASK_X), tx->regs.vT[m], ureg_src(tx->regs.tS[n]));
+    ureg_MOV(ureg, ureg_writemask(tmp, TGSI_WRITEMASK_YZ), ureg_imm1f(ureg, 0.0f));
+
+    sample = ureg_DECL_sampler(ureg, m);
+    tx->info->sampler_mask |= 1 << m;
+    ureg_TEX(ureg, dst, ps1x_sampler_type(tx->info, m), ureg_src(tmp), sample);
+
+    return D3D_OK;
 }
 
 DECL_SPECIAL(TEXM3x2DEPTH)
