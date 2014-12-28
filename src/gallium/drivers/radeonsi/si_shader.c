@@ -59,6 +59,7 @@ struct si_shader_context
 	struct tgsi_parse_context parse;
 	struct tgsi_token * tokens;
 	struct si_shader *shader;
+	struct si_screen *screen;
 	unsigned type; /* TGSI_PROCESSOR_* specifies the type of shader. */
 	int param_streamout_config;
 	int param_streamout_write_index;
@@ -1400,10 +1401,7 @@ static void si_llvm_emit_fs_epilogue(struct lp_build_tgsi_context * bld_base)
 		if (stencil_index >= 0) {
 			out_ptr = si_shader_ctx->radeon_bld.soa.outputs[stencil_index][1];
 			args[6] = LLVMBuildLoad(base->gallivm->builder, out_ptr, "");
-			/* Only setting the stencil component bit (0x2) here
-			 * breaks some stencil piglit tests
-			 */
-			mask |= 0x3;
+			mask |= 0x2;
 			si_shader_ctx->shader->db_shader_control |=
 				S_02880C_STENCIL_TEST_VAL_EXPORT_ENABLE(1);
 		}
@@ -1411,9 +1409,15 @@ static void si_llvm_emit_fs_epilogue(struct lp_build_tgsi_context * bld_base)
 		if (samplemask_index >= 0) {
 			out_ptr = si_shader_ctx->radeon_bld.soa.outputs[samplemask_index][0];
 			args[7] = LLVMBuildLoad(base->gallivm->builder, out_ptr, "");
-			mask |= 0xf; /* Set all components. */
+			mask |= 0x4;
 			si_shader_ctx->shader->db_shader_control |= S_02880C_MASK_EXPORT_ENABLE(1);
 		}
+
+		/* SI (except OLAND) has a bug that it only looks
+		 * at the X writemask component. */
+		if (si_shader_ctx->screen->b.chip_class == SI &&
+		    si_shader_ctx->screen->b.family != CHIP_OLAND)
+			mask |= 0x1;
 
 		if (samplemask_index >= 0)
 			si_shader_ctx->shader->spi_shader_z_format = V_028710_SPI_SHADER_32_ABGR;
@@ -2740,6 +2744,7 @@ int si_shader_create(struct si_screen *sscreen, struct si_shader *shader)
 	tgsi_parse_init(&si_shader_ctx.parse, si_shader_ctx.tokens);
 	si_shader_ctx.shader = shader;
 	si_shader_ctx.type = si_shader_ctx.parse.FullHeader.Processor.Processor;
+	si_shader_ctx.screen = sscreen;
 
 	switch (si_shader_ctx.type) {
 	case TGSI_PROCESSOR_VERTEX:
