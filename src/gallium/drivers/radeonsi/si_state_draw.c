@@ -363,6 +363,8 @@ static void si_emit_draw_packets(struct si_context *sctx,
 	}
 }
 
+#define BOTH_ICACHE_KCACHE (SI_CONTEXT_INV_ICACHE | SI_CONTEXT_INV_KCACHE)
+
 void si_emit_cache_flush(struct r600_common_context *sctx, struct r600_atom *atom)
 {
 	struct radeon_winsys_cs *cs = sctx->rings.gfx.cs;
@@ -370,14 +372,20 @@ void si_emit_cache_flush(struct r600_common_context *sctx, struct r600_atom *ato
 	uint32_t compute =
 		PKT3_SHADER_TYPE_S(!!(sctx->flags & SI_CONTEXT_FLAG_COMPUTE));
 
-	/* XXX SI flushes both ICACHE and KCACHE if either flag is set.
-	 * XXX CIK shouldn't have this issue. Test CIK before separating the flags
-	 * XXX to ensure there is no regression. Also find out if there is another
-	 * XXX way to flush either ICACHE or KCACHE but not both for SI. */
-	if (sctx->flags & (SI_CONTEXT_INV_ICACHE |
-			   SI_CONTEXT_INV_KCACHE)) {
-		cp_coher_cntl |= S_0085F0_SH_ICACHE_ACTION_ENA(1) |
-				 S_0085F0_SH_KCACHE_ACTION_ENA(1);
+	/* SI has a bug that it always flushes ICACHE and KCACHE if either
+	 * bit is set. An alternative way is to write SQC_CACHES. */
+	if (sctx->chip_class == SI &&
+	    sctx->flags & BOTH_ICACHE_KCACHE &&
+	    (sctx->flags & BOTH_ICACHE_KCACHE) != BOTH_ICACHE_KCACHE) {
+		r600_write_config_reg(cs, R_008C08_SQC_CACHES,
+			S_008C08_INST_INVALIDATE(!!(sctx->flags & SI_CONTEXT_INV_ICACHE)) |
+			S_008C08_DATA_INVALIDATE(!!(sctx->flags & SI_CONTEXT_INV_KCACHE)));
+		cs->buf[cs->cdw-3] |= compute; /* set the compute bit in the header */
+	} else {
+		if (sctx->flags & SI_CONTEXT_INV_ICACHE)
+			cp_coher_cntl |= S_0085F0_SH_ICACHE_ACTION_ENA(1);
+		if (sctx->flags & SI_CONTEXT_INV_KCACHE)
+			cp_coher_cntl |= S_0085F0_SH_KCACHE_ACTION_ENA(1);
 	}
 
 	if (sctx->flags & (SI_CONTEXT_INV_TC_L1 | R600_CONTEXT_STREAMOUT_FLUSH))
@@ -459,7 +467,7 @@ void si_emit_cache_flush(struct r600_common_context *sctx, struct r600_atom *ato
 	sctx->flags = 0;
 }
 
-const struct r600_atom si_atom_cache_flush = { si_emit_cache_flush, 21 }; /* number of CS dwords */
+const struct r600_atom si_atom_cache_flush = { si_emit_cache_flush, 24 }; /* number of CS dwords */
 
 static void si_get_draw_start_count(struct si_context *sctx,
 				    const struct pipe_draw_info *info,
