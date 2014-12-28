@@ -2142,7 +2142,25 @@ DECL_SPECIAL(TEXM3x2PAD)
 
 DECL_SPECIAL(TEXM3x2TEX)
 {
-    STUB(D3DERR_INVALIDCALL);
+    struct ureg_program *ureg = tx->ureg;
+    struct ureg_dst dst = tx_dst_param(tx, &tx->insn.dst[0]);
+    struct ureg_src sample;
+    const int m = tx->insn.dst[0].idx - 1;
+    const int n = tx->insn.src[0].idx;
+    assert(m >= 0 && m > n);
+
+    tx_texcoord_alloc(tx, m);
+    tx_texcoord_alloc(tx, m+1);
+
+    /* performs the matrix multiplication */
+    ureg_DP3(ureg, ureg_writemask(dst, TGSI_WRITEMASK_X), tx->regs.vT[m], ureg_src(tx->regs.tS[n]));
+    ureg_DP3(ureg, ureg_writemask(dst, TGSI_WRITEMASK_Y), tx->regs.vT[m+1], ureg_src(tx->regs.tS[n]));
+
+    sample = ureg_DECL_sampler(ureg, m + 1);
+    tx->info->sampler_mask |= 1 << (m + 1);
+    ureg_TEX(ureg, dst, ps1x_sampler_type(tx->info, m + 1), ureg_src(dst), sample);
+
+    return D3D_OK;
 }
 
 DECL_SPECIAL(TEXM3x3PAD)
