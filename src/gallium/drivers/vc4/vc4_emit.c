@@ -37,12 +37,19 @@ vc4_emit_state(struct pipe_context *pctx)
                 float vp_maxy = fabs(vpscale[1]) + vptranslate[1];
                 uint32_t minx = MAX2(vc4->scissor.minx, vp_minx);
                 uint32_t miny = MAX2(vc4->scissor.miny, vp_miny);
+                uint32_t maxx = MIN2(vc4->scissor.maxx, vp_maxx);
+                uint32_t maxy = MIN2(vc4->scissor.maxy, vp_maxy);
 
                 cl_u8(&vc4->bcl, VC4_PACKET_CLIP_WINDOW);
                 cl_u16(&vc4->bcl, minx);
                 cl_u16(&vc4->bcl, miny);
-                cl_u16(&vc4->bcl, MIN2(vc4->scissor.maxx, vp_maxx) - minx);
-                cl_u16(&vc4->bcl, MIN2(vc4->scissor.maxy, vp_maxy) - miny);
+                cl_u16(&vc4->bcl, maxx - minx);
+                cl_u16(&vc4->bcl, maxy - miny);
+
+                vc4->draw_min_x = MIN2(vc4->draw_min_x, minx);
+                vc4->draw_min_y = MIN2(vc4->draw_min_y, miny);
+                vc4->draw_max_x = MAX2(vc4->draw_max_x, maxx);
+                vc4->draw_max_y = MAX2(vc4->draw_max_y, maxy);
         }
 
         if (vc4->dirty & (VC4_DIRTY_RASTERIZER | VC4_DIRTY_ZSA)) {

@@ -173,6 +173,16 @@ struct vc4_context {
         struct vc4_cl bo_handles;
         struct vc4_cl bo_pointers;
         uint32_t shader_rec_count;
+        /** @{
+         * Bounding box of the scissor across all queued drawing.
+         *
+         * Note that the max values are exclusive.
+         */
+        uint32_t draw_min_x;
+        uint32_t draw_min_y;
+        uint32_t draw_max_x;
+        uint32_t draw_max_y;
+        /** @} */
 
         struct vc4_bo *tile_alloc;
         struct vc4_bo *tile_state;

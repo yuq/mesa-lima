@@ -316,6 +316,10 @@ vc4_clear(struct pipe_context *pctx, unsigned buffers,
         if (buffers & PIPE_CLEAR_STENCIL)
                 vc4->clear_stencil = stencil;
 
+        vc4->draw_min_x = 0;
+        vc4->draw_min_y = 0;
+        vc4->draw_max_x = vc4->framebuffer.width;
+        vc4->draw_max_y = vc4->framebuffer.height;
         vc4->cleared |= buffers;
         vc4->resolve |= buffers;
 

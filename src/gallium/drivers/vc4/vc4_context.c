@@ -94,8 +94,15 @@ vc4_setup_rcl(struct vc4_context *vc4)
         uint32_t resolve_uncleared = vc4->resolve & ~vc4->cleared;
         uint32_t width = vc4->framebuffer.width;
         uint32_t height = vc4->framebuffer.height;
-        uint32_t xtiles = align(width, 64) / 64;
-        uint32_t ytiles = align(height, 64) / 64;
+        uint32_t stride_in_tiles = align(width, 64) / 64;
+
+        assert(vc4->draw_min_x != ~0 && vc4->draw_min_y != ~0);
+        uint32_t min_x_tile = vc4->draw_min_x / 64;
+        uint32_t min_y_tile = vc4->draw_min_y / 64;
+        uint32_t max_x_tile = (vc4->draw_max_x - 1) / 64;
+        uint32_t max_y_tile = (vc4->draw_max_y - 1) / 64;
+        uint32_t xtiles = max_x_tile - min_x_tile + 1;
+        uint32_t ytiles = max_y_tile - min_y_tile + 1;
 
 #if 0
         fprintf(stderr, "RCL: resolve 0x%x clear 0x%x resolve uncleared 0x%x\n",
@@ -171,10 +178,10 @@ vc4_setup_rcl(struct vc4_context *vc4)
         uint32_t depth_hindex = ztex ? vc4_gem_hindex(vc4, ztex->bo) : 0;
         uint32_t tile_alloc_hindex = vc4_gem_hindex(vc4, vc4->tile_alloc);
 
-        for (int y = 0; y < ytiles; y++) {
-                for (int x = 0; x < xtiles; x++) {
-                        bool end_of_frame = (x == xtiles - 1 &&
-                                             y == ytiles - 1);
+        for (int y = min_y_tile; y <= max_y_tile; y++) {
+                for (int x = min_x_tile; x <= max_x_tile; x++) {
+                        bool end_of_frame = (x == max_x_tile &&
+                                             y == max_y_tile);
                         bool coords_emitted = false;
 
                         /* Note that the load doesn't actually occur until the
@@ -225,13 +232,13 @@ vc4_setup_rcl(struct vc4_context *vc4)
                         /* Wait for the binner before jumping to the first
                          * tile's lists.
                          */
-                        if (x == 0 && y == 0)
+                        if (x == min_x_tile && y == min_y_tile)
                                 cl_u8(&vc4->rcl, VC4_PACKET_WAIT_ON_SEMAPHORE);
 
                         cl_start_reloc(&vc4->rcl, 1);
                         cl_u8(&vc4->rcl, VC4_PACKET_BRANCH_TO_SUB_LIST);
                         cl_reloc_hindex(&vc4->rcl, tile_alloc_hindex,
-                                        (y * xtiles + x) * 32);
+                                        (y * stride_in_tiles + x) * 32);
 
                         if (vc4->resolve & (PIPE_CLEAR_DEPTH | PIPE_CLEAR_STENCIL)) {
                                 vc4_tile_coordinates(vc4, x, y, &coords_emitted);
@@ -313,6 +320,11 @@ vc4_draw_reset(struct vc4_context *vc4)
         vc4->dirty = ~0;
         vc4->resolve = 0;
         vc4->cleared = 0;
+
+        vc4->draw_min_x = ~0;
+        vc4->draw_min_y = ~0;
+        vc4->draw_max_x = 0;
+        vc4->draw_max_y = 0;
 }
 
 void
@@ -322,6 +334,15 @@ vc4_flush(struct pipe_context *pctx)
 
         if (!vc4->needs_flush)
                 return;
+
+        /* The RCL setup would choke if the draw bounds cause no drawing, so
+         * just drop the drawing if that's the case.
+         */
+        if (vc4->draw_max_x <= vc4->draw_min_x ||
+            vc4->draw_max_y <= vc4->draw_min_y) {
+                vc4_draw_reset(vc4);
+                return;
+        }
 
         /* Increment the semaphore indicating that binning is done and
          * unblocking the render thread.  Note that this doesn't act until the
