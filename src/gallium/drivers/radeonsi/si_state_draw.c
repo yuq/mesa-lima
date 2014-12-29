@@ -551,6 +551,11 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 		}
 	}
 
+	if (info->indexed && r600_resource(ib.buffer)->TC_L2_dirty) {
+		sctx->b.flags |= SI_CONTEXT_INV_TC_L2;
+		r600_resource(ib.buffer)->TC_L2_dirty = false;
+	}
+
 	/* Check flush flags. */
 	if (sctx->b.flags)
 		sctx->atoms.s.cache_flush->dirty = true;
