@@ -1054,9 +1054,11 @@ static void si_invalidate_buffer(struct pipe_context *ctx, struct pipe_resource 
 #define CP_DMA_MAX_BYTE_COUNT ((1 << 21) - 8)
 
 static void si_clear_buffer(struct pipe_context *ctx, struct pipe_resource *dst,
-			    unsigned offset, unsigned size, unsigned value)
+			    unsigned offset, unsigned size, unsigned value,
+			    bool is_framebuffer)
 {
 	struct si_context *sctx = (struct si_context*)ctx;
+	unsigned flush_flags;
 
 	if (!size)
 		return;
@@ -1081,12 +1083,15 @@ static void si_clear_buffer(struct pipe_context *ctx, struct pipe_resource *dst,
 	uint64_t va = r600_resource(dst)->gpu_address + offset;
 
 	/* Flush the caches where the resource is bound. */
-	/* XXX only flush the caches where the buffer is bound. */
-	sctx->b.flags |= SI_CONTEXT_INV_TC_L1 |
-			 SI_CONTEXT_INV_TC_L2 |
-			 SI_CONTEXT_INV_KCACHE |
-			 SI_CONTEXT_FLUSH_AND_INV_FRAMEBUFFER;
-	sctx->b.flags |= SI_CONTEXT_PS_PARTIAL_FLUSH;
+	if (is_framebuffer)
+		flush_flags = SI_CONTEXT_FLUSH_AND_INV_FRAMEBUFFER;
+	else
+		flush_flags = SI_CONTEXT_INV_TC_L1 |
+			      SI_CONTEXT_INV_TC_L2 |
+			      SI_CONTEXT_INV_KCACHE;
+
+	sctx->b.flags |= SI_CONTEXT_PS_PARTIAL_FLUSH |
+			 flush_flags;
 
 	while (size) {
 		unsigned byte_count = MIN2(size, CP_DMA_MAX_BYTE_COUNT);
@@ -1120,17 +1125,16 @@ static void si_clear_buffer(struct pipe_context *ctx, struct pipe_resource *dst,
 
 	/* Flush the caches again in case the 3D engine has been prefetching
 	 * the resource. */
-	/* XXX only flush the caches where the buffer is bound. */
-	sctx->b.flags |= SI_CONTEXT_INV_TC_L1 |
-			 SI_CONTEXT_INV_TC_L2 |
-			 SI_CONTEXT_INV_KCACHE |
-			 SI_CONTEXT_FLUSH_AND_INV_FRAMEBUFFER;
+	sctx->b.flags |= flush_flags;
 }
 
 void si_copy_buffer(struct si_context *sctx,
 		    struct pipe_resource *dst, struct pipe_resource *src,
-		    uint64_t dst_offset, uint64_t src_offset, unsigned size)
+		    uint64_t dst_offset, uint64_t src_offset, unsigned size,
+		    bool is_framebuffer)
 {
+	unsigned flush_flags;
+
 	if (!size)
 		return;
 
@@ -1144,11 +1148,15 @@ void si_copy_buffer(struct si_context *sctx,
 	src_offset += r600_resource(src)->gpu_address;
 
 	/* Flush the caches where the resource is bound. */
-	sctx->b.flags |= SI_CONTEXT_INV_TC_L1 |
-			 SI_CONTEXT_INV_TC_L2 |
-			 SI_CONTEXT_INV_KCACHE |
-			 SI_CONTEXT_FLUSH_AND_INV_FRAMEBUFFER |
-			 SI_CONTEXT_PS_PARTIAL_FLUSH;
+	if (is_framebuffer)
+		flush_flags = SI_CONTEXT_FLUSH_AND_INV_FRAMEBUFFER;
+	else
+		flush_flags = SI_CONTEXT_INV_TC_L1 |
+			      SI_CONTEXT_INV_TC_L2 |
+			      SI_CONTEXT_INV_KCACHE;
+
+	sctx->b.flags |= SI_CONTEXT_PS_PARTIAL_FLUSH |
+			 flush_flags;
 
 	while (size) {
 		unsigned sync_flags = 0;
@@ -1180,10 +1188,9 @@ void si_copy_buffer(struct si_context *sctx,
 		dst_offset += byte_count;
 	}
 
-	sctx->b.flags |= SI_CONTEXT_INV_TC_L1 |
-			 SI_CONTEXT_INV_TC_L2 |
-			 SI_CONTEXT_INV_KCACHE |
-			 SI_CONTEXT_FLUSH_AND_INV_FRAMEBUFFER;
+	/* Flush the caches again in case the 3D engine has been prefetching
+	 * the resource. */
+	sctx->b.flags |= flush_flags;
 }
 
 /* INIT/DEINIT */

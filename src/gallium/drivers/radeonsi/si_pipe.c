@@ -155,7 +155,7 @@ static struct pipe_context *si_create_context(struct pipe_screen *screen, void *
 
 		/* Clear the NULL constant buffer, because loads should return zeros. */
 		sctx->b.clear_buffer(&sctx->b.b, sctx->null_const_buf.buffer, 0,
-				     sctx->null_const_buf.buffer->width0, 0);
+				     sctx->null_const_buf.buffer->width0, 0, false);
 	}
 
 	return &sctx->b.b;
