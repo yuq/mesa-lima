@@ -48,24 +48,30 @@
 #define SI_MAX_DRAW_CS_DWORDS \
 	(/*derived prim state:*/ 6 + /*draw regs:*/ 16 + /*draw packets:*/ 31)
 
-/* read caches */
-#define R600_CONTEXT_INV_TEX_CACHE		(R600_CONTEXT_PRIVATE_FLAG << 0)
-#define R600_CONTEXT_INV_CONST_CACHE		(R600_CONTEXT_PRIVATE_FLAG << 1)
-#define R600_CONTEXT_INV_SHADER_CACHE		(R600_CONTEXT_PRIVATE_FLAG << 2)
-/* read-write caches */
-#define R600_CONTEXT_FLUSH_AND_INV		(R600_CONTEXT_PRIVATE_FLAG << 3)
-#define R600_CONTEXT_FLUSH_AND_INV_CB_META	(R600_CONTEXT_PRIVATE_FLAG << 4)
-#define R600_CONTEXT_FLUSH_AND_INV_DB_META	(R600_CONTEXT_PRIVATE_FLAG << 5)
-#define R600_CONTEXT_FLUSH_AND_INV_DB		(R600_CONTEXT_PRIVATE_FLAG << 6)
-#define R600_CONTEXT_FLUSH_AND_INV_CB		(R600_CONTEXT_PRIVATE_FLAG << 7)
-#define R600_CONTEXT_FLUSH_WITH_INV_L2		(R600_CONTEXT_PRIVATE_FLAG << 8)
-/* engine synchronization */
-#define R600_CONTEXT_PS_PARTIAL_FLUSH		(R600_CONTEXT_PRIVATE_FLAG << 9)
-#define R600_CONTEXT_CS_PARTIAL_FLUSH		(R600_CONTEXT_PRIVATE_FLAG << 10)
-#define R600_CONTEXT_VGT_FLUSH			(R600_CONTEXT_PRIVATE_FLAG << 11)
-#define R600_CONTEXT_VGT_STREAMOUT_SYNC		(R600_CONTEXT_PRIVATE_FLAG << 12)
-/* other flags */
-#define R600_CONTEXT_FLAG_COMPUTE		(R600_CONTEXT_PRIVATE_FLAG << 13)
+/* Instruction cache. */
+#define SI_CONTEXT_INV_ICACHE		(R600_CONTEXT_PRIVATE_FLAG << 0)
+/* Cache used by scalar memory (SMEM) instructions. They also use TC
+ * as a second level cache, which isn't flushed by this.
+ * Other names: constant cache, data cache, DCACHE */
+#define SI_CONTEXT_INV_KCACHE		(R600_CONTEXT_PRIVATE_FLAG << 1)
+/* Caches used by vector memory (VMEM) instructions.
+ * L1 can optionally be bypassed (GLC=1) and can only be used by shaders.
+ * L2 is used by shaders and can be used by other blocks (CP, sDMA). */
+#define SI_CONTEXT_INV_TC_L1		(R600_CONTEXT_PRIVATE_FLAG << 2)
+#define SI_CONTEXT_INV_TC_L2		(R600_CONTEXT_PRIVATE_FLAG << 3)
+/* Framebuffer caches. */
+#define SI_CONTEXT_FLUSH_AND_INV_CB_META (R600_CONTEXT_PRIVATE_FLAG << 4)
+#define SI_CONTEXT_FLUSH_AND_INV_DB_META (R600_CONTEXT_PRIVATE_FLAG << 5)
+#define SI_CONTEXT_FLUSH_AND_INV_DB	(R600_CONTEXT_PRIVATE_FLAG << 6)
+#define SI_CONTEXT_FLUSH_AND_INV_CB	(R600_CONTEXT_PRIVATE_FLAG << 7)
+/* Engine synchronization. */
+#define SI_CONTEXT_PS_PARTIAL_FLUSH	(R600_CONTEXT_PRIVATE_FLAG << 8)
+#define SI_CONTEXT_CS_PARTIAL_FLUSH	(R600_CONTEXT_PRIVATE_FLAG << 9)
+#define SI_CONTEXT_VGT_FLUSH		(R600_CONTEXT_PRIVATE_FLAG << 10)
+#define SI_CONTEXT_VGT_STREAMOUT_SYNC	(R600_CONTEXT_PRIVATE_FLAG << 11)
+/* Compute only. */
+#define SI_CONTEXT_FLUSH_WITH_INV_L2	(R600_CONTEXT_PRIVATE_FLAG << 12) /* TODO: merge with TC? */
+#define SI_CONTEXT_FLAG_COMPUTE		(R600_CONTEXT_PRIVATE_FLAG << 13)
 
 struct si_compute;
 

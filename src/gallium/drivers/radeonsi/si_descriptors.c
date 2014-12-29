@@ -168,7 +168,7 @@ static void si_update_descriptors(struct si_context *sctx,
 
 		desc->atom.dirty = true;
 		/* The descriptors are read with the K cache. */
-		sctx->b.flags |= R600_CONTEXT_INV_CONST_CACHE;
+		sctx->b.flags |= SI_CONTEXT_INV_KCACHE;
 	} else {
 		desc->atom.dirty = false;
 	}
@@ -430,7 +430,8 @@ static void si_set_sampler_views(struct pipe_context *ctx,
 		}
 	}
 
-	sctx->b.flags |= R600_CONTEXT_INV_TEX_CACHE;
+	sctx->b.flags |= SI_CONTEXT_INV_TC_L1 |
+			 SI_CONTEXT_INV_TC_L2;
 	si_update_descriptors(sctx, &samplers->views.desc);
 }
 
@@ -655,7 +656,8 @@ void si_update_vertex_buffers(struct si_context *sctx)
 	 * on performance (confirmed by testing). New descriptors are always
 	 * uploaded to a fresh new buffer, so I don't think flushing the const
 	 * cache is needed. */
-	sctx->b.flags |= R600_CONTEXT_INV_TEX_CACHE;
+	sctx->b.flags |= SI_CONTEXT_INV_TC_L1 |
+			 SI_CONTEXT_INV_TC_L2;
 }
 
 
@@ -1080,13 +1082,14 @@ static void si_clear_buffer(struct pipe_context *ctx, struct pipe_resource *dst,
 
 	/* Flush the caches where the resource is bound. */
 	/* XXX only flush the caches where the buffer is bound. */
-	sctx->b.flags |= R600_CONTEXT_INV_TEX_CACHE |
-			 R600_CONTEXT_INV_CONST_CACHE |
-			 R600_CONTEXT_FLUSH_AND_INV_CB |
-			 R600_CONTEXT_FLUSH_AND_INV_DB |
-			 R600_CONTEXT_FLUSH_AND_INV_CB_META |
-			 R600_CONTEXT_FLUSH_AND_INV_DB_META;
-	sctx->b.flags |= R600_CONTEXT_PS_PARTIAL_FLUSH;
+	sctx->b.flags |= SI_CONTEXT_INV_TC_L1 |
+			 SI_CONTEXT_INV_TC_L2 |
+			 SI_CONTEXT_INV_KCACHE |
+			 SI_CONTEXT_FLUSH_AND_INV_CB |
+			 SI_CONTEXT_FLUSH_AND_INV_DB |
+			 SI_CONTEXT_FLUSH_AND_INV_CB_META |
+			 SI_CONTEXT_FLUSH_AND_INV_DB_META;
+	sctx->b.flags |= SI_CONTEXT_PS_PARTIAL_FLUSH;
 
 	while (size) {
 		unsigned byte_count = MIN2(size, CP_DMA_MAX_BYTE_COUNT);
@@ -1121,12 +1124,13 @@ static void si_clear_buffer(struct pipe_context *ctx, struct pipe_resource *dst,
 	/* Flush the caches again in case the 3D engine has been prefetching
 	 * the resource. */
 	/* XXX only flush the caches where the buffer is bound. */
-	sctx->b.flags |= R600_CONTEXT_INV_TEX_CACHE |
-			 R600_CONTEXT_INV_CONST_CACHE |
-			 R600_CONTEXT_FLUSH_AND_INV_CB |
-			 R600_CONTEXT_FLUSH_AND_INV_DB |
-			 R600_CONTEXT_FLUSH_AND_INV_CB_META |
-			 R600_CONTEXT_FLUSH_AND_INV_DB_META;
+	sctx->b.flags |= SI_CONTEXT_INV_TC_L1 |
+			 SI_CONTEXT_INV_TC_L2 |
+			 SI_CONTEXT_INV_KCACHE |
+			 SI_CONTEXT_FLUSH_AND_INV_CB |
+			 SI_CONTEXT_FLUSH_AND_INV_DB |
+			 SI_CONTEXT_FLUSH_AND_INV_CB_META |
+			 SI_CONTEXT_FLUSH_AND_INV_DB_META;
 }
 
 void si_copy_buffer(struct si_context *sctx,
@@ -1146,13 +1150,14 @@ void si_copy_buffer(struct si_context *sctx,
 	src_offset += r600_resource(src)->gpu_address;
 
 	/* Flush the caches where the resource is bound. */
-	sctx->b.flags |= R600_CONTEXT_INV_TEX_CACHE |
-			 R600_CONTEXT_INV_CONST_CACHE |
-			 R600_CONTEXT_FLUSH_AND_INV_CB |
-			 R600_CONTEXT_FLUSH_AND_INV_DB |
-			 R600_CONTEXT_FLUSH_AND_INV_CB_META |
-			 R600_CONTEXT_FLUSH_AND_INV_DB_META |
-			 R600_CONTEXT_PS_PARTIAL_FLUSH;
+	sctx->b.flags |= SI_CONTEXT_INV_TC_L1 |
+			 SI_CONTEXT_INV_TC_L2 |
+			 SI_CONTEXT_INV_KCACHE |
+			 SI_CONTEXT_FLUSH_AND_INV_CB |
+			 SI_CONTEXT_FLUSH_AND_INV_DB |
+			 SI_CONTEXT_FLUSH_AND_INV_CB_META |
+			 SI_CONTEXT_FLUSH_AND_INV_DB_META |
+			 SI_CONTEXT_PS_PARTIAL_FLUSH;
 
 	while (size) {
 		unsigned sync_flags = 0;
@@ -1184,12 +1189,13 @@ void si_copy_buffer(struct si_context *sctx,
 		dst_offset += byte_count;
 	}
 
-	sctx->b.flags |= R600_CONTEXT_INV_TEX_CACHE |
-			 R600_CONTEXT_INV_CONST_CACHE |
-			 R600_CONTEXT_FLUSH_AND_INV_CB |
-			 R600_CONTEXT_FLUSH_AND_INV_DB |
-			 R600_CONTEXT_FLUSH_AND_INV_CB_META |
-			 R600_CONTEXT_FLUSH_AND_INV_DB_META;
+	sctx->b.flags |= SI_CONTEXT_INV_TC_L1 |
+			 SI_CONTEXT_INV_TC_L2 |
+			 SI_CONTEXT_INV_KCACHE |
+			 SI_CONTEXT_FLUSH_AND_INV_CB |
+			 SI_CONTEXT_FLUSH_AND_INV_DB |
+			 SI_CONTEXT_FLUSH_AND_INV_CB_META |
+			 SI_CONTEXT_FLUSH_AND_INV_DB_META;
 }
 
 /* INIT/DEINIT */

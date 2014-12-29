@@ -1996,12 +1996,12 @@ static void si_set_framebuffer_state(struct pipe_context *ctx,
 	int i;
 
 	if (sctx->framebuffer.state.nr_cbufs) {
-		sctx->b.flags |= R600_CONTEXT_FLUSH_AND_INV_CB |
-				 R600_CONTEXT_FLUSH_AND_INV_CB_META;
+		sctx->b.flags |= SI_CONTEXT_FLUSH_AND_INV_CB |
+				 SI_CONTEXT_FLUSH_AND_INV_CB_META;
 	}
 	if (sctx->framebuffer.state.zsbuf) {
-		sctx->b.flags |= R600_CONTEXT_FLUSH_AND_INV_DB |
-				 R600_CONTEXT_FLUSH_AND_INV_DB_META;
+		sctx->b.flags |= SI_CONTEXT_FLUSH_AND_INV_DB |
+				 SI_CONTEXT_FLUSH_AND_INV_DB_META;
 	}
 
 	util_copy_framebuffer_state(&sctx->framebuffer.state, state);
@@ -2753,8 +2753,9 @@ static void si_texture_barrier(struct pipe_context *ctx)
 {
 	struct si_context *sctx = (struct si_context *)ctx;
 
-	sctx->b.flags |= R600_CONTEXT_INV_TEX_CACHE |
-			 R600_CONTEXT_FLUSH_AND_INV_CB;
+	sctx->b.flags |= SI_CONTEXT_INV_TC_L1 |
+			 SI_CONTEXT_INV_TC_L2 |
+			 SI_CONTEXT_FLUSH_AND_INV_CB;
 }
 
 static void *si_create_blend_custom(struct si_context *sctx, unsigned mode)

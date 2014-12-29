@@ -368,23 +368,24 @@ void si_emit_cache_flush(struct r600_common_context *sctx, struct r600_atom *ato
 	struct radeon_winsys_cs *cs = sctx->rings.gfx.cs;
 	uint32_t cp_coher_cntl = 0;
 	uint32_t compute =
-		PKT3_SHADER_TYPE_S(!!(sctx->flags & R600_CONTEXT_FLAG_COMPUTE));
+		PKT3_SHADER_TYPE_S(!!(sctx->flags & SI_CONTEXT_FLAG_COMPUTE));
 
 	/* XXX SI flushes both ICACHE and KCACHE if either flag is set.
 	 * XXX CIK shouldn't have this issue. Test CIK before separating the flags
 	 * XXX to ensure there is no regression. Also find out if there is another
 	 * XXX way to flush either ICACHE or KCACHE but not both for SI. */
-	if (sctx->flags & (R600_CONTEXT_INV_SHADER_CACHE |
-			   R600_CONTEXT_INV_CONST_CACHE)) {
+	if (sctx->flags & (SI_CONTEXT_INV_ICACHE |
+			   SI_CONTEXT_INV_KCACHE)) {
 		cp_coher_cntl |= S_0085F0_SH_ICACHE_ACTION_ENA(1) |
 				 S_0085F0_SH_KCACHE_ACTION_ENA(1);
 	}
-	if (sctx->flags & (R600_CONTEXT_INV_TEX_CACHE |
-			   R600_CONTEXT_STREAMOUT_FLUSH)) {
-		cp_coher_cntl |= S_0085F0_TC_ACTION_ENA(1) |
-				 S_0085F0_TCL1_ACTION_ENA(1);
-	}
-	if (sctx->flags & R600_CONTEXT_FLUSH_AND_INV_CB) {
+
+	if (sctx->flags & (SI_CONTEXT_INV_TC_L1 | R600_CONTEXT_STREAMOUT_FLUSH))
+		cp_coher_cntl |= S_0085F0_TCL1_ACTION_ENA(1);
+	if (sctx->flags & (SI_CONTEXT_INV_TC_L2 | R600_CONTEXT_STREAMOUT_FLUSH))
+		cp_coher_cntl |= S_0085F0_TC_ACTION_ENA(1);
+
+	if (sctx->flags & SI_CONTEXT_FLUSH_AND_INV_CB) {
 		cp_coher_cntl |= S_0085F0_CB_ACTION_ENA(1) |
 				 S_0085F0_CB0_DEST_BASE_ENA(1) |
 			         S_0085F0_CB1_DEST_BASE_ENA(1) |
@@ -395,7 +396,7 @@ void si_emit_cache_flush(struct r600_common_context *sctx, struct r600_atom *ato
 			         S_0085F0_CB6_DEST_BASE_ENA(1) |
 			         S_0085F0_CB7_DEST_BASE_ENA(1);
 	}
-	if (sctx->flags & R600_CONTEXT_FLUSH_AND_INV_DB) {
+	if (sctx->flags & SI_CONTEXT_FLUSH_AND_INV_DB) {
 		cp_coher_cntl |= S_0085F0_DB_ACTION_ENA(1) |
 				 S_0085F0_DB_DEST_BASE_ENA(1);
 	}
@@ -418,21 +419,21 @@ void si_emit_cache_flush(struct r600_common_context *sctx, struct r600_atom *ato
 		}
 	}
 
-	if (sctx->flags & R600_CONTEXT_FLUSH_AND_INV_CB_META) {
+	if (sctx->flags & SI_CONTEXT_FLUSH_AND_INV_CB_META) {
 		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 0, 0) | compute);
 		radeon_emit(cs, EVENT_TYPE(V_028A90_FLUSH_AND_INV_CB_META) | EVENT_INDEX(0));
 	}
-	if (sctx->flags & R600_CONTEXT_FLUSH_AND_INV_DB_META) {
+	if (sctx->flags & SI_CONTEXT_FLUSH_AND_INV_DB_META) {
 		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 0, 0) | compute);
 		radeon_emit(cs, EVENT_TYPE(V_028A90_FLUSH_AND_INV_DB_META) | EVENT_INDEX(0));
 	}
-	if (sctx->flags & R600_CONTEXT_FLUSH_WITH_INV_L2) {
+	if (sctx->flags & SI_CONTEXT_FLUSH_WITH_INV_L2) {
 		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 0, 0) | compute);
 		radeon_emit(cs, EVENT_TYPE(EVENT_TYPE_CACHE_FLUSH) | EVENT_INDEX(7) |
 				EVENT_WRITE_INV_L2);
         }
 
-	if (sctx->flags & R600_CONTEXT_PS_PARTIAL_FLUSH) {
+	if (sctx->flags & SI_CONTEXT_PS_PARTIAL_FLUSH) {
 		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 0, 0) | compute);
 		radeon_emit(cs, EVENT_TYPE(V_028A90_PS_PARTIAL_FLUSH) | EVENT_INDEX(4));
 	} else if (sctx->flags & R600_CONTEXT_STREAMOUT_FLUSH) {
@@ -441,16 +442,16 @@ void si_emit_cache_flush(struct r600_common_context *sctx, struct r600_atom *ato
 		radeon_emit(cs, EVENT_TYPE(V_028A90_VS_PARTIAL_FLUSH) | EVENT_INDEX(4));
 	}
 
-	if (sctx->flags & R600_CONTEXT_CS_PARTIAL_FLUSH) {
+	if (sctx->flags & SI_CONTEXT_CS_PARTIAL_FLUSH) {
 		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 0, 0) | compute);
 		radeon_emit(cs, EVENT_TYPE(V_028A90_CS_PARTIAL_FLUSH | EVENT_INDEX(4)));
 	}
 
-	if (sctx->flags & R600_CONTEXT_VGT_FLUSH) {
+	if (sctx->flags & SI_CONTEXT_VGT_FLUSH) {
 		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 0, 0) | compute);
 		radeon_emit(cs, EVENT_TYPE(V_028A90_VGT_FLUSH) | EVENT_INDEX(0));
 	}
-	if (sctx->flags & R600_CONTEXT_VGT_STREAMOUT_SYNC) {
+	if (sctx->flags & SI_CONTEXT_VGT_STREAMOUT_SYNC) {
 		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 0, 0) | compute);
 		radeon_emit(cs, EVENT_TYPE(V_028A90_VGT_STREAMOUT_SYNC) | EVENT_INDEX(0));
 	}
@@ -572,7 +573,7 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 	if (sctx->b.family == CHIP_HAWAII &&
 	    (sctx->b.streamout.streamout_enabled ||
 	     sctx->b.streamout.prims_gen_query_enabled)) {
-		sctx->b.flags |= R600_CONTEXT_VGT_STREAMOUT_SYNC;
+		sctx->b.flags |= SI_CONTEXT_VGT_STREAMOUT_SYNC;
 	}
 
 	/* Set the depth buffer as dirty. */

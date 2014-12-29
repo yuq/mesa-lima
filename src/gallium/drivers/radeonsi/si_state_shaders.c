@@ -725,7 +725,7 @@ void si_update_shaders(struct si_context *sctx)
 		if (!sctx->gs_rings)
 			si_init_gs_rings(sctx);
 		if (sctx->emitted.named.gs_rings != sctx->gs_rings)
-			sctx->b.flags |= R600_CONTEXT_VGT_FLUSH;
+			sctx->b.flags |= SI_CONTEXT_VGT_FLUSH;
 		si_pm4_bind_state(sctx, gs_rings, sctx->gs_rings);
 
 		si_set_ring_buffer(ctx, PIPE_SHADER_GEOMETRY, SI_RING_GSVS,

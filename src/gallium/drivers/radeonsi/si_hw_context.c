@@ -90,13 +90,14 @@ void si_context_gfx_flush(void *context, unsigned flags,
 
 	r600_preflush_suspend_features(&ctx->b);
 
-	ctx->b.flags |= R600_CONTEXT_FLUSH_AND_INV_CB |
-			R600_CONTEXT_FLUSH_AND_INV_CB_META |
-			R600_CONTEXT_FLUSH_AND_INV_DB |
-			R600_CONTEXT_FLUSH_AND_INV_DB_META |
-			R600_CONTEXT_INV_TEX_CACHE |
+	ctx->b.flags |= SI_CONTEXT_FLUSH_AND_INV_CB |
+			SI_CONTEXT_FLUSH_AND_INV_CB_META |
+			SI_CONTEXT_FLUSH_AND_INV_DB |
+			SI_CONTEXT_FLUSH_AND_INV_DB_META |
+			SI_CONTEXT_INV_TC_L1 |
+			SI_CONTEXT_INV_TC_L2 |
 			/* this is probably not needed anymore */
-			R600_CONTEXT_PS_PARTIAL_FLUSH;
+			SI_CONTEXT_PS_PARTIAL_FLUSH;
 	si_emit_cache_flush(&ctx->b, NULL);
 
 	/* force to keep tiling flags */
@@ -132,9 +133,10 @@ void si_context_gfx_flush(void *context, unsigned flags,
 void si_begin_new_cs(struct si_context *ctx)
 {
 	/* Flush read caches at the beginning of CS. */
-	ctx->b.flags |= R600_CONTEXT_INV_TEX_CACHE |
-			R600_CONTEXT_INV_CONST_CACHE |
-			R600_CONTEXT_INV_SHADER_CACHE;
+	ctx->b.flags |= SI_CONTEXT_INV_TC_L1 |
+			SI_CONTEXT_INV_TC_L2 |
+			SI_CONTEXT_INV_KCACHE |
+			SI_CONTEXT_INV_ICACHE;
 
 	/* set all valid group as dirty so they get reemited on
 	 * next draw command
