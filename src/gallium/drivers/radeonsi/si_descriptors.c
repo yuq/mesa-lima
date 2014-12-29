@@ -445,8 +445,6 @@ static void si_set_sampler_views(struct pipe_context *ctx,
 		}
 	}
 
-	sctx->b.flags |= SI_CONTEXT_INV_TC_L1 |
-			 SI_CONTEXT_INV_TC_L2;
 	si_update_descriptors(sctx, &samplers->views.desc);
 }
 
@@ -671,8 +669,6 @@ void si_update_vertex_buffers(struct si_context *sctx)
 	 * on performance (confirmed by testing). New descriptors are always
 	 * uploaded to a fresh new buffer, so I don't think flushing the const
 	 * cache is needed. */
-	sctx->b.flags |= SI_CONTEXT_INV_TC_L1 |
-			 SI_CONTEXT_INV_TC_L2;
 }
 
 

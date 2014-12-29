@@ -2004,6 +2004,12 @@ static void si_set_framebuffer_state(struct pipe_context *ctx,
 				 SI_CONTEXT_FLUSH_AND_INV_DB_META;
 	}
 
+	/* Only flush TC when changing the framebuffer state, because
+	 * the only client not using TC that can change textures is
+	 * the framebuffer. */
+	sctx->b.flags |= SI_CONTEXT_INV_TC_L1 |
+			 SI_CONTEXT_INV_TC_L2;
+
 	util_copy_framebuffer_state(&sctx->framebuffer.state, state);
 
 	sctx->framebuffer.export_16bpc = 0;
