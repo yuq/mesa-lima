@@ -1995,20 +1995,16 @@ static void si_set_framebuffer_state(struct pipe_context *ctx,
 	unsigned old_nr_samples = sctx->framebuffer.nr_samples;
 	int i;
 
-	if (sctx->framebuffer.state.nr_cbufs) {
-		sctx->b.flags |= SI_CONTEXT_FLUSH_AND_INV_CB |
-				 SI_CONTEXT_FLUSH_AND_INV_CB_META;
-	}
-	if (sctx->framebuffer.state.zsbuf) {
-		sctx->b.flags |= SI_CONTEXT_FLUSH_AND_INV_DB |
-				 SI_CONTEXT_FLUSH_AND_INV_DB_META;
-	}
-
 	/* Only flush TC when changing the framebuffer state, because
 	 * the only client not using TC that can change textures is
-	 * the framebuffer. */
+	 * the framebuffer.
+	 *
+	 * Flush all CB and DB caches here because all buffers can be used
+	 * for write by both TC (with shader image stores) and CB/DB.
+	 */
 	sctx->b.flags |= SI_CONTEXT_INV_TC_L1 |
-			 SI_CONTEXT_INV_TC_L2;
+			 SI_CONTEXT_INV_TC_L2 |
+			 SI_CONTEXT_FLUSH_AND_INV_FRAMEBUFFER;
 
 	util_copy_framebuffer_state(&sctx->framebuffer.state, state);
 
