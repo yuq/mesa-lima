@@ -305,12 +305,7 @@ void r600_emit_streamout_end(struct r600_common_context *rctx)
 	}
 
 	rctx->streamout.begin_emitted = false;
-
-	if (rctx->chip_class >= R700) {
-		rctx->flags |= R600_CONTEXT_STREAMOUT_FLUSH;
-	} else {
-		rctx->flags |= R600_CONTEXT_FLUSH_AND_INV;
-	}
+	rctx->flags |= R600_CONTEXT_STREAMOUT_FLUSH;
 }
 
 /* STREAMOUT CONFIG DERIVED STATE
