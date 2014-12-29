@@ -15,7 +15,6 @@
 #include "bitmap_wrapper.h"
 extern "C" {
 #include "glapi/glapi.h"
-#include "main/viewport.h"
 #include "pipe/p_format.h"
 #include "state_tracker/st_cb_fbo.h"
 #include "state_tracker/st_cb_flush.h"
@@ -24,6 +23,7 @@ extern "C" {
 #include "state_tracker/st_manager.h"
 #include "state_tracker/sw_winsys.h"
 #include "sw/hgl/hgl_sw_winsys.h"
+#include "util/u_atomic.h"
 #include "util/u_memory.h"
 
 #include "target-helpers/inline_sw_helper.h"
@@ -120,6 +120,7 @@ GalliumContext::CreateContext(Bitmap *bitmap)
 	// Set up the initial things our context needs
 	context->bitmap = bitmap;
 	context->colorSpace = get_bitmap_color_space(bitmap);
+	context->screen = fScreen;
 	context->draw = NULL;
 	context->read = NULL;
 	context->st = NULL;
@@ -131,7 +132,7 @@ GalliumContext::CreateContext(Bitmap *bitmap)
 	}
 
 	// Create state_tracker manager
-	context->manager = hgl_create_st_manager(fScreen);
+	context->manager = hgl_create_st_manager(context);
 
 	// Create state tracker visual
 	context->stVisual = hgl_create_st_visual(fOptions);
@@ -305,14 +306,14 @@ GalliumContext::SetCurrentContext(Bitmap *bitmap, context_id contextID)
 	api->make_current(context->api, context->st, context->draw->stfbi,
 		context->read->stfbi);
 
-	if (context->textures[ST_ATTACHMENT_BACK_LEFT]
-		&& context->textures[ST_ATTACHMENT_DEPTH_STENCIL]
-		&& context->postProcess) {
-		TRACE("Postprocessing textures...\n");
-		pp_init_fbos(context->postProcess,
-			context->textures[ST_ATTACHMENT_BACK_LEFT]->width0,
-			context->textures[ST_ATTACHMENT_BACK_LEFT]->height0);
-	}
+	//if (context->textures[ST_ATTACHMENT_BACK_LEFT]
+	//	&& context->textures[ST_ATTACHMENT_DEPTH_STENCIL]
+	//	&& context->postProcess) {
+	//	TRACE("Postprocessing textures...\n");
+	//	pp_init_fbos(context->postProcess,
+	//		context->textures[ST_ATTACHMENT_BACK_LEFT]->width0,
+	//		context->textures[ST_ATTACHMENT_BACK_LEFT]->height0);
+	//}
 
 	context->bitmap = bitmap;
 	//context->st->pipe->priv = context;
@@ -369,18 +370,38 @@ GalliumContext::SwapBuffers(context_id contextID)
 }
 
 
-void
-GalliumContext::ResizeViewport(int32 width, int32 height)
+bool
+GalliumContext::Validate(uint32 width, uint32 height)
 {
 	CALLED();
-	for (context_id i = 0; i < CONTEXT_MAX; i++) {
-		if (fContext[i] && fContext[i]->st) {
-			struct st_context *stContext = (struct st_context*)fContext[i]->st;
-			// TODO: _mesa_set_viewport needs to be removed for something st_api?
-			_mesa_set_viewport(stContext->ctx, 0, 0, 0, width, height);
-			st_manager_validate_framebuffers(stContext);
-		}
+
+	if (!fContext[fCurrentContext]) {
+		return false;
 	}
+
+	if (fContext[fCurrentContext]->width != width
+		|| fContext[fCurrentContext]->height != height) {
+		Invalidate(width, height);
+		return false;
+	}
+	return true;
+}
+
+
+void
+GalliumContext::Invalidate(uint32 width, uint32 height)
+{
+	CALLED();
+
+	assert(fContext[fCurrentContext]);
+
+	// Update st_context dimensions 
+	fContext[fCurrentContext]->width = width;
+	fContext[fCurrentContext]->height = height;
+
+	// Is this the best way to invalidate?
+	p_atomic_inc(&fContext[fCurrentContext]->read->stfbi->stamp);
+	p_atomic_inc(&fContext[fCurrentContext]->draw->stfbi->stamp);
 }
 
 
