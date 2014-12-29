@@ -164,10 +164,12 @@
 /* 0 - SRC_ADDR
  * 1 - GDS (program SAS to 1 as well)
  * 2 - DATA
+ * 3 - SRC_ADDR using TC L2 (DMA_DATA only)
  */
 #define PKT3_CP_DMA_DST_SEL(x)       ((x) << 20)
 /* 0 - DST_ADDR
  * 1 - GDS (program DAS to 1 as well)
+ * 3 - DST_ADDR using TC L2 (DMA_DATA only)
  */
 /* COMMAND */
 #define PKT3_CP_DMA_CMD_SRC_SWAP(x) ((x) << 23)
