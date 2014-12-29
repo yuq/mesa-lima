@@ -1086,7 +1086,7 @@ static void si_clear_buffer(struct pipe_context *ctx, struct pipe_resource *dst,
 			 R600_CONTEXT_FLUSH_AND_INV_DB |
 			 R600_CONTEXT_FLUSH_AND_INV_CB_META |
 			 R600_CONTEXT_FLUSH_AND_INV_DB_META;
-	sctx->b.flags |= R600_CONTEXT_WAIT_3D_IDLE;
+	sctx->b.flags |= R600_CONTEXT_PS_PARTIAL_FLUSH;
 
 	while (size) {
 		unsigned byte_count = MIN2(size, CP_DMA_MAX_BYTE_COUNT);
@@ -1152,7 +1152,7 @@ void si_copy_buffer(struct si_context *sctx,
 			 R600_CONTEXT_FLUSH_AND_INV_DB |
 			 R600_CONTEXT_FLUSH_AND_INV_CB_META |
 			 R600_CONTEXT_FLUSH_AND_INV_DB_META |
-			 R600_CONTEXT_WAIT_3D_IDLE;
+			 R600_CONTEXT_PS_PARTIAL_FLUSH;
 
 	while (size) {
 		unsigned sync_flags = 0;
