@@ -90,10 +90,7 @@ void si_context_gfx_flush(void *context, unsigned flags,
 
 	r600_preflush_suspend_features(&ctx->b);
 
-	ctx->b.flags |= SI_CONTEXT_FLUSH_AND_INV_CB |
-			SI_CONTEXT_FLUSH_AND_INV_CB_META |
-			SI_CONTEXT_FLUSH_AND_INV_DB |
-			SI_CONTEXT_FLUSH_AND_INV_DB_META |
+	ctx->b.flags |= SI_CONTEXT_FLUSH_AND_INV_FRAMEBUFFER |
 			SI_CONTEXT_INV_TC_L1 |
 			SI_CONTEXT_INV_TC_L2 |
 			/* this is probably not needed anymore */
