@@ -388,9 +388,9 @@ void si_emit_cache_flush(struct r600_common_context *sctx, struct r600_atom *ato
 			cp_coher_cntl |= S_0085F0_SH_KCACHE_ACTION_ENA(1);
 	}
 
-	if (sctx->flags & (SI_CONTEXT_INV_TC_L1 | R600_CONTEXT_STREAMOUT_FLUSH))
+	if (sctx->flags & SI_CONTEXT_INV_TC_L1)
 		cp_coher_cntl |= S_0085F0_TCL1_ACTION_ENA(1);
-	if (sctx->flags & (SI_CONTEXT_INV_TC_L2 | R600_CONTEXT_STREAMOUT_FLUSH))
+	if (sctx->flags & SI_CONTEXT_INV_TC_L2)
 		cp_coher_cntl |= S_0085F0_TC_ACTION_ENA(1);
 
 	if (sctx->flags & SI_CONTEXT_FLUSH_AND_INV_CB) {
@@ -444,8 +444,7 @@ void si_emit_cache_flush(struct r600_common_context *sctx, struct r600_atom *ato
 	if (sctx->flags & SI_CONTEXT_PS_PARTIAL_FLUSH) {
 		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 0, 0) | compute);
 		radeon_emit(cs, EVENT_TYPE(V_028A90_PS_PARTIAL_FLUSH) | EVENT_INDEX(4));
-	} else if (sctx->flags & R600_CONTEXT_STREAMOUT_FLUSH) {
-		/* Needed if streamout buffers are going to be used as a source. */
+	} else if (sctx->flags & SI_CONTEXT_VS_PARTIAL_FLUSH) {
 		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 0, 0) | compute);
 		radeon_emit(cs, EVENT_TYPE(V_028A90_VS_PARTIAL_FLUSH) | EVENT_INDEX(4));
 	}

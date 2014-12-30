@@ -856,6 +856,36 @@ static void si_set_streamout_targets(struct pipe_context *ctx,
 	unsigned old_num_targets = sctx->b.streamout.num_targets;
 	unsigned i, bufidx;
 
+	/* We are going to unbind the buffers. Mark which caches need to be flushed. */
+	if (sctx->b.streamout.num_targets && sctx->b.streamout.begin_emitted) {
+		/* Since streamout uses vector writes which go through TC L2
+		 * and most other clients can use TC L2 as well, we don't need
+		 * to flush it.
+		 *
+		 * The only case which requires flushing it is VGT DMA index
+		 * fetching, which is a rare case. Thus, flag the TC L2
+		 * dirtiness in the resource and handle it when index fetching
+		 * is used.
+		 */
+		for (i = 0; i < sctx->b.streamout.num_targets; i++)
+			if (sctx->b.streamout.targets[i])
+				r600_resource(sctx->b.streamout.targets[i]->b.buffer)->TC_L2_dirty = true;
+
+		/* Invalidate the scalar cache in case a streamout buffer is
+		 * going to be used as a constant buffer.
+		 *
+		 * Invalidate TC L1, because streamout bypasses it (done by
+		 * setting GLC=1 in the store instruction), but it can contain
+		 * outdated data of streamout buffers.
+		 *
+		 * VS_PARTIAL_FLUSH is required if the buffers are going to be
+		 * used as an input immediately.
+		 */
+		sctx->b.flags |= SI_CONTEXT_INV_KCACHE |
+				 SI_CONTEXT_INV_TC_L1 |
+				 SI_CONTEXT_VS_PARTIAL_FLUSH;
+	}
+
 	/* Streamout buffers must be bound in 2 places:
 	 * 1) in VGT by setting the VGT_STRMOUT registers
 	 * 2) as shader resources
