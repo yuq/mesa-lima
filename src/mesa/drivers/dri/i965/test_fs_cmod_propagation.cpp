@@ -350,3 +350,36 @@ TEST_F(cmod_propagation_test, intervening_flag_read_same_value)
    EXPECT_EQ(BRW_OPCODE_SEL, instruction(block0, 1)->opcode);
    EXPECT_EQ(BRW_PREDICATE_NORMAL, instruction(block0, 1)->predicate);
 }
+
+TEST_F(cmod_propagation_test, negate)
+{
+   fs_reg dest = v->vgrf(glsl_type::float_type);
+   fs_reg src0 = v->vgrf(glsl_type::float_type);
+   fs_reg src1 = v->vgrf(glsl_type::float_type);
+   fs_reg zero(0.0f);
+   v->emit(BRW_OPCODE_ADD, dest, src0, src1);
+   dest.negate = true;
+   v->emit(BRW_OPCODE_CMP, v->reg_null_f, dest, zero)
+      ->conditional_mod = BRW_CONDITIONAL_GE;
+
+   /* = Before =
+    *
+    * 0: add(8)        dest  src0  src1
+    * 1: cmp.ge.f0(8)  null  -dest 0.0f
+    *
+    * = After =
+    * 0: add.le.f0(8)  dest  src0  src1
+    */
+
+   v->calculate_cfg();
+   bblock_t *block0 = v->cfg->blocks[0];
+
+   EXPECT_EQ(0, block0->start_ip);
+   EXPECT_EQ(1, block0->end_ip);
+
+   EXPECT_TRUE(cmod_propagation(v));
+   EXPECT_EQ(0, block0->start_ip);
+   EXPECT_EQ(0, block0->end_ip);
+   EXPECT_EQ(BRW_OPCODE_ADD, instruction(block0, 0)->opcode);
+   EXPECT_EQ(BRW_CONDITIONAL_LE, instruction(block0, 0)->conditional_mod);
+}

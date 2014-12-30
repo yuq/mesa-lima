@@ -62,7 +62,6 @@ opt_cmod_propagation_local(fs_visitor *v, bblock_t *block)
           !inst->dst.is_null() ||
           inst->src[0].file != GRF ||
           inst->src[0].abs ||
-          inst->src[0].negate ||
           !inst->src[1].is_zero())
          continue;
 
@@ -74,10 +73,14 @@ opt_cmod_propagation_local(fs_visitor *v, bblock_t *block)
                 scan_inst->dst.reg_offset != inst->src[0].reg_offset)
                break;
 
+            enum brw_conditional_mod cond =
+               inst->src[0].negate ? brw_swap_cmod(inst->conditional_mod)
+                                   : inst->conditional_mod;
+
             if (scan_inst->can_do_cmod() &&
                 ((!read_flag && scan_inst->conditional_mod == BRW_CONDITIONAL_NONE) ||
-                 scan_inst->conditional_mod == inst->conditional_mod)) {
-               scan_inst->conditional_mod = inst->conditional_mod;
+                 scan_inst->conditional_mod == cond)) {
+               scan_inst->conditional_mod = cond;
                inst->remove(block);
                progress = true;
             }
