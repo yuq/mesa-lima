@@ -169,7 +169,6 @@ void si_pm4_emit_dirty(struct si_context *sctx)
 		if (!state || sctx->emitted.array[i] == state)
 			continue;
 
-		assert(state != sctx->queued.named.init);
 		si_pm4_emit(sctx, state);
 		sctx->emitted.array[i] = state;
 	}

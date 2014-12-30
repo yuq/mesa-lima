@@ -142,8 +142,7 @@ void si_begin_new_cs(struct si_context *ctx)
 	si_pm4_reset_emitted(ctx);
 
 	/* The CS initialization should be emitted before everything else. */
-	si_pm4_emit(ctx, ctx->queued.named.init);
-	ctx->emitted.named.init = ctx->queued.named.init;
+	si_pm4_emit(ctx, ctx->init_config);
 
 	ctx->clip_regs.dirty = true;
 	ctx->framebuffer.atom.dirty = true;

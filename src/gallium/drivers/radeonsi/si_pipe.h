@@ -101,6 +101,7 @@ struct si_context {
 	void				*custom_blend_decompress;
 	void				*custom_blend_fastclear;
 	struct si_screen		*screen;
+	struct si_pm4_state		*init_config;
 
 	union {
 		struct {

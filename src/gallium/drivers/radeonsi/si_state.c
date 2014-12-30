@@ -3085,5 +3085,5 @@ void si_init_config(struct si_context *sctx)
 		si_pm4_set_reg(pm4, R_00B01C_SPI_SHADER_PGM_RSRC3_PS, S_00B01C_CU_EN(0xffff));
 	}
 
-	si_pm4_set_state(sctx, init, pm4);
+	sctx->init_config = pm4;
 }

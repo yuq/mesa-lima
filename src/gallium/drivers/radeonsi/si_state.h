@@ -88,7 +88,6 @@ struct si_vertex_element
 
 union si_state {
 	struct {
-		struct si_pm4_state		*init;
 		struct si_state_blend		*blend;
 		struct si_pm4_state		*blend_color;
 		struct si_pm4_state		*clip;
