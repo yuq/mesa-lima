@@ -3606,6 +3606,21 @@ fs_visitor::optimize()
    lower_uniform_pull_constant_loads();
 }
 
+/**
+ * Three source instruction must have a GRF/MRF destination register.
+ * ARF NULL is not allowed.  Fix that up by allocating a temporary GRF.
+ */
+void
+fs_visitor::fixup_3src_null_dest()
+{
+   foreach_block_and_inst_safe (block, fs_inst, inst, cfg) {
+      if (inst->is_3src() && inst->dst.is_null()) {
+         inst->dst = fs_reg(GRF, virtual_grf_alloc(dispatch_width / 8),
+                            inst->dst.type);
+      }
+   }
+}
+
 void
 fs_visitor::allocate_registers()
 {
@@ -3703,6 +3718,7 @@ fs_visitor::run_vs()
    assign_curb_setup();
    assign_vs_urb_setup();
 
+   fixup_3src_null_dest();
    allocate_registers();
 
    return !failed;
@@ -3781,6 +3797,7 @@ fs_visitor::run_fs()
       assign_curb_setup();
       assign_urb_setup();
 
+      fixup_3src_null_dest();
       allocate_registers();
 
       if (failed)

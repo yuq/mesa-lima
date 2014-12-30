@@ -424,6 +424,7 @@ public:
    void setup_payload_gen4();
    void setup_payload_gen6();
    void setup_vs_payload();
+   void fixup_3src_null_dest();
    void assign_curb_setup();
    void calculate_urb_setup();
    void assign_urb_setup();
