@@ -678,6 +678,12 @@ backend_reg::is_accumulator() const
 }
 
 bool
+backend_instruction::is_3src() const
+{
+   return opcode < ARRAY_SIZE(opcode_descs) && opcode_descs[opcode].nsrc == 3;
+}
+
+bool
 backend_instruction::is_tex() const
 {
    return (opcode == SHADER_OPCODE_TEX ||

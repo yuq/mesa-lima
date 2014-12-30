@@ -308,11 +308,7 @@ try_copy_propagate(struct brw_context *brw, vec4_instruction *inst,
        inst->opcode == SHADER_OPCODE_GEN4_SCRATCH_WRITE)
       return false;
 
-   bool is_3src_inst = (inst->opcode == BRW_OPCODE_LRP ||
-                        inst->opcode == BRW_OPCODE_MAD ||
-                        inst->opcode == BRW_OPCODE_BFE ||
-                        inst->opcode == BRW_OPCODE_BFI2);
-   if (is_3src_inst && value.file == UNIFORM)
+   if (inst->is_3src() && value.file == UNIFORM)
       return false;
 
    if (inst->is_send_from_grf())
