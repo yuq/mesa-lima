@@ -787,8 +787,6 @@ nvc0_screen_create(struct nouveau_device *dev)
    PUSH_DATA (push, 0);
    BEGIN_NVC0(push, NVC0_3D(LINE_WIDTH_SEPARATE), 1);
    PUSH_DATA (push, 1);
-   BEGIN_NVC0(push, NVC0_3D(LINE_LAST_PIXEL), 1);
-   PUSH_DATA (push, 0);
    BEGIN_NVC0(push, NVC0_3D(PRIM_RESTART_WITH_DRAW_ARRAYS), 1);
    PUSH_DATA (push, 1);
    BEGIN_NVC0(push, NVC0_3D(BLEND_SEPARATE_ALPHA), 1);
