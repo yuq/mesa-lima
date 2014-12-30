@@ -286,6 +286,35 @@ vc4_setup_rcl(struct vc4_context *vc4)
                 ztex->writes++;
 }
 
+static void
+vc4_draw_reset(struct vc4_context *vc4)
+{
+        vc4_reset_cl(&vc4->bcl);
+        vc4_reset_cl(&vc4->rcl);
+        vc4_reset_cl(&vc4->shader_rec);
+        vc4_reset_cl(&vc4->uniforms);
+        vc4_reset_cl(&vc4->bo_handles);
+        struct vc4_bo **referenced_bos = vc4->bo_pointers.base;
+        for (int i = 0; i < (vc4->bo_handles.next -
+                             vc4->bo_handles.base) / 4; i++) {
+                vc4_bo_unreference(&referenced_bos[i]);
+        }
+        vc4_reset_cl(&vc4->bo_pointers);
+        vc4->shader_rec_count = 0;
+
+        vc4->needs_flush = false;
+        vc4->draw_call_queued = false;
+
+        /* We have no hardware context saved between our draw calls, so we
+         * need to flag the next draw as needing all state emitted.  Emitting
+         * all state at the start of our draws is also what ensures that we
+         * return to the state we need after a previous tile has finished.
+         */
+        vc4->dirty = ~0;
+        vc4->resolve = 0;
+        vc4->cleared = 0;
+}
+
 void
 vc4_flush(struct pipe_context *pctx)
 {
@@ -351,28 +380,7 @@ vc4_flush(struct pipe_context *pctx)
                 }
         }
 
-        vc4_reset_cl(&vc4->bcl);
-        vc4_reset_cl(&vc4->rcl);
-        vc4_reset_cl(&vc4->shader_rec);
-        vc4_reset_cl(&vc4->uniforms);
-        vc4_reset_cl(&vc4->bo_handles);
-        struct vc4_bo **referenced_bos = vc4->bo_pointers.base;
-        for (int i = 0; i < submit.bo_handle_count; i++)
-                vc4_bo_unreference(&referenced_bos[i]);
-        vc4_reset_cl(&vc4->bo_pointers);
-        vc4->shader_rec_count = 0;
-
-        vc4->needs_flush = false;
-        vc4->draw_call_queued = false;
-
-        /* We have no hardware context saved between our draw calls, so we
-         * need to flag the next draw as needing all state emitted.  Emitting
-         * all state at the start of our draws is also what ensures that we
-         * return to the state we need after a previous tile has finished.
-         */
-        vc4->dirty = ~0;
-        vc4->resolve = 0;
-        vc4->cleared = 0;
+        vc4_draw_reset(vc4);
 }
 
 static void
@@ -494,8 +502,8 @@ vc4_context_create(struct pipe_screen *pscreen, void *priv)
         vc4_init_cl(vc4, &vc4->uniforms);
         vc4_init_cl(vc4, &vc4->bo_handles);
         vc4_init_cl(vc4, &vc4->bo_pointers);
+        vc4_draw_reset(vc4);
 
-        vc4->dirty = ~0;
         vc4->fd = screen->fd;
 
         util_slab_create(&vc4->transfer_pool, sizeof(struct vc4_transfer),
