@@ -1580,6 +1580,7 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
    foreach_block_and_inst (block, fs_inst, inst, cfg) {
       struct brw_reg src[3], dst;
       unsigned int last_insn_offset = p->next_insn_offset;
+      bool multiple_instructions_emitted = false;
 
       if (unlikely(debug_flag))
          annotate(brw, &annotation, cfg, inst, p->next_insn_offset);
@@ -1653,10 +1654,16 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
 	 brw_set_default_access_mode(p, BRW_ALIGN_16);
          if (dispatch_width == 16 && brw->gen < 8 && !brw->is_haswell) {
 	    brw_set_default_compression_control(p, BRW_COMPRESSION_NONE);
-	    brw_MAD(p, firsthalf(dst), firsthalf(src[0]), firsthalf(src[1]), firsthalf(src[2]));
+            brw_inst *f = brw_MAD(p, firsthalf(dst), firsthalf(src[0]), firsthalf(src[1]), firsthalf(src[2]));
 	    brw_set_default_compression_control(p, BRW_COMPRESSION_2NDHALF);
-	    brw_MAD(p, sechalf(dst), sechalf(src[0]), sechalf(src[1]), sechalf(src[2]));
+            brw_inst *s = brw_MAD(p, sechalf(dst), sechalf(src[0]), sechalf(src[1]), sechalf(src[2]));
 	    brw_set_default_compression_control(p, BRW_COMPRESSION_COMPRESSED);
+
+            if (inst->conditional_mod) {
+               brw_inst_set_cond_modifier(brw, f, inst->conditional_mod);
+               brw_inst_set_cond_modifier(brw, s, inst->conditional_mod);
+               multiple_instructions_emitted = true;
+            }
 	 } else {
 	    brw_MAD(p, dst, src[0], src[1], src[2]);
 	 }
@@ -1668,10 +1675,16 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
 	 brw_set_default_access_mode(p, BRW_ALIGN_16);
          if (dispatch_width == 16 && brw->gen < 8 && !brw->is_haswell) {
 	    brw_set_default_compression_control(p, BRW_COMPRESSION_NONE);
-	    brw_LRP(p, firsthalf(dst), firsthalf(src[0]), firsthalf(src[1]), firsthalf(src[2]));
+            brw_inst *f = brw_LRP(p, firsthalf(dst), firsthalf(src[0]), firsthalf(src[1]), firsthalf(src[2]));
 	    brw_set_default_compression_control(p, BRW_COMPRESSION_2NDHALF);
-	    brw_LRP(p, sechalf(dst), sechalf(src[0]), sechalf(src[1]), sechalf(src[2]));
+            brw_inst *s = brw_LRP(p, sechalf(dst), sechalf(src[0]), sechalf(src[1]), sechalf(src[2]));
 	    brw_set_default_compression_control(p, BRW_COMPRESSION_COMPRESSED);
+
+            if (inst->conditional_mod) {
+               brw_inst_set_cond_modifier(brw, f, inst->conditional_mod);
+               brw_inst_set_cond_modifier(brw, s, inst->conditional_mod);
+               multiple_instructions_emitted = true;
+            }
 	 } else {
 	    brw_LRP(p, dst, src[0], src[1], src[2]);
 	 }
@@ -2044,6 +2057,9 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
       case SHADER_OPCODE_LOAD_PAYLOAD:
          unreachable("Should be lowered by lower_load_payload()");
       }
+
+      if (multiple_instructions_emitted)
+         continue;
 
       if (inst->no_dd_clear || inst->no_dd_check || inst->conditional_mod) {
          assert(p->next_insn_offset == last_insn_offset + 16 ||
