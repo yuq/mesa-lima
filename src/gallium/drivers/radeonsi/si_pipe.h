@@ -148,8 +148,6 @@ struct si_context {
 	struct r600_atom		msaa_config;
 	int				ps_iter_samples;
 
-	unsigned default_ps_gprs, default_vs_gprs;
-
 	/* Vertex and index buffers. */
 	bool			vertex_buffers_dirty;
 	struct pipe_index_buffer index_buffer;

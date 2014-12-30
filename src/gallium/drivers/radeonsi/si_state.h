@@ -64,7 +64,6 @@ struct si_state_rasterizer {
 	unsigned		pa_sc_line_stipple;
 	unsigned		pa_su_sc_mode_cntl;
 	unsigned		pa_cl_clip_cntl;
-	unsigned		pa_cl_vs_out_cntl;
 	unsigned		clip_plane_enable;
 	float			offset_units;
 	float			offset_scale;
@@ -72,7 +71,6 @@ struct si_state_rasterizer {
 
 struct si_state_dsa {
 	struct si_pm4_state	pm4;
-	float			alpha_ref;
 	unsigned		alpha_func;
 	uint8_t			valuemask[2];
 	uint8_t			writemask[2];
