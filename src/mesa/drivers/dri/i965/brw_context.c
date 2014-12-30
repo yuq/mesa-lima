@@ -81,6 +81,7 @@ brw_query_samples_for_format(struct gl_context *ctx, GLenum target,
    (void) target;
 
    switch (brw->gen) {
+   case 9:
    case 8:
       samples[0] = 8;
       samples[1] = 4;
@@ -97,6 +98,7 @@ brw_query_samples_for_format(struct gl_context *ctx, GLenum target,
       return 1;
 
    default:
+      assert(brw->gen < 6);
       samples[0] = 1;
       return 1;
    }
