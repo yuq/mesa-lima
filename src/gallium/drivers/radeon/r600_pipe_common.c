@@ -617,6 +617,8 @@ static int r600_get_compute_param(struct pipe_screen *screen,
 			*images_supported = 0;
 		}
 		return sizeof(uint32_t);
+	case PIPE_COMPUTE_CAP_MAX_PRIVATE_SIZE:
+		break; /* unused */
 	}
 
         fprintf(stderr, "unknown PIPE_COMPUTE_CAP %d\n", param);

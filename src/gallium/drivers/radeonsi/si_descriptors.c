@@ -206,7 +206,7 @@ static void si_emit_descriptors(struct si_context *sctx,
 {
 	struct radeon_winsys_cs *cs = sctx->b.rings.gfx.cs;
 	uint64_t va_base;
-	int packet_start;
+	int packet_start = 0;
 	int packet_size = 0;
 	int last_index = desc->num_elements; /* point to a non-existing element */
 	unsigned dirty_mask = desc->dirty_mask;
