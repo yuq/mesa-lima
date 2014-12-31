@@ -731,7 +731,7 @@ NineAdapter9_GetDeviceCaps( struct NineAdapter9 *This,
         D3DPIPECAP(TWO_SIDED_STENCIL, D3DSTENCILCAPS_TWOSIDED);
 
     pCaps->FVFCaps =
-        (D3DFVFCAPS_TEXCOORDCOUNTMASK & 0xff) |
+        8 | /* 8 textures max */
         /*D3DFVFCAPS_DONOTSTRIPELEMENTS |*/
         D3DFVFCAPS_PSIZE;
 
@@ -787,8 +787,8 @@ NineAdapter9_GetDeviceCaps( struct NineAdapter9 *This,
 
     pCaps->MaxPointSize = screen->get_paramf(screen, PIPE_CAPF_MAX_POINT_WIDTH);
 
-    pCaps->MaxPrimitiveCount = 0xFFFFF; /* <- wine, really 0xFFFFFFFF; */
-    pCaps->MaxVertexIndex = 0xFFFFF; /* <- wine, really 0xFFFFFFFF */
+    pCaps->MaxPrimitiveCount = 0x555555; /* <- wine, really 0xFFFFFFFF; */
+    pCaps->MaxVertexIndex = 0xFFFFFF; /* <- wine, really 0xFFFFFFFF */
     pCaps->MaxStreams =
         _min(screen->get_shader_param(screen,
                  PIPE_SHADER_VERTEX, PIPE_SHADER_CAP_MAX_INPUTS),
