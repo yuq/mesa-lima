@@ -242,7 +242,7 @@ upload_sf_state(struct brw_context *brw)
    OUT_BATCH(dw3);
    OUT_BATCH_F(ctx->Polygon.OffsetUnits * 2); /* constant.  copied from gen4 */
    OUT_BATCH_F(ctx->Polygon.OffsetFactor); /* scale */
-   OUT_BATCH_F(0.0); /* XXX: global depth offset clamp */
+   OUT_BATCH_F(ctx->Polygon.OffsetClamp); /* global depth offset clamp */
    ADVANCE_BATCH();
 }
 

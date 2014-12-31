@@ -285,6 +285,7 @@ intelInitExtensions(struct gl_context *ctx)
       ctx->Extensions.ARB_texture_gather = true;
       ctx->Extensions.ARB_conditional_render_inverted = true;
       ctx->Extensions.AMD_vertex_shader_layer = true;
+      ctx->Extensions.EXT_polygon_offset_clamp = true;
 
       /* Test if the kernel has the ioctl. */
       if (drm_intel_reg_read(brw->bufmgr, TIMESTAMP, &dummy) == 0)
