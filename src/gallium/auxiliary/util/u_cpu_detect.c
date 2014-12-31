@@ -272,7 +272,7 @@ static INLINE uint64_t xgetbv(void)
 
 
 #if defined(PIPE_ARCH_X86)
-static INLINE boolean sse2_has_daz(void)
+PIPE_ALIGN_STACK static INLINE boolean sse2_has_daz(void)
 {
    struct {
       uint32_t pad1[7];
