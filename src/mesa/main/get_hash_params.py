@@ -812,6 +812,9 @@ descriptor=[
   [ "VIEWPORT_BOUNDS_RANGE", "CONTEXT_FLOAT2(Const.ViewportBounds), extra_ARB_viewport_array" ],
   [ "LAYER_PROVOKING_VERTEX", "CONTEXT_ENUM(Light.ProvokingVertex), extra_ARB_viewport_array" ],
   [ "VIEWPORT_INDEX_PROVOKING_VERTEX", "CONTEXT_ENUM(Light.ProvokingVertex), extra_ARB_viewport_array" ],
+
+# GL_EXT_polygon_offset_clamp
+  [ "POLYGON_OFFSET_CLAMP_EXT", "CONTEXT_FLOAT(Polygon.OffsetClamp), extra_EXT_polygon_offset_clamp" ],
 ]}
 
 ]

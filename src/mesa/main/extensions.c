@@ -234,6 +234,7 @@ static const struct extension extension_table[] = {
    { "GL_EXT_pixel_buffer_object",                 o(EXT_pixel_buffer_object),                 GL,             2004 },
    { "GL_EXT_point_parameters",                    o(EXT_point_parameters),                    GLL,            1997 },
    { "GL_EXT_polygon_offset",                      o(dummy_true),                              GLL,            1995 },
+   { "GL_EXT_polygon_offset_clamp",                o(EXT_polygon_offset_clamp),                GL,             2014 },
    { "GL_EXT_provoking_vertex",                    o(EXT_provoking_vertex),                    GL,             2009 },
    { "GL_EXT_rescale_normal",                      o(dummy_true),                              GLL,            1997 },
    { "GL_EXT_secondary_color",                     o(dummy_true),                              GLL,            1999 },

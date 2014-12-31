@@ -64,6 +64,9 @@ extern void GLAPIENTRY
 _mesa_GetPolygonStipple( GLubyte *mask );
 
 extern void
+_mesa_polygon_offset_clamp(struct gl_context *ctx,
+                           GLfloat factor, GLfloat units, GLfloat clamp);
+extern void
 _mesa_init_polygon( struct gl_context * ctx );
 
 #endif

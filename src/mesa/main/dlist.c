@@ -484,6 +484,9 @@ typedef enum
    /* ARB_uniform_buffer_object */
    OPCODE_UNIFORM_BLOCK_BINDING,
 
+   /* EXT_polygon_offset_clamp */
+   OPCODE_POLYGON_OFFSET_CLAMP,
+
    /* The following three are meta instructions */
    OPCODE_ERROR,                /* raise compiled-in error */
    OPCODE_CONTINUE,
@@ -3191,6 +3194,22 @@ save_PolygonOffsetEXT(GLfloat factor, GLfloat bias)
    save_PolygonOffset(factor, ctx->DrawBuffer->_DepthMaxF * bias);
 }
 
+static void GLAPIENTRY
+save_PolygonOffsetClampEXT(GLfloat factor, GLfloat units, GLfloat clamp)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   Node *n;
+   ASSERT_OUTSIDE_SAVE_BEGIN_END_AND_FLUSH(ctx);
+   n = alloc_instruction(ctx, OPCODE_POLYGON_OFFSET_CLAMP, 3);
+   if (n) {
+      n[1].f = factor;
+      n[2].f = units;
+      n[3].f = clamp;
+   }
+   if (ctx->ExecuteFlag) {
+      CALL_PolygonOffsetClampEXT(ctx->Exec, (factor, units, clamp));
+   }
+}
 
 static void GLAPIENTRY
 save_PopAttrib(void)
@@ -8124,6 +8143,9 @@ execute_list(struct gl_context *ctx, GLuint list)
          case OPCODE_POLYGON_OFFSET:
             CALL_PolygonOffset(ctx->Exec, (n[1].f, n[2].f));
             break;
+         case OPCODE_POLYGON_OFFSET_CLAMP:
+            CALL_PolygonOffsetClampEXT(ctx->Exec, (n[1].f, n[2].f, n[3].f));
+            break;
          case OPCODE_POP_ATTRIB:
             CALL_PopAttrib(ctx->Exec, ());
             break;
@@ -9683,6 +9705,9 @@ _mesa_initialize_save_table(const struct gl_context *ctx)
    SET_ProgramUniformMatrix4x2fv(table, save_ProgramUniformMatrix4x2fv);
    SET_ProgramUniformMatrix3x4fv(table, save_ProgramUniformMatrix3x4fv);
    SET_ProgramUniformMatrix4x3fv(table, save_ProgramUniformMatrix4x3fv);
+
+   /* GL_EXT_polygon_offset_clamp */
+   SET_PolygonOffsetClampEXT(table, save_PolygonOffsetClampEXT);
 }
 
 

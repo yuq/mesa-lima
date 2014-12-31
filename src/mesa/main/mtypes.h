@@ -1004,6 +1004,7 @@ struct gl_polygon_attrib
    GLenum CullFaceMode;		/**< Culling mode GL_FRONT or GL_BACK */
    GLfloat OffsetFactor;	/**< Polygon offset factor, from user */
    GLfloat OffsetUnits;		/**< Polygon offset units, from user */
+   GLfloat OffsetClamp;		/**< Polygon offset clamp, from user */
    GLboolean OffsetPoint;	/**< Offset in GL_POINT mode */
    GLboolean OffsetLine;	/**< Offset in GL_LINE mode */
    GLboolean OffsetFill;	/**< Offset in GL_FILL mode */
@@ -3813,6 +3814,7 @@ struct gl_extensions
    GLboolean EXT_packed_float;
    GLboolean EXT_pixel_buffer_object;
    GLboolean EXT_point_parameters;
+   GLboolean EXT_polygon_offset_clamp;
    GLboolean EXT_provoking_vertex;
    GLboolean EXT_shader_integer_mix;
    GLboolean EXT_stencil_two_side;

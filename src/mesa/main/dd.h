@@ -579,7 +579,7 @@ struct dd_function_table {
    /** Select a polygon rasterization mode */
    void (*PolygonMode)(struct gl_context *ctx, GLenum face, GLenum mode);
    /** Set the scale and units used to calculate depth values */
-   void (*PolygonOffset)(struct gl_context *ctx, GLfloat factor, GLfloat units);
+   void (*PolygonOffset)(struct gl_context *ctx, GLfloat factor, GLfloat units, GLfloat clamp);
    /** Set the polygon stippling pattern */
    void (*PolygonStipple)(struct gl_context *ctx, const GLubyte *mask );
    /* Specifies the current buffer for reading */
