@@ -57,12 +57,20 @@ opt_cmod_propagation_local(fs_visitor *v, bblock_t *block)
    foreach_inst_in_block_reverse_safe(fs_inst, inst, block) {
       ip--;
 
-      if (inst->opcode != BRW_OPCODE_CMP ||
+      if ((inst->opcode != BRW_OPCODE_CMP &&
+           inst->opcode != BRW_OPCODE_MOV) ||
           inst->predicate != BRW_PREDICATE_NONE ||
           !inst->dst.is_null() ||
           inst->src[0].file != GRF ||
-          inst->src[0].abs ||
-          !inst->src[1].is_zero())
+          inst->src[0].abs)
+         continue;
+
+      if (inst->opcode == BRW_OPCODE_CMP && !inst->src[1].is_zero())
+         continue;
+
+      if (inst->opcode == BRW_OPCODE_MOV &&
+          (inst->conditional_mod != BRW_CONDITIONAL_NZ ||
+           inst->src[0].negate))
          continue;
 
       bool read_flag = false;
@@ -72,6 +80,15 @@ opt_cmod_propagation_local(fs_visitor *v, bblock_t *block)
             if (scan_inst->is_partial_write() ||
                 scan_inst->dst.reg_offset != inst->src[0].reg_offset)
                break;
+
+            if (inst->opcode == BRW_OPCODE_MOV) {
+               if (!scan_inst->writes_flag())
+                  break;
+
+               inst->remove(block);
+               progress = true;
+               break;
+            }
 
             enum brw_conditional_mod cond =
                inst->src[0].negate ? brw_swap_cmod(inst->conditional_mod)
