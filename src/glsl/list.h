@@ -636,6 +636,12 @@ inline void exec_node::insert_before(exec_list *before)
         __next != NULL;                              \
         __node = __next, __next = (__type *)__next->next)
 
+#define foreach_in_list_reverse_safe(__type, __node, __list) \
+   for (__type *__node = (__type *)(__list)->tail_pred,      \
+               *__prev = (__type *)__node->prev;             \
+        __prev != NULL;                                      \
+        __node = __prev, __prev = (__type *)__prev->prev)
+
 #define foreach_in_list_use_after(__type, __inst, __list) \
    __type *(__inst);                                      \
    for ((__inst) = (__type *)(__list)->head;              \
