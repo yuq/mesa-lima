@@ -532,6 +532,7 @@ static const _mesa_glsl_extension _mesa_glsl_supported_extensions[] = {
    EXT(ARB_shader_atomic_counters,     true,  false,     ARB_shader_atomic_counters),
    EXT(ARB_shader_bit_encoding,        true,  false,     ARB_shader_bit_encoding),
    EXT(ARB_shader_image_load_store,    true,  false,     ARB_shader_image_load_store),
+   EXT(ARB_shader_precision,           true,  false,     ARB_shader_precision),
    EXT(ARB_shader_stencil_export,      true,  false,     ARB_shader_stencil_export),
    EXT(ARB_shader_texture_lod,         true,  false,     ARB_shader_texture_lod),
    EXT(ARB_shading_language_420pack,   true,  false,     ARB_shading_language_420pack),
