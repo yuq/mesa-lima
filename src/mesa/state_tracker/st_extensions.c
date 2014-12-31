@@ -464,6 +464,7 @@ void st_init_extensions(struct pipe_screen *screen,
       { o(ARB_conditional_render_inverted),  PIPE_CAP_CONDITIONAL_RENDER_INVERTED      },
       { o(ARB_texture_view),                 PIPE_CAP_SAMPLER_VIEW_TARGET              },
       { o(ARB_clip_control),                 PIPE_CAP_CLIP_HALFZ                       },
+      { o(EXT_polygon_offset_clamp),         PIPE_CAP_POLYGON_OFFSET_CLAMP             },
    };
 
    /* Required: render target and sampler support */
