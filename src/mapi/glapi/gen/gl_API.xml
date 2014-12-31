@@ -12858,6 +12858,17 @@
 
 <xi:include href="INTEL_performance_query.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
 
+<category name="GL_EXT_polygon_offset_clamp" number="460">
+    <enum name="POLYGON_OFFSET_CLAMP_EXT"             value="0x8E1B">
+        <size name="Get" mode="get"/>
+    </enum>
+    <function name="PolygonOffsetClampEXT" offset="assign">
+        <param name="factor" type="GLfloat"/>
+        <param name="units"  type="GLfloat"/>
+        <param name="clamp"  type="GLfloat"/>
+    </function>
+</category>
+
 <!-- Unnumbered extensions sorted by name. -->
 
 <category name="GL_ATI_blend_equation_separate">

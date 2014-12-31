@@ -265,6 +265,12 @@ _mesa_PolygonOffsetEXT( GLfloat factor, GLfloat bias )
    _mesa_PolygonOffset(factor, bias * ctx->DrawBuffer->_DepthMaxF );
 }
 
+void GLAPIENTRY
+_mesa_PolygonOffsetClampEXT( GLfloat factor, GLfloat units, GLfloat clamp )
+{
+
+}
+
 
 
 /**********************************************************************/
