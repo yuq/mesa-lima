@@ -88,6 +88,17 @@ struct ir3_compile_context {
 
 	struct tgsi_shader_info info;
 
+	/* hmm, would be nice if tgsi_scan_shader figured this out
+	 * for us:
+	 */
+	struct {
+		unsigned first, last;
+		struct ir3_instruction *fanin;
+	} array[16];
+	uint32_t array_dirty;
+	/* offset into array[], per file, of first array info */
+	uint8_t array_offsets[TGSI_FILE_COUNT];
+
 	/* for calculating input/output positions/linkages: */
 	unsigned next_inloc;
 
@@ -130,11 +141,21 @@ static void create_mov(struct ir3_compile_context *ctx,
 		struct tgsi_dst_register *dst, struct tgsi_src_register *src);
 static type_t get_ftype(struct ir3_compile_context *ctx);
 
+static unsigned setup_arrays(struct ir3_compile_context *ctx, unsigned file, unsigned i)
+{
+	/* ArrayID 0 for a given file is the legacy array spanning the entire file: */
+	ctx->array[i].first = 0;
+	ctx->array[i].last = ctx->info.file_max[file];
+	ctx->array_offsets[file] = i;
+	i += ctx->info.array_max[file] + 1;
+	return i;
+}
+
 static unsigned
 compile_init(struct ir3_compile_context *ctx, struct ir3_shader_variant *so,
 		const struct tgsi_token *tokens)
 {
-	unsigned ret;
+	unsigned ret, i;
 	struct tgsi_shader_info *info = &ctx->info;
 	struct tgsi_lowering_config lconfig = {
 			.color_two_side = so->key.color_two_side,
@@ -190,6 +211,7 @@ compile_init(struct ir3_compile_context *ctx, struct ir3_shader_variant *so,
 	}
 	ctx->ir = so->ir;
 	ctx->so = so;
+	ctx->array_dirty = 0;
 	ctx->next_inloc = 8;
 	ctx->num_internal_temps = 0;
 	ctx->branch_count = 0;
@@ -204,10 +226,12 @@ compile_init(struct ir3_compile_context *ctx, struct ir3_shader_variant *so,
 	ctx->using_tmp_dst = false;
 
 	memset(ctx->frag_coord, 0, sizeof(ctx->frag_coord));
+	memset(ctx->array, 0, sizeof(ctx->array));
+	memset(ctx->array_offsets, 0, sizeof(ctx->array_offsets));
 
 #define FM(x) (1 << TGSI_FILE_##x)
 	/* optimize can't deal with relative addressing: */
-	if (info->indirect_files & (FM(TEMPORARY) | FM(INPUT) | FM(OUTPUT)))
+	if (info->indirect_files_written & (FM(TEMPORARY) | FM(INPUT) | FM(OUTPUT)))
 		return TGSI_PARSE_ERROR;
 
 	/* NOTE: if relative addressing is used, we set constlen in
@@ -216,6 +240,12 @@ compile_init(struct ir3_compile_context *ctx, struct ir3_shader_variant *so,
 	 */
 	if (info->indirect_files & FM(CONSTANT))
 		so->constlen = 4 * (ctx->info.file_max[TGSI_FILE_CONSTANT] + 1);
+
+	i = 0;
+	i += setup_arrays(ctx, TGSI_FILE_INPUT, i);
+	i += setup_arrays(ctx, TGSI_FILE_TEMPORARY, i);
+	i += setup_arrays(ctx, TGSI_FILE_OUTPUT, i);
+	/* any others? we don't track arrays for const..*/
 
 	/* Immediates go after constants: */
 	so->first_immediate = info->file_max[TGSI_FILE_CONSTANT] + 1;
@@ -275,6 +305,12 @@ instr_finish(struct ir3_compile_context *ctx)
 		*(ctx->output_updates[i].instrp) = ctx->output_updates[i].instr;
 
 	ctx->num_output_updates = 0;
+
+	while (ctx->array_dirty) {
+		unsigned aid = ffs(ctx->array_dirty) - 1;
+		ctx->array[aid].fanin = NULL;
+		ctx->array_dirty &= ~(1 << aid);
+	}
 }
 
 /* For "atomic" groups of instructions, for example the four scalar
@@ -515,11 +551,24 @@ ssa_instr(struct ir3_compile_context *ctx, unsigned file, unsigned n)
 			 * NOTE: *don't* use instr_create() here!
 			 */
 			instr = create_immed(ctx, 0.0);
+			/* no need to recreate the immed for every access: */
+			block->temporaries[n] = instr;
 		}
 		break;
 	}
 
 	return instr;
+}
+
+static int array_id(struct ir3_compile_context *ctx,
+		const struct tgsi_src_register *src)
+{
+	// XXX complete hack to recover tgsi_full_src_register...
+	// nothing that isn't wrapped in a tgsi_full_src_register
+	// should be indirect
+	const struct tgsi_full_src_register *fsrc = (const void *)src;
+	debug_assert(src->File != TGSI_FILE_CONSTANT);
+	return fsrc->Indirect.ArrayID + ctx->array_offsets[src->File];
 }
 
 static void
@@ -528,11 +577,51 @@ ssa_src(struct ir3_compile_context *ctx, struct ir3_register *reg,
 {
 	struct ir3_instruction *instr;
 
-	instr = ssa_instr(ctx, src->File, regid(src->Index, chan));
+	if (src->Indirect && (src->File != TGSI_FILE_CONSTANT)) {
+		/* for relative addressing of gpr's (due to register assignment)
+		 * we must generate a fanin instruction to collect all possible
+		 * array elements that the instruction could address together:
+		 */
+		unsigned i, j, aid = array_id(ctx, src);
+
+		if (ctx->array[aid].fanin) {
+			instr = ctx->array[aid].fanin;
+		} else {
+			unsigned first, last;
+
+			first = ctx->array[aid].first;
+			last  = ctx->array[aid].last;
+
+			instr = ir3_instr_create2(ctx->block, -1, OPC_META_FI,
+					1 + (4 * (last + 1 - first)));
+			ir3_reg_create(instr, 0, 0);
+			for (i = first; i <= last; i++) {
+				for (j = 0; j < 4; j++) {
+					unsigned n = (i * 4) + j;
+					ir3_reg_create(instr, 0, IR3_REG_SSA)->instr =
+							ssa_instr(ctx, src->File, n);
+				}
+			}
+			ctx->array[aid].fanin = instr;
+			ctx->array_dirty |= (1 << aid);
+		}
+	} else {
+		/* normal case (not relative addressed GPR) */
+		instr = ssa_instr(ctx, src->File, regid(src->Index, chan));
+	}
 
 	if (instr) {
 		reg->flags |= IR3_REG_SSA;
 		reg->instr = instr;
+	} else if (reg->flags & IR3_REG_SSA) {
+		/* special hack for trans_samp() which calls ssa_src() directly
+		 * to build up the collect (fanin) for const src.. (so SSA flag
+		 * set but no src instr... it basically gets lucky because we
+		 * default to 0.0 for "undefined" src instructions, which is
+		 * what it wants.  We probably need to give it a better way to
+		 * do this, but for now this hack:
+		 */
+		reg->instr = create_immed(ctx, 0.0);
 	}
 }
 
@@ -689,11 +778,23 @@ add_src_reg_wrmask(struct ir3_compile_context *ctx,
 		instr = ir3_instr_create(ctx->block, -1, OPC_META_DEREF);
 		ir3_reg_create(instr, 0, 0);
 		ir3_reg_create(instr, 0, IR3_REG_SSA)->instr = ctx->block->address;
+
+		if (src->File != TGSI_FILE_CONSTANT) {
+			unsigned aid = array_id(ctx, src);
+			unsigned off = src->Index - ctx->array[aid].first; /* vec4 offset */
+			instr->deref.off = regid(off, chan);
+		}
 	}
 
 	reg = ir3_reg_create(instr, regid(num, chan), flags);
 
-	reg->wrmask = wrmask;
+	if (src->Indirect && (src->File != TGSI_FILE_CONSTANT)) {
+		unsigned aid = array_id(ctx, src);
+		reg->size = 4 * (1 + ctx->array[aid].last - ctx->array[aid].first);
+	} else {
+		reg->wrmask = wrmask;
+	}
+
 	if (wrmask == 0x1) {
 		/* normal case */
 		ssa_src(ctx, reg, src, chan);
@@ -729,8 +830,11 @@ add_src_reg_wrmask(struct ir3_compile_context *ctx,
 	}
 
 	if (src->Indirect) {
+		unsigned size = reg->size;
+
 		reg = ir3_reg_create(orig, 0, flags | IR3_REG_SSA);
 		reg->instr = instr;
+		reg->size = size;
 	}
 	return reg;
 }
@@ -2990,10 +3094,25 @@ compile_instructions(struct ir3_compile_context *ctx)
 		case TGSI_TOKEN_TYPE_DECLARATION: {
 			struct tgsi_full_declaration *decl =
 					&ctx->parser.FullToken.FullDeclaration;
-			if (decl->Declaration.File == TGSI_FILE_OUTPUT) {
+			unsigned file = decl->Declaration.File;
+			if (file == TGSI_FILE_OUTPUT) {
 				decl_out(ctx, decl);
-			} else if (decl->Declaration.File == TGSI_FILE_INPUT) {
+			} else if (file == TGSI_FILE_INPUT) {
 				decl_in(ctx, decl);
+			}
+
+			if ((file != TGSI_FILE_CONSTANT) && decl->Declaration.Array) {
+				int aid = decl->Array.ArrayID + ctx->array_offsets[file];
+
+				compile_assert(ctx, aid < ARRAY_SIZE(ctx->array));
+
+				/* legacy ArrayID==0 stuff probably isn't going to work
+				 * well (and is at least untested).. let's just scream:
+				 */
+				compile_assert(ctx, aid != 0);
+
+				ctx->array[aid].first = decl->Range.First;
+				ctx->array[aid].last  = decl->Range.Last;
 			}
 			break;
 		}

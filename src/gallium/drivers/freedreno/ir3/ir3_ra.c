@@ -199,6 +199,14 @@ static void compute_liveregs(struct ir3_ra_ctx *ctx,
 		if (r)
 			regmask_set_if_not(liveregs, r, &written);
 	}
+
+	/* if instruction is output, we need a reg that isn't written
+	 * before the end.. equiv to the instr_used_by() check above
+	 * in the loop body
+	 * TODO maybe should follow fanin/fanout?
+	 */
+	if (instr_is_output(instr))
+		regmask_or(liveregs, liveregs, &written);
 }
 
 static int find_available(regmask_t *liveregs, int size, bool half)
@@ -364,6 +372,14 @@ static void instr_assign_src(struct ir3_ra_ctx *ctx,
 		case OPC_META_FI:
 			instr_assign(ctx, instr, name - (r - 1));
 			return;
+		case OPC_META_DEREF:
+			/* first arg of meta:deref is the addr reg (do not
+			 * propagate), 2nd is actual src (fanin) which does
+			 * get propagated)
+			 */
+			if (r == 2)
+				instr_assign(ctx, instr, name + instr->deref.off);
+			break;
 		default:
 			break;
 		}
@@ -467,7 +483,7 @@ static void instr_alloc_and_assign(struct ir3_ra_ctx *ctx,
 		/* already partially assigned, just finish the job */
 	} else if (is_addr(instr)) {
 		debug_assert(!instr->cp.right);
-		name = instr->regs[2]->num;
+		name = instr->regs[2]->num + instr->deref.off;
 	} else if (reg_gpr(dst)) {
 		int size;
 		/* number of consecutive registers to assign: */

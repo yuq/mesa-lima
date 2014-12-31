@@ -209,6 +209,9 @@ struct ir3_instruction {
 		struct {
 			struct ir3_block *block;
 		} inout;
+		struct {
+			int off;              /* offset relative to addr reg */
+		} deref;
 
 		/* XXX keep this as big as all other union members! */
 		uint32_t info[3];
@@ -465,7 +468,7 @@ static inline struct ir3_instruction *ssa(struct ir3_register *reg)
 
 static inline bool reg_gpr(struct ir3_register *r)
 {
-	if (r->flags & (IR3_REG_CONST | IR3_REG_IMMED | IR3_REG_RELATIV | IR3_REG_ADDR))
+	if (r->flags & (IR3_REG_CONST | IR3_REG_IMMED | IR3_REG_ADDR))
 		return false;
 	if ((reg_num(r) == REG_A0) || (reg_num(r) == REG_P0))
 		return false;
