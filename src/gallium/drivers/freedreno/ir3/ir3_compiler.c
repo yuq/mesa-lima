@@ -480,48 +480,59 @@ ssa_dst(struct ir3_compile_context *ctx, struct ir3_instruction *instr,
 	}
 }
 
-static void
-ssa_src(struct ir3_compile_context *ctx, struct ir3_register *reg,
-		const struct tgsi_src_register *src, unsigned chan)
+static struct ir3_instruction *
+ssa_instr(struct ir3_compile_context *ctx, unsigned file, unsigned n)
 {
 	struct ir3_block *block = ctx->block;
-	unsigned n = regid(src->Index, chan);
+	struct ir3_instruction *instr = NULL;
 
-	switch (src->File) {
+	switch (file) {
 	case TGSI_FILE_INPUT:
-		reg->flags |= IR3_REG_SSA;
-		reg->instr = block_input(ctx->block, n);
+		instr = block_input(ctx->block, n);
 		break;
 	case TGSI_FILE_OUTPUT:
 		/* really this should just happen in case of 'MOV_SAT OUT[n], ..',
 		 * for the following clamp instructions:
 		 */
-		reg->flags |= IR3_REG_SSA;
-		reg->instr = block->outputs[n];
+		instr = block->outputs[n];
 		/* we don't have to worry about read from an OUTPUT that was
 		 * assigned outside of the current block, because the _SAT
 		 * clamp instructions will always be in the same block as
 		 * the original instruction which wrote the OUTPUT
 		 */
-		compile_assert(ctx, reg->instr);
+		compile_assert(ctx, instr);
 		break;
 	case TGSI_FILE_TEMPORARY:
-		reg->flags |= IR3_REG_SSA;
-		reg->instr = block_temporary(ctx->block, n);
+		instr = block_temporary(ctx->block, n);
+		if (!instr) {
+			/* this can happen when registers (or components of a TGSI
+			 * register) are used as src before they have been assigned
+			 * (undefined contents).  To avoid confusing the rest of the
+			 * compiler, and to generally keep things peachy, substitute
+			 * an instruction that sets the src to 0.0.  Or to keep
+			 * things undefined, I could plug in a random number? :-P
+			 *
+			 * NOTE: *don't* use instr_create() here!
+			 */
+			instr = create_immed(ctx, 0.0);
+		}
 		break;
 	}
 
-	if ((reg->flags & IR3_REG_SSA) && !reg->instr) {
-		/* this can happen when registers (or components of a TGSI
-		 * register) are used as src before they have been assigned
-		 * (undefined contents).  To avoid confusing the rest of the
-		 * compiler, and to generally keep things peachy, substitute
-		 * an instruction that sets the src to 0.0.  Or to keep
-		 * things undefined, I could plug in a random number? :-P
-		 *
-		 * NOTE: *don't* use instr_create() here!
-		 */
-		reg->instr = create_immed(ctx, 0.0);
+	return instr;
+}
+
+static void
+ssa_src(struct ir3_compile_context *ctx, struct ir3_register *reg,
+		const struct tgsi_src_register *src, unsigned chan)
+{
+	struct ir3_instruction *instr;
+
+	instr = ssa_instr(ctx, src->File, regid(src->Index, chan));
+
+	if (instr) {
+		reg->flags |= IR3_REG_SSA;
+		reg->instr = instr;
 	}
 }
 
