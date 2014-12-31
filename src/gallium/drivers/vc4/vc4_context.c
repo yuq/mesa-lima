@@ -296,16 +296,16 @@ vc4_setup_rcl(struct vc4_context *vc4)
 static void
 vc4_draw_reset(struct vc4_context *vc4)
 {
-        vc4_reset_cl(&vc4->bcl);
-        vc4_reset_cl(&vc4->rcl);
-        vc4_reset_cl(&vc4->shader_rec);
-        vc4_reset_cl(&vc4->uniforms);
-        vc4_reset_cl(&vc4->bo_handles);
         struct vc4_bo **referenced_bos = vc4->bo_pointers.base;
         for (int i = 0; i < (vc4->bo_handles.next -
                              vc4->bo_handles.base) / 4; i++) {
                 vc4_bo_unreference(&referenced_bos[i]);
         }
+        vc4_reset_cl(&vc4->bcl);
+        vc4_reset_cl(&vc4->rcl);
+        vc4_reset_cl(&vc4->shader_rec);
+        vc4_reset_cl(&vc4->uniforms);
+        vc4_reset_cl(&vc4->bo_handles);
         vc4_reset_cl(&vc4->bo_pointers);
         vc4->shader_rec_count = 0;
 
