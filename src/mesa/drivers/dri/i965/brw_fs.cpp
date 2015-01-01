@@ -3912,9 +3912,10 @@ brw_fs_precompile(struct gl_context *ctx,
                                          BRW_FS_VARYING_INPUT_MASK) > 16)
       key.input_slots_valid = fp->Base.InputsRead | VARYING_BIT_POS;
 
+   const bool has_shader_channel_select = brw->is_haswell || brw->gen >= 8;
    unsigned sampler_count = _mesa_fls(fp->Base.SamplersUsed);
    for (unsigned i = 0; i < sampler_count; i++) {
-      if (fp->Base.ShadowSamplers & (1 << i)) {
+      if (!has_shader_channel_select && (fp->Base.ShadowSamplers & (1 << i))) {
          /* Assume DEPTH_TEXTURE_MODE is the default: X, X, X, 1 */
          key.tex.swizzles[i] =
             MAKE_SWIZZLE4(SWIZZLE_X, SWIZZLE_X, SWIZZLE_X, SWIZZLE_ONE);
