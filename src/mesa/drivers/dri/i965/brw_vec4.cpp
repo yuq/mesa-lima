@@ -1758,7 +1758,7 @@ vec4_visitor::run()
 
    const char *stage_name = stage == MESA_SHADER_GEOMETRY ? "gs" : "vs";
 
-#define OPT(pass, args...) do {                                        \
+#define OPT(pass, args...) ({                                          \
       pass_num++;                                                      \
       bool this_progress = pass(args);                                 \
                                                                        \
@@ -1771,7 +1771,8 @@ vec4_visitor::run()
       }                                                                \
                                                                        \
       progress = progress || this_progress;                            \
-   } while (false)
+      this_progress;                                                   \
+   })
 
 
    if (unlikely(INTEL_DEBUG & DEBUG_OPTIMIZER)) {
@@ -1784,10 +1785,11 @@ vec4_visitor::run()
 
    bool progress;
    int iteration = 0;
+   int pass_num = 0;
    do {
       progress = false;
+      pass_num = 0;
       iteration++;
-      int pass_num = 0;
 
       OPT(opt_reduce_swizzle);
       OPT(dead_code_eliminate);
@@ -1798,11 +1800,13 @@ vec4_visitor::run()
       OPT(opt_register_coalesce);
    } while (progress);
 
-   if (opt_vector_float()) {
-      opt_cse();
-      opt_copy_propagation(false);
-      opt_copy_propagation(true);
-      dead_code_eliminate();
+   pass_num = 0;
+
+   if (OPT(opt_vector_float)) {
+      OPT(opt_cse);
+      OPT(opt_copy_propagation, false);
+      OPT(opt_copy_propagation, true);
+      OPT(dead_code_eliminate);
    }
 
    if (failed)
