@@ -1778,7 +1778,7 @@ done
 # libEGL wants to default to the first platform specified in
 # ./configure.  parse that here.
 if test "x$egl_platforms" != "x"; then
-    FIRST_PLATFORM_CAPS=`echo $egl_platforms | sed 's| .*||' | tr 'a-z' 'A-Z'`
+    FIRST_PLATFORM_CAPS=`echo $egl_platforms | sed 's| .*||' | tr '[[a-z]]' '[[A-Z]]'`
     EGL_NATIVE_PLATFORM="_EGL_PLATFORM_$FIRST_PLATFORM_CAPS"
 else
     EGL_NATIVE_PLATFORM="_EGL_INVALID_PLATFORM"
