@@ -242,6 +242,7 @@ brw_link_shader(struct gl_context *ctx, struct gl_shader_program *shProg)
       do_set_program_inouts(shader->base.ir, prog, shader->base.Stage);
 
       prog->SamplersUsed = shader->base.active_samplers;
+      prog->ShadowSamplers = shader->base.shadow_samplers;
       _mesa_update_shader_textures_used(shProg, prog);
 
       _mesa_reference_program(ctx, &shader->base.Program, prog);
