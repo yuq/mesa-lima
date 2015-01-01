@@ -1359,7 +1359,7 @@ vec4_visitor::dump_instruction(backend_instruction *be_inst, FILE *file)
             fprintf(file, "%uU", inst->src[i].fixed_hw_reg.dw1.ud);
             break;
          case BRW_REGISTER_TYPE_VF:
-            fprintf(stderr, "[%-gF, %-gF, %-gF, %-gF]",
+            fprintf(file, "[%-gF, %-gF, %-gF, %-gF]",
                     brw_vf_to_float((inst->src[i].fixed_hw_reg.dw1.ud >>  0) & 0xff),
                     brw_vf_to_float((inst->src[i].fixed_hw_reg.dw1.ud >>  8) & 0xff),
                     brw_vf_to_float((inst->src[i].fixed_hw_reg.dw1.ud >> 16) & 0xff),
