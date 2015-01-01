@@ -784,6 +784,29 @@ ConstantFolding::opnd(Instruction *i, ImmediateValue &imm0, int s)
          i->src(1).mod = 0;
       }
       break;
+   case OP_MAD:
+      if (imm0.isInteger(0)) {
+         i->setSrc(0, i->getSrc(2));
+         i->src(0).mod = i->src(2).mod;
+         i->setSrc(1, NULL);
+         i->setSrc(2, NULL);
+         i->op = i->src(0).mod.getOp();
+         if (i->op != OP_CVT)
+            i->src(0).mod = 0;
+      } else
+      if (imm0.isInteger(1) || imm0.isInteger(-1)) {
+         if (imm0.isNegative())
+            i->src(t).mod = i->src(t).mod ^ Modifier(NV50_IR_MOD_NEG);
+         if (s == 0) {
+            i->setSrc(0, i->getSrc(1));
+            i->src(0).mod = i->src(1).mod;
+         }
+         i->setSrc(1, i->getSrc(2));
+         i->src(1).mod = i->src(2).mod;
+         i->setSrc(2, NULL);
+         i->op = OP_ADD;
+      }
+      break;
    case OP_ADD:
       if (i->usesFlags())
          break;
