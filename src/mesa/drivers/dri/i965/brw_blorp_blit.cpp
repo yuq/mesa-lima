@@ -1868,8 +1868,9 @@ brw_blorp_blit_params::brw_blorp_blit_params(struct brw_context *brw,
        _mesa_get_format_color_encoding(dst_mt->format) == GL_SRGB &&
        _mesa_get_srgb_format_linear(src_mt->format) ==
        _mesa_get_srgb_format_linear(dst_mt->format)) {
-      dst.brw_surfaceformat = brw_format_for_mesa_format(dst_mt->format);
-      src.brw_surfaceformat = dst.brw_surfaceformat;
+      assert(brw->format_supported_as_render_target[dst_mt->format]);
+      dst.brw_surfaceformat = brw->render_target_format[dst_mt->format];
+      src.brw_surfaceformat = brw_format_for_mesa_format(dst_mt->format);
    }
 
    /* When doing a multisample resolve of a GL_LUMINANCE32F or GL_INTENSITY32F
