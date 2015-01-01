@@ -178,6 +178,10 @@ _mesa_test_texobj_completeness( const struct gl_context *ctx,
                                 struct gl_texture_object *obj );
 
 extern GLboolean
+_mesa_cube_level_complete(const struct gl_texture_object *texObj,
+                          const GLint level);
+
+extern GLboolean
 _mesa_cube_complete(const struct gl_texture_object *texObj);
 
 extern void

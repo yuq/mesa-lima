@@ -810,25 +810,21 @@ _mesa_test_texobj_completeness( const struct gl_context *ctx,
 }
 
 
-/**
- * Check if the given cube map texture is "cube complete" as defined in
- * the OpenGL specification.
- */
 GLboolean
-_mesa_cube_complete(const struct gl_texture_object *texObj)
+_mesa_cube_level_complete(const struct gl_texture_object *texObj,
+                          const GLint level)
 {
-   const GLint baseLevel = texObj->BaseLevel;
    const struct gl_texture_image *img0, *img;
    GLuint face;
 
    if (texObj->Target != GL_TEXTURE_CUBE_MAP)
       return GL_FALSE;
 
-   if ((baseLevel < 0) || (baseLevel >= MAX_TEXTURE_LEVELS))
+   if ((level < 0) || (level >= MAX_TEXTURE_LEVELS))
       return GL_FALSE;
 
    /* check first face */
-   img0 = texObj->Image[0][baseLevel];
+   img0 = texObj->Image[0][level];
    if (!img0 ||
        img0->Width < 1 ||
        img0->Width != img0->Height)
@@ -836,7 +832,7 @@ _mesa_cube_complete(const struct gl_texture_object *texObj)
 
    /* check remaining faces vs. first face */
    for (face = 1; face < 6; face++) {
-      img = texObj->Image[face][baseLevel];
+      img = texObj->Image[face][level];
       if (!img ||
           img->Width != img0->Width ||
           img->Height != img0->Height ||
@@ -847,6 +843,15 @@ _mesa_cube_complete(const struct gl_texture_object *texObj)
    return GL_TRUE;
 }
 
+/**
+ * Check if the given cube map texture is "cube complete" as defined in
+ * the OpenGL specification.
+ */
+GLboolean
+_mesa_cube_complete(const struct gl_texture_object *texObj)
+{
+   return _mesa_cube_level_complete(texObj, texObj->BaseLevel);
+}
 
 /**
  * Mark a texture object dirty.  It forces the object to be incomplete
