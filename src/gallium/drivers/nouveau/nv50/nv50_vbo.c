@@ -736,9 +736,8 @@ nva0_draw_stream_output(struct nv50_context *nv50,
       BEGIN_NV04(push, NVA0_3D(DRAW_TFB_BASE), 1);
       PUSH_DATA (push, 0);
       BEGIN_NV04(push, NVA0_3D(DRAW_TFB_STRIDE), 1);
-      PUSH_DATA (push, 0);
-      BEGIN_NV04(push, NVA0_3D(DRAW_TFB_BYTES), 1);
-      nv50_query_pushbuf_submit(push, so->pq, 0x4);
+      PUSH_DATA (push, so->stride);
+      nv50_query_pushbuf_submit(push, NVA0_3D_DRAW_TFB_BYTES, so->pq, 0x4);
       BEGIN_NV04(push, NV50_3D(VERTEX_END_GL), 1);
       PUSH_DATA (push, 0);
 
