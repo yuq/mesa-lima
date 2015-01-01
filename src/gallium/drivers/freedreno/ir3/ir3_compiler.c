@@ -305,13 +305,6 @@ instr_create(struct ir3_compile_context *ctx, int category, opc_t opc)
 	return (ctx->current_instr = ir3_instr_create(ctx->block, category, opc));
 }
 
-static struct ir3_instruction *
-instr_clone(struct ir3_compile_context *ctx, struct ir3_instruction *instr)
-{
-	instr_finish(ctx);
-	return (ctx->current_instr = ir3_instr_clone(instr));
-}
-
 static struct ir3_block *
 push_block(struct ir3_compile_context *ctx)
 {
@@ -560,19 +553,10 @@ add_dst_reg_wrmask(struct ir3_compile_context *ctx,
 
 	reg = ir3_reg_create(instr, regid(num, chan), flags);
 
-	/* NOTE: do not call ssa_dst() if atomic.. vectorize()
-	 * itself will call ssa_dst().  This is to filter out
-	 * the (initially bogus) .x component dst which is
-	 * created (but not necessarily used, ie. if the net
-	 * result of the vector operation does not write to
-	 * the .x component)
-	 */
-
 	reg->wrmask = wrmask;
 	if (wrmask == 0x1) {
 		/* normal case */
-		if (!ctx->atomic)
-			ssa_dst(ctx, instr, dst, chan);
+		ssa_dst(ctx, instr, dst, chan);
 	} else if ((dst->File == TGSI_FILE_TEMPORARY) ||
 			(dst->File == TGSI_FILE_OUTPUT) ||
 			(dst->File == TGSI_FILE_ADDRESS)) {
@@ -998,27 +982,6 @@ vectorize(struct ir3_compile_context *ctx, struct ir3_instruction *instr,
 
 	instr_atomic_start(ctx);
 
-	add_dst_reg(ctx, instr, dst, TGSI_SWIZZLE_X);
-
-	va_start(ap, nsrcs);
-	for (j = 0; j < nsrcs; j++) {
-		struct tgsi_src_register *src =
-				va_arg(ap, struct tgsi_src_register *);
-		unsigned flags = va_arg(ap, unsigned);
-		struct ir3_register *reg;
-		if (flags & IR3_REG_IMMED) {
-			reg = ir3_reg_create(instr, 0, IR3_REG_IMMED);
-			/* this is an ugly cast.. should have put flags first! */
-			reg->iim_val = *(int *)&src;
-		} else {
-			reg = add_src_reg(ctx, instr, src, TGSI_SWIZZLE_X);
-		}
-		reg->flags |= flags & ~IR3_REG_NEGATE;
-		if (flags & IR3_REG_NEGATE)
-			reg->flags ^= IR3_REG_NEGATE;
-	}
-	va_end(ap);
-
 	for (i = 0; i < 4; i++) {
 		if (dst->WriteMask & (1 << i)) {
 			struct ir3_instruction *cur;
@@ -1026,26 +989,28 @@ vectorize(struct ir3_compile_context *ctx, struct ir3_instruction *instr,
 			if (n++ == 0) {
 				cur = instr;
 			} else {
-				cur = instr_clone(ctx, instr);
+				cur = instr_create(ctx, instr->category, instr->opc);
+				memcpy(cur->info, instr->info, sizeof(cur->info));
 			}
 
-			ssa_dst(ctx, cur, dst, i);
+			add_dst_reg(ctx, cur, dst, i);
 
-			/* fix-up dst register component: */
-			cur->regs[0]->num = regid(cur->regs[0]->num >> 2, i);
-
-			/* fix-up src register component: */
 			va_start(ap, nsrcs);
 			for (j = 0; j < nsrcs; j++) {
-				struct ir3_register *reg = cur->regs[j+1];
 				struct tgsi_src_register *src =
 						va_arg(ap, struct tgsi_src_register *);
 				unsigned flags = va_arg(ap, unsigned);
-				if (reg->flags & IR3_REG_SSA) {
-					ssa_src(ctx, reg, src, src_swiz(src, i));
-				} else if (!(flags & IR3_REG_IMMED)) {
-					reg->num = regid(reg->num >> 2, src_swiz(src, i));
+				struct ir3_register *reg;
+				if (flags & IR3_REG_IMMED) {
+					reg = ir3_reg_create(cur, 0, IR3_REG_IMMED);
+					/* this is an ugly cast.. should have put flags first! */
+					reg->iim_val = *(int *)&src;
+				} else {
+					reg = add_src_reg(ctx, cur, src, src_swiz(src, i));
 				}
+				reg->flags |= flags & ~IR3_REG_NEGATE;
+				if (flags & IR3_REG_NEGATE)
+					reg->flags ^= IR3_REG_NEGATE;
 			}
 			va_end(ap);
 		}

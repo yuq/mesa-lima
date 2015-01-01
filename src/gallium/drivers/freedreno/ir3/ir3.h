@@ -201,6 +201,9 @@ struct ir3_instruction {
 		struct {
 			struct ir3_block *block;
 		} inout;
+
+		/* XXX keep this as big as all other union members! */
+		uint32_t info[3];
 	};
 
 	/* transient values used during various algorithms: */
