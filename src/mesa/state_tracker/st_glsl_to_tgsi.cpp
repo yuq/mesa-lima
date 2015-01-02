@@ -3553,7 +3553,8 @@ glsl_to_tgsi_visitor::copy_propagate(void)
                first = copy_chan;
             } else {
                if (first->src[0].file != copy_chan->src[0].file ||
-        	   first->src[0].index != copy_chan->src[0].index) {
+                   first->src[0].index != copy_chan->src[0].index ||
+                   first->src[0].index2D != copy_chan->src[0].index2D) {
         	  good = false;
         	  break;
                }
