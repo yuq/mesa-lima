@@ -1672,7 +1672,7 @@ _mesa_ShaderBinary(GLint n, const GLuint* shaders, GLenum binaryformat,
    (void) binaryformat;
    (void) binary;
    (void) length;
-   _mesa_error(ctx, GL_INVALID_OPERATION, __FUNCTION__);
+   _mesa_error(ctx, GL_INVALID_OPERATION, "glShaderBinary");
 }
 
 
@@ -1724,7 +1724,7 @@ _mesa_ProgramBinary(GLuint program, GLenum binaryFormat,
    (void) binaryFormat;
    (void) binary;
    (void) length;
-   _mesa_error(ctx, GL_INVALID_OPERATION, __FUNCTION__);
+   _mesa_error(ctx, GL_INVALID_OPERATION, "glProgramBinary");
 }
 
 
