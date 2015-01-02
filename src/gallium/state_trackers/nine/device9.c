@@ -109,7 +109,7 @@ NineDevice9_RestoreNonCSOState( struct NineDevice9 *This, unsigned mask )
             cb.buffer = This->constbuf_vs;
             cb.user_buffer = NULL;
         }
-        cb.buffer_size = This->constbuf_vs->width0;
+        cb.buffer_size = This->vs_const_size;
         pipe->set_constant_buffer(pipe, PIPE_SHADER_VERTEX, 0, &cb);
 
         if (This->prefer_user_constbuf) {
@@ -117,7 +117,7 @@ NineDevice9_RestoreNonCSOState( struct NineDevice9 *This, unsigned mask )
         } else {
             cb.buffer = This->constbuf_ps;
         }
-        cb.buffer_size = This->constbuf_ps->width0;
+        cb.buffer_size = This->ps_const_size;
         pipe->set_constant_buffer(pipe, PIPE_SHADER_FRAGMENT, 0, &cb);
     }
 
@@ -262,6 +262,8 @@ NineDevice9_ctor( struct NineDevice9 *This,
         This->max_ps_const_f = max_const_ps -
                                (NINE_MAX_CONST_I + NINE_MAX_CONST_B / 4);
 
+        This->vs_const_size = max_const_vs * sizeof(float[4]);
+        This->ps_const_size = max_const_ps * sizeof(float[4]);
         /* Include space for I,B constants for user constbuf. */
         This->state.vs_const_f = CALLOC(NINE_MAX_CONST_ALL, sizeof(float[4]));
         This->state.ps_const_f = CALLOC(NINE_MAX_CONST_ALL, sizeof(float[4]));
@@ -283,10 +285,10 @@ NineDevice9_ctor( struct NineDevice9 *This,
         tmpl.bind = PIPE_BIND_CONSTANT_BUFFER;
         tmpl.flags = 0;
 
-        tmpl.width0 = max_const_vs * sizeof(float[4]);
+        tmpl.width0 = This->vs_const_size;
         This->constbuf_vs = pScreen->resource_create(pScreen, &tmpl);
 
-        tmpl.width0 = max_const_ps * sizeof(float[4]);
+        tmpl.width0 = This->ps_const_size;
         This->constbuf_ps = pScreen->resource_create(pScreen, &tmpl);
 
         if (!This->constbuf_vs || !This->constbuf_ps)

@@ -43,8 +43,8 @@ NineStateBlock9_ctor( struct NineStateBlock9 *This,
 
     This->type = type;
 
-    This->state.vs_const_f = MALLOC(pParams->device->constbuf_vs->width0);
-    This->state.ps_const_f = MALLOC(pParams->device->constbuf_ps->width0);
+    This->state.vs_const_f = MALLOC(This->base.device->vs_const_size);
+    This->state.ps_const_f = MALLOC(This->base.device->ps_const_size);
     if (!This->state.vs_const_f || !This->state.ps_const_f)
         return E_OUTOFMEMORY;
 
