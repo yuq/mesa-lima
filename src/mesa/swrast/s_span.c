@@ -39,6 +39,7 @@
 #include "main/imports.h"
 #include "main/image.h"
 #include "main/samplerobj.h"
+#include "main/teximage.h"
 
 #include "s_atifragshader.h"
 #include "s_alpha.h"
@@ -495,7 +496,7 @@ interpolate_texcoords(struct gl_context *ctx, SWspan *span)
          GLfloat q = span->attrStart[attr][3] + span->leftClip * dqdx;
 
          if (obj) {
-            const struct gl_texture_image *img = obj->Image[0][obj->BaseLevel];
+            const struct gl_texture_image *img = _mesa_base_tex_image(obj);
             const struct swrast_texture_image *swImg =
                swrast_texture_image_const(img);
             const struct gl_sampler_object *samp = _mesa_get_samplerobj(ctx, u);
