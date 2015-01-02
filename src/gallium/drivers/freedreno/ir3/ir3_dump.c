@@ -128,13 +128,20 @@ static void dump_reg_name(struct ir3_dump_ctx *ctx,
 				fprintf(ctx->f, "]");
 			}
 		}
+	} else if (reg->flags & IR3_REG_RELATIV) {
+		if (reg->flags & IR3_REG_HALF)
+			fprintf(ctx->f, "h");
+		if (reg->flags & IR3_REG_CONST)
+			fprintf(ctx->f, "c<a0.x + %u>", reg->num);
+		else
+			fprintf(ctx->f, "\x1b[0;31mr<a0.x + %u>\x1b[0m", reg->num);
 	} else {
 		if (reg->flags & IR3_REG_HALF)
 			fprintf(ctx->f, "h");
 		if (reg->flags & IR3_REG_CONST)
 			fprintf(ctx->f, "c%u.%c", reg_num(reg), "xyzw"[reg_comp(reg)]);
 		else
-			fprintf(ctx->f, "r%u.%c", reg_num(reg), "xyzw"[reg_comp(reg)]);
+			fprintf(ctx->f, "\x1b[0;31mr%u.%c\x1b[0m", reg_num(reg), "xyzw"[reg_comp(reg)]);
 	}
 }
 
