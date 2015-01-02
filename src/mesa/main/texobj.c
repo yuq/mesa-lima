@@ -954,6 +954,20 @@ _mesa_total_texture_memory(struct gl_context *ctx)
 }
 
 
+/**
+ * Return the base format for the given texture object by looking
+ * at the base texture image.
+ * \return base format (such as GL_RGBA) or GL_NONE if it can't be determined
+ */
+GLenum
+_mesa_texture_base_format(const struct gl_texture_object *texObj)
+{
+   const struct gl_texture_image *texImage = _mesa_base_tex_image(texObj);
+
+   return texImage ? texImage->_BaseFormat : GL_NONE;
+}
+
+
 static struct gl_texture_object *
 invalidate_tex_image_error_check(struct gl_context *ctx, GLuint texture,
                                  GLint level, const char *name)

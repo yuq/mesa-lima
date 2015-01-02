@@ -833,7 +833,7 @@ apply_depth_mode(GLenum depthMode, GLfloat z, GLfloat texel[4])
 static GLboolean
 is_depth_texture(const struct gl_texture_object *tObj)
 {
-   GLenum format = tObj->Image[0][tObj->BaseLevel]->_BaseFormat;
+   GLenum format = _mesa_texture_base_format(tObj);
    return format == GL_DEPTH_COMPONENT || format == GL_DEPTH_STENCIL_EXT;
 }
 

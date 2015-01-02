@@ -176,12 +176,11 @@ compute_texture_format_swizzle(GLenum baseFormat, GLenum depthMode,
 static unsigned
 get_texture_format_swizzle(const struct st_texture_object *stObj)
 {
-   const struct gl_texture_image *texImage =
-      _mesa_base_tex_image_const(&stObj->base);
+   GLenum baseFormat = _mesa_texture_base_format(&stObj->base);
    unsigned tex_swizzle;
 
-   if (texImage) {
-      tex_swizzle = compute_texture_format_swizzle(texImage->_BaseFormat,
+   if (baseFormat != GL_NONE) {
+      tex_swizzle = compute_texture_format_swizzle(baseFormat,
                                                    stObj->base.DepthMode,
                                                    stObj->pt->format);
    }

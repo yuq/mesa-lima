@@ -134,7 +134,6 @@ convert_sampler(struct st_context *st,
    const struct gl_texture_object *texobj;
    struct gl_context *ctx = st->ctx;
    struct gl_sampler_object *msamp;
-   const struct gl_texture_image *teximg;
    GLenum texBaseFormat;
 
    texobj = ctx->Texture.Unit[texUnit]._Current;
@@ -142,8 +141,7 @@ convert_sampler(struct st_context *st,
       texobj = _mesa_get_fallback_texture(ctx, TEXTURE_2D_INDEX);
    }
 
-   teximg = _mesa_base_tex_image_const(texobj);
-   texBaseFormat = teximg ? teximg->_BaseFormat : GL_RGBA;
+   texBaseFormat = _mesa_texture_base_format(texobj);
 
    msamp = _mesa_get_samplerobj(ctx, texUnit);
 

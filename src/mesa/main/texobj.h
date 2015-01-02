@@ -165,6 +165,9 @@ _mesa_get_fallback_texture(struct gl_context *ctx, gl_texture_index tex);
 extern GLuint
 _mesa_total_texture_memory(struct gl_context *ctx);
 
+extern GLenum
+_mesa_texture_base_format(const struct gl_texture_object *texObj);
+
 extern void
 _mesa_unlock_context_textures( struct gl_context *ctx );
 
