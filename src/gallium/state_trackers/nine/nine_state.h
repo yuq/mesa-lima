@@ -218,7 +218,7 @@ struct NineDevice9;
 
 boolean nine_update_state(struct NineDevice9 *, uint32_t group_mask);
 
-void nine_state_set_defaults(struct nine_state *, const D3DCAPS9 *,
+void nine_state_set_defaults(struct NineDevice9 *, const D3DCAPS9 *,
                              boolean is_reset);
 void nine_state_clear(struct nine_state *, const boolean device);
 

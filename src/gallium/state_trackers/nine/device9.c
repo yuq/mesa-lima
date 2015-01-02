@@ -62,7 +62,7 @@ NineDevice9_SetDefaultState( struct NineDevice9 *This, boolean is_reset )
 
     assert(!This->is_recording);
 
-    nine_state_set_defaults(&This->state, &This->caps, is_reset);
+    nine_state_set_defaults(This, &This->caps, is_reset);
 
     This->state.viewport.X = 0;
     This->state.viewport.Y = 0;
@@ -265,8 +265,8 @@ NineDevice9_ctor( struct NineDevice9 *This,
         This->vs_const_size = max_const_vs * sizeof(float[4]);
         This->ps_const_size = max_const_ps * sizeof(float[4]);
         /* Include space for I,B constants for user constbuf. */
-        This->state.vs_const_f = CALLOC(NINE_MAX_CONST_ALL, sizeof(float[4]));
-        This->state.ps_const_f = CALLOC(NINE_MAX_CONST_ALL, sizeof(float[4]));
+        This->state.vs_const_f = CALLOC(This->vs_const_size, 1);
+        This->state.ps_const_f = CALLOC(This->ps_const_size, 1);
         if (!This->state.vs_const_f || !This->state.ps_const_f)
             return E_OUTOFMEMORY;
 

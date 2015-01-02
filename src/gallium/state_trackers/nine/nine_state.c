@@ -999,9 +999,10 @@ static const DWORD nine_samp_state_defaults[NINED3DSAMP_LAST + 1] =
     [NINED3DSAMP_SHADOW] = 0
 };
 void
-nine_state_set_defaults(struct nine_state *state, const D3DCAPS9 *caps,
+nine_state_set_defaults(struct NineDevice9 *device, const D3DCAPS9 *caps,
                         boolean is_reset)
 {
+    struct nine_state *state = &device->state;
     unsigned s;
 
     /* Initialize defaults.
@@ -1022,9 +1023,9 @@ nine_state_set_defaults(struct nine_state *state, const D3DCAPS9 *caps,
     }
 
     if (state->vs_const_f)
-        memset(state->vs_const_f, 0, NINE_MAX_CONST_F * 4 * sizeof(float));
+        memset(state->vs_const_f, 0, device->vs_const_size);
     if (state->ps_const_f)
-        memset(state->ps_const_f, 0, NINE_MAX_CONST_F * 4 * sizeof(float));
+        memset(state->ps_const_f, 0, device->ps_const_size);
 
     /* Cap dependent initial state:
      */
