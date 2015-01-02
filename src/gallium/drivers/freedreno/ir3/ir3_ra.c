@@ -60,7 +60,12 @@ struct ir3_ra_ctx {
 	bool error;
 };
 
-#define ra_debug 0
+#ifdef DEBUG
+#  include "freedreno_util.h"
+#  define ra_debug (fd_mesa_debug & FD_DBG_OPTMSGS)
+#else
+#  define ra_debug 0
+#endif
 
 #define ra_dump_list(msg, n) do { \
 		if (ra_debug) { \
