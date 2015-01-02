@@ -422,7 +422,7 @@ _mesa_VDPAUUnmapSurfacesNV(GLsizei numSurfaces, const GLintptr *surfaces)
 
          _mesa_lock_texture(ctx, tex);
 
-         image = _mesa_select_tex_image(ctx, tex, surf->target, 0);
+         image = _mesa_select_tex_image(tex, surf->target, 0);
 
          ctx->Driver.VDPAUUnmapSurface(ctx, surf->target, surf->access,
                                        surf->output, tex, image,

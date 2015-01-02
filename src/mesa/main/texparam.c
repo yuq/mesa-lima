@@ -1054,7 +1054,7 @@ get_tex_level_parameter_image(struct gl_context *ctx,
    struct gl_texture_image dummy_image;
    mesa_format texFormat;
 
-   img = _mesa_select_tex_image(ctx, texObj, target, level);
+   img = _mesa_select_tex_image(texObj, target, level);
    if (!img || img->TexFormat == MESA_FORMAT_NONE) {
       /* In case of undefined texture image return the default values.
        *

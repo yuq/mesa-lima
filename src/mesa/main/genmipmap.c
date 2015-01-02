@@ -104,7 +104,7 @@ _mesa_GenerateMipmap(GLenum target)
 
    _mesa_lock_texture(ctx, texObj);
 
-   srcImage = _mesa_select_tex_image(ctx, texObj, target, texObj->BaseLevel);
+   srcImage = _mesa_select_tex_image(texObj, target, texObj->BaseLevel);
    if (!srcImage) {
       _mesa_unlock_texture(ctx, texObj);
       _mesa_error(ctx, GL_INVALID_OPERATION,

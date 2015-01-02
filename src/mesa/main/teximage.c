@@ -815,7 +815,6 @@ _mesa_get_current_tex_object(struct gl_context *ctx, GLenum target)
  * target and mipmap level.  The target and level parameters should
  * have already been error-checked.
  *
- * \param ctx GL context.
  * \param texObj texture unit.
  * \param target texture target.
  * \param level image level.
@@ -823,8 +822,7 @@ _mesa_get_current_tex_object(struct gl_context *ctx, GLenum target)
  * \return pointer to the texture image structure, or NULL on failure.
  */
 struct gl_texture_image *
-_mesa_select_tex_image(struct gl_context *ctx,
-                       const struct gl_texture_object *texObj,
+_mesa_select_tex_image(const struct gl_texture_object *texObj,
 		       GLenum target, GLint level)
 {
    const GLuint face = _mesa_tex_target_to_face(target);
@@ -851,7 +849,7 @@ _mesa_get_tex_image(struct gl_context *ctx, struct gl_texture_object *texObj,
    if (!texObj)
       return NULL;
 
-   texImage = _mesa_select_tex_image(ctx, texObj, target, level);
+   texImage = _mesa_select_tex_image(texObj, target, level);
    if (!texImage) {
       texImage = ctx->Driver.NewTextureImage(ctx);
       if (!texImage) {
@@ -2488,7 +2486,7 @@ texsubimage_error_check(struct gl_context *ctx, GLuint dimensions,
       return GL_TRUE;
    }
 
-   texImage = _mesa_select_tex_image(ctx, texObj, target, level);
+   texImage = _mesa_select_tex_image(texObj, target, level);
    if (!texImage) {
       /* non-existant texture level */
       _mesa_error(ctx, GL_INVALID_OPERATION,
@@ -2838,7 +2836,7 @@ copytexsubimage_error_check(struct gl_context *ctx, GLuint dimensions,
       return GL_TRUE;
    }
 
-   texImage = _mesa_select_tex_image(ctx, texObj, target, level);
+   texImage = _mesa_select_tex_image(texObj, target, level);
    if (!texImage) {
       /* destination image does not exist */
       _mesa_error(ctx, GL_INVALID_OPERATION,
@@ -3042,7 +3040,7 @@ _mesa_choose_texture_format(struct gl_context *ctx,
    /* see if we've already chosen a format for the previous level */
    if (level > 0) {
       struct gl_texture_image *prevImage =
-	 _mesa_select_tex_image(ctx, texObj, target, level - 1);
+	 _mesa_select_tex_image(texObj, target, level - 1);
       /* See if the prev level is defined and has an internal format which
        * matches the new internal format.
        */
@@ -3501,7 +3499,7 @@ texsubimage(struct gl_context *ctx, GLuint dims, GLenum target, GLint level,
 
    _mesa_lock_texture(ctx, texObj);
    {
-      texImage = _mesa_select_tex_image(ctx, texObj, target, level);
+      texImage = _mesa_select_tex_image(texObj, target, level);
 
       if (width > 0 && height > 0 && depth > 0) {
          /* If we have a border, offset=-1 is legal.  Bias by border width. */
@@ -3844,7 +3842,7 @@ copytexsubimage(struct gl_context *ctx, GLuint dims, GLenum target, GLint level,
 
    _mesa_lock_texture(ctx, texObj);
    {
-      texImage = _mesa_select_tex_image(ctx, texObj, target, level);
+      texImage = _mesa_select_tex_image(texObj, target, level);
 
       /* If we have a border, offset=-1 is legal.  Bias by border width. */
       switch (dims) {
@@ -4031,7 +4029,7 @@ get_tex_images_for_clear(struct gl_context *ctx,
       for (i = 0; i < MAX_FACES; i++) {
          target = GL_TEXTURE_CUBE_MAP_POSITIVE_X + i;
 
-         texImages[i] = _mesa_select_tex_image(ctx, texObj, target, level);
+         texImages[i] = _mesa_select_tex_image(texObj, target, level);
          if (texImages[i] == NULL) {
             _mesa_error(ctx, GL_INVALID_OPERATION,
                         "%s(invalid level)", function);
@@ -4042,7 +4040,7 @@ get_tex_images_for_clear(struct gl_context *ctx,
       return MAX_FACES;
    }
 
-   texImages[0] = _mesa_select_tex_image(ctx, texObj, texObj->Target, level);
+   texImages[0] = _mesa_select_tex_image(texObj, texObj->Target, level);
 
    if (texImages[0] == NULL) {
       _mesa_error(ctx, GL_INVALID_OPERATION, "%s(invalid level)", function);
@@ -4263,7 +4261,7 @@ compressed_subtexture_error_check(struct gl_context *ctx, GLint dims,
       return GL_TRUE;
    }
 
-   texImage = _mesa_select_tex_image(ctx, texObj, target, level);
+   texImage = _mesa_select_tex_image(texObj, target, level);
    if (!texImage) {
       _mesa_error(ctx, GL_INVALID_OPERATION,
                   "glCompressedTexSubImage%uD(invalid texture image)", dims);
@@ -4354,7 +4352,7 @@ compressed_tex_sub_image(GLuint dims, GLenum target, GLint level,
 
    _mesa_lock_texture(ctx, texObj);
    {
-      texImage = _mesa_select_tex_image(ctx, texObj, target, level);
+      texImage = _mesa_select_tex_image(texObj, target, level);
       assert(texImage);
 
       if (width > 0 && height > 0 && depth > 0) {

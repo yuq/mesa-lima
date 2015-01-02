@@ -71,7 +71,7 @@ fallback_required(struct gl_context *ctx, GLenum target,
    }
 
    srcLevel = texObj->BaseLevel;
-   baseImage = _mesa_select_tex_image(ctx, texObj, target, srcLevel);
+   baseImage = _mesa_select_tex_image(texObj, target, srcLevel);
    if (!baseImage) {
       _mesa_perf_debug(ctx, MESA_DEBUG_SEVERITY_HIGH,
                        "glGenerateMipmap() couldn't find base teximage\n");
@@ -265,7 +265,7 @@ _mesa_meta_GenerateMipmap(struct gl_context *ctx, GLenum target,
       GLsizei srcWidth, srcHeight, srcDepth;
       GLsizei dstWidth, dstHeight, dstDepth;
 
-      srcImage = _mesa_select_tex_image(ctx, texObj, faceTarget, srcLevel);
+      srcImage = _mesa_select_tex_image(texObj, faceTarget, srcLevel);
       assert(srcImage->Border == 0);
 
       /* src size */
@@ -304,7 +304,7 @@ _mesa_meta_GenerateMipmap(struct gl_context *ctx, GLenum target,
           */
          break;
       }
-      dstImage = _mesa_select_tex_image(ctx, texObj, faceTarget, dstLevel);
+      dstImage = _mesa_select_tex_image(texObj, faceTarget, dstLevel);
 
       /* limit minification to src level */
       _mesa_TexParameteri(target, GL_TEXTURE_MAX_LEVEL, srcLevel);

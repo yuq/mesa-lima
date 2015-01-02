@@ -2967,7 +2967,7 @@ _mesa_GetFramebufferAttachmentParameteriv(GLenum target, GLenum attachment,
       }
       else if (att->Texture) {
          const struct gl_texture_image *texImage =
-            _mesa_select_tex_image(ctx, att->Texture, att->Texture->Target,
+            _mesa_select_tex_image(att->Texture, att->Texture->Target,
                                    att->TextureLevel);
          if (texImage) {
             *params = get_component_bits(pname, texImage->_BaseFormat,

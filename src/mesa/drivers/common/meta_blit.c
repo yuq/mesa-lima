@@ -701,7 +701,7 @@ blitframebuffer_texture(struct gl_context *ctx,
 
       if (target == GL_TEXTURE_2D) {
          const struct gl_texture_image *texImage
-            = _mesa_select_tex_image(ctx, texObj, target, srcLevel);
+            = _mesa_select_tex_image(texObj, target, srcLevel);
          s0 = srcX0 / (float) texImage->Width;
          s1 = srcX1 / (float) texImage->Width;
          t0 = srcY0 / (float) texImage->Height;

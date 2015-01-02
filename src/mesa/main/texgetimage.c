@@ -828,7 +828,7 @@ getteximage_error_check(struct gl_context *ctx, GLenum target, GLint level,
       return GL_TRUE;
    }
 
-   texImage = _mesa_select_tex_image(ctx, texObj, target, level);
+   texImage = _mesa_select_tex_image(texObj, target, level);
    if (!texImage) {
       /* non-existant texture image */
       return GL_TRUE;
@@ -930,7 +930,7 @@ _mesa_GetnTexImageARB( GLenum target, GLint level, GLenum format,
    }
 
    texObj = _mesa_get_current_tex_object(ctx, target);
-   texImage = _mesa_select_tex_image(ctx, texObj, target, level);
+   texImage = _mesa_select_tex_image(texObj, target, level);
 
    if (_mesa_is_zero_size_texture(texImage))
       return;
@@ -992,7 +992,7 @@ getcompressedteximage_error_check(struct gl_context *ctx, GLenum target,
       return GL_TRUE;
    }
 
-   texImage = _mesa_select_tex_image(ctx, texObj, target, level);
+   texImage = _mesa_select_tex_image(texObj, target, level);
 
    if (!texImage) {
       /* probably invalid mipmap level */
@@ -1069,7 +1069,7 @@ _mesa_GetnCompressedTexImageARB(GLenum target, GLint level, GLsizei bufSize,
    }
 
    texObj = _mesa_get_current_tex_object(ctx, target);
-   texImage = _mesa_select_tex_image(ctx, texObj, target, level);
+   texImage = _mesa_select_tex_image(texObj, target, level);
 
    if (_mesa_is_zero_size_texture(texImage))
       return;

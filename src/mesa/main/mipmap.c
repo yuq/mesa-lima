@@ -1901,7 +1901,7 @@ generate_mipmap_uncompressed(struct gl_context *ctx, GLenum target,
       GLboolean success = GL_TRUE;
 
       /* get src image parameters */
-      srcImage = _mesa_select_tex_image(ctx, texObj, target, level);
+      srcImage = _mesa_select_tex_image(texObj, target, level);
       ASSERT(srcImage);
       srcWidth = srcImage->Width;
       srcHeight = srcImage->Height;
@@ -2096,7 +2096,7 @@ generate_mipmap_compressed(struct gl_context *ctx, GLenum target,
       GLuint i;
 
       /* get src image parameters */
-      srcImage = _mesa_select_tex_image(ctx, texObj, target, level);
+      srcImage = _mesa_select_tex_image(texObj, target, level);
       ASSERT(srcImage);
       srcWidth = srcImage->Width;
       srcHeight = srcImage->Height;
@@ -2193,7 +2193,7 @@ _mesa_generate_mipmap(struct gl_context *ctx, GLenum target,
    GLint maxLevel;
 
    ASSERT(texObj);
-   srcImage = _mesa_select_tex_image(ctx, texObj, target, texObj->BaseLevel);
+   srcImage = _mesa_select_tex_image(texObj, target, texObj->BaseLevel);
    ASSERT(srcImage);
 
    maxLevel = _mesa_max_texture_levels(ctx, texObj->Target) - 1;
