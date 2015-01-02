@@ -79,8 +79,6 @@ struct NineDevice9
     struct pipe_resource *constbuf_ps;
     uint16_t max_vs_const_f;
     uint16_t max_ps_const_f;
-    uint32_t vs_bool_true;
-    uint32_t ps_bool_true;
 
     struct gen_mipmap_state *gen_mipmap;
 
@@ -111,6 +109,8 @@ struct NineDevice9
         boolean user_vbufs;
         boolean user_ibufs;
         boolean window_space_position_support;
+        boolean vs_integer;
+        boolean ps_integer;
     } driver_caps;
 
     struct u_upload_mgr *upload;
