@@ -91,12 +91,19 @@ struct ir3_register {
 		struct ir3_instruction *instr;
 	};
 
-	/* used for cat5 instructions, but also for internal/IR level
-	 * tracking of what registers are read/written by an instruction.
-	 * wrmask may be a bad name since it is used to represent both
-	 * src and dst that touch multiple adjacent registers.
-	 */
-	int wrmask;
+	union {
+		/* used for cat5 instructions, but also for internal/IR level
+		 * tracking of what registers are read/written by an instruction.
+		 * wrmask may be a bad name since it is used to represent both
+		 * src and dst that touch multiple adjacent registers.
+		 */
+		unsigned wrmask;
+		/* for relative addressing, 32bits for array size is too small,
+		 * but otoh we don't need to deal with disjoint sets, so instead
+		 * use a simple size field (number of scalar components).
+		 */
+		unsigned size;
+	};
 };
 
 #define IR3_INSTR_SRCS 10
@@ -477,10 +484,23 @@ static inline void regmask_init(regmask_t *regmask)
 static inline void regmask_set(regmask_t *regmask, struct ir3_register *reg)
 {
 	unsigned idx = regmask_idx(reg);
-	unsigned i;
-	for (i = 0; i < IR3_INSTR_SRCS; i++, idx++)
-		if (reg->wrmask & (1 << i))
+	if (reg->flags & IR3_REG_RELATIV) {
+		unsigned i;
+		for (i = 0; i < reg->size; i++, idx++)
 			(*regmask)[idx / 8] |= 1 << (idx % 8);
+	} else {
+		unsigned mask;
+		for (mask = reg->wrmask; mask; mask >>= 1, idx++)
+			if (mask & 1)
+				(*regmask)[idx / 8] |= 1 << (idx % 8);
+	}
+}
+
+static inline void regmask_or(regmask_t *dst, regmask_t *a, regmask_t *b)
+{
+	unsigned i;
+	for (i = 0; i < ARRAY_SIZE(*dst); i++)
+		(*dst)[i] = (*a)[i] | (*b)[i];
 }
 
 /* set bits in a if not set in b, conceptually:
@@ -490,22 +510,36 @@ static inline void regmask_set_if_not(regmask_t *a,
 		struct ir3_register *reg, regmask_t *b)
 {
 	unsigned idx = regmask_idx(reg);
-	unsigned i;
-	for (i = 0; i < IR3_INSTR_SRCS; i++, idx++)
-		if (reg->wrmask & (1 << i))
+	if (reg->flags & IR3_REG_RELATIV) {
+		unsigned i;
+		for (i = 0; i < reg->size; i++, idx++)
 			if (!((*b)[idx / 8] & (1 << (idx % 8))))
 				(*a)[idx / 8] |= 1 << (idx % 8);
+	} else {
+		unsigned mask;
+		for (mask = reg->wrmask; mask; mask >>= 1, idx++)
+			if (mask & 1)
+				if (!((*b)[idx / 8] & (1 << (idx % 8))))
+					(*a)[idx / 8] |= 1 << (idx % 8);
+	}
 }
 
-static inline unsigned regmask_get(regmask_t *regmask,
+static inline bool regmask_get(regmask_t *regmask,
 		struct ir3_register *reg)
 {
 	unsigned idx = regmask_idx(reg);
-	unsigned i;
-	for (i = 0; i < IR3_INSTR_SRCS; i++, idx++)
-		if (reg->wrmask & (1 << i))
+	if (reg->flags & IR3_REG_RELATIV) {
+		unsigned i;
+		for (i = 0; i < reg->size; i++, idx++)
 			if ((*regmask)[idx / 8] & (1 << (idx % 8)))
 				return true;
+	} else {
+		unsigned mask;
+		for (mask = reg->wrmask; mask; mask >>= 1, idx++)
+			if (mask & 1)
+				if ((*regmask)[idx / 8] & (1 << (idx % 8)))
+					return true;
+	}
 	return false;
 }
 

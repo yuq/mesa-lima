@@ -134,7 +134,7 @@ static void dump_reg_name(struct ir3_dump_ctx *ctx,
 		if (reg->flags & IR3_REG_CONST)
 			fprintf(ctx->f, "c<a0.x + %u>", reg->num);
 		else
-			fprintf(ctx->f, "\x1b[0;31mr<a0.x + %u>\x1b[0m", reg->num);
+			fprintf(ctx->f, "\x1b[0;31mr<a0.x + %u>\x1b[0m (%u)", reg->num, reg->size);
 	} else {
 		if (reg->flags & IR3_REG_HALF)
 			fprintf(ctx->f, "h");
