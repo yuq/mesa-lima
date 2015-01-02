@@ -300,6 +300,9 @@
 #define MAX_COMPUTE_IMAGE_UNIFORMS          8
 /*@}*/
 
+/** For GL_ARB_pipeline_statistics_query */
+#define MAX_PIPELINE_STATISTICS             11
+
 /*
  * Color channel component order
  * 

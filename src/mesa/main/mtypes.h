@@ -3072,6 +3072,9 @@ struct gl_query_state
    /** GL_ARB_timer_query */
    struct gl_query_object *TimeElapsed;
 
+   /** GL_ARB_pipeline_statistics_query */
+   struct gl_query_object *pipeline_stats[MAX_PIPELINE_STATISTICS];
+
    GLenum CondRenderMode;
 };
 
@@ -3458,6 +3461,17 @@ struct gl_constants
       GLuint Timestamp;
       GLuint PrimitivesGenerated;
       GLuint PrimitivesWritten;
+      GLuint VerticesSubmitted;
+      GLuint PrimitivesSubmitted;
+      GLuint VsInvocations;
+      GLuint TessPatches;
+      GLuint TessInvocations;
+      GLuint GsInvocations;
+      GLuint GsPrimitives;
+      GLuint FsInvocations;
+      GLuint ComputeInvocations;
+      GLuint ClInPrimitives;
+      GLuint ClOutPrimitives;
    } QueryCounterBits;
 
    GLuint MaxDrawBuffers;    /**< GL_ARB_draw_buffers */
@@ -3754,6 +3768,7 @@ struct gl_extensions
    GLboolean ARB_map_buffer_range;
    GLboolean ARB_occlusion_query;
    GLboolean ARB_occlusion_query2;
+   GLboolean ARB_pipeline_statistics_query;
    GLboolean ARB_point_sprite;
    GLboolean ARB_sample_shading;
    GLboolean ARB_seamless_cube_map;

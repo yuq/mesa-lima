@@ -134,6 +134,7 @@ static const struct extension extension_table[] = {
    { "GL_ARB_multitexture",                        o(dummy_true),                              GLL,            1998 },
    { "GL_ARB_occlusion_query2",                    o(ARB_occlusion_query2),                    GL,             2003 },
    { "GL_ARB_occlusion_query",                     o(ARB_occlusion_query),                     GLL,            2001 },
+   { "GL_ARB_pipeline_statistics_query",           o(ARB_pipeline_statistics_query),           GL,             2014 },
    { "GL_ARB_pixel_buffer_object",                 o(EXT_pixel_buffer_object),                 GL,             2004 },
    { "GL_ARB_point_parameters",                    o(EXT_point_parameters),                    GLL,            1997 },
    { "GL_ARB_point_sprite",                        o(ARB_point_sprite),                        GL,             2003 },
