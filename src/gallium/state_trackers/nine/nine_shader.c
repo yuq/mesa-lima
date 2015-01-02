@@ -1561,43 +1561,54 @@ DECL_SPECIAL(REP)
     unsigned *label;
     struct ureg_src rep = tx_src_param(tx, &tx->insn.src[0]);
     struct ureg_dst ctr;
-    struct ureg_dst tmp = tx_scratch_scalar(tx);
-    struct ureg_src imm =
-        tx->native_integers ? ureg_imm1u(ureg, 0) : ureg_imm1f(ureg, 0.0f);
+    struct ureg_dst tmp;
+    struct ureg_src ctrx;
 
     label = tx_bgnloop(tx);
-    ctr = tx_get_loopctr(tx, FALSE);
+    ctr = ureg_writemask(tx_get_loopctr(tx, FALSE), NINED3DSP_WRITEMASK_0);
+    ctrx = ureg_scalar(ureg_src(ctr), TGSI_SWIZZLE_X);
 
     /* NOTE: rep must be constant, so we don't have to save the count */
     assert(rep.File == TGSI_FILE_CONSTANT || rep.File == TGSI_FILE_IMMEDIATE);
 
-    ureg_MOV(ureg, ctr, imm);
+    /* rep: num_iterations - 0 - 0 - 0 */
+    ureg_MOV(ureg, ctr, rep);
     ureg_BGNLOOP(ureg, label);
-    if (tx->native_integers)
-    {
-        ureg_USGE(ureg, tmp, tx_src_scalar(ctr), rep);
-        ureg_UIF(ureg, tx_src_scalar(tmp), tx_cond(tx));
-    }
-    else
-    {
-        ureg_SGE(ureg, tmp, tx_src_scalar(ctr), rep);
+    tmp = tx_scratch_scalar(tx);
+    /* Initially ctr.x contains the number of iterations.
+     * We decrease ctr.x at the end of every iteration,
+     * and stop when it reaches 0. */
+
+    if (!tx->native_integers) {
+        /* case src and ctr contain floats */
+        /* to avoid precision issue, we stop when ctr <= 0.5 */
+        ureg_SGE(ureg, tmp, ureg_imm1f(ureg, 0.5f), ctrx);
         ureg_IF(ureg, tx_src_scalar(tmp), tx_cond(tx));
+    } else {
+        /* case src and ctr contain integers */
+        ureg_ISGE(ureg, tmp, ureg_imm1i(ureg, 0), ctrx);
+        ureg_UIF(ureg, tx_src_scalar(tmp), tx_cond(tx));
     }
     ureg_BRK(ureg);
     tx_endcond(tx);
     ureg_ENDIF(ureg);
-
-    if (tx->native_integers) {
-        ureg_UADD(ureg, ctr, tx_src_scalar(ctr), ureg_imm1u(ureg, 1));
-    } else {
-        ureg_ADD(ureg, ctr, tx_src_scalar(ctr), ureg_imm1f(ureg, 1.0f));
-    }
 
     return D3D_OK;
 }
 
 DECL_SPECIAL(ENDREP)
 {
+    struct ureg_program *ureg = tx->ureg;
+    struct ureg_dst ctr = tx_get_loopctr(tx, FALSE);
+    struct ureg_dst dst_ctrx = ureg_writemask(ctr, NINED3DSP_WRITEMASK_0);
+    struct ureg_src src_ctr = ureg_src(ctr);
+
+    /* ctr.x -= 1 */
+    if (!tx->native_integers)
+        ureg_ADD(ureg, dst_ctrx, src_ctr, ureg_imm1f(ureg, -1.0f));
+    else
+        ureg_UADD(ureg, dst_ctrx, src_ctr, ureg_imm1i(ureg, -1));
+
     ureg_ENDLOOP(tx->ureg, tx_endloop(tx));
     return D3D_OK;
 }
