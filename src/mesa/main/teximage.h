@@ -114,6 +114,16 @@ _mesa_get_tex_image(struct gl_context *ctx, struct gl_texture_object *texObj,
                     GLenum target, GLint level);
 
 
+/**
+ * Return the base-level texture image for the given texture object.
+ */
+static inline const struct gl_texture_image *
+_mesa_base_tex_image(const struct gl_texture_object *texObj)
+{
+   return texObj->Image[0][texObj->BaseLevel];
+}
+
+
 extern GLint
 _mesa_max_texture_levels(struct gl_context *ctx, GLenum target);
 
