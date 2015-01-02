@@ -326,8 +326,9 @@ create_shader_program(struct gl_context *ctx)
 
 
 /**
- * Named w/ "2" to indicate OpenGL 2.x vs GL_ARB_fragment_programs's
- * DeleteProgramARB.
+ * Delete a shader program.  Actually, just decrement the program's
+ * reference count and mark it as DeletePending.
+ * Used to implement glDeleteProgram() and glDeleteObjectARB().
  */
 static void
 delete_shader_program(struct gl_context *ctx, GLuint name)
