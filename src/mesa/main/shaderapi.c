@@ -1755,12 +1755,7 @@ _mesa_ProgramParameteri(GLuint program, GLenum pname, GLint value)
        *     ProgramParameteri is not TRUE or FALSE."
        */
       if (value != GL_TRUE && value != GL_FALSE) {
-         _mesa_error(ctx, GL_INVALID_VALUE,
-                     "glProgramParameteri(pname=%s, value=%d): "
-                     "value must be 0 or 1.",
-                     _mesa_lookup_enum_by_nr(pname),
-                     value);
-         return;
+         goto invalid_value;
       }
 
       /* No need to notify the driver.  Any changes will actually take effect
@@ -1791,22 +1786,23 @@ _mesa_ProgramParameteri(GLuint program, GLenum pname, GLint value)
        * Chapter 7.3 Program Objects
        */
       if (value != GL_TRUE && value != GL_FALSE) {
-         _mesa_error(ctx, GL_INVALID_VALUE,
-                     "glProgramParameteri(pname=%s, value=%d): "
-                     "value must be 0 or 1.",
-                     _mesa_lookup_enum_by_nr(pname),
-                     value);
-         return;
+         goto invalid_value;
       }
       shProg->SeparateShader = value;
       return;
 
    default:
-      break;
+      _mesa_error(ctx, GL_INVALID_ENUM, "glProgramParameteri(pname=%s)",
+                  _mesa_lookup_enum_by_nr(pname));
+      return;
    }
 
-   _mesa_error(ctx, GL_INVALID_ENUM, "glProgramParameteri(pname=%s)",
-               _mesa_lookup_enum_by_nr(pname));
+invalid_value:
+   _mesa_error(ctx, GL_INVALID_VALUE,
+               "glProgramParameteri(pname=%s, value=%d): "
+               "value must be 0 or 1.",
+               _mesa_lookup_enum_by_nr(pname),
+               value);
 }
 
 void
