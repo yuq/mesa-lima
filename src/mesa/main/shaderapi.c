@@ -307,7 +307,7 @@ create_shader(struct gl_context *ctx, GLenum type)
 }
 
 
-static GLuint 
+static GLuint
 create_shader_program(struct gl_context *ctx)
 {
    GLuint name;
@@ -513,7 +513,8 @@ check_gs_query(struct gl_context *ctx, const struct gl_shader_program *shProg)
  * programs (see glGetProgramivARB).
  */
 static void
-get_programiv(struct gl_context *ctx, GLuint program, GLenum pname, GLint *params)
+get_programiv(struct gl_context *ctx, GLuint program, GLenum pname,
+              GLint *params)
 {
    struct gl_shader_program *shProg
       = _mesa_lookup_shader_program(ctx, program);
@@ -533,7 +534,8 @@ get_programiv(struct gl_context *ctx, GLuint program, GLenum pname, GLint *param
    /* Are uniform buffer objects available in this context?
     */
    const bool has_ubo =
-      (ctx->API == API_OPENGL_COMPAT && ctx->Extensions.ARB_uniform_buffer_object)
+      (ctx->API == API_OPENGL_COMPAT &&
+       ctx->Extensions.ARB_uniform_buffer_object)
       || ctx->API == API_OPENGL_CORE
       || _mesa_is_gles3(ctx);
 
@@ -601,7 +603,8 @@ get_programiv(struct gl_context *ctx, GLuint program, GLenum pname, GLint *param
       for (i = 0; i < shProg->TransformFeedback.NumVarying; i++) {
          /* Add one for the terminating NUL character.
           */
-         const GLint len = strlen(shProg->TransformFeedback.VaryingNames[i]) + 1;
+         const GLint len =
+            strlen(shProg->TransformFeedback.VaryingNames[i]) + 1;
 
          if (len > max_len)
             max_len = len;
@@ -755,8 +758,7 @@ static void
 get_program_info_log(struct gl_context *ctx, GLuint program, GLsizei bufSize,
                      GLsizei *length, GLchar *infoLog)
 {
-   struct gl_shader_program *shProg
-      = _mesa_lookup_shader_program(ctx, program);
+   struct gl_shader_program *shProg = _mesa_lookup_shader_program(ctx, program);
    if (!shProg) {
       _mesa_error(ctx, GL_INVALID_VALUE, "glGetProgramInfoLog(program)");
       return;
@@ -871,7 +873,6 @@ compile_shader(struct gl_context *ctx, GLuint shaderObj)
          }
          fflush(stderr);
       }
-
    }
 
    if (!sh->CompileStatus) {
@@ -918,7 +919,7 @@ link_program(struct gl_context *ctx, GLuint program)
 
    _mesa_glsl_link_shader(ctx, shProg);
 
-   if (shProg->LinkStatus == GL_FALSE && 
+   if (shProg->LinkStatus == GL_FALSE &&
        (ctx->_Shader->Flags & GLSL_REPORT_ERRORS)) {
       _mesa_debug(ctx, "Error linking program %u:\n%s\n",
                   shProg->Name, shProg->InfoLog);
@@ -986,8 +987,7 @@ _mesa_active_program(struct gl_context *ctx, struct gl_shader_program *shProg,
    }
 }
 
-/**
- */
+
 static void
 use_shader_program(struct gl_context *ctx, GLenum type,
                    struct gl_shader_program *shProg,
@@ -1034,6 +1034,7 @@ use_shader_program(struct gl_context *ctx, GLenum type,
    }
 }
 
+
 /**
  * Use the named shader program for subsequent rendering.
  */
@@ -1071,14 +1072,13 @@ validate_shader_program(const struct gl_shader_program *shProg,
 
      any active sampler in the current program object refers to a texture
      image unit where fixed-function fragment processing accesses a
-     texture target that does not match the sampler type, or 
+     texture target that does not match the sampler type, or
 
      the sum of the number of active samplers in the program and the
      number of texture image units enabled for fixed-function fragment
      processing exceeds the combined limit on the total number of texture
      image units allowed.
    */
-
 
    /*
     * Check: any two active samplers in the current program object are of
@@ -1805,6 +1805,7 @@ invalid_value:
                _mesa_lookup_enum_by_nr(pname),
                value);
 }
+
 
 void
 _mesa_use_shader_program(struct gl_context *ctx, GLenum type,
