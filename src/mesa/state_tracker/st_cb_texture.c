@@ -1546,7 +1546,7 @@ st_finalize_texture(struct gl_context *ctx,
    struct st_texture_object *stObj = st_texture_object(tObj);
    const GLuint nr_faces = (stObj->base.Target == GL_TEXTURE_CUBE_MAP) ? 6 : 1;
    GLuint face;
-   struct st_texture_image *firstImage;
+   const struct st_texture_image *firstImage;
    enum pipe_format firstImageFormat;
    GLuint ptWidth, ptHeight, ptDepth, ptLayers, ptNumSamples;
 
@@ -1587,7 +1587,7 @@ st_finalize_texture(struct gl_context *ctx,
 
    }
 
-   firstImage = st_texture_image(stObj->base.Image[0][stObj->base.BaseLevel]);
+   firstImage = st_texture_image_const(_mesa_base_tex_image(&stObj->base));
    assert(firstImage);
 
    /* If both firstImage and stObj point to a texture which can contain

@@ -35,6 +35,7 @@
 #include "main/macros.h"
 #include "main/mtypes.h"
 #include "main/samplerobj.h"
+#include "main/teximage.h"
 #include "main/texobj.h"
 #include "program/prog_instruction.h"
 
@@ -176,7 +177,7 @@ static unsigned
 get_texture_format_swizzle(const struct st_texture_object *stObj)
 {
    const struct gl_texture_image *texImage =
-      stObj->base.Image[0][stObj->base.BaseLevel];
+      _mesa_base_tex_image_const(&stObj->base);
    unsigned tex_swizzle;
 
    if (texImage) {
