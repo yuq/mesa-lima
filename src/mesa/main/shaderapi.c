@@ -431,9 +431,7 @@ detach_shader(struct gl_context *ctx, GLuint program, GLuint shader)
    /* not found */
    {
       GLenum err;
-      if (is_shader(ctx, shader))
-         err = GL_INVALID_OPERATION;
-      else if (is_program(ctx, shader))
+      if (is_shader(ctx, shader) || is_program(ctx, shader))
          err = GL_INVALID_OPERATION;
       else
          err = GL_INVALID_VALUE;
