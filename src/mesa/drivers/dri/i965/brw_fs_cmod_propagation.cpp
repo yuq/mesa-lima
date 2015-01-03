@@ -37,6 +37,15 @@
  * we can do the comparison as part of the ADD instruction directly:
  *
  *    add.ge.f0(8)    g70<1>F    g69<8,8,1>F    4096F
+ *
+ * If there had been a use of the flag register and another CMP using g70
+ *
+ *    add.ge.f0(8)    g70<1>F    g69<8,8,1>F    4096F
+ *    (+f0) sel(8)    g71<F>     g72<8,8,1>F    g73<8,8,1>F
+ *    cmp.ge.f0(8)    null       g70<8,8,1>F    0F
+ *
+ * we can recognize that the CMP is generating the flag value that already
+ * exists and therefore remove the instruction.
  */
 
 static bool
@@ -57,6 +66,7 @@ opt_cmod_propagation_local(fs_visitor *v, bblock_t *block)
           !inst->src[1].is_zero())
          continue;
 
+      bool read_flag = false;
       foreach_inst_in_block_reverse_starting_from(fs_inst, scan_inst, inst,
                                                   block) {
          if (scan_inst->overwrites_reg(inst->src[0])) {
@@ -65,7 +75,7 @@ opt_cmod_propagation_local(fs_visitor *v, bblock_t *block)
                break;
 
             if (scan_inst->can_do_cmod() &&
-                (scan_inst->conditional_mod == BRW_CONDITIONAL_NONE ||
+                ((!read_flag && scan_inst->conditional_mod == BRW_CONDITIONAL_NONE) ||
                  scan_inst->conditional_mod == inst->conditional_mod)) {
                scan_inst->conditional_mod = inst->conditional_mod;
                inst->remove(block);
@@ -74,8 +84,10 @@ opt_cmod_propagation_local(fs_visitor *v, bblock_t *block)
             break;
          }
 
-         if (scan_inst->reads_flag() || scan_inst->writes_flag())
+         if (scan_inst->writes_flag())
             break;
+
+         read_flag = read_flag || scan_inst->reads_flag();
       }
    }
 
