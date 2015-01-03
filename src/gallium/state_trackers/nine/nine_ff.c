@@ -22,6 +22,7 @@
 #include "tgsi/tgsi_dump.h"
 #include "util/u_box.h"
 #include "util/u_hash_table.h"
+#include "util/u_upload_mgr.h"
 
 #define NINE_TGSI_LAZY_DEVS 1
 
@@ -1802,6 +1803,17 @@ nine_ff_update(struct NineDevice9 *device)
             cb.buffer = NULL;
             cb.user_buffer = device->ff.vs_const;
             cb.buffer_size = NINE_FF_NUM_VS_CONST * 4 * sizeof(float);
+
+            if (!device->driver_caps.user_cbufs) {
+                u_upload_data(device->constbuf_uploader,
+                              0,
+                              cb.buffer_size,
+                              cb.user_buffer,
+                              &cb.buffer_offset,
+                              &cb.buffer);
+                u_upload_unmap(device->constbuf_uploader);
+                cb.user_buffer = NULL;
+            }
             pipe->set_constant_buffer(pipe, PIPE_SHADER_VERTEX, 0, &cb);
         } else {
             struct pipe_box box;
@@ -1833,6 +1845,17 @@ nine_ff_update(struct NineDevice9 *device)
             cb.buffer = NULL;
             cb.user_buffer = device->ff.ps_const;
             cb.buffer_size = NINE_FF_NUM_PS_CONST * 4 * sizeof(float);
+
+            if (!device->driver_caps.user_cbufs) {
+                u_upload_data(device->constbuf_uploader,
+                              0,
+                              cb.buffer_size,
+                              cb.user_buffer,
+                              &cb.buffer_offset,
+                              &cb.buffer);
+                u_upload_unmap(device->constbuf_uploader);
+                cb.user_buffer = NULL;
+            }
             pipe->set_constant_buffer(pipe, PIPE_SHADER_FRAGMENT, 0, &cb);
         } else {
             struct pipe_box box;

@@ -129,23 +129,43 @@ NineDevice9_RestoreNonCSOState( struct NineDevice9 *This, unsigned mask )
     if (mask & 0x1) {
         struct pipe_constant_buffer cb;
         cb.buffer_offset = 0;
+        cb.buffer_size = This->vs_const_size;
 
         if (This->prefer_user_constbuf) {
             cb.buffer = NULL;
             cb.user_buffer = This->state.vs_const_f;
+            if (!This->driver_caps.user_cbufs) {
+                u_upload_data(This->constbuf_uploader,
+                              0,
+                              cb.buffer_size,
+                              cb.user_buffer,
+                              &cb.buffer_offset,
+                              &cb.buffer);
+                u_upload_unmap(This->constbuf_uploader);
+                cb.user_buffer = NULL;
+            }
         } else {
             cb.buffer = This->constbuf_vs;
             cb.user_buffer = NULL;
         }
-        cb.buffer_size = This->vs_const_size;
         pipe->set_constant_buffer(pipe, PIPE_SHADER_VERTEX, 0, &cb);
 
+        cb.buffer_size = This->ps_const_size;
         if (This->prefer_user_constbuf) {
             cb.user_buffer = This->state.ps_const_f;
+            if (!This->driver_caps.user_cbufs) {
+                u_upload_data(This->constbuf_uploader,
+                              0,
+                              cb.buffer_size,
+                              cb.user_buffer,
+                              &cb.buffer_offset,
+                              &cb.buffer);
+                u_upload_unmap(This->constbuf_uploader);
+                cb.user_buffer = NULL;
+            }
         } else {
             cb.buffer = This->constbuf_ps;
         }
-        cb.buffer_size = This->ps_const_size;
         pipe->set_constant_buffer(pipe, PIPE_SHADER_FRAGMENT, 0, &cb);
     }
 
@@ -412,16 +432,20 @@ NineDevice9_ctor( struct NineDevice9 *This,
     }
 
     /* Allocate upload helper for drivers that suck (from st pov ;). */
-    {
-        unsigned bind = 0;
 
-        This->driver_caps.user_vbufs = GET_PCAP(USER_VERTEX_BUFFERS);
-        This->driver_caps.user_ibufs = GET_PCAP(USER_INDEX_BUFFERS);
+    This->driver_caps.user_vbufs = GET_PCAP(USER_VERTEX_BUFFERS);
+    This->driver_caps.user_ibufs = GET_PCAP(USER_INDEX_BUFFERS);
+    This->driver_caps.user_cbufs = GET_PCAP(USER_CONSTANT_BUFFERS);
 
-        if (!This->driver_caps.user_vbufs) bind |= PIPE_BIND_VERTEX_BUFFER;
-        if (!This->driver_caps.user_ibufs) bind |= PIPE_BIND_INDEX_BUFFER;
-        if (bind)
-            This->upload = u_upload_create(This->pipe, 1 << 20, 4, bind);
+    if (!This->driver_caps.user_vbufs)
+        This->vertex_uploader = u_upload_create(This->pipe, 65536, 4, PIPE_BIND_VERTEX_BUFFER);
+    if (!This->driver_caps.user_ibufs)
+        This->index_uploader = u_upload_create(This->pipe, 128 * 1024, 4, PIPE_BIND_INDEX_BUFFER);
+    if (!This->driver_caps.user_cbufs) {
+        unsigned alignment = GET_PCAP(CONSTANT_BUFFER_OFFSET_ALIGNMENT);
+
+        This->constbuf_uploader = u_upload_create(This->pipe, This->vs_const_size,
+                                                  alignment, PIPE_BIND_CONSTANT_BUFFER);
     }
 
     This->driver_caps.window_space_position_support = GET_PCAP(TGSI_VS_WINDOW_SPACE_POSITION);
@@ -454,8 +478,12 @@ NineDevice9_dtor( struct NineDevice9 *This )
     nine_ff_fini(This);
     nine_state_clear(&This->state, TRUE);
 
-    if (This->upload)
-        u_upload_destroy(This->upload);
+    if (This->vertex_uploader)
+        u_upload_destroy(This->vertex_uploader);
+    if (This->index_uploader)
+        u_upload_destroy(This->index_uploader);
+    if (This->constbuf_uploader)
+        u_upload_destroy(This->constbuf_uploader);
 
     nine_bind(&This->record, NULL);
 
@@ -2963,13 +2991,16 @@ NineDevice9_DrawPrimitiveUP( struct NineDevice9 *This,
     vtxbuf.buffer = NULL;
     vtxbuf.user_buffer = pVertexStreamZeroData;
 
-    if (!This->driver_caps.user_vbufs)
-        u_upload_data(This->upload,
+    if (!This->driver_caps.user_vbufs) {
+        u_upload_data(This->vertex_uploader,
                       0,
                       (info.max_index + 1) * VertexStreamZeroStride, /* XXX */
                       vtxbuf.user_buffer,
                       &vtxbuf.buffer_offset,
                       &vtxbuf.buffer);
+        u_upload_unmap(This->vertex_uploader);
+        vtxbuf.user_buffer = NULL;
+    }
 
     This->pipe->set_vertex_buffers(This->pipe, 0, 1, &vtxbuf);
 
@@ -3032,23 +3063,28 @@ NineDevice9_DrawIndexedPrimitiveUP( struct NineDevice9 *This,
 
     if (!This->driver_caps.user_vbufs) {
         const unsigned base = info.min_index * VertexStreamZeroStride;
-        u_upload_data(This->upload,
+        u_upload_data(This->vertex_uploader,
                       base,
                       (info.max_index -
                        info.min_index + 1) * VertexStreamZeroStride, /* XXX */
                       (const uint8_t *)vbuf.user_buffer + base,
                       &vbuf.buffer_offset,
                       &vbuf.buffer);
+        u_upload_unmap(This->vertex_uploader);
         /* Won't be used: */
         vbuf.buffer_offset -= base;
+        vbuf.user_buffer = NULL;
     }
-    if (!This->driver_caps.user_ibufs)
-        u_upload_data(This->upload,
+    if (!This->driver_caps.user_ibufs) {
+        u_upload_data(This->index_uploader,
                       0,
                       info.count * ibuf.index_size,
                       ibuf.user_buffer,
                       &ibuf.offset,
                       &ibuf.buffer);
+        u_upload_unmap(This->index_uploader);
+        ibuf.user_buffer = NULL;
+    }
 
     This->pipe->set_vertex_buffers(This->pipe, 0, 1, &vbuf);
     This->pipe->set_index_buffer(This->pipe, &ibuf);
