@@ -130,6 +130,7 @@ tgsi_scan_shader(const struct tgsi_token *tokens,
                /* check for indirect register reads */
                if (src->Register.Indirect) {
                   info->indirect_files |= (1 << src->Register.File);
+                  info->indirect_files_read |= (1 << src->Register.File);
                }
 
                /* MSAA samplers */
@@ -150,6 +151,7 @@ tgsi_scan_shader(const struct tgsi_token *tokens,
                const struct tgsi_full_dst_register *dst = &fullinst->Dst[i];
                if (dst->Register.Indirect) {
                   info->indirect_files |= (1 << dst->Register.File);
+                  info->indirect_files_written |= (1 << dst->Register.File);
                }
             }
 
