@@ -46,6 +46,15 @@ linear_to_tiled(uint32_t xt1, uint32_t xt2,
                 uint32_t tiling,
                 mem_copy_fn mem_copy);
 
+void
+tiled_to_linear(uint32_t xt1, uint32_t xt2,
+                uint32_t yt1, uint32_t yt2,
+                char *dst, const char *src,
+                uint32_t dst_pitch, uint32_t src_pitch,
+                bool has_swizzling,
+                uint32_t tiling,
+                mem_copy_fn mem_copy);
+
 bool intel_get_memcpy(mesa_format tiledFormat, GLenum format,
                       GLenum type, mem_copy_fn* mem_copy, uint32_t* cpp);
 
