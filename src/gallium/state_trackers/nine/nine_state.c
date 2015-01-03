@@ -500,7 +500,7 @@ update_vs_constants_userbuf(struct NineDevice9 *device)
         const struct nine_lconstf *lconstf =  &device->state.vs->lconstf;
         const struct nine_range *r = lconstf->ranges;
         unsigned n = 0;
-        float *dst = (float *)MALLOC(cb.buffer_size);
+        float *dst = device->state.vs_lconstf_temp;
         float *src = (float *)cb.user_buffer;
         memcpy(dst, src, cb.buffer_size);
         while (r) {
@@ -514,9 +514,6 @@ update_vs_constants_userbuf(struct NineDevice9 *device)
     }
 
     pipe->set_constant_buffer(pipe, PIPE_SHADER_VERTEX, 0, &cb);
-
-    if (device->state.vs->lconstf.ranges)
-        FREE((void *)cb.user_buffer);
 
     if (device->state.changed.vs_const_f) {
         struct nine_range *r = device->state.changed.vs_const_f;

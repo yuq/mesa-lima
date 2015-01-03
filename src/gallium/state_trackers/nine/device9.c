@@ -267,7 +267,9 @@ NineDevice9_ctor( struct NineDevice9 *This,
         /* Include space for I,B constants for user constbuf. */
         This->state.vs_const_f = CALLOC(This->vs_const_size, 1);
         This->state.ps_const_f = CALLOC(This->ps_const_size, 1);
-        if (!This->state.vs_const_f || !This->state.ps_const_f)
+        This->state.vs_lconstf_temp = CALLOC(This->vs_const_size,1);
+        if (!This->state.vs_const_f || !This->state.ps_const_f ||
+            !This->state.vs_lconstf_temp)
             return E_OUTOFMEMORY;
 
         if (strstr(pScreen->get_name(pScreen), "AMD") ||
@@ -347,6 +349,7 @@ NineDevice9_dtor( struct NineDevice9 *This )
     pipe_resource_reference(&This->constbuf_ps, NULL);
     FREE(This->state.vs_const_f);
     FREE(This->state.ps_const_f);
+    FREE(This->state.vs_lconstf_temp);
 
     if (This->swapchains) {
         for (i = 0; i < This->nswapchains; ++i)
