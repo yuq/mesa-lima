@@ -39,6 +39,7 @@ NineAdapter9_ctor( struct NineAdapter9 *This,
                    struct NineUnknownParams *pParams,
                    struct d3dadapter9_context *pCTX )
 {
+    struct pipe_screen *hal = pCTX->hal;
     HRESULT hr = NineUnknown_ctor(&This->base, pParams);
     if (FAILED(hr)) { return hr; }
 
@@ -46,7 +47,7 @@ NineAdapter9_ctor( struct NineAdapter9 *This,
     nine_dump_D3DADAPTER_IDENTIFIER9(DBG_CHANNEL, &pCTX->identifier);
 
     This->ctx = pCTX;
-    if (!This->ctx->hal->get_param(This->ctx->hal, PIPE_CAP_CLIP_HALFZ)) {
+    if (!hal->get_param(hal, PIPE_CAP_CLIP_HALFZ)) {
         ERR("Driver doesn't support d3d9 coordinates\n");
         return D3DERR_DRIVERINTERNALERROR;
     }
@@ -54,7 +55,44 @@ NineAdapter9_ctor( struct NineAdapter9 *This,
         !This->ctx->ref->get_param(This->ctx->ref, PIPE_CAP_CLIP_HALFZ)) {
         ERR("Warning: Sotware rendering driver doesn't support d3d9 coordinates\n");
     }
+    /* Old cards had tricks to bypass some restrictions to implement
+     * everything and fit tight the requirements: number of constants,
+     * number of temp registers, special behaviours, etc. Since we don't
+     * have access to all this, we need a bit more than what dx9 required.
+     * For example we have to use more than 32 temp registers to emulate
+     * behaviours, while some dx9 hw don't have more. As for sm2 hardware,
+     * we could support vs2 / ps2 for them but it needs some more care, and
+     * as these are very old, we choose to drop support for them */
 
+    /* checks minimum requirements, most are vs3/ps3 strict requirements */
+    if (!hal->get_param(hal, PIPE_CAP_SM3) ||
+        hal->get_shader_param(hal, PIPE_SHADER_VERTEX,
+                              PIPE_SHADER_CAP_MAX_CONST_BUFFER_SIZE) < 256 * sizeof(float[4]) ||
+        hal->get_shader_param(hal, PIPE_SHADER_FRAGMENT,
+                              PIPE_SHADER_CAP_MAX_CONST_BUFFER_SIZE) < 244 * sizeof(float[4]) ||
+        hal->get_shader_param(hal, PIPE_SHADER_VERTEX,
+                              PIPE_SHADER_CAP_MAX_TEMPS) < 32 ||
+        hal->get_shader_param(hal, PIPE_SHADER_FRAGMENT,
+                              PIPE_SHADER_CAP_MAX_TEMPS) < 32 ||
+        hal->get_shader_param(hal, PIPE_SHADER_VERTEX,
+                              PIPE_SHADER_CAP_MAX_INPUTS) < 16 ||
+        hal->get_shader_param(hal, PIPE_SHADER_FRAGMENT,
+                              PIPE_SHADER_CAP_MAX_INPUTS) < 10) {
+        ERR("Your card is not supported by Gallium Nine. Minimum requirement "
+            "is >= r500, >= nv50, >= i965\n");
+        return D3DERR_DRIVERINTERNALERROR;
+    }
+    /* for r500 */
+    if (hal->get_shader_param(hal, PIPE_SHADER_VERTEX,
+                              PIPE_SHADER_CAP_MAX_CONST_BUFFER_SIZE) < 276 * sizeof(float[4]) || /* we put bool and int constants with float constants */
+        hal->get_shader_param(hal, PIPE_SHADER_VERTEX,
+                              PIPE_SHADER_CAP_MAX_TEMPS) < 40 || /* we use some more temp registers */
+        hal->get_shader_param(hal, PIPE_SHADER_FRAGMENT,
+                              PIPE_SHADER_CAP_MAX_TEMPS) < 40 ||
+        hal->get_shader_param(hal, PIPE_SHADER_FRAGMENT,
+                              PIPE_SHADER_CAP_MAX_INPUTS) < 20) /* we don't pack inputs as much as we could */
+        ERR("Your card is at the limit of Gallium Nine requirements. Some games "
+            "may run into issues because requirements are too tight\n");
     return D3D_OK;
 }
 
@@ -472,7 +510,6 @@ NineAdapter9_GetDeviceCaps( struct NineAdapter9 *This,
                             D3DCAPS9 *pCaps )
 {
     struct pipe_screen *screen;
-    boolean sm3, vs;
     HRESULT hr;
 
     DBG("This=%p DeviceType=%s pCaps=%p\n", This,
@@ -491,10 +528,6 @@ NineAdapter9_GetDeviceCaps( struct NineAdapter9 *This,
 
 #define D3DNPIPECAP(pcap, d3dcap) \
     (screen->get_param(screen, PIPE_CAP_##pcap) ? 0 : (d3dcap))
-
-    sm3 = screen->get_param(screen, PIPE_CAP_SM3);
-    vs = !!(screen->get_shader_param(screen, PIPE_SHADER_VERTEX,
-                                     PIPE_SHADER_CAP_MAX_INSTRUCTIONS));
 
     pCaps->DeviceType = DeviceType;
 
@@ -781,28 +814,16 @@ NineAdapter9_GetDeviceCaps( struct NineAdapter9 *This,
     pCaps->MaxStreamStride = screen->get_param(screen,
             PIPE_CAP_MAX_VERTEX_ATTRIB_STRIDE);
 
-    pCaps->VertexShaderVersion = sm3 ? D3DVS_VERSION(3,0) : D3DVS_VERSION(2,0);
-    if (vs) {
-        /* VS 2 as well as 3.0 supports a minimum of 256 consts, no matter how
-         * much our architecture moans about it. The problem is that D3D9
-         * expects access to 16 int consts (i#), containing 3 components and
-         * 16 booleans (b#), containing only 1 component. This should be packed
-         * into 20 float vectors (16 for i# and 16/4 for b#), since gallium has
-         * removed support for the loop counter/boolean files. */
-        pCaps->MaxVertexShaderConst =
-            _min((screen->get_shader_param(screen, PIPE_SHADER_VERTEX,
-                     PIPE_SHADER_CAP_MAX_CONST_BUFFER_SIZE) /
-                     sizeof(float[4])) - 20,
-		 NINE_MAX_CONST_F);
-        /* Fake the minimum cap for Windows. */
-        if (QUIRK(FAKE_CAPS)) {
-            pCaps->MaxVertexShaderConst = 256;
-        }
-    } else {
-        pCaps->MaxVertexShaderConst = 0;
-    }
+    pCaps->VertexShaderVersion = D3DVS_VERSION(3,0);
 
-    pCaps->PixelShaderVersion = sm3 ? D3DPS_VERSION(3,0) : D3DPS_VERSION(2,0);
+    /* VS 2 as well as 3.0 supports a minimum of 256 consts.
+     * Wine and d3d9 drivers for dx1x hw advertise 256. Just as them,
+     * advertise 256. Problem is with hw that can only do 256, because
+     * we need take a few slots for boolean and integer constants. For these
+     * we'll have to fail later if they use complex shaders. */
+    pCaps->MaxVertexShaderConst = NINE_MAX_CONST_F;
+
+    pCaps->PixelShaderVersion = D3DPS_VERSION(3,0);
     pCaps->PixelShader1xMaxValue = 8.0f; /* XXX: wine */
 
     pCaps->DevCaps2 = D3DDEVCAPS2_STREAMOFFSET |
@@ -919,23 +940,18 @@ NineAdapter9_GetDeviceCaps( struct NineAdapter9 *This,
     else
         pCaps->VertexTextureFilterCaps = 0;
 
-    if (sm3) {
-        pCaps->MaxVertexShader30InstructionSlots =
-            screen->get_shader_param(screen, PIPE_SHADER_VERTEX,
-                                     PIPE_SHADER_CAP_MAX_INSTRUCTIONS);
-        pCaps->MaxPixelShader30InstructionSlots =
-            screen->get_shader_param(screen, PIPE_SHADER_FRAGMENT,
-                                     PIPE_SHADER_CAP_MAX_INSTRUCTIONS);
-        if (pCaps->MaxVertexShader30InstructionSlots > D3DMAX30SHADERINSTRUCTIONS)
-            pCaps->MaxVertexShader30InstructionSlots = D3DMAX30SHADERINSTRUCTIONS;
-        if (pCaps->MaxPixelShader30InstructionSlots > D3DMAX30SHADERINSTRUCTIONS)
-            pCaps->MaxPixelShader30InstructionSlots = D3DMAX30SHADERINSTRUCTIONS;
-        assert(pCaps->MaxVertexShader30InstructionSlots >= D3DMIN30SHADERINSTRUCTIONS);
-        assert(pCaps->MaxPixelShader30InstructionSlots >= D3DMIN30SHADERINSTRUCTIONS);
-    } else {
-        pCaps->MaxVertexShader30InstructionSlots = 0;
-        pCaps->MaxPixelShader30InstructionSlots = 0;
-    }
+    pCaps->MaxVertexShader30InstructionSlots =
+        screen->get_shader_param(screen, PIPE_SHADER_VERTEX,
+                                 PIPE_SHADER_CAP_MAX_INSTRUCTIONS);
+    pCaps->MaxPixelShader30InstructionSlots =
+        screen->get_shader_param(screen, PIPE_SHADER_FRAGMENT,
+                                 PIPE_SHADER_CAP_MAX_INSTRUCTIONS);
+    if (pCaps->MaxVertexShader30InstructionSlots > D3DMAX30SHADERINSTRUCTIONS)
+        pCaps->MaxVertexShader30InstructionSlots = D3DMAX30SHADERINSTRUCTIONS;
+    if (pCaps->MaxPixelShader30InstructionSlots > D3DMAX30SHADERINSTRUCTIONS)
+        pCaps->MaxPixelShader30InstructionSlots = D3DMAX30SHADERINSTRUCTIONS;
+    assert(pCaps->MaxVertexShader30InstructionSlots >= D3DMIN30SHADERINSTRUCTIONS);
+    assert(pCaps->MaxPixelShader30InstructionSlots >= D3DMIN30SHADERINSTRUCTIONS);
 
     /* 65535 is required, advertise more for GPUs with >= 2048 instruction slots */
     pCaps->MaxVShaderInstructionsExecuted = MAX2(65535, pCaps->MaxVertexShader30InstructionSlots * 32);
