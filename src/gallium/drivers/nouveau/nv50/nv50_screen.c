@@ -449,6 +449,13 @@ nv50_screen_init_hwctx(struct nv50_screen *screen)
       PUSH_DATA (push, 0x18);
    }
 
+   BEGIN_NV04(push, NV50_3D(ZETA_COMP_ENABLE), 1);
+   PUSH_DATA(push, screen->base.device->drm_version >= 0x01000101);
+
+   BEGIN_NV04(push, NV50_3D(RT_COMP_ENABLE(0)), 8);
+   for (i = 0; i < 8; ++i)
+      PUSH_DATA(push, screen->base.device->drm_version >= 0x01000101);
+
    BEGIN_NV04(push, NV50_3D(RT_CONTROL), 1);
    PUSH_DATA (push, 1);
 

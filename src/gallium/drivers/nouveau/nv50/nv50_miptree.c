@@ -65,8 +65,7 @@ nv50_tex_choose_tile_dims(unsigned nx, unsigned ny, unsigned nz)
 static uint32_t
 nv50_mt_choose_storage_type(struct nv50_miptree *mt, boolean compressed)
 {
-   const unsigned ms = mt->ms_x + mt->ms_y;
-
+   const unsigned ms = util_logbase2(mt->base.base.nr_samples);
    uint32_t tile_flags;
 
    if (unlikely(mt->base.base.flags & NOUVEAU_RESOURCE_FLAG_LINEAR))
@@ -96,6 +95,22 @@ nv50_mt_choose_storage_type(struct nv50_miptree *mt, boolean compressed)
       tile_flags = 0x60 + ms;
       break;
    default:
+      /* Most color formats don't work with compression. */
+      compressed = false;
+      /* fallthrough */
+   case PIPE_FORMAT_R8G8B8A8_UNORM:
+   case PIPE_FORMAT_R8G8B8A8_SRGB:
+   case PIPE_FORMAT_R8G8B8X8_UNORM:
+   case PIPE_FORMAT_R8G8B8X8_SRGB:
+   case PIPE_FORMAT_B8G8R8A8_UNORM:
+   case PIPE_FORMAT_B8G8R8A8_SRGB:
+   case PIPE_FORMAT_B8G8R8X8_UNORM:
+   case PIPE_FORMAT_B8G8R8X8_SRGB:
+   case PIPE_FORMAT_R10G10B10A2_UNORM:
+   case PIPE_FORMAT_B10G10R10A2_UNORM:
+   case PIPE_FORMAT_R16G16B16A16_FLOAT:
+   case PIPE_FORMAT_R16G16B16X16_FLOAT:
+   case PIPE_FORMAT_R11G11B10_FLOAT:
       switch (util_format_get_blocksizebits(mt->base.base.format)) {
       case 128:
          assert(ms < 3);
@@ -318,6 +333,7 @@ nv50_miptree_create(struct pipe_screen *pscreen,
    struct nouveau_device *dev = nouveau_screen(pscreen)->device;
    struct nv50_miptree *mt = CALLOC_STRUCT(nv50_miptree);
    struct pipe_resource *pt = &mt->base.base;
+   boolean compressed = dev->drm_version >= 0x01000101;
    int ret;
    union nouveau_bo_config bo_config;
    uint32_t bo_flags;
@@ -333,7 +349,7 @@ nv50_miptree_create(struct pipe_screen *pscreen,
    if (pt->bind & PIPE_BIND_LINEAR)
       pt->flags |= NOUVEAU_RESOURCE_FLAG_LINEAR;
 
-   bo_config.nv50.memtype = nv50_mt_choose_storage_type(mt, TRUE);
+   bo_config.nv50.memtype = nv50_mt_choose_storage_type(mt, compressed);
 
    if (!nv50_miptree_init_ms_mode(mt)) {
       FREE(mt);
