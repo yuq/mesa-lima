@@ -467,6 +467,16 @@ vc4_cl_references_bo(struct pipe_context *pctx, struct vc4_bo *bo)
 }
 
 static void
+vc4_invalidate_resource(struct pipe_context *pctx, struct pipe_resource *prsc)
+{
+        struct vc4_context *vc4 = vc4_context(pctx);
+        struct pipe_surface *zsurf = vc4->framebuffer.zsbuf;
+
+        if (zsurf && zsurf->texture == prsc)
+                vc4->resolve &= ~(PIPE_CLEAR_DEPTH | PIPE_CLEAR_STENCIL);
+}
+
+static void
 vc4_context_destroy(struct pipe_context *pctx)
 {
         struct vc4_context *vc4 = vc4_context(pctx);
@@ -510,6 +520,7 @@ vc4_context_create(struct pipe_screen *pscreen, void *priv)
         pctx->priv = priv;
         pctx->destroy = vc4_context_destroy;
         pctx->flush = vc4_pipe_flush;
+        pctx->invalidate_resource = vc4_invalidate_resource;
 
         vc4_draw_init(pctx);
         vc4_state_init(pctx);
