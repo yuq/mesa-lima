@@ -138,6 +138,7 @@ struct si_context {
 	/* shader information */
 	unsigned			sprite_coord_enable;
 	bool				flatshade;
+	bool				bc_optimize_disable;
 	struct si_descriptors		vertex_buffers;
 	struct si_buffer_resources	const_buffers[SI_NUM_SHADERS];
 	struct si_buffer_resources	rw_buffers[SI_NUM_SHADERS];

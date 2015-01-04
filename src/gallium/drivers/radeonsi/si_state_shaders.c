@@ -232,7 +232,7 @@ static void si_shader_ps(struct si_shader *shader)
 {
 	struct tgsi_shader_info *info = &shader->selector->info;
 	struct si_pm4_state *pm4;
-	unsigned i, spi_ps_in_control;
+	unsigned i;
 	unsigned num_sgprs, num_user_sgprs;
 	unsigned spi_baryc_cntl = 0, spi_ps_input_ena;
 	uint64_t va;
@@ -267,9 +267,6 @@ static void si_shader_ps(struct si_shader *shader)
 		}
 	}
 
-	spi_ps_in_control = S_0286D8_NUM_INTERP(shader->nparam) |
-		S_0286D8_BC_OPTIMIZE_DISABLE(1);
-
 	si_pm4_set_reg(pm4, R_0286E0_SPI_BARYC_CNTL, spi_baryc_cntl);
 	spi_ps_input_ena = shader->spi_ps_input_ena;
 	/* we need to enable at least one of them, otherwise we hang the GPU */
@@ -284,7 +281,6 @@ static void si_shader_ps(struct si_shader *shader)
 
 	si_pm4_set_reg(pm4, R_0286CC_SPI_PS_INPUT_ENA, spi_ps_input_ena);
 	si_pm4_set_reg(pm4, R_0286D0_SPI_PS_INPUT_ADDR, spi_ps_input_ena);
-	si_pm4_set_reg(pm4, R_0286D8_SPI_PS_IN_CONTROL, spi_ps_in_control);
 
 	si_pm4_set_reg(pm4, R_028710_SPI_SHADER_Z_FORMAT, shader->spi_shader_z_format);
 	si_pm4_set_reg(pm4, R_028714_SPI_SHADER_COL_FORMAT,
@@ -665,6 +661,10 @@ bcolor:
 		}
 	}
 
+	si_pm4_set_reg(pm4, R_0286D8_SPI_PS_IN_CONTROL,
+		       S_0286D8_NUM_INTERP(ps->nparam) |
+		       S_0286D8_BC_OPTIMIZE_DISABLE(sctx->bc_optimize_disable));
+
 	si_pm4_set_state(sctx, spi, pm4);
 }
 
@@ -710,6 +710,7 @@ void si_update_shaders(struct si_context *sctx)
 {
 	struct pipe_context *ctx = (struct pipe_context*)sctx;
 	struct si_state_rasterizer *rs = sctx->queued.named.rasterizer;
+	bool bc_optimize_disable;
 
 	if (sctx->gs_shader) {
 		si_shader_select(ctx, sctx->gs_shader);
@@ -774,11 +775,18 @@ void si_update_shaders(struct si_context *sctx)
 
 	si_pm4_bind_state(sctx, ps, sctx->ps_shader->current->pm4);
 
+	/* Whether CENTER != CENTROID. */
+	bc_optimize_disable = sctx->framebuffer.nr_samples > 1 &&
+			      rs->multisample_enable &&
+			      sctx->ps_shader->info.uses_centroid;
+
 	if (si_pm4_state_changed(sctx, ps) || si_pm4_state_changed(sctx, vs) ||
 	    sctx->sprite_coord_enable != rs->sprite_coord_enable ||
-	    sctx->flatshade != rs->flatshade) {
+	    sctx->flatshade != rs->flatshade ||
+	    sctx->bc_optimize_disable != bc_optimize_disable) {
 		sctx->sprite_coord_enable = rs->sprite_coord_enable;
 		sctx->flatshade = rs->flatshade;
+		sctx->bc_optimize_disable = bc_optimize_disable;
 		si_update_spi_map(sctx);
 	}
 
