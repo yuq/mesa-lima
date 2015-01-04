@@ -42,15 +42,28 @@
 #include "instr-a3xx.h"
 #include "ir3.h"
 
+static void dump_reg(const char *name, uint32_t r)
+{
+	if (r != regid(63,0))
+		debug_printf("; %s: r%d.%c\n", name, r >> 2, "xyzw"[r & 0x3]);
+}
+
+static void dump_semantic(struct ir3_shader_variant *so,
+		unsigned sem, const char *name)
+{
+	uint32_t regid;
+	regid = ir3_find_output_regid(so, ir3_semantic_name(sem, 0));
+	dump_reg(name, regid);
+}
+
 static void dump_info(struct ir3_shader_variant *so, const char *str)
 {
-	struct ir3_info info;
 	uint32_t *bin;
 	const char *type = (so->type == SHADER_VERTEX) ? "VERT" : "FRAG";
 
 	// for debug, dump some before/after info:
 	// TODO make gpu_id configurable on cmdline
-	bin = ir3_assemble(so->ir, &info, 320);
+	bin = ir3_shader_assemble(so, 320);
 	if (fd_mesa_debug & FD_DBG_DISASM) {
 		struct ir3_block *block = so->ir->block;
 		struct ir3_register *reg;
@@ -109,7 +122,7 @@ if (block) {
 		}
 }
 
-		disasm_a3xx(bin, info.sizedwords, 0, so->type);
+		disasm_a3xx(bin, so->info.sizedwords, 0, so->type);
 
 		debug_printf("; %s: outputs:", type);
 		for (i = 0; i < so->outputs_count; i++) {
@@ -133,9 +146,37 @@ if (block) {
 		}
 		debug_printf("\n");
 	}
-	debug_printf("; %s: %u instructions, %d half, %d full\n\n",
-			type, info.instrs_count, info.max_half_reg + 1, info.max_reg + 1);
+
+	/* print generic shader info: */
+	debug_printf("; %s: %u instructions, %d half, %d full\n", type,
+			so->info.instrs_count,
+			so->info.max_half_reg + 1,
+			so->info.max_reg + 1);
+
+	/* print shader type specific info: */
+	switch (so->type) {
+	case SHADER_VERTEX:
+		dump_semantic(so, TGSI_SEMANTIC_POSITION, "pos");
+		dump_semantic(so, TGSI_SEMANTIC_PSIZE, "psize");
+		break;
+	case SHADER_FRAGMENT:
+		dump_reg("pos (bary)", so->pos_regid);
+		dump_semantic(so, TGSI_SEMANTIC_POSITION, "posz");
+		dump_semantic(so, TGSI_SEMANTIC_COLOR, "color");
+		/* these two are hard-coded since we don't know how to
+		 * program them to anything but all 0's...
+		 */
+		if (so->frag_coord)
+			debug_printf("; fragcoord: r0.x\n");
+		if (so->frag_face)
+			debug_printf("; fragface: hr0.x\n");
+		break;
+	case SHADER_COMPUTE:
+		break;
+	}
 	free(bin);
+
+	debug_printf("\n");
 }
 
 

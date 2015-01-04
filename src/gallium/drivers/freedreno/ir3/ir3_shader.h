@@ -210,6 +210,7 @@ struct ir3_shader {
 	uint32_t vpsrepl[8];
 };
 
+void * ir3_shader_assemble(struct ir3_shader_variant *v, uint32_t gpu_id);
 
 struct ir3_shader * ir3_shader_create(struct pipe_context *pctx,
 		const struct tgsi_token *tokens, enum shader_t type);

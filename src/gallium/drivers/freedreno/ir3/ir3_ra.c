@@ -519,7 +519,7 @@ static int block_ra(struct ir3_ra_ctx *ctx, struct ir3_block *block)
 	 */
 	if ((ctx->type == SHADER_FRAGMENT) && !block->parent) {
 		unsigned i = 0, j;
-		if (ctx->frag_face) {
+		if (ctx->frag_face && (i < block->ninputs) && block->inputs[i]) {
 			/* if we have frag_face, it gets hr0.x */
 			instr_assign(ctx, block->inputs[i], REG_HALF | 0);
 			i += 4;
