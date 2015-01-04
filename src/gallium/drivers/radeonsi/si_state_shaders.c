@@ -65,7 +65,7 @@ static void si_shader_es(struct si_shader *shader)
 		       S_00B328_VGPRS((shader->num_vgprs - 1) / 4) |
 		       S_00B328_SGPRS((num_sgprs - 1) / 8) |
 		       S_00B328_VGPR_COMP_CNT(vgpr_comp_cnt) |
-		       S_00B328_DX10_CLAMP(1));
+		       S_00B328_DX10_CLAMP(shader->dx10_clamp_mode));
 	si_pm4_set_reg(pm4, R_00B32C_SPI_SHADER_PGM_RSRC2_ES,
 		       S_00B32C_USER_SGPR(num_user_sgprs));
 }
@@ -134,7 +134,7 @@ static void si_shader_gs(struct si_shader *shader)
 	si_pm4_set_reg(pm4, R_00B228_SPI_SHADER_PGM_RSRC1_GS,
 		       S_00B228_VGPRS((shader->num_vgprs - 1) / 4) |
 		       S_00B228_SGPRS((num_sgprs - 1) / 8) |
-		       S_00B228_DX10_CLAMP(1));
+		       S_00B228_DX10_CLAMP(shader->dx10_clamp_mode));
 	si_pm4_set_reg(pm4, R_00B22C_SPI_SHADER_PGM_RSRC2_GS,
 		       S_00B22C_USER_SGPR(num_user_sgprs));
 }
@@ -209,7 +209,7 @@ static void si_shader_vs(struct si_shader *shader)
 		       S_00B128_VGPRS((shader->num_vgprs - 1) / 4) |
 		       S_00B128_SGPRS((num_sgprs - 1) / 8) |
 		       S_00B128_VGPR_COMP_CNT(vgpr_comp_cnt) |
-		       S_00B128_DX10_CLAMP(1));
+		       S_00B128_DX10_CLAMP(shader->dx10_clamp_mode));
 	si_pm4_set_reg(pm4, R_00B12C_SPI_SHADER_PGM_RSRC2_VS,
 		       S_00B12C_USER_SGPR(num_user_sgprs) |
 		       S_00B12C_SO_BASE0_EN(!!shader->selector->so.stride[0]) |
@@ -304,7 +304,7 @@ static void si_shader_ps(struct si_shader *shader)
 	si_pm4_set_reg(pm4, R_00B028_SPI_SHADER_PGM_RSRC1_PS,
 		       S_00B028_VGPRS((shader->num_vgprs - 1) / 4) |
 		       S_00B028_SGPRS((num_sgprs - 1) / 8) |
-		       S_00B028_DX10_CLAMP(1));
+		       S_00B028_DX10_CLAMP(shader->dx10_clamp_mode));
 	si_pm4_set_reg(pm4, R_00B02C_SPI_SHADER_PGM_RSRC2_PS,
 		       S_00B02C_EXTRA_LDS_SIZE(shader->lds_size) |
 		       S_00B02C_USER_SGPR(num_user_sgprs));

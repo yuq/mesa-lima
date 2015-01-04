@@ -2369,6 +2369,10 @@ static void create_function(struct si_shader_context *si_shader_ctx)
 	radeon_llvm_create_func(&si_shader_ctx->radeon_bld, params, num_params);
 	radeon_llvm_shader_type(si_shader_ctx->radeon_bld.main_fn, si_shader_ctx->type);
 
+	if (shader->dx10_clamp_mode)
+		LLVMAddTargetDependentFunctionAttr(si_shader_ctx->radeon_bld.main_fn,
+						   "enable-no-nans-fp-math", "true");
+
 	for (i = 0; i <= last_sgpr; ++i) {
 		LLVMValueRef P = LLVMGetParam(si_shader_ctx->radeon_bld.main_fn, i);
 
@@ -2722,6 +2726,9 @@ int si_shader_create(struct si_screen *sscreen, struct si_shader *shader)
 	memset(&si_shader_ctx, 0, sizeof(si_shader_ctx));
 	radeon_llvm_context_init(&si_shader_ctx.radeon_bld);
 	bld_base = &si_shader_ctx.radeon_bld.soa.bld_base;
+
+	if (sel->type != PIPE_SHADER_COMPUTE)
+		shader->dx10_clamp_mode = true;
 
 	if (sel->info.uses_kill)
 		shader->db_shader_control |= S_02880C_KILL_ENABLE(1);
