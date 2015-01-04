@@ -165,6 +165,8 @@ tgsi_scan_shader(const struct tgsi_token *tokens,
                = &parse.FullToken.FullDeclaration;
             const uint file = fulldecl->Declaration.File;
             uint reg;
+            if (fulldecl->Declaration.Array)
+               info->array_max[file] = MAX2(info->array_max[file], fulldecl->Array.ArrayID);
             for (reg = fulldecl->Range.First;
                  reg <= fulldecl->Range.Last;
                  reg++) {
