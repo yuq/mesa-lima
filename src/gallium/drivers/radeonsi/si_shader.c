@@ -598,6 +598,16 @@ static void declare_system_value(
 						  SI_PARAM_BASE_VERTEX), "");
 		break;
 
+	case TGSI_SEMANTIC_VERTEXID_NOBASE:
+		value = LLVMGetParam(radeon_bld->main_fn,
+				     si_shader_ctx->param_vertex_id);
+		break;
+
+	case TGSI_SEMANTIC_BASEVERTEX:
+		value = LLVMGetParam(radeon_bld->main_fn,
+				     SI_PARAM_BASE_VERTEX);
+		break;
+
 	case TGSI_SEMANTIC_SAMPLEID:
 		value = get_sample_id(radeon_bld);
 		break;
