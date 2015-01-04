@@ -362,7 +362,6 @@ static INLINE void si_shader_selector_key(struct pipe_context *ctx,
 
 		if (sctx->queued.named.rasterizer) {
 			key->ps.color_two_side = sctx->queued.named.rasterizer->two_side;
-			key->ps.flatshade = sctx->queued.named.rasterizer->flatshade;
 
 			if (sctx->queued.named.blend) {
 				key->ps.alpha_to_one = sctx->queued.named.blend->alpha_to_one &&
@@ -632,10 +631,8 @@ bcolor:
 		tmp = 0;
 
 		if (interpolate == TGSI_INTERPOLATE_CONSTANT ||
-		    (interpolate == TGSI_INTERPOLATE_COLOR &&
-		     ps->key.ps.flatshade)) {
+		    (interpolate == TGSI_INTERPOLATE_COLOR && sctx->flatshade))
 			tmp |= S_028644_FLAT_SHADE(1);
-		}
 
 		if (name == TGSI_SEMANTIC_GENERIC &&
 		    sctx->sprite_coord_enable & (1 << index)) {
@@ -711,6 +708,7 @@ static void si_init_gs_rings(struct si_context *sctx)
 void si_update_shaders(struct si_context *sctx)
 {
 	struct pipe_context *ctx = (struct pipe_context*)sctx;
+	struct si_state_rasterizer *rs = sctx->queued.named.rasterizer;
 
 	if (sctx->gs_shader) {
 		si_shader_select(ctx, sctx->gs_shader);
@@ -776,8 +774,10 @@ void si_update_shaders(struct si_context *sctx)
 	si_pm4_bind_state(sctx, ps, sctx->ps_shader->current->pm4);
 
 	if (si_pm4_state_changed(sctx, ps) || si_pm4_state_changed(sctx, vs) ||
-	    sctx->sprite_coord_enable != sctx->queued.named.rasterizer->sprite_coord_enable) {
-		sctx->sprite_coord_enable = sctx->queued.named.rasterizer->sprite_coord_enable;
+	    sctx->sprite_coord_enable != rs->sprite_coord_enable ||
+	    sctx->flatshade != rs->flatshade) {
+		sctx->sprite_coord_enable = rs->sprite_coord_enable;
+		sctx->flatshade = rs->flatshade;
 		si_update_spi_map(sctx);
 	}
 
