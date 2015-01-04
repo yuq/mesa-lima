@@ -596,7 +596,8 @@ vbo_draw_arrays(struct gl_context *ctx, GLenum mode, GLint start,
    prim[0].is_indirect = 0;
 
    /* Implement the primitive restart index */
-   if (ctx->Array.PrimitiveRestart && ctx->Array.RestartIndex < count) {
+   if (ctx->Array.PrimitiveRestart && !ctx->Array.PrimitiveRestartFixedIndex &&
+       ctx->Array.RestartIndex < count) {
       GLuint primCount = 0;
 
       if (ctx->Array.RestartIndex == start) {
