@@ -167,8 +167,18 @@ static void si_update_descriptors(struct si_context *sctx,
 			desc->atom.num_dw += 4; /* second pointer update */
 
 		desc->atom.dirty = true;
+
+		/* TODO: Investigate if these flushes can be removed after
+		 * adding CE support. */
+
 		/* The descriptors are read with the K cache. */
 		sctx->b.flags |= SI_CONTEXT_INV_KCACHE;
+
+		/* Since SI uses uncached CP DMA to update descriptors,
+		 * we have to flush TC L2, which is used to fetch constants
+		 * along with KCACHE. */
+		if (sctx->b.chip_class == SI)
+			sctx->b.flags |= SI_CONTEXT_INV_TC_L2;
 	} else {
 		desc->atom.dirty = false;
 	}
@@ -248,7 +258,9 @@ static void si_emit_descriptors(struct si_context *sctx,
 			packet_size = 2 + desc->element_dw_size;
 
 			radeon_emit(cs, PKT3(PKT3_WRITE_DATA, packet_size, 0));
-			radeon_emit(cs, PKT3_WRITE_DATA_DST_SEL(PKT3_WRITE_DATA_DST_SEL_TC_OR_L2) |
+			radeon_emit(cs, PKT3_WRITE_DATA_DST_SEL(sctx->b.chip_class == SI ?
+						PKT3_WRITE_DATA_DST_SEL_MEM_SYNC :
+						PKT3_WRITE_DATA_DST_SEL_TC_L2) |
 					     PKT3_WRITE_DATA_WR_CONFIRM |
 					     PKT3_WRITE_DATA_ENGINE_SEL(PKT3_WRITE_DATA_ENGINE_SEL_ME));
 			radeon_emit(cs, va & 0xFFFFFFFFUL);

@@ -98,7 +98,7 @@
 #define     PKT3_WRITE_DATA_DST_SEL(x)             ((x) << 8)
 #define     PKT3_WRITE_DATA_DST_SEL_REG            0
 #define     PKT3_WRITE_DATA_DST_SEL_MEM_SYNC       1
-#define     PKT3_WRITE_DATA_DST_SEL_TC_OR_L2       2
+#define     PKT3_WRITE_DATA_DST_SEL_TC_L2          2
 #define     PKT3_WRITE_DATA_DST_SEL_GDS            3
 #define     PKT3_WRITE_DATA_DST_SEL_RESERVED_4     4
 #define     PKT3_WRITE_DATA_DST_SEL_MEM_ASYNC      5
