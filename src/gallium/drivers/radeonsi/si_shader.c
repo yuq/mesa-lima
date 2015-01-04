@@ -453,11 +453,6 @@ static void declare_input_fs(
 			interp_param = LLVMGetParam(main_fn, SI_PARAM_LINEAR_CENTER);
 		break;
 	case TGSI_INTERPOLATE_COLOR:
-		if (si_shader_ctx->shader->key.ps.flatshade) {
-			interp_param = 0;
-			break;
-		}
-		/* fall through to perspective */
 	case TGSI_INTERPOLATE_PERSPECTIVE:
 		if (decl->Interp.Location == TGSI_INTERPOLATE_LOC_SAMPLE)
 			interp_param = LLVMGetParam(main_fn, SI_PARAM_PERSP_SAMPLE);
@@ -471,9 +466,18 @@ static void declare_input_fs(
 		return;
 	}
 
+	/* fs.constant returns the param from the middle vertex, so it's not
+	 * really useful for flat shading. It's meant to be used for custom
+	 * interpolation (but the intrinsic can't fetch from the other two
+	 * vertices).
+	 *
+	 * Luckily, it doesn't matter, because we rely on the FLAT_SHADE state
+	 * to do the right thing. The only reason we use fs.constant is that
+	 * fs.interp cannot be used on integers, because they can be equal
+	 * to NaN.
+	 */
 	intr_name = interp_param ? "llvm.SI.fs.interp" : "llvm.SI.fs.constant";
 
-	/* XXX: Could there be more than TGSI_NUM_CHANNELS (4) ? */
 	if (decl->Semantic.Name == TGSI_SEMANTIC_COLOR &&
 	    si_shader_ctx->shader->key.ps.color_two_side) {
 		LLVMValueRef args[4];
