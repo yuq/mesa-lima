@@ -623,7 +623,8 @@ static void si_update_spi_map(struct si_context *sctx)
 		unsigned interpolate = psinfo->input_interpolate[i];
 		unsigned param_offset = ps->ps_input_param_offset[i];
 
-		if (name == TGSI_SEMANTIC_POSITION)
+		if (name == TGSI_SEMANTIC_POSITION ||
+		    name == TGSI_SEMANTIC_FACE)
 			/* Read from preloaded VGPRs, not parameters */
 			continue;
 
