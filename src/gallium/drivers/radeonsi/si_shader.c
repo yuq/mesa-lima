@@ -591,8 +591,11 @@ static void declare_system_value(
 		break;
 
 	case TGSI_SEMANTIC_VERTEXID:
-		value = LLVMGetParam(radeon_bld->main_fn,
-				     si_shader_ctx->param_vertex_id);
+		value = LLVMBuildAdd(gallivm->builder,
+				     LLVMGetParam(radeon_bld->main_fn,
+						  si_shader_ctx->param_vertex_id),
+				     LLVMGetParam(radeon_bld->main_fn,
+						  SI_PARAM_BASE_VERTEX), "");
 		break;
 
 	case TGSI_SEMANTIC_SAMPLEID:
