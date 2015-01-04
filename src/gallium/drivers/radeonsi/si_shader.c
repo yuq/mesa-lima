@@ -484,7 +484,7 @@ static void declare_input_fs(
 		face = LLVMGetParam(main_fn, SI_PARAM_FRONT_FACE);
 
 		is_face_positive = LLVMBuildFCmp(gallivm->builder,
-						 LLVMRealUGT, face,
+						 LLVMRealOGT, face,
 						 lp_build_const_float(gallivm, 0.0f),
 						 "");
 
