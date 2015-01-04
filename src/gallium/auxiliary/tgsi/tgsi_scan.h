@@ -72,6 +72,7 @@ struct tgsi_shader_info
    boolean writes_stencil; /**< does fragment shader write stencil value? */
    boolean writes_edgeflag; /**< vertex shader outputs edgeflag */
    boolean uses_kill;  /**< KILL or KILL_IF instruction used? */
+   boolean uses_centroid;
    boolean uses_instanceid;
    boolean uses_vertexid;
    boolean uses_vertexid_nobase;

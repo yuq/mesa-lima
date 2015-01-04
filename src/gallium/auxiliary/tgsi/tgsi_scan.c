@@ -191,6 +191,9 @@ tgsi_scan_shader(const struct tgsi_token *tokens,
                   info->input_cylindrical_wrap[reg] = (ubyte)fulldecl->Interp.CylindricalWrap;
                   info->num_inputs++;
 
+                  if (fulldecl->Interp.Location == TGSI_INTERPOLATE_LOC_CENTROID)
+                     info->uses_centroid = TRUE;
+
                   if (semName == TGSI_SEMANTIC_PRIMID)
                      info->uses_primid = TRUE;
                   else if (procType == TGSI_PROCESSOR_FRAGMENT) {
