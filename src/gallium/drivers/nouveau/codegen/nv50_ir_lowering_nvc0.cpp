@@ -754,7 +754,8 @@ NVC0LoweringPass::handleTEX(TexInstruction *i)
          assert(i->tex.useOffsets == 1);
          for (c = 0; c < 3; ++c) {
             ImmediateValue val;
-            assert(i->offset[0][c].getImmediate(val));
+            if (!i->offset[0][c].getImmediate(val))
+               assert(!"non-immediate offset passed to non-TXG");
             imm |= (val.reg.data.u32 & 0xf) << (c * 4);
          }
          if (i->op == OP_TXD && chipset >= NVISA_GK104_CHIPSET) {
