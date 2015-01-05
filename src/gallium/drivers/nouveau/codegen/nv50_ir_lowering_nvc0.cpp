@@ -1454,8 +1454,9 @@ NVC0LoweringPass::handleRDSV(Instruction *i)
       Value *face = i->getDef(0);
       bld.mkInterp(NV50_IR_INTERP_FLAT, face, addr, NULL);
       if (i->dType == TYPE_F32) {
-         bld.mkOp2(OP_AND, TYPE_U32, face, face, bld.mkImm(0x80000000));
-         bld.mkOp2(OP_XOR, TYPE_U32, face, face, bld.mkImm(0xbf800000));
+         bld.mkOp2(OP_OR, TYPE_U32, face, face, bld.mkImm(0x00000001));
+         bld.mkOp1(OP_NEG, TYPE_S32, face, face);
+         bld.mkCvt(OP_CVT, TYPE_F32, face, TYPE_S32, face);
       }
    }
       break;
