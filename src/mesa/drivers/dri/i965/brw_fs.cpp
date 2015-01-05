@@ -2367,6 +2367,18 @@ fs_visitor::opt_algebraic()
             break;
          }
          break;
+      case BRW_OPCODE_CMP:
+         if (inst->conditional_mod == BRW_CONDITIONAL_GE &&
+             inst->src[0].abs &&
+             inst->src[0].negate &&
+             inst->src[1].is_zero()) {
+            inst->src[0].abs = false;
+            inst->src[0].negate = false;
+            inst->conditional_mod = BRW_CONDITIONAL_Z;
+            progress = true;
+            break;
+         }
+         break;
       case BRW_OPCODE_SEL:
          if (inst->src[0].equals(inst->src[1])) {
             inst->opcode = BRW_OPCODE_MOV;
