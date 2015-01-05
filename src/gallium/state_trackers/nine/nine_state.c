@@ -214,11 +214,12 @@ update_vertex_elements(struct NineDevice9 *device)
             if (state->stream_freq[b] & D3DSTREAMSOURCE_INSTANCEDATA)
                 ve[n].instance_divisor = state->stream_freq[b] & 0x7FFFFF;
         } else {
-            /* TODO:
-             * If drivers don't want to handle this, insert a dummy buffer.
-             * But on which stream ?
-             */
-            /* no data, disable */
+            /* TODO: msdn doesn't specify what should happen when the vertex
+             * declaration doesn't match the vertex shader inputs.
+             * Some websites say the code will pass but nothing will get rendered.
+             * We should check and implement the correct behaviour. */
+            /* Put PIPE_FORMAT_NONE.
+             * Some drivers (r300) are very unhappy with that */
             ve[n].src_format = PIPE_FORMAT_NONE;
             ve[n].src_offset = 0;
             ve[n].instance_divisor = 0;
