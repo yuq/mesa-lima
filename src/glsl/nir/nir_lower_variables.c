@@ -189,78 +189,71 @@ get_deref_node(nir_deref_var *deref, bool add_to_leaves,
                struct lower_variables_state *state)
 {
    bool is_leaf = true;
-   struct deref_node *parent = NULL;
-   nir_deref *tail = &deref->deref;
-   while (tail) {
-      struct deref_node *node;
 
+   struct deref_node *node;
+
+   struct hash_entry *var_entry =
+      _mesa_hash_table_search(state->deref_var_nodes, deref->var);
+
+   if (var_entry) {
+      node = var_entry->data;
+   } else {
+      node = deref_node_create(NULL, deref->deref.type, state->dead_ctx);
+      _mesa_hash_table_insert(state->deref_var_nodes, deref->var, node);
+   }
+
+   for (nir_deref *tail = deref->deref.child; tail; tail = tail->child) {
       switch (tail->deref_type) {
-      case nir_deref_type_var: {
-         assert(tail == &deref->deref);
-         assert(parent == NULL);
-
-         struct hash_entry *entry =
-            _mesa_hash_table_search(state->deref_var_nodes, deref->var);
-         if (entry) {
-            node = entry->data;
-         } else {
-            node = deref_node_create(NULL, tail->type, state->dead_ctx);
-            _mesa_hash_table_insert(state->deref_var_nodes, deref->var, node);
-         }
-         break;
-      }
-
       case nir_deref_type_struct: {
-         assert(parent != NULL);
-
          nir_deref_struct *deref_struct = nir_deref_as_struct(tail);
-         assert(deref_struct->index < type_get_length(parent->type));
-         if (parent->children[deref_struct->index]) {
-            node = parent->children[deref_struct->index];
-         } else {
-            node = deref_node_create(parent, tail->type, state->dead_ctx);
-            parent->children[deref_struct->index] = node;
-         }
+
+         assert(deref_struct->index < type_get_length(node->type));
+
+         if (node->children[deref_struct->index] == NULL)
+            node->children[deref_struct->index] =
+               deref_node_create(node, tail->type, state->dead_ctx);
+
+         node = node->children[deref_struct->index];
          break;
       }
 
       case nir_deref_type_array: {
-         assert(parent != NULL);
-
          nir_deref_array *arr = nir_deref_as_array(tail);
+
          switch (arr->deref_array_type) {
          case nir_deref_array_type_direct:
-            if (arr->base_offset >= type_get_length(parent->type)) {
-               /* This is possible if a loop unrolls and generates an
-                * out-of-bounds offset.  We need to handle this at least
-                * somewhat gracefully.
-                */
+            /* This is possible if a loop unrolls and generates an
+             * out-of-bounds offset.  We need to handle this at least
+             * somewhat gracefully.
+             */
+            if (arr->base_offset >= type_get_length(node->type))
                return NULL;
-            } else if (parent->children[arr->base_offset]) {
-               node = parent->children[arr->base_offset];
-            } else {
-               node = deref_node_create(parent, tail->type, state->dead_ctx);
-               parent->children[arr->base_offset] = node;
-            }
+
+            if (node->children[arr->base_offset] == NULL)
+               node->children[arr->base_offset] =
+                  deref_node_create(node, tail->type, state->dead_ctx);
+
+            node = node->children[arr->base_offset];
             break;
+
          case nir_deref_array_type_indirect:
-            if (parent->indirect) {
-               node = parent->indirect;
-            } else {
-               node = deref_node_create(parent, tail->type, state->dead_ctx);
-               parent->indirect = node;
-            }
+            if (node->indirect == NULL)
+               node->indirect = deref_node_create(node, tail->type,
+                                                  state->dead_ctx);
+
+            node = node->indirect;
             is_leaf = false;
             break;
+
          case nir_deref_array_type_wildcard:
-            if (parent->wildcard) {
-               node = parent->wildcard;
-            } else {
-               node = deref_node_create(parent, tail->type, state->dead_ctx);
-               parent->wildcard = node;
-            }
+            if (node->wildcard == NULL)
+               node->wildcard = deref_node_create(node, tail->type,
+                                                  state->dead_ctx);
+
+            node = node->wildcard;
             is_leaf = false;
             break;
+
          default:
             unreachable("Invalid array deref type");
          }
@@ -269,17 +262,14 @@ get_deref_node(nir_deref_var *deref, bool add_to_leaves,
       default:
          unreachable("Invalid deref type");
       }
-
-      parent = node;
-      tail = tail->child;
    }
 
-   assert(parent);
+   assert(node);
 
    if (is_leaf && add_to_leaves)
-      _mesa_hash_table_insert(state->deref_leaves, deref, parent);
+      _mesa_hash_table_insert(state->deref_leaves, deref, node);
 
-   return parent;
+   return node;
 }
 
 /* \sa foreach_deref_node_match */
