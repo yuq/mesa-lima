@@ -1374,12 +1374,13 @@ trans_samp(const struct instr_translater *t,
 
 	collect = ir3_instr_create(ctx->block, -1, OPC_META_FI);
 	ir3_reg_create(collect, 0, 0);
-	for (i = 0; i < 4; i++)
+	for (i = 0; i < 4; i++) {
 		if (tinf.src_wrmask & (1 << i))
 			ssa_src(ctx, ir3_reg_create(collect, 0, IR3_REG_SSA),
 					coord, src_swiz(coord, i));
 		else if (tinf.src_wrmask & ~((1 << i) - 1))
 			ir3_reg_create(collect, 0, 0);
+	}
 
 	/* Attach derivatives onto the end of the fan-in. Derivatives start after
 	 * the 4th argument, so make sure that fi is padded up to 4 first.

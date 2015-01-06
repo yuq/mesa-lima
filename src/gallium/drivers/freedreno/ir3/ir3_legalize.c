@@ -80,7 +80,13 @@ static void legalize(struct ir3_legalize_ctx *ctx)
 			ctx->max_bary = MAX2(ctx->max_bary, inloc->iim_val);
 		}
 
-		for (i = 1; i < n->regs_count; i++) {
+		/* NOTE: consider dst register too.. it could happen that
+		 * texture sample instruction (for example) writes some
+		 * components which are unused.  A subsequent instruction
+		 * that writes the same register can race w/ the sam instr
+		 * resulting in undefined results:
+		 */
+		for (i = 0; i < n->regs_count; i++) {
 			reg = n->regs[i];
 
 			if (reg_gpr(reg)) {
