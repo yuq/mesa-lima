@@ -53,12 +53,21 @@ struct lower_variables_state {
    /* A hash table mapping variables to deref_node data */
    struct hash_table *deref_var_nodes;
 
-   /* A hash table mapping dereference leaves to deref_node data.  A deref
-    * is considered a leaf if it is fully-qualified (no wildcards) and
-    * direct.  In short, these are the derefs we can actually consider
-    * lowering to SSA values.
+   /* A hash table mapping fully-qualified direct dereferences, i.e.
+    * dereferences with no indirect or wildcard array dereferences, to
+    * deref_node data.
+    *
+    * At the moment, we only lower loads, stores, and copies that can be
+    * trivially lowered to loads and stores, i.e. copies with no indirects
+    * and no wildcards.  If a part of a variable that is being loaded from
+    * and/or stored into is also involved in a copy operation with
+    * wildcards, then we lower that copy operation to loads and stores, but
+    * otherwise we leave copies with wildcards alone. Since the only derefs
+    * used in these loads, stores, and trivial copies are ones with no
+    * wildcards and no indirects, these are precisely the derefs that we
+    * can actually consider lowering.
     */
-   struct hash_table *deref_leaves;
+   struct hash_table *direct_deref_nodes;
 
    /* A hash table mapping phi nodes to deref_state data */
    struct hash_table *phi_table;
@@ -181,14 +190,15 @@ deref_node_create(struct deref_node *parent,
 }
 
 /* Gets the deref_node for the given deref chain and creates it if it
- * doesn't yet exist.  If the deref is a leaf (fully-qualified and direct)
- * and add_to_leaves is true, it will be added to the hash table of leaves.
+ * doesn't yet exist.  If the deref is fully-qualified and direct and
+ * add_to_direct_deref_nodes is true, it will be added to the hash table of
+ * of fully-qualified direct derefs.
  */
 static struct deref_node *
-get_deref_node(nir_deref_var *deref, bool add_to_leaves,
+get_deref_node(nir_deref_var *deref, bool add_to_direct_deref_nodes,
                struct lower_variables_state *state)
 {
-   bool is_leaf = true;
+   bool is_direct = true;
 
    struct deref_node *node;
 
@@ -242,7 +252,7 @@ get_deref_node(nir_deref_var *deref, bool add_to_leaves,
                                                   state->dead_ctx);
 
             node = node->indirect;
-            is_leaf = false;
+            is_direct = false;
             break;
 
          case nir_deref_array_type_wildcard:
@@ -251,7 +261,7 @@ get_deref_node(nir_deref_var *deref, bool add_to_leaves,
                                                   state->dead_ctx);
 
             node = node->wildcard;
-            is_leaf = false;
+            is_direct = false;
             break;
 
          default:
@@ -266,8 +276,8 @@ get_deref_node(nir_deref_var *deref, bool add_to_leaves,
 
    assert(node);
 
-   if (is_leaf && add_to_leaves)
-      _mesa_hash_table_insert(state->deref_leaves, deref, node);
+   if (is_direct && add_to_direct_deref_nodes)
+      _mesa_hash_table_insert(state->direct_deref_nodes, deref, node);
 
    return node;
 }
@@ -321,7 +331,7 @@ foreach_deref_node_worker(struct deref_node *node, nir_deref *deref,
  * a[*].foo[*].bar
  *
  * The given deref must be a full-length and fully qualified (no wildcards
- * or indirexcts) deref chain.
+ * or indirects) deref chain.
  */
 static bool
 foreach_deref_node_match(nir_deref_var *deref,
@@ -384,13 +394,18 @@ deref_may_be_aliased_node(struct deref_node *node, nir_deref *deref,
 }
 
 /* Returns true if there are no indirects that can ever touch this deref.
- * This question can only be asked about fully-qualified derefs.
+ *
+ * For example, if the given deref is a[6].foo, then any uses of a[i].foo
+ * would cause this to return false, but a[i].bar would not affect it
+ * because it's a different structure member.  A var_copy involving of
+ * a[*].bar also doesn't affect it because that can be lowered to entirely
+ * direct load/stores.
+ *
+ * We only support asking this question about fully-qualified derefs.
  * Obviously, it's pointless to ask this about indirects, but we also
- * rule-out wildcards.  For example, if the given deref is a[6].foo, then
- * any uses of a[i].foo would case this to return false, but a[i].bar would
- * not affect it because it's a different structure member.  A var_copy
- * involving of a[*].bar also doesn't affect it because that can be lowered
- * to entirely direct load/stores.
+ * rule-out wildcards.  Handling Wildcard dereferences would involve
+ * checking each array index to make sure that there aren't any indirect
+ * references.
  */
 static bool
 deref_may_be_aliased(nir_deref_var *deref,
@@ -940,7 +955,7 @@ rename_variables_block(nir_block *block, struct lower_variables_state *state)
 
             def_stack_push(node, &mov->dest.dest.ssa, state);
 
-            /* We'll wait to remove the unstruction until the next pass
+            /* We'll wait to remove the instruction until the next pass
              * where we pop the node we just pushed back off the stack.
              */
             break;
@@ -1012,6 +1027,15 @@ insert_phi_nodes(struct lower_variables_state *state)
 {
    unsigned work[state->impl->num_blocks];
    unsigned has_already[state->impl->num_blocks];
+
+   /*
+    * Since the work flags already prevent us from inserting a node that has
+    * ever been inserted into W, we don't need to use a set to represent W.
+    * Also, since no block can ever be inserted into W more than once, we know
+    * that the maximum size of W is the number of basic blocks in the
+    * function. So all we need to handle W is an array and a pointer to the
+    * next element to be inserted and the next element to be removed.
+    */
    nir_block *W[state->impl->num_blocks];
 
    memset(work, 0, sizeof work);
@@ -1021,7 +1045,7 @@ insert_phi_nodes(struct lower_variables_state *state)
    unsigned iter_count = 0;
 
    struct hash_entry *deref_entry;
-   hash_table_foreach(state->deref_leaves, deref_entry) {
+   hash_table_foreach(state->direct_deref_nodes, deref_entry) {
       struct deref_node *node = deref_entry->data;
 
       if (node->stores == NULL)
@@ -1078,6 +1102,34 @@ insert_phi_nodes(struct lower_variables_state *state)
    }
 }
 
+
+/** Implements a pass to lower variable uses to SSA values
+ *
+ * This path walks the list of instructions and tries to lower as many
+ * local variable load/store operations to SSA defs and uses as it can.
+ * The process involves four passes:
+ *
+ *  1) Iterate over all of the instructions and mark where each local
+ *     variable deref is used in a load, store, or copy.  While we're at
+ *     it, we keep track of all of the fully-qualified (no wildcards) and
+ *     fully-direct references we see and store them in the
+ *     direct_deref_nodes hash table.
+ *
+ *  2) Walk over the the list of fully-qualified direct derefs generated in
+ *     the previous pass.  For each deref, we determine if it can ever be
+ *     aliased, i.e. if there is an indirect reference anywhere that may
+ *     refer to it.  If it cannot be aliased, we mark it for lowering to an
+ *     SSA value.  At this point, we lower any var_copy instructions that
+ *     use the given deref to load/store operations and, if the deref has a
+ *     constant initializer, we go ahead and add a load_const value at the
+ *     beginning of the function with the initialized value.
+ *
+ *  3) Walk over the list of derefs we plan to lower to SSA values and
+ *     insert phi nodes as needed.
+ *
+ *  4) Perform "variable renaming" by replacing the load/store instructions
+ *     with SSA definitions and SSA uses.
+ */
 static bool
 nir_lower_variables_impl(nir_function_impl *impl)
 {
@@ -1090,8 +1142,8 @@ nir_lower_variables_impl(nir_function_impl *impl)
    state.deref_var_nodes = _mesa_hash_table_create(state.dead_ctx,
                                                    _mesa_hash_pointer,
                                                    _mesa_key_pointer_equal);
-   state.deref_leaves = _mesa_hash_table_create(state.dead_ctx,
-                                                hash_deref, derefs_equal);
+   state.direct_deref_nodes = _mesa_hash_table_create(state.dead_ctx,
+                                                      hash_deref, derefs_equal);
    state.phi_table = _mesa_hash_table_create(state.dead_ctx,
                                              _mesa_hash_pointer,
                                              _mesa_key_pointer_equal);
@@ -1106,17 +1158,17 @@ nir_lower_variables_impl(nir_function_impl *impl)
    nir_metadata_require(impl, nir_metadata_block_index);
 
    struct hash_entry *entry;
-   hash_table_foreach(state.deref_leaves, entry) {
+   hash_table_foreach(state.direct_deref_nodes, entry) {
       nir_deref_var *deref = (void *)entry->key;
       struct deref_node *node = entry->data;
 
       if (deref->var->data.mode != nir_var_local) {
-         _mesa_hash_table_remove(state.deref_leaves, entry);
+         _mesa_hash_table_remove(state.direct_deref_nodes, entry);
          continue;
       }
 
       if (deref_may_be_aliased(deref, &state)) {
-         _mesa_hash_table_remove(state.deref_leaves, entry);
+         _mesa_hash_table_remove(state.direct_deref_nodes, entry);
          continue;
       }
 
