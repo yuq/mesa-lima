@@ -431,27 +431,18 @@ _mesa_hash_table_random_entry(struct hash_table *ht,
 uint32_t
 _mesa_hash_data(const void *data, size_t size)
 {
-   uint32_t hash = 2166136261ul;
-   const uint8_t *bytes = data;
-
-   while (size-- != 0) {
-      hash ^= *bytes;
-      hash = hash * 0x01000193;
-      bytes++;
-   }
-
-   return hash;
+   return _mesa_fnv32_1a_accumulate_block(_mesa_fnv32_1a_offset_bias,
+                                          data, size);
 }
 
 /** FNV-1a string hash implementation */
 uint32_t
 _mesa_hash_string(const char *key)
 {
-   uint32_t hash = 2166136261ul;
+   uint32_t hash = _mesa_fnv32_1a_offset_bias;
 
    while (*key != 0) {
-      hash ^= *key;
-      hash = hash * 0x01000193;
+      hash = _mesa_fnv32_1a_accumulate(hash, *key);
       key++;
    }
 

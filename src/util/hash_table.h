@@ -101,6 +101,25 @@ static inline uint32_t _mesa_hash_pointer(const void *pointer)
    return _mesa_hash_data(&pointer, sizeof(pointer));
 }
 
+static const uint32_t _mesa_fnv32_1a_offset_bias = 2166136261u;
+
+static inline uint32_t
+_mesa_fnv32_1a_accumulate_block(uint32_t hash, const void *data, size_t size)
+{
+   const uint8_t *bytes = (const uint8_t *)data;
+
+   while (size-- != 0) {
+      hash ^= *bytes;
+      hash = hash * 0x01000193;
+      bytes++;
+   }
+
+   return hash;
+}
+
+#define _mesa_fnv32_1a_accumulate(hash, expr) \
+   _mesa_fnv32_1a_accumulate_block(hash, &(expr), sizeof(expr))
+
 /**
  * This foreach function is safe against deletion (which just replaces
  * an entry's data with the deleted marker), but not against insertion
