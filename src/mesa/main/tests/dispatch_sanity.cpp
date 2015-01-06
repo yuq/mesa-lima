@@ -975,6 +975,9 @@ const struct function gl_core_functions_possible[] = {
    { "glGetTextureParameterIiv", 45, -1 },
    { "glGetTextureParameterIuiv", 45, -1 },
    { "glGetTextureParameteriv", 45, -1 },
+   { "glCopyTextureSubImage1D", 45, -1 },
+   { "glCopyTextureSubImage2D", 45, -1 },
+   { "glCopyTextureSubImage3D", 45, -1 },
 
    { NULL, 0, -1 }
 };

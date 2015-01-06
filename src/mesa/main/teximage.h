@@ -174,6 +174,14 @@ _mesa_texture_sub_image(struct gl_context *ctx, GLuint dims,
                         GLsizei width, GLsizei height, GLsizei depth,
                         GLenum format, GLenum type, const GLvoid *pixels,
                         bool dsa);
+
+extern void
+_mesa_copy_texture_sub_image(struct gl_context *ctx, GLuint dims,
+                             struct gl_texture_object *texObj,
+                             GLenum target, GLint level,
+                             GLint xoffset, GLint yoffset, GLint zoffset,
+                             GLint x, GLint y,
+                             GLsizei width, GLsizei height, bool dsa);
 /*@}*/
 
 
@@ -252,8 +260,8 @@ _mesa_TextureSubImage3D(GLuint texture, GLint level,
 
 
 extern void GLAPIENTRY
-_mesa_CopyTexImage1D( GLenum target, GLint level, GLenum internalformat,
-                      GLint x, GLint y, GLsizei width, GLint border );
+_mesa_CopyTexImage1D(GLenum target, GLint level, GLenum internalformat,
+                     GLint x, GLint y, GLsizei width, GLint border);
 
 
 extern void GLAPIENTRY
@@ -278,7 +286,21 @@ _mesa_CopyTexSubImage3D( GLenum target, GLint level,
                          GLint xoffset, GLint yoffset, GLint zoffset,
                          GLint x, GLint y, GLsizei width, GLsizei height );
 
+extern void GLAPIENTRY
+_mesa_CopyTextureSubImage1D(GLuint texture, GLint level,
+                            GLint xoffset, GLint x, GLint y, GLsizei width);
 
+extern void GLAPIENTRY
+_mesa_CopyTextureSubImage2D(GLuint texture, GLint level,
+                            GLint xoffset, GLint yoffset,
+                            GLint x, GLint y,
+                            GLsizei width, GLsizei height);
+
+extern void GLAPIENTRY
+_mesa_CopyTextureSubImage3D(GLuint texture, GLint level,
+                            GLint xoffset, GLint yoffset, GLint zoffset,
+                            GLint x, GLint y,
+                            GLsizei width, GLsizei height);
 
 extern void GLAPIENTRY
 _mesa_ClearTexSubImage( GLuint texture, GLint level,

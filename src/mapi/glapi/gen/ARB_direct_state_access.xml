@@ -75,6 +75,38 @@
       <param name="pixels" type="const GLvoid *" />
    </function>
 
+   <function name="CopyTextureSubImage1D" offset="assign">
+      <param name="texture" type="GLuint" />
+      <param name="level" type="GLint" />
+      <param name="xoffset" type="GLint" />
+      <param name="x" type="GLint" />
+      <param name="y" type="GLint" />
+      <param name="width" type="GLsizei" />
+   </function>
+
+   <function name="CopyTextureSubImage2D" offset="assign">
+      <param name="texture" type="GLuint" />
+      <param name="level" type="GLint" />
+      <param name="xoffset" type="GLint" />
+      <param name="yoffset" type="GLint" />
+      <param name="x" type="GLint" />
+      <param name="y" type="GLint" />
+      <param name="width" type="GLsizei" />
+      <param name="height" type="GLsizei" />
+   </function>
+
+   <function name="CopyTextureSubImage3D" offset="assign">
+      <param name="texture" type="GLuint" />
+      <param name="level" type="GLint" />
+      <param name="xoffset" type="GLint" />
+      <param name="yoffset" type="GLint" />
+      <param name="zoffset" type="GLint" />
+      <param name="x" type="GLint" />
+      <param name="y" type="GLint" />
+      <param name="width" type="GLsizei" />
+      <param name="height" type="GLsizei" />
+   </function>
+
    <function name="TextureParameterf" offset="assign">
       <param name="texture" type="GLuint" />
       <param name="pname" type="GLenum" />
