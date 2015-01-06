@@ -2490,7 +2490,7 @@ delete_from_cache_if_matches(struct hash_table *ht,
                              struct hash_entry *entry,
                              struct vc4_uncompiled_shader *so)
 {
-        struct vc4_key *key = entry->data;
+        const struct vc4_key *key = entry->key;
 
         if (key->shader_state == so) {
                 struct vc4_compiled_shader *shader = entry->data;
