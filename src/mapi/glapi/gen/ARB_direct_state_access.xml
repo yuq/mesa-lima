@@ -179,6 +179,10 @@
       <param name="param" type="const GLint *" />
    </function>
 
+   <function name="GenerateTextureMipmap" offset="assign">
+      <param name="texture" type="GLuint" />
+   </function>
+
    <function name="BindTextureUnit" offset="assign">
       <param name="unit" type="GLuint" />
       <param name="texture" type="GLuint" />
