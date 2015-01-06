@@ -39,6 +39,25 @@
       <param name="depth" type="GLsizei" />
    </function>
 
+   <function name="TextureStorage2DMultisample" offset="assign">
+      <param name="texture" type="GLuint" />
+      <param name="samples" type="GLsizei" />
+      <param name="internalformat" type="GLenum" />
+      <param name="width" type="GLsizei" />
+      <param name="height" type="GLsizei" />
+      <param name="fixedsamplelocations" type="GLboolean" />
+   </function>
+
+   <function name="TextureStorage3DMultisample" offset="assign">
+      <param name="texture" type="GLuint" />
+      <param name="samples" type="GLsizei" />
+      <param name="internalformat" type="GLenum" />
+      <param name="width" type="GLsizei" />
+      <param name="height" type="GLsizei" />
+      <param name="depth" type="GLsizei" />
+      <param name="fixedsamplelocations" type="GLboolean" />
+   </function>
+
    <function name="TextureSubImage1D" offset="assign">
       <param name="texture" type="GLuint" />
       <param name="level" type="GLint" />

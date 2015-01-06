@@ -193,6 +193,15 @@ _mesa_copy_texture_sub_image(struct gl_context *ctx, GLuint dims,
                              GLint xoffset, GLint yoffset, GLint zoffset,
                              GLint x, GLint y,
                              GLsizei width, GLsizei height, bool dsa);
+
+extern void
+_mesa_texture_image_multisample(struct gl_context *ctx, GLuint dims,
+                                struct gl_texture_object *texObj,
+                                GLenum target, GLsizei samples,
+                                GLint internalformat, GLsizei width,
+                                GLsizei height, GLsizei depth,
+                                GLboolean fixedsamplelocations,
+                                GLboolean immutable, const char *func);
 /*@}*/
 
 
@@ -408,6 +417,17 @@ _mesa_TexStorage3DMultisample(GLenum target, GLsizei samples,
                               GLsizei height, GLsizei depth,
                               GLboolean fixedsamplelocations);
 
+void GLAPIENTRY
+_mesa_TextureStorage2DMultisample(GLuint texture, GLsizei samples,
+                                  GLenum internalformat, GLsizei width,
+                                  GLsizei height,
+                                  GLboolean fixedsamplelocations);
+
+void GLAPIENTRY
+_mesa_TextureStorage3DMultisample(GLuint texture, GLsizei samples,
+                                  GLenum internalformat, GLsizei width,
+                                  GLsizei height, GLsizei depth,
+                                  GLboolean fixedsamplelocations);
 /*@}*/
 
 #ifdef __cplusplus

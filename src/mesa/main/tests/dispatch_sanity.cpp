@@ -984,6 +984,8 @@ const struct function gl_core_functions_possible[] = {
    { "glCompressedTextureSubImage2D", 45, -1 },
    { "glCompressedTextureSubImage3D", 45, -1 },
    { "glGenerateTextureMipmap", 45, -1 },
+   { "glTextureStorage2DMultisample", 45, -1 },
+   { "glTextureStorage3DMultisample", 45, -1 },
 
    { NULL, 0, -1 }
 };
