@@ -880,17 +880,12 @@ _mesa_texture_parameterfv(struct gl_context *ctx,
 }
 
 
-void GLAPIENTRY
-_mesa_TexParameteri(GLenum target, GLenum pname, GLint param)
+void
+_mesa_texture_parameteri(struct gl_context *ctx,
+                         struct gl_texture_object *texObj,
+                         GLenum pname, GLint param, bool dsa)
 {
    GLboolean need_update;
-   struct gl_texture_object *texObj;
-   GET_CURRENT_CONTEXT(ctx);
-
-   texObj = get_texobj_by_target(ctx, target, GL_FALSE);
-   if (!texObj)
-      return;
-
    switch (pname) {
    case GL_TEXTURE_MIN_LOD:
    case GL_TEXTURE_MAX_LOD:
@@ -903,16 +898,24 @@ _mesa_TexParameteri(GLenum target, GLenum pname, GLint param)
          fparam[0] = (GLfloat) param;
          fparam[1] = fparam[2] = fparam[3] = 0.0F;
          /* convert int param to float */
-         need_update = set_tex_parameterf(ctx, texObj, pname, fparam, false);
+         need_update = set_tex_parameterf(ctx, texObj, pname, fparam, dsa);
       }
       break;
+   case GL_TEXTURE_BORDER_COLOR:
+   case GL_TEXTURE_SWIZZLE_RGBA:
+      {
+         _mesa_error(ctx, GL_INVALID_ENUM,
+                     "glTex%sParameteri(non-scalar pname)",
+                     dsa ? "ture" : "");
+         return;
+      }
    default:
       /* this will generate an error if pname is illegal */
       {
          GLint iparam[4];
          iparam[0] = param;
          iparam[1] = iparam[2] = iparam[3] = 0;
-         need_update = set_tex_parameteri(ctx, texObj, pname, iparam, false);
+         need_update = set_tex_parameteri(ctx, texObj, pname, iparam, dsa);
       }
    }
 
@@ -1004,6 +1007,19 @@ _mesa_TexParameterfv(GLenum target, GLenum pname, const GLfloat *params)
    _mesa_texture_parameterfv(ctx, texObj, pname, params, false);
 }
 
+void GLAPIENTRY
+_mesa_TexParameteri(GLenum target, GLenum pname, GLint param)
+{
+   struct gl_texture_object *texObj;
+   GET_CURRENT_CONTEXT(ctx);
+
+   texObj = get_texobj_by_target(ctx, target, GL_FALSE);
+   if (!texObj)
+      return;
+
+   _mesa_texture_parameteri(ctx, texObj, pname, param, false);
+}
+
 /**
  * Set tex parameter to integer value(s).  Primarily intended to set
  * integer-valued texture border color (for integer-valued textures).
@@ -1092,6 +1108,22 @@ _mesa_TextureParameterf(GLuint texture, GLenum pname, GLfloat param)
    }
 
    _mesa_texture_parameterf(ctx, texObj, pname, param, true);
+}
+
+void GLAPIENTRY
+_mesa_TextureParameteri(GLuint texture, GLenum pname, GLint param)
+{
+   struct gl_texture_object *texObj;
+   GET_CURRENT_CONTEXT(ctx);
+
+   texObj = get_texobj_by_name(ctx, texture, GL_FALSE);
+   if (!texObj) {
+      /* User passed a non-generated name. */
+      _mesa_error(ctx, GL_INVALID_OPERATION, "glTextureParameteri(texture)");
+      return;
+   }
+
+   _mesa_texture_parameteri(ctx, texObj, pname, param, true);
 }
 
 static GLboolean
