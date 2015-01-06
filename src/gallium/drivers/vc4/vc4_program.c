@@ -1903,11 +1903,11 @@ emit_zs_write(struct vc4_compile *c, struct qreg rcp_w)
         struct qreg zscale = add_uniform(c, QUNIFORM_VIEWPORT_Z_SCALE, 0);
         struct qreg zoffset = add_uniform(c, QUNIFORM_VIEWPORT_Z_OFFSET, 0);
 
-        qir_VPM_WRITE(c, qir_FMUL(c, qir_FADD(c, qir_FMUL(c,
+        qir_VPM_WRITE(c, qir_FADD(c, qir_FMUL(c, qir_FMUL(c,
                                                           c->outputs[c->output_position_index + 2],
                                                           zscale),
-                                              zoffset),
-                                  rcp_w));
+                                              rcp_w),
+                                  zoffset));
 }
 
 static void
