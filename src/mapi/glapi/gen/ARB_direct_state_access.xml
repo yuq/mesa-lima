@@ -157,6 +157,13 @@
       <param name="pixels" type="GLvoid *" />
    </function>
 
+   <function name="GetCompressedTextureImage" offset="assign">
+      <param name="texture" type="GLuint" />
+      <param name="level" type="GLint" />
+      <param name="bufSize" type="GLsizei" />
+      <param name="pixels" type="GLvoid *" />
+   </function>
+
    <function name="GetTextureLevelParameterfv" offset="assign">
       <param name="texture" type="GLuint" />
       <param name="level" type="GLint" />
