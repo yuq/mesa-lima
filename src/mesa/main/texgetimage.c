@@ -1303,7 +1303,16 @@ _mesa_GetCompressedTextureImage(GLuint texture, GLint level,
 
    /* Must handle special case GL_TEXTURE_CUBE_MAP. */
    if (texObj->Target == GL_TEXTURE_CUBE_MAP) {
-      assert(texObj->NumLayers >= 6);
+
+      /* Make sure the texture object is a proper cube.
+       * (See texturesubimage in teximage.c for details on why this check is
+       * performed.)
+       */
+      if (!_mesa_cube_level_complete(texObj, level)) {
+         _mesa_error(ctx, GL_INVALID_OPERATION,
+                     "glGetCompressedTextureImage(cube map incomplete)");
+         return;
+      }
 
       /* Copy each face. */
       for (i = 0; i < 6; ++i) {
