@@ -549,6 +549,30 @@ NineSurface9_CopySurface( struct NineSurface9 *This,
             r_src = NULL;
     }
 
+    /* check source block align for compressed textures */
+    if (util_format_is_compressed(From->base.info.format) &&
+        ((src_box.width != From->desc.Width) ||
+         (src_box.height != From->desc.Height))) {
+        const unsigned w = util_format_get_blockwidth(From->base.info.format);
+        const unsigned h = util_format_get_blockheight(From->base.info.format);
+        user_assert(!(src_box.width % w) &&
+                    !(src_box.height % h),
+                    D3DERR_INVALIDCALL);
+    }
+
+    /* check destination block align for compressed textures */
+    if (util_format_is_compressed(This->base.info.format) &&
+        ((dst_box.width != This->desc.Width) ||
+         (dst_box.height != This->desc.Height) ||
+         dst_box.x != 0 ||
+         dst_box.y != 0)) {
+        const unsigned w = util_format_get_blockwidth(This->base.info.format);
+        const unsigned h = util_format_get_blockheight(This->base.info.format);
+        user_assert(!(dst_box.x % w) && !(dst_box.width % w) &&
+                    !(dst_box.y % h) && !(dst_box.height % h),
+                    D3DERR_INVALIDCALL);
+    }
+
     if (r_dst && r_src) {
         pipe->resource_copy_region(pipe,
                                    r_dst, This->level,
