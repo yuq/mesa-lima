@@ -68,80 +68,82 @@ struct lower_variables_state {
  * variable dreferences.  When the hash or equality function encounters an
  * array, all indirects are treated as equal and are never equal to a
  * direct dereference or a wildcard.
- *
- * Some of the magic numbers here were taken from _mesa_hash_data and one
- * was just a big prime I found on the internet.
  */
 static uint32_t
 hash_deref(const void *void_deref)
 {
-   const nir_deref *deref = void_deref;
+   uint32_t hash = _mesa_fnv32_1a_offset_bias;
 
-   uint32_t hash;
-   if (deref->child) {
-      hash = hash_deref(deref->child);
-   } else {
-      hash = 2166136261ul;
+   const nir_deref_var *deref_var = void_deref;
+   hash = _mesa_fnv32_1a_accumulate(hash, deref_var->var);
+
+   for (const nir_deref *deref = deref_var->deref.child;
+        deref; deref = deref->child) {
+      switch (deref->deref_type) {
+      case nir_deref_type_array: {
+         nir_deref_array *deref_array = nir_deref_as_array(deref);
+
+         hash = _mesa_fnv32_1a_accumulate(hash, deref_array->deref_array_type);
+
+         if (deref_array->deref_array_type == nir_deref_array_type_direct)
+            hash = _mesa_fnv32_1a_accumulate(hash, deref_array->base_offset);
+         break;
+      }
+      case nir_deref_type_struct: {
+         nir_deref_struct *deref_struct = nir_deref_as_struct(deref);
+         hash = _mesa_fnv32_1a_accumulate(hash, deref_struct->index);
+         break;
+      }
+      default:
+         assert("Invalid deref chain");
+      }
    }
 
-   switch (deref->deref_type) {
-   case nir_deref_type_var:
-      hash ^= _mesa_hash_pointer(nir_deref_as_var(deref)->var);
-      break;
-   case nir_deref_type_array: {
-      nir_deref_array *array = nir_deref_as_array(deref);
-      hash += 268435183 * array->deref_array_type;
-      if (array->deref_array_type == nir_deref_array_type_direct)
-         hash ^= array->base_offset; /* Some prime */
-      break;
-   }
-   case nir_deref_type_struct:
-      hash ^= nir_deref_as_struct(deref)->index;
-      break;
-   }
-
-   return hash * 0x01000193;
+   return hash;
 }
 
 static bool
 derefs_equal(const void *void_a, const void *void_b)
 {
-   const nir_deref *a = void_a;
-   const nir_deref *b = void_b;
+   const nir_deref_var *a_var = void_a;
+   const nir_deref_var *b_var = void_b;
 
-   if (a->deref_type != b->deref_type)
+   if (a_var->var != b_var->var)
       return false;
 
-   switch (a->deref_type) {
-   case nir_deref_type_var:
-      if (nir_deref_as_var(a)->var != nir_deref_as_var(b)->var)
-         return false;
-      break;
-   case nir_deref_type_array: {
-      nir_deref_array *a_arr = nir_deref_as_array(a);
-      nir_deref_array *b_arr = nir_deref_as_array(b);
-
-      if (a_arr->deref_array_type != b_arr->deref_array_type)
+   for (const nir_deref *a = a_var->deref.child, *b = b_var->deref.child;
+        a != NULL; a = a->child, b = b->child) {
+      if (a->deref_type != b->deref_type)
          return false;
 
-      if (a_arr->deref_array_type == nir_deref_array_type_direct &&
-          a_arr->base_offset != b_arr->base_offset)
+      switch (a->deref_type) {
+      case nir_deref_type_array: {
+         nir_deref_array *a_arr = nir_deref_as_array(a);
+         nir_deref_array *b_arr = nir_deref_as_array(b);
+
+         if (a_arr->deref_array_type != b_arr->deref_array_type)
+            return false;
+
+         if (a_arr->deref_array_type == nir_deref_array_type_direct &&
+             a_arr->base_offset != b_arr->base_offset)
+            return false;
+         break;
+      }
+      case nir_deref_type_struct:
+         if (nir_deref_as_struct(a)->index != nir_deref_as_struct(b)->index)
+            return false;
+         break;
+      default:
+         assert("Invalid deref chain");
          return false;
-      break;
+      }
+
+      assert((a->child == NULL) == (b->child == NULL));
+      if((a->child == NULL) != (b->child == NULL))
+         return false;
    }
-   case nir_deref_type_struct:
-      if (nir_deref_as_struct(a)->index != nir_deref_as_struct(b)->index)
-         return false;
-      break;
-   default:
-      unreachable("Invalid dreference type");
-   }
 
-   assert((a->child == NULL) == (b->child == NULL));
-   if (a->child)
-      return derefs_equal(a->child, b->child);
-   else
-      return true;
+   return true;
 }
 
 static int

@@ -43,61 +43,48 @@ struct locals_to_regs_state {
 static uint32_t
 hash_deref(const void *void_deref)
 {
-   const nir_deref *deref = void_deref;
+   uint32_t hash = _mesa_fnv32_1a_offset_bias;
 
-   uint32_t hash;
-   if (deref->child) {
-      hash = hash_deref(deref->child);
-   } else {
-      hash = 2166136261ul;
+   const nir_deref_var *deref_var = void_deref;
+   hash = _mesa_fnv32_1a_accumulate(hash, deref_var->var);
+
+   for (const nir_deref *deref = deref_var->deref.child;
+        deref; deref = deref->child) {
+      if (deref->deref_type == nir_deref_type_struct) {
+         const nir_deref_struct *deref_struct = nir_deref_as_struct(deref);
+         hash = _mesa_fnv32_1a_accumulate(hash, deref_struct->index);
+      }
    }
 
-   switch (deref->deref_type) {
-   case nir_deref_type_var:
-      hash ^= _mesa_hash_pointer(nir_deref_as_var(deref)->var);
-      break;
-   case nir_deref_type_array: {
-      hash ^= 268435183;
-      break;
-   }
-   case nir_deref_type_struct:
-      hash ^= nir_deref_as_struct(deref)->index;
-      break;
-   }
-
-   return hash * 0x01000193;
+   return hash;
 }
 
 static bool
 derefs_equal(const void *void_a, const void *void_b)
 {
-   const nir_deref *a = void_a;
-   const nir_deref *b = void_b;
+   const nir_deref_var *a_var = void_a;
+   const nir_deref_var *b_var = void_b;
 
-   if (a->deref_type != b->deref_type)
+   if (a_var->var != b_var->var)
       return false;
 
-   switch (a->deref_type) {
-   case nir_deref_type_var:
-      if (nir_deref_as_var(a)->var != nir_deref_as_var(b)->var)
+   for (const nir_deref *a = a_var->deref.child, *b = b_var->deref.child;
+        a != NULL; a = a->child, b = b->child) {
+      if (a->deref_type != b->deref_type)
          return false;
-      break;
-   case nir_deref_type_array:
-      /* Do nothing.  All array derefs are the same */
-      break;
-   case nir_deref_type_struct:
-      if (nir_deref_as_struct(a)->index != nir_deref_as_struct(b)->index)
+
+      if (a->deref_type == nir_deref_type_struct) {
+         if (nir_deref_as_struct(a)->index != nir_deref_as_struct(b)->index)
+            return false;
+      }
+      /* Do nothing for arrays.  They're all the same. */
+
+      assert((a->child == NULL) == (b->child == NULL));
+      if((a->child == NULL) != (b->child == NULL))
          return false;
-      break;
-   default:
-      unreachable("Invalid dreference type");
    }
 
-   assert((a->child == NULL) == (b->child == NULL));
-   if (a->child)
-      return derefs_equal(a->child, b->child);
-   else
-      return true;
+   return true;
 }
 
 static nir_register *
