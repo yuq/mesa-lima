@@ -229,7 +229,7 @@ set_swizzle_component(GLuint *swizzle, GLuint comp, GLuint swz)
 
 /**
  * This is called just prior to changing any texture object state which
- * will not effect texture completeness.
+ * will not affect texture completeness.
  */
 static inline void
 flush(struct gl_context *ctx)
@@ -240,7 +240,7 @@ flush(struct gl_context *ctx)
 
 /**
  * This is called just prior to changing any texture object state which
- * can effect texture completeness (texture base level, max level).
+ * could affect texture completeness (texture base level, max level).
  * Any pending rendering will be flushed out, we'll set the _NEW_TEXTURE
  * state flag and then mark the texture object as 'incomplete' so that any
  * per-texture derived state gets recomputed.
