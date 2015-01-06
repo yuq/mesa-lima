@@ -486,7 +486,8 @@ vc4_screen_is_format_supported(struct pipe_screen *pscreen,
         }
 
         if ((usage & PIPE_BIND_SAMPLER_VIEW) &&
-            vc4_tex_format_supported(format)) {
+            vc4_tex_format_supported(format) &&
+            format != PIPE_FORMAT_ETC1_RGB8) {
                 retval |= PIPE_BIND_SAMPLER_VIEW;
         }
 
