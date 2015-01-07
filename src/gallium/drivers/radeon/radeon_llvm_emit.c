@@ -162,13 +162,15 @@ unsigned radeon_llvm_compile(LLVMModuleRef M, struct radeon_shader_binary *binar
 		strncpy(cpu, gpu_family, CPU_STRING_LEN);
 		memset(fs, 0, sizeof(fs));
 		if (dump) {
-			LLVMDumpModule(M);
 			strncpy(fs, "+DumpCode", FS_STRING_LEN);
 		}
 		tm = LLVMCreateTargetMachine(target, triple, cpu, fs,
 				  LLVMCodeGenLevelDefault, LLVMRelocDefault,
 						  LLVMCodeModelDefault);
 		dispose_tm = true;
+	}
+	if (dump) {
+		LLVMDumpModule(M);
 	}
 	/* Setup Diagnostic Handler*/
 	llvm_ctx = LLVMGetModuleContext(M);
