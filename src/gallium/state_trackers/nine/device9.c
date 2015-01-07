@@ -2327,6 +2327,9 @@ NineDevice9_SetSamplerState( struct NineDevice9 *This,
     state->changed.group |= NINE_STATE_SAMPLER;
     state->changed.sampler[Sampler] |= 1 << Type;
 
+    if (Type == D3DSAMP_SRGBTEXTURE)
+        state->changed.srgb = TRUE;
+
     return D3D_OK;
 }
 

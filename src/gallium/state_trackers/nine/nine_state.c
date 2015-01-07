@@ -678,7 +678,7 @@ update_textures_and_samplers(struct NineDevice9 *device)
             nine_convert_sampler_state(device->cso, s, state->samp[s]);
         }
     }
-    if (state->changed.texture & NINE_PS_SAMPLERS_MASK)
+    if (state->changed.texture & NINE_PS_SAMPLERS_MASK || state->changed.srgb)
         pipe->set_sampler_views(pipe, PIPE_SHADER_FRAGMENT, 0,
                                 num_textures, view);
 
@@ -708,13 +708,14 @@ update_textures_and_samplers(struct NineDevice9 *device)
             nine_convert_sampler_state(device->cso, s, state->samp[s]);
         }
     }
-    if (state->changed.texture & NINE_VS_SAMPLERS_MASK)
+    if (state->changed.texture & NINE_VS_SAMPLERS_MASK || state->changed.srgb)
         pipe->set_sampler_views(pipe, PIPE_SHADER_VERTEX, 0,
                                 num_textures, view);
 
     if (commit_samplers)
         cso_single_sampler_done(device->cso, PIPE_SHADER_VERTEX);
 
+    state->changed.srgb = FALSE;
     state->changed.texture = 0;
 }
 
