@@ -2995,7 +2995,9 @@ tx_ctor(struct shader_translator *tx, struct nine_shader_info *info)
     info->position_t = FALSE;
     info->point_size = FALSE;
 
-    tx->info->const_used_size = 0;
+    tx->info->const_float_slots = 0;
+    tx->info->const_int_slots = 0;
+    tx->info->const_bool_slots = 0;
 
     info->sampler_mask = 0x0;
     info->rt_mask = 0x0;
@@ -3065,6 +3067,7 @@ nine_translate_shader(struct NineDevice9 *device, struct nine_shader_info *info)
     struct shader_translator *tx;
     HRESULT hr = D3D_OK;
     const unsigned processor = tgsi_processor_from_type(info->type);
+    unsigned slot_max;
 
     user_assert(processor != ~0, D3DERR_INVALIDCALL);
 
@@ -3196,8 +3199,16 @@ nine_translate_shader(struct NineDevice9 *device, struct nine_shader_info *info)
         hr = D3D_OK;
     }
 
-    if (tx->indirect_const_access)
-        info->const_used_size = ~0;
+    if (tx->indirect_const_access) /* vs only */
+        info->const_float_slots = device->max_vs_const_f;
+
+    slot_max = info->const_bool_slots > 0 ?
+                   device->max_vs_const_f + NINE_MAX_CONST_I
+                   + info->const_bool_slots :
+                       info->const_int_slots > 0 ?
+                           device->max_vs_const_f + info->const_int_slots :
+                               info->const_float_slots;
+    info->const_used_size = sizeof(float[4]) * slot_max; /* slots start from 1 */
 
     info->cso = ureg_create_shader_and_destroy(tx->ureg, device->pipe);
     if (!info->cso) {

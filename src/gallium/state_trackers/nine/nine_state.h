@@ -91,11 +91,6 @@
     ((nconstf)        * 4 * sizeof(float) + \
      NINE_MAX_CONST_I * 4 * sizeof(int))
 
-#define NINE_CONSTBUF_SIZE(nconstf)         \
-    ((nconstf)        * 4 * sizeof(float) + \
-     NINE_MAX_CONST_I * 4 * sizeof(int) + \
-     NINE_MAX_CONST_B * 1 * sizeof(float))
-
 
 #define NINE_MAX_LIGHTS        65536
 #define NINE_MAX_LIGHTS_ACTIVE 8
