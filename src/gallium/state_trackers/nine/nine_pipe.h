@@ -284,6 +284,7 @@ d3dformat_to_string(D3DFORMAT fmt)
     case D3DFMT_DF24: return "D3DFMT_DF24";
     case D3DFMT_INTZ: return "D3DFMT_INTZ";
     case D3DFMT_NVDB: return "D3DFMT_NVDB";
+    case D3DFMT_RESZ: return "D3DFMT_RESZ";
     case D3DFMT_NULL: return "D3DFMT_NULL";
     default:
         break;

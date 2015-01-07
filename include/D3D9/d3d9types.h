@@ -658,6 +658,7 @@ typedef enum _D3DFORMAT {
     D3DFMT_NVDB = MAKEFOURCC('N', 'V', 'D', 'B'),
     D3DFMT_NV11 = MAKEFOURCC('N', 'V', '1', '1'),
     D3DFMT_NV12 = MAKEFOURCC('N', 'V', '1', '2'),
+    D3DFMT_RESZ = MAKEFOURCC('R', 'E', 'S', 'Z'),
     D3DFMT_Y210 = MAKEFOURCC('Y', '2', '1', '0'),
     D3DFMT_Y216 = MAKEFOURCC('Y', '2', '1', '6'),
     D3DFMT_Y410 = MAKEFOURCC('Y', '4', '1', '0')

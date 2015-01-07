@@ -1991,6 +1991,60 @@ NineDevice9_GetClipPlane( struct NineDevice9 *This,
     return D3D_OK;
 }
 
+#define RESZ_CODE 0x7fa05000
+
+static HRESULT
+NineDevice9_ResolveZ( struct NineDevice9 *This )
+{
+    struct nine_state *state = &This->state;
+    const struct util_format_description *desc;
+    struct NineSurface9 *source = state->ds;
+    struct NineBaseTexture9 *destination = state->texture[0];
+    struct pipe_resource *src, *dst;
+    struct pipe_blit_info blit;
+
+    DBG("RESZ resolve\n");
+
+    user_assert(source && destination &&
+                destination->base.type == D3DRTYPE_TEXTURE, D3DERR_INVALIDCALL);
+
+    src = source->base.resource;
+    dst = destination->base.resource;
+
+    user_assert(src && dst, D3DERR_INVALIDCALL);
+
+    /* check dst is depth format. we know already for src */
+    desc = util_format_description(dst->format);
+    user_assert(desc->colorspace == UTIL_FORMAT_COLORSPACE_ZS, D3DERR_INVALIDCALL);
+
+    blit.src.resource = src;
+    blit.src.level = 0;
+    blit.src.format = src->format;
+    blit.src.box.z = 0;
+    blit.src.box.depth = 1;
+    blit.src.box.x = 0;
+    blit.src.box.y = 0;
+    blit.src.box.width = src->width0;
+    blit.src.box.height = src->height0;
+
+    blit.dst.resource = dst;
+    blit.dst.level = 0;
+    blit.dst.format = dst->format;
+    blit.dst.box.z = 0;
+    blit.dst.box.depth = 1;
+    blit.dst.box.x = 0;
+    blit.dst.box.y = 0;
+    blit.dst.box.width = dst->width0;
+    blit.dst.box.height = dst->height0;
+
+    blit.mask = PIPE_MASK_ZS;
+    blit.filter = PIPE_TEX_FILTER_NEAREST;
+    blit.scissor_enable = FALSE;
+
+    This->pipe->blit(This->pipe, &blit);
+    return D3D_OK;
+}
+
 HRESULT WINAPI
 NineDevice9_SetRenderState( struct NineDevice9 *This,
                             D3DRENDERSTATETYPE State,
@@ -2000,6 +2054,9 @@ NineDevice9_SetRenderState( struct NineDevice9 *This,
 
     DBG("This=%p State=%u(%s) Value=%08x\n", This,
         State, nine_d3drs_to_string(State), Value);
+
+    if (State == D3DRS_POINTSIZE && Value == RESZ_CODE)
+        return NineDevice9_ResolveZ(This);
 
     user_assert(State < Elements(state->rs), D3DERR_INVALIDCALL);
 
