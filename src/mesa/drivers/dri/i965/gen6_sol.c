@@ -241,7 +241,7 @@ brw_begin_transform_feedback(struct gl_context *ctx, GLenum mode,
 
    assert(brw->gen == 6);
 
-   if (brw->geometry_program) {
+   if (ctx->_Shader->CurrentProgram[MESA_SHADER_GEOMETRY]) {
       /* BRW_NEW_GEOMETRY_PROGRAM */
       shaderprog =
          ctx->_Shader->CurrentProgram[MESA_SHADER_GEOMETRY];
