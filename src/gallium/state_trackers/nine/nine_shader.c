@@ -504,6 +504,7 @@ struct shader_translator
 
 #define IS_VS (tx->processor == TGSI_PROCESSOR_VERTEX)
 #define IS_PS (tx->processor == TGSI_PROCESSOR_FRAGMENT)
+#define NINE_MAX_CONST_F_SHADER (tx->processor == TGSI_PROCESSOR_VERTEX ? NINE_MAX_CONST_F : NINE_MAX_CONST_F_PS3)
 
 #define FAILURE_VOID(cond) if ((cond)) {tx->failure=1;return;}
 
@@ -526,7 +527,7 @@ static boolean
 tx_lconstf(struct shader_translator *tx, struct ureg_src *src, INT index)
 {
    INT i;
-   if (index < 0 || index >= (NINE_MAX_CONST_F * 2)) {
+   if (index < 0 || index >= NINE_MAX_CONST_F_SHADER) {
        tx->failure = TRUE;
        return FALSE;
    }
@@ -566,9 +567,8 @@ tx_set_lconstf(struct shader_translator *tx, INT index, float f[4])
 {
     unsigned n;
 
-    /* Anno1404 sets out of range constants. */
-    FAILURE_VOID(index < 0 || index >= (NINE_MAX_CONST_F * 2))
-    if (index >= NINE_MAX_CONST_F)
+    FAILURE_VOID(index < 0 || index >= NINE_MAX_CONST_F_SHADER)
+    if (IS_VS && index >= NINE_MAX_CONST_F_SHADER)
         WARN("lconstf index %i too high, indirect access won't work\n", index);
 
     for (n = 0; n < tx->num_lconstf; ++n)
