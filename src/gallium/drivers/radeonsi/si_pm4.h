@@ -29,8 +29,9 @@
 
 #include "radeon/drm/radeon_winsys.h"
 
-#define SI_PM4_MAX_DW		140
-#define SI_PM4_MAX_BO		4
+#define SI_PM4_MAX_DW		256
+#define SI_PM4_MAX_BO		32
+#define SI_PM4_MAX_RELOCS	4
 
 // forward defines
 struct si_context;
@@ -52,6 +53,10 @@ struct si_pm4_state
 	struct r600_resource	*bo[SI_PM4_MAX_BO];
 	enum radeon_bo_usage	bo_usage[SI_PM4_MAX_BO];
 	enum radeon_bo_priority	bo_priority[SI_PM4_MAX_BO];
+
+	/* relocs for shader data */
+	unsigned	nrelocs;
+	unsigned	relocs[SI_PM4_MAX_RELOCS];
 
 	bool compute_pkt;
 };

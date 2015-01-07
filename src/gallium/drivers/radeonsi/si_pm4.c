@@ -145,13 +145,17 @@ unsigned si_pm4_dirty_dw(struct si_context *sctx)
 void si_pm4_emit(struct si_context *sctx, struct si_pm4_state *state)
 {
 	struct radeon_winsys_cs *cs = sctx->b.rings.gfx.cs;
-
 	for (int i = 0; i < state->nbo; ++i) {
 		r600_context_bo_reloc(&sctx->b, &sctx->b.rings.gfx, state->bo[i],
 				      state->bo_usage[i], state->bo_priority[i]);
 	}
 
 	memcpy(&cs->buf[cs->cdw], state->pm4, state->ndw * 4);
+
+	for (int i = 0; i < state->nrelocs; ++i) {
+		cs->buf[cs->cdw + state->relocs[i]] += cs->cdw << 2;
+	}
+
 	cs->cdw += state->ndw;
 
 #if SI_TRACE_CS
