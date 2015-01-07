@@ -424,11 +424,13 @@ static void si_destroy_screen(struct pipe_screen* pscreen)
 	if (!sscreen->b.ws->unref(sscreen->b.ws))
 		return;
 
-	r600_destroy_common_screen(&sscreen->b);
-
 #if HAVE_LLVM >= 0x0306
+	// r600_destroy_common_screen() frees sscreen, so we need to make
+	// sure to dispose the TargetMachine before we call it.
 	LLVMDisposeTargetMachine(sscreen->tm);
 #endif
+
+	r600_destroy_common_screen(&sscreen->b);
 }
 
 #define SI_TILE_MODE_COLOR_2D_8BPP  14
