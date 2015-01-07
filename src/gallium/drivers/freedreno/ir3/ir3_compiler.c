@@ -1365,7 +1365,7 @@ trans_samp(const struct instr_translater *t,
 
 	reg = ir3_reg_create(instr, 0, IR3_REG_SSA);
 
-	collect = ir3_instr_create(ctx->block, -1, OPC_META_FI);
+	collect = ir3_instr_create2(ctx->block, -1, OPC_META_FI, 12);
 	ir3_reg_create(collect, 0, 0);
 	for (i = 0; i < 4; i++) {
 		if (tinf.src_wrmask & (1 << i))
@@ -1403,7 +1403,7 @@ trans_samp(const struct instr_translater *t,
 
 	reg = ir3_reg_create(instr, 0, IR3_REG_SSA);
 
-	collect = ir3_instr_create(ctx->block, -1, OPC_META_FI);
+	collect = ir3_instr_create2(ctx->block, -1, OPC_META_FI, 5);
 	ir3_reg_create(collect, 0, 0);
 
 	if (inst->Texture.NumOffsets) {

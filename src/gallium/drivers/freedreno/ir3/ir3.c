@@ -648,11 +648,27 @@ struct ir3_block * ir3_block_create(struct ir3 *shader,
 	return block;
 }
 
-struct ir3_instruction * ir3_instr_create(struct ir3_block *block,
-		int category, opc_t opc)
+static struct ir3_instruction *instr_create(struct ir3_block *block, int nreg)
 {
-	struct ir3_instruction *instr =
-			ir3_alloc(block->shader, sizeof(struct ir3_instruction));
+	struct ir3_instruction *instr;
+	unsigned sz = sizeof(*instr) + (nreg * sizeof(instr->regs[0]));
+	char *ptr = ir3_alloc(block->shader, sz);
+
+	instr = (struct ir3_instruction *)ptr;
+	ptr  += sizeof(*instr);
+	instr->regs = (struct ir3_register **)ptr;
+
+#ifdef DEBUG
+	instr->regs_max = nreg;
+#endif
+
+	return instr;
+}
+
+struct ir3_instruction * ir3_instr_create2(struct ir3_block *block,
+		int category, opc_t opc, int nreg)
+{
+	struct ir3_instruction *instr = instr_create(block, nreg);
 	instr->block = block;
 	instr->category = category;
 	instr->opc = opc;
@@ -660,13 +676,27 @@ struct ir3_instruction * ir3_instr_create(struct ir3_block *block,
 	return instr;
 }
 
+struct ir3_instruction * ir3_instr_create(struct ir3_block *block,
+		int category, opc_t opc)
+{
+	/* NOTE: we could be slightly more clever, at least for non-meta,
+	 * and choose # of regs based on category.
+	 */
+	return ir3_instr_create2(block, category, opc, 4);
+}
+
+/* only used by old compiler: */
 struct ir3_instruction * ir3_instr_clone(struct ir3_instruction *instr)
 {
-	struct ir3_instruction *new_instr =
-			ir3_alloc(instr->block->shader, sizeof(struct ir3_instruction));
+	struct ir3_instruction *new_instr = instr_create(instr->block,
+			instr->regs_count);
+	struct ir3_register **regs;
 	unsigned i;
 
+	regs = new_instr->regs;
 	*new_instr = *instr;
+	new_instr->regs = regs;
+
 	insert_instr(instr->block->shader, new_instr);
 
 	/* clone registers: */
@@ -685,7 +715,9 @@ struct ir3_register * ir3_reg_create(struct ir3_instruction *instr,
 		int num, int flags)
 {
 	struct ir3_register *reg = reg_create(instr->block->shader, num, flags);
-	assert(instr->regs_count < ARRAY_SIZE(instr->regs));
+#ifdef DEBUG
+	debug_assert(instr->regs_count < instr->regs_max);
+#endif
 	instr->regs[instr->regs_count++] = reg;
 	return reg;
 }

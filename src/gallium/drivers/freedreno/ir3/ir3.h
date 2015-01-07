@@ -106,8 +106,6 @@ struct ir3_register {
 	};
 };
 
-#define IR3_INSTR_SRCS 10
-
 struct ir3_instruction {
 	struct ir3_block *block;
 	int category;
@@ -166,8 +164,11 @@ struct ir3_instruction {
 		IR3_INSTR_MARK  = 0x1000,
 	} flags;
 	int repeat;
+#ifdef DEBUG
+	unsigned regs_max;
+#endif
 	unsigned regs_count;
-	struct ir3_register *regs[1 + IR3_INSTR_SRCS];
+	struct ir3_register **regs;
 	union {
 		struct {
 			char inv;
@@ -320,6 +321,8 @@ struct ir3_block * ir3_block_create(struct ir3 *shader,
 
 struct ir3_instruction * ir3_instr_create(struct ir3_block *block,
 		int category, opc_t opc);
+struct ir3_instruction * ir3_instr_create2(struct ir3_block *block,
+		int category, opc_t opc, int nreg);
 struct ir3_instruction * ir3_instr_clone(struct ir3_instruction *instr);
 const char *ir3_instr_name(struct ir3_instruction *instr);
 
