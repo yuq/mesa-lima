@@ -127,6 +127,9 @@ NineVolume9_dtor( struct NineVolume9 *This )
     if (This->transfer)
         NineVolume9_UnlockBox(This);
 
+    if (This->data)
+           FREE(This->data);
+
     pipe_resource_reference(&This->resource, NULL);
 
     NineUnknown_dtor(&This->base);
