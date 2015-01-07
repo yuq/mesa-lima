@@ -908,6 +908,9 @@ nop_glFlush(void)
 #endif
 
 
+extern void (*__glapi_noop_table[])(void);
+
+
 /**
  * Allocate and initialize a new dispatch table.  All the dispatch
  * function pointers will point at the _mesa_generic_nop() function
@@ -929,7 +932,13 @@ _mesa_alloc_dispatch_table(void)
       _glapi_proc *entry = (_glapi_proc *) table;
       GLint i;
       for (i = 0; i < numEntries; i++) {
+#if defined(_WIN32)
+         /* FIXME: This will not generate an error, but at least it won't
+          * corrupt the stack like _mesa_generic_nop does. */
+         entry[i] = __glapi_noop_table[i];
+#else
          entry[i] = (_glapi_proc) _mesa_generic_nop;
+#endif
       }
 
 #if defined(_WIN32)
