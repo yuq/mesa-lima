@@ -315,6 +315,9 @@ vc4_bo_flink(struct vc4_bo *bo, uint32_t *name)
 bool
 vc4_wait_seqno(struct vc4_screen *screen, uint64_t seqno, uint64_t timeout_ns)
 {
+        if (screen->finished_seqno >= seqno)
+                return true;
+
 #ifndef USE_VC4_SIMULATOR
         struct drm_vc4_wait_seqno wait;
         memset(&wait, 0, sizeof(wait));

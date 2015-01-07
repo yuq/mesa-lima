@@ -66,9 +66,6 @@ vc4_fence_signalled(struct pipe_screen *pscreen,
         struct vc4_screen *screen = vc4_screen(pscreen);
         struct vc4_fence *f = (struct vc4_fence *)pf;
 
-        if (screen->finished_seqno >= f->seqno)
-                return true;
-
         return vc4_wait_seqno(screen, f->seqno, 0);
 }
 
@@ -79,9 +76,6 @@ vc4_fence_finish(struct pipe_screen *pscreen,
 {
         struct vc4_screen *screen = vc4_screen(pscreen);
         struct vc4_fence *f = (struct vc4_fence *)pf;
-
-        if (screen->finished_seqno >= f->seqno)
-                return true;
 
         return vc4_wait_seqno(screen, f->seqno, timeout_ns);
 }
