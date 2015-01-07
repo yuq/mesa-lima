@@ -1437,7 +1437,11 @@ void nir_index_blocks(nir_function_impl *impl);
 
 void nir_print_shader(nir_shader *shader, FILE *fp);
 
+#ifdef DEBUG
 void nir_validate_shader(nir_shader *shader);
+#else
+static inline void nir_validate_shader(nir_shader *shader) { }
+#endif /* DEBUG */
 
 void nir_calc_dominance_impl(nir_function_impl *impl);
 void nir_calc_dominance(nir_shader *shader);

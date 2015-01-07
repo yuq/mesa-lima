@@ -32,6 +32,11 @@
  * This file checks for invalid IR indicating a bug somewhere in the compiler.
  */
 
+/* Since this file is just a pile of asserts, don't bother compiling it if
+ * we're not building a debug build.
+ */
+#ifdef DEBUG
+
 /*
  * Per-register validation state.
  */
@@ -882,3 +887,5 @@ nir_validate_shader(nir_shader *shader)
 
    destroy_validate_state(&state);
 }
+
+#endif /* NDEBUG */
