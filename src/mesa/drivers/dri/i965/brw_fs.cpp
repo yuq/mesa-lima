@@ -339,17 +339,13 @@ fs_visitor::CMP(fs_reg dst, fs_reg src0, fs_reg src1,
     *
     * Original gen4 does type conversion to the destination type before
     * comparison, producing garbage results for floating point comparisons.
-    * gen5 does the comparison on the execution type (resolved source types),
-    * so dst type doesn't matter.  gen6 does comparison and then uses the
-    * result as if it was the dst type with no conversion, which happens to
-    * mostly work out for float-interpreted-as-int since our comparisons are
-    * for >0, =0, <0.
+    *
+    * The destination type doesn't matter on newer generations, so we set the
+    * type to match src0 so we can compact the instruction.
     */
-   if (brw->gen == 4) {
-      dst.type = src0.type;
-      if (dst.file == HW_REG)
-	 dst.fixed_hw_reg.type = dst.type;
-   }
+   dst.type = src0.type;
+   if (dst.file == HW_REG)
+      dst.fixed_hw_reg.type = dst.type;
 
    resolve_ud_negate(&src0);
    resolve_ud_negate(&src1);

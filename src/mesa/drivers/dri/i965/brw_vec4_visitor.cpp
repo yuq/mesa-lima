@@ -222,15 +222,19 @@ vec4_visitor::CMP(dst_reg dst, src_reg src0, src_reg src1,
 {
    vec4_instruction *inst;
 
-   /* original gen4 does type conversion to the destination type
-    * before before comparison, producing garbage results for floating
-    * point comparisons.
+   /* Take the instruction:
+    *
+    * CMP null<d> src0<f> src1<f>
+    *
+    * Original gen4 does type conversion to the destination type before
+    * comparison, producing garbage results for floating point comparisons.
+    *
+    * The destination type doesn't matter on newer generations, so we set the
+    * type to match src0 so we can compact the instruction.
     */
-   if (brw->gen == 4) {
-      dst.type = src0.type;
-      if (dst.file == HW_REG)
-	 dst.fixed_hw_reg.type = dst.type;
-   }
+   dst.type = src0.type;
+   if (dst.file == HW_REG)
+      dst.fixed_hw_reg.type = dst.type;
 
    resolve_ud_negate(&src0);
    resolve_ud_negate(&src1);
