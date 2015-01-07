@@ -495,6 +495,7 @@ struct shader_translator
     struct sm1_local_const lconstb[NINE_MAX_CONST_B];
 
     boolean indirect_const_access;
+    boolean failure;
 
     struct nine_shader_info *info;
 
@@ -503,6 +504,8 @@ struct shader_translator
 
 #define IS_VS (tx->processor == TGSI_PROCESSOR_VERTEX)
 #define IS_PS (tx->processor == TGSI_PROCESSOR_FRAGMENT)
+
+#define FAILURE_VOID(cond) if ((cond)) {tx->failure=1;return;}
 
 static void
 sm1_read_semantic(struct shader_translator *, struct sm1_semantic *);
@@ -523,7 +526,10 @@ static boolean
 tx_lconstf(struct shader_translator *tx, struct ureg_src *src, INT index)
 {
    INT i;
-   assert(index >= 0 && index < (NINE_MAX_CONST_F * 2));
+   if (index < 0 || index >= (NINE_MAX_CONST_F * 2)) {
+       tx->failure = TRUE;
+       return FALSE;
+   }
    for (i = 0; i < tx->num_lconstf; ++i) {
       if (tx->lconstf[i].idx == index) {
          *src = tx->lconstf[i].reg;
@@ -535,7 +541,10 @@ tx_lconstf(struct shader_translator *tx, struct ureg_src *src, INT index)
 static boolean
 tx_lconsti(struct shader_translator *tx, struct ureg_src *src, INT index)
 {
-   assert(index >= 0 && index < NINE_MAX_CONST_I);
+   if (index < 0 || index >= NINE_MAX_CONST_I) {
+       tx->failure = TRUE;
+       return FALSE;
+   }
    if (tx->lconsti[index].idx == index)
       *src = tx->lconsti[index].reg;
    return tx->lconsti[index].idx == index;
@@ -543,7 +552,10 @@ tx_lconsti(struct shader_translator *tx, struct ureg_src *src, INT index)
 static boolean
 tx_lconstb(struct shader_translator *tx, struct ureg_src *src, INT index)
 {
-   assert(index >= 0 && index < NINE_MAX_CONST_B);
+   if (index < 0 || index >= NINE_MAX_CONST_B) {
+       tx->failure = TRUE;
+       return FALSE;
+   }
    if (tx->lconstb[index].idx == index)
       *src = tx->lconstb[index].reg;
    return tx->lconstb[index].idx == index;
@@ -555,7 +567,7 @@ tx_set_lconstf(struct shader_translator *tx, INT index, float f[4])
     unsigned n;
 
     /* Anno1404 sets out of range constants. */
-    assert(index >= 0 && index < (NINE_MAX_CONST_F * 2));
+    FAILURE_VOID(index < 0 || index >= (NINE_MAX_CONST_F * 2))
     if (index >= NINE_MAX_CONST_F)
         WARN("lconstf index %i too high, indirect access won't work\n", index);
 
@@ -579,7 +591,7 @@ tx_set_lconstf(struct shader_translator *tx, INT index, float f[4])
 static void
 tx_set_lconsti(struct shader_translator *tx, INT index, int i[4])
 {
-    assert(index >= 0 && index < NINE_MAX_CONST_I);
+    FAILURE_VOID(index < 0 || index >= NINE_MAX_CONST_I)
     tx->lconsti[index].idx = index;
     tx->lconsti[index].reg = tx->native_integers ?
        ureg_imm4i(tx->ureg, i[0], i[1], i[2], i[3]) :
@@ -588,7 +600,7 @@ tx_set_lconsti(struct shader_translator *tx, INT index, int i[4])
 static void
 tx_set_lconstb(struct shader_translator *tx, INT index, BOOL b)
 {
-    assert(index >= 0 && index < NINE_MAX_CONST_B);
+    FAILURE_VOID(index < 0 || index >= NINE_MAX_CONST_B)
     tx->lconstb[index].idx = index;
     tx->lconstb[index].reg = tx->native_integers ?
        ureg_imm1u(tx->ureg, b ? 0xffffffff : 0) :
@@ -598,7 +610,10 @@ tx_set_lconstb(struct shader_translator *tx, INT index, BOOL b)
 static INLINE struct ureg_dst
 tx_scratch(struct shader_translator *tx)
 {
-    assert(tx->num_scratch < Elements(tx->regs.t));
+    if (tx->num_scratch >= Elements(tx->regs.t)) {
+        tx->failure = TRUE;
+        return tx->regs.t[0];
+    }
     if (ureg_dst_is_undef(tx->regs.t[tx->num_scratch]))
         tx->regs.t[tx->num_scratch] = ureg_DECL_local_temporary(tx->ureg);
     return tx->regs.t[tx->num_scratch++];
@@ -3097,9 +3112,16 @@ nine_translate_shader(struct NineDevice9 *device, struct nine_shader_info *info)
             ureg_property(tx->ureg, TGSI_PROPERTY_FS_COORD_PIXEL_CENTER, TGSI_FS_COORD_PIXEL_CENTER_INTEGER);
     }
 
-    while (!sm1_parse_eof(tx))
+    while (!sm1_parse_eof(tx) && !tx->failure)
         sm1_parse_instruction(tx);
     tx->parse++; /* for byte_size */
+
+    if (tx->failure) {
+        ERR("Encountered buggy shader\n");
+        ureg_destroy(tx->ureg);
+        hr = D3DERR_INVALIDCALL;
+        goto out;
+    }
 
     if (IS_PS && (tx->version.major < 2) && tx->num_temp) {
         ureg_MOV(tx->ureg, ureg_DECL_output(tx->ureg, TGSI_SEMANTIC_COLOR, 0),
