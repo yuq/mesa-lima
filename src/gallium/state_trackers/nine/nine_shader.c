@@ -2137,7 +2137,7 @@ DECL_SPECIAL(TEXREG2GB)
 
 DECL_SPECIAL(TEXM3x2PAD)
 {
-    STUB(D3DERR_INVALIDCALL);
+    return D3D_OK; /* this is just padding */
 }
 
 DECL_SPECIAL(TEXM3x2TEX)
@@ -2374,12 +2374,12 @@ struct sm1_op_info inst_table[] =
     _OPI(M3x3, NOP, V(0,0), V(3,0), V(0,0), V(3,0), 1, 2, SPECIAL(M3x3)),
     _OPI(M3x2, NOP, V(0,0), V(3,0), V(0,0), V(3,0), 1, 2, SPECIAL(M3x2)),
 
-    _OPI(CALL,    CAL,     V(2,0), V(3,0), V(2,1), V(3,0), 0, 0, SPECIAL(CALL)),
-    _OPI(CALLNZ,  CAL,     V(2,0), V(3,0), V(2,1), V(3,0), 0, 0, SPECIAL(CALLNZ)),
+    _OPI(CALL,    CAL,     V(2,0), V(3,0), V(2,1), V(3,0), 0, 1, SPECIAL(CALL)),
+    _OPI(CALLNZ,  CAL,     V(2,0), V(3,0), V(2,1), V(3,0), 0, 2, SPECIAL(CALLNZ)),
     _OPI(LOOP,    BGNLOOP, V(2,0), V(3,0), V(3,0), V(3,0), 0, 2, SPECIAL(LOOP)),
     _OPI(RET,     RET,     V(2,0), V(3,0), V(2,1), V(3,0), 0, 0, SPECIAL(RET)),
     _OPI(ENDLOOP, ENDLOOP, V(2,0), V(3,0), V(3,0), V(3,0), 0, 0, SPECIAL(ENDLOOP)),
-    _OPI(LABEL,   NOP,     V(2,0), V(3,0), V(2,1), V(3,0), 0, 0, SPECIAL(LABEL)),
+    _OPI(LABEL,   NOP,     V(2,0), V(3,0), V(2,1), V(3,0), 0, 1, SPECIAL(LABEL)),
 
     _OPI(DCL, NOP, V(0,0), V(3,0), V(0,0), V(3,0), 0, 0, SPECIAL(DCL)),
 
@@ -2414,16 +2414,16 @@ struct sm1_op_info inst_table[] =
     _OPI(TEX,          TEX, V(0,0), V(0,0), V(0,0), V(1,3), 1, 0, SPECIAL(TEX)),
     _OPI(TEX,          TEX, V(0,0), V(0,0), V(1,4), V(1,4), 1, 1, SPECIAL(TEXLD_14)),
     _OPI(TEX,          TEX, V(0,0), V(0,0), V(2,0), V(3,0), 1, 2, SPECIAL(TEXLD)),
-    _OPI(TEXBEM,       TEX, V(0,0), V(0,0), V(0,0), V(1,3), 0, 0, SPECIAL(TEXBEM)),
-    _OPI(TEXBEML,      TEX, V(0,0), V(0,0), V(0,0), V(1,3), 0, 0, SPECIAL(TEXBEML)),
-    _OPI(TEXREG2AR,    TEX, V(0,0), V(0,0), V(0,0), V(1,3), 0, 0, SPECIAL(TEXREG2AR)),
-    _OPI(TEXREG2GB,    TEX, V(0,0), V(0,0), V(0,0), V(1,3), 0, 0, SPECIAL(TEXREG2GB)),
-    _OPI(TEXM3x2PAD,   TEX, V(0,0), V(0,0), V(0,0), V(1,3), 0, 0, SPECIAL(TEXM3x2PAD)),
-    _OPI(TEXM3x2TEX,   TEX, V(0,0), V(0,0), V(0,0), V(1,3), 0, 0, SPECIAL(TEXM3x2TEX)),
-    _OPI(TEXM3x3PAD,   TEX, V(0,0), V(0,0), V(0,0), V(1,3), 0, 0, SPECIAL(TEXM3x3PAD)),
-    _OPI(TEXM3x3TEX,   TEX, V(0,0), V(0,0), V(0,0), V(1,3), 0, 0, SPECIAL(TEXM3x3)),
-    _OPI(TEXM3x3SPEC,  TEX, V(0,0), V(0,0), V(0,0), V(1,3), 0, 0, SPECIAL(TEXM3x3SPEC)),
-    _OPI(TEXM3x3VSPEC, TEX, V(0,0), V(0,0), V(0,0), V(1,3), 0, 0, SPECIAL(TEXM3x3VSPEC)),
+    _OPI(TEXBEM,       TEX, V(0,0), V(0,0), V(0,0), V(1,3), 1, 1, SPECIAL(TEXBEM)),
+    _OPI(TEXBEML,      TEX, V(0,0), V(0,0), V(0,0), V(1,3), 1, 1, SPECIAL(TEXBEML)),
+    _OPI(TEXREG2AR,    TEX, V(0,0), V(0,0), V(0,0), V(1,3), 1, 1, SPECIAL(TEXREG2AR)),
+    _OPI(TEXREG2GB,    TEX, V(0,0), V(0,0), V(0,0), V(1,3), 1, 1, SPECIAL(TEXREG2GB)),
+    _OPI(TEXM3x2PAD,   TEX, V(0,0), V(0,0), V(0,0), V(1,3), 1, 1, SPECIAL(TEXM3x2PAD)),
+    _OPI(TEXM3x2TEX,   TEX, V(0,0), V(0,0), V(0,0), V(1,3), 1, 1, SPECIAL(TEXM3x2TEX)),
+    _OPI(TEXM3x3PAD,   TEX, V(0,0), V(0,0), V(0,0), V(1,3), 1, 1, SPECIAL(TEXM3x3PAD)),
+    _OPI(TEXM3x3TEX,   TEX, V(0,0), V(0,0), V(0,0), V(1,3), 1, 1, SPECIAL(TEXM3x3)),
+    _OPI(TEXM3x3SPEC,  TEX, V(0,0), V(0,0), V(0,0), V(1,3), 1, 2, SPECIAL(TEXM3x3SPEC)),
+    _OPI(TEXM3x3VSPEC, TEX, V(0,0), V(0,0), V(0,0), V(1,3), 1, 1, SPECIAL(TEXM3x3VSPEC)),
 
     _OPI(EXPP, EXP, V(0,0), V(1,1), V(0,0), V(0,0), 1, 1, NULL),
     _OPI(EXPP, EX2, V(2,0), V(3,0), V(0,0), V(0,0), 1, 1, NULL),
@@ -2433,23 +2433,23 @@ struct sm1_op_info inst_table[] =
     _OPI(DEF, NOP, V(0,0), V(3,0), V(0,0), V(3,0), 1, 0, SPECIAL(DEF)),
 
     /* More tex stuff */
-    _OPI(TEXREG2RGB,   TEX, V(0,0), V(0,0), V(1,2), V(1,3), 0, 0, SPECIAL(TEXREG2RGB)),
-    _OPI(TEXDP3TEX,    TEX, V(0,0), V(0,0), V(1,2), V(1,3), 0, 0, SPECIAL(TEXDP3TEX)),
-    _OPI(TEXM3x2DEPTH, TEX, V(0,0), V(0,0), V(1,3), V(1,3), 0, 0, SPECIAL(TEXM3x2DEPTH)),
-    _OPI(TEXDP3,       TEX, V(0,0), V(0,0), V(1,2), V(1,3), 0, 0, SPECIAL(TEXDP3)),
-    _OPI(TEXM3x3,      TEX, V(0,0), V(0,0), V(1,2), V(1,3), 0, 0, SPECIAL(TEXM3x3)),
-    _OPI(TEXDEPTH,     TEX, V(0,0), V(0,0), V(1,4), V(1,4), 0, 0, SPECIAL(TEXDEPTH)),
+    _OPI(TEXREG2RGB,   TEX, V(0,0), V(0,0), V(1,2), V(1,3), 1, 1, SPECIAL(TEXREG2RGB)),
+    _OPI(TEXDP3TEX,    TEX, V(0,0), V(0,0), V(1,2), V(1,3), 1, 1, SPECIAL(TEXDP3TEX)),
+    _OPI(TEXM3x2DEPTH, TEX, V(0,0), V(0,0), V(1,3), V(1,3), 1, 1, SPECIAL(TEXM3x2DEPTH)),
+    _OPI(TEXDP3,       TEX, V(0,0), V(0,0), V(1,2), V(1,3), 1, 1, SPECIAL(TEXDP3)),
+    _OPI(TEXM3x3,      TEX, V(0,0), V(0,0), V(1,2), V(1,3), 1, 1, SPECIAL(TEXM3x3)),
+    _OPI(TEXDEPTH,     TEX, V(0,0), V(0,0), V(1,4), V(1,4), 1, 0, SPECIAL(TEXDEPTH)),
 
     /* Misc */
     _OPI(CMP,    CMP,  V(0,0), V(0,0), V(1,2), V(3,0), 1, 3, SPECIAL(CMP)), /* reversed */
-    _OPI(BEM,    NOP,  V(0,0), V(0,0), V(1,4), V(1,4), 0, 0, SPECIAL(BEM)),
+    _OPI(BEM,    NOP,  V(0,0), V(0,0), V(1,4), V(1,4), 1, 2, SPECIAL(BEM)),
     _OPI(DP2ADD, NOP,  V(0,0), V(0,0), V(2,0), V(3,0), 1, 3, SPECIAL(DP2ADD)),
     _OPI(DSX,    DDX,  V(0,0), V(0,0), V(2,1), V(3,0), 1, 1, NULL),
     _OPI(DSY,    DDY,  V(0,0), V(0,0), V(2,1), V(3,0), 1, 1, NULL),
     _OPI(TEXLDD, TXD,  V(0,0), V(0,0), V(2,1), V(3,0), 1, 4, SPECIAL(TEXLDD)),
-    _OPI(SETP,   NOP,  V(0,0), V(3,0), V(2,1), V(3,0), 0, 0, SPECIAL(SETP)),
+    _OPI(SETP,   NOP,  V(0,0), V(3,0), V(2,1), V(3,0), 1, 2, SPECIAL(SETP)),
     _OPI(TEXLDL, TXL,  V(3,0), V(3,0), V(3,0), V(3,0), 1, 2, SPECIAL(TEXLDL)),
-    _OPI(BREAKP, BRK,  V(0,0), V(3,0), V(2,1), V(3,0), 0, 0, SPECIAL(BREAKP))
+    _OPI(BREAKP, BRK,  V(0,0), V(3,0), V(2,1), V(3,0), 0, 1, SPECIAL(BREAKP))
 };
 
 struct sm1_op_info inst_phase =
