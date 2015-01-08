@@ -1220,6 +1220,8 @@ struct gl_texture_object
    GLboolean Purgeable;        /**< Is the buffer purgeable under memory
                                     pressure? */
    GLboolean Immutable;        /**< GL_ARB_texture_storage */
+   GLboolean _IsFloat;         /**< GL_OES_float_texture */
+   GLboolean _IsHalfFloat;     /**< GL_OES_half_float_texture */
 
    GLuint MinLevel;            /**< GL_ARB_texture_view */
    GLuint MinLayer;            /**< GL_ARB_texture_view */
@@ -3859,6 +3861,10 @@ struct gl_extensions
    GLboolean OES_draw_texture;
    GLboolean OES_depth_texture_cube_map;
    GLboolean OES_EGL_image_external;
+   GLboolean OES_texture_float;
+   GLboolean OES_texture_float_linear;
+   GLboolean OES_texture_half_float;
+   GLboolean OES_texture_half_float_linear;
    GLboolean OES_compressed_ETC1_RGB8_texture;
    GLboolean extension_sentinel;
    /** The extension string */

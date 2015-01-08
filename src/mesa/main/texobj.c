@@ -49,6 +49,54 @@
 /** \name Internal functions */
 /*@{*/
 
+/**
+ * This function checks for all valid combinations of Min and Mag filters for
+ * Float types, when extensions like OES_texture_float and
+ * OES_texture_float_linear are supported. OES_texture_float mentions support
+ * for NEAREST, NEAREST_MIPMAP_NEAREST magnification and minification filters.
+ * Mag filters like LINEAR and min filters like NEAREST_MIPMAP_LINEAR,
+ * LINEAR_MIPMAP_NEAREST and LINEAR_MIPMAP_LINEAR are only valid in case
+ * OES_texture_float_linear is supported.
+ *
+ * Returns true in case the filter is valid for given Float type else false.
+ */
+static bool
+valid_filter_for_float(const struct gl_context *ctx,
+                       const struct gl_texture_object *obj)
+{
+   switch (obj->Sampler.MagFilter) {
+   case GL_LINEAR:
+      if (obj->_IsHalfFloat && !ctx->Extensions.OES_texture_half_float_linear) {
+         return false;
+      } else if (obj->_IsFloat && !ctx->Extensions.OES_texture_float_linear) {
+         return false;
+      }
+   case GL_NEAREST:
+   case GL_NEAREST_MIPMAP_NEAREST:
+      break;
+   default:
+      unreachable("Invalid mag filter");
+   }
+
+   switch (obj->Sampler.MinFilter) {
+   case GL_LINEAR:
+   case GL_NEAREST_MIPMAP_LINEAR:
+   case GL_LINEAR_MIPMAP_NEAREST:
+   case GL_LINEAR_MIPMAP_LINEAR:
+      if (obj->_IsHalfFloat && !ctx->Extensions.OES_texture_half_float_linear) {
+         return false;
+      } else if (obj->_IsFloat && !ctx->Extensions.OES_texture_float_linear) {
+         return false;
+      }
+   case GL_NEAREST:
+   case GL_NEAREST_MIPMAP_NEAREST:
+      break;
+   default:
+      unreachable("Invalid min filter");
+   }
+
+   return true;
+}
 
 /**
  * Return the gl_texture_object for a given ID.
@@ -408,6 +456,8 @@ _mesa_copy_texture_object( struct gl_texture_object *dest,
    dest->_MipmapComplete = src->_MipmapComplete;
    COPY_4V(dest->Swizzle, src->Swizzle);
    dest->_Swizzle = src->_Swizzle;
+   dest->_IsHalfFloat = src->_IsHalfFloat;
+   dest->_IsFloat = src->_IsFloat;
 
    dest->RequiredTextureImageUnits = src->RequiredTextureImageUnits;
 }
@@ -639,6 +689,14 @@ _mesa_test_texobj_completeness( const struct gl_context *ctx,
    {
       GLenum datatype = _mesa_get_format_datatype(baseImage->TexFormat);
       t->_IsIntegerFormat = datatype == GL_INT || datatype == GL_UNSIGNED_INT;
+   }
+
+   /* Check if the texture type is Float or HalfFloatOES and ensure Min and Mag
+    * filters are supported in this case.
+    */
+   if (_mesa_is_gles(ctx) && !valid_filter_for_float(ctx, t)) {
+      incomplete(t, BASE, "Filter is not supported with Float types.");
+      return;
    }
 
    /* Compute _MaxLevel (the maximum mipmap level we'll sample from given the

@@ -62,7 +62,58 @@
  */
 #define NEW_COPY_TEX_STATE (_NEW_BUFFERS | _NEW_PIXEL)
 
+/**
+ * Returns a corresponding internal floating point format for a given base
+ * format as specifed by OES_texture_float. In case of GL_FLOAT, the internal
+ * format needs to be a 32 bit component and in case of GL_HALF_FLOAT_OES it
+ * needs to be a 16 bit component.
+ *
+ * For example, given base format GL_RGBA, type GL_Float return GL_RGBA32F_ARB.
+ */
+static GLenum
+adjust_for_oes_float_texture(GLenum format, GLenum type)
+{
+   switch (type) {
+   case GL_FLOAT:
+      switch (format) {
+      case GL_RGBA:
+         return GL_RGBA32F;
+      case GL_RGB:
+         return GL_RGB32F;
+      case GL_ALPHA:
+         return GL_ALPHA32F_ARB;
+      case GL_LUMINANCE:
+         return GL_LUMINANCE32F_ARB;
+      case GL_LUMINANCE_ALPHA:
+         return GL_LUMINANCE_ALPHA32F_ARB;
+      default:
+         break;
+      }
+      break;
 
+   case GL_HALF_FLOAT_OES:
+      switch (format) {
+      case GL_RGBA:
+         return GL_RGBA16F;
+      case GL_RGB:
+         return GL_RGB16F;
+      case GL_ALPHA:
+         return GL_ALPHA16F_ARB;
+      case GL_LUMINANCE:
+         return GL_LUMINANCE16F_ARB;
+      case GL_LUMINANCE_ALPHA:
+         return GL_LUMINANCE_ALPHA16F_ARB;
+      default:
+         break;
+      }
+      break;
+
+   default:
+      break;
+   }
+
+   return format;
+}
 
 /**
  * Return the simple base format for a given internal texture format.
@@ -3182,6 +3233,19 @@ teximage(struct gl_context *ctx, GLboolean compressed, GLuint dims,
       texFormat = _mesa_glenum_to_compressed_format(internalFormat);
    }
    else {
+      /* In case of HALF_FLOAT_OES or FLOAT_OES, find corresponding sized
+       * internal floating point format for the given base format.
+       */
+      if (_mesa_is_gles(ctx) && format == internalFormat) {
+         if (type == GL_FLOAT) {
+            texObj->_IsFloat = GL_TRUE;
+         } else if (type == GL_HALF_FLOAT_OES || type == GL_HALF_FLOAT) {
+            texObj->_IsHalfFloat = GL_TRUE;
+         }
+
+         internalFormat = adjust_for_oes_float_texture(format, type);
+      }
+
       texFormat = _mesa_choose_texture_format(ctx, texObj, target, level,
                                               internalFormat, format, type);
    }
