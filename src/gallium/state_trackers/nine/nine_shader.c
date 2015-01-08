@@ -2778,7 +2778,7 @@ sm1_parse_get_param(struct shader_translator *tx, DWORD *reg, DWORD *rel)
             *rel = (1 << 31) |
                 ((D3DSPR_ADDR << D3DSP_REGTYPE_SHIFT2) & D3DSP_REGTYPE_MASK2) |
                 ((D3DSPR_ADDR << D3DSP_REGTYPE_SHIFT)  & D3DSP_REGTYPE_MASK) |
-                (D3DSP_NOSWIZZLE << D3DSP_SWIZZLE_SHIFT);
+                D3DSP_NOSWIZZLE;
         else
             *rel = TOKEN_NEXT(tx);
     }
