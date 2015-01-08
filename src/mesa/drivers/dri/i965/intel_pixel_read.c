@@ -142,7 +142,7 @@ do_blit_readpixels(struct gl_context * ctx,
                                   dst_buffer,
                                   irb->mt->format,
                                   dst_offset,
-                                  width, height,
+                                  width, height, 1,
                                   dst_stride);
 
    if (!intel_miptree_blit(brw,

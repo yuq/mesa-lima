@@ -526,6 +526,7 @@ intel_miptree_create_for_bo(struct brw_context *brw,
                             uint32_t offset,
                             uint32_t width,
                             uint32_t height,
+                            uint32_t depth,
                             int pitch);
 
 void

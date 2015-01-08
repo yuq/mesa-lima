@@ -671,10 +671,12 @@ intel_miptree_create_for_bo(struct brw_context *brw,
                             uint32_t offset,
                             uint32_t width,
                             uint32_t height,
+                            uint32_t depth,
                             int pitch)
 {
    struct intel_mipmap_tree *mt;
    uint32_t tiling, swizzle;
+   GLenum target;
 
    drm_intel_bo_get_tiling(bo, &tiling, &swizzle);
 
@@ -689,9 +691,11 @@ intel_miptree_create_for_bo(struct brw_context *brw,
     */
    assert(pitch >= 0);
 
-   mt = intel_miptree_create_layout(brw, GL_TEXTURE_2D, format,
+   target = depth > 1 ? GL_TEXTURE_2D_ARRAY : GL_TEXTURE_2D;
+
+   mt = intel_miptree_create_layout(brw, target, format,
                                     0, 0,
-                                    width, height, 1,
+                                    width, height, depth,
                                     true, 0, false);
    if (!mt) {
       free(mt);
@@ -742,6 +746,7 @@ intel_update_winsys_renderbuffer_miptree(struct brw_context *intel,
                                                  0,
                                                  width,
                                                  height,
+                                                 1,
                                                  pitch);
    if (!singlesample_mt)
       goto fail;

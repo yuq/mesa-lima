@@ -143,7 +143,7 @@ try_pbo_upload(struct gl_context *ctx,
                                   src_buffer,
                                   intelImage->mt->format,
                                   src_offset,
-                                  image->Width, image->Height,
+                                  image->Width, image->Height, 1,
                                   src_stride);
    if (!pbo_mt)
       return false;
@@ -236,7 +236,7 @@ intel_set_texture_image_bo(struct gl_context *ctx,
    ctx->Driver.FreeTextureImageBuffer(ctx, image);
 
    intel_image->mt = intel_miptree_create_for_bo(brw, bo, image->TexFormat,
-                                                 0, width, height, pitch);
+                                                 0, width, height, 1, pitch);
    if (intel_image->mt == NULL)
        return;
    intel_image->mt->target = target;
@@ -489,7 +489,7 @@ blit_texture_to_pbo(struct gl_context *ctx,
                                   dst_buffer,
                                   intelImage->mt->format,
                                   dst_offset,
-                                  texImage->Width, texImage->Height,
+                                  texImage->Width, texImage->Height, 1,
                                   dst_stride);
 
    if (!pbo_mt)
