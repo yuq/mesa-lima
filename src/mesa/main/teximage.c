@@ -3543,6 +3543,7 @@ texturesubimage(struct gl_context *ctx, GLuint dims,
 
    /* Must handle special case GL_TEXTURE_CUBE_MAP. */
    if (texObj->Target == GL_TEXTURE_CUBE_MAP) {
+      GLint rowStride;
 
       /* Error checking */
       if (texObj->NumLayers < 6) {
@@ -3594,6 +3595,8 @@ texturesubimage(struct gl_context *ctx, GLuint dims,
          return;
       }
 
+      rowStride = _mesa_image_image_stride(&ctx->Unpack, width, height,
+                                           format, type);
       /* Copy in each face. */
       for (i = 0; i < 6; ++i) {
          texImage = texObj->Image[i][level];
@@ -3601,8 +3604,7 @@ texturesubimage(struct gl_context *ctx, GLuint dims,
                                  level, xoffset, yoffset, zoffset,
                                  width, height, 1, format,
                                  type, pixels, true);
-         pixels += _mesa_image_image_stride(&ctx->Unpack, width, height,
-                                            format, type);
+         pixels = (GLubyte *) pixels + rowStride;
       }
    }
    else {
