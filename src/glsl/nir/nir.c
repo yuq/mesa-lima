@@ -461,7 +461,7 @@ nir_tex_instr_create(void *mem_ctx, unsigned num_srcs)
    dest_init(&instr->dest);
 
    instr->num_srcs = num_srcs;
-   for (unsigned i = 0; i < num_srcs; i++)
+   for (unsigned i = 0; i < 4; i++)
       src_init(&instr->src[i]);
 
    instr->has_predicate = false;
