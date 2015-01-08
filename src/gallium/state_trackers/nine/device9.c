@@ -1968,9 +1968,11 @@ NineDevice9_SetClipPlane( struct NineDevice9 *This,
 {
     struct nine_state *state = This->update;
 
-    DBG("This=%p Index=%u pPlane=%p(%f %f %f %f)\n", This, Index, pPlane,
-        pPlane ? pPlane[0] : 0.0f, pPlane ? pPlane[1] : 0.0f,
-        pPlane ? pPlane[2] : 0.0f, pPlane ? pPlane[3] : 0.0f);
+    user_assert(pPlane, D3DERR_INVALIDCALL);
+
+    DBG("This=%p Index=%u pPlane=%f %f %f %f\n", This, Index,
+        pPlane[0], pPlane[1],
+        pPlane[2], pPlane[3]);
 
     user_assert(Index < PIPE_MAX_CLIP_PLANES, D3DERR_INVALIDCALL);
 
