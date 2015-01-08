@@ -344,4 +344,9 @@ intelInitExtensions(struct gl_context *ctx)
 
    if (brw->gen == 7)
       ctx->Extensions.ARB_gpu_shader5 = true;
+
+   ctx->Extensions.OES_texture_float = true;
+   ctx->Extensions.OES_texture_float_linear = true;
+   ctx->Extensions.OES_texture_half_float = true;
+   ctx->Extensions.OES_texture_half_float_linear = true;
 }
