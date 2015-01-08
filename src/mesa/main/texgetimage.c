@@ -811,13 +811,12 @@ getteximage_error_check(struct gl_context *ctx,
                         GLenum format, GLenum type, GLsizei clientMemSize,
                         GLvoid *pixels, bool dsa)
 {
-   assert(texImage);
-
    const GLint maxLevels = _mesa_max_texture_levels(ctx, target);
    const GLuint dimensions = (target == GL_TEXTURE_3D) ? 3 : 2;
    GLenum baseFormat;
    const char *suffix = dsa ? "ture" : "";
 
+   assert(texImage);
    assert(maxLevels != 0);
    if (level < 0 || level >= maxLevels) {
       _mesa_error(ctx, GL_INVALID_VALUE,
@@ -1133,7 +1132,7 @@ _mesa_GetTextureImage(GLuint texture, GLint level, GLenum format,
          image_stride = _mesa_image_image_stride(&ctx->Pack, texImage->Width,
                                                  texImage->Height, format,
                                                  type);
-         pixels += image_stride;
+         pixels = (GLubyte *) pixels + image_stride;
          bufSize -= image_stride;
       }
    }
@@ -1158,10 +1157,11 @@ getcompressedteximage_error_check(struct gl_context *ctx,
                                   GLint level, GLsizei clientMemSize,
                                   GLvoid *img, bool dsa)
 {
-   assert(texImage);
    const GLint maxLevels = _mesa_max_texture_levels(ctx, target);
    GLuint compressedSize, dimensions;
    const char *suffix = dsa ? "ture" : "";
+
+   assert(texImage);
 
    if (!legal_getteximage_target(ctx, target, dsa)) {
       _mesa_error(ctx, GL_INVALID_ENUM,
@@ -1343,7 +1343,7 @@ _mesa_GetCompressedTextureImage(GLuint texture, GLint level,
                                                 texImage->Width,
                                                 texImage->Height, 1);
 
-         pixels += image_stride;
+         pixels = (GLubyte *) pixels + image_stride;
          bufSize -= image_stride;
       }
    }
