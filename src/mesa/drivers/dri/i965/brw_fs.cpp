@@ -3331,9 +3331,11 @@ fs_visitor::dump_instruction(backend_instruction *be_inst, FILE *file)
          case BRW_REGISTER_TYPE_F:
             fprintf(file, "%ff", inst->src[i].fixed_hw_reg.dw1.f);
             break;
+         case BRW_REGISTER_TYPE_W:
          case BRW_REGISTER_TYPE_D:
             fprintf(file, "%dd", inst->src[i].fixed_hw_reg.dw1.d);
             break;
+         case BRW_REGISTER_TYPE_UW:
          case BRW_REGISTER_TYPE_UD:
             fprintf(file, "%uu", inst->src[i].fixed_hw_reg.dw1.ud);
             break;
