@@ -1076,17 +1076,11 @@ static void
 emit_vertex_input(struct vc4_compile *c, int attr)
 {
         enum pipe_format format = c->vs_key->attr_formats[attr];
+        uint32_t attr_size = util_format_get_blocksize(format);
         struct qreg vpm_reads[4];
 
-        /* Right now, we're setting the VPM offsets to be 16 bytes wide every
-         * time, so we always read 4 32-bit VPM entries.
-         */
-        for (int i = 0; i < 4; i++) {
-                vpm_reads[i] = qir_get_temp(c);
-                qir_emit(c, qir_inst(QOP_VPM_READ,
-                                     vpm_reads[i],
-                                     c->undef,
-                                     c->undef));
+        for (int i = 0; i < align(attr_size, 4) / 4; i++) {
+                vpm_reads[i] = qir_VPM_READ(c);
                 c->num_inputs++;
         }
 

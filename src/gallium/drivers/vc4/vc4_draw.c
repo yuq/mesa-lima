@@ -197,6 +197,7 @@ vc4_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
         cl_u32(&vc4->shader_rec, 0); /* UBO offset written by kernel */
 
         uint32_t max_index = 0xffff;
+        uint32_t vpm_offset = 0;
         for (int i = 0; i < vtx->num_elements; i++) {
                 struct pipe_vertex_element *elem = &vtx->pipe[i];
                 struct pipe_vertex_buffer *vb =
@@ -210,8 +211,10 @@ vc4_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
                 cl_reloc(vc4, &vc4->shader_rec, rsc->bo, offset);
                 cl_u8(&vc4->shader_rec, elem_size - 1);
                 cl_u8(&vc4->shader_rec, vb->stride);
-                cl_u8(&vc4->shader_rec, i * 16); /* VS VPM offset */
-                cl_u8(&vc4->shader_rec, i * 16); /* CS VPM offset */
+                cl_u8(&vc4->shader_rec, vpm_offset); /* VS VPM offset */
+                cl_u8(&vc4->shader_rec, vpm_offset); /* CS VPM offset */
+
+                vpm_offset += align(elem_size, 4) / 4;
 
                 if (vb->stride > 0) {
                         max_index = MIN2(max_index,
