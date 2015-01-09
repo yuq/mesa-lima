@@ -92,6 +92,12 @@ brw_reg_from_fs_reg(fs_reg *reg)
       case BRW_REGISTER_TYPE_UD:
 	 brw_reg = brw_imm_ud(reg->fixed_hw_reg.dw1.ud);
 	 break;
+      case BRW_REGISTER_TYPE_W:
+	 brw_reg = brw_imm_w(reg->fixed_hw_reg.dw1.d);
+	 break;
+      case BRW_REGISTER_TYPE_UW:
+	 brw_reg = brw_imm_uw(reg->fixed_hw_reg.dw1.ud);
+	 break;
       case BRW_REGISTER_TYPE_VF:
          brw_reg = brw_imm_vf(reg->fixed_hw_reg.dw1.ud);
          break;
