@@ -40,6 +40,11 @@ static const struct qir_op_info qir_op_info[] = {
         [QOP_FSUB] = { "fsub", 1, 2 },
         [QOP_FMUL] = { "fmul", 1, 2 },
         [QOP_MUL24] = { "mul24", 1, 2 },
+        [QOP_V8MULD] = {"v8muld", 1, 2 },
+        [QOP_V8MIN] = {"v8min", 1, 2 },
+        [QOP_V8MAX] = {"v8max", 1, 2 },
+        [QOP_V8ADDS] = {"v8adds", 1, 2 },
+        [QOP_V8SUBS] = {"v8subs", 1, 2 },
         [QOP_FMIN] = { "fmin", 1, 2 },
         [QOP_FMAX] = { "fmax", 1, 2 },
         [QOP_FMINABS] = { "fminabs", 1, 2 },
@@ -173,6 +178,11 @@ qir_is_mul(struct qinst *inst)
         switch (inst->op) {
         case QOP_FMUL:
         case QOP_MUL24:
+        case QOP_V8MULD:
+        case QOP_V8MIN:
+        case QOP_V8MAX:
+        case QOP_V8ADDS:
+        case QOP_V8SUBS:
                 return true;
         default:
                 return false;

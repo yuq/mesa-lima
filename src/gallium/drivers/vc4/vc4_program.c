@@ -1040,6 +1040,26 @@ ntq_emit_alu(struct vc4_compile *c, nir_alu_instr *instr)
                 *dest = ntq_emit_ubfe(c, src[0], src[1], src[2]);
                 break;
 
+        case nir_op_usadd_4x8:
+                *dest = qir_V8ADDS(c, src[0], src[1]);
+                break;
+
+        case nir_op_ussub_4x8:
+                *dest = qir_V8SUBS(c, src[0], src[1]);
+                break;
+
+        case nir_op_umin_4x8:
+                *dest = qir_V8MIN(c, src[0], src[1]);
+                break;
+
+        case nir_op_umax_4x8:
+                *dest = qir_V8MAX(c, src[0], src[1]);
+                break;
+
+        case nir_op_umul_unorm_4x8:
+                *dest = qir_V8MULD(c, src[0], src[1]);
+                break;
+
         default:
                 fprintf(stderr, "unknown NIR ALU inst: ");
                 nir_print_instr(&instr->instr, stderr);

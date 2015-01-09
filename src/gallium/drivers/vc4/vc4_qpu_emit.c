@@ -203,6 +203,11 @@ vc4_generate_code(struct vc4_context *vc4, struct vc4_compile *c)
                         A(NOT),
 
                         M(FMUL),
+                        M(V8MULD),
+                        M(V8MIN),
+                        M(V8MAX),
+                        M(V8ADDS),
+                        M(V8SUBS),
                         M(MUL24),
                 };
 
