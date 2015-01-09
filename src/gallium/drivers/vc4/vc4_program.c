@@ -1843,32 +1843,22 @@ emit_frag_end(struct vc4_compile *c)
                 qir_TLB_Z_WRITE(c, z);
         }
 
-        bool color_written = false;
+        struct qreg packed_color = c->undef;
         for (int i = 0; i < 4; i++) {
-                if (swizzled_outputs[i].file != QFILE_NULL)
-                        color_written = true;
-        }
-
-        struct qreg packed_color;
-        if (color_written) {
-                /* Fill in any undefined colors.  The simulator will assertion
-                 * fail if we read something that wasn't written, and I don't
-                 * know what hardware does.
-                 */
-                for (int i = 0; i < 4; i++) {
-                        if (swizzled_outputs[i].file == QFILE_NULL)
-                                swizzled_outputs[i] = qir_uniform_f(c, 0.0);
+                if (swizzled_outputs[i].file == QFILE_NULL)
+                        continue;
+                if (packed_color.file == QFILE_NULL) {
+                        packed_color = qir_PACK_8888_F(c, swizzled_outputs[i]);
+                } else {
+                        packed_color = qir_PACK_8_F(c,
+                                                    packed_color,
+                                                    swizzled_outputs[i],
+                                                    i);
                 }
-                packed_color = qir_get_temp(c);
-                qir_emit(c, qir_inst4(QOP_PACK_COLORS, packed_color,
-                                      swizzled_outputs[0],
-                                      swizzled_outputs[1],
-                                      swizzled_outputs[2],
-                                      swizzled_outputs[3]));
-        } else {
-                packed_color = qir_uniform_ui(c, 0);
         }
 
+        if (packed_color.file == QFILE_NULL)
+                packed_color = qir_uniform_ui(c, 0);
 
         if (c->fs_key->logicop_func != PIPE_LOGICOP_COPY) {
                 packed_color = vc4_logicop(c, packed_color, packed_dst_color);
