@@ -135,53 +135,22 @@ get_bus_info( int fd,
               DWORD *subsysid,
               DWORD *revision )
 {
-    drm_unique_t u;
+    int vid, did;
 
-    u.unique_len = 0;
-    u.unique = NULL;
-
-    if (ioctl(fd, DRM_IOCTL_GET_UNIQUE, &u)) { return; }
-    u.unique = CALLOC(u.unique_len+1, 1);
-
-    if (ioctl(fd, DRM_IOCTL_GET_UNIQUE, &u)) { return; }
-    u.unique[u.unique_len] = '\0';
-
-    DBG("DRM Device BusID: %s\n", u.unique);
-    if (strncmp("pci:", u.unique, 4) == 0) {
-        char fname[512]; /* this ought to be enough */
-        int l = snprintf(fname, 512, "/sys/bus/pci/devices/%s/", u.unique+4);
-
-        /* VendorId */
-        snprintf(fname+l, 512-l, "vendor");
-        *vendorid = read_file_dword(fname);
-        /* DeviceId */
-        snprintf(fname+l, 512-l, "device");
-        *deviceid = read_file_dword(fname);
-        /* SubSysId */
-        snprintf(fname+l, 512-l, "subsystem_device");
-        *subsysid = (read_file_dword(fname) << 16) & 0xFFFF0000;
-        snprintf(fname+l, 512-l, "subsystem_vendor");
-        *subsysid |= read_file_dword(fname) & 0x0000FFFF;
-        /* Revision */
-        {
-            int cfgfd;
-
-            snprintf(fname+l, 512-l, "config");
-            cfgfd = open(fname, O_RDONLY);
-            if (cfgfd >= 0) {
-                *revision = read_config_dword(cfgfd, 0x8) & 0x000000FF;
-                close(cfgfd);
-            } else {
-                DBG("Unable to get raw PCI information from `%s'\n", fname);
-            }
-        }
-        DBG("PCI info: vendor=0x%04x, device=0x%04x, subsys=0x%08x, rev=%d\n",
-            *vendorid, *deviceid, *subsysid, *revision);
+    if (loader_get_pci_id_for_fd(fd, &vid, &did)) {
+        DBG("PCI info: vendor=0x%04x, device=0x%04x\n",
+            vid, did);
+        *vendorid = vid;
+        *deviceid = did;
+        *subsysid = 0;
+        *revision = 0;
     } else {
-        DBG("Unsupported BusID type.\n");
+        DBG("Unable to detect card. Fake GTX 680.\n");
+        *vendorid = 0x10de; /* NV GTX 680 */
+        *deviceid = 0x1180;
+        *subsysid = 0;
+        *revision = 0;
     }
-
-    FREE(u.unique);
 }
 
 static INLINE void
