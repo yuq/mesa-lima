@@ -25,8 +25,10 @@
 
 #include "d3d9.h"
 #include "pipe/p_format.h"
+#include "pipe/p_screen.h"
 #include "pipe/p_state.h" /* pipe_box */
 #include "util/u_rect.h"
+#include "util/u_format.h"
 #include "nine_helpers.h"
 
 struct cso_context;
@@ -174,7 +176,7 @@ pipe_to_d3d9_format(enum pipe_format format)
 }
 
 static INLINE enum pipe_format
-d3d9_to_pipe_format(D3DFORMAT format)
+d3d9_to_pipe_format_internal(D3DFORMAT format)
 {
     if (format <= D3DFMT_A2B10G10R10_XR_BIAS)
         return nine_d3d9_to_pipe_format_map[format];
@@ -207,6 +209,57 @@ d3d9_to_pipe_format(D3DFORMAT format)
                  (char)(format >> 16), (char)(format >> 24));
         return PIPE_FORMAT_NONE;
     }
+}
+
+#define format_check_internal(pipe_format) \
+    screen->is_format_supported(screen, pipe_format, target, \
+                                sample_count, bindings)
+
+static INLINE enum pipe_format
+d3d9_to_pipe_format_checked(struct pipe_screen *screen,
+                            D3DFORMAT format,
+                            enum pipe_texture_target target,
+                            unsigned sample_count,
+                            unsigned bindings,
+                            boolean srgb)
+{
+    enum pipe_format result;
+
+    result = d3d9_to_pipe_format_internal(format);
+    if (result == PIPE_FORMAT_NONE)
+        return PIPE_FORMAT_NONE;
+
+    if (srgb)
+        result = util_format_srgb(result);
+
+    if (format_check_internal(result))
+        return result;
+    return PIPE_FORMAT_NONE;
+}
+
+/* same that above, but determines binding flags */
+static INLINE enum pipe_format
+d3d9_to_pipe_format_checked_no_bind(struct pipe_screen *screen,
+                                    D3DFORMAT format,
+                                    enum pipe_texture_target target,
+                                    unsigned sample_count,
+                                    boolean srgb)
+{
+    enum pipe_format result;
+    unsigned bindings;
+
+    result = d3d9_to_pipe_format_internal(format);
+    if (result == PIPE_FORMAT_NONE)
+        return PIPE_FORMAT_NONE;
+
+    bindings = util_format_is_depth_or_stencil(result) ?
+        PIPE_BIND_DEPTH_STENCIL : PIPE_BIND_RENDER_TARGET;
+    if (srgb)
+        result = util_format_srgb(result);
+
+    if (format_check_internal(result))
+        return result;
+    return PIPE_FORMAT_NONE;
 }
 
 static INLINE const char *

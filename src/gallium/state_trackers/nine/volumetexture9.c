@@ -59,11 +59,10 @@ NineVolumeTexture9_ctor( struct NineVolumeTexture9 *This,
     if (Usage & D3DUSAGE_AUTOGENMIPMAP)
         Levels = 0;
 
-    pf = d3d9_to_pipe_format(Format);
-    if (pf == PIPE_FORMAT_NONE ||
-        !screen->is_format_supported(screen, pf, PIPE_TEXTURE_3D, 0, PIPE_BIND_SAMPLER_VIEW)) {
+    pf = d3d9_to_pipe_format_checked(screen, Format, PIPE_TEXTURE_3D, 0,
+                                     PIPE_BIND_SAMPLER_VIEW, FALSE);
+    if (pf == PIPE_FORMAT_NONE)
         return D3DERR_INVALIDCALL;
-    }
 
     /* We support ATI1 and ATI2 hacks only for 2D textures */
     if (Format == D3DFMT_ATI1 || Format == D3DFMT_ATI2)

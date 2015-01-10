@@ -195,7 +195,10 @@ NineSwapChain9_Resize( struct NineSwapChain9 *This,
     newBufferCount = pParams->BackBufferCount +
                      (pParams->SwapEffect != D3DSWAPEFFECT_COPY);
 
-    pf = d3d9_to_pipe_format(pParams->BackBufferFormat);
+    pf = d3d9_to_pipe_format_checked(This->screen, pParams->BackBufferFormat,
+                                     PIPE_TEXTURE_2D, pParams->MultiSampleType,
+                                     PIPE_BIND_RENDER_TARGET, FALSE);
+
     if (This->actx->linear_framebuffer ||
         (pf != PIPE_FORMAT_B8G8R8X8_UNORM &&
         pf != PIPE_FORMAT_B8G8R8A8_UNORM) ||
@@ -284,12 +287,18 @@ NineSwapChain9_Resize( struct NineSwapChain9 *This,
     }
 
     for (i = 0; i < newBufferCount; ++i) {
-        tmplt.format = d3d9_to_pipe_format(pParams->BackBufferFormat);
         tmplt.bind = PIPE_BIND_SAMPLER_VIEW | PIPE_BIND_TRANSFER_READ |
                      PIPE_BIND_TRANSFER_WRITE | PIPE_BIND_RENDER_TARGET;
         tmplt.nr_samples = pParams->MultiSampleType;
         if (!has_present_buffers)
             tmplt.bind |= PIPE_BIND_SHARED | PIPE_BIND_SCANOUT | PIPE_BIND_DISPLAY_TARGET;
+        tmplt.format = d3d9_to_pipe_format_checked(This->screen,
+                                                   pParams->BackBufferFormat,
+                                                   PIPE_TEXTURE_2D,
+                                                   tmplt.nr_samples,
+                                                   tmplt.bind, FALSE);
+        if (tmplt.format == PIPE_FORMAT_NONE)
+            return D3DERR_INVALIDCALL;
         resource = This->screen->resource_create(This->screen, &tmplt);
         if (!resource) {
             DBG("Failed to create pipe_resource.\n");
@@ -330,10 +339,17 @@ NineSwapChain9_Resize( struct NineSwapChain9 *This,
             pipe_resource_reference(&resource, NULL);
     }
     if (pParams->EnableAutoDepthStencil) {
-        tmplt.format = d3d9_to_pipe_format(pParams->AutoDepthStencilFormat);
         tmplt.bind = PIPE_BIND_SAMPLER_VIEW | PIPE_BIND_TRANSFER_READ |
                      PIPE_BIND_TRANSFER_WRITE | PIPE_BIND_DEPTH_STENCIL;
         tmplt.nr_samples = pParams->MultiSampleType;
+        tmplt.format = d3d9_to_pipe_format_checked(This->screen,
+                                                   pParams->AutoDepthStencilFormat,
+                                                   PIPE_TEXTURE_2D,
+                                                   tmplt.nr_samples,
+                                                   tmplt.bind,
+                                                   FALSE);
+        if (tmplt.format == PIPE_FORMAT_NONE)
+            return D3DERR_INVALIDCALL;
 
         resource = This->screen->resource_create(This->screen, &tmplt);
         if (!resource) {
