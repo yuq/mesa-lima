@@ -1079,6 +1079,7 @@ emit_vertex_input(struct vc4_compile *c, int attr)
         uint32_t attr_size = util_format_get_blocksize(format);
         struct qreg vpm_reads[4];
 
+        c->vattr_sizes[attr] = align(attr_size, 4);
         for (int i = 0; i < align(attr_size, 4) / 4; i++) {
                 struct qreg vpm = { QFILE_VPM, attr * 4 + i };
                 vpm_reads[i] = qir_MOV(c, vpm);
@@ -1933,11 +1934,10 @@ emit_stub_vpm_read(struct vc4_compile *c)
         if (c->num_inputs)
                 return;
 
-        for (int i = 0; i < 4; i++) {
-                struct qreg vpm = { QFILE_VPM, 0 };
-                (void)qir_MOV(c, vpm);
-                c->num_inputs++;
-        }
+        c->vattr_sizes[0] = 4;
+        struct qreg vpm = { QFILE_VPM, 0 };
+        (void)qir_MOV(c, vpm);
+        c->num_inputs++;
 }
 
 static void
@@ -2275,6 +2275,15 @@ vc4_get_compiled_shader(struct vc4_context *vc4, enum qstage stage,
                 }
         } else {
                 shader->num_inputs = c->num_inputs;
+
+                shader->vattr_offsets[0] = 0;
+                for (int i = 0; i < 8; i++) {
+                        shader->vattr_offsets[i + 1] =
+                                shader->vattr_offsets[i] + c->vattr_sizes[i];
+
+                        if (c->vattr_sizes[i])
+                                shader->vattrs_live |= (1 << i);
+                }
         }
 
         copy_uniform_state_to_shader(shader, c);

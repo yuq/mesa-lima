@@ -185,14 +185,14 @@ vc4_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
         cl_u32(&vc4->shader_rec, 0); /* UBO offset written by kernel */
 
         cl_u16(&vc4->shader_rec, 0); /* vs num uniforms */
-        cl_u8(&vc4->shader_rec, (1 << num_elements_emit) - 1); /* vs attribute array bitfield */
-        cl_u8(&vc4->shader_rec, 16 * num_elements_emit); /* vs total attribute size */
+        cl_u8(&vc4->shader_rec, vc4->prog.vs->vattrs_live);
+        cl_u8(&vc4->shader_rec, vc4->prog.vs->vattr_offsets[8]);
         cl_reloc(vc4, &vc4->shader_rec, vc4->prog.vs->bo, 0);
         cl_u32(&vc4->shader_rec, 0); /* UBO offset written by kernel */
 
         cl_u16(&vc4->shader_rec, 0); /* cs num uniforms */
-        cl_u8(&vc4->shader_rec, (1 << num_elements_emit) - 1); /* cs attribute array bitfield */
-        cl_u8(&vc4->shader_rec, 16 * num_elements_emit); /* cs total attribute size */
+        cl_u8(&vc4->shader_rec, vc4->prog.cs->vattrs_live);
+        cl_u8(&vc4->shader_rec, vc4->prog.cs->vattr_offsets[8]);
         cl_reloc(vc4, &vc4->shader_rec, vc4->prog.cs->bo, 0);
         cl_u32(&vc4->shader_rec, 0); /* UBO offset written by kernel */
 
@@ -211,8 +211,8 @@ vc4_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
                 cl_reloc(vc4, &vc4->shader_rec, rsc->bo, offset);
                 cl_u8(&vc4->shader_rec, elem_size - 1);
                 cl_u8(&vc4->shader_rec, vb->stride);
-                cl_u8(&vc4->shader_rec, vpm_offset); /* VS VPM offset */
-                cl_u8(&vc4->shader_rec, vpm_offset); /* CS VPM offset */
+                cl_u8(&vc4->shader_rec, vc4->prog.vs->vattr_offsets[i]);
+                cl_u8(&vc4->shader_rec, vc4->prog.cs->vattr_offsets[i]);
 
                 vpm_offset += align(elem_size, 4);
 

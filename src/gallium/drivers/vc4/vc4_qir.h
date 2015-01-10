@@ -312,6 +312,8 @@ struct vc4_compile {
         struct qreg line_x, point_x, point_y;
         struct qreg discard;
 
+        uint8_t vattr_sizes[8];
+
         /**
          * Array of the TGSI semantics of all FS QFILE_VARY reads.
          *

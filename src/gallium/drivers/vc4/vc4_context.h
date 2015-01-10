@@ -121,6 +121,12 @@ struct vc4_compiled_shader {
 
         uint8_t num_inputs;
 
+        /* Byte offsets for the start of the vertex attributes 0-7, and the
+         * total size as "attribute" 8.
+         */
+        uint8_t vattr_offsets[9];
+        uint8_t vattrs_live;
+
         /**
          * Array of the meanings of the VPM inputs this shader needs.
          *
