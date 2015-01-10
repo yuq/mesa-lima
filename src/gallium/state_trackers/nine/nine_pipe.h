@@ -181,7 +181,7 @@ d3d9_to_pipe_format_internal(D3DFORMAT format)
     if (format <= D3DFMT_A2B10G10R10_XR_BIAS)
         return nine_d3d9_to_pipe_format_map[format];
     switch (format) {
-    case D3DFMT_INTZ: return PIPE_FORMAT_Z24_UNORM_S8_UINT;
+    case D3DFMT_INTZ: return PIPE_FORMAT_S8_UINT_Z24_UNORM;
     case D3DFMT_DXT1: return PIPE_FORMAT_DXT1_RGBA;
     case D3DFMT_DXT2: return PIPE_FORMAT_DXT3_RGBA; /* XXX */
     case D3DFMT_DXT3: return PIPE_FORMAT_DXT3_RGBA;
@@ -234,6 +234,25 @@ d3d9_to_pipe_format_checked(struct pipe_screen *screen,
 
     if (format_check_internal(result))
         return result;
+
+    /* fallback to another format for formats
+     * that match several pipe_format */
+    switch(format) {
+        /* depth buffer formats are not lockable (except those for which it
+         * is precised in the name), so it is ok to match to another similar
+         * format. In all cases, if the app reads the texture with a shader,
+         * it gets depth on r and doesn't get stencil.*/
+        case D3DFMT_INTZ:
+        case D3DFMT_D24S8:
+            if (format_check_internal(PIPE_FORMAT_Z24_UNORM_S8_UINT))
+                return PIPE_FORMAT_Z24_UNORM_S8_UINT;
+            break;
+        case D3DFMT_D24X8:
+            if (format_check_internal(PIPE_FORMAT_Z24X8_UNORM))
+                return PIPE_FORMAT_Z24X8_UNORM;
+        default:
+            break;
+    }
     return PIPE_FORMAT_NONE;
 }
 
