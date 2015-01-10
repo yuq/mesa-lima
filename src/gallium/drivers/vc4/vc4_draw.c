@@ -288,7 +288,10 @@ pack_rgba(enum pipe_format format, const float *rgba)
 {
         union util_color uc;
         util_pack_color(rgba, format, &uc);
-        return uc.ui[0];
+        if (util_format_get_blocksize(format) == 2)
+                return uc.us;
+        else
+                return uc.ui[0];
 }
 
 static void
