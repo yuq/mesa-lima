@@ -82,8 +82,10 @@ qir_opt_vpm_writes(struct vc4_compile *c)
                 if (qir_depends_on_flags(inst))
                         continue;
 
-                if (qir_has_side_effects(c, inst))
+                if (qir_has_side_effects(c, inst) ||
+                    qir_has_side_effect_reads(c, inst)) {
                         continue;
+                }
 
                 /* A QOP_TEX_RESULT destination is r4, so we can't move
                  * accesses to it past another QOP_TEX_RESULT which would

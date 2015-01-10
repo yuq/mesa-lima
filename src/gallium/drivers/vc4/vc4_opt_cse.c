@@ -133,7 +133,8 @@ qir_opt_cse(struct vc4_compile *c)
         foreach_s(node, t, &c->instructions) {
                 struct qinst *inst = (struct qinst *)node;
 
-                if (qir_has_side_effects(c, inst)) {
+                if (qir_has_side_effects(c, inst) ||
+                    qir_has_side_effect_reads(c, inst)) {
                         if (inst->op == QOP_TLB_DISCARD_SETUP)
                                 last_sf = NULL;
                         continue;

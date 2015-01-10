@@ -64,7 +64,8 @@ qir_opt_dead_code(struct vc4_compile *c)
                 if (inst->dst.file == QFILE_TEMP &&
                     !used[inst->dst.index] &&
                     (!qir_has_side_effects(c, inst) ||
-                     inst->op == QOP_TEX_RESULT)) {
+                     inst->op == QOP_TEX_RESULT) &&
+                    !(qir_has_side_effect_reads(c, inst))) {
                         if (inst->op == QOP_TEX_RESULT) {
                                 dce_tex = true;
                                 c->num_texture_samples--;
