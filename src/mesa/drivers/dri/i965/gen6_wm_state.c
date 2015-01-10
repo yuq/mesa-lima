@@ -135,10 +135,10 @@ upload_wm_state(struct brw_context *brw)
       _mesa_get_min_invocations_per_fragment(ctx, brw->fragment_program, false);
    assert(min_inv_per_frag >= 1);
 
-   if (prog_data->prog_offset_16) {
+   if (prog_data->prog_offset_16 || prog_data->no_8) {
       dw5 |= GEN6_WM_16_DISPATCH_ENABLE;
 
-      if (min_inv_per_frag == 1) {
+      if (!prog_data->no_8 && min_inv_per_frag == 1) {
          dw5 |= GEN6_WM_8_DISPATCH_ENABLE;
          dw4 |= (prog_data->base.dispatch_grf_start_reg <<
                  GEN6_WM_DISPATCH_START_GRF_SHIFT_0);
