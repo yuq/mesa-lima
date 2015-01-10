@@ -147,6 +147,7 @@ vc4_generate_code(struct vc4_context *vc4, struct vc4_compile *c)
         uint32_t inputs_remaining = c->num_inputs;
         uint32_t vpm_read_fifo_count = 0;
         uint32_t vpm_read_offset = 0;
+        int last_vpm_read_index = -1;
         bool written_r3 = false;
         bool needs_restore;
         /* Map from the QIR ops enum order to QPU unpack bits. */
@@ -250,7 +251,10 @@ vc4_generate_code(struct vc4_context *vc4, struct vc4_compile *c)
                                 assert(src[i].addr <= 47);
                                 break;
                         case QFILE_VPM:
-                                assert(!"not reached");
+                                assert((int)qinst->src[i].index >=
+                                       last_vpm_read_index);
+                                last_vpm_read_index = qinst->src[i].index;
+                                src[i] = qpu_ra(QPU_R_VPM);
                                 break;
                         }
                 }
@@ -312,10 +316,6 @@ vc4_generate_code(struct vc4_context *vc4, struct vc4_compile *c)
                         set_last_cond_add(c, ((qinst->op - QOP_SEL_X_Y_ZS) ^
                                               1) + QPU_COND_ZS);
 
-                        break;
-
-                case QOP_VPM_READ:
-                        queue(c, qpu_a_MOV(dst, qpu_ra(QPU_R_VPM)));
                         break;
 
                 case QOP_RCP:

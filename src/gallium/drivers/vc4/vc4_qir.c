@@ -79,7 +79,6 @@ static const struct qir_op_info qir_op_info[] = {
         [QOP_PACK_8C_F] = { "pack_8c_f", 1, 2, false, true },
         [QOP_PACK_8D_F] = { "pack_8d_f", 1, 2, false, true },
         [QOP_PACK_SCALED] = { "pack_scaled", 1, 2, false, true },
-        [QOP_VPM_READ] = { "vpm_read", 0, 1, true },
         [QOP_TLB_DISCARD_SETUP] = { "discard", 0, 1, true },
         [QOP_TLB_STENCIL_SETUP] = { "tlb_stencil_setup", 0, 1, true },
         [QOP_TLB_Z_WRITE] = { "tlb_z", 0, 1, true },
@@ -152,6 +151,9 @@ qir_has_side_effects(struct vc4_compile *c, struct qinst *inst)
                     c->input_semantics[inst->src[i].index].semantic == 0xff) {
                         return true;
                 }
+
+                if (inst->src[i].file == QFILE_VPM)
+                        return true;
         }
 
         if (inst->dst.file == QFILE_VPM)
