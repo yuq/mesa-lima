@@ -1395,15 +1395,13 @@ _mesa_IsBuffer(GLuint id)
 }
 
 
-void GLAPIENTRY
-_mesa_BufferStorage(GLenum target, GLsizeiptr size, const GLvoid *data,
-                    GLbitfield flags)
+void
+_mesa_buffer_storage(struct gl_context *ctx, struct gl_buffer_object *bufObj,
+                     GLenum target, GLsizeiptr size, const GLvoid *data,
+                     GLbitfield flags, const char *func)
 {
-   GET_CURRENT_CONTEXT(ctx);
-   struct gl_buffer_object *bufObj;
-
    if (size <= 0) {
-      _mesa_error(ctx, GL_INVALID_VALUE, "glBufferStorage(size <= 0)");
+      _mesa_error(ctx, GL_INVALID_VALUE, "%s(size <= 0)", func);
       return;
    }
 
@@ -1413,27 +1411,25 @@ _mesa_BufferStorage(GLenum target, GLsizeiptr size, const GLvoid *data,
                  GL_MAP_COHERENT_BIT |
                  GL_DYNAMIC_STORAGE_BIT |
                  GL_CLIENT_STORAGE_BIT)) {
-      _mesa_error(ctx, GL_INVALID_VALUE, "glBufferStorage(flags)");
+      _mesa_error(ctx, GL_INVALID_VALUE, "%s(invalid flag bits set)", func);
       return;
    }
 
    if (flags & GL_MAP_PERSISTENT_BIT &&
        !(flags & (GL_MAP_READ_BIT | GL_MAP_WRITE_BIT))) {
-      _mesa_error(ctx, GL_INVALID_VALUE, "glBufferStorage(flags!=READ/WRITE)");
+      _mesa_error(ctx, GL_INVALID_VALUE,
+                  "%s(PERSISTENT and flags!=READ/WRITE)", func);
       return;
    }
 
    if (flags & GL_MAP_COHERENT_BIT && !(flags & GL_MAP_PERSISTENT_BIT)) {
-      _mesa_error(ctx, GL_INVALID_VALUE, "glBufferStorage(flags!=PERSISTENT)");
+      _mesa_error(ctx, GL_INVALID_VALUE,
+                  "%s(COHERENT and flags!=PERSISTENT)", func);
       return;
    }
 
-   bufObj = get_buffer(ctx, "glBufferStorage", target, GL_INVALID_OPERATION);
-   if (!bufObj)
-      return;
-
    if (bufObj->Immutable) {
-      _mesa_error(ctx, GL_INVALID_OPERATION, "glBufferStorage(immutable)");
+      _mesa_error(ctx, GL_INVALID_OPERATION, "%s(immutable)", func);
       return;
    }
 
@@ -1453,13 +1449,48 @@ _mesa_BufferStorage(GLenum target, GLsizeiptr size, const GLvoid *data,
           * glBufferStorage is not described in the spec, Graham Sellers
           * said that it should behave the same as glBufferData.
           */
-         _mesa_error(ctx, GL_INVALID_OPERATION, "glBufferStorage()");
+         _mesa_error(ctx, GL_INVALID_OPERATION, "%s", func);
       }
       else {
-         _mesa_error(ctx, GL_OUT_OF_MEMORY, "glBufferStorage()");
+         _mesa_error(ctx, GL_OUT_OF_MEMORY, "%s", func);
       }
    }
 }
+
+void GLAPIENTRY
+_mesa_BufferStorage(GLenum target, GLsizeiptr size, const GLvoid *data,
+                    GLbitfield flags)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   struct gl_buffer_object *bufObj;
+
+   bufObj = get_buffer(ctx, "glBufferStorage", target, GL_INVALID_OPERATION);
+   if (!bufObj)
+      return;
+
+   _mesa_buffer_storage(ctx, bufObj, target, size, data, flags,
+                        "glBufferStorage");
+}
+
+void GLAPIENTRY
+_mesa_NamedBufferStorage(GLuint buffer, GLsizeiptr size, const GLvoid *data,
+                         GLbitfield flags)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   struct gl_buffer_object *bufObj;
+
+   bufObj = _mesa_lookup_bufferobj_err(ctx, buffer, "glNamedBufferStorage");
+   if (!bufObj)
+      return;
+
+   /*
+    * In direct state access, buffer objects have an unspecified target since
+    * they are not required to be bound.
+    */
+   _mesa_buffer_storage(ctx, bufObj, GL_NONE, size, data, flags,
+                        "glNamedBufferStorage");
+}
+
 
 
 void GLAPIENTRY

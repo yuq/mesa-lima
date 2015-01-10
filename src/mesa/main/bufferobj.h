@@ -130,6 +130,11 @@ extern void
 _mesa_init_buffer_object_functions(struct dd_function_table *driver);
 
 extern void
+_mesa_buffer_storage(struct gl_context *ctx, struct gl_buffer_object *bufObj,
+                     GLenum target, GLsizeiptr size, const GLvoid *data,
+                     GLbitfield flags, const char *func);
+
+extern void
 _mesa_buffer_unmap_all_mappings(struct gl_context *ctx,
                                 struct gl_buffer_object *bufObj);
 
@@ -161,6 +166,10 @@ _mesa_IsBuffer(GLuint buffer);
 void GLAPIENTRY
 _mesa_BufferStorage(GLenum target, GLsizeiptr size, const GLvoid *data,
                     GLbitfield flags);
+
+void GLAPIENTRY
+_mesa_NamedBufferStorage(GLuint buffer, GLsizeiptr size, const GLvoid *data,
+                         GLbitfield flags);
 
 void GLAPIENTRY
 _mesa_BufferData(GLenum target, GLsizeiptrARB size,
