@@ -1625,8 +1625,8 @@ fs_visitor::nir_emit_texture(nir_tex_instr *instr)
    fs_reg coordinate, shadow_comparitor, lod, lod2, sample_index, mcs, offset;
 
    for (unsigned i = 0; i < instr->num_srcs; i++) {
-      fs_reg src = get_nir_src(instr->src[i]);
-      switch (instr->src_type[i]) {
+      fs_reg src = get_nir_src(instr->src[i].src);
+      switch (instr->src[i].src_type) {
       case nir_tex_src_bias:
          lod = retype(src, BRW_REGISTER_TYPE_F);
          break;

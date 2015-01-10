@@ -822,8 +822,13 @@ typedef enum {
    nir_tex_src_ddx,
    nir_tex_src_ddy,
    nir_tex_src_sampler_offset, /* < dynamically uniform indirect offset */
-   nir_num_texinput_types
-} nir_texinput_type;
+   nir_num_tex_src_types
+} nir_tex_src_type;
+
+typedef struct {
+   nir_src src;
+   nir_tex_src_type src_type;
+} nir_tex_src;
 
 typedef enum {
    nir_texop_tex,                /**< Regular texture look-up */
@@ -846,8 +851,7 @@ typedef struct {
 
    nir_texop op;
    nir_dest dest;
-   nir_src src[4];
-   nir_texinput_type src_type[4];
+   nir_tex_src *src;
    unsigned num_srcs, coord_components;
    bool is_array, is_shadow;
 
@@ -917,13 +921,13 @@ nir_tex_instr_dest_size(nir_tex_instr *instr)
 static inline unsigned
 nir_tex_instr_src_size(nir_tex_instr *instr, unsigned src)
 {
-   if (instr->src_type[src] == nir_tex_src_coord)
+   if (instr->src[src].src_type == nir_tex_src_coord)
       return instr->coord_components;
 
 
-   if (instr->src_type[src] == nir_tex_src_offset ||
-       instr->src_type[src] == nir_tex_src_ddx ||
-       instr->src_type[src] == nir_tex_src_ddy) {
+   if (instr->src[src].src_type == nir_tex_src_offset ||
+       instr->src[src].src_type == nir_tex_src_ddx ||
+       instr->src[src].src_type == nir_tex_src_ddy) {
       if (instr->is_array)
          return instr->coord_components - 1;
       else
@@ -934,10 +938,10 @@ nir_tex_instr_src_size(nir_tex_instr *instr, unsigned src)
 }
 
 static inline int
-nir_tex_instr_src_index(nir_tex_instr *instr, nir_texinput_type type)
+nir_tex_instr_src_index(nir_tex_instr *instr, nir_tex_src_type type)
 {
    for (unsigned i = 0; i < instr->num_srcs; i++)
-      if (instr->src_type[i] == type)
+      if (instr->src[i].src_type == type)
          return (int) i;
 
    return -1;

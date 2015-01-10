@@ -1662,20 +1662,20 @@ nir_visitor::visit(ir_texture *ir)
 
    if (ir->coordinate != NULL) {
       instr->coord_components = ir->coordinate->type->vector_elements;
-      instr->src[src_number] = evaluate_rvalue(ir->coordinate);
-      instr->src_type[src_number] = nir_tex_src_coord;
+      instr->src[src_number].src = evaluate_rvalue(ir->coordinate);
+      instr->src[src_number].src_type = nir_tex_src_coord;
       src_number++;
    }
 
    if (ir->projector != NULL) {
-      instr->src[src_number] = evaluate_rvalue(ir->projector);
-      instr->src_type[src_number] = nir_tex_src_projector;
+      instr->src[src_number].src = evaluate_rvalue(ir->projector);
+      instr->src[src_number].src_type = nir_tex_src_projector;
       src_number++;
    }
 
    if (ir->shadow_comparitor != NULL) {
-      instr->src[src_number] = evaluate_rvalue(ir->shadow_comparitor);
-      instr->src_type[src_number] = nir_tex_src_comparitor;
+      instr->src[src_number].src = evaluate_rvalue(ir->shadow_comparitor);
+      instr->src[src_number].src_type = nir_tex_src_comparitor;
       src_number++;
    }
 
@@ -1688,16 +1688,16 @@ nir_visitor::visit(ir_texture *ir)
          for (unsigned i = 0; i < const_offset->type->vector_elements; i++)
             instr->const_offset[i] = const_offset->value.i[i];
       } else {
-         instr->src[src_number] = evaluate_rvalue(ir->offset);
-         instr->src_type[src_number] = nir_tex_src_offset;
+         instr->src[src_number].src = evaluate_rvalue(ir->offset);
+         instr->src[src_number].src_type = nir_tex_src_offset;
          src_number++;
       }
    }
 
    switch (ir->op) {
    case ir_txb:
-      instr->src[src_number] = evaluate_rvalue(ir->lod_info.bias);
-      instr->src_type[src_number] = nir_tex_src_bias;
+      instr->src[src_number].src = evaluate_rvalue(ir->lod_info.bias);
+      instr->src[src_number].src_type = nir_tex_src_bias;
       src_number++;
       break;
 
@@ -1705,24 +1705,24 @@ nir_visitor::visit(ir_texture *ir)
    case ir_txf:
    case ir_txs:
       if (ir->lod_info.lod != NULL) {
-         instr->src[src_number] = evaluate_rvalue(ir->lod_info.lod);
-         instr->src_type[src_number] = nir_tex_src_lod;
+         instr->src[src_number].src = evaluate_rvalue(ir->lod_info.lod);
+         instr->src[src_number].src_type = nir_tex_src_lod;
          src_number++;
       }
       break;
 
    case ir_txd:
-      instr->src[src_number] = evaluate_rvalue(ir->lod_info.grad.dPdx);
-      instr->src_type[src_number] = nir_tex_src_ddx;
+      instr->src[src_number].src = evaluate_rvalue(ir->lod_info.grad.dPdx);
+      instr->src[src_number].src_type = nir_tex_src_ddx;
       src_number++;
-      instr->src[src_number] = evaluate_rvalue(ir->lod_info.grad.dPdy);
-      instr->src_type[src_number] = nir_tex_src_ddy;
+      instr->src[src_number].src = evaluate_rvalue(ir->lod_info.grad.dPdy);
+      instr->src[src_number].src_type = nir_tex_src_ddy;
       src_number++;
       break;
 
    case ir_txf_ms:
-      instr->src[src_number] = evaluate_rvalue(ir->lod_info.sample_index);
-      instr->src_type[src_number] = nir_tex_src_ms_index;
+      instr->src[src_number].src = evaluate_rvalue(ir->lod_info.sample_index);
+      instr->src[src_number].src_type = nir_tex_src_ms_index;
       src_number++;
       break;
 

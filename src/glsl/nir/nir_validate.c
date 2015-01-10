@@ -381,13 +381,13 @@ validate_tex_instr(nir_tex_instr *instr, validate_state *state)
 {
    validate_dest(&instr->dest, state);
 
-   bool src_type_seen[nir_num_texinput_types];
-   for (unsigned i = 0; i < nir_num_texinput_types; i++)
+   bool src_type_seen[nir_num_tex_src_types];
+   for (unsigned i = 0; i < nir_num_tex_src_types; i++)
       src_type_seen[i] = false;
 
    for (unsigned i = 0; i < instr->num_srcs; i++) {
-      assert(!src_type_seen[instr->src_type[i]]);
-      src_type_seen[instr->src_type[i]] = true;
+      assert(!src_type_seen[instr->src[i].src_type]);
+      src_type_seen[instr->src[i].src_type] = true;
       validate_src(&instr->src[i], state);
    }
 

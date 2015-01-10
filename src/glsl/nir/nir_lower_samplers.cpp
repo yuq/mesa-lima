@@ -94,12 +94,15 @@ lower_sampler(nir_tex_instr *instr, struct gl_shader_program *shader_program,
          case nir_deref_array_type_indirect: {
             assert(!has_indirect);
 
-            assert(instr->num_srcs < 4);
-
-            nir_instr_rewrite_src(&instr->instr, &instr->src[instr->num_srcs],
-                                  nir_src_copy(deref_array->indirect, mem_ctx));
-            instr->src_type[instr->num_srcs] = nir_tex_src_sampler_offset;
+            instr->src = reralloc(mem_ctx, instr->src, nir_tex_src,
+                                  instr->num_srcs + 1);
+            memset(&instr->src[instr->num_srcs], 0, sizeof *instr->src);
+            instr->src[instr->num_srcs].src_type = nir_tex_src_sampler_offset;
             instr->num_srcs++;
+
+            nir_instr_rewrite_src(&instr->instr,
+                                  &instr->src[instr->num_srcs - 1].src,
+                                  nir_src_copy(deref_array->indirect, mem_ctx));
 
             instr->sampler_array_size = glsl_get_length(deref->type);
 

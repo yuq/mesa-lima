@@ -402,11 +402,11 @@ print_tex_instr(nir_tex_instr *instr, print_var_state *state, FILE *fp)
    }
 
    for (unsigned i = 0; i < instr->num_srcs; i++) {
-      print_src(&instr->src[i], fp);
+      print_src(&instr->src[i].src, fp);
 
       fprintf(fp, " ");
 
-      switch(instr->src_type[i]) {
+      switch(instr->src[i].src_type) {
       case nir_tex_src_coord:
          fprintf(fp, "(coord)");
          break;

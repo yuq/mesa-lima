@@ -447,8 +447,9 @@ nir_tex_instr_create(void *mem_ctx, unsigned num_srcs)
    dest_init(&instr->dest);
 
    instr->num_srcs = num_srcs;
-   for (unsigned i = 0; i < 4; i++)
-      src_init(&instr->src[i]);
+   instr->src = ralloc_array(mem_ctx, nir_tex_src, num_srcs);
+   for (unsigned i = 0; i < num_srcs; i++)
+      src_init(&instr->src[i].src);
 
    instr->sampler_index = 0;
    instr->sampler_array_size = 0;
