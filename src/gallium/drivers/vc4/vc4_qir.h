@@ -30,6 +30,7 @@
 #include <stdint.h>
 #include <string.h>
 
+#include "util/macros.h"
 #include "util/u_simple_list.h"
 #include "tgsi/tgsi_parse.h"
 
