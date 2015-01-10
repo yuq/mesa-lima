@@ -1006,6 +1006,25 @@ _mesa_lookup_bufferobj_locked(struct gl_context *ctx, GLuint buffer)
       _mesa_HashLookupLocked(ctx->Shared->BufferObjects, buffer);
 }
 
+/**
+ * A convenience function for direct state access functions that throws
+ * GL_INVALID_OPERATION if buffer is not the name of a buffer object in the
+ * hash table.
+ */
+struct gl_buffer_object *
+_mesa_lookup_bufferobj_err(struct gl_context *ctx, GLuint buffer,
+                           const char *caller)
+{
+   struct gl_buffer_object *bufObj;
+
+   bufObj = _mesa_lookup_bufferobj(ctx, buffer);
+   if (!bufObj)
+      _mesa_error(ctx, GL_INVALID_OPERATION,
+                  "%s(non-generated buffer name %u)", caller, buffer);
+
+   return bufObj;
+}
+
 
 void
 _mesa_begin_bufferobj_lookups(struct gl_context *ctx)
