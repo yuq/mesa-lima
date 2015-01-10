@@ -344,6 +344,9 @@ brw_upload_initial_gpu_state(struct brw_context *brw)
    if (!brw->hw_ctx)
       return;
 
+   if (brw->gen == 6)
+      intel_emit_post_sync_nonzero_flush(brw);
+
    brw_upload_invariant_state(brw);
 
    if (brw->gen >= 8) {
@@ -611,6 +614,10 @@ void brw_upload_state(struct brw_context *brw)
 
    if ((state->mesa | state->brw) == 0)
       return;
+
+   /* Emit Sandybridge workaround flushes on every primitive, for safety. */
+   if (brw->gen == 6)
+      intel_emit_post_sync_nonzero_flush(brw);
 
    if (unlikely(INTEL_DEBUG)) {
       /* Debug version which enforces various sanity checks on the

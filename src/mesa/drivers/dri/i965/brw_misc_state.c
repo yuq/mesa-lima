@@ -47,10 +47,6 @@ static void upload_drawing_rect(struct brw_context *brw)
 {
    struct gl_context *ctx = &brw->ctx;
 
-   /* 3DSTATE_DRAWING_RECTANGLE is non-pipelined. */
-   if (brw->gen == 6)
-      intel_emit_post_sync_nonzero_flush(brw);
-
    BEGIN_BATCH(4);
    OUT_BATCH(_3DSTATE_DRAWING_RECTANGLE << 16 | (4 - 2));
    OUT_BATCH(0); /* xmin, ymin */
@@ -581,7 +577,6 @@ brw_emit_depth_stencil_hiz(struct brw_context *brw,
     * non-pipelined state that will need the PIPE_CONTROL workaround.
     */
    if (brw->gen == 6) {
-      intel_emit_post_sync_nonzero_flush(brw);
       intel_emit_depth_stall_flushes(brw);
    }
 
@@ -685,9 +680,6 @@ brw_emit_depth_stencil_hiz(struct brw_context *brw,
     *     when HiZ is enabled and the DEPTH_BUFFER_STATE changes.
     */
    if (brw->gen >= 6 || hiz) {
-      if (brw->gen == 6)
-	 intel_emit_post_sync_nonzero_flush(brw);
-
       BEGIN_BATCH(2);
       OUT_BATCH(_3DSTATE_CLEAR_PARAMS << 16 |
 		GEN5_DEPTH_CLEAR_VALID |
@@ -719,9 +711,6 @@ static void upload_polygon_stipple(struct brw_context *brw)
    /* _NEW_POLYGON */
    if (!ctx->Polygon.StippleFlag)
       return;
-
-   if (brw->gen == 6)
-      intel_emit_post_sync_nonzero_flush(brw);
 
    BEGIN_BATCH(33);
    OUT_BATCH(_3DSTATE_POLY_STIPPLE_PATTERN << 16 | (33 - 2));
@@ -766,9 +755,6 @@ static void upload_polygon_stipple_offset(struct brw_context *brw)
    if (!ctx->Polygon.StippleFlag)
       return;
 
-   if (brw->gen == 6)
-      intel_emit_post_sync_nonzero_flush(brw);
-
    BEGIN_BATCH(2);
    OUT_BATCH(_3DSTATE_POLY_STIPPLE_OFFSET << 16 | (2-2));
 
@@ -810,9 +796,6 @@ static void upload_aa_line_parameters(struct brw_context *brw)
    if (brw->gen == 4 && !brw->is_g4x)
       return;
 
-   if (brw->gen == 6)
-      intel_emit_post_sync_nonzero_flush(brw);
-
    BEGIN_BATCH(3);
    OUT_BATCH(_3DSTATE_AA_LINE_PARAMETERS << 16 | (3 - 2));
    /* use legacy aa line coverage computation */
@@ -841,9 +824,6 @@ static void upload_line_stipple(struct brw_context *brw)
 
    if (!ctx->Line.StippleFlag)
       return;
-
-   if (brw->gen == 6)
-      intel_emit_post_sync_nonzero_flush(brw);
 
    BEGIN_BATCH(3);
    OUT_BATCH(_3DSTATE_LINE_STIPPLE_PATTERN << 16 | (3 - 2));
@@ -882,10 +862,6 @@ void
 brw_upload_invariant_state(struct brw_context *brw)
 {
    const bool is_965 = brw->gen == 4 && !brw->is_g4x;
-
-   /* 3DSTATE_SIP, 3DSTATE_MULTISAMPLE, etc. are nonpipelined. */
-   if (brw->gen == 6)
-      intel_emit_post_sync_nonzero_flush(brw);
 
    /* Select the 3D pipeline (as opposed to media) */
    const uint32_t _3DSTATE_PIPELINE_SELECT =
@@ -953,9 +929,6 @@ static void upload_state_base_address( struct brw_context *brw )
 
    if (brw->gen >= 6) {
       uint8_t mocs = brw->gen == 7 ? GEN7_MOCS_L3 : 0;
-
-      if (brw->gen == 6)
-	 intel_emit_post_sync_nonzero_flush(brw);
 
        BEGIN_BATCH(10);
        OUT_BATCH(CMD_STATE_BASE_ADDRESS << 16 | (10 - 2));

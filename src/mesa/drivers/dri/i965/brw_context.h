@@ -861,7 +861,6 @@ struct intel_batchbuffer {
    drm_intel_bo *last_bo;
    /** BO for post-sync nonzero writes for gen6 workaround. */
    drm_intel_bo *workaround_bo;
-   bool need_workaround_flush;
 
    uint16_t emit, total;
    uint16_t used, reserved_space;

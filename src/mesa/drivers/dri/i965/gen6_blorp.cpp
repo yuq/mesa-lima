@@ -517,17 +517,16 @@ void
 gen6_blorp_emit_vs_disable(struct brw_context *brw,
                            const brw_blorp_params *params)
 {
-   if (brw->gen == 6) {
-      /* From the BSpec, 3D Pipeline > Geometry > Vertex Shader > State,
-       * 3DSTATE_VS, Dword 5.0 "VS Function Enable":
-       *
-       *   [DevSNB] A pipeline flush must be programmed prior to a
-       *   3DSTATE_VS command that causes the VS Function Enable to
-       *   toggle. Pipeline flush can be executed by sending a PIPE_CONTROL
-       *   command with CS stall bit set and a post sync operation.
-       */
-      intel_emit_post_sync_nonzero_flush(brw);
-   }
+   /* From the BSpec, 3D Pipeline > Geometry > Vertex Shader > State,
+    * 3DSTATE_VS, Dword 5.0 "VS Function Enable":
+    *
+    *   [DevSNB] A pipeline flush must be programmed prior to a
+    *   3DSTATE_VS command that causes the VS Function Enable to
+    *   toggle. Pipeline flush can be executed by sending a PIPE_CONTROL
+    *   command with CS stall bit set and a post sync operation.
+    *
+    * We've already done one at the start of the BLORP operation.
+    */
 
    /* Disable the push constant buffers. */
    BEGIN_BATCH(5);
@@ -817,7 +816,6 @@ gen6_blorp_emit_depth_stencil_config(struct brw_context *brw,
 
    /* 3DSTATE_DEPTH_BUFFER */
    {
-      intel_emit_post_sync_nonzero_flush(brw);
       intel_emit_depth_stall_flushes(brw);
 
       BEGIN_BATCH(7);
@@ -893,7 +891,6 @@ static void
 gen6_blorp_emit_depth_disable(struct brw_context *brw,
                               const brw_blorp_params *params)
 {
-   intel_emit_post_sync_nonzero_flush(brw);
    intel_emit_depth_stall_flushes(brw);
 
    BEGIN_BATCH(7);
@@ -945,9 +942,6 @@ void
 gen6_blorp_emit_drawing_rectangle(struct brw_context *brw,
                                   const brw_blorp_params *params)
 {
-   if (brw->gen == 6)
-      intel_emit_post_sync_nonzero_flush(brw);
-
    BEGIN_BATCH(4);
    OUT_BATCH(_3DSTATE_DRAWING_RECTANGLE << 16 | (4 - 2));
    OUT_BATCH(0);
@@ -997,9 +991,6 @@ gen6_blorp_emit_primitive(struct brw_context *brw,
    OUT_BATCH(0);
    OUT_BATCH(0);
    ADVANCE_BATCH();
-
-   /* Only used on Sandybridge; harmless to set elsewhere. */
-   brw->batch.need_workaround_flush = true;
 }
 
 /**
@@ -1025,7 +1016,7 @@ gen6_blorp_exec(struct brw_context *brw,
    uint32_t prog_offset = params->get_wm_prog(brw, &prog_data);
 
    /* Emit workaround flushes when we switch from drawing to blorping. */
-   brw->batch.need_workaround_flush = true;
+   intel_emit_post_sync_nonzero_flush(brw);
 
    gen6_emit_3dstate_multisample(brw, params->dst.num_samples);
    gen6_emit_3dstate_sample_mask(brw,

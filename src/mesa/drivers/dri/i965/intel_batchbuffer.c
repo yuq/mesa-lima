@@ -51,8 +51,6 @@ intel_batchbuffer_init(struct brw_context *brw)
 						      4096, 4096);
    }
 
-   brw->batch.need_workaround_flush = true;
-
    if (!brw->has_llc) {
       brw->batch.cpu_map = malloc(BATCH_SZ);
       brw->batch.map = brw->batch.cpu_map;
@@ -182,11 +180,6 @@ brw_new_batch(struct brw_context *brw)
       brw->state.dirty.brw |= BRW_NEW_CONTEXT;
 
    brw->state.dirty.brw |= BRW_NEW_BATCH;
-
-   /* Assume that the last command before the start of our batch was a
-    * primitive, for safety.
-    */
-   brw->batch.need_workaround_flush = true;
 
    brw->state_batch_count = 0;
 
@@ -647,17 +640,12 @@ gen7_emit_cs_stall_flush(struct brw_context *brw)
 void
 intel_emit_post_sync_nonzero_flush(struct brw_context *brw)
 {
-   if (!brw->batch.need_workaround_flush)
-      return;
-
    brw_emit_pipe_control_flush(brw,
                                PIPE_CONTROL_CS_STALL |
                                PIPE_CONTROL_STALL_AT_SCOREBOARD);
 
    brw_emit_pipe_control_write(brw, PIPE_CONTROL_WRITE_IMMEDIATE,
                                brw->batch.workaround_bo, 0, 0, 0);
-
-   brw->batch.need_workaround_flush = false;
 }
 
 /* Emit a pipelined flush to either flush render and texture cache for
