@@ -96,13 +96,12 @@ swap_file(struct qpu_reg *src)
  * address.
  *
  * In that case, we need to move one to a temporary that can be used in the
- * instruction, instead.
+ * instruction, instead.  We reserve ra31/rb31 for this purpose.
  */
-static bool
+static void
 fixup_raddr_conflict(struct vc4_compile *c,
                      struct qpu_reg dst,
-                     struct qpu_reg *src0, struct qpu_reg *src1,
-                     bool r3_live)
+                     struct qpu_reg *src0, struct qpu_reg *src1)
 {
         uint32_t mux0 = src0->mux == QPU_MUX_SMALL_IMM ? QPU_MUX_B : src0->mux;
         uint32_t mux1 = src1->mux == QPU_MUX_SMALL_IMM ? QPU_MUX_B : src1->mux;
@@ -111,31 +110,18 @@ fixup_raddr_conflict(struct vc4_compile *c,
             mux0 != mux1 ||
             (src0->addr == src1->addr &&
              src0->mux == src1->mux)) {
-                return false;
+                return;
         }
 
         if (swap_file(src0) || swap_file(src1))
-                return false;
+                return;
 
         if (mux0 == QPU_MUX_A) {
-                /* If we're conflicting over the A regfile, then we can just
-                 * use the reserved rb31.
-                 */
                 queue(c, qpu_a_MOV(qpu_rb(31), *src1));
                 *src1 = qpu_rb(31);
-                return false;
         } else {
-                /* Otherwise, we need a non-B regfile.  So, we spill r3 out to
-                 * rb31, then store our desired value in r3, and tell the
-                 * caller to put rb31 back into r3 when we're done.
-                 */
-                if (r3_live)
-                        queue(c, qpu_a_MOV(qpu_rb(31), qpu_r3()));
-                queue(c, qpu_a_MOV(qpu_r3(), *src1));
-
-                *src1 = qpu_r3();
-
-                return r3_live && dst.mux != QPU_MUX_R3;
+                queue(c, qpu_a_MOV(qpu_ra(31), *src1));
+                *src1 = qpu_ra(31);
         }
 }
 
@@ -148,8 +134,6 @@ vc4_generate_code(struct vc4_context *vc4, struct vc4_compile *c)
         uint32_t vpm_read_fifo_count = 0;
         uint32_t vpm_read_offset = 0;
         int last_vpm_read_index = -1;
-        bool written_r3 = false;
-        bool needs_restore;
         /* Map from the QIR ops enum order to QPU unpack bits. */
         static const uint32_t unpack_map[] = {
                 QPU_UNPACK_8A,
@@ -467,12 +451,8 @@ vc4_generate_code(struct vc4_context *vc4, struct vc4_compile *c)
                         break;
 
                 case QOP_TEX_DIRECT:
-                        needs_restore = fixup_raddr_conflict(c, dst,
-                                                             &src[0], &src[1],
-                                                             written_r3);
+                        fixup_raddr_conflict(c, dst, &src[0], &src[1]);
                         queue(c, qpu_a_ADD(qpu_rb(QPU_W_TMU0_S), src[0], src[1]));
-                        if (needs_restore)
-                                queue(c, qpu_a_MOV(qpu_r3(), qpu_rb(31)));
                         break;
 
                 case QOP_TEX_RESULT:
@@ -554,9 +534,7 @@ vc4_generate_code(struct vc4_context *vc4, struct vc4_compile *c)
                         if (qir_get_op_nsrc(qinst->op) == 1)
                                 src[1] = src[0];
 
-                        needs_restore = fixup_raddr_conflict(c, dst,
-                                                             &src[0], &src[1],
-                                                             written_r3);
+                        fixup_raddr_conflict(c, dst, &src[0], &src[1]);
 
                         if (translate[qinst->op].is_mul) {
                                 queue(c, qpu_m_alu2(translate[qinst->op].op,
@@ -567,14 +545,9 @@ vc4_generate_code(struct vc4_context *vc4, struct vc4_compile *c)
                                                     dst,
                                                     src[0], src[1]));
                         }
-                        if (needs_restore)
-                                queue(c, qpu_a_MOV(qpu_r3(), qpu_rb(31)));
 
                         break;
                 }
-
-                if (dst.mux == QPU_MUX_R3)
-                        written_r3 = true;
         }
 
         qpu_schedule_instructions(c);
