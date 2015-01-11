@@ -403,6 +403,15 @@ writes_a_file(uint64_t inst)
                 return QPU_GET_FIELD(inst, QPU_WADDR_MUL) < 32;
 }
 
+static bool
+reads_r4(uint64_t inst)
+{
+        return (QPU_GET_FIELD(inst, QPU_ADD_A) == QPU_MUX_R4 ||
+                QPU_GET_FIELD(inst, QPU_ADD_B) == QPU_MUX_R4 ||
+                QPU_GET_FIELD(inst, QPU_MUL_A) == QPU_MUX_R4 ||
+                QPU_GET_FIELD(inst, QPU_MUL_B) == QPU_MUX_R4);
+}
+
 uint64_t
 qpu_merge_inst(uint64_t a, uint64_t b)
 {
@@ -506,6 +515,36 @@ qpu_merge_inst(uint64_t a, uint64_t b)
                         return 0;
 
                 if (new_b_pack && QPU_GET_FIELD(b, QPU_OP_MUL) != QPU_M_NOP)
+                        return 0;
+        }
+
+        /* unpacking: Make sure that non-NOP unpacks agree, then deal with
+         * special-case failing of adding a non-NOP unpack to something with a
+         * NOP unpack.
+         */
+        if (!merge_fields(&merge, a, b, QPU_UNPACK_MASK, 0))
+                return 0;
+        bool new_a_unpack = (QPU_GET_FIELD(a, QPU_UNPACK) !=
+                             QPU_GET_FIELD(merge, QPU_UNPACK));
+        bool new_b_unpack = (QPU_GET_FIELD(b, QPU_UNPACK) !=
+                             QPU_GET_FIELD(merge, QPU_UNPACK));
+        if (!(merge & QPU_PM)) {
+                /* Make sure we're not going to be putting a new
+                 * a-file packing on either half.
+                 */
+                if (new_a_unpack && QPU_GET_FIELD(a, QPU_RADDR_A) != QPU_R_NOP)
+                        return 0;
+
+                if (new_b_unpack && QPU_GET_FIELD(b, QPU_RADDR_A) != QPU_R_NOP)
+                        return 0;
+        } else {
+                /* Make sure we're not going to be putting new r4 unpack on
+                 * either half.
+                 */
+                if (new_a_unpack && reads_r4(a))
+                        return 0;
+
+                if (new_b_unpack && reads_r4(b))
                         return 0;
         }
 
