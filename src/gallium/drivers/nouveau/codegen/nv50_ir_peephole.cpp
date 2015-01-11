@@ -1132,6 +1132,84 @@ ConstantFolding::opnd(Instruction *i, ImmediateValue &imm0, int s)
       i->op = OP_MOV;
       break;
    }
+   case OP_CVT: {
+      Storage res;
+
+      // TODO: handle 64-bit values properly
+      if (typeSizeof(i->dType) == 8 || typeSizeof(i->sType) == 8)
+         return;
+
+      // TODO: handle single byte/word extractions
+      if (i->subOp)
+         return;
+
+      bld.setPosition(i, true); /* make sure bld is init'ed */
+
+#define CASE(type, dst, fmin, fmax, imin, imax, umin, umax) \
+   case type: \
+      switch (i->sType) { \
+      case TYPE_F32: \
+         res.data.dst = util_iround(i->saturate ? \
+                                    CLAMP(imm0.reg.data.f32, fmin, fmax) : \
+                                    imm0.reg.data.f32); \
+         break; \
+      case TYPE_S32: \
+         res.data.dst = i->saturate ? \
+                        CLAMP(imm0.reg.data.s32, imin, imax) : \
+                        imm0.reg.data.s32; \
+         break; \
+      case TYPE_U32: \
+         res.data.dst = i->saturate ? \
+                        CLAMP(imm0.reg.data.u32, umin, umax) : \
+                        imm0.reg.data.u32; \
+         break; \
+      case TYPE_S16: \
+         res.data.dst = i->saturate ? \
+                        CLAMP(imm0.reg.data.s16, imin, imax) : \
+                        imm0.reg.data.s16; \
+         break; \
+      case TYPE_U16: \
+         res.data.dst = i->saturate ? \
+                        CLAMP(imm0.reg.data.u16, umin, umax) : \
+                        imm0.reg.data.u16; \
+         break; \
+      default: return; \
+      } \
+      i->setSrc(0, bld.mkImm(res.data.dst)); \
+      break
+
+      switch(i->dType) {
+      CASE(TYPE_U16, u16, 0, UINT16_MAX, 0, UINT16_MAX, 0, UINT16_MAX);
+      CASE(TYPE_S16, s16, INT16_MIN, INT16_MAX, INT16_MIN, INT16_MAX, 0, INT16_MAX);
+      CASE(TYPE_U32, u32, 0, UINT32_MAX, 0, INT32_MAX, 0, UINT32_MAX);
+      CASE(TYPE_S32, s32, INT32_MIN, INT32_MAX, INT32_MIN, INT32_MAX, 0, INT32_MAX);
+      case TYPE_F32:
+         switch (i->sType) {
+         case TYPE_F32:
+            res.data.f32 = i->saturate ?
+               CLAMP(imm0.reg.data.f32, 0.0f, 1.0f) :
+               imm0.reg.data.f32;
+            break;
+         case TYPE_U16: res.data.f32 = (float) imm0.reg.data.u16; break;
+         case TYPE_U32: res.data.f32 = (float) imm0.reg.data.u32; break;
+         case TYPE_S16: res.data.f32 = (float) imm0.reg.data.s16; break;
+         case TYPE_S32: res.data.f32 = (float) imm0.reg.data.s32; break;
+         default:
+            return;
+         }
+         i->setSrc(0, bld.mkImm(res.data.f32));
+         break;
+      default:
+         return;
+      }
+#undef CASE
+
+      i->setType(i->dType); /* Remove i->sType, which we don't need anymore */
+      i->op = OP_MOV;
+      i->saturate = 0;
+      i->src(0).mod = Modifier(0); /* Clear the already applied modifier */
+      break;
+   }
    default:
       return;
    }
