@@ -1596,6 +1596,15 @@ vc4_blend(struct vc4_compile *c, struct qreg *result,
                 return;
         }
 
+        struct qreg clamped_src[4];
+        struct qreg clamped_dst[4];
+        for (int i = 0; i < 4; i++) {
+                clamped_src[i] = qir_SAT(c, src_color[i]);
+                clamped_dst[i] = qir_SAT(c, dst_color[i]);
+        }
+        src_color = clamped_src;
+        dst_color = clamped_dst;
+
         struct qreg src_blend[4], dst_blend[4];
         for (int i = 0; i < 3; i++) {
                 src_blend[i] = vc4_blend_channel(c,
@@ -2793,7 +2802,7 @@ vc4_write_uniforms(struct vc4_context *vc4, struct vc4_compiled_shader *shader,
 
                 case QUNIFORM_BLEND_CONST_COLOR:
                         cl_aligned_f(&vc4->uniforms,
-                                     vc4->blend_color.color[uinfo->data[i]]);
+                                     CLAMP(vc4->blend_color.color[uinfo->data[i]], 0, 1));
                         break;
 
                 case QUNIFORM_STENCIL:
