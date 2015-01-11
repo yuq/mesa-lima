@@ -4412,8 +4412,8 @@ translate_dst(struct st_translate *t,
       /* Clamp colors for ARB_color_buffer_float. */
       switch (t->procType) {
       case TGSI_PROCESSOR_VERTEX:
-         /* XXX if the geometry shader is present, this must be done there
-          * instead of here. */
+         /* This can only occur with a compatibility profile, which doesn't
+          * support geometry shaders. */
          if (dst_reg->index == VARYING_SLOT_COL0 ||
              dst_reg->index == VARYING_SLOT_COL1 ||
              dst_reg->index == VARYING_SLOT_BFC0 ||
