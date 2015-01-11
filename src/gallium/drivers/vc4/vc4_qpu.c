@@ -337,6 +337,11 @@ try_swap_ra_file(uint64_t *merge, uint64_t *a, uint64_t *b)
                 return false;
         }
 
+        if (!(*merge & QPU_PM) &&
+            QPU_GET_FIELD(*merge, QPU_UNPACK) != QPU_UNPACK_NOP) {
+                return false;
+        }
+
         if (raddr_b_b != QPU_R_NOP &&
             raddr_b_b != raddr_a_a)
                 return false;
