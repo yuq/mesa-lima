@@ -315,6 +315,14 @@ get_swizzled_channel(struct vc4_compile *c,
         }
 }
 
+static inline struct qreg
+qir_SAT(struct vc4_compile *c, struct qreg val)
+{
+        return qir_FMAX(c,
+                        qir_FMIN(c, val, qir_uniform_f(c, 1.0)),
+                        qir_uniform_f(c, 0.0));
+}
+
 static struct qreg
 tgsi_to_qir_alu(struct vc4_compile *c,
                 struct tgsi_full_instruction *tgsi_inst,
@@ -686,13 +694,11 @@ tgsi_to_qir_tex(struct vc4_compile *c,
         }
 
         if (c->key->tex[unit].wrap_s == PIPE_TEX_WRAP_CLAMP) {
-                s = qir_FMIN(c, qir_FMAX(c, s, qir_uniform_f(c, 0.0)),
-                             qir_uniform_f(c, 1.0));
+                s = qir_SAT(c, s);
         }
 
         if (c->key->tex[unit].wrap_t == PIPE_TEX_WRAP_CLAMP) {
-                t = qir_FMIN(c, qir_FMAX(c, t, qir_uniform_f(c, 0.0)),
-                             qir_uniform_f(c, 1.0));
+                t = qir_SAT(c, t);
         }
 
         qir_TEX_T(c, t, texture_u[next_texture_u++]);
