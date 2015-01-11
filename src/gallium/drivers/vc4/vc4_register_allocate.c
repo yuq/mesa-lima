@@ -254,25 +254,13 @@ vc4_register_allocate(struct vc4_context *vc4, struct vc4_compile *c)
                                           vc4->reg_class_a);
                         break;
 
-                case QOP_UNPACK_8A_F:
-                case QOP_UNPACK_8B_F:
-                case QOP_UNPACK_8C_F:
-                case QOP_UNPACK_8D_F:
-                case QOP_UNPACK_16A_F:
-                case QOP_UNPACK_16B_F:
-                case QOP_UNPACK_8A_I:
-                case QOP_UNPACK_8B_I:
-                case QOP_UNPACK_8C_I:
-                case QOP_UNPACK_8D_I:
-                case QOP_UNPACK_16A_I:
-                case QOP_UNPACK_16B_I:
-                        /* The unpack flags require an A-file src register. */
-                        ra_set_node_class(g, temp_to_node[inst->src[0].index],
-                                          vc4->reg_class_a);
-                        break;
-
                 default:
                         break;
+                }
+
+                if (qir_src_needs_a_file(inst)) {
+                        ra_set_node_class(g, temp_to_node[inst->src[0].index],
+                                          vc4->reg_class_a);
                 }
         }
 

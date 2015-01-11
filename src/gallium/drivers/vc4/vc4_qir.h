@@ -385,6 +385,7 @@ bool qir_is_multi_instruction(struct qinst *inst);
 bool qir_depends_on_flags(struct qinst *inst);
 bool qir_writes_r4(struct qinst *inst);
 bool qir_reads_r4(struct qinst *inst);
+bool qir_src_needs_a_file(struct qinst *inst);
 struct qreg qir_follow_movs(struct qinst **defs, struct qreg reg);
 
 void qir_dump(struct vc4_compile *c);

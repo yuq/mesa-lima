@@ -193,6 +193,28 @@ qir_depends_on_flags(struct qinst *inst)
 }
 
 bool
+qir_src_needs_a_file(struct qinst *inst)
+{
+        switch (inst->op) {
+        case QOP_UNPACK_8A_F:
+        case QOP_UNPACK_8B_F:
+        case QOP_UNPACK_8C_F:
+        case QOP_UNPACK_8D_F:
+        case QOP_UNPACK_16A_F:
+        case QOP_UNPACK_16B_F:
+        case QOP_UNPACK_8A_I:
+        case QOP_UNPACK_8B_I:
+        case QOP_UNPACK_8C_I:
+        case QOP_UNPACK_8D_I:
+        case QOP_UNPACK_16A_I:
+        case QOP_UNPACK_16B_I:
+                return true;
+        default:
+                return false;
+        }
+}
+
+bool
 qir_writes_r4(struct qinst *inst)
 {
         switch (inst->op) {
