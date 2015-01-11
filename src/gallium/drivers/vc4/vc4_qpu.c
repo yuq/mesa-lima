@@ -394,6 +394,15 @@ convert_mov(uint64_t *inst)
         return true;
 }
 
+static bool
+writes_a_file(uint64_t inst)
+{
+        if (!(inst & QPU_WS))
+                return QPU_GET_FIELD(inst, QPU_WADDR_ADD) < 32;
+        else
+                return QPU_GET_FIELD(inst, QPU_WADDR_MUL) < 32;
+}
+
 uint64_t
 qpu_merge_inst(uint64_t a, uint64_t b)
 {
@@ -467,6 +476,36 @@ qpu_merge_inst(uint64_t a, uint64_t b)
                 merge = (merge & ~QPU_WS) | (a & QPU_WS);
         } else {
                 if ((a & QPU_WS) != (b & QPU_WS))
+                        return 0;
+        }
+
+        /* packing: Make sure that non-NOP packs agree, then deal with
+         * special-case failing of adding a non-NOP pack to something with a
+         * NOP pack.
+         */
+        if (!merge_fields(&merge, a, b, QPU_PACK_MASK, 0))
+                return 0;
+        bool new_a_pack = (QPU_GET_FIELD(a, QPU_PACK) !=
+                           QPU_GET_FIELD(merge, QPU_PACK));
+        bool new_b_pack = (QPU_GET_FIELD(b, QPU_PACK) !=
+                           QPU_GET_FIELD(merge, QPU_PACK));
+        if (!(merge & QPU_PM)) {
+                /* Make sure we're not going to be putting a new
+                 * a-file packing on either half.
+                 */
+                if (new_a_pack && writes_a_file(a))
+                        return 0;
+
+                if (new_b_pack && writes_a_file(b))
+                        return 0;
+        } else {
+                /* Make sure we're not going to be putting new MUL packing on
+                 * either half.
+                 */
+                if (new_a_pack && QPU_GET_FIELD(a, QPU_OP_MUL) != QPU_M_NOP)
+                        return 0;
+
+                if (new_b_pack && QPU_GET_FIELD(b, QPU_OP_MUL) != QPU_M_NOP)
                         return 0;
         }
 
