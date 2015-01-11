@@ -44,7 +44,7 @@
 #define VC4_DIRTY_FRAGTEX       (1 <<  3)
 #define VC4_DIRTY_VERTTEX       (1 <<  4)
 #define VC4_DIRTY_TEXSTATE      (1 <<  5)
-#define VC4_DIRTY_PROG          (1 <<  6)
+
 #define VC4_DIRTY_BLEND_COLOR   (1 <<  7)
 #define VC4_DIRTY_STENCIL_REF   (1 <<  8)
 #define VC4_DIRTY_SAMPLE_MASK   (1 <<  9)
@@ -59,9 +59,9 @@
 #define VC4_DIRTY_FLAT_SHADE_FLAGS (1 << 18)
 #define VC4_DIRTY_PRIM_MODE     (1 << 19)
 #define VC4_DIRTY_CLIP          (1 << 20)
-
-#define VC4_SHADER_DIRTY_VP     (1 << 0)
-#define VC4_SHADER_DIRTY_FP     (1 << 1)
+#define VC4_DIRTY_UNCOMPILED_VS (1 << 21)
+#define VC4_DIRTY_UNCOMPILED_FS (1 << 22)
+#define VC4_DIRTY_COMPILED_FS   (1 << 24)
 
 struct vc4_texture_stateobj {
         struct pipe_sampler_view *textures[PIPE_MAX_SAMPLERS];
@@ -139,7 +139,6 @@ struct vc4_compiled_shader {
 struct vc4_program_stateobj {
         struct vc4_uncompiled_shader *bind_vs, *bind_fs;
         struct vc4_compiled_shader *cs, *vs, *fs;
-        uint32_t dirty;
         uint8_t num_exports;
         /* Indexed by semantic name or TGSI_SEMANTIC_COUNT + semantic index
          * for TGSI_SEMANTIC_GENERIC.  Special vs exports (position and point-

@@ -2364,7 +2364,7 @@ vc4_update_compiled_fs(struct vc4_context *vc4, uint8_t prim_mode)
                             VC4_DIRTY_RASTERIZER |
                             VC4_DIRTY_FRAGTEX |
                             VC4_DIRTY_TEXSTATE |
-                            VC4_DIRTY_PROG))) {
+                            VC4_DIRTY_UNCOMPILED_FS))) {
                 return;
         }
 
@@ -2408,6 +2408,7 @@ vc4_update_compiled_fs(struct vc4_context *vc4, uint8_t prim_mode)
         if (vc4->prog.fs == old_fs)
                 return;
 
+        vc4->dirty |= VC4_DIRTY_COMPILED_FS;
         if (vc4->rasterizer->base.flatshade &&
             old_fs && vc4->prog.fs->color_inputs != old_fs->color_inputs) {
                 vc4->dirty |= VC4_DIRTY_FLAT_SHADE_FLAGS;
@@ -2425,7 +2426,8 @@ vc4_update_compiled_vs(struct vc4_context *vc4, uint8_t prim_mode)
                             VC4_DIRTY_VERTTEX |
                             VC4_DIRTY_TEXSTATE |
                             VC4_DIRTY_VTXSTATE |
-                            VC4_DIRTY_PROG))) {
+                            VC4_DIRTY_UNCOMPILED_VS |
+                            VC4_DIRTY_COMPILED_FS))) {
                 return;
         }
 
@@ -2814,8 +2816,7 @@ vc4_fp_state_bind(struct pipe_context *pctx, void *hwcso)
 {
         struct vc4_context *vc4 = vc4_context(pctx);
         vc4->prog.bind_fs = hwcso;
-        vc4->prog.dirty |= VC4_SHADER_DIRTY_FP;
-        vc4->dirty |= VC4_DIRTY_PROG;
+        vc4->dirty |= VC4_DIRTY_UNCOMPILED_FS;
 }
 
 static void
@@ -2823,8 +2824,7 @@ vc4_vp_state_bind(struct pipe_context *pctx, void *hwcso)
 {
         struct vc4_context *vc4 = vc4_context(pctx);
         vc4->prog.bind_vs = hwcso;
-        vc4->prog.dirty |= VC4_SHADER_DIRTY_VP;
-        vc4->dirty |= VC4_DIRTY_PROG;
+        vc4->dirty |= VC4_DIRTY_UNCOMPILED_VS;
 }
 
 void
