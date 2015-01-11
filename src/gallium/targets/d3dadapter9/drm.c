@@ -79,14 +79,20 @@ struct d3dadapter9drm_context
 static void
 drm_destroy( struct d3dadapter9_context *ctx )
 {
+    if (ctx->ref)
+        ctx->ref->destroy(ctx->ref);
+    /* because ref is a wrapper around hal, freeing ref frees hal too. */
+    else if (ctx->hal)
+        ctx->hal->destroy(ctx->hal);
 #if !GALLIUM_STATIC_TARGETS
-    struct d3dadapter9drm_context *drm = (struct d3dadapter9drm_context *)ctx;
+    {
+        struct d3dadapter9drm_context *drm = (struct d3dadapter9drm_context *)ctx;
 
-    /* pipe_loader_sw destroys the context */
-    if (drm->swdev)
-        pipe_loader_release(&drm->swdev, 1);
-    if (drm->dev)
-        pipe_loader_release(&drm->dev, 1);
+        if (drm->swdev)
+            pipe_loader_release(&drm->swdev, 1);
+        if (drm->dev)
+            pipe_loader_release(&drm->dev, 1);
+    }
 #endif
 
     FREE(ctx);
