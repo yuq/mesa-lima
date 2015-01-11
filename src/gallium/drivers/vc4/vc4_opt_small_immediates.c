@@ -79,6 +79,9 @@ qir_opt_small_immediates(struct vc4_compile *c)
                                 continue;
                         }
 
+                        if (qir_src_needs_a_file(inst))
+                                continue;
+
                         uint32_t imm = c->uniform_data[src.index];
                         uint32_t small_imm = qpu_encode_small_immediate(imm);
                         if (small_imm == ~0)
