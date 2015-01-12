@@ -341,15 +341,21 @@ vec4_visitor::opt_vector_float()
 {
    bool progress = false;
 
-   int last_reg = -1;
+   int last_reg = -1, last_reg_offset = -1;
+   enum register_file last_reg_file = BAD_FILE;
+
    int remaining_channels;
    uint8_t imm[4];
    int inst_count;
    vec4_instruction *imm_inst[4];
 
    foreach_block_and_inst_safe(block, vec4_instruction, inst, cfg) {
-      if (last_reg != inst->dst.reg) {
+      if (last_reg != inst->dst.reg ||
+          last_reg_offset != inst->dst.reg_offset ||
+          last_reg_file != inst->dst.file) {
          last_reg = inst->dst.reg;
+         last_reg_offset = inst->dst.reg_offset;
+         last_reg_file = inst->dst.file;
          remaining_channels = WRITEMASK_XYZW;
 
          inst_count = 0;
