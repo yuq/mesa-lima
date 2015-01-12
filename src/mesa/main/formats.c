@@ -28,7 +28,8 @@
 #include "formats.h"
 #include "macros.h"
 #include "glformats.h"
-
+#include "c11/threads.h"
+#include "util/hash_table.h"
 
 /**
  * Information about texture formats.
@@ -377,24 +378,67 @@ _mesa_format_to_array_format(mesa_format format)
       return _mesa_array_format_flip_channels(info->ArrayFormat);
 }
 
+static struct hash_table *format_array_format_table;
+static once_flag format_array_format_table_exists = ONCE_FLAG_INIT;
+
+static bool
+array_formats_equal(const void *a, const void *b)
+{
+   return (intptr_t)a == (intptr_t)b;
+}
+
+static void
+format_array_format_table_init()
+{
+   const struct gl_format_info *info;
+   mesa_array_format array_format;
+   unsigned f;
+
+   format_array_format_table = _mesa_hash_table_create(NULL, NULL,
+                                                       array_formats_equal);
+
+   for (f = 1; f < MESA_FORMAT_COUNT; ++f) {
+      info = _mesa_get_format_info(f);
+      if (!info->ArrayFormat)
+         continue;
+
+      if (_mesa_little_endian()) {
+         array_format = info->ArrayFormat;
+      } else {
+         array_format = _mesa_array_format_flip_channels(info->ArrayFormat);
+      }
+
+      /* This can happen and does for some of the BGR formats.  Let's take
+       * the first one in the list.
+       */
+      if (_mesa_hash_table_search_pre_hashed(format_array_format_table,
+                                             array_format,
+                                             (void *)(intptr_t)array_format))
+         continue;
+
+      _mesa_hash_table_insert_pre_hashed(format_array_format_table,
+                                         array_format,
+                                         (void *)(intptr_t)array_format,
+                                         (void *)(intptr_t)f);
+   }
+}
+
 mesa_format
 _mesa_format_from_array_format(uint32_t array_format)
 {
-   mesa_array_format af;
-   unsigned f;
+   struct hash_entry *entry;
 
    assert(_mesa_format_is_mesa_array_format(array_format));
 
-   if (_mesa_little_endian())
-      af = array_format;
+   call_once(&format_array_format_table_exists, format_array_format_table_init);
+
+   entry = _mesa_hash_table_search_pre_hashed(format_array_format_table,
+                                              array_format,
+                                              (void *)(intptr_t)array_format);
+   if (entry)
+      return (intptr_t)entry->data;
    else
-      af = _mesa_array_format_flip_channels(array_format);
-
-   for (f = 1; f < MESA_FORMAT_COUNT; ++f)
-      if (_mesa_get_format_info(f)->ArrayFormat == af)
-         return f;
-
-   return MESA_FORMAT_NONE;
+      return MESA_FORMAT_NONE;
 }
 
 /** Is the given format a compressed format? */
