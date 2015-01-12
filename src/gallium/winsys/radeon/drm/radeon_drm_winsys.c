@@ -673,7 +673,7 @@ radeon_drm_winsys_create(int fd, radeon_screen_create_t screen_create)
         goto fail;
 
     ws->cman = pb_cache_manager_create(ws->kman, 1000000, 2.0f, 0,
-                                       (ws->info.vram_size + ws->info.gart_size) / 8);
+                                       MIN2(ws->info.vram_size, ws->info.gart_size));
     if (!ws->cman)
         goto fail;
 
