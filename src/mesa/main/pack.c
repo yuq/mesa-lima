@@ -1438,14 +1438,14 @@ _mesa_pack_luminance_from_rgba_integer(GLuint n,
                                        GLenum dst_format,
                                        GLenum dst_type)
 {
-   assert(dst_format == GL_LUMINANCE_INTEGER_EXT ||
-          dst_format == GL_LUMINANCE_ALPHA_INTEGER_EXT);
-
    int i;
    int64_t lum64;
    int32_t lum32, alpha;
    bool dst_is_signed;
    int dst_bits;
+
+   assert(dst_format == GL_LUMINANCE_INTEGER_EXT ||
+          dst_format == GL_LUMINANCE_ALPHA_INTEGER_EXT);
 
    /* We first compute luminance values as a 64-bit addition of the
     * 32-bit R,G,B components, then we clamp the result to the dst type size.
