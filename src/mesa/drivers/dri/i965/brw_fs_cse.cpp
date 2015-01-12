@@ -194,7 +194,8 @@ fs_visitor::opt_cse_local(bblock_t *block)
 
          foreach_in_list_use_after(aeb_entry, entry, &aeb) {
             /* Match current instruction's expression against those in AEB. */
-            if (instructions_match(inst, entry->generator)) {
+            if (!(entry->generator->dst.is_null() && !inst->dst.is_null()) &&
+                instructions_match(inst, entry->generator)) {
                found = true;
                progress = true;
                break;
