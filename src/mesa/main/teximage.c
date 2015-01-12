@@ -4732,6 +4732,8 @@ _mesa_CompressedTextureSubImage3D(GLuint texture, GLint level, GLint xoffset,
 
    texObj = _mesa_lookup_texture_err(ctx, texture,
                                      "glCompressedTextureSubImage3D");
+   if (!texObj)
+      return;
 
    _mesa_compressed_texture_sub_image(ctx, 3, texObj, texObj->Target, level,
                                       xoffset, yoffset, zoffset,
