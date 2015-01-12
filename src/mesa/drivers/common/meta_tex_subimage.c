@@ -236,3 +236,120 @@ fail:
 
    return success;
 }
+
+bool
+_mesa_meta_pbo_GetTexSubImage(struct gl_context *ctx, GLuint dims,
+                              struct gl_texture_image *tex_image,
+                              int xoffset, int yoffset, int zoffset,
+                              int width, int height, int depth,
+                              GLenum format, GLenum type, const void *pixels,
+                              const struct gl_pixelstore_attrib *packing)
+{
+   GLuint pbo = 0, pbo_tex = 0, fbos[2] = { 0, 0 };
+   struct gl_texture_image *pbo_tex_image;
+   GLenum status;
+   bool success = false;
+
+   /* XXX: This should probably be passed in from somewhere */
+   const char *where = "_mesa_meta_pbo_GetTexSubImage";
+
+   if (!_mesa_is_bufferobj(packing->BufferObj))
+      return false;
+
+   if (format == GL_DEPTH_COMPONENT ||
+       format == GL_DEPTH_STENCIL ||
+       format == GL_STENCIL_INDEX ||
+       format == GL_COLOR_INDEX)
+      return false;
+
+   if (ctx->_ImageTransferState)
+      return false;
+
+   if (!_mesa_validate_pbo_access(dims, packing, width, height, depth,
+                                  format, type, INT_MAX, pixels)) {
+      _mesa_error(ctx, GL_INVALID_OPERATION,
+                  "%s(out of bounds PBO access)", where);
+      return true;
+   }
+
+   if (_mesa_check_disallowed_mapping(packing->BufferObj)) {
+      /* buffer is mapped - that's an error */
+      _mesa_error(ctx, GL_INVALID_OPERATION, "%s(PBO is mapped)", where);
+      return true;
+   }
+
+   pbo_tex_image = create_texture_for_pbo(ctx, false, GL_PIXEL_PACK_BUFFER,
+                                          width, height, depth,
+                                          format, type, pixels, packing,
+                                          &pbo, &pbo_tex);
+   if (!pbo_tex_image)
+      return false;
+
+   /* Only stash the current FBO */
+   _mesa_meta_begin(ctx, 0);
+
+   _mesa_GenFramebuffers(2, fbos);
+
+   if (tex_image && tex_image->TexObject->Target == GL_TEXTURE_1D_ARRAY) {
+      assert(depth == 1);
+      depth = height;
+      height = 1;
+   }
+
+   /* If we were given a texture, bind it to the read framebuffer.  If not,
+    * we're doing a ReadPixels and we should just use whatever framebuffer
+    * the client has bound.
+    */
+   if (tex_image) {
+      _mesa_BindFramebuffer(GL_READ_FRAMEBUFFER, fbos[0]);
+      _mesa_meta_bind_fbo_image(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+                                tex_image, zoffset);
+      /* If this passes on the first layer it should pass on the others */
+      status = _mesa_CheckFramebufferStatus(GL_READ_FRAMEBUFFER);
+      if (status != GL_FRAMEBUFFER_COMPLETE)
+         goto fail;
+   } else {
+      assert(depth == 1);
+   }
+
+   _mesa_BindFramebuffer(GL_DRAW_FRAMEBUFFER, fbos[1]);
+   _mesa_meta_bind_fbo_image(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+                             pbo_tex_image, 0);
+   /* If this passes on the first layer it should pass on the others */
+   status = _mesa_CheckFramebufferStatus(GL_DRAW_FRAMEBUFFER);
+   if (status != GL_FRAMEBUFFER_COMPLETE)
+      goto fail;
+
+   _mesa_update_state(ctx);
+
+   if (_mesa_meta_BlitFramebuffer(ctx, xoffset, yoffset,
+                                  xoffset + width, yoffset + height,
+                                  0, 0, width, height,
+                                  GL_COLOR_BUFFER_BIT, GL_NEAREST))
+      goto fail;
+
+   for (int z = 1; z < depth; z++) {
+      _mesa_meta_bind_fbo_image(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+                                tex_image, zoffset + z);
+      _mesa_meta_bind_fbo_image(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+                                pbo_tex_image, z);
+
+      _mesa_update_state(ctx);
+
+      _mesa_meta_BlitFramebuffer(ctx, xoffset, yoffset,
+                                 xoffset + width, yoffset + height,
+                                 0, 0, width, height,
+                                 GL_COLOR_BUFFER_BIT, GL_NEAREST);
+   }
+
+   success = true;
+
+fail:
+   _mesa_DeleteFramebuffers(2, fbos);
+   _mesa_DeleteTextures(1, &pbo_tex);
+   _mesa_DeleteBuffers(1, &pbo);
+
+   _mesa_meta_end(ctx);
+
+   return success;
+}
