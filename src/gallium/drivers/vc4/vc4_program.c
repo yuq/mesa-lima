@@ -1804,15 +1804,6 @@ emit_frag_end(struct vc4_compile *c)
                         blend_color[i] = qir_srgb_encode(c, blend_color[i]);
         }
 
-        /* If the bit isn't set in the color mask, then just return the
-         * original dst color, instead.
-         */
-        for (int i = 0; i < 4; i++) {
-                if (!(c->fs_key->blend.colormask & (1 << i))) {
-                        blend_color[i] = dst_color[i];
-                }
-        }
-
         /* Debug: Sometimes you're getting a black output and just want to see
          * if the FS is getting executed at all.  Spam magenta into the color
          * output.
@@ -1873,6 +1864,24 @@ emit_frag_end(struct vc4_compile *c)
 
         if (c->fs_key->logicop_func != PIPE_LOGICOP_COPY) {
                 packed_color = vc4_logicop(c, packed_color, packed_dst_color);
+        }
+
+        /* If the bit isn't set in the color mask, then just return the
+         * original dst color, instead.
+         */
+        uint32_t colormask = 0xffffffff;
+        for (int i = 0; i < 4; i++) {
+                if (format_swiz[i] < 4 &&
+                    !(c->fs_key->blend.colormask & (1 << format_swiz[i]))) {
+                        colormask &= ~(0xff << (i * 8));
+                }
+        }
+        if (colormask != 0xffffffff) {
+                packed_color = qir_OR(c,
+                                      qir_AND(c, packed_color,
+                                              qir_uniform_ui(c, colormask)),
+                                      qir_AND(c, packed_dst_color,
+                                              qir_uniform_ui(c, ~colormask)));
         }
 
         qir_emit(c, qir_inst(QOP_TLB_COLOR_WRITE, c->undef,
