@@ -36,6 +36,10 @@
 #include "radeon/radeon_video.h"
 #include <inttypes.h>
 
+#ifndef HAVE_LLVM
+#define HAVE_LLVM 0
+#endif
+
 /*
  * pipe_context
  */
