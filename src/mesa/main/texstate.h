@@ -41,7 +41,6 @@
 static inline struct gl_texture_unit *
 _mesa_get_tex_unit(struct gl_context *ctx, GLuint unit)
 {
-   ASSERT(unit >= 0);
    ASSERT(unit < Elements(ctx->Texture.Unit));
    return &(ctx->Texture.Unit[unit]);
 }
