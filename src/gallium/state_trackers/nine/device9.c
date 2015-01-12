@@ -765,6 +765,7 @@ NineDevice9_CreateTexture( struct NineDevice9 *This,
              D3DUSAGE_DYNAMIC | D3DUSAGE_NONSECURE | D3DUSAGE_RENDERTARGET |
              D3DUSAGE_SOFTWAREPROCESSING | D3DUSAGE_TEXTAPI;
 
+    *ppTexture = NULL;
     user_assert(Width && Height, D3DERR_INVALIDCALL);
     user_assert(!pSharedHandle || This->ex, D3DERR_INVALIDCALL);
     /* When is used shared handle, Pool must be
@@ -806,6 +807,7 @@ NineDevice9_CreateVolumeTexture( struct NineDevice9 *This,
     Usage &= D3DUSAGE_DYNAMIC | D3DUSAGE_NONSECURE |
              D3DUSAGE_SOFTWAREPROCESSING;
 
+    *ppVolumeTexture = NULL;
     user_assert(Width && Height && Depth, D3DERR_INVALIDCALL);
     user_assert(!pSharedHandle || Pool == D3DPOOL_DEFAULT, D3DERR_INVALIDCALL);
 
@@ -839,6 +841,7 @@ NineDevice9_CreateCubeTexture( struct NineDevice9 *This,
              D3DUSAGE_NONSECURE | D3DUSAGE_RENDERTARGET |
              D3DUSAGE_SOFTWAREPROCESSING;
 
+    *ppCubeTexture = NULL;
     user_assert(EdgeLength, D3DERR_INVALIDCALL);
     user_assert(!pSharedHandle || Pool == D3DPOOL_DEFAULT, D3DERR_INVALIDCALL);
 
@@ -1020,6 +1023,7 @@ NineDevice9_CreateRenderTarget( struct NineDevice9 *This,
                                 IDirect3DSurface9 **ppSurface,
                                 HANDLE *pSharedHandle )
 {
+    *ppSurface = NULL;
     return create_zs_or_rt_surface(This, 0, D3DPOOL_DEFAULT,
                                    Width, Height, Format,
                                    MultiSample, MultisampleQuality,
@@ -1037,6 +1041,7 @@ NineDevice9_CreateDepthStencilSurface( struct NineDevice9 *This,
                                        IDirect3DSurface9 **ppSurface,
                                        HANDLE *pSharedHandle )
 {
+    *ppSurface = NULL;
     return create_zs_or_rt_surface(This, 1, D3DPOOL_DEFAULT,
                                    Width, Height, Format,
                                    MultiSample, MultisampleQuality,
@@ -1474,6 +1479,7 @@ NineDevice9_CreateOffscreenPlainSurface( struct NineDevice9 *This,
         Width, Height, d3dformat_to_string(Format), Format, Pool,
         ppSurface, pSharedHandle);
 
+    *ppSurface = NULL;
     user_assert(!pSharedHandle || Pool == D3DPOOL_DEFAULT
                                || Pool == D3DPOOL_SYSTEMMEM, D3DERR_INVALIDCALL);
     user_assert(Pool != D3DPOOL_MANAGED, D3DERR_INVALIDCALL);
