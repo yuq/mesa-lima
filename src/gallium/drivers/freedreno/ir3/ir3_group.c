@@ -187,6 +187,36 @@ static void instr_find_neighbors(struct ir3_instruction *instr)
 	}
 }
 
+/* a bit of sadness.. we can't have "holes" in inputs from PoV of
+ * register assignment, they still need to be grouped together.  So
+ * we need to insert dummy/padding instruction for grouping, and
+ * then take it back out again before anyone notices.
+ */
+static void pad_and_group_input(struct ir3_instruction **input, unsigned n)
+{
+	int i, mask = 0;
+	struct ir3_block *block = NULL;
+
+	for (i = n - 1; i >= 0; i--) {
+		struct ir3_instruction *instr = input[i];
+		if (instr) {
+			block = instr->block;
+		} else if (block) {
+			instr = ir3_instr_create(block, 0, OPC_NOP);
+			ir3_reg_create(instr, 0, IR3_REG_SSA);    /* dst */
+			input[i] = instr;
+			mask |= (1 << i);
+		}
+	}
+
+	group_n(&arr_ops_in, input, n);
+
+	for (i = 0; i < n; i++) {
+		if (mask & (1 << i))
+			input[i] = NULL;
+	}
+}
+
 static void block_find_neighbors(struct ir3_block *block)
 {
 	unsigned i;
@@ -214,7 +244,7 @@ static void block_find_neighbors(struct ir3_block *block)
 		 * on vec4 boundaries
 		 */
 		for (i = 0; i < block->ninputs; i += 4)
-			group_n(&arr_ops_in, &block->inputs[i], 4);
+			pad_and_group_input(&block->inputs[i], 4);
 		for (i = 0; i < block->noutputs; i += 4)
 			group_n(&arr_ops_out, &block->outputs[i], 4);
 
