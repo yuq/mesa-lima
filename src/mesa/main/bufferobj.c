@@ -665,11 +665,11 @@ _mesa_buffer_get_subdata( struct gl_context *ctx, GLintptrARB offset,
  * dd_function_table::ClearBufferSubData.
  */
 void
-_mesa_buffer_clear_subdata(struct gl_context *ctx,
-                           GLintptr offset, GLsizeiptr size,
-                           const GLvoid *clearValue,
-                           GLsizeiptr clearValueSize,
-                           struct gl_buffer_object *bufObj)
+_mesa_ClearBufferSubData_sw(struct gl_context *ctx,
+                            GLintptr offset, GLsizeiptr size,
+                            const GLvoid *clearValue,
+                            GLsizeiptr clearValueSize,
+                            struct gl_buffer_object *bufObj)
 {
    GLsizeiptr i;
    GLubyte *dest;
@@ -1118,7 +1118,7 @@ _mesa_init_buffer_object_functions(struct dd_function_table *driver)
    driver->UnmapBuffer = _mesa_buffer_unmap;
 
    /* GL_ARB_clear_buffer_object */
-   driver->ClearBufferSubData = _mesa_buffer_clear_subdata;
+   driver->ClearBufferSubData = _mesa_ClearBufferSubData_sw;
 
    /* GL_ARB_map_buffer_range */
    driver->MapBufferRange = _mesa_buffer_map_range;
@@ -1700,84 +1700,31 @@ _mesa_GetBufferSubData(GLenum target, GLintptr offset,
    ctx->Driver.GetBufferSubData( ctx, offset, size, data, bufObj );
 }
 
-
-void GLAPIENTRY
-_mesa_ClearBufferData(GLenum target, GLenum internalformat, GLenum format,
-                      GLenum type, const GLvoid* data)
+/**
+ * \param subdata   true if caller is *SubData, false if *Data
+ */
+void
+_mesa_clear_buffer_sub_data(struct gl_context *ctx,
+                            struct gl_buffer_object *bufObj,
+                            GLenum internalformat,
+                            GLintptr offset, GLsizeiptr size,
+                            GLenum format, GLenum type,
+                            const GLvoid *data,
+                            const char *func, bool subdata)
 {
-   GET_CURRENT_CONTEXT(ctx);
-   struct gl_buffer_object* bufObj;
    mesa_format mesaFormat;
    GLubyte clearValue[MAX_PIXEL_BYTES];
    GLsizeiptr clearValueSize;
 
-   bufObj = get_buffer(ctx, "glClearBufferData", target, GL_INVALID_VALUE);
-   if (!bufObj) {
-      return;
-   }
-
-   if (_mesa_check_disallowed_mapping(bufObj)) {
-      _mesa_error(ctx, GL_INVALID_OPERATION,
-                  "glClearBufferData(buffer currently mapped)");
-      return;
-   }
-
-   mesaFormat = validate_clear_buffer_format(ctx, internalformat,
-                                             format, type,
-                                             "glClearBufferData");
-   if (mesaFormat == MESA_FORMAT_NONE) {
-      return;
-   }
-
-   clearValueSize = _mesa_get_format_bytes(mesaFormat);
-   if (bufObj->Size % clearValueSize != 0) {
-      _mesa_error(ctx, GL_INVALID_VALUE,
-                  "glClearBufferData(size is not a multiple of "
-                  "internalformat size)");
-      return;
-   }
-
-   if (data == NULL) {
-      /* clear to zeros, per the spec */
-      ctx->Driver.ClearBufferSubData(ctx, 0, bufObj->Size,
-                                     NULL, clearValueSize, bufObj);
-      return;
-   }
-
-   if (!convert_clear_buffer_data(ctx, mesaFormat, clearValue,
-                                  format, type, data, "glClearBufferData")) {
-      return;
-   }
-
-   ctx->Driver.ClearBufferSubData(ctx, 0, bufObj->Size,
-                                  clearValue, clearValueSize, bufObj);
-}
-
-
-void GLAPIENTRY
-_mesa_ClearBufferSubData(GLenum target, GLenum internalformat,
-                         GLintptr offset, GLsizeiptr size,
-                         GLenum format, GLenum type,
-                         const GLvoid* data)
-{
-   GET_CURRENT_CONTEXT(ctx);
-   struct gl_buffer_object* bufObj;
-   mesa_format mesaFormat;
-   GLubyte clearValue[MAX_PIXEL_BYTES];
-   GLsizeiptr clearValueSize;
-
-   bufObj = get_buffer(ctx, "glClearBufferSubData", target, GL_INVALID_VALUE);
-   if (!bufObj)
-      return;
-
+   /* This checks for disallowed mappings. */
    if (!buffer_object_subdata_range_good(ctx, bufObj, offset, size,
-                                         true, "glClearBufferSubData")) {
+                                         subdata, func)) {
       return;
    }
 
    mesaFormat = validate_clear_buffer_format(ctx, internalformat,
-                                             format, type,
-                                             "glClearBufferSubData");
+                                             format, type, func);
+
    if (mesaFormat == MESA_FORMAT_NONE) {
       return;
    }
@@ -1785,8 +1732,8 @@ _mesa_ClearBufferSubData(GLenum target, GLenum internalformat,
    clearValueSize = _mesa_get_format_bytes(mesaFormat);
    if (offset % clearValueSize != 0 || size % clearValueSize != 0) {
       _mesa_error(ctx, GL_INVALID_VALUE,
-                  "glClearBufferSubData(offset or size is not a multiple of "
-                  "internalformat size)");
+                  "%s(offset or size is not a multiple of "
+                  "internalformat size)", func);
       return;
    }
 
@@ -1800,8 +1747,7 @@ _mesa_ClearBufferSubData(GLenum target, GLenum internalformat,
    }
 
    if (!convert_clear_buffer_data(ctx, mesaFormat, clearValue,
-                                  format, type, data,
-                                  "glClearBufferSubData")) {
+                                  format, type, data, func)) {
       return;
    }
 
@@ -1809,6 +1755,41 @@ _mesa_ClearBufferSubData(GLenum target, GLenum internalformat,
       ctx->Driver.ClearBufferSubData(ctx, offset, size,
                                      clearValue, clearValueSize, bufObj);
    }
+}
+
+void GLAPIENTRY
+_mesa_ClearBufferData(GLenum target, GLenum internalformat, GLenum format,
+                      GLenum type, const GLvoid *data)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   struct gl_buffer_object *bufObj;
+
+   bufObj = get_buffer(ctx, "glClearBufferData", target, GL_INVALID_VALUE);
+   if (!bufObj)
+      return;
+
+   _mesa_clear_buffer_sub_data(ctx, bufObj, internalformat, 0, bufObj->Size,
+                               format, type, data,
+                               "glClearBufferData", false);
+}
+
+
+void GLAPIENTRY
+_mesa_ClearBufferSubData(GLenum target, GLenum internalformat,
+                         GLintptr offset, GLsizeiptr size,
+                         GLenum format, GLenum type,
+                         const GLvoid* data)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   struct gl_buffer_object* bufObj;
+
+   bufObj = get_buffer(ctx, "glClearBufferSubData", target, GL_INVALID_VALUE);
+   if (!bufObj)
+      return;
+
+   _mesa_clear_buffer_sub_data(ctx, bufObj, internalformat, offset, size,
+                               format, type, data,
+                               "glClearBufferSubData", true);
 }
 
 
