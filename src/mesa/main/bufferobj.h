@@ -149,6 +149,13 @@ _mesa_buffer_unmap_all_mappings(struct gl_context *ctx,
                                 struct gl_buffer_object *bufObj);
 
 extern void
+_mesa_copy_buffer_sub_data(struct gl_context *ctx,
+                           struct gl_buffer_object *src,
+                           struct gl_buffer_object *dst,
+                           GLintptr readOffset, GLintptr writeOffset,
+                           GLsizeiptr size, const char *func);
+
+extern void
 _mesa_buffer_clear_subdata(struct gl_context *ctx,
                            GLintptr offset, GLsizeiptr size,
                            const GLvoid *clearValue,
@@ -231,6 +238,11 @@ void GLAPIENTRY
 _mesa_CopyBufferSubData(GLenum readTarget, GLenum writeTarget,
                         GLintptr readOffset, GLintptr writeOffset,
                         GLsizeiptr size);
+
+void GLAPIENTRY
+_mesa_CopyNamedBufferSubData(GLuint readBuffer, GLuint writeBuffer,
+                             GLintptr readOffset, GLintptr writeOffset,
+                             GLsizeiptr size);
 
 void * GLAPIENTRY
 _mesa_MapBufferRange(GLenum target, GLintptr offset, GLsizeiptr length,

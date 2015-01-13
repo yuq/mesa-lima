@@ -35,6 +35,14 @@
       <param name="data" type="const GLvoid *" />
    </function>
 
+   <function name="CopyNamedBufferSubData" offset="assign">
+      <param name="readBuffer" type="GLuint" />
+      <param name="writeBuffer" type="GLuint" />
+      <param name="readOffset" type="GLintptr" />
+      <param name="writeOffset" type="GLintptr" />
+      <param name="size" type="GLsizeiptr" />
+   </function>
+
    <!-- Texture object functions -->
 
    <function name="CreateTextures" offset="assign">

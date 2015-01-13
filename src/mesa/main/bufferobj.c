@@ -766,11 +766,11 @@ _mesa_buffer_unmap(struct gl_context *ctx, struct gl_buffer_object *bufObj,
  * Called via glCopyBufferSubData().
  */
 static void
-_mesa_copy_buffer_subdata(struct gl_context *ctx,
-                          struct gl_buffer_object *src,
-                          struct gl_buffer_object *dst,
-                          GLintptr readOffset, GLintptr writeOffset,
-                          GLsizeiptr size)
+copy_buffer_sub_data_fallback(struct gl_context *ctx,
+                              struct gl_buffer_object *src,
+                              struct gl_buffer_object *dst,
+                              GLintptr readOffset, GLintptr writeOffset,
+                              GLsizeiptr size)
 {
    GLubyte *srcPtr, *dstPtr;
 
@@ -1125,7 +1125,7 @@ _mesa_init_buffer_object_functions(struct dd_function_table *driver)
    driver->FlushMappedBufferRange = _mesa_buffer_flush_mapped_range;
 
    /* GL_ARB_copy_buffer */
-   driver->CopyBufferSubData = _mesa_copy_buffer_subdata;
+   driver->CopyBufferSubData = copy_buffer_sub_data_fallback;
 }
 
 
@@ -2130,6 +2130,75 @@ _mesa_GetBufferPointerv(GLenum target, GLenum pname, GLvoid **params)
 }
 
 
+void
+_mesa_copy_buffer_sub_data(struct gl_context *ctx,
+                           struct gl_buffer_object *src,
+                           struct gl_buffer_object *dst,
+                           GLintptr readOffset, GLintptr writeOffset,
+                           GLsizeiptr size, const char *func)
+{
+   if (_mesa_check_disallowed_mapping(src)) {
+      _mesa_error(ctx, GL_INVALID_OPERATION,
+                  "%s(readBuffer is mapped)", func);
+      return;
+   }
+
+   if (_mesa_check_disallowed_mapping(dst)) {
+      _mesa_error(ctx, GL_INVALID_OPERATION,
+                  "%s(writeBuffer is mapped)", func);
+      return;
+   }
+
+   if (readOffset < 0) {
+      _mesa_error(ctx, GL_INVALID_VALUE,
+                  "%s(readOffset %d < 0)", func, (int) readOffset);
+      return;
+   }
+
+   if (writeOffset < 0) {
+      _mesa_error(ctx, GL_INVALID_VALUE,
+                  "%s(writeOffset %d < 0)", func, (int) writeOffset);
+      return;
+   }
+
+   if (size < 0) {
+      _mesa_error(ctx, GL_INVALID_VALUE,
+                  "%s(size %d < 0)", func, (int) size);
+      return;
+   }
+
+   if (readOffset + size > src->Size) {
+      _mesa_error(ctx, GL_INVALID_VALUE,
+                  "%s(readOffset %d + size %d > src_buffer_size %d)", func,
+                  (int) readOffset, (int) size, (int) src->Size);
+      return;
+   }
+
+   if (writeOffset + size > dst->Size) {
+      _mesa_error(ctx, GL_INVALID_VALUE,
+                  "%s(writeOffset %d + size %d > dst_buffer_size %d)", func,
+                  (int) writeOffset, (int) size, (int) dst->Size);
+      return;
+   }
+
+   if (src == dst) {
+      if (readOffset + size <= writeOffset) {
+         /* OK */
+      }
+      else if (writeOffset + size <= readOffset) {
+         /* OK */
+      }
+      else {
+         /* overlapping src/dst is illegal */
+         _mesa_error(ctx, GL_INVALID_VALUE,
+                     "%s(overlapping src/dst)", func);
+         return;
+      }
+   }
+
+   ctx->Driver.CopyBufferSubData(ctx, src, dst, readOffset, writeOffset, size);
+}
+
 void GLAPIENTRY
 _mesa_CopyBufferSubData(GLenum readTarget, GLenum writeTarget,
                         GLintptr readOffset, GLintptr writeOffset,
@@ -2148,66 +2217,30 @@ _mesa_CopyBufferSubData(GLenum readTarget, GLenum writeTarget,
    if (!dst)
       return;
 
-   if (_mesa_check_disallowed_mapping(src)) {
-      _mesa_error(ctx, GL_INVALID_OPERATION,
-                  "glCopyBufferSubData(readBuffer is mapped)");
+   _mesa_copy_buffer_sub_data(ctx, src, dst, readOffset, writeOffset, size,
+                              "glCopyBufferSubData");
+}
+
+void GLAPIENTRY
+_mesa_CopyNamedBufferSubData(GLuint readBuffer, GLuint writeBuffer,
+                             GLintptr readOffset, GLintptr writeOffset,
+                             GLsizeiptr size)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   struct gl_buffer_object *src, *dst;
+
+   src = _mesa_lookup_bufferobj_err(ctx, readBuffer,
+                                    "glCopyNamedBufferSubData");
+   if (!src)
       return;
-   }
 
-   if (_mesa_check_disallowed_mapping(dst)) {
-      _mesa_error(ctx, GL_INVALID_OPERATION,
-                  "glCopyBufferSubData(writeBuffer is mapped)");
+   dst = _mesa_lookup_bufferobj_err(ctx, writeBuffer,
+                                    "glCopyNamedBufferSubData");
+   if (!dst)
       return;
-   }
 
-   if (readOffset < 0) {
-      _mesa_error(ctx, GL_INVALID_VALUE,
-                  "glCopyBufferSubData(readOffset = %d)", (int) readOffset);
-      return;
-   }
-
-   if (writeOffset < 0) {
-      _mesa_error(ctx, GL_INVALID_VALUE,
-                  "glCopyBufferSubData(writeOffset = %d)", (int) writeOffset);
-      return;
-   }
-
-   if (size < 0) {
-      _mesa_error(ctx, GL_INVALID_VALUE,
-                  "glCopyBufferSubData(writeOffset = %d)", (int) size);
-      return;
-   }
-
-   if (readOffset + size > src->Size) {
-      _mesa_error(ctx, GL_INVALID_VALUE,
-                  "glCopyBufferSubData(readOffset + size = %d)",
-                  (int) (readOffset + size));
-      return;
-   }
-
-   if (writeOffset + size > dst->Size) {
-      _mesa_error(ctx, GL_INVALID_VALUE,
-                  "glCopyBufferSubData(writeOffset + size = %d)",
-                  (int) (writeOffset + size));
-      return;
-   }
-
-   if (src == dst) {
-      if (readOffset + size <= writeOffset) {
-         /* OK */
-      }
-      else if (writeOffset + size <= readOffset) {
-         /* OK */
-      }
-      else {
-         /* overlapping src/dst is illegal */
-         _mesa_error(ctx, GL_INVALID_VALUE,
-                     "glCopyBufferSubData(overlapping src/dst)");
-         return;
-      }
-   }
-
-   ctx->Driver.CopyBufferSubData(ctx, src, dst, readOffset, writeOffset, size);
+   _mesa_copy_buffer_sub_data(ctx, src, dst, readOffset, writeOffset, size,
+                              "glCopyNamedBufferSubData");
 }
 
 
