@@ -2570,7 +2570,7 @@ write_texture_p0(struct vc4_context *vc4,
                                texture->u.tex.first_level, VC4_TEX_P0_MIPLVLS) |
                  VC4_SET_FIELD(texture->target == PIPE_TEXTURE_CUBE,
                                VC4_TEX_P0_CMMODE) |
-                 VC4_SET_FIELD(rsc->vc4_format & 7, VC4_TEX_P0_TYPE));
+                 VC4_SET_FIELD(rsc->vc4_format & 15, VC4_TEX_P0_TYPE));
 }
 
 static void
