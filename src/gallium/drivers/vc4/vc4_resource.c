@@ -468,6 +468,106 @@ vc4_surface_destroy(struct pipe_context *pctx, struct pipe_surface *psurf)
         FREE(psurf);
 }
 
+/** Debug routine to dump the contents of an 8888 surface to the console */
+void
+vc4_dump_surface(struct pipe_surface *psurf)
+{
+        if (!psurf)
+                return;
+
+        struct pipe_resource *prsc = psurf->texture;
+        struct vc4_resource *rsc = vc4_resource(prsc);
+        uint32_t *map = vc4_bo_map(rsc->bo);
+        uint32_t stride = rsc->slices[0].stride / 4;
+        uint32_t width = psurf->width;
+        uint32_t height = psurf->height;
+        uint32_t chunk_w = width / 79;
+        uint32_t chunk_h = height / 40;
+        uint32_t found_colors[10];
+        uint32_t num_found_colors = 0;
+
+        if (rsc->vc4_format != VC4_TEXTURE_TYPE_RGBA32R) {
+                fprintf(stderr, "%s: Unsupported format %s\n",
+                        __func__, util_format_short_name(psurf->format));
+                return;
+        }
+
+        for (int by = 0; by < height; by += chunk_h) {
+                for (int bx = 0; bx < width; bx += chunk_w) {
+                        int all_found_color = -1; /* nothing found */
+
+                        for (int y = by; y < MIN2(height, by + chunk_h); y++) {
+                                for (int x = bx; x < MIN2(width, bx + chunk_w); x++) {
+                                        uint32_t pix = map[y * stride + x];
+
+                                        int i;
+                                        for (i = 0; i < num_found_colors; i++) {
+                                                if (pix == found_colors[i])
+                                                        break;
+                                        }
+                                        if (i == num_found_colors &&
+                                            num_found_colors <
+                                            ARRAY_SIZE(found_colors)) {
+                                                found_colors[num_found_colors++] = pix;
+                                        }
+
+                                        if (i < num_found_colors) {
+                                                if (all_found_color == -1)
+                                                        all_found_color = i;
+                                                else if (i != all_found_color)
+                                                        all_found_color = ARRAY_SIZE(found_colors);
+                                        }
+                                }
+                        }
+                        /* If all pixels for this chunk have a consistent
+                         * value, then print a character for it.  Either a
+                         * fixed name (particularly common for piglit tests),
+                         * or a runtime-generated number.
+                         */
+                        if (all_found_color >= 0 &&
+                            all_found_color < ARRAY_SIZE(found_colors)) {
+                                static const struct {
+                                        uint32_t val;
+                                        const char *c;
+                                } named_colors[] = {
+                                        { 0xff000000, "█" },
+                                        { 0x00000000, "█" },
+                                        { 0xffff0000, "r" },
+                                        { 0xff00ff00, "g" },
+                                        { 0xff0000ff, "b" },
+                                        { 0xffffffff, "w" },
+                                };
+                                int i;
+                                for (i = 0; i < ARRAY_SIZE(named_colors); i++) {
+                                        if (named_colors[i].val ==
+                                            found_colors[all_found_color]) {
+                                                fprintf(stderr, "%s",
+                                                        named_colors[i].c);
+                                                break;
+                                        }
+                                }
+                                /* For unnamed colors, print a number and the
+                                 * numbers will have values printed at the
+                                 * end.
+                                 */
+                                if (i == ARRAY_SIZE(named_colors)) {
+                                        fprintf(stderr, "%c",
+                                                '0' + all_found_color);
+                                }
+                        } else {
+                                /* If there's no consistent color, print this.
+                                 */
+                                fprintf(stderr, ".");
+                        }
+                }
+                fprintf(stderr, "\n");
+        }
+
+        for (int i = 0; i < num_found_colors; i++) {
+                fprintf(stderr, "color %d: 0x%08x\n", i, found_colors[i]);
+        }
+}
+
 static void
 vc4_flush_resource(struct pipe_context *pctx, struct pipe_resource *resource)
 {
