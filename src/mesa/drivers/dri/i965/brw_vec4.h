@@ -591,7 +591,9 @@ public:
                   struct gl_program *prog,
                   struct brw_vue_prog_data *prog_data,
                   void *mem_ctx,
-                  bool debug_flag);
+                  bool debug_flag,
+                  const char *stage_name,
+                  const char *stage_abbrev);
    ~vec4_generator();
 
    const unsigned *generate_assembly(const cfg_t *cfg, unsigned *asm_size);
@@ -684,6 +686,8 @@ private:
    struct brw_vue_prog_data *prog_data;
 
    void *mem_ctx;
+   const char *stage_name;
+   const char *stage_abbrev;
    const bool debug_flag;
 };
 
