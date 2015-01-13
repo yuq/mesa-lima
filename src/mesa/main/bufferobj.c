@@ -232,40 +232,31 @@ bufferobj_range_mapped(const struct gl_buffer_object *obj,
  * \c glClearBufferSubData.
  *
  * \param ctx     GL context.
- * \param target  Buffer object target on which to operate.
+ * \param bufObj  The buffer object.
  * \param offset  Offset of the first byte of the subdata range.
  * \param size    Size, in bytes, of the subdata range.
  * \param mappedRange  If true, checks if an overlapping range is mapped.
  *                     If false, checks if buffer is mapped.
- * \param errorNoBuffer  Error code if no buffer is bound to target.
  * \param caller  Name of calling function for recording errors.
- * \return   A pointer to the buffer object bound to \c target in the
- *           specified context or \c NULL if any of the parameter or state
- *           conditions are invalid.
+ * \return   false if error, true otherwise
  *
  * \sa glBufferSubDataARB, glGetBufferSubDataARB, glClearBufferSubData
  */
-static struct gl_buffer_object *
-buffer_object_subdata_range_good(struct gl_context * ctx, GLenum target,
-                                 GLintptrARB offset, GLsizeiptrARB size,
-                                 bool mappedRange, GLenum errorNoBuffer,
-                                 const char *caller)
+static bool
+buffer_object_subdata_range_good(struct gl_context *ctx,
+                                 struct gl_buffer_object *bufObj,
+                                 GLintptr offset, GLsizeiptr size,
+                                 bool mappedRange, const char *caller)
 {
-   struct gl_buffer_object *bufObj;
-
    if (size < 0) {
       _mesa_error(ctx, GL_INVALID_VALUE, "%s(size < 0)", caller);
-      return NULL;
+      return false;
    }
 
    if (offset < 0) {
       _mesa_error(ctx, GL_INVALID_VALUE, "%s(offset < 0)", caller);
-      return NULL;
+      return false;
    }
-
-   bufObj = get_buffer(ctx, caller, target, errorNoBuffer);
-   if (!bufObj)
-      return NULL;
 
    if (offset + size > bufObj->Size) {
       _mesa_error(ctx, GL_INVALID_VALUE,
@@ -273,26 +264,26 @@ buffer_object_subdata_range_good(struct gl_context * ctx, GLenum target,
                   (unsigned long) offset,
                   (unsigned long) size,
                   (unsigned long) bufObj->Size);
-      return NULL;
+      return false;
    }
 
    if (bufObj->Mappings[MAP_USER].AccessFlags & GL_MAP_PERSISTENT_BIT)
-      return bufObj;
+      return true;
 
    if (mappedRange) {
       if (bufferobj_range_mapped(bufObj, offset, size)) {
          _mesa_error(ctx, GL_INVALID_OPERATION, "%s", caller);
-         return NULL;
+         return false;
       }
    }
    else {
       if (_mesa_bufferobj_mapped(bufObj, MAP_USER)) {
          _mesa_error(ctx, GL_INVALID_OPERATION, "%s", caller);
-         return NULL;
+         return false;
       }
    }
 
-   return bufObj;
+   return true;
 }
 
 
@@ -607,9 +598,9 @@ buffer_data_fallback(struct gl_context *ctx, GLenum target, GLsizeiptr size,
  * \sa glBufferSubDataARB, dd_function_table::BufferSubData.
  */
 static void
-_mesa_buffer_subdata( struct gl_context *ctx, GLintptrARB offset,
-		      GLsizeiptrARB size, const GLvoid * data,
-		      struct gl_buffer_object * bufObj )
+buffer_sub_data_fallback(struct gl_context *ctx, GLintptr offset,
+                         GLsizeiptr size, const GLvoid *data,
+                         struct gl_buffer_object *bufObj)
 {
    (void) ctx;
 
@@ -1118,7 +1109,7 @@ _mesa_init_buffer_object_functions(struct dd_function_table *driver)
    driver->NewBufferObject = _mesa_new_buffer_object;
    driver->DeleteBuffer = _mesa_delete_buffer_object;
    driver->BufferData = buffer_data_fallback;
-   driver->BufferSubData = _mesa_buffer_subdata;
+   driver->BufferSubData = buffer_sub_data_fallback;
    driver->GetBufferSubData = _mesa_buffer_get_subdata;
    driver->UnmapBuffer = _mesa_buffer_unmap;
 
@@ -1617,24 +1608,31 @@ _mesa_NamedBufferData(GLuint buffer, GLsizeiptr size, const GLvoid *data,
 }
 
 
-void GLAPIENTRY
-_mesa_BufferSubData(GLenum target, GLintptrARB offset,
-                       GLsizeiptrARB size, const GLvoid * data)
+/**
+ * Implementation for glBufferSubData and glNamedBufferSubData.
+ *
+ * \param ctx     GL context.
+ * \param bufObj  The buffer object.
+ * \param offset  Offset of the first byte of the subdata range.
+ * \param size    Size, in bytes, of the subdata range.
+ * \param data    The data store.
+ * \param func  Name of calling function for recording errors.
+ *
+ */
+void
+_mesa_buffer_sub_data(struct gl_context *ctx, struct gl_buffer_object *bufObj,
+                      GLintptr offset, GLsizeiptr size, const GLvoid *data,
+                      const char *func)
 {
-   GET_CURRENT_CONTEXT(ctx);
-   struct gl_buffer_object *bufObj;
-
-   bufObj = buffer_object_subdata_range_good( ctx, target, offset, size,
-                                              false, GL_INVALID_OPERATION,
-                                              "glBufferSubDataARB" );
-   if (!bufObj) {
+   if (!buffer_object_subdata_range_good(ctx, bufObj, offset, size,
+                                         false, func)) {
       /* error already recorded */
       return;
    }
 
    if (bufObj->Immutable &&
        !(bufObj->StorageFlags & GL_DYNAMIC_STORAGE_BIT)) {
-      _mesa_error(ctx, GL_INVALID_OPERATION, "glBufferSubData");
+      _mesa_error(ctx, GL_INVALID_OPERATION, func);
       return;
    }
 
@@ -1647,19 +1645,50 @@ _mesa_BufferSubData(GLenum target, GLintptrARB offset,
    ctx->Driver.BufferSubData( ctx, offset, size, data, bufObj );
 }
 
-
 void GLAPIENTRY
-_mesa_GetBufferSubData(GLenum target, GLintptrARB offset,
-                          GLsizeiptrARB size, void * data)
+_mesa_BufferSubData(GLenum target, GLintptr offset,
+                    GLsizeiptr size, const GLvoid *data)
 {
    GET_CURRENT_CONTEXT(ctx);
    struct gl_buffer_object *bufObj;
 
-   bufObj = buffer_object_subdata_range_good(ctx, target, offset, size,
-                                             false, GL_INVALID_OPERATION,
-                                             "glGetBufferSubDataARB");
-   if (!bufObj) {
-      /* error already recorded */
+   bufObj = get_buffer(ctx, "glBufferSubData", target, GL_INVALID_OPERATION);
+   if (!bufObj)
+      return;
+
+   _mesa_buffer_sub_data(ctx, bufObj, offset, size, data, "glBufferSubData");
+}
+
+void GLAPIENTRY
+_mesa_NamedBufferSubData(GLuint buffer, GLintptr offset,
+                         GLsizeiptr size, const GLvoid *data)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   struct gl_buffer_object *bufObj;
+
+   bufObj = _mesa_lookup_bufferobj_err(ctx, buffer, "glNamedBufferSubData");
+   if (!bufObj)
+      return;
+
+   _mesa_buffer_sub_data(ctx, bufObj, offset, size, data,
+                         "glNamedBufferSubData");
+}
+
+
+void GLAPIENTRY
+_mesa_GetBufferSubData(GLenum target, GLintptr offset,
+                       GLsizeiptr size, GLvoid *data)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   struct gl_buffer_object *bufObj;
+
+   bufObj = get_buffer(ctx, "glGetBufferSubData", target,
+                       GL_INVALID_OPERATION);
+   if (!bufObj)
+      return;
+
+   if (!buffer_object_subdata_range_good(ctx, bufObj, offset, size, false,
+                                         "glGetBufferSubData")) {
       return;
    }
 
@@ -1733,10 +1762,12 @@ _mesa_ClearBufferSubData(GLenum target, GLenum internalformat,
    GLubyte clearValue[MAX_PIXEL_BYTES];
    GLsizeiptr clearValueSize;
 
-   bufObj = buffer_object_subdata_range_good(ctx, target, offset, size,
-                                             true, GL_INVALID_VALUE,
-                                             "glClearBufferSubData");
-   if (!bufObj) {
+   bufObj = get_buffer(ctx, "glClearBufferSubData", target, GL_INVALID_VALUE);
+   if (!bufObj)
+      return;
+
+   if (!buffer_object_subdata_range_good(ctx, bufObj, offset, size,
+                                         true, "glClearBufferSubData")) {
       return;
    }
 

@@ -140,6 +140,11 @@ _mesa_buffer_data(struct gl_context *ctx, struct gl_buffer_object *bufObj,
                   GLenum usage, const char *func);
 
 extern void
+_mesa_buffer_sub_data(struct gl_context *ctx, struct gl_buffer_object *bufObj,
+                      GLintptr offset, GLsizeiptr size, const GLvoid *data,
+                      const char *func);
+
+extern void
 _mesa_buffer_unmap_all_mappings(struct gl_context *ctx,
                                 struct gl_buffer_object *bufObj);
 
@@ -187,6 +192,10 @@ _mesa_NamedBufferData(GLuint buffer, GLsizeiptr size,
 void GLAPIENTRY
 _mesa_BufferSubData(GLenum target, GLintptrARB offset,
                     GLsizeiptrARB size, const GLvoid * data);
+
+void GLAPIENTRY
+_mesa_NamedBufferSubData(GLuint buffer, GLintptr offset,
+                         GLsizeiptr size, const GLvoid *data);
 
 void GLAPIENTRY
 _mesa_GetBufferSubData(GLenum target, GLintptrARB offset,
