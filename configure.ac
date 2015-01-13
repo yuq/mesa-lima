@@ -73,7 +73,13 @@ AX_PROG_FLEX([],
 
 AC_CHECK_PROG(INDENT, indent, indent, cat)
 if test "x$INDENT" != "xcat"; then
-    AC_SUBST(INDENT_FLAGS, '-i4 -nut -br -brs -npcs -ce -TGLubyte -TGLbyte -TBool')
+    # Only GNU indent is supported
+    INDENT_VERSION=`indent --version | grep GNU`
+    if test $? -eq 0; then
+       AC_SUBST(INDENT_FLAGS, '-i4 -nut -br -brs -npcs -ce -TGLubyte -TGLbyte -TBool')
+    else
+       INDENT="cat"
+    fi
 fi
 
 AX_CHECK_PYTHON_MAKO_MODULE(0.3.4)
