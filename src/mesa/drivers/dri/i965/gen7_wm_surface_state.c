@@ -517,7 +517,8 @@ gen7_update_renderbuffer_surface(struct brw_context *brw,
       surf[0] |= GEN7_SURFACE_IS_ARRAY;
    }
 
-   surf[1] = mt->bo->offset64;
+   assert(mt->offset % mt->cpp == 0);
+   surf[1] = mt->bo->offset64 + mt->offset;
 
    assert(brw->has_surface_tile_offset);
 

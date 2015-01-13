@@ -658,8 +658,9 @@ brw_update_renderbuffer_surface(struct brw_context *brw,
 	      format << BRW_SURFACE_FORMAT_SHIFT);
 
    /* reloc */
+   assert(mt->offset % mt->cpp == 0);
    surf[1] = (intel_renderbuffer_get_tile_offsets(irb, &tile_x, &tile_y) +
-	      mt->bo->offset64);
+	      mt->bo->offset64 + mt->offset);
 
    surf[2] = ((rb->Width - 1) << BRW_SURFACE_WIDTH_SHIFT |
 	      (rb->Height - 1) << BRW_SURFACE_HEIGHT_SHIFT);

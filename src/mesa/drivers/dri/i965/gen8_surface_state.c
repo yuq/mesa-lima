@@ -432,7 +432,8 @@ gen8_update_renderbuffer_surface(struct brw_context *brw,
              SET_FIELD(HSW_SCS_BLUE,  GEN7_SURFACE_SCS_B) |
              SET_FIELD(HSW_SCS_ALPHA, GEN7_SURFACE_SCS_A);
 
-   *((uint64_t *) &surf[8]) = mt->bo->offset64; /* reloc */
+   assert(mt->offset % mt->cpp == 0);
+   *((uint64_t *) &surf[8]) = mt->bo->offset64 + mt->offset; /* reloc */
 
    if (aux_mt) {
       *((uint64_t *) &surf[10]) = aux_mt->bo->offset64;
