@@ -596,8 +596,6 @@ dri2_wl_swap_buffers_with_damage(_EGLDriver *drv,
 {
    struct dri2_egl_display *dri2_dpy = dri2_egl_display(disp);
    struct dri2_egl_surface *dri2_surf = dri2_egl_surface(draw);
-   struct dri2_egl_context *dri2_ctx;
-   _EGLContext *ctx;
    int i;
 
    for (i = 0; i < ARRAY_SIZE(dri2_surf->color_buffers); i++)
