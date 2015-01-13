@@ -47,6 +47,84 @@ dump_VC4_PACKET_BRANCH_TO_SUB_LIST(void *cl, uint32_t offset, uint32_t hw_offset
 }
 
 static void
+dump_VC4_PACKET_STORE_TILE_BUFFER_GENERAL(void *cl, uint32_t offset, uint32_t hw_offset)
+{
+        uint8_t *bytes = cl + offset;
+        uint32_t *addr = cl + offset + 2;
+
+        const char *fullvg = "";
+        const char *fullzs = "";
+        const char *fullcolor = "";
+        const char *buffer = "???";
+
+        switch ((bytes[0] & 0x7)){
+        case 0:
+                buffer = "none";
+                break;
+        case 1:
+                buffer = "color";
+                break;
+        case 2:
+                buffer = "zs";
+                break;
+        case 3:
+                buffer = "z";
+                break;
+        case 4:
+                buffer = "vgmask";
+                break;
+        case 5:
+                buffer = "full";
+                if (*addr & (1 << 0))
+                        fullcolor = " !color";
+                if (*addr & (1 << 1))
+                        fullzs = " !zs";
+                if (*addr & (1 << 2))
+                        fullvg = " !vgmask";
+                break;
+        }
+
+        const char *tiling = "???";
+        switch ((bytes[0] >> 4) & 7) {
+        case 0:
+                tiling = "linear";
+                break;
+        case 1:
+                tiling = "T";
+                break;
+        case 2:
+                tiling = "LT";
+                break;
+        }
+
+        const char *format = "???";
+        switch (bytes[1] & 3) {
+        case 0:
+                format = "RGBA8888";
+                break;
+        case 1:
+                format = "BGR565_DITHER";
+                break;
+        case 2:
+                format = "BGR565";
+                break;
+        }
+
+        fprintf(stderr, "0x%08x 0x%08x: 0x%02x %s %s\n",
+                offset + 0, hw_offset + 0, bytes[0],
+                buffer, tiling);
+
+        fprintf(stderr, "0x%08x 0x%08x: 0x%02x %s\n",
+                offset + 1, hw_offset + 1, bytes[1],
+                format);
+
+        fprintf(stderr, "0x%08x 0x%08x:      addr 0x%08x %s%s%s%s\n",
+                offset + 2, hw_offset + 2, *addr & ~15,
+                fullcolor, fullzs, fullvg,
+                (*addr & (1 << 3)) ? " EOF" : "");
+}
+
+static void
 dump_VC4_PACKET_FLAT_SHADE_FLAGS(void *cl, uint32_t offset, uint32_t hw_offset)
 {
         uint32_t *bits = cl + offset;
@@ -206,7 +284,7 @@ static const struct packet_info {
         PACKET(VC4_PACKET_STORE_MS_TILE_BUFFER_AND_EOF, 1),
         PACKET(VC4_PACKET_STORE_FULL_RES_TILE_BUFFER, 5),
         PACKET(VC4_PACKET_LOAD_FULL_RES_TILE_BUFFER, 5),
-        PACKET(VC4_PACKET_STORE_TILE_BUFFER_GENERAL, 7),
+        PACKET_DUMP(VC4_PACKET_STORE_TILE_BUFFER_GENERAL, 7),
         PACKET(VC4_PACKET_LOAD_TILE_BUFFER_GENERAL, 7),
 
         PACKET(VC4_PACKET_GL_INDEXED_PRIMITIVE, 14),
