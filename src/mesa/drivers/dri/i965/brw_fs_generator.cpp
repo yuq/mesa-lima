@@ -123,12 +123,13 @@ fs_generator::fs_generator(struct brw_context *brw,
                            const void *key,
                            struct brw_stage_prog_data *prog_data,
                            struct gl_program *prog,
-                           bool runtime_check_aads_emit)
+                           bool runtime_check_aads_emit,
+                           const char *stage_abbrev)
 
    : brw(brw), key(key),
      prog_data(prog_data),
      prog(prog), runtime_check_aads_emit(runtime_check_aads_emit),
-     debug_flag(false), mem_ctx(mem_ctx)
+     debug_flag(false), stage_abbrev(stage_abbrev), mem_ctx(mem_ctx)
 {
    ctx = &brw->ctx;
 
@@ -2035,10 +2036,11 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
 
       default:
 	 if (inst->opcode < (int) ARRAY_SIZE(opcode_descs)) {
-	    _mesa_problem(ctx, "Unsupported opcode `%s' in FS",
-			  opcode_descs[inst->opcode].name);
+	    _mesa_problem(ctx, "Unsupported opcode `%s' in %s",
+			  opcode_descs[inst->opcode].name, stage_abbrev);
 	 } else {
-	    _mesa_problem(ctx, "Unsupported opcode %d in FS", inst->opcode);
+	    _mesa_problem(ctx, "Unsupported opcode %d in %s", inst->opcode,
+                          stage_abbrev);
 	 }
 	 abort();
 
@@ -2085,9 +2087,9 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
                   MESA_DEBUG_SOURCE_SHADER_COMPILER,
                   MESA_DEBUG_TYPE_OTHER,
                   MESA_DEBUG_SEVERITY_NOTIFICATION,
-                  "FS SIMD%d shader: %d inst, %d loops, "
+                  "%s SIMD%d shader: %d inst, %d loops, "
                   "compacted %d to %d bytes.\n",
-                  dispatch_width, before_size / 16, loop_count,
+                  stage_abbrev, dispatch_width, before_size / 16, loop_count,
                   before_size, after_size);
 
    return start_offset;

@@ -1895,7 +1895,7 @@ brw_vs_emit(struct brw_context *brw,
       }
 
       fs_generator g(brw, mem_ctx, (void *) &c->key, &prog_data->base.base,
-                     &c->vp->program.Base, v.runtime_check_aads_emit);
+                     &c->vp->program.Base, v.runtime_check_aads_emit, "VS");
       if (INTEL_DEBUG & DEBUG_VS) {
          char *name = ralloc_asprintf(mem_ctx, "%s vertex shader %d",
                                       prog->Label ? prog->Label : "unnamed",
