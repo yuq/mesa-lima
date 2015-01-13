@@ -3037,16 +3037,6 @@ fs_visitor::insert_gen4_post_send_dependency_workarounds(bblock_t *block, fs_ins
       if (i == write_len)
          return;
    }
-
-   /* If we hit the end of the program, resolve all remaining dependencies out
-    * of paranoia.
-    */
-   fs_inst *last_inst = (fs_inst *)this->instructions.get_tail();
-   assert(last_inst->eot);
-   for (int i = 0; i < write_len; i++) {
-      if (needs_dep[i])
-         last_inst->insert_before(block, DEP_RESOLVE_MOV(first_write_grf + i));
-   }
 }
 
 void
