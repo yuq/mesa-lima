@@ -1807,14 +1807,21 @@ intel_miptree_map_blit(struct brw_context *brw,
    }
    map->stride = map->mt->pitch;
 
-   if (!intel_miptree_blit(brw,
-                           mt, level, slice,
-                           map->x, map->y, false,
-                           map->mt, 0, 0,
-                           0, 0, false,
-                           map->w, map->h, GL_COPY)) {
-      fprintf(stderr, "Failed to blit\n");
-      goto fail;
+   /* One of either READ_BIT or WRITE_BIT or both is set.  READ_BIT implies no
+    * INVALIDATE_RANGE_BIT.  WRITE_BIT needs the original values read in unless
+    * invalidate is set, since we'll be writing the whole rectangle from our
+    * temporary buffer back out.
+    */
+   if (!(map->mode & GL_MAP_INVALIDATE_RANGE_BIT)) {
+      if (!intel_miptree_blit(brw,
+                              mt, level, slice,
+                              map->x, map->y, false,
+                              map->mt, 0, 0,
+                              0, 0, false,
+                              map->w, map->h, GL_COPY)) {
+         fprintf(stderr, "Failed to blit\n");
+         goto fail;
+      }
    }
 
    map->ptr = intel_miptree_map_raw(brw, map->mt);
