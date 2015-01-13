@@ -85,86 +85,6 @@ intel_miptree_create_for_teximage(struct brw_context *brw,
                                false);
 }
 
-/* XXX: Do this for TexSubImage also:
- */
-static bool
-try_pbo_upload(struct gl_context *ctx,
-               struct gl_texture_image *image,
-               const struct gl_pixelstore_attrib *unpack,
-	       GLenum format, GLenum type, const void *pixels)
-{
-   struct intel_texture_image *intelImage = intel_texture_image(image);
-   struct brw_context *brw = brw_context(ctx);
-   struct intel_buffer_object *pbo = intel_buffer_object(unpack->BufferObj);
-   GLuint src_offset;
-   drm_intel_bo *src_buffer;
-
-   if (!_mesa_is_bufferobj(unpack->BufferObj))
-      return false;
-
-   DBG("trying pbo upload\n");
-
-   if (ctx->_ImageTransferState || unpack->SkipPixels || unpack->SkipRows) {
-      DBG("%s: image transfer\n", __FUNCTION__);
-      return false;
-   }
-
-   ctx->Driver.AllocTextureImageBuffer(ctx, image);
-
-   if (!intelImage->mt) {
-      DBG("%s: no miptree\n", __FUNCTION__);
-      return false;
-   }
-
-   if (!_mesa_format_matches_format_and_type(intelImage->mt->format,
-                                             format, type, false)) {
-      DBG("%s: format mismatch (upload to %s with format 0x%x, type 0x%x)\n",
-	  __FUNCTION__, _mesa_get_format_name(intelImage->mt->format),
-	  format, type);
-      return false;
-   }
-
-   if (image->TexObject->Target == GL_TEXTURE_1D_ARRAY ||
-       image->TexObject->Target == GL_TEXTURE_2D_ARRAY) {
-      DBG("%s: no support for array textures\n", __FUNCTION__);
-      return false;
-   }
-
-   int src_stride =
-      _mesa_image_row_stride(unpack, image->Width, format, type);
-
-   /* note: potential 64-bit ptr to 32-bit int cast */
-   src_offset = (GLuint) (unsigned long) pixels;
-   src_buffer = intel_bufferobj_buffer(brw, pbo,
-                                       src_offset, src_stride * image->Height);
-
-   struct intel_mipmap_tree *pbo_mt =
-      intel_miptree_create_for_bo(brw,
-                                  src_buffer,
-                                  intelImage->mt->format,
-                                  src_offset,
-                                  image->Width, image->Height, 1,
-                                  src_stride);
-   if (!pbo_mt)
-      return false;
-
-   if (!intel_miptree_blit(brw,
-                           pbo_mt, 0, 0,
-                           0, 0, false,
-                           intelImage->mt, image->Level, image->Face,
-                           0, 0, false,
-                           image->Width, image->Height, GL_COPY)) {
-      DBG("%s: blit failed\n", __FUNCTION__);
-      intel_miptree_release(&pbo_mt);
-      return false;
-   }
-
-   intel_miptree_release(&pbo_mt);
-
-   DBG("%s: success\n", __FUNCTION__);
-   return true;
-}
-
 static void
 intelTexImage(struct gl_context * ctx,
               GLuint dims,
@@ -172,13 +92,24 @@ intelTexImage(struct gl_context * ctx,
               GLenum format, GLenum type, const void *pixels,
               const struct gl_pixelstore_attrib *unpack)
 {
+   struct intel_texture_image *intelImage = intel_texture_image(texImage);
    bool ok;
+
+   bool tex_busy = intelImage->mt && drm_intel_bo_busy(intelImage->mt->bo);
 
    DBG("%s mesa_format %s target %s format %s type %s level %d %dx%dx%d\n",
        __FUNCTION__, _mesa_get_format_name(texImage->TexFormat),
        _mesa_lookup_enum_by_nr(texImage->TexObject->Target),
        _mesa_lookup_enum_by_nr(format), _mesa_lookup_enum_by_nr(type),
        texImage->Level, texImage->Width, texImage->Height, texImage->Depth);
+
+   ok = _mesa_meta_pbo_TexSubImage(ctx, dims, texImage, 0, 0, 0,
+                                   texImage->Width, texImage->Height,
+                                   texImage->Depth,
+                                   format, type, pixels,
+                                   true, tex_busy, unpack);
+   if (ok)
+      return;
 
    ok = intel_texsubimage_tiled_memcpy(ctx, dims, texImage,
                                        0, 0, 0, /*x,y,z offsets*/
@@ -189,13 +120,6 @@ intelTexImage(struct gl_context * ctx,
                                        true /*for_glTexImage*/);
    if (ok)
       return;
-
-   /* Attempt to use the blitter for PBO image uploads.
-    */
-   if (dims <= 2 &&
-       try_pbo_upload(ctx, texImage, unpack, format, type, pixels)) {
-      return;
-   }
 
    DBG("%s: upload image %dx%dx%d pixels %p\n",
        __FUNCTION__, texImage->Width, texImage->Height, texImage->Depth,
@@ -418,107 +342,22 @@ intel_image_target_texture_2d(struct gl_context *ctx, GLenum target,
                               image->tile_x, image->tile_y);
 }
 
-static bool
-blit_texture_to_pbo(struct gl_context *ctx,
-                    GLenum format, GLenum type,
-                    GLvoid * pixels, struct gl_texture_image *texImage)
-{
-   struct intel_texture_image *intelImage = intel_texture_image(texImage);
-   struct brw_context *brw = brw_context(ctx);
-   const struct gl_pixelstore_attrib *pack = &ctx->Pack;
-   struct intel_buffer_object *dst = intel_buffer_object(pack->BufferObj);
-   GLuint dst_offset;
-   drm_intel_bo *dst_buffer;
-   GLenum target = texImage->TexObject->Target;
-
-   /* Check if we can use GPU blit to copy from the hardware texture
-    * format to the user's format/type.
-    * Note that GL's pixel transfer ops don't apply to glGetTexImage()
-    */
-
-   if (!_mesa_format_matches_format_and_type(intelImage->mt->format, format,
-                                             type, false))
-   {
-      perf_debug("%s: unsupported format, fallback to CPU mapping for PBO\n",
-                 __FUNCTION__);
-
-      return false;
-   }
-
-   if (ctx->_ImageTransferState) {
-      perf_debug("%s: bad transfer state, fallback to CPU mapping for PBO\n",
-                 __FUNCTION__);
-      return false;
-   }
-
-   if (pack->SwapBytes || pack->LsbFirst) {
-      perf_debug("%s: unsupported pack swap params\n",
-                 __FUNCTION__);
-      return false;
-   }
-
-   if (target == GL_TEXTURE_1D_ARRAY ||
-       target == GL_TEXTURE_2D_ARRAY ||
-       target == GL_TEXTURE_CUBE_MAP ||
-       target == GL_TEXTURE_CUBE_MAP_ARRAY ||
-       target == GL_TEXTURE_3D) {
-      perf_debug("%s: no support for multiple slices, fallback to CPU mapping "
-                 "for PBO\n", __FUNCTION__);
-      return false;
-   }
-
-   int dst_stride = _mesa_image_row_stride(pack, texImage->Width, format, type);
-   bool dst_flip = false;
-   /* Mesa flips the dst_stride for ctx->Pack.Invert, our mt must have a
-    * normal dst_stride.
-    */
-   struct gl_pixelstore_attrib uninverted_pack = *pack;
-   if (ctx->Pack.Invert) {
-      dst_stride = -dst_stride;
-      dst_flip = true;
-      uninverted_pack.Invert = false;
-   }
-   dst_offset = (GLintptr) pixels;
-   dst_offset += _mesa_image_offset(2, &uninverted_pack, texImage->Width,
-                                    texImage->Height, format, type, 0, 0, 0);
-   dst_buffer = intel_bufferobj_buffer(brw, dst, dst_offset,
-                                       texImage->Height * dst_stride);
-
-   struct intel_mipmap_tree *pbo_mt =
-      intel_miptree_create_for_bo(brw,
-                                  dst_buffer,
-                                  intelImage->mt->format,
-                                  dst_offset,
-                                  texImage->Width, texImage->Height, 1,
-                                  dst_stride);
-
-   if (!pbo_mt)
-      return false;
-
-   if (!intel_miptree_blit(brw,
-                           intelImage->mt, texImage->Level, texImage->Face,
-                           0, 0, false,
-                           pbo_mt, 0, 0,
-                           0, 0, dst_flip,
-                           texImage->Width, texImage->Height, GL_COPY))
-      return false;
-
-   intel_miptree_release(&pbo_mt);
-
-   return true;
-}
-
 static void
 intel_get_tex_image(struct gl_context *ctx,
                     GLenum format, GLenum type, GLvoid *pixels,
                     struct gl_texture_image *texImage) {
+   struct brw_context *brw = brw_context(ctx);
+
    DBG("%s\n", __FUNCTION__);
 
    if (_mesa_is_bufferobj(ctx->Pack.BufferObj)) {
-      /* Using PBOs, so try the BLT based path. */
-      if (blit_texture_to_pbo(ctx, format, type, pixels, texImage))
+      if (_mesa_meta_pbo_GetTexSubImage(ctx, 3, texImage, 0, 0, 0,
+                                        texImage->Width, texImage->Height,
+                                        texImage->Depth, format, type,
+                                        pixels, &ctx->Pack))
          return;
 
+      perf_debug("%s: fallback to CPU mapping in PBO case\n", __FUNCTION__);
    }
 
    _mesa_meta_GetTexImage(ctx, format, type, pixels, texImage);
