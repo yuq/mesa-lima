@@ -489,7 +489,7 @@ draw_rgba_pixels( struct gl_context *ctx, GLint x, GLint y,
          uint32_t srcMesaFormat = _mesa_format_from_format_and_type(format, type);
          for (row = 0; row < height; row++) {
             int dstRowStride = 4 * width * sizeof(float);
-            _mesa_format_convert(rgba, RGBA8888_FLOAT, dstRowStride,
+            _mesa_format_convert(rgba, RGBA32_FLOAT, dstRowStride,
                                  (void*)source, srcMesaFormat, srcStride,
                                  spanWidth, 1, NULL);
             if (transferOps)

@@ -27,16 +27,16 @@
 #include "format_pack.h"
 #include "format_unpack.h"
 
-const mesa_array_format RGBA8888_FLOAT =
+const mesa_array_format RGBA32_FLOAT =
    MESA_ARRAY_FORMAT(4, 1, 1, 1, 4, 0, 1, 2, 3);
 
-const mesa_array_format RGBA8888_UBYTE =
+const mesa_array_format RGBA8_UBYTE =
    MESA_ARRAY_FORMAT(1, 0, 0, 1, 4, 0, 1, 2, 3);
 
-const mesa_array_format RGBA8888_UINT =
+const mesa_array_format RGBA32_UINT =
    MESA_ARRAY_FORMAT(4, 0, 0, 0, 4, 0, 1, 2, 3);
 
-const mesa_array_format RGBA8888_INT =
+const mesa_array_format RGBA32_INT =
    MESA_ARRAY_FORMAT(4, 1, 0, 0, 4, 0, 1, 2, 3);
 
 static void
@@ -257,7 +257,7 @@ _mesa_format_convert(void *void_dst, uint32_t dst_format, size_t dst_stride,
    if (!rebase_swizzle) {
       /* Handle the cases where we can directly unpack */
       if (!src_format_is_mesa_array_format) {
-         if (dst_array_format == RGBA8888_FLOAT) {
+         if (dst_array_format == RGBA32_FLOAT) {
             for (row = 0; row < height; ++row) {
                _mesa_unpack_rgba_row(src_format, width,
                                      src, (float (*)[4])dst);
@@ -265,7 +265,7 @@ _mesa_format_convert(void *void_dst, uint32_t dst_format, size_t dst_stride,
                dst += dst_stride;
             }
             return;
-         } else if (dst_array_format == RGBA8888_UBYTE) {
+         } else if (dst_array_format == RGBA8_UBYTE) {
             assert(!_mesa_is_format_integer_color(src_format));
             for (row = 0; row < height; ++row) {
                _mesa_unpack_ubyte_rgba_row(src_format, width,
@@ -274,7 +274,7 @@ _mesa_format_convert(void *void_dst, uint32_t dst_format, size_t dst_stride,
                dst += dst_stride;
             }
             return;
-         } else if (dst_array_format == RGBA8888_UINT &&
+         } else if (dst_array_format == RGBA32_UINT &&
                     _mesa_is_format_unsigned(src_format)) {
             assert(_mesa_is_format_integer_color(src_format));
             for (row = 0; row < height; ++row) {
@@ -289,7 +289,7 @@ _mesa_format_convert(void *void_dst, uint32_t dst_format, size_t dst_stride,
 
       /* Handle the cases where we can directly pack */
       if (!dst_format_is_mesa_array_format) {
-         if (src_array_format == RGBA8888_FLOAT) {
+         if (src_array_format == RGBA32_FLOAT) {
             for (row = 0; row < height; ++row) {
                _mesa_pack_float_rgba_row(dst_format, width,
                                          (const float (*)[4])src, dst);
@@ -297,7 +297,7 @@ _mesa_format_convert(void *void_dst, uint32_t dst_format, size_t dst_stride,
                dst += dst_stride;
             }
             return;
-         } else if (src_array_format == RGBA8888_UBYTE) {
+         } else if (src_array_format == RGBA8_UBYTE) {
             assert(!_mesa_is_format_integer_color(dst_format));
             for (row = 0; row < height; ++row) {
                _mesa_pack_ubyte_rgba_row(dst_format, width,
@@ -306,7 +306,7 @@ _mesa_format_convert(void *void_dst, uint32_t dst_format, size_t dst_stride,
                dst += dst_stride;
             }
             return;
-         } else if (src_array_format == RGBA8888_UINT &&
+         } else if (src_array_format == RGBA32_UINT &&
                     _mesa_is_format_unsigned(dst_format)) {
             assert(_mesa_is_format_integer_color(dst_format));
             for (row = 0; row < height; ++row) {

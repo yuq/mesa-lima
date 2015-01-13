@@ -1170,7 +1170,7 @@ st_GetTexImage(struct gl_context * ctx,
                                       dst_format, rgba);
 
             _mesa_format_convert(dest, dstMesaFormat, dstStride,
-                                 rgba, RGBA8888_FLOAT, srcStride,
+                                 rgba, RGBA32_FLOAT, srcStride,
                                  width, 1, NULL);
          }
          else {
@@ -1184,7 +1184,7 @@ st_GetTexImage(struct gl_context * ctx,
                                          dst_format, rgba);
 
                _mesa_format_convert(dest, dstMesaFormat, dstStride,
-                                    rgba, RGBA8888_FLOAT, srcStride,
+                                    rgba, RGBA32_FLOAT, srcStride,
                                     width, 1, NULL);
             }
          }

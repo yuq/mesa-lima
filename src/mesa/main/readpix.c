@@ -501,14 +501,14 @@ read_rgba_pixels( struct gl_context *ctx,
       if (dst_is_integer) {
          src_is_uint = _mesa_is_format_unsigned(rb_format);
          if (src_is_uint) {
-            rgba_format = RGBA8888_UINT;
+            rgba_format = RGBA32_UINT;
             rgba_stride = width * 4 * sizeof(GLuint);
          } else {
-            rgba_format = RGBA8888_INT;
+            rgba_format = RGBA32_INT;
             rgba_stride = width * 4 * sizeof(GLint);
          }
       } else {
-         rgba_format = RGBA8888_FLOAT;
+         rgba_format = RGBA32_FLOAT;
          rgba_stride = width * 4 * sizeof(GLfloat);
       }
 
