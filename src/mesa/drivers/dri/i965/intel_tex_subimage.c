@@ -35,6 +35,7 @@
 #include "main/texstore.h"
 #include "main/texcompress.h"
 #include "main/enums.h"
+#include "drivers/common/meta.h"
 
 #include "brw_context.h"
 #include "intel_batchbuffer.h"
@@ -84,96 +85,6 @@ typedef void (*tile_copy_fn)(uint32_t x0, uint32_t x1, uint32_t x2, uint32_t x3,
                              uint32_t swizzle_bit,
                              mem_copy_fn mem_copy);
 
-
-static bool
-intel_blit_texsubimage(struct gl_context * ctx,
-		       struct gl_texture_image *texImage,
-		       GLint xoffset, GLint yoffset,
-		       GLint width, GLint height,
-		       GLenum format, GLenum type, const void *pixels,
-		       const struct gl_pixelstore_attrib *packing)
-{
-   struct brw_context *brw = brw_context(ctx);
-   struct intel_texture_image *intelImage = intel_texture_image(texImage);
-
-   /* Try to do a blit upload of the subimage if the texture is
-    * currently busy.
-    */
-   if (!intelImage->mt)
-      return false;
-
-   /* Prior to Sandybridge, the blitter can't handle Y tiling */
-   if (brw->gen < 6 && intelImage->mt->tiling == I915_TILING_Y)
-      return false;
-
-   if (texImage->TexObject->Target != GL_TEXTURE_2D)
-      return false;
-
-   /* On gen6, it's probably not worth swapping to the blit ring to do
-    * this because of all the overhead involved.
-    */
-   if (brw->gen >= 6)
-      return false;
-
-   if (!drm_intel_bo_busy(intelImage->mt->bo))
-      return false;
-
-   DBG("BLT subimage %s target %s level %d offset %d,%d %dx%d\n",
-       __FUNCTION__,
-       _mesa_lookup_enum_by_nr(texImage->TexObject->Target),
-       texImage->Level, xoffset, yoffset, width, height);
-
-   pixels = _mesa_validate_pbo_teximage(ctx, 2, width, height, 1,
-					format, type, pixels, packing,
-					"glTexSubImage");
-   if (!pixels)
-      return false;
-
-   struct intel_mipmap_tree *temp_mt =
-      intel_miptree_create(brw, GL_TEXTURE_2D, texImage->TexFormat,
-                           0, 0,
-                           width, height, 1,
-                           false, 0, INTEL_MIPTREE_TILING_NONE,
-                           false);
-   if (!temp_mt)
-      goto err;
-
-   GLubyte *dst = intel_miptree_map_raw(brw, temp_mt);
-   if (!dst)
-      goto err;
-
-   if (!_mesa_texstore(ctx, 2, texImage->_BaseFormat,
-		       texImage->TexFormat,
-		       temp_mt->pitch,
-		       &dst,
-		       width, height, 1,
-		       format, type, pixels, packing)) {
-      _mesa_error(ctx, GL_OUT_OF_MEMORY, "intelTexSubImage");
-   }
-
-   intel_miptree_unmap_raw(brw, temp_mt);
-
-   bool ret;
-
-   ret = intel_miptree_blit(brw,
-                            temp_mt, 0, 0,
-                            0, 0, false,
-                            intelImage->mt, texImage->Level, texImage->Face,
-                            xoffset, yoffset, false,
-                            width, height, GL_COPY);
-   assert(ret);
-
-   intel_miptree_release(&temp_mt);
-   _mesa_unmap_teximage_pbo(ctx, packing);
-
-   return ret;
-
-err:
-   _mesa_error(ctx, GL_OUT_OF_MEMORY, "intelTexSubImage");
-   intel_miptree_release(&temp_mt);
-   _mesa_unmap_teximage_pbo(ctx, packing);
-   return false;
-}
 
 #ifdef __SSSE3__
 static const uint8_t rgba8_permutation[16] =
@@ -676,13 +587,23 @@ intelTexSubImage(struct gl_context * ctx,
                  const GLvoid * pixels,
                  const struct gl_pixelstore_attrib *packing)
 {
+   struct intel_texture_image *intelImage = intel_texture_image(texImage);
    bool ok;
+
+   bool tex_busy = intelImage->mt && drm_intel_bo_busy(intelImage->mt->bo);
 
    DBG("%s mesa_format %s target %s format %s type %s level %d %dx%dx%d\n",
        __FUNCTION__, _mesa_get_format_name(texImage->TexFormat),
        _mesa_lookup_enum_by_nr(texImage->TexObject->Target),
        _mesa_lookup_enum_by_nr(format), _mesa_lookup_enum_by_nr(type),
        texImage->Level, texImage->Width, texImage->Height, texImage->Depth);
+
+   ok = _mesa_meta_pbo_TexSubImage(ctx, dims, texImage,
+                                   xoffset, yoffset, zoffset,
+                                   width, height, depth, format, type,
+                                   pixels, false, tex_busy, packing);
+   if (ok)
+      return;
 
    ok = intel_texsubimage_tiled_memcpy(ctx, dims, texImage,
                                        xoffset, yoffset, zoffset,
@@ -692,16 +613,10 @@ intelTexSubImage(struct gl_context * ctx,
    if (ok)
      return;
 
-   /* The intel_blit_texsubimage() function only handles 2D images */
-   if (dims != 2 || !intel_blit_texsubimage(ctx, texImage,
-			       xoffset, yoffset,
-			       width, height,
-			       format, type, pixels, packing)) {
-      _mesa_store_texsubimage(ctx, dims, texImage,
-                              xoffset, yoffset, zoffset,
-                              width, height, depth,
-                              format, type, pixels, packing);
-   }
+   _mesa_store_texsubimage(ctx, dims, texImage,
+                           xoffset, yoffset, zoffset,
+                           width, height, depth,
+                           format, type, pixels, packing);
 }
 
 void
