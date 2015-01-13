@@ -431,8 +431,11 @@ fs_visitor::try_emit_mad(ir_expression *ir)
    ir_rvalue *nonmul = ir->operands[1];
    ir_expression *mul = ir->operands[0]->as_expression();
 
-   bool mul_negate = false;
-   if (mul && mul->operation == ir_unop_neg) {
+   bool mul_negate = false, mul_abs = false;
+   if (mul && mul->operation == ir_unop_abs) {
+      mul = mul->operands[0]->as_expression();
+      mul_abs = true;
+   } else if (mul && mul->operation == ir_unop_neg) {
       mul = mul->operands[0]->as_expression();
       mul_negate = true;
    }
@@ -441,7 +444,10 @@ fs_visitor::try_emit_mad(ir_expression *ir)
       nonmul = ir->operands[0];
       mul = ir->operands[1]->as_expression();
 
-      if (mul && mul->operation == ir_unop_neg) {
+      if (mul && mul->operation == ir_unop_abs) {
+         mul = mul->operands[0]->as_expression();
+         mul_abs = true;
+      } else if (mul && mul->operation == ir_unop_neg) {
          mul = mul->operands[0]->as_expression();
          mul_negate = true;
       }
@@ -461,9 +467,15 @@ fs_visitor::try_emit_mad(ir_expression *ir)
    mul->operands[0]->accept(this);
    fs_reg src1 = this->result;
    src1.negate ^= mul_negate;
+   src1.abs = mul_abs;
+   if (mul_abs)
+      src1.negate = false;
 
    mul->operands[1]->accept(this);
    fs_reg src2 = this->result;
+   src2.abs = mul_abs;
+   if (mul_abs)
+      src2.negate = false;
 
    this->result = fs_reg(this, ir->type);
    emit(BRW_OPCODE_MAD, this->result, src0, src1, src2);
