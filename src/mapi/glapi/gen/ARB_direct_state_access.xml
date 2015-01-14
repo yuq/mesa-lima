@@ -75,6 +75,11 @@
       <param name="access" type="GLbitfield" />
    </function>
 
+   <function name="UnmapNamedBuffer" offset="assign">
+      <return type="GLboolean" />
+      <param name="buffer" type="GLuint" />
+   </function>
+
    <!-- Texture object functions -->
 
    <function name="CreateTextures" offset="assign">

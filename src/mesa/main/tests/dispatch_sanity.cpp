@@ -962,6 +962,7 @@ const struct function gl_core_functions_possible[] = {
    { "glClearNamedBufferSubData", 45, -1 },
    { "glMapNamedBuffer", 45, -1 },
    { "glMapNamedBufferRange", 45, -1 },
+   { "glUnmapNamedBuffer", 45, -1 },
    { "glCreateTextures", 45, -1 },
    { "glTextureStorage1D", 45, -1 },
    { "glTextureStorage2D", 45, -1 },

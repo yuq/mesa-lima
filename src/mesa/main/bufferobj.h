@@ -177,6 +177,10 @@ _mesa_clear_buffer_sub_data(struct gl_context *ctx,
                             const GLvoid *data,
                             const char *func, bool subdata);
 
+extern GLboolean
+_mesa_unmap_buffer(struct gl_context *ctx, struct gl_buffer_object *bufObj,
+                   const char *func);
+
 /*
  * API functions
  */
@@ -247,6 +251,9 @@ _mesa_ClearNamedBufferSubData(GLuint buffer, GLenum internalformat,
 
 GLboolean GLAPIENTRY
 _mesa_UnmapBuffer(GLenum target);
+
+GLboolean GLAPIENTRY
+_mesa_UnmapNamedBuffer(GLuint buffer);
 
 void GLAPIENTRY
 _mesa_GetBufferParameteriv(GLenum target, GLenum pname, GLint *params);

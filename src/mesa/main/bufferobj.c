@@ -741,15 +741,15 @@ _mesa_buffer_flush_mapped_range( struct gl_context *ctx,
 
 
 /**
- * Default callback for \c dd_function_table::MapBuffer().
+ * Default callback for \c dd_function_table::UnmapBuffer().
  *
  * The input parameters will have been already tested for errors.
  *
  * \sa glUnmapBufferARB, dd_function_table::UnmapBuffer
  */
 static GLboolean
-_mesa_buffer_unmap(struct gl_context *ctx, struct gl_buffer_object *bufObj,
-                   gl_map_buffer_index index)
+unmap_buffer_fallback(struct gl_context *ctx, struct gl_buffer_object *bufObj,
+                      gl_map_buffer_index index)
 {
    (void) ctx;
    /* XXX we might assert here that bufObj->Pointer is non-null */
@@ -1115,7 +1115,7 @@ _mesa_init_buffer_object_functions(struct dd_function_table *driver)
    driver->BufferData = buffer_data_fallback;
    driver->BufferSubData = buffer_sub_data_fallback;
    driver->GetBufferSubData = _mesa_buffer_get_subdata;
-   driver->UnmapBuffer = _mesa_buffer_unmap;
+   driver->UnmapBuffer = unmap_buffer_fallback;
 
    /* GL_ARB_clear_buffer_object */
    driver->ClearBufferSubData = _mesa_ClearBufferSubData_sw;
@@ -1828,20 +1828,16 @@ _mesa_ClearNamedBufferSubData(GLuint buffer, GLenum internalformat,
 }
 
 
-GLboolean GLAPIENTRY
-_mesa_UnmapBuffer(GLenum target)
+GLboolean
+_mesa_unmap_buffer(struct gl_context *ctx, struct gl_buffer_object *bufObj,
+                   const char *func)
 {
-   GET_CURRENT_CONTEXT(ctx);
-   struct gl_buffer_object *bufObj;
    GLboolean status = GL_TRUE;
    ASSERT_OUTSIDE_BEGIN_END_WITH_RETVAL(ctx, GL_FALSE);
 
-   bufObj = get_buffer(ctx, "glUnmapBufferARB", target, GL_INVALID_OPERATION);
-   if (!bufObj)
-      return GL_FALSE;
-
    if (!_mesa_bufferobj_mapped(bufObj, MAP_USER)) {
-      _mesa_error(ctx, GL_INVALID_OPERATION, "glUnmapBufferARB");
+      _mesa_error(ctx, GL_INVALID_OPERATION,
+                  "%s(buffer is not mapped)", func);
       return GL_FALSE;
    }
 
@@ -1890,6 +1886,31 @@ _mesa_UnmapBuffer(GLenum target)
    return status;
 }
 
+GLboolean GLAPIENTRY
+_mesa_UnmapBuffer(GLenum target)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   struct gl_buffer_object *bufObj;
+
+   bufObj = get_buffer(ctx, "glUnmapBuffer", target, GL_INVALID_OPERATION);
+   if (!bufObj)
+      return GL_FALSE;
+
+   return _mesa_unmap_buffer(ctx, bufObj, "glUnmapBuffer");
+}
+
+GLboolean GLAPIENTRY
+_mesa_UnmapNamedBuffer(GLuint buffer)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   struct gl_buffer_object *bufObj;
+
+   bufObj = _mesa_lookup_bufferobj_err(ctx, buffer, "glUnmapNamedBuffer");
+   if (!bufObj)
+      return GL_FALSE;
+
+   return _mesa_unmap_buffer(ctx, bufObj, "glUnmapNamedBuffer");
+}
 
 void GLAPIENTRY
 _mesa_GetBufferParameteriv(GLenum target, GLenum pname, GLint *params)
