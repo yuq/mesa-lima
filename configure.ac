@@ -76,7 +76,7 @@ if test "x$INDENT" != "xcat"; then
     AC_SUBST(INDENT_FLAGS, '-i4 -nut -br -brs -npcs -ce -TGLubyte -TGLbyte -TBool')
 fi
 
-AX_CHECK_PYTHON_MAKO_MODULE(0.7.3)
+AX_CHECK_PYTHON_MAKO_MODULE(0.3.4)
 
 AC_PROG_INSTALL
 
