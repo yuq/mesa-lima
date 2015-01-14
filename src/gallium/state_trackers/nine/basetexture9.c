@@ -69,8 +69,16 @@ NineBaseTexture9_ctor( struct NineBaseTexture9 *This,
         D3DTEXF_LINEAR : D3DTEXF_NONE;
     This->lod = 0;
     This->lod_resident = -1;
-    This->shadow = This->format != D3DFMT_INTZ && util_format_has_depth(
-        util_format_description(This->base.info.format));
+    /* When a depth buffer is sampled, it is for shadow mapping, except for
+     * D3DFMT_INTZ, D3DFMT_DF16 and D3DFMT_DF24.
+     * In addition D3DFMT_INTZ can be used for both texturing and depth buffering
+     * if z write is disabled. This particular feature may not work for us in
+     * practice because OGL doesn't have that. However apparently it is known
+     * some cards have performance issues with this feature, so real apps
+     * shouldn't use it. */
+    This->shadow = (This->format != D3DFMT_INTZ && This->format != D3DFMT_DF16 &&
+                    This->format != D3DFMT_DF24) &&
+                   util_format_has_depth(util_format_description(This->base.info.format));
 
     list_inithead(&This->list);
 

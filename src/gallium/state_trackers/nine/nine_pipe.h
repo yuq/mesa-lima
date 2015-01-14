@@ -182,6 +182,7 @@ d3d9_to_pipe_format_internal(D3DFORMAT format)
         return nine_d3d9_to_pipe_format_map[format];
     switch (format) {
     case D3DFMT_INTZ: return PIPE_FORMAT_S8_UINT_Z24_UNORM;
+    case D3DFMT_DF16: return PIPE_FORMAT_Z16_UNORM;
     case D3DFMT_DXT1: return PIPE_FORMAT_DXT1_RGBA;
     case D3DFMT_DXT2: return PIPE_FORMAT_DXT3_RGBA; /* XXX */
     case D3DFMT_DXT3: return PIPE_FORMAT_DXT3_RGBA;
@@ -199,8 +200,9 @@ d3d9_to_pipe_format_internal(D3DFORMAT format)
     case D3DFMT_Y210: /* XXX */
     case D3DFMT_Y216:
     case D3DFMT_NV11:
-    case D3DFMT_DF16: /* useless, not supported by wine either */
-    case D3DFMT_DF24: /* useless, not supported by wine either */
+    case D3DFMT_DF24: /* Similar to D3DFMT_DF16 but for 24-bits.
+        We don't advertise it because when it is supported, Fetch-4 is
+        supposed to be supported, which we don't support yet. */
     case D3DFMT_NULL: /* special cased, only for surfaces */
         return PIPE_FORMAT_NONE;
     default:
