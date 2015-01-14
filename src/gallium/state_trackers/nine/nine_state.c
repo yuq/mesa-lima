@@ -957,7 +957,8 @@ static const DWORD nine_render_state_defaults[NINED3DRS_LAST + 1] =
     [D3DRS_DESTBLENDALPHA] = D3DBLEND_ZERO,
     [D3DRS_BLENDOPALPHA] = D3DBLENDOP_ADD,
     [NINED3DRS_VSPOINTSIZE] = FALSE,
-    [NINED3DRS_RTMASK] = 0xf
+    [NINED3DRS_RTMASK] = 0xf,
+    [NINED3DRS_ALPHACOVERAGE] = FALSE
 };
 static const DWORD nine_tex_stage_state_defaults[NINED3DTSS_LAST + 1] =
 {

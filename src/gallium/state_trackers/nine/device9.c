@@ -2049,6 +2049,9 @@ NineDevice9_ResolveZ( struct NineDevice9 *This )
     return D3D_OK;
 }
 
+#define ALPHA_TO_COVERAGE_ENABLE   MAKEFOURCC('A', '2', 'M', '1')
+#define ALPHA_TO_COVERAGE_DISABLE  MAKEFOURCC('A', '2', 'M', '0')
+
 HRESULT WINAPI
 NineDevice9_SetRenderState( struct NineDevice9 *This,
                             D3DRENDERSTATETYPE State,
@@ -2059,8 +2062,18 @@ NineDevice9_SetRenderState( struct NineDevice9 *This,
     DBG("This=%p State=%u(%s) Value=%08x\n", This,
         State, nine_d3drs_to_string(State), Value);
 
-    if (State == D3DRS_POINTSIZE && Value == RESZ_CODE)
-        return NineDevice9_ResolveZ(This);
+    /* Amd hacks (equivalent to GL extensions) */
+    if (State == D3DRS_POINTSIZE) {
+        if (Value == RESZ_CODE)
+            return NineDevice9_ResolveZ(This);
+
+        if (Value == ALPHA_TO_COVERAGE_ENABLE ||
+            Value == ALPHA_TO_COVERAGE_DISABLE) {
+            state->rs[NINED3DRS_ALPHACOVERAGE] = (Value == ALPHA_TO_COVERAGE_ENABLE);
+            state->changed.group |= NINE_STATE_BLEND;
+            return D3D_OK;
+        }
+    }
 
     user_assert(State < Elements(state->rs), D3DERR_INVALIDCALL);
 
