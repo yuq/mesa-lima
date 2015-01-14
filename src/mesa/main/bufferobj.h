@@ -155,6 +155,12 @@ _mesa_copy_buffer_sub_data(struct gl_context *ctx,
                            GLintptr readOffset, GLintptr writeOffset,
                            GLsizeiptr size, const char *func);
 
+extern void *
+_mesa_map_buffer_range(struct gl_context *ctx,
+                       struct gl_buffer_object *bufObj,
+                       GLintptr offset, GLsizeiptr length,
+                       GLbitfield access, const char *func);
+
 extern void
 _mesa_ClearBufferSubData_sw(struct gl_context *ctx,
                             GLintptr offset, GLsizeiptr size,
