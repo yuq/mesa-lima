@@ -825,25 +825,24 @@ _mesa_lookup_transform_feedback_object(struct gl_context *ctx, GLuint name)
          _mesa_HashLookup(ctx->TransformFeedback.Objects, name);
 }
 
-
-/**
- * Create new transform feedback objects.   Transform feedback objects
- * encapsulate the state related to transform feedback to allow quickly
- * switching state (and drawing the results, below).
- * Part of GL_ARB_transform_feedback2.
- */
-void GLAPIENTRY
-_mesa_GenTransformFeedbacks(GLsizei n, GLuint *names)
+static void
+create_transform_feedbacks(struct gl_context *ctx, GLsizei n, GLuint *ids,
+                           bool dsa)
 {
    GLuint first;
-   GET_CURRENT_CONTEXT(ctx);
+   const char* func;
+
+   if (dsa)
+      func = "glCreateTransformFeedbacks";
+   else
+      func = "glGenTransformFeedbacks";
 
    if (n < 0) {
-      _mesa_error(ctx, GL_INVALID_VALUE, "glGenTransformFeedbacks(n < 0)");
+      _mesa_error(ctx, GL_INVALID_VALUE, "%s(n < 0)", func);
       return;
    }
 
-   if (!names)
+   if (!ids)
       return;
 
    /* we don't need contiguous IDs, but this might be faster */
@@ -854,16 +853,54 @@ _mesa_GenTransformFeedbacks(GLsizei n, GLuint *names)
          struct gl_transform_feedback_object *obj
             = ctx->Driver.NewTransformFeedback(ctx, first + i);
          if (!obj) {
-            _mesa_error(ctx, GL_OUT_OF_MEMORY, "glGenTransformFeedbacks");
+            _mesa_error(ctx, GL_OUT_OF_MEMORY, "%s", func);
             return;
          }
-         names[i] = first + i;
+         ids[i] = first + i;
          _mesa_HashInsert(ctx->TransformFeedback.Objects, first + i, obj);
+         if (dsa) {
+            /* this is normally done at bind time in the non-dsa case */
+            obj->EverBound = GL_TRUE;
+         }
       }
    }
    else {
-      _mesa_error(ctx, GL_OUT_OF_MEMORY, "glGenTransformFeedbacks");
+      _mesa_error(ctx, GL_OUT_OF_MEMORY, "%s", func);
    }
+}
+
+/**
+ * Create new transform feedback objects.   Transform feedback objects
+ * encapsulate the state related to transform feedback to allow quickly
+ * switching state (and drawing the results, below).
+ * Part of GL_ARB_transform_feedback2.
+ */
+void GLAPIENTRY
+_mesa_GenTransformFeedbacks(GLsizei n, GLuint *names)
+{
+   GET_CURRENT_CONTEXT(ctx);
+
+   /* GenTransformFeedbacks should just reserve the object names that a
+    * subsequent call to BindTransformFeedback should actively create. For
+    * the sake of simplicity, we reserve the names and create the objects
+    * straight away.
+    */
+
+   create_transform_feedbacks(ctx, n, names, false);
+}
+
+/**
+ * Create new transform feedback objects.   Transform feedback objects
+ * encapsulate the state related to transform feedback to allow quickly
+ * switching state (and drawing the results, below).
+ * Part of GL_ARB_direct_state_access.
+ */
+void GLAPIENTRY
+_mesa_CreateTransformFeedbacks(GLsizei n, GLuint *names)
+{
+   GET_CURRENT_CONTEXT(ctx);
+
+   create_transform_feedbacks(ctx, n, names, true);
 }
 
 

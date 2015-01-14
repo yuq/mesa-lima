@@ -922,6 +922,7 @@ const struct function gl_core_functions_possible[] = {
    { "glClipControl", 45, -1 },
 
    /* GL_ARB_direct_state_access */
+   { "glCreateTransformFeedbacks", 45, -1 },
    { "glCreateBuffers", 45, -1 },
    { "glNamedBufferStorage", 45, -1 },
    { "glNamedBufferData", 45, -1 },

@@ -102,6 +102,9 @@ _mesa_lookup_transform_feedback_object(struct gl_context *ctx, GLuint name);
 extern void GLAPIENTRY
 _mesa_GenTransformFeedbacks(GLsizei n, GLuint *names);
 
+extern void GLAPIENTRY
+_mesa_CreateTransformFeedbacks(GLsizei n, GLuint *names);
+
 extern GLboolean GLAPIENTRY
 _mesa_IsTransformFeedback(GLuint name);
 

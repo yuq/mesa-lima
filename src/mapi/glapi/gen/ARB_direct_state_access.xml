@@ -7,6 +7,13 @@
    <enum name="QUERY_TARGET"    value="0x82EA"/>
    <enum name="TEXTURE_BINDING" value="0x82EB"/>
 
+   <!-- Transform Feedback object functions -->
+
+  <function name="CreateTransformFeedbacks" offset="assign">
+      <param name="n" type="GLsizei" />
+      <param name="ids" type="GLuint *" />
+   </function>
+
    <!-- Buffer object functions -->
 
    <function name="CreateBuffers" offset="assign">
