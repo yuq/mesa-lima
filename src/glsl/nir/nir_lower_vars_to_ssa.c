@@ -189,6 +189,26 @@ deref_node_create(struct deref_node *parent,
    return node;
 }
 
+/* Returns the deref node associated with the given variable.  This will be
+ * the root of the tree representing all of the derefs of the given variable.
+ */
+static struct deref_node *
+get_deref_node_for_var(nir_variable *var, struct lower_variables_state *state)
+{
+   struct deref_node *node;
+
+   struct hash_entry *var_entry =
+      _mesa_hash_table_search(state->deref_var_nodes, var);
+
+   if (var_entry) {
+      return var_entry->data;
+   } else {
+      node = deref_node_create(NULL, var->type, state->dead_ctx);
+      _mesa_hash_table_insert(state->deref_var_nodes, var, node);
+      return node;
+   }
+}
+
 /* Gets the deref_node for the given deref chain and creates it if it
  * doesn't yet exist.  If the deref is fully-qualified and direct and
  * add_to_direct_deref_nodes is true, it will be added to the hash table of
@@ -200,17 +220,9 @@ get_deref_node(nir_deref_var *deref, bool add_to_direct_deref_nodes,
 {
    bool is_direct = true;
 
-   struct deref_node *node;
-
-   struct hash_entry *var_entry =
-      _mesa_hash_table_search(state->deref_var_nodes, deref->var);
-
-   if (var_entry) {
-      node = var_entry->data;
-   } else {
-      node = deref_node_create(NULL, deref->deref.type, state->dead_ctx);
-      _mesa_hash_table_insert(state->deref_var_nodes, deref->var, node);
-   }
+   /* Start at the base of the chain. */
+   struct deref_node *node = get_deref_node_for_var(deref->var, state);
+   assert(deref->deref.type == node->type);
 
    for (nir_deref *tail = deref->deref.child; tail; tail = tail->child) {
       switch (tail->deref_type) {
@@ -411,15 +423,8 @@ static bool
 deref_may_be_aliased(nir_deref_var *deref,
                      struct lower_variables_state *state)
 {
-   nir_deref_var var_deref = *deref;
-   var_deref.deref.child = NULL;
-   struct deref_node *node = get_deref_node(&var_deref, false, state);
-
-   /* An invalid dereference can't be aliased. */
-   if (node == NULL)
-      return false;
-
-   return deref_may_be_aliased_node(node, &deref->deref, state);
+   return deref_may_be_aliased_node(get_deref_node_for_var(deref->var, state),
+                                    &deref->deref, state);
 }
 
 static void
