@@ -60,6 +60,9 @@ fs_visitor::emit_nir_code()
    } while (progress);
 
    /* Lower a bunch of stuff */
+   nir_lower_var_copies(nir);
+   nir_validate_shader(nir);
+
    nir_lower_io(nir);
    nir_validate_shader(nir);
 
