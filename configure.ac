@@ -1043,10 +1043,25 @@ if test "x$with_sha1" = xlibcrypto; then
 	fi
 fi
 AC_MSG_CHECKING([for SHA1 implementation])
-AM_CONDITIONAL([HAVE_SHA1], [test x$with_sha1 != x])
 AC_MSG_RESULT([$with_sha1])
 AC_SUBST(SHA1_LIBS)
 AC_SUBST(SHA1_CFLAGS)
+
+# Allow user to configure out the shader-cache feature
+AC_ARG_ENABLE([shader-cache],
+    AS_HELP_STRING([--disable-shader-cache], [Disable binary shader cache]),
+    [enable_shader_cache="$enableval"],
+    [if test "x$with_sha1" != "x"; then
+        enable_shader_cache=yes
+     else
+        enable_shader_cache=no
+     fi])
+if test "x$with_sha1" = "x"; then
+    if test "x$enable_shader_cache" = "xyes"; then
+        AC_MSG_ERROR([Cannot enable shader cache (no SHA-1 implementation found)])
+    fi
+fi
+AM_CONDITIONAL([ENABLE_SHADER_CACHE], [test x$enable_shader_cache = xyes])
 
 # Check for libdrm
 PKG_CHECK_MODULES([LIBDRM], [libdrm >= $LIBDRM_REQUIRED],
@@ -2490,6 +2505,12 @@ else
     echo "        Gallium:         no"
 fi
 
+dnl Shader cache
+echo ""
+echo "        Shader cache:    $enable_shader_cache"
+if test "x$enable_shader_cache" = "xyes"; then
+    echo "        With SHA1 from:  $with_sha1"
+fi
 
 dnl Libraries
 echo ""
