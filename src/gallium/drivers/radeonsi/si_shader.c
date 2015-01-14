@@ -2621,9 +2621,7 @@ int si_compile_llvm(struct si_screen *sscreen, struct si_shader *shader,
 		return r;
 	}
 	r = si_shader_binary_read(sscreen, shader, &binary);
-	FREE(binary.code);
-	FREE(binary.config);
-	FREE(binary.rodata);
+	radeon_shader_binary_free_members(&binary);
 	return r;
 }
 

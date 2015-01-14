@@ -439,9 +439,7 @@ static void si_delete_compute_state(struct pipe_context *ctx, void* state){
 	pipe_resource_reference(
 		(struct pipe_resource **)&program->input_buffer, NULL);
 
-	FREE(program->binary.code);
-	FREE(program->binary.config);
-	FREE(program->binary.rodata);
+	radeon_shader_binary_free_members(&program->binary);
 	FREE(program);
 }
 

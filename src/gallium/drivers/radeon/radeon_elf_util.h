@@ -46,4 +46,9 @@ const unsigned char *radeon_shader_binary_config_start(
 	const struct radeon_shader_binary *binary,
 	uint64_t symbol_offset);
 
+/**
+ * Free all memory allocated for members of \p binary.  This function does
+ * not free \p binary.
+ */
+void radeon_shader_binary_free_members(struct radeon_shader_binary *binary);
 #endif /* RADEON_ELF_UTIL_H */

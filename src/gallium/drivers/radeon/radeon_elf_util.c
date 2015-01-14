@@ -161,3 +161,9 @@ const unsigned char *radeon_shader_binary_config_start(
 	}
 	return binary->config;
 }
+
+void radeon_shader_binary_free_members(struct radeon_shader_binary *binary) {
+	FREE(binary->code);
+	FREE(binary->config);
+	FREE(binary->rodata);
+}
