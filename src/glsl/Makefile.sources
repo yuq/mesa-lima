@@ -32,6 +32,7 @@ NIR_FILES = \
 	$(GLSL_SRCDIR)/nir/nir_lower_system_values.c \
 	$(GLSL_SRCDIR)/nir/nir_lower_to_source_mods.c \
 	$(GLSL_SRCDIR)/nir/nir_lower_vars_to_ssa.c \
+	$(GLSL_SRCDIR)/nir/nir_lower_var_copies.c \
 	$(GLSL_SRCDIR)/nir/nir_lower_vec_to_movs.c \
 	$(GLSL_SRCDIR)/nir/nir_metadata.c \
 	$(GLSL_SRCDIR)/nir/nir_opcodes.c \
