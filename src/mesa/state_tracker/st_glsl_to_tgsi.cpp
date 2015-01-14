@@ -2051,6 +2051,7 @@ glsl_to_tgsi_visitor::visit(ir_swizzle *ir)
    ir->val->accept(this);
    src = this->result;
    assert(src.file != PROGRAM_UNDEFINED);
+   assert(ir->type->vector_elements > 0);
 
    for (i = 0; i < 4; i++) {
       if (i < ir->type->vector_elements) {
