@@ -151,8 +151,7 @@ vc4_setup_rcl(struct vc4_context *vc4)
                             VC4_RENDER_CONFIG_MEMORY_FORMAT_SHIFT) |
                            (vc4_rt_format_is_565(render_surf->base.format) ?
                             VC4_RENDER_CONFIG_FORMAT_BGR565 :
-                            VC4_RENDER_CONFIG_FORMAT_RGBA8888) |
-                           VC4_RENDER_CONFIG_EARLY_Z_COVERAGE_DISABLE));
+                            VC4_RENDER_CONFIG_FORMAT_RGBA8888)));
 
         /* The tile buffer normally gets cleared when the previous tile is
          * stored.  If the clear values changed between frames, then the tile
