@@ -96,10 +96,19 @@ _mesa_half_to_unorm(uint16_t x, unsigned dst_bits)
 static inline unsigned
 _mesa_unorm_to_unorm(unsigned x, unsigned src_bits, unsigned dst_bits)
 {
-   if (src_bits < dst_bits)
+   if (src_bits < dst_bits) {
       return EXTEND_NORMALIZED_INT(x, src_bits, dst_bits);
-   else
-      return x >> (src_bits - dst_bits);
+   } else {
+      unsigned src_half = (1 << (src_bits - 1)) - 1;
+
+      if (src_bits + dst_bits > sizeof(x) * 8) {
+         assert(src_bits + dst_bits <= sizeof(uint64_t) * 8);
+         return (((uint64_t) x * MAX_UINT(dst_bits) + src_half) /
+                 MAX_UINT(src_bits));
+      } else {
+         return (x * MAX_UINT(dst_bits) + src_half) / MAX_UINT(src_bits);
+      }
+   }
 }
 
 static inline unsigned
