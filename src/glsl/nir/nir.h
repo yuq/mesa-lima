@@ -1467,7 +1467,7 @@ void nir_lower_locals_to_regs(nir_shader *shader);
 
 void nir_lower_io(nir_shader *shader);
 
-void nir_lower_variables(nir_shader *shader);
+void nir_lower_vars_to_ssa(nir_shader *shader);
 
 void nir_remove_dead_variables(nir_shader *shader);
 

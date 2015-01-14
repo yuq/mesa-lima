@@ -43,7 +43,7 @@ fs_visitor::emit_nir_code()
    bool progress;
    do {
       progress = false;
-      nir_lower_variables(nir);
+      nir_lower_vars_to_ssa(nir);
       nir_validate_shader(nir);
       progress |= nir_copy_prop(nir);
       nir_validate_shader(nir);

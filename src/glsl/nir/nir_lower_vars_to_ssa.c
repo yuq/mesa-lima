@@ -1131,7 +1131,7 @@ insert_phi_nodes(struct lower_variables_state *state)
  *     with SSA definitions and SSA uses.
  */
 static bool
-nir_lower_variables_impl(nir_function_impl *impl)
+nir_lower_vars_to_ssa_impl(nir_function_impl *impl)
 {
    struct lower_variables_state state;
 
@@ -1206,10 +1206,10 @@ nir_lower_variables_impl(nir_function_impl *impl)
 }
 
 void
-nir_lower_variables(nir_shader *shader)
+nir_lower_vars_to_ssa(nir_shader *shader)
 {
    nir_foreach_overload(shader, overload) {
       if (overload->impl)
-         nir_lower_variables_impl(overload->impl);
+         nir_lower_vars_to_ssa_impl(overload->impl);
    }
 }
