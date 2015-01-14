@@ -69,6 +69,14 @@ struct lower_variables_state {
     */
    struct hash_table *direct_deref_nodes;
 
+   /* Controls whether get_deref_node will add variables to the
+    * direct_deref_nodes table.  This is turned on when we are initially
+    * scanning for load/store instructions.  It is then turned off so we
+    * don't accidentally change the direct_deref_nodes table while we're
+    * iterating throug it.
+    */
+   bool add_to_direct_deref_nodes;
+
    /* A hash table mapping phi nodes to deref_state data */
    struct hash_table *phi_table;
 };
@@ -211,12 +219,11 @@ get_deref_node_for_var(nir_variable *var, struct lower_variables_state *state)
 
 /* Gets the deref_node for the given deref chain and creates it if it
  * doesn't yet exist.  If the deref is fully-qualified and direct and
- * add_to_direct_deref_nodes is true, it will be added to the hash table of
- * of fully-qualified direct derefs.
+ * state->add_to_direct_deref_nodes is true, it will be added to the hash
+ * table of of fully-qualified direct derefs.
  */
 static struct deref_node *
-get_deref_node(nir_deref_var *deref, bool add_to_direct_deref_nodes,
-               struct lower_variables_state *state)
+get_deref_node(nir_deref_var *deref, struct lower_variables_state *state)
 {
    bool is_direct = true;
 
@@ -288,7 +295,7 @@ get_deref_node(nir_deref_var *deref, bool add_to_direct_deref_nodes,
 
    assert(node);
 
-   if (is_direct && add_to_direct_deref_nodes)
+   if (is_direct && state->add_to_direct_deref_nodes)
       _mesa_hash_table_insert(state->direct_deref_nodes, deref, node);
 
    return node;
@@ -353,7 +360,7 @@ foreach_deref_node_match(nir_deref_var *deref,
 {
    nir_deref_var var_deref = *deref;
    var_deref.deref.child = NULL;
-   struct deref_node *node = get_deref_node(&var_deref, false, state);
+   struct deref_node *node = get_deref_node(&var_deref, state);
 
    if (node == NULL)
       return false;
@@ -428,11 +435,10 @@ deref_may_be_aliased(nir_deref_var *deref,
 }
 
 static void
-register_load_instr(nir_intrinsic_instr *load_instr, bool create_node,
+register_load_instr(nir_intrinsic_instr *load_instr,
                     struct lower_variables_state *state)
 {
-   struct deref_node *node = get_deref_node(load_instr->variables[0],
-                                            create_node, state);
+   struct deref_node *node = get_deref_node(load_instr->variables[0], state);
    if (node == NULL)
       return;
 
@@ -444,11 +450,10 @@ register_load_instr(nir_intrinsic_instr *load_instr, bool create_node,
 }
 
 static void
-register_store_instr(nir_intrinsic_instr *store_instr, bool create_node,
+register_store_instr(nir_intrinsic_instr *store_instr,
                      struct lower_variables_state *state)
 {
-   struct deref_node *node = get_deref_node(store_instr->variables[0],
-                                            create_node, state);
+   struct deref_node *node = get_deref_node(store_instr->variables[0], state);
    if (node == NULL)
       return;
 
@@ -460,12 +465,13 @@ register_store_instr(nir_intrinsic_instr *store_instr, bool create_node,
 }
 
 static void
-register_copy_instr(nir_intrinsic_instr *copy_instr, bool create_node,
+register_copy_instr(nir_intrinsic_instr *copy_instr,
                     struct lower_variables_state *state)
 {
    for (unsigned idx = 0; idx < 2; idx++) {
-      struct deref_node *node = get_deref_node(copy_instr->variables[idx],
-                                               create_node, state);
+      struct deref_node *node =
+         get_deref_node(copy_instr->variables[idx], state);
+
       if (node == NULL)
          continue;
 
@@ -491,15 +497,15 @@ register_variable_uses_block(nir_block *block, void *void_state)
 
       switch (intrin->intrinsic) {
       case nir_intrinsic_load_var:
-         register_load_instr(intrin, true, state);
+         register_load_instr(intrin, state);
          break;
 
       case nir_intrinsic_store_var:
-         register_store_instr(intrin, true, state);
+         register_store_instr(intrin, state);
          break;
 
       case nir_intrinsic_copy_var:
-         register_copy_instr(intrin, true, state);
+         register_copy_instr(intrin, state);
          break;
 
       default:
@@ -508,128 +514,6 @@ register_variable_uses_block(nir_block *block, void *void_state)
    }
 
    return true;
-}
-
-/* Walks down the deref chain and returns the next deref in the chain whose
- * child is a wildcard.  In other words, given the chain  a[1].foo[*].bar,
- * this function will return the deref to foo.  Calling it a second time
- * with the [*].bar, it will return NULL.
- */
-static nir_deref *
-deref_next_wildcard_parent(nir_deref *deref)
-{
-   for (nir_deref *tail = deref; tail->child; tail = tail->child) {
-      if (tail->child->deref_type != nir_deref_type_array)
-         continue;
-
-      nir_deref_array *arr = nir_deref_as_array(tail->child);
-
-      if (arr->deref_array_type == nir_deref_array_type_wildcard)
-         return tail;
-   }
-
-   return NULL;
-}
-
-/* Returns the last deref in the chain.
- */
-static nir_deref *
-get_deref_tail(nir_deref *deref)
-{
-   while (deref->child)
-      deref = deref->child;
-
-   return deref;
-}
-
-/* This function recursively walks the given deref chain and replaces the
- * given copy instruction with an equivalent sequence load/store
- * operations.
- *
- * @copy_instr    The copy instruction to replace; new instructions will be
- *                inserted before this one
- *
- * @dest_head     The head of the destination variable deref chain
- *
- * @src_head      The head of the source variable deref chain
- *
- * @dest_tail     The current tail of the destination variable deref chain;
- *                this is used for recursion and external callers of this
- *                function should call it with tail == head
- *
- * @src_tail      The current tail of the source variable deref chain;
- *                this is used for recursion and external callers of this
- *                function should call it with tail == head
- *
- * @state         The current variable lowering state
- */
-static void
-emit_copy_load_store(nir_intrinsic_instr *copy_instr,
-                     nir_deref_var *dest_head, nir_deref_var *src_head,
-                     nir_deref *dest_tail, nir_deref *src_tail,
-                     struct lower_variables_state *state)
-{
-   /* Find the next pair of wildcards */
-   nir_deref *src_arr_parent = deref_next_wildcard_parent(src_tail);
-   nir_deref *dest_arr_parent = deref_next_wildcard_parent(dest_tail);
-
-   if (src_arr_parent || dest_arr_parent) {
-      /* Wildcards had better come in matched pairs */
-      assert(dest_arr_parent && dest_arr_parent);
-
-      nir_deref_array *src_arr = nir_deref_as_array(src_arr_parent->child);
-      nir_deref_array *dest_arr = nir_deref_as_array(dest_arr_parent->child);
-
-      unsigned length = type_get_length(src_arr_parent->type);
-      /* The wildcards should represent the same number of elements */
-      assert(length == type_get_length(dest_arr_parent->type));
-      assert(length > 0);
-
-      /* Walk over all of the elements that this wildcard refers to and
-       * call emit_copy_load_store on each one of them */
-      src_arr->deref_array_type = nir_deref_array_type_direct;
-      dest_arr->deref_array_type = nir_deref_array_type_direct;
-      for (unsigned i = 0; i < length; i++) {
-         src_arr->base_offset = i;
-         dest_arr->base_offset = i;
-         emit_copy_load_store(copy_instr, dest_head, src_head,
-                              &dest_arr->deref, &src_arr->deref, state);
-      }
-      src_arr->deref_array_type = nir_deref_array_type_wildcard;
-      dest_arr->deref_array_type = nir_deref_array_type_wildcard;
-   } else {
-      /* In this case, we have no wildcards anymore, so all we have to do
-       * is just emit the load and store operations. */
-      src_tail = get_deref_tail(src_tail);
-      dest_tail = get_deref_tail(dest_tail);
-
-      assert(src_tail->type == dest_tail->type);
-
-      unsigned num_components = glsl_get_vector_elements(src_tail->type);
-
-      nir_deref *src_deref = nir_copy_deref(state->mem_ctx, &src_head->deref);
-      nir_deref *dest_deref = nir_copy_deref(state->mem_ctx, &dest_head->deref);
-
-      nir_intrinsic_instr *load =
-         nir_intrinsic_instr_create(state->mem_ctx, nir_intrinsic_load_var);
-      load->num_components = num_components;
-      load->variables[0] = nir_deref_as_var(src_deref);
-      load->dest.is_ssa = true;
-      nir_ssa_def_init(&load->instr, &load->dest.ssa, num_components, NULL);
-
-      nir_instr_insert_before(&copy_instr->instr, &load->instr);
-      register_load_instr(load, false, state);
-
-      nir_intrinsic_instr *store =
-         nir_intrinsic_instr_create(state->mem_ctx, nir_intrinsic_store_var);
-      store->num_components = num_components;
-      store->variables[0] = nir_deref_as_var(dest_deref);
-      store->src[0].is_ssa = true;
-      store->src[0].ssa = &load->dest.ssa;
-
-      nir_instr_insert_before(&copy_instr->instr, &store->instr);
-      register_store_instr(store, false, state);
-   }
 }
 
 /* Walks over all of the copy instructions to or from the given deref_node
@@ -646,14 +530,12 @@ lower_copies_to_load_store(struct deref_node *node,
    set_foreach(node->copies, copy_entry) {
       nir_intrinsic_instr *copy = (void *)copy_entry->key;
 
-      emit_copy_load_store(copy, copy->variables[0], copy->variables[1],
-                           &copy->variables[0]->deref,
-                           &copy->variables[1]->deref,
-                           state);
+      nir_lower_var_copy_instr(copy, state->mem_ctx);
 
       for (unsigned i = 0; i < 2; ++i) {
-         struct deref_node *arg_node = get_deref_node(copy->variables[i],
-                                                      false, state);
+         struct deref_node *arg_node =
+            get_deref_node(copy->variables[i], state);
+
          if (arg_node == NULL)
             continue;
 
@@ -869,8 +751,8 @@ rename_variables_block(nir_block *block, struct lower_variables_state *state)
 
          switch (intrin->intrinsic) {
          case nir_intrinsic_load_var: {
-            struct deref_node *node = get_deref_node(intrin->variables[0],
-                                                     false, state);
+            struct deref_node *node =
+               get_deref_node(intrin->variables[0], state);
 
             if (node == NULL) {
                /* If we hit this path then we are referencing an invalid
@@ -926,8 +808,8 @@ rename_variables_block(nir_block *block, struct lower_variables_state *state)
          }
 
          case nir_intrinsic_store_var: {
-            struct deref_node *node = get_deref_node(intrin->variables[0],
-                                                     false, state);
+            struct deref_node *node =
+               get_deref_node(intrin->variables[0], state);
 
             if (node == NULL) {
                /* Probably an out-of-bounds array store.  That should be a
@@ -1005,8 +887,7 @@ rename_variables_block(nir_block *block, struct lower_variables_state *state)
          if (intrin->intrinsic != nir_intrinsic_store_var)
             continue;
 
-         struct deref_node *node = get_deref_node(intrin->variables[0],
-                                                  false, state);
+         struct deref_node *node = get_deref_node(intrin->variables[0], state);
          if (!node)
             continue;
 
@@ -1153,6 +1034,8 @@ nir_lower_vars_to_ssa_impl(nir_function_impl *impl)
                                              _mesa_hash_pointer,
                                              _mesa_key_pointer_equal);
 
+   /* Build the initial deref structures and direct_deref_nodes table */
+   state.add_to_direct_deref_nodes = true;
    nir_foreach_block(impl, register_variable_uses_block, &state);
 
    struct set *outputs = _mesa_set_create(state.dead_ctx,
@@ -1161,6 +1044,9 @@ nir_lower_vars_to_ssa_impl(nir_function_impl *impl)
    bool progress = false;
 
    nir_metadata_require(impl, nir_metadata_block_index);
+
+   /* We're about to iterate through direct_deref_nodes.  Don't modify it. */
+   state.add_to_direct_deref_nodes = false;
 
    struct hash_entry *entry;
    hash_table_foreach(state.direct_deref_nodes, entry) {
@@ -1198,6 +1084,14 @@ nir_lower_vars_to_ssa_impl(nir_function_impl *impl)
       return false;
 
    nir_metadata_require(impl, nir_metadata_dominance);
+
+   /* We may have lowered some copy instructions to load/store
+    * instructions.  The uses from the copy instructions hav already been
+    * removed but we need to rescan to ensure that the uses from the newly
+    * added load/store instructions are registered.  We need this
+    * information for phi node insertion below.
+    */
+   nir_foreach_block(impl, register_variable_uses_block, &state);
 
    insert_phi_nodes(&state);
    rename_variables_block(impl->start_block, &state);
