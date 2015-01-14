@@ -1260,7 +1260,6 @@ _mesa_execute_program(struct gl_context * ctx,
                else if (swz == SWIZZLE_ONE)
                   result[i] = 1.0;
                else {
-                  ASSERT(swz >= 0);
                   ASSERT(swz <= 3);
                   result[i] = src[swz];
                }
