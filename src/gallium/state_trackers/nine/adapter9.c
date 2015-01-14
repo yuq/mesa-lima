@@ -307,6 +307,10 @@ NineAdapter9_CheckDeviceFormat( struct NineAdapter9 *This,
         return screen->get_param(screen, PIPE_CAP_MULTISAMPLE_Z_RESOLVE) ?
                D3D_OK : D3DERR_NOTAVAILABLE;
 
+    /* ATOC hack */
+    if (CheckFormat == D3DFMT_ATOC && RType == D3DRTYPE_SURFACE)
+        return D3D_OK;
+
     if (Usage & D3DUSAGE_QUERY_POSTPIXELSHADER_BLENDING)
         bind |= PIPE_BIND_BLENDABLE;
 

@@ -2075,6 +2075,14 @@ NineDevice9_SetRenderState( struct NineDevice9 *This,
         }
     }
 
+    /* NV hack */
+    if (State == D3DRS_ADAPTIVETESS_Y &&
+        (Value == D3DFMT_ATOC || (Value == D3DFMT_UNKNOWN && state->rs[NINED3DRS_ALPHACOVERAGE]))) {
+            state->rs[NINED3DRS_ALPHACOVERAGE] = (Value == D3DFMT_ATOC);
+            state->changed.group |= NINE_STATE_BLEND;
+            return D3D_OK;
+    }
+
     user_assert(State < Elements(state->rs), D3DERR_INVALIDCALL);
 
     if (likely(state->rs[State] != Value) || unlikely(This->is_recording)) {
