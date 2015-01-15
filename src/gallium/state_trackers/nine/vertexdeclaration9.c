@@ -192,7 +192,7 @@ NineVertexDeclaration9_ctor( struct NineVertexDeclaration9 *This,
     This->decls = CALLOC(This->nelems+1, sizeof(D3DVERTEXELEMENT9));
     This->elems = CALLOC(This->nelems, sizeof(struct pipe_vertex_element));
     This->usage_map = CALLOC(This->nelems, sizeof(uint16_t));
-    if (!This->decls || !This->elems) { return E_OUTOFMEMORY; }
+    if (!This->decls || !This->elems || !This->usage_map) { return E_OUTOFMEMORY; }
     memcpy(This->decls, pElements, sizeof(D3DVERTEXELEMENT9)*(This->nelems+1));
 
     for (i = 0; i < This->nelems; ++i) {
