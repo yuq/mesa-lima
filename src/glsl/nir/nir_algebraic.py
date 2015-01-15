@@ -192,8 +192,10 @@ ${pass_name}_block(nir_block *block, void *void_state)
          for (unsigned i = 0; i < ARRAY_SIZE(${pass_name}_${opcode}_xforms); i++) {
             if (nir_replace_instr(alu, ${pass_name}_${opcode}_xforms[i].search,
                                   ${pass_name}_${opcode}_xforms[i].replace,
-                                  state->mem_ctx))
+                                  state->mem_ctx)) {
                state->progress = true;
+               break;
+            }
          }
          break;
       % endfor
