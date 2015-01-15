@@ -2347,7 +2347,7 @@ reuse_framebuffer_texture_attachment(struct gl_framebuffer *fb,
 static void
 framebuffer_texture(struct gl_context *ctx, const char *caller, GLenum target,
                     GLenum attachment, GLenum textarget, GLuint texture,
-                    GLint level, GLint zoffset, GLboolean layered)
+                    GLint level, GLuint zoffset, GLboolean layered)
 {
    struct gl_renderbuffer_attachment *att;
    struct gl_texture_object *texObj = NULL;
@@ -2441,8 +2441,8 @@ framebuffer_texture(struct gl_context *ctx, const char *caller, GLenum target,
       }
 
       if (texObj->Target == GL_TEXTURE_3D) {
-         const GLint maxSize = 1 << (ctx->Const.Max3DTextureLevels - 1);
-         if (zoffset < 0 || zoffset >= maxSize) {
+         const GLuint maxSize = 1 << (ctx->Const.Max3DTextureLevels - 1);
+         if (zoffset >= maxSize) {
             _mesa_error(ctx, GL_INVALID_VALUE,
                         "glFramebufferTexture%s(zoffset)", caller);
             return;
@@ -2452,8 +2452,7 @@ framebuffer_texture(struct gl_context *ctx, const char *caller, GLenum target,
                (texObj->Target == GL_TEXTURE_2D_ARRAY_EXT) ||
                (texObj->Target == GL_TEXTURE_CUBE_MAP_ARRAY) ||
                (texObj->Target == GL_TEXTURE_2D_MULTISAMPLE_ARRAY)) {
-         if (zoffset < 0 ||
-             zoffset >= (GLint) ctx->Const.MaxArrayTextureLayers) {
+         if (zoffset >= ctx->Const.MaxArrayTextureLayers) {
             _mesa_error(ctx, GL_INVALID_VALUE,
                         "glFramebufferTexture%s(layer)", caller);
             return;

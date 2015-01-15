@@ -207,7 +207,7 @@ static struct set_entry *
 set_add(struct set *ht, uint32_t hash, const void *key);
 
 static void
-set_rehash(struct set *ht, int new_size_index)
+set_rehash(struct set *ht, unsigned new_size_index)
 {
    struct set old_ht;
    struct set_entry *table, *entry;

@@ -301,7 +301,7 @@ _mesa_DrawBuffer(GLenum buffer)
 void GLAPIENTRY
 _mesa_DrawBuffers(GLsizei n, const GLenum *buffers)
 {
-   GLint output;
+   GLuint output;
    GLbitfield usedBufferMask, supportedMask;
    GLbitfield destMask[MAX_DRAW_BUFFERS];
    GET_CURRENT_CONTEXT(ctx);

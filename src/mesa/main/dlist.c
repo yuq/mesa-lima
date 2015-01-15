@@ -1021,7 +1021,7 @@ dlist_alloc(struct gl_context *ctx, OpCode opcode, GLuint bytes)
    const GLuint contNodes = 1 + POINTER_DWORDS;  /* size of continue info */
    Node *n;
 
-   if (opcode < (GLuint) OPCODE_EXT_0) {
+   if (opcode < OPCODE_EXT_0) {
       if (InstSize[opcode] == 0) {
          /* save instruction size now */
          InstSize[opcode] = numNodes;

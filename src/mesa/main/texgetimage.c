@@ -596,7 +596,7 @@ get_tex_memcpy(struct gl_context *ctx, GLenum format, GLenum type,
 
    if (memCopy) {
       const GLuint bpp = _mesa_get_format_bytes(texImage->TexFormat);
-      const GLuint bytesPerRow = texImage->Width * bpp;
+      const GLint bytesPerRow = texImage->Width * bpp;
       GLubyte *dst =
          _mesa_image_address2d(&ctx->Pack, pixels, texImage->Width,
                                texImage->Height, format, type, 0, 0);
@@ -707,7 +707,7 @@ _mesa_GetCompressedTexImage_sw(struct gl_context *ctx,
    const GLuint dimensions =
       _mesa_get_texture_dimensions(texImage->TexObject->Target);
    struct compressed_pixelstore store;
-   GLuint i, slice;
+   GLint slice;
    GLubyte *dest;
 
    _mesa_compute_compressed_pixelstore(dimensions, texImage->TexFormat,
@@ -745,7 +745,7 @@ _mesa_GetCompressedTexImage_sw(struct gl_context *ctx,
                                   GL_MAP_READ_BIT, &src, &srcRowStride);
 
       if (src) {
-
+         GLint i;
          for (i = 0; i < store.CopyRowsPerSlice; i++) {
             memcpy(dest, src, store.CopyBytesPerRow);
             dest += store.TotalBytesPerRow;

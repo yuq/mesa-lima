@@ -300,7 +300,8 @@ check_draw_elements_data(struct gl_context *ctx, GLsizei count, GLenum elemType,
 {
    struct gl_vertex_array_object *vao = ctx->Array.VAO;
    const void *elemMap;
-   GLint i, k;
+   GLint i;
+   GLuint k;
 
    if (_mesa_is_bufferobj(ctx->Array.VAO->IndexBufferObj)) {
       elemMap = ctx->Driver.MapBufferRange(ctx, 0,

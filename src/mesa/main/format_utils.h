@@ -163,7 +163,7 @@ _mesa_unsigned_to_unsigned(unsigned src, unsigned dst_size)
 static inline int
 _mesa_unsigned_to_signed(unsigned src, unsigned dst_size)
 {
-   return MIN2(src, MAX_INT(dst_size));
+   return MIN2(src, (unsigned)MAX_INT(dst_size));
 }
 
 static inline int

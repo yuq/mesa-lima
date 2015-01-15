@@ -232,7 +232,7 @@ hash_table_insert(struct hash_table *ht, uint32_t hash,
                   const void *key, void *data);
 
 static void
-_mesa_hash_table_rehash(struct hash_table *ht, int new_size_index)
+_mesa_hash_table_rehash(struct hash_table *ht, unsigned new_size_index)
 {
    struct hash_table old_ht;
    struct hash_entry *table, *entry;

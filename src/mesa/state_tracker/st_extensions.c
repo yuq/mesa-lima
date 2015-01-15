@@ -411,7 +411,8 @@ void st_init_extensions(struct pipe_screen *screen,
                         struct st_config_options *options,
                         boolean has_lib_dxtc)
 {
-   int i, glsl_feature_level;
+   unsigned i;
+   int glsl_feature_level;
    GLboolean *extension_table = (GLboolean *) extensions;
 
    static const struct st_extension_cap_mapping cap_mapping[] = {
@@ -705,7 +706,7 @@ void st_init_extensions(struct pipe_screen *screen,
       extensions->EXT_texture_integer = GL_FALSE;
    }
 
-   consts->UniformBooleanTrue = consts->NativeIntegers ? ~0 : fui(1.0f);
+   consts->UniformBooleanTrue = consts->NativeIntegers ? ~0U : fui(1.0f);
 
    /* Below are the cases which cannot be moved into tables easily. */
 
