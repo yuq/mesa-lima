@@ -42,8 +42,8 @@ main(int argc, char **argv)
 
    ht = _mesa_hash_table_create(NULL, NULL, _mesa_key_string_equal);
 
-   _mesa_hash_table_insert_with_hash(ht, bad_hash, str1, NULL);
-   _mesa_hash_table_insert_with_hash(ht, bad_hash, str2, NULL);
+   _mesa_hash_table_insert_pre_hashed(ht, bad_hash, str1, NULL);
+   _mesa_hash_table_insert_pre_hashed(ht, bad_hash, str2, NULL);
 
    entry1 = _mesa_hash_table_search_pre_hashed(ht, bad_hash, str1);
    assert(entry1->key == str1);
@@ -63,11 +63,11 @@ main(int argc, char **argv)
    /* Put str1 back, then spam junk into the table to force a
     * resize and make sure we can still find them both.
     */
-   _mesa_hash_table_insert_with_hash(ht, bad_hash, str1, NULL);
+   _mesa_hash_table_insert_pre_hashed(ht, bad_hash, str1, NULL);
    for (i = 0; i < 100; i++) {
       char *key = malloc(10);
       sprintf(key, "spam%d", i);
-      _mesa_hash_table_insert_with_hash(ht, _mesa_hash_string(key), key, NULL);
+      _mesa_hash_table_insert_pre_hashed(ht, _mesa_hash_string(key), key, NULL);
    }
    entry1 = _mesa_hash_table_search_pre_hashed(ht, bad_hash, str1);
    assert(entry1->key == str1);

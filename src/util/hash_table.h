@@ -70,8 +70,8 @@ void _mesa_hash_table_set_deleted_key(struct hash_table *ht,
 struct hash_entry *
 _mesa_hash_table_insert(struct hash_table *ht, const void *key, void *data);
 struct hash_entry *
-_mesa_hash_table_insert_with_hash(struct hash_table *ht, uint32_t hash,
-                                  const void *key, void *data);
+_mesa_hash_table_insert_pre_hashed(struct hash_table *ht, uint32_t hash,
+                                   const void *key, void *data);
 struct hash_entry *
 _mesa_hash_table_search(struct hash_table *ht, const void *key);
 struct hash_entry *

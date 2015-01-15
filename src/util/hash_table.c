@@ -334,8 +334,8 @@ _mesa_hash_table_insert(struct hash_table *ht, const void *key, void *data)
 }
 
 struct hash_entry *
-_mesa_hash_table_insert_with_hash(struct hash_table *ht, uint32_t hash,
-                                  const void *key, void *data)
+_mesa_hash_table_insert_pre_hashed(struct hash_table *ht, uint32_t hash,
+                                   const void *key, void *data)
 {
    assert(ht->key_hash_function == NULL || hash == ht->key_hash_function(key));
    return hash_table_insert(ht, hash, key, data);

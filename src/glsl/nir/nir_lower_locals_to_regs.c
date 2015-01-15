@@ -118,7 +118,7 @@ get_reg_for_deref(nir_deref_var *deref, struct locals_to_regs_state *state)
    reg->num_components = glsl_get_vector_elements(tail->type);
    reg->num_array_elems = array_size > 1 ? array_size : 0;
 
-   _mesa_hash_table_insert_with_hash(state->regs_table, hash, deref, reg);
+   _mesa_hash_table_insert_pre_hashed(state->regs_table, hash, deref, reg);
 
    return reg;
 }
