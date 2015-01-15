@@ -114,15 +114,12 @@ rewrite_src_instr(nir_src *src, nir_ssa_def *new_def, nir_instr *parent_instr)
    search_state.found = false;
    nir_foreach_src(parent_instr, search_def, &search_state);
    if (!search_state.found) {
-      struct set_entry *entry =
-         _mesa_set_search(old_def->uses, _mesa_hash_pointer(parent_instr),
-                          parent_instr);
+      struct set_entry *entry = _mesa_set_search(old_def->uses, parent_instr);
       assert(entry);
       _mesa_set_remove(old_def->uses, entry);
    }
 
-   _mesa_set_add(new_def->uses, _mesa_hash_pointer(parent_instr),
-                 parent_instr);
+   _mesa_set_add(new_def->uses, parent_instr);
 }
 
 static void
@@ -132,12 +129,11 @@ rewrite_src_if(nir_if *if_stmt, nir_ssa_def *new_def)
 
    if_stmt->condition.ssa = new_def;
 
-   struct set_entry *entry =
-      _mesa_set_search(old_def->if_uses, _mesa_hash_pointer(if_stmt), if_stmt);
+   struct set_entry *entry = _mesa_set_search(old_def->if_uses, if_stmt);
    assert(entry);
    _mesa_set_remove(old_def->if_uses, entry);
 
-   _mesa_set_add(new_def->if_uses, _mesa_hash_pointer(if_stmt), if_stmt);
+   _mesa_set_add(new_def->if_uses, if_stmt);
 }
 
 static bool

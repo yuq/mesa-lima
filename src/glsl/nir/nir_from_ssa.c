@@ -353,16 +353,14 @@ isolate_phi_nodes_block(nir_block *block, void *void_state)
          exec_list_push_tail(&pcopy->entries, &entry->node);
 
          entry->src = nir_src_copy(src->src, state->dead_ctx);
-         _mesa_set_add(src->src.ssa->uses,
-                       _mesa_hash_pointer(&pcopy->instr), &pcopy->instr);
+         _mesa_set_add(src->src.ssa->uses, &pcopy->instr);
 
          entry->dest.is_ssa = true;
          nir_ssa_def_init(&pcopy->instr, &entry->dest.ssa,
                           phi->dest.ssa.num_components, src->src.ssa->name);
 
          struct set_entry *use_entry =
-            _mesa_set_search(src->src.ssa->uses,
-                             _mesa_hash_pointer(instr), instr);
+            _mesa_set_search(src->src.ssa->uses, instr);
          if (use_entry)
             /* It is possible that a phi node can use the same source twice
              * but for different basic blocks.  If that happens, entry will
@@ -374,7 +372,7 @@ isolate_phi_nodes_block(nir_block *block, void *void_state)
             _mesa_set_remove(src->src.ssa->uses, use_entry);
 
          src->src.ssa = &entry->dest.ssa;
-         _mesa_set_add(entry->dest.ssa.uses, _mesa_hash_pointer(instr), instr);
+         _mesa_set_add(entry->dest.ssa.uses, instr);
       }
 
       nir_parallel_copy_entry *entry = ralloc(state->dead_ctx,
@@ -393,9 +391,7 @@ isolate_phi_nodes_block(nir_block *block, void *void_state)
 
       entry->src.is_ssa = true;
       entry->src.ssa = &phi->dest.ssa;
-      _mesa_set_add(phi->dest.ssa.uses,
-                    _mesa_hash_pointer(&block_pcopy->instr),
-                    &block_pcopy->instr);
+      _mesa_set_add(phi->dest.ssa.uses, &block_pcopy->instr);
    }
 
    return true;
@@ -545,7 +541,7 @@ rewrite_ssa_src(nir_src *src, void *void_state)
 
       /* We don't need to remove it from the uses set because that is going
        * away.  We just need to add it to the one for the register. */
-      _mesa_set_add(reg->uses, _mesa_hash_pointer(state->instr), state->instr);
+      _mesa_set_add(reg->uses, state->instr);
    }
 
    return true;
@@ -570,7 +566,7 @@ rewrite_ssa_dest(nir_dest *dest, void *void_state)
       memset(dest, 0, sizeof *dest);
       dest->reg.reg = reg;
 
-      _mesa_set_add(reg->defs, _mesa_hash_pointer(state->instr), state->instr);
+      _mesa_set_add(reg->defs, state->instr);
    }
 
    return true;
@@ -605,8 +601,7 @@ resolve_registers_block(nir_block *block, void *void_state)
          memset(&following_if->condition, 0, sizeof following_if->condition);
          following_if->condition.reg.reg = reg;
 
-         _mesa_set_add(reg->if_uses, _mesa_hash_pointer(following_if),
-                       following_if);
+         _mesa_set_add(reg->if_uses, following_if);
       } else {
          /* FIXME: We really shouldn't hit this.  We should be doing
           * constant control flow propagation.

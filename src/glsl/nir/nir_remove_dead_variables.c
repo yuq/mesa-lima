@@ -33,7 +33,7 @@ add_var_use_intrinsic(nir_intrinsic_instr *instr, struct set *live)
    unsigned num_vars = nir_intrinsic_infos[instr->intrinsic].num_variables;
    for (unsigned i = 0; i < num_vars; i++) {
       nir_variable *var = instr->variables[i]->var;
-      _mesa_set_add(live, _mesa_hash_pointer(var), var);
+      _mesa_set_add(live, var);
    }
 }
 
@@ -42,12 +42,12 @@ add_var_use_call(nir_call_instr *instr, struct set *live)
 {
    if (instr->return_deref != NULL) {
       nir_variable *var = instr->return_deref->var;
-      _mesa_set_add(live, _mesa_hash_pointer(var), var);
+      _mesa_set_add(live, var);
    }
 
    for (unsigned i = 0; i < instr->num_params; i++) {
       nir_variable *var = instr->params[i]->var;
-      _mesa_set_add(live, _mesa_hash_pointer(var), var);
+      _mesa_set_add(live, var);
    }
 }
 
@@ -56,7 +56,7 @@ add_var_use_tex(nir_tex_instr *instr, struct set *live)
 {
    if (instr->sampler != NULL) {
       nir_variable *var = instr->sampler->var;
-      _mesa_set_add(live, _mesa_hash_pointer(var), var);
+      _mesa_set_add(live, var);
    }
 }
 
@@ -101,8 +101,7 @@ static void
 remove_dead_local_vars(nir_function_impl *impl, struct set *live)
 {
    foreach_list_typed_safe(nir_variable, var, node, &impl->locals) {
-      struct set_entry *entry =
-         _mesa_set_search(live, _mesa_hash_pointer(var), var);
+      struct set_entry *entry = _mesa_set_search(live, var);
       if (entry == NULL)
          exec_node_remove(&var->node);
    }
@@ -112,8 +111,7 @@ static void
 remove_dead_global_vars(nir_shader *shader, struct set *live)
 {
    foreach_list_typed_safe(nir_variable, var, node, &shader->globals) {
-      struct set_entry *entry =
-         _mesa_set_search(live, _mesa_hash_pointer(var), var);
+      struct set_entry *entry = _mesa_set_search(live, var);
       if (entry == NULL)
          exec_node_remove(&var->node);
    }
@@ -123,7 +121,7 @@ void
 nir_remove_dead_variables(nir_shader *shader)
 {
    struct set *live =
-      _mesa_set_create(NULL, _mesa_key_pointer_equal);
+      _mesa_set_create(NULL, _mesa_hash_pointer, _mesa_key_pointer_equal);
 
    add_var_use_shader(shader, live);
 

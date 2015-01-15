@@ -113,8 +113,7 @@ calc_dom_frontier_cb(nir_block *block, void *state)
       set_foreach(block->predecessors, entry) {
          nir_block *runner = (nir_block *) entry->key;
          while (runner != block->imm_dom) {
-            _mesa_set_add(runner->dom_frontier, _mesa_hash_pointer(block),
-                          block);
+            _mesa_set_add(runner->dom_frontier, block);
             runner = runner->imm_dom;
          }
       }

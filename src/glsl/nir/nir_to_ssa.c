@@ -194,11 +194,9 @@ rewrite_use(nir_src *src, void *_state)
    src->ssa = get_ssa_src(src->reg.reg, state);
 
    if (state->parent_instr)
-      _mesa_set_add(src->ssa->uses, _mesa_hash_pointer(state->parent_instr),
-                  state->parent_instr);
+      _mesa_set_add(src->ssa->uses, state->parent_instr);
    else
-      _mesa_set_add(src->ssa->if_uses, _mesa_hash_pointer(state->parent_if),
-                  state->parent_if);
+      _mesa_set_add(src->ssa->if_uses, state->parent_if);
    return true;
 }
 

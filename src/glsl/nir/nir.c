@@ -61,9 +61,12 @@ reg_create(void *mem_ctx, struct exec_list *list)
 {
    nir_register *reg = ralloc(mem_ctx, nir_register);
 
-   reg->uses = _mesa_set_create(mem_ctx, _mesa_key_pointer_equal);
-   reg->defs = _mesa_set_create(mem_ctx, _mesa_key_pointer_equal);
-   reg->if_uses = _mesa_set_create(mem_ctx, _mesa_key_pointer_equal);
+   reg->uses = _mesa_set_create(mem_ctx, _mesa_hash_pointer,
+                                _mesa_key_pointer_equal);
+   reg->defs = _mesa_set_create(mem_ctx, _mesa_hash_pointer,
+                                _mesa_key_pointer_equal);
+   reg->if_uses = _mesa_set_create(mem_ctx, _mesa_hash_pointer,
+                                   _mesa_key_pointer_equal);
 
    reg->num_components = 0;
    reg->num_array_elems = 0;
@@ -175,7 +178,7 @@ nir_dest nir_dest_copy(nir_dest dest, void *mem_ctx)
 static inline void
 block_add_pred(nir_block *block, nir_block *pred)
 {
-   _mesa_set_add(block->predecessors, _mesa_hash_pointer(pred), pred);
+   _mesa_set_add(block->predecessors, pred);
 }
 
 static void
@@ -208,8 +211,7 @@ unlink_blocks(nir_block *pred, nir_block *succ)
       pred->successors[1] = NULL;
    }
 
-   struct set_entry *entry = _mesa_set_search(succ->predecessors,
-                                              _mesa_hash_pointer(pred), pred);
+   struct set_entry *entry = _mesa_set_search(succ->predecessors, pred);
 
    assert(entry);
 
@@ -274,9 +276,11 @@ nir_block_create(void *mem_ctx)
    cf_init(&block->cf_node, nir_cf_node_block);
 
    block->successors[0] = block->successors[1] = NULL;
-   block->predecessors = _mesa_set_create(mem_ctx, _mesa_key_pointer_equal);
+   block->predecessors = _mesa_set_create(mem_ctx, _mesa_hash_pointer,
+                                          _mesa_key_pointer_equal);
    block->imm_dom = NULL;
-   block->dom_frontier = _mesa_set_create(mem_ctx, _mesa_key_pointer_equal);
+   block->dom_frontier = _mesa_set_create(mem_ctx, _mesa_hash_pointer,
+                                          _mesa_key_pointer_equal);
 
    exec_list_make_empty(&block->instr_list);
 
@@ -1001,7 +1005,7 @@ update_if_uses(nir_cf_node *node)
                              if_stmt->condition.ssa->if_uses :
                              if_stmt->condition.reg.reg->uses;
 
-   _mesa_set_add(if_uses_set, _mesa_hash_pointer(if_stmt), if_stmt);
+   _mesa_set_add(if_uses_set, if_stmt);
 }
 
 void
@@ -1168,7 +1172,7 @@ add_use_cb(nir_src *src, void *state)
 
    struct set *uses_set = src->is_ssa ? src->ssa->uses : src->reg.reg->uses;
 
-   _mesa_set_add(uses_set, _mesa_hash_pointer(instr), instr);
+   _mesa_set_add(uses_set, instr);
 
    return true;
 }
@@ -1194,7 +1198,7 @@ add_reg_def_cb(nir_dest *dest, void *state)
    nir_instr *instr = (nir_instr *) state;
 
    if (!dest->is_ssa)
-      _mesa_set_add(dest->reg.reg->defs, _mesa_hash_pointer(instr), instr);
+      _mesa_set_add(dest->reg.reg->defs, instr);
 
    return true;
 }
@@ -1313,9 +1317,7 @@ remove_use_cb(nir_src *src, void *state)
 
    struct set *uses_set = src->is_ssa ? src->ssa->uses : src->reg.reg->uses;
 
-   struct set_entry *entry = _mesa_set_search(uses_set,
-                                              _mesa_hash_pointer(instr),
-                                              instr);
+   struct set_entry *entry = _mesa_set_search(uses_set, instr);
    if (entry)
       _mesa_set_remove(uses_set, entry);
 
@@ -1332,9 +1334,7 @@ remove_def_cb(nir_dest *dest, void *state)
 
    nir_register *reg = dest->reg.reg;
 
-   struct set_entry *entry = _mesa_set_search(reg->defs,
-                                              _mesa_hash_pointer(instr),
-                                              instr);
+   struct set_entry *entry = _mesa_set_search(reg->defs, instr);
    if (entry)
       _mesa_set_remove(reg->defs, entry);
 
@@ -1741,9 +1741,7 @@ nir_instr_rewrite_src(nir_instr *instr, nir_src *src, nir_src new_src)
       nir_ssa_def *old_ssa = src->ssa;
       *src = new_src;
       if (old_ssa && nir_foreach_src(instr, src_does_not_use_def, old_ssa)) {
-         struct set_entry *entry = _mesa_set_search(old_ssa->uses,
-                                                    _mesa_hash_pointer(instr),
-                                                    instr);
+         struct set_entry *entry = _mesa_set_search(old_ssa->uses, instr);
          assert(entry);
          _mesa_set_remove(old_ssa->uses, entry);
       }
@@ -1754,9 +1752,7 @@ nir_instr_rewrite_src(nir_instr *instr, nir_src *src, nir_src new_src)
       nir_register *old_reg = src->reg.reg;
       *src = new_src;
       if (old_reg && nir_foreach_src(instr, src_does_not_use_reg, old_reg)) {
-         struct set_entry *entry = _mesa_set_search(old_reg->uses,
-                                                    _mesa_hash_pointer(instr),
-                                                    instr);
+         struct set_entry *entry = _mesa_set_search(old_reg->uses, instr);
          assert(entry);
          _mesa_set_remove(old_reg->uses, entry);
       }
@@ -1764,10 +1760,10 @@ nir_instr_rewrite_src(nir_instr *instr, nir_src *src, nir_src new_src)
 
    if (new_src.is_ssa) {
       if (new_src.ssa)
-         _mesa_set_add(new_src.ssa->uses, _mesa_hash_pointer(instr), instr);
+         _mesa_set_add(new_src.ssa->uses, instr);
    } else {
       if (new_src.reg.reg)
-         _mesa_set_add(new_src.reg.reg->uses, _mesa_hash_pointer(instr), instr);
+         _mesa_set_add(new_src.reg.reg->uses, instr);
    }
 }
 
@@ -1779,8 +1775,10 @@ nir_ssa_def_init(nir_instr *instr, nir_ssa_def *def,
 
    def->name = name;
    def->parent_instr = instr;
-   def->uses = _mesa_set_create(mem_ctx, _mesa_key_pointer_equal);
-   def->if_uses = _mesa_set_create(mem_ctx, _mesa_key_pointer_equal);
+   def->uses = _mesa_set_create(mem_ctx, _mesa_hash_pointer,
+                                _mesa_key_pointer_equal);
+   def->if_uses = _mesa_set_create(mem_ctx, _mesa_hash_pointer,
+                                   _mesa_key_pointer_equal);
    def->num_components = num_components;
 
    if (instr->block) {
@@ -1835,7 +1833,7 @@ nir_ssa_def_rewrite_uses(nir_ssa_def *def, nir_src new_src, void *mem_ctx)
 
       _mesa_set_remove(def->uses, entry);
       nir_foreach_src(instr, ssa_def_rewrite_uses_src, &state);
-      _mesa_set_add(new_uses, _mesa_hash_pointer(instr), instr);
+      _mesa_set_add(new_uses, instr);
    }
 
    set_foreach(def->if_uses, entry) {
@@ -1843,7 +1841,7 @@ nir_ssa_def_rewrite_uses(nir_ssa_def *def, nir_src new_src, void *mem_ctx)
 
       _mesa_set_remove(def->if_uses, entry);
       if_use->condition = nir_src_copy(new_src, mem_ctx);
-      _mesa_set_add(new_if_uses, _mesa_hash_pointer(if_use), if_use);
+      _mesa_set_add(new_if_uses, if_use);
    }
 }
 

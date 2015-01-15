@@ -92,9 +92,7 @@ validate_reg_src(nir_reg_src *src, validate_state *state)
 {
    assert(src->reg != NULL);
 
-   struct set_entry *entry =
-      _mesa_set_search(src->reg->uses, _mesa_hash_pointer(state->instr),
-                       state->instr);
+   struct set_entry *entry = _mesa_set_search(src->reg->uses, state->instr);
    assert(entry && "use not in nir_register.uses");
 
    struct hash_entry *entry2;
@@ -103,8 +101,7 @@ validate_reg_src(nir_reg_src *src, validate_state *state)
    assert(entry2);
 
    reg_validate_state *reg_state = (reg_validate_state *) entry2->data;
-   _mesa_set_add(reg_state->uses, _mesa_hash_pointer(state->instr),
-                 state->instr);
+   _mesa_set_add(reg_state->uses, state->instr);
 
    if (!src->reg->is_global) {
       assert(reg_state->where_defined == state->impl &&
@@ -137,8 +134,7 @@ validate_ssa_src(nir_ssa_def *def, validate_state *state)
 
    struct set_entry *entry2;
 
-   entry2 = _mesa_set_search(def->uses, _mesa_hash_pointer(state->instr),
-                              state->instr);
+   entry2 = _mesa_set_search(def->uses, state->instr);
 
    assert(entry2 && "SSA use missing");
 
@@ -183,9 +179,7 @@ validate_reg_dest(nir_reg_dest *dest, validate_state *state)
 {
    assert(dest->reg != NULL);
 
-   struct set_entry *entry =
-      _mesa_set_search(dest->reg->defs, _mesa_hash_pointer(state->instr),
-                       state->instr);
+   struct set_entry *entry = _mesa_set_search(dest->reg->defs, state->instr);
    assert(entry && "definition not in nir_register.defs");
 
    struct hash_entry *entry2;
@@ -194,8 +188,7 @@ validate_reg_dest(nir_reg_dest *dest, validate_state *state)
    assert(entry2);
 
    reg_validate_state *reg_state = (reg_validate_state *) entry2->data;
-   _mesa_set_add(reg_state->defs, _mesa_hash_pointer(state->instr),
-                 state->instr);
+   _mesa_set_add(reg_state->defs, state->instr);
 
    if (!dest->reg->is_global) {
       assert(reg_state->where_defined == state->impl &&
@@ -553,8 +546,7 @@ validate_block(nir_block *block, validate_state *state)
    for (unsigned i = 0; i < 2; i++) {
       if (block->successors[i] != NULL) {
          struct set_entry *entry =
-            _mesa_set_search(block->successors[i]->predecessors,
-                             _mesa_hash_pointer(block), block);
+            _mesa_set_search(block->successors[i]->predecessors, block);
          assert(entry);
 
          validate_phi_srcs(block, block->successors[i], state);
@@ -585,13 +577,11 @@ validate_if(nir_if *if_stmt, validate_state *state)
 
    if (!if_stmt->condition.is_ssa) {
       nir_register *reg = if_stmt->condition.reg.reg;
-      struct set_entry *entry =
-         _mesa_set_search(reg->if_uses, _mesa_hash_pointer(if_stmt), if_stmt);
+      struct set_entry *entry =  _mesa_set_search(reg->if_uses, if_stmt);
       assert(entry);
    } else {
       nir_ssa_def *def = if_stmt->condition.ssa;
-      struct set_entry *entry =
-         _mesa_set_search(def->if_uses, _mesa_hash_pointer(if_stmt), if_stmt);
+      struct set_entry *entry = _mesa_set_search(def->if_uses, if_stmt);
       assert(entry);
    }
 
@@ -679,8 +669,10 @@ prevalidate_reg_decl(nir_register *reg, bool is_global, validate_state *state)
    BITSET_SET(state->regs_found, reg->index);
 
    reg_validate_state *reg_state = ralloc(state->regs, reg_validate_state);
-   reg_state->uses = _mesa_set_create(reg_state, _mesa_key_pointer_equal);
-   reg_state->defs = _mesa_set_create(reg_state, _mesa_key_pointer_equal);
+   reg_state->uses = _mesa_set_create(reg_state, _mesa_hash_pointer,
+                                      _mesa_key_pointer_equal);
+   reg_state->defs = _mesa_set_create(reg_state, _mesa_hash_pointer,
+                                      _mesa_key_pointer_equal);
 
    reg_state->where_defined = is_global ? NULL : state->impl;
 
@@ -699,8 +691,7 @@ postvalidate_reg_decl(nir_register *reg, validate_state *state)
       struct set_entry *entry;
       set_foreach(reg->uses, entry) {
          struct set_entry *entry2 =
-            _mesa_set_search(reg_state->uses, _mesa_hash_pointer(entry->key),
-                             entry->key);
+            _mesa_set_search(reg_state->uses, entry->key);
 
          if (entry2 == NULL) {
             printf("%p\n", entry->key);
@@ -715,8 +706,7 @@ postvalidate_reg_decl(nir_register *reg, validate_state *state)
       struct set_entry *entry;
       set_foreach(reg->defs, entry) {
          struct set_entry *entry2 =
-            _mesa_set_search(reg_state->defs, _mesa_hash_pointer(entry->key),
-                             entry->key);
+            _mesa_set_search(reg_state->defs, entry->key);
 
          if (entry2 == NULL) {
             printf("%p\n", entry->key);

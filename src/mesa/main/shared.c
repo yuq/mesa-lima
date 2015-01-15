@@ -119,7 +119,8 @@ _mesa_alloc_shared_state(struct gl_context *ctx)
    shared->FrameBuffers = _mesa_NewHashTable();
    shared->RenderBuffers = _mesa_NewHashTable();
 
-   shared->SyncObjects = _mesa_set_create(NULL, _mesa_key_pointer_equal);
+   shared->SyncObjects = _mesa_set_create(NULL, _mesa_hash_pointer,
+                                          _mesa_key_pointer_equal);
 
    return shared;
 }

@@ -443,10 +443,10 @@ register_load_instr(nir_intrinsic_instr *load_instr,
       return;
 
    if (node->loads == NULL)
-      node->loads = _mesa_set_create(state->dead_ctx,
+      node->loads = _mesa_set_create(state->dead_ctx, _mesa_hash_pointer,
                                      _mesa_key_pointer_equal);
 
-   _mesa_set_add(node->loads, _mesa_hash_pointer(load_instr), load_instr);
+   _mesa_set_add(node->loads, load_instr);
 }
 
 static void
@@ -458,10 +458,10 @@ register_store_instr(nir_intrinsic_instr *store_instr,
       return;
 
    if (node->stores == NULL)
-      node->stores = _mesa_set_create(state->dead_ctx,
+      node->stores = _mesa_set_create(state->dead_ctx, _mesa_hash_pointer,
                                      _mesa_key_pointer_equal);
 
-   _mesa_set_add(node->stores, _mesa_hash_pointer(store_instr), store_instr);
+   _mesa_set_add(node->stores, store_instr);
 }
 
 static void
@@ -476,10 +476,10 @@ register_copy_instr(nir_intrinsic_instr *copy_instr,
          continue;
 
       if (node->copies == NULL)
-         node->copies = _mesa_set_create(state->dead_ctx,
+         node->copies = _mesa_set_create(state->dead_ctx, _mesa_hash_pointer,
                                          _mesa_key_pointer_equal);
 
-      _mesa_set_add(node->copies, _mesa_hash_pointer(copy_instr), copy_instr);
+      _mesa_set_add(node->copies, copy_instr);
    }
 }
 
@@ -539,9 +539,7 @@ lower_copies_to_load_store(struct deref_node *node,
          if (arg_node == NULL)
             continue;
 
-         struct set_entry *arg_entry = _mesa_set_search(arg_node->copies,
-                                                        copy_entry->hash,
-                                                        copy);
+         struct set_entry *arg_entry = _mesa_set_search(arg_node->copies, copy);
          assert(arg_entry);
          _mesa_set_remove(node->copies, arg_entry);
       }
@@ -714,7 +712,7 @@ add_phi_sources(nir_block *block, nir_block *pred,
       src->src.is_ssa = true;
       src->src.ssa = get_ssa_def_for_block(node, pred, state);
 
-      _mesa_set_add(src->src.ssa->uses, _mesa_hash_pointer(instr), instr);
+      _mesa_set_add(src->src.ssa->uses, instr);
 
       exec_list_push_tail(&phi->srcs, &src->node);
    }
@@ -1039,6 +1037,7 @@ nir_lower_vars_to_ssa_impl(nir_function_impl *impl)
    nir_foreach_block(impl, register_variable_uses_block, &state);
 
    struct set *outputs = _mesa_set_create(state.dead_ctx,
+                                          _mesa_hash_pointer,
                                           _mesa_key_pointer_equal);
 
    bool progress = false;
@@ -1075,7 +1074,7 @@ nir_lower_vars_to_ssa_impl(nir_function_impl *impl)
       }
 
       if (deref->var->data.mode == nir_var_shader_out)
-         _mesa_set_add(outputs, _mesa_hash_pointer(node), node);
+         _mesa_set_add(outputs, node);
 
       foreach_deref_node_match(deref, lower_copies_to_load_store, &state);
    }

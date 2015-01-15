@@ -33,6 +33,7 @@
  */
 
 #include <stdlib.h>
+#include <assert.h>
 
 #include "macros.h"
 #include "ralloc.h"
@@ -103,6 +104,7 @@ entry_is_present(struct set_entry *entry)
 
 struct set *
 _mesa_set_create(void *mem_ctx,
+                 uint32_t (*key_hash_function)(const void *key),
                  bool (*key_equals_function)(const void *a,
                                              const void *b))
 {
@@ -116,6 +118,7 @@ _mesa_set_create(void *mem_ctx,
    ht->size = hash_sizes[ht->size_index].size;
    ht->rehash = hash_sizes[ht->size_index].rehash;
    ht->max_entries = hash_sizes[ht->size_index].max_entries;
+   ht->key_hash_function = key_hash_function;
    ht->key_equals_function = key_equals_function;
    ht->table = rzalloc_array(ht, struct set_entry, ht->size);
    ht->entries = 0;
@@ -157,8 +160,8 @@ _mesa_set_destroy(struct set *ht, void (*delete_function)(struct set_entry *entr
  *
  * Returns NULL if no entry is found.
  */
-struct set_entry *
-_mesa_set_search(const struct set *ht, uint32_t hash, const void *key)
+static struct set_entry *
+set_search(const struct set *ht, uint32_t hash, const void *key)
 {
    uint32_t hash_address;
 
@@ -183,6 +186,25 @@ _mesa_set_search(const struct set *ht, uint32_t hash, const void *key)
 
    return NULL;
 }
+
+struct set_entry *
+_mesa_set_search(const struct set *set, const void *key)
+{
+   assert(set->key_hash_function);
+   return set_search(set, set->key_hash_function(key), key);
+}
+
+struct set_entry *
+_mesa_set_search_pre_hashed(const struct set *set, uint32_t hash,
+                            const void *key)
+{
+   assert(set->key_hash_function == NULL ||
+          hash == set->key_hash_function(key));
+   return set_search(set, hash, key);
+}
+
+static struct set_entry *
+set_add(struct set *ht, uint32_t hash, const void *key);
 
 static void
 set_rehash(struct set *ht, int new_size_index)
@@ -212,7 +234,7 @@ set_rehash(struct set *ht, int new_size_index)
         entry != old_ht.table + old_ht.size;
         entry++) {
       if (entry_is_present(entry)) {
-         _mesa_set_add(ht, entry->hash, entry->key);
+         set_add(ht, entry->hash, entry->key);
       }
    }
 
@@ -225,8 +247,8 @@ set_rehash(struct set *ht, int new_size_index)
  * Note that insertion may rearrange the table on a resize or rehash,
  * so previously found hash_entries are no longer valid after this function.
  */
-struct set_entry *
-_mesa_set_add(struct set *ht, uint32_t hash, const void *key)
+static struct set_entry *
+set_add(struct set *ht, uint32_t hash, const void *key)
 {
    uint32_t hash_address;
 
@@ -275,6 +297,21 @@ _mesa_set_add(struct set *ht, uint32_t hash, const void *key)
     * application could ignore this result.
     */
    return NULL;
+}
+
+struct set_entry *
+_mesa_set_add(struct set *set, const void *key)
+{
+   assert(set->key_hash_function);
+   return set_add(set, set->key_hash_function(key), key);
+}
+
+struct set_entry *
+_mesa_set_add_pre_hashed(struct set *set, uint32_t hash, const void *key)
+{
+   assert(set->key_hash_function == NULL ||
+          hash == set->key_hash_function(key));
+   return set_add(set, hash, key);
 }
 
 /**
