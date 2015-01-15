@@ -56,7 +56,11 @@
 
 
 #include <llvm/IR/DataLayout.h>
+#if HAVE_LLVM >= 0x0307
+#include <llvm/Analysis/TargetLibraryInfo.h>
+#else
 #include <llvm/Target/TargetLibraryInfo.h>
+#endif
 #include <llvm/Target/TargetMachine.h>
 #include <llvm/Target/TargetOptions.h>
 
