@@ -50,6 +50,7 @@
 #define E_OUTOFMEMORY MAKE_HRESULT(1, 0x007, 14)
 #define E_NOINTERFACE MAKE_HRESULT(1, 0x000, 0x4002)
 #define E_POINTER     MAKE_HRESULT(1, 0x000, 0x4003)
+#define E_FAIL        MAKE_HRESULT(1, 0x000, 0x4005)
 
 #define S_OK          ((HRESULT)0)
 #define S_FALSE       ((HRESULT)1)

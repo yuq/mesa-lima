@@ -181,10 +181,11 @@ NineVertexDeclaration9_ctor( struct NineVertexDeclaration9 *This,
     HRESULT hr = NineUnknown_ctor(&This->base, pParams);
     if (FAILED(hr)) { return hr; }
 
+    /* wine */
     for (This->nelems = 0;
-         pElements[This->nelems].Type != D3DDECLTYPE_UNUSED &&
-         pElements[This->nelems].Stream != 0xFF; /* wine */
-         ++This->nelems);
+         pElements[This->nelems].Stream != 0xFF;
+         ++This->nelems)
+        user_assert(pElements[This->nelems].Type != D3DDECLTYPE_UNUSED, E_FAIL);
 
     caps = NineDevice9_GetCaps(This->base.device);
     user_assert(This->nelems <= caps->MaxStreams, D3DERR_INVALIDCALL);
