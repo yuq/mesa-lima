@@ -38,6 +38,8 @@
 void
 _mesa_init_renderbuffer(struct gl_renderbuffer *rb, GLuint name)
 {
+   GET_CURRENT_CONTEXT(ctx);
+
    mtx_init(&rb->Mutex, mtx_plain);
 
    rb->ClassID = 0;
@@ -64,7 +66,6 @@ _mesa_init_renderbuffer(struct gl_renderbuffer *rb, GLuint name)
     * specs. If the context is not current, we cannot determine the
     * API, so default to GL_RGBA.
     */
-   GET_CURRENT_CONTEXT(ctx);
    if (ctx && _mesa_is_gles3(ctx)) {
       rb->InternalFormat = GL_RGBA4;
    } else {
