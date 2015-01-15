@@ -9,6 +9,8 @@ MESA_UTIL_FILES :=	\
 	register_allocate.h \
 	rgtc.c \
 	rgtc.h \
+	set.c \
+	set.h \
 	strtod.cpp \
 	strtod.h \
 	texcompress_rgtc_tmp.h \

@@ -35,8 +35,8 @@
 #include <stdlib.h>
 
 #include "macros.h"
+#include "ralloc.h"
 #include "set.h"
-#include "util/ralloc.h"
 
 /*
  * From Knuth -- a good choice for hash/rehash values is p, p-2 where
@@ -343,4 +343,3 @@ _mesa_set_random_entry(struct set *ht,
 
    return NULL;
 }
-

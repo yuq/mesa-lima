@@ -36,9 +36,9 @@
 #include "main/context.h"
 #include "main/teximage.h"
 #include "main/image.h"
-#include "main/set.h"
 #include "main/condrender.h"
 #include "util/hash_table.h"
+#include "util/set.h"
 
 #include "swrast/swrast.h"
 #include "drivers/common/meta.h"

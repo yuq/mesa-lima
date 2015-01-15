@@ -36,12 +36,12 @@
 #include "program/program.h"
 #include "dlist.h"
 #include "samplerobj.h"
-#include "set.h"
 #include "shaderapi.h"
 #include "shaderobj.h"
 #include "syncobj.h"
 
 #include "util/hash_table.h"
+#include "util/set.h"
 
 /**
  * Allocate and initialize a shared context state structure.

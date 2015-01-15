@@ -28,10 +28,10 @@
 #pragma once
 
 #include "util/hash_table.h"
-#include "main/set.h"
 #include "../list.h"
 #include "GL/gl.h" /* GLenum */
 #include "util/ralloc.h"
+#include "util/set.h"
 #include "main/mtypes.h"
 #include "main/bitset.h"
 #include "nir_types.h"

@@ -63,8 +63,8 @@
 #include "get.h"
 #include "dispatch.h"
 #include "mtypes.h"
-#include "set.h"
 #include "util/hash_table.h"
+#include "util/set.h"
 
 #include "syncobj.h"
 

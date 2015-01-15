@@ -174,8 +174,6 @@ MAIN_FILES = \
 	$(SRCDIR)main/samplerobj.h \
 	$(SRCDIR)main/scissor.c \
 	$(SRCDIR)main/scissor.h \
-	$(SRCDIR)main/set.c \
-	$(SRCDIR)main/set.h \
 	$(SRCDIR)main/shaderapi.c \
 	$(SRCDIR)main/shaderapi.h \
 	$(SRCDIR)main/shaderimage.c \
