@@ -724,15 +724,31 @@ fs_visitor::emit_shader_time_end()
    current_annotation = "shader time end";
 
    enum shader_time_shader_type type, written_type, reset_type;
-   if (dispatch_width == 8) {
-      type = ST_FS8;
-      written_type = ST_FS8_WRITTEN;
-      reset_type = ST_FS8_RESET;
-   } else {
-      assert(dispatch_width == 16);
-      type = ST_FS16;
-      written_type = ST_FS16_WRITTEN;
-      reset_type = ST_FS16_RESET;
+   switch (stage) {
+   case MESA_SHADER_VERTEX:
+      type = ST_VS;
+      written_type = ST_VS_WRITTEN;
+      reset_type = ST_VS_RESET;
+      break;
+   case MESA_SHADER_GEOMETRY:
+      type = ST_GS;
+      written_type = ST_GS_WRITTEN;
+      reset_type = ST_GS_RESET;
+      break;
+   case MESA_SHADER_FRAGMENT:
+      if (dispatch_width == 8) {
+         type = ST_FS8;
+         written_type = ST_FS8_WRITTEN;
+         reset_type = ST_FS8_RESET;
+      } else {
+         assert(dispatch_width == 16);
+         type = ST_FS16;
+         written_type = ST_FS16_WRITTEN;
+         reset_type = ST_FS16_RESET;
+      }
+      break;
+   default:
+      unreachable("fs_visitor::emit_shader_time_end missing code");
    }
 
    fs_reg shader_end_time = get_timestamp();
