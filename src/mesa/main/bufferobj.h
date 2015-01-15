@@ -162,6 +162,12 @@ _mesa_map_buffer_range(struct gl_context *ctx,
                        GLbitfield access, const char *func);
 
 extern void
+_mesa_flush_mapped_buffer_range(struct gl_context *ctx,
+                                struct gl_buffer_object *bufObj,
+                                GLintptr offset, GLsizeiptr length,
+                                const char *func);
+
+extern void
 _mesa_ClearBufferSubData_sw(struct gl_context *ctx,
                             GLintptr offset, GLsizeiptr size,
                             const GLvoid *clearValue,

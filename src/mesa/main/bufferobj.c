@@ -727,10 +727,10 @@ map_buffer_range_fallback(struct gl_context *ctx, GLintptr offset,
  * Called via glFlushMappedBufferRange().
  */
 static void
-_mesa_buffer_flush_mapped_range( struct gl_context *ctx,
-                                 GLintptr offset, GLsizeiptr length,
-                                 struct gl_buffer_object *obj,
-                                 gl_map_buffer_index index)
+flush_mapped_buffer_range_fallback(struct gl_context *ctx,
+                                   GLintptr offset, GLsizeiptr length,
+                                   struct gl_buffer_object *obj,
+                                   gl_map_buffer_index index)
 {
    (void) ctx;
    (void) offset;
@@ -1122,7 +1122,7 @@ _mesa_init_buffer_object_functions(struct dd_function_table *driver)
 
    /* GL_ARB_map_buffer_range */
    driver->MapBufferRange = map_buffer_range_fallback;
-   driver->FlushMappedBufferRange = _mesa_buffer_flush_mapped_range;
+   driver->FlushMappedBufferRange = flush_mapped_buffer_range_fallback;
 
    /* GL_ARB_copy_buffer */
    driver->CopyBufferSubData = copy_buffer_sub_data_fallback;
@@ -2455,57 +2455,49 @@ _mesa_MapNamedBuffer(GLuint buffer, GLenum access)
 }
 
 
-/**
- * See GL_ARB_map_buffer_range spec
- */
-void GLAPIENTRY
-_mesa_FlushMappedBufferRange(GLenum target, GLintptr offset, GLsizeiptr length)
+void
+_mesa_flush_mapped_buffer_range(struct gl_context *ctx,
+                                struct gl_buffer_object *bufObj,
+                                GLintptr offset, GLsizeiptr length,
+                                const char *func)
 {
-   GET_CURRENT_CONTEXT(ctx);
-   struct gl_buffer_object *bufObj;
-
    if (!ctx->Extensions.ARB_map_buffer_range) {
       _mesa_error(ctx, GL_INVALID_OPERATION,
-                  "glFlushMappedBufferRange(extension not supported)");
+                  "%s(ARB_map_buffer_range not supported)", func);
       return;
    }
 
    if (offset < 0) {
       _mesa_error(ctx, GL_INVALID_VALUE,
-                  "glFlushMappedBufferRange(offset = %ld)", (long)offset);
+                  "%s(offset %ld < 0)", func, (long) offset);
       return;
    }
 
    if (length < 0) {
       _mesa_error(ctx, GL_INVALID_VALUE,
-                  "glFlushMappedBufferRange(length = %ld)", (long)length);
+                  "%s(length %ld < 0)", func, (long) length);
       return;
    }
-
-   bufObj = get_buffer(ctx, "glFlushMappedBufferRange", target,
-                       GL_INVALID_OPERATION);
-   if (!bufObj)
-      return;
 
    if (!_mesa_bufferobj_mapped(bufObj, MAP_USER)) {
       /* buffer is not mapped */
       _mesa_error(ctx, GL_INVALID_OPERATION,
-                  "glFlushMappedBufferRange(buffer is not mapped)");
+                  "%s(buffer is not mapped)", func);
       return;
    }
 
    if ((bufObj->Mappings[MAP_USER].AccessFlags &
         GL_MAP_FLUSH_EXPLICIT_BIT) == 0) {
       _mesa_error(ctx, GL_INVALID_OPERATION,
-                  "glFlushMappedBufferRange(GL_MAP_FLUSH_EXPLICIT_BIT not set)");
+                  "%s(GL_MAP_FLUSH_EXPLICIT_BIT not set)", func);
       return;
    }
 
    if (offset + length > bufObj->Mappings[MAP_USER].Length) {
       _mesa_error(ctx, GL_INVALID_VALUE,
-		  "glFlushMappedBufferRange(offset %ld + length %ld > mapped length %ld)",
-		  (long)offset, (long)length,
-                  (long)bufObj->Mappings[MAP_USER].Length);
+                  "%s(offset %ld + length %ld > mapped length %ld)", func,
+                  (long) offset, (long) length,
+                  (long) bufObj->Mappings[MAP_USER].Length);
       return;
    }
 
@@ -2514,6 +2506,22 @@ _mesa_FlushMappedBufferRange(GLenum target, GLintptr offset, GLsizeiptr length)
    if (ctx->Driver.FlushMappedBufferRange)
       ctx->Driver.FlushMappedBufferRange(ctx, offset, length, bufObj,
                                          MAP_USER);
+}
+
+void GLAPIENTRY
+_mesa_FlushMappedBufferRange(GLenum target, GLintptr offset,
+                             GLsizeiptr length)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   struct gl_buffer_object *bufObj;
+
+   bufObj = get_buffer(ctx, "glFlushMappedBufferRange", target,
+                       GL_INVALID_OPERATION);
+   if (!bufObj)
+      return;
+
+   _mesa_flush_mapped_buffer_range(ctx, bufObj, offset, length,
+                                   "glFlushMappedBufferRange");
 }
 
 
