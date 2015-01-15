@@ -1541,7 +1541,7 @@ static bool
 visit_tex_src(nir_tex_instr *instr, nir_foreach_src_cb cb, void *state)
 {
    for (unsigned i = 0; i < instr->num_srcs; i++)
-      if (!visit_src(&instr->src[i], cb, state))
+      if (!visit_src(&instr->src[i].src, cb, state))
          return false;
 
    if (instr->sampler != NULL)
