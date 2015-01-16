@@ -256,7 +256,7 @@ NineDevice9_ctor( struct NineDevice9 *This,
                             NINE_MAX_CONST_ALL);
         /* ps 3.0: 224 float constants. All cards supported support at least
          * 256 constants for ps */
-        max_const_ps = 224 + (NINE_MAX_CONST_I + NINE_MAX_CONST_B / 4);
+        max_const_ps = NINE_MAX_CONST_F_PS3 + (NINE_MAX_CONST_I + NINE_MAX_CONST_B / 4);
 
         This->max_vs_const_f = max_const_vs -
                                (NINE_MAX_CONST_I + NINE_MAX_CONST_B / 4);
@@ -3309,8 +3309,8 @@ NineDevice9_SetPixelShaderConstantF( struct NineDevice9 *This,
     DBG("This=%p StartRegister=%u pConstantData=%p Vector4fCount=%u\n",
         This, StartRegister, pConstantData, Vector4fCount);
 
-    user_assert(StartRegister                  < NINE_MAX_CONST_F, D3DERR_INVALIDCALL);
-    user_assert(StartRegister + Vector4fCount <= NINE_MAX_CONST_F, D3DERR_INVALIDCALL);
+    user_assert(StartRegister                  < NINE_MAX_CONST_F_PS3, D3DERR_INVALIDCALL);
+    user_assert(StartRegister + Vector4fCount <= NINE_MAX_CONST_F_PS3, D3DERR_INVALIDCALL);
 
     if (!Vector4fCount)
        return D3D_OK;
@@ -3337,8 +3337,8 @@ NineDevice9_GetPixelShaderConstantF( struct NineDevice9 *This,
 {
     const struct nine_state *state = &This->state;
 
-    user_assert(StartRegister                  < NINE_MAX_CONST_F, D3DERR_INVALIDCALL);
-    user_assert(StartRegister + Vector4fCount <= NINE_MAX_CONST_F, D3DERR_INVALIDCALL);
+    user_assert(StartRegister                  < NINE_MAX_CONST_F_PS3, D3DERR_INVALIDCALL);
+    user_assert(StartRegister + Vector4fCount <= NINE_MAX_CONST_F_PS3, D3DERR_INVALIDCALL);
     user_assert(pConstantData, D3DERR_INVALIDCALL);
 
     memcpy(pConstantData,
