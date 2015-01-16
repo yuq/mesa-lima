@@ -3460,6 +3460,7 @@ fs_visitor::emit_single_fb_write(fs_reg color0, fs_reg color1,
       fs_reg payload = fs_reg(GRF, -1, BRW_REGISTER_TYPE_F);
       load = emit(LOAD_PAYLOAD(payload, sources, length));
       payload.reg = virtual_grf_alloc(load->regs_written);
+      payload.width = dispatch_width;
       load->dst = payload;
       write = emit(FS_OPCODE_FB_WRITE, reg_undef, payload);
       write->base_mrf = -1;
@@ -3468,6 +3469,7 @@ fs_visitor::emit_single_fb_write(fs_reg color0, fs_reg color1,
       load = emit(LOAD_PAYLOAD(fs_reg(MRF, 1, BRW_REGISTER_TYPE_F),
                                sources, length));
       write = emit(FS_OPCODE_FB_WRITE);
+      write->exec_size = dispatch_width;
       write->base_mrf = 1;
    }
 
