@@ -381,7 +381,7 @@ validate_tex_instr(nir_tex_instr *instr, validate_state *state)
    for (unsigned i = 0; i < instr->num_srcs; i++) {
       assert(!src_type_seen[instr->src[i].src_type]);
       src_type_seen[instr->src[i].src_type] = true;
-      validate_src(&instr->src[i], state);
+      validate_src(&instr->src[i].src, state);
    }
 
    if (instr->sampler != NULL)
