@@ -132,12 +132,10 @@ fs_visitor::emit_nir_code()
 void
 fs_visitor::nir_setup_inputs(nir_shader *shader)
 {
-   fs_reg varying = nir_inputs;
-
    struct hash_entry *entry;
    hash_table_foreach(shader->inputs, entry) {
       nir_variable *var = (nir_variable *) entry->data;
-      varying.reg_offset = var->data.driver_location;
+      fs_reg varying = offset(nir_inputs, var->data.driver_location);
 
       fs_reg reg;
       if (!strcmp(var->name, "gl_FragCoord")) {
@@ -160,12 +158,11 @@ void
 fs_visitor::nir_setup_outputs(nir_shader *shader)
 {
    brw_wm_prog_key *key = (brw_wm_prog_key*) this->key;
-   fs_reg reg = nir_outputs;
 
    struct hash_entry *entry;
    hash_table_foreach(shader->outputs, entry) {
       nir_variable *var = (nir_variable *) entry->data;
-      reg.reg_offset = var->data.driver_location;
+      fs_reg reg = offset(nir_outputs, var->data.driver_location);
 
       if (var->data.index > 0) {
          assert(var->data.location == FRAG_RESULT_DATA0);
@@ -194,8 +191,7 @@ fs_visitor::nir_setup_outputs(nir_shader *shader)
          /* General color output. */
          for (unsigned int i = 0; i < MAX2(1, var->type->length); i++) {
             int output = var->data.location - FRAG_RESULT_DATA0 + i;
-            this->outputs[output] = reg;
-            this->outputs[output].reg_offset += vector_elements * i;
+            this->outputs[output] = offset(reg, vector_elements * i);
             this->output_components[output] = vector_elements;
          }
       }
@@ -1056,8 +1052,7 @@ fs_visitor::get_nir_src(nir_src src)
        * default to D - instructions that need floating point semantics will set
        * this to F if they need to
        */
-      reg.type = BRW_REGISTER_TYPE_D;
-      reg.reg_offset = src.reg.base_offset;
+      reg = retype(offset(reg, src.reg.base_offset), BRW_REGISTER_TYPE_D);
       if (src.reg.indirect) {
          reg.reladdr = new(mem_ctx) fs_reg();
          *reg.reladdr = retype(get_nir_src(*src.reg.indirect),
@@ -1117,7 +1112,7 @@ fs_visitor::get_nir_dest(nir_dest dest)
    else
       reg = nir_locals[dest.reg.reg->index];
 
-   reg.reg_offset = dest.reg.base_offset;
+   reg = offset(reg, dest.reg.base_offset);
    if (dest.reg.indirect) {
       reg.reladdr = new(mem_ctx) fs_reg();
       *reg.reladdr = retype(get_nir_src(*dest.reg.indirect),
@@ -1135,10 +1130,10 @@ fs_visitor::emit_percomp(fs_inst *inst, unsigned wr_mask)
          continue;
 
       fs_inst *new_inst = new(mem_ctx) fs_inst(*inst);
-      new_inst->dst.reg_offset += i;
+      new_inst->dst = offset(new_inst->dst, i);
       for (unsigned j = 0; j < new_inst->sources; j++)
          if (inst->src[j].file == GRF)
-            new_inst->src[j].reg_offset += i;
+            new_inst->src[j] = offset(new_inst->src[j], i);
 
       emit(new_inst);
    }
@@ -1154,11 +1149,8 @@ fs_visitor::emit_percomp(enum opcode op, fs_reg dest, fs_reg src0,
       if (!((wr_mask >> i) & 1))
          continue;
 
-      fs_inst *new_inst = new(mem_ctx) fs_inst(op, dest, src0);
-      new_inst->dst.reg_offset += i;
-      for (unsigned j = 0; j < new_inst->sources; j++)
-         if (new_inst->src[j].file == GRF)
-            new_inst->src[j].reg_offset += i;
+      fs_reg new_src0 = src0.file == GRF ? offset(src0, i) : src0;
+      fs_inst *new_inst = new(mem_ctx) fs_inst(op, offset(dest, i), new_src0);
 
       new_inst->predicate = predicate;
       new_inst->conditional_mod = mod;
@@ -1177,11 +1169,10 @@ fs_visitor::emit_percomp(enum opcode op, fs_reg dest, fs_reg src0, fs_reg src1,
       if (!((wr_mask >> i) & 1))
          continue;
 
-      fs_inst *new_inst = new(mem_ctx) fs_inst(op, dest, src0, src1);
-      new_inst->dst.reg_offset += i;
-      for (unsigned j = 0; j < new_inst->sources; j++)
-         if (new_inst->src[j].file == GRF)
-            new_inst->src[j].reg_offset += i;
+      fs_reg new_src0 = src0.file == GRF ? offset(src0, i) : src0;
+      fs_reg new_src1 = src1.file == GRF ? offset(src1, i) : src1;
+      fs_inst *new_inst =
+         new(mem_ctx) fs_inst(op, offset(dest, i), new_src0, new_src1);
 
       new_inst->predicate = predicate;
       new_inst->conditional_mod = mod;
@@ -1198,13 +1189,8 @@ fs_visitor::emit_math_percomp(enum opcode op, fs_reg dest, fs_reg src0,
       if (!((wr_mask >> i) & 1))
          continue;
 
-      fs_reg new_dest = dest;
-      new_dest.reg_offset += i;
-      fs_reg new_src0 = src0;
-      if (src0.file == GRF)
-         new_src0.reg_offset += i;
-
-      fs_inst *new_inst = emit_math(op, new_dest, new_src0);
+      fs_reg new_src0 = src0.file == GRF ? offset(src0, i) : src0;
+      fs_inst *new_inst = emit_math(op, offset(dest, i), new_src0);
       new_inst->saturate = saturate;
    }
 }
@@ -1218,16 +1204,9 @@ fs_visitor::emit_math_percomp(enum opcode op, fs_reg dest, fs_reg src0,
       if (!((wr_mask >> i) & 1))
          continue;
 
-      fs_reg new_dest = dest;
-      new_dest.reg_offset += i;
-      fs_reg new_src0 = src0;
-      if (src0.file == GRF)
-         new_src0.reg_offset += i;
-      fs_reg new_src1 = src1;
-      if (src1.file == GRF)
-         new_src1.reg_offset += i;
-
-      fs_inst *new_inst = emit_math(op, new_dest, new_src0, new_src1);
+      fs_reg new_src0 = src0.file == GRF ? offset(src0, i) : src0;
+      fs_reg new_src1 = src1.file == GRF ? offset(src1, i) : src1;
+      fs_inst *new_inst = emit_math(op, offset(dest, i), new_src0, new_src1);
       new_inst->saturate = saturate;
    }
 }
@@ -1237,8 +1216,7 @@ fs_visitor::emit_reduction(enum opcode op, fs_reg dest, fs_reg src,
                            unsigned num_components)
 {
    fs_reg src0 = src;
-   fs_reg src1 = src;
-   src1.reg_offset++;
+   fs_reg src1 = offset(src, 1);
 
    if (num_components == 2) {
       emit(op, dest, src0, src1);
@@ -1249,8 +1227,7 @@ fs_visitor::emit_reduction(enum opcode op, fs_reg dest, fs_reg src,
    temp1.type = src.type;
    emit(op, temp1, src0, src1);
 
-   fs_reg src2 = src;
-   src2.reg_offset += 2;
+   fs_reg src2 = offset(src, 2);
 
    if (num_components == 3) {
       emit(op, dest, temp1, src2);
@@ -1259,8 +1236,7 @@ fs_visitor::emit_reduction(enum opcode op, fs_reg dest, fs_reg src,
 
    assert(num_components == 4);
 
-   fs_reg src3 = src;
-   src3.reg_offset += 3;
+   fs_reg src3 = offset(src, 3);
    fs_reg temp2 = vgrf(1);
    temp2.type = src.type;
 
@@ -1366,15 +1342,14 @@ fs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
       unsigned index = 0;
       for (int i = 0; i < instr->const_index[1]; i++) {
          for (unsigned j = 0; j < instr->num_components; j++) {
-            fs_reg src = nir_uniforms;
-            src.reg_offset = instr->const_index[0] + index;
+            fs_reg src = offset(retype(nir_uniforms, dest.type),
+                                instr->const_index[0] + index);
             if (has_indirect)
                src.reladdr = new(mem_ctx) fs_reg(get_nir_src(instr->src[0]));
-            src.type = dest.type;
             index++;
 
             emit(MOV(dest, src));
-            dest.reg_offset++;
+            dest = offset(dest, 1);
          }
       }
       break;
@@ -1435,7 +1410,7 @@ fs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
             assert(packed_consts.subreg_offset < 32);
 
             emit(MOV(dest, packed_consts));
-            dest.reg_offset++;
+            dest = offset(dest, 1);
          }
       }
       break;
@@ -1447,15 +1422,14 @@ fs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
       unsigned index = 0;
       for (int i = 0; i < instr->const_index[1]; i++) {
          for (unsigned j = 0; j < instr->num_components; j++) {
-            fs_reg src = nir_inputs;
-            src.reg_offset = instr->const_index[0] + index;
+            fs_reg src = offset(retype(nir_inputs, dest.type),
+                                instr->const_index[0] + index);
             if (has_indirect)
                src.reladdr = new(mem_ctx) fs_reg(get_nir_src(instr->src[0]));
-            src.type = dest.type;
             index++;
 
             emit(MOV(dest, src));
-            dest.reg_offset++;
+            dest = offset(dest, 1);
          }
       }
       break;
@@ -1574,7 +1548,7 @@ fs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
          src.type = dest.type;
 
          emit(FS_OPCODE_LINTERP, dest, dst_x, dst_y, src);
-         dest.reg_offset++;
+         dest = offset(dest, 1);
       }
       break;
    }
@@ -1586,14 +1560,13 @@ fs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
       unsigned index = 0;
       for (int i = 0; i < instr->const_index[1]; i++) {
          for (unsigned j = 0; j < instr->num_components; j++) {
-            fs_reg new_dest = nir_outputs;
-            new_dest.reg_offset = instr->const_index[0] + index;
+            fs_reg new_dest = offset(retype(nir_outputs, src.type),
+                                     instr->const_index[0] + index);
             if (has_indirect)
                src.reladdr = new(mem_ctx) fs_reg(get_nir_src(instr->src[1]));
-            new_dest.type = src.type;
             index++;
             emit(MOV(new_dest, src));
-            src.reg_offset++;
+            src = offset(src, 1);
          }
       }
       break;
