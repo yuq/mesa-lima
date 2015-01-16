@@ -2789,7 +2789,7 @@ _mesa_GetFramebufferAttachmentParameteriv(GLenum target, GLenum attachment,
 
       if (_mesa_is_gles3(ctx) && attachment != GL_BACK &&
           attachment != GL_DEPTH && attachment != GL_STENCIL) {
-         _mesa_error(ctx, GL_INVALID_OPERATION,
+         _mesa_error(ctx, GL_INVALID_ENUM,
                      "glGetFramebufferAttachmentParameteriv(attachment)");
          return;
       }
