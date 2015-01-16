@@ -358,10 +358,9 @@ intel_batchbuffer_emit_reloc(struct brw_context *brw,
    assert(ret == 0);
    (void)ret;
 
-   /*
-    * Using the old buffer offset, write in what the right data would be, in case
-    * the buffer doesn't move and we can short-circuit the relocation processing
-    * in the kernel
+   /* Using the old buffer offset, write in what the right data would be, in
+    * case the buffer doesn't move and we can short-circuit the relocation
+    * processing in the kernel
     */
    intel_batchbuffer_emit_dword(brw, buffer->offset64 + delta);
 
