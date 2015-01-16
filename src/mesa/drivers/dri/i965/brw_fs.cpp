@@ -3543,7 +3543,7 @@ fs_visitor::optimize()
    assign_constant_locations();
    demote_pull_constants();
 
-#define OPT(pass, args...) do {                                         \
+#define OPT(pass, args...) ({                                           \
       pass_num++;                                                       \
       bool this_progress = pass(args);                                  \
                                                                         \
@@ -3556,7 +3556,8 @@ fs_visitor::optimize()
       }                                                                 \
                                                                         \
       progress = progress || this_progress;                             \
-   } while (false)
+      this_progress;                                                    \
+   })
 
    if (unlikely(INTEL_DEBUG & DEBUG_OPTIMIZER)) {
       char filename[64];
@@ -3568,10 +3569,11 @@ fs_visitor::optimize()
 
    bool progress;
    int iteration = 0;
+   int pass_num = 0;
    do {
       progress = false;
+      pass_num = 0;
       iteration++;
-      int pass_num = 0;
 
       OPT(remove_duplicate_mrf_writes);
 
@@ -3590,11 +3592,13 @@ fs_visitor::optimize()
       OPT(compact_virtual_grfs);
    } while (progress);
 
-   if (lower_load_payload()) {
+   pass_num = 0;
+
+   if (OPT(lower_load_payload)) {
       split_virtual_grfs();
-      register_coalesce();
-      compute_to_mrf();
-      dead_code_eliminate();
+      OPT(register_coalesce);
+      OPT(compute_to_mrf);
+      OPT(dead_code_eliminate);
    }
 
    lower_uniform_pull_constant_loads();
