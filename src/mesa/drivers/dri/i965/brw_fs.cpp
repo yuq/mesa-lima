@@ -3753,8 +3753,7 @@ fs_visitor::run_fs()
        * functions called "main").
        */
       if (shader) {
-         if (getenv("INTEL_USE_NIR") != NULL && !brw->use_rep_send) {
-            no16("Cannot do 16-wide in NIR yet");
+         if (getenv("INTEL_USE_NIR") != NULL) {
             emit_nir_code();
          } else {
             foreach_in_list(ir_instruction, ir, shader->base.ir) {
