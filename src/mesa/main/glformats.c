@@ -2666,6 +2666,8 @@ _mesa_format_from_format_and_type(GLenum format, GLenum type)
          return MESA_FORMAT_A2R10G10B10_UINT;
       break;
    case GL_UNSIGNED_INT_2_10_10_10_REV:
+      if (format == GL_RGB)
+         return MESA_FORMAT_R10G10B10X2_UNORM;
       if (format == GL_RGBA)
          return MESA_FORMAT_R10G10B10A2_UNORM;
       else if (format == GL_RGBA_INTEGER)

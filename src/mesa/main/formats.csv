@@ -82,6 +82,7 @@ MESA_FORMAT_G16R16_UNORM                  , packed, 1, 1, un16, un16,     ,     
 MESA_FORMAT_B10G10R10A2_UNORM             , packed, 1, 1, un10, un10, un10, un2 , zyxw, rgb
 MESA_FORMAT_B10G10R10X2_UNORM             , packed, 1, 1, un10, un10, un10, x2  , zyx1, rgb
 MESA_FORMAT_R10G10B10A2_UNORM             , packed, 1, 1, un10, un10, un10, un2 , xyzw, rgb
+MESA_FORMAT_R10G10B10X2_UNORM             , packed, 1, 1, un10, un10, un10, x2  , xyz1, rgb
 
 MESA_FORMAT_S8_UINT_Z24_UNORM             , packed, 1, 1, un24, u8  ,     ,     , xy__, zs
 MESA_FORMAT_X8_UINT_Z24_UNORM             , packed, 1, 1, un24, x8  ,     ,     , x___, zs
