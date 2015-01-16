@@ -323,6 +323,7 @@ public:
    fs_reg *variable_storage(ir_variable *var);
    int virtual_grf_alloc(int size);
    fs_reg vgrf(const glsl_type *const type);
+   fs_reg vgrf(int num_components);
    void import_uniforms(fs_visitor *v);
    void setup_uniform_clipplane_values();
    void compute_clip_distance();

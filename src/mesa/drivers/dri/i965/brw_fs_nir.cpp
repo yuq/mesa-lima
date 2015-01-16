@@ -95,12 +95,12 @@ fs_visitor::emit_nir_code()
     */
 
    if (nir->num_inputs > 0) {
-      nir_inputs = fs_reg(GRF, virtual_grf_alloc(nir->num_inputs));
+      nir_inputs = vgrf(nir->num_inputs);
       nir_setup_inputs(nir);
    }
 
    if (nir->num_outputs > 0) {
-      nir_outputs = fs_reg(GRF, virtual_grf_alloc(nir->num_outputs));
+      nir_outputs = vgrf(nir->num_outputs);
       nir_setup_outputs(nir);
    }
 
@@ -116,7 +116,7 @@ fs_visitor::emit_nir_code()
       unsigned array_elems =
          reg->num_array_elems == 0 ? 1 : reg->num_array_elems;
       unsigned size = array_elems * reg->num_components;
-      nir_globals[reg->index] = fs_reg(GRF, virtual_grf_alloc(size));
+      nir_globals[reg->index] = vgrf(size);
    }
 
    /* get the main function and emit it */
@@ -356,7 +356,7 @@ fs_visitor::nir_emit_impl(nir_function_impl *impl)
       unsigned array_elems =
          reg->num_array_elems == 0 ? 1 : reg->num_array_elems;
       unsigned size = array_elems * reg->num_components;
-      nir_locals[reg->index] = fs_reg(GRF, virtual_grf_alloc(size));
+      nir_locals[reg->index] = vgrf(size);
    }
 
    nir_emit_cf_list(&impl->body);
@@ -730,7 +730,7 @@ fs_visitor::nir_emit_alu(nir_alu_instr *instr)
    case nir_op_ball_fequal4:
    case nir_op_ball_iequal4: {
       unsigned num_components = nir_op_infos[instr->op].input_sizes[0];
-      fs_reg temp = fs_reg(GRF, virtual_grf_alloc(num_components));
+      fs_reg temp = vgrf(num_components);
       emit_percomp(CMP(temp, op[0], op[1], BRW_CONDITIONAL_Z),
                    (1 << num_components) - 1);
       emit_reduction(BRW_OPCODE_AND, result, temp, num_components);
@@ -744,7 +744,7 @@ fs_visitor::nir_emit_alu(nir_alu_instr *instr)
    case nir_op_bany_fnequal4:
    case nir_op_bany_inequal4: {
       unsigned num_components = nir_op_infos[instr->op].input_sizes[0];
-      fs_reg temp = fs_reg(GRF, virtual_grf_alloc(num_components));
+      fs_reg temp = vgrf(num_components);
       temp.type = BRW_REGISTER_TYPE_UD;
       emit_percomp(CMP(temp, op[0], op[1], BRW_CONDITIONAL_NZ),
                    (1 << num_components) - 1);
@@ -769,7 +769,7 @@ fs_visitor::nir_emit_alu(nir_alu_instr *instr)
    case nir_op_fdot3:
    case nir_op_fdot4: {
       unsigned num_components = nir_op_infos[instr->op].input_sizes[0];
-      fs_reg temp = fs_reg(GRF, virtual_grf_alloc(num_components));
+      fs_reg temp = vgrf(num_components);
       emit_percomp(MUL(temp, op[0], op[1]), (1 << num_components) - 1);
       emit_reduction(BRW_OPCODE_ADD, result, temp, num_components);
       if (instr->dest.saturate) {
@@ -1038,8 +1038,8 @@ fs_visitor::get_nir_src(nir_src src)
    if (src.is_ssa) {
       assert(src.ssa->parent_instr->type == nir_instr_type_load_const);
       nir_load_const_instr *load = nir_instr_as_load_const(src.ssa->parent_instr);
-      fs_reg reg(GRF, virtual_grf_alloc(src.ssa->num_components),
-                 BRW_REGISTER_TYPE_D);
+      fs_reg reg = vgrf(src.ssa->num_components);
+      reg.type = BRW_REGISTER_TYPE_D;
 
       for (unsigned i = 0; i < src.ssa->num_components; ++i)
          emit(MOV(offset(reg, i), fs_reg(load->value.i[i])));
@@ -1091,7 +1091,8 @@ fs_visitor::get_nir_alu_src(nir_alu_instr *instr, unsigned src)
 
    if (needs_swizzle) {
       /* resolve the swizzle through MOV's */
-      fs_reg new_reg = fs_reg(GRF, virtual_grf_alloc(num_components), reg.type);
+      fs_reg new_reg = vgrf(num_components);
+      new_reg.type = reg.type;
 
       for (unsigned i = 0; i < 4; i++) {
          if (!nir_alu_instr_channel_used(instr, src, i))
@@ -1244,7 +1245,7 @@ fs_visitor::emit_reduction(enum opcode op, fs_reg dest, fs_reg src,
       return;
    }
 
-   fs_reg temp1 = fs_reg(GRF, virtual_grf_alloc(1));
+   fs_reg temp1 = vgrf(1);
    temp1.type = src.type;
    emit(op, temp1, src0, src1);
 
@@ -1260,7 +1261,7 @@ fs_visitor::emit_reduction(enum opcode op, fs_reg dest, fs_reg src,
 
    fs_reg src3 = src;
    src3.reg_offset += 3;
-   fs_reg temp2 = fs_reg(GRF, virtual_grf_alloc(1));
+   fs_reg temp2 = vgrf(1);
    temp2.type = src.type;
 
    emit(op, temp2, src2, src3);
@@ -1487,7 +1488,7 @@ fs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
        */
       no16("interpolate_at_* not yet supported in SIMD16 mode.");
 
-      fs_reg dst_x(GRF, virtual_grf_alloc(2), BRW_REGISTER_TYPE_F);
+      fs_reg dst_x = vgrf(2);
       fs_reg dst_y = offset(dst_x, 1);
 
       /* For most messages, we need one reg of ignored data; the hardware

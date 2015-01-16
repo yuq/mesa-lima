@@ -1040,6 +1040,14 @@ fs_visitor::vgrf(const glsl_type *const type)
                  brw_type_for_base_type(type), dispatch_width);
 }
 
+fs_reg
+fs_visitor::vgrf(int num_components)
+{
+   int reg_width = dispatch_width / 8;
+   return fs_reg(GRF, virtual_grf_alloc(num_components * reg_width),
+                 BRW_REGISTER_TYPE_F, dispatch_width);
+}
+
 /** Fixed HW reg constructor. */
 fs_reg::fs_reg(enum register_file file, int reg)
 {
