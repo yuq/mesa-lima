@@ -3135,9 +3135,11 @@ fs_visitor::lower_load_payload()
       }
 
       if (inst->dst.file == MRF || inst->dst.file == GRF) {
-         bool force_sechalf = inst->force_sechalf;
+         bool force_sechalf = inst->force_sechalf &&
+                              !inst->force_writemask_all;
          bool toggle_sechalf = inst->dst.width == 16 &&
-                               type_sz(inst->dst.type) == 4;
+                               type_sz(inst->dst.type) == 4 &&
+                               !inst->force_writemask_all;
          for (int i = 0; i < inst->regs_written; ++i) {
             metadata[dst_reg + i].written = true;
             metadata[dst_reg + i].force_sechalf = force_sechalf;
@@ -3180,11 +3182,15 @@ fs_visitor::lower_load_payload()
                   mov->force_writemask_all = metadata[src_reg].force_writemask_all;
                   metadata[dst_reg] = metadata[src_reg];
                   if (dst.width * type_sz(dst.type) > 32) {
-                     assert((!metadata[src_reg].written ||
-                             !metadata[src_reg].force_sechalf) &&
-                            (!metadata[src_reg + 1].written ||
-                             metadata[src_reg + 1].force_sechalf));
-                     metadata[dst_reg + 1] = metadata[src_reg + 1];
+                     if (metadata[src_reg].force_writemask_all) {
+                        metadata[dst_reg + 1] = metadata[src_reg];
+                     } else {
+                        assert((!metadata[src_reg].written ||
+                                !metadata[src_reg].force_sechalf) &&
+                               (!metadata[src_reg + 1].written ||
+                                metadata[src_reg + 1].force_sechalf));
+                        metadata[dst_reg + 1] = metadata[src_reg + 1];
+                     }
                   }
                } else {
                   metadata[dst_reg].force_writemask_all = false;
