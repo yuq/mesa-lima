@@ -183,6 +183,7 @@ static int r300_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
         case PIPE_CAP_SAMPLER_VIEW_TARGET:
         case PIPE_CAP_VERTEXID_NOBASE:
         case PIPE_CAP_POLYGON_OFFSET_CLAMP:
+        case PIPE_CAP_MULTISAMPLE_Z_RESOLVE:
             return 0;
 
         /* SWTCL-only features. */

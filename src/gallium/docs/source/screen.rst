@@ -243,6 +243,9 @@ The integer capabilities:
   this, at least BASEVERTEX should be exposed separately too).
 * ``PIPE_CAP_POLYGON_OFFSET_CLAMP``: If true, the driver implements support
   for ``pipe_rasterizer_state::offset_clamp``.
+* ``PIPE_CAP_MULTISAMPLE_Z_RESOLVE``: Whether the driver supports blitting
+  a multisampled depth buffer into a single-sampled texture (or depth buffer).
+  Only the first sampled should be copied.
 
 
 .. _pipe_capf:

@@ -401,6 +401,8 @@ static int r600_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 		return rscreen->b.info.vram_size >> 20;
 	case PIPE_CAP_UMA:
 		return 0;
+	case PIPE_CAP_MULTISAMPLE_Z_RESOLVE:
+		return rscreen->b.chip_class >= R700;
 	}
 	return 0;
 }
