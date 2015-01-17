@@ -271,12 +271,6 @@ NineSwapChain9_Resize( struct NineSwapChain9 *This,
         if (!bufs)
             return E_OUTOFMEMORY;
         This->buffers = bufs;
-        if (has_present_buffers) {
-            This->present_buffers = REALLOC(This->present_buffers,
-                                            This->present_buffers == NULL ? 0 : oldBufferCount * sizeof(struct pipe_resource *),
-                                            newBufferCount * sizeof(struct pipe_resource *));
-            memset(This->present_buffers, 0, newBufferCount * sizeof(struct pipe_resource *));
-        }
         This->present_handles = REALLOC(This->present_handles,
                                         oldBufferCount * sizeof(D3DWindowBuffer *),
                                         newBufferCount * sizeof(D3DWindowBuffer *));
@@ -284,6 +278,15 @@ NineSwapChain9_Resize( struct NineSwapChain9 *This,
             This->buffers[i] = NULL;
             This->present_handles[i] = NULL;
         }
+    }
+
+    if (has_present_buffers &&
+        (newBufferCount != oldBufferCount || !This->present_buffers)) {
+        This->present_buffers = REALLOC(This->present_buffers,
+                                        This->present_buffers == NULL ? 0 :
+                                        oldBufferCount * sizeof(struct pipe_resource *),
+                                        newBufferCount * sizeof(struct pipe_resource *));
+        memset(This->present_buffers, 0, newBufferCount * sizeof(struct pipe_resource *));
     }
 
     for (i = 0; i < newBufferCount; ++i) {
