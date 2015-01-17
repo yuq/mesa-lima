@@ -207,7 +207,7 @@ _mesa_sha1_update(struct mesa_sha1 *ctx, const void *data, int size)
 int
 _mesa_sha1_final(struct mesa_sha1 *ctx, unsigned char result[20])
 {
-   gcry_md_hd_t h = (grcy_md_hd_t) ctx;
+   gcry_md_hd_t h = (gcry_md_hd_t) ctx;
 
    memcpy(result, gcry_md_read(h, GCRY_MD_SHA1), 20);
    gcry_md_close(h);
