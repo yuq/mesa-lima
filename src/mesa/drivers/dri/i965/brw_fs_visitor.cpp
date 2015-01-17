@@ -3098,16 +3098,41 @@ fs_visitor::emit_dummy_fs()
    int reg_width = dispatch_width / 8;
 
    /* Everyone's favorite color. */
-   emit(MOV(fs_reg(MRF, 2 + 0 * reg_width), fs_reg(1.0f)));
-   emit(MOV(fs_reg(MRF, 2 + 1 * reg_width), fs_reg(0.0f)));
-   emit(MOV(fs_reg(MRF, 2 + 2 * reg_width), fs_reg(1.0f)));
-   emit(MOV(fs_reg(MRF, 2 + 3 * reg_width), fs_reg(0.0f)));
+   const float color[4] = { 1.0, 0.0, 1.0, 0.0 };
+   for (int i = 0; i < 4; i++) {
+      emit(MOV(fs_reg(MRF, 2 + i * reg_width, BRW_REGISTER_TYPE_F,
+                      dispatch_width), fs_reg(color[i])));
+   }
 
    fs_inst *write;
-   write = emit(FS_OPCODE_FB_WRITE, fs_reg(0), fs_reg(0));
-   write->base_mrf = 2;
-   write->mlen = 4 * reg_width;
+   write = emit(FS_OPCODE_FB_WRITE);
    write->eot = true;
+   if (brw->gen >= 6) {
+      write->base_mrf = 2;
+      write->mlen = 4 * reg_width;
+   } else {
+      write->header_present = true;
+      write->base_mrf = 0;
+      write->mlen = 2 + 4 * reg_width;
+   }
+
+   /* Tell the SF we don't have any inputs.  Gen4-5 require at least one
+    * varying to avoid GPU hangs, so set that.
+    */
+   brw_wm_prog_data *wm_prog_data = (brw_wm_prog_data *) this->prog_data;
+   wm_prog_data->num_varying_inputs = brw->gen < 6 ? 1 : 0;
+   memset(wm_prog_data->urb_setup, -1,
+          sizeof(wm_prog_data->urb_setup[0]) * VARYING_SLOT_MAX);
+
+   /* We don't have any uniforms. */
+   stage_prog_data->nr_params = 0;
+   stage_prog_data->nr_pull_params = 0;
+   stage_prog_data->curb_read_length = 0;
+   stage_prog_data->dispatch_grf_start_reg = 2;
+   wm_prog_data->dispatch_grf_start_reg_16 = 2;
+   grf_used = 1; /* Gen4-5 don't allow zero GRF blocks */
+
+   calculate_cfg();
 }
 
 /* The register location here is relative to the start of the URB
