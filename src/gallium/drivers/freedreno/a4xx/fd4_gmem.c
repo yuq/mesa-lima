@@ -54,7 +54,14 @@ static void
 emit_mrt(struct fd_ringbuffer *ring, unsigned nr_bufs,
 		struct pipe_surface **bufs, uint32_t *bases, uint32_t bin_w)
 {
+	enum a4xx_tile_mode tile_mode;
 	unsigned i;
+
+	if (bin_w) {
+		tile_mode = 2;
+	} else {
+		tile_mode = TILE4_LINEAR;
+	}
 
 	for (i = 0; i < 8; i++) {
 		enum a4xx_color_fmt format = 0;
@@ -91,15 +98,20 @@ emit_mrt(struct fd_ringbuffer *ring, unsigned nr_bufs,
 
 		OUT_PKT0(ring, REG_A4XX_RB_MRT_BUF_INFO(i), 3);
 		OUT_RING(ring, A4XX_RB_MRT_BUF_INFO_COLOR_FORMAT(format) |
-				0x80 | /* XXX not on gmem2mem?? tile-mode? */
+				A4XX_RB_MRT_BUF_INFO_COLOR_TILE_MODE(tile_mode) |
 				A4XX_RB_MRT_BUF_INFO_COLOR_BUF_PITCH(stride) |
 				A4XX_RB_MRT_BUF_INFO_COLOR_SWAP(swap));
 		if (bin_w || (i >= nr_bufs)) {
 			OUT_RING(ring, base);
+			OUT_RING(ring, A4XX_RB_MRT_CONTROL3_STRIDE(stride));
 		} else {
-			OUT_RELOCW(ring, rsc->bo, offset, 0, -1);
+			OUT_RELOCW(ring, rsc->bo, offset, 0, 0);
+			/* RB_MRT[i].CONTROL3.STRIDE not emitted by c2d..
+			 * not sure if we need to skip it for bypass or
+			 * not.
+			 */
+			OUT_RING(ring, A4XX_RB_MRT_CONTROL3_STRIDE(0));
 		}
-		OUT_RING(ring, A4XX_RB_MRT_CONTROL3_STRIDE(stride));
 	}
 }
 
@@ -418,6 +430,48 @@ patch_rbrc(struct fd_context *ctx, uint32_t val)
 	util_dynarray_resize(&fd4_ctx->rbrc_patches, 0);
 }
 
+/* for rendering directly to system memory: */
+static void
+fd4_emit_sysmem_prep(struct fd_context *ctx)
+{
+	struct pipe_framebuffer_state *pfb = &ctx->framebuffer;
+	struct fd_ringbuffer *ring = ctx->ring;
+	uint32_t pitch = 0;
+
+	if (pfb->cbufs[0]) {
+		struct pipe_surface *psurf = pfb->cbufs[0];
+		unsigned lvl = psurf->u.tex.level;
+		pitch = fd_resource(psurf->texture)->slices[lvl].pitch;
+	}
+
+	fd4_emit_restore(ctx);
+
+	OUT_PKT0(ring, REG_A4XX_RB_FRAME_BUFFER_DIMENSION, 1);
+	OUT_RING(ring, A4XX_RB_FRAME_BUFFER_DIMENSION_WIDTH(pfb->width) |
+			A4XX_RB_FRAME_BUFFER_DIMENSION_HEIGHT(pfb->height));
+
+	emit_mrt(ring, pfb->nr_cbufs, pfb->cbufs, NULL, 0);
+
+	/* setup scissor/offset for current tile: */
+	OUT_PKT0(ring, REG_A4XX_RB_BIN_OFFSET, 1);
+	OUT_RING(ring, A4XX_RB_BIN_OFFSET_X(0) |
+			A4XX_RB_BIN_OFFSET_Y(0));
+
+	OUT_PKT0(ring, REG_A4XX_GRAS_SC_SCREEN_SCISSOR_TL, 2);
+	OUT_RING(ring, A4XX_GRAS_SC_SCREEN_SCISSOR_TL_X(0) |
+			A4XX_GRAS_SC_SCREEN_SCISSOR_TL_Y(0));
+	OUT_RING(ring, A4XX_GRAS_SC_SCREEN_SCISSOR_BR_X(pfb->width - 1) |
+			A4XX_GRAS_SC_SCREEN_SCISSOR_BR_Y(pfb->height - 1));
+
+	OUT_PKT0(ring, REG_A4XX_RB_MODE_CONTROL, 1);
+	OUT_RING(ring, A4XX_RB_MODE_CONTROL_WIDTH(0) |
+			A4XX_RB_MODE_CONTROL_HEIGHT(0) |
+			0x00c00000);  /* XXX */
+
+	patch_draws(ctx, IGNORE_VISIBILITY);
+	patch_rbrc(ctx, 0);  // XXX
+}
+
 static void
 update_vsc_pipe(struct fd_context *ctx)
 {
@@ -558,6 +612,7 @@ fd4_gmem_init(struct pipe_context *pctx)
 {
 	struct fd_context *ctx = fd_context(pctx);
 
+	ctx->emit_sysmem_prep = fd4_emit_sysmem_prep;
 	ctx->emit_tile_init = fd4_emit_tile_init;
 	ctx->emit_tile_prep = fd4_emit_tile_prep;
 	ctx->emit_tile_mem2gmem = fd4_emit_tile_mem2gmem;
