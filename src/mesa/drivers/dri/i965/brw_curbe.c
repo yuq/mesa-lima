@@ -285,6 +285,19 @@ brw_upload_constant_buffer(struct brw_context *brw)
     */
 
 emit:
+   /* Work around mysterious 965 hangs that appear to happen if you do
+    * two 3DPRIMITIVEs with only a CONSTANT_BUFFER inbetween.  If we
+    * haven't already flushed for some other reason, explicitly do so.
+    *
+    * We've found no documented reason why this should be necessary.
+    */
+   if (brw->gen == 4 && !brw->is_g4x &&
+       (brw->state.dirty.brw & (BRW_NEW_BATCH | BRW_NEW_PSP)) == 0) {
+      BEGIN_BATCH(1);
+      OUT_BATCH(MI_FLUSH);
+      ADVANCE_BATCH();
+   }
+
    /* BRW_NEW_URB_FENCE: From the gen4 PRM, volume 1, section 3.9.8
     * (CONSTANT_BUFFER (CURBE Load)):
     *
