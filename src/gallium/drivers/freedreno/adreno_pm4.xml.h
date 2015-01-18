@@ -12,9 +12,9 @@ The rules-ng-ng source files this header was generated from are:
 - /home/robclark/src/freedreno/envytools/rnndb/freedreno_copyright.xml  (   1453 bytes, from 2013-03-31 16:51:27)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/a2xx.xml          (  32901 bytes, from 2014-06-02 15:21:30)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_common.xml (  10551 bytes, from 2014-11-13 22:44:30)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_pm4.xml    (  15076 bytes, from 2014-12-01 22:40:01)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_pm4.xml    (  15085 bytes, from 2014-12-20 21:49:41)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/a3xx.xml          (  64344 bytes, from 2014-12-12 20:22:26)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/a4xx.xml          (  50931 bytes, from 2014-12-20 16:40:43)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/a4xx.xml          (  51270 bytes, from 2015-01-18 23:05:48)
 
 Copyright (C) 2013-2014 by the following authors:
 - Rob Clark <robdclark@gmail.com> (robclark)
@@ -388,14 +388,14 @@ static inline uint32_t CP_DRAW_INDX_OFFSET_0_INDEX_SIZE(enum a4xx_index_size val
 {
 	return ((val) << CP_DRAW_INDX_OFFSET_0_INDEX_SIZE__SHIFT) & CP_DRAW_INDX_OFFSET_0_INDEX_SIZE__MASK;
 }
-#define CP_DRAW_INDX_OFFSET_0_NUM_INSTANCES__MASK		0xffff0000
-#define CP_DRAW_INDX_OFFSET_0_NUM_INSTANCES__SHIFT		16
-static inline uint32_t CP_DRAW_INDX_OFFSET_0_NUM_INSTANCES(uint32_t val)
-{
-	return ((val) << CP_DRAW_INDX_OFFSET_0_NUM_INSTANCES__SHIFT) & CP_DRAW_INDX_OFFSET_0_NUM_INSTANCES__MASK;
-}
 
 #define REG_CP_DRAW_INDX_OFFSET_1				0x00000001
+#define CP_DRAW_INDX_OFFSET_1_NUM_INSTANCES__MASK		0xffffffff
+#define CP_DRAW_INDX_OFFSET_1_NUM_INSTANCES__SHIFT		0
+static inline uint32_t CP_DRAW_INDX_OFFSET_1_NUM_INSTANCES(uint32_t val)
+{
+	return ((val) << CP_DRAW_INDX_OFFSET_1_NUM_INSTANCES__SHIFT) & CP_DRAW_INDX_OFFSET_1_NUM_INSTANCES__MASK;
+}
 
 #define REG_CP_DRAW_INDX_OFFSET_2				0x00000002
 #define CP_DRAW_INDX_OFFSET_2_NUM_INDICES__MASK			0xffffffff

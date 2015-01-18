@@ -12,11 +12,11 @@ The rules-ng-ng source files this header was generated from are:
 - /home/robclark/src/freedreno/envytools/rnndb/freedreno_copyright.xml  (   1453 bytes, from 2013-03-31 16:51:27)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/a2xx.xml          (  32901 bytes, from 2014-06-02 15:21:30)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_common.xml (  10551 bytes, from 2014-11-13 22:44:30)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_pm4.xml    (  15076 bytes, from 2014-12-01 22:40:01)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_pm4.xml    (  15085 bytes, from 2014-12-20 21:49:41)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/a3xx.xml          (  64344 bytes, from 2014-12-12 20:22:26)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/a4xx.xml          (  50931 bytes, from 2014-12-20 16:40:43)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/a4xx.xml          (  51270 bytes, from 2015-01-18 23:05:48)
 
-Copyright (C) 2013-2014 by the following authors:
+Copyright (C) 2013-2015 by the following authors:
 - Rob Clark <robdclark@gmail.com> (robclark)
 
 Permission is hereby granted, free of charge, to any person obtaining
@@ -309,6 +309,12 @@ static inline uint32_t REG_A4XX_RB_MRT_BUF_INFO(uint32_t i0) { return 0x000020a5
 static inline uint32_t A4XX_RB_MRT_BUF_INFO_COLOR_FORMAT(enum a4xx_color_fmt val)
 {
 	return ((val) << A4XX_RB_MRT_BUF_INFO_COLOR_FORMAT__SHIFT) & A4XX_RB_MRT_BUF_INFO_COLOR_FORMAT__MASK;
+}
+#define A4XX_RB_MRT_BUF_INFO_COLOR_TILE_MODE__MASK		0x000000c0
+#define A4XX_RB_MRT_BUF_INFO_COLOR_TILE_MODE__SHIFT		6
+static inline uint32_t A4XX_RB_MRT_BUF_INFO_COLOR_TILE_MODE(enum a4xx_tile_mode val)
+{
+	return ((val) << A4XX_RB_MRT_BUF_INFO_COLOR_TILE_MODE__SHIFT) & A4XX_RB_MRT_BUF_INFO_COLOR_TILE_MODE__MASK;
 }
 #define A4XX_RB_MRT_BUF_INFO_DITHER_MODE__MASK			0x00000600
 #define A4XX_RB_MRT_BUF_INFO_DITHER_MODE__SHIFT			9
@@ -1467,6 +1473,12 @@ static inline uint32_t A4XX_VFD_CONTROL_1_REGID4INST(uint32_t val)
 #define REG_A4XX_VFD_CONTROL_2					0x00002202
 
 #define REG_A4XX_VFD_CONTROL_3					0x00002203
+#define A4XX_VFD_CONTROL_3_REGID_VTXCNT__MASK			0x0000ff00
+#define A4XX_VFD_CONTROL_3_REGID_VTXCNT__SHIFT			8
+static inline uint32_t A4XX_VFD_CONTROL_3_REGID_VTXCNT(uint32_t val)
+{
+	return ((val) << A4XX_VFD_CONTROL_3_REGID_VTXCNT__SHIFT) & A4XX_VFD_CONTROL_3_REGID_VTXCNT__MASK;
+}
 
 #define REG_A4XX_VFD_CONTROL_4					0x00002204
 
@@ -1488,12 +1500,7 @@ static inline uint32_t A4XX_VFD_FETCH_INSTR_0_BUFSTRIDE(uint32_t val)
 	return ((val) << A4XX_VFD_FETCH_INSTR_0_BUFSTRIDE__SHIFT) & A4XX_VFD_FETCH_INSTR_0_BUFSTRIDE__MASK;
 }
 #define A4XX_VFD_FETCH_INSTR_0_SWITCHNEXT			0x00080000
-#define A4XX_VFD_FETCH_INSTR_0_STEPRATE__MASK			0xff000000
-#define A4XX_VFD_FETCH_INSTR_0_STEPRATE__SHIFT			24
-static inline uint32_t A4XX_VFD_FETCH_INSTR_0_STEPRATE(uint32_t val)
-{
-	return ((val) << A4XX_VFD_FETCH_INSTR_0_STEPRATE__SHIFT) & A4XX_VFD_FETCH_INSTR_0_STEPRATE__MASK;
-}
+#define A4XX_VFD_FETCH_INSTR_0_INSTANCED			0x00100000
 
 static inline uint32_t REG_A4XX_VFD_FETCH_INSTR_1(uint32_t i0) { return 0x0000220b + 0x4*i0; }
 
@@ -1506,6 +1513,12 @@ static inline uint32_t A4XX_VFD_FETCH_INSTR_2_SIZE(uint32_t val)
 }
 
 static inline uint32_t REG_A4XX_VFD_FETCH_INSTR_3(uint32_t i0) { return 0x0000220d + 0x4*i0; }
+#define A4XX_VFD_FETCH_INSTR_3_STEPRATE__MASK			0x000001ff
+#define A4XX_VFD_FETCH_INSTR_3_STEPRATE__SHIFT			0
+static inline uint32_t A4XX_VFD_FETCH_INSTR_3_STEPRATE(uint32_t val)
+{
+	return ((val) << A4XX_VFD_FETCH_INSTR_3_STEPRATE__SHIFT) & A4XX_VFD_FETCH_INSTR_3_STEPRATE__MASK;
+}
 
 static inline uint32_t REG_A4XX_VFD_DECODE(uint32_t i0) { return 0x0000228a + 0x1*i0; }
 
