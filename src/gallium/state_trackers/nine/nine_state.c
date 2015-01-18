@@ -44,7 +44,10 @@ update_framebuffer(struct NineDevice9 *device)
     struct nine_state *state = &device->state;
     struct pipe_framebuffer_state *fb = &device->state.fb;
     unsigned i;
-    unsigned w = 0, h = 0; /* no surface can have width or height 0 */
+    struct NineSurface9 *rt0 = state->rt[0];
+    unsigned w = rt0->desc.Width;
+    unsigned h = rt0->desc.Height;
+    D3DMULTISAMPLE_TYPE nr_samples = rt0->desc.MultiSampleType;
 
     const int sRGB = state->rs[D3DRS_SRGBWRITEENABLE] ? 1 : 0;
 
@@ -53,19 +56,31 @@ update_framebuffer(struct NineDevice9 *device)
     state->rt_mask = 0x0;
     fb->nr_cbufs = 0;
 
+    /* all render targets must have the same size and the depth buffer must be
+     * bigger. Multisample has to match, according to spec. But some apps do
+     * things wrong there, and no error is returned. The behaviour they get
+     * apparently is that depth buffer is disabled if it doesn't match.
+     * Surely the same for render targets. */
+
+    /* Special case: D3DFMT_NULL is used to bound no real render target,
+     * but render to depth buffer. We have to not take into account the render
+     * target info. TODO: know what should happen when there are several render targers
+     * and the first one is D3DFMT_NULL */
+    if (rt0->desc.Format == D3DFMT_NULL && state->ds) {
+        w = state->ds->desc.Width;
+        h = state->ds->desc.Height;
+        nr_samples = state->ds->desc.MultiSampleType;
+    }
+
     for (i = 0; i < device->caps.NumSimultaneousRTs; ++i) {
-        if (state->rt[i] && state->rt[i]->desc.Format != D3DFMT_NULL) {
-            struct NineSurface9 *rt = state->rt[i];
+        struct NineSurface9 *rt = state->rt[i];
+
+        if (rt && rt->desc.Format != D3DFMT_NULL && rt->desc.Width == w &&
+            rt->desc.Height == h && rt->desc.MultiSampleType == nr_samples) {
             fb->cbufs[i] = NineSurface9_GetSurface(rt, sRGB);
             state->rt_mask |= 1 << i;
             fb->nr_cbufs = i + 1;
-            if (w) {
-                w = MIN2(w, rt->desc.Width);
-                h = MIN2(h, rt->desc.Height);
-            } else {
-                w = rt->desc.Width;
-                h = rt->desc.Height;
-            }
+
             if (unlikely(rt->desc.Usage & D3DUSAGE_AUTOGENMIPMAP)) {
                 assert(rt->texture == D3DRTYPE_TEXTURE ||
                        rt->texture == D3DRTYPE_CUBETEXTURE);
@@ -79,15 +94,10 @@ update_framebuffer(struct NineDevice9 *device)
         }
     }
 
-    if (state->ds) {
+    if (state->ds && state->ds->desc.Width >= w &&
+        state->ds->desc.Height >= h &&
+        state->ds->desc.MultiSampleType == nr_samples) {
         fb->zsbuf = NineSurface9_GetSurface(state->ds, 0);
-        if (w) {
-            w = MIN2(w, state->ds->desc.Width);
-            h = MIN2(h, state->ds->desc.Height);
-        } else {
-            w = state->ds->desc.Width;
-            h = state->ds->desc.Height;
-        }
     } else {
         fb->zsbuf = NULL;
     }
