@@ -302,9 +302,12 @@ fs_visitor::try_copy_propagate(fs_inst *inst, int arg, acp_entry *entry)
        (entry->dst.reg_offset + entry->regs_written) * 32)
       return false;
 
-   /* See resolve_ud_negate() and comment in brw_fs_emit.cpp. */
-   if (inst->conditional_mod &&
-       inst->src[arg].type == BRW_REGISTER_TYPE_UD &&
+   /* we can't generally copy-propagate UD negations because we
+    * can end up accessing the resulting values as signed integers
+    * instead. See also resolve_ud_negate() and comment in
+    * fs_generator::generate_code.
+    */
+   if (inst->src[arg].type == BRW_REGISTER_TYPE_UD &&
        entry->src.negate)
       return false;
 

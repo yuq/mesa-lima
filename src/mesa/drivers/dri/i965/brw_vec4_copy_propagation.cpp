@@ -314,12 +314,11 @@ try_copy_propagate(struct brw_context *brw, vec4_instruction *inst,
    if (inst->is_send_from_grf())
       return false;
 
-   /* We can't copy-propagate a UD negation into a condmod
-    * instruction, because the condmod ends up looking at the 33-bit
-    * signed accumulator value instead of the 32-bit value we wanted
+   /* we can't generally copy-propagate UD negations becuse we
+    * end up accessing the resulting values as signed integers
+    * instead. See also resolve_ud_negate().
     */
-   if (inst->conditional_mod &&
-       value.negate &&
+   if (value.negate &&
        value.type == BRW_REGISTER_TYPE_UD)
       return false;
 
