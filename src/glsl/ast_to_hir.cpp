@@ -5381,6 +5381,14 @@ ast_interface_block::hir(exec_list *instructions,
 {
    YYLTYPE loc = this->get_location();
 
+   /* Interface blocks must be declared at global scope */
+   if (state->current_function != NULL) {
+      _mesa_glsl_error(&loc, state,
+                       "Interface block `%s' must be declared "
+                       "at global scope",
+                       this->block_name);
+   }
+
    /* The ast_interface_block has a list of ast_declarator_lists.  We
     * need to turn those into ir_variables with an association
     * with this uniform block.
