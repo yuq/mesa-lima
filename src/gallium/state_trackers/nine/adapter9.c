@@ -385,29 +385,6 @@ NineAdapter9_CheckDeviceMultiSampleType( struct NineAdapter9 *This,
     return D3D_OK;
 }
 
-static INLINE boolean
-depth_stencil_format( D3DFORMAT fmt )
-{
-    static D3DFORMAT allowed[] = {
-        D3DFMT_D16_LOCKABLE,
-        D3DFMT_D32,
-        D3DFMT_D15S1,
-        D3DFMT_D24S8,
-        D3DFMT_D24X8,
-        D3DFMT_D24X4S4,
-        D3DFMT_D16,
-        D3DFMT_D32F_LOCKABLE,
-        D3DFMT_D24FS8,
-        D3DFMT_D32_LOCKABLE
-    };
-    unsigned i;
-
-    for (i = 0; i < sizeof(allowed)/sizeof(D3DFORMAT); i++) {
-        if (fmt == allowed[i]) { return TRUE; }
-    }
-    return FALSE;
-}
-
 HRESULT WINAPI
 NineAdapter9_CheckDepthStencilMatch( struct NineAdapter9 *This,
                                      D3DDEVTYPE DeviceType,
@@ -441,7 +418,8 @@ NineAdapter9_CheckDepthStencilMatch( struct NineAdapter9 *This,
         bfmt = dfmt;
     zsfmt = d3d9_to_pipe_format_checked(screen, DepthStencilFormat,
                                         PIPE_TEXTURE_2D, 0,
-                                        PIPE_BIND_DEPTH_STENCIL, FALSE);
+                                        d3d9_get_pipe_depth_format_bindings(DepthStencilFormat),
+                                        FALSE);
     if (dfmt == PIPE_FORMAT_NONE ||
         bfmt == PIPE_FORMAT_NONE ||
         zsfmt == PIPE_FORMAT_NONE) {

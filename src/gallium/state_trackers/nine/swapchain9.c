@@ -341,8 +341,14 @@ NineSwapChain9_Resize( struct NineSwapChain9 *This,
         pipe_resource_reference(&resource, NULL);
     }
     if (pParams->EnableAutoDepthStencil) {
-        tmplt.bind = PIPE_BIND_SAMPLER_VIEW | PIPE_BIND_TRANSFER_READ |
-                     PIPE_BIND_TRANSFER_WRITE | PIPE_BIND_DEPTH_STENCIL;
+        tmplt.bind = d3d9_get_pipe_depth_format_bindings(pParams->AutoDepthStencilFormat);
+        /* Checking the d3d9 depth format for texture support indicates the app if it can use
+         * the format for shadow mapping or texturing. If the check returns true, then the app
+         * is allowed to use this functionnality, so try first to create the buffer
+         * with PIPE_BIND_SAMPLER_VIEW. If the format can't be created with it, try without.
+         * If it fails with PIPE_BIND_SAMPLER_VIEW, then the app check for texture support
+         * would fail too, so we are fine. */
+        tmplt.bind |= PIPE_BIND_SAMPLER_VIEW;
         tmplt.nr_samples = pParams->MultiSampleType;
         tmplt.format = d3d9_to_pipe_format_checked(This->screen,
                                                    pParams->AutoDepthStencilFormat,
@@ -350,6 +356,16 @@ NineSwapChain9_Resize( struct NineSwapChain9 *This,
                                                    tmplt.nr_samples,
                                                    tmplt.bind,
                                                    FALSE);
+        if (tmplt.format == PIPE_FORMAT_NONE) {
+            tmplt.bind &= ~PIPE_BIND_SAMPLER_VIEW;
+            tmplt.format = d3d9_to_pipe_format_checked(This->screen,
+                                                       pParams->AutoDepthStencilFormat,
+                                                       PIPE_TEXTURE_2D,
+                                                       tmplt.nr_samples,
+                                                       tmplt.bind,
+                                                       FALSE);
+        }
+
         if (tmplt.format == PIPE_FORMAT_NONE)
             return D3DERR_INVALIDCALL;
 

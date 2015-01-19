@@ -175,6 +175,57 @@ pipe_to_d3d9_format(enum pipe_format format)
     return nine_pipe_to_d3d9_format_map[format];
 }
 
+static INLINE boolean
+depth_stencil_format( D3DFORMAT fmt )
+{
+    static D3DFORMAT allowed[] = {
+        D3DFMT_D16_LOCKABLE,
+        D3DFMT_D32,
+        D3DFMT_D15S1,
+        D3DFMT_D24S8,
+        D3DFMT_D24X8,
+        D3DFMT_D24X4S4,
+        D3DFMT_D16,
+        D3DFMT_D32F_LOCKABLE,
+        D3DFMT_D24FS8,
+        D3DFMT_D32_LOCKABLE,
+        D3DFMT_DF16,
+        D3DFMT_DF24,
+        D3DFMT_INTZ
+    };
+    unsigned i;
+
+    for (i = 0; i < sizeof(allowed)/sizeof(D3DFORMAT); i++) {
+        if (fmt == allowed[i]) { return TRUE; }
+    }
+    return FALSE;
+}
+
+static INLINE unsigned
+d3d9_get_pipe_depth_format_bindings(D3DFORMAT format)
+{
+    switch (format) {
+    case D3DFMT_D32:
+    case D3DFMT_D15S1:
+    case D3DFMT_D24S8:
+    case D3DFMT_D24X8:
+    case D3DFMT_D24X4S4:
+    case D3DFMT_D16:
+    case D3DFMT_D24FS8:
+        return PIPE_BIND_DEPTH_STENCIL;
+    case D3DFMT_D32F_LOCKABLE:
+    case D3DFMT_D16_LOCKABLE:
+    case D3DFMT_D32_LOCKABLE:
+        return PIPE_BIND_DEPTH_STENCIL | PIPE_BIND_TRANSFER_READ |
+               PIPE_BIND_TRANSFER_WRITE;
+    case D3DFMT_DF16:
+    case D3DFMT_DF24:
+    case D3DFMT_INTZ:
+        return PIPE_BIND_DEPTH_STENCIL | PIPE_BIND_SAMPLER_VIEW;
+    default: assert(0);
+    }
+}
+
 static INLINE enum pipe_format
 d3d9_to_pipe_format_internal(D3DFORMAT format)
 {

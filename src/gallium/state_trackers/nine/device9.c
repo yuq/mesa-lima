@@ -971,7 +971,7 @@ create_zs_or_rt_surface(struct NineDevice9 *This,
     templ.bind = PIPE_BIND_SAMPLER_VIEW; /* StretchRect */
     switch (type) {
     case 0: templ.bind |= PIPE_BIND_RENDER_TARGET; break;
-    case 1: templ.bind |= PIPE_BIND_DEPTH_STENCIL; break;
+    case 1: templ.bind = d3d9_get_pipe_depth_format_bindings(Format); break;
     default:
         assert(type == 2);
         break;
@@ -1042,6 +1042,8 @@ NineDevice9_CreateDepthStencilSurface( struct NineDevice9 *This,
                                        HANDLE *pSharedHandle )
 {
     *ppSurface = NULL;
+    if (!depth_stencil_format(Format))
+        return D3DERR_NOTAVAILABLE;
     return create_zs_or_rt_surface(This, 1, D3DPOOL_DEFAULT,
                                    Width, Height, Format,
                                    MultiSample, MultisampleQuality,
