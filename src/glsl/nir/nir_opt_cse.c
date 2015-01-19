@@ -112,7 +112,34 @@ nir_instrs_equal(nir_instr *instr1, nir_instr *instr2)
 
       return true;
    }
-   case nir_instr_type_intrinsic:
+   case nir_instr_type_intrinsic: {
+      nir_intrinsic_instr *intrinsic1 = nir_instr_as_intrinsic(instr1);
+      nir_intrinsic_instr *intrinsic2 = nir_instr_as_intrinsic(instr2);
+      const nir_intrinsic_info *info =
+         &nir_intrinsic_infos[intrinsic1->intrinsic];
+
+      if (intrinsic1->intrinsic != intrinsic2->intrinsic ||
+          intrinsic1->num_components != intrinsic2->num_components)
+         return false;
+
+      if (info->has_dest && intrinsic1->dest.ssa.num_components !=
+                            intrinsic2->dest.ssa.num_components)
+         return false;
+
+      for (unsigned i = 0; i < info->num_srcs; i++) {
+         if (!nir_srcs_equal(intrinsic1->src[i], intrinsic2->src[i]))
+            return false;
+      }
+
+      assert(info->num_variables == 0);
+
+      for (unsigned i = 0; i < info->num_indices; i++) {
+         if (intrinsic1->const_index[i] != intrinsic2->const_index[i])
+            return false;
+      }
+
+      return true;
+   }
    case nir_instr_type_call:
    case nir_instr_type_jump:
    case nir_instr_type_ssa_undef:
@@ -151,7 +178,13 @@ nir_instr_can_cse(nir_instr *instr)
       return true;
    case nir_instr_type_tex:
       return false; /* TODO */
-   case nir_instr_type_intrinsic:
+   case nir_instr_type_intrinsic: {
+      const nir_intrinsic_info *info =
+         &nir_intrinsic_infos[nir_instr_as_intrinsic(instr)->intrinsic];
+      return (info->flags & NIR_INTRINSIC_CAN_ELIMINATE) &&
+             (info->flags & NIR_INTRINSIC_CAN_REORDER) &&
+             info->num_variables == 0; /* not implemented yet */
+   }
    case nir_instr_type_call:
    case nir_instr_type_jump:
    case nir_instr_type_ssa_undef:
@@ -176,6 +209,9 @@ nir_instr_get_dest_ssa_def(nir_instr *instr)
    case nir_instr_type_phi:
       assert(nir_instr_as_phi(instr)->dest.is_ssa);
       return &nir_instr_as_phi(instr)->dest.ssa;
+   case nir_instr_type_intrinsic:
+      assert(nir_instr_as_intrinsic(instr)->dest.is_ssa);
+      return &nir_instr_as_intrinsic(instr)->dest.ssa;
    default:
       unreachable("We never ask for any of these");
    }
