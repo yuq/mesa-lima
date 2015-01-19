@@ -472,6 +472,7 @@ d3dcmpfunc_to_pipe_func(D3DCMPFUNC func)
     case D3DCMP_NOTEQUAL:     return PIPE_FUNC_NOTEQUAL;
     case D3DCMP_GREATEREQUAL: return PIPE_FUNC_GEQUAL;
     case D3DCMP_ALWAYS:       return PIPE_FUNC_ALWAYS;
+    case D3DCMP_NEVER_ZERO:   return PIPE_FUNC_NEVER; // Tested on windows + ATI HD5770
     default:
         assert(0);
         return PIPE_FUNC_NEVER;

@@ -472,6 +472,7 @@ typedef enum _D3DBUSTYPE {
 } D3DBUSTYPE;
 
 typedef enum _D3DCMPFUNC {
+    D3DCMP_NEVER_ZERO = 0, //Needed to avoid warnings
     D3DCMP_NEVER = 1,
     D3DCMP_LESS = 2,
     D3DCMP_EQUAL = 3,
