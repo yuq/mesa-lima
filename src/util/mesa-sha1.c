@@ -24,7 +24,7 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include "sha1.h"
+#include "mesa-sha1.h"
 
 #if defined(HAVE_SHA1_IN_LIBMD)  /* Use libmd for SHA1 */ \
 	|| defined(HAVE_SHA1_IN_LIBC)   /* Use libc for SHA1 */

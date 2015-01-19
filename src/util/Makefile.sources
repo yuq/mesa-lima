@@ -1,6 +1,6 @@
 MESA_UTIL_SHADER_CACHE_FILES := \
-	sha1.c \
-	sha1.h
+	mesa-sha1.c \
+	mesa-sha1.h
 
 MESA_UTIL_FILES :=	\
 	format_srgb.h \
