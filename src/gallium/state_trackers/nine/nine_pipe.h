@@ -516,6 +516,7 @@ d3dfillmode_to_pipe_polygon_mode(D3DFILLMODE mode)
     case D3DFILL_POINT:     return PIPE_POLYGON_MODE_POINT;
     case D3DFILL_WIREFRAME: return PIPE_POLYGON_MODE_LINE;
     case D3DFILL_SOLID:     return PIPE_POLYGON_MODE_FILL;
+    case D3DFILL_SOLID_ZERO:return PIPE_POLYGON_MODE_FILL;
     default:
         assert(0);
         return PIPE_POLYGON_MODE_FILL;
