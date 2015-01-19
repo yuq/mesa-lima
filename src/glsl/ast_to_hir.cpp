@@ -5201,6 +5201,13 @@ ast_process_structure_or_interface_block(exec_list *instructions,
                              "members");
          }
 
+         if (qual->flags.q.constant) {
+            YYLTYPE loc = decl_list->get_location();
+            _mesa_glsl_error(&loc, state,
+                             "const storage qualifier cannot be applied "
+                             "to struct or interface block members");
+         }
+
          field_type = process_array_type(&loc, decl_type,
                                          decl->array_specifier, state);
          fields[i].type = field_type;
