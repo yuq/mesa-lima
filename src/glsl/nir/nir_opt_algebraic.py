@@ -68,6 +68,19 @@ optimizations = [
    (('fadd', ('fmul', a, b), c), ('ffma', a, b, c)),
    (('fge', ('fneg', ('fabs', a)), 0.0), ('feq', a, 0.0)),
    (('fmin', ('fmax', a, 1.0), 0.0), ('fsat', a)),
+   # Logical and bit operations
+   (('fand', a, 0.0), 0.0),
+   (('iand', a, a), a),
+   (('iand', a, 0), 0),
+   (('ior', a, a), a),
+   (('ior', a, 0), a),
+   (('fxor', a, a), 0.0),
+   (('ixor', a, a), 0),
+   (('inot', ('inot', a)), a),
+   # DeMorgan's Laws
+   (('iand', ('inot', a), ('inot', b)), ('inot', ('ior',  a, b))),
+   (('ior',  ('inot', a), ('inot', b)), ('inot', ('iand', a, b))),
+
 # This one may not be exact
    (('feq', ('fadd', a, b), 0.0), ('feq', a, ('fneg', b))),
 ]
