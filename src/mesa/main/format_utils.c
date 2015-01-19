@@ -175,7 +175,7 @@ _mesa_compute_rgba2base2rgba_component_mapping(GLenum baseFormat, uint8_t *map)
          return needRebase;
       }
    default:
-      assert(!"Unexpected base format");
+      unreachable("Unexpected base format");
    }
 }
 
