@@ -5443,8 +5443,22 @@ ast_interface_block::hir(exec_list *instructions,
 
    state->struct_specifier_depth--;
 
-   if (!redeclaring_per_vertex)
+   if (!redeclaring_per_vertex) {
       validate_identifier(this->block_name, loc, state);
+
+      /* From section 4.3.9 ("Interface Blocks") of the GLSL 4.50 spec:
+       *
+       *     "Block names have no other use within a shader beyond interface
+       *     matching; it is a compile-time error to use a block name at global
+       *     scope for anything other than as a block name."
+       */
+      ir_variable *var = state->symbols->get_variable(this->block_name);
+      if (var && !var->type->is_interface()) {
+         _mesa_glsl_error(&loc, state, "Block name `%s' is "
+                          "already used in the scope.",
+                          this->block_name);
+      }
+   }
 
    const glsl_type *earlier_per_vertex = NULL;
    if (redeclaring_per_vertex) {
