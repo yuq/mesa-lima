@@ -338,8 +338,7 @@ NineSwapChain9_Resize( struct NineSwapChain9 *This,
             pipe_resource_reference(&(This->present_buffers[i]), resource);
         }
         This->present_handles[i] = D3DWindowBuffer_create(This, resource, depth);
-        if (!has_present_buffers)
-            pipe_resource_reference(&resource, NULL);
+        pipe_resource_reference(&resource, NULL);
     }
     if (pParams->EnableAutoDepthStencil) {
         tmplt.bind = PIPE_BIND_SAMPLER_VIEW | PIPE_BIND_TRANSFER_READ |
