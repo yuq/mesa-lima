@@ -242,7 +242,7 @@ static const struct brw_device_info brw_device_info_chv = {
    .max_wm_threads = 128,
    .urb = {
       .size = 128,
-      .min_vs_entries = 64,
+      .min_vs_entries = 34,
       .max_vs_entries = 640,
       .max_gs_entries = 256,
    }
