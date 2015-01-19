@@ -676,6 +676,7 @@ NineSurface9_SetResourceResize( struct NineSurface9 *This,
 
     This->desc.Width = This->base.info.width0 = resource->width0;
     This->desc.Height = This->base.info.height0 = resource->height0;
+    This->desc.MultiSampleType = This->base.info.nr_samples = resource->nr_samples;
 
     This->stride = util_format_get_stride(This->base.info.format,
                                           This->desc.Width);
