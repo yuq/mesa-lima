@@ -353,7 +353,7 @@ validate_image_unit(struct gl_context *ctx, struct gl_image_unit *u)
       return GL_FALSE;
 
    if (t->Target == GL_TEXTURE_BUFFER) {
-      tex_format = t->_BufferObjectFormat;
+      tex_format = _mesa_get_shader_image_format(t->BufferObjectFormat);
 
    } else {
       struct gl_texture_image *img = (t->Target == GL_TEXTURE_CUBE_MAP ?
@@ -363,10 +363,10 @@ validate_image_unit(struct gl_context *ctx, struct gl_image_unit *u)
       if (!img || img->Border || img->NumSamples > ctx->Const.MaxImageSamples)
          return GL_FALSE;
 
-      tex_format = img->TexFormat;
+      tex_format = _mesa_get_shader_image_format(img->InternalFormat);
    }
 
-   if (get_image_format_class(tex_format) == IMAGE_FORMAT_CLASS_NONE)
+   if (!tex_format)
       return GL_FALSE;
 
    switch (t->ImageFormatCompatibilityType) {
