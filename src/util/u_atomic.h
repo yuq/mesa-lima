@@ -71,8 +71,8 @@
 
 #define PIPE_ATOMIC "MSVC Intrinsics"
 
-/* We use the Windows header's Interlocked* functions instead of the
- * _Interlocked* intrinsics wherever we can, as support for the latter varies
+/* We use the Windows header's Interlocked*64 functions instead of the
+ * _Interlocked*64 intrinsics wherever we can, as support for the latter varies
  * with target CPU, whereas Windows headers take care of all portability
  * issues: using intrinsics where available, falling back to library
  * implementations where not.
@@ -102,25 +102,25 @@
    ((void) p_atomic_inc_return(_v))
 
 #define p_atomic_inc_return(_v) (\
-   sizeof *(_v) == sizeof(short)   ? InterlockedIncrement16((short *)  (_v)) : \
-   sizeof *(_v) == sizeof(long)    ? InterlockedIncrement  ((long *)   (_v)) : \
-   sizeof *(_v) == sizeof(__int64) ? InterlockedIncrement64((__int64 *)(_v)) : \
+   sizeof *(_v) == sizeof(short)   ? _InterlockedIncrement16((short *)  (_v)) : \
+   sizeof *(_v) == sizeof(long)    ? _InterlockedIncrement  ((long *)   (_v)) : \
+   sizeof *(_v) == sizeof(__int64) ? InterlockedIncrement64 ((__int64 *)(_v)) : \
                                      (assert(!"should not get here"), 0))
 
 #define p_atomic_dec(_v) \
    ((void) p_atomic_dec_return(_v))
 
 #define p_atomic_dec_return(_v) (\
-   sizeof *(_v) == sizeof(short)   ? InterlockedDecrement16((short *)  (_v)) : \
-   sizeof *(_v) == sizeof(long)    ? InterlockedDecrement  ((long *)   (_v)) : \
-   sizeof *(_v) == sizeof(__int64) ? InterlockedDecrement64((__int64 *)(_v)) : \
+   sizeof *(_v) == sizeof(short)   ? _InterlockedDecrement16((short *)  (_v)) : \
+   sizeof *(_v) == sizeof(long)    ? _InterlockedDecrement  ((long *)   (_v)) : \
+   sizeof *(_v) == sizeof(__int64) ? InterlockedDecrement64 ((__int64 *)(_v)) : \
                                      (assert(!"should not get here"), 0))
 
 #define p_atomic_cmpxchg(_v, _old, _new) (\
-   sizeof *(_v) == sizeof(char)    ? _InterlockedCompareExchange8((char *)   (_v), (char)   (_new), (char)   (_old)) : \
-   sizeof *(_v) == sizeof(short)   ? InterlockedCompareExchange16((short *)  (_v), (short)  (_new), (short)  (_old)) : \
-   sizeof *(_v) == sizeof(long)    ? InterlockedCompareExchange  ((long *)   (_v), (long)   (_new), (long)   (_old)) : \
-   sizeof *(_v) == sizeof(__int64) ? InterlockedCompareExchange64((__int64 *)(_v), (__int64)(_new), (__int64)(_old)) : \
+   sizeof *(_v) == sizeof(char)    ? _InterlockedCompareExchange8 ((char *)   (_v), (char)   (_new), (char)   (_old)) : \
+   sizeof *(_v) == sizeof(short)   ? _InterlockedCompareExchange16((short *)  (_v), (short)  (_new), (short)  (_old)) : \
+   sizeof *(_v) == sizeof(long)    ? _InterlockedCompareExchange  ((long *)   (_v), (long)   (_new), (long)   (_old)) : \
+   sizeof *(_v) == sizeof(__int64) ? InterlockedCompareExchange64 ((__int64 *)(_v), (__int64)(_new), (__int64)(_old)) : \
                                      (assert(!"should not get here"), 0))
 
 #endif
