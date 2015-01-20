@@ -157,7 +157,7 @@ brw_link_shader(struct gl_context *ctx, struct gl_shader_program *shProg)
                                   ? BITFIELD_INSERT_TO_BFM_BFI
                                   : 0;
       lower_instructions(shader->base.ir,
-			 MOD_TO_FRACT |
+			 MOD_TO_FLOOR |
 			 DIV_TO_MUL_RCP |
 			 SUB_TO_ADD_NEG |
 			 EXP_TO_EXP2 |

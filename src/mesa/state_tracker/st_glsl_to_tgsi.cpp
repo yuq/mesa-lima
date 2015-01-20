@@ -5419,7 +5419,7 @@ st_link_shader(struct gl_context *ctx, struct gl_shader_program *prog)
          lower_offset_arrays(ir);
       do_mat_op_to_vec(ir);
       lower_instructions(ir,
-                         MOD_TO_FRACT |
+                         MOD_TO_FLOOR |
                          DIV_TO_MUL_RCP |
                          EXP_TO_EXP2 |
                          LOG_TO_LOG2 |

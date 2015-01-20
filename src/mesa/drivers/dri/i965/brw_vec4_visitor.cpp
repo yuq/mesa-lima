@@ -1522,7 +1522,7 @@ vec4_visitor::visit(ir_expression *ir)
       break;
    }
    case ir_binop_mod:
-      /* Floating point should be lowered by MOD_TO_FRACT in the compiler. */
+      /* Floating point should be lowered by MOD_TO_FLOOR in the compiler. */
       assert(ir->type->is_integer());
       emit_math(SHADER_OPCODE_INT_REMAINDER, result_dst, op[0], op[1]);
       break;
