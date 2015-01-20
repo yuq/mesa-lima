@@ -275,7 +275,8 @@ nine_state_copy_common(struct nine_state *dst,
             if (mask->ff.light[i].Type != NINED3DLIGHT_INVALID)
                 dst->ff.light[i] = src->ff.light[i];
 
-        DBG("TODO: active lights\n");
+        memcpy(dst->ff.active_light, src->ff.active_light, sizeof(src->ff.active_light) );
+        dst->ff.num_lights_active = src->ff.num_lights_active;
     }
     if (mask->changed.group & NINE_STATE_FF_VSTRANSF) {
         for (i = 0; i < Elements(mask->ff.changed.transform); ++i) {
@@ -415,7 +416,8 @@ nine_state_copy_common_all(struct nine_state *dst,
         memcpy(dst->ff.light,
                src->ff.light, src->ff.num_lights * sizeof(dst->ff.light[0]));
 
-        DBG("TODO: active lights\n");
+        memcpy(dst->ff.active_light, src->ff.active_light, sizeof(src->ff.active_light) );
+        dst->ff.num_lights_active = src->ff.num_lights_active;
     }
 
     /* Transforms. */

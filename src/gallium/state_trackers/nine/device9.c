@@ -1965,7 +1965,9 @@ NineDevice9_GetLightEnable( struct NineDevice9 *This,
     for (i = 0; i < state->ff.num_lights_active; ++i)
         if (state->ff.active_light[i] == Index)
             break;
-    *pEnable = i != state->ff.num_lights_active;
+
+    *pEnable = i != state->ff.num_lights_active ? 128 : 0; // Taken from wine
+
     return D3D_OK;
 }
 
