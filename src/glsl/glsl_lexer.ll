@@ -544,7 +544,13 @@ subroutine	KEYWORD(0, 300, 0, 0, SUBROUTINE);
 [_a-zA-Z][_a-zA-Z0-9]*	{
 			    struct _mesa_glsl_parse_state *state = yyextra;
 			    void *ctx = state;	
-			    yylval->identifier = ralloc_strdup(ctx, yytext);
+			    if (state->es_shader && strlen(yytext) > 1024) {
+			       _mesa_glsl_error(yylloc, state,
+			                        "Identifier `%s' exceeds 1024 characters",
+			                        yytext);
+			    } else {
+			      yylval->identifier = ralloc_strdup(ctx, yytext);
+			    }
 			    return classify_identifier(state, yytext);
 			}
 
