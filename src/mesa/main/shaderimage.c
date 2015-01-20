@@ -337,13 +337,14 @@ validate_image_unit(struct gl_context *ctx, struct gl_image_unit *u)
    struct gl_texture_object *t = u->TexObj;
    mesa_format tex_format;
 
-   if (!t || u->Level < t->BaseLevel ||
-       u->Level > t->_MaxLevel)
+   if (!t)
       return GL_FALSE;
 
    _mesa_test_texobj_completeness(ctx, t);
 
-   if ((u->Level == t->BaseLevel && !t->_BaseComplete) ||
+   if (u->Level < t->BaseLevel ||
+       u->Level > t->_MaxLevel ||
+       (u->Level == t->BaseLevel && !t->_BaseComplete) ||
        (u->Level != t->BaseLevel && !t->_MipmapComplete))
       return GL_FALSE;
 
