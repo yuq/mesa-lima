@@ -514,22 +514,24 @@ _mesa_EndTransformFeedback(void)
  * Helper used by BindBufferRange() and BindBufferBase().
  */
 static void
-bind_buffer_range(struct gl_context *ctx, GLuint index,
+bind_buffer_range(struct gl_context *ctx,
+                  struct gl_transform_feedback_object *obj,
+                  GLuint index,
                   struct gl_buffer_object *bufObj,
-                  GLintptr offset, GLsizeiptr size)
+                  GLintptr offset, GLsizeiptr size,
+                  bool dsa)
 {
-   struct gl_transform_feedback_object *obj =
-      ctx->TransformFeedback.CurrentObject;
-
    /* Note: no need to FLUSH_VERTICES or flag NewTransformFeedback, because
     * transform feedback buffers can't be changed while transform feedback is
     * active.
     */
 
-   /* The general binding point */
-   _mesa_reference_buffer_object(ctx,
-                                 &ctx->TransformFeedback.CurrentBuffer,
-                                 bufObj);
+   if (!dsa) {
+      /* The general binding point */
+      _mesa_reference_buffer_object(ctx,
+                                    &ctx->TransformFeedback.CurrentBuffer,
+                                    bufObj);
+   }
 
    /* The per-attribute binding point */
    _mesa_set_transform_feedback_binding(ctx, obj, index, bufObj, offset, size);
@@ -543,15 +545,12 @@ bind_buffer_range(struct gl_context *ctx, GLuint index,
  */
 void
 _mesa_bind_buffer_range_transform_feedback(struct gl_context *ctx,
-					   GLuint index,
-					   struct gl_buffer_object *bufObj,
-					   GLintptr offset,
-					   GLsizeiptr size)
+                                           struct gl_transform_feedback_object *obj,
+                                           GLuint index,
+                                           struct gl_buffer_object *bufObj,
+                                           GLintptr offset,
+                                           GLsizeiptr size)
 {
-   struct gl_transform_feedback_object *obj;
-
-   obj = ctx->TransformFeedback.CurrentObject;
-
    if (obj->Active) {
       _mesa_error(ctx, GL_INVALID_OPERATION,
                   "glBindBufferRange(transform feedback active)");
@@ -559,13 +558,15 @@ _mesa_bind_buffer_range_transform_feedback(struct gl_context *ctx,
    }
 
    if (index >= ctx->Const.MaxTransformFeedbackBuffers) {
-      _mesa_error(ctx, GL_INVALID_VALUE, "glBindBufferRange(index=%d)", index);
+      _mesa_error(ctx, GL_INVALID_VALUE, "glBindBufferRange(index=%d "
+                  "out of bounds)", index);
       return;
    }
 
    if (size & 0x3) {
       /* must a multiple of four */
-      _mesa_error(ctx, GL_INVALID_VALUE, "glBindBufferRange(size=%d)", (int) size);
+      _mesa_error(ctx, GL_INVALID_VALUE, "glBindBufferRange(size=%d)",
+                  (int) size);
       return;
    }  
 
@@ -576,38 +577,109 @@ _mesa_bind_buffer_range_transform_feedback(struct gl_context *ctx,
       return;
    }  
 
-   bind_buffer_range(ctx, index, bufObj, offset, size);
+   bind_buffer_range(ctx, obj, index, bufObj, offset, size, false);
 }
 
 
 /**
  * Specify a buffer object to receive transform feedback results.
  * As above, but start at offset = 0.
- * Called from the glBindBufferBase() function.
+ * Called from the glBindBufferBase() and glTransformFeedbackBufferBase()
+ * functions.
  */
 void
 _mesa_bind_buffer_base_transform_feedback(struct gl_context *ctx,
-					  GLuint index,
-					  struct gl_buffer_object *bufObj)
+                                          struct gl_transform_feedback_object *obj,
+                                          GLuint index,
+                                          struct gl_buffer_object *bufObj,
+                                          bool dsa)
 {
-   struct gl_transform_feedback_object *obj;
-
-   obj = ctx->TransformFeedback.CurrentObject;
-
    if (obj->Active) {
       _mesa_error(ctx, GL_INVALID_OPERATION,
-                  "glBindBufferBase(transform feedback active)");
+                  "%s(transform feedback active)",
+                  dsa ? "glTransformFeedbackBufferBase" : "glBindBufferBase");
       return;
    }
 
    if (index >= ctx->Const.MaxTransformFeedbackBuffers) {
-      _mesa_error(ctx, GL_INVALID_VALUE, "glBindBufferBase(index=%d)", index);
+      _mesa_error(ctx, GL_INVALID_VALUE, "%s(index=%d out of bounds)",
+                  dsa ? "glTransformFeedbackBufferBase" : "glBindBufferBase",
+                  index);
       return;
    }
 
-   bind_buffer_range(ctx, index, bufObj, 0, 0);
+   bind_buffer_range(ctx, obj, index, bufObj, 0, 0, dsa);
 }
 
+/**
+ * Wrapper around lookup_transform_feedback_object that throws
+ * GL_INVALID_OPERATION if id is not in the hash table. After calling
+ * _mesa_error, it returns NULL.
+ */
+static struct gl_transform_feedback_object *
+lookup_transform_feedback_object_err(struct gl_context *ctx,
+                                     GLuint xfb, const char* func)
+{
+   struct gl_transform_feedback_object *obj;
+
+   obj = _mesa_lookup_transform_feedback_object(ctx, xfb);
+   if (!obj) {
+      _mesa_error(ctx, GL_INVALID_OPERATION,
+                  "%s(xfb=%u: non-generated object name)", func, xfb);
+   }
+
+   return obj;
+}
+
+/**
+ * Wrapper around _mesa_lookup_bufferobj that throws GL_INVALID_VALUE if id
+ * is not in the hash table. Specialised version for the
+ * transform-feedback-related functions. After calling _mesa_error, it
+ * returns NULL.
+ */
+static struct gl_buffer_object *
+lookup_transform_feedback_bufferobj_err(struct gl_context *ctx,
+                                        GLuint buffer, const char* func)
+{
+   struct gl_buffer_object *bufObj;
+
+   /* OpenGL 4.5 core profile, 13.2, pdf page 444: buffer must be zero or the
+    * name of an existing buffer object.
+    */
+   if (buffer == 0) {
+      bufObj = ctx->Shared->NullBufferObj;
+   } else {
+      bufObj = _mesa_lookup_bufferobj(ctx, buffer);
+      if (!bufObj) {
+         _mesa_error(ctx, GL_INVALID_VALUE, "%s(invalid buffer=%u)", func,
+                     buffer);
+      }
+   }
+
+   return bufObj;
+}
+
+void GLAPIENTRY
+_mesa_TransformFeedbackBufferBase(GLuint xfb, GLuint index, GLuint buffer)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   struct gl_transform_feedback_object *obj;
+   struct gl_buffer_object *bufObj;
+
+   obj = lookup_transform_feedback_object_err(ctx, xfb,
+                                              "glTransformFeedbackBufferBase");
+   if(!obj) {
+      return;
+   }
+
+   bufObj = lookup_transform_feedback_bufferobj_err(ctx, buffer,
+                                              "glTransformFeedbackBufferBase");
+   if(!bufObj) {
+      return;
+   }
+
+   _mesa_bind_buffer_base_transform_feedback(ctx, obj, index, bufObj, true);
+}
 
 /**
  * Specify a buffer object to receive transform feedback results, plus the
@@ -660,7 +732,7 @@ _mesa_BindBufferOffsetEXT(GLenum target, GLuint index, GLuint buffer,
       return;
    }
 
-   bind_buffer_range(ctx, index, bufObj, offset, 0);
+   bind_buffer_range(ctx, obj, index, bufObj, offset, 0, false);
 }
 
 
@@ -817,6 +889,10 @@ _mesa_GetTransformFeedbackVarying(GLuint program, GLuint index,
 struct gl_transform_feedback_object *
 _mesa_lookup_transform_feedback_object(struct gl_context *ctx, GLuint name)
 {
+   /* OpenGL 4.5 core profile, 13.2 pdf page 444: "xfb must be zero, indicating
+    * the default transform feedback object, or the name of an existing
+    * transform feedback object."
+    */
    if (name == 0) {
       return ctx->TransformFeedback.DefaultObject;
    }

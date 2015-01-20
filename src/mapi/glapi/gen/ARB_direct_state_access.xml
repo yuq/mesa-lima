@@ -14,6 +14,12 @@
       <param name="ids" type="GLuint *" />
    </function>
 
+   <function name="TransformFeedbackBufferBase" offset="assign">
+      <param name="xfb" type="GLuint" />
+      <param name="index" type="GLuint" />
+      <param name="buffer" type="GLuint" />
+   </function>
+
    <!-- Buffer object functions -->
 
    <function name="CreateBuffers" offset="assign">

@@ -65,6 +65,7 @@ _mesa_EndTransformFeedback(void);
 
 extern void
 _mesa_bind_buffer_range_transform_feedback(struct gl_context *ctx,
+					   struct gl_transform_feedback_object *obj,
 					   GLuint index,
 					   struct gl_buffer_object *bufObj,
 					   GLintptr offset,
@@ -72,8 +73,10 @@ _mesa_bind_buffer_range_transform_feedback(struct gl_context *ctx,
 
 extern void
 _mesa_bind_buffer_base_transform_feedback(struct gl_context *ctx,
+					  struct gl_transform_feedback_object *obj,
 					  GLuint index,
-					  struct gl_buffer_object *bufObj);
+					  struct gl_buffer_object *bufObj,
+					  bool dsa);
 
 extern void GLAPIENTRY
 _mesa_BindBufferOffsetEXT(GLenum target, GLuint index, GLuint buffer,
@@ -143,5 +146,10 @@ _mesa_set_transform_feedback_binding(struct gl_context *ctx,
    tfObj->Offset[index]        = offset;
    tfObj->RequestedSize[index] = size;
 }
+
+/*** GL_ARB_direct_state_access ***/
+
+extern void GLAPIENTRY
+_mesa_TransformFeedbackBufferBase(GLuint xfb, GLuint index, GLuint buffer);
 
 #endif /* TRANSFORM_FEEDBACK_H */
