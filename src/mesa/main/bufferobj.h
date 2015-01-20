@@ -278,6 +278,10 @@ void GLAPIENTRY
 _mesa_GetBufferPointerv(GLenum target, GLenum pname, GLvoid **params);
 
 void GLAPIENTRY
+_mesa_GetNamedBufferPointerv(GLuint buffer, GLenum pname, GLvoid **params);
+
+
+void GLAPIENTRY
 _mesa_CopyBufferSubData(GLenum readTarget, GLenum writeTarget,
                         GLintptr readOffset, GLintptr writeOffset,
                         GLsizeiptr size);

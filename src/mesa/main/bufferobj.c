@@ -2066,6 +2066,26 @@ _mesa_GetBufferPointerv(GLenum target, GLenum pname, GLvoid **params)
    *params = bufObj->Mappings[MAP_USER].Pointer;
 }
 
+void GLAPIENTRY
+_mesa_GetNamedBufferPointerv(GLuint buffer, GLenum pname, GLvoid **params)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   struct gl_buffer_object *bufObj;
+
+   if (pname != GL_BUFFER_MAP_POINTER) {
+      _mesa_error(ctx, GL_INVALID_ENUM, "glGetNamedBufferPointerv(pname != "
+                  "GL_BUFFER_MAP_POINTER)");
+      return;
+   }
+
+   bufObj = _mesa_lookup_bufferobj_err(ctx, buffer,
+                                       "glGetNamedBufferPointerv");
+   if (!bufObj)
+      return;
+
+   *params = bufObj->Mappings[MAP_USER].Pointer;
+}
+
 
 void
 _mesa_copy_buffer_sub_data(struct gl_context *ctx,

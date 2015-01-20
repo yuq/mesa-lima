@@ -98,6 +98,12 @@
       <param name="params" type="GLint64 *" />
    </function>
 
+   <function name="GetNamedBufferPointerv" offset="assign">
+      <param name="buffer" type="GLuint" />
+      <param name="pname" type="GLenum" />
+      <param name="params" type="GLvoid **" />
+   </function>
+
    <!-- Texture object functions -->
 
    <function name="CreateTextures" offset="assign">
