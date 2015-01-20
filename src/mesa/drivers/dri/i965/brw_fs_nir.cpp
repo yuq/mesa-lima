@@ -93,6 +93,12 @@ fs_visitor::emit_nir_code()
    nir_validate_shader(nir);
    nir_copy_prop(nir);
    nir_validate_shader(nir);
+
+   if (INTEL_DEBUG & DEBUG_WM) {
+      fprintf(stderr, "NIR (SSA form) for fragment shader:\n");
+      nir_print_shader(nir, stderr);
+   }
+
    nir_convert_from_ssa(nir);
    nir_validate_shader(nir);
    nir_lower_vec_to_movs(nir);
@@ -132,6 +138,11 @@ fs_visitor::emit_nir_code()
       assert(strcmp(overload->function->name, "main") == 0);
       assert(overload->impl);
       nir_emit_impl(overload->impl);
+   }
+
+   if (INTEL_DEBUG & DEBUG_WM) {
+      fprintf(stderr, "NIR (final form) for fragment shader:\n");
+      nir_print_shader(nir, stderr);
    }
 
    ralloc_free(nir);
