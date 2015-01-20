@@ -1700,6 +1700,28 @@ _mesa_GetBufferSubData(GLenum target, GLintptr offset,
    ctx->Driver.GetBufferSubData( ctx, offset, size, data, bufObj );
 }
 
+void GLAPIENTRY
+_mesa_GetNamedBufferSubData(GLuint buffer, GLintptr offset,
+                            GLsizeiptr size, GLvoid *data)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   struct gl_buffer_object *bufObj;
+
+   bufObj = _mesa_lookup_bufferobj_err(ctx, buffer,
+                                       "glGetNamedBufferSubData");
+   if (!bufObj)
+      return;
+
+   if (!buffer_object_subdata_range_good(ctx, bufObj, offset, size, false,
+                                         "glGetNamedBufferSubData")) {
+      return;
+   }
+
+   assert(ctx->Driver.GetBufferSubData);
+   ctx->Driver.GetBufferSubData(ctx, offset, size, data, bufObj);
+}
+
+
 /**
  * \param subdata   true if caller is *SubData, false if *Data
  */

@@ -104,6 +104,13 @@
       <param name="params" type="GLvoid **" />
    </function>
 
+   <function name="GetNamedBufferSubData" offset="assign">
+      <param name="buffer" type="GLuint" />
+      <param name="offset" type="GLintptr" />
+      <param name="size" type="GLsizeiptr" />
+      <param name="data" type="GLvoid *" />
+   </function>
+
    <!-- Texture object functions -->
 
    <function name="CreateTextures" offset="assign">
