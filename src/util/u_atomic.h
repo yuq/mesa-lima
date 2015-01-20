@@ -84,7 +84,35 @@
 #include <intrin.h>
 #include <assert.h>
 
-#pragma intrinsic(_InterlockedCompareExchange8)
+#if _MSC_VER < 1600
+
+/* Implement _InterlockedCompareExchange8 in terms of InterlockedCompareExchange16 */
+static __inline
+char _InterlockedCompareExchange8(char volatile *Destination8, char Exchange8, char Comparand8)
+{
+   INT_PTR DestinationAddr = (INT_PTR)Destination8;
+   short volatile *Destination16 = (short volatile *)(DestinationAddr & ~1);
+   const short Shift8 = (DestinationAddr & 1) * 8;
+   const short Mask8 = 0xff << Shift8;
+   short Initial16 = *Destination16;
+   char Initial8 = Initial16 >> Shift8;
+   while (Initial8 == Comparand8) {
+      /* initial *Destination8 matches, so try exchange it while keeping the
+       * neighboring byte untouched */
+      short Exchange16 = (Initial16 & ~Mask8) | ((short)Exchange8 << Shift8);
+      short Comparand16 = Initial16;
+      short Initial16 = InterlockedCompareExchange16(Destination16, Exchange16, Comparand16);
+      if (Initial16 == Comparand16) {
+         /* succeeded */
+         return Comparand8;
+      }
+      /* something changed, retry with the new initial value */
+      Initial8 = Initial16 >> Shift8;
+   }
+   return Initial8;
+}
+
+#endif /* _MSC_VER < 1600 */
 
 /* MSVC supports decltype keyword, but it's only supported on C++ and doesn't
  * quite work here; and if a C++-only solution is worthwhile, then it would be
