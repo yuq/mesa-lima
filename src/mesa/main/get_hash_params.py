@@ -343,6 +343,7 @@ descriptor=[
 
 # GL_ARB_ES3_compatibility
   [ "MAX_ELEMENT_INDEX", "CONTEXT_INT64(Const.MaxElementIndex), extra_ARB_ES3_compatibility_api_es3"],
+  [ "PRIMITIVE_RESTART_FIXED_INDEX", "CONTEXT_BOOL(Array.PrimitiveRestartFixedIndex), extra_ARB_ES3_compatibility_api_es3" ],
 
 # GL_ARB_fragment_shader
   [ "MAX_FRAGMENT_UNIFORM_COMPONENTS_ARB", "CONTEXT_INT(Const.Program[MESA_SHADER_FRAGMENT].MaxUniformComponents), extra_ARB_fragment_shader" ],
