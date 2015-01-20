@@ -26,20 +26,9 @@
 #include "glsl/nir/glsl_to_nir.h"
 #include "brw_fs.h"
 
-void
-fs_visitor::emit_nir_code()
+static void
+nir_optimize(nir_shader *nir)
 {
-   /* first, lower the GLSL IR shader to NIR */
-   lower_output_reads(shader->base.ir);
-   nir_shader *nir = glsl_to_nir(shader->base.ir, NULL, true);
-   nir_validate_shader(nir);
-
-   nir_lower_global_vars_to_local(nir);
-   nir_validate_shader(nir);
-
-   nir_split_var_copies(nir);
-   nir_validate_shader(nir);
-
    bool progress;
    do {
       progress = false;
@@ -58,6 +47,23 @@ fs_visitor::emit_nir_code()
       progress |= nir_opt_constant_folding(nir);
       nir_validate_shader(nir);
    } while (progress);
+}
+
+void
+fs_visitor::emit_nir_code()
+{
+   /* first, lower the GLSL IR shader to NIR */
+   lower_output_reads(shader->base.ir);
+   nir_shader *nir = glsl_to_nir(shader->base.ir, NULL, true);
+   nir_validate_shader(nir);
+
+   nir_lower_global_vars_to_local(nir);
+   nir_validate_shader(nir);
+
+   nir_split_var_copies(nir);
+   nir_validate_shader(nir);
+
+   nir_optimize(nir);
 
    /* Lower a bunch of stuff */
    nir_lower_var_copies(nir);
@@ -80,6 +86,8 @@ fs_visitor::emit_nir_code()
 
    nir_lower_atomics(nir);
    nir_validate_shader(nir);
+
+   nir_optimize(nir);
 
    nir_lower_to_source_mods(nir);
    nir_validate_shader(nir);
