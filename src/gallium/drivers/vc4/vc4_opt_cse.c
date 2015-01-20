@@ -106,7 +106,7 @@ vc4_find_cse(struct vc4_compile *c, struct hash_table *ht,
         if (!alloc_key)
                 return NULL;
         memcpy(alloc_key, &key, sizeof(*alloc_key));
-        _mesa_hash_table_insert_with_hash(ht, hash, alloc_key, inst);
+        _mesa_hash_table_insert_pre_hashed(ht, hash, alloc_key, inst);
 
         if (debug) {
                 fprintf(stderr, "Added to CSE HT: ");
