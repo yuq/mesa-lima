@@ -139,12 +139,16 @@ dest_is_ssa(nir_dest *dest, void *data)
 static bool
 nir_instr_can_cse(nir_instr *instr)
 {
+   /* We only handle SSA. */
+   if (!nir_foreach_dest(instr, dest_is_ssa, NULL) ||
+       !nir_foreach_src(instr, src_is_ssa, NULL))
+      return false;
+
    switch (instr->type) {
    case nir_instr_type_alu:
    case nir_instr_type_load_const:
    case nir_instr_type_phi:
-      return nir_foreach_dest(instr, dest_is_ssa, NULL) &&
-             nir_foreach_src(instr, src_is_ssa, NULL);
+      return true;
    case nir_instr_type_tex:
       return false; /* TODO */
    case nir_instr_type_intrinsic:
