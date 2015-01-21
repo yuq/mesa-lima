@@ -94,7 +94,6 @@ ifeq ($(strip $(MESA_BUILD_GALLIUM)),true)
 SUBDIRS += src/gallium
 endif
 
-mkfiles := $(patsubst %,$(MESA_TOP)/%/Android.mk,$(SUBDIRS))
-include $(mkfiles)
+include $(call all-named-subdir-makefiles,$(SUBDIRS))
 
 endif
