@@ -456,7 +456,6 @@ _mesa_BindImageTexture(GLuint unit, GLuint texture, GLint level,
                        GLenum format)
 {
    GET_CURRENT_CONTEXT(ctx);
-   struct gl_texture_object *t = NULL;
    struct gl_image_unit *u;
 
    if (!validate_bind_image_texture(ctx, unit, texture, level,
@@ -469,34 +468,34 @@ _mesa_BindImageTexture(GLuint unit, GLuint texture, GLint level,
    ctx->NewDriverState |= ctx->DriverFlags.NewImageUnits;
 
    if (texture) {
-      t = _mesa_lookup_texture(ctx, texture);
+      struct gl_texture_object *t = _mesa_lookup_texture(ctx, texture);
+
       if (!t) {
          _mesa_error(ctx, GL_INVALID_VALUE, "glBindImageTexture(texture)");
          return;
       }
 
       _mesa_reference_texobj(&u->TexObj, t);
-      u->Level = level;
-      u->Access = access;
-      u->Format = format;
-      u->_ActualFormat = _mesa_get_shader_image_format(format);
-
-      if (_mesa_tex_target_is_layered(t->Target)) {
-         u->Layered = layered;
-         u->Layer = (layered ? 0 : layer);
-      } else {
-         u->Layered = GL_FALSE;
-         u->Layer = 0;
-      }
-
    } else {
       _mesa_reference_texobj(&u->TexObj, NULL);
    }
 
+   u->Level = level;
+   u->Access = access;
+   u->Format = format;
+   u->_ActualFormat = _mesa_get_shader_image_format(format);
    u->_Valid = validate_image_unit(ctx, u);
 
+   if (u->TexObj && _mesa_tex_target_is_layered(u->TexObj->Target)) {
+      u->Layered = layered;
+      u->Layer = (layered ? 0 : layer);
+   } else {
+      u->Layered = GL_FALSE;
+      u->Layer = 0;
+   }
+
    if (ctx->Driver.BindImageTexture)
-      ctx->Driver.BindImageTexture(ctx, u, t, level, layered,
+      ctx->Driver.BindImageTexture(ctx, u, u->TexObj, level, layered,
                                    layer, access, format);
 }
 
