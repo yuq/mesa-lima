@@ -69,7 +69,10 @@ brw_codegen_gs_prog(struct brw_context *brw,
       rzalloc_array(NULL, const gl_constant_value *, param_count);
    c.prog_data.base.base.pull_param =
       rzalloc_array(NULL, const gl_constant_value *, param_count);
+   c.prog_data.base.base.image_param =
+      rzalloc_array(NULL, struct brw_image_param, gs->NumImages);
    c.prog_data.base.base.nr_params = param_count;
+   c.prog_data.base.base.nr_image_params = gs->NumImages;
 
    if (brw->gen >= 7) {
       if (gp->program.OutputType == GL_POINTS) {

@@ -361,6 +361,7 @@ struct brw_stage_prog_data {
 
    GLuint nr_params;       /**< number of float params/constants */
    GLuint nr_pull_params;
+   unsigned nr_image_params;
 
    unsigned curb_read_length;
    unsigned total_scratch;
@@ -381,6 +382,59 @@ struct brw_stage_prog_data {
     */
    const gl_constant_value **param;
    const gl_constant_value **pull_param;
+
+   /**
+    * Image metadata passed to the shader as uniforms.  This is deliberately
+    * ignored by brw_stage_prog_data_compare() because its contents don't have
+    * any influence on program compilation.
+    */
+   struct brw_image_param *image_param;
+};
+
+/*
+ * Image metadata structure as laid out in the shader parameter
+ * buffer.  Entries have to be 16B-aligned for the vec4 back-end to be
+ * able to use them.  That's okay because the padding and any unused
+ * entries [most of them except when we're doing untyped surface
+ * access] will be removed by the uniform packing pass.
+ */
+#define BRW_IMAGE_PARAM_SURFACE_IDX_OFFSET      0
+#define BRW_IMAGE_PARAM_OFFSET_OFFSET           4
+#define BRW_IMAGE_PARAM_SIZE_OFFSET             8
+#define BRW_IMAGE_PARAM_STRIDE_OFFSET           12
+#define BRW_IMAGE_PARAM_TILING_OFFSET           16
+#define BRW_IMAGE_PARAM_SWIZZLING_OFFSET        20
+#define BRW_IMAGE_PARAM_SIZE                    24
+
+struct brw_image_param {
+   /** Surface binding table index. */
+   uint32_t surface_idx;
+
+   /** Offset applied to the X and Y surface coordinates. */
+   uint32_t offset[2];
+
+   /** Surface X, Y and Z dimensions. */
+   uint32_t size[3];
+
+   /** X-stride in bytes, Y-stride in pixels, horizontal slice stride in
+    * pixels, vertical slice stride in pixels.
+    */
+   uint32_t stride[4];
+
+   /** Log2 of the tiling modulus in the X, Y and Z dimension. */
+   uint32_t tiling[3];
+
+   /**
+    * Right shift to apply for bit 6 address swizzling.  Two different
+    * swizzles can be specified and will be applied one after the other.  The
+    * resulting address will be:
+    *
+    *  addr' = addr ^ ((1 << 6) & ((addr >> swizzling[0]) ^
+    *                              (addr >> swizzling[1])))
+    *
+    * Use \c 0xff if any of the swizzles is not required.
+    */
+   uint32_t swizzling[2];
 };
 
 /* Data about a particular attempt to compile a program.  Note that

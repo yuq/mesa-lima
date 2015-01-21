@@ -1045,6 +1045,103 @@ get_image_format(struct brw_context *brw, mesa_format format, GLenum access)
 }
 
 static void
+update_default_image_param(struct brw_context *brw,
+                           struct gl_image_unit *u,
+                           unsigned surface_idx,
+                           struct brw_image_param *param)
+{
+   memset(param, 0, sizeof(*param));
+   param->surface_idx = surface_idx;
+   /* Set the swizzling shifts to all-ones to effectively disable swizzling --
+    * See emit_address_calculation() in brw_fs_surface_builder.cpp for a more
+    * detailed explanation of these parameters.
+    */
+   param->swizzling[0] = 0xff;
+   param->swizzling[1] = 0xff;
+}
+
+static void
+update_buffer_image_param(struct brw_context *brw,
+                          struct gl_image_unit *u,
+                          unsigned surface_idx,
+                          struct brw_image_param *param)
+{
+   struct gl_buffer_object *obj = u->TexObj->BufferObject;
+
+   update_default_image_param(brw, u, surface_idx, param);
+
+   param->size[0] = obj->Size / _mesa_get_format_bytes(u->_ActualFormat);
+   param->stride[0] = _mesa_get_format_bytes(u->_ActualFormat);
+}
+
+static void
+update_texture_image_param(struct brw_context *brw,
+                           struct gl_image_unit *u,
+                           unsigned surface_idx,
+                           struct brw_image_param *param)
+{
+   struct intel_mipmap_tree *mt = intel_texture_object(u->TexObj)->mt;
+
+   update_default_image_param(brw, u, surface_idx, param);
+
+   param->size[0] = minify(mt->logical_width0, u->Level);
+   param->size[1] = minify(mt->logical_height0, u->Level);
+   param->size[2] = (!u->Layered ? 1 :
+                     u->TexObj->Target == GL_TEXTURE_CUBE_MAP ? 6 :
+                     u->TexObj->Target == GL_TEXTURE_3D ?
+                     minify(mt->logical_depth0, u->Level) :
+                     mt->logical_depth0);
+
+   intel_miptree_get_image_offset(mt, u->Level, u->Layer,
+                                  &param->offset[0],
+                                  &param->offset[1]);
+
+   param->stride[0] = mt->cpp;
+   param->stride[1] = mt->pitch / mt->cpp;
+   param->stride[2] =
+      brw_miptree_get_horizontal_slice_pitch(brw, mt, u->Level);
+   param->stride[3] =
+      brw_miptree_get_vertical_slice_pitch(brw, mt, u->Level);
+
+   if (mt->tiling == I915_TILING_X) {
+      /* An X tile is a rectangular block of 512x8 bytes. */
+      param->tiling[0] = _mesa_logbase2(512 / mt->cpp);
+      param->tiling[1] = _mesa_logbase2(8);
+
+      if (brw->has_swizzling) {
+         /* Right shifts required to swizzle bits 9 and 10 of the memory
+          * address with bit 6.
+          */
+         param->swizzling[0] = 3;
+         param->swizzling[1] = 4;
+      }
+   } else if (mt->tiling == I915_TILING_Y) {
+      /* The layout of a Y-tiled surface in memory isn't really fundamentally
+       * different to the layout of an X-tiled surface, we simply pretend that
+       * the surface is broken up in a number of smaller 16Bx32 tiles, each
+       * one arranged in X-major order just like is the case for X-tiling.
+       */
+      param->tiling[0] = _mesa_logbase2(16 / mt->cpp);
+      param->tiling[1] = _mesa_logbase2(32);
+
+      if (brw->has_swizzling) {
+         /* Right shift required to swizzle bit 9 of the memory address with
+          * bit 6.
+          */
+         param->swizzling[0] = 3;
+      }
+   }
+
+   /* 3D textures are arranged in 2D in memory with 2^lod slices per row.  The
+    * address calculation algorithm (emit_address_calculation() in
+    * brw_fs_surface_builder.cpp) handles this as a sort of tiling with
+    * modulus equal to the LOD.
+    */
+   param->tiling[2] = (u->TexObj->Target == GL_TEXTURE_3D ? u->Level :
+                       0);
+}
+
+static void
 update_image_surface(struct brw_context *brw,
                      struct gl_image_unit *u,
                      GLenum access,
@@ -1066,6 +1163,8 @@ update_image_surface(struct brw_context *brw,
             brw, surf_offset, intel_obj->buffer, obj->BufferOffset,
             format, intel_obj->Base.Size / texel_size, texel_size,
             access != GL_READ_ONLY);
+
+         update_buffer_image_param(brw, u, surface_idx, param);
 
       } else {
          struct intel_texture_object *intel_obj = intel_texture_object(obj);
@@ -1094,10 +1193,13 @@ update_image_surface(struct brw_context *brw,
                format, SWIZZLE_XYZW,
                surf_offset, access != GL_READ_ONLY, false);
          }
+
+         update_texture_image_param(brw, u, surface_idx, param);
       }
 
    } else {
       brw->vtbl.emit_null_surface_state(brw, 1, 1, 1, surf_offset);
+      update_default_image_param(brw, u, surface_idx, param);
    }
 }
 

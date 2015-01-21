@@ -190,6 +190,7 @@ brw_codegen_wm_prog(struct brw_context *brw,
    int param_count;
    if (fs) {
       param_count = fs->num_uniform_components;
+      prog_data.base.nr_image_params = fs->NumImages;
    } else {
       param_count = fp->program.Base.Parameters->NumParameters * 4;
    }
@@ -199,6 +200,9 @@ brw_codegen_wm_prog(struct brw_context *brw,
       rzalloc_array(NULL, const gl_constant_value *, param_count);
    prog_data.base.pull_param =
       rzalloc_array(NULL, const gl_constant_value *, param_count);
+   prog_data.base.image_param =
+      rzalloc_array(NULL, struct brw_image_param,
+                    prog_data.base.nr_image_params);
    prog_data.base.nr_params = param_count;
 
    prog_data.barycentric_interp_modes =

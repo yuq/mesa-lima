@@ -190,7 +190,10 @@ brw_codegen_cs_prog(struct brw_context *brw,
       rzalloc_array(NULL, const gl_constant_value *, param_count);
    prog_data.base.pull_param =
       rzalloc_array(NULL, const gl_constant_value *, param_count);
+   prog_data.base.image_param =
+      rzalloc_array(NULL, struct brw_image_param, cs->NumImages);
    prog_data.base.nr_params = param_count;
+   prog_data.base.nr_image_params = cs->NumImages;
 
    program = brw_cs_emit(brw, mem_ctx, key, &prog_data,
                          &cp->program, prog, &program_size);
