@@ -924,6 +924,7 @@ const struct function gl_core_functions_possible[] = {
    /* GL_ARB_direct_state_access */
    { "glCreateTransformFeedbacks", 45, -1 },
    { "glTransformFeedbackBufferBase", 45, -1 },
+   { "glTransformFeedbackBufferRange", 45, -1 },
    { "glCreateBuffers", 45, -1 },
    { "glNamedBufferStorage", 45, -1 },
    { "glNamedBufferData", 45, -1 },

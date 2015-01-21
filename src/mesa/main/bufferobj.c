@@ -3887,7 +3887,8 @@ _mesa_BindBufferRange(GLenum target, GLuint index,
    case GL_TRANSFORM_FEEDBACK_BUFFER:
       _mesa_bind_buffer_range_transform_feedback(ctx,
                                                  ctx->TransformFeedback.CurrentObject,
-                                                 index, bufObj, offset, size);
+                                                 index, bufObj, offset, size,
+                                                 false);
       return;
    case GL_UNIFORM_BUFFER:
       bind_buffer_range_uniform_buffer(ctx, index, bufObj, offset, size);

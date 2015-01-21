@@ -69,7 +69,7 @@ _mesa_bind_buffer_range_transform_feedback(struct gl_context *ctx,
 					   GLuint index,
 					   struct gl_buffer_object *bufObj,
 					   GLintptr offset,
-					   GLsizeiptr size);
+					   GLsizeiptr size, bool dsa);
 
 extern void
 _mesa_bind_buffer_base_transform_feedback(struct gl_context *ctx,
@@ -151,5 +151,9 @@ _mesa_set_transform_feedback_binding(struct gl_context *ctx,
 
 extern void GLAPIENTRY
 _mesa_TransformFeedbackBufferBase(GLuint xfb, GLuint index, GLuint buffer);
+
+extern void GLAPIENTRY
+_mesa_TransformFeedbackBufferRange(GLuint xfb, GLuint index, GLuint buffer,
+                                   GLintptr offset, GLsizeiptr size);
 
 #endif /* TRANSFORM_FEEDBACK_H */
