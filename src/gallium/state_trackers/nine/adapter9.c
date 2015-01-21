@@ -359,6 +359,7 @@ NineAdapter9_CheckDeviceMultiSampleType( struct NineAdapter9 *This,
     struct pipe_screen *screen;
     HRESULT hr;
     enum pipe_format pf;
+    unsigned bind;
 
     DBG("This=%p DeviceType=%s SurfaceFormat=%s Windowed=%i MultiSampleType=%u "
         "pQualityLevels=%p\n", This, nine_D3DDEVTYPE_to_str(DeviceType),
@@ -369,9 +370,14 @@ NineAdapter9_CheckDeviceMultiSampleType( struct NineAdapter9 *This,
     if (FAILED(hr))
         return hr;
 
-    pf = d3d9_to_pipe_format_checked_no_bind(screen, SurfaceFormat,
-                                             PIPE_TEXTURE_2D,
-                                             MultiSampleType, FALSE);
+    if (depth_stencil_format(SurfaceFormat))
+        bind = d3d9_get_pipe_depth_format_bindings(SurfaceFormat);
+    else /* render-target */
+        bind = PIPE_BIND_SAMPLER_VIEW | PIPE_BIND_TRANSFER_READ |
+               PIPE_BIND_TRANSFER_WRITE | PIPE_BIND_RENDER_TARGET;
+
+    pf = d3d9_to_pipe_format_checked(screen, SurfaceFormat, PIPE_TEXTURE_2D,
+                                     MultiSampleType, bind, FALSE);
 
     if (pf == PIPE_FORMAT_NONE) {
         DBG("%s with %u samples not available.\n",

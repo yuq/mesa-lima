@@ -309,31 +309,6 @@ d3d9_to_pipe_format_checked(struct pipe_screen *screen,
     return PIPE_FORMAT_NONE;
 }
 
-/* same that above, but determines binding flags */
-static INLINE enum pipe_format
-d3d9_to_pipe_format_checked_no_bind(struct pipe_screen *screen,
-                                    D3DFORMAT format,
-                                    enum pipe_texture_target target,
-                                    unsigned sample_count,
-                                    boolean srgb)
-{
-    enum pipe_format result;
-    unsigned bindings;
-
-    result = d3d9_to_pipe_format_internal(format);
-    if (result == PIPE_FORMAT_NONE)
-        return PIPE_FORMAT_NONE;
-
-    bindings = util_format_is_depth_or_stencil(result) ?
-        PIPE_BIND_DEPTH_STENCIL : PIPE_BIND_RENDER_TARGET;
-    if (srgb)
-        result = util_format_srgb(result);
-
-    if (format_check_internal(result))
-        return result;
-    return PIPE_FORMAT_NONE;
-}
-
 static INLINE const char *
 d3dformat_to_string(D3DFORMAT fmt)
 {
