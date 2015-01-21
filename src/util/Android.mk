@@ -42,21 +42,15 @@ LOCAL_MODULE := libmesa_util
 
 # Generated sources
 
-ifeq ($(LOCAL_MODULE_CLASS),)
 LOCAL_MODULE_CLASS := STATIC_LIBRARIES
-endif
 
 intermediates := $(call local-intermediates-dir)
+LOCAL_GENERATED_SOURCES := $(addprefix $(intermediates)/,$(MESA_UTIL_GENERATED_FILES))
 
-# This is the list of auto-generated files: sources and headers
-sources := $(addprefix $(intermediates)/, $(MESA_UTIL_GENERATED_FILES))
-
-LOCAL_GENERATED_SOURCES += $(sources)
-
-FORMAT_SRGB := $(LOCAL_PATH)/format_srgb.py
-
-$(intermediates)/format_srgb.c: $(FORMAT_SRGB)
-	@$(MESA_PYTHON2) $(FORMAT_SRGB) $< > $@
+$(LOCAL_GENERATED_SOURCES): PRIVATE_PYTHON := $(MESA_PYTHON2)
+$(LOCAL_GENERATED_SOURCES): PRIVATE_CUSTOM_TOOL = $(PRIVATE_PYTHON) $^ > $@
+$(LOCAL_GENERATED_SOURCES): $(intermediates)/%.c: $(LOCAL_PATH)/%.py
+	$(transform-generated-source)
 
 include $(MESA_COMMON_MK)
 include $(BUILD_STATIC_LIBRARY)
@@ -82,21 +76,15 @@ LOCAL_MODULE := libmesa_util
 
 # Generated sources
 
-ifeq ($(LOCAL_MODULE_CLASS),)
 LOCAL_MODULE_CLASS := STATIC_LIBRARIES
-endif
 
 intermediates := $(call local-intermediates-dir)
+LOCAL_GENERATED_SOURCES := $(addprefix $(intermediates)/,$(MESA_UTIL_GENERATED_FILES))
 
-# This is the list of auto-generated files: sources and headers
-sources := $(addprefix $(intermediates)/, $(MESA_UTIL_GENERATED_FILES))
-
-LOCAL_GENERATED_SOURCES += $(sources)
-
-FORMAT_SRGB := $(LOCAL_PATH)/format_srgb.py
-
-$(intermediates)/format_srgb.c: $(FORMAT_SRGB)
-	@$(MESA_PYTHON2) $(FORMAT_SRGB) $< > $@
+$(LOCAL_GENERATED_SOURCES): PRIVATE_PYTHON := $(MESA_PYTHON2)
+$(LOCAL_GENERATED_SOURCES): PRIVATE_CUSTOM_TOOL = $(PRIVATE_PYTHON) $^ > $@
+$(LOCAL_GENERATED_SOURCES): $(intermediates)/%.c: $(LOCAL_PATH)/%.py
+	$(transform-generated-source)
 
 include $(MESA_COMMON_MK)
 include $(BUILD_HOST_STATIC_LIBRARY)
