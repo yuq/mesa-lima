@@ -175,6 +175,24 @@ nir_dest nir_dest_copy(nir_dest dest, void *mem_ctx)
    return ret;
 }
 
+void
+nir_alu_src_copy(nir_alu_src *dest, const nir_alu_src *src, void *mem_ctx)
+{
+   dest->src = nir_src_copy(src->src, mem_ctx);
+   dest->abs = src->abs;
+   dest->negate = src->negate;
+   for (unsigned i = 0; i < 4; i++)
+      dest->swizzle[i] = src->swizzle[i];
+}
+
+void
+nir_alu_dest_copy(nir_alu_dest *dest, const nir_alu_dest *src, void *mem_ctx)
+{
+   dest->dest = nir_dest_copy(src->dest, mem_ctx);
+   dest->write_mask = src->write_mask;
+   dest->saturate = src->saturate;
+}
+
 static inline void
 block_add_pred(nir_block *block, nir_block *pred)
 {

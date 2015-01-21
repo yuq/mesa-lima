@@ -57,15 +57,12 @@ lower_vec_to_movs_block(nir_block *block, void *mem_ctx)
          assert(src_idx < nir_op_infos[vec->op].num_inputs);
 
          nir_alu_instr *mov = nir_alu_instr_create(mem_ctx, nir_op_imov);
-         mov->src[0].src = nir_src_copy(vec->src[src_idx].src, mem_ctx);
-         mov->src[0].negate = vec->src[src_idx].negate;
-         mov->src[0].abs = vec->src[src_idx].abs;
+         nir_alu_src_copy(&mov->src[0], &vec->src[src_idx], mem_ctx);
 
          /* We only care about the one swizzle */
          mov->src[0].swizzle[i] = vec->src[src_idx].swizzle[0];
 
-         mov->dest.dest = nir_dest_copy(vec->dest.dest, mem_ctx);
-         mov->dest.saturate = vec->dest.saturate;
+         nir_alu_dest_copy(&mov->dest, &vec->dest, mem_ctx);
          mov->dest.write_mask = (1u << i);
 
          nir_instr_insert_before(&vec->instr, &mov->instr);

@@ -154,10 +154,7 @@ nir_opt_peephole_select_block(nir_block *block, void *void_state)
             assert(mov->instr.type == nir_instr_type_alu);
             assert(mov->op == nir_op_fmov || mov->op == nir_op_imov);
 
-            sel->src[idx].src = nir_src_copy(mov->src[0].src, state->mem_ctx);
-            sel->src[idx].negate = mov->src[0].negate;
-            sel->src[idx].abs = mov->src[0].abs;
-            memcpy(sel->src[idx].swizzle, mov->src[0].swizzle, 4);
+            nir_alu_src_copy(&sel->src[idx], &mov->src[0], state->mem_ctx);
          } else {
             sel->src[idx].src = nir_src_copy(src->src, state->mem_ctx);
          }
