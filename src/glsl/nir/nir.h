@@ -482,6 +482,43 @@ typedef struct {
    bool is_ssa;
 } nir_dest;
 
+static inline nir_src
+nir_src_for_ssa(nir_ssa_def *def)
+{
+   nir_src src;
+
+   src.is_ssa = true;
+   src.ssa = def;
+
+   return src;
+}
+
+static inline nir_src
+nir_src_for_reg(nir_register *reg)
+{
+   nir_src src;
+
+   src.is_ssa = false;
+   src.reg.reg = reg;
+   src.reg.indirect = NULL;
+   src.reg.base_offset = 0;
+
+   return src;
+}
+
+static inline nir_dest
+nir_dest_for_reg(nir_register *reg)
+{
+   nir_dest dest;
+
+   dest.is_ssa = false;
+   dest.reg.reg = reg;
+   dest.reg.indirect = NULL;
+   dest.reg.base_offset = 0;
+
+   return dest;
+}
+
 nir_src nir_src_copy(nir_src src, void *mem_ctx);
 nir_dest nir_dest_copy(nir_dest dest, void *mem_ctx);
 
