@@ -355,9 +355,8 @@ isolate_phi_nodes_block(nir_block *block, void *void_state)
          entry->src = nir_src_copy(src->src, state->dead_ctx);
          _mesa_set_add(src->src.ssa->uses, &pcopy->instr);
 
-         entry->dest.is_ssa = true;
-         nir_ssa_def_init(&pcopy->instr, &entry->dest.ssa,
-                          phi->dest.ssa.num_components, src->src.ssa->name);
+         nir_ssa_dest_init(&pcopy->instr, &entry->dest,
+                           phi->dest.ssa.num_components, src->src.ssa->name);
 
          struct set_entry *use_entry =
             _mesa_set_search(src->src.ssa->uses, instr);
@@ -379,9 +378,8 @@ isolate_phi_nodes_block(nir_block *block, void *void_state)
                                               nir_parallel_copy_entry);
       exec_list_push_tail(&block_pcopy->entries, &entry->node);
 
-      entry->dest.is_ssa = true;
-      nir_ssa_def_init(&block_pcopy->instr, &entry->dest.ssa,
-                       phi->dest.ssa.num_components, phi->dest.ssa.name);
+      nir_ssa_dest_init(&block_pcopy->instr, &entry->dest,
+                        phi->dest.ssa.num_components, phi->dest.ssa.name);
       nir_ssa_def_rewrite_uses(&phi->dest.ssa,
                                nir_src_for_ssa(&entry->dest.ssa),
                                state->mem_ctx);

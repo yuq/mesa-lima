@@ -612,8 +612,7 @@ nir_visitor::visit(ir_call *ir)
          (ir_dereference *) ir->actual_parameters.get_head();
       param->accept(this);
       instr->variables[0] = this->deref_head;
-      instr->dest.is_ssa = true;
-      nir_ssa_def_init(&instr->instr, &instr->dest.ssa, 1, NULL);
+      nir_ssa_dest_init(&instr->instr, &instr->dest, 1, NULL);
 
       nir_instr_insert_after_cf_list(this->cf_node_list, &instr->instr);
 
@@ -696,9 +695,7 @@ nir_visitor::visit(ir_assignment *ir)
       nir_intrinsic_instr *load =
          nir_intrinsic_instr_create(this->shader, nir_intrinsic_load_var);
       load->num_components = ir->lhs->type->vector_elements;
-      load->dest.is_ssa = true;
-      nir_ssa_def_init(&load->instr, &load->dest.ssa,
-                       num_components, NULL);
+      nir_ssa_dest_init(&load->instr, &load->dest, num_components, NULL);
       load->variables[0] = lhs_deref;
       nir_instr_insert_after_cf_list(this->cf_node_list, &load->instr);
 
@@ -711,9 +708,7 @@ nir_visitor::visit(ir_assignment *ir)
          default: unreachable("Invalid number of components"); break;
       }
       nir_alu_instr *vec = nir_alu_instr_create(this->shader, vec_op);
-      vec->dest.dest.is_ssa = true;
-      nir_ssa_def_init(&vec->instr, &vec->dest.dest.ssa,
-                       num_components, NULL);
+      nir_ssa_dest_init(&vec->instr, &vec->dest.dest, num_components, NULL);
       vec->dest.write_mask = (1 << num_components) - 1;
 
       unsigned component = 0;
@@ -798,8 +793,7 @@ nir_visitor::add_instr(nir_instr *instr, unsigned num_components)
 {
    nir_dest *dest = get_instr_dest(instr);
 
-   dest->is_ssa = true;
-   nir_ssa_def_init(instr, &dest->ssa, num_components, NULL);
+   nir_ssa_dest_init(instr, dest, num_components, NULL);
 
    nir_instr_insert_after_cf_list(this->cf_node_list, instr);
    this->result = instr;

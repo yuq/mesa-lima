@@ -86,8 +86,7 @@ lower_instr(nir_intrinsic_instr *instr, nir_function_impl *impl)
          nir_instr_insert_before(&instr->instr, &atomic_counter_size->instr);
 
          nir_alu_instr *mul = nir_alu_instr_create(mem_ctx, nir_op_imul);
-         mul->dest.dest.is_ssa = true;
-         nir_ssa_def_init(&mul->instr, &mul->dest.dest.ssa, 1, NULL);
+         nir_ssa_dest_init(&mul->instr, &mul->dest.dest, 1, NULL);
          mul->dest.write_mask = 0x1;
          mul->src[0].src = nir_src_copy(deref_array->indirect, mem_ctx);
          mul->src[1].src.is_ssa = true;
@@ -95,8 +94,7 @@ lower_instr(nir_intrinsic_instr *instr, nir_function_impl *impl)
          nir_instr_insert_before(&instr->instr, &mul->instr);
 
          nir_alu_instr *add = nir_alu_instr_create(mem_ctx, nir_op_iadd);
-         add->dest.dest.is_ssa = true;
-         nir_ssa_def_init(&add->instr, &add->dest.dest.ssa, 1, NULL);
+         nir_ssa_dest_init(&add->instr, &add->dest.dest, 1, NULL);
          add->dest.write_mask = 0x1;
          add->src[0].src.is_ssa = true;
          add->src[0].src.ssa = &mul->dest.dest.ssa;
@@ -112,9 +110,8 @@ lower_instr(nir_intrinsic_instr *instr, nir_function_impl *impl)
    new_instr->src[0].ssa = offset_def;;
 
    if (instr->dest.is_ssa) {
-      new_instr->dest.is_ssa = true;
-      nir_ssa_def_init(&new_instr->instr, &new_instr->dest.ssa,
-                       instr->dest.ssa.num_components, NULL);
+      nir_ssa_dest_init(&new_instr->instr, &new_instr->dest,
+                        instr->dest.ssa.num_components, NULL);
       nir_ssa_def_rewrite_uses(&instr->dest.ssa,
                                nir_src_for_ssa(&new_instr->dest.ssa),
                                mem_ctx);

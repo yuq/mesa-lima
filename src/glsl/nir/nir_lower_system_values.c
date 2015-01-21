@@ -70,9 +70,8 @@ convert_instr(nir_intrinsic_instr *instr)
    nir_intrinsic_instr *new_instr = nir_intrinsic_instr_create(mem_ctx, op);
 
    if (instr->dest.is_ssa) {
-      new_instr->dest.is_ssa = true;
-      nir_ssa_def_init(&new_instr->instr, &new_instr->dest.ssa,
-                       instr->dest.ssa.num_components, NULL);
+      nir_ssa_dest_init(&new_instr->instr, &new_instr->dest,
+                        instr->dest.ssa.num_components, NULL);
       nir_ssa_def_rewrite_uses(&instr->dest.ssa,
                                nir_src_for_ssa(&new_instr->dest.ssa),
                                mem_ctx);

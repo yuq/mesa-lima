@@ -201,8 +201,7 @@ construct_value(const nir_search_value *value, nir_alu_type type,
          num_components = nir_op_infos[expr->opcode].output_size;
 
       nir_alu_instr *alu = nir_alu_instr_create(mem_ctx, expr->opcode);
-      alu->dest.dest.is_ssa = true;
-      nir_ssa_def_init(&alu->instr, &alu->dest.dest.ssa, num_components, NULL);
+      nir_ssa_dest_init(&alu->instr, &alu->dest.dest, num_components, NULL);
       alu->dest.write_mask = (1 << num_components) - 1;
       alu->dest.saturate = false;
 
@@ -301,9 +300,8 @@ nir_replace_instr(nir_alu_instr *instr, const nir_search_expression *search,
     */
    nir_alu_instr *mov = nir_alu_instr_create(mem_ctx, nir_op_imov);
    mov->dest.write_mask = instr->dest.write_mask;
-   mov->dest.dest.is_ssa = true;
-   nir_ssa_def_init(&mov->instr, &mov->dest.dest.ssa,
-                    instr->dest.dest.ssa.num_components, NULL);
+   nir_ssa_dest_init(&mov->instr, &mov->dest.dest,
+                     instr->dest.dest.ssa.num_components, NULL);
 
    mov->src[0] = construct_value(replace, nir_op_infos[instr->op].output_type,
                                  instr->dest.dest.ssa.num_components, &state,

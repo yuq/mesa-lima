@@ -214,15 +214,12 @@ rewrite_def_forwards(nir_dest *dest, void *_state)
    if (state->states[index].stack == NULL)
       return true;
 
-   dest->is_ssa = true;
-
    char *name = NULL;
    if (dest->reg.reg->name)
       name = ralloc_asprintf(state->mem_ctx, "%s_%u", dest->reg.reg->name,
                              state->states[index].num_defs);
 
-   nir_ssa_def_init(state->parent_instr, &dest->ssa,
-                    reg->num_components, name);
+   nir_ssa_dest_init(state->parent_instr, dest, reg->num_components, name);
 
    /* push our SSA destination on the stack */
    state->states[index].index++;
@@ -270,9 +267,7 @@ rewrite_alu_instr_forward(nir_alu_instr *instr, rewrite_state *state)
                                 reg->name, state->states[index].num_defs);
 
       instr->dest.write_mask = (1 << num_components) - 1;
-      instr->dest.dest.is_ssa = true;
-      nir_ssa_def_init(&instr->instr, &instr->dest.dest.ssa,
-                       num_components, name);
+      nir_ssa_dest_init(&instr->instr, &instr->dest.dest, num_components, name);
 
       if (nir_op_infos[instr->op].output_size == 0) {
          /*

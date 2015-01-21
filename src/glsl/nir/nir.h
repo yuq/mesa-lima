@@ -1456,6 +1456,8 @@ nir_const_value *nir_src_as_const_value(nir_src src);
 bool nir_srcs_equal(nir_src src1, nir_src src2);
 void nir_instr_rewrite_src(nir_instr *instr, nir_src *src, nir_src new_src);
 
+void nir_ssa_dest_init(nir_instr *instr, nir_dest *dest,
+                       unsigned num_components, const char *name);
 void nir_ssa_def_init(nir_instr *instr, nir_ssa_def *def,
                       unsigned num_components, const char *name);
 void nir_ssa_def_rewrite_uses(nir_ssa_def *def, nir_src new_src, void *mem_ctx);

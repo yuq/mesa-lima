@@ -155,8 +155,7 @@ emit_copy_load_store(nir_intrinsic_instr *copy_instr,
          nir_intrinsic_instr_create(mem_ctx, nir_intrinsic_load_var);
       load->num_components = num_components;
       load->variables[0] = nir_deref_as_var(src_deref);
-      load->dest.is_ssa = true;
-      nir_ssa_def_init(&load->instr, &load->dest.ssa, num_components, NULL);
+      nir_ssa_dest_init(&load->instr, &load->dest, num_components, NULL);
 
       nir_instr_insert_before(&copy_instr->instr, &load->instr);
 

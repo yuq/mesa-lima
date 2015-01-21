@@ -158,8 +158,7 @@ get_deref_reg_src(nir_deref_var *deref, nir_instr *instr,
          mul->src[1].src.is_ssa = true;
          mul->src[1].src.ssa = &load_const->def;
          mul->dest.write_mask = 1;
-         mul->dest.dest.is_ssa = true;
-         nir_ssa_def_init(&mul->instr, &mul->dest.dest.ssa, 1, NULL);
+         nir_ssa_dest_init(&mul->instr, &mul->dest.dest, 1, NULL);
          nir_instr_insert_before(instr, &mul->instr);
 
          src.reg.indirect->is_ssa = true;
@@ -178,8 +177,7 @@ get_deref_reg_src(nir_deref_var *deref, nir_instr *instr,
             add->src[1].src = nir_src_copy(deref_array->indirect,
                                            state->mem_ctx);
             add->dest.write_mask = 1;
-            add->dest.dest.is_ssa = true;
-            nir_ssa_def_init(&add->instr, &add->dest.dest.ssa, 1, NULL);
+            nir_ssa_dest_init(&add->instr, &add->dest.dest, 1, NULL);
             nir_instr_insert_before(instr, &add->instr);
 
             src.reg.indirect->is_ssa = true;
@@ -212,9 +210,8 @@ lower_locals_to_regs_block(nir_block *block, void *void_state)
                                              &intrin->instr, state);
          mov->dest.write_mask = (1 << intrin->num_components) - 1;
          if (intrin->dest.is_ssa) {
-            mov->dest.dest.is_ssa = true;
-            nir_ssa_def_init(&mov->instr, &mov->dest.dest.ssa,
-                             intrin->num_components, NULL);
+            nir_ssa_dest_init(&mov->instr, &mov->dest.dest,
+                              intrin->num_components, NULL);
             nir_ssa_def_rewrite_uses(&intrin->dest.ssa,
                                      nir_src_for_ssa(&mov->dest.dest.ssa),
                                      state->mem_ctx);

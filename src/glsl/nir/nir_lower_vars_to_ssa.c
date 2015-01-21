@@ -784,9 +784,8 @@ rename_variables_block(nir_block *block, struct lower_variables_state *state)
             assert(intrin->dest.is_ssa);
 
             mov->dest.write_mask = (1 << intrin->num_components) - 1;
-            mov->dest.dest.is_ssa = true;
-            nir_ssa_def_init(&mov->instr, &mov->dest.dest.ssa,
-                             intrin->num_components, NULL);
+            nir_ssa_dest_init(&mov->instr, &mov->dest.dest,
+                              intrin->num_components, NULL);
 
             nir_instr_insert_before(&intrin->instr, &mov->instr);
             nir_instr_remove(&intrin->instr);
@@ -824,9 +823,8 @@ rename_variables_block(nir_block *block, struct lower_variables_state *state)
                mov->src[0].swizzle[i] = 0;
 
             mov->dest.write_mask = (1 << intrin->num_components) - 1;
-            mov->dest.dest.is_ssa = true;
-            nir_ssa_def_init(&mov->instr, &mov->dest.dest.ssa,
-                             intrin->num_components, NULL);
+            nir_ssa_dest_init(&mov->instr, &mov->dest.dest,
+                              intrin->num_components, NULL);
 
             nir_instr_insert_before(&intrin->instr, &mov->instr);
 
@@ -960,9 +958,8 @@ insert_phi_nodes(struct lower_variables_state *state)
 
             if (has_already[next->index] < iter_count) {
                nir_phi_instr *phi = nir_phi_instr_create(state->mem_ctx);
-               phi->dest.is_ssa = true;
-               nir_ssa_def_init(&phi->instr, &phi->dest.ssa,
-                                glsl_get_vector_elements(node->type), NULL);
+               nir_ssa_dest_init(&phi->instr, &phi->dest,
+                                 glsl_get_vector_elements(node->type), NULL);
                nir_instr_insert_before_block(next, &phi->instr);
 
                _mesa_hash_table_insert(state->phi_table, phi, node);

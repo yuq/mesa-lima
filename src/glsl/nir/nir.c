@@ -1791,6 +1791,14 @@ nir_ssa_def_init(nir_instr *instr, nir_ssa_def *def,
    }
 }
 
+void
+nir_ssa_dest_init(nir_instr *instr, nir_dest *dest,
+                 unsigned num_components, const char *name)
+{
+   dest->is_ssa = true;
+   nir_ssa_def_init(instr, &dest->ssa, num_components, name);
+}
+
 struct ssa_def_rewrite_state {
    void *mem_ctx;
    nir_ssa_def *old;
