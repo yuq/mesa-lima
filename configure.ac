@@ -145,6 +145,7 @@ AC_MSG_RESULT([$acv_mesa_CLANG])
 dnl If we're using GCC, make sure that it is at least version 4.2.0.  Older
 dnl versions are explictly not supported.
 GEN_ASM_OFFSETS=no
+USE_GNU99=no
 if test "x$GCC" = xyes -a "x$acv_mesa_CLANG" = xno; then
     AC_MSG_CHECKING([whether gcc version is sufficient])
     major=0
@@ -163,6 +164,9 @@ if test "x$GCC" = xyes -a "x$acv_mesa_CLANG" = xno; then
         AC_MSG_RESULT([yes])
     fi
 
+    if test $GCC_VERSION_MAJOR -lt 4 -o $GCC_VERSION_MAJOR -eq 4 -a $GCC_VERSION_MINOR -lt 6 ; then
+        USE_GNU99=yes
+    fi
     if test "x$cross_compiling" = xyes; then
         GEN_ASM_OFFSETS=yes
     fi
@@ -221,7 +225,13 @@ esac
 
 dnl Add flags for gcc and g++
 if test "x$GCC" = xyes; then
-    CFLAGS="$CFLAGS -Wall -std=c99"
+    CFLAGS="$CFLAGS -Wall"
+
+    if test "x$USE_GNU99" = xyes; then
+	CFLAGS="$CFLAGS -std=gnu99"
+    else
+	CFLAGS="$CFLAGS -std=c99"
+    fi
 
     # Enable -Werror=implicit-function-declaration and
     # -Werror=missing-prototypes, if available, or otherwise, just
