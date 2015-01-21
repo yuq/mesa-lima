@@ -600,7 +600,7 @@ get_const_initializer_load(const nir_deref_var *deref,
          load->value.u[i] = constant->value.u[matrix_offset + i];
          break;
       case GLSL_TYPE_BOOL:
-         load->value.u[i] = constant->value.u[matrix_offset + i] ?
+         load->value.u[i] = constant->value.b[matrix_offset + i] ?
                              NIR_TRUE : NIR_FALSE;
          break;
       default:
