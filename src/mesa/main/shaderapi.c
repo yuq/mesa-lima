@@ -448,8 +448,16 @@ static void
 get_attached_shaders(struct gl_context *ctx, GLuint program, GLsizei maxCount,
                      GLsizei *count, GLuint *obj)
 {
-   struct gl_shader_program *shProg =
+   struct gl_shader_program *shProg;
+
+   if (maxCount < 0) {
+      _mesa_error(ctx, GL_INVALID_VALUE, "glGetAttachedShaders(maxCount < 0)");
+      return;
+   }
+
+   shProg =
       _mesa_lookup_shader_program_err(ctx, program, "glGetAttachedShaders");
+
    if (shProg) {
       GLuint i;
       for (i = 0; i < (GLuint) maxCount && i < shProg->NumShaders; i++) {
@@ -786,6 +794,12 @@ get_shader_source(struct gl_context *ctx, GLuint shader, GLsizei maxLength,
                   GLsizei *length, GLchar *sourceOut)
 {
    struct gl_shader *sh;
+
+   if (maxLength < 0) {
+      _mesa_error(ctx, GL_INVALID_VALUE, "glGetShaderSource(bufSize < 0)");
+      return;
+   }
+
    sh = _mesa_lookup_shader_err(ctx, shader, "glGetShaderSource");
    if (!sh) {
       return;
@@ -1683,6 +1697,11 @@ _mesa_GetProgramBinary(GLuint program, GLsizei bufSize, GLsizei *length,
    GLsizei length_dummy;
    GET_CURRENT_CONTEXT(ctx);
 
+   if (bufSize < 0){
+      _mesa_error(ctx, GL_INVALID_VALUE, "glGetProgramBinary(bufSize < 0)");
+      return;
+   }
+
    shProg = _mesa_lookup_shader_program_err(ctx, program, "glGetProgramBinary");
    if (!shProg)
       return;
@@ -1709,11 +1728,6 @@ _mesa_GetProgramBinary(GLuint program, GLsizei bufSize, GLsizei *length,
                   "glGetProgramBinary(program %u not linked)",
                   shProg->Name);
       *length = 0;
-      return;
-   }
-
-   if (bufSize < 0){
-      _mesa_error(ctx, GL_INVALID_VALUE, "glGetProgramBinary(bufSize < 0)");
       return;
    }
 
