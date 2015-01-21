@@ -731,7 +731,7 @@ rewrite_phi_preds(nir_block *block, nir_block *old_pred, nir_block *new_pred)
          break;
 
       nir_phi_instr *phi = nir_instr_as_phi(instr);
-      foreach_list_typed_safe(nir_phi_src, src, node, &phi->srcs) {
+      nir_foreach_phi_src(phi, src) {
          if (src->pred == old_pred) {
             src->pred = new_pred;
             break;
@@ -1585,7 +1585,7 @@ visit_load_const_src(nir_load_const_instr *instr, nir_foreach_src_cb cb,
 static bool
 visit_phi_src(nir_phi_instr *instr, nir_foreach_src_cb cb, void *state)
 {
-   foreach_list_typed(nir_phi_src, src, node, &instr->srcs) {
+   nir_foreach_phi_src(instr, src) {
       if (!visit_src(&src->src, cb, state))
          return false;
    }

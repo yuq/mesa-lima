@@ -990,6 +990,9 @@ typedef struct {
    nir_src src;
 } nir_phi_src;
 
+#define nir_foreach_phi_src(phi, entry) \
+   foreach_list_typed(nir_phi_src, entry, node, &(phi)->srcs)
+
 typedef struct {
    nir_instr instr;
 

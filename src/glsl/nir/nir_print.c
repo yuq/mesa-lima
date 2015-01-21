@@ -543,7 +543,7 @@ print_phi_instr(nir_phi_instr *instr, FILE *fp)
 {
    print_dest(&instr->dest, fp);
    fprintf(fp, " = phi ");
-   foreach_list_typed(nir_phi_src, src, node, &instr->srcs) {
+   nir_foreach_phi_src(instr, src) {
       if (&src->node != exec_list_get_head(&instr->srcs))
          fprintf(fp, ", ");
 

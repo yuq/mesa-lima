@@ -99,8 +99,8 @@ nir_instrs_equal(nir_instr *instr1, nir_instr *instr2)
       if (phi1->instr.block != phi2->instr.block)
          return false;
 
-      foreach_list_typed(nir_phi_src, src1, node, &phi1->srcs) {
-         foreach_list_typed(nir_phi_src, src2, node, &phi2->srcs) {
+      nir_foreach_phi_src(phi1, src1) {
+         nir_foreach_phi_src(phi2, src2) {
             if (src1->pred == src2->pred) {
                if (!nir_srcs_equal(src1->src, src2->src))
                   return false;

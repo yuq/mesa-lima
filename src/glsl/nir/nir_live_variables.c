@@ -147,7 +147,7 @@ propagate_across_edge(nir_block *pred, nir_block *succ,
          break;
       nir_phi_instr *phi = nir_instr_as_phi(instr);
 
-      foreach_list_typed(nir_phi_src, src, node, &phi->srcs) {
+      nir_foreach_phi_src(phi, src) {
          if (src->pred == pred) {
             set_src_live(&src->src, live);
             break;

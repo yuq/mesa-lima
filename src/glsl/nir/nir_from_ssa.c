@@ -343,7 +343,7 @@ isolate_phi_nodes_block(nir_block *block, void *void_state)
 
       nir_phi_instr *phi = nir_instr_as_phi(instr);
       assert(phi->dest.is_ssa);
-      foreach_list_typed(nir_phi_src, src, node, &phi->srcs) {
+      nir_foreach_phi_src(phi, src) {
          nir_parallel_copy_instr *pcopy =
             get_parallel_copy_at_end_of_block(src->pred);
          assert(pcopy);
@@ -412,7 +412,7 @@ coalesce_phi_nodes_block(nir_block *block, void *void_state)
       assert(phi->dest.is_ssa);
       merge_node *dest_node = get_merge_node(&phi->dest.ssa, state);
 
-      foreach_list_typed(nir_phi_src, src, node, &phi->srcs) {
+      nir_foreach_phi_src(phi, src) {
          assert(src->src.is_ssa);
          merge_node *src_node = get_merge_node(src->src.ssa, state);
          if (src_node->set != dest_node->set)

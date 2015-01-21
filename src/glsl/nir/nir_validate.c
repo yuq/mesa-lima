@@ -486,7 +486,7 @@ validate_phi_src(nir_phi_instr *instr, nir_block *pred, validate_state *state)
    assert(instr->dest.is_ssa);
 
    exec_list_validate(&instr->srcs);
-   foreach_list_typed(nir_phi_src, src, node, &instr->srcs) {
+   nir_foreach_phi_src(instr, src) {
       if (src->pred == pred) {
          unsigned num_components;
          if (src->src.is_ssa)
