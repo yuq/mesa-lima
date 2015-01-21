@@ -216,12 +216,8 @@ constant_fold_alu_instr(nir_alu_instr *instr, void *mem_ctx)
 
    nir_instr_insert_before(&instr->instr, &dest->instr);
 
-   nir_src new_src = {
-      .is_ssa = true,
-      .ssa = &dest->def,
-   };
-
-   nir_ssa_def_rewrite_uses(&instr->dest.dest.ssa, new_src, mem_ctx);
+   nir_ssa_def_rewrite_uses(&instr->dest.dest.ssa, nir_src_for_ssa(&dest->def),
+                            mem_ctx);
 
    nir_instr_remove(&instr->instr);
    ralloc_free(instr);
@@ -248,12 +244,8 @@ constant_fold_deref(nir_instr *instr, nir_deref_var *deref)
 
          arr->base_offset += indirect->value.u[0];
 
-         nir_src empty = {
-            .is_ssa = true,
-            .ssa = NULL,
-         };
-
-         nir_instr_rewrite_src(instr, &arr->indirect, empty);
+         /* Clear out the source */
+         nir_instr_rewrite_src(instr, &arr->indirect, nir_src_for_ssa(NULL));
 
          arr->deref_array_type = nir_deref_array_type_direct;
 

@@ -115,11 +115,9 @@ lower_instr(nir_intrinsic_instr *instr, nir_function_impl *impl)
       new_instr->dest.is_ssa = true;
       nir_ssa_def_init(&new_instr->instr, &new_instr->dest.ssa,
                        instr->dest.ssa.num_components, NULL);
-      nir_src new_dest_src = {
-         .is_ssa = true,
-         .ssa = &new_instr->dest.ssa,
-      };
-      nir_ssa_def_rewrite_uses(&instr->dest.ssa, new_dest_src, mem_ctx);
+      nir_ssa_def_rewrite_uses(&instr->dest.ssa,
+                               nir_src_for_ssa(&new_instr->dest.ssa),
+                               mem_ctx);
    } else {
       new_instr->dest = nir_dest_copy(instr->dest, mem_ctx);
    }

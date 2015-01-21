@@ -382,12 +382,9 @@ isolate_phi_nodes_block(nir_block *block, void *void_state)
       entry->dest.is_ssa = true;
       nir_ssa_def_init(&block_pcopy->instr, &entry->dest.ssa,
                        phi->dest.ssa.num_components, phi->dest.ssa.name);
-
-      nir_src entry_dest_src = {
-         .ssa = &entry->dest.ssa,
-         .is_ssa = true,
-      };
-      nir_ssa_def_rewrite_uses(&phi->dest.ssa, entry_dest_src, state->mem_ctx);
+      nir_ssa_def_rewrite_uses(&phi->dest.ssa,
+                               nir_src_for_ssa(&entry->dest.ssa),
+                               state->mem_ctx);
 
       entry->src.is_ssa = true;
       entry->src.ssa = &phi->dest.ssa;
@@ -620,22 +617,16 @@ emit_copy(nir_parallel_copy_instr *pcopy, nir_src src, nir_src dest_src,
    assert(!dest_src.is_ssa &&
           dest_src.reg.indirect == NULL &&
           dest_src.reg.base_offset == 0);
-   nir_dest dest = {
-      .reg.reg = dest_src.reg.reg,
-      .reg.indirect = NULL,
-      .reg.base_offset = 0,
-      .is_ssa = false,
-   };
 
    if (src.is_ssa)
-      assert(src.ssa->num_components >= dest.reg.reg->num_components);
+      assert(src.ssa->num_components >= dest_src.reg.reg->num_components);
    else
-      assert(src.reg.reg->num_components >= dest.reg.reg->num_components);
+      assert(src.reg.reg->num_components >= dest_src.reg.reg->num_components);
 
    nir_alu_instr *mov = nir_alu_instr_create(mem_ctx, nir_op_imov);
    mov->src[0].src = nir_src_copy(src, mem_ctx);
-   mov->dest.dest = nir_dest_copy(dest, mem_ctx);
-   mov->dest.write_mask = (1 << dest.reg.reg->num_components) - 1;
+   mov->dest.dest = nir_dest_for_reg(dest_src.reg.reg);
+   mov->dest.write_mask = (1 << dest_src.reg.reg->num_components) - 1;
 
    nir_instr_insert_before(&pcopy->instr, &mov->instr);
 }
@@ -720,12 +711,7 @@ resolve_parallel_copy(nir_parallel_copy_instr *pcopy,
          values[src_idx] = entry->src;
       }
 
-      nir_src dest_src = {
-         .reg.reg = entry->dest.reg.reg,
-         .reg.indirect = NULL,
-         .reg.base_offset = 0,
-         .is_ssa = false,
-      };
+      nir_src dest_src = nir_src_for_reg(entry->dest.reg.reg);
 
       int dest_idx = -1;
       for (int i = 0; i < num_vals; ++i) {

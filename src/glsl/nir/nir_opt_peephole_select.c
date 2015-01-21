@@ -168,11 +168,9 @@ nir_opt_peephole_select_block(nir_block *block, void *void_state)
                        phi->dest.ssa.num_components, phi->dest.ssa.name);
       sel->dest.write_mask = (1 << phi->dest.ssa.num_components) - 1;
 
-      nir_src sel_dest_src = {
-         .is_ssa = true,
-         .ssa = &sel->dest.dest.ssa,
-      };
-      nir_ssa_def_rewrite_uses(&phi->dest.ssa, sel_dest_src, state->mem_ctx);
+      nir_ssa_def_rewrite_uses(&phi->dest.ssa,
+                               nir_src_for_ssa(&sel->dest.dest.ssa),
+                               state->mem_ctx);
 
       nir_instr_insert_before(&phi->instr, &sel->instr);
       nir_instr_remove(&phi->instr);

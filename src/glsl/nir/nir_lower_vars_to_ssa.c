@@ -765,12 +765,8 @@ rename_variables_block(nir_block *block, struct lower_variables_state *state)
                nir_instr_insert_before(&intrin->instr, &undef->instr);
                nir_instr_remove(&intrin->instr);
 
-               nir_src new_src = {
-                  .is_ssa = true,
-                  .ssa = &undef->def,
-               };
-
-               nir_ssa_def_rewrite_uses(&intrin->dest.ssa, new_src,
+               nir_ssa_def_rewrite_uses(&intrin->dest.ssa,
+                                        nir_src_for_ssa(&undef->def),
                                         state->mem_ctx);
                continue;
             }
@@ -795,12 +791,8 @@ rename_variables_block(nir_block *block, struct lower_variables_state *state)
             nir_instr_insert_before(&intrin->instr, &mov->instr);
             nir_instr_remove(&intrin->instr);
 
-            nir_src new_src = {
-               .is_ssa = true,
-               .ssa = &mov->dest.dest.ssa,
-            };
-
-            nir_ssa_def_rewrite_uses(&intrin->dest.ssa, new_src,
+            nir_ssa_def_rewrite_uses(&intrin->dest.ssa,
+                                     nir_src_for_ssa(&mov->dest.dest.ssa),
                                      state->mem_ctx);
             break;
          }

@@ -215,13 +215,8 @@ lower_locals_to_regs_block(nir_block *block, void *void_state)
             mov->dest.dest.is_ssa = true;
             nir_ssa_def_init(&mov->instr, &mov->dest.dest.ssa,
                              intrin->num_components, NULL);
-
-            nir_src new_src = {
-               .is_ssa = true,
-               .ssa = &mov->dest.dest.ssa,
-            };
-
-            nir_ssa_def_rewrite_uses(&intrin->dest.ssa, new_src,
+            nir_ssa_def_rewrite_uses(&intrin->dest.ssa,
+                                     nir_src_for_ssa(&mov->dest.dest.ssa),
                                      state->mem_ctx);
          } else {
             mov->dest.dest = nir_dest_copy(intrin->dest, state->mem_ctx);

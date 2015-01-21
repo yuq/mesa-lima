@@ -238,13 +238,8 @@ nir_lower_io_block(nir_block *block, void *void_state)
             load->dest.is_ssa = true;
             nir_ssa_def_init(&load->instr, &load->dest.ssa,
                              intrin->num_components, NULL);
-
-            nir_src new_src = {
-               .is_ssa = true,
-               .ssa = &load->dest.ssa,
-            };
-
-            nir_ssa_def_rewrite_uses(&intrin->dest.ssa, new_src,
+            nir_ssa_def_rewrite_uses(&intrin->dest.ssa,
+                                     nir_src_for_ssa(&load->dest.ssa),
                                      state->mem_ctx);
          } else {
             load->dest = nir_dest_copy(intrin->dest, state->mem_ctx);

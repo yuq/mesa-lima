@@ -221,13 +221,11 @@ construct_value(const nir_search_value *value, nir_alu_type type,
 
       nir_instr_insert_before(instr, &alu->instr);
 
-      nir_alu_src val = {
-         .src.is_ssa = true,
-         .src.ssa = &alu->dest.dest.ssa,
-         .negate = false,
-         .abs = false,
-         .swizzle = { 0, 1, 2, 3 }
-      };
+      nir_alu_src val;
+      val.src = nir_src_for_ssa(&alu->dest.dest.ssa);
+      val.negate = false;
+      val.abs = false,
+      memcpy(val.swizzle, identity_swizzle, sizeof val.swizzle);
 
       return val;
    }
@@ -265,13 +263,11 @@ construct_value(const nir_search_value *value, nir_alu_type type,
 
       nir_instr_insert_before(instr, &load->instr);
 
-      nir_alu_src val = {
-         .src.is_ssa = true,
-         .src.ssa = &load->def,
-         .negate = false,
-         .abs = false,
-         .swizzle = { 0, 0, 0, 0 } /* Splatted scalar */
-      };
+      nir_alu_src val;
+      val.src = nir_src_for_ssa(&load->def);
+      val.negate = false;
+      val.abs = false,
+      memset(val.swizzle, 0, sizeof val.swizzle);
 
       return val;
    }
@@ -314,12 +310,8 @@ nir_replace_instr(nir_alu_instr *instr, const nir_search_expression *search,
                                  &instr->instr, mem_ctx);
    nir_instr_insert_before(&instr->instr, &mov->instr);
 
-   nir_src replace_src = {
-      .is_ssa = true,
-      .ssa = &mov->dest.dest.ssa,
-   };
-
-   nir_ssa_def_rewrite_uses(&instr->dest.dest.ssa, replace_src, mem_ctx);
+   nir_ssa_def_rewrite_uses(&instr->dest.dest.ssa,
+                            nir_src_for_ssa(&mov->dest.dest.ssa), mem_ctx);
 
    /* We know this one has no more uses because we just rewrote them all,
     * so we can remove it.  The rest of the matched expression, however, we

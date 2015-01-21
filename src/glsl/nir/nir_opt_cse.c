@@ -187,12 +187,10 @@ nir_opt_cse_instr(nir_instr *instr, struct cse_state *state)
         !exec_node_is_head_sentinel(node); node = node->prev) {
       nir_instr *other = exec_node_data(nir_instr, node, node);
       if (nir_instrs_equal(instr, other)) {
-         nir_src other_dest_src = {
-            .is_ssa = true,
-            .ssa = nir_instr_get_dest_ssa_def(other),
-         };
+         nir_ssa_def *other_def = nir_instr_get_dest_ssa_def(other);
          nir_ssa_def_rewrite_uses(nir_instr_get_dest_ssa_def(instr),
-                                  other_dest_src, state->mem_ctx);
+                                  nir_src_for_ssa(other_def),
+                                  state->mem_ctx);
          nir_instr_remove(instr);
          state->progress = true;
          return;
@@ -203,12 +201,10 @@ nir_opt_cse_instr(nir_instr *instr, struct cse_state *state)
         block != NULL; block = block->imm_dom) {
       nir_foreach_instr_reverse(block, other) {
          if (nir_instrs_equal(instr, other)) {
-            nir_src other_dest_src = {
-               .is_ssa = true,
-               .ssa = nir_instr_get_dest_ssa_def(other),
-            };
+            nir_ssa_def *other_def = nir_instr_get_dest_ssa_def(other);
             nir_ssa_def_rewrite_uses(nir_instr_get_dest_ssa_def(instr),
-                                     other_dest_src, state->mem_ctx);
+                                     nir_src_for_ssa(other_def),
+                                     state->mem_ctx);
             nir_instr_remove(instr);
             state->progress = true;
             return;
