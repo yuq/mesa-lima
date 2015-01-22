@@ -1992,10 +1992,13 @@ brw_blorp_blit_params::brw_blorp_blit_params(struct brw_context *brw,
 
    wm_prog_key.src_tiled_w = src.map_stencil_as_y_tiled;
    wm_prog_key.dst_tiled_w = dst.map_stencil_as_y_tiled;
-   x0 = wm_push_consts.dst_x0 = dst_x0;
-   y0 = wm_push_consts.dst_y0 = dst_y0;
-   x1 = wm_push_consts.dst_x1 = dst_x1;
-   y1 = wm_push_consts.dst_y1 = dst_y1;
+   /* Round floating point values to nearest integer to avoid "off by one texel"
+    * kind of errors when blitting.
+    */
+   x0 = wm_push_consts.dst_x0 = roundf(dst_x0);
+   y0 = wm_push_consts.dst_y0 = roundf(dst_y0);
+   x1 = wm_push_consts.dst_x1 = roundf(dst_x1);
+   y1 = wm_push_consts.dst_y1 = roundf(dst_y1);
    wm_push_consts.rect_grid_x1 = (minify(src_mt->logical_width0, src_level) *
                                   wm_prog_key.x_scale - 1.0);
    wm_push_consts.rect_grid_y1 = (minify(src_mt->logical_height0, src_level) *
