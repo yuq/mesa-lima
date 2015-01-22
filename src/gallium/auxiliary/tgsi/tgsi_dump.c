@@ -709,6 +709,7 @@ struct str_dump_ctx
    char *str;
    char *ptr;
    int left;
+   bool nospace;
 };
 
 static void
@@ -731,10 +732,11 @@ str_dump_ctx_printf(struct dump_ctx *ctx, const char *format, ...)
          sctx->ptr += written;
          sctx->left -= written;
       }
-   }
+   } else
+      sctx->nospace = true;
 }
 
-void
+bool
 tgsi_dump_str(
    const struct tgsi_token *tokens,
    uint flags,
@@ -761,6 +763,7 @@ tgsi_dump_str(
    ctx.str[0] = 0;
    ctx.ptr = str;
    ctx.left = (int)size;
+   ctx.nospace = false;
 
    if (flags & TGSI_DUMP_FLOAT_AS_HEX)
       ctx.base.dump_float_as_hex = TRUE;
@@ -768,6 +771,8 @@ tgsi_dump_str(
       ctx.base.dump_float_as_hex = FALSE;
 
    tgsi_iterate_shader( tokens, &ctx.base.iter );
+
+   return !ctx.nospace;
 }
 
 void
@@ -790,6 +795,7 @@ tgsi_dump_instruction_str(
    ctx.str[0] = 0;
    ctx.ptr = str;
    ctx.left = (int)size;
+   ctx.nospace = false;
 
    iter_instruction( &ctx.base.iter, (struct tgsi_full_instruction *)inst );
 }
