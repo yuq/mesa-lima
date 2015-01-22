@@ -80,6 +80,13 @@ optimizations = [
    # DeMorgan's Laws
    (('iand', ('inot', a), ('inot', b)), ('inot', ('ior',  a, b))),
    (('ior',  ('inot', a), ('inot', b)), ('inot', ('iand', a, b))),
+   # Shift optimizations
+   (('ishl', 0, a), 0),
+   (('ishl', a, 0), a),
+   (('ishr', 0, a), 0),
+   (('ishr', a, 0), a),
+   (('ushr', 0, a), 0),
+   (('ushr', a, 0), 0),
 
 # This one may not be exact
    (('feq', ('fadd', a, b), 0.0), ('feq', a, ('fneg', b))),
