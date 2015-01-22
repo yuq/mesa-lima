@@ -524,9 +524,9 @@ static int r600_get_compute_param(struct pipe_screen *screen,
 		}
 		if (ret) {
 			sprintf(ret, "%s-%s", gpu, triple);
-
 		}
-		return (strlen(triple) + strlen(gpu)) * sizeof(char);
+		/* +2 for dash and terminating NIL byte */
+		return (strlen(triple) + strlen(gpu) + 2) * sizeof(char);
 	}
 	case PIPE_COMPUTE_CAP_GRID_DIMENSION:
 		if (ret) {
