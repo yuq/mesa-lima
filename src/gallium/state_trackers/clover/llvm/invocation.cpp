@@ -699,9 +699,9 @@ clover::compile_program_llvm(const compat::string &source,
                                                          debug_options, 0);
 
    std::vector<llvm::Function *> kernels;
-   size_t processor_str_len = std::string(target.begin()).find_first_of("-");
-   std::string processor(target.begin(), 0, processor_str_len);
-   std::string triple(target.begin(), processor_str_len + 1,
+   size_t processor_str_len = std::string(target).find_first_of("-");
+   std::string processor(target, 0, processor_str_len);
+   std::string triple(target, processor_str_len + 1,
                       target.size() - processor_str_len - 1);
    clang::LangAS::Map address_spaces;
    llvm::LLVMContext llvm_ctx;
