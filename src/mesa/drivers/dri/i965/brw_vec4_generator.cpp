@@ -1595,8 +1595,8 @@ vec4_generator::generate_code(const cfg_t *cfg)
                  shader_prog->Label ? shader_prog->Label : "unnamed",
                  stage_name, shader_prog->Name);
       } else {
-         fprintf(stderr, "Native code for %s program %d:\n", prog->Id,
-                 stage_name);
+         fprintf(stderr, "Native code for %s program %d:\n", stage_name,
+                 prog->Id);
       }
       fprintf(stderr, "%s vec4 shader: %d instructions. %d loops. Compacted %d to %d"
                       " bytes (%.0f%%)\n",
