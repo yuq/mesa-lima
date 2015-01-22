@@ -139,8 +139,6 @@ fs_visitor::emit_nir_code()
 
    nir_convert_from_ssa(nir);
    nir_validate_shader(nir);
-   nir_lower_vec_to_movs(nir);
-   nir_validate_shader(nir);
 
    /* emit the arrays used for inputs and outputs - load/store intrinsics will
     * be converted to reads/writes of these arrays
@@ -418,6 +416,7 @@ fs_visitor::nir_emit_impl(nir_function_impl *impl)
 void
 fs_visitor::nir_emit_cf_list(exec_list *list)
 {
+   exec_list_validate(list);
    foreach_list_typed(nir_cf_node, node, node, list) {
       switch (node->type) {
       case nir_cf_node_if:
@@ -540,34 +539,97 @@ fs_visitor::nir_emit_alu(nir_alu_instr *instr)
    struct brw_wm_prog_key *fs_key = (struct brw_wm_prog_key *) this->key;
    fs_inst *inst;
 
-   fs_reg op[3];
    fs_reg result = get_nir_dest(instr->dest.dest);
    result.type = brw_type_for_nir_type(nir_op_infos[instr->op].output_type);
 
-   for (unsigned i = 0; i < nir_op_infos[instr->op].num_inputs; i++)
-      op[i] = get_nir_alu_src(instr, i);
+   fs_reg op[4];
+   for (unsigned i = 0; i < nir_op_infos[instr->op].num_inputs; i++) {
+      op[i] = get_nir_src(instr->src[i].src);
+      op[i].type = brw_type_for_nir_type(nir_op_infos[instr->op].input_types[i]);
+      op[i].abs = instr->src[i].abs;
+      op[i].negate = instr->src[i].negate;
+   }
 
+   /* We get a bunch of mov's out of the from_ssa pass and they may still
+    * be vectorized.  We'll handle them as a special-case.  We'll also
+    * handle vecN here because it's basically the same thing.
+    */
+   switch (instr->op) {
+   case nir_op_imov:
+   case nir_op_fmov:
+   case nir_op_vec2:
+   case nir_op_vec3:
+   case nir_op_vec4: {
+      fs_reg temp = result;
+      bool need_extra_copy = false;
+      for (unsigned i = 0; i < nir_op_infos[instr->op].num_inputs; i++) {
+         if (!instr->src[i].src.is_ssa &&
+             instr->dest.dest.reg.reg == instr->src[i].src.reg.reg) {
+            need_extra_copy = true;
+            temp = retype(vgrf(4), result.type);
+            break;
+         }
+      }
+
+      for (unsigned i = 0; i < 4; i++) {
+         if (!(instr->dest.write_mask & (1 << i)))
+            continue;
+
+         if (instr->op == nir_op_imov || instr->op == nir_op_fmov) {
+            inst = emit(MOV(offset(temp, i),
+                        offset(op[0], instr->src[0].swizzle[i])));
+         } else {
+            inst = emit(MOV(offset(temp, i),
+                        offset(op[i], instr->src[i].swizzle[0])));
+         }
+         inst->saturate = instr->dest.saturate;
+      }
+
+      /* In this case the source and destination registers were the same,
+       * so we need to insert an extra set of moves in order to deal with
+       * any swizzling.
+       */
+      if (need_extra_copy) {
+         for (unsigned i = 0; i < 4; i++) {
+            if (!(instr->dest.write_mask & (1 << i)))
+               continue;
+
+            emit(MOV(offset(result, i), offset(temp, i)));
+         }
+      }
+      return;
+   }
+   default:
+      break;
+   }
+
+   /* At this point, we have dealt with any instruction that operates on
+    * more than a single channel.  Therefore, we can just adjust the source
+    * and destination registers for that channel and emit the instruction.
+    */
+   unsigned channel = 0;
    if (nir_op_infos[instr->op].output_size == 0) {
-      /* We've already scalarized, so we know that we only have one
-       * channel.  The only question is which channel.
+      /* Since NIR is doing the scalarizing for us, we should only ever see
+       * vectorized operations with a single channel.
        */
       assert(_mesa_bitcount(instr->dest.write_mask) == 1);
-      unsigned off = ffs(instr->dest.write_mask) - 1;
-      result = offset(result, off);
+      channel = ffs(instr->dest.write_mask) - 1;
 
-      for (unsigned i = 0; i < nir_op_infos[instr->op].num_inputs; i++)
-         op[i] = offset(op[i], off);
+      result = offset(result, channel);
+   }
+
+   for (unsigned i = 0; i < nir_op_infos[instr->op].num_inputs; i++) {
+      assert(nir_op_infos[instr->op].input_sizes[i] < 2);
+      op[i] = offset(op[i], instr->src[i].swizzle[channel]);
    }
 
    switch (instr->op) {
-   case nir_op_fmov:
    case nir_op_i2f:
    case nir_op_u2f:
       inst = emit(MOV(result, op[0]));
       inst->saturate = instr->dest.saturate;
       break;
 
-   case nir_op_imov:
    case nir_op_f2i:
    case nir_op_f2u:
       emit(MOV(result, op[0]));
@@ -820,11 +882,6 @@ fs_visitor::nir_emit_alu(nir_alu_instr *instr)
    case nir_op_fnoise4_4:
       unreachable("not reached: should be handled by lower_noise");
 
-   case nir_op_vec2:
-   case nir_op_vec3:
-   case nir_op_vec4:
-      unreachable("not reached: should be handled by lower_quadop_vector");
-
    case nir_op_ldexp:
       unreachable("not reached: should be handled by ldexp_to_arith()");
 
@@ -1042,46 +1099,6 @@ fs_visitor::get_nir_src(nir_src src)
 
       return reg;
    }
-}
-
-fs_reg
-fs_visitor::get_nir_alu_src(nir_alu_instr *instr, unsigned src)
-{
-   fs_reg reg = get_nir_src(instr->src[src].src);
-
-   reg.type = brw_type_for_nir_type(nir_op_infos[instr->op].input_types[src]);
-   reg.abs = instr->src[src].abs;
-   reg.negate = instr->src[src].negate;
-
-   bool needs_swizzle = false;
-   unsigned num_components = 0;
-   for (unsigned i = 0; i < 4; i++) {
-      if (!nir_alu_instr_channel_used(instr, src, i))
-         continue;
-
-      if (instr->src[src].swizzle[i] != i)
-         needs_swizzle = true;
-
-      num_components = i + 1;
-   }
-
-   if (needs_swizzle) {
-      /* resolve the swizzle through MOV's */
-      fs_reg new_reg = vgrf(num_components);
-      new_reg.type = reg.type;
-
-      for (unsigned i = 0; i < 4; i++) {
-         if (!nir_alu_instr_channel_used(instr, src, i))
-            continue;
-
-         emit(MOV(offset(new_reg, i),
-                  offset(reg, instr->src[src].swizzle[i])));
-      }
-
-      return new_reg;
-   }
-
-   return reg;
 }
 
 fs_reg
