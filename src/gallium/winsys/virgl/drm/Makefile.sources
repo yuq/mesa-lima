@@ -1,0 +1,2 @@
+C_SOURCES := \
+	virgl_drm_winsys.c
