@@ -308,7 +308,7 @@ ADDR_E_RETURNCODE CiAddrLib::HwlComputeCmaskAddrFromCoord(
         UINT_64 metaNibbleAddress = HwlComputeMetadataNibbleAddress(fmaskAddress,
                                                                     0,
                                                                     0,
-                                                                    4,
+                                                                    4,   // cmask 4 bits
                                                                     elemBits,
                                                                     blockByte,
                                                                     m_pipeInterleaveBytes,
@@ -322,6 +322,51 @@ ADDR_E_RETURNCODE CiAddrLib::HwlComputeCmaskAddrFromCoord(
 
     return returnCode;
 }
+
+/**
+***************************************************************************************************
+*   CiAddrLib::HwlComputeHtileAddrFromCoord
+*
+*   @brief
+*       Compute tc compatible Htile address from depth/stencil address
+*
+*   @return
+*       ADDR_E_RETURNCODE
+***************************************************************************************************
+*/
+ADDR_E_RETURNCODE CiAddrLib::HwlComputeHtileAddrFromCoord(
+    const ADDR_COMPUTE_HTILE_ADDRFROMCOORD_INPUT*  pIn,  ///< [in] depth/stencil addr/bpp/tile input
+    ADDR_COMPUTE_HTILE_ADDRFROMCOORD_OUTPUT*       pOut  ///< [out] htile address
+    ) const
+{
+    ADDR_E_RETURNCODE returnCode = ADDR_NOTSUPPORTED;
+
+    if ((m_settings.isVolcanicIslands == TRUE) &&
+        (pIn->flags.tcCompatible == TRUE))
+    {
+        UINT_32 numOfPipes   = HwlGetPipes(pIn->pTileInfo);
+        UINT_32 numOfBanks   = pIn->pTileInfo->banks;
+        UINT_64 zStencilAddr = pIn->zStencilAddr;
+        UINT_32 elemBits     = pIn->bpp;
+        UINT_32 blockByte    = 64 * elemBits / 8;
+        UINT_64 metaNibbleAddress = HwlComputeMetadataNibbleAddress(zStencilAddr,
+                                                                    0,
+                                                                    0,
+                                                                    32,  // htile 32 bits
+                                                                    elemBits,
+                                                                    blockByte,
+                                                                    m_pipeInterleaveBytes,
+                                                                    numOfPipes,
+                                                                    numOfBanks,
+                                                                    1);
+        pOut->addr = (metaNibbleAddress >> 1);
+        pOut->bitPosition = 0;
+        returnCode = ADDR_OK;
+    }
+
+    return returnCode;
+}
+
 /**
 ***************************************************************************************************
 *   CiAddrLib::HwlConvertChipFamily

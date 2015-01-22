@@ -154,6 +154,10 @@ protected:
         const ADDR_COMPUTE_CMASK_ADDRFROMCOORD_INPUT* pIn,
         ADDR_COMPUTE_CMASK_ADDRFROMCOORD_OUTPUT* pOut) const;
 
+    virtual ADDR_E_RETURNCODE HwlComputeHtileAddrFromCoord(
+        const ADDR_COMPUTE_HTILE_ADDRFROMCOORD_INPUT*  pIn,
+        ADDR_COMPUTE_HTILE_ADDRFROMCOORD_OUTPUT*       pOut) const;
+
     virtual ADDR_E_RETURNCODE HwlGetMaxAlignments(ADDR_GET_MAX_ALINGMENTS_OUTPUT* pOut) const;
 
     virtual VOID HwlPadDimensions(

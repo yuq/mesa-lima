@@ -290,6 +290,14 @@ protected:
         return ADDR_NOTSUPPORTED;
     }
 
+    /// Virtual function to get htile address for tc compatible htile
+    virtual ADDR_E_RETURNCODE HwlComputeHtileAddrFromCoord(
+        const ADDR_COMPUTE_HTILE_ADDRFROMCOORD_INPUT* pIn,
+        ADDR_COMPUTE_HTILE_ADDRFROMCOORD_OUTPUT* pOut) const
+    {
+        return ADDR_NOTSUPPORTED;
+    }
+
     // Compute attributes
 
     // HTILE

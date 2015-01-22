@@ -1422,18 +1422,25 @@ ADDR_E_RETURNCODE AddrLib1::ComputeHtileAddrFromCoord(
 
         if (returnCode == ADDR_OK)
         {
-            pOut->addr = HwlComputeXmaskAddrFromCoord(pIn->pitch,
-                                                      pIn->height,
-                                                      pIn->x,
-                                                      pIn->y,
-                                                      pIn->slice,
-                                                      pIn->numSlices,
-                                                      1,
-                                                      pIn->isLinear,
-                                                      isWidth8,
-                                                      isHeight8,
-                                                      pIn->pTileInfo,
-                                                      &pOut->bitPosition);
+            if (pIn->flags.tcCompatible)
+            {
+                HwlComputeHtileAddrFromCoord(pIn, pOut);
+            }
+            else
+            {
+                pOut->addr = HwlComputeXmaskAddrFromCoord(pIn->pitch,
+                                                          pIn->height,
+                                                          pIn->x,
+                                                          pIn->y,
+                                                          pIn->slice,
+                                                          pIn->numSlices,
+                                                          1,
+                                                          pIn->isLinear,
+                                                          isWidth8,
+                                                          isHeight8,
+                                                          pIn->pTileInfo,
+                                                          &pOut->bitPosition);
+            }
         }
     }
 

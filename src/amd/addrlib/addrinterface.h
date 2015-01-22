@@ -851,6 +851,7 @@ typedef struct _ADDR_COMPUTE_HTILE_ADDRFROMCOORD_INPUT
     UINT_32            slice;           ///< Index of slice
     UINT_32            numSlices;       ///< Number of slices
     BOOL_32            isLinear;        ///< Linear or tiled HTILE layout
+    ADDR_HTILE_FLAGS   flags;           ///< htile flags
     AddrHtileBlockSize blockWidth;      ///< 4 or 8. 1 means 8, 0 means 4. EG above only support 8
     AddrHtileBlockSize blockHeight;     ///< 4 or 8. 1 means 8, 0 means 4. EG above only support 8
     ADDR_TILEINFO*     pTileInfo;       ///< Tile info
@@ -859,6 +860,8 @@ typedef struct _ADDR_COMPUTE_HTILE_ADDRFROMCOORD_INPUT
                                         ///  while the global useTileIndex is set to 1
     INT_32             macroModeIndex;  ///< Index in macro tile mode table if there is one (CI)
                                         ///< README: When tileIndex is not -1, this must be valid
+    UINT_32            bpp;             ///< depth/stencil buffer bit per pixel size
+    UINT_32            zStencilAddr;    ///< tcCompatible Z/Stencil surface address
 } ADDR_COMPUTE_HTILE_ADDRFROMCOORD_INPUT;
 
 /**
