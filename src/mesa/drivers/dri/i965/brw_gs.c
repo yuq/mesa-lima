@@ -69,11 +69,7 @@ do_gs_prog(struct brw_context *brw,
       rzalloc_array(NULL, const gl_constant_value *, param_count);
    c.prog_data.base.base.pull_param =
       rzalloc_array(NULL, const gl_constant_value *, param_count);
-   /* Setting nr_params here NOT to the size of the param and pull_param
-    * arrays, but to the number of uniform components vec4_visitor
-    * needs. vec4_visitor::setup_uniforms() will set it back to a proper value.
-    */
-   c.prog_data.base.base.nr_params = ALIGN(param_count, 4) / 4 + gs->num_samplers;
+   c.prog_data.base.base.nr_params = param_count;
 
    if (brw->gen >= 7) {
       if (gp->program.OutputType == GL_POINTS) {

@@ -3671,7 +3671,8 @@ vec4_visitor::vec4_visitor(struct brw_context *brw,
     */
    this->uniform_array_size = 1;
    if (prog_data) {
-      this->uniform_array_size = MAX2(stage_prog_data->nr_params, 1);
+      this->uniform_array_size =
+         MAX2(DIV_ROUND_UP(stage_prog_data->nr_params, 4), 1);
    }
 
    this->uniform_size = rzalloc_array(mem_ctx, int, this->uniform_array_size);
