@@ -136,6 +136,7 @@ _mesa_meta_pbo_TexSubImage(struct gl_context *ctx, GLuint dims,
    struct gl_texture_image *pbo_tex_image;
    GLenum status;
    bool success = false;
+   int z;
 
    /* XXX: This should probably be passed in from somewhere */
    const char *where = "_mesa_meta_pbo_TexSubImage";
@@ -211,7 +212,7 @@ _mesa_meta_pbo_TexSubImage(struct gl_context *ctx, GLuint dims,
                                   GL_COLOR_BUFFER_BIT, GL_NEAREST))
       goto fail;
 
-   for (int z = 1; z < depth; z++) {
+   for (z = 1; z < depth; z++) {
       _mesa_meta_bind_fbo_image(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
                                 pbo_tex_image, z);
       _mesa_meta_bind_fbo_image(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
@@ -249,6 +250,7 @@ _mesa_meta_pbo_GetTexSubImage(struct gl_context *ctx, GLuint dims,
    struct gl_texture_image *pbo_tex_image;
    GLenum status;
    bool success = false;
+   int z;
 
    /* XXX: This should probably be passed in from somewhere */
    const char *where = "_mesa_meta_pbo_GetTexSubImage";
@@ -328,7 +330,7 @@ _mesa_meta_pbo_GetTexSubImage(struct gl_context *ctx, GLuint dims,
                                   GL_COLOR_BUFFER_BIT, GL_NEAREST))
       goto fail;
 
-   for (int z = 1; z < depth; z++) {
+   for (z = 1; z < depth; z++) {
       _mesa_meta_bind_fbo_image(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
                                 tex_image, zoffset + z);
       _mesa_meta_bind_fbo_image(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
