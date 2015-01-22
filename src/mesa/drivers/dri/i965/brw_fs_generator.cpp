@@ -697,7 +697,7 @@ fs_generator::generate_tex(fs_inst *inst, struct brw_reg dst, struct brw_reg src
                        brw_imm_ud(inst->offset));
          }
 
-         brw_adjust_sampler_state_pointer(p, header_reg, sampler_index, dst);
+         brw_adjust_sampler_state_pointer(p, header_reg, sampler_index);
          brw_pop_insn_state(p);
       }
    }

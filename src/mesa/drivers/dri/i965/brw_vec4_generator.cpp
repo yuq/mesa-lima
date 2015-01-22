@@ -354,7 +354,7 @@ vec4_generator::generate_tex(vec4_instruction *inst,
          if (dw2)
             brw_MOV(p, get_element_ud(header, 2), brw_imm_ud(dw2));
 
-         brw_adjust_sampler_state_pointer(p, header, sampler_index, dst);
+         brw_adjust_sampler_state_pointer(p, header, sampler_index);
          brw_pop_insn_state(p);
       }
    }

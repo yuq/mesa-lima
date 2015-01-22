@@ -2383,8 +2383,7 @@ void brw_SAMPLE(struct brw_compile *p,
  */
 void brw_adjust_sampler_state_pointer(struct brw_compile *p,
                                       struct brw_reg header,
-                                      struct brw_reg sampler_index,
-                                      struct brw_reg scratch)
+                                      struct brw_reg sampler_index)
 {
    /* The "Sampler Index" field can only store values between 0 and 15.
     * However, we can add an offset to the "Sampler State Pointer"
@@ -2414,7 +2413,7 @@ void brw_adjust_sampler_state_pointer(struct brw_compile *p,
          return;
       }
 
-      struct brw_reg temp = vec1(retype(scratch, BRW_REGISTER_TYPE_UD));
+      struct brw_reg temp = get_element_ud(header, 3);
 
       brw_AND(p, temp, get_element_ud(sampler_index, 0), brw_imm_ud(0x0f0));
       brw_SHL(p, temp, temp, brw_imm_ud(4));
