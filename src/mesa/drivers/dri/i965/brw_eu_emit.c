@@ -453,12 +453,12 @@ void
 brw_set_src1(struct brw_compile *p, brw_inst *inst, struct brw_reg reg)
 {
    const struct brw_context *brw = p->brw;
-   assert(reg.file != BRW_MESSAGE_REGISTER_FILE);
 
    if (reg.file != BRW_ARCHITECTURE_REGISTER_FILE)
       assert(reg.nr < 128);
 
    gen7_convert_mrf_to_grf(p, &reg);
+   assert(reg.file != BRW_MESSAGE_REGISTER_FILE);
 
    validate_reg(brw, inst, reg);
 
