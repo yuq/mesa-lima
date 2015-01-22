@@ -66,6 +66,15 @@ optimizations = [
    (('flrp', a, a, b), a),
    (('flrp', 0.0, a, b), ('fmul', a, b)),
    (('fadd', ('fmul', a, b), c), ('ffma', a, b, c)),
+   # Comparison simplifications
+   (('inot', ('flt', a, b)), ('fge', a, b)),
+   (('inot', ('fge', a, b)), ('flt', a, b)),
+   (('inot', ('ilt', a, b)), ('ige', a, b)),
+   (('inot', ('ige', a, b)), ('ilt', a, b)),
+   (('flt', ('fadd', a, b), 0.0), ('flt', a, ('fneg', b))),
+   (('fge', ('fadd', a, b), 0.0), ('fge', a, ('fneg', b))),
+   (('feq', ('fadd', a, b), 0.0), ('feq', a, ('fneg', b))),
+   (('fne', ('fadd', a, b), 0.0), ('fne', a, ('fneg', b))),
    (('fge', ('fneg', ('fabs', a)), 0.0), ('feq', a, 0.0)),
    (('fmin', ('fmax', a, 1.0), 0.0), ('fsat', a)),
    # Logical and bit operations
