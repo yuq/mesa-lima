@@ -96,6 +96,16 @@ optimizations = [
    (('ishr', a, 0), a),
    (('ushr', 0, a), 0),
    (('ushr', a, 0), 0),
+   # Exponential/logarithmic identities
+   (('fexp2', ('flog2', a)), a), # 2^lg2(a) = a
+   (('fexp',  ('flog',  a)), a), # e^ln(a)  = a
+   (('flog2', ('fexp2', a)), a), # lg2(2^a) = a
+   (('flog',  ('fexp',  a)), a), # ln(e^a)  = a
+   (('fexp2', ('fmul', ('flog2', a), b)), ('fpow', a, b)), # 2^(lg2(a)*b) = a^b
+   (('fexp',  ('fmul', ('flog', a), b)),  ('fpow', a, b)), # e^(ln(a)*b) = a^b
+   (('fpow', a, 1.0), a),
+   (('fpow', a, 2.0), ('fmul', a, a)),
+   (('fpow', 2.0, a), ('fexp2', a)),
 
 # This one may not be exact
    (('feq', ('fadd', a, b), 0.0), ('feq', a, ('fneg', b))),
