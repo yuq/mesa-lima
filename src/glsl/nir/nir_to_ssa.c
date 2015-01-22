@@ -313,7 +313,7 @@ rewrite_alu_instr_forward(nir_alu_instr *instr, rewrite_state *state)
       case 2: op = nir_op_vec2; break;
       case 3: op = nir_op_vec3; break;
       case 4: op = nir_op_vec4; break;
-      default: assert(0); break;
+      default: unreachable("not reached");
       }
 
       nir_alu_instr *vec = nir_alu_instr_create(state->mem_ctx, op);

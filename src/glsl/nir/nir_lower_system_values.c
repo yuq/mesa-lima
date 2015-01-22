@@ -64,8 +64,7 @@ convert_instr(nir_intrinsic_instr *instr)
       op = nir_intrinsic_load_invocation_id;
       break;
    default:
-      assert(0);
-      break;
+      unreachable("not reached");
    }
 
    nir_intrinsic_instr *new_instr = nir_intrinsic_instr_create(mem_ctx, op);

@@ -938,8 +938,7 @@ nir_tex_instr_dest_size(nir_tex_instr *instr)
             ret = 3;
             break;
          default:
-            assert(0);
-            break;
+            unreachable("not reached");
       }
       if (instr->is_array)
          ret++;

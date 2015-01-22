@@ -216,8 +216,7 @@ constant_copy(ir_constant *ir, void *mem_ctx)
       break;
 
    default:
-      assert(0);
-      break;
+      unreachable("not reached");
    }
 
    return ret;
@@ -278,8 +277,7 @@ nir_visitor::visit(ir_variable *ir)
       break;
 
    default:
-      assert(0);
-      break;
+      unreachable("not reached");
    }
 
    var->data.interpolation = ir->data.interpolation;
@@ -311,8 +309,7 @@ nir_visitor::visit(ir_variable *ir)
       var->data.depth_layout = nir_depth_layout_unchanged;
       break;
    default:
-      assert(0);
-      break;
+      unreachable("not reached");
    }
 
    var->data.location = ir->data.location;
@@ -374,8 +371,7 @@ nir_visitor::visit(ir_variable *ir)
       break;
 
    default:
-      assert(0);
-      break;
+      unreachable("not reached");
    }
 
    _mesa_hash_table_insert(var_table, ir, var);
@@ -429,8 +425,7 @@ nir_visitor::create_overload(ir_function_signature *ir, nir_function *function)
          break;
 
       default:
-         assert(0);
-         break;
+         unreachable("not reached");
       }
 
       overload->params[i].type = param->type;
@@ -573,8 +568,7 @@ nir_visitor::visit(ir_loop_jump *ir)
       type = nir_jump_continue;
       break;
    default:
-      assert(0);
-      break;
+      unreachable("not reached");
    }
 
    nir_jump_instr *instr = nir_jump_instr_create(this->shader, type);
@@ -793,8 +787,7 @@ get_instr_dest(nir_instr *instr)
          return &tex_instr->dest;
 
       default:
-         assert(0);
-         break;
+         unreachable("not reached");
    }
 
    return NULL;
@@ -1087,8 +1080,7 @@ nir_visitor::visit(ir_expression *ir)
               dest_size, srcs);
          break;
       default:
-         assert(0);
-         break;
+         unreachable("not reached");
       }
       break;
    case ir_unop_trunc: emit(nir_op_ftrunc, dest_size, srcs); break;
@@ -1207,8 +1199,7 @@ nir_visitor::visit(ir_expression *ir)
          }
          break;
       default:
-         assert(0);
-         break;
+         unreachable("not reached");
       }
       break;
    case ir_binop_add:
@@ -1296,8 +1287,7 @@ nir_visitor::visit(ir_expression *ir)
          break;
 
       default:
-         assert(0);
-         break;
+         unreachable("not reached");
       }
 
       instr = emit(op, dest_size, srcs);
@@ -1402,8 +1392,7 @@ nir_visitor::visit(ir_expression *ir)
                case 3: emit(nir_op_ball_fequal3, dest_size, srcs); break;
                case 4: emit(nir_op_ball_fequal4, dest_size, srcs); break;
                default:
-                  assert(0);
-                  break;
+                  unreachable("not reached");
             }
          } else {
             switch (ir->operands[0]->type->vector_elements) {
@@ -1412,8 +1401,7 @@ nir_visitor::visit(ir_expression *ir)
                case 3: emit(nir_op_ball_iequal3, dest_size, srcs); break;
                case 4: emit(nir_op_ball_iequal4, dest_size, srcs); break;
                default:
-                  assert(0);
-                  break;
+                  unreachable("not reached");
             }
          }
       } else {
@@ -1423,8 +1411,7 @@ nir_visitor::visit(ir_expression *ir)
             case 3: emit(nir_op_fall_equal3, dest_size, srcs); break;
             case 4: emit(nir_op_fall_equal4, dest_size, srcs); break;
             default:
-               assert(0);
-               break;
+               unreachable("not reached");
          }
       }
       break;
@@ -1437,8 +1424,7 @@ nir_visitor::visit(ir_expression *ir)
                case 3: emit(nir_op_bany_fnequal3, dest_size, srcs); break;
                case 4: emit(nir_op_bany_fnequal4, dest_size, srcs); break;
                default:
-                  assert(0);
-                  break;
+                  unreachable("not reached");
             }
          } else {
             switch (ir->operands[0]->type->vector_elements) {
@@ -1447,8 +1433,7 @@ nir_visitor::visit(ir_expression *ir)
                case 3: emit(nir_op_bany_inequal3, dest_size, srcs); break;
                case 4: emit(nir_op_bany_inequal4, dest_size, srcs); break;
                default:
-                  assert(0);
-                  break;
+                  unreachable("not reached");
             }
          }
       } else {
@@ -1458,8 +1443,7 @@ nir_visitor::visit(ir_expression *ir)
             case 3: emit(nir_op_fany_nequal3, dest_size, srcs); break;
             case 4: emit(nir_op_fany_nequal4, dest_size, srcs); break;
             default:
-               assert(0);
-               break;
+               unreachable("not reached");
          }
       }
       break;
@@ -1487,8 +1471,7 @@ nir_visitor::visit(ir_expression *ir)
          case 3: emit(nir_op_fdot3, dest_size, srcs); break;
          case 4: emit(nir_op_fdot4, dest_size, srcs); break;
          default:
-            assert(0);
-            break;
+            unreachable("not reached");
       }
       break;
 
@@ -1545,8 +1528,7 @@ nir_visitor::visit(ir_expression *ir)
       break;
 
    default:
-      assert(0);
-      break;
+      unreachable("not reached");
    }
 }
 
@@ -1621,8 +1603,7 @@ nir_visitor::visit(ir_texture *ir)
       break;
 
    default:
-      assert(0);
-      break;
+      unreachable("not reached");
    }
 
    if (ir->projector != NULL)
