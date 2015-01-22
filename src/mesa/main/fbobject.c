@@ -138,6 +138,27 @@ _mesa_lookup_framebuffer(struct gl_context *ctx, GLuint id)
 
 
 /**
+ * A convenience function for direct state access that throws
+ * GL_INVALID_OPERATION if the framebuffer doesn't exist.
+ */
+struct gl_framebuffer *
+_mesa_lookup_framebuffer_err(struct gl_context *ctx, GLuint id,
+                             const char *func)
+{
+   struct gl_framebuffer *fb;
+
+   fb = _mesa_lookup_framebuffer(ctx, id);
+   if (!fb || fb == &DummyFramebuffer) {
+      _mesa_error(ctx, GL_INVALID_OPERATION,
+                  "%s(non-existent framebuffer %u)", func, id);
+      return NULL;
+   }
+
+   return fb;
+}
+
+
+/**
  * Mark the given framebuffer as invalid.  This will force the
  * test for framebuffer completeness to be done before the framebuffer
  * is used.
