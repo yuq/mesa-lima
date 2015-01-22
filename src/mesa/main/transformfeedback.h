@@ -163,4 +163,8 @@ extern void GLAPIENTRY
 _mesa_GetTransformFeedbacki_v(GLuint xfb, GLenum pname, GLuint index,
                               GLint *param);
 
+extern void GLAPIENTRY
+_mesa_GetTransformFeedbacki64_v(GLuint xfb, GLenum pname, GLuint index,
+                                GLint64 *param);
+
 #endif /* TRANSFORM_FEEDBACK_H */

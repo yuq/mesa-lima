@@ -41,6 +41,13 @@
       <param name="param" type="GLint *" />
    </function>
 
+   <function name="GetTransformFeedbacki64_v" offset="assign">
+      <param name="xfb" type="GLuint" />
+      <param name="pname" type="GLenum" />
+      <param name="index" type="GLuint" />
+      <param name="param" type="GLint64 *" />
+   </function>
+
    <!-- Buffer object functions -->
 
    <function name="CreateBuffers" offset="assign">
