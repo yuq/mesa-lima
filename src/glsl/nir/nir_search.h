@@ -47,6 +47,13 @@ typedef struct {
 
    /** The variable index;  Must be less than NIR_SEARCH_MAX_VARIABLES */
    unsigned variable;
+
+   /** Indicates that the given variable must be a constant
+    *
+    * This is only alloed in search expressions and indicates that the
+    * given variable is only allowed to match constant values.
+    */
+   bool is_constant;
 } nir_search_variable;
 
 typedef struct {

@@ -78,6 +78,10 @@ match_value(const nir_search_value *value, nir_alu_instr *instr, unsigned src,
 
          return true;
       } else {
+         if (var->is_constant &&
+             instr->src[src].src.ssa->parent_instr->type != nir_instr_type_load_const)
+            return false;
+
          state->variables_seen |= (1 << var->variable);
          state->variables[var->variable].src = instr->src[src].src;
          state->variables[var->variable].abs = false;
@@ -235,6 +239,8 @@ construct_value(const nir_search_value *value, nir_alu_type type,
 
       nir_alu_src val;
       nir_alu_src_copy(&val, &state->variables[var->variable], mem_ctx);
+
+      assert(!var->is_constant);
 
       return val;
    }
