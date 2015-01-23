@@ -36,6 +36,8 @@ EXTRA_DIST = tests glcpp/tests README TODO glcpp/README	\
 	glsl_parser.yy					\
 	glcpp/glcpp-lex.l				\
 	glcpp/glcpp-parse.y				\
+	nir/nir_algebraic.py				\
+	nir/nir_opt_algebraic.py			\
 	SConscript
 
 include Makefile.sources
