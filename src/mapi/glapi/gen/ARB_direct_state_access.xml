@@ -152,6 +152,13 @@
       <param name="data" type="GLvoid *" />
    </function>
 
+   <!-- Framebuffer object functions -->
+
+   <function name="CreateFramebuffers" offset="assign">
+      <param name="n" type="GLsizei" />
+      <param name="framebuffers" type="GLuint *" />
+   </function>
+
    <!-- Renderbuffer object functions -->
 
    <function name="CreateRenderbuffers" offset="assign">

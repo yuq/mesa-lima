@@ -2417,15 +2417,23 @@ _mesa_DeleteFramebuffers(GLsizei n, const GLuint *framebuffers)
 }
 
 
-void GLAPIENTRY
-_mesa_GenFramebuffers(GLsizei n, GLuint *framebuffers)
+/**
+ * This is the implementation for glGenFramebuffers and glCreateFramebuffers.
+ * It is not exposed to the rest of Mesa to encourage the use of
+ * nameless buffers in driver internals.
+ */
+static void
+create_framebuffers(GLsizei n, GLuint *framebuffers, bool dsa)
 {
    GET_CURRENT_CONTEXT(ctx);
    GLuint first;
    GLint i;
+   struct gl_framebuffer *fb;
+
+   const char *func = dsa ? "glCreateFramebuffers" : "glGenFramebuffers";
 
    if (n < 0) {
-      _mesa_error(ctx, GL_INVALID_VALUE, "glGenFramebuffersEXT(n)");
+      _mesa_error(ctx, GL_INVALID_VALUE, "%s(n < 0)", func);
       return;
    }
 
@@ -2437,11 +2445,35 @@ _mesa_GenFramebuffers(GLsizei n, GLuint *framebuffers)
    for (i = 0; i < n; i++) {
       GLuint name = first + i;
       framebuffers[i] = name;
-      /* insert dummy placeholder into hash table */
+
+      if (dsa) {
+         fb = ctx->Driver.NewFramebuffer(ctx, framebuffers[i]);
+         if (!fb) {
+            _mesa_error(ctx, GL_OUT_OF_MEMORY, "%s", func);
+            return;
+         }
+      }
+      else
+         fb = &DummyFramebuffer;
+
       mtx_lock(&ctx->Shared->Mutex);
-      _mesa_HashInsert(ctx->Shared->FrameBuffers, name, &DummyFramebuffer);
+      _mesa_HashInsert(ctx->Shared->FrameBuffers, name, fb);
       mtx_unlock(&ctx->Shared->Mutex);
    }
+}
+
+
+void GLAPIENTRY
+_mesa_GenFramebuffers(GLsizei n, GLuint *framebuffers)
+{
+   create_framebuffers(n, framebuffers, false);
+}
+
+
+void GLAPIENTRY
+_mesa_CreateFramebuffers(GLsizei n, GLuint *framebuffers)
+{
+   create_framebuffers(n, framebuffers, true);
 }
 
 

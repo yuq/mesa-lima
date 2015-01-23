@@ -169,6 +169,9 @@ _mesa_DeleteFramebuffers(GLsizei n, const GLuint *framebuffers);
 extern void GLAPIENTRY
 _mesa_GenFramebuffers(GLsizei n, GLuint *framebuffers);
 
+extern void GLAPIENTRY
+_mesa_CreateFramebuffers(GLsizei n, GLuint *framebuffers);
+
 extern GLenum GLAPIENTRY
 _mesa_CheckFramebufferStatus(GLenum target);
 
