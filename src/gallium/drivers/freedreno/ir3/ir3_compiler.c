@@ -64,7 +64,7 @@ struct ir3_compile_context {
 	 */
 	struct {
 		struct ir3_instruction *instr, **instrp;
-	} output_updates[16];
+	} output_updates[64];
 	unsigned num_output_updates;
 
 	/* are we in a sequence of "atomic" instructions?
@@ -97,7 +97,7 @@ struct ir3_compile_context {
 	struct {
 		unsigned first, last;
 		struct ir3_instruction *fanin;
-	} array[16];
+	} array[MAX_ARRAYS];
 	uint32_t array_dirty;
 	/* offset into array[], per file, of first array info */
 	uint8_t array_offsets[TGSI_FILE_COUNT];
@@ -247,10 +247,6 @@ compile_init(struct ir3_compile_context *ctx, struct ir3_shader_variant *so,
 	memset(ctx->array_offsets, 0, sizeof(ctx->array_offsets));
 
 #define FM(x) (1 << TGSI_FILE_##x)
-	/* optimize can't deal with relative addressing: */
-	if (info->indirect_files_written & (FM(TEMPORARY) | FM(INPUT) | FM(OUTPUT)))
-		return TGSI_PARSE_ERROR;
-
 	/* NOTE: if relative addressing is used, we set constlen in
 	 * the compiler (to worst-case value) since we don't know in
 	 * the assembler what the max addr reg value can be:
@@ -595,6 +591,16 @@ ssa_instr_get(struct ir3_compile_context *ctx, unsigned file, unsigned n)
 	return instr;
 }
 
+static int dst_array_id(struct ir3_compile_context *ctx,
+		const struct tgsi_dst_register *dst)
+{
+	// XXX complete hack to recover tgsi_full_dst_register...
+	// nothing that isn't wrapped in a tgsi_full_dst_register
+	// should be indirect
+	const struct tgsi_full_dst_register *fdst = (const void *)dst;
+	return fdst->Indirect.ArrayID + ctx->array_offsets[dst->File];
+}
+
 static int src_array_id(struct ir3_compile_context *ctx,
 		const struct tgsi_src_register *src)
 {
@@ -639,7 +645,56 @@ static void
 ssa_dst(struct ir3_compile_context *ctx, struct ir3_instruction *instr,
 		const struct tgsi_dst_register *dst, unsigned chan)
 {
-	ssa_instr_set(ctx, dst->File, regid(dst->Index, chan), instr);
+	if (dst->Indirect) {
+		struct ir3_register *reg = instr->regs[0];
+		unsigned i, aid = dst_array_id(ctx, dst);
+		unsigned first = ctx->array[aid].first;
+		unsigned last  = ctx->array[aid].last;
+		unsigned off   = dst->Index - first; /* vec4 offset */
+
+		reg->size = 4 * (1 + last - first);
+		reg->offset = regid(off, chan);
+
+		instr->fanin = array_fanin(ctx, aid, dst->File);
+
+		/* annotate with the array-id, to help out the register-
+		 * assignment stage.  At least for the case of indirect
+		 * writes, we should capture enough dependencies to
+		 * preserve the order of reads/writes of the array, so
+		 * the multiple "names" for the array should end up all
+		 * assigned to the same registers.
+		 */
+		instr->fanin->fi.aid = aid;
+
+		/* Since we are scalarizing vec4 tgsi instructions/regs, we
+		 * run into a slight complication here.  To do the naive thing
+		 * and setup a fanout for each scalar array element would end
+		 * up with the result that the instructions generated for each
+		 * component of the vec4 would end up clobbering each other.
+		 * So we take advantage here of knowing that the array index
+		 * (after the shl.b) will be a multiple of four, and only set
+		 * every fourth scalar component in the array.  See also
+		 * fixup_ssa_dst_array()
+		 */
+		for (i = first; i <= last; i++) {
+			struct ir3_instruction *split;
+			unsigned n = regid(i, chan);
+			int off = (4 * (i - first)) + chan;
+
+			if (is_meta(instr) && (instr->opc == OPC_META_FO))
+				off -= instr->fo.off;
+
+			split = ir3_instr_create(ctx->block, -1, OPC_META_FO);
+			split->fo.off = off;
+			ir3_reg_create(split, 0, 0);
+			ir3_reg_create(split, 0, IR3_REG_SSA)->instr = instr;
+
+			ssa_instr_set(ctx, dst->File, n, split);
+		}
+	} else {
+		/* normal case (not relative addressed GPR) */
+		ssa_instr_set(ctx, dst->File, regid(dst->Index, chan), instr);
+	}
 }
 
 static void
@@ -705,12 +760,22 @@ add_dst_reg_wrmask(struct ir3_compile_context *ctx,
 		break;
 	}
 
-	if (dst->Indirect)
+	if (dst->Indirect) {
 		flags |= IR3_REG_RELATIV;
 
-	reg = ir3_reg_create(instr, regid(num, chan), flags);
+		/* shouldn't happen, and we can't cope with it below: */
+		compile_assert(ctx, wrmask == 0x1);
 
+		compile_assert(ctx, ctx->block->address);
+		if (instr->address)
+			compile_assert(ctx, ctx->block->address == instr->address);
+
+		instr->address = ctx->block->address;
+	}
+
+	reg = ir3_reg_create(instr, regid(num, chan), flags);
 	reg->wrmask = wrmask;
+
 	if (wrmask == 0x1) {
 		/* normal case */
 		ssa_dst(ctx, instr, dst, chan);
@@ -719,6 +784,8 @@ add_dst_reg_wrmask(struct ir3_compile_context *ctx,
 			(dst->File == TGSI_FILE_ADDRESS)) {
 		struct ir3_instruction *prev = NULL;
 		unsigned i;
+
+		compile_assert(ctx, !dst->Indirect);
 
 		/* if instruction writes multiple, we need to create
 		 * some place-holder collect the registers:
@@ -2539,10 +2606,16 @@ instr_cat1(const struct instr_translater *t,
 		struct ir3_compile_context *ctx,
 		struct tgsi_full_instruction *inst)
 {
-	struct tgsi_dst_register *dst = get_dst(ctx, inst);
+	struct tgsi_dst_register *dst = &inst->Dst[0].Register;
 	struct tgsi_src_register *src = &inst->Src[0].Register;
+
+	/* NOTE: atomic start/end, rather than in create_mov() since
+	 * create_mov() is used already w/in atomic sequences (and
+	 * we aren't clever enough to deal with the nesting)
+	 */
+	instr_atomic_start(ctx);
 	create_mov(ctx, dst, src);
-	put_dst(ctx, inst, dst);
+	instr_atomic_end(ctx);
 }
 
 static void
@@ -3321,6 +3394,10 @@ ir3_compile_shader(struct ir3_shader_variant *so,
 		ret = -1;
 		goto out;
 	}
+
+	/* for now, until the edge cases are worked out: */
+	if (ctx.info.indirect_files_written & (FM(TEMPORARY) | FM(INPUT) | FM(OUTPUT)))
+		cp = false;
 
 	compile_instructions(&ctx);
 

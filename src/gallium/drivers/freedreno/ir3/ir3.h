@@ -205,6 +205,9 @@ struct ir3_instruction {
 			int off;              /* component/offset */
 		} fo;
 		struct {
+			int aid;
+		} fi;
+		struct {
 			struct ir3_block *if_block, *else_block;
 		} flow;
 		struct {
@@ -263,6 +266,19 @@ struct ir3_instruction {
 	 * it's src/dst registers.  Beyond that, you need to insert mov's.
 	 */
 	struct ir3_instruction *address;
+
+	/* in case of a instruction with relative dst instruction, we need to
+	 * capture the dependency on the fanin for the previous values of
+	 * the array elements.  Since we don't know at compile time actually
+	 * which array elements are written, this serves to preserve the
+	 * unconditional write to array elements prior to the conditional
+	 * write.
+	 *
+	 * TODO only cat1 can do indirect write.. we could maybe move this
+	 * into instr->cat1.fanin (but would require the frontend to insert
+	 * the extra mov)
+	 */
+	struct ir3_instruction *fanin;
 
 	struct ir3_instruction *next;
 #ifdef DEBUG
@@ -372,6 +388,8 @@ static inline int ir3_instr_regno(struct ir3_instruction *instr,
 	return -1;
 }
 
+
+#define MAX_ARRAYS 16
 
 /* comp:
  *   0 - x
@@ -498,6 +516,8 @@ static inline bool reg_gpr(struct ir3_register *r)
 
 static inline unsigned __ssa_src_cnt(struct ir3_instruction *instr)
 {
+	if (instr->fanin)
+		return instr->regs_count + 2;
 	if (instr->address)
 		return instr->regs_count + 1;
 	return instr->regs_count;
@@ -505,6 +525,8 @@ static inline unsigned __ssa_src_cnt(struct ir3_instruction *instr)
 
 static inline struct ir3_instruction * __ssa_src_n(struct ir3_instruction *instr, unsigned n)
 {
+	if (n == (instr->regs_count + 1))
+		return instr->fanin;
 	if (n == (instr->regs_count + 0))
 		return instr->address;
 	return ssa(instr->regs[n]);

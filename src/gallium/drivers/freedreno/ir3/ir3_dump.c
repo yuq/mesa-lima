@@ -414,8 +414,20 @@ ir3_dump_instr_single(struct ir3_instruction *instr)
 		fprintf(ctx.f, "]");
 	}
 
-	if (is_meta(instr) && (instr->opc == OPC_META_FO))
-		printf(", off=%d", instr->fo.off);
+	if (instr->fanin) {
+		fprintf(ctx.f, ", fanin=_");
+		fprintf(ctx.f, "[");
+		dump_instr_name(&ctx, instr->fanin);
+		fprintf(ctx.f, "]");
+	}
+
+	if (is_meta(instr)) {
+		if (instr->opc == OPC_META_FO) {
+			printf(", off=%d", instr->fo.off);
+		} else if ((instr->opc == OPC_META_FI) && instr->fi.aid) {
+			printf(", aid=%d", instr->fi.aid);
+		}
+	}
 
 	printf("\n");
 }
