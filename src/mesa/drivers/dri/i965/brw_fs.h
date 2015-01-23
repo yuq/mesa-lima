@@ -535,7 +535,7 @@ public:
    bool try_emit_saturate(ir_expression *ir);
    bool try_emit_line(ir_expression *ir);
    bool try_emit_mad(ir_expression *ir);
-   void try_replace_with_sel();
+   bool try_replace_with_sel();
    bool opt_peephole_sel();
    bool opt_peephole_predicated_break();
    bool opt_saturate_propagation();

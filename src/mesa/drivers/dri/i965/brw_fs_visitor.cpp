@@ -2741,7 +2741,7 @@ fs_visitor::emit_if_gen6(ir_if *ir)
  *
  * If src0 is an immediate value, we promote it to a temporary GRF.
  */
-void
+bool
 fs_visitor::try_replace_with_sel()
 {
    fs_inst *endif_inst = (fs_inst *) instructions.get_tail();
@@ -2755,7 +2755,7 @@ fs_visitor::try_replace_with_sel()
    fs_inst *match = (fs_inst *) endif_inst->prev;
    for (int i = 0; i < 4; i++) {
       if (match->is_head_sentinel() || match->opcode != opcodes[4-i-1])
-         return;
+         return false;
       match = (fs_inst *) match->prev;
    }
 
@@ -2797,16 +2797,16 @@ fs_visitor::try_replace_with_sel()
          sel->predicate = if_inst->predicate;
          sel->predicate_inverse = if_inst->predicate_inverse;
       }
+
+      return true;
    }
+
+   return false;
 }
 
 void
 fs_visitor::visit(ir_if *ir)
 {
-   if (brw->gen < 6) {
-      no16("Can't support (non-uniform) control flow on SIMD16\n");
-   }
-
    /* Don't point the annotation at the if statement, because then it plus
     * the then and else blocks get printed.
     */
@@ -2836,7 +2836,9 @@ fs_visitor::visit(ir_if *ir)
 
    emit(BRW_OPCODE_ENDIF);
 
-   try_replace_with_sel();
+   if (!try_replace_with_sel() && brw->gen < 6) {
+      no16("Can't support (non-uniform) control flow on SIMD16\n");
+   }
 }
 
 void

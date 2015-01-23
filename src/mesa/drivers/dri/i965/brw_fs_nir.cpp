@@ -435,10 +435,6 @@ fs_visitor::nir_emit_cf_list(exec_list *list)
 void
 fs_visitor::nir_emit_if(nir_if *if_stmt)
 {
-   if (brw->gen < 6) {
-      no16("Can't support (non-uniform) control flow on SIMD16\n");
-   }
-
    /* first, put the condition into f0 */
    fs_inst *inst = emit(MOV(reg_null_d,
                             retype(get_nir_src(if_stmt->condition),
@@ -456,7 +452,9 @@ fs_visitor::nir_emit_if(nir_if *if_stmt)
 
    emit(BRW_OPCODE_ENDIF);
 
-   try_replace_with_sel();
+   if (!try_replace_with_sel() && brw->gen < 6) {
+      no16("Can't support (non-uniform) control flow on SIMD16\n");
+   }
 }
 
 void
