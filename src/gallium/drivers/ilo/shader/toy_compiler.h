@@ -141,6 +141,9 @@ struct toy_compaction_table {
    uint32_t datatype[32];
    uint32_t subreg[32];
    uint32_t src[32];
+
+   uint32_t control_3src[4];
+   uint64_t source_3src[4];
 };
 
 /**
