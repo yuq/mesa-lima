@@ -54,7 +54,6 @@ struct si_compute {
 	unsigned local_size;
 	unsigned private_size;
 	unsigned input_size;
-	struct radeon_shader_binary binary;
 	struct si_shader shader;
 	unsigned num_user_sgprs;
 
@@ -102,8 +101,8 @@ static void *si_create_compute_state(
 	}
 #else
 
-	radeon_elf_read(code, header->num_bytes, &program->binary, true);
-	si_shader_binary_read(sctx->screen, &program->shader, &program->binary);
+	radeon_elf_read(code, header->num_bytes, &program->shader.binary, true);
+	si_shader_binary_read(sctx->screen, &program->shader, &program->shader.binary);
 
 #endif
 	program->input_buffer =	si_resource_create_custom(sctx->b.b.screen,
@@ -256,7 +255,7 @@ static void si_launch_grid(
 
 #if HAVE_LLVM >= 0x0306
 	/* Read the config information */
-	si_shader_binary_read_config(&program->binary, shader, pc);
+	si_shader_binary_read_config(&program->shader.binary, shader, pc);
 #endif
 
 	/* Upload the kernel arguments */
@@ -296,7 +295,7 @@ static void si_launch_grid(
 
 		/* Patch the shader with the scratch buffer address. */
 		apply_scratch_relocs(sctx->screen,
-			&program->binary, shader, scratch_buffer_va);
+			&program->shader.binary, shader, scratch_buffer_va);
 
 	}
 
@@ -481,7 +480,7 @@ static void si_delete_compute_state(struct pipe_context *ctx, void* state){
 	pipe_resource_reference(
 		(struct pipe_resource **)&program->input_buffer, NULL);
 
-	radeon_shader_binary_free_members(&program->binary, true);
+	radeon_shader_binary_free_members(&program->shader.binary, true);
 	FREE(program);
 }
 

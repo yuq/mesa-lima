@@ -142,6 +142,7 @@ struct si_shader {
 	struct si_pm4_state		*pm4;
 	struct r600_resource		*bo;
 	struct r600_resource		*scratch_bo;
+	struct radeon_shader_binary	binary;
 	unsigned			num_sgprs;
 	unsigned			num_vgprs;
 	unsigned			lds_size;
