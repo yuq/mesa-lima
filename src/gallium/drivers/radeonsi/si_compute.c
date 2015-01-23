@@ -55,7 +55,7 @@ struct si_compute {
 	unsigned private_size;
 	unsigned input_size;
 	struct radeon_shader_binary binary;
-	struct si_shader program;
+	struct si_shader shader;
 	unsigned num_user_sgprs;
 
 	struct r600_resource *input_buffer;
@@ -103,7 +103,7 @@ static void *si_create_compute_state(
 #else
 
 	radeon_elf_read(code, header->num_bytes, &program->binary, true);
-	si_shader_binary_read(sctx->screen, &program->program, &program->binary);
+	si_shader_binary_read(sctx->screen, &program->shader, &program->binary);
 
 #endif
 	program->input_buffer =	si_resource_create_custom(sctx->b.b.screen,
@@ -231,7 +231,7 @@ static void si_launch_grid(
 	uint64_t shader_va;
 	unsigned arg_user_sgpr_count = NUM_USER_SGPRS;
 	unsigned i;
-	struct si_shader *shader = &program->program;
+	struct si_shader *shader = &program->shader;
 	unsigned lds_blocks;
 	unsigned num_waves_for_scratch;
 
@@ -256,7 +256,7 @@ static void si_launch_grid(
 
 #if HAVE_LLVM >= 0x0306
 	/* Read the config information */
-	si_shader_binary_read_config(&program->binary, &program->program, pc);
+	si_shader_binary_read_config(&program->binary, shader, pc);
 #endif
 
 	/* Upload the kernel arguments */
@@ -475,7 +475,7 @@ static void si_delete_compute_state(struct pipe_context *ctx, void* state){
 		LLVMContextDispose(program->llvm_ctx);
 	}
 #else
-	si_shader_destroy(ctx, &program->program);
+	si_shader_destroy(ctx, &program->shader);
 #endif
 
 	pipe_resource_reference(
