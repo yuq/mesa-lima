@@ -498,10 +498,10 @@ create_immed(struct ir3_compile_context *ctx, float val)
 }
 
 static void
-ssa_dst(struct ir3_compile_context *ctx, struct ir3_instruction *instr,
-		const struct tgsi_dst_register *dst, unsigned chan)
+ssa_instr_set(struct ir3_compile_context *ctx, unsigned file, unsigned n,
+		struct ir3_instruction *instr)
 {
-	unsigned n = regid(dst->Index, chan);
+	struct ir3_block *block = ctx->block;
 	unsigned idx = ctx->num_output_updates;
 
 	compile_assert(ctx, idx < ARRAY_SIZE(ctx->output_updates));
@@ -516,22 +516,22 @@ ssa_dst(struct ir3_compile_context *ctx, struct ir3_instruction *instr,
 	 * file..
 	 */
 
-	switch (dst->File) {
+	switch (file) {
 	case TGSI_FILE_OUTPUT:
-		compile_assert(ctx, n < ctx->block->noutputs);
-		ctx->output_updates[idx].instrp = &ctx->block->outputs[n];
+		compile_assert(ctx, n < block->noutputs);
+		ctx->output_updates[idx].instrp = &block->outputs[n];
 		ctx->output_updates[idx].instr = instr;
 		ctx->num_output_updates++;
 		break;
 	case TGSI_FILE_TEMPORARY:
-		compile_assert(ctx, n < ctx->block->ntemporaries);
-		ctx->output_updates[idx].instrp = &ctx->block->temporaries[n];
+		compile_assert(ctx, n < block->ntemporaries);
+		ctx->output_updates[idx].instrp = &block->temporaries[n];
 		ctx->output_updates[idx].instr = instr;
 		ctx->num_output_updates++;
 		break;
 	case TGSI_FILE_ADDRESS:
 		compile_assert(ctx, n < 1);
-		ctx->output_updates[idx].instrp = &ctx->block->address;
+		ctx->output_updates[idx].instrp = &block->address;
 		ctx->output_updates[idx].instr = instr;
 		ctx->num_output_updates++;
 		break;
@@ -539,7 +539,7 @@ ssa_dst(struct ir3_compile_context *ctx, struct ir3_instruction *instr,
 }
 
 static struct ir3_instruction *
-ssa_instr(struct ir3_compile_context *ctx, unsigned file, unsigned n)
+ssa_instr_get(struct ir3_compile_context *ctx, unsigned file, unsigned n)
 {
 	struct ir3_block *block = ctx->block;
 	struct ir3_instruction *instr = NULL;
@@ -595,7 +595,7 @@ ssa_instr(struct ir3_compile_context *ctx, unsigned file, unsigned n)
 	return instr;
 }
 
-static int array_id(struct ir3_compile_context *ctx,
+static int src_array_id(struct ir3_compile_context *ctx,
 		const struct tgsi_src_register *src)
 {
 	// XXX complete hack to recover tgsi_full_src_register...
@@ -604,6 +604,13 @@ static int array_id(struct ir3_compile_context *ctx,
 	const struct tgsi_full_src_register *fsrc = (const void *)src;
 	debug_assert(src->File != TGSI_FILE_CONSTANT);
 	return fsrc->Indirect.ArrayID + ctx->array_offsets[src->File];
+}
+
+static void
+ssa_dst(struct ir3_compile_context *ctx, struct ir3_instruction *instr,
+		const struct tgsi_dst_register *dst, unsigned chan)
+{
+	ssa_instr_set(ctx, dst->File, regid(dst->Index, chan), instr);
 }
 
 static void
@@ -617,7 +624,7 @@ ssa_src(struct ir3_compile_context *ctx, struct ir3_register *reg,
 		 * we must generate a fanin instruction to collect all possible
 		 * array elements that the instruction could address together:
 		 */
-		unsigned i, j, aid = array_id(ctx, src);
+		unsigned i, j, aid = src_array_id(ctx, src);
 
 		if (ctx->array[aid].fanin) {
 			instr = ctx->array[aid].fanin;
@@ -632,9 +639,9 @@ ssa_src(struct ir3_compile_context *ctx, struct ir3_register *reg,
 			ir3_reg_create(instr, 0, 0);
 			for (i = first; i <= last; i++) {
 				for (j = 0; j < 4; j++) {
-					unsigned n = (i * 4) + j;
+					unsigned n = regid(i, j);
 					ir3_reg_create(instr, 0, IR3_REG_SSA)->instr =
-							ssa_instr(ctx, src->File, n);
+							ssa_instr_get(ctx, src->File, n);
 				}
 			}
 			ctx->array[aid].fanin = instr;
@@ -642,7 +649,7 @@ ssa_src(struct ir3_compile_context *ctx, struct ir3_register *reg,
 		}
 	} else {
 		/* normal case (not relative addressed GPR) */
-		instr = ssa_instr(ctx, src->File, regid(src->Index, chan));
+		instr = ssa_instr_get(ctx, src->File, regid(src->Index, chan));
 	}
 
 	if (instr) {
@@ -816,7 +823,7 @@ add_src_reg_wrmask(struct ir3_compile_context *ctx,
 		ir3_reg_create(instr, 0, IR3_REG_SSA)->instr = ctx->block->address;
 
 		if (src->File != TGSI_FILE_CONSTANT) {
-			unsigned aid = array_id(ctx, src);
+			unsigned aid = src_array_id(ctx, src);
 			unsigned off = src->Index - ctx->array[aid].first; /* vec4 offset */
 			instr->deref.off = regid(off, chan);
 		}
@@ -825,7 +832,7 @@ add_src_reg_wrmask(struct ir3_compile_context *ctx,
 	reg = ir3_reg_create(instr, regid(num, chan), flags);
 
 	if (src->Indirect && (src->File != TGSI_FILE_CONSTANT)) {
-		unsigned aid = array_id(ctx, src);
+		unsigned aid = src_array_id(ctx, src);
 		reg->size = 4 * (1 + ctx->array[aid].last - ctx->array[aid].first);
 	} else {
 		reg->wrmask = wrmask;
@@ -872,6 +879,7 @@ add_src_reg_wrmask(struct ir3_compile_context *ctx,
 		reg->instr = instr;
 		reg->size = size;
 	}
+
 	return reg;
 }
 
