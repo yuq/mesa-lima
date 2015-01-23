@@ -25,7 +25,7 @@
  *
  */
 
-#include "nir.h"
+#include "nir_constant_expressions.h"
 #include <math.h>
 
 /*
@@ -38,20 +38,10 @@ struct constant_fold_state {
    bool progress;
 };
 
-#define SRC_COMP(T, IDX, CMP) src[IDX]->value.T[instr->src[IDX].swizzle[CMP]]
-#define SRC(T, IDX) SRC_COMP(T, IDX, i)
-#define DEST_COMP(T, CMP) dest->value.T[CMP]
-#define DEST(T) DEST_COMP(T, i)
-
-#define FOLD_PER_COMP(EXPR) \
-   for (unsigned i = 0; i < instr->dest.dest.ssa.num_components; i++) { \
-      EXPR; \
-   } \
-
 static bool
 constant_fold_alu_instr(nir_alu_instr *instr, void *mem_ctx)
 {
-   nir_load_const_instr *src[4], *dest;
+   nir_const_value src[4];
 
    if (!instr->dest.dest.is_ssa)
       return false;
@@ -60,163 +50,36 @@ constant_fold_alu_instr(nir_alu_instr *instr, void *mem_ctx)
       if (!instr->src[i].src.is_ssa)
          return false;
 
-      if (instr->src[i].src.ssa->parent_instr->type != nir_instr_type_load_const)
+      nir_instr *src_instr = instr->src[i].src.ssa->parent_instr;
+
+      if (src_instr->type != nir_instr_type_load_const)
          return false;
+      nir_load_const_instr* load_const = nir_instr_as_load_const(src_instr);
+
+      for (unsigned j = 0; j < instr->dest.dest.ssa.num_components; j++) {
+         src[i].u[j] = load_const->value.u[instr->src[i].swizzle[j]];
+      }
 
       /* We shouldn't have any source modifiers in the optimization loop. */
       assert(!instr->src[i].abs && !instr->src[i].negate);
-
-      src[i] = nir_instr_as_load_const(instr->src[i].src.ssa->parent_instr);
    }
 
    /* We shouldn't have any saturate modifiers in the optimization loop. */
    assert(!instr->dest.saturate);
 
-   dest = nir_load_const_instr_create(mem_ctx,
-                                      instr->dest.dest.ssa.num_components);
+   nir_const_value dest =
+      nir_eval_const_opcode(instr->op, instr->dest.dest.ssa.num_components,
+                            src);
 
-   switch (instr->op) {
-   case nir_op_ineg:
-      FOLD_PER_COMP(DEST(i) = -SRC(i, 0));
-      break;
-   case nir_op_fneg:
-      FOLD_PER_COMP(DEST(f) = -SRC(f, 0));
-      break;
-   case nir_op_inot:
-      FOLD_PER_COMP(DEST(i) = ~SRC(i, 0));
-      break;
-   case nir_op_fnot:
-      FOLD_PER_COMP(DEST(f) = (SRC(f, 0) == 0.0f) ? 1.0f : 0.0f);
-      break;
-   case nir_op_frcp:
-      FOLD_PER_COMP(DEST(f) = 1.0f / SRC(f, 0));
-      break;
-   case nir_op_frsq:
-      FOLD_PER_COMP(DEST(f) = 1.0f / sqrt(SRC(f, 0)));
-      break;
-   case nir_op_fsqrt:
-      FOLD_PER_COMP(DEST(f) = sqrtf(SRC(f, 0)));
-      break;
-   case nir_op_fexp:
-      FOLD_PER_COMP(DEST(f) = expf(SRC(f, 0)));
-      break;
-   case nir_op_flog:
-      FOLD_PER_COMP(DEST(f) = logf(SRC(f, 0)));
-      break;
-   case nir_op_fexp2:
-      FOLD_PER_COMP(DEST(f) = exp2f(SRC(f, 0)));
-      break;
-   case nir_op_flog2:
-      FOLD_PER_COMP(DEST(f) = log2f(SRC(f, 0)));
-      break;
-   case nir_op_f2i:
-      FOLD_PER_COMP(DEST(i) = SRC(f, 0));
-      break;
-   case nir_op_f2u:
-      FOLD_PER_COMP(DEST(u) = SRC(f, 0));
-      break;
-   case nir_op_i2f:
-      FOLD_PER_COMP(DEST(f) = SRC(i, 0));
-      break;
-   case nir_op_f2b:
-      FOLD_PER_COMP(DEST(u) = (SRC(i, 0) == 0.0f) ? NIR_FALSE : NIR_TRUE);
-      break;
-   case nir_op_b2f:
-      FOLD_PER_COMP(DEST(f) = SRC(u, 0) ? 1.0f : 0.0f);
-      break;
-   case nir_op_i2b:
-      FOLD_PER_COMP(DEST(u) = SRC(i, 0) ? NIR_TRUE : NIR_FALSE);
-      break;
-   case nir_op_u2f:
-      FOLD_PER_COMP(DEST(f) = SRC(u, 0));
-      break;
-   case nir_op_bany2:
-      DEST_COMP(u, 0) = (SRC_COMP(u, 0, 0) || SRC_COMP(u, 0, 1)) ?
-                        NIR_TRUE : NIR_FALSE;
-      break;
-   case nir_op_fadd:
-      FOLD_PER_COMP(DEST(f) = SRC(f, 0) + SRC(f, 1));
-      break;
-   case nir_op_iadd:
-      FOLD_PER_COMP(DEST(i) = SRC(i, 0) + SRC(i, 1));
-      break;
-   case nir_op_fsub:
-      FOLD_PER_COMP(DEST(f) = SRC(f, 0) - SRC(f, 1));
-      break;
-   case nir_op_isub:
-      FOLD_PER_COMP(DEST(i) = SRC(i, 0) - SRC(i, 1));
-      break;
-   case nir_op_fmul:
-      FOLD_PER_COMP(DEST(f) = SRC(f, 0) * SRC(f, 1));
-      break;
-   case nir_op_imul:
-      FOLD_PER_COMP(DEST(i) = SRC(i, 0) * SRC(i, 1));
-      break;
-   case nir_op_fdiv:
-      FOLD_PER_COMP(DEST(f) = SRC(f, 0) / SRC(f, 1));
-      break;
-   case nir_op_idiv:
-      FOLD_PER_COMP(DEST(i) = SRC(i, 0) / SRC(i, 1));
-      break;
-   case nir_op_udiv:
-      FOLD_PER_COMP(DEST(u) = SRC(u, 0) / SRC(u, 1));
-      break;
-   case nir_op_flt:
-      FOLD_PER_COMP(DEST(u) = (SRC(f, 0) < SRC(f, 1)) ? NIR_TRUE : NIR_FALSE);
-      break;
-   case nir_op_fge:
-      FOLD_PER_COMP(DEST(u) = (SRC(f, 0) >= SRC(f, 1)) ? NIR_TRUE : NIR_FALSE);
-      break;
-   case nir_op_feq:
-      FOLD_PER_COMP(DEST(u) = (SRC(f, 0) == SRC(f, 1)) ? NIR_TRUE : NIR_FALSE);
-      break;
-   case nir_op_fne:
-      FOLD_PER_COMP(DEST(u) = (SRC(f, 0) != SRC(f, 1)) ? NIR_TRUE : NIR_FALSE);
-      break;
-   case nir_op_ilt:
-      FOLD_PER_COMP(DEST(u) = (SRC(i, 0) < SRC(i, 1)) ? NIR_TRUE : NIR_FALSE);
-      break;
-   case nir_op_ige:
-      FOLD_PER_COMP(DEST(u) = (SRC(i, 0) >= SRC(i, 1)) ? NIR_TRUE : NIR_FALSE);
-      break;
-   case nir_op_ieq:
-      FOLD_PER_COMP(DEST(u) = (SRC(i, 0) == SRC(i, 1)) ? NIR_TRUE : NIR_FALSE);
-      break;
-   case nir_op_ine:
-      FOLD_PER_COMP(DEST(u) = (SRC(i, 0) != SRC(i, 1)) ? NIR_TRUE : NIR_FALSE);
-      break;
-   case nir_op_ult:
-      FOLD_PER_COMP(DEST(u) = (SRC(u, 0) < SRC(u, 1)) ? NIR_TRUE : NIR_FALSE);
-      break;
-   case nir_op_uge:
-      FOLD_PER_COMP(DEST(u) = (SRC(u, 0) >= SRC(u, 1)) ? NIR_TRUE : NIR_FALSE);
-      break;
-   case nir_op_ishl:
-      FOLD_PER_COMP(DEST(i) = SRC(i, 0) << SRC(i, 1));
-      break;
-   case nir_op_ishr:
-      FOLD_PER_COMP(DEST(i) = SRC(i, 0) >> SRC(i, 1));
-      break;
-   case nir_op_ushr:
-      FOLD_PER_COMP(DEST(u) = SRC(u, 0) >> SRC(u, 1));
-      break;
-   case nir_op_iand:
-      FOLD_PER_COMP(DEST(i) = SRC(i, 0) & SRC(i, 1));
-      break;
-   case nir_op_ior:
-      FOLD_PER_COMP(DEST(i) = SRC(i, 0) | SRC(i, 1));
-      break;
-   case nir_op_ixor:
-      FOLD_PER_COMP(DEST(i) = SRC(i, 0) ^ SRC(i, 1));
-      break;
-   default:
-      ralloc_free(dest);
-      return false;
-   }
+   nir_load_const_instr *new_instr =
+      nir_load_const_instr_create(mem_ctx,
+                                  instr->dest.dest.ssa.num_components);
 
-   nir_instr_insert_before(&instr->instr, &dest->instr);
+   new_instr->value = dest;
 
-   nir_ssa_def_rewrite_uses(&instr->dest.dest.ssa, nir_src_for_ssa(&dest->def),
+   nir_instr_insert_before(&instr->instr, &new_instr->instr);
+
+   nir_ssa_def_rewrite_uses(&instr->dest.dest.ssa, nir_src_for_ssa(&new_instr->def),
                             mem_ctx);
 
    nir_instr_remove(&instr->instr);
