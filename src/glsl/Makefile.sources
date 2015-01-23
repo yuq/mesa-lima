@@ -11,6 +11,7 @@ LIBGLCPP_GENERATED_FILES = \
 	glcpp/glcpp-parse.c
 
 NIR_GENERATED_FILES = \
+	nir/nir_constant_expressions.c \
 	nir/nir_opcodes.c \
 	nir/nir_opcodes.h \
 	nir/nir_opt_algebraic.c

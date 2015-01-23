@@ -40,6 +40,7 @@ EXTRA_DIST = tests glcpp/tests README TODO glcpp/README	\
 	glcpp/glcpp-lex.l				\
 	glcpp/glcpp-parse.y				\
 	nir/nir_algebraic.py				\
+	nir/nir_constant_expressions.py			\
 	nir/nir_opcodes.py				\
 	nir/nir_opcodes_c.py				\
 	nir/nir_opcodes_h.py				\
@@ -215,6 +216,7 @@ BUILT_SOURCES =						\
 	glsl_lexer.cpp					\
 	glcpp/glcpp-parse.c				\
 	glcpp/glcpp-lex.c				\
+	nir/nir_constant_expressions.c			\
 	nir/nir_opcodes.c				\
 	nir/nir_opcodes.h				\
 	nir/nir_opt_algebraic.c
@@ -229,6 +231,10 @@ clean-local:
 dist-hook:
 	$(RM) glcpp/tests/*.out
 	$(RM) glcpp/tests/subtest*/*.out
+
+nir/nir_constant_expressions.c: nir/nir_opcodes.py nir/nir_constant_expressions.py nir/nir_constant_expressions.h
+	$(MKDIR_P) nir;							\
+	$(PYTHON2) $(PYTHON_FLAGS) $(srcdir)/nir/nir_constant_expressions.py > $@
 
 nir/nir_opcodes.h: nir/nir_opcodes.py nir/nir_opcodes_h.py
 	$(MKDIR_P) nir;							\
