@@ -67,7 +67,9 @@ EXTRA_DIST = \
 	drivers/SConscript \
 	drivers/windows \
 	main/format_info.py \
+	main/format_pack.py \
 	main/format_parser.py \
+	main/format_unpack.py \
 	main/formats.csv \
 	main/get_hash_generator.py \
 	main/get_hash_params.py \
