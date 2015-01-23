@@ -11,6 +11,8 @@ LIBGLCPP_GENERATED_FILES = \
 	glcpp/glcpp-parse.c
 
 NIR_GENERATED_FILES = \
+	nir/nir_opcodes.c \
+	nir/nir_opcodes.h \
 	nir/nir_opt_algebraic.c
 
 NIR_FILES = \
@@ -35,8 +37,6 @@ NIR_FILES = \
 	nir/nir_lower_var_copies.c \
 	nir/nir_lower_vec_to_movs.c \
 	nir/nir_metadata.c \
-	nir/nir_opcodes.c \
-	nir/nir_opcodes.h \
 	nir/nir_opt_constant_folding.c \
 	nir/nir_opt_copy_propagate.c \
 	nir/nir_opt_cse.c \

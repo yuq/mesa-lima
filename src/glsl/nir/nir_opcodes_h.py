@@ -1,5 +1,7 @@
-/*
- * Copyright © 2014 Intel Corporation
+#! /usr/bin/env python
+
+template = """\
+/* Copyright (C) 2014 Connor Abbott
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -22,25 +24,24 @@
  *
  * Authors:
  *    Connor Abbott (cwabbott0@gmail.com)
- *
  */
 
-#include "nir.h"
+#ifndef _NIR_OPCODES_
+#define _NIR_OPCODES_
 
-#define OPCODE(_name, _num_inputs, _output_size, _output_type, \
-               _input_sizes, _input_types, _algebraic_props) \
-{ \
-   .name = #_name, \
-   .num_inputs = _num_inputs, \
-   .output_size = _output_size, \
-   .output_type = _output_type, \
-   .input_sizes = _input_sizes, \
-   .input_types = _input_types, \
-   .algebraic_properties = _algebraic_props, \
-},
+<% opcode_names = sorted(opcodes.iterkeys()) %>
 
-#define LAST_OPCODE(name)
+typedef enum {
+% for name in opcode_names:
+   nir_op_${name},
+% endfor
+   nir_last_opcode = nir_op_${opcode_names[-1]},
+   nir_num_opcodes = nir_last_opcode + 1
+} nir_op;
 
-const nir_op_info nir_op_infos[nir_num_opcodes] = {
-#include "nir_opcodes.h"
-};
+#endif /* _NIR_OPCODES_ */"""
+
+from nir_opcodes import opcodes
+from mako.template import Template
+
+print Template(template).render(opcodes=opcodes)

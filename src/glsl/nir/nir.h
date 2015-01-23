@@ -37,6 +37,8 @@
 #include "nir_types.h"
 #include <stdio.h>
 
+#include "nir_opcodes.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -572,20 +574,6 @@ typedef struct {
 void nir_alu_src_copy(nir_alu_src *dest, const nir_alu_src *src, void *mem_ctx);
 void nir_alu_dest_copy(nir_alu_dest *dest, const nir_alu_dest *src,
                        void *mem_ctx);
-
-#define OPCODE(name, num_inputs, output_size, output_type, \
-               input_sizes, input_types, algebraic_props) \
-   nir_op_##name,
-
-#define LAST_OPCODE(name) nir_last_opcode = nir_op_##name,
-
-typedef enum {
-#include "nir_opcodes.h"
-   nir_num_opcodes = nir_last_opcode + 1
-} nir_op;
-
-#undef OPCODE
-#undef LAST_OPCODE
 
 typedef enum {
    nir_type_float,

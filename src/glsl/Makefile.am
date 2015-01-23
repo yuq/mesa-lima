@@ -29,6 +29,7 @@ AM_CPPFLAGS = \
 	-I$(top_srcdir)/src/glsl/glcpp \
 	-I$(top_srcdir)/src/glsl/nir \
 	-I$(top_srcdir)/src/gtest/include \
+	-I$(top_builddir)/src/glsl/nir \
 	$(DEFINES)
 AM_CFLAGS = $(VISIBILITY_CFLAGS)
 AM_CXXFLAGS = $(VISIBILITY_CXXFLAGS)
@@ -39,6 +40,9 @@ EXTRA_DIST = tests glcpp/tests README TODO glcpp/README	\
 	glcpp/glcpp-lex.l				\
 	glcpp/glcpp-parse.y				\
 	nir/nir_algebraic.py				\
+	nir/nir_opcodes.py				\
+	nir/nir_opcodes_c.py				\
+	nir/nir_opcodes_h.py				\
 	nir/nir_opt_algebraic.py			\
 	SConscript
 
@@ -211,6 +215,8 @@ BUILT_SOURCES =						\
 	glsl_lexer.cpp					\
 	glcpp/glcpp-parse.c				\
 	glcpp/glcpp-lex.c				\
+	nir/nir_opcodes.c				\
+	nir/nir_opcodes.h				\
 	nir/nir_opt_algebraic.c
 CLEANFILES =						\
 	glcpp/glcpp-parse.h				\
@@ -223,6 +229,16 @@ clean-local:
 dist-hook:
 	$(RM) glcpp/tests/*.out
 	$(RM) glcpp/tests/subtest*/*.out
+
+nir/nir_opcodes.h: nir/nir_opcodes.py nir/nir_opcodes_h.py
+	$(MKDIR_P) nir;							\
+	$(PYTHON2) $(PYTHON_FLAGS) $(srcdir)/nir/nir_opcodes_h.py > $@
+
+nir/nir.h: $(top_builddir)/src/glsl/nir/nir_opcodes.h
+
+nir/nir_opcodes.c: nir/nir_opcodes.py nir/nir_opcodes_c.py
+	$(MKDIR_P) nir;							\
+	$(PYTHON2) $(PYTHON_FLAGS) $(srcdir)/nir/nir_opcodes_c.py > $@
 
 nir/nir_opt_algebraic.c: nir/nir_opt_algebraic.py nir/nir_algebraic.py
 	$(MKDIR_P) nir;							\
