@@ -141,7 +141,6 @@ MAIN_FILES = \
 	$(SRCDIR)main/objectlabel.h \
 	$(SRCDIR)main/pack.c \
 	$(SRCDIR)main/pack.h \
-	$(SRCDIR)main/pack_tmp.h \
 	$(SRCDIR)main/pbo.c \
 	$(SRCDIR)main/pbo.h \
 	$(SRCDIR)main/performance_monitor.c \
