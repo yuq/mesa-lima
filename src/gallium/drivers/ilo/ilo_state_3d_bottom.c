@@ -495,7 +495,7 @@ fs_init_cso_gen6(const struct ilo_dev_info *dev,
     *      ENABLE this bit due to ClipDistance clipping."
     */
    if (ilo_shader_get_kernel_param(fs, ILO_KERNEL_FS_USE_KILL))
-      dw5 |= GEN6_WM_DW5_PS_KILL;
+      dw5 |= GEN6_WM_DW5_PS_KILL_PIXEL;
 
    /*
     * From the Sandy Bridge PRM, volume 2 part 1, page 275:
@@ -522,13 +522,13 @@ fs_init_cso_gen6(const struct ilo_dev_info *dev,
     *  c) fs or cc kills
     */
    if (true)
-      dw5 |= GEN6_WM_DW5_PS_ENABLE;
+      dw5 |= GEN6_WM_DW5_PS_DISPATCH_ENABLE;
 
    assert(!ilo_shader_get_kernel_param(fs, ILO_KERNEL_FS_DISPATCH_16_OFFSET));
-   dw5 |= GEN6_WM_DW5_8_PIXEL_DISPATCH;
+   dw5 |= GEN6_PS_DISPATCH_8 << GEN6_WM_DW5_PS_DISPATCH_MODE__SHIFT;
 
    dw6 = input_count << GEN6_WM_DW6_SF_ATTR_COUNT__SHIFT |
-         GEN6_WM_DW6_POSOFFSET_NONE |
+         GEN6_WM_DW6_PS_POSOFFSET_NONE |
          interps << GEN6_WM_DW6_BARYCENTRIC_INTERP__SHIFT;
 
    STATIC_ASSERT(Elements(cso->payload) >= 4);
@@ -578,7 +578,7 @@ fs_init_cso_gen7(const struct ilo_dev_info *dev,
       dw4 |= GEN7_PS_DW4_ATTR_ENABLE;
 
    assert(!ilo_shader_get_kernel_param(fs, ILO_KERNEL_FS_DISPATCH_16_OFFSET));
-   dw4 |= GEN7_PS_DW4_8_PIXEL_DISPATCH;
+   dw4 |= GEN6_PS_DISPATCH_8 << GEN7_PS_DW4_DISPATCH_MODE__SHIFT;
 
    dw5 = start_grf << GEN7_PS_DW5_URB_GRF_START0__SHIFT |
          0 << GEN7_PS_DW5_URB_GRF_START1__SHIFT |
@@ -594,7 +594,7 @@ fs_init_cso_gen7(const struct ilo_dev_info *dev,
     *  b) fs writes depth, or
     *  c) fs or cc kills
     */
-   wm_dw1 |= GEN7_WM_DW1_PS_ENABLE;
+   wm_dw1 |= GEN7_WM_DW1_PS_DISPATCH_ENABLE;
 
    /*
     * From the Ivy Bridge PRM, volume 2 part 1, page 278:
@@ -623,7 +623,7 @@ fs_init_cso_gen7(const struct ilo_dev_info *dev,
     *      to ENABLE this bit due to ClipDistance clipping."
     */
    if (ilo_shader_get_kernel_param(fs, ILO_KERNEL_FS_USE_KILL))
-      wm_dw1 |= GEN7_WM_DW1_PS_KILL;
+      wm_dw1 |= GEN7_WM_DW1_PS_KILL_PIXEL;
 
    if (ilo_shader_get_kernel_param(fs, ILO_KERNEL_FS_OUTPUT_Z))
       wm_dw1 |= GEN7_WM_DW1_PSCDEPTH_ON;
@@ -1269,7 +1269,7 @@ blend_get_rt_blend_enable_gen6(const struct ilo_dev_info *dev,
       a_dst = gen6_blend_factor_dst_alpha_forced_one(a_dst);
    }
 
-   dw = GEN6_BLEND_DW0_BLEND_ENABLE |
+   dw = GEN6_RT_DW0_BLEND_ENABLE |
         gen6_translate_pipe_blend(rt->alpha_func) << 26 |
         a_src << 20 |
         a_dst << 15 |
@@ -1279,7 +1279,7 @@ blend_get_rt_blend_enable_gen6(const struct ilo_dev_info *dev,
 
    if (rt->rgb_func != rt->alpha_func ||
        rgb_src != a_src || rgb_dst != a_dst)
-      dw |= GEN6_BLEND_DW0_INDEPENDENT_ALPHA_ENABLE;
+      dw |= GEN6_RT_DW0_INDEPENDENT_ALPHA_ENABLE;
 
    return dw;
 }
@@ -1296,18 +1296,18 @@ blend_init_cso_gen6(const struct ilo_dev_info *dev,
    ILO_DEV_ASSERT(dev, 6, 7.5);
 
    cso->payload[0] = 0;
-   cso->payload[1] = GEN6_BLEND_DW1_COLORCLAMP_RTFORMAT |
-                     GEN6_BLEND_DW1_PRE_BLEND_CLAMP |
-                     GEN6_BLEND_DW1_POST_BLEND_CLAMP;
+   cso->payload[1] = GEN6_RT_DW1_COLORCLAMP_RTFORMAT |
+                     GEN6_RT_DW1_PRE_BLEND_CLAMP |
+                     GEN6_RT_DW1_POST_BLEND_CLAMP;
 
    if (!(rt->colormask & PIPE_MASK_A))
-      cso->payload[1] |= GEN6_BLEND_DW1_WRITE_DISABLE_A;
+      cso->payload[1] |= GEN6_RT_DW1_WRITE_DISABLE_A;
    if (!(rt->colormask & PIPE_MASK_R))
-      cso->payload[1] |= GEN6_BLEND_DW1_WRITE_DISABLE_R;
+      cso->payload[1] |= GEN6_RT_DW1_WRITE_DISABLE_R;
    if (!(rt->colormask & PIPE_MASK_G))
-      cso->payload[1] |= GEN6_BLEND_DW1_WRITE_DISABLE_G;
+      cso->payload[1] |= GEN6_RT_DW1_WRITE_DISABLE_G;
    if (!(rt->colormask & PIPE_MASK_B))
-      cso->payload[1] |= GEN6_BLEND_DW1_WRITE_DISABLE_B;
+      cso->payload[1] |= GEN6_RT_DW1_WRITE_DISABLE_B;
 
    /*
     * From the Sandy Bridge PRM, volume 2 part 1, page 365:
@@ -1337,7 +1337,7 @@ blend_get_logicop_enable_gen6(const struct ilo_dev_info *dev,
    if (!state->logicop_enable)
       return 0;
 
-   return GEN6_BLEND_DW1_LOGICOP_ENABLE |
+   return GEN6_RT_DW1_LOGICOP_ENABLE |
           gen6_translate_pipe_logicop(state->logicop_func) << 18;
 }
 
@@ -1351,9 +1351,9 @@ blend_get_alpha_mod_gen6(const struct ilo_dev_info *dev,
    ILO_DEV_ASSERT(dev, 6, 7.5);
 
    if (state->alpha_to_coverage) {
-      dw |= GEN6_BLEND_DW1_ALPHA_TO_COVERAGE;
+      dw |= GEN6_RT_DW1_ALPHA_TO_COVERAGE;
       if (ilo_dev_gen(dev) >= ILO_GEN(7))
-         dw |= GEN6_BLEND_DW1_ALPHA_TO_COVERAGE_DITHER;
+         dw |= GEN6_RT_DW1_ALPHA_TO_COVERAGE_DITHER;
    }
    /*
     * From the Sandy Bridge PRM, volume 2 part 1, page 378:
@@ -1362,7 +1362,7 @@ blend_get_alpha_mod_gen6(const struct ilo_dev_info *dev,
     *      must be disabled."
     */
    if (state->alpha_to_one && !dual_blend)
-      dw |= GEN6_BLEND_DW1_ALPHA_TO_ONE;
+      dw |= GEN6_RT_DW1_ALPHA_TO_ONE;
 
    return dw;
 }
@@ -1384,7 +1384,7 @@ ilo_gpe_init_blend(const struct ilo_dev_info *dev,
    blend->dw_alpha_mod =
       blend_get_alpha_mod_gen6(dev, state, blend->dual_blend);
    blend->dw_logicop = blend_get_logicop_enable_gen6(dev, state);
-   blend->dw_shared = (state->dither) ? GEN6_BLEND_DW1_DITHER_ENABLE : 0;
+   blend->dw_shared = (state->dither) ? GEN6_RT_DW1_DITHER_ENABLE : 0;
 
    blend_init_cso_gen6(dev, state, blend, 0);
    if (state->independent_blend_enable) {
@@ -1511,7 +1511,7 @@ dsa_get_alpha_enable_gen6(const struct ilo_dev_info *dev,
       return 0;
 
    /* this will be ORed to BLEND_STATE */
-   dw = GEN6_BLEND_DW1_ALPHA_TEST_ENABLE |
+   dw = GEN6_RT_DW1_ALPHA_TEST_ENABLE |
         gen6_translate_dsa_func(state->func) << 13;
 
    return dw;

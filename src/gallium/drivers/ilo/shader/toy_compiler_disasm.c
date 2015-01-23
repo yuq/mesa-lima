@@ -901,7 +901,7 @@ disasm_inst_mdesc_sampler_op(const struct disasm_inst *inst, int op)
    case GEN7_MSG_SAMPLER_SAMPLE_D_C:   return "sample_d_c";
    case GEN7_MSG_SAMPLER_SAMPLE_LZ:    return "sample_lz";
    case GEN7_MSG_SAMPLER_SAMPLE_C_LC:  return "sample_c_lc";
-   case GEN7_MSG_SAMPLER_SAMPLE_LD_LZ: return "sample_ld_lz";
+   case GEN7_MSG_SAMPLER_LD_LZ:        return "ld_lz";
    case GEN7_MSG_SAMPLER_LD_MCS:       return "ld_mcs";
    case GEN7_MSG_SAMPLER_LD2DMS:       return "ld2dms";
    case GEN7_MSG_SAMPLER_LD2DSS:       return "ld2dss";
@@ -977,7 +977,7 @@ disasm_inst_mdesc_dp_op_gen7(const struct disasm_inst *inst,
    switch (sfid) {
    case GEN6_SFID_DP_SAMPLER:
       switch (op) {
-      case GEN7_MSG_DP_SAMPLER_OWORD_BLOCK_READ:         return "OWORD block read";
+      case GEN7_MSG_DP_SAMPLER_UNALIGNED_OWORD_BLOCK_READ: return "OWORD block read";
       case GEN7_MSG_DP_SAMPLER_MEDIA_BLOCK_READ:         return "media block read";
       default:                                           return "BAD";
       }
@@ -1582,7 +1582,7 @@ disasm_printer_add_mdesc_dp_rc(struct disasm_printer *printer,
    if (is_rt_write) {
       disasm_printer_add(printer, " %s%s%s%s",
             disasm_inst_mdesc_dp_rt_write_simd_mode(inst, mdesc),
-            (mdesc & GEN6_MSG_DP_SLOTGRP_HI) ? " Hi" : "",
+            (mdesc & GEN6_MSG_DP_RT_SLOTGRP_HI) ? " Hi" : "",
             (mdesc & GEN6_MSG_DP_RT_LAST) ? " LastRT" : "",
             (ilo_dev_gen(inst->dev) == ILO_GEN(6) &&
              (mdesc & GEN6_MSG_DP_SEND_WRITE_COMMIT)) ? " WriteCommit" : "");

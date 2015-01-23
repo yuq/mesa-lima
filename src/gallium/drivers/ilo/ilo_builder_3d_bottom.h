@@ -315,10 +315,10 @@ gen6_3DSTATE_WM(struct ilo_builder *builder,
    dw4 |= GEN6_WM_DW4_STATISTICS;
 
    if (cc_may_kill)
-      dw5 |= GEN6_WM_DW5_PS_KILL | GEN6_WM_DW5_PS_ENABLE;
+      dw5 |= GEN6_WM_DW5_PS_KILL_PIXEL | GEN6_WM_DW5_PS_DISPATCH_ENABLE;
 
    if (dual_blend)
-      dw5 |= GEN6_WM_DW5_DUAL_SOURCE_BLEND;
+      dw5 |= GEN6_WM_DW5_PS_DUAL_SOURCE_BLEND;
 
    dw5 |= rasterizer->wm.payload[0];
 
@@ -389,7 +389,7 @@ gen7_3DSTATE_WM(struct ilo_builder *builder,
    dw1 |= GEN7_WM_DW1_STATISTICS;
 
    if (cc_may_kill)
-      dw1 |= GEN7_WM_DW1_PS_ENABLE | GEN7_WM_DW1_PS_KILL;
+      dw1 |= GEN7_WM_DW1_PS_DISPATCH_ENABLE | GEN7_WM_DW1_PS_KILL_PIXEL;
 
    if (num_samples > 1) {
       dw1 |= rasterizer->wm.dw_msaa_rast;
@@ -458,7 +458,7 @@ gen7_disable_3DSTATE_PS(struct ilo_builder *builder)
    ILO_DEV_ASSERT(builder->dev, 7, 7.5);
 
    /* GPU hangs if none of the dispatch enable bits is set */
-   dw4 = GEN7_PS_DW4_8_PIXEL_DISPATCH;
+   dw4 = GEN6_PS_DISPATCH_8 << GEN7_PS_DW4_DISPATCH_MODE__SHIFT;
 
    /* see brwCreateContext() */
    switch (ilo_dev_gen(builder->dev)) {
@@ -880,9 +880,9 @@ gen6_3DSTATE_VIEWPORT_STATE_POINTERS(struct ilo_builder *builder,
    ilo_builder_batch_pointer(builder, cmd_len, &dw);
 
    dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_VIEWPORT_STATE_POINTERS) |
-           GEN6_PTR_VP_DW0_CLIP_CHANGED |
-           GEN6_PTR_VP_DW0_SF_CHANGED |
-           GEN6_PTR_VP_DW0_CC_CHANGED |
+           GEN6_VP_PTR_DW0_CLIP_CHANGED |
+           GEN6_VP_PTR_DW0_SF_CHANGED |
+           GEN6_VP_PTR_DW0_CC_CHANGED |
            (cmd_len - 2);
    dw[1] = clip_viewport;
    dw[2] = sf_viewport;
@@ -919,9 +919,9 @@ gen6_3DSTATE_CC_STATE_POINTERS(struct ilo_builder *builder,
    ilo_builder_batch_pointer(builder, cmd_len, &dw);
 
    dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_CC_STATE_POINTERS) | (cmd_len - 2);
-   dw[1] = blend_state | GEN6_PTR_CC_DW1_BLEND_CHANGED;
-   dw[2] = depth_stencil_state | GEN6_PTR_CC_DW2_ZS_CHANGED;
-   dw[3] = color_calc_state | GEN6_PTR_CC_DW3_CC_CHANGED;
+   dw[1] = blend_state | GEN6_CC_PTR_DW1_BLEND_CHANGED;
+   dw[2] = depth_stencil_state | GEN6_CC_PTR_DW2_ZS_CHANGED;
+   dw[3] = color_calc_state | GEN6_CC_PTR_DW3_CC_CHANGED;
 }
 
 static inline void
@@ -1253,10 +1253,10 @@ gen6_BLEND_STATE(struct ilo_builder *builder,
          if (caps->can_alpha_test)
             dw[1] |= dsa->dw_alpha;
       } else {
-         dw[1] |= GEN6_BLEND_DW1_WRITE_DISABLE_A |
-                  GEN6_BLEND_DW1_WRITE_DISABLE_R |
-                  GEN6_BLEND_DW1_WRITE_DISABLE_G |
-                  GEN6_BLEND_DW1_WRITE_DISABLE_B |
+         dw[1] |= GEN6_RT_DW1_WRITE_DISABLE_A |
+                  GEN6_RT_DW1_WRITE_DISABLE_R |
+                  GEN6_RT_DW1_WRITE_DISABLE_G |
+                  GEN6_RT_DW1_WRITE_DISABLE_B |
                   dsa->dw_alpha;
       }
 

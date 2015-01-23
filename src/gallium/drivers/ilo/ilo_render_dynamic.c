@@ -303,22 +303,22 @@ ilo_render_get_draw_dynamic_states_len(const struct ilo_render *render,
       len = alignment - 1;
 
       /* CC states */
-      len += align(GEN6_BLEND_STATE__SIZE * ILO_MAX_DRAW_BUFFERS, alignment);
+      len += align(GEN6_BLEND_STATE__SIZE, alignment);
       len += align(GEN6_DEPTH_STENCIL_STATE__SIZE, alignment);
       len += align(GEN6_COLOR_CALC_STATE__SIZE, alignment);
 
       /* viewport arrays */
       if (ilo_dev_gen(render->dev) >= ILO_GEN(7)) {
          len += 15 + /* pad first */
-            align(GEN7_SF_CLIP_VIEWPORT__SIZE * ILO_MAX_VIEWPORTS, 16) +
-            align(GEN6_CC_VIEWPORT__SIZE * ILO_MAX_VIEWPORTS, 8) +
-            align(GEN6_SCISSOR_RECT__SIZE * ILO_MAX_VIEWPORTS, 8);
+            align(GEN7_SF_CLIP_VIEWPORT__SIZE, 16) +
+            align(GEN6_CC_VIEWPORT__SIZE, 8) +
+            align(GEN6_SCISSOR_RECT__SIZE, 8);
       } else {
          len += 7 + /* pad first */
-            align(GEN6_SF_VIEWPORT__SIZE * ILO_MAX_VIEWPORTS, 8) +
-            align(GEN6_CLIP_VIEWPORT__SIZE * ILO_MAX_VIEWPORTS, 8) +
-            align(GEN6_CC_VIEWPORT__SIZE * ILO_MAX_VIEWPORTS, 8) +
-            align(GEN6_SCISSOR_RECT__SIZE * ILO_MAX_VIEWPORTS, 8);
+            align(GEN6_SF_VIEWPORT__SIZE, 8) +
+            align(GEN6_CLIP_VIEWPORT__SIZE, 8) +
+            align(GEN6_CC_VIEWPORT__SIZE, 8) +
+            align(GEN6_SCISSOR_RECT__SIZE, 8);
       }
 
       static_len = len;
@@ -361,7 +361,8 @@ ilo_render_get_draw_dynamic_states_len(const struct ilo_render *render,
          num_samplers = align(num_samplers, 4);
 
          len += align(GEN6_SAMPLER_STATE__SIZE * num_samplers, alignment) +
-            align(GEN6_SAMPLER_BORDER_COLOR__SIZE, alignment) * num_samplers;
+                align(GEN6_SAMPLER_BORDER_COLOR_STATE__SIZE, alignment) *
+                num_samplers;
       }
 
       /* PCB */
@@ -522,7 +523,8 @@ ilo_render_get_launch_grid_dynamic_states_len(const struct ilo_render *render,
       num_samplers = align(num_samplers, 4);
 
       len += align(GEN6_SAMPLER_STATE__SIZE * num_samplers, alignment) +
-         align(GEN6_SAMPLER_BORDER_COLOR__SIZE, alignment) * num_samplers;
+             align(GEN6_SAMPLER_BORDER_COLOR_STATE__SIZE, alignment) *
+             num_samplers;
    }
 
    len += GEN6_INTERFACE_DESCRIPTOR_DATA__SIZE;

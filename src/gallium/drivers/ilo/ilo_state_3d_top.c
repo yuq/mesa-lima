@@ -66,16 +66,16 @@ ve_init_cso(const struct ilo_dev_info *dev,
 
    STATIC_ASSERT(Elements(cso->payload) >= 2);
    cso->payload[0] =
-      vb_index << GEN6_VE_STATE_DW0_VB_INDEX__SHIFT |
-      GEN6_VE_STATE_DW0_VALID |
-      format << GEN6_VE_STATE_DW0_FORMAT__SHIFT |
-      state->src_offset << GEN6_VE_STATE_DW0_VB_OFFSET__SHIFT;
+      vb_index << GEN6_VE_DW0_VB_INDEX__SHIFT |
+      GEN6_VE_DW0_VALID |
+      format << GEN6_VE_DW0_FORMAT__SHIFT |
+      state->src_offset << GEN6_VE_DW0_VB_OFFSET__SHIFT;
 
    cso->payload[1] =
-         comp[0] << GEN6_VE_STATE_DW1_COMP0__SHIFT |
-         comp[1] << GEN6_VE_STATE_DW1_COMP1__SHIFT |
-         comp[2] << GEN6_VE_STATE_DW1_COMP2__SHIFT |
-         comp[3] << GEN6_VE_STATE_DW1_COMP3__SHIFT;
+         comp[0] << GEN6_VE_DW1_COMP0__SHIFT |
+         comp[1] << GEN6_VE_DW1_COMP1__SHIFT |
+         comp[2] << GEN6_VE_DW1_COMP2__SHIFT |
+         comp[3] << GEN6_VE_DW1_COMP3__SHIFT;
 }
 
 void
@@ -142,7 +142,7 @@ ilo_gpe_set_ve_edgeflag(const struct ilo_dev_info *dev,
     *        to some set of corresponding edge-flag-supported primitive
     *        types (e.g., POLYGONs) prior to submission to the 3D pipeline."
     */
-   cso->payload[0] |= GEN6_VE_STATE_DW0_EDGE_FLAG_ENABLE;
+   cso->payload[0] |= GEN6_VE_DW0_EDGE_FLAG_ENABLE;
 
    /*
     * Edge flags have format GEN6_FORMAT_R8_USCALED when defined via
@@ -152,8 +152,8 @@ ilo_gpe_set_ve_edgeflag(const struct ilo_dev_info *dev,
     * Since all the hardware cares about is whether the flags are zero or not,
     * we can treat them as the corresponding _UINT formats.
     */
-   format = GEN_EXTRACT(cso->payload[0], GEN6_VE_STATE_DW0_FORMAT);
-   cso->payload[0] &= ~GEN6_VE_STATE_DW0_FORMAT__MASK;
+   format = GEN_EXTRACT(cso->payload[0], GEN6_VE_DW0_FORMAT);
+   cso->payload[0] &= ~GEN6_VE_DW0_FORMAT__MASK;
 
    switch (format) {
    case GEN6_FORMAT_R32_FLOAT:
@@ -166,13 +166,13 @@ ilo_gpe_set_ve_edgeflag(const struct ilo_dev_info *dev,
       break;
    }
 
-   cso->payload[0] |= GEN_SHIFT32(format, GEN6_VE_STATE_DW0_FORMAT);
+   cso->payload[0] |= GEN_SHIFT32(format, GEN6_VE_DW0_FORMAT);
 
    cso->payload[1] =
-         GEN6_VFCOMP_STORE_SRC << GEN6_VE_STATE_DW1_COMP0__SHIFT |
-         GEN6_VFCOMP_NOSTORE << GEN6_VE_STATE_DW1_COMP1__SHIFT |
-         GEN6_VFCOMP_NOSTORE << GEN6_VE_STATE_DW1_COMP2__SHIFT |
-         GEN6_VFCOMP_NOSTORE << GEN6_VE_STATE_DW1_COMP3__SHIFT;
+         GEN6_VFCOMP_STORE_SRC << GEN6_VE_DW1_COMP0__SHIFT |
+         GEN6_VFCOMP_NOSTORE << GEN6_VE_DW1_COMP1__SHIFT |
+         GEN6_VFCOMP_NOSTORE << GEN6_VE_DW1_COMP2__SHIFT |
+         GEN6_VFCOMP_NOSTORE << GEN6_VE_DW1_COMP3__SHIFT;
 }
 
 void
@@ -189,12 +189,12 @@ ilo_gpe_init_ve_nosrc(const struct ilo_dev_info *dev,
           comp2 != GEN6_VFCOMP_STORE_SRC &&
           comp3 != GEN6_VFCOMP_STORE_SRC);
 
-   cso->payload[0] = GEN6_VE_STATE_DW0_VALID;
+   cso->payload[0] = GEN6_VE_DW0_VALID;
    cso->payload[1] =
-         comp0 << GEN6_VE_STATE_DW1_COMP0__SHIFT |
-         comp1 << GEN6_VE_STATE_DW1_COMP1__SHIFT |
-         comp2 << GEN6_VE_STATE_DW1_COMP2__SHIFT |
-         comp3 << GEN6_VE_STATE_DW1_COMP3__SHIFT;
+         comp0 << GEN6_VE_DW1_COMP0__SHIFT |
+         comp1 << GEN6_VE_DW1_COMP1__SHIFT |
+         comp2 << GEN6_VE_DW1_COMP2__SHIFT |
+         comp3 << GEN6_VE_DW1_COMP3__SHIFT;
 }
 
 void

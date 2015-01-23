@@ -140,7 +140,7 @@ gen7_3dstate_push_constant_alloc(struct ilo_builder *builder,
    ilo_builder_batch_pointer(builder, cmd_len, &dw);
 
    dw[0] = cmd | (cmd_len - 2);
-   dw[1] = offset << GEN7_PCB_ALLOC_ANY_DW1_OFFSET__SHIFT |
+   dw[1] = offset << GEN7_PCB_ALLOC_DW1_OFFSET__SHIFT |
            size;
 }
 
@@ -273,8 +273,8 @@ gen7_3dstate_urb(struct ilo_builder *builder,
    ilo_builder_batch_pointer(builder, cmd_len, &dw);
 
    dw[0] = cmd | (cmd_len - 2);
-   dw[1] = offset << GEN7_URB_ANY_DW1_OFFSET__SHIFT |
-           (alloc_size - 1) << GEN7_URB_ANY_DW1_ENTRY_SIZE__SHIFT |
+   dw[1] = offset << GEN7_URB_DW1_OFFSET__SHIFT |
+           (alloc_size - 1) << GEN7_URB_DW1_ENTRY_SIZE__SHIFT |
            num_entries;
 }
 
@@ -375,15 +375,15 @@ gen6_3DSTATE_VERTEX_BUFFERS(struct ilo_builder *builder,
       const unsigned pipe_idx = ve->vb_mapping[hw_idx];
       const struct pipe_vertex_buffer *cso = &vb->states[pipe_idx];
 
-      dw[0] = hw_idx << GEN6_VB_STATE_DW0_INDEX__SHIFT;
+      dw[0] = hw_idx << GEN6_VB_DW0_INDEX__SHIFT;
 
       if (instance_divisor)
-         dw[0] |= GEN6_VB_STATE_DW0_ACCESS_INSTANCEDATA;
+         dw[0] |= GEN6_VB_DW0_ACCESS_INSTANCEDATA;
       else
-         dw[0] |= GEN6_VB_STATE_DW0_ACCESS_VERTEXDATA;
+         dw[0] |= GEN6_VB_DW0_ACCESS_VERTEXDATA;
 
       if (ilo_dev_gen(builder->dev) >= ILO_GEN(7))
-         dw[0] |= GEN7_VB_STATE_DW0_ADDR_MODIFIED;
+         dw[0] |= GEN7_VB_DW0_ADDR_MODIFIED;
 
       /* use null vb if there is no buffer or the stride is out of range */
       if (cso->buffer && cso->stride <= 2048) {
@@ -391,7 +391,7 @@ gen6_3DSTATE_VERTEX_BUFFERS(struct ilo_builder *builder,
          const uint32_t start_offset = cso->buffer_offset;
          const uint32_t end_offset = buf->bo_size - 1;
 
-         dw[0] |= cso->stride << GEN6_VB_STATE_DW0_PITCH__SHIFT;
+         dw[0] |= cso->stride << GEN6_VB_DW0_PITCH__SHIFT;
          ilo_builder_batch_reloc(builder, pos + 1, buf->bo, start_offset, 0);
          ilo_builder_batch_reloc(builder, pos + 2, buf->bo, end_offset, 0);
       }
@@ -429,11 +429,11 @@ gen6_user_3DSTATE_VERTEX_BUFFERS(struct ilo_builder *builder,
    pos++;
 
    /* VERTEX_BUFFER_STATE */
-   dw[0] = 0 << GEN6_VB_STATE_DW0_INDEX__SHIFT |
-           GEN6_VB_STATE_DW0_ACCESS_VERTEXDATA |
-           stride << GEN6_VB_STATE_DW0_PITCH__SHIFT;
+   dw[0] = 0 << GEN6_VB_DW0_INDEX__SHIFT |
+           GEN6_VB_DW0_ACCESS_VERTEXDATA |
+           stride << GEN6_VB_DW0_PITCH__SHIFT;
    if (ilo_dev_gen(builder->dev) >= ILO_GEN(7))
-      dw[0] |= GEN7_VB_STATE_DW0_ADDR_MODIFIED;
+      dw[0] |= GEN7_VB_DW0_ADDR_MODIFIED;
 
    dw[3] = 0;
 
@@ -1014,9 +1014,9 @@ gen6_3DSTATE_BINDING_TABLE_POINTERS(struct ilo_builder *builder,
    ilo_builder_batch_pointer(builder, cmd_len, &dw);
 
    dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_BINDING_TABLE_POINTERS) |
-           GEN6_PTR_BINDING_TABLE_DW0_VS_CHANGED |
-           GEN6_PTR_BINDING_TABLE_DW0_GS_CHANGED |
-           GEN6_PTR_BINDING_TABLE_DW0_PS_CHANGED |
+           GEN6_BINDING_TABLE_PTR_DW0_VS_CHANGED |
+           GEN6_BINDING_TABLE_PTR_DW0_GS_CHANGED |
+           GEN6_BINDING_TABLE_PTR_DW0_PS_CHANGED |
            (cmd_len - 2);
    dw[1] = vs_binding_table;
    dw[2] = gs_binding_table;
@@ -1037,9 +1037,9 @@ gen6_3DSTATE_SAMPLER_STATE_POINTERS(struct ilo_builder *builder,
    ilo_builder_batch_pointer(builder, cmd_len, &dw);
 
    dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_SAMPLER_STATE_POINTERS) |
-           GEN6_PTR_SAMPLER_DW0_VS_CHANGED |
-           GEN6_PTR_SAMPLER_DW0_GS_CHANGED |
-           GEN6_PTR_SAMPLER_DW0_PS_CHANGED |
+           GEN6_SAMPLER_PTR_DW0_VS_CHANGED |
+           GEN6_SAMPLER_PTR_DW0_GS_CHANGED |
+           GEN6_SAMPLER_PTR_DW0_PS_CHANGED |
            (cmd_len - 2);
    dw[1] = vs_sampler_state;
    dw[2] = gs_sampler_state;
