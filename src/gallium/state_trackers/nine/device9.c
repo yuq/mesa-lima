@@ -3297,12 +3297,20 @@ NineDevice9_SetPixelShader( struct NineDevice9 *This,
                             IDirect3DPixelShader9 *pShader )
 {
     struct nine_state *state = This->update;
+    unsigned old_mask = state->ps ? state->ps->rt_mask : 1;
+    unsigned mask;
 
     DBG("This=%p pShader=%p\n", This, pShader);
 
     nine_bind(&state->ps, pShader);
 
     state->changed.group |= NINE_STATE_PS;
+
+    mask = state->ps ? state->ps->rt_mask : 1;
+    /* We need to update cbufs if the pixel shader would
+     * write to different render targets */
+    if (mask != old_mask)
+        state->changed.group |= NINE_STATE_FB;
 
     return D3D_OK;
 }

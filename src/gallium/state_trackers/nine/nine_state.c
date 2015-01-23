@@ -48,7 +48,7 @@ update_framebuffer(struct NineDevice9 *device)
     unsigned w = rt0->desc.Width;
     unsigned h = rt0->desc.Height;
     D3DMULTISAMPLE_TYPE nr_samples = rt0->desc.MultiSampleType;
-
+    unsigned mask = state->ps ? state->ps->rt_mask : 1;
     const int sRGB = state->rs[D3DRS_SRGBWRITEENABLE] ? 1 : 0;
 
     DBG("\n");
@@ -75,8 +75,9 @@ update_framebuffer(struct NineDevice9 *device)
     for (i = 0; i < device->caps.NumSimultaneousRTs; ++i) {
         struct NineSurface9 *rt = state->rt[i];
 
-        if (rt && rt->desc.Format != D3DFMT_NULL && rt->desc.Width == w &&
-            rt->desc.Height == h && rt->desc.MultiSampleType == nr_samples) {
+        if (rt && rt->desc.Format != D3DFMT_NULL && (mask & (1 << i)) &&
+            rt->desc.Width == w && rt->desc.Height == h &&
+            rt->desc.MultiSampleType == nr_samples) {
             fb->cbufs[i] = NineSurface9_GetSurface(rt, sRGB);
             state->rt_mask |= 1 << i;
             fb->nr_cbufs = i + 1;
@@ -126,12 +127,6 @@ update_framebuffer(struct NineDevice9 *device)
             state->changed.group |= NINE_STATE_RASTERIZER;
         }
     }
-
-#ifdef DEBUG
-    if (state->rt_mask & (state->ps ? ~state->ps->rt_mask : 0))
-        WARN_ONCE("FIXME: writing undefined values to cbufs 0x%x\n",
-                  state->rt_mask & ~state->ps->rt_mask);
-#endif
 
     return state->changed.group;
 }
@@ -329,9 +324,6 @@ update_ps(struct NineDevice9 *device)
         for (s = 0; mask; ++s, mask >>= 1)
             if ((mask & 1) && !(device->state.texture[NINE_SAMPLER_PS(s)]))
                 WARN_ONCE("FIXME: unbound sampler should return alpha=1\n");
-        if (device->state.rt_mask & ~ps->rt_mask)
-            WARN_ONCE("FIXME: writing undefined values to cbufs 0x%x\n",
-                device->state.rt_mask & ~ps->rt_mask);
     }
 #endif
     return 0;
