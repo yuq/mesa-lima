@@ -1610,11 +1610,15 @@ NineDevice9_Clear( struct NineDevice9 *This,
                    float Z,
                    DWORD Stencil )
 {
+    const int sRGB = This->state.rs[D3DRS_SRGBWRITEENABLE] ? 1 : 0;
+    struct pipe_surface *cbuf, *zsbuf;
     struct pipe_context *pipe = This->pipe;
-    struct NineSurface9 *zsbuf = This->state.ds;
+    struct NineSurface9 *zsbuf_surf = This->state.ds;
+    struct NineSurface9 *rt;
     unsigned bufs = 0;
     unsigned r, i;
     union pipe_color_union rgba;
+    unsigned rt_mask = 0;
     D3DRECT rect;
 
     DBG("This=%p Count=%u pRects=%p Flags=%x Color=%08x Z=%f Stencil=%x\n",
@@ -1623,8 +1627,8 @@ NineDevice9_Clear( struct NineDevice9 *This,
     user_assert(This->state.ds || !(Flags & NINED3DCLEAR_DEPTHSTENCIL),
                 D3DERR_INVALIDCALL);
     user_assert(!(Flags & D3DCLEAR_STENCIL) ||
-                (zsbuf &&
-                 util_format_is_depth_and_stencil(zsbuf->base.info.format)),
+                (zsbuf_surf &&
+                 util_format_is_depth_and_stencil(zsbuf_surf->base.info.format)),
                 D3DERR_INVALIDCALL);
 #ifdef NINE_STRICT
     user_assert((Count && pRects) || (!Count && !pRects), D3DERR_INVALIDCALL);
@@ -1670,7 +1674,14 @@ NineDevice9_Clear( struct NineDevice9 *This,
 
     if (rect.x1 >= This->state.fb.width || rect.y1 >= This->state.fb.height)
         return D3D_OK;
+
+    for (i = 0; i < This->caps.NumSimultaneousRTs; ++i) {
+        if (This->state.rt[i] && This->state.rt[i]->desc.Format != D3DFMT_NULL)
+            rt_mask |= 1 << i;
+    }
+
     if (!Count &&
+        (!(bufs & PIPE_CLEAR_COLOR) || (rt_mask == This->state.rt_mask)) &&
         rect.x1 == 0 && rect.x2 >= This->state.fb.width &&
         rect.y1 == 0 && rect.y2 >= This->state.fb.height) {
         /* fast path, clears everything at once */
@@ -1678,17 +1689,18 @@ NineDevice9_Clear( struct NineDevice9 *This,
         pipe->clear(pipe, bufs, &rgba, Z, Stencil);
         return D3D_OK;
     }
-    rect.x2 = MIN2(rect.x2, This->state.fb.width);
-    rect.y2 = MIN2(rect.y2, This->state.fb.height);
 
     if (!Count) {
         Count = 1;
         pRects = &rect;
     }
 
-    for (i = 0; (i < This->state.fb.nr_cbufs); ++i) {
-        if (!This->state.fb.cbufs[i] || !(Flags & D3DCLEAR_TARGET))
+    for (i = 0; i < This->caps.NumSimultaneousRTs; ++i) {
+        rt = This->state.rt[i];
+        if (!rt || rt->desc.Format == D3DFMT_NULL ||
+            !(Flags & D3DCLEAR_TARGET))
             continue; /* save space, compiler should hoist this */
+        cbuf = NineSurface9_GetSurface(rt, sRGB);
         for (r = 0; r < Count; ++r) {
             /* Don't trust users to pass these in the right order. */
             unsigned x1 = MIN2(pRects[r].x1, pRects[r].x2);
@@ -1703,11 +1715,11 @@ NineDevice9_Clear( struct NineDevice9 *This,
 
             x1 = MAX2(x1, rect.x1);
             y1 = MAX2(y1, rect.y1);
-            x2 = MIN2(x2, rect.x2);
-            y2 = MIN2(y2, rect.y2);
+            x2 = MIN3(x2, rect.x2, rt->desc.Width);
+            y2 = MIN3(y2, rect.y2, rt->desc.Height);
 
             DBG("Clearing (%u..%u)x(%u..%u)\n", x1, x2, y1, y2);
-            pipe->clear_render_target(pipe, This->state.fb.cbufs[i], &rgba,
+            pipe->clear_render_target(pipe, cbuf, &rgba,
                                       x1, y1, x2 - x1, y2 - y1);
         }
     }
@@ -1729,10 +1741,12 @@ NineDevice9_Clear( struct NineDevice9 *This,
 
         x1 = MIN2(x1, rect.x1);
         y1 = MIN2(y1, rect.y1);
-        x2 = MIN2(x2, rect.x2);
-        y2 = MIN2(y2, rect.y2);
+        x2 = MIN3(x2, rect.x2, zsbuf_surf->desc.Width);
+        y2 = MIN3(y2, rect.y2, zsbuf_surf->desc.Height);
 
-        pipe->clear_depth_stencil(pipe, This->state.fb.zsbuf, bufs, Z, Stencil,
+        zsbuf = NineSurface9_GetSurface(zsbuf_surf, 0);
+        assert(zsbuf);
+        pipe->clear_depth_stencil(pipe, zsbuf, bufs, Z, Stencil,
                                   x1, y1, x2 - x1, y2 - y1);
     }
     return D3D_OK;
