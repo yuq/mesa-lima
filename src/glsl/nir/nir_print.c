@@ -210,7 +210,9 @@ print_var_decl(nir_variable *var, print_var_state *state, FILE *fp)
 
    glsl_print_type(var->type, fp);
 
-   struct set_entry *entry = _mesa_set_search(state->syms, var->name);
+   struct set_entry *entry = NULL;
+   if (state)
+      entry = _mesa_set_search(state->syms, var->name);
 
    char *name;
 
@@ -231,18 +233,26 @@ print_var_decl(nir_variable *var, print_var_state *state, FILE *fp)
 
    fprintf(fp, "\n");
 
-   _mesa_set_add(state->syms, name);
-   _mesa_hash_table_insert(state->ht, var, name);
+   if (state) {
+      _mesa_set_add(state->syms, name);
+      _mesa_hash_table_insert(state->ht, var, name);
+   }
 }
 
 static void
 print_var(nir_variable *var, print_var_state *state, FILE *fp)
 {
-   struct hash_entry *entry = _mesa_hash_table_search(state->ht, var);
+   const char *name;
+   if (state) {
+      struct hash_entry *entry = _mesa_hash_table_search(state->ht, var);
 
-   assert(entry != NULL);
+      assert(entry != NULL);
+      name = entry->data;
+   } else {
+      name = var->name;
+   }
 
-   fprintf(fp, "%s", (char *) entry->data);
+   fprintf(fp, "%s", name);
 }
 
 static void
