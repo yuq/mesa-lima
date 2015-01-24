@@ -1902,7 +1902,7 @@ if test "x$enable_gallium_llvm" = xyes; then
         fi
 
         if test "x$enable_opencl" = xyes; then
-            LLVM_COMPONENTS="${LLVM_COMPONENTS} ipo linker instrumentation"
+            LLVM_COMPONENTS="${LLVM_COMPONENTS} all-targets ipo linker instrumentation"
             # LLVM 3.3 >= 177971 requires IRReader
             if $LLVM_CONFIG --components | grep -qw 'irreader'; then
                 LLVM_COMPONENTS="${LLVM_COMPONENTS} irreader"
