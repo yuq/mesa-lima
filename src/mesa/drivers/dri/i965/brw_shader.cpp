@@ -905,6 +905,8 @@ backend_instruction::can_do_cmod() const
    case BRW_OPCODE_SHR:
    case BRW_OPCODE_SUBB:
    case BRW_OPCODE_XOR:
+   case FS_OPCODE_CINTERP:
+   case FS_OPCODE_LINTERP:
       return true;
    default:
       return false;
