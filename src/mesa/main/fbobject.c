@@ -121,6 +121,27 @@ _mesa_lookup_renderbuffer(struct gl_context *ctx, GLuint id)
 
 
 /**
+ * A convenience function for direct state access that throws
+ * GL_INVALID_OPERATION if the renderbuffer doesn't exist.
+ */
+struct gl_renderbuffer *
+_mesa_lookup_renderbuffer_err(struct gl_context *ctx, GLuint id,
+                              const char *func)
+{
+   struct gl_renderbuffer *rb;
+
+   rb = _mesa_lookup_renderbuffer(ctx, id);
+   if (!rb || rb == &DummyRenderbuffer) {
+      _mesa_error(ctx, GL_INVALID_OPERATION,
+                  "%s(non-existent renderbuffer %u)", func, id);
+      return NULL;
+   }
+
+   return rb;
+}
+
+
+/**
  * Helper routine for getting a gl_framebuffer.
  */
 struct gl_framebuffer *

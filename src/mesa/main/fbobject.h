@@ -64,6 +64,10 @@ _mesa_get_incomplete_framebuffer(void);
 extern struct gl_renderbuffer *
 _mesa_lookup_renderbuffer(struct gl_context *ctx, GLuint id);
 
+extern struct gl_renderbuffer *
+_mesa_lookup_renderbuffer_err(struct gl_context *ctx, GLuint id,
+                              const char *func);
+
 extern struct gl_framebuffer *
 _mesa_lookup_framebuffer(struct gl_context *ctx, GLuint id);
 
