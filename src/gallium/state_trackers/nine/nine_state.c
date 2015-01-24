@@ -279,6 +279,7 @@ update_vs(struct NineDevice9 *device)
 {
     struct nine_state *state = &device->state;
     struct NineVertexShader9 *vs = state->vs;
+    uint32_t changed_group = 0;
 
     /* likely because we dislike FF */
     if (likely(vs)) {
@@ -291,17 +292,13 @@ update_vs(struct NineDevice9 *device)
 
     if (state->rs[NINED3DRS_VSPOINTSIZE] != vs->point_size) {
         state->rs[NINED3DRS_VSPOINTSIZE] = vs->point_size;
-        return NINE_STATE_RASTERIZER;
+        changed_group |= NINE_STATE_RASTERIZER;
     }
-#ifdef DEBUG
-    {
-        unsigned s, mask = vs->sampler_mask;
-        for (s = 0; mask; ++s, mask >>= 1)
-            if ((mask & 1) && !(device->state.texture[NINE_SAMPLER_VS(s)]))
-                WARN_ONCE("FIXME: unbound sampler should return alpha=1\n");
-    }
-#endif
-    return 0;
+
+    if ((state->bound_samplers_mask_vs & vs->sampler_mask) != vs->sampler_mask)
+        /* Bound dummy sampler. */
+        changed_group |= NINE_STATE_SAMPLER;
+    return changed_group;
 }
 
 static INLINE uint32_t
@@ -309,6 +306,7 @@ update_ps(struct NineDevice9 *device)
 {
     struct nine_state *state = &device->state;
     struct NinePixelShader9 *ps = state->ps;
+    uint32_t changed_group = 0;
 
     if (likely(ps)) {
         state->cso.ps = NinePixelShader9_GetVariant(ps, state->ps_key);
@@ -318,15 +316,10 @@ update_ps(struct NineDevice9 *device)
     }
     device->pipe->bind_fs_state(device->pipe, state->cso.ps);
 
-#ifdef DEBUG
-    {
-        unsigned s, mask = ps->sampler_mask;
-        for (s = 0; mask; ++s, mask >>= 1)
-            if ((mask & 1) && !(device->state.texture[NINE_SAMPLER_PS(s)]))
-                WARN_ONCE("FIXME: unbound sampler should return alpha=1\n");
-    }
-#endif
-    return 0;
+    if ((state->bound_samplers_mask_ps & ps->sampler_mask) != ps->sampler_mask)
+        /* Bound dummy sampler. */
+        changed_group |= NINE_STATE_SAMPLER;
+    return changed_group;
 }
 
 #define DO_UPLOAD_CONST_F(buf,p,c,d) \
@@ -651,66 +644,142 @@ update_textures_and_samplers(struct NineDevice9 *device)
     struct pipe_context *pipe = device->pipe;
     struct nine_state *state = &device->state;
     struct pipe_sampler_view *view[NINE_MAX_SAMPLERS];
+    struct pipe_sampler_state samp;
     unsigned num_textures;
     unsigned i;
+    boolean commit_views;
     boolean commit_samplers;
+    uint16_t sampler_mask = state->ps ? state->ps->sampler_mask :
+                            device->ff.ps->sampler_mask;
 
     /* TODO: Can we reduce iterations here ? */
 
+    commit_views = FALSE;
     commit_samplers = FALSE;
+    state->bound_samplers_mask_ps = 0;
     for (num_textures = 0, i = 0; i < NINE_MAX_SAMPLERS_PS; ++i) {
         const unsigned s = NINE_SAMPLER_PS(i);
         int sRGB;
-        if (!state->texture[s]) {
+
+        if (!state->texture[s] && !(sampler_mask & (1 << i))) {
             view[i] = NULL;
-#ifdef DEBUG
-            if (state->ps && state->ps->sampler_mask & (1 << i))
-                WARN_ONCE("FIXME: unbound sampler should return alpha=1\n");
-#endif
             continue;
         }
-        sRGB = state->samp[s][D3DSAMP_SRGBTEXTURE] ? 1 : 0;
 
-        view[i] = NineBaseTexture9_GetSamplerView(state->texture[s], sRGB);
-        num_textures = i + 1;
+        if (state->texture[s]) {
+            sRGB = state->samp[s][D3DSAMP_SRGBTEXTURE] ? 1 : 0;
 
-        if (update_sampler_derived(state, s) || (state->changed.sampler[s] & 0x05fe)) {
-            state->changed.sampler[s] = 0;
+            view[i] = NineBaseTexture9_GetSamplerView(state->texture[s], sRGB);
+            num_textures = i + 1;
+
+            if (update_sampler_derived(state, s) || (state->changed.sampler[s] & 0x05fe)) {
+                state->changed.sampler[s] = 0;
+                commit_samplers = TRUE;
+                nine_convert_sampler_state(device->cso, s, state->samp[s]);
+            }
+        } else {
+            /* Bind dummy sampler. We do not bind dummy sampler when
+             * it is not needed because it could add overhead. The
+             * dummy sampler should have r=g=b=0 and a=1. We do not
+             * unbind dummy sampler directly when they are not needed
+             * anymore, but they're going to be removed as long as texture
+             * or sampler states are changed. */
+            view[i] = device->dummy_sampler;
+            num_textures = i + 1;
+
+            memset(&samp, 0, sizeof(samp));
+            samp.min_mip_filter = PIPE_TEX_MIPFILTER_NONE;
+            samp.max_lod = 15.0f;
+            samp.wrap_s = PIPE_TEX_WRAP_CLAMP_TO_EDGE;
+            samp.wrap_t = PIPE_TEX_WRAP_CLAMP_TO_EDGE;
+            samp.wrap_r = PIPE_TEX_WRAP_CLAMP_TO_EDGE;
+            samp.min_img_filter = PIPE_TEX_FILTER_NEAREST;
+            samp.mag_img_filter = PIPE_TEX_FILTER_NEAREST;
+            samp.compare_mode = PIPE_TEX_COMPARE_NONE;
+            samp.compare_func = PIPE_FUNC_LEQUAL;
+            samp.normalized_coords = 1;
+            samp.seamless_cube_map = 1;
+
+            cso_single_sampler(device->cso, PIPE_SHADER_FRAGMENT,
+                               s - NINE_SAMPLER_PS(0), &samp);
+
+            commit_views = TRUE;
             commit_samplers = TRUE;
-            nine_convert_sampler_state(device->cso, s, state->samp[s]);
+            state->changed.sampler[s] = ~0;
         }
+
+        state->bound_samplers_mask_ps |= (1 << s);
     }
-    if (state->changed.texture & NINE_PS_SAMPLERS_MASK || state->changed.srgb)
+
+    commit_views |= (state->changed.texture & NINE_PS_SAMPLERS_MASK) != 0;
+    commit_views |= state->changed.srgb;
+    if (commit_views)
         pipe->set_sampler_views(pipe, PIPE_SHADER_FRAGMENT, 0,
                                 num_textures, view);
 
     if (commit_samplers)
         cso_single_sampler_done(device->cso, PIPE_SHADER_FRAGMENT);
 
+    commit_views = FALSE;
     commit_samplers = FALSE;
+    sampler_mask = state->vs ? state->vs->sampler_mask : 0;
+    state->bound_samplers_mask_vs = 0;
     for (num_textures = 0, i = 0; i < NINE_MAX_SAMPLERS_VS; ++i) {
         const unsigned s = NINE_SAMPLER_VS(i);
         int sRGB;
-        if (!state->texture[s]) {
+
+        if (!state->texture[s] && !(sampler_mask & (1 << i))) {
             view[i] = NULL;
-#ifdef DEBUG
-            if (state->vs && state->vs->sampler_mask & (1 << i))
-                WARN_ONCE("FIXME: unbound sampler should return alpha=1\n");
-#endif
             continue;
         }
-        sRGB = state->samp[s][D3DSAMP_SRGBTEXTURE] ? 1 : 0;
 
-        view[i] = NineBaseTexture9_GetSamplerView(state->texture[s], sRGB);
-        num_textures = i + 1;
+        if (state->texture[s]) {
+            sRGB = state->samp[s][D3DSAMP_SRGBTEXTURE] ? 1 : 0;
 
-        if (update_sampler_derived(state, s) || (state->changed.sampler[s] & 0x05fe)) {
-            state->changed.sampler[s] = 0;
+            view[i] = NineBaseTexture9_GetSamplerView(state->texture[s], sRGB);
+            num_textures = i + 1;
+
+            if (update_sampler_derived(state, s) || (state->changed.sampler[s] & 0x05fe)) {
+                state->changed.sampler[s] = 0;
+                commit_samplers = TRUE;
+                nine_convert_sampler_state(device->cso, s, state->samp[s]);
+            }
+        } else {
+            /* Bind dummy sampler. We do not bind dummy sampler when
+             * it is not needed because it could add overhead. The
+             * dummy sampler should have r=g=b=0 and a=1. We do not
+             * unbind dummy sampler directly when they are not needed
+             * anymore, but they're going to be removed as long as texture
+             * or sampler states are changed. */
+            view[i] = device->dummy_sampler;
+            num_textures = i + 1;
+
+            memset(&samp, 0, sizeof(samp));
+            samp.min_mip_filter = PIPE_TEX_MIPFILTER_NONE;
+            samp.max_lod = 15.0f;
+            samp.wrap_s = PIPE_TEX_WRAP_CLAMP_TO_EDGE;
+            samp.wrap_t = PIPE_TEX_WRAP_CLAMP_TO_EDGE;
+            samp.wrap_r = PIPE_TEX_WRAP_CLAMP_TO_EDGE;
+            samp.min_img_filter = PIPE_TEX_FILTER_NEAREST;
+            samp.mag_img_filter = PIPE_TEX_FILTER_NEAREST;
+            samp.compare_mode = PIPE_TEX_COMPARE_NONE;
+            samp.compare_func = PIPE_FUNC_LEQUAL;
+            samp.normalized_coords = 1;
+            samp.seamless_cube_map = 1;
+
+            cso_single_sampler(device->cso, PIPE_SHADER_VERTEX,
+                               s - NINE_SAMPLER_VS(0), &samp);
+
+            commit_views = TRUE;
             commit_samplers = TRUE;
-            nine_convert_sampler_state(device->cso, s, state->samp[s]);
+            state->changed.sampler[s] = ~0;
         }
+
+        state->bound_samplers_mask_vs |= (1 << s);
     }
-    if (state->changed.texture & NINE_VS_SAMPLERS_MASK || state->changed.srgb)
+    commit_views |= (state->changed.texture & NINE_VS_SAMPLERS_MASK) != 0;
+    commit_views |= state->changed.srgb;
+    if (commit_views)
         pipe->set_sampler_views(pipe, PIPE_SHADER_VERTEX, 0,
                                 num_textures, view);
 

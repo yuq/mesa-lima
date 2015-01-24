@@ -175,6 +175,8 @@ struct nine_state
 
     DWORD samp[NINE_MAX_SAMPLERS][NINED3DSAMP_COUNT];
     uint32_t samplers_shadow;
+    uint8_t bound_samplers_mask_vs;
+    uint16_t bound_samplers_mask_ps;
 
     struct {
         struct {

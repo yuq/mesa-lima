@@ -82,6 +82,9 @@ struct NineDevice9
     uint16_t max_vs_const_f;
     uint16_t max_ps_const_f;
 
+    struct pipe_resource *dummy_texture;
+    struct pipe_sampler_view *dummy_sampler;
+
     struct gen_mipmap_state *gen_mipmap;
 
     struct {

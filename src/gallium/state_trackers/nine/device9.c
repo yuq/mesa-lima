@@ -298,6 +298,43 @@ NineDevice9_ctor( struct NineDevice9 *This,
             return E_OUTOFMEMORY;
     }
 
+    /* allocate dummy texture/sampler for when there are missing ones bound */
+    {
+        struct pipe_resource tmplt;
+        struct pipe_sampler_view templ;
+
+        tmplt.target = PIPE_TEXTURE_2D;
+        tmplt.width0 = 1;
+        tmplt.height0 = 1;
+        tmplt.depth0 = 1;
+        tmplt.last_level = 0;
+        tmplt.array_size = 1;
+        tmplt.usage = PIPE_USAGE_DEFAULT;
+        tmplt.flags = 0;
+        tmplt.format = PIPE_FORMAT_B8G8R8A8_UNORM;
+        tmplt.bind = PIPE_BIND_SAMPLER_VIEW;
+        tmplt.nr_samples = 0;
+
+        This->dummy_texture = This->screen->resource_create(This->screen, &tmplt);
+        if (!This->dummy_texture)
+            return D3DERR_DRIVERINTERNALERROR;
+
+        templ.format = PIPE_FORMAT_B8G8R8A8_UNORM;
+        templ.u.tex.first_layer = 0;
+        templ.u.tex.last_layer = 0;
+        templ.u.tex.first_level = 0;
+        templ.u.tex.last_level = 0;
+        templ.swizzle_r = PIPE_SWIZZLE_ZERO;
+        templ.swizzle_g = PIPE_SWIZZLE_ZERO;
+        templ.swizzle_b = PIPE_SWIZZLE_ZERO;
+        templ.swizzle_a = PIPE_SWIZZLE_ONE;
+        templ.target = This->dummy_texture->target;
+
+        This->dummy_sampler = This->pipe->create_sampler_view(This->pipe, This->dummy_texture, &templ);
+        if (!This->dummy_sampler)
+            return D3DERR_DRIVERINTERNALERROR;
+    }
+
     /* Allocate upload helper for drivers that suck (from st pov ;). */
     {
         unsigned bind = 0;
@@ -346,6 +383,8 @@ NineDevice9_dtor( struct NineDevice9 *This )
 
     nine_bind(&This->record, NULL);
 
+    pipe_sampler_view_reference(&This->dummy_sampler, NULL);
+    pipe_resource_reference(&This->dummy_texture, NULL);
     pipe_resource_reference(&This->constbuf_vs, NULL);
     pipe_resource_reference(&This->constbuf_ps, NULL);
     FREE(This->state.vs_const_f);

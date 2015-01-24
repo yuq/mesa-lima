@@ -1493,6 +1493,7 @@ nine_ff_get_ps(struct NineDevice9 *device)
     enum pipe_error err;
     struct nine_ff_ps_key key;
     unsigned s;
+    uint8_t sampler_mask = 0;
 
     assert(sizeof(key) <= sizeof(key.value32));
 
@@ -1506,12 +1507,17 @@ nine_ff_get_ps(struct NineDevice9 *device)
             key.ts[s].alphaop = D3DTOP_DISABLE; /* DISABLE == 1, avoid degenerate keys */
             break;
         }
+
         if (!state->texture[s] &&
             state->ff.tex_stage[s][D3DTSS_COLORARG1] == D3DTA_TEXTURE) {
             /* This should also disable the stage. */
             key.ts[s].colorop = key.ts[s].alphaop = D3DTOP_DISABLE;
             break;
         }
+
+        if (state->ff.tex_stage[s][D3DTSS_COLORARG1] == D3DTA_TEXTURE)
+            sampler_mask |= (1 << s);
+
         if (key.ts[s].colorop != D3DTOP_DISABLE) {
             uint8_t used_c = ps_d3dtop_args_mask(key.ts[s].colorop);
             if (used_c & 0x1) key.ts[s].colorarg0 = state->ff.tex_stage[s][D3DTSS_COLORARG0];
@@ -1570,6 +1576,7 @@ nine_ff_get_ps(struct NineDevice9 *device)
         NineUnknown_ConvertRefToBind(NineUnknown(ps));
 
         ps->rt_mask = 0x1;
+        ps->sampler_mask = sampler_mask;
     }
     return ps;
 }
