@@ -102,7 +102,7 @@ lower_sampler(nir_tex_instr *instr, struct gl_shader_program *shader_program,
 
             nir_instr_rewrite_src(&instr->instr,
                                   &instr->src[instr->num_srcs - 1].src,
-                                  nir_src_copy(deref_array->indirect, mem_ctx));
+                                  deref_array->indirect);
 
             instr->sampler_array_size = glsl_get_length(deref->type);
 

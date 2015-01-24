@@ -76,7 +76,7 @@ convert_instr(nir_intrinsic_instr *instr)
                                nir_src_for_ssa(&new_instr->dest.ssa),
                                mem_ctx);
    } else {
-      new_instr->dest = nir_dest_copy(instr->dest, mem_ctx);
+      nir_dest_copy(&new_instr->dest, &instr->dest, mem_ctx);
    }
 
    nir_instr_insert_before(&instr->instr, &new_instr->instr);

@@ -521,8 +521,8 @@ nir_dest_for_reg(nir_register *reg)
    return dest;
 }
 
-nir_src nir_src_copy(nir_src src, void *mem_ctx);
-nir_dest nir_dest_copy(nir_dest dest, void *mem_ctx);
+void nir_src_copy(nir_src *dest, const nir_src *src, void *mem_ctx);
+void nir_dest_copy(nir_dest *dest, const nir_dest *src, void *mem_ctx);
 
 typedef struct {
    nir_src src;

@@ -135,50 +135,44 @@ nir_function_overload_create(nir_function *func)
    return overload;
 }
 
-nir_src nir_src_copy(nir_src src, void *mem_ctx)
+void nir_src_copy(nir_src *dest, const nir_src *src, void *mem_ctx)
 {
-   nir_src ret;
-   ret.is_ssa = src.is_ssa;
-   if (ret.is_ssa) {
-      ret.ssa = src.ssa;
+   dest->is_ssa = src->is_ssa;
+   if (src->is_ssa) {
+      dest->ssa = src->ssa;
    } else {
-      ret.reg.base_offset = src.reg.base_offset;
-      ret.reg.reg = src.reg.reg;
-      if (src.reg.indirect) {
-         ret.reg.indirect = ralloc(mem_ctx, nir_src);
-         *ret.reg.indirect = *src.reg.indirect;
+      dest->reg.base_offset = src->reg.base_offset;
+      dest->reg.reg = src->reg.reg;
+      if (src->reg.indirect) {
+         dest->reg.indirect = ralloc(mem_ctx, nir_src);
+         nir_src_copy(dest->reg.indirect, src->reg.indirect, mem_ctx);
       } else {
-         ret.reg.indirect = NULL;
+         dest->reg.indirect = NULL;
       }
    }
-
-   return ret;
 }
 
-nir_dest nir_dest_copy(nir_dest dest, void *mem_ctx)
+void nir_dest_copy(nir_dest *dest, const nir_dest *src, void *mem_ctx)
 {
-   nir_dest ret;
-   ret.is_ssa = dest.is_ssa;
-   if (ret.is_ssa) {
-      ret.ssa = dest.ssa;
+   dest->is_ssa = src->is_ssa;
+   if (src->is_ssa) {
+      dest->ssa = src->ssa;
    } else {
-      ret.reg.base_offset = dest.reg.base_offset;
-      ret.reg.reg = dest.reg.reg;
-      if (dest.reg.indirect) {
-         ret.reg.indirect = ralloc(mem_ctx, nir_src);
-         *ret.reg.indirect = *dest.reg.indirect;
+      dest->reg.base_offset = src->reg.base_offset;
+      dest->reg.reg = src->reg.reg;
+      if (src->reg.indirect) {
+         dest->reg.indirect = ralloc(mem_ctx, nir_src);
+         nir_src_copy(dest->reg.indirect, src->reg.indirect, mem_ctx);
       } else {
-         ret.reg.indirect = NULL;
+         dest->reg.indirect = NULL;
       }
    }
-
-   return ret;
 }
 
 void
 nir_alu_src_copy(nir_alu_src *dest, const nir_alu_src *src, void *mem_ctx)
 {
-   dest->src = nir_src_copy(src->src, mem_ctx);
+   nir_src_copy(&dest->src, &src->src, mem_ctx);
    dest->abs = src->abs;
    dest->negate = src->negate;
    for (unsigned i = 0; i < 4; i++)
@@ -188,7 +182,7 @@ nir_alu_src_copy(nir_alu_src *dest, const nir_alu_src *src, void *mem_ctx)
 void
 nir_alu_dest_copy(nir_alu_dest *dest, const nir_alu_dest *src, void *mem_ctx)
 {
-   dest->dest = nir_dest_copy(src->dest, mem_ctx);
+   nir_dest_copy(&dest->dest, &src->dest, mem_ctx);
    dest->write_mask = src->write_mask;
    dest->saturate = src->saturate;
 }
@@ -563,7 +557,7 @@ copy_deref_array(void *mem_ctx, nir_deref_array *deref)
    ret->base_offset = deref->base_offset;
    ret->deref_array_type = deref->deref_array_type;
    if (deref->deref_array_type == nir_deref_array_type_indirect) {
-      ret->indirect = nir_src_copy(deref->indirect, mem_ctx);
+      nir_src_copy(&ret->indirect, &deref->indirect, mem_ctx);
    }
    ret->deref.type = deref->deref.type;
    if (deref->deref.child)
@@ -1829,7 +1823,7 @@ ssa_def_rewrite_uses_src(nir_src *src, void *void_state)
    struct ssa_def_rewrite_state *state = void_state;
 
    if (src->is_ssa && src->ssa == state->old)
-      *src = nir_src_copy(state->new_src, state->mem_ctx);
+      nir_src_copy(src, &state->new_src, state->mem_ctx);
 
    return true;
 }
@@ -1866,7 +1860,7 @@ nir_ssa_def_rewrite_uses(nir_ssa_def *def, nir_src new_src, void *mem_ctx)
       nir_if *if_use = (nir_if *)entry->key;
 
       _mesa_set_remove(def->if_uses, entry);
-      if_use->condition = nir_src_copy(new_src, mem_ctx);
+      nir_src_copy(&if_use->condition, &new_src, mem_ctx);
       _mesa_set_add(new_if_uses, if_use);
    }
 }

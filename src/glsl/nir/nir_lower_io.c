@@ -148,8 +148,8 @@ get_io_offset(nir_deref_var *deref, nir_instr *instr, nir_src *indirect,
                                                       nir_op_imul);
             mul->src[0].src.is_ssa = true;
             mul->src[0].src.ssa = &load_const->def;
-            mul->src[1].src = nir_src_copy(deref_array->indirect,
-                                           state->mem_ctx);
+            nir_src_copy(&mul->src[1].src, &deref_array->indirect,
+                         state->mem_ctx);
             mul->dest.write_mask = 1;
             nir_ssa_dest_init(&mul->instr, &mul->dest.dest, 1, NULL);
             nir_instr_insert_before(instr, &mul->instr);
@@ -239,7 +239,7 @@ nir_lower_io_block(nir_block *block, void *void_state)
                                      nir_src_for_ssa(&load->dest.ssa),
                                      state->mem_ctx);
          } else {
-            load->dest = nir_dest_copy(intrin->dest, state->mem_ctx);
+            nir_dest_copy(&load->dest, &intrin->dest, state->mem_ctx);
          }
 
          nir_instr_insert_before(&intrin->instr, &load->instr);
@@ -272,7 +272,7 @@ nir_lower_io_block(nir_block *block, void *void_state)
          store->const_index[0] = offset;
          store->const_index[1] = 1;
 
-         store->src[0] = nir_src_copy(intrin->src[0], state->mem_ctx);
+         nir_src_copy(&store->src[0], &intrin->src[0], state->mem_ctx);
 
          if (has_indirect)
             store->src[1] = indirect;

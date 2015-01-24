@@ -88,7 +88,7 @@ lower_instr(nir_intrinsic_instr *instr, nir_function_impl *impl)
          nir_alu_instr *mul = nir_alu_instr_create(mem_ctx, nir_op_imul);
          nir_ssa_dest_init(&mul->instr, &mul->dest.dest, 1, NULL);
          mul->dest.write_mask = 0x1;
-         mul->src[0].src = nir_src_copy(deref_array->indirect, mem_ctx);
+         nir_src_copy(&mul->src[0].src, &deref_array->indirect, mem_ctx);
          mul->src[1].src.is_ssa = true;
          mul->src[1].src.ssa = &atomic_counter_size->def;
          nir_instr_insert_before(&instr->instr, &mul->instr);
@@ -116,7 +116,7 @@ lower_instr(nir_intrinsic_instr *instr, nir_function_impl *impl)
                                nir_src_for_ssa(&new_instr->dest.ssa),
                                mem_ctx);
    } else {
-      new_instr->dest = nir_dest_copy(instr->dest, mem_ctx);
+      nir_dest_copy(&new_instr->dest, &instr->dest, mem_ctx);
    }
 
    nir_instr_insert_before(&instr->instr, &new_instr->instr);

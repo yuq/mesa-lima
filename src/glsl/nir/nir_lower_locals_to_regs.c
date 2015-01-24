@@ -168,14 +168,14 @@ get_deref_reg_src(nir_deref_var *deref, nir_instr *instr,
       if (deref_array->deref_array_type == nir_deref_array_type_indirect) {
          if (src.reg.indirect == NULL) {
             src.reg.indirect = ralloc(state->mem_ctx, nir_src);
-            *src.reg.indirect = nir_src_copy(deref_array->indirect,
-                                             state->mem_ctx);
+            nir_src_copy(src.reg.indirect, &deref_array->indirect,
+                         state->mem_ctx);
          } else {
             nir_alu_instr *add = nir_alu_instr_create(state->mem_ctx,
                                                       nir_op_iadd);
             add->src[0].src = *src.reg.indirect;
-            add->src[1].src = nir_src_copy(deref_array->indirect,
-                                           state->mem_ctx);
+            nir_src_copy(&add->src[1].src, &deref_array->indirect,
+                         state->mem_ctx);
             add->dest.write_mask = 1;
             nir_ssa_dest_init(&add->instr, &add->dest.dest, 1, NULL);
             nir_instr_insert_before(instr, &add->instr);
@@ -216,7 +216,7 @@ lower_locals_to_regs_block(nir_block *block, void *void_state)
                                      nir_src_for_ssa(&mov->dest.dest.ssa),
                                      state->mem_ctx);
          } else {
-            mov->dest.dest = nir_dest_copy(intrin->dest, state->mem_ctx);
+            nir_dest_copy(&mov->dest.dest, &intrin->dest, state->mem_ctx);
          }
          nir_instr_insert_before(&intrin->instr, &mov->instr);
 
@@ -232,7 +232,7 @@ lower_locals_to_regs_block(nir_block *block, void *void_state)
                                              &intrin->instr, state);
 
          nir_alu_instr *mov = nir_alu_instr_create(state->mem_ctx, nir_op_imov);
-         mov->src[0].src = nir_src_copy(intrin->src[0], state->mem_ctx);
+         nir_src_copy(&mov->src[0].src, &intrin->src[0], state->mem_ctx);
          mov->dest.write_mask = (1 << intrin->num_components) - 1;
          mov->dest.dest.is_ssa = false;
          mov->dest.dest.reg.reg = reg_src.reg.reg;

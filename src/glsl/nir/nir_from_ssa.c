@@ -352,7 +352,7 @@ isolate_phi_nodes_block(nir_block *block, void *void_state)
                                                  nir_parallel_copy_entry);
          exec_list_push_tail(&pcopy->entries, &entry->node);
 
-         entry->src = nir_src_copy(src->src, state->dead_ctx);
+         nir_src_copy(&entry->src, &src->src, state->dead_ctx);
          _mesa_set_add(src->src.ssa->uses, &pcopy->instr);
 
          nir_ssa_dest_init(&pcopy->instr, &entry->dest,
@@ -622,7 +622,7 @@ emit_copy(nir_parallel_copy_instr *pcopy, nir_src src, nir_src dest_src,
       assert(src.reg.reg->num_components >= dest_src.reg.reg->num_components);
 
    nir_alu_instr *mov = nir_alu_instr_create(mem_ctx, nir_op_imov);
-   mov->src[0].src = nir_src_copy(src, mem_ctx);
+   nir_src_copy(&mov->src[0].src, &src, mem_ctx);
    mov->dest.dest = nir_dest_for_reg(dest_src.reg.reg);
    mov->dest.write_mask = (1 << dest_src.reg.reg->num_components) - 1;
 
