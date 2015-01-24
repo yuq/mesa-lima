@@ -74,27 +74,28 @@ struct d3dadapter9drm_context
 {
     struct d3dadapter9_context base;
     struct pipe_loader_device *dev, *swdev;
+    int fd;
 };
 
 static void
 drm_destroy( struct d3dadapter9_context *ctx )
 {
+    struct d3dadapter9drm_context *drm = (struct d3dadapter9drm_context *)ctx;
+
     if (ctx->ref)
         ctx->ref->destroy(ctx->ref);
     /* because ref is a wrapper around hal, freeing ref frees hal too. */
     else if (ctx->hal)
         ctx->hal->destroy(ctx->hal);
-#if !GALLIUM_STATIC_TARGETS
-    {
-        struct d3dadapter9drm_context *drm = (struct d3dadapter9drm_context *)ctx;
 
-        if (drm->swdev)
-            pipe_loader_release(&drm->swdev, 1);
-        if (drm->dev)
-            pipe_loader_release(&drm->dev, 1);
-    }
+#if !GALLIUM_STATIC_TARGETS
+    if (drm->swdev)
+        pipe_loader_release(&drm->swdev, 1);
+    if (drm->dev)
+        pipe_loader_release(&drm->dev, 1);
 #endif
 
+    close(drm->fd);
     FREE(ctx);
 }
 
@@ -235,6 +236,7 @@ drm_create_adapter( int fd,
     ctx->base.destroy = drm_destroy;
 
     fd = loader_get_user_preferred_fd(fd, &different_device);
+    ctx->fd = fd;
     ctx->base.linear_framebuffer = !!different_device;
 
 #if GALLIUM_STATIC_TARGETS
