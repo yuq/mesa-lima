@@ -438,6 +438,8 @@ fs_visitor::nir_emit_block(nir_block *block)
 void
 fs_visitor::nir_emit_instr(nir_instr *instr)
 {
+   this->base_ir = instr;
+
    switch (instr->type) {
    case nir_instr_type_alu:
       nir_emit_alu(nir_instr_as_alu(instr));
@@ -464,6 +466,8 @@ fs_visitor::nir_emit_instr(nir_instr *instr)
    default:
       unreachable("unknown instruction type");
    }
+
+   this->base_ir = NULL;
 }
 
 static brw_reg_type

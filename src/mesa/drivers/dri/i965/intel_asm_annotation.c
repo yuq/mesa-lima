@@ -29,6 +29,7 @@
 #include "program/prog_print.h"
 #include "program/prog_instruction.h"
 #include "main/macros.h"
+#include "glsl/nir/nir.h"
 
 void
 dump_assembly(void *assembly, int num_annotations, struct annotation *annotation,
@@ -55,7 +56,9 @@ dump_assembly(void *assembly, int num_annotations, struct annotation *annotation
          last_annotation_ir = annotation[i].ir;
          if (last_annotation_ir) {
             fprintf(stderr, "   ");
-            if (!prog->Instructions)
+            if (prog->nir)
+               nir_print_instr(annotation[i].ir, stderr);
+            else if (!prog->Instructions)
                fprint_ir(stderr, annotation[i].ir);
             else {
                const struct prog_instruction *pi =
