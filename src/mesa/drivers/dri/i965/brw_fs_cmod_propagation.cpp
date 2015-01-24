@@ -69,8 +69,7 @@ opt_cmod_propagation_local(fs_visitor *v, bblock_t *block)
          continue;
 
       if (inst->opcode == BRW_OPCODE_MOV &&
-          (inst->conditional_mod != BRW_CONDITIONAL_NZ ||
-           inst->src[0].negate))
+          inst->conditional_mod != BRW_CONDITIONAL_NZ)
          continue;
 
       bool read_flag = false;
@@ -81,15 +80,20 @@ opt_cmod_propagation_local(fs_visitor *v, bblock_t *block)
                 scan_inst->dst.reg_offset != inst->src[0].reg_offset)
                break;
 
-            if (inst->opcode == BRW_OPCODE_MOV) {
-               if (!scan_inst->writes_flag())
-                  break;
-
+            /* If the instruction generating inst's source also wrote the
+             * flag, and inst is doing a simple .nz comparison, then inst
+             * is redundant - the appropriate value is already in the flag
+             * register.  Delete inst.
+             */
+            if (inst->conditional_mod == BRW_CONDITIONAL_NZ &&
+                !inst->src[0].negate &&
+                scan_inst->writes_flag()) {
                inst->remove(block);
                progress = true;
                break;
             }
 
+            /* Otherwise, try propagating the conditional. */
             enum brw_conditional_mod cond =
                inst->src[0].negate ? brw_swap_cmod(inst->conditional_mod)
                                    : inst->conditional_mod;
