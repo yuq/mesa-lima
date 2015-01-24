@@ -307,6 +307,7 @@ public:
                  const fs_reg &a);
    void emit_minmax(enum brw_conditional_mod conditionalmod, const fs_reg &dst,
                     const fs_reg &src0, const fs_reg &src1);
+   bool try_emit_b2f_of_comparison(ir_expression *ir);
    bool try_emit_saturate(ir_expression *ir);
    bool try_emit_line(ir_expression *ir);
    bool try_emit_mad(ir_expression *ir);
@@ -317,6 +318,7 @@ public:
    bool opt_saturate_propagation();
    bool opt_cmod_propagation();
    void emit_bool_to_cond_code(ir_rvalue *condition);
+   void emit_bool_to_cond_code_of_reg(ir_expression *expr, fs_reg op[3]);
    void emit_if_gen6(ir_if *ir);
    void emit_unspill(bblock_t *block, fs_inst *inst, fs_reg reg,
                      uint32_t spill_offset, int count);

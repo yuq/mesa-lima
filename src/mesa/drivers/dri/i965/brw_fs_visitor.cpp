@@ -475,6 +475,87 @@ fs_visitor::try_emit_mad(ir_expression *ir)
    return true;
 }
 
+bool
+fs_visitor::try_emit_b2f_of_comparison(ir_expression *ir)
+{
+   /* On platforms that do not natively generate 0u and ~0u for Boolean
+    * results, b2f expressions that look like
+    *
+    *     f = b2f(expr cmp 0)
+    *
+    * will generate better code by pretending the expression is
+    *
+    *     f = ir_triop_csel(0.0, 1.0, expr cmp 0)
+    *
+    * This is because the last instruction of "expr" can generate the
+    * condition code for the "cmp 0".  This avoids having to do the "-(b & 1)"
+    * trick to generate 0u or ~0u for the Boolean result.  This means code like
+    *
+    *     mov(16)         g16<1>F         1F
+    *     mul.ge.f0(16)   null            g6<8,8,1>F      g14<8,8,1>F
+    *     (+f0) sel(16)   m6<1>F          g16<8,8,1>F     0F
+    *
+    * will be generated instead of
+    *
+    *     mul(16)         g2<1>F          g12<8,8,1>F     g4<8,8,1>F
+    *     cmp.ge.f0(16)   g2<1>D          g4<8,8,1>F      0F
+    *     and(16)         g4<1>D          g2<8,8,1>D      1D
+    *     and(16)         m6<1>D          -g4<8,8,1>D     0x3f800000UD
+    *
+    * When the comparison is either == 0.0 or != 0.0 using the knowledge that
+    * the true (or false) case already results in zero would allow better code
+    * generation by possibly avoiding a load-immediate instruction.
+    */
+   ir_expression *cmp = ir->operands[0]->as_expression();
+   if (cmp == NULL)
+      return false;
+
+   if (cmp->operation == ir_binop_equal || cmp->operation == ir_binop_nequal) {
+      for (unsigned i = 0; i < 2; i++) {
+         ir_constant *c = cmp->operands[i]->as_constant();
+         if (c == NULL || !c->is_zero())
+            continue;
+
+         ir_expression *expr = cmp->operands[i ^ 1]->as_expression();
+         if (expr != NULL) {
+            fs_reg op[2];
+
+            for (unsigned j = 0; j < 2; j++) {
+               cmp->operands[j]->accept(this);
+               op[j] = this->result;
+
+               resolve_ud_negate(&op[j]);
+            }
+
+            emit_bool_to_cond_code_of_reg(cmp, op);
+
+            /* In this case we know when the condition is true, op[i ^ 1]
+             * contains zero.  Invert the predicate, use op[i ^ 1] as src0,
+             * and immediate 1.0f as src1.
+             */
+            this->result = vgrf(ir->type);
+            op[i ^ 1].type = BRW_REGISTER_TYPE_F;
+
+            fs_inst *inst = emit(SEL(this->result, op[i ^ 1], fs_reg(1.0f)));
+            inst->predicate = BRW_PREDICATE_NORMAL;
+            inst->predicate_inverse = cmp->operation == ir_binop_equal;
+            return true;
+         }
+      }
+   }
+
+   emit_bool_to_cond_code(cmp);
+
+   fs_reg temp = vgrf(ir->type);
+   emit(MOV(temp, fs_reg(1.0f)));
+
+   this->result = vgrf(ir->type);
+   fs_inst *inst = emit(SEL(this->result, temp, fs_reg(0.0f)));
+   inst->predicate = BRW_PREDICATE_NORMAL;
+
+   return true;
+}
+
 static int
 pack_pixel_offset(float x)
 {
@@ -638,6 +719,11 @@ fs_visitor::visit(ir_expression *ir)
       inst = emit(SEL(this->result, op[1], op[2]));
       inst->predicate = BRW_PREDICATE_NORMAL;
       return;
+
+   case ir_unop_b2f:
+      if (brw->gen <= 5 && try_emit_b2f_of_comparison(ir))
+         return;
+      break;
 
    case ir_unop_interpolate_at_centroid:
    case ir_binop_interpolate_at_offset:
@@ -2508,7 +2594,6 @@ fs_visitor::emit_bool_to_cond_code(ir_rvalue *ir)
    }
 
    fs_reg op[3];
-   fs_inst *inst;
 
    assert(expr->get_num_operands() <= 3);
    for (unsigned int i = 0; i < expr->get_num_operands(); i++) {
@@ -2520,6 +2605,14 @@ fs_visitor::emit_bool_to_cond_code(ir_rvalue *ir)
       resolve_ud_negate(&op[i]);
    }
 
+   emit_bool_to_cond_code_of_reg(expr, op);
+}
+
+void
+fs_visitor::emit_bool_to_cond_code_of_reg(ir_expression *expr, fs_reg op[3])
+{
+   fs_inst *inst;
+
    switch (expr->operation) {
    case ir_unop_logic_not:
       inst = emit(AND(reg_null_d, op[0], fs_reg(1)));
@@ -2528,7 +2621,7 @@ fs_visitor::emit_bool_to_cond_code(ir_rvalue *ir)
 
    case ir_binop_logic_xor:
       if (brw->gen <= 5) {
-         fs_reg temp = vgrf(ir->type);
+         fs_reg temp = vgrf(expr->type);
          emit(XOR(temp, op[0], op[1]));
          inst = emit(AND(reg_null_d, temp, fs_reg(1)));
       } else {
@@ -2539,7 +2632,7 @@ fs_visitor::emit_bool_to_cond_code(ir_rvalue *ir)
 
    case ir_binop_logic_or:
       if (brw->gen <= 5) {
-         fs_reg temp = vgrf(ir->type);
+         fs_reg temp = vgrf(expr->type);
          emit(OR(temp, op[0], op[1]));
          inst = emit(AND(reg_null_d, temp, fs_reg(1)));
       } else {
@@ -2550,7 +2643,7 @@ fs_visitor::emit_bool_to_cond_code(ir_rvalue *ir)
 
    case ir_binop_logic_and:
       if (brw->gen <= 5) {
-         fs_reg temp = vgrf(ir->type);
+         fs_reg temp = vgrf(expr->type);
          emit(AND(temp, op[0], op[1]));
          inst = emit(AND(reg_null_d, temp, fs_reg(1)));
       } else {
