@@ -490,6 +490,9 @@ dump_prog_cache(struct brw_context *brw)
 	 case BRW_CACHE_FS_PROG:
 	    name = "FS kernel";
 	    break;
+         case BRW_CACHE_CS_PROG:
+            name = "CS kernel";
+            break;
 	 default:
 	    name = "unknown";
 	    break;

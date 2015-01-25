@@ -164,6 +164,7 @@ enum brw_cache_id {
    BRW_CACHE_FF_GS_PROG,
    BRW_CACHE_GS_PROG,
    BRW_CACHE_CLIP_PROG,
+   BRW_CACHE_CS_PROG,
 
    BRW_MAX_CACHE
 };
@@ -245,6 +246,7 @@ enum brw_state_id {
 #define BRW_NEW_FF_GS_PROG_DATA         (1ull << BRW_CACHE_FF_GS_PROG)
 #define BRW_NEW_GS_PROG_DATA            (1ull << BRW_CACHE_GS_PROG)
 #define BRW_NEW_CLIP_PROG_DATA          (1ull << BRW_CACHE_CLIP_PROG)
+#define BRW_NEW_CS_PROG_DATA            (1ull << BRW_CACHE_CS_PROG)
 #define BRW_NEW_URB_FENCE               (1ull << BRW_STATE_URB_FENCE)
 #define BRW_NEW_FRAGMENT_PROGRAM        (1ull << BRW_STATE_FRAGMENT_PROGRAM)
 #define BRW_NEW_GEOMETRY_PROGRAM        (1ull << BRW_STATE_GEOMETRY_PROGRAM)
