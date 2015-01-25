@@ -652,6 +652,21 @@ nir_alu_instr_channel_used(nir_alu_instr *instr, unsigned src, unsigned channel)
    return (instr->dest.write_mask >> channel) & 1;
 }
 
+/*
+ * For instructions whose destinations are SSA, get the number of channels
+ * used for a source
+ */
+static inline unsigned
+nir_ssa_alu_instr_src_components(nir_alu_instr *instr, unsigned src)
+{
+   assert(instr->dest.dest.is_ssa);
+
+   if (nir_op_infos[instr->op].input_sizes[src] > 0)
+      return nir_op_infos[instr->op].input_sizes[src];
+
+   return instr->dest.dest.ssa.num_components;
+}
+
 typedef enum {
    nir_deref_type_var,
    nir_deref_type_array,
