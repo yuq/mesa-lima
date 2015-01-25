@@ -331,7 +331,11 @@ namespace {
 
       llvm::PassManagerBuilder PMB;
       PMB.OptLevel = optimization_level;
+#if HAVE_LLVM < 0x0307
       PMB.LibraryInfo = new llvm::TargetLibraryInfo(
+#else
+      PMB.LibraryInfo = new llvm::TargetLibraryInfoImpl(
+#endif
             llvm::Triple(mod->getTargetTriple()));
       PMB.populateModulePassManager(PM);
       PM.run(*mod);
