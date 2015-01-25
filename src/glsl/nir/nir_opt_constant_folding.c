@@ -56,7 +56,8 @@ constant_fold_alu_instr(nir_alu_instr *instr, void *mem_ctx)
          return false;
       nir_load_const_instr* load_const = nir_instr_as_load_const(src_instr);
 
-      for (unsigned j = 0; j < instr->dest.dest.ssa.num_components; j++) {
+      for (unsigned j = 0; j < nir_ssa_alu_instr_src_components(instr, i);
+           j++) {
          src[i].u[j] = load_const->value.u[instr->src[i].swizzle[j]];
       }
 
