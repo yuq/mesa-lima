@@ -244,11 +244,17 @@ static inline void
 ilo_builder_writer_reloc(struct ilo_builder *builder,
                          enum ilo_builder_writer_type which,
                          unsigned offset, struct intel_bo *bo,
-                         unsigned bo_offset, unsigned reloc_flags)
+                         unsigned bo_offset, unsigned reloc_flags,
+                         bool write_presumed_offset_hi)
 {
    struct ilo_builder_writer *writer = &builder->writers[which];
    uint64_t presumed_offset;
    int err;
+
+   if (write_presumed_offset_hi)
+      ILO_DEV_ASSERT(builder->dev, 8, 8);
+   else
+      ILO_DEV_ASSERT(builder->dev, 6, 7.5);
 
    assert(offset + sizeof(uint32_t) <= writer->used ||
           (offset >= writer->size - writer->stolen &&
@@ -259,9 +265,13 @@ ilo_builder_writer_reloc(struct ilo_builder *builder,
    if (unlikely(err))
       builder->unrecoverable_error = true;
 
-   /* 32-bit addressing */
-   assert(presumed_offset == (uint64_t) ((uint32_t) presumed_offset));
-   *((uint32_t *) ((char *) writer->ptr + offset)) = presumed_offset;
+   if (write_presumed_offset_hi) {
+      *((uint64_t *) ((char *) writer->ptr + offset)) = presumed_offset;
+   } else {
+      /* 32-bit addressing */
+      assert(presumed_offset == (uint64_t) ((uint32_t) presumed_offset));
+      *((uint32_t *) ((char *) writer->ptr + offset)) = presumed_offset;
+   }
 }
 
 /**
@@ -369,7 +379,19 @@ ilo_builder_surface_reloc(struct ilo_builder *builder,
    const enum ilo_builder_writer_type which = ILO_BUILDER_WRITER_BATCH;
 
    ilo_builder_writer_reloc(builder, which, offset + (dw_index << 2),
-         bo, bo_offset, reloc_flags);
+         bo, bo_offset, reloc_flags, false);
+}
+
+static inline void
+ilo_builder_surface_reloc64(struct ilo_builder *builder,
+                            uint32_t offset, unsigned dw_index,
+                            struct intel_bo *bo, unsigned bo_offset,
+                            unsigned reloc_flags)
+{
+   const enum ilo_builder_writer_type which = ILO_BUILDER_WRITER_BATCH;
+
+   ilo_builder_writer_reloc(builder, which, offset + (dw_index << 2),
+         bo, bo_offset, reloc_flags, true);
 }
 
 static inline unsigned
@@ -470,7 +492,18 @@ ilo_builder_batch_reloc(struct ilo_builder *builder, unsigned pos,
    const enum ilo_builder_writer_type which = ILO_BUILDER_WRITER_BATCH;
 
    ilo_builder_writer_reloc(builder, which, pos << 2,
-         bo, bo_offset, reloc_flags);
+         bo, bo_offset, reloc_flags, false);
+}
+
+static inline void
+ilo_builder_batch_reloc64(struct ilo_builder *builder, unsigned pos,
+                          struct intel_bo *bo, unsigned bo_offset,
+                          unsigned reloc_flags)
+{
+   const enum ilo_builder_writer_type which = ILO_BUILDER_WRITER_BATCH;
+
+   ilo_builder_writer_reloc(builder, which, pos << 2,
+         bo, bo_offset, reloc_flags, true);
 }
 
 static inline unsigned
