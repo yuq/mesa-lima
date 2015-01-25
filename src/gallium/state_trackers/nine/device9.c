@@ -41,6 +41,7 @@
 
 #include "pipe/p_screen.h"
 #include "pipe/p_context.h"
+#include "pipe/p_config.h"
 #include "util/u_math.h"
 #include "util/u_inlines.h"
 #include "util/u_hash_table.h"
@@ -52,6 +53,33 @@
 #include "cso_cache/cso_context.h"
 
 #define DBG_CHANNEL DBG_DEVICE
+
+#if defined(PIPE_CC_GCC) && (defined(PIPE_ARCH_X86) || defined(PIPE_ARCH_X86_64))
+
+#include <fpu_control.h>
+
+static void nine_setup_fpu()
+{
+    fpu_control_t c;
+
+    _FPU_GETCW(c);
+    /* clear the control word */
+    c &= _FPU_RESERVED;
+    /* d3d9 doc/wine tests: mask all exceptions, use single-precision
+     * and round to nearest */
+    c |= _FPU_MASK_IM | _FPU_MASK_DM | _FPU_MASK_ZM | _FPU_MASK_OM |
+         _FPU_MASK_UM | _FPU_MASK_PM | _FPU_SINGLE | _FPU_RC_NEAREST;
+    _FPU_SETCW(c);
+}
+
+#else
+
+static void nine_setup_fpu(void)
+{
+    WARN_ONCE("FPU setup not supported on non-x86 platforms\n");
+}
+
+#endif
 
 static void
 NineDevice9_SetDefaultState( struct NineDevice9 *This, boolean is_reset )
@@ -167,6 +195,9 @@ NineDevice9_ctor( struct NineDevice9 *This,
     This->present = pPresentationGroup;
     IDirect3D9_AddRef(This->d3d9);
     ID3DPresentGroup_AddRef(This->present);
+
+    if (!(This->params.BehaviorFlags & D3DCREATE_FPU_PRESERVE))
+        nine_setup_fpu();
 
     This->pipe = This->screen->context_create(This->screen, NULL);
     if (!This->pipe) { return E_OUTOFMEMORY; } /* guess */
