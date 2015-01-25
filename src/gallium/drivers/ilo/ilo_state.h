@@ -250,7 +250,8 @@ struct ilo_dsa_state {
    /* DEPTH_STENCIL_STATE or Gen8+ 3DSTATE_WM_DEPTH_STENCIL */
    uint32_t payload[3];
 
-   uint32_t dw_alpha;
+   uint32_t dw_blend_alpha;
+   uint32_t dw_ps_blend_alpha;
    ubyte alpha_ref;
 };
 
@@ -271,6 +272,10 @@ struct ilo_blend_state {
    uint32_t dw_shared;
    uint32_t dw_alpha_mod;
    uint32_t dw_logicop;
+
+   /* a part of 3DSTATE_PS_BLEND */
+   uint32_t dw_ps_blend;
+   uint32_t dw_ps_blend_dst_alpha_forced_one;
 };
 
 struct ilo_sampler_cso {

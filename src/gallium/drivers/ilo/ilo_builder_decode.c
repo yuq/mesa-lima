@@ -371,6 +371,11 @@ writer_decode_blend(const struct ilo_builder *builder,
    unsigned offset = item->offset;
    unsigned i;
 
+   if (ilo_dev_gen(builder->dev) >= ILO_GEN(8)) {
+      writer_dw(builder, which, offset, 0, "BLEND\n");
+      offset += 4;
+   }
+
    for (i = 0; i < count; i++) {
       writer_dw(builder, which, offset, 0, "BLEND%d\n", i);
       writer_dw(builder, which, offset, 1, "BLEND%d\n", i);

@@ -706,6 +706,44 @@ gen8_3DSTATE_PS_EXTRA(struct ilo_builder *builder,
 }
 
 static inline void
+gen8_3DSTATE_PS_BLEND(struct ilo_builder *builder,
+                      const struct ilo_blend_state *blend,
+                      const struct ilo_fb_state *fb,
+                      const struct ilo_dsa_state *dsa)
+{
+   const uint8_t cmd_len = 2;
+   uint32_t dw1, *dw;
+
+   ILO_DEV_ASSERT(builder->dev, 8, 8);
+
+   dw1 = 0;
+   if (blend->alpha_to_coverage && fb->num_samples > 1)
+      dw1 |= GEN8_PS_BLEND_DW1_ALPHA_TO_COVERAGE;
+
+   if (fb->state.nr_cbufs && fb->state.cbufs[0]) {
+      const struct ilo_fb_blend_caps *caps = &fb->blend_caps[0];
+
+      dw1 |= GEN8_PS_BLEND_DW1_WRITABLE_RT;
+      if (caps->can_blend) {
+         if (caps->dst_alpha_forced_one)
+            dw1 |= blend->dw_ps_blend_dst_alpha_forced_one;
+         else
+            dw1 |= blend->dw_ps_blend;
+      }
+
+      if (caps->can_alpha_test)
+         dw1 |= dsa->dw_ps_blend_alpha;
+   } else {
+      dw1 |= dsa->dw_ps_blend_alpha;
+   }
+
+   ilo_builder_batch_pointer(builder, cmd_len, &dw);
+
+   dw[0] = GEN8_RENDER_CMD(3D, 3DSTATE_PS_BLEND) | (cmd_len - 2);
+   dw[1] = dw1;
+}
+
+static inline void
 gen6_3DSTATE_CONSTANT_PS(struct ilo_builder *builder,
                          const uint32_t *bufs, const int *sizes,
                          int num_bufs)
@@ -1517,7 +1555,7 @@ gen6_BLEND_STATE(struct ilo_builder *builder,
    assert(num_targets <= 8);
 
    if (!num_targets) {
-      if (!dsa->dw_alpha)
+      if (!dsa->dw_blend_alpha)
          return 0;
       /* to be able to reference alpha func */
       num_targets = 1;
@@ -1548,13 +1586,13 @@ gen6_BLEND_STATE(struct ilo_builder *builder,
             dw[1] |= blend->dw_logicop;
 
          if (caps->can_alpha_test)
-            dw[1] |= dsa->dw_alpha;
+            dw[1] |= dsa->dw_blend_alpha;
       } else {
          dw[1] |= GEN6_RT_DW1_WRITE_DISABLE_A |
                   GEN6_RT_DW1_WRITE_DISABLE_R |
                   GEN6_RT_DW1_WRITE_DISABLE_G |
                   GEN6_RT_DW1_WRITE_DISABLE_B |
-                  dsa->dw_alpha;
+                  dsa->dw_blend_alpha;
       }
 
       /*
@@ -1568,6 +1606,67 @@ gen6_BLEND_STATE(struct ilo_builder *builder,
        */
       if (fb->num_samples > 1)
          dw[1] |= blend->dw_alpha_mod;
+
+      dw += 2;
+   }
+
+   return state_offset;
+}
+
+static inline uint32_t
+gen8_BLEND_STATE(struct ilo_builder *builder,
+                 const struct ilo_blend_state *blend,
+                 const struct ilo_fb_state *fb,
+                 const struct ilo_dsa_state *dsa)
+{
+   const int state_align = 64;
+   int state_len;
+   uint32_t state_offset, *dw;
+   unsigned i;
+
+   ILO_DEV_ASSERT(builder->dev, 8, 8);
+
+   assert(fb->state.nr_cbufs <= 8);
+
+   /* may need to reference alpha func even when there is no color buffer */
+   if (!fb->state.nr_cbufs && !dsa->dw_blend_alpha)
+      return 0;
+
+   state_len = 1 + 2 * fb->state.nr_cbufs;
+
+   state_offset = ilo_builder_dynamic_pointer(builder,
+         ILO_BUILDER_ITEM_BLEND, state_align, state_len, &dw);
+
+   dw[0] = blend->dw_shared;
+   if (fb->num_samples > 1)
+      dw[0] |= blend->dw_alpha_mod;
+   if (!fb->state.nr_cbufs || fb->blend_caps[0].can_alpha_test)
+      dw[0] |= dsa->dw_blend_alpha;
+   dw++;
+
+   for (i = 0; i < fb->state.nr_cbufs; i++) {
+      const struct ilo_fb_blend_caps *caps = &fb->blend_caps[i];
+      const struct ilo_blend_cso *cso = &blend->cso[i];
+
+      dw[0] = cso->payload[0];
+      dw[1] = cso->payload[1];
+
+      if (fb->state.cbufs[i]) {
+         if (caps->can_blend) {
+            if (caps->dst_alpha_forced_one)
+               dw[0] |= cso->dw_blend_dst_alpha_forced_one;
+            else
+               dw[0] |= cso->dw_blend;
+         }
+
+         if (caps->can_logicop)
+            dw[1] |= blend->dw_logicop;
+      } else {
+         dw[0] |= GEN8_RT_DW0_WRITE_DISABLE_A |
+                  GEN8_RT_DW0_WRITE_DISABLE_R |
+                  GEN8_RT_DW0_WRITE_DISABLE_G |
+                  GEN8_RT_DW0_WRITE_DISABLE_B;
+      }
 
       dw += 2;
    }

@@ -702,7 +702,7 @@ gen6_draw_wm(struct ilo_render *r,
    if (DIRTY(FS) || DIRTY(BLEND) || DIRTY(DSA) ||
        DIRTY(RASTERIZER) || r->instruction_bo_changed) {
       const bool dual_blend = vec->blend->dual_blend;
-      const bool cc_may_kill = (vec->dsa->dw_alpha ||
+      const bool cc_may_kill = (vec->dsa->dw_blend_alpha ||
                                 vec->blend->alpha_to_coverage);
 
       if (ilo_dev_gen(r->dev) == ILO_GEN(6) && r->hw_ctx_changed)

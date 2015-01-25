@@ -1529,6 +1529,49 @@ blend_get_rt_blend_enable_gen6(const struct ilo_dev_info *dev,
    return dw;
 }
 
+static uint32_t
+blend_get_rt_blend_enable_gen8(const struct ilo_dev_info *dev,
+                               const struct pipe_rt_blend_state *rt,
+                               bool dst_alpha_forced_one,
+                               bool *independent_alpha)
+{
+   int rgb_src, rgb_dst, a_src, a_dst;
+   uint32_t dw;
+
+   ILO_DEV_ASSERT(dev, 8, 8);
+
+   if (!rt->blend_enable) {
+      *independent_alpha = false;
+      return 0;
+   }
+
+   rgb_src = gen6_translate_pipe_blendfactor(rt->rgb_src_factor);
+   rgb_dst = gen6_translate_pipe_blendfactor(rt->rgb_dst_factor);
+   a_src = gen6_translate_pipe_blendfactor(rt->alpha_src_factor);
+   a_dst = gen6_translate_pipe_blendfactor(rt->alpha_dst_factor);
+
+   if (dst_alpha_forced_one) {
+      rgb_src = gen6_blend_factor_dst_alpha_forced_one(rgb_src);
+      rgb_dst = gen6_blend_factor_dst_alpha_forced_one(rgb_dst);
+      a_src = gen6_blend_factor_dst_alpha_forced_one(a_src);
+      a_dst = gen6_blend_factor_dst_alpha_forced_one(a_dst);
+   }
+
+   dw = GEN8_RT_DW0_BLEND_ENABLE |
+        rgb_src << 26 |
+        rgb_dst << 21 |
+        gen6_translate_pipe_blend(rt->rgb_func) << 18 |
+        a_src << 13 |
+        a_dst << 8 |
+        gen6_translate_pipe_blend(rt->alpha_func) << 5;
+
+   *independent_alpha = (rt->rgb_func != rt->alpha_func ||
+                         rgb_src != a_src ||
+                         rgb_dst != a_dst);
+
+   return dw;
+}
+
 static void
 blend_init_cso_gen6(const struct ilo_dev_info *dev,
                     const struct pipe_blend_state *state,
@@ -1573,6 +1616,49 @@ blend_init_cso_gen6(const struct ilo_dev_info *dev,
    }
 }
 
+static bool
+blend_init_cso_gen8(const struct ilo_dev_info *dev,
+                    const struct pipe_blend_state *state,
+                    struct ilo_blend_state *blend,
+                    unsigned index)
+{
+   const struct pipe_rt_blend_state *rt = &state->rt[index];
+   struct ilo_blend_cso *cso = &blend->cso[index];
+   bool independent_alpha = false;
+
+   ILO_DEV_ASSERT(dev, 8, 8);
+
+   cso->payload[0] = 0;
+   cso->payload[1] = GEN8_RT_DW1_COLORCLAMP_RTFORMAT |
+                     GEN8_RT_DW1_PRE_BLEND_CLAMP |
+                     GEN8_RT_DW1_POST_BLEND_CLAMP;
+
+   if (!(rt->colormask & PIPE_MASK_A))
+      cso->payload[0] |= GEN8_RT_DW0_WRITE_DISABLE_A;
+   if (!(rt->colormask & PIPE_MASK_R))
+      cso->payload[0] |= GEN8_RT_DW0_WRITE_DISABLE_R;
+   if (!(rt->colormask & PIPE_MASK_G))
+      cso->payload[0] |= GEN8_RT_DW0_WRITE_DISABLE_G;
+   if (!(rt->colormask & PIPE_MASK_B))
+      cso->payload[0] |= GEN8_RT_DW0_WRITE_DISABLE_B;
+
+   if (state->logicop_enable) {
+      cso->dw_blend = 0;
+      cso->dw_blend_dst_alpha_forced_one = 0;
+   } else {
+      bool tmp[2];
+
+      cso->dw_blend = blend_get_rt_blend_enable_gen8(dev, rt, false, &tmp[0]);
+      cso->dw_blend_dst_alpha_forced_one =
+         blend_get_rt_blend_enable_gen8(dev, rt, true, &tmp[1]);
+
+      if (tmp[0] || tmp[1])
+         independent_alpha = true;
+   }
+
+   return independent_alpha;
+}
+
 static uint32_t
 blend_get_logicop_enable_gen6(const struct ilo_dev_info *dev,
                               const struct pipe_blend_state *state)
@@ -1584,6 +1670,19 @@ blend_get_logicop_enable_gen6(const struct ilo_dev_info *dev,
 
    return GEN6_RT_DW1_LOGICOP_ENABLE |
           gen6_translate_pipe_logicop(state->logicop_func) << 18;
+}
+
+static uint32_t
+blend_get_logicop_enable_gen8(const struct ilo_dev_info *dev,
+                              const struct pipe_blend_state *state)
+{
+   ILO_DEV_ASSERT(dev, 8, 8);
+
+   if (!state->logicop_enable)
+      return 0;
+
+   return GEN8_RT_DW1_LOGICOP_ENABLE |
+          gen6_translate_pipe_logicop(state->logicop_func) << 27;
 }
 
 static uint32_t
@@ -1612,6 +1711,54 @@ blend_get_alpha_mod_gen6(const struct ilo_dev_info *dev,
    return dw;
 }
 
+static uint32_t
+blend_get_alpha_mod_gen8(const struct ilo_dev_info *dev,
+                         const struct pipe_blend_state *state,
+                         bool dual_blend)
+{
+   uint32_t dw = 0;
+
+   ILO_DEV_ASSERT(dev, 8, 8);
+
+   if (state->alpha_to_coverage) {
+      dw |= GEN8_BLEND_DW0_ALPHA_TO_COVERAGE |
+            GEN8_BLEND_DW0_ALPHA_TO_COVERAGE_DITHER;
+   }
+
+   if (state->alpha_to_one && !dual_blend)
+      dw |= GEN8_BLEND_DW0_ALPHA_TO_ONE;
+
+   return dw;
+}
+
+static uint32_t
+blend_get_ps_blend_gen8(const struct ilo_dev_info *dev, uint32_t rt_dw0)
+{
+   int rgb_src, rgb_dst, a_src, a_dst;
+   uint32_t dw;
+
+   ILO_DEV_ASSERT(dev, 8, 8);
+
+   if (!(rt_dw0 & GEN8_RT_DW0_BLEND_ENABLE))
+      return 0;
+
+   a_src = GEN_EXTRACT(rt_dw0, GEN8_RT_DW0_SRC_ALPHA_FACTOR);
+   a_dst = GEN_EXTRACT(rt_dw0, GEN8_RT_DW0_DST_ALPHA_FACTOR);
+   rgb_src = GEN_EXTRACT(rt_dw0, GEN8_RT_DW0_SRC_COLOR_FACTOR);
+   rgb_dst = GEN_EXTRACT(rt_dw0, GEN8_RT_DW0_DST_COLOR_FACTOR);
+
+   dw = GEN8_PS_BLEND_DW1_BLEND_ENABLE;
+   dw |= GEN_SHIFT32(a_src, GEN8_PS_BLEND_DW1_SRC_ALPHA_FACTOR);
+   dw |= GEN_SHIFT32(a_dst, GEN8_PS_BLEND_DW1_DST_ALPHA_FACTOR);
+   dw |= GEN_SHIFT32(rgb_src, GEN8_PS_BLEND_DW1_SRC_COLOR_FACTOR);
+   dw |= GEN_SHIFT32(rgb_dst, GEN8_PS_BLEND_DW1_DST_COLOR_FACTOR);
+
+   if (a_src != rgb_src || a_dst != rgb_dst)
+      dw |= GEN8_PS_BLEND_DW1_INDEPENDENT_ALPHA_ENABLE;
+
+   return dw;
+}
+
 void
 ilo_gpe_init_blend(const struct ilo_dev_info *dev,
                    const struct pipe_blend_state *state,
@@ -1619,25 +1766,57 @@ ilo_gpe_init_blend(const struct ilo_dev_info *dev,
 {
    unsigned i;
 
-   ILO_DEV_ASSERT(dev, 6, 7.5);
+   ILO_DEV_ASSERT(dev, 6, 8);
 
    blend->dual_blend = (util_blend_state_is_dual(state, 0) &&
                         state->rt[0].blend_enable &&
                         !state->logicop_enable);
    blend->alpha_to_coverage = state->alpha_to_coverage;
 
-   blend->dw_alpha_mod =
-      blend_get_alpha_mod_gen6(dev, state, blend->dual_blend);
-   blend->dw_logicop = blend_get_logicop_enable_gen6(dev, state);
-   blend->dw_shared = (state->dither) ? GEN6_RT_DW1_DITHER_ENABLE : 0;
+   if (ilo_dev_gen(dev) >= ILO_GEN(8)) {
+      bool independent_alpha;
 
-   blend_init_cso_gen6(dev, state, blend, 0);
-   if (state->independent_blend_enable) {
-      for (i = 1; i < Elements(blend->cso); i++)
-         blend_init_cso_gen6(dev, state, blend, i);
+      blend->dw_alpha_mod =
+         blend_get_alpha_mod_gen8(dev, state, blend->dual_blend);
+      blend->dw_logicop = blend_get_logicop_enable_gen8(dev, state);
+      blend->dw_shared = (state->dither) ? GEN8_BLEND_DW0_DITHER_ENABLE : 0;
+
+      independent_alpha = blend_init_cso_gen8(dev, state, blend, 0);
+      if (independent_alpha)
+         blend->dw_shared |= GEN8_BLEND_DW0_INDEPENDENT_ALPHA_ENABLE;
+
+      blend->dw_ps_blend = blend_get_ps_blend_gen8(dev,
+            blend->cso[0].dw_blend);
+      blend->dw_ps_blend_dst_alpha_forced_one = blend_get_ps_blend_gen8(dev,
+            blend->cso[0].dw_blend_dst_alpha_forced_one);
+
+      if (state->independent_blend_enable) {
+         for (i = 1; i < Elements(blend->cso); i++) {
+            independent_alpha = blend_init_cso_gen8(dev, state, blend, i);
+            if (independent_alpha)
+               blend->dw_shared |= GEN8_BLEND_DW0_INDEPENDENT_ALPHA_ENABLE;
+         }
+      } else {
+         for (i = 1; i < Elements(blend->cso); i++)
+            blend->cso[i] = blend->cso[0];
+      }
    } else {
-      for (i = 1; i < Elements(blend->cso); i++)
-         blend->cso[i] = blend->cso[0];
+      blend->dw_alpha_mod =
+         blend_get_alpha_mod_gen6(dev, state, blend->dual_blend);
+      blend->dw_logicop = blend_get_logicop_enable_gen6(dev, state);
+      blend->dw_shared = (state->dither) ? GEN6_RT_DW1_DITHER_ENABLE : 0;
+
+      blend->dw_ps_blend = 0;
+      blend->dw_ps_blend_dst_alpha_forced_one = 0;
+
+      blend_init_cso_gen6(dev, state, blend, 0);
+      if (state->independent_blend_enable) {
+         for (i = 1; i < Elements(blend->cso); i++)
+            blend_init_cso_gen6(dev, state, blend, i);
+      } else {
+         for (i = 1; i < Elements(blend->cso); i++)
+            blend->cso[i] = blend->cso[0];
+      }
    }
 }
 
@@ -1843,7 +2022,10 @@ ilo_gpe_init_dsa(const struct ilo_dev_info *dev,
                      state->stencil[1].valuemask << 8 |
                      state->stencil[1].writemask;
 
-   dsa->dw_alpha = dsa_get_alpha_enable_gen6(dev, &state->alpha);
+   dsa->dw_blend_alpha = dsa_get_alpha_enable_gen6(dev, &state->alpha);
+   dsa->dw_ps_blend_alpha = (state->alpha.enabled) ?
+      GEN8_PS_BLEND_DW1_ALPHA_TEST_ENABLE : 0;
+
    dsa->alpha_ref = float_to_ubyte(state->alpha.ref_value);
 }
 
@@ -1916,10 +2098,16 @@ fb_set_blend_caps(const struct ilo_dev_info *dev,
     *
     *     "Logic Ops are only supported on *_UNORM surfaces (excluding _SRGB
     *      variants), otherwise Logic Ops must be DISABLED."
+    *
+    * According to the classic driver, this is lifted on Gen8+.
     */
-   caps->can_logicop = (ch >= 0 && desc->channel[ch].normalized &&
-                        desc->channel[ch].type == UTIL_FORMAT_TYPE_UNSIGNED &&
-                        desc->colorspace == UTIL_FORMAT_COLORSPACE_RGB);
+   if (ilo_dev_gen(dev) >= ILO_GEN(8)) {
+      caps->can_logicop = true;
+   } else {
+      caps->can_logicop = (ch >= 0 && desc->channel[ch].normalized &&
+            desc->channel[ch].type == UTIL_FORMAT_TYPE_UNSIGNED &&
+            desc->colorspace == UTIL_FORMAT_COLORSPACE_RGB);
+   }
 
    /* no blending for pure integer formats */
    caps->can_blend = !util_format_is_pure_integer(format);

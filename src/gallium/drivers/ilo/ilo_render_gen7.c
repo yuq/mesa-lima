@@ -516,7 +516,7 @@ gen7_draw_wm(struct ilo_render *r,
 {
    /* 3DSTATE_WM */
    if (DIRTY(FS) || DIRTY(BLEND) || DIRTY(DSA) || DIRTY(RASTERIZER)) {
-      const bool cc_may_kill = (vec->dsa->dw_alpha ||
+      const bool cc_may_kill = (vec->dsa->dw_blend_alpha ||
                                 vec->blend->alpha_to_coverage);
 
       gen7_3DSTATE_WM(r->builder, vec->fs, vec->rasterizer, cc_may_kill);
