@@ -1232,11 +1232,10 @@ gen6_BLEND_STATE(struct ilo_builder *builder,
          ILO_BUILDER_ITEM_BLEND, state_align, state_len, &dw);
 
    for (i = 0; i < num_targets; i++) {
-      const struct ilo_blend_cso *cso =
-         &blend->cso[(blend->independent_blend_enable) ? i : 0];
+      const struct ilo_blend_cso *cso = &blend->cso[i];
 
       dw[0] = cso->payload[0];
-      dw[1] = cso->payload[1];
+      dw[1] = cso->payload[1] | blend->dw_shared;
 
       if (i < fb->state.nr_cbufs && fb->state.cbufs[i]) {
          const struct ilo_fb_blend_caps *caps = &fb->blend_caps[i];
@@ -1249,7 +1248,7 @@ gen6_BLEND_STATE(struct ilo_builder *builder,
          }
 
          if (caps->can_logicop)
-            dw[1] |= cso->dw_logicop;
+            dw[1] |= blend->dw_logicop;
 
          if (caps->can_alpha_test)
             dw[1] |= dsa->dw_alpha;
@@ -1271,7 +1270,7 @@ gen6_BLEND_STATE(struct ilo_builder *builder,
        * requires that anyway.
        */
       if (fb->num_samples > 1)
-         dw[1] |= cso->dw_alpha_mod;
+         dw[1] |= blend->dw_alpha_mod;
 
       dw += 2;
    }

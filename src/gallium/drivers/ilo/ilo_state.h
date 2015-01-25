@@ -252,17 +252,17 @@ struct ilo_blend_cso {
 
    uint32_t dw_blend;
    uint32_t dw_blend_dst_alpha_forced_one;
-
-   uint32_t dw_logicop;
-   uint32_t dw_alpha_mod;
 };
 
 struct ilo_blend_state {
    struct ilo_blend_cso cso[ILO_MAX_DRAW_BUFFERS];
 
-   bool independent_blend_enable;
    bool dual_blend;
    bool alpha_to_coverage;
+
+   uint32_t dw_shared;
+   uint32_t dw_alpha_mod;
+   uint32_t dw_logicop;
 };
 
 struct ilo_sampler_cso {

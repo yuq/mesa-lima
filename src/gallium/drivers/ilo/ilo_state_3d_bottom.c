@@ -1245,12 +1245,14 @@ gen6_blend_factor_dst_alpha_forced_one(int factor)
 }
 
 static uint32_t
-blend_get_rt_blend_enable(const struct ilo_dev_info *dev,
-                          const struct pipe_rt_blend_state *rt,
-                          bool dst_alpha_forced_one)
+blend_get_rt_blend_enable_gen6(const struct ilo_dev_info *dev,
+                               const struct pipe_rt_blend_state *rt,
+                               bool dst_alpha_forced_one)
 {
    int rgb_src, rgb_dst, a_src, a_dst;
    uint32_t dw;
+
+   ILO_DEV_ASSERT(dev, 6, 7.5);
 
    if (!rt->blend_enable)
       return 0;
@@ -1267,7 +1269,7 @@ blend_get_rt_blend_enable(const struct ilo_dev_info *dev,
       a_dst = gen6_blend_factor_dst_alpha_forced_one(a_dst);
    }
 
-   dw = 1 << 31 |
+   dw = GEN6_BLEND_DW0_BLEND_ENABLE |
         gen6_translate_pipe_blend(rt->alpha_func) << 26 |
         a_src << 20 |
         a_dst << 15 |
@@ -1277,7 +1279,90 @@ blend_get_rt_blend_enable(const struct ilo_dev_info *dev,
 
    if (rt->rgb_func != rt->alpha_func ||
        rgb_src != a_src || rgb_dst != a_dst)
-      dw |= 1 << 30;
+      dw |= GEN6_BLEND_DW0_INDEPENDENT_ALPHA_ENABLE;
+
+   return dw;
+}
+
+static void
+blend_init_cso_gen6(const struct ilo_dev_info *dev,
+                    const struct pipe_blend_state *state,
+                    struct ilo_blend_state *blend,
+                    unsigned index)
+{
+   const struct pipe_rt_blend_state *rt = &state->rt[index];
+   struct ilo_blend_cso *cso = &blend->cso[index];
+
+   ILO_DEV_ASSERT(dev, 6, 7.5);
+
+   cso->payload[0] = 0;
+   cso->payload[1] = GEN6_BLEND_DW1_COLORCLAMP_RTFORMAT |
+                     GEN6_BLEND_DW1_PRE_BLEND_CLAMP |
+                     GEN6_BLEND_DW1_POST_BLEND_CLAMP;
+
+   if (!(rt->colormask & PIPE_MASK_A))
+      cso->payload[1] |= GEN6_BLEND_DW1_WRITE_DISABLE_A;
+   if (!(rt->colormask & PIPE_MASK_R))
+      cso->payload[1] |= GEN6_BLEND_DW1_WRITE_DISABLE_R;
+   if (!(rt->colormask & PIPE_MASK_G))
+      cso->payload[1] |= GEN6_BLEND_DW1_WRITE_DISABLE_G;
+   if (!(rt->colormask & PIPE_MASK_B))
+      cso->payload[1] |= GEN6_BLEND_DW1_WRITE_DISABLE_B;
+
+   /*
+    * From the Sandy Bridge PRM, volume 2 part 1, page 365:
+    *
+    *     "Color Buffer Blending and Logic Ops must not be enabled
+    *      simultaneously, or behavior is UNDEFINED."
+    *
+    * Since state->logicop_enable takes precedence over rt->blend_enable,
+    * no special care is needed.
+    */
+   if (state->logicop_enable) {
+      cso->dw_blend = 0;
+      cso->dw_blend_dst_alpha_forced_one = 0;
+   } else {
+      cso->dw_blend = blend_get_rt_blend_enable_gen6(dev, rt, false);
+      cso->dw_blend_dst_alpha_forced_one =
+         blend_get_rt_blend_enable_gen6(dev, rt, true);
+   }
+}
+
+static uint32_t
+blend_get_logicop_enable_gen6(const struct ilo_dev_info *dev,
+                              const struct pipe_blend_state *state)
+{
+   ILO_DEV_ASSERT(dev, 6, 7.5);
+
+   if (!state->logicop_enable)
+      return 0;
+
+   return GEN6_BLEND_DW1_LOGICOP_ENABLE |
+          gen6_translate_pipe_logicop(state->logicop_func) << 18;
+}
+
+static uint32_t
+blend_get_alpha_mod_gen6(const struct ilo_dev_info *dev,
+                         const struct pipe_blend_state *state,
+                         bool dual_blend)
+{
+   uint32_t dw = 0;
+
+   ILO_DEV_ASSERT(dev, 6, 7.5);
+
+   if (state->alpha_to_coverage) {
+      dw |= GEN6_BLEND_DW1_ALPHA_TO_COVERAGE;
+      if (ilo_dev_gen(dev) >= ILO_GEN(7))
+         dw |= GEN6_BLEND_DW1_ALPHA_TO_COVERAGE_DITHER;
+   }
+   /*
+    * From the Sandy Bridge PRM, volume 2 part 1, page 378:
+    *
+    *     "If Dual Source Blending is enabled, this bit (AlphaToOne Enable)
+    *      must be disabled."
+    */
+   if (state->alpha_to_one && !dual_blend)
+      dw |= GEN6_BLEND_DW1_ALPHA_TO_ONE;
 
    return dw;
 }
@@ -1287,92 +1372,27 @@ ilo_gpe_init_blend(const struct ilo_dev_info *dev,
                    const struct pipe_blend_state *state,
                    struct ilo_blend_state *blend)
 {
-   unsigned num_cso, i;
+   unsigned i;
 
    ILO_DEV_ASSERT(dev, 6, 7.5);
 
-   if (state->independent_blend_enable) {
-      num_cso = Elements(blend->cso);
-   }
-   else {
-      memset(blend->cso, 0, sizeof(blend->cso));
-      num_cso = 1;
-   }
-
-   blend->independent_blend_enable = state->independent_blend_enable;
+   blend->dual_blend = (util_blend_state_is_dual(state, 0) &&
+                        state->rt[0].blend_enable &&
+                        !state->logicop_enable);
    blend->alpha_to_coverage = state->alpha_to_coverage;
-   blend->dual_blend = false;
 
-   for (i = 0; i < num_cso; i++) {
-      const struct pipe_rt_blend_state *rt = &state->rt[i];
-      struct ilo_blend_cso *cso = &blend->cso[i];
-      bool dual_blend;
+   blend->dw_alpha_mod =
+      blend_get_alpha_mod_gen6(dev, state, blend->dual_blend);
+   blend->dw_logicop = blend_get_logicop_enable_gen6(dev, state);
+   blend->dw_shared = (state->dither) ? GEN6_BLEND_DW1_DITHER_ENABLE : 0;
 
-      cso->payload[0] = 0;
-      cso->payload[1] = GEN6_BLEND_DW1_COLORCLAMP_RTFORMAT |
-                            0x3;
-
-      if (!(rt->colormask & PIPE_MASK_A))
-         cso->payload[1] |= 1 << 27;
-      if (!(rt->colormask & PIPE_MASK_R))
-         cso->payload[1] |= 1 << 26;
-      if (!(rt->colormask & PIPE_MASK_G))
-         cso->payload[1] |= 1 << 25;
-      if (!(rt->colormask & PIPE_MASK_B))
-         cso->payload[1] |= 1 << 24;
-
-      if (state->dither)
-         cso->payload[1] |= 1 << 12;
-
-      /*
-       * From the Sandy Bridge PRM, volume 2 part 1, page 365:
-       *
-       *     "Color Buffer Blending and Logic Ops must not be enabled
-       *      simultaneously, or behavior is UNDEFINED."
-       *
-       * Since state->logicop_enable takes precedence over rt->blend_enable,
-       * no special care is needed.
-       */
-      if (state->logicop_enable) {
-         cso->dw_logicop = 1 << 22 |
-            gen6_translate_pipe_logicop(state->logicop_func) << 18;
-
-         cso->dw_blend = 0;
-         cso->dw_blend_dst_alpha_forced_one = 0;
-
-         dual_blend = false;
-      }
-      else {
-         cso->dw_logicop = 0;
-
-         cso->dw_blend = blend_get_rt_blend_enable(dev, rt, false);
-         cso->dw_blend_dst_alpha_forced_one =
-            blend_get_rt_blend_enable(dev, rt, true);
-
-         dual_blend = (rt->blend_enable &&
-               util_blend_state_is_dual(state, i));
-      }
-
-      cso->dw_alpha_mod = 0;
-
-      if (state->alpha_to_coverage) {
-         cso->dw_alpha_mod |= 1 << 31;
-
-         if (ilo_dev_gen(dev) >= ILO_GEN(7))
-            cso->dw_alpha_mod |= 1 << 29;
-      }
-
-      /*
-       * From the Sandy Bridge PRM, volume 2 part 1, page 378:
-       *
-       *     "If Dual Source Blending is enabled, this bit (AlphaToOne Enable)
-       *      must be disabled."
-       */
-      if (state->alpha_to_one && !dual_blend)
-         cso->dw_alpha_mod |= 1 << 30;
-
-      if (dual_blend)
-         blend->dual_blend = true;
+   blend_init_cso_gen6(dev, state, blend, 0);
+   if (state->independent_blend_enable) {
+      for (i = 1; i < Elements(blend->cso); i++)
+         blend_init_cso_gen6(dev, state, blend, i);
+   } else {
+      for (i = 1; i < Elements(blend->cso); i++)
+         blend->cso[i] = blend->cso[0];
    }
 }
 
