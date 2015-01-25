@@ -37,14 +37,16 @@
 static inline void
 gen6_MI_STORE_DATA_IMM(struct ilo_builder *builder,
                        struct intel_bo *bo, uint32_t bo_offset,
-                       uint64_t val, bool store_qword)
+                       uint64_t val)
 {
-   const uint8_t cmd_len = (store_qword) ? 5 : 4;
+   const uint8_t cmd_len = (ilo_dev_gen(builder->dev) >= ILO_GEN(8)) ? 6 : 5;
    uint32_t reloc_flags = INTEL_RELOC_WRITE;
    uint32_t *dw;
    unsigned pos;
 
-   ILO_DEV_ASSERT(builder->dev, 6, 7.5);
+   ILO_DEV_ASSERT(builder->dev, 6, 8);
+
+   assert(bo_offset % 8 == 0);
 
    pos = ilo_builder_batch_pointer(builder, cmd_len, &dw);
 
@@ -56,17 +58,18 @@ gen6_MI_STORE_DATA_IMM(struct ilo_builder *builder,
    }
 
    dw[1] = 0; /* MBZ */
-   dw[3] = (uint32_t) val;
 
-   if (store_qword) {
-      assert(bo_offset % 8 == 0);
-      dw[4] = (uint32_t) (val >> 32);
+   if (ilo_dev_gen(builder->dev) >= ILO_GEN(8)) {
+      dw[4] = (uint32_t) val;
+      dw[5] = (uint32_t) (val >> 32);
+
+      ilo_builder_batch_reloc64(builder, pos + 2, bo, bo_offset, reloc_flags);
    } else {
-      assert(bo_offset % 4 == 0);
-      assert(val == (uint64_t) ((uint32_t) val));
-   }
+      dw[3] = (uint32_t) val;
+      dw[4] = (uint32_t) (val >> 32);
 
-   ilo_builder_batch_reloc(builder, pos + 2, bo, bo_offset, reloc_flags);
+      ilo_builder_batch_reloc(builder, pos + 2, bo, bo_offset, reloc_flags);
+   }
 }
 
 static inline void
@@ -76,7 +79,7 @@ gen6_MI_LOAD_REGISTER_IMM(struct ilo_builder *builder,
    const uint8_t cmd_len = 3;
    uint32_t *dw;
 
-   ILO_DEV_ASSERT(builder->dev, 6, 7.5);
+   ILO_DEV_ASSERT(builder->dev, 6, 8);
 
    assert(reg % 4 == 0);
 
@@ -88,31 +91,34 @@ gen6_MI_LOAD_REGISTER_IMM(struct ilo_builder *builder,
 }
 
 static inline void
-gen6_MI_STORE_REGISTER_MEM(struct ilo_builder *builder,
-                           struct intel_bo *bo, uint32_t bo_offset,
-                           uint32_t reg)
+gen6_MI_STORE_REGISTER_MEM(struct ilo_builder *builder, uint32_t reg,
+                           struct intel_bo *bo, uint32_t bo_offset)
 {
-   const uint8_t cmd_len = 3;
+   const uint8_t cmd_len = (ilo_dev_gen(builder->dev) >= ILO_GEN(8)) ? 4 : 3;
    uint32_t reloc_flags = INTEL_RELOC_WRITE;
    uint32_t *dw;
    unsigned pos;
 
-   ILO_DEV_ASSERT(builder->dev, 6, 7.5);
+   ILO_DEV_ASSERT(builder->dev, 6, 8);
 
    assert(reg % 4 == 0 && bo_offset % 4 == 0);
 
    pos = ilo_builder_batch_pointer(builder, cmd_len, &dw);
 
    dw[0] = GEN6_MI_CMD(MI_STORE_REGISTER_MEM) | (cmd_len - 2);
-   /* must use GGTT on GEN6 as in PIPE_CONTROL */
-   if (ilo_dev_gen(builder->dev) == ILO_GEN(6)) {
-      dw[0] |= GEN6_MI_STORE_REGISTER_MEM_DW0_USE_GGTT;
-      reloc_flags |= INTEL_RELOC_GGTT;
-   }
-
    dw[1] = reg;
 
-   ilo_builder_batch_reloc(builder, pos + 2, bo, bo_offset, reloc_flags);
+   if (ilo_dev_gen(builder->dev) >= ILO_GEN(8)) {
+      ilo_builder_batch_reloc64(builder, pos + 2, bo, bo_offset, reloc_flags);
+   } else {
+      /* must use GGTT on Gen6 as in PIPE_CONTROL */
+      if (ilo_dev_gen(builder->dev) == ILO_GEN(6)) {
+         dw[0] |= GEN6_MI_STORE_REGISTER_MEM_DW0_USE_GGTT;
+         reloc_flags |= INTEL_RELOC_GGTT;
+      }
+
+      ilo_builder_batch_reloc(builder, pos + 2, bo, bo_offset, reloc_flags);
+   }
 }
 
 static inline void
@@ -121,7 +127,7 @@ gen6_MI_FLUSH_DW(struct ilo_builder *builder)
    const uint8_t cmd_len = 4;
    uint32_t *dw;
 
-   ILO_DEV_ASSERT(builder->dev, 6, 7.5);
+   ILO_DEV_ASSERT(builder->dev, 6, 8);
 
    ilo_builder_batch_pointer(builder, cmd_len, &dw);
 
@@ -159,6 +165,29 @@ gen6_MI_REPORT_PERF_COUNT(struct ilo_builder *builder,
    ilo_builder_batch_reloc(builder, pos + 1, bo, bo_offset, reloc_flags);
 }
 
+static inline void
+gen7_MI_LOAD_REGISTER_MEM(struct ilo_builder *builder, uint32_t reg,
+                          struct intel_bo *bo, uint32_t bo_offset)
+{
+   const uint8_t cmd_len = (ilo_dev_gen(builder->dev) >= ILO_GEN(8)) ? 4 : 3;
+   uint32_t *dw;
+   unsigned pos;
+
+   ILO_DEV_ASSERT(builder->dev, 7, 8);
+
+   assert(reg % 4 == 0 && bo_offset % 4 == 0);
+
+   pos = ilo_builder_batch_pointer(builder, cmd_len, &dw);
+
+   dw[0] = GEN7_MI_CMD(MI_LOAD_REGISTER_MEM) | (cmd_len - 2);
+   dw[1] = reg;
+
+   if (ilo_dev_gen(builder->dev) >= ILO_GEN(8))
+      ilo_builder_batch_reloc64(builder, pos + 2, bo, bo_offset, 0);
+   else
+      ilo_builder_batch_reloc(builder, pos + 2, bo, bo_offset, 0);
+}
+
 /**
  * Add a MI_BATCH_BUFFER_END to the batch buffer.  Pad with MI_NOOP if
  * necessary.
@@ -175,7 +204,7 @@ gen6_mi_batch_buffer_end(struct ilo_builder *builder)
    const bool pad = !(builder->writers[ILO_BUILDER_WRITER_BATCH].used & 0x7);
    uint32_t *dw;
 
-   ILO_DEV_ASSERT(builder->dev, 6, 7.5);
+   ILO_DEV_ASSERT(builder->dev, 6, 8);
 
    if (pad) {
       ilo_builder_batch_pointer(builder, 2, &dw);

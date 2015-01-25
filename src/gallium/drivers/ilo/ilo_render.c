@@ -343,12 +343,12 @@ ilo_render_emit_query(struct ilo_render *render,
    for (i = 0; i < reg_count; i++) {
       if (regs[i]) {
          /* store lower 32 bits */
-         gen6_MI_STORE_REGISTER_MEM(render->builder, q->bo, offset, regs[i]);
+         gen6_MI_STORE_REGISTER_MEM(render->builder, regs[i], q->bo, offset);
          /* store higher 32 bits */
-         gen6_MI_STORE_REGISTER_MEM(render->builder, q->bo,
-               offset + 4, regs[i] + 4);
+         gen6_MI_STORE_REGISTER_MEM(render->builder, regs[i] + 4,
+               q->bo, offset + 4);
       } else {
-         gen6_MI_STORE_DATA_IMM(render->builder, q->bo, offset, 0, true);
+         gen6_MI_STORE_DATA_IMM(render->builder, q->bo, offset, 0);
       }
 
       offset += 8;
