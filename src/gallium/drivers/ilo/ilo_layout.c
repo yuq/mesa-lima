@@ -423,7 +423,9 @@ layout_init_alignments(struct ilo_layout *layout,
          }
       }
    } else {
-      const bool valign_4 = (templ->nr_samples > 1) ||
+      const bool valign_4 =
+         (templ->nr_samples > 1) ||
+         (ilo_dev_gen(params->dev) >= ILO_GEN(8)) ||
          (ilo_dev_gen(params->dev) >= ILO_GEN(7) &&
           layout->tiling == INTEL_TILING_Y &&
           (templ->bind & PIPE_BIND_RENDER_TARGET));
