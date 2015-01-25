@@ -1358,20 +1358,14 @@ gen6_translate_tex_filter(unsigned filter)
  * wrapping mode.
  */
 static int
-gen6_translate_tex_wrap(unsigned wrap, bool clamp_to_edge)
+gen6_translate_tex_wrap(unsigned wrap)
 {
-   /* clamp to edge or border? */
-   if (wrap == PIPE_TEX_WRAP_CLAMP) {
-      wrap = (clamp_to_edge) ?
-         PIPE_TEX_WRAP_CLAMP_TO_EDGE : PIPE_TEX_WRAP_CLAMP_TO_BORDER;
-   }
-
    switch (wrap) {
+   case PIPE_TEX_WRAP_CLAMP:              return GEN8_TEXCOORDMODE_HALF_BORDER;
    case PIPE_TEX_WRAP_REPEAT:             return GEN6_TEXCOORDMODE_WRAP;
    case PIPE_TEX_WRAP_CLAMP_TO_EDGE:      return GEN6_TEXCOORDMODE_CLAMP;
    case PIPE_TEX_WRAP_CLAMP_TO_BORDER:    return GEN6_TEXCOORDMODE_CLAMP_BORDER;
    case PIPE_TEX_WRAP_MIRROR_REPEAT:      return GEN6_TEXCOORDMODE_MIRROR;
-   case PIPE_TEX_WRAP_CLAMP:
    case PIPE_TEX_WRAP_MIRROR_CLAMP:
    case PIPE_TEX_WRAP_MIRROR_CLAMP_TO_EDGE:
    case PIPE_TEX_WRAP_MIRROR_CLAMP_TO_BORDER:
@@ -1418,10 +1412,9 @@ ilo_gpe_init_sampler_cso(const struct ilo_dev_info *dev,
    int mip_filter, min_filter, mag_filter, max_aniso;
    int lod_bias, max_lod, min_lod;
    int wrap_s, wrap_t, wrap_r, wrap_cube;
-   bool clamp_is_to_edge;
    uint32_t dw0, dw1, dw3;
 
-   ILO_DEV_ASSERT(dev, 6, 7.5);
+   ILO_DEV_ASSERT(dev, 6, 8);
 
    memset(sampler, 0, sizeof(*sampler));
 
@@ -1498,26 +1491,46 @@ ilo_gpe_init_sampler_cso(const struct ilo_dev_info *dev,
       mag_filter = min_filter;
    }
 
-   /*
-    * For nearest filtering, PIPE_TEX_WRAP_CLAMP means
-    * PIPE_TEX_WRAP_CLAMP_TO_EDGE;  for linear filtering, PIPE_TEX_WRAP_CLAMP
-    * means PIPE_TEX_WRAP_CLAMP_TO_BORDER while additionally clamping the
-    * texture coordinates to [0.0, 1.0].
-    *
-    * The clamping will be taken care of in the shaders.  There are two
-    * filters here, but let the minification one has a say.
-    */
-   clamp_is_to_edge = (state->min_img_filter == PIPE_TEX_FILTER_NEAREST);
-   if (!clamp_is_to_edge) {
-      sampler->saturate_s = (state->wrap_s == PIPE_TEX_WRAP_CLAMP);
-      sampler->saturate_t = (state->wrap_t == PIPE_TEX_WRAP_CLAMP);
-      sampler->saturate_r = (state->wrap_r == PIPE_TEX_WRAP_CLAMP);
-   }
-
    /* determine wrap s/t/r */
-   wrap_s = gen6_translate_tex_wrap(state->wrap_s, clamp_is_to_edge);
-   wrap_t = gen6_translate_tex_wrap(state->wrap_t, clamp_is_to_edge);
-   wrap_r = gen6_translate_tex_wrap(state->wrap_r, clamp_is_to_edge);
+   wrap_s = gen6_translate_tex_wrap(state->wrap_s);
+   wrap_t = gen6_translate_tex_wrap(state->wrap_t);
+   wrap_r = gen6_translate_tex_wrap(state->wrap_r);
+   if (ilo_dev_gen(dev) < ILO_GEN(8)) {
+      /*
+       * For nearest filtering, PIPE_TEX_WRAP_CLAMP means
+       * PIPE_TEX_WRAP_CLAMP_TO_EDGE;  for linear filtering,
+       * PIPE_TEX_WRAP_CLAMP means PIPE_TEX_WRAP_CLAMP_TO_BORDER while
+       * additionally clamping the texture coordinates to [0.0, 1.0].
+       *
+       * PIPE_TEX_WRAP_CLAMP is not supported natively until Gen8.  The
+       * clamping has to be taken care of in the shaders.  There are two
+       * filters here, but let the minification one has a say.
+       */
+      const bool clamp_is_to_edge =
+         (state->min_img_filter == PIPE_TEX_FILTER_NEAREST);
+
+      if (clamp_is_to_edge) {
+         if (wrap_s == GEN8_TEXCOORDMODE_HALF_BORDER)
+            wrap_s = GEN6_TEXCOORDMODE_CLAMP;
+         if (wrap_t == GEN8_TEXCOORDMODE_HALF_BORDER)
+            wrap_t = GEN6_TEXCOORDMODE_CLAMP;
+         if (wrap_r == GEN8_TEXCOORDMODE_HALF_BORDER)
+            wrap_r = GEN6_TEXCOORDMODE_CLAMP;
+      } else {
+         if (wrap_s == GEN8_TEXCOORDMODE_HALF_BORDER) {
+            wrap_s = GEN6_TEXCOORDMODE_CLAMP_BORDER;
+            sampler->saturate_s = true;
+         }
+         if (wrap_t == GEN8_TEXCOORDMODE_HALF_BORDER) {
+            wrap_t = GEN6_TEXCOORDMODE_CLAMP_BORDER;
+            sampler->saturate_t = true;
+         }
+         if (wrap_r == GEN8_TEXCOORDMODE_HALF_BORDER) {
+            wrap_r = GEN6_TEXCOORDMODE_CLAMP_BORDER;
+            sampler->saturate_r = true;
+         }
+      }
+   }
 
    /*
     * From the Sandy Bridge PRM, volume 4 part 1, page 107:
