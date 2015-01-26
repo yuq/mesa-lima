@@ -830,50 +830,62 @@ static inline void
 gen7_3DSTATE_STREAMOUT(struct ilo_builder *builder,
                        int render_stream,
                        bool render_disable,
-                       unsigned buffer_mask,
-                       int vertex_attrib_count)
+                       int vertex_attrib_count,
+                       const int *buf_strides)
 {
-   const uint8_t cmd_len = 3;
-   uint32_t dw1, dw2, *dw;
+   const uint8_t cmd_len = (ilo_dev_gen(builder->dev) >= ILO_GEN(8)) ? 5 : 3;
+   uint32_t *dw;
+   int buf_mask;
 
-   ILO_DEV_ASSERT(builder->dev, 7, 7.5);
+   ILO_DEV_ASSERT(builder->dev, 7, 8);
 
-   dw1 = render_stream << GEN7_SO_DW1_RENDER_STREAM_SELECT__SHIFT;
+   ilo_builder_batch_pointer(builder, cmd_len, &dw);
+
+   dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_STREAMOUT) | (cmd_len - 2);
+
+   dw[1] = render_stream << GEN7_SO_DW1_RENDER_STREAM_SELECT__SHIFT;
    if (render_disable)
-      dw1 |= GEN7_SO_DW1_RENDER_DISABLE;
+      dw[1] |= GEN7_SO_DW1_RENDER_DISABLE;
 
-   dw2 = 0;
+   if (buf_strides) {
+      buf_mask = ((bool) buf_strides[3]) << 3 |
+                 ((bool) buf_strides[2]) << 2 |
+                 ((bool) buf_strides[1]) << 1 |
+                 ((bool) buf_strides[0]);
+      if (ilo_dev_gen(builder->dev) >= ILO_GEN(8)) {
+         dw[3] = buf_strides[1] << 16 | buf_strides[0];
+         dw[4] = buf_strides[3] << 16 | buf_strides[1];
+      }
+   } else {
+      buf_mask = 0;
+   }
 
-   if (buffer_mask) {
+   if (buf_mask) {
       int read_len;
+
+      dw[1] |= GEN7_SO_DW1_SO_ENABLE |
+               GEN7_SO_DW1_STATISTICS;
+      /* API_OPENGL */
+      if (true)
+         dw[1] |= GEN7_SO_DW1_REORDER_TRAILING;
+      if (ilo_dev_gen(builder->dev) < ILO_GEN(8))
+         dw[1] |= buf_mask << GEN7_SO_DW1_BUFFER_ENABLES__SHIFT;
 
       read_len = (vertex_attrib_count + 1) / 2;
       if (!read_len)
          read_len = 1;
 
-      dw1 |= GEN7_SO_DW1_SO_ENABLE |
-             GEN7_SO_DW1_STATISTICS |
-             buffer_mask << GEN7_SO_DW1_BUFFER_ENABLES__SHIFT;
-
-      /* API_OPENGL */
-      if (true)
-         dw1 |= GEN7_SO_DW1_REORDER_TRAILING;
-
-      dw2 = 0 << GEN7_SO_DW2_STREAM3_READ_OFFSET__SHIFT |
-            (read_len - 1) << GEN7_SO_DW2_STREAM3_READ_LEN__SHIFT |
-            0 << GEN7_SO_DW2_STREAM2_READ_OFFSET__SHIFT |
-            (read_len - 1) << GEN7_SO_DW2_STREAM2_READ_LEN__SHIFT |
-            0 << GEN7_SO_DW2_STREAM1_READ_OFFSET__SHIFT |
-            (read_len - 1) << GEN7_SO_DW2_STREAM1_READ_LEN__SHIFT |
-            0 << GEN7_SO_DW2_STREAM0_READ_OFFSET__SHIFT |
-            (read_len - 1) << GEN7_SO_DW2_STREAM0_READ_LEN__SHIFT;
+      dw[2] = 0 << GEN7_SO_DW2_STREAM3_READ_OFFSET__SHIFT |
+              (read_len - 1) << GEN7_SO_DW2_STREAM3_READ_LEN__SHIFT |
+              0 << GEN7_SO_DW2_STREAM2_READ_OFFSET__SHIFT |
+              (read_len - 1) << GEN7_SO_DW2_STREAM2_READ_LEN__SHIFT |
+              0 << GEN7_SO_DW2_STREAM1_READ_OFFSET__SHIFT |
+              (read_len - 1) << GEN7_SO_DW2_STREAM1_READ_LEN__SHIFT |
+              0 << GEN7_SO_DW2_STREAM0_READ_OFFSET__SHIFT |
+              (read_len - 1) << GEN7_SO_DW2_STREAM0_READ_LEN__SHIFT;
+   } else {
+      dw[2] = 0;
    }
-
-   ilo_builder_batch_pointer(builder, cmd_len, &dw);
-
-   dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_STREAMOUT) | (cmd_len - 2);
-   dw[1] = dw1;
-   dw[2] = dw2;
 }
 
 static inline void
@@ -894,7 +906,7 @@ gen7_3DSTATE_SO_DECL_LIST(struct ilo_builder *builder,
    int hw_decl_count, i;
    uint32_t *dw;
 
-   ILO_DEV_ASSERT(builder->dev, 7, 7.5);
+   ILO_DEV_ASSERT(builder->dev, 7, 8);
 
    memset(streams, 0, sizeof(streams));
    memset(buf_offsets, 0, sizeof(buf_offsets));
@@ -978,13 +990,13 @@ static inline void
 gen7_3DSTATE_SO_BUFFER(struct ilo_builder *builder, int index, int stride,
                        const struct pipe_stream_output_target *so_target)
 {
-   const uint8_t cmd_len = 4;
+   const uint8_t cmd_len = (ilo_dev_gen(builder->dev) >= ILO_GEN(8)) ? 8 : 4;
    struct ilo_buffer *buf;
    int start, end;
    uint32_t *dw;
    unsigned pos;
 
-   ILO_DEV_ASSERT(builder->dev, 7, 7.5);
+   ILO_DEV_ASSERT(builder->dev, 7, 8);
 
    buf = ilo_buffer(so_target->buffer);
 
@@ -1002,19 +1014,29 @@ gen7_3DSTATE_SO_BUFFER(struct ilo_builder *builder, int index, int stride,
    dw[1] = index << GEN7_SO_BUF_DW1_INDEX__SHIFT |
            stride;
 
-   ilo_builder_batch_reloc(builder, pos + 2,
-         buf->bo, start, INTEL_RELOC_WRITE);
-   ilo_builder_batch_reloc(builder, pos + 3,
-         buf->bo, end, INTEL_RELOC_WRITE);
+   if (ilo_dev_gen(builder->dev) >= ILO_GEN(8)) {
+      dw[4] = end - start;
+      dw[5] = 0;
+      dw[6] = 0;
+      dw[7] = 0;
+
+      ilo_builder_batch_reloc64(builder, pos + 2,
+            buf->bo, start, INTEL_RELOC_WRITE);
+   } else {
+      ilo_builder_batch_reloc(builder, pos + 2,
+            buf->bo, start, INTEL_RELOC_WRITE);
+      ilo_builder_batch_reloc(builder, pos + 3,
+            buf->bo, end, INTEL_RELOC_WRITE);
+   }
 }
 
 static inline void
 gen7_disable_3DSTATE_SO_BUFFER(struct ilo_builder *builder, int index)
 {
-   const uint8_t cmd_len = 4;
+   const uint8_t cmd_len = (ilo_dev_gen(builder->dev) >= ILO_GEN(8)) ? 8 : 4;
    uint32_t *dw;
 
-   ILO_DEV_ASSERT(builder->dev, 7, 7.5);
+   ILO_DEV_ASSERT(builder->dev, 7, 8);
 
    ilo_builder_batch_pointer(builder, cmd_len, &dw);
 
@@ -1022,6 +1044,13 @@ gen7_disable_3DSTATE_SO_BUFFER(struct ilo_builder *builder, int index)
    dw[1] = index << GEN7_SO_BUF_DW1_INDEX__SHIFT;
    dw[2] = 0;
    dw[3] = 0;
+
+   if (ilo_dev_gen(builder->dev) >= ILO_GEN(8)) {
+      dw[4] = 0;
+      dw[5] = 0;
+      dw[6] = 0;
+      dw[7] = 0;
+   }
 }
 
 static inline void

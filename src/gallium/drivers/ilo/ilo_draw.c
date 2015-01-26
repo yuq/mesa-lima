@@ -296,8 +296,9 @@ draw_vbo(struct ilo_context *ilo, const struct ilo_state_vector *vec)
    bool success = true;
    int max_len, before_space;
 
-   /* on GEN7+, we need SOL_RESET to reset the SO write offsets */
+   /* on Gen7 and Gen7.5, we need SOL_RESET to reset the SO write offsets */
    if (ilo_dev_gen(ilo->dev) >= ILO_GEN(7) &&
+       ilo_dev_gen(ilo->dev) <= ILO_GEN(7.5) &&
        (vec->dirty & ILO_DIRTY_SO) && vec->so.enabled &&
        !vec->so.append_bitmask) {
       ilo_cp_submit(ilo->cp, "SOL_RESET");

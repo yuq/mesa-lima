@@ -472,13 +472,17 @@ gen7_draw_sol(struct ilo_render *r,
 
    /* 3DSTATE_STREAMOUT */
    if (DIRTY(SO) || DIRTY(RASTERIZER) || dirty_sh) {
-      const unsigned buffer_mask = (1 << vec->so.count) - 1;
       const int output_count = ilo_shader_get_kernel_param(shader,
             ILO_KERNEL_OUTPUT_COUNT);
+      int buf_strides[4] = { 0, 0, 0, 0 };
+      int i;
+
+      for (i = 0; i < vec->so.count; i++)
+         buf_strides[i] = so_info->stride[i] * 4;
 
       gen7_3DSTATE_STREAMOUT(r->builder, 0,
             vec->rasterizer->state.rasterizer_discard,
-            buffer_mask, output_count);
+            output_count, buf_strides);
    }
 }
 
