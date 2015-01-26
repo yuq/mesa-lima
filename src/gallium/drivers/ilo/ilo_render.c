@@ -35,33 +35,46 @@
 #include "ilo_query.h"
 #include "ilo_render_gen.h"
 
-/* in U0.4 */
+/* in S1.3 */
 struct sample_position {
-   uint8_t x, y;
+   int8_t x, y;
 };
 
-/* \see gen6_get_sample_position() */
-static const struct sample_position sample_position_1x[1] = {
-   {  8,  8 },
+static const struct sample_position ilo_sample_pattern_1x[1] = {
+   {  0,  0 },
 };
 
-static const struct sample_position sample_position_4x[4] = {
-   {  6,  2 }, /* distance from the center is sqrt(40) */
-   { 14,  6 }, /* distance from the center is sqrt(40) */
-   {  2, 10 }, /* distance from the center is sqrt(40) */
-   { 10, 14 }, /* distance from the center is sqrt(40) */
+static const struct sample_position ilo_sample_pattern_4x[4] = {
+   { -2, -6 },
+   {  6, -2 },
+   { -6,  2 },
+   {  2,  6 },
 };
 
-static const struct sample_position sample_position_8x[8] = {
-   {  7,  9 }, /* distance from the center is sqrt(2) */
-   {  9, 13 }, /* distance from the center is sqrt(26) */
-   { 11,  3 }, /* distance from the center is sqrt(34) */
-   { 13, 11 }, /* distance from the center is sqrt(34) */
-   {  1,  7 }, /* distance from the center is sqrt(50) */
-   {  5,  1 }, /* distance from the center is sqrt(58) */
-   { 15,  5 }, /* distance from the center is sqrt(58) */
-   {  3, 15 }, /* distance from the center is sqrt(74) */
+/* \see brw_multisample_positions_8x */
+static const struct sample_position ilo_sample_pattern_8x[8] = {
+   { -1,  1 },
+   {  1,  5 },
+   {  3, -5 },
+   {  5,  3 },
+   { -7, -1 },
+   { -3, -7 },
+   {  7, -3 },
+   { -5,  7 },
 };
+
+static uint8_t
+pack_sample_position(const struct sample_position *pos)
+{
+   return (pos->x + 8) << 4 | (pos->y + 8);
+}
+
+static void
+get_sample_position(const struct sample_position *pos, float *x, float *y)
+{
+   *x = (float) (pos->x + 8) / 16.0f;
+   *y = (float) (pos->y + 8) / 16.0f;
+}
 
 struct ilo_render *
 ilo_render_create(struct ilo_builder *builder)
@@ -84,23 +97,16 @@ ilo_render_create(struct ilo_builder *builder)
       return NULL;
    }
 
-   render->packed_sample_position_1x =
-      sample_position_1x[0].x << 4 |
-      sample_position_1x[0].y;
-
    /* pack into dwords */
+   render->sample_pattern_1x = pack_sample_position(ilo_sample_pattern_1x);
    for (i = 0; i < 4; i++) {
-      render->packed_sample_position_4x |=
-         sample_position_4x[i].x << (8 * i + 4) |
-         sample_position_4x[i].y << (8 * i);
+      render->sample_pattern_4x |=
+         pack_sample_position(&ilo_sample_pattern_4x[i]) << (8 * i);
 
-      render->packed_sample_position_8x[0] |=
-         sample_position_8x[i].x << (8 * i + 4) |
-         sample_position_8x[i].y << (8 * i);
-
-      render->packed_sample_position_8x[1] |=
-         sample_position_8x[4 + i].x << (8 * i + 4) |
-         sample_position_8x[4 + i].y << (8 * i);
+      render->sample_pattern_8x[0] |=
+         pack_sample_position(&ilo_sample_pattern_8x[i]) << (8 * i);
+      render->sample_pattern_8x[1] |=
+         pack_sample_position(&ilo_sample_pattern_8x[i + 4]) << (8 * i);
    }
 
    ilo_render_invalidate_hw(render);
@@ -124,20 +130,20 @@ ilo_render_get_sample_position(const struct ilo_render *render,
                                unsigned sample_index,
                                float *x, float *y)
 {
-   const struct sample_position *pos;
+   const struct sample_position *pattern;
 
    switch (sample_count) {
    case 1:
-      assert(sample_index < Elements(sample_position_1x));
-      pos = sample_position_1x;
+      assert(sample_index < Elements(ilo_sample_pattern_1x));
+      pattern = ilo_sample_pattern_1x;
       break;
    case 4:
-      assert(sample_index < Elements(sample_position_4x));
-      pos = sample_position_4x;
+      assert(sample_index < Elements(ilo_sample_pattern_4x));
+      pattern = ilo_sample_pattern_4x;
       break;
    case 8:
-      assert(sample_index < Elements(sample_position_8x));
-      pos = sample_position_8x;
+      assert(sample_index < Elements(ilo_sample_pattern_8x));
+      pattern = ilo_sample_pattern_8x;
       break;
    default:
       assert(!"unknown sample count");
@@ -147,8 +153,7 @@ ilo_render_get_sample_position(const struct ilo_render *render,
       break;
    }
 
-   *x = (float) pos[sample_index].x / 16.0f;
-   *y = (float) pos[sample_index].y / 16.0f;
+   get_sample_position(&pattern[sample_index], x, y);
 }
 
 void

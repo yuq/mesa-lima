@@ -524,8 +524,7 @@ gen7_3DSTATE_SAMPLER_STATE_POINTERS_PS(struct ilo_builder *builder,
 
 static inline void
 gen6_3DSTATE_MULTISAMPLE(struct ilo_builder *builder,
-                         int num_samples,
-                         const uint32_t *packed_sample_pos,
+                         int num_samples, const uint32_t *pattern,
                          bool pixel_location_center)
 {
    const uint8_t cmd_len = (ilo_dev_gen(builder->dev) >= ILO_GEN(7)) ? 4 : 3;
@@ -545,14 +544,14 @@ gen6_3DSTATE_MULTISAMPLE(struct ilo_builder *builder,
       break;
    case 4:
       dw1 |= GEN6_MULTISAMPLE_DW1_NUMSAMPLES_4;
-      dw2 = packed_sample_pos[0];
+      dw2 = pattern[0];
       dw3 = 0;
       break;
    case 8:
       assert(ilo_dev_gen(builder->dev) >= ILO_GEN(7));
       dw1 |= GEN7_MULTISAMPLE_DW1_NUMSAMPLES_8;
-      dw2 = packed_sample_pos[0];
-      dw3 = packed_sample_pos[1];
+      dw2 = pattern[0];
+      dw3 = pattern[1];
       break;
    default:
       assert(!"unsupported sample count");

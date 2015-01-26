@@ -717,10 +717,10 @@ gen6_draw_wm_multisample(struct ilo_render *r,
 {
    /* 3DSTATE_MULTISAMPLE and 3DSTATE_SAMPLE_MASK */
    if (DIRTY(SAMPLE_MASK) || DIRTY(FB)) {
-      const uint32_t *packed_sample_pos;
+      const uint32_t *pattern;
 
-      packed_sample_pos = (vec->fb.num_samples > 1) ?
-         &r->packed_sample_position_4x : &r->packed_sample_position_1x;
+      pattern = (vec->fb.num_samples > 1) ?
+         &r->sample_pattern_4x : &r->sample_pattern_1x;
 
       if (ilo_dev_gen(r->dev) == ILO_GEN(6)) {
          gen6_wa_pre_non_pipelined(r);
@@ -728,7 +728,7 @@ gen6_draw_wm_multisample(struct ilo_render *r,
       }
 
       gen6_3DSTATE_MULTISAMPLE(r->builder,
-            vec->fb.num_samples, packed_sample_pos,
+            vec->fb.num_samples, pattern,
             vec->rasterizer->state.half_pixel_center);
 
       gen6_3DSTATE_SAMPLE_MASK(r->builder,
@@ -920,13 +920,13 @@ static void
 gen6_rectlist_wm_multisample(struct ilo_render *r,
                              const struct ilo_blitter *blitter)
 {
-   const uint32_t *packed_sample_pos = (blitter->fb.num_samples > 1) ?
-      &r->packed_sample_position_4x : &r->packed_sample_position_1x;
+   const uint32_t *pattern = (blitter->fb.num_samples > 1) ?
+      &r->sample_pattern_4x : &r->sample_pattern_1x;
 
    gen6_wa_pre_3dstate_multisample(r);
 
    gen6_3DSTATE_MULTISAMPLE(r->builder, blitter->fb.num_samples,
-         packed_sample_pos, true);
+         pattern, true);
 
    gen6_3DSTATE_SAMPLE_MASK(r->builder,
          (1 << blitter->fb.num_samples) - 1);
