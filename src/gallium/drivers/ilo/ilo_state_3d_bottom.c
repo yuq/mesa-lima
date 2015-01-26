@@ -128,24 +128,30 @@ rasterizer_init_clip(const struct ilo_dev_info *dev,
 }
 
 static void
-rasterizer_init_sf(const struct ilo_dev_info *dev,
-                   const struct pipe_rasterizer_state *state,
-                   struct ilo_rasterizer_sf *sf)
+rasterizer_init_sf_depth_offset_gen6(const struct ilo_dev_info *dev,
+                                     const struct pipe_rasterizer_state *state,
+                                     struct ilo_rasterizer_sf *sf)
 {
-   float offset_const, offset_scale, offset_clamp;
-   int line_width, point_width;
-   uint32_t dw1, dw2, dw3;
-
-   ILO_DEV_ASSERT(dev, 6, 7.5);
+   ILO_DEV_ASSERT(dev, 6, 8);
 
    /*
     * Scale the constant term.  The minimum representable value used by the HW
     * is not large enouch to be the minimum resolvable difference.
     */
-   offset_const = state->offset_units * 2.0f;
+   sf->dw_depth_offset_const = fui(state->offset_units * 2.0f);
+   sf->dw_depth_offset_scale = fui(state->offset_scale);
+   sf->dw_depth_offset_clamp = fui(state->offset_clamp);
+}
 
-   offset_scale = state->offset_scale;
-   offset_clamp = state->offset_clamp;
+static void
+rasterizer_init_sf_gen6(const struct ilo_dev_info *dev,
+                        const struct pipe_rasterizer_state *state,
+                        struct ilo_rasterizer_sf *sf)
+{
+   int line_width, point_width;
+   uint32_t dw1, dw2, dw3;
+
+   ILO_DEV_ASSERT(dev, 6, 7.5);
 
    /*
     * From the Sandy Bridge PRM, volume 2 part 1, page 248:
@@ -177,13 +183,7 @@ rasterizer_init_sf(const struct ilo_dev_info *dev,
                 GEN7_SF_DW1_DEPTH_OFFSET_WIREFRAME |
                 GEN7_SF_DW1_DEPTH_OFFSET_POINT;
       }
-      else {
-         offset_const = 0.0f;
-         offset_scale = 0.0f;
-         offset_clamp = 0.0f;
-      }
-   }
-   else {
+   } else {
       if (state->offset_tri)
          dw1 |= GEN7_SF_DW1_DEPTH_OFFSET_SOLID;
       if (state->offset_line)
@@ -262,18 +262,17 @@ rasterizer_init_sf(const struct ilo_dev_info *dev,
     *
     * Line width is in U3.7.
     */
-   line_width = (int) ((state->line_width +
-            (float) state->line_smooth) * 128.0f + 0.5f);
+   line_width = (int)
+      ((state->line_width + (float) state->line_smooth) * 128.0f + 0.5f);
    line_width = CLAMP(line_width, 0, 1023);
 
-   if (line_width == 128 && !state->line_smooth) {
-      /* use GIQ rules */
+   /* use GIQ rules */
+   if (line_width == 128 && !state->line_smooth)
       line_width = 0;
-   }
 
    dw2 |= line_width << GEN7_SF_DW2_LINE_WIDTH__SHIFT;
 
-   if (ilo_dev_gen(dev) >= ILO_GEN(7.5) && state->line_stipple_enable)
+   if (ilo_dev_gen(dev) == ILO_GEN(7.5) && state->line_stipple_enable)
       dw2 |= GEN75_SF_DW2_LINE_STIPPLE_ENABLE;
 
    if (state->scissor)
@@ -283,14 +282,13 @@ rasterizer_init_sf(const struct ilo_dev_info *dev,
          GEN7_SF_DW3_SUBPIXEL_8BITS;
 
    if (state->line_last_pixel)
-      dw3 |= 1 << 31;
+      dw3 |= GEN7_SF_DW3_LINE_LAST_PIXEL_ENABLE;
 
    if (state->flatshade_first) {
       dw3 |= 0 << GEN7_SF_DW3_TRI_PROVOKE__SHIFT |
              0 << GEN7_SF_DW3_LINE_PROVOKE__SHIFT |
              1 << GEN7_SF_DW3_TRIFAN_PROVOKE__SHIFT;
-   }
-   else {
+   } else {
       dw3 |= 2 << GEN7_SF_DW3_TRI_PROVOKE__SHIFT |
              1 << GEN7_SF_DW3_LINE_PROVOKE__SHIFT |
              2 << GEN7_SF_DW3_TRIFAN_PROVOKE__SHIFT;
@@ -305,13 +303,10 @@ rasterizer_init_sf(const struct ilo_dev_info *dev,
 
    dw3 |= point_width;
 
-   STATIC_ASSERT(Elements(sf->payload) >= 6);
+   STATIC_ASSERT(Elements(sf->payload) >= 3);
    sf->payload[0] = dw1;
    sf->payload[1] = dw2;
    sf->payload[2] = dw3;
-   sf->payload[3] = fui(offset_const);
-   sf->payload[4] = fui(offset_scale);
-   sf->payload[5] = fui(offset_clamp);
 
    if (state->multisample) {
       sf->dw_msaa = GEN7_SF_DW2_MSRASTMODE_ON_PATTERN;
@@ -328,10 +323,151 @@ rasterizer_init_sf(const struct ilo_dev_info *dev,
 
          sf->dw_msaa |= line_width << GEN7_SF_DW2_LINE_WIDTH__SHIFT;
       }
-   }
-   else {
+   } else {
       sf->dw_msaa = 0;
    }
+
+   rasterizer_init_sf_depth_offset_gen6(dev, state, sf);
+   /* 3DSTATE_RASTER is Gen8+ only */
+   sf->dw_raster = 0;
+}
+
+static uint32_t
+rasterizer_get_sf_raster_gen8(const struct ilo_dev_info *dev,
+                              const struct pipe_rasterizer_state *state)
+{
+   uint32_t dw = 0;
+
+   ILO_DEV_ASSERT(dev, 8, 8);
+
+   if (state->front_ccw)
+      dw |= GEN8_RASTER_DW1_FRONTWINDING_CCW;
+
+   switch (state->cull_face) {
+   case PIPE_FACE_NONE:
+      dw |= GEN8_RASTER_DW1_CULLMODE_NONE;
+      break;
+   case PIPE_FACE_FRONT:
+      dw |= GEN8_RASTER_DW1_CULLMODE_FRONT;
+      break;
+   case PIPE_FACE_BACK:
+      dw |= GEN8_RASTER_DW1_CULLMODE_BACK;
+      break;
+   case PIPE_FACE_FRONT_AND_BACK:
+      dw |= GEN8_RASTER_DW1_CULLMODE_BOTH;
+      break;
+   }
+
+   if (state->point_smooth)
+      dw |= GEN8_RASTER_DW1_SMOOTH_POINT_ENABLE;
+
+   if (state->multisample)
+      dw |= GEN8_RASTER_DW1_API_MULTISAMPLE_ENABLE;
+
+   if (state->offset_tri)
+      dw|= GEN8_RASTER_DW1_DEPTH_OFFSET_SOLID;
+   if (state->offset_line)
+      dw|= GEN8_RASTER_DW1_DEPTH_OFFSET_WIREFRAME;
+   if (state->offset_point)
+      dw|= GEN8_RASTER_DW1_DEPTH_OFFSET_POINT;
+
+   switch (state->fill_front) {
+   case PIPE_POLYGON_MODE_FILL:
+      dw |= GEN8_RASTER_DW1_FRONTFACE_SOLID;
+      break;
+   case PIPE_POLYGON_MODE_LINE:
+      dw |= GEN8_RASTER_DW1_FRONTFACE_WIREFRAME;
+      break;
+   case PIPE_POLYGON_MODE_POINT:
+      dw |= GEN8_RASTER_DW1_FRONTFACE_POINT;
+      break;
+   }
+
+   switch (state->fill_back) {
+   case PIPE_POLYGON_MODE_FILL:
+      dw |= GEN8_RASTER_DW1_BACKFACE_SOLID;
+      break;
+   case PIPE_POLYGON_MODE_LINE:
+      dw |= GEN8_RASTER_DW1_BACKFACE_WIREFRAME;
+      break;
+   case PIPE_POLYGON_MODE_POINT:
+      dw |= GEN8_RASTER_DW1_BACKFACE_POINT;
+      break;
+   }
+
+   if (state->line_smooth)
+      dw |= GEN8_RASTER_DW1_AA_LINE_ENABLE;
+
+   if (state->scissor)
+      dw |= GEN8_RASTER_DW1_SCISSOR_ENABLE;
+
+   if (state->depth_clip)
+      dw |= GEN8_RASTER_DW1_Z_TEST_ENABLE;
+
+   return dw;
+}
+
+static void
+rasterizer_init_sf_gen8(const struct ilo_dev_info *dev,
+                        const struct pipe_rasterizer_state *state,
+                        struct ilo_rasterizer_sf *sf)
+{
+   int line_width, point_width;
+   uint32_t dw1, dw2, dw3;
+
+   ILO_DEV_ASSERT(dev, 8, 8);
+
+   /* in U3.7 */
+   line_width = (int)
+      ((state->line_width + (float) state->line_smooth) * 128.0f + 0.5f);
+   line_width = CLAMP(line_width, 0, 1023);
+
+   /* use GIQ rules */
+   if (line_width == 128 && !state->line_smooth)
+      line_width = 0;
+
+   /* in U8.3 */
+   point_width = (int) (state->point_size * 8.0f + 0.5f);
+   point_width = CLAMP(point_width, 1, 2047);
+
+   dw1 = GEN7_SF_DW1_STATISTICS |
+         GEN7_SF_DW1_VIEWPORT_ENABLE;
+
+   dw2 = line_width << GEN7_SF_DW2_LINE_WIDTH__SHIFT;
+   if (state->line_smooth)
+      dw2 |= GEN7_SF_DW2_AA_LINE_CAP_1_0;
+
+   dw3 = GEN7_SF_DW3_TRUE_AA_LINE_DISTANCE |
+         GEN7_SF_DW3_SUBPIXEL_8BITS |
+         point_width;
+
+   if (state->line_last_pixel)
+      dw3 |= GEN7_SF_DW3_LINE_LAST_PIXEL_ENABLE;
+
+   if (state->flatshade_first) {
+      dw3 |= 0 << GEN7_SF_DW3_TRI_PROVOKE__SHIFT |
+             0 << GEN7_SF_DW3_LINE_PROVOKE__SHIFT |
+             1 << GEN7_SF_DW3_TRIFAN_PROVOKE__SHIFT;
+   } else {
+      dw3 |= 2 << GEN7_SF_DW3_TRI_PROVOKE__SHIFT |
+             1 << GEN7_SF_DW3_LINE_PROVOKE__SHIFT |
+             2 << GEN7_SF_DW3_TRIFAN_PROVOKE__SHIFT;
+   }
+
+   if (!state->point_size_per_vertex)
+      dw3 |= GEN7_SF_DW3_USE_POINT_WIDTH;
+
+   dw3 |= point_width;
+
+   STATIC_ASSERT(Elements(sf->payload) >= 3);
+   sf->payload[0] = dw1;
+   sf->payload[1] = dw2;
+   sf->payload[2] = dw3;
+
+   rasterizer_init_sf_depth_offset_gen6(dev, state, sf);
+
+   sf->dw_msaa = 0;
+   sf->dw_raster = rasterizer_get_sf_raster_gen8(dev, state);
 }
 
 static void
@@ -435,12 +571,17 @@ ilo_gpe_init_rasterizer(const struct ilo_dev_info *dev,
                         struct ilo_rasterizer_state *rasterizer)
 {
    rasterizer_init_clip(dev, state, &rasterizer->clip);
-   rasterizer_init_sf(dev, state, &rasterizer->sf);
 
-   if (ilo_dev_gen(dev) >= ILO_GEN(7))
+   if (ilo_dev_gen(dev) >= ILO_GEN(8)) {
       rasterizer_init_wm_gen7(dev, state, &rasterizer->wm);
-   else
+      rasterizer_init_sf_gen8(dev, state, &rasterizer->sf);
+   } else if (ilo_dev_gen(dev) >= ILO_GEN(7)) {
+      rasterizer_init_wm_gen7(dev, state, &rasterizer->wm);
+      rasterizer_init_sf_gen6(dev, state, &rasterizer->sf);
+   } else {
       rasterizer_init_wm_gen6(dev, state, &rasterizer->wm);
+      rasterizer_init_sf_gen6(dev, state, &rasterizer->sf);
+   }
 }
 
 static void

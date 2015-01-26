@@ -219,8 +219,16 @@ struct ilo_rasterizer_clip {
 
 struct ilo_rasterizer_sf {
    /* 3DSTATE_SF */
-   uint32_t payload[6];
+   uint32_t payload[3];
    uint32_t dw_msaa;
+
+   /* Global Depth Offset Constant/Scale/Clamp */
+   uint32_t dw_depth_offset_const;
+   uint32_t dw_depth_offset_scale;
+   uint32_t dw_depth_offset_clamp;
+
+   /* Gen8+ 3DSTATE_RASTER */
+   uint32_t dw_raster;
 };
 
 struct ilo_rasterizer_wm {

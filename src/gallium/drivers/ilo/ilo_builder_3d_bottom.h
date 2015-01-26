@@ -96,7 +96,6 @@ static inline void
 gen7_internal_3dstate_sf(struct ilo_builder *builder,
                          uint8_t cmd_len, uint32_t *dw,
                          const struct ilo_rasterizer_sf *sf,
-                         enum pipe_format zs_format,
                          int num_samples)
 {
    ILO_DEV_ASSERT(builder->dev, 6, 7.5);
@@ -105,51 +104,29 @@ gen7_internal_3dstate_sf(struct ilo_builder *builder,
 
    dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_SF) | (cmd_len - 2);
 
-   if (sf) {
-      /* see rasterizer_init_sf() */
-      STATIC_ASSERT(Elements(sf->payload) >= 6);
-      dw[1] = sf->payload[0];
-      dw[2] = sf->payload[1];
-      dw[3] = sf->payload[2];
-      dw[4] = sf->payload[3];
-      dw[5] = sf->payload[4];
-      dw[6] = sf->payload[5];
-
-      if (num_samples > 1)
-         dw[2] |= sf->dw_msaa;
-   } else {
+   if (!sf) {
       dw[1] = 0;
       dw[2] = (num_samples > 1) ? GEN7_SF_DW2_MSRASTMODE_ON_PATTERN : 0;
       dw[3] = 0;
       dw[4] = 0;
       dw[5] = 0;
       dw[6] = 0;
+
+      return;
    }
 
-   if (ilo_dev_gen(builder->dev) >= ILO_GEN(7)) {
-      int hw_format;
+   /* see rasterizer_init_sf_gen6() */
+   STATIC_ASSERT(Elements(sf->payload) >= 3);
+   dw[1] = sf->payload[0];
+   dw[2] = sf->payload[1];
+   dw[3] = sf->payload[2];
 
-      /* separate stencil */
-      switch (zs_format) {
-      case PIPE_FORMAT_Z16_UNORM:
-         hw_format = GEN6_ZFORMAT_D16_UNORM;
-         break;
-      case PIPE_FORMAT_Z32_FLOAT:
-      case PIPE_FORMAT_Z32_FLOAT_S8X24_UINT:
-         hw_format = GEN6_ZFORMAT_D32_FLOAT;
-         break;
-      case PIPE_FORMAT_Z24X8_UNORM:
-      case PIPE_FORMAT_Z24_UNORM_S8_UINT:
-         hw_format = GEN6_ZFORMAT_D24_UNORM_X8_UINT;
-         break;
-      default:
-         /* FLOAT surface is assumed when there is no depth buffer */
-         hw_format = GEN6_ZFORMAT_D32_FLOAT;
-         break;
-      }
+   if (num_samples > 1)
+      dw[2] |= sf->dw_msaa;
 
-      dw[1] |= hw_format << GEN7_SF_DW1_DEPTH_FORMAT__SHIFT;
-   }
+   dw[4] = sf->dw_depth_offset_const;
+   dw[5] = sf->dw_depth_offset_scale;
+   dw[6] = sf->dw_depth_offset_clamp;
 }
 
 static inline void
@@ -238,13 +215,11 @@ gen6_3DSTATE_SF(struct ilo_builder *builder,
    sf = (rasterizer) ? &rasterizer->sf : NULL;
    sprite_coord_mode = (rasterizer) ? rasterizer->state.sprite_coord_mode : 0;
 
-   gen7_internal_3dstate_sf(builder,
-         Elements(gen7_3dstate_sf), gen7_3dstate_sf,
-         sf, PIPE_FORMAT_NONE, sample_count);
+   gen7_internal_3dstate_sf(builder, Elements(gen7_3dstate_sf),
+         gen7_3dstate_sf, sf, sample_count);
 
-   gen7_internal_3dstate_sbe(builder,
-         Elements(gen7_3dstate_sbe), gen7_3dstate_sbe,
-         fs, sprite_coord_mode);
+   gen7_internal_3dstate_sbe(builder, Elements(gen7_3dstate_sbe),
+         gen7_3dstate_sbe, fs, sprite_coord_mode);
 
    ilo_builder_batch_pointer(builder, cmd_len, &dw);
 
@@ -267,8 +242,52 @@ gen7_3DSTATE_SF(struct ilo_builder *builder,
 
    ilo_builder_batch_pointer(builder, cmd_len, &dw);
 
-   gen7_internal_3dstate_sf(builder, cmd_len, dw,
-         sf, zs_format, sample_count);
+   gen7_internal_3dstate_sf(builder, cmd_len, dw, sf, sample_count);
+
+   if (ilo_dev_gen(builder->dev) >= ILO_GEN(7)) {
+      int hw_format;
+
+      /* separate stencil */
+      switch (zs_format) {
+      case PIPE_FORMAT_Z16_UNORM:
+         hw_format = GEN6_ZFORMAT_D16_UNORM;
+         break;
+      case PIPE_FORMAT_Z32_FLOAT:
+      case PIPE_FORMAT_Z32_FLOAT_S8X24_UINT:
+         hw_format = GEN6_ZFORMAT_D32_FLOAT;
+         break;
+      case PIPE_FORMAT_Z24X8_UNORM:
+      case PIPE_FORMAT_Z24_UNORM_S8_UINT:
+         hw_format = GEN6_ZFORMAT_D24_UNORM_X8_UINT;
+         break;
+      default:
+         /* FLOAT surface is assumed when there is no depth buffer */
+         hw_format = GEN6_ZFORMAT_D32_FLOAT;
+         break;
+      }
+
+      dw[1] |= hw_format << GEN7_SF_DW1_DEPTH_FORMAT__SHIFT;
+   }
+}
+
+static inline void
+gen8_3DSTATE_SF(struct ilo_builder *builder,
+                const struct ilo_rasterizer_sf *sf)
+{
+   const uint8_t cmd_len = 4;
+   uint32_t *dw;
+
+   ILO_DEV_ASSERT(builder->dev, 8, 8);
+
+   ilo_builder_batch_pointer(builder, cmd_len, &dw);
+
+   dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_SF) | (cmd_len - 2);
+
+   /* see rasterizer_init_sf_gen8() */
+   STATIC_ASSERT(Elements(sf->payload) >= 3);
+   dw[1] = sf->payload[0];
+   dw[2] = sf->payload[1];
+   dw[3] = sf->payload[2];
 }
 
 static inline void
@@ -284,6 +303,24 @@ gen7_3DSTATE_SBE(struct ilo_builder *builder,
    ilo_builder_batch_pointer(builder, cmd_len, &dw);
 
    gen7_internal_3dstate_sbe(builder, cmd_len, dw, fs, sprite_coord_mode);
+}
+
+static inline void
+gen8_3DSTATE_RASTER(struct ilo_builder *builder,
+                    const struct ilo_rasterizer_sf *sf)
+{
+   const uint8_t cmd_len = 5;
+   uint32_t *dw;
+
+   ILO_DEV_ASSERT(builder->dev, 8, 8);
+
+   ilo_builder_batch_pointer(builder, cmd_len, &dw);
+
+   dw[0] = GEN8_RENDER_CMD(3D, 3DSTATE_RASTER) | (cmd_len - 2);
+   dw[1] = sf->dw_raster;
+   dw[2] = sf->dw_depth_offset_const;
+   dw[3] = sf->dw_depth_offset_scale;
+   dw[4] = sf->dw_depth_offset_clamp;
 }
 
 static inline void
