@@ -599,10 +599,10 @@ gen6_disable_3DSTATE_VS(struct ilo_builder *builder)
 static inline void
 gen7_disable_3DSTATE_HS(struct ilo_builder *builder)
 {
-   const uint8_t cmd_len = 7;
+   const uint8_t cmd_len = (ilo_dev_gen(builder->dev) >= ILO_GEN(8)) ? 9 : 7;
    uint32_t *dw;
 
-   ILO_DEV_ASSERT(builder->dev, 7, 7.5);
+   ILO_DEV_ASSERT(builder->dev, 7, 8);
 
    ilo_builder_batch_pointer(builder, cmd_len, &dw);
 
@@ -613,6 +613,10 @@ gen7_disable_3DSTATE_HS(struct ilo_builder *builder)
    dw[4] = 0;
    dw[5] = 0;
    dw[6] = 0;
+   if (ilo_dev_gen(builder->dev) >= ILO_GEN(8)) {
+      dw[7] = 0;
+      dw[8] = 0;
+   }
 }
 
 static inline void
@@ -634,10 +638,10 @@ gen7_3DSTATE_TE(struct ilo_builder *builder)
 static inline void
 gen7_disable_3DSTATE_DS(struct ilo_builder *builder)
 {
-   const uint8_t cmd_len = 6;
+   const uint8_t cmd_len = (ilo_dev_gen(builder->dev) >= ILO_GEN(8)) ? 9 : 6;
    uint32_t *dw;
 
-   ILO_DEV_ASSERT(builder->dev, 7, 7.5);
+   ILO_DEV_ASSERT(builder->dev, 7, 8);
 
    ilo_builder_batch_pointer(builder, cmd_len, &dw);
 
@@ -647,6 +651,11 @@ gen7_disable_3DSTATE_DS(struct ilo_builder *builder)
    dw[3] = 0;
    dw[4] = 0;
    dw[5] = 0;
+   if (ilo_dev_gen(builder->dev) >= ILO_GEN(8)) {
+      dw[6] = 0;
+      dw[7] = 0;
+      dw[8] = 0;
+   }
 }
 
 static inline void
@@ -794,10 +803,10 @@ gen7_3DSTATE_GS(struct ilo_builder *builder,
 static inline void
 gen7_disable_3DSTATE_GS(struct ilo_builder *builder)
 {
-   const uint8_t cmd_len = 7;
+   const uint8_t cmd_len = (ilo_dev_gen(builder->dev) >= ILO_GEN(8)) ? 10 : 7;
    uint32_t *dw;
 
-   ILO_DEV_ASSERT(builder->dev, 7, 7.5);
+   ILO_DEV_ASSERT(builder->dev, 7, 8);
 
    ilo_builder_batch_pointer(builder, cmd_len, &dw);
 
@@ -806,8 +815,15 @@ gen7_disable_3DSTATE_GS(struct ilo_builder *builder)
    dw[2] = 0;
    dw[3] = 0;
    dw[4] = 0;
-   dw[5] = GEN7_GS_DW5_STATISTICS;
-   dw[6] = 0;
+
+   if (ilo_dev_gen(builder->dev) >= ILO_GEN(8)) {
+      dw[7] = GEN8_GS_DW7_STATISTICS;
+      dw[8] = 0;
+      dw[9] = 0;
+   } else {
+      dw[5] = GEN7_GS_DW5_STATISTICS;
+      dw[6] = 0;
+   }
 }
 
 static inline void
