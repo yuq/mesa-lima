@@ -147,7 +147,7 @@ unop("inot", tint, "~src0") # invert every bit of the integer
 unop("fnot", tfloat, "(src0 == 0.0f) ? 1.0f : 0.0f")
 unop("fsign", tfloat, "(src0 == 0.0f) ? 0.0f : ((src0 > 0.0f) ? 1.0f : -1.0f)")
 unop("isign", tint, "(src0 == 0) ? 0 : ((src0 > 0) ? 1 : -1)")
-unop("iabs", tint, "abs(src0)")
+unop("iabs", tint, "(src0 < 0) ? -src0 : src0")
 unop("fabs", tfloat, "fabsf(src0)")
 unop("fsat", tfloat, "(src0 > 1.0f) ? 1.0f : ((src0 <= 0.0f) ? 0.0f : src0)")
 unop("frcp", tfloat, "1.0f / src0")
