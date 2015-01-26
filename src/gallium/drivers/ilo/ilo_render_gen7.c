@@ -57,7 +57,7 @@ gen7_pipe_control(struct ilo_render *r, uint32_t dw1)
          dw1 |= GEN6_PIPE_CONTROL_PIXEL_SCOREBOARD_STALL;
    }
 
-   gen6_PIPE_CONTROL(r->builder, dw1, bo, 0, false);
+   gen6_PIPE_CONTROL(r->builder, dw1, bo, 0, 0);
 
 
    r->state.current_pipe_control_dw1 |= dw1;

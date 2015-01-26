@@ -211,7 +211,7 @@ ilo_render_emit_flush(struct ilo_render *render)
    if (ilo_dev_gen(render->dev) == ILO_GEN(6))
       gen6_wa_pre_pipe_control(render, dw1);
 
-   gen6_PIPE_CONTROL(render->builder, dw1, NULL, 0, false);
+   gen6_PIPE_CONTROL(render->builder, dw1, NULL, 0, 0);
 
    render->state.current_pipe_control_dw1 |= dw1;
    render->state.deferred_pipe_control_dw1 &= ~dw1;
@@ -331,8 +331,7 @@ ilo_render_emit_query(struct ilo_render *render,
       if (ilo_dev_gen(render->dev) == ILO_GEN(6))
          gen6_wa_pre_pipe_control(render, pipe_control_dw1);
 
-      gen6_PIPE_CONTROL(render->builder, pipe_control_dw1,
-            q->bo, offset, true);
+      gen6_PIPE_CONTROL(render->builder, pipe_control_dw1, q->bo, offset, 0);
 
       render->state.current_pipe_control_dw1 |= pipe_control_dw1;
       render->state.deferred_pipe_control_dw1 &= ~pipe_control_dw1;

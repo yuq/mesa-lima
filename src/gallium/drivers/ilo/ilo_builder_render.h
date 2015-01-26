@@ -37,15 +37,17 @@
 static inline void
 gen6_STATE_SIP(struct ilo_builder *builder, uint32_t sip)
 {
-   const uint8_t cmd_len = 2;
+   const uint8_t cmd_len = (ilo_dev_gen(builder->dev) >= ILO_GEN(8)) ? 3 : 2;
    uint32_t *dw;
 
-   ILO_DEV_ASSERT(builder->dev, 6, 7.5);
+   ILO_DEV_ASSERT(builder->dev, 6, 8);
 
    ilo_builder_batch_pointer(builder, cmd_len, &dw);
 
    dw[0] = GEN6_RENDER_CMD(COMMON, STATE_SIP) | (cmd_len - 2);
    dw[1] = sip;
+   if (ilo_dev_gen(builder->dev) >= ILO_GEN(8))
+      dw[2] = 0;
 }
 
 static inline void
@@ -55,7 +57,7 @@ gen6_PIPELINE_SELECT(struct ilo_builder *builder, int pipeline)
    const uint32_t dw0 = GEN6_RENDER_CMD(SINGLE_DW, PIPELINE_SELECT) |
                         pipeline;
 
-   ILO_DEV_ASSERT(builder->dev, 6, 7.5);
+   ILO_DEV_ASSERT(builder->dev, 6, 8);
 
    switch (pipeline) {
    case GEN6_PIPELINE_SELECT_DW0_SELECT_3D:
@@ -75,15 +77,14 @@ gen6_PIPELINE_SELECT(struct ilo_builder *builder, int pipeline)
 static inline void
 gen6_PIPE_CONTROL(struct ilo_builder *builder, uint32_t dw1,
                   struct intel_bo *bo, uint32_t bo_offset,
-                  bool write_qword)
+                  uint64_t imm)
 {
-   const uint8_t cmd_len = (write_qword) ? 5 : 4;
-   const uint64_t imm = 0;
+   const uint8_t cmd_len = (ilo_dev_gen(builder->dev) >= ILO_GEN(8)) ? 6 : 5;
    uint32_t reloc_flags = INTEL_RELOC_WRITE;
    uint32_t *dw;
    unsigned pos;
 
-   ILO_DEV_ASSERT(builder->dev, 6, 7.5);
+   ILO_DEV_ASSERT(builder->dev, 6, 8);
 
    if (dw1 & GEN6_PIPE_CONTROL_CS_STALL) {
       /*
@@ -137,35 +138,55 @@ gen6_PIPE_CONTROL(struct ilo_builder *builder, uint32_t dw1,
                       GEN6_PIPE_CONTROL_DEPTH_CACHE_FLUSH)));
    }
 
+   switch (dw1 & GEN6_PIPE_CONTROL_WRITE__MASK) {
+   case GEN6_PIPE_CONTROL_WRITE_PS_DEPTH_COUNT:
+   case GEN6_PIPE_CONTROL_WRITE_TIMESTAMP:
+      assert(!imm);
+      break;
+   default:
+      break;
+   }
+
+   assert(bo_offset % 8 == 0);
+
    pos = ilo_builder_batch_pointer(builder, cmd_len, &dw);
 
    dw[0] = GEN6_RENDER_CMD(3D, PIPE_CONTROL) | (cmd_len - 2);
    dw[1] = dw1;
-   dw[3] = (uint32_t) imm;
 
-   if (write_qword) {
-      assert(bo_offset % 8 == 0);
-      dw[4] = (uint32_t) (imm >> 32);
-   } else {
-      assert(bo_offset % 4 == 0);
-      assert(imm == (uint64_t) ((uint32_t) imm));
-   }
+   if (ilo_dev_gen(builder->dev) >= ILO_GEN(8)) {
+      dw[4] = (uint32_t) imm;
+      dw[5] = (uint32_t) (imm >> 32);
 
-   if (bo) {
-      /*
-       * From the Sandy Bridge PRM, volume 1 part 3, page 19:
-       *
-       *     "[DevSNB] PPGTT memory writes by MI_* (such as MI_STORE_DATA_IMM)
-       *      and PIPE_CONTROL are not supported."
-       */
-      if (ilo_dev_gen(builder->dev) == ILO_GEN(6)) {
-         bo_offset |= GEN6_PIPE_CONTROL_DW2_USE_GGTT;
-         reloc_flags |= INTEL_RELOC_GGTT;
+      if (bo) {
+         ilo_builder_batch_reloc64(builder, pos + 2,
+               bo, bo_offset, reloc_flags);
+      } else {
+         dw[2] = 0;
+         dw[3] = 0;
       }
 
-      ilo_builder_batch_reloc(builder, pos + 2, bo, bo_offset, reloc_flags);
    } else {
-      dw[2] = 0;
+      dw[3] = (uint32_t) imm;
+      dw[4] = (uint32_t) (imm >> 32);
+
+      if (bo) {
+         /*
+          * From the Sandy Bridge PRM, volume 1 part 3, page 19:
+          *
+          *     "[DevSNB] PPGTT memory writes by MI_* (such as
+          *      MI_STORE_DATA_IMM) and PIPE_CONTROL are not supported."
+          */
+         if (ilo_dev_gen(builder->dev) == ILO_GEN(6)) {
+            bo_offset |= GEN6_PIPE_CONTROL_DW2_USE_GGTT;
+            reloc_flags |= INTEL_RELOC_GGTT;
+         }
+
+         ilo_builder_batch_reloc(builder, pos + 2,
+               bo, bo_offset, reloc_flags);
+      } else {
+         dw[2] = 0;
+      }
    }
 }
 
@@ -178,8 +199,13 @@ ilo_builder_batch_patch_sba(struct ilo_builder *builder)
    if (!builder->sba_instruction_pos)
       return;
 
-   ilo_builder_batch_reloc(builder, builder->sba_instruction_pos,
-         inst->bo, 1, 0);
+   if (ilo_dev_gen(builder->dev) >= ILO_GEN(8)) {
+      ilo_builder_batch_reloc64(builder, builder->sba_instruction_pos,
+            inst->bo, 1, 0);
+   } else {
+      ilo_builder_batch_reloc(builder, builder->sba_instruction_pos,
+            inst->bo, 1, 0);
+   }
 }
 
 /**
@@ -226,6 +252,38 @@ gen6_state_base_address(struct ilo_builder *builder, bool init_all)
    dw[7] = 0xfffff000 + init_all;
    dw[8] = 0xfffff000 + init_all;
    dw[9] = init_all;
+}
+
+static inline void
+gen8_state_base_address(struct ilo_builder *builder, bool init_all)
+{
+   const uint8_t cmd_len = 16;
+   const struct ilo_builder_writer *bat =
+      &builder->writers[ILO_BUILDER_WRITER_BATCH];
+   uint32_t *dw;
+   unsigned pos;
+
+   ILO_DEV_ASSERT(builder->dev, 8, 8);
+
+   pos = ilo_builder_batch_pointer(builder, cmd_len, &dw);
+
+   dw[0] = GEN6_RENDER_CMD(COMMON, STATE_BASE_ADDRESS) | (cmd_len - 2);
+   dw[1] = init_all;
+   dw[2] = 0;
+   dw[3] = 0;
+   ilo_builder_batch_reloc64(builder, pos + 4, bat->bo, 1, 0);
+   ilo_builder_batch_reloc64(builder, pos + 6, bat->bo, 1, 0);
+   dw[8] = init_all;
+   dw[9] = 0;
+
+   ilo_builder_batch_patch_sba(builder);
+   builder->sba_instruction_pos = pos + 10;
+
+   /* skip range checks */
+   dw[12] = 0xfffff000 + init_all;
+   dw[13] = 0xfffff000 + init_all;
+   dw[14] = 0xfffff000 + init_all;
+   dw[15] = 0xfffff000 + init_all;
 }
 
 #endif /* ILO_BUILDER_RENDER_H */

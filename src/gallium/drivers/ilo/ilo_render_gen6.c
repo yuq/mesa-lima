@@ -49,7 +49,7 @@ gen6_pipe_control(struct ilo_render *r, uint32_t dw1)
 
    ILO_DEV_ASSERT(r->dev, 6, 6);
 
-   gen6_PIPE_CONTROL(r->builder, dw1, bo, 0, false);
+   gen6_PIPE_CONTROL(r->builder, dw1, bo, 0, 0);
 
    r->state.current_pipe_control_dw1 |= dw1;
 
