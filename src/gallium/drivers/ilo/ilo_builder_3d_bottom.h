@@ -130,7 +130,7 @@ gen7_internal_3dstate_sf(struct ilo_builder *builder,
 }
 
 static inline void
-gen7_internal_3dstate_sbe(struct ilo_builder *builder,
+gen8_internal_3dstate_sbe(struct ilo_builder *builder,
                           uint8_t cmd_len, uint32_t *dw,
                           const struct ilo_shader_state *fs,
                           int sprite_coord_mode)
@@ -138,15 +138,16 @@ gen7_internal_3dstate_sbe(struct ilo_builder *builder,
    const struct ilo_kernel_routing *routing;
    int vue_offset, vue_len, out_count;
 
-   ILO_DEV_ASSERT(builder->dev, 6, 7.5);
+   ILO_DEV_ASSERT(builder->dev, 6, 8);
 
-   assert(cmd_len == 14);
+   assert(cmd_len == 4);
 
    dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_SBE) | (cmd_len - 2);
 
    if (!fs) {
       dw[1] = 1 << GEN7_SBE_DW1_URB_READ_LEN__SHIFT;
-      memset(&dw[2], 0, sizeof(*dw) * (cmd_len - 2));
+      dw[2] = 0;
+      dw[3] = 0;
       return;
    }
 
@@ -164,8 +165,16 @@ gen7_internal_3dstate_sbe(struct ilo_builder *builder,
    assert(out_count <= 32);
 
    dw[1] = out_count << GEN7_SBE_DW1_ATTR_COUNT__SHIFT |
-           vue_len << GEN7_SBE_DW1_URB_READ_LEN__SHIFT |
-           vue_offset << GEN7_SBE_DW1_URB_READ_OFFSET__SHIFT;
+           vue_len << GEN7_SBE_DW1_URB_READ_LEN__SHIFT;
+
+   if (ilo_dev_gen(builder->dev) >= ILO_GEN(8)) {
+      dw[1] |= GEN8_SBE_DW1_USE_URB_READ_LEN |
+               GEN8_SBE_DW1_USE_URB_READ_OFFSET |
+               vue_offset << GEN8_SBE_DW1_URB_READ_OFFSET__SHIFT;
+   } else {
+      dw[1] |= vue_offset << GEN7_SBE_DW1_URB_READ_OFFSET__SHIFT;
+   }
+
    if (routing->swizzle_enable)
       dw[1] |= GEN7_SBE_DW1_ATTR_SWIZZLE_ENABLE;
 
@@ -178,9 +187,6 @@ gen7_internal_3dstate_sbe(struct ilo_builder *builder,
       break;
    }
 
-   STATIC_ASSERT(sizeof(routing->swizzles) >= sizeof(*dw) * 8);
-   memcpy(&dw[2], routing->swizzles, sizeof(*dw) * 8);
-
    /*
     * From the Ivy Bridge PRM, volume 2 part 1, page 268:
     *
@@ -189,13 +195,37 @@ gen7_internal_3dstate_sbe(struct ilo_builder *builder,
     *
     * TODO We do not check that yet.
     */
-   dw[10] = routing->point_sprite_enable;
+   dw[2] = routing->point_sprite_enable;
 
-   dw[11] = routing->const_interp_enable;
+   dw[3] = routing->const_interp_enable;
+}
+
+static inline void
+gen8_internal_3dstate_sbe_swiz(struct ilo_builder *builder,
+                               uint8_t cmd_len, uint32_t *dw,
+                               const struct ilo_shader_state *fs)
+{
+   const struct ilo_kernel_routing *routing;
+
+   ILO_DEV_ASSERT(builder->dev, 6, 8);
+
+   assert(cmd_len == 11);
+
+   dw[0] = GEN8_RENDER_CMD(3D, 3DSTATE_SBE_SWIZ) | (cmd_len - 2);
+
+   if (!fs) {
+      memset(&dw[1], 0, sizeof(*dw) * (cmd_len - 1));
+      return;
+   }
+
+   routing = ilo_shader_get_kernel_routing(fs);
+
+   STATIC_ASSERT(sizeof(routing->swizzles) >= sizeof(*dw) * 8);
+   memcpy(&dw[1], routing->swizzles, sizeof(*dw) * 8);
 
    /* WrapShortest enables */
-   dw[12] = 0;
-   dw[13] = 0;
+   dw[9] = 0;
+   dw[10] = 0;
 }
 
 static inline void
@@ -205,7 +235,8 @@ gen6_3DSTATE_SF(struct ilo_builder *builder,
                 int sample_count)
 {
    const uint8_t cmd_len = 20;
-   uint32_t gen7_3dstate_sf[7], gen7_3dstate_sbe[14];
+   uint32_t gen8_3dstate_sbe[4], gen8_3dstate_sbe_swiz[11];
+   uint32_t gen7_3dstate_sf[7];
    const struct ilo_rasterizer_sf *sf;
    int sprite_coord_mode;
    uint32_t *dw;
@@ -215,18 +246,23 @@ gen6_3DSTATE_SF(struct ilo_builder *builder,
    sf = (rasterizer) ? &rasterizer->sf : NULL;
    sprite_coord_mode = (rasterizer) ? rasterizer->state.sprite_coord_mode : 0;
 
+   gen8_internal_3dstate_sbe(builder, Elements(gen8_3dstate_sbe),
+         gen8_3dstate_sbe, fs, sprite_coord_mode);
+   gen8_internal_3dstate_sbe_swiz(builder, Elements(gen8_3dstate_sbe_swiz),
+         gen8_3dstate_sbe_swiz, fs);
    gen7_internal_3dstate_sf(builder, Elements(gen7_3dstate_sf),
          gen7_3dstate_sf, sf, sample_count);
-
-   gen7_internal_3dstate_sbe(builder, Elements(gen7_3dstate_sbe),
-         gen7_3dstate_sbe, fs, sprite_coord_mode);
 
    ilo_builder_batch_pointer(builder, cmd_len, &dw);
 
    dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_SF) | (cmd_len - 2);
-   dw[1] = gen7_3dstate_sbe[1];
+   dw[1] = gen8_3dstate_sbe[1];
    memcpy(&dw[2], &gen7_3dstate_sf[1], sizeof(*dw) * 6);
-   memcpy(&dw[8], &gen7_3dstate_sbe[2], sizeof(*dw) * 12);
+   memcpy(&dw[8], &gen8_3dstate_sbe_swiz[1], sizeof(*dw) * 8);
+   dw[16] = gen8_3dstate_sbe[2];
+   dw[17] = gen8_3dstate_sbe[3];
+   dw[18] = gen8_3dstate_sbe_swiz[9];
+   dw[19] = gen8_3dstate_sbe_swiz[10];
 }
 
 static inline void
@@ -296,13 +332,54 @@ gen7_3DSTATE_SBE(struct ilo_builder *builder,
                  int sprite_coord_mode)
 {
    const uint8_t cmd_len = 14;
+   uint32_t gen8_3dstate_sbe[4], gen8_3dstate_sbe_swiz[11];
    uint32_t *dw;
 
    ILO_DEV_ASSERT(builder->dev, 7, 7.5);
 
+   gen8_internal_3dstate_sbe(builder, Elements(gen8_3dstate_sbe),
+         gen8_3dstate_sbe, fs, sprite_coord_mode);
+   gen8_internal_3dstate_sbe_swiz(builder, Elements(gen8_3dstate_sbe_swiz),
+         gen8_3dstate_sbe_swiz, fs);
+
    ilo_builder_batch_pointer(builder, cmd_len, &dw);
 
-   gen7_internal_3dstate_sbe(builder, cmd_len, dw, fs, sprite_coord_mode);
+   dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_SBE) | (cmd_len - 2);
+   dw[1] = gen8_3dstate_sbe[1];
+   memcpy(&dw[2], &gen8_3dstate_sbe_swiz[1], sizeof(*dw) * 8);
+   dw[10] = gen8_3dstate_sbe[2];
+   dw[11] = gen8_3dstate_sbe[3];
+   dw[12] = gen8_3dstate_sbe_swiz[9];
+   dw[13] = gen8_3dstate_sbe_swiz[10];
+}
+
+static inline void
+gen8_3DSTATE_SBE(struct ilo_builder *builder,
+                 const struct ilo_shader_state *fs,
+                 int sprite_coord_mode)
+{
+   const uint8_t cmd_len = 4;
+   uint32_t *dw;
+
+   ILO_DEV_ASSERT(builder->dev, 8, 8);
+
+   ilo_builder_batch_pointer(builder, cmd_len, &dw);
+
+   gen8_internal_3dstate_sbe(builder, cmd_len, dw, fs, sprite_coord_mode);
+}
+
+static inline void
+gen8_3DSTATE_SBE_SWIZ(struct ilo_builder *builder,
+                      const struct ilo_shader_state *fs)
+{
+   const uint8_t cmd_len = 11;
+   uint32_t *dw;
+
+   ILO_DEV_ASSERT(builder->dev, 8, 8);
+
+   ilo_builder_batch_pointer(builder, cmd_len, &dw);
+
+   gen8_internal_3dstate_sbe_swiz(builder, cmd_len, dw, fs);
 }
 
 static inline void
