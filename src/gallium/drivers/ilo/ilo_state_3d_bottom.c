@@ -1418,21 +1418,17 @@ gen6_translate_dsa_func(unsigned func)
    }
 }
 
-void
-ilo_gpe_init_dsa(const struct ilo_dev_info *dev,
-                 const struct pipe_depth_stencil_alpha_state *state,
-                 struct ilo_dsa_state *dsa)
+static uint32_t
+dsa_get_stencil_enable_gen6(const struct ilo_dev_info *dev,
+                            const struct pipe_stencil_state *stencil0,
+                            const struct pipe_stencil_state *stencil1)
 {
-   const struct pipe_depth_state *depth = &state->depth;
-   const struct pipe_stencil_state *stencil0 = &state->stencil[0];
-   const struct pipe_stencil_state *stencil1 = &state->stencil[1];
-   const struct pipe_alpha_state *alpha = &state->alpha;
-   uint32_t *dw;
+   uint32_t dw;
 
    ILO_DEV_ASSERT(dev, 6, 7.5);
 
-   STATIC_ASSERT(Elements(dsa->payload) >= 3);
-   dw = dsa->payload;
+   if (!stencil0->enabled)
+      return 0;
 
    /*
     * From the Sandy Bridge PRM, volume 2 part 1, page 359:
@@ -1448,35 +1444,34 @@ ilo_gpe_init_dsa(const struct ilo_dev_info *dev,
     *
     * TODO We do not check these yet.
     */
-   if (stencil0->enabled) {
-      dw[0] = 1 << 31 |
-              gen6_translate_dsa_func(stencil0->func) << 28 |
-              gen6_translate_pipe_stencil_op(stencil0->fail_op) << 25 |
-              gen6_translate_pipe_stencil_op(stencil0->zfail_op) << 22 |
-              gen6_translate_pipe_stencil_op(stencil0->zpass_op) << 19;
-      if (stencil0->writemask)
-         dw[0] |= 1 << 18;
+   dw = GEN6_ZS_DW0_STENCIL_TEST_ENABLE |
+        gen6_translate_dsa_func(stencil0->func) << 28 |
+        gen6_translate_pipe_stencil_op(stencil0->fail_op) << 25 |
+        gen6_translate_pipe_stencil_op(stencil0->zfail_op) << 22 |
+        gen6_translate_pipe_stencil_op(stencil0->zpass_op) << 19;
+   if (stencil0->writemask)
+      dw |= GEN6_ZS_DW0_STENCIL_WRITE_ENABLE;
 
-      dw[1] = stencil0->valuemask << 24 |
-              stencil0->writemask << 16;
-
-      if (stencil1->enabled) {
-         dw[0] |= 1 << 15 |
-                  gen6_translate_dsa_func(stencil1->func) << 12 |
-                  gen6_translate_pipe_stencil_op(stencil1->fail_op) << 9 |
-                  gen6_translate_pipe_stencil_op(stencil1->zfail_op) << 6 |
-                  gen6_translate_pipe_stencil_op(stencil1->zpass_op) << 3;
-         if (stencil1->writemask)
-            dw[0] |= 1 << 18;
-
-         dw[1] |= stencil1->valuemask << 8 |
-                  stencil1->writemask;
-      }
+   if (stencil1->enabled) {
+      dw |= GEN6_ZS_DW0_STENCIL1_ENABLE |
+            gen6_translate_dsa_func(stencil1->func) << 12 |
+            gen6_translate_pipe_stencil_op(stencil1->fail_op) << 9 |
+            gen6_translate_pipe_stencil_op(stencil1->zfail_op) << 6 |
+            gen6_translate_pipe_stencil_op(stencil1->zpass_op) << 3;
+      if (stencil1->writemask)
+         dw |= GEN6_ZS_DW0_STENCIL_WRITE_ENABLE;
    }
-   else {
-      dw[0] = 0;
-      dw[1] = 0;
-   }
+
+   return dw;
+}
+
+static uint32_t
+dsa_get_depth_enable_gen6(const struct ilo_dev_info *dev,
+                          const struct pipe_depth_state *state)
+{
+   uint32_t dw;
+
+   ILO_DEV_ASSERT(dev, 6, 7.5);
 
    /*
     * From the Sandy Bridge PRM, volume 2 part 1, page 360:
@@ -1491,23 +1486,56 @@ ilo_gpe_init_dsa(const struct ilo_dev_info *dev,
     *
     * TODO We do not check these yet.
     */
-   dw[2] = depth->enabled << 31 |
-           depth->writemask << 26;
-   if (depth->enabled)
-      dw[2] |= gen6_translate_dsa_func(depth->func) << 27;
-   else
-      dw[2] |= GEN6_COMPAREFUNCTION_ALWAYS << 27;
-
-   /* dw_alpha will be ORed to BLEND_STATE */
-   if (alpha->enabled) {
-      dsa->dw_alpha = 1 << 16 |
-                      gen6_translate_dsa_func(alpha->func) << 13;
-   }
-   else {
-      dsa->dw_alpha = 0;
+   if (state->enabled) {
+      dw = GEN6_ZS_DW2_DEPTH_TEST_ENABLE |
+           gen6_translate_dsa_func(state->func) << 27;
+   } else {
+      dw = GEN6_COMPAREFUNCTION_ALWAYS << 27;
    }
 
-   dsa->alpha_ref = float_to_ubyte(alpha->ref_value);
+   if (state->writemask)
+      dw |= GEN6_ZS_DW2_DEPTH_WRITE_ENABLE;
+
+   return dw;
+}
+
+static uint32_t
+dsa_get_alpha_enable_gen6(const struct ilo_dev_info *dev,
+                          const struct pipe_alpha_state *state)
+{
+   uint32_t dw;
+
+   ILO_DEV_ASSERT(dev, 6, 7.5);
+
+   if (!state->enabled)
+      return 0;
+
+   /* this will be ORed to BLEND_STATE */
+   dw = GEN6_BLEND_DW1_ALPHA_TEST_ENABLE |
+        gen6_translate_dsa_func(state->func) << 13;
+
+   return dw;
+}
+
+void
+ilo_gpe_init_dsa(const struct ilo_dev_info *dev,
+                 const struct pipe_depth_stencil_alpha_state *state,
+                 struct ilo_dsa_state *dsa)
+{
+   ILO_DEV_ASSERT(dev, 6, 7.5);
+
+   STATIC_ASSERT(Elements(dsa->payload) >= 3);
+
+   dsa->payload[0] = dsa_get_stencil_enable_gen6(dev,
+         &state->stencil[0], &state->stencil[1]);
+   dsa->payload[1] = state->stencil[0].valuemask << 24 |
+                     state->stencil[0].writemask << 16 |
+                     state->stencil[1].valuemask << 8 |
+                     state->stencil[1].writemask;
+   dsa->payload[2] = dsa_get_depth_enable_gen6(dev, &state->depth);
+
+   dsa->dw_alpha = dsa_get_alpha_enable_gen6(dev, &state->alpha);
+   dsa->alpha_ref = float_to_ubyte(state->alpha.ref_value);
 }
 
 void
