@@ -192,6 +192,20 @@ writer_decode_sf_clip_viewport_gen7(const struct ilo_builder *builder,
       dw = writer_dw(builder, which, offset, 11, "SF_CLIP VP%d", i);
       ilo_printf("guardband ymax = %f\n", uif(dw));
 
+      if (ilo_dev_gen(builder->dev) >= ILO_GEN(8)) {
+         dw = writer_dw(builder, which, offset, 12, "SF_CLIP VP%d", i);
+         ilo_printf("extent xmin = %f\n", uif(dw));
+
+         dw = writer_dw(builder, which, offset, 13, "SF_CLIP VP%d", i);
+         ilo_printf("extent xmax = %f\n", uif(dw));
+
+         dw = writer_dw(builder, which, offset, 14, "SF_CLIP VP%d", i);
+         ilo_printf("extent ymin = %f\n", uif(dw));
+
+         dw = writer_dw(builder, which, offset, 15, "SF_CLIP VP%d", i);
+         ilo_printf("extent ymax = %f\n", uif(dw));
+      }
+
       offset += state_size;
    }
 }

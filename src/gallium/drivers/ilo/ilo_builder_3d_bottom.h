@@ -1056,7 +1056,7 @@ gen7_SF_CLIP_VIEWPORT(struct ilo_builder *builder,
    uint32_t state_offset, *dw;
    unsigned i;
 
-   ILO_DEV_ASSERT(builder->dev, 7, 7.5);
+   ILO_DEV_ASSERT(builder->dev, 7, 8);
 
    /*
     * From the Ivy Bridge PRM, volume 2 part 1, page 270:
@@ -1084,14 +1084,23 @@ gen7_SF_CLIP_VIEWPORT(struct ilo_builder *builder,
       dw[5] = fui(vp->m32);
       dw[6] = 0;
       dw[7] = 0;
+
       dw[8] = fui(vp->min_gbx);
       dw[9] = fui(vp->max_gbx);
       dw[10] = fui(vp->min_gby);
       dw[11] = fui(vp->max_gby);
-      dw[12] = 0;
-      dw[13] = 0;
-      dw[14] = 0;
-      dw[15] = 0;
+
+      if (ilo_dev_gen(builder->dev) >= ILO_GEN(8)) {
+         dw[12] = fui(vp->min_x);
+         dw[13] = fui(vp->max_x - 1.0f);
+         dw[14] = fui(vp->min_y);
+         dw[15] = fui(vp->max_y - 1.0f);
+      } else {
+         dw[12] = 0;
+         dw[13] = 0;
+         dw[14] = 0;
+         dw[15] = 0;
+      }
 
       dw += 16;
    }

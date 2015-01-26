@@ -637,16 +637,19 @@ gen6_draw_clip(struct ilo_render *r,
       unsigned i;
 
       /*
-       * We do not do 2D clipping yet.  Guard band test should only be enabled
-       * when the viewport is larger than the framebuffer.
+       * Gen8+ has viewport extent test.  Guard band test can be enabled on
+       * prior Gens only when the viewport is larger than the framebuffer,
+       * unless we emulate viewport extent test on them.
        */
-      for (i = 0; i < vec->viewport.count; i++) {
-         const struct ilo_viewport_cso *vp = &vec->viewport.cso[i];
+      if (ilo_dev_gen(r->dev) < ILO_GEN(8)) {
+         for (i = 0; i < vec->viewport.count; i++) {
+            const struct ilo_viewport_cso *vp = &vec->viewport.cso[i];
 
-         if (vp->min_x > 0.0f || vp->max_x < vec->fb.state.width ||
-             vp->min_y > 0.0f || vp->max_y < vec->fb.state.height) {
-            enable_guardband = false;
-            break;
+            if (vp->min_x > 0.0f || vp->max_x < vec->fb.state.width ||
+                vp->min_y > 0.0f || vp->max_y < vec->fb.state.height) {
+               enable_guardband = false;
+               break;
+            }
          }
       }
 
