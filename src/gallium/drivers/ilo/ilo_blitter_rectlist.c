@@ -339,7 +339,10 @@ ilo_blitter_rectlist_clear_zs(struct ilo_blitter *blitter,
    if (!hiz_can_clear_zs(blitter, tex))
       return false;
 
-   clear_value = util_pack_z(tex->layout.format, depth);
+   if (ilo_dev_gen(blitter->ilo->dev) >= ILO_GEN(8))
+      clear_value = fui(depth);
+   else
+      clear_value = util_pack_z(tex->layout.format, depth);
 
    ilo_blit_resolve_surface(blitter->ilo, zs,
          ILO_TEXTURE_RENDER_WRITE | ILO_TEXTURE_CLEAR);
