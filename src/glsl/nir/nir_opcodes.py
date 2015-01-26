@@ -252,12 +252,10 @@ unpack_2x16("half")
 # Lowered floating point unpacking operations.
 
 
-unop_horiz("unpack_half_2x16_split_x", 1, tfloat, 1, tunsigned, """
-dst.x = unpack_half_1x16((uint16_t)(src0.x & 0xffff));
-""")
-unop_horiz("unpack_half_2x16_split_y", 1, tfloat, 1, tunsigned, """
-dst.y = unpack_half_1x16((uint16_t)(src0.x >> 16));
-""")
+unop_horiz("unpack_half_2x16_split_x", 1, tfloat, 1, tunsigned,
+           "unpack_half_1x16((uint16_t)(src0.x & 0xffff))")
+unop_horiz("unpack_half_2x16_split_y", 1, tfloat, 1, tunsigned,
+           "unpack_half_1x16((uint16_t)(src0.x >> 16))")
 
 
 # Bit operations, part of ARB_gpu_shader5.
