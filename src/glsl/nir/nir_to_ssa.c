@@ -239,6 +239,9 @@ rewrite_alu_instr_forward(nir_alu_instr *instr, rewrite_state *state)
 
    nir_foreach_src(&instr->instr, rewrite_use, state);
 
+   if (instr->dest.dest.is_ssa)
+      return;
+
    nir_register *reg = instr->dest.dest.reg.reg;
    unsigned index = reg->index;
 
