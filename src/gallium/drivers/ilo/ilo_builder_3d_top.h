@@ -1624,10 +1624,11 @@ static inline uint32_t
 gen6_SAMPLER_BORDER_COLOR_STATE(struct ilo_builder *builder,
                                 const struct ilo_sampler_cso *sampler)
 {
-   const int state_align = 32;
+   const int state_align =
+      (ilo_dev_gen(builder->dev) >= ILO_GEN(8)) ? 64 : 32;
    const int state_len = (ilo_dev_gen(builder->dev) >= ILO_GEN(7)) ? 4 : 12;
 
-   ILO_DEV_ASSERT(builder->dev, 6, 7.5);
+   ILO_DEV_ASSERT(builder->dev, 6, 8);
 
    assert(Elements(sampler->payload) >= 3 + state_len);
 
