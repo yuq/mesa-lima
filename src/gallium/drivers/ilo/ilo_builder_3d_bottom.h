@@ -518,6 +518,33 @@ gen7_3DSTATE_WM(struct ilo_builder *builder,
 }
 
 static inline void
+gen8_3DSTATE_WM(struct ilo_builder *builder,
+                const struct ilo_shader_state *fs,
+                const struct ilo_rasterizer_state *rasterizer)
+{
+   const uint8_t cmd_len = 2;
+   const struct ilo_shader_cso *cso;
+   uint32_t dw1, interps, *dw;
+
+   ILO_DEV_ASSERT(builder->dev, 8, 8);
+
+   /* see rasterizer_get_wm_gen8() */
+   dw1 = rasterizer->wm.payload[0];
+   dw1 |= GEN7_WM_DW1_STATISTICS;
+
+   /* see fs_init_cso_gen8() */
+   cso = ilo_shader_get_kernel_cso(fs);
+   interps = cso->payload[4];
+
+   assert(!(dw1 & interps));
+
+   ilo_builder_batch_pointer(builder, cmd_len, &dw);
+
+   dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_WM) | (cmd_len - 2);
+   dw[1] = dw1 | interps;
+}
+
+static inline void
 gen7_hiz_3DSTATE_WM(struct ilo_builder *builder, uint32_t hiz_op)
 {
    const uint8_t cmd_len = 3;
@@ -542,6 +569,7 @@ gen7_3DSTATE_PS(struct ilo_builder *builder,
 
    ILO_DEV_ASSERT(builder->dev, 7, 7.5);
 
+   /* see fs_init_cso_gen7() */
    cso = ilo_shader_get_kernel_cso(fs);
    dw2 = cso->payload[0];
    dw4 = cso->payload[1];
@@ -598,6 +626,64 @@ gen7_disable_3DSTATE_PS(struct ilo_builder *builder)
    dw[5] = 0;
    dw[6] = 0;
    dw[7] = 0;
+}
+
+static inline void
+gen8_3DSTATE_PS(struct ilo_builder *builder,
+                const struct ilo_shader_state *fs)
+{
+   const uint8_t cmd_len = 12;
+   const struct ilo_shader_cso *cso;
+   uint32_t dw3, dw6, dw7, *dw;
+
+   ILO_DEV_ASSERT(builder->dev, 8, 8);
+
+   /* see fs_init_cso_gen8() */
+   cso = ilo_shader_get_kernel_cso(fs);
+   dw3 = cso->payload[0];
+   dw6 = cso->payload[1];
+   dw7 = cso->payload[2];
+
+   ilo_builder_batch_pointer(builder, cmd_len, &dw);
+
+   dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_PS) | (cmd_len - 2);
+   dw[1] = ilo_shader_get_kernel_offset(fs);
+   dw[2] = 0;
+   dw[3] = dw3;
+   dw[4] = 0; /* scratch */
+   dw[5] = 0;
+   dw[6] = dw6;
+   dw[7] = dw7;
+   dw[8] = 0; /* kernel 1 */
+   dw[9] = 0;
+   dw[10] = 0; /* kernel 2 */
+   dw[11] = 0;
+}
+
+static inline void
+gen8_3DSTATE_PS_EXTRA(struct ilo_builder *builder,
+                      const struct ilo_shader_state *fs,
+                      bool cc_may_kill, bool per_sample)
+{
+   const uint8_t cmd_len = 2;
+   const struct ilo_shader_cso *cso;
+   uint32_t dw1, *dw;
+
+   ILO_DEV_ASSERT(builder->dev, 8, 8);
+
+   /* see fs_init_cso_gen8() */
+   cso = ilo_shader_get_kernel_cso(fs);
+   dw1 = cso->payload[3];
+
+   if (cc_may_kill)
+      dw1 |= GEN8_PSX_DW1_DISPATCH_ENABLE | GEN8_PSX_DW1_KILL_PIXEL;
+   if (per_sample)
+      dw1 |= GEN8_PSX_DW1_PER_SAMPLE;
+
+   ilo_builder_batch_pointer(builder, cmd_len, &dw);
+
+   dw[0] = GEN8_RENDER_CMD(3D, 3DSTATE_PS_EXTRA) | (cmd_len - 2);
+   dw[1] = dw1;
 }
 
 static inline void

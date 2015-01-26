@@ -492,13 +492,6 @@ rasterizer_init_wm_gen6(const struct ilo_dev_info *dev,
    if (state->line_stipple_enable)
       dw5 |= GEN6_WM_DW5_LINE_STIPPLE_ENABLE;
 
-   dw6 = GEN6_WM_DW6_ZW_INTERP_PIXEL |
-         GEN6_WM_DW6_MSRASTMODE_OFF_PIXEL |
-         GEN6_WM_DW6_MSDISPMODE_PERSAMPLE;
-
-   if (state->bottom_edge_rule)
-      dw6 |= GEN6_WM_DW6_POINT_RASTRULE_UPPER_RIGHT;
-
    /*
     * assertion that makes sure
     *
@@ -508,6 +501,10 @@ rasterizer_init_wm_gen6(const struct ilo_dev_info *dev,
     */
    STATIC_ASSERT(GEN6_WM_DW6_MSRASTMODE_OFF_PIXEL == 0 &&
                  GEN6_WM_DW6_MSDISPMODE_PERSAMPLE == 0);
+   dw6 = GEN6_WM_DW6_ZW_INTERP_PIXEL;
+
+   if (state->bottom_edge_rule)
+      dw6 |= GEN6_WM_DW6_POINT_RASTRULE_UPPER_RIGHT;
 
    wm->dw_msaa_rast =
       (state->multisample) ? GEN6_WM_DW6_MSRASTMODE_ON_PATTERN : 0;
@@ -527,9 +524,19 @@ rasterizer_init_wm_gen7(const struct ilo_dev_info *dev,
 
    ILO_DEV_ASSERT(dev, 7, 7.5);
 
+   /*
+    * assertion that makes sure
+    *
+    *   dw1 |= wm->dw_msaa_rast;
+    *   dw2 |= wm->dw_msaa_disp;
+    *
+    * is valid
+    */
+   STATIC_ASSERT(GEN7_WM_DW1_MSRASTMODE_OFF_PIXEL == 0 &&
+                 GEN7_WM_DW2_MSDISPMODE_PERSAMPLE == 0);
    dw1 = GEN7_WM_DW1_ZW_INTERP_PIXEL |
-         GEN7_WM_DW1_AA_LINE_WIDTH_2_0 |
-         GEN7_WM_DW1_MSRASTMODE_OFF_PIXEL;
+         GEN7_WM_DW1_AA_LINE_WIDTH_2_0;
+   dw2 = 0;
 
    /* same value as in 3DSTATE_SF */
    if (state->line_smooth)
@@ -543,19 +550,6 @@ rasterizer_init_wm_gen7(const struct ilo_dev_info *dev,
    if (state->bottom_edge_rule)
       dw1 |= GEN7_WM_DW1_POINT_RASTRULE_UPPER_RIGHT;
 
-   dw2 = GEN7_WM_DW2_MSDISPMODE_PERSAMPLE;
-
-   /*
-    * assertion that makes sure
-    *
-    *   dw1 |= wm->dw_msaa_rast;
-    *   dw2 |= wm->dw_msaa_disp;
-    *
-    * is valid
-    */
-   STATIC_ASSERT(GEN7_WM_DW1_MSRASTMODE_OFF_PIXEL == 0 &&
-                 GEN7_WM_DW2_MSDISPMODE_PERSAMPLE == 0);
-
    wm->dw_msaa_rast =
       (state->multisample) ? GEN7_WM_DW1_MSRASTMODE_ON_PATTERN : 0;
    wm->dw_msaa_disp = GEN7_WM_DW2_MSDISPMODE_PERPIXEL;
@@ -563,6 +557,32 @@ rasterizer_init_wm_gen7(const struct ilo_dev_info *dev,
    STATIC_ASSERT(Elements(wm->payload) >= 2);
    wm->payload[0] = dw1;
    wm->payload[1] = dw2;
+}
+
+static uint32_t
+rasterizer_get_wm_gen8(const struct ilo_dev_info *dev,
+                       const struct pipe_rasterizer_state *state)
+{
+   uint32_t dw;
+
+   ILO_DEV_ASSERT(dev, 8, 8);
+
+   dw = GEN7_WM_DW1_ZW_INTERP_PIXEL |
+        GEN7_WM_DW1_AA_LINE_WIDTH_2_0;
+
+   /* same value as in 3DSTATE_SF */
+   if (state->line_smooth)
+      dw |= GEN7_WM_DW1_AA_LINE_CAP_1_0;
+
+   if (state->poly_stipple_enable)
+      dw |= GEN7_WM_DW1_POLY_STIPPLE_ENABLE;
+   if (state->line_stipple_enable)
+      dw |= GEN7_WM_DW1_LINE_STIPPLE_ENABLE;
+
+   if (state->bottom_edge_rule)
+      dw |= GEN7_WM_DW1_POINT_RASTRULE_UPPER_RIGHT;
+
+   return dw;
 }
 
 void
@@ -573,7 +593,9 @@ ilo_gpe_init_rasterizer(const struct ilo_dev_info *dev,
    rasterizer_init_clip(dev, state, &rasterizer->clip);
 
    if (ilo_dev_gen(dev) >= ILO_GEN(8)) {
-      rasterizer_init_wm_gen7(dev, state, &rasterizer->wm);
+      memset(&rasterizer->wm, 0, sizeof(rasterizer->wm));
+      rasterizer->wm.payload[0] = rasterizer_get_wm_gen8(dev, state);
+
       rasterizer_init_sf_gen8(dev, state, &rasterizer->sf);
    } else if (ilo_dev_gen(dev) >= ILO_GEN(7)) {
       rasterizer_init_wm_gen7(dev, state, &rasterizer->wm);
@@ -681,6 +703,68 @@ fs_init_cso_gen6(const struct ilo_dev_info *dev,
    cso->payload[3] = dw6;
 }
 
+static uint32_t
+fs_get_wm_gen7(const struct ilo_dev_info *dev,
+               const struct ilo_shader_state *fs)
+{
+   uint32_t dw;
+
+   ILO_DEV_ASSERT(dev, 7, 7.5);
+
+   dw = ilo_shader_get_kernel_param(fs,
+         ILO_KERNEL_FS_BARYCENTRIC_INTERPOLATIONS) <<
+      GEN7_WM_DW1_BARYCENTRIC_INTERP__SHIFT;
+
+   /*
+    * TODO set this bit only when
+    *
+    *  a) fs writes colors and color is not masked, or
+    *  b) fs writes depth, or
+    *  c) fs or cc kills
+    */
+   dw |= GEN7_WM_DW1_PS_DISPATCH_ENABLE;
+
+   /*
+    * From the Ivy Bridge PRM, volume 2 part 1, page 278:
+    *
+    *     "This bit (Pixel Shader Kill Pixel), if ENABLED, indicates that
+    *      the PS kernel or color calculator has the ability to kill
+    *      (discard) pixels or samples, other than due to depth or stencil
+    *      testing. This bit is required to be ENABLED in the following
+    *      situations:
+    *
+    *      - The API pixel shader program contains "killpix" or "discard"
+    *        instructions, or other code in the pixel shader kernel that
+    *        can cause the final pixel mask to differ from the pixel mask
+    *        received on dispatch.
+    *
+    *      - A sampler with chroma key enabled with kill pixel mode is used
+    *        by the pixel shader.
+    *
+    *      - Any render target has Alpha Test Enable or AlphaToCoverage
+    *        Enable enabled.
+    *
+    *      - The pixel shader kernel generates and outputs oMask.
+    *
+    *      Note: As ClipDistance clipping is fully supported in hardware
+    *      and therefore not via PS instructions, there should be no need
+    *      to ENABLE this bit due to ClipDistance clipping."
+    */
+   if (ilo_shader_get_kernel_param(fs, ILO_KERNEL_FS_USE_KILL))
+      dw |= GEN7_WM_DW1_PS_KILL_PIXEL;
+
+   if (ilo_shader_get_kernel_param(fs, ILO_KERNEL_FS_OUTPUT_Z))
+      dw |= GEN7_WM_DW1_PSCDEPTH_ON;
+
+   if (ilo_shader_get_kernel_param(fs, ILO_KERNEL_FS_INPUT_Z))
+      dw |= GEN7_WM_DW1_PS_USE_DEPTH;
+
+   if (ilo_shader_get_kernel_param(fs, ILO_KERNEL_FS_INPUT_W))
+      dw |= GEN7_WM_DW1_PS_USE_W;
+
+   return dw;
+}
+
 static void
 fs_init_cso_gen7(const struct ilo_dev_info *dev,
                  const struct ilo_shader_state *fs,
@@ -688,7 +772,6 @@ fs_init_cso_gen7(const struct ilo_dev_info *dev,
 {
    int start_grf, sampler_count, max_threads;
    uint32_t dw2, dw4, dw5;
-   uint32_t wm_interps, wm_dw1;
 
    ILO_DEV_ASSERT(dev, 7, 7.5);
 
@@ -727,66 +810,83 @@ fs_init_cso_gen7(const struct ilo_dev_info *dev,
          0 << GEN7_PS_DW5_URB_GRF_START1__SHIFT |
          0 << GEN7_PS_DW5_URB_GRF_START2__SHIFT;
 
-   /* FS affects 3DSTATE_WM too */
-   wm_dw1 = 0;
-
-   /*
-    * TODO set this bit only when
-    *
-    *  a) fs writes colors and color is not masked, or
-    *  b) fs writes depth, or
-    *  c) fs or cc kills
-    */
-   wm_dw1 |= GEN7_WM_DW1_PS_DISPATCH_ENABLE;
-
-   /*
-    * From the Ivy Bridge PRM, volume 2 part 1, page 278:
-    *
-    *     "This bit (Pixel Shader Kill Pixel), if ENABLED, indicates that
-    *      the PS kernel or color calculator has the ability to kill
-    *      (discard) pixels or samples, other than due to depth or stencil
-    *      testing. This bit is required to be ENABLED in the following
-    *      situations:
-    *
-    *      - The API pixel shader program contains "killpix" or "discard"
-    *        instructions, or other code in the pixel shader kernel that
-    *        can cause the final pixel mask to differ from the pixel mask
-    *        received on dispatch.
-    *
-    *      - A sampler with chroma key enabled with kill pixel mode is used
-    *        by the pixel shader.
-    *
-    *      - Any render target has Alpha Test Enable or AlphaToCoverage
-    *        Enable enabled.
-    *
-    *      - The pixel shader kernel generates and outputs oMask.
-    *
-    *      Note: As ClipDistance clipping is fully supported in hardware
-    *      and therefore not via PS instructions, there should be no need
-    *      to ENABLE this bit due to ClipDistance clipping."
-    */
-   if (ilo_shader_get_kernel_param(fs, ILO_KERNEL_FS_USE_KILL))
-      wm_dw1 |= GEN7_WM_DW1_PS_KILL_PIXEL;
-
-   if (ilo_shader_get_kernel_param(fs, ILO_KERNEL_FS_OUTPUT_Z))
-      wm_dw1 |= GEN7_WM_DW1_PSCDEPTH_ON;
-
-   if (ilo_shader_get_kernel_param(fs, ILO_KERNEL_FS_INPUT_Z))
-      wm_dw1 |= GEN7_WM_DW1_PS_USE_DEPTH;
-
-   if (ilo_shader_get_kernel_param(fs, ILO_KERNEL_FS_INPUT_W))
-      wm_dw1 |= GEN7_WM_DW1_PS_USE_W;
-
-   wm_interps = ilo_shader_get_kernel_param(fs,
-         ILO_KERNEL_FS_BARYCENTRIC_INTERPOLATIONS);
-
-   wm_dw1 |= wm_interps << GEN7_WM_DW1_BARYCENTRIC_INTERP__SHIFT;
-
    STATIC_ASSERT(Elements(cso->payload) >= 4);
    cso->payload[0] = dw2;
    cso->payload[1] = dw4;
    cso->payload[2] = dw5;
-   cso->payload[3] = wm_dw1;
+   cso->payload[3] = fs_get_wm_gen7(dev, fs);
+}
+
+static uint32_t
+fs_get_psx_gen8(const struct ilo_dev_info *dev,
+                const struct ilo_shader_state *fs)
+{
+   uint32_t dw;
+
+   ILO_DEV_ASSERT(dev, 8, 8);
+
+   dw = GEN8_PSX_DW1_DISPATCH_ENABLE;
+
+   if (ilo_shader_get_kernel_param(fs, ILO_KERNEL_FS_USE_KILL))
+      dw |= GEN8_PSX_DW1_KILL_PIXEL;
+   if (ilo_shader_get_kernel_param(fs, ILO_KERNEL_FS_OUTPUT_Z))
+      dw |= GEN8_PSX_DW1_PSCDEPTH_ON;
+   if (ilo_shader_get_kernel_param(fs, ILO_KERNEL_FS_INPUT_Z))
+      dw |= GEN8_PSX_DW1_USE_DEPTH;
+   if (ilo_shader_get_kernel_param(fs, ILO_KERNEL_FS_INPUT_W))
+      dw |= GEN8_PSX_DW1_USE_W;
+   if (ilo_shader_get_kernel_param(fs, ILO_KERNEL_INPUT_COUNT))
+      dw |= GEN8_PSX_DW1_ATTR_ENABLE;
+
+   return dw;
+}
+
+static uint32_t
+fs_get_wm_gen8(const struct ilo_dev_info *dev,
+               const struct ilo_shader_state *fs)
+{
+   ILO_DEV_ASSERT(dev, 8, 8);
+
+   return ilo_shader_get_kernel_param(fs,
+         ILO_KERNEL_FS_BARYCENTRIC_INTERPOLATIONS) <<
+      GEN7_WM_DW1_BARYCENTRIC_INTERP__SHIFT;
+}
+
+static void
+fs_init_cso_gen8(const struct ilo_dev_info *dev,
+                 const struct ilo_shader_state *fs,
+                 struct ilo_shader_cso *cso)
+{
+   int start_grf, sampler_count;
+   uint32_t dw3, dw6, dw7;
+
+   ILO_DEV_ASSERT(dev, 8, 8);
+
+   start_grf = ilo_shader_get_kernel_param(fs, ILO_KERNEL_URB_DATA_START_REG);
+   sampler_count = ilo_shader_get_kernel_param(fs, ILO_KERNEL_SAMPLER_COUNT);
+
+   dw3 = (true) ? 0 : GEN6_THREADDISP_FP_MODE_ALT;
+   dw3 |= ((sampler_count + 3) / 4) << GEN6_THREADDISP_SAMPLER_COUNT__SHIFT;
+
+   /* always 64? */
+   dw6 = (64 - 2) << GEN8_PS_DW6_MAX_THREADS__SHIFT |
+         GEN8_PS_DW6_POSOFFSET_NONE;
+   if (ilo_shader_get_kernel_param(fs, ILO_KERNEL_PCB_CBUF0_SIZE))
+      dw6 |= GEN8_PS_DW6_PUSH_CONSTANT_ENABLE;
+
+   assert(!ilo_shader_get_kernel_param(fs, ILO_KERNEL_FS_DISPATCH_16_OFFSET));
+   dw6 |= GEN6_PS_DISPATCH_8 << GEN8_PS_DW6_DISPATCH_MODE__SHIFT;
+
+   dw7 = start_grf << GEN8_PS_DW7_URB_GRF_START0__SHIFT |
+         0 << GEN8_PS_DW7_URB_GRF_START1__SHIFT |
+         0 << GEN8_PS_DW7_URB_GRF_START2__SHIFT;
+
+   STATIC_ASSERT(Elements(cso->payload) >= 5);
+   cso->payload[0] = dw3;
+   cso->payload[1] = dw6;
+   cso->payload[2] = dw7;
+   cso->payload[3] = fs_get_psx_gen8(dev, fs);
+   cso->payload[4] = fs_get_wm_gen8(dev, fs);
 }
 
 void
@@ -794,7 +894,9 @@ ilo_gpe_init_fs_cso(const struct ilo_dev_info *dev,
                     const struct ilo_shader_state *fs,
                     struct ilo_shader_cso *cso)
 {
-   if (ilo_dev_gen(dev) >= ILO_GEN(7))
+   if (ilo_dev_gen(dev) >= ILO_GEN(8))
+      fs_init_cso_gen8(dev, fs, cso);
+   else if (ilo_dev_gen(dev) >= ILO_GEN(7))
       fs_init_cso_gen7(dev, fs, cso);
    else
       fs_init_cso_gen6(dev, fs, cso);
