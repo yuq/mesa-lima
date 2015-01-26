@@ -771,6 +771,75 @@ gen6_3DSTATE_MULTISAMPLE(struct ilo_builder *builder,
 }
 
 static inline void
+gen8_3DSTATE_MULTISAMPLE(struct ilo_builder *builder,
+                         int num_samples,
+                         bool pixel_location_center)
+{
+   const uint8_t cmd_len = 2;
+   uint32_t dw1, *dw;
+
+   ILO_DEV_ASSERT(builder->dev, 8, 8);
+
+   dw1 = (pixel_location_center) ? GEN6_MULTISAMPLE_DW1_PIXLOC_CENTER :
+      GEN6_MULTISAMPLE_DW1_PIXLOC_UL_CORNER;
+
+   switch (num_samples) {
+   case 0:
+   case 1:
+      dw1 |= GEN6_MULTISAMPLE_DW1_NUMSAMPLES_1;
+      break;
+   case 2:
+      dw1 |= GEN8_MULTISAMPLE_DW1_NUMSAMPLES_2;
+      break;
+   case 4:
+      dw1 |= GEN6_MULTISAMPLE_DW1_NUMSAMPLES_4;
+      break;
+   case 8:
+      dw1 |= GEN7_MULTISAMPLE_DW1_NUMSAMPLES_8;
+      break;
+   case 16:
+      dw1 |= GEN8_MULTISAMPLE_DW1_NUMSAMPLES_16;
+      break;
+   default:
+      assert(!"unsupported sample count");
+      dw1 |= GEN6_MULTISAMPLE_DW1_NUMSAMPLES_1;
+      break;
+   }
+
+   ilo_builder_batch_pointer(builder, cmd_len, &dw);
+
+   dw[0] = GEN8_RENDER_CMD(3D, 3DSTATE_MULTISAMPLE) | (cmd_len - 2);
+   dw[1] = dw1;
+}
+
+static inline void
+gen8_3DSTATE_SAMPLE_PATTERN(struct ilo_builder *builder,
+                            const uint32_t *pattern_1x,
+                            const uint32_t *pattern_2x,
+                            const uint32_t *pattern_4x,
+                            const uint32_t *pattern_8x,
+                            const uint32_t *pattern_16x)
+{
+   const uint8_t cmd_len = 9;
+   uint32_t *dw;
+
+   ILO_DEV_ASSERT(builder->dev, 8, 8);
+
+   ilo_builder_batch_pointer(builder, cmd_len, &dw);
+
+   dw[0] = GEN8_RENDER_CMD(3D, 3DSTATE_SAMPLE_PATTERN) | (cmd_len - 2);
+   dw[1] = pattern_16x[3];
+   dw[2] = pattern_16x[2];
+   dw[3] = pattern_16x[1];
+   dw[4] = pattern_16x[0];
+   dw[5] = pattern_8x[1];
+   dw[6] = pattern_8x[0];
+   dw[7] = pattern_4x[0];
+   dw[8] = pattern_1x[0] << 16 |
+           pattern_2x[0];
+}
+
+static inline void
 gen6_3DSTATE_SAMPLE_MASK(struct ilo_builder *builder,
                          unsigned sample_mask)
 {
@@ -797,7 +866,7 @@ gen7_3DSTATE_SAMPLE_MASK(struct ilo_builder *builder,
    const unsigned valid_mask = ((1 << num_samples) - 1) | 0x1;
    uint32_t *dw;
 
-   ILO_DEV_ASSERT(builder->dev, 7, 7.5);
+   ILO_DEV_ASSERT(builder->dev, 7, 8);
 
    /*
     * From the Ivy Bridge PRM, volume 2 part 1, page 294:

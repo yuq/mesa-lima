@@ -44,6 +44,11 @@ static const struct sample_position ilo_sample_pattern_1x[1] = {
    {  0,  0 },
 };
 
+static const struct sample_position ilo_sample_pattern_2x[2] = {
+   { -4, -4 },
+   {  4,  4 },
+};
+
 static const struct sample_position ilo_sample_pattern_4x[4] = {
    { -2, -6 },
    {  6, -2 },
@@ -61,6 +66,25 @@ static const struct sample_position ilo_sample_pattern_8x[8] = {
    { -3, -7 },
    {  7, -3 },
    { -5,  7 },
+};
+
+static const struct sample_position ilo_sample_pattern_16x[16] = {
+   {  0,  2 },
+   {  3,  0 },
+   { -3, -2 },
+   { -2, -4 },
+   {  4,  3 },
+   {  5,  1 },
+   {  6, -1 },
+   {  2, -6 },
+   { -4,  5 },
+   { -5, -5 },
+   { -1, -7 },
+   {  7, -3 },
+   { -7,  4 },
+   {  1, -8 },
+   { -6,  6 },
+   { -8,  7 },
 };
 
 static uint8_t
@@ -99,6 +123,9 @@ ilo_render_create(struct ilo_builder *builder)
 
    /* pack into dwords */
    render->sample_pattern_1x = pack_sample_position(ilo_sample_pattern_1x);
+   render->sample_pattern_2x =
+      pack_sample_position(&ilo_sample_pattern_2x[1]) << 8 |
+      pack_sample_position(&ilo_sample_pattern_2x[0]);
    for (i = 0; i < 4; i++) {
       render->sample_pattern_4x |=
          pack_sample_position(&ilo_sample_pattern_4x[i]) << (8 * i);
@@ -107,6 +134,15 @@ ilo_render_create(struct ilo_builder *builder)
          pack_sample_position(&ilo_sample_pattern_8x[i]) << (8 * i);
       render->sample_pattern_8x[1] |=
          pack_sample_position(&ilo_sample_pattern_8x[i + 4]) << (8 * i);
+
+      render->sample_pattern_16x[0] |=
+         pack_sample_position(&ilo_sample_pattern_16x[i]) << (8 * i);
+      render->sample_pattern_16x[1] |=
+         pack_sample_position(&ilo_sample_pattern_16x[i + 4]) << (8 * i);
+      render->sample_pattern_16x[2] |=
+         pack_sample_position(&ilo_sample_pattern_16x[i + 8]) << (8 * i);
+      render->sample_pattern_16x[3] |=
+         pack_sample_position(&ilo_sample_pattern_16x[i + 12]) << (8 * i);
    }
 
    ilo_render_invalidate_hw(render);
@@ -137,6 +173,10 @@ ilo_render_get_sample_position(const struct ilo_render *render,
       assert(sample_index < Elements(ilo_sample_pattern_1x));
       pattern = ilo_sample_pattern_1x;
       break;
+   case 2:
+      assert(sample_index < Elements(ilo_sample_pattern_2x));
+      pattern = ilo_sample_pattern_2x;
+      break;
    case 4:
       assert(sample_index < Elements(ilo_sample_pattern_4x));
       pattern = ilo_sample_pattern_4x;
@@ -144,6 +184,10 @@ ilo_render_get_sample_position(const struct ilo_render *render,
    case 8:
       assert(sample_index < Elements(ilo_sample_pattern_8x));
       pattern = ilo_sample_pattern_8x;
+      break;
+   case 16:
+      assert(sample_index < Elements(ilo_sample_pattern_16x));
+      pattern = ilo_sample_pattern_16x;
       break;
    default:
       assert(!"unknown sample count");
