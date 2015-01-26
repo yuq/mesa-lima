@@ -55,6 +55,7 @@ struct simple_node {
 do {						\
    (elem)->next->prev = (elem)->prev;		\
    (elem)->prev->next = (elem)->next;		\
+   make_empty_list(elem);			\
 } while (0)
 
 /**
