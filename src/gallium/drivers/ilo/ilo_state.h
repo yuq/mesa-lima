@@ -247,7 +247,7 @@ struct ilo_rasterizer_state {
 };
 
 struct ilo_dsa_state {
-   /* DEPTH_STENCIL_STATE */
+   /* DEPTH_STENCIL_STATE or Gen8+ 3DSTATE_WM_DEPTH_STENCIL */
    uint32_t payload[3];
 
    uint32_t dw_alpha;

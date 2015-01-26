@@ -559,6 +559,25 @@ gen7_hiz_3DSTATE_WM(struct ilo_builder *builder, uint32_t hiz_op)
 }
 
 static inline void
+gen8_3DSTATE_WM_DEPTH_STENCIL(struct ilo_builder *builder,
+                              const struct ilo_dsa_state *dsa)
+{
+   const uint8_t cmd_len = 3;
+   uint32_t dw1, dw2, *dw;
+
+   ILO_DEV_ASSERT(builder->dev, 8, 8);
+
+   dw1 = dsa->payload[0];
+   dw2 = dsa->payload[1];
+
+   ilo_builder_batch_pointer(builder, cmd_len, &dw);
+
+   dw[0] = GEN8_RENDER_CMD(3D, 3DSTATE_WM_DEPTH_STENCIL) | (cmd_len - 2);
+   dw[1] = dw1;
+   dw[2] = dw2;
+}
+
+static inline void
 gen7_3DSTATE_PS(struct ilo_builder *builder,
                 const struct ilo_shader_state *fs,
                 bool dual_blend)

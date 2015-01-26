@@ -1711,6 +1711,39 @@ dsa_get_stencil_enable_gen6(const struct ilo_dev_info *dev,
 }
 
 static uint32_t
+dsa_get_stencil_enable_gen8(const struct ilo_dev_info *dev,
+                            const struct pipe_stencil_state *stencil0,
+                            const struct pipe_stencil_state *stencil1)
+{
+   uint32_t dw;
+
+   ILO_DEV_ASSERT(dev, 8, 8);
+
+   if (!stencil0->enabled)
+      return 0;
+
+   dw = gen6_translate_pipe_stencil_op(stencil0->fail_op) << 29 |
+        gen6_translate_pipe_stencil_op(stencil0->zfail_op) << 26 |
+        gen6_translate_pipe_stencil_op(stencil0->zpass_op) << 23 |
+        gen6_translate_dsa_func(stencil0->func) << 8 |
+        GEN8_ZS_DW1_STENCIL_TEST_ENABLE;
+   if (stencil0->writemask)
+      dw |= GEN8_ZS_DW1_STENCIL_WRITE_ENABLE;
+
+   if (stencil1->enabled) {
+      dw |= gen6_translate_dsa_func(stencil1->func) << 20 |
+            gen6_translate_pipe_stencil_op(stencil1->fail_op) << 17 |
+            gen6_translate_pipe_stencil_op(stencil1->zfail_op) << 14 |
+            gen6_translate_pipe_stencil_op(stencil1->zpass_op) << 11 |
+            GEN8_ZS_DW1_STENCIL1_ENABLE;
+      if (stencil1->writemask)
+         dw |= GEN8_ZS_DW1_STENCIL_WRITE_ENABLE;
+   }
+
+   return dw;
+}
+
+static uint32_t
 dsa_get_depth_enable_gen6(const struct ilo_dev_info *dev,
                           const struct pipe_depth_state *state)
 {
@@ -1745,12 +1778,33 @@ dsa_get_depth_enable_gen6(const struct ilo_dev_info *dev,
 }
 
 static uint32_t
+dsa_get_depth_enable_gen8(const struct ilo_dev_info *dev,
+                          const struct pipe_depth_state *state)
+{
+   uint32_t dw;
+
+   ILO_DEV_ASSERT(dev, 8, 8);
+
+   if (state->enabled) {
+      dw = GEN8_ZS_DW1_DEPTH_TEST_ENABLE |
+           gen6_translate_dsa_func(state->func) << 5;
+   } else {
+      dw = GEN6_COMPAREFUNCTION_ALWAYS << 5;
+   }
+
+   if (state->writemask)
+      dw |= GEN8_ZS_DW1_DEPTH_WRITE_ENABLE;
+
+   return dw;
+}
+
+static uint32_t
 dsa_get_alpha_enable_gen6(const struct ilo_dev_info *dev,
                           const struct pipe_alpha_state *state)
 {
    uint32_t dw;
 
-   ILO_DEV_ASSERT(dev, 6, 7.5);
+   ILO_DEV_ASSERT(dev, 6, 8);
 
    if (!state->enabled)
       return 0;
@@ -1767,17 +1821,27 @@ ilo_gpe_init_dsa(const struct ilo_dev_info *dev,
                  const struct pipe_depth_stencil_alpha_state *state,
                  struct ilo_dsa_state *dsa)
 {
-   ILO_DEV_ASSERT(dev, 6, 7.5);
+   ILO_DEV_ASSERT(dev, 6, 8);
 
    STATIC_ASSERT(Elements(dsa->payload) >= 3);
 
-   dsa->payload[0] = dsa_get_stencil_enable_gen6(dev,
-         &state->stencil[0], &state->stencil[1]);
+   if (ilo_dev_gen(dev) >= ILO_GEN(8)) {
+      const uint32_t dw_stencil = dsa_get_stencil_enable_gen8(dev,
+            &state->stencil[0], &state->stencil[1]);
+      const uint32_t dw_depth = dsa_get_depth_enable_gen8(dev, &state->depth);
+
+      assert(!(dw_stencil & dw_depth));
+      dsa->payload[0] = dw_stencil | dw_depth;
+   } else {
+      dsa->payload[0] = dsa_get_stencil_enable_gen6(dev,
+            &state->stencil[0], &state->stencil[1]);
+      dsa->payload[2] = dsa_get_depth_enable_gen6(dev, &state->depth);
+   }
+
    dsa->payload[1] = state->stencil[0].valuemask << 24 |
                      state->stencil[0].writemask << 16 |
                      state->stencil[1].valuemask << 8 |
                      state->stencil[1].writemask;
-   dsa->payload[2] = dsa_get_depth_enable_gen6(dev, &state->depth);
 
    dsa->dw_alpha = dsa_get_alpha_enable_gen6(dev, &state->alpha);
    dsa->alpha_ref = float_to_ubyte(state->alpha.ref_value);
