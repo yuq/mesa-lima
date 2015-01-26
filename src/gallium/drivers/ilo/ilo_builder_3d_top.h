@@ -1249,11 +1249,11 @@ gen7_3dstate_constant(struct ilo_builder *builder,
    const uint32_t cmd = GEN6_RENDER_TYPE_RENDER |
                         GEN6_RENDER_SUBTYPE_3D |
                         subop;
-   const uint8_t cmd_len = 7;
+   const uint8_t cmd_len = (ilo_dev_gen(builder->dev) >= ILO_GEN(8)) ? 11 : 7;
    uint32_t payload[6], *dw;
    int total_read_length, i;
 
-   ILO_DEV_ASSERT(builder->dev, 7, 7.5);
+   ILO_DEV_ASSERT(builder->dev, 7, 8);
 
    /* VS, HS, DS, GS, and PS variants */
    assert(subop >= GEN6_RENDER_OPCODE_3DSTATE_CONSTANT_VS &&
@@ -1308,7 +1308,20 @@ gen7_3dstate_constant(struct ilo_builder *builder,
    ilo_builder_batch_pointer(builder, cmd_len, &dw);
 
    dw[0] = cmd | (cmd_len - 2);
-   memcpy(&dw[1], payload, sizeof(payload));
+   if (ilo_dev_gen(builder->dev) >= ILO_GEN(8)) {
+      dw[1] = payload[0];
+      dw[2] = payload[1];
+      dw[3] = payload[2];
+      dw[4] = 0;
+      dw[5] = payload[3];
+      dw[6] = 0;
+      dw[7] = payload[4];
+      dw[8] = 0;
+      dw[9] = payload[5];
+      dw[10] = 0;
+   } else {
+      memcpy(&dw[1], payload, sizeof(payload));
+   }
 }
 
 static inline void
