@@ -578,6 +578,82 @@ gen8_3DSTATE_WM_DEPTH_STENCIL(struct ilo_builder *builder,
 }
 
 static inline void
+gen8_3DSTATE_WM_HZ_OP(struct ilo_builder *builder, uint32_t op,
+                      uint16_t width, uint16_t height, int sample_count)
+{
+   const uint8_t cmd_len = 5;
+   const uint32_t sample_mask = ((1 << sample_count) - 1) | 0x1;
+   uint32_t dw1, *dw;
+
+   ILO_DEV_ASSERT(builder->dev, 8, 8);
+
+   dw1 = op;
+
+   switch (sample_count) {
+   case 0:
+   case 1:
+      dw1 |= GEN8_WM_HZ_DW1_NUMSAMPLES_1;
+      break;
+   case 2:
+      dw1 |= GEN8_WM_HZ_DW1_NUMSAMPLES_2;
+      break;
+   case 4:
+      dw1 |= GEN8_WM_HZ_DW1_NUMSAMPLES_4;
+      break;
+   case 8:
+      dw1 |= GEN8_WM_HZ_DW1_NUMSAMPLES_8;
+      break;
+   case 16:
+      dw1 |= GEN8_WM_HZ_DW1_NUMSAMPLES_16;
+      break;
+   default:
+      assert(!"unsupported sample count");
+      dw1 |= GEN8_WM_HZ_DW1_NUMSAMPLES_1;
+      break;
+   }
+
+   ilo_builder_batch_pointer(builder, cmd_len, &dw);
+
+   dw[0] = GEN8_RENDER_CMD(3D, 3DSTATE_WM_HZ_OP) | (cmd_len - 2);
+   dw[1] = dw1;
+   dw[2] = 0;
+   /* exclusive? */
+   dw[3] = height << 16 | width;
+   dw[4] = sample_mask;
+}
+
+static inline void
+gen8_disable_3DSTATE_WM_HZ_OP(struct ilo_builder *builder)
+{
+   const uint8_t cmd_len = 5;
+   uint32_t *dw;
+
+   ILO_DEV_ASSERT(builder->dev, 8, 8);
+
+   ilo_builder_batch_pointer(builder, cmd_len, &dw);
+
+   dw[0] = GEN8_RENDER_CMD(3D, 3DSTATE_WM_HZ_OP) | (cmd_len - 2);
+   dw[1] = 0;
+   dw[2] = 0;
+   dw[3] = 0;
+   dw[4] = 0;
+}
+
+static inline void
+gen8_3DSTATE_WM_CHROMAKEY(struct ilo_builder *builder)
+{
+   const uint8_t cmd_len = 2;
+   uint32_t *dw;
+
+   ILO_DEV_ASSERT(builder->dev, 8, 8);
+
+   ilo_builder_batch_pointer(builder, cmd_len, &dw);
+
+   dw[0] = GEN8_RENDER_CMD(3D, 3DSTATE_WM_CHROMAKEY) | (cmd_len - 2);
+   dw[1] = 0;
+}
+
+static inline void
 gen7_3DSTATE_PS(struct ilo_builder *builder,
                 const struct ilo_shader_state *fs,
                 bool dual_blend)
