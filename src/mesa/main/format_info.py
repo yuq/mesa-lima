@@ -58,7 +58,7 @@ def get_gl_base_format(fmat):
    elif fmat.has_channel('i') and fmat.num_channels() == 1:
       return 'GL_INTENSITY'
    else:
-      assert False
+      sys.exit("error, could not determine base format for {0}, check swizzle".format(fmat.name));
 
 def get_gl_data_type(fmat):
    if fmat.is_compressed():

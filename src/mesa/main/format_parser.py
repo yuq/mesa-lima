@@ -24,6 +24,8 @@
 # TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+import sys
+
 VOID = 'x'
 UNSIGNED = 'u'
 SIGNED = 's'
@@ -562,7 +564,10 @@ def parse(filename):
          block_height = int(fields[3])
          colorspace = fields[9]
 
-         swizzle = Swizzle(fields[8])
+         try:
+            swizzle = Swizzle(fields[8])
+         except:
+            sys.exit("error parsing swizzle for format " + name)
          channels = _parse_channels(fields[4:8], layout, colorspace, swizzle)
 
          yield Format(name, layout, block_width, block_height, channels, swizzle, colorspace)
