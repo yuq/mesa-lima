@@ -596,6 +596,20 @@ static int select_twoside_color(struct r600_shader_ctx *ctx, int front, int back
 	return 0;
 }
 
+static int vs_add_primid_output(struct r600_shader_ctx *ctx, int prim_id_sid)
+{
+	int i;
+	i = ctx->shader->noutput++;
+	ctx->shader->output[i].name = TGSI_SEMANTIC_PRIMID;
+	ctx->shader->output[i].sid = 0;
+	ctx->shader->output[i].gpr = 0;
+	ctx->shader->output[i].interpolate = TGSI_INTERPOLATE_CONSTANT;
+	ctx->shader->output[i].write_mask = 0x4;
+	ctx->shader->output[i].spi_sid = prim_id_sid;
+
+	return 0;
+}
+
 static int tgsi_declaration(struct r600_shader_ctx *ctx)
 {
 	struct tgsi_full_declaration *d = &ctx->parse.FullToken.FullDeclaration;
@@ -625,6 +639,11 @@ static int tgsi_declaration(struct r600_shader_ctx *ctx)
 				break;
 			case TGSI_SEMANTIC_POSITION:
 				ctx->fragcoord_input = i;
+				break;
+			case TGSI_SEMANTIC_PRIMID:
+				/* set this for now */
+				ctx->shader->gs_prim_id_input = true;
+				ctx->shader->ps_prim_id_input = i;
 				break;
 			}
 			if (ctx->bc->chip_class >= EVERGREEN) {
@@ -1800,6 +1819,7 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 	ctx.shader = shader;
 	ctx.native_integers = true;
 
+	shader->vs_as_gs_a = key.vs_as_gs_a;
 	shader->vs_as_es = key.vs_as_es;
 
 	r600_bytecode_init(ctx.bc, rscreen->b.chip_class, rscreen->b.family,
@@ -1938,6 +1958,10 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 	ctx.nliterals = 0;
 	ctx.literals = NULL;
 	shader->fs_write_all = FALSE;
+
+	if (shader->vs_as_gs_a)
+		vs_add_primid_output(&ctx, key.vs_prim_id_out);
+
 	while (!tgsi_parse_end_of_tokens(&ctx.parse)) {
 		tgsi_parse_token(&ctx.parse);
 		switch (ctx.parse.FullToken.Token.Type) {
@@ -2335,7 +2359,14 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 					output[j].swizzle_z = 4; /* 0 */
 					output[j].swizzle_w = 5; /* 1 */
 					break;
+				case TGSI_SEMANTIC_PRIMID:
+					output[j].swizzle_x = 2;
+					output[j].swizzle_y = 4; /* 0 */
+					output[j].swizzle_z = 4; /* 0 */
+					output[j].swizzle_w = 4; /* 0 */
+					break;
 				}
+
 				break;
 			case TGSI_PROCESSOR_FRAGMENT:
 				if (shader->output[i].name == TGSI_SEMANTIC_COLOR) {

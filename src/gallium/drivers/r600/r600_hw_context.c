@@ -315,9 +315,9 @@ void r600_begin_new_cs(struct r600_context *ctx)
 	ctx->stencil_ref.atom.dirty = true;
 	ctx->vertex_fetch_shader.atom.dirty = true;
 	ctx->export_shader.atom.dirty = true;
+	ctx->shader_stages.atom.dirty = true;
 	if (ctx->gs_shader) {
 		ctx->geometry_shader.atom.dirty = true;
-		ctx->shader_stages.atom.dirty = true;
 		ctx->gs_rings.atom.dirty = true;
 	}
 	ctx->vertex_shader.atom.dirty = true;

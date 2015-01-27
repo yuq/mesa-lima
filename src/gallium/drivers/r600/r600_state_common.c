@@ -707,6 +707,10 @@ static INLINE struct r600_shader_key r600_shader_selector_key(struct pipe_contex
 			key.nr_cbufs = 2;
 	} else if (sel->type == PIPE_SHADER_VERTEX) {
 		key.vs_as_es = (rctx->gs_shader != NULL);
+		if (rctx->ps_shader->current->shader.gs_prim_id_input && !rctx->gs_shader) {
+			key.vs_as_gs_a = true;
+			key.vs_prim_id_out = rctx->ps_shader->current->shader.input[rctx->ps_shader->current->shader.ps_prim_id_input].spi_sid;
+		}
 	}
 	return key;
 }
@@ -1265,6 +1269,7 @@ static bool r600_update_derived_state(struct r600_context *rctx)
 				r600_update_ps_state(ctx, rctx->ps_shader->current);
 		}
 
+		rctx->shader_stages.atom.dirty = true;
 		update_shader_atom(ctx, &rctx->pixel_shader, rctx->ps_shader->current);
 	}
 
