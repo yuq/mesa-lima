@@ -2731,7 +2731,8 @@ framebuffer_texture(struct gl_context *ctx, const char *caller, GLenum target,
                                               BUFFER_DEPTH);
       } else {
          set_texture_attachment(ctx, fb, att, texObj, textarget,
-                                      level, zoffset, layered);
+                                level, zoffset, layered);
+
          if (attachment == GL_DEPTH_STENCIL_ATTACHMENT) {
             /* Above we created a new renderbuffer and attached it to the
              * depth attachment point. Now attach it to the stencil attachment
