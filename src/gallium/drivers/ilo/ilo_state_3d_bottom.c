@@ -44,7 +44,7 @@ rasterizer_init_clip(const struct ilo_dev_info *dev,
 {
    uint32_t dw1, dw2, dw3;
 
-   ILO_DEV_ASSERT(dev, 6, 7.5);
+   ILO_DEV_ASSERT(dev, 6, 8);
 
    dw1 = GEN6_CLIP_DW1_STATISTICS;
 
@@ -61,22 +61,24 @@ rasterizer_init_clip(const struct ilo_dev_info *dev,
       dw1 |= 0 << 19 |
              GEN7_CLIP_DW1_EARLY_CULL_ENABLE;
 
-      if (state->front_ccw)
-         dw1 |= GEN7_CLIP_DW1_FRONTWINDING_CCW;
+      if (ilo_dev_gen(dev) < ILO_GEN(8)) {
+         if (state->front_ccw)
+            dw1 |= GEN7_CLIP_DW1_FRONTWINDING_CCW;
 
-      switch (state->cull_face) {
-      case PIPE_FACE_NONE:
-         dw1 |= GEN7_CLIP_DW1_CULLMODE_NONE;
-         break;
-      case PIPE_FACE_FRONT:
-         dw1 |= GEN7_CLIP_DW1_CULLMODE_FRONT;
-         break;
-      case PIPE_FACE_BACK:
-         dw1 |= GEN7_CLIP_DW1_CULLMODE_BACK;
-         break;
-      case PIPE_FACE_FRONT_AND_BACK:
-         dw1 |= GEN7_CLIP_DW1_CULLMODE_BOTH;
-         break;
+         switch (state->cull_face) {
+         case PIPE_FACE_NONE:
+            dw1 |= GEN7_CLIP_DW1_CULLMODE_NONE;
+            break;
+         case PIPE_FACE_FRONT:
+            dw1 |= GEN7_CLIP_DW1_CULLMODE_FRONT;
+            break;
+         case PIPE_FACE_BACK:
+            dw1 |= GEN7_CLIP_DW1_CULLMODE_BACK;
+            break;
+         case PIPE_FACE_FRONT_AND_BACK:
+            dw1 |= GEN7_CLIP_DW1_CULLMODE_BOTH;
+            break;
+         }
       }
    }
 
@@ -90,7 +92,7 @@ rasterizer_init_clip(const struct ilo_dev_info *dev,
    else
       dw2 |= GEN6_CLIP_DW2_APIMODE_OGL;
 
-   if (state->depth_clip)
+   if (ilo_dev_gen(dev) < ILO_GEN(8) && state->depth_clip)
       dw2 |= GEN6_CLIP_DW2_Z_TEST_ENABLE;
 
    if (state->flatshade_first) {
