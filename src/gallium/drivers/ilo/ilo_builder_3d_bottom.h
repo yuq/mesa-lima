@@ -48,7 +48,7 @@ gen6_3DSTATE_CLIP(struct ilo_builder *builder,
    uint32_t dw1, dw2, dw3, *dw;
    int interps;
 
-   ILO_DEV_ASSERT(builder->dev, 6, 7.5);
+   ILO_DEV_ASSERT(builder->dev, 6, 8);
 
    dw1 = rasterizer->clip.payload[0];
    dw2 = rasterizer->clip.payload[1];
@@ -1029,7 +1029,7 @@ gen6_3DSTATE_DRAWING_RECTANGLE(struct ilo_builder *builder,
    unsigned rect_limit;
    uint32_t *dw;
 
-   ILO_DEV_ASSERT(builder->dev, 6, 7.5);
+   ILO_DEV_ASSERT(builder->dev, 6, 8);
 
    if (ilo_dev_gen(builder->dev) >= ILO_GEN(7)) {
       rect_limit = 16383;
@@ -1291,7 +1291,7 @@ gen7_3DSTATE_CLEAR_PARAMS(struct ilo_builder *builder,
    const uint8_t cmd_len = 3;
    uint32_t *dw;
 
-   ILO_DEV_ASSERT(builder->dev, 7, 7.5);
+   ILO_DEV_ASSERT(builder->dev, 7, 8);
 
    ilo_builder_batch_pointer(builder, cmd_len, &dw);
 
@@ -1330,7 +1330,7 @@ gen6_3DSTATE_SCISSOR_STATE_POINTERS(struct ilo_builder *builder,
    const uint8_t cmd_len = 2;
    uint32_t *dw;
 
-   ILO_DEV_ASSERT(builder->dev, 6, 7.5);
+   ILO_DEV_ASSERT(builder->dev, 6, 8);
 
    ilo_builder_batch_pointer(builder, cmd_len, &dw);
 
@@ -1552,7 +1552,7 @@ gen6_CC_VIEWPORT(struct ilo_builder *builder,
    uint32_t state_offset, *dw;
    unsigned i;
 
-   ILO_DEV_ASSERT(builder->dev, 6, 7.5);
+   ILO_DEV_ASSERT(builder->dev, 6, 8);
 
    /*
     * From the Sandy Bridge PRM, volume 2 part 1, page 385:
@@ -1584,7 +1584,7 @@ gen6_SCISSOR_RECT(struct ilo_builder *builder,
    const int state_align = 32;
    const int state_len = 2 * num_viewports;
 
-   ILO_DEV_ASSERT(builder->dev, 6, 7.5);
+   ILO_DEV_ASSERT(builder->dev, 6, 8);
 
    /*
     * From the Sandy Bridge PRM, volume 2 part 1, page 263:
@@ -1609,7 +1609,7 @@ gen6_COLOR_CALC_STATE(struct ilo_builder *builder,
    const int state_len = 6;
    uint32_t state_offset, *dw;
 
-   ILO_DEV_ASSERT(builder->dev, 6, 7.5);
+   ILO_DEV_ASSERT(builder->dev, 6, 8);
 
    state_offset = ilo_builder_dynamic_pointer(builder,
          ILO_BUILDER_ITEM_COLOR_CALC, state_align, state_len, &dw);

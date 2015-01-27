@@ -75,7 +75,7 @@ gen7_3DPRIMITIVE(struct ilo_builder *builder,
       ((info->indexed) ? ib->draw_start_offset : 0);
    uint32_t *dw;
 
-   ILO_DEV_ASSERT(builder->dev, 7, 7.5);
+   ILO_DEV_ASSERT(builder->dev, 7, 8);
 
    ilo_builder_batch_pointer(builder, cmd_len, &dw);
 

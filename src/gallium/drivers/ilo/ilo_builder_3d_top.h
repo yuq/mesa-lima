@@ -326,7 +326,7 @@ gen75_3DSTATE_VF(struct ilo_builder *builder,
    const uint8_t cmd_len = 2;
    uint32_t *dw;
 
-   ILO_DEV_ASSERT(builder->dev, 7.5, 7.5);
+   ILO_DEV_ASSERT(builder->dev, 7.5, 8);
 
    ilo_builder_batch_pointer(builder, cmd_len, &dw);
 
@@ -345,7 +345,7 @@ gen6_3DSTATE_VF_STATISTICS(struct ilo_builder *builder,
    const uint32_t dw0 = GEN6_RENDER_CMD(SINGLE_DW, 3DSTATE_VF_STATISTICS) |
                         enable;
 
-   ILO_DEV_ASSERT(builder->dev, 6, 7.5);
+   ILO_DEV_ASSERT(builder->dev, 6, 8);
 
    ilo_builder_batch_write(builder, cmd_len, &dw0);
 }
@@ -560,7 +560,7 @@ gen6_3DSTATE_VERTEX_ELEMENTS(struct ilo_builder *builder,
    uint32_t *dw;
    unsigned i;
 
-   ILO_DEV_ASSERT(builder->dev, 6, 7.5);
+   ILO_DEV_ASSERT(builder->dev, 6, 8);
 
    /*
     * From the Sandy Bridge PRM, volume 2 part 1, page 92:
@@ -799,7 +799,7 @@ gen7_3DSTATE_TE(struct ilo_builder *builder)
    const uint8_t cmd_len = 4;
    uint32_t *dw;
 
-   ILO_DEV_ASSERT(builder->dev, 7, 7.5);
+   ILO_DEV_ASSERT(builder->dev, 7, 8);
 
    ilo_builder_batch_pointer(builder, cmd_len, &dw);
 
@@ -1283,7 +1283,7 @@ gen7_3dstate_pointer(struct ilo_builder *builder,
    const uint8_t cmd_len = 2;
    uint32_t *dw;
 
-   ILO_DEV_ASSERT(builder->dev, 7, 7.5);
+   ILO_DEV_ASSERT(builder->dev, 7, 8);
 
    ilo_builder_batch_pointer(builder, cmd_len, &dw);
 
@@ -1686,7 +1686,7 @@ gen6_SAMPLER_STATE(struct ilo_builder *builder,
    uint32_t state_offset, *dw;
    int i;
 
-   ILO_DEV_ASSERT(builder->dev, 6, 7.5);
+   ILO_DEV_ASSERT(builder->dev, 6, 8);
 
    /*
     * From the Sandy Bridge PRM, volume 4 part 1, page 101:
@@ -1824,7 +1824,7 @@ gen6_push_constant_buffer(struct ilo_builder *builder,
    uint32_t state_offset;
    char *buf;
 
-   ILO_DEV_ASSERT(builder->dev, 6, 7.5);
+   ILO_DEV_ASSERT(builder->dev, 6, 8);
 
    state_offset = ilo_builder_dynamic_pointer(builder,
          ILO_BUILDER_ITEM_BLOB, state_align, state_len, (uint32_t **) &buf);

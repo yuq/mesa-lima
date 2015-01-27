@@ -1365,7 +1365,7 @@ ilo_gpe_set_viewport_cso(const struct ilo_dev_info *dev,
    const float scale_z = fabs(state->scale[2]);
    int min_gbx, max_gbx, min_gby, max_gby;
 
-   ILO_DEV_ASSERT(dev, 6, 7.5);
+   ILO_DEV_ASSERT(dev, 6, 8);
 
    viewport_get_guardband(dev,
          (int) state->translate[0],
@@ -2058,7 +2058,7 @@ ilo_gpe_set_scissor(const struct ilo_dev_info *dev,
 {
    unsigned i;
 
-   ILO_DEV_ASSERT(dev, 6, 7.5);
+   ILO_DEV_ASSERT(dev, 6, 8);
 
    for (i = 0; i < num_states; i++) {
       uint16_t min_x, min_y, max_x, max_y;
@@ -2170,7 +2170,7 @@ ilo_gpe_set_fb(const struct ilo_dev_info *dev,
    const struct pipe_surface *first_surf = NULL;
    int i;
 
-   ILO_DEV_ASSERT(dev, 6, 7.5);
+   ILO_DEV_ASSERT(dev, 6, 8);
 
    util_copy_framebuffer_state(&fb->state, state);
 

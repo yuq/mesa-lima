@@ -52,7 +52,7 @@ ve_init_cso(const struct ilo_dev_info *dev,
    };
    int format;
 
-   ILO_DEV_ASSERT(dev, 6, 7.5);
+   ILO_DEV_ASSERT(dev, 6, 8);
 
    switch (util_format_get_nr_components(state->src_format)) {
    case 1: comp[1] = GEN6_VFCOMP_STORE_0;
@@ -86,7 +86,7 @@ ilo_gpe_init_ve(const struct ilo_dev_info *dev,
 {
    unsigned i;
 
-   ILO_DEV_ASSERT(dev, 6, 7.5);
+   ILO_DEV_ASSERT(dev, 6, 8);
 
    ve->count = num_states;
    ve->vb_count = 0;
@@ -124,7 +124,7 @@ ilo_gpe_set_ve_edgeflag(const struct ilo_dev_info *dev,
 {
    int format;
 
-   ILO_DEV_ASSERT(dev, 6, 7.5);
+   ILO_DEV_ASSERT(dev, 6, 8);
 
    /*
     * From the Sandy Bridge PRM, volume 2 part 1, page 94:
@@ -180,7 +180,7 @@ ilo_gpe_init_ve_nosrc(const struct ilo_dev_info *dev,
                           int comp0, int comp1, int comp2, int comp3,
                           struct ilo_ve_cso *cso)
 {
-   ILO_DEV_ASSERT(dev, 6, 7.5);
+   ILO_DEV_ASSERT(dev, 6, 8);
 
    STATIC_ASSERT(Elements(cso->payload) >= 2);
 
