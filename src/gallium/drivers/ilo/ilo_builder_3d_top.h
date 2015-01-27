@@ -198,7 +198,7 @@ gen7_3dstate_urb(struct ilo_builder *builder,
    int alloc_size, num_entries, min_entries, max_entries;
    uint32_t *dw;
 
-   ILO_DEV_ASSERT(builder->dev, 7, 7.5);
+   ILO_DEV_ASSERT(builder->dev, 7, 8);
 
    /* VS, HS, DS, and GS variants */
    assert(subop >= GEN7_RENDER_OPCODE_3DSTATE_URB_VS &&
@@ -229,6 +229,10 @@ gen7_3dstate_urb(struct ilo_builder *builder,
    switch (subop) {
    case GEN7_RENDER_OPCODE_3DSTATE_URB_VS:
       switch (ilo_dev_gen(builder->dev)) {
+      case ILO_GEN(8):
+         max_entries = 2560;
+         min_entries = 64;
+         break;
       case ILO_GEN(7.5):
          max_entries = (builder->dev->gt >= 2) ? 1664 : 640;
          min_entries = (builder->dev->gt >= 2) ? 64 : 32;
@@ -255,6 +259,9 @@ gen7_3dstate_urb(struct ilo_builder *builder,
       break;
    case GEN7_RENDER_OPCODE_3DSTATE_URB_GS:
       switch (ilo_dev_gen(builder->dev)) {
+      case ILO_GEN(8):
+         max_entries = 960;
+         break;
       case ILO_GEN(7.5):
          max_entries = (builder->dev->gt >= 2) ? 640 : 256;
          break;
