@@ -518,26 +518,33 @@ ilo_get_name(struct pipe_screen *screen)
    struct ilo_screen *is = ilo_screen(screen);
    const char *chipset = NULL;
 
-   if (gen_is_vlv(is->dev.devid)) {
+   if (gen_is_chv(is->dev.devid)) {
+      chipset = "Intel(R) Cherryview";
+   } else if (gen_is_bdw(is->dev.devid)) {
+      /* this is likely wrong */
+      if (gen_is_desktop(is->dev.devid))
+         chipset = "Intel(R) Broadwell Desktop";
+      else if (gen_is_mobile(is->dev.devid))
+         chipset = "Intel(R) Broadwell Mobile";
+      else if (gen_is_server(is->dev.devid))
+         chipset = "Intel(R) Broadwell Server";
+   } else if (gen_is_vlv(is->dev.devid)) {
       chipset = "Intel(R) Bay Trail";
-   }
-   else if (gen_is_hsw(is->dev.devid)) {
+   } else if (gen_is_hsw(is->dev.devid)) {
       if (gen_is_desktop(is->dev.devid))
          chipset = "Intel(R) Haswell Desktop";
       else if (gen_is_mobile(is->dev.devid))
          chipset = "Intel(R) Haswell Mobile";
       else if (gen_is_server(is->dev.devid))
          chipset = "Intel(R) Haswell Server";
-   }
-   else if (gen_is_ivb(is->dev.devid)) {
+   } else if (gen_is_ivb(is->dev.devid)) {
       if (gen_is_desktop(is->dev.devid))
          chipset = "Intel(R) Ivybridge Desktop";
       else if (gen_is_mobile(is->dev.devid))
          chipset = "Intel(R) Ivybridge Mobile";
       else if (gen_is_server(is->dev.devid))
          chipset = "Intel(R) Ivybridge Server";
-   }
-   else if (gen_is_snb(is->dev.devid)) {
+   } else if (gen_is_snb(is->dev.devid)) {
       if (gen_is_desktop(is->dev.devid))
          chipset = "Intel(R) Sandybridge Desktop";
       else if (gen_is_mobile(is->dev.devid))
@@ -711,7 +718,24 @@ init_dev(struct ilo_dev_info *dev, const struct intel_winsys_info *info)
       ilo_warn("PPGTT disabled\n");
    }
 
-   if (gen_is_hsw(info->devid)) {
+   if (gen_is_bdw(info->devid) || gen_is_chv(info->devid)) {
+      dev->gen_opaque = ILO_GEN(8);
+      dev->gt = (gen_is_bdw(info->devid)) ? gen_get_bdw_gt(info->devid) : 1;
+      /* XXX random values */
+      if (dev->gt == 3) {
+         dev->eu_count = 48;
+         dev->thread_count = 336;
+         dev->urb_size = 384 * 1024;
+      } else if (dev->gt == 2) {
+         dev->eu_count = 24;
+         dev->thread_count = 168;
+         dev->urb_size = 384 * 1024;
+      } else {
+         dev->eu_count = 12;
+         dev->thread_count = 84;
+         dev->urb_size = 192 * 1024;
+      }
+   } else if (gen_is_hsw(info->devid)) {
       /*
        * From the Haswell PRM, volume 4, page 8:
        *
