@@ -300,7 +300,7 @@ struct ilo_sampler_state {
 
 struct ilo_view_surface {
    /* SURFACE_STATE */
-   uint32_t payload[8];
+   uint32_t payload[13];
    struct intel_bo *bo;
 };
 

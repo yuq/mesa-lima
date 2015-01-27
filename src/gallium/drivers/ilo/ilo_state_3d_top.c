@@ -734,7 +734,7 @@ view_init_null_gen7(const struct ilo_dev_info *dev,
 {
    uint32_t *dw;
 
-   ILO_DEV_ASSERT(dev, 7, 7.5);
+   ILO_DEV_ASSERT(dev, 7, 8);
 
    assert(width >= 1 && height >= 1 && depth >= 1);
 
@@ -769,12 +769,16 @@ view_init_null_gen7(const struct ilo_dev_info *dev,
     *      true"
     */
 
-   STATIC_ASSERT(Elements(surf->payload) >= 8);
+   STATIC_ASSERT(Elements(surf->payload) >= 13);
    dw = surf->payload;
 
    dw[0] = GEN6_SURFTYPE_NULL << GEN7_SURFACE_DW0_TYPE__SHIFT |
-           GEN6_FORMAT_B8G8R8A8_UNORM << GEN7_SURFACE_DW0_FORMAT__SHIFT |
-           GEN6_TILING_X << 13;
+           GEN6_FORMAT_B8G8R8A8_UNORM << GEN7_SURFACE_DW0_FORMAT__SHIFT;
+
+   if (ilo_dev_gen(dev) >= ILO_GEN(8))
+      dw[0] |= GEN6_TILING_X << GEN8_SURFACE_DW0_TILING__SHIFT;
+   else
+      dw[0] |= GEN6_TILING_X << GEN7_SURFACE_DW0_TILING__SHIFT;
 
    dw[1] = 0;
 
@@ -788,6 +792,9 @@ view_init_null_gen7(const struct ilo_dev_info *dev,
 
    dw[6] = 0;
    dw[7] = 0;
+
+   if (ilo_dev_gen(dev) >= ILO_GEN(8))
+      memset(&dw[8], 0, sizeof(*dw) * (13 - 8));
 
    surf->bo = NULL;
 }
@@ -809,7 +816,7 @@ view_init_for_buffer_gen7(const struct ilo_dev_info *dev,
    int surface_type, surface_format, num_entries;
    uint32_t *dw;
 
-   ILO_DEV_ASSERT(dev, 7, 7.5);
+   ILO_DEV_ASSERT(dev, 7, 8);
 
    surface_type = (structured) ? GEN7_SURFTYPE_STRBUF : GEN6_SURFTYPE_BUFFER;
 
@@ -884,7 +891,7 @@ view_init_for_buffer_gen7(const struct ilo_dev_info *dev,
    if (typed || structured)
       depth &= 0x3f;
 
-   STATIC_ASSERT(Elements(surf->payload) >= 8);
+   STATIC_ASSERT(Elements(surf->payload) >= 13);
    dw = surf->payload;
 
    dw[0] = surface_type << GEN7_SURFACE_DW0_TYPE__SHIFT |
@@ -892,7 +899,12 @@ view_init_for_buffer_gen7(const struct ilo_dev_info *dev,
    if (render_cache_rw)
       dw[0] |= GEN7_SURFACE_DW0_RENDER_CACHE_RW;
 
-   dw[1] = offset;
+   if (ilo_dev_gen(dev) >= ILO_GEN(8)) {
+      dw[8] = offset;
+      memset(&dw[9], 0, sizeof(*dw) * (13 - 9));
+   } else {
+      dw[1] = offset;
+   }
 
    dw[2] = GEN_SHIFT32(height, GEN7_SURFACE_DW2_HEIGHT) |
            GEN_SHIFT32(width, GEN7_SURFACE_DW2_WIDTH);
@@ -932,7 +944,7 @@ view_init_for_texture_gen7(const struct ilo_dev_info *dev,
    int width, height, depth, pitch, lod;
    uint32_t *dw;
 
-   ILO_DEV_ASSERT(dev, 7, 7.5);
+   ILO_DEV_ASSERT(dev, 7, 8);
 
    surface_type = ilo_gpe_gen6_translate_texture(tex->base.target);
    assert(surface_type != GEN6_SURFTYPE_BUFFER);
@@ -1037,12 +1049,11 @@ view_init_for_texture_gen7(const struct ilo_dev_info *dev,
       }
    }
 
-   STATIC_ASSERT(Elements(surf->payload) >= 8);
+   STATIC_ASSERT(Elements(surf->payload) >= 13);
    dw = surf->payload;
 
    dw[0] = surface_type << GEN7_SURFACE_DW0_TYPE__SHIFT |
-           surface_format << GEN7_SURFACE_DW0_FORMAT__SHIFT |
-           ilo_gpe_gen6_translate_winsys_tiling(tex->layout.tiling) << 13;
+           surface_format << GEN7_SURFACE_DW0_FORMAT__SHIFT;
 
    /*
     * From the Ivy Bridge PRM, volume 4 part 1, page 63:
@@ -1062,19 +1073,57 @@ view_init_for_texture_gen7(const struct ilo_dev_info *dev,
          assert(depth == 1);
    }
 
-   assert(tex->layout.align_i == 4 || tex->layout.align_i == 8);
-   assert(tex->layout.align_j == 2 || tex->layout.align_j == 4);
+   if (ilo_dev_gen(dev) >= ILO_GEN(8)) {
+      switch (tex->layout.align_j) {
+      case 4:
+         dw[0] |= GEN7_SURFACE_DW0_VALIGN_4;
+         break;
+      case 8:
+         dw[0] |= GEN8_SURFACE_DW0_VALIGN_8;
+         break;
+      case 16:
+         dw[0] |= GEN8_SURFACE_DW0_VALIGN_16;
+         break;
+      default:
+         assert(!"unsupported valign");
+         break;
+      }
 
-   if (tex->layout.align_j == 4)
-      dw[0] |= GEN7_SURFACE_DW0_VALIGN_4;
+      switch (tex->layout.align_i) {
+      case 4:
+         dw[0] |= GEN8_SURFACE_DW0_HALIGN_4;
+         break;
+      case 8:
+         dw[0] |= GEN8_SURFACE_DW0_HALIGN_8;
+         break;
+      case 16:
+         dw[0] |= GEN8_SURFACE_DW0_HALIGN_16;
+         break;
+      default:
+         assert(!"unsupported halign");
+         break;
+      }
 
-   if (tex->layout.align_i == 8)
-      dw[0] |= GEN7_SURFACE_DW0_HALIGN_8;
+      dw[0] |= ilo_gpe_gen6_translate_winsys_tiling(tex->layout.tiling) <<
+         GEN8_SURFACE_DW0_TILING__SHIFT;
+   } else {
+      assert(tex->layout.align_i == 4 || tex->layout.align_i == 8);
+      assert(tex->layout.align_j == 2 || tex->layout.align_j == 4);
 
-   if (tex->layout.walk == ILO_LAYOUT_WALK_LOD)
-      dw[0] |= GEN7_SURFACE_DW0_ARYSPC_LOD0;
-   else
-      dw[0] |= GEN7_SURFACE_DW0_ARYSPC_FULL;
+      if (tex->layout.align_j == 4)
+         dw[0] |= GEN7_SURFACE_DW0_VALIGN_4;
+
+      if (tex->layout.align_i == 8)
+         dw[0] |= GEN7_SURFACE_DW0_HALIGN_8;
+
+      dw[0] |= ilo_gpe_gen6_translate_winsys_tiling(tex->layout.tiling) <<
+         GEN7_SURFACE_DW0_TILING__SHIFT;
+
+      if (tex->layout.walk == ILO_LAYOUT_WALK_LOD)
+         dw[0] |= GEN7_SURFACE_DW0_ARYSPC_LOD0;
+      else
+         dw[0] |= GEN7_SURFACE_DW0_ARYSPC_FULL;
+   }
 
    if (is_rt)
       dw[0] |= GEN7_SURFACE_DW0_RENDER_CACHE_RW;
@@ -1082,7 +1131,12 @@ view_init_for_texture_gen7(const struct ilo_dev_info *dev,
    if (surface_type == GEN6_SURFTYPE_CUBE && !is_rt)
       dw[0] |= GEN7_SURFACE_DW0_CUBE_FACE_ENABLES__MASK;
 
-   dw[1] = 0;
+   if (ilo_dev_gen(dev) >= ILO_GEN(8)) {
+      assert(tex->layout.layer_height % 4 == 0);
+      dw[1] = tex->layout.layer_height / 4;
+   } else {
+      dw[1] = 0;
+   }
 
    dw[2] = GEN_SHIFT32(height - 1, GEN7_SURFACE_DW2_HEIGHT) |
            GEN_SHIFT32(width - 1, GEN7_SURFACE_DW2_WIDTH);
@@ -1106,12 +1160,25 @@ view_init_for_texture_gen7(const struct ilo_dev_info *dev,
       dw[4] |= GEN7_SURFACE_DW4_MSFMT_MSS;
    }
 
-   if (tex->base.nr_samples > 4)
-      dw[4] |= GEN7_SURFACE_DW4_MULTISAMPLECOUNT_8;
-   else if (tex->base.nr_samples > 2)
-      dw[4] |= GEN7_SURFACE_DW4_MULTISAMPLECOUNT_4;
-   else
+   switch (tex->base.nr_samples) {
+   case 0:
+   case 1:
+   default:
       dw[4] |= GEN7_SURFACE_DW4_MULTISAMPLECOUNT_1;
+      break;
+   case 2:
+      dw[4] |= GEN8_SURFACE_DW4_MULTISAMPLECOUNT_2;
+      break;
+   case 4:
+      dw[4] |= GEN7_SURFACE_DW4_MULTISAMPLECOUNT_4;
+      break;
+   case 8:
+      dw[4] |= GEN7_SURFACE_DW4_MULTISAMPLECOUNT_8;
+      break;
+   case 16:
+      dw[4] |= GEN8_SURFACE_DW4_MULTISAMPLECOUNT_16;
+      break;
+   }
 
    dw[5] = GEN_SHIFT32(first_level, GEN7_SURFACE_DW5_MIN_LOD) |
            lod;
@@ -1125,6 +1192,9 @@ view_init_for_texture_gen7(const struct ilo_dev_info *dev,
                GEN_SHIFT32(GEN75_SCS_BLUE,  GEN75_SURFACE_DW7_SCS_B) |
                GEN_SHIFT32(GEN75_SCS_ALPHA, GEN75_SURFACE_DW7_SCS_A);
    }
+
+   if (ilo_dev_gen(dev) >= ILO_GEN(8))
+      memset(&dw[8], 0, sizeof(*dw) * (13 - 8));
 
    /* do not increment reference count */
    surf->bo = tex->bo;

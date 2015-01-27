@@ -1413,7 +1413,7 @@ gen6_BINDING_TABLE_STATE(struct ilo_builder *builder,
    const int state_align = 32;
    const int state_len = num_surface_states;
 
-   ILO_DEV_ASSERT(builder->dev, 6, 7.5);
+   ILO_DEV_ASSERT(builder->dev, 6, 8);
 
    /*
     * From the Sandy Bridge PRM, volume 4 part 1, page 69:
@@ -1434,18 +1434,26 @@ gen6_SURFACE_STATE(struct ilo_builder *builder,
                    const struct ilo_view_surface *surf,
                    bool for_render)
 {
-   const int state_align = 32;
-   const int state_len = (ilo_dev_gen(builder->dev) >= ILO_GEN(7)) ? 8 : 6;
+   const int state_align =
+      (ilo_dev_gen(builder->dev) >= ILO_GEN(8)) ? 64 : 32;
+   const int state_len =
+      (ilo_dev_gen(builder->dev) >= ILO_GEN(8)) ? 13 :
+      (ilo_dev_gen(builder->dev) >= ILO_GEN(7)) ? 8 : 6;
    uint32_t state_offset;
 
-   ILO_DEV_ASSERT(builder->dev, 6, 7.5);
+   ILO_DEV_ASSERT(builder->dev, 6, 8);
 
    state_offset = ilo_builder_surface_write(builder, ILO_BUILDER_ITEM_SURFACE,
          state_align, state_len, surf->payload);
 
    if (surf->bo) {
-      ilo_builder_surface_reloc(builder, state_offset, 1, surf->bo,
-            surf->payload[1], (for_render) ? INTEL_RELOC_WRITE : 0);
+      if (ilo_dev_gen(builder->dev) >= ILO_GEN(8)) {
+         ilo_builder_surface_reloc64(builder, state_offset, 8, surf->bo,
+               surf->payload[8], (for_render) ? INTEL_RELOC_WRITE : 0);
+      } else {
+         ilo_builder_surface_reloc(builder, state_offset, 1, surf->bo,
+               surf->payload[1], (for_render) ? INTEL_RELOC_WRITE : 0);
+      }
    }
 
    return state_offset;
