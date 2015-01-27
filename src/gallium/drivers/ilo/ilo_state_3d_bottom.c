@@ -909,6 +909,7 @@ struct ilo_zs_surface_info {
    struct {
       struct intel_bo *bo;
       unsigned stride;
+      unsigned qpitch;
       enum intel_tiling_mode tiling;
       uint32_t offset;
    } zs, stencil, hiz;
@@ -921,7 +922,7 @@ static void
 zs_init_info_null(const struct ilo_dev_info *dev,
                   struct ilo_zs_surface_info *info)
 {
-   ILO_DEV_ASSERT(dev, 6, 7.5);
+   ILO_DEV_ASSERT(dev, 6, 8);
 
    memset(info, 0, sizeof(*info));
 
@@ -942,7 +943,7 @@ zs_init_info(const struct ilo_dev_info *dev,
 {
    bool separate_stencil;
 
-   ILO_DEV_ASSERT(dev, 6, 7.5);
+   ILO_DEV_ASSERT(dev, 6, 8);
 
    memset(info, 0, sizeof(*info));
 
@@ -1032,6 +1033,10 @@ zs_init_info(const struct ilo_dev_info *dev,
    if (format != PIPE_FORMAT_S8_UINT) {
       info->zs.bo = tex->bo;
       info->zs.stride = tex->layout.bo_stride;
+
+      assert(tex->layout.layer_height % 4 == 0);
+      info->zs.qpitch = tex->layout.layer_height / 4;
+
       info->zs.tiling = tex->layout.tiling;
       info->zs.offset = 0;
    }
@@ -1053,6 +1058,9 @@ zs_init_info(const struct ilo_dev_info *dev,
        */
       info->stencil.stride = s8_tex->layout.bo_stride * 2;
 
+      assert(s8_tex->layout.layer_height % 4 == 0);
+      info->stencil.qpitch = s8_tex->layout.layer_height / 4;
+
       info->stencil.tiling = s8_tex->layout.tiling;
 
       if (ilo_dev_gen(dev) == ILO_GEN(6)) {
@@ -1070,6 +1078,10 @@ zs_init_info(const struct ilo_dev_info *dev,
    if (ilo_texture_can_enable_hiz(tex, level, first_layer, num_layers)) {
       info->hiz.bo = tex->aux_bo;
       info->hiz.stride = tex->layout.aux_stride;
+
+      assert(tex->layout.aux_layer_height % 4 == 0);
+      info->hiz.qpitch = tex->layout.aux_layer_height / 4;
+
       info->hiz.tiling = INTEL_TILING_Y;
 
       /* offset to the level */
@@ -1100,7 +1112,7 @@ ilo_gpe_init_zs_surface(const struct ilo_dev_info *dev,
    uint32_t dw1, dw2, dw3, dw4, dw5, dw6;
    int align_w = 8, align_h = 4;
 
-   ILO_DEV_ASSERT(dev, 6, 7.5);
+   ILO_DEV_ASSERT(dev, 6, 8);
 
    if (tex) {
       zs_init_info(dev, tex, format, level, first_layer, num_layers, &info);
@@ -1158,8 +1170,8 @@ ilo_gpe_init_zs_surface(const struct ilo_dev_info *dev,
       break;
    }
 
-   dw1 = info.surface_type << 29 |
-         info.format << 18;
+   dw1 = info.surface_type << GEN6_DEPTH_DW1_TYPE__SHIFT |
+         info.format << GEN6_DEPTH_DW1_FORMAT__SHIFT;
 
    if (info.zs.bo) {
       /* required for GEN6+ */
@@ -1170,66 +1182,68 @@ ilo_gpe_init_zs_surface(const struct ilo_dev_info *dev,
 
       dw1 |= (info.zs.stride - 1);
       dw2 = info.zs.offset;
-   }
-   else {
+   } else {
       dw2 = 0;
    }
 
    if (ilo_dev_gen(dev) >= ILO_GEN(7)) {
       if (info.zs.bo)
-         dw1 |= 1 << 28;
+         dw1 |= GEN7_DEPTH_DW1_DEPTH_WRITE_ENABLE;
 
       if (info.stencil.bo)
-         dw1 |= 1 << 27;
+         dw1 |= GEN7_DEPTH_DW1_STENCIL_WRITE_ENABLE;
 
       if (info.hiz.bo)
-         dw1 |= 1 << 22;
+         dw1 |= GEN7_DEPTH_DW1_HIZ_ENABLE;
 
-      dw3 = (info.height - 1) << 18 |
-            (info.width - 1) << 4 |
-            info.lod;
+      dw3 = (info.height - 1) << GEN7_DEPTH_DW3_HEIGHT__SHIFT |
+            (info.width - 1) << GEN7_DEPTH_DW3_WIDTH__SHIFT |
+            info.lod << GEN7_DEPTH_DW3_LOD__SHIFT;
 
-      zs->dw_aligned_8x4 = (align(info.height, align_h) - 1) << 18 |
-                           (align(info.width, align_w) - 1) << 4 |
-                           info.lod;
+      zs->dw_aligned_8x4 =
+         (align(info.height, align_h) - 1) << GEN7_DEPTH_DW3_HEIGHT__SHIFT |
+         (align(info.width, align_w) - 1) << GEN7_DEPTH_DW3_WIDTH__SHIFT |
+         info.lod << GEN7_DEPTH_DW3_LOD__SHIFT;
 
-      dw4 = (info.depth - 1) << 21 |
-            info.first_layer << 10;
+      dw4 = (info.depth - 1) << GEN7_DEPTH_DW4_DEPTH__SHIFT |
+            info.first_layer << GEN7_DEPTH_DW4_MIN_ARRAY_ELEMENT__SHIFT;
 
       dw5 = 0;
 
-      dw6 = (info.num_layers - 1) << 21;
-   }
-   else {
+      dw6 = (info.num_layers - 1) << GEN7_DEPTH_DW6_RT_VIEW_EXTENT__SHIFT;
+
+      if (ilo_dev_gen(dev) >= ILO_GEN(8))
+         dw6 |= info.zs.qpitch;
+   } else {
       /* always Y-tiled */
-      dw1 |= 1 << 27 |
-             1 << 26;
+      dw1 |= GEN6_TILING_Y << GEN6_DEPTH_DW1_TILING__SHIFT;
 
       if (info.hiz.bo) {
-         dw1 |= 1 << 22 |
-                1 << 21;
+         dw1 |= GEN6_DEPTH_DW1_HIZ_ENABLE |
+                GEN6_DEPTH_DW1_SEPARATE_STENCIL;
       }
 
-      dw3 = (info.height - 1) << 19 |
-            (info.width - 1) << 6 |
-            info.lod << 2 |
+      dw3 = (info.height - 1) << GEN6_DEPTH_DW3_HEIGHT__SHIFT |
+            (info.width - 1) << GEN6_DEPTH_DW3_WIDTH__SHIFT |
+            info.lod << GEN6_DEPTH_DW3_LOD__SHIFT |
             GEN6_DEPTH_DW3_MIPLAYOUT_BELOW;
 
-      zs->dw_aligned_8x4 = (align(info.height, align_h) - 1) << 19 |
-                           (align(info.width, align_w) - 1) << 6 |
-                           info.lod << 2 |
-                           GEN6_DEPTH_DW3_MIPLAYOUT_BELOW;
+      zs->dw_aligned_8x4 =
+         (align(info.height, align_h) - 1) << GEN6_DEPTH_DW3_HEIGHT__SHIFT |
+         (align(info.width, align_w) - 1) << GEN6_DEPTH_DW3_WIDTH__SHIFT |
+         info.lod << GEN6_DEPTH_DW3_LOD__SHIFT |
+         GEN6_DEPTH_DW3_MIPLAYOUT_BELOW;
 
-      dw4 = (info.depth - 1) << 21 |
-            info.first_layer << 10 |
-            (info.num_layers - 1) << 1;
+      dw4 = (info.depth - 1) << GEN6_DEPTH_DW4_DEPTH__SHIFT |
+            info.first_layer << GEN6_DEPTH_DW4_MIN_ARRAY_ELEMENT__SHIFT |
+            (info.num_layers - 1) << GEN6_DEPTH_DW4_RT_VIEW_EXTENT__SHIFT;
 
       dw5 = 0;
 
       dw6 = 0;
    }
 
-   STATIC_ASSERT(Elements(zs->payload) >= 10);
+   STATIC_ASSERT(Elements(zs->payload) >= 12);
 
    zs->payload[0] = dw1;
    zs->payload[1] = dw2;
@@ -1246,34 +1260,40 @@ ilo_gpe_init_zs_surface(const struct ilo_dev_info *dev,
       assert(info.stencil.stride > 0 && info.stencil.stride < 128 * 1024 &&
              info.stencil.stride % 128 == 0);
 
-      zs->payload[6] = info.stencil.stride - 1;
-      zs->payload[7] = info.stencil.offset;
-
+      dw1 = (info.stencil.stride - 1) << GEN6_STENCIL_DW1_PITCH__SHIFT;
       if (ilo_dev_gen(dev) >= ILO_GEN(7.5))
-         zs->payload[6] |= GEN75_STENCIL_DW1_STENCIL_BUFFER_ENABLE;
+         dw1 |= GEN75_STENCIL_DW1_STENCIL_BUFFER_ENABLE;
 
-      /* do not increment reference count */
-      zs->separate_s8_bo = info.stencil.bo;
+      dw2 = info.stencil.offset;
+      dw4 = info.stencil.qpitch;
+   } else {
+      dw1 = 0;
+      dw2 = 0;
+      dw4 = 0;
    }
-   else {
-      zs->payload[6] = 0;
-      zs->payload[7] = 0;
-      zs->separate_s8_bo = NULL;
-   }
+
+   zs->payload[6] = dw1;
+   zs->payload[7] = dw2;
+   zs->payload[8] = dw4;
+   /* do not increment reference count */
+   zs->separate_s8_bo = info.stencil.bo;
 
    /* hiz */
    if (info.hiz.bo) {
-      zs->payload[8] = info.hiz.stride - 1;
-      zs->payload[9] = info.hiz.offset;
+      dw1 = (info.hiz.stride - 1) << GEN6_HIZ_DW1_PITCH__SHIFT;
+      dw2 = info.hiz.offset;
+      dw4 = info.hiz.qpitch;
+   } else {
+      dw1 = 0;
+      dw2 = 0;
+      dw4 = 0;
+   }
 
-      /* do not increment reference count */
-      zs->hiz_bo = info.hiz.bo;
-   }
-   else {
-      zs->payload[8] = 0;
-      zs->payload[9] = 0;
-      zs->hiz_bo = NULL;
-   }
+   zs->payload[9] = dw1;
+   zs->payload[10] = dw2;
+   zs->payload[11] = dw4;
+   /* do not increment reference count */
+   zs->hiz_bo = info.hiz.bo;
 }
 
 static void

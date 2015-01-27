@@ -118,6 +118,7 @@ struct ilo_layout {
    /* bitmask of levels that can use aux */
    unsigned aux_enables;
    unsigned aux_offsets[PIPE_MAX_TEXTURE_LEVELS];
+   unsigned aux_layer_height;
    unsigned aux_stride;
    unsigned aux_height;
 };

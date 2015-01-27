@@ -1086,6 +1086,8 @@ layout_calculate_hiz_size(struct ilo_layout *layout,
          hz_height = hz_qpitch * templ->array_size / 2;
          if (ilo_dev_gen(params->dev) >= ILO_GEN(7))
             hz_height = align(hz_height, 8);
+
+         layout->aux_layer_height = hz_qpitch;
       }
       break;
    case ILO_LAYOUT_WALK_3D:

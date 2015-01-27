@@ -1082,26 +1082,40 @@ gen6_3DSTATE_DEPTH_BUFFER(struct ilo_builder *builder,
    const uint32_t cmd = (ilo_dev_gen(builder->dev) >= ILO_GEN(7)) ?
       GEN7_RENDER_CMD(3D, 3DSTATE_DEPTH_BUFFER) :
       GEN6_RENDER_CMD(3D, 3DSTATE_DEPTH_BUFFER);
-   const uint8_t cmd_len = 7;
+   const uint8_t cmd_len = (ilo_dev_gen(builder->dev) >= ILO_GEN(8)) ? 8 : 7;
    uint32_t *dw;
    unsigned pos;
 
-   ILO_DEV_ASSERT(builder->dev, 6, 7.5);
+   ILO_DEV_ASSERT(builder->dev, 6, 8);
 
    pos = ilo_builder_batch_pointer(builder, cmd_len, &dw);
 
    dw[0] = cmd | (cmd_len - 2);
    dw[1] = zs->payload[0];
-   dw[3] = (aligned_8x4) ? zs->dw_aligned_8x4 : zs->payload[2];
-   dw[4] = zs->payload[3];
-   dw[5] = zs->payload[4];
-   dw[6] = zs->payload[5];
+   dw[2] = 0;
 
-   if (zs->bo) {
-      ilo_builder_batch_reloc(builder, pos + 2,
-            zs->bo, zs->payload[1], INTEL_RELOC_WRITE);
+   /* see ilo_gpe_init_zs_surface() */
+   if (ilo_dev_gen(builder->dev) >= ILO_GEN(8)) {
+      dw[3] = 0;
+      dw[4] = (aligned_8x4) ? zs->dw_aligned_8x4 : zs->payload[2];
+      dw[5] = zs->payload[3];
+      dw[6] = zs->payload[4];
+      dw[7] = zs->payload[5];
+
+      if (zs->bo) {
+         ilo_builder_batch_reloc64(builder, pos + 2, zs->bo,
+               zs->payload[1], INTEL_RELOC_WRITE);
+      }
    } else {
-      dw[2] = 0;
+      dw[3] = (aligned_8x4) ? zs->dw_aligned_8x4 : zs->payload[2];
+      dw[4] = zs->payload[3];
+      dw[5] = zs->payload[4];
+      dw[6] = zs->payload[5];
+
+      if (zs->bo) {
+         ilo_builder_batch_reloc(builder, pos + 2, zs->bo,
+               zs->payload[1], INTEL_RELOC_WRITE);
+      }
    }
 }
 
@@ -1112,23 +1126,32 @@ gen6_3DSTATE_STENCIL_BUFFER(struct ilo_builder *builder,
    const uint32_t cmd = (ilo_dev_gen(builder->dev) >= ILO_GEN(7)) ?
       GEN7_RENDER_CMD(3D, 3DSTATE_STENCIL_BUFFER) :
       GEN6_RENDER_CMD(3D, 3DSTATE_STENCIL_BUFFER);
-   const uint8_t cmd_len = 3;
+   const uint8_t cmd_len = (ilo_dev_gen(builder->dev) >= ILO_GEN(8)) ? 5 : 3;
    uint32_t *dw;
    unsigned pos;
 
-   ILO_DEV_ASSERT(builder->dev, 6, 7.5);
+   ILO_DEV_ASSERT(builder->dev, 6, 8);
 
    pos = ilo_builder_batch_pointer(builder, cmd_len, &dw);
 
    dw[0] = cmd | (cmd_len - 2);
    /* see ilo_gpe_init_zs_surface() */
    dw[1] = zs->payload[6];
+   dw[2] = 0;
 
-   if (zs->separate_s8_bo) {
-      ilo_builder_batch_reloc(builder, pos + 2,
-            zs->separate_s8_bo, zs->payload[7], INTEL_RELOC_WRITE);
+   if (ilo_dev_gen(builder->dev) >= ILO_GEN(8)) {
+      dw[3] = 0;
+      dw[4] = zs->payload[8];
+
+      if (zs->separate_s8_bo) {
+         ilo_builder_batch_reloc64(builder, pos + 2,
+               zs->separate_s8_bo, zs->payload[7], INTEL_RELOC_WRITE);
+      }
    } else {
-      dw[2] = 0;
+      if (zs->separate_s8_bo) {
+         ilo_builder_batch_reloc(builder, pos + 2,
+               zs->separate_s8_bo, zs->payload[7], INTEL_RELOC_WRITE);
+      }
    }
 }
 
@@ -1139,23 +1162,32 @@ gen6_3DSTATE_HIER_DEPTH_BUFFER(struct ilo_builder *builder,
    const uint32_t cmd = (ilo_dev_gen(builder->dev) >= ILO_GEN(7)) ?
       GEN7_RENDER_CMD(3D, 3DSTATE_HIER_DEPTH_BUFFER) :
       GEN6_RENDER_CMD(3D, 3DSTATE_HIER_DEPTH_BUFFER);
-   const uint8_t cmd_len = 3;
+   const uint8_t cmd_len = (ilo_dev_gen(builder->dev) >= ILO_GEN(8)) ? 5 : 3;
    uint32_t *dw;
    unsigned pos;
 
-   ILO_DEV_ASSERT(builder->dev, 6, 7.5);
+   ILO_DEV_ASSERT(builder->dev, 6, 8);
 
    pos = ilo_builder_batch_pointer(builder, cmd_len, &dw);
 
    dw[0] = cmd | (cmd_len - 2);
    /* see ilo_gpe_init_zs_surface() */
-   dw[1] = zs->payload[8];
+   dw[1] = zs->payload[9];
+   dw[2] = 0;
 
-   if (zs->hiz_bo) {
-      ilo_builder_batch_reloc(builder, pos + 2,
-            zs->hiz_bo, zs->payload[9], INTEL_RELOC_WRITE);
+   if (ilo_dev_gen(builder->dev) >= ILO_GEN(8)) {
+      dw[3] = 0;
+      dw[4] = zs->payload[11];
+
+      if (zs->hiz_bo) {
+         ilo_builder_batch_reloc64(builder, pos + 2,
+               zs->hiz_bo, zs->payload[10], INTEL_RELOC_WRITE);
+      }
    } else {
-      dw[2] = 0;
+      if (zs->hiz_bo) {
+         ilo_builder_batch_reloc(builder, pos + 2,
+               zs->hiz_bo, zs->payload[10], INTEL_RELOC_WRITE);
+      }
    }
 }
 
