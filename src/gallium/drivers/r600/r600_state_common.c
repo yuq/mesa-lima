@@ -1170,6 +1170,10 @@ static bool r600_update_derived_state(struct r600_context *rctx)
 		}
 	}
 
+	r600_shader_select(ctx, rctx->ps_shader, &ps_dirty);
+	if (unlikely(!rctx->ps_shader->current))
+		return false;
+
 	update_gs_block_state(rctx, rctx->gs_shader != NULL);
 
 	if (rctx->gs_shader) {
@@ -1232,9 +1236,6 @@ static bool r600_update_derived_state(struct r600_context *rctx)
 		}
 	}
 
-	r600_shader_select(ctx, rctx->ps_shader, &ps_dirty);
-	if (unlikely(!rctx->ps_shader->current))
-		return false;
 
 	if (unlikely(ps_dirty || rctx->pixel_shader.shader != rctx->ps_shader->current ||
 		rctx->rasterizer->sprite_coord_enable != rctx->ps_shader->current->sprite_coord_enable ||
