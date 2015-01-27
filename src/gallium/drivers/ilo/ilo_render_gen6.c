@@ -258,7 +258,10 @@ gen6_draw_common_base_address(struct ilo_render *r,
       if (ilo_dev_gen(r->dev) == ILO_GEN(6))
          gen6_wa_pre_non_pipelined(r);
 
-      gen6_state_base_address(r->builder, r->hw_ctx_changed);
+      if (ilo_dev_gen(r->dev) >= ILO_GEN(8))
+         gen8_state_base_address(r->builder, r->hw_ctx_changed);
+      else
+         gen6_state_base_address(r->builder, r->hw_ctx_changed);
 
       /*
        * From the Sandy Bridge PRM, volume 1 part 1, page 28:

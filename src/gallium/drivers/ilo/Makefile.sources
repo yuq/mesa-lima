@@ -40,6 +40,7 @@ C_SOURCES := \
 	ilo_render_dynamic.c \
 	ilo_render_gen6.c \
 	ilo_render_gen7.c \
+	ilo_render_gen8.c \
 	ilo_render_media.c \
 	ilo_render_surface.c \
 	ilo_screen.c \

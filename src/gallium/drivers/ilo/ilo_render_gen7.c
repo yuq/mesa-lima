@@ -38,7 +38,7 @@
 /**
  * A wrapper for gen6_PIPE_CONTROL().
  */
-static inline void
+static void
 gen7_pipe_control(struct ilo_render *r, uint32_t dw1)
 {
    struct intel_bo *bo = (dw1 & GEN6_PIPE_CONTROL_WRITE__MASK) ?
@@ -222,7 +222,7 @@ gen7_wa_post_ps_and_later(struct ilo_render *r)
 
 #define DIRTY(state) (session->pipe_dirty & ILO_DIRTY_ ## state)
 
-static void
+void
 gen7_draw_common_urb(struct ilo_render *r,
                      const struct ilo_state_vector *vec,
                      struct ilo_render_draw_session *session)
@@ -230,8 +230,10 @@ gen7_draw_common_urb(struct ilo_render *r,
    /* 3DSTATE_URB_{VS,GS,HS,DS} */
    if (DIRTY(VE) || DIRTY(VS)) {
       /* the first 16KB are reserved for VS and PS PCBs */
-      const int offset = (ilo_dev_gen(r->dev) == ILO_GEN(7.5) &&
-            r->dev->gt == 3) ? 32768 : 16384;
+      const int offset =
+         (ilo_dev_gen(r->dev) >= ILO_GEN(8)) ||
+          (ilo_dev_gen(r->dev) == ILO_GEN(7.5) && r->dev->gt == 3) ?
+          32768 : 16384;
       int vs_entry_size, vs_total_size;
 
       vs_entry_size = (vec->vs) ?
@@ -251,7 +253,8 @@ gen7_draw_common_urb(struct ilo_render *r,
       vs_entry_size *= sizeof(float) * 4;
       vs_total_size = r->dev->urb_size - offset;
 
-      gen7_wa_pre_vs(r);
+      if (ilo_dev_gen(r->dev) < ILO_GEN(8))
+         gen7_wa_pre_vs(r);
 
       gen7_3DSTATE_URB_VS(r->builder,
             offset, vs_total_size, vs_entry_size);
@@ -262,7 +265,7 @@ gen7_draw_common_urb(struct ilo_render *r,
    }
 }
 
-static void
+void
 gen7_draw_common_pcb_alloc(struct ilo_render *r,
                            const struct ilo_state_vector *vec,
                            struct ilo_render_draw_session *session)
@@ -273,8 +276,10 @@ gen7_draw_common_pcb_alloc(struct ilo_render *r,
        * Push constant buffers are only allowed to take up at most the first
        * 16KB of the URB.  Split the space evenly for VS and FS.
        */
-      const int max_size = (ilo_dev_gen(r->dev) == ILO_GEN(7.5) &&
-            r->dev->gt == 3) ? 32768 : 16384;
+      const int max_size =
+         (ilo_dev_gen(r->dev) >= ILO_GEN(8)) ||
+          (ilo_dev_gen(r->dev) == ILO_GEN(7.5) && r->dev->gt == 3) ?
+          32768 : 16384;
       const int size = max_size / 2;
       int offset = 0;
 
@@ -288,7 +293,7 @@ gen7_draw_common_pcb_alloc(struct ilo_render *r,
    }
 }
 
-static void
+void
 gen7_draw_common_pointers_1(struct ilo_render *r,
                             const struct ilo_state_vector *vec,
                             struct ilo_render_draw_session *session)
@@ -303,7 +308,7 @@ gen7_draw_common_pointers_1(struct ilo_render *r,
    }
 }
 
-static void
+void
 gen7_draw_common_pointers_2(struct ilo_render *r,
                             const struct ilo_state_vector *vec,
                             struct ilo_render_draw_session *session)
@@ -321,29 +326,29 @@ gen7_draw_common_pointers_2(struct ilo_render *r,
    }
 
    /* 3DSTATE_DEPTH_STENCIL_STATE_POINTERS */
-   if (session->dsa_changed) {
+   if (ilo_dev_gen(r->dev) < ILO_GEN(8) && session->dsa_changed) {
       gen7_3DSTATE_DEPTH_STENCIL_STATE_POINTERS(r->builder,
             r->state.DEPTH_STENCIL_STATE);
    }
 }
 
-static void
+void
 gen7_draw_vs(struct ilo_render *r,
              const struct ilo_state_vector *vec,
              struct ilo_render_draw_session *session)
 {
-   const bool emit_3dstate_binding_table =
-      session->binding_table_vs_changed;
-   const bool emit_3dstate_sampler_state =
-      session->sampler_vs_changed;
+   const bool emit_3dstate_binding_table = session->binding_table_vs_changed;
+   const bool emit_3dstate_sampler_state = session->sampler_vs_changed;
    /* see gen6_draw_vs() */
    const bool emit_3dstate_constant_vs = session->pcb_vs_changed;
    const bool emit_3dstate_vs = (DIRTY(VS) || r->instruction_bo_changed);
 
    /* emit depth stall before any of the VS commands */
-   if (emit_3dstate_binding_table || emit_3dstate_sampler_state ||
-           emit_3dstate_constant_vs || emit_3dstate_vs)
-      gen7_wa_pre_vs(r);
+   if (ilo_dev_gen(r->dev) < ILO_GEN(8)) {
+      if (emit_3dstate_binding_table || emit_3dstate_sampler_state ||
+          emit_3dstate_constant_vs || emit_3dstate_vs)
+         gen7_wa_pre_vs(r);
+   }
 
    /* 3DSTATE_BINDING_TABLE_POINTERS_VS */
    if (emit_3dstate_binding_table) {
@@ -366,11 +371,18 @@ gen7_draw_vs(struct ilo_render *r,
    }
 
    /* 3DSTATE_VS */
-   if (emit_3dstate_vs)
-      gen6_3DSTATE_VS(r->builder, vec->vs);
+   if (ilo_dev_gen(r->dev) >= ILO_GEN(8)) {
+      if (emit_3dstate_vs || DIRTY(RASTERIZER)) {
+         gen8_3DSTATE_VS(r->builder, vec->vs,
+               vec->rasterizer->state.clip_plane_enable);
+      }
+   } else {
+      if (emit_3dstate_vs)
+         gen6_3DSTATE_VS(r->builder, vec->vs);
+   }
 }
 
-static void
+void
 gen7_draw_hs(struct ilo_render *r,
              const struct ilo_state_vector *vec,
              struct ilo_render_draw_session *session)
@@ -386,7 +398,7 @@ gen7_draw_hs(struct ilo_render *r,
       gen7_3DSTATE_BINDING_TABLE_POINTERS_HS(r->builder, 0);
 }
 
-static void
+void
 gen7_draw_te(struct ilo_render *r,
              const struct ilo_state_vector *vec,
              struct ilo_render_draw_session *session)
@@ -396,7 +408,7 @@ gen7_draw_te(struct ilo_render *r,
       gen7_3DSTATE_TE(r->builder);
 }
 
-static void
+void
 gen7_draw_ds(struct ilo_render *r,
              const struct ilo_state_vector *vec,
              struct ilo_render_draw_session *session)
@@ -413,7 +425,7 @@ gen7_draw_ds(struct ilo_render *r,
 
 }
 
-static void
+void
 gen7_draw_gs(struct ilo_render *r,
              const struct ilo_state_vector *vec,
              struct ilo_render_draw_session *session)
@@ -431,7 +443,7 @@ gen7_draw_gs(struct ilo_render *r,
    }
 }
 
-static void
+void
 gen7_draw_sol(struct ilo_render *r,
               const struct ilo_state_vector *vec,
               struct ilo_render_draw_session *session)
@@ -633,7 +645,7 @@ gen7_draw_wm_multisample(struct ilo_render *r,
    }
 }
 
-static void
+void
 gen7_draw_vf_draw(struct ilo_render *r,
                   const struct ilo_state_vector *vec,
                   struct ilo_render_draw_session *session)
@@ -693,7 +705,9 @@ gen7_rectlist_pcb_alloc(struct ilo_render *r,
     * 16KB of the URB.  Split the space evenly for VS and FS.
     */
    const int max_size =
-      (ilo_dev_gen(r->dev) == ILO_GEN(7.5) && r->dev->gt == 3) ? 32768 : 16384;
+      (ilo_dev_gen(r->dev) >= ILO_GEN(8)) ||
+       (ilo_dev_gen(r->dev) == ILO_GEN(7.5) && r->dev->gt == 3) ?
+       32768 : 16384;
    const int size = max_size / 2;
    int offset = 0;
 
@@ -711,7 +725,9 @@ gen7_rectlist_urb(struct ilo_render *r,
 {
    /* the first 16KB are reserved for VS and PS PCBs */
    const int offset =
-      (ilo_dev_gen(r->dev) == ILO_GEN(7.5) && r->dev->gt == 3) ? 32768 : 16384;
+      (ilo_dev_gen(r->dev) >= ILO_GEN(8)) ||
+       (ilo_dev_gen(r->dev) == ILO_GEN(7.5) && r->dev->gt == 3) ?
+       32768 : 16384;
 
    gen7_3DSTATE_URB_VS(r->builder, offset, r->dev->urb_size - offset,
          (blitter->ve.count + blitter->ve.prepend_nosrc_cso) *

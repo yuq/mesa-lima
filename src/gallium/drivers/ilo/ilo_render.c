@@ -428,7 +428,7 @@ int
 ilo_render_get_draw_len(const struct ilo_render *render,
                         const struct ilo_state_vector *vec)
 {
-   ILO_DEV_ASSERT(render->dev, 6, 7.5);
+   ILO_DEV_ASSERT(render->dev, 6, 8);
 
    return ilo_render_get_draw_dynamic_states_len(render, vec) +
           ilo_render_get_draw_surface_states_len(render, vec) +
@@ -481,7 +481,7 @@ ilo_render_emit_draw(struct ilo_render *render,
 {
    struct ilo_render_draw_session session;
 
-   ILO_DEV_ASSERT(render->dev, 6, 7.5);
+   ILO_DEV_ASSERT(render->dev, 6, 8);
 
    draw_session_prepare(render, vec, &session);
 
