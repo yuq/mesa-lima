@@ -67,6 +67,49 @@ struct si_compute {
 #endif
 };
 
+static void apply_scratch_relocs(const struct si_screen *sscreen,
+			struct si_shader *shader, uint64_t scratch_va);
+static void init_scratch_buffer(struct si_context *sctx, struct si_compute *program)
+{
+	unsigned scratch_bytes = 0;
+	uint64_t scratch_buffer_va;
+	unsigned i;
+
+	/* Compute the scratch buffer size using the maximum number of waves.
+	 * This way we don't need to recompute it for each kernel launch. */
+	unsigned scratch_waves = 32 * sctx->screen->b.info.max_compute_units;
+	for (i = 0; i < program->shader.binary.global_symbol_count; i++) {
+		unsigned offset =
+				program->shader.binary.global_symbol_offsets[i];
+		unsigned scratch_bytes_needed;
+
+		si_shader_binary_read_config(&program->shader.binary,
+						&program->shader, offset);
+		scratch_bytes_needed = program->shader.scratch_bytes_per_wave;
+		scratch_bytes = MAX2(scratch_bytes, scratch_bytes_needed);
+	}
+
+	if (scratch_bytes == 0)
+		return;
+
+	program->shader.scratch_bo = (struct r600_resource*)
+				si_resource_create_custom(sctx->b.b.screen,
+				PIPE_USAGE_DEFAULT,
+				scratch_bytes * scratch_waves);
+
+	scratch_buffer_va = program->shader.scratch_bo->gpu_address;
+
+	/* apply_scratch_relocs needs scratch_bytes_per_wave to be set
+	 * to the maximum bytes needed, so it can compute the stride
+	 * correctly.
+	 */
+	program->shader.scratch_bytes_per_wave = scratch_bytes;
+
+	/* Patch the shader with the scratch buffer address. */
+	apply_scratch_relocs(sctx->screen, &program->shader, scratch_buffer_va);
+
+}
+
 static void *si_create_compute_state(
 	struct pipe_context *ctx,
 	const struct pipe_compute_state *cso)
@@ -102,6 +145,12 @@ static void *si_create_compute_state(
 #else
 
 	radeon_elf_read(code, header->num_bytes, &program->shader.binary, true);
+
+	/* init_scratch_buffer patches the shader code with the scratch address,
+	 * so we need to call it before si_shader_binary_read() which uploads
+	 * the shader code to the GPU.
+	 */
+	init_scratch_buffer(sctx, program);
 	si_shader_binary_read(sctx->screen, &program->shader, &program->shader.binary);
 
 #endif
@@ -183,32 +232,27 @@ static unsigned compute_num_waves_for_scratch(
 }
 
 static void apply_scratch_relocs(const struct si_screen *sscreen,
-			const struct radeon_shader_binary *binary,
 			struct si_shader *shader, uint64_t scratch_va) {
 	unsigned i;
-	char *ptr;
 	uint32_t scratch_rsrc_dword0 = scratch_va & 0xffffffff;
 	uint32_t scratch_rsrc_dword1 =
 		S_008F04_BASE_ADDRESS_HI(scratch_va >> 32)
 		|  S_008F04_STRIDE(shader->scratch_bytes_per_wave / 64);
 
-	if (!binary->reloc_count) {
+	if (!shader->binary.reloc_count) {
 		return;
 	}
 
-	ptr = sscreen->b.ws->buffer_map(shader->bo->cs_buf, NULL,
-					PIPE_TRANSFER_READ_WRITE);
-	for (i = 0 ; i < binary->reloc_count; i++) {
-		const struct radeon_shader_reloc *reloc = &binary->relocs[i];
+	for (i = 0 ; i < shader->binary.reloc_count; i++) {
+		const struct radeon_shader_reloc *reloc = &shader->binary.relocs[i];
 		if (!strcmp(scratch_rsrc_dword0_symbol, reloc->name)) {
-			util_memcpy_cpu_to_le32(ptr + reloc->offset,
+			util_memcpy_cpu_to_le32(shader->binary.code + reloc->offset,
 				&scratch_rsrc_dword0, 4);
 		} else if (!strcmp(scratch_rsrc_dword1_symbol, reloc->name)) {
-			util_memcpy_cpu_to_le32(ptr + reloc->offset,
+			util_memcpy_cpu_to_le32(shader->binary.code + reloc->offset,
 				&scratch_rsrc_dword1, 4);
 		}
 	}
-	sscreen->b.ws->buffer_unmap(shader->bo->cs_buf);
 }
 
 static void si_launch_grid(
@@ -277,26 +321,18 @@ static void si_launch_grid(
 	memcpy(kernel_args + (num_work_size_bytes / 4), input, program->input_size);
 
 	if (shader->scratch_bytes_per_wave > 0) {
-		unsigned scratch_bytes = shader->scratch_bytes_per_wave *
-						num_waves_for_scratch;
 
 		COMPUTE_DBG(sctx->screen, "Waves: %u; Scratch per wave: %u bytes; "
 		            "Total Scratch: %u bytes\n", num_waves_for_scratch,
-			    shader->scratch_bytes_per_wave, scratch_bytes);
-		if (!shader->scratch_bo) {
-			shader->scratch_bo = (struct r600_resource*)
-				si_resource_create_custom(sctx->b.b.screen,
-				PIPE_USAGE_DEFAULT, scratch_bytes);
-		}
-		scratch_buffer_va = shader->scratch_bo->gpu_address;
+			    shader->scratch_bytes_per_wave,
+			    shader->scratch_bytes_per_wave *
+			    num_waves_for_scratch);
+
 		si_pm4_add_bo(pm4, shader->scratch_bo,
 				RADEON_USAGE_READWRITE,
 				RADEON_PRIO_SHADER_RESOURCE_RW);
 
-		/* Patch the shader with the scratch buffer address. */
-		apply_scratch_relocs(sctx->screen,
-			&program->shader.binary, shader, scratch_buffer_va);
-
+		scratch_buffer_va = shader->scratch_bo->gpu_address;
 	}
 
 	for (i = 0; i < (kernel_args_size / 4); i++) {
