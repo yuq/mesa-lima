@@ -90,10 +90,11 @@ gen7_3dstate_push_constant_alloc(struct ilo_builder *builder,
                         GEN6_RENDER_SUBTYPE_3D |
                         subop;
    const uint8_t cmd_len = 2;
+   const int slice_count = (ilo_dev_gen(builder->dev) >= ILO_GEN(8)) ? 2 : 1;
    uint32_t *dw;
    int end;
 
-   ILO_DEV_ASSERT(builder->dev, 7, 7.5);
+   ILO_DEV_ASSERT(builder->dev, 7, 8);
 
    /* VS, HS, DS, GS, and PS variants */
    assert(subop >= GEN7_RENDER_OPCODE_3DSTATE_PUSH_CONSTANT_ALLOC_VS &&
@@ -113,16 +114,16 @@ gen7_3dstate_push_constant_alloc(struct ilo_builder *builder,
     * Thus, the valid range of buffer end is [0KB, 16KB].
     */
    end = (offset + size) / 1024;
-   if (end > 16) {
+   if (end > 16 * slice_count) {
       assert(!"invalid constant buffer end");
-      end = 16;
+      end = 16 * slice_count;
    }
 
    /* the valid range of buffer offset is [0KB, 15KB] */
    offset = (offset + 1023) / 1024;
-   if (offset > 15) {
+   if (offset > 15 * slice_count) {
       assert(!"invalid constant buffer offset");
-      offset = 15;
+      offset = 15 * slice_count;
    }
 
    if (offset > end) {
@@ -132,9 +133,9 @@ gen7_3dstate_push_constant_alloc(struct ilo_builder *builder,
 
    /* the valid range of buffer size is [0KB, 15KB] */
    size = end - offset;
-   if (size > 15) {
+   if (size > 15 * slice_count) {
       assert(!"invalid constant buffer size");
-      size = 15;
+      size = 15 * slice_count;
    }
 
    ilo_builder_batch_pointer(builder, cmd_len, &dw);
