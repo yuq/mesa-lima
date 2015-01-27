@@ -323,6 +323,11 @@ intel_set_texture_storage_for_buffer_object(struct gl_context *ctx,
          perf_debug("Bad PBO alignment; fallback to CPU mapping\n");
          return false;
       }
+
+      if (!brw->format_supported_as_render_target[image->TexFormat]) {
+         perf_debug("Non-renderable PBO format; fallback to CPU mapping\n");
+         return false;
+      }
    }
 
    assert(intel_texobj->mt == NULL);
