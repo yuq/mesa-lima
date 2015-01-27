@@ -125,7 +125,8 @@ _mesa_es_error_check_format_and_type(GLenum format, GLenum type,
                                      unsigned dimensions);
 
 extern GLenum
-_mesa_es3_error_check_format_and_type(GLenum format, GLenum type,
+_mesa_es3_error_check_format_and_type(const struct gl_context *ctx,
+                                      GLenum format, GLenum type,
                                       GLenum internalFormat);
 
 extern uint32_t

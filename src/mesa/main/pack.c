@@ -268,6 +268,7 @@ extract_uint_indexes(GLuint n, GLuint indexes[],
           srcType == GL_INT ||
           srcType == GL_UNSIGNED_INT_24_8_EXT ||
           srcType == GL_HALF_FLOAT_ARB ||
+          srcType == GL_HALF_FLOAT_OES ||
           srcType == GL_FLOAT ||
           srcType == GL_FLOAT_32_UNSIGNED_INT_24_8_REV);
 
@@ -407,6 +408,7 @@ extract_uint_indexes(GLuint n, GLuint indexes[],
          }
          break;
       case GL_HALF_FLOAT_ARB:
+      case GL_HALF_FLOAT_OES:
          {
             GLuint i;
             const GLhalfARB *s = (const GLhalfARB *) src;
@@ -510,6 +512,7 @@ _mesa_unpack_stencil_span( struct gl_context *ctx, GLuint n,
           srcType == GL_INT ||
           srcType == GL_UNSIGNED_INT_24_8_EXT ||
           srcType == GL_HALF_FLOAT_ARB ||
+          srcType == GL_HALF_FLOAT_OES ||
           srcType == GL_FLOAT ||
           srcType == GL_FLOAT_32_UNSIGNED_INT_24_8_REV);
 
@@ -700,6 +703,7 @@ _mesa_pack_stencil_span( struct gl_context *ctx, GLuint n,
       }
       break;
    case GL_HALF_FLOAT_ARB:
+   case GL_HALF_FLOAT_OES:
       {
          GLhalfARB *dst = (GLhalfARB *) dest;
          GLuint i;
@@ -917,6 +921,7 @@ _mesa_unpack_depth_span( struct gl_context *ctx, GLuint n,
          needClamp = GL_TRUE;
          break;
       case GL_HALF_FLOAT_ARB:
+      case GL_HALF_FLOAT_OES:
          {
             GLuint i;
             const GLhalfARB *src = (const GLhalfARB *) source;
@@ -1106,6 +1111,7 @@ _mesa_pack_depth_span( struct gl_context *ctx, GLuint n, GLvoid *dest,
       }
       break;
    case GL_HALF_FLOAT_ARB:
+   case GL_HALF_FLOAT_OES:
       {
          GLhalfARB *dst = (GLhalfARB *) dest;
          GLuint i;

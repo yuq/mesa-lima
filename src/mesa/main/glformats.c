@@ -291,6 +291,7 @@ _mesa_sizeof_type(GLenum type)
    case GL_DOUBLE:
       return sizeof(GLdouble);
    case GL_HALF_FLOAT_ARB:
+   case GL_HALF_FLOAT_OES:
       return sizeof(GLhalfARB);
    case GL_FIXED:
       return sizeof(GLfixed);
@@ -323,6 +324,7 @@ _mesa_sizeof_packed_type(GLenum type)
    case GL_INT:
       return sizeof(GLint);
    case GL_HALF_FLOAT_ARB:
+   case GL_HALF_FLOAT_OES:
       return sizeof(GLhalfARB);
    case GL_FLOAT:
       return sizeof(GLfloat);
@@ -439,6 +441,7 @@ _mesa_bytes_per_pixel(GLenum format, GLenum type)
    case GL_FLOAT:
       return comps * sizeof(GLfloat);
    case GL_HALF_FLOAT_ARB:
+   case GL_HALF_FLOAT_OES:
       return comps * sizeof(GLhalfARB);
    case GL_UNSIGNED_BYTE_3_3_2:
    case GL_UNSIGNED_BYTE_2_3_3_REV:
@@ -1667,6 +1670,18 @@ _mesa_error_check_format_and_type(const struct gl_context *ctx,
       }
       return GL_NO_ERROR;
 
+   case GL_HALF_FLOAT_OES:
+      switch (format) {
+      case GL_RGBA:
+      case GL_RGB:
+      case GL_LUMINANCE_ALPHA:
+      case GL_LUMINANCE:
+      case GL_ALPHA:
+         return GL_NO_ERROR;
+      default:
+         return GL_INVALID_OPERATION;
+      }
+
    default:
       ; /* fall-through */
    }
@@ -2019,7 +2034,8 @@ _mesa_es_error_check_format_and_type(GLenum format, GLenum type,
  * \return error code, or GL_NO_ERROR.
  */
 GLenum
-_mesa_es3_error_check_format_and_type(GLenum format, GLenum type,
+_mesa_es3_error_check_format_and_type(const struct gl_context *ctx,
+                                      GLenum format, GLenum type,
                                       GLenum internalFormat)
 {
    switch (format) {
@@ -2084,11 +2100,17 @@ _mesa_es3_error_check_format_and_type(GLenum format, GLenum type,
          case GL_RGBA16F:
          case GL_RGBA32F:
             break;
+         case GL_RGBA:
+            if (ctx->Extensions.OES_texture_float && internalFormat == format)
+               break;
          default:
             return GL_INVALID_OPERATION;
          }
          break;
 
+      case GL_HALF_FLOAT_OES:
+         if (ctx->Extensions.OES_texture_half_float && internalFormat == format)
+            break;
       default:
          return GL_INVALID_OPERATION;
       }
@@ -2193,9 +2215,17 @@ _mesa_es3_error_check_format_and_type(GLenum format, GLenum type,
          case GL_R11F_G11F_B10F:
          case GL_RGB9_E5:
             break;
+         case GL_RGB:
+            if (ctx->Extensions.OES_texture_float && internalFormat == format)
+               break;
          default:
             return GL_INVALID_OPERATION;
          }
+         break;
+
+      case GL_HALF_FLOAT_OES:
+         if (!ctx->Extensions.OES_texture_half_float || internalFormat != format)
+            return GL_INVALID_OPERATION;
          break;
 
       case GL_UNSIGNED_INT_2_10_10_10_REV:
@@ -2437,9 +2467,17 @@ _mesa_es3_error_check_format_and_type(GLenum format, GLenum type,
    case GL_ALPHA:
    case GL_LUMINANCE:
    case GL_LUMINANCE_ALPHA:
-      if (type != GL_UNSIGNED_BYTE || format != internalFormat)
-         return GL_INVALID_OPERATION;
-      break;
+      switch (type) {
+      case GL_FLOAT:
+         if (ctx->Extensions.OES_texture_float && internalFormat == format)
+            break;
+      case GL_HALF_FLOAT_OES:
+         if (ctx->Extensions.OES_texture_half_float && internalFormat == format)
+            break;
+      default:
+         if (type != GL_UNSIGNED_BYTE || format != internalFormat)
+            return GL_INVALID_OPERATION;
+      }
    }
 
    return GL_NO_ERROR;
@@ -2563,6 +2601,7 @@ _mesa_format_from_format_and_type(GLenum format, GLenum type)
       is_signed = true;
       break;
    case GL_HALF_FLOAT:
+   case GL_HALF_FLOAT_OES:
       type_size = 2;
       is_signed = true;
       is_float = true;
