@@ -316,6 +316,10 @@ static void si_shader_ps(struct si_shader *shader)
 
 static void si_shader_init_pm4_state(struct si_shader *shader)
 {
+
+	if (shader->pm4)
+		si_pm4_free_state_simple(shader->pm4);
+
 	switch (shader->selector->type) {
 	case PIPE_SHADER_VERTEX:
 		if (shader->key.vs.as_es)
