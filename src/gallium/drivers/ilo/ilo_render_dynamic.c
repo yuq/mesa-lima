@@ -61,7 +61,7 @@ gen7_emit_draw_dynamic_viewports(struct ilo_render *r,
                                  const struct ilo_state_vector *vec,
                                  struct ilo_render_draw_session *session)
 {
-   ILO_DEV_ASSERT(r->dev, 7, 7.5);
+   ILO_DEV_ASSERT(r->dev, 7, 8);
 
    /* SF_CLIP_VIEWPORT and CC_VIEWPORT */
    if (DIRTY(VIEWPORT)) {
@@ -80,7 +80,7 @@ gen6_emit_draw_dynamic_scissors(struct ilo_render *r,
                                 const struct ilo_state_vector *vec,
                                 struct ilo_render_draw_session *session)
 {
-   ILO_DEV_ASSERT(r->dev, 6, 7.5);
+   ILO_DEV_ASSERT(r->dev, 6, 8);
 
    /* SCISSOR_RECT */
    if (DIRTY(SCISSOR) || DIRTY(VIEWPORT)) {
@@ -97,12 +97,17 @@ gen6_emit_draw_dynamic_cc(struct ilo_render *r,
                           const struct ilo_state_vector *vec,
                           struct ilo_render_draw_session *session)
 {
-   ILO_DEV_ASSERT(r->dev, 6, 7.5);
+   ILO_DEV_ASSERT(r->dev, 6, 8);
 
    /* BLEND_STATE */
    if (DIRTY(BLEND) || DIRTY(FB) || DIRTY(DSA)) {
-      r->state.BLEND_STATE = gen6_BLEND_STATE(r->builder,
-            vec->blend, &vec->fb, vec->dsa);
+      if (ilo_dev_gen(r->dev) >= ILO_GEN(8)) {
+         r->state.BLEND_STATE = gen8_BLEND_STATE(r->builder,
+               vec->blend, &vec->fb, vec->dsa);
+      } else {
+         r->state.BLEND_STATE = gen6_BLEND_STATE(r->builder,
+               vec->blend, &vec->fb, vec->dsa);
+      }
 
       session->blend_changed = true;
    }
@@ -117,7 +122,7 @@ gen6_emit_draw_dynamic_cc(struct ilo_render *r,
    }
 
    /* DEPTH_STENCIL_STATE */
-   if (DIRTY(DSA)) {
+   if (ilo_dev_gen(r->dev) < ILO_GEN(8) && DIRTY(DSA)) {
       r->state.DEPTH_STENCIL_STATE =
          gen6_DEPTH_STENCIL_STATE(r->builder, vec->dsa);
 
@@ -140,7 +145,7 @@ gen6_emit_draw_dynamic_samplers(struct ilo_render *r,
    bool emit_border_color = false;
    bool skip = false;
 
-   ILO_DEV_ASSERT(r->dev, 6, 7.5);
+   ILO_DEV_ASSERT(r->dev, 6, 8);
 
    /* SAMPLER_BORDER_COLOR_STATE and SAMPLER_STATE */
    switch (shader_type) {
@@ -205,7 +210,7 @@ gen6_emit_draw_dynamic_pcb(struct ilo_render *r,
                            const struct ilo_state_vector *vec,
                            struct ilo_render_draw_session *session)
 {
-   ILO_DEV_ASSERT(r->dev, 6, 7.5);
+   ILO_DEV_ASSERT(r->dev, 6, 8);
 
    /* push constant buffer for VS */
    if (DIRTY(VS) || DIRTY(CBUF) || DIRTY(CLIP)) {
@@ -293,7 +298,7 @@ ilo_render_get_draw_dynamic_states_len(const struct ilo_render *render,
    static int static_len;
    int sh_type, len;
 
-   ILO_DEV_ASSERT(render->dev, 6, 7.5);
+   ILO_DEV_ASSERT(render->dev, 6, 8);
 
    if (!static_len) {
       /* 64 bytes, or 16 dwords */
@@ -304,8 +309,9 @@ ilo_render_get_draw_dynamic_states_len(const struct ilo_render *render,
 
       /* CC states */
       len += align(GEN6_BLEND_STATE__SIZE, alignment);
-      len += align(GEN6_DEPTH_STENCIL_STATE__SIZE, alignment);
       len += align(GEN6_COLOR_CALC_STATE__SIZE, alignment);
+      if (ilo_dev_gen(render->dev) < ILO_GEN(8))
+         len += align(GEN6_DEPTH_STENCIL_STATE__SIZE, alignment);
 
       /* viewport arrays */
       if (ilo_dev_gen(render->dev) >= ILO_GEN(7)) {
@@ -360,9 +366,15 @@ ilo_render_get_draw_dynamic_states_len(const struct ilo_render *render,
          /* prefetches are done in multiples of 4 */
          num_samplers = align(num_samplers, 4);
 
-         len += align(GEN6_SAMPLER_STATE__SIZE * num_samplers, alignment) +
-                align(GEN6_SAMPLER_BORDER_COLOR_STATE__SIZE, alignment) *
-                num_samplers;
+         len += align(GEN6_SAMPLER_STATE__SIZE * num_samplers, alignment);
+
+         if (ilo_dev_gen(render->dev) >= ILO_GEN(8)) {
+            len += align(GEN6_SAMPLER_BORDER_COLOR_STATE__SIZE, 64 / 4) *
+               num_samplers;
+         } else {
+            len += align(GEN6_SAMPLER_BORDER_COLOR_STATE__SIZE, alignment) *
+               num_samplers;
+         }
       }
 
       /* PCB */
@@ -380,7 +392,7 @@ ilo_render_emit_draw_dynamic_states(struct ilo_render *render,
 {
    const unsigned dynamic_used = ilo_builder_dynamic_used(render->builder);
 
-   ILO_DEV_ASSERT(render->dev, 6, 7.5);
+   ILO_DEV_ASSERT(render->dev, 6, 8);
 
    if (ilo_dev_gen(render->dev) >= ILO_GEN(7))
       gen7_emit_draw_dynamic_viewports(render, vec, session);
