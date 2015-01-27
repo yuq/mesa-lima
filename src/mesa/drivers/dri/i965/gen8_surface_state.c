@@ -450,7 +450,7 @@ gen8_update_renderbuffer_surface(struct brw_context *brw,
    drm_intel_bo_emit_reloc(brw->batch.bo,
                            brw->wm.base.surf_offset[surf_index] + 8 * 4,
                            mt->bo,
-                           0,
+                           mt->offset,
                            I915_GEM_DOMAIN_RENDER,
                            I915_GEM_DOMAIN_RENDER);
 }
