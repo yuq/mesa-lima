@@ -127,7 +127,7 @@ rgba8_copy(void *dst, const void *src, size_t bytes)
 typedef void (*tile_copy_fn)(uint32_t x0, uint32_t x1, uint32_t x2, uint32_t x3,
                              uint32_t y0, uint32_t y1,
                              char *dst, const char *src,
-                             uint32_t src_pitch,
+                             int32_t linear_pitch,
                              uint32_t swizzle_bit,
                              mem_copy_fn mem_copy);
 
@@ -140,7 +140,7 @@ static inline void
 linear_to_xtiled(uint32_t x0, uint32_t x1, uint32_t x2, uint32_t x3,
                  uint32_t y0, uint32_t y1,
                  char *dst, const char *src,
-                 uint32_t src_pitch,
+                 int32_t src_pitch,
                  uint32_t swizzle_bit,
                  mem_copy_fn mem_copy)
 {
@@ -149,7 +149,7 @@ linear_to_xtiled(uint32_t x0, uint32_t x1, uint32_t x2, uint32_t x3,
     */
    uint32_t xo, yo;
 
-   src += y0 * src_pitch;
+   src += (ptrdiff_t)y0 * src_pitch;
 
    for (yo = y0 * xtile_width; yo < y1 * xtile_width; yo += xtile_width) {
       /* Bits 9 and 10 of the copy destination offset control swizzling.
@@ -181,7 +181,7 @@ static inline void
 linear_to_ytiled(uint32_t x0, uint32_t x1, uint32_t x2, uint32_t x3,
                  uint32_t y0, uint32_t y1,
                  char *dst, const char *src,
-                 uint32_t src_pitch,
+                 int32_t src_pitch,
                  uint32_t swizzle_bit,
                  mem_copy_fn mem_copy)
 {
@@ -210,7 +210,7 @@ linear_to_ytiled(uint32_t x0, uint32_t x1, uint32_t x2, uint32_t x3,
 
    uint32_t x, yo;
 
-   src += y0 * src_pitch;
+   src += (ptrdiff_t)y0 * src_pitch;
 
    for (yo = y0 * column_width; yo < y1 * column_width; yo += column_width) {
       uint32_t xo = xo1;
@@ -242,7 +242,7 @@ static inline void
 xtiled_to_linear(uint32_t x0, uint32_t x1, uint32_t x2, uint32_t x3,
                  uint32_t y0, uint32_t y1,
                  char *dst, const char *src,
-                 uint32_t dst_pitch,
+                 int32_t dst_pitch,
                  uint32_t swizzle_bit,
                  mem_copy_fn mem_copy)
 {
@@ -251,7 +251,7 @@ xtiled_to_linear(uint32_t x0, uint32_t x1, uint32_t x2, uint32_t x3,
     */
    uint32_t xo, yo;
 
-   dst += y0 * dst_pitch;
+   dst += (ptrdiff_t)y0 * dst_pitch;
 
    for (yo = y0 * xtile_width; yo < y1 * xtile_width; yo += xtile_width) {
       /* Bits 9 and 10 of the copy destination offset control swizzling.
@@ -283,7 +283,7 @@ static inline void
 ytiled_to_linear(uint32_t x0, uint32_t x1, uint32_t x2, uint32_t x3,
                  uint32_t y0, uint32_t y1,
                  char *dst, const char *src,
-                 uint32_t dst_pitch,
+                 int32_t dst_pitch,
                  uint32_t swizzle_bit,
                  mem_copy_fn mem_copy)
 {
@@ -312,7 +312,7 @@ ytiled_to_linear(uint32_t x0, uint32_t x1, uint32_t x2, uint32_t x3,
 
    uint32_t x, yo;
 
-   dst += y0 * dst_pitch;
+   dst += (ptrdiff_t)y0 * dst_pitch;
 
    for (yo = y0 * column_width; yo < y1 * column_width; yo += column_width) {
       uint32_t xo = xo1;
@@ -349,7 +349,7 @@ static FLATTEN void
 linear_to_xtiled_faster(uint32_t x0, uint32_t x1, uint32_t x2, uint32_t x3,
                         uint32_t y0, uint32_t y1,
                         char *dst, const char *src,
-                        uint32_t src_pitch,
+                        int32_t src_pitch,
                         uint32_t swizzle_bit,
                         mem_copy_fn mem_copy)
 {
@@ -385,7 +385,7 @@ static FLATTEN void
 linear_to_ytiled_faster(uint32_t x0, uint32_t x1, uint32_t x2, uint32_t x3,
                         uint32_t y0, uint32_t y1,
                         char *dst, const char *src,
-                        uint32_t src_pitch,
+                        int32_t src_pitch,
                         uint32_t swizzle_bit,
                         mem_copy_fn mem_copy)
 {
@@ -421,7 +421,7 @@ static FLATTEN void
 xtiled_to_linear_faster(uint32_t x0, uint32_t x1, uint32_t x2, uint32_t x3,
                         uint32_t y0, uint32_t y1,
                         char *dst, const char *src,
-                        uint32_t dst_pitch,
+                        int32_t dst_pitch,
                         uint32_t swizzle_bit,
                         mem_copy_fn mem_copy)
 {
@@ -457,7 +457,7 @@ static FLATTEN void
 ytiled_to_linear_faster(uint32_t x0, uint32_t x1, uint32_t x2, uint32_t x3,
                         uint32_t y0, uint32_t y1,
                         char *dst, const char *src,
-                        uint32_t dst_pitch,
+                        int32_t dst_pitch,
                         uint32_t swizzle_bit,
                         mem_copy_fn mem_copy)
 {
@@ -495,7 +495,7 @@ void
 linear_to_tiled(uint32_t xt1, uint32_t xt2,
                 uint32_t yt1, uint32_t yt2,
                 char *dst, const char *src,
-                uint32_t dst_pitch, uint32_t src_pitch,
+                uint32_t dst_pitch, int32_t src_pitch,
                 bool has_swizzling,
                 uint32_t tiling,
                 mem_copy_fn mem_copy)
@@ -586,7 +586,7 @@ void
 tiled_to_linear(uint32_t xt1, uint32_t xt2,
                 uint32_t yt1, uint32_t yt2,
                 char *dst, const char *src,
-                uint32_t dst_pitch, uint32_t src_pitch,
+                int32_t dst_pitch, uint32_t src_pitch,
                 bool has_swizzling,
                 uint32_t tiling,
                 mem_copy_fn mem_copy)
