@@ -166,6 +166,21 @@
       <param name="renderbuffer" type="GLuint" />
    </function>
 
+   <function name="NamedFramebufferTexture" offset="assign">
+      <param name="framebuffer" type="GLuint" />
+      <param name="attachment" type="GLenum" />
+      <param name="texture" type="GLuint" />
+      <param name="level" type="GLint" />
+   </function>
+
+   <function name="NamedFramebufferTextureLayer" offset="assign">
+      <param name="framebuffer" type="GLuint" />
+      <param name="attachment" type="GLenum" />
+      <param name="texture" type="GLuint" />
+      <param name="level" type="GLint" />
+      <param name="layer" type="GLint" />
+   </function>
+
    <!-- Renderbuffer object functions -->
 
    <function name="CreateRenderbuffers" offset="assign">

@@ -982,6 +982,8 @@ const struct function gl_core_functions_possible[] = {
    { "glGetNamedBufferSubData", 45, -1 },
    { "glCreateFramebuffers", 45, -1 },
    { "glNamedFramebufferRenderbuffer", 45, -1 },
+   { "glNamedFramebufferTexture", 45, -1 },
+   { "glNamedFramebufferTextureLayer", 45, -1 },
    { "glCreateRenderbuffers", 45, -1 },
    { "glNamedRenderbufferStorage", 45, -1 },
    { "glNamedRenderbufferStorageMultisample", 45, -1 },

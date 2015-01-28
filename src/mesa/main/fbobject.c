@@ -2996,6 +2996,36 @@ _mesa_FramebufferTextureLayer(GLenum target, GLenum attachment,
 
 
 void GLAPIENTRY
+_mesa_NamedFramebufferTextureLayer(GLuint framebuffer, GLenum attachment,
+                                   GLuint texture, GLint level, GLint layer)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   struct gl_framebuffer *fb;
+   struct gl_texture_object *texObj;
+   GLboolean layered = GL_FALSE;
+
+   /* Get the framebuffer object */
+   fb = _mesa_lookup_framebuffer_err(ctx, framebuffer,
+                                     "glNamedFramebufferTextureLayer");
+   if (!fb)
+      return;
+
+   /* Get the texture object */
+   if (!get_texture_for_framebuffer(ctx, texture, 0, level, layer,
+                                    &layered,
+                                    "glNamedFramebufferTextureLayer",
+                                    &texObj)) {
+      /* Error already recorded */
+      return;
+   }
+
+   _mesa_framebuffer_texture(ctx, fb, attachment, texObj, 0, level,
+                             layer, layered,
+                             "glNamedFramebufferTextureLayer");
+}
+
+
+void GLAPIENTRY
 _mesa_FramebufferTexture(GLenum target, GLenum attachment,
                          GLuint texture, GLint level)
 {
@@ -3029,6 +3059,40 @@ _mesa_FramebufferTexture(GLenum target, GLenum attachment,
 
    _mesa_framebuffer_texture(ctx, fb, attachment, texObj, 0, level,
                              0, layered, "glFramebufferTexture");
+}
+
+
+void GLAPIENTRY
+_mesa_NamedFramebufferTexture(GLuint framebuffer, GLenum attachment,
+                              GLuint texture, GLint level)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   struct gl_framebuffer *fb;
+   struct gl_texture_object *texObj;
+   GLboolean layered = GL_TRUE;
+
+   if (!_mesa_has_geometry_shaders(ctx)) {
+      _mesa_error(ctx, GL_INVALID_OPERATION,
+                  "unsupported function (glNamedFramebufferTexture) called");
+      return;
+   }
+
+   /* Get the framebuffer object */
+   fb = _mesa_lookup_framebuffer_err(ctx, framebuffer,
+                                     "glNamedFramebufferTexture");
+   if (!fb)
+      return;
+
+   /* Get the texture object */
+   if (!get_texture_for_framebuffer(ctx, texture, 0, level, 0,
+                                    &layered, "glNamedFramebufferTexture",
+                                    &texObj)) {
+      /* Error already recorded */
+      return;
+   }
+
+   _mesa_framebuffer_texture(ctx, fb, attachment, texObj, 0, level,
+                             0, layered, "glNamedFramebufferTexture");
 }
 
 
