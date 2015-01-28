@@ -193,7 +193,7 @@ _mesa_meta_GenerateMipmap(struct gl_context *ctx, GLenum target,
    if (use_glsl_version) {
       _mesa_meta_setup_vertex_objects(&mipmap->VAO, &mipmap->VBO, true,
                                       2, 4, 0);
-      _mesa_meta_setup_blit_shader(ctx, target, &mipmap->shaders);
+      _mesa_meta_setup_blit_shader(ctx, target, true, &mipmap->shaders);
    } else {
       _mesa_meta_setup_ff_tnl_for_blit(&mipmap->VAO, &mipmap->VBO, 3);
       _mesa_set_enable(ctx, target, GL_TRUE);

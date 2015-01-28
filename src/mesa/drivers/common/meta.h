@@ -632,6 +632,7 @@ _mesa_meta_setup_copypix_texture(struct gl_context *ctx,
 void
 _mesa_meta_setup_blit_shader(struct gl_context *ctx,
                              GLenum target,
+                             bool do_depth,
                              struct blit_shader_table *table);
 
 void

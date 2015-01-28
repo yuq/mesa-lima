@@ -243,6 +243,7 @@ _mesa_meta_compile_and_link_program(struct gl_context *ctx,
 void
 _mesa_meta_setup_blit_shader(struct gl_context *ctx,
                              GLenum target,
+                             bool do_depth,
                              struct blit_shader_table *table)
 {
    char *vs_source, *fs_source;
@@ -3035,7 +3036,7 @@ decompress_texture_image(struct gl_context *ctx,
       _mesa_meta_setup_vertex_objects(&decompress->VAO, &decompress->VBO, true,
                                       2, 4, 0);
 
-      _mesa_meta_setup_blit_shader(ctx, target, &decompress->shaders);
+      _mesa_meta_setup_blit_shader(ctx, target, true, &decompress->shaders);
    } else {
       _mesa_meta_setup_ff_tnl_for_blit(&decompress->VAO, &decompress->VBO, 3);
    }

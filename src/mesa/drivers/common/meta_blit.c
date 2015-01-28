@@ -531,7 +531,7 @@ setup_glsl_blit_framebuffer(struct gl_context *ctx,
    } else if (is_target_multisample) {
       setup_glsl_msaa_blit_shader(ctx, blit, src_rb, target);
    } else {
-      _mesa_meta_setup_blit_shader(ctx, target, &blit->shaders);
+      _mesa_meta_setup_blit_shader(ctx, target, true, &blit->shaders);
    }
 }
 
