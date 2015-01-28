@@ -115,6 +115,14 @@ _mesa_detach_renderbuffer(struct gl_context *ctx,
                           struct gl_framebuffer *fb,
                           const void *att);
 
+extern void
+_mesa_framebuffer_texture(struct gl_context *ctx, struct gl_framebuffer *fb,
+                          GLenum attachment,
+                          struct gl_texture_object *texObj, GLenum textarget,
+                          GLint level, GLuint zoffset, GLboolean layered,
+                          const char *caller);
+
+
 extern GLboolean GLAPIENTRY
 _mesa_IsRenderbuffer(GLuint renderbuffer);
 
