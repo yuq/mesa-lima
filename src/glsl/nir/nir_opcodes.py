@@ -480,7 +480,7 @@ else
 opcode("ldexp", 0, tunsigned, [0, 0], [tfloat, tint], "", """
 dst = ldexp(src0, src1);
 /* flush denormals to zero. */
-if (fpclassify(dst) != FP_NORMAL)
+if (!isnormal(dst))
    dst = copysign(0.0f, src0);
 """)
 
