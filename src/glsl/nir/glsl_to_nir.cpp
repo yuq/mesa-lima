@@ -142,6 +142,9 @@ glsl_to_nir(exec_list *ir, _mesa_glsl_parse_state *state,
          nir_shader_compiler_options *new_options =
             rzalloc(ctx, nir_shader_compiler_options);
          options = gl_options->NirOptions = new_options;
+
+         if (gl_options->EmitNoPow)
+            new_options->lower_fpow = true;
       } else {
          options = gl_options->NirOptions;
       }
