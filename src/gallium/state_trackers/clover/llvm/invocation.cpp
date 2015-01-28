@@ -717,6 +717,9 @@ clover::compile_program_llvm(const compat::string &source,
    llvm_ctx.setDiagnosticHandler(diagnostic_handler, &r_log);
 #endif
 
+   if (get_debug_flags() & DBG_CLC)
+      debug_log(source, ".cl");
+
    // The input file name must have the .cl extension in order for the
    // CompilerInvocation class to recognize it as an OpenCL source file.
    llvm::Module *mod = compile_llvm(llvm_ctx, source, headers, "input.cl",
@@ -726,9 +729,6 @@ clover::compile_program_llvm(const compat::string &source,
    find_kernels(mod, kernels);
 
    optimize(mod, optimization_level, kernels);
-
-   if (get_debug_flags() & DBG_CLC)
-      debug_log(source, ".cl");
 
    if (get_debug_flags() & DBG_LLVM) {
       std::string log;
