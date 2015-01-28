@@ -128,7 +128,8 @@ optimizations = [
    (('fdiv', 1.0, a), ('frcp', a)),
    (('frcp', ('frcp', a)), a),
    (('frcp', ('fsqrt', a)), ('frsq', a)),
-   (('frcp', ('frsq', a)), ('fsqrt', a)),
+   (('fsqrt', a), ('frcp', ('frsq', a)), 'options->lower_fsqrt'),
+   (('frcp', ('frsq', a)), ('fsqrt', a), '!options->lower_fsqrt'),
    # Boolean simplifications
    (('ine', 'a@bool', 0), 'a'),
    (('ieq', 'a@bool', 0), ('inot', 'a')),
