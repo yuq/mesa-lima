@@ -514,6 +514,39 @@ ir_algebraic_visitor::handle_expression(ir_expression *ir)
       if (op_const[1] && !op_const[0])
 	 reassociate_constant(ir, 1, op_const[1], op_expr[0]);
 
+      /* Optimizes
+       *
+       *    (mul (floor (add (abs x) 0.5) (sign x)))
+       *
+       * into
+       *
+       *    (trunc (add x (mul (sign x) 0.5)))
+       */
+      for (int i = 0; i < 2; i++) {
+         ir_expression *sign_expr = ir->operands[i]->as_expression();
+         ir_expression *floor_expr = ir->operands[1 - i]->as_expression();
+
+         if (!sign_expr || sign_expr->operation != ir_unop_sign ||
+             !floor_expr || floor_expr->operation != ir_unop_floor)
+            continue;
+
+         ir_expression *add_expr = floor_expr->operands[0]->as_expression();
+
+         for (int j = 0; j < 2; j++) {
+            ir_expression *abs_expr = add_expr->operands[j]->as_expression();
+            if (!abs_expr || abs_expr->operation != ir_unop_abs)
+               continue;
+
+            ir_constant *point_five = add_expr->operands[1 - j]->as_constant();
+            if (!point_five->is_value(0.5, 0))
+               continue;
+
+            if (abs_expr->operands[0]->equals(sign_expr->operands[0])) {
+               return trunc(add(abs_expr->operands[0],
+                                mul(sign_expr, point_five)));
+            }
+         }
+      }
       break;
 
    case ir_binop_div:
