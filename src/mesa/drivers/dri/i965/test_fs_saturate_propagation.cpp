@@ -353,3 +353,43 @@ TEST_F(saturate_propagation_test, intervening_saturating_copy)
    EXPECT_EQ(BRW_OPCODE_MOV, instruction(block0, 2)->opcode);
    EXPECT_FALSE(instruction(block0, 2)->saturate);
 }
+
+TEST_F(saturate_propagation_test, intervening_dest_write)
+{
+   fs_reg dst0 = v->vgrf(glsl_type::vec4_type);
+   fs_reg dst1 = v->vgrf(glsl_type::float_type);
+   fs_reg src0 = v->vgrf(glsl_type::float_type);
+   fs_reg src1 = v->vgrf(glsl_type::float_type);
+   fs_reg src2 = v->vgrf(glsl_type::vec2_type);
+   v->emit(BRW_OPCODE_ADD, offset(dst0, 2), src0, src1);
+   v->emit(SHADER_OPCODE_TEX, dst0, src2)
+      ->regs_written = 4;
+   v->emit(BRW_OPCODE_MOV, dst1, offset(dst0, 2))
+      ->saturate = true;
+
+   /* = Before =
+    *
+    * 0: add(8)        dst0+2  src0    src1
+    * 1: tex(8) rlen 4 dst0+0  src2
+    * 2: mov.sat(8)    dst1    dst0+2
+    *
+    * = After =
+    * (no changes)
+    */
+
+   v->calculate_cfg();
+   bblock_t *block0 = v->cfg->blocks[0];
+
+   EXPECT_EQ(0, block0->start_ip);
+   EXPECT_EQ(2, block0->end_ip);
+
+   EXPECT_FALSE(saturate_propagation(v));
+   EXPECT_EQ(0, block0->start_ip);
+   EXPECT_EQ(2, block0->end_ip);
+   EXPECT_EQ(BRW_OPCODE_ADD, instruction(block0, 0)->opcode);
+   EXPECT_FALSE(instruction(block0, 0)->saturate);
+   EXPECT_EQ(SHADER_OPCODE_TEX, instruction(block0, 1)->opcode);
+   EXPECT_FALSE(instruction(block0, 0)->saturate);
+   EXPECT_EQ(BRW_OPCODE_MOV, instruction(block0, 2)->opcode);
+   EXPECT_TRUE(instruction(block0, 2)->saturate);
+}

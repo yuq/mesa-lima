@@ -64,10 +64,10 @@ opt_saturate_propagation_local(fs_visitor *v, bblock_t *block)
 
       bool interfered = false;
       foreach_inst_in_block_reverse_starting_from(fs_inst, scan_inst, inst, block) {
-         if (scan_inst->dst.file == GRF &&
-             scan_inst->dst.reg == inst->src[0].reg &&
-             scan_inst->dst.reg_offset == inst->src[0].reg_offset &&
-             !scan_inst->is_partial_write()) {
+         if (scan_inst->overwrites_reg(inst->src[0])) {
+            if (scan_inst->is_partial_write())
+               break;
+
             if (scan_inst->saturate) {
                inst->saturate = false;
                progress = true;
