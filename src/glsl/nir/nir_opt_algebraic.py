@@ -118,6 +118,7 @@ optimizations = [
    (('fexp',  ('flog',  a)), a), # e^ln(a)  = a
    (('flog2', ('fexp2', a)), a), # lg2(2^a) = a
    (('flog',  ('fexp',  a)), a), # ln(e^a)  = a
+   (('fpow', a, b), ('fexp2', ('fmul', ('flog2', a), b)), 'options->lower_fpow'), # a^b = 2^(lg2(a)*b)
    (('fexp2', ('fmul', ('flog2', a), b)), ('fpow', a, b), '!options->lower_fpow'), # 2^(lg2(a)*b) = a^b
    (('fexp',  ('fmul', ('flog', a), b)),  ('fpow', a, b), '!options->lower_fpow'), # e^(ln(a)*b) = a^b
    (('fpow', a, 1.0), a),
