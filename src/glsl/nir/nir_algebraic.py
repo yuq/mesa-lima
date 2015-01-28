@@ -179,10 +179,7 @@ struct transform {
    ${xform.replace.render()}
 % endfor
 
-static const struct {
-   const nir_search_expression *search;
-   const nir_search_value *replace;
-} ${pass_name}_${opcode}_xforms[] = {
+static const struct transform ${pass_name}_${opcode}_xforms[] = {
 % for xform in xform_list:
    { &${xform.search.name}, ${xform.replace.c_ptr} },
 % endfor
@@ -211,8 +208,8 @@ ${pass_name}_block(nir_block *block, void *void_state)
       % for opcode in xform_dict.keys():
       case nir_op_${opcode}:
          for (unsigned i = 0; i < ARRAY_SIZE(${pass_name}_${opcode}_xforms); i++) {
-            if (nir_replace_instr(alu, ${pass_name}_${opcode}_xforms[i].search,
-                                  ${pass_name}_${opcode}_xforms[i].replace,
+            const struct transform *xform = &${pass_name}_${opcode}_xforms[i];
+            if (nir_replace_instr(alu, xform->search, xform->replace,
                                   state->mem_ctx)) {
                state->progress = true;
                break;
