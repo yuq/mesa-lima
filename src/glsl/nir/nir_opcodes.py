@@ -477,7 +477,7 @@ else
    dst = ((1 << bits)- 1) << offset;
 """)
 
-opcode("ldexp", 0, tunsigned, [0, 0], [tfloat, tint], "", """
+opcode("ldexp", 0, tfloat, [0, 0], [tfloat, tint], "", """
 dst = ldexp(src0, src1);
 /* flush denormals to zero. */
 if (!isnormal(dst))
