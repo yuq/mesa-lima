@@ -510,7 +510,8 @@ setup_glsl_blit_framebuffer(struct gl_context *ctx,
                             struct blit_state *blit,
                             struct gl_renderbuffer *src_rb,
                             GLenum target, GLenum filter,
-                            bool is_scaled_blit)
+                            bool is_scaled_blit,
+                            bool do_depth)
 {
    unsigned texcoord_size;
    bool is_target_multisample = target == GL_TEXTURE_2D_MULTISAMPLE ||
@@ -531,7 +532,9 @@ setup_glsl_blit_framebuffer(struct gl_context *ctx,
    } else if (is_target_multisample) {
       setup_glsl_msaa_blit_shader(ctx, blit, src_rb, target);
    } else {
-      _mesa_meta_setup_blit_shader(ctx, target, true, &blit->shaders);
+      _mesa_meta_setup_blit_shader(ctx, target, do_depth,
+                                   do_depth ? &blit->shaders_with_depth
+                                            : &blit->shaders_without_depth);
    }
 }
 
@@ -642,7 +645,8 @@ blitframebuffer_texture(struct gl_context *ctx,
    scaled_blit = dstW != srcW || dstH != srcH;
 
    if (glsl_version) {
-      setup_glsl_blit_framebuffer(ctx, blit, rb, target, filter, scaled_blit);
+      setup_glsl_blit_framebuffer(ctx, blit, rb, target, filter, scaled_blit,
+                                  do_depth);
    }
    else {
       _mesa_meta_setup_ff_tnl_for_blit(&ctx->Meta->Blit.VAO,
@@ -962,7 +966,8 @@ _mesa_meta_glsl_blit_cleanup(struct blit_state *blit)
       blit->VBO = 0;
    }
 
-   _mesa_meta_blit_shader_table_cleanup(&blit->shaders);
+   _mesa_meta_blit_shader_table_cleanup(&blit->shaders_with_depth);
+   _mesa_meta_blit_shader_table_cleanup(&blit->shaders_without_depth);
 
    _mesa_DeleteTextures(1, &blit->depthTex.TexObj);
    blit->depthTex.TexObj = 0;
