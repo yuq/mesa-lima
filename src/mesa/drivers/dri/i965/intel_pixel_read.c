@@ -155,6 +155,21 @@ intel_readpixels_tiled_memcpy(struct gl_context * ctx,
 
    dst_pitch = _mesa_image_row_stride(pack, width, format, type);
 
+   /* For a window-system renderbuffer, the buffer is actually flipped
+    * vertically, so we need to handle that.  Since the detiling function
+    * can only really work in the forwards direction, we have to be a
+    * little creative.  First, we compute the Y-offset of the first row of
+    * the renderbuffer (in renderbuffer coordinates).  We then match that
+    * with the last row of the client's data.  Finally, we give
+    * tiled_to_linear a negative pitch so that it walks through the
+    * client's data backwards as it walks through the renderbufer forwards.
+    */
+   if (rb->Name == 0) {
+      yoffset = rb->Height - yoffset - height;
+      pixels += (ptrdiff_t) (height - 1) * dst_pitch;
+      dst_pitch = -dst_pitch;
+   }
+
    /* We postponed printing this message until having committed to executing
     * the function.
     */
