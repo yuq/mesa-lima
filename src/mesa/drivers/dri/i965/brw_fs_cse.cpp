@@ -109,7 +109,7 @@ is_expression(const fs_inst *const inst)
 }
 
 static bool
-operands_match(const fs_inst *a, const fs_inst *b)
+operands_match(const fs_inst *a, const fs_inst *b, bool *negate)
 {
    fs_reg *xs = a->src;
    fs_reg *ys = b->src;
@@ -118,6 +118,35 @@ operands_match(const fs_inst *a, const fs_inst *b)
       return xs[0].equals(ys[0]) &&
              ((xs[1].equals(ys[1]) && xs[2].equals(ys[2])) ||
               (xs[2].equals(ys[1]) && xs[1].equals(ys[2])));
+   } else if (a->opcode == BRW_OPCODE_MUL && a->dst.type == BRW_REGISTER_TYPE_F) {
+      bool xs0_negate = xs[0].negate;
+      bool xs1_negate = xs[1].file == IMM ? xs[1].fixed_hw_reg.dw1.f < 0.0f
+                                          : xs[1].negate;
+      bool ys0_negate = ys[0].negate;
+      bool ys1_negate = ys[1].file == IMM ? ys[1].fixed_hw_reg.dw1.f < 0.0f
+                                          : ys[1].negate;
+      float xs1_imm = xs[1].fixed_hw_reg.dw1.f;
+      float ys1_imm = ys[1].fixed_hw_reg.dw1.f;
+
+      xs[0].negate = false;
+      xs[1].negate = false;
+      ys[0].negate = false;
+      ys[1].negate = false;
+      xs[1].fixed_hw_reg.dw1.f = fabsf(xs[1].fixed_hw_reg.dw1.f);
+      ys[1].fixed_hw_reg.dw1.f = fabsf(ys[1].fixed_hw_reg.dw1.f);
+
+      bool ret = (xs[0].equals(ys[0]) && xs[1].equals(ys[1])) ||
+                 (xs[1].equals(ys[0]) && xs[0].equals(ys[1]));
+
+      xs[0].negate = xs0_negate;
+      xs[1].negate = xs[1].file == IMM ? false : xs1_negate;
+      ys[0].negate = ys0_negate;
+      ys[1].negate = ys[1].file == IMM ? false : ys1_negate;
+      xs[1].fixed_hw_reg.dw1.f = xs1_imm;
+      ys[1].fixed_hw_reg.dw1.f = ys1_imm;
+
+      *negate = (xs0_negate + xs1_negate) != (ys0_negate + ys1_negate);
+      return ret;
    } else if (!a->is_commutative()) {
       bool match = true;
       for (int i = 0; i < a->sources; i++) {
@@ -134,7 +163,7 @@ operands_match(const fs_inst *a, const fs_inst *b)
 }
 
 static bool
-instructions_match(fs_inst *a, fs_inst *b)
+instructions_match(fs_inst *a, fs_inst *b, bool *negate)
 {
    return a->opcode == b->opcode &&
           a->saturate == b->saturate &&
@@ -151,7 +180,7 @@ instructions_match(fs_inst *a, fs_inst *b)
                           a->header_present == b->header_present &&
                           a->shadow_compare == b->shadow_compare)
                        : true) &&
-          operands_match(a, b);
+          operands_match(a, b, negate);
 }
 
 bool
@@ -169,11 +198,12 @@ fs_visitor::opt_cse_local(bblock_t *block)
           (inst->dst.file != HW_REG || inst->dst.is_null()))
       {
          bool found = false;
+         bool negate = false;
 
          foreach_in_list_use_after(aeb_entry, entry, &aeb) {
             /* Match current instruction's expression against those in AEB. */
             if (!(entry->generator->dst.is_null() && !inst->dst.is_null()) &&
-                instructions_match(inst, entry->generator)) {
+                instructions_match(inst, entry->generator, &negate)) {
                found = true;
                progress = true;
                break;
@@ -239,6 +269,7 @@ fs_visitor::opt_cse_local(bblock_t *block)
                } else {
                   copy = MOV(dst, tmp);
                   copy->force_writemask_all = inst->force_writemask_all;
+                  copy->src[0].negate = negate;
                }
                inst->insert_before(block, copy);
             }
@@ -259,9 +290,10 @@ fs_visitor::opt_cse_local(bblock_t *block)
           * the flag register if we just wrote it.
           */
          if (inst->writes_flag()) {
+            bool negate; /* dummy */
             if (entry->generator->reads_flag() ||
                 (entry->generator->writes_flag() &&
-                 !instructions_match(inst, entry->generator))) {
+                 !instructions_match(inst, entry->generator, &negate))) {
                entry->remove();
                ralloc_free(entry);
                continue;
