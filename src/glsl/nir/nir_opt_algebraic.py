@@ -141,6 +141,16 @@ optimizations = [
    # next round of opt_algebraic, get picked up by one of the above two.
    (('bcsel', '#a', b, c), ('bcsel', ('ine', 'a', 0), b, c)),
 
+   # Subtracts
+   (('fsub', 0.0, ('fsub', 0.0, a)), a),
+   (('isub', 0, ('isub', 0, a)), a),
+   (('fneg', a), ('fsub', 0.0, a), 'options->lower_negate'),
+   (('ineg', a), ('isub', 0, a), 'options->lower_negate'),
+   (('fadd', a, ('fsub', 0.0, b)), ('fsub', a, b)),
+   (('iadd', a, ('isub', 0, b)), ('isub', a, b)),
+   (('fabs', ('fsub', 0.0, a)), ('fabs', a)),
+   (('iabs', ('isub', 0, a)), ('iabs', a)),
+
 # This one may not be exact
    (('feq', ('fadd', a, b), 0.0), ('feq', a, ('fneg', b))),
 ]

@@ -1329,6 +1329,8 @@ typedef struct nir_function {
 typedef struct nir_shader_compiler_options {
    bool lower_fpow;
    bool lower_fsqrt;
+   /** lowers fneg and ineg to fsub and isub. */
+   bool lower_negate;
 } nir_shader_compiler_options;
 
 typedef struct nir_shader {
