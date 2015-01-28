@@ -3037,7 +3037,7 @@ decompress_texture_image(struct gl_context *ctx,
       _mesa_meta_setup_vertex_objects(&decompress->VAO, &decompress->VBO, true,
                                       2, 4, 0);
 
-      _mesa_meta_setup_blit_shader(ctx, target, true, &decompress->shaders);
+      _mesa_meta_setup_blit_shader(ctx, target, false, &decompress->shaders);
    } else {
       _mesa_meta_setup_ff_tnl_for_blit(&decompress->VAO, &decompress->VBO, 3);
    }
