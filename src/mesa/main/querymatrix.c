@@ -17,7 +17,6 @@
 #include "glheader.h"
 #include "querymatrix.h"
 #include "main/get.h"
-#include "util/macros.h"
 
 
 /**
@@ -37,6 +36,56 @@
 
 #define INT_TO_FIXED(x) ((GLfixed) ((x) << 16))
 #define FLOAT_TO_FIXED(x) ((GLfixed) ((x) * 65536.0))
+
+#if defined(fpclassify)
+/* ISO C99 says that fpclassify is a macro.  Assume that any implementation
+ * of fpclassify, whether it's in a C99 compiler or not, will be a macro.
+ */
+#elif defined(_MSC_VER)
+/* Not required on VS2013 and above. */
+/* Oddly, the fpclassify() function doesn't exist in such a form
+ * on MSVC.  This is an implementation using slightly different
+ * lower-level Windows functions.
+ */
+#include <float.h>
+
+enum {FP_NAN, FP_INFINITE, FP_ZERO, FP_SUBNORMAL, FP_NORMAL}
+fpclassify(double x)
+{
+    switch(_fpclass(x)) {
+        case _FPCLASS_SNAN: /* signaling NaN */
+        case _FPCLASS_QNAN: /* quiet NaN */
+            return FP_NAN;
+        case _FPCLASS_NINF: /* negative infinity */
+        case _FPCLASS_PINF: /* positive infinity */
+            return FP_INFINITE;
+        case _FPCLASS_NN:   /* negative normal */
+        case _FPCLASS_PN:   /* positive normal */
+            return FP_NORMAL;
+        case _FPCLASS_ND:   /* negative denormalized */
+        case _FPCLASS_PD:   /* positive denormalized */
+            return FP_SUBNORMAL;
+        case _FPCLASS_NZ:   /* negative zero */
+        case _FPCLASS_PZ:   /* positive zero */
+            return FP_ZERO;
+        default:
+            /* Should never get here; but if we do, this will guarantee
+             * that the pattern is not treated like a number.
+             */
+            return FP_NAN;
+    }
+}
+
+#else
+
+enum {FP_NAN, FP_INFINITE, FP_ZERO, FP_SUBNORMAL, FP_NORMAL}
+fpclassify(double x)
+{
+   /* XXX do something better someday */
+   return FP_NORMAL;
+}
+
+#endif
 
 GLbitfield GLAPIENTRY _mesa_QueryMatrixxOES(GLfixed mantissa[16], GLint exponent[16])
 {
