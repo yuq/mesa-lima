@@ -342,7 +342,7 @@ ast_type_qualifier::merge_in_qualifier(YYLTYPE *loc,
    }
 
    if (q.flags.q.early_fragment_tests) {
-      state->early_fragment_tests = true;
+      state->fs_early_fragment_tests = true;
    }
 
    if (create_gs_ast) {

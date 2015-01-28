@@ -1413,6 +1413,8 @@ link_fs_input_layout_qualifiers(struct gl_shader_program *prog,
          linked_shader->origin_upper_left = shader->origin_upper_left;
          linked_shader->pixel_center_integer = shader->pixel_center_integer;
       }
+
+      linked_shader->EarlyFragmentTests |= shader->EarlyFragmentTests;
    }
 }
 

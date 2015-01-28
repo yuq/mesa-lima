@@ -212,7 +212,7 @@ _mesa_glsl_parse_state::_mesa_glsl_parse_state(struct gl_context *_ctx,
    this->gs_input_size = 0;
    this->in_qualifier = new(this) ast_type_qualifier();
    this->out_qualifier = new(this) ast_type_qualifier();
-   this->early_fragment_tests = false;
+   this->fs_early_fragment_tests = false;
    memset(this->atomic_counter_offsets, 0,
           sizeof(this->atomic_counter_offsets));
    this->allow_extension_directive_midshader =
@@ -1418,6 +1418,7 @@ set_shader_inout_layout(struct gl_shader *shader,
       assert(!state->fs_redeclares_gl_fragcoord);
       assert(!state->fs_pixel_center_integer);
       assert(!state->fs_origin_upper_left);
+      assert(!state->fs_early_fragment_tests);
    }
 
    switch (shader->Stage) {
@@ -1460,6 +1461,7 @@ set_shader_inout_layout(struct gl_shader *shader,
       shader->origin_upper_left = state->fs_origin_upper_left;
       shader->ARB_fragment_coord_conventions_enable =
          state->ARB_fragment_coord_conventions_enable;
+      shader->EarlyFragmentTests = state->fs_early_fragment_tests;
       break;
 
    default:

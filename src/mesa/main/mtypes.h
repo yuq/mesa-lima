@@ -2499,6 +2499,12 @@ struct gl_shader
    GLuint NumImages;
 
    /**
+    * Whether early fragment tests are enabled as defined by
+    * ARB_shader_image_load_store.
+    */
+   bool EarlyFragmentTests;
+
+   /**
     * Compute shader state from ARB_compute_shader layout qualifiers.
     */
    struct {
