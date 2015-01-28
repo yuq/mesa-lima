@@ -158,7 +158,15 @@ do {                       \
 #   endif
 #endif
 
-#if defined(fpclassify)
+/* The fallbacks below don't work correctly in C++ and properly detecting
+ * FP_NORMAL in C++ is hard.  Since we don't use fpclassify in any C++ code
+ * at the moment, we can just predicate this whole thing by not being in
+ * C++ and we shoudld be ok.  If we ever want to use fpclassify in a C++
+ * file, we will have to revisit this.
+ */
+#ifndef __cplusplus
+
+#ifdef FP_NORMAL
 /* ISO C99 says that fpclassify is a macro.  Assume that any implementation
  * of fpclassify, whether it's in a C99 compiler or not, will be a macro.
  */
@@ -199,7 +207,7 @@ fpclassify(double x)
 
 #else
 
-enum {FP_NAN, FP_INFINITE, FP_ZERO, FP_SUBNORMAL, FP_NORMAL}
+static inline enum {FP_NAN, FP_INFINITE, FP_ZERO, FP_SUBNORMAL, FP_NORMAL}
 fpclassify(double x)
 {
    /* XXX do something better someday */
@@ -207,5 +215,7 @@ fpclassify(double x)
 }
 
 #endif
+
+#endif /* __cplusplus */
 
 #endif /* UTIL_MACROS_H */
