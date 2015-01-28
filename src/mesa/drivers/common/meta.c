@@ -293,10 +293,11 @@ _mesa_meta_setup_blit_shader(struct gl_context *ctx,
                 "void main()\n"
                 "{\n"
                 "   gl_FragColor = %s(texSampler, %s);\n"
-                "   gl_FragDepth = gl_FragColor.x;\n"
+                "%s"
                 "}\n",
                 fs_preprocess, shader->type, fs_input,
-                shader->func, shader->texcoords);
+                shader->func, shader->texcoords,
+                do_depth ?  "   gl_FragDepth = gl_FragColor.x;\n" : "");
 
    _mesa_meta_compile_and_link_program(ctx, vs_source, fs_source,
                                        ralloc_asprintf(mem_ctx, "%s blit",
