@@ -60,6 +60,13 @@ gen7_upload_constant_state(struct brw_context *brw,
    }
 
    ADVANCE_BATCH();
+
+  /* On SKL+ the new constants don't take effect until the next corresponding
+   * 3DSTATE_BINDING_TABLE_POINTER_* command is parsed so we need to ensure
+   * that is sent
+   */
+   if (brw->gen >= 9)
+      brw->state.dirty.brw |= BRW_NEW_SURFACES;
 }
 
 
