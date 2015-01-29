@@ -120,11 +120,37 @@ optimizations = [
    # Boolean simplifications
    (('ine', 'a@bool', 0), 'a'),
    (('ieq', 'a@bool', 0), ('inot', 'a')),
-   (('bcsel', 'a@bool', True, False), 'a'),
-   (('bcsel', 'a@bool', False, True), ('inot', 'a')),
+   (('bcsel', a, True, False), ('ine', a, 0)),
+   (('bcsel', a, False, True), ('ieq', a, 0)),
+   (('bcsel', True, b, c), b),
+   (('bcsel', False, b, c), c),
+   # The result of this should be hit by constant propagation and, in the
+   # next round of opt_algebraic, get picked up by one of the above two.
+   (('bcsel', '#a', b, c), ('bcsel', ('ine', 'a', 0), b, c)),
 
 # This one may not be exact
    (('feq', ('fadd', a, b), 0.0), ('feq', a, ('fneg', b))),
 ]
+
+# Add optimizations to handle the case where the result of a ternary is
+# compared to a constant.  This way we can take things like
+#
+# (a ? 0 : 1) > 0
+#
+# and turn it into
+#
+# a ? (0 > 0) : (1 > 0)
+#
+# which constant folding will eat for lunch.  The resulting ternary will
+# further get cleaned up by the boolean reductions above and we will be
+# left with just the original variable "a".
+for op in ['flt', 'fge', 'feq', 'fne',
+           'ilt', 'ige', 'ieq', 'ine', 'ult', 'uge']:
+   optimizations += [
+      ((op, ('bcsel', 'a', '#b', '#c'), '#d'),
+       ('bcsel', 'a', (op, 'b', 'd'), (op, 'c', 'd'))),
+      ((op, '#d', ('bcsel', a, '#b', '#c')),
+       ('bcsel', 'a', (op, 'd', 'b'), (op, 'd', 'c'))),
+   ]
 
 print nir_algebraic.AlgebraicPass("nir_opt_algebraic", optimizations).render()
