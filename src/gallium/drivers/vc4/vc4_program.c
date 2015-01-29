@@ -1931,7 +1931,7 @@ emit_point_size_write(struct vc4_compile *c)
 {
         struct qreg point_size;
 
-        if (c->output_point_size_index)
+        if (c->output_point_size_index != -1)
                 point_size = c->outputs[c->output_point_size_index + 3];
         else
                 point_size = qir_uniform_f(c, 1.0);
