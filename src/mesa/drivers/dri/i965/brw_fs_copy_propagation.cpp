@@ -448,15 +448,21 @@ fs_visitor::try_constant_propagate(fs_inst *inst, acp_entry *entry)
           (entry->dst.reg_offset + entry->regs_written) * 32)
          continue;
 
-      /* Don't bother with cases that should have been taken care of by the
-       * GLSL compiler's constant folding pass.
-       */
-      if (inst->src[i].negate || inst->src[i].abs)
-         continue;
-
       fs_reg val = entry->src;
       val.effective_width = inst->src[i].effective_width;
       val.type = inst->src[i].type;
+
+      if (inst->src[i].abs) {
+         if (!brw_abs_immediate(val.type, &val.fixed_hw_reg)) {
+            continue;
+         }
+      }
+
+      if (inst->src[i].negate) {
+         if (!brw_negate_immediate(val.type, &val.fixed_hw_reg)) {
+            continue;
+         }
+      }
 
       switch (inst->opcode) {
       case BRW_OPCODE_MOV:
