@@ -77,10 +77,6 @@ optimizations = [
    (('inot', ('fge', a, b)), ('flt', a, b)),
    (('inot', ('ilt', a, b)), ('ige', a, b)),
    (('inot', ('ige', a, b)), ('ilt', a, b)),
-   (('ine', ('flt', a, b), 0), ('flt', a, b)),
-   (('ine', ('fge', a, b), 0), ('fge', a, b)),
-   (('ine', ('ilt', a, b), 0), ('ilt', a, b)),
-   (('ine', ('ige', a, b), 0), ('ige', a, b)),
    (('flt', ('fadd', a, b), 0.0), ('flt', a, ('fneg', b))),
    (('fge', ('fadd', a, b), 0.0), ('fge', a, ('fneg', b))),
    (('feq', ('fadd', a, b), 0.0), ('feq', a, ('fneg', b))),
@@ -121,6 +117,11 @@ optimizations = [
    (('frcp', ('frcp', a)), a),
    (('frcp', ('fsqrt', a)), ('frsq', a)),
    (('frcp', ('frsq', a)), ('fsqrt', a)),
+   # Boolean simplifications
+   (('ine', 'a@bool', 0), 'a'),
+   (('ieq', 'a@bool', 0), ('inot', 'a')),
+   (('bcsel', 'a@bool', True, False), 'a'),
+   (('bcsel', 'a@bool', False, True), ('inot', 'a')),
 
 # This one may not be exact
    (('feq', ('fadd', a, b), 0.0), ('feq', a, ('fneg', b))),
