@@ -602,11 +602,8 @@ brw_saturate_immediate(enum brw_reg_type type, struct brw_reg *reg)
       sat_imm.f = CLAMP(imm.f, 0.0f, 1.0f);
       break;
    case BRW_REGISTER_TYPE_UB:
-      sat_imm.ud = CLAMP(imm.ud, 0, UCHAR_MAX);
-      break;
    case BRW_REGISTER_TYPE_B:
-      sat_imm.d = CLAMP(imm.d, CHAR_MIN, CHAR_MAX);
-      break;
+      unreachable("no UB/B immediates");
    case BRW_REGISTER_TYPE_V:
    case BRW_REGISTER_TYPE_UV:
    case BRW_REGISTER_TYPE_VF:
