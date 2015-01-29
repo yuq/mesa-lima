@@ -195,6 +195,7 @@ enum brw_conditional_mod brw_conditional_for_comparison(unsigned int op);
 uint32_t brw_math_function(enum opcode op);
 const char *brw_instruction_name(enum opcode op);
 bool brw_saturate_immediate(enum brw_reg_type type, struct brw_reg *reg);
+bool brw_negate_immediate(enum brw_reg_type type, struct brw_reg *reg);
 
 #ifdef __cplusplus
 extern "C" {
