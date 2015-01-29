@@ -36,9 +36,15 @@ d = 'd'
 # and <replace> is either an expression or a value.  An expression is
 # defined as a tuple of the form (<op>, <src0>, <src1>, <src2>, <src3>)
 # where each source is either an expression or a value.  A value can be
-# either a numeric constant or a string representing a variable name.  For
-# constants, you have to be careful to make sure that it is the right type
-# because python is unaware of the source and destination types of the
+# either a numeric constant or a string representing a variable name.
+#
+# Variable names are specified as "[#]name[@type]" where "#" inicates that
+# the given variable will only match constants and the type indicates that
+# the given variable will only match values from ALU instructions with the
+# given output type.
+#
+# For constants, you have to be careful to make sure that it is the right
+# type because python is unaware of the source and destination types of the
 # opcodes.
 
 optimizations = [

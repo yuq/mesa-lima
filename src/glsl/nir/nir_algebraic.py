@@ -28,6 +28,7 @@ import itertools
 import struct
 import sys
 import mako.template
+import re
 
 # Represents a set of variables, each with a unique id
 class VarSet(object):
@@ -65,6 +66,8 @@ static const ${val.c_type} ${val.name} = {
    { ${hex(val)} /* ${val.value} */ },
 % elif isinstance(val, Variable):
    ${val.index}, /* ${val.var_name} */
+   ${'true' if val.is_constant else 'false'},
+   nir_type_${ val.required_type or 'invalid' },
 % elif isinstance(val, Expression):
    nir_op_${val.opcode},
    { ${', '.join(src.c_ptr for src in val.sources)} },
@@ -111,12 +114,23 @@ class Constant(Value):
       else:
          assert False
 
+_var_name_re = re.compile(r"(?P<const>#)?(?P<name>\w+)(?:@(?P<type>\w+))?")
+
 class Variable(Value):
    def __init__(self, val, name, varset):
       Value.__init__(self, name, "variable")
-      self.var_name = val
-      self.index = varset[val]
-      self.name = name
+
+      m = _var_name_re.match(val)
+      assert m and m.group('name') is not None
+
+      self.var_name = m.group('name')
+      self.is_constant = m.group('const') is not None
+      self.required_type = m.group('type')
+
+      if self.required_type is not None:
+         assert self.required_type in ('float', 'bool', 'int', 'unsigned')
+
+      self.index = varset[self.var_name]
 
 class Expression(Value):
    def __init__(self, expr, name_base, varset):
