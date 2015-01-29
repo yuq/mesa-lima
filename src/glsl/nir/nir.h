@@ -576,6 +576,7 @@ void nir_alu_dest_copy(nir_alu_dest *dest, const nir_alu_dest *src,
                        void *mem_ctx);
 
 typedef enum {
+   nir_type_invalid = 0, /* Not a valid type */
    nir_type_float,
    nir_type_int,
    nir_type_unsigned,
