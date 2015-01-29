@@ -145,6 +145,9 @@ optimizations = [
    # next round of opt_algebraic, get picked up by one of the above two.
    (('bcsel', '#a', b, c), ('bcsel', ('ine', 'a', 0), b, c)),
 
+   (('bcsel', a, b, b), b),
+   (('fcsel', a, b, b), b),
+
    # Subtracts
    (('fsub', 0.0, ('fsub', 0.0, a)), a),
    (('isub', 0, ('isub', 0, a)), a),
