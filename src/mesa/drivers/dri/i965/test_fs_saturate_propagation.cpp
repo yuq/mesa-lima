@@ -215,14 +215,13 @@ TEST_F(saturate_propagation_test, neg_mov_sat)
    fs_reg dst0 = v->vgrf(glsl_type::float_type);
    fs_reg dst1 = v->vgrf(glsl_type::float_type);
    fs_reg src0 = v->vgrf(glsl_type::float_type);
-   fs_reg src1 = v->vgrf(glsl_type::float_type);
-   bld.ADD(dst0, src0, src1);
+   bld.RNDU(dst0, src0);
    dst0.negate = true;
    set_saturate(true, bld.MOV(dst1, dst0));
 
    /* = Before =
     *
-    * 0: add(8)        dst0  src0  src1
+    * 0: rndu(8)       dst0  src0
     * 1: mov.sat(8)    dst1  -dst0
     *
     * = After =
@@ -238,10 +237,48 @@ TEST_F(saturate_propagation_test, neg_mov_sat)
    EXPECT_FALSE(saturate_propagation(v));
    EXPECT_EQ(0, block0->start_ip);
    EXPECT_EQ(1, block0->end_ip);
-   EXPECT_EQ(BRW_OPCODE_ADD, instruction(block0, 0)->opcode);
+   EXPECT_EQ(BRW_OPCODE_RNDU, instruction(block0, 0)->opcode);
    EXPECT_FALSE(instruction(block0, 0)->saturate);
    EXPECT_EQ(BRW_OPCODE_MOV, instruction(block0, 1)->opcode);
    EXPECT_TRUE(instruction(block0, 1)->saturate);
+}
+
+TEST_F(saturate_propagation_test, add_neg_mov_sat)
+{
+   const fs_builder &bld = v->bld;
+   fs_reg dst0 = v->vgrf(glsl_type::float_type);
+   fs_reg dst1 = v->vgrf(glsl_type::float_type);
+   fs_reg src0 = v->vgrf(glsl_type::float_type);
+   fs_reg src1 = v->vgrf(glsl_type::float_type);
+   bld.ADD(dst0, src0, src1);
+   dst0.negate = true;
+   set_saturate(true, bld.MOV(dst1, dst0));
+
+   /* = Before =
+    *
+    * 0: add(8)        dst0  src0  src1
+    * 1: mov.sat(8)    dst1  -dst0
+    *
+    * = After =
+    * 0: add.sat(8)    dst0  -src0 -src1
+    * 1: mov(8)        dst1  dst0
+    */
+
+   v->calculate_cfg();
+   bblock_t *block0 = v->cfg->blocks[0];
+
+   EXPECT_EQ(0, block0->start_ip);
+   EXPECT_EQ(1, block0->end_ip);
+
+   EXPECT_TRUE(saturate_propagation(v));
+   EXPECT_EQ(0, block0->start_ip);
+   EXPECT_EQ(1, block0->end_ip);
+   EXPECT_EQ(BRW_OPCODE_ADD, instruction(block0, 0)->opcode);
+   EXPECT_TRUE(instruction(block0, 0)->saturate);
+   EXPECT_TRUE(instruction(block0, 0)->src[0].negate);
+   EXPECT_TRUE(instruction(block0, 0)->src[1].negate);
+   EXPECT_EQ(BRW_OPCODE_MOV, instruction(block0, 1)->opcode);
+   EXPECT_FALSE(instruction(block0, 1)->saturate);
 }
 
 TEST_F(saturate_propagation_test, mul_neg_mov_sat)
