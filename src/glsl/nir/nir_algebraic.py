@@ -34,12 +34,17 @@ class VarSet(object):
    def __init__(self):
       self.names = {}
       self.ids = itertools.count()
+      self.immutable = False;
 
    def __getitem__(self, name):
       if name not in self.names:
+         assert not self.immutable, "Unknown replacement variable: " + name
          self.names[name] = self.ids.next()
 
       return self.names[name]
+
+   def lock(self):
+      self.immutable = True
 
 class Value(object):
    @staticmethod
@@ -137,6 +142,8 @@ class SearchAndReplace(object):
          self.search = search
       else:
          self.search = Expression(search, "search{0}".format(self.id), varset)
+
+      varset.lock()
 
       if isinstance(replace, Value):
          self.replace = replace
