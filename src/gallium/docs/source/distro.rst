@@ -60,6 +60,11 @@ AMD radeonsi
 
 Driver for the AMD Southern Islands family of GPUs.
 
+freedreno
+^^^^^^^^^
+
+Driver for Qualcomm Adreno a2xx, a3xx, and a4xx series of GPUs.
+
 .. _softpipe:
 
 Softpipe
