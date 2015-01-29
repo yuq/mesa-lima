@@ -82,6 +82,17 @@ match_value(const nir_search_value *value, nir_alu_instr *instr, unsigned src,
              instr->src[src].src.ssa->parent_instr->type != nir_instr_type_load_const)
             return false;
 
+         if (var->type != nir_type_invalid) {
+            if (instr->src[src].src.ssa->parent_instr->type != nir_instr_type_alu)
+               return false;
+
+            nir_alu_instr *src_alu =
+               nir_instr_as_alu(instr->src[src].src.ssa->parent_instr);
+
+            if (nir_op_infos[src_alu->op].output_type != var->type)
+               return false;
+         }
+
          state->variables_seen |= (1 << var->variable);
          state->variables[var->variable].src = instr->src[src].src;
          state->variables[var->variable].abs = false;

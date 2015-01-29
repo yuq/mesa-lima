@@ -54,6 +54,18 @@ typedef struct {
     * given variable is only allowed to match constant values.
     */
    bool is_constant;
+
+   /** Indicates that the given variable must have a certain type
+    *
+    * This is only allowed in search expressions and indicates that the
+    * given variable is only allowed to match values that come from an ALU
+    * instruction with the given output type.  A type of nir_type_void
+    * means it can match any type.
+    *
+    * Note: A variable that is both constant and has a non-void type will
+    * never match anything.
+    */
+   nir_alu_type type;
 } nir_search_variable;
 
 typedef struct {
