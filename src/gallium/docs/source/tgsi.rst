@@ -48,13 +48,13 @@ used.
 
 .. math::
 
-  dst.x = \lfloor src.x\rfloor
+  dst.x = (int) \lfloor src.x\rfloor
 
-  dst.y = \lfloor src.y\rfloor
+  dst.y = (int) \lfloor src.y\rfloor
 
-  dst.z = \lfloor src.z\rfloor
+  dst.z = (int) \lfloor src.z\rfloor
 
-  dst.w = \lfloor src.w\rfloor
+  dst.w = (int) \lfloor src.w\rfloor
 
 
 .. opcode:: MOV - Move
@@ -312,8 +312,6 @@ This instruction replicates its result.
 
 
 .. opcode:: FLR - Floor
-
-This is identical to :opcode:`ARL`.
 
 .. math::
 
@@ -637,13 +635,13 @@ This instruction replicates its result.
 
 .. math::
 
-  dst.x = round(src.x)
+  dst.x = (int) round(src.x)
 
-  dst.y = round(src.y)
+  dst.y = (int) round(src.y)
 
-  dst.z = round(src.z)
+  dst.z = (int) round(src.z)
 
-  dst.w = round(src.w)
+  dst.w = (int) round(src.w)
 
 
 .. opcode:: SSG - Set Sign
