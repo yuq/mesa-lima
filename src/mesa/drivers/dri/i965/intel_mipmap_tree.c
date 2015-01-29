@@ -416,9 +416,13 @@ intel_miptree_create_layout(struct brw_context *brw,
             width0 = ALIGN(width0, 2) * 4;
             height0 = ALIGN(height0, 2) * 2;
             break;
+         case 16:
+            width0 = ALIGN(width0, 2) * 4;
+            height0 = ALIGN(height0, 2) * 4;
+            break;
          default:
-            /* num_samples should already have been quantized to 0, 1, 2, 4, or
-             * 8.
+            /* num_samples should already have been quantized to 0, 1, 2, 4, 8
+             * or 16.
              */
             unreachable("not reached");
          }
