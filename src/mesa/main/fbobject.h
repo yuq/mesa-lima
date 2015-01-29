@@ -122,6 +122,10 @@ _mesa_framebuffer_texture(struct gl_context *ctx, struct gl_framebuffer *fb,
                           GLint level, GLuint layer, GLboolean layered,
                           const char *caller);
 
+extern GLenum
+_mesa_check_framebuffer_status(struct gl_context *ctx,
+                               struct gl_framebuffer *fb);
+
 
 extern GLboolean GLAPIENTRY
 _mesa_IsRenderbuffer(GLuint renderbuffer);
@@ -194,6 +198,9 @@ _mesa_CreateFramebuffers(GLsizei n, GLuint *framebuffers);
 
 extern GLenum GLAPIENTRY
 _mesa_CheckFramebufferStatus(GLenum target);
+
+extern GLenum GLAPIENTRY
+_mesa_CheckNamedFramebufferStatus(GLuint framebuffer, GLenum target);
 
 extern void GLAPIENTRY
 _mesa_FramebufferTexture1D(GLenum target, GLenum attachment,

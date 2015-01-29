@@ -2499,23 +2499,11 @@ _mesa_CreateFramebuffers(GLsizei n, GLuint *framebuffers)
 }
 
 
-GLenum GLAPIENTRY
-_mesa_CheckFramebufferStatus(GLenum target)
+GLenum
+_mesa_check_framebuffer_status(struct gl_context *ctx,
+                               struct gl_framebuffer *buffer)
 {
-   struct gl_framebuffer *buffer;
-   GET_CURRENT_CONTEXT(ctx);
-
    ASSERT_OUTSIDE_BEGIN_END_WITH_RETVAL(ctx, 0);
-
-   if (MESA_VERBOSE & VERBOSE_API)
-      _mesa_debug(ctx, "glCheckFramebufferStatus(%s)\n",
-                  _mesa_lookup_enum_by_nr(target));
-
-   buffer = get_framebuffer_target(ctx, target);
-   if (!buffer) {
-      _mesa_error(ctx, GL_INVALID_ENUM, "glCheckFramebufferStatus(target)");
-      return 0;
-   }
 
    if (_mesa_is_winsys_fbo(buffer)) {
       /* EGL_KHR_surfaceless_context allows the winsys FBO to be incomplete. */
@@ -2533,6 +2521,67 @@ _mesa_CheckFramebufferStatus(GLenum target)
    }
 
    return buffer->_Status;
+}
+
+
+GLenum GLAPIENTRY
+_mesa_CheckFramebufferStatus(GLenum target)
+{
+   struct gl_framebuffer *fb;
+   GET_CURRENT_CONTEXT(ctx);
+
+   if (MESA_VERBOSE & VERBOSE_API)
+      _mesa_debug(ctx, "glCheckFramebufferStatus(%s)\n",
+                  _mesa_lookup_enum_by_nr(target));
+
+   fb = get_framebuffer_target(ctx, target);
+   if (!fb) {
+      _mesa_error(ctx, GL_INVALID_ENUM,
+                  "glCheckFramebufferStatus(invalid target %s)",
+                  _mesa_lookup_enum_by_nr(target));
+      return 0;
+   }
+
+   return _mesa_check_framebuffer_status(ctx, fb);
+}
+
+
+GLenum GLAPIENTRY
+_mesa_CheckNamedFramebufferStatus(GLuint framebuffer, GLenum target)
+{
+   struct gl_framebuffer *fb;
+   GET_CURRENT_CONTEXT(ctx);
+
+   /* Validate the target (for conformance's sake) and grab a reference to the
+    * default framebuffer in case framebuffer = 0.
+    * Section 9.4 Framebuffer Completeness of the OpenGL 4.5 core spec
+    * (30.10.2014, PDF page 336) says:
+    *    "If framebuffer is zero, then the status of the default read or
+    *    draw framebuffer (as determined by target) is returned."
+    */
+   switch (target) {
+      case GL_DRAW_FRAMEBUFFER:
+      case GL_FRAMEBUFFER:
+         fb = ctx->WinSysDrawBuffer;
+         break;
+      case GL_READ_FRAMEBUFFER:
+         fb = ctx->WinSysReadBuffer;
+         break;
+      default:
+         _mesa_error(ctx, GL_INVALID_ENUM,
+                     "glCheckNamedFramebufferStatus(invalid target %s)",
+                     _mesa_lookup_enum_by_nr(target));
+         return 0;
+   }
+
+   if (framebuffer) {
+      fb = _mesa_lookup_framebuffer_err(ctx, framebuffer,
+                                        "glCheckNamedFramebufferStatus");
+      if (!fb)
+         return 0;
+   }
+
+   return _mesa_check_framebuffer_status(ctx, fb);
 }
 
 

@@ -181,6 +181,12 @@
       <param name="layer" type="GLint" />
    </function>
 
+   <function name="CheckNamedFramebufferStatus" offset="assign">
+      <return type="GLenum" />
+      <param name="framebuffer" type="GLuint" />
+      <param name="target" type="GLenum" />
+   </function>
+
    <!-- Renderbuffer object functions -->
 
    <function name="CreateRenderbuffers" offset="assign">
