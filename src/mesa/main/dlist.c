@@ -579,7 +579,7 @@ get_pointer(const Node *node)
 
 /**
  * Used to store a 64-bit uint in a pair of "Nodes" for the sake of 32-bit
- * environment.  In 64-bit env, sizeof(Node)==8 anyway.
+ * environment.
  */
 union uint64_pair
 {
