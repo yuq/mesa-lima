@@ -1249,7 +1249,12 @@ intel_miptree_copy_teximage(struct brw_context *brw,
       intel_texture_object(intelImage->base.Base.TexObject);
    int level = intelImage->base.Base.Level;
    int face = intelImage->base.Base.Face;
-   GLuint depth = intelImage->base.Base.Depth;
+
+   GLuint depth;
+   if (intel_obj->base.Target == GL_TEXTURE_1D_ARRAY)
+      depth = intelImage->base.Base.Height;
+   else
+      depth = intelImage->base.Base.Depth;
 
    if (!invalidate) {
       for (int slice = 0; slice < depth; slice++) {
