@@ -3307,24 +3307,17 @@ _mesa_NamedFramebufferRenderbuffer(GLuint framebuffer, GLenum attachment,
 }
 
 
-void GLAPIENTRY
-_mesa_GetFramebufferAttachmentParameteriv(GLenum target, GLenum attachment,
-                                          GLenum pname, GLint *params)
+void
+_mesa_get_framebuffer_attachment_parameter(struct gl_context *ctx,
+                                           struct gl_framebuffer *buffer,
+                                           GLenum attachment, GLenum pname,
+                                           GLint *params, const char *caller)
 {
    const struct gl_renderbuffer_attachment *att;
-   struct gl_framebuffer *buffer;
    GLenum err;
-   GET_CURRENT_CONTEXT(ctx);
 
    /* The error differs in GL and GLES. */
    err = _mesa_is_desktop_gl(ctx) ? GL_INVALID_OPERATION : GL_INVALID_ENUM;
-
-   buffer = get_framebuffer_target(ctx, target);
-   if (!buffer) {
-      _mesa_error(ctx, GL_INVALID_ENUM,
-                  "glGetFramebufferAttachmentParameteriv(target)");
-      return;
-   }
 
    if (_mesa_is_winsys_fbo(buffer)) {
       /* Page 126 (page 136 of the PDF) of the OpenGL ES 2.0.25 spec
@@ -3341,14 +3334,15 @@ _mesa_GetFramebufferAttachmentParameteriv(GLenum target, GLenum attachment,
            !ctx->Extensions.ARB_framebuffer_object)
           && !_mesa_is_gles3(ctx)) {
          _mesa_error(ctx, GL_INVALID_OPERATION,
-                     "glGetFramebufferAttachmentParameteriv(bound FBO = 0)");
+                     "%s(window-system framebuffer)", caller);
          return;
       }
 
       if (_mesa_is_gles3(ctx) && attachment != GL_BACK &&
           attachment != GL_DEPTH && attachment != GL_STENCIL) {
          _mesa_error(ctx, GL_INVALID_ENUM,
-                     "glGetFramebufferAttachmentParameteriv(attachment)");
+                     "%s(invalid attachment %s)", caller,
+                     _mesa_lookup_enum_by_nr(attachment));
          return;
       }
       /* the default / window-system FBO */
@@ -3360,8 +3354,8 @@ _mesa_GetFramebufferAttachmentParameteriv(GLenum target, GLenum attachment,
    }
 
    if (att == NULL) {
-      _mesa_error(ctx, GL_INVALID_ENUM,
-                  "glGetFramebufferAttachmentParameteriv(attachment)");
+      _mesa_error(ctx, GL_INVALID_ENUM, "%s(invalid attachment %s)", caller,
+                  _mesa_lookup_enum_by_nr(attachment));
       return;
    }
 
@@ -3375,9 +3369,8 @@ _mesa_GetFramebufferAttachmentParameteriv(GLenum target, GLenum attachment,
           *    attachment, since it does not have a single format."
           */
          _mesa_error(ctx, GL_INVALID_OPERATION,
-                     "glGetFramebufferAttachmentParameteriv("
-                     "GL_FRAMEBUFFER_ATTACHMENT_COMPONENT_TYPE"
-                     " is invalid for depth+stencil attachment)");
+                     "%s(GL_FRAMEBUFFER_ATTACHMENT_COMPONENT_TYPE"
+                     " is invalid for depth+stencil attachment)", caller);
          return;
       }
       /* the depth and stencil attachments must point to the same buffer */
@@ -3385,8 +3378,7 @@ _mesa_GetFramebufferAttachmentParameteriv(GLenum target, GLenum attachment,
       stencilAtt = get_attachment(ctx, buffer, GL_STENCIL_ATTACHMENT);
       if (depthAtt->Renderbuffer != stencilAtt->Renderbuffer) {
          _mesa_error(ctx, GL_INVALID_OPERATION,
-                     "glGetFramebufferAttachmentParameteriv(DEPTH/STENCIL"
-                     " attachments differ)");
+                     "%s(DEPTH/STENCIL attachments differ)", caller);
          return;
       }
    }
@@ -3419,8 +3411,8 @@ _mesa_GetFramebufferAttachmentParameteriv(GLenum target, GLenum attachment,
          *params = att->TextureLevel;
       }
       else if (att->Type == GL_NONE) {
-         _mesa_error(ctx, err,
-                     "glGetFramebufferAttachmentParameteriv(pname)");
+         _mesa_error(ctx, err, "%s(invalid pname %s)", caller,
+                     _mesa_lookup_enum_by_nr(pname));
       }
       else {
          goto invalid_pname_enum;
@@ -3436,8 +3428,8 @@ _mesa_GetFramebufferAttachmentParameteriv(GLenum target, GLenum attachment,
          }
       }
       else if (att->Type == GL_NONE) {
-         _mesa_error(ctx, err,
-                     "glGetFramebufferAttachmentParameteriv(pname)");
+         _mesa_error(ctx, err, "%s(invalid pname %s)", caller,
+                     _mesa_lookup_enum_by_nr(pname));
       }
       else {
          goto invalid_pname_enum;
@@ -3447,8 +3439,8 @@ _mesa_GetFramebufferAttachmentParameteriv(GLenum target, GLenum attachment,
       if (ctx->API == API_OPENGLES) {
          goto invalid_pname_enum;
       } else if (att->Type == GL_NONE) {
-         _mesa_error(ctx, err,
-                     "glGetFramebufferAttachmentParameteriv(pname)");
+         _mesa_error(ctx, err, "%s(invalid pname %s)", caller,
+                     _mesa_lookup_enum_by_nr(pname));
       } else if (att->Type == GL_TEXTURE) {
          if (att->Texture && (att->Texture->Target == GL_TEXTURE_3D ||
              att->Texture->Target == GL_TEXTURE_2D_ARRAY)) {
@@ -3469,8 +3461,8 @@ _mesa_GetFramebufferAttachmentParameteriv(GLenum target, GLenum attachment,
          goto invalid_pname_enum;
       }
       else if (att->Type == GL_NONE) {
-         _mesa_error(ctx, err,
-                     "glGetFramebufferAttachmentParameteriv(pname)");
+         _mesa_error(ctx, err, "%s(invalid pname %s)", caller,
+                     _mesa_lookup_enum_by_nr(pname));
       }
       else {
          if (ctx->Extensions.EXT_framebuffer_sRGB) {
@@ -3492,8 +3484,8 @@ _mesa_GetFramebufferAttachmentParameteriv(GLenum target, GLenum attachment,
          goto invalid_pname_enum;
       }
       else if (att->Type == GL_NONE) {
-         _mesa_error(ctx, err,
-                     "glGetFramebufferAttachmentParameteriv(pname)");
+         _mesa_error(ctx, err, "%s(invalid pname %s)", caller,
+                     _mesa_lookup_enum_by_nr(pname));
       }
       else {
          mesa_format format = att->Renderbuffer->Format;
@@ -3508,9 +3500,9 @@ _mesa_GetFramebufferAttachmentParameteriv(GLenum target, GLenum attachment,
          if (_mesa_is_gles3(ctx) &&
              attachment == GL_DEPTH_STENCIL_ATTACHMENT) {
             _mesa_error(ctx, GL_INVALID_OPERATION,
-                        "glGetFramebufferAttachmentParameteriv(cannot query "
+                        "%s(cannot query "
                         "GL_FRAMEBUFFER_ATTACHMENT_COMPONENT_TYPE of "
-                        "GL_DEPTH_STENCIL_ATTACHMENT");
+                        "GL_DEPTH_STENCIL_ATTACHMENT)", caller);
             return;
          }
 
@@ -3544,8 +3536,8 @@ _mesa_GetFramebufferAttachmentParameteriv(GLenum target, GLenum attachment,
          goto invalid_pname_enum;
       }
       else if (att->Type == GL_NONE) {
-         _mesa_error(ctx, err,
-                     "glGetFramebufferAttachmentParameteriv(pname)");
+         _mesa_error(ctx, err, "%s(invalid pname %s)", caller,
+                     _mesa_lookup_enum_by_nr(pname));
       }
       else if (att->Texture) {
          const struct gl_texture_image *texImage =
@@ -3564,8 +3556,7 @@ _mesa_GetFramebufferAttachmentParameteriv(GLenum target, GLenum attachment,
                                       att->Renderbuffer->Format);
       }
       else {
-         _mesa_problem(ctx, "glGetFramebufferAttachmentParameterivEXT:"
-                       " invalid FBO attachment structure");
+         _mesa_problem(ctx, "%s: invalid FBO attachment structure", caller);
       }
       return;
    case GL_FRAMEBUFFER_ATTACHMENT_LAYERED:
@@ -3574,8 +3565,8 @@ _mesa_GetFramebufferAttachmentParameteriv(GLenum target, GLenum attachment,
       } else if (att->Type == GL_TEXTURE) {
          *params = att->Layered;
       } else if (att->Type == GL_NONE) {
-         _mesa_error(ctx, err,
-                     "glGetFramebufferAttachmentParameteriv(pname)");
+         _mesa_error(ctx, err, "%s(invalid pname %s)", caller,
+                     _mesa_lookup_enum_by_nr(pname));
       } else {
          goto invalid_pname_enum;
       }
@@ -3587,9 +3578,60 @@ _mesa_GetFramebufferAttachmentParameteriv(GLenum target, GLenum attachment,
    return;
 
 invalid_pname_enum:
-   _mesa_error(ctx, GL_INVALID_ENUM,
-               "glGetFramebufferAttachmentParameteriv(pname)");
+   _mesa_error(ctx, GL_INVALID_ENUM, "%s(invalid pname %s)", caller,
+               _mesa_lookup_enum_by_nr(pname));
    return;
+}
+
+
+void GLAPIENTRY
+_mesa_GetFramebufferAttachmentParameteriv(GLenum target, GLenum attachment,
+                                          GLenum pname, GLint *params)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   struct gl_framebuffer *buffer;
+
+   buffer = get_framebuffer_target(ctx, target);
+   if (!buffer) {
+      _mesa_error(ctx, GL_INVALID_ENUM,
+                  "glGetFramebufferAttachmentParameteriv(invalid target %s)",
+                  _mesa_lookup_enum_by_nr(target));
+      return;
+   }
+
+   _mesa_get_framebuffer_attachment_parameter(ctx, buffer, attachment, pname,
+                                              params,
+                                    "glGetFramebufferAttachmentParameteriv");
+}
+
+
+void GLAPIENTRY
+_mesa_GetNamedFramebufferAttachmentParameteriv(GLuint framebuffer,
+                                               GLenum attachment,
+                                               GLenum pname, GLint *params)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   struct gl_framebuffer *buffer;
+
+   if (framebuffer) {
+      buffer = _mesa_lookup_framebuffer_err(ctx, framebuffer,
+                              "glGetNamedFramebufferAttachmentParameteriv");
+      if (!buffer)
+         return;
+   }
+   else {
+      /*
+       * Section 9.2 Binding and Managing Framebuffer Objects of the OpenGL
+       * 4.5 core spec (30.10.2014, PDF page 314):
+       *    "If framebuffer is zero, then the default draw framebuffer is
+       *    queried."
+       */
+      buffer = ctx->WinSysDrawBuffer;
+   }
+
+   _mesa_get_framebuffer_attachment_parameter(ctx, buffer, attachment, pname,
+                                              params,
+                              "glGetNamedFramebufferAttachmentParameteriv");
 }
 
 

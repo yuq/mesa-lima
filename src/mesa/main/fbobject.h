@@ -126,6 +126,12 @@ extern GLenum
 _mesa_check_framebuffer_status(struct gl_context *ctx,
                                struct gl_framebuffer *fb);
 
+extern void
+_mesa_get_framebuffer_attachment_parameter(struct gl_context *ctx,
+                                           struct gl_framebuffer *buffer,
+                                           GLenum attachment, GLenum pname,
+                                           GLint *params, const char *caller);
+
 
 extern GLboolean GLAPIENTRY
 _mesa_IsRenderbuffer(GLuint renderbuffer);
@@ -244,6 +250,10 @@ _mesa_NamedFramebufferRenderbuffer(GLuint framebuffer, GLenum attachment,
 extern void GLAPIENTRY
 _mesa_GetFramebufferAttachmentParameteriv(GLenum target, GLenum attachment,
                                              GLenum pname, GLint *params);
+extern void GLAPIENTRY
+_mesa_GetNamedFramebufferAttachmentParameteriv(GLuint framebuffer,
+                                               GLenum attachment,
+                                               GLenum pname, GLint *params);
 
 extern void GLAPIENTRY
 _mesa_InvalidateSubFramebuffer(GLenum target, GLsizei numAttachments,
