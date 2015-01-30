@@ -71,7 +71,8 @@ optimizations = [
    (('flrp', a, b, 1.0), b),
    (('flrp', a, a, b), a),
    (('flrp', 0.0, a, b), ('fmul', a, b)),
-   (('fadd', ('fmul', a, b), c), ('ffma', a, b, c)),
+   (('ffma', a, b, c), ('fadd', ('fmul', a, b), c), 'options->lower_ffma'),
+   (('fadd', ('fmul', a, b), c), ('ffma', a, b, c), '!options->lower_ffma'),
    # Comparison simplifications
    (('inot', ('flt', a, b)), ('fge', a, b)),
    (('inot', ('fge', a, b)), ('flt', a, b)),
