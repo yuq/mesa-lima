@@ -8032,17 +8032,8 @@ execute_list(struct gl_context *ctx, GLuint list)
             CALL_LoadIdentity(ctx->Exec, ());
             break;
          case OPCODE_LOAD_MATRIX:
-            if (sizeof(Node) == sizeof(GLfloat)) {
-               CALL_LoadMatrixf(ctx->Exec, (&n[1].f));
-            }
-            else {
-               GLfloat m[16];
-               GLuint i;
-               for (i = 0; i < 16; i++) {
-                  m[i] = n[1 + i].f;
-               }
-               CALL_LoadMatrixf(ctx->Exec, (m));
-            }
+            STATIC_ASSERT(sizeof(Node) == sizeof(GLfloat));
+            CALL_LoadMatrixf(ctx->Exec, (&n[1].f));
             break;
          case OPCODE_LOAD_NAME:
             CALL_LoadName(ctx->Exec, (n[1].ui));
@@ -8088,17 +8079,7 @@ execute_list(struct gl_context *ctx, GLuint list)
             CALL_MatrixMode(ctx->Exec, (n[1].e));
             break;
          case OPCODE_MULT_MATRIX:
-            if (sizeof(Node) == sizeof(GLfloat)) {
-               CALL_MultMatrixf(ctx->Exec, (&n[1].f));
-            }
-            else {
-               GLfloat m[16];
-               GLuint i;
-               for (i = 0; i < 16; i++) {
-                  m[i] = n[1 + i].f;
-               }
-               CALL_MultMatrixf(ctx->Exec, (m));
-            }
+            CALL_MultMatrixf(ctx->Exec, (&n[1].f));
             break;
          case OPCODE_ORTHO:
             CALL_Ortho(ctx->Exec,
@@ -8695,84 +8676,34 @@ execute_list(struct gl_context *ctx, GLuint list)
             CALL_BindFragmentShaderATI(ctx->Exec, (n[1].i));
             break;
          case OPCODE_SET_FRAGMENT_SHADER_CONSTANTS_ATI:
-            {
-               GLfloat values[4];
-               GLuint i, dst = n[1].ui;
-
-               for (i = 0; i < 4; i++)
-                  values[i] = n[1 + i].f;
-               CALL_SetFragmentShaderConstantATI(ctx->Exec, (dst, values));
-            }
+            CALL_SetFragmentShaderConstantATI(ctx->Exec, (n[1].ui, &n[2].f));
             break;
          case OPCODE_ATTR_1F_NV:
             CALL_VertexAttrib1fNV(ctx->Exec, (n[1].e, n[2].f));
             break;
          case OPCODE_ATTR_2F_NV:
-            /* Really shouldn't have to do this - the Node structure
-             * is convenient, but it would be better to store the data
-             * packed appropriately so that it can be sent directly
-             * on.  With x86_64 becoming common, this will start to
-             * matter more.
-             */
-            if (sizeof(Node) == sizeof(GLfloat))
-               CALL_VertexAttrib2fvNV(ctx->Exec, (n[1].e, &n[2].f));
-            else
-               CALL_VertexAttrib2fNV(ctx->Exec, (n[1].e, n[2].f, n[3].f));
+            CALL_VertexAttrib2fvNV(ctx->Exec, (n[1].e, &n[2].f));
             break;
          case OPCODE_ATTR_3F_NV:
-            if (sizeof(Node) == sizeof(GLfloat))
-               CALL_VertexAttrib3fvNV(ctx->Exec, (n[1].e, &n[2].f));
-            else
-               CALL_VertexAttrib3fNV(ctx->Exec, (n[1].e, n[2].f, n[3].f,
-                                                 n[4].f));
+            CALL_VertexAttrib3fvNV(ctx->Exec, (n[1].e, &n[2].f));
             break;
          case OPCODE_ATTR_4F_NV:
-            if (sizeof(Node) == sizeof(GLfloat))
-               CALL_VertexAttrib4fvNV(ctx->Exec, (n[1].e, &n[2].f));
-            else
-               CALL_VertexAttrib4fNV(ctx->Exec, (n[1].e, n[2].f, n[3].f,
-                                                 n[4].f, n[5].f));
+            CALL_VertexAttrib4fvNV(ctx->Exec, (n[1].e, &n[2].f));
             break;
          case OPCODE_ATTR_1F_ARB:
             CALL_VertexAttrib1fARB(ctx->Exec, (n[1].e, n[2].f));
             break;
          case OPCODE_ATTR_2F_ARB:
-            /* Really shouldn't have to do this - the Node structure
-             * is convenient, but it would be better to store the data
-             * packed appropriately so that it can be sent directly
-             * on.  With x86_64 becoming common, this will start to
-             * matter more.
-             */
-            if (sizeof(Node) == sizeof(GLfloat))
-               CALL_VertexAttrib2fvARB(ctx->Exec, (n[1].e, &n[2].f));
-            else
-               CALL_VertexAttrib2fARB(ctx->Exec, (n[1].e, n[2].f, n[3].f));
+            CALL_VertexAttrib2fvARB(ctx->Exec, (n[1].e, &n[2].f));
             break;
          case OPCODE_ATTR_3F_ARB:
-            if (sizeof(Node) == sizeof(GLfloat))
-               CALL_VertexAttrib3fvARB(ctx->Exec, (n[1].e, &n[2].f));
-            else
-               CALL_VertexAttrib3fARB(ctx->Exec, (n[1].e, n[2].f, n[3].f,
-                                                  n[4].f));
+            CALL_VertexAttrib3fvARB(ctx->Exec, (n[1].e, &n[2].f));
             break;
          case OPCODE_ATTR_4F_ARB:
-            if (sizeof(Node) == sizeof(GLfloat))
-               CALL_VertexAttrib4fvARB(ctx->Exec, (n[1].e, &n[2].f));
-            else
-               CALL_VertexAttrib4fARB(ctx->Exec, (n[1].e, n[2].f, n[3].f,
-                                                  n[4].f, n[5].f));
+            CALL_VertexAttrib4fvARB(ctx->Exec, (n[1].e, &n[2].f));
             break;
          case OPCODE_MATERIAL:
-            if (sizeof(Node) == sizeof(GLfloat))
-               CALL_Materialfv(ctx->Exec, (n[1].e, n[2].e, &n[3].f));
-            else {
-               GLfloat f[4];
-               f[0] = n[3].f;
-               f[1] = n[4].f;
-               f[2] = n[5].f;
-               f[3] = n[6].f;
-               CALL_Materialfv(ctx->Exec, (n[1].e, n[2].e, f));
-            }
+            CALL_Materialfv(ctx->Exec, (n[1].e, n[2].e, &n[3].f));
             break;
          case OPCODE_BEGIN:
             CALL_Begin(ctx->Exec, (n[1].e));
