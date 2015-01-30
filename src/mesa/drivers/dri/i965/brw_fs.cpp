@@ -3954,15 +3954,13 @@ fs_visitor::run_fs()
       /* Generate FS IR for main().  (the visitor only descends into
        * functions called "main").
        */
-      if (shader) {
-         if (env_var_as_boolean("INTEL_USE_NIR", false)) {
-            emit_nir_code();
-         } else {
-            foreach_in_list(ir_instruction, ir, shader->base.ir) {
-               base_ir = ir;
-               this->result = reg_undef;
-               ir->accept(this);
-            }
+      if (env_var_as_boolean("INTEL_USE_NIR", false)) {
+         emit_nir_code();
+      } else if (shader) {
+         foreach_in_list(ir_instruction, ir, shader->base.ir) {
+            base_ir = ir;
+            this->result = reg_undef;
+            ir->accept(this);
          }
       } else {
          emit_fragment_program_code();

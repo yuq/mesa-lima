@@ -24,6 +24,7 @@
 #include "glsl/ir.h"
 #include "glsl/ir_optimization.h"
 #include "glsl/nir/glsl_to_nir.h"
+#include "program/prog_to_nir.h"
 #include "brw_fs.h"
 #include "brw_nir.h"
 
@@ -86,9 +87,15 @@ fs_visitor::emit_nir_code()
    const nir_shader_compiler_options *options =
       ctx->Const.ShaderCompilerOptions[stage].NirOptions;
 
-   /* first, lower the GLSL IR shader to NIR */
-   lower_output_reads(shader->base.ir);
-   nir_shader *nir = glsl_to_nir(&shader->base, options);
+   nir_shader *nir;
+   /* First, lower the GLSL IR or Mesa IR to NIR */
+   if (shader_prog) {
+      lower_output_reads(shader->base.ir);
+      nir = glsl_to_nir(&shader->base, options);
+   } else {
+      nir = prog_to_nir(prog, options);
+      nir_convert_to_ssa(nir); /* turn registers into SSA */
+   }
    nir_validate_shader(nir);
 
    nir_lower_global_vars_to_local(nir);
@@ -106,9 +113,18 @@ fs_visitor::emit_nir_code()
    /* Get rid of split copies */
    nir_optimize(nir);
 
-   nir_assign_var_locations_scalar_direct_first(nir, &nir->uniforms,
-                                                &num_direct_uniforms,
-                                                &nir->num_uniforms);
+   if (shader_prog) {
+      nir_assign_var_locations_scalar_direct_first(nir, &nir->uniforms,
+                                                   &num_direct_uniforms,
+                                                   &nir->num_uniforms);
+   } else {
+      /* ARB programs generally create a giant array of "uniform" data, and allow
+       * indirect addressing without any boundaries.  In the absence of bounds
+       * analysis, it's all or nothing.  num_direct_uniforms is only useful when
+       * we have some direct and some indirect access; it doesn't matter here.
+       */
+      num_direct_uniforms = 0;
+   }
    nir_assign_var_locations_scalar(&nir->inputs, &nir->num_inputs);
    nir_assign_var_locations_scalar(&nir->outputs, &nir->num_outputs);
 
@@ -118,8 +134,10 @@ fs_visitor::emit_nir_code()
    nir_remove_dead_variables(nir);
    nir_validate_shader(nir);
 
-   nir_lower_samplers(nir, shader_prog, shader->base.Program);
-   nir_validate_shader(nir);
+   if (shader_prog) {
+      nir_lower_samplers(nir, shader_prog, shader->base.Program);
+      nir_validate_shader(nir);
+   }
 
    nir_lower_system_values(nir);
    nir_validate_shader(nir);
@@ -320,16 +338,25 @@ fs_visitor::nir_setup_uniforms(nir_shader *shader)
    if (dispatch_width != 8)
       return;
 
-   foreach_list_typed(nir_variable, var, node, &shader->uniforms) {
-      /* UBO's and atomics don't take up space in the uniform file */
+   if (shader_prog) {
+      foreach_list_typed(nir_variable, var, node, &shader->uniforms) {
+         /* UBO's and atomics don't take up space in the uniform file */
+         if (var->interface_type != NULL || var->type->contains_atomic())
+            continue;
 
-      if (var->interface_type != NULL || var->type->contains_atomic())
-         continue;
-
-      if (strncmp(var->name, "gl_", 3) == 0)
-         nir_setup_builtin_uniform(var);
-      else
-         nir_setup_uniform(var);
+         if (strncmp(var->name, "gl_", 3) == 0)
+            nir_setup_builtin_uniform(var);
+         else
+            nir_setup_uniform(var);
+      }
+   } else {
+      /* prog_to_nir doesn't create uniform variables; set param up directly. */
+      for (unsigned p = 0; p < prog->Parameters->NumParameters; p++) {
+         for (unsigned int i = 0; i < 4; i++) {
+            stage_prog_data->param[4 * p + i] =
+               &prog->Parameters->ParameterValues[p][i];
+         }
+      }
    }
 }
 
