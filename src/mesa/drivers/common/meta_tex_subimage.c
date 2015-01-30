@@ -206,7 +206,8 @@ _mesa_meta_pbo_TexSubImage(struct gl_context *ctx, GLuint dims,
 
    _mesa_update_state(ctx);
 
-   if (_mesa_meta_BlitFramebuffer(ctx, 0, 0, width, height,
+   if (_mesa_meta_BlitFramebuffer(ctx, ctx->ReadBuffer, ctx->DrawBuffer,
+                                  0, 0, width, height,
                                   xoffset, yoffset,
                                   xoffset + width, yoffset + height,
                                   GL_COLOR_BUFFER_BIT, GL_NEAREST))
@@ -220,7 +221,8 @@ _mesa_meta_pbo_TexSubImage(struct gl_context *ctx, GLuint dims,
 
       _mesa_update_state(ctx);
 
-      _mesa_meta_BlitFramebuffer(ctx, 0, 0, width, height,
+      _mesa_meta_BlitFramebuffer(ctx, ctx->ReadBuffer, ctx->DrawBuffer,
+                                 0, 0, width, height,
                                  xoffset, yoffset,
                                  xoffset + width, yoffset + height,
                                  GL_COLOR_BUFFER_BIT, GL_NEAREST);
@@ -324,7 +326,8 @@ _mesa_meta_pbo_GetTexSubImage(struct gl_context *ctx, GLuint dims,
 
    _mesa_update_state(ctx);
 
-   if (_mesa_meta_BlitFramebuffer(ctx, xoffset, yoffset,
+   if (_mesa_meta_BlitFramebuffer(ctx, ctx->ReadBuffer, ctx->DrawBuffer,
+                                  xoffset, yoffset,
                                   xoffset + width, yoffset + height,
                                   0, 0, width, height,
                                   GL_COLOR_BUFFER_BIT, GL_NEAREST))
@@ -338,7 +341,8 @@ _mesa_meta_pbo_GetTexSubImage(struct gl_context *ctx, GLuint dims,
 
       _mesa_update_state(ctx);
 
-      _mesa_meta_BlitFramebuffer(ctx, xoffset, yoffset,
+      _mesa_meta_BlitFramebuffer(ctx, ctx->ReadBuffer, ctx->DrawBuffer,
+                                 xoffset, yoffset,
                                  xoffset + width, yoffset + height,
                                  0, 0, width, height,
                                  GL_COLOR_BUFFER_BIT, GL_NEAREST);

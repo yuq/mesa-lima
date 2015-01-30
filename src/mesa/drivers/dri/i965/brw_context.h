@@ -1489,6 +1489,8 @@ void brw_meta_updownsample(struct brw_context *brw,
                            struct intel_mipmap_tree *dst);
 
 void brw_meta_fbo_stencil_blit(struct brw_context *brw,
+                               struct gl_framebuffer *read_fb,
+                               struct gl_framebuffer *draw_fb,
                                GLfloat srcX0, GLfloat srcY0,
                                GLfloat srcX1, GLfloat srcY1,
                                GLfloat dstX0, GLfloat dstY0,
@@ -1713,6 +1715,8 @@ gen7_resume_transform_feedback(struct gl_context *ctx,
 /* brw_blorp_blit.cpp */
 GLbitfield
 brw_blorp_framebuffer(struct brw_context *brw,
+                      struct gl_framebuffer *readFb,
+                      struct gl_framebuffer *drawFb,
                       GLint srcX0, GLint srcY0, GLint srcX1, GLint srcY1,
                       GLint dstX0, GLint dstY0, GLint dstX1, GLint dstY1,
                       GLbitfield mask, GLenum filter);

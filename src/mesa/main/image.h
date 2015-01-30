@@ -32,6 +32,7 @@
 
 struct gl_context;
 struct gl_pixelstore_attrib;
+struct gl_framebuffer;
 
 extern void
 _mesa_swap2_copy(GLushort *dst, GLushort *src, GLuint n);
@@ -140,6 +141,8 @@ _mesa_clip_to_region(GLint xmin, GLint ymin,
 
 extern GLboolean
 _mesa_clip_blit(struct gl_context *ctx,
+                const struct gl_framebuffer *readFb,
+                const struct gl_framebuffer *drawFb,
                 GLint *srcX0, GLint *srcY0, GLint *srcX1, GLint *srcY1,
                 GLint *dstX0, GLint *dstY0, GLint *dstX1, GLint *dstY1);
 

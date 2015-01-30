@@ -2793,7 +2793,8 @@ copytexsubimage_using_blit_framebuffer(struct gl_context *ctx, GLuint dims,
     * are too strict for CopyTexImage.  We know meta will be fine with format
     * changes.
     */
-   mask = _mesa_meta_BlitFramebuffer(ctx, x, y,
+   mask = _mesa_meta_BlitFramebuffer(ctx, ctx->ReadBuffer, ctx->DrawBuffer,
+                                     x, y,
                                      x + width, y + height,
                                      xoffset, yoffset,
                                      xoffset + width, yoffset + height,

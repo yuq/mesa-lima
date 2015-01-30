@@ -861,19 +861,21 @@ clip_left_or_bottom(GLint *srcX0, GLint *srcX1,
  */
 GLboolean
 _mesa_clip_blit(struct gl_context *ctx,
+                const struct gl_framebuffer *readFb,
+                const struct gl_framebuffer *drawFb,
                 GLint *srcX0, GLint *srcY0, GLint *srcX1, GLint *srcY1,
                 GLint *dstX0, GLint *dstY0, GLint *dstX1, GLint *dstY1)
 {
    const GLint srcXmin = 0;
-   const GLint srcXmax = ctx->ReadBuffer->Width;
+   const GLint srcXmax = readFb->Width;
    const GLint srcYmin = 0;
-   const GLint srcYmax = ctx->ReadBuffer->Height;
+   const GLint srcYmax = readFb->Height;
 
    /* these include scissor bounds */
-   const GLint dstXmin = ctx->DrawBuffer->_Xmin;
-   const GLint dstXmax = ctx->DrawBuffer->_Xmax;
-   const GLint dstYmin = ctx->DrawBuffer->_Ymin;
-   const GLint dstYmax = ctx->DrawBuffer->_Ymax;
+   const GLint dstXmin = drawFb->_Xmin;
+   const GLint dstXmax = drawFb->_Xmax;
+   const GLint dstYmin = drawFb->_Ymin;
+   const GLint dstYmax = drawFb->_Ymax;
 
    /*
    printf("PreClipX:  src: %d .. %d  dst: %d .. %d\n",
