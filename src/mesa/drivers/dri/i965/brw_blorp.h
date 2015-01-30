@@ -380,8 +380,7 @@ gen6_blorp_emit_blend_state(struct brw_context *brw,
                             const brw_blorp_params *params);
 
 uint32_t
-gen6_blorp_emit_cc_state(struct brw_context *brw,
-                         const brw_blorp_params *params);
+gen6_blorp_emit_cc_state(struct brw_context *brw);
 
 uint32_t
 gen6_blorp_emit_wm_constants(struct brw_context *brw,
@@ -393,7 +392,6 @@ gen6_blorp_emit_vs_disable(struct brw_context *brw,
 
 uint32_t
 gen6_blorp_emit_binding_table(struct brw_context *brw,
-                              const brw_blorp_params *params,
                               uint32_t wm_surf_offset_renderbuffer,
                               uint32_t wm_surf_offset_texture);
 
@@ -406,8 +404,7 @@ gen6_blorp_emit_gs_disable(struct brw_context *brw,
                            const brw_blorp_params *params);
 
 void
-gen6_blorp_emit_clip_disable(struct brw_context *brw,
-                             const brw_blorp_params *params);
+gen6_blorp_emit_clip_disable(struct brw_context *brw);
 
 void
 gen6_blorp_emit_drawing_rectangle(struct brw_context *brw,

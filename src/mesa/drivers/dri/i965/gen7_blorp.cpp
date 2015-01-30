@@ -786,7 +786,7 @@ gen7_blorp_exec(struct brw_context *brw,
    gen7_blorp_emit_urb_config(brw);
    if (params->use_wm_prog) {
       cc_blend_state_offset = gen6_blorp_emit_blend_state(brw, params);
-      cc_state_offset = gen6_blorp_emit_cc_state(brw, params);
+      cc_state_offset = gen6_blorp_emit_cc_state(brw);
       gen7_blorp_emit_blend_state_pointer(brw, cc_blend_state_offset);
       gen7_blorp_emit_cc_state_pointer(brw, cc_state_offset);
    }
@@ -809,7 +809,7 @@ gen7_blorp_exec(struct brw_context *brw,
                                           false /* is_render_target */);
       }
       wm_bind_bo_offset =
-         gen6_blorp_emit_binding_table(brw, params,
+         gen6_blorp_emit_binding_table(brw,
                                        wm_surf_offset_renderbuffer,
                                        wm_surf_offset_texture);
       sampler_offset =
@@ -821,7 +821,7 @@ gen7_blorp_exec(struct brw_context *brw,
    gen7_blorp_emit_ds_disable(brw);
    gen7_blorp_emit_gs_disable(brw);
    gen7_blorp_emit_streamout_disable(brw);
-   gen6_blorp_emit_clip_disable(brw, params);
+   gen6_blorp_emit_clip_disable(brw);
    gen7_blorp_emit_sf_config(brw, params);
    gen7_blorp_emit_wm_config(brw, params, prog_data);
    if (params->use_wm_prog) {
