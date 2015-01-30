@@ -82,7 +82,7 @@ optimizations = [
    (('feq', ('fadd', a, b), 0.0), ('feq', a, ('fneg', b))),
    (('fne', ('fadd', a, b), 0.0), ('fne', a, ('fneg', b))),
    (('fge', ('fneg', ('fabs', a)), 0.0), ('feq', a, 0.0)),
-   (('fmin', ('fmax', a, 1.0), 0.0), ('fsat', a)),
+   (('fmin', ('fmax', a, 0.0), 1.0), ('fsat', a)),
    # Logical and bit operations
    (('fand', a, 0.0), 0.0),
    (('iand', a, a), a),
