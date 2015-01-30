@@ -376,6 +376,15 @@ ir_algebraic_visitor::handle_expression(ir_expression *ir)
       }
       break;
 
+   case ir_unop_f2i:
+   case ir_unop_f2u:
+      if (op_expr[0] && op_expr[0]->operation == ir_unop_trunc) {
+         return new(mem_ctx) ir_expression(ir->operation,
+                                           ir->type,
+                                           op_expr[0]->operands[0]);
+      }
+      break;
+
    case ir_unop_logic_not: {
       enum ir_expression_operation new_op = ir_unop_logic_not;
 
