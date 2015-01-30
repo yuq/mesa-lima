@@ -342,8 +342,9 @@ NineDevice9_ctor( struct NineDevice9 *This,
         This->state.vs_const_f = CALLOC(This->vs_const_size, 1);
         This->state.ps_const_f = CALLOC(This->ps_const_size, 1);
         This->state.vs_lconstf_temp = CALLOC(This->vs_const_size,1);
+        This->state.ps_lconstf_temp = CALLOC(This->ps_const_size,1);
         if (!This->state.vs_const_f || !This->state.ps_const_f ||
-            !This->state.vs_lconstf_temp)
+            !This->state.vs_lconstf_temp || !This->state.ps_lconstf_temp)
             return E_OUTOFMEMORY;
 
         if (strstr(pScreen->get_name(pScreen), "AMD") ||
@@ -466,6 +467,7 @@ NineDevice9_dtor( struct NineDevice9 *This )
     FREE(This->state.vs_const_f);
     FREE(This->state.ps_const_f);
     FREE(This->state.vs_lconstf_temp);
+    FREE(This->state.ps_lconstf_temp);
 
     if (This->swapchains) {
         for (i = 0; i < This->nswapchains; ++i)
@@ -2636,6 +2638,7 @@ NineDevice9_SetTextureStageState( struct NineDevice9 *This,
                                   DWORD Value )
 {
     struct nine_state *state = This->update;
+    int bumpmap_index = -1;
 
     DBG("Stage=%u Type=%u Value=%08x\n", Stage, Type, Value);
     nine_dump_D3DTSS_value(DBG_FF, Type, Value);
@@ -2644,6 +2647,33 @@ NineDevice9_SetTextureStageState( struct NineDevice9 *This,
     user_assert(Type < Elements(state->ff.tex_stage[0]), D3DERR_INVALIDCALL);
 
     state->ff.tex_stage[Stage][Type] = Value;
+    switch (Type) {
+    case D3DTSS_BUMPENVMAT00:
+        bumpmap_index = 4 * Stage;
+        break;
+    case D3DTSS_BUMPENVMAT10:
+        bumpmap_index = 4 * Stage + 1;
+        break;
+    case D3DTSS_BUMPENVMAT01:
+        bumpmap_index = 4 * Stage + 2;
+        break;
+    case D3DTSS_BUMPENVMAT11:
+        bumpmap_index = 4 * Stage + 3;
+        break;
+    case D3DTSS_BUMPENVLSCALE:
+        bumpmap_index = 4 * 8 + 2 * Stage;
+        break;
+    case D3DTSS_BUMPENVLOFFSET:
+        bumpmap_index = 4 * 8 + 2 * Stage + 1;
+        break;
+    default:
+        break;
+    }
+
+    if (bumpmap_index >= 0) {
+        state->bumpmap_vars[bumpmap_index] = Value;
+        state->changed.group |= NINE_STATE_PS_CONST;
+    }
 
     state->changed.group |= NINE_STATE_FF_PSSTAGES;
     state->ff.changed.tex_stage[Stage][Type / 32] |= 1 << (Type % 32);

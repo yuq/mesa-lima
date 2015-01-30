@@ -72,6 +72,7 @@ NinePixelShader9_ctor( struct NinePixelShader9 *This,
     This->sampler_mask = info.sampler_mask;
     This->rt_mask = info.rt_mask;
     This->const_used_size = info.const_used_size;
+    This->bumpenvmat_needed = info.bumpenvmat_needed;
     /* no constant relative addressing for ps */
     assert(info.lconstf.data == NULL);
     assert(info.lconstf.ranges == NULL);

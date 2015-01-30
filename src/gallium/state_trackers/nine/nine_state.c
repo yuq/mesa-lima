@@ -586,6 +586,7 @@ update_ps_constants_userbuf(struct NineDevice9 *device)
     struct nine_state *state = &device->state;
     struct pipe_context *pipe = device->pipe;
     struct pipe_constant_buffer cb;
+    int i;
     cb.buffer = NULL;
     cb.buffer_offset = 0;
     cb.buffer_size = device->state.ps->const_used_size;
@@ -604,6 +605,14 @@ update_ps_constants_userbuf(struct NineDevice9 *device)
         uint32_t *bdst = (uint32_t *)&idst[4 * NINE_MAX_CONST_I];
         memcpy(bdst, state->ps_const_b, sizeof(state->ps_const_b));
         state->changed.ps_const_b = 0;
+    }
+
+    /* Upload special constants needed to implement PS1.x instructions like TEXBEM,TEXBEML and BEM */
+    if (device->state.ps->bumpenvmat_needed) {
+        memcpy(device->state.ps_lconstf_temp, cb.user_buffer, cb.buffer_size);
+        memcpy(&device->state.ps_lconstf_temp[4 * 8], &device->state.bumpmap_vars, sizeof(device->state.bumpmap_vars));
+
+        cb.user_buffer = device->state.ps_lconstf_temp;
     }
 
     pipe->set_constant_buffer(pipe, PIPE_SHADER_FRAGMENT, 0, &cb);
@@ -1152,6 +1161,7 @@ nine_state_set_defaults(struct NineDevice9 *device, const D3DCAPS9 *caps,
     }
     state->ff.tex_stage[0][D3DTSS_COLOROP] = D3DTOP_MODULATE;
     state->ff.tex_stage[0][D3DTSS_ALPHAOP] = D3DTOP_SELECTARG1;
+    memset(&state->bumpmap_vars, 0, sizeof(state->bumpmap_vars));
 
     for (s = 0; s < Elements(state->samp); ++s) {
         memcpy(&state->samp[s], nine_samp_state_defaults,

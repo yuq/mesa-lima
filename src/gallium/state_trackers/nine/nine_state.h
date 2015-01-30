@@ -148,6 +148,8 @@ struct nine_state
     float *ps_const_f;
     int    ps_const_i[NINE_MAX_CONST_I][4];
     BOOL   ps_const_b[NINE_MAX_CONST_B];
+    float *ps_lconstf_temp;
+    uint32_t bumpmap_vars[48];
     uint32_t ps_key;
 
     struct {

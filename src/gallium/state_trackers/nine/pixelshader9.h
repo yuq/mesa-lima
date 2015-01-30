@@ -41,6 +41,7 @@ struct NinePixelShader9
 
     unsigned const_used_size; /* in bytes */
 
+    uint8_t bumpenvmat_needed;
     uint16_t sampler_mask;
     uint16_t sampler_mask_shadow;
     uint8_t rt_mask;

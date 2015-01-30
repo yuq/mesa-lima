@@ -89,6 +89,15 @@ static inline const char *d3dsio_to_string(unsigned opcode);
 #define NINE_SWIZZLE4(x,y,z,w) \
    TGSI_SWIZZLE_##x, TGSI_SWIZZLE_##y, TGSI_SWIZZLE_##z, TGSI_SWIZZLE_##w
 
+#define NINE_CONSTANT_SRC(index) \
+   ureg_src_register(TGSI_FILE_CONSTANT, index)
+
+#define NINE_APPLY_SWIZZLE(src, s) \
+   ureg_swizzle(src, NINE_SWIZZLE4(s, s, s, s))
+
+#define NINE_CONSTANT_SRC_SWIZZLE(index, s) \
+   NINE_APPLY_SWIZZLE(NINE_CONSTANT_SRC(index), s)
+
 #define NINED3DSPDM_SATURATE (D3DSPDM_SATURATE >> D3DSP_DSTMOD_SHIFT)
 #define NINED3DSPDM_PARTIALP (D3DSPDM_PARTIALPRECISION >> D3DSP_DSTMOD_SHIFT)
 #define NINED3DSPDM_CENTROID (D3DSPDM_MSAMPCENTROID >> D3DSP_DSTMOD_SHIFT)
@@ -2135,12 +2144,76 @@ DECL_SPECIAL(TEXKILL)
 
 DECL_SPECIAL(TEXBEM)
 {
-    STUB(D3DERR_INVALIDCALL);
-}
+    struct ureg_program *ureg = tx->ureg;
+    struct ureg_dst dst = tx_dst_param(tx, &tx->insn.dst[0]);
+    struct ureg_dst tmp, tmp2;
+    struct ureg_src sample, m00, m01, m10, m11;
+    struct ureg_src bumpenvlscale, bumpenvloffset;
+    const int m = tx->insn.dst[0].idx;
+    const int n = tx->insn.src[0].idx;
 
-DECL_SPECIAL(TEXBEML)
-{
-    STUB(D3DERR_INVALIDCALL);
+    assert(tx->version.major == 1);
+
+    sample = ureg_DECL_sampler(ureg, m);
+    tx->info->sampler_mask |= 1 << m;
+
+    tx_texcoord_alloc(tx, m);
+
+    tmp = tx_scratch(tx);
+    tmp2 = tx_scratch(tx);
+    /*
+     * Bump-env-matrix:
+     * 00 is X
+     * 01 is Y
+     * 10 is Z
+     * 11 is W
+     */
+    nine_info_mark_const_f_used(tx->info, 8 + 8 + m/2);
+    m00 = NINE_CONSTANT_SRC_SWIZZLE(8 + m, X);
+    m01 = NINE_CONSTANT_SRC_SWIZZLE(8 + m, Y);
+    m10 = NINE_CONSTANT_SRC_SWIZZLE(8 + m, Z);
+    m11 = NINE_CONSTANT_SRC_SWIZZLE(8 + m, W);
+
+    /* These two attributes are packed as X=scale0 Y=offset0 Z=scale1 W=offset1 etc */
+    if (m % 2 == 0) {
+        bumpenvlscale = NINE_CONSTANT_SRC_SWIZZLE(8 + 8 + m / 2, X);
+        bumpenvloffset = NINE_CONSTANT_SRC_SWIZZLE(8 + 8 + m / 2, Y);
+    } else {
+        bumpenvlscale = NINE_CONSTANT_SRC_SWIZZLE(8 + 8 + m / 2, Z);
+        bumpenvloffset = NINE_CONSTANT_SRC_SWIZZLE(8 + 8 + m / 2, W);
+    }
+
+    /* u' = TextureCoordinates(stage m)u + D3DTSS_BUMPENVMAT00(stage m)*t(n)R  */
+    ureg_MAD(ureg, ureg_writemask(tmp, TGSI_WRITEMASK_X), m00,
+             NINE_APPLY_SWIZZLE(ureg_src(tx->regs.tS[n]), X), tx->regs.vT[m]);
+    /* u' = u' + D3DTSS_BUMPENVMAT10(stage m)*t(n)G */
+    ureg_MAD(ureg, ureg_writemask(tmp, TGSI_WRITEMASK_X), m10,
+             NINE_APPLY_SWIZZLE(ureg_src(tx->regs.tS[n]), Y),
+             NINE_APPLY_SWIZZLE(ureg_src(tmp), X));
+
+    /* v' = TextureCoordinates(stage m)v + D3DTSS_BUMPENVMAT01(stage m)*t(n)R */
+    ureg_MAD(ureg, ureg_writemask(tmp, TGSI_WRITEMASK_Y), m01,
+             NINE_APPLY_SWIZZLE(ureg_src(tx->regs.tS[n]), X), tx->regs.vT[m]);
+    /* v' = v' + D3DTSS_BUMPENVMAT11(stage m)*t(n)G*/
+    ureg_MAD(ureg, ureg_writemask(tmp, TGSI_WRITEMASK_Y), m11,
+             NINE_APPLY_SWIZZLE(ureg_src(tx->regs.tS[n]), Y),
+             NINE_APPLY_SWIZZLE(ureg_src(tmp), Y));
+
+    /* Now the texture coordinates are in tmp.xy */
+
+    if (tx->insn.opcode == D3DSIO_TEXBEM) {
+        ureg_TEX(ureg, dst, ps1x_sampler_type(tx->info, m), ureg_src(tmp), sample);
+    } else if (tx->insn.opcode == D3DSIO_TEXBEML) {
+        /* t(m)RGBA = t(m)RGBA * [(t(n)B * D3DTSS_BUMPENVLSCALE(stage m)) + D3DTSS_BUMPENVLOFFSET(stage m)] */
+        ureg_TEX(ureg, tmp, ps1x_sampler_type(tx->info, m), ureg_src(tmp), sample);
+        ureg_MAD(ureg, tmp2, NINE_APPLY_SWIZZLE(ureg_src(tx->regs.tS[n]), Z),
+                 bumpenvlscale, bumpenvloffset);
+        ureg_MUL(ureg, dst, ureg_src(tmp), ureg_src(tmp2));
+    }
+
+    tx->info->bumpenvmat_needed = 1;
+
+    return D3D_OK;
 }
 
 DECL_SPECIAL(TEXREG2AR)
@@ -2421,7 +2494,43 @@ DECL_SPECIAL(TEXDEPTH)
 
 DECL_SPECIAL(BEM)
 {
-    STUB(D3DERR_INVALIDCALL);
+    struct ureg_program *ureg = tx->ureg;
+    struct ureg_dst dst = tx_dst_param(tx, &tx->insn.dst[0]);
+    struct ureg_src src0 = tx_src_param(tx, &tx->insn.src[0]);
+    struct ureg_src src1 = tx_src_param(tx, &tx->insn.src[1]);
+    struct ureg_src m00, m01, m10, m11;
+    const int m = tx->insn.dst[0].idx;
+    struct ureg_dst tmp;
+    /*
+     * Bump-env-matrix:
+     * 00 is X
+     * 01 is Y
+     * 10 is Z
+     * 11 is W
+     */
+    nine_info_mark_const_f_used(tx->info, 8 + m);
+    m00 = NINE_CONSTANT_SRC_SWIZZLE(8 + m, X);
+    m01 = NINE_CONSTANT_SRC_SWIZZLE(8 + m, Y);
+    m10 = NINE_CONSTANT_SRC_SWIZZLE(8 + m, Z);
+    m11 = NINE_CONSTANT_SRC_SWIZZLE(8 + m, W);
+    /* dest.r = src0.r + D3DTSS_BUMPENVMAT00(stage n) * src1.r  */
+    ureg_MAD(ureg, ureg_writemask(tmp, TGSI_WRITEMASK_X), m00,
+             NINE_APPLY_SWIZZLE(src1, X), NINE_APPLY_SWIZZLE(src0, X));
+    /* dest.r = dest.r + D3DTSS_BUMPENVMAT10(stage n) * src1.g; */
+    ureg_MAD(ureg, ureg_writemask(tmp, TGSI_WRITEMASK_X), m10,
+             NINE_APPLY_SWIZZLE(src1, Y), NINE_APPLY_SWIZZLE(ureg_src(tmp), X));
+
+    /* dest.g = src0.g + D3DTSS_BUMPENVMAT01(stage n) * src1.r */
+    ureg_MAD(ureg, ureg_writemask(tmp, TGSI_WRITEMASK_Y), m01,
+             NINE_APPLY_SWIZZLE(src1, X), src0);
+    /* dest.g = dest.g + D3DTSS_BUMPENVMAT11(stage n) * src1.g */
+    ureg_MAD(ureg, ureg_writemask(tmp, TGSI_WRITEMASK_Y), m11,
+             NINE_APPLY_SWIZZLE(src1, Y), NINE_APPLY_SWIZZLE(ureg_src(tmp), Y));
+    ureg_MOV(ureg, ureg_writemask(dst, TGSI_WRITEMASK_XY), ureg_src(tmp));
+
+    tx->info->bumpenvmat_needed = 1;
+
+    return D3D_OK;
 }
 
 DECL_SPECIAL(TEXLD)
@@ -2616,7 +2725,7 @@ struct sm1_op_info inst_table[] =
     _OPI(TEX,          TEX, V(0,0), V(0,0), V(1,4), V(1,4), 1, 1, SPECIAL(TEXLD_14)),
     _OPI(TEX,          TEX, V(0,0), V(0,0), V(2,0), V(3,0), 1, 2, SPECIAL(TEXLD)),
     _OPI(TEXBEM,       TEX, V(0,0), V(0,0), V(0,0), V(1,3), 1, 1, SPECIAL(TEXBEM)),
-    _OPI(TEXBEML,      TEX, V(0,0), V(0,0), V(0,0), V(1,3), 1, 1, SPECIAL(TEXBEML)),
+    _OPI(TEXBEML,      TEX, V(0,0), V(0,0), V(0,0), V(1,3), 1, 1, SPECIAL(TEXBEM)),
     _OPI(TEXREG2AR,    TEX, V(0,0), V(0,0), V(0,0), V(1,3), 1, 1, SPECIAL(TEXREG2AR)),
     _OPI(TEXREG2GB,    TEX, V(0,0), V(0,0), V(0,0), V(1,3), 1, 1, SPECIAL(TEXREG2GB)),
     _OPI(TEXM3x2PAD,   TEX, V(0,0), V(0,0), V(0,0), V(1,3), 1, 1, SPECIAL(TEXM3x2PAD)),
@@ -3023,6 +3132,8 @@ tx_ctor(struct shader_translator *tx, struct nine_shader_info *info)
     info->lconstf.data = NULL;
     info->lconstf.ranges = NULL;
 
+    info->bumpenvmat_needed = 0;
+
     for (i = 0; i < Elements(tx->regs.rL); ++i) {
         tx->regs.rL[i] = ureg_dst_undef();
     }
@@ -3233,6 +3344,7 @@ nine_translate_shader(struct NineDevice9 *device, struct nine_shader_info *info)
                        info->const_int_slots > 0 ?
                            max_const_f + info->const_int_slots :
                                info->const_float_slots;
+
     info->const_used_size = sizeof(float[4]) * slot_max; /* slots start from 1 */
 
     for (s = 0; s < slot_max; s++)
