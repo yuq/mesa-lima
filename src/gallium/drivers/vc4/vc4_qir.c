@@ -245,7 +245,7 @@ qir_reads_r4(struct qinst *inst)
 }
 
 static void
-qir_print_reg(struct vc4_compile *c, struct qreg reg)
+qir_print_reg(struct vc4_compile *c, struct qreg reg, bool write)
 {
         static const char *files[] = {
                 [QFILE_TEMP] = "t",
@@ -261,7 +261,12 @@ qir_print_reg(struct vc4_compile *c, struct qreg reg)
                 else
                         fprintf(stderr, "%f", uif(reg.index));
         } else if (reg.file == QFILE_VPM) {
-                fprintf(stderr, "vpm");
+                if (write) {
+                        fprintf(stderr, "vpm");
+                } else {
+                        fprintf(stderr, "vpm%d.%d",
+                                reg.index / 4, reg.index % 4);
+                }
         } else {
                 fprintf(stderr, "%s%d", files[reg.file], reg.index);
         }
@@ -279,10 +284,10 @@ qir_dump_inst(struct vc4_compile *c, struct qinst *inst)
 {
         fprintf(stderr, "%s ", qir_get_op_name(inst->op));
 
-        qir_print_reg(c, inst->dst);
+        qir_print_reg(c, inst->dst, true);
         for (int i = 0; i < qir_get_op_nsrc(inst->op); i++) {
                 fprintf(stderr, ", ");
-                qir_print_reg(c, inst->src[i]);
+                qir_print_reg(c, inst->src[i], false);
         }
 }
 
