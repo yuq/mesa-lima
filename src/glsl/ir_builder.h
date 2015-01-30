@@ -137,6 +137,7 @@ ir_expression *imul_high(operand a, operand b);
 ir_expression *div(operand a, operand b);
 ir_expression *carry(operand a, operand b);
 ir_expression *borrow(operand a, operand b);
+ir_expression *trunc(operand a);
 ir_expression *round_even(operand a);
 ir_expression *dot(operand a, operand b);
 ir_expression *clamp(operand a, operand b, operand c);

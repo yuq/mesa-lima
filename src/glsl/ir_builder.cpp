@@ -246,6 +246,11 @@ ir_expression *borrow(operand a, operand b)
    return expr(ir_binop_borrow, a, b);
 }
 
+ir_expression *trunc(operand a)
+{
+   return expr(ir_unop_trunc, a);
+}
+
 ir_expression *round_even(operand a)
 {
    return expr(ir_unop_round_even, a);
