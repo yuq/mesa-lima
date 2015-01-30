@@ -659,6 +659,45 @@ brw_negate_immediate(enum brw_reg_type type, struct brw_reg *reg)
    return false;
 }
 
+bool
+brw_abs_immediate(enum brw_reg_type type, struct brw_reg *reg)
+{
+   switch (type) {
+   case BRW_REGISTER_TYPE_D:
+      reg->dw1.d = abs(reg->dw1.d);
+      return true;
+   case BRW_REGISTER_TYPE_W:
+      reg->dw1.d = abs((int16_t)reg->dw1.ud);
+      return true;
+   case BRW_REGISTER_TYPE_F:
+      reg->dw1.f = fabsf(reg->dw1.f);
+      return true;
+   case BRW_REGISTER_TYPE_VF:
+      reg->dw1.ud &= ~0x80808080;
+      return true;
+   case BRW_REGISTER_TYPE_UB:
+   case BRW_REGISTER_TYPE_B:
+      unreachable("no UB/B immediates");
+   case BRW_REGISTER_TYPE_UQ:
+   case BRW_REGISTER_TYPE_UD:
+   case BRW_REGISTER_TYPE_UW:
+   case BRW_REGISTER_TYPE_UV:
+      /* Presumably the absolute value modifier on an unsigned source is a
+       * nop, but it would be nice to confirm.
+       */
+      assert(!"unimplemented: abs unsigned immediate");
+   case BRW_REGISTER_TYPE_V:
+      assert(!"unimplemented: abs V immediate");
+   case BRW_REGISTER_TYPE_Q:
+      assert(!"unimplemented: abs Q immediate");
+   case BRW_REGISTER_TYPE_DF:
+   case BRW_REGISTER_TYPE_HF:
+      assert(!"unimplemented: abs DF/HF immediate");
+   }
+
+   return false;
+}
+
 backend_visitor::backend_visitor(struct brw_context *brw,
                                  struct gl_shader_program *shader_prog,
                                  struct gl_program *prog,
