@@ -191,26 +191,55 @@ update_vertex_elements(struct NineDevice9 *device)
     const struct NineVertexShader9 *vs;
     unsigned n, b, i;
     int index;
+    char vdecl_index_map[16]; /* vs->num_inputs <= 16 */
+    char used_streams[device->caps.MaxStreams];
+    int dummy_vbo_stream = -1;
+    BOOL need_dummy_vbo = FALSE;
     struct pipe_vertex_element ve[PIPE_MAX_ATTRIBS];
 
     state->stream_usage_mask = 0;
-
+    memset(vdecl_index_map, -1, 16);
+    memset(used_streams, 0, device->caps.MaxStreams);
     vs = device->state.vs ? device->state.vs : device->ff.vs;
 
     if (!vdecl) /* no inputs */
         return;
-    for (n = 0; n < vs->num_inputs; ++n) {
-        DBG("looking up input %u (usage %u) from vdecl(%p)\n",
-            n, vs->input_map[n].ndecl, vdecl);
 
-        index = -1;
-        for (i = 0; i < vdecl->nelems; i++) {
-            if (vdecl->usage_map[i] == vs->input_map[n].ndecl) {
-                index = i;
+    if (vdecl) {
+        for (n = 0; n < vs->num_inputs; ++n) {
+            DBG("looking up input %u (usage %u) from vdecl(%p)\n",
+                n, vs->input_map[n].ndecl, vdecl);
+
+            for (i = 0; i < vdecl->nelems; i++) {
+                if (vdecl->usage_map[i] == vs->input_map[n].ndecl) {
+                    vdecl_index_map[n] = i;
+                    used_streams[vdecl->elems[i].vertex_buffer_index] = 1;
+                    break;
+                }
+            }
+            if (vdecl_index_map[n] < 0)
+                need_dummy_vbo = TRUE;
+        }
+    } else {
+        /* No vertex declaration. Likely will never happen in practice,
+         * but we need not crash on this */
+        need_dummy_vbo = TRUE;
+    }
+
+    if (need_dummy_vbo) {
+        for (i = 0; i < device->caps.MaxStreams; i++ ) {
+            if (!used_streams[i]) {
+                dummy_vbo_stream = i;
                 break;
             }
         }
+    }
+    /* there are less vertex shader inputs than stream slots,
+     * so if we need a slot for the dummy vbo, we should have found one */
+    assert (!need_dummy_vbo || dummy_vbo_stream != -1);
 
+    for (n = 0; n < vs->num_inputs; ++n) {
+        index = vdecl_index_map[n];
         if (index >= 0) {
             ve[n] = vdecl->elems[index];
             b = ve[n].vertex_buffer_index;
@@ -219,18 +248,27 @@ update_vertex_elements(struct NineDevice9 *device)
             if (state->stream_freq[b] & D3DSTREAMSOURCE_INSTANCEDATA)
                 ve[n].instance_divisor = state->stream_freq[b] & 0x7FFFFF;
         } else {
-            /* TODO: msdn doesn't specify what should happen when the vertex
-             * declaration doesn't match the vertex shader inputs.
-             * Some websites say the code will pass but nothing will get rendered.
-             * We should check and implement the correct behaviour. */
-            /* Put PIPE_FORMAT_NONE.
-             * Some drivers (r300) are very unhappy with that */
-            ve[n].src_format = PIPE_FORMAT_NONE;
+            /* if the vertex declaration is incomplete compared to what the
+             * vertex shader needs, we bind a dummy vbo with 0 0 0 0.
+             * This is not precised by the spec, but is the behaviour
+             * tested on win */
+            ve[n].vertex_buffer_index = dummy_vbo_stream;
+            ve[n].src_format = PIPE_FORMAT_R32G32B32A32_FLOAT;
             ve[n].src_offset = 0;
             ve[n].instance_divisor = 0;
-            ve[n].vertex_buffer_index = 0;
         }
     }
+
+    if (state->dummy_vbo_bound_at != dummy_vbo_stream) {
+        if (state->dummy_vbo_bound_at >= 0)
+            state->changed.vtxbuf |= 1 << state->dummy_vbo_bound_at;
+        if (dummy_vbo_stream >= 0) {
+            state->changed.vtxbuf |= 1 << dummy_vbo_stream;
+            state->vbo_bound_done = FALSE;
+        }
+        state->dummy_vbo_bound_at = dummy_vbo_stream;
+    }
+
     cso_set_vertex_elements(device->cso, vs->num_inputs, ve);
 
     state->changed.stream_freq = 0;
@@ -566,12 +604,26 @@ update_vertex_buffers(struct NineDevice9 *device)
 {
     struct pipe_context *pipe = device->pipe;
     struct nine_state *state = &device->state;
+    struct pipe_vertex_buffer dummy_vtxbuf;
     uint32_t mask = state->changed.vtxbuf;
     unsigned i;
     unsigned start;
     unsigned count = 0;
 
     DBG("mask=%x\n", mask);
+
+    if (state->dummy_vbo_bound_at >= 0) {
+        if (!state->vbo_bound_done) {
+            dummy_vtxbuf.buffer = device->dummy_vbo;
+            dummy_vtxbuf.stride = 0;
+            dummy_vtxbuf.user_buffer = NULL;
+            dummy_vtxbuf.buffer_offset = 0;
+            pipe->set_vertex_buffers(pipe, state->dummy_vbo_bound_at,
+                                     1, &dummy_vtxbuf);
+            state->vbo_bound_done = TRUE;
+        }
+        mask &= ~(1 << state->dummy_vbo_bound_at);
+    }
 
     for (i = 0; mask; mask >>= 1, ++i) {
         if (mask & 1) {
@@ -580,8 +632,8 @@ update_vertex_buffers(struct NineDevice9 *device)
             ++count;
         } else {
             if (count)
-                pipe->set_vertex_buffers(pipe,
-                                         start, count, &state->vtxbuf[start]);
+                pipe->set_vertex_buffers(pipe, start, count,
+                                         &state->vtxbuf[start]);
             count = 0;
         }
     }
@@ -1116,6 +1168,11 @@ nine_state_set_defaults(struct NineDevice9 *device, const D3DCAPS9 *caps,
 
     for (s = 0; s < Elements(state->changed.sampler); ++s)
         state->changed.sampler[s] = ~0;
+
+    if (!is_reset) {
+        state->dummy_vbo_bound_at = -1;
+        state->vbo_bound_done = FALSE;
+    }
 }
 
 void

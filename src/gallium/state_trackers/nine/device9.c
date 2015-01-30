@@ -221,6 +221,42 @@ NineDevice9_ctor( struct NineDevice9 *This,
         NineUnknown_ConvertRefToBind(NineUnknown(This->state.rt[i]));
     }
 
+    /* Initialize a dummy VBO to be used when a a vertex declaration does not
+     * specify all the inputs needed by vertex shader, on win default behavior
+     * is to pass 0,0,0,0 to the shader */
+    {
+        struct pipe_transfer *transfer;
+        struct pipe_resource tmpl;
+        struct pipe_box box;
+        unsigned char *data;
+
+        tmpl.target = PIPE_BUFFER;
+        tmpl.format = PIPE_FORMAT_R8_UNORM;
+        tmpl.width0 = 16; /* 4 floats */
+        tmpl.height0 = 1;
+        tmpl.depth0 = 1;
+        tmpl.array_size = 1;
+        tmpl.last_level = 0;
+        tmpl.nr_samples = 0;
+        tmpl.usage = PIPE_USAGE_DEFAULT;
+        tmpl.bind = PIPE_BIND_VERTEX_BUFFER | PIPE_BIND_TRANSFER_WRITE;
+        tmpl.flags = 0;
+        This->dummy_vbo = pScreen->resource_create(pScreen, &tmpl);
+
+        if (!This->dummy_vbo)
+            return D3DERR_OUTOFVIDEOMEMORY;
+
+        u_box_1d(0, 16, &box);
+        data = This->pipe->transfer_map(This->pipe, This->dummy_vbo, 0,
+                                        PIPE_TRANSFER_WRITE |
+                                        PIPE_TRANSFER_DISCARD_WHOLE_RESOURCE,
+                                        &box, &transfer);
+        assert(data);
+        assert(transfer);
+        memset(data, 0, 16);
+        This->pipe->transfer_unmap(This->pipe, transfer);
+    }
+
     This->cursor.software = FALSE;
     This->cursor.hotspot.x = -1;
     This->cursor.hotspot.y = -1;
@@ -387,6 +423,7 @@ NineDevice9_dtor( struct NineDevice9 *This )
     pipe_resource_reference(&This->dummy_texture, NULL);
     pipe_resource_reference(&This->constbuf_vs, NULL);
     pipe_resource_reference(&This->constbuf_ps, NULL);
+    pipe_resource_reference(&This->dummy_vbo, NULL);
     FREE(This->state.vs_const_f);
     FREE(This->state.ps_const_f);
     FREE(This->state.vs_lconstf_temp);

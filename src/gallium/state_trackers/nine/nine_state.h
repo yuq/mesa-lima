@@ -178,6 +178,9 @@ struct nine_state
     uint8_t bound_samplers_mask_vs;
     uint16_t bound_samplers_mask_ps;
 
+    int dummy_vbo_bound_at; /* -1 = not bound , >= 0 = bound index */
+    boolean vbo_bound_done;
+
     struct {
         struct {
             uint32_t group;

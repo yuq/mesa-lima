@@ -123,6 +123,10 @@ struct NineDevice9
     struct nine_range_pool range_pool;
 
     struct hud_context *hud; /* NULL if hud is disabled */
+
+    /* dummy vbo (containing 0 0 0 0) to bind if vertex shader input
+     * is not bound to anything by the vertex declaration */
+    struct pipe_resource *dummy_vbo;
 };
 static INLINE struct NineDevice9 *
 NineDevice9( void *data )
