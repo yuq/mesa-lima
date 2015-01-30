@@ -546,13 +546,13 @@ union pointer
  * Save a 4 or 8-byte pointer at dest (and dest+1).
  */
 static inline void
-save_pointer(union gl_dlist_node *dest, void *src)
+save_pointer(Node *dest, void *src)
 {
    union pointer p;
    unsigned i;
 
    STATIC_ASSERT(POINTER_DWORDS == 1 || POINTER_DWORDS == 2);
-   STATIC_ASSERT(sizeof(union gl_dlist_node) == 4);
+   STATIC_ASSERT(sizeof(Node) == 4);
 
    p.ptr = src;
 
@@ -565,7 +565,7 @@ save_pointer(union gl_dlist_node *dest, void *src)
  * Retrieve a 4 or 8-byte pointer from node (node+1).
  */
 static inline void *
-get_pointer(const union gl_dlist_node *node)
+get_pointer(const Node *node)
 {
    union pointer p;
    unsigned i;
