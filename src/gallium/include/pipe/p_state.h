@@ -57,7 +57,7 @@ extern "C" {
 #define PIPE_MAX_CLIP_PLANES       8
 #define PIPE_MAX_COLOR_BUFS        8
 #define PIPE_MAX_CONSTANT_BUFFERS 32
-#define PIPE_MAX_SAMPLERS         16
+#define PIPE_MAX_SAMPLERS         18 /* 16 public + 2 driver internal */
 #define PIPE_MAX_SHADER_INPUTS    32
 #define PIPE_MAX_SHADER_OUTPUTS   48 /* 32 GENERICs + POS, PSIZE, FOG, etc. */
 #define PIPE_MAX_SHADER_SAMPLER_VIEWS 32
