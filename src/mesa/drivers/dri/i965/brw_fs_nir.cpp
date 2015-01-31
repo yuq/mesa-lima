@@ -195,7 +195,7 @@ fs_visitor::nir_setup_inputs(nir_shader *shader)
       fs_reg varying = offset(nir_inputs, var->data.driver_location);
 
       fs_reg reg;
-      if (!strcmp(var->name, "gl_FragCoord")) {
+      if (var->data.location == VARYING_SLOT_POS) {
          reg = *emit_fragcoord_interpolation(var->data.pixel_center_integer,
                                              var->data.origin_upper_left);
          emit_percomp(MOV(varying, reg), 0xF);

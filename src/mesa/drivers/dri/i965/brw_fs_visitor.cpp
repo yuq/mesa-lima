@@ -92,10 +92,10 @@ fs_visitor::visit(ir_variable *ir)
          reg = new(this->mem_ctx)
             fs_reg(ATTR, ir->data.location,
                    brw_type_for_base_type(ir->type->get_scalar_type()));
-      } else if (!strcmp(ir->name, "gl_FragCoord")) {
+      } else if (ir->data.location == VARYING_SLOT_POS) {
          reg = emit_fragcoord_interpolation(ir->data.pixel_center_integer,
                                             ir->data.origin_upper_left);
-      } else if (!strcmp(ir->name, "gl_FrontFacing")) {
+      } else if (ir->data.location == VARYING_SLOT_FACE) {
 	 reg = emit_frontfacing_interpolation();
       } else {
          reg = new(this->mem_ctx) fs_reg(vgrf(ir->type));
