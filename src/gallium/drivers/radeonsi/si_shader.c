@@ -63,8 +63,6 @@ struct si_shader_output_values
 struct si_shader_context
 {
 	struct radeon_llvm_context radeon_bld;
-	struct tgsi_parse_context parse;
-	struct tgsi_token * tokens;
 	struct si_shader *shader;
 	struct si_screen *screen;
 	unsigned type; /* TGSI_PROCESSOR_* specifies the type of shader. */
@@ -2800,10 +2798,8 @@ int si_shader_create(struct si_screen *sscreen, struct si_shader *shader)
 	}
 
 	si_shader_ctx.radeon_bld.load_system_value = declare_system_value;
-	si_shader_ctx.tokens = sel->tokens;
-	tgsi_parse_init(&si_shader_ctx.parse, si_shader_ctx.tokens);
 	si_shader_ctx.shader = shader;
-	si_shader_ctx.type = si_shader_ctx.parse.FullHeader.Processor.Processor;
+	si_shader_ctx.type = tgsi_get_processor_type(sel->tokens);
 	si_shader_ctx.screen = sscreen;
 
 	switch (si_shader_ctx.type) {
@@ -2880,8 +2876,6 @@ int si_shader_create(struct si_screen *sscreen, struct si_shader *shader)
 			goto out;
 		}
 	}
-
-	tgsi_parse_free(&si_shader_ctx.parse);
 
 out:
 	for (int i = 0; i < SI_NUM_CONST_BUFFERS; i++)
