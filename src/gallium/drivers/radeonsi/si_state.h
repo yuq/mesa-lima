@@ -155,9 +155,9 @@ struct si_descriptors {
 	unsigned buffer_offset;
 
 	/* The i-th bit is set if that element is dirty (changed but not emitted). */
-	unsigned dirty_mask;
+	uint64_t dirty_mask;
 	/* The i-th bit is set if that element is enabled (non-NULL resource). */
-	unsigned enabled_mask;
+	uint64_t enabled_mask;
 
 	/* We can't update descriptors directly because the GPU might be
 	 * reading them at the same time, so we have to update them
