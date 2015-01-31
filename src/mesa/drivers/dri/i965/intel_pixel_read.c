@@ -125,6 +125,13 @@ intel_readpixels_tiled_memcpy(struct gl_context * ctx,
       yoffset += irb->mt->level[level].level_y;
    }
 
+   /* It is possible that the renderbuffer (or underlying texture) is
+    * multisampled.  Since ReadPixels from a multisampled buffer requires a
+    * multisample resolve, we can't handle this here
+    */
+   if (rb->NumSamples > 1)
+      return false;
+
    if (!intel_get_memcpy(rb->Format, format, type, &mem_copy, &cpp))
       return false;
 
