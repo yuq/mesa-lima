@@ -2369,6 +2369,14 @@ apply_image_qualifier_to_variable(const struct ast_type_qualifier *qual,
 
          var->data.image_format = GL_NONE;
       }
+   } else if (qual->flags.q.read_only ||
+              qual->flags.q.write_only ||
+              qual->flags.q.coherent ||
+              qual->flags.q._volatile ||
+              qual->flags.q.restrict_flag ||
+              qual->flags.q.explicit_image_format) {
+      _mesa_glsl_error(loc, state, "memory qualifiers may only be applied to "
+                       "images");
    }
 }
 
@@ -2793,8 +2801,7 @@ apply_type_qualifier_to_variable(const struct ast_type_qualifier *qual,
       validate_matrix_layout_for_type(state, loc, var->type, var);
    }
 
-   if (var->type->contains_image())
-      apply_image_qualifier_to_variable(qual, var, state, loc);
+   apply_image_qualifier_to_variable(qual, var, state, loc);
 }
 
 /**
