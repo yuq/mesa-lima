@@ -67,6 +67,7 @@ struct si_state_rasterizer {
 	unsigned		clip_plane_enable;
 	float			offset_units;
 	float			offset_scale;
+	bool			poly_stipple_enable;
 };
 
 struct si_state_dsa {

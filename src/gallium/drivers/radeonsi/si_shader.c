@@ -37,6 +37,7 @@
 #include "radeon/radeon_elf_util.h"
 #include "radeon/radeon_llvm_emit.h"
 #include "util/u_memory.h"
+#include "util/u_pstipple.h"
 #include "tgsi/tgsi_parse.h"
 #include "tgsi/tgsi_util.h"
 #include "tgsi/tgsi_dump.h"
@@ -2742,16 +2743,26 @@ static int si_generate_gs_copy_shader(struct si_screen *sscreen,
 int si_shader_create(struct si_screen *sscreen, struct si_shader *shader)
 {
 	struct si_shader_selector *sel = shader->selector;
+	struct tgsi_token *tokens = sel->tokens;
 	struct si_shader_context si_shader_ctx;
 	struct lp_build_tgsi_context * bld_base;
+	struct tgsi_shader_info stipple_shader_info;
 	LLVMModuleRef mod;
 	int r = 0;
+	bool poly_stipple = sel->type == PIPE_SHADER_FRAGMENT &&
+			    shader->key.ps.poly_stipple;
 	bool dump = r600_can_dump_shader(&sscreen->b, sel->tokens);
+
+	if (poly_stipple) {
+		tokens = util_pstipple_create_fragment_shader(tokens, NULL,
+						SI_POLY_STIPPLE_SAMPLER);
+		tgsi_scan_shader(tokens, &stipple_shader_info);
+	}
 
 	/* Dump TGSI code before doing TGSI->LLVM conversion in case the
 	 * conversion fails. */
 	if (dump) {
-		tgsi_dump(sel->tokens, 0);
+		tgsi_dump(tokens, 0);
 		si_dump_streamout(&sel->so);
 	}
 
@@ -2768,7 +2779,7 @@ int si_shader_create(struct si_screen *sscreen, struct si_shader *shader)
 		shader->db_shader_control |= S_02880C_KILL_ENABLE(1);
 
 	shader->uses_instanceid = sel->info.uses_instanceid;
-	bld_base->info = &sel->info;
+	bld_base->info = poly_stipple ? &stipple_shader_info : &sel->info;
 	bld_base->emit_fetch_funcs[TGSI_FILE_CONSTANT] = fetch_constant;
 
 	bld_base->op_actions[TGSI_OPCODE_TEX] = tex_action;
@@ -2799,7 +2810,7 @@ int si_shader_create(struct si_screen *sscreen, struct si_shader *shader)
 
 	si_shader_ctx.radeon_bld.load_system_value = declare_system_value;
 	si_shader_ctx.shader = shader;
-	si_shader_ctx.type = tgsi_get_processor_type(sel->tokens);
+	si_shader_ctx.type = tgsi_get_processor_type(tokens);
 	si_shader_ctx.screen = sscreen;
 
 	switch (si_shader_ctx.type) {
@@ -2848,7 +2859,7 @@ int si_shader_create(struct si_screen *sscreen, struct si_shader *shader)
 					bld_base->uint_bld.elem_type, "");
 	}
 
-	if (!lp_build_tgsi_llvm(bld_base, sel->tokens)) {
+	if (!lp_build_tgsi_llvm(bld_base, tokens)) {
 		fprintf(stderr, "Failed to translate shader from TGSI to LLVM\n");
 		goto out;
 	}
@@ -2880,7 +2891,8 @@ int si_shader_create(struct si_screen *sscreen, struct si_shader *shader)
 out:
 	for (int i = 0; i < SI_NUM_CONST_BUFFERS; i++)
 		FREE(si_shader_ctx.constants[i]);
-
+	if (poly_stipple)
+		tgsi_free_tokens(tokens);
 	return r;
 }
 

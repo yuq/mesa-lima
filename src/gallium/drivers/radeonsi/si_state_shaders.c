@@ -376,6 +376,11 @@ static INLINE void si_shader_selector_key(struct pipe_context *ctx,
 						       sctx->queued.named.rasterizer->multisample_enable &&
 						       !sctx->framebuffer.cb0_is_integer;
 			}
+
+			key->ps.poly_stipple = sctx->queued.named.rasterizer->poly_stipple_enable &&
+					       ((sctx->current_rast_prim >= PIPE_PRIM_TRIANGLES &&
+						 sctx->current_rast_prim <= PIPE_PRIM_POLYGON) ||
+						sctx->current_rast_prim >= PIPE_PRIM_TRIANGLES_ADJACENCY);
 		}
 		if (sctx->queued.named.dsa) {
 			key->ps.alpha_func = sctx->queued.named.dsa->alpha_func;
