@@ -223,6 +223,7 @@ struct si_context {
 	int			last_prim;
 	int			last_multi_vgt_param;
 	int			last_rast_prim;
+	int			current_rast_prim; /* primitive type after TES, GS */
 
 	/* Scratch buffer */
 	boolean                 emit_scratch_reloc;

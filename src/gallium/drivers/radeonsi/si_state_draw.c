@@ -149,28 +149,26 @@ static unsigned si_get_ia_multi_vgt_param(struct si_context *sctx,
 		S_028AA8_WD_SWITCH_ON_EOP(sctx->b.chip_class >= CIK ? wd_switch_on_eop : 0);
 }
 
-static void si_emit_rasterizer_prim_state(struct si_context *sctx, unsigned mode)
+/* rast_prim is the primitive type after GS. */
+static void si_emit_rasterizer_prim_state(struct si_context *sctx, unsigned rast_prim)
 {
 	struct radeon_winsys_cs *cs = sctx->b.rings.gfx.cs;
 
-	if (sctx->gs_shader)
-		mode = sctx->gs_shader->gs_output_prim;
-
-	if (mode == sctx->last_rast_prim)
+	if (rast_prim == sctx->last_rast_prim)
 		return;
 
 	r600_write_context_reg(cs, R_028A0C_PA_SC_LINE_STIPPLE,
 		sctx->pa_sc_line_stipple |
-		S_028A0C_AUTO_RESET_CNTL(mode == PIPE_PRIM_LINES ? 1 :
-					 mode == PIPE_PRIM_LINE_STRIP ? 2 : 0));
+		S_028A0C_AUTO_RESET_CNTL(rast_prim == PIPE_PRIM_LINES ? 1 :
+					 rast_prim == PIPE_PRIM_LINE_STRIP ? 2 : 0));
 
 	r600_write_context_reg(cs, R_028814_PA_SU_SC_MODE_CNTL,
 		sctx->pa_su_sc_mode_cntl |
-		S_028814_PROVOKING_VTX_LAST(mode == PIPE_PRIM_QUADS ||
-					    mode == PIPE_PRIM_QUAD_STRIP ||
-					    mode == PIPE_PRIM_POLYGON));
+		S_028814_PROVOKING_VTX_LAST(rast_prim == PIPE_PRIM_QUADS ||
+					    rast_prim == PIPE_PRIM_QUAD_STRIP ||
+					    rast_prim == PIPE_PRIM_POLYGON));
 
-	sctx->last_rast_prim = mode;
+	sctx->last_rast_prim = rast_prim;
 }
 
 static void si_emit_draw_registers(struct si_context *sctx,
@@ -502,7 +500,7 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 {
 	struct si_context *sctx = (struct si_context *)ctx;
 	struct pipe_index_buffer ib = {};
-	uint32_t i;
+	unsigned i;
 
 	if (!info->count && !info->indirect &&
 	    (info->indexed || !info->count_from_stream_output))
@@ -510,6 +508,11 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 
 	if (!sctx->ps_shader || !sctx->vs_shader)
 		return;
+
+	if (sctx->gs_shader)
+		sctx->current_rast_prim = sctx->gs_shader->gs_output_prim;
+	else
+		sctx->current_rast_prim = info->mode;
 
 	si_decompress_textures(sctx);
 	si_update_shaders(sctx);
@@ -596,7 +599,7 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 	}
 
 	si_pm4_emit_dirty(sctx);
-	si_emit_rasterizer_prim_state(sctx, info->mode);
+	si_emit_rasterizer_prim_state(sctx, sctx->current_rast_prim);
 	si_emit_draw_registers(sctx, info, &ib);
 	si_emit_draw_packets(sctx, info, &ib);
 
