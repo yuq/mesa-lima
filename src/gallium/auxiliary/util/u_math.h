@@ -583,6 +583,13 @@ u_bit_scan(unsigned *mask)
    return i;
 }
 
+static INLINE int
+u_bit_scan64(uint64_t *mask)
+{
+   int i = ffsll(*mask) - 1;
+   *mask &= ~(1llu << i);
+   return i;
+}
 
 /**
  * Return float bits.
