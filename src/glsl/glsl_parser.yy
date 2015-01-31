@@ -214,6 +214,7 @@ static bool match_layout_qualifier(const char *s1, const char *s2,
 %type <type_qualifier> layout_qualifier
 %type <type_qualifier> layout_qualifier_id_list layout_qualifier_id
 %type <type_qualifier> interface_block_layout_qualifier
+%type <type_qualifier> memory_qualifier
 %type <type_qualifier> interface_qualifier
 %type <type_specifier> type_specifier
 %type <type_specifier> type_specifier_nonarray
@@ -1000,6 +1001,11 @@ parameter_qualifier:
       $$ = $2;
       $$.precision = $1;
    }
+   | memory_qualifier parameter_qualifier
+   {
+      $$ = $1;
+      $$.merge_qualifier(&@1, state, $2);
+   }
 
 parameter_direction_qualifier:
    IN_TOK
@@ -1581,6 +1587,7 @@ type_qualifier:
    | storage_qualifier
    | interpolation_qualifier
    | layout_qualifier
+   | memory_qualifier
    | precision_qualifier
    {
       memset(&$$, 0, sizeof($$));
@@ -1718,6 +1725,11 @@ type_qualifier:
       $$ = $2;
       $$.precision = $1;
    }
+   | memory_qualifier type_qualifier
+   {
+      $$ = $1;
+      $$.merge_qualifier(&@1, state, $2);
+   }
    ;
 
 auxiliary_storage_qualifier:
@@ -1778,7 +1790,10 @@ storage_qualifier:
       memset(& $$, 0, sizeof($$));
       $$.flags.q.uniform = 1;
    }
-   | COHERENT
+   ;
+
+memory_qualifier:
+   COHERENT
    {
       memset(& $$, 0, sizeof($$));
       $$.flags.q.coherent = 1;
