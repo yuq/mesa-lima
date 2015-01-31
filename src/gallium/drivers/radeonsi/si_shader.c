@@ -236,14 +236,14 @@ static LLVMValueRef get_instance_index_for_fetch(
 
 	LLVMValueRef result = LLVMGetParam(radeon_bld->main_fn,
 					   si_shader_ctx->param_instance_id);
-	result = LLVMBuildAdd(gallivm->builder, result, LLVMGetParam(
-			radeon_bld->main_fn, SI_PARAM_START_INSTANCE), "");
 
+	/* The division must be done before START_INSTANCE is added. */
 	if (divisor > 1)
 		result = LLVMBuildUDiv(gallivm->builder, result,
 				lp_build_const_int32(gallivm, divisor), "");
 
-	return result;
+	return LLVMBuildAdd(gallivm->builder, result, LLVMGetParam(
+			radeon_bld->main_fn, SI_PARAM_START_INSTANCE), "");
 }
 
 static void declare_input_vs(
