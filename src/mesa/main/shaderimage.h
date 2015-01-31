@@ -43,6 +43,12 @@ mesa_format
 _mesa_get_shader_image_format(GLenum format);
 
 /**
+ * Initialize a context's shader image units to the default state.
+ */
+void
+_mesa_init_image_units(struct gl_context *ctx);
+
+/**
  * Recalculate the \c _Valid flag of a context's shader image units.
  *
  * To be called when the state of any texture bound to an image unit

@@ -118,6 +118,7 @@
 #include "scissor.h"
 #include "shared.h"
 #include "shaderobj.h"
+#include "shaderimage.h"
 #include "util/simple_list.h"
 #include "state.h"
 #include "stencil.h"
@@ -821,6 +822,7 @@ init_attrib_groups(struct gl_context *ctx)
    _mesa_init_feedback( ctx );
    _mesa_init_fog( ctx );
    _mesa_init_hint( ctx );
+   _mesa_init_image_units( ctx );
    _mesa_init_line( ctx );
    _mesa_init_lighting( ctx );
    _mesa_init_matrix( ctx );
