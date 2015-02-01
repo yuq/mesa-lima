@@ -237,7 +237,7 @@ static void r600_emit_streamout_begin(struct r600_common_context *rctx, struct r
 			}
 		}
 
-		if (rctx->streamout.append_bitmask & (1 << i)) {
+		if (rctx->streamout.append_bitmask & (1 << i) && t[i]->buf_filled_size_valid) {
 			uint64_t va = t[i]->buf_filled_size->gpu_address +
 				      t[i]->buf_filled_size_offset;
 
@@ -302,6 +302,8 @@ void r600_emit_streamout_end(struct r600_common_context *rctx)
 		 * buffer bound. This ensures that the primitives-emitted query
 		 * won't increment. */
 		r600_write_context_reg(cs, R_028AD0_VGT_STRMOUT_BUFFER_SIZE_0 + 16*i, 0);
+
+		t[i]->buf_filled_size_valid = true;
 	}
 
 	rctx->streamout.begin_emitted = false;

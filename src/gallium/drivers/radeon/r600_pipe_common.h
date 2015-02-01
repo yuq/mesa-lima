@@ -294,6 +294,7 @@ struct r600_so_target {
 	/* The buffer where BUFFER_FILLED_SIZE is stored. */
 	struct r600_resource	*buf_filled_size;
 	unsigned		buf_filled_size_offset;
+	bool			buf_filled_size_valid;
 
 	unsigned		stride_in_dw;
 };
