@@ -2262,11 +2262,11 @@ static struct pipe_sampler_view *si_create_sampler_view(struct pipe_context *ctx
 		format = si_translate_buffer_dataformat(ctx->screen, desc, first_non_void);
 		num_format = si_translate_buffer_numformat(ctx->screen, desc, first_non_void);
 
-		view->state[0] = va;
-		view->state[1] = S_008F04_BASE_ADDRESS_HI(va >> 32) |
+		view->state[4] = va;
+		view->state[5] = S_008F04_BASE_ADDRESS_HI(va >> 32) |
 				 S_008F04_STRIDE(stride);
-		view->state[2] = state->u.buf.last_element + 1 - state->u.buf.first_element;
-		view->state[3] = S_008F0C_DST_SEL_X(si_map_swizzle(desc->swizzle[0])) |
+		view->state[6] = state->u.buf.last_element + 1 - state->u.buf.first_element;
+		view->state[7] = S_008F0C_DST_SEL_X(si_map_swizzle(desc->swizzle[0])) |
 				 S_008F0C_DST_SEL_Y(si_map_swizzle(desc->swizzle[1])) |
 				 S_008F0C_DST_SEL_Z(si_map_swizzle(desc->swizzle[2])) |
 				 S_008F0C_DST_SEL_W(si_map_swizzle(desc->swizzle[3])) |

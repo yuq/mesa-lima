@@ -1063,7 +1063,7 @@ static void si_invalidate_buffer(struct pipe_context *ctx, struct pipe_resource 
 	/* Texture buffers - update virtual addresses in sampler view descriptors. */
 	LIST_FOR_EACH_ENTRY(view, &sctx->b.texture_buffers, list) {
 		if (view->base.texture == buf) {
-			si_desc_reset_buffer_offset(ctx, view->state, old_va, buf);
+			si_desc_reset_buffer_offset(ctx, &view->state[4], old_va, buf);
 		}
 	}
 	/* Texture buffers - update bindings. */

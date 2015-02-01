@@ -1538,7 +1538,7 @@ static void tex_fetch_args(
 		/* Bitcast and truncate v8i32 to v16i8. */
 		LLVMValueRef res = si_shader_ctx->resources[sampler_index];
 		res = LLVMBuildBitCast(gallivm->builder, res, v2i128, "");
-		res = LLVMBuildExtractElement(gallivm->builder, res, bld_base->uint_bld.zero, "");
+		res = LLVMBuildExtractElement(gallivm->builder, res, bld_base->uint_bld.one, "");
 		res = LLVMBuildBitCast(gallivm->builder, res, v16i8, "");
 
 		emit_data->dst_type = LLVMVectorType(bld_base->base.elem_type, 4);
@@ -2016,7 +2016,7 @@ static void txq_fetch_args(
 		LLVMValueRef size = si_shader_ctx->resources[inst->Src[1].Register.Index];
 		size = LLVMBuildBitCast(gallivm->builder, size, v8i32, "");
 		size = LLVMBuildExtractElement(gallivm->builder, size,
-					      lp_build_const_int32(gallivm, 2), "");
+					      lp_build_const_int32(gallivm, 6), "");
 		emit_data->args[0] = size;
 		return;
 	}
