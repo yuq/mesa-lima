@@ -100,7 +100,7 @@ replace_with_mov(struct vc4_compile *c, struct qinst *inst, struct qreg arg)
 }
 
 static bool
-add_replace_zero(struct vc4_compile *c,
+replace_x_0_with_x(struct vc4_compile *c,
                  struct qinst **defs,
                  struct qinst *inst,
                  int arg)
@@ -112,7 +112,7 @@ add_replace_zero(struct vc4_compile *c,
 }
 
 static bool
-fmul_replace_zero(struct vc4_compile *c,
+replace_x_0_with_0(struct vc4_compile *c,
                   struct qinst **defs,
                   struct qinst *inst,
                   int arg)
@@ -217,16 +217,16 @@ qir_opt_algebraic(struct vc4_compile *c)
                         break;
 
                 case QOP_ADD:
-                        if (add_replace_zero(c, defs, inst, 0) ||
-                            add_replace_zero(c, defs, inst, 1)) {
+                        if (replace_x_0_with_x(c, defs, inst, 0) ||
+                            replace_x_0_with_x(c, defs, inst, 1)) {
                                 progress = true;
                                 break;
                         }
                         break;
 
                 case QOP_FADD:
-                        if (add_replace_zero(c, defs, inst, 0) ||
-                            add_replace_zero(c, defs, inst, 1)) {
+                        if (replace_x_0_with_x(c, defs, inst, 0) ||
+                            replace_x_0_with_x(c, defs, inst, 1)) {
                                 progress = true;
                                 break;
                         }
@@ -262,10 +262,37 @@ qir_opt_algebraic(struct vc4_compile *c)
                         break;
 
                 case QOP_FMUL:
-                        if (fmul_replace_zero(c, defs, inst, 0) ||
-                            fmul_replace_zero(c, defs, inst, 1) ||
+                        if (replace_x_0_with_0(c, defs, inst, 0) ||
+                            replace_x_0_with_0(c, defs, inst, 1) ||
                             fmul_replace_one(c, defs, inst, 0) ||
                             fmul_replace_one(c, defs, inst, 1)) {
+                                progress = true;
+                                break;
+                        }
+                        break;
+
+                case QOP_AND:
+                        if (replace_x_0_with_0(c, defs, inst, 0) ||
+                            replace_x_0_with_0(c, defs, inst, 1)) {
+                                progress = true;
+                                break;
+                        }
+
+                        if (is_constant_value(c, defs, inst->src[0], ~0)) {
+                                replace_with_mov(c, inst, inst->src[1]);
+                                progress = true;
+                                break;
+                        }
+                        if (is_constant_value(c, defs, inst->src[1], ~0)) {
+                                replace_with_mov(c, inst, inst->src[0]);
+                                progress = true;
+                                break;
+                        }
+                        break;
+
+                case QOP_OR:
+                        if (replace_x_0_with_x(c, defs, inst, 0) ||
+                            replace_x_0_with_x(c, defs, inst, 1)) {
                                 progress = true;
                                 break;
                         }
