@@ -105,11 +105,18 @@ static uint32_t reg(struct ir3_register *reg, struct ir3_info *info,
 	if (reg->flags & IR3_REG_IMMED) {
 		val.iim_val = reg->iim_val;
 	} else {
-		int8_t components = util_last_bit(reg->wrmask);
-		int16_t max = (reg->num + repeat + components - 1) >> 2;
+		unsigned components;
 
-		val.comp = reg->num & 0x3;
-		val.num  = reg->num >> 2;
+		if (reg->flags & IR3_REG_RELATIV) {
+			components = reg->size;
+			val.dummy10 = reg->offset;
+		} else {
+			components = util_last_bit(reg->wrmask);
+			val.comp = reg->num & 0x3;
+			val.num  = reg->num >> 2;
+		}
+
+		int16_t max = (reg->num + repeat + components - 1) >> 2;
 
 		if (reg->flags & IR3_REG_CONST) {
 			info->max_const = MAX2(info->max_const, max);
@@ -166,13 +173,13 @@ static int emit_cat1(struct ir3_instruction *instr, void *ptr,
 		cat1->iim_val = src->iim_val;
 		cat1->src_im  = 1;
 	} else if (src->flags & IR3_REG_RELATIV) {
-		cat1->off       = src->offset;
+		cat1->off       = reg(src, info, instr->repeat,
+				IR3_REG_R | IR3_REG_CONST | IR3_REG_HALF | IR3_REG_RELATIV);
 		cat1->src_rel   = 1;
 		cat1->src_rel_c = !!(src->flags & IR3_REG_CONST);
 	} else {
 		cat1->src  = reg(src, info, instr->repeat,
-				IR3_REG_IMMED | IR3_REG_R |
-				IR3_REG_CONST | IR3_REG_HALF);
+				IR3_REG_R | IR3_REG_CONST | IR3_REG_HALF);
 		cat1->src_c     = !!(src->flags & IR3_REG_CONST);
 	}
 
