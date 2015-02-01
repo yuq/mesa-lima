@@ -33,7 +33,9 @@
 #include "util/u_memory.h"
 #include "util/u_simple_shaders.h"
 #include "util/u_surface.h"
+#include "util/u_string.h"
 #include "util/u_tile.h"
+#include "tgsi/tgsi_strings.h"
 #include "tgsi/tgsi_text.h"
 #include "cso_cache/cso_context.h"
 #include <stdio.h>
@@ -258,14 +260,21 @@ enum {
 };
 
 static void
-util_report_result_helper(const char *name, int status)
+util_report_result_helper(int status, const char *name, ...)
 {
-   printf("Test(%s) = %s\n", name,
+   char buf[256];
+   va_list ap;
+
+   va_start(ap, name);
+   util_vsnprintf(buf, sizeof(buf), name, ap);
+   va_end(ap);
+
+   printf("Test(%s) = %s\n", buf,
           status == SKIP ? "skip" :
           status == PASS ? "pass" : "fail");
 }
 
-#define util_report_result(status) util_report_result_helper(__func__, status)
+#define util_report_result(status) util_report_result_helper(status, __func__)
 
 /**
  * Test TGSI_PROPERTY_VS_WINDOW_SPACE_POSITION.
@@ -334,15 +343,26 @@ tgsi_vs_window_space_position(struct pipe_context *ctx)
 }
 
 static void
-null_sampler_view(struct pipe_context *ctx)
+null_sampler_view(struct pipe_context *ctx, unsigned tgsi_tex_target)
 {
    struct cso_context *cso;
    struct pipe_resource *cb;
    void *fs, *vs;
    bool pass = true;
    /* 2 expected colors: */
-   static const float expected[] = {0, 0, 0, 1,
-                                    0, 0, 0, 0};
+   static const float expected_tex[] = {0, 0, 0, 1,
+                                        0, 0, 0, 0};
+   static const float expected_buf[] = {0, 0, 0, 0};
+   const float *expected = tgsi_tex_target == TGSI_TEXTURE_BUFFER ?
+                              expected_buf : expected_tex;
+   unsigned num_expected = tgsi_tex_target == TGSI_TEXTURE_BUFFER ? 1 : 2;
+
+   if (tgsi_tex_target == TGSI_TEXTURE_BUFFER &&
+       !ctx->screen->get_param(ctx->screen, PIPE_CAP_TEXTURE_BUFFER_OBJECTS)) {
+      util_report_result_helper(SKIP, "%s: %s", __func__,
+                                tgsi_texture_names[tgsi_tex_target]);
+      return;
+   }
 
    cso = cso_create_context(ctx);
    cb = util_create_texture2d(ctx->screen, 256, 256,
@@ -352,7 +372,7 @@ null_sampler_view(struct pipe_context *ctx)
    ctx->set_sampler_views(ctx, PIPE_SHADER_FRAGMENT, 0, 1, NULL);
 
    /* Fragment shader. */
-   fs = util_make_fragment_tex_shader(ctx, TGSI_TEXTURE_2D,
+   fs = util_make_fragment_tex_shader(ctx, tgsi_tex_target,
                                       TGSI_INTERPOLATE_LINEAR);
    cso_set_fragment_shader_handle(cso, fs);
 
@@ -362,7 +382,8 @@ null_sampler_view(struct pipe_context *ctx)
 
    /* Probe pixels. */
    pass = pass && util_probe_rect_rgba_multi(ctx, cb, 0, 0,
-                                  cb->width0, cb->height0, expected, 2);
+                                  cb->width0, cb->height0, expected,
+                                  num_expected);
 
    /* Cleanup. */
    cso_destroy_context(cso);
@@ -370,7 +391,8 @@ null_sampler_view(struct pipe_context *ctx)
    ctx->delete_fs_state(ctx, fs);
    pipe_resource_reference(&cb, NULL);
 
-   util_report_result(pass);
+   util_report_result_helper(pass, "%s: %s", __func__,
+                             tgsi_texture_names[tgsi_tex_target]);
 }
 
 static void
@@ -437,7 +459,8 @@ util_run_tests(struct pipe_screen *screen)
    struct pipe_context *ctx = screen->context_create(screen, NULL);
 
    tgsi_vs_window_space_position(ctx);
-   null_sampler_view(ctx);
+   null_sampler_view(ctx, TGSI_TEXTURE_2D);
+   null_sampler_view(ctx, TGSI_TEXTURE_BUFFER);
    null_constant_buffer(ctx);
 
    ctx->destroy(ctx);
