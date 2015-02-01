@@ -261,7 +261,14 @@ tgsi_vs_window_space_position(struct pipe_context *ctx)
  * context_create.
  */
 void
-util_run_tests(struct pipe_context *ctx)
+util_run_tests(struct pipe_screen *screen)
 {
+   struct pipe_context *ctx = screen->context_create(screen, NULL);
+
    tgsi_vs_window_space_position(ctx);
+
+   ctx->destroy(ctx);
+
+   puts("Done. Exiting..");
+   exit(0);
 }
