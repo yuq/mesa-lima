@@ -30,9 +30,11 @@
 #include "util/u_draw_quad.h"
 #include "util/u_format.h"
 #include "util/u_inlines.h"
+#include "util/u_memory.h"
 #include "util/u_simple_shaders.h"
 #include "util/u_surface.h"
 #include "util/u_tile.h"
+#include "tgsi/tgsi_text.h"
 #include "cso_cache/cso_context.h"
 #include <stdio.h>
 
@@ -371,6 +373,60 @@ null_sampler_view(struct pipe_context *ctx)
    util_report_result(pass);
 }
 
+static void
+null_constant_buffer(struct pipe_context *ctx)
+{
+   struct cso_context *cso;
+   struct pipe_resource *cb;
+   void *fs, *vs;
+   bool pass = true;
+   static const float zero[] = {0, 0, 0, 0};
+
+   cso = cso_create_context(ctx);
+   cb = util_create_texture2d(ctx->screen, 256, 256,
+                              PIPE_FORMAT_R8G8B8A8_UNORM);
+   util_set_common_states_and_clear(cso, ctx, cb);
+
+   ctx->set_constant_buffer(ctx, PIPE_SHADER_FRAGMENT, 0, NULL);
+
+   /* Fragment shader. */
+   {
+      static const char *text = /* I don't like ureg... */
+            "FRAG\n"
+            "DCL CONST[0]\n"
+            "DCL OUT[0], COLOR\n"
+
+            "MOV OUT[0], CONST[0]\n"
+            "END\n";
+      struct tgsi_token tokens[1000];
+      struct pipe_shader_state state = {tokens};
+
+      if (!tgsi_text_translate(text, tokens, Elements(tokens))) {
+         puts("Can't compile a fragment shader.");
+         util_report_result(FAIL);
+         return;
+      }
+      fs = ctx->create_fs_state(ctx, &state);
+      cso_set_fragment_shader_handle(cso, fs);
+   }
+
+   /* Vertex shader. */
+   vs = util_set_passthrough_vertex_shader(cso, ctx, false);
+   util_draw_fullscreen_quad(cso);
+
+   /* Probe pixels. */
+   pass = pass && util_probe_rect_rgba(ctx, cb, 0, 0, cb->width0,
+                                       cb->height0, zero);
+
+   /* Cleanup. */
+   cso_destroy_context(cso);
+   ctx->delete_vs_state(ctx, vs);
+   ctx->delete_fs_state(ctx, fs);
+   pipe_resource_reference(&cb, NULL);
+
+   util_report_result(pass);
+}
+
 /**
  * Run all tests. This should be run with a clean context after
  * context_create.
@@ -382,6 +438,7 @@ util_run_tests(struct pipe_screen *screen)
 
    tgsi_vs_window_space_position(ctx);
    null_sampler_view(ctx);
+   null_constant_buffer(ctx);
 
    ctx->destroy(ctx);
 
