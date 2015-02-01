@@ -374,6 +374,9 @@ static void si_sampler_views_begin_new_cs(struct si_context *sctx,
 		struct si_sampler_view *rview =
 			(struct si_sampler_view*)views->views[i];
 
+		if (!rview->resource)
+			continue;
+
 		r600_context_bo_reloc(&sctx->b, &sctx->b.rings.gfx,
 				      rview->resource, RADEON_USAGE_READ,
 				      si_get_resource_ro_priority(rview->resource));
@@ -398,9 +401,11 @@ static void si_set_sampler_view(struct si_context *sctx, unsigned shader,
 		struct si_sampler_view *rview =
 			(struct si_sampler_view*)view;
 
-		r600_context_bo_reloc(&sctx->b, &sctx->b.rings.gfx,
-				      rview->resource, RADEON_USAGE_READ,
-				      si_get_resource_ro_priority(rview->resource));
+		if (rview->resource)
+			r600_context_bo_reloc(&sctx->b, &sctx->b.rings.gfx,
+				rview->resource, RADEON_USAGE_READ,
+				si_get_resource_ro_priority(rview->resource));
+
 
 		pipe_sampler_view_reference(&views->views[slot], view);
 		views->desc_data[slot] = view_desc;
@@ -441,7 +446,7 @@ static void si_set_sampler_views(struct pipe_context *ctx,
 
 		si_set_sampler_view(sctx, shader, slot, views[i], rviews[i]->state);
 
-		if (views[i]->texture->target != PIPE_BUFFER) {
+		if (views[i]->texture && views[i]->texture->target != PIPE_BUFFER) {
 			struct r600_texture *rtex =
 				(struct r600_texture*)views[i]->texture;
 

@@ -2246,9 +2246,20 @@ static struct pipe_sampler_view *si_create_sampler_view(struct pipe_context *ctx
 	/* initialize base object */
 	view->base = *state;
 	view->base.texture = NULL;
-	pipe_resource_reference(&view->base.texture, texture);
 	view->base.reference.count = 1;
 	view->base.context = ctx;
+
+	/* NULL resource, obey swizzle (only ZERO and ONE make sense). */
+	if (!texture) {
+		view->state[3] = S_008F1C_DST_SEL_X(si_map_swizzle(state->swizzle_r)) |
+				 S_008F1C_DST_SEL_Y(si_map_swizzle(state->swizzle_g)) |
+				 S_008F1C_DST_SEL_Z(si_map_swizzle(state->swizzle_b)) |
+				 S_008F1C_DST_SEL_W(si_map_swizzle(state->swizzle_a)) |
+				 S_008F1C_TYPE(V_008F1C_SQ_RSRC_IMG_1D);
+		return &view->base;
+	}
+
+	pipe_resource_reference(&view->base.texture, texture);
 	view->resource = &tmp->resource;
 
 	/* Buffer resource. */
@@ -2484,7 +2495,7 @@ static void si_sampler_view_destroy(struct pipe_context *ctx,
 {
 	struct si_sampler_view *view = (struct si_sampler_view *)state;
 
-	if (view->resource->b.b.target == PIPE_BUFFER)
+	if (view->resource && view->resource->b.b.target == PIPE_BUFFER)
 		LIST_DELINIT(&view->list);
 
 	pipe_resource_reference(&state->texture, NULL);
