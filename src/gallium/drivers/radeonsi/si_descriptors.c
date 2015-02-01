@@ -44,7 +44,25 @@
 
 #define SI_NUM_CONTEXTS 16
 
-static uint32_t null_desc[8]; /* zeros */
+/* NULL image and buffer descriptor.
+ *
+ * For images, all fields must be zero except for the swizzle, which
+ * supports arbitrary combinations of 0s and 1s. The texture type must be
+ * any valid type (e.g. 1D). If the texture type isn't set, the hw hangs.
+ *
+ * For buffers, all fields must be zero. If they are not, the hw hangs.
+ *
+ * This is the only reason why the buffer descriptor must be in words [4:7].
+ */
+static uint32_t null_descriptor[8] = {
+	0,
+	0,
+	0,
+	S_008F1C_DST_SEL_W(V_008F1C_SQ_SEL_1) |
+	S_008F1C_TYPE(V_008F1C_SQ_RSRC_IMG_1D)
+	/* the rest must contain zeros, which is also used by the buffer
+	 * descriptor */
+};
 
 /* Set this if you want the 3D engine to wait until CP DMA is done.
  * It should be set on the last CP DMA packet. */
@@ -310,10 +328,18 @@ static void si_init_sampler_views(struct si_context *sctx,
 				  struct si_sampler_views *views,
 				  unsigned shader)
 {
+	int i;
+
 	si_init_descriptors(sctx, &views->desc,
 			    si_get_shader_user_data_base(shader) +
 			    SI_SGPR_RESOURCE * 4,
 			    8, SI_NUM_SAMPLER_VIEWS, si_emit_sampler_views);
+
+	for (i = 0; i < views->desc.num_elements; i++) {
+		views->desc_data[i] = null_descriptor;
+		views->desc.dirty_mask |= 1llu << i;
+	}
+	si_update_descriptors(sctx, &views->desc);
 }
 
 static void si_release_sampler_views(struct si_sampler_views *views)
@@ -381,7 +407,7 @@ static void si_set_sampler_view(struct si_context *sctx, unsigned shader,
 		views->desc.enabled_mask |= 1 << slot;
 	} else {
 		pipe_sampler_view_reference(&views->views[slot], NULL);
-		views->desc_data[slot] = null_desc;
+		views->desc_data[slot] = null_descriptor;
 		views->desc.enabled_mask &= ~(1 << slot);
 	}
 
