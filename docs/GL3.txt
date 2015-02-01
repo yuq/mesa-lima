@@ -197,7 +197,7 @@ GL 4.5, GLSL 4.50:
   - Framebuffer object                                 started (Laura Ekstrand)
   - Renderbuffer object                                not started
   - Texture object                                     started (Laura Ekstrand)
-  - Vertex array object                                not started
+  - Vertex array object                                started (Fredrik Höglund)
   - Sampler object                                     not started
   - Program Pipeline object                            not started
   - Query object                                       started (Martin Peres)
