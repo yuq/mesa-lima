@@ -138,6 +138,52 @@ util_set_interleaved_vertex_elements(struct cso_context *cso,
    free(velem);
 }
 
+static void *
+util_set_passthrough_vertex_shader(struct cso_context *cso,
+                                   struct pipe_context *ctx,
+                                   bool window_space)
+{
+   static const uint vs_attribs[] = {
+      TGSI_SEMANTIC_POSITION,
+      TGSI_SEMANTIC_GENERIC
+   };
+   static const uint vs_indices[] = {0, 0};
+   void *vs;
+
+   vs = util_make_vertex_passthrough_shader(ctx, 2, vs_attribs, vs_indices,
+                                            window_space);
+   cso_set_vertex_shader_handle(cso, vs);
+   return vs;
+}
+
+static void
+util_set_common_states_and_clear(struct cso_context *cso, struct pipe_context *ctx,
+                                 struct pipe_resource *cb)
+{
+   static const float clear_color[] = {0.1, 0.1, 0.1, 0.1};
+
+   util_set_framebuffer_cb0(cso, ctx, cb);
+   util_set_blend_normal(cso);
+   util_set_dsa_disable(cso);
+   util_set_rasterizer_normal(cso);
+   util_set_max_viewport(cso, cb);
+
+   ctx->clear(ctx, PIPE_CLEAR_COLOR0, (void*)clear_color, 0, 0);
+}
+
+static void
+util_draw_fullscreen_quad(struct cso_context *cso)
+{
+   static float vertices[] = {
+     -1, -1, 0, 1,   0, 0, 0, 0,
+     -1,  1, 0, 1,   0, 1, 0, 0,
+      1,  1, 0, 1,   1, 1, 0, 0,
+      1, -1, 0, 1,   1, 0, 0, 0
+   };
+   util_set_interleaved_vertex_elements(cso, 2);
+   util_draw_user_vertex_buffer(cso, vertices, PIPE_PRIM_QUADS, 4, 2);
+}
+
 static bool
 util_probe_rect_rgba(struct pipe_context *ctx, struct pipe_resource *tex,
                      unsigned offx, unsigned offy, unsigned w, unsigned h,
@@ -176,6 +222,22 @@ done:
    return pass;
 }
 
+enum {
+   SKIP = -1,
+   FAIL = 0, /* also "false" */
+   PASS = 1 /* also "true" */
+};
+
+static void
+util_report_result_helper(const char *name, int status)
+{
+   printf("Test(%s) = %s\n", name,
+          status == SKIP ? "skip" :
+          status == PASS ? "pass" : "fail");
+}
+
+#define util_report_result(status) util_report_result_helper(__func__, status)
+
 /**
  * Test TGSI_PROPERTY_VS_WINDOW_SPACE_POSITION.
  *
@@ -196,38 +258,18 @@ tgsi_vs_window_space_position(struct pipe_context *ctx)
    struct pipe_resource *cb;
    void *fs, *vs;
    bool pass = true;
-
-   static uint vs_attribs[] = {
-      TGSI_SEMANTIC_POSITION,
-      TGSI_SEMANTIC_GENERIC
-   };
-   static uint vs_indices[] = {0, 0};
-   static float vertices[] = {
-       0,   0, 0, 0,   1,  0, 0, 1,
-       0, 256, 0, 0,   1,  0, 0, 1,
-     256, 256, 0, 0,   1,  0, 0, 1,
-     256,   0, 0, 0,   1,  0, 0, 1,
-   };
-   static float red[] = {1, 0, 0, 1};
-   static float clear_color[] = {0.1, 0.1, 0.1, 0.1};
+   static const float red[] = {1, 0, 0, 1};
 
    if (!ctx->screen->get_param(ctx->screen,
                                PIPE_CAP_TGSI_VS_WINDOW_SPACE_POSITION)) {
-      printf("Test(%s) = skip\n", __func__);
+      util_report_result(SKIP);
       return;
    }
 
    cso = cso_create_context(ctx);
    cb = util_create_texture2d(ctx->screen, 256, 256,
                               PIPE_FORMAT_R8G8B8A8_UNORM);
-
-   /* Set states. */
-   util_set_framebuffer_cb0(cso, ctx, cb);
-   util_set_blend_normal(cso);
-   util_set_dsa_disable(cso);
-   util_set_rasterizer_normal(cso);
-   util_set_max_viewport(cso, cb);
-   util_set_interleaved_vertex_elements(cso, 2);
+   util_set_common_states_and_clear(cso, ctx, cb);
 
    /* Fragment shader. */
    fs = util_make_fragment_passthrough_shader(ctx, TGSI_SEMANTIC_GENERIC,
@@ -235,13 +277,19 @@ tgsi_vs_window_space_position(struct pipe_context *ctx)
    cso_set_fragment_shader_handle(cso, fs);
 
    /* Vertex shader. */
-   vs = util_make_vertex_passthrough_shader(ctx, 2, vs_attribs, vs_indices,
-                                            TRUE);
-   cso_set_vertex_shader_handle(cso, vs);
+   vs = util_set_passthrough_vertex_shader(cso, ctx, true);
 
-   /* Clear and draw. */
-   ctx->clear(ctx, PIPE_CLEAR_COLOR0, (void*)clear_color, 0, 0);
-   util_draw_user_vertex_buffer(cso, vertices, PIPE_PRIM_QUADS, 4, 2);
+   /* Draw. */
+   {
+      static float vertices[] = {
+          0,   0, 0, 0,   1,  0, 0, 1,
+          0, 256, 0, 0,   1,  0, 0, 1,
+        256, 256, 0, 0,   1,  0, 0, 1,
+        256,   0, 0, 0,   1,  0, 0, 1,
+      };
+      util_set_interleaved_vertex_elements(cso, 2);
+      util_draw_user_vertex_buffer(cso, vertices, PIPE_PRIM_QUADS, 4, 2);
+   }
 
    /* Probe pixels. */
    pass = pass && util_probe_rect_rgba(ctx, cb, 0, 0,
@@ -253,7 +301,7 @@ tgsi_vs_window_space_position(struct pipe_context *ctx)
    ctx->delete_fs_state(ctx, fs);
    pipe_resource_reference(&cb, NULL);
 
-   printf("Test(%s) = %s\n", __func__, pass ? "pass" : "fail");
+   util_report_result(pass);
 }
 
 /**
