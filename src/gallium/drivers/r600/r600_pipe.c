@@ -267,6 +267,7 @@ static int r600_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 	case PIPE_CAP_TGSI_VS_LAYER_VIEWPORT:
 	case PIPE_CAP_SAMPLE_SHADING:
 	case PIPE_CAP_CLIP_HALFZ:
+	case PIPE_CAP_POLYGON_OFFSET_CLAMP:
 		return 1;
 
 	case PIPE_CAP_COMPUTE:

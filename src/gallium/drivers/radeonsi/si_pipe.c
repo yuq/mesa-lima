@@ -226,6 +226,7 @@ static int si_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 	case PIPE_CAP_DRAW_INDIRECT:
 	case PIPE_CAP_CLIP_HALFZ:
 	case PIPE_CAP_TGSI_VS_WINDOW_SPACE_POSITION:
+	case PIPE_CAP_POLYGON_OFFSET_CLAMP:
 		return 1;
 
 	case PIPE_CAP_TEXTURE_MULTISAMPLE:

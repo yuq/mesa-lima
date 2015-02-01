@@ -241,6 +241,8 @@ The integer capabilities:
   semantics. Only relevant if geometry shaders are supported.
   (Currently not possible to query availability of these two semantics outside
   this, at least BASEVERTEX should be exposed separately too).
+* ``PIPE_CAP_POLYGON_OFFSET_CLAMP``: If true, the driver implements support
+  for ``pipe_rasterizer_state::offset_clamp``.
 
 
 .. _pipe_capf:
