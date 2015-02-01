@@ -1744,6 +1744,7 @@ fs_visitor::nir_emit_texture(nir_tex_instr *instr)
    int lod_components = 0, offset_components = 0;
 
    fs_reg coordinate, shadow_comparitor, lod, lod2, sample_index, mcs, tex_offset;
+   fs_reg projector;
 
    for (unsigned i = 0; i < instr->num_srcs; i++) {
       fs_reg src = get_nir_src(instr->src[i].src);
@@ -1796,7 +1797,8 @@ fs_visitor::nir_emit_texture(nir_tex_instr *instr)
             offset_components = instr->coord_components;
          break;
       case nir_tex_src_projector:
-         unreachable("should be lowered");
+         projector = retype(src, BRW_REGISTER_TYPE_F);
+         break;
 
       case nir_tex_src_sampler_offset: {
          /* Figure out the highest possible sampler index and mark it as used */
@@ -1818,6 +1820,13 @@ fs_visitor::nir_emit_texture(nir_tex_instr *instr)
       default:
          unreachable("unknown texture source");
       }
+   }
+
+   if (projector.file != BAD_FILE) {
+      fs_reg invproj = vgrf(glsl_type::float_type);
+      emit_math(SHADER_OPCODE_RCP, invproj, projector);
+      for (int i = 0; i < 3; i++)
+         emit(MUL(offset(coordinate, i), offset(coordinate, i), invproj));
    }
 
    if (instr->op == nir_texop_txf_ms) {
