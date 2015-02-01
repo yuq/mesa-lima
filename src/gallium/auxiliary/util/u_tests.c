@@ -184,15 +184,24 @@ util_draw_fullscreen_quad(struct cso_context *cso)
    util_draw_user_vertex_buffer(cso, vertices, PIPE_PRIM_QUADS, 4, 2);
 }
 
+/**
+ * Probe and test if the rectangle contains the expected color.
+ *
+ * If "num_expected_colors" > 1, at least one expected color must match
+ * the probed color. "expected" should be an array of 4*num_expected_colors
+ * floats.
+ */
 static bool
-util_probe_rect_rgba(struct pipe_context *ctx, struct pipe_resource *tex,
-                     unsigned offx, unsigned offy, unsigned w, unsigned h,
-                     const float *expected)
+util_probe_rect_rgba_multi(struct pipe_context *ctx, struct pipe_resource *tex,
+                           unsigned offx, unsigned offy, unsigned w,
+                           unsigned h,
+                           const float *expected,
+                           unsigned num_expected_colors)
 {
    struct pipe_transfer *transfer;
    void *map;
    float *pixels = malloc(w * h * 4 * sizeof(float));
-   int x,y,c;
+   int x,y,e,c;
    bool pass = true;
 
    map = pipe_transfer_map(ctx, tex, 0, 0, PIPE_TRANSFER_READ,
@@ -200,26 +209,44 @@ util_probe_rect_rgba(struct pipe_context *ctx, struct pipe_resource *tex,
    pipe_get_tile_rgba(transfer, map, 0, 0, w, h, pixels);
    pipe_transfer_unmap(ctx, transfer);
 
-   for (y = 0; y < h; y++) {
-      for (x = 0; x < w; x++) {
-         float *probe = &pixels[(y*w + x)*4];
+   for (e = 0; e < num_expected_colors; e++) {
+      for (y = 0; y < h; y++) {
+         for (x = 0; x < w; x++) {
+            float *probe = &pixels[(y*w + x)*4];
 
-         for (c = 0; c < 4; c++)
-            if (fabs(probe[c] - expected[c]) >= TOLERANCE) {
-               printf("Probe color at (%i,%i),  ", offx+x, offy+y);
-               printf("Expected: %.3f, %.3f, %.3f, %.3f,  ",
-                      expected[0], expected[1], expected[2], expected[3]);
-               printf("Got: %.3f, %.3f, %.3f, %.3f\n",
-                      probe[0], probe[1], probe[2], probe[2]);
-               pass = false;
-               goto done;
+            for (c = 0; c < 4; c++) {
+               if (fabs(probe[c] - expected[e*4+c]) >= TOLERANCE) {
+                  if (e < num_expected_colors-1)
+                     goto next_color; /* test the next expected color */
+
+                  printf("Probe color at (%i,%i),  ", offx+x, offy+y);
+                  printf("Expected: %.3f, %.3f, %.3f, %.3f,  ",
+                         expected[e*4], expected[e*4+1],
+                         expected[e*4+2], expected[e*4+3]);
+                  printf("Got: %.3f, %.3f, %.3f, %.3f\n",
+                         probe[0], probe[1], probe[2], probe[2]);
+                  pass = false;
+                  goto done;
+               }
             }
+         }
       }
+      break; /* this color was successful */
+
+   next_color:;
    }
 done:
 
    free(pixels);
    return pass;
+}
+
+static bool
+util_probe_rect_rgba(struct pipe_context *ctx, struct pipe_resource *tex,
+                     unsigned offx, unsigned offy, unsigned w, unsigned h,
+                     const float *expected)
+{
+   return util_probe_rect_rgba_multi(ctx, tex, offx, offy, w, h, expected, 1);
 }
 
 enum {
@@ -304,6 +331,46 @@ tgsi_vs_window_space_position(struct pipe_context *ctx)
    util_report_result(pass);
 }
 
+static void
+null_sampler_view(struct pipe_context *ctx)
+{
+   struct cso_context *cso;
+   struct pipe_resource *cb;
+   void *fs, *vs;
+   bool pass = true;
+   /* 2 expected colors: */
+   static const float expected[] = {0, 0, 0, 1,
+                                    0, 0, 0, 0};
+
+   cso = cso_create_context(ctx);
+   cb = util_create_texture2d(ctx->screen, 256, 256,
+                              PIPE_FORMAT_R8G8B8A8_UNORM);
+   util_set_common_states_and_clear(cso, ctx, cb);
+
+   ctx->set_sampler_views(ctx, PIPE_SHADER_FRAGMENT, 0, 1, NULL);
+
+   /* Fragment shader. */
+   fs = util_make_fragment_tex_shader(ctx, TGSI_TEXTURE_2D,
+                                      TGSI_INTERPOLATE_LINEAR);
+   cso_set_fragment_shader_handle(cso, fs);
+
+   /* Vertex shader. */
+   vs = util_set_passthrough_vertex_shader(cso, ctx, false);
+   util_draw_fullscreen_quad(cso);
+
+   /* Probe pixels. */
+   pass = pass && util_probe_rect_rgba_multi(ctx, cb, 0, 0,
+                                  cb->width0, cb->height0, expected, 2);
+
+   /* Cleanup. */
+   cso_destroy_context(cso);
+   ctx->delete_vs_state(ctx, vs);
+   ctx->delete_fs_state(ctx, fs);
+   pipe_resource_reference(&cb, NULL);
+
+   util_report_result(pass);
+}
+
 /**
  * Run all tests. This should be run with a clean context after
  * context_create.
@@ -314,6 +381,7 @@ util_run_tests(struct pipe_screen *screen)
    struct pipe_context *ctx = screen->context_create(screen, NULL);
 
    tgsi_vs_window_space_position(ctx);
+   null_sampler_view(ctx);
 
    ctx->destroy(ctx);
 
