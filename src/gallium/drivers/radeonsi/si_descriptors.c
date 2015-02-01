@@ -404,7 +404,7 @@ static void si_set_sampler_views(struct pipe_context *ctx,
 	for (i = 0; i < count; i++) {
 		unsigned slot = start + i;
 
-		if (!views[i]) {
+		if (!views || !views[i]) {
 			samplers->depth_texture_mask &= ~(1 << slot);
 			samplers->compressed_colortex_mask &= ~(1 << slot);
 			si_set_sampler_view(sctx, shader, slot, NULL, NULL);
