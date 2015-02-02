@@ -190,6 +190,18 @@ gen8_emit_depth_stencil_hiz(struct brw_context *brw,
    case GL_TEXTURE_3D:
       assert(mt);
       depth = MAX2(mt->logical_depth0, 1);
+      surftype = translate_tex_target(gl_target);
+      break;
+   case GL_TEXTURE_1D_ARRAY:
+   case GL_TEXTURE_1D:
+      if (brw->gen >= 9) {
+         /* WaDisable1DDepthStencil. Skylake+ doesn't support 1D depth
+          * textures but it does allow pretending it's a 2D texture
+          * instead.
+          */
+         surftype = BRW_SURFACE_2D;
+         break;
+      }
       /* fallthrough */
    default:
       surftype = translate_tex_target(gl_target);
