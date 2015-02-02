@@ -170,14 +170,10 @@ static unsigned delay_calc_srcn(struct ir3_sched_ctx *ctx,
 	unsigned delay = 0;
 
 	if (is_meta(assigner)) {
-		unsigned i;
-		for (i = 1; i < assigner->regs_count; i++) {
-			struct ir3_register *reg = assigner->regs[i];
-			if (reg->flags & IR3_REG_SSA) {
-				unsigned d = delay_calc_srcn(ctx, reg->instr,
-						consumer, srcn);
-				delay = MAX2(delay, d);
-			}
+		struct ir3_instruction *src;
+		foreach_ssa_src(src, assigner) {
+			unsigned d = delay_calc_srcn(ctx, src, consumer, srcn);
+			delay = MAX2(delay, d);
 		}
 	} else {
 		delay = ir3_delayslots(assigner, consumer, srcn);
@@ -191,15 +187,12 @@ static unsigned delay_calc_srcn(struct ir3_sched_ctx *ctx,
 static unsigned delay_calc(struct ir3_sched_ctx *ctx,
 		struct ir3_instruction *instr)
 {
-	unsigned i, delay = 0;
+	unsigned delay = 0;
+	struct ir3_instruction *src;
 
-	for (i = 1; i < instr->regs_count; i++) {
-		struct ir3_register *reg = instr->regs[i];
-		if (reg->flags & IR3_REG_SSA) {
-			unsigned d = delay_calc_srcn(ctx, reg->instr,
-					instr, i - 1);
-			delay = MAX2(delay, d);
-		}
+	foreach_ssa_src_n(src, i, instr) {
+		unsigned d = delay_calc_srcn(ctx, src, instr, i);
+		delay = MAX2(delay, d);
 	}
 
 	return delay;
@@ -213,19 +206,16 @@ static int trysched(struct ir3_sched_ctx *ctx,
 {
 	struct ir3_instruction *srcs[64];
 	struct ir3_instruction *src;
-	unsigned i, delay, nsrcs = 0;
+	unsigned delay, nsrcs = 0;
 
 	/* if already scheduled: */
 	if (instr->flags & IR3_INSTR_MARK)
 		return 0;
 
-	debug_assert(instr->regs_count < ARRAY_SIZE(srcs));
-
-	/* figure out our src's: */
-	for (i = 1; i < instr->regs_count; i++) {
-		struct ir3_register *reg = instr->regs[i];
-		if (reg->flags & IR3_REG_SSA)
-			srcs[nsrcs++] = reg->instr;
+	/* figure out our src's, copy 'em out into an array for sorting: */
+	foreach_ssa_src(src, instr) {
+		debug_assert(nsrcs < ARRAY_SIZE(srcs));
+		srcs[nsrcs++] = src;
 	}
 
 	/* for each src register in sorted order:
@@ -302,16 +292,13 @@ static struct ir3_instruction * reverse(struct ir3_instruction *instr)
 static bool uses_current_addr(struct ir3_sched_ctx *ctx,
 		struct ir3_instruction *instr)
 {
-	unsigned i;
-	for (i = 1; i < instr->regs_count; i++) {
-		struct ir3_register *reg = instr->regs[i];
-		if (reg->flags & IR3_REG_SSA) {
-			if (is_addr(reg->instr)) {
-				struct ir3_instruction *addr;
-				addr = reg->instr->regs[1]->instr; /* the mova */
-				if (ctx->addr == addr)
-					return true;
-			}
+	struct ir3_instruction *src;
+	foreach_ssa_src(src, instr) {
+		if (is_addr(src)) {
+			struct ir3_instruction *addr =
+				src->regs[1]->instr; /* the mova */
+			if (ctx->addr == addr)
+				return true;
 		}
 	}
 	return false;
@@ -320,12 +307,10 @@ static bool uses_current_addr(struct ir3_sched_ctx *ctx,
 static bool uses_current_pred(struct ir3_sched_ctx *ctx,
 		struct ir3_instruction *instr)
 {
-	unsigned i;
-	for (i = 1; i < instr->regs_count; i++) {
-		struct ir3_register *reg = instr->regs[i];
-		if ((reg->flags & IR3_REG_SSA) && (ctx->pred == reg->instr))
-				return true;
-	}
+	struct ir3_instruction *src;
+	foreach_ssa_src(src, instr)
+		if (ctx->pred == src)
+			return true;
 	return false;
 }
 

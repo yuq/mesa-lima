@@ -389,7 +389,7 @@ static void instr_assign_src(struct ir3_ra_ctx *ctx,
 static void instr_assign(struct ir3_ra_ctx *ctx,
 		struct ir3_instruction *instr, unsigned name)
 {
-	struct ir3_instruction *n;
+	struct ir3_instruction *n, *src;
 	struct ir3_register *reg = instr->regs[0];
 
 	/* check if already assigned: */
@@ -404,12 +404,15 @@ static void instr_assign(struct ir3_ra_ctx *ctx,
 
 	/* and rename any subsequent use of result of this instr: */
 	for (n = instr->next; n && !ctx->error; n = n->next) {
-		unsigned i;
+		foreach_ssa_src_n(src, i, n) {
+			unsigned r = i + 1;
 
-		for (i = 1; i < n->regs_count; i++) {
-			reg = n->regs[i];
-			if ((reg->flags & IR3_REG_SSA) && (reg->instr == instr))
-				instr_assign_src(ctx, n, i, name);
+			/* skip address / etc (non real sources): */
+			if (r >= n->regs_count)
+				continue;
+
+			if (src == instr)
+				instr_assign_src(ctx, n, r, name);
 		}
 	}
 
@@ -420,9 +423,9 @@ static void instr_assign(struct ir3_ra_ctx *ctx,
 	 * to the actual instruction:
 	 */
 	if (is_meta(instr) && (instr->opc == OPC_META_FO)) {
-		struct ir3_instruction *src = ssa(instr->regs[1]);
 		debug_assert(name >= instr->fo.off);
-		if (src)
+
+		foreach_ssa_src(src, instr)
 			instr_assign(ctx, src, name - instr->fo.off);
 	}
 }

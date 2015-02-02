@@ -486,6 +486,40 @@ static inline bool reg_gpr(struct ir3_register *r)
 	return true;
 }
 
+
+/* iterator for an instructions's sources (reg), also returns src #: */
+#define foreach_src_n(__srcreg, __n, __instr) \
+	if ((__instr)->regs_count) \
+		for (unsigned __cnt = (__instr)->regs_count - 1, __n = 0; __n < __cnt; __n++) \
+			if ((__srcreg = (__instr)->regs[__n + 1]))
+
+/* iterator for an instructions's sources (reg): */
+#define foreach_src(__srcreg, __instr) \
+	foreach_src_n(__srcreg, __i, __instr)
+
+static inline unsigned __ssa_src_cnt(struct ir3_instruction *instr)
+{
+	return instr->regs_count;
+}
+
+static inline struct ir3_instruction * __ssa_src_n(struct ir3_instruction *instr, unsigned n)
+{
+	return ssa(instr->regs[n]);
+}
+
+#define __src_cnt(__instr) ((__instr)->address ? (__instr)->regs_count : (__instr)->regs_count - 1)
+
+/* iterator for an instruction's SSA sources (instr), also returns src #: */
+#define foreach_ssa_src_n(__srcinst, __n, __instr) \
+	if ((__instr)->regs_count) \
+		for (unsigned __cnt = __ssa_src_cnt(__instr) - 1, __n = 0; __n < __cnt; __n++) \
+			if ((__srcinst = __ssa_src_n(__instr, __n + 1)))
+
+/* iterator for an instruction's SSA sources (instr): */
+#define foreach_ssa_src(__srcinst, __instr) \
+	foreach_ssa_src_n(__srcinst, __i, __instr)
+
+
 /* dump: */
 #include <stdio.h>
 void ir3_dump(struct ir3 *shader, const char *name,

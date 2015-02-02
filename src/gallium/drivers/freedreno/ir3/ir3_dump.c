@@ -161,12 +161,9 @@ static void dump_instr(struct ir3_dump_ctx *ctx,
 	if (is_meta(instr)) {
 		if ((instr->opc == OPC_META_FO) ||
 				(instr->opc == OPC_META_FI)) {
-			unsigned i;
-			for (i = 1; i < instr->regs_count; i++) {
-				struct ir3_register *reg = instr->regs[i];
-				if (reg->flags & IR3_REG_SSA)
-					dump_instr(ctx, reg->instr);
-			}
+			struct ir3_instruction *src;
+			foreach_ssa_src(src, instr)
+				dump_instr(ctx, src);
 		} else if (instr->opc == OPC_META_FLOW) {
 			struct ir3_register *reg = instr->regs[1];
 			ir3_block_dump(ctx, instr->flow.if_block, "if");
@@ -226,16 +223,12 @@ static void dump_link2(struct ir3_dump_ctx *ctx,
 			printdef(ctx, defer, "[label=\".%c\"]",
 					"xyzw"[instr->fo.off & 0x3]);
 		} else if (instr->opc == OPC_META_FI) {
-			unsigned i;
+			struct ir3_instruction *src;
 
-			/* recursively dump all parents and links */
-			for (i = 1; i < instr->regs_count; i++) {
-				struct ir3_register *reg = instr->regs[i];
-				if (reg->flags & IR3_REG_SSA) {
-					dump_link2(ctx, reg->instr, target, defer);
-					printdef(ctx, defer, "[label=\".%c\"]",
-							"xyzw"[(i - 1) & 0x3]);
-				}
+			foreach_ssa_src_n(src, i, instr) {
+				dump_link2(ctx, src, target, defer);
+				printdef(ctx, defer, "[label=\".%c\"]",
+						"xyzw"[i & 0x3]);
 			}
 		} else if (instr->opc == OPC_META_OUTPUT) {
 			printdef(ctx, defer, "output%lx:<out%u>:w -> %s",
@@ -274,7 +267,7 @@ static struct ir3_register *follow_flow(struct ir3_register *reg)
 static void ir3_instr_dump(struct ir3_dump_ctx *ctx,
 		struct ir3_instruction *instr)
 {
-	unsigned i;
+	struct ir3_register *src;
 
 	fprintf(ctx->f, "instr%lx [shape=record,style=filled,fillcolor=lightgrey,label=\"{",
 			PTRID(instr));
@@ -284,13 +277,13 @@ static void ir3_instr_dump(struct ir3_dump_ctx *ctx,
 	fprintf(ctx->f, "|<dst0>");
 
 	/* source register(s): */
-	for (i = 1; i < instr->regs_count; i++) {
-		struct ir3_register *reg = follow_flow(instr->regs[i]);
+	foreach_src_n(src, i, instr) {
+		struct ir3_register *reg = follow_flow(src);
 
 		fprintf(ctx->f, "|");
 
 		if (reg->flags & IR3_REG_SSA)
-			fprintf(ctx->f, "<src%u> ", (i - 1));
+			fprintf(ctx->f, "<src%u> ", i);
 
 		dump_reg_name(ctx, reg, true);
 	}
@@ -298,18 +291,18 @@ static void ir3_instr_dump(struct ir3_dump_ctx *ctx,
 	fprintf(ctx->f, "}\"];\n");
 
 	/* and recursively dump dependent instructions: */
-	for (i = 1; i < instr->regs_count; i++) {
-		struct ir3_register *reg = instr->regs[i];
+	foreach_src_n(src, i, instr) {
+		struct ir3_register *reg = follow_flow(src);
 		char target[32];  /* link target */
 
 		if (!(reg->flags & IR3_REG_SSA))
 			continue;
 
 		snprintf(target, sizeof(target), "instr%lx:<src%u>",
-				PTRID(instr), (i - 1));
+				PTRID(instr), i);
 
 		dump_instr(ctx, reg->instr);
-		dump_link(ctx, follow_flow(reg)->instr, instr->block, target);
+		dump_link(ctx, reg->instr, instr->block, target);
 	}
 }
 
