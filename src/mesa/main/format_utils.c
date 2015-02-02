@@ -499,7 +499,7 @@ _mesa_format_convert(void *void_dst, uint32_t dst_format, size_t dst_stride,
                                          MESA_ARRAY_FORMAT_TYPE_FLOAT, 4,
                                          tmp_float + row * width,
                                          MESA_ARRAY_FORMAT_TYPE_FLOAT, 4,
-                                         rebase_swizzle, false, width);
+                                         rebase_swizzle, normalized, width);
             src += src_stride;
          }
       }
@@ -543,7 +543,7 @@ _mesa_format_convert(void *void_dst, uint32_t dst_format, size_t dst_stride,
                                          MESA_ARRAY_FORMAT_TYPE_UBYTE, 4,
                                          tmp_ubyte + row * width,
                                          MESA_ARRAY_FORMAT_TYPE_UBYTE, 4,
-                                         rebase_swizzle, false, width);
+                                         rebase_swizzle, normalized, width);
             src += src_stride;
          }
       }
