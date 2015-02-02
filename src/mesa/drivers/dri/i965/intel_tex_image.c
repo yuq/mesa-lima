@@ -392,6 +392,13 @@ intel_gettexsubimage_tiled_memcpy(struct gl_context *ctx,
        packing->Invert)
       return false;
 
+   /* We can't handle copying from RGBX or BGRX because the tiled_memcpy
+    * function doesn't set the last channel to 1.
+    */
+   if (texImage->TexFormat == MESA_FORMAT_B8G8R8X8_UNORM ||
+       texImage->TexFormat == MESA_FORMAT_R8G8B8X8_UNORM)
+      return false;
+
    if (!intel_get_memcpy(texImage->TexFormat, format, type, &mem_copy, &cpp))
       return false;
 
