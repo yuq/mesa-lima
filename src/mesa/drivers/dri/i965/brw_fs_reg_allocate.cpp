@@ -380,7 +380,10 @@ fs_visitor::setup_payload_interference(struct ra_graph *g,
             if (node_nr >= payload_node_count)
                continue;
 
-            payload_last_use_ip[node_nr] = use_ip;
+            for (int j = 0; j < inst->regs_read(i); j++) {
+               payload_last_use_ip[node_nr + j] = use_ip;
+               assert(node_nr + j < payload_node_count);
+            }
          }
       }
 
