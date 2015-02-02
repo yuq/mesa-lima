@@ -620,9 +620,9 @@ map_readbuffer(struct gl_context *ctx, GLenum type)
  * By time we get here, all parameters will have been error-checked.
  */
 void
-_swrast_CopyPixels( struct gl_context *ctx,
-		    GLint srcx, GLint srcy, GLsizei width, GLsizei height,
-		    GLint destx, GLint desty, GLenum type )
+_swrast_CopyPixels(struct gl_context *ctx,
+                   GLint srcx, GLint srcy, GLsizei width, GLsizei height,
+                   GLint destx, GLint desty, GLenum type)
 {
    SWcontext *swrast = SWRAST_CONTEXT(ctx);
    struct gl_renderbuffer *rb;
@@ -634,9 +634,9 @@ _swrast_CopyPixels( struct gl_context *ctx,
       _swrast_validate_derived( ctx );
 
    if (!(SWRAST_CONTEXT(ctx)->_RasterMask != 0x0 ||
-	 ctx->Pixel.ZoomX != 1.0F ||
-	 ctx->Pixel.ZoomY != 1.0F ||
-	 ctx->_ImageTransferState) &&
+       ctx->Pixel.ZoomX != 1.0F ||
+       ctx->Pixel.ZoomY != 1.0F ||
+       ctx->_ImageTransferState) &&
       swrast_fast_copy_pixels(ctx, ctx->ReadBuffer, ctx->DrawBuffer,
                               srcx, srcy, width, height, destx, desty,
                               type)) {

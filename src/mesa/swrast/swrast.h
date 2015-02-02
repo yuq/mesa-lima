@@ -132,11 +132,11 @@ _swrast_Bitmap( struct gl_context *ctx,
 		const GLubyte *bitmap );
 
 extern void
-_swrast_CopyPixels( struct gl_context *ctx,
-		    GLint srcx, GLint srcy,
-		    GLint destx, GLint desty,
-		    GLsizei width, GLsizei height,
-		    GLenum type );
+_swrast_CopyPixels(struct gl_context *ctx,
+                   GLint srcx, GLint srcy,
+                   GLint destx, GLint desty,
+                   GLsizei width, GLsizei height,
+                   GLenum type);
 
 extern GLboolean
 swrast_fast_copy_pixels(struct gl_context *ctx,

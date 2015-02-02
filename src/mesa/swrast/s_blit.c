@@ -789,7 +789,7 @@ _swrast_BlitFramebuffer(struct gl_context *ctx,
       }
 
       if (!mask)
-	 return;
+         return;
    }
 
    if (filter == GL_NEAREST) {
