@@ -455,7 +455,8 @@ vec4_visitor::opt_reduce_swizzle()
    bool progress = false;
 
    foreach_block_and_inst_safe(block, vec4_instruction, inst, cfg) {
-      if (inst->dst.file == BAD_FILE || inst->dst.file == HW_REG)
+      if (inst->dst.file == BAD_FILE || inst->dst.file == HW_REG ||
+          inst->is_send_from_grf())
          continue;
 
       int swizzle[4];
