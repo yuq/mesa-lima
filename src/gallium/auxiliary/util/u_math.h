@@ -561,14 +561,10 @@ util_last_bit(unsigned u)
 static INLINE unsigned
 util_last_bit_signed(int i)
 {
-#if defined(__GNUC__) && ((__GNUC__ * 100 + __GNUC_MINOR__) >= 407) && !defined(__INTEL_COMPILER)
-   return 31 - __builtin_clrsb(i);
-#else
    if (i >= 0)
       return util_last_bit(i);
    else
       return util_last_bit(~(unsigned)i);
-#endif
 }
 
 /* Destructively loop over all of the bits in a mask as in:
