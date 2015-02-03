@@ -124,11 +124,32 @@ private:
 
 }; /* end of anonymous namespace */
 
+static const nir_shader_compiler_options default_options = {
+};
+
 nir_shader *
 glsl_to_nir(exec_list *ir, _mesa_glsl_parse_state *state,
             bool native_integers)
 {
-   nir_shader *shader = nir_shader_create(NULL);
+   const nir_shader_compiler_options *options;
+
+   if (state) {
+      struct gl_context *ctx = state->ctx;
+      struct gl_shader_compiler_options *gl_options =
+         &ctx->Const.ShaderCompilerOptions[state->stage];
+
+      if (!gl_options->NirOptions) {
+         nir_shader_compiler_options *new_options =
+            rzalloc(ctx, nir_shader_compiler_options);
+         options = gl_options->NirOptions = new_options;
+      } else {
+         options = gl_options->NirOptions;
+      }
+   } else {
+      options = &default_options;
+   }
+
+   nir_shader *shader = nir_shader_create(NULL, options);
 
    if (state) {
       shader->num_user_structures = state->num_user_structures;

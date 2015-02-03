@@ -1326,6 +1326,9 @@ typedef struct nir_function {
    exec_node_data(nir_function_overload, \
                   exec_list_get_head(&(func)->overload_list), node)
 
+typedef struct nir_shader_compiler_options {
+} nir_shader_compiler_options;
+
 typedef struct nir_shader {
    /** hash table of name -> uniform nir_variable */
    struct hash_table *uniforms;
@@ -1335,6 +1338,13 @@ typedef struct nir_shader {
 
    /** hash table of name -> output nir_variable */
    struct hash_table *outputs;
+
+   /** Set of driver-specific options for the shader.
+    *
+    * The memory for the options is expected to be kept in a single static
+    * copy by the driver.
+    */
+   const struct nir_shader_compiler_options *options;
 
    /** list of global variables in the shader */
    struct exec_list globals;
@@ -1361,12 +1371,13 @@ typedef struct nir_shader {
    unsigned num_inputs, num_uniforms, num_outputs;
 } nir_shader;
 
-#define nir_foreach_overload(shader, overload) \
+#define nir_foreach_overload(shader, overload)                        \
    foreach_list_typed(nir_function, func, node, &(shader)->functions) \
       foreach_list_typed(nir_function_overload, overload, node, \
                          &(func)->overload_list)
 
-nir_shader *nir_shader_create(void *mem_ctx);
+nir_shader *nir_shader_create(void *mem_ctx,
+                              const nir_shader_compiler_options *options);
 
 /** creates a register, including assigning it an index and adding it to the list */
 nir_register *nir_global_reg_create(nir_shader *shader);

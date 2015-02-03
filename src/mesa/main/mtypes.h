@@ -3034,6 +3034,8 @@ struct gl_shader_compiler_options
    GLboolean OptimizeForAOS;
 
    struct gl_sl_pragmas DefaultPragmas; /**< Default #pragma settings */
+
+   struct nir_shader_compiler_options *NirOptions;
 };
 
 

@@ -29,7 +29,7 @@
 #include <assert.h>
 
 nir_shader *
-nir_shader_create(void *mem_ctx)
+nir_shader_create(void *mem_ctx, const nir_shader_compiler_options *options)
 {
    nir_shader *shader = ralloc(mem_ctx, nir_shader);
 
@@ -39,6 +39,8 @@ nir_shader_create(void *mem_ctx)
                                             _mesa_key_string_equal);
    shader->outputs = _mesa_hash_table_create(shader, _mesa_key_hash_string,
                                              _mesa_key_string_equal);
+
+   shader->options = options;
 
    shader->num_user_structures = 0;
    shader->user_structures = NULL;
