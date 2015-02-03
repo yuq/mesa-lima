@@ -109,14 +109,17 @@ union si_state {
 	struct si_pm4_state	*array[0];
 };
 
-#define SI_NUM_USER_SAMPLERS 16 /* AKA OpenGL textures units per shader */
+#define SI_NUM_USER_SAMPLERS            16 /* AKA OpenGL textures units per shader */
+#define SI_POLY_STIPPLE_SAMPLER         SI_NUM_USER_SAMPLERS
+#define SI_NUM_SAMPLERS                 (SI_POLY_STIPPLE_SAMPLER + 1)
 
 /* User sampler views:   0..15
- * FMASK sampler views: 16..31 (no sampler states)
+ * Polygon stipple tex:  16
+ * FMASK sampler views:  17..33 (no sampler states)
  */
-#define SI_FMASK_TEX_OFFSET		SI_NUM_USER_SAMPLERS
-#define SI_NUM_SAMPLER_VIEWS		(SI_FMASK_TEX_OFFSET + SI_NUM_USER_SAMPLERS)
-#define SI_NUM_SAMPLER_STATES		SI_NUM_USER_SAMPLERS
+#define SI_FMASK_TEX_OFFSET		SI_NUM_SAMPLERS
+#define SI_NUM_SAMPLER_VIEWS		(SI_FMASK_TEX_OFFSET + SI_NUM_SAMPLERS)
+#define SI_NUM_SAMPLER_STATES		SI_NUM_SAMPLERS
 
 /* User constant buffers:   0..15
  * Driver state constants:  16
