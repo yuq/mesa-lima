@@ -1996,7 +1996,7 @@ GLboolean radeonValidateState( struct gl_context *ctx )
    if (new_state & _NEW_BUFFERS) {
      _mesa_update_framebuffer(ctx, ctx->ReadBuffer, ctx->DrawBuffer);
      /* this updates the DrawBuffer's Width/Height if it's a FBO */
-     _mesa_update_draw_buffer_bounds(ctx);
+     _mesa_update_draw_buffer_bounds(ctx, ctx->DrawBuffer);
      RADEON_STATECHANGE(rmesa, ctx);
    }
 

@@ -312,7 +312,7 @@ _mesa_resize_framebuffer(struct gl_context *ctx, struct gl_framebuffer *fb,
 
    if (ctx) {
       /* update scissor / window bounds */
-      _mesa_update_draw_buffer_bounds(ctx);
+      _mesa_update_draw_buffer_bounds(ctx, ctx->DrawBuffer);
       /* Signal new buffer state so that swrast will update its clipping
        * info (the CLIP_BIT flag).
        */
@@ -413,9 +413,9 @@ _mesa_scissor_bounding_box(const struct gl_context *ctx,
  * \param ctx  the GL context.
  */
 void
-_mesa_update_draw_buffer_bounds(struct gl_context *ctx)
+_mesa_update_draw_buffer_bounds(struct gl_context *ctx,
+                                struct gl_framebuffer *buffer)
 {
-   struct gl_framebuffer *buffer = ctx->DrawBuffer;
    int bbox[4];
 
    if (!buffer)
