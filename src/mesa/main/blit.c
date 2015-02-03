@@ -526,3 +526,54 @@ _mesa_BlitFramebuffer(GLint srcX0, GLint srcY0, GLint srcX1, GLint srcY1,
                           dstX0, dstY0, dstX1, dstY1,
                           mask, filter, "glBlitFramebuffer");
 }
+
+
+void GLAPIENTRY
+_mesa_BlitNamedFramebuffer(GLuint readFramebuffer, GLuint drawFramebuffer,
+                           GLint srcX0, GLint srcY0, GLint srcX1, GLint srcY1,
+                           GLint dstX0, GLint dstY0, GLint dstX1, GLint dstY1,
+                           GLbitfield mask, GLenum filter)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   struct gl_framebuffer *readFb, *drawFb;
+
+   if (MESA_VERBOSE & VERBOSE_API)
+      _mesa_debug(ctx,
+                  "glBlitNamedFramebuffer(%u %u %d, %d, %d, %d, "
+                  " %d, %d, %d, %d, 0x%x, %s)\n",
+                  readFramebuffer, drawFramebuffer,
+                  srcX0, srcY0, srcX1, srcY1,
+                  dstX0, dstY0, dstX1, dstY1,
+                  mask, _mesa_lookup_enum_by_nr(filter));
+
+   /*
+    * According to PDF page 533 of the OpenGL 4.5 core spec (30.10.2014,
+    * Section 18.3 Copying Pixels):
+    *   "... if readFramebuffer or drawFramebuffer is zero (for
+    *   BlitNamedFramebuffer), then the default read or draw framebuffer is
+    *   used as the corresponding source or destination framebuffer,
+    *   respectively."
+    */
+   if (readFramebuffer) {
+      readFb = _mesa_lookup_framebuffer_err(ctx, readFramebuffer,
+                                            "glBlitNamedFramebuffer");
+      if (!readFb)
+         return;
+   }
+   else
+      readFb = ctx->WinSysReadBuffer;
+
+   if (drawFramebuffer) {
+      drawFb = _mesa_lookup_framebuffer_err(ctx, drawFramebuffer,
+                                            "glBlitNamedFramebuffer");
+      if (!drawFb)
+         return;
+   }
+   else
+      drawFb = ctx->WinSysDrawBuffer;
+
+   _mesa_blit_framebuffer(ctx, readFb, drawFb,
+                          srcX0, srcY0, srcX1, srcY1,
+                          dstX0, dstY0, dstX1, dstY1,
+                          mask, filter, "glBlitNamedFramebuffer");
+}

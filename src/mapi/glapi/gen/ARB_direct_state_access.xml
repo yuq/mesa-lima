@@ -181,6 +181,21 @@
       <param name="layer" type="GLint" />
    </function>
 
+   <function name="BlitNamedFramebuffer" offset="assign">
+      <param name="readFramebuffer" type="GLuint" />
+      <param name="drawFramebuffer" type="GLuint" />
+      <param name="srcX0" type="GLint" />
+      <param name="srcY0" type="GLint" />
+      <param name="srcX1" type="GLint" />
+      <param name="srcY1" type="GLint" />
+      <param name="dstX0" type="GLint" />
+      <param name="dstY0" type="GLint" />
+      <param name="dstX1" type="GLint" />
+      <param name="dstY1" type="GLint" />
+      <param name="mask" type="GLbitfield" />
+      <param name="filter" type="GLenum" />
+   </function>
+
    <function name="CheckNamedFramebufferStatus" offset="assign">
       <return type="GLenum" />
       <param name="framebuffer" type="GLuint" />
