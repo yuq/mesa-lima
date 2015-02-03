@@ -691,7 +691,7 @@ _mesa_update_framebuffer(struct gl_context *ctx,
    if (readFb != drawFb)
       update_framebuffer(ctx, readFb);
 
-   _mesa_update_clamp_vertex_color(ctx);
+   _mesa_update_clamp_vertex_color(ctx, drawFb);
    _mesa_update_clamp_fragment_color(ctx);
 }
 

@@ -769,7 +769,7 @@ _mesa_ClampColor(GLenum target, GLenum clamp)
       }
       FLUSH_VERTICES(ctx, _NEW_LIGHT);
       ctx->Light.ClampVertexColor = clamp;
-      _mesa_update_clamp_vertex_color(ctx);
+      _mesa_update_clamp_vertex_color(ctx, ctx->DrawBuffer);
       break;
    case GL_CLAMP_FRAGMENT_COLOR_ARB:
       if (ctx->API == API_OPENGL_CORE &&
@@ -814,9 +814,10 @@ _mesa_get_clamp_fragment_color(const struct gl_context *ctx)
 }
 
 GLboolean
-_mesa_get_clamp_vertex_color(const struct gl_context *ctx)
+_mesa_get_clamp_vertex_color(const struct gl_context *ctx,
+                             const struct gl_framebuffer *drawFb)
 {
-   return get_clamp_color(ctx->DrawBuffer, ctx->Light.ClampVertexColor);
+   return get_clamp_color(drawFb, ctx->Light.ClampVertexColor);
 }
 
 GLboolean
@@ -848,9 +849,11 @@ _mesa_update_clamp_fragment_color(struct gl_context *ctx)
  * Update the ctx->Color._ClampVertexColor field
  */
 void
-_mesa_update_clamp_vertex_color(struct gl_context *ctx)
+_mesa_update_clamp_vertex_color(struct gl_context *ctx,
+                                const struct gl_framebuffer *drawFb)
 {
-   ctx->Light._ClampVertexColor = _mesa_get_clamp_vertex_color(ctx);
+   ctx->Light._ClampVertexColor =
+         _mesa_get_clamp_vertex_color(ctx, drawFb);
 }
 
 /**
