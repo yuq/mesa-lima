@@ -1084,12 +1084,14 @@ vec4_instruction_scheduler::calculate_deps()
          }
       }
 
-      for (int i = 0; i < inst->mlen; i++) {
-         /* It looks like the MRF regs are released in the send
-          * instruction once it's sent, not when the result comes
-          * back.
-          */
-         add_dep(last_mrf_write[inst->base_mrf + i], n);
+      if (!inst->is_send_from_grf()) {
+         for (int i = 0; i < inst->mlen; i++) {
+            /* It looks like the MRF regs are released in the send
+             * instruction once it's sent, not when the result comes
+             * back.
+             */
+            add_dep(last_mrf_write[inst->base_mrf + i], n);
+         }
       }
 
       if (inst->reads_flag()) {
@@ -1122,7 +1124,7 @@ vec4_instruction_scheduler::calculate_deps()
          add_barrier_deps(n);
       }
 
-      if (inst->mlen > 0) {
+      if (inst->mlen > 0 && !inst->is_send_from_grf()) {
          for (int i = 0; i < v->implied_mrf_writes(inst); i++) {
             add_dep(last_mrf_write[inst->base_mrf + i], n);
             last_mrf_write[inst->base_mrf + i] = n;
@@ -1178,12 +1180,14 @@ vec4_instruction_scheduler::calculate_deps()
          }
       }
 
-      for (int i = 0; i < inst->mlen; i++) {
-         /* It looks like the MRF regs are released in the send
-          * instruction once it's sent, not when the result comes
-          * back.
-          */
-         add_dep(n, last_mrf_write[inst->base_mrf + i], 2);
+      if (!inst->is_send_from_grf()) {
+         for (int i = 0; i < inst->mlen; i++) {
+            /* It looks like the MRF regs are released in the send
+             * instruction once it's sent, not when the result comes
+             * back.
+             */
+            add_dep(n, last_mrf_write[inst->base_mrf + i], 2);
+         }
       }
 
       if (inst->reads_flag()) {
@@ -1212,7 +1216,7 @@ vec4_instruction_scheduler::calculate_deps()
          add_barrier_deps(n);
       }
 
-      if (inst->mlen > 0) {
+      if (inst->mlen > 0 && !inst->is_send_from_grf()) {
          for (int i = 0; i < v->implied_mrf_writes(inst); i++) {
             last_mrf_write[inst->base_mrf + i] = n;
          }
