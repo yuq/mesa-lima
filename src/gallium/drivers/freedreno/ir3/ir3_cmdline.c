@@ -210,7 +210,7 @@ read_file(const char *filename, void **ptr, size_t *size)
 
 static void reset_variant(struct ir3_shader_variant *v, const char *msg)
 {
-	debug_error(msg);
+	printf("; %s\n", msg);
 	v->inputs_count = 0;
 	v->outputs_count = 0;
 	v->total_in = 0;
@@ -335,6 +335,9 @@ int main(int argc, char **argv)
 		print_usage();
 		return ret;
 	}
+
+	if (fd_mesa_debug & FD_DBG_OPTMSGS)
+		debug_printf("%s\n", (char *)ptr);
 
 	if (!tgsi_text_translate(ptr, toks, Elements(toks)))
 		errx(1, "could not parse `%s'", filename);
