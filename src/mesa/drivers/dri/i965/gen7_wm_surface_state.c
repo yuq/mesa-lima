@@ -24,6 +24,7 @@
 #include "main/blend.h"
 #include "main/samplerobj.h"
 #include "main/texformat.h"
+#include "main/teximage.h"
 #include "program/prog_parameter.h"
 
 #include "intel_mipmap_tree.h"
@@ -301,7 +302,8 @@ gen7_update_texture_surface(struct gl_context *ctx,
    if (mt->align_w == 8)
       surf[0] |= GEN7_SURFACE_HALIGN_8;
 
-   if (mt->logical_depth0 > 1 && tObj->Target != GL_TEXTURE_3D)
+   if (_mesa_is_array_texture(tObj->Target) ||
+       tObj->Target == GL_TEXTURE_CUBE_MAP)
       surf[0] |= GEN7_SURFACE_IS_ARRAY;
 
    /* if this is a view with restricted NumLayers, then

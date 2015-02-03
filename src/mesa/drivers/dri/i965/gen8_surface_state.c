@@ -25,6 +25,7 @@
 #include "main/mtypes.h"
 #include "main/samplerobj.h"
 #include "main/texformat.h"
+#include "main/teximage.h"
 #include "program/prog_parameter.h"
 
 #include "intel_mipmap_tree.h"
@@ -208,7 +209,8 @@ gen8_update_texture_surface(struct gl_context *ctx,
       surf[0] |= BRW_SURFACE_CUBEFACE_ENABLES;
    }
 
-   if (mt->logical_depth0 > 1 && tObj->Target != GL_TEXTURE_3D)
+   if (_mesa_is_array_texture(tObj->Target) ||
+       tObj->Target == GL_TEXTURE_CUBE_MAP)
       surf[0] |= GEN8_SURFACE_IS_ARRAY;
 
    surf[1] = SET_FIELD(mocs_wb, GEN8_SURFACE_MOCS) | mt->qpitch >> 2;
