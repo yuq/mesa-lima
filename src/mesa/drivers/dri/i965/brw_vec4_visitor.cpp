@@ -1751,10 +1751,12 @@ vec4_visitor::visit(ir_expression *ir)
 
          emit(MOV(grf_offset, offset));
 
-         emit(new(mem_ctx) vec4_instruction(VS_OPCODE_PULL_CONSTANT_LOAD_GEN7,
-                                            dst_reg(packed_consts),
-                                            surf_index,
-                                            src_reg(grf_offset)));
+         vec4_instruction *pull =
+            emit(new(mem_ctx) vec4_instruction(VS_OPCODE_PULL_CONSTANT_LOAD_GEN7,
+                                               dst_reg(packed_consts),
+                                               surf_index,
+                                               src_reg(grf_offset)));
+         pull->mlen = 1;
       } else {
          vec4_instruction *pull =
             emit(new(mem_ctx) vec4_instruction(VS_OPCODE_PULL_CONSTANT_LOAD,
@@ -3431,6 +3433,7 @@ vec4_visitor::emit_pull_constant_load(bblock_t *block, vec4_instruction *inst,
 
       load = new(mem_ctx) vec4_instruction(VS_OPCODE_PULL_CONSTANT_LOAD_GEN7,
                                            temp, index, src_reg(grf_offset));
+      load->mlen = 1;
    } else {
       load = new(mem_ctx) vec4_instruction(VS_OPCODE_PULL_CONSTANT_LOAD,
                                            temp, index, offset);

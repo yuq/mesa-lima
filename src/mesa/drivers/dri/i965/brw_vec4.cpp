@@ -1761,7 +1761,9 @@ vec4_visitor::emit_shader_time_write(enum shader_time_shader_type type,
    time.type = BRW_REGISTER_TYPE_UD;
    emit(MOV(time, src_reg(value)));
 
-   emit(SHADER_OPCODE_SHADER_TIME_ADD, dst_reg(), src_reg(dst));
+   vec4_instruction *inst =
+      emit(SHADER_OPCODE_SHADER_TIME_ADD, dst_reg(), src_reg(dst));
+   inst->mlen = 2;
 }
 
 bool

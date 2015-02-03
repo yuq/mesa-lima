@@ -550,6 +550,7 @@ vec4_vs_visitor::get_vp_src_reg(const prog_src_register &src)
             load = new(mem_ctx)
                vec4_instruction(VS_OPCODE_PULL_CONSTANT_LOAD_GEN7,
                                 dst_reg(result), surf_index, reladdr);
+            load->mlen = 1;
          } else {
             load = new(mem_ctx)
                vec4_instruction(VS_OPCODE_PULL_CONSTANT_LOAD,
