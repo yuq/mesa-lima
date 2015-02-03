@@ -148,38 +148,23 @@ is_valid_blit_filter(const struct gl_context *ctx, GLenum filter)
 }
 
 
-/**
- * Blit rectangular region, optionally from one framebuffer to another.
- *
- * Note, if the src buffer is multisampled and the dest is not, this is
- * when the samples must be resolved to a single color.
- */
-void GLAPIENTRY
-_mesa_BlitFramebuffer(GLint srcX0, GLint srcY0, GLint srcX1, GLint srcY1,
-                         GLint dstX0, GLint dstY0, GLint dstX1, GLint dstY1,
-                         GLbitfield mask, GLenum filter)
+void
+_mesa_blit_framebuffer(struct gl_context *ctx,
+                       struct gl_framebuffer *readFb,
+                       struct gl_framebuffer *drawFb,
+                       GLint srcX0, GLint srcY0, GLint srcX1, GLint srcY1,
+                       GLint dstX0, GLint dstY0, GLint dstX1, GLint dstY1,
+                       GLbitfield mask, GLenum filter, const char *func)
 {
    const GLbitfield legalMaskBits = (GL_COLOR_BUFFER_BIT |
                                      GL_DEPTH_BUFFER_BIT |
                                      GL_STENCIL_BUFFER_BIT);
-   const struct gl_framebuffer *readFb, *drawFb;
-   GET_CURRENT_CONTEXT(ctx);
 
    FLUSH_VERTICES(ctx, 0);
-
-   if (MESA_VERBOSE & VERBOSE_API)
-      _mesa_debug(ctx,
-                  "glBlitFramebuffer(%d, %d, %d, %d,  %d, %d, %d, %d, 0x%x, %s)\n",
-                  srcX0, srcY0, srcX1, srcY1,
-                  dstX0, dstY0, dstX1, dstY1,
-                  mask, _mesa_lookup_enum_by_nr(filter));
 
    if (ctx->NewState) {
       _mesa_update_state(ctx);
    }
-
-   readFb = ctx->ReadBuffer;
-   drawFb = ctx->DrawBuffer;
 
    if (!readFb || !drawFb) {
       /* This will normally never happen but someday we may want to
@@ -192,12 +177,12 @@ _mesa_BlitFramebuffer(GLint srcX0, GLint srcY0, GLint srcX1, GLint srcY1,
    if (drawFb->_Status != GL_FRAMEBUFFER_COMPLETE_EXT ||
        readFb->_Status != GL_FRAMEBUFFER_COMPLETE_EXT) {
       _mesa_error(ctx, GL_INVALID_FRAMEBUFFER_OPERATION_EXT,
-                  "glBlitFramebufferEXT(incomplete draw/read buffers)");
+                  "%s(incomplete draw/read buffers)", func);
       return;
    }
 
    if (!is_valid_blit_filter(ctx, filter)) {
-      _mesa_error(ctx, GL_INVALID_ENUM, "glBlitFramebufferEXT(%s)",
+      _mesa_error(ctx, GL_INVALID_ENUM, "%s(invalid filter %s)", func,
                   _mesa_lookup_enum_by_nr(filter));
       return;
    }
@@ -205,13 +190,13 @@ _mesa_BlitFramebuffer(GLint srcX0, GLint srcY0, GLint srcX1, GLint srcY1,
    if ((filter == GL_SCALED_RESOLVE_FASTEST_EXT ||
         filter == GL_SCALED_RESOLVE_NICEST_EXT) &&
         (readFb->Visual.samples == 0 || drawFb->Visual.samples > 0)) {
-      _mesa_error(ctx, GL_INVALID_OPERATION, "glBlitFramebufferEXT(%s)",
+      _mesa_error(ctx, GL_INVALID_OPERATION, "%s(%s: invalid samples)", func,
                   _mesa_lookup_enum_by_nr(filter));
       return;
    }
 
    if (mask & ~legalMaskBits) {
-      _mesa_error( ctx, GL_INVALID_VALUE, "glBlitFramebufferEXT(mask)");
+      _mesa_error(ctx, GL_INVALID_VALUE, "%s(invalid mask bits set)", func);
       return;
    }
 
@@ -219,13 +204,13 @@ _mesa_BlitFramebuffer(GLint srcX0, GLint srcY0, GLint srcX1, GLint srcY1,
    if ((mask & (GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT))
         && filter != GL_NEAREST) {
       _mesa_error(ctx, GL_INVALID_OPERATION,
-             "glBlitFramebufferEXT(depth/stencil requires GL_NEAREST filter)");
+             "%s(depth/stencil requires GL_NEAREST filter)", func);
       return;
    }
 
    /* get color read/draw renderbuffers */
    if (mask & GL_COLOR_BUFFER_BIT) {
-      const GLuint numColorDrawBuffers = ctx->DrawBuffer->_NumColorDrawBuffers;
+      const GLuint numColorDrawBuffers = drawFb->_NumColorDrawBuffers;
       const struct gl_renderbuffer *colorReadRb = readFb->_ColorReadBuffer;
       const struct gl_renderbuffer *colorDrawRb = NULL;
       GLuint i;
@@ -241,7 +226,7 @@ _mesa_BlitFramebuffer(GLint srcX0, GLint srcY0, GLint srcX1, GLint srcY1,
       }
       else {
          for (i = 0; i < numColorDrawBuffers; i++) {
-            colorDrawRb = ctx->DrawBuffer->_ColorDrawBuffers[i];
+            colorDrawRb = drawFb->_ColorDrawBuffers[i];
             if (!colorDrawRb)
                continue;
 
@@ -257,15 +242,15 @@ _mesa_BlitFramebuffer(GLint srcX0, GLint srcY0, GLint srcX1, GLint srcY1,
              */
             if (_mesa_is_gles3(ctx) && (colorDrawRb == colorReadRb)) {
                _mesa_error(ctx, GL_INVALID_OPERATION,
-                           "glBlitFramebuffer(source and destination color "
-                           "buffer cannot be the same)");
+                           "%s(source and destination color "
+                           "buffer cannot be the same)", func);
                return;
             }
 
             if (!compatible_color_datatypes(colorReadRb->Format,
                                             colorDrawRb->Format)) {
                _mesa_error(ctx, GL_INVALID_OPERATION,
-                           "glBlitFramebufferEXT(color buffer datatypes mismatch)");
+                           "%s(color buffer datatypes mismatch)", func);
                return;
             }
             /* extra checks for multisample copies... */
@@ -273,7 +258,7 @@ _mesa_BlitFramebuffer(GLint srcX0, GLint srcY0, GLint srcX1, GLint srcY1,
                /* color formats must match */
                if (!compatible_resolve_formats(colorReadRb, colorDrawRb)) {
                   _mesa_error(ctx, GL_INVALID_OPERATION,
-                         "glBlitFramebufferEXT(bad src/dst multisample pixel formats)");
+                         "%s(bad src/dst multisample pixel formats)", func);
                   return;
                }
             }
@@ -286,7 +271,7 @@ _mesa_BlitFramebuffer(GLint srcX0, GLint srcY0, GLint srcX1, GLint srcY1,
             GLenum type = _mesa_get_format_datatype(colorReadRb->Format);
             if (type == GL_INT || type == GL_UNSIGNED_INT) {
                _mesa_error(ctx, GL_INVALID_OPERATION,
-                           "glBlitFramebufferEXT(integer color type)");
+                           "%s(integer color type)", func);
                return;
             }
          }
@@ -313,8 +298,8 @@ _mesa_BlitFramebuffer(GLint srcX0, GLint srcY0, GLint srcX1, GLint srcY1,
 
          if (_mesa_is_gles3(ctx) && (drawRb == readRb)) {
             _mesa_error(ctx, GL_INVALID_OPERATION,
-                        "glBlitFramebuffer(source and destination stencil "
-                        "buffer cannot be the same)");
+                        "%s(source and destination stencil "
+                        "buffer cannot be the same)", func);
             return;
          }
 
@@ -324,7 +309,7 @@ _mesa_BlitFramebuffer(GLint srcX0, GLint srcY0, GLint srcX1, GLint srcY1,
              * there is only one: GL_UNSIGNED_INT.
              */
             _mesa_error(ctx, GL_INVALID_OPERATION,
-                        "glBlitFramebuffer(stencil attachment format mismatch)");
+                        "%s(stencil attachment format mismatch)", func);
             return;
          }
 
@@ -340,8 +325,8 @@ _mesa_BlitFramebuffer(GLint srcX0, GLint srcY0, GLint srcX1, GLint srcY1,
               _mesa_get_format_datatype(readRb->Format) !=
               _mesa_get_format_datatype(drawRb->Format))) {
 
-            _mesa_error(ctx, GL_INVALID_OPERATION, "glBlitFramebuffer"
-                        "(stencil attachment depth format mismatch)");
+            _mesa_error(ctx, GL_INVALID_OPERATION,
+                        "%s(stencil attachment depth format mismatch)", func);
             return;
          }
       }
@@ -367,8 +352,8 @@ _mesa_BlitFramebuffer(GLint srcX0, GLint srcY0, GLint srcX1, GLint srcY1,
 
          if (_mesa_is_gles3(ctx) && (drawRb == readRb)) {
             _mesa_error(ctx, GL_INVALID_OPERATION,
-                        "glBlitFramebuffer(source and destination depth "
-                        "buffer cannot be the same)");
+                        "%s(source and destination depth "
+                        "buffer cannot be the same)", func);
             return;
          }
 
@@ -377,7 +362,7 @@ _mesa_BlitFramebuffer(GLint srcX0, GLint srcY0, GLint srcX1, GLint srcY1,
              (_mesa_get_format_datatype(readRb->Format) !=
               _mesa_get_format_datatype(drawRb->Format))) {
             _mesa_error(ctx, GL_INVALID_OPERATION,
-                        "glBlitFramebuffer(depth attachment format mismatch)");
+                        "%s(depth attachment format mismatch)", func);
             return;
          }
 
@@ -389,8 +374,8 @@ _mesa_BlitFramebuffer(GLint srcX0, GLint srcY0, GLint srcX1, GLint srcY1,
           * we should ignore the stencil format check.
           */
          if (read_s_bit > 0 && draw_s_bit > 0 && read_s_bit != draw_s_bit) {
-            _mesa_error(ctx, GL_INVALID_OPERATION, "glBlitFramebuffer"
-                        "(depth attachment stencil bits mismatch)");
+            _mesa_error(ctx, GL_INVALID_OPERATION,
+                        "%s(depth attachment stencil bits mismatch)", func);
             return;
          }
       }
@@ -406,7 +391,7 @@ _mesa_BlitFramebuffer(GLint srcX0, GLint srcY0, GLint srcX1, GLint srcY1,
        */
       if (drawFb->Visual.samples > 0) {
          _mesa_error(ctx, GL_INVALID_OPERATION,
-                     "glBlitFramebuffer(destination samples must be 0)");
+                     "%s(destination samples must be 0)", func);
          return;
       }
 
@@ -426,7 +411,7 @@ _mesa_BlitFramebuffer(GLint srcX0, GLint srcY0, GLint srcX1, GLint srcY1,
           && (srcX0 != dstX0 || srcY0 != dstY0
               || srcX1 != dstX1 || srcY1 != dstY1)) {
          _mesa_error(ctx, GL_INVALID_OPERATION,
-                     "glBlitFramebuffer(bad src/dst multisample region)");
+                     "%s(bad src/dst multisample region)", func);
          return;
       }
    } else {
@@ -434,7 +419,7 @@ _mesa_BlitFramebuffer(GLint srcX0, GLint srcY0, GLint srcX1, GLint srcY1,
           drawFb->Visual.samples > 0 &&
           readFb->Visual.samples != drawFb->Visual.samples) {
          _mesa_error(ctx, GL_INVALID_OPERATION,
-                     "glBlitFramebufferEXT(mismatched samples)");
+                     "%s(mismatched samples)", func);
          return;
       }
 
@@ -445,7 +430,7 @@ _mesa_BlitFramebuffer(GLint srcX0, GLint srcY0, GLint srcX1, GLint srcY1,
          if (abs(srcX1 - srcX0) != abs(dstX1 - dstX0) ||
              abs(srcY1 - srcY0) != abs(dstY1 - dstY0)) {
             _mesa_error(ctx, GL_INVALID_OPERATION,
-                        "glBlitFramebufferEXT(bad src/dst multisample region sizes)");
+                        "%s(bad src/dst multisample region sizes)", func);
             return;
          }
       }
@@ -457,11 +442,12 @@ _mesa_BlitFramebuffer(GLint srcX0, GLint srcY0, GLint srcX1, GLint srcY1,
       const struct gl_renderbuffer *colorDrawRb = NULL;
       GLuint i = 0;
 
-      printf("glBlitFramebuffer(%d, %d, %d, %d,  %d, %d, %d, %d,"
-             " 0x%x, 0x%x)\n",
+      printf("%s(%d, %d, %d, %d,  %d, %d, %d, %d,"
+             " 0x%x, 0x%x)\n", func,
              srcX0, srcY0, srcX1, srcY1,
              dstX0, dstY0, dstX1, dstY1,
              mask, filter);
+
       if (colorReadRb) {
          const struct gl_renderbuffer_attachment *att;
 
@@ -479,8 +465,8 @@ _mesa_BlitFramebuffer(GLint srcX0, GLint srcY0, GLint srcX1, GLint srcY1,
          printf("\n");
 
          /* Print all active color render buffers */
-         for (i = 0; i < ctx->DrawBuffer->_NumColorDrawBuffers; i++) {
-            colorDrawRb = ctx->DrawBuffer->_ColorDrawBuffers[i];
+         for (i = 0; i < drawFb->_NumColorDrawBuffers; i++) {
+            colorDrawRb = drawFb->_ColorDrawBuffers[i];
             if (!colorDrawRb)
                continue;
 
@@ -507,8 +493,36 @@ _mesa_BlitFramebuffer(GLint srcX0, GLint srcY0, GLint srcX1, GLint srcY1,
    }
 
    assert(ctx->Driver.BlitFramebuffer);
-   ctx->Driver.BlitFramebuffer(ctx, ctx->ReadBuffer, ctx->DrawBuffer,
+   ctx->Driver.BlitFramebuffer(ctx, readFb, drawFb,
                                srcX0, srcY0, srcX1, srcY1,
                                dstX0, dstY0, dstX1, dstY1,
                                mask, filter);
+}
+
+
+/**
+ * Blit rectangular region, optionally from one framebuffer to another.
+ *
+ * Note, if the src buffer is multisampled and the dest is not, this is
+ * when the samples must be resolved to a single color.
+ */
+void GLAPIENTRY
+_mesa_BlitFramebuffer(GLint srcX0, GLint srcY0, GLint srcX1, GLint srcY1,
+                      GLint dstX0, GLint dstY0, GLint dstX1, GLint dstY1,
+                      GLbitfield mask, GLenum filter)
+{
+   GET_CURRENT_CONTEXT(ctx);
+
+   if (MESA_VERBOSE & VERBOSE_API)
+      _mesa_debug(ctx,
+                  "glBlitFramebuffer(%d, %d, %d, %d, "
+                  " %d, %d, %d, %d, 0x%x, %s)\n",
+                  srcX0, srcY0, srcX1, srcY1,
+                  dstX0, dstY0, dstX1, dstY1,
+                  mask, _mesa_lookup_enum_by_nr(filter));
+
+   _mesa_blit_framebuffer(ctx, ctx->ReadBuffer, ctx->DrawBuffer,
+                          srcX0, srcY0, srcX1, srcY1,
+                          dstX0, dstY0, dstX1, dstY1,
+                          mask, filter, "glBlitFramebuffer");
 }
