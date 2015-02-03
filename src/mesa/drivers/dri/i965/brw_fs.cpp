@@ -126,7 +126,8 @@ fs_inst::init(enum opcode opcode, uint8_t exec_size, const fs_reg &dst,
    case HW_REG:
    case MRF:
    case ATTR:
-      this->regs_written = (dst.width * dst.stride * type_sz(dst.type) + 31) / 32;
+      this->regs_written =
+         DIV_ROUND_UP(MAX2(dst.width * dst.stride, 1) * type_sz(dst.type), 32);
       break;
    case BAD_FILE:
       this->regs_written = 0;
