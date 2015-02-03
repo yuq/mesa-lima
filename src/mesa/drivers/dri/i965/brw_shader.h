@@ -33,6 +33,9 @@
 
 #pragma once
 
+#define MAX_SAMPLER_MESSAGE_SIZE 11
+#define MAX_VGRF_SIZE 16
+
 enum PACKED register_file {
    BAD_FILE,
    GRF,

@@ -102,8 +102,11 @@ brw_vec4_alloc_reg_set(struct intel_screen *screen)
     * SEND-from-GRF sources cannot be split, so we also need classes for each
     * potential message length.
     */
-   const int class_count = 2;
-   const int class_sizes[class_count] = {1, 2};
+   const int class_count = MAX_VGRF_SIZE;
+   int class_sizes[MAX_VGRF_SIZE];
+
+   for (int i = 0; i < class_count; i++)
+      class_sizes[i] = i + 1;
 
    /* Compute the total number of registers across all classes. */
    int ra_reg_count = 0;
@@ -194,8 +197,7 @@ vec4_visitor::reg_allocate()
 
    for (unsigned i = 0; i < alloc.count; i++) {
       int size = this->alloc.sizes[i];
-      assert(size >= 1 && size <= 2 &&
-             "Register allocation relies on split_virtual_grfs().");
+      assert(size >= 1 && size <= MAX_VGRF_SIZE);
       ra_set_node_class(g, i, screen->vec4_reg_set.classes[size - 1]);
 
       for (unsigned j = 0; j < i; j++) {
