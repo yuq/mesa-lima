@@ -51,6 +51,10 @@
  * Therefore, if \c head->next is \c NULL or \c tail_prev->prev is \c NULL,
  * the list is empty.
  *
+ * Do note that this means that the list nodes will contain pointers into the
+ * list structure itself and as a result you may not \c realloc() an  \c
+ * exec_list or any structure in which an \c exec_list is embedded.
+ *
  * To anyone familiar with "exec lists" on the Amiga, this structure should
  * be immediately recognizable.  See the following link for the original Amiga
  * operating system documentation on the subject.
