@@ -678,17 +678,14 @@ update_framebuffer(struct gl_context *ctx, struct gl_framebuffer *fb)
 
 
 /**
- * Update state related to the current draw/read framebuffers.
+ * Update state related to the draw/read framebuffers.
  */
 void
-_mesa_update_framebuffer(struct gl_context *ctx)
+_mesa_update_framebuffer(struct gl_context *ctx,
+                         struct gl_framebuffer *readFb,
+                         struct gl_framebuffer *drawFb)
 {
-   struct gl_framebuffer *drawFb;
-   struct gl_framebuffer *readFb;
-
    assert(ctx);
-   drawFb = ctx->DrawBuffer;
-   readFb = ctx->ReadBuffer;
 
    update_framebuffer(ctx, drawFb);
    if (readFb != drawFb)

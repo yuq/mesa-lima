@@ -220,7 +220,7 @@ void radeon_draw_buffer(struct gl_context *ctx, struct gl_framebuffer *fb)
 	 */
 	if (ctx->NewState & (_NEW_BUFFERS | _NEW_COLOR | _NEW_PIXEL)) {
 		/* this updates the DrawBuffer->_NumColorDrawBuffers fields, etc */
-		_mesa_update_framebuffer(ctx);
+		_mesa_update_framebuffer(ctx, ctx->ReadBuffer, ctx->DrawBuffer);
 		/* this updates the DrawBuffer's Width/Height if it's a FBO */
 		_mesa_update_draw_buffer_bounds(ctx);
 	}
