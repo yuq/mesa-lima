@@ -122,6 +122,16 @@ try_constant_propagate(struct brw_context *brw, vec4_instruction *inst,
    if (value.file != IMM)
       return false;
 
+   if (value.type == BRW_REGISTER_TYPE_VF) {
+      /* The result of bit-casting the component values of a vector float
+       * cannot in general be represented as an immediate.
+       */
+      if (inst->src[arg].type != BRW_REGISTER_TYPE_F)
+         return false;
+   } else {
+      value.type = inst->src[arg].type;
+   }
+
    if (inst->src[arg].abs) {
       if ((brw->gen >= 8 && is_logic_op(inst->opcode)) ||
           !brw_abs_immediate(value.type, &value.fixed_hw_reg)) {
