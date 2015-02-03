@@ -239,6 +239,14 @@ validate_alu_dest(nir_alu_dest *dest, validate_state *state)
     * register/SSA value
     */
    assert(is_packed || !(dest->write_mask & ~((1 << dest_size) - 1)));
+
+   /* validate that saturate is only ever used on instructions with
+    * destinations of type float
+    */
+   nir_alu_instr *alu = nir_instr_as_alu(state->instr);
+   assert(nir_op_infos[alu->op].output_type == nir_type_float ||
+          !dest->saturate);
+
    validate_dest(&dest->dest, state);
 }
 
