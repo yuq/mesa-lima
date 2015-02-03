@@ -306,7 +306,7 @@ _mesa_BlitFramebuffer(GLint srcX0, GLint srcY0, GLint srcX1, GLint srcY1,
        *     ignored."
        */
       if ((readRb == NULL) || (drawRb == NULL)) {
-	 mask &= ~GL_STENCIL_BUFFER_BIT;
+         mask &= ~GL_STENCIL_BUFFER_BIT;
       }
       else {
          int read_z_bits, draw_z_bits;
@@ -360,7 +360,7 @@ _mesa_BlitFramebuffer(GLint srcX0, GLint srcY0, GLint srcX1, GLint srcY1,
        *     ignored."
        */
       if ((readRb == NULL) || (drawRb == NULL)) {
-	 mask &= ~GL_DEPTH_BUFFER_BIT;
+         mask &= ~GL_DEPTH_BUFFER_BIT;
       }
       else {
          int read_s_bit, draw_s_bit;
@@ -458,23 +458,23 @@ _mesa_BlitFramebuffer(GLint srcX0, GLint srcY0, GLint srcX1, GLint srcY1,
       GLuint i = 0;
 
       printf("glBlitFramebuffer(%d, %d, %d, %d,  %d, %d, %d, %d,"
-	     " 0x%x, 0x%x)\n",
-	     srcX0, srcY0, srcX1, srcY1,
-	     dstX0, dstY0, dstX1, dstY1,
-	     mask, filter);
+             " 0x%x, 0x%x)\n",
+             srcX0, srcY0, srcX1, srcY1,
+             dstX0, dstY0, dstX1, dstY1,
+             mask, filter);
       if (colorReadRb) {
          const struct gl_renderbuffer_attachment *att;
 
          att = find_attachment(readFb, colorReadRb);
          printf("  Src FBO %u  RB %u (%dx%d)  ",
-		readFb->Name, colorReadRb->Name,
-		colorReadRb->Width, colorReadRb->Height);
+                readFb->Name, colorReadRb->Name,
+                colorReadRb->Width, colorReadRb->Height);
          if (att && att->Texture) {
             printf("Tex %u  tgt 0x%x  level %u  face %u",
-		   att->Texture->Name,
-		   att->Texture->Target,
-		   att->TextureLevel,
-		   att->CubeMapFace);
+                   att->Texture->Name,
+                   att->Texture->Target,
+                   att->TextureLevel,
+                   att->CubeMapFace);
          }
          printf("\n");
 
@@ -486,14 +486,14 @@ _mesa_BlitFramebuffer(GLint srcX0, GLint srcY0, GLint srcX1, GLint srcY1,
 
             att = find_attachment(drawFb, colorDrawRb);
             printf("  Dst FBO %u  RB %u (%dx%d)  ",
-		   drawFb->Name, colorDrawRb->Name,
-		   colorDrawRb->Width, colorDrawRb->Height);
+                   drawFb->Name, colorDrawRb->Name,
+                   colorDrawRb->Width, colorDrawRb->Height);
             if (att && att->Texture) {
                printf("Tex %u  tgt 0x%x  level %u  face %u",
-		      att->Texture->Name,
-		      att->Texture->Target,
-		      att->TextureLevel,
-		      att->CubeMapFace);
+                      att->Texture->Name,
+                      att->Texture->Target,
+                      att->TextureLevel,
+                      att->CubeMapFace);
             }
             printf("\n");
          }
