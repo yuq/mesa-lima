@@ -2384,12 +2384,11 @@ vec4_visitor::visit(ir_call *ir)
 src_reg
 vec4_visitor::emit_mcs_fetch(ir_texture *ir, src_reg coordinate, src_reg sampler)
 {
-   vec4_instruction *inst = new(mem_ctx) vec4_instruction(SHADER_OPCODE_TXF_MCS);
+   vec4_instruction *inst =
+      new(mem_ctx) vec4_instruction(SHADER_OPCODE_TXF_MCS,
+                                    dst_reg(this, glsl_type::uvec4_type));
    inst->base_mrf = 2;
    inst->mlen = 1;
-   inst->dst = dst_reg(this, glsl_type::uvec4_type);
-   inst->dst.writemask = WRITEMASK_XYZW;
-
    inst->src[1] = sampler;
 
    /* parameters are: u, v, r, lod; lod will always be zero due to api restrictions */
@@ -2562,7 +2561,8 @@ vec4_visitor::visit(ir_texture *ir)
       unreachable("Unrecognized tex op");
    }
 
-   vec4_instruction *inst = new(mem_ctx) vec4_instruction(opcode);
+   vec4_instruction *inst = new(mem_ctx) vec4_instruction(
+      opcode, dst_reg(this, ir->type));
 
    if (ir->offset != NULL && !has_nonconstant_offset) {
       inst->offset =
@@ -2587,8 +2587,6 @@ vec4_visitor::visit(ir_texture *ir)
       is_high_sampler(brw, sampler_reg);
    inst->base_mrf = 2;
    inst->mlen = inst->header_present + 1; /* always at least one */
-   inst->dst = dst_reg(this, ir->type);
-   inst->dst.writemask = WRITEMASK_XYZW;
    inst->shadow_compare = ir->shadow_comparitor != NULL;
 
    inst->src[1] = sampler_reg;
