@@ -52,6 +52,8 @@ nir_optimize(nir_shader *nir)
       nir_validate_shader(nir);
       progress |= nir_opt_constant_folding(nir);
       nir_validate_shader(nir);
+      progress |= nir_opt_remove_phis(nir);
+      nir_validate_shader(nir);
    } while (progress);
 }
 
