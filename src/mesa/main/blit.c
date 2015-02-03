@@ -34,6 +34,7 @@
 #include "enums.h"
 #include "blit.h"
 #include "fbobject.h"
+#include "framebuffer.h"
 #include "glformats.h"
 #include "mtypes.h"
 #include "state.h"
@@ -162,9 +163,11 @@ _mesa_blit_framebuffer(struct gl_context *ctx,
 
    FLUSH_VERTICES(ctx, 0);
 
-   if (ctx->NewState) {
-      _mesa_update_state(ctx);
-   }
+   /* Update completeness status of readFb and drawFb. */
+   _mesa_update_framebuffer(ctx, readFb, drawFb);
+
+   /* Make sure drawFb has an initialized bounding box. */
+   _mesa_update_draw_buffer_bounds(ctx, drawFb);
 
    if (!readFb || !drawFb) {
       /* This will normally never happen but someday we may want to
