@@ -79,6 +79,7 @@ create_texture_for_pbo(struct gl_context *ctx, bool create_pbo,
       buffer_obj = packing->BufferObj;
    } else {
       assert(create_pbo);
+      bool is_pixel_pack = pbo_target == GL_PIXEL_PACK_BUFFER;
 
       _mesa_GenBuffers(1, tmp_pbo);
 
@@ -88,7 +89,12 @@ create_texture_for_pbo(struct gl_context *ctx, bool create_pbo,
        */
       _mesa_BindBuffer(pbo_target, *tmp_pbo);
 
-      _mesa_BufferData(pbo_target, row_stride * height, pixels, GL_STREAM_DRAW);
+      if (is_pixel_pack)
+         _mesa_BufferData(pbo_target, row_stride * height, pixels,
+                          GL_STREAM_READ);
+      else
+         _mesa_BufferData(pbo_target, row_stride * height, pixels,
+                          GL_STREAM_DRAW);
 
       buffer_obj = ctx->Unpack.BufferObj;
       pixels = NULL;
