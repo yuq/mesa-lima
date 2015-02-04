@@ -1148,7 +1148,15 @@ brw_inst *
 brw_F32TO16(struct brw_compile *p, struct brw_reg dst, struct brw_reg src)
 {
    const struct brw_context *brw = p->brw;
-   bool align16 = brw_inst_access_mode(brw, p->current) == BRW_ALIGN_16;
+   const bool align16 = brw_inst_access_mode(brw, p->current) == BRW_ALIGN_16;
+   /* The F32TO16 instruction doesn't support 32-bit destination types in
+    * Align1 mode, and neither does the Gen8 implementation in terms of a
+    * converting MOV.  Gen7 does zero out the high 16 bits in Align16 mode as
+    * an undocumented feature.
+    */
+   const bool needs_zero_fill = (dst.type == BRW_REGISTER_TYPE_UD &&
+                                 brw->gen >= 8);
+   brw_inst *inst;
 
    if (align16) {
       assert(dst.type == BRW_REGISTER_TYPE_UD);
@@ -1158,18 +1166,28 @@ brw_F32TO16(struct brw_compile *p, struct brw_reg dst, struct brw_reg src)
              dst.type == BRW_REGISTER_TYPE_HF);
    }
 
+   brw_push_insn_state(p);
+
+   if (needs_zero_fill) {
+      brw_set_default_access_mode(p, BRW_ALIGN_1);
+      dst = spread(retype(dst, BRW_REGISTER_TYPE_W), 2);
+   }
+
    if (brw->gen >= 8) {
-      if (align16) {
-         /* Emulate the Gen7 zeroing bug (see comments in vec4_visitor's
-          * emit_pack_half_2x16 method.)
-          */
-         brw_MOV(p, retype(dst, BRW_REGISTER_TYPE_UD), brw_imm_ud(0u));
-      }
-      return brw_MOV(p, retype(dst, BRW_REGISTER_TYPE_HF), src);
+      inst = brw_MOV(p, retype(dst, BRW_REGISTER_TYPE_HF), src);
    } else {
       assert(brw->gen == 7);
-      return brw_alu1(p, BRW_OPCODE_F32TO16, dst, src);
+      inst = brw_alu1(p, BRW_OPCODE_F32TO16, dst, src);
    }
+
+   if (needs_zero_fill) {
+      brw_inst_set_no_dd_clear(brw, inst, true);
+      inst = brw_MOV(p, suboffset(dst, 1), brw_imm_ud(0u));
+      brw_inst_set_no_dd_check(brw, inst, true);
+   }
+
+   brw_pop_insn_state(p);
+   return inst;
 }
 
 brw_inst *
