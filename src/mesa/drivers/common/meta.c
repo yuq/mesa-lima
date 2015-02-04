@@ -823,6 +823,8 @@ _mesa_meta_begin(struct gl_context *ctx, GLbitfield state)
 void
 _mesa_meta_end(struct gl_context *ctx)
 {
+   assert(ctx->Meta->SaveStackDepth > 0);
+
    struct save_state *save = &ctx->Meta->Save[ctx->Meta->SaveStackDepth - 1];
    const GLbitfield state = save->SavedState;
    int i;
