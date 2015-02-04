@@ -1150,6 +1150,58 @@ stitch_blocks(nir_block *before, nir_block *after)
    exec_node_remove(&after->cf_node.node);
 }
 
+static void
+remove_defs_uses(nir_instr *instr);
+
+static void
+cleanup_cf_node(nir_cf_node *node)
+{
+   switch (node->type) {
+   case nir_cf_node_block: {
+      nir_block *block = nir_cf_node_as_block(node);
+      /* We need to walk the instructions and clean up defs/uses */
+      nir_foreach_instr(block, instr)
+         remove_defs_uses(instr);
+      break;
+   }
+
+   case nir_cf_node_if: {
+      nir_if *if_stmt = nir_cf_node_as_if(node);
+      foreach_list_typed(nir_cf_node, child, node, &if_stmt->then_list)
+         cleanup_cf_node(child);
+      foreach_list_typed(nir_cf_node, child, node, &if_stmt->else_list)
+         cleanup_cf_node(child);
+
+      struct set *if_uses;
+      if (if_stmt->condition.is_ssa) {
+         if_uses = if_stmt->condition.ssa->if_uses;
+      } else {
+         if_uses = if_stmt->condition.reg.reg->if_uses;
+      }
+
+      struct set_entry *entry = _mesa_set_search(if_uses, if_stmt);
+      assert(entry);
+      _mesa_set_remove(if_uses, entry);
+      break;
+   }
+
+   case nir_cf_node_loop: {
+      nir_loop *loop = nir_cf_node_as_loop(node);
+      foreach_list_typed(nir_cf_node, child, node, &loop->body)
+         cleanup_cf_node(child);
+      break;
+   }
+   case nir_cf_node_function: {
+      nir_function_impl *impl = nir_cf_node_as_function(node);
+      foreach_list_typed(nir_cf_node, child, node, &impl->body)
+         cleanup_cf_node(child);
+      break;
+   }
+   default:
+      unreachable("Invalid CF node type");
+   }
+}
+
 void
 nir_cf_node_remove(nir_cf_node *node)
 {
@@ -1177,6 +1229,8 @@ nir_cf_node_remove(nir_cf_node *node)
       exec_node_remove(&node->node);
       stitch_blocks(before_block, after_block);
    }
+
+   cleanup_cf_node(node);
 }
 
 static bool
