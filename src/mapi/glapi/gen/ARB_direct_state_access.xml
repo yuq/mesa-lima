@@ -181,6 +181,22 @@
       <param name="layer" type="GLint" />
    </function>
 
+   <function name="InvalidateNamedFramebufferData" offset="assign">
+      <param name="framebuffer" type="GLuint" />
+      <param name="numAttachments" type="GLsizei" />
+      <param name="attachments" type="const GLenum *" />
+   </function>
+
+   <function name="InvalidateNamedFramebufferSubData" offset="assign">
+      <param name="framebuffer" type="GLuint" />
+      <param name="numAttachments" type="GLsizei" />
+      <param name="attachments" type="const GLenum *" />
+      <param name="x" type="GLint" />
+      <param name="y" type="GLint" />
+      <param name="width" type="GLsizei" />
+      <param name="height" type="GLsizei" />
+   </function>
+
    <function name="BlitNamedFramebuffer" offset="assign">
       <param name="readFramebuffer" type="GLuint" />
       <param name="drawFramebuffer" type="GLuint" />

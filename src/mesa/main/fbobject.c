@@ -3788,6 +3788,35 @@ _mesa_InvalidateSubFramebuffer(GLenum target, GLsizei numAttachments,
 
 
 void GLAPIENTRY
+_mesa_InvalidateNamedFramebufferSubData(GLuint framebuffer,
+                                        GLsizei numAttachments,
+                                        const GLenum *attachments,
+                                        GLint x, GLint y,
+                                        GLsizei width, GLsizei height)
+{
+   struct gl_framebuffer *fb;
+   GET_CURRENT_CONTEXT(ctx);
+
+   /* The OpenGL 4.5 core spec (02.02.2015) says (in Section 17.4 Whole
+    * Framebuffer Operations, PDF page 522): "If framebuffer is zero, the
+    * default draw framebuffer is affected."
+    */
+   if (framebuffer) {
+      fb = _mesa_lookup_framebuffer_err(ctx, framebuffer,
+                                        "glInvalidateNamedFramebufferSubData");
+      if (!fb)
+         return;
+   }
+   else
+      fb = ctx->WinSysDrawBuffer;
+
+   invalidate_framebuffer_storage(ctx, fb, numAttachments, attachments,
+                                  x, y, width, height,
+                                  "glInvalidateNamedFramebufferSubData");
+}
+
+
+void GLAPIENTRY
 _mesa_InvalidateFramebuffer(GLenum target, GLsizei numAttachments,
                             const GLenum *attachments)
 {
@@ -3818,6 +3847,46 @@ _mesa_InvalidateFramebuffer(GLenum target, GLsizei numAttachments,
                                   0, 0,
                                   MAX_VIEWPORT_WIDTH, MAX_VIEWPORT_HEIGHT,
                                   "glInvalidateFramebuffer");
+}
+
+
+void GLAPIENTRY
+_mesa_InvalidateNamedFramebufferData(GLuint framebuffer,
+                                     GLsizei numAttachments,
+                                     const GLenum *attachments)
+{
+   struct gl_framebuffer *fb;
+   GET_CURRENT_CONTEXT(ctx);
+
+   /* The OpenGL 4.5 core spec (02.02.2015) says (in Section 17.4 Whole
+    * Framebuffer Operations, PDF page 522): "If framebuffer is zero, the
+    * default draw framebuffer is affected."
+    */
+   if (framebuffer) {
+      fb = _mesa_lookup_framebuffer_err(ctx, framebuffer,
+                                        "glInvalidateNamedFramebufferData");
+      if (!fb)
+         return;
+   }
+   else
+      fb = ctx->WinSysDrawBuffer;
+
+   /* The GL_ARB_invalidate_subdata spec says:
+    *
+    *     "The command
+    *
+    *        void InvalidateFramebuffer(enum target,
+    *                                   sizei numAttachments,
+    *                                   const enum *attachments);
+    *
+    *     is equivalent to the command InvalidateSubFramebuffer with <x>, <y>,
+    *     <width>, <height> equal to 0, 0, <MAX_VIEWPORT_DIMS[0]>,
+    *     <MAX_VIEWPORT_DIMS[1]> respectively."
+    */
+   invalidate_framebuffer_storage(ctx, fb, numAttachments, attachments,
+                                  0, 0,
+                                  MAX_VIEWPORT_WIDTH, MAX_VIEWPORT_HEIGHT,
+                                  "glInvalidateNamedFramebufferData");
 }
 
 
