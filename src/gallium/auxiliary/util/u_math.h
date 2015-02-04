@@ -530,6 +530,7 @@ unsigned ffs( unsigned u )
 }
 #elif defined(__MINGW32__) || defined(PIPE_OS_ANDROID)
 #define ffs __builtin_ffs
+#define ffsll __builtin_ffsll
 #endif
 
 #endif /* FFS_DEFINED */
