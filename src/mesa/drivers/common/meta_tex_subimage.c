@@ -96,7 +96,7 @@ create_texture_for_pbo(struct gl_context *ctx, bool create_pbo,
          _mesa_BufferData(pbo_target, row_stride * height, pixels,
                           GL_STREAM_DRAW);
 
-      buffer_obj = ctx->Unpack.BufferObj;
+      buffer_obj = packing->BufferObj;
       pixels = NULL;
 
       _mesa_BindBuffer(pbo_target, 0);
