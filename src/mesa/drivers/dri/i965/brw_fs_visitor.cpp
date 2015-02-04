@@ -51,10 +51,10 @@ extern "C" {
 
 
 fs_reg *
-fs_visitor::emit_vs_system_value(enum brw_reg_type type, int location)
+fs_visitor::emit_vs_system_value(int location)
 {
    fs_reg *reg = new(this->mem_ctx)
-      fs_reg(ATTR, VERT_ATTRIB_MAX, type);
+      fs_reg(ATTR, VERT_ATTRIB_MAX, BRW_REGISTER_TYPE_D);
    brw_vs_prog_data *vs_prog_data = (brw_vs_prog_data *) prog_data;
 
    switch (location) {
@@ -191,8 +191,7 @@ fs_visitor::visit(ir_variable *ir)
       case SYSTEM_VALUE_VERTEX_ID:
       case SYSTEM_VALUE_VERTEX_ID_ZERO_BASE:
       case SYSTEM_VALUE_INSTANCE_ID:
-         reg = emit_vs_system_value(brw_type_for_base_type(ir->type),
-                                    ir->data.location);
+         reg = emit_vs_system_value(ir->data.location);
          break;
       case SYSTEM_VALUE_SAMPLE_POS:
 	 reg = emit_samplepos_setup();

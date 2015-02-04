@@ -259,7 +259,7 @@ public:
                                    glsl_interp_qualifier interpolation_mode,
                                    int location, bool mod_centroid,
                                    bool mod_sample);
-   fs_reg *emit_vs_system_value(enum brw_reg_type type, int location);
+   fs_reg *emit_vs_system_value(int location);
    void emit_interpolation_setup_gen4();
    void emit_interpolation_setup_gen6();
    void compute_sample_position(fs_reg dst, fs_reg int_sample_pos);
