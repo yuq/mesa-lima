@@ -45,6 +45,7 @@
 #include <stdbool.h>
 #include "main/imports.h"
 #include "main/compiler.h"
+#include "main/macros.h"
 #include "program/prog_instruction.h"
 #include "brw_defines.h"
 
@@ -720,6 +721,27 @@ stride(struct brw_reg reg, unsigned vstride, unsigned width, unsigned hstride)
    return reg;
 }
 
+/**
+ * Multiply the vertical and horizontal stride of a register by the given
+ * factor \a s.
+ */
+static inline struct brw_reg
+spread(struct brw_reg reg, unsigned s)
+{
+   if (s) {
+      assert(is_power_of_two(s));
+
+      if (reg.hstride)
+         reg.hstride += cvt(s) - 1;
+
+      if (reg.vstride)
+         reg.vstride += cvt(s) - 1;
+
+      return reg;
+   } else {
+      return stride(reg, 0, 1, 0);
+   }
+}
 
 static inline struct brw_reg
 vec16(struct brw_reg reg)

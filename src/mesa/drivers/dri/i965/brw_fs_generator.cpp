@@ -1399,27 +1399,6 @@ fs_generator::generate_set_sample_id(fs_inst *inst,
    brw_pop_insn_state(p);
 }
 
-/**
- * Change the register's data type from UD to W, doubling the strides in order
- * to compensate for halving the data type width.
- */
-static struct brw_reg
-ud_reg_to_w(struct brw_reg r)
-{
-   assert(r.type == BRW_REGISTER_TYPE_UD);
-   r.type = BRW_REGISTER_TYPE_W;
-
-   /* The BRW_*_STRIDE enums are defined so that incrementing the field
-    * doubles the real stride.
-    */
-   if (r.hstride != 0)
-      ++r.hstride;
-   if (r.vstride != 0)
-      ++r.vstride;
-
-   return r;
-}
-
 void
 fs_generator::generate_pack_half_2x16_split(fs_inst *inst,
                                             struct brw_reg dst,
@@ -1440,9 +1419,9 @@ fs_generator::generate_pack_half_2x16_split(fs_inst *inst,
     *   (HorzStride) of 2. The 16-bit result is stored in the lower word of
     *   each destination channel and the upper word is not modified.
     */
-   struct brw_reg dst_w = ud_reg_to_w(dst);
+   struct brw_reg dst_w = spread(retype(dst, BRW_REGISTER_TYPE_W), 2);
 
-   /* Give each 32-bit channel of dst the form below , where "." means
+   /* Give each 32-bit channel of dst the form below, where "." means
     * unchanged.
     *   0x....hhhh
     */
@@ -1474,7 +1453,7 @@ fs_generator::generate_unpack_half_2x16_split(fs_inst *inst,
     *   the source data type must be Word (W). The destination type must be
     *   F (Float).
     */
-   struct brw_reg src_w = ud_reg_to_w(src);
+   struct brw_reg src_w = spread(retype(src, BRW_REGISTER_TYPE_W), 2);
 
    /* Each channel of src has the form of unpackHalf2x16's input: 0xhhhhllll.
     * For the Y case, we wish to access only the upper word; therefore
