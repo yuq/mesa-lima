@@ -2004,38 +2004,20 @@ nir_index_blocks(nir_function_impl *impl)
    impl->num_blocks = index;
 }
 
-static void
-index_ssa_def(nir_ssa_def *def, unsigned *index)
-{
-   def->index = (*index)++;
-}
-
 static bool
-index_ssa_def_cb(nir_dest *dest, void *state)
+index_ssa_def_cb(nir_ssa_def *def, void *state)
 {
-   unsigned *index = state;
-   if (dest->is_ssa)
-      index_ssa_def(&dest->ssa, index);
-   return true;
-}
+   unsigned *index = (unsigned *) state;
+   def->index = (*index)++;
 
-static void
-index_ssa_undef(nir_ssa_undef_instr *instr, unsigned *index)
-{
-   index_ssa_def(&instr->def, index);
+   return true;
 }
 
 static bool
 index_ssa_block(nir_block *block, void *state)
 {
-   unsigned *index = state;
-
-   nir_foreach_instr(block, instr) {
-      if (instr->type == nir_instr_type_ssa_undef)
-         index_ssa_undef(nir_instr_as_ssa_undef(instr), index);
-      else
-         nir_foreach_dest(instr, index_ssa_def_cb, state);
-   }
+   nir_foreach_instr(block, instr)
+      nir_foreach_ssa_def(instr, index_ssa_def_cb, state);
 
    return true;
 }
