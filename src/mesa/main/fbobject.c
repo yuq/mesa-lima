@@ -3650,9 +3650,26 @@ invalidate_framebuffer_storage(GLenum target, GLsizei numAttachments,
       return;
    }
 
+   /* Section 17.4 Whole Framebuffer Operations of the OpenGL 4.5 Core
+    * Spec (2.2.2015, PDF page 522) says:
+    *    "An INVALID_VALUE error is generated if numAttachments, width, or
+    *    height is negative."
+    */
    if (numAttachments < 0) {
       _mesa_error(ctx, GL_INVALID_VALUE,
                   "%s(numAttachments < 0)", name);
+      return;
+   }
+
+   if (width < 0) {
+      _mesa_error(ctx, GL_INVALID_VALUE,
+                  "%s(width < 0)", name);
+      return;
+   }
+
+   if (height < 0) {
+      _mesa_error(ctx, GL_INVALID_VALUE,
+                  "%s(height < 0)", name);
       return;
    }
 
@@ -3748,7 +3765,8 @@ invalidate_framebuffer_storage(GLenum target, GLsizei numAttachments,
    return;
 
 invalid_enum:
-   _mesa_error(ctx, GL_INVALID_ENUM, "%s(attachment)", name);
+   _mesa_error(ctx, GL_INVALID_ENUM, "%s(invalid attachment %s)", name,
+               _mesa_lookup_enum_by_nr(attachments[i]));
    return;
 }
 
