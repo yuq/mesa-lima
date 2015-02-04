@@ -3112,7 +3112,7 @@ fs_visitor::lower_load_payload()
    bool progress = false;
 
    int vgrf_to_reg[alloc.count];
-   int reg_count = 16; /* Leave room for MRF */
+   int reg_count = 0;
    for (unsigned i = 0; i < alloc.count; ++i) {
       vgrf_to_reg[i] = reg_count;
       reg_count += alloc.sizes[i];
@@ -3126,15 +3126,8 @@ fs_visitor::lower_load_payload()
    memset(metadata, 0, sizeof(metadata));
 
    foreach_block_and_inst_safe (block, fs_inst, inst, cfg) {
-      int dst_reg;
       if (inst->dst.file == GRF) {
-         dst_reg = vgrf_to_reg[inst->dst.reg];
-      } else {
-         /* MRF */
-         dst_reg = inst->dst.reg;
-      }
-
-      if (inst->dst.file == MRF || inst->dst.file == GRF) {
+         const int dst_reg = vgrf_to_reg[inst->dst.reg];
          bool force_sechalf = inst->force_sechalf &&
                               !inst->force_writemask_all;
          bool toggle_sechalf = inst->dst.width == 16 &&
@@ -3180,26 +3173,20 @@ fs_visitor::lower_load_payload()
                                 inst->src[i].reg_offset;
                   mov->force_sechalf = metadata[src_reg].force_sechalf;
                   mov->force_writemask_all = metadata[src_reg].force_writemask_all;
-                  metadata[dst_reg] = metadata[src_reg];
+               }
+
+               if (dst.file == GRF) {
+                  const int dst_reg = vgrf_to_reg[dst.reg];
+                  const bool force_writemask = mov->force_writemask_all;
+                  metadata[dst_reg].force_writemask_all = force_writemask;
+                  metadata[dst_reg].force_sechalf = mov->force_sechalf;
                   if (dst.width * type_sz(dst.type) > 32) {
-                     if (metadata[src_reg].force_writemask_all) {
-                        metadata[dst_reg + 1] = metadata[src_reg];
-                     } else {
-                        assert((!metadata[src_reg].written ||
-                                !metadata[src_reg].force_sechalf) &&
-                               (!metadata[src_reg + 1].written ||
-                                metadata[src_reg + 1].force_sechalf));
-                        metadata[dst_reg + 1] = metadata[src_reg + 1];
-                     }
-                  }
-               } else {
-                  metadata[dst_reg].force_writemask_all = false;
-                  metadata[dst_reg].force_sechalf = false;
-                  if (dst.width == 16) {
-                     metadata[dst_reg + 1].force_writemask_all = false;
-                     metadata[dst_reg + 1].force_sechalf = true;
+                     assert(!mov->force_sechalf);
+                     metadata[dst_reg + 1].force_writemask_all = force_writemask;
+                     metadata[dst_reg + 1].force_sechalf = !force_writemask;
                   }
                }
+
                inst->insert_before(block, mov);
             }
 
