@@ -1171,20 +1171,11 @@ intelMakeCurrent(__DRIcontext * driContextPriv,
                  __DRIdrawable * driReadPriv)
 {
    struct brw_context *brw;
-   GET_CURRENT_CONTEXT(curCtx);
 
    if (driContextPriv)
       brw = (struct brw_context *) driContextPriv->driverPrivate;
    else
       brw = NULL;
-
-   /* According to the glXMakeCurrent() man page: "Pending commands to
-    * the previous context, if any, are flushed before it is released."
-    * But only flush if we're actually changing contexts.
-    */
-   if (brw_context(curCtx) && brw_context(curCtx) != brw) {
-      _mesa_flush(curCtx);
-   }
 
    if (driContextPriv) {
       struct gl_context *ctx = &brw->ctx;
