@@ -868,6 +868,11 @@ vec4_visitor::is_dep_ctrl_unsafe(const vec4_instruction *inst)
    }
 #undef IS_DWORD
 
+   if (brw->gen >= 8) {
+      if (inst->opcode == BRW_OPCODE_F32TO16)
+         return true;
+   }
+
    /*
     * mlen:
     * In the presence of send messages, totally interrupt dependency
