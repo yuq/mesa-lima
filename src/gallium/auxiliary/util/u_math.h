@@ -584,6 +584,7 @@ u_bit_scan(unsigned *mask)
    return i;
 }
 
+#ifndef _MSC_VER
 static INLINE int
 u_bit_scan64(uint64_t *mask)
 {
@@ -591,6 +592,7 @@ u_bit_scan64(uint64_t *mask)
    *mask &= ~(1llu << i);
    return i;
 }
+#endif
 
 /**
  * Return float bits.
