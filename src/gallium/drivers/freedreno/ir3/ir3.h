@@ -79,17 +79,18 @@ struct ir3_register {
 		 * the component is in the low two bits of the reg #, so
 		 * rN.x becomes: (N << 2) | x
 		 */
-		int num;
+		int   num;
 		/* immediate: */
-		int     iim_val;
-		float   fim_val;
+		int   iim_val;
+		float fim_val;
 		/* relative: */
-		int offset;
-		/* for IR3_REG_SSA, src registers contain ptr back to
-		 * assigning instruction.
-		 */
-		struct ir3_instruction *instr;
+		int   offset;
 	};
+
+	/* for IR3_REG_SSA, src registers contain ptr back to
+	 * assigning instruction.
+	 */
+	struct ir3_instruction *instr;
 
 	union {
 		/* used for cat5 instructions, but also for internal/IR level
@@ -209,9 +210,6 @@ struct ir3_instruction {
 		struct {
 			struct ir3_block *block;
 		} inout;
-		struct {
-			int off;              /* offset relative to addr reg */
-		} deref;
 
 		/* XXX keep this as big as all other union members! */
 		uint32_t info[3];
@@ -260,6 +258,12 @@ struct ir3_instruction {
 		struct ir3_instruction *left, *right;
 		uint16_t left_cnt, right_cnt;
 	} cp;
+
+	/* an instruction can reference at most one address register amongst
+	 * it's src/dst registers.  Beyond that, you need to insert mov's.
+	 */
+	struct ir3_instruction *address;
+
 	struct ir3_instruction *next;
 #ifdef DEBUG
 	uint32_t serialno;
@@ -445,11 +449,6 @@ static inline bool is_meta(struct ir3_instruction *instr)
 	return (instr->category == -1);
 }
 
-static inline bool is_addr(struct ir3_instruction *instr)
-{
-	return is_meta(instr) && (instr->opc == OPC_META_DEREF);
-}
-
 static inline bool writes_addr(struct ir3_instruction *instr)
 {
 	if (instr->regs_count > 0) {
@@ -499,11 +498,15 @@ static inline bool reg_gpr(struct ir3_register *r)
 
 static inline unsigned __ssa_src_cnt(struct ir3_instruction *instr)
 {
+	if (instr->address)
+		return instr->regs_count + 1;
 	return instr->regs_count;
 }
 
 static inline struct ir3_instruction * __ssa_src_n(struct ir3_instruction *instr, unsigned n)
 {
+	if (n == (instr->regs_count + 0))
+		return instr->address;
 	return ssa(instr->regs[n]);
 }
 

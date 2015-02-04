@@ -624,16 +624,18 @@ ssa_src(struct ir3_compile_context *ctx, struct ir3_register *reg,
 		 * we must generate a fanin instruction to collect all possible
 		 * array elements that the instruction could address together:
 		 */
-		unsigned i, j, aid = src_array_id(ctx, src);
+		unsigned aid   = src_array_id(ctx, src);
+		unsigned first = ctx->array[aid].first;
+		unsigned last  = ctx->array[aid].last;
+		unsigned off   = src->Index - first; /* vec4 offset */
+		unsigned i, j;
+
+		reg->size = 4 * (1 + last - first);
+		reg->offset = regid(off, chan);
 
 		if (ctx->array[aid].fanin) {
 			instr = ctx->array[aid].fanin;
 		} else {
-			unsigned first, last;
-
-			first = ctx->array[aid].first;
-			last  = ctx->array[aid].last;
-
 			instr = ir3_instr_create2(ctx->block, -1, OPC_META_FI,
 					1 + (4 * (last + 1 - first)));
 			ir3_reg_create(instr, 0, 0);
@@ -756,7 +758,6 @@ add_src_reg_wrmask(struct ir3_compile_context *ctx,
 {
 	unsigned flags = 0, num = 0;
 	struct ir3_register *reg;
-	struct ir3_instruction *orig = NULL;
 
 	switch (src->File) {
 	case TGSI_FILE_IMMEDIATE:
@@ -815,28 +816,15 @@ add_src_reg_wrmask(struct ir3_compile_context *ctx,
 		/* shouldn't happen, and we can't cope with it below: */
 		compile_assert(ctx, wrmask == 0x1);
 
-		/* wrap in a meta-deref to track both the src and address: */
-		orig = instr;
+		compile_assert(ctx, ctx->block->address);
+		if (instr->address)
+			compile_assert(ctx, ctx->block->address == instr->address);
 
-		instr = ir3_instr_create(ctx->block, -1, OPC_META_DEREF);
-		ir3_reg_create(instr, 0, 0);
-		ir3_reg_create(instr, 0, IR3_REG_SSA)->instr = ctx->block->address;
-
-		if (src->File != TGSI_FILE_CONSTANT) {
-			unsigned aid = src_array_id(ctx, src);
-			unsigned off = src->Index - ctx->array[aid].first; /* vec4 offset */
-			instr->deref.off = regid(off, chan);
-		}
+		instr->address = ctx->block->address;
 	}
 
 	reg = ir3_reg_create(instr, regid(num, chan), flags);
-
-	if (src->Indirect && (src->File != TGSI_FILE_CONSTANT)) {
-		unsigned aid = src_array_id(ctx, src);
-		reg->size = 4 * (1 + ctx->array[aid].last - ctx->array[aid].first);
-	} else {
-		reg->wrmask = wrmask;
-	}
+	reg->wrmask = wrmask;
 
 	if (wrmask == 0x1) {
 		/* normal case */
@@ -870,14 +858,6 @@ add_src_reg_wrmask(struct ir3_compile_context *ctx,
 
 		reg->flags |= IR3_REG_SSA;
 		reg->instr = collect;
-	}
-
-	if (src->Indirect) {
-		unsigned size = reg->size;
-
-		reg = ir3_reg_create(orig, 0, flags | IR3_REG_SSA);
-		reg->instr = instr;
-		reg->size = size;
 	}
 
 	return reg;

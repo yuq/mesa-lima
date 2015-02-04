@@ -292,16 +292,7 @@ static struct ir3_instruction * reverse(struct ir3_instruction *instr)
 static bool uses_current_addr(struct ir3_sched_ctx *ctx,
 		struct ir3_instruction *instr)
 {
-	struct ir3_instruction *src;
-	foreach_ssa_src(src, instr) {
-		if (is_addr(src)) {
-			struct ir3_instruction *addr =
-				src->regs[1]->instr; /* the mova */
-			if (ctx->addr == addr)
-				return true;
-		}
-	}
-	return false;
+	return instr->address && (ctx->addr == instr->address);
 }
 
 static bool uses_current_pred(struct ir3_sched_ctx *ctx,

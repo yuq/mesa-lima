@@ -204,9 +204,6 @@ typedef enum {
 	/* branches/flow control */
 	OPC_META_FLOW = 4,
 	OPC_META_PHI = 5,
-	/* relative addressing */
-	OPC_META_DEREF = 6,
-
 
 } opc_t;
 

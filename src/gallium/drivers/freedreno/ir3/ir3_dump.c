@@ -58,9 +58,6 @@ static void dump_instr_name(struct ir3_dump_ctx *ctx,
 		case OPC_META_PHI:
 			fprintf(ctx->f, "&#934;");
 			break;
-		case OPC_META_DEREF:
-			fprintf(ctx->f, "(*)");
-			break;
 		default:
 			/* shouldn't hit here.. just for debugging: */
 			switch (instr->opc) {
@@ -171,8 +168,7 @@ static void dump_instr(struct ir3_dump_ctx *ctx,
 				ir3_block_dump(ctx, instr->flow.else_block, "else");
 			if (reg->flags & IR3_REG_SSA)
 				dump_instr(ctx, reg->instr);
-		} else if ((instr->opc == OPC_META_PHI) ||
-				(instr->opc == OPC_META_DEREF)) {
+		} else if (instr->opc == OPC_META_PHI) {
 			/* treat like a normal instruction: */
 			ir3_instr_dump(ctx, instr);
 		}
@@ -234,8 +230,7 @@ static void dump_link2(struct ir3_dump_ctx *ctx,
 			printdef(ctx, defer, "output%lx:<out%u>:w -> %s",
 					PTRID(instr->inout.block),
 					instr->regs[0]->num, target);
-		} else if ((instr->opc == OPC_META_PHI) ||
-				(instr->opc == OPC_META_DEREF)) {
+		} else if (instr->opc == OPC_META_PHI) {
 			/* treat like a normal instruction: */
 			printdef(ctx, defer, "instr%lx:<dst0> -> %s", PTRID(instr), target);
 		}
@@ -410,6 +405,13 @@ ir3_dump_instr_single(struct ir3_instruction *instr)
 		struct ir3_register *reg = instr->regs[i];
 		printf(i ? ", " : " ");
 		dump_reg_name(&ctx, reg, !!i);
+	}
+
+	if (instr->address) {
+		fprintf(ctx.f, ", address=_");
+		fprintf(ctx.f, "[");
+		dump_instr_name(&ctx, instr->address);
+		fprintf(ctx.f, "]");
 	}
 
 	if (is_meta(instr) && (instr->opc == OPC_META_FO))

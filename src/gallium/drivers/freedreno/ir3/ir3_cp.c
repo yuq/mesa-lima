@@ -95,6 +95,9 @@ instr_cp(struct ir3_instruction *instr)
 		foreach_src(reg, instr)
 			if (reg->flags & IR3_REG_SSA)
 				reg->instr = instr_cp(reg->instr);
+
+		if (instr->address)
+			instr->address = instr_cp(instr->address);
 	}
 
 	return instr;

@@ -357,6 +357,11 @@ static void instr_assign(struct ir3_ra_ctx *ctx,
 static void instr_assign_src(struct ir3_ra_ctx *ctx,
 		struct ir3_instruction *instr, unsigned r, unsigned name)
 {
+	struct ir3_register *reg = instr->regs[r];
+
+	if (reg->flags & IR3_REG_RELATIV)
+		name += reg->offset;
+
 	reg_assign(instr, r, name);
 
 	if (is_meta(instr)) {
@@ -372,14 +377,6 @@ static void instr_assign_src(struct ir3_ra_ctx *ctx,
 		case OPC_META_FI:
 			instr_assign(ctx, instr, name - (r - 1));
 			return;
-		case OPC_META_DEREF:
-			/* first arg of meta:deref is the addr reg (do not
-			 * propagate), 2nd is actual src (fanin) which does
-			 * get propagated)
-			 */
-			if (r == 2)
-				instr_assign(ctx, instr, name + instr->deref.off);
-			break;
 		default:
 			break;
 		}
@@ -391,6 +388,9 @@ static void instr_assign(struct ir3_ra_ctx *ctx,
 {
 	struct ir3_instruction *n, *src;
 	struct ir3_register *reg = instr->regs[0];
+
+	if ((reg->flags & IR3_REG_RELATIV))
+		name += reg->offset;
 
 	/* check if already assigned: */
 	if (!(reg->flags & IR3_REG_SSA)) {
@@ -484,9 +484,6 @@ static void instr_alloc_and_assign(struct ir3_ra_ctx *ctx,
 	/* allocate register(s): */
 	if (name >= 0) {
 		/* already partially assigned, just finish the job */
-	} else if (is_addr(instr)) {
-		debug_assert(!instr->cp.right);
-		name = instr->regs[2]->num + instr->deref.off;
 	} else if (reg_gpr(dst)) {
 		int size;
 		/* number of consecutive registers to assign: */
