@@ -606,6 +606,35 @@ static int src_array_id(struct ir3_compile_context *ctx,
 	return fsrc->Indirect.ArrayID + ctx->array_offsets[src->File];
 }
 
+static struct ir3_instruction *
+array_fanin(struct ir3_compile_context *ctx, unsigned aid, unsigned file)
+{
+	struct ir3_instruction *instr;
+
+	if (ctx->array[aid].fanin) {
+		instr = ctx->array[aid].fanin;
+	} else {
+		unsigned first = ctx->array[aid].first;
+		unsigned last  = ctx->array[aid].last;
+		unsigned i, j;
+
+		instr = ir3_instr_create2(ctx->block, -1, OPC_META_FI,
+				1 + (4 * (last + 1 - first)));
+		ir3_reg_create(instr, 0, 0);
+		for (i = first; i <= last; i++) {
+			for (j = 0; j < 4; j++) {
+				unsigned n = regid(i, j);
+				ir3_reg_create(instr, 0, IR3_REG_SSA)->instr =
+						ssa_instr_get(ctx, file, n);
+			}
+		}
+		ctx->array[aid].fanin = instr;
+		ctx->array_dirty |= (1 << aid);
+	}
+
+	return instr;
+}
+
 static void
 ssa_dst(struct ir3_compile_context *ctx, struct ir3_instruction *instr,
 		const struct tgsi_dst_register *dst, unsigned chan)
@@ -628,27 +657,11 @@ ssa_src(struct ir3_compile_context *ctx, struct ir3_register *reg,
 		unsigned first = ctx->array[aid].first;
 		unsigned last  = ctx->array[aid].last;
 		unsigned off   = src->Index - first; /* vec4 offset */
-		unsigned i, j;
 
 		reg->size = 4 * (1 + last - first);
 		reg->offset = regid(off, chan);
 
-		if (ctx->array[aid].fanin) {
-			instr = ctx->array[aid].fanin;
-		} else {
-			instr = ir3_instr_create2(ctx->block, -1, OPC_META_FI,
-					1 + (4 * (last + 1 - first)));
-			ir3_reg_create(instr, 0, 0);
-			for (i = first; i <= last; i++) {
-				for (j = 0; j < 4; j++) {
-					unsigned n = regid(i, j);
-					ir3_reg_create(instr, 0, IR3_REG_SSA)->instr =
-							ssa_instr_get(ctx, src->File, n);
-				}
-			}
-			ctx->array[aid].fanin = instr;
-			ctx->array_dirty |= (1 << aid);
-		}
+		instr = array_fanin(ctx, aid, src->File);
 	} else {
 		/* normal case (not relative addressed GPR) */
 		instr = ssa_instr_get(ctx, src->File, regid(src->Index, chan));
