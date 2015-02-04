@@ -1155,13 +1155,14 @@ brw_F32TO16(struct brw_compile *p, struct brw_reg dst, struct brw_reg src)
     * an undocumented feature.
     */
    const bool needs_zero_fill = (dst.type == BRW_REGISTER_TYPE_UD &&
-                                 brw->gen >= 8);
+                                 (!align16 || brw->gen >= 8));
    brw_inst *inst;
 
    if (align16) {
       assert(dst.type == BRW_REGISTER_TYPE_UD);
    } else {
-      assert(dst.type == BRW_REGISTER_TYPE_W ||
+      assert(dst.type == BRW_REGISTER_TYPE_UD ||
+             dst.type == BRW_REGISTER_TYPE_W ||
              dst.type == BRW_REGISTER_TYPE_UW ||
              dst.type == BRW_REGISTER_TYPE_HF);
    }
@@ -1199,6 +1200,15 @@ brw_F16TO32(struct brw_compile *p, struct brw_reg dst, struct brw_reg src)
    if (align16) {
       assert(src.type == BRW_REGISTER_TYPE_UD);
    } else {
+      /* From the Ivybridge PRM, Vol4, Part3, Section 6.26 f16to32:
+       *
+       *   Because this instruction does not have a 16-bit floating-point
+       *   type, the source data type must be Word (W). The destination type
+       *   must be F (Float).
+       */
+      if (src.type == BRW_REGISTER_TYPE_UD)
+         src = spread(retype(src, BRW_REGISTER_TYPE_W), 2);
+
       assert(src.type == BRW_REGISTER_TYPE_W ||
              src.type == BRW_REGISTER_TYPE_UW ||
              src.type == BRW_REGISTER_TYPE_HF);
