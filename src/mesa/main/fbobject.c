@@ -3636,19 +3636,13 @@ _mesa_GetNamedFramebufferAttachmentParameteriv(GLuint framebuffer,
 
 
 static void
-invalidate_framebuffer_storage(GLenum target, GLsizei numAttachments,
+invalidate_framebuffer_storage(struct gl_context *ctx,
+                               struct gl_framebuffer *fb,
+                               GLsizei numAttachments,
                                const GLenum *attachments, GLint x, GLint y,
                                GLsizei width, GLsizei height, const char *name)
 {
    int i;
-   struct gl_framebuffer *fb;
-   GET_CURRENT_CONTEXT(ctx);
-
-   fb = get_framebuffer_target(ctx, target);
-   if (!fb) {
-      _mesa_error(ctx, GL_INVALID_ENUM, "%s(target)", name);
-      return;
-   }
 
    /* Section 17.4 Whole Framebuffer Operations of the OpenGL 4.5 Core
     * Spec (2.2.2015, PDF page 522) says:
@@ -3776,7 +3770,18 @@ _mesa_InvalidateSubFramebuffer(GLenum target, GLsizei numAttachments,
                                const GLenum *attachments, GLint x, GLint y,
                                GLsizei width, GLsizei height)
 {
-   invalidate_framebuffer_storage(target, numAttachments, attachments,
+   struct gl_framebuffer *fb;
+   GET_CURRENT_CONTEXT(ctx);
+
+   fb = get_framebuffer_target(ctx, target);
+   if (!fb) {
+      _mesa_error(ctx, GL_INVALID_ENUM,
+                  "glInvalidateSubFramebuffer(invalid target %s)",
+                  _mesa_lookup_enum_by_nr(target));
+      return;
+   }
+
+   invalidate_framebuffer_storage(ctx, fb, numAttachments, attachments,
                                   x, y, width, height,
                                   "glInvalidateSubFramebuffer");
 }
@@ -3786,6 +3791,17 @@ void GLAPIENTRY
 _mesa_InvalidateFramebuffer(GLenum target, GLsizei numAttachments,
                             const GLenum *attachments)
 {
+   struct gl_framebuffer *fb;
+   GET_CURRENT_CONTEXT(ctx);
+
+   fb = get_framebuffer_target(ctx, target);
+   if (!fb) {
+      _mesa_error(ctx, GL_INVALID_ENUM,
+                  "glInvalidateFramebuffer(invalid target %s)",
+                  _mesa_lookup_enum_by_nr(target));
+      return;
+   }
+
    /* The GL_ARB_invalidate_subdata spec says:
     *
     *     "The command
@@ -3798,7 +3814,7 @@ _mesa_InvalidateFramebuffer(GLenum target, GLsizei numAttachments,
     *     <width>, <height> equal to 0, 0, <MAX_VIEWPORT_DIMS[0]>,
     *     <MAX_VIEWPORT_DIMS[1]> respectively."
     */
-   invalidate_framebuffer_storage(target, numAttachments, attachments,
+   invalidate_framebuffer_storage(ctx, fb, numAttachments, attachments,
                                   0, 0,
                                   MAX_VIEWPORT_WIDTH, MAX_VIEWPORT_HEIGHT,
                                   "glInvalidateFramebuffer");
