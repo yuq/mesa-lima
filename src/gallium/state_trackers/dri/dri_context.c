@@ -57,7 +57,7 @@ dri_create_context(gl_api api, const struct gl_config * visual,
    unsigned allowed_flags = __DRI_CTX_FLAG_DEBUG |
                             __DRI_CTX_FLAG_FORWARD_COMPATIBLE |
                             __DRI_CTX_FLAG_NO_ERROR;
-   unsigned allowed_attribs = 0;
+   unsigned allowed_attribs = __DRIVER_CONTEXT_ATTRIB_RELEASE_BEHAVIOR;
    const __DRIbackgroundCallableExtension *backgroundCallable =
       screen->sPriv->dri2.backgroundCallable;
 
@@ -111,6 +111,10 @@ dri_create_context(gl_api api, const struct gl_config * visual,
 
    if (ctx_config->flags & __DRI_CTX_FLAG_NO_ERROR)
       attribs.flags |= ST_CONTEXT_FLAG_NO_ERROR;
+
+   if ((ctx_config->attribute_mask & __DRIVER_CONTEXT_ATTRIB_RELEASE_BEHAVIOR)
+       && (ctx_config->release_behavior == __DRI_CTX_RELEASE_BEHAVIOR_NONE))
+      attribs.flags |= ST_CONTEXT_FLAG_RELEASE_NONE;
 
    if (sharedContextPrivate) {
       st_share = ((struct dri_context *)sharedContextPrivate)->st;
