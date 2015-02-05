@@ -119,6 +119,8 @@ is_valid_vec_const(ir_constant *ir)
 static inline bool
 is_less_than_one(ir_constant *ir)
 {
+   assert(ir->type->base_type == GLSL_TYPE_FLOAT);
+
    if (!is_valid_vec_const(ir))
       return false;
 
@@ -134,6 +136,8 @@ is_less_than_one(ir_constant *ir)
 static inline bool
 is_greater_than_zero(ir_constant *ir)
 {
+   assert(ir->type->base_type == GLSL_TYPE_FLOAT);
+
    if (!is_valid_vec_const(ir))
       return false;
 
@@ -559,7 +563,9 @@ ir_algebraic_visitor::handle_expression(ir_expression *ir)
       break;
 
    case ir_binop_div:
-      if (is_vec_one(op_const[0]) && ir->type->base_type == GLSL_TYPE_FLOAT) {
+      if (is_vec_one(op_const[0]) && (
+                ir->type->base_type == GLSL_TYPE_FLOAT ||
+                ir->type->base_type == GLSL_TYPE_DOUBLE)) {
 	 return new(mem_ctx) ir_expression(ir_unop_rcp,
 					   ir->operands[1]->type,
 					   ir->operands[1],
@@ -580,7 +586,7 @@ ir_algebraic_visitor::handle_expression(ir_expression *ir)
          unsigned components[4] = { 0 }, count = 0;
 
          for (unsigned c = 0; c < op_const[i]->type->vector_elements; c++) {
-            if (op_const[i]->value.f[c] == 0.0)
+            if (op_const[i]->is_zero())
                continue;
 
             components[count] = c;
@@ -596,7 +602,7 @@ ir_algebraic_visitor::handle_expression(ir_expression *ir)
 
          /* Swizzle both operands to remove the channels that were zero. */
          return new(mem_ctx)
-            ir_expression(op, glsl_type::float_type,
+            ir_expression(op, ir->type,
                           new(mem_ctx) ir_swizzle(ir->operands[0],
                                                   components, count),
                           new(mem_ctx) ir_swizzle(ir->operands[1],
@@ -833,7 +839,19 @@ ir_algebraic_visitor::handle_expression(ir_expression *ir)
          return mul(ir->operands[1], ir->operands[2]);
       } else if (is_vec_zero(op_const[1])) {
          unsigned op2_components = ir->operands[2]->type->vector_elements;
-         ir_constant *one = new(mem_ctx) ir_constant(1.0f, op2_components);
+         ir_constant *one;
+
+         switch (ir->type->base_type) {
+         case GLSL_TYPE_FLOAT:
+            one = new(mem_ctx) ir_constant(1.0f, op2_components);
+            break;
+         case GLSL_TYPE_DOUBLE:
+            one = new(mem_ctx) ir_constant(1.0, op2_components);
+            break;
+         default:
+            unreachable("unexpected type");
+         }
+
          return mul(ir->operands[0], add(one, neg(ir->operands[2])));
       }
       break;
