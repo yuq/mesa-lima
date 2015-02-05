@@ -608,7 +608,12 @@ private:
 	 }
 
 	 if (type->without_array()->is_matrix()) {
-	    this->uniforms[id].matrix_stride = 16;
+            const glsl_type *matrix = type->without_array();
+            const unsigned N = matrix->base_type == GLSL_TYPE_DOUBLE ? 8 : 4;
+            const unsigned items = row_major ? matrix->matrix_columns : matrix->vector_elements;
+
+            assert(items <= 4);
+            this->uniforms[id].matrix_stride = glsl_align(items * N, 16);
 	    this->uniforms[id].row_major = row_major;
 	 } else {
 	    this->uniforms[id].matrix_stride = 0;
