@@ -1283,13 +1283,20 @@ vec4_visitor::dump_instruction(backend_instruction *be_inst, FILE *file)
    vec4_instruction *inst = (vec4_instruction *)be_inst;
 
    if (inst->predicate) {
-      fprintf(file, "(%cf0) ",
-             inst->predicate_inverse ? '-' : '+');
+      fprintf(file, "(%cf0.%d) ",
+              inst->predicate_inverse ? '-' : '+',
+              inst->flag_subreg);
    }
 
    fprintf(file, "%s", brw_instruction_name(inst->opcode));
    if (inst->conditional_mod) {
       fprintf(file, "%s", conditional_modifier[inst->conditional_mod]);
+      if (!inst->predicate &&
+          (brw->gen < 5 || (inst->opcode != BRW_OPCODE_SEL &&
+                            inst->opcode != BRW_OPCODE_IF &&
+                            inst->opcode != BRW_OPCODE_WHILE))) {
+         fprintf(file, ".f0.%d", inst->flag_subreg);
+      }
    }
    fprintf(file, " ");
 

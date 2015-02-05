@@ -135,6 +135,11 @@ struct backend_instruction {
    bool saturate:1;
    bool shadow_compare:1;
    bool header_present:1;
+
+   /* Chooses which flag subregister (f0.0 or f0.1) is used for conditional
+    * mod and predication.
+    */
+   unsigned flag_subreg:1;
 };
 
 #ifdef __cplusplus

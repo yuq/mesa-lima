@@ -1167,6 +1167,7 @@ vec4_generator::generate_code(const cfg_t *cfg)
 
       brw_set_default_predicate_control(p, inst->predicate);
       brw_set_default_predicate_inverse(p, inst->predicate_inverse);
+      brw_set_default_flag_reg(p, 0, inst->flag_subreg);
       brw_set_default_saturate(p, inst->saturate);
       brw_set_default_mask_control(p, inst->force_writemask_all);
       brw_set_default_acc_write_control(p, inst->writes_accumulator);

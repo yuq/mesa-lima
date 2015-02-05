@@ -49,6 +49,7 @@ vec4_instruction::vec4_instruction(enum opcode opcode, const dst_reg &dst,
    this->ir = NULL;
    this->urb_write_flags = BRW_URB_WRITE_NO_FLAGS;
    this->header_present = false;
+   this->flag_subreg = 0;
    this->mlen = 0;
    this->base_mrf = 0;
    this->offset = 0;

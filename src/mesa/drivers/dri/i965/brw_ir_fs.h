@@ -239,11 +239,6 @@ public:
     */
    uint8_t exec_size;
 
-   /* Chooses which flag subregister (f0.0 or f0.1) is used for conditional
-    * mod and predication.
-    */
-   uint8_t flag_subreg;
-
    bool eot:1;
    bool force_uncompressed:1;
    bool force_sechalf:1;
