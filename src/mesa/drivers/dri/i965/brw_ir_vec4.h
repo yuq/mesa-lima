@@ -171,6 +171,7 @@ public:
    unsigned sol_vertex; /**< gen6: used for setting dst index in SVB header */
 
    bool is_send_from_grf();
+   unsigned regs_read(unsigned arg) const;
    bool can_reswizzle(int dst_writemask, int swizzle, int swizzle_mask);
    void reswizzle(int dst_writemask, int swizzle);
    bool can_do_source_mods(struct brw_context *brw);

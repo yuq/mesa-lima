@@ -262,6 +262,24 @@ vec4_instruction::is_send_from_grf()
    }
 }
 
+unsigned
+vec4_instruction::regs_read(unsigned arg) const
+{
+   if (src[arg].file == BAD_FILE)
+      return 0;
+
+   switch (opcode) {
+   case SHADER_OPCODE_SHADER_TIME_ADD:
+      return arg == 0 ? mlen : 1;
+
+   case VS_OPCODE_PULL_CONSTANT_LOAD_GEN7:
+      return arg == 1 ? mlen : 1;
+
+   default:
+      return 1;
+   }
+}
+
 bool
 vec4_instruction::can_do_source_mods(struct brw_context *brw)
 {

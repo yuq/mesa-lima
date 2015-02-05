@@ -1063,7 +1063,8 @@ vec4_instruction_scheduler::calculate_deps()
       /* read-after-write deps. */
       for (int i = 0; i < 3; i++) {
          if (inst->src[i].file == GRF) {
-            add_dep(last_grf_write[inst->src[i].reg], n);
+            for (unsigned j = 0; j < inst->regs_read(i); ++j)
+               add_dep(last_grf_write[inst->src[i].reg + j], n);
          } else if (inst->src[i].file == HW_REG &&
                     (inst->src[i].fixed_hw_reg.file ==
                      BRW_GENERAL_REGISTER_FILE)) {
@@ -1103,8 +1104,10 @@ vec4_instruction_scheduler::calculate_deps()
 
       /* write-after-write deps. */
       if (inst->dst.file == GRF) {
-         add_dep(last_grf_write[inst->dst.reg], n);
-         last_grf_write[inst->dst.reg] = n;
+         for (unsigned j = 0; j < inst->regs_written; ++j) {
+            add_dep(last_grf_write[inst->dst.reg + j], n);
+            last_grf_write[inst->dst.reg + j] = n;
+         }
       } else if (inst->dst.file == MRF) {
          add_dep(last_mrf_write[inst->dst.reg], n);
          last_mrf_write[inst->dst.reg] = n;
@@ -1156,7 +1159,8 @@ vec4_instruction_scheduler::calculate_deps()
       /* write-after-read deps. */
       for (int i = 0; i < 3; i++) {
          if (inst->src[i].file == GRF) {
-            add_dep(n, last_grf_write[inst->src[i].reg]);
+            for (unsigned j = 0; j < inst->regs_read(i); ++j)
+               add_dep(n, last_grf_write[inst->src[i].reg + j]);
          } else if (inst->src[i].file == HW_REG &&
                     (inst->src[i].fixed_hw_reg.file ==
                      BRW_GENERAL_REGISTER_FILE)) {
@@ -1194,7 +1198,8 @@ vec4_instruction_scheduler::calculate_deps()
        * can mark this as WAR dependency.
        */
       if (inst->dst.file == GRF) {
-         last_grf_write[inst->dst.reg] = n;
+         for (unsigned j = 0; j < inst->regs_written; ++j)
+            last_grf_write[inst->dst.reg + j] = n;
       } else if (inst->dst.file == MRF) {
          last_mrf_write[inst->dst.reg] = n;
       } else if (inst->dst.file == HW_REG &&
