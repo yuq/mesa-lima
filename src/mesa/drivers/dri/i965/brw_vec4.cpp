@@ -235,6 +235,22 @@ dst_reg::dst_reg(src_reg reg)
 }
 
 bool
+dst_reg::equals(const dst_reg &r) const
+{
+   return (file == r.file &&
+           reg == r.reg &&
+           reg_offset == r.reg_offset &&
+           type == r.type &&
+           negate == r.negate &&
+           abs == r.abs &&
+           writemask == r.writemask &&
+           (reladdr == r.reladdr ||
+            (reladdr && r.reladdr && reladdr->equals(*r.reladdr))) &&
+           memcmp(&fixed_hw_reg, &r.fixed_hw_reg,
+                  sizeof(fixed_hw_reg)) == 0);
+}
+
+bool
 vec4_instruction::is_send_from_grf()
 {
    switch (opcode) {
