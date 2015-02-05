@@ -197,6 +197,13 @@
       <param name="height" type="GLsizei" />
    </function>
 
+   <function name="ClearNamedFramebufferiv" offset="assign">
+      <param name="framebuffer" type="GLuint" />
+      <param name="buffer" type="GLenum" />
+      <param name="drawbuffer" type="GLint" />
+      <param name="value" type="const GLint *" />
+   </function>
+
    <function name="BlitNamedFramebuffer" offset="assign">
       <param name="readFramebuffer" type="GLuint" />
       <param name="drawFramebuffer" type="GLuint" />

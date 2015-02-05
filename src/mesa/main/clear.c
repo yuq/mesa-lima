@@ -34,6 +34,8 @@
 #include "clear.h"
 #include "context.h"
 #include "enums.h"
+#include "fbobject.h"
+#include "get.h"
 #include "macros.h"
 #include "mtypes.h"
 #include "state.h"
@@ -396,6 +398,24 @@ _mesa_ClearBufferiv(GLenum buffer, GLint drawbuffer, const GLint *value)
                   _mesa_lookup_enum_by_nr(buffer));
       return;
    }
+}
+
+
+/**
+ * The ClearBuffer framework is so complicated and so riddled with the
+ * assumption that the framebuffer is bound that, for now, we will just fake
+ * direct state access clearing for the user.
+ */
+void GLAPIENTRY
+_mesa_ClearNamedFramebufferiv(GLuint framebuffer, GLenum buffer,
+                              GLint drawbuffer, const GLint *value)
+{
+   GLint oldfb;
+
+   _mesa_GetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &oldfb);
+   _mesa_BindFramebuffer(GL_DRAW_FRAMEBUFFER, framebuffer);
+   _mesa_ClearBufferiv(buffer, drawbuffer, value);
+   _mesa_BindFramebuffer(GL_DRAW_FRAMEBUFFER, (GLuint) oldfb);
 }
 
 
