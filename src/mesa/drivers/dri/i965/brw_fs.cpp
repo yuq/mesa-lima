@@ -3173,6 +3173,14 @@ fs_visitor::lower_load_payload()
                                 inst->src[i].reg_offset;
                   mov->force_sechalf = metadata[src_reg].force_sechalf;
                   mov->force_writemask_all = metadata[src_reg].force_writemask_all;
+               } else {
+                  /* We don't have any useful metadata for immediates or
+                   * uniforms.  Assume that any of the channels of the
+                   * destination may be used.
+                   */
+                  assert(inst->src[i].file == IMM ||
+                         inst->src[i].file == UNIFORM);
+                  mov->force_writemask_all = true;
                }
 
                if (dst.file == GRF) {
