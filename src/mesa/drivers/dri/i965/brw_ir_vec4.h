@@ -31,7 +31,6 @@
 namespace brw {
 
 class dst_reg;
-class vec4_visitor;
 
 unsigned
 swizzle_for_size(int size);
@@ -151,7 +150,7 @@ class vec4_instruction : public backend_instruction {
 public:
    DECLARE_RALLOC_CXX_OPERATORS(vec4_instruction)
 
-   vec4_instruction(vec4_visitor *v, enum opcode opcode,
+   vec4_instruction(enum opcode opcode,
                     const dst_reg &dst = dst_reg(),
                     const src_reg &src0 = src_reg(),
                     const src_reg &src1 = src_reg(),

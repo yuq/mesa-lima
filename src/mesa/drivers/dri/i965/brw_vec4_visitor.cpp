@@ -28,8 +28,7 @@
 
 namespace brw {
 
-vec4_instruction::vec4_instruction(vec4_visitor *v,
-                                   enum opcode opcode, const dst_reg &dst,
+vec4_instruction::vec4_instruction(enum opcode opcode, const dst_reg &dst,
                                    const src_reg &src0, const src_reg &src1,
                                    const src_reg &src2)
 {
@@ -46,18 +45,21 @@ vec4_instruction::vec4_instruction(vec4_visitor *v,
    this->conditional_mod = BRW_CONDITIONAL_NONE;
    this->target = 0;
    this->shadow_compare = false;
-   this->ir = v->base_ir;
+   this->ir = NULL;
    this->urb_write_flags = BRW_URB_WRITE_NO_FLAGS;
    this->header_present = false;
    this->mlen = 0;
    this->base_mrf = 0;
    this->offset = 0;
-   this->annotation = v->current_annotation;
+   this->annotation = NULL;
 }
 
 vec4_instruction *
 vec4_visitor::emit(vec4_instruction *inst)
 {
+   inst->ir = this->base_ir;
+   inst->annotation = this->current_annotation;
+
    this->instructions.push_tail(inst);
 
    return inst;
@@ -79,8 +81,7 @@ vec4_instruction *
 vec4_visitor::emit(enum opcode opcode, const dst_reg &dst, const src_reg &src0,
                    const src_reg &src1, const src_reg &src2)
 {
-   return emit(new(mem_ctx) vec4_instruction(this, opcode, dst,
-					     src0, src1, src2));
+   return emit(new(mem_ctx) vec4_instruction(opcode, dst, src0, src1, src2));
 }
 
 
@@ -88,33 +89,32 @@ vec4_instruction *
 vec4_visitor::emit(enum opcode opcode, const dst_reg &dst, const src_reg &src0,
                    const src_reg &src1)
 {
-   return emit(new(mem_ctx) vec4_instruction(this, opcode, dst, src0, src1));
+   return emit(new(mem_ctx) vec4_instruction(opcode, dst, src0, src1));
 }
 
 vec4_instruction *
 vec4_visitor::emit(enum opcode opcode, const dst_reg &dst, const src_reg &src0)
 {
-   return emit(new(mem_ctx) vec4_instruction(this, opcode, dst, src0));
+   return emit(new(mem_ctx) vec4_instruction(opcode, dst, src0));
 }
 
 vec4_instruction *
 vec4_visitor::emit(enum opcode opcode, const dst_reg &dst)
 {
-   return emit(new(mem_ctx) vec4_instruction(this, opcode, dst));
+   return emit(new(mem_ctx) vec4_instruction(opcode, dst));
 }
 
 vec4_instruction *
 vec4_visitor::emit(enum opcode opcode)
 {
-   return emit(new(mem_ctx) vec4_instruction(this, opcode, dst_reg()));
+   return emit(new(mem_ctx) vec4_instruction(opcode, dst_reg()));
 }
 
 #define ALU1(op)							\
    vec4_instruction *							\
    vec4_visitor::op(const dst_reg &dst, const src_reg &src0)		\
    {									\
-      return new(mem_ctx) vec4_instruction(this, BRW_OPCODE_##op, dst,	\
-					   src0);			\
+      return new(mem_ctx) vec4_instruction(BRW_OPCODE_##op, dst, src0); \
    }
 
 #define ALU2(op)							\
@@ -122,8 +122,8 @@ vec4_visitor::emit(enum opcode opcode)
    vec4_visitor::op(const dst_reg &dst, const src_reg &src0,		\
                     const src_reg &src1)				\
    {									\
-      return new(mem_ctx) vec4_instruction(this, BRW_OPCODE_##op, dst,	\
-					   src0, src1);			\
+      return new(mem_ctx) vec4_instruction(BRW_OPCODE_##op, dst,        \
+                                           src0, src1);                 \
    }
 
 #define ALU2_ACC(op)							\
@@ -131,10 +131,10 @@ vec4_visitor::emit(enum opcode opcode)
    vec4_visitor::op(const dst_reg &dst, const src_reg &src0,		\
                     const src_reg &src1)				\
    {									\
-      vec4_instruction *inst = new(mem_ctx) vec4_instruction(this,     \
+      vec4_instruction *inst = new(mem_ctx) vec4_instruction(           \
                        BRW_OPCODE_##op, dst, src0, src1);		\
-      inst->writes_accumulator = true;                                 \
-      return inst;                                                     \
+      inst->writes_accumulator = true;                                  \
+      return inst;                                                      \
    }
 
 #define ALU3(op)							\
@@ -143,7 +143,7 @@ vec4_visitor::emit(enum opcode opcode)
                     const src_reg &src1, const src_reg &src2)		\
    {									\
       assert(brw->gen >= 6);						\
-      return new(mem_ctx) vec4_instruction(this, BRW_OPCODE_##op, dst,	\
+      return new(mem_ctx) vec4_instruction(BRW_OPCODE_##op, dst,	\
 					   src0, src1, src2);		\
    }
 
@@ -186,7 +186,7 @@ vec4_visitor::IF(enum brw_predicate predicate)
 {
    vec4_instruction *inst;
 
-   inst = new(mem_ctx) vec4_instruction(this, BRW_OPCODE_IF);
+   inst = new(mem_ctx) vec4_instruction(BRW_OPCODE_IF);
    inst->predicate = predicate;
 
    return inst;
@@ -204,7 +204,7 @@ vec4_visitor::IF(src_reg src0, src_reg src1,
    resolve_ud_negate(&src0);
    resolve_ud_negate(&src1);
 
-   inst = new(mem_ctx) vec4_instruction(this, BRW_OPCODE_IF, dst_null_d(),
+   inst = new(mem_ctx) vec4_instruction(BRW_OPCODE_IF, dst_null_d(),
 					src0, src1);
    inst->conditional_mod = condition;
 
@@ -239,7 +239,7 @@ vec4_visitor::CMP(dst_reg dst, src_reg src0, src_reg src1,
    resolve_ud_negate(&src0);
    resolve_ud_negate(&src1);
 
-   inst = new(mem_ctx) vec4_instruction(this, BRW_OPCODE_CMP, dst, src0, src1);
+   inst = new(mem_ctx) vec4_instruction(BRW_OPCODE_CMP, dst, src0, src1);
    inst->conditional_mod = condition;
 
    return inst;
@@ -250,7 +250,7 @@ vec4_visitor::SCRATCH_READ(const dst_reg &dst, const src_reg &index)
 {
    vec4_instruction *inst;
 
-   inst = new(mem_ctx) vec4_instruction(this, SHADER_OPCODE_GEN4_SCRATCH_READ,
+   inst = new(mem_ctx) vec4_instruction(SHADER_OPCODE_GEN4_SCRATCH_READ,
 					dst, index);
    inst->base_mrf = 14;
    inst->mlen = 2;
@@ -264,7 +264,7 @@ vec4_visitor::SCRATCH_WRITE(const dst_reg &dst, const src_reg &src,
 {
    vec4_instruction *inst;
 
-   inst = new(mem_ctx) vec4_instruction(this, SHADER_OPCODE_GEN4_SCRATCH_WRITE,
+   inst = new(mem_ctx) vec4_instruction(SHADER_OPCODE_GEN4_SCRATCH_WRITE,
 					dst, src, index);
    inst->base_mrf = 13;
    inst->mlen = 3;
@@ -1747,15 +1747,13 @@ vec4_visitor::visit(ir_expression *ir)
 
          emit(MOV(grf_offset, offset));
 
-         emit(new(mem_ctx) vec4_instruction(this,
-                                            VS_OPCODE_PULL_CONSTANT_LOAD_GEN7,
+         emit(new(mem_ctx) vec4_instruction(VS_OPCODE_PULL_CONSTANT_LOAD_GEN7,
                                             dst_reg(packed_consts),
                                             surf_index,
                                             src_reg(grf_offset)));
       } else {
          vec4_instruction *pull =
-            emit(new(mem_ctx) vec4_instruction(this,
-                                               VS_OPCODE_PULL_CONSTANT_LOAD,
+            emit(new(mem_ctx) vec4_instruction(VS_OPCODE_PULL_CONSTANT_LOAD,
                                                dst_reg(packed_consts),
                                                surf_index,
                                                offset));
@@ -2382,7 +2380,7 @@ vec4_visitor::visit(ir_call *ir)
 src_reg
 vec4_visitor::emit_mcs_fetch(ir_texture *ir, src_reg coordinate, src_reg sampler)
 {
-   vec4_instruction *inst = new(mem_ctx) vec4_instruction(this, SHADER_OPCODE_TXF_MCS);
+   vec4_instruction *inst = new(mem_ctx) vec4_instruction(SHADER_OPCODE_TXF_MCS);
    inst->base_mrf = 2;
    inst->mlen = 1;
    inst->dst = dst_reg(this, glsl_type::uvec4_type);
@@ -2560,7 +2558,7 @@ vec4_visitor::visit(ir_texture *ir)
       unreachable("Unrecognized tex op");
    }
 
-   vec4_instruction *inst = new(mem_ctx) vec4_instruction(this, opcode);
+   vec4_instruction *inst = new(mem_ctx) vec4_instruction(opcode);
 
    if (ir->offset != NULL && !has_nonconstant_offset) {
       inst->offset =
@@ -3429,11 +3427,10 @@ vec4_visitor::emit_pull_constant_load(bblock_t *block, vec4_instruction *inst,
       grf_offset.type = offset.type;
       emit_before(block, inst, MOV(grf_offset, offset));
 
-      load = new(mem_ctx) vec4_instruction(this,
-                                           VS_OPCODE_PULL_CONSTANT_LOAD_GEN7,
+      load = new(mem_ctx) vec4_instruction(VS_OPCODE_PULL_CONSTANT_LOAD_GEN7,
                                            temp, index, src_reg(grf_offset));
    } else {
-      load = new(mem_ctx) vec4_instruction(this, VS_OPCODE_PULL_CONSTANT_LOAD,
+      load = new(mem_ctx) vec4_instruction(VS_OPCODE_PULL_CONSTANT_LOAD,
                                            temp, index, offset);
       load->base_mrf = 14;
       load->mlen = 1;
