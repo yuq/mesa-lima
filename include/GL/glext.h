@@ -33,7 +33,7 @@ extern "C" {
 ** used to make the header, and the header can be found at
 **   http://www.opengl.org/registry/
 **
-** Khronos $Revision: 29537 $ on $Date: 2015-01-22 02:32:35 -0800 (Thu, 22 Jan 2015) $
+** Khronos $Revision: 29735 $ on $Date: 2015-02-02 19:00:01 -0800 (Mon, 02 Feb 2015) $
 */
 
 #if defined(_WIN32) && !defined(APIENTRY) && !defined(__CYGWIN__) && !defined(__SCITECH_SNAP__)
@@ -53,7 +53,7 @@ extern "C" {
 #define GLAPI extern
 #endif
 
-#define GL_GLEXT_VERSION 20150122
+#define GL_GLEXT_VERSION 20150202
 
 /* Generated C header for:
  * API: gl
@@ -2594,7 +2594,6 @@ GLAPI void APIENTRY glBindVertexBuffers (GLuint first, GLsizei count, const GLui
 #define GL_MAX_COMBINED_CLIP_AND_CULL_DISTANCES 0x82FA
 #define GL_TEXTURE_TARGET                 0x1006
 #define GL_QUERY_TARGET                   0x82EA
-#define GL_TEXTURE_BINDING                0x82EB
 #define GL_GUILTY_CONTEXT_RESET           0x8253
 #define GL_INNOCENT_CONTEXT_RESET         0x8254
 #define GL_UNKNOWN_CONTEXT_RESET          0x8255
@@ -11402,10 +11401,10 @@ GLAPI void APIENTRY glReferencePlaneSGIX (const GLdouble *equation);
 
 #ifndef GL_SGIX_resample
 #define GL_SGIX_resample 1
-#define GL_PACK_RESAMPLE_SGIX             0x842C
-#define GL_UNPACK_RESAMPLE_SGIX           0x842D
-#define GL_RESAMPLE_REPLICATE_SGIX        0x842E
-#define GL_RESAMPLE_ZERO_FILL_SGIX        0x842F
+#define GL_PACK_RESAMPLE_SGIX             0x842E
+#define GL_UNPACK_RESAMPLE_SGIX           0x842F
+#define GL_RESAMPLE_REPLICATE_SGIX        0x8433
+#define GL_RESAMPLE_ZERO_FILL_SGIX        0x8434
 #define GL_RESAMPLE_DECIMATE_SGIX         0x8430
 #endif /* GL_SGIX_resample */
 
