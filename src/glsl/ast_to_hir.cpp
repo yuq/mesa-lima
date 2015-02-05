@@ -172,6 +172,7 @@ get_conversion_operation(const glsl_type *to, const glsl_type *from,
       switch (from->base_type) {
       case GLSL_TYPE_INT: return ir_unop_i2f;
       case GLSL_TYPE_UINT: return ir_unop_u2f;
+      case GLSL_TYPE_DOUBLE: return ir_unop_d2f;
       default: return (ir_expression_operation)0;
       }
 
@@ -181,6 +182,16 @@ get_conversion_operation(const glsl_type *to, const glsl_type *from,
       switch (from->base_type) {
          case GLSL_TYPE_INT: return ir_unop_i2u;
          default: return (ir_expression_operation)0;
+      }
+
+   case GLSL_TYPE_DOUBLE:
+      if (!state->has_double())
+         return (ir_expression_operation)0;
+      switch (from->base_type) {
+      case GLSL_TYPE_INT: return ir_unop_i2d;
+      case GLSL_TYPE_UINT: return ir_unop_u2d;
+      case GLSL_TYPE_FLOAT: return ir_unop_f2d;
+      default: return (ir_expression_operation)0;
       }
 
    default: return (ir_expression_operation)0;
@@ -340,8 +351,10 @@ arithmetic_result_type(ir_rvalue * &value_a, ir_rvalue * &value_b,
     * type of both operands must be float.
     */
    assert(type_a->is_matrix() || type_b->is_matrix());
-   assert(type_a->base_type == GLSL_TYPE_FLOAT);
-   assert(type_b->base_type == GLSL_TYPE_FLOAT);
+   assert(type_a->base_type == GLSL_TYPE_FLOAT ||
+          type_a->base_type == GLSL_TYPE_DOUBLE);
+   assert(type_b->base_type == GLSL_TYPE_FLOAT ||
+          type_b->base_type == GLSL_TYPE_DOUBLE);
 
    /*   "* The operator is add (+), subtract (-), or divide (/), and the
     *      operands are matrices with the same number of rows and the same
@@ -959,6 +972,7 @@ do_comparison(void *mem_ctx, int operation, ir_rvalue *op0, ir_rvalue *op1)
    case GLSL_TYPE_UINT:
    case GLSL_TYPE_INT:
    case GLSL_TYPE_BOOL:
+   case GLSL_TYPE_DOUBLE:
       return new(mem_ctx) ir_expression(operation, op0, op1);
 
    case GLSL_TYPE_ARRAY: {
@@ -1744,6 +1758,10 @@ ast_expression::do_hir(exec_list *instructions,
 
    case ast_bool_constant:
       result = new(ctx) ir_constant(bool(this->primary_expression.bool_constant));
+      break;
+
+   case ast_double_constant:
+      result = new(ctx) ir_constant(this->primary_expression.double_constant);
       break;
 
    case ast_sequence: {
@@ -2559,6 +2577,8 @@ apply_type_qualifier_to_variable(const struct ast_type_qualifier *qual,
             break;
          _mesa_glsl_error(loc, state,
                           "varying variables may not be of type struct");
+         break;
+      case GLSL_TYPE_DOUBLE:
          break;
       default:
          _mesa_glsl_error(loc, state, "illegal type for a varying variable");
@@ -3645,6 +3665,15 @@ ast_declarator_list::hir(exec_list *instructions,
                           var_type);
       }
 
+      /* Double fragment inputs must be qualified with 'flat'. */
+      if (var->type->contains_double() &&
+          var->data.interpolation != INTERP_QUALIFIER_FLAT &&
+          state->stage == MESA_SHADER_FRAGMENT &&
+          var->data.mode == ir_var_shader_in) {
+         _mesa_glsl_error(&loc, state, "if a fragment input is (or contains) "
+                          "a double, then it must be qualified with 'flat'",
+                          var_type);
+      }
 
       /* Interpolation qualifiers cannot be applied to 'centroid' and
        * 'centroid varying'.

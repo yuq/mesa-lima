@@ -962,6 +962,10 @@ ast_expression::print(void) const
       printf("%f ", primary_expression.float_constant);
       break;
 
+   case ast_double_constant:
+      printf("%f ", primary_expression.double_constant);
+      break;
+
    case ast_bool_constant:
       printf("%s ",
 	     primary_expression.bool_constant
