@@ -394,6 +394,17 @@ struct radeon_winsys {
                                             unsigned *stride);
 
     /**
+     * Get a winsys buffer from a user pointer. The resulting buffer can't be
+     * mapped or exported. Both pointer and size must be page aligned.
+     *
+     * \param ws        The winsys this function is called from.
+     * \param pointer   User pointer to turn into a buffer object.
+     * \param Size      Size in bytes for the new buffer.
+     */
+    struct pb_buffer *(*buffer_from_ptr)(struct radeon_winsys *ws,
+                                         void *pointer, unsigned size);
+
+    /**
      * Get a winsys handle from a winsys buffer. The internal structure
      * of the handle is platform-specific and only a winsys should access it.
      *
