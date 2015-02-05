@@ -272,7 +272,7 @@ get_parallel_copy_at_end_of_block(nir_block *block)
    if (last_instr->type == nir_instr_type_jump)
       last_instr = nir_instr_prev(last_instr);
 
-   if (last_instr->type == nir_instr_type_parallel_copy)
+   if (last_instr && last_instr->type == nir_instr_type_parallel_copy)
       return nir_instr_as_parallel_copy(last_instr);
    else
       return NULL;
