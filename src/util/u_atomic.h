@@ -39,6 +39,7 @@
 #define p_atomic_dec_zero(v) (__sync_sub_and_fetch((v), 1) == 0)
 #define p_atomic_inc(v) (void) __sync_add_and_fetch((v), 1)
 #define p_atomic_dec(v) (void) __sync_sub_and_fetch((v), 1)
+#define p_atomic_add(v, i) (void) __sync_add_and_fetch((v), (i))
 #define p_atomic_inc_return(v) __sync_add_and_fetch((v), 1)
 #define p_atomic_dec_return(v) __sync_sub_and_fetch((v), 1)
 #define p_atomic_cmpxchg(v, old, _new) \
@@ -60,6 +61,7 @@
 #define p_atomic_dec_zero(_v) (p_atomic_dec_return(_v) == 0)
 #define p_atomic_inc(_v) ((void) p_atomic_inc_return(_v))
 #define p_atomic_dec(_v) ((void) p_atomic_dec_return(_v))
+#define p_atomic_add(_v, _i) (*(_v) = *(_v) + (_i))
 #define p_atomic_inc_return(_v) (++(*(_v)))
 #define p_atomic_dec_return(_v) (--(*(_v)))
 #define p_atomic_cmpxchg(_v, _old, _new) (*(_v) == (_old) ? (*(_v) = (_new), (_old)) : *(_v))
@@ -144,6 +146,13 @@ char _InterlockedCompareExchange8(char volatile *Destination8, char Exchange8, c
    sizeof *(_v) == sizeof(__int64) ? InterlockedDecrement64 ((__int64 *)(_v)) : \
                                      (assert(!"should not get here"), 0))
 
+#define p_atomic_add(_v, _i) (\
+   sizeof *(_v) == sizeof(char)    ? _InterlockedExchangeAdd8 ((char *)   (_v), (_i)) : \
+   sizeof *(_v) == sizeof(short)   ? _InterlockedExchangeAdd16((short *)  (_v), (_i)) : \
+   sizeof *(_v) == sizeof(long)    ? _InterlockedExchangeAdd  ((long *)   (_v), (_i)) : \
+   sizeof *(_v) == sizeof(__int64) ? InterlockedExchangeAdd64((__int64 *)(_v), (_i)) : \
+                                     (assert(!"should not get here"), 0))
+
 #define p_atomic_cmpxchg(_v, _old, _new) (\
    sizeof *(_v) == sizeof(char)    ? _InterlockedCompareExchange8 ((char *)   (_v), (char)   (_new), (char)   (_old)) : \
    sizeof *(_v) == sizeof(short)   ? _InterlockedCompareExchange16((short *)  (_v), (short)  (_new), (short)  (_old)) : \
@@ -196,6 +205,13 @@ char _InterlockedCompareExchange8(char volatile *Destination8, char Exchange8, c
    sizeof(*v) == sizeof(uint16_t) ? atomic_dec_16_nv((uint16_t *)(v)) : \
    sizeof(*v) == sizeof(uint32_t) ? atomic_dec_32_nv((uint32_t *)(v)) : \
    sizeof(*v) == sizeof(uint64_t) ? atomic_dec_64_nv((uint64_t *)(v)) : \
+                                    (assert(!"should not get here"), 0))
+
+#define p_atomic_add(v, i) ((void)				     \
+   sizeof(*v) == sizeof(uint8_t)  ? atomic_add_8 ((uint8_t  *)(v), (i)) : \
+   sizeof(*v) == sizeof(uint16_t) ? atomic_add_16((uint16_t *)(v), (i)) : \
+   sizeof(*v) == sizeof(uint32_t) ? atomic_add_32((uint32_t *)(v), (i)) : \
+   sizeof(*v) == sizeof(uint64_t) ? atomic_add_64((uint64_t *)(v), (i)) : \
                                     (assert(!"should not get here"), 0))
 
 #define p_atomic_cmpxchg(v, old, _new) ((typeof(*v)) \

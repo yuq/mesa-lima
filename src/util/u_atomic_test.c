@@ -97,6 +97,11 @@
       assert(v == ones && "p_atomic_dec_return"); \
       assert(r == v && "p_atomic_dec_return"); \
       \
+      v = 23; \
+      p_atomic_add(&v, 42); \
+      r = p_atomic_read(&v); \
+      assert(r == 65 && "p_atomic_add"); \
+      \
       (void) r; \
       (void) b; \
    }
