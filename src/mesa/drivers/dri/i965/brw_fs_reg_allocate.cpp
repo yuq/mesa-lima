@@ -523,19 +523,6 @@ fs_visitor::setup_mrf_hack_interference(struct ra_graph *g, int first_mrf_node)
    }
 }
 
-static bool
-is_last_send(fs_inst *inst)
-{
-   switch (inst->opcode) {
-   case SHADER_OPCODE_URB_WRITE_SIMD8:
-   case FS_OPCODE_FB_WRITE:
-      return inst->eot;
-   default:
-      assert(!inst->eot);
-      return false;
-   }
-}
-
 bool
 fs_visitor::assign_regs(bool allow_spilling)
 {
@@ -608,7 +595,7 @@ fs_visitor::assign_regs(bool allow_spilling)
           * We could just do "something high".  Instead, we just pick the
           * highest register that works.
           */
-         if (is_last_send(inst)) {
+         if (inst->eot) {
             int size = virtual_grf_sizes[inst->src[0].reg];
             int reg = screen->wm_reg_sets[rsi].class_to_ra_reg_range[size] - 1;
             ra_set_node_reg(g, inst->src[0].reg, reg);
