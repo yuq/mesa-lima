@@ -103,11 +103,20 @@ intelTexImage(struct gl_context * ctx,
        _mesa_lookup_enum_by_nr(format), _mesa_lookup_enum_by_nr(type),
        texImage->Level, texImage->Width, texImage->Height, texImage->Depth);
 
+   /* Allocate storage for texture data. */
+   if (!ctx->Driver.AllocTextureImageBuffer(ctx, texImage)) {
+      _mesa_error(ctx, GL_OUT_OF_MEMORY, "glTexImage%uD", dims);
+      return;
+   }
+
+   assert(intelImage->mt);
+
    ok = _mesa_meta_pbo_TexSubImage(ctx, dims, texImage, 0, 0, 0,
                                    texImage->Width, texImage->Height,
                                    texImage->Depth,
                                    format, type, pixels,
-                                   true, tex_busy, unpack);
+                                   false /*allocate_storage*/,
+                                   tex_busy, unpack);
    if (ok)
       return;
 
@@ -117,7 +126,7 @@ intelTexImage(struct gl_context * ctx,
                                        texImage->Height,
                                        texImage->Depth,
                                        format, type, pixels, unpack,
-                                       true /*for_glTexImage*/);
+                                       false /*allocate_storage*/);
    if (ok)
       return;
 
