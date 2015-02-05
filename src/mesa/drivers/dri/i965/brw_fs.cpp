@@ -2325,6 +2325,15 @@ fs_visitor::opt_algebraic()
 	    break;
 	 }
 
+         /* a * -1.0 = -a */
+         if (inst->src[1].is_negative_one()) {
+            inst->opcode = BRW_OPCODE_MOV;
+            inst->src[0].negate = !inst->src[0].negate;
+            inst->src[1] = reg_undef;
+            progress = true;
+            break;
+         }
+
          /* a * 0.0 = 0.0 */
          if (inst->src[1].is_zero()) {
             inst->opcode = BRW_OPCODE_MOV;

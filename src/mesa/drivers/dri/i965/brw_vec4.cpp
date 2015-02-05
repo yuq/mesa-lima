@@ -725,6 +725,11 @@ vec4_visitor::opt_algebraic()
 	    inst->opcode = BRW_OPCODE_MOV;
 	    inst->src[1] = src_reg();
 	    progress = true;
+         } else if (inst->src[1].is_negative_one()) {
+            inst->opcode = BRW_OPCODE_MOV;
+            inst->src[0].negate = !inst->src[0].negate;
+            inst->src[1] = src_reg();
+            progress = true;
 	 }
 	 break;
       case BRW_OPCODE_CMP:
