@@ -492,6 +492,24 @@ _mesa_ClearBufferuiv(GLenum buffer, GLint drawbuffer, const GLuint *value)
 
 
 /**
+ * The ClearBuffer framework is so complicated and so riddled with the
+ * assumption that the framebuffer is bound that, for now, we will just fake
+ * direct state access clearing for the user.
+ */
+void GLAPIENTRY
+_mesa_ClearNamedFramebufferuiv(GLuint framebuffer, GLenum buffer,
+                               GLint drawbuffer, const GLuint *value)
+{
+   GLint oldfb;
+
+   _mesa_GetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &oldfb);
+   _mesa_BindFramebuffer(GL_DRAW_FRAMEBUFFER, framebuffer);
+   _mesa_ClearBufferuiv(buffer, drawbuffer, value);
+   _mesa_BindFramebuffer(GL_DRAW_FRAMEBUFFER, (GLuint) oldfb);
+}
+
+
+/**
  * New in GL 3.0
  * Clear fixed-pt or float color buffer or depth buffer (not stencil).
  */
