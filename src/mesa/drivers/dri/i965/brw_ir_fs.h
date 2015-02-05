@@ -191,7 +191,7 @@ class fs_inst : public backend_instruction {
    fs_inst &operator=(const fs_inst &);
 
    void init(enum opcode opcode, uint8_t exec_width, const fs_reg &dst,
-             fs_reg *src, int sources);
+             const fs_reg *src, unsigned sources);
 
 public:
    DECLARE_RALLOC_CXX_OPERATORS(fs_inst)
@@ -210,10 +210,12 @@ public:
            const fs_reg &src0, const fs_reg &src1, const fs_reg &src2);
    fs_inst(enum opcode opcode, const fs_reg &dst, const fs_reg &src0,
            const fs_reg &src1, const fs_reg &src2);
-   fs_inst(enum opcode opcode, const fs_reg &dst, fs_reg src[], int sources);
+   fs_inst(enum opcode opcode, const fs_reg &dst, const fs_reg src[],
+           unsigned sources);
    fs_inst(enum opcode opcode, uint8_t exec_size, const fs_reg &dst,
-           fs_reg src[], int sources);
+           const fs_reg src[], unsigned sources);
    fs_inst(const fs_inst &that);
+   ~fs_inst();
 
    void resize_sources(uint8_t num_sources);
 

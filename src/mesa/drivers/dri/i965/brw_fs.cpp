@@ -54,13 +54,16 @@ extern "C" {
 
 void
 fs_inst::init(enum opcode opcode, uint8_t exec_size, const fs_reg &dst,
-              fs_reg *src, int sources)
+              const fs_reg *src, unsigned sources)
 {
    memset(this, 0, sizeof(*this));
 
+   this->src = new fs_reg[MAX2(sources, 3)];
+   for (unsigned i = 0; i < sources; i++)
+      this->src[i] = src[i];
+
    this->opcode = opcode;
    this->dst = dst;
-   this->src = src;
    this->sources = sources;
    this->exec_size = exec_size;
 
@@ -75,7 +78,7 @@ fs_inst::init(enum opcode opcode, uint8_t exec_size, const fs_reg &dst,
       if (dst.file == GRF) {
          this->exec_size = dst.width;
       } else {
-         for (int i = 0; i < sources; ++i) {
+         for (unsigned i = 0; i < sources; ++i) {
             if (src[i].file != GRF && src[i].file != ATTR)
                continue;
 
@@ -90,7 +93,7 @@ fs_inst::init(enum opcode opcode, uint8_t exec_size, const fs_reg &dst,
    }
    assert(this->exec_size != 0);
 
-   for (int i = 0; i < sources; ++i) {
+   for (unsigned i = 0; i < sources; ++i) {
       switch (this->src[i].file) {
       case BAD_FILE:
          this->src[i].effective_width = 8;
@@ -140,82 +143,68 @@ fs_inst::init(enum opcode opcode, uint8_t exec_size, const fs_reg &dst,
 
 fs_inst::fs_inst()
 {
-   fs_reg *src = ralloc_array(this, fs_reg, 3);
-   init(BRW_OPCODE_NOP, 8, dst, src, 0);
+   init(BRW_OPCODE_NOP, 8, dst, NULL, 0);
 }
 
 fs_inst::fs_inst(enum opcode opcode, uint8_t exec_size)
 {
-   fs_reg *src = ralloc_array(this, fs_reg, 3);
-   init(opcode, exec_size, reg_undef, src, 0);
+   init(opcode, exec_size, reg_undef, NULL, 0);
 }
 
 fs_inst::fs_inst(enum opcode opcode, const fs_reg &dst)
 {
-   fs_reg *src = ralloc_array(this, fs_reg, 3);
-   init(opcode, 0, dst, src, 0);
+   init(opcode, 0, dst, NULL, 0);
 }
 
 fs_inst::fs_inst(enum opcode opcode, uint8_t exec_size, const fs_reg &dst,
                  const fs_reg &src0)
 {
-   fs_reg *src = ralloc_array(this, fs_reg, 3);
-   src[0] = src0;
+   const fs_reg src[1] = { src0 };
    init(opcode, exec_size, dst, src, 1);
 }
 
 fs_inst::fs_inst(enum opcode opcode, const fs_reg &dst, const fs_reg &src0)
 {
-   fs_reg *src = ralloc_array(this, fs_reg, 3);
-   src[0] = src0;
+   const fs_reg src[1] = { src0 };
    init(opcode, 0, dst, src, 1);
 }
 
 fs_inst::fs_inst(enum opcode opcode, uint8_t exec_size, const fs_reg &dst,
                  const fs_reg &src0, const fs_reg &src1)
 {
-   fs_reg *src = ralloc_array(this, fs_reg, 3);
-   src[0] = src0;
-   src[1] = src1;
+   const fs_reg src[2] = { src0, src1 };
    init(opcode, exec_size, dst, src, 2);
 }
 
 fs_inst::fs_inst(enum opcode opcode, const fs_reg &dst, const fs_reg &src0,
                  const fs_reg &src1)
 {
-   fs_reg *src = ralloc_array(this, fs_reg, 3);
-   src[0] = src0;
-   src[1] = src1;
+   const fs_reg src[2] = { src0, src1 };
    init(opcode, 0, dst, src, 2);
 }
 
 fs_inst::fs_inst(enum opcode opcode, uint8_t exec_size, const fs_reg &dst,
                  const fs_reg &src0, const fs_reg &src1, const fs_reg &src2)
 {
-   fs_reg *src = ralloc_array(this, fs_reg, 3);
-   src[0] = src0;
-   src[1] = src1;
-   src[2] = src2;
+   const fs_reg src[3] = { src0, src1, src2 };
    init(opcode, exec_size, dst, src, 3);
 }
 
 fs_inst::fs_inst(enum opcode opcode, const fs_reg &dst, const fs_reg &src0,
                  const fs_reg &src1, const fs_reg &src2)
 {
-   fs_reg *src = ralloc_array(this, fs_reg, 3);
-   src[0] = src0;
-   src[1] = src1;
-   src[2] = src2;
+   const fs_reg src[3] = { src0, src1, src2 };
    init(opcode, 0, dst, src, 3);
 }
 
-fs_inst::fs_inst(enum opcode opcode, const fs_reg &dst, fs_reg src[], int sources)
+fs_inst::fs_inst(enum opcode opcode, const fs_reg &dst,
+                 const fs_reg src[], unsigned sources)
 {
    init(opcode, 0, dst, src, sources);
 }
 
 fs_inst::fs_inst(enum opcode opcode, uint8_t exec_width, const fs_reg &dst,
-                 fs_reg src[], int sources)
+                 const fs_reg src[], unsigned sources)
 {
    init(opcode, exec_width, dst, src, sources);
 }
@@ -224,17 +213,28 @@ fs_inst::fs_inst(const fs_inst &that)
 {
    memcpy(this, &that, sizeof(that));
 
-   this->src = ralloc_array(this, fs_reg, that.sources);
+   this->src = new fs_reg[MAX2(that.sources, 3)];
 
-   for (int i = 0; i < that.sources; i++)
+   for (unsigned i = 0; i < that.sources; i++)
       this->src[i] = that.src[i];
+}
+
+fs_inst::~fs_inst()
+{
+   delete[] this->src;
 }
 
 void
 fs_inst::resize_sources(uint8_t num_sources)
 {
    if (this->sources != num_sources) {
-      this->src = reralloc(this, this->src, fs_reg, num_sources);
+      fs_reg *src = new fs_reg[MAX2(num_sources, 3)];
+
+      for (unsigned i = 0; i < MIN2(this->sources, num_sources); ++i)
+         src[i] = this->src[i];
+
+      delete[] this->src;
+      this->src = src;
       this->sources = num_sources;
    }
 }
@@ -374,7 +374,7 @@ fs_visitor::LOAD_PAYLOAD(const fs_reg &dst, fs_reg *src, int sources)
        * dealing with whole registers.  If this ever changes, we can deal
        * with it later.
        */
-      int size = src[i].effective_width * type_sz(src[i].type);
+      int size = inst->src[i].effective_width * type_sz(src[i].type);
       assert(size % 32 == 0);
       inst->regs_written += (size + 31) / 32;
    }
