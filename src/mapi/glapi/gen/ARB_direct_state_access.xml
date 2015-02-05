@@ -211,6 +211,13 @@
       <param name="value" type="const GLuint *" />
    </function>
 
+   <function name="ClearNamedFramebufferfv" offset="assign">
+      <param name="framebuffer" type="GLuint" />
+      <param name="buffer" type="GLenum" />
+      <param name="drawbuffer" type="GLint" />
+      <param name="value" type="const GLfloat *" />
+   </function>
+
    <function name="BlitNamedFramebuffer" offset="assign">
       <param name="readFramebuffer" type="GLuint" />
       <param name="drawFramebuffer" type="GLuint" />
