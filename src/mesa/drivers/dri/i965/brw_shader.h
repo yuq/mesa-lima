@@ -51,6 +51,7 @@ struct backend_reg
 #ifdef __cplusplus
    bool is_zero() const;
    bool is_one() const;
+   bool is_negative_one() const;
    bool is_null() const;
    bool is_accumulator() const;
 #endif

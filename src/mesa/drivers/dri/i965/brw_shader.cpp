@@ -732,6 +732,22 @@ backend_reg::is_one() const
 }
 
 bool
+backend_reg::is_negative_one() const
+{
+   if (file != IMM)
+      return false;
+
+   switch (type) {
+   case BRW_REGISTER_TYPE_F:
+      return fixed_hw_reg.dw1.f == -1.0;
+   case BRW_REGISTER_TYPE_D:
+      return fixed_hw_reg.dw1.d == -1;
+   default:
+      return false;
+   }
+}
+
+bool
 backend_reg::is_null() const
 {
    return file == HW_REG &&
