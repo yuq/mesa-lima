@@ -1362,6 +1362,7 @@ ir_to_mesa_visitor::visit(ir_expression *ir)
    case ir_unop_pack_unorm_2x16:
    case ir_unop_pack_unorm_4x8:
    case ir_unop_pack_half_2x16:
+   case ir_unop_pack_double_2x32:
    case ir_unop_unpack_snorm_2x16:
    case ir_unop_unpack_snorm_4x8:
    case ir_unop_unpack_unorm_2x16:
@@ -1369,11 +1370,21 @@ ir_to_mesa_visitor::visit(ir_expression *ir)
    case ir_unop_unpack_half_2x16:
    case ir_unop_unpack_half_2x16_split_x:
    case ir_unop_unpack_half_2x16_split_y:
+   case ir_unop_unpack_double_2x32:
    case ir_binop_pack_half_2x16_split:
    case ir_unop_bitfield_reverse:
    case ir_unop_bit_count:
    case ir_unop_find_msb:
    case ir_unop_find_lsb:
+   case ir_unop_d2f:
+   case ir_unop_f2d:
+   case ir_unop_d2i:
+   case ir_unop_i2d:
+   case ir_unop_d2u:
+   case ir_unop_u2d:
+   case ir_unop_d2b:
+   case ir_unop_frexp_sig:
+   case ir_unop_frexp_exp:
       assert(!"not supported");
       break;
    case ir_binop_min:
