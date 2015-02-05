@@ -244,7 +244,6 @@ public:
     */
    uint8_t flag_subreg;
 
-   uint8_t regs_written; /**< Number of vgrfs written by a SEND message, or 1 */
    bool eot:1;
    bool force_uncompressed:1;
    bool force_sechalf:1;
