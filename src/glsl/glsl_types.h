@@ -200,6 +200,7 @@ struct glsl_type {
     * @{
     */
    static const glsl_type *vec(unsigned components);
+   static const glsl_type *dvec(unsigned components);
    static const glsl_type *ivec(unsigned components);
    static const glsl_type *uvec(unsigned components);
    static const glsl_type *bvec(unsigned components);
@@ -388,7 +389,7 @@ struct glsl_type {
    bool is_matrix() const
    {
       /* GLSL only has float matrices. */
-      return (matrix_columns > 1) && (base_type == GLSL_TYPE_FLOAT);
+      return (matrix_columns > 1) && (base_type == GLSL_TYPE_FLOAT || base_type == GLSL_TYPE_DOUBLE);
    }
 
    /**
@@ -396,7 +397,7 @@ struct glsl_type {
     */
    bool is_numeric() const
    {
-      return (base_type >= GLSL_TYPE_UINT) && (base_type <= GLSL_TYPE_FLOAT);
+      return (base_type >= GLSL_TYPE_UINT) && (base_type <= GLSL_TYPE_DOUBLE);
    }
 
    /**
@@ -412,6 +413,12 @@ struct glsl_type {
     * types, contains an integral type.
     */
    bool contains_integer() const;
+
+   /**
+    * Query whether or not type is a double type, or for struct and array
+    * types, contains a double type.
+    */
+   bool contains_double() const;
 
    /**
     * Query whether or not a type is a float type
