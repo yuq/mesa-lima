@@ -287,7 +287,7 @@ vec4_instruction::can_do_source_mods(struct brw_context *brw)
 int
 vec4_visitor::implied_mrf_writes(vec4_instruction *inst)
 {
-   if (inst->mlen == 0)
+   if (inst->mlen == 0 || inst->is_send_from_grf())
       return 0;
 
    switch (inst->opcode) {
