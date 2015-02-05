@@ -793,10 +793,10 @@ fs_instruction_scheduler::calculate_deps()
       for (int i = 0; i < inst->sources; i++) {
          if (inst->src[i].file == GRF) {
             if (post_reg_alloc) {
-               for (int r = 0; r < inst->regs_read(v, i); r++)
+               for (int r = 0; r < inst->regs_read(i); r++)
                   add_dep(last_grf_write[inst->src[i].reg + r], n);
             } else {
-               for (int r = 0; r < inst->regs_read(v, i); r++) {
+               for (int r = 0; r < inst->regs_read(i); r++) {
                   add_dep(last_grf_write[inst->src[i].reg * 16 + inst->src[i].reg_offset + r], n);
                }
             }
@@ -922,10 +922,10 @@ fs_instruction_scheduler::calculate_deps()
       for (int i = 0; i < inst->sources; i++) {
          if (inst->src[i].file == GRF) {
             if (post_reg_alloc) {
-               for (int r = 0; r < inst->regs_read(v, i); r++)
+               for (int r = 0; r < inst->regs_read(i); r++)
                   add_dep(n, last_grf_write[inst->src[i].reg + r]);
             } else {
-               for (int r = 0; r < inst->regs_read(v, i); r++) {
+               for (int r = 0; r < inst->regs_read(i); r++) {
                   add_dep(n, last_grf_write[inst->src[i].reg * 16 + inst->src[i].reg_offset + r]);
                }
             }

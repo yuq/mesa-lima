@@ -298,7 +298,7 @@ fs_visitor::try_copy_propagate(fs_inst *inst, int arg, acp_entry *entry)
     */
    if (inst->src[arg].reg_offset < entry->dst.reg_offset ||
        (inst->src[arg].reg_offset * 32 + inst->src[arg].subreg_offset +
-        inst->regs_read(this, arg) * inst->src[arg].stride * 32) >
+        inst->regs_read(arg) * inst->src[arg].stride * 32) >
        (entry->dst.reg_offset + entry->regs_written) * 32)
       return false;
 
@@ -444,7 +444,7 @@ fs_visitor::try_constant_propagate(fs_inst *inst, acp_entry *entry)
        */
       if (inst->src[i].reg_offset < entry->dst.reg_offset ||
           (inst->src[i].reg_offset * 32 + inst->src[i].subreg_offset +
-           inst->regs_read(this, i) * inst->src[i].stride * 32) >
+           inst->regs_read(i) * inst->src[i].stride * 32) >
           (entry->dst.reg_offset + entry->regs_written) * 32)
          continue;
 

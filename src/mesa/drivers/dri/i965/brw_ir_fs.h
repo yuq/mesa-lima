@@ -28,7 +28,6 @@
 #include "brw_shader.h"
 
 class fs_inst;
-class fs_visitor;
 
 class fs_reg : public backend_reg {
 public:
@@ -222,7 +221,7 @@ public:
    bool overwrites_reg(const fs_reg &reg) const;
    bool is_send_from_grf() const;
    bool is_partial_write() const;
-   int regs_read(fs_visitor *v, int arg) const;
+   int regs_read(int arg) const;
    bool can_do_source_mods(struct brw_context *brw);
 
    bool reads_flag() const;

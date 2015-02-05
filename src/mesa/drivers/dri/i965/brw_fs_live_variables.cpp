@@ -152,7 +152,7 @@ fs_live_variables::setup_def_use()
             if (reg.file != GRF)
                continue;
 
-            for (int j = 0; j < inst->regs_read(v, i); j++) {
+            for (int j = 0; j < inst->regs_read(i); j++) {
                setup_one_read(bd, inst, ip, reg);
                reg.reg_offset++;
             }

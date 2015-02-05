@@ -916,7 +916,7 @@ fs_inst::is_partial_write() const
 }
 
 int
-fs_inst::regs_read(fs_visitor *v, int arg) const
+fs_inst::regs_read(int arg) const
 {
    if (is_tex() && arg == 0 && src[0].file == GRF) {
       return mlen;
@@ -1953,7 +1953,7 @@ fs_visitor::split_virtual_grfs()
       for (int i = 0; i < inst->sources; i++) {
          if (inst->src[i].file == GRF) {
             int reg = vgrf_to_reg[inst->src[i].reg] + inst->src[i].reg_offset;
-            for (int j = 1; j < inst->regs_read(this, i); j++)
+            for (int j = 1; j < inst->regs_read(i); j++)
                split_points[reg + j] = false;
          }
       }
