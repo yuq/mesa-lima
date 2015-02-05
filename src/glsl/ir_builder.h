@@ -139,6 +139,7 @@ ir_expression *carry(operand a, operand b);
 ir_expression *borrow(operand a, operand b);
 ir_expression *trunc(operand a);
 ir_expression *round_even(operand a);
+ir_expression *fract(operand a);
 ir_expression *dot(operand a, operand b);
 ir_expression *clamp(operand a, operand b, operand c);
 ir_expression *saturate(operand a);
@@ -183,6 +184,10 @@ ir_expression *b2i(operand a);
 ir_expression *i2b(operand a);
 ir_expression *f2b(operand a);
 ir_expression *b2f(operand a);
+
+ir_expression *f2d(operand a);
+ir_expression *i2d(operand a);
+ir_expression *u2d(operand a);
 
 ir_expression *min2(operand a, operand b);
 ir_expression *max2(operand a, operand b);
