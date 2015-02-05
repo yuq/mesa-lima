@@ -989,6 +989,7 @@ const struct function gl_core_functions_possible[] = {
    { "glClearNamedFramebufferiv", 45, -1 },
    { "glClearNamedFramebufferuiv", 45, -1 },
    { "glClearNamedFramebufferfv", 45, -1 },
+   { "glClearNamedFramebufferfi", 45, -1 },
    { "glBlitNamedFramebuffer", 45, -1 },
    { "glCheckNamedFramebufferStatus", 45, -1 },
    { "glGetNamedFramebufferAttachmentParameteriv", 45, -1 },

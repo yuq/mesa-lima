@@ -682,3 +682,21 @@ _mesa_ClearBufferfi(GLenum buffer, GLint drawbuffer,
       ctx->Stencil.Clear = clearStencilSave;
    }
 }
+
+
+/**
+ * The ClearBuffer framework is so complicated and so riddled with the
+ * assumption that the framebuffer is bound that, for now, we will just fake
+ * direct state access clearing for the user.
+ */
+void GLAPIENTRY
+_mesa_ClearNamedFramebufferfi(GLuint framebuffer, GLenum buffer,
+                              GLfloat depth, GLint stencil)
+{
+   GLint oldfb;
+
+   _mesa_GetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &oldfb);
+   _mesa_BindFramebuffer(GL_DRAW_FRAMEBUFFER, framebuffer);
+   _mesa_ClearBufferfi(buffer, 0, depth, stencil);
+   _mesa_BindFramebuffer(GL_DRAW_FRAMEBUFFER, (GLuint) oldfb);
+}
