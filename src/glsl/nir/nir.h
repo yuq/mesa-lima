@@ -416,15 +416,23 @@ typedef struct {
 } nir_instr;
 
 static inline nir_instr *
-nir_instr_next(const nir_instr *instr)
+nir_instr_next(nir_instr *instr)
 {
-   return exec_node_data(nir_instr, (instr)->node.next, node);
+   struct exec_node *next = exec_node_get_next(&instr->node);
+   if (exec_node_is_tail_sentinel(next))
+      return NULL;
+   else
+      return exec_node_data(nir_instr, next, node);
 }
 
 static inline nir_instr *
-nir_instr_prev(const nir_instr *instr)
+nir_instr_prev(nir_instr *instr)
 {
-   return exec_node_data(nir_instr, (instr)->node.prev, node);
+   struct exec_node *prev = exec_node_get_prev(&instr->node);
+   if (exec_node_is_head_sentinel(prev))
+      return NULL;
+   else
+      return exec_node_data(nir_instr, prev, node);
 }
 
 typedef struct {
@@ -1272,13 +1280,21 @@ typedef struct {
 static inline nir_cf_node *
 nir_cf_node_next(nir_cf_node *node)
 {
-   return exec_node_data(nir_cf_node, exec_node_get_next(&node->node), node);
+   struct exec_node *next = exec_node_get_next(&node->node);
+   if (exec_node_is_tail_sentinel(next))
+      return NULL;
+   else
+      return exec_node_data(nir_cf_node, next, node);
 }
 
 static inline nir_cf_node *
 nir_cf_node_prev(nir_cf_node *node)
 {
-   return exec_node_data(nir_cf_node, exec_node_get_prev(&node->node), node);
+   struct exec_node *prev = exec_node_get_prev(&node->node);
+   if (exec_node_is_head_sentinel(prev))
+      return NULL;
+   else
+      return exec_node_data(nir_cf_node, prev, node);
 }
 
 static inline bool
