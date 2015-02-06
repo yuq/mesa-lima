@@ -625,9 +625,11 @@ brw_negate_immediate(enum brw_reg_type type, struct brw_reg *reg)
 {
    switch (type) {
    case BRW_REGISTER_TYPE_D:
+   case BRW_REGISTER_TYPE_UD:
       reg->dw1.d = -reg->dw1.d;
       return true;
    case BRW_REGISTER_TYPE_W:
+   case BRW_REGISTER_TYPE_UW:
       reg->dw1.d = -(int16_t)reg->dw1.ud;
       return true;
    case BRW_REGISTER_TYPE_F:
@@ -639,12 +641,6 @@ brw_negate_immediate(enum brw_reg_type type, struct brw_reg *reg)
    case BRW_REGISTER_TYPE_UB:
    case BRW_REGISTER_TYPE_B:
       unreachable("no UB/B immediates");
-   case BRW_REGISTER_TYPE_UD:
-   case BRW_REGISTER_TYPE_UW:
-      /* Presumably the negate modifier on an unsigned source is the same as
-       * on a signed source but it would be nice to confirm.
-       */
-      assert(!"unimplemented: negate UD/UW immediate");
    case BRW_REGISTER_TYPE_UV:
    case BRW_REGISTER_TYPE_V:
       assert(!"unimplemented: negate UV/V immediate");

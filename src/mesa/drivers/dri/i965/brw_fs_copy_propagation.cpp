@@ -453,13 +453,15 @@ fs_visitor::try_constant_propagate(fs_inst *inst, acp_entry *entry)
       val.type = inst->src[i].type;
 
       if (inst->src[i].abs) {
-         if (!brw_abs_immediate(val.type, &val.fixed_hw_reg)) {
+         if ((brw->gen >= 8 && is_logic_op(inst->opcode)) ||
+             !brw_abs_immediate(val.type, &val.fixed_hw_reg)) {
             continue;
          }
       }
 
       if (inst->src[i].negate) {
-         if (!brw_negate_immediate(val.type, &val.fixed_hw_reg)) {
+         if ((brw->gen >= 8 && is_logic_op(inst->opcode)) ||
+             !brw_negate_immediate(val.type, &val.fixed_hw_reg)) {
             continue;
          }
       }

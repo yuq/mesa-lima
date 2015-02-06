@@ -96,6 +96,15 @@ swizzle_vf_imm(unsigned vf4, unsigned swizzle)
 }
 
 static bool
+is_logic_op(enum opcode opcode)
+{
+   return (opcode == BRW_OPCODE_AND ||
+           opcode == BRW_OPCODE_OR  ||
+           opcode == BRW_OPCODE_XOR ||
+           opcode == BRW_OPCODE_NOT);
+}
+
+static bool
 try_constant_propagate(struct brw_context *brw, vec4_instruction *inst,
                        int arg, struct copy_entry *entry)
 {
@@ -114,13 +123,15 @@ try_constant_propagate(struct brw_context *brw, vec4_instruction *inst,
       return false;
 
    if (inst->src[arg].abs) {
-      if (!brw_abs_immediate(value.type, &value.fixed_hw_reg)) {
+      if ((brw->gen >= 8 && is_logic_op(inst->opcode)) ||
+          !brw_abs_immediate(value.type, &value.fixed_hw_reg)) {
          return false;
       }
    }
 
    if (inst->src[arg].negate) {
-      if (!brw_negate_immediate(value.type, &value.fixed_hw_reg)) {
+      if ((brw->gen >= 8 && is_logic_op(inst->opcode)) ||
+          !brw_negate_immediate(value.type, &value.fixed_hw_reg)) {
          return false;
       }
    }
@@ -223,15 +234,6 @@ try_constant_propagate(struct brw_context *brw, vec4_instruction *inst,
    }
 
    return false;
-}
-
-static bool
-is_logic_op(enum opcode opcode)
-{
-   return (opcode == BRW_OPCODE_AND ||
-           opcode == BRW_OPCODE_OR  ||
-           opcode == BRW_OPCODE_XOR ||
-           opcode == BRW_OPCODE_NOT);
 }
 
 static bool
