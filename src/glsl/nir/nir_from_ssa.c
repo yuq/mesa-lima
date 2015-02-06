@@ -54,13 +54,8 @@ ssa_def_dominates(nir_ssa_def *a, nir_ssa_def *b)
    } else if (a->parent_instr->block == b->parent_instr->block) {
       return a->live_index <= b->live_index;
    } else {
-      nir_block *block = b->parent_instr->block;
-      while (block->imm_dom != NULL) {
-         if (block->imm_dom == a->parent_instr->block)
-            return true;
-         block = block->imm_dom;
-      }
-      return false;
+      return nir_block_dominates(a->parent_instr->block,
+                                 b->parent_instr->block);
    }
 }
 
