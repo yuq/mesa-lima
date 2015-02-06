@@ -941,7 +941,10 @@ CodeEmitterNV50::emitFMAD(const Instruction *i)
 
    if (i->encSize == 4) {
       emitForm_MUL(i);
-      assert(!neg_mul && !neg_add);
+      code[0] |= neg_mul << 15;
+      code[0] |= neg_add << 22;
+      if (i->saturate)
+         code[0] |= 1 << 8;
    } else {
       code[1]  = neg_mul << 26;
       code[1] |= neg_add << 27;
@@ -1931,11 +1934,6 @@ CodeEmitterNV50::getMinEncodingSize(const Instruction *i) const
 
    // check constraints on short MAD
    if (info.srcNr >= 2 && i->srcExists(2)) {
-      if (i->saturate || i->src(2).mod)
-         return 8;
-      if ((i->src(0).mod ^ i->src(1).mod) ||
-          (i->src(0).mod | i->src(1).mod).abs())
-         return 8;
       if (!i->defExists(0) ||
           i->def(0).rep()->reg.data.id != i->src(2).rep()->reg.data.id)
          return 8;
