@@ -662,8 +662,10 @@ bcolor:
 		}
 
 		if (j == vsinfo->num_outputs) {
-			/* No corresponding output found, load defaults into input */
-			tmp |= S_028644_OFFSET(0x20);
+			/* No corresponding output found, load defaults into input.
+			 * Don't set any other bits.
+			 * (FLAT_SHADE=1 completely changes behavior) */
+			tmp = S_028644_OFFSET(0x20);
 		}
 
 		si_pm4_set_reg(pm4,
