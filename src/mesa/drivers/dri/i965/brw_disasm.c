@@ -1197,6 +1197,18 @@ qtr_ctrl(FILE *file, struct brw_context *brw, brw_inst *inst)
    return 0;
 }
 
+#ifdef DEBUG
+static __attribute__((__unused__)) int
+brw_disassemble_imm(struct brw_context *brw,
+                    uint32_t dw3, uint32_t dw2, uint32_t dw1, uint32_t dw0)
+{
+   brw_inst inst;
+   inst.data[0] = (((uint64_t) dw1) << 32) | ((uint64_t) dw0);
+   inst.data[1] = (((uint64_t) dw3) << 32) | ((uint64_t) dw2);
+   return brw_disassemble_inst(stderr, brw, &inst, false);
+}
+#endif
+
 int
 brw_disassemble_inst(FILE *file, struct brw_context *brw, brw_inst *inst,
                      bool is_compacted)
