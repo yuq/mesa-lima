@@ -3127,7 +3127,7 @@ fs_visitor::lower_load_payload()
 
    foreach_block_and_inst_safe (block, fs_inst, inst, cfg) {
       if (inst->dst.file == GRF) {
-         const int dst_reg = vgrf_to_reg[inst->dst.reg];
+         const int dst_reg = vgrf_to_reg[inst->dst.reg] + inst->dst.reg_offset;
          bool force_sechalf = inst->force_sechalf &&
                               !inst->force_writemask_all;
          bool toggle_sechalf = inst->dst.width == 16 &&
@@ -3176,7 +3176,7 @@ fs_visitor::lower_load_payload()
                }
 
                if (dst.file == GRF) {
-                  const int dst_reg = vgrf_to_reg[dst.reg];
+                  const int dst_reg = vgrf_to_reg[dst.reg] + dst.reg_offset;
                   const bool force_writemask = mov->force_writemask_all;
                   metadata[dst_reg].force_writemask_all = force_writemask;
                   metadata[dst_reg].force_sechalf = mov->force_sechalf;
