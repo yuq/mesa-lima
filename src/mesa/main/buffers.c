@@ -297,6 +297,25 @@ _mesa_DrawBuffer(GLenum buffer)
 }
 
 
+void GLAPIENTRY
+_mesa_NamedFramebufferDrawBuffer(GLuint framebuffer, GLenum buf)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   struct gl_framebuffer *fb;
+
+   if (framebuffer) {
+      fb = _mesa_lookup_framebuffer_err(ctx, framebuffer,
+                                        "glNamedFramebufferDrawBuffer");
+      if (!fb)
+         return;
+   }
+   else
+      fb = ctx->WinSysDrawBuffer;
+
+   _mesa_draw_buffer(ctx, fb, buf, "glNamedFramebufferDrawBuffer");
+}
+
+
 /**
  * Called by glDrawBuffersARB; specifies the destination color renderbuffers
  * for N fragment program color outputs.

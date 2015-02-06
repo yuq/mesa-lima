@@ -46,6 +46,9 @@ extern void GLAPIENTRY
 _mesa_DrawBuffer( GLenum mode );
 
 extern void GLAPIENTRY
+_mesa_NamedFramebufferDrawBuffer(GLuint framebuffer, GLenum buf);
+
+extern void GLAPIENTRY
 _mesa_DrawBuffers(GLsizei n, const GLenum *buffers);
 
 extern void

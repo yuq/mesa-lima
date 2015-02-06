@@ -985,6 +985,7 @@ const struct function gl_core_functions_possible[] = {
    { "glNamedFramebufferParameteri", 45, -1 },
    { "glNamedFramebufferTexture", 45, -1 },
    { "glNamedFramebufferTextureLayer", 45, -1 },
+   { "glNamedFramebufferDrawBuffer", 45, -1 },
    { "glInvalidateNamedFramebufferSubData", 45, -1 },
    { "glInvalidateNamedFramebufferData", 45, -1 },
    { "glClearNamedFramebufferiv", 45, -1 },

@@ -187,6 +187,11 @@
       <param name="layer" type="GLint" />
    </function>
 
+   <function name="NamedFramebufferDrawBuffer" offset="assign">
+      <param name="framebuffer" type="GLuint" />
+      <param name="buf" type="GLenum" />
+   </function>
+
    <function name="InvalidateNamedFramebufferData" offset="assign">
       <param name="framebuffer" type="GLuint" />
       <param name="numAttachments" type="GLsizei" />
