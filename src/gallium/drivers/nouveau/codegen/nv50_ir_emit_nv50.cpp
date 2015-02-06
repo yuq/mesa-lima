@@ -939,6 +939,14 @@ CodeEmitterNV50::emitFMAD(const Instruction *i)
 
    code[0] = 0xe0000000;
 
+   if (i->src(1).getFile() == FILE_IMMEDIATE) {
+      code[1] = 0;
+      emitForm_IMM(i);
+      code[0] |= neg_mul << 15;
+      code[0] |= neg_add << 22;
+      if (i->saturate)
+         code[0] |= 1 << 8;
+   } else
    if (i->encSize == 4) {
       emitForm_MUL(i);
       code[0] |= neg_mul << 15;
