@@ -71,5 +71,8 @@ _mesa_read_buffer(struct gl_context *ctx, struct gl_framebuffer *fb,
 extern void GLAPIENTRY
 _mesa_ReadBuffer( GLenum mode );
 
+extern void GLAPIENTRY
+_mesa_NamedFramebufferReadBuffer(GLuint framebuffer, GLenum src);
+
 
 #endif

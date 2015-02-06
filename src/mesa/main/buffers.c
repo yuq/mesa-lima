@@ -697,3 +697,22 @@ _mesa_ReadBuffer(GLenum buffer)
    GET_CURRENT_CONTEXT(ctx);
    _mesa_read_buffer(ctx, ctx->ReadBuffer, buffer, "glReadBuffer");
 }
+
+
+void GLAPIENTRY
+_mesa_NamedFramebufferReadBuffer(GLuint framebuffer, GLenum src)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   struct gl_framebuffer *fb;
+
+   if (framebuffer) {
+      fb = _mesa_lookup_framebuffer_err(ctx, framebuffer,
+                                        "glNamedFramebufferReadBuffer");
+      if (!fb)
+         return;
+   }
+   else
+      fb = ctx->WinSysReadBuffer;
+
+   _mesa_read_buffer(ctx, fb, src, "glNamedFramebufferReadBuffer");
+}
