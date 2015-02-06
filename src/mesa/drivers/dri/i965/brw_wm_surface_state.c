@@ -199,6 +199,14 @@ brw_get_texture_swizzle(const struct gl_context *ctx,
       swizzles[1] = SWIZZLE_ZERO;
       swizzles[2] = SWIZZLE_ZERO;
       break;
+   case GL_LUMINANCE:
+      if (t->_IsIntegerFormat) {
+         swizzles[0] = SWIZZLE_X;
+         swizzles[1] = SWIZZLE_X;
+         swizzles[2] = SWIZZLE_X;
+         swizzles[3] = SWIZZLE_ONE;
+      }
+      break;
    case GL_RED:
    case GL_RG:
    case GL_RGB:
