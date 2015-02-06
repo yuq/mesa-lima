@@ -58,8 +58,7 @@ struct r600_query {
 static bool r600_is_timer_query(unsigned type)
 {
 	return type == PIPE_QUERY_TIME_ELAPSED ||
-	       type == PIPE_QUERY_TIMESTAMP ||
-	       type == PIPE_QUERY_TIMESTAMP_DISJOINT;
+	       type == PIPE_QUERY_TIMESTAMP;
 }
 
 static bool r600_query_needs_begin(unsigned type)
@@ -75,6 +74,7 @@ static struct r600_resource *r600_new_query_buffer(struct r600_common_context *c
 
 	/* Non-GPU queries. */
 	switch (type) {
+	case PIPE_QUERY_TIMESTAMP_DISJOINT:
 	case R600_QUERY_DRAW_CALLS:
 	case R600_QUERY_REQUESTED_VRAM:
 	case R600_QUERY_REQUESTED_GTT:
@@ -116,7 +116,6 @@ static struct r600_resource *r600_new_query_buffer(struct r600_common_context *c
 	case PIPE_QUERY_GPU_FINISHED:
 	case PIPE_QUERY_TIME_ELAPSED:
 	case PIPE_QUERY_TIMESTAMP:
-	case PIPE_QUERY_TIMESTAMP_DISJOINT:
 		break;
 	case PIPE_QUERY_PRIMITIVES_EMITTED:
 	case PIPE_QUERY_PRIMITIVES_GENERATED:
@@ -209,8 +208,6 @@ static void r600_emit_query_begin(struct r600_common_context *ctx, struct r600_q
 		radeon_emit(cs, va);
 		radeon_emit(cs, (va >> 32UL) & 0xFF);
 		break;
-	case PIPE_QUERY_TIMESTAMP_DISJOINT:
-		break;
 	default:
 		assert(0);
 	}
@@ -279,7 +276,6 @@ static void r600_emit_query_end(struct r600_common_context *ctx, struct r600_que
 		radeon_emit(cs, (va >> 32UL) & 0xFF);
 		break;
         case PIPE_QUERY_GPU_FINISHED:
-        case PIPE_QUERY_TIMESTAMP_DISJOINT:
 		break;
 	default:
 		assert(0);
@@ -375,8 +371,6 @@ static struct pipe_query *r600_create_query(struct pipe_context *ctx, unsigned q
 		query->result_size = 8;
 		query->num_cs_dw = 8;
 		break;
-	case PIPE_QUERY_TIMESTAMP_DISJOINT:
-		break;
 	case PIPE_QUERY_PRIMITIVES_EMITTED:
 	case PIPE_QUERY_PRIMITIVES_GENERATED:
 	case PIPE_QUERY_SO_STATISTICS:
@@ -391,6 +385,7 @@ static struct pipe_query *r600_create_query(struct pipe_context *ctx, unsigned q
 		query->num_cs_dw = 8;
 		break;
 	/* Non-GPU queries. */
+	case PIPE_QUERY_TIMESTAMP_DISJOINT:
 	case R600_QUERY_DRAW_CALLS:
 	case R600_QUERY_REQUESTED_VRAM:
 	case R600_QUERY_REQUESTED_GTT:
@@ -447,6 +442,8 @@ static void r600_begin_query(struct pipe_context *ctx, struct pipe_query *query)
 
 	/* Non-GPU queries. */
 	switch (rquery->type) {
+	case PIPE_QUERY_TIMESTAMP_DISJOINT:
+		return;
 	case R600_QUERY_DRAW_CALLS:
 		rquery->begin_result = rctx->num_draw_calls;
 		return;
@@ -499,6 +496,8 @@ static void r600_end_query(struct pipe_context *ctx, struct pipe_query *query)
 
 	/* Non-GPU queries. */
 	switch (rquery->type) {
+	case PIPE_QUERY_TIMESTAMP_DISJOINT:
+		return;
 	case R600_QUERY_DRAW_CALLS:
 		rquery->end_result = rctx->num_draw_calls;
 		return;
@@ -561,6 +560,12 @@ static boolean r600_get_query_buffer_result(struct r600_common_context *ctx,
 
 	/* Non-GPU queries. */
 	switch (query->type) {
+	case PIPE_QUERY_TIMESTAMP_DISJOINT:
+		/* Convert from cycles per millisecond to cycles per second (Hz). */
+		result->timestamp_disjoint.frequency =
+			(uint64_t)ctx->screen->info.r600_clock_crystal_freq * 1000;
+		result->timestamp_disjoint.disjoint = FALSE;
+		return TRUE;
 	case R600_QUERY_DRAW_CALLS:
 	case R600_QUERY_REQUESTED_VRAM:
 	case R600_QUERY_REQUESTED_GTT:
@@ -612,12 +617,6 @@ static boolean r600_get_query_buffer_result(struct r600_common_context *ctx,
 			      (uint64_t)current_result[1] << 32;
 		break;
 	}
-	case PIPE_QUERY_TIMESTAMP_DISJOINT:
-		/* Convert from cycles per millisecond to cycles per second (Hz). */
-		result->timestamp_disjoint.frequency =
-			(uint64_t)ctx->screen->info.r600_clock_crystal_freq * 1000;
-		result->timestamp_disjoint.disjoint = FALSE;
-		break;
 	case PIPE_QUERY_PRIMITIVES_EMITTED:
 		/* SAMPLE_STREAMOUTSTATS stores this structure:
 		 * {
