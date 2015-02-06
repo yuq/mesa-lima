@@ -397,6 +397,10 @@ nvc0_query_end(struct pipe_context *pipe, struct pipe_query *pq)
       /* indexed by TFB buffer instead of by vertex stream */
       nvc0_query_get(push, q, 0x00, 0x0d005002 | (q->index << 5));
       break;
+   case PIPE_QUERY_TIMESTAMP_DISJOINT:
+      /* This query is not issued on GPU because disjoint is forced to FALSE */
+      q->state = NVC0_QUERY_STATE_READY;
+      break;
    default:
 #ifdef NOUVEAU_ENABLE_DRIVER_STATISTICS
       if (q->type >= NVC0_QUERY_DRV_STAT(0) &&

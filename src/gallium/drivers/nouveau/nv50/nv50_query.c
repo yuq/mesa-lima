@@ -231,6 +231,8 @@ nv50_query_end(struct pipe_context *pipe, struct pipe_query *pq)
       nv50_query_get(push, q, 0, 0x0d005002 | (q->index << 5));
       break;
    case PIPE_QUERY_TIMESTAMP_DISJOINT:
+      /* This query is not issued on GPU because disjoint is forced to FALSE */
+      q->ready = TRUE;
       break;
    default:
       assert(0);
