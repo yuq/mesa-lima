@@ -36,6 +36,7 @@
 #include "glheader.h"
 
 struct gl_context;
+struct gl_framebuffer;
 
 extern void GLAPIENTRY
 _mesa_DrawBuffer( GLenum mode );
@@ -44,7 +45,8 @@ extern void GLAPIENTRY
 _mesa_DrawBuffers(GLsizei n, const GLenum *buffers);
 
 extern void
-_mesa_drawbuffers(struct gl_context *ctx, GLuint n, const GLenum *buffers,
+_mesa_drawbuffers(struct gl_context *ctx, struct gl_framebuffer *fb,
+                  GLuint n, const GLenum *buffers,
                   const GLbitfield *destMask);
 
 extern void

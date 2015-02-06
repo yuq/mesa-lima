@@ -1565,7 +1565,8 @@ handle_first_current(struct gl_context *ctx)
          else
             buffer = GL_FRONT;
 
-         _mesa_drawbuffers(ctx, 1, &buffer, NULL /* destMask */);
+         _mesa_drawbuffers(ctx, ctx->DrawBuffer, 1, &buffer,
+                           NULL /* destMask */);
       }
 
       if (ctx->ReadBuffer != _mesa_get_incomplete_framebuffer()) {

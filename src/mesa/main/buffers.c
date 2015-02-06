@@ -277,7 +277,7 @@ _mesa_DrawBuffer(GLenum buffer)
    }
 
    /* if we get here, there's no error so set new state */
-   _mesa_drawbuffers(ctx, 1, &buffer, &destMask);
+   _mesa_drawbuffers(ctx, ctx->DrawBuffer, 1, &buffer, &destMask);
 
    /*
     * Call device driver function.
@@ -440,7 +440,7 @@ _mesa_DrawBuffers(GLsizei n, const GLenum *buffers)
    }
 
    /* OK, if we get here, there were no errors so set the new state */
-   _mesa_drawbuffers(ctx, n, buffers, destMask);
+   _mesa_drawbuffers(ctx, ctx->DrawBuffer, n, buffers, destMask);
 
    /*
     * Call device driver function.  Note that n can be equal to 0,
@@ -459,13 +459,11 @@ _mesa_DrawBuffers(GLsizei n, const GLenum *buffers)
  * actual change.
  */
 static void
-updated_drawbuffers(struct gl_context *ctx)
+updated_drawbuffers(struct gl_context *ctx, struct gl_framebuffer *fb)
 {
    FLUSH_VERTICES(ctx, _NEW_BUFFERS);
 
    if (ctx->API == API_OPENGL_COMPAT && !ctx->Extensions.ARB_ES2_compatibility) {
-      struct gl_framebuffer *fb = ctx->DrawBuffer;
-
       /* Flag the FBO as requiring validation. */
       if (_mesa_is_user_fbo(fb)) {
 	 fb->_Status = 0;
@@ -482,6 +480,7 @@ updated_drawbuffers(struct gl_context *ctx)
  * so nothing should go wrong at this point.
  *
  * \param ctx  current context
+ * \param fb   the desired draw buffer
  * \param n    number of color outputs to set
  * \param buffers  array[n] of colorbuffer names, like GL_LEFT.
  * \param destMask  array[n] of BUFFER_BIT_* bitmasks which correspond to the
@@ -489,10 +488,9 @@ updated_drawbuffers(struct gl_context *ctx)
  *                  BUFFER_BIT_FRONT_LEFT | BUFFER_BIT_BACK_LEFT).
  */
 void
-_mesa_drawbuffers(struct gl_context *ctx, GLuint n, const GLenum *buffers,
-                  const GLbitfield *destMask)
+_mesa_drawbuffers(struct gl_context *ctx, struct gl_framebuffer *fb,
+                  GLuint n, const GLenum *buffers, const GLbitfield *destMask)
 {
-   struct gl_framebuffer *fb = ctx->DrawBuffer;
    GLbitfield mask[MAX_DRAW_BUFFERS];
    GLuint buf;
 
@@ -518,7 +516,7 @@ _mesa_drawbuffers(struct gl_context *ctx, GLuint n, const GLenum *buffers,
       while (destMask0) {
          GLint bufIndex = ffs(destMask0) - 1;
          if (fb->_ColorDrawBufferIndexes[count] != bufIndex) {
-            updated_drawbuffers(ctx);
+            updated_drawbuffers(ctx, fb);
             fb->_ColorDrawBufferIndexes[count] = bufIndex;
          }
          count++;
@@ -535,14 +533,14 @@ _mesa_drawbuffers(struct gl_context *ctx, GLuint n, const GLenum *buffers,
             /* only one bit should be set in the destMask[buf] field */
             assert(_mesa_bitcount(destMask[buf]) == 1);
             if (fb->_ColorDrawBufferIndexes[buf] != bufIndex) {
-	       updated_drawbuffers(ctx);
+	       updated_drawbuffers(ctx, fb);
                fb->_ColorDrawBufferIndexes[buf] = bufIndex;
             }
             count = buf + 1;
          }
          else {
             if (fb->_ColorDrawBufferIndexes[buf] != -1) {
-	       updated_drawbuffers(ctx);
+	       updated_drawbuffers(ctx, fb);
                fb->_ColorDrawBufferIndexes[buf] = -1;
             }
          }
@@ -554,7 +552,7 @@ _mesa_drawbuffers(struct gl_context *ctx, GLuint n, const GLenum *buffers,
    /* set remaining outputs to -1 (GL_NONE) */
    for (buf = fb->_NumColorDrawBuffers; buf < ctx->Const.MaxDrawBuffers; buf++) {
       if (fb->_ColorDrawBufferIndexes[buf] != -1) {
-         updated_drawbuffers(ctx);
+         updated_drawbuffers(ctx, fb);
          fb->_ColorDrawBufferIndexes[buf] = -1;
       }
    }
@@ -566,7 +564,7 @@ _mesa_drawbuffers(struct gl_context *ctx, GLuint n, const GLenum *buffers,
       /* also set context drawbuffer state */
       for (buf = 0; buf < ctx->Const.MaxDrawBuffers; buf++) {
          if (ctx->Color.DrawBuffer[buf] != fb->ColorDrawBuffer[buf]) {
-	    updated_drawbuffers(ctx);
+	    updated_drawbuffers(ctx, fb);
             ctx->Color.DrawBuffer[buf] = fb->ColorDrawBuffer[buf];
          }
       }
@@ -585,7 +583,7 @@ _mesa_update_draw_buffers(struct gl_context *ctx)
    /* should be a window system FBO */
    assert(_mesa_is_winsys_fbo(ctx->DrawBuffer));
 
-   _mesa_drawbuffers(ctx, ctx->Const.MaxDrawBuffers,
+   _mesa_drawbuffers(ctx, ctx->DrawBuffer, ctx->Const.MaxDrawBuffers,
                      ctx->Color.DrawBuffer, NULL);
 }
 

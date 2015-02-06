@@ -652,7 +652,7 @@ update_framebuffer(struct gl_context *ctx, struct gl_framebuffer *fb)
        * context state (GL_READ_BUFFER too).
        */
       if (fb->ColorDrawBuffer[0] != ctx->Color.DrawBuffer[0]) {
-         _mesa_drawbuffers(ctx, ctx->Const.MaxDrawBuffers,
+         _mesa_drawbuffers(ctx, fb, ctx->Const.MaxDrawBuffers,
                            ctx->Color.DrawBuffer, NULL);
       }
    }
