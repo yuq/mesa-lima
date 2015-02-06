@@ -1517,6 +1517,8 @@ static inline void nir_validate_shader(nir_shader *shader) { }
 void nir_calc_dominance_impl(nir_function_impl *impl);
 void nir_calc_dominance(nir_shader *shader);
 
+nir_block *nir_dominance_lca(nir_block *b1, nir_block *b2);
+
 void nir_dump_dom_tree_impl(nir_function_impl *impl, FILE *fp);
 void nir_dump_dom_tree(nir_shader *shader, FILE *fp);
 

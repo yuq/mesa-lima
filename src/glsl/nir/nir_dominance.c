@@ -212,6 +212,28 @@ nir_calc_dominance(nir_shader *shader)
    }
 }
 
+/**
+ * Computes the least common anscestor of two blocks.  If one of the blocks
+ * is null, the other block is returned.
+ */
+nir_block *
+nir_dominance_lca(nir_block *b1, nir_block *b2)
+{
+   if (b1 == NULL)
+      return b2;
+
+   if (b2 == NULL)
+      return b1;
+
+   assert(nir_cf_node_get_function(&b1->cf_node) ==
+          nir_cf_node_get_function(&b2->cf_node));
+
+   assert(nir_cf_node_get_function(&b1->cf_node)->valid_metadata &
+          nir_metadata_dominance);
+
+   return intersect(b1, b2);
+}
+
 static bool
 dump_block_dom(nir_block *block, void *state)
 {
