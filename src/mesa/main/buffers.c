@@ -623,11 +623,10 @@ _mesa_update_draw_buffers(struct gl_context *ctx)
  * \param bufferIndex  the numerical index corresponding to 'buffer'
  */
 void
-_mesa_readbuffer(struct gl_context *ctx, GLenum buffer, GLint bufferIndex)
+_mesa_readbuffer(struct gl_context *ctx, struct gl_framebuffer *fb,
+                 GLenum buffer, GLint bufferIndex)
 {
-   struct gl_framebuffer *fb = ctx->ReadBuffer;
-
-   if (_mesa_is_winsys_fbo(fb)) {
+   if ((fb == ctx->ReadBuffer) && _mesa_is_winsys_fbo(fb)) {
       /* Only update the per-context READ_BUFFER state if we're bound to
        * a window-system framebuffer.
        */
@@ -646,23 +645,17 @@ _mesa_readbuffer(struct gl_context *ctx, GLenum buffer, GLint bufferIndex)
  * Called by glReadBuffer to set the source renderbuffer for reading pixels.
  * \param mode color buffer such as GL_FRONT, GL_BACK, etc.
  */
-void GLAPIENTRY
-_mesa_ReadBuffer(GLenum buffer)
+void
+_mesa_read_buffer(struct gl_context *ctx, struct gl_framebuffer *fb,
+                  GLenum buffer, const char *caller)
 {
-   struct gl_framebuffer *fb;
    GLbitfield supportedMask;
    GLint srcBuffer;
-   GET_CURRENT_CONTEXT(ctx);
 
    FLUSH_VERTICES(ctx, 0);
 
    if (MESA_VERBOSE & VERBOSE_API)
-      _mesa_debug(ctx, "glReadBuffer %s\n", _mesa_lookup_enum_by_nr(buffer));
-
-   fb = ctx->ReadBuffer;
-
-   if (MESA_VERBOSE & VERBOSE_API)
-      _mesa_debug(ctx, "glReadBuffer %s\n", _mesa_lookup_enum_by_nr(buffer));
+      _mesa_debug(ctx, "%s %s\n", caller, _mesa_lookup_enum_by_nr(buffer));
 
    if (buffer == GL_NONE) {
       /* This is legal--it means that no buffer should be bound for reading. */
@@ -673,24 +666,34 @@ _mesa_ReadBuffer(GLenum buffer)
       srcBuffer = read_buffer_enum_to_index(buffer);
       if (srcBuffer == -1) {
          _mesa_error(ctx, GL_INVALID_ENUM,
-                     "glReadBuffer(buffer=0x%x)", buffer);
+                     "%s(invalid buffer %s)", caller,
+                     _mesa_lookup_enum_by_nr(buffer));
          return;
       }
       supportedMask = supported_buffer_bitmask(ctx, fb);
       if (((1 << srcBuffer) & supportedMask) == 0) {
          _mesa_error(ctx, GL_INVALID_OPERATION,
-                     "glReadBuffer(buffer=0x%x)", buffer);
+                     "%s(invalid buffer %s)", caller,
+                     _mesa_lookup_enum_by_nr(buffer));
          return;
       }
    }
 
    /* OK, all error checking has been completed now */
 
-   _mesa_readbuffer(ctx, buffer, srcBuffer);
+   _mesa_readbuffer(ctx, fb, buffer, srcBuffer);
 
-   /*
-    * Call device driver function.
-    */
-   if (ctx->Driver.ReadBuffer)
-      (*ctx->Driver.ReadBuffer)(ctx, buffer);
+   /* Call the device driver function only if fb is the bound read buffer */
+   if (fb == ctx->ReadBuffer) {
+      if (ctx->Driver.ReadBuffer)
+         (*ctx->Driver.ReadBuffer)(ctx, buffer);
+   }
+}
+
+
+void GLAPIENTRY
+_mesa_ReadBuffer(GLenum buffer)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   _mesa_read_buffer(ctx, ctx->ReadBuffer, buffer, "glReadBuffer");
 }

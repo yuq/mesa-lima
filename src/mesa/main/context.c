@@ -1579,7 +1579,7 @@ handle_first_current(struct gl_context *ctx)
             bufferIndex = BUFFER_FRONT_LEFT;
          }
 
-         _mesa_readbuffer(ctx, buffer, bufferIndex);
+         _mesa_readbuffer(ctx, ctx->ReadBuffer, buffer, bufferIndex);
       }
    }
 
