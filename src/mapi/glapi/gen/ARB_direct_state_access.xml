@@ -166,6 +166,12 @@
       <param name="renderbuffer" type="GLuint" />
    </function>
 
+   <function name="NamedFramebufferParameteri" offset="assign">
+      <param name="framebuffer" type="GLuint" />
+      <param name="pname" type="GLenum" />
+      <param name="param" type="GLint" />
+   </function>
+
    <function name="NamedFramebufferTexture" offset="assign">
       <param name="framebuffer" type="GLuint" />
       <param name="attachment" type="GLenum" />
@@ -244,6 +250,12 @@
       <return type="GLenum" />
       <param name="framebuffer" type="GLuint" />
       <param name="target" type="GLenum" />
+   </function>
+
+   <function name="GetNamedFramebufferParameteriv" offset="assign">
+      <param name="framebuffer" type="GLuint" />
+      <param name="pname" type="GLenum" />
+      <param name="param" type="GLint *" />
    </function>
 
    <function name="GetNamedFramebufferAttachmentParameteriv" offset="assign">

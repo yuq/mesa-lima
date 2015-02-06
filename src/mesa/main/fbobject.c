@@ -3635,6 +3635,38 @@ _mesa_GetNamedFramebufferAttachmentParameteriv(GLuint framebuffer,
 }
 
 
+void GLAPIENTRY
+_mesa_NamedFramebufferParameteri(GLuint framebuffer, GLenum pname,
+                                 GLint param)
+{
+   GET_CURRENT_CONTEXT(ctx);
+
+   (void) framebuffer;
+   (void) pname;
+   (void) param;
+
+   _mesa_error(ctx, GL_INVALID_OPERATION,
+               "glNamedFramebufferParameteri not supported "
+               "(ARB_framebuffer_no_attachments not implemented)");
+}
+
+
+void GLAPIENTRY
+_mesa_GetNamedFramebufferParameteriv(GLuint framebuffer, GLenum pname,
+                                     GLint *param)
+{
+   GET_CURRENT_CONTEXT(ctx);
+
+   (void) framebuffer;
+   (void) pname;
+   (void) param;
+
+   _mesa_error(ctx, GL_INVALID_OPERATION,
+               "glGetNamedFramebufferParameteriv not supported "
+               "(ARB_framebuffer_no_attachments not implemented)");
+}
+
+
 static void
 invalidate_framebuffer_storage(struct gl_context *ctx,
                                struct gl_framebuffer *fb,

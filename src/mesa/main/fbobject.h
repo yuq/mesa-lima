@@ -256,6 +256,14 @@ _mesa_GetNamedFramebufferAttachmentParameteriv(GLuint framebuffer,
                                                GLenum pname, GLint *params);
 
 extern void GLAPIENTRY
+_mesa_NamedFramebufferParameteri(GLuint framebuffer, GLenum pname,
+                                 GLint param);
+
+extern void GLAPIENTRY
+_mesa_GetNamedFramebufferParameteriv(GLuint framebuffer, GLenum pname,
+                                     GLint *param);
+
+extern void GLAPIENTRY
 _mesa_InvalidateSubFramebuffer(GLenum target, GLsizei numAttachments,
                                const GLenum *attachments, GLint x, GLint y,
                                GLsizei width, GLsizei height);
