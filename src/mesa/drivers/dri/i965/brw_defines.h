@@ -551,6 +551,7 @@
 #define BRW_SURFACE_PITCH_MASK		INTEL_MASK(19, 3)
 #define BRW_SURFACE_TILED		(1 << 1)
 #define BRW_SURFACE_TILED_Y		(1 << 0)
+#define HSW_SURFACE_IS_INTEGER_FORMAT   (1 << 18)
 
 /* Surface state DW4 */
 #define BRW_SURFACE_MIN_LOD_SHIFT	28

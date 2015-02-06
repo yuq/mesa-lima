@@ -269,6 +269,68 @@ upload_default_color(struct brw_context *brw,
       uint32_t *sdc = brw_state_batch(brw, AUB_TRACE_SAMPLER_DEFAULT_COLOR,
                                       4 * 4, 64, sdc_offset);
       memcpy(sdc, color.ui, 4 * 4);
+   } else if (brw->is_haswell && texObj->_IsIntegerFormat) {
+      /* Haswell's integer border color support is completely insane:
+       * SAMPLER_BORDER_COLOR_STATE is 20 DWords.  The first four are
+       * for float colors.  The next 12 DWords are MBZ and only exist to
+       * pad it out to a 64 byte cacheline boundary.  DWords 16-19 then
+       * contain integer colors; these are only used if SURFACE_STATE
+       * has the "Integer Surface Format" bit set.  Even then, the
+       * arrangement of the RGBA data devolves into madness.
+       */
+      uint32_t *sdc = brw_state_batch(brw, AUB_TRACE_SAMPLER_DEFAULT_COLOR,
+                                      20 * 4, 512, sdc_offset);
+      memset(sdc, 0, 20 * 4);
+      sdc = &sdc[16];
+
+      mesa_format format = firstImage->TexFormat;
+      int bits_per_channel = _mesa_get_format_bits(format, GL_RED_BITS);
+
+      /* From the Haswell PRM, "Command Reference: Structures", Page 36:
+       * "If any color channel is missing from the surface format,
+       *  corresponding border color should be programmed as zero and if
+       *  alpha channel is missing, corresponding Alpha border color should
+       *  be programmed as 1."
+       */
+      unsigned c[4] = { 0, 0, 0, 1 };
+      for (int i = 0; i < 4; i++) {
+         if (_mesa_format_has_color_component(format, i))
+            c[i] = color.ui[i];
+      }
+
+      switch (bits_per_channel) {
+      case 8:
+         /* Copy RGBA in order. */
+         for (int i = 0; i < 4; i++)
+            ((uint8_t *) sdc)[i] = c[i];
+         break;
+      case 10:
+         /* R10G10B10A2_UINT is treated like a 16-bit format. */
+      case 16:
+         ((uint16_t *) sdc)[0] = c[0]; /* R -> DWord 0, bits 15:0  */
+         ((uint16_t *) sdc)[1] = c[1]; /* G -> DWord 0, bits 31:16 */
+         /* DWord 1 is Reserved/MBZ! */
+         ((uint16_t *) sdc)[4] = c[2]; /* B -> DWord 2, bits 15:0  */
+         ((uint16_t *) sdc)[5] = c[3]; /* A -> DWord 3, bits 31:16 */
+         break;
+      case 32:
+         if (firstImage->_BaseFormat == GL_RG) {
+            /* Careful inspection of the tables reveals that for RG32 formats,
+             * the green channel needs to go where blue normally belongs.
+             */
+            sdc[0] = c[0];
+            sdc[2] = c[1];
+            sdc[3] = 1;
+         } else {
+            /* Copy RGBA in order. */
+            for (int i = 0; i < 4; i++)
+               sdc[i] = c[i];
+         }
+         break;
+      default:
+         assert(!"Invalid number of bits per channel in integer format.");
+         break;
+      }
    } else if (brw->gen == 5 || brw->gen == 6) {
       struct gen5_sampler_default_color *sdc;
 

@@ -321,6 +321,9 @@ gen7_update_texture_surface(struct gl_context *ctx,
    surf[3] = SET_FIELD(effective_depth - 1, BRW_SURFACE_DEPTH) |
              (mt->pitch - 1);
 
+   if (brw->is_haswell && tObj->_IsIntegerFormat)
+      surf[3] |= HSW_SURFACE_IS_INTEGER_FORMAT;
+
    surf[4] = gen7_surface_msaa_bits(mt->num_samples, mt->msaa_layout) |
              SET_FIELD(tObj->MinLayer, GEN7_SURFACE_MIN_ARRAY_ELEMENT) |
              SET_FIELD((effective_depth - 1),
