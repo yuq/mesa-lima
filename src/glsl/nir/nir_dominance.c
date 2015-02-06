@@ -177,6 +177,17 @@ calc_dom_children(nir_function_impl* impl)
    nir_foreach_block(impl, block_add_child, NULL);
 }
 
+static void
+calc_dfs_indicies(nir_block *block, unsigned *index)
+{
+   block->dom_pre_index = (*index)++;
+
+   for (unsigned i = 0; i < block->num_dom_children; i++)
+      calc_dfs_indicies(block->dom_children[i], index);
+
+   block->dom_post_index = (*index)++;
+}
+
 void
 nir_calc_dominance_impl(nir_function_impl *impl)
 {
@@ -201,6 +212,9 @@ nir_calc_dominance_impl(nir_function_impl *impl)
    impl->start_block->imm_dom = NULL;
 
    calc_dom_children(impl);
+
+   unsigned dfs_index = 0;
+   calc_dfs_indicies(impl->start_block, &dfs_index);
 }
 
 void
@@ -232,6 +246,22 @@ nir_dominance_lca(nir_block *b1, nir_block *b2)
           nir_metadata_dominance);
 
    return intersect(b1, b2);
+}
+
+/**
+ * Returns true if parent dominates child
+ */
+bool
+nir_block_dominates(nir_block *parent, nir_block *child)
+{
+   assert(nir_cf_node_get_function(&parent->cf_node) ==
+          nir_cf_node_get_function(&child->cf_node));
+
+   assert(nir_cf_node_get_function(&parent->cf_node)->valid_metadata &
+          nir_metadata_dominance);
+
+   return child->dom_pre_index >= parent->dom_pre_index &&
+          child->dom_post_index <= parent->dom_post_index;
 }
 
 static bool

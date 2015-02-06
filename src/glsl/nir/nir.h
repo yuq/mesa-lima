@@ -1135,6 +1135,14 @@ typedef struct nir_block {
    /* Set of nir_block's on the dominance frontier of this block */
    struct set *dom_frontier;
 
+   /*
+    * These two indices have the property that dom_{pre,post}_index for each
+    * child of this block in the dominance tree will always be between
+    * dom_pre_index and dom_post_index for this block, which makes testing if
+    * a given block is dominated by another block an O(1) operation.
+    */
+   unsigned dom_pre_index, dom_post_index;
+
    /* live in and out for this block; used for liveness analysis */
    BITSET_WORD *live_in;
    BITSET_WORD *live_out;
@@ -1518,6 +1526,7 @@ void nir_calc_dominance_impl(nir_function_impl *impl);
 void nir_calc_dominance(nir_shader *shader);
 
 nir_block *nir_dominance_lca(nir_block *b1, nir_block *b2);
+bool nir_block_dominates(nir_block *parent, nir_block *child);
 
 void nir_dump_dom_tree_impl(nir_function_impl *impl, FILE *fp);
 void nir_dump_dom_tree(nir_shader *shader, FILE *fp);
