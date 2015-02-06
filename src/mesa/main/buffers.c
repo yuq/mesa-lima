@@ -242,16 +242,16 @@ read_buffer_enum_to_index(GLenum buffer)
  *
  * See the GL_EXT_framebuffer_object spec for more info.
  */
-void GLAPIENTRY
-_mesa_DrawBuffer(GLenum buffer)
+void
+_mesa_draw_buffer(struct gl_context *ctx, struct gl_framebuffer *fb,
+                  GLenum buffer, const char *caller)
 {
    GLbitfield destMask;
-   GET_CURRENT_CONTEXT(ctx);
 
    FLUSH_VERTICES(ctx, 0);
 
    if (MESA_VERBOSE & VERBOSE_API) {
-      _mesa_debug(ctx, "glDrawBuffer %s\n", _mesa_lookup_enum_by_nr(buffer));
+      _mesa_debug(ctx, "%s %s\n", caller, _mesa_lookup_enum_by_nr(buffer));
    }
 
    if (buffer == GL_NONE) {
@@ -259,33 +259,41 @@ _mesa_DrawBuffer(GLenum buffer)
    }
    else {
       const GLbitfield supportedMask
-         = supported_buffer_bitmask(ctx, ctx->DrawBuffer);
+         = supported_buffer_bitmask(ctx, fb);
       destMask = draw_buffer_enum_to_bitmask(ctx, buffer);
       if (destMask == BAD_MASK) {
          /* totally bogus buffer */
-         _mesa_error(ctx, GL_INVALID_ENUM,
-                     "glDrawBuffer(buffer=0x%x)", buffer);
+         _mesa_error(ctx, GL_INVALID_ENUM, "%s(invalid buffer %s)", caller,
+                     _mesa_lookup_enum_by_nr(buffer));
          return;
       }
       destMask &= supportedMask;
       if (destMask == 0x0) {
          /* none of the named color buffers exist! */
-         _mesa_error(ctx, GL_INVALID_OPERATION,
-                     "glDrawBuffer(buffer=0x%x)", buffer);
+         _mesa_error(ctx, GL_INVALID_OPERATION, "%s(invalid buffer %s)",
+                     caller, _mesa_lookup_enum_by_nr(buffer));
          return;
       }
    }
 
    /* if we get here, there's no error so set new state */
-   _mesa_drawbuffers(ctx, ctx->DrawBuffer, 1, &buffer, &destMask);
+   _mesa_drawbuffers(ctx, fb, 1, &buffer, &destMask);
 
-   /*
-    * Call device driver function.
-    */
-   if (ctx->Driver.DrawBuffers)
-      ctx->Driver.DrawBuffers(ctx, 1, &buffer);
-   else if (ctx->Driver.DrawBuffer)
-      ctx->Driver.DrawBuffer(ctx, buffer);
+   /* Call device driver function only if fb is the bound draw buffer */
+   if (fb == ctx->DrawBuffer) {
+      if (ctx->Driver.DrawBuffers)
+         ctx->Driver.DrawBuffers(ctx, 1, &buffer);
+      else if (ctx->Driver.DrawBuffer)
+         ctx->Driver.DrawBuffer(ctx, buffer);
+   }
+}
+
+
+void GLAPIENTRY
+_mesa_DrawBuffer(GLenum buffer)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   _mesa_draw_buffer(ctx, ctx->DrawBuffer, buffer, "glDrawBuffer");
 }
 
 
