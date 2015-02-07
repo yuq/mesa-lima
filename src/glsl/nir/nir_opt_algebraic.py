@@ -83,6 +83,15 @@ optimizations = [
    (('fne', ('fadd', a, b), 0.0), ('fne', a, ('fneg', b))),
    (('fge', ('fneg', ('fabs', a)), 0.0), ('feq', a, 0.0)),
    (('fmin', ('fmax', a, 0.0), 1.0), ('fsat', a)),
+   # Comparison with the same args.  Note that these are not done for
+   # the float versions because NaN always returns false on float
+   # inequalities.
+   (('ilt', a, a), False),
+   (('ige', a, a), True),
+   (('ieq', a, a), True),
+   (('ine', a, a), False),
+   (('ult', a, a), False),
+   (('uge', a, a), True),
    # Logical and bit operations
    (('fand', a, 0.0), 0.0),
    (('iand', a, a), a),
