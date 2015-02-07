@@ -90,7 +90,7 @@ nir_instrs_equal(nir_instr *instr1, nir_instr *instr2)
          return false;
 
       return memcmp(load1->value.f, load2->value.f,
-                    load1->def.num_components * sizeof load2->value.f) == 0;
+                    load1->def.num_components * sizeof(*load2->value.f)) == 0;
    }
    case nir_instr_type_phi: {
       nir_phi_instr *phi1 = nir_instr_as_phi(instr1);
