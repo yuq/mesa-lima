@@ -468,6 +468,7 @@ set_renderbuffer_attachment(struct gl_context *ctx,
    remove_attachment(ctx, att);
    att->Type = GL_RENDERBUFFER_EXT;
    att->Texture = NULL; /* just to be safe */
+   att->Layered = GL_FALSE;
    att->Complete = GL_FALSE;
    _mesa_reference_renderbuffer(&att->Renderbuffer, rb);
 }
