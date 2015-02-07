@@ -418,7 +418,7 @@ dri_postprocessing(struct dri_context *ctx,
    struct pipe_resource *src = drawable->textures[att];
    struct pipe_resource *zsbuf = drawable->textures[ST_ATTACHMENT_DEPTH_STENCIL];
 
-   if (ctx->pp && src && zsbuf)
+   if (ctx->pp && src)
       pp_run(ctx->pp, src, src, zsbuf);
 }
 
