@@ -51,6 +51,7 @@ enum glsl_base_type {
    GLSL_TYPE_UINT = 0,
    GLSL_TYPE_INT,
    GLSL_TYPE_FLOAT,
+   GLSL_TYPE_DOUBLE,
    GLSL_TYPE_BOOL,
    GLSL_TYPE_SAMPLER,
    GLSL_TYPE_IMAGE,
@@ -418,6 +419,14 @@ struct glsl_type {
    bool is_float() const
    {
       return base_type == GLSL_TYPE_FLOAT;
+   }
+
+   /**
+    * Query whether or not a type is a double type
+    */
+   bool is_double() const
+   {
+      return base_type == GLSL_TYPE_DOUBLE;
    }
 
    /**
