@@ -517,6 +517,7 @@ fs_generator::generate_tex(fs_inst *inst, struct brw_reg dst, struct brw_reg src
    int rlen = 4;
    uint32_t simd_mode;
    uint32_t return_format;
+   bool is_combined_send = inst->eot;
 
    switch (dst.type) {
    case BRW_REGISTER_TYPE_D:
@@ -688,6 +689,11 @@ fs_generator::generate_tex(fs_inst *inst, struct brw_reg dst, struct brw_reg src
       dst = vec16(dst);
    }
 
+   if (is_combined_send) {
+      assert(brw->gen >= 9 || brw->is_cherryview);
+      rlen = 0;
+   }
+
    assert(brw->gen < 7 || !inst->header_present ||
           src.file == BRW_GENERAL_REGISTER_FILE);
 
@@ -792,6 +798,11 @@ fs_generator::generate_tex(fs_inst *inst, struct brw_reg dst, struct brw_reg src
       /* visitor knows more than we do about the surface limit required,
        * so has already done marking.
        */
+   }
+
+   if (is_combined_send) {
+      brw_inst_set_eot(brw, brw_last_inst, true);
+      brw_inst_set_opcode(brw, brw_last_inst, BRW_OPCODE_SENDC);
    }
 }
 

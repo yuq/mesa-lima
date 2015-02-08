@@ -2555,6 +2555,94 @@ fs_visitor::opt_algebraic()
    return progress;
 }
 
+/**
+ * Optimize sample messages which are followed by the final RT write.
+ *
+ * CHV, and GEN9+ can mark a texturing SEND instruction with EOT to have its
+ * results sent directly to the framebuffer, bypassing the EU.  Recognize the
+ * final texturing results copied to the framebuffer write payload and modify
+ * them to write to the framebuffer directly.
+ */
+bool
+fs_visitor::opt_sampler_eot()
+{
+   brw_wm_prog_key *key = (brw_wm_prog_key*) this->key;
+
+   if (brw->gen < 9 && !brw->is_cherryview)
+      return false;
+
+   /* FINISHME: It should be possible to implement this optimization when there
+    * are multiple drawbuffers.
+    */
+   if (key->nr_color_regions != 1)
+      return false;
+
+   /* Look for a texturing instruction immediately before the final FB_WRITE. */
+   fs_inst *fb_write = (fs_inst *) cfg->blocks[cfg->num_blocks - 1]->end();
+   assert(fb_write->eot);
+   assert(fb_write->opcode == FS_OPCODE_FB_WRITE);
+
+   fs_inst *tex_inst = (fs_inst *) fb_write->prev;
+
+   /* There wasn't one; nothing to do. */
+   if (unlikely(tex_inst->is_head_sentinel()) || !tex_inst->is_tex())
+      return false;
+
+   /* If there's no header present, we need to munge the LOAD_PAYLOAD as well.
+    * It's very likely to be the previous instruction.
+    */
+   fs_inst *load_payload = (fs_inst *) tex_inst->prev;
+   if (load_payload->is_head_sentinel() ||
+       load_payload->opcode != SHADER_OPCODE_LOAD_PAYLOAD)
+      return false;
+
+   assert(!tex_inst->eot); /* We can't get here twice */
+   assert((tex_inst->offset & (0xff << 24)) == 0);
+
+   tex_inst->offset |= fb_write->target << 24;
+   tex_inst->eot = true;
+   fb_write->remove(cfg->blocks[cfg->num_blocks - 1]);
+
+   /* If a header is present, marking the eot is sufficient. Otherwise, we need
+    * to create a new LOAD_PAYLOAD command with the same sources and a space
+    * saved for the header. Using a new destination register not only makes sure
+    * we have enough space, but it will make sure the dead code eliminator kills
+    * the instruction that this will replace.
+    */
+   if (tex_inst->header_present)
+      return true;
+
+   fs_reg send_header = vgrf(load_payload->sources + 1);
+   fs_reg *new_sources =
+      ralloc_array(mem_ctx, fs_reg, load_payload->sources + 1);
+
+   new_sources[0] = fs_reg();
+   for (int i = 0; i < load_payload->sources; i++)
+      new_sources[i+1] = load_payload->src[i];
+
+   /* The LOAD_PAYLOAD helper seems like the obvious choice here. However, it
+    * requires a lot of information about the sources to appropriately figure
+    * out the number of registers needed to be used. Given this stage in our
+    * optimization, we may not have the appropriate GRFs required by
+    * LOAD_PAYLOAD at this point (copy propagation). Therefore, we need to
+    * manually emit the instruction.
+    */
+   fs_inst *new_load_payload = new(mem_ctx) fs_inst(SHADER_OPCODE_LOAD_PAYLOAD,
+                                                    load_payload->exec_size,
+                                                    send_header,
+                                                    new_sources,
+                                                    load_payload->sources + 1);
+
+   new_load_payload->regs_written = load_payload->regs_written + 1;
+   tex_inst->mlen++;
+   tex_inst->header_present = true;
+   tex_inst->insert_before(cfg->blocks[cfg->num_blocks - 1], new_load_payload);
+   tex_inst->src[0] = send_header;
+   tex_inst->dst = reg_null_ud;
+
+   return true;
+}
+
 bool
 fs_visitor::opt_register_renaming()
 {
@@ -3760,6 +3848,8 @@ fs_visitor::optimize()
    } while (progress);
 
    pass_num = 0;
+
+   OPT(opt_sampler_eot);
 
    if (OPT(lower_load_payload)) {
       split_virtual_grfs();

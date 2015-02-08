@@ -231,6 +231,8 @@ public:
    bool compute_to_mrf();
    bool dead_code_eliminate();
    bool remove_duplicate_mrf_writes();
+
+   bool opt_sampler_eot();
    bool virtual_grf_interferes(int a, int b);
    void schedule_instructions(instruction_scheduler_mode mode);
    void insert_gen4_send_dependency_workarounds();
