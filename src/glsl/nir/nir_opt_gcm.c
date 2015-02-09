@@ -47,16 +47,17 @@ struct gcm_block_info {
    nir_instr *last_instr;
 };
 
+/* Flags used in the instr->pass_flags field for various instruction states */
+enum {
+   GCM_INSTR_PINNED =            (1 << 0),
+   GCM_INSTR_SCHEDULED_EARLY =   (1 << 1),
+   GCM_INSTR_SCHEDULED_LATE =    (1 << 2),
+   GCM_INSTR_PLACED =            (1 << 3),
+};
+
 struct gcm_state {
    nir_function_impl *impl;
    nir_instr *instr;
-
-   /* Marks all instructions that have been visited by the curren pass */
-   BITSET_WORD *visited;
-
-   /* Marks instructions that are "pinned", i.e. cannot be moved from their
-    * basic block by code motion */
-   BITSET_WORD *pinned;
 
    /* The list of non-pinned instructions.  As we do the late scheduling,
     * we pull non-pinned instructions out of their blocks and place them in
@@ -97,14 +98,16 @@ gcm_build_block_info(struct exec_list *cf_list, struct gcm_state *state,
    }
 }
 
-/* Walks the instruction list and marks immovable instructions as pinned */
+/* Walks the instruction list and marks immovable instructions as pinned
+ *
+ * This function also serves to initialize the instr->pass_flags field.
+ * After this is completed, all instructions' pass_flags fields will be set
+ * to either GCM_INSTR_PINNED or 0.
+ */
 static bool
-gcm_pin_instructions_block(nir_block *block, void *void_state)
+gcm_pin_instructions_block(nir_block *block, void *state)
 {
-   struct gcm_state *state = void_state;
-
    nir_foreach_instr_safe(block, instr) {
-      bool pinned;
       switch (instr->type) {
       case nir_instr_type_alu:
          switch (nir_instr_as_alu(instr)->op) {
@@ -115,42 +118,52 @@ gcm_pin_instructions_block(nir_block *block, void *void_state)
          case nir_op_fddx_coarse:
          case nir_op_fddy_coarse:
             /* These can only go in uniform control flow; pin them for now */
-            pinned = true;
+            instr->pass_flags = GCM_INSTR_PINNED;
 
          default:
-            pinned = false;
+            instr->pass_flags = 0;
          }
          break;
 
       case nir_instr_type_tex:
-         /* We need to pin texture ops that do partial derivatives */
-         pinned = nir_instr_as_tex(instr)->op == nir_texop_txd;
+         switch (nir_instr_as_tex(instr)->op) {
+         case nir_texop_tex:
+         case nir_texop_txb:
+         case nir_texop_lod:
+            /* These two take implicit derivatives so they need to be pinned */
+            instr->pass_flags = GCM_INSTR_PINNED;
+
+         default:
+            instr->pass_flags = 0;
+         }
          break;
 
       case nir_instr_type_load_const:
-         pinned = false;
+         instr->pass_flags = 0;
          break;
 
       case nir_instr_type_intrinsic: {
          const nir_intrinsic_info *info =
             &nir_intrinsic_infos[nir_instr_as_intrinsic(instr)->intrinsic];
-         pinned = !(info->flags & NIR_INTRINSIC_CAN_ELIMINATE) ||
-                  !(info->flags & NIR_INTRINSIC_CAN_REORDER);
+
+         if ((info->flags & NIR_INTRINSIC_CAN_ELIMINATE) &&
+             (info->flags & NIR_INTRINSIC_CAN_REORDER)) {
+            instr->pass_flags = 0;
+         } else {
+            instr->pass_flags = GCM_INSTR_PINNED;
+         }
          break;
       }
 
       case nir_instr_type_jump:
       case nir_instr_type_ssa_undef:
       case nir_instr_type_phi:
-         pinned = true;
+         instr->pass_flags = GCM_INSTR_PINNED;
          break;
 
       default:
          unreachable("Invalid instruction type in GCM");
       }
-
-      if (pinned)
-         BITSET_SET(state->pinned, instr->index);
    }
 
    return true;
@@ -206,16 +219,16 @@ gcm_schedule_early_src(nir_src *src, void *void_state)
 static void
 gcm_schedule_early_instr(nir_instr *instr, struct gcm_state *state)
 {
-   if (BITSET_TEST(state->visited, instr->index))
+   if (instr->pass_flags & GCM_INSTR_SCHEDULED_EARLY)
       return;
 
-   BITSET_SET(state->visited, instr->index);
+   instr->pass_flags |= GCM_INSTR_SCHEDULED_EARLY;
 
    /* Pinned instructions are already scheduled so we don't need to do
     * anything.  Also, bailing here keeps us from ever following the
     * sources of phi nodes which can be back-edges.
     */
-   if (BITSET_TEST(state->pinned, instr->index))
+   if (instr->pass_flags & GCM_INSTR_PINNED)
       return;
 
    /* Start with the instruction at the top.  As we iterate over the
@@ -330,16 +343,16 @@ gcm_schedule_late_def(nir_ssa_def *def, void *void_state)
 static void
 gcm_schedule_late_instr(nir_instr *instr, struct gcm_state *state)
 {
-   if (BITSET_TEST(state->visited, instr->index))
+   if (instr->pass_flags & GCM_INSTR_SCHEDULED_LATE)
       return;
 
-   BITSET_SET(state->visited, instr->index);
+   instr->pass_flags |= GCM_INSTR_SCHEDULED_LATE;
 
    /* Pinned instructions are already scheduled so we don't need to do
     * anything.  Also, bailing here keeps us from ever following phi nodes
     * which can be back-edges.
     */
-   if (BITSET_TEST(state->pinned, instr->index))
+   if (instr->pass_flags & GCM_INSTR_PINNED)
       return;
 
    nir_foreach_ssa_def(instr, gcm_schedule_late_def, state);
@@ -353,7 +366,7 @@ gcm_schedule_late_block(nir_block *block, void *void_state)
    nir_foreach_instr_safe(block, instr) {
       gcm_schedule_late_instr(instr, state);
 
-      if (!BITSET_TEST(state->pinned, instr->index)) {
+      if (!(instr->pass_flags & GCM_INSTR_PINNED)) {
          /* If this is an instruction we can move, go ahead and pull it out
           * of the program and put it on the instrs list.  This keeps us
           * from causing linked list confusion when we're trying to put
@@ -401,23 +414,23 @@ gcm_place_instr_def(nir_ssa_def *def, void *state)
 static void
 gcm_place_instr(nir_instr *instr, struct gcm_state *state)
 {
-   if (BITSET_TEST(state->visited, instr->index))
+   if (instr->pass_flags & GCM_INSTR_PLACED)
       return;
 
-   BITSET_SET(state->visited, instr->index);
+   instr->pass_flags |= GCM_INSTR_PLACED;
 
    /* Phi nodes are our once source of back-edges.  Since right now we are
     * only doing scheduling within blocks, we don't need to worry about
     * them since they are always at the top.  Just skip them completely.
     */
    if (instr->type == nir_instr_type_phi) {
-      assert(BITSET_TEST(state->pinned, instr->index));
+      assert(instr->pass_flags & GCM_INSTR_PINNED);
       return;
    }
 
    nir_foreach_ssa_def(instr, gcm_place_instr_def, state);
 
-   if (BITSET_TEST(state->pinned, instr->index)) {
+   if (instr->pass_flags & GCM_INSTR_PINNED) {
       /* Pinned instructions have an implicit dependence on the pinned
        * instructions that come after them in the block.  Since the pinned
        * instructions will naturally "chain" together, we only need to
@@ -426,7 +439,7 @@ gcm_place_instr(nir_instr *instr, struct gcm_state *state)
       for (nir_instr *after = nir_instr_next(instr);
            after;
            after = nir_instr_next(after)) {
-         if (BITSET_TEST(state->pinned, after->index)) {
+         if (after->pass_flags & GCM_INSTR_PINNED) {
             gcm_place_instr(after, state);
             break;
          }
@@ -434,7 +447,7 @@ gcm_place_instr(nir_instr *instr, struct gcm_state *state)
    }
 
    struct gcm_block_info *block_info = &state->blocks[instr->block->index];
-   if (!BITSET_TEST(state->pinned, instr->index)) {
+   if (!(instr->pass_flags & GCM_INSTR_PINNED)) {
       exec_node_remove(&instr->node);
 
       if (block_info->last_instr) {
@@ -459,13 +472,8 @@ opt_gcm_impl(nir_function_impl *impl)
 {
    struct gcm_state state;
 
-   unsigned num_instrs = nir_index_instrs(impl);
-   unsigned instr_words = BITSET_WORDS(num_instrs);
-
    state.impl = impl;
    state.instr = NULL;
-   state.visited = rzalloc_array(NULL, BITSET_WORD, instr_words);
-   state.pinned = rzalloc_array(NULL, BITSET_WORD, instr_words);
    exec_list_make_empty(&state.instrs);
    state.blocks = rzalloc_array(NULL, struct gcm_block_info, impl->num_blocks);
 
@@ -474,20 +482,15 @@ opt_gcm_impl(nir_function_impl *impl)
 
    gcm_build_block_info(&impl->body, &state, 0);
    nir_foreach_block(impl, gcm_pin_instructions_block, &state);
-
    nir_foreach_block(impl, gcm_schedule_early_block, &state);
-
-   memset(state.visited, 0, instr_words * sizeof(*state.visited));
    nir_foreach_block(impl, gcm_schedule_late_block, &state);
 
-   memset(state.visited, 0, instr_words * sizeof(*state.visited));
    while (!exec_list_is_empty(&state.instrs)) {
       nir_instr *instr = exec_node_data(nir_instr,
                                         state.instrs.tail_pred, node);
       gcm_place_instr(instr, &state);
    }
 
-   ralloc_free(state.visited);
    ralloc_free(state.blocks);
 }
 
