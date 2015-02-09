@@ -199,7 +199,7 @@ lower_instructions_visitor::sub_to_add_neg(ir_expression *ir)
 void
 lower_instructions_visitor::div_to_mul_rcp(ir_expression *ir)
 {
-   assert(ir->operands[1]->type->is_float());
+   assert(ir->operands[1]->type->is_float() || ir->operands[1]->type->is_double());
 
    /* New expression for the 1.0 / op1 */
    ir_rvalue *expr;
@@ -327,7 +327,7 @@ lower_instructions_visitor::mod_to_floor(ir_expression *ir)
    /* Don't generate new IR that would need to be lowered in an additional
     * pass.
     */
-   if (lowering(DIV_TO_MUL_RCP) && ir->type->is_float())
+   if (lowering(DIV_TO_MUL_RCP) && (ir->type->is_float() || ir->type->is_double()))
       div_to_mul_rcp(div_expr);
 
    ir_expression *const floor_expr =
@@ -1014,7 +1014,8 @@ lower_instructions_visitor::visit_leave(ir_expression *ir)
    case ir_binop_div:
       if (ir->operands[1]->type->is_integer() && lowering(INT_DIV_TO_MUL_RCP))
 	 int_div_to_mul_rcp(ir);
-      else if (ir->operands[1]->type->is_float() && lowering(DIV_TO_MUL_RCP))
+      else if ((ir->operands[1]->type->is_float() ||
+                ir->operands[1]->type->is_double()) && lowering(DIV_TO_MUL_RCP))
 	 div_to_mul_rcp(ir);
       break;
 
