@@ -65,9 +65,9 @@ is_phi_src_scalarizable(nir_phi_src *src,
        * are ok too.
        */
       return nir_op_infos[src_alu->op].output_size == 0 ||
-             src_alu->op != nir_op_vec2 ||
-             src_alu->op != nir_op_vec3 ||
-             src_alu->op != nir_op_vec4;
+             src_alu->op == nir_op_vec2 ||
+             src_alu->op == nir_op_vec3 ||
+             src_alu->op == nir_op_vec4;
    }
 
    case nir_instr_type_phi:
