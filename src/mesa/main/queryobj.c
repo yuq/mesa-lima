@@ -405,6 +405,22 @@ _mesa_BeginQueryIndexed(GLenum target, GLuint index, GLuint id)
                      "glBeginQuery{Indexed}(query already active)");
          return;
       }
+
+      /* Section 2.14 Asynchronous Queries, page 84 of the OpenGL ES 3.0.4
+       * spec states:
+       *
+       *     "BeginQuery generates an INVALID_OPERATION error if any of the
+       *      following conditions hold: [...] id is the name of an
+       *      existing query object whose type does not match target; [...]
+       *
+       * Similar wording exists in the OpenGL 4.5 spec, section 4.2. QUERY
+       * OBJECTS AND ASYNCHRONOUS QUERIES, page 43.
+       */
+      if (q->EverBound && q->Target != target) {
+         _mesa_error(ctx, GL_INVALID_OPERATION,
+                     "glBeginQuery{Indexed}(target mismatch)");
+         return;
+      }
    }
 
    q->Target = target;
