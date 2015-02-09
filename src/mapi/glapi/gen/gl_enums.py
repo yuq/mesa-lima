@@ -211,9 +211,13 @@ def _parser():
     return parser.parse_args()
 
 
-if __name__ == '__main__':
+def main():
     args = _parser()
     api_list = [gl_XML.parse_GL_API(args.input_file)]
 
     printer = PrintGlEnums()
     printer.Print(api_list)
+
+
+if __name__ == '__main__':
+    main()
