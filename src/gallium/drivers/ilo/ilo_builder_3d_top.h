@@ -350,6 +350,96 @@ gen6_3DSTATE_VF_STATISTICS(struct ilo_builder *builder,
    ilo_builder_batch_write(builder, cmd_len, &dw0);
 }
 
+/**
+ * Translate a pipe primitive type to the matching hardware primitive type.
+ */
+static inline int
+gen6_3d_translate_pipe_prim(unsigned prim)
+{
+   static const int prim_mapping[ILO_PRIM_MAX] = {
+      [PIPE_PRIM_POINTS]                     = GEN6_3DPRIM_POINTLIST,
+      [PIPE_PRIM_LINES]                      = GEN6_3DPRIM_LINELIST,
+      [PIPE_PRIM_LINE_LOOP]                  = GEN6_3DPRIM_LINELOOP,
+      [PIPE_PRIM_LINE_STRIP]                 = GEN6_3DPRIM_LINESTRIP,
+      [PIPE_PRIM_TRIANGLES]                  = GEN6_3DPRIM_TRILIST,
+      [PIPE_PRIM_TRIANGLE_STRIP]             = GEN6_3DPRIM_TRISTRIP,
+      [PIPE_PRIM_TRIANGLE_FAN]               = GEN6_3DPRIM_TRIFAN,
+      [PIPE_PRIM_QUADS]                      = GEN6_3DPRIM_QUADLIST,
+      [PIPE_PRIM_QUAD_STRIP]                 = GEN6_3DPRIM_QUADSTRIP,
+      [PIPE_PRIM_POLYGON]                    = GEN6_3DPRIM_POLYGON,
+      [PIPE_PRIM_LINES_ADJACENCY]            = GEN6_3DPRIM_LINELIST_ADJ,
+      [PIPE_PRIM_LINE_STRIP_ADJACENCY]       = GEN6_3DPRIM_LINESTRIP_ADJ,
+      [PIPE_PRIM_TRIANGLES_ADJACENCY]        = GEN6_3DPRIM_TRILIST_ADJ,
+      [PIPE_PRIM_TRIANGLE_STRIP_ADJACENCY]   = GEN6_3DPRIM_TRISTRIP_ADJ,
+      [ILO_PRIM_RECTANGLES]                  = GEN6_3DPRIM_RECTLIST,
+   };
+
+   assert(prim_mapping[prim]);
+
+   return prim_mapping[prim];
+}
+
+static inline void
+gen8_3DSTATE_VF_TOPOLOGY(struct ilo_builder *builder, unsigned pipe_prim)
+{
+   const uint8_t cmd_len = 2;
+   const int prim = gen6_3d_translate_pipe_prim(pipe_prim);
+   uint32_t *dw;
+
+   ILO_DEV_ASSERT(builder->dev, 8, 8);
+
+   ilo_builder_batch_pointer(builder, cmd_len, &dw);
+
+   dw[0] = GEN8_RENDER_CMD(3D, 3DSTATE_VF_TOPOLOGY) | (cmd_len - 2);
+   dw[1] = prim;
+}
+
+static inline void
+gen8_3DSTATE_VF_INSTANCING(struct ilo_builder *builder,
+                           int vb_index, uint32_t step_rate)
+{
+   const uint8_t cmd_len = 3;
+   uint32_t *dw;
+
+   ILO_DEV_ASSERT(builder->dev, 8, 8);
+
+   ilo_builder_batch_pointer(builder, cmd_len, &dw);
+
+   dw[0] = GEN8_RENDER_CMD(3D, 3DSTATE_VF_INSTANCING) | (cmd_len - 2);
+   dw[1] = vb_index;
+   if (step_rate)
+      dw[1] |= GEN8_INSTANCING_DW1_ENABLE;
+   dw[2] = step_rate;
+}
+
+static inline void
+gen8_3DSTATE_VF_SGVS(struct ilo_builder *builder,
+                     bool vid_enable, int vid_ve, int vid_comp,
+                     bool iid_enable, int iid_ve, int iid_comp)
+{
+   const uint8_t cmd_len = 2;
+   uint32_t *dw;
+
+   ILO_DEV_ASSERT(builder->dev, 8, 8);
+
+   ilo_builder_batch_pointer(builder, cmd_len, &dw);
+
+   dw[0] = GEN8_RENDER_CMD(3D, 3DSTATE_VF_SGVS) | (cmd_len - 2);
+   dw[1] = 0;
+
+   if (iid_enable) {
+      dw[1] |= GEN8_SGVS_DW1_IID_ENABLE |
+               vid_comp << GEN8_SGVS_DW1_IID_VE_COMP__SHIFT |
+               vid_ve << GEN8_SGVS_DW1_IID_VE_INDEX__SHIFT;
+   }
+
+   if (vid_enable) {
+      dw[1] |= GEN8_SGVS_DW1_VID_ENABLE |
+               vid_comp << GEN8_SGVS_DW1_VID_VE_COMP__SHIFT |
+               vid_ve << GEN8_SGVS_DW1_VID_VE_INDEX__SHIFT;
+   }
+}
+
 static inline void
 gen6_3DSTATE_VERTEX_BUFFERS(struct ilo_builder *builder,
                             const struct ilo_ve_state *ve,
@@ -359,7 +449,7 @@ gen6_3DSTATE_VERTEX_BUFFERS(struct ilo_builder *builder,
    uint32_t *dw;
    unsigned pos, hw_idx;
 
-   ILO_DEV_ASSERT(builder->dev, 6, 7.5);
+   ILO_DEV_ASSERT(builder->dev, 6, 8);
 
    /*
     * From the Sandy Bridge PRM, volume 2 part 1, page 82:
@@ -385,31 +475,44 @@ gen6_3DSTATE_VERTEX_BUFFERS(struct ilo_builder *builder,
 
       dw[0] = hw_idx << GEN6_VB_DW0_INDEX__SHIFT;
 
+      if (ilo_dev_gen(builder->dev) >= ILO_GEN(7))
+         dw[0] |= GEN7_VB_DW0_ADDR_MODIFIED;
+
       if (instance_divisor)
          dw[0] |= GEN6_VB_DW0_ACCESS_INSTANCEDATA;
       else
          dw[0] |= GEN6_VB_DW0_ACCESS_VERTEXDATA;
 
-      if (ilo_dev_gen(builder->dev) >= ILO_GEN(7))
-         dw[0] |= GEN7_VB_DW0_ADDR_MODIFIED;
-
       /* use null vb if there is no buffer or the stride is out of range */
-      if (cso->buffer && cso->stride <= 2048) {
+      if (!cso->buffer || cso->stride > 2048) {
+         dw[0] |= GEN6_VB_DW0_IS_NULL;
+         dw[1] = 0;
+         dw[2] = 0;
+         dw[3] = (ilo_dev_gen(builder->dev) >= ILO_GEN(8)) ?
+            0 : instance_divisor;
+
+         continue;
+      }
+
+      dw[0] |= cso->stride << GEN6_VB_DW0_PITCH__SHIFT;
+
+      if (ilo_dev_gen(builder->dev) >= ILO_GEN(8)) {
+         const struct ilo_buffer *buf = ilo_buffer(cso->buffer);
+         const uint32_t start_offset = cso->buffer_offset;
+
+         ilo_builder_batch_reloc64(builder, pos + 1,
+               buf->bo, start_offset, 0);
+         dw[3] = buf->bo_size;
+      } else {
          const struct ilo_buffer *buf = ilo_buffer(cso->buffer);
          const uint32_t start_offset = cso->buffer_offset;
          const uint32_t end_offset = buf->bo_size - 1;
 
-         dw[0] |= cso->stride << GEN6_VB_DW0_PITCH__SHIFT;
+         dw[3] = instance_divisor;
+
          ilo_builder_batch_reloc(builder, pos + 1, buf->bo, start_offset, 0);
          ilo_builder_batch_reloc(builder, pos + 2, buf->bo, end_offset, 0);
       }
-      else {
-         dw[0] |= 1 << 13;
-         dw[1] = 0;
-         dw[2] = 0;
-      }
-
-      dw[3] = instance_divisor;
 
       dw += 4;
       pos += 4;
@@ -551,6 +654,47 @@ gen6_3DSTATE_INDEX_BUFFER(struct ilo_builder *builder,
 
    ilo_builder_batch_reloc(builder, pos + 1, buf->bo, start_offset, 0);
    ilo_builder_batch_reloc(builder, pos + 2, buf->bo, end_offset, 0);
+}
+
+static inline void
+gen8_3DSTATE_INDEX_BUFFER(struct ilo_builder *builder,
+                          const struct ilo_ib_state *ib)
+{
+   const uint8_t cmd_len = 5;
+   struct ilo_buffer *buf = ilo_buffer(ib->hw_resource);
+   int format;
+   uint32_t *dw;
+   unsigned pos;
+
+   ILO_DEV_ASSERT(builder->dev, 8, 8);
+
+   if (!buf)
+      return;
+
+   switch (ib->hw_index_size) {
+   case 4:
+      format = GEN8_IB_DW1_FORMAT_DWORD;
+      break;
+   case 2:
+      format = GEN8_IB_DW1_FORMAT_WORD;
+      break;
+   case 1:
+      format = GEN8_IB_DW1_FORMAT_BYTE;
+      break;
+   default:
+      assert(!"unknown index size");
+      format = GEN8_IB_DW1_FORMAT_BYTE;
+      break;
+   }
+
+   pos = ilo_builder_batch_pointer(builder, cmd_len, &dw);
+
+   dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_INDEX_BUFFER) | (cmd_len - 2);
+   dw[1] = format;
+   dw[4] = buf->bo_size;
+
+   /* ignore ib->offset here in favor of adjusting 3DPRIMITIVE */
+   ilo_builder_batch_reloc64(builder, pos + 2, buf->bo, 0, 0);
 }
 
 static inline void
