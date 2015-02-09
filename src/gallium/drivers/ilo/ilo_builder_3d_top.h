@@ -723,6 +723,36 @@ gen6_3DSTATE_VS(struct ilo_builder *builder,
 }
 
 static inline void
+gen8_3DSTATE_VS(struct ilo_builder *builder,
+                const struct ilo_shader_state *vs,
+                uint32_t clip_plane_enable)
+{
+   const uint8_t cmd_len = 9;
+   const struct ilo_shader_cso *cso;
+   uint32_t dw3, dw6, dw7, dw8, *dw;
+
+   ILO_DEV_ASSERT(builder->dev, 8, 8);
+
+   cso = ilo_shader_get_kernel_cso(vs);
+   dw3 = cso->payload[0];
+   dw6 = cso->payload[1];
+   dw7 = cso->payload[2];
+   dw8 = clip_plane_enable << GEN8_VS_DW8_UCP_CLIP_ENABLES__SHIFT;
+
+   ilo_builder_batch_pointer(builder, cmd_len, &dw);
+
+   dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_VS) | (cmd_len - 2);
+   dw[1] = ilo_shader_get_kernel_offset(vs);
+   dw[2] = 0;
+   dw[3] = dw3;
+   dw[4] = 0; /* scratch */
+   dw[5] = 0;
+   dw[6] = dw6;
+   dw[7] = dw7;
+   dw[8] = dw8;
+}
+
+static inline void
 gen6_disable_3DSTATE_VS(struct ilo_builder *builder)
 {
    const uint8_t cmd_len = 6;

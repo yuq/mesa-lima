@@ -205,7 +205,7 @@ ilo_gpe_init_vs_cso(const struct ilo_dev_info *dev,
    int start_grf, vue_read_len, sampler_count, max_threads;
    uint32_t dw2, dw4, dw5;
 
-   ILO_DEV_ASSERT(dev, 6, 7.5);
+   ILO_DEV_ASSERT(dev, 6, 8);
 
    start_grf = ilo_shader_get_kernel_param(vs, ILO_KERNEL_URB_DATA_START_REG);
    vue_read_len = ilo_shader_get_kernel_param(vs, ILO_KERNEL_INPUT_COUNT);
