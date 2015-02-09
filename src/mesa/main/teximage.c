@@ -5149,7 +5149,7 @@ _mesa_validate_texbuffer_format(const struct gl_context *ctx,
 
 void
 _mesa_texture_buffer_range(struct gl_context *ctx,
-                           struct gl_texture_object *texObj, GLenum target, 
+                           struct gl_texture_object *texObj, GLenum target,
                            GLenum internalFormat,
                            struct gl_buffer_object *bufObj,
                            GLintptr offset, GLsizeiptr size, bool range,
