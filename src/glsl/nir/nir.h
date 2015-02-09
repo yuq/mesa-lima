@@ -411,8 +411,10 @@ typedef struct {
    nir_instr_type type;
    struct nir_block *block;
 
-   /* flag for dead code elimination (see nir_opt_dce.c) */
-   bool live;
+   /* A temporary for optimization and analysis passes to use for storing
+    * flags.  For instance, DCE uses this to store the "dead/live" info.
+    */
+   uint8_t pass_flags;
 } nir_instr;
 
 static inline nir_instr *
