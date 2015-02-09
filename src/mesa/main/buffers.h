@@ -55,6 +55,10 @@ _mesa_draw_buffers(struct gl_context *ctx, struct gl_framebuffer *fb,
 extern void GLAPIENTRY
 _mesa_DrawBuffers(GLsizei n, const GLenum *buffers);
 
+extern void GLAPIENTRY
+_mesa_NamedFramebufferDrawBuffers(GLuint framebuffer, GLsizei n,
+                                  const GLenum *bufs);
+
 extern void
 _mesa_drawbuffers(struct gl_context *ctx, struct gl_framebuffer *fb,
                   GLuint n, const GLenum *buffers,

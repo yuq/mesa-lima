@@ -506,6 +506,26 @@ _mesa_DrawBuffers(GLsizei n, const GLenum *buffers)
 }
 
 
+void GLAPIENTRY
+_mesa_NamedFramebufferDrawBuffers(GLuint framebuffer, GLsizei n,
+                                  const GLenum *bufs)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   struct gl_framebuffer *fb;
+
+   if (framebuffer) {
+      fb = _mesa_lookup_framebuffer_err(ctx, framebuffer,
+                                        "glNamedFramebufferDrawBuffers");
+      if (!fb)
+         return;
+   }
+   else
+      fb = ctx->WinSysDrawBuffer;
+
+   _mesa_draw_buffers(ctx, fb, n, bufs, "glNamedFramebufferDrawBuffers");
+}
+
+
 /**
  * Performs necessary state updates when _mesa_drawbuffers makes an
  * actual change.

@@ -192,6 +192,12 @@
       <param name="buf" type="GLenum" />
    </function>
 
+   <function name="NamedFramebufferDrawBuffers" offset="assign">
+      <param name="framebuffer" type="GLuint" />
+      <param name="n" type="GLsizei" />
+      <param name="bufs" type="const GLenum *" />
+   </function>
+
    <function name="NamedFramebufferReadBuffer" offset="assign">
       <param name="framebuffer" type="GLuint" />
       <param name="buf" type="GLenum" />
