@@ -107,6 +107,12 @@ upload_wm_state(struct brw_context *brw)
       dw1 |= GEN7_WM_USES_INPUT_COVERAGE_MASK;
    }
 
+   /* BRW_NEW_FS_PROG_DATA */
+   if (prog_data->early_fragment_tests)
+      dw1 |= GEN7_WM_EARLY_DS_CONTROL_PREPS;
+   else if (prog_data->base.nr_image_params)
+      dw1 |= GEN7_WM_EARLY_DS_CONTROL_PSEXEC;
+
    /* _NEW_BUFFERS | _NEW_COLOR */
    if (brw->is_haswell &&
        !(brw_color_buffer_write_enabled(brw) || writes_depth) &&

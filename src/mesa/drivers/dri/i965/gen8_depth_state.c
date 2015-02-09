@@ -250,10 +250,10 @@ pma_fix_enable(const struct brw_context *brw)
     */
    const bool hiz_enabled = depth_irb && intel_renderbuffer_has_hiz(depth_irb);
 
-   /* 3DSTATE_WM::Early Depth/Stencil Control != EDSC_PREPS (2).
-    * We always leave this set to EDSC_NORMAL (0).
+   /* BRW_NEW_FS_PROG_DATA:
+    * 3DSTATE_WM::Early Depth/Stencil Control != EDSC_PREPS (2).
     */
-   const bool edsc_not_preps = true;
+   const bool edsc_not_preps = !brw->wm.prog_data->early_fragment_tests;
 
    /* 3DSTATE_PS_EXTRA::PixelShaderValid is always true. */
    const bool pixel_shader_valid = true;

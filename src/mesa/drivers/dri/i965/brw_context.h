@@ -466,6 +466,7 @@ struct brw_wm_prog_data {
 
    uint8_t computed_depth_mode;
 
+   bool early_fragment_tests;
    bool no_8;
    bool dual_src_blend;
    bool uses_pos_offset;

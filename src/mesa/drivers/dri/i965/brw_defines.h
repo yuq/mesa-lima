@@ -2384,6 +2384,9 @@ enum brw_wm_barycentric_interp_mode {
 # define GEN7_WM_KILL_ENABLE				(1 << 25)
 # define GEN7_WM_COMPUTED_DEPTH_MODE_SHIFT              23
 # define GEN7_WM_USES_SOURCE_DEPTH			(1 << 20)
+# define GEN7_WM_EARLY_DS_CONTROL_NORMAL                (0 << 21)
+# define GEN7_WM_EARLY_DS_CONTROL_PSEXEC                (1 << 21)
+# define GEN7_WM_EARLY_DS_CONTROL_PREPS                 (2 << 21)
 # define GEN7_WM_USES_SOURCE_W			        (1 << 19)
 # define GEN7_WM_POSITION_ZW_PIXEL			(0 << 17)
 # define GEN7_WM_POSITION_ZW_CENTROID			(2 << 17)

@@ -119,6 +119,12 @@ upload_wm_state(struct brw_context *brw)
    dw1 |= brw->wm.prog_data->barycentric_interp_modes <<
       GEN7_WM_BARYCENTRIC_INTERPOLATION_MODE_SHIFT;
 
+   /* BRW_NEW_FS_PROG_DATA */
+   if (brw->wm.prog_data->early_fragment_tests)
+      dw1 |= GEN7_WM_EARLY_DS_CONTROL_PREPS;
+   else if (brw->wm.prog_data->base.nr_image_params)
+      dw1 |= GEN7_WM_EARLY_DS_CONTROL_PSEXEC;
+
    BEGIN_BATCH(2);
    OUT_BATCH(_3DSTATE_WM << 16 | (2 - 2));
    OUT_BATCH(dw1);
