@@ -1489,7 +1489,7 @@ void nir_index_ssa_defs(nir_function_impl *impl);
 void nir_index_blocks(nir_function_impl *impl);
 
 void nir_print_shader(nir_shader *shader, FILE *fp);
-void nir_print_instr(nir_instr *instr, FILE *fp);
+void nir_print_instr(const nir_instr *instr, FILE *fp);
 
 #ifdef DEBUG
 void nir_validate_shader(nir_shader *shader);

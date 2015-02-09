@@ -576,7 +576,7 @@ print_parallel_copy_instr(nir_parallel_copy_instr *instr, FILE *fp)
 }
 
 static void
-print_instr(nir_instr *instr, print_var_state *state, unsigned tabs, FILE *fp)
+print_instr(const nir_instr *instr, print_var_state *state, unsigned tabs, FILE *fp)
 {
    print_tabs(tabs, fp);
 
@@ -882,7 +882,7 @@ nir_print_shader(nir_shader *shader, FILE *fp)
 }
 
 void
-nir_print_instr(nir_instr *instr, FILE *fp)
+nir_print_instr(const nir_instr *instr, FILE *fp)
 {
    print_instr(instr, NULL, 0, fp);
 }
