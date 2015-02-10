@@ -833,6 +833,7 @@ bool r600_common_screen_init(struct r600_common_screen *rscreen,
 	rscreen->b.fence_reference = r600_fence_reference;
 	rscreen->b.fence_signalled = r600_fence_signalled;
 	rscreen->b.resource_destroy = u_resource_destroy_vtbl;
+	rscreen->b.resource_from_user_memory = r600_buffer_from_user_memory;
 
 	if (rscreen->info.has_uvd) {
 		rscreen->b.get_video_param = rvid_get_video_param;

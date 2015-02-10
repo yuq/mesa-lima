@@ -232,6 +232,9 @@ static int si_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 	case PIPE_CAP_MULTISAMPLE_Z_RESOLVE:
 		return 1;
 
+	case PIPE_CAP_RESOURCE_FROM_USER_MEMORY:
+		return !SI_BIG_ENDIAN && sscreen->b.info.has_userptr;
+
 	case PIPE_CAP_TEXTURE_MULTISAMPLE:
 		/* 2D tiling on CIK is supported since DRM 2.35.0 */
 		return sscreen->b.chip_class < CIK ||

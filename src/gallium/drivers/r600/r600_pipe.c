@@ -270,6 +270,9 @@ static int r600_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 	case PIPE_CAP_POLYGON_OFFSET_CLAMP:
 		return 1;
 
+	case PIPE_CAP_RESOURCE_FROM_USER_MEMORY:
+		return !R600_BIG_ENDIAN && rscreen->b.info.has_userptr;
+
 	case PIPE_CAP_COMPUTE:
 		return rscreen->b.chip_class > R700;
 
