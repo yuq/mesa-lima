@@ -69,7 +69,6 @@ lower_sampler(nir_tex_instr *instr, struct gl_shader_program *shader_program,
 
    /* Get the name and the offset */
    instr->sampler_index = 0;
-   bool has_indirect = false;
    char *name = ralloc_strdup(mem_ctx, instr->sampler->var->name);
 
    for (nir_deref *deref = &instr->sampler->deref;
@@ -82,7 +81,6 @@ lower_sampler(nir_tex_instr *instr, struct gl_shader_program *shader_program,
           * thing we have.  This should be ok for now as we don't support
           * arrays_of_arrays yet.
           */
-         assert(!has_indirect);
 
          instr->sampler_index *= glsl_get_length(deref->type);
          switch (deref_array->deref_array_type) {
@@ -92,8 +90,6 @@ lower_sampler(nir_tex_instr *instr, struct gl_shader_program *shader_program,
                ralloc_asprintf_append(&name, "[%u]", deref_array->base_offset);
             break;
          case nir_deref_array_type_indirect: {
-            assert(!has_indirect);
-
             instr->src = reralloc(mem_ctx, instr->src, nir_tex_src,
                                   instr->num_srcs + 1);
             memset(&instr->src[instr->num_srcs], 0, sizeof *instr->src);
