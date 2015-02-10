@@ -51,6 +51,8 @@ _mesa_free_queryobj_data(struct gl_context *ctx);
 void GLAPIENTRY
 _mesa_GenQueries(GLsizei n, GLuint *ids);
 void GLAPIENTRY
+_mesa_CreateQueries(GLenum target, GLsizei n, GLuint *ids);
+void GLAPIENTRY
 _mesa_DeleteQueries(GLsizei n, const GLuint *ids);
 GLboolean GLAPIENTRY
 _mesa_IsQuery(GLuint id);

@@ -233,18 +233,22 @@ get_query_binding_point(struct gl_context *ctx, GLenum target, GLuint index)
    }
 }
 
-
-void GLAPIENTRY
-_mesa_GenQueries(GLsizei n, GLuint *ids)
+/**
+ * Create $n query objects and store them in *ids. Make them of type $target
+ * if dsa is set. Called from _mesa_GenQueries() and _mesa_CreateQueries().
+ */
+static void
+create_queries(struct gl_context *ctx, GLenum target, GLsizei n, GLuint *ids,
+               bool dsa)
 {
+   const char *func = dsa ? "glGenQueries" : "glCreateQueries";
    GLuint first;
-   GET_CURRENT_CONTEXT(ctx);
 
    if (MESA_VERBOSE & VERBOSE_API)
-      _mesa_debug(ctx, "glGenQueries(%d)\n", n);
+      _mesa_debug(ctx, "%s(%d)\n", func, n);
 
    if (n < 0) {
-      _mesa_error(ctx, GL_INVALID_VALUE, "glGenQueriesARB(n < 0)");
+      _mesa_error(ctx, GL_INVALID_VALUE, "%s(n < 0)", func);
       return;
    }
 
@@ -255,13 +259,47 @@ _mesa_GenQueries(GLsizei n, GLuint *ids)
          struct gl_query_object *q
             = ctx->Driver.NewQueryObject(ctx, first + i);
          if (!q) {
-            _mesa_error(ctx, GL_OUT_OF_MEMORY, "glGenQueriesARB");
+            _mesa_error(ctx, GL_OUT_OF_MEMORY, "%s", func);
             return;
+         } else if (dsa) {
+            /* Do the equivalent of binding the buffer with a target */
+            q->Target = target;
+            q->EverBound = GL_TRUE;
          }
          ids[i] = first + i;
          _mesa_HashInsert(ctx->Query.QueryObjects, first + i, q);
       }
    }
+}
+
+void GLAPIENTRY
+_mesa_GenQueries(GLsizei n, GLuint *ids)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   create_queries(ctx, 0, n, ids, false);
+}
+
+void GLAPIENTRY
+_mesa_CreateQueries(GLenum target, GLsizei n, GLuint *ids)
+{
+   GET_CURRENT_CONTEXT(ctx);
+
+   switch (target) {
+   case GL_SAMPLES_PASSED:
+   case GL_ANY_SAMPLES_PASSED:
+   case GL_ANY_SAMPLES_PASSED_CONSERVATIVE:
+   case GL_TIME_ELAPSED:
+   case GL_TIMESTAMP:
+   case GL_PRIMITIVES_GENERATED:
+   case GL_TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN:
+      break;
+   default:
+      _mesa_error(ctx, GL_INVALID_ENUM, "glCreateQueries(invalid target = %s)",
+                  _mesa_lookup_enum_by_nr(target));
+      return;
+   }
+
+   create_queries(ctx, target, n, ids, true);
 }
 
 
@@ -424,6 +462,18 @@ _mesa_BeginQueryIndexed(GLenum target, GLuint index, GLuint id)
       }
    }
 
+   /* This possibly changes the target of a buffer allocated by
+    * CreateQueries. Issue 39) in the ARB_direct_state_access extension states
+    * the following:
+    *
+    * "CreateQueries adds a <target>, so strictly speaking the <target>
+    * command isn't needed for BeginQuery/EndQuery, but in the end, this also
+    * isn't a selector, so we decided not to change it."
+    *
+    * Updating the target of the query object should be acceptable, so let's
+    * do that.
+    */
+
    q->Target = target;
    q->Active = GL_TRUE;
    q->Result = 0;
@@ -540,6 +590,18 @@ _mesa_QueryCounter(GLuint id, GLenum target)
       _mesa_error(ctx, GL_INVALID_OPERATION, "glQueryCounter(id is active)");
       return;
    }
+
+   /* This possibly changes the target of a buffer allocated by
+    * CreateQueries. Issue 39) in the ARB_direct_state_access extension states
+    * the following:
+    *
+    * "CreateQueries adds a <target>, so strictly speaking the <target>
+    * command isn't needed for BeginQuery/EndQuery, but in the end, this also
+    * isn't a selector, so we decided not to change it."
+    *
+    * Updating the target of the query object should be acceptable, so let's
+    * do that.
+    */
 
    q->Target = target;
    q->Result = 0;
