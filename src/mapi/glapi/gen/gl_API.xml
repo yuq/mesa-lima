@@ -12856,6 +12856,10 @@
     <enum name="SKIP_DECODE_EXT"                      value="0x8A4A"/>
 </category>
 
+<category name="GL_AMD_pinned_memory" number="411">
+    <enum name="EXTERNAL_VIRTUAL_MEMORY_BUFFER_AMD"   value="0x9160"/>
+</category>
+
 <xi:include href="INTEL_performance_query.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
 
 <category name="GL_EXT_polygon_offset_clamp" number="460">

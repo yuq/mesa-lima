@@ -3837,6 +3837,7 @@ struct gl_extensions
    GLboolean OES_standard_derivatives;
    /* vendor extensions */
    GLboolean AMD_performance_monitor;
+   GLboolean AMD_pinned_memory;
    GLboolean AMD_seamless_cubemap_per_texture;
    GLboolean AMD_vertex_shader_layer;
    GLboolean AMD_vertex_shader_viewport_index;
@@ -4376,6 +4377,12 @@ struct gl_context
     * target.
     */
    struct gl_buffer_object *AtomicBuffer;
+
+   /**
+    * Object currently associated w/ the GL_EXTERNAL_VIRTUAL_MEMORY_BUFFER_AMD
+    * target.
+    */
+   struct gl_buffer_object *ExternalVirtualMemoryBuffer;
 
    /**
     * Array of atomic counter buffer binding points.
