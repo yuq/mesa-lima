@@ -604,7 +604,7 @@ nir_visitor::visit(ir_call *ir)
       } else if (strcmp(ir->callee_name(), "__intrinsic_atomic_predecrement") == 0) {
          op = nir_intrinsic_atomic_counter_dec_var;
       } else {
-         assert(0);
+         unreachable("not reached");
       }
 
       nir_intrinsic_instr *instr = nir_intrinsic_instr_create(shader, op);
@@ -1162,7 +1162,7 @@ nir_visitor::visit(ir_expression *ir)
             case 2: emit(nir_op_fnoise1_2, dest_size, srcs); break;
             case 3: emit(nir_op_fnoise1_3, dest_size, srcs); break;
             case 4: emit(nir_op_fnoise1_4, dest_size, srcs); break;
-            default: assert(0); break;
+            default: unreachable("not reached");
          }
          break;
       case 2:
@@ -1171,7 +1171,7 @@ nir_visitor::visit(ir_expression *ir)
             case 2: emit(nir_op_fnoise2_2, dest_size, srcs); break;
             case 3: emit(nir_op_fnoise2_3, dest_size, srcs); break;
             case 4: emit(nir_op_fnoise2_4, dest_size, srcs); break;
-            default: assert(0); break;
+            default: unreachable("not reached");
          }
          break;
       case 3:
@@ -1180,7 +1180,7 @@ nir_visitor::visit(ir_expression *ir)
             case 2: emit(nir_op_fnoise3_2, dest_size, srcs); break;
             case 3: emit(nir_op_fnoise3_3, dest_size, srcs); break;
             case 4: emit(nir_op_fnoise3_4, dest_size, srcs); break;
-            default: assert(0); break;
+            default: unreachable("not reached");
          }
          break;
       case 4:
@@ -1189,7 +1189,7 @@ nir_visitor::visit(ir_expression *ir)
             case 2: emit(nir_op_fnoise4_2, dest_size, srcs); break;
             case 3: emit(nir_op_fnoise4_3, dest_size, srcs); break;
             case 4: emit(nir_op_fnoise4_4, dest_size, srcs); break;
-            default: assert(0); break;
+            default: unreachable("not reached");
          }
          break;
       default:
@@ -1517,7 +1517,7 @@ nir_visitor::visit(ir_expression *ir)
          case 2: emit(nir_op_vec2, dest_size, srcs); break;
          case 3: emit(nir_op_vec3, dest_size, srcs); break;
          case 4: emit(nir_op_vec4, dest_size, srcs); break;
-         default: assert(0); break;
+         default: unreachable("not reached");
       }
       break;
 
@@ -1627,7 +1627,7 @@ nir_visitor::visit(ir_texture *ir)
       instr->dest_type = nir_type_unsigned;
       break;
    default:
-      assert(0);
+      unreachable("not reached");
    }
 
    ir->sampler->accept(this);
