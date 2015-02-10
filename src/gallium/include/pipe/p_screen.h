@@ -164,6 +164,14 @@ struct pipe_screen {
 						  struct winsys_handle *handle);
 
    /**
+    * Create a resource from user memory. This maps the user memory into
+    * the device address space.
+    */
+   struct pipe_resource * (*resource_from_user_memory)(struct pipe_screen *,
+                                                       const struct pipe_resource *t,
+                                                       void *user_memory);
+
+   /**
     * Get a winsys_handle from a texture. Some platforms/winsys requires
     * that the texture is created with a special usage flag like
     * DISPLAYTARGET or PRIMARY.

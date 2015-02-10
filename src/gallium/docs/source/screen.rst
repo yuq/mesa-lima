@@ -246,6 +246,12 @@ The integer capabilities:
 * ``PIPE_CAP_MULTISAMPLE_Z_RESOLVE``: Whether the driver supports blitting
   a multisampled depth buffer into a single-sampled texture (or depth buffer).
   Only the first sampled should be copied.
+* ``PIPE_CAP_RESOURCE_FROM_USER_MEMORY``: Whether the driver can create
+  a pipe_resource where an already-existing piece of (malloc'd) user memory
+  is used as its backing storage. In other words, whether the driver can map
+  existing user memory into the device address space for direct device access.
+  The create function is pipe_screen::resource_from_user_memory. The address
+  and size must be page-aligned.
 
 
 .. _pipe_capf:
