@@ -671,21 +671,7 @@ upload_program(struct i915_fragment_program *p)
          break;
 
       case OPCODE_MIN:
-         src0 = src_vector(p, &inst->SrcReg[0], program);
-         src1 = src_vector(p, &inst->SrcReg[1], program);
-         tmp = i915_get_utemp(p);
-         flags = get_result_flags(inst);
-
-         i915_emit_arith(p,
-                         A0_MAX,
-                         tmp, flags & A0_DEST_CHANNEL_ALL, 0,
-                         negate(src0, 1, 1, 1, 1),
-                         negate(src1, 1, 1, 1, 1), 0);
-
-         i915_emit_arith(p,
-                         A0_MOV,
-                         get_result_vector(p, inst),
-                         flags, 0, negate(tmp, 1, 1, 1, 1), 0, 0);
+         EMIT_2ARG_ARITH(A0_MIN);
          break;
 
       case OPCODE_MOV:
