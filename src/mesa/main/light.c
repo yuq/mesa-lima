@@ -1207,12 +1207,3 @@ _mesa_init_lighting( struct gl_context *ctx )
    ctx->_ForceEyeCoords = GL_FALSE;
    ctx->_ModelViewInvScale = 1.0;
 }
-
-
-/**
- * Deallocate malloc'd lighting state attached to given context.
- */
-void
-_mesa_free_lighting_data( struct gl_context *ctx )
-{
-}

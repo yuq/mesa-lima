@@ -1280,7 +1280,6 @@ _mesa_free_context_data( struct gl_context *ctx )
 
    _mesa_free_attrib_data(ctx);
    _mesa_free_buffer_objects(ctx);
-   _mesa_free_lighting_data( ctx );
    _mesa_free_eval_data( ctx );
    _mesa_free_texture_data( ctx );
    _mesa_free_matrix_data( ctx );
