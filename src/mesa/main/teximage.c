@@ -739,6 +739,28 @@ _mesa_is_proxy_texture(GLenum target)
 
 
 /**
+ * Test if a target is an array target.
+ *
+ * \param target texture target.
+ *
+ * \return true if the target is an array target, false otherwise.
+ */
+bool
+_mesa_is_array_texture(GLenum target)
+{
+   switch (target) {
+   case GL_TEXTURE_1D_ARRAY:
+   case GL_TEXTURE_2D_ARRAY:
+   case GL_TEXTURE_CUBE_MAP_ARRAY:
+   case GL_TEXTURE_2D_MULTISAMPLE_ARRAY:
+      return true;
+   default:
+      return false;
+   };
+}
+
+
+/**
  * Return the proxy target which corresponds to the given texture target
  */
 static GLenum
