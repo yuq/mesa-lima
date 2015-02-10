@@ -321,6 +321,9 @@ void
 fs_visitor::emit_minmax(enum brw_conditional_mod conditionalmod, const fs_reg &dst,
                         const fs_reg &src0, const fs_reg &src1)
 {
+   assert(conditionalmod == BRW_CONDITIONAL_GE ||
+          conditionalmod == BRW_CONDITIONAL_L);
+
    fs_inst *inst;
 
    if (brw->gen >= 6) {
@@ -1956,7 +1959,7 @@ fs_visitor::rescale_texcoord(fs_reg coordinate, int coord_components,
 	    chan = offset(chan, i);
 
 	    inst = emit(BRW_OPCODE_SEL, chan, chan, fs_reg(0.0f));
-	    inst->conditional_mod = BRW_CONDITIONAL_G;
+	    inst->conditional_mod = BRW_CONDITIONAL_GE;
 
 	    /* Our parameter comes in as 1.0/width or 1.0/height,
 	     * because that's what people normally want for doing

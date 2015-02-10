@@ -517,7 +517,7 @@ vec4_visitor::emit_unpack_snorm_4x8(const dst_reg &dst, src_reg src0)
    emit(MUL(scaled, src_reg(f), src_reg(1.0f / 127.0f)));
 
    dst_reg max(this, glsl_type::vec4_type);
-   emit_minmax(BRW_CONDITIONAL_G, max, src_reg(scaled), src_reg(-1.0f));
+   emit_minmax(BRW_CONDITIONAL_GE, max, src_reg(scaled), src_reg(-1.0f));
    emit_minmax(BRW_CONDITIONAL_L, dst, src_reg(max), src_reg(1.0f));
 }
 
@@ -545,7 +545,7 @@ void
 vec4_visitor::emit_pack_snorm_4x8(const dst_reg &dst, const src_reg &src0)
 {
    dst_reg max(this, glsl_type::vec4_type);
-   emit_minmax(BRW_CONDITIONAL_G, max, src0, src_reg(-1.0f));
+   emit_minmax(BRW_CONDITIONAL_GE, max, src0, src_reg(-1.0f));
 
    dst_reg min(this, glsl_type::vec4_type);
    emit_minmax(BRW_CONDITIONAL_L, min, src_reg(max), src_reg(1.0f));
@@ -1683,7 +1683,7 @@ vec4_visitor::visit(ir_expression *ir)
       emit_minmax(BRW_CONDITIONAL_L, result_dst, op[0], op[1]);
       break;
    case ir_binop_max:
-      emit_minmax(BRW_CONDITIONAL_G, result_dst, op[0], op[1]);
+      emit_minmax(BRW_CONDITIONAL_GE, result_dst, op[0], op[1]);
       break;
 
    case ir_binop_pow:

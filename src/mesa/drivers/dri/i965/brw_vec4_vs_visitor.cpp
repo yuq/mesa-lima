@@ -97,7 +97,7 @@ vec4_vs_visitor::emit_prolog()
                dst.type = brw_type_for_base_type(glsl_type::vec4_type);
                emit(MOV(dst, src_reg(reg_d)));
                emit(MUL(dst, src_reg(dst), src_reg(es3_normalize_factor)));
-               emit_minmax(BRW_CONDITIONAL_G, dst, src_reg(dst), src_reg(-1.0f));
+               emit_minmax(BRW_CONDITIONAL_GE, dst, src_reg(dst), src_reg(-1.0f));
             } else {
                /* The following equations are from the OpenGL 3.2 specification:
                 *

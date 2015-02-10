@@ -226,7 +226,7 @@ vec4_vs_visitor::emit_program_code()
                /* if (tmp.y < 0) tmp.y = 0; */
                src_reg tmp_y = swizzle(src[0], BRW_SWIZZLE_YYYY);
                result.writemask = WRITEMASK_Z;
-               emit_minmax(BRW_CONDITIONAL_G, result, tmp_y, src_reg(0.0f));
+               emit_minmax(BRW_CONDITIONAL_GE, result, tmp_y, src_reg(0.0f));
 
                src_reg clamped_y(result);
                clamped_y.swizzle = BRW_SWIZZLE_ZZZZ;
@@ -313,7 +313,7 @@ vec4_vs_visitor::emit_program_code()
       }
 
       case OPCODE_MAX:
-         emit_minmax(BRW_CONDITIONAL_G, dst, src[0], src[1]);
+         emit_minmax(BRW_CONDITIONAL_GE, dst, src[0], src[1]);
          break;
 
       case OPCODE_MIN:
