@@ -54,6 +54,7 @@ TEST_LIBS = \
 
 TESTS = \
 	test_fs_cmod_propagation \
+	test_fs_saturate_propagation \
         test_eu_compact \
 	test_vf_float_conversions \
         test_vec4_copy_propagation \
@@ -64,6 +65,12 @@ check_PROGRAMS = $(TESTS)
 test_fs_cmod_propagation_SOURCES = \
 	test_fs_cmod_propagation.cpp
 test_fs_cmod_propagation_LDADD = \
+	$(TEST_LIBS) \
+	$(top_builddir)/src/gtest/libgtest.la
+
+test_fs_saturate_propagation_SOURCES = \
+	test_fs_saturate_propagation.cpp
+test_fs_saturate_propagation_LDADD = \
 	$(TEST_LIBS) \
 	$(top_builddir)/src/gtest/libgtest.la
 
