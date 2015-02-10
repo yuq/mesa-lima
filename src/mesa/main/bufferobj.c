@@ -1226,7 +1226,7 @@ _mesa_DeleteBuffers(GLsizei n, const GLuint *ids)
             }
          }
 
-         if (ctx->UniformBuffer == bufObj) {
+         if (ctx->AtomicBuffer == bufObj) {
             _mesa_BindBuffer( GL_ATOMIC_COUNTER_BUFFER, 0 );
          }
 
