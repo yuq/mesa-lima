@@ -386,7 +386,7 @@ vec4_vs_visitor::emit_program_code()
       }
 
       /* Copy the temporary back into the actual destination register. */
-      if (vpi->Opcode != OPCODE_END) {
+      if (_mesa_num_inst_dst_regs(vpi->Opcode) != 0) {
          emit(MOV(get_vp_dst_reg(vpi->DstReg), src_reg(dst)));
       }
    }

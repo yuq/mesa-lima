@@ -522,7 +522,7 @@ fs_visitor::emit_fragment_program_code()
       /* To handle saturates, we emit a MOV with a saturate bit, which
        * optimization should fold into the preceding instructions when safe.
        */
-      if (fpi->Opcode != OPCODE_END) {
+      if (_mesa_num_inst_dst_regs(fpi->Opcode) != 0) {
          fs_reg real_dst = get_fp_dst_reg(&fpi->DstReg);
 
          for (int i = 0; i < 4; i++) {
