@@ -290,7 +290,7 @@ gen8_create_raw_surface(struct brw_context *brw, drm_intel_bo *bo,
 }
 
 /**
- * Creates a null renderbuffer surface.
+ * Creates a null surface.
  *
  * This is used when the shader doesn't write to any color output.  An FB
  * write to target 0 will still be emitted, because that's how the thread is
@@ -298,23 +298,19 @@ gen8_create_raw_surface(struct brw_context *brw, drm_intel_bo *bo,
  * hardware discard the target 0 color output..
  */
 static void
-gen8_update_null_renderbuffer_surface(struct brw_context *brw, unsigned unit)
+gen8_emit_null_surface_state(struct brw_context *brw,
+                             unsigned width,
+                             unsigned height,
+                             unsigned samples,
+                             uint32_t *out_offset)
 {
-   struct gl_context *ctx = &brw->ctx;
-
-   /* _NEW_BUFFERS */
-   const struct gl_framebuffer *fb = ctx->DrawBuffer;
-   uint32_t surf_index =
-      brw->wm.prog_data->binding_table.render_target_start + unit;
-
-   uint32_t *surf =
-      allocate_surface_state(brw, &brw->wm.base.surf_offset[surf_index]);
+   uint32_t *surf = allocate_surface_state(brw, out_offset);
 
    surf[0] = BRW_SURFACE_NULL << BRW_SURFACE_TYPE_SHIFT |
              BRW_SURFACEFORMAT_B8G8R8A8_UNORM << BRW_SURFACE_FORMAT_SHIFT |
              GEN8_SURFACE_TILING_Y;
-   surf[2] = SET_FIELD(fb->Width - 1, GEN7_SURFACE_WIDTH) |
-             SET_FIELD(fb->Height - 1, GEN7_SURFACE_HEIGHT);
+   surf[2] = SET_FIELD(width - 1, GEN7_SURFACE_WIDTH) |
+             SET_FIELD(height - 1, GEN7_SURFACE_HEIGHT);
 }
 
 /**
@@ -459,8 +455,7 @@ gen8_init_vtable_surface_functions(struct brw_context *brw)
 {
    brw->vtbl.update_texture_surface = gen8_update_texture_surface;
    brw->vtbl.update_renderbuffer_surface = gen8_update_renderbuffer_surface;
-   brw->vtbl.update_null_renderbuffer_surface =
-      gen8_update_null_renderbuffer_surface;
+   brw->vtbl.emit_null_surface_state = gen8_emit_null_surface_state;
    brw->vtbl.create_raw_surface = gen8_create_raw_surface;
    brw->vtbl.emit_buffer_surface_state = gen8_emit_buffer_surface_state;
 }

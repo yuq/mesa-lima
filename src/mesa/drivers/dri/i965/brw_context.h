@@ -964,8 +964,6 @@ struct brw_context
 					  struct gl_renderbuffer *rb,
 					  bool layered,
 					  unsigned unit);
-      void (*update_null_renderbuffer_surface)(struct brw_context *brw,
-					       unsigned unit);
 
       void (*create_raw_surface)(struct brw_context *brw,
                                  drm_intel_bo *bo,
@@ -981,6 +979,11 @@ struct brw_context
                                         unsigned buffer_size,
                                         unsigned pitch,
                                         bool rw);
+      void (*emit_null_surface_state)(struct brw_context *brw,
+                                      unsigned width,
+                                      unsigned height,
+                                      unsigned samples,
+                                      uint32_t *out_offset);
 
       /**
        * Send the appropriate state packets to configure depth, stencil, and
@@ -1330,7 +1333,7 @@ struct brw_context
 
       /**
        * Buffer object used in place of multisampled null render targets on
-       * Gen6.  See brw_update_null_renderbuffer_surface().
+       * Gen6.  See brw_emit_null_surface_state().
        */
       drm_intel_bo *multisampled_null_render_target_bo;
       uint32_t fast_clear_op;

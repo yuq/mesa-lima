@@ -391,7 +391,7 @@ gen7_create_raw_surface(struct brw_context *brw, drm_intel_bo *bo,
 }
 
 /**
- * Creates a null renderbuffer surface.
+ * Creates a null surface.
  *
  * This is used when the shader doesn't write to any color output.  An FB
  * write to target 0 will still be emitted, because that's how the thread is
@@ -399,7 +399,11 @@ gen7_create_raw_surface(struct brw_context *brw, drm_intel_bo *bo,
  * hardware discard the target 0 color output..
  */
 static void
-gen7_update_null_renderbuffer_surface(struct brw_context *brw, unsigned unit)
+gen7_emit_null_surface_state(struct brw_context *brw,
+                             unsigned width,
+                             unsigned height,
+                             unsigned samples,
+                             uint32_t *out_offset)
 {
    /* From the Ivy bridge PRM, Vol4 Part1 p62 (Surface Type: Programming
     * Notes):
@@ -416,15 +420,8 @@ gen7_update_null_renderbuffer_surface(struct brw_context *brw, unsigned unit)
     *     depth buffer’s corresponding state for all render target surfaces,
     *     including null.
     */
-   struct gl_context *ctx = &brw->ctx;
-
-   /* _NEW_BUFFERS */
-   const struct gl_framebuffer *fb = ctx->DrawBuffer;
-   uint32_t surf_index =
-      brw->wm.prog_data->binding_table.render_target_start + unit;
-
    uint32_t *surf = brw_state_batch(brw, AUB_TRACE_SURFACE_STATE, 8 * 4, 32,
-                                    &brw->wm.base.surf_offset[surf_index]);
+                                    out_offset);
    memset(surf, 0, 8 * 4);
 
    /* From the Ivybridge PRM, Volume 4, Part 1, page 65,
@@ -435,8 +432,8 @@ gen7_update_null_renderbuffer_surface(struct brw_context *brw, unsigned unit)
              BRW_SURFACEFORMAT_B8G8R8A8_UNORM << BRW_SURFACE_FORMAT_SHIFT |
              GEN7_SURFACE_TILING_Y;
 
-   surf[2] = SET_FIELD(fb->Width - 1, GEN7_SURFACE_WIDTH) |
-             SET_FIELD(fb->Height - 1, GEN7_SURFACE_HEIGHT);
+   surf[2] = SET_FIELD(width - 1, GEN7_SURFACE_WIDTH) |
+             SET_FIELD(height - 1, GEN7_SURFACE_HEIGHT);
 
    gen7_check_surface_setup(surf, true /* is_render_target */);
 }
@@ -565,8 +562,7 @@ gen7_init_vtable_surface_functions(struct brw_context *brw)
 {
    brw->vtbl.update_texture_surface = gen7_update_texture_surface;
    brw->vtbl.update_renderbuffer_surface = gen7_update_renderbuffer_surface;
-   brw->vtbl.update_null_renderbuffer_surface =
-      gen7_update_null_renderbuffer_surface;
+   brw->vtbl.emit_null_surface_state = gen7_emit_null_surface_state;
    brw->vtbl.create_raw_surface = gen7_create_raw_surface;
    brw->vtbl.emit_buffer_surface_state = gen7_emit_buffer_surface_state;
 }

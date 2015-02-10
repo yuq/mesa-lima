@@ -516,7 +516,11 @@ const struct brw_tracked_state brw_wm_pull_constants = {
  * hardware discard the target 0 color output..
  */
 static void
-brw_update_null_renderbuffer_surface(struct brw_context *brw, unsigned int unit)
+brw_emit_null_surface_state(struct brw_context *brw,
+                            unsigned width,
+                            unsigned height,
+                            unsigned samples,
+                            uint32_t *out_offset)
 {
    /* From the Sandy bridge PRM, Vol4 Part1 p71 (Surface Type: Programming
     * Notes):
@@ -536,23 +540,14 @@ brw_update_null_renderbuffer_surface(struct brw_context *brw, unsigned int unit)
     *
     *     - Surface Format must be R8G8B8A8_UNORM.
     */
-   struct gl_context *ctx = &brw->ctx;
-   uint32_t *surf;
    unsigned surface_type = BRW_SURFACE_NULL;
    drm_intel_bo *bo = NULL;
    unsigned pitch_minus_1 = 0;
    uint32_t multisampling_state = 0;
-   /* BRW_NEW_FS_PROG_DATA */
-   uint32_t surf_index =
-      brw->wm.prog_data->binding_table.render_target_start + unit;
+   uint32_t *surf = brw_state_batch(brw, AUB_TRACE_SURFACE_STATE, 6 * 4, 32,
+                                    out_offset);
 
-   /* _NEW_BUFFERS */
-   const struct gl_framebuffer *fb = ctx->DrawBuffer;
-
-   surf = brw_state_batch(brw, AUB_TRACE_SURFACE_STATE, 6 * 4, 32,
-                          &brw->wm.base.surf_offset[surf_index]);
-
-   if (fb->Visual.samples > 1) {
+   if (samples > 1) {
       /* On Gen6, null render targets seem to cause GPU hangs when
        * multisampling.  So work around this problem by rendering into dummy
        * color buffer.
@@ -567,16 +562,15 @@ brw_update_null_renderbuffer_surface(struct brw_context *brw, unsigned int unit)
        * width_in_tiles and height_in_tiles by dividing the width and height
        * by 16 rather than the normal Y-tile size of 32.
        */
-      unsigned width_in_tiles = ALIGN(fb->Width, 16) / 16;
-      unsigned height_in_tiles = ALIGN(fb->Height, 16) / 16;
+      unsigned width_in_tiles = ALIGN(width, 16) / 16;
+      unsigned height_in_tiles = ALIGN(height, 16) / 16;
       unsigned size_needed = (width_in_tiles + height_in_tiles - 1) * 4096;
       brw_get_scratch_bo(brw, &brw->wm.multisampled_null_render_target_bo,
                          size_needed);
       bo = brw->wm.multisampled_null_render_target_bo;
       surface_type = BRW_SURFACE_2D;
       pitch_minus_1 = 127;
-      multisampling_state =
-         brw_get_surface_num_multisamples(fb->Visual.samples);
+      multisampling_state = brw_get_surface_num_multisamples(samples);
    }
 
    surf[0] = (surface_type << BRW_SURFACE_TYPE_SHIFT |
@@ -588,8 +582,8 @@ brw_update_null_renderbuffer_surface(struct brw_context *brw, unsigned int unit)
 		  1 << BRW_SURFACE_WRITEDISABLE_A_SHIFT);
    }
    surf[1] = bo ? bo->offset64 : 0;
-   surf[2] = ((fb->Width - 1) << BRW_SURFACE_WIDTH_SHIFT |
-              (fb->Height - 1) << BRW_SURFACE_HEIGHT_SHIFT);
+   surf[2] = ((width - 1) << BRW_SURFACE_WIDTH_SHIFT |
+              (height - 1) << BRW_SURFACE_HEIGHT_SHIFT);
 
    /* From Sandy bridge PRM, Vol4 Part1 p82 (Tiled Surface: Programming
     * Notes):
@@ -603,7 +597,7 @@ brw_update_null_renderbuffer_surface(struct brw_context *brw, unsigned int unit)
 
    if (bo) {
       drm_intel_bo_emit_reloc(brw->batch.bo,
-                              brw->wm.base.surf_offset[surf_index] + 4,
+                              *out_offset + 4,
                               bo, 0,
                               I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER);
    }
@@ -723,6 +717,8 @@ static void
 brw_update_renderbuffer_surfaces(struct brw_context *brw)
 {
    struct gl_context *ctx = &brw->ctx;
+   /* _NEW_BUFFERS */
+   const struct gl_framebuffer *fb = ctx->DrawBuffer;
    GLuint i;
 
    /* _NEW_BUFFERS | _NEW_COLOR */
@@ -733,11 +729,21 @@ brw_update_renderbuffer_surfaces(struct brw_context *brw)
 	    brw->vtbl.update_renderbuffer_surface(brw, ctx->DrawBuffer->_ColorDrawBuffers[i],
                                                   ctx->DrawBuffer->MaxNumLayers > 0, i);
 	 } else {
-	    brw->vtbl.update_null_renderbuffer_surface(brw, i);
+            const uint32_t surf_index =
+               brw->wm.prog_data->binding_table.render_target_start + i;
+
+            brw->vtbl.emit_null_surface_state(
+               brw, fb->Width, fb->Height, fb->Visual.samples,
+               &brw->wm.base.surf_offset[surf_index]);
 	 }
       }
    } else {
-      brw->vtbl.update_null_renderbuffer_surface(brw, 0);
+      const uint32_t surf_index =
+         brw->wm.prog_data->binding_table.render_target_start;
+
+      brw->vtbl.emit_null_surface_state(
+         brw, fb->Width, fb->Height, fb->Visual.samples,
+         &brw->wm.base.surf_offset[surf_index]);
    }
    brw->state.dirty.brw |= BRW_NEW_SURFACES;
 }
@@ -967,7 +973,6 @@ gen4_init_vtable_surface_functions(struct brw_context *brw)
 {
    brw->vtbl.update_texture_surface = brw_update_texture_surface;
    brw->vtbl.update_renderbuffer_surface = brw_update_renderbuffer_surface;
-   brw->vtbl.update_null_renderbuffer_surface =
-      brw_update_null_renderbuffer_surface;
+   brw->vtbl.emit_null_surface_state = brw_emit_null_surface_state;
    brw->vtbl.emit_buffer_surface_state = gen4_emit_buffer_surface_state;
 }
