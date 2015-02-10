@@ -47,8 +47,10 @@ intel_update_max_level(struct intel_texture_object *intelObj,
 {
    struct gl_texture_object *tObj = &intelObj->base;
 
-   if (sampler->MinFilter == GL_NEAREST ||
-       sampler->MinFilter == GL_LINEAR) {
+   if (!tObj->_MipmapComplete ||
+       (tObj->_RenderToTexture &&
+        (sampler->MinFilter == GL_NEAREST ||
+         sampler->MinFilter == GL_LINEAR))) {
       intelObj->_MaxLevel = tObj->BaseLevel;
    } else {
       intelObj->_MaxLevel = tObj->_MaxLevel;
