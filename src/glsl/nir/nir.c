@@ -1180,7 +1180,7 @@ nir_cf_node_remove(nir_cf_node *node)
 static bool
 add_use_cb(nir_src *src, void *state)
 {
-   nir_instr *instr = (nir_instr *) state;
+   nir_instr *instr = state;
 
    struct set *uses_set = src->is_ssa ? src->ssa->uses : src->reg.reg->uses;
 
@@ -1192,7 +1192,7 @@ add_use_cb(nir_src *src, void *state)
 static bool
 add_ssa_def_cb(nir_ssa_def *def, void *state)
 {
-   nir_instr *instr = (nir_instr *) state;
+   nir_instr *instr = state;
 
    if (instr->block && def->index == UINT_MAX) {
       nir_function_impl *impl =
@@ -1207,7 +1207,7 @@ add_ssa_def_cb(nir_ssa_def *def, void *state)
 static bool
 add_reg_def_cb(nir_dest *dest, void *state)
 {
-   nir_instr *instr = (nir_instr *) state;
+   nir_instr *instr = state;
 
    if (!dest->is_ssa)
       _mesa_set_add(dest->reg.reg->defs, instr);
@@ -1325,7 +1325,7 @@ nir_instr_insert_after_cf_list(struct exec_list *list, nir_instr *after)
 static bool
 remove_use_cb(nir_src *src, void *state)
 {
-   nir_instr *instr = (nir_instr *) state;
+   nir_instr *instr = state;
 
    struct set *uses_set = src->is_ssa ? src->ssa->uses : src->reg.reg->uses;
 
@@ -1339,7 +1339,7 @@ remove_use_cb(nir_src *src, void *state)
 static bool
 remove_def_cb(nir_dest *dest, void *state)
 {
-   nir_instr *instr = (nir_instr *) state;
+   nir_instr *instr = state;
 
    if (dest->is_ssa)
       return true;
@@ -1984,7 +1984,7 @@ nir_block_get_following_if(nir_block *block)
 static bool
 index_block(nir_block *block, void *state)
 {
-   unsigned *index = (unsigned *) state;
+   unsigned *index = state;
    block->index = (*index)++;
    return true;
 }
@@ -2011,7 +2011,7 @@ index_ssa_def(nir_ssa_def *def, unsigned *index)
 static bool
 index_ssa_def_cb(nir_dest *dest, void *state)
 {
-   unsigned *index = (unsigned *) state;
+   unsigned *index = state;
    if (dest->is_ssa)
       index_ssa_def(&dest->ssa, index);
    return true;
@@ -2026,7 +2026,7 @@ index_ssa_undef(nir_ssa_undef_instr *instr, unsigned *index)
 static bool
 index_ssa_block(nir_block *block, void *state)
 {
-   unsigned *index = (unsigned *) state;
+   unsigned *index = state;
 
    nir_foreach_instr(block, instr) {
       if (instr->type == nir_instr_type_ssa_undef)

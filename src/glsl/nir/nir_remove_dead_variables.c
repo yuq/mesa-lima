@@ -63,7 +63,7 @@ add_var_use_tex(nir_tex_instr *instr, struct set *live)
 static bool
 add_var_use_block(nir_block *block, void *state)
 {
-   struct set *live = (struct set *) state;
+   struct set *live = state;
 
    nir_foreach_instr(block, instr) {
       switch(instr->type) {

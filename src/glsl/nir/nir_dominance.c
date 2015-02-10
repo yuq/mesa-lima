@@ -215,7 +215,7 @@ nir_calc_dominance(nir_shader *shader)
 static bool
 dump_block_dom(nir_block *block, void *state)
 {
-   FILE *fp = (FILE *) state;
+   FILE *fp = state;
    if (block->imm_dom)
       fprintf(fp, "\t%u -> %u\n", block->imm_dom->index, block->index);
    return true;
@@ -241,7 +241,7 @@ nir_dump_dom_tree(nir_shader *shader, FILE *fp)
 static bool
 dump_block_dom_frontier(nir_block *block, void *state)
 {
-   FILE *fp = (FILE *) state;
+   FILE *fp = state;
 
    fprintf(fp, "DF(%u) = {", block->index);
    struct set_entry *entry;
@@ -271,7 +271,7 @@ nir_dump_dom_frontier(nir_shader *shader, FILE *fp)
 static bool
 dump_block_succs(nir_block *block, void *state)
 {
-   FILE *fp = (FILE *) state;
+   FILE *fp = state;
    if (block->successors[0])
       fprintf(fp, "\t%u -> %u\n", block->index, block->successors[0]->index);
    if (block->successors[1])
