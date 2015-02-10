@@ -883,7 +883,7 @@ static struct pb_buffer *radeon_winsys_bo_from_ptr(struct radeon_winsys *rws,
 
     memset(&args, 0, sizeof(args));
     args.addr = (uintptr_t)pointer;
-    args.size = size;
+    args.size = align(size, sysconf(_SC_PAGE_SIZE));
     args.flags = RADEON_GEM_USERPTR_ANONONLY |
         RADEON_GEM_USERPTR_VALIDATE |
         RADEON_GEM_USERPTR_REGISTER;
