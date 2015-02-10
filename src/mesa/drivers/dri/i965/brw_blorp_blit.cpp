@@ -1308,10 +1308,10 @@ brw_blorp_blit_program::clamp_tex_coords(struct brw_reg regX,
                                          struct brw_reg clampX1,
                                          struct brw_reg clampY1)
 {
-   emit_cond_mov(regX, clampX0, BRW_CONDITIONAL_L, regX, clampX0);
-   emit_cond_mov(regX, clampX1, BRW_CONDITIONAL_G, regX, clampX1);
-   emit_cond_mov(regY, clampY0, BRW_CONDITIONAL_L, regY, clampY0);
-   emit_cond_mov(regY, clampY1, BRW_CONDITIONAL_G, regY, clampY1);
+   emit_max(regX, regX, clampX0);
+   emit_max(regY, regY, clampY0);
+   emit_min(regX, regX, clampX1);
+   emit_min(regY, regY, clampY1);
 }
 
 /**
