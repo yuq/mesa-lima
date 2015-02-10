@@ -1730,6 +1730,13 @@ if test "x$with_egl_platforms" != "x" -a "x$enable_egl" != xyes; then
     AC_MSG_ERROR([cannot build egl state tracker without EGL library])
 fi
 
+PKG_CHECK_MODULES([WAYLAND_SCANNER], [wayland_scanner],
+        WAYLAND_SCANNER=`$PKG_CONFIG --variable=wayland_scanner wayland_scanner`,
+        WAYLAND_SCANNER='')
+if test "x$WAYLAND_SCANNER" = x; then
+    AC_PATH_PROG([WAYLAND_SCANNER], [wayland-scanner])
+fi
+
 # Do per-EGL platform setups and checks
 egl_platforms=`IFS=', '; echo $with_egl_platforms`
 for plat in $egl_platforms; do
@@ -1737,9 +1744,9 @@ for plat in $egl_platforms; do
 	wayland)
 		PKG_CHECK_MODULES([WAYLAND], [wayland-client >= $WAYLAND_REQUIRED wayland-server >= $WAYLAND_REQUIRED])
 
-                WAYLAND_PREFIX=`$PKG_CONFIG --variable=prefix wayland-client`
-                AC_PATH_PROG([WAYLAND_SCANNER], [wayland-scanner],,
-                             [${WAYLAND_PREFIX}/bin$PATH_SEPARATOR$PATH])
+		if test "x$WAYLAND_SCANNER" = x; then
+			AC_MSG_ERROR([wayland-scanner is needed to compile the wayland egl platform])
+		fi
 		;;
 
 	x11)
