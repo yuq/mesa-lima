@@ -616,31 +616,12 @@ type_size(const struct glsl_type *type)
    return 0;
 }
 
-int
-vec4_visitor::virtual_grf_alloc(int size)
-{
-   if (virtual_grf_array_size <= virtual_grf_count) {
-      if (virtual_grf_array_size == 0)
-	 virtual_grf_array_size = 16;
-      else
-	 virtual_grf_array_size *= 2;
-      virtual_grf_sizes = reralloc(mem_ctx, virtual_grf_sizes, int,
-				   virtual_grf_array_size);
-      virtual_grf_reg_map = reralloc(mem_ctx, virtual_grf_reg_map, int,
-				     virtual_grf_array_size);
-   }
-   virtual_grf_reg_map[virtual_grf_count] = virtual_grf_reg_count;
-   virtual_grf_reg_count += size;
-   virtual_grf_sizes[virtual_grf_count] = size;
-   return virtual_grf_count++;
-}
-
 src_reg::src_reg(class vec4_visitor *v, const struct glsl_type *type)
 {
    init();
 
    this->file = GRF;
-   this->reg = v->virtual_grf_alloc(type_size(type));
+   this->reg = v->alloc.allocate(type_size(type));
 
    if (type->is_array() || type->is_record()) {
       this->swizzle = BRW_SWIZZLE_NOOP;
@@ -658,7 +639,7 @@ src_reg::src_reg(class vec4_visitor *v, const struct glsl_type *type, int size)
    init();
 
    this->file = GRF;
-   this->reg = v->virtual_grf_alloc(type_size(type) * size);
+   this->reg = v->alloc.allocate(type_size(type) * size);
 
    this->swizzle = BRW_SWIZZLE_NOOP;
 
@@ -670,7 +651,7 @@ dst_reg::dst_reg(class vec4_visitor *v, const struct glsl_type *type)
    init();
 
    this->file = GRF;
-   this->reg = v->virtual_grf_alloc(type_size(type));
+   this->reg = v->alloc.allocate(type_size(type));
 
    if (type->is_array() || type->is_record()) {
       this->writemask = WRITEMASK_XYZW;
@@ -3372,7 +3353,7 @@ vec4_visitor::emit_scratch_write(bblock_t *block, vec4_instruction *inst,
 void
 vec4_visitor::move_grf_array_access_to_scratch()
 {
-   int scratch_loc[this->virtual_grf_count];
+   int scratch_loc[this->alloc.count];
    memset(scratch_loc, -1, sizeof(scratch_loc));
 
    /* First, calculate the set of virtual GRFs that need to be punted
@@ -3383,7 +3364,7 @@ vec4_visitor::move_grf_array_access_to_scratch()
       if (inst->dst.file == GRF && inst->dst.reladdr &&
 	  scratch_loc[inst->dst.reg] == -1) {
 	 scratch_loc[inst->dst.reg] = c->last_scratch;
-	 c->last_scratch += this->virtual_grf_sizes[inst->dst.reg];
+	 c->last_scratch += this->alloc.sizes[inst->dst.reg];
       }
 
       for (int i = 0 ; i < 3; i++) {
@@ -3392,7 +3373,7 @@ vec4_visitor::move_grf_array_access_to_scratch()
 	 if (src->file == GRF && src->reladdr &&
 	     scratch_loc[src->reg] == -1) {
 	    scratch_loc[src->reg] = c->last_scratch;
-	    c->last_scratch += this->virtual_grf_sizes[src->reg];
+	    c->last_scratch += this->alloc.sizes[src->reg];
 	 }
       }
    }
@@ -3612,11 +3593,6 @@ vec4_visitor::vec4_visitor(struct brw_context *brw,
 
    this->virtual_grf_start = NULL;
    this->virtual_grf_end = NULL;
-   this->virtual_grf_sizes = NULL;
-   this->virtual_grf_count = 0;
-   this->virtual_grf_reg_map = NULL;
-   this->virtual_grf_reg_count = 0;
-   this->virtual_grf_array_size = 0;
    this->live_intervals = NULL;
 
    this->max_grf = brw->gen >= 7 ? GEN7_MRF_HACK_START : BRW_MAX_GRF;

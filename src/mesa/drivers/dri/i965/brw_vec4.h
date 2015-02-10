@@ -275,23 +275,12 @@ public:
    const void *base_ir;
    const char *current_annotation;
 
-   int *virtual_grf_sizes;
-   int virtual_grf_count;
-   int virtual_grf_array_size;
    int first_non_payload_grf;
    unsigned int max_grf;
    int *virtual_grf_start;
    int *virtual_grf_end;
    brw::vec4_live_variables *live_intervals;
    dst_reg userplane[MAX_CLIP_PLANES];
-
-   /**
-    * This is the size to be used for an array with an element per
-    * reg_offset
-    */
-   int virtual_grf_reg_count;
-   /** Per-virtual-grf indices into an array of size virtual_grf_reg_count */
-   int *virtual_grf_reg_map;
 
    dst_reg *variable_storage(ir_variable *var);
 
@@ -347,7 +336,6 @@ public:
    bool run(void);
    void fail(const char *msg, ...);
 
-   int virtual_grf_alloc(int size);
    void setup_uniform_clipplane_values();
    void setup_uniform_values(ir_variable *ir);
    void setup_builtin_uniform_values(ir_variable *ir);

@@ -321,7 +321,6 @@ public:
    void init();
 
    fs_reg *variable_storage(ir_variable *var);
-   int virtual_grf_alloc(int size);
    fs_reg vgrf(const glsl_type *const type);
    fs_reg vgrf(int num_components);
    void import_uniforms(fs_visitor *v);
@@ -643,9 +642,6 @@ public:
 
    int *param_size;
 
-   int *virtual_grf_sizes;
-   int virtual_grf_count;
-   int virtual_grf_array_size;
    int *virtual_grf_start;
    int *virtual_grf_end;
    brw::fs_live_variables *live_intervals;
@@ -679,7 +675,7 @@ public:
    bool do_dual_src;
    int first_non_payload_grf;
    /** Either BRW_MAX_GRF or GEN7_MRF_HACK_START */
-   int max_grf;
+   unsigned max_grf;
 
    fs_reg *fp_temp_regs;
    fs_reg *fp_input_regs;
@@ -730,7 +726,7 @@ public:
    fs_reg shader_start_time;
    fs_reg userplane[MAX_CLIP_PLANES];
 
-   int grf_used;
+   unsigned grf_used;
    bool spilled_any_registers;
 
    const unsigned dispatch_width; /**< 8 or 16 */

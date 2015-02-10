@@ -1278,7 +1278,7 @@ fs_visitor::try_rewrite_rhs_to_dst(ir_assignment *ir,
    /* If last_rhs_inst wrote a different number of components than our LHS,
     * we can't safely rewrite it.
     */
-   if (virtual_grf_sizes[dst.reg] != modify->regs_written)
+   if (alloc.sizes[dst.reg] != modify->regs_written)
       return false;
 
    /* Success!  Rewrite the instruction. */
@@ -1461,7 +1461,7 @@ fs_visitor::emit_texture_gen4(ir_texture_opcode op, fs_reg dst,
        * this weirdness around to the expected layout.
        */
       orig_dst = dst;
-      dst = fs_reg(GRF, virtual_grf_alloc(8), orig_dst.type);
+      dst = fs_reg(GRF, alloc.allocate(8), orig_dst.type);
    }
 
    enum opcode opcode;
@@ -1672,7 +1672,7 @@ fs_visitor::emit_texture_gen7(ir_texture_opcode op, fs_reg dst,
        * need to offset the Sampler State Pointer in the header.
        */
       header_present = true;
-      sources[0] = fs_reg(GRF, virtual_grf_alloc(1), BRW_REGISTER_TYPE_UD);
+      sources[0] = fs_reg(GRF, alloc.allocate(1), BRW_REGISTER_TYPE_UD);
       length++;
    }
 
@@ -1814,7 +1814,7 @@ fs_visitor::emit_texture_gen7(ir_texture_opcode op, fs_reg dst,
    else
       mlen = length * reg_width;
 
-   fs_reg src_payload = fs_reg(GRF, virtual_grf_alloc(mlen),
+   fs_reg src_payload = fs_reg(GRF, alloc.allocate(mlen),
                                BRW_REGISTER_TYPE_F);
    emit(LOAD_PAYLOAD(src_payload, sources, length));
 
@@ -1926,7 +1926,7 @@ fs_visitor::rescale_texcoord(fs_reg coordinate, int coord_components,
     * tracking to get the scaling factor.
     */
    if (brw->gen < 6 && is_rect) {
-      fs_reg dst = fs_reg(GRF, virtual_grf_alloc(coord_components));
+      fs_reg dst = fs_reg(GRF, alloc.allocate(coord_components));
       fs_reg src = coordinate;
       coordinate = dst;
 
@@ -1985,7 +1985,7 @@ fs_reg
 fs_visitor::emit_mcs_fetch(fs_reg coordinate, int components, fs_reg sampler)
 {
    int reg_width = dispatch_width / 8;
-   fs_reg payload = fs_reg(GRF, virtual_grf_alloc(components * reg_width),
+   fs_reg payload = fs_reg(GRF, alloc.allocate(components * reg_width),
                            BRW_REGISTER_TYPE_F);
    fs_reg dest = vgrf(glsl_type::uvec4_type);
    fs_reg *sources = ralloc_array(mem_ctx, fs_reg, components);
@@ -2986,7 +2986,7 @@ fs_visitor::emit_untyped_atomic(unsigned atomic_op, unsigned surf_index,
 
    fs_reg *sources = ralloc_array(mem_ctx, fs_reg, 4);
 
-   sources[0] = fs_reg(GRF, virtual_grf_alloc(1), BRW_REGISTER_TYPE_UD);
+   sources[0] = fs_reg(GRF, alloc.allocate(1), BRW_REGISTER_TYPE_UD);
    /* Initialize the sample mask in the message header. */
    emit(MOV(sources[0], fs_reg(0u)))
       ->force_writemask_all = true;
@@ -3020,7 +3020,7 @@ fs_visitor::emit_untyped_atomic(unsigned atomic_op, unsigned surf_index,
    }
 
    int mlen = 1 + (length - 1) * reg_width;
-   fs_reg src_payload = fs_reg(GRF, virtual_grf_alloc(mlen),
+   fs_reg src_payload = fs_reg(GRF, alloc.allocate(mlen),
                                BRW_REGISTER_TYPE_UD);
    emit(LOAD_PAYLOAD(src_payload, sources, length));
 
@@ -3041,7 +3041,7 @@ fs_visitor::emit_untyped_surface_read(unsigned surf_index, fs_reg dst,
 
    fs_reg *sources = ralloc_array(mem_ctx, fs_reg, 2);
 
-   sources[0] = fs_reg(GRF, virtual_grf_alloc(1), BRW_REGISTER_TYPE_UD);
+   sources[0] = fs_reg(GRF, alloc.allocate(1), BRW_REGISTER_TYPE_UD);
    /* Initialize the sample mask in the message header. */
    emit(MOV(sources[0], fs_reg(0u)))
       ->force_writemask_all = true;
@@ -3060,7 +3060,7 @@ fs_visitor::emit_untyped_surface_read(unsigned surf_index, fs_reg dst,
    emit(MOV(sources[1], offset));
 
    int mlen = 1 + reg_width;
-   fs_reg src_payload = fs_reg(GRF, virtual_grf_alloc(mlen),
+   fs_reg src_payload = fs_reg(GRF, alloc.allocate(mlen),
                                BRW_REGISTER_TYPE_UD);
    fs_inst *inst = emit(LOAD_PAYLOAD(src_payload, sources, 2));
 
@@ -3280,7 +3280,7 @@ fs_visitor::setup_color_payload(fs_reg *dst, fs_reg color, unsigned components)
       int len = 0;
       for (unsigned i = 0; i < 4; ++i) {
          if (colors_enabled & (1 << i)) {
-            dst[len] = fs_reg(GRF, virtual_grf_alloc(color.width / 8),
+            dst[len] = fs_reg(GRF, alloc.allocate(color.width / 8),
                               color.type, color.width);
             inst = emit(MOV(dst[len], offset(color, i)));
             inst->saturate = key->clamp_fragment_color;
@@ -3304,11 +3304,11 @@ fs_visitor::setup_color_payload(fs_reg *dst, fs_reg color, unsigned components)
        */
       for (unsigned i = 0; i < 4; ++i) {
          if (colors_enabled & (1 << i)) {
-            dst[i] = fs_reg(GRF, virtual_grf_alloc(1), color.type);
+            dst[i] = fs_reg(GRF, alloc.allocate(1), color.type);
             inst = emit(MOV(dst[i], half(offset(color, i), 0)));
             inst->saturate = key->clamp_fragment_color;
 
-            dst[i + 4] = fs_reg(GRF, virtual_grf_alloc(1), color.type);
+            dst[i + 4] = fs_reg(GRF, alloc.allocate(1), color.type);
             inst = emit(MOV(dst[i + 4], half(offset(color, i), 1)));
             inst->saturate = key->clamp_fragment_color;
             inst->force_sechalf = true;
@@ -3409,7 +3409,7 @@ fs_visitor::emit_single_fb_write(fs_reg color0, fs_reg color1,
       length += 2;
 
    if (payload.aa_dest_stencil_reg) {
-      sources[length] = fs_reg(GRF, virtual_grf_alloc(1));
+      sources[length] = fs_reg(GRF, alloc.allocate(1));
       emit(MOV(sources[length],
                fs_reg(brw_vec8_grf(payload.aa_dest_stencil_reg, 0))));
       length++;
@@ -3423,7 +3423,7 @@ fs_visitor::emit_single_fb_write(fs_reg color0, fs_reg color1,
       /* Hand over gl_SampleMask. Only lower 16 bits are relevant.  Since
        * it's unsinged single words, one vgrf is always 16-wide.
        */
-      sources[length] = fs_reg(GRF, virtual_grf_alloc(1),
+      sources[length] = fs_reg(GRF, alloc.allocate(1),
                                BRW_REGISTER_TYPE_UW, 16);
       emit(FS_OPCODE_SET_OMASK, sources[length], this->sample_mask);
       length++;
@@ -3437,7 +3437,7 @@ fs_visitor::emit_single_fb_write(fs_reg color0, fs_reg color1,
       length += setup_color_payload(sources + length, this->outputs[0], 0);
    } else if (color1.file == BAD_FILE) {
       if (src0_alpha.file != BAD_FILE) {
-         sources[length] = fs_reg(GRF, virtual_grf_alloc(reg_size),
+         sources[length] = fs_reg(GRF, alloc.allocate(reg_size),
                                   src0_alpha.type, src0_alpha.width);
          fs_inst *inst = emit(MOV(sources[length], src0_alpha));
          inst->saturate = key->clamp_fragment_color;
@@ -3486,7 +3486,7 @@ fs_visitor::emit_single_fb_write(fs_reg color0, fs_reg color1,
       /* Send from the GRF */
       fs_reg payload = fs_reg(GRF, -1, BRW_REGISTER_TYPE_F);
       load = emit(LOAD_PAYLOAD(payload, sources, length));
-      payload.reg = virtual_grf_alloc(load->regs_written);
+      payload.reg = alloc.allocate(load->regs_written);
       payload.width = dispatch_width;
       load->dst = payload;
       write = emit(FS_OPCODE_FB_WRITE, reg_undef, payload);
@@ -3655,7 +3655,7 @@ fs_visitor::emit_urb_writes()
     * send to terminate the shader. */
    if (vue_map->slots_valid == 0) {
 
-      fs_reg payload = fs_reg(GRF, virtual_grf_alloc(1), BRW_REGISTER_TYPE_UD);
+      fs_reg payload = fs_reg(GRF, alloc.allocate(1), BRW_REGISTER_TYPE_UD);
       fs_inst *inst = emit(MOV(payload, fs_reg(retype(brw_vec8_grf(1, 0),
                                                       BRW_REGISTER_TYPE_UD))));
       inst->force_writemask_all = true;
@@ -3688,7 +3688,7 @@ fs_visitor::emit_urb_writes()
             break;
          }
 
-         zero = fs_reg(GRF, virtual_grf_alloc(1), BRW_REGISTER_TYPE_UD);
+         zero = fs_reg(GRF, alloc.allocate(1), BRW_REGISTER_TYPE_UD);
          emit(MOV(zero, fs_reg(0u)));
 
          sources[length++] = zero;
@@ -3742,7 +3742,7 @@ fs_visitor::emit_urb_writes()
              * temp register and use that for the payload.
              */
             for (int i = 0; i < 4; i++) {
-               reg = fs_reg(GRF, virtual_grf_alloc(1), outputs[varying].type);
+               reg = fs_reg(GRF, alloc.allocate(1), outputs[varying].type);
                src = offset(this->outputs[varying], i);
                fs_inst *inst = emit(MOV(reg, src));
                inst->saturate = true;
@@ -3769,14 +3769,14 @@ fs_visitor::emit_urb_writes()
             emit_shader_time_end();
 
          fs_reg *payload_sources = ralloc_array(mem_ctx, fs_reg, length + 1);
-         fs_reg payload = fs_reg(GRF, virtual_grf_alloc(length + 1),
+         fs_reg payload = fs_reg(GRF, alloc.allocate(length + 1),
                                  BRW_REGISTER_TYPE_F);
 
          /* We need WE_all on the MOV for the message header (the URB handles)
           * so do a MOV to a dummy register and set force_writemask_all on the
           * MOV.  LOAD_PAYLOAD will preserve that.
           */
-         fs_reg dummy = fs_reg(GRF, virtual_grf_alloc(1),
+         fs_reg dummy = fs_reg(GRF, alloc.allocate(1),
                                BRW_REGISTER_TYPE_UD);
          fs_inst *inst = emit(MOV(dummy, fs_reg(retype(brw_vec8_grf(1, 0),
                                                        BRW_REGISTER_TYPE_UD))));
@@ -3892,9 +3892,6 @@ fs_visitor::init()
    this->current_annotation = NULL;
    this->base_ir = NULL;
 
-   this->virtual_grf_sizes = NULL;
-   this->virtual_grf_count = 0;
-   this->virtual_grf_array_size = 0;
    this->virtual_grf_start = NULL;
    this->virtual_grf_end = NULL;
    this->live_intervals = NULL;

@@ -27,6 +27,10 @@
 #include "main/compiler.h"
 #include "glsl/ir.h"
 
+#ifdef __cplusplus
+#include "brw_ir_allocator.h"
+#endif
+
 #pragma once
 
 enum PACKED register_file {
@@ -171,6 +175,8 @@ public:
    cfg_t *cfg;
 
    gl_shader_stage stage;
+
+   brw::simple_allocator alloc;
 
    virtual void dump_instruction(backend_instruction *inst) = 0;
    virtual void dump_instruction(backend_instruction *inst, FILE *file) = 0;

@@ -544,9 +544,9 @@ fs_instruction_scheduler::get_register_pressure_benefit(backend_instruction *be)
 
    if (inst->dst.file == GRF) {
       if (remaining_grf_uses[inst->dst.reg] == 1)
-         benefit += v->virtual_grf_sizes[inst->dst.reg];
+         benefit += v->alloc.sizes[inst->dst.reg];
       if (!grf_active[inst->dst.reg])
-         benefit -= v->virtual_grf_sizes[inst->dst.reg];
+         benefit -= v->alloc.sizes[inst->dst.reg];
    }
 
    for (int i = 0; i < inst->sources; i++) {
@@ -554,9 +554,9 @@ fs_instruction_scheduler::get_register_pressure_benefit(backend_instruction *be)
          continue;
 
       if (remaining_grf_uses[inst->src[i].reg] == 1)
-         benefit += v->virtual_grf_sizes[inst->src[i].reg];
+         benefit += v->alloc.sizes[inst->src[i].reg];
       if (!grf_active[inst->src[i].reg])
-         benefit -= v->virtual_grf_sizes[inst->src[i].reg];
+         benefit -= v->alloc.sizes[inst->src[i].reg];
    }
 
    return benefit;
@@ -1503,7 +1503,7 @@ fs_visitor::schedule_instructions(instruction_scheduler_mode mode)
    if (mode == SCHEDULE_POST)
       grf_count = grf_used;
    else
-      grf_count = virtual_grf_count;
+      grf_count = alloc.count;
 
    fs_instruction_scheduler sched(this, grf_count, mode);
    sched.run(cfg);

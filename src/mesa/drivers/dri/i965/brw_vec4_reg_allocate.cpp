@@ -45,15 +45,14 @@ assign(unsigned int *reg_hw_locations, backend_reg *reg)
 bool
 vec4_visitor::reg_allocate_trivial()
 {
-   unsigned int hw_reg_mapping[this->virtual_grf_count];
-   bool virtual_grf_used[this->virtual_grf_count];
-   int i;
+   unsigned int hw_reg_mapping[this->alloc.count];
+   bool virtual_grf_used[this->alloc.count];
    int next;
 
    /* Calculate which virtual GRFs are actually in use after whatever
     * optimization passes have occurred.
     */
-   for (int i = 0; i < this->virtual_grf_count; i++) {
+   for (unsigned i = 0; i < this->alloc.count; i++) {
       virtual_grf_used[i] = false;
    }
 
@@ -61,18 +60,18 @@ vec4_visitor::reg_allocate_trivial()
       if (inst->dst.file == GRF)
 	 virtual_grf_used[inst->dst.reg] = true;
 
-      for (int i = 0; i < 3; i++) {
+      for (unsigned i = 0; i < 3; i++) {
 	 if (inst->src[i].file == GRF)
 	    virtual_grf_used[inst->src[i].reg] = true;
       }
    }
 
    hw_reg_mapping[0] = this->first_non_payload_grf;
-   next = hw_reg_mapping[0] + this->virtual_grf_sizes[0];
-   for (i = 1; i < this->virtual_grf_count; i++) {
+   next = hw_reg_mapping[0] + this->alloc.sizes[0];
+   for (unsigned i = 1; i < this->alloc.count; i++) {
       if (virtual_grf_used[i]) {
 	 hw_reg_mapping[i] = next;
-	 next += this->virtual_grf_sizes[i];
+	 next += this->alloc.sizes[i];
       }
    }
    prog_data->total_grf = next;
@@ -176,7 +175,7 @@ bool
 vec4_visitor::reg_allocate()
 {
    struct intel_screen *screen = brw->intelScreen;
-   unsigned int hw_reg_mapping[virtual_grf_count];
+   unsigned int hw_reg_mapping[alloc.count];
    int payload_reg_count = this->first_non_payload_grf;
 
    /* Using the trivial allocator can be useful in debugging undefined
@@ -187,19 +186,19 @@ vec4_visitor::reg_allocate()
 
    calculate_live_intervals();
 
-   int node_count = virtual_grf_count;
+   int node_count = alloc.count;
    int first_payload_node = node_count;
    node_count += payload_reg_count;
    struct ra_graph *g =
       ra_alloc_interference_graph(screen->vec4_reg_set.regs, node_count);
 
-   for (int i = 0; i < virtual_grf_count; i++) {
-      int size = this->virtual_grf_sizes[i];
+   for (unsigned i = 0; i < alloc.count; i++) {
+      int size = this->alloc.sizes[i];
       assert(size >= 1 && size <= 2 &&
              "Register allocation relies on split_virtual_grfs().");
       ra_set_node_class(g, i, screen->vec4_reg_set.classes[size - 1]);
 
-      for (int j = 0; j < i; j++) {
+      for (unsigned j = 0; j < i; j++) {
 	 if (virtual_grf_interferes(i, j)) {
 	    ra_add_node_interference(g, i, j);
 	 }
@@ -230,12 +229,12 @@ vec4_visitor::reg_allocate()
     * numbers.
     */
    prog_data->total_grf = payload_reg_count;
-   for (int i = 0; i < virtual_grf_count; i++) {
+   for (unsigned i = 0; i < alloc.count; i++) {
       int reg = ra_get_node_reg(g, i);
 
       hw_reg_mapping[i] = screen->vec4_reg_set.ra_reg_to_grf[reg];
       prog_data->total_grf = MAX2(prog_data->total_grf,
-				  hw_reg_mapping[i] + virtual_grf_sizes[i]);
+				  hw_reg_mapping[i] + alloc.sizes[i]);
    }
 
    foreach_block_and_inst(block, vec4_instruction, inst, cfg) {
@@ -255,9 +254,9 @@ vec4_visitor::evaluate_spill_costs(float *spill_costs, bool *no_spill)
 {
    float loop_scale = 1.0;
 
-   for (int i = 0; i < this->virtual_grf_count; i++) {
+   for (unsigned i = 0; i < this->alloc.count; i++) {
       spill_costs[i] = 0.0;
-      no_spill[i] = virtual_grf_sizes[i] != 1;
+      no_spill[i] = alloc.sizes[i] != 1;
    }
 
    /* Calculate costs for spilling nodes.  Call it a cost of 1 per
@@ -308,12 +307,12 @@ vec4_visitor::evaluate_spill_costs(float *spill_costs, bool *no_spill)
 int
 vec4_visitor::choose_spill_reg(struct ra_graph *g)
 {
-   float spill_costs[this->virtual_grf_count];
-   bool no_spill[this->virtual_grf_count];
+   float spill_costs[this->alloc.count];
+   bool no_spill[this->alloc.count];
 
    evaluate_spill_costs(spill_costs, no_spill);
 
-   for (int i = 0; i < this->virtual_grf_count; i++) {
+   for (unsigned i = 0; i < this->alloc.count; i++) {
       if (!no_spill[i])
          ra_set_node_spill_cost(g, i, spill_costs[i]);
    }
@@ -324,7 +323,7 @@ vec4_visitor::choose_spill_reg(struct ra_graph *g)
 void
 vec4_visitor::spill_reg(int spill_reg_nr)
 {
-   assert(virtual_grf_sizes[spill_reg_nr] == 1);
+   assert(alloc.sizes[spill_reg_nr] == 1);
    unsigned int spill_offset = c->last_scratch++;
 
    /* Generate spill/unspill instructions for the objects being spilled. */
@@ -332,7 +331,7 @@ vec4_visitor::spill_reg(int spill_reg_nr)
       for (unsigned int i = 0; i < 3; i++) {
          if (inst->src[i].file == GRF && inst->src[i].reg == spill_reg_nr) {
             src_reg spill_reg = inst->src[i];
-            inst->src[i].reg = virtual_grf_alloc(1);
+            inst->src[i].reg = alloc.allocate(1);
             dst_reg temp = dst_reg(inst->src[i]);
 
             emit_scratch_read(block, inst, temp, spill_reg, spill_offset);

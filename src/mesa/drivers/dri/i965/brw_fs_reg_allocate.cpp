@@ -31,7 +31,7 @@
 #include "glsl/ir_optimization.h"
 
 static void
-assign_reg(int *reg_hw_locations, fs_reg *reg)
+assign_reg(unsigned *reg_hw_locations, fs_reg *reg)
 {
    if (reg->file == GRF) {
       assert(reg->reg_offset >= 0);
@@ -43,17 +43,17 @@ assign_reg(int *reg_hw_locations, fs_reg *reg)
 void
 fs_visitor::assign_regs_trivial()
 {
-   int hw_reg_mapping[this->virtual_grf_count + 1];
-   int i;
+   unsigned hw_reg_mapping[this->alloc.count + 1];
+   unsigned i;
    int reg_width = dispatch_width / 8;
 
    /* Note that compressed instructions require alignment to 2 registers. */
    hw_reg_mapping[0] = ALIGN(this->first_non_payload_grf, reg_width);
-   for (i = 1; i <= this->virtual_grf_count; i++) {
+   for (i = 1; i <= this->alloc.count; i++) {
       hw_reg_mapping[i] = (hw_reg_mapping[i - 1] +
-			   this->virtual_grf_sizes[i - 1]);
+			   this->alloc.sizes[i - 1]);
    }
-   this->grf_used = hw_reg_mapping[this->virtual_grf_count];
+   this->grf_used = hw_reg_mapping[this->alloc.count];
 
    foreach_block_and_inst(block, fs_inst, inst, cfg) {
       assign_reg(hw_reg_mapping, &inst->dst);
@@ -66,7 +66,7 @@ fs_visitor::assign_regs_trivial()
       fail("Ran out of regs on trivial allocator (%d/%d)\n",
 	   this->grf_used, max_grf);
    } else {
-      this->virtual_grf_count = this->grf_used;
+      this->alloc.count = this->grf_used;
    }
 
 }
@@ -427,7 +427,7 @@ fs_visitor::setup_payload_interference(struct ra_graph *g,
        * live between the start of the program and our last use of the payload
        * node.
        */
-      for (int j = 0; j < this->virtual_grf_count; j++) {
+      for (unsigned j = 0; j < this->alloc.count; j++) {
          /* Note that we use a <= comparison, unlike virtual_grf_interferes(),
           * in order to not have to worry about the uniform issue described in
           * calculate_live_intervals().
@@ -515,7 +515,7 @@ fs_visitor::setup_mrf_hack_interference(struct ra_graph *g, int first_mrf_node)
        * that are used as conflicting with all virtual GRFs.
        */
       if (mrf_used[i]) {
-         for (int j = 0; j < this->virtual_grf_count; j++) {
+         for (unsigned j = 0; j < this->alloc.count; j++) {
             ra_add_node_interference(g, first_mrf_node + i, j);
          }
       }
@@ -533,12 +533,12 @@ fs_visitor::assign_regs(bool allow_spilling)
     * for reg_width == 2.
     */
    int reg_width = dispatch_width / 8;
-   int hw_reg_mapping[this->virtual_grf_count];
+   unsigned hw_reg_mapping[this->alloc.count];
    int payload_node_count = ALIGN(this->first_non_payload_grf, reg_width);
    int rsi = reg_width - 1; /* Which screen->wm_reg_sets[] to use */
    calculate_live_intervals();
 
-   int node_count = this->virtual_grf_count;
+   int node_count = this->alloc.count;
    int first_payload_node = node_count;
    node_count += payload_node_count;
    int first_mrf_hack_node = node_count;
@@ -547,8 +547,8 @@ fs_visitor::assign_regs(bool allow_spilling)
    struct ra_graph *g =
       ra_alloc_interference_graph(screen->wm_reg_sets[rsi].regs, node_count);
 
-   for (int i = 0; i < this->virtual_grf_count; i++) {
-      unsigned size = this->virtual_grf_sizes[i];
+   for (unsigned i = 0; i < this->alloc.count; i++) {
+      unsigned size = this->alloc.sizes[i];
       int c;
 
       assert(size <= ARRAY_SIZE(screen->wm_reg_sets[rsi].classes) &&
@@ -572,7 +572,7 @@ fs_visitor::assign_regs(bool allow_spilling)
 
       ra_set_node_class(g, i, c);
 
-      for (int j = 0; j < i; j++) {
+      for (unsigned j = 0; j < i; j++) {
 	 if (virtual_grf_interferes(i, j)) {
 	    ra_add_node_interference(g, i, j);
 	 }
@@ -595,7 +595,7 @@ fs_visitor::assign_regs(bool allow_spilling)
           * highest register that works.
           */
          if (inst->eot) {
-            int size = virtual_grf_sizes[inst->src[0].reg];
+            int size = alloc.sizes[inst->src[0].reg];
             int reg = screen->wm_reg_sets[rsi].class_to_ra_reg_range[size] - 1;
             ra_set_node_reg(g, inst->src[0].reg, reg);
             break;
@@ -661,12 +661,12 @@ fs_visitor::assign_regs(bool allow_spilling)
     * numbers.
     */
    this->grf_used = payload_node_count;
-   for (int i = 0; i < this->virtual_grf_count; i++) {
+   for (unsigned i = 0; i < this->alloc.count; i++) {
       int reg = ra_get_node_reg(g, i);
 
       hw_reg_mapping[i] = screen->wm_reg_sets[rsi].ra_reg_to_grf[reg];
       this->grf_used = MAX2(this->grf_used,
-			    hw_reg_mapping[i] + this->virtual_grf_sizes[i]);
+			    hw_reg_mapping[i] + this->alloc.sizes[i]);
    }
 
    foreach_block_and_inst(block, fs_inst, inst, cfg) {
@@ -676,7 +676,7 @@ fs_visitor::assign_regs(bool allow_spilling)
       }
    }
 
-   this->virtual_grf_count = this->grf_used;
+   this->alloc.count = this->grf_used;
 
    ralloc_free(g);
 
@@ -747,10 +747,10 @@ int
 fs_visitor::choose_spill_reg(struct ra_graph *g)
 {
    float loop_scale = 1.0;
-   float spill_costs[this->virtual_grf_count];
-   bool no_spill[this->virtual_grf_count];
+   float spill_costs[this->alloc.count];
+   bool no_spill[this->alloc.count];
 
-   for (int i = 0; i < this->virtual_grf_count; i++) {
+   for (unsigned i = 0; i < this->alloc.count; i++) {
       spill_costs[i] = 0.0;
       no_spill[i] = false;
    }
@@ -811,7 +811,7 @@ fs_visitor::choose_spill_reg(struct ra_graph *g)
       }
    }
 
-   for (int i = 0; i < this->virtual_grf_count; i++) {
+   for (unsigned i = 0; i < this->alloc.count; i++) {
       if (!no_spill[i])
 	 ra_set_node_spill_cost(g, i, spill_costs[i]);
    }
@@ -822,7 +822,7 @@ fs_visitor::choose_spill_reg(struct ra_graph *g)
 void
 fs_visitor::spill_reg(int spill_reg)
 {
-   int size = virtual_grf_sizes[spill_reg];
+   int size = alloc.sizes[spill_reg];
    unsigned int spill_offset = last_scratch;
    assert(ALIGN(spill_offset, 16) == spill_offset); /* oword read/write req. */
    int spill_base_mrf = dispatch_width > 8 ? 13 : 14;
@@ -862,7 +862,7 @@ fs_visitor::spill_reg(int spill_reg)
             int regs_read = inst->regs_read(this, i);
             int subset_spill_offset = (spill_offset +
                                        REG_SIZE * inst->src[i].reg_offset);
-            fs_reg unspill_dst(GRF, virtual_grf_alloc(regs_read));
+            fs_reg unspill_dst(GRF, alloc.allocate(regs_read));
 
             inst->src[i].reg = unspill_dst.reg;
             inst->src[i].reg_offset = 0;
@@ -876,7 +876,7 @@ fs_visitor::spill_reg(int spill_reg)
 	  inst->dst.reg == spill_reg) {
          int subset_spill_offset = (spill_offset +
                                     REG_SIZE * inst->dst.reg_offset);
-         fs_reg spill_src(GRF, virtual_grf_alloc(inst->regs_written));
+         fs_reg spill_src(GRF, alloc.allocate(inst->regs_written));
 
          inst->dst.reg = spill_src.reg;
          inst->dst.reg_offset = 0;

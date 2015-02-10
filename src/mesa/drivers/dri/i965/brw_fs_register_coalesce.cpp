@@ -66,7 +66,7 @@ is_nop_mov(const fs_inst *inst)
 static bool
 is_copy_payload(const fs_visitor *v, const fs_inst *inst)
 {
-   if (v->virtual_grf_sizes[inst->src[0].reg] != inst->regs_written)
+   if (v->alloc.sizes[inst->src[0].reg] != inst->regs_written)
       return false;
 
    fs_reg reg = inst->src[0];
@@ -94,8 +94,8 @@ is_coalesce_candidate(const fs_visitor *v, const fs_inst *inst)
       return false;
    }
 
-   if (v->virtual_grf_sizes[inst->src[0].reg] >
-       v->virtual_grf_sizes[inst->dst.reg])
+   if (v->alloc.sizes[inst->src[0].reg] >
+       v->alloc.sizes[inst->dst.reg])
       return false;
 
    if (inst->opcode == SHADER_OPCODE_LOAD_PAYLOAD) {
@@ -179,7 +179,7 @@ fs_visitor::register_coalesce()
       if (reg_from != inst->src[0].reg) {
          reg_from = inst->src[0].reg;
 
-         src_size = virtual_grf_sizes[inst->src[0].reg];
+         src_size = alloc.sizes[inst->src[0].reg];
          assert(src_size <= MAX_VGRF_SIZE);
 
          assert(inst->src[0].width % 8 == 0);

@@ -1209,7 +1209,7 @@ vec4_visitor::opt_register_coalesce()
 void
 vec4_visitor::split_virtual_grfs()
 {
-   int num_vars = this->virtual_grf_count;
+   int num_vars = this->alloc.count;
    int new_virtual_grf[num_vars];
    bool split_grf[num_vars];
 
@@ -1217,7 +1217,7 @@ vec4_visitor::split_virtual_grfs()
 
    /* Try to split anything > 0 sized. */
    for (int i = 0; i < num_vars; i++) {
-      split_grf[i] = this->virtual_grf_sizes[i] != 1;
+      split_grf[i] = this->alloc.sizes[i] != 1;
    }
 
    /* Check that the instructions are compatible with the registers we're trying
@@ -1243,13 +1243,13 @@ vec4_visitor::split_virtual_grfs()
       if (!split_grf[i])
          continue;
 
-      new_virtual_grf[i] = virtual_grf_alloc(1);
-      for (int j = 2; j < this->virtual_grf_sizes[i]; j++) {
-         int reg = virtual_grf_alloc(1);
+      new_virtual_grf[i] = alloc.allocate(1);
+      for (unsigned j = 2; j < this->alloc.sizes[i]; j++) {
+         unsigned reg = alloc.allocate(1);
          assert(reg == new_virtual_grf[i] + j - 1);
          (void) reg;
       }
-      this->virtual_grf_sizes[i] = 1;
+      this->alloc.sizes[i] = 1;
    }
 
    foreach_block_and_inst(block, vec4_instruction, inst, cfg) {
@@ -1432,7 +1432,7 @@ vec4_visitor::dump_instruction(backend_instruction *be_inst, FILE *file)
       /* Don't print .0; and only VGRFs have reg_offsets and sizes */
       if (inst->src[i].reg_offset != 0 &&
           inst->src[i].file == GRF &&
-          virtual_grf_sizes[inst->src[i].reg] != 1)
+          alloc.sizes[inst->src[i].reg] != 1)
          fprintf(file, ".%d", inst->src[i].reg_offset);
 
       if (inst->src[i].file != IMM) {
@@ -1834,9 +1834,9 @@ vec4_visitor::run()
 
    if (false) {
       /* Debug of register spilling: Go spill everything. */
-      const int grf_count = virtual_grf_count;
-      float spill_costs[virtual_grf_count];
-      bool no_spill[virtual_grf_count];
+      const int grf_count = alloc.count;
+      float spill_costs[alloc.count];
+      bool no_spill[alloc.count];
       evaluate_spill_costs(spill_costs, no_spill);
       for (int i = 0; i < grf_count; i++) {
          if (no_spill[i])

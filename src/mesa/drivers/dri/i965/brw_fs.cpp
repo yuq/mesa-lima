@@ -424,7 +424,7 @@ fs_visitor::VARYING_PULL_CONSTANT_LOAD(const fs_reg &dst,
 
    assert(dst.width % 8 == 0);
    int regs_written = 4 * (dst.width / 8) * scale;
-   fs_reg vec4_result = fs_reg(GRF, virtual_grf_alloc(regs_written),
+   fs_reg vec4_result = fs_reg(GRF, alloc.allocate(regs_written),
                                dst.type, dst.width);
    inst = new(mem_ctx) fs_inst(op, vec4_result, surf_index, vec4_offset);
    inst->regs_written = regs_written;
@@ -688,7 +688,7 @@ fs_visitor::get_timestamp()
                                           0),
                              BRW_REGISTER_TYPE_UD));
 
-   fs_reg dst = fs_reg(GRF, virtual_grf_alloc(1), BRW_REGISTER_TYPE_UD, 4);
+   fs_reg dst = fs_reg(GRF, alloc.allocate(1), BRW_REGISTER_TYPE_UD, 4);
 
    fs_inst *mov = emit(MOV(dst, ts));
    /* We want to read the 3 fields we care about even if it's not enabled in
@@ -764,7 +764,7 @@ fs_visitor::emit_shader_time_end()
 
    fs_reg start = shader_start_time;
    start.negate = true;
-   fs_reg diff = fs_reg(GRF, virtual_grf_alloc(1), BRW_REGISTER_TYPE_UD, 1);
+   fs_reg diff = fs_reg(GRF, alloc.allocate(1), BRW_REGISTER_TYPE_UD, 1);
    emit(ADD(diff, start, shader_end_time));
 
    /* If there were no instructions between the two timestamp gets, the diff
@@ -1029,26 +1029,11 @@ fs_visitor::implied_mrf_writes(fs_inst *inst)
    }
 }
 
-int
-fs_visitor::virtual_grf_alloc(int size)
-{
-   if (virtual_grf_array_size <= virtual_grf_count) {
-      if (virtual_grf_array_size == 0)
-	 virtual_grf_array_size = 16;
-      else
-	 virtual_grf_array_size *= 2;
-      virtual_grf_sizes = reralloc(mem_ctx, virtual_grf_sizes, int,
-				   virtual_grf_array_size);
-   }
-   virtual_grf_sizes[virtual_grf_count] = size;
-   return virtual_grf_count++;
-}
-
 fs_reg
 fs_visitor::vgrf(const glsl_type *const type)
 {
    int reg_width = dispatch_width / 8;
-   return fs_reg(GRF, virtual_grf_alloc(type_size(type) * reg_width),
+   return fs_reg(GRF, alloc.allocate(type_size(type) * reg_width),
                  brw_type_for_base_type(type), dispatch_width);
 }
 
@@ -1056,7 +1041,7 @@ fs_reg
 fs_visitor::vgrf(int num_components)
 {
    int reg_width = dispatch_width / 8;
-   return fs_reg(GRF, virtual_grf_alloc(num_components * reg_width),
+   return fs_reg(GRF, alloc.allocate(num_components * reg_width),
                  BRW_REGISTER_TYPE_F, dispatch_width);
 }
 
@@ -1912,14 +1897,14 @@ fs_visitor::assign_vs_urb_setup()
 void
 fs_visitor::split_virtual_grfs()
 {
-   int num_vars = this->virtual_grf_count;
+   int num_vars = this->alloc.count;
 
    /* Count the total number of registers */
    int reg_count = 0;
    int vgrf_to_reg[num_vars];
    for (int i = 0; i < num_vars; i++) {
       vgrf_to_reg[i] = reg_count;
-      reg_count += virtual_grf_sizes[i];
+      reg_count += alloc.sizes[i];
    }
 
    /* An array of "split points".  For each register slot, this indicates
@@ -1935,14 +1920,14 @@ fs_visitor::split_virtual_grfs()
    foreach_block_and_inst(block, fs_inst, inst, cfg) {
       if (inst->dst.file == GRF) {
          int reg = vgrf_to_reg[inst->dst.reg];
-         for (int j = 1; j < this->virtual_grf_sizes[inst->dst.reg]; j++)
+         for (unsigned j = 1; j < this->alloc.sizes[inst->dst.reg]; j++)
             split_points[reg + j] = true;
       }
 
       for (int i = 0; i < inst->sources; i++) {
          if (inst->src[i].file == GRF) {
             int reg = vgrf_to_reg[inst->src[i].reg];
-            for (int j = 1; j < this->virtual_grf_sizes[inst->src[i].reg]; j++)
+            for (unsigned j = 1; j < this->alloc.sizes[inst->src[i].reg]; j++)
                split_points[reg + j] = true;
          }
       }
@@ -1988,13 +1973,13 @@ fs_visitor::split_virtual_grfs()
       int offset = 1;
 
       /* j > 0 case */
-      for (int j = 1; j < virtual_grf_sizes[i]; j++) {
+      for (unsigned j = 1; j < alloc.sizes[i]; j++) {
          /* If this is a split point, reset the offset to 0 and allocate a
           * new virtual GRF for the previous offset many registers
           */
          if (split_points[reg]) {
             assert(offset <= MAX_VGRF_SIZE);
-            int grf = virtual_grf_alloc(offset);
+            int grf = alloc.allocate(offset);
             for (int k = reg - offset; k < reg; k++)
                new_virtual_grf[k] = grf;
             offset = 0;
@@ -2006,7 +1991,7 @@ fs_visitor::split_virtual_grfs()
 
       /* The last one gets the original register number */
       assert(offset <= MAX_VGRF_SIZE);
-      virtual_grf_sizes[i] = offset;
+      alloc.sizes[i] = offset;
       for (int k = reg - offset; k < reg; k++)
          new_virtual_grf[k] = i;
    }
@@ -2017,14 +2002,14 @@ fs_visitor::split_virtual_grfs()
          reg = vgrf_to_reg[inst->dst.reg] + inst->dst.reg_offset;
          inst->dst.reg = new_virtual_grf[reg];
          inst->dst.reg_offset = new_reg_offset[reg];
-         assert(new_reg_offset[reg] < virtual_grf_sizes[new_virtual_grf[reg]]);
+         assert((unsigned)new_reg_offset[reg] < alloc.sizes[new_virtual_grf[reg]]);
       }
       for (int i = 0; i < inst->sources; i++) {
 	 if (inst->src[i].file == GRF) {
             reg = vgrf_to_reg[inst->src[i].reg] + inst->src[i].reg_offset;
             inst->src[i].reg = new_virtual_grf[reg];
             inst->src[i].reg_offset = new_reg_offset[reg];
-            assert(new_reg_offset[reg] < virtual_grf_sizes[new_virtual_grf[reg]]);
+            assert((unsigned)new_reg_offset[reg] < alloc.sizes[new_virtual_grf[reg]]);
          }
       }
    }
@@ -2044,7 +2029,7 @@ bool
 fs_visitor::compact_virtual_grfs()
 {
    bool progress = false;
-   int remap_table[this->virtual_grf_count];
+   int remap_table[this->alloc.count];
    memset(remap_table, -1, sizeof(remap_table));
 
    /* Mark which virtual GRFs are used. */
@@ -2060,7 +2045,7 @@ fs_visitor::compact_virtual_grfs()
 
    /* Compact the GRF arrays. */
    int new_index = 0;
-   for (int i = 0; i < this->virtual_grf_count; i++) {
+   for (unsigned i = 0; i < this->alloc.count; i++) {
       if (remap_table[i] == -1) {
          /* We just found an unused register.  This means that we are
           * actually going to compact something.
@@ -2068,13 +2053,13 @@ fs_visitor::compact_virtual_grfs()
          progress = true;
       } else {
          remap_table[i] = new_index;
-         virtual_grf_sizes[new_index] = virtual_grf_sizes[i];
+         alloc.sizes[new_index] = alloc.sizes[i];
          invalidate_live_intervals();
          ++new_index;
       }
    }
 
-   this->virtual_grf_count = new_index;
+   this->alloc.count = new_index;
 
    /* Patch all the instructions to use the newly renumbered registers */
    foreach_block_and_inst(block, fs_inst, inst, cfg) {
@@ -2458,8 +2443,8 @@ fs_visitor::opt_register_renaming()
    bool progress = false;
    int depth = 0;
 
-   int remap[virtual_grf_count];
-   memset(remap, -1, sizeof(int) * virtual_grf_count);
+   int remap[alloc.count];
+   memset(remap, -1, sizeof(int) * alloc.count);
 
    foreach_block_and_inst(block, fs_inst, inst, cfg) {
       if (inst->opcode == BRW_OPCODE_IF || inst->opcode == BRW_OPCODE_DO) {
@@ -2483,12 +2468,12 @@ fs_visitor::opt_register_renaming()
 
       if (depth == 0 &&
           inst->dst.file == GRF &&
-          virtual_grf_sizes[inst->dst.reg] == inst->dst.width / 8 &&
+          alloc.sizes[inst->dst.reg] == inst->dst.width / 8 &&
           !inst->is_partial_write()) {
          if (remap[dst] == -1) {
             remap[dst] = dst;
          } else {
-            remap[dst] = virtual_grf_alloc(inst->dst.width / 8);
+            remap[dst] = alloc.allocate(inst->dst.width / 8);
             inst->dst.reg = remap[dst];
             progress = true;
          }
@@ -3030,7 +3015,7 @@ fs_visitor::lower_uniform_pull_constant_loads()
           */
          if (brw->gen >= 9) {
             payload.reg_offset++;
-            virtual_grf_sizes[payload.reg] = 2;
+            alloc.sizes[payload.reg] = 2;
          }
 
          /* This is actually going to be a MOV, but since only the first dword
@@ -3071,11 +3056,11 @@ fs_visitor::lower_load_payload()
 {
    bool progress = false;
 
-   int vgrf_to_reg[virtual_grf_count];
+   int vgrf_to_reg[alloc.count];
    int reg_count = 16; /* Leave room for MRF */
-   for (int i = 0; i < virtual_grf_count; ++i) {
+   for (unsigned i = 0; i < alloc.count; ++i) {
       vgrf_to_reg[i] = reg_count;
-      reg_count += virtual_grf_sizes[i];
+      reg_count += alloc.sizes[i];
    }
 
    struct {
@@ -3239,7 +3224,7 @@ fs_visitor::dump_instruction(backend_instruction *be_inst, FILE *file)
       fprintf(file, "vgrf%d", inst->dst.reg);
       if (inst->dst.width != dispatch_width)
          fprintf(file, "@%d", inst->dst.width);
-      if (virtual_grf_sizes[inst->dst.reg] != inst->dst.width / 8 ||
+      if (alloc.sizes[inst->dst.reg] != inst->dst.width / 8 ||
           inst->dst.subreg_offset)
          fprintf(file, "+%d.%d",
                  inst->dst.reg_offset, inst->dst.subreg_offset);
@@ -3299,7 +3284,7 @@ fs_visitor::dump_instruction(backend_instruction *be_inst, FILE *file)
          fprintf(file, "vgrf%d", inst->src[i].reg);
          if (inst->src[i].width != dispatch_width)
             fprintf(file, "@%d", inst->src[i].width);
-         if (virtual_grf_sizes[inst->src[i].reg] != inst->src[i].width / 8 ||
+         if (alloc.sizes[inst->src[i].reg] != inst->src[i].width / 8 ||
              inst->src[i].subreg_offset)
             fprintf(file, "+%d.%d", inst->src[i].reg_offset,
                     inst->src[i].subreg_offset);
@@ -3550,9 +3535,9 @@ fs_visitor::calculate_register_pressure()
 
    regs_live_at_ip = rzalloc_array(mem_ctx, int, num_instructions);
 
-   for (int reg = 0; reg < virtual_grf_count; reg++) {
+   for (unsigned reg = 0; reg < alloc.count; reg++) {
       for (int ip = virtual_grf_start[reg]; ip <= virtual_grf_end[reg]; ip++)
-         regs_live_at_ip[ip] += virtual_grf_sizes[reg];
+         regs_live_at_ip[ip] += alloc.sizes[reg];
    }
 }
 
@@ -3640,7 +3625,7 @@ fs_visitor::fixup_3src_null_dest()
 {
    foreach_block_and_inst_safe (block, fs_inst, inst, cfg) {
       if (inst->is_3src() && inst->dst.is_null()) {
-         inst->dst = fs_reg(GRF, virtual_grf_alloc(dispatch_width / 8),
+         inst->dst = fs_reg(GRF, alloc.allocate(dispatch_width / 8),
                             inst->dst.type);
       }
    }
