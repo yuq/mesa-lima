@@ -41,6 +41,9 @@ main(int argc, char **argv)
    uint32_t bad_hash = 5;
    int i;
 
+   (void) argc;
+   (void) argv;
+
    ht = _mesa_hash_table_create(NULL, NULL, _mesa_key_string_equal);
 
    /* Insert some items.  Inserting 3 items forces a rehash and the new
