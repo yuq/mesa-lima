@@ -105,8 +105,10 @@ gcm_build_block_info(struct exec_list *cf_list, struct gcm_state *state,
  * to either GCM_INSTR_PINNED or 0.
  */
 static bool
-gcm_pin_instructions_block(nir_block *block, void *state)
+gcm_pin_instructions_block(nir_block *block, void *void_state)
 {
+   struct gcm_state *state = void_state;
+
    nir_foreach_instr_safe(block, instr) {
       switch (instr->type) {
       case nir_instr_type_alu:
@@ -163,6 +165,22 @@ gcm_pin_instructions_block(nir_block *block, void *state)
 
       default:
          unreachable("Invalid instruction type in GCM");
+      }
+
+      if (!(instr->pass_flags & GCM_INSTR_PINNED)) {
+         /* If this is an unpinned instruction, go ahead and pull it out of
+          * the program and put it on the instrs list.  This has a couple
+          * of benifits.  First, it makes the scheduling algorithm more
+          * efficient because we can avoid walking over basic blocks and
+          * pinned instructions.  Second, it keeps us from causing linked
+          * list confusion when we're trying to put everything in its
+          * proper place at the end of the pass.
+          *
+          * Note that we don't use nir_instr_remove here because that also
+          * cleans up uses and defs and we want to keep that information.
+          */
+         exec_node_remove(&instr->node);
+         exec_list_push_tail(&state->instrs, &instr->node);
       }
    }
 
@@ -238,15 +256,6 @@ gcm_schedule_early_instr(nir_instr *instr, struct gcm_state *state)
    state->instr = instr;
 
    nir_foreach_src(instr, gcm_schedule_early_src, state);
-}
-
-static bool
-gcm_schedule_early_block(nir_block *block, void *state)
-{
-   nir_foreach_instr(block, instr)
-      gcm_schedule_early_instr(instr, state);
-
-   return true;
 }
 
 static void
@@ -358,31 +367,6 @@ gcm_schedule_late_instr(nir_instr *instr, struct gcm_state *state)
    nir_foreach_ssa_def(instr, gcm_schedule_late_def, state);
 }
 
-static bool
-gcm_schedule_late_block(nir_block *block, void *void_state)
-{
-   struct gcm_state *state = void_state;
-
-   nir_foreach_instr_safe(block, instr) {
-      gcm_schedule_late_instr(instr, state);
-
-      if (!(instr->pass_flags & GCM_INSTR_PINNED)) {
-         /* If this is an instruction we can move, go ahead and pull it out
-          * of the program and put it on the instrs list.  This keeps us
-          * from causing linked list confusion when we're trying to put
-          * everything in its proper place.
-          *
-          * Note that we don't use nir_instr_remove here because that also
-          * cleans up uses and defs and we want to keep that information.
-          */
-         exec_node_remove(&instr->node);
-         exec_list_push_tail(&state->instrs, &instr->node);
-      }
-   }
-
-   return true;
-}
-
 static void
 gcm_place_instr(nir_instr *instr, struct gcm_state *state);
 
@@ -482,8 +466,12 @@ opt_gcm_impl(nir_function_impl *impl)
 
    gcm_build_block_info(&impl->body, &state, 0);
    nir_foreach_block(impl, gcm_pin_instructions_block, &state);
-   nir_foreach_block(impl, gcm_schedule_early_block, &state);
-   nir_foreach_block(impl, gcm_schedule_late_block, &state);
+
+   foreach_list_typed(nir_instr, instr, node, &state.instrs)
+      gcm_schedule_early_instr(instr, &state);
+
+   foreach_list_typed(nir_instr, instr, node, &state.instrs)
+      gcm_schedule_late_instr(instr, &state);
 
    while (!exec_list_is_empty(&state.instrs)) {
       nir_instr *instr = exec_node_data(nir_instr,
