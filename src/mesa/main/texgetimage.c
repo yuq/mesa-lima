@@ -450,7 +450,7 @@ get_tex_rgba_uncompressed(struct gl_context *ctx, GLuint dimensions,
       if (transferOps) {
          uint32_t rgba_format;
          int rgba_stride;
-         bool need_convert;
+         bool need_convert = false;
 
          /* We will convert to RGBA float */
          rgba_format = RGBA32_FLOAT;
@@ -462,7 +462,6 @@ get_tex_rgba_uncompressed(struct gl_context *ctx, GLuint dimensions,
           * buffer.
           */
          if (format == rgba_format) {
-            need_convert = false;
             rgba = dest;
          } else if (rgba == NULL) { /* Allocate the RGBA buffer only once */
             need_convert = true;
