@@ -1255,10 +1255,8 @@ brw_blorp_blit_program::translate_dst_to_src()
    emit_mov(Xp_f, X);
    emit_mov(Yp_f, Y);
    /* Scale and offset */
-   emit_mul(X_f, Xp_f, x_transform.multiplier);
-   emit_mul(Y_f, Yp_f, y_transform.multiplier);
-   emit_add(X_f, X_f, x_transform.offset);
-   emit_add(Y_f, Y_f, y_transform.offset);
+   emit_mad(X_f, x_transform.offset, Xp_f, x_transform.multiplier);
+   emit_mad(Y_f, y_transform.offset, Yp_f, y_transform.multiplier);
    if (key->blit_scaled && key->blend) {
       /* Translate coordinates to lay out the samples in a rectangular  grid
        * roughly corresponding to sample locations.

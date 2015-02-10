@@ -85,6 +85,15 @@ protected:
          new (mem_ctx) fs_inst(BRW_OPCODE_LRP, 16, dst, src1, src2, src3));
    }
 
+   inline void emit_mad(const struct brw_reg &dst,
+                        const struct brw_reg &src1,
+                        const struct brw_reg &src2,
+                        const struct brw_reg &src3)
+   {
+      insts.push_tail(
+         new (mem_ctx) fs_inst(BRW_OPCODE_MAD, 16, dst, src1, src2, src3));
+   }
+
    inline void emit_min(const struct brw_reg& dst,
                         const struct brw_reg& src1,
                         const struct brw_reg& src2)
