@@ -345,6 +345,10 @@ void *radeon_bo_do_map(struct radeon_bo *bo)
     struct drm_radeon_gem_mmap args = {0};
     void *ptr;
 
+    /* If the buffer is created from user memory, return the user pointer. */
+    if (bo->user_ptr)
+        return bo->user_ptr;
+
     /* Return the pointer if it's already mapped. */
     if (bo->ptr)
         return bo->ptr;
@@ -900,6 +904,7 @@ static struct pb_buffer *radeon_winsys_bo_from_ptr(struct radeon_winsys *rws,
     bo->base.vtbl = &radeon_bo_vtbl;
     bo->mgr = mgr;
     bo->rws = mgr->rws;
+    bo->user_ptr = pointer;
     bo->va = 0;
     bo->initial_domain = RADEON_DOMAIN_GTT;
     pipe_mutex_init(bo->map_mutex);

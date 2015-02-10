@@ -394,8 +394,8 @@ struct radeon_winsys {
                                             unsigned *stride);
 
     /**
-     * Get a winsys buffer from a user pointer. The resulting buffer can't be
-     * mapped or exported. Both pointer and size must be page aligned.
+     * Get a winsys buffer from a user pointer. The resulting buffer can't
+     * be exported. Both pointer and size must be page aligned.
      *
      * \param ws        The winsys this function is called from.
      * \param pointer   User pointer to turn into a buffer object.
