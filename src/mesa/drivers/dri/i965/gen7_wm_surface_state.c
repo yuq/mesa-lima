@@ -373,24 +373,6 @@ gen7_update_texture_surface(struct gl_context *ctx,
 }
 
 /**
- * Create a raw surface for untyped R/W access.
- */
-static void
-gen7_create_raw_surface(struct brw_context *brw, drm_intel_bo *bo,
-                        uint32_t offset, uint32_t size,
-                        uint32_t *out_offset, bool rw)
-{
-   gen7_emit_buffer_surface_state(brw,
-                                  out_offset,
-                                  bo,
-                                  offset,
-                                  BRW_SURFACEFORMAT_RAW,
-                                  size,
-                                  1,
-                                  true /* rw */);
-}
-
-/**
  * Creates a null surface.
  *
  * This is used when the shader doesn't write to any color output.  An FB
@@ -563,6 +545,5 @@ gen7_init_vtable_surface_functions(struct brw_context *brw)
    brw->vtbl.update_texture_surface = gen7_update_texture_surface;
    brw->vtbl.update_renderbuffer_surface = gen7_update_renderbuffer_surface;
    brw->vtbl.emit_null_surface_state = gen7_emit_null_surface_state;
-   brw->vtbl.create_raw_surface = gen7_create_raw_surface;
    brw->vtbl.emit_buffer_surface_state = gen7_emit_buffer_surface_state;
 }

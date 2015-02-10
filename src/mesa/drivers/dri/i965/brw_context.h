@@ -964,12 +964,6 @@ struct brw_context
 					  bool layered,
 					  unsigned unit);
 
-      void (*create_raw_surface)(struct brw_context *brw,
-                                 drm_intel_bo *bo,
-                                 uint32_t offset,
-                                 uint32_t size,
-                                 uint32_t *out_offset,
-                                 bool rw);
       void (*emit_buffer_surface_state)(struct brw_context *brw,
                                         uint32_t *out_offset,
                                         drm_intel_bo *bo,

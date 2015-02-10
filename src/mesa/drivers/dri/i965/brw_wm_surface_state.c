@@ -953,9 +953,9 @@ brw_upload_abo_surfaces(struct brw_context *brw,
       drm_intel_bo *bo = intel_bufferobj_buffer(
          brw, intel_bo, binding->Offset, intel_bo->Base.Size - binding->Offset);
 
-      brw->vtbl.create_raw_surface(brw, bo, binding->Offset,
-                                   bo->size - binding->Offset,
-                                   &surf_offsets[i], true);
+      brw->vtbl.emit_buffer_surface_state(brw, &surf_offsets[i], bo,
+                                          binding->Offset, BRW_SURFACEFORMAT_RAW,
+                                          bo->size - binding->Offset, 1, true);
    }
 
    if (prog->NumAtomicBuffers)
