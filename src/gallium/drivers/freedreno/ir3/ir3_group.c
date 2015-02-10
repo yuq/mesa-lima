@@ -50,50 +50,7 @@ static bool check_stop(struct ir3_instruction *instr)
 	return false;
 }
 
-/* bleh.. we need to do the same group_n() thing for both inputs/outputs
- * (where we have a simple instr[] array), and fanin nodes (where we have
- * an extra indirection via reg->instr).
- */
-struct group_ops {
-	struct ir3_instruction *(*get)(void *arr, int idx);
-	void (*set)(void *arr, int idx, struct ir3_instruction *instr);
-};
-
-static struct ir3_instruction *arr_get(void *arr, int idx)
-{
-	return ((struct ir3_instruction **)arr)[idx];
-}
-static void arr_set_out(void *arr, int idx, struct ir3_instruction *instr)
-{
-	((struct ir3_instruction **)arr)[idx] = instr;
-}
-static void arr_set_in(void *arr, int idx, struct ir3_instruction *instr)
-{
-	debug_printf("cannot insert mov before input!\n");
-	debug_assert(0);
-}
-static struct group_ops arr_ops_out = { arr_get, arr_set_out };
-static struct group_ops arr_ops_in = { arr_get, arr_set_in };
-
-static struct ir3_instruction *instr_get(void *arr, int idx)
-{
-	return ssa(((struct ir3_instruction *)arr)->regs[idx+1]);
-}
-static void instr_set(void *arr, int idx, struct ir3_instruction *instr)
-{
-	((struct ir3_instruction *)arr)->regs[idx+1]->instr = instr;
-}
-static struct group_ops instr_ops = { instr_get, instr_set };
-
-
-
-static bool conflicts(struct ir3_instruction *a, struct ir3_instruction *b)
-{
-	return (a && b) && (a != b);
-}
-
-static struct ir3_instruction *
-create_mov(struct ir3_instruction *instr)
+static struct ir3_instruction * create_mov(struct ir3_instruction *instr)
 {
 	struct ir3_instruction *mov;
 
@@ -104,6 +61,67 @@ create_mov(struct ir3_instruction *instr)
 	ir3_reg_create(mov, 0, IR3_REG_SSA)->instr = instr;
 
 	return mov;
+}
+
+/* bleh.. we need to do the same group_n() thing for both inputs/outputs
+ * (where we have a simple instr[] array), and fanin nodes (where we have
+ * an extra indirection via reg->instr).
+ */
+struct group_ops {
+	struct ir3_instruction *(*get)(void *arr, int idx);
+	void (*insert_mov)(void *arr, int idx, struct ir3_instruction *instr);
+};
+
+static struct ir3_instruction *arr_get(void *arr, int idx)
+{
+	return ((struct ir3_instruction **)arr)[idx];
+}
+static void arr_insert_mov_out(void *arr, int idx, struct ir3_instruction *instr)
+{
+	((struct ir3_instruction **)arr)[idx] = create_mov(instr);
+}
+static void arr_insert_mov_in(void *arr, int idx, struct ir3_instruction *instr)
+{
+	/* so, we can't insert a mov in front of a meta:in.. and the downstream
+	 * instruction already has a pointer to 'instr'.  So we cheat a bit and
+	 * morph the meta:in instruction into a mov and insert a new meta:in
+	 * in front.
+	 */
+	struct ir3_instruction *in;
+
+	debug_assert(instr->regs_count == 1);
+
+	in = ir3_instr_create(instr->block, -1, OPC_META_INPUT);
+	in->inout.block = instr->block;
+	ir3_reg_create(in, instr->regs[0]->num, 0);
+
+	/* create src reg for meta:in and fixup to now be a mov: */
+	ir3_reg_create(instr, 0, IR3_REG_SSA)->instr = in;
+	instr->category = 1;
+	instr->opc = 0;
+	instr->cat1.src_type = TYPE_F32;
+	instr->cat1.dst_type = TYPE_F32;
+
+	((struct ir3_instruction **)arr)[idx] = in;
+}
+static struct group_ops arr_ops_out = { arr_get, arr_insert_mov_out };
+static struct group_ops arr_ops_in = { arr_get, arr_insert_mov_in };
+
+static struct ir3_instruction *instr_get(void *arr, int idx)
+{
+	return ssa(((struct ir3_instruction *)arr)->regs[idx+1]);
+}
+static void instr_insert_mov(void *arr, int idx, struct ir3_instruction *instr)
+{
+	((struct ir3_instruction *)arr)->regs[idx+1]->instr = create_mov(instr);
+}
+static struct group_ops instr_ops = { instr_get, instr_insert_mov };
+
+
+
+static bool conflicts(struct ir3_instruction *a, struct ir3_instruction *b)
+{
+	return (a && b) && (a != b);
 }
 
 static void group_n(struct group_ops *ops, void *arr, unsigned n)
@@ -135,8 +153,7 @@ restart:
 					conflict = true;
 
 			if (conflict) {
-				instr = create_mov(instr);
-				ops->set(arr, i, instr);
+				ops->insert_mov(arr, i, instr);
 				/* inserting the mov may have caused a conflict
 				 * against the previous:
 				 */
