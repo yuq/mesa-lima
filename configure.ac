@@ -1572,7 +1572,8 @@ if test -n "$with_gallium_drivers" -a "x$with_gallium_drivers" != xswrast; then
     fi
 fi
 
-if test "x$enable_xvmc" = xyes -o \
+if test "x$enable_dri" = xyes -o \
+        "x$enable_xvmc" = xyes -o \
         "x$enable_vdpau" = xyes -o \
         "x$enable_omx" = xyes -o \
         "x$enable_va" = xyes; then

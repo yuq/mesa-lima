@@ -53,9 +53,7 @@ libgalliumvl_stub_la_SOURCES = \
 
 if NEED_GALLIUM_VL
 
-noinst_LTLIBRARIES += libgalliumvl.la
-
-libgalliumvl_la_CFLAGS = \
+COMMON_VL_CFLAGS = \
 	$(AM_CFLAGS) \
 	$(VL_CFLAGS) \
 	$(LIBDRM_CFLAGS) \
@@ -63,13 +61,26 @@ libgalliumvl_la_CFLAGS = \
 	-DPIPE_SEARCH_DIR=\"$(libdir)/gallium-pipe\"
 
 if HAVE_GALLIUM_STATIC_TARGETS
-libgalliumvl_la_CFLAGS += \
+COMMON_VL_CFLAGS += \
 	-DGALLIUM_STATIC_TARGETS=1
 
 endif # HAVE_GALLIUM_STATIC_TARGETS
 
+noinst_LTLIBRARIES += libgalliumvl.la
+
+libgalliumvl_la_CFLAGS = \
+	$(COMMON_VL_CFLAGS)
+
 libgalliumvl_la_SOURCES = \
 	$(VL_SOURCES)
+
+noinst_LTLIBRARIES += libgalliumvlwinsys.la
+
+libgalliumvlwinsys_la_CFLAGS = \
+	$(COMMON_VL_CFLAGS)
+
+libgalliumvlwinsys_la_SOURCES = \
+	$(VL_WINSYS_SOURCES)
 
 endif
 

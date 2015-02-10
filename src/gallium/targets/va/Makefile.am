@@ -25,6 +25,7 @@ endif # HAVE_LD_VERSION_SCRIPT
 # NOTE: gallium_drv_video does not use(link against) libva
 gallium_drv_video_la_LIBADD = \
 	$(top_builddir)/src/gallium/state_trackers/va/libvatracker.la \
+	$(top_builddir)/src/gallium/auxiliary/libgalliumvlwinsys.la \
 	$(top_builddir)/src/gallium/auxiliary/libgalliumvl.la \
 	$(top_builddir)/src/gallium/auxiliary/libgallium.la \
 	$(top_builddir)/src/util/libmesautil.la \

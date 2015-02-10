@@ -24,6 +24,7 @@ endif # HAVE_LD_VERSION_SCRIPT
 
 libXvMCgallium_la_LIBADD = \
 	$(top_builddir)/src/gallium/state_trackers/xvmc/libxvmctracker.la \
+	$(top_builddir)/src/gallium/auxiliary/libgalliumvlwinsys.la \
 	$(top_builddir)/src/gallium/auxiliary/libgalliumvl.la \
 	$(top_builddir)/src/gallium/auxiliary/libgallium.la \
 	$(top_builddir)/src/util/libmesautil.la \
