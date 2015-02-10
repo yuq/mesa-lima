@@ -155,7 +155,7 @@ _mesa_pack_bitmap( GLint width, GLint height, const GLubyte *source,
    if (!source)
       return;
 
-   width_in_bytes = CEILING( width, 8 );
+   width_in_bytes = DIV_ROUND_UP( width, 8 );
    src = source;
    for (row = 0; row < height; row++) {
       GLubyte *dst = (GLubyte *) _mesa_image_address2d(packing, dest,

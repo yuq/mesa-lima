@@ -151,7 +151,7 @@ _mesa_image_offset( GLuint dimensions,
       assert(format == GL_COLOR_INDEX || format == GL_STENCIL_INDEX);
 
       bytes_per_row = alignment
-                    * CEILING( comp_per_pixel*pixels_per_row, 8*alignment );
+                    * DIV_ROUND_UP( comp_per_pixel*pixels_per_row, 8*alignment );
 
       bytes_per_image = bytes_per_row * rows_per_image;
 
