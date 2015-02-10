@@ -561,9 +561,9 @@ _mesa_total_buffer_object_memory(struct gl_context *ctx)
  * \sa glBufferDataARB, dd_function_table::BufferData.
  */
 static GLboolean
-_mesa_buffer_data( struct gl_context *ctx, GLenum target, GLsizeiptrARB size,
-		   const GLvoid * data, GLenum usage, GLenum storageFlags,
-		   struct gl_buffer_object * bufObj )
+buffer_data_fallback(struct gl_context *ctx, GLenum target, GLsizeiptr size,
+                     const GLvoid *data, GLenum usage, GLenum storageFlags,
+                     struct gl_buffer_object *bufObj)
 {
    void * new_data;
 
@@ -1117,7 +1117,7 @@ _mesa_init_buffer_object_functions(struct dd_function_table *driver)
    /* GL_ARB_vertex/pixel_buffer_object */
    driver->NewBufferObject = _mesa_new_buffer_object;
    driver->DeleteBuffer = _mesa_delete_buffer_object;
-   driver->BufferData = _mesa_buffer_data;
+   driver->BufferData = buffer_data_fallback;
    driver->BufferSubData = _mesa_buffer_subdata;
    driver->GetBufferSubData = _mesa_buffer_get_subdata;
    driver->UnmapBuffer = _mesa_buffer_unmap;
@@ -1492,23 +1492,22 @@ _mesa_NamedBufferStorage(GLuint buffer, GLsizeiptr size, const GLvoid *data,
 }
 
 
-
-void GLAPIENTRY
-_mesa_BufferData(GLenum target, GLsizeiptrARB size,
-                    const GLvoid * data, GLenum usage)
+void
+_mesa_buffer_data(struct gl_context *ctx, struct gl_buffer_object *bufObj,
+                  GLenum target, GLsizeiptr size, const GLvoid *data,
+                  GLenum usage, const char *func)
 {
-   GET_CURRENT_CONTEXT(ctx);
-   struct gl_buffer_object *bufObj;
    bool valid_usage;
 
    if (MESA_VERBOSE & VERBOSE_API)
-      _mesa_debug(ctx, "glBufferData(%s, %ld, %p, %s)\n",
+      _mesa_debug(ctx, "%s(%s, %ld, %p, %s)\n",
+                  func,
                   _mesa_lookup_enum_by_nr(target),
                   (long int) size, data,
                   _mesa_lookup_enum_by_nr(usage));
 
    if (size < 0) {
-      _mesa_error(ctx, GL_INVALID_VALUE, "glBufferDataARB(size < 0)");
+      _mesa_error(ctx, GL_INVALID_VALUE, "%s(size < 0)", func);
       return;
    }
 
@@ -1537,16 +1536,13 @@ _mesa_BufferData(GLenum target, GLsizeiptrARB size,
    }
 
    if (!valid_usage) {
-      _mesa_error(ctx, GL_INVALID_ENUM, "glBufferData(usage)");
+      _mesa_error(ctx, GL_INVALID_ENUM, "%s(invalid usage: %s)", func,
+                  _mesa_lookup_enum_by_nr(usage));
       return;
    }
 
-   bufObj = get_buffer(ctx, "glBufferDataARB", target, GL_INVALID_OPERATION);
-   if (!bufObj)
-      return;
-
    if (bufObj->Immutable) {
-      _mesa_error(ctx, GL_INVALID_OPERATION, "glBufferData(immutable)");
+      _mesa_error(ctx, GL_INVALID_OPERATION, "%s(immutable)", func);
       return;
    }
 
@@ -1579,12 +1575,45 @@ _mesa_BufferData(GLenum target, GLsizeiptrARB size,
           *   EXTERNAL_VIRTUAL_MEMORY_BUFFER_AMD, and the store cannot be
           *   mapped to the GPU address space.
           */
-         _mesa_error(ctx, GL_INVALID_OPERATION, "glBufferData()");
+         _mesa_error(ctx, GL_INVALID_OPERATION, "%s", func);
       }
       else {
-         _mesa_error(ctx, GL_OUT_OF_MEMORY, "glBufferData()");
+         _mesa_error(ctx, GL_OUT_OF_MEMORY, "%s", func);
       }
    }
+}
+
+void GLAPIENTRY
+_mesa_BufferData(GLenum target, GLsizeiptr size,
+                 const GLvoid *data, GLenum usage)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   struct gl_buffer_object *bufObj;
+
+   bufObj = get_buffer(ctx, "glBufferData", target, GL_INVALID_OPERATION);
+   if (!bufObj)
+      return;
+
+   _mesa_buffer_data(ctx, bufObj, target, size, data, usage,
+                     "glBufferData");
+}
+
+void GLAPIENTRY
+_mesa_NamedBufferData(GLuint buffer, GLsizeiptr size, const GLvoid *data,
+                      GLenum usage)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   struct gl_buffer_object *bufObj;
+
+   bufObj = _mesa_lookup_bufferobj_err(ctx, buffer, "glNamedBufferData");
+   if (!bufObj)
+      return;
+
+   /* In direct state access, buffer objects have an unspecified target since
+    * they are not required to be bound.
+    */
+   _mesa_buffer_data(ctx, bufObj, GL_NONE, size, data, usage,
+                     "glNamedBufferData");
 }
 
 

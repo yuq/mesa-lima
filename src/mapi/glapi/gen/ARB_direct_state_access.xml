@@ -21,6 +21,13 @@
       <param name="flags" type="GLbitfield" />
    </function>
 
+   <function name="NamedBufferData" offset="assign">
+      <param name="buffer" type="GLuint" />
+      <param name="size" type="GLsizeiptr" />
+      <param name="data" type="const GLvoid *" />
+      <param name="usage" type="GLenum" />
+   </function>
+
    <!-- Texture object functions -->
 
    <function name="CreateTextures" offset="assign">
