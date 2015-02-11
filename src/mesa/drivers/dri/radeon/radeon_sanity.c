@@ -315,8 +315,6 @@ static struct reg_names vector_names[] = {
    { 1000, "" },
 };
 
-union fi { float f; int i; };
-
 #define ISVEC   1
 #define ISFLOAT 2
 #define TOUCHED 4

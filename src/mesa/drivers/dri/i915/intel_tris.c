@@ -1268,12 +1268,6 @@ intelFallback(struct intel_context *intel, GLbitfield bit, bool mode)
    }
 }
 
-union fi
-{
-   GLfloat f;
-   GLint i;
-};
-
 /**********************************************************************/
 /*                            Initialization.                         */
 /**********************************************************************/
