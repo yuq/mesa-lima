@@ -225,7 +225,7 @@ ilo_render_get_flush_len(const struct ilo_render *render)
 {
    int len;
 
-   ILO_DEV_ASSERT(render->dev, 6, 7.5);
+   ILO_DEV_ASSERT(render->dev, 6, 8);
 
    len = GEN6_PIPE_CONTROL__SIZE;
 
@@ -250,7 +250,7 @@ ilo_render_emit_flush(struct ilo_render *render)
                         GEN6_PIPE_CONTROL_CS_STALL;
    const unsigned batch_used = ilo_builder_batch_used(render->builder);
 
-   ILO_DEV_ASSERT(render->dev, 6, 7.5);
+   ILO_DEV_ASSERT(render->dev, 6, 8);
 
    if (ilo_dev_gen(render->dev) == ILO_GEN(6))
       gen6_wa_pre_pipe_control(render, dw1);
@@ -273,7 +273,7 @@ ilo_render_get_query_len(const struct ilo_render *render,
 {
    int len;
 
-   ILO_DEV_ASSERT(render->dev, 6, 7.5);
+   ILO_DEV_ASSERT(render->dev, 6, 8);
 
    /* always a flush or a variant of flush */
    len = ilo_render_get_flush_len(render);
@@ -342,7 +342,7 @@ ilo_render_emit_query(struct ilo_render *render,
    int reg_count = 0, i;
    uint32_t pipe_control_dw1 = 0;
 
-   ILO_DEV_ASSERT(render->dev, 6, 7.5);
+   ILO_DEV_ASSERT(render->dev, 6, 8);
 
    switch (q->type) {
    case PIPE_QUERY_OCCLUSION_COUNTER:
