@@ -420,6 +420,13 @@
       <param name="params" type="GLint *" />
    </function>
 
+   <!-- Program Pipeline object functions -->
+
+   <function name="CreateProgramPipelines" offset="assign">
+      <param name="n" type="GLsizei" />
+      <param name="pipelines" type="GLuint *" />
+   </function>
+
    <!-- Query object functions -->
 
    <function name="CreateQueries" offset="assign">
