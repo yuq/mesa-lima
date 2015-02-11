@@ -25,7 +25,7 @@
  *
  */
 
-#include "main/bitset.h"
+#include "util/bitset.h"
 #include "brw_vec4.h"
 
 namespace brw {

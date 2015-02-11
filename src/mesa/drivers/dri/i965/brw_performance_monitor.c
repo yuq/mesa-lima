@@ -44,7 +44,7 @@
 
 #include <limits.h>
 
-#include "main/bitset.h"
+#include "util/bitset.h"
 #include "main/hash.h"
 #include "main/macros.h"
 #include "main/mtypes.h"

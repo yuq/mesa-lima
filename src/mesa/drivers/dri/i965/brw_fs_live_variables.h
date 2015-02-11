@@ -26,7 +26,7 @@
  */
 
 #include "brw_fs.h"
-#include "main/bitset.h"
+#include "util/bitset.h"
 
 struct cfg_t;
 

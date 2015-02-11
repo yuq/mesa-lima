@@ -24,7 +24,6 @@ MAIN_FILES = \
 	main/atifragshader.h \
 	main/attrib.c \
 	main/attrib.h \
-	main/bitset.h \
 	main/blend.c \
 	main/blend.h \
 	main/blit.c \

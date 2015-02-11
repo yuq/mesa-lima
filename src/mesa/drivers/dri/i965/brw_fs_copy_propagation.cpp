@@ -34,7 +34,7 @@
 
 #define ACP_HASH_SIZE 16
 
-#include "main/bitset.h"
+#include "util/bitset.h"
 #include "brw_fs.h"
 #include "brw_cfg.h"
 

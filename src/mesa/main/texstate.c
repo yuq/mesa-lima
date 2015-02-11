@@ -40,7 +40,7 @@
 #include "teximage.h"
 #include "texstate.h"
 #include "mtypes.h"
-#include "bitset.h"
+#include "util/bitset.h"
 
 
 /**

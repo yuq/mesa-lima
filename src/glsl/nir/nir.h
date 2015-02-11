@@ -33,7 +33,7 @@
 #include "util/ralloc.h"
 #include "util/set.h"
 #include "main/mtypes.h"
-#include "main/bitset.h"
+#include "util/bitset.h"
 #include "nir_types.h"
 #include <stdio.h>
 
