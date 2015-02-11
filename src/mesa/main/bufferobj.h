@@ -220,7 +220,7 @@ _mesa_GetBufferSubData(GLenum target, GLintptrARB offset,
 void GLAPIENTRY
 _mesa_ClearBufferData(GLenum target, GLenum internalformat,
                       GLenum format, GLenum type,
-                      const GLvoid * data);
+                      const GLvoid *data);
 
 void GLAPIENTRY
 _mesa_ClearNamedBufferData(GLuint buffer, GLenum internalformat,
@@ -231,7 +231,7 @@ void GLAPIENTRY
 _mesa_ClearBufferSubData(GLenum target, GLenum internalformat,
                          GLintptr offset, GLsizeiptr size,
                          GLenum format, GLenum type,
-                         const GLvoid * data);
+                         const GLvoid *data);
 
 void GLAPIENTRY
 _mesa_ClearNamedBufferSubData(GLuint buffer, GLenum internalformat,

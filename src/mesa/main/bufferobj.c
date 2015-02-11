@@ -1794,10 +1794,10 @@ void GLAPIENTRY
 _mesa_ClearBufferSubData(GLenum target, GLenum internalformat,
                          GLintptr offset, GLsizeiptr size,
                          GLenum format, GLenum type,
-                         const GLvoid* data)
+                         const GLvoid *data)
 {
    GET_CURRENT_CONTEXT(ctx);
-   struct gl_buffer_object* bufObj;
+   struct gl_buffer_object *bufObj;
 
    bufObj = get_buffer(ctx, "glClearBufferSubData", target, GL_INVALID_VALUE);
    if (!bufObj)
