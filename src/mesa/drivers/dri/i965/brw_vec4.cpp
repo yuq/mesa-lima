@@ -378,9 +378,9 @@ vec4_visitor::opt_vector_float()
    int last_reg = -1, last_reg_offset = -1;
    enum register_file last_reg_file = BAD_FILE;
 
-   int remaining_channels;
+   int remaining_channels = 0;
    uint8_t imm[4];
-   int inst_count;
+   int inst_count = 0;
    vec4_instruction *imm_inst[4];
 
    foreach_block_and_inst_safe(block, vec4_instruction, inst, cfg) {
