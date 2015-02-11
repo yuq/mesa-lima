@@ -245,9 +245,6 @@ _mesa_ClearNamedBufferSubData(GLuint buffer, GLenum internalformat,
                               GLenum format, GLenum type,
                               const GLvoid *data);
 
-void * GLAPIENTRY
-_mesa_MapBuffer(GLenum target, GLenum access);
-
 GLboolean GLAPIENTRY
 _mesa_UnmapBuffer(GLenum target);
 
@@ -273,6 +270,17 @@ _mesa_CopyNamedBufferSubData(GLuint readBuffer, GLuint writeBuffer,
 void * GLAPIENTRY
 _mesa_MapBufferRange(GLenum target, GLintptr offset, GLsizeiptr length,
                      GLbitfield access);
+
+void * GLAPIENTRY
+_mesa_MapNamedBufferRange(GLuint buffer, GLintptr offset, GLsizeiptr length,
+                          GLbitfield access);
+
+void * GLAPIENTRY
+_mesa_MapBuffer(GLenum target, GLenum access);
+
+void * GLAPIENTRY
+_mesa_MapNamedBuffer(GLuint buffer, GLenum access);
+
 
 void GLAPIENTRY
 _mesa_FlushMappedBufferRange(GLenum target,

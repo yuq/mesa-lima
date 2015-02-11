@@ -2346,6 +2346,28 @@ _mesa_MapBufferRange(GLenum target, GLintptr offset, GLsizeiptr length,
                                  "glMapBufferRange");
 }
 
+void * GLAPIENTRY
+_mesa_MapNamedBufferRange(GLuint buffer, GLintptr offset, GLsizeiptr length,
+                          GLbitfield access)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   struct gl_buffer_object *bufObj;
+
+   if (!ctx->Extensions.ARB_map_buffer_range) {
+      _mesa_error(ctx, GL_INVALID_OPERATION,
+                  "glMapNamedBufferRange("
+                  "ARB_map_buffer_range not supported)");
+      return NULL;
+   }
+
+   bufObj = _mesa_lookup_bufferobj_err(ctx, buffer, "glMapNamedBufferRange");
+   if (!bufObj)
+      return NULL;
+
+   return _mesa_map_buffer_range(ctx, bufObj, offset, length, access,
+                                 "glMapNamedBufferRange");
+}
+
 /**
  * Converts GLenum access from MapBuffer and MapNamedBuffer into
  * flags for input to _mesa_map_buffer_range.
@@ -2389,6 +2411,26 @@ _mesa_MapBuffer(GLenum target, GLenum access)
 
    return _mesa_map_buffer_range(ctx, bufObj, 0, bufObj->Size, accessFlags,
                                  "glMapBuffer");
+}
+
+void * GLAPIENTRY
+_mesa_MapNamedBuffer(GLuint buffer, GLenum access)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   struct gl_buffer_object *bufObj;
+   GLbitfield accessFlags;
+
+   if (!get_map_buffer_access_flags(ctx, access, &accessFlags)) {
+      _mesa_error(ctx, GL_INVALID_ENUM, "glMapNamedBuffer(invalid access)");
+      return NULL;
+   }
+
+   bufObj = _mesa_lookup_bufferobj_err(ctx, buffer, "glMapNamedBuffer");
+   if (!bufObj)
+      return NULL;
+
+   return _mesa_map_buffer_range(ctx, bufObj, 0, bufObj->Size, accessFlags,
+                                 "glMapNamedBuffer");
 }
 
 

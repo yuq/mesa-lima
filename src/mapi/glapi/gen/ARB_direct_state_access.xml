@@ -61,6 +61,20 @@
       <param name="data" type="const GLvoid *" />
    </function>
 
+   <function name="MapNamedBuffer" offset="assign">
+      <return type="GLvoid *" />
+      <param name="buffer" type="GLuint" />
+      <param name="access" type="GLenum" />
+   </function>
+
+   <function name="MapNamedBufferRange" offset="assign">
+      <return type="GLvoid *" />
+      <param name="buffer" type="GLuint" />
+      <param name="offset" type="GLintptr" />
+      <param name="length" type="GLsizeiptr" />
+      <param name="access" type="GLbitfield" />
+   </function>
+
    <!-- Texture object functions -->
 
    <function name="CreateTextures" offset="assign">
