@@ -86,6 +86,10 @@ opt_saturate_propagation_local(fs_visitor *v, bblock_t *block)
                      if (scan_inst->opcode == BRW_OPCODE_MUL) {
                         scan_inst->src[0].negate = !scan_inst->src[0].negate;
                         inst->src[0].negate = false;
+                     } else if (scan_inst->opcode == BRW_OPCODE_MAD) {
+                        scan_inst->src[0].negate = !scan_inst->src[0].negate;
+                        scan_inst->src[1].negate = !scan_inst->src[1].negate;
+                        inst->src[0].negate = false;
                      } else if (scan_inst->opcode == BRW_OPCODE_ADD) {
                         if (scan_inst->src[1].file == IMM) {
                            if (!brw_negate_immediate(scan_inst->src[1].type,
