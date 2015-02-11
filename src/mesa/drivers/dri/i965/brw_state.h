@@ -152,6 +152,13 @@ extern const struct brw_tracked_state gen8_vertices;
 extern const struct brw_tracked_state gen8_vf_topology;
 extern const struct brw_tracked_state gen8_vs_state;
 
+static inline bool
+brw_state_dirty(struct brw_context *brw, GLuint mesa_flags, uint64_t brw_flags)
+{
+   return ((brw->state.dirty.mesa & mesa_flags) |
+           (brw->state.dirty.brw & brw_flags)) != 0;
+}
+
 /* brw_misc_state.c */
 void brw_upload_invariant_state(struct brw_context *brw);
 uint32_t

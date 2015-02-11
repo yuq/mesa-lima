@@ -221,10 +221,18 @@ static void populate_key(struct brw_context *brw,
 
 /* Calculate interpolants for triangle and line rasterization.
  */
-static void
+void
 brw_upload_ff_gs_prog(struct brw_context *brw)
 {
    struct brw_ff_gs_prog_key key;
+
+   if (!brw_state_dirty(brw,
+                        _NEW_LIGHT,
+                        BRW_NEW_PRIMITIVE |
+                        BRW_NEW_TRANSFORM_FEEDBACK |
+                        BRW_NEW_VS_PROG_DATA))
+      return;
+
    /* Populate the key:
     */
    populate_key(brw, &key);
@@ -247,13 +255,3 @@ void gen6_brw_upload_ff_gs_prog(struct brw_context *brw)
 {
    brw_upload_ff_gs_prog(brw);
 }
-
-const struct brw_tracked_state brw_ff_gs_prog = {
-   .dirty = {
-      .mesa  = _NEW_LIGHT,
-      .brw   = BRW_NEW_PRIMITIVE |
-               BRW_NEW_TRANSFORM_FEEDBACK |
-               BRW_NEW_VS_PROG_DATA,
-   },
-   .emit = brw_upload_ff_gs_prog
-};

@@ -409,8 +409,8 @@ brw_setup_vue_key_clip_info(struct brw_context *brw,
    }
 }
 
-
-static void brw_upload_vs_prog(struct brw_context *brw)
+void
+brw_upload_vs_prog(struct brw_context *brw)
 {
    struct gl_context *ctx = &brw->ctx;
    struct brw_vs_prog_key key;
@@ -419,6 +419,17 @@ static void brw_upload_vs_prog(struct brw_context *brw)
       (struct brw_vertex_program *)brw->vertex_program;
    struct gl_program *prog = (struct gl_program *) brw->vertex_program;
    int i;
+
+   if (!brw_state_dirty(brw,
+                        _NEW_BUFFERS |
+                        _NEW_LIGHT |
+                        _NEW_POINT |
+                        _NEW_POLYGON |
+                        _NEW_TEXTURE |
+                        _NEW_TRANSFORM,
+                        BRW_NEW_VERTEX_PROGRAM |
+                        BRW_NEW_VS_ATTRIB_WORKAROUNDS))
+      return;
 
    memset(&key, 0, sizeof(key));
 
@@ -481,22 +492,6 @@ static void brw_upload_vs_prog(struct brw_context *brw)
       }
    }
 }
-
-/* See brw_vs.c:
- */
-const struct brw_tracked_state brw_vs_prog = {
-   .dirty = {
-      .mesa  = _NEW_BUFFERS |
-               _NEW_LIGHT |
-               _NEW_POINT |
-               _NEW_POLYGON |
-               _NEW_TEXTURE |
-               _NEW_TRANSFORM,
-      .brw   = BRW_NEW_VERTEX_PROGRAM |
-               BRW_NEW_VS_ATTRIB_WORKAROUNDS,
-   },
-   .emit = brw_upload_vs_prog
-};
 
 bool
 brw_vs_precompile(struct gl_context *ctx,

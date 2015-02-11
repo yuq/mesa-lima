@@ -292,8 +292,7 @@ do_gs_prog(struct brw_context *brw,
    return true;
 }
 
-
-static void
+void
 brw_upload_gs_prog(struct brw_context *brw)
 {
    struct gl_context *ctx = &brw->ctx;
@@ -302,6 +301,13 @@ brw_upload_gs_prog(struct brw_context *brw)
    /* BRW_NEW_GEOMETRY_PROGRAM */
    struct brw_geometry_program *gp =
       (struct brw_geometry_program *) brw->geometry_program;
+
+   if (!brw_state_dirty(brw,
+                        _NEW_TEXTURE,
+                        BRW_NEW_GEOMETRY_PROGRAM |
+                        BRW_NEW_TRANSFORM_FEEDBACK |
+                        BRW_NEW_VUE_MAP_VS))
+      return;
 
    if (gp == NULL) {
       /* No geometry shader.  Vertex data just passes straight through. */
@@ -357,18 +363,6 @@ brw_upload_gs_prog(struct brw_context *brw)
       brw->state.dirty.brw |= BRW_NEW_VUE_MAP_GEOM_OUT;
    }
 }
-
-
-const struct brw_tracked_state brw_gs_prog = {
-   .dirty = {
-      .mesa  = _NEW_TEXTURE,
-      .brw   = BRW_NEW_GEOMETRY_PROGRAM |
-               BRW_NEW_TRANSFORM_FEEDBACK |
-               BRW_NEW_VUE_MAP_VS,
-   },
-   .emit = brw_upload_gs_prog
-};
-
 
 bool
 brw_gs_precompile(struct gl_context *ctx,

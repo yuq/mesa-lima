@@ -36,17 +36,17 @@
 #include "drivers/common/meta.h"
 #include "intel_batchbuffer.h"
 #include "intel_buffers.h"
+#include "brw_vs.h"
+#include "brw_ff_gs.h"
+#include "brw_gs.h"
+#include "brw_wm.h"
 
 static const struct brw_tracked_state *gen4_atoms[] =
 {
-   &brw_vs_prog, /* must do before GS prog, state base address. */
-   &brw_ff_gs_prog, /* must do before state base address */
-
    &brw_interpolation_map,
 
    &brw_clip_prog, /* must do before state base address */
    &brw_sf_prog, /* must do before state base address */
-   &brw_wm_prog, /* must do before state base address */
 
    /* Once all the programs are done, we know how large urb entry
     * sizes need to be and can decide if we need to change the urb
@@ -107,10 +107,6 @@ static const struct brw_tracked_state *gen4_atoms[] =
 
 static const struct brw_tracked_state *gen6_atoms[] =
 {
-   &brw_vs_prog, /* must do before state base address */
-   &brw_gs_prog, /* must do before state base address */
-   &brw_wm_prog, /* must do before state base address */
-
    &gen6_clip_vp,
    &gen6_sf_vp,
 
@@ -180,10 +176,6 @@ static const struct brw_tracked_state *gen6_atoms[] =
 
 static const struct brw_tracked_state *gen7_atoms[] =
 {
-   &brw_vs_prog,
-   &brw_gs_prog,
-   &brw_wm_prog,
-
    /* Command packets: */
 
    /* must do before binding table pointers, cc state ptrs */
@@ -256,10 +248,6 @@ static const struct brw_tracked_state *gen7_atoms[] =
 
 static const struct brw_tracked_state *gen8_atoms[] =
 {
-   &brw_vs_prog,
-   &brw_gs_prog,
-   &brw_wm_prog,
-
    /* Command packets: */
    &gen8_state_base_address,
 
@@ -565,6 +553,19 @@ brw_print_dirty_count(struct dirty_bit_map *bit_map)
    }
 }
 
+static void
+brw_upload_programs(struct brw_context *brw)
+{
+   brw_upload_vs_prog(brw);
+
+   if (brw->gen < 6)
+      brw_upload_ff_gs_prog(brw);
+   else
+      brw_upload_gs_prog(brw);
+
+   brw_upload_wm_prog(brw);
+}
+
 /***********************************************************************
  * Emit all state:
  */
@@ -618,6 +619,8 @@ void brw_upload_state(struct brw_context *brw)
    /* Emit Sandybridge workaround flushes on every primitive, for safety. */
    if (brw->gen == 6)
       intel_emit_post_sync_nonzero_flush(brw);
+
+   brw_upload_programs(brw);
 
    if (unlikely(INTEL_DEBUG)) {
       /* Debug version which enforces various sanity checks on the

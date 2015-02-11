@@ -582,14 +582,31 @@ static void brw_wm_populate_key( struct brw_context *brw,
    key->program_string_id = fp->id;
 }
 
-
-static void
+void
 brw_upload_wm_prog(struct brw_context *brw)
 {
    struct gl_context *ctx = &brw->ctx;
    struct brw_wm_prog_key key;
    struct brw_fragment_program *fp = (struct brw_fragment_program *)
       brw->fragment_program;
+
+   if (!brw_state_dirty(brw,
+                        _NEW_BUFFERS |
+                        _NEW_COLOR |
+                        _NEW_DEPTH |
+                        _NEW_FRAG_CLAMP |
+                        _NEW_HINT |
+                        _NEW_LIGHT |
+                        _NEW_LINE |
+                        _NEW_MULTISAMPLE |
+                        _NEW_POLYGON |
+                        _NEW_STENCIL |
+                        _NEW_TEXTURE,
+                        BRW_NEW_FRAGMENT_PROGRAM |
+                        BRW_NEW_REDUCED_PRIMITIVE |
+                        BRW_NEW_STATS_WM |
+                        BRW_NEW_VUE_MAP_GEOM_OUT))
+      return;
 
    brw_wm_populate_key(brw, &key);
 
@@ -603,26 +620,3 @@ brw_upload_wm_prog(struct brw_context *brw)
    }
    brw->wm.base.prog_data = &brw->wm.prog_data->base;
 }
-
-
-const struct brw_tracked_state brw_wm_prog = {
-   .dirty = {
-      .mesa  = _NEW_BUFFERS |
-               _NEW_COLOR |
-               _NEW_DEPTH |
-               _NEW_FRAG_CLAMP |
-               _NEW_HINT |
-               _NEW_LIGHT |
-               _NEW_LINE |
-               _NEW_MULTISAMPLE |
-               _NEW_POLYGON |
-               _NEW_STENCIL |
-               _NEW_TEXTURE,
-      .brw   = BRW_NEW_FRAGMENT_PROGRAM |
-               BRW_NEW_REDUCED_PRIMITIVE |
-               BRW_NEW_STATS_WM |
-               BRW_NEW_VUE_MAP_GEOM_OUT,
-   },
-   .emit = brw_upload_wm_prog
-};
-

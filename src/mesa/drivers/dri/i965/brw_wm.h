@@ -83,4 +83,7 @@ void brw_wm_debug_recompile(struct brw_context *brw,
                             const struct brw_wm_prog_key *key);
 bool brw_wm_prog_data_compare(const void *a, const void *b);
 
+void
+brw_upload_wm_prog(struct brw_context *brw);
+
 #endif
