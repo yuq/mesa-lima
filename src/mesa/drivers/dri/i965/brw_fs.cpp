@@ -2393,6 +2393,7 @@ fs_visitor::opt_algebraic()
                   if (inst->src[1].fixed_hw_reg.dw1.f >= 1.0f) {
                      inst->opcode = BRW_OPCODE_MOV;
                      inst->src[1] = reg_undef;
+                     inst->conditional_mod = BRW_CONDITIONAL_NONE;
                      progress = true;
                   }
                   break;
