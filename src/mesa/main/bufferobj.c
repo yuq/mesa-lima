@@ -272,13 +272,17 @@ buffer_object_subdata_range_good(struct gl_context *ctx,
 
    if (mappedRange) {
       if (bufferobj_range_mapped(bufObj, offset, size)) {
-         _mesa_error(ctx, GL_INVALID_OPERATION, "%s", caller);
+         _mesa_error(ctx, GL_INVALID_OPERATION,
+                     "%s(range is mapped without persistent bit)",
+                     caller);
          return false;
       }
    }
    else {
       if (_mesa_bufferobj_mapped(bufObj, MAP_USER)) {
-         _mesa_error(ctx, GL_INVALID_OPERATION, "%s", caller);
+         _mesa_error(ctx, GL_INVALID_OPERATION,
+                     "%s(buffer is mapped without persistent bit)",
+                     caller);
          return false;
       }
    }
@@ -1642,7 +1646,7 @@ _mesa_buffer_sub_data(struct gl_context *ctx, struct gl_buffer_object *bufObj,
    bufObj->Written = GL_TRUE;
 
    assert(ctx->Driver.BufferSubData);
-   ctx->Driver.BufferSubData( ctx, offset, size, data, bufObj );
+   ctx->Driver.BufferSubData(ctx, offset, size, data, bufObj);
 }
 
 void GLAPIENTRY
