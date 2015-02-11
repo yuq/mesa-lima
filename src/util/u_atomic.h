@@ -88,9 +88,9 @@
 
 #if _MSC_VER < 1600
 
-/* Implement _InterlockedCompareExchange8 in terms of InterlockedCompareExchange16 */
-static __inline
-char _InterlockedCompareExchange8(char volatile *Destination8, char Exchange8, char Comparand8)
+/* Implement _InterlockedCompareExchange8 in terms of _InterlockedCompareExchange16 */
+static __inline char
+_InterlockedCompareExchange8(char volatile *Destination8, char Exchange8, char Comparand8)
 {
    INT_PTR DestinationAddr = (INT_PTR)Destination8;
    short volatile *Destination16 = (short volatile *)(DestinationAddr & ~1);
@@ -103,7 +103,7 @@ char _InterlockedCompareExchange8(char volatile *Destination8, char Exchange8, c
        * neighboring byte untouched */
       short Exchange16 = (Initial16 & ~Mask8) | ((short)Exchange8 << Shift8);
       short Comparand16 = Initial16;
-      short Initial16 = InterlockedCompareExchange16(Destination16, Exchange16, Comparand16);
+      short Initial16 = _InterlockedCompareExchange16(Destination16, Exchange16, Comparand16);
       if (Initial16 == Comparand16) {
          /* succeeded */
          return Comparand8;
@@ -112,6 +112,35 @@ char _InterlockedCompareExchange8(char volatile *Destination8, char Exchange8, c
       Initial8 = Initial16 >> Shift8;
    }
    return Initial8;
+}
+
+/* Implement _InterlockedExchangeAdd16 in terms of _InterlockedCompareExchange16 */
+static __inline short
+_InterlockedExchangeAdd16(short volatile *Addend, short Value)
+{
+   short Initial = *Addend;
+   short Comparand;
+   do {
+      short Exchange = Initial + Value;
+      Comparand = Initial;
+      /* if *Addend==Comparand then *Addend=Exchange, return original *Addend */
+      Initial = _InterlockedCompareExchange16(Addend, Exchange, Comparand);
+   } while(Initial != Comparand);
+   return Comparand;
+}
+
+/* Implement _InterlockedExchangeAdd8 in terms of _InterlockedCompareExchange8 */
+static __inline char
+_InterlockedExchangeAdd8(char volatile *Addend, char Value)
+{
+   char Initial = *Addend;
+   char Comparand;
+   do {
+      char Exchange = Initial + Value;
+      Comparand = Initial;
+      Initial = _InterlockedCompareExchange8(Addend, Exchange, Comparand);
+   } while(Initial != Comparand);
+   return Comparand;
 }
 
 #endif /* _MSC_VER < 1600 */
