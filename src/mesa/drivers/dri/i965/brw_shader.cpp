@@ -607,10 +607,10 @@ brw_saturate_immediate(enum brw_reg_type type, struct brw_reg *reg)
    case BRW_REGISTER_TYPE_V:
    case BRW_REGISTER_TYPE_UV:
    case BRW_REGISTER_TYPE_VF:
-      assert(!"unimplemented: saturate vector immediate");
+      unreachable("unimplemented: saturate vector immediate");
    case BRW_REGISTER_TYPE_DF:
    case BRW_REGISTER_TYPE_HF:
-      assert(!"unimplemented: saturate DF/HF immediate");
+      unreachable("unimplemented: saturate DF/HF immediate");
    }
 
    if (imm.ud != sat_imm.ud) {
