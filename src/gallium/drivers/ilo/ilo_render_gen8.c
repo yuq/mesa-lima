@@ -393,3 +393,72 @@ ilo_render_get_draw_commands_len_gen8(const struct ilo_render *render,
 
    return len;
 }
+
+int
+ilo_render_get_rectlist_commands_len_gen8(const struct ilo_render *render,
+                                          const struct ilo_blitter *blitter)
+{
+   ILO_DEV_ASSERT(render->dev, 8, 8);
+
+   return 64;
+}
+
+void
+ilo_render_emit_rectlist_commands_gen8(struct ilo_render *r,
+                                       const struct ilo_blitter *blitter,
+                                       const struct ilo_render_rectlist_session *session)
+{
+   uint32_t op;
+
+   ILO_DEV_ASSERT(r->dev, 8, 8);
+
+   gen8_wa_pre_depth(r);
+
+   if (blitter->uses & (ILO_BLITTER_USE_FB_DEPTH |
+                        ILO_BLITTER_USE_FB_STENCIL)) {
+      gen6_3DSTATE_DEPTH_BUFFER(r->builder,
+            &blitter->fb.dst.u.zs, true);
+   }
+
+   if (blitter->uses & ILO_BLITTER_USE_FB_DEPTH) {
+      gen6_3DSTATE_HIER_DEPTH_BUFFER(r->builder,
+            &blitter->fb.dst.u.zs);
+   }
+
+   if (blitter->uses & ILO_BLITTER_USE_FB_STENCIL) {
+      gen6_3DSTATE_STENCIL_BUFFER(r->builder,
+            &blitter->fb.dst.u.zs);
+   }
+
+   gen7_3DSTATE_CLEAR_PARAMS(r->builder,
+         blitter->depth_clear_value);
+
+   gen6_3DSTATE_DRAWING_RECTANGLE(r->builder, 0, 0,
+         blitter->fb.width, blitter->fb.height);
+
+   switch (blitter->op) {
+   case ILO_BLITTER_RECTLIST_CLEAR_ZS:
+      op = 0;
+      if (blitter->uses & ILO_BLITTER_USE_FB_DEPTH)
+         op |= GEN8_WM_HZ_DW1_DEPTH_CLEAR;
+      if (blitter->uses & ILO_BLITTER_USE_FB_STENCIL)
+         op |= GEN8_WM_HZ_DW1_STENCIL_CLEAR;
+      break;
+   case ILO_BLITTER_RECTLIST_RESOLVE_Z:
+      op = GEN8_WM_HZ_DW1_DEPTH_RESOLVE;
+      break;
+   case ILO_BLITTER_RECTLIST_RESOLVE_HIZ:
+      op = GEN8_WM_HZ_DW1_HIZ_RESOLVE;
+      break;
+   default:
+      op = 0;
+      break;
+   }
+
+   gen8_3DSTATE_WM_HZ_OP(r->builder, op, blitter->fb.width,
+         blitter->fb.height, blitter->fb.num_samples);
+
+   gen8_pipe_control(r, GEN6_PIPE_CONTROL_WRITE_IMM);
+
+   gen8_disable_3DSTATE_WM_HZ_OP(r->builder);
+}

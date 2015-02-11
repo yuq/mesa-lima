@@ -416,9 +416,9 @@ int
 ilo_render_get_rectlist_dynamic_states_len(const struct ilo_render *render,
                                            const struct ilo_blitter *blitter)
 {
-   ILO_DEV_ASSERT(render->dev, 6, 7.5);
+   ILO_DEV_ASSERT(render->dev, 6, 8);
 
-   return 96;
+   return (ilo_dev_gen(render->dev) >= ILO_GEN(8)) ? 0 : 96;
 }
 
 void
@@ -428,7 +428,10 @@ ilo_render_emit_rectlist_dynamic_states(struct ilo_render *render,
 {
    const unsigned dynamic_used = ilo_builder_dynamic_used(render->builder);
 
-   ILO_DEV_ASSERT(render->dev, 6, 7.5);
+   ILO_DEV_ASSERT(render->dev, 6, 8);
+
+   if (ilo_dev_gen(render->dev) >= ILO_GEN(8))
+      return;
 
    /* both are inclusive */
    session->vb_start = gen6_user_vertex_buffer(render->builder,

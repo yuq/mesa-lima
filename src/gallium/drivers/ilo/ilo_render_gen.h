@@ -240,11 +240,18 @@ int
 ilo_render_get_rectlist_commands_len_gen6(const struct ilo_render *render,
                                           const struct ilo_blitter *blitter);
 
+int
+ilo_render_get_rectlist_commands_len_gen8(const struct ilo_render *render,
+                                          const struct ilo_blitter *blitter);
+
 static inline int
 ilo_render_get_rectlist_commands_len(const struct ilo_render *render,
                                      const struct ilo_blitter *blitter)
 {
-   return ilo_render_get_rectlist_commands_len_gen6(render, blitter);
+   if (ilo_dev_gen(render->dev) >= ILO_GEN(8))
+      return ilo_render_get_rectlist_commands_len_gen8(render, blitter);
+   else
+      return ilo_render_get_rectlist_commands_len_gen6(render, blitter);
 }
 
 void
@@ -257,6 +264,11 @@ ilo_render_emit_rectlist_commands_gen7(struct ilo_render *r,
                                        const struct ilo_blitter *blitter,
                                        const struct ilo_render_rectlist_session *session);
 
+void
+ilo_render_emit_rectlist_commands_gen8(struct ilo_render *r,
+                                       const struct ilo_blitter *blitter,
+                                       const struct ilo_render_rectlist_session *session);
+
 static inline void
 ilo_render_emit_rectlist_commands(struct ilo_render *render,
                                   const struct ilo_blitter *blitter,
@@ -264,7 +276,9 @@ ilo_render_emit_rectlist_commands(struct ilo_render *render,
 {
    const unsigned batch_used = ilo_builder_batch_used(render->builder);
 
-   if (ilo_dev_gen(render->dev) >= ILO_GEN(7))
+   if (ilo_dev_gen(render->dev) >= ILO_GEN(8))
+      ilo_render_emit_rectlist_commands_gen8(render, blitter, session);
+   else if (ilo_dev_gen(render->dev) >= ILO_GEN(7))
       ilo_render_emit_rectlist_commands_gen7(render, blitter, session);
    else
       ilo_render_emit_rectlist_commands_gen6(render, blitter, session);

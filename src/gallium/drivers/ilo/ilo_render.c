@@ -405,7 +405,7 @@ int
 ilo_render_get_rectlist_len(const struct ilo_render *render,
                             const struct ilo_blitter *blitter)
 {
-   ILO_DEV_ASSERT(render->dev, 6, 7.5);
+   ILO_DEV_ASSERT(render->dev, 6, 8);
 
    return ilo_render_get_rectlist_dynamic_states_len(render, blitter) +
           ilo_render_get_rectlist_commands_len(render, blitter);
@@ -417,7 +417,7 @@ ilo_render_emit_rectlist(struct ilo_render *render,
 {
    struct ilo_render_rectlist_session session;
 
-   ILO_DEV_ASSERT(render->dev, 6, 7.5);
+   ILO_DEV_ASSERT(render->dev, 6, 8);
 
    memset(&session, 0, sizeof(session));
    ilo_render_emit_rectlist_dynamic_states(render, blitter, &session);
