@@ -1024,13 +1024,13 @@ fs_generator::generate_uniform_pull_constant_load_gen7(fs_inst *inst,
 
    if (brw->gen >= 9) {
       /* Skylake requires a message header in order to use SIMD4x2 mode. */
-      src = retype(brw_vec8_grf(offset.nr - 1, 0), BRW_REGISTER_TYPE_UD);
+      src = retype(brw_vec4_grf(offset.nr - 1, 0), BRW_REGISTER_TYPE_UD);
       mlen = 2;
       header_present = true;
 
       brw_push_insn_state(p);
       brw_set_default_mask_control(p, BRW_MASK_DISABLE);
-      brw_MOV(p, src, retype(brw_vec8_grf(0, 0), BRW_REGISTER_TYPE_UD));
+      brw_MOV(p, src, retype(brw_vec4_grf(0, 0), BRW_REGISTER_TYPE_UD));
       brw_set_default_access_mode(p, BRW_ALIGN_1);
 
       brw_MOV(p, get_element_ud(src, 2),
