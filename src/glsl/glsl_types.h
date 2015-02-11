@@ -28,7 +28,6 @@
 
 #include <string.h>
 #include <assert.h>
-#include "main/mtypes.h" /* for gl_texture_index, C++'s enum rules are broken */
 
 #ifdef __cplusplus
 extern "C" {
@@ -104,6 +103,7 @@ enum glsl_matrix_layout {
 #ifdef __cplusplus
 #include "GL/gl.h"
 #include "util/ralloc.h"
+#include "main/mtypes.h" /* for gl_texture_index, C++'s enum rules are broken */
 
 struct glsl_type {
    GLenum gl_type;
