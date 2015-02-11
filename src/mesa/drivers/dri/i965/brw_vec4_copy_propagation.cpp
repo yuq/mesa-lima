@@ -238,7 +238,7 @@ try_constant_propagate(struct brw_context *brw, vec4_instruction *inst,
 
 static bool
 try_copy_propagate(struct brw_context *brw, vec4_instruction *inst,
-                   int arg, struct copy_entry *entry, int reg)
+                   int arg, struct copy_entry *entry)
 {
    /* For constant propagation, we only handle the same constant
     * across all 4 channels.  Some day, we should handle the 8-bit
@@ -413,7 +413,7 @@ vec4_visitor::opt_copy_propagation(bool do_constant_prop)
          if (do_constant_prop && try_constant_propagate(brw, inst, i, &entry))
             progress = true;
 
-	 if (try_copy_propagate(brw, inst, i, &entry, reg))
+	 if (try_copy_propagate(brw, inst, i, &entry))
 	    progress = true;
       }
 

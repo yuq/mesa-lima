@@ -866,8 +866,7 @@ vec4_generator::generate_oword_dual_block_offsets(struct brw_reg m1,
 }
 
 void
-vec4_generator::generate_unpack_flags(vec4_instruction *inst,
-                                      struct brw_reg dst)
+vec4_generator::generate_unpack_flags(struct brw_reg dst)
 {
    brw_push_insn_state(p);
    brw_set_default_mask_control(p, BRW_MASK_DISABLE);
@@ -1510,7 +1509,7 @@ vec4_generator::generate_code(const cfg_t *cfg)
          break;
 
       case VS_OPCODE_UNPACK_FLAGS_SIMD4X2:
-         generate_unpack_flags(inst, dst);
+         generate_unpack_flags(dst);
          break;
 
       case VEC4_OPCODE_PACK_BYTES: {
