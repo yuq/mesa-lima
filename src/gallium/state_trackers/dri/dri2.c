@@ -368,7 +368,7 @@ dri2_allocate_textures(struct dri_context *ctx,
    /* Image specific variables */
    struct __DRIimageList images;
    /* Dri2 specific variables */
-   __DRIbuffer *buffers;
+   __DRIbuffer *buffers = NULL;
    struct winsys_handle whandle;
    unsigned num_buffers = statts_count;
 
