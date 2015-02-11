@@ -292,6 +292,26 @@ get_back_bo(struct dri2_egl_surface *dri2_surf)
    struct dri2_egl_display *dri2_dpy =
       dri2_egl_display(dri2_surf->base.Resource.Display);
    int i;
+   unsigned int dri_image_format;
+
+   /* currently supports three WL DRM formats,
+    * WL_DRM_FORMAT_ARGB8888, WL_DRM_FORMAT_XRGB8888,
+    * and WL_DRM_FORMAT_RGB565
+    */
+   switch (dri2_surf->format) {
+   case WL_DRM_FORMAT_ARGB8888:
+      dri_image_format = __DRI_IMAGE_FORMAT_ARGB8888;
+      break;
+   case WL_DRM_FORMAT_XRGB8888:
+      dri_image_format = __DRI_IMAGE_FORMAT_XRGB8888;
+      break;
+   case WL_DRM_FORMAT_RGB565:
+      dri_image_format = __DRI_IMAGE_FORMAT_RGB565;
+      break;
+   default:
+      /* format is not supported */
+      return -1;
+   }
 
    /* We always want to throttle to some event (either a frame callback or
     * a sync request) after the commit so that we can be sure the
@@ -322,7 +342,7 @@ get_back_bo(struct dri2_egl_surface *dri2_surf)
          dri2_dpy->image->createImage(dri2_dpy->dri_screen,
                                       dri2_surf->base.Width,
                                       dri2_surf->base.Height,
-                                      __DRI_IMAGE_FORMAT_ARGB8888,
+                                      dri_image_format,
                                       __DRI_IMAGE_USE_SHARE,
                                       NULL);
       dri2_surf->back->age = 0;
@@ -462,10 +482,25 @@ dri2_wl_get_buffers(__DRIdrawable * driDrawable,
                     unsigned int *attachments, int count,
                     int *out_count, void *loaderPrivate)
 {
+   struct dri2_egl_surface *dri2_surf = loaderPrivate;
    unsigned int *attachments_with_format;
    __DRIbuffer *buffer;
-   const unsigned int format = 32;
+   unsigned int bpp;
+
    int i;
+
+   switch (dri2_surf->format) {
+   case WL_DRM_FORMAT_ARGB8888:
+   case WL_DRM_FORMAT_XRGB8888:
+      bpp = 32;
+      break;
+   case WL_DRM_FORMAT_RGB565:
+      bpp = 16;
+      break;
+   default:
+      /* format is not supported */
+      return NULL;
+   }
 
    attachments_with_format = calloc(count, 2 * sizeof(unsigned int));
    if (!attachments_with_format) {
@@ -475,7 +510,7 @@ dri2_wl_get_buffers(__DRIdrawable * driDrawable,
 
    for (i = 0; i < count; ++i) {
       attachments_with_format[2*i] = attachments[i];
-      attachments_with_format[2*i + 1] = format;
+      attachments_with_format[2*i + 1] = bpp;
    }
 
    buffer =
