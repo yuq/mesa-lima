@@ -129,9 +129,12 @@ brw_vec4_alloc_reg_set(struct intel_screen *screen)
     * between them and the base GRF registers (and also each other).
     */
    int reg = 0;
+   unsigned *q_values[MAX_VGRF_SIZE];
    for (int i = 0; i < class_count; i++) {
       int class_reg_count = base_reg_count - (class_sizes[i] - 1);
       screen->vec4_reg_set.classes[i] = ra_alloc_reg_class(screen->vec4_reg_set.regs);
+
+      q_values[i] = new unsigned[MAX_VGRF_SIZE];
 
       for (int j = 0; j < class_reg_count; j++) {
 	 ra_class_add_reg(screen->vec4_reg_set.regs, screen->vec4_reg_set.classes[i], reg);
@@ -146,10 +149,23 @@ brw_vec4_alloc_reg_set(struct intel_screen *screen)
 
 	 reg++;
       }
+
+      for (int j = 0; j < class_count; j++) {
+         /* Calculate the q values manually because the algorithm used by
+          * ra_set_finalize() to do it has higher complexity affecting the
+          * start-up time of some applications.  q(i, j) is just the maximum
+          * number of registers from class i a register from class j can
+          * conflict with.
+          */
+         q_values[i][j] = class_sizes[i] + class_sizes[j] - 1;
+      }
    }
    assert(reg == ra_reg_count);
 
-   ra_set_finalize(screen->vec4_reg_set.regs, NULL);
+   ra_set_finalize(screen->vec4_reg_set.regs, q_values);
+
+   for (int i = 0; i < MAX_VGRF_SIZE; i++)
+      delete[] q_values[i];
 }
 
 void
