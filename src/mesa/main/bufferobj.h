@@ -223,10 +223,21 @@ _mesa_ClearBufferData(GLenum target, GLenum internalformat,
                       const GLvoid * data);
 
 void GLAPIENTRY
+_mesa_ClearNamedBufferData(GLuint buffer, GLenum internalformat,
+                           GLenum format, GLenum type,
+                           const GLvoid *data);
+
+void GLAPIENTRY
 _mesa_ClearBufferSubData(GLenum target, GLenum internalformat,
                          GLintptr offset, GLsizeiptr size,
                          GLenum format, GLenum type,
                          const GLvoid * data);
+
+void GLAPIENTRY
+_mesa_ClearNamedBufferSubData(GLuint buffer, GLenum internalformat,
+                              GLintptr offset, GLsizeiptr size,
+                              GLenum format, GLenum type,
+                              const GLvoid *data);
 
 void * GLAPIENTRY
 _mesa_MapBuffer(GLenum target, GLenum access);

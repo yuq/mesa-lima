@@ -1773,6 +1773,22 @@ _mesa_ClearBufferData(GLenum target, GLenum internalformat, GLenum format,
                                "glClearBufferData", false);
 }
 
+void GLAPIENTRY
+_mesa_ClearNamedBufferData(GLuint buffer, GLenum internalformat,
+                           GLenum format, GLenum type, const GLvoid *data)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   struct gl_buffer_object *bufObj;
+
+   bufObj = _mesa_lookup_bufferobj_err(ctx, buffer, "glClearNamedBufferData");
+   if (!bufObj)
+      return;
+
+   _mesa_clear_buffer_sub_data(ctx, bufObj, internalformat, 0, bufObj->Size,
+                               format, type, data,
+                               "glClearNamedBufferData", false);
+}
+
 
 void GLAPIENTRY
 _mesa_ClearBufferSubData(GLenum target, GLenum internalformat,
@@ -1790,6 +1806,25 @@ _mesa_ClearBufferSubData(GLenum target, GLenum internalformat,
    _mesa_clear_buffer_sub_data(ctx, bufObj, internalformat, offset, size,
                                format, type, data,
                                "glClearBufferSubData", true);
+}
+
+void GLAPIENTRY
+_mesa_ClearNamedBufferSubData(GLuint buffer, GLenum internalformat,
+                              GLintptr offset, GLsizeiptr size,
+                              GLenum format, GLenum type,
+                              const GLvoid *data)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   struct gl_buffer_object *bufObj;
+
+   bufObj = _mesa_lookup_bufferobj_err(ctx, buffer,
+                                       "glClearNamedBufferSubData");
+   if (!bufObj)
+      return;
+
+   _mesa_clear_buffer_sub_data(ctx, bufObj, internalformat, offset, size,
+                               format, type, data,
+                               "glClearNamedBufferSubData", true);
 }
 
 
