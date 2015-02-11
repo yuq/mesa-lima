@@ -710,8 +710,8 @@ _mesa_GetQueryObjectiv(GLuint id, GLenum pname, GLint *params)
          }
          break;
       case GL_QUERY_RESULT_AVAILABLE_ARB:
-	 if (!q->Ready)
-	    ctx->Driver.CheckQuery( ctx, q );
+         if (!q->Ready)
+            ctx->Driver.CheckQuery( ctx, q );
          *params = q->Ready;
          break;
       default:
@@ -761,8 +761,8 @@ _mesa_GetQueryObjectuiv(GLuint id, GLenum pname, GLuint *params)
          }
          break;
       case GL_QUERY_RESULT_AVAILABLE_ARB:
-	 if (!q->Ready)
-	    ctx->Driver.CheckQuery( ctx, q );
+         if (!q->Ready)
+            ctx->Driver.CheckQuery( ctx, q );
          *params = q->Ready;
          break;
       default:
@@ -801,8 +801,8 @@ _mesa_GetQueryObjecti64v(GLuint id, GLenum pname, GLint64EXT *params)
          *params = q->Result;
          break;
       case GL_QUERY_RESULT_AVAILABLE_ARB:
-	 if (!q->Ready)
-	    ctx->Driver.CheckQuery( ctx, q );
+         if (!q->Ready)
+            ctx->Driver.CheckQuery( ctx, q );
          *params = q->Ready;
          break;
       default:
@@ -841,8 +841,8 @@ _mesa_GetQueryObjectui64v(GLuint id, GLenum pname, GLuint64EXT *params)
          *params = q->Result;
          break;
       case GL_QUERY_RESULT_AVAILABLE_ARB:
-	 if (!q->Ready)
-	    ctx->Driver.CheckQuery( ctx, q );
+         if (!q->Ready)
+            ctx->Driver.CheckQuery( ctx, q );
          *params = q->Ready;
          break;
       default:
