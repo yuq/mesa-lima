@@ -26,6 +26,7 @@
  */
 
 #include "nir.h"
+#include "main/config.h"
 #include <assert.h>
 
 /*

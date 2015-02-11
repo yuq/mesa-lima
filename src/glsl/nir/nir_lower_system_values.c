@@ -26,6 +26,7 @@
  */
 
 #include "nir.h"
+#include "main/mtypes.h"
 
 static void
 convert_instr(nir_intrinsic_instr *instr)

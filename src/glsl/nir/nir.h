@@ -32,7 +32,6 @@
 #include "GL/gl.h" /* GLenum */
 #include "util/ralloc.h"
 #include "util/set.h"
-#include "main/mtypes.h"
 #include "util/bitset.h"
 #include "nir_types.h"
 #include <stdio.h>
@@ -42,6 +41,9 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+struct gl_program;
+struct gl_shader_program;
 
 #define NIR_FALSE 0u
 #define NIR_TRUE (~0u)
