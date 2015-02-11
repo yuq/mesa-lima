@@ -37,8 +37,9 @@
 #include "u_atomic.h"
 
 
-#define test_atomic_cmpxchg(type, ones) \
-   static void test_atomic_cmpxchg_##type (void) { \
+/* Test operations that are supported for all types, including 8 bits types */
+#define test_atomic_8bits(type, ones) \
+   static void test_atomic_8bits_##type (void) { \
       type v, r; \
       \
       p_atomic_set(&v, ones); \
@@ -55,18 +56,24 @@
       assert(v == 0 && "p_atomic_cmpxchg"); \
       assert(r == ones && "p_atomic_cmpxchg"); \
       \
+      v = 23; \
+      p_atomic_add(&v, 42); \
+      r = p_atomic_read(&v); \
+      assert(r == 65 && "p_atomic_add"); \
+      \
       (void) r; \
    }
 
 
+/* Test operations that are not supported for 8 bits types */
 #define test_atomic(type, ones) \
-   test_atomic_cmpxchg(type, ones) \
+   test_atomic_8bits(type, ones) \
    \
    static void test_atomic_##type (void) { \
       type v, r; \
       bool b; \
       \
-      test_atomic_cmpxchg_##type(); \
+      test_atomic_8bits_##type(); \
       \
       v = 2; \
       b = p_atomic_dec_zero(&v); \
@@ -97,11 +104,6 @@
       assert(v == ones && "p_atomic_dec_return"); \
       assert(r == v && "p_atomic_dec_return"); \
       \
-      v = 23; \
-      p_atomic_add(&v, 42); \
-      r = p_atomic_read(&v); \
-      assert(r == 65 && "p_atomic_add"); \
-      \
       (void) r; \
       (void) b; \
    }
@@ -117,9 +119,9 @@ test_atomic(uint32_t, UINT32_C(0xffffffff))
 test_atomic(int64_t, INT64_C(-1))
 test_atomic(uint64_t, UINT64_C(0xffffffffffffffff))
 
-test_atomic_cmpxchg(int8_t, INT8_C(-1))
-test_atomic_cmpxchg(uint8_t, UINT8_C(0xff))
-test_atomic_cmpxchg(bool, true)
+test_atomic_8bits(int8_t, INT8_C(-1))
+test_atomic_8bits(uint8_t, UINT8_C(0xff))
+test_atomic_8bits(bool, true)
 
 int
 main()
@@ -134,9 +136,9 @@ main()
    test_atomic_int64_t();
    test_atomic_uint64_t();
 
-   test_atomic_cmpxchg_int8_t();
-   test_atomic_cmpxchg_uint8_t();
-   test_atomic_cmpxchg_bool();
+   test_atomic_8bits_int8_t();
+   test_atomic_8bits_uint8_t();
+   test_atomic_8bits_bool();
 
    return 0;
 }
