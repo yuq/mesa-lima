@@ -56,7 +56,6 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 static void r200Clear( struct gl_context *ctx, GLbitfield mask )
 {
-   r200ContextPtr rmesa = R200_CONTEXT(ctx);
    GLuint hwmask, swmask;
    GLuint hwbits = BUFFER_BIT_FRONT_LEFT | BUFFER_BIT_BACK_LEFT |
                    BUFFER_BIT_DEPTH | BUFFER_BIT_STENCIL |
