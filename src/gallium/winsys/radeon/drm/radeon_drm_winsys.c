@@ -309,6 +309,21 @@ static boolean do_winsys_init(struct radeon_drm_winsys *ws)
 	}
     }
 
+    /* Check for userptr support. */
+    {
+        struct drm_radeon_gem_userptr args = {0};
+
+        /* If the ioctl doesn't exist, -EINVAL is returned.
+         *
+         * If the ioctl exists, it should return -EACCES
+         * if RADEON_GEM_USERPTR_READONLY or RADEON_GEM_USERPTR_REGISTER
+         * aren't set.
+         */
+        ws->info.has_userptr =
+            drmCommandWriteRead(ws->fd, DRM_RADEON_GEM_USERPTR,
+                                &args, sizeof(args)) == -EACCES;
+    }
+
     /* Get GEM info. */
     retval = drmCommandWriteRead(ws->fd, DRM_RADEON_GEM_INFO,
             &gem_info, sizeof(gem_info));

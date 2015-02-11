@@ -32,6 +32,25 @@
 
 #include "radeon_winsys.h"
 #include "os/os_thread.h"
+#include <radeon_drm.h>
+
+#ifndef DRM_RADEON_GEM_USERPTR
+
+#define DRM_RADEON_GEM_USERPTR		0x2d
+
+#define RADEON_GEM_USERPTR_READONLY	(1 << 0)
+#define RADEON_GEM_USERPTR_ANONONLY	(1 << 1)
+#define RADEON_GEM_USERPTR_VALIDATE	(1 << 2)
+#define RADEON_GEM_USERPTR_REGISTER	(1 << 3)
+
+struct drm_radeon_gem_userptr {
+       uint64_t                addr;
+       uint64_t                size;
+       uint32_t                flags;
+       uint32_t                handle;
+};
+
+#endif
 
 struct radeon_drm_cs;
 
