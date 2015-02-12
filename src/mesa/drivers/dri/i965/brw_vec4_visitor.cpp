@@ -2613,6 +2613,7 @@ vec4_visitor::visit(ir_texture *ir)
       is_high_sampler(brw, sampler_reg);
    inst->base_mrf = 2;
    inst->mlen = inst->header_present + 1; /* always at least one */
+   inst->dst.writemask = WRITEMASK_XYZW;
    inst->shadow_compare = ir->shadow_comparitor != NULL;
 
    inst->src[1] = sampler_reg;
