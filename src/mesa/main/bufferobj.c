@@ -1912,128 +1912,99 @@ _mesa_UnmapNamedBuffer(GLuint buffer)
    return _mesa_unmap_buffer(ctx, bufObj, "glUnmapNamedBuffer");
 }
 
+
+static bool
+get_buffer_parameter(struct gl_context *ctx,
+                     struct gl_buffer_object *bufObj, GLenum pname,
+                     GLint64 *params, const char *func)
+{
+   switch (pname) {
+   case GL_BUFFER_SIZE_ARB:
+      *params = bufObj->Size;
+      break;
+   case GL_BUFFER_USAGE_ARB:
+      *params = bufObj->Usage;
+      break;
+   case GL_BUFFER_ACCESS_ARB:
+      *params = simplified_access_mode(ctx,
+                            bufObj->Mappings[MAP_USER].AccessFlags);
+      break;
+   case GL_BUFFER_MAPPED_ARB:
+      *params = _mesa_bufferobj_mapped(bufObj, MAP_USER);
+      break;
+   case GL_BUFFER_ACCESS_FLAGS:
+      if (!ctx->Extensions.ARB_map_buffer_range)
+         goto invalid_pname;
+      *params = bufObj->Mappings[MAP_USER].AccessFlags;
+      break;
+   case GL_BUFFER_MAP_OFFSET:
+      if (!ctx->Extensions.ARB_map_buffer_range)
+         goto invalid_pname;
+      *params = bufObj->Mappings[MAP_USER].Offset;
+      break;
+   case GL_BUFFER_MAP_LENGTH:
+      if (!ctx->Extensions.ARB_map_buffer_range)
+         goto invalid_pname;
+      *params = bufObj->Mappings[MAP_USER].Length;
+      break;
+   case GL_BUFFER_IMMUTABLE_STORAGE:
+      if (!ctx->Extensions.ARB_buffer_storage)
+         goto invalid_pname;
+      *params = bufObj->Immutable;
+      break;
+   case GL_BUFFER_STORAGE_FLAGS:
+      if (!ctx->Extensions.ARB_buffer_storage)
+         goto invalid_pname;
+      *params = bufObj->StorageFlags;
+      break;
+   default:
+      goto invalid_pname;
+   }
+
+   return true;
+
+invalid_pname:
+   _mesa_error(ctx, GL_INVALID_ENUM, "%s(invalid pname: %s)", func,
+               _mesa_lookup_enum_by_nr(pname));
+   return false;
+}
+
 void GLAPIENTRY
 _mesa_GetBufferParameteriv(GLenum target, GLenum pname, GLint *params)
 {
    GET_CURRENT_CONTEXT(ctx);
    struct gl_buffer_object *bufObj;
+   GLint64 parameter;
 
-   bufObj = get_buffer(ctx, "glGetBufferParameterivARB", target,
+   bufObj = get_buffer(ctx, "glGetBufferParameteriv", target,
                        GL_INVALID_OPERATION);
    if (!bufObj)
       return;
 
-   switch (pname) {
-   case GL_BUFFER_SIZE_ARB:
-      *params = (GLint) bufObj->Size;
-      return;
-   case GL_BUFFER_USAGE_ARB:
-      *params = bufObj->Usage;
-      return;
-   case GL_BUFFER_ACCESS_ARB:
-      *params = simplified_access_mode(ctx,
-                            bufObj->Mappings[MAP_USER].AccessFlags);
-      return;
-   case GL_BUFFER_MAPPED_ARB:
-      *params = _mesa_bufferobj_mapped(bufObj, MAP_USER);
-      return;
-   case GL_BUFFER_ACCESS_FLAGS:
-      if (!ctx->Extensions.ARB_map_buffer_range)
-         goto invalid_pname;
-      *params = bufObj->Mappings[MAP_USER].AccessFlags;
-      return;
-   case GL_BUFFER_MAP_OFFSET:
-      if (!ctx->Extensions.ARB_map_buffer_range)
-         goto invalid_pname;
-      *params = (GLint) bufObj->Mappings[MAP_USER].Offset;
-      return;
-   case GL_BUFFER_MAP_LENGTH:
-      if (!ctx->Extensions.ARB_map_buffer_range)
-         goto invalid_pname;
-      *params = (GLint) bufObj->Mappings[MAP_USER].Length;
-      return;
-   case GL_BUFFER_IMMUTABLE_STORAGE:
-      if (!ctx->Extensions.ARB_buffer_storage)
-         goto invalid_pname;
-      *params = bufObj->Immutable;
-      return;
-   case GL_BUFFER_STORAGE_FLAGS:
-      if (!ctx->Extensions.ARB_buffer_storage)
-         goto invalid_pname;
-      *params = bufObj->StorageFlags;
-      return;
-   default:
-      ; /* fall-through */
-   }
+   if (!get_buffer_parameter(ctx, bufObj, pname, &parameter,
+                             "glGetBufferParameteriv"))
+      return; /* Error already recorded. */
 
-invalid_pname:
-   _mesa_error(ctx, GL_INVALID_ENUM, "glGetBufferParameterivARB(pname=%s)",
-               _mesa_lookup_enum_by_nr(pname));
+   *params = (GLint) parameter;
 }
 
-
-/**
- * New in GL 3.2
- * This is pretty much a duplicate of GetBufferParameteriv() but the
- * GL_BUFFER_SIZE_ARB attribute will be 64-bits on a 64-bit system.
- */
 void GLAPIENTRY
 _mesa_GetBufferParameteri64v(GLenum target, GLenum pname, GLint64 *params)
 {
    GET_CURRENT_CONTEXT(ctx);
    struct gl_buffer_object *bufObj;
+   GLint64 parameter;
 
    bufObj = get_buffer(ctx, "glGetBufferParameteri64v", target,
                        GL_INVALID_OPERATION);
    if (!bufObj)
       return;
 
-   switch (pname) {
-   case GL_BUFFER_SIZE_ARB:
-      *params = bufObj->Size;
-      return;
-   case GL_BUFFER_USAGE_ARB:
-      *params = bufObj->Usage;
-      return;
-   case GL_BUFFER_ACCESS_ARB:
-      *params = simplified_access_mode(ctx,
-                             bufObj->Mappings[MAP_USER].AccessFlags);
-      return;
-   case GL_BUFFER_ACCESS_FLAGS:
-      if (!ctx->Extensions.ARB_map_buffer_range)
-         goto invalid_pname;
-      *params = bufObj->Mappings[MAP_USER].AccessFlags;
-      return;
-   case GL_BUFFER_MAPPED_ARB:
-      *params = _mesa_bufferobj_mapped(bufObj, MAP_USER);
-      return;
-   case GL_BUFFER_MAP_OFFSET:
-      if (!ctx->Extensions.ARB_map_buffer_range)
-         goto invalid_pname;
-      *params = bufObj->Mappings[MAP_USER].Offset;
-      return;
-   case GL_BUFFER_MAP_LENGTH:
-      if (!ctx->Extensions.ARB_map_buffer_range)
-         goto invalid_pname;
-      *params = bufObj->Mappings[MAP_USER].Length;
-      return;
-   case GL_BUFFER_IMMUTABLE_STORAGE:
-      if (!ctx->Extensions.ARB_buffer_storage)
-         goto invalid_pname;
-      *params = bufObj->Immutable;
-      return;
-   case GL_BUFFER_STORAGE_FLAGS:
-      if (!ctx->Extensions.ARB_buffer_storage)
-         goto invalid_pname;
-      *params = bufObj->StorageFlags;
-      return;
-   default:
-      ; /* fall-through */
-   }
+   if (!get_buffer_parameter(ctx, bufObj, pname, &parameter,
+                             "glGetBufferParameteri64v"))
+      return; /* Error already recorded. */
 
-invalid_pname:
-   _mesa_error(ctx, GL_INVALID_ENUM, "glGetBufferParameteri64v(pname=%s)",
-               _mesa_lookup_enum_by_nr(pname));
+   *params = parameter;
 }
 
 
