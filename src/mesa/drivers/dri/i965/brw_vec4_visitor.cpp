@@ -489,7 +489,7 @@ vec4_visitor::emit_unpack_unorm_4x8(const dst_reg &dst, src_reg src0)
 
    shifted.type = BRW_REGISTER_TYPE_UB;
    dst_reg f(this, glsl_type::vec4_type);
-   emit(MOV(f, src_reg(shifted)));
+   emit(VEC4_OPCODE_MOV_BYTES, f, src_reg(shifted));
 
    emit(MUL(dst, src_reg(f), src_reg(1.0f / 255.0f)));
 }
@@ -511,7 +511,7 @@ vec4_visitor::emit_unpack_snorm_4x8(const dst_reg &dst, src_reg src0)
 
    shifted.type = BRW_REGISTER_TYPE_B;
    dst_reg f(this, glsl_type::vec4_type);
-   emit(MOV(f, src_reg(shifted)));
+   emit(VEC4_OPCODE_MOV_BYTES, f, src_reg(shifted));
 
    dst_reg scaled(this, glsl_type::vec4_type);
    emit(MUL(scaled, src_reg(f), src_reg(1.0f / 127.0f)));

@@ -471,6 +471,8 @@ brw_instruction_name(enum opcode op)
    case SHADER_OPCODE_URB_WRITE_SIMD8:
       return "gen8_urb_write_simd8";
 
+   case VEC4_OPCODE_MOV_BYTES:
+      return "mov_bytes";
    case VEC4_OPCODE_PACK_BYTES:
       return "pack_bytes";
    case VEC4_OPCODE_UNPACK_UNIFORM:

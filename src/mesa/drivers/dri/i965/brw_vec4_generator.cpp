@@ -1512,6 +1512,22 @@ vec4_generator::generate_code(const cfg_t *cfg)
          generate_unpack_flags(dst);
          break;
 
+      case VEC4_OPCODE_MOV_BYTES: {
+         /* Moves the low byte from each channel, using an Align1 access mode
+          * and a <4,1,0> source region.
+          */
+         assert(src[0].type == BRW_REGISTER_TYPE_UB ||
+                src[0].type == BRW_REGISTER_TYPE_B);
+
+         brw_set_default_access_mode(p, BRW_ALIGN_1);
+         src[0].vstride = BRW_VERTICAL_STRIDE_4;
+         src[0].width = BRW_WIDTH_1;
+         src[0].hstride = BRW_HORIZONTAL_STRIDE_0;
+         brw_MOV(p, dst, src[0]);
+         brw_set_default_access_mode(p, BRW_ALIGN_16);
+         break;
+      }
+
       case VEC4_OPCODE_PACK_BYTES: {
          /* Is effectively:
           *
