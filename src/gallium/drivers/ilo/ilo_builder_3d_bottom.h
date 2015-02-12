@@ -1070,7 +1070,7 @@ gen6_3DSTATE_POLY_STIPPLE_OFFSET(struct ilo_builder *builder,
    const uint8_t cmd_len = 2;
    uint32_t *dw;
 
-   ILO_DEV_ASSERT(builder->dev, 6, 7.5);
+   ILO_DEV_ASSERT(builder->dev, 6, 8);
 
    assert(x_offset >= 0 && x_offset <= 31);
    assert(y_offset >= 0 && y_offset <= 31);
@@ -1089,7 +1089,7 @@ gen6_3DSTATE_POLY_STIPPLE_PATTERN(struct ilo_builder *builder,
    uint32_t *dw;
    int i;
 
-   ILO_DEV_ASSERT(builder->dev, 6, 7.5);
+   ILO_DEV_ASSERT(builder->dev, 6, 8);
 
    ilo_builder_batch_pointer(builder, cmd_len, &dw);
 
@@ -1109,7 +1109,7 @@ gen6_3DSTATE_LINE_STIPPLE(struct ilo_builder *builder,
    unsigned inverse;
    uint32_t *dw;
 
-   ILO_DEV_ASSERT(builder->dev, 6, 7.5);
+   ILO_DEV_ASSERT(builder->dev, 6, 8);
 
    assert((pattern & 0xffff) == pattern);
    assert(factor >= 1 && factor <= 256);
@@ -1145,7 +1145,7 @@ gen6_3DSTATE_AA_LINE_PARAMETERS(struct ilo_builder *builder)
       0 << GEN6_AA_LINE_DW2_CAP_BIAS__SHIFT | 0,
    };
 
-   ILO_DEV_ASSERT(builder->dev, 6, 7.5);
+   ILO_DEV_ASSERT(builder->dev, 6, 8);
 
    ilo_builder_batch_write(builder, cmd_len, dw);
 }
