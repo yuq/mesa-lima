@@ -222,7 +222,7 @@ d3d9_get_pipe_depth_format_bindings(D3DFORMAT format)
     case D3DFMT_DF24:
     case D3DFMT_INTZ:
         return PIPE_BIND_DEPTH_STENCIL | PIPE_BIND_SAMPLER_VIEW;
-    default: assert(0);
+    default: unreachable("Unexpected format");
     }
 }
 
