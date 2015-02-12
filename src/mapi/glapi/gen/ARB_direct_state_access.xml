@@ -420,6 +420,13 @@
       <param name="params" type="GLint *" />
    </function>
 
+   <!-- Sampler object functions -->
+
+   <function name="CreateSamplers" offset="assign">
+      <param name="n" type="GLsizei" />
+      <param name="samplers" type="GLuint *" />
+   </function>
+
    <!-- Program Pipeline object functions -->
 
    <function name="CreateProgramPipelines" offset="assign">

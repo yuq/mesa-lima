@@ -80,6 +80,8 @@ _mesa_init_sampler_object_functions(struct dd_function_table *driver);
 void GLAPIENTRY
 _mesa_GenSamplers(GLsizei count, GLuint *samplers);
 void GLAPIENTRY
+_mesa_CreateSamplers(GLsizei count, GLuint *samplers);
+void GLAPIENTRY
 _mesa_DeleteSamplers(GLsizei count, const GLuint *samplers);
 GLboolean GLAPIENTRY
 _mesa_IsSampler(GLuint sampler);
