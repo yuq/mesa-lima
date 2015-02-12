@@ -161,6 +161,36 @@ intel_vertical_texture_alignment_unit(struct brw_context *brw,
 }
 
 static void
+gen9_miptree_layout_1d(struct intel_mipmap_tree *mt)
+{
+   unsigned x = 0;
+   unsigned width = mt->physical_width0;
+   unsigned depth = mt->physical_depth0; /* number of array layers. */
+
+   /* When this layout is used the horizontal alignment is fixed at 64 and the
+    * hardware ignores the value given in the surface state
+    */
+   const unsigned int align_w = 64;
+
+   mt->total_height = mt->physical_height0;
+   mt->total_width = 0;
+
+   for (unsigned level = mt->first_level; level <= mt->last_level; level++) {
+      unsigned img_width;
+
+      intel_miptree_set_level_info(mt, level, x, 0, depth);
+
+      img_width = ALIGN(width, align_w);
+
+      mt->total_width = MAX2(mt->total_width, x + img_width);
+
+      x += img_width;
+
+      width = minify(width, 1);
+   }
+}
+
+static void
 brw_miptree_layout_2d(struct intel_mipmap_tree *mt)
 {
    unsigned x = 0;
@@ -245,12 +275,34 @@ align_cube(struct intel_mipmap_tree *mt)
       mt->total_height += 2;
 }
 
+static bool
+use_linear_1d_layout(struct brw_context *brw,
+                     struct intel_mipmap_tree *mt)
+{
+   /* On Gen9+ the mipmap levels of a 1D surface are all laid out in a
+    * horizontal line. This isn't done for depth/stencil buffers however
+    * because those will be using a tiled layout
+    */
+   if (brw->gen >= 9 &&
+       (mt->target == GL_TEXTURE_1D ||
+        mt->target == GL_TEXTURE_1D_ARRAY)) {
+      GLenum base_format = _mesa_get_format_base_format(mt->format);
+
+      if (base_format != GL_DEPTH_COMPONENT &&
+          base_format != GL_DEPTH_STENCIL)
+         return true;
+   }
+
+   return false;
+}
+
 static void
 brw_miptree_layout_texture_array(struct brw_context *brw,
 				 struct intel_mipmap_tree *mt)
 {
    int h0, h1;
    unsigned height = mt->physical_height0;
+   bool layout_1d = use_linear_1d_layout(brw, mt);
 
    h0 = ALIGN(mt->physical_height0, mt->align_h);
    h1 = ALIGN(minify(mt->physical_height0, 1), mt->align_h);
@@ -261,7 +313,10 @@ brw_miptree_layout_texture_array(struct brw_context *brw,
 
    int physical_qpitch = mt->compressed ? mt->qpitch / 4 : mt->qpitch;
 
-   brw_miptree_layout_2d(mt);
+   if (layout_1d)
+      gen9_miptree_layout_1d(mt);
+   else
+      brw_miptree_layout_2d(mt);
 
    for (unsigned level = mt->first_level; level <= mt->last_level; level++) {
       unsigned img_height;
@@ -395,7 +450,10 @@ brw_miptree_layout(struct brw_context *brw, struct intel_mipmap_tree *mt)
          break;
       case INTEL_MSAA_LAYOUT_NONE:
       case INTEL_MSAA_LAYOUT_IMS:
-         brw_miptree_layout_2d(mt);
+         if (use_linear_1d_layout(brw, mt))
+            gen9_miptree_layout_1d(mt);
+         else
+            brw_miptree_layout_2d(mt);
          break;
       }
       break;
