@@ -1697,7 +1697,7 @@ _mesa_GetBufferSubData(GLenum target, GLintptr offset,
    }
 
    assert(ctx->Driver.GetBufferSubData);
-   ctx->Driver.GetBufferSubData( ctx, offset, size, data, bufObj );
+   ctx->Driver.GetBufferSubData(ctx, offset, size, data, bufObj);
 }
 
 void GLAPIENTRY

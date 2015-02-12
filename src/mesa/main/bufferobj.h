@@ -230,8 +230,8 @@ _mesa_NamedBufferSubData(GLuint buffer, GLintptr offset,
                          GLsizeiptr size, const GLvoid *data);
 
 void GLAPIENTRY
-_mesa_GetBufferSubData(GLenum target, GLintptrARB offset,
-                       GLsizeiptrARB size, void * data);
+_mesa_GetBufferSubData(GLenum target, GLintptr offset,
+                       GLsizeiptr size, GLvoid *data);
 
 void GLAPIENTRY
 _mesa_GetNamedBufferSubData(GLuint buffer, GLintptr offset,
