@@ -1205,6 +1205,26 @@ _mesa_IsRenderbuffer(GLuint renderbuffer)
 }
 
 
+static struct gl_renderbuffer *
+allocate_renderbuffer(struct gl_context *ctx, GLuint renderbuffer,
+                      const char *func)
+{
+   struct gl_renderbuffer *newRb;
+
+   /* create new renderbuffer object */
+   newRb = ctx->Driver.NewRenderbuffer(ctx, renderbuffer);
+   if (!newRb) {
+      _mesa_error(ctx, GL_OUT_OF_MEMORY, "%s", func);
+      return NULL;
+   }
+   assert(newRb->AllocStorage);
+   _mesa_HashInsert(ctx->Shared->RenderBuffers, renderbuffer, newRb);
+   newRb->RefCount = 1; /* referenced by hash table */
+
+   return newRb;
+}
+
+
 static void
 bind_renderbuffer(GLenum target, GLuint renderbuffer, bool allow_user_names)
 {
@@ -1233,15 +1253,7 @@ bind_renderbuffer(GLenum target, GLuint renderbuffer, bool allow_user_names)
       }
 
       if (!newRb) {
-         /* create new renderbuffer object */
-         newRb = ctx->Driver.NewRenderbuffer(ctx, renderbuffer);
-         if (!newRb) {
-            _mesa_error(ctx, GL_OUT_OF_MEMORY, "glBindRenderbufferEXT");
-            return;
-         }
-         assert(newRb->AllocStorage);
-         _mesa_HashInsert(ctx->Shared->RenderBuffers, renderbuffer, newRb);
-         newRb->RefCount = 1; /* referenced by hash table */
+         newRb = allocate_renderbuffer(ctx, renderbuffer, "glBindRenderbufferEXT");
       }
    }
    else {
@@ -1383,16 +1395,17 @@ _mesa_DeleteRenderbuffers(GLsizei n, const GLuint *renderbuffers)
    }
 }
 
-
-void GLAPIENTRY
-_mesa_GenRenderbuffers(GLsizei n, GLuint *renderbuffers)
+static void
+create_render_buffers(struct gl_context *ctx, GLsizei n, GLuint *renderbuffers,
+                      bool dsa)
 {
-   GET_CURRENT_CONTEXT(ctx);
+   const char *func = dsa ? "glCreateRenderbuffers" : "glGenRenderbuffers";
+   struct gl_renderbuffer *obj;
    GLuint first;
    GLint i;
 
    if (n < 0) {
-      _mesa_error(ctx, GL_INVALID_VALUE, "glGenRenderbuffersEXT(n)");
+      _mesa_error(ctx, GL_INVALID_VALUE, "%s(n<0)", func);
       return;
    }
 
@@ -1404,11 +1417,34 @@ _mesa_GenRenderbuffers(GLsizei n, GLuint *renderbuffers)
    for (i = 0; i < n; i++) {
       GLuint name = first + i;
       renderbuffers[i] = name;
-      /* insert dummy placeholder into hash table */
-      mtx_lock(&ctx->Shared->Mutex);
-      _mesa_HashInsert(ctx->Shared->RenderBuffers, name, &DummyRenderbuffer);
-      mtx_unlock(&ctx->Shared->Mutex);
+
+      if (dsa) {
+         obj = allocate_renderbuffer(ctx, name, func);
+      } else {
+         obj = &DummyRenderbuffer;
+
+         /* insert the object into the hash table */
+         mtx_lock(&ctx->Shared->Mutex);
+         _mesa_HashInsert(ctx->Shared->RenderBuffers, name, obj);
+         mtx_unlock(&ctx->Shared->Mutex);
+      }
    }
+}
+
+
+void GLAPIENTRY
+_mesa_GenRenderbuffers(GLsizei n, GLuint *renderbuffers)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   create_render_buffers(ctx, n, renderbuffers, false);
+}
+
+
+void GLAPIENTRY
+_mesa_CreateRenderbuffers(GLsizei n, GLuint *renderbuffers)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   create_render_buffers(ctx, n, renderbuffers, true);
 }
 
 

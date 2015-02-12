@@ -115,6 +115,9 @@ extern void GLAPIENTRY
 _mesa_GenRenderbuffers(GLsizei n, GLuint *renderbuffers);
 
 extern void GLAPIENTRY
+_mesa_CreateRenderbuffers(GLsizei n, GLuint *renderbuffers);
+
+extern void GLAPIENTRY
 _mesa_RenderbufferStorage(GLenum target, GLenum internalformat,
                              GLsizei width, GLsizei height);
 

@@ -152,6 +152,13 @@
       <param name="data" type="GLvoid *" />
    </function>
 
+   <!-- Renderbuffer object functions -->
+
+   <function name="CreateRenderbuffers" offset="assign">
+      <param name="n" type="GLsizei" />
+      <param name="renderbuffers" type="GLuint *" />
+   </function>
+
    <!-- Texture object functions -->
 
    <function name="CreateTextures" offset="assign">
