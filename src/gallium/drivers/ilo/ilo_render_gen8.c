@@ -399,7 +399,7 @@ ilo_render_get_rectlist_commands_len_gen8(const struct ilo_render *render,
 {
    ILO_DEV_ASSERT(render->dev, 8, 8);
 
-   return 64;
+   return 96;
 }
 
 void
