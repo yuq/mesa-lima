@@ -257,7 +257,6 @@ gen8_draw_vf(struct ilo_render *r,
              const struct ilo_state_vector *vec,
              struct ilo_render_draw_session *session)
 {
-   const int prim = gen6_3d_translate_pipe_prim(vec->draw->mode);
    int i;
 
    /* 3DSTATE_INDEX_BUFFER */
@@ -278,7 +277,7 @@ gen8_draw_vf(struct ilo_render *r,
    if (DIRTY(VE))
       gen6_3DSTATE_VERTEX_ELEMENTS(r->builder, vec->ve);
 
-   gen8_3DSTATE_VF_TOPOLOGY(r->builder, prim);
+   gen8_3DSTATE_VF_TOPOLOGY(r->builder, vec->draw->mode);
 
    for (i = 0; i < vec->ve->vb_count; i++) {
       gen8_3DSTATE_VF_INSTANCING(r->builder, i,
