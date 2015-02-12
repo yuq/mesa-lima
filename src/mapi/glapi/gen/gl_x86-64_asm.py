@@ -302,9 +302,14 @@ def _parser():
     return parser.parse_args()
 
 
-if __name__ == '__main__':
+def main():
+    """Main file."""
     args = _parser()
     printer = PrintGenericStubs()
     api = gl_XML.parse_GL_API(args.filename, glX_XML.glx_item_factory())
 
     printer.Print(api)
+
+
+if __name__ == '__main__':
+    main()
