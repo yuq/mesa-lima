@@ -2524,6 +2524,22 @@ _mesa_FlushMappedBufferRange(GLenum target, GLintptr offset,
                                    "glFlushMappedBufferRange");
 }
 
+void GLAPIENTRY
+_mesa_FlushMappedNamedBufferRange(GLuint buffer, GLintptr offset,
+                                  GLsizeiptr length)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   struct gl_buffer_object *bufObj;
+
+   bufObj = _mesa_lookup_bufferobj_err(ctx, buffer,
+                                       "glFlushMappedNamedBufferRange");
+   if (!bufObj)
+      return;
+
+   _mesa_flush_mapped_buffer_range(ctx, bufObj, offset, length,
+                                   "glFlushMappedNamedBufferRange");
+}
+
 
 static GLenum
 buffer_object_purgeable(struct gl_context *ctx, GLuint name, GLenum option)

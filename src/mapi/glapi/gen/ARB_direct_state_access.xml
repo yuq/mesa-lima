@@ -80,6 +80,12 @@
       <param name="buffer" type="GLuint" />
    </function>
 
+   <function name="FlushMappedNamedBufferRange" offset="assign">
+      <param name="buffer" type="GLuint" />
+      <param name="offset" type="GLintptr" />
+      <param name="length" type="GLsizeiptr" />
+   </function>
+
    <!-- Texture object functions -->
 
    <function name="CreateTextures" offset="assign">
