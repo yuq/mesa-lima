@@ -781,6 +781,18 @@ test_attachment_completeness(const struct gl_context *ctx, GLenum format,
             att->Complete = GL_FALSE;
             return;
          }
+
+         /* OES_texture_float allows creation and use of floating point
+          * textures with GL_FLOAT, GL_HALF_FLOAT but it does not allow
+          * these textures to be used as a render target, this is done via
+          * GL_EXT_color_buffer(_half)_float with set of new sized types.
+          */
+         if (_mesa_is_gles(ctx) && (texImage->TexObject->_IsFloat ||
+                                    texImage->TexObject->_IsHalfFloat)) {
+            att_incomplete("bad internal format");
+            att->Complete = GL_FALSE;
+            return;
+         }
       }
       else if (format == GL_DEPTH) {
          if (baseFormat == GL_DEPTH_COMPONENT) {
