@@ -2163,6 +2163,12 @@ vc4_shader_tgsi_to_qir(struct vc4_context *vc4, enum qstage stage,
         }
 
         tgsi_parse_free(&c->parser);
+        if (vc4_debug & VC4_DEBUG_QIR) {
+                fprintf(stderr, "%s prog %d/%d pre-opt QIR:\n",
+                        qir_get_stage_name(c->stage),
+                        c->program_id, c->variant_id);
+                qir_dump(c);
+        }
 
         qir_optimize(c);
 

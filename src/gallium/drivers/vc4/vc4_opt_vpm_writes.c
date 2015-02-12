@@ -79,7 +79,7 @@ qir_opt_vpm_writes(struct vc4_compile *c)
                 if (qir_is_multi_instruction(inst))
                         continue;
 
-                if (qir_depends_on_flags(inst))
+                if (qir_depends_on_flags(inst) || inst->sf)
                         continue;
 
                 if (qir_has_side_effects(c, inst) ||
@@ -106,6 +106,7 @@ qir_opt_vpm_writes(struct vc4_compile *c)
                 /* Move the generating instruction to the end of the program
                  * to maintain the order of the VPM writes.
                  */
+                assert(!vpm_writes[i]->sf);
                 move_to_tail(&vpm_writes[i]->link, &inst->link);
                 qir_remove_instruction(vpm_writes[i]);
 

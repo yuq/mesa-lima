@@ -59,7 +59,6 @@ static const struct qir_op_info qir_op_info[] = {
         [QOP_XOR] = { "xor", 1, 2 },
         [QOP_NOT] = { "not", 1, 1 },
 
-        [QOP_SF] = { "sf", 0, 1 },
         [QOP_SEL_X_0_NS] = { "fsel_x_0_ns", 1, 1, false, true },
         [QOP_SEL_X_0_NC] = { "fsel_x_0_nc", 1, 1, false, true },
         [QOP_SEL_X_0_ZS] = { "fsel_x_0_zs", 1, 1, false, true },
@@ -282,7 +281,9 @@ qir_print_reg(struct vc4_compile *c, struct qreg reg, bool write)
 void
 qir_dump_inst(struct vc4_compile *c, struct qinst *inst)
 {
-        fprintf(stderr, "%s ", qir_get_op_name(inst->op));
+        fprintf(stderr, "%s%s ",
+                qir_get_op_name(inst->op),
+                inst->sf ? ".sf" : "");
 
         qir_print_reg(c, inst->dst, true);
         for (int i = 0; i < qir_get_op_nsrc(inst->op); i++) {
@@ -414,6 +415,20 @@ qir_get_stage_name(enum qstage stage)
         };
 
         return names[stage];
+}
+
+void
+qir_SF(struct vc4_compile *c, struct qreg src)
+{
+        assert(!is_empty_list(&c->instructions));
+        struct qinst *last_inst = (struct qinst *)c->instructions.prev;
+        if (last_inst->dst.file != src.file ||
+            last_inst->dst.index != src.index ||
+            qir_is_multi_instruction(last_inst)) {
+                src = qir_MOV(c, src);
+                last_inst = (struct qinst *)c->instructions.prev;
+        }
+        last_inst->sf = true;
 }
 
 #define OPTPASS(func)                                                   \

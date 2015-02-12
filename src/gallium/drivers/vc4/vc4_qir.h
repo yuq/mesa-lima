@@ -24,6 +24,7 @@
 #ifndef VC4_QIR_H
 #define VC4_QIR_H
 
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
@@ -75,9 +76,6 @@ enum qop {
         QOP_OR,
         QOP_XOR,
         QOP_NOT,
-
-        /* Sets the flag register according to src. */
-        QOP_SF,
 
         /* Note: Orderings of these compares must be the same as in
          * qpu_defines.h.  Selects the src[0] if the ns flag bit is set,
@@ -173,6 +171,7 @@ struct qinst {
         enum qop op;
         struct qreg dst;
         struct qreg *src;
+        bool sf;
 };
 
 enum qstage {
@@ -397,6 +396,8 @@ bool qir_opt_vpm_writes(struct vc4_compile *c);
 
 void qpu_schedule_instructions(struct vc4_compile *c);
 
+void qir_SF(struct vc4_compile *c, struct qreg src);
+
 #define QIR_ALU0(name)                                                   \
 static inline struct qreg                                                \
 qir_##name(struct vc4_compile *c)                                        \
@@ -443,7 +444,6 @@ QIR_ALU2(FADD)
 QIR_ALU2(FSUB)
 QIR_ALU2(FMUL)
 QIR_ALU2(MUL24)
-QIR_NODST_1(SF)
 QIR_ALU1(SEL_X_0_ZS)
 QIR_ALU1(SEL_X_0_ZC)
 QIR_ALU1(SEL_X_0_NS)
