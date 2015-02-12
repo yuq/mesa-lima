@@ -268,6 +268,13 @@ void GLAPIENTRY
 _mesa_GetBufferParameteri64v(GLenum target, GLenum pname, GLint64 *params);
 
 void GLAPIENTRY
+_mesa_GetNamedBufferParameteriv(GLuint buffer, GLenum pname, GLint *params);
+
+void GLAPIENTRY
+_mesa_GetNamedBufferParameteri64v(GLuint buffer, GLenum pname,
+                                  GLint64 *params);
+
+void GLAPIENTRY
 _mesa_GetBufferPointerv(GLenum target, GLenum pname, GLvoid **params);
 
 void GLAPIENTRY

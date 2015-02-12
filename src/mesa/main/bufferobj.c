@@ -2007,6 +2007,45 @@ _mesa_GetBufferParameteri64v(GLenum target, GLenum pname, GLint64 *params)
    *params = parameter;
 }
 
+void GLAPIENTRY
+_mesa_GetNamedBufferParameteriv(GLuint buffer, GLenum pname, GLint *params)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   struct gl_buffer_object *bufObj;
+   GLint64 parameter;
+
+   bufObj = _mesa_lookup_bufferobj_err(ctx, buffer,
+                                       "glGetNamedBufferParameteriv");
+   if (!bufObj)
+      return;
+
+   if (!get_buffer_parameter(ctx, bufObj, pname, &parameter,
+                             "glGetNamedBufferParameteriv"))
+      return; /* Error already recorded. */
+
+   *params = (GLint) parameter;
+}
+
+void GLAPIENTRY
+_mesa_GetNamedBufferParameteri64v(GLuint buffer, GLenum pname,
+                                  GLint64 *params)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   struct gl_buffer_object *bufObj;
+   GLint64 parameter;
+
+   bufObj = _mesa_lookup_bufferobj_err(ctx, buffer,
+                                       "glGetNamedBufferParameteri64v");
+   if (!bufObj)
+      return;
+
+   if (!get_buffer_parameter(ctx, bufObj, pname, &parameter,
+                             "glGetNamedBufferParameteri64v"))
+      return; /* Error already recorded. */
+
+   *params = parameter;
+}
+
 
 void GLAPIENTRY
 _mesa_GetBufferPointerv(GLenum target, GLenum pname, GLvoid **params)

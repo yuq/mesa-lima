@@ -86,6 +86,18 @@
       <param name="length" type="GLsizeiptr" />
    </function>
 
+   <function name="GetNamedBufferParameteriv" offset="assign">
+      <param name="buffer" type="GLuint" />
+      <param name="pname" type="GLenum" />
+      <param name="params" type="GLint *" />
+   </function>
+
+   <function name="GetNamedBufferParameteri64v" offset="assign">
+      <param name="buffer" type="GLuint" />
+      <param name="pname" type="GLenum" />
+      <param name="params" type="GLint64 *" />
+   </function>
+
    <!-- Texture object functions -->
 
    <function name="CreateTextures" offset="assign">
