@@ -195,11 +195,11 @@ GL 4.5, GLSL 4.50:
   - Transform Feedback object                          started (Martin Peres)
   - Buffer object                                      started (Laura Ekstrand)
   - Framebuffer object                                 started (Laura Ekstrand)
-  - Renderbuffer object                                not started
+  - Renderbuffer object                                started (Martin Peres)
   - Texture object                                     started (Laura Ekstrand)
   - Vertex array object                                started (Fredrik Höglund)
-  - Sampler object                                     not started
-  - Program Pipeline object                            not started
+  - Sampler object                                     started (Martin Peres)
+  - Program Pipeline object                            started (Martin Peres)
   - Query object                                       started (Martin Peres)
   GL_ARB_get_texture_sub_image                         started (Brian Paul)
   GL_ARB_shader_texture_image_samples                  not started
