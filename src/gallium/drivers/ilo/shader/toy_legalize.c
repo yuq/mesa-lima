@@ -397,8 +397,6 @@ patch_if_else_jip(struct toy_compiler *tc, struct toy_inst *inst)
    else {
       inst->dst = tdst_imm_w(jip);
    }
-
-   inst->thread_ctrl = GEN6_THREADCTRL_SWITCH;
 }
 
 static void
@@ -437,8 +435,6 @@ patch_endif_jip(struct toy_compiler *tc, struct toy_inst *inst)
       inst->src[1] = tsrc_imm_w(dist * 2);
    else
       inst->dst = tdst_imm_w(dist * 2);
-
-   inst->thread_ctrl = GEN6_THREADCTRL_SWITCH;
 }
 
 static void
