@@ -2298,6 +2298,7 @@ can_blit_slice(struct intel_mipmap_tree *mt,
    if (image_x >= 32768 || image_y >= 32768)
       return false;
 
+   /* See intel_miptree_blit() for details on the 32k pitch limit. */
    if (mt->pitch >= 32768)
       return false;
 
@@ -2352,7 +2353,6 @@ intel_miptree_map(struct brw_context *brw,
    } else if (mt->stencil_mt && !(mode & BRW_MAP_DIRECT_BIT)) {
       intel_miptree_map_depthstencil(brw, mt, map, level, slice);
    }
-   /* See intel_miptree_blit() for details on the 32k pitch limit. */
    else if (brw->has_llc &&
             !(mode & GL_MAP_WRITE_BIT) &&
             !mt->compressed &&
