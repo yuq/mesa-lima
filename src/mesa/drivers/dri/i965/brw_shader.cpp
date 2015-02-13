@@ -1060,11 +1060,18 @@ backend_visitor::dump_instructions(const char *name)
          file = stderr;
    }
 
-   int ip = 0;
-   foreach_block_and_inst(block, backend_instruction, inst, cfg) {
-      if (!name)
-         fprintf(stderr, "%d: ", ip++);
-      dump_instruction(inst, file);
+   if (cfg) {
+      int ip = 0;
+      foreach_block_and_inst(block, backend_instruction, inst, cfg) {
+         fprintf(file, "%4d: ", ip++);
+         dump_instruction(inst, file);
+      }
+   } else {
+      int ip = 0;
+      foreach_in_list(backend_instruction, inst, &instructions) {
+         fprintf(file, "%4d: ", ip++);
+         dump_instruction(inst, file);
+      }
    }
 
    if (file != stderr) {

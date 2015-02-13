@@ -3176,7 +3176,6 @@ fs_visitor::dump_instructions()
 void
 fs_visitor::dump_instructions(const char *name)
 {
-   calculate_register_pressure();
    FILE *file = stderr;
    if (name && geteuid() != 0) {
       file = fopen(name, "w");
@@ -3184,14 +3183,23 @@ fs_visitor::dump_instructions(const char *name)
          file = stderr;
    }
 
-   int ip = 0, max_pressure = 0;
-   foreach_block_and_inst(block, backend_instruction, inst, cfg) {
-      max_pressure = MAX2(max_pressure, regs_live_at_ip[ip]);
-      fprintf(file, "{%3d} %4d: ", regs_live_at_ip[ip], ip);
-      dump_instruction(inst, file);
-      ++ip;
+   if (cfg) {
+      calculate_register_pressure();
+      int ip = 0, max_pressure = 0;
+      foreach_block_and_inst(block, backend_instruction, inst, cfg) {
+         max_pressure = MAX2(max_pressure, regs_live_at_ip[ip]);
+         fprintf(file, "{%3d} %4d: ", regs_live_at_ip[ip], ip);
+         dump_instruction(inst, file);
+         ip++;
+      }
+      fprintf(file, "Maximum %3d registers live at once.\n", max_pressure);
+   } else {
+      int ip = 0;
+      foreach_in_list(backend_instruction, inst, &instructions) {
+         fprintf(file, "%4d: ", ip++);
+         dump_instruction(inst, file);
+      }
    }
-   fprintf(file, "Maximum %3d registers live at once.\n", max_pressure);
 
    if (file != stderr) {
       fclose(file);
