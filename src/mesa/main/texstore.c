@@ -728,15 +728,19 @@ texstore_rgba(TEXSTORE_PARAMS)
        */
       GLint swapSize = _mesa_sizeof_packed_type(srcType);
       if (swapSize == 2 || swapSize == 4) {
-         int components = _mesa_components_in_format(srcFormat);
-         int elementCount = srcWidth * srcHeight * components;
-         tempImage = malloc(elementCount * swapSize);
+         int bytesPerPixel = _mesa_bytes_per_pixel(srcFormat, srcType);
+         assert(bytesPerPixel % swapSize == 0);
+         int swapsPerPixel = bytesPerPixel / swapSize;
+         int elementCount = srcWidth * srcHeight * srcDepth;
+         tempImage = malloc(elementCount * bytesPerPixel);
          if (!tempImage)
             return GL_FALSE;
          if (swapSize == 2)
-            _mesa_swap2_copy(tempImage, (GLushort *) srcAddr, elementCount);
+            _mesa_swap2_copy(tempImage, (GLushort *) srcAddr,
+                             elementCount * swapsPerPixel);
          else
-            _mesa_swap4_copy(tempImage, (GLuint *) srcAddr, elementCount);
+            _mesa_swap4_copy(tempImage, (GLuint *) srcAddr,
+                             elementCount * swapsPerPixel);
          srcAddr = tempImage;
       }
    }

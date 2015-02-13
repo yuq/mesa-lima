@@ -511,12 +511,15 @@ get_tex_rgba_uncompressed(struct gl_context *ctx, GLuint dimensions,
    do_swap:
       /* Handle byte swapping if required */
       if (ctx->Pack.SwapBytes) {
-         int components = _mesa_components_in_format(format);
          GLint swapSize = _mesa_sizeof_packed_type(type);
-         if (swapSize == 2)
-            _mesa_swap2((GLushort *) dest, width * height * components);
-         else if (swapSize == 4)
-            _mesa_swap4((GLuint *) dest, width * height * components);
+         if (swapSize == 2 || swapSize == 4) {
+            int swapsPerPixel = _mesa_bytes_per_pixel(format, type) / swapSize;
+            assert(_mesa_bytes_per_pixel(format, type) % swapSize == 0);
+            if (swapSize == 2)
+               _mesa_swap2((GLushort *) dest, width * height * swapsPerPixel);
+            else if (swapSize == 4)
+               _mesa_swap4((GLuint *) dest, width * height * swapsPerPixel);
+         }
       }
 
       /* Unmap the src texture buffer */

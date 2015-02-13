@@ -605,12 +605,15 @@ read_rgba_pixels( struct gl_context *ctx,
 done_swap:
    /* Handle byte swapping if required */
    if (packing->SwapBytes) {
-      int components = _mesa_components_in_format(format);
       GLint swapSize = _mesa_sizeof_packed_type(type);
-      if (swapSize == 2)
-         _mesa_swap2((GLushort *) dst, width * height * components);
-      else if (swapSize == 4)
-         _mesa_swap4((GLuint *) dst, width * height * components);
+      if (swapSize == 2 || swapSize == 4) {
+         int swapsPerPixel = _mesa_bytes_per_pixel(format, type) / swapSize;
+         assert(_mesa_bytes_per_pixel(format, type) % swapSize == 0);
+         if (swapSize == 2)
+            _mesa_swap2((GLushort *) dst, width * height * swapsPerPixel);
+         else if (swapSize == 4)
+            _mesa_swap4((GLuint *) dst, width * height * swapsPerPixel);
+      }
    }
 
 done_unmap:
