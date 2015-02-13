@@ -184,7 +184,7 @@ static const struct {
 };
 
 static void
-disasm_inst_decode_dw0_gen6(struct disasm_inst *inst, uint32_t dw0)
+disasm_inst_decode_dw0_opcode_gen6(struct disasm_inst *inst, uint32_t dw0)
 {
    ILO_DEV_ASSERT(inst->dev, 6, 8);
 
@@ -218,6 +218,14 @@ disasm_inst_decode_dw0_gen6(struct disasm_inst *inst, uint32_t dw0)
    default:
       break;
    }
+}
+
+static void
+disasm_inst_decode_dw0_gen6(struct disasm_inst *inst, uint32_t dw0)
+{
+   ILO_DEV_ASSERT(inst->dev, 6, 8);
+
+   disasm_inst_decode_dw0_opcode_gen6(inst, dw0);
 
    inst->access_mode = GEN_EXTRACT(dw0, GEN6_INST_ACCESSMODE);
 
@@ -250,19 +258,17 @@ disasm_inst_decode_dw0_gen6(struct disasm_inst *inst, uint32_t dw0)
       break;
    }
 
-   if (ilo_dev_gen(inst->dev) >= ILO_GEN(8)) {
-      switch (inst->opcode) {
-      case GEN6_OPCODE_IF:
-      case GEN6_OPCODE_ELSE:
-      case GEN8_OPCODE_GOTO:
+   switch (inst->opcode) {
+   case GEN6_OPCODE_IF:
+   case GEN6_OPCODE_ELSE:
+   case GEN8_OPCODE_GOTO:
+      if (ilo_dev_gen(inst->dev) >= ILO_GEN(8)) {
          inst->branch_ctrl = (bool) (dw0 & GEN8_INST_BRANCHCTRL);
          break;
-      default:
-         inst->acc_wr_ctrl = (bool) (dw0 & GEN6_INST_ACCWRCTRL);
-         break;
       }
-   } else {
+   default:
       inst->acc_wr_ctrl = (bool) (dw0 & GEN6_INST_ACCWRCTRL);
+      break;
    }
 
    inst->cmpt_ctrl = (bool) (dw0 & GEN6_INST_CMPTCTRL);
