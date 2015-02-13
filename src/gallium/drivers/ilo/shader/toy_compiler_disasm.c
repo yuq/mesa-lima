@@ -118,6 +118,11 @@ struct disasm_inst {
          int16_t jip;
          int16_t uip;
       } ip16;
+
+      struct {
+         int32_t jip;
+         int32_t uip;
+      } ip32;
    } u;
 };
 
@@ -287,13 +292,6 @@ disasm_inst_decode_dw0_gen6(struct disasm_inst *inst, uint32_t dw0)
    inst->saturate = (bool) (dw0 & GEN6_INST_SATURATE);
 }
 
-static bool
-disasm_inst_jip_in_dw1_high_gen6(const struct disasm_inst *inst)
-{
-   return (ilo_dev_gen(inst->dev) == ILO_GEN(6) &&
-           inst->has_jip && !inst->has_uip);
-}
-
 static void
 disasm_inst_decode_dw1_low_gen6(struct disasm_inst *inst, uint32_t dw1)
 {
@@ -392,7 +390,8 @@ disasm_inst_decode_dw1_gen6(struct disasm_inst *inst, uint32_t dw1)
    else
       disasm_inst_decode_dw1_low_gen6(inst, dw1);
 
-   if (disasm_inst_jip_in_dw1_high_gen6(inst))
+   if (ilo_dev_gen(inst->dev) == ILO_GEN(6) &&
+       inst->has_jip && !inst->has_uip)
       inst->u.imm64 = dw1 >> 16;
    else
       disasm_inst_decode_dw1_high_gen6(inst, dw1);
@@ -402,26 +401,46 @@ static void
 disasm_inst_decode_dw2_dw3_gen6(struct disasm_inst *inst,
                                 uint32_t dw2, uint32_t dw3)
 {
-   int count, i;
+   int imm_bits = 0, count, i;
 
    ILO_DEV_ASSERT(inst->dev, 6, 8);
 
    if (ilo_dev_gen(inst->dev) >= ILO_GEN(8)) {
-      inst->src1.base.file = GEN_EXTRACT(dw2, GEN8_INST_SRC1_FILE);
-      inst->src1.base.type = GEN_EXTRACT(dw2, GEN8_INST_SRC1_TYPE);
+      /* how about real 64-bit immediates? */
+      if (inst->has_uip) {
+         imm_bits = 64;
+         inst->src1.base.file = GEN6_FILE_IMM;
+         inst->src1.base.type = GEN6_TYPE_D;
+      } else {
+         inst->src1.base.file = GEN_EXTRACT(dw2, GEN8_INST_SRC1_FILE);
+         inst->src1.base.type = GEN_EXTRACT(dw2, GEN8_INST_SRC1_TYPE);
+
+         if (inst->src0.base.file == GEN6_FILE_IMM ||
+             inst->src1.base.file == GEN6_FILE_IMM)
+            imm_bits = 32;
+      }
    } else {
       if (ilo_dev_gen(inst->dev) >= ILO_GEN(7))
          inst->flag_reg = GEN_EXTRACT(dw2, GEN7_INST_FLAG_REG);
       inst->flag_subreg = GEN_EXTRACT(dw2, GEN6_INST_FLAG_SUBREG);
+
+      if (inst->src0.base.file == GEN6_FILE_IMM ||
+          inst->src1.base.file == GEN6_FILE_IMM)
+         imm_bits = 32;
    }
 
-   if (inst->src0.base.file == GEN6_FILE_IMM ||
-       inst->src1.base.file == GEN6_FILE_IMM) {
+   switch (imm_bits) {
+   case 32:
+      inst->u.imm64 = dw3;
       count = 1;
-      if (!disasm_inst_jip_in_dw1_high_gen6(inst))
-         inst->u.imm64 = dw3;
-   } else {
+      break;
+   case 64:
+      inst->u.imm64 = (uint64_t) dw2 << 32 | dw3;
+      count = 0;
+      break;
+   default:
       count = 2;
+      break;
    }
 
    for (i = 0; i < count; i++) {
@@ -1861,14 +1880,16 @@ disasm_printer_print_inst(struct disasm_printer *printer,
 
    if (inst->has_jip || inst->has_uip) {
       if (inst->has_jip) {
-         const int32_t jip = inst->u.ip16.jip;
+         const int32_t jip = (ilo_dev_gen(inst->dev) >= ILO_GEN(8)) ?
+            inst->u.ip32.jip : inst->u.ip16.jip;
 
          disasm_printer_column(printer, col++);
          disasm_printer_add(printer, "JIP: %d", jip);
       }
 
       if (inst->has_uip) {
-         const int32_t uip = inst->u.ip16.uip;
+         const int32_t uip = (ilo_dev_gen(inst->dev) >= ILO_GEN(8)) ?
+            inst->u.ip32.uip : inst->u.ip16.uip;
 
          disasm_printer_column(printer, col++);
          disasm_printer_add(printer, "UIP: %d", uip);
