@@ -284,35 +284,43 @@ disasm_inst_jip_in_dw1_high_gen6(const struct disasm_inst *inst)
 }
 
 static void
-disasm_inst_decode_dw1_gen6(struct disasm_inst *inst, uint32_t dw1)
+disasm_inst_decode_dw1_low_gen6(struct disasm_inst *inst, uint32_t dw1)
+{
+   ILO_DEV_ASSERT(inst->dev, 6, 7.5);
+
+   inst->dst.base.file = GEN_EXTRACT(dw1, GEN6_INST_DST_FILE);
+   inst->dst.base.type = GEN_EXTRACT(dw1, GEN6_INST_DST_TYPE);
+   inst->src0.base.file = GEN_EXTRACT(dw1, GEN6_INST_SRC0_FILE);
+   inst->src0.base.type = GEN_EXTRACT(dw1, GEN6_INST_SRC0_TYPE);
+   inst->src1.base.file = GEN_EXTRACT(dw1, GEN6_INST_SRC1_FILE);
+   inst->src1.base.type = GEN_EXTRACT(dw1, GEN6_INST_SRC1_TYPE);
+
+   if (ilo_dev_gen(inst->dev) >= ILO_GEN(7))
+      inst->nib_ctrl = (bool) (dw1 & GEN7_INST_NIBCTRL);
+}
+
+static void
+disasm_inst_decode_dw1_low_gen8(struct disasm_inst *inst, uint32_t dw1)
+{
+   ILO_DEV_ASSERT(inst->dev, 8, 8);
+
+   inst->flag_subreg = GEN_EXTRACT(dw1, GEN8_INST_FLAG_SUBREG);
+   inst->flag_reg = GEN_EXTRACT(dw1, GEN8_INST_FLAG_REG);
+   inst->mask_ctrl = GEN_EXTRACT(dw1, GEN8_INST_MASKCTRL);
+
+   inst->dst.base.file = GEN_EXTRACT(dw1, GEN8_INST_DST_FILE);
+   inst->dst.base.type = GEN_EXTRACT(dw1, GEN8_INST_DST_TYPE);
+   inst->src0.base.file = GEN_EXTRACT(dw1, GEN8_INST_SRC0_FILE);
+   inst->src0.base.type = GEN_EXTRACT(dw1, GEN8_INST_SRC0_TYPE);
+
+   inst->dst.base.addr_imm = GEN_EXTRACT(dw1, GEN8_INST_DST_ADDR_IMM_BIT9) <<
+      GEN8_INST_DST_ADDR_IMM_BIT9__SHR;
+}
+
+static void
+disasm_inst_decode_dw1_high_gen6(struct disasm_inst *inst, uint32_t dw1)
 {
    ILO_DEV_ASSERT(inst->dev, 6, 8);
-
-   if (ilo_dev_gen(inst->dev) >= ILO_GEN(8)) {
-      inst->flag_subreg = GEN_EXTRACT(dw1, GEN8_INST_FLAG_SUBREG);
-      inst->flag_reg = GEN_EXTRACT(dw1, GEN8_INST_FLAG_REG);
-      inst->mask_ctrl = GEN_EXTRACT(dw1, GEN8_INST_MASKCTRL);
-
-      inst->dst.base.file = GEN_EXTRACT(dw1, GEN8_INST_DST_FILE);
-      inst->dst.base.type = GEN_EXTRACT(dw1, GEN8_INST_DST_TYPE);
-      inst->src0.base.file = GEN_EXTRACT(dw1, GEN8_INST_SRC0_FILE);
-      inst->src0.base.type = GEN_EXTRACT(dw1, GEN8_INST_SRC0_TYPE);
-   } else {
-      inst->dst.base.file = GEN_EXTRACT(dw1, GEN6_INST_DST_FILE);
-      inst->dst.base.type = GEN_EXTRACT(dw1, GEN6_INST_DST_TYPE);
-      inst->src0.base.file = GEN_EXTRACT(dw1, GEN6_INST_SRC0_FILE);
-      inst->src0.base.type = GEN_EXTRACT(dw1, GEN6_INST_SRC0_TYPE);
-      inst->src1.base.file = GEN_EXTRACT(dw1, GEN6_INST_SRC1_FILE);
-      inst->src1.base.type = GEN_EXTRACT(dw1, GEN6_INST_SRC1_TYPE);
-
-      if (ilo_dev_gen(inst->dev) >= ILO_GEN(7))
-         inst->nib_ctrl = (bool) (dw1 & GEN7_INST_NIBCTRL);
-   }
-
-   if (disasm_inst_jip_in_dw1_high_gen6(inst)) {
-      inst->u.imm32 = dw1 >> 16;
-      return;
-   }
 
    inst->dst.base.addr_mode = GEN_EXTRACT(dw1, GEN6_INST_DST_ADDRMODE);
 
@@ -331,18 +339,15 @@ disasm_inst_decode_dw1_gen6(struct disasm_inst *inst, uint32_t dw1)
          inst->dst.base.addr_subreg =
             GEN_EXTRACT(dw1, GEN8_INST_DST_ADDR_SUBREG);
 
+         /* bit 9 is already set in disasm_inst_decode_dw1_low_gen8() */
          if (inst->access_mode == GEN6_ALIGN_1) {
-            inst->dst.base.addr_imm =
+            inst->dst.base.addr_imm |=
                GEN_EXTRACT(dw1, GEN8_INST_DST_ADDR_IMM);
          } else {
-            inst->dst.base.addr_imm = GEN_EXTRACT(dw1,
-                  GEN8_INST_DST_ADDR_IMM_ALIGN16) <<
+            inst->dst.base.addr_imm |=
+               GEN_EXTRACT(dw1, GEN8_INST_DST_ADDR_IMM_ALIGN16) <<
                GEN8_INST_DST_ADDR_IMM_ALIGN16__SHR;
          }
-
-         inst->dst.base.addr_imm |= GEN_EXTRACT(dw1,
-               GEN8_INST_DST_ADDR_IMM_BIT9) <<
-            GEN8_INST_DST_ADDR_IMM_BIT9__SHR;
       } else {
          inst->dst.base.addr_subreg =
             GEN_EXTRACT(dw1, GEN6_INST_DST_ADDR_SUBREG);
@@ -351,8 +356,8 @@ disasm_inst_decode_dw1_gen6(struct disasm_inst *inst, uint32_t dw1)
             inst->dst.base.addr_imm =
                GEN_EXTRACT(dw1, GEN6_INST_DST_ADDR_IMM);
          } else {
-            inst->dst.base.addr_imm = GEN_EXTRACT(dw1,
-                  GEN6_INST_DST_ADDR_IMM_ALIGN16) <<
+            inst->dst.base.addr_imm =
+               GEN_EXTRACT(dw1, GEN6_INST_DST_ADDR_IMM_ALIGN16) <<
                GEN6_INST_DST_ADDR_IMM_ALIGN16__SHR;
          }
       }
@@ -364,6 +369,22 @@ disasm_inst_decode_dw1_gen6(struct disasm_inst *inst, uint32_t dw1)
       inst->dst.writemask = 0xf;
    else
       inst->dst.writemask = GEN_EXTRACT(dw1, GEN6_INST_DST_WRITEMASK);
+}
+
+static void
+disasm_inst_decode_dw1_gen6(struct disasm_inst *inst, uint32_t dw1)
+{
+   ILO_DEV_ASSERT(inst->dev, 6, 8);
+
+   if (ilo_dev_gen(inst->dev) >= ILO_GEN(8))
+      disasm_inst_decode_dw1_low_gen8(inst, dw1);
+   else
+      disasm_inst_decode_dw1_low_gen6(inst, dw1);
+
+   if (disasm_inst_jip_in_dw1_high_gen6(inst))
+      inst->u.imm32 = dw1 >> 16;
+   else
+      disasm_inst_decode_dw1_high_gen6(inst, dw1);
 }
 
 static void
