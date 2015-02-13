@@ -944,6 +944,8 @@ const struct function gl_core_functions_possible[] = {
    { "glGetNamedBufferPointerv", 45, -1 },
    { "glGetNamedBufferSubData", 45, -1 },
    { "glCreateRenderbuffers", 45, -1 },
+   { "glNamedRenderbufferStorage", 45, -1 },
+   { "glNamedRenderbufferStorageMultisample", 45, -1 },
    { "glGetNamedRenderbufferParameteriv", 45, -1 },
    { "glCreateTextures", 45, -1 },
    { "glTextureStorage1D", 45, -1 },

@@ -159,6 +159,21 @@
       <param name="renderbuffers" type="GLuint *" />
    </function>
 
+   <function name="NamedRenderbufferStorage" offset="assign">
+      <param name="renderbuffer" type="GLuint" />
+      <param name="internalformat" type="GLenum" />
+      <param name="width" type="GLsizei" />
+      <param name="height" type="GLsizei" />
+   </function>
+
+   <function name="NamedRenderbufferStorageMultisample" offset="assign">
+      <param name="renderbuffer" type="GLuint" />
+      <param name="samples" type="GLsizei" />
+      <param name="internalformat" type="GLenum" />
+      <param name="width" type="GLsizei" />
+      <param name="height" type="GLsizei" />
+   </function>
+
    <function name="GetNamedRenderbufferParameteriv" offset="assign">
       <param name="renderbuffer" type="GLuint" />
       <param name="pname" type="GLenum" />

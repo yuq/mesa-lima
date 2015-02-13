@@ -131,6 +131,15 @@ _es_RenderbufferStorageEXT(GLenum target, GLenum internalFormat,
 			   GLsizei width, GLsizei height);
 
 extern void GLAPIENTRY
+_mesa_NamedRenderbufferStorage(GLuint renderbuffer, GLenum internalformat,
+                               GLsizei width, GLsizei height);
+
+extern void GLAPIENTRY
+_mesa_NamedRenderbufferStorageMultisample(GLuint renderbuffer, GLsizei samples,
+                                          GLenum internalformat,
+                                          GLsizei width, GLsizei height);
+
+extern void GLAPIENTRY
 _mesa_EGLImageTargetRenderbufferStorageOES(GLenum target, GLeglImageOES image);
 
 extern void GLAPIENTRY

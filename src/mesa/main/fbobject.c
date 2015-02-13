@@ -1785,40 +1785,17 @@ invalidate_rb(GLuint key, void *data, void *userData)
 
 
 /**
- * Helper function used by _mesa_RenderbufferStorage() and
- * _mesa_RenderbufferStorageMultisample().
- * samples will be NO_SAMPLES if called by _mesa_RenderbufferStorage().
+ * Helper function used by renderbuffer_storage_direct() and
+ * renderbuffer_storage_target().
+ * samples will be NO_SAMPLES if called by a non-multisample function.
  */
 static void
-renderbuffer_storage(GLenum target, GLenum internalFormat,
-                     GLsizei width, GLsizei height, GLsizei samples)
+renderbuffer_storage(struct gl_context *ctx, struct gl_renderbuffer *rb,
+                     GLenum internalFormat, GLsizei width,
+                     GLsizei height, GLsizei samples, const char *func)
 {
-   const char *func = samples == NO_SAMPLES ?
-      "glRenderbufferStorage" : "glRenderbufferStorageMultisample";
-   struct gl_renderbuffer *rb;
    GLenum baseFormat;
    GLenum sample_count_error;
-   GET_CURRENT_CONTEXT(ctx);
-
-   if (MESA_VERBOSE & VERBOSE_API) {
-      if (samples == NO_SAMPLES)
-         _mesa_debug(ctx, "%s(%s, %s, %d, %d)\n",
-                     func,
-                     _mesa_lookup_enum_by_nr(target),
-                     _mesa_lookup_enum_by_nr(internalFormat),
-                     width, height);
-      else
-         _mesa_debug(ctx, "%s(%s, %s, %d, %d, %d)\n",
-                     func,
-                     _mesa_lookup_enum_by_nr(target),
-                     _mesa_lookup_enum_by_nr(internalFormat),
-                     width, height, samples);
-   }
-
-   if (target != GL_RENDERBUFFER_EXT) {
-      _mesa_error(ctx, GL_INVALID_ENUM, "%s(target)", func);
-      return;
-   }
 
    baseFormat = _mesa_base_fbo_format(ctx, internalFormat);
    if (baseFormat == 0) {
@@ -1828,12 +1805,14 @@ renderbuffer_storage(GLenum target, GLenum internalFormat,
    }
 
    if (width < 0 || width > (GLsizei) ctx->Const.MaxRenderbufferSize) {
-      _mesa_error(ctx, GL_INVALID_VALUE, "%s(width)", func);
+      _mesa_error(ctx, GL_INVALID_VALUE, "%s(invalid width %d)", func,
+                  width);
       return;
    }
 
    if (height < 0 || height > (GLsizei) ctx->Const.MaxRenderbufferSize) {
-      _mesa_error(ctx, GL_INVALID_VALUE, "%s(height)", func);
+      _mesa_error(ctx, GL_INVALID_VALUE, "%s(invalid height %d)", func,
+                  height);
       return;
    }
 
@@ -1845,18 +1824,12 @@ renderbuffer_storage(GLenum target, GLenum internalFormat,
       /* check the sample count;
        * note: driver may choose to use more samples than what's requested
        */
-      sample_count_error = _mesa_check_sample_count(ctx, target,
+      sample_count_error = _mesa_check_sample_count(ctx, GL_RENDERBUFFER,
             internalFormat, samples);
       if (sample_count_error != GL_NO_ERROR) {
          _mesa_error(ctx, sample_count_error, "%s(samples)", func);
          return;
       }
-   }
-
-   rb = ctx->CurrentRenderbuffer;
-   if (!rb) {
-      _mesa_error(ctx, GL_INVALID_OPERATION, "%s", func);
-      return;
    }
 
    FLUSH_VERTICES(ctx, _NEW_BUFFERS);
@@ -1898,6 +1871,83 @@ renderbuffer_storage(GLenum target, GLenum internalFormat,
    if (rb->AttachedAnytime) {
       _mesa_HashWalk(ctx->Shared->FrameBuffers, invalidate_rb, rb);
    }
+}
+
+/**
+ * Helper function used by _mesa_NamedRenderbufferStorage*().
+ * samples will be NO_SAMPLES if called by a non-multisample function.
+ */
+static void
+renderbuffer_storage_named(GLuint renderbuffer, GLenum internalFormat,
+                           GLsizei width, GLsizei height, GLsizei samples,
+                           const char *func)
+{
+   GET_CURRENT_CONTEXT(ctx);
+
+   if (MESA_VERBOSE & VERBOSE_API) {
+      if (samples == NO_SAMPLES)
+         _mesa_debug(ctx, "%s(%u, %s, %d, %d)\n",
+                     func, renderbuffer,
+                     _mesa_lookup_enum_by_nr(internalFormat),
+                     width, height);
+      else
+         _mesa_debug(ctx, "%s(%u, %s, %d, %d, %d)\n",
+                     func, renderbuffer,
+                     _mesa_lookup_enum_by_nr(internalFormat),
+                     width, height, samples);
+   }
+
+   struct gl_renderbuffer *rb = _mesa_lookup_renderbuffer(ctx, renderbuffer);
+   if (!rb || rb == &DummyRenderbuffer) {
+      /* ID was reserved, but no real renderbuffer object made yet */
+      _mesa_error(ctx, GL_INVALID_OPERATION, "%s(invalid renderbuffer %u)",
+                  func, renderbuffer);
+      return;
+   }
+
+   renderbuffer_storage(ctx, rb, internalFormat, width, height, samples, func);
+}
+
+/**
+ * Helper function used by _mesa_RenderbufferStorage() and
+ * _mesa_RenderbufferStorageMultisample().
+ * samples will be NO_SAMPLES if called by _mesa_RenderbufferStorage().
+ */
+static void
+renderbuffer_storage_target(GLenum target, GLenum internalFormat,
+                            GLsizei width, GLsizei height, GLsizei samples,
+                            const char *func)
+{
+   GET_CURRENT_CONTEXT(ctx);
+
+   if (MESA_VERBOSE & VERBOSE_API) {
+      if (samples == NO_SAMPLES)
+         _mesa_debug(ctx, "%s(%s, %s, %d, %d)\n",
+                     func,
+                     _mesa_lookup_enum_by_nr(target),
+                     _mesa_lookup_enum_by_nr(internalFormat),
+                     width, height);
+      else
+         _mesa_debug(ctx, "%s(%s, %s, %d, %d, %d)\n",
+                     func,
+                     _mesa_lookup_enum_by_nr(target),
+                     _mesa_lookup_enum_by_nr(internalFormat),
+                     width, height, samples);
+   }
+
+   if (target != GL_RENDERBUFFER_EXT) {
+      _mesa_error(ctx, GL_INVALID_ENUM, "%s(target)", func);
+      return;
+   }
+
+   if (!ctx->CurrentRenderbuffer) {
+      _mesa_error(ctx, GL_INVALID_OPERATION, "%s(no renderbuffer bound)",
+                  func);
+      return;
+   }
+
+   renderbuffer_storage(ctx, ctx->CurrentRenderbuffer, internalFormat, width,
+                        height, samples, func);
 }
 
 
@@ -1959,7 +2009,8 @@ _mesa_RenderbufferStorage(GLenum target, GLenum internalFormat,
     * glRenderbufferStorageMultisample() with samples=0.  We pass in
     * a token value here just for error reporting purposes.
     */
-   renderbuffer_storage(target, internalFormat, width, height, NO_SAMPLES);
+   renderbuffer_storage_target(target, internalFormat, width, height,
+                               NO_SAMPLES, "glRenderbufferStorage");
 }
 
 
@@ -1968,7 +2019,8 @@ _mesa_RenderbufferStorageMultisample(GLenum target, GLsizei samples,
                                      GLenum internalFormat,
                                      GLsizei width, GLsizei height)
 {
-   renderbuffer_storage(target, internalFormat, width, height, samples);
+   renderbuffer_storage_target(target, internalFormat, width, height,
+                               samples, "glRenderbufferStorageMultisample");
 }
 
 
@@ -1989,7 +2041,30 @@ _es_RenderbufferStorageEXT(GLenum target, GLenum internalFormat,
       break;
    }
 
-   renderbuffer_storage(target, internalFormat, width, height, 0);
+   renderbuffer_storage_target(target, internalFormat, width, height, 0,
+                               "glRenderbufferStorageEXT");
+}
+
+void GLAPIENTRY
+_mesa_NamedRenderbufferStorage(GLuint renderbuffer, GLenum internalformat,
+                               GLsizei width, GLsizei height)
+{
+   /* GL_ARB_fbo says calling this function is equivalent to calling
+    * glRenderbufferStorageMultisample() with samples=0.  We pass in
+    * a token value here just for error reporting purposes.
+    */
+   renderbuffer_storage_named(renderbuffer, internalformat, width, height,
+                              NO_SAMPLES, "glNamedRenderbufferStorage");
+}
+
+void GLAPIENTRY
+_mesa_NamedRenderbufferStorageMultisample(GLuint renderbuffer, GLsizei samples,
+                                          GLenum internalformat,
+                                          GLsizei width, GLsizei height)
+{
+   renderbuffer_storage_named(renderbuffer, internalformat, width, height,
+                              samples,
+                              "glNamedRenderbufferStorageMultisample");
 }
 
 
