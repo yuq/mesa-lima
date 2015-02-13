@@ -3557,8 +3557,6 @@ fs_visitor::optimize()
 {
    const char *stage_name = stage == MESA_SHADER_VERTEX ? "vs" : "fs";
 
-   calculate_cfg();
-
    split_virtual_grfs();
 
    move_uniform_array_access_to_pull_constants();
@@ -3734,6 +3732,8 @@ fs_visitor::run_vs()
 
    emit_urb_writes();
 
+   calculate_cfg();
+
    optimize();
 
    assign_curb_setup();
@@ -3812,6 +3812,8 @@ fs_visitor::run_fs()
          emit_alpha_test();
 
       emit_fb_writes();
+
+      calculate_cfg();
 
       optimize();
 
