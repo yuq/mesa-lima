@@ -159,6 +159,12 @@
       <param name="renderbuffers" type="GLuint *" />
    </function>
 
+   <function name="GetNamedRenderbufferParameteriv" offset="assign">
+      <param name="renderbuffer" type="GLuint" />
+      <param name="pname" type="GLenum" />
+      <param name="params" type="GLint *" />
+   </function>
+
    <!-- Texture object functions -->
 
    <function name="CreateTextures" offset="assign">

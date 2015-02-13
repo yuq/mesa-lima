@@ -1993,25 +1993,11 @@ _es_RenderbufferStorageEXT(GLenum target, GLenum internalFormat,
 }
 
 
-void GLAPIENTRY
-_mesa_GetRenderbufferParameteriv(GLenum target, GLenum pname, GLint *params)
+static void
+get_render_buffer_parameteriv(struct gl_context *ctx,
+                              struct gl_renderbuffer *rb, GLenum pname,
+                              GLint *params, const char *func)
 {
-   struct gl_renderbuffer *rb;
-   GET_CURRENT_CONTEXT(ctx);
-
-   if (target != GL_RENDERBUFFER_EXT) {
-      _mesa_error(ctx, GL_INVALID_ENUM,
-                  "glGetRenderbufferParameterivEXT(target)");
-      return;
-   }
-
-   rb = ctx->CurrentRenderbuffer;
-   if (!rb) {
-      _mesa_error(ctx, GL_INVALID_OPERATION,
-                  "glGetRenderbufferParameterivEXT");
-      return;
-   }
-
    /* No need to flush here since we're just quering state which is
     * not effected by rendering.
     */
@@ -2042,10 +2028,51 @@ _mesa_GetRenderbufferParameteriv(GLenum target, GLenum pname, GLint *params)
       }
       /* fallthrough */
    default:
+      _mesa_error(ctx, GL_INVALID_ENUM, "%s(invalid pname=%s)", func,
+                  _mesa_lookup_enum_by_nr(pname));
+      return;
+   }
+}
+
+
+void GLAPIENTRY
+_mesa_GetRenderbufferParameteriv(GLenum target, GLenum pname, GLint *params)
+{
+   GET_CURRENT_CONTEXT(ctx);
+
+   if (target != GL_RENDERBUFFER_EXT) {
       _mesa_error(ctx, GL_INVALID_ENUM,
                   "glGetRenderbufferParameterivEXT(target)");
       return;
    }
+
+   if (!ctx->CurrentRenderbuffer) {
+      _mesa_error(ctx, GL_INVALID_OPERATION, "glGetRenderbufferParameterivEXT"
+                  "(no renderbuffer bound)");
+      return;
+   }
+
+   get_render_buffer_parameteriv(ctx, ctx->CurrentRenderbuffer, pname,
+                                 params, "glGetRenderbufferParameteriv");
+}
+
+
+void GLAPIENTRY
+_mesa_GetNamedRenderbufferParameteriv(GLuint renderbuffer, GLenum pname,
+                                      GLint *params)
+{
+   GET_CURRENT_CONTEXT(ctx);
+
+   struct gl_renderbuffer *rb = _mesa_lookup_renderbuffer(ctx, renderbuffer);
+   if (!rb || rb == &DummyRenderbuffer) {
+      /* ID was reserved, but no real renderbuffer object made yet */
+      _mesa_error(ctx, GL_INVALID_OPERATION, "glGetNamedRenderbufferParameteriv"
+                  "(invalid renderbuffer %i)", renderbuffer);
+      return;
+   }
+
+   get_render_buffer_parameteriv(ctx, rb, pname, params,
+                                 "glGetNamedRenderbufferParameteriv");
 }
 
 

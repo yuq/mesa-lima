@@ -137,6 +137,10 @@ extern void GLAPIENTRY
 _mesa_GetRenderbufferParameteriv(GLenum target, GLenum pname,
                                     GLint *params);
 
+void GLAPIENTRY
+_mesa_GetNamedRenderbufferParameteriv(GLuint renderbuffer, GLenum pname,
+                                      GLint *params);
+
 extern GLboolean GLAPIENTRY
 _mesa_IsFramebuffer(GLuint framebuffer);
 
