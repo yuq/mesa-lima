@@ -444,8 +444,12 @@ translate_src_gen6(const struct codegen *cg, int idx)
    /* special treatment may be needed if any of the operand is immediate */
    if (cg->src[0].file == GEN6_FILE_IMM) {
       assert(!cg->src[0].absolute && !cg->src[0].negate);
-      /* only the last src operand can be an immediate */
-      assert(src_is_null(cg, 1));
+
+      /* only the last src operand can be an immediate unless it is Gen8+ */
+      assert(ilo_dev_gen(cg->dev) >= ILO_GEN(8) || src_is_null(cg, 1));
+
+      if (!src_is_null(cg, 1))
+         return cg->src[idx].origin;
 
       if (idx == 0) {
          if (ilo_dev_gen(cg->dev) >= ILO_GEN(8)) {
