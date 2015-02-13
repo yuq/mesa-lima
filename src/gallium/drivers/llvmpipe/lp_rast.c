@@ -31,6 +31,7 @@
 #include "util/u_rect.h"
 #include "util/u_surface.h"
 #include "util/u_pack_color.h"
+#include "util/u_string.h"
 
 #include "os/os_time.h"
 
@@ -747,11 +748,16 @@ static PIPE_THREAD_ROUTINE( thread_function, init_data )
    struct lp_rasterizer_task *task = (struct lp_rasterizer_task *) init_data;
    struct lp_rasterizer *rast = task->rast;
    boolean debug = false;
-   unsigned fpstate = util_fpstate_get();
+   char thread_name[16];
+   unsigned fpstate;
+
+   util_snprintf(thread_name, sizeof thread_name, "llvmpipe-%u", task->thread_index);
+   pipe_thread_setname(thread_name);
 
    /* Make sure that denorms are treated like zeros. This is 
     * the behavior required by D3D10. OpenGL doesn't care.
     */
+   fpstate = util_fpstate_get();
    util_fpstate_set_denorms_to_zero(fpstate);
 
    while (1) {
