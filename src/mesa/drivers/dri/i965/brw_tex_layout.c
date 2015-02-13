@@ -82,6 +82,9 @@ intel_horizontal_texture_alignment_unit(struct brw_context *brw,
    if (brw->gen >= 7 && mt->format == MESA_FORMAT_Z_UNORM16)
       return 8;
 
+   if (brw->gen == 8 && mt->mcs_mt && mt->num_samples <= 1)
+      return 16;
+
    return 4;
 }
 
