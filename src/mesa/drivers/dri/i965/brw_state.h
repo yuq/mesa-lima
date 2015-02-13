@@ -245,6 +245,15 @@ void brw_update_renderbuffer_surfaces(struct brw_context *brw,
                                       uint32_t render_target_start,
                                       uint32_t *surf_offset);
 
+/* gen7_wm_state.c */
+void
+gen7_upload_ps_state(struct brw_context *brw,
+                     const struct gl_fragment_program *fp,
+                     const struct brw_stage_state *stage_state,
+                     const struct brw_wm_prog_data *prog_data,
+                     bool enable_dual_src_blend, unsigned sample_mask,
+                     unsigned fast_clear_op);
+
 /* gen7_wm_surface_state.c */
 uint32_t gen7_surface_tiling_mode(uint32_t tiling);
 uint32_t gen7_surface_msaa_bits(unsigned num_samples, enum intel_msaa_layout l);
