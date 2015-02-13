@@ -2305,6 +2305,34 @@ can_blit_slice(struct intel_mipmap_tree *mt,
    return true;
 }
 
+static bool
+use_intel_mipree_map_blit(struct brw_context *brw,
+                          struct intel_mipmap_tree *mt,
+                          GLbitfield mode,
+                          unsigned int level,
+                          unsigned int slice)
+{
+   if (brw->has_llc &&
+      /* It's probably not worth swapping to the blit ring because of
+       * all the overhead involved.
+       */
+       !(mode & GL_MAP_WRITE_BIT) &&
+       !mt->compressed &&
+       (mt->tiling == I915_TILING_X ||
+        /* Prior to Sandybridge, the blitter can't handle Y tiling */
+        (brw->gen >= 6 && mt->tiling == I915_TILING_Y)) &&
+       can_blit_slice(mt, level, slice))
+      return true;
+
+   if (mt->tiling != I915_TILING_NONE &&
+       mt->bo->size >= brw->max_gtt_map_object_size) {
+      assert(can_blit_slice(mt, level, slice));
+      return true;
+   }
+
+   return false;
+}
+
 /**
  * Parameter \a out_stride has type ptrdiff_t not because the buffer stride may
  * exceed 32 bits but to diminish the likelihood subtle bugs in pointer
@@ -2352,17 +2380,7 @@ intel_miptree_map(struct brw_context *brw,
       intel_miptree_map_etc(brw, mt, map, level, slice);
    } else if (mt->stencil_mt && !(mode & BRW_MAP_DIRECT_BIT)) {
       intel_miptree_map_depthstencil(brw, mt, map, level, slice);
-   }
-   else if (brw->has_llc &&
-            !(mode & GL_MAP_WRITE_BIT) &&
-            !mt->compressed &&
-            (mt->tiling == I915_TILING_X ||
-             (brw->gen >= 6 && mt->tiling == I915_TILING_Y)) &&
-            can_blit_slice(mt, level, slice)) {
-      intel_miptree_map_blit(brw, mt, map, level, slice);
-   } else if (mt->tiling != I915_TILING_NONE &&
-              mt->bo->size >= brw->max_gtt_map_object_size) {
-      assert(can_blit_slice(mt, level, slice));
+   } else if (use_intel_mipree_map_blit(brw, mt, mode, level, slice)) {
       intel_miptree_map_blit(brw, mt, map, level, slice);
 #if defined(USE_SSE41)
    } else if (!(mode & GL_MAP_WRITE_BIT) && !mt->compressed && cpu_has_sse4_1) {
