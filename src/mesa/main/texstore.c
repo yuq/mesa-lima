@@ -73,6 +73,7 @@
 #include "texstore.h"
 #include "enums.h"
 #include "glformats.h"
+#include "pixeltransfer.h"
 #include "../../gallium/auxiliary/util/u_format_rgb9e5.h"
 #include "../../gallium/auxiliary/util/u_format_r11g11b10f.h"
 
@@ -675,12 +676,13 @@ texstore_compressed(TEXSTORE_PARAMS)
 static GLboolean
 texstore_rgba(TEXSTORE_PARAMS)
 {
-   void *tempImage = NULL;
+   void *tempImage = NULL, *tempRGBA = NULL;
    int srcRowStride, img;
-   GLubyte *src;
+   GLubyte *src, *dst;
    uint32_t srcMesaFormat;
    uint8_t rebaseSwizzle[4];
    bool needRebase;
+   bool transferOpsDone = false;
 
    /* We have to handle MESA_FORMAT_YCBCR manually because it is a special case
     * and _mesa_format_convert does not support it. In this case the we only
@@ -708,6 +710,11 @@ texstore_rgba(TEXSTORE_PARAMS)
                                                 ctx->_ImageTransferState);
       if (!tempImage)
          return GL_FALSE;
+
+      /* _mesa_unpack_color_index_to_rgba_ubyte has handled transferops
+       * if needed.
+       */
+      transferOpsDone = true;
 
       /* Now we only have to adjust our src info for a conversion from
        * the RGBA ubyte and then we continue as usual.
@@ -737,12 +744,51 @@ texstore_rgba(TEXSTORE_PARAMS)
    srcRowStride =
       _mesa_image_row_stride(srcPacking, srcWidth, srcFormat, srcType);
 
+   srcMesaFormat = _mesa_format_from_format_and_type(srcFormat, srcType);
+   dstFormat = _mesa_get_srgb_format_linear(dstFormat);
+
+   /* If we have transferOps then we need to convert to RGBA float first,
+      then apply transferOps, then do the conversion to dst
+    */
+   if (!transferOpsDone &&
+       _mesa_texstore_needs_transfer_ops(ctx, baseInternalFormat, dstFormat)) {
+      /* Allocate RGBA float image */
+      int elementCount = srcWidth * srcHeight * srcDepth;
+      tempRGBA = malloc(4 * elementCount * sizeof(float));
+      if (!tempRGBA) {
+         free(tempImage);
+         free(tempRGBA);
+         return GL_FALSE;
+      }
+
+      /* Convert from src to RGBA float */
+      src = (GLubyte *) srcAddr;
+      dst = (GLubyte *) tempRGBA;
+      for (img = 0; img < srcDepth; img++) {
+         _mesa_format_convert(dst, RGBA32_FLOAT, 4 * srcWidth * sizeof(float),
+                              src, srcMesaFormat, srcRowStride,
+                              srcWidth, srcHeight, NULL);
+         src += srcHeight * srcRowStride;
+         dst += srcHeight * 4 * srcWidth * sizeof(float);
+      }
+
+      /* Apply transferOps */
+      _mesa_apply_rgba_transfer_ops(ctx, ctx->_ImageTransferState, elementCount,
+                                    (float(*)[4]) tempRGBA);
+
+      /* Now we have to adjust our src info for a conversion from
+       * the RGBA float image and then we continue as usual.
+       */
+      srcAddr = tempRGBA;
+      srcFormat = GL_RGBA;
+      srcType = GL_FLOAT;
+      srcRowStride = srcWidth * 4 * sizeof(float);
+      srcMesaFormat = RGBA32_FLOAT;
+   }
+
    src = (GLubyte *)
       _mesa_image_address(dims, srcPacking, srcAddr, srcWidth, srcHeight,
                           srcFormat, srcType, 0, 0, 0);
-
-   srcMesaFormat = _mesa_format_from_format_and_type(srcFormat, srcType);
-   dstFormat = _mesa_get_srgb_format_linear(dstFormat);
 
    if (_mesa_get_format_base_format(dstFormat) != baseInternalFormat) {
       needRebase =
@@ -761,6 +807,7 @@ texstore_rgba(TEXSTORE_PARAMS)
    }
 
    free(tempImage);
+   free(tempRGBA);
 
    return GL_TRUE;
 }
