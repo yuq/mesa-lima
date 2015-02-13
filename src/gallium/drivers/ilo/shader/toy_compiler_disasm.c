@@ -106,7 +106,18 @@ struct disasm_inst {
    struct disasm_src_operand src1;
    union {
       struct disasm_src_operand src2;
-      uint32_t imm32;
+      uint64_t imm64;
+
+      uint32_t ud;
+      int32_t d;
+      uint16_t uw;
+      int16_t w;
+      float f;
+
+      struct {
+         int16_t jip;
+         int16_t uip;
+      } ip16;
    } u;
 };
 
@@ -382,7 +393,7 @@ disasm_inst_decode_dw1_gen6(struct disasm_inst *inst, uint32_t dw1)
       disasm_inst_decode_dw1_low_gen6(inst, dw1);
 
    if (disasm_inst_jip_in_dw1_high_gen6(inst))
-      inst->u.imm32 = dw1 >> 16;
+      inst->u.imm64 = dw1 >> 16;
    else
       disasm_inst_decode_dw1_high_gen6(inst, dw1);
 }
@@ -408,7 +419,7 @@ disasm_inst_decode_dw2_dw3_gen6(struct disasm_inst *inst,
        inst->src1.base.file == GEN6_FILE_IMM) {
       count = 1;
       if (!disasm_inst_jip_in_dw1_high_gen6(inst))
-         inst->u.imm32 = dw3;
+         inst->u.imm64 = dw3;
    } else {
       count = 2;
    }
@@ -913,9 +924,11 @@ disasm_inst_cmpt_ctrl(const struct disasm_inst *inst)
 static const char *
 disasm_inst_eot(const struct disasm_inst *inst)
 {
+   const uint32_t mdesc = inst->u.ud;
+
    if (inst->opcode == GEN6_OPCODE_SEND ||
        inst->opcode == GEN6_OPCODE_SENDC)
-      return (inst->u.imm32 & GEN6_MSG_EOT) ? " EOT" : "";
+      return (mdesc & GEN6_MSG_EOT) ? " EOT" : "";
    else
       return "";
 }
@@ -1460,28 +1473,28 @@ disasm_printer_add_operand(struct disasm_printer *printer,
    if (operand->file == GEN6_FILE_IMM) {
       switch (operand->type) {
       case GEN6_TYPE_UD:
-         disasm_printer_add(printer, "0x%08xUD", inst->u.imm32);
+         disasm_printer_add(printer, "0x%08xUD", inst->u.ud);
          break;
       case GEN6_TYPE_D:
-         disasm_printer_add(printer, "%dD", inst->u.imm32);
+         disasm_printer_add(printer, "%dD", inst->u.d);
          break;
       case GEN6_TYPE_UW:
-         disasm_printer_add(printer, "0x%04xUW", (uint16_t) inst->u.imm32);
+         disasm_printer_add(printer, "0x%04xUW", inst->u.uw);
          break;
       case GEN6_TYPE_W:
-         disasm_printer_add(printer, "%dW", (int16_t) inst->u.imm32);
+         disasm_printer_add(printer, "%dW", inst->u.w);
          break;
       case GEN6_TYPE_UV_IMM:
-         disasm_printer_add(printer, "0x%08xUV", inst->u.imm32);
+         disasm_printer_add(printer, "0x%08xUV", inst->u.ud);
          break;
       case GEN6_TYPE_VF_IMM:
          disasm_printer_add(printer, "Vector Float");
          break;
       case GEN6_TYPE_V_IMM:
-         disasm_printer_add(printer, "0x%08xV", inst->u.imm32);
+         disasm_printer_add(printer, "0x%08xV", inst->u.ud);
          break;
       case GEN6_TYPE_F:
-         disasm_printer_add(printer, "%-gF", uif(inst->u.imm32));
+         disasm_printer_add(printer, "%-gF", uif(inst->u.f));
          break;
       default:
          disasm_printer_add(printer, "BAD");
@@ -1794,7 +1807,7 @@ static void
 disasm_printer_add_mdesc(struct disasm_printer *printer,
                          const struct disasm_inst *inst)
 {
-   const uint32_t mdesc = inst->u.imm32;
+   const uint32_t mdesc = inst->u.ud;
 
    assert(inst->opcode == GEN6_OPCODE_SEND ||
           inst->opcode == GEN6_OPCODE_SENDC);
@@ -1848,14 +1861,17 @@ disasm_printer_print_inst(struct disasm_printer *printer,
 
    if (inst->has_jip || inst->has_uip) {
       if (inst->has_jip) {
+         const int32_t jip = inst->u.ip16.jip;
+
          disasm_printer_column(printer, col++);
-         disasm_printer_add(printer, "JIP: %d", (int16_t) inst->u.imm32);
+         disasm_printer_add(printer, "JIP: %d", jip);
       }
 
       if (inst->has_uip) {
+         const int32_t uip = inst->u.ip16.uip;
+
          disasm_printer_column(printer, col++);
-         disasm_printer_add(printer, "UIP: %d",
-               (int16_t) (inst->u.imm32 >> 16));
+         disasm_printer_add(printer, "UIP: %d", uip);
       }
    } else {
       const int src_count = disasm_opcode_table[inst->opcode].src_count;
