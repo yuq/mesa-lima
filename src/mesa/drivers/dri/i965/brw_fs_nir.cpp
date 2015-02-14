@@ -1206,7 +1206,9 @@ fs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
    }
 
    case nir_intrinsic_load_front_face:
-      assert(!"TODO");
+      emit(MOV(retype(dest, BRW_REGISTER_TYPE_D),
+               *emit_frontfacing_interpolation()));
+      break;
 
    case nir_intrinsic_load_sample_mask_in: {
       fs_reg sample_mask_in = nir_system_values[SYSTEM_VALUE_SAMPLE_MASK_IN];
