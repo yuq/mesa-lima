@@ -1401,11 +1401,14 @@ nvc0_blit(struct pipe_context *pipe, const struct pipe_blit_info *info)
       } else
       if (!nv50_2d_src_format_faithful(info->src.format)) {
          if (!util_format_is_luminance(info->src.format)) {
+            if (!nv50_2d_dst_format_ops_supported(info->dst.format))
+               eng3d = TRUE;
+            else
             if (util_format_is_intensity(info->src.format))
                eng3d = info->src.format != PIPE_FORMAT_I8_UNORM;
             else
-            if (!nv50_2d_dst_format_ops_supported(info->dst.format))
-               eng3d = TRUE;
+            if (util_format_is_alpha(info->src.format))
+               eng3d = info->src.format != PIPE_FORMAT_A8_UNORM;
             else
                eng3d = !nv50_2d_format_supported(info->src.format);
          }
