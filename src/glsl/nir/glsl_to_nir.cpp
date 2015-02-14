@@ -242,6 +242,7 @@ nir_visitor::visit(ir_variable *ir)
    var->data.centroid = ir->data.centroid;
    var->data.sample = ir->data.sample;
    var->data.invariant = ir->data.invariant;
+   var->data.location = ir->data.location;
 
    switch(ir->data.mode) {
    case ir_var_auto:
@@ -260,7 +261,13 @@ nir_visitor::visit(ir_variable *ir)
       break;
 
    case ir_var_shader_in:
-      var->data.mode = nir_var_shader_in;
+      if (ir->data.location == VARYING_SLOT_FACE) {
+         /* For whatever reason, GLSL IR makes gl_FrontFacing an input */
+         var->data.location = SYSTEM_VALUE_FRONT_FACE;
+         var->data.mode = nir_var_system_value;
+      } else {
+         var->data.mode = nir_var_shader_in;
+      }
       break;
 
    case ir_var_shader_out:
@@ -312,7 +319,6 @@ nir_visitor::visit(ir_variable *ir)
       unreachable("not reached");
    }
 
-   var->data.location = ir->data.location;
    var->data.index = ir->data.index;
    var->data.binding = ir->data.binding;
    /* XXX Get rid of buffer_index */
