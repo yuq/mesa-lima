@@ -1089,9 +1089,11 @@ nvc0_set_transform_feedback_targets(struct pipe_context *pipe,
       pipe_so_target_reference(&nvc0->tfbbuf[i], targets[i]);
    }
    for (; i < nvc0->num_tfbbufs; ++i) {
-      nvc0->tfbbuf_dirty |= 1 << i;
-      nvc0_so_target_save_offset(pipe, nvc0->tfbbuf[i], i, &serialize);
-      pipe_so_target_reference(&nvc0->tfbbuf[i], NULL);
+      if (nvc0->tfbbuf[i]) {
+         nvc0->tfbbuf_dirty |= 1 << i;
+         nvc0_so_target_save_offset(pipe, nvc0->tfbbuf[i], i, &serialize);
+         pipe_so_target_reference(&nvc0->tfbbuf[i], NULL);
+      }
    }
    nvc0->num_tfbbufs = num_targets;
 
