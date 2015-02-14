@@ -199,9 +199,6 @@ fs_visitor::nir_setup_inputs(nir_shader *shader)
          reg = *emit_fragcoord_interpolation(var->data.pixel_center_integer,
                                              var->data.origin_upper_left);
          emit_percomp(MOV(varying, reg), 0xF);
-      } else if (!strcmp(var->name, "gl_FrontFacing")) {
-         reg = *emit_frontfacing_interpolation();
-         emit(MOV(retype(varying, BRW_REGISTER_TYPE_UD), reg));
       } else {
          emit_general_interpolation(varying, var->name, var->type,
                                     (glsl_interp_qualifier) var->data.interpolation,
