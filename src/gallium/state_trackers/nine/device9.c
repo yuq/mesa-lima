@@ -2718,12 +2718,14 @@ NineDevice9_SetSamplerState( struct NineDevice9 *This,
     if (Sampler >= D3DDMAPSAMPLER)
         Sampler = Sampler - D3DDMAPSAMPLER + NINE_MAX_SAMPLERS_PS;
 
-    state->samp[Sampler][Type] = Value;
-    state->changed.group |= NINE_STATE_SAMPLER;
-    state->changed.sampler[Sampler] |= 1 << Type;
+    if (state->samp[Sampler][Type] != Value || unlikely(This->is_recording)) {
+        state->samp[Sampler][Type] = Value;
+        state->changed.group |= NINE_STATE_SAMPLER;
+        state->changed.sampler[Sampler] |= 1 << Type;
 
-    if (Type == D3DSAMP_SRGBTEXTURE)
-        state->changed.srgb = TRUE;
+        if (Type == D3DSAMP_SRGBTEXTURE)
+            state->changed.srgb = TRUE;
+    }
 
     return D3D_OK;
 }
