@@ -31,8 +31,6 @@
 #include "util/u_memory.h"
 #include "util/u_inlines.h"
 #include "util/u_format.h"
-#include "tgsi/tgsi_dump.h"
-#include "tgsi/tgsi_parse.h"
 
 #include "freedreno_program.h"
 
@@ -127,13 +125,14 @@ emit_shader(struct fd_ringbuffer *ring, const struct ir3_shader_variant *so)
 }
 
 void
-fd3_program_emit(struct fd_ringbuffer *ring, struct fd3_emit *emit)
+fd3_program_emit(struct fd_ringbuffer *ring, struct fd3_emit *emit,
+				 int nr, struct pipe_surface **bufs)
 {
 	const struct ir3_shader_variant *vp, *fp;
 	const struct ir3_info *vsi, *fsi;
 	enum a3xx_instrbuffermode fpbuffer, vpbuffer;
 	uint32_t fpbuffersz, vpbuffersz, fsoff;
-	uint32_t pos_regid, posz_regid, psize_regid, color_regid;
+	uint32_t pos_regid, posz_regid, psize_regid, color_regid[4] = {0};
 	int constmode;
 	int i, j, k;
 
@@ -199,11 +198,26 @@ fd3_program_emit(struct fd_ringbuffer *ring, struct fd3_emit *emit)
 		ir3_semantic_name(TGSI_SEMANTIC_POSITION, 0));
 	psize_regid = ir3_find_output_regid(vp,
 		ir3_semantic_name(TGSI_SEMANTIC_PSIZE, 0));
-	color_regid = ir3_find_output_regid(fp,
-		ir3_semantic_name(TGSI_SEMANTIC_COLOR, 0));
+	if (fp->color0_mrt) {
+		color_regid[0] = color_regid[1] = color_regid[2] = color_regid[3] =
+			ir3_find_output_regid(fp, ir3_semantic_name(TGSI_SEMANTIC_COLOR, 0));
+	} else {
+		for (int i = 0; i < fp->outputs_count; i++) {
+			ir3_semantic sem = fp->outputs[i].semantic;
+			unsigned idx = sem2idx(sem);
+			if (sem2name(sem) != TGSI_SEMANTIC_COLOR)
+				continue;
+			assert(idx < 4);
+			color_regid[idx] = fp->outputs[i].regid;
+		}
+	}
 
-	if (util_format_is_alpha(emit->format))
-		color_regid += 3;
+	/* adjust regids for alpha output formats. there is no alpha render
+	 * format, so it's just treated like red
+	 */
+	for (i = 0; i < nr; i++)
+		if (util_format_is_alpha(pipe_surface_format(bufs[i])))
+			color_regid[i] += 3;
 
 	/* we could probably divide this up into things that need to be
 	 * emitted if frag-prog is dirty vs if vert-prog is dirty..
@@ -345,21 +359,23 @@ fd3_program_emit(struct fd_ringbuffer *ring, struct fd3_emit *emit)
 	}
 
 	OUT_PKT0(ring, REG_A3XX_SP_FS_OUTPUT_REG, 1);
-	if (fp->writes_pos) {
-		OUT_RING(ring, A3XX_SP_FS_OUTPUT_REG_DEPTH_ENABLE |
-				A3XX_SP_FS_OUTPUT_REG_DEPTH_REGID(posz_regid));
-	} else {
-		OUT_RING(ring, 0x00000000);
-	}
+	OUT_RING(ring,
+			 COND(fp->writes_pos, A3XX_SP_FS_OUTPUT_REG_DEPTH_ENABLE) |
+			 A3XX_SP_FS_OUTPUT_REG_DEPTH_REGID(posz_regid) |
+			 A3XX_SP_FS_OUTPUT_REG_MRT(MAX2(1, nr) - 1));
 
 	OUT_PKT0(ring, REG_A3XX_SP_FS_MRT_REG(0), 4);
-	OUT_RING(ring, A3XX_SP_FS_MRT_REG_REGID(color_regid) |
-			COND(fp->key.half_precision, A3XX_SP_FS_MRT_REG_HALF_PRECISION) |
-			COND(util_format_is_pure_uint(emit->format), A3XX_SP_FS_MRT_REG_UINT) |
-			COND(util_format_is_pure_sint(emit->format), A3XX_SP_FS_MRT_REG_SINT));
-	OUT_RING(ring, A3XX_SP_FS_MRT_REG_REGID(0));
-	OUT_RING(ring, A3XX_SP_FS_MRT_REG_REGID(0));
-	OUT_RING(ring, A3XX_SP_FS_MRT_REG_REGID(0));
+	for (i = 0; i < 4; i++) {
+		uint32_t mrt_reg = A3XX_SP_FS_MRT_REG_REGID(color_regid[i]) |
+			COND(fp->key.half_precision, A3XX_SP_FS_MRT_REG_HALF_PRECISION);
+
+		if (i < nr) {
+			enum pipe_format fmt = pipe_surface_format(bufs[i]);
+			mrt_reg |= COND(util_format_is_pure_uint(fmt), A3XX_SP_FS_MRT_REG_UINT) |
+				COND(util_format_is_pure_sint(fmt), A3XX_SP_FS_MRT_REG_SINT);
+		}
+		OUT_RING(ring, mrt_reg);
+	}
 
 	if (emit->key.binning_pass) {
 		OUT_PKT0(ring, REG_A3XX_VPC_ATTR, 2);

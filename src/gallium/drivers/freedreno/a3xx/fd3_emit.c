@@ -293,59 +293,92 @@ emit_textures(struct fd_context *ctx, struct fd_ringbuffer *ring,
  * case format (fd3_gmem_restore_format()) stuff for restoring depth/stencil.
  */
 void
-fd3_emit_gmem_restore_tex(struct fd_ringbuffer *ring, struct pipe_surface *psurf)
+fd3_emit_gmem_restore_tex(struct fd_ringbuffer *ring,
+						  struct pipe_surface **psurf,
+						  int bufs)
 {
-	struct fd_resource *rsc = fd_resource(psurf->texture);
-	unsigned lvl = psurf->u.tex.level;
-	struct fd_resource_slice *slice = fd_resource_slice(rsc, lvl);
-	uint32_t offset = fd_resource_offset(rsc, lvl, psurf->u.tex.first_layer);
-	enum pipe_format format = fd3_gmem_restore_format(psurf->format);
-
-	debug_assert(psurf->u.tex.first_layer == psurf->u.tex.last_layer);
+	int i, j;
 
 	/* output sampler state: */
-	OUT_PKT3(ring, CP_LOAD_STATE, 4);
+	OUT_PKT3(ring, CP_LOAD_STATE, 2 + 2 * bufs);
 	OUT_RING(ring, CP_LOAD_STATE_0_DST_OFF(FRAG_TEX_OFF) |
 			CP_LOAD_STATE_0_STATE_SRC(SS_DIRECT) |
 			CP_LOAD_STATE_0_STATE_BLOCK(SB_FRAG_TEX) |
-			CP_LOAD_STATE_0_NUM_UNIT(1));
+			CP_LOAD_STATE_0_NUM_UNIT(bufs));
 	OUT_RING(ring, CP_LOAD_STATE_1_STATE_TYPE(ST_SHADER) |
 			CP_LOAD_STATE_1_EXT_SRC_ADDR(0));
-	OUT_RING(ring, A3XX_TEX_SAMP_0_XY_MAG(A3XX_TEX_NEAREST) |
-			A3XX_TEX_SAMP_0_XY_MIN(A3XX_TEX_NEAREST) |
-			A3XX_TEX_SAMP_0_WRAP_S(A3XX_TEX_CLAMP_TO_EDGE) |
-			A3XX_TEX_SAMP_0_WRAP_T(A3XX_TEX_CLAMP_TO_EDGE) |
-			A3XX_TEX_SAMP_0_WRAP_R(A3XX_TEX_REPEAT));
-	OUT_RING(ring, 0x00000000);
+	for (i = 0; i < bufs; i++) {
+		OUT_RING(ring, A3XX_TEX_SAMP_0_XY_MAG(A3XX_TEX_NEAREST) |
+				 A3XX_TEX_SAMP_0_XY_MIN(A3XX_TEX_NEAREST) |
+				 A3XX_TEX_SAMP_0_WRAP_S(A3XX_TEX_CLAMP_TO_EDGE) |
+				 A3XX_TEX_SAMP_0_WRAP_T(A3XX_TEX_CLAMP_TO_EDGE) |
+				 A3XX_TEX_SAMP_0_WRAP_R(A3XX_TEX_REPEAT));
+		OUT_RING(ring, 0x00000000);
+	}
 
 	/* emit texture state: */
-	OUT_PKT3(ring, CP_LOAD_STATE, 6);
+	OUT_PKT3(ring, CP_LOAD_STATE, 2 + 4 * bufs);
 	OUT_RING(ring, CP_LOAD_STATE_0_DST_OFF(FRAG_TEX_OFF) |
 			CP_LOAD_STATE_0_STATE_SRC(SS_DIRECT) |
 			CP_LOAD_STATE_0_STATE_BLOCK(SB_FRAG_TEX) |
-			CP_LOAD_STATE_0_NUM_UNIT(1));
+			CP_LOAD_STATE_0_NUM_UNIT(bufs));
 	OUT_RING(ring, CP_LOAD_STATE_1_STATE_TYPE(ST_CONSTANTS) |
 			CP_LOAD_STATE_1_EXT_SRC_ADDR(0));
-	OUT_RING(ring, A3XX_TEX_CONST_0_FMT(fd3_pipe2tex(format)) |
-			A3XX_TEX_CONST_0_TYPE(A3XX_TEX_2D) |
-			fd3_tex_swiz(format,  PIPE_SWIZZLE_RED, PIPE_SWIZZLE_GREEN,
-					PIPE_SWIZZLE_BLUE, PIPE_SWIZZLE_ALPHA));
-	OUT_RING(ring, A3XX_TEX_CONST_1_FETCHSIZE(TFETCH_DISABLE) |
-			A3XX_TEX_CONST_1_WIDTH(psurf->width) |
-			A3XX_TEX_CONST_1_HEIGHT(psurf->height));
-	OUT_RING(ring, A3XX_TEX_CONST_2_PITCH(slice->pitch * rsc->cpp) |
-			A3XX_TEX_CONST_2_INDX(0));
-	OUT_RING(ring, 0x00000000);
+	for (i = 0; i < bufs; i++) {
+		if (!psurf[i]) {
+			OUT_RING(ring, A3XX_TEX_CONST_0_TYPE(A3XX_TEX_2D) |
+				A3XX_TEX_CONST_0_SWIZ_X(A3XX_TEX_ONE) |
+				A3XX_TEX_CONST_0_SWIZ_Y(A3XX_TEX_ONE) |
+				A3XX_TEX_CONST_0_SWIZ_Z(A3XX_TEX_ONE) |
+				A3XX_TEX_CONST_0_SWIZ_W(A3XX_TEX_ONE));
+			OUT_RING(ring, 0x00000000);
+			OUT_RING(ring, A3XX_TEX_CONST_2_INDX(BASETABLE_SZ * i));
+			OUT_RING(ring, 0x00000000);
+			continue;
+		}
+
+		struct fd_resource *rsc = fd_resource(psurf[i]->texture);
+		unsigned lvl = psurf[i]->u.tex.level;
+		struct fd_resource_slice *slice = fd_resource_slice(rsc, lvl);
+		enum pipe_format format = fd3_gmem_restore_format(psurf[i]->format);
+
+		debug_assert(psurf[i]->u.tex.first_layer == psurf[i]->u.tex.last_layer);
+
+		OUT_RING(ring, A3XX_TEX_CONST_0_FMT(fd3_pipe2tex(format)) |
+				 A3XX_TEX_CONST_0_TYPE(A3XX_TEX_2D) |
+				 fd3_tex_swiz(format,  PIPE_SWIZZLE_RED, PIPE_SWIZZLE_GREEN,
+							  PIPE_SWIZZLE_BLUE, PIPE_SWIZZLE_ALPHA));
+		OUT_RING(ring, A3XX_TEX_CONST_1_FETCHSIZE(TFETCH_DISABLE) |
+				 A3XX_TEX_CONST_1_WIDTH(psurf[i]->width) |
+				 A3XX_TEX_CONST_1_HEIGHT(psurf[i]->height));
+		OUT_RING(ring, A3XX_TEX_CONST_2_PITCH(slice->pitch * rsc->cpp) |
+				 A3XX_TEX_CONST_2_INDX(BASETABLE_SZ * i));
+		OUT_RING(ring, 0x00000000);
+	}
 
 	/* emit mipaddrs: */
-	OUT_PKT3(ring, CP_LOAD_STATE, 3);
+	OUT_PKT3(ring, CP_LOAD_STATE, 2 + BASETABLE_SZ * bufs);
 	OUT_RING(ring, CP_LOAD_STATE_0_DST_OFF(BASETABLE_SZ * FRAG_TEX_OFF) |
 			CP_LOAD_STATE_0_STATE_SRC(SS_DIRECT) |
 			CP_LOAD_STATE_0_STATE_BLOCK(SB_FRAG_MIPADDR) |
-			CP_LOAD_STATE_0_NUM_UNIT(1));
+			CP_LOAD_STATE_0_NUM_UNIT(BASETABLE_SZ * bufs));
 	OUT_RING(ring, CP_LOAD_STATE_1_STATE_TYPE(ST_CONSTANTS) |
 			CP_LOAD_STATE_1_EXT_SRC_ADDR(0));
-	OUT_RELOC(ring, rsc->bo, offset, 0, 0);
+	for (i = 0; i < bufs; i++) {
+		if (psurf[i]) {
+			struct fd_resource *rsc = fd_resource(psurf[i]->texture);
+			unsigned lvl = psurf[i]->u.tex.level;
+			uint32_t offset = fd_resource_offset(rsc, lvl, psurf[i]->u.tex.first_layer);
+			OUT_RELOC(ring, rsc->bo, offset, 0, 0);
+		} else {
+			OUT_RING(ring, 0x00000000);
+		}
+
+		/* pad the remaining entries w/ null: */
+		for (j = 1; j < BASETABLE_SZ; j++) {
+			OUT_RING(ring, 0x00000000);
+		}
+	}
 }
 
 void
@@ -570,8 +603,10 @@ fd3_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 		OUT_RING(ring, A3XX_GRAS_CL_VPORT_ZSCALE(ctx->viewport.scale[2]));
 	}
 
-	if (dirty & FD_DIRTY_PROG)
-		fd3_program_emit(ring, emit);
+	if (dirty & (FD_DIRTY_PROG | FD_DIRTY_FRAMEBUFFER)) {
+		struct pipe_framebuffer_state *pfb = &ctx->framebuffer;
+		fd3_program_emit(ring, emit, pfb->nr_cbufs, pfb->cbufs);
+	}
 
 	/* TODO we should not need this or fd_wfi() before emit_constants():
 	 */
@@ -623,6 +658,9 @@ fd3_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 							A3XX_RB_MRT_CONTROL_DITHER_MODE__MASK);
 				control |= A3XX_RB_MRT_CONTROL_ROP_CODE(ROP_COPY);
 			}
+
+			if (format == PIPE_FORMAT_NONE)
+				control &= ~A3XX_RB_MRT_CONTROL_COMPONENT_ENABLE__MASK;
 
 			if (has_alpha) {
 				blend_control |= blend->rb_mrt[i].blend_control_rgb;
