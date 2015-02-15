@@ -104,29 +104,6 @@ fd_screen_get_timestamp(struct pipe_screen *pscreen)
 }
 
 static void
-fd_screen_fence_ref(struct pipe_screen *pscreen,
-		struct pipe_fence_handle **ptr,
-		struct pipe_fence_handle *pfence)
-{
-	fd_fence_ref(fd_fence(pfence), (struct fd_fence **)ptr);
-}
-
-static boolean
-fd_screen_fence_signalled(struct pipe_screen *screen,
-		struct pipe_fence_handle *pfence)
-{
-	return fd_fence_signalled(fd_fence(pfence));
-}
-
-static boolean
-fd_screen_fence_finish(struct pipe_screen *screen,
-		struct pipe_fence_handle *pfence,
-		uint64_t timeout)
-{
-	return fd_fence_wait(fd_fence(pfence));
-}
-
-static void
 fd_screen_destroy(struct pipe_screen *pscreen)
 {
 	struct fd_screen *screen = fd_screen(pscreen);

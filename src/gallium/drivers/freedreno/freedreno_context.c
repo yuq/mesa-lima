@@ -28,6 +28,7 @@
 
 #include "freedreno_context.h"
 #include "freedreno_draw.h"
+#include "freedreno_fence.h"
 #include "freedreno_program.h"
 #include "freedreno_resource.h"
 #include "freedreno_texture.h"
@@ -125,16 +126,10 @@ static void
 fd_context_flush(struct pipe_context *pctx, struct pipe_fence_handle **fence,
 		unsigned flags)
 {
-	DBG("fence=%p", fence);
-
-#if 0
-	if (fence) {
-		fd_fence_ref(ctx->screen->fence.current,
-				(struct fd_fence **)fence);
-	}
-#endif
-
 	fd_context_render(pctx);
+
+	if (fence)
+		*fence = fd_fence_create(pctx);
 }
 
 void
