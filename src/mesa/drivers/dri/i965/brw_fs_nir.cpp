@@ -533,6 +533,90 @@ brw_type_for_nir_type(nir_alu_type type)
    return BRW_REGISTER_TYPE_F;
 }
 
+bool
+fs_visitor::optimize_frontfacing_ternary(nir_alu_instr *instr,
+                                         const fs_reg &result)
+{
+   if (instr->src[0].src.is_ssa ||
+       !instr->src[0].src.reg.reg ||
+       !instr->src[0].src.reg.reg->parent_instr)
+      return false;
+
+   if (instr->src[0].src.reg.reg->parent_instr->type !=
+       nir_instr_type_intrinsic)
+      return false;
+
+   nir_intrinsic_instr *src0 =
+      nir_instr_as_intrinsic(instr->src[0].src.reg.reg->parent_instr);
+
+   if (src0->intrinsic != nir_intrinsic_load_front_face)
+      return false;
+
+   nir_const_value *value1 = nir_src_as_const_value(instr->src[1].src);
+   if (!value1 || fabsf(value1->f[0]) != 1.0f)
+      return false;
+
+   nir_const_value *value2 = nir_src_as_const_value(instr->src[2].src);
+   if (!value2 || fabsf(value2->f[0]) != 1.0f)
+      return false;
+
+   fs_reg tmp = vgrf(glsl_type::int_type);
+
+   if (brw->gen >= 6) {
+      /* Bit 15 of g0.0 is 0 if the polygon is front facing. */
+      fs_reg g0 = fs_reg(retype(brw_vec1_grf(0, 0), BRW_REGISTER_TYPE_W));
+
+      /* For (gl_FrontFacing ? 1.0 : -1.0), emit:
+       *
+       *    or(8)  tmp.1<2>W  g0.0<0,1,0>W  0x00003f80W
+       *    and(8) dst<1>D    tmp<8,8,1>D   0xbf800000D
+       *
+       * and negate g0.0<0,1,0>W for (gl_FrontFacing ? -1.0 : 1.0).
+       *
+       * This negation looks like it's safe in practice, because bits 0:4 will
+       * surely be TRIANGLES
+       */
+
+      if (value1->f[0] == -1.0f) {
+         g0.negate = true;
+      }
+
+      tmp.type = BRW_REGISTER_TYPE_W;
+      tmp.subreg_offset = 2;
+      tmp.stride = 2;
+
+      fs_inst *or_inst = emit(OR(tmp, g0, fs_reg(0x3f80)));
+      or_inst->src[1].type = BRW_REGISTER_TYPE_UW;
+
+      tmp.type = BRW_REGISTER_TYPE_D;
+      tmp.subreg_offset = 0;
+      tmp.stride = 1;
+   } else {
+      /* Bit 31 of g1.6 is 0 if the polygon is front facing. */
+      fs_reg g1_6 = fs_reg(retype(brw_vec1_grf(1, 6), BRW_REGISTER_TYPE_D));
+
+      /* For (gl_FrontFacing ? 1.0 : -1.0), emit:
+       *
+       *    or(8)  tmp<1>D  g1.6<0,1,0>D  0x3f800000D
+       *    and(8) dst<1>D  tmp<8,8,1>D   0xbf800000D
+       *
+       * and negate g1.6<0,1,0>D for (gl_FrontFacing ? -1.0 : 1.0).
+       *
+       * This negation looks like it's safe in practice, because bits 0:4 will
+       * surely be TRIANGLES
+       */
+
+      if (value1->f[0] == -1.0f) {
+         g1_6.negate = true;
+      }
+
+      emit(OR(tmp, g1_6, fs_reg(0x3f800000)));
+   }
+   emit(AND(retype(result, BRW_REGISTER_TYPE_D), tmp, fs_reg(0xbf800000)));
+
+   return true;
+}
+
 void
 fs_visitor::nir_emit_alu(nir_alu_instr *instr)
 {
@@ -1058,6 +1142,9 @@ fs_visitor::nir_emit_alu(nir_alu_instr *instr)
       break;
 
    case nir_op_bcsel:
+      if (optimize_frontfacing_ternary(instr, result))
+         return;
+
       emit(CMP(reg_null_d, op[0], fs_reg(0), BRW_CONDITIONAL_NZ));
       inst = emit(SEL(result, op[1], op[2]));
       inst->predicate = BRW_PREDICATE_NORMAL;
