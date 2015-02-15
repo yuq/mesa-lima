@@ -735,12 +735,16 @@ static void si_delete_rs_state(struct pipe_context *ctx, void *state)
  */
 static void si_update_dsa_stencil_ref(struct si_context *sctx)
 {
-	struct si_pm4_state *pm4 = CALLOC_STRUCT(si_pm4_state);
+	struct si_pm4_state *pm4;
 	struct pipe_stencil_ref *ref = &sctx->stencil_ref;
-        struct si_state_dsa *dsa = sctx->queued.named.dsa;
+	struct si_state_dsa *dsa = sctx->queued.named.dsa;
 
-        if (pm4 == NULL)
-                return;
+	if (!dsa)
+		return;
+
+	pm4 = CALLOC_STRUCT(si_pm4_state);
+	if (pm4 == NULL)
+		return;
 
 	si_pm4_set_reg(pm4, R_028430_DB_STENCILREFMASK,
 		       S_028430_STENCILTESTVAL(ref->ref_value[0]) |
