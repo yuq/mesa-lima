@@ -841,6 +841,8 @@ static inline void
 gen7_3DSTATE_BINDING_TABLE_POINTERS_PS(struct ilo_builder *builder,
                                        uint32_t binding_table)
 {
+   ILO_DEV_ASSERT(builder->dev, 7, 8);
+
    gen7_3dstate_pointer(builder,
          GEN7_RENDER_OPCODE_3DSTATE_BINDING_TABLE_POINTERS_PS,
          binding_table);
@@ -850,6 +852,8 @@ static inline void
 gen7_3DSTATE_SAMPLER_STATE_POINTERS_PS(struct ilo_builder *builder,
                                        uint32_t sampler_state)
 {
+   ILO_DEV_ASSERT(builder->dev, 7, 8);
+
    gen7_3dstate_pointer(builder,
          GEN7_RENDER_OPCODE_3DSTATE_SAMPLER_STATE_POINTERS_PS,
          sampler_state);
@@ -1362,6 +1366,8 @@ static inline void
 gen7_3DSTATE_VIEWPORT_STATE_POINTERS_SF_CLIP(struct ilo_builder *builder,
                                              uint32_t sf_clip_viewport)
 {
+   ILO_DEV_ASSERT(builder->dev, 7, 8);
+
    gen7_3dstate_pointer(builder,
          GEN7_RENDER_OPCODE_3DSTATE_VIEWPORT_STATE_POINTERS_SF_CLIP,
          sf_clip_viewport);
@@ -1371,6 +1377,8 @@ static inline void
 gen7_3DSTATE_VIEWPORT_STATE_POINTERS_CC(struct ilo_builder *builder,
                                         uint32_t cc_viewport)
 {
+   ILO_DEV_ASSERT(builder->dev, 7, 8);
+
    gen7_3dstate_pointer(builder,
          GEN7_RENDER_OPCODE_3DSTATE_VIEWPORT_STATE_POINTERS_CC,
          cc_viewport);
@@ -1380,6 +1388,11 @@ static inline void
 gen7_3DSTATE_CC_STATE_POINTERS(struct ilo_builder *builder,
                                uint32_t color_calc_state)
 {
+   ILO_DEV_ASSERT(builder->dev, 7, 8);
+
+   if (ilo_dev_gen(builder->dev) >= ILO_GEN(8))
+      color_calc_state |= 1;
+
    gen7_3dstate_pointer(builder,
          GEN6_RENDER_OPCODE_3DSTATE_CC_STATE_POINTERS, color_calc_state);
 }
@@ -1388,6 +1401,8 @@ static inline void
 gen7_3DSTATE_DEPTH_STENCIL_STATE_POINTERS(struct ilo_builder *builder,
                                           uint32_t depth_stencil_state)
 {
+   ILO_DEV_ASSERT(builder->dev, 7, 8);
+
    gen7_3dstate_pointer(builder,
          GEN7_RENDER_OPCODE_3DSTATE_DEPTH_STENCIL_STATE_POINTERS,
          depth_stencil_state);
@@ -1397,6 +1412,11 @@ static inline void
 gen7_3DSTATE_BLEND_STATE_POINTERS(struct ilo_builder *builder,
                                   uint32_t blend_state)
 {
+   ILO_DEV_ASSERT(builder->dev, 7, 8);
+
+   if (ilo_dev_gen(builder->dev) >= ILO_GEN(8))
+      blend_state |= 1;
+
    gen7_3dstate_pointer(builder,
          GEN7_RENDER_OPCODE_3DSTATE_BLEND_STATE_POINTERS,
          blend_state);
