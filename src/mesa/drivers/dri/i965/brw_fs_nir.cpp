@@ -832,7 +832,29 @@ fs_visitor::nir_emit_alu(nir_alu_instr *instr)
       break;
 
    case nir_op_imul: {
-      /* TODO put in the 16-bit constant optimization once we have SSA */
+      if (brw->gen >= 8) {
+         emit(MUL(result, op[0], op[1]));
+         break;
+      } else {
+         nir_const_value *value0 = nir_src_as_const_value(instr->src[0].src);
+         nir_const_value *value1 = nir_src_as_const_value(instr->src[1].src);
+
+         if (value0 && value0->u[0] < (1 << 16)) {
+            if (brw->gen < 7) {
+               emit(MUL(result, op[0], op[1]));
+            } else {
+               emit(MUL(result, op[1], op[0]));
+            }
+            break;
+         } else if (value1 && value1->u[0] < (1 << 16)) {
+            if (brw->gen < 7) {
+               emit(MUL(result, op[1], op[0]));
+            } else {
+               emit(MUL(result, op[0], op[1]));
+            }
+            break;
+         }
+      }
 
       if (brw->gen >= 7)
          no16("SIMD16 explicit accumulator operands unsupported\n");
