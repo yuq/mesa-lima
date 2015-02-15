@@ -434,7 +434,7 @@ NineDevice9_ctor( struct NineDevice9 *This,
     NineDevice9_RestoreNonCSOState(This, ~0);
 
     This->update = &This->state;
-    nine_update_state(This, ~0);
+    nine_update_state(This);
 
     ID3DPresentGroup_Release(This->present);
 
@@ -1902,7 +1902,7 @@ NineDevice9_Clear( struct NineDevice9 *This,
         return D3D_OK;
     d3dcolor_to_pipe_color_union(&rgba, Color);
 
-    nine_update_state(This, NINE_STATE_FB);
+    nine_update_state_framebuffer(This);
 
     rect.x1 = This->state.viewport.X;
     rect.y1 = This->state.viewport.Y;
@@ -2882,7 +2882,7 @@ NineDevice9_DrawPrimitive( struct NineDevice9 *This,
     DBG("iface %p, PrimitiveType %u, StartVertex %u, PrimitiveCount %u\n",
         This, PrimitiveType, StartVertex, PrimitiveCount);
 
-    nine_update_state(This, ~0);
+    nine_update_state(This);
 
     init_draw_info(&info, This, PrimitiveType, PrimitiveCount);
     info.indexed = FALSE;
@@ -2915,7 +2915,7 @@ NineDevice9_DrawIndexedPrimitive( struct NineDevice9 *This,
     user_assert(This->state.idxbuf, D3DERR_INVALIDCALL);
     user_assert(This->state.vdecl, D3DERR_INVALIDCALL);
 
-    nine_update_state(This, ~0);
+    nine_update_state(This);
 
     init_draw_info(&info, This, PrimitiveType, PrimitiveCount);
     info.indexed = TRUE;
@@ -2947,7 +2947,7 @@ NineDevice9_DrawPrimitiveUP( struct NineDevice9 *This,
     user_assert(pVertexStreamZeroData && VertexStreamZeroStride,
                 D3DERR_INVALIDCALL);
 
-    nine_update_state(This, ~0);
+    nine_update_state(This);
 
     init_draw_info(&info, This, PrimitiveType, PrimitiveCount);
     info.indexed = FALSE;
@@ -3009,7 +3009,7 @@ NineDevice9_DrawIndexedPrimitiveUP( struct NineDevice9 *This,
     user_assert(IndexDataFormat == D3DFMT_INDEX16 ||
                 IndexDataFormat == D3DFMT_INDEX32, D3DERR_INVALIDCALL);
 
-    nine_update_state(This, ~0);
+    nine_update_state(This);
 
     init_draw_info(&info, This, PrimitiveType, PrimitiveCount);
     info.indexed = TRUE;
@@ -3093,7 +3093,7 @@ NineDevice9_ProcessVertices( struct NineDevice9 *This,
     if (!screen->get_param(screen, PIPE_CAP_MAX_STREAM_OUTPUT_BUFFERS))
         STUB(D3DERR_INVALIDCALL);
 
-    nine_update_state(This, ~0);
+    nine_update_state(This);
 
     /* TODO: Create shader with stream output. */
     STUB(D3DERR_INVALIDCALL);

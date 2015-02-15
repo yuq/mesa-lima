@@ -885,8 +885,21 @@ update_textures_and_samplers(struct NineDevice9 *device)
      NINE_STATE_VS | \
      NINE_STATE_PS)
 
+void
+nine_update_state_framebuffer(struct NineDevice9 *device)
+{
+    struct nine_state *state = &device->state;
+
+    validate_textures(device);
+
+    if (state->changed.group & NINE_STATE_FB)
+        update_framebuffer(device);
+
+    state->changed.group &= ~NINE_STATE_FB;
+}
+
 boolean
-nine_update_state(struct NineDevice9 *device, uint32_t mask)
+nine_update_state(struct NineDevice9 *device)
 {
     struct pipe_context *pipe = device->pipe;
     struct nine_state *state = &device->state;
@@ -905,16 +918,16 @@ nine_update_state(struct NineDevice9 *device, uint32_t mask)
     validate_textures(device); /* may clobber state */
 
     /* ff_update may change VS/PS dirty bits */
-    if ((mask & NINE_STATE_FF) && unlikely(!state->vs || !state->ps))
+    if (unlikely(!state->vs || !state->ps))
         nine_ff_update(device);
-    group = state->changed.group & mask;
+    group = state->changed.group;
 
     if (group & NINE_STATE_SHADER_VARIANT_GROUP)
         group |= update_shader_variant_keys(device);
 
     if (group & NINE_STATE_FREQ_GROUP_0) {
         if (group & NINE_STATE_FB)
-            group = update_framebuffer(device) & mask;
+            group = update_framebuffer(device);
         if (group & NINE_STATE_VIEWPORT)
             update_viewport(device);
         if (group & NINE_STATE_SCISSOR)
@@ -981,7 +994,7 @@ nine_update_state(struct NineDevice9 *device, uint32_t mask)
     if (state->changed.vtxbuf)
         update_vertex_buffers(device);
 
-    device->state.changed.group &= ~mask |
+    device->state.changed.group &=
         (NINE_STATE_FF | NINE_STATE_VS_CONST | NINE_STATE_PS_CONST);
 
     DBG("finished\n");
