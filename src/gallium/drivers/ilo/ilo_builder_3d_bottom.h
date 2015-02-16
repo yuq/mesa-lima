@@ -1748,19 +1748,13 @@ gen8_BLEND_STATE(struct ilo_builder *builder,
                  const struct ilo_dsa_state *dsa)
 {
    const int state_align = 64;
-   int state_len;
+   const int state_len = 1 + 2 * fb->state.nr_cbufs;
    uint32_t state_offset, *dw;
    unsigned i;
 
    ILO_DEV_ASSERT(builder->dev, 8, 8);
 
    assert(fb->state.nr_cbufs <= 8);
-
-   /* may need to reference alpha func even when there is no color buffer */
-   if (!fb->state.nr_cbufs && !dsa->dw_blend_alpha)
-      return 0;
-
-   state_len = 1 + 2 * fb->state.nr_cbufs;
 
    state_offset = ilo_builder_dynamic_pointer(builder,
          ILO_BUILDER_ITEM_BLEND, state_align, state_len, &dw);
