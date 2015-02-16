@@ -926,6 +926,7 @@ const struct function gl_core_functions_possible[] = {
    { "glTransformFeedbackBufferBase", 45, -1 },
    { "glTransformFeedbackBufferRange", 45, -1 },
    { "glGetTransformFeedbackiv", 45, -1 },
+   { "glGetTransformFeedbacki_v", 45, -1 },
    { "glCreateBuffers", 45, -1 },
    { "glNamedBufferStorage", 45, -1 },
    { "glNamedBufferData", 45, -1 },

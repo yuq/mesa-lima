@@ -1228,3 +1228,32 @@ _mesa_GetTransformFeedbackiv(GLuint xfb, GLenum pname, GLint *param)
                    "glGetTransformFeedbackiv(pname=%i)", pname);
     }
 }
+
+extern void GLAPIENTRY
+_mesa_GetTransformFeedbacki_v(GLuint xfb, GLenum pname, GLuint index,
+                              GLint *param)
+{
+   struct gl_transform_feedback_object *obj;
+   GET_CURRENT_CONTEXT(ctx);
+
+   obj = lookup_transform_feedback_object_err(ctx, xfb,
+                                              "glGetTransformFeedbacki_v");
+   if(!obj) {
+      return;
+   }
+
+   if (index >= ctx->Const.MaxTransformFeedbackBuffers) {
+      _mesa_error(ctx, GL_INVALID_VALUE,
+                  "glGetTransformFeedbacki_v(index=%i)", index);
+      return;
+   }
+
+   switch(pname) {
+   case GL_TRANSFORM_FEEDBACK_BUFFER_BINDING:
+      *param = obj->BufferNames[index];
+      break;
+   default:
+      _mesa_error(ctx, GL_INVALID_ENUM,
+                  "glGetTransformFeedbacki_v(pname=%i)", pname);
+   }
+}
