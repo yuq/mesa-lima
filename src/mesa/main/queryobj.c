@@ -914,6 +914,45 @@ _mesa_GetQueryObjectui64v(GLuint id, GLenum pname, GLuint64EXT *params)
 }
 
 /**
+ * New with GL_ARB_query_buffer_object
+ */
+void GLAPIENTRY
+_mesa_GetQueryBufferObjectiv(GLuint id, GLuint buffer, GLenum pname,
+                             GLintptr offset)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   _mesa_error(ctx, GL_INVALID_OPERATION, "glGetQueryBufferObjectiv");
+}
+
+
+void GLAPIENTRY
+_mesa_GetQueryBufferObjectuiv(GLuint id, GLuint buffer, GLenum pname,
+                              GLintptr offset)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   _mesa_error(ctx, GL_INVALID_OPERATION, "glGetQueryBufferObjectuiv");
+}
+
+
+void GLAPIENTRY
+_mesa_GetQueryBufferObjecti64v(GLuint id, GLuint buffer, GLenum pname,
+                               GLintptr offset)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   _mesa_error(ctx, GL_INVALID_OPERATION, "glGetQueryBufferObjecti64v");
+}
+
+
+void GLAPIENTRY
+_mesa_GetQueryBufferObjectui64v(GLuint id, GLuint buffer, GLenum pname,
+                                GLintptr offset)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   _mesa_error(ctx, GL_INVALID_OPERATION, "glGetQueryBufferObjectui64v");
+}
+
+
+/**
  * Allocate/init the context state related to query objects.
  */
 void

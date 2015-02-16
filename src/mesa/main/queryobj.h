@@ -79,5 +79,17 @@ void GLAPIENTRY
 _mesa_GetQueryObjecti64v(GLuint id, GLenum pname, GLint64EXT *params);
 void GLAPIENTRY
 _mesa_GetQueryObjectui64v(GLuint id, GLenum pname, GLuint64EXT *params);
+void GLAPIENTRY
+_mesa_GetQueryBufferObjectiv(GLuint id, GLuint buffer, GLenum pname,
+                             GLintptr offset);
+void GLAPIENTRY
+_mesa_GetQueryBufferObjectuiv(GLuint id, GLuint buffer, GLenum pname,
+                              GLintptr offset);
+void GLAPIENTRY
+_mesa_GetQueryBufferObjecti64v(GLuint id, GLuint buffer, GLenum pname,
+                               GLintptr offset);
+void GLAPIENTRY
+_mesa_GetQueryBufferObjectui64v(GLuint id, GLuint buffer, GLenum pname,
+                                GLintptr offset);
 
 #endif /* QUERYOBJ_H */

@@ -428,5 +428,32 @@
       <param name="ids" type="GLuint *" />
    </function>
 
+   <function name="GetQueryBufferObjectiv" offset="assign">
+      <param name="id" type="GLuint" />
+      <param name="buffer" type="GLuint" />
+      <param name="pname" type="GLenum" />
+      <param name="offset" type="GLintptr" />
+   </function>
+
+   <function name="GetQueryBufferObjectuiv" offset="assign">
+      <param name="id" type="GLuint" />
+      <param name="buffer" type="GLuint" />
+      <param name="pname" type="GLenum" />
+      <param name="offset" type="GLintptr" />
+   </function>
+
+   <function name="GetQueryBufferObjecti64v" offset="assign">
+      <param name="id" type="GLuint" />
+      <param name="buffer" type="GLuint" />
+      <param name="pname" type="GLenum" />
+      <param name="offset" type="GLintptr" />
+   </function>
+
+   <function name="GetQueryBufferObjectui64v" offset="assign">
+      <param name="id" type="GLuint" />
+      <param name="buffer" type="GLuint" />
+      <param name="pname" type="GLenum" />
+      <param name="offset" type="GLintptr" />
+   </function>
 </category>
 </OpenGLAPI>

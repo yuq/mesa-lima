@@ -977,6 +977,10 @@ const struct function gl_core_functions_possible[] = {
    { "glTextureBuffer", 45, -1 },
    { "glTextureBufferRange", 45, -1 },
    { "glCreateQueries", 45, -1 },
+   { "glGetQueryBufferObjectiv", 45, -1 },
+   { "glGetQueryBufferObjectuiv", 45, -1 },
+   { "glGetQueryBufferObjecti64v", 45, -1 },
+   { "glGetQueryBufferObjectui64v", 45, -1 },
 
    /* GL_EXT_polygon_offset_clamp */
    { "glPolygonOffsetClampEXT", 11, -1 },
