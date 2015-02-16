@@ -2978,9 +2978,6 @@ fs_visitor::emit_untyped_atomic(unsigned atomic_op, unsigned surf_index,
                                 fs_reg dst, fs_reg offset, fs_reg src0,
                                 fs_reg src1)
 {
-   bool uses_kill =
-      (stage == MESA_SHADER_FRAGMENT) &&
-      ((brw_wm_prog_data*) this->prog_data)->uses_kill;
    int reg_width = dispatch_width / 8;
    int length = 0;
 
@@ -2991,13 +2988,24 @@ fs_visitor::emit_untyped_atomic(unsigned atomic_op, unsigned surf_index,
    emit(MOV(sources[0], fs_reg(0u)))
       ->force_writemask_all = true;
 
-   if (uses_kill) {
-      emit(MOV(component(sources[0], 7), brw_flag_reg(0, 1)))
-         ->force_writemask_all = true;
+   if (stage == MESA_SHADER_FRAGMENT) {
+      if (((brw_wm_prog_data*)this->prog_data)->uses_kill) {
+         emit(MOV(component(sources[0], 7), brw_flag_reg(0, 1)))
+            ->force_writemask_all = true;
+      } else {
+         emit(MOV(component(sources[0], 7),
+                  retype(brw_vec1_grf(1, 7), BRW_REGISTER_TYPE_UD)))
+            ->force_writemask_all = true;
+      }
    } else {
+      /* The execution mask is part of the side-band information sent together with
+       * the message payload to the data port. It's implicitly ANDed with the sample
+       * mask sent in the header to compute the actual set of channels that execute
+       * the atomic operation.
+       */
+      assert(stage == MESA_SHADER_VERTEX);
       emit(MOV(component(sources[0], 7),
-               retype(brw_vec1_grf(1, 7), BRW_REGISTER_TYPE_UD)))
-         ->force_writemask_all = true;
+               brw_imm_ud(0xff)))->force_writemask_all = true;
    }
    length++;
 
