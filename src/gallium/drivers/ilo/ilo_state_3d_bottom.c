@@ -2003,7 +2003,7 @@ dsa_get_alpha_enable_gen6(const struct ilo_dev_info *dev,
 {
    uint32_t dw;
 
-   ILO_DEV_ASSERT(dev, 6, 8);
+   ILO_DEV_ASSERT(dev, 6, 7.5);
 
    if (!state->enabled)
       return 0;
@@ -2011,6 +2011,24 @@ dsa_get_alpha_enable_gen6(const struct ilo_dev_info *dev,
    /* this will be ORed to BLEND_STATE */
    dw = GEN6_RT_DW1_ALPHA_TEST_ENABLE |
         gen6_translate_dsa_func(state->func) << 13;
+
+   return dw;
+}
+
+static uint32_t
+dsa_get_alpha_enable_gen8(const struct ilo_dev_info *dev,
+                          const struct pipe_alpha_state *state)
+{
+   uint32_t dw;
+
+   ILO_DEV_ASSERT(dev, 8, 8);
+
+   if (!state->enabled)
+      return 0;
+
+   /* this will be ORed to BLEND_STATE */
+   dw = GEN8_BLEND_DW0_ALPHA_TEST_ENABLE |
+        gen6_translate_dsa_func(state->func) << 24;
 
    return dw;
 }
@@ -2031,20 +2049,23 @@ ilo_gpe_init_dsa(const struct ilo_dev_info *dev,
 
       assert(!(dw_stencil & dw_depth));
       dsa->payload[0] = dw_stencil | dw_depth;
+
+      dsa->dw_blend_alpha = dsa_get_alpha_enable_gen8(dev, &state->alpha);
+      dsa->dw_ps_blend_alpha = (state->alpha.enabled) ?
+         GEN8_PS_BLEND_DW1_ALPHA_TEST_ENABLE : 0;
    } else {
       dsa->payload[0] = dsa_get_stencil_enable_gen6(dev,
             &state->stencil[0], &state->stencil[1]);
       dsa->payload[2] = dsa_get_depth_enable_gen6(dev, &state->depth);
+
+      dsa->dw_blend_alpha = dsa_get_alpha_enable_gen6(dev, &state->alpha);
+      dsa->dw_ps_blend_alpha = 0;
    }
 
    dsa->payload[1] = state->stencil[0].valuemask << 24 |
                      state->stencil[0].writemask << 16 |
                      state->stencil[1].valuemask << 8 |
                      state->stencil[1].writemask;
-
-   dsa->dw_blend_alpha = dsa_get_alpha_enable_gen6(dev, &state->alpha);
-   dsa->dw_ps_blend_alpha = (state->alpha.enabled) ?
-      GEN8_PS_BLEND_DW1_ALPHA_TEST_ENABLE : 0;
 
    dsa->alpha_ref = float_to_ubyte(state->alpha.ref_value);
 }
