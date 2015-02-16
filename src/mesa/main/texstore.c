@@ -729,9 +729,9 @@ texstore_rgba(TEXSTORE_PARAMS)
       GLint swapSize = _mesa_sizeof_packed_type(srcType);
       if (swapSize == 2 || swapSize == 4) {
          int bytesPerPixel = _mesa_bytes_per_pixel(srcFormat, srcType);
-         assert(bytesPerPixel % swapSize == 0);
          int swapsPerPixel = bytesPerPixel / swapSize;
          int elementCount = srcWidth * srcHeight * srcDepth;
+         assert(bytesPerPixel % swapSize == 0);
          tempImage = malloc(elementCount * bytesPerPixel);
          if (!tempImage)
             return GL_FALSE;
