@@ -27,6 +27,7 @@
 #include "nine_debug.h"
 #include "nine_state.h"
 
+#include "util/macros.h"
 #include "util/u_memory.h"
 #include "util/u_inlines.h"
 #include "pipe/p_shader_tokens.h"
@@ -3082,6 +3083,7 @@ nine_translate_shader(struct NineDevice9 *device, struct nine_shader_info *info)
     HRESULT hr = D3D_OK;
     const unsigned processor = tgsi_processor_from_type(info->type);
     unsigned s, slot_max;
+    unsigned max_const_f;
 
     user_assert(processor != ~0, D3DERR_INVALIDCALL);
 
@@ -3221,11 +3223,12 @@ nine_translate_shader(struct NineDevice9 *device, struct nine_shader_info *info)
     if (tx->indirect_const_access) /* vs only */
         info->const_float_slots = device->max_vs_const_f;
 
+    max_const_f = IS_VS ? device->max_vs_const_f : device->max_ps_const_f;
     slot_max = info->const_bool_slots > 0 ?
-                   device->max_vs_const_f + NINE_MAX_CONST_I
-                   + info->const_bool_slots :
+                   max_const_f + NINE_MAX_CONST_I
+                   + DIV_ROUND_UP(info->const_bool_slots, 4) :
                        info->const_int_slots > 0 ?
-                           device->max_vs_const_f + info->const_int_slots :
+                           max_const_f + info->const_int_slots :
                                info->const_float_slots;
     info->const_used_size = sizeof(float[4]) * slot_max; /* slots start from 1 */
 
