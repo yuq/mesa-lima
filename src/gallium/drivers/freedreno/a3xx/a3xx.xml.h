@@ -130,6 +130,7 @@ enum a3xx_tex_fmt {
 	TFMT_I420_Y = 24,
 	TFMT_I420_U = 26,
 	TFMT_I420_V = 27,
+	TFMT_ETC1 = 34,
 	TFMT_DXT1 = 36,
 	TFMT_DXT3 = 37,
 	TFMT_DXT5 = 38,
