@@ -832,12 +832,12 @@ const struct function gl_core_functions_possible[] = {
    { "glInvalidateSubFramebuffer", 43, -1 },
    { "glMultiDrawArraysIndirect", 43, -1 },
    { "glMultiDrawElementsIndirect", 43, -1 },
-// { "glGetProgramInterfaceiv", 43, -1 },               // XXX: Add to xml
-// { "glGetProgramResourceIndex", 43, -1 },             // XXX: Add to xml
-// { "glGetProgramResourceName", 43, -1 },              // XXX: Add to xml
-// { "glGetProgramResourceiv", 43, -1 },                // XXX: Add to xml
-// { "glGetProgramResourceLocation", 43, -1 },          // XXX: Add to xml
-// { "glGetProgramResourceLocationIndex", 43, -1 },     // XXX: Add to xml
+   { "glGetProgramInterfaceiv", 43, -1 },
+   { "glGetProgramResourceIndex", 43, -1 },
+   { "glGetProgramResourceName", 43, -1 },
+   { "glGetProgramResourceiv", 43, -1 },
+   { "glGetProgramResourceLocation", 43, -1 },
+   { "glGetProgramResourceLocationIndex", 43, -1 },
 // { "glShaderStorageBlockBinding", 43, -1 },           // XXX: Add to xml
    { "glTexBufferRange", 43, -1 },
 // { "glTextureBufferRangeEXT", 43, -1 },               // XXX: Add to xml
