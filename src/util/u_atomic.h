@@ -215,7 +215,7 @@ _InterlockedExchangeAdd8(char volatile *addend, char value)
    sizeof(*v) == sizeof(uint64_t) ? atomic_inc_64((uint64_t *)(v)) : \
                                     (assert(!"should not get here"), 0))
 
-#define p_atomic_inc_return(v) ((typeof(*v)) \
+#define p_atomic_inc_return(v) ((__typeof(*v)) \
    sizeof(*v) == sizeof(uint8_t)  ? atomic_inc_8_nv ((uint8_t  *)(v)) : \
    sizeof(*v) == sizeof(uint16_t) ? atomic_inc_16_nv((uint16_t *)(v)) : \
    sizeof(*v) == sizeof(uint32_t) ? atomic_inc_32_nv((uint32_t *)(v)) : \
@@ -229,7 +229,7 @@ _InterlockedExchangeAdd8(char volatile *addend, char value)
    sizeof(*v) == sizeof(uint64_t) ? atomic_dec_64((uint64_t *)(v)) : \
                                     (assert(!"should not get here"), 0))
 
-#define p_atomic_dec_return(v) ((typeof(*v)) \
+#define p_atomic_dec_return(v) ((__typeof(*v)) \
    sizeof(*v) == sizeof(uint8_t)  ? atomic_dec_8_nv ((uint8_t  *)(v)) : \
    sizeof(*v) == sizeof(uint16_t) ? atomic_dec_16_nv((uint16_t *)(v)) : \
    sizeof(*v) == sizeof(uint32_t) ? atomic_dec_32_nv((uint32_t *)(v)) : \
@@ -243,7 +243,7 @@ _InterlockedExchangeAdd8(char volatile *addend, char value)
    sizeof(*v) == sizeof(uint64_t) ? atomic_add_64((uint64_t *)(v), (i)) : \
                                     (assert(!"should not get here"), 0))
 
-#define p_atomic_cmpxchg(v, old, _new) ((typeof(*v)) \
+#define p_atomic_cmpxchg(v, old, _new) ((__typeof(*v)) \
    sizeof(*v) == sizeof(uint8_t)  ? atomic_cas_8 ((uint8_t  *)(v), (uint8_t )(old), (uint8_t )(_new)) : \
    sizeof(*v) == sizeof(uint16_t) ? atomic_cas_16((uint16_t *)(v), (uint16_t)(old), (uint16_t)(_new)) : \
    sizeof(*v) == sizeof(uint32_t) ? atomic_cas_32((uint32_t *)(v), (uint32_t)(old), (uint32_t)(_new)) : \
