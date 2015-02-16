@@ -1203,3 +1203,28 @@ _mesa_ResumeTransformFeedback(void)
    assert(ctx->Driver.ResumeTransformFeedback);
    ctx->Driver.ResumeTransformFeedback(ctx, obj);
 }
+
+extern void GLAPIENTRY
+_mesa_GetTransformFeedbackiv(GLuint xfb, GLenum pname, GLint *param)
+{
+    struct gl_transform_feedback_object *obj;
+    GET_CURRENT_CONTEXT(ctx);
+
+    obj = lookup_transform_feedback_object_err(ctx, xfb,
+                                               "glGetTransformFeedbackiv");
+    if(!obj) {
+       return;
+    }
+
+    switch(pname) {
+    case GL_TRANSFORM_FEEDBACK_PAUSED:
+       *param = obj->Paused;
+       break;
+    case GL_TRANSFORM_FEEDBACK_ACTIVE:
+       *param = obj->Active;
+       break;
+    default:
+       _mesa_error(ctx, GL_INVALID_ENUM,
+                   "glGetTransformFeedbackiv(pname=%i)", pname);
+    }
+}

@@ -156,4 +156,7 @@ extern void GLAPIENTRY
 _mesa_TransformFeedbackBufferRange(GLuint xfb, GLuint index, GLuint buffer,
                                    GLintptr offset, GLsizeiptr size);
 
+extern void GLAPIENTRY
+_mesa_GetTransformFeedbackiv(GLuint xfb, GLenum pname, GLint *param);
+
 #endif /* TRANSFORM_FEEDBACK_H */

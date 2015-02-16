@@ -28,6 +28,12 @@
       <param name="size" type="GLsizeiptr" />
    </function>
 
+   <function name="GetTransformFeedbackiv" offset="assign">
+      <param name="xfb" type="GLuint" />
+      <param name="pname" type="GLenum" />
+      <param name="param" type="GLint *" />
+   </function>
+
    <!-- Buffer object functions -->
 
    <function name="CreateBuffers" offset="assign">
