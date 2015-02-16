@@ -229,7 +229,7 @@ public:
    DECLARE_RALLOC_CXX_OPERATORS(glsl_to_tgsi_instruction)
 
    unsigned op;
-   st_dst_reg dst;
+   st_dst_reg dst[1];
    st_src_reg src[4];
    /** Pointer to the ir source this tree came from for debugging */
    ir_instruction *ir;
@@ -551,7 +551,7 @@ glsl_to_tgsi_visitor::emit(ir_instruction *ir, unsigned op,
    assert(num_reladdr == 0);
 
    inst->op = op;
-   inst->dst = dst;
+   inst->dst[0] = dst;
    inst->src[0] = src0;
    inst->src[1] = src1;
    inst->src[2] = src2;
@@ -768,7 +768,7 @@ glsl_to_tgsi_visitor::emit_scalar(ir_instruction *ir, unsigned op,
                                    src1_swiz, src1_swiz);
 
       inst = emit(ir, op, dst, src0, src1);
-      inst->dst.writemask = this_mask;
+      inst->dst[0].writemask = this_mask;
       done_mask |= this_mask;
    }
 }
@@ -875,7 +875,7 @@ glsl_to_tgsi_visitor::emit_scs(ir_instruction *ir, unsigned op,
          /* Emit the SCS instruction.
           */
          inst = emit(ir, TGSI_OPCODE_SCS, tmp_dst, src0);
-         inst->dst.writemask = scs_mask;
+         inst->dst[0].writemask = scs_mask;
 
          /* Move the result of the SCS instruction to the desired location in
           * the destination.
@@ -883,12 +883,12 @@ glsl_to_tgsi_visitor::emit_scs(ir_instruction *ir, unsigned op,
          tmp.swizzle = MAKE_SWIZZLE4(component, component,
                                      component, component);
          inst = emit(ir, TGSI_OPCODE_SCS, dst, tmp);
-         inst->dst.writemask = this_mask;
+         inst->dst[0].writemask = this_mask;
       } else {
          /* Emit the SCS instruction to write directly to the destination.
           */
          glsl_to_tgsi_instruction *inst = emit(ir, TGSI_OPCODE_SCS, dst, src0);
-         inst->dst.writemask = scs_mask;
+         inst->dst[0].writemask = scs_mask;
       }
 
       done_mask |= this_mask;
@@ -2520,7 +2520,7 @@ glsl_to_tgsi_visitor::visit(ir_assignment *ir)
               this->instructions.get_tail() &&
               ir->rhs == ((glsl_to_tgsi_instruction *)this->instructions.get_tail())->ir &&
               type_size(ir->lhs->type) == 1 &&
-              l.writemask == ((glsl_to_tgsi_instruction *)this->instructions.get_tail())->dst.writemask) {
+              l.writemask == ((glsl_to_tgsi_instruction *)this->instructions.get_tail())->dst[0].writemask) {
       /* To avoid emitting an extra MOV when assigning an expression to a
        * variable, emit the last instruction of the expression again, but
        * replace the destination register with the target of the assignment.
@@ -2530,7 +2530,7 @@ glsl_to_tgsi_visitor::visit(ir_assignment *ir)
       inst = (glsl_to_tgsi_instruction *)this->instructions.get_tail();
       new_inst = emit(ir, inst->op, l, inst->src[0], inst->src[1], inst->src[2]);
       new_inst->saturate = inst->saturate;
-      inst->dead_mask = inst->dst.writemask;
+      inst->dead_mask = inst->dst[0].writemask;
    } else {
       emit_block_mov(ir, ir->rhs->type, &l, &r, NULL, false);
    }
@@ -3297,7 +3297,7 @@ glsl_to_tgsi_visitor::simplify_cmp(void)
       unsigned prevWriteMask = 0;
 
       /* Give up if we encounter relative addressing or flow control. */
-      if (inst->dst.reladdr ||
+      if (inst->dst[0].reladdr ||
           tgsi_get_opcode_info(inst->op)->is_branch ||
           inst->op == TGSI_OPCODE_BGNSUB ||
           inst->op == TGSI_OPCODE_CONT ||
@@ -3307,12 +3307,12 @@ glsl_to_tgsi_visitor::simplify_cmp(void)
          break;
       }
 
-      if (inst->dst.file == PROGRAM_OUTPUT) {
-         assert(inst->dst.index < MAX_PROGRAM_OUTPUTS);
-         prevWriteMask = outputWrites[inst->dst.index];
-         outputWrites[inst->dst.index] |= inst->dst.writemask;
-      } else if (inst->dst.file == PROGRAM_TEMPORARY) {
-         if (inst->dst.index >= tempWritesSize) {
+      if (inst->dst[0].file == PROGRAM_OUTPUT) {
+         assert(inst->dst[0].index < MAX_PROGRAM_OUTPUTS);
+         prevWriteMask = outputWrites[inst->dst[0].index];
+         outputWrites[inst->dst[0].index] |= inst->dst[0].writemask;
+      } else if (inst->dst[0].file == PROGRAM_TEMPORARY) {
+         if (inst->dst[0].index >= tempWritesSize) {
             const int inc = 4096;
 
             tempWrites = (unsigned*)
@@ -3325,18 +3325,18 @@ glsl_to_tgsi_visitor::simplify_cmp(void)
             tempWritesSize += inc;
          }
 
-         prevWriteMask = tempWrites[inst->dst.index];
-         tempWrites[inst->dst.index] |= inst->dst.writemask;
+         prevWriteMask = tempWrites[inst->dst[0].index];
+         tempWrites[inst->dst[0].index] |= inst->dst[0].writemask;
       } else
          continue;
 
       /* For a CMP to be considered a conditional write, the destination
        * register and source register two must be the same. */
       if (inst->op == TGSI_OPCODE_CMP
-          && !(inst->dst.writemask & prevWriteMask)
-          && inst->src[2].file == inst->dst.file
-          && inst->src[2].index == inst->dst.index
-          && inst->dst.writemask == get_src_arg_mask(inst->dst, inst->src[2])) {
+          && !(inst->dst[0].writemask & prevWriteMask)
+          && inst->src[2].file == inst->dst[0].file
+          && inst->src[2].index == inst->dst[0].index
+          && inst->dst[0].writemask == get_src_arg_mask(inst->dst[0], inst->src[2])) {
 
          inst->op = TGSI_OPCODE_MOV;
          inst->src[0] = inst->src[1];
@@ -3367,8 +3367,8 @@ glsl_to_tgsi_visitor::rename_temp_register(int index, int new_index)
          }
       }
 
-      if (inst->dst.file == PROGRAM_TEMPORARY && inst->dst.index == index) {
-         inst->dst.index = new_index;
+      if (inst->dst[0].file == PROGRAM_TEMPORARY && inst->dst[0].index == index) {
+         inst->dst[0].index = new_index;
       }
    }
 }
@@ -3414,7 +3414,7 @@ glsl_to_tgsi_visitor::get_first_temp_write(int index)
    int i = 0;
 
    foreach_in_list(glsl_to_tgsi_instruction, inst, &this->instructions) {
-      if (inst->dst.file == PROGRAM_TEMPORARY && inst->dst.index == index) {
+      if (inst->dst[0].file == PROGRAM_TEMPORARY && inst->dst[0].index == index) {
          return (depth == 0) ? i : loop_start;
       }
       if (inst->op == TGSI_OPCODE_BGNLOOP) {
@@ -3469,7 +3469,7 @@ glsl_to_tgsi_visitor::get_last_temp_write(int index)
    int i = 0;
 
    foreach_in_list(glsl_to_tgsi_instruction, inst, &this->instructions) {
-      if (inst->dst.file == PROGRAM_TEMPORARY && inst->dst.index == index)
+      if (inst->dst[0].file == PROGRAM_TEMPORARY && inst->dst[0].index == index)
          last = (depth == 0) ? i : -2;
 
       if (inst->op == TGSI_OPCODE_BGNLOOP)
@@ -3514,8 +3514,8 @@ glsl_to_tgsi_visitor::copy_propagate(void)
    int level = 0;
 
    foreach_in_list(glsl_to_tgsi_instruction, inst, &this->instructions) {
-      assert(inst->dst.file != PROGRAM_TEMPORARY
-             || inst->dst.index < this->next_temp);
+      assert(inst->dst[0].file != PROGRAM_TEMPORARY
+             || inst->dst[0].index < this->next_temp);
 
       /* First, do any copy propagation possible into the src regs. */
       for (int r = 0; r < 3; r++) {
@@ -3608,13 +3608,13 @@ glsl_to_tgsi_visitor::copy_propagate(void)
          /* Continuing the block, clear any written channels from
           * the ACP.
           */
-         if (inst->dst.file == PROGRAM_TEMPORARY && inst->dst.reladdr) {
+         if (inst->dst[0].file == PROGRAM_TEMPORARY && inst->dst[0].reladdr) {
             /* Any temporary might be written, so no copy propagation
              * across this instruction.
              */
             memset(acp, 0, sizeof(*acp) * this->next_temp * 4);
-         } else if (inst->dst.file == PROGRAM_OUTPUT &&
-                    inst->dst.reladdr) {
+         } else if (inst->dst[0].file == PROGRAM_OUTPUT &&
+                    inst->dst[0].reladdr) {
             /* Any output might be written, so no copy propagation
              * from outputs across this instruction.
              */
@@ -3627,13 +3627,13 @@ glsl_to_tgsi_visitor::copy_propagate(void)
                      acp[4 * r + c] = NULL;
                }
             }
-         } else if (inst->dst.file == PROGRAM_TEMPORARY ||
-                    inst->dst.file == PROGRAM_OUTPUT) {
+         } else if (inst->dst[0].file == PROGRAM_TEMPORARY ||
+                    inst->dst[0].file == PROGRAM_OUTPUT) {
             /* Clear where it's used as dst. */
-            if (inst->dst.file == PROGRAM_TEMPORARY) {
+            if (inst->dst[0].file == PROGRAM_TEMPORARY) {
                for (int c = 0; c < 4; c++) {
-                  if (inst->dst.writemask & (1 << c)) {
-                     acp[4 * inst->dst.index + c] = NULL;
+                  if (inst->dst[0].writemask & (1 << c)) {
+                     acp[4 * inst->dst[0].index + c] = NULL;
                   }
                }
             }
@@ -3646,9 +3646,9 @@ glsl_to_tgsi_visitor::copy_propagate(void)
 
                   int src_chan = GET_SWZ(acp[4 * r + c]->src[0].swizzle, c);
 
-                  if (acp[4 * r + c]->src[0].file == inst->dst.file &&
-                      acp[4 * r + c]->src[0].index == inst->dst.index &&
-                      inst->dst.writemask & (1 << src_chan))
+                  if (acp[4 * r + c]->src[0].file == inst->dst[0].file &&
+                      acp[4 * r + c]->src[0].index == inst->dst[0].index &&
+                      inst->dst[0].writemask & (1 << src_chan))
                      acp[4 * r + c] = NULL;
                }
             }
@@ -3658,18 +3658,18 @@ glsl_to_tgsi_visitor::copy_propagate(void)
 
       /* If this is a copy, add it to the ACP. */
       if (inst->op == TGSI_OPCODE_MOV &&
-          inst->dst.file == PROGRAM_TEMPORARY &&
-          !(inst->dst.file == inst->src[0].file &&
-             inst->dst.index == inst->src[0].index) &&
-          !inst->dst.reladdr &&
+          inst->dst[0].file == PROGRAM_TEMPORARY &&
+          !(inst->dst[0].file == inst->src[0].file &&
+             inst->dst[0].index == inst->src[0].index) &&
+          !inst->dst[0].reladdr &&
           !inst->saturate &&
           !inst->src[0].reladdr &&
           !inst->src[0].reladdr2 &&
           !inst->src[0].negate) {
          for (int i = 0; i < 4; i++) {
-            if (inst->dst.writemask & (1 << i)) {
-               acp[4 * inst->dst.index + i] = inst;
-               acp_level[4 * inst->dst.index + i] = level;
+            if (inst->dst[0].writemask & (1 << i)) {
+               acp[4 * inst->dst[0].index + i] = inst;
+               acp_level[4 * inst->dst[0].index + i] = level;
             }
          }
       }
@@ -3706,8 +3706,8 @@ glsl_to_tgsi_visitor::eliminate_dead_code(void)
    int removed = 0;
 
    foreach_in_list(glsl_to_tgsi_instruction, inst, &this->instructions) {
-      assert(inst->dst.file != PROGRAM_TEMPORARY
-             || inst->dst.index < this->next_temp);
+      assert(inst->dst[0].file != PROGRAM_TEMPORARY
+             || inst->dst[0].index < this->next_temp);
 
       switch (inst->op) {
       case TGSI_OPCODE_BGNLOOP:
@@ -3796,19 +3796,19 @@ glsl_to_tgsi_visitor::eliminate_dead_code(void)
        * If there is already an instruction in the write array for one or more
        * of the channels, flag that channel write as dead.
        */
-      if (inst->dst.file == PROGRAM_TEMPORARY &&
-          !inst->dst.reladdr &&
+      if (inst->dst[0].file == PROGRAM_TEMPORARY &&
+          !inst->dst[0].reladdr &&
           !inst->saturate) {
          for (int c = 0; c < 4; c++) {
-            if (inst->dst.writemask & (1 << c)) {
-               if (writes[4 * inst->dst.index + c]) {
-                  if (write_level[4 * inst->dst.index + c] < level)
+            if (inst->dst[0].writemask & (1 << c)) {
+               if (writes[4 * inst->dst[0].index + c]) {
+                  if (write_level[4 * inst->dst[0].index + c] < level)
                      continue;
                   else
-                     writes[4 * inst->dst.index + c]->dead_mask |= (1 << c);
+                     writes[4 * inst->dst[0].index + c]->dead_mask |= (1 << c);
                }
-               writes[4 * inst->dst.index + c] = inst;
-               write_level[4 * inst->dst.index + c] = level;
+               writes[4 * inst->dst[0].index + c] = inst;
+               write_level[4 * inst->dst[0].index + c] = level;
             }
          }
       }
@@ -3827,14 +3827,14 @@ glsl_to_tgsi_visitor::eliminate_dead_code(void)
     * the writemask of other instructions with dead channels.
     */
    foreach_in_list_safe(glsl_to_tgsi_instruction, inst, &this->instructions) {
-      if (!inst->dead_mask || !inst->dst.writemask)
+      if (!inst->dead_mask || !inst->dst[0].writemask)
          continue;
-      else if ((inst->dst.writemask & ~inst->dead_mask) == 0) {
+      else if ((inst->dst[0].writemask & ~inst->dead_mask) == 0) {
          inst->remove();
          delete inst;
          removed++;
       } else
-         inst->dst.writemask &= ~(inst->dead_mask);
+         inst->dst[0].writemask &= ~(inst->dead_mask);
    }
 
    ralloc_free(write_level);
@@ -4017,8 +4017,8 @@ get_pixel_transfer_visitor(struct st_fragment_program *fp,
       glsl_to_tgsi_instruction *newinst;
       st_src_reg src_regs[3];
 
-      if (inst->dst.file == PROGRAM_OUTPUT)
-         prog->OutputsWritten |= BITFIELD64_BIT(inst->dst.index);
+      if (inst->dst[0].file == PROGRAM_OUTPUT)
+         prog->OutputsWritten |= BITFIELD64_BIT(inst->dst[0].index);
 
       for (int i = 0; i < 3; i++) {
          src_regs[i] = inst->src[i];
@@ -4031,7 +4031,7 @@ get_pixel_transfer_visitor(struct st_fragment_program *fp,
             prog->InputsRead |= BITFIELD64_BIT(src_regs[i].index);
       }
 
-      newinst = v->emit(NULL, inst->op, inst->dst, src_regs[0], src_regs[1], src_regs[2]);
+      newinst = v->emit(NULL, inst->op, inst->dst[0], src_regs[0], src_regs[1], src_regs[2]);
       newinst->tex_target = inst->tex_target;
       newinst->sampler_array_size = inst->sampler_array_size;
    }
@@ -4102,8 +4102,8 @@ get_bitmap_visitor(struct st_fragment_program *fp,
       glsl_to_tgsi_instruction *newinst;
       st_src_reg src_regs[3];
 
-      if (inst->dst.file == PROGRAM_OUTPUT)
-         prog->OutputsWritten |= BITFIELD64_BIT(inst->dst.index);
+      if (inst->dst[0].file == PROGRAM_OUTPUT)
+         prog->OutputsWritten |= BITFIELD64_BIT(inst->dst[0].index);
 
       for (int i = 0; i < 3; i++) {
          src_regs[i] = inst->src[i];
@@ -4111,7 +4111,7 @@ get_bitmap_visitor(struct st_fragment_program *fp,
             prog->InputsRead |= BITFIELD64_BIT(src_regs[i].index);
       }
 
-      newinst = v->emit(NULL, inst->op, inst->dst, src_regs[0], src_regs[1], src_regs[2]);
+      newinst = v->emit(NULL, inst->op, inst->dst[0], src_regs[0], src_regs[1], src_regs[2]);
       newinst->tex_target = inst->tex_target;
       newinst->sampler_array_size = inst->sampler_array_size;
    }
@@ -4533,7 +4533,7 @@ compile_tgsi_instruction(struct st_translate *t,
 
    if (num_dst)
       dst[0] = translate_dst(t,
-                             &inst->dst,
+                             &inst->dst[0],
                              inst->saturate,
                              clamp_dst_color_output);
 
