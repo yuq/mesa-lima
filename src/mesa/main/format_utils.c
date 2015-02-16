@@ -1423,8 +1423,8 @@ convert_int(void *void_dst, int num_dst_channels,
  * \param[in]  count             the number of pixels to convert
  */
 void
-_mesa_swizzle_and_convert(void *void_dst, GLenum dst_type, int num_dst_channels,
-                          const void *void_src, GLenum src_type, int num_src_channels,
+_mesa_swizzle_and_convert(void *void_dst, enum mesa_array_format_datatype dst_type, int num_dst_channels,
+                          const void *void_src, enum mesa_array_format_datatype src_type, int num_src_channels,
                           const uint8_t swizzle[4], bool normalized, int count)
 {
    if (swizzle_convert_try_memcpy(void_dst, dst_type, num_dst_channels,
