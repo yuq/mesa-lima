@@ -903,29 +903,30 @@ glsl_to_tgsi_visitor::add_constant(gl_register_file file,
    if (file == PROGRAM_CONSTANT) {
       return _mesa_add_typed_unnamed_constant(this->prog->Parameters, values,
                                               size, datatype, swizzle_out);
-   } else {
-      int index = 0;
-      immediate_storage *entry;
-      assert(file == PROGRAM_IMMEDIATE);
-
-      /* Search immediate storage to see if we already have an identical
-       * immediate that we can use instead of adding a duplicate entry.
-       */
-      foreach_in_list(immediate_storage, entry, &this->immediates) {
-         if (entry->size == size &&
-             entry->type == datatype &&
-             !memcmp(entry->values, values, size * sizeof(gl_constant_value))) {
-             return index;
-         }
-         index++;
-      }
-
-      /* Add this immediate to the list. */
-      entry = new(mem_ctx) immediate_storage(values, size, datatype);
-      this->immediates.push_tail(entry);
-      this->num_immediates++;
-      return index;
    }
+
+   assert(file == PROGRAM_IMMEDIATE);
+
+   int index = 0;
+   immediate_storage *entry;
+
+   /* Search immediate storage to see if we already have an identical
+    * immediate that we can use instead of adding a duplicate entry.
+    */
+   foreach_in_list(immediate_storage, entry, &this->immediates) {
+      if (entry->size == size &&
+          entry->type == datatype &&
+          !memcmp(entry->values, values, size * sizeof(gl_constant_value))) {
+         return index;
+      }
+      index++;
+   }
+
+   /* Add this immediate to the list. */
+   entry = new(mem_ctx) immediate_storage(values, size, datatype);
+   this->immediates.push_tail(entry);
+   this->num_immediates++;
+   return index;
 }
 
 st_src_reg
