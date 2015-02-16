@@ -1342,6 +1342,7 @@ NineDevice9_StretchRect( struct NineDevice9 *This,
                 (pSourceRect->left <= pSourceRect->right &&
                  pSourceRect->top <= pSourceRect->bottom), D3DERR_INVALIDCALL);
 
+    memset(&blit, 0, sizeof(blit));
     blit.dst.resource = dst_res;
     blit.dst.level = dst->level;
     blit.dst.box.z = dst->layer;
@@ -2130,6 +2131,7 @@ NineDevice9_ResolveZ( struct NineDevice9 *This )
     desc = util_format_description(dst->format);
     user_assert(desc->colorspace == UTIL_FORMAT_COLORSPACE_ZS, D3DERR_INVALIDCALL);
 
+    memset(&blit, 0, sizeof(blit));
     blit.src.resource = src;
     blit.src.level = 0;
     blit.src.format = src->format;
