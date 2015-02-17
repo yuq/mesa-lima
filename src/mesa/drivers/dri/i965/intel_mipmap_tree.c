@@ -649,10 +649,10 @@ intel_miptree_create(struct brw_context *brw,
    mt->pitch = pitch;
 
    /* If the BO is too large to fit in the aperture, we need to use the
-    * BLT engine to support it.  The BLT paths can't currently handle Y-tiling,
-    * so we need to fall back to X.
+    * BLT engine to support it.  Prior to Sandybridge, the BLT paths can't
+    * handle Y-tiling, so we need to fall back to X.
     */
-   if (y_or_x && mt->bo->size >= brw->max_gtt_map_object_size) {
+   if (brw->gen < 6 && y_or_x && mt->bo->size >= brw->max_gtt_map_object_size) {
       perf_debug("%dx%d miptree larger than aperture; falling back to X-tiled\n",
                  mt->total_width, mt->total_height);
 
