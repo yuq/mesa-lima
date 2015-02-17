@@ -282,6 +282,8 @@ ilo_layout_get_slice_pos(const struct ilo_layout *layout,
       }
    default:
       assert(!"unknown layout walk type");
+      *x = 0;
+      *y = 0;
       break;
    }
 

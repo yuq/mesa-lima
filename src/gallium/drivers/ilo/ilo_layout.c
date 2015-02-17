@@ -656,7 +656,7 @@ layout_init_size_and_format(struct ilo_layout *layout,
 {
    const struct pipe_resource *templ = params->templ;
    enum pipe_format format = templ->format;
-   bool require_separate_stencil;
+   bool require_separate_stencil = false;
 
    layout->width0 = templ->width0;
    layout->height0 = templ->height0;
@@ -1100,6 +1100,11 @@ layout_calculate_hiz_size(struct ilo_layout *layout,
          hz_height += h * u_minify(templ->depth0, lv);
       }
       hz_height /= 2;
+      break;
+   default:
+      assert(!"unknown HiZ walk");
+      hz_width = 0;
+      hz_height = 0;
       break;
    }
 
