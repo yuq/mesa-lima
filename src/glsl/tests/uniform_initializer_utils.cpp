@@ -84,6 +84,7 @@ generate_data_element(void *mem_ctx, const glsl_type *type,
       case GLSL_TYPE_UINT:
       case GLSL_TYPE_INT:
       case GLSL_TYPE_SAMPLER:
+      case GLSL_TYPE_IMAGE:
 	 data.i[i] = values[idx];
 	 break;
       case GLSL_TYPE_FLOAT:
@@ -112,6 +113,7 @@ generate_data_element(void *mem_ctx, const glsl_type *type,
       case GLSL_TYPE_UINT:
       case GLSL_TYPE_INT:
       case GLSL_TYPE_SAMPLER:
+      case GLSL_TYPE_IMAGE:
 	 ASSERT_EQ(data.i[i], val->value.i[i]);
 	 break;
       case GLSL_TYPE_FLOAT:
@@ -212,6 +214,7 @@ verify_data(gl_constant_value *storage, unsigned storage_array_size,
 	 case GLSL_TYPE_UINT:
 	 case GLSL_TYPE_INT:
 	 case GLSL_TYPE_SAMPLER:
+	 case GLSL_TYPE_IMAGE:
 	    EXPECT_EQ(val->value.i[i], storage[i].i);
 	    break;
 	 case GLSL_TYPE_FLOAT:
