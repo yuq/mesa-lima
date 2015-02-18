@@ -227,6 +227,9 @@ brw_miptree_layout_2d(struct intel_mipmap_tree *mt)
 
       width  = minify(width, 1);
       height = minify(height, 1);
+
+      if (mt->target == GL_TEXTURE_3D)
+         depth = minify(depth, 1);
    }
 }
 
@@ -266,7 +269,7 @@ brw_miptree_layout_texture_array(struct brw_context *brw,
       if (mt->compressed)
          img_height /= mt->align_h;
 
-      for (int q = 0; q < mt->physical_depth0; q++) {
+      for (int q = 0; q < mt->level[level].depth; q++) {
          if (mt->array_layout == ALL_SLICES_AT_EACH_LOD) {
             intel_miptree_set_image_offset(mt, level, q, 0, q * img_height);
          } else {
@@ -371,7 +374,10 @@ brw_miptree_layout(struct brw_context *brw, struct intel_mipmap_tree *mt)
       break;
 
    case GL_TEXTURE_3D:
-      brw_miptree_layout_texture_3d(brw, mt);
+      if (brw->gen >= 9)
+         brw_miptree_layout_texture_array(brw, mt);
+      else
+         brw_miptree_layout_texture_3d(brw, mt);
       break;
 
    case GL_TEXTURE_1D_ARRAY:
