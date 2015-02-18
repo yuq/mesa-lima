@@ -2675,6 +2675,9 @@ void r600_update_vs_state(struct pipe_context *ctx, struct r600_pipe_shader *sha
 		S_02881C_USE_VTX_VIEWPORT_INDX(rshader->vs_out_viewport);
 }
 
+#define RV610_GSVS_ALIGN 32
+#define R600_GSVS_ALIGN 16
+
 void r600_update_gs_state(struct pipe_context *ctx, struct r600_pipe_shader *shader)
 {
 	struct r600_context *rctx = (struct r600_context *)ctx;
@@ -2683,6 +2686,23 @@ void r600_update_gs_state(struct pipe_context *ctx, struct r600_pipe_shader *sha
 	struct r600_shader *cp_shader = &shader->gs_copy_shader->shader;
 	unsigned gsvs_itemsize =
 			(cp_shader->ring_item_sizes[0] * shader->selector->gs_max_out_vertices) >> 2;
+
+	/* some r600s needs gsvs itemsize aligned to cacheline size
+	   this was fixed in rs780 and above. */
+	switch (rctx->b.family) {
+	case CHIP_RV610:
+		gsvs_itemsize = align(gsvs_itemsize, RV610_GSVS_ALIGN);
+		break;
+	case CHIP_R600:
+	case CHIP_RV630:
+	case CHIP_RV670:
+	case CHIP_RV620:
+	case CHIP_RV635:
+		gsvs_itemsize = align(gsvs_itemsize, R600_GSVS_ALIGN);
+		break;
+	default:
+		break;
+	}
 
 	r600_init_command_buffer(cb, 64);
 
