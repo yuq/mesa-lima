@@ -48,7 +48,7 @@ struct nv50_query {
    struct nouveau_mm_allocation *mm;
 };
 
-#define NV50_QUERY_ALLOC_SPACE 128
+#define NV50_QUERY_ALLOC_SPACE 256
 
 static INLINE struct nv50_query *
 nv50_query(struct pipe_query *pipe)
@@ -184,6 +184,16 @@ nv50_query_begin(struct pipe_context *pipe, struct pipe_query *pq)
       nv50_query_get(push, q, 0x20, 0x05805002);
       nv50_query_get(push, q, 0x30, 0x06805002);
       break;
+   case PIPE_QUERY_PIPELINE_STATISTICS:
+      nv50_query_get(push, q, 0x80, 0x00801002); /* VFETCH, VERTICES */
+      nv50_query_get(push, q, 0x90, 0x01801002); /* VFETCH, PRIMS */
+      nv50_query_get(push, q, 0xa0, 0x02802002); /* VP, LAUNCHES */
+      nv50_query_get(push, q, 0xb0, 0x03806002); /* GP, LAUNCHES */
+      nv50_query_get(push, q, 0xc0, 0x04806002); /* GP, PRIMS_OUT */
+      nv50_query_get(push, q, 0xd0, 0x07804002); /* RAST, PRIMS_IN */
+      nv50_query_get(push, q, 0xe0, 0x08804002); /* RAST, PRIMS_OUT */
+      nv50_query_get(push, q, 0xf0, 0x0980a002); /* ROP, PIXELS */
+      break;
    case PIPE_QUERY_TIME_ELAPSED:
       nv50_query_get(push, q, 0x10, 0x00005002);
       break;
@@ -216,6 +226,16 @@ nv50_query_end(struct pipe_context *pipe, struct pipe_query *pq)
    case PIPE_QUERY_SO_STATISTICS:
       nv50_query_get(push, q, 0x00, 0x05805002);
       nv50_query_get(push, q, 0x10, 0x06805002);
+      break;
+   case PIPE_QUERY_PIPELINE_STATISTICS:
+      nv50_query_get(push, q, 0x00, 0x00801002); /* VFETCH, VERTICES */
+      nv50_query_get(push, q, 0x10, 0x01801002); /* VFETCH, PRIMS */
+      nv50_query_get(push, q, 0x20, 0x02802002); /* VP, LAUNCHES */
+      nv50_query_get(push, q, 0x30, 0x03806002); /* GP, LAUNCHES */
+      nv50_query_get(push, q, 0x40, 0x04806002); /* GP, PRIMS_OUT */
+      nv50_query_get(push, q, 0x50, 0x07804002); /* RAST, PRIMS_IN */
+      nv50_query_get(push, q, 0x60, 0x08804002); /* RAST, PRIMS_OUT */
+      nv50_query_get(push, q, 0x70, 0x0980a002); /* ROP, PIXELS */
       break;
    case PIPE_QUERY_TIMESTAMP:
       q->sequence++;
@@ -257,6 +277,7 @@ nv50_query_result(struct pipe_context *pipe, struct pipe_query *pq,
    uint32_t *res32 = (uint32_t *)result;
    boolean *res8 = (boolean *)result;
    uint64_t *data64 = (uint64_t *)q->data;
+   int i;
 
    if (!q->ready) /* update ? */
       q->ready = nv50_query_ready(q);
@@ -288,6 +309,10 @@ nv50_query_result(struct pipe_context *pipe, struct pipe_query *pq,
    case PIPE_QUERY_SO_STATISTICS:
       res64[0] = data64[0] - data64[4];
       res64[1] = data64[2] - data64[6];
+      break;
+   case PIPE_QUERY_PIPELINE_STATISTICS:
+      for (i = 0; i < 8; ++i)
+         res64[i] = data64[i * 2] - data64[16 + i * 2];
       break;
    case PIPE_QUERY_TIMESTAMP:
       res64[0] = data64[1];
