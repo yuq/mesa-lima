@@ -403,10 +403,14 @@ struct intel_mipmap_tree
    enum miptree_array_layout array_layout;
 
    /**
-    * The distance in rows between array slices in an uncompressed surface.
+    * The distance in between array slices.
     *
-    * For compressed surfaces, slices are stored closer together physically;
-    * the real distance is (qpitch / block height).
+    * The value is the one that is sent in the surface state. The actual
+    * meaning depends on certain criteria. Usually it is simply the number of
+    * uncompressed rows between each slice. However on Gen9+ for compressed
+    * surfaces it is the number of blocks. For 1D array surfaces that have the
+    * mipmap tree stored horizontally it is the number of pixels between each
+    * slice.
     */
    uint32_t qpitch;
 
