@@ -90,7 +90,9 @@ gen7_3dstate_push_constant_alloc(struct ilo_builder *builder,
                         GEN6_RENDER_SUBTYPE_3D |
                         subop;
    const uint8_t cmd_len = 2;
-   const int slice_count = (ilo_dev_gen(builder->dev) >= ILO_GEN(8)) ? 2 : 1;
+   const int slice_count = ((ilo_dev_gen(builder->dev) == ILO_GEN(7.5) &&
+                             builder->dev->gt == 3) ||
+                            ilo_dev_gen(builder->dev) >= ILO_GEN(8)) ? 2 : 1;
    uint32_t *dw;
    int end;
 
@@ -137,6 +139,8 @@ gen7_3dstate_push_constant_alloc(struct ilo_builder *builder,
       assert(!"invalid constant buffer size");
       size = 15 * slice_count;
    }
+
+   assert(offset % slice_count == 0 && size % slice_count == 0);
 
    ilo_builder_batch_pointer(builder, cmd_len, &dw);
 
