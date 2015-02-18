@@ -993,7 +993,8 @@ adjust_later_block_ips(bblock_t *start_block, int ip_adjustment)
 void
 backend_instruction::insert_after(bblock_t *block, backend_instruction *inst)
 {
-   assert(inst_is_in_block(block, this) || !"Instruction not in block");
+   if (!this->is_head_sentinel())
+      assert(inst_is_in_block(block, this) || !"Instruction not in block");
 
    block->end_ip++;
 
@@ -1005,7 +1006,8 @@ backend_instruction::insert_after(bblock_t *block, backend_instruction *inst)
 void
 backend_instruction::insert_before(bblock_t *block, backend_instruction *inst)
 {
-   assert(inst_is_in_block(block, this) || !"Instruction not in block");
+   if (!this->is_tail_sentinel())
+      assert(inst_is_in_block(block, this) || !"Instruction not in block");
 
    block->end_ip++;
 
