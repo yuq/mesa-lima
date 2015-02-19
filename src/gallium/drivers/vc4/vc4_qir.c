@@ -423,6 +423,39 @@ qir_get_stage_name(enum qstage stage)
         return names[stage];
 }
 
+struct qreg
+qir_uniform(struct vc4_compile *c,
+            enum quniform_contents contents,
+            uint32_t data)
+{
+        for (int i = 0; i < c->num_uniforms; i++) {
+                if (c->uniform_contents[i] == contents &&
+                    c->uniform_data[i] == data) {
+                        return (struct qreg) { QFILE_UNIF, i };
+                }
+        }
+
+        uint32_t uniform = c->num_uniforms++;
+        struct qreg u = { QFILE_UNIF, uniform };
+
+        if (uniform >= c->uniform_array_size) {
+                c->uniform_array_size = MAX2(MAX2(16, uniform + 1),
+                                             c->uniform_array_size * 2);
+
+                c->uniform_data = reralloc(c, c->uniform_data,
+                                           uint32_t,
+                                           c->uniform_array_size);
+                c->uniform_contents = reralloc(c, c->uniform_contents,
+                                               enum quniform_contents,
+                                               c->uniform_array_size);
+        }
+
+        c->uniform_contents[uniform] = contents;
+        c->uniform_data[uniform] = data;
+
+        return u;
+}
+
 void
 qir_SF(struct vc4_compile *c, struct qreg src)
 {

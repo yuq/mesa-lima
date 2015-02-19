@@ -110,51 +110,6 @@ resize_qreg_array(struct vc4_compile *c,
 }
 
 static struct qreg
-qir_uniform(struct vc4_compile *c,
-            enum quniform_contents contents,
-            uint32_t data)
-{
-        for (int i = 0; i < c->num_uniforms; i++) {
-                if (c->uniform_contents[i] == contents &&
-                    c->uniform_data[i] == data) {
-                        return (struct qreg) { QFILE_UNIF, i };
-                }
-        }
-
-        uint32_t uniform = c->num_uniforms++;
-        struct qreg u = { QFILE_UNIF, uniform };
-
-        if (uniform >= c->uniform_array_size) {
-                c->uniform_array_size = MAX2(MAX2(16, uniform + 1),
-                                             c->uniform_array_size * 2);
-
-                c->uniform_data = reralloc(c, c->uniform_data,
-                                           uint32_t,
-                                           c->uniform_array_size);
-                c->uniform_contents = reralloc(c, c->uniform_contents,
-                                               enum quniform_contents,
-                                               c->uniform_array_size);
-        }
-
-        c->uniform_contents[uniform] = contents;
-        c->uniform_data[uniform] = data;
-
-        return u;
-}
-
-static struct qreg
-qir_uniform_ui(struct vc4_compile *c, uint32_t ui)
-{
-        return qir_uniform(c, QUNIFORM_CONSTANT, ui);
-}
-
-static struct qreg
-qir_uniform_f(struct vc4_compile *c, float f)
-{
-        return qir_uniform(c, QUNIFORM_CONSTANT, fui(f));
-}
-
-static struct qreg
 indirect_uniform_load(struct vc4_compile *c,
                       struct tgsi_full_src_register *src, int swiz)
 {

@@ -33,6 +33,7 @@
 
 #include "util/macros.h"
 #include "util/simple_list.h"
+#include "util/u_math.h"
 #include "tgsi/tgsi_parse.h"
 
 enum qfile {
@@ -368,6 +369,9 @@ struct qinst *qir_inst4(enum qop op, struct qreg dst,
                         struct qreg c,
                         struct qreg d);
 void qir_remove_instruction(struct qinst *qinst);
+struct qreg qir_uniform(struct vc4_compile *c,
+                        enum quniform_contents contents,
+                        uint32_t data);
 void qir_reorder_uniforms(struct vc4_compile *c);
 void qir_emit(struct vc4_compile *c, struct qinst *inst);
 struct qreg qir_get_temp(struct vc4_compile *c);
@@ -399,6 +403,18 @@ void qir_lower_uniforms(struct vc4_compile *c);
 void qpu_schedule_instructions(struct vc4_compile *c);
 
 void qir_SF(struct vc4_compile *c, struct qreg src);
+
+static inline struct qreg
+qir_uniform_ui(struct vc4_compile *c, uint32_t ui)
+{
+        return qir_uniform(c, QUNIFORM_CONSTANT, ui);
+}
+
+static inline struct qreg
+qir_uniform_f(struct vc4_compile *c, float f)
+{
+        return qir_uniform(c, QUNIFORM_CONSTANT, fui(f));
+}
 
 #define QIR_ALU0(name)                                                   \
 static inline struct qreg                                                \
