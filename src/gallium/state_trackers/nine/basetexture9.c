@@ -163,7 +163,8 @@ NineBaseTexture9_UploadSelf( struct NineBaseTexture9 *This )
 {
     HRESULT hr;
     unsigned last_level = This->base.info.last_level;
-    unsigned l;
+    unsigned l, min_level_dirty = This->managed.lod;
+    BOOL update_lod;
 
     DBG("This=%p dirty=%i type=%s\n", This, This->managed.dirty,
         nine_D3DRTYPE_to_str(This->base.type));
@@ -173,7 +174,14 @@ NineBaseTexture9_UploadSelf( struct NineBaseTexture9 *This )
     if (This->base.usage & D3DUSAGE_AUTOGENMIPMAP)
         last_level = 0; /* TODO: What if level 0 is not resident ? */
 
-    if (This->managed.lod_resident != This->managed.lod) {
+    update_lod = This->managed.lod_resident != This->managed.lod;
+    if (!update_lod && !This->managed.dirty)
+        return D3D_OK;
+
+    /* Allocate a new resource with the correct number of levels,
+     * Mark states for update, and tell the nine surfaces/volumes
+     * their new resource. */
+    if (update_lod) {
         struct pipe_resource *res;
 
         DBG("updating LOD from %u to %u ...\n", This->managed.lod_resident, This->managed.lod);
@@ -192,51 +200,35 @@ NineBaseTexture9_UploadSelf( struct NineBaseTexture9 *This )
                 state->changed.group |= NINE_STATE_TEXTURE;
         }
 
+        /* Allocate a new resource */
         hr = NineBaseTexture9_CreatePipeResource(This, This->managed.lod_resident != -1);
         if (FAILED(hr))
             return hr;
         res = This->base.resource;
 
-        if (This->managed.lod_resident == -1) /* no levels were resident */
+        if (This->managed.lod_resident == -1) {/* no levels were resident */
+            This->managed.dirty = FALSE; /* We are going to upload everything. */
             This->managed.lod_resident = This->base.info.last_level + 1;
+        }
 
         if (This->base.type == D3DRTYPE_TEXTURE) {
             struct NineTexture9 *tex = NineTexture9(This);
-            struct pipe_box box;
 
-            /* Mark uninitialized levels as dirty. */
-            box.x = box.y = box.z = 0;
-            box.depth = 1;
-            for (l = This->managed.lod; l < This->managed.lod_resident; ++l) {
-                box.width = u_minify(This->base.info.width0, l);
-                box.height = u_minify(This->base.info.height0, l);
-                NineSurface9_AddDirtyRect(tex->surfaces[l], &box);
-            }
-            for (l = 0; l < This->managed.lod; ++l)
-                NineSurface9_SetResource(tex->surfaces[l], NULL, -1);
-            for (; l <= This->base.info.last_level; ++l)
+            /* last content (if apply) has been copied to the new resource.
+             * Note: We cannot render to surfaces of managed textures.
+             * Note2: the level argument passed is to get the level offset
+             * right when the texture is uploaded (the texture first level
+             * corresponds to This->managed.lod).
+             * Note3: We don't care about the value passed for the surfaces
+             * before This->managed.lod, negative with this implementation. */
+            for (l = 0; l <= This->base.info.last_level; ++l)
                 NineSurface9_SetResource(tex->surfaces[l], res, l - This->managed.lod);
         } else
         if (This->base.type == D3DRTYPE_CUBETEXTURE) {
             struct NineCubeTexture9 *tex = NineCubeTexture9(This);
-            struct pipe_box box;
             unsigned z;
 
-            /* Mark uninitialized levels as dirty. */
-            box.x = box.y = box.z = 0;
-            box.depth = 1;
-            for (l = This->managed.lod; l < This->managed.lod_resident; ++l) {
-                box.width = u_minify(This->base.info.width0, l);
-                box.height = u_minify(This->base.info.height0, l);
-                for (z = 0; z < 6; ++z)
-                    NineSurface9_AddDirtyRect(tex->surfaces[l * 6 + z], &box);
-            }
-            for (l = 0; l < This->managed.lod; ++l) {
-                for (z = 0; z < 6; ++z)
-                    NineSurface9_SetResource(tex->surfaces[l * 6 + z],
-                                             NULL, -1);
-            }
-            for (; l <= This->base.info.last_level; ++l) {
+            for (l = 0; l <= This->base.info.last_level; ++l) {
                 for (z = 0; z < 6; ++z)
                     NineSurface9_SetResource(tex->surfaces[l * 6 + z],
                                              res, l - This->managed.lod);
@@ -244,96 +236,133 @@ NineBaseTexture9_UploadSelf( struct NineBaseTexture9 *This )
         } else
         if (This->base.type == D3DRTYPE_VOLUMETEXTURE) {
             struct NineVolumeTexture9 *tex = NineVolumeTexture9(This);
+
+            for (l = 0; l <= This->base.info.last_level; ++l)
+                NineVolume9_SetResource(tex->volumes[l], res, l - This->managed.lod);
+        } else {
+            assert(!"invalid texture type");
+        }
+
+        /* We are going to fully upload the new levels,
+         * no need to update dirty parts of the texture for these */
+        min_level_dirty = MAX2(This->managed.lod, This->managed.lod_resident);
+    }
+
+    /* Update dirty parts of the texture */
+    if (This->managed.dirty) {
+        if (This->base.type == D3DRTYPE_TEXTURE) {
+            struct NineTexture9 *tex = NineTexture9(This);
+            struct pipe_box box;
+            box.z = 0;
+            box.depth = 1;
+
+            DBG("TEXTURE: dirty rect=(%u,%u) (%ux%u)\n",
+                tex->dirty_rect.x, tex->dirty_rect.y,
+                tex->dirty_rect.width, tex->dirty_rect.height);
+
+            /* Note: for l < min_level_dirty, the resource is
+             * either non-existing (and thus will be entirely re-uploaded
+             * if the lod changes) or going to have a full upload */
+            if (tex->dirty_rect.width) {
+                for (l = min_level_dirty; l <= last_level; ++l) {
+                    u_box_minify_2d(&box, &tex->dirty_rect, l);
+                    NineSurface9_UploadSelf(tex->surfaces[l], &box);
+                }
+                memset(&tex->dirty_rect, 0, sizeof(tex->dirty_rect));
+                tex->dirty_rect.depth = 1;
+            }
+        } else
+        if (This->base.type == D3DRTYPE_CUBETEXTURE) {
+            struct NineCubeTexture9 *tex = NineCubeTexture9(This);
+            unsigned z;
+            struct pipe_box box;
+            box.z = 0;
+            box.depth = 1;
+
+            for (z = 0; z < 6; ++z) {
+                DBG("FACE[%u]: dirty rect=(%u,%u) (%ux%u)\n", z,
+                    tex->dirty_rect[z].x, tex->dirty_rect[z].y,
+                    tex->dirty_rect[z].width, tex->dirty_rect[z].height);
+
+                if (tex->dirty_rect[z].width) {
+                    for (l = min_level_dirty; l <= last_level; ++l) {
+                        u_box_minify_2d(&box, &tex->dirty_rect[z], l);
+                        NineSurface9_UploadSelf(tex->surfaces[l * 6 + z], &box);
+                    }
+                    memset(&tex->dirty_rect[z], 0, sizeof(tex->dirty_rect[z]));
+                    tex->dirty_rect[z].depth = 1;
+                }
+            }
+        } else
+        if (This->base.type == D3DRTYPE_VOLUMETEXTURE) {
+            struct NineVolumeTexture9 *tex = NineVolumeTexture9(This);
             struct pipe_box box;
 
-            /* Mark uninitialized levels as dirty. */
+            DBG("VOLUME: dirty_box=(%u,%u,%u) (%ux%ux%u)\n",
+                tex->dirty_box.x, tex->dirty_box.y, tex->dirty_box.y,
+                tex->dirty_box.width, tex->dirty_box.height, tex->dirty_box.depth);
+
+            if (tex->dirty_box.width) {
+                for (l = 0; l <= last_level; ++l) {
+                    u_box_minify_2d(&box, &tex->dirty_box, l);
+                    NineVolume9_AddDirtyRegion(tex->volumes[l], &tex->dirty_box);
+                }
+                memset(&tex->dirty_box, 0, sizeof(tex->dirty_box));
+            }
+            for (l = min_level_dirty; l <= last_level; ++l)
+                NineVolume9_UploadSelf(tex->volumes[l]);
+        } else {
+            assert(!"invalid texture type");
+        }
+        This->managed.dirty = FALSE;
+    }
+
+    /* Upload the new levels */
+    if (update_lod) {
+        if (This->base.type == D3DRTYPE_TEXTURE) {
+            struct NineTexture9 *tex = NineTexture9(This);
+            struct pipe_box box;
+
+            box.x = box.y = box.z = 0;
+            box.depth = 1;
+            for (l = This->managed.lod; l < This->managed.lod_resident; ++l) {
+                box.width = u_minify(This->base.info.width0, l);
+                box.height = u_minify(This->base.info.height0, l);
+                NineSurface9_UploadSelf(tex->surfaces[l], &box);
+            }
+        } else
+        if (This->base.type == D3DRTYPE_CUBETEXTURE) {
+            struct NineCubeTexture9 *tex = NineCubeTexture9(This);
+            struct pipe_box box;
+            unsigned z;
+
+            box.x = box.y = box.z = 0;
+            box.depth = 1;
+            for (l = This->managed.lod; l < This->managed.lod_resident; ++l) {
+                box.width = u_minify(This->base.info.width0, l);
+                box.height = u_minify(This->base.info.height0, l);
+                for (z = 0; z < 6; ++z)
+                    NineSurface9_UploadSelf(tex->surfaces[l * 6 + z], &box);
+            }
+        } else
+        if (This->base.type == D3DRTYPE_VOLUMETEXTURE) {
+            struct NineVolumeTexture9 *tex = NineVolumeTexture9(This);
+            struct pipe_box box;
+
             box.x = box.y = box.z = 0;
             for (l = This->managed.lod; l < This->managed.lod_resident; ++l) {
                 box.width = u_minify(This->base.info.width0, l);
                 box.height = u_minify(This->base.info.height0, l);
                 box.depth = u_minify(This->base.info.depth0, l);
                 NineVolume9_AddDirtyRegion(tex->volumes[l], &box);
+                NineVolume9_UploadSelf(tex->volumes[l]);
             }
-            for (l = 0; l < This->managed.lod; ++l)
-                NineVolume9_SetResource(tex->volumes[l], NULL, -1);
-            for (; l <= This->base.info.last_level; ++l)
-                NineVolume9_SetResource(tex->volumes[l], res, l - This->managed.lod);
         } else {
             assert(!"invalid texture type");
         }
 
-        if (This->managed.lod < This->managed.lod_resident)
-            This->managed.dirty = TRUE;
         This->managed.lod_resident = This->managed.lod;
     }
-    if (!This->managed.dirty)
-        return D3D_OK;
-
-    if (This->base.type == D3DRTYPE_TEXTURE) {
-        struct NineTexture9 *tex = NineTexture9(This);
-        struct pipe_box box;
-        box.z = 0;
-        box.depth = 1;
-
-        DBG("TEXTURE: dirty rect=(%u,%u) (%ux%u)\n",
-            tex->dirty_rect.x, tex->dirty_rect.y,
-            tex->dirty_rect.width, tex->dirty_rect.height);
-
-        /* Note: for l < This->managed.lod, the resource is
-         * non-existing, and thus will be entirely re-uploaded
-         * if This->managed.lod changes */
-        if (tex->dirty_rect.width) {
-            for (l = This->managed.lod; l <= last_level; ++l) {
-                u_box_minify_2d(&box, &tex->dirty_rect, l);
-                NineSurface9_UploadSelf(tex->surfaces[l], &box);
-            }
-            memset(&tex->dirty_rect, 0, sizeof(tex->dirty_rect));
-            tex->dirty_rect.depth = 1;
-        }
-    } else
-    if (This->base.type == D3DRTYPE_CUBETEXTURE) {
-        struct NineCubeTexture9 *tex = NineCubeTexture9(This);
-        unsigned z;
-        struct pipe_box box;
-        box.z = 0;
-        box.depth = 1;
-
-        for (z = 0; z < 6; ++z) {
-            DBG("FACE[%u]: dirty rect=(%u,%u) (%ux%u)\n", z,
-                tex->dirty_rect[z].x, tex->dirty_rect[z].y,
-                tex->dirty_rect[z].width, tex->dirty_rect[z].height);
-
-            if (tex->dirty_rect[z].width) {
-                for (l = This->managed.lod; l <= last_level; ++l) {
-                    u_box_minify_2d(&box, &tex->dirty_rect[z], l);
-                    NineSurface9_UploadSelf(tex->surfaces[l * 6 + z], &box);
-                }
-                memset(&tex->dirty_rect[z], 0, sizeof(tex->dirty_rect[z]));
-                tex->dirty_rect[z].depth = 1;
-            }
-        }
-    } else
-    if (This->base.type == D3DRTYPE_VOLUMETEXTURE) {
-        struct NineVolumeTexture9 *tex = NineVolumeTexture9(This);
-        struct pipe_box box;
-
-        DBG("VOLUME: dirty_box=(%u,%u,%u) (%ux%ux%u)\n",
-            tex->dirty_box.x, tex->dirty_box.y, tex->dirty_box.y,
-            tex->dirty_box.width, tex->dirty_box.height, tex->dirty_box.depth);
-
-        if (tex->dirty_box.width) {
-            for (l = 0; l <= last_level; ++l) {
-                u_box_minify_2d(&box, &tex->dirty_box, l);
-                NineVolume9_AddDirtyRegion(tex->volumes[l], &tex->dirty_box);
-            }
-            memset(&tex->dirty_box, 0, sizeof(tex->dirty_box));
-        }
-        for (l = This->managed.lod; l <= last_level; ++l)
-            NineVolume9_UploadSelf(tex->volumes[l]);
-    } else {
-        assert(!"invalid texture type");
-    }
-    This->managed.dirty = FALSE;
 
     if (This->base.usage & D3DUSAGE_AUTOGENMIPMAP)
         This->dirty_mip = TRUE;
