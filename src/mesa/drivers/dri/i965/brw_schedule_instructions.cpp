@@ -1517,9 +1517,9 @@ fs_visitor::schedule_instructions(instruction_scheduler_mode mode)
    fs_instruction_scheduler sched(this, grf_count, mode);
    sched.run(cfg);
 
-   if (unlikely(INTEL_DEBUG & DEBUG_WM) && mode == SCHEDULE_POST) {
-      fprintf(stderr, "fs%d estimated execution time: %d cycles\n",
-             dispatch_width, sched.time);
+   if (unlikely(debug_enabled) && mode == SCHEDULE_POST) {
+      fprintf(stderr, "%s%d estimated execution time: %d cycles\n",
+              stage_abbrev, dispatch_width, sched.time);
    }
 
    invalidate_live_intervals();
@@ -1531,8 +1531,9 @@ vec4_visitor::opt_schedule_instructions()
    vec4_instruction_scheduler sched(this, prog_data->total_grf);
    sched.run(cfg);
 
-   if (unlikely(debug_flag)) {
-      fprintf(stderr, "vec4 estimated execution time: %d cycles\n", sched.time);
+   if (unlikely(debug_enabled)) {
+      fprintf(stderr, "%s estimated execution time: %d cycles\n",
+              stage_abbrev, sched.time);
    }
 
    invalidate_live_intervals();
