@@ -1707,8 +1707,8 @@ fs_visitor::nir_emit_texture(nir_tex_instr *instr)
 
          /* Emit code to evaluate the actual indexing expression */
          sampler_reg = vgrf(glsl_type::uint_type);
-         emit(ADD(sampler_reg, src, fs_reg(sampler)))
-             ->force_writemask_all = true;
+         emit(ADD(sampler_reg, src, fs_reg(sampler)));
+         emit_uniformize(sampler_reg, sampler_reg);
          break;
       }
 

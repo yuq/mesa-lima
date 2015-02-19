@@ -2317,8 +2317,9 @@ fs_visitor::visit(ir_texture *ir)
       /* Emit code to evaluate the actual indexing expression */
       nonconst_sampler_index->accept(this);
       fs_reg temp = vgrf(glsl_type::uint_type);
-      emit(ADD(temp, this->result, fs_reg(sampler)))
-            ->force_writemask_all = true;
+      emit(ADD(temp, this->result, fs_reg(sampler)));
+      emit_uniformize(temp, temp);
+
       sampler_reg = temp;
    } else {
       /* Single sampler, or constant array index; the indexing expression

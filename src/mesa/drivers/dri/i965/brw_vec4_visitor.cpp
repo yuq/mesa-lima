@@ -2518,8 +2518,9 @@ vec4_visitor::visit(ir_texture *ir)
       /* Emit code to evaluate the actual indexing expression */
       nonconst_sampler_index->accept(this);
       dst_reg temp(this, glsl_type::uint_type);
-      emit(ADD(temp, this->result, src_reg(sampler)))
-         ->force_writemask_all = true;
+      emit(ADD(temp, this->result, src_reg(sampler)));
+      emit_uniformize(temp, src_reg(temp));
+
       sampler_reg = src_reg(temp);
    } else {
       /* Single sampler, or constant array index; the indexing expression
