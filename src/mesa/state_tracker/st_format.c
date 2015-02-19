@@ -921,6 +921,9 @@ test_format_conversion(struct st_context *st)
       if (i == PIPE_FORMAT_ETC1_RGB8 && !st->has_etc1)
          continue;
 
+      if (_mesa_is_format_etc2(mf) && !st->has_etc2)
+         continue;
+
       if (mf != MESA_FORMAT_NONE) {
          enum pipe_format pf = st_mesa_format_to_pipe_format(st, mf);
          assert(pf == i);
