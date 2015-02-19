@@ -367,24 +367,21 @@ void si_emit_cache_flush(struct r600_common_context *sctx, struct r600_atom *ato
 {
 	struct radeon_winsys_cs *cs = sctx->rings.gfx.cs;
 	uint32_t cp_coher_cntl = 0;
-	uint32_t sqc_caches = 0;
 	uint32_t compute =
 		PKT3_SHADER_TYPE_S(!!(sctx->flags & SI_CONTEXT_FLAG_COMPUTE));
 
 	/* SI has a bug that it always flushes ICACHE and KCACHE if either
-	 * bit is set. An alternative way is to write SQC_CACHES. */
-	if (sctx->chip_class == SI &&
-	    sctx->flags & BOTH_ICACHE_KCACHE &&
-	    (sctx->flags & BOTH_ICACHE_KCACHE) != BOTH_ICACHE_KCACHE) {
-		sqc_caches =
-			S_008C08_INST_INVALIDATE(!!(sctx->flags & SI_CONTEXT_INV_ICACHE)) |
-			S_008C08_DATA_INVALIDATE(!!(sctx->flags & SI_CONTEXT_INV_KCACHE));
-	} else {
-		if (sctx->flags & SI_CONTEXT_INV_ICACHE)
-			cp_coher_cntl |= S_0085F0_SH_ICACHE_ACTION_ENA(1);
-		if (sctx->flags & SI_CONTEXT_INV_KCACHE)
-			cp_coher_cntl |= S_0085F0_SH_KCACHE_ACTION_ENA(1);
-	}
+	 * bit is set. An alternative way is to write SQC_CACHES, but that
+	 * doesn't seem to work reliably. Since the bug doesn't affect
+	 * correctness (it only does more work than necessary) and
+	 * the performance impact is likely negligible, there is no plan
+	 * to fix it.
+	 */
+
+	if (sctx->flags & SI_CONTEXT_INV_ICACHE)
+		cp_coher_cntl |= S_0085F0_SH_ICACHE_ACTION_ENA(1);
+	if (sctx->flags & SI_CONTEXT_INV_KCACHE)
+		cp_coher_cntl |= S_0085F0_SH_KCACHE_ACTION_ENA(1);
 
 	if (sctx->flags & SI_CONTEXT_INV_TC_L1)
 		cp_coher_cntl |= S_0085F0_TCL1_ACTION_ENA(1);
@@ -451,10 +448,6 @@ void si_emit_cache_flush(struct r600_common_context *sctx, struct r600_atom *ato
 	 * It looks like SURFACE_SYNC flushes caches immediately and doesn't
 	 * wait for any engines. This should be last.
 	 */
-	if (sqc_caches) {
-		r600_write_config_reg(cs, R_008C08_SQC_CACHES, sqc_caches);
-		cs->buf[cs->cdw-3] |= compute; /* set the compute bit in the header */
-	}
 	if (cp_coher_cntl) {
 		if (sctx->chip_class >= CIK) {
 			radeon_emit(cs, PKT3(PKT3_ACQUIRE_MEM, 5, 0) | compute);
