@@ -318,6 +318,15 @@ qir_get_temp(struct vc4_compile *c)
         reg.file = QFILE_TEMP;
         reg.index = c->num_temps++;
 
+        if (c->num_temps > c->defs_array_size) {
+                uint32_t old_size = c->defs_array_size;
+                c->defs_array_size = MAX2(old_size * 2, 16);
+                c->defs = reralloc(c, c->defs, struct qinst *,
+                                   c->defs_array_size);
+                memset(&c->defs[old_size], 0,
+                       sizeof(c->defs[0]) * (c->defs_array_size - old_size));
+        }
+
         return reg;
 }
 
@@ -358,6 +367,9 @@ qir_inst4(enum qop op, struct qreg dst,
 void
 qir_emit(struct vc4_compile *c, struct qinst *inst)
 {
+        if (inst->dst.file == QFILE_TEMP)
+                c->defs[inst->dst.index] = inst;
+
         insert_at_tail(&c->instructions, &inst->link);
 }
 
@@ -383,18 +395,21 @@ qir_compile_init(void)
 }
 
 void
-qir_remove_instruction(struct qinst *qinst)
+qir_remove_instruction(struct vc4_compile *c, struct qinst *qinst)
 {
+        if (qinst->dst.file == QFILE_TEMP)
+                c->defs[qinst->dst.index] = NULL;
+
         remove_from_list(&qinst->link);
         free(qinst->src);
         free(qinst);
 }
 
 struct qreg
-qir_follow_movs(struct qinst **defs, struct qreg reg)
+qir_follow_movs(struct vc4_compile *c, struct qreg reg)
 {
-        while (reg.file == QFILE_TEMP && defs[reg.index]->op == QOP_MOV)
-                reg = defs[reg.index]->src[0];
+        while (reg.file == QFILE_TEMP && c->defs[reg.index]->op == QOP_MOV)
+                reg = c->defs[reg.index]->src[0];
 
         return reg;
 }
@@ -405,7 +420,7 @@ qir_compile_destroy(struct vc4_compile *c)
         while (!is_empty_list(&c->instructions)) {
                 struct qinst *qinst =
                         (struct qinst *)first_elem(&c->instructions);
-                qir_remove_instruction(qinst);
+                qir_remove_instruction(c, qinst);
         }
 
         ralloc_free(c);

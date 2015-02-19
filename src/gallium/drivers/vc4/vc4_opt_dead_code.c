@@ -44,7 +44,7 @@ dce(struct vc4_compile *c, struct qinst *inst)
                 fprintf(stderr, "\n");
         }
         assert(!inst->sf);
-        qir_remove_instruction(inst);
+        qir_remove_instruction(c, inst);
 }
 
 static bool

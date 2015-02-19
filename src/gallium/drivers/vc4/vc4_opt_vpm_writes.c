@@ -38,20 +38,15 @@ qir_opt_vpm_writes(struct vc4_compile *c)
 
         bool progress = false;
         struct simple_node *node;
-        struct qinst *defs[c->num_temps];
         struct qinst *vpm_writes[64] = { 0 };
         uint32_t use_count[c->num_temps];
         uint32_t vpm_write_count = 0;
-        memset(&defs, 0, sizeof(defs));
         memset(&use_count, 0, sizeof(use_count));
 
         foreach(node, &c->instructions) {
                 struct qinst *inst = (struct qinst *)node;
 
                 switch (inst->dst.file) {
-                case QFILE_TEMP:
-                        defs[inst->dst.index] = inst;
-                        break;
                 case QFILE_VPM:
                         vpm_writes[vpm_write_count++] = inst;
                         break;
@@ -75,7 +70,7 @@ qir_opt_vpm_writes(struct vc4_compile *c)
                 if (use_count[temp] != 1)
                         continue;
 
-                struct qinst *inst = defs[temp];
+                struct qinst *inst = c->defs[temp];
                 if (qir_is_multi_instruction(inst))
                         continue;
 
@@ -94,7 +89,7 @@ qir_opt_vpm_writes(struct vc4_compile *c)
                 int src;
                 for (src = 0; src < qir_get_op_nsrc(inst->op); src++) {
                         if (inst->src[src].file == QFILE_TEMP) {
-                                if (defs[inst->src[src].index]->op ==
+                                if (c->defs[inst->src[src].index]->op ==
                                     QOP_TEX_RESULT) {
                                         break;
                                 }
@@ -108,8 +103,9 @@ qir_opt_vpm_writes(struct vc4_compile *c)
                  */
                 assert(!vpm_writes[i]->sf);
                 move_to_tail(&vpm_writes[i]->link, &inst->link);
-                qir_remove_instruction(vpm_writes[i]);
+                qir_remove_instruction(c, vpm_writes[i]);
 
+                c->defs[inst->dst.index] = NULL;
                 inst->dst.file = QFILE_VPM;
                 inst->dst.index = 0;
 

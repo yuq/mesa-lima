@@ -41,13 +41,9 @@ qir_opt_copy_propagation(struct vc4_compile *c)
         struct simple_node *node;
         bool debug = false;
         struct qreg *movs = calloc(c->num_temps, sizeof(struct qreg));
-        struct qinst **defs = calloc(c->num_temps, sizeof(struct qreg));
 
         foreach(node, &c->instructions) {
                 struct qinst *inst = (struct qinst *)node;
-
-                if (inst->dst.file == QFILE_TEMP)
-                        defs[inst->dst.index] = inst;
 
                 for (int i = 0; i < qir_get_op_nsrc(inst->op); i++) {
                         int index = inst->src[i].index;
@@ -76,13 +72,12 @@ qir_opt_copy_propagation(struct vc4_compile *c)
                     inst->dst.file == QFILE_TEMP &&
                     inst->src[0].file != QFILE_VPM &&
                     !(inst->src[0].file == QFILE_TEMP &&
-                      (defs[inst->src[0].index]->op == QOP_TEX_RESULT ||
-                       defs[inst->src[0].index]->op == QOP_TLB_COLOR_READ))) {
+                      (c->defs[inst->src[0].index]->op == QOP_TEX_RESULT ||
+                       c->defs[inst->src[0].index]->op == QOP_TLB_COLOR_READ))) {
                         movs[inst->dst.index] = inst->src[0];
                 }
         }
 
         free(movs);
-        free(defs);
         return progress;
 }

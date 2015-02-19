@@ -284,6 +284,9 @@ struct vc4_compile {
         struct vc4_context *vc4;
         struct tgsi_parse_context parser;
         struct qreg *temps;
+        /* For each temp, the instruction generating its value. */
+        struct qinst **defs;
+        uint32_t defs_array_size;
         /**
          * Inputs to the shader, arranged by TGSI declaration order.
          *
@@ -368,7 +371,7 @@ struct qinst *qir_inst4(enum qop op, struct qreg dst,
                         struct qreg b,
                         struct qreg c,
                         struct qreg d);
-void qir_remove_instruction(struct qinst *qinst);
+void qir_remove_instruction(struct vc4_compile *c, struct qinst *qinst);
 struct qreg qir_uniform(struct vc4_compile *c,
                         enum quniform_contents contents,
                         uint32_t data);
@@ -385,7 +388,7 @@ bool qir_depends_on_flags(struct qinst *inst);
 bool qir_writes_r4(struct qinst *inst);
 bool qir_reads_r4(struct qinst *inst);
 bool qir_src_needs_a_file(struct qinst *inst);
-struct qreg qir_follow_movs(struct qinst **defs, struct qreg reg);
+struct qreg qir_follow_movs(struct vc4_compile *c, struct qreg reg);
 
 void qir_dump(struct vc4_compile *c);
 void qir_dump_inst(struct vc4_compile *c, struct qinst *inst);
