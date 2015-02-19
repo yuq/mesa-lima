@@ -72,6 +72,19 @@ static const struct dri_debug_control debug_control[] = {
    { NULL,    0 }
 };
 
+uint64_t
+intel_debug_flag_for_shader_stage(gl_shader_stage stage)
+{
+   int flags[] = {
+      [MESA_SHADER_VERTEX] = DEBUG_VS,
+      [MESA_SHADER_GEOMETRY] = DEBUG_GS,
+      [MESA_SHADER_FRAGMENT] = DEBUG_WM,
+      [MESA_SHADER_COMPUTE] = 0, /* no debug flag yet */
+   };
+   STATIC_ASSERT(MESA_SHADER_STAGES == 4);
+   return flags[stage];
+}
+
 void
 brw_process_intel_debug_variable(struct brw_context *brw)
 {

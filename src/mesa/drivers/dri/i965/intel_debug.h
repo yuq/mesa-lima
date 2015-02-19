@@ -110,6 +110,8 @@ extern uint64_t INTEL_DEBUG;
    }                                                            \
 } while (0)
 
+extern uint64_t intel_debug_flag_for_shader_stage(gl_shader_stage stage);
+
 struct brw_context;
 
 extern void brw_process_intel_debug_variable(struct brw_context *brw);
