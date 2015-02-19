@@ -688,7 +688,7 @@ update_sampler_derived(struct nine_state *state, unsigned s)
     }
 
     if (state->samp[s][D3DSAMP_MIPFILTER] != D3DTEXF_NONE) {
-        int lod = state->samp[s][D3DSAMP_MAXMIPLEVEL] - state->texture[s]->lod;
+        int lod = state->samp[s][D3DSAMP_MAXMIPLEVEL] - state->texture[s]->managed.lod;
         if (lod < 0)
             lod = 0;
         if (state->samp[s][NINED3DSAMP_MINLOD] != lod) {

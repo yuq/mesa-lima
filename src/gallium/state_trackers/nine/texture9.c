@@ -299,7 +299,7 @@ NineTexture9_AddDirtyRect( struct NineTexture9 *This,
             This->base.dirty_mip = TRUE;
         return D3D_OK;
     }
-    This->base.dirty = TRUE;
+    This->base.managed.dirty = TRUE;
 
     BASETEX_REGISTER_UPDATE(&This->base);
 

@@ -168,7 +168,7 @@ NineVolume9_MarkContainerDirty( struct NineVolume9 *This )
     tex = NineBaseTexture9(This->base.container);
     assert(tex);
     if (This->desc.Pool == D3DPOOL_MANAGED)
-        tex->dirty = TRUE;
+        tex->managed.dirty = TRUE;
     else
     if (This->desc.Usage & D3DUSAGE_AUTOGENMIPMAP)
         tex->dirty_mip = TRUE;

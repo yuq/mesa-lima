@@ -2457,7 +2457,7 @@ NineDevice9_SetTexture( struct NineDevice9 *This,
         if (tex) {
             state->samplers_shadow |= tex->shadow << Stage;
 
-            if ((tex->dirty | tex->dirty_mip) && LIST_IS_EMPTY(&tex->list))
+            if ((tex->managed.dirty | tex->dirty_mip) && LIST_IS_EMPTY(&tex->list))
                 list_add(&tex->list, &This->update_textures);
 
             tex->bind_count++;
