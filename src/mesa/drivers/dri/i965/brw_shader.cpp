@@ -709,6 +709,9 @@ backend_visitor::backend_visitor(struct brw_context *brw,
      cfg(NULL),
      stage(stage)
 {
+   debug_enabled = INTEL_DEBUG & intel_debug_flag_for_shader_stage(stage);
+   stage_name = _mesa_shader_stage_to_string(stage);
+   stage_abbrev = _mesa_shader_stage_to_abbrev(stage);
 }
 
 bool
