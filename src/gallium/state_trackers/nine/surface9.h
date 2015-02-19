@@ -48,7 +48,6 @@ struct NineSurface9
     D3DSURFACE_DESC desc;
 
     uint8_t *data; /* system memory backing */
-    boolean manage_data;
     unsigned stride; /* for system memory backing */
 
     /* wine doesn't even use these, 2 will be enough */

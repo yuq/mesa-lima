@@ -62,10 +62,17 @@ NineSurface9_ctor( struct NineSurface9 *This,
     user_assert(!(pDesc->Usage & D3DUSAGE_DYNAMIC) ||
                 (pDesc->Pool != D3DPOOL_MANAGED), D3DERR_INVALIDCALL);
 
-    assert(pResource ||
-           pDesc->Pool != D3DPOOL_DEFAULT || pDesc->Format == D3DFMT_NULL);
+    assert(pResource || (user_buffer && pDesc->Pool != D3DPOOL_DEFAULT) ||
+           (!pContainer && pDesc->Pool != D3DPOOL_DEFAULT) ||
+           pDesc->Format == D3DFMT_NULL);
 
     assert(!pResource || !user_buffer);
+    assert(!user_buffer || pDesc->Pool != D3DPOOL_DEFAULT);
+    /* The only way we can have !pContainer is being created
+     * from create_zs_or_rt_surface with params 0 0 0 */
+    assert(pContainer || (Level == 0 && Layer == 0 && TextureType == 0));
+
+    This->data = (uint8_t *)user_buffer;
 
     This->base.info.screen = pParams->device->screen;
     This->base.info.target = PIPE_TEXTURE_2D;
@@ -90,9 +97,20 @@ NineSurface9_ctor( struct NineSurface9 *This,
     if (pDesc->Usage & D3DUSAGE_DEPTHSTENCIL)
         This->base.info.bind |= PIPE_BIND_DEPTH_STENCIL;
 
+    /* Ram buffer with no parent. Has to allocate the resource itself */
+    if (!pResource && !pContainer) {
+        assert(!user_buffer);
+        This->data = MALLOC(
+            nine_format_get_level_alloc_size(This->base.info.format,
+                                             pDesc->Width,
+                                             pDesc->Height,
+                                             0));
+        if (!This->data)
+            return E_OUTOFMEMORY;
+    }
+
     if (pDesc->Pool == D3DPOOL_SYSTEMMEM) {
         This->base.info.usage = PIPE_USAGE_STAGING;
-        This->data = (uint8_t *)user_buffer; /* this is *pSharedHandle */
         assert(!pResource);
     } else {
         if (pResource && (pDesc->Usage & D3DUSAGE_DYNAMIC))
@@ -113,24 +131,10 @@ NineSurface9_ctor( struct NineSurface9 *This,
     This->layer = Layer;
     This->desc = *pDesc;
 
-    This->stride = util_format_get_stride(This->base.info.format, pDesc->Width);
-    This->stride = align(This->stride, 4);
+    This->stride = nine_format_get_stride(This->base.info.format, pDesc->Width);
 
-    if (!pResource && !This->data) {
-        const unsigned size = This->stride *
-            util_format_get_nblocksy(This->base.info.format, This->desc.Height);
-
-        DBG("(%p(This=%p),level=%u) Allocating 0x%x bytes of system memory.\n",
-            This->base.base.container, This, This->level, size);
-
-        This->data = (uint8_t *)MALLOC(size);
-        if (!This->data)
-            return E_OUTOFMEMORY;
-        This->manage_data = TRUE;
-    } else {
-        if (pResource && NineSurface9_IsOffscreenPlain(This))
-            pResource->flags |= NINE_RESOURCE_FLAG_LOCKABLE; /* why setting this flag there ? too late ? should be before NineResource9_ctor call perhaps ? */
-    }
+    if (pResource && NineSurface9_IsOffscreenPlain(This))
+        pResource->flags |= NINE_RESOURCE_FLAG_LOCKABLE;
 
     NineSurface9_Dump(This);
 
@@ -147,8 +151,8 @@ NineSurface9_dtor( struct NineSurface9 *This )
     pipe_surface_reference(&This->surface[0], NULL);
     pipe_surface_reference(&This->surface[1], NULL);
 
-    /* release allocated system memory for non-D3DPOOL_DEFAULT resources */
-    if (This->manage_data && This->data)
+    /* Release system memory when we have to manage it (no parent) */
+    if (!This->base.base.container && This->data)
         FREE(This->data);
     NineResource9_dtor(&This->base);
 }
@@ -678,9 +682,8 @@ NineSurface9_SetResourceResize( struct NineSurface9 *This,
     This->desc.Height = This->base.info.height0 = resource->height0;
     This->desc.MultiSampleType = This->base.info.nr_samples = resource->nr_samples;
 
-    This->stride = util_format_get_stride(This->base.info.format,
+    This->stride = nine_format_get_stride(This->base.info.format,
                                           This->desc.Width);
-    This->stride = align(This->stride, 4);
 
     pipe_surface_reference(&This->surface[0], NULL);
     pipe_surface_reference(&This->surface[1], NULL);

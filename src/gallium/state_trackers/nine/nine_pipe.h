@@ -673,4 +673,45 @@ d3dtexturefiltertype_to_pipe_tex_mipfilter(D3DTEXTUREFILTERTYPE filter)
     }
 }
 
+static INLINE unsigned nine_format_get_stride(enum pipe_format format,
+                                              unsigned width)
+{
+    unsigned stride = util_format_get_stride(format, width);
+
+    return align(stride, 4);
+}
+
+static INLINE unsigned nine_format_get_level_alloc_size(enum pipe_format format,
+                                                        unsigned width,
+                                                        unsigned height,
+                                                        unsigned level)
+{
+    unsigned w, h, size;
+
+    w = u_minify(width, level);
+    h = u_minify(height, level);
+    size = nine_format_get_stride(format, w) *
+        util_format_get_nblocksy(format, h);
+    return size;
+}
+
+static INLINE unsigned nine_format_get_size_and_offsets(enum pipe_format format,
+                                                        unsigned *offsets,
+                                                        unsigned width,
+                                                        unsigned height,
+                                                        unsigned last_level)
+{
+    unsigned l, w, h, size = 0;
+
+    for (l = 0; l <= last_level; ++l) {
+        w = u_minify(width, l);
+        h = u_minify(height, l);
+        offsets[l] = size;
+        size += nine_format_get_stride(format, w) *
+            util_format_get_nblocksy(format, h);
+    }
+
+    return size;
+}
+
 #endif /* _NINE_PIPE_H_ */
