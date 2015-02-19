@@ -73,7 +73,16 @@ intel_horizontal_texture_alignment_unit(struct brw_context *brw,
         */
       unsigned int i, j;
       _mesa_get_format_block_size(mt->format, &i, &j);
-      return i;
+
+      /* On Gen9+ we can pick our own alignment for compressed textures but it
+       * has to be a multiple of the block size. The minimum alignment we can
+       * pick is 4 so we effectively have to align to 4 times the block
+       * size
+       */
+      if (brw->gen >= 9)
+         return i * 4;
+      else
+         return i;
     }
 
    if (mt->format == MESA_FORMAT_S_UINT8)
@@ -116,7 +125,8 @@ intel_vertical_texture_alignment_unit(struct brw_context *brw,
     * the SURFACE_STATE "Surface Vertical Alignment" field.
     */
    if (_mesa_is_format_compressed(format))
-      return 4;
+      /* See comment above for the horizontal alignment */
+      return brw->gen >= 9 ? 16 : 4;
 
    if (format == MESA_FORMAT_S_UINT8)
       return brw->gen >= 7 ? 8 : 4;
@@ -198,6 +208,9 @@ brw_miptree_layout_2d(struct intel_mipmap_tree *mt)
    unsigned width = mt->physical_width0;
    unsigned height = mt->physical_height0;
    unsigned depth = mt->physical_depth0; /* number of array layers. */
+   unsigned int bw, bh;
+
+   _mesa_get_format_block_size(mt->format, &bw, &bh);
 
    mt->total_width = mt->physical_width0;
 
@@ -215,7 +228,7 @@ brw_miptree_layout_2d(struct intel_mipmap_tree *mt)
 
        if (mt->compressed) {
           mip1_width = ALIGN(minify(mt->physical_width0, 1), mt->align_w) +
-             ALIGN(minify(mt->physical_width0, 2), mt->align_w);
+             ALIGN(minify(mt->physical_width0, 2), bw);
        } else {
           mip1_width = ALIGN(minify(mt->physical_width0, 1), mt->align_w) +
              minify(mt->physical_width0, 2);
@@ -235,7 +248,7 @@ brw_miptree_layout_2d(struct intel_mipmap_tree *mt)
 
       img_height = ALIGN(height, mt->align_h);
       if (mt->compressed)
-	 img_height /= mt->align_h;
+	 img_height /= bh;
 
       if (mt->array_layout == ALL_SLICES_AT_EACH_LOD) {
          /* Compact arrays with separated miplevels */
@@ -529,5 +542,15 @@ brw_miptree_layout(struct brw_context *brw, struct intel_mipmap_tree *mt)
    }
    DBG("%s: %dx%dx%d\n", __func__,
        mt->total_width, mt->total_height, mt->cpp);
+
+   /* On Gen9+ the alignment values are expressed in multiples of the block
+    * size
+    */
+   if (brw->gen >= 9) {
+      unsigned int i, j;
+      _mesa_get_format_block_size(mt->format, &i, &j);
+      mt->align_w /= i;
+      mt->align_h /= j;
+   }
 }
 
