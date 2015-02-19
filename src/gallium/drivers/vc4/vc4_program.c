@@ -110,7 +110,7 @@ resize_qreg_array(struct vc4_compile *c,
 }
 
 static struct qreg
-add_uniform(struct vc4_compile *c,
+qir_uniform(struct vc4_compile *c,
             enum quniform_contents contents,
             uint32_t data)
 {
@@ -146,7 +146,7 @@ static struct qreg
 get_temp_for_uniform(struct vc4_compile *c, enum quniform_contents contents,
                      uint32_t data)
 {
-        struct qreg u = add_uniform(c, contents, data);
+        struct qreg u = qir_uniform(c, contents, data);
         struct qreg t = qir_MOV(c, u);
         return t;
 }
@@ -188,7 +188,7 @@ indirect_uniform_load(struct vc4_compile *c,
         indirect_offset = qir_MIN(c, indirect_offset, qir_uniform_ui(c, (range->dst_offset +
                                                                          range->size - 4)));
 
-        qir_TEX_DIRECT(c, indirect_offset, add_uniform(c, QUNIFORM_UBO_ADDR, 0));
+        qir_TEX_DIRECT(c, indirect_offset, qir_uniform(c, QUNIFORM_UBO_ADDR, 0));
         struct qreg r4 = qir_TEX_RESULT(c);
         c->num_texture_samples++;
         return qir_MOV(c, r4);
@@ -646,10 +646,10 @@ tgsi_to_qir_tex(struct vc4_compile *c,
         }
 
         struct qreg texture_u[] = {
-                add_uniform(c, QUNIFORM_TEXTURE_CONFIG_P0, unit),
-                add_uniform(c, QUNIFORM_TEXTURE_CONFIG_P1, unit),
-                add_uniform(c, QUNIFORM_CONSTANT, 0),
-                add_uniform(c, QUNIFORM_CONSTANT, 0),
+                qir_uniform(c, QUNIFORM_TEXTURE_CONFIG_P0, unit),
+                qir_uniform(c, QUNIFORM_TEXTURE_CONFIG_P1, unit),
+                qir_uniform(c, QUNIFORM_CONSTANT, 0),
+                qir_uniform(c, QUNIFORM_CONSTANT, 0),
         };
         uint32_t next_texture_u = 0;
 
@@ -672,7 +672,7 @@ tgsi_to_qir_tex(struct vc4_compile *c,
         if (tgsi_inst->Texture.Texture == TGSI_TEXTURE_CUBE ||
             tgsi_inst->Texture.Texture == TGSI_TEXTURE_SHADOWCUBE ||
             is_txl) {
-                texture_u[2] = add_uniform(c, QUNIFORM_TEXTURE_CONFIG_P2,
+                texture_u[2] = qir_uniform(c, QUNIFORM_TEXTURE_CONFIG_P2,
                                            unit | (is_txl << 16));
         }
 
@@ -1825,12 +1825,12 @@ emit_frag_end(struct vc4_compile *c)
                 qir_TLB_DISCARD_SETUP(c, c->discard);
 
         if (c->fs_key->stencil_enabled) {
-                qir_TLB_STENCIL_SETUP(c, add_uniform(c, QUNIFORM_STENCIL, 0));
+                qir_TLB_STENCIL_SETUP(c, qir_uniform(c, QUNIFORM_STENCIL, 0));
                 if (c->fs_key->stencil_twoside) {
-                        qir_TLB_STENCIL_SETUP(c, add_uniform(c, QUNIFORM_STENCIL, 1));
+                        qir_TLB_STENCIL_SETUP(c, qir_uniform(c, QUNIFORM_STENCIL, 1));
                 }
                 if (c->fs_key->stencil_full_writemasks) {
-                        qir_TLB_STENCIL_SETUP(c, add_uniform(c, QUNIFORM_STENCIL, 2));
+                        qir_TLB_STENCIL_SETUP(c, qir_uniform(c, QUNIFORM_STENCIL, 2));
                 }
         }
 
@@ -1895,7 +1895,7 @@ emit_scaled_viewport_write(struct vc4_compile *c, struct qreg rcp_w)
 
         for (int i = 0; i < 2; i++) {
                 struct qreg scale =
-                        add_uniform(c, QUNIFORM_VIEWPORT_X_SCALE + i, 0);
+                        qir_uniform(c, QUNIFORM_VIEWPORT_X_SCALE + i, 0);
 
                 xyi[i] = qir_FTOI(c, qir_FMUL(c,
                                               qir_FMUL(c,
@@ -1910,8 +1910,8 @@ emit_scaled_viewport_write(struct vc4_compile *c, struct qreg rcp_w)
 static void
 emit_zs_write(struct vc4_compile *c, struct qreg rcp_w)
 {
-        struct qreg zscale = add_uniform(c, QUNIFORM_VIEWPORT_Z_SCALE, 0);
-        struct qreg zoffset = add_uniform(c, QUNIFORM_VIEWPORT_Z_OFFSET, 0);
+        struct qreg zscale = qir_uniform(c, QUNIFORM_VIEWPORT_Z_SCALE, 0);
+        struct qreg zoffset = qir_uniform(c, QUNIFORM_VIEWPORT_Z_OFFSET, 0);
 
         qir_VPM_WRITE(c, qir_FADD(c, qir_FMUL(c, qir_FMUL(c,
                                                           c->outputs[c->output_position_index + 2],
@@ -1995,7 +1995,7 @@ emit_ucp_clipdistance(struct vc4_compile *c)
                 for (int i = 0; i < 4; i++) {
                         struct qreg pos_chan = c->outputs[cv + i];
                         struct qreg ucp =
-                                add_uniform(c, QUNIFORM_USER_CLIP_PLANE,
+                                qir_uniform(c, QUNIFORM_USER_CLIP_PLANE,
                                             plane * 4 + i);
                         dist = qir_FADD(c, dist, qir_FMUL(c, pos_chan, ucp));
                 }
