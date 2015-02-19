@@ -573,7 +573,7 @@ NineBaseTexture9_PreLoad( struct NineBaseTexture9 *This )
 {
     DBG("This=%p\n", This);
 
-    if (This->managed.dirty && This->base.pool == D3DPOOL_MANAGED)
+    if (This->base.pool == D3DPOOL_MANAGED)
         NineBaseTexture9_UploadSelf(This);
 }
 
