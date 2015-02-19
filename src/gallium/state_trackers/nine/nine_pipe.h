@@ -108,17 +108,6 @@ rect_to_pipe_box_flip(struct pipe_box *dst, const RECT *src)
 }
 
 static INLINE void
-nine_u_rect_to_pipe_box(struct pipe_box *dst, const struct u_rect *rect, int z)
-{
-    dst->x = rect->x0;
-    dst->y = rect->y0;
-    dst->z = z;
-    dst->width = rect->x1 - rect->x0;
-    dst->height = rect->y1 - rect->y0;
-    dst->depth = 1;
-}
-
-static INLINE void
 rect_to_pipe_box_xy_only(struct pipe_box *dst, const RECT *src)
 {
     user_warn(src->left > src->right || src->top > src->bottom);

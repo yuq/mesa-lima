@@ -279,16 +279,17 @@ NineBaseTexture9_UploadSelf( struct NineBaseTexture9 *This )
             tex->dirty_rect.x, tex->dirty_rect.y,
             tex->dirty_rect.width, tex->dirty_rect.height);
 
+        /* Note: for l < This->managed.lod, the resource is
+         * non-existing, and thus will be entirely re-uploaded
+         * if This->managed.lod changes */
         if (tex->dirty_rect.width) {
-            for (l = 0; l <= last_level; ++l) {
+            for (l = This->managed.lod; l <= last_level; ++l) {
                 u_box_minify_2d(&box, &tex->dirty_rect, l);
-                NineSurface9_AddDirtyRect(tex->surfaces[l], &box);
+                NineSurface9_UploadSelf(tex->surfaces[l], &box);
             }
             memset(&tex->dirty_rect, 0, sizeof(tex->dirty_rect));
             tex->dirty_rect.depth = 1;
         }
-        for (l = This->managed.lod; l <= last_level; ++l)
-            NineSurface9_UploadSelf(tex->surfaces[l]);
     } else
     if (This->base.type == D3DRTYPE_CUBETEXTURE) {
         struct NineCubeTexture9 *tex = NineCubeTexture9(This);
@@ -303,15 +304,13 @@ NineBaseTexture9_UploadSelf( struct NineBaseTexture9 *This )
                 tex->dirty_rect[z].width, tex->dirty_rect[z].height);
 
             if (tex->dirty_rect[z].width) {
-                for (l = 0; l <= last_level; ++l) {
+                for (l = This->managed.lod; l <= last_level; ++l) {
                     u_box_minify_2d(&box, &tex->dirty_rect[z], l);
-                    NineSurface9_AddDirtyRect(tex->surfaces[l * 6 + z], &box);
+                    NineSurface9_UploadSelf(tex->surfaces[l * 6 + z], &box);
                 }
                 memset(&tex->dirty_rect[z], 0, sizeof(tex->dirty_rect[z]));
                 tex->dirty_rect[z].depth = 1;
             }
-            for (l = This->managed.lod; l <= last_level; ++l)
-                NineSurface9_UploadSelf(tex->surfaces[l * 6 + z]);
         }
     } else
     if (This->base.type == D3DRTYPE_VOLUMETEXTURE) {

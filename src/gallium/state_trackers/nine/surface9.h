@@ -49,9 +49,6 @@ struct NineSurface9
 
     uint8_t *data; /* system memory backing */
     unsigned stride; /* for system memory backing */
-
-    /* wine doesn't even use these, 2 will be enough */
-    struct u_rect dirty_rects[2];
 };
 static INLINE struct NineSurface9 *
 NineSurface9( void *data )
@@ -121,14 +118,9 @@ void
 NineSurface9_AddDirtyRect( struct NineSurface9 *This,
                            const struct pipe_box *box );
 
-static INLINE void
-NineSurface9_ClearDirtyRects( struct NineSurface9 *This )
-{
-    memset(&This->dirty_rects, 0, sizeof(This->dirty_rects));
-}
-
 HRESULT
-NineSurface9_UploadSelf( struct NineSurface9 *This );
+NineSurface9_UploadSelf( struct NineSurface9 *This,
+                         const struct pipe_box *damaged );
 
 HRESULT
 NineSurface9_CopySurface( struct NineSurface9 *This,

@@ -22,7 +22,11 @@
 
 #include "surface9.h"
 #include "device9.h"
-#include "basetexture9.h" /* for marking dirty */
+
+/* for marking dirty */
+#include "basetexture9.h"
+#include "texture9.h"
+#include "cubetexture9.h"
 
 #include "nine_helpers.h"
 #include "nine_pipe.h"
@@ -146,7 +150,6 @@ NineSurface9_dtor( struct NineSurface9 *This )
 {
     if (This->transfer)
         NineSurface9_UnlockRect(This);
-    NineSurface9_ClearDirtyRects(This);
 
     pipe_surface_reference(&This->surface[0], NULL);
     pipe_surface_reference(&This->surface[1], NULL);
@@ -257,55 +260,38 @@ NineSurface9_GetDesc( struct NineSurface9 *This,
     return D3D_OK;
 }
 
-/* Wine just keeps a single directy rect and expands it to cover all
- * the dirty rects ever added.
- * We'll keep 2, and expand the one that fits better, just for fun.
- */
+/* Add the dirty rects to the source texture */
 INLINE void
 NineSurface9_AddDirtyRect( struct NineSurface9 *This,
                            const struct pipe_box *box )
 {
-    float area[2];
-    struct u_rect rect, cover_a, cover_b;
+    RECT dirty_rect;
 
     DBG("This=%p box=%p\n", This, box);
 
-    if (!box) {
-        This->dirty_rects[0].x0 = 0;
-        This->dirty_rects[0].y0 = 0;
-        This->dirty_rects[0].x1 = This->desc.Width;
-        This->dirty_rects[0].y1 = This->desc.Height;
+    assert (This->base.pool != D3DPOOL_MANAGED ||
+            This->texture == D3DRTYPE_CUBETEXTURE ||
+            This->texture == D3DRTYPE_TEXTURE);
 
-        memset(&This->dirty_rects[1], 0, sizeof(This->dirty_rects[1]));
+    if (This->base.pool != D3DPOOL_MANAGED)
         return;
-    }
-    rect.x0 = box->x;
-    rect.y0 = box->y;
-    rect.x1 = box->x + box->width;
-    rect.y1 = box->y + box->height;
 
-    if (This->dirty_rects[0].x1 == 0) {
-        This->dirty_rects[0] = rect;
-        return;
-    }
+    /* Add a dirty rect to level 0 of the parent texture */
+    dirty_rect.left = box->x << This->level_actual;
+    dirty_rect.right = dirty_rect.left + (box->width << This->level_actual);
+    dirty_rect.top = box->y << This->level_actual;
+    dirty_rect.bottom = dirty_rect.top + (box->height << This->level_actual);
 
-    u_rect_union(&cover_a, &This->dirty_rects[0], &rect);
-    area[0] = u_rect_area(&cover_a);
+    if (This->texture == D3DRTYPE_TEXTURE) {
+        struct NineTexture9 *tex =
+            NineTexture9(This->base.base.container);
 
-    if (This->dirty_rects[1].x1 == 0) {
-        area[1] = u_rect_area(&This->dirty_rects[0]);
-        if (area[0] > (area[1] * 1.25f))
-            This->dirty_rects[1] = rect;
-        else
-            This->dirty_rects[0] = cover_a;
-    } else {
-        u_rect_union(&cover_b, &This->dirty_rects[1], &rect);
-        area[1] = u_rect_area(&cover_b);
+        NineTexture9_AddDirtyRect(tex, &dirty_rect);
+    } else { /* This->texture == D3DRTYPE_CUBETEXTURE */
+        struct NineCubeTexture9 *ctex =
+            NineCubeTexture9(This->base.base.container);
 
-        if (area[0] > area[1])
-            This->dirty_rects[1] = cover_b;
-        else
-            This->dirty_rects[0] = cover_a;
+        NineCubeTexture9_AddDirtyRect(ctex, This->layer, &dirty_rect);
     }
 }
 
@@ -423,8 +409,7 @@ NineSurface9_LockRect( struct NineSurface9 *This,
 
     if (!(Flags & (D3DLOCK_NO_DIRTY_UPDATE | D3DLOCK_READONLY))) {
         NineSurface9_MarkContainerDirty(This);
-        if (This->base.pool == D3DPOOL_MANAGED)
-            NineSurface9_AddDirtyRect(This, &box);
+        NineSurface9_AddDirtyRect(This, &box);
     }
 
     ++This->lock_count;
@@ -477,13 +462,6 @@ IDirect3DSurface9Vtbl NineSurface9_vtable = {
     (void *)NineSurface9_GetDC,
     (void *)NineSurface9_ReleaseDC
 };
-
-
-static INLINE boolean
-NineSurface9_IsDirty(struct NineSurface9 *This)
-{
-    return This->dirty_rects[0].x1 != 0;
-}
 
 HRESULT
 NineSurface9_CopySurface( struct NineSurface9 *This,
@@ -623,33 +601,35 @@ NineSurface9_CopySurface( struct NineSurface9 *This,
  * never have to do the reverse, i.e. download the surface.
  */
 HRESULT
-NineSurface9_UploadSelf( struct NineSurface9 *This )
+NineSurface9_UploadSelf( struct NineSurface9 *This,
+                         const struct pipe_box *damaged )
 {
     struct pipe_context *pipe = This->pipe;
     struct pipe_resource *res = This->base.resource;
     uint8_t *ptr;
-    unsigned i;
+    struct pipe_box box;
 
-    DBG("This=%p\n", This);
+    DBG("This=%p damaged=%p\n", This, damaged);
 
     assert(This->base.pool == D3DPOOL_MANAGED);
 
-    if (!NineSurface9_IsDirty(This))
-        return D3D_OK;
-
-    for (i = 0; i < Elements(This->dirty_rects); ++i) {
-        struct pipe_box box;
-        nine_u_rect_to_pipe_box(&box, &This->dirty_rects[i], This->layer);
-
-        if (box.width == 0)
-            break;
-        ptr = NineSurface9_GetSystemMemPointer(This, box.x, box.y);
-
-        pipe->transfer_inline_write(pipe, res, This->level,
-                                    0,
-                                    &box, ptr, This->stride, 0);
+    if (damaged) {
+        box = *damaged;
+        box.z = This->layer;
+        box.depth = 1;
+    } else {
+        box.x = 0;
+        box.y = 0;
+        box.z = This->layer;
+        box.width = This->desc.Width;
+        box.height = This->desc.Height;
+        box.depth = 1;
     }
-    NineSurface9_ClearDirtyRects(This);
+
+    ptr = NineSurface9_GetSystemMemPointer(This, box.x, box.y);
+
+    pipe->transfer_inline_write(pipe, res, This->level, 0,
+                                &box, ptr, This->stride, 0);
 
     return D3D_OK;
 }
