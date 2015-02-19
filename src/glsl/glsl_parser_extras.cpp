@@ -376,6 +376,23 @@ _mesa_shader_stage_to_string(unsigned stage)
    return "unknown";
 }
 
+/**
+ * Translate a gl_shader_stage to a shader stage abbreviation (VS, GS, FS)
+ * for debug printouts and error messages.
+ */
+const char *
+_mesa_shader_stage_to_abbrev(unsigned stage)
+{
+   switch (stage) {
+   case MESA_SHADER_VERTEX:   return "VS";
+   case MESA_SHADER_FRAGMENT: return "FS";
+   case MESA_SHADER_GEOMETRY: return "GS";
+   case MESA_SHADER_COMPUTE:  return "CS";
+   }
+
+   unreachable("Unknown shader stage.");
+}
+
 /* This helper function will append the given message to the shader's
    info log and report it via GL_ARB_debug_output. Per that extension,
    'type' is one of the enum values classifying the message, and
