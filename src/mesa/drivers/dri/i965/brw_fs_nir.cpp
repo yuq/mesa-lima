@@ -1407,13 +1407,13 @@ fs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
                              const_index->u[0]);
       } else {
          /* The block index is not a constant. Evaluate the index expression
-          * per-channel and add the base UBO index; the generator will select
-          * a value from any live channel.
+          * per-channel and add the base UBO index; we have to select a value
+          * from any live channel.
           */
          surf_index = vgrf(glsl_type::uint_type);
          emit(ADD(surf_index, get_nir_src(instr->src[0]),
-                  fs_reg(stage_prog_data->binding_table.ubo_start)))
-            ->force_writemask_all = true;
+                  fs_reg(stage_prog_data->binding_table.ubo_start)));
+         emit_uniformize(surf_index, surf_index);
 
          /* Assume this may touch any UBO. It would be nice to provide
           * a tighter bound, but the array information is already lowered away.

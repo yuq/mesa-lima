@@ -1831,12 +1831,13 @@ vec4_visitor::visit(ir_expression *ir)
                               const_uniform_block->value.u[0]);
       } else {
          /* The block index is not a constant. Evaluate the index expression
-          * per-channel and add the base UBO index; the generator will select
-          * a value from any live channel.
+          * per-channel and add the base UBO index; we have to select a value
+          * from any live channel.
           */
          surf_index = src_reg(this, glsl_type::uint_type);
          emit(ADD(dst_reg(surf_index), op[0],
                   src_reg(prog_data->base.binding_table.ubo_start)));
+         emit_uniformize(dst_reg(surf_index), surf_index);
 
          /* Assume this may touch any UBO. It would be nice to provide
           * a tighter bound, but the array information is already lowered away.
