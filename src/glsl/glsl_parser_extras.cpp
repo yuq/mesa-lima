@@ -370,10 +370,10 @@ _mesa_shader_stage_to_string(unsigned stage)
    case MESA_SHADER_VERTEX:   return "vertex";
    case MESA_SHADER_FRAGMENT: return "fragment";
    case MESA_SHADER_GEOMETRY: return "geometry";
+   case MESA_SHADER_COMPUTE:  return "compute";
    }
 
-   assert(!"Should not get here.");
-   return "unknown";
+   unreachable("Unknown shader stage.");
 }
 
 /**
