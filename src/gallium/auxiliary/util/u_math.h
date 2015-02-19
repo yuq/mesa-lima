@@ -608,9 +608,9 @@ fui( float f )
 static INLINE float
 uif(uint32_t ui)
 {
-        union fi fi;
-        fi.ui = ui;
-        return fi.f;
+   union fi fi;
+   fi.ui = ui;
+   return fi.f;
 }
 
 
