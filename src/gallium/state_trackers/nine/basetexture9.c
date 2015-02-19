@@ -404,8 +404,6 @@ NineBaseTexture9_GenerateMipSubLevels( struct NineBaseTexture9 *This )
                     first_layer, last_layer, filter);
 
     This->dirty_mip = FALSE;
-
-    NineDevice9_RestoreNonCSOState(This->base.base.device, ~0x3);
 }
 
 HRESULT
