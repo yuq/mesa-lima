@@ -450,11 +450,8 @@ public:
     */
    inline bool is_interface_instance() const
    {
-      const glsl_type *const t = this->type;
-
-      return (t == this->interface_type)
-         || (t->is_array() && t->fields.array == this->interface_type);
-    }
+      return this->type->without_array() == this->interface_type;
+   }
 
    /**
     * Set this->interface_type on a newly created variable.
