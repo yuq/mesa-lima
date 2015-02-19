@@ -810,11 +810,11 @@ fs_visitor::vfail(const char *format, va_list va)
    failed = true;
 
    msg = ralloc_vasprintf(mem_ctx, format, va);
-   msg = ralloc_asprintf(mem_ctx, "FS compile failed: %s\n", msg);
+   msg = ralloc_asprintf(mem_ctx, "%s compile failed: %s\n", stage_abbrev, msg);
 
    this->fail_msg = msg;
 
-   if (INTEL_DEBUG & DEBUG_WM) {
+   if (debug_enabled) {
       fprintf(stderr, "%s",  msg);
    }
 }

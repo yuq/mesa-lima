@@ -124,8 +124,8 @@ fs_visitor::emit_nir_code()
    nir_copy_prop(nir);
    nir_validate_shader(nir);
 
-   if (INTEL_DEBUG & DEBUG_WM) {
-      fprintf(stderr, "NIR (SSA form) for fragment shader:\n");
+   if (unlikely(debug_enabled)) {
+      fprintf(stderr, "NIR (SSA form) for %s shader:\n", stage_name);
       nir_print_shader(nir, stderr);
    }
 
@@ -135,7 +135,8 @@ fs_visitor::emit_nir_code()
                      MESA_DEBUG_SOURCE_SHADER_COMPILER,
                      MESA_DEBUG_TYPE_OTHER,
                      MESA_DEBUG_SEVERITY_NOTIFICATION,
-                     "FS NIR shader: %d inst\n",
+                     "%s NIR shader: %d inst\n",
+                     stage_abbrev,
                      count_nir_instrs(nir));
    }
 
@@ -178,8 +179,8 @@ fs_visitor::emit_nir_code()
       nir_emit_impl(overload->impl);
    }
 
-   if (INTEL_DEBUG & DEBUG_WM) {
-      fprintf(stderr, "NIR (final form) for fragment shader:\n");
+   if (unlikely(debug_enabled)) {
+      fprintf(stderr, "NIR (final form) for %s shader:\n", stage_name);
       nir_print_shader(nir, stderr);
    }
 
