@@ -166,8 +166,7 @@ NineSurface9_CreatePipeSurface( struct NineSurface9 *This, const int sRGB )
     struct pipe_surface templ;
     enum pipe_format srgb_format;
 
-    assert(This->desc.Pool == D3DPOOL_DEFAULT ||
-           This->desc.Pool == D3DPOOL_MANAGED);
+    assert(This->desc.Pool == D3DPOOL_DEFAULT);
     assert(resource);
 
     srgb_format = util_format_srgb(resource->format);
@@ -504,6 +503,9 @@ NineSurface9_CopySurface( struct NineSurface9 *This,
     DBG("This=%p From=%p pDestPoint=%p pSourceRect=%p\n",
         This, From, pDestPoint, pSourceRect);
 
+    assert(This->base.pool != D3DPOOL_MANAGED &&
+           From->base.pool != D3DPOOL_MANAGED);
+
     user_assert(This->desc.Format == From->desc.Format, D3DERR_INVALIDCALL);
 
     dst_box.x = pDestPoint ? pDestPoint->x : 0;
@@ -543,20 +545,6 @@ NineSurface9_CopySurface( struct NineSurface9 *This,
 
     dst_box.width = src_box.width;
     dst_box.height = src_box.height;
-
-    /* Don't copy to device memory of managed resources.
-     * We don't want to download it back again later.
-     */
-    if (This->base.pool == D3DPOOL_MANAGED)
-        r_dst = NULL;
-
-    /* Don't copy from stale device memory of managed resources.
-     * Also, don't copy between system and device if we don't have to.
-     */
-    if (From->base.pool == D3DPOOL_MANAGED) {
-        if (!r_dst || NineSurface9_IsDirty(From))
-            r_src = NULL;
-    }
 
     /* check source block align for compressed textures */
     if (util_format_is_compressed(From->base.info.format) &&
@@ -623,8 +611,7 @@ NineSurface9_CopySurface( struct NineSurface9 *This,
                        From->stride, src_box.x, src_box.y);
     }
 
-    if (This->base.pool == D3DPOOL_DEFAULT ||
-        This->base.pool == D3DPOOL_MANAGED)
+    if (This->base.pool == D3DPOOL_DEFAULT)
         NineSurface9_MarkContainerDirty(This);
     if (!r_dst && This->base.resource)
         NineSurface9_AddDirtyRect(This, &dst_box);
