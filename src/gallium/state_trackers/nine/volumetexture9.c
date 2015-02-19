@@ -223,6 +223,15 @@ NineVolumeTexture9_AddDirtyBox( struct NineVolumeTexture9 *This,
         struct pipe_box box;
         d3dbox_to_pipe_box(&box, pDirtyBox);
         u_box_union_3d(&This->dirty_box, &This->dirty_box, &box);
+        This->dirty_box.x = MAX2(This->dirty_box.x, 0);
+        This->dirty_box.y = MAX2(This->dirty_box.y, 0);
+        This->dirty_box.z = MAX2(This->dirty_box.z, 0);
+        This->dirty_box.width = MIN2(This->dirty_box.width,
+                                     This->base.base.info.width0 - This->dirty_box.x);
+        This->dirty_box.height = MIN2(This->dirty_box.height,
+                                     This->base.base.info.height0 - This->dirty_box.y);
+        This->dirty_box.depth = MIN2(This->dirty_box.depth,
+                                     This->base.base.info.depth0 - This->dirty_box.z);
     }
     return D3D_OK;
 }

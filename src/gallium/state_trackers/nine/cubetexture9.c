@@ -276,6 +276,10 @@ NineCubeTexture9_AddDirtyRect( struct NineCubeTexture9 *This,
         rect_to_pipe_box_clamp(&box, pDirtyRect);
         u_box_union_2d(&This->dirty_rect[FaceType], &This->dirty_rect[FaceType],
                        &box);
+        (void) u_box_clip_2d(&This->dirty_rect[FaceType],
+                             &This->dirty_rect[FaceType],
+                             This->base.base.info.width0,
+                             This->base.base.info.height0);
     }
     return D3D_OK;
 }
