@@ -84,7 +84,6 @@ public:
 		struct gl_shader_program *shader_prog,
                 gl_shader_stage stage,
 		void *mem_ctx,
-                bool debug_flag,
                 bool no_spills,
                 shader_time_shader_type st_base,
                 shader_time_shader_type st_written,
@@ -397,8 +396,6 @@ protected:
    virtual void emit_urb_write_header(int mrf) = 0;
    virtual vec4_instruction *emit_urb_write_opcode(bool complete) = 0;
    virtual int compute_array_stride(ir_dereference_array *ir);
-
-   const bool debug_flag;
 
 private:
    /**

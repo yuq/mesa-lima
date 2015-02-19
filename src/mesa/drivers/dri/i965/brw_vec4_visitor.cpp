@@ -3588,7 +3588,6 @@ vec4_visitor::vec4_visitor(struct brw_context *brw,
 			   struct gl_shader_program *shader_prog,
                            gl_shader_stage stage,
 			   void *mem_ctx,
-                           bool debug_flag,
                            bool no_spills,
                            shader_time_shader_type st_base,
                            shader_time_shader_type st_written,
@@ -3601,7 +3600,6 @@ vec4_visitor::vec4_visitor(struct brw_context *brw,
      fail_msg(NULL),
      first_non_payload_grf(0),
      need_all_constants_in_pull_buffer(false),
-     debug_flag(debug_flag),
      no_spills(no_spills),
      st_base(st_base),
      st_written(st_written),
@@ -3662,7 +3660,7 @@ vec4_visitor::fail(const char *format, ...)
 
    this->fail_msg = msg;
 
-   if (debug_flag) {
+   if (debug_enabled) {
       fprintf(stderr, "%s",  msg);
    }
 }

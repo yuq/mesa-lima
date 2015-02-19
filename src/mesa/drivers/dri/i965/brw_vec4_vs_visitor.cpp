@@ -220,7 +220,7 @@ vec4_vs_visitor::vec4_vs_visitor(struct brw_context *brw,
    : vec4_visitor(brw, &vs_compile->base, &vs_compile->vp->program.Base,
                   &vs_compile->key.base, &vs_prog_data->base, prog,
                   MESA_SHADER_VERTEX,
-                  mem_ctx, INTEL_DEBUG & DEBUG_VS, false /* no_spills */,
+                  mem_ctx, false /* no_spills */,
                   ST_VS, ST_VS_WRITTEN, ST_VS_RESET),
      vs_compile(vs_compile),
      vs_prog_data(vs_prog_data)
