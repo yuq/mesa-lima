@@ -228,7 +228,7 @@ print_var_decl(nir_variable *var, print_var_state *state, FILE *fp)
    if (var->data.mode == nir_var_shader_in ||
        var->data.mode == nir_var_shader_out ||
        var->data.mode == nir_var_uniform) {
-      fprintf(fp, " (%u)", var->data.driver_location);
+      fprintf(fp, " (%u, %u)", var->data.location, var->data.driver_location);
    }
 
    fprintf(fp, "\n");
