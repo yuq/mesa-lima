@@ -645,7 +645,7 @@ lower_instructions_visitor::dfrexp_sig_to_arith(ir_expression *ir)
       new(ir) ir_variable(bvec, "is_not_zero", ir_var_temporary);
    ir_rvalue *results[4] = {NULL};
 
-   ir_constant *dzero = new(ir) ir_constant(0.0d, vec_elem);
+   ir_constant *dzero = new(ir) ir_constant(0.0, vec_elem);
    i.insert_before(is_not_zero);
    i.insert_before(
          assign(is_not_zero,
@@ -717,7 +717,7 @@ lower_instructions_visitor::dfrexp_exp_to_arith(ir_expression *ir)
       new(ir) ir_variable(bvec, "is_not_zero", ir_var_temporary);
    ir_variable *high_words =
       new(ir) ir_variable(uvec, "high_words", ir_var_temporary);
-   ir_constant *dzero = new(ir) ir_constant(0.0d, vec_elem);
+   ir_constant *dzero = new(ir) ir_constant(0.0, vec_elem);
    ir_constant *izero = new(ir) ir_constant(0, vec_elem);
 
    ir_rvalue *absval = abs(ir->operands[0]);
