@@ -2546,6 +2546,22 @@ fs_visitor::opt_algebraic()
          }
          break;
       }
+      case SHADER_OPCODE_BROADCAST:
+         if (is_uniform(inst->src[0])) {
+            inst->opcode = BRW_OPCODE_MOV;
+            inst->sources = 1;
+            inst->force_writemask_all = true;
+            progress = true;
+         } else if (inst->src[1].file == IMM) {
+            inst->opcode = BRW_OPCODE_MOV;
+            inst->src[0] = component(inst->src[0],
+                                     inst->src[1].fixed_hw_reg.dw1.ud);
+            inst->sources = 1;
+            inst->force_writemask_all = true;
+            progress = true;
+         }
+         break;
+
       default:
 	 break;
       }

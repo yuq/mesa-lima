@@ -95,6 +95,13 @@ negate(src_reg reg)
    return reg;
 }
 
+static inline bool
+is_uniform(const src_reg &reg)
+{
+   return (reg.file == IMM || reg.file == UNIFORM || reg.is_null()) &&
+          (!reg.reladdr || is_uniform(*reg.reladdr));
+}
+
 class dst_reg : public backend_reg
 {
 public:

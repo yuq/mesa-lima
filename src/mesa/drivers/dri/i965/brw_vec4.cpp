@@ -682,6 +682,16 @@ vec4_visitor::opt_algebraic()
          }
          break;
       }
+      case SHADER_OPCODE_BROADCAST:
+         if (is_uniform(inst->src[0]) ||
+             inst->src[1].is_zero()) {
+            inst->opcode = BRW_OPCODE_MOV;
+            inst->src[1] = src_reg();
+            inst->force_writemask_all = true;
+            progress = true;
+         }
+         break;
+
       default:
 	 break;
       }

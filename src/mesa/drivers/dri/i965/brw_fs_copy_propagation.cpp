@@ -608,6 +608,7 @@ fs_visitor::try_constant_propagate(fs_inst *inst, acp_entry *entry)
          break;
 
       case FS_OPCODE_UNIFORM_PULL_CONSTANT_LOAD:
+      case SHADER_OPCODE_BROADCAST:
          inst->src[i] = val;
          progress = true;
          break;

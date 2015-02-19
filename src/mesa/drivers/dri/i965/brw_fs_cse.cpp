@@ -89,6 +89,7 @@ is_expression(const fs_inst *const inst)
    case FS_OPCODE_VARYING_PULL_CONSTANT_LOAD:
    case FS_OPCODE_CINTERP:
    case FS_OPCODE_LINTERP:
+   case SHADER_OPCODE_BROADCAST:
       return true;
    case SHADER_OPCODE_RCP:
    case SHADER_OPCODE_RSQ:

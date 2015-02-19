@@ -152,6 +152,7 @@ try_constant_propagate(const struct brw_device_info *devinfo,
 
    switch (inst->opcode) {
    case BRW_OPCODE_MOV:
+   case SHADER_OPCODE_BROADCAST:
       inst->src[arg] = value;
       return true;
 

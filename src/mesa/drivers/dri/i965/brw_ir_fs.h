@@ -166,6 +166,13 @@ component(fs_reg reg, unsigned idx)
    return reg;
 }
 
+static inline bool
+is_uniform(const fs_reg &reg)
+{
+   return (reg.width == 1 || reg.stride == 0 || reg.is_null()) &&
+          (!reg.reladdr || is_uniform(*reg.reladdr));
+}
+
 /**
  * Get either of the 8-component halves of a 16-component register.
  *
