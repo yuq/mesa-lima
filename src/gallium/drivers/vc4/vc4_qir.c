@@ -174,6 +174,12 @@ qir_is_multi_instruction(struct qinst *inst)
 }
 
 bool
+qir_is_tex(struct qinst *inst)
+{
+        return inst->op >= QOP_TEX_S && inst->op <= QOP_TEX_DIRECT;
+}
+
+bool
 qir_depends_on_flags(struct qinst *inst)
 {
         switch (inst->op) {
@@ -420,9 +426,12 @@ qir_get_stage_name(enum qstage stage)
 void
 qir_SF(struct vc4_compile *c, struct qreg src)
 {
-        assert(!is_empty_list(&c->instructions));
-        struct qinst *last_inst = (struct qinst *)c->instructions.prev;
-        if (last_inst->dst.file != src.file ||
+        struct qinst *last_inst = NULL;
+        if (!is_empty_list(&c->instructions))
+                last_inst = (struct qinst *)c->instructions.prev;
+
+        if (!last_inst ||
+            last_inst->dst.file != src.file ||
             last_inst->dst.index != src.index ||
             qir_is_multi_instruction(last_inst)) {
                 src = qir_MOV(c, src);

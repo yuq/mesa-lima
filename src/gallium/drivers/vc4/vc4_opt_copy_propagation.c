@@ -49,22 +49,11 @@ qir_opt_copy_propagation(struct vc4_compile *c)
                 if (inst->dst.file == QFILE_TEMP)
                         defs[inst->dst.index] = inst;
 
-                /* A single instruction can only read one uniform value.  (It
-                 * could maybe read the same uniform value in two operands,
-                 * but that doesn't seem important to do).
-                 */
-                bool reads_a_uniform = false;
-                for (int i = 0; i < qir_get_op_nsrc(inst->op); i++) {
-                        if (inst->src[i].file == QFILE_UNIF)
-                                reads_a_uniform = true;
-                }
-
                 for (int i = 0; i < qir_get_op_nsrc(inst->op); i++) {
                         int index = inst->src[i].index;
                         if (inst->src[i].file == QFILE_TEMP &&
                             (movs[index].file == QFILE_TEMP ||
-                             (movs[index].file == QFILE_UNIF &&
-                              !reads_a_uniform))) {
+                             movs[index].file == QFILE_UNIF)) {
                                 if (debug) {
                                         fprintf(stderr, "Copy propagate: ");
                                         qir_dump_inst(c, inst);
@@ -72,8 +61,6 @@ qir_opt_copy_propagation(struct vc4_compile *c)
                                 }
 
                                 inst->src[i] = movs[index];
-                                if (movs[index].file == QFILE_UNIF)
-                                        reads_a_uniform = true;
 
                                 if (debug) {
                                         fprintf(stderr, "to: ");

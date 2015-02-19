@@ -143,24 +143,15 @@ qir_uniform(struct vc4_compile *c,
 }
 
 static struct qreg
-get_temp_for_uniform(struct vc4_compile *c, enum quniform_contents contents,
-                     uint32_t data)
-{
-        struct qreg u = qir_uniform(c, contents, data);
-        struct qreg t = qir_MOV(c, u);
-        return t;
-}
-
-static struct qreg
 qir_uniform_ui(struct vc4_compile *c, uint32_t ui)
 {
-        return get_temp_for_uniform(c, QUNIFORM_CONSTANT, ui);
+        return qir_uniform(c, QUNIFORM_CONSTANT, ui);
 }
 
 static struct qreg
 qir_uniform_f(struct vc4_compile *c, float f)
 {
-        return qir_uniform_ui(c, fui(f));
+        return qir_uniform(c, QUNIFORM_CONSTANT, fui(f));
 }
 
 static struct qreg
@@ -232,8 +223,7 @@ get_src(struct vc4_compile *c, unsigned tgsi_op,
                 if (src->Indirect) {
                         r = indirect_uniform_load(c, full_src, s);
                 } else {
-                        r = get_temp_for_uniform(c, QUNIFORM_UNIFORM,
-                                                 src->Index * 4 + s);
+                        r = qir_uniform(c, QUNIFORM_UNIFORM, src->Index * 4 + s);
                 }
                 break;
         case TGSI_FILE_INPUT:
@@ -660,13 +650,9 @@ tgsi_to_qir_tex(struct vc4_compile *c,
         if (tgsi_inst->Texture.Texture == TGSI_TEXTURE_RECT ||
             tgsi_inst->Texture.Texture == TGSI_TEXTURE_SHADOWRECT) {
                 s = qir_FMUL(c, s,
-                             get_temp_for_uniform(c,
-                                                  QUNIFORM_TEXRECT_SCALE_X,
-                                                  unit));
+                             qir_uniform(c, QUNIFORM_TEXRECT_SCALE_X, unit));
                 t = qir_FMUL(c, t,
-                             get_temp_for_uniform(c,
-                                                  QUNIFORM_TEXRECT_SCALE_Y,
-                                                  unit));
+                             qir_uniform(c, QUNIFORM_TEXRECT_SCALE_Y, unit));
         }
 
         if (tgsi_inst->Texture.Texture == TGSI_TEXTURE_CUBE ||
@@ -689,7 +675,7 @@ tgsi_to_qir_tex(struct vc4_compile *c,
                    c->key->tex[unit].wrap_s == PIPE_TEX_WRAP_CLAMP ||
                    c->key->tex[unit].wrap_t == PIPE_TEX_WRAP_CLAMP_TO_BORDER ||
                    c->key->tex[unit].wrap_t == PIPE_TEX_WRAP_CLAMP) {
-                qir_TEX_R(c, get_temp_for_uniform(c, QUNIFORM_TEXTURE_BORDER_COLOR, unit),
+                qir_TEX_R(c, qir_uniform(c, QUNIFORM_TEXTURE_BORDER_COLOR, unit),
                           texture_u[next_texture_u++]);
         }
 
@@ -1504,14 +1490,11 @@ vc4_blend_channel(struct vc4_compile *c,
                 }
         case PIPE_BLENDFACTOR_CONST_COLOR:
                 return qir_FMUL(c, val,
-                                get_temp_for_uniform(c,
-                                                     QUNIFORM_BLEND_CONST_COLOR,
-                                                     channel));
+                                qir_uniform(c, QUNIFORM_BLEND_CONST_COLOR,
+                                            channel));
         case PIPE_BLENDFACTOR_CONST_ALPHA:
                 return qir_FMUL(c, val,
-                                get_temp_for_uniform(c,
-                                                     QUNIFORM_BLEND_CONST_COLOR,
-                                                     3));
+                                qir_uniform(c, QUNIFORM_BLEND_CONST_COLOR, 3));
         case PIPE_BLENDFACTOR_ZERO:
                 return qir_uniform_f(c, 0.0);
         case PIPE_BLENDFACTOR_INV_SRC_COLOR:
@@ -1529,15 +1512,15 @@ vc4_blend_channel(struct vc4_compile *c,
         case PIPE_BLENDFACTOR_INV_CONST_COLOR:
                 return qir_FMUL(c, val,
                                 qir_FSUB(c, qir_uniform_f(c, 1.0),
-                                         get_temp_for_uniform(c,
-                                                              QUNIFORM_BLEND_CONST_COLOR,
-                                                              channel)));
+                                         qir_uniform(c,
+                                                     QUNIFORM_BLEND_CONST_COLOR,
+                                                     channel)));
         case PIPE_BLENDFACTOR_INV_CONST_ALPHA:
                 return qir_FMUL(c, val,
                                 qir_FSUB(c, qir_uniform_f(c, 1.0),
-                                         get_temp_for_uniform(c,
-                                                              QUNIFORM_BLEND_CONST_COLOR,
-                                                              3)));
+                                         qir_uniform(c,
+                                                     QUNIFORM_BLEND_CONST_COLOR,
+                                                     3)));
 
         default:
         case PIPE_BLENDFACTOR_SRC1_COLOR:
@@ -1661,7 +1644,7 @@ static void
 alpha_test_discard(struct vc4_compile *c)
 {
         struct qreg src_alpha;
-        struct qreg alpha_ref = get_temp_for_uniform(c, QUNIFORM_ALPHA_REF, 0);
+        struct qreg alpha_ref = qir_uniform(c, QUNIFORM_ALPHA_REF, 0);
 
         if (!c->fs_key->alpha_test)
                 return;
@@ -2171,6 +2154,7 @@ vc4_shader_tgsi_to_qir(struct vc4_context *vc4, enum qstage stage,
         }
 
         qir_optimize(c);
+        qir_lower_uniforms(c);
 
         if (vc4_debug & VC4_DEBUG_QIR) {
                 fprintf(stderr, "%s prog %d/%d QIR:\n",
