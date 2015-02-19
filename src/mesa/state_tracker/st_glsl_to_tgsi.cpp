@@ -1004,6 +1004,7 @@ type_size(const struct glsl_type *type)
    case GLSL_TYPE_INTERFACE:
    case GLSL_TYPE_VOID:
    case GLSL_TYPE_ERROR:
+   case GLSL_TYPE_DOUBLE:
       assert(!"Invalid type in type_size");
       break;
    }
@@ -2025,6 +2026,17 @@ glsl_to_tgsi_visitor::visit(ir_expression *ir)
    case ir_binop_ldexp:
    case ir_binop_carry:
    case ir_binop_borrow:
+   case ir_unop_d2f:
+   case ir_unop_f2d:
+   case ir_unop_d2i:
+   case ir_unop_i2d:
+   case ir_unop_d2u:
+   case ir_unop_u2d:
+   case ir_unop_d2b:
+   case ir_unop_pack_double_2x32:
+   case ir_unop_unpack_double_2x32:
+   case ir_unop_frexp_sig:
+   case ir_unop_frexp_exp:
       /* This operation is not supported, or should have already been handled.
        */
       assert(!"Invalid ir opcode in glsl_to_tgsi_visitor::visit()");
