@@ -86,6 +86,7 @@ optimizations = [
    (('bcsel', ('flt', a, b), a, b), ('fmin', a, b)),
    (('bcsel', ('flt', a, b), b, a), ('fmax', a, b)),
    (('bcsel', ('inot', 'a@bool'), b, c), ('bcsel', a, c, b)),
+   (('bcsel', a, ('bcsel', a, b, c), d), ('bcsel', a, b, d)),
    (('fmin', ('fmax', a, 0.0), 1.0), ('fsat', a), '!options->lower_fsat'),
    (('fsat', a), ('fmin', ('fmax', a, 0.0), 1.0), 'options->lower_fsat'),
    (('fsat', ('fsat', a)), ('fsat', a)),
