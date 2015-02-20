@@ -2980,6 +2980,53 @@ fs_visitor::compute_to_mrf()
 }
 
 /**
+ * Eliminate FIND_LIVE_CHANNEL instructions occurring outside any control
+ * flow.  We could probably do better here with some form of divergence
+ * analysis.
+ */
+bool
+fs_visitor::eliminate_find_live_channel()
+{
+   bool progress = false;
+   unsigned depth = 0;
+
+   foreach_block_and_inst_safe(block, fs_inst, inst, cfg) {
+      switch (inst->opcode) {
+      case BRW_OPCODE_IF:
+      case BRW_OPCODE_DO:
+         depth++;
+         break;
+
+      case BRW_OPCODE_ENDIF:
+      case BRW_OPCODE_WHILE:
+         depth--;
+         break;
+
+      case FS_OPCODE_DISCARD_JUMP:
+         /* This can potentially make control flow non-uniform until the end
+          * of the program.
+          */
+         return progress;
+
+      case SHADER_OPCODE_FIND_LIVE_CHANNEL:
+         if (depth == 0) {
+            inst->opcode = BRW_OPCODE_MOV;
+            inst->src[0] = fs_reg(0);
+            inst->sources = 1;
+            inst->force_writemask_all = true;
+            progress = true;
+         }
+         break;
+
+      default:
+         break;
+      }
+   }
+
+   return progress;
+}
+
+/**
  * Once we've generated code, try to convert normal FS_OPCODE_FB_WRITE
  * instructions to FS_OPCODE_REP_FB_WRITE.
  */
@@ -3920,6 +3967,7 @@ fs_visitor::optimize()
       OPT(opt_zero_samples);
       OPT(register_coalesce);
       OPT(compute_to_mrf);
+      OPT(eliminate_find_live_channel);
 
       OPT(compact_virtual_grfs);
    } while (progress);

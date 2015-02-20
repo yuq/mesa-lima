@@ -239,6 +239,7 @@ public:
    bool opt_register_renaming();
    bool register_coalesce();
    bool compute_to_mrf();
+   bool eliminate_find_live_channel();
    bool dead_code_eliminate();
    bool remove_duplicate_mrf_writes();
 

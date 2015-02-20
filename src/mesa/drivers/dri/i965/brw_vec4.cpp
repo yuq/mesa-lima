@@ -1132,6 +1132,46 @@ vec4_visitor::opt_register_coalesce()
 }
 
 /**
+ * Eliminate FIND_LIVE_CHANNEL instructions occurring outside any control
+ * flow.  We could probably do better here with some form of divergence
+ * analysis.
+ */
+bool
+vec4_visitor::eliminate_find_live_channel()
+{
+   bool progress = false;
+   unsigned depth = 0;
+
+   foreach_block_and_inst_safe(block, vec4_instruction, inst, cfg) {
+      switch (inst->opcode) {
+      case BRW_OPCODE_IF:
+      case BRW_OPCODE_DO:
+         depth++;
+         break;
+
+      case BRW_OPCODE_ENDIF:
+      case BRW_OPCODE_WHILE:
+         depth--;
+         break;
+
+      case SHADER_OPCODE_FIND_LIVE_CHANNEL:
+         if (depth == 0) {
+            inst->opcode = BRW_OPCODE_MOV;
+            inst->src[0] = src_reg(0);
+            inst->force_writemask_all = true;
+            progress = true;
+         }
+         break;
+
+      default:
+         break;
+      }
+   }
+
+   return progress;
+}
+
+/**
  * Splits virtual GRFs requesting more than one contiguous physical register.
  *
  * We initially create large virtual GRFs for temporary structures, arrays,
@@ -1759,6 +1799,7 @@ vec4_visitor::run()
       OPT(opt_cse);
       OPT(opt_algebraic);
       OPT(opt_register_coalesce);
+      OPT(eliminate_find_live_channel);
    } while (progress);
 
    pass_num = 0;
