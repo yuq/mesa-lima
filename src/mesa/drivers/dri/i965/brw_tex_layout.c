@@ -41,7 +41,7 @@
 
 static unsigned int
 intel_horizontal_texture_alignment_unit(struct brw_context *brw,
-                                       mesa_format format)
+                                        struct intel_mipmap_tree *mt)
 {
    /**
     * From the "Alignment Unit Size" section of various specs, namely:
@@ -67,19 +67,19 @@ intel_horizontal_texture_alignment_unit(struct brw_context *brw,
     * On IVB+, non-special cases can be overridden by setting the SURFACE_STATE
     * "Surface Horizontal Alignment" field to HALIGN_4 or HALIGN_8.
     */
-    if (_mesa_is_format_compressed(format)) {
+    if (_mesa_is_format_compressed(mt->format)) {
        /* The hardware alignment requirements for compressed textures
         * happen to match the block boundaries.
         */
       unsigned int i, j;
-      _mesa_get_format_block_size(format, &i, &j);
+      _mesa_get_format_block_size(mt->format, &i, &j);
       return i;
     }
 
-   if (format == MESA_FORMAT_S_UINT8)
+   if (mt->format == MESA_FORMAT_S_UINT8)
       return 8;
 
-   if (brw->gen >= 7 && format == MESA_FORMAT_Z_UNORM16)
+   if (brw->gen >= 7 && mt->format == MESA_FORMAT_Z_UNORM16)
       return 8;
 
    return 4;
@@ -350,7 +350,7 @@ brw_miptree_layout(struct brw_context *brw, struct intel_mipmap_tree *mt)
          mt->align_h = 32;
       }
    } else {
-      mt->align_w = intel_horizontal_texture_alignment_unit(brw, mt->format);
+      mt->align_w = intel_horizontal_texture_alignment_unit(brw, mt);
       mt->align_h =
          intel_vertical_texture_alignment_unit(brw, mt->format, multisampled);
    }
