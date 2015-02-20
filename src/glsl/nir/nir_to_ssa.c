@@ -134,7 +134,7 @@ typedef struct {
    nir_ssa_def **stack;
    int index;
    unsigned num_defs; /** < used to add indices to debug names */
-#ifdef DEBUG
+#ifndef NDEBUG
    unsigned stack_size;
 #endif
 } reg_state;
@@ -489,7 +489,7 @@ init_rewrite_state(nir_function_impl *impl, rewrite_state *state)
          state->states[reg->index].stack = ralloc_array(state->states,
                                                         nir_ssa_def *,
                                                         stack_size);
-#ifdef DEBUG
+#ifndef NDEBUG
          state->states[reg->index].stack_size = stack_size;
 #endif
          state->states[reg->index].index = -1;
