@@ -631,7 +631,6 @@ update_vertex_buffers(struct NineDevice9 *device)
     uint32_t mask = state->changed.vtxbuf;
     unsigned i;
     unsigned start;
-    unsigned count = 0;
 
     DBG("mask=%x\n", mask);
 
@@ -650,18 +649,12 @@ update_vertex_buffers(struct NineDevice9 *device)
 
     for (i = 0; mask; mask >>= 1, ++i) {
         if (mask & 1) {
-            if (!count)
-                start = i;
-            ++count;
-        } else {
-            if (count)
-                pipe->set_vertex_buffers(pipe, start, count,
-                                         &state->vtxbuf[start]);
-            count = 0;
+            if (state->vtxbuf[i].buffer)
+                pipe->set_vertex_buffers(pipe, i, 1, &state->vtxbuf[i]);
+            else
+                pipe->set_vertex_buffers(pipe, i, 1, NULL);
         }
     }
-    if (count)
-        pipe->set_vertex_buffers(pipe, start, count, &state->vtxbuf[start]);
 
     state->changed.vtxbuf = 0;
 }
