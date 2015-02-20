@@ -1433,8 +1433,6 @@ fs_visitor::emit_texture_gen4(ir_texture_opcode op, fs_reg dst,
    bool simd16 = false;
    fs_reg orig_dst;
 
-   no16("SIMD16 texturing on Gen4 not supported yet.");
-
    /* g0 header. */
    mlen = 1;
 
@@ -1582,6 +1580,69 @@ fs_visitor::emit_texture_gen4(ir_texture_opcode op, fs_reg dst,
 	 dst = offset(dst, 2);
       }
    }
+
+   return inst;
+}
+
+fs_inst *
+fs_visitor::emit_texture_gen4_simd16(ir_texture_opcode op, fs_reg dst,
+                                     fs_reg coordinate, int vector_elements,
+                                     fs_reg shadow_c, fs_reg lod,
+                                     uint32_t sampler)
+{
+   fs_reg message(MRF, 2, BRW_REGISTER_TYPE_F, dispatch_width);
+   bool has_lod = op == ir_txl || op == ir_txb || op == ir_txf;
+
+   if (has_lod && shadow_c.file != BAD_FILE)
+      no16("TXB and TXL with shadow comparison unsupported in SIMD16.");
+
+   if (op == ir_txd)
+      no16("textureGrad unsupported in SIMD16.");
+
+   /* Copy the coordinates. */
+   for (int i = 0; i < vector_elements; i++) {
+      emit(MOV(retype(offset(message, i), coordinate.type), coordinate));
+      coordinate = offset(coordinate, 1);
+   }
+
+   fs_reg msg_end = offset(message, vector_elements);
+
+   /* Messages other than sample and ld require all three components */
+   if (has_lod || shadow_c.file != BAD_FILE) {
+      for (int i = vector_elements; i < 3; i++) {
+         emit(MOV(offset(message, i), fs_reg(0.0f)));
+      }
+   }
+
+   if (has_lod) {
+      fs_reg msg_lod = retype(offset(message, 3), op == ir_txf ?
+                              BRW_REGISTER_TYPE_UD : BRW_REGISTER_TYPE_F);
+      emit(MOV(msg_lod, lod));
+      msg_end = offset(msg_lod, 1);
+   }
+
+   if (shadow_c.file != BAD_FILE) {
+      fs_reg msg_ref = offset(message, 3 + has_lod);
+      emit(MOV(msg_ref, shadow_c));
+      msg_end = offset(msg_ref, 1);
+   }
+
+   enum opcode opcode;
+   switch (op) {
+   case ir_tex: opcode = SHADER_OPCODE_TEX; break;
+   case ir_txb: opcode = FS_OPCODE_TXB;     break;
+   case ir_txd: opcode = SHADER_OPCODE_TXD; break;
+   case ir_txl: opcode = SHADER_OPCODE_TXL; break;
+   case ir_txs: opcode = SHADER_OPCODE_TXS; break;
+   case ir_txf: opcode = SHADER_OPCODE_TXF; break;
+   default: unreachable("not reached");
+   }
+
+   fs_inst *inst = emit(opcode, dst, reg_undef, fs_reg(sampler));
+   inst->base_mrf = message.reg - 1;
+   inst->mlen = msg_end.reg - inst->base_mrf;
+   inst->header_present = true;
+   inst->regs_written = 8;
 
    return inst;
 }
@@ -2148,6 +2209,9 @@ fs_visitor::emit_texture(ir_texture_opcode op,
                                shadow_c, lod, lod2, grad_components,
                                sample_index, sampler,
                                offset_value.file != BAD_FILE);
+   } else if (dispatch_width == 16) {
+      inst = emit_texture_gen4_simd16(op, dst, coordinate, coord_components,
+                                      shadow_c, lod, sampler);
    } else {
       inst = emit_texture_gen4(op, dst, coordinate, coord_components,
                                shadow_c, lod, lod2, grad_components,

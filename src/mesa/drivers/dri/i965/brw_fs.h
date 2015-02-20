@@ -271,6 +271,10 @@ public:
                               fs_reg shadow_comp,
                               fs_reg lod, fs_reg lod2, int grad_components,
                               uint32_t sampler);
+   fs_inst *emit_texture_gen4_simd16(ir_texture_opcode op, fs_reg dst,
+                                     fs_reg coordinate, int vector_elements,
+                                     fs_reg shadow_c, fs_reg lod,
+                                     uint32_t sampler);
    fs_inst *emit_texture_gen5(ir_texture_opcode op, fs_reg dst,
                               fs_reg coordinate, int coord_components,
                               fs_reg shadow_comp,

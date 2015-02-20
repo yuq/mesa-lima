@@ -622,16 +622,26 @@ fs_generator::generate_tex(fs_inst *inst, struct brw_reg dst, struct brw_reg src
 	 /* Note that G45 and older determines shadow compare and dispatch width
 	  * from message length for most messages.
 	  */
-	 assert(dispatch_width == 8);
-	 msg_type = BRW_SAMPLER_MESSAGE_SIMD8_SAMPLE;
-	 if (inst->shadow_compare) {
-	    assert(inst->mlen == 6);
-	 } else {
-	    assert(inst->mlen <= 4);
-	 }
+         if (dispatch_width == 8) {
+            msg_type = BRW_SAMPLER_MESSAGE_SIMD8_SAMPLE;
+            if (inst->shadow_compare) {
+               assert(inst->mlen == 6);
+            } else {
+               assert(inst->mlen <= 4);
+            }
+         } else {
+            if (inst->shadow_compare) {
+               msg_type = BRW_SAMPLER_MESSAGE_SIMD16_SAMPLE_COMPARE;
+               assert(inst->mlen == 9);
+            } else {
+               msg_type = BRW_SAMPLER_MESSAGE_SIMD16_SAMPLE;
+               assert(inst->mlen <= 7 && inst->mlen % 2 == 1);
+            }
+         }
 	 break;
       case FS_OPCODE_TXB:
 	 if (inst->shadow_compare) {
+            assert(dispatch_width == 8);
 	    assert(inst->mlen == 6);
 	    msg_type = BRW_SAMPLER_MESSAGE_SIMD8_SAMPLE_BIAS_COMPARE;
 	 } else {
@@ -642,6 +652,7 @@ fs_generator::generate_tex(fs_inst *inst, struct brw_reg dst, struct brw_reg src
 	 break;
       case SHADER_OPCODE_TXL:
 	 if (inst->shadow_compare) {
+            assert(dispatch_width == 8);
 	    assert(inst->mlen == 6);
 	    msg_type = BRW_SAMPLER_MESSAGE_SIMD8_SAMPLE_LOD_COMPARE;
 	 } else {
@@ -652,11 +663,12 @@ fs_generator::generate_tex(fs_inst *inst, struct brw_reg dst, struct brw_reg src
 	 break;
       case SHADER_OPCODE_TXD:
 	 /* There is no sample_d_c message; comparisons are done manually */
+         assert(dispatch_width == 8);
 	 assert(inst->mlen == 7 || inst->mlen == 10);
 	 msg_type = BRW_SAMPLER_MESSAGE_SIMD8_SAMPLE_GRADIENTS;
 	 break;
       case SHADER_OPCODE_TXF:
-	 assert(inst->mlen == 9);
+         assert(inst->mlen <= 9 && inst->mlen % 2 == 1);
 	 msg_type = BRW_SAMPLER_MESSAGE_SIMD16_LD;
 	 simd_mode = BRW_SAMPLER_SIMD_MODE_SIMD16;
 	 break;
