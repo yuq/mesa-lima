@@ -146,6 +146,11 @@ NineTexture9_ctor( struct NineTexture9 *This,
                                                 Width, Height,
                                                 info->last_level);
     } else if (Pool != D3DPOOL_DEFAULT) {
+        /* TODO: For D3DUSAGE_AUTOGENMIPMAP, it is likely we only have to
+         * allocate only for the first level, since it is the only lockable
+         * level. Check apps don't crash if we allocate smaller buffer (some
+         * apps access sublevels of texture even if they locked only first
+         * level) */
         level_offsets = alloca(sizeof(unsigned) * (info->last_level + 1));
         user_buffer = MALLOC(
             nine_format_get_size_and_offsets(pf, level_offsets,

@@ -104,12 +104,15 @@ NineBaseTexture9_SetLOD( struct NineBaseTexture9 *This,
                          DWORD LODNew )
 {
     DWORD old = This->managed.lod;
+    DWORD max_level;
 
     DBG("This=%p LODNew=%d\n", This, LODNew);
 
     user_assert(This->base.pool == D3DPOOL_MANAGED, 0);
 
-    This->managed.lod = MIN2(LODNew, This->base.info.last_level);
+    max_level = (This->base.usage & D3DUSAGE_AUTOGENMIPMAP) ?
+                0 : This->base.info.last_level;
+    This->managed.lod = MIN2(LODNew, max_level);
 
     if (This->managed.lod != old && This->bind_count && LIST_IS_EMPTY(&This->list))
        list_add(&This->list, &This->base.base.device->update_textures);
@@ -172,7 +175,7 @@ NineBaseTexture9_UploadSelf( struct NineBaseTexture9 *This )
     assert(This->base.pool == D3DPOOL_MANAGED);
 
     if (This->base.usage & D3DUSAGE_AUTOGENMIPMAP)
-        last_level = 0; /* TODO: What if level 0 is not resident ? */
+        last_level = 0;
 
     update_lod = This->managed.lod_resident != This->managed.lod;
     if (!update_lod && !This->managed.dirty)
@@ -366,7 +369,6 @@ NineBaseTexture9_UploadSelf( struct NineBaseTexture9 *This )
 
     if (This->base.usage & D3DUSAGE_AUTOGENMIPMAP)
         This->dirty_mip = TRUE;
-    /* TODO: if dirty only because of lod change, only generate added levels */
 
     DBG("DONE, generate mip maps = %i\n", This->dirty_mip);
     return D3D_OK;
