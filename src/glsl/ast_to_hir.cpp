@@ -3574,6 +3574,9 @@ ast_declarator_list::hir(exec_list *instructions,
             case GLSL_TYPE_INT:
                if (state->is_version(120, 300))
                   break;
+            case GLSL_TYPE_DOUBLE:
+               if (check_type->base_type == GLSL_TYPE_DOUBLE && (state->is_version(410, 0) || state->ARB_vertex_attrib_64bit_enable))
+                  break;
             /* FALLTHROUGH */
             default:
                _mesa_glsl_error(& loc, state,

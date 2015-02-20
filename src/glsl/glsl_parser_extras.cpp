@@ -580,6 +580,7 @@ static const _mesa_glsl_extension _mesa_glsl_supported_extensions[] = {
    EXT(ARB_texture_query_lod,          true,  false,     ARB_texture_query_lod),
    EXT(ARB_texture_rectangle,          true,  false,     dummy_true),
    EXT(ARB_uniform_buffer_object,      true,  false,     ARB_uniform_buffer_object),
+   EXT(ARB_vertex_attrib_64bit,        true,  false,     ARB_vertex_attrib_64bit),
    EXT(ARB_viewport_array,             true,  false,     ARB_viewport_array),
 
    /* KHR extensions go here, sorted alphabetically.

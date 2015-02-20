@@ -482,6 +482,8 @@ struct _mesa_glsl_parse_state {
    bool ARB_texture_rectangle_warn;
    bool ARB_uniform_buffer_object_enable;
    bool ARB_uniform_buffer_object_warn;
+   bool ARB_vertex_attrib_64bit_enable;
+   bool ARB_vertex_attrib_64bit_warn;
    bool ARB_viewport_array_enable;
    bool ARB_viewport_array_warn;
 
