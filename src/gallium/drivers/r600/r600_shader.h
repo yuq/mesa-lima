@@ -89,6 +89,8 @@ struct r600_shader {
 	unsigned		vs_as_gs_a;
 	unsigned                ps_prim_id_input;
 	struct r600_shader_array * arrays;
+
+	boolean			uses_doubles;
 };
 
 union r600_shader_key {
