@@ -695,7 +695,8 @@ struct gl_current_attrib
     * \note Index and Edgeflag current values are stored as floats in the 
     * SIX and SEVEN attribute slots.
     */
-   GLfloat Attrib[VERT_ATTRIB_MAX][4];	/**< Position, color, texcoords, etc */
+   /* we need double storage for this for vertex attrib 64bit */
+   GLfloat Attrib[VERT_ATTRIB_MAX][4*2];	/**< Position, color, texcoords, etc */
 
    /**
     * \name Current raster position attributes (always valid).
@@ -1523,6 +1524,7 @@ struct gl_client_array
    GLboolean Enabled;		/**< Enabled flag is a boolean */
    GLboolean Normalized;        /**< GL_ARB_vertex_program */
    GLboolean Integer;           /**< Integer-valued? */
+   GLboolean Doubles;       /**< double precision values are not converted to floats */
    GLuint InstanceDivisor;      /**< GL_ARB_instanced_arrays */
 
    struct gl_buffer_object *BufferObj;/**< GL_ARB_vertex_buffer_object */
@@ -1553,6 +1555,7 @@ struct gl_vertex_attrib_array
    GLboolean Enabled;       /**< Whether the array is enabled */
    GLboolean Normalized;    /**< Fixed-point values are normalized when converted to floats */
    GLboolean Integer;       /**< Fixed-point values are not converted to floats */
+   GLboolean Doubles;       /**< double precision values are not converted to floats */
    GLuint _ElementSize;     /**< Size of each element in bytes */
    GLuint VertexBinding;    /**< Vertex buffer binding */
 };

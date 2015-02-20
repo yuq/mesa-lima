@@ -243,6 +243,7 @@ get_legal_types_mask(const struct gl_context *ctx)
  * \param type         Datatype of each component (GL_FLOAT, GL_INT, etc)
  * \param normalized   Whether integer types are converted to floats in [-1, 1]
  * \param integer      Integer-valued values (will not be normalized to [-1, 1])
+ * \param doubles      Double values not reduced to floats
  * \param relativeOffset Offset of the first element relative to the binding offset.
  */
 static bool
@@ -251,7 +252,7 @@ update_array_format(struct gl_context *ctx,
                     GLuint attrib, GLbitfield legalTypesMask,
                     GLint sizeMin, GLint sizeMax,
                     GLint size, GLenum type,
-                    GLboolean normalized, GLboolean integer,
+                    GLboolean normalized, GLboolean integer, GLboolean doubles,
                     GLuint relativeOffset)
 {
    struct gl_vertex_attrib_array *array;
@@ -368,6 +369,7 @@ update_array_format(struct gl_context *ctx,
    array->Format = format;
    array->Normalized = normalized;
    array->Integer = integer;
+   array->Doubles = doubles;
    array->RelativeOffset = relativeOffset;
    array->_ElementSize = elementSize;
 
@@ -392,6 +394,7 @@ update_array_format(struct gl_context *ctx,
  * \param stride  stride between elements, in elements
  * \param normalized  are integer types converted to floats in [-1, 1]?
  * \param integer  integer-valued values (will not be normalized to [-1,1])
+ * \param doubles  Double values not reduced to floats
  * \param ptr  the address (or offset inside VBO) of the array data
  */
 static void
@@ -400,7 +403,7 @@ update_array(struct gl_context *ctx,
              GLuint attrib, GLbitfield legalTypesMask,
              GLint sizeMin, GLint sizeMax,
              GLint size, GLenum type, GLsizei stride,
-             GLboolean normalized, GLboolean integer,
+             GLboolean normalized, GLboolean integer, GLboolean doubles,
              const GLvoid *ptr)
 {
    struct gl_vertex_attrib_array *array;
@@ -454,7 +457,7 @@ update_array(struct gl_context *ctx,
    }
 
    if (!update_array_format(ctx, func, attrib, legalTypesMask, sizeMin,
-                            sizeMax, size, type, normalized, integer, 0)) {
+                            sizeMax, size, type, normalized, integer, doubles, 0)) {
       return;
    }
 
@@ -488,7 +491,7 @@ _mesa_VertexPointer(GLint size, GLenum type, GLsizei stride, const GLvoid *ptr)
 
    update_array(ctx, "glVertexPointer", VERT_ATTRIB_POS,
                 legalTypes, 2, 4,
-                size, type, stride, GL_FALSE, GL_FALSE, ptr);
+                size, type, stride, GL_FALSE, GL_FALSE, GL_FALSE, ptr);
 }
 
 
@@ -507,7 +510,7 @@ _mesa_NormalPointer(GLenum type, GLsizei stride, const GLvoid *ptr )
 
    update_array(ctx, "glNormalPointer", VERT_ATTRIB_NORMAL,
                 legalTypes, 3, 3,
-                3, type, stride, GL_TRUE, GL_FALSE, ptr);
+                3, type, stride, GL_TRUE, GL_FALSE, GL_FALSE, ptr);
 }
 
 
@@ -529,7 +532,7 @@ _mesa_ColorPointer(GLint size, GLenum type, GLsizei stride, const GLvoid *ptr)
 
    update_array(ctx, "glColorPointer", VERT_ATTRIB_COLOR0,
                 legalTypes, sizeMin, BGRA_OR_4,
-                size, type, stride, GL_TRUE, GL_FALSE, ptr);
+                size, type, stride, GL_TRUE, GL_FALSE, GL_FALSE, ptr);
 }
 
 
@@ -543,7 +546,7 @@ _mesa_FogCoordPointer(GLenum type, GLsizei stride, const GLvoid *ptr)
 
    update_array(ctx, "glFogCoordPointer", VERT_ATTRIB_FOG,
                 legalTypes, 1, 1,
-                1, type, stride, GL_FALSE, GL_FALSE, ptr);
+                1, type, stride, GL_FALSE, GL_FALSE, GL_FALSE, ptr);
 }
 
 
@@ -558,7 +561,7 @@ _mesa_IndexPointer(GLenum type, GLsizei stride, const GLvoid *ptr)
 
    update_array(ctx, "glIndexPointer", VERT_ATTRIB_COLOR_INDEX,
                 legalTypes, 1, 1,
-                1, type, stride, GL_FALSE, GL_FALSE, ptr);
+                1, type, stride, GL_FALSE, GL_FALSE, GL_FALSE, ptr);
 }
 
 
@@ -578,7 +581,7 @@ _mesa_SecondaryColorPointer(GLint size, GLenum type,
 
    update_array(ctx, "glSecondaryColorPointer", VERT_ATTRIB_COLOR1,
                 legalTypes, 3, BGRA_OR_4,
-                size, type, stride, GL_TRUE, GL_FALSE, ptr);
+                size, type, stride, GL_TRUE, GL_FALSE, GL_FALSE, ptr);
 }
 
 
@@ -600,7 +603,7 @@ _mesa_TexCoordPointer(GLint size, GLenum type, GLsizei stride,
 
    update_array(ctx, "glTexCoordPointer", VERT_ATTRIB_TEX(unit),
                 legalTypes, sizeMin, 4,
-                size, type, stride, GL_FALSE, GL_FALSE,
+                size, type, stride, GL_FALSE, GL_FALSE, GL_FALSE,
                 ptr);
 }
 
@@ -617,7 +620,7 @@ _mesa_EdgeFlagPointer(GLsizei stride, const GLvoid *ptr)
 
    update_array(ctx, "glEdgeFlagPointer", VERT_ATTRIB_EDGEFLAG,
                 legalTypes, 1, 1,
-                1, GL_UNSIGNED_BYTE, stride, GL_FALSE, integer, ptr);
+                1, GL_UNSIGNED_BYTE, stride, GL_FALSE, integer, GL_FALSE, ptr);
 }
 
 
@@ -637,7 +640,7 @@ _mesa_PointSizePointerOES(GLenum type, GLsizei stride, const GLvoid *ptr)
       
    update_array(ctx, "glPointSizePointer", VERT_ATTRIB_POINT_SIZE,
                 legalTypes, 1, 1,
-                1, type, stride, GL_FALSE, GL_FALSE, ptr);
+                1, type, stride, GL_FALSE, GL_FALSE, GL_FALSE, ptr);
 }
 
 
@@ -668,7 +671,7 @@ _mesa_VertexAttribPointer(GLuint index, GLint size, GLenum type,
 
    update_array(ctx, "glVertexAttribPointer", VERT_ATTRIB_GENERIC(index),
                 legalTypes, 1, BGRA_OR_4,
-                size, type, stride, normalized, GL_FALSE, ptr);
+                size, type, stride, normalized, GL_FALSE, GL_FALSE, ptr);
 }
 
 
@@ -696,13 +699,23 @@ _mesa_VertexAttribIPointer(GLuint index, GLint size, GLenum type,
 
    update_array(ctx, "glVertexAttribIPointer", VERT_ATTRIB_GENERIC(index),
                 legalTypes, 1, 4,
-                size, type, stride, normalized, integer, ptr);
+                size, type, stride, normalized, integer, GL_FALSE, ptr);
 }
 
 void GLAPIENTRY
 _mesa_VertexAttribLPointer(GLuint index, GLint size, GLenum type,
                            GLsizei stride, const GLvoid *ptr)
 {
+   GET_CURRENT_CONTEXT(ctx);
+   const GLbitfield legalTypes = (DOUBLE_BIT);
+   if (index >= ctx->Const.Program[MESA_SHADER_VERTEX].MaxAttribs) {
+      _mesa_error(ctx, GL_INVALID_VALUE, "glVertexAttribLPointer(index)");
+      return;
+   }
+
+   update_array(ctx, "glVertexAttribLPointer", VERT_ATTRIB_GENERIC(index),
+                legalTypes, 1, 4,
+                size, type, stride, GL_TRUE, GL_FALSE, GL_TRUE, ptr);
 }
 
 void GLAPIENTRY
@@ -886,6 +899,21 @@ _mesa_GetVertexAttribdv(GLuint index, GLenum pname, GLdouble *params)
 void GLAPIENTRY
 _mesa_GetVertexAttribLdv(GLuint index, GLenum pname, GLdouble *params)
 {
+   GET_CURRENT_CONTEXT(ctx);
+
+   if (pname == GL_CURRENT_VERTEX_ATTRIB_ARB) {
+      const GLdouble *v = (const GLdouble *)get_current_attrib(ctx, index, "glGetVertexAttribLdv");
+      if (v != NULL) {
+         params[0] = v[0];
+         params[1] = v[1];
+         params[2] = v[2];
+         params[3] = v[3];
+      }
+   }
+   else {
+      params[0] = (GLdouble) get_vertex_array_attrib(ctx, index, pname,
+                                                     "glGetVertexAttribLdv");
+   }
 }
 
 void GLAPIENTRY
@@ -1671,7 +1699,7 @@ _mesa_VertexAttribFormat(GLuint attribIndex, GLint size, GLenum type,
    update_array_format(ctx, "glVertexAttribFormat",
                        VERT_ATTRIB_GENERIC(attribIndex),
                        legalTypes, 1, BGRA_OR_4, size, type, normalized,
-                       GL_FALSE, relativeOffset);
+                       GL_FALSE, GL_FALSE, relativeOffset);
 }
 
 
@@ -1717,7 +1745,7 @@ _mesa_VertexAttribIFormat(GLuint attribIndex, GLint size, GLenum type,
 
    update_array_format(ctx, "glVertexAttribIFormat",
                        VERT_ATTRIB_GENERIC(attribIndex),
-                       legalTypes, 1, 4, size, type, GL_FALSE, GL_TRUE,
+                       legalTypes, 1, 4, size, type, GL_FALSE, GL_TRUE, GL_FALSE,
                        relativeOffset);
 }
 
@@ -1765,7 +1793,7 @@ _mesa_VertexAttribLFormat(GLuint attribIndex, GLint size, GLenum type,
 
    update_array_format(ctx, "glVertexAttribLFormat",
                        VERT_ATTRIB_GENERIC(attribIndex),
-                       legalTypes, 1, 4, size, type, GL_FALSE, GL_FALSE,
+                       legalTypes, 1, 4, size, type, GL_FALSE, GL_FALSE, GL_TRUE,
                        relativeOffset);
 }
 
@@ -1876,6 +1904,7 @@ _mesa_copy_client_array(struct gl_context *ctx,
    dst->Enabled = src->Enabled;
    dst->Normalized = src->Normalized;
    dst->Integer = src->Integer;
+   dst->Doubles = src->Doubles;
    dst->InstanceDivisor = src->InstanceDivisor;
    dst->_ElementSize = src->_ElementSize;
    _mesa_reference_buffer_object(ctx, &dst->BufferObj, src->BufferObj);
@@ -1893,6 +1922,7 @@ _mesa_copy_vertex_attrib_array(struct gl_context *ctx,
    dst->RelativeOffset = src->RelativeOffset;
    dst->Format         = src->Format;
    dst->Integer        = src->Integer;
+   dst->Doubles        = src->Doubles;
    dst->Normalized     = src->Normalized;
    dst->Ptr            = src->Ptr;
    dst->Enabled        = src->Enabled;

@@ -68,6 +68,7 @@ _mesa_update_client_array(struct gl_context *ctx,
    dst->Enabled = src->Enabled;
    dst->Normalized = src->Normalized;
    dst->Integer = src->Integer;
+   dst->Doubles = src->Doubles;
    dst->InstanceDivisor = binding->InstanceDivisor;
    dst->_ElementSize = src->_ElementSize;
    _mesa_reference_buffer_object(ctx, &dst->BufferObj, binding->BufferObj);

@@ -200,6 +200,7 @@ init_array(struct gl_context *ctx,
    array->Enabled = GL_FALSE;
    array->Normalized = GL_FALSE;
    array->Integer = GL_FALSE;
+   array->Doubles = GL_FALSE;
    array->_ElementSize = size * _mesa_sizeof_type(type);
    array->VertexBinding = index;
 
