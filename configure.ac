@@ -370,6 +370,8 @@ if test "x$enable_debug" = xyes; then
             CXXFLAGS="$CXXFLAGS -O0"
         fi
     fi
+else
+   DEFINES="$DEFINES -DNDEBUG"
 fi
 
 dnl
