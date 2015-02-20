@@ -221,7 +221,7 @@ lp_build_rho(struct lp_build_sample_context *bld,
    struct lp_build_context *coord_bld = &bld->coord_bld;
    struct lp_build_context *rho_bld = &bld->lodf_bld;
    const unsigned dims = bld->dims;
-   LLVMValueRef ddx_ddy[2];
+   LLVMValueRef ddx_ddy[2] = {NULL};
    LLVMBuilderRef builder = bld->gallivm->builder;
    LLVMTypeRef i32t = LLVMInt32TypeInContext(bld->gallivm->context);
    LLVMValueRef index0 = LLVMConstInt(i32t, 0, 0);

@@ -509,7 +509,7 @@ void
 gallivm_compile_module(struct gallivm_state *gallivm)
 {
    LLVMValueRef func;
-   int64_t time_begin;
+   int64_t time_begin = 0;
 
    assert(!gallivm->compiled);
 
