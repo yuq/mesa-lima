@@ -151,8 +151,8 @@ optimizations = [
    (('fcsel', a, b, b), b),
 
    # Subtracts
-   (('fsub', 0.0, ('fsub', 0.0, a)), a),
-   (('isub', 0, ('isub', 0, a)), a),
+   (('fsub', a, ('fsub', 0.0, b)), ('fadd', a, b)),
+   (('isub', a, ('isub', 0, b)), ('iadd', a, b)),
    (('fneg', a), ('fsub', 0.0, a), 'options->lower_negate'),
    (('ineg', a), ('isub', 0, a), 'options->lower_negate'),
    (('fadd', a, ('fsub', 0.0, b)), ('fsub', a, b)),
