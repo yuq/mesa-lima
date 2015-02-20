@@ -147,6 +147,11 @@ emit_pipeline_stat(struct brw_context *brw, drm_intel_bo *bo,
    };
    STATIC_ASSERT(ARRAY_SIZE(target_to_register) == MAX_PIPELINE_STATISTICS);
    uint32_t reg = target_to_register[pipeline_target_to_index(target)];
+   /* Gen6 GS code counts full primitives, that is, it won't count individual
+    * triangles in a triangle strip. Use CL_INVOCATION_COUNT for that.
+    */
+   if (brw->gen == 6 && target == GL_GEOMETRY_SHADER_PRIMITIVES_EMITTED_ARB)
+      reg = CL_INVOCATION_COUNT;
    assert(reg != 0);
 
    /* Emit a flush to make sure various parts of the pipeline are complete and
