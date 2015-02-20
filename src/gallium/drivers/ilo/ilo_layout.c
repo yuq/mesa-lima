@@ -508,8 +508,13 @@ layout_get_valid_tilings(const struct ilo_layout *layout,
        *
        *     "NOTE: 128BPE Format Color buffer ( render target ) MUST be
        *      either TileX or Linear."
+       *
+       * From the Haswell PRM, volume 5, page 32:
+       *
+       *     "NOTE: 128 BPP format color buffer (render target) supports
+       *      Linear, TiledX and TiledY."
        */
-      if (layout->block_size == 16)
+      if (ilo_dev_gen(params->dev) < ILO_GEN(7.5) && layout->block_size == 16)
          valid_tilings &= ~LAYOUT_TILING_Y;
 
       /*
