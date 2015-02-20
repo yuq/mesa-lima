@@ -53,9 +53,9 @@
 #include "state_tracker/drm_driver.h"
 
 #if 0
-#define DEBUG(msg, ...) fprintf(stderr, msg, __VA_ARGS__)
+#define DEBUG_PRINT(msg, ...) fprintf(stderr, msg, __VA_ARGS__)
 #else
-#define DEBUG(msg, ...)
+#define DEBUG_PRINT(msg, ...)
 #endif
 
 struct sw_winsys;
@@ -145,7 +145,7 @@ kms_sw_displaytarget_create(struct sw_winsys *ws,
 
    list_add(&kms_sw_dt->link, &kms_sw->bo_list);
 
-   DEBUG("KMS-DEBUG: created buffer %u (size %u)\n", kms_sw_dt->handle, kms_sw_dt->size);
+   DEBUG_PRINT("KMS-DEBUG: created buffer %u (size %u)\n", kms_sw_dt->handle, kms_sw_dt->size);
 
    *stride = kms_sw_dt->stride;
    return (struct sw_displaytarget *)kms_sw_dt;
@@ -177,7 +177,7 @@ kms_sw_displaytarget_destroy(struct sw_winsys *ws,
 
    list_del(&kms_sw_dt->link);
 
-   DEBUG("KMS-DEBUG: destroyed buffer %u\n", kms_sw_dt->handle);
+   DEBUG_PRINT("KMS-DEBUG: destroyed buffer %u\n", kms_sw_dt->handle);
 
    FREE(kms_sw_dt);
 }
@@ -205,7 +205,7 @@ kms_sw_displaytarget_map(struct sw_winsys *ws,
    if (kms_sw_dt->mapped == MAP_FAILED)
       return NULL;
 
-   DEBUG("KMS-DEBUG: mapped buffer %u (size %u) at %p\n",
+   DEBUG_PRINT("KMS-DEBUG: mapped buffer %u (size %u) at %p\n",
          kms_sw_dt->handle, kms_sw_dt->size, kms_sw_dt->mapped);
 
    return kms_sw_dt->mapped;
@@ -249,7 +249,7 @@ kms_sw_displaytarget_unmap(struct sw_winsys *ws,
 {
    struct kms_sw_displaytarget *kms_sw_dt = kms_sw_displaytarget(dt);
 
-   DEBUG("KMS-DEBUG: unmapped buffer %u (was %p)\n", kms_sw_dt->handle, kms_sw_dt->mapped);
+   DEBUG_PRINT("KMS-DEBUG: unmapped buffer %u (was %p)\n", kms_sw_dt->handle, kms_sw_dt->mapped);
 
    munmap(kms_sw_dt->mapped, kms_sw_dt->size);
    kms_sw_dt->mapped = NULL;
@@ -283,7 +283,7 @@ kms_sw_displaytarget_from_handle(struct sw_winsys *ws,
          if (kms_sw_dt->handle == whandle->handle) {
             kms_sw_dt->ref_count++;
 
-            DEBUG("KMS-DEBUG: imported buffer %u (size %u)\n", kms_sw_dt->handle, kms_sw_dt->size);
+            DEBUG_PRINT("KMS-DEBUG: imported buffer %u (size %u)\n", kms_sw_dt->handle, kms_sw_dt->size);
 
             *stride = kms_sw_dt->stride;
             return (struct sw_displaytarget *)kms_sw_dt;
