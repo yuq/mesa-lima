@@ -307,7 +307,7 @@ compute_version(const struct gl_extensions *extensions,
                          consts->GLSLVersion >= 410 &&
                          extensions->ARB_ES2_compatibility &&
                          extensions->ARB_shader_precision &&
-                         false /*extensions->ARB_vertex_attrib_64bit*/ &&
+                         extensions->ARB_vertex_attrib_64bit &&
                          extensions->ARB_viewport_array);
    const bool ver_4_2 = (ver_4_1 &&
                          consts->GLSLVersion >= 420 &&

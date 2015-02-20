@@ -3678,6 +3678,7 @@ struct gl_extensions
    GLboolean ARB_transform_feedback3;
    GLboolean ARB_transform_feedback_instanced;
    GLboolean ARB_uniform_buffer_object;
+   GLboolean ARB_vertex_attrib_64bit;
    GLboolean ARB_vertex_program;
    GLboolean ARB_vertex_shader;
    GLboolean ARB_vertex_type_10f_11f_11f_rev;
