@@ -313,7 +313,7 @@ kms_sw_displaytarget_get_handle(struct sw_winsys *winsys,
       return TRUE;
    case DRM_API_HANDLE_TYPE_FD:
       if (!drmPrimeHandleToFD(kms_sw->fd, kms_sw_dt->handle,
-                             DRM_CLOEXEC, &whandle->handle)) {
+                             DRM_CLOEXEC, (int*)&whandle->handle)) {
          whandle->stride = kms_sw_dt->stride;
          return TRUE;
       }
