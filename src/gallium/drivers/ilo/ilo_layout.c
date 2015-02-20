@@ -430,8 +430,9 @@ layout_init_alignments(struct ilo_layout *layout,
           layout->tiling == INTEL_TILING_Y &&
           (templ->bind & PIPE_BIND_RENDER_TARGET));
 
-      if (valign_4)
-         assert(layout->block_size != 12);
+      if (ilo_dev_gen(params->dev) >= ILO_GEN(7) &&
+          ilo_dev_gen(params->dev) <= ILO_GEN(7.5) && valign_4)
+         assert(layout->format != PIPE_FORMAT_R32G32B32_FLOAT);
 
       layout->align_i = 4;
       layout->align_j = (valign_4) ? 4 : 2;
@@ -525,7 +526,9 @@ layout_get_valid_tilings(const struct ilo_layout *layout,
        *
        *     "VALIGN_4 is not supported for surface format R32G32B32_FLOAT."
        */
-      if (ilo_dev_gen(params->dev) >= ILO_GEN(7) && layout->block_size == 12)
+      if (ilo_dev_gen(params->dev) >= ILO_GEN(7) &&
+          ilo_dev_gen(params->dev) <= ILO_GEN(7.5) &&
+          layout->format == PIPE_FORMAT_R32G32B32_FLOAT)
          valid_tilings &= ~LAYOUT_TILING_Y;
    }
 
