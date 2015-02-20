@@ -39,6 +39,33 @@ match_expression(const nir_search_expression *expr, nir_alu_instr *instr,
 
 static const uint8_t identity_swizzle[] = { 0, 1, 2, 3 };
 
+static bool alu_instr_is_bool(nir_alu_instr *instr);
+
+static bool
+src_is_bool(nir_src src)
+{
+   if (!src.is_ssa)
+      return false;
+   if (src.ssa->parent_instr->type != nir_instr_type_alu)
+      return false;
+   return alu_instr_is_bool((nir_alu_instr *)src.ssa->parent_instr);
+}
+
+static bool
+alu_instr_is_bool(nir_alu_instr *instr)
+{
+   switch (instr->op) {
+   case nir_op_iand:
+   case nir_op_ior:
+   case nir_op_ixor:
+      return src_is_bool(instr->src[0].src) && src_is_bool(instr->src[1].src);
+   case nir_op_inot:
+      return src_is_bool(instr->src[0].src);
+   default:
+      return nir_op_infos[instr->op].output_type == nir_type_bool;
+   }
+}
+
 static bool
 match_value(const nir_search_value *value, nir_alu_instr *instr, unsigned src,
             unsigned num_components, const uint8_t *swizzle,
@@ -89,7 +116,8 @@ match_value(const nir_search_value *value, nir_alu_instr *instr, unsigned src,
             nir_alu_instr *src_alu =
                nir_instr_as_alu(instr->src[src].src.ssa->parent_instr);
 
-            if (nir_op_infos[src_alu->op].output_type != var->type)
+            if (nir_op_infos[src_alu->op].output_type != var->type &&
+                !(var->type == nir_type_bool && alu_instr_is_bool(src_alu)))
                return false;
          }
 
