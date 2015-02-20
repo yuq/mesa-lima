@@ -1994,6 +1994,28 @@ static const nir_shader_compiler_options nir_options = {
         .lower_negate = true,
 };
 
+static bool
+count_nir_instrs_in_block(nir_block *block, void *state)
+{
+        int *count = (int *) state;
+        nir_foreach_instr(block, instr) {
+                *count = *count + 1;
+        }
+        return true;
+}
+
+static int
+count_nir_instrs(nir_shader *nir)
+{
+        int count = 0;
+        nir_foreach_overload(nir, overload) {
+                if (!overload->impl)
+                        continue;
+                nir_foreach_block(overload->impl, count_nir_instrs_in_block, &count);
+        }
+        return count;
+}
+
 static struct vc4_compile *
 vc4_shader_ntq(struct vc4_context *vc4, enum qstage stage,
                        struct vc4_key *key)
@@ -2063,6 +2085,13 @@ vc4_shader_ntq(struct vc4_context *vc4, enum qstage stage,
         nir_remove_dead_variables(c->s);
 
         nir_convert_from_ssa(c->s);
+
+        if (vc4_debug & VC4_DEBUG_SHADERDB) {
+                fprintf(stderr, "SHADER-DB: %s prog %d/%d: %d NIR instructions\n",
+                        qir_get_stage_name(c->stage),
+                        c->program_id, c->variant_id,
+                        count_nir_instrs(c->s));
+        }
 
         if (vc4_debug & VC4_DEBUG_NIR) {
                 fprintf(stderr, "%s prog %d/%d NIR:\n",
