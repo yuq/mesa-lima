@@ -1756,12 +1756,21 @@ NineDevice9_Clear( struct NineDevice9 *This,
             rt_mask |= 1 << i;
     }
 
+    /* fast path, clears everything at once */
     if (!Count &&
         (!(bufs & PIPE_CLEAR_COLOR) || (rt_mask == This->state.rt_mask)) &&
-        rect.x1 == 0 && rect.x2 >= This->state.fb.width &&
-        rect.y1 == 0 && rect.y2 >= This->state.fb.height) {
-        /* fast path, clears everything at once */
-        DBG("fast path\n");
+        rect.x1 == 0 && rect.y1 == 0 &&
+        /* Case we clear only render target. Check clear region vs rt. */
+        ((!(bufs & (PIPE_CLEAR_DEPTH | PIPE_CLEAR_STENCIL)) &&
+         rect.x2 >= This->state.fb.width &&
+         rect.y2 >= This->state.fb.height) ||
+        /* Case we clear depth buffer (and eventually rt too).
+         * depth buffer size is always >= rt size. Compare to clear region */
+        ((bufs & (PIPE_CLEAR_DEPTH | PIPE_CLEAR_STENCIL)) &&
+         This->state.fb.zsbuf != NULL &&
+         rect.x2 >= zsbuf_surf->desc.Width &&
+         rect.y2 >= zsbuf_surf->desc.Height))) {
+        DBG("Clear fast path\n");
         pipe->clear(pipe, bufs, &rgba, Z, Stencil);
         return D3D_OK;
     }
