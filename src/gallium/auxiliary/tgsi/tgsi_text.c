@@ -240,7 +240,7 @@ static boolean parse_double( const char **pcur, uint32_t *val0, uint32_t *val1)
       uint32_t uval[2];
    } v;
 
-   v.dval = strtod(cur, pcur);
+   v.dval = strtod(cur, (char**)pcur);
    if (*pcur == cur)
       return FALSE;
 
