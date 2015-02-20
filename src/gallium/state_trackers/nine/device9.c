@@ -1214,6 +1214,13 @@ NineDevice9_UpdateTexture( struct NineDevice9 *This,
     if (dstb->base.usage & D3DUSAGE_AUTOGENMIPMAP) {
         /* Only the first level is updated, the others regenerated. */
         last_level = 0;
+        /* if the source has D3DUSAGE_AUTOGENMIPMAP, we have to ignore
+         * the sublevels, thus level 0 has to match */
+        user_assert(!(srcb->base.usage & D3DUSAGE_AUTOGENMIPMAP) ||
+                    (srcb->base.info.width0 == dstb->base.info.width0 &&
+                     srcb->base.info.height0 == dstb->base.info.height0 &&
+                     srcb->base.info.depth0 == dstb->base.info.depth0),
+                    D3DERR_INVALIDCALL);
     } else {
         user_assert(!(srcb->base.usage & D3DUSAGE_AUTOGENMIPMAP), D3DERR_INVALIDCALL);
     }
@@ -1276,8 +1283,10 @@ NineDevice9_UpdateTexture( struct NineDevice9 *This,
         assert(!"invalid texture type");
     }
 
-    if (dstb->base.usage & D3DUSAGE_AUTOGENMIPMAP)
+    if (dstb->base.usage & D3DUSAGE_AUTOGENMIPMAP) {
+        dstb->dirty_mip = TRUE;
         NineBaseTexture9_GenerateMipSubLevels(dstb);
+    }
 
     return D3D_OK;
 }
@@ -1508,6 +1517,9 @@ NineDevice9_StretchRect( struct NineDevice9 *This,
             blit.src.resource, blit.src.level,
             &blit.src.box);
     }
+
+    /* Communicate the container it needs to update sublevels - if apply */
+    NineSurface9_MarkContainerDirty(dst);
 
     return D3D_OK;
 }

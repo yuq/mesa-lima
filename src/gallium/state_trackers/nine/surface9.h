@@ -83,6 +83,9 @@ NineSurface9_dtor( struct NineSurface9 *This );
 
 /*** Nine private ***/
 
+void
+NineSurface9_MarkContainerDirty( struct NineSurface9 *This );
+
 struct pipe_surface *
 NineSurface9_CreatePipeSurface( struct NineSurface9 *This, const int sRGB );
 
