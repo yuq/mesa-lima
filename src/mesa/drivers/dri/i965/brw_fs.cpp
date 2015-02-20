@@ -4030,8 +4030,7 @@ brw_wm_fs_emit(struct brw_context *brw,
 
    cfg_t *simd16_cfg = NULL;
    fs_visitor v2(brw, mem_ctx, key, prog_data, prog, fp, 16);
-   if (brw->gen >= 5 && likely(!(INTEL_DEBUG & DEBUG_NO16) ||
-                               brw->use_rep_send)) {
+   if (likely(!(INTEL_DEBUG & DEBUG_NO16) || brw->use_rep_send)) {
       if (!v.simd16_unsupported) {
          /* Try a SIMD16 compile */
          v2.import_uniforms(&v);
@@ -4049,7 +4048,7 @@ brw_wm_fs_emit(struct brw_context *brw,
 
    cfg_t *simd8_cfg;
    int no_simd8 = (INTEL_DEBUG & DEBUG_NO8) || brw->no_simd8;
-   if (no_simd8 && simd16_cfg) {
+   if ((no_simd8 || brw->gen < 5) && simd16_cfg) {
       simd8_cfg = NULL;
       prog_data->no_8 = true;
    } else {

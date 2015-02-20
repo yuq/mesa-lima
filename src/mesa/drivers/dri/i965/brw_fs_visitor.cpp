@@ -1433,6 +1433,8 @@ fs_visitor::emit_texture_gen4(ir_texture_opcode op, fs_reg dst,
    bool simd16 = false;
    fs_reg orig_dst;
 
+   no16("SIMD16 texturing on Gen4 not supported yet.");
+
    /* g0 header. */
    mlen = 1;
 
