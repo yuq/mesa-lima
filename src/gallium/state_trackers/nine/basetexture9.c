@@ -69,6 +69,10 @@ NineBaseTexture9_ctor( struct NineBaseTexture9 *This,
         D3DTEXF_LINEAR : D3DTEXF_NONE;
     This->managed.lod = 0;
     This->managed.lod_resident = -1;
+    /* Mark the texture as dirty to trigger first upload when we need the texture,
+     * even if it wasn't set by the application */
+    if (Pool == D3DPOOL_MANAGED)
+        This->managed.dirty = TRUE;
     /* When a depth buffer is sampled, it is for shadow mapping, except for
      * D3DFMT_INTZ, D3DFMT_DF16 and D3DFMT_DF24.
      * In addition D3DFMT_INTZ can be used for both texturing and depth buffering
@@ -496,9 +500,6 @@ NineBaseTexture9_UpdateSamplerView( struct NineBaseTexture9 *This,
 	if (unlikely(This->format == D3DFMT_NULL))
             return D3D_OK;
         NineBaseTexture9_Dump(This);
-        /* hack due to incorrect POOL_MANAGED handling */
-        NineBaseTexture9_GenerateMipSubLevels(This);
-        resource = This->base.resource;
     }
     assert(resource);
 
