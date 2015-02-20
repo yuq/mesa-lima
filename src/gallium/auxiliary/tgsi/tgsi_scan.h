@@ -95,7 +95,7 @@ struct tgsi_shader_info
    boolean writes_viewport_index;
    boolean writes_layer;
    boolean is_msaa_sampler[PIPE_MAX_SAMPLERS];
-
+   boolean uses_doubles; /**< uses any of the double instructions */
    unsigned clipdist_writemask;
    unsigned culldist_writemask;
    unsigned num_written_culldistance;

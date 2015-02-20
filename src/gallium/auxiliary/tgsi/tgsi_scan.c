@@ -100,6 +100,10 @@ tgsi_scan_shader(const struct tgsi_token *tokens,
             assert(fullinst->Instruction.Opcode < TGSI_OPCODE_LAST);
             info->opcode_count[fullinst->Instruction.Opcode]++;
 
+            if (fullinst->Instruction.Opcode >= TGSI_OPCODE_F2D &&
+                fullinst->Instruction.Opcode <= TGSI_OPCODE_DSSG)
+               info->uses_doubles = true;
+
             for (i = 0; i < fullinst->Instruction.NumSrcRegs; i++) {
                const struct tgsi_full_src_register *src =
                   &fullinst->Src[i];
