@@ -699,7 +699,11 @@ _mesa_VertexAttribIPointer(GLuint index, GLint size, GLenum type,
                 size, type, stride, normalized, integer, ptr);
 }
 
-
+void GLAPIENTRY
+_mesa_VertexAttribLPointer(GLuint index, GLint size, GLenum type,
+                           GLsizei stride, const GLvoid *ptr)
+{
+}
 
 void GLAPIENTRY
 _mesa_EnableVertexAttribArray(GLuint index)
@@ -879,6 +883,10 @@ _mesa_GetVertexAttribdv(GLuint index, GLenum pname, GLdouble *params)
    }
 }
 
+void GLAPIENTRY
+_mesa_GetVertexAttribLdv(GLuint index, GLenum pname, GLdouble *params)
+{
+}
 
 void GLAPIENTRY
 _mesa_GetVertexAttribiv(GLuint index, GLenum pname, GLint *params)

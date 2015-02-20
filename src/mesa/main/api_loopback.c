@@ -1490,8 +1490,45 @@ _mesa_VertexAttribI4usv(GLuint index, const GLushort *v)
    ATTRIBI_4UI(index, v[0], v[1], v[2], v[3]);
 }
 
+void GLAPIENTRY
+_mesa_VertexAttribL1d(GLuint index, GLdouble x)
+{
+}
 
+void GLAPIENTRY
+_mesa_VertexAttribL2d(GLuint index, GLdouble x, GLdouble y)
+{
+}
 
+void GLAPIENTRY
+_mesa_VertexAttribL3d(GLuint index, GLdouble x, GLdouble y, GLdouble z)
+{
+}
+
+void GLAPIENTRY
+_mesa_VertexAttribL4d(GLuint index, GLdouble x, GLdouble y, GLdouble z, GLdouble w)
+{
+}
+
+void GLAPIENTRY
+_mesa_VertexAttribL1dv(GLuint index, const GLdouble *v)
+{
+}
+
+void GLAPIENTRY
+_mesa_VertexAttribL2dv(GLuint index, const GLdouble *v)
+{
+}
+
+void GLAPIENTRY
+_mesa_VertexAttribL3dv(GLuint index, const GLdouble *v)
+{
+}
+
+void GLAPIENTRY
+_mesa_VertexAttribL4dv(GLuint index, const GLdouble *v)
+{
+}
 
 /*
  * This code never registers handlers for any of the entry points

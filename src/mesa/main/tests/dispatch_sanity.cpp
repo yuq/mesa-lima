@@ -780,16 +780,16 @@ const struct function gl_core_functions_possible[] = {
    { "glProgramUniformMatrix4x3dv", 40, -1 },
    { "glValidateProgramPipeline", 43, -1 },
    { "glGetProgramPipelineInfoLog", 43, -1 },
-// { "glVertexAttribL1d", 43, -1 },                     // XXX: Add to xml
-// { "glVertexAttribL2d", 43, -1 },                     // XXX: Add to xml
-// { "glVertexAttribL3d", 43, -1 },                     // XXX: Add to xml
-// { "glVertexAttribL4d", 43, -1 },                     // XXX: Add to xml
-// { "glVertexAttribL1dv", 43, -1 },                    // XXX: Add to xml
-// { "glVertexAttribL2dv", 43, -1 },                    // XXX: Add to xml
-// { "glVertexAttribL3dv", 43, -1 },                    // XXX: Add to xml
-// { "glVertexAttribL4dv", 43, -1 },                    // XXX: Add to xml
-// { "glVertexAttribLPointer", 43, -1 },                // XXX: Add to xml
-// { "glGetVertexAttribLdv", 43, -1 },                  // XXX: Add to xml
+   { "glVertexAttribL1d", 41, -1 },
+   { "glVertexAttribL2d", 41, -1 },
+   { "glVertexAttribL3d", 41, -1 },
+   { "glVertexAttribL4d", 41, -1 },
+   { "glVertexAttribL1dv", 41, -1 },
+   { "glVertexAttribL2dv", 41, -1 },
+   { "glVertexAttribL3dv", 41, -1 },
+   { "glVertexAttribL4dv", 41, -1 },
+   { "glVertexAttribLPointer", 41, -1 },
+   { "glGetVertexAttribLdv", 41, -1 },
    { "glViewportArrayv", 43, -1 },
    { "glViewportIndexedf", 43, -1 },
    { "glViewportIndexedfv", 43, -1 },
