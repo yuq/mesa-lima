@@ -2061,6 +2061,10 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
          generate_set_simd4x2_offset(inst, dst, src[0]);
          break;
 
+      case SHADER_OPCODE_BROADCAST:
+         brw_broadcast(p, dst, src[0], src[1]);
+         break;
+
       case FS_OPCODE_SET_OMASK:
          generate_set_omask(inst, dst, src[0]);
          break;

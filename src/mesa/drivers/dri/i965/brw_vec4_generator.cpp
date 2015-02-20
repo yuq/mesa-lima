@@ -1512,6 +1512,10 @@ vec4_generator::generate_code(const cfg_t *cfg)
          brw_memory_fence(p, dst);
          break;
 
+      case SHADER_OPCODE_BROADCAST:
+         brw_broadcast(p, dst, src[0], src[1]);
+         break;
+
       case VS_OPCODE_UNPACK_FLAGS_SIMD4X2:
          generate_unpack_flags(dst);
          break;

@@ -918,6 +918,12 @@ enum opcode {
 
    SHADER_OPCODE_URB_WRITE_SIMD8,
 
+   /**
+    * Pick the channel from its first source register given by the index
+    * specified as second source.  Useful for variable indexing of surfaces.
+    */
+   SHADER_OPCODE_BROADCAST,
+
    VEC4_OPCODE_MOV_BYTES,
    VEC4_OPCODE_PACK_BYTES,
    VEC4_OPCODE_UNPACK_UNIFORM,

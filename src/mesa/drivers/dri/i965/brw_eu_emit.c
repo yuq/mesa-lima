@@ -3212,6 +3212,81 @@ brw_pixel_interpolator_query(struct brw_codegen *p,
    brw_inst_set_pi_message_data(devinfo, insn, data);
 }
 
+void
+brw_broadcast(struct brw_codegen *p,
+              struct brw_reg dst,
+              struct brw_reg src,
+              struct brw_reg idx)
+{
+   const struct brw_device_info *devinfo = p->devinfo;
+   const bool align1 = brw_inst_access_mode(devinfo, p->current) == BRW_ALIGN_1;
+   brw_inst *inst;
+
+   assert(src.file == BRW_GENERAL_REGISTER_FILE &&
+          src.address_mode == BRW_ADDRESS_DIRECT);
+
+   if ((src.vstride == 0 && (src.hstride == 0 || !align1)) ||
+       idx.file == BRW_IMMEDIATE_VALUE) {
+      /* Trivial, the source is already uniform or the index is a constant.
+       * We will typically not get here if the optimizer is doing its job, but
+       * asserting would be mean.
+       */
+      const unsigned i = idx.file == BRW_IMMEDIATE_VALUE ? idx.dw1.ud : 0;
+      brw_MOV(p, dst,
+              (align1 ? stride(suboffset(src, i), 0, 1, 0) :
+               stride(suboffset(src, 4 * i), 0, 4, 1)));
+   } else {
+      if (align1) {
+         const struct brw_reg addr =
+            retype(brw_address_reg(0), BRW_REGISTER_TYPE_UD);
+         const unsigned offset = src.nr * REG_SIZE + src.subnr;
+         /* Limit in bytes of the signed indirect addressing immediate. */
+         const unsigned limit = 512;
+
+         brw_push_insn_state(p);
+         brw_set_default_mask_control(p, BRW_MASK_DISABLE);
+         brw_set_default_predicate_control(p, BRW_PREDICATE_NONE);
+
+         /* Take into account the component size and horizontal stride. */
+         assert(src.vstride == src.hstride + src.width);
+         brw_SHL(p, addr, vec1(idx),
+                 brw_imm_ud(_mesa_logbase2(type_sz(src.type)) +
+                            src.hstride - 1));
+
+         /* We can only address up to limit bytes using the indirect
+          * addressing immediate, account for the difference if the source
+          * register is above this limit.
+          */
+         if (offset >= limit)
+            brw_ADD(p, addr, addr, brw_imm_ud(offset - offset % limit));
+
+         brw_pop_insn_state(p);
+
+         /* Use indirect addressing to fetch the specified component. */
+         brw_MOV(p, dst,
+                 retype(brw_vec1_indirect(addr.subnr, offset % limit),
+                        src.type));
+      } else {
+         /* In SIMD4x2 mode the index can be either zero or one, replicate it
+          * to all bits of a flag register,
+          */
+         inst = brw_MOV(p,
+                        brw_null_reg(),
+                        stride(brw_swizzle1(idx, 0), 0, 4, 1));
+         brw_inst_set_pred_control(devinfo, inst, BRW_PREDICATE_NONE);
+         brw_inst_set_cond_modifier(devinfo, inst, BRW_CONDITIONAL_NZ);
+         brw_inst_set_flag_reg_nr(devinfo, inst, 1);
+
+         /* and use predicated SEL to pick the right channel. */
+         inst = brw_SEL(p, dst,
+                        stride(suboffset(src, 4), 0, 4, 1),
+                        stride(src, 0, 4, 1));
+         brw_inst_set_pred_control(devinfo, inst, BRW_PREDICATE_NORMAL);
+         brw_inst_set_flag_reg_nr(devinfo, inst, 1);
+      }
+   }
+}
+
 /**
  * This instruction is generated as a single-channel align1 instruction by
  * both the VS and FS stages when using INTEL_DEBUG=shader_time.

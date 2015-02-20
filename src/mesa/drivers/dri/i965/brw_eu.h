@@ -461,6 +461,12 @@ brw_pixel_interpolator_query(struct brw_codegen *p,
                              unsigned msg_length,
                              unsigned response_length);
 
+void
+brw_broadcast(struct brw_codegen *p,
+              struct brw_reg dst,
+              struct brw_reg src,
+              struct brw_reg idx);
+
 /***********************************************************************
  * brw_eu_util.c:
  */
