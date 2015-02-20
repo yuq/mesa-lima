@@ -3043,7 +3043,7 @@ void si_init_config(struct si_context *sctx)
 	si_pm4_set_reg(pm4, R_028B90_VGT_GS_INSTANCE_CNT, 0);
 
 	si_pm4_set_reg(pm4, R_028B98_VGT_STRMOUT_BUFFER_CONFIG, 0x0);
-	si_pm4_set_reg(pm4, R_028AB4_VGT_REUSE_OFF, 0x00000000);
+	si_pm4_set_reg(pm4, R_028AB4_VGT_REUSE_OFF, 0);
 	si_pm4_set_reg(pm4, R_028AB8_VGT_VTX_CNT_EN, 0x0);
 	if (sctx->b.chip_class < CIK)
 		si_pm4_set_reg(pm4, R_008A14_PA_CL_ENHANCE, S_008A14_NUM_CLIP_SEQ(3) |
@@ -3058,7 +3058,7 @@ void si_init_config(struct si_context *sctx)
 		switch (sctx->screen->b.family) {
 		case CHIP_BONAIRE:
 			si_pm4_set_reg(pm4, R_028350_PA_SC_RASTER_CONFIG, 0x16000012);
-			si_pm4_set_reg(pm4, R_028354_PA_SC_RASTER_CONFIG_1, 0x00000000);
+			si_pm4_set_reg(pm4, R_028354_PA_SC_RASTER_CONFIG_1, 0);
 			break;
 		case CHIP_HAWAII:
 			si_pm4_set_reg(pm4, R_028350_PA_SC_RASTER_CONFIG, 0x3a00161a);
@@ -3071,8 +3071,8 @@ void si_init_config(struct si_context *sctx)
 		case CHIP_MULLINS:
 			/* XXX todo */
 		default:
-			si_pm4_set_reg(pm4, R_028350_PA_SC_RASTER_CONFIG, 0x00000000);
-			si_pm4_set_reg(pm4, R_028354_PA_SC_RASTER_CONFIG_1, 0x00000000);
+			si_pm4_set_reg(pm4, R_028350_PA_SC_RASTER_CONFIG, 0);
+			si_pm4_set_reg(pm4, R_028354_PA_SC_RASTER_CONFIG_1, 0);
 			break;
 		}
 	} else {
@@ -3092,12 +3092,12 @@ void si_init_config(struct si_context *sctx)
 			raster_config = 0x00000082;
 			break;
 		case CHIP_HAINAN:
-			raster_config = 0x00000000;
+			raster_config = 0;
 			break;
 		default:
 			fprintf(stderr,
 				"radeonsi: Unknown GPU, using 0 for raster_config\n");
-			raster_config = 0x00000000;
+			raster_config = 0;
 			break;
 		}
 
@@ -3124,16 +3124,16 @@ void si_init_config(struct si_context *sctx)
 	si_pm4_set_reg(pm4, R_028230_PA_SC_EDGERULE, 0xAAAAAAAA);
 	/* PA_SU_HARDWARE_SCREEN_OFFSET must be 0 due to hw bug on SI */
 	si_pm4_set_reg(pm4, R_028234_PA_SU_HARDWARE_SCREEN_OFFSET, 0);
-	si_pm4_set_reg(pm4, R_0282D0_PA_SC_VPORT_ZMIN_0, 0x00000000);
-	si_pm4_set_reg(pm4, R_0282D4_PA_SC_VPORT_ZMAX_0, 0x3F800000);
-	si_pm4_set_reg(pm4, R_028820_PA_CL_NANINF_CNTL, 0x00000000);
-	si_pm4_set_reg(pm4, R_028BE8_PA_CL_GB_VERT_CLIP_ADJ, 0x3F800000);
-	si_pm4_set_reg(pm4, R_028BEC_PA_CL_GB_VERT_DISC_ADJ, 0x3F800000);
-	si_pm4_set_reg(pm4, R_028BF0_PA_CL_GB_HORZ_CLIP_ADJ, 0x3F800000);
-	si_pm4_set_reg(pm4, R_028BF4_PA_CL_GB_HORZ_DISC_ADJ, 0x3F800000);
-	si_pm4_set_reg(pm4, R_028020_DB_DEPTH_BOUNDS_MIN, 0x00000000);
-	si_pm4_set_reg(pm4, R_028024_DB_DEPTH_BOUNDS_MAX, 0x00000000);
-	si_pm4_set_reg(pm4, R_028028_DB_STENCIL_CLEAR, 0x00000000);
+	si_pm4_set_reg(pm4, R_0282D0_PA_SC_VPORT_ZMIN_0, 0);
+	si_pm4_set_reg(pm4, R_0282D4_PA_SC_VPORT_ZMAX_0, fui(1.0));
+	si_pm4_set_reg(pm4, R_028820_PA_CL_NANINF_CNTL, 0);
+	si_pm4_set_reg(pm4, R_028BE8_PA_CL_GB_VERT_CLIP_ADJ, fui(1.0));
+	si_pm4_set_reg(pm4, R_028BEC_PA_CL_GB_VERT_DISC_ADJ, fui(1.0));
+	si_pm4_set_reg(pm4, R_028BF0_PA_CL_GB_HORZ_CLIP_ADJ, fui(1.0));
+	si_pm4_set_reg(pm4, R_028BF4_PA_CL_GB_HORZ_DISC_ADJ, fui(1.0));
+	si_pm4_set_reg(pm4, R_028020_DB_DEPTH_BOUNDS_MIN, 0);
+	si_pm4_set_reg(pm4, R_028024_DB_DEPTH_BOUNDS_MAX, 0);
+	si_pm4_set_reg(pm4, R_028028_DB_STENCIL_CLEAR, 0);
 	si_pm4_set_reg(pm4, R_028AC0_DB_SRESULTS_COMPARE_STATE0, 0x0);
 	si_pm4_set_reg(pm4, R_028AC4_DB_SRESULTS_COMPARE_STATE1, 0x0);
 	si_pm4_set_reg(pm4, R_028AC8_DB_PRELOAD_CONTROL, 0x0);

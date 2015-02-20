@@ -1025,7 +1025,7 @@ static void r600_setup_buffer_constants(struct r600_context *rctx, int shader_ty
 				if (desc->channel[0].pure_integer)
 					samplers->buffer_constants[offset+4] = 1;
 				else
-					samplers->buffer_constants[offset+4] = 0x3f800000;
+					samplers->buffer_constants[offset+4] = fui(1.0);
 			} else
 				samplers->buffer_constants[offset + 4] = 0;
 
