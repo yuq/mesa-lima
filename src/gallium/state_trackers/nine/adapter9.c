@@ -545,7 +545,7 @@ NineAdapter9_GetDeviceCaps( struct NineAdapter9 *This,
                      /*D3DDEVCAPS_RTPATCHHANDLEZERO |*/
                      /*D3DDEVCAPS_SEPARATETEXTUREMEMORIES |*/
                      /*D3DDEVCAPS_TEXTURENONLOCALVIDMEM |*/
-                     D3DDEVCAPS_TEXTURESYSTEMMEMORY |
+                     /* D3DDEVCAPS_TEXTURESYSTEMMEMORY |*/
                      D3DDEVCAPS_TEXTUREVIDEOMEMORY |
                      D3DDEVCAPS_TLVERTEXSYSTEMMEMORY |
                      D3DDEVCAPS_TLVERTEXVIDEOMEMORY;
