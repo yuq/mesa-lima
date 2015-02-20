@@ -909,6 +909,8 @@ void st_init_extensions(struct pipe_screen *screen,
    if (screen->get_shader_param(screen, PIPE_SHADER_VERTEX,
                                 PIPE_SHADER_CAP_DOUBLES) &&
        screen->get_shader_param(screen, PIPE_SHADER_FRAGMENT,
-                                PIPE_SHADER_CAP_DOUBLES))
+                                PIPE_SHADER_CAP_DOUBLES)) {
       extensions->ARB_gpu_shader_fp64 = GL_TRUE;
+      extensions->ARB_vertex_attrib_64bit = GL_TRUE;
+   }
 }

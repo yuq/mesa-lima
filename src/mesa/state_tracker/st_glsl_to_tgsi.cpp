@@ -88,6 +88,7 @@ public:
       this->reladdr = NULL;
       this->reladdr2 = NULL;
       this->has_index2 = false;
+      this->double_reg2 = false;
    }
 
    st_src_reg(gl_register_file file, int index, int type)
@@ -101,6 +102,7 @@ public:
       this->reladdr = NULL;
       this->reladdr2 = NULL;
       this->has_index2 = false;
+      this->double_reg2 = false;
    }
 
    st_src_reg(gl_register_file file, int index, int type, int index2D)
@@ -114,6 +116,7 @@ public:
       this->reladdr = NULL;
       this->reladdr2 = NULL;
       this->has_index2 = false;
+      this->double_reg2 = false;
    }
 
    st_src_reg()
@@ -127,6 +130,7 @@ public:
       this->reladdr = NULL;
       this->reladdr2 = NULL;
       this->has_index2 = false;
+      this->double_reg2 = false;
    }
 
    explicit st_src_reg(st_dst_reg reg);
@@ -141,6 +145,11 @@ public:
    st_src_reg *reladdr;
    st_src_reg *reladdr2;
    bool has_index2;
+   /*
+    * Is this the second half of a double register pair?
+    * currently used for input mapping only.
+    */
+   bool double_reg2;
 };
 
 class st_dst_reg {
@@ -197,6 +206,7 @@ st_src_reg::st_src_reg(st_dst_reg reg)
    this->index2D = 0;
    this->reladdr2 = NULL;
    this->has_index2 = false;
+   this->double_reg2 = false;
 }
 
 st_dst_reg::st_dst_reg(st_src_reg reg)
@@ -677,8 +687,10 @@ glsl_to_tgsi_visitor::emit(ir_instruction *ir, unsigned op,
 
             if (dinst->src[j].type == GLSL_TYPE_DOUBLE) {
                dinst->src[j].index = initial_src_idx[j];
-               if (swz > 1)
+               if (swz > 1) {
+                  dinst->src[j].double_reg2 = true;
                   dinst->src[j].index++;
+	       }
 
                if (swz & 1)
                   dinst->src[j].swizzle = MAKE_SWIZZLE4(SWIZZLE_Z, SWIZZLE_W, SWIZZLE_Z, SWIZZLE_W);
@@ -3705,6 +3717,7 @@ glsl_to_tgsi_visitor::copy_propagate(void)
             } else {
                if (first->src[0].file != copy_chan->src[0].file ||
                    first->src[0].index != copy_chan->src[0].index ||
+                   first->src[0].double_reg2 != copy_chan->src[0].double_reg2 ||
                    first->src[0].index2D != copy_chan->src[0].index2D) {
                   good = false;
                   break;
@@ -3720,6 +3733,7 @@ glsl_to_tgsi_visitor::copy_propagate(void)
             inst->src[r].index = first->src[0].index;
             inst->src[r].index2D = first->src[0].index2D;
             inst->src[r].has_index2 = first->src[0].has_index2;
+            inst->src[r].double_reg2 = first->src[0].double_reg2;
 
             int swizzle = 0;
             for (int i = 0; i < 4; i++) {
@@ -4552,6 +4566,9 @@ dst_register(struct st_translate *t,
 static struct ureg_src
 src_register(struct st_translate *t, const st_src_reg *reg)
 {
+   int index = reg->index;
+   int double_reg2 = reg->double_reg2 ? 1 : 0;
+
    switch(reg->file) {
    case PROGRAM_UNDEFINED:
       return ureg_imm4f(t->ureg, 0, 0, 0, 0);
@@ -4577,8 +4594,12 @@ src_register(struct st_translate *t, const st_src_reg *reg)
       return t->immediates[reg->index];
 
    case PROGRAM_INPUT:
-      assert(t->inputMapping[reg->index] < ARRAY_SIZE(t->inputs));
-      return t->inputs[t->inputMapping[reg->index]];
+      /* GLSL inputs are 64-bit containers, so we have to
+       * map back to the original index and add the offset after
+       * mapping. */
+      index -= double_reg2;
+      assert(t->inputMapping[index] < ARRAY_SIZE(t->inputs));
+      return t->inputs[t->inputMapping[index] + double_reg2];
 
    case PROGRAM_OUTPUT:
       assert(t->outputMapping[reg->index] < ARRAY_SIZE(t->outputs));
