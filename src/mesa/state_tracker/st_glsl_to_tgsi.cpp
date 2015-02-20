@@ -2611,6 +2611,7 @@ glsl_to_tgsi_visitor::visit(ir_assignment *ir)
       assert(!ir->lhs->type->is_scalar() && !ir->lhs->type->is_vector());
       l.writemask = WRITEMASK_XYZW;
    } else if (ir->lhs->type->is_scalar() &&
+              !ir->lhs->type->is_double() &&
               ir->lhs->variable_referenced()->data.mode == ir_var_shader_out) {
       /* FINISHME: This hack makes writing to gl_FragDepth, which lives in the
        * FINISHME: W component of fragment shader output zero, work correctly.
