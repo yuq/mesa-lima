@@ -200,12 +200,6 @@ static inline GLuint CPU_TO_LE32(GLuint x)
 #endif
 
 
-/* Turn off macro checking systems used by other libraries */
-#ifdef CHECK
-#undef CHECK
-#endif
-
-
 /**
  * ASSERT macro
  */
