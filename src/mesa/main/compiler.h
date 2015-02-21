@@ -174,11 +174,6 @@ static inline GLuint CPU_TO_LE32(GLuint x)
 
 
 
-#if !defined(CAPI) && defined(_WIN32)
-#define CAPI _cdecl
-#endif
-
-
 /**
  * Create a macro so that asm functions can be linked into compilers other
  * than GNU C
