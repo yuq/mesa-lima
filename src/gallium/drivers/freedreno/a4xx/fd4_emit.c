@@ -425,13 +425,9 @@ fd4_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 		OUT_PKT0(ring, REG_A4XX_GRAS_SU_POLY_OFFSET_SCALE, 2);
 		OUT_RING(ring, rasterizer->gras_su_poly_offset_scale);
 		OUT_RING(ring, rasterizer->gras_su_poly_offset_offset);
-	}
 
-	if (dirty & (FD_DIRTY_RASTERIZER | FD_DIRTY_PROG)) {
-		uint32_t val = fd4_rasterizer_stateobj(ctx->rasterizer)
-				->gras_cl_clip_cntl;
 		OUT_PKT0(ring, REG_A4XX_GRAS_CL_CLIP_CNTL, 1);
-		OUT_RING(ring, val);
+		OUT_RING(ring, rasterizer->gras_cl_clip_cntl);
 	}
 
 	/* NOTE: since primitive_restart is not actually part of any

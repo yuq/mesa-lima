@@ -365,7 +365,10 @@ fd3_program_emit(struct fd_ringbuffer *ring, struct fd3_emit *emit)
 				COND(vp->writes_psize, A3XX_VPC_ATTR_PSIZE));
 		OUT_RING(ring, 0x00000000);
 	} else {
-		uint32_t vinterp[4] = {0}, flatshade[2] = {0};
+		uint32_t vinterp[4], flatshade[2];
+
+		memset(vinterp, 0, sizeof(vinterp));
+		memset(flatshade, 0, sizeof(flatshade));
 
 		/* figure out VARYING_INTERP / FLAT_SHAD register values: */
 		for (j = -1; (j = ir3_next_varying(fp, j)) < (int)fp->inputs_count; ) {
