@@ -203,24 +203,6 @@ struct st_geometry_program
    struct gl_geometry_program Base;  /**< The Mesa geometry program */
    struct glsl_to_tgsi_visitor* glsl_to_tgsi;
 
-   /** map GP input back to VP output */
-   GLuint input_map[PIPE_MAX_SHADER_INPUTS];
-
-   /** maps a Mesa VARYING_SLOT_x to a packed TGSI input index */
-   GLuint input_to_index[VARYING_SLOT_MAX];
-   /** maps a TGSI input index back to a Mesa VARYING_SLOT_x */
-   GLuint index_to_input[PIPE_MAX_SHADER_INPUTS];
-
-   GLuint num_inputs;
-
-   GLuint input_to_slot[VARYING_SLOT_MAX];  /**< Maps VARYING_SLOT_x to slot */
-   GLuint num_input_slots;
-
-   ubyte input_semantic_name[PIPE_MAX_SHADER_INPUTS];
-   ubyte input_semantic_index[PIPE_MAX_SHADER_INPUTS];
-
-   struct pipe_shader_state tgsi;
-
    struct st_gp_variant *variants;
 };
 

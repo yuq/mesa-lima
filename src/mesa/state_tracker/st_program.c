@@ -870,11 +870,13 @@ st_translate_geometry_program(struct st_context *st,
    struct pipe_context *pipe = st->pipe;
    GLuint attr;
    GLbitfield64 inputsRead;
-   GLuint vslot = 0;
 
    uint gs_num_inputs = 0;
    uint gs_builtin_inputs = 0;
    uint gs_array_offset = 0;
+
+   ubyte input_semantic_name[PIPE_MAX_SHADER_INPUTS];
+   ubyte input_semantic_index[PIPE_MAX_SHADER_INPUTS];
 
    ubyte gs_output_semantic_name[PIPE_MAX_SHADER_OUTPUTS];
    ubyte gs_output_semantic_index[PIPE_MAX_SHADER_OUTPUTS];
@@ -883,6 +885,7 @@ st_translate_geometry_program(struct st_context *st,
    GLint i;
    GLuint maxSlot = 0;
    struct ureg_program *ureg;
+   struct pipe_shader_state state = {0};
 
    struct st_gp_variant *gpv;
 
@@ -900,9 +903,6 @@ st_translate_geometry_program(struct st_context *st,
       return NULL;
    }
 
-   /* which vertex output goes to the first geometry input */
-   vslot = 0;
-
    memset(inputMapping, 0, sizeof(inputMapping));
    memset(outputMapping, 0, sizeof(outputMapping));
 
@@ -918,11 +918,6 @@ st_translate_geometry_program(struct st_context *st,
 
          inputMapping[attr] = slot;
 
-         stgp->input_map[slot + gs_array_offset] = vslot - gs_builtin_inputs;
-         stgp->input_to_index[attr] = vslot;
-         stgp->index_to_input[vslot] = attr;
-         ++vslot;
-
          if (attr != VARYING_SLOT_PRIMITIVE_ID) {
             gs_array_offset += 2;
          } else
@@ -935,40 +930,40 @@ st_translate_geometry_program(struct st_context *st,
 
          switch (attr) {
          case VARYING_SLOT_PRIMITIVE_ID:
-            stgp->input_semantic_name[slot] = TGSI_SEMANTIC_PRIMID;
-            stgp->input_semantic_index[slot] = 0;
+            input_semantic_name[slot] = TGSI_SEMANTIC_PRIMID;
+            input_semantic_index[slot] = 0;
             break;
          case VARYING_SLOT_POS:
-            stgp->input_semantic_name[slot] = TGSI_SEMANTIC_POSITION;
-            stgp->input_semantic_index[slot] = 0;
+            input_semantic_name[slot] = TGSI_SEMANTIC_POSITION;
+            input_semantic_index[slot] = 0;
             break;
          case VARYING_SLOT_COL0:
-            stgp->input_semantic_name[slot] = TGSI_SEMANTIC_COLOR;
-            stgp->input_semantic_index[slot] = 0;
+            input_semantic_name[slot] = TGSI_SEMANTIC_COLOR;
+            input_semantic_index[slot] = 0;
             break;
          case VARYING_SLOT_COL1:
-            stgp->input_semantic_name[slot] = TGSI_SEMANTIC_COLOR;
-            stgp->input_semantic_index[slot] = 1;
+            input_semantic_name[slot] = TGSI_SEMANTIC_COLOR;
+            input_semantic_index[slot] = 1;
             break;
          case VARYING_SLOT_FOGC:
-            stgp->input_semantic_name[slot] = TGSI_SEMANTIC_FOG;
-            stgp->input_semantic_index[slot] = 0;
+            input_semantic_name[slot] = TGSI_SEMANTIC_FOG;
+            input_semantic_index[slot] = 0;
             break;
          case VARYING_SLOT_CLIP_VERTEX:
-            stgp->input_semantic_name[slot] = TGSI_SEMANTIC_CLIPVERTEX;
-            stgp->input_semantic_index[slot] = 0;
+            input_semantic_name[slot] = TGSI_SEMANTIC_CLIPVERTEX;
+            input_semantic_index[slot] = 0;
             break;
          case VARYING_SLOT_CLIP_DIST0:
-            stgp->input_semantic_name[slot] = TGSI_SEMANTIC_CLIPDIST;
-            stgp->input_semantic_index[slot] = 0;
+            input_semantic_name[slot] = TGSI_SEMANTIC_CLIPDIST;
+            input_semantic_index[slot] = 0;
             break;
          case VARYING_SLOT_CLIP_DIST1:
-            stgp->input_semantic_name[slot] = TGSI_SEMANTIC_CLIPDIST;
-            stgp->input_semantic_index[slot] = 1;
+            input_semantic_name[slot] = TGSI_SEMANTIC_CLIPDIST;
+            input_semantic_index[slot] = 1;
             break;
          case VARYING_SLOT_PSIZ:
-            stgp->input_semantic_name[slot] = TGSI_SEMANTIC_PSIZE;
-            stgp->input_semantic_index[slot] = 0;
+            input_semantic_name[slot] = TGSI_SEMANTIC_PSIZE;
+            input_semantic_index[slot] = 0;
             break;
          case VARYING_SLOT_TEX0:
          case VARYING_SLOT_TEX1:
@@ -979,16 +974,16 @@ st_translate_geometry_program(struct st_context *st,
          case VARYING_SLOT_TEX6:
          case VARYING_SLOT_TEX7:
             if (st->needs_texcoord_semantic) {
-               stgp->input_semantic_name[slot] = TGSI_SEMANTIC_TEXCOORD;
-               stgp->input_semantic_index[slot] = attr - VARYING_SLOT_TEX0;
+               input_semantic_name[slot] = TGSI_SEMANTIC_TEXCOORD;
+               input_semantic_index[slot] = attr - VARYING_SLOT_TEX0;
                break;
             }
             /* fall through */
          case VARYING_SLOT_VAR0:
          default:
             assert(attr >= VARYING_SLOT_VAR0 && attr < VARYING_SLOT_MAX);
-            stgp->input_semantic_name[slot] = TGSI_SEMANTIC_GENERIC;
-            stgp->input_semantic_index[slot] =
+            input_semantic_name[slot] = TGSI_SEMANTIC_GENERIC;
+            input_semantic_index[slot] =
                st_get_generic_varying_index(st, attr);
          break;
          }
@@ -1120,12 +1115,6 @@ st_translate_geometry_program(struct st_context *st,
    }
 #endif
 
-   /* free old shader state, if any */
-   if (stgp->tgsi.tokens) {
-      st_free_tokens(stgp->tgsi.tokens);
-      stgp->tgsi.tokens = NULL;
-   }
-
    ureg_property(ureg, TGSI_PROPERTY_GS_INPUT_PRIM, stgp->Base.InputType);
    ureg_property(ureg, TGSI_PROPERTY_GS_OUTPUT_PRIM, stgp->Base.OutputType);
    ureg_property(ureg, TGSI_PROPERTY_GS_MAX_OUTPUT_VERTICES,
@@ -1141,8 +1130,8 @@ st_translate_geometry_program(struct st_context *st,
                            /* inputs */
                            gs_num_inputs,
                            inputMapping,
-                           stgp->input_semantic_name,
-                           stgp->input_semantic_index,
+                           input_semantic_name,
+                           input_semantic_index,
                            NULL,
                            NULL,
                            /* outputs */
@@ -1160,8 +1149,8 @@ st_translate_geometry_program(struct st_context *st,
                                 /* inputs */
                                 gs_num_inputs,
                                 inputMapping,
-                                stgp->input_semantic_name,
-                                stgp->input_semantic_index,
+                                input_semantic_name,
+                                input_semantic_index,
                                 NULL,
                                 /* outputs */
                                 gs_num_outputs,
@@ -1171,14 +1160,13 @@ st_translate_geometry_program(struct st_context *st,
                                 FALSE,
                                 FALSE);
 
-   stgp->num_inputs = gs_num_inputs;
-   stgp->tgsi.tokens = ureg_get_tokens( ureg, NULL );
+   state.tokens = ureg_get_tokens( ureg, NULL );
    ureg_destroy( ureg );
 
    if (stgp->glsl_to_tgsi) {
       st_translate_stream_output_info(stgp->glsl_to_tgsi,
                                       outputMapping,
-                                      &stgp->tgsi.stream_output);
+                                      &state.stream_output);
    }
 
    if ((ST_DEBUG & DEBUG_TGSI) && (ST_DEBUG & DEBUG_MESA)) {
@@ -1187,13 +1175,15 @@ st_translate_geometry_program(struct st_context *st,
    }
 
    if (ST_DEBUG & DEBUG_TGSI) {
-      tgsi_dump(stgp->tgsi.tokens, 0);
+      tgsi_dump(state.tokens, 0);
       debug_printf("\n");
    }
 
    /* fill in new variant */
-   gpv->driver_shader = pipe->create_gs_state(pipe, &stgp->tgsi);
+   gpv->driver_shader = pipe->create_gs_state(pipe, &state);
    gpv->key = *key;
+
+   st_free_tokens(state.tokens);
    return gpv;
 }
 
