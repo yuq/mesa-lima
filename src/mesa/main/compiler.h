@@ -206,10 +206,6 @@ static inline GLuint CPU_TO_LE32(GLuint x)
  */
 #define uninitialized_var(x) x = x
 
-#ifndef NULL
-#define NULL 0
-#endif
-
 
 /**
  * LONGSTRING macro
