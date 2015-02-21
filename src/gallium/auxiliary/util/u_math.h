@@ -398,7 +398,7 @@ unsigned ffs( unsigned u )
 static INLINE unsigned
 util_last_bit(unsigned u)
 {
-#if defined(__GNUC__)
+#if defined(HAVE___BUILTIN_CLZ)
    return u == 0 ? 0 : 32 - __builtin_clz(u);
 #else
    unsigned r = 0;
@@ -520,7 +520,7 @@ float_to_byte_tex(float f)
 static INLINE unsigned
 util_logbase2(unsigned n)
 {
-#if defined(PIPE_CC_GCC)
+#if defined(HAVE___BUILTIN_CLZ)
    return ((sizeof(unsigned) * 8 - 1) - __builtin_clz(n | 1));
 #else
    unsigned pos = 0;
@@ -540,7 +540,7 @@ util_logbase2(unsigned n)
 static INLINE unsigned
 util_next_power_of_two(unsigned x)
 {
-#if defined(PIPE_CC_GCC)
+#if defined(HAVE___BUILTIN_CLZ)
    if (x <= 1)
        return 1;
 
@@ -572,7 +572,7 @@ util_next_power_of_two(unsigned x)
 static INLINE unsigned
 util_bitcount(unsigned n)
 {
-#if defined(PIPE_CC_GCC)
+#if defined(HAVE___BUILTIN_POPCOUNT)
    return __builtin_popcount(n);
 #else
    /* K&R classic bitcount.
@@ -641,8 +641,7 @@ util_bitreverse(unsigned n)
 static INLINE uint32_t
 util_bswap32(uint32_t n)
 {
-/* We need the gcc version checks for non-autoconf build system */
-#if defined(HAVE___BUILTIN_BSWAP32) || (defined(PIPE_CC_GCC) && (PIPE_CC_GCC_VERSION >= 403))
+#if defined(HAVE___BUILTIN_BSWAP32)
    return __builtin_bswap32(n);
 #else
    return (n >> 24) |
