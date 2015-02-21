@@ -598,7 +598,7 @@ set_fetch_functions(const struct gl_sampler_object *samp,
 
    texImage->FetchCompressedTexel = _mesa_get_compressed_fetch_func(format);
 
-   ASSERT(texImage->FetchTexel);
+   assert(texImage->FetchTexel);
 }
 
 void

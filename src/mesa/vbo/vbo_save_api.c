@@ -1564,14 +1564,14 @@ _save_current_init(struct gl_context *ctx)
 
    for (i = VBO_ATTRIB_POS; i <= VBO_ATTRIB_GENERIC15; i++) {
       const GLuint j = i - VBO_ATTRIB_POS;
-      ASSERT(j < VERT_ATTRIB_MAX);
+      assert(j < VERT_ATTRIB_MAX);
       save->currentsz[i] = &ctx->ListState.ActiveAttribSize[j];
       save->current[i] = ctx->ListState.CurrentAttrib[j];
    }
 
    for (i = VBO_ATTRIB_FIRST_MATERIAL; i <= VBO_ATTRIB_LAST_MATERIAL; i++) {
       const GLuint j = i - VBO_ATTRIB_FIRST_MATERIAL;
-      ASSERT(j < MAT_ATTRIB_MAX);
+      assert(j < MAT_ATTRIB_MAX);
       save->currentsz[i] = &ctx->ListState.ActiveMaterialSize[j];
       save->current[i] = ctx->ListState.CurrentMaterial[j];
    }

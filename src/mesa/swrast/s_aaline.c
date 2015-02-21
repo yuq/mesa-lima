@@ -477,7 +477,7 @@ _swrast_choose_aa_line_function(struct gl_context *ctx)
 {
    SWcontext *swrast = SWRAST_CONTEXT(ctx);
 
-   ASSERT(ctx->Line.SmoothFlag);
+   assert(ctx->Line.SmoothFlag);
 
    if (ctx->Texture._EnabledCoordUnits != 0
        || _swrast_use_fragment_program(ctx)

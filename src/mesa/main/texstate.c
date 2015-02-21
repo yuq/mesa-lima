@@ -68,8 +68,8 @@ _mesa_copy_texture_state( const struct gl_context *src, struct gl_context *dst )
 {
    GLuint u, tex;
 
-   ASSERT(src);
-   ASSERT(dst);
+   assert(src);
+   assert(dst);
 
    dst->Texture.CurrentUnit = src->Texture.CurrentUnit;
    dst->Texture._GenFlags = src->Texture._GenFlags;
@@ -292,7 +292,7 @@ _mesa_ActiveTexture(GLenum texture)
 
    k = _mesa_max_tex_unit(ctx);
 
-   ASSERT(k <= Elements(ctx->Texture.Unit));
+   assert(k <= Elements(ctx->Texture.Unit));
 
    if (MESA_VERBOSE & (VERBOSE_API|VERBOSE_TEXTURE))
       _mesa_debug(ctx, "glActiveTexture %s\n",
@@ -363,7 +363,7 @@ update_texture_matrices( struct gl_context *ctx )
    ctx->Texture._TexMatEnabled = 0x0;
 
    for (u = 0; u < ctx->Const.MaxTextureCoordUnits; u++) {
-      ASSERT(u < Elements(ctx->TextureMatrixStack));
+      assert(u < Elements(ctx->TextureMatrixStack));
       if (_math_matrix_is_dirty(ctx->TextureMatrixStack[u].Top)) {
 	 _math_matrix_analyse( ctx->TextureMatrixStack[u].Top );
 
@@ -501,7 +501,7 @@ update_texgen(struct gl_context *ctx)
 	 ctx->Texture._GenFlags |= texUnit->_GenFlags;
       }
 
-      ASSERT(unit < Elements(ctx->TextureMatrixStack));
+      assert(unit < Elements(ctx->TextureMatrixStack));
       if (ctx->TextureMatrixStack[unit].Top->type != MATRIX_IDENTITY)
 	 ctx->Texture._TexMatEnabled |= ENABLE_TEXMAT(unit);
    }

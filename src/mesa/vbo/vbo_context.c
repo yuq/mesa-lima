@@ -108,7 +108,7 @@ static void init_mat_currval(struct gl_context *ctx)
       &vbo->currval[VBO_ATTRIB_MAT_FRONT_AMBIENT];
    GLuint i;
 
-   ASSERT(NR_MAT_ATTRIBS == MAT_ATTRIB_MAX);
+   assert(NR_MAT_ATTRIBS == MAT_ATTRIB_MAX);
 
    memset(arrays, 0, sizeof(*arrays) * NR_MAT_ATTRIBS);
 

@@ -266,7 +266,7 @@ intel_region_release(struct intel_region **region_handle)
 
    _DBG("%s %p %d\n", __FUNCTION__, region, region->refcount - 1);
 
-   ASSERT(region->refcount > 0);
+   assert(region->refcount > 0);
    region->refcount--;
 
    if (region->refcount == 0) {

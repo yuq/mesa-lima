@@ -198,19 +198,19 @@ static void DEST_1UI( GLuint *t,
 static void INIT(void)
 {
 #ifdef DEST_1UI
-   ASSERT(SZ == 1);
+   assert(SZ == 1);
    TAB(_1ui)[SRC_IDX] = DEST_1UI;
 #endif
 #ifdef DEST_1UB
-   ASSERT(SZ == 1);
+   assert(SZ == 1);
    TAB(_1ub)[SRC_IDX] = DEST_1UB;
 #endif
 #ifdef DEST_1F
-   ASSERT(SZ == 1);
+   assert(SZ == 1);
    TAB(_1f)[SRC_IDX] = DEST_1F;
 #endif
 #ifdef DEST_3FN
-   ASSERT(SZ == 3);
+   assert(SZ == 3);
    TAB(_3fn)[SRC_IDX] = DEST_3FN;
 #endif
 #ifdef DEST_4UB

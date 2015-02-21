@@ -650,8 +650,8 @@ set_tex_image(struct gl_texture_object *tObj,
 {
    const GLuint face = _mesa_tex_target_to_face(target);
 
-   ASSERT(tObj);
-   ASSERT(texImage);
+   assert(tObj);
+   assert(texImage);
    if (target == GL_TEXTURE_RECTANGLE_NV || target == GL_TEXTURE_EXTERNAL_OES)
       assert(level == 0);
 
@@ -696,7 +696,7 @@ _mesa_delete_texture_image(struct gl_context *ctx,
    /* Free texImage->Data and/or any other driver-specific texture
     * image storage.
     */
-   ASSERT(ctx->Driver.FreeTextureImageBuffer);
+   assert(ctx->Driver.FreeTextureImageBuffer);
    ctx->Driver.FreeTextureImageBuffer( ctx, texImage );
    free(texImage);
 }
@@ -807,9 +807,9 @@ _mesa_select_tex_image(const struct gl_texture_object *texObj,
 {
    const GLuint face = _mesa_tex_target_to_face(target);
 
-   ASSERT(texObj);
-   ASSERT(level >= 0);
-   ASSERT(level < MAX_TEXTURE_LEVELS);
+   assert(texObj);
+   assert(level >= 0);
+   assert(level < MAX_TEXTURE_LEVELS);
 
    return texObj->Image[face][level];
 }
@@ -1239,7 +1239,7 @@ make_null_texture(GLint width, GLint height, GLint depth, GLenum format)
 static void
 clear_teximage_fields(struct gl_texture_image *img)
 {
-   ASSERT(img);
+   assert(img);
    img->_BaseFormat = 0;
    img->InternalFormat = 0;
    img->Border = 0;
@@ -1284,14 +1284,14 @@ init_teximage_fields_ms(struct gl_context *ctx,
                         GLuint numSamples, GLboolean fixedSampleLocations)
 {
    GLenum target;
-   ASSERT(img);
-   ASSERT(width >= 0);
-   ASSERT(height >= 0);
-   ASSERT(depth >= 0);
+   assert(img);
+   assert(width >= 0);
+   assert(height >= 0);
+   assert(depth >= 0);
 
    target = img->TexObject->Target;
    img->_BaseFormat = _mesa_base_tex_format( ctx, internalFormat );
-   ASSERT(img->_BaseFormat != -1);
+   assert(img->_BaseFormat != -1);
    img->InternalFormat = internalFormat;
    img->Border = border;
    img->Width = width;
@@ -2184,7 +2184,7 @@ texture_error_check( struct gl_context *ctx,
 
    /* additional checks for ycbcr textures */
    if (internalFormat == GL_YCBCR_MESA) {
-      ASSERT(ctx->Extensions.MESA_ycbcr_texture);
+      assert(ctx->Extensions.MESA_ycbcr_texture);
       if (type != GL_UNSIGNED_SHORT_8_8_MESA &&
           type != GL_UNSIGNED_SHORT_8_8_REV_MESA) {
          char message[100];
@@ -2933,7 +2933,7 @@ check_rtt_cb(GLuint key, void *data, void *userData)
              att->TextureLevel == level &&
              att->CubeMapFace == face) {
             _mesa_update_texture_renderbuffer(ctx, ctx->DrawBuffer, att);
-            ASSERT(att->Renderbuffer->TexImage);
+            assert(att->Renderbuffer->TexImage);
             /* Mark fb status as indeterminate to force re-validation */
             fb->_Status = 0;
          }
@@ -2977,7 +2977,7 @@ check_gen_mipmap(struct gl_context *ctx, GLenum target,
    if (texObj->GenerateMipmap &&
        level == texObj->BaseLevel &&
        level < texObj->MaxLevel) {
-      ASSERT(ctx->Driver.GenerateMipmap);
+      assert(ctx->Driver.GenerateMipmap);
       ctx->Driver.GenerateMipmap(ctx, target, texObj);
    }
 }
@@ -3054,7 +3054,7 @@ _mesa_choose_texture_format(struct gl_context *ctx,
           prevImage->Width > 0 &&
           prevImage->InternalFormat == internalFormat) {
          /* use the same format */
-         ASSERT(prevImage->TexFormat != MESA_FORMAT_NONE);
+         assert(prevImage->TexFormat != MESA_FORMAT_NONE);
          return prevImage->TexFormat;
       }
    }
@@ -3093,7 +3093,7 @@ _mesa_choose_texture_format(struct gl_context *ctx,
    /* choose format from scratch */
    f = ctx->Driver.ChooseTextureFormat(ctx, target, internalFormat,
                                        format, type);
-   ASSERT(f != MESA_FORMAT_NONE);
+   assert(f != MESA_FORMAT_NONE);
    return f;
 }
 

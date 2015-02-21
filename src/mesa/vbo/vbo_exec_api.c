@@ -1036,7 +1036,7 @@ void vbo_exec_vtx_init( struct vbo_exec_context *exec )
                                  &exec->vtx.bufferobj,
                                  ctx->Shared->NullBufferObj);
 
-   ASSERT(!exec->vtx.buffer_map);
+   assert(!exec->vtx.buffer_map);
    exec->vtx.buffer_map = _mesa_align_malloc(VBO_VERT_BUFFER_SIZE, 64);
    exec->vtx.buffer_ptr = exec->vtx.buffer_map;
 
@@ -1044,16 +1044,16 @@ void vbo_exec_vtx_init( struct vbo_exec_context *exec )
    _mesa_noop_vtxfmt_init(&exec->vtxfmt_noop);
 
    for (i = 0 ; i < VBO_ATTRIB_MAX ; i++) {
-      ASSERT(i < Elements(exec->vtx.attrsz));
+      assert(i < Elements(exec->vtx.attrsz));
       exec->vtx.attrsz[i] = 0;
-      ASSERT(i < Elements(exec->vtx.attrtype));
+      assert(i < Elements(exec->vtx.attrtype));
       exec->vtx.attrtype[i] = GL_FLOAT;
-      ASSERT(i < Elements(exec->vtx.active_sz));
+      assert(i < Elements(exec->vtx.active_sz));
       exec->vtx.active_sz[i] = 0;
    }
    for (i = 0 ; i < VERT_ATTRIB_MAX; i++) {
-      ASSERT(i < Elements(exec->vtx.inputs));
-      ASSERT(i < Elements(exec->vtx.arrays));
+      assert(i < Elements(exec->vtx.inputs));
+      assert(i < Elements(exec->vtx.arrays));
       exec->vtx.inputs[i] = &exec->vtx.arrays[i];
    }
    
@@ -1099,7 +1099,7 @@ void vbo_exec_vtx_destroy( struct vbo_exec_context *exec )
    /* True VBOs should already be unmapped
     */
    if (exec->vtx.buffer_map) {
-      ASSERT(exec->vtx.bufferobj->Name == 0 ||
+      assert(exec->vtx.bufferobj->Name == 0 ||
              exec->vtx.bufferobj->Name == IMM_BUFFER_NAME);
       if (exec->vtx.bufferobj->Name == 0) {
          _mesa_align_free(exec->vtx.buffer_map);

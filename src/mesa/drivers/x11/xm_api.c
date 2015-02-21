@@ -285,7 +285,7 @@ create_xmesa_buffer(XMesaDrawable d, BufferType type,
 {
    XMesaBuffer b;
 
-   ASSERT(type == WINDOW || type == PIXMAP || type == PBUFFER);
+   assert(type == WINDOW || type == PIXMAP || type == PBUFFER);
 
    b = (XMesaBuffer) CALLOC_STRUCT(xmesa_buffer);
    if (!b)
@@ -564,7 +564,7 @@ initialize_visual_and_buffer(XMesaVisual v, XMesaBuffer b,
    const int xclass = v->visualType;
 
 
-   ASSERT(!b || b->xm_visual == v);
+   assert(!b || b->xm_visual == v);
 
    /* Save true bits/pixel */
    v->BitsPerPixel = bits_per_pixel(v);
@@ -605,8 +605,8 @@ initialize_visual_and_buffer(XMesaVisual v, XMesaBuffer b,
       /* Do window-specific initializations */
 
       /* these should have been set in create_xmesa_buffer */
-      ASSERT(b->frontxrb->drawable == window);
-      ASSERT(b->frontxrb->pixmap == (XMesaPixmap) window);
+      assert(b->frontxrb->drawable == window);
+      assert(b->frontxrb->pixmap == (XMesaPixmap) window);
 
       /* Setup for single/double buffering */
       if (v->mesa_visual.doubleBufferMode) {

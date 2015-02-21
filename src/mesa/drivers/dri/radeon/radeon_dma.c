@@ -473,9 +473,9 @@ rcommonAllocDmaLowVerts( radeonContextPtr rmesa, int nverts, int vsize )
                 rmesa->dma.flush = rcommon_flush_last_swtcl_prim;
         }
 
-	ASSERT( vsize == rmesa->swtcl.vertex_size * 4 );
-        ASSERT( rmesa->dma.flush == rcommon_flush_last_swtcl_prim );
-        ASSERT( rmesa->dma.current_used +
+	assert( vsize == rmesa->swtcl.vertex_size * 4 );
+        assert( rmesa->dma.flush == rcommon_flush_last_swtcl_prim );
+        assert( rmesa->dma.current_used +
                 rmesa->swtcl.numverts * rmesa->swtcl.vertex_size * 4 ==
                 rmesa->dma.current_vertexptr );
 

@@ -481,7 +481,7 @@ swrast_map_renderbuffer(struct gl_context *ctx,
       return;
    }
 
-   ASSERT(xrb->Base.Buffer);
+   assert(xrb->Base.Buffer);
 
    if (rb->AllocStorage == swrast_alloc_back_storage) {
       map += (rb->Height - 1) * stride;

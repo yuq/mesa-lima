@@ -124,7 +124,7 @@ vbo_draw_method(struct vbo_context *vbo, gl_draw_method method)
          ctx->Array._DrawArrays = vbo->save.inputs;
          break;
       default:
-         ASSERT(0);
+         assert(0);
       }
 
       ctx->NewDriverState |= ctx->DriverFlags.NewArray;
@@ -146,7 +146,7 @@ vbo_attrtype_to_integer_flag(GLenum format)
    case GL_UNSIGNED_INT:
       return GL_TRUE;
    default:
-      ASSERT(0);
+      assert(0);
       return GL_FALSE;
    }
 }
@@ -170,7 +170,7 @@ vbo_get_default_vals_as_float(GLenum format)
    case GL_UNSIGNED_INT:
       return (const GLfloat*)default_int;
    default:
-      ASSERT(0);
+      assert(0);
       return NULL;
    }
 }

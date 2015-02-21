@@ -197,7 +197,7 @@ _mesa_do_init_remap_table(const char *pool,
       const char *spec;
 
       /* sanity check */
-      ASSERT(i == remap[i].remap_index);
+      assert(i == remap[i].remap_index);
       spec = _mesa_function_pool + remap[i].pool_index;
 
       offset = _mesa_map_function_spec(spec);

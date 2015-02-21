@@ -3515,7 +3515,7 @@ get_src_arg_mask(st_dst_reg dst, st_src_reg src)
     */
    for (comp = 0; comp < 4; ++comp) {
       const unsigned coord = GET_SWZ(src.swizzle, comp);
-      ASSERT(coord < 4);
+      assert(coord < 4);
       if (dst.writemask & (1 << comp) && coord <= SWIZZLE_W)
          read_mask |= 1 << coord;
    }

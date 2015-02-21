@@ -799,7 +799,7 @@ get_clamp_color(const struct gl_framebuffer *fb, GLenum clamp)
    if (clamp == GL_TRUE || clamp == GL_FALSE)
       return clamp;
 
-   ASSERT(clamp == GL_FIXED_ONLY);
+   assert(clamp == GL_FIXED_ONLY);
    if (!fb)
       return GL_TRUE;
 

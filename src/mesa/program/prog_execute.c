@@ -190,10 +190,10 @@ fetch_vector4(const struct prog_src_register *source,
       COPY_4V(result, src);
    }
    else {
-      ASSERT(GET_SWZ(source->Swizzle, 0) <= 3);
-      ASSERT(GET_SWZ(source->Swizzle, 1) <= 3);
-      ASSERT(GET_SWZ(source->Swizzle, 2) <= 3);
-      ASSERT(GET_SWZ(source->Swizzle, 3) <= 3);
+      assert(GET_SWZ(source->Swizzle, 0) <= 3);
+      assert(GET_SWZ(source->Swizzle, 1) <= 3);
+      assert(GET_SWZ(source->Swizzle, 2) <= 3);
+      assert(GET_SWZ(source->Swizzle, 3) <= 3);
       result[0] = src[GET_SWZ(source->Swizzle, 0)];
       result[1] = src[GET_SWZ(source->Swizzle, 1)];
       result[2] = src[GET_SWZ(source->Swizzle, 2)];
@@ -207,7 +207,7 @@ fetch_vector4(const struct prog_src_register *source,
       result[3] = FABSF(result[3]);
    }
    if (source->Negate) {
-      ASSERT(source->Negate == NEGATE_XYZW);
+      assert(source->Negate == NEGATE_XYZW);
       result[0] = -result[0];
       result[1] = -result[1];
       result[2] = -result[2];
@@ -265,7 +265,7 @@ fetch_vector4_deriv(struct gl_context * ctx,
          result[3] = FABSF(result[3]);
       }
       if (source->Negate) {
-         ASSERT(source->Negate == NEGATE_XYZW);
+         assert(source->Negate == NEGATE_XYZW);
          result[0] = -result[0];
          result[1] = -result[1];
          result[2] = -result[2];
@@ -556,12 +556,12 @@ _mesa_execute_program(struct gl_context * ctx,
          break;
       case OPCODE_BGNLOOP:
          /* no-op */
-         ASSERT(program->Instructions[inst->BranchTarget].Opcode
+         assert(program->Instructions[inst->BranchTarget].Opcode
                 == OPCODE_ENDLOOP);
          break;
       case OPCODE_ENDLOOP:
          /* subtract 1 here since pc is incremented by for(pc) loop */
-         ASSERT(program->Instructions[inst->BranchTarget].Opcode
+         assert(program->Instructions[inst->BranchTarget].Opcode
                 == OPCODE_BGNLOOP);
          pc = inst->BranchTarget - 1;   /* go to matching BNGLOOP */
          break;
@@ -570,7 +570,7 @@ _mesa_execute_program(struct gl_context * ctx,
       case OPCODE_ENDSUB:      /* end subroutine */
          break;
       case OPCODE_BRK:         /* break out of loop (conditional) */
-         ASSERT(program->Instructions[inst->BranchTarget].Opcode
+         assert(program->Instructions[inst->BranchTarget].Opcode
                 == OPCODE_ENDLOOP);
          if (eval_condition(machine, inst)) {
             /* break out of loop */
@@ -579,7 +579,7 @@ _mesa_execute_program(struct gl_context * ctx,
          }
          break;
       case OPCODE_CONT:        /* continue loop (conditional) */
-         ASSERT(program->Instructions[inst->BranchTarget].Opcode
+         assert(program->Instructions[inst->BranchTarget].Opcode
                 == OPCODE_ENDLOOP);
          if (eval_condition(machine, inst)) {
             /* continue at ENDLOOP */
@@ -768,7 +768,7 @@ _mesa_execute_program(struct gl_context * ctx,
       case OPCODE_IF:
          {
             GLboolean cond;
-            ASSERT(program->Instructions[inst->BranchTarget].Opcode
+            assert(program->Instructions[inst->BranchTarget].Opcode
                    == OPCODE_ELSE ||
                    program->Instructions[inst->BranchTarget].Opcode
                    == OPCODE_ENDIF);
@@ -797,7 +797,7 @@ _mesa_execute_program(struct gl_context * ctx,
          break;
       case OPCODE_ELSE:
          /* goto ENDIF */
-         ASSERT(program->Instructions[inst->BranchTarget].Opcode
+         assert(program->Instructions[inst->BranchTarget].Opcode
                 == OPCODE_ENDIF);
          assert(inst->BranchTarget >= 0);
          pc = inst->BranchTarget;
@@ -1260,7 +1260,7 @@ _mesa_execute_program(struct gl_context * ctx,
                else if (swz == SWIZZLE_ONE)
                   result[i] = 1.0;
                else {
-                  ASSERT(swz <= 3);
+                  assert(swz <= 3);
                   result[i] = src[swz];
                }
                if (source->Negate & (1 << i))
@@ -1357,7 +1357,7 @@ _mesa_execute_program(struct gl_context * ctx,
 
             fetch_vector4(&inst->SrcReg[0], machine, texcoord);
             /* Not so sure about this test - if texcoord[3] is
-             * zero, we'd probably be fine except for an ASSERT in
+             * zero, we'd probably be fine except for an assert in
              * IROUND_POS() which gets triggered by the inf values created.
              */
             if (texcoord[3] != 0.0) {

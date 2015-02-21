@@ -2065,7 +2065,7 @@ img_filter_2d_ewa(struct sp_sampler_view *sp_sview,
    float F = A*C-B*B/4.0f;
 
    /* check if it is an ellipse */
-   /* ASSERT(F > 0.0); */
+   /* assert(F > 0.0); */
 
    /* Compute the ellipse's (u,v) bounding box in texture space */
    float d = -B*B+4.0f*C*A;

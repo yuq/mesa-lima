@@ -1651,7 +1651,7 @@ static void r200LogicOpCode( struct gl_context *ctx, GLenum opcode )
    r200ContextPtr rmesa = R200_CONTEXT(ctx);
    GLuint rop = (GLuint)opcode - GL_CLEAR;
 
-   ASSERT( rop < 16 );
+   assert( rop < 16 );
 
    R200_STATECHANGE( rmesa, msk );
    rmesa->hw.msk.cmd[MSK_RB3D_ROPCNTL] = r200_rop_tab[rop];

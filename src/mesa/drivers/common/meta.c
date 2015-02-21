@@ -393,7 +393,7 @@ _mesa_meta_setup_vertex_objects(GLuint *VAO, GLuint *VBO,
 void
 _mesa_meta_init(struct gl_context *ctx)
 {
-   ASSERT(!ctx->Meta);
+   assert(!ctx->Meta);
 
    ctx->Meta = CALLOC_STRUCT(gl_meta_state);
 }
@@ -1045,7 +1045,7 @@ _mesa_meta_end(struct gl_context *ctx)
    if (state & MESA_META_TEXTURE) {
       GLuint u, tgt;
 
-      ASSERT(ctx->Texture.CurrentUnit == 0);
+      assert(ctx->Texture.CurrentUnit == 0);
 
       /* restore texenv for unit[0] */
       _mesa_TexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, save->EnvMode);
@@ -1332,8 +1332,8 @@ _mesa_meta_alloc_texture(struct temp_texture *tex,
 {
    GLboolean newTex = GL_FALSE;
 
-   ASSERT(width <= tex->MaxSize);
-   ASSERT(height <= tex->MaxSize);
+   assert(width <= tex->MaxSize);
+   assert(height <= tex->MaxSize);
 
    if (width > tex->Width ||
        height > tex->Height ||
@@ -1747,7 +1747,7 @@ meta_clear(struct gl_context *ctx, GLbitfield buffers, bool glsl)
          _mesa_ClampColor(GL_CLAMP_FRAGMENT_COLOR, GL_FALSE);
    }
    else {
-      ASSERT(metaSave & MESA_META_COLOR_MASK);
+      assert(metaSave & MESA_META_COLOR_MASK);
       _mesa_ColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
    }
 

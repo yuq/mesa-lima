@@ -134,8 +134,8 @@ _swrast_fog_rgba_span( const struct gl_context *ctx, SWspan *span )
    const SWcontext *swrast = CONST_SWRAST_CONTEXT(ctx);
    GLfloat rFog, gFog, bFog;
 
-   ASSERT(swrast->_FogEnabled);
-   ASSERT(span->arrayMask & SPAN_RGBA);
+   assert(swrast->_FogEnabled);
+   assert(span->arrayMask & SPAN_RGBA);
 
    /* compute (scaled) fog color */
    if (span->array->ChanType == GL_UNSIGNED_BYTE) {
@@ -174,7 +174,7 @@ _swrast_fog_rgba_span( const struct gl_context *ctx, SWspan *span )
             }
             else {
                GLfloat (*rgba)[4] = span->array->attribs[VARYING_SLOT_COL0];
-               ASSERT(span->array->ChanType == GL_FLOAT);
+               assert(span->array->ChanType == GL_FLOAT);
                FOG_LOOP(GLfloat, LINEAR_FOG);
             }
          }
@@ -193,7 +193,7 @@ _swrast_fog_rgba_span( const struct gl_context *ctx, SWspan *span )
             }
             else {
                GLfloat (*rgba)[4] = span->array->attribs[VARYING_SLOT_COL0];
-               ASSERT(span->array->ChanType == GL_FLOAT);
+               assert(span->array->ChanType == GL_FLOAT);
                FOG_LOOP(GLfloat, EXP_FOG);
             }
          }
@@ -212,7 +212,7 @@ _swrast_fog_rgba_span( const struct gl_context *ctx, SWspan *span )
             }
             else {
                GLfloat (*rgba)[4] = span->array->attribs[VARYING_SLOT_COL0];
-               ASSERT(span->array->ChanType == GL_FLOAT);
+               assert(span->array->ChanType == GL_FLOAT);
                FOG_LOOP(GLfloat, EXP2_FOG);
             }
          }
@@ -237,7 +237,7 @@ _swrast_fog_rgba_span( const struct gl_context *ctx, SWspan *span )
       }
       else {
          GLfloat (*rgba)[4] = span->array->attribs[VARYING_SLOT_COL0];
-         ASSERT(span->array->ChanType == GL_FLOAT);
+         assert(span->array->ChanType == GL_FLOAT);
          FOG_LOOP(GLfloat, BLEND_FOG);
       }
    }

@@ -356,7 +356,7 @@ update_array_format(struct gl_context *ctx,
       return false;
    }
 
-   ASSERT(size <= 4);
+   assert(size <= 4);
 
    elementSize = _mesa_bytes_per_vertex_attrib(size, type);
    assert(elementSize != -1);
@@ -714,7 +714,7 @@ _mesa_EnableVertexAttribArray(GLuint index)
 
    vao = ctx->Array.VAO;
 
-   ASSERT(VERT_ATTRIB_GENERIC(index) < Elements(vao->VertexAttrib));
+   assert(VERT_ATTRIB_GENERIC(index) < Elements(vao->VertexAttrib));
 
    if (!vao->VertexAttrib[VERT_ATTRIB_GENERIC(index)].Enabled) {
       /* was disabled, now being enabled */
@@ -740,7 +740,7 @@ _mesa_DisableVertexAttribArray(GLuint index)
 
    vao = ctx->Array.VAO;
 
-   ASSERT(VERT_ATTRIB_GENERIC(index) < Elements(vao->VertexAttrib));
+   assert(VERT_ATTRIB_GENERIC(index) < Elements(vao->VertexAttrib));
 
    if (vao->VertexAttrib[VERT_ATTRIB_GENERIC(index)].Enabled) {
       /* was enabled, now being disabled */
@@ -769,7 +769,7 @@ get_vertex_array_attrib(struct gl_context *ctx, GLuint index, GLenum pname,
       return 0;
    }
 
-   ASSERT(VERT_ATTRIB_GENERIC(index) < Elements(vao->VertexAttrib));
+   assert(VERT_ATTRIB_GENERIC(index) < Elements(vao->VertexAttrib));
 
    array = &vao->VertexAttrib[VERT_ATTRIB_GENERIC(index)];
 
@@ -834,7 +834,7 @@ get_current_attrib(struct gl_context *ctx, GLuint index, const char *function)
       return NULL;
    }
 
-   ASSERT(VERT_ATTRIB_GENERIC(index) < Elements(ctx->Array.VAO->VertexAttrib));
+   assert(VERT_ATTRIB_GENERIC(index) < Elements(ctx->Array.VAO->VertexAttrib));
 
    FLUSH_CURRENT(ctx, 0);
    return ctx->Current.Attrib[VERT_ATTRIB_GENERIC(index)];
@@ -956,7 +956,7 @@ _mesa_GetVertexAttribPointerv(GLuint index, GLenum pname, GLvoid **pointer)
       return;
    }
 
-   ASSERT(VERT_ATTRIB_GENERIC(index) < Elements(ctx->Array.VAO->VertexAttrib));
+   assert(VERT_ATTRIB_GENERIC(index) < Elements(ctx->Array.VAO->VertexAttrib));
 
    *pointer = (GLvoid *) ctx->Array.VAO->VertexAttrib[VERT_ATTRIB_GENERIC(index)].Ptr;
 }
@@ -1348,7 +1348,7 @@ _mesa_VertexAttribDivisor(GLuint index, GLuint divisor)
       return;
    }
 
-   ASSERT(genericIndex < Elements(ctx->Array.VAO->VertexAttrib));
+   assert(genericIndex < Elements(ctx->Array.VAO->VertexAttrib));
 
    /* The ARB_vertex_attrib_binding spec says:
     *
@@ -1802,7 +1802,7 @@ _mesa_VertexAttribBinding(GLuint attribIndex, GLuint bindingIndex)
       return;
    }
 
-   ASSERT(VERT_ATTRIB_GENERIC(attribIndex) <
+   assert(VERT_ATTRIB_GENERIC(attribIndex) <
           Elements(ctx->Array.VAO->VertexAttrib));
 
    vertex_attrib_binding(ctx, VERT_ATTRIB_GENERIC(attribIndex),

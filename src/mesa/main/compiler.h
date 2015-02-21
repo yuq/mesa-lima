@@ -200,16 +200,6 @@ static inline GLuint CPU_TO_LE32(GLuint x)
 #endif
 
 
-/**
- * ASSERT macro
- */
-#if defined(DEBUG)
-#  define ASSERT(X)   assert(X)
-#else
-#  define ASSERT(X)
-#endif
-
-
 /*
  * A trick to suppress uninitialized variable warning without generating any
  * code

@@ -441,7 +441,7 @@ create_xmesa_buffer(Drawable d, BufferType type,
    XMesaDisplay xmdpy = xmesa_init_display(vis->display);
    XMesaBuffer b;
 
-   ASSERT(type == WINDOW || type == PIXMAP || type == PBUFFER);
+   assert(type == WINDOW || type == PIXMAP || type == PBUFFER);
 
    if (!xmdpy)
       return NULL;
@@ -556,7 +556,7 @@ initialize_visual_and_buffer(XMesaVisual v, XMesaBuffer b,
                              GLboolean rgb_flag, Drawable window,
                              Colormap cmap)
 {
-   ASSERT(!b || b->xm_visual == v);
+   assert(!b || b->xm_visual == v);
 
    /* Save true bits/pixel */
    v->BitsPerPixel = bits_per_pixel(v);

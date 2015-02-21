@@ -103,7 +103,7 @@ _mesa_PointParameterfv( GLenum pname, const GLfloat *params)
     * If point parameters aren't supported, then this function shouldn't even
     * exist.
     */
-   ASSERT(!(ctx->Extensions.ARB_point_sprite
+   assert(!(ctx->Extensions.ARB_point_sprite
             || ctx->Extensions.NV_point_sprite)
           || ctx->Extensions.EXT_point_parameters);
 

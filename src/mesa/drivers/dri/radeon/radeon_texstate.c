@@ -995,7 +995,7 @@ static GLboolean setup_hardware_state(r100ContextPtr rmesa, radeonTexObj *t, int
    t->tile_bits = 0;
 
    if (t->base.Target == GL_TEXTURE_CUBE_MAP) {
-      ASSERT(log2Width == log2Height);
+      assert(log2Width == log2Height);
       t->pp_txformat |= ((log2Width << RADEON_TXFORMAT_F5_WIDTH_SHIFT) |
 			 (log2Height << RADEON_TXFORMAT_F5_HEIGHT_SHIFT) |
 			 /* don't think we need this bit, if it exists at all - fglrx does not set it */

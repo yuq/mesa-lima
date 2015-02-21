@@ -351,7 +351,7 @@ _swrast_validate_triangle( struct gl_context *ctx,
 
    _swrast_validate_derived( ctx );
    swrast->choose_triangle( ctx );
-   ASSERT(swrast->Triangle);
+   assert(swrast->Triangle);
 
    if (swrast->SpecularVertexAdd) {
       /* separate specular color, but no texture */
@@ -373,7 +373,7 @@ _swrast_validate_line( struct gl_context *ctx, const SWvertex *v0, const SWverte
 
    _swrast_validate_derived( ctx );
    swrast->choose_line( ctx );
-   ASSERT(swrast->Line);
+   assert(swrast->Line);
 
    if (swrast->SpecularVertexAdd) {
       swrast->SpecLine = swrast->Line;

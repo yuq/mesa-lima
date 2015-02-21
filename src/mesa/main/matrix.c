@@ -176,7 +176,7 @@ _mesa_MatrixMode( GLenum mode )
          return;
       }
 #endif
-      ASSERT(ctx->Texture.CurrentUnit < Elements(ctx->TextureMatrixStack));
+      assert(ctx->Texture.CurrentUnit < Elements(ctx->TextureMatrixStack));
       ctx->CurrentStack = &ctx->TextureMatrixStack[ctx->Texture.CurrentUnit];
       break;
    case GL_MATRIX0_ARB:

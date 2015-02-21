@@ -172,7 +172,7 @@ vbo_exec_bind_arrays( struct gl_context *ctx )
          exec->vtx.inputs[attr] = &vbo->currval[VBO_ATTRIB_POS+attr];
       }
       for (attr = 0; attr < MAT_ATTRIB_MAX; attr++) {
-         ASSERT(VERT_ATTRIB_GENERIC(attr) < Elements(exec->vtx.inputs));
+         assert(VERT_ATTRIB_GENERIC(attr) < Elements(exec->vtx.inputs));
          exec->vtx.inputs[VERT_ATTRIB_GENERIC(attr)] =
             &vbo->currval[VBO_ATTRIB_MAT_FRONT_AMBIENT+attr];
       }
@@ -183,7 +183,7 @@ vbo_exec_bind_arrays( struct gl_context *ctx )
          exec->vtx.inputs[attr] = &vbo->currval[VBO_ATTRIB_POS+attr];
       }
       for (attr = 0; attr < VERT_ATTRIB_GENERIC_MAX; attr++) {
-         ASSERT(VERT_ATTRIB_GENERIC(attr) < Elements(exec->vtx.inputs));
+         assert(VERT_ATTRIB_GENERIC(attr) < Elements(exec->vtx.inputs));
          exec->vtx.inputs[VERT_ATTRIB_GENERIC(attr)] =
             &vbo->currval[VBO_ATTRIB_GENERIC0+attr];
       }
@@ -213,8 +213,8 @@ vbo_exec_bind_arrays( struct gl_context *ctx )
 	    (GLbyte *)exec->vtx.vertex;
 
          /* override the default array set above */
-         ASSERT(attr < Elements(exec->vtx.inputs));
-         ASSERT(attr < Elements(exec->vtx.arrays)); /* arrays[] */
+         assert(attr < Elements(exec->vtx.inputs));
+         assert(attr < Elements(exec->vtx.arrays)); /* arrays[] */
          exec->vtx.inputs[attr] = &arrays[attr];
 
          if (_mesa_is_bufferobj(exec->vtx.bufferobj)) {

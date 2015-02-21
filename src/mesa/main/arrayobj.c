@@ -143,7 +143,7 @@ _mesa_reference_vao_(struct gl_context *ctx,
       struct gl_vertex_array_object *oldObj = *ptr;
 
       mtx_lock(&oldObj->Mutex);
-      ASSERT(oldObj->RefCount > 0);
+      assert(oldObj->RefCount > 0);
       oldObj->RefCount--;
 #if 0
       printf("ArrayObj %p %d DECR to %d\n",
@@ -153,13 +153,13 @@ _mesa_reference_vao_(struct gl_context *ctx,
       mtx_unlock(&oldObj->Mutex);
 
       if (deleteFlag) {
-	 ASSERT(ctx->Driver.DeleteArrayObject);
+	 assert(ctx->Driver.DeleteArrayObject);
          ctx->Driver.DeleteArrayObject(ctx, oldObj);
       }
 
       *ptr = NULL;
    }
-   ASSERT(!*ptr);
+   assert(!*ptr);
 
    if (vao) {
       /* reference new array object */
@@ -335,7 +335,7 @@ bind_vertex_array(struct gl_context *ctx, GLuint id, GLboolean genRequired)
    struct gl_vertex_array_object * const oldObj = ctx->Array.VAO;
    struct gl_vertex_array_object *newObj = NULL;
 
-   ASSERT(oldObj != NULL);
+   assert(oldObj != NULL);
 
    if ( oldObj->Name == id )
       return;   /* rebinding the same array object- no change */
@@ -456,7 +456,7 @@ _mesa_DeleteVertexArrays(GLsizei n, const GLuint *ids)
       struct gl_vertex_array_object *obj = _mesa_lookup_vao(ctx, ids[i]);
 
       if ( obj != NULL ) {
-	 ASSERT( obj->Name == ids[i] );
+	 assert( obj->Name == ids[i] );
 
 	 /* If the array object is currently bound, the spec says "the binding
 	  * for that object reverts to zero and the default vertex array
