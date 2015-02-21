@@ -69,12 +69,15 @@ private:
 
    virtual void enter_record(const glsl_type *type, const char *name,
                              bool row_major) {
+      assert(type->is_record());
       this->offset = glsl_align(
             this->offset, type->std140_base_alignment(row_major));
    }
 
    virtual void leave_record(const glsl_type *type, const char *name,
                              bool row_major) {
+      assert(type->is_record());
+
       /* If this is the last field of a structure, apply rule #9.  The
        * GL_ARB_uniform_buffer_object spec says:
        *
