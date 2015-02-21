@@ -1515,7 +1515,7 @@ store_dest_dstret(struct tgsi_exec_machine *mach,
                  enum tgsi_exec_datatype dst_datatype)
 {
    uint i;
-   union tgsi_exec_channel null;
+   static union tgsi_exec_channel null;
    union tgsi_exec_channel *dst;
    union tgsi_exec_channel index2D;
    uint execmask = mach->ExecMask;
