@@ -3108,7 +3108,7 @@ fs_visitor::emit_untyped_atomic(unsigned atomic_op, unsigned surf_index,
        */
       assert(stage == MESA_SHADER_VERTEX || stage == MESA_SHADER_COMPUTE);
       emit(MOV(component(sources[0], 7),
-               fs_reg(0xffff)))->force_writemask_all = true;
+               fs_reg(0xffffu)))->force_writemask_all = true;
    }
    length++;
 
@@ -3171,7 +3171,7 @@ fs_visitor::emit_untyped_surface_read(unsigned surf_index, fs_reg dst,
        */
       assert(stage == MESA_SHADER_VERTEX || stage == MESA_SHADER_COMPUTE);
       emit(MOV(component(sources[0], 7),
-               fs_reg(0xffff)))->force_writemask_all = true;
+               fs_reg(0xffffu)))->force_writemask_all = true;
    }
 
    /* Set the surface read offset. */
