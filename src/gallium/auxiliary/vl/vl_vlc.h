@@ -149,11 +149,7 @@ vl_vlc_fillbits(struct vl_vlc *vlc)
       } else if (bytes_left >= 4) {
 
          /* enough bytes in buffer, read in a whole dword */
-         uint64_t value = *(const uint32_t*)vlc->data;
-
-#ifndef PIPE_ARCH_BIG_ENDIAN
-         value = util_bswap32(value);
-#endif
+         uint64_t value = util_cpu_to_le32(*(const uint32_t*)vlc->data);
 
          vlc->buffer |= value << vlc->invalid_bits;
          vlc->data += 4;
