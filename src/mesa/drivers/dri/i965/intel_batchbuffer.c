@@ -390,7 +390,7 @@ intel_batchbuffer_data(struct brw_context *brw,
 {
    assert((bytes & 3) == 0);
    intel_batchbuffer_require_space(brw, bytes, ring);
-   __memcpy(brw->batch.map + brw->batch.used, data, bytes);
+   memcpy(brw->batch.map + brw->batch.used, data, bytes);
    brw->batch.used += bytes >> 2;
 }
 
