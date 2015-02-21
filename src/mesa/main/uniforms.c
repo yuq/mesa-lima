@@ -1142,6 +1142,8 @@ _mesa_GetActiveUniformBlockiv(GLuint program,
       return;
 
    case GL_UNIFORM_BLOCK_REFERENCED_BY_GEOMETRY_SHADER:
+      if (!_mesa_has_geometry_shaders(ctx))
+         break;
       params[0] = shProg->UniformBlockStageIndex[MESA_SHADER_GEOMETRY][uniformBlockIndex] != -1;
       return;
 
