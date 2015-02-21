@@ -440,7 +440,7 @@ fd4_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 				->pc_prim_vtx_cntl;
 
 		val |= COND(vp->writes_psize, A4XX_PC_PRIM_VTX_CNTL_PSIZE);
-		val |= COND(fp->total_in > 0, A4XX_PC_PRIM_VTX_CNTL_VAROUT);
+		val |= COND(fp->total_in > 0, A4XX_PC_PRIM_VTX_CNTL_VAROUT(1));
 
 		OUT_PKT0(ring, REG_A4XX_PC_PRIM_VTX_CNTL, 2);
 		OUT_RING(ring, val);

@@ -375,7 +375,7 @@ fd4_emit_tile_mem2gmem(struct fd_context *ctx, struct fd_tile *tile)
 
 	OUT_PKT0(ring, REG_A4XX_PC_PRIM_VTX_CNTL, 1);
 	OUT_RING(ring, A4XX_PC_PRIM_VTX_CNTL_PROVOKING_VTX_LAST |
-			A4XX_PC_PRIM_VTX_CNTL_VAROUT);
+			A4XX_PC_PRIM_VTX_CNTL_VAROUT(1));
 
 	OUT_PKT0(ring, REG_A4XX_VFD_INDEX_OFFSET, 2);
 	OUT_RING(ring, 0);            /* VFD_INDEX_OFFSET */

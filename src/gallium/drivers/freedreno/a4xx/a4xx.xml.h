@@ -13,8 +13,8 @@ The rules-ng-ng source files this header was generated from are:
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/a2xx.xml          (  32901 bytes, from 2014-06-02 15:21:30)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_common.xml (  10551 bytes, from 2014-11-13 22:44:30)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_pm4.xml    (  15085 bytes, from 2014-12-20 21:49:41)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/a3xx.xml          (  64344 bytes, from 2014-12-12 20:22:26)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/a4xx.xml          (  51270 bytes, from 2015-01-18 23:05:48)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/a3xx.xml          (  64848 bytes, from 2015-02-20 18:21:24)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/a4xx.xml          (  51566 bytes, from 2015-02-21 18:31:59)
 
 Copyright (C) 2013-2015 by the following authors:
 - Rob Clark <robdclark@gmail.com> (robclark)
@@ -936,6 +936,10 @@ static inline uint32_t REG_A4XX_RBBM_CLOCK_DELAY_RB_MARB_CCU_L1_REG(uint32_t i0)
 
 #define REG_A4XX_CP_IB2_BUFSZ					0x00000209
 
+#define REG_A4XX_CP_ME_NRT_ADDR					0x0000020c
+
+#define REG_A4XX_CP_ME_NRT_DATA					0x0000020d
+
 #define REG_A4XX_CP_ME_RB_DONE_DATA				0x00000217
 
 #define REG_A4XX_CP_QUEUE_THRESH2				0x00000219
@@ -946,9 +950,9 @@ static inline uint32_t REG_A4XX_RBBM_CLOCK_DELAY_RB_MARB_CCU_L1_REG(uint32_t i0)
 
 #define REG_A4XX_CP_ROQ_DATA					0x0000021d
 
-#define REG_A4XX_CP_MEQ_ADDR 					0x0000021e
+#define REG_A4XX_CP_MEQ_ADDR					0x0000021e
 
-#define REG_A4XX_CP_MEQ_DATA 					0x0000021f
+#define REG_A4XX_CP_MEQ_DATA					0x0000021f
 
 #define REG_A4XX_CP_MERCIU_ADDR					0x00000220
 
@@ -1423,6 +1427,10 @@ static inline uint32_t REG_A4XX_VSC_PIPE_DATA_LENGTH_REG(uint32_t i0) { return 0
 #define REG_A4XX_VFD_DEBUG_CONTROL				0x00000e40
 
 #define REG_A4XX_VFD_PERFCTR_VFD_SEL_7				0x00000e4a
+
+#define REG_A4XX_VGT_CL_INITIATOR				0x000021d0
+
+#define REG_A4XX_VGT_EVENT_INITIATOR				0x000021d9
 
 #define REG_A4XX_VFD_CONTROL_0					0x00002200
 #define A4XX_VFD_CONTROL_0_TOTALATTRTOVS__MASK			0x000000ff
@@ -2041,7 +2049,12 @@ static inline uint32_t A4XX_HLSQ_GS_CONTROL_REG_INSTRLENGTH(uint32_t val)
 #define REG_A4XX_PC_BIN_BASE					0x000021c0
 
 #define REG_A4XX_PC_PRIM_VTX_CNTL				0x000021c4
-#define A4XX_PC_PRIM_VTX_CNTL_VAROUT				0x00000001
+#define A4XX_PC_PRIM_VTX_CNTL_VAROUT__MASK			0x0000000f
+#define A4XX_PC_PRIM_VTX_CNTL_VAROUT__SHIFT			0
+static inline uint32_t A4XX_PC_PRIM_VTX_CNTL_VAROUT(uint32_t val)
+{
+	return ((val) << A4XX_PC_PRIM_VTX_CNTL_VAROUT__SHIFT) & A4XX_PC_PRIM_VTX_CNTL_VAROUT__MASK;
+}
 #define A4XX_PC_PRIM_VTX_CNTL_PROVOKING_VTX_LAST		0x02000000
 #define A4XX_PC_PRIM_VTX_CNTL_PSIZE				0x04000000
 
