@@ -69,7 +69,7 @@ delete_vp_variant(struct st_context *st, struct st_vp_variant *vpv)
       draw_delete_vertex_shader( st->draw, vpv->draw_shader );
       
    if (vpv->tgsi.tokens)
-      st_free_tokens(vpv->tgsi.tokens);
+      ureg_free_tokens(vpv->tgsi.tokens);
       
    free( vpv );
 }
@@ -108,7 +108,7 @@ delete_fp_variant(struct st_context *st, struct st_fp_variant *fpv)
    if (fpv->parameters)
       _mesa_free_parameter_list(fpv->parameters);
    if (fpv->tgsi.tokens)
-      st_free_tokens(fpv->tgsi.tokens);
+      ureg_free_tokens(fpv->tgsi.tokens);
    free(fpv);
 }
 
@@ -1183,7 +1183,7 @@ st_translate_geometry_program(struct st_context *st,
    gpv->driver_shader = pipe->create_gs_state(pipe, &state);
    gpv->key = *key;
 
-   st_free_tokens(state.tokens);
+   ureg_free_tokens(state.tokens);
    return gpv;
 }
 

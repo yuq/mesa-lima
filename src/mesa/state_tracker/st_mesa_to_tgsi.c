@@ -1254,14 +1254,3 @@ out:
 
    return ret;
 }
-
-
-/**
- * Tokens cannot be free with free otherwise the builtin gallium
- * malloc debugging will get confused.
- */
-void
-st_free_tokens(const struct tgsi_token *tokens)
-{
-   ureg_free_tokens(tokens);
-}
