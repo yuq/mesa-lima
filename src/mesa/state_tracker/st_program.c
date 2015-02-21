@@ -1147,51 +1147,6 @@ st_get_gp_variant(struct st_context *st,
 }
 
 
-
-
-/**
- * Debug- print current shader text
- */
-void
-st_print_shaders(struct gl_context *ctx)
-{
-   struct gl_shader_program **shProg = ctx->_Shader->CurrentProgram;
-   unsigned j;
-
-   for (j = 0; j < 3; j++) {
-      unsigned i;
-
-      if (shProg[j] == NULL)
-	 continue;
-
-      for (i = 0; i < shProg[j]->NumShaders; i++) {
-	 struct gl_shader *sh;
-
-	 switch (shProg[j]->Shaders[i]->Type) {
-	 case GL_VERTEX_SHADER:
-	    sh = (i != 0) ? NULL : shProg[j]->Shaders[i];
-	    break;
-	 case GL_GEOMETRY_SHADER_ARB:
-	    sh = (i != 1) ? NULL : shProg[j]->Shaders[i];
-	    break;
-	 case GL_FRAGMENT_SHADER:
-	    sh = (i != 2) ? NULL : shProg[j]->Shaders[i];
-	    break;
-	 default:
-	    assert(0);
-	    sh = NULL;
-	    break;
-	 }
-
-	 if (sh != NULL) {
-	    printf("GLSL shader %u of %u:\n", i, shProg[j]->NumShaders);
-	    printf("%s\n", sh->Source);
-	 }
-      }
-   }
-}
-
-
 /**
  * Vert/Geom/Frag programs have per-context variants.  Free all the
  * variants attached to the given program which match the given context.

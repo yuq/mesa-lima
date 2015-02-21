@@ -322,10 +322,6 @@ extern void
 st_release_gp_variants(struct st_context *st,
                        struct st_geometry_program *stgp);
 
-
-extern void
-st_print_shaders(struct gl_context *ctx);
-
 extern void
 st_destroy_program_variants(struct st_context *st);
 
