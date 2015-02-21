@@ -1525,6 +1525,10 @@ NVC0LoweringPass::handleRDSV(Instruction *i)
          i->op = OP_MOV;
          i->setSrc(0, bld.mkImm((sv == SV_NTID || sv == SV_NCTAID) ? 1 : 0));
       }
+      if (sv == SV_VERTEX_COUNT) {
+         bld.setPosition(i, true);
+         bld.mkOp2(OP_EXTBF, TYPE_U32, i->getDef(0), i->getDef(0), bld.mkImm(0x808));
+      }
       return true;
    }
 
