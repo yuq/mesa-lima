@@ -465,9 +465,8 @@ static void si_emit_clip_regs(struct si_context *sctx, struct r600_atom *atom)
 {
 	struct radeon_winsys_cs *cs = sctx->b.rings.gfx.cs;
 	struct tgsi_shader_info *info = si_get_vs_info(sctx);
-	struct si_shader *vs = si_get_vs_state(sctx);
 	unsigned window_space =
-	   vs->selector->info.properties[TGSI_PROPERTY_VS_WINDOW_SPACE_POSITION];
+	   info->properties[TGSI_PROPERTY_VS_WINDOW_SPACE_POSITION];
 	unsigned clipdist_mask =
 		info->writes_clipvertex ? SIX_BITS : info->clipdist_writemask;
 
