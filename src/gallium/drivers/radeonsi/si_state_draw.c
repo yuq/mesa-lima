@@ -150,9 +150,10 @@ static unsigned si_get_ia_multi_vgt_param(struct si_context *sctx,
 }
 
 /* rast_prim is the primitive type after GS. */
-static void si_emit_rasterizer_prim_state(struct si_context *sctx, unsigned rast_prim)
+static void si_emit_rasterizer_prim_state(struct si_context *sctx)
 {
 	struct radeon_winsys_cs *cs = sctx->b.rings.gfx.cs;
+	unsigned rast_prim = sctx->current_rast_prim;
 
 	if (rast_prim == sctx->last_rast_prim)
 		return;
@@ -172,15 +173,11 @@ static void si_emit_rasterizer_prim_state(struct si_context *sctx, unsigned rast
 }
 
 static void si_emit_draw_registers(struct si_context *sctx,
-				   const struct pipe_draw_info *info,
-				   const struct pipe_index_buffer *ib)
+				   const struct pipe_draw_info *info)
 {
 	struct radeon_winsys_cs *cs = sctx->b.rings.gfx.cs;
 	unsigned prim = si_conv_pipe_prim(info->mode);
-	unsigned gs_out_prim =
-		si_conv_prim_to_gs_out(sctx->gs_shader ?
-				       sctx->gs_shader->gs_output_prim :
-				       info->mode);
+	unsigned gs_out_prim = si_conv_prim_to_gs_out(sctx->current_rast_prim);
 	unsigned ia_multi_vgt_param = si_get_ia_multi_vgt_param(sctx, info);
 
 	/* Draw state. */
@@ -598,8 +595,8 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 	}
 
 	si_pm4_emit_dirty(sctx);
-	si_emit_rasterizer_prim_state(sctx, sctx->current_rast_prim);
-	si_emit_draw_registers(sctx, info, &ib);
+	si_emit_rasterizer_prim_state(sctx);
+	si_emit_draw_registers(sctx, info);
 	si_emit_draw_packets(sctx, info, &ib);
 
 #if SI_TRACE_CS
