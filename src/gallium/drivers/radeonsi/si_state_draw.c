@@ -502,12 +502,18 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 	if (!sctx->ps_shader || !sctx->vs_shader)
 		return;
 
+	si_decompress_textures(sctx);
+
+	/* Set the rasterization primitive type.
+	 *
+	 * This must be done after si_decompress_textures, which can call
+	 * draw_vbo recursively, and before si_update_shaders, which uses
+	 * current_rast_prim for this draw_vbo call. */
 	if (sctx->gs_shader)
 		sctx->current_rast_prim = sctx->gs_shader->gs_output_prim;
 	else
 		sctx->current_rast_prim = info->mode;
 
-	si_decompress_textures(sctx);
 	si_update_shaders(sctx);
 
 	if (sctx->vertex_buffers_dirty) {
