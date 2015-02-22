@@ -159,12 +159,14 @@ static void si_shader_vs(struct si_shader *shader)
 	va = shader->bo->gpu_address;
 	si_pm4_add_bo(pm4, shader->bo, RADEON_USAGE_READ, RADEON_PRIO_SHADER_DATA);
 
-	vgpr_comp_cnt = shader->uses_instanceid ? 3 : 0;
-
-	if (shader->is_gs_copy_shader)
+	if (shader->is_gs_copy_shader) {
+		vgpr_comp_cnt = 0; /* only VertexID is needed for GS-COPY. */
 		num_user_sgprs = SI_GSCOPY_NUM_USER_SGPR;
-	else
+	} else if (shader->selector->type == PIPE_SHADER_VERTEX) {
+		vgpr_comp_cnt = shader->uses_instanceid ? 3 : 0;
 		num_user_sgprs = SI_VS_NUM_USER_SGPR;
+	} else
+		assert(0);
 
 	num_sgprs = shader->num_sgprs;
 	if (num_user_sgprs > num_sgprs) {
