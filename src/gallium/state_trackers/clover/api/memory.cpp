@@ -32,13 +32,16 @@ namespace {
       CL_MEM_READ_WRITE | CL_MEM_WRITE_ONLY | CL_MEM_READ_ONLY;
    const cl_mem_flags host_ptr_flags =
       CL_MEM_USE_HOST_PTR | CL_MEM_ALLOC_HOST_PTR | CL_MEM_COPY_HOST_PTR;
+   const cl_mem_flags host_access_flags =
+      CL_MEM_HOST_WRITE_ONLY | CL_MEM_HOST_READ_ONLY | CL_MEM_HOST_NO_ACCESS;
    const cl_mem_flags all_mem_flags =
-      dev_access_flags | host_ptr_flags;
+      dev_access_flags | host_ptr_flags | host_access_flags;
 
    void
    validate_flags(cl_mem_flags flags, cl_mem_flags valid) {
       if ((flags & ~valid) ||
-          util_bitcount(flags & dev_access_flags) > 1)
+          util_bitcount(flags & dev_access_flags) > 1 ||
+          util_bitcount(flags & host_access_flags) > 1)
          throw error(CL_INVALID_VALUE);
 
       if ((flags & CL_MEM_USE_HOST_PTR) &&
@@ -78,10 +81,10 @@ clCreateSubBuffer(cl_mem d_mem, cl_mem_flags flags,
                   const void *op_info, cl_int *r_errcode) try {
    auto &parent = obj<root_buffer>(d_mem);
 
-   validate_flags(flags, dev_access_flags);
+   validate_flags(flags, dev_access_flags | host_access_flags);
 
    if (~flags & parent.flags() &
-       (dev_access_flags & ~CL_MEM_READ_WRITE))
+       ((dev_access_flags & ~CL_MEM_READ_WRITE) | host_access_flags))
       throw error(CL_INVALID_VALUE);
 
    if (op == CL_BUFFER_CREATE_TYPE_REGION) {
