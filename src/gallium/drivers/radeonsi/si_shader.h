@@ -268,14 +268,20 @@ struct si_shader {
 
 static inline struct tgsi_shader_info *si_get_vs_info(struct si_context *sctx)
 {
-	return sctx->gs_shader ? &sctx->gs_shader->info
-                               : &sctx->vs_shader->info;
+	if (sctx->gs_shader)
+		return &sctx->gs_shader->info;
+	else if (sctx->tes_shader)
+		return &sctx->tes_shader->info;
+	else
+		return &sctx->vs_shader->info;
 }
 
 static inline struct si_shader* si_get_vs_state(struct si_context *sctx)
 {
 	if (sctx->gs_shader)
 		return sctx->gs_shader->current->gs_copy_shader;
+	else if (sctx->tes_shader)
+		return sctx->tes_shader->current;
 	else
 		return sctx->vs_shader->current;
 }
