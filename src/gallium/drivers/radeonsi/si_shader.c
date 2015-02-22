@@ -328,6 +328,24 @@ static void declare_input_vs(
 	}
 }
 
+static LLVMValueRef get_primitive_id(struct lp_build_tgsi_context *bld_base,
+				     unsigned swizzle)
+{
+	struct si_shader_context *si_shader_ctx = si_shader_context(bld_base);
+
+	if (swizzle > 0)
+		return bld_base->uint_bld.zero;
+
+	switch (si_shader_ctx->type) {
+	case TGSI_PROCESSOR_GEOMETRY:
+		return LLVMGetParam(si_shader_ctx->radeon_bld.main_fn,
+				    SI_PARAM_PRIMITIVE_ID);
+	default:
+		assert(0);
+		return bld_base->uint_bld.zero;
+	}
+}
+
 static LLVMValueRef fetch_input_gs(
 	struct lp_build_tgsi_context *bld_base,
 	const struct tgsi_full_src_register *reg,
@@ -347,13 +365,8 @@ static LLVMValueRef fetch_input_gs(
 	unsigned semantic_name = info->input_semantic_name[reg->Register.Index];
 	unsigned semantic_index = info->input_semantic_index[reg->Register.Index];
 
-	if (swizzle != ~0 && semantic_name == TGSI_SEMANTIC_PRIMID) {
-		if (swizzle == 0)
-			return LLVMGetParam(si_shader_ctx->radeon_bld.main_fn,
-					    SI_PARAM_PRIMITIVE_ID);
-		else
-			return uint->zero;
-	}
+	if (swizzle != ~0 && semantic_name == TGSI_SEMANTIC_PRIMID)
+		return get_primitive_id(bld_base, swizzle);
 
 	if (!reg->Register.Dimension)
 		return NULL;
