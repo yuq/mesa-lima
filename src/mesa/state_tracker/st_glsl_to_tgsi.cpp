@@ -2409,22 +2409,34 @@ glsl_to_tgsi_visitor::visit(ir_dereference_array *ir)
    ir_constant *index;
    st_src_reg src;
    int element_size = type_size(ir->type);
-   bool is_2D_input;
+   bool is_2D = false;
 
    index = ir->array_index->constant_expression_value();
 
    ir->array->accept(this);
    src = this->result;
 
-   is_2D_input = this->prog->Target == GL_GEOMETRY_PROGRAM_NV &&
-                 src.file == PROGRAM_INPUT &&
-                 ir->array->ir_type != ir_type_dereference_array;
+   if (ir->array->ir_type != ir_type_dereference_array) {
+      switch (this->prog->Target) {
+      case GL_TESS_CONTROL_PROGRAM_NV:
+         is_2D = (src.file == PROGRAM_INPUT || src.file == PROGRAM_OUTPUT) &&
+                 !ir->variable_referenced()->data.patch;
+         break;
+      case GL_TESS_EVALUATION_PROGRAM_NV:
+         is_2D = src.file == PROGRAM_INPUT &&
+                 !ir->variable_referenced()->data.patch;
+         break;
+      case GL_GEOMETRY_PROGRAM_NV:
+         is_2D = src.file == PROGRAM_INPUT;
+         break;
+      }
+   }
 
-   if (is_2D_input)
+   if (is_2D)
       element_size = 1;
 
    if (index) {
-      if (is_2D_input) {
+      if (is_2D) {
          src.index2D = index->value.i[0];
          src.has_index2 = true;
       } else
@@ -2451,7 +2463,7 @@ glsl_to_tgsi_visitor::visit(ir_dereference_array *ir)
       /* If there was already a relative address register involved, add the
        * new and the old together to get the new offset.
        */
-      if (!is_2D_input && src.reladdr != NULL) {
+      if (!is_2D && src.reladdr != NULL) {
          st_src_reg accum_reg = get_temp(native_integers ?
                                 glsl_type::int_type : glsl_type::float_type);
 
@@ -2461,7 +2473,7 @@ glsl_to_tgsi_visitor::visit(ir_dereference_array *ir)
          index_reg = accum_reg;
       }
 
-      if (is_2D_input) {
+      if (is_2D) {
          src.reladdr2 = ralloc(mem_ctx, st_src_reg);
          memcpy(src.reladdr2, &index_reg, sizeof(index_reg));
          src.index2D = 0;
