@@ -96,6 +96,125 @@ static unsigned si_conv_prim_to_gs_out(unsigned mode)
 	return prim_conv[mode];
 }
 
+/**
+ * This calculates the LDS size for tessellation shaders (VS, TCS, TES).
+ * LS.LDS_SIZE is shared by all 3 shader stages.
+ *
+ * The information about LDS and other non-compile-time parameters is then
+ * written to userdata SGPRs.
+ */
+static void si_emit_derived_tess_state(struct si_context *sctx,
+				       const struct pipe_draw_info *info,
+				       unsigned *num_patches)
+{
+	struct radeon_winsys_cs *cs = sctx->b.rings.gfx.cs;
+	struct si_shader_selector *ls = sctx->vs_shader;
+	/* The TES pointer will only be used for sctx->last_tcs.
+	 * It would be wrong to think that TCS = TES. */
+	struct si_shader_selector *tcs =
+		sctx->tcs_shader ? sctx->tcs_shader : sctx->tes_shader;
+	unsigned tes_sh_base = sctx->shader_userdata.sh_base[PIPE_SHADER_TESS_EVAL];
+	unsigned num_tcs_input_cp = info->vertices_per_patch;
+	unsigned num_tcs_output_cp, num_tcs_inputs, num_tcs_outputs;
+	unsigned num_tcs_patch_outputs;
+	unsigned input_vertex_size, output_vertex_size, pervertex_output_patch_size;
+	unsigned input_patch_size, output_patch_size, output_patch0_offset;
+	unsigned perpatch_output_offset, lds_size, ls_rsrc2;
+	unsigned tcs_in_layout, tcs_out_layout, tcs_out_offsets;
+
+	*num_patches = 1; /* TODO: calculate this */
+
+	if (sctx->last_ls == ls->current &&
+	    sctx->last_tcs == tcs &&
+	    sctx->last_tes_sh_base == tes_sh_base &&
+	    sctx->last_num_tcs_input_cp == num_tcs_input_cp)
+		return;
+
+	sctx->last_ls = ls->current;
+	sctx->last_tcs = tcs;
+	sctx->last_tes_sh_base = tes_sh_base;
+	sctx->last_num_tcs_input_cp = num_tcs_input_cp;
+
+	/* This calculates how shader inputs and outputs among VS, TCS, and TES
+	 * are laid out in LDS. */
+	num_tcs_inputs = util_last_bit64(ls->outputs_written);
+
+	if (sctx->tcs_shader) {
+		num_tcs_outputs = util_last_bit64(tcs->outputs_written);
+		num_tcs_output_cp = tcs->info.properties[TGSI_PROPERTY_TCS_VERTICES_OUT];
+		num_tcs_patch_outputs = util_last_bit64(tcs->patch_outputs_written);
+	} else {
+		/* No TCS. Route varyings from LS to TES. */
+		num_tcs_outputs = num_tcs_inputs;
+		num_tcs_output_cp = num_tcs_input_cp;
+		num_tcs_patch_outputs = 2; /* TESSINNER + TESSOUTER */
+	}
+
+	input_vertex_size = num_tcs_inputs * 16;
+	output_vertex_size = num_tcs_outputs * 16;
+
+	input_patch_size = num_tcs_input_cp * input_vertex_size;
+
+	pervertex_output_patch_size = num_tcs_output_cp * output_vertex_size;
+	output_patch_size = pervertex_output_patch_size + num_tcs_patch_outputs * 16;
+
+	output_patch0_offset = sctx->tcs_shader ? input_patch_size * *num_patches : 0;
+	perpatch_output_offset = output_patch0_offset + pervertex_output_patch_size;
+
+	lds_size = output_patch0_offset + output_patch_size * *num_patches;
+	ls_rsrc2 = ls->current->ls_rsrc2;
+
+	if (sctx->b.chip_class >= CIK) {
+		assert(lds_size <= 65536);
+		ls_rsrc2 |= S_00B52C_LDS_SIZE(align(lds_size, 512) / 512);
+	} else {
+		assert(lds_size <= 32768);
+		ls_rsrc2 |= S_00B52C_LDS_SIZE(align(lds_size, 256) / 256);
+	}
+
+	/* Due to a hw bug, RSRC2_LS must be written twice with another
+	 * LS register written in between. */
+	if (sctx->b.chip_class == CIK && sctx->b.family != CHIP_HAWAII)
+		si_write_sh_reg(cs, R_00B52C_SPI_SHADER_PGM_RSRC2_LS, ls_rsrc2);
+	si_write_sh_reg_seq(cs, R_00B528_SPI_SHADER_PGM_RSRC1_LS, 2);
+	radeon_emit(cs, ls->current->ls_rsrc1);
+	radeon_emit(cs, ls_rsrc2);
+
+	/* Compute userdata SGPRs. */
+	assert(((input_vertex_size / 4) & ~0xff) == 0);
+	assert(((output_vertex_size / 4) & ~0xff) == 0);
+	assert(((input_patch_size / 4) & ~0x1fff) == 0);
+	assert(((output_patch_size / 4) & ~0x1fff) == 0);
+	assert(((output_patch0_offset / 16) & ~0xffff) == 0);
+	assert(((perpatch_output_offset / 16) & ~0xffff) == 0);
+	assert(num_tcs_input_cp <= 32);
+	assert(num_tcs_output_cp <= 32);
+
+	tcs_in_layout = (input_patch_size / 4) |
+			((input_vertex_size / 4) << 13);
+	tcs_out_layout = (output_patch_size / 4) |
+			 ((output_vertex_size / 4) << 13);
+	tcs_out_offsets = (output_patch0_offset / 16) |
+			  ((perpatch_output_offset / 16) << 16);
+
+	/* Set them for LS. */
+	si_write_sh_reg(cs,
+		R_00B530_SPI_SHADER_USER_DATA_LS_0 + SI_SGPR_LS_OUT_LAYOUT * 4,
+		tcs_in_layout);
+
+	/* Set them for TCS. */
+	si_write_sh_reg_seq(cs,
+		R_00B430_SPI_SHADER_USER_DATA_HS_0 + SI_SGPR_TCS_OUT_OFFSETS * 4, 3);
+	radeon_emit(cs, tcs_out_offsets);
+	radeon_emit(cs, tcs_out_layout | (num_tcs_input_cp << 26));
+	radeon_emit(cs, tcs_in_layout);
+
+	/* Set them for TES. */
+	si_write_sh_reg_seq(cs, tes_sh_base + SI_SGPR_TCS_OUT_OFFSETS * 4, 2);
+	radeon_emit(cs, tcs_out_offsets);
+	radeon_emit(cs, tcs_out_layout | (num_tcs_output_cp << 26));
+}
+
 static unsigned si_get_ia_multi_vgt_param(struct si_context *sctx,
 					  const struct pipe_draw_info *info)
 {
@@ -208,7 +327,11 @@ static void si_emit_draw_registers(struct si_context *sctx,
 	struct radeon_winsys_cs *cs = sctx->b.rings.gfx.cs;
 	unsigned prim = si_conv_pipe_prim(info->mode);
 	unsigned gs_out_prim = si_conv_prim_to_gs_out(sctx->current_rast_prim);
+	unsigned num_patches = 0;
 	unsigned ia_multi_vgt_param = si_get_ia_multi_vgt_param(sctx, info);
+
+	if (sctx->tes_shader)
+		si_emit_derived_tess_state(sctx, info, &num_patches);
 
 	/* Draw state. */
 	if (prim != sctx->last_prim ||

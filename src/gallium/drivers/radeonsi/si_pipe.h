@@ -48,7 +48,8 @@
 
 #define SI_MAX_DRAW_CS_DWORDS \
 	(/*scratch:*/ 3 + /*derived prim state:*/ 3 + \
-	 /*draw regs:*/ 16 + /*draw packets:*/ 31)
+	 /*draw regs:*/ 16 + /*draw packets:*/ 31 +\
+	 /*derived tess state:*/ 19)
 
 /* Instruction cache. */
 #define SI_CONTEXT_INV_ICACHE		(R600_CONTEXT_PRIVATE_FLAG << 0)
@@ -224,7 +225,7 @@ struct si_context {
 	bool			db_depth_disable_expclear;
 	unsigned		ps_db_shader_control;
 
-	/* Draw state. */
+	/* Emitted draw state. */
 	int			last_base_vertex;
 	int			last_start_instance;
 	int			last_sh_base_reg;
@@ -241,6 +242,12 @@ struct si_context {
 	boolean                 emit_scratch_reloc;
 	unsigned		scratch_waves;
 	unsigned		spi_tmpring_size;
+
+	/* Emitted derived tessellation state. */
+	struct si_shader	*last_ls; /* local shader (VS) */
+	struct si_shader_selector *last_tcs;
+	int			last_num_tcs_input_cp;
+	int			last_tes_sh_base;
 };
 
 /* cik_sdma.c */

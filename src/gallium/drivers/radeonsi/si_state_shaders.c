@@ -745,11 +745,15 @@ static void si_bind_tcs_shader(struct pipe_context *ctx, void *state)
 {
 	struct si_context *sctx = (struct si_context *)ctx;
 	struct si_shader_selector *sel = state;
+	bool enable_changed = !!sctx->tcs_shader != !!sel;
 
 	if (sctx->tcs_shader == sel)
 		return;
 
 	sctx->tcs_shader = sel;
+
+	if (enable_changed)
+		sctx->last_tcs = NULL; /* invalidate derived tess state */
 }
 
 static void si_bind_tes_shader(struct pipe_context *ctx, void *state)
@@ -765,8 +769,10 @@ static void si_bind_tes_shader(struct pipe_context *ctx, void *state)
 	sctx->clip_regs.dirty = true;
 	sctx->last_rast_prim = -1; /* reset this so that it gets updated */
 
-	if (enable_changed)
+	if (enable_changed) {
 		si_shader_change_notify(sctx);
+		sctx->last_tes_sh_base = -1; /* invalidate derived tess state */
+	}
 }
 
 static void si_make_dummy_ps(struct si_context *sctx)
