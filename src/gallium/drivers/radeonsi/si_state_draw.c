@@ -730,6 +730,9 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 	 * current_rast_prim for this draw_vbo call. */
 	if (sctx->gs_shader)
 		sctx->current_rast_prim = sctx->gs_shader->gs_output_prim;
+	else if (sctx->tes_shader)
+		sctx->current_rast_prim =
+			sctx->tes_shader->info.properties[TGSI_PROPERTY_TES_PRIM_MODE];
 	else
 		sctx->current_rast_prim = info->mode;
 
