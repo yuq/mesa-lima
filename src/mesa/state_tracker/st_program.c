@@ -869,11 +869,8 @@ st_translate_geometry_program(struct st_context *st,
    GLuint outputMapping[VARYING_SLOT_MAX];
    struct pipe_context *pipe = st->pipe;
    GLuint attr;
-   GLbitfield64 inputsRead;
 
    uint gs_num_inputs = 0;
-   uint gs_builtin_inputs = 0;
-   uint gs_array_offset = 0;
 
    ubyte input_semantic_name[PIPE_MAX_SHADER_INPUTS];
    ubyte input_semantic_index[PIPE_MAX_SHADER_INPUTS];
@@ -883,21 +880,15 @@ st_translate_geometry_program(struct st_context *st,
    uint gs_num_outputs = 0;
 
    GLint i;
-   GLuint maxSlot = 0;
    struct ureg_program *ureg;
    struct pipe_shader_state state = {0};
-
    struct st_gp_variant *gpv;
 
    gpv = CALLOC_STRUCT(st_gp_variant);
    if (!gpv)
       return NULL;
 
-   if (!stgp->glsl_to_tgsi) {
-      _mesa_remove_output_reads(&stgp->Base.Base, PROGRAM_OUTPUT);
-   }
-
-   ureg = ureg_create( TGSI_PROCESSOR_GEOMETRY );
+   ureg = ureg_create(TGSI_PROCESSOR_GEOMETRY);
    if (ureg == NULL) {
       free(gpv);
       return NULL;
@@ -909,24 +900,11 @@ st_translate_geometry_program(struct st_context *st,
    /*
     * Convert Mesa program inputs to TGSI input register semantics.
     */
-   inputsRead = stgp->Base.Base.InputsRead;
    for (attr = 0; attr < VARYING_SLOT_MAX; attr++) {
-      if ((inputsRead & BITFIELD64_BIT(attr)) != 0) {
-         const GLuint slot = gs_num_inputs;
-
-         gs_num_inputs++;
+      if ((stgp->Base.Base.InputsRead & BITFIELD64_BIT(attr)) != 0) {
+         const GLuint slot = gs_num_inputs++;
 
          inputMapping[attr] = slot;
-
-         if (attr != VARYING_SLOT_PRIMITIVE_ID) {
-            gs_array_offset += 2;
-         } else
-            ++gs_builtin_inputs;
-
-#if 0
-         debug_printf("input map at %d = %d\n",
-                      slot + gs_array_offset, stgp->input_map[slot + gs_array_offset]);
-#endif
 
          switch (attr) {
          case VARYING_SLOT_PRIMITIVE_ID:
@@ -1002,10 +980,8 @@ st_translate_geometry_program(struct st_context *st,
     */
    for (attr = 0; attr < VARYING_SLOT_MAX; attr++) {
       if (stgp->Base.Base.OutputsWritten & BITFIELD64_BIT(attr)) {
-         GLuint slot;
+         GLuint slot = gs_num_outputs++;
 
-         slot = gs_num_outputs;
-         gs_num_outputs++;
          outputMapping[attr] = slot;
 
          switch (attr) {
@@ -1088,86 +1064,38 @@ st_translate_geometry_program(struct st_context *st,
       }
    }
 
-   /* find max output slot referenced to compute gs_num_outputs */
-   for (attr = 0; attr < VARYING_SLOT_MAX; attr++) {
-      if (outputMapping[attr] != ~0U && outputMapping[attr] > maxSlot)
-         maxSlot = outputMapping[attr];
-   }
-   gs_num_outputs = maxSlot + 1;
-
-#if 0 /* debug */
-   {
-      GLuint i;
-      printf("outputMapping? %d\n", outputMapping ? 1 : 0);
-      if (outputMapping) {
-         printf("attr -> slot\n");
-         for (i = 0; i < 16;  i++) {
-            printf(" %2d       %3d\n", i, outputMapping[i]);
-         }
-      }
-      printf("slot    sem_name  sem_index\n");
-      for (i = 0; i < gs_num_outputs; i++) {
-         printf(" %2d         %d         %d\n",
-                i,
-                gs_output_semantic_name[i],
-                gs_output_semantic_index[i]);
-      }
-   }
-#endif
-
    ureg_property(ureg, TGSI_PROPERTY_GS_INPUT_PRIM, stgp->Base.InputType);
    ureg_property(ureg, TGSI_PROPERTY_GS_OUTPUT_PRIM, stgp->Base.OutputType);
    ureg_property(ureg, TGSI_PROPERTY_GS_MAX_OUTPUT_VERTICES,
                  stgp->Base.VerticesOut);
    ureg_property(ureg, TGSI_PROPERTY_GS_INVOCATIONS, stgp->Base.Invocations);
 
-   if (stgp->glsl_to_tgsi)
-      st_translate_program(st->ctx,
-                           TGSI_PROCESSOR_GEOMETRY,
-                           ureg,
-                           stgp->glsl_to_tgsi,
-                           &stgp->Base.Base,
-                           /* inputs */
-                           gs_num_inputs,
-                           inputMapping,
-                           input_semantic_name,
-                           input_semantic_index,
-                           NULL,
-                           NULL,
-                           /* outputs */
-                           gs_num_outputs,
-                           outputMapping,
-                           gs_output_semantic_name,
-                           gs_output_semantic_index,
-                           FALSE,
-                           FALSE);
-   else
-      st_translate_mesa_program(st->ctx,
-                                TGSI_PROCESSOR_GEOMETRY,
-                                ureg,
-                                &stgp->Base.Base,
-                                /* inputs */
-                                gs_num_inputs,
-                                inputMapping,
-                                input_semantic_name,
-                                input_semantic_index,
-                                NULL,
-                                /* outputs */
-                                gs_num_outputs,
-                                outputMapping,
-                                gs_output_semantic_name,
-                                gs_output_semantic_index,
-                                FALSE,
-                                FALSE);
+   st_translate_program(st->ctx,
+                        TGSI_PROCESSOR_GEOMETRY,
+                        ureg,
+                        stgp->glsl_to_tgsi,
+                        &stgp->Base.Base,
+                        /* inputs */
+                        gs_num_inputs,
+                        inputMapping,
+                        input_semantic_name,
+                        input_semantic_index,
+                        NULL,
+                        NULL,
+                        /* outputs */
+                        gs_num_outputs,
+                        outputMapping,
+                        gs_output_semantic_name,
+                        gs_output_semantic_index,
+                        FALSE,
+                        FALSE);
 
-   state.tokens = ureg_get_tokens( ureg, NULL );
-   ureg_destroy( ureg );
+   state.tokens = ureg_get_tokens(ureg, NULL);
+   ureg_destroy(ureg);
 
-   if (stgp->glsl_to_tgsi) {
-      st_translate_stream_output_info(stgp->glsl_to_tgsi,
-                                      outputMapping,
-                                      &state.stream_output);
-   }
+   st_translate_stream_output_info(stgp->glsl_to_tgsi,
+                                   outputMapping,
+                                   &state.stream_output);
 
    if ((ST_DEBUG & DEBUG_TGSI) && (ST_DEBUG & DEBUG_MESA)) {
       _mesa_print_program(&stgp->Base.Base);
