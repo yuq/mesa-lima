@@ -1086,7 +1086,8 @@ glsl_type::std140_base_alignment(bool row_major) const
 	  this->fields.array->is_matrix()) {
 	 return MAX2(this->fields.array->std140_base_alignment(row_major), 16);
       } else {
-	 assert(this->fields.array->is_record());
+	 assert(this->fields.array->is_record() ||
+                this->fields.array->is_array());
 	 return this->fields.array->std140_base_alignment(row_major);
       }
    }
