@@ -1032,13 +1032,13 @@ static void build_tbuffer_store(struct si_shader_context *shader,
 			   args, Elements(args));
 }
 
-static void build_streamout_store(struct si_shader_context *shader,
-				  LLVMValueRef rsrc,
-				  LLVMValueRef vdata,
-				  unsigned num_channels,
-				  LLVMValueRef vaddr,
-				  LLVMValueRef soffset,
-				  unsigned inst_offset)
+static void build_tbuffer_store_dwords(struct si_shader_context *shader,
+				     LLVMValueRef rsrc,
+				     LLVMValueRef vdata,
+				     unsigned num_channels,
+				     LLVMValueRef vaddr,
+				     LLVMValueRef soffset,
+				     unsigned inst_offset)
 {
 	static unsigned dfmt[] = {
 		V_008F0C_BUF_DATA_FORMAT_32,
@@ -1151,11 +1151,11 @@ static void si_llvm_emit_streamout(struct si_shader_context *shader,
 				break;
 			}
 
-			build_streamout_store(shader, shader->so_buffers[buf_idx],
-					      vdata, num_comps,
-					      so_write_offset[buf_idx],
-					      LLVMConstInt(i32, 0, 0),
-					      so->output[i].dst_offset*4);
+			build_tbuffer_store_dwords(shader, shader->so_buffers[buf_idx],
+						   vdata, num_comps,
+						   so_write_offset[buf_idx],
+						   LLVMConstInt(i32, 0, 0),
+						   so->output[i].dst_offset*4);
 		}
 	}
 	lp_build_endif(&if_ctx);
