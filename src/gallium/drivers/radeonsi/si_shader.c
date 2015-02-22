@@ -2354,6 +2354,27 @@ static LLVMTypeRef const_array(LLVMTypeRef elem_type, int num_elements)
 			       CONST_ADDR_SPACE);
 }
 
+static void declare_streamout_params(struct si_shader_context *si_shader_ctx,
+				     struct pipe_stream_output_info *so,
+				     LLVMTypeRef *params, LLVMTypeRef i32,
+				     unsigned *num_params)
+{
+	int i;
+
+	/* Streamout SGPRs. */
+	if (so->num_outputs) {
+		params[si_shader_ctx->param_streamout_config = (*num_params)++] = i32;
+		params[si_shader_ctx->param_streamout_write_index = (*num_params)++] = i32;
+	}
+	/* A streamout buffer offset is loaded if the stride is non-zero. */
+	for (i = 0; i < 4; i++) {
+		if (!so->stride[i])
+			continue;
+
+		params[si_shader_ctx->param_streamout_offset[i] = (*num_params)++] = i32;
+	}
+}
+
 static void create_function(struct si_shader_context *si_shader_ctx)
 {
 	struct lp_build_tgsi_context *bld_base = &si_shader_ctx->radeon_bld.soa.bld_base;
@@ -2394,19 +2415,8 @@ static void create_function(struct si_shader_context *si_shader_ctx)
 			}
 
 			/* The locations of the other parameters are assigned dynamically. */
-
-			/* Streamout SGPRs. */
-			if (shader->selector->so.num_outputs) {
-				params[si_shader_ctx->param_streamout_config = num_params++] = i32;
-				params[si_shader_ctx->param_streamout_write_index = num_params++] = i32;
-			}
-			/* A streamout buffer offset is loaded if the stride is non-zero. */
-			for (i = 0; i < 4; i++) {
-				if (!shader->selector->so.stride[i])
-					continue;
-
-				params[si_shader_ctx->param_streamout_offset[i] = num_params++] = i32;
-			}
+			declare_streamout_params(si_shader_ctx, &shader->selector->so,
+						 params, i32, &num_params);
 		}
 
 		last_sgpr = num_params-1;
