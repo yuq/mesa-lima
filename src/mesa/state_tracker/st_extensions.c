@@ -747,6 +747,11 @@ void st_init_extensions(struct pipe_screen *screen,
 #endif
    }
 
+   if (screen->get_shader_param(screen, PIPE_SHADER_TESS_CTRL,
+                                PIPE_SHADER_CAP_MAX_INSTRUCTIONS) > 0) {
+      extensions->ARB_tessellation_shader = GL_TRUE;
+   }
+
    if (screen->get_param(screen, PIPE_CAP_PRIMITIVE_RESTART)) {
       extensions->NV_primitive_restart = GL_TRUE;
    }
