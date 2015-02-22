@@ -31,6 +31,7 @@
 
 #include "util/u_index_modify.h"
 #include "util/u_upload_mgr.h"
+#include "util/u_prim.h"
 
 static void si_decompress_textures(struct si_context *sctx)
 {
@@ -216,7 +217,8 @@ static void si_emit_derived_tess_state(struct si_context *sctx,
 }
 
 static unsigned si_get_ia_multi_vgt_param(struct si_context *sctx,
-					  const struct pipe_draw_info *info)
+					  const struct pipe_draw_info *info,
+					  unsigned num_patches)
 {
 	struct si_state_rasterizer *rs = sctx->queued.named.rasterizer;
 	unsigned prim = info->mode;
@@ -225,10 +227,40 @@ static unsigned si_get_ia_multi_vgt_param(struct si_context *sctx,
 	/* SWITCH_ON_EOP(0) is always preferable. */
 	bool wd_switch_on_eop = false;
 	bool ia_switch_on_eop = false;
+	bool ia_switch_on_eoi = false;
 	bool partial_vs_wave = false;
+	bool partial_es_wave = false;
 
 	if (sctx->gs_shader)
 		primgroup_size = 64; /* recommended with a GS */
+
+	if (sctx->tes_shader) {
+		unsigned num_cp_out =
+			sctx->tcs_shader ?
+			sctx->tcs_shader->info.properties[TGSI_PROPERTY_TCS_VERTICES_OUT] :
+			info->vertices_per_patch;
+		unsigned max_size = 256 / MAX2(info->vertices_per_patch, num_cp_out);
+
+		primgroup_size = MIN2(primgroup_size, max_size);
+
+		/* primgroup_size must be set to a multiple of NUM_PATCHES */
+		primgroup_size = (primgroup_size / num_patches) * num_patches;
+
+		/* SWITCH_ON_EOI must be set if PrimID is used.
+		 * If SWITCH_ON_EOI is set, PARTIAL_ES_WAVE must be set too. */
+		if ((sctx->tcs_shader && sctx->tcs_shader->info.uses_primid) ||
+		    sctx->tes_shader->info.uses_primid) {
+			ia_switch_on_eoi = true;
+			partial_es_wave = true;
+		}
+
+		/* Bug with tessellation and GS on Bonaire and older 2 SE chips. */
+		if ((sctx->b.family == CHIP_TAHITI ||
+		     sctx->b.family == CHIP_PITCAIRN ||
+		     sctx->b.family == CHIP_BONAIRE) &&
+		    sctx->gs_shader)
+			partial_vs_wave = true;
+	}
 
 	/* This is a hardware requirement. */
 	if ((rs && rs->line_stipple_enable) ||
@@ -268,8 +300,23 @@ static unsigned si_get_ia_multi_vgt_param(struct si_context *sctx,
 		assert(wd_switch_on_eop || !ia_switch_on_eop);
 	}
 
+	/* Hw bug with single-primitive instances and SWITCH_ON_EOI
+	 * on multi-SE chips. */
+	if (sctx->b.screen->info.max_se >= 2 && ia_switch_on_eoi &&
+	    (info->indirect ||
+	     (info->instance_count > 1 &&
+	      u_prims_for_vertices(info->mode, info->count) <= 1)))
+		sctx->b.flags |= SI_CONTEXT_VGT_FLUSH;
+
+	/* Instancing bug on 2 SE chips. */
+	if (sctx->b.screen->info.max_se == 2 && ia_switch_on_eoi &&
+	    (info->indirect || info->instance_count > 1))
+		partial_vs_wave = true;
+
 	return S_028AA8_SWITCH_ON_EOP(ia_switch_on_eop) |
+		S_028AA8_SWITCH_ON_EOI(ia_switch_on_eoi) |
 		S_028AA8_PARTIAL_VS_WAVE_ON(partial_vs_wave) |
+		S_028AA8_PARTIAL_ES_WAVE_ON(partial_es_wave) |
 		S_028AA8_PRIMGROUP_SIZE(primgroup_size - 1) |
 		S_028AA8_WD_SWITCH_ON_EOP(sctx->b.chip_class >= CIK ? wd_switch_on_eop : 0);
 }
@@ -327,11 +374,12 @@ static void si_emit_draw_registers(struct si_context *sctx,
 	struct radeon_winsys_cs *cs = sctx->b.rings.gfx.cs;
 	unsigned prim = si_conv_pipe_prim(info->mode);
 	unsigned gs_out_prim = si_conv_prim_to_gs_out(sctx->current_rast_prim);
-	unsigned num_patches = 0;
-	unsigned ia_multi_vgt_param = si_get_ia_multi_vgt_param(sctx, info);
+	unsigned ia_multi_vgt_param, num_patches = 0;
 
 	if (sctx->tes_shader)
 		si_emit_derived_tess_state(sctx, info, &num_patches);
+
+	ia_multi_vgt_param = si_get_ia_multi_vgt_param(sctx, info, num_patches);
 
 	/* Draw state. */
 	if (prim != sctx->last_prim ||
