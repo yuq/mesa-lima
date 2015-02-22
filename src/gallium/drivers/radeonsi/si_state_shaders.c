@@ -1115,6 +1115,40 @@ static void si_update_spi_tmpring_size(struct si_context *sctx)
 				S_0286E8_WAVESIZE(scratch_bytes_per_wave >> 10);
 }
 
+static void si_init_tess_factor_ring(struct si_context *sctx)
+{
+	assert(!sctx->tf_state);
+	sctx->tf_state = CALLOC_STRUCT(si_pm4_state);
+
+	sctx->tf_ring = pipe_buffer_create(sctx->b.b.screen, PIPE_BIND_CUSTOM,
+					   PIPE_USAGE_DEFAULT,
+					   32768 * sctx->screen->b.info.max_se);
+	sctx->b.clear_buffer(&sctx->b.b, sctx->tf_ring, 0,
+			     sctx->tf_ring->width0, fui(0), false);
+	assert(((sctx->tf_ring->width0 / 4) & C_030938_SIZE) == 0);
+
+	if (sctx->b.chip_class >= CIK) {
+		si_pm4_set_reg(sctx->tf_state, R_030938_VGT_TF_RING_SIZE,
+			       S_030938_SIZE(sctx->tf_ring->width0 / 4));
+		si_pm4_set_reg(sctx->tf_state, R_030940_VGT_TF_MEMORY_BASE,
+			       r600_resource(sctx->tf_ring)->gpu_address >> 8);
+	} else {
+		si_pm4_set_reg(sctx->tf_state, R_008988_VGT_TF_RING_SIZE,
+			       S_008988_SIZE(sctx->tf_ring->width0 / 4));
+		si_pm4_set_reg(sctx->tf_state, R_0089B8_VGT_TF_MEMORY_BASE,
+			       r600_resource(sctx->tf_ring)->gpu_address >> 8);
+	}
+	si_pm4_add_bo(sctx->tf_state, r600_resource(sctx->tf_ring),
+		      RADEON_USAGE_READWRITE, RADEON_PRIO_SHADER_RESOURCE_RW);
+	si_pm4_bind_state(sctx, tf_ring, sctx->tf_state);
+
+	si_set_ring_buffer(&sctx->b.b, PIPE_SHADER_TESS_CTRL,
+			   SI_RING_TESS_FACTOR, sctx->tf_ring, 0,
+			   sctx->tf_ring->width0, false, false, 0, 0);
+
+	sctx->b.flags |= SI_CONTEXT_VGT_FLUSH;
+}
+
 static void si_update_vgt_shader_config(struct si_context *sctx)
 {
 	/* Calculate the index of the config.
@@ -1157,6 +1191,9 @@ void si_update_shaders(struct si_context *sctx)
 
 	/* Update stages before GS. */
 	if (sctx->tes_shader) {
+		if (!sctx->tf_state)
+			si_init_tess_factor_ring(sctx);
+
 		/* VS as LS */
 		si_shader_select(ctx, sctx->vs_shader);
 		si_pm4_bind_state(sctx, ls, sctx->vs_shader->current->pm4);

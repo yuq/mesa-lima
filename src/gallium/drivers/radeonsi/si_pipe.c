@@ -42,6 +42,7 @@ static void si_destroy_context(struct pipe_context *context)
 
 	pipe_resource_reference(&sctx->esgs_ring, NULL);
 	pipe_resource_reference(&sctx->gsvs_ring, NULL);
+	pipe_resource_reference(&sctx->tf_ring, NULL);
 	pipe_resource_reference(&sctx->null_const_buf.buffer, NULL);
 	r600_resource_reference(&sctx->border_color_table, NULL);
 	r600_resource_reference(&sctx->scratch_buffer, NULL);
@@ -49,6 +50,7 @@ static void si_destroy_context(struct pipe_context *context)
 
 	si_pm4_free_state(sctx, sctx->init_config, ~0);
 	si_pm4_delete_state(sctx, gs_rings, sctx->gs_rings);
+	si_pm4_delete_state(sctx, tf_ring, sctx->tf_state);
 	for (i = 0; i < Elements(sctx->vgt_shader_config); i++)
 		si_pm4_delete_state(sctx, vgt_shader_config, sctx->vgt_shader_config[i]);
 
