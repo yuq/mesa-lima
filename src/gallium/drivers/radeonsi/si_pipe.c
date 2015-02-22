@@ -293,8 +293,10 @@ static int si_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 	case PIPE_CAP_CONDITIONAL_RENDER_INVERTED:
 	case PIPE_CAP_SAMPLER_VIEW_TARGET:
 	case PIPE_CAP_VERTEXID_NOBASE:
-	case PIPE_CAP_MAX_SHADER_PATCH_VARYINGS:
 		return 0;
+
+	case PIPE_CAP_MAX_SHADER_PATCH_VARYINGS:
+		return 30;
 
 	case PIPE_CAP_TEXTURE_BORDER_COLOR_QUIRK:
 		return PIPE_QUIRK_TEXTURE_BORDER_COLOR_SWIZZLE_R600;
@@ -375,6 +377,13 @@ static int si_get_shader_param(struct pipe_screen* pscreen, unsigned shader, enu
 	case PIPE_SHADER_VERTEX:
 	case PIPE_SHADER_GEOMETRY:
 		break;
+	case PIPE_SHADER_TESS_CTRL:
+	case PIPE_SHADER_TESS_EVAL:
+		/* LLVM 3.6.2 is required for tessellation because of bug fixes there */
+		if (HAVE_LLVM < 0x0306 ||
+		    (HAVE_LLVM == 0x0306 && MESA_LLVM_VERSION_PATCH < 2))
+			return 0;
+		break;
 	case PIPE_SHADER_COMPUTE:
 		switch (param) {
 		case PIPE_SHADER_CAP_PREFERRED_IR:
@@ -401,7 +410,6 @@ static int si_get_shader_param(struct pipe_screen* pscreen, unsigned shader, enu
 		}
 		break;
 	default:
-		/* TODO: support tessellation */
 		return 0;
 	}
 
@@ -433,7 +441,7 @@ static int si_get_shader_param(struct pipe_screen* pscreen, unsigned shader, enu
 		/* Indirection of geometry shader input dimension is not
 		 * handled yet
 		 */
-		return shader < PIPE_SHADER_GEOMETRY;
+		return shader != PIPE_SHADER_GEOMETRY;
 	case PIPE_SHADER_CAP_INDIRECT_OUTPUT_ADDR:
 	case PIPE_SHADER_CAP_INDIRECT_TEMP_ADDR:
 	case PIPE_SHADER_CAP_INDIRECT_CONST_ADDR:
