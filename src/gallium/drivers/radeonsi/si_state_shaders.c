@@ -356,21 +356,25 @@ static INLINE void si_shader_selector_key(struct pipe_context *ctx,
 					  union si_shader_key *key)
 {
 	struct si_context *sctx = (struct si_context *)ctx;
+	unsigned i;
+
 	memset(key, 0, sizeof(*key));
 
-	if (sel->type == PIPE_SHADER_VERTEX) {
-		unsigned i;
-		if (!sctx->vertex_elements)
-			return;
-
-		for (i = 0; i < sctx->vertex_elements->count; ++i)
-			key->vs.instance_divisors[i] = sctx->vertex_elements->elements[i].instance_divisor;
+	switch (sel->type) {
+	case PIPE_SHADER_VERTEX:
+		if (sctx->vertex_elements)
+			for (i = 0; i < sctx->vertex_elements->count; ++i)
+				key->vs.instance_divisors[i] =
+					sctx->vertex_elements->elements[i].instance_divisor;
 
 		if (sctx->gs_shader) {
 			key->vs.as_es = 1;
 			key->vs.gs_used_inputs = sctx->gs_shader->gs_used_inputs;
 		}
-	} else if (sel->type == PIPE_SHADER_FRAGMENT) {
+		break;
+	case PIPE_SHADER_GEOMETRY:
+		break;
+	case PIPE_SHADER_FRAGMENT: {
 		struct si_state_rasterizer *rs = sctx->queued.named.rasterizer;
 
 		if (sel->info.properties[TGSI_PROPERTY_FS_COLOR0_WRITES_ALL_CBUFS])
@@ -398,11 +402,14 @@ static INLINE void si_shader_selector_key(struct pipe_context *ctx,
 		}
 
 		key->ps.alpha_func = PIPE_FUNC_ALWAYS;
-
 		/* Alpha-test should be disabled if colorbuffer 0 is integer. */
 		if (sctx->queued.named.dsa &&
 		    !sctx->framebuffer.cb0_is_integer)
 			key->ps.alpha_func = sctx->queued.named.dsa->alpha_func;
+		break;
+	}
+	default:
+		assert(0);
 	}
 }
 
