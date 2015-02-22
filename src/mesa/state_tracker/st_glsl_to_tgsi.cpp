@@ -2243,7 +2243,10 @@ is_inout_array(unsigned stage, ir_variable *var, bool *is_2d)
 
    *is_2d = false;
 
-   if (stage == MESA_SHADER_GEOMETRY && var->data.mode == ir_var_shader_in) {
+   if (((stage == MESA_SHADER_GEOMETRY && var->data.mode == ir_var_shader_in) ||
+        (stage == MESA_SHADER_TESS_EVAL && var->data.mode == ir_var_shader_in) ||
+        stage == MESA_SHADER_TESS_CTRL) &&
+       !var->data.patch) {
       if (!var->type->is_array())
          return false; /* a system value probably */
 
@@ -2355,7 +2358,8 @@ glsl_to_tgsi_visitor::visit(ir_dereference_variable *ir)
 
 static void
 shrink_array_declarations(struct array_decl *arrays, unsigned count,
-                          GLbitfield64 usage_mask)
+                          GLbitfield64 usage_mask,
+                          GLbitfield patch_usage_mask)
 {
    unsigned i, j;
 
@@ -2367,8 +2371,15 @@ shrink_array_declarations(struct array_decl *arrays, unsigned count,
 
       /* Shrink the beginning. */
       for (j = 0; j < decl->array_size; j++) {
-         if (usage_mask & BITFIELD64_BIT(decl->mesa_index+j))
-            break;
+         if (decl->mesa_index >= VARYING_SLOT_PATCH0) {
+            if (patch_usage_mask &
+                BITFIELD64_BIT(decl->mesa_index - VARYING_SLOT_PATCH0 + j))
+               break;
+         }
+         else {
+            if (usage_mask & BITFIELD64_BIT(decl->mesa_index+j))
+               break;
+         }
 
          decl->mesa_index++;
          decl->array_size--;
@@ -2377,8 +2388,15 @@ shrink_array_declarations(struct array_decl *arrays, unsigned count,
 
       /* Shrink the end. */
       for (j = decl->array_size-1; j >= 0; j--) {
-         if (usage_mask & BITFIELD64_BIT(decl->mesa_index+j))
-            break;
+         if (decl->mesa_index >= VARYING_SLOT_PATCH0) {
+            if (patch_usage_mask &
+                BITFIELD64_BIT(decl->mesa_index - VARYING_SLOT_PATCH0 + j))
+               break;
+         }
+         else {
+            if (usage_mask & BITFIELD64_BIT(decl->mesa_index+j))
+               break;
+         }
 
          decl->array_size--;
       }
@@ -3553,7 +3571,7 @@ glsl_to_tgsi_visitor::simplify_cmp(void)
 {
    int tempWritesSize = 0;
    unsigned *tempWrites = NULL;
-   unsigned outputWrites[MAX_PROGRAM_OUTPUTS];
+   unsigned outputWrites[VARYING_SLOT_TESS_MAX];
 
    memset(outputWrites, 0, sizeof(outputWrites));
 
@@ -3573,7 +3591,7 @@ glsl_to_tgsi_visitor::simplify_cmp(void)
       }
 
       if (inst->dst[0].file == PROGRAM_OUTPUT) {
-         assert(inst->dst[0].index < MAX_PROGRAM_OUTPUTS);
+         assert(inst->dst[0].index < (signed)ARRAY_SIZE(outputWrites));
          prevWriteMask = outputWrites[inst->dst[0].index];
          outputWrites[inst->dst[0].index] |= inst->dst[0].writemask;
       } else if (inst->dst[0].file == PROGRAM_TEMPORARY) {
@@ -4527,6 +4545,14 @@ const unsigned _mesa_sysval_to_semantic[SYSTEM_VALUE_MAX] = {
    TGSI_SEMANTIC_SAMPLEID,
    TGSI_SEMANTIC_SAMPLEPOS,
    TGSI_SEMANTIC_SAMPLEMASK,
+
+   /* Tessellation shaders
+    */
+   TGSI_SEMANTIC_TESSCOORD,
+   TGSI_SEMANTIC_VERTICESIN,
+   TGSI_SEMANTIC_PRIMID,
+   TGSI_SEMANTIC_TESSOUTER,
+   TGSI_SEMANTIC_TESSINNER,
 };
 
 /**
@@ -4651,6 +4677,9 @@ dst_register(struct st_translate *t, gl_register_file file, unsigned index,
       if (!array_id) {
          if (t->procType == TGSI_PROCESSOR_FRAGMENT)
             assert(index < FRAG_RESULT_MAX);
+         else if (t->procType == TGSI_PROCESSOR_TESS_CTRL ||
+                  t->procType == TGSI_PROCESSOR_TESS_EVAL)
+            assert(index < VARYING_SLOT_TESS_MAX);
          else
             assert(index < VARYING_SLOT_MAX);
 
@@ -5271,6 +5300,8 @@ st_translate_program(
           TGSI_SEMANTIC_VERTEXID_NOBASE);
    assert(_mesa_sysval_to_semantic[SYSTEM_VALUE_BASE_VERTEX] ==
           TGSI_SEMANTIC_BASEVERTEX);
+   assert(_mesa_sysval_to_semantic[SYSTEM_VALUE_TESS_COORD] ==
+          TGSI_SEMANTIC_TESSCOORD);
 
    t = CALLOC_STRUCT(st_translate);
    if (!t) {
@@ -5313,6 +5344,8 @@ st_translate_program(
       }
       break;
    case TGSI_PROCESSOR_GEOMETRY:
+   case TGSI_PROCESSOR_TESS_EVAL:
+   case TGSI_PROCESSOR_TESS_CTRL:
       for (i = 0; i < numInputs; i++) {
          unsigned array_id = 0;
          unsigned array_size;
@@ -5347,6 +5380,8 @@ st_translate_program(
    case TGSI_PROCESSOR_FRAGMENT:
       break;
    case TGSI_PROCESSOR_GEOMETRY:
+   case TGSI_PROCESSOR_TESS_EVAL:
+   case TGSI_PROCESSOR_TESS_CTRL:
    case TGSI_PROCESSOR_VERTEX:
       for (i = 0; i < numOutputs; i++) {
          unsigned array_id = 0;
@@ -5750,9 +5785,9 @@ get_mesa_program(struct gl_context *ctx,
 
    do_set_program_inouts(shader->ir, prog, shader->Stage);
    shrink_array_declarations(v->input_arrays, v->num_input_arrays,
-                             prog->InputsRead);
+                             prog->InputsRead, prog->PatchInputsRead);
    shrink_array_declarations(v->output_arrays, v->num_output_arrays,
-                             prog->OutputsWritten);
+                             prog->OutputsWritten, prog->PatchOutputsWritten);
    count_resources(v, prog);
 
    /* This must be done before the uniform storage is associated. */
@@ -5781,6 +5816,8 @@ get_mesa_program(struct gl_context *ctx,
    struct st_vertex_program *stvp;
    struct st_fragment_program *stfp;
    struct st_geometry_program *stgp;
+   struct st_tessctrl_program *sttcp;
+   struct st_tesseval_program *sttep;
 
    switch (shader->Type) {
    case GL_VERTEX_SHADER:
@@ -5794,6 +5831,14 @@ get_mesa_program(struct gl_context *ctx,
    case GL_GEOMETRY_SHADER:
       stgp = (struct st_geometry_program *)prog;
       stgp->glsl_to_tgsi = v;
+      break;
+   case GL_TESS_CONTROL_SHADER:
+      sttcp = (struct st_tessctrl_program *)prog;
+      sttcp->glsl_to_tgsi = v;
+      break;
+   case GL_TESS_EVALUATION_SHADER:
+      sttep = (struct st_tesseval_program *)prog;
+      sttep->glsl_to_tgsi = v;
       break;
    default:
       assert(!"should not be reached");
