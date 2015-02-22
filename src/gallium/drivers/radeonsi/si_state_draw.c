@@ -718,8 +718,14 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 	    (info->indexed || !info->count_from_stream_output))
 		return;
 
-	if (!sctx->ps_shader || !sctx->vs_shader)
+	if (!sctx->ps_shader || !sctx->vs_shader) {
+		assert(0);
 		return;
+	}
+	if (!!sctx->tes_shader != (info->mode == PIPE_PRIM_PATCHES)) {
+		assert(0);
+		return;
+	}
 
 	si_decompress_textures(sctx);
 
