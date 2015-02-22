@@ -142,8 +142,9 @@ struct si_shader_data {
  * Ring buffers:        0..1
  * Streamout buffers:   2..5
  */
-#define SI_RING_ESGS		0
-#define SI_RING_GSVS		1
+#define SI_RING_TESS_FACTOR	0 /* for HS (TCS)  */
+#define SI_RING_ESGS		0 /* for ES, GS */
+#define SI_RING_GSVS		1 /* for GS, VS */
 #define SI_NUM_RING_BUFFERS	2
 #define SI_SO_BUF_OFFSET	SI_NUM_RING_BUFFERS
 #define SI_NUM_RW_BUFFERS	(SI_SO_BUF_OFFSET + 4)

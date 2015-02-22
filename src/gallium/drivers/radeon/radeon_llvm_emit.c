@@ -62,6 +62,8 @@ void radeon_llvm_shader_type(LLVMValueRef F, unsigned type)
 
 	switch (type) {
 	case TGSI_PROCESSOR_VERTEX:
+	case TGSI_PROCESSOR_TESS_CTRL:
+	case TGSI_PROCESSOR_TESS_EVAL:
 		llvm_type = RADEON_LLVM_SHADER_VS;
 		break;
 	case TGSI_PROCESSOR_GEOMETRY:

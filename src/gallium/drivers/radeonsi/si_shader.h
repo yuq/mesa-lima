@@ -26,6 +26,46 @@
  *      Christian König <christian.koenig@amd.com>
  */
 
+/* How linking tessellation shader inputs and outputs works.
+ *
+ * Inputs and outputs between shaders are stored in a buffer. This buffer
+ * lives in LDS (typical case for tessellation), but it can also live
+ * in memory. Each input or output has a fixed location within a vertex.
+ * The highest used input or output determines the stride between vertices.
+ *
+ * Since tessellation is only enabled in the OpenGL core profile,
+ * only these semantics are valid for per-vertex data:
+ *
+ *   Name             Location
+ *
+ *   POSITION         0
+ *   PSIZE            1
+ *   CLIPDIST0..1     2..3
+ *   CULLDIST0..1     (not implemented)
+ *   GENERIC0..31     4..35
+ *
+ * For example, a shader only writing GENERIC0 has the output stride of 5.
+ *
+ * Only these semantics are valid for per-patch data:
+ *
+ *   Name             Location
+ *
+ *   TESSOUTER        0
+ *   TESSINNER        1
+ *   PATCH0..29       2..31
+ *
+ * That's how independent shaders agree on input and output locations.
+ * The si_shader_io_get_unique_index function assigns the locations.
+ *
+ * Other required information for calculating the input and output addresses
+ * like the vertex stride, the patch stride, and the offsets where per-vertex
+ * and per-patch data start, is passed to the shader via user data SGPRs.
+ * The offsets and strides are calculated at draw time and aren't available
+ * at compile time.
+ *
+ * The same approach should be used for linking ES->GS in the future.
+ */
+
 #ifndef SI_SHADER_H
 #define SI_SHADER_H
 
@@ -43,9 +83,16 @@ struct radeon_shader_reloc;
 #define SI_SGPR_VERTEX_BUFFER	8  /* VS only */
 #define SI_SGPR_BASE_VERTEX	10 /* VS only */
 #define SI_SGPR_START_INSTANCE	11 /* VS only */
+#define SI_SGPR_LS_OUT_LAYOUT	12 /* VS(LS) only */
+#define SI_SGPR_TCS_OUT_OFFSETS	8  /* TCS & TES only */
+#define SI_SGPR_TCS_OUT_LAYOUT	9  /* TCS & TES only */
+#define SI_SGPR_TCS_IN_LAYOUT	10 /* TCS only */
 #define SI_SGPR_ALPHA_REF	8  /* PS only */
 
 #define SI_VS_NUM_USER_SGPR	12
+#define SI_LS_NUM_USER_SGPR	13
+#define SI_TCS_NUM_USER_SGPR	11
+#define SI_TES_NUM_USER_SGPR	10
 #define SI_GS_NUM_USER_SGPR	8
 #define SI_GSCOPY_NUM_USER_SGPR	4
 #define SI_PS_NUM_USER_SGPR	9
@@ -61,6 +108,31 @@ struct radeon_shader_reloc;
 #define SI_PARAM_BASE_VERTEX	5
 #define SI_PARAM_START_INSTANCE	6
 /* the other VS parameters are assigned dynamically */
+
+/* Offsets where TCS outputs and TCS patch outputs live in LDS:
+ *   [0:15] = TCS output patch0 offset / 16, max = NUM_PATCHES * 32 * 32
+ *   [16:31] = TCS output patch0 offset for per-patch / 16, max = NUM_PATCHES*32*32* + 32*32
+ */
+#define SI_PARAM_TCS_OUT_OFFSETS 4 /* for TCS & TES */
+
+/* Layout of TCS outputs / TES inputs:
+ *   [0:12] = stride between output patches in dwords, num_outputs * num_vertices * 4, max = 32*32*4
+ *   [13:20] = stride between output vertices in dwords = num_inputs * 4, max = 32*4
+ *   [26:31] = gl_PatchVerticesIn, max = 32
+ */
+#define SI_PARAM_TCS_OUT_LAYOUT	5 /* for TCS & TES */
+
+/* Layout of LS outputs / TCS inputs
+ *   [0:12] = stride between patches in dwords = num_inputs * num_vertices * 4, max = 32*32*4
+ *   [13:20] = stride between vertices in dwords = num_inputs * 4, max = 32*4
+ */
+#define SI_PARAM_TCS_IN_LAYOUT	6 /* TCS only */
+#define SI_PARAM_LS_OUT_LAYOUT	7 /* same value as TCS_IN_LAYOUT, LS only */
+
+/* TCS only parameters. */
+#define SI_PARAM_TESS_FACTOR_OFFSET 7
+#define SI_PARAM_PATCH_ID	8
+#define SI_PARAM_REL_IDS	9
 
 /* GS only parameters */
 #define SI_PARAM_GS2VS_OFFSET	4
@@ -113,8 +185,23 @@ struct si_shader_selector {
 	unsigned	gs_output_prim;
 	unsigned	gs_max_out_vertices;
 	unsigned	gs_num_invocations;
-	uint64_t	gs_used_inputs; /* mask of "get_unique_index" bits */
+
+	/* masks of "get_unique_index" bits */
+	uint64_t	inputs_read;
+	uint64_t	outputs_written;
+	uint32_t	patch_outputs_written;
 };
+
+/* Valid shader configurations:
+ *
+ * API shaders       VS | TCS | TES | GS |pass| PS
+ * are compiled as:     |     |     |    |thru|
+ *                      |     |     |    |    |
+ * Only VS & PS:     VS | --  | --  | -- | -- | PS
+ * With GS:          ES | --  | --  | GS | VS | PS
+ * With Tessel.:     LS | HS  | VS  | -- | -- | PS
+ * With both:        LS | HS  | ES  | GS | VS | PS
+ */
 
 union si_shader_key {
 	struct {
@@ -128,11 +215,23 @@ union si_shader_key {
 	} ps;
 	struct {
 		unsigned	instance_divisors[SI_NUM_VERTEX_BUFFERS];
-		/* The mask of "get_unique_index" bits, needed for ES,
-		 * it describes how the ES->GS ring buffer is laid out. */
-		uint64_t	gs_used_inputs;
-		unsigned	as_es:1;
+		/* Mask of "get_unique_index" bits - which outputs are read
+		 * by the next stage (needed by ES).
+		 * This describes how outputs are laid out in memory. */
+		uint64_t	es_enabled_outputs;
+		unsigned	as_es:1; /* export shader */
+		unsigned	as_ls:1; /* local shader */
 	} vs;
+	struct {
+		unsigned	prim_mode:3;
+	} tcs; /* tessellation control shader */
+	struct {
+		/* Mask of "get_unique_index" bits - which outputs are read
+		 * by the next stage (needed by ES).
+		 * This describes how outputs are laid out in memory. */
+		uint64_t	es_enabled_outputs;
+		unsigned	as_es:1; /* export shader */
+	} tes; /* tessellation evaluation shader */
 };
 
 struct si_shader {
