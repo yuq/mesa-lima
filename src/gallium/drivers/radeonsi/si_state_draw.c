@@ -321,6 +321,24 @@ static unsigned si_get_ia_multi_vgt_param(struct si_context *sctx,
 		S_028AA8_WD_SWITCH_ON_EOP(sctx->b.chip_class >= CIK ? wd_switch_on_eop : 0);
 }
 
+static unsigned si_get_ls_hs_config(struct si_context *sctx,
+				    const struct pipe_draw_info *info,
+				    unsigned num_patches)
+{
+	unsigned num_output_cp;
+
+	if (!sctx->tes_shader)
+		return 0;
+
+	num_output_cp = sctx->tcs_shader ?
+		sctx->tcs_shader->info.properties[TGSI_PROPERTY_TCS_VERTICES_OUT] :
+		info->vertices_per_patch;
+
+	return S_028B58_NUM_PATCHES(num_patches) |
+		S_028B58_HS_NUM_INPUT_CP(info->vertices_per_patch) |
+		S_028B58_HS_NUM_OUTPUT_CP(num_output_cp);
+}
+
 static void si_emit_scratch_reloc(struct si_context *sctx)
 {
 	struct radeon_winsys_cs *cs = sctx->b.rings.gfx.cs;
@@ -374,27 +392,31 @@ static void si_emit_draw_registers(struct si_context *sctx,
 	struct radeon_winsys_cs *cs = sctx->b.rings.gfx.cs;
 	unsigned prim = si_conv_pipe_prim(info->mode);
 	unsigned gs_out_prim = si_conv_prim_to_gs_out(sctx->current_rast_prim);
-	unsigned ia_multi_vgt_param, num_patches = 0;
+	unsigned ia_multi_vgt_param, ls_hs_config, num_patches = 0;
 
 	if (sctx->tes_shader)
 		si_emit_derived_tess_state(sctx, info, &num_patches);
 
 	ia_multi_vgt_param = si_get_ia_multi_vgt_param(sctx, info, num_patches);
+	ls_hs_config = si_get_ls_hs_config(sctx, info, num_patches);
 
 	/* Draw state. */
 	if (prim != sctx->last_prim ||
-	    ia_multi_vgt_param != sctx->last_multi_vgt_param) {
+	    ia_multi_vgt_param != sctx->last_multi_vgt_param ||
+	    ls_hs_config != sctx->last_ls_hs_config) {
 		if (sctx->b.chip_class >= CIK) {
 			radeon_emit(cs, PKT3(PKT3_DRAW_PREAMBLE, 2, 0));
 			radeon_emit(cs, prim); /* VGT_PRIMITIVE_TYPE */
 			radeon_emit(cs, ia_multi_vgt_param); /* IA_MULTI_VGT_PARAM */
-			radeon_emit(cs, 0); /* VGT_LS_HS_CONFIG */
+			radeon_emit(cs, ls_hs_config); /* VGT_LS_HS_CONFIG */
 		} else {
 			r600_write_config_reg(cs, R_008958_VGT_PRIMITIVE_TYPE, prim);
 			r600_write_context_reg(cs, R_028AA8_IA_MULTI_VGT_PARAM, ia_multi_vgt_param);
+			r600_write_context_reg(cs, R_028B58_VGT_LS_HS_CONFIG, ls_hs_config);
 		}
 		sctx->last_prim = prim;
 		sctx->last_multi_vgt_param = ia_multi_vgt_param;
+		sctx->last_ls_hs_config = ls_hs_config;
 	}
 
 	if (gs_out_prim != sctx->last_gs_out_prim) {

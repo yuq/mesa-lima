@@ -48,7 +48,7 @@
 
 #define SI_MAX_DRAW_CS_DWORDS \
 	(/*scratch:*/ 3 + /*derived prim state:*/ 3 + \
-	 /*draw regs:*/ 16 + /*draw packets:*/ 31 +\
+	 /*draw regs:*/ 18 + /*draw packets:*/ 31 +\
 	 /*derived tess state:*/ 19)
 
 /* Instruction cache. */
@@ -234,6 +234,7 @@ struct si_context {
 	int			last_gs_out_prim;
 	int			last_prim;
 	int			last_multi_vgt_param;
+	int			last_ls_hs_config;
 	int			last_rast_prim;
 	unsigned		last_sc_line_stipple;
 	int			current_rast_prim; /* primitive type after TES, GS */
