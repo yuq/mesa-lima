@@ -264,6 +264,9 @@ struct si_shader {
 	unsigned		nr_param_exports;
 	bool			is_gs_copy_shader;
 	bool			dx10_clamp_mode; /* convert NaNs to 0 */
+
+	unsigned		ls_rsrc1;
+	unsigned		ls_rsrc2;
 };
 
 static inline struct tgsi_shader_info *si_get_vs_info(struct si_context *sctx)

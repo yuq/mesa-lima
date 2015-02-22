@@ -33,6 +33,129 @@
 #include "util/u_memory.h"
 #include "util/u_simple_shaders.h"
 
+static void si_set_tesseval_regs(struct si_shader *shader,
+				 struct si_pm4_state *pm4)
+{
+	struct tgsi_shader_info *info = &shader->selector->info;
+	unsigned tes_prim_mode = info->properties[TGSI_PROPERTY_TES_PRIM_MODE];
+	unsigned tes_spacing = info->properties[TGSI_PROPERTY_TES_SPACING];
+	bool tes_vertex_order_cw = info->properties[TGSI_PROPERTY_TES_VERTEX_ORDER_CW];
+	bool tes_point_mode = info->properties[TGSI_PROPERTY_TES_POINT_MODE];
+	unsigned type, partitioning, topology;
+
+	switch (tes_prim_mode) {
+	case PIPE_PRIM_LINES:
+		type = V_028B6C_TESS_ISOLINE;
+		break;
+	case PIPE_PRIM_TRIANGLES:
+		type = V_028B6C_TESS_TRIANGLE;
+		break;
+	case PIPE_PRIM_QUADS:
+		type = V_028B6C_TESS_QUAD;
+		break;
+	default:
+		assert(0);
+		return;
+	}
+
+	switch (tes_spacing) {
+	case PIPE_TESS_SPACING_FRACTIONAL_ODD:
+		partitioning = V_028B6C_PART_FRAC_ODD;
+		break;
+	case PIPE_TESS_SPACING_FRACTIONAL_EVEN:
+		partitioning = V_028B6C_PART_FRAC_EVEN;
+		break;
+	case PIPE_TESS_SPACING_EQUAL:
+		partitioning = V_028B6C_PART_INTEGER;
+		break;
+	default:
+		assert(0);
+		return;
+	}
+
+	if (tes_point_mode)
+		topology = V_028B6C_OUTPUT_POINT;
+	else if (tes_prim_mode == PIPE_PRIM_LINES)
+		topology = V_028B6C_OUTPUT_LINE;
+	else if (tes_vertex_order_cw)
+		/* for some reason, this must be the other way around */
+		topology = V_028B6C_OUTPUT_TRIANGLE_CCW;
+	else
+		topology = V_028B6C_OUTPUT_TRIANGLE_CW;
+
+	si_pm4_set_reg(pm4, R_028B6C_VGT_TF_PARAM,
+		       S_028B6C_TYPE(type) |
+		       S_028B6C_PARTITIONING(partitioning) |
+		       S_028B6C_TOPOLOGY(topology));
+}
+
+static void si_shader_ls(struct si_shader *shader)
+{
+	struct si_pm4_state *pm4;
+	unsigned num_sgprs, num_user_sgprs;
+	unsigned vgpr_comp_cnt;
+	uint64_t va;
+
+	pm4 = shader->pm4 = CALLOC_STRUCT(si_pm4_state);
+	if (pm4 == NULL)
+		return;
+
+	va = shader->bo->gpu_address;
+	si_pm4_add_bo(pm4, shader->bo, RADEON_USAGE_READ, RADEON_PRIO_SHADER_DATA);
+
+	/* We need at least 2 components for LS.
+	 * VGPR0-3: (VertexID, RelAutoindex, ???, InstanceID). */
+	vgpr_comp_cnt = shader->uses_instanceid ? 3 : 1;
+
+	num_user_sgprs = SI_LS_NUM_USER_SGPR;
+	num_sgprs = shader->num_sgprs;
+	if (num_user_sgprs > num_sgprs) {
+		/* Last 2 reserved SGPRs are used for VCC */
+		num_sgprs = num_user_sgprs + 2;
+	}
+	assert(num_sgprs <= 104);
+
+	si_pm4_set_reg(pm4, R_00B520_SPI_SHADER_PGM_LO_LS, va >> 8);
+	si_pm4_set_reg(pm4, R_00B524_SPI_SHADER_PGM_HI_LS, va >> 40);
+
+	shader->ls_rsrc1 = S_00B528_VGPRS((shader->num_vgprs - 1) / 4) |
+			   S_00B528_SGPRS((num_sgprs - 1) / 8) |
+		           S_00B528_VGPR_COMP_CNT(vgpr_comp_cnt);
+	shader->ls_rsrc2 = S_00B52C_USER_SGPR(num_user_sgprs);
+}
+
+static void si_shader_hs(struct si_shader *shader)
+{
+	struct si_pm4_state *pm4;
+	unsigned num_sgprs, num_user_sgprs;
+	uint64_t va;
+
+	pm4 = shader->pm4 = CALLOC_STRUCT(si_pm4_state);
+	if (pm4 == NULL)
+		return;
+
+	va = shader->bo->gpu_address;
+	si_pm4_add_bo(pm4, shader->bo, RADEON_USAGE_READ, RADEON_PRIO_SHADER_DATA);
+
+	num_user_sgprs = SI_TCS_NUM_USER_SGPR;
+	num_sgprs = shader->num_sgprs;
+	/* One SGPR after user SGPRs is pre-loaded with tessellation factor
+	 * buffer offset. */
+	if ((num_user_sgprs + 1) > num_sgprs) {
+		/* Last 2 reserved SGPRs are used for VCC */
+		num_sgprs = num_user_sgprs + 1 + 2;
+	}
+	assert(num_sgprs <= 104);
+
+	si_pm4_set_reg(pm4, R_00B420_SPI_SHADER_PGM_LO_HS, va >> 8);
+	si_pm4_set_reg(pm4, R_00B424_SPI_SHADER_PGM_HI_HS, va >> 40);
+	si_pm4_set_reg(pm4, R_00B428_SPI_SHADER_PGM_RSRC1_HS,
+		       S_00B428_VGPRS((shader->num_vgprs - 1) / 4) |
+		       S_00B428_SGPRS((num_sgprs - 1) / 8));
+	si_pm4_set_reg(pm4, R_00B42C_SPI_SHADER_PGM_RSRC2_HS,
+		       S_00B42C_USER_SGPR(num_user_sgprs));
+}
+
 static void si_shader_es(struct si_shader *shader)
 {
 	struct si_pm4_state *pm4;
@@ -48,9 +171,15 @@ static void si_shader_es(struct si_shader *shader)
 	va = shader->bo->gpu_address;
 	si_pm4_add_bo(pm4, shader->bo, RADEON_USAGE_READ, RADEON_PRIO_SHADER_DATA);
 
-	vgpr_comp_cnt = shader->uses_instanceid ? 3 : 0;
+	if (shader->selector->type == PIPE_SHADER_VERTEX) {
+		vgpr_comp_cnt = shader->uses_instanceid ? 3 : 0;
+		num_user_sgprs = SI_VS_NUM_USER_SGPR;
+	} else if (shader->selector->type == PIPE_SHADER_TESS_EVAL) {
+		vgpr_comp_cnt = 3; /* all components are needed for TES */
+		num_user_sgprs = SI_TES_NUM_USER_SGPR;
+	} else
+		assert(0);
 
-	num_user_sgprs = SI_VS_NUM_USER_SGPR;
 	num_sgprs = shader->num_sgprs;
 	/* One SGPR after user SGPRs is pre-loaded with es2gs_offset */
 	if ((num_user_sgprs + 1) > num_sgprs) {
@@ -69,6 +198,9 @@ static void si_shader_es(struct si_shader *shader)
 	si_pm4_set_reg(pm4, R_00B32C_SPI_SHADER_PGM_RSRC2_ES,
 		       S_00B32C_USER_SGPR(num_user_sgprs) |
 		       S_00B32C_SCRATCH_EN(shader->scratch_bytes_per_wave > 0));
+
+	if (shader->selector->type == PIPE_SHADER_TESS_EVAL)
+		si_set_tesseval_regs(shader, pm4);
 }
 
 static void si_shader_gs(struct si_shader *shader)
@@ -169,6 +301,9 @@ static void si_shader_vs(struct si_shader *shader)
 	} else if (shader->selector->type == PIPE_SHADER_VERTEX) {
 		vgpr_comp_cnt = shader->uses_instanceid ? 3 : 0;
 		num_user_sgprs = SI_VS_NUM_USER_SGPR;
+	} else if (shader->selector->type == PIPE_SHADER_TESS_EVAL) {
+		vgpr_comp_cnt = 3; /* all components are needed for TES */
+		num_user_sgprs = SI_TES_NUM_USER_SGPR;
 	} else
 		assert(0);
 
@@ -220,6 +355,9 @@ static void si_shader_vs(struct si_shader *shader)
 			       S_028818_VPORT_X_SCALE_ENA(1) | S_028818_VPORT_X_OFFSET_ENA(1) |
 			       S_028818_VPORT_Y_SCALE_ENA(1) | S_028818_VPORT_Y_OFFSET_ENA(1) |
 			       S_028818_VPORT_Z_SCALE_ENA(1) | S_028818_VPORT_Z_OFFSET_ENA(1));
+
+	if (shader->selector->type == PIPE_SHADER_TESS_EVAL)
+		si_set_tesseval_regs(shader, pm4);
 }
 
 static void si_shader_ps(struct si_shader *shader)
@@ -317,7 +455,18 @@ static void si_shader_init_pm4_state(struct si_shader *shader)
 
 	switch (shader->selector->type) {
 	case PIPE_SHADER_VERTEX:
-		if (shader->key.vs.as_es)
+		if (shader->key.vs.as_ls)
+			si_shader_ls(shader);
+		else if (shader->key.vs.as_es)
+			si_shader_es(shader);
+		else
+			si_shader_vs(shader);
+		break;
+	case PIPE_SHADER_TESS_CTRL:
+		si_shader_hs(shader);
+		break;
+	case PIPE_SHADER_TESS_EVAL:
+		if (shader->key.tes.as_es)
 			si_shader_es(shader);
 		else
 			si_shader_vs(shader);
@@ -657,7 +806,18 @@ static void si_delete_shader_selector(struct pipe_context *ctx,
 		c = p->next_variant;
 		switch (sel->type) {
 		case PIPE_SHADER_VERTEX:
-			if (p->key.vs.as_es)
+			if (p->key.vs.as_ls)
+				si_pm4_delete_state(sctx, ls, p->pm4);
+			else if (p->key.vs.as_es)
+				si_pm4_delete_state(sctx, es, p->pm4);
+			else
+				si_pm4_delete_state(sctx, vs, p->pm4);
+			break;
+		case PIPE_SHADER_TESS_CTRL:
+			si_pm4_delete_state(sctx, hs, p->pm4);
+			break;
+		case PIPE_SHADER_TESS_EVAL:
+			if (p->key.tes.as_es)
 				si_pm4_delete_state(sctx, es, p->pm4);
 			else
 				si_pm4_delete_state(sctx, vs, p->pm4);
@@ -995,15 +1155,45 @@ void si_update_shaders(struct si_context *sctx)
 	struct pipe_context *ctx = (struct pipe_context*)sctx;
 	struct si_state_rasterizer *rs = sctx->queued.named.rasterizer;
 
+	/* Update stages before GS. */
+	if (sctx->tes_shader) {
+		/* VS as LS */
+		si_shader_select(ctx, sctx->vs_shader);
+		si_pm4_bind_state(sctx, ls, sctx->vs_shader->current->pm4);
+
+		if (sctx->tcs_shader) {
+			si_shader_select(ctx, sctx->tcs_shader);
+			si_pm4_bind_state(sctx, hs, sctx->tcs_shader->current->pm4);
+		} else {
+			assert(!"generate TCS shader");
+		}
+
+		si_shader_select(ctx, sctx->tes_shader);
+		if (sctx->gs_shader) {
+			/* TES as ES */
+			si_pm4_bind_state(sctx, es, sctx->tes_shader->current->pm4);
+		} else {
+			/* TES as VS */
+			si_pm4_bind_state(sctx, vs, sctx->tes_shader->current->pm4);
+			sctx->b.streamout.stride_in_dw = sctx->tes_shader->so.stride;
+		}
+	} else if (sctx->gs_shader) {
+		/* VS as ES */
+		si_shader_select(ctx, sctx->vs_shader);
+		si_pm4_bind_state(sctx, es, sctx->vs_shader->current->pm4);
+	} else {
+		/* VS as VS */
+		si_shader_select(ctx, sctx->vs_shader);
+		si_pm4_bind_state(sctx, vs, sctx->vs_shader->current->pm4);
+		sctx->b.streamout.stride_in_dw = sctx->vs_shader->so.stride;
+	}
+
+	/* Update GS. */
 	if (sctx->gs_shader) {
 		si_shader_select(ctx, sctx->gs_shader);
 		si_pm4_bind_state(sctx, gs, sctx->gs_shader->current->pm4);
 		si_pm4_bind_state(sctx, vs, sctx->gs_shader->current->gs_copy_shader->pm4);
-
 		sctx->b.streamout.stride_in_dw = sctx->gs_shader->so.stride;
-
-		si_shader_select(ctx, sctx->vs_shader);
-		si_pm4_bind_state(sctx, es, sctx->vs_shader->current->pm4);
 
 		if (!sctx->gs_rings)
 			si_init_gs_rings(sctx);
@@ -1017,11 +1207,6 @@ void si_update_shaders(struct si_context *sctx)
 				   sctx->gs_shader->info.num_outputs * 16,
 				   64, true, true, 4, 16);
 	} else {
-		si_shader_select(ctx, sctx->vs_shader);
-		si_pm4_bind_state(sctx, vs, sctx->vs_shader->current->pm4);
-
-		sctx->b.streamout.stride_in_dw = sctx->vs_shader->so.stride;
-
 		si_pm4_bind_state(sctx, gs_rings, NULL);
 		si_pm4_bind_state(sctx, gs, NULL);
 		si_pm4_bind_state(sctx, es, NULL);

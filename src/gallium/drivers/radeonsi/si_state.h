@@ -102,6 +102,8 @@ union si_state {
 		struct si_pm4_state		*fb_blend;
 		struct si_pm4_state		*dsa_stencil_ref;
 		struct si_pm4_state		*ta_bordercolor_base;
+		struct si_pm4_state		*ls;
+		struct si_pm4_state		*hs;
 		struct si_pm4_state		*es;
 		struct si_pm4_state		*gs;
 		struct si_pm4_state		*gs_rings;
