@@ -51,11 +51,13 @@ namespace {
 }
 
 CLOVER_API cl_mem
-clCreateBuffer(cl_context d_ctx, cl_mem_flags flags, size_t size,
+clCreateBuffer(cl_context d_ctx, cl_mem_flags d_flags, size_t size,
                void *host_ptr, cl_int *r_errcode) try {
+   const cl_mem_flags flags = d_flags |
+      (d_flags & dev_access_flags ? 0 : CL_MEM_READ_WRITE);
    auto &ctx = obj(d_ctx);
 
-   validate_flags(flags, all_mem_flags);
+   validate_flags(d_flags, all_mem_flags);
 
    if (bool(host_ptr) != bool(flags & (CL_MEM_USE_HOST_PTR |
                                        CL_MEM_COPY_HOST_PTR)))
@@ -76,12 +78,16 @@ clCreateBuffer(cl_context d_ctx, cl_mem_flags flags, size_t size,
 }
 
 CLOVER_API cl_mem
-clCreateSubBuffer(cl_mem d_mem, cl_mem_flags flags,
+clCreateSubBuffer(cl_mem d_mem, cl_mem_flags d_flags,
                   cl_buffer_create_type op,
                   const void *op_info, cl_int *r_errcode) try {
    auto &parent = obj<root_buffer>(d_mem);
+   const cl_mem_flags flags = d_flags |
+      (d_flags & dev_access_flags ? 0 : parent.flags() & dev_access_flags) |
+      (d_flags & host_access_flags ? 0 : parent.flags() & host_access_flags) |
+      (parent.flags() & host_ptr_flags);
 
-   validate_flags(flags, dev_access_flags | host_access_flags);
+   validate_flags(d_flags, dev_access_flags | host_access_flags);
 
    if (~flags & parent.flags() &
        ((dev_access_flags & ~CL_MEM_READ_WRITE) | host_access_flags))
@@ -111,13 +117,15 @@ clCreateSubBuffer(cl_mem d_mem, cl_mem_flags flags,
 }
 
 CLOVER_API cl_mem
-clCreateImage2D(cl_context d_ctx, cl_mem_flags flags,
+clCreateImage2D(cl_context d_ctx, cl_mem_flags d_flags,
                 const cl_image_format *format,
                 size_t width, size_t height, size_t row_pitch,
                 void *host_ptr, cl_int *r_errcode) try {
+   const cl_mem_flags flags = d_flags |
+      (d_flags & dev_access_flags ? 0 : CL_MEM_READ_WRITE);
    auto &ctx = obj(d_ctx);
 
-   validate_flags(flags, all_mem_flags);
+   validate_flags(d_flags, all_mem_flags);
 
    if (!any_of(std::mem_fn(&device::image_support), ctx.devices()))
       throw error(CL_INVALID_OPERATION);
@@ -145,14 +153,16 @@ clCreateImage2D(cl_context d_ctx, cl_mem_flags flags,
 }
 
 CLOVER_API cl_mem
-clCreateImage3D(cl_context d_ctx, cl_mem_flags flags,
+clCreateImage3D(cl_context d_ctx, cl_mem_flags d_flags,
                 const cl_image_format *format,
                 size_t width, size_t height, size_t depth,
                 size_t row_pitch, size_t slice_pitch,
                 void *host_ptr, cl_int *r_errcode) try {
+   const cl_mem_flags flags = d_flags |
+      (d_flags & dev_access_flags ? 0 : CL_MEM_READ_WRITE);
    auto &ctx = obj(d_ctx);
 
-   validate_flags(flags, all_mem_flags);
+   validate_flags(d_flags, all_mem_flags);
 
    if (!any_of(std::mem_fn(&device::image_support), ctx.devices()))
       throw error(CL_INVALID_OPERATION);
