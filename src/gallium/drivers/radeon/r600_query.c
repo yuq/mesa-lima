@@ -200,11 +200,6 @@ static void r600_emit_query_begin(struct r600_common_context *ctx, struct r600_q
 		radeon_emit(cs, 0);
 		break;
 	case PIPE_QUERY_PIPELINE_STATISTICS:
-		if (!ctx->num_pipelinestat_queries) {
-			radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 0, 0));
-			radeon_emit(cs, EVENT_TYPE(EVENT_TYPE_PIPELINESTAT_START) | EVENT_INDEX(0));
-		}
-		ctx->num_pipelinestat_queries++;
 		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 2, 0));
 		radeon_emit(cs, EVENT_TYPE(EVENT_TYPE_SAMPLE_PIPELINESTAT) | EVENT_INDEX(2));
 		radeon_emit(cs, va);
@@ -265,12 +260,6 @@ static void r600_emit_query_end(struct r600_common_context *ctx, struct r600_que
 		radeon_emit(cs, 0);
 		break;
 	case PIPE_QUERY_PIPELINE_STATISTICS:
-		assert(ctx->num_pipelinestat_queries > 0);
-		ctx->num_pipelinestat_queries--;
-		if (!ctx->num_pipelinestat_queries) {
-			radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 0, 0));
-			radeon_emit(cs, EVENT_TYPE(EVENT_TYPE_PIPELINESTAT_STOP) | EVENT_INDEX(0));
-		}
 		va += query->buffer.results_end + query->result_size/2;
 		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 2, 0));
 		radeon_emit(cs, EVENT_TYPE(EVENT_TYPE_SAMPLE_PIPELINESTAT) | EVENT_INDEX(2));
@@ -380,7 +369,7 @@ static struct pipe_query *r600_create_query(struct pipe_context *ctx, unsigned q
 	case PIPE_QUERY_PIPELINE_STATISTICS:
 		/* 11 values on EG, 8 on R600. */
 		query->result_size = (rctx->chip_class >= EVERGREEN ? 11 : 8) * 16;
-		query->num_cs_dw = 8;
+		query->num_cs_dw = 6;
 		break;
 	/* Non-GPU queries and queries not requiring a buffer. */
 	case PIPE_QUERY_TIMESTAMP_DISJOINT:
