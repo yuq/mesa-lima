@@ -1769,6 +1769,12 @@ static void r600_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info 
 					(info.count_from_stream_output ? S_0287F0_USE_OPAQUE(1) : 0);
 	}
 
+	/* ES ring rolling over at EOP - workaround */
+	if (rctx->b.chip_class == R600) {
+		cs->buf[cs->cdw++] = PKT3(PKT3_EVENT_WRITE, 0, 0);
+		cs->buf[cs->cdw++] = EVENT_TYPE(EVENT_TYPE_SQ_NON_EVENT);
+	}
+
 	if (rctx->screen->b.trace_bo) {
 		r600_trace_emit(rctx);
 	}
