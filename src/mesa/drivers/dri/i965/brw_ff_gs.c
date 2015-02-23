@@ -147,8 +147,9 @@ static void compile_ff_gs_prog(struct brw_context *brw,
    ralloc_free(mem_ctx);
 }
 
-static void populate_key(struct brw_context *brw,
-                         struct brw_ff_gs_prog_key *key)
+static void
+brw_ff_gs_populate_key(struct brw_context *brw,
+                       struct brw_ff_gs_prog_key *key)
 {
    static const unsigned swizzle_for_offset[4] = {
       BRW_SWIZZLE4(0, 1, 2, 3),
@@ -235,7 +236,7 @@ brw_upload_ff_gs_prog(struct brw_context *brw)
 
    /* Populate the key:
     */
-   populate_key(brw, &key);
+   brw_ff_gs_populate_key(brw, &key);
 
    if (brw->ff_gs.prog_active != key.need_gs_prog) {
       brw->ctx.NewDriverState |= BRW_NEW_FF_GS_PROG_DATA;

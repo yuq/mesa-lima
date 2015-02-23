@@ -401,6 +401,55 @@ brw_setup_vue_key_clip_info(struct brw_context *brw,
    }
 }
 
+static void
+brw_vs_populate_key(struct brw_context *brw,
+                    struct brw_vs_prog_key *key)
+{
+   struct gl_context *ctx = &brw->ctx;
+   /* BRW_NEW_VERTEX_PROGRAM */
+   struct brw_vertex_program *vp =
+      (struct brw_vertex_program *)brw->vertex_program;
+   struct gl_program *prog = (struct gl_program *) brw->vertex_program;
+   int i;
+
+   memset(key, 0, sizeof(*key));
+
+   /* Just upload the program verbatim for now.  Always send it all
+    * the inputs it asks for, whether they are varying or not.
+    */
+   key->base.program_string_id = vp->id;
+   brw_setup_vue_key_clip_info(brw, &key->base,
+                               vp->program.Base.UsesClipDistanceOut);
+
+   /* _NEW_POLYGON */
+   if (brw->gen < 6) {
+      key->copy_edgeflag = (ctx->Polygon.FrontMode != GL_FILL ||
+                            ctx->Polygon.BackMode != GL_FILL);
+   }
+
+   if (prog->OutputsWritten & (VARYING_BIT_COL0 | VARYING_BIT_COL1 |
+                               VARYING_BIT_BFC0 | VARYING_BIT_BFC1)) {
+      /* _NEW_LIGHT | _NEW_BUFFERS */
+      key->clamp_vertex_color = ctx->Light._ClampVertexColor;
+   }
+
+   /* _NEW_POINT */
+   if (brw->gen < 6 && ctx->Point.PointSprite) {
+      for (i = 0; i < 8; i++) {
+	 if (ctx->Point.CoordReplace[i])
+            key->point_coord_replace |= (1 << i);
+      }
+   }
+
+   /* _NEW_TEXTURE */
+   brw_populate_sampler_prog_key_data(ctx, prog, brw->vs.base.sampler_count,
+                                      &key->base.tex);
+
+   /* BRW_NEW_VS_ATTRIB_WORKAROUNDS */
+   memcpy(key->gl_attrib_wa_flags, brw->vb.attrib_wa_flags,
+          sizeof(brw->vb.attrib_wa_flags));
+}
+
 void
 brw_upload_vs_prog(struct brw_context *brw)
 {
@@ -409,8 +458,6 @@ brw_upload_vs_prog(struct brw_context *brw)
    /* BRW_NEW_VERTEX_PROGRAM */
    struct brw_vertex_program *vp =
       (struct brw_vertex_program *)brw->vertex_program;
-   struct gl_program *prog = (struct gl_program *) brw->vertex_program;
-   int i;
 
    if (!brw_state_dirty(brw,
                         _NEW_BUFFERS |
@@ -423,42 +470,7 @@ brw_upload_vs_prog(struct brw_context *brw)
                         BRW_NEW_VS_ATTRIB_WORKAROUNDS))
       return;
 
-   memset(&key, 0, sizeof(key));
-
-   /* Just upload the program verbatim for now.  Always send it all
-    * the inputs it asks for, whether they are varying or not.
-    */
-   key.base.program_string_id = vp->id;
-   brw_setup_vue_key_clip_info(brw, &key.base,
-                               vp->program.Base.UsesClipDistanceOut);
-
-   /* _NEW_POLYGON */
-   if (brw->gen < 6) {
-      key.copy_edgeflag = (ctx->Polygon.FrontMode != GL_FILL ||
-                           ctx->Polygon.BackMode != GL_FILL);
-   }
-
-   if (prog->OutputsWritten & (VARYING_BIT_COL0 | VARYING_BIT_COL1 |
-                               VARYING_BIT_BFC0 | VARYING_BIT_BFC1)) {
-      /* _NEW_LIGHT | _NEW_BUFFERS */
-      key.clamp_vertex_color = ctx->Light._ClampVertexColor;
-   }
-
-   /* _NEW_POINT */
-   if (brw->gen < 6 && ctx->Point.PointSprite) {
-      for (i = 0; i < 8; i++) {
-	 if (ctx->Point.CoordReplace[i])
-	    key.point_coord_replace |= (1 << i);
-      }
-   }
-
-   /* _NEW_TEXTURE */
-   brw_populate_sampler_prog_key_data(ctx, prog, brw->vs.base.sampler_count,
-                                      &key.base.tex);
-
-   /* BRW_NEW_VS_ATTRIB_WORKAROUNDS */
-   memcpy(key.gl_attrib_wa_flags, brw->vb.attrib_wa_flags,
-          sizeof(brw->vb.attrib_wa_flags));
+   brw_vs_populate_key(brw, &key);
 
    if (!brw_search_cache(&brw->cache, BRW_CACHE_VS_PROG,
 			 &key, sizeof(key),

@@ -288,6 +288,30 @@ do_gs_prog(struct brw_context *brw,
    return true;
 }
 
+static void
+brw_gs_populate_key(struct brw_context *brw,
+                    struct brw_gs_prog_key *key)
+{
+   struct gl_context *ctx = &brw->ctx;
+   struct brw_stage_state *stage_state = &brw->gs.base;
+   struct brw_geometry_program *gp =
+      (struct brw_geometry_program *) brw->geometry_program;
+   struct gl_program *prog = &gp->program.Base;
+
+   memset(key, 0, sizeof(*key));
+
+   key->base.program_string_id = gp->id;
+   brw_setup_vue_key_clip_info(brw, &key->base,
+                               gp->program.Base.UsesClipDistanceOut);
+
+   /* _NEW_TEXTURE */
+   brw_populate_sampler_prog_key_data(ctx, prog, stage_state->sampler_count,
+                                      &key->base.tex);
+
+   /* BRW_NEW_VUE_MAP_VS */
+   key->input_varyings = brw->vue_map_vs.slots_valid;
+}
+
 void
 brw_upload_gs_prog(struct brw_context *brw)
 {
@@ -327,20 +351,7 @@ brw_upload_gs_prog(struct brw_context *brw)
       return;
    }
 
-   struct gl_program *prog = &gp->program.Base;
-
-   memset(&key, 0, sizeof(key));
-
-   key.base.program_string_id = gp->id;
-   brw_setup_vue_key_clip_info(brw, &key.base,
-                               gp->program.Base.UsesClipDistanceOut);
-
-   /* _NEW_TEXTURE */
-   brw_populate_sampler_prog_key_data(ctx, prog, stage_state->sampler_count,
-                                      &key.base.tex);
-
-   /* BRW_NEW_VUE_MAP_VS */
-   key.input_varyings = brw->vue_map_vs.slots_valid;
+   brw_gs_populate_key(brw, &key);
 
    if (!brw_search_cache(&brw->cache, BRW_CACHE_GS_PROG,
                          &key, sizeof(key),
