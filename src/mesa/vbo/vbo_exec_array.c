@@ -181,8 +181,7 @@ vbo_get_minmax_index(struct gl_context *ctx,
       break;
    }
    default:
-      assert(0);
-      break;
+      unreachable("not reached");
    }
 
    if (_mesa_is_bufferobj(ib->obj)) {
