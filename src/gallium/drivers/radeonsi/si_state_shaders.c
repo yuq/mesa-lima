@@ -661,7 +661,7 @@ bcolor:
 			}
 		}
 
-		if (j == vsinfo->num_outputs & !G_028644_PT_SPRITE_TEX(tmp)) {
+		if (j == vsinfo->num_outputs && !G_028644_PT_SPRITE_TEX(tmp)) {
 			/* No corresponding output found, load defaults into input.
 			 * Don't set any other bits.
 			 * (FLAT_SHADE=1 completely changes behavior) */
