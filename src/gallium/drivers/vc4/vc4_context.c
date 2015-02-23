@@ -363,17 +363,17 @@ vc4_flush(struct pipe_context *pctx)
         struct drm_vc4_submit_cl submit;
         memset(&submit, 0, sizeof(submit));
 
-        submit.bo_handles = vc4->bo_handles.base;
+        submit.bo_handles = (uintptr_t)vc4->bo_handles.base;
         submit.bo_handle_count = (vc4->bo_handles.next -
                                   vc4->bo_handles.base) / 4;
-        submit.bin_cl = vc4->bcl.base;
+        submit.bin_cl = (uintptr_t)vc4->bcl.base;
         submit.bin_cl_size = vc4->bcl.next - vc4->bcl.base;
-        submit.render_cl = vc4->rcl.base;
+        submit.render_cl = (uintptr_t)vc4->rcl.base;
         submit.render_cl_size = vc4->rcl.next - vc4->rcl.base;
-        submit.shader_rec = vc4->shader_rec.base;
+        submit.shader_rec = (uintptr_t)vc4->shader_rec.base;
         submit.shader_rec_size = vc4->shader_rec.next - vc4->shader_rec.base;
         submit.shader_rec_count = vc4->shader_rec_count;
-        submit.uniforms = vc4->uniforms.base;
+        submit.uniforms = (uintptr_t)vc4->uniforms.base;
         submit.uniforms_size = vc4->uniforms.next - vc4->uniforms.base;
 
         if (!(vc4_debug & VC4_DEBUG_NORAST)) {
