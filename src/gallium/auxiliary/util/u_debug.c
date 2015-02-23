@@ -722,36 +722,21 @@ error1:
 void
 debug_print_transfer_flags(const char *msg, unsigned usage)
 {
-#define FLAG(x)  { x, #x }
-   static const struct {
-      unsigned bit;
-      const char *name;
-   } flags[] = {
-      FLAG(PIPE_TRANSFER_READ),
-      FLAG(PIPE_TRANSFER_WRITE),
-      FLAG(PIPE_TRANSFER_MAP_DIRECTLY),
-      FLAG(PIPE_TRANSFER_DISCARD_RANGE),
-      FLAG(PIPE_TRANSFER_DONTBLOCK),
-      FLAG(PIPE_TRANSFER_UNSYNCHRONIZED),
-      FLAG(PIPE_TRANSFER_FLUSH_EXPLICIT),
-      FLAG(PIPE_TRANSFER_DISCARD_WHOLE_RESOURCE)
+   static const struct debug_named_value names[] = {
+      DEBUG_NAMED_VALUE(PIPE_TRANSFER_READ),
+      DEBUG_NAMED_VALUE(PIPE_TRANSFER_WRITE),
+      DEBUG_NAMED_VALUE(PIPE_TRANSFER_MAP_DIRECTLY),
+      DEBUG_NAMED_VALUE(PIPE_TRANSFER_DISCARD_RANGE),
+      DEBUG_NAMED_VALUE(PIPE_TRANSFER_DONTBLOCK),
+      DEBUG_NAMED_VALUE(PIPE_TRANSFER_UNSYNCHRONIZED),
+      DEBUG_NAMED_VALUE(PIPE_TRANSFER_FLUSH_EXPLICIT),
+      DEBUG_NAMED_VALUE(PIPE_TRANSFER_DISCARD_WHOLE_RESOURCE),
+      DEBUG_NAMED_VALUE(PIPE_TRANSFER_PERSISTENT),
+      DEBUG_NAMED_VALUE(PIPE_TRANSFER_COHERENT),
+      DEBUG_NAMED_VALUE_END
    };
-   unsigned i;
 
-   debug_printf("%s ", msg);
-
-   for (i = 0; i < Elements(flags); i++) {
-      if (usage & flags[i].bit) {
-         debug_printf("%s", flags[i].name);
-         usage &= ~flags[i].bit;
-         if (usage) {
-            debug_printf(" | ");
-         }
-      }
-   }
-
-   debug_printf("\n");
-#undef FLAG
+   debug_printf("%s: %s\n", msg, debug_dump_flags(names, usage));
 }
 
 
