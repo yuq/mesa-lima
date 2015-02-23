@@ -89,8 +89,11 @@ create_texture_for_pbo(struct gl_context *ctx, bool create_pbo,
        */
       _mesa_BindBuffer(pbo_target, *tmp_pbo);
 
+      /* In case of GL_PIXEL_PACK_BUFFER, pass null pointer for the pixel
+       * data to avoid unnecessary data copying in _mesa_BufferData().
+       */
       if (is_pixel_pack)
-         _mesa_BufferData(pbo_target, row_stride * height, pixels,
+         _mesa_BufferData(pbo_target, row_stride * height, NULL,
                           GL_STREAM_READ);
       else
          _mesa_BufferData(pbo_target, row_stride * height, pixels,
