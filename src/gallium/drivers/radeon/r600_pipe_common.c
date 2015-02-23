@@ -665,12 +665,21 @@ static int r600_get_driver_query_info(struct pipe_screen *screen,
 		{"num-bytes-moved", R600_QUERY_NUM_BYTES_MOVED, 0, TRUE},
 		{"VRAM-usage", R600_QUERY_VRAM_USAGE, rscreen->info.vram_size, TRUE},
 		{"GTT-usage", R600_QUERY_GTT_USAGE, rscreen->info.gart_size, TRUE},
+		{"temperature", R600_QUERY_GPU_TEMPERATURE, 100, FALSE},
+		{"shader-clock", R600_QUERY_CURRENT_GPU_SCLK, 0, FALSE},
+		{"memory-clock", R600_QUERY_CURRENT_GPU_MCLK, 0, FALSE}
 	};
+	unsigned num_queries;
+
+	if (rscreen->info.drm_major == 2 && rscreen->info.drm_minor >= 42)
+		num_queries = Elements(list);
+	else
+		num_queries = 8;
 
 	if (!info)
-		return Elements(list);
+		return num_queries;
 
-	if (index >= Elements(list))
+	if (index >= num_queries)
 		return 0;
 
 	*info = list[index];

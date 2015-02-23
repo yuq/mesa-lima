@@ -86,6 +86,9 @@ static struct r600_resource *r600_new_query_buffer(struct r600_common_context *c
 	case R600_QUERY_NUM_BYTES_MOVED:
 	case R600_QUERY_VRAM_USAGE:
 	case R600_QUERY_GTT_USAGE:
+	case R600_QUERY_GPU_TEMPERATURE:
+	case R600_QUERY_CURRENT_GPU_SCLK:
+	case R600_QUERY_CURRENT_GPU_MCLK:
 		return NULL;
 	}
 
@@ -382,6 +385,9 @@ static struct pipe_query *r600_create_query(struct pipe_context *ctx, unsigned q
 	case R600_QUERY_NUM_BYTES_MOVED:
 	case R600_QUERY_VRAM_USAGE:
 	case R600_QUERY_GTT_USAGE:
+	case R600_QUERY_GPU_TEMPERATURE:
+	case R600_QUERY_CURRENT_GPU_SCLK:
+	case R600_QUERY_CURRENT_GPU_MCLK:
 		skip_allocation = true;
 		break;
 	default:
@@ -439,6 +445,9 @@ static void r600_begin_query(struct pipe_context *ctx, struct pipe_query *query)
 	case R600_QUERY_REQUESTED_GTT:
 	case R600_QUERY_VRAM_USAGE:
 	case R600_QUERY_GTT_USAGE:
+	case R600_QUERY_GPU_TEMPERATURE:
+	case R600_QUERY_CURRENT_GPU_SCLK:
+	case R600_QUERY_CURRENT_GPU_MCLK:
 		rquery->begin_result = 0;
 		return;
 	case R600_QUERY_BUFFER_WAIT_TIME:
@@ -513,6 +522,15 @@ static void r600_end_query(struct pipe_context *ctx, struct pipe_query *query)
 	case R600_QUERY_GTT_USAGE:
 		rquery->end_result = rctx->ws->query_value(rctx->ws, RADEON_GTT_USAGE);
 		return;
+	case R600_QUERY_GPU_TEMPERATURE:
+		rquery->end_result = rctx->ws->query_value(rctx->ws, RADEON_GPU_TEMPERATURE) / 1000;
+		return;
+	case R600_QUERY_CURRENT_GPU_SCLK:
+		rquery->end_result = rctx->ws->query_value(rctx->ws, RADEON_CURRENT_SCLK) * 1000000;
+		return;
+	case R600_QUERY_CURRENT_GPU_MCLK:
+		rquery->end_result = rctx->ws->query_value(rctx->ws, RADEON_CURRENT_MCLK) * 1000000;
+		return;
 	}
 
 	r600_emit_query_end(rctx, rquery);
@@ -570,6 +588,9 @@ static boolean r600_get_query_buffer_result(struct r600_common_context *ctx,
 	case R600_QUERY_NUM_BYTES_MOVED:
 	case R600_QUERY_VRAM_USAGE:
 	case R600_QUERY_GTT_USAGE:
+	case R600_QUERY_GPU_TEMPERATURE:
+	case R600_QUERY_CURRENT_GPU_SCLK:
+	case R600_QUERY_CURRENT_GPU_MCLK:
 		result->u64 = query->end_result - query->begin_result;
 		return TRUE;
 	}

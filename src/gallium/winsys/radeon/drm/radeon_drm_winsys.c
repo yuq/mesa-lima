@@ -49,6 +49,13 @@
 #define RADEON_INFO_ACTIVE_CU_COUNT 0x20
 #endif
 
+#ifndef RADEON_INFO_CURRENT_GPU_TEMP
+#define RADEON_INFO_CURRENT_GPU_TEMP	0x21
+#define RADEON_INFO_CURRENT_GPU_SCLK	0x22
+#define RADEON_INFO_CURRENT_GPU_MCLK	0x23
+#define RADEON_INFO_READ_REG		0x24
+#endif
+
 static struct util_hash_table *fd_tab = NULL;
 pipe_static_mutex(fd_tab_mutex);
 
@@ -558,6 +565,18 @@ static uint64_t radeon_query_value(struct radeon_winsys *rws,
     case RADEON_GTT_USAGE:
         radeon_get_drm_value(ws->fd, RADEON_INFO_GTT_USAGE,
                              "gtt-usage", (uint32_t*)&retval);
+        return retval;
+    case RADEON_GPU_TEMPERATURE:
+        radeon_get_drm_value(ws->fd, RADEON_INFO_CURRENT_GPU_TEMP,
+                             "gpu-temp", (uint32_t*)&retval);
+        return retval;
+    case RADEON_CURRENT_SCLK:
+        radeon_get_drm_value(ws->fd, RADEON_INFO_CURRENT_GPU_SCLK,
+                             "current-gpu-sclk", (uint32_t*)&retval);
+        return retval;
+    case RADEON_CURRENT_MCLK:
+        radeon_get_drm_value(ws->fd, RADEON_INFO_CURRENT_GPU_MCLK,
+                             "current-gpu-mclk", (uint32_t*)&retval);
         return retval;
     }
     return 0;
