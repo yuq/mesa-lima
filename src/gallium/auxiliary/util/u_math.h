@@ -47,7 +47,7 @@ extern "C" {
 #endif
 
 
-#include <math.h>
+#include "c99_math.h"
 #include <float.h>
 #include <stdarg.h>
 
