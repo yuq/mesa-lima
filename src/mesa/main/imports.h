@@ -99,14 +99,6 @@ typedef union { GLfloat f; GLint i; GLuint u; } fi_type;
 /*@}*/
 
 
-/*
- * signbit() is a macro on Linux.  Not available on Windows.
- */
-#ifndef signbit
-#define signbit(x) ((x) < 0.0f)
-#endif
-
-
 /***
  *** LOG2: Log base 2 of float
  ***/

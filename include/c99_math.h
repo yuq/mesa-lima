@@ -202,4 +202,12 @@ llrintf(float f)
 #endif /* C99 */
 
 
+/*
+ * signbit() is a macro on Linux.  Not available on Windows.
+ */
+#ifndef signbit
+#define signbit(x) ((x) < 0.0f)
+#endif
+
+
 #endif /* #define _C99_MATH_H_ */
