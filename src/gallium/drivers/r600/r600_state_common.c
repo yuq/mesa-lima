@@ -1769,6 +1769,18 @@ static void r600_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info 
 					(info.count_from_stream_output ? S_0287F0_USE_OPAQUE(1) : 0);
 	}
 
+	/* SMX returns CONTEXT_DONE too early workaround */
+	if (rctx->b.family == CHIP_R600 ||
+	    rctx->b.family == CHIP_RV610 ||
+	    rctx->b.family == CHIP_RV630 ||
+	    rctx->b.family == CHIP_RV635) {
+		/* if we have gs shader or streamout
+		   we need to do a wait idle after every draw */
+		if (rctx->gs_shader || rctx->b.streamout.streamout_enabled) {
+			radeon_set_config_reg(cs, R_008040_WAIT_UNTIL, S_008040_WAIT_3D_IDLE(1));
+		}
+	}
+
 	/* ES ring rolling over at EOP - workaround */
 	if (rctx->b.chip_class == R600) {
 		cs->buf[cs->cdw++] = PKT3(PKT3_EVENT_WRITE, 0, 0);
