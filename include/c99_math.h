@@ -92,6 +92,16 @@ static inline float ldexpf(float x, int exp)
    return (float) ldexp(x, exp);
 }
 
+static inline float logf(float x)
+{
+   return (float) log(x);
+}
+
+static inline float expf(float x)
+{
+   return (float) exp(x);
+}
+
 
 #else
 /* Work-around an extra semi-colon in VS 2005 logf definition */

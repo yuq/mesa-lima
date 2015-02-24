@@ -203,7 +203,7 @@ compute_lambda(const GLfloat sPlane[4], const GLfloat tPlane[4],
    if (rho2 == 0.0F)
       return 0.0;
    else
-      return (GLfloat) (LOGF(rho2) * 1.442695 * 0.5);/* 1.442695 = 1/log(2) */
+      return logf(rho2) * 1.442695f * 0.5f;/* 1.442695 = 1/log(2) */
 }
 
 

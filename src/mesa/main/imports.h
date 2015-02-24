@@ -207,22 +207,16 @@ static inline GLfloat LOG2(GLfloat x)
  *** CEILF: ceiling of float
  *** FLOORF: floor of float
  *** FABSF: absolute value of float
- *** LOGF: the natural logarithm (base e) of the value
- *** EXPF: raise e to the value
  ***/
 #if defined(__gnu_linux__)
 /* C99 functions */
 #define CEILF(x)   ceilf(x)
 #define FLOORF(x)  floorf(x)
 #define FABSF(x)   fabsf(x)
-#define LOGF(x)    logf(x)
-#define EXPF(x)    expf(x)
 #else
 #define CEILF(x)   ((GLfloat) ceil(x))
 #define FLOORF(x)  ((GLfloat) floor(x))
 #define FABSF(x)   ((GLfloat) fabs(x))
-#define LOGF(x)    ((GLfloat) log(x))
-#define EXPF(x)    ((GLfloat) exp(x))
 #endif
 
 

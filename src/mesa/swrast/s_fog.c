@@ -23,6 +23,7 @@
  */
 
 
+#include "c99_math.h"
 #include "main/glheader.h"
 #include "main/colormac.h"
 #include "main/macros.h"
@@ -49,12 +50,12 @@ _swrast_z_to_fogfactor(struct gl_context *ctx, GLfloat z)
       return CLAMP(f, 0.0F, 1.0F);
    case GL_EXP:
       d = ctx->Fog.Density;
-      f = EXPF(-d * z);
+      f = expf(-d * z);
       f = CLAMP(f, 0.0F, 1.0F);
       return f;
    case GL_EXP2:
       d = ctx->Fog.Density;
-      f = EXPF(-(d * d * z * z));
+      f = expf(-(d * d * z * z));
       f = CLAMP(f, 0.0F, 1.0F);
       return f;
    default:
@@ -66,14 +67,14 @@ _swrast_z_to_fogfactor(struct gl_context *ctx, GLfloat z)
 
 #define LINEAR_FOG(f, coord)  f = (fogEnd - coord) * fogScale
 
-#define EXP_FOG(f, coord)  f = EXPF(density * coord)
+#define EXP_FOG(f, coord)  f = expf(density * coord)
 
 #define EXP2_FOG(f, coord)				\
 do {							\
    GLfloat tmp = negDensitySquared * coord * coord;	\
    if (tmp < FLT_MIN_10_EXP)				\
       tmp = FLT_MIN_10_EXP;				\
-   f = EXPF(tmp);					\
+   f = expf(tmp);					\
  } while(0)
 
 
