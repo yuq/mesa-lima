@@ -97,8 +97,6 @@ typedef union { GLfloat f; GLint i; GLuint u; } fi_type;
 #if (!defined(_XOPEN_SOURCE) || (_XOPEN_SOURCE < 600)) && !defined(_ISOC99_SOURCE) \
    && (!defined(__STDC_VERSION__) || (__STDC_VERSION__ < 199901L)) \
    && (!defined(_MSC_VER) || (_MSC_VER < 1400))
-#define ceilf(f) ((float) ceil(f))
-#define floorf(f) ((float) floor(f))
 
 #define sqrtf(f) ((float) sqrt(f))
 #endif
