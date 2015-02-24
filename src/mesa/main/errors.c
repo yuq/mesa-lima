@@ -28,6 +28,7 @@
  */
 
 
+#include <stdarg.h>
 #include "errors.h"
 #include "enums.h"
 #include "imports.h"

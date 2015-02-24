@@ -42,8 +42,7 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-
-
+#include <stdarg.h>
 #include "imports.h"
 #include "context.h"
 #include "mtypes.h"

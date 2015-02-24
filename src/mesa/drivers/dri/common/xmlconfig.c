@@ -27,6 +27,7 @@
  * \author Felix Kuehling
  */
 
+#include <stdarg.h>
 #include <string.h>
 #include <assert.h>
 #include <expat.h>
