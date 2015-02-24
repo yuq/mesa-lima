@@ -938,7 +938,7 @@ static int load_sample_position(struct r600_shader_ctx *ctx, struct r600_shader_
 	memset(&vtx, 0, sizeof(struct r600_bytecode_vtx));
 	vtx.op = FETCH_OP_VFETCH;
 	vtx.buffer_id = R600_SAMPLE_POSITIONS_CONST_BUFFER;
-	vtx.fetch_type = 2;	/* VTX_FETCH_NO_INDEX_OFFSET */
+	vtx.fetch_type = SQ_VTX_FETCH_NO_INDEX_OFFSET;
 	if (sample_id == NULL) {
 		vtx.src_gpr = ctx->fixed_pt_position_gpr; // SAMPLEID is in .w;
 		vtx.src_sel_x = 3;
@@ -1095,7 +1095,7 @@ static int tgsi_fetch_rel_const(struct r600_shader_ctx *ctx,
 
 	memset(&vtx, 0, sizeof(vtx));
 	vtx.buffer_id = cb_idx;
-	vtx.fetch_type = 2;		/* VTX_FETCH_NO_INDEX_OFFSET */
+	vtx.fetch_type = SQ_VTX_FETCH_NO_INDEX_OFFSET;
 	vtx.src_gpr = ar_reg;
 	vtx.src_sel_x = ar_chan;
 	vtx.mega_fetch_count = 16;
@@ -1173,7 +1173,7 @@ static int fetch_gs_input(struct r600_shader_ctx *ctx, struct tgsi_full_src_regi
 
 	memset(&vtx, 0, sizeof(vtx));
 	vtx.buffer_id = R600_GS_RING_CONST_BUFFER;
-	vtx.fetch_type = 2;		/* VTX_FETCH_NO_INDEX_OFFSET */
+	vtx.fetch_type = SQ_VTX_FETCH_NO_INDEX_OFFSET;
 	vtx.src_gpr = offset_reg;
 	vtx.src_sel_x = offset_chan;
 	vtx.offset = index * 16; /*bytes*/
@@ -1539,7 +1539,7 @@ static int generate_gs_copy_shader(struct r600_context *rctx,
 		memset(&vtx, 0, sizeof(vtx));
 		vtx.op = FETCH_OP_VFETCH;
 		vtx.buffer_id = R600_GS_RING_CONST_BUFFER;
-		vtx.fetch_type = 2;
+		vtx.fetch_type = SQ_VTX_FETCH_NO_INDEX_OFFSET;
 		vtx.offset = out->ring_offset;
 		vtx.dst_gpr = out->gpr;
 		vtx.dst_sel_x = 0;
@@ -5025,7 +5025,7 @@ static int do_vtx_fetch_inst(struct r600_shader_ctx *ctx, boolean src_requires_l
 	memset(&vtx, 0, sizeof(vtx));
 	vtx.op = FETCH_OP_VFETCH;
 	vtx.buffer_id = id + R600_MAX_CONST_BUFFERS;
-	vtx.fetch_type = 2;		/* VTX_FETCH_NO_INDEX_OFFSET */
+	vtx.fetch_type = SQ_VTX_FETCH_NO_INDEX_OFFSET;
 	vtx.src_gpr = src_gpr;
 	vtx.mega_fetch_count = 16;
 	vtx.dst_gpr = ctx->file_offset[inst->Dst[0].Register.File] + inst->Dst[0].Register.Index;

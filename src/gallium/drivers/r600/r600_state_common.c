@@ -196,6 +196,10 @@ void r600_emit_vgt_state(struct r600_context *rctx, struct r600_atom *atom)
 	r600_write_context_reg_seq(cs, R_028408_VGT_INDX_OFFSET, 2);
 	radeon_emit(cs, a->vgt_indx_offset); /* R_028408_VGT_INDX_OFFSET */
 	radeon_emit(cs, a->vgt_multi_prim_ib_reset_indx); /* R_02840C_VGT_MULTI_PRIM_IB_RESET_INDX */
+	if (a->last_draw_was_indirect) {
+		a->last_draw_was_indirect = false;
+		r600_write_ctl_const(cs, R_03CFF0_SQ_VTX_BASE_VTX_LOC, 0);
+	}
 }
 
 static void r600_set_clip_state(struct pipe_context *ctx,
@@ -1353,7 +1357,7 @@ static void r600_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info 
 	unsigned i;
 	struct radeon_winsys_cs *cs = rctx->b.rings.gfx.cs;
 
-	if (!info.count && (info.indexed || !info.count_from_stream_output)) {
+	if (!info.indirect && !info.count && (info.indexed || !info.count_from_stream_output)) {
 		return;
 	}
 
@@ -1379,19 +1383,44 @@ static void r600_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info 
 		pipe_resource_reference(&ib.buffer, rctx->index_buffer.buffer);
 		ib.user_buffer = rctx->index_buffer.user_buffer;
 		ib.index_size = rctx->index_buffer.index_size;
-		ib.offset = rctx->index_buffer.offset + info.start * ib.index_size;
+		ib.offset = rctx->index_buffer.offset;
+		if (!info.indirect) {
+			ib.offset += info.start * ib.index_size;
+		}
 
 		/* Translate 8-bit indices to 16-bit. */
-		if (ib.index_size == 1) {
+		if (unlikely(ib.index_size == 1)) {
 			struct pipe_resource *out_buffer = NULL;
 			unsigned out_offset;
 			void *ptr;
+			unsigned start, count;
 
-			u_upload_alloc(rctx->b.uploader, 0, info.count * 2,
+			if (likely(!info.indirect)) {
+				start = 0;
+				count = info.count;
+			}
+			else {
+				/* Have to get start/count from indirect buffer, slow path ahead... */
+				struct r600_resource *indirect_resource = (struct r600_resource *)info.indirect;
+				unsigned *data = r600_buffer_map_sync_with_rings(&rctx->b, indirect_resource,
+					PIPE_TRANSFER_READ);
+				if (data) {
+					data += info.indirect_offset / sizeof(unsigned);
+					start = data[2] * ib.index_size;
+					count = data[0];
+					rctx->b.ws->buffer_unmap(indirect_resource->cs_buf);
+				}
+				else {
+					start = 0;
+					count = 0;
+				}
+			}
+
+			u_upload_alloc(rctx->b.uploader, start, count * 2,
 				       &out_offset, &out_buffer, &ptr);
 
 			util_shorten_ubyte_elts_to_userptr(
-						&rctx->b.b, &ib, 0, ib.offset, info.count, ptr);
+						&rctx->b.b, &ib, 0, ib.offset + start, count, ptr);
 
 			pipe_resource_reference(&ib.buffer, NULL);
 			ib.user_buffer = NULL;
@@ -1403,9 +1432,11 @@ static void r600_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info 
 		/* Upload the index buffer.
 		 * The upload is skipped for small index counts on little-endian machines
 		 * and the indices are emitted via PKT3_DRAW_INDEX_IMMD.
+		 * Indirect draws never use immediate indices.
 		 * Note: Instanced rendering in combination with immediate indices hangs. */
-		if (ib.user_buffer && (R600_BIG_ENDIAN || info.instance_count > 1 ||
-				       info.count*ib.index_size > 20)) {
+		if (ib.user_buffer && (R600_BIG_ENDIAN || info.indirect ||
+						 info.instance_count > 1 ||
+						 info.count*ib.index_size > 20)) {
 			u_upload_data(rctx->b.uploader, 0, info.count * ib.index_size,
 				      ib.user_buffer, &ib.offset, &ib.buffer);
 			ib.user_buffer = NULL;
@@ -1417,7 +1448,8 @@ static void r600_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info 
 	/* Set the index offset and primitive restart. */
 	if (rctx->vgt_state.vgt_multi_prim_ib_reset_en != info.primitive_restart ||
 	    rctx->vgt_state.vgt_multi_prim_ib_reset_indx != info.restart_index ||
-	    rctx->vgt_state.vgt_indx_offset != info.index_bias) {
+	    rctx->vgt_state.vgt_indx_offset != info.index_bias ||
+	    (rctx->vgt_state.last_draw_was_indirect && !info.indirect)) {
 		rctx->vgt_state.vgt_multi_prim_ib_reset_en = info.primitive_restart;
 		rctx->vgt_state.vgt_multi_prim_ib_reset_indx = info.restart_index;
 		rctx->vgt_state.vgt_indx_offset = info.index_bias;
@@ -1485,7 +1517,7 @@ static void r600_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info 
 	}
 
 	/* Update start instance. */
-	if (rctx->last_start_instance != info.start_instance) {
+	if (!info.indirect && rctx->last_start_instance != info.start_instance) {
 		r600_write_ctl_const(cs, R_03CFF4_SQ_VTX_START_INST_LOC, info.start_instance);
 		rctx->last_start_instance = info.start_instance;
 	}
@@ -1510,8 +1542,30 @@ static void r600_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info 
 	}
 
 	/* Draw packets. */
-	cs->buf[cs->cdw++] = PKT3(PKT3_NUM_INSTANCES, 0, rctx->b.predicate_drawing);
-	cs->buf[cs->cdw++] = info.instance_count;
+	if (!info.indirect) {
+		cs->buf[cs->cdw++] = PKT3(PKT3_NUM_INSTANCES, 0, rctx->b.predicate_drawing);
+		cs->buf[cs->cdw++] = info.instance_count;
+	}
+
+	if (unlikely(info.indirect)) {
+		uint64_t va = r600_resource(info.indirect)->gpu_address;
+		assert(rctx->b.chip_class >= EVERGREEN);
+
+		// Invalidate so non-indirect draw calls reset this state
+		rctx->vgt_state.last_draw_was_indirect = true;
+		rctx->last_start_instance = -1;
+
+		cs->buf[cs->cdw++] = PKT3(EG_PKT3_SET_BASE, 2, rctx->b.predicate_drawing);
+		cs->buf[cs->cdw++] = EG_DRAW_INDEX_INDIRECT_PATCH_TABLE_BASE;
+		cs->buf[cs->cdw++] = va;
+		cs->buf[cs->cdw++] = (va >> 32UL) & 0xFF;
+
+		cs->buf[cs->cdw++] = PKT3(PKT3_NOP, 0, rctx->b.predicate_drawing);
+		cs->buf[cs->cdw++] = r600_context_bo_reloc(&rctx->b, &rctx->b.rings.gfx,
+							   (struct r600_resource*)info.indirect,
+							   RADEON_USAGE_READ, RADEON_PRIO_MIN);
+	}
+
 	if (info.indexed) {
 		cs->buf[cs->cdw++] = PKT3(PKT3_INDEX_TYPE, 0, rctx->b.predicate_drawing);
 		cs->buf[cs->cdw++] = ib.index_size == 4 ?
@@ -1528,18 +1582,40 @@ static void r600_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info 
 			cs->cdw += size_dw;
 		} else {
 			uint64_t va = r600_resource(ib.buffer)->gpu_address + ib.offset;
-			cs->buf[cs->cdw++] = PKT3(PKT3_DRAW_INDEX, 3, rctx->b.predicate_drawing);
-			cs->buf[cs->cdw++] = va;
-			cs->buf[cs->cdw++] = (va >> 32UL) & 0xFF;
-			cs->buf[cs->cdw++] = info.count;
-			cs->buf[cs->cdw++] = V_0287F0_DI_SRC_SEL_DMA;
-			cs->buf[cs->cdw++] = PKT3(PKT3_NOP, 0, rctx->b.predicate_drawing);
-			cs->buf[cs->cdw++] = r600_context_bo_reloc(&rctx->b, &rctx->b.rings.gfx,
-								   (struct r600_resource*)ib.buffer,
-								   RADEON_USAGE_READ, RADEON_PRIO_MIN);
+
+			if (likely(!info.indirect)) {
+				cs->buf[cs->cdw++] = PKT3(PKT3_DRAW_INDEX, 3, rctx->b.predicate_drawing);
+				cs->buf[cs->cdw++] = va;
+				cs->buf[cs->cdw++] = (va >> 32UL) & 0xFF;
+				cs->buf[cs->cdw++] = info.count;
+				cs->buf[cs->cdw++] = V_0287F0_DI_SRC_SEL_DMA;
+				cs->buf[cs->cdw++] = PKT3(PKT3_NOP, 0, rctx->b.predicate_drawing);
+				cs->buf[cs->cdw++] = r600_context_bo_reloc(&rctx->b, &rctx->b.rings.gfx,
+									   (struct r600_resource*)ib.buffer,
+									   RADEON_USAGE_READ, RADEON_PRIO_MIN);
+			}
+			else {
+				uint32_t max_size = (ib.buffer->width0 - ib.offset) / ib.index_size;
+
+				cs->buf[cs->cdw++] = PKT3(EG_PKT3_INDEX_BASE, 1, rctx->b.predicate_drawing);
+				cs->buf[cs->cdw++] = va;
+				cs->buf[cs->cdw++] = (va >> 32UL) & 0xFF;
+
+				cs->buf[cs->cdw++] = PKT3(PKT3_NOP, 0, rctx->b.predicate_drawing);
+				cs->buf[cs->cdw++] = r600_context_bo_reloc(&rctx->b, &rctx->b.rings.gfx,
+									   (struct r600_resource*)ib.buffer,
+									   RADEON_USAGE_READ, RADEON_PRIO_MIN);
+
+				cs->buf[cs->cdw++] = PKT3(EG_PKT3_INDEX_BUFFER_SIZE, 0, rctx->b.predicate_drawing);
+				cs->buf[cs->cdw++] = max_size;
+
+				cs->buf[cs->cdw++] = PKT3(EG_PKT3_DRAW_INDEX_INDIRECT, 1, rctx->b.predicate_drawing);
+				cs->buf[cs->cdw++] = info.indirect_offset;
+				cs->buf[cs->cdw++] = V_0287F0_DI_SRC_SEL_DMA;
+			}
 		}
 	} else {
-		if (info.count_from_stream_output) {
+		if (unlikely(info.count_from_stream_output)) {
 			struct r600_so_target *t = (struct r600_so_target*)info.count_from_stream_output;
 			uint64_t va = t->buf_filled_size->gpu_address + t->buf_filled_size_offset;
 
@@ -1558,8 +1634,14 @@ static void r600_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info 
 								   RADEON_PRIO_MIN);
 		}
 
-		cs->buf[cs->cdw++] = PKT3(PKT3_DRAW_INDEX_AUTO, 1, rctx->b.predicate_drawing);
-		cs->buf[cs->cdw++] = info.count;
+		if (likely(!info.indirect)) {
+			cs->buf[cs->cdw++] = PKT3(PKT3_DRAW_INDEX_AUTO, 1, rctx->b.predicate_drawing);
+			cs->buf[cs->cdw++] = info.count;
+		}
+		else {
+			cs->buf[cs->cdw++] = PKT3(EG_PKT3_DRAW_INDIRECT, 1, rctx->b.predicate_drawing);
+			cs->buf[cs->cdw++] = info.indirect_offset;
+		}
 		cs->buf[cs->cdw++] = V_0287F0_DI_SRC_SEL_AUTO_INDEX |
 					(info.count_from_stream_output ? S_0287F0_USE_OPAQUE(1) : 0);
 	}

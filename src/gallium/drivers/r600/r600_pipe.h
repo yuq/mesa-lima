@@ -55,7 +55,7 @@
 
 /* the number of CS dwords for flushing and drawing */
 #define R600_MAX_FLUSH_CS_DWORDS	16
-#define R600_MAX_DRAW_CS_DWORDS		40
+#define R600_MAX_DRAW_CS_DWORDS		47
 #define R600_TRACE_CS_DWORDS		7
 
 #define R600_MAX_USER_CONST_BUFFERS 13
@@ -145,6 +145,7 @@ struct r600_vgt_state {
 	uint32_t vgt_multi_prim_ib_reset_en;
 	uint32_t vgt_multi_prim_ib_reset_indx;
 	uint32_t vgt_indx_offset;
+	bool last_draw_was_indirect;
 };
 
 struct r600_blend_color {
