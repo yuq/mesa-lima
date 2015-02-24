@@ -1468,6 +1468,7 @@ _swrast_read_rgba_span( struct gl_context *ctx, struct gl_renderbuffer *rb,
 	     rb->_BaseFormat == GL_ALPHA);
 
       assert(srb->Map);
+      (void) srb; /* silence unused var warning */
 
       src = _swrast_pixel_address(rb, x + skip, y);
 
