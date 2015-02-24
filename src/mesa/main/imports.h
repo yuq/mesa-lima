@@ -204,15 +204,12 @@ static inline GLfloat LOG2(GLfloat x)
 
 
 /***
- *** FLOORF: floor of float
  *** FABSF: absolute value of float
  ***/
 #if defined(__gnu_linux__)
 /* C99 functions */
-#define FLOORF(x)  floorf(x)
 #define FABSF(x)   fabsf(x)
 #else
-#define FLOORF(x)  ((GLfloat) floor(x))
 #define FABSF(x)   ((GLfloat) fabs(x))
 #endif
 

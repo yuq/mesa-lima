@@ -709,7 +709,7 @@ _mesa_execute_program(struct gl_context * ctx,
          {
             GLfloat t[4], q[4], floor_t0;
             fetch_vector1(&inst->SrcReg[0], machine, t);
-            floor_t0 = FLOORF(t[0]);
+            floor_t0 = floorf(t[0]);
             if (floor_t0 > FLT_MAX_EXP) {
                SET_POS_INFINITY(q[0]);
                SET_POS_INFINITY(q[2]);
@@ -748,10 +748,10 @@ _mesa_execute_program(struct gl_context * ctx,
          {
             GLfloat a[4], result[4];
             fetch_vector4(&inst->SrcReg[0], machine, a);
-            result[0] = FLOORF(a[0]);
-            result[1] = FLOORF(a[1]);
-            result[2] = FLOORF(a[2]);
-            result[3] = FLOORF(a[3]);
+            result[0] = floorf(a[0]);
+            result[1] = floorf(a[1]);
+            result[2] = floorf(a[2]);
+            result[3] = floorf(a[3]);
             store_vector4(inst, machine, result);
          }
          break;
@@ -759,10 +759,10 @@ _mesa_execute_program(struct gl_context * ctx,
          {
             GLfloat a[4], result[4];
             fetch_vector4(&inst->SrcReg[0], machine, a);
-            result[0] = a[0] - FLOORF(a[0]);
-            result[1] = a[1] - FLOORF(a[1]);
-            result[2] = a[2] - FLOORF(a[2]);
-            result[3] = a[3] - FLOORF(a[3]);
+            result[0] = a[0] - floorf(a[0]);
+            result[1] = a[1] - floorf(a[1]);
+            result[2] = a[2] - floorf(a[2]);
+            result[3] = a[3] - floorf(a[3]);
             store_vector4(inst, machine, result);
          }
          break;

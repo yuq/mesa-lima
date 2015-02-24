@@ -29,6 +29,7 @@
  * Display lists management functions.
  */
 
+#include "c99_math.h"
 #include "glheader.h"
 #include "imports.h"
 #include "api_arrayelt.h"
@@ -912,7 +913,7 @@ translate_id(GLsizei n, GLenum type, const GLvoid * list)
       return (GLint) uiptr[n];
    case GL_FLOAT:
       fptr = (GLfloat *) list;
-      return (GLint) FLOORF(fptr[n]);
+      return (GLint) floorf(fptr[n]);
    case GL_2_BYTES:
       ubptr = ((GLubyte *) list) + 2 * n;
       return (GLint) ubptr[0] * 256
