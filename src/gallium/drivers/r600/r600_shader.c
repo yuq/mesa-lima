@@ -1613,6 +1613,16 @@ static int generate_gs_copy_shader(struct r600_context *rctx,
 		cshader->shader.ring_item_sizes[ring] = ocnt * 16;
 	}
 
+	/* bc adds nops - copy it */
+	if (ctx.bc->chip_class == R600) {
+		memset(&alu, 0, sizeof(struct r600_bytecode_alu));
+		alu.op = ALU_OP0_NOP;
+		alu.last = 1;
+		r600_bytecode_add_alu(ctx.bc, &alu);
+
+		r600_bytecode_add_cfinst(ctx.bc, CF_OP_NOP);
+	}
+
 	/* export vertex data */
 	/* XXX factor out common code with r600_shader_from_tgsi ? */
 	for (i = 0; i < ocnt; ++i) {
