@@ -4659,7 +4659,7 @@ dst_register(struct st_translate *t,
  * Map a glsl_to_tgsi src register to a TGSI ureg_src register.
  */
 static struct ureg_src
-src_register(struct st_translate *t, const struct st_src_reg *reg)
+src_register(struct st_translate *t, const st_src_reg *reg)
 {
    switch(reg->file) {
    case PROGRAM_UNDEFINED:
