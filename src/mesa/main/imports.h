@@ -97,13 +97,7 @@ typedef union { GLfloat f; GLint i; GLuint u; } fi_type;
 #if (!defined(_XOPEN_SOURCE) || (_XOPEN_SOURCE < 600)) && !defined(_ISOC99_SOURCE) \
    && (!defined(__STDC_VERSION__) || (__STDC_VERSION__ < 199901L)) \
    && (!defined(_MSC_VER) || (_MSC_VER < 1400))
-#define acosf(f) ((float) acos(f))
-#define asinf(f) ((float) asin(f))
-#define atan2f(x,y) ((float) atan2(x,y))
-#define atanf(f) ((float) atan(f))
 #define ceilf(f) ((float) ceil(f))
-#define cosf(f) ((float) cos(f))
-#define coshf(f) ((float) cosh(f))
 #define expf(f) ((float) exp(f))
 #define exp2f(f) ((float) exp2(f))
 #define floorf(f) ((float) floor(f))
@@ -116,14 +110,7 @@ typedef union { GLfloat f; GLint i; GLuint u; } fi_type;
 #endif
 
 #define powf(x,y) ((float) pow(x,y))
-#define sinf(f) ((float) sin(f))
-#define sinhf(f) ((float) sinh(f))
 #define sqrtf(f) ((float) sqrt(f))
-#define tanf(f) ((float) tan(f))
-#define tanhf(f) ((float) tanh(f))
-#define acoshf(f) ((float) acosh(f))
-#define asinhf(f) ((float) asinh(f))
-#define atanhf(f) ((float) atanh(f))
 #endif
 
 #if defined(_MSC_VER)
@@ -131,9 +118,6 @@ typedef union { GLfloat f; GLint i; GLuint u; } fi_type;
 static inline float truncf(float x) { return x < 0.0f ? ceilf(x) : floorf(x); }
 static inline float exp2f(float x) { return powf(2.0f, x); }
 static inline float log2f(float x) { return logf(x) * 1.442695041f; }
-static inline float asinhf(float x) { return logf(x + sqrtf(x * x + 1.0f)); }
-static inline float acoshf(float x) { return logf(x + sqrtf(x * x - 1.0f)); }
-static inline float atanhf(float x) { return (logf(1.0f + x) - logf(1.0f - x)) / 2.0f; }
 static inline int isblank(int ch) { return ch == ' ' || ch == '\t'; }
 #define strtoll(p, e, b) _strtoi64(p, e, b)
 #endif /* _MSC_VER < 1800 */
