@@ -23,6 +23,7 @@
  */
 
 
+#include "c99_math.h"
 #include "main/glheader.h"
 #include "main/context.h"
 #include "main/colormac.h"
@@ -223,7 +224,7 @@ linear_texel_locations(GLenum wrapMode,
       }
       break;
    case GL_MIRROR_CLAMP_EXT:
-      u = FABSF(s);
+      u = fabsf(s);
       if (u >= 1.0F)
          u = (GLfloat) size;
       else
@@ -233,7 +234,7 @@ linear_texel_locations(GLenum wrapMode,
       *i1 = *i0 + 1;
       break;
    case GL_MIRROR_CLAMP_TO_EDGE_EXT:
-      u = FABSF(s);
+      u = fabsf(s);
       if (u >= 1.0F)
          u = (GLfloat) size;
       else
@@ -250,7 +251,7 @@ linear_texel_locations(GLenum wrapMode,
       {
          const GLfloat min = -1.0F / (2.0F * size);
          const GLfloat max = 1.0F - min;
-         u = FABSF(s);
+         u = fabsf(s);
          if (u <= min)
             u = min * size;
          else if (u >= max)
@@ -354,7 +355,7 @@ nearest_texel_location(GLenum wrapMode,
       {
          /* s limited to [0,1] */
          /* i limited to [0,size-1] */
-         const GLfloat u = FABSF(s);
+         const GLfloat u = fabsf(s);
          if (u <= 0.0F)
             i = 0;
          else if (u >= 1.0F)
@@ -369,7 +370,7 @@ nearest_texel_location(GLenum wrapMode,
          /* i limited to [0, size-1] */
          const GLfloat min = 1.0F / (2.0F * size);
          const GLfloat max = 1.0F - min;
-         const GLfloat u = FABSF(s);
+         const GLfloat u = fabsf(s);
          if (u < min)
             i = 0;
          else if (u > max)
@@ -384,7 +385,7 @@ nearest_texel_location(GLenum wrapMode,
          /* i limited to [0, size-1] */
          const GLfloat min = -1.0F / (2.0F * size);
          const GLfloat max = 1.0F - min;
-         const GLfloat u = FABSF(s);
+         const GLfloat u = fabsf(s);
          if (u < min)
             i = -1;
          else if (u > max)
@@ -2358,7 +2359,7 @@ choose_cube_face(const struct gl_texture_object *texObj,
    const GLfloat rx = texcoord[0];
    const GLfloat ry = texcoord[1];
    const GLfloat rz = texcoord[2];
-   const GLfloat arx = FABSF(rx), ary = FABSF(ry), arz = FABSF(rz);
+   const GLfloat arx = fabsf(rx), ary = fabsf(ry), arz = fabsf(rz);
    GLuint face;
    GLfloat sc, tc, ma;
 

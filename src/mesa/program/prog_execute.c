@@ -202,10 +202,10 @@ fetch_vector4(const struct prog_src_register *source,
    }
 
    if (source->Abs) {
-      result[0] = FABSF(result[0]);
-      result[1] = FABSF(result[1]);
-      result[2] = FABSF(result[2]);
-      result[3] = FABSF(result[3]);
+      result[0] = fabsf(result[0]);
+      result[1] = fabsf(result[1]);
+      result[2] = fabsf(result[2]);
+      result[3] = fabsf(result[3]);
    }
    if (source->Negate) {
       assert(source->Negate == NEGATE_XYZW);
@@ -260,10 +260,10 @@ fetch_vector4_deriv(struct gl_context * ctx,
       result[3] = deriv[GET_SWZ(source->Swizzle, 3)];
       
       if (source->Abs) {
-         result[0] = FABSF(result[0]);
-         result[1] = FABSF(result[1]);
-         result[2] = FABSF(result[2]);
-         result[3] = FABSF(result[3]);
+         result[0] = fabsf(result[0]);
+         result[1] = fabsf(result[1]);
+         result[2] = fabsf(result[2]);
+         result[3] = fabsf(result[3]);
       }
       if (source->Negate) {
          assert(source->Negate == NEGATE_XYZW);
@@ -291,7 +291,7 @@ fetch_vector1(const struct prog_src_register *source,
    result[0] = src[GET_SWZ(source->Swizzle, 0)];
 
    if (source->Abs) {
-      result[0] = FABSF(result[0]);
+      result[0] = fabsf(result[0]);
    }
    if (source->Negate) {
       result[0] = -result[0];
@@ -521,10 +521,10 @@ _mesa_execute_program(struct gl_context * ctx,
          {
             GLfloat a[4], result[4];
             fetch_vector4(&inst->SrcReg[0], machine, a);
-            result[0] = FABSF(a[0]);
-            result[1] = FABSF(a[1]);
-            result[2] = FABSF(a[2]);
-            result[3] = FABSF(a[3]);
+            result[0] = fabsf(a[0]);
+            result[1] = fabsf(a[1]);
+            result[2] = fabsf(a[2]);
+            result[3] = fabsf(a[3]);
             store_vector4(inst, machine, result);
          }
          break;
@@ -875,7 +875,7 @@ _mesa_execute_program(struct gl_context * ctx,
          {
             GLfloat t[4], q[4], abs_t0;
             fetch_vector1(&inst->SrcReg[0], machine, t);
-            abs_t0 = FABSF(t[0]);
+            abs_t0 = fabsf(t[0]);
             if (abs_t0 != 0.0F) {
                if (IS_INF_OR_NAN(abs_t0))
                {
@@ -1084,7 +1084,7 @@ _mesa_execute_program(struct gl_context * ctx,
          {
             GLfloat a[4], result[4];
             fetch_vector1(&inst->SrcReg[0], machine, a);
-            a[0] = FABSF(a[0]);
+            a[0] = fabsf(a[0]);
             result[0] = result[1] = result[2] = result[3] = INV_SQRTF(a[0]);
             store_vector4(inst, machine, result);
             if (DEBUG_PROG) {

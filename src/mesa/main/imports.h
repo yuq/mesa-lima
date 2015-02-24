@@ -203,17 +203,6 @@ static inline GLfloat LOG2(GLfloat x)
 #endif
 
 
-/***
- *** FABSF: absolute value of float
- ***/
-#if defined(__gnu_linux__)
-/* C99 functions */
-#define FABSF(x)   fabsf(x)
-#else
-#define FABSF(x)   ((GLfloat) fabs(x))
-#endif
-
-
 /**
  * Convert float to int by rounding to nearest integer, away from zero.
  */

@@ -187,7 +187,7 @@ run_fog_stage(struct gl_context *ctx, struct tnl_pipeline_stage *stage)
 	    NOTE should avoid going through array twice */
 	 coord = input->start;
 	 for (i = 0; i < input->count; i++) {
-	    *coord = FABSF(*coord);
+	    *coord = fabsf(*coord);
 	    STRIDE_F(coord, input->stride);
 	 }
       }
@@ -202,7 +202,7 @@ run_fog_stage(struct gl_context *ctx, struct tnl_pipeline_stage *stage)
 	 input->count = VB->EyePtr->count;
 	 coord = VB->EyePtr->start;
 	 for (i = 0 ; i < VB->EyePtr->count; i++) {
-	    input->data[i][0] = FABSF(coord[2]);
+	    input->data[i][0] = fabsf(coord[2]);
 	    STRIDE_F(coord, VB->EyePtr->stride);
 	 }
       }

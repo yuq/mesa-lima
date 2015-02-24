@@ -92,7 +92,7 @@ if (span->arrayAttribs & VARYING_BIT_FOGC) {					\
    GLuint i;									\
    for (i = 0; i < span->end; i++) {						\
       const GLfloat fogCoord = span->array->attribs[VARYING_SLOT_FOGC][i][0];	\
-      const GLfloat c = FABSF(fogCoord);					\
+      const GLfloat c = fabsf(fogCoord);					\
       GLfloat f, oneMinusF;							\
       FOG_FUNC(f, c);								\
       f = CLAMP(f, 0.0F, 1.0F);							\
@@ -109,7 +109,7 @@ else {										\
    GLfloat w = span->attrStart[VARYING_SLOT_POS][3];				\
    GLuint i;									\
    for (i = 0; i < span->end; i++) {						\
-      const GLfloat c = FABSF(fogCoord) / w;					\
+      const GLfloat c = fabsf(fogCoord) / w;					\
       GLfloat f, oneMinusF;							\
       FOG_FUNC(f, c);								\
       f = CLAMP(f, 0.0F, 1.0F);							\

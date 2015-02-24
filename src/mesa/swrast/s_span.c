@@ -31,6 +31,7 @@
  * \author Brian Paul
  */
 
+#include "c99_math.h"
 #include "main/glheader.h"
 #include "main/colormac.h"
 #include "main/format_pack.h"
@@ -443,10 +444,10 @@ _swrast_compute_lambda(GLfloat dsdx, GLfloat dsdy, GLfloat dtdx, GLfloat dtdy,
    GLfloat dsdy2 = (s + dsdy) / (q + dqdy) - s * invQ;
    GLfloat dtdy2 = (t + dtdy) / (q + dqdy) - t * invQ;
    GLfloat maxU, maxV, rho, lambda;
-   dsdx2 = FABSF(dsdx2);
-   dsdy2 = FABSF(dsdy2);
-   dtdx2 = FABSF(dtdx2);
-   dtdy2 = FABSF(dtdy2);
+   dsdx2 = fabsf(dsdx2);
+   dsdy2 = fabsf(dsdy2);
+   dtdx2 = fabsf(dtdx2);
+   dtdy2 = fabsf(dtdy2);
    maxU = MAX2(dsdx2, dsdy2) * texW;
    maxV = MAX2(dtdx2, dtdy2) * texH;
    rho = MAX2(maxU, maxV);
