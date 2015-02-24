@@ -14,7 +14,7 @@ The rules-ng-ng source files this header was generated from are:
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_common.xml (  10551 bytes, from 2014-11-13 22:44:30)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_pm4.xml    (  15085 bytes, from 2014-12-20 21:49:41)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/a3xx.xml          (  64848 bytes, from 2015-02-20 18:21:24)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/a4xx.xml          (  51566 bytes, from 2015-02-21 18:31:59)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/a4xx.xml          (  51942 bytes, from 2015-02-24 17:14:02)
 
 Copyright (C) 2013-2015 by the following authors:
 - Rob Clark <robdclark@gmail.com> (robclark)
@@ -150,6 +150,7 @@ enum a4xx_depth_format {
 enum a4xx_tex_filter {
 	A4XX_TEX_NEAREST = 0,
 	A4XX_TEX_LINEAR = 1,
+	A4XX_TEX_ANISO = 2,
 };
 
 enum a4xx_tex_clamp {
@@ -157,6 +158,14 @@ enum a4xx_tex_clamp {
 	A4XX_TEX_CLAMP_TO_EDGE = 1,
 	A4XX_TEX_MIRROR_REPEAT = 2,
 	A4XX_TEX_CLAMP_NONE = 3,
+};
+
+enum a4xx_tex_aniso {
+	A4XX_TEX_ANISO_1 = 0,
+	A4XX_TEX_ANISO_2 = 1,
+	A4XX_TEX_ANISO_4 = 2,
+	A4XX_TEX_ANISO_8 = 3,
+	A4XX_TEX_ANISO_16 = 4,
 };
 
 enum a4xx_tex_swiz {
@@ -2178,6 +2187,12 @@ static inline uint32_t A4XX_TEX_SAMP_0_WRAP_T(enum a4xx_tex_clamp val)
 static inline uint32_t A4XX_TEX_SAMP_0_WRAP_R(enum a4xx_tex_clamp val)
 {
 	return ((val) << A4XX_TEX_SAMP_0_WRAP_R__SHIFT) & A4XX_TEX_SAMP_0_WRAP_R__MASK;
+}
+#define A4XX_TEX_SAMP_0_ANISO__MASK				0x0001c000
+#define A4XX_TEX_SAMP_0_ANISO__SHIFT				14
+static inline uint32_t A4XX_TEX_SAMP_0_ANISO(enum a4xx_tex_aniso val)
+{
+	return ((val) << A4XX_TEX_SAMP_0_ANISO__SHIFT) & A4XX_TEX_SAMP_0_ANISO__MASK;
 }
 
 #define REG_A4XX_TEX_SAMP_1					0x00000001
