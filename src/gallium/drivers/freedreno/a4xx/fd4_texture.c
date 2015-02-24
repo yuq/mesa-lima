@@ -68,13 +68,13 @@ tex_clamp(unsigned wrap)
 }
 
 static enum a4xx_tex_filter
-tex_filter(unsigned filter)
+tex_filter(unsigned filter, bool aniso)
 {
 	switch (filter) {
 	case PIPE_TEX_FILTER_NEAREST:
 		return A4XX_TEX_NEAREST;
 	case PIPE_TEX_FILTER_LINEAR:
-		return A4XX_TEX_LINEAR;
+		return aniso ? A4XX_TEX_ANISO : A4XX_TEX_LINEAR;
 	default:
 		DBG("invalid filter: %u", filter);
 		return 0;
@@ -86,6 +86,7 @@ fd4_sampler_state_create(struct pipe_context *pctx,
 		const struct pipe_sampler_state *cso)
 {
 	struct fd4_sampler_stateobj *so = CALLOC_STRUCT(fd4_sampler_stateobj);
+	unsigned aniso = util_last_bit(MIN2(cso->max_anisotropy >> 1, 8));
 	bool miplinear = false;
 
 	if (!so)
@@ -98,8 +99,9 @@ fd4_sampler_state_create(struct pipe_context *pctx,
 
 	so->texsamp0 =
 		COND(miplinear, A4XX_TEX_SAMP_0_MIPFILTER_LINEAR_NEAR) |
-		A4XX_TEX_SAMP_0_XY_MAG(tex_filter(cso->mag_img_filter)) |
-		A4XX_TEX_SAMP_0_XY_MIN(tex_filter(cso->min_img_filter)) |
+		A4XX_TEX_SAMP_0_XY_MAG(tex_filter(cso->mag_img_filter, aniso)) |
+		A4XX_TEX_SAMP_0_XY_MIN(tex_filter(cso->min_img_filter, aniso)) |
+		A4XX_TEX_SAMP_0_ANISO(aniso) |
 		A4XX_TEX_SAMP_0_WRAP_S(tex_clamp(cso->wrap_s)) |
 		A4XX_TEX_SAMP_0_WRAP_T(tex_clamp(cso->wrap_t)) |
 		A4XX_TEX_SAMP_0_WRAP_R(tex_clamp(cso->wrap_r));
