@@ -209,8 +209,6 @@ static inline GLfloat LOG2(GLfloat x)
  *** FABSF: absolute value of float
  *** LOGF: the natural logarithm (base e) of the value
  *** EXPF: raise e to the value
- *** LDEXPF: multiply value by an integral power of two
- *** FREXPF: extract mantissa and exponent from value
  ***/
 #if defined(__gnu_linux__)
 /* C99 functions */
@@ -219,16 +217,12 @@ static inline GLfloat LOG2(GLfloat x)
 #define FABSF(x)   fabsf(x)
 #define LOGF(x)    logf(x)
 #define EXPF(x)    expf(x)
-#define LDEXPF(x,y)  ldexpf(x,y)
-#define FREXPF(x,y)  frexpf(x,y)
 #else
 #define CEILF(x)   ((GLfloat) ceil(x))
 #define FLOORF(x)  ((GLfloat) floor(x))
 #define FABSF(x)   ((GLfloat) fabs(x))
 #define LOGF(x)    ((GLfloat) log(x))
 #define EXPF(x)    ((GLfloat) exp(x))
-#define LDEXPF(x,y)  ((GLfloat) ldexp(x,y))
-#define FREXPF(x,y)  ((GLfloat) frexp(x,y))
 #endif
 
 

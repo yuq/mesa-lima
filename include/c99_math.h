@@ -82,6 +82,17 @@ static inline float logf( float f )
    return (float) log( (double) f );
 }
 
+static inline float frexpf(float x, int *exp)
+{
+   return (float) frexp(x, exp);
+}
+
+static inline float ldexpf(float x, int exp)
+{
+   return (float) ldexp(x, exp);
+}
+
+
 #else
 /* Work-around an extra semi-colon in VS 2005 logf definition */
 #ifdef logf
