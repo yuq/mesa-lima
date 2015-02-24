@@ -1554,6 +1554,7 @@ static int generate_gs_copy_shader(struct r600_context *rctx,
 		vtx.op = FETCH_OP_VFETCH;
 		vtx.buffer_id = R600_GS_RING_CONST_BUFFER;
 		vtx.fetch_type = SQ_VTX_FETCH_NO_INDEX_OFFSET;
+		vtx.mega_fetch_count = 16;
 		vtx.offset = out->ring_offset;
 		vtx.dst_gpr = out->gpr;
 		vtx.src_gpr = 0;
