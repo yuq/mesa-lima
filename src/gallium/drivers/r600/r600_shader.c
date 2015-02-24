@@ -2219,6 +2219,11 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 		if (ctx.type == TGSI_PROCESSOR_GEOMETRY) {
 			struct r600_bytecode_alu alu;
 			int r;
+
+			/* GS thread with no output workaround - emit a cut at start of GS */
+			if (ctx.bc->chip_class == R600)
+				r600_bytecode_add_cfinst(ctx.bc, CF_OP_CUT_VERTEX);
+
 			for (j = 0; j < 4; j++) {
 				memset(&alu, 0, sizeof(struct r600_bytecode_alu));
 				alu.op = ALU_OP1_MOV;
