@@ -99,15 +99,8 @@ typedef union { GLfloat f; GLint i; GLuint u; } fi_type;
    && (!defined(_MSC_VER) || (_MSC_VER < 1400))
 #define ceilf(f) ((float) ceil(f))
 #define expf(f) ((float) exp(f))
-#define exp2f(f) ((float) exp2(f))
 #define floorf(f) ((float) floor(f))
 #define logf(f) ((float) log(f))
-
-#ifdef ANDROID
-#define log2f(f) (logf(f) * (float) (1.0 / M_LN2))
-#else
-#define log2f(f) ((float) log2(f))
-#endif
 
 #define powf(x,y) ((float) pow(x,y))
 #define sqrtf(f) ((float) sqrt(f))
@@ -115,9 +108,6 @@ typedef union { GLfloat f; GLint i; GLuint u; } fi_type;
 
 #if defined(_MSC_VER)
 #if _MSC_VER < 1800  /* Not req'd on VS2013 and above */
-static inline float truncf(float x) { return x < 0.0f ? ceilf(x) : floorf(x); }
-static inline float exp2f(float x) { return powf(2.0f, x); }
-static inline float log2f(float x) { return logf(x) * 1.442695041f; }
 static inline int isblank(int ch) { return ch == ' ' || ch == '\t'; }
 #define strtoll(p, e, b) _strtoi64(p, e, b)
 #endif /* _MSC_VER < 1800 */
