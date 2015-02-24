@@ -1793,6 +1793,27 @@ static int generate_gs_copy_shader(struct r600_context *rctx,
 	return r600_bytecode_build(ctx.bc);
 }
 
+static int emit_inc_ring_offset(struct r600_shader_ctx *ctx, int idx, bool ind)
+{
+	if (ind) {
+		struct r600_bytecode_alu alu;
+		int r;
+
+		memset(&alu, 0, sizeof(struct r600_bytecode_alu));
+		alu.op = ALU_OP2_ADD_INT;
+		alu.src[0].sel = ctx->gs_export_gpr_tregs[idx];
+		alu.src[1].sel = V_SQ_ALU_SRC_LITERAL;
+		alu.src[1].value = ctx->gs_out_ring_offset >> 4;
+		alu.dst.sel = ctx->gs_export_gpr_tregs[idx];
+		alu.dst.write = 1;
+		alu.last = 1;
+		r = r600_bytecode_add_alu(ctx->bc, &alu);
+		if (r)
+			return r;
+	}
+	return 0;
+}
+
 static int emit_gs_ring_writes(struct r600_shader_ctx *ctx, const struct pipe_stream_output_info *so, int stream, bool ind)
 {
 	struct r600_bytecode_output output;
@@ -1859,23 +1880,6 @@ static int emit_gs_ring_writes(struct r600_shader_ctx *ctx, const struct pipe_st
 		r600_bytecode_add_output(ctx->bc, &output);
 	}
 
-	if (ind) {
-		/* get a temp and add the ring offset to the next vertex base in the shader */
-		struct r600_bytecode_alu alu;
-		int r;
-
-		memset(&alu, 0, sizeof(struct r600_bytecode_alu));
-		alu.op = ALU_OP2_ADD_INT;
-		alu.src[0].sel = ctx->gs_export_gpr_tregs[effective_stream];
-		alu.src[1].sel = V_SQ_ALU_SRC_LITERAL;
-		alu.src[1].value = ctx->gs_out_ring_offset >> 4;
-		alu.dst.sel = ctx->gs_export_gpr_tregs[effective_stream];
-		alu.dst.write = 1;
-		alu.last = 1;
-		r = r600_bytecode_add_alu(ctx->bc, &alu);
-		if (r)
-			return r;
-	}
 	++ctx->gs_next_vertex;
 	return 0;
 }
@@ -7772,8 +7776,10 @@ static int tgsi_gs_emit(struct r600_shader_ctx *ctx)
 		emit_gs_ring_writes(ctx, ctx->gs_stream_output_info, stream, TRUE);
 
 	r = r600_bytecode_add_cfinst(ctx->bc, ctx->inst_info->op);
-	if (!r)
+	if (!r) {
 		ctx->bc->cf_last->count = stream; // Count field for CUT/EMIT_VERTEX indicates which stream
+		return emit_inc_ring_offset(ctx, stream, TRUE);
+	}
 	return r;
 }
 
