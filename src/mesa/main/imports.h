@@ -100,7 +100,6 @@ typedef union { GLfloat f; GLint i; GLuint u; } fi_type;
 #define ceilf(f) ((float) ceil(f))
 #define expf(f) ((float) exp(f))
 #define floorf(f) ((float) floor(f))
-#define logf(f) ((float) log(f))
 
 #define sqrtf(f) ((float) sqrt(f))
 #endif
