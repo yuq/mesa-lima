@@ -1026,9 +1026,9 @@ update_modelview_scale( struct gl_context *ctx )
       GLfloat f = m[2] * m[2] + m[6] * m[6] + m[10] * m[10];
       if (f < 1e-12) f = 1.0;
       if (ctx->_NeedEyeCoords)
-	 ctx->_ModelViewInvScale = (GLfloat) INV_SQRTF(f);
+	 ctx->_ModelViewInvScale = 1.0f / sqrtf(f);
       else
-	 ctx->_ModelViewInvScale = (GLfloat) sqrtf(f);
+	 ctx->_ModelViewInvScale = sqrtf(f);
    }
 }
 

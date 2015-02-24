@@ -119,15 +119,6 @@ static inline int isblank(int ch) { return ch == ' ' || ch == '\t'; }
 #endif
 
 
-/** single-precision inverse square root */
-static inline float
-INV_SQRTF(float x)
-{
-   /* XXX we could try Quake's fast inverse square root function here */
-   return 1.0F / sqrtf(x);
-}
-
-
 /***
  *** LOG2: Log base 2 of float
  ***/

@@ -1085,7 +1085,7 @@ _mesa_execute_program(struct gl_context * ctx,
             GLfloat a[4], result[4];
             fetch_vector1(&inst->SrcReg[0], machine, a);
             a[0] = fabsf(a[0]);
-            result[0] = result[1] = result[2] = result[3] = INV_SQRTF(a[0]);
+            result[0] = result[1] = result[2] = result[3] = 1.0f / sqrtf(a[0]);
             store_vector4(inst, machine, result);
             if (DEBUG_PROG) {
                printf("RSQ %g = 1/sqrt(|%g|)\n", result[0], a[0]);

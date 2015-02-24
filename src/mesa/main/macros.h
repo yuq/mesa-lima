@@ -775,7 +775,7 @@ NORMALIZE_3FV(GLfloat v[3])
 {
    GLfloat len = (GLfloat) LEN_SQUARED_3FV(v);
    if (len) {
-      len = INV_SQRTF(len);
+      len = 1.0f / sqrtf(len);
       v[0] *= len;
       v[1] *= len;
       v[2] *= len;
