@@ -250,6 +250,9 @@ fs_visitor::emit_fragment_program_code()
                                     fs_reg(0.0f), BRW_CONDITIONAL_GE));
             cmp->predicate = BRW_PREDICATE_NORMAL;
             cmp->flag_subreg = 1;
+
+            if (brw->gen >= 6)
+               emit_discard_jump();
          }
          break;
       }
