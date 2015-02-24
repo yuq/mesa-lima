@@ -938,14 +938,16 @@ static void r300_texture_setup_fb_state(struct r300_surface *surf)
         surf->pitch_zmask = tex->tex.zmask_stride_in_pixels[level];
         surf->pitch_hiz = tex->tex.hiz_stride_in_pixels[level];
     } else {
+        enum pipe_format format = util_format_linear(surf->base.format);
+
         surf->pitch =
                 stride |
-                r300_translate_colorformat(surf->base.format) |
+                r300_translate_colorformat(format) |
                 R300_COLOR_TILE(tex->tex.macrotile[level]) |
                 R300_COLOR_MICROTILE(tex->tex.microtile);
-        surf->format = r300_translate_out_fmt(surf->base.format);
+        surf->format = r300_translate_out_fmt(format);
         surf->colormask_swizzle =
-            r300_translate_colormask_swizzle(surf->base.format);
+            r300_translate_colormask_swizzle(format);
         surf->pitch_cmask = tex->tex.cmask_stride_in_pixels;
     }
 }
