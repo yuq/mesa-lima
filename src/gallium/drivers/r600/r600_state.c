@@ -2213,10 +2213,11 @@ void r600_init_atom_start_cs(struct r600_context *rctx)
 		num_temp_gprs = 4;
 		num_gs_gprs = 0;
 		num_es_gprs = 0;
-		num_ps_threads = 136;
-		num_vs_threads = 48;
-		num_gs_threads = 4;
-		num_es_threads = 4;
+		/* use limits 40 VS and at least 16 ES/GS */
+		num_ps_threads = 120;
+		num_vs_threads = 40;
+		num_gs_threads = 16;
+		num_es_threads = 16;
 		num_ps_stack_entries = 40;
 		num_vs_stack_entries = 40;
 		num_gs_stack_entries = 32;
