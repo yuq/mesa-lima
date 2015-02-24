@@ -83,9 +83,6 @@ typedef union { GLfloat f; GLint i; GLuint u; } fi_type;
  * Math macros
  */
 
-#define MAX_GLUSHORT	0xffff
-#define MAX_GLUINT	0xffffffff
-
 /* Degrees to radians conversion: */
 #define DEG2RAD (M_PI/180.0)
 

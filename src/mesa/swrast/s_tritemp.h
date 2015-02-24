@@ -91,6 +91,11 @@
  */
 
 
+#ifndef MAX_GLUINT
+#define MAX_GLUINT	0xffffffff
+#endif
+
+
 /*
  * Some code we unfortunately need to prevent negative interpolated colors.
  */
