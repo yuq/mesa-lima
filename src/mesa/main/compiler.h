@@ -35,7 +35,6 @@
 
 
 #include <assert.h>
-#include <ctype.h>
 #include <math.h>
 #include <limits.h>
 #include <stdlib.h>

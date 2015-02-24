@@ -64,6 +64,7 @@
  * \author Ian Romanick <ian.d.romanick@intel.com>
  */
 
+#include <ctype.h>
 #include "main/core.h"
 #include "glsl_symbol_table.h"
 #include "glsl_parser_extras.h"
