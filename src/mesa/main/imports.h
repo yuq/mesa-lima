@@ -90,17 +90,6 @@ typedef union { GLfloat f; GLint i; GLuint u; } fi_type;
 #define DEG2RAD (M_PI/180.0)
 
 
-/**
- * \name Work-arounds for platforms that lack C99 math functions
- */
-/*@{*/
-#if (!defined(_XOPEN_SOURCE) || (_XOPEN_SOURCE < 600)) && !defined(_ISOC99_SOURCE) \
-   && (!defined(__STDC_VERSION__) || (__STDC_VERSION__ < 199901L)) \
-   && (!defined(_MSC_VER) || (_MSC_VER < 1400))
-
-#define sqrtf(f) ((float) sqrt(f))
-#endif
-
 #if defined(_MSC_VER)
 #if _MSC_VER < 1800  /* Not req'd on VS2013 and above */
 static inline int isblank(int ch) { return ch == ' ' || ch == '\t'; }
