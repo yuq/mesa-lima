@@ -762,7 +762,8 @@ cross_validate_globals(struct gl_shader_program *prog,
             /* Check if types match. Interface blocks have some special
              * rules so we handle those elsewhere.
              */
-	    if (var->type != existing->type) {
+           if (var->type != existing->type &&
+                !var->is_interface_instance()) {
 	       if (!validate_intrastage_arrays(prog, var, existing)) {
                   if (var->type->is_record() && existing->type->is_record()
                       && existing->type->record_compare(var->type)) {
