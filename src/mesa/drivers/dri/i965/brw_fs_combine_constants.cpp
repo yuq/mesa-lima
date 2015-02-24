@@ -270,6 +270,7 @@ fs_visitor::opt_combine_constants()
       struct imm *imm = &table.imm[i];
 
       fs_inst *mov = MOV(reg, fs_reg(imm->val));
+      mov->force_writemask_all = true;
       if (imm->inst) {
          imm->inst->insert_before(imm->block, mov);
       } else {
