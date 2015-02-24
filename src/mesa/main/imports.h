@@ -204,17 +204,14 @@ static inline GLfloat LOG2(GLfloat x)
 
 
 /***
- *** CEILF: ceiling of float
  *** FLOORF: floor of float
  *** FABSF: absolute value of float
  ***/
 #if defined(__gnu_linux__)
 /* C99 functions */
-#define CEILF(x)   ceilf(x)
 #define FLOORF(x)  floorf(x)
 #define FABSF(x)   fabsf(x)
 #else
-#define CEILF(x)   ((GLfloat) ceil(x))
 #define FLOORF(x)  ((GLfloat) floor(x))
 #define FABSF(x)   ((GLfloat) fabs(x))
 #endif
