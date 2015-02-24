@@ -100,8 +100,11 @@ create_texture_for_pbo(struct gl_context *ctx, bool create_pbo,
    _mesa_GenTextures(1, tmp_tex);
    tex_obj = _mesa_lookup_texture(ctx, *tmp_tex);
    tex_obj->Target = depth > 1 ? GL_TEXTURE_2D_ARRAY : GL_TEXTURE_2D;
-   tex_obj->Immutable = GL_TRUE;
    _mesa_initialize_texture_object(ctx, tex_obj, *tmp_tex, GL_TEXTURE_2D);
+   /* This must be set after _mesa_initialize_texture_object, not before. */
+   tex_obj->Immutable = GL_TRUE;
+   /* This is required for interactions with ARB_texture_view. */
+   tex_obj->NumLayers = 1;
 
    internal_format = _mesa_get_format_base_format(pbo_format);
 
