@@ -1596,6 +1596,7 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
       case 1:
       case 2:
       case 4:
+         assert(inst->force_writemask_all);
          brw_set_default_compression_control(p, BRW_COMPRESSION_NONE);
          break;
       case 8:
