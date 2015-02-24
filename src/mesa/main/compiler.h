@@ -217,19 +217,6 @@ static inline GLuint CPU_TO_LE32(GLuint x)
 # define LONGSTRING __extension__
 #endif
 
-
-#ifndef M_PI
-#define M_PI (3.14159265358979323846)
-#endif
-
-#ifndef M_E
-#define M_E (2.7182818284590452354)
-#endif
-
-#ifndef M_LOG2E
-#define M_LOG2E     (1.4426950408889634074)
-#endif
-
 #ifndef ONE_DIV_SQRT_LN2
 #define ONE_DIV_SQRT_LN2 (1.201122408786449815)
 #endif
