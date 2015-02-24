@@ -79,14 +79,6 @@ typedef union { GLfloat f; GLint i; GLuint u; } fi_type;
 
 
 
-/**********************************************************************
- * Math macros
- */
-
-/* Degrees to radians conversion: */
-#define DEG2RAD (M_PI/180.0)
-
-
 #if defined(_MSC_VER)
 #if _MSC_VER < 1800  /* Not req'd on VS2013 and above */
 #define strtoll(p, e, b) _strtoi64(p, e, b)
