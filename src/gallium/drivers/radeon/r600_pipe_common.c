@@ -667,7 +667,8 @@ static int r600_get_driver_query_info(struct pipe_screen *screen,
 		{"GTT-usage", R600_QUERY_GTT_USAGE, rscreen->info.gart_size, TRUE},
 		{"temperature", R600_QUERY_GPU_TEMPERATURE, 100, FALSE},
 		{"shader-clock", R600_QUERY_CURRENT_GPU_SCLK, 0, FALSE},
-		{"memory-clock", R600_QUERY_CURRENT_GPU_MCLK, 0, FALSE}
+		{"memory-clock", R600_QUERY_CURRENT_GPU_MCLK, 0, FALSE},
+		{"GPU-load", R600_QUERY_GPU_LOAD, 100, FALSE}
 	};
 	unsigned num_queries;
 
@@ -872,6 +873,7 @@ bool r600_common_screen_init(struct r600_common_screen *rscreen,
 	}
 	util_format_s3tc_init();
 	pipe_mutex_init(rscreen->aux_context_lock);
+	pipe_mutex_init(rscreen->gpu_load_mutex);
 
 	if (rscreen->info.drm_minor >= 28 && (rscreen->debug_flags & DBG_TRACE_CS)) {
 		rscreen->trace_bo = (struct r600_resource*)pipe_buffer_create(&rscreen->b,
@@ -915,6 +917,9 @@ bool r600_common_screen_init(struct r600_common_screen *rscreen,
 
 void r600_destroy_common_screen(struct r600_common_screen *rscreen)
 {
+	r600_gpu_load_kill_thread(rscreen);
+
+	pipe_mutex_destroy(rscreen->gpu_load_mutex);
 	pipe_mutex_destroy(rscreen->aux_context_lock);
 	rscreen->aux_context->destroy(rscreen->aux_context);
 

@@ -582,6 +582,21 @@ static uint64_t radeon_query_value(struct radeon_winsys *rws,
     return 0;
 }
 
+static void radeon_read_registers(struct radeon_winsys *rws,
+                                  unsigned reg_offset,
+                                  unsigned num_registers, uint32_t *out)
+{
+    struct radeon_drm_winsys *ws = (struct radeon_drm_winsys*)rws;
+    unsigned i;
+
+    for (i = 0; i < num_registers; i++) {
+        uint32_t reg = reg_offset + i*4;
+
+        radeon_get_drm_value(ws->fd, RADEON_INFO_READ_REG, "read-reg", &reg);
+        out[i] = reg;
+    }
+}
+
 static unsigned hash_fd(void *key)
 {
     int fd = pointer_to_intptr(key);
@@ -728,6 +743,7 @@ radeon_drm_winsys_create(int fd, radeon_screen_create_t screen_create)
     ws->base.surface_init = radeon_drm_winsys_surface_init;
     ws->base.surface_best = radeon_drm_winsys_surface_best;
     ws->base.query_value = radeon_query_value;
+    ws->base.read_registers = radeon_read_registers;
 
     radeon_bomgr_init_functions(ws);
     radeon_drm_cs_init_functions(ws);

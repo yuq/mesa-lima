@@ -589,6 +589,9 @@ struct radeon_winsys {
 
     uint64_t (*query_value)(struct radeon_winsys *ws,
                             enum radeon_value_id value);
+
+    void (*read_registers)(struct radeon_winsys *ws, unsigned reg_offset,
+                           unsigned num_registers, uint32_t *out);
 };
 
 

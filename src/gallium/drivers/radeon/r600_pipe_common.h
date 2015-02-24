@@ -58,6 +58,7 @@
 #define R600_QUERY_GPU_TEMPERATURE	(PIPE_QUERY_DRIVER_SPECIFIC + 8)
 #define R600_QUERY_CURRENT_GPU_SCLK	(PIPE_QUERY_DRIVER_SPECIFIC + 9)
 #define R600_QUERY_CURRENT_GPU_MCLK	(PIPE_QUERY_DRIVER_SPECIFIC + 10)
+#define R600_QUERY_GPU_LOAD		(PIPE_QUERY_DRIVER_SPECIFIC + 11)
 
 #define R600_CONTEXT_STREAMOUT_FLUSH		(1u << 0)
 #define R600_CONTEXT_PRIVATE_FLAG		(1u << 1)
@@ -283,6 +284,13 @@ struct r600_common_screen {
 	struct r600_resource		*trace_bo;
 	uint32_t			*trace_ptr;
 	unsigned			cs_count;
+
+	/* GPU load thread. */
+	pipe_mutex			gpu_load_mutex;
+	pipe_thread			gpu_load_thread;
+	unsigned			gpu_load_counter_busy;
+	unsigned			gpu_load_counter_idle;
+	unsigned			gpu_load_stop_thread; /* bool */
 };
 
 /* This encapsulates a state or an operation which can emitted into the GPU
@@ -477,6 +485,11 @@ struct pipe_resource *r600_resource_create_common(struct pipe_screen *screen,
 						  const struct pipe_resource *templ);
 const char *r600_get_llvm_processor_name(enum radeon_family family);
 void r600_need_dma_space(struct r600_common_context *ctx, unsigned num_dw);
+
+/* r600_gpu_load.c */
+void r600_gpu_load_kill_thread(struct r600_common_screen *rscreen);
+uint64_t r600_gpu_load_begin(struct r600_common_screen *rscreen);
+unsigned r600_gpu_load_end(struct r600_common_screen *rscreen, uint64_t begin);
 
 /* r600_query.c */
 void r600_query_init(struct r600_common_context *rctx);
