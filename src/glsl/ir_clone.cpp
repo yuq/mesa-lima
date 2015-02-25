@@ -363,6 +363,7 @@ ir_constant::clone(void *mem_ctx, struct hash_table *ht) const
       return c;
    }
 
+   case GLSL_TYPE_FUNCTION:
    case GLSL_TYPE_SAMPLER:
    case GLSL_TYPE_IMAGE:
    case GLSL_TYPE_ATOMIC_UINT:

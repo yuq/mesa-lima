@@ -1029,6 +1029,8 @@ glsl_type::component_slots() const
       return 1;
    case GLSL_TYPE_SUBROUTINE:
      return 1;
+
+   case GLSL_TYPE_FUNCTION:
    case GLSL_TYPE_SAMPLER:
    case GLSL_TYPE_ATOMIC_UINT:
    case GLSL_TYPE_VOID:
@@ -1402,6 +1404,7 @@ glsl_type::count_attribute_slots() const
    case GLSL_TYPE_ARRAY:
       return this->length * this->fields.array->count_attribute_slots();
 
+   case GLSL_TYPE_FUNCTION:
    case GLSL_TYPE_SAMPLER:
    case GLSL_TYPE_IMAGE:
    case GLSL_TYPE_ATOMIC_UINT:
