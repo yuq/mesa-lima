@@ -47,12 +47,6 @@ extern "C" {
 
 
 /**
- * Get standard integer types
- */
-#include <stdint.h>
-
-
-/**
   * Sun compilers define __i386 instead of the gcc-style __i386__
  */
 #ifdef __SUNPRO_C
