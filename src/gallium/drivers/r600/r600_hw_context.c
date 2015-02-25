@@ -307,7 +307,7 @@ void r600_begin_new_cs(struct r600_context *ctx)
 	ctx->poly_offset_state.atom.dirty = true;
 	ctx->vgt_state.atom.dirty = true;
 	ctx->sample_mask.atom.dirty = true;
-	for (i = 0; i < 16; i++) {
+	for (i = 0; i < R600_MAX_VIEWPORTS; i++) {
 		ctx->scissor[i].atom.dirty = true;
 		ctx->viewport[i].atom.dirty = true;
 	}

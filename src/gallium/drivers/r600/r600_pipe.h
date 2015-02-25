@@ -38,6 +38,8 @@
 
 #define R600_NUM_ATOMS 73
 
+#define R600_MAX_VIEWPORTS 16
+
 /* read caches */
 #define R600_CONTEXT_INV_VERTEX_CACHE		(R600_CONTEXT_PRIVATE_FLAG << 0)
 #define R600_CONTEXT_INV_TEX_CACHE		(R600_CONTEXT_PRIVATE_FLAG << 1)
@@ -443,12 +445,12 @@ struct r600_context {
 	struct r600_poly_offset_state	poly_offset_state;
 	struct r600_cso_state		rasterizer_state;
 	struct r600_sample_mask		sample_mask;
-	struct r600_scissor_state	scissor[16];
+	struct r600_scissor_state	scissor[R600_MAX_VIEWPORTS];
 	struct r600_seamless_cube_map	seamless_cube_map;
 	struct r600_config_state	config_state;
 	struct r600_stencil_ref_state	stencil_ref;
 	struct r600_vgt_state		vgt_state;
-	struct r600_viewport_state	viewport[16];
+	struct r600_viewport_state	viewport[R600_MAX_VIEWPORTS];
 	/* Shaders and shader resources. */
 	struct r600_cso_state		vertex_fetch_shader;
 	struct r600_shader_state	vertex_shader;
