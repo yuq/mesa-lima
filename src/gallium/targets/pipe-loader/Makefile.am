@@ -40,11 +40,15 @@ PIPE_LIBS =
 
 if NEED_GALLIUM_VL
 PIPE_LIBS += \
-	$(top_builddir)/src/gallium/auxiliary/libgalliumvlwinsys.la \
 	$(top_builddir)/src/gallium/auxiliary/libgalliumvl.la
 else
 PIPE_LIBS += \
 	$(top_builddir)/src/gallium/auxiliary/libgalliumvl_stub.la
+endif
+
+if NEED_GALLIUM_VL_WINSYS
+PIPE_LIBS+= \
+	$(top_builddir)/src/gallium/auxiliary/libgalliumvlwinsys.la
 endif
 
 PIPE_LIBS += \
