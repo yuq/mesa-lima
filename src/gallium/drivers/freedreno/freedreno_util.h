@@ -76,8 +76,6 @@ extern bool fd_binning_enabled;
 			debug_printf("%s:%d: "fmt "\n", \
 				__FUNCTION__, __LINE__, ##__VA_ARGS__); } while (0)
 
-#define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
-
 /* for conditionally setting boolean flag(s): */
 #define COND(bool, val) ((bool) ? (val) : 0)
 
