@@ -226,8 +226,6 @@ _mesa_meta_pbo_TexSubImage(struct gl_context *ctx, GLuint dims,
            height : depth;
 
    for (z = 1; z < iters; z++) {
-      _mesa_meta_bind_fbo_image(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-                                pbo_tex_image, z);
       _mesa_meta_bind_fbo_image(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
                                 tex_image, zoffset + z);
 
@@ -359,8 +357,6 @@ _mesa_meta_pbo_GetTexSubImage(struct gl_context *ctx, GLuint dims,
    for (z = 1; z < iters; z++) {
       _mesa_meta_bind_fbo_image(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
                                 tex_image, zoffset + z);
-      _mesa_meta_bind_fbo_image(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-                                pbo_tex_image, z);
 
       _mesa_update_state(ctx);
 
