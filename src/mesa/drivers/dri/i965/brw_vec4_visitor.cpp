@@ -1555,6 +1555,11 @@ vec4_visitor::visit(ir_expression *ir)
    }
 
    case ir_binop_all_equal:
+      if (brw->gen <= 5) {
+         resolve_bool_comparison(ir->operands[0], &op[0]);
+         resolve_bool_comparison(ir->operands[1], &op[1]);
+      }
+
       /* "==" operator producing a scalar boolean. */
       if (ir->operands[0]->type->is_vector() ||
 	  ir->operands[1]->type->is_vector()) {
@@ -1567,6 +1572,11 @@ vec4_visitor::visit(ir_expression *ir)
       }
       break;
    case ir_binop_any_nequal:
+      if (brw->gen <= 5) {
+         resolve_bool_comparison(ir->operands[0], &op[0]);
+         resolve_bool_comparison(ir->operands[1], &op[1]);
+      }
+
       /* "!=" operator producing a scalar boolean. */
       if (ir->operands[0]->type->is_vector() ||
 	  ir->operands[1]->type->is_vector()) {
@@ -1581,6 +1591,9 @@ vec4_visitor::visit(ir_expression *ir)
       break;
 
    case ir_unop_any:
+      if (brw->gen <= 5) {
+         resolve_bool_comparison(ir->operands[0], &op[0]);
+      }
       emit(CMP(dst_null_d(), op[0], src_reg(0), BRW_CONDITIONAL_NZ));
       emit(MOV(result_dst, src_reg(0)));
 
