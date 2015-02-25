@@ -341,16 +341,16 @@ enum pipe_flush_flags {
 #define PIPE_BIND_VERTEX_BUFFER        (1 << 4) /* set_vertex_buffers */
 #define PIPE_BIND_INDEX_BUFFER         (1 << 5) /* draw_elements */
 #define PIPE_BIND_CONSTANT_BUFFER      (1 << 6) /* set_constant_buffer */
-#define PIPE_BIND_DISPLAY_TARGET       (1 << 8) /* flush_front_buffer */
-#define PIPE_BIND_TRANSFER_WRITE       (1 << 9) /* transfer_map */
-#define PIPE_BIND_TRANSFER_READ        (1 << 10) /* transfer_map */
-#define PIPE_BIND_STREAM_OUTPUT        (1 << 11) /* set_stream_output_buffers */
-#define PIPE_BIND_CURSOR               (1 << 16) /* mouse cursor */
-#define PIPE_BIND_CUSTOM               (1 << 17) /* state-tracker/winsys usages */
-#define PIPE_BIND_GLOBAL               (1 << 18) /* set_global_binding */
-#define PIPE_BIND_SHADER_RESOURCE      (1 << 19) /* set_shader_resources */
-#define PIPE_BIND_COMPUTE_RESOURCE     (1 << 20) /* set_compute_resources */
-#define PIPE_BIND_COMMAND_ARGS_BUFFER  (1 << 21) /* pipe_draw_info.indirect */
+#define PIPE_BIND_DISPLAY_TARGET       (1 << 7) /* flush_front_buffer */
+#define PIPE_BIND_TRANSFER_WRITE       (1 << 8) /* transfer_map */
+#define PIPE_BIND_TRANSFER_READ        (1 << 9) /* transfer_map */
+#define PIPE_BIND_STREAM_OUTPUT        (1 << 10) /* set_stream_output_buffers */
+#define PIPE_BIND_CURSOR               (1 << 11) /* mouse cursor */
+#define PIPE_BIND_CUSTOM               (1 << 12) /* state-tracker/winsys usages */
+#define PIPE_BIND_GLOBAL               (1 << 13) /* set_global_binding */
+#define PIPE_BIND_SHADER_RESOURCE      (1 << 14) /* set_shader_resources */
+#define PIPE_BIND_COMPUTE_RESOURCE     (1 << 15) /* set_compute_resources */
+#define PIPE_BIND_COMMAND_ARGS_BUFFER  (1 << 16) /* pipe_draw_info.indirect */
 
 /* The first two flags above were previously part of the amorphous
  * TEXTURE_USAGE, most of which are now descriptions of the ways a
@@ -370,9 +370,9 @@ enum pipe_flush_flags {
  * The third flag has been added to be able to force textures to be created
  * in linear mode (no tiling).
  */
-#define PIPE_BIND_SCANOUT     (1 << 14) /*  */
-#define PIPE_BIND_SHARED      (1 << 15) /* get_texture_handle ??? */
-#define PIPE_BIND_LINEAR      (1 << 21)
+#define PIPE_BIND_SCANOUT     (1 << 17) /*  */
+#define PIPE_BIND_SHARED      (1 << 18) /* get_texture_handle ??? */
+#define PIPE_BIND_LINEAR      (1 << 19)
 
 
 /* Flags for the driver about resource behaviour:
