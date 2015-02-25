@@ -2837,14 +2837,6 @@ copytexsubimage_error_check(struct gl_context *ctx, GLuint dimensions,
       }
    }
 
-   /* check target (proxies not allowed) */
-   if (!legal_texsubimage_target(ctx, dimensions, target, dsa)) {
-      _mesa_error(ctx, GL_INVALID_ENUM, "glCopyTex%sSubImage%uD(target=%s)",
-                  suffix, dimensions,
-                  _mesa_lookup_enum_by_nr(target));
-      return GL_TRUE;
-   }
-
    /* Check level */
    if (level < 0 || level >= _mesa_max_texture_levels(ctx, target)) {
       _mesa_error(ctx, GL_INVALID_VALUE,
@@ -4110,6 +4102,16 @@ _mesa_CopyTexSubImage1D( GLenum target, GLint level,
    struct gl_texture_object* texObj;
    GET_CURRENT_CONTEXT(ctx);
 
+   /* Check target (proxies not allowed). Target must be checked prior to
+    * calling _mesa_get_current_tex_object.
+    */
+   if (!legal_texsubimage_target(ctx, 1, target, false)) {
+      _mesa_error(ctx, GL_INVALID_ENUM,
+                  "glCopyTexSubImage1D(invalid target %s)",
+                  _mesa_lookup_enum_by_nr(target));
+      return;
+   }
+
    texObj = _mesa_get_current_tex_object(ctx, target);
    if (!texObj)
       return;
@@ -4127,6 +4129,16 @@ _mesa_CopyTexSubImage2D( GLenum target, GLint level,
 {
    struct gl_texture_object* texObj;
    GET_CURRENT_CONTEXT(ctx);
+
+   /* Check target (proxies not allowed). Target must be checked prior to
+    * calling _mesa_get_current_tex_object.
+    */
+   if (!legal_texsubimage_target(ctx, 2, target, false)) {
+      _mesa_error(ctx, GL_INVALID_ENUM,
+                  "glCopyTexSubImage2D(invalid target %s)",
+                  _mesa_lookup_enum_by_nr(target));
+      return;
+   }
 
    texObj = _mesa_get_current_tex_object(ctx, target);
    if (!texObj)
@@ -4146,6 +4158,16 @@ _mesa_CopyTexSubImage3D( GLenum target, GLint level,
 {
    struct gl_texture_object* texObj;
    GET_CURRENT_CONTEXT(ctx);
+
+   /* Check target (proxies not allowed). Target must be checked prior to
+    * calling _mesa_get_current_tex_object.
+    */
+   if (!legal_texsubimage_target(ctx, 3, target, false)) {
+      _mesa_error(ctx, GL_INVALID_ENUM,
+                  "glCopyTexSubImage3D(invalid target %s)",
+                  _mesa_lookup_enum_by_nr(target));
+      return;
+   }
 
    texObj = _mesa_get_current_tex_object(ctx, target);
    if (!texObj)
@@ -4167,6 +4189,14 @@ _mesa_CopyTextureSubImage1D(GLuint texture, GLint level,
    if (!texObj)
       return;
 
+   /* Check target (proxies not allowed). */
+   if (!legal_texsubimage_target(ctx, 1, texObj->Target, true)) {
+      _mesa_error(ctx, GL_INVALID_ENUM,
+                  "glCopyTextureSubImage1D(invalid target %s)",
+                  _mesa_lookup_enum_by_nr(texObj->Target));
+      return;
+   }
+
    _mesa_copy_texture_sub_image(ctx, 1, texObj, texObj->Target, level,
                                 xoffset, 0, 0, x, y, width, 1, true);
 }
@@ -4182,6 +4212,14 @@ _mesa_CopyTextureSubImage2D(GLuint texture, GLint level,
    texObj = _mesa_lookup_texture_err(ctx, texture, "glCopyTextureSubImage2D");
    if (!texObj)
       return;
+
+   /* Check target (proxies not allowed). */
+   if (!legal_texsubimage_target(ctx, 2, texObj->Target, true)) {
+      _mesa_error(ctx, GL_INVALID_ENUM,
+                  "glCopyTextureSubImage2D(invalid target %s)",
+                  _mesa_lookup_enum_by_nr(texObj->Target));
+      return;
+   }
 
    _mesa_copy_texture_sub_image(ctx, 2, texObj, texObj->Target, level,
                                 xoffset, yoffset, 0,
@@ -4201,6 +4239,14 @@ _mesa_CopyTextureSubImage3D(GLuint texture, GLint level,
    texObj = _mesa_lookup_texture_err(ctx, texture, "glCopyTextureSubImage3D");
    if (!texObj)
       return;
+
+   /* Check target (proxies not allowed). */
+   if (!legal_texsubimage_target(ctx, 3, texObj->Target, true)) {
+      _mesa_error(ctx, GL_INVALID_ENUM,
+                  "glCopyTextureSubImage3D(invalid target %s)",
+                  _mesa_lookup_enum_by_nr(texObj->Target));
+      return;
+   }
 
    _mesa_copy_texture_sub_image(ctx, 3, texObj, texObj->Target, level,
                                 xoffset, yoffset, zoffset,
