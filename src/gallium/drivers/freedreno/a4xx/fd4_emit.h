@@ -55,7 +55,6 @@ struct fd4_emit {
 	struct ir3_shader_key key;
 	enum a4xx_color_fmt format;
 	uint32_t dirty;
-	bool rasterflat;
 
 	/* cached to avoid repeated lookups of same variants: */
 	struct ir3_shader_variant *vp, *fp;

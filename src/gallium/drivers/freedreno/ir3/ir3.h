@@ -427,6 +427,12 @@ static inline bool is_mem(struct ir3_instruction *instr)
 
 static inline bool is_input(struct ir3_instruction *instr)
 {
+	/* in some cases, ldlv is used to fetch varying without
+	 * interpolation.. fortunately inloc is the first src
+	 * register in either case
+	 */
+	if (is_mem(instr) && (instr->opc == OPC_LDLV))
+		return true;
 	return (instr->category == 2) && (instr->opc == OPC_BARY_F);
 }
 

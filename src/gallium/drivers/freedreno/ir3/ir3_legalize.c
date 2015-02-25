@@ -187,8 +187,44 @@ static void legalize(struct ir3_legalize_ctx *ctx)
 			last_input = n;
 	}
 
-	if (last_input)
+	if (last_input) {
+		/* special hack.. if using ldlv to bypass interpolation,
+		 * we need to insert a dummy bary.f on which we can set
+		 * the (ei) flag:
+		 */
+		if (is_mem(last_input) && (last_input->opc == OPC_LDLV)) {
+			int i, cnt;
+
+			/* note that ir3_instr_create() inserts into
+			 * shader->instrs[] and increments the count..
+			 * so we need to bump up the cnt initially (to
+			 * avoid it clobbering the last real instr) and
+			 * restore it after.
+			 */
+			cnt = ++shader->instrs_count;
+
+			/* inserting instructions would be a bit nicer if list.. */
+			for (i = cnt - 2; i >= 0; i--) {
+				if (shader->instrs[i] == last_input) {
+
+					/* (ss)bary.f (ei)r63.x, 0, r0.x */
+					last_input = ir3_instr_create(block, 2, OPC_BARY_F);
+					last_input->flags |= IR3_INSTR_SS;
+					ir3_reg_create(last_input, regid(63, 0), 0);
+					ir3_reg_create(last_input, 0, IR3_REG_IMMED)->iim_val = 0;
+					ir3_reg_create(last_input, regid(0, 0), 0);
+
+					shader->instrs[i + 1] = last_input;
+
+					break;
+				}
+				shader->instrs[i + 1] = shader->instrs[i];
+			}
+
+			shader->instrs_count = cnt;
+		}
 		last_input->regs[0]->flags |= IR3_REG_EI;
+	}
 
 	if (last_rel)
 		last_rel->flags |= IR3_INSTR_UL;

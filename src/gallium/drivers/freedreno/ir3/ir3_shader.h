@@ -77,6 +77,10 @@ struct ir3_shader_key {
 			 * let's start with this and see how it goes:
 			 */
 			unsigned alpha : 1;
+			/* used when shader needs to handle flat varyings (a4xx),
+			 * for TGSI_INTERPOLATE_COLOR:
+			 */
+			unsigned rasterflat : 1;
 		};
 		uint32_t global;
 	};

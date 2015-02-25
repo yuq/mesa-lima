@@ -246,6 +246,7 @@ ir3_shader_variant(struct ir3_shader *shader, struct ir3_shader_key key)
 		key.color_two_side = false;
 		key.half_precision = false;
 		key.alpha = false;
+		key.rasterflat = false;
 		if (key.has_per_samp) {
 			key.fsaturate_s = 0;
 			key.fsaturate_t = 0;

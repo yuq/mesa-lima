@@ -105,6 +105,11 @@ struct ir3_compile_context {
 	/* for calculating input/output positions/linkages: */
 	unsigned next_inloc;
 
+	/* a4xx (at least patchlevel 0) cannot seem to flat-interpolate
+	 * so we need to use ldlv.u32 to load the varying directly:
+	 */
+	bool flat_bypass;
+
 	unsigned num_internal_temps;
 	struct tgsi_src_register internal_temps[8];
 
@@ -204,9 +209,13 @@ compile_init(struct ir3_compile_context *ctx, struct ir3_shader_variant *so,
 	} else if (ir3_shader_gpuid(so->shader) >= 400) {
 		/* a4xx seems to have *no* sam.p */
 		lconfig.lower_TXP = ~0;  /* lower all txp */
+		/* need special handling for "flat" */
+		ctx->flat_bypass = true;
 	} else {
 		/* a3xx just needs to avoid sam.p for 3d tex */
 		lconfig.lower_TXP = (1 << TGSI_TEXTURE_3D);
+		/* no special handling for "flat" */
+		ctx->flat_bypass = false;
 	}
 
 	ctx->tokens = tgsi_transform_lowering(&lconfig, tokens, &ctx->info);
@@ -2745,10 +2754,22 @@ decl_semantic(const struct tgsi_declaration_semantic *sem)
 
 static struct ir3_instruction *
 decl_in_frag_bary(struct ir3_compile_context *ctx, unsigned regid,
-		unsigned j, unsigned inloc)
+		unsigned j, unsigned inloc, bool use_ldlv)
 {
 	struct ir3_instruction *instr;
 	struct ir3_register *src;
+
+	if (use_ldlv) {
+		/* ldlv.u32 dst, l[#inloc], 1 */
+		instr = instr_create(ctx, 6, OPC_LDLV);
+		instr->cat6.type = TYPE_U32;
+		instr->cat6.iim_val = 1;
+		ir3_reg_create(instr, regid, 0);   /* dummy dst */
+		ir3_reg_create(instr, 0, IR3_REG_IMMED)->iim_val = inloc;
+		ir3_reg_create(instr, 0, IR3_REG_IMMED)->iim_val = 1;
+
+		return instr;
+	}
 
 	/* bary.f dst, #inloc, r0.x */
 	instr = instr_create(ctx, 2, OPC_BARY_F);
@@ -2943,9 +2964,31 @@ decl_in(struct ir3_compile_context *ctx, struct tgsi_full_declaration *decl)
 					so->frag_face = true;
 					instr = decl_in_frag_face(ctx, r + j, j);
 				} else {
+					bool use_ldlv = false;
+
+					/* I don't believe it is valid to not have Interp
+					 * on a normal frag shader input, and various parts
+					 * that that handle flat/smooth shading make this
+					 * assumption as well.
+					 */
+					compile_assert(ctx, decl->Declaration.Interpolate);
+
+					if (ctx->flat_bypass) {
+						switch (decl->Interp.Interpolate) {
+						case TGSI_INTERPOLATE_COLOR:
+							if (!ctx->so->key.rasterflat)
+								break;
+							/* fallthrough */
+						case TGSI_INTERPOLATE_CONSTANT:
+							use_ldlv = true;
+							break;
+						}
+					}
+
 					so->inputs[n].bary = true;
+
 					instr = decl_in_frag_bary(ctx, r + j, j,
-							so->inputs[n].inloc + j - 8);
+							so->inputs[n].inloc + j - 8, use_ldlv);
 				}
 			} else {
 				instr = create_input(ctx->block, NULL, (i * 4) + j);
