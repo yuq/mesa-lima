@@ -4522,25 +4522,21 @@ out:
 
 
 /**
- * Error checking for glCompressedTexSubImage[123]D().
+ * Target checking for glCompressedTexSubImage[123]D().
  * \return GL_TRUE if error, GL_FALSE if no error
+ * Must come before other error checking so that the texture object can
+ * be correctly retrieved using _mesa_get_current_tex_object.
  */
 static GLboolean
-compressed_subtexture_error_check(struct gl_context *ctx, GLint dims,
-                                  const struct gl_texture_object *texObj,
-                                  GLenum target, GLint level,
-                                  GLint xoffset, GLint yoffset, GLint zoffset,
-                                  GLsizei width, GLsizei height, GLsizei depth,
-                                  GLenum format, GLsizei imageSize, bool dsa)
+compressed_subtexture_target_check(struct gl_context *ctx, GLenum target,
+                                   GLint dims, GLenum format, bool dsa,
+                                   const char *caller)
 {
-   struct gl_texture_image *texImage;
-   GLint expectedSize;
    GLboolean targetOK;
-   const char *suffix = dsa ? "ture" : "";
 
    if (dsa && target == GL_TEXTURE_RECTANGLE) {
-      _mesa_error(ctx, GL_INVALID_OPERATION,
-                  "glCompressedSubTexture%dD(target)", dims);
+      _mesa_error(ctx, GL_INVALID_OPERATION, "%s(invalid target %s)", caller,
+                  _mesa_lookup_enum_by_nr(target));
       return GL_TRUE;
    }
 
@@ -4603,7 +4599,9 @@ compressed_subtexture_error_check(struct gl_context *ctx, GLint dims,
          }
          if (invalidformat) {
             _mesa_error(ctx, GL_INVALID_OPERATION,
-                        "glCompressedTex%sSubImage%uD(target)", suffix, dims);
+                        "%s(invalid target %s for format %s)", caller,
+                        _mesa_lookup_enum_by_nr(target),
+                        _mesa_lookup_enum_by_nr(format));
             return GL_TRUE;
          }
       }
@@ -4617,10 +4615,29 @@ compressed_subtexture_error_check(struct gl_context *ctx, GLint dims,
    }
 
    if (!targetOK) {
-      _mesa_error(ctx, GL_INVALID_ENUM,
-                  "glCompressedTex%sSubImage%uD(target)", suffix, dims);
+      _mesa_error(ctx, GL_INVALID_ENUM, "%s(invalid target %s)", caller,
+                  _mesa_lookup_enum_by_nr(target));
       return GL_TRUE;
    }
+
+   return GL_FALSE;
+}
+
+/**
+ * Error checking for glCompressedTexSubImage[123]D().
+ * \return GL_TRUE if error, GL_FALSE if no error
+ */
+static GLboolean
+compressed_subtexture_error_check(struct gl_context *ctx, GLint dims,
+                                  const struct gl_texture_object *texObj,
+                                  GLenum target, GLint level,
+                                  GLint xoffset, GLint yoffset, GLint zoffset,
+                                  GLsizei width, GLsizei height, GLsizei depth,
+                                  GLenum format, GLsizei imageSize, bool dsa)
+{
+   struct gl_texture_image *texImage;
+   GLint expectedSize;
+   const char *suffix = dsa ? "ture" : "";
 
    /* this will catch any invalid compressed format token */
    if (!_mesa_is_compressed_format(ctx, format)) {
@@ -4777,6 +4794,11 @@ _mesa_CompressedTexSubImage1D(GLenum target, GLint level, GLint xoffset,
    struct gl_texture_object *texObj;
    GET_CURRENT_CONTEXT(ctx);
 
+   if (compressed_subtexture_target_check(ctx, target, 1, format, false,
+                                          "glCompressedTexSubImage1D")) {
+      return;
+   }
+
    texObj = _mesa_get_current_tex_object(ctx, target);
    if (!texObj)
       return;
@@ -4799,6 +4821,12 @@ _mesa_CompressedTextureSubImage1D(GLuint texture, GLint level, GLint xoffset,
    if (!texObj)
       return;
 
+   if (compressed_subtexture_target_check(ctx, texObj->Target, 1, format,
+                                          true,
+                                          "glCompressedTextureSubImage1D")) {
+      return;
+   }
+
    _mesa_compressed_texture_sub_image(ctx, 1, texObj, texObj->Target, level,
                                       xoffset, 0, 0, width, 1, 1,
                                       format, imageSize, data, true);
@@ -4813,6 +4841,11 @@ _mesa_CompressedTexSubImage2D(GLenum target, GLint level, GLint xoffset,
 {
    struct gl_texture_object *texObj;
    GET_CURRENT_CONTEXT(ctx);
+
+   if (compressed_subtexture_target_check(ctx, target, 2, format, false,
+                                          "glCompressedTexSubImage2D")) {
+      return;
+   }
 
    texObj = _mesa_get_current_tex_object(ctx, target);
    if (!texObj)
@@ -4838,6 +4871,12 @@ _mesa_CompressedTextureSubImage2D(GLuint texture, GLint level, GLint xoffset,
    if (!texObj)
       return;
 
+   if (compressed_subtexture_target_check(ctx, texObj->Target, 2, format,
+                                          true,
+                                          "glCompressedTextureSubImage2D")) {
+      return;
+   }
+
    _mesa_compressed_texture_sub_image(ctx, 2, texObj, texObj->Target, level,
                                       xoffset, yoffset, 0, width, height, 1,
                                       format, imageSize, data, true);
@@ -4851,6 +4890,11 @@ _mesa_CompressedTexSubImage3D(GLenum target, GLint level, GLint xoffset,
 {
    struct gl_texture_object *texObj;
    GET_CURRENT_CONTEXT(ctx);
+
+   if (compressed_subtexture_target_check(ctx, target, 3, format, false,
+                                          "glCompressedTexSubImage3D")) {
+      return;
+   }
 
    texObj = _mesa_get_current_tex_object(ctx, target);
    if (!texObj)
@@ -4876,6 +4920,12 @@ _mesa_CompressedTextureSubImage3D(GLuint texture, GLint level, GLint xoffset,
                                      "glCompressedTextureSubImage3D");
    if (!texObj)
       return;
+
+   if (compressed_subtexture_target_check(ctx, texObj->Target, 3, format,
+                                          true,
+                                          "glCompressedTextureSubImage3D")) {
+      return;
+   }
 
    _mesa_compressed_texture_sub_image(ctx, 3, texObj, texObj->Target, level,
                                       xoffset, yoffset, zoffset,
