@@ -134,6 +134,7 @@
 #include "math/m_matrix.h"
 #include "main/dispatch.h" /* for _gloffset_COUNT */
 #include "uniforms.h"
+#include "macros.h"
 
 #ifdef USE_SPARC_ASM
 #include "sparc/sparc.h"
@@ -656,7 +657,7 @@ _mesa_init_constants(struct gl_constants *consts, gl_api api)
    consts->MaxSamples = 0;
 
    /* GLSL default if NativeIntegers == FALSE */
-   consts->UniformBooleanTrue = FLT_AS_UINT(1.0f);
+   consts->UniformBooleanTrue = FLOAT_AS_UNION(1.0f).u;
 
    /* GL_ARB_sync */
    consts->MaxServerWaitTimeout = 0x1fff7fffffffULL;

@@ -73,8 +73,8 @@ vbo_copy_vertices( struct vbo_exec_context *exec )
    GLuint nr = exec->vtx.prim[exec->vtx.prim_count-1].count;
    GLuint ovf, i;
    GLuint sz = exec->vtx.vertex_size;
-   GLfloat *dst = exec->vtx.copied.buffer;
-   const GLfloat *src = (exec->vtx.buffer_map + 
+   fi_type *dst = exec->vtx.copied.buffer;
+   const fi_type *src = (exec->vtx.buffer_map +
                          exec->vtx.prim[exec->vtx.prim_count-1].start * 
                          exec->vtx.vertex_size);
 
@@ -309,7 +309,7 @@ vbo_exec_vtx_map( struct vbo_exec_context *exec )
       /* The VBO exists and there's room for more */
       if (exec->vtx.bufferobj->Size > 0) {
          exec->vtx.buffer_map =
-            (GLfloat *)ctx->Driver.MapBufferRange(ctx, 
+            (fi_type *)ctx->Driver.MapBufferRange(ctx,
                                                   exec->vtx.buffer_used,
                                                   (VBO_VERT_BUFFER_SIZE - 
                                                    exec->vtx.buffer_used),
@@ -336,7 +336,7 @@ vbo_exec_vtx_map( struct vbo_exec_context *exec )
                                  exec->vtx.bufferobj)) {
          /* buffer allocation worked, now map the buffer */
          exec->vtx.buffer_map =
-            (GLfloat *)ctx->Driver.MapBufferRange(ctx,
+            (fi_type *)ctx->Driver.MapBufferRange(ctx,
                                                   0, VBO_VERT_BUFFER_SIZE,
                                                   accessRange,
                                                   exec->vtx.bufferobj,

@@ -56,6 +56,7 @@
 #include "vbo_exec.h"
 #include "vbo_save.h"
 
+#include "main/macros.h"
 
 struct vbo_context {
    struct gl_client_array currval[VBO_ATTRIB_MAX];
@@ -151,24 +152,23 @@ vbo_attrtype_to_integer_flag(GLenum format)
    }
 }
 
-
 /**
  * Return default component values for the given format.
- * The return type is an array of floats, because that's how we declare
- * the vertex storage despite the fact we sometimes store integers in there.
+ * The return type is an array of fi_types, because that's how we declare
+ * the vertex storage : floats , integers or unsigned integers.
  */
-static inline const GLfloat *
-vbo_get_default_vals_as_float(GLenum format)
+static inline const fi_type *
+vbo_get_default_vals_as_union(GLenum format)
 {
    static const GLfloat default_float[4] = { 0, 0, 0, 1 };
    static const GLint default_int[4] = { 0, 0, 0, 1 };
 
    switch (format) {
    case GL_FLOAT:
-      return default_float;
+      return (fi_type *)default_float;
    case GL_INT:
    case GL_UNSIGNED_INT:
-      return (const GLfloat*)default_int;
+      return (fi_type *)default_int;
    default:
       assert(0);
       return NULL;
