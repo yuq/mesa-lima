@@ -36,6 +36,8 @@
 #define IMPORTS_H
 
 
+#include <stdlib.h>
+#include <string.h>
 #include "compiler.h"
 #include "glheader.h"
 #include "errors.h"
