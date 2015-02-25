@@ -43,6 +43,7 @@
  */
 
 #include <stdarg.h>
+#include "c99_math.h"
 #include "imports.h"
 #include "context.h"
 #include "mtypes.h"

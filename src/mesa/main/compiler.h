@@ -35,7 +35,6 @@
 
 
 #include <assert.h>
-#include <math.h>
 
 #include "util/macros.h"
 
