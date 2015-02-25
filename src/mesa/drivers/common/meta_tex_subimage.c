@@ -205,8 +205,12 @@ _mesa_meta_pbo_TexSubImage(struct gl_context *ctx, GLuint dims,
 
    if (tex_image->TexObject->Target == GL_TEXTURE_1D_ARRAY) {
       assert(depth == 1);
+      assert(zoffset == 0);
       depth = height;
       height = 1;
+      image_height = 1;
+      zoffset = yoffset;
+      yoffset = 0;
    }
 
    _mesa_meta_bind_fbo_image(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
@@ -322,8 +326,12 @@ _mesa_meta_pbo_GetTexSubImage(struct gl_context *ctx, GLuint dims,
 
    if (tex_image && tex_image->TexObject->Target == GL_TEXTURE_1D_ARRAY) {
       assert(depth == 1);
+      assert(zoffset == 0);
       depth = height;
       height = 1;
+      image_height = 1;
+      zoffset = yoffset;
+      yoffset = 0;
    }
 
    /* If we were given a texture, bind it to the read framebuffer.  If not,
