@@ -263,6 +263,18 @@ if test "x$GCC" = xyes; then
     # gcc's builtin memcmp is slower than glibc's
     # http://gcc.gnu.org/bugzilla/show_bug.cgi?id=43052
     CFLAGS="$CFLAGS -fno-builtin-memcmp"
+
+    # Flags to help ensure that certain portions of the code -- and only those
+    # portions -- can be built with MSVC:
+    # - src/util, src/gallium/auxiliary, and src/gallium/drivers/llvmpipe needs
+    #   to build with Windows SDK 7.0.7600, which bundles MSVC 2008
+    # - non-Linux/Posix OpenGL portions needs to build on MSVC 2013 (which
+    #   supports most of C99)
+    # - the rest has no compiler compiler restrictions
+    MSVC2013_COMPAT_CFLAGS="-Werror=vla -Werror=pointer-arith"
+    MSVC2013_COMPAT_CXXFLAGS="-Werror=vla -Werror=pointer-arith"
+    MSVC2008_COMPAT_CFLAGS="$MSVC2013_COMPAT_CFLAGS -Werror=declaration-after-statement"
+    MSVC2008_COMPAT_CXXFLAGS="$MSVC2013_COMPAT_CXXFLAGS"
 fi
 if test "x$GXX" = xyes; then
     CXXFLAGS="$CXXFLAGS -Wall"
@@ -287,6 +299,11 @@ if test "x$GXX" = xyes; then
     # http://gcc.gnu.org/bugzilla/show_bug.cgi?id=43052
     CXXFLAGS="$CXXFLAGS -fno-builtin-memcmp"
 fi
+
+AC_SUBST([MSVC2013_COMPAT_CFLAGS])
+AC_SUBST([MSVC2013_COMPAT_CXXFLAGS])
+AC_SUBST([MSVC2008_COMPAT_CFLAGS])
+AC_SUBST([MSVC2008_COMPAT_CXXFLAGS])
 
 dnl even if the compiler appears to support it, using visibility attributes isn't
 dnl going to do anything useful currently on cygwin apart from emit lots of warnings
