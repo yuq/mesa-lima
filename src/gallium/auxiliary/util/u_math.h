@@ -356,7 +356,7 @@ util_half_inf_sign(int16_t x)
 #ifndef FFS_DEFINED
 #define FFS_DEFINED 1
 
-#if defined(_MSC_VER) && _MSC_VER >= 1300 && (_M_IX86 || _M_AMD64 || _M_IA64)
+#if defined(_MSC_VER) && (_M_IX86 || _M_AMD64 || _M_IA64)
 unsigned char _BitScanForward(unsigned long* Index, unsigned long Mask);
 #pragma intrinsic(_BitScanForward)
 static INLINE

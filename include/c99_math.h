@@ -40,81 +40,10 @@
 
 #if defined(_MSC_VER)
 
-#if _MSC_VER < 1400 && !defined(__cplusplus)
-
-static inline float cosf( float f )
-{
-   return (float) cos( (double) f );
-}
-
-static inline float sinf( float f )
-{
-   return (float) sin( (double) f );
-}
-
-static inline float ceilf( float f )
-{
-   return (float) ceil( (double) f );
-}
-
-static inline float floorf( float f )
-{
-   return (float) floor( (double) f );
-}
-
-static inline float powf( float f, float g )
-{
-   return (float) pow( (double) f, (double) g );
-}
-
-static inline float sqrtf( float f )
-{
-   return (float) sqrt( (double) f );
-}
-
-static inline float fabsf( float f )
-{
-   return (float) fabs( (double) f );
-}
-
-static inline float logf( float f )
-{
-   return (float) log( (double) f );
-}
-
-static inline float frexpf(float x, int *exp)
-{
-   return (float) frexp(x, exp);
-}
-
-static inline float ldexpf(float x, int exp)
-{
-   return (float) ldexp(x, exp);
-}
-
-static inline float logf(float x)
-{
-   return (float) log(x);
-}
-
-static inline float expf(float x)
-{
-   return (float) exp(x);
-}
-
-
-#else
-/* Work-around an extra semi-colon in VS 2005 logf definition */
-#ifdef logf
-#undef logf
-#define logf(x) ((float)log((double)(x)))
-#endif /* logf */
-
 #if _MSC_VER < 1800
 #define isfinite(x) _finite((double)(x))
 #define isnan(x) _isnan((double)(x))
 #endif /* _MSC_VER < 1800 */
-#endif /* _MSC_VER < 1400 && !defined(__cplusplus) */
 
 #if _MSC_VER < 1800
 static inline double log2( double x )
