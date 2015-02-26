@@ -147,7 +147,7 @@ _mesa_meta_pbo_TexSubImage(struct gl_context *ctx, GLuint dims,
    struct gl_texture_image *pbo_tex_image;
    GLenum status;
    bool success = false;
-   int z, iters;
+   int z;
 
    /* XXX: This should probably be passed in from somewhere */
    const char *where = "_mesa_meta_pbo_TexSubImage";
@@ -200,6 +200,12 @@ _mesa_meta_pbo_TexSubImage(struct gl_context *ctx, GLuint dims,
    _mesa_BindFramebuffer(GL_READ_FRAMEBUFFER, fbos[0]);
    _mesa_BindFramebuffer(GL_DRAW_FRAMEBUFFER, fbos[1]);
 
+   if (tex_image->TexObject->Target == GL_TEXTURE_1D_ARRAY) {
+      assert(depth == 1);
+      depth = height;
+      height = 1;
+   }
+
    _mesa_meta_bind_fbo_image(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
                              pbo_tex_image, 0);
    /* If this passes on the first layer it should pass on the others */
@@ -223,27 +229,17 @@ _mesa_meta_pbo_TexSubImage(struct gl_context *ctx, GLuint dims,
                                   GL_COLOR_BUFFER_BIT, GL_NEAREST))
       goto fail;
 
-   iters = tex_image->TexObject->Target == GL_TEXTURE_1D_ARRAY ?
-           height : depth;
-
-   for (z = 1; z < iters; z++) {
+   for (z = 1; z < depth; z++) {
       _mesa_meta_bind_fbo_image(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
                                 tex_image, zoffset + z);
 
       _mesa_update_state(ctx);
 
-      if (tex_image->TexObject->Target == GL_TEXTURE_1D_ARRAY)
-         _mesa_meta_BlitFramebuffer(ctx, ctx->ReadBuffer, ctx->DrawBuffer,
-                                    0, z, width, z + 1,
-                                    xoffset, yoffset,
-                                    xoffset + width, yoffset + 1,
-                                    GL_COLOR_BUFFER_BIT, GL_NEAREST);
-      else
-         _mesa_meta_BlitFramebuffer(ctx, ctx->ReadBuffer, ctx->DrawBuffer,
-                                    0, z * height, width, (z + 1) * height,
-                                    xoffset, yoffset,
-                                    xoffset + width, yoffset + height,
-                                    GL_COLOR_BUFFER_BIT, GL_NEAREST);
+      _mesa_meta_BlitFramebuffer(ctx, ctx->ReadBuffer, ctx->DrawBuffer,
+                                 0, z * height, width, (z + 1) * height,
+                                 xoffset, yoffset,
+                                 xoffset + width, yoffset + height,
+                                 GL_COLOR_BUFFER_BIT, GL_NEAREST);
    }
 
    success = true;
@@ -270,7 +266,7 @@ _mesa_meta_pbo_GetTexSubImage(struct gl_context *ctx, GLuint dims,
    struct gl_texture_image *pbo_tex_image;
    GLenum status;
    bool success = false;
-   int z, iters;
+   int z;
 
    /* XXX: This should probably be passed in from somewhere */
    const char *where = "_mesa_meta_pbo_GetTexSubImage";
@@ -317,6 +313,12 @@ _mesa_meta_pbo_GetTexSubImage(struct gl_context *ctx, GLuint dims,
 
    _mesa_GenFramebuffers(2, fbos);
 
+   if (tex_image && tex_image->TexObject->Target == GL_TEXTURE_1D_ARRAY) {
+      assert(depth == 1);
+      depth = height;
+      height = 1;
+   }
+
    /* If we were given a texture, bind it to the read framebuffer.  If not,
     * we're doing a ReadPixels and we should just use whatever framebuffer
     * the client has bound.
@@ -350,29 +352,17 @@ _mesa_meta_pbo_GetTexSubImage(struct gl_context *ctx, GLuint dims,
                                   GL_COLOR_BUFFER_BIT, GL_NEAREST))
       goto fail;
 
-   if (tex_image && tex_image->TexObject->Target == GL_TEXTURE_1D_ARRAY)
-      iters = height;
-   else
-      iters = depth;
-
-   for (z = 1; z < iters; z++) {
+   for (z = 1; z < depth; z++) {
       _mesa_meta_bind_fbo_image(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
                                 tex_image, zoffset + z);
 
       _mesa_update_state(ctx);
 
-      if (tex_image->TexObject->Target == GL_TEXTURE_1D_ARRAY)
-         _mesa_meta_BlitFramebuffer(ctx, ctx->ReadBuffer, ctx->DrawBuffer,
-                                    xoffset, yoffset,
-                                    xoffset + width, yoffset + 1,
-                                    0, z, width, z + 1,
-                                    GL_COLOR_BUFFER_BIT, GL_NEAREST);
-      else
-         _mesa_meta_BlitFramebuffer(ctx, ctx->ReadBuffer, ctx->DrawBuffer,
-                                    xoffset, yoffset,
-                                    xoffset + width, yoffset + height,
-                                    0, z * height, width, (z + 1) * height,
-                                    GL_COLOR_BUFFER_BIT, GL_NEAREST);
+      _mesa_meta_BlitFramebuffer(ctx, ctx->ReadBuffer, ctx->DrawBuffer,
+                                 xoffset, yoffset,
+                                 xoffset + width, yoffset + height,
+                                 0, z * height, width, (z + 1) * height,
+                                 GL_COLOR_BUFFER_BIT, GL_NEAREST);
    }
 
    success = true;
