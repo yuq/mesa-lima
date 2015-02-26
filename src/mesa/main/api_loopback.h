@@ -27,7 +27,6 @@
 #ifndef API_LOOPBACK_H
 #define API_LOOPBACK_H
 
-#include "main/compiler.h"
 #include "main/glheader.h" // ?
 #include "main/macros.h" // ?
 #include "main/mtypes.h" // ?
