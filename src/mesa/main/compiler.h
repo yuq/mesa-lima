@@ -64,14 +64,6 @@ extern "C" {
 
 
 /**
- * finite macro.
- */
-#if defined(_MSC_VER)
-#  define finite _finite
-#endif
-
-
-/**
  * Disable assorted warnings
  */
 #if defined(_WIN32) && !defined(__CYGWIN__)

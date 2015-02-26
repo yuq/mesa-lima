@@ -121,6 +121,14 @@ static inline GLfloat LOG2(GLfloat x)
 
 
 
+/**
+ * finite macro.
+ */
+#if defined(_MSC_VER)
+#  define finite _finite
+#endif
+
+
 /***
  *** IS_INF_OR_NAN: test if float is infinite or NaN
  ***/
