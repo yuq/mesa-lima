@@ -313,6 +313,18 @@ translation_unit:
    {
       delete state->symbols;
       state->symbols = new(ralloc_parent(state)) glsl_symbol_table;
+      if (state->es_shader) {
+         if (state->stage == MESA_SHADER_FRAGMENT) {
+            state->symbols->add_default_precision_qualifier("int", ast_precision_medium);
+         } else {
+            state->symbols->add_default_precision_qualifier("float", ast_precision_high);
+            state->symbols->add_default_precision_qualifier("int", ast_precision_high);
+         }
+         state->symbols->add_default_precision_qualifier("sampler2D", ast_precision_low);
+         state->symbols->add_default_precision_qualifier("samplerExternalOES", ast_precision_low);
+         state->symbols->add_default_precision_qualifier("samplerCube", ast_precision_low);
+         state->symbols->add_default_precision_qualifier("atomic_uint", ast_precision_high);
+      }
       _mesa_glsl_initialize_types(state);
    }
    ;
