@@ -65,6 +65,28 @@ brw_reg_type_letters(unsigned type)
    return names[type];
 }
 
+/* Returns a conditional modifier that negates the condition. */
+enum brw_conditional_mod
+brw_negate_cmod(uint32_t cmod)
+{
+   switch (cmod) {
+   case BRW_CONDITIONAL_Z:
+      return BRW_CONDITIONAL_NZ;
+   case BRW_CONDITIONAL_NZ:
+      return BRW_CONDITIONAL_Z;
+   case BRW_CONDITIONAL_G:
+      return BRW_CONDITIONAL_LE;
+   case BRW_CONDITIONAL_GE:
+      return BRW_CONDITIONAL_L;
+   case BRW_CONDITIONAL_L:
+      return BRW_CONDITIONAL_GE;
+   case BRW_CONDITIONAL_LE:
+      return BRW_CONDITIONAL_G;
+   default:
+      return ~0;
+   }
+}
+
 /* Returns the corresponding conditional mod for swapping src0 and
  * src1 in e.g. CMP.
  */
