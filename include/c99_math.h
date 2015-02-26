@@ -40,6 +40,11 @@
 
 #if defined(_MSC_VER)
 
+/* This is to ensure that we get M_PI, etc. definitions */
+#if !defined(_USE_MATH_DEFINES)
+#error _USE_MATH_DEFINES define required when building with MSVC
+#endif 
+
 #if _MSC_VER < 1800
 #define isfinite(x) _finite((double)(x))
 #define isnan(x) _isnan((double)(x))
