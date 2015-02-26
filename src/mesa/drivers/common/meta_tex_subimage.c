@@ -144,6 +144,7 @@ _mesa_meta_pbo_TexSubImage(struct gl_context *ctx, GLuint dims,
                            const struct gl_pixelstore_attrib *packing)
 {
    GLuint pbo = 0, pbo_tex = 0, fbos[2] = { 0, 0 };
+   int full_height, image_height;
    struct gl_texture_image *pbo_tex_image;
    GLenum status;
    bool success = false;
@@ -177,14 +178,16 @@ _mesa_meta_pbo_TexSubImage(struct gl_context *ctx, GLuint dims,
       return true;
    }
 
-   /* Only accept tightly packed pixels from the user. */
-   if (packing->ImageHeight != 0 && packing->ImageHeight != height)
-      return false;
+   /* For arrays, use a tall (height * depth) 2D texture but taking into
+    * account the inter-image padding specified with the image height packing
+    * property.
+    */
+   image_height = packing->ImageHeight == 0 ? height : packing->ImageHeight;
+   full_height = image_height * (depth - 1) + height;
 
-   /* For arrays, use a tall (height * depth) 2D texture. */
    pbo_tex_image = create_texture_for_pbo(ctx, create_pbo,
                                           GL_PIXEL_UNPACK_BUFFER,
-                                          width, height * depth,
+                                          width, full_height,
                                           format, type, pixels, packing,
                                           &pbo, &pbo_tex);
    if (!pbo_tex_image)
@@ -236,7 +239,8 @@ _mesa_meta_pbo_TexSubImage(struct gl_context *ctx, GLuint dims,
       _mesa_update_state(ctx);
 
       _mesa_meta_BlitFramebuffer(ctx, ctx->ReadBuffer, ctx->DrawBuffer,
-                                 0, z * height, width, (z + 1) * height,
+                                 0, z * image_height,
+                                 width, z * image_height + height,
                                  xoffset, yoffset,
                                  xoffset + width, yoffset + height,
                                  GL_COLOR_BUFFER_BIT, GL_NEAREST);
@@ -263,6 +267,7 @@ _mesa_meta_pbo_GetTexSubImage(struct gl_context *ctx, GLuint dims,
                               const struct gl_pixelstore_attrib *packing)
 {
    GLuint pbo = 0, pbo_tex = 0, fbos[2] = { 0, 0 };
+   int full_height, image_height;
    struct gl_texture_image *pbo_tex_image;
    GLenum status;
    bool success = false;
@@ -296,13 +301,15 @@ _mesa_meta_pbo_GetTexSubImage(struct gl_context *ctx, GLuint dims,
       return true;
    }
 
-   /* Only accept tightly packed pixels from the user. */
-   if (packing->ImageHeight != 0 && packing->ImageHeight != height)
-      return false;
+   /* For arrays, use a tall (height * depth) 2D texture but taking into
+    * account the inter-image padding specified with the image height packing
+    * property.
+    */
+   image_height = packing->ImageHeight == 0 ? height : packing->ImageHeight;
+   full_height = image_height * (depth - 1) + height;
 
-   /* For arrays, use a tall (height * depth) 2D texture. */
    pbo_tex_image = create_texture_for_pbo(ctx, false, GL_PIXEL_PACK_BUFFER,
-                                          width, height * depth,
+                                          width, full_height * depth,
                                           format, type, pixels, packing,
                                           &pbo, &pbo_tex);
    if (!pbo_tex_image)
@@ -361,7 +368,8 @@ _mesa_meta_pbo_GetTexSubImage(struct gl_context *ctx, GLuint dims,
       _mesa_meta_BlitFramebuffer(ctx, ctx->ReadBuffer, ctx->DrawBuffer,
                                  xoffset, yoffset,
                                  xoffset + width, yoffset + height,
-                                 0, z * height, width, (z + 1) * height,
+                                 0, z * image_height,
+                                 width, z * image_height + height,
                                  GL_COLOR_BUFFER_BIT, GL_NEAREST);
    }
 
