@@ -2799,16 +2799,25 @@ brw_untyped_atomic(struct brw_compile *p,
                    bool response_expected)
 {
    const struct brw_context *brw = p->brw;
+   const bool align1 = brw_inst_access_mode(brw, p->current) == BRW_ALIGN_1;
+   /* Mask out unused components -- This is especially important in Align16
+    * mode on generations that don't have native support for SIMD4x2 atomics,
+    * because unused but enabled components will cause the dataport to perform
+    * additional atomic operations on the addresses that happen to be in the
+    * uninitialized Y, Z and W coordinates of the payload.
+    */
+   const unsigned mask = align1 ? WRITEMASK_XYZW : WRITEMASK_X;
    brw_inst *insn = brw_next_insn(p, BRW_OPCODE_SEND);
 
-   brw_set_dest(p, insn, retype(dest, BRW_REGISTER_TYPE_UD));
+   brw_set_dest(p, insn, retype(brw_writemask(dest, mask),
+                                BRW_REGISTER_TYPE_UD));
    brw_set_src0(p, insn, retype(payload, BRW_REGISTER_TYPE_UD));
    brw_set_src1(p, insn, brw_imm_d(0));
    brw_set_dp_untyped_atomic_message(
       p, insn, atomic_op, bind_table_index, msg_length,
       brw_surface_payload_size(p, response_expected,
                                brw->gen >= 8 || brw->is_haswell, true),
-      brw_inst_access_mode(brw, insn) == BRW_ALIGN_1);
+      align1);
 }
 
 static void
