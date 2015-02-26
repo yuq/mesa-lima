@@ -93,7 +93,7 @@ emit_factor(GLuint blendUnit, GLuint * state, GLuint count,
 }
 
 
-static INLINE GLuint
+static inline GLuint
 GetTexelOp(GLint unit)
 {
    switch (unit) {

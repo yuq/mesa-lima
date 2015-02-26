@@ -121,7 +121,7 @@ intelDmaPrimitive(struct intel_context *intel, GLenum prim)
 
 #define INTEL_NO_VBO_STATE_RESERVED 1500
 
-static INLINE GLuint intel_get_vb_max(struct intel_context *intel)
+static inline GLuint intel_get_vb_max(struct intel_context *intel)
 {
    GLuint ret;
 
@@ -133,7 +133,7 @@ static INLINE GLuint intel_get_vb_max(struct intel_context *intel)
    return ret;
 }
 
-static INLINE GLuint intel_get_current_max(struct intel_context *intel)
+static inline GLuint intel_get_current_max(struct intel_context *intel)
 {
    GLuint ret;
 
