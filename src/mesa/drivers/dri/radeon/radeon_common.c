@@ -486,7 +486,7 @@ out:
 	return dwords;
 }
 
-static INLINE void radeon_emit_atom(radeonContextPtr radeon, struct radeon_state_atom *atom)
+static inline void radeon_emit_atom(radeonContextPtr radeon, struct radeon_state_atom *atom)
 {
 	BATCH_LOCALS(radeon);
 	int dwords;
@@ -511,7 +511,7 @@ static INLINE void radeon_emit_atom(radeonContextPtr radeon, struct radeon_state
 
 }
 
-static INLINE void radeonEmitAtoms(radeonContextPtr radeon, GLboolean emitAll)
+static inline void radeonEmitAtoms(radeonContextPtr radeon, GLboolean emitAll)
 {
 	struct radeon_state_atom *atom;
 

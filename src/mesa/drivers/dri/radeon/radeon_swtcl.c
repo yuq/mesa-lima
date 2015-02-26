@@ -374,7 +374,7 @@ static const GLuint hw_prim[GL_POLYGON+1] = {
    0
 };
 
-static INLINE void
+static inline void
 radeonDmaPrimitive( r100ContextPtr rmesa, GLenum prim )
 {
    RADEON_NEWPRIM( rmesa );
