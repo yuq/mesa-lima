@@ -27,6 +27,9 @@
 
 #include "nir.h"
 
+#include "c99_alloca.h"
+
+
 struct deref_node {
    struct deref_node *parent;
    const struct glsl_type *type;
@@ -899,8 +902,8 @@ rename_variables_block(nir_block *block, struct lower_variables_state *state)
 static void
 insert_phi_nodes(struct lower_variables_state *state)
 {
-   unsigned work[state->impl->num_blocks];
-   unsigned has_already[state->impl->num_blocks];
+   unsigned *work = alloca(state->impl->num_blocks * sizeof *work);
+   unsigned *has_already = alloca(state->impl->num_blocks * sizeof *has_already);
 
    /*
     * Since the work flags already prevent us from inserting a node that has
@@ -910,10 +913,10 @@ insert_phi_nodes(struct lower_variables_state *state)
     * function. So all we need to handle W is an array and a pointer to the
     * next element to be inserted and the next element to be removed.
     */
-   nir_block *W[state->impl->num_blocks];
+   nir_block **W = alloca(state->impl->num_blocks * sizeof *W);
 
-   memset(work, 0, sizeof work);
-   memset(has_already, 0, sizeof has_already);
+   memset(work, 0, state->impl->num_blocks * sizeof *work);
+   memset(has_already, 0, state->impl->num_blocks * sizeof *has_already);
 
    unsigned w_start, w_end;
    unsigned iter_count = 0;

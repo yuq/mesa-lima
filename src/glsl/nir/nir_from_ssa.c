@@ -26,6 +26,7 @@
  */
 
 #include "nir.h"
+#include "c99_alloca.h"
 
 /*
  * This file implements an out-of-SSA pass as described in "Revisiting
@@ -181,7 +182,7 @@ merge_merge_sets(merge_set *a, merge_set *b)
 static bool
 merge_sets_interfere(merge_set *a, merge_set *b)
 {
-   merge_node *dom[a->size + b->size];
+   merge_node **dom = alloca((a->size + b->size) * sizeof *dom);
    int dom_idx = -1;
 
    struct exec_node *an = exec_list_get_head(&a->nodes);
@@ -673,21 +674,21 @@ resolve_parallel_copy(nir_parallel_copy_instr *pcopy,
    }
 
    /* The register/source corresponding to the given index */
-   nir_src values[num_copies * 2];
-   memset(values, 0, sizeof values);
+   nir_src *values = alloca(num_copies * 2 * sizeof *values);
+   memset(values, 0, num_copies * 2 * sizeof *values);
 
    /* The current location of a given piece of data */
-   int loc[num_copies * 2];
+   int *loc = alloca(num_copies * 2 * sizeof *loc);
 
    /* The piece of data that the given piece of data is to be copied from */
-   int pred[num_copies * 2];
+   int *pred = alloca(num_copies * 2 * sizeof *pred);
 
    /* Initialize loc and pred.  We will use -1 for "null" */
-   memset(loc, -1, sizeof loc);
-   memset(pred, -1, sizeof pred);
+   memset(loc, -1, num_copies * 2 * sizeof *loc);
+   memset(pred, -1, num_copies * 2 * sizeof *pred);
 
    /* The destinations we have yet to properly fill */
-   int to_do[num_copies * 2];
+   int *to_do = alloca(num_copies * 2 * sizeof *to_do);
    int to_do_idx = -1;
 
    /* Now we set everything up:
@@ -737,7 +738,7 @@ resolve_parallel_copy(nir_parallel_copy_instr *pcopy,
    }
 
    /* Currently empty destinations we can go ahead and fill */
-   int ready[num_copies * 2];
+   int *ready = alloca(num_copies * 2 * sizeof *ready);
    int ready_idx = -1;
 
    /* Mark the ones that are ready for copying.  We know an index is a
