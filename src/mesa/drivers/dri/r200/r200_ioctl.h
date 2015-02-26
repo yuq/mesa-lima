@@ -102,7 +102,7 @@ do {								\
    memcpy( rmesa->hw.ATOM.lastcmd, rmesa->hw.ATOM.cmd,	\
 	   rmesa->hw.ATOM.cmd_size * 4)
 
-static INLINE int R200_DB_STATECHANGE( 
+static inline int R200_DB_STATECHANGE( 
    r200ContextPtr rmesa,
    struct radeon_state_atom *atom )
 {

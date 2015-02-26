@@ -152,7 +152,7 @@ static GLboolean r200VertexProgUpdateParams(struct gl_context *ctx, struct r200_
    return GL_TRUE;
 }
 
-static INLINE unsigned long t_dst_mask(GLuint mask)
+static inline unsigned long t_dst_mask(GLuint mask)
 {
    /* WRITEMASK_* is equivalent to VSF_FLAG_* */
    return mask & VSF_FLAG_ALL;
@@ -223,7 +223,7 @@ static unsigned long t_src_class(gl_register_file file)
    }
 }
 
-static INLINE unsigned long t_swizzle(GLubyte swizzle)
+static inline unsigned long t_swizzle(GLubyte swizzle)
 {
 /* this is in fact a NOP as the Mesa SWIZZLE_* are all identical to VSF_IN_COMPONENT_* */
    return swizzle;

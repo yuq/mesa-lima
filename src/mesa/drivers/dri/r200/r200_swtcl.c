@@ -318,7 +318,7 @@ void r200_swtcl_flush(struct gl_context *ctx, uint32_t current_offset)
 /**************************************************************************/
 
 
-static INLINE GLuint reduced_hw_prim( struct gl_context *ctx, GLuint prim)
+static inline GLuint reduced_hw_prim( struct gl_context *ctx, GLuint prim)
 {
    switch (prim) {
    case GL_POINTS:
