@@ -174,10 +174,10 @@ intel_dri2_flush_with_flags(__DRIcontext *cPriv,
    if (flags & __DRI2_FLUSH_DRAWABLE)
       intel_resolve_for_dri2_flush(brw, dPriv);
 
-   if (reason == __DRI2_THROTTLE_SWAPBUFFER ||
-       reason == __DRI2_THROTTLE_FLUSHFRONT) {
-      brw->need_throttle = true;
-   }
+   if (reason == __DRI2_THROTTLE_SWAPBUFFER)
+      brw->need_swap_throttle = true;
+   if (reason == __DRI2_THROTTLE_FLUSHFRONT)
+      brw->need_flush_throttle = true;
 
    intel_batchbuffer_flush(brw);
 

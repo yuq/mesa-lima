@@ -1031,7 +1031,19 @@ struct brw_context
 
    /** Framerate throttling: @{ */
    drm_intel_bo *first_post_swapbuffers_batch;
-   bool need_throttle;
+
+   /* Limit the number of outstanding SwapBuffers by waiting for an earlier
+    * frame of rendering to complete. This gives a very precise cap to the
+    * latency between input and output such that rendering never gets more
+    * than a frame behind the user. (With the caveat that we technically are
+    * not using the SwapBuffers itself as a barrier but the first batch
+    * submitted afterwards, which may be immediately prior to the next
+    * SwapBuffers.)
+    */
+   bool need_swap_throttle;
+
+   /** General throttling, not caught by throttling between SwapBuffers */
+   bool need_flush_throttle;
    /** @} */
 
    GLuint stats_wm;

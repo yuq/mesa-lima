@@ -234,8 +234,8 @@ intel_glFlush(struct gl_context *ctx)
 
    intel_batchbuffer_flush(brw);
    intel_flush_front(ctx);
-   if (brw_is_front_buffer_drawing(ctx->DrawBuffer))
-      brw->need_throttle = true;
+
+   brw->need_flush_throttle = true;
 }
 
 static void
@@ -1245,12 +1245,20 @@ intel_prepare_render(struct brw_context *brw)
     * the swap, and getting our hands on that doesn't seem worth it,
     * so we just us the first batch we emitted after the last swap.
     */
-   if (brw->need_throttle && brw->first_post_swapbuffers_batch) {
+   if (brw->need_swap_throttle && brw->first_post_swapbuffers_batch) {
       if (!brw->disable_throttling)
          drm_intel_bo_wait_rendering(brw->first_post_swapbuffers_batch);
       drm_intel_bo_unreference(brw->first_post_swapbuffers_batch);
       brw->first_post_swapbuffers_batch = NULL;
-      brw->need_throttle = false;
+      brw->need_swap_throttle = false;
+      /* Throttling here is more precise than the throttle ioctl, so skip it */
+      brw->need_flush_throttle = false;
+   }
+
+   if (brw->need_flush_throttle) {
+      __DRIscreen *psp = brw->intelScreen->driScrnPriv;
+      drmCommandNone(psp->fd, DRM_I915_GEM_THROTTLE);
+      brw->need_flush_throttle = false;
    }
 }
 
