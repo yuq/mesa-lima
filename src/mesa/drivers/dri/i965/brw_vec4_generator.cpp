@@ -1125,7 +1125,7 @@ vec4_generator::generate_untyped_atomic(vec4_instruction *inst,
 
    brw_untyped_atomic(p, dst, brw_message_reg(inst->base_mrf),
                       atomic_op.dw1.ud, surf_index.dw1.ud,
-                      inst->mlen, 1);
+                      inst->mlen, true);
 
    brw_mark_surface_used(&prog_data->base, surf_index.dw1.ud);
 }
@@ -1139,8 +1139,7 @@ vec4_generator::generate_untyped_surface_read(vec4_instruction *inst,
 	  surf_index.type == BRW_REGISTER_TYPE_UD);
 
    brw_untyped_surface_read(p, dst, brw_message_reg(inst->base_mrf),
-                            surf_index.dw1.ud,
-                            inst->mlen, 1);
+                            surf_index.dw1.ud, inst->mlen, 1);
 
    brw_mark_surface_used(&prog_data->base, surf_index.dw1.ud);
 }

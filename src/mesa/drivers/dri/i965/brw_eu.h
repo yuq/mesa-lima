@@ -405,7 +405,7 @@ brw_untyped_atomic(struct brw_compile *p,
                    unsigned atomic_op,
                    unsigned bind_table_index,
                    unsigned msg_length,
-                   unsigned response_length);
+                   bool response_expected);
 
 void
 brw_untyped_surface_read(struct brw_compile *p,
@@ -413,7 +413,7 @@ brw_untyped_surface_read(struct brw_compile *p,
                          struct brw_reg mrf,
                          unsigned bind_table_index,
                          unsigned msg_length,
-                         unsigned response_length);
+                         unsigned num_channels);
 
 void
 brw_pixel_interpolator_query(struct brw_compile *p,

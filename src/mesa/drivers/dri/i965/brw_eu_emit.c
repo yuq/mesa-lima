@@ -2729,6 +2729,20 @@ brw_svb_write(struct brw_compile *p,
                             send_commit_msg); /* send_commit_msg */
 }
 
+static unsigned
+brw_surface_payload_size(struct brw_compile *p,
+                         unsigned num_channels,
+                         bool has_simd4x2,
+                         bool has_simd16)
+{
+   if (has_simd4x2 && brw_inst_access_mode(p->brw, p->current) == BRW_ALIGN_16)
+      return 1;
+   else if (has_simd16 && p->compressed)
+      return 2 * num_channels;
+   else
+      return num_channels;
+}
+
 static void
 brw_set_dp_untyped_atomic_message(struct brw_compile *p,
                                   brw_inst *insn,
@@ -2782,7 +2796,8 @@ brw_untyped_atomic(struct brw_compile *p,
                    unsigned atomic_op,
                    unsigned bind_table_index,
                    unsigned msg_length,
-                   unsigned response_length) {
+                   bool response_expected)
+{
    const struct brw_context *brw = p->brw;
    brw_inst *insn = brw_next_insn(p, BRW_OPCODE_SEND);
 
@@ -2790,7 +2805,9 @@ brw_untyped_atomic(struct brw_compile *p,
    brw_set_src0(p, insn, retype(payload, BRW_REGISTER_TYPE_UD));
    brw_set_src1(p, insn, brw_imm_d(0));
    brw_set_dp_untyped_atomic_message(
-      p, insn, atomic_op, bind_table_index, msg_length, response_length,
+      p, insn, atomic_op, bind_table_index, msg_length,
+      brw_surface_payload_size(p, response_expected,
+                               brw->gen >= 8 || brw->is_haswell, true),
       brw_inst_access_mode(brw, insn) == BRW_ALIGN_1);
 }
 
@@ -2800,12 +2817,12 @@ brw_set_dp_untyped_surface_read_message(struct brw_compile *p,
                                         unsigned bind_table_index,
                                         unsigned msg_length,
                                         unsigned response_length,
+                                        unsigned num_channels,
                                         bool header_present)
 {
    const struct brw_context *brw = p->brw;
    const unsigned dispatch_width =
       (brw_inst_exec_size(brw, insn) == BRW_EXECUTE_16 ? 16 : 8);
-   const unsigned num_channels = response_length / (dispatch_width / 8);
 
    if (brw->gen >= 8 || brw->is_haswell) {
       brw_set_message_descriptor(p, insn, HSW_SFID_DATAPORT_DATA_CACHE_1,
@@ -2843,7 +2860,7 @@ brw_untyped_surface_read(struct brw_compile *p,
                          struct brw_reg mrf,
                          unsigned bind_table_index,
                          unsigned msg_length,
-                         unsigned response_length)
+                         unsigned num_channels)
 {
    const struct brw_context *brw = p->brw;
    brw_inst *insn = next_insn(p, BRW_OPCODE_SEND);
@@ -2851,8 +2868,9 @@ brw_untyped_surface_read(struct brw_compile *p,
    brw_set_dest(p, insn, retype(dest, BRW_REGISTER_TYPE_UD));
    brw_set_src0(p, insn, retype(mrf, BRW_REGISTER_TYPE_UD));
    brw_set_dp_untyped_surface_read_message(
-      p, insn, bind_table_index, msg_length, response_length,
-      brw_inst_access_mode(brw, insn) == BRW_ALIGN_1);
+      p, insn, bind_table_index, msg_length,
+      brw_surface_payload_size(p, num_channels, true, true),
+      num_channels, brw_inst_access_mode(brw, insn) == BRW_ALIGN_1);
 }
 
 void
