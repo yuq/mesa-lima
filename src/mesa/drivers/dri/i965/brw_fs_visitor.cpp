@@ -2422,8 +2422,9 @@ fs_visitor::visit(ir_discard *ir)
     */
    fs_inst *cmp;
    if (ir->condition) {
-      ir->condition->accept(this);
-      cmp = emit(CMP(reg_null_f, this->result, fs_reg(0), BRW_CONDITIONAL_Z));
+      emit_bool_to_cond_code(ir->condition);
+      cmp = (fs_inst *) this->instructions.get_tail();
+      cmp->conditional_mod = brw_negate_cmod(cmp->conditional_mod);
    } else {
       fs_reg some_reg = fs_reg(retype(brw_vec8_grf(0, 0),
                                       BRW_REGISTER_TYPE_UW));
