@@ -208,26 +208,26 @@ struct st_geometry_program
 
 
 
-static INLINE struct st_fragment_program *
+static inline struct st_fragment_program *
 st_fragment_program( struct gl_fragment_program *fp )
 {
    return (struct st_fragment_program *)fp;
 }
 
 
-static INLINE struct st_vertex_program *
+static inline struct st_vertex_program *
 st_vertex_program( struct gl_vertex_program *vp )
 {
    return (struct st_vertex_program *)vp;
 }
 
-static INLINE struct st_geometry_program *
+static inline struct st_geometry_program *
 st_geometry_program( struct gl_geometry_program *gp )
 {
    return (struct st_geometry_program *)gp;
 }
 
-static INLINE void
+static inline void
 st_reference_vertprog(struct st_context *st,
                       struct st_vertex_program **ptr,
                       struct st_vertex_program *prog)
@@ -237,7 +237,7 @@ st_reference_vertprog(struct st_context *st,
                            (struct gl_program *) prog);
 }
 
-static INLINE void
+static inline void
 st_reference_geomprog(struct st_context *st,
                       struct st_geometry_program **ptr,
                       struct st_geometry_program *prog)
@@ -247,7 +247,7 @@ st_reference_geomprog(struct st_context *st,
                            (struct gl_program *) prog);
 }
 
-static INLINE void
+static inline void
 st_reference_fragprog(struct st_context *st,
                       struct st_fragment_program **ptr,
                       struct st_fragment_program *prog)
@@ -260,7 +260,7 @@ st_reference_fragprog(struct st_context *st,
 /**
  * This defines mapping from Mesa VARYING_SLOTs to TGSI GENERIC slots.
  */
-static INLINE unsigned
+static inline unsigned
 st_get_generic_varying_index(struct st_context *st, GLuint attr)
 {
    if (attr >= VARYING_SLOT_VAR0) {

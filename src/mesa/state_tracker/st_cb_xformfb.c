@@ -59,7 +59,7 @@ struct st_transform_feedback_object {
    struct pipe_stream_output_target *draw_count;
 };
 
-static INLINE struct st_transform_feedback_object *
+static inline struct st_transform_feedback_object *
 st_transform_feedback_object(struct gl_transform_feedback_object *obj)
 {
    return (struct st_transform_feedback_object *) obj;

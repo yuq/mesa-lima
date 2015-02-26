@@ -64,7 +64,7 @@ struct rastpos_stage
 };
 
 
-static INLINE struct rastpos_stage *
+static inline struct rastpos_stage *
 rastpos_stage( struct draw_stage *stage )
 {
    return (struct rastpos_stage *) stage;
