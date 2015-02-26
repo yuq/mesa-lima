@@ -2141,11 +2141,15 @@ ast_fully_specified_type::glsl_type(const char **name,
    if (type == NULL)
       return NULL;
 
+   /* The fragment language does not define a default precision value
+    * for float types, so check that one is defined if the type declaration
+    * isn't providing one explictly.
+    */
    if (type->base_type == GLSL_TYPE_FLOAT
        && state->es_shader
        && state->stage == MESA_SHADER_FRAGMENT
        && this->qualifier.precision == ast_precision_none
-       && state->symbols->get_variable("#default precision") == NULL) {
+       && state->symbols->get_default_precision_qualifier("float") == ast_precision_none) {
       YYLTYPE loc = this->get_location();
       _mesa_glsl_error(&loc, state,
                        "no precision specified this scope for type `%s'",
@@ -5714,19 +5718,9 @@ ast_type_specifier::hir(exec_list *instructions,
          return NULL;
       }
 
-      if (type->base_type == GLSL_TYPE_FLOAT
-          && state->es_shader
-          && state->stage == MESA_SHADER_FRAGMENT) {
+      if (state->es_shader) {
          /* Section 4.5.3 (Default Precision Qualifiers) of the GLSL ES 1.00
           * spec says:
-          *
-          *     "The fragment language has no default precision qualifier for
-          *     floating point types."
-          *
-          * As a result, we have to track whether or not default precision has
-          * been specified for float in GLSL ES fragment shaders.
-          *
-          * Earlier in that same section, the spec says:
           *
           *     "Non-precision qualified declarations will use the precision
           *     qualifier specified in the most recent precision statement
@@ -5740,16 +5734,13 @@ ast_type_specifier::hir(exec_list *instructions,
           *     overriding earlier statements within that scope."
           *
           * Default precision specifications follow the same scope rules as
-          * variables.  So, we can track the state of the default float
-          * precision in the symbol table, and the rules will just work.  This
+          * variables.  So, we can track the state of the default precision
+          * qualifiers in the symbol table, and the rules will just work.  This
           * is a slight abuse of the symbol table, but it has the semantics
           * that we want.
           */
-         ir_variable *const junk =
-            new(state) ir_variable(type, "#default precision",
-                                   ir_var_auto);
-
-         state->symbols->add_variable(junk);
+         state->symbols->add_default_precision_qualifier(this->type_name,
+                                                         this->default_precision);
       }
 
       /* FINISHME: Translate precision statements into IR. */
