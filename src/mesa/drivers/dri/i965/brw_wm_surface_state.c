@@ -187,6 +187,8 @@ brw_get_texture_swizzle(const struct gl_context *ctx,
       }
    }
 
+   GLenum datatype = _mesa_get_format_datatype(img->TexFormat);
+
    /* If the texture's format is alpha-only, force R, G, and B to
     * 0.0. Similarly, if the texture's format has no alpha channel,
     * force the alpha value read to 1.0. This allows for the
@@ -200,11 +202,27 @@ brw_get_texture_swizzle(const struct gl_context *ctx,
       swizzles[2] = SWIZZLE_ZERO;
       break;
    case GL_LUMINANCE:
-      if (t->_IsIntegerFormat) {
+      if (t->_IsIntegerFormat || datatype == GL_SIGNED_NORMALIZED) {
          swizzles[0] = SWIZZLE_X;
          swizzles[1] = SWIZZLE_X;
          swizzles[2] = SWIZZLE_X;
          swizzles[3] = SWIZZLE_ONE;
+      }
+      break;
+   case GL_LUMINANCE_ALPHA:
+      if (datatype == GL_SIGNED_NORMALIZED) {
+         swizzles[0] = SWIZZLE_X;
+         swizzles[1] = SWIZZLE_X;
+         swizzles[2] = SWIZZLE_X;
+         swizzles[3] = SWIZZLE_W;
+      }
+      break;
+   case GL_INTENSITY:
+      if (datatype == GL_SIGNED_NORMALIZED) {
+         swizzles[0] = SWIZZLE_X;
+         swizzles[1] = SWIZZLE_X;
+         swizzles[2] = SWIZZLE_X;
+         swizzles[3] = SWIZZLE_X;
       }
       break;
    case GL_RED:
