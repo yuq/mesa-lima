@@ -420,6 +420,11 @@ static inline bool is_tex(struct ir3_instruction *instr)
 	return (instr->category == 5);
 }
 
+static inline bool is_mem(struct ir3_instruction *instr)
+{
+	return (instr->category == 6);
+}
+
 static inline bool is_input(struct ir3_instruction *instr)
 {
 	return (instr->category == 2) && (instr->opc == OPC_BARY_F);
@@ -508,9 +513,6 @@ int ir3_block_ra(struct ir3_block *block, enum shader_t type,
 void ir3_block_legalize(struct ir3_block *block,
 		bool *has_samp, int *max_bary);
 
-#ifndef ARRAY_SIZE
-#  define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
-#endif
 
 /* ************************************************************************* */
 /* split this out or find some helper to use.. like main/bitset.h.. */

@@ -168,6 +168,8 @@ static void legalize(struct ir3_legalize_ctx *ctx)
 			 */
 			ctx->has_samp = true;
 			regmask_set(&needs_sy, n->regs[0]);
+		} else if (is_mem(n)) {
+			regmask_set(&needs_sy, n->regs[0]);
 		}
 
 		/* both tex/sfu appear to not always immediately consume
