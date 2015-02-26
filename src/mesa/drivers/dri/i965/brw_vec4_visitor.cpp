@@ -2961,8 +2961,8 @@ vec4_visitor::emit_untyped_atomic(unsigned atomic_op, unsigned surf_index,
     * unused channels will be masked out.
     */
    vec4_instruction *inst = emit(SHADER_OPCODE_UNTYPED_ATOMIC, dst,
+                                 brw_message_reg(0),
                                  src_reg(atomic_op), src_reg(surf_index));
-   inst->base_mrf = 0;
    inst->mlen = mlen;
 }
 
@@ -2977,9 +2977,8 @@ vec4_visitor::emit_untyped_surface_read(unsigned surf_index, dst_reg dst,
     * untyped surface read message, but that's OK because unused
     * channels will be masked out.
     */
-   vec4_instruction *inst = emit(SHADER_OPCODE_UNTYPED_SURFACE_READ,
-                                 dst, src_reg(surf_index));
-   inst->base_mrf = 0;
+   vec4_instruction *inst = emit(SHADER_OPCODE_UNTYPED_SURFACE_READ, dst,
+                                 brw_message_reg(0), src_reg(surf_index));
    inst->mlen = 1;
 }
 

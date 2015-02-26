@@ -1469,19 +1469,17 @@ vec4_generator::generate_code(const cfg_t *cfg)
          break;
 
       case SHADER_OPCODE_UNTYPED_ATOMIC:
-         assert(src[0].file == BRW_IMMEDIATE_VALUE &&
-                src[1].file == BRW_IMMEDIATE_VALUE);
-         brw_untyped_atomic(p, dst, brw_message_reg(inst->base_mrf),
-                            src[1], src[0].dw1.ud, inst->mlen,
+         assert(src[1].file == BRW_IMMEDIATE_VALUE &&
+                src[2].file == BRW_IMMEDIATE_VALUE);
+         brw_untyped_atomic(p, dst, src[0], src[2], src[1].dw1.ud, inst->mlen,
                             !inst->dst.is_null());
-         brw_mark_surface_used(&prog_data->base, src[1].dw1.ud);
+         brw_mark_surface_used(&prog_data->base, src[2].dw1.ud);
          break;
 
       case SHADER_OPCODE_UNTYPED_SURFACE_READ:
-         assert(src[0].file == BRW_IMMEDIATE_VALUE);
-         brw_untyped_surface_read(p, dst, brw_message_reg(inst->base_mrf),
-                                  src[0], inst->mlen, 1);
-         brw_mark_surface_used(&prog_data->base, src[0].dw1.ud);
+         assert(src[1].file == BRW_IMMEDIATE_VALUE);
+         brw_untyped_surface_read(p, dst, src[0], src[1], inst->mlen, 1);
+         brw_mark_surface_used(&prog_data->base, src[1].dw1.ud);
          break;
 
       case VS_OPCODE_UNPACK_FLAGS_SIMD4X2:
