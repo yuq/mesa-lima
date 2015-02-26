@@ -91,13 +91,6 @@ extern "C" {
 #endif
 
 
-
-/* XXX: Use standard `inline` keyword instead */
-#ifndef INLINE
-#  define INLINE inline
-#endif
-
-
 /**
  * PUBLIC/USED macros
  *
