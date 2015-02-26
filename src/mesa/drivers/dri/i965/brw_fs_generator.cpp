@@ -2018,7 +2018,7 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
          assert(src[1].file == BRW_IMMEDIATE_VALUE &&
                 src[2].file == BRW_IMMEDIATE_VALUE);
          brw_untyped_atomic(p, dst, src[0], src[2], src[1].dw1.ud,
-                            inst->mlen, true);
+                            inst->mlen, !inst->dst.is_null());
          brw_mark_surface_used(prog_data, src[2].dw1.ud);
          break;
 
