@@ -156,5 +156,9 @@ llrintf(float f)
 #define M_LOG2E (1.4426950408889634074)
 #endif
 
+#ifndef FLT_MAX_EXP
+#define FLT_MAX_EXP 128
+#endif
+
 
 #endif /* #define _C99_MATH_H_ */

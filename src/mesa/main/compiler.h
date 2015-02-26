@@ -188,10 +188,6 @@ static inline GLuint CPU_TO_LE32(GLuint x)
 # define LONGSTRING __extension__
 #endif
 
-#ifndef FLT_MAX_EXP
-#define FLT_MAX_EXP 128
-#endif
-
 #define IEEE_ONE 0x3f800000
 
 #ifndef Elements
