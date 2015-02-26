@@ -363,8 +363,8 @@ static int si_get_shader_param(struct pipe_screen* pscreen, unsigned shader, enu
 			return PIPE_SHADER_IR_NATIVE;
 #endif
 		case PIPE_SHADER_CAP_DOUBLES:
-			return 0; /* XXX: Enable doubles once the compiler can
-			             handle them. */
+			return HAVE_LLVM >= 0x0307;
+
 		case PIPE_SHADER_CAP_MAX_CONST_BUFFER_SIZE: {
 			uint64_t max_const_buffer_size;
 			pscreen->get_compute_param(pscreen,
