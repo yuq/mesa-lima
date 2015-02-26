@@ -41,6 +41,9 @@
 #include "main/samplerobj.h"
 
 
+#define ONE_DIV_SQRT_LN2 (1.201122408786449815)
+
+
 /**
  * Use the list of tokens in the state[] array to find global GL state
  * and return it in <value>.  Usually, four values are returned in <value>
