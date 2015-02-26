@@ -37,6 +37,7 @@
 
 
 #include <stdlib.h>
+#include <stdarg.h>
 #include <string.h>
 #include "compiler.h"
 #include "glheader.h"
