@@ -419,6 +419,8 @@ vec4_generator::generate_tex(vec4_instruction *inst,
       brw_AND(p, addr, addr, brw_imm_ud(0x0ff));
       brw_OR(p, addr, addr, temp);
 
+      brw_pop_insn_state(p);
+
       /* dst = send(offset, a0.0 | <descriptor>) */
       brw_inst *insn = brw_send_indirect_message(
          p, BRW_SFID_SAMPLER, dst, src, addr);
@@ -431,8 +433,6 @@ vec4_generator::generate_tex(vec4_instruction *inst,
                               inst->header_present /* header */,
                               BRW_SAMPLER_SIMD_MODE_SIMD4X2,
                               return_format);
-
-      brw_pop_insn_state(p);
 
       /* visitor knows more than we do about the surface limit required,
        * so has already done marking.
@@ -1091,6 +1091,8 @@ vec4_generator::generate_pull_constant_load_gen7(vec4_instruction *inst,
       brw_set_src0(p, insn_and, vec1(retype(surf_index, BRW_REGISTER_TYPE_UD)));
       brw_set_src1(p, insn_and, brw_imm_ud(0x0ff));
 
+      brw_pop_insn_state(p);
+
       /* dst = send(offset, a0.0 | <descriptor>) */
       brw_inst *insn = brw_send_indirect_message(
          p, BRW_SFID_SAMPLER, dst, src, addr);
@@ -1103,8 +1105,6 @@ vec4_generator::generate_pull_constant_load_gen7(vec4_instruction *inst,
                               header_present /* header */,
                               BRW_SAMPLER_SIMD_MODE_SIMD4X2,
                               0);
-
-      brw_pop_insn_state(p);
 
       /* visitor knows more than we do about the surface limit required,
        * so has already done marking.

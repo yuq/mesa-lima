@@ -762,6 +762,8 @@ fs_generator::generate_tex(fs_inst *inst, struct brw_reg dst, struct brw_reg src
       brw_AND(p, addr, addr, brw_imm_ud(0x0ff));
       brw_OR(p, addr, addr, temp);
 
+      brw_pop_insn_state(p);
+
       /* dst = send(offset, a0.0 | <descriptor>) */
       brw_inst *insn = brw_send_indirect_message(
          p, BRW_SFID_SAMPLER, dst, src, addr);
@@ -774,8 +776,6 @@ fs_generator::generate_tex(fs_inst *inst, struct brw_reg dst, struct brw_reg src
                               inst->header_present /* header */,
                               simd_mode,
                               return_format);
-
-      brw_pop_insn_state(p);
 
       /* visitor knows more than we do about the surface limit required,
        * so has already done marking.
@@ -1229,6 +1229,8 @@ fs_generator::generate_varying_pull_constant_load_gen7(fs_inst *inst,
       brw_set_src0(p, insn_and, vec1(retype(index, BRW_REGISTER_TYPE_UD)));
       brw_set_src1(p, insn_and, brw_imm_ud(0x0ff));
 
+      brw_pop_insn_state(p);
+
       /* dst = send(offset, a0.0 | <descriptor>) */
       brw_inst *insn = brw_send_indirect_message(
          p, BRW_SFID_SAMPLER, retype(dst, BRW_REGISTER_TYPE_UW),
@@ -1242,8 +1244,6 @@ fs_generator::generate_varying_pull_constant_load_gen7(fs_inst *inst,
                               false /* header */,
                               simd_mode,
                               0);
-
-      brw_pop_insn_state(p);
 
       /* visitor knows more than we do about the surface limit required,
        * so has already done marking.
