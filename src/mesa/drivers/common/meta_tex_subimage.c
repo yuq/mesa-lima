@@ -193,8 +193,8 @@ _mesa_meta_pbo_TexSubImage(struct gl_context *ctx, GLuint dims,
    if (allocate_storage)
       ctx->Driver.AllocTextureImageBuffer(ctx, tex_image);
 
-   /* Only stash the current FBO */
-   _mesa_meta_begin(ctx, 0);
+   _mesa_meta_begin(ctx, ~(MESA_META_PIXEL_TRANSFER |
+                           MESA_META_PIXEL_STORE));
 
    _mesa_GenFramebuffers(2, fbos);
    _mesa_BindFramebuffer(GL_READ_FRAMEBUFFER, fbos[0]);
@@ -312,8 +312,8 @@ _mesa_meta_pbo_GetTexSubImage(struct gl_context *ctx, GLuint dims,
    if (!pbo_tex_image)
       return false;
 
-   /* Only stash the current FBO */
-   _mesa_meta_begin(ctx, 0);
+   _mesa_meta_begin(ctx, ~(MESA_META_PIXEL_TRANSFER |
+                           MESA_META_PIXEL_STORE));
 
    _mesa_GenFramebuffers(2, fbos);
 
