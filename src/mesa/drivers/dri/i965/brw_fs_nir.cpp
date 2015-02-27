@@ -1090,7 +1090,7 @@ fs_visitor::nir_emit_alu(nir_alu_instr *instr)
       break;
 
    case nir_op_fpow:
-      inst = emit(SHADER_OPCODE_POW, result, op[0], op[1]);
+      inst = emit_math(SHADER_OPCODE_POW, result, op[0], op[1]);
       inst->saturate = instr->dest.saturate;
       break;
 
