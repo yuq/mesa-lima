@@ -372,7 +372,7 @@ fd_screen_get_shader_param(struct pipe_screen *pscreen, unsigned shader,
 		 * TODO looks like a4xx will require some additional
 		 * work for integer varying fetch..
 		 */
-		return (is_a3xx(screen) && glsl130) ? 1 : 0;
+		return ((is_a3xx(screen) || is_a4xx(screen)) && glsl130) ? 1 : 0;
 	case PIPE_SHADER_CAP_MAX_TEXTURE_SAMPLERS:
 	case PIPE_SHADER_CAP_MAX_SAMPLER_VIEWS:
 		return 16;
