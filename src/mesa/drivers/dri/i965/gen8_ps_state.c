@@ -146,8 +146,13 @@ upload_ps_state(struct brw_context *brw)
 
    /* 3DSTATE_PS expects the number of threads per PSD, which is always 64;
     * it implicitly scales for different GT levels (which have some # of PSDs).
+    *
+    * In Gen8 the format is U8-2 whereas in Gen9 it is U8-1.
     */
-   dw6 |= (64 - 2) << HSW_PS_MAX_THREADS_SHIFT;
+   if (brw->gen >= 9)
+      dw6 |= (64 - 1) << HSW_PS_MAX_THREADS_SHIFT;
+   else
+      dw6 |= (64 - 2) << HSW_PS_MAX_THREADS_SHIFT;
 
    if (prog_data->base.nr_params > 0)
       dw6 |= GEN7_PS_PUSH_CONSTANT_ENABLE;
