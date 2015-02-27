@@ -306,7 +306,7 @@ struct tgsi_property_data {
 #define TGSI_OPCODE_MAD                 16
 #define TGSI_OPCODE_SUB                 17
 #define TGSI_OPCODE_LRP                 18
-                                /* gap */
+#define TGSI_OPCODE_FMA                 19
 #define TGSI_OPCODE_SQRT                20
 #define TGSI_OPCODE_DP2A                21
                                 /* gap */
@@ -404,7 +404,7 @@ struct tgsi_property_data {
 #define TGSI_OPCODE_BREAKC              115
 #define TGSI_OPCODE_KILL_IF             116  /* conditional kill */
 #define TGSI_OPCODE_END                 117  /* aka HALT */
-                                /* gap */
+#define TGSI_OPCODE_DFMA                118
 #define TGSI_OPCODE_F2I                 119
 #define TGSI_OPCODE_IDIV                120
 #define TGSI_OPCODE_IMAX                121
@@ -510,7 +510,7 @@ struct tgsi_property_data {
 #define TGSI_OPCODE_DSNE                206 /* SM5 */
 #define TGSI_OPCODE_DRCP                207 /* eg, cayman */
 #define TGSI_OPCODE_DSQRT               208 /* eg, cayman also has DRSQ */
-#define TGSI_OPCODE_DMAD                209 /* DFMA? */
+#define TGSI_OPCODE_DMAD                209
 #define TGSI_OPCODE_DFRAC               210 /* eg, cayman */
 #define TGSI_OPCODE_DLDEXP              211 /* eg, cayman */
 #define TGSI_OPCODE_DFRACEXP            212 /* eg, cayman */

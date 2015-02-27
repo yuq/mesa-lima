@@ -272,6 +272,21 @@ This instruction replicates its result.
   dst.w = src0.w \times src1.w + (1 - src0.w) \times src2.w
 
 
+.. opcode:: FMA - Fused Multiply-Add
+
+Perform a * b + c with no intermediate rounding step.
+
+.. math::
+
+  dst.x = src0.x \times src1.x + src2.x
+
+  dst.y = src0.y \times src1.y + src2.y
+
+  dst.z = src0.z \times src1.z + src2.z
+
+  dst.w = src0.w \times src1.w + src2.w
+
+
 .. opcode:: DP2A - 2-component Dot Product And Add
 
 .. math::
@@ -1954,6 +1969,17 @@ source is an integer.
 
 
 .. opcode:: DMAD - Multiply And Add
+
+.. math::
+
+  dst.xy = src0.xy \times src1.xy + src2.xy
+
+  dst.zw = src0.zw \times src1.zw + src2.zw
+
+
+.. opcode:: DFMA - Fused Multiply-Add
+
+Perform a * b + c with no intermediate rounding step.
 
 .. math::
 
