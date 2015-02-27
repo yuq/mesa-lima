@@ -67,7 +67,6 @@ egl_gallium_la_LIBADD = \
 	$(top_builddir)/src/loader/libloader.la \
 	$(top_builddir)/src/gallium/auxiliary/libgalliumvl_stub.la \
 	$(top_builddir)/src/gallium/auxiliary/libgallium.la \
-	$(top_builddir)/src/gallium/drivers/identity/libidentity.la \
 	$(top_builddir)/src/gallium/drivers/trace/libtrace.la \
 	$(top_builddir)/src/gallium/drivers/rbug/librbug.la \
 	$(top_builddir)/src/gallium/state_trackers/egl/libegl.la \
