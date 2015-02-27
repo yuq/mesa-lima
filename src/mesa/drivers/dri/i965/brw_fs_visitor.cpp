@@ -3668,7 +3668,7 @@ fs_visitor::emit_fb_writes()
    brw_wm_prog_data *prog_data = (brw_wm_prog_data*) this->prog_data;
    brw_wm_prog_key *key = (brw_wm_prog_key*) this->key;
 
-   fs_inst *inst;
+   fs_inst *inst = NULL;
    if (do_dual_src) {
       this->current_annotation = ralloc_asprintf(this->mem_ctx,
 						 "FB dual-source write");
@@ -3700,8 +3700,12 @@ fs_visitor::emit_fb_writes()
       }
 
       prog_data->dual_src_blend = true;
-   } else if (key->nr_color_regions > 0) {
+   } else {
       for (int target = 0; target < key->nr_color_regions; target++) {
+         /* Skip over outputs that weren't written. */
+         if (this->outputs[target].file == BAD_FILE)
+            continue;
+
          this->current_annotation = ralloc_asprintf(this->mem_ctx,
                                                     "FB write target %d",
                                                     target);
@@ -3714,7 +3718,9 @@ fs_visitor::emit_fb_writes()
                                      this->output_components[target]);
          inst->target = target;
       }
-   } else {
+   }
+
+   if (inst == NULL) {
       /* Even if there's no color buffers enabled, we still need to send
        * alpha out the pipeline to our null renderbuffer to support
        * alpha-testing, alpha-to-coverage, and so on.
