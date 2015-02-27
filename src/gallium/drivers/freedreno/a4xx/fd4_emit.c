@@ -301,9 +301,7 @@ fd4_emit_vertex_bufs(struct fd_ringbuffer *ring, struct fd4_emit *emit)
 		return;
 
 	for (i = 0, j = 0; i <= last; i++) {
-		uint8_t semantic = sem2name(vp->inputs[i].semantic);
-		assert(semantic != TGSI_SEMANTIC_VERTEXID);
-		assert(semantic != TGSI_SEMANTIC_INSTANCEID);
+		assert(sem2name(vp->inputs[i].semantic) == 0);
 		if (vp->inputs[i].compmask) {
 			struct pipe_vertex_element *elem = &vtx->vtx->pipe[i];
 			const struct pipe_vertex_buffer *vb =
