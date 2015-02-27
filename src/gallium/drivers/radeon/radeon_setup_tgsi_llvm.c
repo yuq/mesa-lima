@@ -1224,6 +1224,7 @@ static void build_tgsi_intrinsic(
                emit_data->dst_type, emit_data->args,
                emit_data->arg_count, attr);
 }
+
 void
 build_tgsi_intrinsic_nomem(
  const struct lp_build_tgsi_action * action,
@@ -1231,14 +1232,6 @@ build_tgsi_intrinsic_nomem(
  struct lp_build_emit_data * emit_data)
 {
 	build_tgsi_intrinsic(action, bld_base, emit_data, LLVMReadNoneAttribute);
-}
-
-static void build_tgsi_intrinsic_readonly(
- const struct lp_build_tgsi_action * action,
- struct lp_build_tgsi_context * bld_base,
- struct lp_build_emit_data * emit_data)
-{
-	build_tgsi_intrinsic(action, bld_base, emit_data, LLVMReadOnlyAttribute);
 }
 
 void radeon_llvm_context_init(struct radeon_llvm_context * ctx)
@@ -1295,20 +1288,20 @@ void radeon_llvm_context_init(struct radeon_llvm_context * ctx)
 
 	lp_set_default_actions(bld_base);
 
-	bld_base->op_actions[TGSI_OPCODE_ABS].emit = build_tgsi_intrinsic_readonly;
+	bld_base->op_actions[TGSI_OPCODE_ABS].emit = build_tgsi_intrinsic_nomem;
 	bld_base->op_actions[TGSI_OPCODE_ABS].intr_name = "fabs";
-	bld_base->op_actions[TGSI_OPCODE_ARL].emit = emit_arl;
 	bld_base->op_actions[TGSI_OPCODE_AND].emit = emit_and;
+	bld_base->op_actions[TGSI_OPCODE_ARL].emit = emit_arl;
 	bld_base->op_actions[TGSI_OPCODE_BGNLOOP].emit = bgnloop_emit;
 	bld_base->op_actions[TGSI_OPCODE_BRK].emit = brk_emit;
-	bld_base->op_actions[TGSI_OPCODE_CEIL].emit = build_tgsi_intrinsic_readonly;
+	bld_base->op_actions[TGSI_OPCODE_CEIL].emit = build_tgsi_intrinsic_nomem;
 	bld_base->op_actions[TGSI_OPCODE_CEIL].intr_name = "ceil";
 	bld_base->op_actions[TGSI_OPCODE_CLAMP].emit = build_tgsi_intrinsic_nomem;
 	bld_base->op_actions[TGSI_OPCODE_CLAMP].intr_name = "llvm.AMDIL.clamp.";
 	bld_base->op_actions[TGSI_OPCODE_CMP].emit = build_tgsi_intrinsic_nomem;
 	bld_base->op_actions[TGSI_OPCODE_CMP].intr_name = "llvm.AMDGPU.cndlt";
 	bld_base->op_actions[TGSI_OPCODE_CONT].emit = cont_emit;
-	bld_base->op_actions[TGSI_OPCODE_COS].emit = build_tgsi_intrinsic_readonly;
+	bld_base->op_actions[TGSI_OPCODE_COS].emit = build_tgsi_intrinsic_nomem;
 	bld_base->op_actions[TGSI_OPCODE_COS].intr_name = "llvm.cos.f32";
 	bld_base->op_actions[TGSI_OPCODE_DDX].intr_name = "llvm.AMDGPU.ddx";
 	bld_base->op_actions[TGSI_OPCODE_DDX].fetch_args = tex_fetch_args;
@@ -1319,7 +1312,7 @@ void radeon_llvm_context_init(struct radeon_llvm_context * ctx)
 	bld_base->op_actions[TGSI_OPCODE_ENDLOOP].emit = endloop_emit;
 	bld_base->op_actions[TGSI_OPCODE_EX2].emit = build_tgsi_intrinsic_nomem;
 	bld_base->op_actions[TGSI_OPCODE_EX2].intr_name = "llvm.AMDIL.exp.";
-	bld_base->op_actions[TGSI_OPCODE_FLR].emit = build_tgsi_intrinsic_readonly;
+	bld_base->op_actions[TGSI_OPCODE_FLR].emit = build_tgsi_intrinsic_nomem;
 	bld_base->op_actions[TGSI_OPCODE_FLR].intr_name = "floor";
 	bld_base->op_actions[TGSI_OPCODE_FRC].emit = build_tgsi_intrinsic_nomem;
 	bld_base->op_actions[TGSI_OPCODE_FRC].intr_name = "llvm.AMDIL.fraction.";
@@ -1348,14 +1341,14 @@ void radeon_llvm_context_init(struct radeon_llvm_context * ctx)
 	bld_base->op_actions[TGSI_OPCODE_KILL_IF].intr_name = "llvm.AMDGPU.kill";
 	bld_base->op_actions[TGSI_OPCODE_KILL].emit = lp_build_tgsi_intrinsic;
 	bld_base->op_actions[TGSI_OPCODE_KILL].intr_name = "llvm.AMDGPU.kilp";
-	bld_base->op_actions[TGSI_OPCODE_LG2].emit = build_tgsi_intrinsic_readonly;
+	bld_base->op_actions[TGSI_OPCODE_LG2].emit = build_tgsi_intrinsic_nomem;
 	bld_base->op_actions[TGSI_OPCODE_LG2].intr_name = "llvm.log2.f32";
 	bld_base->op_actions[TGSI_OPCODE_LRP].emit = build_tgsi_intrinsic_nomem;
 	bld_base->op_actions[TGSI_OPCODE_LRP].intr_name = "llvm.AMDGPU.lrp";
 	bld_base->op_actions[TGSI_OPCODE_MOD].emit = emit_mod;
 	bld_base->op_actions[TGSI_OPCODE_NOT].emit = emit_not;
 	bld_base->op_actions[TGSI_OPCODE_OR].emit = emit_or;
-	bld_base->op_actions[TGSI_OPCODE_POW].emit = build_tgsi_intrinsic_readonly;
+	bld_base->op_actions[TGSI_OPCODE_POW].emit = build_tgsi_intrinsic_nomem;
 	bld_base->op_actions[TGSI_OPCODE_POW].intr_name = "llvm.pow.f32";
 	bld_base->op_actions[TGSI_OPCODE_ROUND].emit = build_tgsi_intrinsic_nomem;
 	bld_base->op_actions[TGSI_OPCODE_ROUND].intr_name = "llvm.AMDIL.round.nearest.";
@@ -1366,7 +1359,7 @@ void radeon_llvm_context_init(struct radeon_llvm_context * ctx)
 	bld_base->op_actions[TGSI_OPCODE_SLT].emit = emit_cmp;
 	bld_base->op_actions[TGSI_OPCODE_SNE].emit = emit_cmp;
 	bld_base->op_actions[TGSI_OPCODE_SGT].emit = emit_cmp;
-	bld_base->op_actions[TGSI_OPCODE_SIN].emit = build_tgsi_intrinsic_readonly;
+	bld_base->op_actions[TGSI_OPCODE_SIN].emit = build_tgsi_intrinsic_nomem;
 	bld_base->op_actions[TGSI_OPCODE_SIN].intr_name = "llvm.sin.f32";
 	bld_base->op_actions[TGSI_OPCODE_SSG].emit = emit_ssg;
 	bld_base->op_actions[TGSI_OPCODE_TEX].fetch_args = tex_fetch_args;
