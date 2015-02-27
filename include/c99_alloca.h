@@ -35,6 +35,10 @@
 
 #  define alloca _alloca
 
+#elif defined(__MINGW32__)
+
+#  include <malloc.h>
+
 #else /* !defined(_MSC_VER) */
 
 #  include <alloca.h>
