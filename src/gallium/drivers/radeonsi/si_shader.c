@@ -643,6 +643,10 @@ static void declare_system_value(
 		break;
 	}
 
+	case TGSI_SEMANTIC_SAMPLEMASK:
+		value = LLVMGetParam(radeon_bld->main_fn, SI_PARAM_SAMPLE_COVERAGE);
+		break;
+
 	default:
 		assert(!"unknown system value");
 		return;
