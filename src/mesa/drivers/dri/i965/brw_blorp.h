@@ -211,7 +211,7 @@ struct brw_blorp_prog_data
 class brw_blorp_params
 {
 public:
-   brw_blorp_params();
+   explicit brw_blorp_params(unsigned num_varyings = 0);
 
    virtual uint32_t get_wm_prog(struct brw_context *brw,
                                 brw_blorp_prog_data **prog_data) const = 0;
@@ -228,6 +228,7 @@ public:
    bool use_wm_prog;
    brw_blorp_wm_push_constants wm_push_consts;
    bool color_write_disable[4];
+   const unsigned num_varyings;
 };
 
 

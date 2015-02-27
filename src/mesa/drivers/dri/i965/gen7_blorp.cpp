@@ -415,9 +415,11 @@ gen7_blorp_emit_sf_config(struct brw_context *brw,
    {
       BEGIN_BATCH(14);
       OUT_BATCH(_3DSTATE_SBE << 16 | (14 - 2));
-      OUT_BATCH((1 - 1) << GEN7_SBE_NUM_OUTPUTS_SHIFT | /* only position */
+      OUT_BATCH(GEN7_SBE_SWIZZLE_ENABLE |
+                params->num_varyings << GEN7_SBE_NUM_OUTPUTS_SHIFT |
                 1 << GEN7_SBE_URB_ENTRY_READ_LENGTH_SHIFT |
-                0 << GEN7_SBE_URB_ENTRY_READ_OFFSET_SHIFT);
+                BRW_SF_URB_ENTRY_READ_OFFSET <<
+                   GEN7_SBE_URB_ENTRY_READ_OFFSET_SHIFT);
       for (int i = 0; i < 12; ++i)
          OUT_BATCH(0);
       ADVANCE_BATCH();

@@ -634,9 +634,10 @@ gen6_blorp_emit_sf_config(struct brw_context *brw,
 {
    BEGIN_BATCH(20);
    OUT_BATCH(_3DSTATE_SF << 16 | (20 - 2));
-   OUT_BATCH((1 - 1) << GEN6_SF_NUM_OUTPUTS_SHIFT | /* only position */
+   OUT_BATCH(params->num_varyings << GEN6_SF_NUM_OUTPUTS_SHIFT |
              1 << GEN6_SF_URB_ENTRY_READ_LENGTH_SHIFT |
-             0 << GEN6_SF_URB_ENTRY_READ_OFFSET_SHIFT);
+             BRW_SF_URB_ENTRY_READ_OFFSET <<
+                GEN6_SF_URB_ENTRY_READ_OFFSET_SHIFT);
    OUT_BATCH(0); /* dw2 */
    OUT_BATCH(params->dst.num_samples > 1 ? GEN6_SF_MSRAST_ON_PATTERN : 0);
    for (int i = 0; i < 16; ++i)
