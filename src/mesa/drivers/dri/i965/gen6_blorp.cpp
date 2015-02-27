@@ -93,6 +93,37 @@ gen6_blorp_emit_state_base_address(struct brw_context *brw,
    ADVANCE_BATCH();
 }
 
+static void
+gen6_blorp_emit_vertex_buffer_state(struct brw_context *brw,
+                                    unsigned num_elems,
+                                    unsigned vbo_size,
+                                    uint32_t vertex_offset)
+{
+   /* 3DSTATE_VERTEX_BUFFERS */
+   const int num_buffers = 1;
+   const int batch_length = 1 + 4 * num_buffers;
+
+   uint32_t dw0 = GEN6_VB0_ACCESS_VERTEXDATA |
+                  (num_elems * sizeof(float)) << BRW_VB0_PITCH_SHIFT;
+
+   if (brw->gen >= 7)
+      dw0 |= GEN7_VB0_ADDRESS_MODIFYENABLE;
+
+   if (brw->gen == 7)
+      dw0 |= GEN7_MOCS_L3 << 16;
+
+   BEGIN_BATCH(batch_length);
+   OUT_BATCH((_3DSTATE_VERTEX_BUFFERS << 16) | (batch_length - 2));
+   OUT_BATCH(dw0);
+   /* start address */
+   OUT_RELOC(brw->batch.bo, I915_GEM_DOMAIN_VERTEX, 0,
+             vertex_offset);
+   /* end address */
+   OUT_RELOC(brw->batch.bo, I915_GEM_DOMAIN_VERTEX, 0,
+             vertex_offset + vbo_size - 1);
+   OUT_BATCH(0);
+   ADVANCE_BATCH();
+}
 
 void
 gen6_blorp_emit_vertices(struct brw_context *brw,
@@ -144,32 +175,9 @@ gen6_blorp_emit_vertices(struct brw_context *brw,
       memcpy(vertex_data, vertices, GEN6_BLORP_VBO_SIZE);
    }
 
-   /* 3DSTATE_VERTEX_BUFFERS */
-   {
-      const int num_buffers = 1;
-      const int batch_length = 1 + 4 * num_buffers;
-
-      uint32_t dw0 = GEN6_VB0_ACCESS_VERTEXDATA |
-                     (GEN6_BLORP_NUM_VUE_ELEMS * sizeof(float)) << BRW_VB0_PITCH_SHIFT;
-
-      if (brw->gen >= 7)
-         dw0 |= GEN7_VB0_ADDRESS_MODIFYENABLE;
-
-      if (brw->gen == 7)
-         dw0 |= GEN7_MOCS_L3 << 16;
-
-      BEGIN_BATCH(batch_length);
-      OUT_BATCH((_3DSTATE_VERTEX_BUFFERS << 16) | (batch_length - 2));
-      OUT_BATCH(dw0);
-      /* start address */
-      OUT_RELOC(brw->batch.bo, I915_GEM_DOMAIN_VERTEX, 0,
-		vertex_offset);
-      /* end address */
-      OUT_RELOC(brw->batch.bo, I915_GEM_DOMAIN_VERTEX, 0,
-		vertex_offset + GEN6_BLORP_VBO_SIZE - 1);
-      OUT_BATCH(0);
-      ADVANCE_BATCH();
-   }
+   gen6_blorp_emit_vertex_buffer_state(brw, GEN6_BLORP_NUM_VUE_ELEMS,
+                                       GEN6_BLORP_VBO_SIZE,
+                                       vertex_offset);
 
    /* 3DSTATE_VERTEX_ELEMENTS
     *
