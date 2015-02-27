@@ -581,8 +581,8 @@ util_bitcount(unsigned n)
     * Requires only one iteration per set bit, instead of
     * one iteration per bit less than highest set bit.
     */
-   unsigned bits = 0;
-   for (bits; n; bits++) {
+   unsigned bits;
+   for (bits = 0; n; bits++) {
       n &= n - 1;
    }
    return bits;
