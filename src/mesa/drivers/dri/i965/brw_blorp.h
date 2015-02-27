@@ -415,7 +415,9 @@ gen6_blorp_emit_drawing_rectangle(struct brw_context *brw,
 
 uint32_t
 gen6_blorp_emit_sampler_state(struct brw_context *brw,
-                              const brw_blorp_params *params);
+                              unsigned tex_filter, unsigned max_lod,
+                              bool non_normalized_coords);
+
 /** \} */
 
 #endif /* __cplusplus */

@@ -830,7 +830,8 @@ gen7_blorp_exec(struct brw_context *brw,
          gen6_blorp_emit_binding_table(brw, params,
                                        wm_surf_offset_renderbuffer,
                                        wm_surf_offset_texture);
-      sampler_offset = gen6_blorp_emit_sampler_state(brw, params);
+      sampler_offset =
+         gen6_blorp_emit_sampler_state(brw, BRW_MAPFILTER_LINEAR, 0, true);
    }
    gen7_blorp_emit_vs_disable(brw, params);
    gen7_blorp_emit_hs_disable(brw, params);

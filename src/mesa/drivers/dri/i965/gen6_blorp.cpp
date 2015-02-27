@@ -455,7 +455,8 @@ gen6_blorp_emit_binding_table(struct brw_context *brw,
  */
 uint32_t
 gen6_blorp_emit_sampler_state(struct brw_context *brw,
-                              const brw_blorp_params *params)
+                              unsigned tex_filter, unsigned max_lod,
+                              bool non_normalized_coords)
 {
    uint32_t sampler_offset;
    uint32_t *sampler_state = (uint32_t *)
@@ -476,8 +477,8 @@ gen6_blorp_emit_sampler_state(struct brw_context *brw,
    brw_emit_sampler_state(brw,
                           sampler_state,
                           sampler_offset,
-                          BRW_MAPFILTER_LINEAR, /* min filter */
-                          BRW_MAPFILTER_LINEAR, /* mag filter */
+                          tex_filter, /* min filter */
+                          tex_filter, /* mag filter */
                           BRW_MIPFILTER_NONE,
                           BRW_ANISORATIO_2,
                           address_rounding,
@@ -485,11 +486,11 @@ gen6_blorp_emit_sampler_state(struct brw_context *brw,
                           BRW_TEXCOORDMODE_CLAMP,
                           BRW_TEXCOORDMODE_CLAMP,
                           0, /* min LOD */
-                          0, /* max LOD */
+                          max_lod,
                           0, /* LOD bias */
                           0, /* base miplevel */
                           0, /* shadow function */
-                          true, /* non-normalized coordinates */
+                          non_normalized_coords,
                           0); /* border color offset - unused */
 
    return sampler_offset;
@@ -1059,7 +1060,9 @@ gen6_blorp_exec(struct brw_context *brw,
          gen6_blorp_emit_binding_table(brw, params,
                                        wm_surf_offset_renderbuffer,
                                        wm_surf_offset_texture);
-      sampler_offset = gen6_blorp_emit_sampler_state(brw, params);
+      sampler_offset =
+         gen6_blorp_emit_sampler_state(brw, BRW_MAPFILTER_LINEAR, 0, true);
+                                                
       gen6_blorp_emit_sampler_state_pointers(brw, params, sampler_offset);
    }
    gen6_blorp_emit_vs_disable(brw, params);
