@@ -39,9 +39,7 @@ EXTRA_DIST = \
 	glapi/SConscript \
 	shared-glapi/SConscript
 
-AM_CFLAGS = \
-	$(PTHREAD_CFLAGS) \
-	$(MSVC2013_COMPAT_CFLAGS)
+AM_CFLAGS = $(PTHREAD_CFLAGS)
 AM_CPPFLAGS =							\
 	$(DEFINES)						\
 	$(SELINUX_CFLAGS)					\

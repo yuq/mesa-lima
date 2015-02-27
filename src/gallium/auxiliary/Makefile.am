@@ -12,12 +12,9 @@ noinst_LTLIBRARIES = libgallium.la
 AM_CFLAGS = \
 	-I$(top_srcdir)/src/gallium/auxiliary/util \
 	$(GALLIUM_CFLAGS) \
-	$(VISIBILITY_CFLAGS) \
-	$(MSVC2008_COMPAT_CXXFLAGS)
+	$(VISIBILITY_CFLAGS)
 
-AM_CXXFLAGS = \
-	$(VISIBILITY_CXXFLAGS) \
-	$(MSVC2008_COMPAT_CXXFLAGS)
+AM_CXXFLAGS = $(VISIBILITY_CXXFLAGS)
 
 libgallium_la_SOURCES = \
 	$(C_SOURCES) \

@@ -25,12 +25,10 @@ include $(top_srcdir)/src/gallium/Automake.inc
 
 AM_CFLAGS = \
 	$(GALLIUM_DRIVER_CFLAGS) \
-	$(LLVM_CFLAGS) \
-	$(MSVC2008_COMPAT_CFLAGS)
+	$(LLVM_CFLAGS)
 AM_CXXFLAGS= \
 	$(GALLIUM_DRIVER_CXXFLAGS) \
-	$(LLVM_CXXFLAGS) \
-	$(MSVC2008_COMPAT_CXXFLAGS)
+	$(LLVM_CXXFLAGS)
 
 noinst_LTLIBRARIES = libllvmpipe.la
 

@@ -31,8 +31,7 @@
 include $(top_srcdir)/src/gallium/Automake.inc
 
 AM_CFLAGS = \
-	$(GALLIUM_TARGET_CFLAGS) \
-	$(MSVC2013_COMPAT_CFLAGS)
+	$(GALLIUM_TARGET_CFLAGS)
 
 AM_CPPFLAGS = \
 	-I$(top_srcdir)/src/gallium/state_trackers/egl \
