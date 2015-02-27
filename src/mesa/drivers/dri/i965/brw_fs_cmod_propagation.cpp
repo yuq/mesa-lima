@@ -80,6 +80,10 @@ opt_cmod_propagation_local(fs_visitor *v, bblock_t *block)
                 scan_inst->dst.reg_offset != inst->src[0].reg_offset)
                break;
 
+            /* Comparisons operate differently for ints and floats */
+            if (scan_inst->dst.type != inst->dst.type)
+               break;
+
             /* If the instruction generating inst's source also wrote the
              * flag, and inst is doing a simple .nz comparison, then inst
              * is redundant - the appropriate value is already in the flag
