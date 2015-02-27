@@ -645,14 +645,8 @@ lower_packed_varyings_visitor::needs_lowering(ir_variable *var)
    if (var->data.explicit_location)
       return false;
 
-   const glsl_type *type = var->type;
-   if (this->gs_input_vertices != 0) {
-      assert(type->is_array());
-      type = type->element_type();
-   }
-   if (type->is_array())
-      type = type->fields.array;
-   if (type->vector_elements == 4 && !type->is_double())
+   if (var->type->without_array()->vector_elements == 4 &&
+       !var->type->is_double())
       return false;
    return true;
 }
