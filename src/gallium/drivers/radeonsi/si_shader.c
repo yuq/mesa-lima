@@ -192,6 +192,30 @@ static int get_param_index(unsigned semantic_name, unsigned index,
 }
 
 /**
+ * Get the value of a shader input parameter and extract a bitfield.
+ */
+static LLVMValueRef unpack_param(struct si_shader_context *si_shader_ctx,
+				 unsigned param, unsigned rshift,
+				 unsigned bitwidth)
+{
+	struct gallivm_state *gallivm = &si_shader_ctx->radeon_bld.gallivm;
+	LLVMValueRef value = LLVMGetParam(si_shader_ctx->radeon_bld.main_fn,
+					  param);
+
+	if (rshift)
+		value = LLVMBuildLShr(gallivm->builder, value,
+				      lp_build_const_int32(gallivm, rshift), "");
+
+	if (rshift + bitwidth < 32) {
+		unsigned mask = (1 << bitwidth) - 1;
+		value = LLVMBuildAnd(gallivm->builder, value,
+				     lp_build_const_int32(gallivm, mask), "");
+	}
+
+	return value;
+}
+
+/**
  * Build an LLVM bytecode indexed load using LLVMBuildGEP + LLVMBuildLoad.
  * It's equivalent to doing a load from &base_ptr[index].
  *
@@ -561,14 +585,8 @@ static void declare_input_fs(
 
 static LLVMValueRef get_sample_id(struct radeon_llvm_context *radeon_bld)
 {
-	struct gallivm_state *gallivm = &radeon_bld->gallivm;
-	LLVMValueRef value = LLVMGetParam(radeon_bld->main_fn,
-					  SI_PARAM_ANCILLARY);
-	value = LLVMBuildLShr(gallivm->builder, value,
-			      lp_build_const_int32(gallivm, 8), "");
-	value = LLVMBuildAnd(gallivm->builder, value,
-			     lp_build_const_int32(gallivm, 0xf), "");
-	return value;
+	return unpack_param(si_shader_context(&radeon_bld->soa.bld_base),
+			    SI_PARAM_ANCILLARY, 8, 4);
 }
 
 /**
@@ -1013,16 +1031,9 @@ static void si_llvm_emit_streamout(struct si_shader_context *shader,
 
 	LLVMTypeRef i32 = LLVMInt32TypeInContext(gallivm->context);
 
-	LLVMValueRef so_param =
-		LLVMGetParam(shader->radeon_bld.main_fn,
-			     shader->param_streamout_config);
-
 	/* Get bits [22:16], i.e. (so_param >> 16) & 127; */
 	LLVMValueRef so_vtx_count =
-		LLVMBuildAnd(builder,
-			     LLVMBuildLShr(builder, so_param,
-					   LLVMConstInt(i32, 16, 0), ""),
-			     LLVMConstInt(i32, 127, 0), "");
+		unpack_param(shader, shader->param_streamout_config, 16, 7);
 
 	LLVMValueRef tid = build_intrinsic(builder, "llvm.SI.tid", i32,
 					   NULL, 0, LLVMReadNoneAttribute);
