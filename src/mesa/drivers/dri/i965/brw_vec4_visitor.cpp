@@ -1655,7 +1655,7 @@ vec4_visitor::visit(ir_expression *ir)
       emit(CMP(result_dst, op[0], src_reg(0.0f), BRW_CONDITIONAL_NZ));
       break;
    case ir_unop_i2b:
-      emit(AND(result_dst, op[0], src_reg(1)));
+      emit(CMP(result_dst, op[0], src_reg(0), BRW_CONDITIONAL_NZ));
       break;
 
    case ir_unop_trunc:
