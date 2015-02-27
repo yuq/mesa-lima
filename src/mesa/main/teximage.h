@@ -409,6 +409,10 @@ _mesa_TexBufferRange(GLenum target, GLenum internalFormat, GLuint buffer,
 extern void GLAPIENTRY
 _mesa_TextureBuffer(GLuint texture, GLenum internalFormat, GLuint buffer);
 
+extern void GLAPIENTRY
+_mesa_TextureBufferRange(GLuint texture, GLenum internalFormat, GLuint buffer,
+                         GLintptr offset, GLsizeiptr size);
+
 
 extern void GLAPIENTRY
 _mesa_TexImage2DMultisample(GLenum target, GLsizei samples,

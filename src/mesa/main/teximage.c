@@ -5463,6 +5463,52 @@ _mesa_TextureBuffer(GLuint texture, GLenum internalFormat, GLuint buffer)
                               bufObj, 0, buffer ? -1 : 0, "glTextureBuffer");
 }
 
+void GLAPIENTRY
+_mesa_TextureBufferRange(GLuint texture, GLenum internalFormat, GLuint buffer,
+                         GLintptr offset, GLsizeiptr size)
+{
+   struct gl_texture_object *texObj;
+   struct gl_buffer_object *bufObj;
+
+   GET_CURRENT_CONTEXT(ctx);
+
+   if (buffer) {
+      bufObj = _mesa_lookup_bufferobj_err(ctx, buffer,
+                                          "glTextureBufferRange");
+      if (!bufObj)
+         return;
+
+      if (!check_texture_buffer_range(ctx, bufObj, offset, size,
+          "glTextureBufferRange"))
+         return;
+
+   } else {
+
+      /* OpenGL 4.5 core spec (02.02.2015) says in Section 8.9 Buffer
+       * Textures (PDF page 254):
+       *    "If buffer is zero, then any buffer object attached to the buffer
+       *    texture is detached, the values offset and size are ignored and
+       *    the state for offset and size for the buffer texture are reset to
+       *    zero."
+       */
+      offset = 0;
+      size = 0;
+      bufObj = NULL;
+   }
+
+   /* Get the texture object by Name. */
+   texObj = _mesa_lookup_texture_err(ctx, texture, "glTextureBufferRange");
+   if (!texObj)
+      return;
+
+   if (!check_texture_buffer_target(ctx, texObj->Target,
+       "glTextureBufferRange"))
+      return;
+
+   _mesa_texture_buffer_range(ctx, texObj, internalFormat,
+                              bufObj, offset, size, "glTextureBufferRange");
+}
+
 static GLboolean
 is_renderable_texture_format(struct gl_context *ctx, GLenum internalformat)
 {
