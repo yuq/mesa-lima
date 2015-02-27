@@ -402,7 +402,7 @@ public:
    void resolve_ud_negate(fs_reg *reg);
    void resolve_bool_comparison(ir_rvalue *rvalue, fs_reg *reg);
 
-   fs_reg get_timestamp();
+   fs_reg get_timestamp(fs_inst **out_mov);
 
    struct brw_reg interp_reg(int location, int channel);
    void setup_uniform_values(ir_variable *ir);
