@@ -759,19 +759,24 @@ fs_visitor::emit_shader_time_end()
       unreachable("fs_visitor::emit_shader_time_end missing code");
    }
 
+   /* Insert our code just before the final SEND with EOT. */
+   exec_node *end = this->instructions.get_tail();
+   assert(end && ((fs_inst *) end)->eot);
+
    fs_inst *tm_read;
    fs_reg shader_end_time = get_timestamp(&tm_read);
-   emit(tm_read);
+   end->insert_before(tm_read);
 
    /* Check that there weren't any timestamp reset events (assuming these
     * were the only two timestamp reads that happened).
     */
    fs_reg reset = shader_end_time;
    reset.set_smear(2);
-   fs_inst *test = emit(AND(reg_null_d, reset, fs_reg(1u)));
+   fs_inst *test = AND(reg_null_d, reset, fs_reg(1u));
    test->conditional_mod = BRW_CONDITIONAL_Z;
    test->force_writemask_all = true;
-   emit(IF(BRW_PREDICATE_NORMAL));
+   end->insert_before(test);
+   end->insert_before(IF(BRW_PREDICATE_NORMAL));
 
    fs_reg start = shader_start_time;
    start.negate = true;
@@ -779,7 +784,7 @@ fs_visitor::emit_shader_time_end()
    diff.set_smear(0);
    fs_inst *add = ADD(diff, start, shader_end_time);
    add->force_writemask_all = true;
-   emit(add);
+   end->insert_before(add);
 
    /* If there were no instructions between the two timestamp gets, the diff
     * is 2 cycles.  Remove that overhead, so I can forget about that when
@@ -787,13 +792,13 @@ fs_visitor::emit_shader_time_end()
     */
    add = ADD(diff, diff, fs_reg(-2u));
    add->force_writemask_all = true;
-   emit(add);
+   end->insert_before(add);
 
-   emit(SHADER_TIME_ADD(type, diff));
-   emit(SHADER_TIME_ADD(written_type, fs_reg(1u)));
-   emit(BRW_OPCODE_ELSE);
-   emit(SHADER_TIME_ADD(reset_type, fs_reg(1u)));
-   emit(BRW_OPCODE_ENDIF);
+   end->insert_before(SHADER_TIME_ADD(type, diff));
+   end->insert_before(SHADER_TIME_ADD(written_type, fs_reg(1u)));
+   end->insert_before(new(mem_ctx) fs_inst(BRW_OPCODE_ELSE, dispatch_width));
+   end->insert_before(SHADER_TIME_ADD(reset_type, fs_reg(1u)));
+   end->insert_before(new(mem_ctx) fs_inst(BRW_OPCODE_ENDIF, dispatch_width));
 }
 
 fs_inst *
@@ -3921,6 +3926,9 @@ fs_visitor::run_fs()
          emit_alpha_test();
 
       emit_fb_writes();
+
+      if (INTEL_DEBUG & DEBUG_SHADER_TIME)
+         emit_shader_time_end();
 
       calculate_cfg();
 

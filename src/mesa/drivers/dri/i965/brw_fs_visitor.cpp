@@ -3670,9 +3670,6 @@ fs_visitor::emit_fb_writes()
 
    fs_inst *inst;
    if (do_dual_src) {
-      if (INTEL_DEBUG & DEBUG_SHADER_TIME)
-         emit_shader_time_end();
-
       this->current_annotation = ralloc_asprintf(this->mem_ctx,
 						 "FB dual-source write");
       inst = emit_single_fb_write(this->outputs[0], this->dual_src_output,
@@ -3712,19 +3709,12 @@ fs_visitor::emit_fb_writes()
          if (brw->gen >= 6 && key->replicate_alpha && target != 0)
             src0_alpha = offset(outputs[0], 3);
 
-         if (target == key->nr_color_regions - 1 &&
-             (INTEL_DEBUG & DEBUG_SHADER_TIME))
-            emit_shader_time_end();
-
          inst = emit_single_fb_write(this->outputs[target], reg_undef,
                                      src0_alpha,
                                      this->output_components[target]);
          inst->target = target;
       }
    } else {
-      if (INTEL_DEBUG & DEBUG_SHADER_TIME)
-         emit_shader_time_end();
-
       /* Even if there's no color buffers enabled, we still need to send
        * alpha out the pipeline to our null renderbuffer to support
        * alpha-testing, alpha-to-coverage, and so on.
@@ -3935,9 +3925,6 @@ fs_visitor::emit_urb_writes()
       if (length == 8 || last)
          flush = true;
       if (flush) {
-         if (last && (INTEL_DEBUG & DEBUG_SHADER_TIME))
-            emit_shader_time_end();
-
          fs_reg *payload_sources = ralloc_array(mem_ctx, fs_reg, length + 1);
          fs_reg payload = fs_reg(GRF, alloc.allocate(length + 1),
                                  BRW_REGISTER_TYPE_F);
