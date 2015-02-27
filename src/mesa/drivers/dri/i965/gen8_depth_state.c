@@ -340,7 +340,7 @@ write_pma_stall_bits(struct brw_context *brw, uint32_t pma_stall_bits)
     * Flush is also necessary.
     */
    const uint32_t render_cache_flush =
-      ctx->Stencil._WriteEnabled ? PIPE_CONTROL_WRITE_FLUSH : 0;
+      ctx->Stencil._WriteEnabled ? PIPE_CONTROL_RENDER_TARGET_FLUSH : 0;
    brw_emit_pipe_control_flush(brw,
                                PIPE_CONTROL_CS_STALL |
                                PIPE_CONTROL_DEPTH_CACHE_FLUSH |

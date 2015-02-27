@@ -411,7 +411,7 @@ intel_batchbuffer_data(struct brw_context *brw,
 static void
 gen8_add_cs_stall_workaround_bits(uint32_t *flags)
 {
-   uint32_t wa_bits = PIPE_CONTROL_WRITE_FLUSH |
+   uint32_t wa_bits = PIPE_CONTROL_RENDER_TARGET_FLUSH |
                       PIPE_CONTROL_DEPTH_CACHE_FLUSH |
                       PIPE_CONTROL_WRITE_IMMEDIATE |
                       PIPE_CONTROL_WRITE_DEPTH_COUNT |
@@ -665,7 +665,7 @@ intel_batchbuffer_emit_mi_flush(struct brw_context *brw)
       OUT_BATCH(0);
       ADVANCE_BATCH();
    } else {
-      int flags = PIPE_CONTROL_NO_WRITE | PIPE_CONTROL_WRITE_FLUSH;
+      int flags = PIPE_CONTROL_NO_WRITE | PIPE_CONTROL_RENDER_TARGET_FLUSH;
       if (brw->gen >= 6) {
          if (brw->gen == 9) {
             /* Hardware workaround: SKL
@@ -676,10 +676,10 @@ intel_batchbuffer_emit_mi_flush(struct brw_context *brw)
             brw_emit_pipe_control_flush(brw, 0);
          }
 
-         flags |= PIPE_CONTROL_INSTRUCTION_FLUSH |
+         flags |= PIPE_CONTROL_INSTRUCTION_INVALIDATE |
                   PIPE_CONTROL_DEPTH_CACHE_FLUSH |
                   PIPE_CONTROL_VF_CACHE_INVALIDATE |
-                  PIPE_CONTROL_TC_FLUSH |
+                  PIPE_CONTROL_TEXTURE_CACHE_INVALIDATE |
                   PIPE_CONTROL_CS_STALL;
 
          if (brw->gen == 6) {

@@ -248,7 +248,7 @@ upload_vs_state(struct brw_context *brw)
     */
    brw_emit_pipe_control_flush(brw,
                                PIPE_CONTROL_DEPTH_STALL |
-                               PIPE_CONTROL_INSTRUCTION_FLUSH |
+                               PIPE_CONTROL_INSTRUCTION_INVALIDATE |
                                PIPE_CONTROL_STATE_CACHE_INVALIDATE);
 }
 
