@@ -771,4 +771,23 @@ debug_print_bind_flags(const char *msg, unsigned usage)
 }
 
 
+/**
+ * Print PIPE_USAGE_x enum values with a message.
+ */
+void
+debug_print_usage_enum(const char *msg, unsigned usage)
+{
+   static const struct debug_named_value names[] = {
+      DEBUG_NAMED_VALUE(PIPE_USAGE_DEFAULT),
+      DEBUG_NAMED_VALUE(PIPE_USAGE_IMMUTABLE),
+      DEBUG_NAMED_VALUE(PIPE_USAGE_DYNAMIC),
+      DEBUG_NAMED_VALUE(PIPE_USAGE_STREAM),
+      DEBUG_NAMED_VALUE(PIPE_USAGE_STAGING),
+      DEBUG_NAMED_VALUE_END
+   };
+
+   debug_printf("%s: %s\n", msg, debug_dump_enum(names, usage));
+}
+
+
 #endif
