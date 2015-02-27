@@ -78,8 +78,9 @@ create_texture_for_pbo(struct gl_context *ctx, bool create_pbo,
       *tmp_pbo = 0;
       buffer_obj = packing->BufferObj;
    } else {
-      assert(create_pbo);
       bool is_pixel_pack = pbo_target == GL_PIXEL_PACK_BUFFER;
+
+      assert(create_pbo);
 
       _mesa_GenBuffers(1, tmp_pbo);
 
