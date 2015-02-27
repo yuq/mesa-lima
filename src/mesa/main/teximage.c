@@ -224,7 +224,10 @@ _mesa_base_tex_format( struct gl_context *ctx, GLint internalFormat )
    if (ctx->Extensions.ARB_stencil_texturing) {
       switch (internalFormat) {
       case GL_STENCIL_INDEX:
+      case GL_STENCIL_INDEX1:
+      case GL_STENCIL_INDEX4:
       case GL_STENCIL_INDEX8:
+      case GL_STENCIL_INDEX16:
          return GL_STENCIL_INDEX;
       default:
          ; /* fallthrough */
