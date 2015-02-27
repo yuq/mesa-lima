@@ -341,6 +341,12 @@ tgsi_opcode_infer_type( uint opcode )
    case TGSI_OPCODE_USNE:
    case TGSI_OPCODE_SVIEWINFO:
    case TGSI_OPCODE_UMUL_HI:
+   case TGSI_OPCODE_UBFE:
+   case TGSI_OPCODE_BFI:
+   case TGSI_OPCODE_BREV:
+   case TGSI_OPCODE_POPC:
+   case TGSI_OPCODE_LSB:
+   case TGSI_OPCODE_UMSB:
       return TGSI_TYPE_UNSIGNED;
    case TGSI_OPCODE_ARL:
    case TGSI_OPCODE_ARR:
@@ -362,6 +368,8 @@ tgsi_opcode_infer_type( uint opcode )
    case TGSI_OPCODE_IABS:
    case TGSI_OPCODE_ISSG:
    case TGSI_OPCODE_IMUL_HI:
+   case TGSI_OPCODE_IBFE:
+   case TGSI_OPCODE_IMSB:
       return TGSI_TYPE_SIGNED;
    default:
       return TGSI_TYPE_FLOAT;
