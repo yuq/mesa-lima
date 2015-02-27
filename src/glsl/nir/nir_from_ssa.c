@@ -26,7 +26,7 @@
  */
 
 #include "nir.h"
-#include "c99_alloca.h"
+#include "nir_vla.h"
 
 /*
  * This file implements an out-of-SSA pass as described in "Revisiting
@@ -182,7 +182,7 @@ merge_merge_sets(merge_set *a, merge_set *b)
 static bool
 merge_sets_interfere(merge_set *a, merge_set *b)
 {
-   merge_node **dom = alloca((a->size + b->size) * sizeof *dom);
+   NIR_VLA(merge_node *, dom, a->size + b->size);
    int dom_idx = -1;
 
    struct exec_node *an = exec_list_get_head(&a->nodes);
@@ -674,21 +674,16 @@ resolve_parallel_copy(nir_parallel_copy_instr *pcopy,
    }
 
    /* The register/source corresponding to the given index */
-   nir_src *values = alloca(num_copies * 2 * sizeof *values);
-   memset(values, 0, num_copies * 2 * sizeof *values);
+   NIR_VLA_ZERO(nir_src, values, num_copies * 2);
 
-   /* The current location of a given piece of data */
-   int *loc = alloca(num_copies * 2 * sizeof *loc);
+   /* The current location of a given piece of data.  We will use -1 for "null" */
+   NIR_VLA_FILL(int, loc, num_copies * 2, -1);
 
-   /* The piece of data that the given piece of data is to be copied from */
-   int *pred = alloca(num_copies * 2 * sizeof *pred);
-
-   /* Initialize loc and pred.  We will use -1 for "null" */
-   memset(loc, -1, num_copies * 2 * sizeof *loc);
-   memset(pred, -1, num_copies * 2 * sizeof *pred);
+   /* The piece of data that the given piece of data is to be copied from.  We will use -1 for "null" */
+   NIR_VLA_FILL(int, pred, num_copies * 2, -1);
 
    /* The destinations we have yet to properly fill */
-   int *to_do = alloca(num_copies * 2 * sizeof *to_do);
+   NIR_VLA(int, to_do, num_copies * 2);
    int to_do_idx = -1;
 
    /* Now we set everything up:
@@ -738,7 +733,7 @@ resolve_parallel_copy(nir_parallel_copy_instr *pcopy,
    }
 
    /* Currently empty destinations we can go ahead and fill */
-   int *ready = alloca(num_copies * 2 * sizeof *ready);
+   NIR_VLA(int, ready, num_copies * 2);
    int ready_idx = -1;
 
    /* Mark the ones that are ready for copying.  We know an index is a

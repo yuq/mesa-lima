@@ -26,8 +26,7 @@
  */
 
 #include "nir.h"
-
-#include "c99_alloca.h"
+#include "nir_vla.h"
 
 
 struct deref_node {
@@ -902,8 +901,8 @@ rename_variables_block(nir_block *block, struct lower_variables_state *state)
 static void
 insert_phi_nodes(struct lower_variables_state *state)
 {
-   unsigned *work = alloca(state->impl->num_blocks * sizeof *work);
-   unsigned *has_already = alloca(state->impl->num_blocks * sizeof *has_already);
+   NIR_VLA_ZERO(unsigned, work, state->impl->num_blocks);
+   NIR_VLA_ZERO(unsigned, has_already, state->impl->num_blocks);
 
    /*
     * Since the work flags already prevent us from inserting a node that has
@@ -913,10 +912,7 @@ insert_phi_nodes(struct lower_variables_state *state)
     * function. So all we need to handle W is an array and a pointer to the
     * next element to be inserted and the next element to be removed.
     */
-   nir_block **W = alloca(state->impl->num_blocks * sizeof *W);
-
-   memset(work, 0, state->impl->num_blocks * sizeof *work);
-   memset(has_already, 0, state->impl->num_blocks * sizeof *has_already);
+   NIR_VLA(nir_block *, W, state->impl->num_blocks);
 
    unsigned w_start, w_end;
    unsigned iter_count = 0;
