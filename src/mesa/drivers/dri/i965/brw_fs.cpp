@@ -778,16 +778,15 @@ fs_visitor::emit_shader_time_end()
    add->force_writemask_all = true;
    emit(add);
 
-   emit_shader_time_write(type, diff);
-   emit_shader_time_write(written_type, fs_reg(1u));
+   emit(SHADER_TIME_ADD(type, diff));
+   emit(SHADER_TIME_ADD(written_type, fs_reg(1u)));
    emit(BRW_OPCODE_ELSE);
-   emit_shader_time_write(reset_type, fs_reg(1u));
+   emit(SHADER_TIME_ADD(reset_type, fs_reg(1u)));
    emit(BRW_OPCODE_ENDIF);
 }
 
-void
-fs_visitor::emit_shader_time_write(enum shader_time_shader_type type,
-                                   fs_reg value)
+fs_inst *
+fs_visitor::SHADER_TIME_ADD(enum shader_time_shader_type type, fs_reg value)
 {
    int shader_time_index =
       brw_get_shader_time_index(brw, shader_prog, prog, type);
@@ -799,8 +798,8 @@ fs_visitor::emit_shader_time_write(enum shader_time_shader_type type,
    else
       payload = vgrf(glsl_type::uint_type);
 
-   emit(new(mem_ctx) fs_inst(SHADER_OPCODE_SHADER_TIME_ADD,
-                             fs_reg(), payload, offset, value));
+   return new(mem_ctx) fs_inst(SHADER_OPCODE_SHADER_TIME_ADD,
+                               fs_reg(), payload, offset, value);
 }
 
 void
