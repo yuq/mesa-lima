@@ -430,21 +430,16 @@ fs_visitor::try_emit_mad(ir_expression *ir)
    if (ir->type != glsl_type::float_type)
       return false;
 
-   ir_rvalue *nonmul = ir->operands[1];
-   ir_expression *mul = ir->operands[0]->as_expression();
+   ir_rvalue *nonmul;
+   ir_expression *mul;
+   bool mul_negate, mul_abs;
 
-   bool mul_negate = false, mul_abs = false;
-   if (mul && mul->operation == ir_unop_abs) {
-      mul = mul->operands[0]->as_expression();
-      mul_abs = true;
-   } else if (mul && mul->operation == ir_unop_neg) {
-      mul = mul->operands[0]->as_expression();
-      mul_negate = true;
-   }
+   for (int i = 0; i < 2; i++) {
+      mul_negate = false;
+      mul_abs = false;
 
-   if (!mul || mul->operation != ir_binop_mul) {
-      nonmul = ir->operands[0];
-      mul = ir->operands[1]->as_expression();
+      mul = ir->operands[i]->as_expression();
+      nonmul = ir->operands[1 - i];
 
       if (mul && mul->operation == ir_unop_abs) {
          mul = mul->operands[0]->as_expression();
@@ -454,9 +449,12 @@ fs_visitor::try_emit_mad(ir_expression *ir)
          mul_negate = true;
       }
 
-      if (!mul || mul->operation != ir_binop_mul)
-         return false;
+      if (mul && mul->operation == ir_binop_mul)
+         break;
    }
+
+   if (!mul || mul->operation != ir_binop_mul)
+      return false;
 
    nonmul->accept(this);
    fs_reg src0 = this->result;
