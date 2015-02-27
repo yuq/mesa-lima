@@ -2605,16 +2605,22 @@ int si_shader_binary_read(struct si_screen *sscreen,
 	bool dump  = r600_can_dump_shader(&sscreen->b,
 		shader->selector ? shader->selector->tokens : NULL);
 
-	if (dump && !binary->disassembled) {
-		fprintf(stderr, "SI CODE:\n");
-		for (i = 0; i < binary->code_size; i+=4 ) {
-			fprintf(stderr, "@0x%x: %02x%02x%02x%02x\n", i, binary->code[i + 3],
+	si_shader_binary_read_config(sscreen, shader, 0);
+
+	if (dump) {
+		if (!binary->disassembled) {
+			fprintf(stderr, "SI CODE:\n");
+			for (i = 0; i < binary->code_size; i+=4 ) {
+				fprintf(stderr, "@0x%x: %02x%02x%02x%02x\n", i, binary->code[i + 3],
 				binary->code[i + 2], binary->code[i + 1],
 				binary->code[i]);
+			}
 		}
+		fprintf(stderr, "SGPRS: %d\nVGPRS: %d\nCode Size: %d bytes\nLDS: %d blocks\n"
+				"Scratch: %d bytes per wave\n",
+			shader->num_sgprs, shader->num_vgprs, binary->code_size,
+			shader->lds_size, shader->scratch_bytes_per_wave);
 	}
-
-	si_shader_binary_read_config(sscreen, shader, 0);
 
 	/* copy new shader */
 	code_size = binary->code_size + binary->rodata_size;
