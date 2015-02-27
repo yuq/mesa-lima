@@ -133,6 +133,8 @@ setup_glsl_msaa_blit_scaled_shader(struct gl_context *ctx,
       sample_map = ctx->Const.SampleMap8x;
       break;
    default:
+      sample_number = NULL;
+      sample_map = NULL;
       _mesa_problem(ctx, "Unsupported sample count %d\n", samples);
       unreachable("Unsupported sample count");
    }
