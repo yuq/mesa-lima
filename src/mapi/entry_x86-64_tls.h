@@ -88,7 +88,7 @@ entry_generate(int slot)
       0x41, 0xff, 0xa3, 0x34, 0x12, 0x00, 0x00,
    };
    unsigned long addr;
-   void *code;
+   char *code;
    mapi_func entry;
 
    addr = x86_64_current_tls();
