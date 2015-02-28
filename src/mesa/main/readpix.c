@@ -594,6 +594,7 @@ read_rgba_pixels( struct gl_context *ctx,
       _mesa_format_convert(dst, dst_format, dst_stride,
                            luminance, luminance_format, luminance_stride,
                            width, height, NULL);
+      free(luminance);
    } else {
       _mesa_pack_luminance_from_rgba_integer(width * height, src, !src_is_uint,
                                              dst, format, type);
