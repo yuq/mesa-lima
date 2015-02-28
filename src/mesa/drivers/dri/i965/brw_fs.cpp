@@ -2883,8 +2883,7 @@ fs_visitor::remove_duplicate_mrf_writes()
 }
 
 static void
-clear_deps_for_inst_src(fs_inst *inst, int dispatch_width, bool *deps,
-                        int first_grf, int grf_len)
+clear_deps_for_inst_src(fs_inst *inst, bool *deps, int first_grf, int grf_len)
 {
    /* Clear the flag for registers that actually got read (as expected). */
    for (int i = 0; i < inst->sources; i++) {
@@ -2935,8 +2934,7 @@ fs_visitor::insert_gen4_pre_send_dependency_workarounds(bblock_t *block,
    memset(needs_dep, false, sizeof(needs_dep));
    memset(needs_dep, true, write_len);
 
-   clear_deps_for_inst_src(inst, dispatch_width,
-                           needs_dep, first_write_grf, write_len);
+   clear_deps_for_inst_src(inst, needs_dep, first_write_grf, write_len);
 
    /* Walk backwards looking for writes to registers we're writing which
     * aren't read since being written.  If we hit the start of the program,
@@ -2976,8 +2974,7 @@ fs_visitor::insert_gen4_pre_send_dependency_workarounds(bblock_t *block,
       }
 
       /* Clear the flag for registers that actually got read (as expected). */
-      clear_deps_for_inst_src(scan_inst, dispatch_width,
-                              needs_dep, first_write_grf, write_len);
+      clear_deps_for_inst_src(scan_inst, needs_dep, first_write_grf, write_len);
 
       /* Continue the loop only if we haven't resolved all the dependencies */
       int i;
@@ -3022,8 +3019,7 @@ fs_visitor::insert_gen4_post_send_dependency_workarounds(bblock_t *block, fs_ins
       }
 
       /* Clear the flag for registers that actually got read (as expected). */
-      clear_deps_for_inst_src(scan_inst, dispatch_width,
-                              needs_dep, first_write_grf, write_len);
+      clear_deps_for_inst_src(scan_inst, needs_dep, first_write_grf, write_len);
 
       /* We insert our reads as late as possible since they're reading the
        * result of a SEND, which has massive latency.
