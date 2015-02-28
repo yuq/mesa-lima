@@ -1264,6 +1264,7 @@ brw_get_perf_monitor_result(struct gl_context *ctx,
 {
    struct brw_context *brw = brw_context(ctx);
    struct brw_perf_monitor_object *monitor = brw_perf_monitor(m);
+   const GLuint *const data_end = (GLuint *)((uint8_t *) data + data_size);
 
    DBG("GetResult(%d)\n", m->Name);
    brw_dump_perf_monitors(brw);
@@ -1309,9 +1310,11 @@ brw_get_perf_monitor_result(struct gl_context *ctx,
          if (counter < 0 || !BITSET_TEST(m->ActiveCounters[group], counter))
             continue;
 
-         data[offset++] = group;
-         data[offset++] = counter;
-         data[offset++] = monitor->oa_results[i];
+         if (data + offset + 3 <= data_end) {
+            data[offset++] = group;
+            data[offset++] = counter;
+            data[offset++] = monitor->oa_results[i];
+         }
       }
 
       clean_bookend_bo(brw);
@@ -1335,10 +1338,12 @@ brw_get_perf_monitor_result(struct gl_context *ctx,
 
       for (int i = 0; i < num_counters; i++) {
          if (BITSET_TEST(m->ActiveCounters[PIPELINE_STATS_COUNTERS], i)) {
-            data[offset++] = PIPELINE_STATS_COUNTERS;
-            data[offset++] = i;
-            *((uint64_t *) (&data[offset])) = monitor->pipeline_stats_results[i];
-            offset += 2;
+            if (data + offset + 4 <= data_end) {
+               data[offset++] = PIPELINE_STATS_COUNTERS;
+               data[offset++] = i;
+               *((uint64_t *) (&data[offset])) = monitor->pipeline_stats_results[i];
+               offset += 2;
+            }
          }
       }
    }
