@@ -124,7 +124,7 @@ get_src_register_pointer(const struct prog_src_register *source,
       return (GLfloat *) prog->Parameters->ParameterValues[reg];
 
    case PROGRAM_SYSTEM_VALUE:
-      assert(reg < (GLint) Elements(machine->SystemValues));
+      assert(reg < (GLint) ARRAY_SIZE(machine->SystemValues));
       return machine->SystemValues[reg];
 
    default:

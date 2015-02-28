@@ -310,11 +310,11 @@ _mesa_fetch_state(struct gl_context *ctx, const gl_state_index state[],
             matrix = &ctx->_ModelProjectMatrix;
          }
          else if (mat == STATE_TEXTURE_MATRIX) {
-            assert(index < Elements(ctx->TextureMatrixStack));
+            assert(index < ARRAY_SIZE(ctx->TextureMatrixStack));
             matrix = ctx->TextureMatrixStack[index].Top;
          }
          else if (mat == STATE_PROGRAM_MATRIX) {
-            assert(index < Elements(ctx->ProgramMatrixStack));
+            assert(index < ARRAY_SIZE(ctx->ProgramMatrixStack));
             matrix = ctx->ProgramMatrixStack[index].Top;
          }
          else {
