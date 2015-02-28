@@ -58,6 +58,8 @@ optimizations = [
    (('iadd', a, 0), a),
    (('fadd', ('fmul', a, b), ('fmul', a, c)), ('fmul', a, ('fadd', b, c))),
    (('iadd', ('imul', a, b), ('imul', a, c)), ('imul', a, ('iadd', b, c))),
+   (('fadd', ('fneg', a), a), 0.0),
+   (('iadd', ('ineg', a), a), 0),
    (('fmul', a, 0.0), 0.0),
    (('imul', a, 0), 0),
    (('fmul', a, 1.0), a),
