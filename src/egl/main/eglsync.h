@@ -50,7 +50,7 @@ struct _egl_sync
 };
 
 
-PUBLIC EGLBoolean
+extern EGLBoolean
 _eglInitSync(_EGLSync *sync, _EGLDisplay *dpy, EGLenum type,
              const EGLint *attrib_list);
 

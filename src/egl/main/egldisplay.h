@@ -178,11 +178,11 @@ extern _EGLDisplay *
 _eglFindDisplay(_EGLPlatformType plat, void *plat_dpy);
 
 
-PUBLIC void
+extern void
 _eglReleaseDisplayResources(_EGLDriver *drv, _EGLDisplay *dpy);
 
 
-PUBLIC void
+extern void
 _eglCleanupDisplay(_EGLDisplay *disp);
 
 
@@ -190,7 +190,7 @@ extern EGLBoolean
 _eglCheckDisplayHandle(EGLDisplay dpy);
 
 
-PUBLIC EGLBoolean
+extern EGLBoolean
 _eglCheckResource(void *res, _EGLResourceType type, _EGLDisplay *dpy);
 
 
@@ -222,11 +222,11 @@ extern void
 _eglInitResource(_EGLResource *res, EGLint size, _EGLDisplay *dpy);
 
 
-PUBLIC void
+extern void
 _eglGetResource(_EGLResource *res);
 
 
-PUBLIC EGLBoolean
+extern EGLBoolean
 _eglPutResource(_EGLResource *res);
 
 

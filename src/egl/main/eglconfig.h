@@ -164,11 +164,11 @@ _eglGetConfigKey(const _EGLConfig *conf, EGLint key)
 }
 
 
-PUBLIC void
+extern void
 _eglInitConfig(_EGLConfig *config, _EGLDisplay *dpy, EGLint id);
 
 
-PUBLIC EGLConfig
+extern EGLConfig
 _eglLinkConfig(_EGLConfig *conf);
 
 
@@ -186,25 +186,25 @@ _eglGetConfigHandle(_EGLConfig *conf)
 }
 
 
-PUBLIC EGLBoolean
+extern EGLBoolean
 _eglValidateConfig(const _EGLConfig *conf, EGLBoolean for_matching);
 
 
-PUBLIC EGLBoolean
+extern EGLBoolean
 _eglMatchConfig(const _EGLConfig *conf, const _EGLConfig *criteria);
 
 
-PUBLIC EGLBoolean
+extern EGLBoolean
 _eglParseConfigAttribList(_EGLConfig *conf, _EGLDisplay *dpy,
                           const EGLint *attrib_list);
 
 
-PUBLIC EGLint
+extern EGLint
 _eglCompareConfigs(const _EGLConfig *conf1, const _EGLConfig *conf2,
                    const _EGLConfig *criteria, EGLBoolean compare_id);
 
 
-PUBLIC EGLBoolean
+extern EGLBoolean
 _eglFilterConfigArray(_EGLArray *array, EGLConfig *configs,
                       EGLint config_size, EGLint *num_configs,
                       EGLBoolean (*match)(const _EGLConfig *, void *),

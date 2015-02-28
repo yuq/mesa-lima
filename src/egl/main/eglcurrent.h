@@ -91,7 +91,7 @@ _eglConvertApiFromIndex(EGLint idx)
 }
 
 
-PUBLIC _EGLThreadInfo *
+extern _EGLThreadInfo *
 _eglGetCurrentThread(void);
 
 
@@ -103,15 +103,15 @@ extern EGLBoolean
 _eglIsCurrentThreadDummy(void);
 
 
-PUBLIC _EGLContext *
+extern _EGLContext *
 _eglGetAPIContext(EGLenum api);
 
 
-PUBLIC _EGLContext *
+extern _EGLContext *
 _eglGetCurrentContext(void);
 
 
-PUBLIC EGLBoolean
+extern EGLBoolean
 _eglError(EGLint errCode, const char *msg);
 
 
