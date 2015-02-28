@@ -289,7 +289,7 @@ public:
                      fs_reg shadow_c,
                      fs_reg lod, fs_reg dpdy, int grad_components,
                      fs_reg sample_index,
-                     fs_reg offset, unsigned offset_components,
+                     fs_reg offset,
                      fs_reg mcs,
                      int gather_component,
                      bool is_cube_array,

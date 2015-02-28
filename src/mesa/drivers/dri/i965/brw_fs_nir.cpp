@@ -1760,7 +1760,7 @@ fs_visitor::nir_emit_texture(nir_tex_instr *instr)
 
    emit_texture(op, dest_type, coordinate, instr->coord_components,
                 shadow_comparitor, lod, lod2, lod_components, sample_index,
-                offset, offset_components, mcs, gather_component,
+                offset, mcs, gather_component,
                 is_cube_array, is_rect, sampler, sampler_reg, texunit);
 
    fs_reg dest = get_nir_dest(instr->dest);

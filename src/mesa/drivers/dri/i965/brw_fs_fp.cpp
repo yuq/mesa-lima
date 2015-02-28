@@ -475,7 +475,7 @@ fs_visitor::emit_fragment_program_code()
 
          emit_texture(op, glsl_type::vec4_type, coordinate, coord_components,
                       shadow_c, lod, dpdy, 0, sample_index,
-                      reg_undef, 0, /* offset, components */
+                      reg_undef, /* offset */
                       reg_undef, /* mcs */
                       0, /* gather component */
                       false, /* is cube array */

@@ -2025,7 +2025,7 @@ fs_visitor::emit_texture(ir_texture_opcode op,
                          fs_reg shadow_c,
                          fs_reg lod, fs_reg lod2, int grad_components,
                          fs_reg sample_index,
-                         fs_reg offset_value, unsigned offset_components,
+                         fs_reg offset_value,
                          fs_reg mcs,
                          int gather_component,
                          bool is_cube_array,
@@ -2191,7 +2191,6 @@ fs_visitor::visit(ir_texture *ir)
    }
 
    fs_reg offset_value;
-   int offset_components = 0;
    if (ir->offset) {
       ir_constant *const_offset = ir->offset->as_constant();
       if (const_offset) {
@@ -2206,7 +2205,6 @@ fs_visitor::visit(ir_texture *ir)
          ir->offset->accept(this);
          offset_value = this->result;
       }
-      offset_components = ir->offset->type->vector_elements;
    }
 
    fs_reg lod, lod2, sample_index, mcs;
@@ -2263,7 +2261,7 @@ fs_visitor::visit(ir_texture *ir)
 
    emit_texture(ir->op, ir->type, coordinate, coord_components,
                 shadow_comparitor, lod, lod2, grad_components,
-                sample_index, offset_value, offset_components, mcs,
+                sample_index, offset_value, mcs,
                 gather_component, is_cube_array, is_rect, sampler,
                 sampler_reg, texunit);
 }
