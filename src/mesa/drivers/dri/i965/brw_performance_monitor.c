@@ -150,7 +150,7 @@ enum brw_counter_groups {
  * documentation, but is available by reading the source code for the
  * intel_perf_counters utility (shipped as part of intel-gpu-tools).
  */
-const static struct gl_perf_monitor_counter gen5_raw_chaps_counters[] = {
+static const struct gl_perf_monitor_counter gen5_raw_chaps_counters[] = {
    COUNTER("cycles the CS unit is starved"),
    COUNTER("cycles the CS unit is stalled"),
    COUNTER("cycles the VF unit is starved"),
@@ -182,7 +182,7 @@ const static struct gl_perf_monitor_counter gen5_raw_chaps_counters[] = {
    COUNTER("cycles any EU is stalled for math"),
 };
 
-const static int gen5_oa_snapshot_layout[] =
+static const int gen5_oa_snapshot_layout[] =
 {
    -1, /* Report ID */
    -1, /* TIMESTAMP (64-bit) */
@@ -218,7 +218,7 @@ const static int gen5_oa_snapshot_layout[] =
    28, /* cycles any EU is stalled for math */
 };
 
-const static struct gl_perf_monitor_group gen5_groups[] = {
+static const struct gl_perf_monitor_group gen5_groups[] = {
    [OA_COUNTERS] = GROUP("CHAPS Counters", INT_MAX, gen5_raw_chaps_counters),
    /* Our pipeline statistics counter handling requires hardware contexts. */
 };
@@ -237,7 +237,7 @@ const static struct gl_perf_monitor_group gen5_groups[] = {
 /**
  * Aggregating counters A0-A28:
  */
-const static struct gl_perf_monitor_counter gen6_raw_oa_counters[] = {
+static const struct gl_perf_monitor_counter gen6_raw_oa_counters[] = {
    /* A0:   0 */ COUNTER("Aggregated Core Array Active"),
    /* A1:   1 */ COUNTER("Aggregated Core Array Stalled"),
    /* A2:   2 */ COUNTER("Vertex Shader Active Time"),
@@ -278,7 +278,7 @@ const static struct gl_perf_monitor_counter gen6_raw_oa_counters[] = {
  *
  * (Yes, this is a strange order.)  We also have to remap for missing counters.
  */
-const static int gen6_oa_snapshot_layout[] =
+static const int gen6_oa_snapshot_layout[] =
 {
    -1, /* Report ID */
    -1, /* TIMESTAMP (64-bit) */
@@ -314,7 +314,7 @@ const static int gen6_oa_snapshot_layout[] =
    18, /* A21: Pixel Kill Count */
 };
 
-const static struct gl_perf_monitor_counter gen6_statistics_counters[] = {
+static const struct gl_perf_monitor_counter gen6_statistics_counters[] = {
    COUNTER64("IA_VERTICES_COUNT"),
    COUNTER64("IA_PRIMITIVES_COUNT"),
    COUNTER64("VS_INVOCATION_COUNT"),
@@ -329,7 +329,7 @@ const static struct gl_perf_monitor_counter gen6_statistics_counters[] = {
 };
 
 /** MMIO register addresses for each pipeline statistics counter. */
-const static int gen6_statistics_register_addresses[] = {
+static const int gen6_statistics_register_addresses[] = {
    IA_VERTICES_COUNT,
    IA_PRIMITIVES_COUNT,
    VS_INVOCATION_COUNT,
@@ -343,7 +343,7 @@ const static int gen6_statistics_register_addresses[] = {
    GEN6_SO_PRIM_STORAGE_NEEDED,
 };
 
-const static struct gl_perf_monitor_group gen6_groups[] = {
+static const struct gl_perf_monitor_group gen6_groups[] = {
    GROUP("Observability Architecture Counters", INT_MAX, gen6_raw_oa_counters),
    GROUP("Pipeline Statistics Registers", INT_MAX, gen6_statistics_counters),
 };
@@ -353,7 +353,7 @@ const static struct gl_perf_monitor_group gen6_groups[] = {
  * Ivybridge/Baytrail/Haswell:
  *  @{
  */
-const static struct gl_perf_monitor_counter gen7_raw_oa_counters[] = {
+static const struct gl_perf_monitor_counter gen7_raw_oa_counters[] = {
    COUNTER("Aggregated Core Array Active"),
    COUNTER("Aggregated Core Array Stalled"),
    COUNTER("Vertex Shader Active Time"),
@@ -399,7 +399,7 @@ const static struct gl_perf_monitor_counter gen7_raw_oa_counters[] = {
  * B7   B6   B5   B4   B3   B2   B1    B0
  * Rsv  Rsv  Rsv  Rsv  Rsv  Rsv  Rsv   Rsv
  */
-const static int gen7_oa_snapshot_layout[] =
+static const int gen7_oa_snapshot_layout[] =
 {
    -1, /* Report ID */
    -1, /* TIMESTAMP (64-bit) */
@@ -467,7 +467,7 @@ const static int gen7_oa_snapshot_layout[] =
    -1, /* Reserved */
 };
 
-const static struct gl_perf_monitor_counter gen7_statistics_counters[] = {
+static const struct gl_perf_monitor_counter gen7_statistics_counters[] = {
    COUNTER64("IA_VERTICES_COUNT"),
    COUNTER64("IA_PRIMITIVES_COUNT"),
    COUNTER64("VS_INVOCATION_COUNT"),
@@ -490,7 +490,7 @@ const static struct gl_perf_monitor_counter gen7_statistics_counters[] = {
 };
 
 /** MMIO register addresses for each pipeline statistics counter. */
-const static int gen7_statistics_register_addresses[] = {
+static const int gen7_statistics_register_addresses[] = {
    IA_VERTICES_COUNT,
    IA_PRIMITIVES_COUNT,
    VS_INVOCATION_COUNT,
@@ -512,7 +512,7 @@ const static int gen7_statistics_register_addresses[] = {
    GEN7_SO_PRIM_STORAGE_NEEDED(3),
 };
 
-const static struct gl_perf_monitor_group gen7_groups[] = {
+static const struct gl_perf_monitor_group gen7_groups[] = {
    GROUP("Observability Architecture Counters", INT_MAX, gen7_raw_oa_counters),
    GROUP("Pipeline Statistics Registers", INT_MAX, gen7_statistics_counters),
 };
