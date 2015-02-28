@@ -1431,6 +1431,7 @@ fs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
 
    case nir_intrinsic_load_input_indirect:
       has_indirect = true;
+      /* fallthrough */
    case nir_intrinsic_load_input: {
       unsigned index = 0;
       for (int i = 0; i < instr->const_index[1]; i++) {
