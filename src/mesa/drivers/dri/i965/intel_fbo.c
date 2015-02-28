@@ -729,7 +729,7 @@ intel_validate_framebuffer(struct gl_context *ctx, struct gl_framebuffer *fb)
       }
    }
 
-   for (i = 0; i < Elements(fb->Attachment); i++) {
+   for (i = 0; i < ARRAY_SIZE(fb->Attachment); i++) {
       struct gl_renderbuffer *rb;
       struct intel_renderbuffer *irb;
 

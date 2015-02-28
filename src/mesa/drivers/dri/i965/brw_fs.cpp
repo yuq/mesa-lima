@@ -2852,7 +2852,7 @@ fs_visitor::remove_duplicate_mrf_writes()
 
       /* Clear out any MRF move records whose sources got overwritten. */
       if (inst->dst.file == GRF) {
-	 for (unsigned int i = 0; i < Elements(last_mrf_move); i++) {
+	 for (unsigned int i = 0; i < ARRAY_SIZE(last_mrf_move); i++) {
 	    if (last_mrf_move[i] &&
 		last_mrf_move[i]->src[0].reg == inst->dst.reg) {
 	       last_mrf_move[i] = NULL;

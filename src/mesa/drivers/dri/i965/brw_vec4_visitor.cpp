@@ -1305,7 +1305,7 @@ void
 vec4_visitor::visit(ir_expression *ir)
 {
    unsigned int operand;
-   src_reg op[Elements(ir->operands)];
+   src_reg op[ARRAY_SIZE(ir->operands)];
    vec4_instruction *inst;
 
    if (ir->operation == ir_binop_add) {

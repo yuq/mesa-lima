@@ -249,21 +249,21 @@ validate_reg(const struct brw_context *brw, brw_inst *inst, struct brw_reg reg)
        reg.file == BRW_ARF_NULL)
       return;
 
-   assert(reg.hstride >= 0 && reg.hstride < Elements(hstride_for_reg));
+   assert(reg.hstride >= 0 && reg.hstride < ARRAY_SIZE(hstride_for_reg));
    hstride = hstride_for_reg[reg.hstride];
 
    if (reg.vstride == 0xf) {
       vstride = -1;
    } else {
-      assert(reg.vstride >= 0 && reg.vstride < Elements(vstride_for_reg));
+      assert(reg.vstride >= 0 && reg.vstride < ARRAY_SIZE(vstride_for_reg));
       vstride = vstride_for_reg[reg.vstride];
    }
 
-   assert(reg.width >= 0 && reg.width < Elements(width_for_reg));
+   assert(reg.width >= 0 && reg.width < ARRAY_SIZE(width_for_reg));
    width = width_for_reg[reg.width];
 
    assert(brw_inst_exec_size(brw, inst) >= 0 &&
-          brw_inst_exec_size(brw, inst) < Elements(execsize_for_reg));
+          brw_inst_exec_size(brw, inst) < ARRAY_SIZE(execsize_for_reg));
    execsize = execsize_for_reg[brw_inst_exec_size(brw, inst)];
 
    /* Restrictions from 3.3.10: Register Region Restrictions. */

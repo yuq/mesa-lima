@@ -219,7 +219,7 @@ brw_delete_transform_feedback(struct gl_context *ctx,
    struct brw_transform_feedback_object *brw_obj =
       (struct brw_transform_feedback_object *) obj;
 
-   for (unsigned i = 0; i < Elements(obj->Buffers); i++) {
+   for (unsigned i = 0; i < ARRAY_SIZE(obj->Buffers); i++) {
       _mesa_reference_buffer_object(ctx, &obj->Buffers[i], NULL);
    }
 
