@@ -31,7 +31,7 @@
 #define EGLCOMPILER_INCLUDED
 
 
-#include "c99_compat.h" /* inline, __func__, etc. */
+#include "c99_compat.h" /* __func__, etc. */
 
 
 /**
@@ -63,12 +63,6 @@
 #else
 /* hope the best instead of adding a bunch of ifdef's */
 #  include <stdint.h>
-#endif
-
-
-/* XXX: Use standard `inline` keyword instead */
-#ifndef INLINE
-#  define INLINE inline
 #endif
 
 

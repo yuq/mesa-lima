@@ -29,6 +29,7 @@
 #ifndef EGLCURRENT_INCLUDED
 #define EGLCURRENT_INCLUDED
 
+#include "c99_compat.h"
 
 #include "egltypedefs.h"
 
@@ -61,7 +62,7 @@ struct _egl_thread_info
 /**
  * Return true if a client API enum is recognized.
  */
-static INLINE EGLBoolean
+static inline EGLBoolean
 _eglIsApiValid(EGLenum api)
 {
    return (api >= _EGL_API_FIRST_API && api <= _EGL_API_LAST_API);
@@ -72,7 +73,7 @@ _eglIsApiValid(EGLenum api)
  * Convert a client API enum to an index, for use by thread info.
  * The client API enum is assumed to be valid.
  */
-static INLINE EGLint
+static inline EGLint
 _eglConvertApiToIndex(EGLenum api)
 {
    return api - _EGL_API_FIRST_API;
@@ -83,7 +84,7 @@ _eglConvertApiToIndex(EGLenum api)
  * Convert an index, used by thread info, to a client API enum.
  * The index is assumed to be valid.
  */
-static INLINE EGLenum
+static inline EGLenum
 _eglConvertApiFromIndex(EGLint idx)
 {
    return _EGL_API_FIRST_API + idx;

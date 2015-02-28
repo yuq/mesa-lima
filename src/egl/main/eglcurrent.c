@@ -28,6 +28,8 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include "c99_compat.h"
+
 #include "egllog.h"
 #include "eglmutex.h"
 #include "eglcurrent.h"
@@ -55,7 +57,7 @@ static __thread const _EGLThreadInfo *_egl_TLS
    __attribute__ ((tls_model("initial-exec")));
 #endif
 
-static INLINE void _eglSetTSD(const _EGLThreadInfo *t)
+static inline void _eglSetTSD(const _EGLThreadInfo *t)
 {
    pthread_setspecific(_egl_TSD, (const void *) t);
 #ifdef GLX_USE_TLS
@@ -63,7 +65,7 @@ static INLINE void _eglSetTSD(const _EGLThreadInfo *t)
 #endif
 }
 
-static INLINE _EGLThreadInfo *_eglGetTSD(void)
+static inline _EGLThreadInfo *_eglGetTSD(void)
 {
 #ifdef GLX_USE_TLS
    return (_EGLThreadInfo *) _egl_TLS;
@@ -72,7 +74,7 @@ static INLINE _EGLThreadInfo *_eglGetTSD(void)
 #endif
 }
 
-static INLINE void _eglFiniTSD(void)
+static inline void _eglFiniTSD(void)
 {
    _eglLockMutex(&_egl_TSDMutex);
    if (_egl_TSDInitialized) {
@@ -86,7 +88,7 @@ static INLINE void _eglFiniTSD(void)
    _eglUnlockMutex(&_egl_TSDMutex);
 }
 
-static INLINE EGLBoolean _eglInitTSD(void (*dtor)(_EGLThreadInfo *))
+static inline EGLBoolean _eglInitTSD(void (*dtor)(_EGLThreadInfo *))
 {
    if (!_egl_TSDInitialized) {
       _eglLockMutex(&_egl_TSDMutex);
@@ -112,23 +114,23 @@ static INLINE EGLBoolean _eglInitTSD(void (*dtor)(_EGLThreadInfo *))
 static const _EGLThreadInfo *_egl_TSD;
 static void (*_egl_FreeTSD)(_EGLThreadInfo *);
 
-static INLINE void _eglSetTSD(const _EGLThreadInfo *t)
+static inline void _eglSetTSD(const _EGLThreadInfo *t)
 {
    _egl_TSD = t;
 }
 
-static INLINE _EGLThreadInfo *_eglGetTSD(void)
+static inline _EGLThreadInfo *_eglGetTSD(void)
 {
    return (_EGLThreadInfo *) _egl_TSD;
 }
 
-static INLINE void _eglFiniTSD(void)
+static inline void _eglFiniTSD(void)
 {
    if (_egl_FreeTSD && _egl_TSD)
       _egl_FreeTSD((_EGLThreadInfo *) _egl_TSD);
 }
 
-static INLINE EGLBoolean _eglInitTSD(void (*dtor)(_EGLThreadInfo *))
+static inline EGLBoolean _eglInitTSD(void (*dtor)(_EGLThreadInfo *))
 {
    if (!_egl_FreeTSD && dtor) {
       _egl_FreeTSD = dtor;
@@ -179,7 +181,7 @@ _eglDestroyThreadInfo(_EGLThreadInfo *t)
 /**
  * Make sure TSD is initialized and return current value.
  */
-static INLINE _EGLThreadInfo *
+static inline _EGLThreadInfo *
 _eglCheckedGetTSD(void)
 {
    if (_eglInitTSD(&_eglDestroyThreadInfo) != EGL_TRUE) {

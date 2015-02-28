@@ -29,6 +29,7 @@
 #ifndef EGLARRAY_INCLUDED
 #define EGLARRAY_INCLUDED
 
+#include "c99_compat.h"
 
 #include "egltypedefs.h"
 
@@ -75,7 +76,7 @@ _eglFlattenArray(_EGLArray *array, void *buffer, EGLint elem_size, EGLint size,
                  _EGLArrayForEach flatten);
 
 
-static INLINE EGLint
+static inline EGLint
 _eglGetArraySize(_EGLArray *array)
 {
    return (array) ? array->Size : 0;

@@ -86,6 +86,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "c99_compat.h"
 
 #include "eglglobals.h"
 #include "eglcontext.h"
@@ -161,7 +162,7 @@
    _EGL_CHECK_OBJECT(disp, Sync, s, ret, drv)
 
 
-static INLINE _EGLDriver *
+static inline _EGLDriver *
 _eglCheckDisplay(_EGLDisplay *disp, const char *msg)
 {
    if (!disp) {
@@ -176,7 +177,7 @@ _eglCheckDisplay(_EGLDisplay *disp, const char *msg)
 }
 
 
-static INLINE _EGLDriver *
+static inline _EGLDriver *
 _eglCheckSurface(_EGLDisplay *disp, _EGLSurface *surf, const char *msg)
 {
    _EGLDriver *drv = _eglCheckDisplay(disp, msg);
@@ -190,7 +191,7 @@ _eglCheckSurface(_EGLDisplay *disp, _EGLSurface *surf, const char *msg)
 }
 
 
-static INLINE _EGLDriver *
+static inline _EGLDriver *
 _eglCheckContext(_EGLDisplay *disp, _EGLContext *context, const char *msg)
 {
    _EGLDriver *drv = _eglCheckDisplay(disp, msg);
@@ -204,7 +205,7 @@ _eglCheckContext(_EGLDisplay *disp, _EGLContext *context, const char *msg)
 }
 
 
-static INLINE _EGLDriver *
+static inline _EGLDriver *
 _eglCheckConfig(_EGLDisplay *disp, _EGLConfig *conf, const char *msg)
 {
    _EGLDriver *drv = _eglCheckDisplay(disp, msg);
@@ -218,7 +219,7 @@ _eglCheckConfig(_EGLDisplay *disp, _EGLConfig *conf, const char *msg)
 }
 
 
-static INLINE _EGLDriver *
+static inline _EGLDriver *
 _eglCheckSync(_EGLDisplay *disp, _EGLSync *s, const char *msg)
 {
    _EGLDriver *drv = _eglCheckDisplay(disp, msg);
@@ -235,7 +236,7 @@ _eglCheckSync(_EGLDisplay *disp, _EGLSync *s, const char *msg)
 #ifdef EGL_MESA_screen_surface
 
 
-static INLINE _EGLDriver *
+static inline _EGLDriver *
 _eglCheckScreen(_EGLDisplay *disp, _EGLScreen *scrn, const char *msg)
 {
    _EGLDriver *drv = _eglCheckDisplay(disp, msg);
@@ -249,7 +250,7 @@ _eglCheckScreen(_EGLDisplay *disp, _EGLScreen *scrn, const char *msg)
 }
 
 
-static INLINE _EGLDriver *
+static inline _EGLDriver *
 _eglCheckMode(_EGLDisplay *disp, _EGLMode *m, const char *msg)
 {
    _EGLDriver *drv = _eglCheckDisplay(disp, msg);
@@ -269,7 +270,7 @@ _eglCheckMode(_EGLDisplay *disp, _EGLMode *m, const char *msg)
 /**
  * Lookup and lock a display.
  */
-static INLINE _EGLDisplay *
+static inline _EGLDisplay *
 _eglLockDisplay(EGLDisplay display)
 {
    _EGLDisplay *dpy = _eglLookupDisplay(display);
@@ -282,7 +283,7 @@ _eglLockDisplay(EGLDisplay display)
 /**
  * Unlock a display.
  */
-static INLINE void
+static inline void
 _eglUnlockDisplay(_EGLDisplay *dpy)
 {
    _eglUnlockMutex(&dpy->Mutex);

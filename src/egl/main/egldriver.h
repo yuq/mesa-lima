@@ -32,6 +32,8 @@
 #define EGLDRIVER_INCLUDED
 
 
+#include "c99_compat.h"
+
 #include "egltypedefs.h"
 #include "eglapi.h"
 #include <stddef.h>
@@ -43,7 +45,7 @@
  * semicolon when used.
  */
 #define _EGL_DRIVER_TYPECAST(drvtype, egltype, code)           \
-   static INLINE struct drvtype *drvtype(const egltype *obj)   \
+   static inline struct drvtype *drvtype(const egltype *obj)   \
    { return (struct drvtype *) code; }
 
 

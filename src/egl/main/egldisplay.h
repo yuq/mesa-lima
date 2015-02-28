@@ -31,6 +31,7 @@
 #ifndef EGLDISPLAY_INCLUDED
 #define EGLDISPLAY_INCLUDED
 
+#include "c99_compat.h"
 
 #include "egltypedefs.h"
 #include "egldefines.h"
@@ -197,7 +198,7 @@ _eglCheckResource(void *res, _EGLResourceType type, _EGLDisplay *dpy);
  * Lookup a handle to find the linked display.
  * Return NULL if the handle has no corresponding linked display.
  */
-static INLINE _EGLDisplay *
+static inline _EGLDisplay *
 _eglLookupDisplay(EGLDisplay display)
 {
    _EGLDisplay *dpy = (_EGLDisplay *) display;
@@ -210,7 +211,7 @@ _eglLookupDisplay(EGLDisplay display)
 /**
  * Return the handle of a linked display, or EGL_NO_DISPLAY.
  */
-static INLINE EGLDisplay
+static inline EGLDisplay
 _eglGetDisplayHandle(_EGLDisplay *dpy)
 {
    return (EGLDisplay) ((dpy) ? dpy : EGL_NO_DISPLAY);
@@ -240,7 +241,7 @@ _eglUnlinkResource(_EGLResource *res, _EGLResourceType type);
 /**
  * Return true if the resource is linked.
  */
-static INLINE EGLBoolean
+static inline EGLBoolean
 _eglIsResourceLinked(_EGLResource *res)
 {
    return res->IsLinked;

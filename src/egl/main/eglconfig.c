@@ -36,6 +36,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include "c99_compat.h"
+
 #include "eglconfig.h"
 #include "egldisplay.h"
 #include "eglcurrent.h"
@@ -481,7 +483,7 @@ _eglMatchConfig(const _EGLConfig *conf, const _EGLConfig *criteria)
    return matched;
 }
 
-static INLINE EGLBoolean
+static inline EGLBoolean
 _eglIsConfigAttribValid(_EGLConfig *conf, EGLint attr)
 {
    if (_eglOffsetOfConfig(attr) < 0)
@@ -651,7 +653,7 @@ _eglCompareConfigs(const _EGLConfig *conf1, const _EGLConfig *conf2,
 }
 
 
-static INLINE
+static inline
 void _eglSwapConfigs(const _EGLConfig **conf1, const _EGLConfig **conf2)
 {
    const _EGLConfig *tmp = *conf1;

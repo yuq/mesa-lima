@@ -29,30 +29,32 @@
 #ifndef EGLMUTEX_INCLUDED
 #define EGLMUTEX_INCLUDED
 
+#include "c99_compat.h"
+
 #include "eglcompiler.h"
 
 #include "c11/threads.h"
 
 typedef mtx_t _EGLMutex;
 
-static INLINE void _eglInitMutex(_EGLMutex *m)
+static inline void _eglInitMutex(_EGLMutex *m)
 {
    mtx_init(m, mtx_plain);
 }
 
-static INLINE void
+static inline void
 _eglDestroyMutex(_EGLMutex *m)
 {
    mtx_destroy(m);
 }
 
-static INLINE void
+static inline void
 _eglLockMutex(_EGLMutex *m)
 {
    mtx_lock(m);
 }
 
-static INLINE void
+static inline void
 _eglUnlockMutex(_EGLMutex *m)
 {
    mtx_unlock(m);

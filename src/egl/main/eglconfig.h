@@ -34,6 +34,8 @@
 
 #include <assert.h>
 #include <stddef.h>
+#include "c99_compat.h"
+
 #include "egltypedefs.h"
 
 
@@ -86,7 +88,7 @@ struct _egl_config
 /**
  * Map an EGL attribute enum to the offset of the member in _EGLConfig.
  */
-static INLINE EGLint
+static inline EGLint
 _eglOffsetOfConfig(EGLint attr)
 {
    switch (attr) {
@@ -141,7 +143,7 @@ _eglOffsetOfConfig(EGLint attr)
  * in the attribute enums.  The separation is to catch application errors.
  * Drivers should never set a key that is an invalid attribute.
  */
-static INLINE void
+static inline void
 _eglSetConfigKey(_EGLConfig *conf, EGLint key, EGLint val)
 {
    EGLint offset = _eglOffsetOfConfig(key);
@@ -153,7 +155,7 @@ _eglSetConfigKey(_EGLConfig *conf, EGLint key, EGLint val)
 /**
  * Return the value for a given key.
  */
-static INLINE EGLint
+static inline EGLint
 _eglGetConfigKey(const _EGLConfig *conf, EGLint key)
 {
    EGLint offset = _eglOffsetOfConfig(key);
@@ -177,7 +179,7 @@ _eglLookupConfig(EGLConfig config, _EGLDisplay *dpy);
 /**
  * Return the handle of a linked config.
  */
-static INLINE EGLConfig
+static inline EGLConfig
 _eglGetConfigHandle(_EGLConfig *conf)
 {
    return (EGLConfig) conf;
