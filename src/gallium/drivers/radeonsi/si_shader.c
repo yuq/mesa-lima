@@ -794,7 +794,7 @@ static void si_llvm_init_export_args_load(struct lp_build_tgsi_context *bld_base
 }
 
 static void si_alpha_test(struct lp_build_tgsi_context *bld_base,
-			  LLVMValueRef *out_ptr)
+			  LLVMValueRef alpha_ptr)
 {
 	struct si_shader_context *si_shader_ctx = si_shader_context(bld_base);
 	struct gallivm_state *gallivm = bld_base->base.gallivm;
@@ -806,7 +806,7 @@ static void si_alpha_test(struct lp_build_tgsi_context *bld_base,
 		LLVMValueRef alpha_pass =
 			lp_build_cmp(&bld_base->base,
 				     si_shader_ctx->shader->key.ps.alpha_func,
-				     LLVMBuildLoad(gallivm->builder, out_ptr[3], ""),
+				     LLVMBuildLoad(gallivm->builder, alpha_ptr, ""),
 				     alpha_ref);
 		LLVMValueRef arg =
 			lp_build_select(&bld_base->base,
@@ -1337,6 +1337,7 @@ static void si_llvm_emit_fs_epilogue(struct lp_build_tgsi_context * bld_base)
 		unsigned semantic_name = info->output_semantic_name[i];
 		unsigned semantic_index = info->output_semantic_index[i];
 		unsigned target;
+		LLVMValueRef alpha_ptr;
 
 		/* Select the correct target */
 		switch (semantic_name) {
@@ -1351,15 +1352,15 @@ static void si_llvm_emit_fs_epilogue(struct lp_build_tgsi_context * bld_base)
 			continue;
 		case TGSI_SEMANTIC_COLOR:
 			target = V_008DFC_SQ_EXP_MRT + semantic_index;
+			alpha_ptr = si_shader_ctx->radeon_bld.soa.outputs[i][3];
+
 			if (si_shader_ctx->shader->key.ps.alpha_to_one)
-				LLVMBuildStore(bld_base->base.gallivm->builder,
-					       bld_base->base.one,
-					       si_shader_ctx->radeon_bld.soa.outputs[i][3]);
+				LLVMBuildStore(base->gallivm->builder,
+					       base->one, alpha_ptr);
 
 			if (semantic_index == 0 &&
 			    si_shader_ctx->shader->key.ps.alpha_func != PIPE_FUNC_ALWAYS)
-				si_alpha_test(bld_base,
-					      si_shader_ctx->radeon_bld.soa.outputs[i]);
+				si_alpha_test(bld_base, alpha_ptr);
 			break;
 		default:
 			target = 0;
