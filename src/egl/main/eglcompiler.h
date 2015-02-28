@@ -62,20 +62,6 @@
 #  include <stdint.h>
 #endif
 
-
-/**
- * Function visibility
- */
-#ifndef PUBLIC
-#  if defined(__GNUC__) || (defined(__SUNPRO_C) && (__SUNPRO_C >= 0x590))
-#    define PUBLIC __attribute__((visibility("default")))
-#  elif defined(_MSC_VER)
-#    define PUBLIC __declspec(dllexport)
-#  else
-#    define PUBLIC
-#  endif
-#endif
-
 #define STATIC_ASSERT(COND) \
    do { \
       (void) sizeof(char [1 - 2*!(COND)]); \
