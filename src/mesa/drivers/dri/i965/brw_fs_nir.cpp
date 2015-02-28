@@ -1369,6 +1369,7 @@ fs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
 
    case nir_intrinsic_load_ubo_indirect:
       has_indirect = true;
+      /* fallthrough */
    case nir_intrinsic_load_ubo: {
       nir_const_value *const_index = nir_src_as_const_value(instr->src[0]);
       fs_reg surf_index;
