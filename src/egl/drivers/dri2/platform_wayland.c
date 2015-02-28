@@ -26,6 +26,7 @@
  *    Benjamin Franzke <benjaminfranzke@googlemail.com>
  */
 
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <limits.h>

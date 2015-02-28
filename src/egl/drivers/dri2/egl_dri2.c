@@ -27,6 +27,7 @@
 
 #define WL_HIDE_DEPRECATED
 
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>

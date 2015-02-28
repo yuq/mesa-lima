@@ -24,6 +24,7 @@
 
 #include <errno.h>
 #include <dlfcn.h>
+#include <stdint.h>
 #include <stdio.h>
 
 extern "C" {
