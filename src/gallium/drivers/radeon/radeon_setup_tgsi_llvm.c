@@ -1234,6 +1234,39 @@ build_tgsi_intrinsic_nomem(
 	build_tgsi_intrinsic(action, bld_base, emit_data, LLVMReadNoneAttribute);
 }
 
+static void emit_bfi(const struct lp_build_tgsi_action * action,
+		     struct lp_build_tgsi_context * bld_base,
+		     struct lp_build_emit_data * emit_data)
+{
+	struct gallivm_state *gallivm = bld_base->base.gallivm;
+	LLVMBuilderRef builder = gallivm->builder;
+	LLVMValueRef bfi_args[3];
+
+	// Calculate the bitmask: (((1 << src3) - 1) << src2
+	bfi_args[0] = LLVMBuildShl(builder,
+				   LLVMBuildSub(builder,
+						LLVMBuildShl(builder,
+							     bld_base->int_bld.one,
+							     emit_data->args[3], ""),
+						bld_base->int_bld.one, ""),
+				   emit_data->args[2], "");
+
+	bfi_args[1] = LLVMBuildShl(builder, emit_data->args[1],
+				   emit_data->args[2], "");
+
+	bfi_args[2] = emit_data->args[0];
+
+	/* Calculate:
+	 *   (arg0 & arg1) | (~arg0 & arg2) = arg2 ^ (arg0 & (arg1 ^ arg2)
+	 * Use the right-hand side, which the LLVM backend can convert to V_BFI.
+	 */
+	emit_data->output[emit_data->chan] =
+		LLVMBuildXor(builder, bfi_args[2],
+			LLVMBuildAnd(builder, bfi_args[0],
+				LLVMBuildXor(builder, bfi_args[1], bfi_args[2],
+					     ""), ""), "");
+}
+
 /* this is ffs in C */
 static void emit_lsb(const struct lp_build_tgsi_action * action,
 		     struct lp_build_tgsi_context * bld_base,
@@ -1381,6 +1414,7 @@ void radeon_llvm_context_init(struct radeon_llvm_context * ctx)
 	bld_base->op_actions[TGSI_OPCODE_ABS].intr_name = "fabs";
 	bld_base->op_actions[TGSI_OPCODE_AND].emit = emit_and;
 	bld_base->op_actions[TGSI_OPCODE_ARL].emit = emit_arl;
+	bld_base->op_actions[TGSI_OPCODE_BFI].emit = emit_bfi;
 	bld_base->op_actions[TGSI_OPCODE_BGNLOOP].emit = bgnloop_emit;
 	bld_base->op_actions[TGSI_OPCODE_BREV].emit = build_tgsi_intrinsic_nomem;
 	bld_base->op_actions[TGSI_OPCODE_BREV].intr_name = "llvm.AMDGPU.brev";

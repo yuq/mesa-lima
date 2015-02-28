@@ -102,7 +102,7 @@ GL 4.0, GLSL 4.00:
   - Dynamically uniform UBO array indices              DONE (r600)
   - Implicit signed -> unsigned conversions            DONE
   - Fused multiply-add                                 DONE ()
-  - Packing/bitfield/conversion functions              DONE (r600)
+  - Packing/bitfield/conversion functions              DONE (r600, radeonsi)
   - Enhanced textureGather                             DONE (r600, radeonsi)
   - Geometry shader instancing                         DONE (r600)
   - Geometry shader multiple streams                   DONE ()
