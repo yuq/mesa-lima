@@ -1487,20 +1487,20 @@ _mesa_pack_luminance_from_rgba_integer(GLuint n,
          case GL_UNSIGNED_BYTE: {
             GLbyte *dst = (GLbyte *) dstAddr;
             dst[i] = lum32;
+            break;
          }
-         break;
          case GL_SHORT:
          case GL_UNSIGNED_SHORT: {
             GLshort *dst = (GLshort *) dstAddr;
             dst[i] = lum32;
+            break;
          }
-         break;
          case GL_INT:
          case GL_UNSIGNED_INT: {
             GLint *dst = (GLint *) dstAddr;
             dst[i] = lum32;
+            break;
          }
-         break;
          }
       }
       return;
@@ -1525,21 +1525,22 @@ _mesa_pack_luminance_from_rgba_integer(GLuint n,
             GLbyte *dst = (GLbyte *) dstAddr;
             dst[2*i] = lum32;
             dst[2*i+1] = alpha;
+            break;
          }
          case GL_SHORT:
          case GL_UNSIGNED_SHORT: {
             GLshort *dst = (GLshort *) dstAddr;
             dst[i] = lum32;
             dst[2*i+1] = alpha;
+            break;
          }
-         break;
          case GL_INT:
          case GL_UNSIGNED_INT: {
             GLint *dst = (GLint *) dstAddr;
             dst[i] = lum32;
             dst[2*i+1] = alpha;
+            break;
          }
-         break;
          }
       }
       return;
