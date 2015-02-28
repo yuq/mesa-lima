@@ -521,9 +521,10 @@ set_renderbuffer_attachment(struct gl_context *ctx,
  * Attach a renderbuffer object to a framebuffer object.
  */
 void
-_mesa_framebuffer_renderbuffer(struct gl_context *ctx,
-                               struct gl_framebuffer *fb,
-                               GLenum attachment, struct gl_renderbuffer *rb)
+_mesa_FramebufferRenderbuffer_sw(struct gl_context *ctx,
+                                 struct gl_framebuffer *fb,
+                                 GLenum attachment,
+                                 struct gl_renderbuffer *rb)
 {
    struct gl_renderbuffer_attachment *att;
 

@@ -723,7 +723,7 @@ radeon_framebuffer_renderbuffer(struct gl_context * ctx,
 		"%s(%p, fb %p, rb %p) \n",
 		__func__, ctx, fb, rb);
 
-   _mesa_framebuffer_renderbuffer(ctx, fb, attachment, rb);
+   _mesa_FramebufferRenderbuffer_sw(ctx, fb, attachment, rb);
    radeon_draw_buffer(ctx, fb);
 }
 
