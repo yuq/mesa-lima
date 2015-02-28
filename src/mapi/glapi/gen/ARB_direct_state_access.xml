@@ -159,6 +159,13 @@
       <param name="framebuffers" type="GLuint *" />
    </function>
 
+   <function name="NamedFramebufferRenderbuffer" offset="assign">
+      <param name="framebuffer" type="GLuint" />
+      <param name="attachment" type="GLenum" />
+      <param name="renderbuffertarget" type="GLenum" />
+      <param name="renderbuffer" type="GLuint" />
+   </function>
+
    <!-- Renderbuffer object functions -->
 
    <function name="CreateRenderbuffers" offset="assign">

@@ -2896,61 +2896,28 @@ _mesa_FramebufferTexture(GLenum target, GLenum attachment,
 }
 
 
-void GLAPIENTRY
-_mesa_FramebufferRenderbuffer(GLenum target, GLenum attachment,
-                              GLenum renderbufferTarget,
-                              GLuint renderbuffer)
+void
+_mesa_framebuffer_renderbuffer(struct gl_context *ctx,
+                               struct gl_framebuffer *fb,
+                               GLenum attachment,
+                               struct gl_renderbuffer *rb,
+                               const char *func)
 {
    struct gl_renderbuffer_attachment *att;
-   struct gl_framebuffer *fb;
-   struct gl_renderbuffer *rb;
-   GET_CURRENT_CONTEXT(ctx);
-
-   fb = get_framebuffer_target(ctx, target);
-   if (!fb) {
-      _mesa_error(ctx, GL_INVALID_ENUM,
-                  "glFramebufferRenderbuffer(target)");
-      return;
-   }
-
-   if (renderbufferTarget != GL_RENDERBUFFER_EXT) {
-      _mesa_error(ctx, GL_INVALID_ENUM,
-                  "glFramebufferRenderbuffer(renderbufferTarget)");
-      return;
-   }
 
    if (_mesa_is_winsys_fbo(fb)) {
       /* Can't attach new renderbuffers to a window system framebuffer */
-      _mesa_error(ctx, GL_INVALID_OPERATION, "glFramebufferRenderbuffer");
+      _mesa_error(ctx, GL_INVALID_OPERATION,
+                  "%s(window-system framebuffer)", func);
       return;
    }
 
    att = get_attachment(ctx, fb, attachment);
    if (att == NULL) {
       _mesa_error(ctx, GL_INVALID_ENUM,
-                  "glFramebufferRenderbuffer(invalid attachment %s)",
+                  "%s(invalid attachment %s)", func,
                   _mesa_lookup_enum_by_nr(attachment));
       return;
-   }
-
-   if (renderbuffer) {
-      rb = _mesa_lookup_renderbuffer(ctx, renderbuffer);
-      if (!rb) {
-         _mesa_error(ctx, GL_INVALID_OPERATION,
-                     "glFramebufferRenderbuffer(non-existant"
-                     " renderbuffer %u)", renderbuffer);
-         return;
-      }
-      else if (rb == &DummyRenderbuffer) {
-         _mesa_error(ctx, GL_INVALID_OPERATION,
-                     "glFramebufferRenderbuffer(renderbuffer %u)",
-                     renderbuffer);
-         return;
-      }
-   }
-   else {
-      /* remove renderbuffer attachment */
-      rb = NULL;
    }
 
    if (attachment == GL_DEPTH_STENCIL_ATTACHMENT &&
@@ -2959,8 +2926,7 @@ _mesa_FramebufferRenderbuffer(GLenum target, GLenum attachment,
       const GLenum baseFormat = _mesa_get_format_base_format(rb->Format);
       if (baseFormat != GL_DEPTH_STENCIL) {
          _mesa_error(ctx, GL_INVALID_OPERATION,
-                     "glFramebufferRenderbuffer(renderbuffer"
-                     " is not DEPTH_STENCIL format)");
+                     "%s(renderbuffer is not DEPTH_STENCIL format)", func);
          return;
       }
    }
@@ -2974,6 +2940,81 @@ _mesa_FramebufferRenderbuffer(GLenum target, GLenum attachment,
     * after the binding is updated.  Update visual info now.
     */
    _mesa_update_framebuffer_visual(ctx, fb);
+}
+
+
+void GLAPIENTRY
+_mesa_FramebufferRenderbuffer(GLenum target, GLenum attachment,
+                              GLenum renderbuffertarget,
+                              GLuint renderbuffer)
+{
+   struct gl_framebuffer *fb;
+   struct gl_renderbuffer *rb;
+   GET_CURRENT_CONTEXT(ctx);
+
+   fb = get_framebuffer_target(ctx, target);
+   if (!fb) {
+      _mesa_error(ctx, GL_INVALID_ENUM,
+                  "glFramebufferRenderbuffer(invalid target %s)",
+                  _mesa_lookup_enum_by_nr(target));
+      return;
+   }
+
+   if (renderbuffertarget != GL_RENDERBUFFER) {
+      _mesa_error(ctx, GL_INVALID_ENUM,
+                  "glFramebufferRenderbuffer(renderbuffertarget is not "
+                  "GL_RENDERBUFFER)");
+      return;
+   }
+
+   if (renderbuffer) {
+      rb = _mesa_lookup_renderbuffer_err(ctx, renderbuffer,
+                                         "glFramebufferRenderbuffer");
+      if (!rb)
+         return;
+   }
+   else {
+      /* remove renderbuffer attachment */
+      rb = NULL;
+   }
+
+   _mesa_framebuffer_renderbuffer(ctx, fb, attachment, rb,
+                                  "glFramebufferRenderbuffer");
+}
+
+
+void GLAPIENTRY
+_mesa_NamedFramebufferRenderbuffer(GLuint framebuffer, GLenum attachment,
+                                   GLenum renderbuffertarget,
+                                   GLuint renderbuffer)
+{
+   struct gl_framebuffer *fb;
+   struct gl_renderbuffer *rb;
+   GET_CURRENT_CONTEXT(ctx);
+
+   fb = _mesa_lookup_framebuffer_err(ctx, framebuffer,
+                                     "glNamedFramebufferRenderbuffer");
+
+   if (renderbuffertarget != GL_RENDERBUFFER) {
+      _mesa_error(ctx, GL_INVALID_ENUM,
+                  "glNamedFramebufferRenderbuffer(renderbuffertarget is not "
+                  "GL_RENDERBUFFER)");
+      return;
+   }
+
+   if (renderbuffer) {
+      rb = _mesa_lookup_renderbuffer_err(ctx, renderbuffer,
+                                         "glNamedFramebufferRenderbuffer");
+      if (!rb)
+         return;
+   }
+   else {
+      /* remove renderbuffer attachment */
+      rb = NULL;
+   }
+
+   _mesa_framebuffer_renderbuffer(ctx, fb, attachment, rb,
+                                  "glNamedFramebufferRenderbuffer");
 }
 
 
