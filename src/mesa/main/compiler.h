@@ -175,9 +175,6 @@ static inline GLuint CPU_TO_LE32(GLuint x)
 
 #define IEEE_ONE 0x3f800000
 
-#ifndef Elements
-#define Elements(x) (sizeof(x)/sizeof(*(x)))
-#endif
 
 #ifdef __cplusplus
 }
