@@ -1739,7 +1739,7 @@ _mesa_GetProgramBinary(GLuint program, GLsizei bufSize, GLsizei *length,
     * Ensure that length always points to valid storage to avoid multiple NULL
     * pointer checks below.
     */
-   if (length != NULL)
+   if (length == NULL)
       length = &length_dummy;
 
 
