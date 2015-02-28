@@ -366,33 +366,33 @@ static INLINE void si_shader_selector_key(struct pipe_context *ctx,
 			key->vs.gs_used_inputs = sctx->gs_shader->gs_used_inputs;
 		}
 	} else if (sel->type == PIPE_SHADER_FRAGMENT) {
+		struct si_state_rasterizer *rs = sctx->queued.named.rasterizer;
+
 		if (sel->info.properties[TGSI_PROPERTY_FS_COLOR0_WRITES_ALL_CBUFS])
 			key->ps.last_cbuf = MAX2(sctx->framebuffer.state.nr_cbufs, 1) - 1;
 		key->ps.export_16bpc = sctx->framebuffer.export_16bpc;
 
-		if (sctx->queued.named.rasterizer) {
-			key->ps.color_two_side = sctx->queued.named.rasterizer->two_side;
+		if (rs) {
+			key->ps.color_two_side = rs->two_side;
 
 			if (sctx->queued.named.blend) {
 				key->ps.alpha_to_one = sctx->queued.named.blend->alpha_to_one &&
-						       sctx->queued.named.rasterizer->multisample_enable &&
+						       rs->multisample_enable &&
 						       !sctx->framebuffer.cb0_is_integer;
 			}
 
-			key->ps.poly_stipple = sctx->queued.named.rasterizer->poly_stipple_enable &&
+			key->ps.poly_stipple = rs->poly_stipple_enable &&
 					       ((sctx->current_rast_prim >= PIPE_PRIM_TRIANGLES &&
 						 sctx->current_rast_prim <= PIPE_PRIM_POLYGON) ||
 						sctx->current_rast_prim >= PIPE_PRIM_TRIANGLES_ADJACENCY);
 		}
-		if (sctx->queued.named.dsa) {
-			key->ps.alpha_func = sctx->queued.named.dsa->alpha_func;
 
-			/* Alpha-test should be disabled if colorbuffer 0 is integer. */
-			if (sctx->framebuffer.cb0_is_integer)
-				key->ps.alpha_func = PIPE_FUNC_ALWAYS;
-		} else {
-			key->ps.alpha_func = PIPE_FUNC_ALWAYS;
-		}
+		key->ps.alpha_func = PIPE_FUNC_ALWAYS;
+
+		/* Alpha-test should be disabled if colorbuffer 0 is integer. */
+		if (sctx->queued.named.dsa &&
+		    !sctx->framebuffer.cb0_is_integer)
+			key->ps.alpha_func = sctx->queued.named.dsa->alpha_func;
 	}
 }
 
