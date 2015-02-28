@@ -35,20 +35,20 @@
 
 static void clear_active_eval1( struct vbo_exec_context *exec, GLuint attr ) 
 {
-   assert(attr < Elements(exec->eval.map1));
+   assert(attr < ARRAY_SIZE(exec->eval.map1));
    exec->eval.map1[attr].map = NULL;
 }
 
 static void clear_active_eval2( struct vbo_exec_context *exec, GLuint attr ) 
 {
-   assert(attr < Elements(exec->eval.map2));
+   assert(attr < ARRAY_SIZE(exec->eval.map2));
    exec->eval.map2[attr].map = NULL;
 }
 
 static void set_active_eval1( struct vbo_exec_context *exec, GLuint attr, GLuint dim, 
 			      struct gl_1d_map *map )
 {
-   assert(attr < Elements(exec->eval.map1));
+   assert(attr < ARRAY_SIZE(exec->eval.map1));
    if (!exec->eval.map1[attr].map) {
       exec->eval.map1[attr].map = map;
       exec->eval.map1[attr].sz = dim;
@@ -58,7 +58,7 @@ static void set_active_eval1( struct vbo_exec_context *exec, GLuint attr, GLuint
 static void set_active_eval2( struct vbo_exec_context *exec, GLuint attr, GLuint dim, 
 			      struct gl_2d_map *map )
 {
-   assert(attr < Elements(exec->eval.map2));
+   assert(attr < ARRAY_SIZE(exec->eval.map2));
    if (!exec->eval.map2[attr].map) {
       exec->eval.map2[attr].map = map;
       exec->eval.map2[attr].sz = dim;

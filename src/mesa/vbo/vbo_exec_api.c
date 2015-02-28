@@ -1044,16 +1044,16 @@ void vbo_exec_vtx_init( struct vbo_exec_context *exec )
    _mesa_noop_vtxfmt_init(&exec->vtxfmt_noop);
 
    for (i = 0 ; i < VBO_ATTRIB_MAX ; i++) {
-      assert(i < Elements(exec->vtx.attrsz));
+      assert(i < ARRAY_SIZE(exec->vtx.attrsz));
       exec->vtx.attrsz[i] = 0;
-      assert(i < Elements(exec->vtx.attrtype));
+      assert(i < ARRAY_SIZE(exec->vtx.attrtype));
       exec->vtx.attrtype[i] = GL_FLOAT;
-      assert(i < Elements(exec->vtx.active_sz));
+      assert(i < ARRAY_SIZE(exec->vtx.active_sz));
       exec->vtx.active_sz[i] = 0;
    }
    for (i = 0 ; i < VERT_ATTRIB_MAX; i++) {
-      assert(i < Elements(exec->vtx.inputs));
-      assert(i < Elements(exec->vtx.arrays));
+      assert(i < ARRAY_SIZE(exec->vtx.inputs));
+      assert(i < ARRAY_SIZE(exec->vtx.arrays));
       exec->vtx.inputs[i] = &exec->vtx.arrays[i];
    }
    
@@ -1110,7 +1110,7 @@ void vbo_exec_vtx_destroy( struct vbo_exec_context *exec )
 
    /* Drop any outstanding reference to the vertex buffer
     */
-   for (i = 0; i < Elements(exec->vtx.arrays); i++) {
+   for (i = 0; i < ARRAY_SIZE(exec->vtx.arrays); i++) {
       _mesa_reference_buffer_object(ctx,
                                     &exec->vtx.arrays[i].BufferObj,
                                     NULL);
