@@ -178,14 +178,6 @@ static inline GLuint CPU_TO_LE32(GLuint x)
 #define _NORMAPIP *
 #endif
 
-
-/*
- * A trick to suppress uninitialized variable warning without generating any
- * code
- */
-#define uninitialized_var(x) x = x
-
-
 /**
  * LONGSTRING macro
  * gcc -pedantic warns about long string literals, LONGSTRING silences that.
