@@ -31,9 +31,6 @@
 #define EGLCOMPILER_INCLUDED
 
 
-#include "c99_compat.h" /* __func__, etc. */
-
-
 /**
  * Get standard integer types
  */
@@ -77,11 +74,6 @@
 #  else
 #    define PUBLIC
 #  endif
-#endif
-
-/* XXX: Use standard `__func__` instead */
-#ifndef __FUNCTION__
-#  define __FUNCTION__ __func__
 #endif
 
 #define STATIC_ASSERT(COND) \
