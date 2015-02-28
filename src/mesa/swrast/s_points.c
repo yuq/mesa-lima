@@ -140,7 +140,7 @@ sprite_point(struct gl_context *ctx, const SWvertex *vert)
          if (attr >= VARYING_SLOT_TEX0 && attr <= VARYING_SLOT_TEX7) {
             /* a texcoord attribute */
             const GLuint u = attr - VARYING_SLOT_TEX0;
-            assert(u < Elements(ctx->Point.CoordReplace));
+            assert(u < ARRAY_SIZE(ctx->Point.CoordReplace));
             if (ctx->Point.CoordReplace[u]) {
                tCoords[numTcoords++] = attr;
 
