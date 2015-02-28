@@ -81,7 +81,7 @@ _mesa_update_shader_textures_used(struct gl_shader_program *shProg,
       if (prog->SamplersUsed & (1 << s)) {
          GLuint unit = shader->SamplerUnits[s];
          GLuint tgt = shader->SamplerTargets[s];
-         assert(unit < Elements(prog->TexturesUsed));
+         assert(unit < ARRAY_SIZE(prog->TexturesUsed));
          assert(tgt < NUM_TEXTURE_TARGETS);
 
          /* The types of the samplers associated with a particular texture

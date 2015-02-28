@@ -105,7 +105,7 @@ _mesa_alloc_shared_state(struct gl_context *ctx)
          GL_TEXTURE_2D,
          GL_TEXTURE_1D
       };
-      STATIC_ASSERT(Elements(targets) == NUM_TEXTURE_TARGETS);
+      STATIC_ASSERT(ARRAY_SIZE(targets) == NUM_TEXTURE_TARGETS);
       shared->DefaultTex[i] = ctx->Driver.NewTextureObject(ctx, 0, targets[i]);
    }
 

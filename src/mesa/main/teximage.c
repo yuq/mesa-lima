@@ -729,9 +729,9 @@ _mesa_is_proxy_texture(GLenum target)
     * NUM_TEXTURE_TARGETS should match number of terms above, except there's no
     * proxy for GL_TEXTURE_BUFFER and GL_TEXTURE_EXTERNAL_OES.
     */
-   STATIC_ASSERT(NUM_TEXTURE_TARGETS == Elements(targets) + 2);
+   STATIC_ASSERT(NUM_TEXTURE_TARGETS == ARRAY_SIZE(targets) + 2);
 
-   for (i = 0; i < Elements(targets); ++i)
+   for (i = 0; i < ARRAY_SIZE(targets); ++i)
       if (target == targets[i])
          return GL_TRUE;
    return GL_FALSE;

@@ -60,7 +60,7 @@ int driDispatchRemapTable[driDispatchRemapTable_size];
 const char *
 _mesa_get_function_spec(GLint func_index)
 {
-   if (func_index < Elements(_mesa_function_pool))
+   if (func_index < ARRAY_SIZE(_mesa_function_pool))
       return _mesa_function_pool + func_index;
    else
       return NULL;

@@ -447,7 +447,7 @@ _mesa_init_current(struct gl_context *ctx)
    GLuint i;
 
    /* Init all to (0,0,0,1) */
-   for (i = 0; i < Elements(ctx->Current.Attrib); i++) {
+   for (i = 0; i < ARRAY_SIZE(ctx->Current.Attrib); i++) {
       ASSIGN_4V( ctx->Current.Attrib[i], 0.0, 0.0, 0.0, 1.0 );
    }
 

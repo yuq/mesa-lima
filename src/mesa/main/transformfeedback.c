@@ -235,7 +235,7 @@ delete_transform_feedback(struct gl_context *ctx,
 {
    GLuint i;
 
-   for (i = 0; i < Elements(obj->Buffers); i++) {
+   for (i = 0; i < ARRAY_SIZE(obj->Buffers); i++) {
       _mesa_reference_buffer_object(ctx, &obj->Buffers[i], NULL);
    }
 

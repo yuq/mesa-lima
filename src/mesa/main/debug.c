@@ -58,8 +58,8 @@ tex_target_name(GLenum tgt)
       { GL_TEXTURE_EXTERNAL_OES, "GL_TEXTURE_EXTERNAL_OES" }
    };
    GLuint i;
-   STATIC_ASSERT(Elements(tex_targets) == NUM_TEXTURE_TARGETS);
-   for (i = 0; i < Elements(tex_targets); i++) {
+   STATIC_ASSERT(ARRAY_SIZE(tex_targets) == NUM_TEXTURE_TARGETS);
+   for (i = 0; i < ARRAY_SIZE(tex_targets); i++) {
       if (tex_targets[i].target == tgt)
          return tex_targets[i].name;
    }
@@ -168,7 +168,7 @@ set_verbose_flags(const char *str)
       return;
 
    MESA_VERBOSE = 0x0;
-   for (i = 0; i < Elements(opts); i++) {
+   for (i = 0; i < ARRAY_SIZE(opts); i++) {
       if (strstr(str, opts[i].name) || strcmp(str, "all") == 0)
          MESA_VERBOSE |= opts[i].flag;
    }
@@ -201,7 +201,7 @@ set_debug_flags(const char *str)
       return;
 
    MESA_DEBUG_FLAGS = 0x0;
-   for (i = 0; i < Elements(opts); i++) {
+   for (i = 0; i < ARRAY_SIZE(opts); i++) {
       if (strstr(str, opts[i].name))
          MESA_DEBUG_FLAGS |= opts[i].flag;
    }

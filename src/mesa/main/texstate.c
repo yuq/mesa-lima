@@ -292,7 +292,7 @@ _mesa_ActiveTexture(GLenum texture)
 
    k = _mesa_max_tex_unit(ctx);
 
-   assert(k <= Elements(ctx->Texture.Unit));
+   assert(k <= ARRAY_SIZE(ctx->Texture.Unit));
 
    if (MESA_VERBOSE & (VERBOSE_API|VERBOSE_TEXTURE))
       _mesa_debug(ctx, "glActiveTexture %s\n",
@@ -363,7 +363,7 @@ update_texture_matrices( struct gl_context *ctx )
    ctx->Texture._TexMatEnabled = 0x0;
 
    for (u = 0; u < ctx->Const.MaxTextureCoordUnits; u++) {
-      assert(u < Elements(ctx->TextureMatrixStack));
+      assert(u < ARRAY_SIZE(ctx->TextureMatrixStack));
       if (_math_matrix_is_dirty(ctx->TextureMatrixStack[u].Top)) {
 	 _math_matrix_analyse( ctx->TextureMatrixStack[u].Top );
 
@@ -501,7 +501,7 @@ update_texgen(struct gl_context *ctx)
 	 ctx->Texture._GenFlags |= texUnit->_GenFlags;
       }
 
-      assert(unit < Elements(ctx->TextureMatrixStack));
+      assert(unit < ARRAY_SIZE(ctx->TextureMatrixStack));
       if (ctx->TextureMatrixStack[unit].Top->type != MATRIX_IDENTITY)
 	 ctx->Texture._TexMatEnabled |= ENABLE_TEXMAT(unit);
    }
@@ -797,7 +797,7 @@ alloc_proxy_textures( struct gl_context *ctx )
    };
    GLint tgt;
 
-   STATIC_ASSERT(Elements(targets) == NUM_TEXTURE_TARGETS);
+   STATIC_ASSERT(ARRAY_SIZE(targets) == NUM_TEXTURE_TARGETS);
    assert(targets[TEXTURE_2D_INDEX] == GL_TEXTURE_2D);
    assert(targets[TEXTURE_CUBE_INDEX] == GL_TEXTURE_CUBE_MAP);
 
@@ -894,7 +894,7 @@ _mesa_init_texture(struct gl_context *ctx)
     */
    ctx->Texture.CubeMapSeamless = ctx->API == API_OPENGLES2;
 
-   for (u = 0; u < Elements(ctx->Texture.Unit); u++)
+   for (u = 0; u < ARRAY_SIZE(ctx->Texture.Unit); u++)
       init_texture_unit(ctx, u);
 
    /* After we're done initializing the context's texture state the default
@@ -927,7 +927,7 @@ _mesa_free_texture_data(struct gl_context *ctx)
    GLuint u, tgt;
 
    /* unreference current textures */
-   for (u = 0; u < Elements(ctx->Texture.Unit); u++) {
+   for (u = 0; u < ARRAY_SIZE(ctx->Texture.Unit); u++) {
       /* The _Current texture could account for another reference */
       _mesa_reference_texobj(&ctx->Texture.Unit[u]._Current, NULL);
 
@@ -943,7 +943,7 @@ _mesa_free_texture_data(struct gl_context *ctx)
    /* GL_ARB_texture_buffer_object */
    _mesa_reference_buffer_object(ctx, &ctx->Texture.BufferObject, NULL);
 
-   for (u = 0; u < Elements(ctx->Texture.Unit); u++) {
+   for (u = 0; u < ARRAY_SIZE(ctx->Texture.Unit); u++) {
       _mesa_reference_sampler_object(ctx, &ctx->Texture.Unit[u].Sampler, NULL);
    }
 }
@@ -959,7 +959,7 @@ _mesa_update_default_objects_texture(struct gl_context *ctx)
 {
    GLuint u, tex;
 
-   for (u = 0; u < Elements(ctx->Texture.Unit); u++) {
+   for (u = 0; u < ARRAY_SIZE(ctx->Texture.Unit); u++) {
       struct gl_texture_unit *texUnit = &ctx->Texture.Unit[u];
       for (tex = 0; tex < NUM_TEXTURE_TARGETS; tex++) {
          _mesa_reference_texobj(&texUnit->CurrentTex[tex],

@@ -1179,7 +1179,7 @@ _mesa_DeleteBuffers(GLsizei n, const GLuint *ids)
          _mesa_buffer_unmap_all_mappings(ctx, bufObj);
 
          /* unbind any vertex pointers bound to this buffer */
-         for (j = 0; j < Elements(vao->VertexBinding); j++) {
+         for (j = 0; j < ARRAY_SIZE(vao->VertexBinding); j++) {
             unbind(ctx, &vao->VertexBinding[j].BufferObj, bufObj);
          }
 

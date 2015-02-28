@@ -84,10 +84,10 @@ unbind_array_object_vbos(struct gl_context *ctx, struct gl_vertex_array_object *
 {
    GLuint i;
 
-   for (i = 0; i < Elements(obj->VertexBinding); i++)
+   for (i = 0; i < ARRAY_SIZE(obj->VertexBinding); i++)
       _mesa_reference_buffer_object(ctx, &obj->VertexBinding[i].BufferObj, NULL);
 
-   for (i = 0; i < Elements(obj->_VertexAttrib); i++)
+   for (i = 0; i < ARRAY_SIZE(obj->_VertexAttrib); i++)
       _mesa_reference_buffer_object(ctx, &obj->_VertexAttrib[i].BufferObj, NULL);
 }
 
@@ -230,7 +230,7 @@ _mesa_initialize_vao(struct gl_context *ctx,
    obj->RefCount = 1;
 
    /* Init the individual arrays */
-   for (i = 0; i < Elements(obj->VertexAttrib); i++) {
+   for (i = 0; i < ARRAY_SIZE(obj->VertexAttrib); i++) {
       switch (i) {
       case VERT_ATTRIB_WEIGHT:
          init_array(ctx, obj, VERT_ATTRIB_WEIGHT, 1, GL_FLOAT);

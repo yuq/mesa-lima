@@ -896,7 +896,7 @@ void _mesa_init_color( struct gl_context * ctx )
    ctx->Color.AlphaFunc = GL_ALWAYS;
    ctx->Color.AlphaRef = 0;
    ctx->Color.BlendEnabled = 0x0;
-   for (i = 0; i < Elements(ctx->Color.Blend); i++) {
+   for (i = 0; i < ARRAY_SIZE(ctx->Color.Blend); i++) {
       ctx->Color.Blend[i].SrcRGB = GL_ONE;
       ctx->Color.Blend[i].DstRGB = GL_ZERO;
       ctx->Color.Blend[i].SrcA = GL_ONE;

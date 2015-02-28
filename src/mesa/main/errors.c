@@ -137,7 +137,7 @@ gl_enum_to_debug_source(GLenum e)
 {
    unsigned i;
 
-   for (i = 0; i < Elements(debug_source_enums); i++) {
+   for (i = 0; i < ARRAY_SIZE(debug_source_enums); i++) {
       if (debug_source_enums[i] == e)
          break;
    }
@@ -149,7 +149,7 @@ gl_enum_to_debug_type(GLenum e)
 {
    unsigned i;
 
-   for (i = 0; i < Elements(debug_type_enums); i++) {
+   for (i = 0; i < ARRAY_SIZE(debug_type_enums); i++) {
       if (debug_type_enums[i] == e)
          break;
    }
@@ -161,7 +161,7 @@ gl_enum_to_debug_severity(GLenum e)
 {
    unsigned i;
 
-   for (i = 0; i < Elements(debug_severity_enums); i++) {
+   for (i = 0; i < ARRAY_SIZE(debug_severity_enums); i++) {
       if (debug_severity_enums[i] == e)
          break;
    }
