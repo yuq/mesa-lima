@@ -79,7 +79,7 @@ generate_data_element(void *mem_ctx, const glsl_type *type,
    ir_constant_data data;
    memset(&data, 0, sizeof(data));
    for (unsigned i = 0; i < type->components(); i++) {
-      const unsigned idx = (i + data_index_base) % Elements(values);
+      const unsigned idx = (i + data_index_base) % ARRAY_SIZE(values);
       switch (type->base_type) {
       case GLSL_TYPE_UINT:
       case GLSL_TYPE_INT:
