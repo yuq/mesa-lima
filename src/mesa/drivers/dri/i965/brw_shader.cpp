@@ -963,6 +963,7 @@ backend_instruction::has_side_effects() const
 {
    switch (opcode) {
    case SHADER_OPCODE_UNTYPED_ATOMIC:
+   case SHADER_OPCODE_GEN4_SCRATCH_WRITE:
    case SHADER_OPCODE_URB_WRITE_SIMD8:
    case FS_OPCODE_FB_WRITE:
       return true;
