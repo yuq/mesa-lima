@@ -49,7 +49,7 @@
  */
 
 static bool
-opt_cmod_propagation_local(fs_visitor *v, bblock_t *block)
+opt_cmod_propagation_local(bblock_t *block)
 {
    bool progress = false;
    int ip = block->end_ip + 1;
@@ -128,7 +128,7 @@ fs_visitor::opt_cmod_propagation()
    bool progress = false;
 
    foreach_block_reverse(block, cfg) {
-      progress = opt_cmod_propagation_local(this, block) || progress;
+      progress = opt_cmod_propagation_local(block) || progress;
    }
 
    if (progress)
