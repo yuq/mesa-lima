@@ -2735,11 +2735,8 @@ fs_visitor::try_opt_frontfacing_ternary(ir_if *ir)
    if (!then_rhs || !else_rhs)
       return false;
 
-   if ((then_rhs->is_one() || then_rhs->is_negative_one()) &&
-       (else_rhs->is_one() || else_rhs->is_negative_one())) {
-      assert(then_rhs->is_one() == else_rhs->is_negative_one());
-      assert(else_rhs->is_one() == then_rhs->is_negative_one());
-
+   if ((then_rhs->is_one() && else_rhs->is_negative_one()) ||
+       (else_rhs->is_one() && then_rhs->is_negative_one())) {
       then_assign->lhs->accept(this);
       fs_reg dst = this->result;
       dst.type = BRW_REGISTER_TYPE_D;
