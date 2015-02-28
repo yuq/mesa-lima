@@ -2735,6 +2735,9 @@ fs_visitor::try_opt_frontfacing_ternary(ir_if *ir)
    if (!then_rhs || !else_rhs)
       return false;
 
+   if (then_rhs->type->base_type != GLSL_TYPE_FLOAT)
+      return false;
+
    if ((then_rhs->is_one() && else_rhs->is_negative_one()) ||
        (else_rhs->is_one() && then_rhs->is_negative_one())) {
       then_assign->lhs->accept(this);
