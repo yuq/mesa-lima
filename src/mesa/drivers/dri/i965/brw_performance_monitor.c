@@ -1353,6 +1353,7 @@ brw_get_perf_monitor_result(struct gl_context *ctx,
 static struct gl_perf_monitor_object *
 brw_new_perf_monitor(struct gl_context *ctx)
 {
+   (void) ctx;
    return calloc(1, sizeof(struct brw_perf_monitor_object));
 }
 
