@@ -1234,6 +1234,95 @@ build_tgsi_intrinsic_nomem(
 	build_tgsi_intrinsic(action, bld_base, emit_data, LLVMReadNoneAttribute);
 }
 
+/* this is ffs in C */
+static void emit_lsb(const struct lp_build_tgsi_action * action,
+		     struct lp_build_tgsi_context * bld_base,
+		     struct lp_build_emit_data * emit_data)
+{
+	struct gallivm_state *gallivm = bld_base->base.gallivm;
+	LLVMValueRef args[2] = {
+		emit_data->args[0],
+
+		/* The value of 1 means that ffs(x=0) = undef, so LLVM won't
+		 * add special code to check for x=0. The reason is that
+		 * the LLVM behavior for x=0 is different from what we
+		 * need here.
+		 *
+		 * The hardware already implements the correct behavior.
+		 */
+		lp_build_const_int32(gallivm, 1)
+	};
+
+	emit_data->output[emit_data->chan] =
+		build_intrinsic(gallivm->builder, "llvm.cttz.i32",
+				emit_data->dst_type, args, Elements(args),
+				LLVMReadNoneAttribute);
+}
+
+/* Find the last bit set. */
+static void emit_umsb(const struct lp_build_tgsi_action * action,
+		      struct lp_build_tgsi_context * bld_base,
+		      struct lp_build_emit_data * emit_data)
+{
+	struct gallivm_state *gallivm = bld_base->base.gallivm;
+	LLVMBuilderRef builder = gallivm->builder;
+	LLVMValueRef args[2] = {
+		emit_data->args[0],
+		/* Don't generate code for handling zero: */
+		lp_build_const_int32(gallivm, 1)
+	};
+
+	LLVMValueRef msb =
+		build_intrinsic(builder, "llvm.ctlz.i32",
+				emit_data->dst_type, args, Elements(args),
+				LLVMReadNoneAttribute);
+
+	/* The HW returns the last bit index from MSB, but TGSI wants
+	 * the index from LSB. Invert it by doing "31 - msb". */
+	msb = LLVMBuildSub(builder, lp_build_const_int32(gallivm, 31),
+			   msb, "");
+
+	/* Check for zero: */
+	emit_data->output[emit_data->chan] =
+		LLVMBuildSelect(builder,
+				LLVMBuildICmp(builder, LLVMIntEQ, args[0],
+					      bld_base->uint_bld.zero, ""),
+				lp_build_const_int32(gallivm, -1), msb, "");
+}
+
+/* Find the last bit opposite of the sign bit. */
+static void emit_imsb(const struct lp_build_tgsi_action * action,
+		     struct lp_build_tgsi_context * bld_base,
+		     struct lp_build_emit_data * emit_data)
+{
+	struct gallivm_state *gallivm = bld_base->base.gallivm;
+	LLVMBuilderRef builder = gallivm->builder;
+	LLVMValueRef arg = emit_data->args[0];
+
+	LLVMValueRef msb =
+		build_intrinsic(builder, "llvm.AMDGPU.flbit.i32",
+				emit_data->dst_type, &arg, 1,
+				LLVMReadNoneAttribute);
+
+	/* The HW returns the last bit index from MSB, but TGSI wants
+	 * the index from LSB. Invert it by doing "31 - msb". */
+	msb = LLVMBuildSub(builder, lp_build_const_int32(gallivm, 31),
+			   msb, "");
+
+	/* If arg == 0 || arg == -1 (0xffffffff), return -1. */
+	LLVMValueRef all_ones = lp_build_const_int32(gallivm, -1);
+
+	LLVMValueRef cond =
+		LLVMBuildOr(builder,
+			    LLVMBuildICmp(builder, LLVMIntEQ, arg,
+					  bld_base->uint_bld.zero, ""),
+			    LLVMBuildICmp(builder, LLVMIntEQ, arg,
+					  all_ones, ""), "");
+
+	emit_data->output[emit_data->chan] =
+		LLVMBuildSelect(builder, cond, all_ones, msb, "");
+}
+
 void radeon_llvm_context_init(struct radeon_llvm_context * ctx)
 {
 	struct lp_type type;
@@ -1333,6 +1422,7 @@ void radeon_llvm_context_init(struct radeon_llvm_context * ctx)
 	bld_base->op_actions[TGSI_OPCODE_IMAX].intr_name = "llvm.AMDGPU.imax";
 	bld_base->op_actions[TGSI_OPCODE_IMIN].emit = build_tgsi_intrinsic_nomem;
 	bld_base->op_actions[TGSI_OPCODE_IMIN].intr_name = "llvm.AMDGPU.imin";
+	bld_base->op_actions[TGSI_OPCODE_IMSB].emit = emit_imsb;
 	bld_base->op_actions[TGSI_OPCODE_INEG].emit = emit_ineg;
 	bld_base->op_actions[TGSI_OPCODE_ISHR].emit = emit_ishr;
 	bld_base->op_actions[TGSI_OPCODE_ISGE].emit = emit_icmp;
@@ -1343,11 +1433,13 @@ void radeon_llvm_context_init(struct radeon_llvm_context * ctx)
 	bld_base->op_actions[TGSI_OPCODE_KILL_IF].intr_name = "llvm.AMDGPU.kill";
 	bld_base->op_actions[TGSI_OPCODE_KILL].emit = lp_build_tgsi_intrinsic;
 	bld_base->op_actions[TGSI_OPCODE_KILL].intr_name = "llvm.AMDGPU.kilp";
+	bld_base->op_actions[TGSI_OPCODE_LSB].emit = emit_lsb;
 	bld_base->op_actions[TGSI_OPCODE_LG2].emit = build_tgsi_intrinsic_nomem;
 	bld_base->op_actions[TGSI_OPCODE_LG2].intr_name = "llvm.log2.f32";
 	bld_base->op_actions[TGSI_OPCODE_LRP].emit = build_tgsi_intrinsic_nomem;
 	bld_base->op_actions[TGSI_OPCODE_LRP].intr_name = "llvm.AMDGPU.lrp";
 	bld_base->op_actions[TGSI_OPCODE_MOD].emit = emit_mod;
+	bld_base->op_actions[TGSI_OPCODE_UMSB].emit = emit_umsb;
 	bld_base->op_actions[TGSI_OPCODE_NOT].emit = emit_not;
 	bld_base->op_actions[TGSI_OPCODE_OR].emit = emit_or;
 	bld_base->op_actions[TGSI_OPCODE_POW].emit = build_tgsi_intrinsic_nomem;
