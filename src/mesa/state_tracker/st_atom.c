@@ -197,7 +197,7 @@ void st_validate_state( struct st_context *st )
       memset(&examined, 0, sizeof(examined));
       prev = *state;
 
-      for (i = 0; i < Elements(atoms); i++) {	 
+      for (i = 0; i < ARRAY_SIZE(atoms); i++) {	 
 	 const struct st_tracked_state *atom = atoms[i];
 	 struct st_state_flags generated;
 	 
@@ -228,7 +228,7 @@ void st_validate_state( struct st_context *st )
 
    }
    else {
-      for (i = 0; i < Elements(atoms); i++) {	 
+      for (i = 0; i < ARRAY_SIZE(atoms); i++) {	 
 	 if (check_state(state, &atoms[i]->dirty))
 	    atoms[i]->update( st );
       }

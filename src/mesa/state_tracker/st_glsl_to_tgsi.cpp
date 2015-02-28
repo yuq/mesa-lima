@@ -1497,7 +1497,7 @@ void
 glsl_to_tgsi_visitor::visit(ir_expression *ir)
 {
    unsigned int operand;
-   st_src_reg op[Elements(ir->operands)];
+   st_src_reg op[ARRAY_SIZE(ir->operands)];
    st_src_reg result_src;
    st_dst_reg result_dst;
 
@@ -4022,7 +4022,7 @@ glsl_to_tgsi_visitor::eliminate_dead_code(void)
          /* Continuing the block, clear any channels from the write array that
           * are read by this instruction.
           */
-         for (unsigned i = 0; i < Elements(inst->src); i++) {
+         for (unsigned i = 0; i < ARRAY_SIZE(inst->src); i++) {
             if (inst->src[i].file == PROGRAM_TEMPORARY && inst->src[i].reladdr){
                /* Any temporary might be read, so no dead code elimination
                 * across this instruction.
@@ -4067,7 +4067,7 @@ glsl_to_tgsi_visitor::eliminate_dead_code(void)
        * If there is already an instruction in the write array for one or more
        * of the channels, flag that channel write as dead.
        */
-      for (unsigned i = 0; i < Elements(inst->dst); i++) {
+      for (unsigned i = 0; i < ARRAY_SIZE(inst->dst); i++) {
          if (inst->dst[i].file == PROGRAM_TEMPORARY &&
              !inst->dst[i].reladdr &&
              !inst->saturate) {
@@ -4625,7 +4625,7 @@ dst_register(struct st_translate *t,
    case PROGRAM_ARRAY:
       array = index >> 16;
 
-      assert(array < Elements(t->arrays));
+      assert(array < ARRAY_SIZE(t->arrays));
 
       if (ureg_dst_is_undef(t->arrays[array]))
          t->arrays[array] = ureg_DECL_array_temporary(
@@ -4642,7 +4642,7 @@ dst_register(struct st_translate *t,
       else
          assert(index < VARYING_SLOT_MAX);
 
-      assert(t->outputMapping[index] < Elements(t->outputs));
+      assert(t->outputMapping[index] < ARRAY_SIZE(t->outputs));
 
       return t->outputs[t->outputMapping[index]];
 
@@ -4685,18 +4685,18 @@ src_register(struct st_translate *t, const st_src_reg *reg)
       return t->immediates[reg->index];
 
    case PROGRAM_INPUT:
-      assert(t->inputMapping[reg->index] < Elements(t->inputs));
+      assert(t->inputMapping[reg->index] < ARRAY_SIZE(t->inputs));
       return t->inputs[t->inputMapping[reg->index]];
 
    case PROGRAM_OUTPUT:
-      assert(t->outputMapping[reg->index] < Elements(t->outputs));
+      assert(t->outputMapping[reg->index] < ARRAY_SIZE(t->outputs));
       return ureg_src(t->outputs[t->outputMapping[reg->index]]); /* not needed? */
 
    case PROGRAM_ADDRESS:
       return ureg_src(t->address[reg->index]);
 
    case PROGRAM_SYSTEM_VALUE:
-      assert(reg->index < (int) Elements(t->systemValues));
+      assert(reg->index < (int) ARRAY_SIZE(t->systemValues));
       return t->systemValues[reg->index];
 
    default:
@@ -4824,7 +4824,7 @@ translate_tex_offset(struct st_translate *t,
       array = in_offset->index >> 16;
 
       assert(array >= 0);
-      assert(array < (int) Elements(t->arrays));
+      assert(array < (int) ARRAY_SIZE(t->arrays));
 
       dst = t->arrays[array];
       offset.File = dst.File;
@@ -5200,8 +5200,8 @@ st_translate_program(
    unsigned i;
    enum pipe_error ret = PIPE_OK;
 
-   assert(numInputs <= Elements(t->inputs));
-   assert(numOutputs <= Elements(t->outputs));
+   assert(numInputs <= ARRAY_SIZE(t->inputs));
+   assert(numOutputs <= ARRAY_SIZE(t->outputs));
 
    assert(_mesa_sysval_to_semantic[SYSTEM_VALUE_FRONT_FACE] ==
           TGSI_SEMANTIC_FACE);

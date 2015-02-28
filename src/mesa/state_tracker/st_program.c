@@ -1054,7 +1054,7 @@ st_translate_geometry_program(struct st_context *st,
             /* fall through */
          case VARYING_SLOT_VAR0:
          default:
-            assert(slot < Elements(gs_output_semantic_name));
+            assert(slot < ARRAY_SIZE(gs_output_semantic_name));
             assert(attr >= VARYING_SLOT_VAR0);
             gs_output_semantic_name[slot] = TGSI_SEMANTIC_GENERIC;
             gs_output_semantic_index[slot] =
@@ -1247,7 +1247,7 @@ destroy_shader_program_variants_cb(GLuint key, void *data, void *userData)
             destroy_program_variants(st, shProg->Shaders[i]->Program);
          }
 
-	 for (i = 0; i < Elements(shProg->_LinkedShaders); i++) {
+	 for (i = 0; i < ARRAY_SIZE(shProg->_LinkedShaders); i++) {
 	    if (shProg->_LinkedShaders[i])
                destroy_program_variants(st, shProg->_LinkedShaders[i]->Program);
 	 }
