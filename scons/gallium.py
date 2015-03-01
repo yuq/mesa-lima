@@ -283,6 +283,7 @@ def generate(env):
             '_SVID_SOURCE',
             '_BSD_SOURCE',
             '_GNU_SOURCE',
+            '_DEFAULT_SOURCE',
             'HAVE_PTHREAD',
             'HAVE_POSIX_MEMALIGN',
         ]
