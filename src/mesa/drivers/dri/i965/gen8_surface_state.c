@@ -70,7 +70,7 @@ surface_tiling_mode(uint32_t tiling)
 }
 
 static unsigned
-vertical_alignment(struct intel_mipmap_tree *mt)
+vertical_alignment(const struct intel_mipmap_tree *mt)
 {
    switch (mt->align_h) {
    case 4:
@@ -85,7 +85,7 @@ vertical_alignment(struct intel_mipmap_tree *mt)
 }
 
 static unsigned
-horizontal_alignment(struct intel_mipmap_tree *mt)
+horizontal_alignment(const struct intel_mipmap_tree *mt)
 {
    switch (mt->align_w) {
    case 4:
