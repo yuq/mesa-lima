@@ -44,7 +44,7 @@
  *     programmed in order for the programming of this state to be
  *     valid.
  */
-static void
+void
 gen7_blorp_emit_urb_config(struct brw_context *brw)
 {
    /* URB allocations must be done in 8k chunks. */
@@ -83,7 +83,7 @@ gen7_blorp_emit_urb_config(struct brw_context *brw)
 
 
 /* 3DSTATE_BLEND_STATE_POINTERS */
-static void
+void
 gen7_blorp_emit_blend_state_pointer(struct brw_context *brw,
                                     uint32_t cc_blend_state_offset)
 {
@@ -95,7 +95,7 @@ gen7_blorp_emit_blend_state_pointer(struct brw_context *brw,
 
 
 /* 3DSTATE_CC_STATE_POINTERS */
-static void
+void
 gen7_blorp_emit_cc_state_pointer(struct brw_context *brw,
                                  uint32_t cc_state_offset)
 {
@@ -105,7 +105,7 @@ gen7_blorp_emit_cc_state_pointer(struct brw_context *brw,
    ADVANCE_BATCH();
 }
 
-static void
+void
 gen7_blorp_emit_cc_viewport(struct brw_context *brw)
 {
    struct brw_cc_viewport *ccv;
@@ -291,7 +291,7 @@ gen7_blorp_emit_hs_disable(struct brw_context *brw)
  *
  * Disable the tesselation engine.
  */
-static void
+void
 gen7_blorp_emit_te_disable(struct brw_context *brw)
 {
    BEGIN_BATCH(4);
@@ -545,7 +545,7 @@ gen7_blorp_emit_ps_config(struct brw_context *brw,
 }
 
 
-static void
+void
 gen7_blorp_emit_binding_table_pointers_ps(struct brw_context *brw,
                                           uint32_t wm_bind_bo_offset)
 {
@@ -556,7 +556,7 @@ gen7_blorp_emit_binding_table_pointers_ps(struct brw_context *brw,
 }
 
 
-static void
+void
 gen7_blorp_emit_sampler_state_pointers_ps(struct brw_context *brw,
                                           uint32_t sampler_offset)
 {
@@ -567,7 +567,7 @@ gen7_blorp_emit_sampler_state_pointers_ps(struct brw_context *brw,
 }
 
 
-static void
+void
 gen7_blorp_emit_constant_ps(struct brw_context *brw,
                             uint32_t wm_push_const_offset)
 {
@@ -594,7 +594,7 @@ gen7_blorp_emit_constant_ps(struct brw_context *brw,
    ADVANCE_BATCH();
 }
 
-static void
+void
 gen7_blorp_emit_constant_ps_disable(struct brw_context *brw)
 {
    BEGIN_BATCH(7);
@@ -743,7 +743,7 @@ gen7_blorp_emit_depth_disable(struct brw_context *brw)
  *    with the other Depth/Stencil state commands(i.e.  3DSTATE_DEPTH_BUFFER,
  *    3DSTATE_STENCIL_BUFFER, or 3DSTATE_HIER_DEPTH_BUFFER).
  */
-static void
+void
 gen7_blorp_emit_clear_params(struct brw_context *brw,
                              const brw_blorp_params *params)
 {
@@ -756,7 +756,7 @@ gen7_blorp_emit_clear_params(struct brw_context *brw,
 
 
 /* 3DPRIMITIVE */
-static void
+void
 gen7_blorp_emit_primitive(struct brw_context *brw,
                           const brw_blorp_params *params)
 {

@@ -425,6 +425,45 @@ uint32_t
 gen6_blorp_emit_sampler_state(struct brw_context *brw,
                               unsigned tex_filter, unsigned max_lod,
                               bool non_normalized_coords);
+void
+gen7_blorp_emit_urb_config(struct brw_context *brw);
+
+void
+gen7_blorp_emit_blend_state_pointer(struct brw_context *brw,
+                                    uint32_t cc_blend_state_offset);
+
+void
+gen7_blorp_emit_cc_state_pointer(struct brw_context *brw,
+                                 uint32_t cc_state_offset);
+
+void
+gen7_blorp_emit_cc_viewport(struct brw_context *brw);
+
+void
+gen7_blorp_emit_te_disable(struct brw_context *brw);
+
+void
+gen7_blorp_emit_binding_table_pointers_ps(struct brw_context *brw,
+                                          uint32_t wm_bind_bo_offset);
+
+void
+gen7_blorp_emit_sampler_state_pointers_ps(struct brw_context *brw,
+                                          uint32_t sampler_offset);
+
+void
+gen7_blorp_emit_clear_params(struct brw_context *brw,
+                             const brw_blorp_params *params);
+
+void
+gen7_blorp_emit_constant_ps(struct brw_context *brw,
+                            uint32_t wm_push_const_offset);
+
+void
+gen7_blorp_emit_constant_ps_disable(struct brw_context *brw);
+
+void
+gen7_blorp_emit_primitive(struct brw_context *brw,
+                          const brw_blorp_params *params);
 
 /** \} */
 
