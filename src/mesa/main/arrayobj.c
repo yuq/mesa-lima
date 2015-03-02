@@ -685,3 +685,37 @@ _mesa_VertexArrayElementBuffer(GLuint vaobj, GLuint buffer)
    if (bufObj)
       _mesa_reference_buffer_object(ctx, &vao->IndexBufferObj, bufObj);
 }
+
+
+void GLAPIENTRY
+_mesa_GetVertexArrayiv(GLuint vaobj, GLenum pname, GLint *param)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   struct gl_vertex_array_object *vao;
+
+   ASSERT_OUTSIDE_BEGIN_END(ctx);
+
+   /* The GL_ARB_direct_state_access specification says:
+    *
+    *   "An INVALID_OPERATION error is generated if <vaobj> is not
+    *    [compatibility profile: zero or] the name of an existing
+    *    vertex array object."
+    */
+   vao =_mesa_lookup_vao_err(ctx, vaobj, "glGetVertexArrayiv");
+   if (!vao)
+      return;
+
+   /* The GL_ARB_direct_state_access specification says:
+    *
+    *   "An INVALID_ENUM error is generated if <pname> is not
+    *    ELEMENT_ARRAY_BUFFER_BINDING."
+    */
+   if (pname != GL_ELEMENT_ARRAY_BUFFER_BINDING) {
+      _mesa_error(ctx, GL_INVALID_ENUM,
+                  "glGetVertexArrayiv(pname != "
+                  "GL_ELEMENT_ARRAY_BUFFER_BINDING)");
+      return;
+   }
+
+   param[0] = vao->IndexBufferObj->Name;
+}

@@ -102,4 +102,6 @@ GLboolean GLAPIENTRY _mesa_IsVertexArray( GLuint id );
 
 void GLAPIENTRY _mesa_VertexArrayElementBuffer(GLuint vaobj, GLuint buffer);
 
+void GLAPIENTRY _mesa_GetVertexArrayiv(GLuint vaobj, GLenum pname, GLint *param);
+
 #endif /* ARRAYOBJ_H */

@@ -524,6 +524,12 @@
       <param name="divisor" type="GLuint" />
    </function>
 
+   <function name="GetVertexArrayiv" offset="assign">
+      <param name="vaobj" type="GLuint" />
+      <param name="pname" type="GLenum" />
+      <param name="param" type="GLint *" />
+   </function>
+
    <!-- Sampler object functions -->
 
    <function name="CreateSamplers" offset="assign">
