@@ -176,6 +176,10 @@ _mesa_EnableVertexAttribArray(GLuint index);
 
 
 extern void GLAPIENTRY
+_mesa_EnableVertexArrayAttrib(GLuint vaobj, GLuint index);
+
+
+extern void GLAPIENTRY
 _mesa_DisableVertexAttribArray(GLuint index);
 
 

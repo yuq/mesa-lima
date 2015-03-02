@@ -460,6 +460,11 @@
       <param name="index" type="GLuint" />
    </function>
 
+   <function name="EnableVertexArrayAttrib" offset="assign">
+      <param name="vaobj" type="GLuint" />
+      <param name="index" type="GLuint" />
+   </function>
+
    <!-- Sampler object functions -->
 
    <function name="CreateSamplers" offset="assign">
