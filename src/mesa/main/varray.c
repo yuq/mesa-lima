@@ -265,6 +265,7 @@ get_legal_types_mask(const struct gl_context *ctx)
 static bool
 update_array_format(struct gl_context *ctx,
                     const char *func,
+                    struct gl_vertex_array_object *vao,
                     GLuint attrib, GLbitfield legalTypesMask,
                     GLint sizeMin, GLint sizeMax,
                     GLint size, GLenum type,
@@ -379,7 +380,7 @@ update_array_format(struct gl_context *ctx,
    elementSize = _mesa_bytes_per_vertex_attrib(size, type);
    assert(elementSize != -1);
 
-   array = &ctx->Array.VAO->VertexAttrib[attrib];
+   array = &vao->VertexAttrib[attrib];
    array->Size = size;
    array->Type = type;
    array->Format = format;
@@ -389,7 +390,7 @@ update_array_format(struct gl_context *ctx,
    array->RelativeOffset = relativeOffset;
    array->_ElementSize = elementSize;
 
-   ctx->Array.VAO->NewArrays |= VERT_BIT(attrib);
+   vao->NewArrays |= VERT_BIT(attrib);
    ctx->NewState |= _NEW_ARRAY;
 
    return true;
@@ -472,8 +473,9 @@ update_array(struct gl_context *ctx,
       return;
    }
 
-   if (!update_array_format(ctx, func, attrib, legalTypesMask, sizeMin,
-                            sizeMax, size, type, normalized, integer, doubles, 0)) {
+   if (!update_array_format(ctx, func, ctx->Array.VAO, attrib,
+                            legalTypesMask, sizeMin, sizeMax,
+                            size, type, normalized, integer, doubles, 0)) {
       return;
    }
 
@@ -1836,9 +1838,10 @@ vertex_attrib_format(GLuint attribIndex, GLint size, GLenum type,
 
    FLUSH_VERTICES(ctx, 0);
 
-   update_array_format(ctx, func, VERT_ATTRIB_GENERIC(attribIndex),
-                       legalTypes, 1, maxSize, size, type, normalized,
-                       integer, doubles, relativeOffset);
+   update_array_format(ctx, func, ctx->Array.VAO,
+                       VERT_ATTRIB_GENERIC(attribIndex),
+                       legalTypes, 1, maxSize, size, type,
+                       normalized, integer, doubles, relativeOffset);
 }
 
 
