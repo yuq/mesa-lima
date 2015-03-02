@@ -887,6 +887,11 @@ get_vertex_array_attrib(struct gl_context *ctx,
          return array->Integer;
       }
       goto error;
+   case GL_VERTEX_ATTRIB_ARRAY_LONG:
+      if (_mesa_is_desktop_gl(ctx)) {
+         return array->Doubles;
+      }
+      goto error;
    case GL_VERTEX_ATTRIB_ARRAY_DIVISOR_ARB:
       if ((_mesa_is_desktop_gl(ctx) && ctx->Extensions.ARB_instanced_arrays)
           || _mesa_is_gles3(ctx)) {
