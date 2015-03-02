@@ -1086,6 +1086,123 @@ _mesa_GetVertexAttribPointerv(GLuint index, GLenum pname, GLvoid **pointer)
 }
 
 
+/** ARB_direct_state_access */
+void GLAPIENTRY
+_mesa_GetVertexArrayIndexediv(GLuint vaobj, GLuint index,
+                              GLenum pname, GLint *params)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   struct gl_vertex_array_object *vao;
+
+   /* The ARB_direct_state_access specification says:
+    *
+    *    "An INVALID_OPERATION error is generated if <vaobj> is not
+    *     [compatibility profile: zero or] the name of an existing
+    *     vertex array object."
+    */
+   vao = _mesa_lookup_vao_err(ctx, vaobj, "glGetVertexArrayIndexediv");
+   if (!vao)
+      return;
+
+   /* The ARB_direct_state_access specification says:
+    *
+    *    "For GetVertexArrayIndexediv, <pname> must be one of
+    *     VERTEX_ATTRIB_ARRAY_ENABLED, VERTEX_ATTRIB_ARRAY_SIZE,
+    *     VERTEX_ATTRIB_ARRAY_STRIDE, VERTEX_ATTRIB_ARRAY_TYPE,
+    *     VERTEX_ATTRIB_ARRAY_NORMALIZED, VERTEX_ATTRIB_ARRAY_INTEGER,
+    *     VERTEX_ATTRIB_ARRAY_LONG, VERTEX_ATTRIB_ARRAY_DIVISOR, or
+    *     VERTEX_ATTRIB_RELATIVE_OFFSET."
+    *
+    * and:
+    *
+    *    "Add GetVertexArrayIndexediv in 'Get Command' for
+    *     VERTEX_ATTRIB_ARRAY_BUFFER_BINDING
+    *     VERTEX_ATTRIB_BINDING,
+    *     VERTEX_ATTRIB_RELATIVE_OFFSET,
+    *     VERTEX_BINDING_OFFSET, and
+    *     VERTEX_BINDING_STRIDE states"
+    *
+    * The only parameter name common to both lists is
+    * VERTEX_ATTRIB_RELATIVE_OFFSET.  Also note that VERTEX_BINDING_BUFFER
+    * and VERTEX_BINDING_DIVISOR are missing from both lists.  It seems
+    * pretty clear however that the intent is that it should be possible
+    * to query all vertex attrib and binding states that can be set with
+    * a DSA function.
+    */
+   switch (pname) {
+   case GL_VERTEX_BINDING_OFFSET:
+      params[0] = vao->VertexBinding[VERT_ATTRIB_GENERIC(index)].Offset;
+      break;
+   case GL_VERTEX_BINDING_STRIDE:
+      params[0] = vao->VertexBinding[VERT_ATTRIB_GENERIC(index)].Stride;
+      break;
+   case GL_VERTEX_BINDING_DIVISOR:
+      params[0] = vao->VertexBinding[VERT_ATTRIB_GENERIC(index)].InstanceDivisor;
+      break;
+   case GL_VERTEX_BINDING_BUFFER:
+      params[0] = vao->VertexBinding[VERT_ATTRIB_GENERIC(index)].BufferObj->Name;
+      break;
+   default:
+      params[0] = get_vertex_array_attrib(ctx, vao, index, pname,
+                                          "glGetVertexArrayIndexediv");
+      break;
+   }
+}
+
+
+void GLAPIENTRY
+_mesa_GetVertexArrayIndexed64iv(GLuint vaobj, GLuint index,
+                                GLenum pname, GLint64 *params)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   struct gl_vertex_array_object *vao;
+
+   /* The ARB_direct_state_access specification says:
+    *
+    *    "An INVALID_OPERATION error is generated if <vaobj> is not
+    *     [compatibility profile: zero or] the name of an existing
+    *     vertex array object."
+    */
+   vao = _mesa_lookup_vao_err(ctx, vaobj, "glGetVertexArrayIndexed64iv");
+   if (!vao)
+      return;
+
+   /* The ARB_direct_state_access specification says:
+    *
+    *    "For GetVertexArrayIndexed64iv, <pname> must be
+    *     VERTEX_BINDING_OFFSET."
+    *
+    * and:
+    *
+    *    "An INVALID_ENUM error is generated if <pname> is not one of
+    *     the valid values listed above for the corresponding command."
+    */
+   if (pname != GL_VERTEX_BINDING_OFFSET) {
+      _mesa_error(ctx, GL_INVALID_ENUM, "glGetVertexArrayIndexed64iv("
+                  "pname != GL_VERTEX_BINDING_OFFSET)");
+      return;
+   }
+
+   /* The ARB_direct_state_access specification says:
+    *
+    *    "An INVALID_VALUE error is generated if <index> is greater than
+    *     or equal to the value of MAX_VERTEX_ATTRIBS."
+    *
+    * Since the index refers to a buffer binding in this case, the intended
+    * limit must be MAX_VERTEX_ATTRIB_BINDINGS.  Both limits are currently
+    * required to be the same, so in practice this doesn't matter.
+    */
+   if (index >= ctx->Const.MaxVertexAttribBindings) {
+      _mesa_error(ctx, GL_INVALID_VALUE, "glGetVertexArrayIndexed64iv("
+                  "index %d >= the value of GL_MAX_VERTEX_ATTRIB_BINDINGS (%d))",
+                  index, ctx->Const.MaxVertexAttribBindings);
+      return;
+   }
+
+   params[0] = vao->VertexBinding[VERT_ATTRIB_GENERIC(index)].Offset;
+}
+
+
 void GLAPIENTRY
 _mesa_VertexPointerEXT(GLint size, GLenum type, GLsizei stride,
                        GLsizei count, const GLvoid *ptr)

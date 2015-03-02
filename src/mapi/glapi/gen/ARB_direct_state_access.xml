@@ -530,6 +530,20 @@
       <param name="param" type="GLint *" />
    </function>
 
+   <function name="GetVertexArrayIndexediv" offset="assign">
+      <param name="vaobj" type="GLuint" />
+      <param name="index" type="GLuint" />
+      <param name="pname" type="GLenum" />
+      <param name="param" type="GLint *" />
+   </function>
+
+   <function name="GetVertexArrayIndexed64iv" offset="assign">
+      <param name="vaobj" type="GLuint" />
+      <param name="index" type="GLuint" />
+      <param name="pname" type="GLenum" />
+      <param name="param" type="GLint64 *" />
+   </function>
+
    <!-- Sampler object functions -->
 
    <function name="CreateSamplers" offset="assign">

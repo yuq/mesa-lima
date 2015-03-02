@@ -1029,6 +1029,8 @@ const struct function gl_core_functions_possible[] = {
    { "glVertexArrayAttribBinding", 45, -1 },
    { "glVertexArrayBindingDivisor", 45, -1 },
    { "glGetVertexArrayiv", 45, -1 },
+   { "glGetVertexArrayIndexediv", 45, -1 },
+   { "glGetVertexArrayIndexed64iv", 45, -1 },
    { "glCreateSamplers", 45, -1 },
    { "glCreateProgramPipelines", 45, -1 },
    { "glCreateQueries", 45, -1 },
