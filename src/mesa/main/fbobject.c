@@ -2585,17 +2585,34 @@ get_texture_for_framebuffer(struct gl_context *ctx,
                             struct gl_texture_object **texObj)
 {
    GLenum maxLevelsTarget;
+   GLboolean err = GL_TRUE;
 
    *texObj = NULL; /* This will get returned if texture = 0. */
 
    /* The textarget, level, and zoffset parameters are only validated if
     * texture is non-zero.
     */
-   if (texture) {
-      GLboolean err = GL_TRUE;
+   if (!texture)
+      return true;
 
-      *texObj = _mesa_lookup_texture(ctx, texture);
-      if (*texObj != NULL && (*texObj)->Target != 0) {
+   *texObj = _mesa_lookup_texture(ctx, texture);
+   if (*texObj == NULL || (*texObj)->Target == 0) {
+      /* Can't render to a non-existent texture object.
+       *
+       * The OpenGL 4.5 core spec (02.02.2015) in Section 9.2 Binding and
+       * Managing Framebuffer Objects specifies a different error
+       * depending upon the calling function (PDF pages 325-328).
+       * *FramebufferTexture (where *layered = GL_TRUE) throws invalid
+       * value, while the other commands throw invalid operation (where
+       * *layered = GL_FALSE).
+       */
+      const GLenum error = *layered ? GL_INVALID_VALUE :
+                           GL_INVALID_OPERATION;
+      _mesa_error(ctx, error,
+                  "%s(non-existent texture %u)", caller, texture);
+      return false;
+   }
+
          if (textarget == 0) {
             if (*layered) {
                /* We're being called by gl*FramebufferTexture() and textarget
@@ -2644,23 +2661,6 @@ get_texture_for_framebuffer(struct gl_context *ctx,
                 ? !_mesa_is_cube_face(textarget)
                 : ((*texObj)->Target != textarget);
          }
-      }
-      else {
-         /* Can't render to a non-existent texture object.
-          *
-          * The OpenGL 4.5 core spec (02.02.2015) in Section 9.2 Binding and
-          * Managing Framebuffer Objects specifies a different error
-          * depending upon the calling function (PDF pages 325-328).
-          * *FramebufferTexture (where *layered = GL_TRUE) throws invalid
-          * value, while the other commands throw invalid operation (where
-          * *layered = GL_FALSE).
-          */
-         const GLenum error = *layered ? GL_INVALID_VALUE :
-                              GL_INVALID_OPERATION;
-         _mesa_error(ctx, error,
-                     "%s(non-existent texture %u)", caller, texture);
-         return false;
-      }
 
       if (err) {
          _mesa_error(ctx, GL_INVALID_OPERATION,
@@ -2707,7 +2707,6 @@ get_texture_for_framebuffer(struct gl_context *ctx,
                      "%s(invalid level %d)", caller, level);
          return false;
       }
-   }
 
    return true;
 }
