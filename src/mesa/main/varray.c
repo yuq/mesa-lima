@@ -66,6 +66,21 @@
 #define UNSIGNED_INT_10F_11F_11F_REV_BIT  (1 << 14)
 #define ALL_TYPE_BITS                    ((1 << 15) - 1)
 
+#define ATTRIB_FORMAT_TYPES_MASK (BYTE_BIT | UNSIGNED_BYTE_BIT | \
+                                  SHORT_BIT | UNSIGNED_SHORT_BIT | \
+                                  INT_BIT | UNSIGNED_INT_BIT | \
+                                  HALF_BIT | FLOAT_BIT | DOUBLE_BIT | \
+                                  FIXED_GL_BIT | \
+                                  UNSIGNED_INT_2_10_10_10_REV_BIT | \
+                                  INT_2_10_10_10_REV_BIT | \
+                                  UNSIGNED_INT_10F_11F_11F_REV_BIT)
+
+#define ATTRIB_IFORMAT_TYPES_MASK (BYTE_BIT | UNSIGNED_BYTE_BIT | \
+                                   SHORT_BIT | UNSIGNED_SHORT_BIT | \
+                                   INT_BIT | UNSIGNED_INT_BIT)
+
+#define ATTRIB_LFORMAT_TYPES_MASK DOUBLE_BIT
+
 
 /** Convert GL datatype enum into a <type>_BIT value seen above */
 static GLbitfield
@@ -1777,19 +1792,13 @@ _mesa_VertexArrayVertexBuffers(GLuint vaobj, GLuint first, GLsizei count,
 }
 
 
-void GLAPIENTRY
-_mesa_VertexAttribFormat(GLuint attribIndex, GLint size, GLenum type,
-                         GLboolean normalized, GLuint relativeOffset)
+static void
+vertex_attrib_format(GLuint attribIndex, GLint size, GLenum type,
+                     GLboolean normalized, GLboolean integer,
+                     GLboolean doubles, GLbitfield legalTypes,
+                     GLsizei maxSize, GLuint relativeOffset,
+                     const char *func)
 {
-    const GLbitfield legalTypes = (BYTE_BIT | UNSIGNED_BYTE_BIT |
-                                   SHORT_BIT | UNSIGNED_SHORT_BIT |
-                                   INT_BIT | UNSIGNED_INT_BIT |
-                                   HALF_BIT | FLOAT_BIT | DOUBLE_BIT |
-                                   FIXED_GL_BIT |
-                                   UNSIGNED_INT_2_10_10_10_REV_BIT |
-                                   INT_2_10_10_10_REV_BIT |
-                                   UNSIGNED_INT_10F_11F_11F_REV_BIT);
-
    GET_CURRENT_CONTEXT(ctx);
    ASSERT_OUTSIDE_BEGIN_END(ctx);
 
@@ -1799,11 +1808,16 @@ _mesa_VertexAttribFormat(GLuint attribIndex, GLint size, GLenum type,
     *     conditions:
     *     - if no vertex array object is currently bound (see section 2.10);
     *     - ..."
+    *
+    * This error condition only applies to VertexAttribFormat and
+    * VertexAttribIFormat in the extension spec, but we assume that this
+    * is an oversight.  In the OpenGL 4.3 (Core Profile) spec, it applies
+    * to all three functions.
     */
    if (ctx->API == API_OPENGL_CORE &&
        ctx->Array.VAO == ctx->Array.DefaultVAO) {
       _mesa_error(ctx, GL_INVALID_OPERATION,
-                  "glVertexAttribFormat(No array object bound)");
+                  "%s(No array object bound)", func);
       return;
    }
 
@@ -1814,18 +1828,28 @@ _mesa_VertexAttribFormat(GLuint attribIndex, GLint size, GLenum type,
     */
    if (attribIndex >= ctx->Const.Program[MESA_SHADER_VERTEX].MaxAttribs) {
       _mesa_error(ctx, GL_INVALID_VALUE,
-                  "glVertexAttribFormat(attribindex=%u > "
+                  "%s(attribindex=%u > "
                   "GL_MAX_VERTEX_ATTRIBS)",
-                  attribIndex);
+                  func, attribIndex);
       return;
    }
 
    FLUSH_VERTICES(ctx, 0);
 
-   update_array_format(ctx, "glVertexAttribFormat",
-                       VERT_ATTRIB_GENERIC(attribIndex),
-                       legalTypes, 1, BGRA_OR_4, size, type, normalized,
-                       GL_FALSE, GL_FALSE, relativeOffset);
+   update_array_format(ctx, func, VERT_ATTRIB_GENERIC(attribIndex),
+                       legalTypes, 1, maxSize, size, type, normalized,
+                       integer, doubles, relativeOffset);
+}
+
+
+void GLAPIENTRY
+_mesa_VertexAttribFormat(GLuint attribIndex, GLint size, GLenum type,
+                         GLboolean normalized, GLuint relativeOffset)
+{
+   vertex_attrib_format(attribIndex, size, type, normalized,
+                        GL_FALSE, GL_FALSE, ATTRIB_FORMAT_TYPES_MASK,
+                        BGRA_OR_4, relativeOffset,
+                        "glVertexAttribFormat");
 }
 
 
@@ -1833,46 +1857,9 @@ void GLAPIENTRY
 _mesa_VertexAttribIFormat(GLuint attribIndex, GLint size, GLenum type,
                           GLuint relativeOffset)
 {
-   const GLbitfield legalTypes = (BYTE_BIT | UNSIGNED_BYTE_BIT |
-                                  SHORT_BIT | UNSIGNED_SHORT_BIT |
-                                  INT_BIT | UNSIGNED_INT_BIT);
-
-   GET_CURRENT_CONTEXT(ctx);
-   ASSERT_OUTSIDE_BEGIN_END(ctx);
-
-   /* The ARB_vertex_attrib_binding spec says:
-    *
-    *    "An INVALID_OPERATION error is generated under any of the following
-    *     conditions:
-    *     - if no vertex array object is currently bound (see section 2.10);
-    *     - ..."
-    */
-   if (ctx->API == API_OPENGL_CORE &&
-       ctx->Array.VAO == ctx->Array.DefaultVAO) {
-      _mesa_error(ctx, GL_INVALID_OPERATION,
-                  "glVertexAttribIFormat(No array object bound)");
-      return;
-   }
-
-   /* The ARB_vertex_attrib_binding spec says:
-    *
-    *   "The error INVALID_VALUE is generated if index is greater than
-    *    or equal to the value of MAX_VERTEX_ATTRIBS."
-    */
-   if (attribIndex >= ctx->Const.Program[MESA_SHADER_VERTEX].MaxAttribs) {
-      _mesa_error(ctx, GL_INVALID_VALUE,
-                  "glVertexAttribIFormat(attribindex=%u > "
-                  "GL_MAX_VERTEX_ATTRIBS)",
-                  attribIndex);
-      return;
-   }
-
-   FLUSH_VERTICES(ctx, 0);
-
-   update_array_format(ctx, "glVertexAttribIFormat",
-                       VERT_ATTRIB_GENERIC(attribIndex),
-                       legalTypes, 1, 4, size, type, GL_FALSE, GL_TRUE, GL_FALSE,
-                       relativeOffset);
+   vertex_attrib_format(attribIndex, size, type, GL_FALSE,
+                        GL_TRUE, GL_FALSE, ATTRIB_IFORMAT_TYPES_MASK, 4,
+                        relativeOffset, "glVertexAttribIFormat");
 }
 
 
@@ -1880,47 +1867,9 @@ void GLAPIENTRY
 _mesa_VertexAttribLFormat(GLuint attribIndex, GLint size, GLenum type,
                           GLuint relativeOffset)
 {
-   const GLbitfield legalTypes = DOUBLE_BIT;
-
-   GET_CURRENT_CONTEXT(ctx);
-   ASSERT_OUTSIDE_BEGIN_END(ctx);
-
-   /* Page 298 of the PDF of the OpenGL 4.3 (Core Profile) spec says:
-    *
-    *    "An INVALID_OPERATION error is generated under any of the following
-    *     conditions:
-    *     • if no vertex array object is currently bound (see section 10.4);
-    *     • ..."
-    *
-    * This language is missing from the extension spec, but we assume
-    * that this is an oversight.
-    */
-   if (ctx->API == API_OPENGL_CORE &&
-       ctx->Array.VAO == ctx->Array.DefaultVAO) {
-      _mesa_error(ctx, GL_INVALID_OPERATION,
-                  "glVertexAttribLFormat(No array object bound)");
-      return;
-   }
-
-   /* The ARB_vertex_attrib_binding spec says:
-    *
-    *   "The error INVALID_VALUE is generated if <attribindex> is greater than
-    *    or equal to the value of MAX_VERTEX_ATTRIBS."
-    */
-   if (attribIndex >= ctx->Const.Program[MESA_SHADER_VERTEX].MaxAttribs) {
-      _mesa_error(ctx, GL_INVALID_VALUE,
-                  "glVertexAttribLFormat(attribindex=%u > "
-                  "GL_MAX_VERTEX_ATTRIBS)",
-                  attribIndex);
-      return;
-   }
-
-   FLUSH_VERTICES(ctx, 0);
-
-   update_array_format(ctx, "glVertexAttribLFormat",
-                       VERT_ATTRIB_GENERIC(attribIndex),
-                       legalTypes, 1, 4, size, type, GL_FALSE, GL_FALSE, GL_TRUE,
-                       relativeOffset);
+   vertex_attrib_format(attribIndex, size, type, GL_FALSE, GL_FALSE,
+                        GL_TRUE, ATTRIB_LFORMAT_TYPES_MASK, 4,
+                        relativeOffset, "glVertexAttribLFormat");
 }
 
 
