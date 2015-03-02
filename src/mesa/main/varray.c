@@ -184,10 +184,11 @@ bind_vertex_buffer(struct gl_context *ctx,
  * given by bindingIndex.
  */
 static void
-vertex_binding_divisor(struct gl_context *ctx, GLuint bindingIndex,
+vertex_binding_divisor(struct gl_context *ctx,
+                       struct gl_vertex_array_object *vao,
+                       GLuint bindingIndex,
                        GLuint divisor)
 {
-   struct gl_vertex_array_object *vao = ctx->Array.VAO;
    struct gl_vertex_buffer_binding *binding =
       &vao->VertexBinding[bindingIndex];
 
@@ -1474,7 +1475,7 @@ _mesa_VertexAttribDivisor(GLuint index, GLuint divisor)
     *       VertexBindingDivisor(index, divisor);"
     */
    vertex_attrib_binding(ctx, vao, genericIndex, genericIndex);
-   vertex_binding_divisor(ctx, genericIndex, divisor);
+   vertex_binding_divisor(ctx, vao, genericIndex, divisor);
 }
 
 
@@ -2076,7 +2077,8 @@ _mesa_VertexBindingDivisor(GLuint bindingIndex, GLuint divisor)
       return;
    }
 
-   vertex_binding_divisor(ctx, VERT_ATTRIB_GENERIC(bindingIndex), divisor);
+   vertex_binding_divisor(ctx, ctx->Array.VAO,
+                          VERT_ATTRIB_GENERIC(bindingIndex), divisor);
 }
 
 
