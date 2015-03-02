@@ -470,6 +470,14 @@
       <param name="buffer" type="GLuint" />
    </function>
 
+   <function name="VertexArrayVertexBuffer" offset="assign">
+      <param name="vaobj" type="GLuint" />
+      <param name="bindingindex" type="GLuint" />
+      <param name="buffer" type="GLuint" />
+      <param name="offset" type="GLintptr" />
+      <param name="stride" type="GLsizei" />
+   </function>
+
    <!-- Sampler object functions -->
 
    <function name="CreateSamplers" offset="assign">
