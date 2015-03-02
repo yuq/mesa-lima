@@ -512,6 +512,12 @@
       <param name="relativeoffset" type="GLuint" />
    </function>
 
+   <function name="VertexArrayAttribBinding" offset="assign">
+      <param name="vaobj" type="GLuint" />
+      <param name="attribindex" type="GLuint" />
+      <param name="bindingindex" type="GLuint" />
+   </function>
+
    <!-- Sampler object functions -->
 
    <function name="CreateSamplers" offset="assign">

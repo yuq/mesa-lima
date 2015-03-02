@@ -334,6 +334,10 @@ extern void GLAPIENTRY
 _mesa_VertexAttribBinding(GLuint attribIndex, GLuint bindingIndex);
 
 extern void GLAPIENTRY
+_mesa_VertexArrayAttribBinding(GLuint vaobj, GLuint attribIndex,
+                               GLuint bindingIndex);
+
+extern void GLAPIENTRY
 _mesa_VertexBindingDivisor(GLuint bindingIndex, GLuint divisor);
 
 

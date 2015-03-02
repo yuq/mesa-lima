@@ -1026,6 +1026,7 @@ const struct function gl_core_functions_possible[] = {
    { "glVertexArrayAttribFormat", 45, -1 },
    { "glVertexArrayAttribIFormat", 45, -1 },
    { "glVertexArrayAttribLFormat", 45, -1 },
+   { "glVertexArrayAttribBinding", 45, -1 },
    { "glCreateSamplers", 45, -1 },
    { "glCreateProgramPipelines", 45, -1 },
    { "glCreateQueries", 45, -1 },
