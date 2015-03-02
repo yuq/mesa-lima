@@ -93,6 +93,8 @@ void GLAPIENTRY _mesa_GenVertexArrays(GLsizei n, GLuint *arrays);
 
 void GLAPIENTRY _mesa_GenVertexArraysAPPLE(GLsizei n, GLuint *buffer);
 
+void GLAPIENTRY _mesa_CreateVertexArrays(GLsizei n, GLuint *arrays);
+
 GLboolean GLAPIENTRY _mesa_IsVertexArray( GLuint id );
 
 #endif /* ARRAYOBJ_H */

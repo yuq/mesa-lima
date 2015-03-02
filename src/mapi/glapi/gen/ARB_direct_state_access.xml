@@ -448,6 +448,13 @@
       <param name="params" type="GLint *" />
    </function>
 
+   <!-- Vertex Array object functions -->
+
+   <function name="CreateVertexArrays" offset="assign">
+      <param name="n" type="GLsizei" />
+      <param name="arrays" type="GLuint *" />
+   </function>
+
    <!-- Sampler object functions -->
 
    <function name="CreateSamplers" offset="assign">

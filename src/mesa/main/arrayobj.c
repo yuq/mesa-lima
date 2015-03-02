@@ -481,19 +481,23 @@ _mesa_DeleteVertexArrays(GLsizei n, const GLuint *ids)
 
 /**
  * Generate a set of unique array object IDs and store them in \c arrays.
- * Helper for _mesa_GenVertexArrays[APPLE]() functions below.
+ * Helper for _mesa_GenVertexArrays[APPLE]() and _mesa_CreateVertexArrays()
+ * below.
+ *
  * \param n       Number of IDs to generate.
  * \param arrays  Array of \c n locations to store the IDs.
- * \param vboOnly Will arrays have to reside in VBOs?
+ * \param create  Indicates that the objects should also be created.
+ * \param func    The name of the GL entry point.
  */
 static void
-gen_vertex_arrays(struct gl_context *ctx, GLsizei n, GLuint *arrays)
+gen_vertex_arrays(struct gl_context *ctx, GLsizei n, GLuint *arrays,
+                  bool create, const char *func)
 {
    GLuint first;
    GLint i;
 
    if (n < 0) {
-      _mesa_error(ctx, GL_INVALID_VALUE, "glGenVertexArrays");
+      _mesa_error(ctx, GL_INVALID_VALUE, "%s(n < 0)", func);
       return;
    }
 
@@ -503,16 +507,20 @@ gen_vertex_arrays(struct gl_context *ctx, GLsizei n, GLuint *arrays)
 
    first = _mesa_HashFindFreeKeyBlock(ctx->Array.Objects, n);
 
-   /* Allocate new, empty array objects and return identifiers */
+   /* For the sake of simplicity we create the array objects in both
+    * the Gen* and Create* cases.  The only difference is the value of
+    * EverBound, which is set to true in the Create* case.
+    */
    for (i = 0; i < n; i++) {
       struct gl_vertex_array_object *obj;
       GLuint name = first + i;
 
       obj = (*ctx->Driver.NewArrayObject)( ctx, name );
       if (!obj) {
-         _mesa_error(ctx, GL_OUT_OF_MEMORY, "glGenVertexArrays");
+         _mesa_error(ctx, GL_OUT_OF_MEMORY, "%s", func);
          return;
       }
+      obj->EverBound = create;
       save_array_object(ctx, obj);
       arrays[i] = first + i;
    }
@@ -527,7 +535,7 @@ void GLAPIENTRY
 _mesa_GenVertexArrays(GLsizei n, GLuint *arrays)
 {
    GET_CURRENT_CONTEXT(ctx);
-   gen_vertex_arrays(ctx, n, arrays);
+   gen_vertex_arrays(ctx, n, arrays, false, "glGenVertexArrays");
 }
 
 
@@ -539,7 +547,19 @@ void GLAPIENTRY
 _mesa_GenVertexArraysAPPLE(GLsizei n, GLuint *arrays)
 {
    GET_CURRENT_CONTEXT(ctx);
-   gen_vertex_arrays(ctx, n, arrays);
+   gen_vertex_arrays(ctx, n, arrays, false, "glGenVertexArraysAPPLE");
+}
+
+
+/**
+ * ARB_direct_state_access
+ * Generates ID's and creates the array objects.
+ */
+void GLAPIENTRY
+_mesa_CreateVertexArrays(GLsizei n, GLuint *arrays)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   gen_vertex_arrays(ctx, n, arrays, true, "glCreateVertexArrays");
 }
 
 

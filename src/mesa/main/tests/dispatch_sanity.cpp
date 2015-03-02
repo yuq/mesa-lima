@@ -1017,6 +1017,7 @@ const struct function gl_core_functions_possible[] = {
    { "glTextureStorage3DMultisample", 45, -1 },
    { "glTextureBuffer", 45, -1 },
    { "glTextureBufferRange", 45, -1 },
+   { "glCreateVertexArrays", 45, -1 },
    { "glCreateSamplers", 45, -1 },
    { "glCreateProgramPipelines", 45, -1 },
    { "glCreateQueries", 45, -1 },
