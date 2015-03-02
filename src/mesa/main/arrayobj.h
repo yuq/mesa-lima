@@ -100,4 +100,6 @@ void GLAPIENTRY _mesa_CreateVertexArrays(GLsizei n, GLuint *arrays);
 
 GLboolean GLAPIENTRY _mesa_IsVertexArray( GLuint id );
 
+void GLAPIENTRY _mesa_VertexArrayElementBuffer(GLuint vaobj, GLuint buffer);
+
 #endif /* ARRAYOBJ_H */

@@ -1020,6 +1020,7 @@ const struct function gl_core_functions_possible[] = {
    { "glCreateVertexArrays", 45, -1 },
    { "glDisableVertexArrayAttrib", 45, -1 },
    { "glEnableVertexArrayAttrib", 45, -1 },
+   { "glVertexArrayElementBuffer", 45, -1 },
    { "glCreateSamplers", 45, -1 },
    { "glCreateProgramPipelines", 45, -1 },
    { "glCreateQueries", 45, -1 },
