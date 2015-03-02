@@ -79,6 +79,7 @@ XCBDRI2_REQUIRED=1.8
 XCBGLX_REQUIRED=1.8.1
 XSHMFENCE_REQUIRED=1.1
 XVMC_REQUIRED=1.0.6
+PYTHON_MAKO_REQUIRED=0.3.4
 
 dnl Check for progs
 AC_PROG_CPP
@@ -114,7 +115,12 @@ if test "x$INDENT" != "xcat"; then
     fi
 fi
 
-AX_CHECK_PYTHON_MAKO_MODULE(0.3.4)
+AX_CHECK_PYTHON_MAKO_MODULE($PYTHON_MAKO_REQUIRED)
+if test -n "$PYTHON2" -a "x$acv_mako_found" = "xyes"; then
+    AC_MSG_RESULT(yes)
+else
+    AC_MSG_ERROR([Python mako module v$PYTHON_MAKO_REQUIRED or higher not found])
+fi
 
 AC_PROG_INSTALL
 
