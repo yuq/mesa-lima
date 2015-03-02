@@ -1363,6 +1363,8 @@ void radeon_llvm_context_init(struct radeon_llvm_context * ctx)
 	bld_base->op_actions[TGSI_OPCODE_SGT].emit = emit_cmp;
 	bld_base->op_actions[TGSI_OPCODE_SIN].emit = build_tgsi_intrinsic_nomem;
 	bld_base->op_actions[TGSI_OPCODE_SIN].intr_name = "llvm.sin.f32";
+	bld_base->op_actions[TGSI_OPCODE_SQRT].emit = build_tgsi_intrinsic_nomem;
+	bld_base->op_actions[TGSI_OPCODE_SQRT].intr_name = "llvm.sqrt.f32";
 	bld_base->op_actions[TGSI_OPCODE_SSG].emit = emit_ssg;
 	bld_base->op_actions[TGSI_OPCODE_TEX].fetch_args = tex_fetch_args;
 	bld_base->op_actions[TGSI_OPCODE_TEX].intr_name = "llvm.AMDGPU.tex";

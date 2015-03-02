@@ -403,7 +403,7 @@ static int si_get_shader_param(struct pipe_screen* pscreen, unsigned shader, enu
 	case PIPE_SHADER_CAP_TGSI_CONT_SUPPORTED:
 		return 1;
 	case PIPE_SHADER_CAP_TGSI_SQRT_SUPPORTED:
-		return 0;
+		return 1;
 	case PIPE_SHADER_CAP_INDIRECT_INPUT_ADDR:
 		/* Indirection of geometry shader input dimension is not
 		 * handled yet
