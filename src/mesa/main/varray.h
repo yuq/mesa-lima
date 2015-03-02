@@ -299,6 +299,11 @@ _mesa_BindVertexBuffers(GLuint first, GLsizei count, const GLuint *buffers,
                         const GLintptr *offsets, const GLsizei *strides);
 
 extern void GLAPIENTRY
+_mesa_VertexArrayVertexBuffers(GLuint vaobj, GLuint first, GLsizei count,
+                               const GLuint *buffers,
+                               const GLintptr *offsets, const GLsizei *strides);
+
+extern void GLAPIENTRY
 _mesa_VertexAttribFormat(GLuint attribIndex, GLint size, GLenum type,
                          GLboolean normalized, GLuint relativeOffset);
 
