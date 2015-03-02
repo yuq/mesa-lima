@@ -82,6 +82,7 @@ struct cso_context {
    struct u_vbuf *vbuf;
 
    boolean has_geometry_shader;
+   boolean has_tessellation;
    boolean has_streamout;
 
    struct sampler_info samplers[PIPE_SHADER_TYPES];
@@ -108,6 +109,8 @@ struct cso_context {
    void *fragment_shader, *fragment_shader_saved;
    void *vertex_shader, *vertex_shader_saved;
    void *geometry_shader, *geometry_shader_saved;
+   void *tessctrl_shader, *tessctrl_shader_saved;
+   void *tesseval_shader, *tesseval_shader_saved;
    void *velements, *velements_saved;
    struct pipe_query *render_condition, *render_condition_saved;
    uint render_condition_mode, render_condition_mode_saved;
@@ -272,6 +275,10 @@ struct cso_context *cso_create_context( struct pipe_context *pipe )
    if (pipe->screen->get_shader_param(pipe->screen, PIPE_SHADER_GEOMETRY,
                                 PIPE_SHADER_CAP_MAX_INSTRUCTIONS) > 0) {
       ctx->has_geometry_shader = TRUE;
+   }
+   if (pipe->screen->get_shader_param(pipe->screen, PIPE_SHADER_TESS_CTRL,
+                                PIPE_SHADER_CAP_MAX_INSTRUCTIONS) > 0) {
+      ctx->has_tessellation = TRUE;
    }
    if (pipe->screen->get_param(pipe->screen,
                                PIPE_CAP_MAX_STREAM_OUTPUT_BUFFERS) != 0) {
@@ -810,6 +817,92 @@ void cso_restore_geometry_shader(struct cso_context *ctx)
       ctx->geometry_shader = ctx->geometry_shader_saved;
    }
    ctx->geometry_shader_saved = NULL;
+}
+
+void cso_set_tessctrl_shader_handle(struct cso_context *ctx, void *handle)
+{
+   assert(ctx->has_tessellation || !handle);
+
+   if (ctx->has_tessellation && ctx->tessctrl_shader != handle) {
+      ctx->tessctrl_shader = handle;
+      ctx->pipe->bind_tcs_state(ctx->pipe, handle);
+   }
+}
+
+void cso_delete_tessctrl_shader(struct cso_context *ctx, void *handle)
+{
+    if (handle == ctx->tessctrl_shader) {
+      /* unbind before deleting */
+      ctx->pipe->bind_tcs_state(ctx->pipe, NULL);
+      ctx->tessctrl_shader = NULL;
+   }
+   ctx->pipe->delete_tcs_state(ctx->pipe, handle);
+}
+
+void cso_save_tessctrl_shader(struct cso_context *ctx)
+{
+   if (!ctx->has_tessellation) {
+      return;
+   }
+
+   assert(!ctx->tessctrl_shader_saved);
+   ctx->tessctrl_shader_saved = ctx->tessctrl_shader;
+}
+
+void cso_restore_tessctrl_shader(struct cso_context *ctx)
+{
+   if (!ctx->has_tessellation) {
+      return;
+   }
+
+   if (ctx->tessctrl_shader_saved != ctx->tessctrl_shader) {
+      ctx->pipe->bind_tcs_state(ctx->pipe, ctx->tessctrl_shader_saved);
+      ctx->tessctrl_shader = ctx->tessctrl_shader_saved;
+   }
+   ctx->tessctrl_shader_saved = NULL;
+}
+
+void cso_set_tesseval_shader_handle(struct cso_context *ctx, void *handle)
+{
+   assert(ctx->has_tessellation || !handle);
+
+   if (ctx->has_tessellation && ctx->tesseval_shader != handle) {
+      ctx->tesseval_shader = handle;
+      ctx->pipe->bind_tes_state(ctx->pipe, handle);
+   }
+}
+
+void cso_delete_tesseval_shader(struct cso_context *ctx, void *handle)
+{
+    if (handle == ctx->tesseval_shader) {
+      /* unbind before deleting */
+      ctx->pipe->bind_tes_state(ctx->pipe, NULL);
+      ctx->tesseval_shader = NULL;
+   }
+   ctx->pipe->delete_tes_state(ctx->pipe, handle);
+}
+
+void cso_save_tesseval_shader(struct cso_context *ctx)
+{
+   if (!ctx->has_tessellation) {
+      return;
+   }
+
+   assert(!ctx->tesseval_shader_saved);
+   ctx->tesseval_shader_saved = ctx->tesseval_shader;
+}
+
+void cso_restore_tesseval_shader(struct cso_context *ctx)
+{
+   if (!ctx->has_tessellation) {
+      return;
+   }
+
+   if (ctx->tesseval_shader_saved != ctx->tesseval_shader) {
+      ctx->pipe->bind_tes_state(ctx->pipe, ctx->tesseval_shader_saved);
+      ctx->tesseval_shader = ctx->tesseval_shader_saved;
+   }
+   ctx->tesseval_shader_saved = NULL;
 }
 
 /* clip state */
