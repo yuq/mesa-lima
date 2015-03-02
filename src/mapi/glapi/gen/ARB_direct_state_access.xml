@@ -487,6 +487,31 @@
       <param name="strides" type="const GLsizei *" />
    </function>
 
+   <function name="VertexArrayAttribFormat" offset="assign">
+      <param name="vaobj" type="GLuint" />
+      <param name="attribindex" type="GLuint" />
+      <param name="size" type="GLint" />
+      <param name="type" type="GLenum" />
+      <param name="normalized" type="GLboolean" />
+      <param name="relativeoffset" type="GLuint" />
+   </function>
+
+   <function name="VertexArrayAttribIFormat" offset="assign">
+      <param name="vaobj" type="GLuint" />
+      <param name="attribindex" type="GLuint" />
+      <param name="size" type="GLint" />
+      <param name="type" type="GLenum" />
+      <param name="relativeoffset" type="GLuint" />
+   </function>
+
+   <function name="VertexArrayAttribLFormat" offset="assign">
+      <param name="vaobj" type="GLuint" />
+      <param name="attribindex" type="GLuint" />
+      <param name="size" type="GLint" />
+      <param name="type" type="GLenum" />
+      <param name="relativeoffset" type="GLuint" />
+   </function>
+
    <!-- Sampler object functions -->
 
    <function name="CreateSamplers" offset="assign">

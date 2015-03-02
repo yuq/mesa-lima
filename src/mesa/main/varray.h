@@ -308,12 +308,27 @@ _mesa_VertexAttribFormat(GLuint attribIndex, GLint size, GLenum type,
                          GLboolean normalized, GLuint relativeOffset);
 
 extern void GLAPIENTRY
+_mesa_VertexArrayAttribFormat(GLuint vaobj, GLuint attribIndex, GLint size,
+                              GLenum type, GLboolean normalized,
+                              GLuint relativeOffset);
+
+extern void GLAPIENTRY
 _mesa_VertexAttribIFormat(GLuint attribIndex, GLint size, GLenum type,
                           GLuint relativeOffset);
 
 extern void GLAPIENTRY
+_mesa_VertexArrayAttribIFormat(GLuint vaobj, GLuint attribIndex,
+                               GLint size, GLenum type,
+                               GLuint relativeOffset);
+
+extern void GLAPIENTRY
 _mesa_VertexAttribLFormat(GLuint attribIndex, GLint size, GLenum type,
                           GLuint relativeOffset);
+
+extern void GLAPIENTRY
+_mesa_VertexArrayAttribLFormat(GLuint vaobj, GLuint attribIndex,
+                               GLint size, GLenum type,
+                               GLuint relativeOffset);
 
 extern void GLAPIENTRY
 _mesa_VertexAttribBinding(GLuint attribIndex, GLuint bindingIndex);
