@@ -265,6 +265,18 @@ void gen7_set_surface_mcs_info(struct brw_context *brw,
 void gen7_check_surface_setup(uint32_t *surf, bool is_render_target);
 void gen7_init_vtable_surface_functions(struct brw_context *brw);
 
+/* gen8_ps_state.c */
+void gen8_upload_ps_state(struct brw_context *brw,
+                          const struct gl_fragment_program *fp,
+                          const struct brw_stage_state *stage_state,
+                          const struct brw_wm_prog_data *prog_data,
+                          uint32_t fast_clear_op);
+
+void gen8_upload_ps_extra(struct brw_context *brw,
+                          const struct gl_fragment_program *fp,
+                          const struct brw_wm_prog_data *prog_data,
+                          bool multisampled_fbo);
+
 /* gen7_sol_state.c */
 void gen7_upload_3dstate_so_decl_list(struct brw_context *brw,
                                       const struct brw_vue_map *vue_map);
