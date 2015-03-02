@@ -139,11 +139,12 @@ vertex_attrib_binding(struct gl_context *ctx, GLuint attribIndex,
  * and sets the Offset and Stride fields.
  */
 static void
-bind_vertex_buffer(struct gl_context *ctx, GLuint index,
+bind_vertex_buffer(struct gl_context *ctx,
+                   struct gl_vertex_array_object *vao,
+                   GLuint index,
                    struct gl_buffer_object *vbo,
                    GLintptr offset, GLsizei stride)
 {
-   struct gl_vertex_array_object *vao = ctx->Array.VAO;
    struct gl_vertex_buffer_binding *binding = &vao->VertexBinding[index];
 
    if (binding->BufferObj != vbo ||
@@ -471,7 +472,7 @@ update_array(struct gl_context *ctx,
 
    /* Update the vertex buffer binding */
    effectiveStride = stride != 0 ? stride : array->_ElementSize;
-   bind_vertex_buffer(ctx, attrib, ctx->Array.ArrayBufferObj,
+   bind_vertex_buffer(ctx, ctx->Array.VAO, attrib, ctx->Array.ArrayBufferObj,
                       (GLintptr) ptr, effectiveStride);
 }
 
@@ -1491,7 +1492,7 @@ _mesa_BindVertexBuffer(GLuint bindingIndex, GLuint buffer, GLintptr offset,
                        GLsizei stride)
 {
    GET_CURRENT_CONTEXT(ctx);
-   const struct gl_vertex_array_object *vao = ctx->Array.VAO;
+   struct gl_vertex_array_object * const vao = ctx->Array.VAO;
    struct gl_buffer_object *vbo;
 
    ASSERT_OUTSIDE_BEGIN_END(ctx);
@@ -1573,7 +1574,7 @@ _mesa_BindVertexBuffer(GLuint bindingIndex, GLuint buffer, GLintptr offset,
       vbo = ctx->Shared->NullBufferObj;
    }
 
-   bind_vertex_buffer(ctx, VERT_ATTRIB_GENERIC(bindingIndex),
+   bind_vertex_buffer(ctx, vao, VERT_ATTRIB_GENERIC(bindingIndex),
                       vbo, offset, stride);
 }
 
@@ -1626,7 +1627,8 @@ _mesa_BindVertexBuffers(GLuint first, GLsizei count, const GLuint *buffers,
       struct gl_buffer_object *vbo = ctx->Shared->NullBufferObj;
 
       for (i = 0; i < count; i++)
-         bind_vertex_buffer(ctx, VERT_ATTRIB_GENERIC(first + i), vbo, 0, 16);
+         bind_vertex_buffer(ctx, vao, VERT_ATTRIB_GENERIC(first + i),
+                            vbo, 0, 16);
 
       return;
    }
@@ -1698,8 +1700,8 @@ _mesa_BindVertexBuffers(GLuint first, GLsizei count, const GLuint *buffers,
          vbo = ctx->Shared->NullBufferObj;
       }
 
-      bind_vertex_buffer(ctx, VERT_ATTRIB_GENERIC(first + i), vbo,
-                         offsets[i], strides[i]);
+      bind_vertex_buffer(ctx, vao, VERT_ATTRIB_GENERIC(first + i),
+                         vbo, offsets[i], strides[i]);
    }
 
    _mesa_end_bufferobj_lookups(ctx);
