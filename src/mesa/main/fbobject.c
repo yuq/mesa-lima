@@ -2613,100 +2613,100 @@ get_texture_for_framebuffer(struct gl_context *ctx,
       return false;
    }
 
-         if (textarget == 0) {
-            if (*layered) {
-               /* We're being called by gl*FramebufferTexture() and textarget
-                * is not used.
-                */
-               switch ((*texObj)->Target) {
-               case GL_TEXTURE_3D:
-               case GL_TEXTURE_1D_ARRAY_EXT:
-               case GL_TEXTURE_2D_ARRAY_EXT:
-               case GL_TEXTURE_CUBE_MAP:
-               case GL_TEXTURE_CUBE_MAP_ARRAY:
-               case GL_TEXTURE_2D_MULTISAMPLE_ARRAY:
-                  err = false;
-                  break;
-               case GL_TEXTURE_1D:
-               case GL_TEXTURE_2D:
-               case GL_TEXTURE_RECTANGLE:
-               case GL_TEXTURE_2D_MULTISAMPLE:
-                  /* These texture types are valid to pass to
-                   * glFramebufferTexture(), but since they aren't layered, it
-                   * is equivalent to calling glFramebufferTexture{1D,2D}().
-                   */
-                  err = false;
-                  *layered = false;
-                  textarget = (*texObj)->Target;
-                  break;
-               default:
-                  err = true;
-                  break;
-               }
-            } else {
-               /* We're being called by glFramebufferTextureLayer() and
-                * textarget is not used.  The only legal texture types for
-                * that function are 3D and 1D/2D arrays textures.
-                */
-               err = ((*texObj)->Target != GL_TEXTURE_3D) &&
-                  ((*texObj)->Target != GL_TEXTURE_1D_ARRAY) &&
-                  ((*texObj)->Target != GL_TEXTURE_2D_ARRAY) &&
-                  ((*texObj)->Target != GL_TEXTURE_CUBE_MAP_ARRAY) &&
-                  ((*texObj)->Target != GL_TEXTURE_2D_MULTISAMPLE_ARRAY);
-            }
+   if (textarget == 0) {
+      if (*layered) {
+         /* We're being called by gl*FramebufferTexture() and textarget
+          * is not used.
+          */
+         switch ((*texObj)->Target) {
+         case GL_TEXTURE_3D:
+         case GL_TEXTURE_1D_ARRAY_EXT:
+         case GL_TEXTURE_2D_ARRAY_EXT:
+         case GL_TEXTURE_CUBE_MAP:
+         case GL_TEXTURE_CUBE_MAP_ARRAY:
+         case GL_TEXTURE_2D_MULTISAMPLE_ARRAY:
+            err = false;
+            break;
+         case GL_TEXTURE_1D:
+         case GL_TEXTURE_2D:
+         case GL_TEXTURE_RECTANGLE:
+         case GL_TEXTURE_2D_MULTISAMPLE:
+            /* These texture types are valid to pass to
+             * glFramebufferTexture(), but since they aren't layered, it
+             * is equivalent to calling glFramebufferTexture{1D,2D}().
+             */
+            err = false;
+            *layered = false;
+            textarget = (*texObj)->Target;
+            break;
+         default:
+            err = true;
+            break;
          }
-         else {
-            /* Make sure textarget is consistent with the texture's type */
-            err = ((*texObj)->Target == GL_TEXTURE_CUBE_MAP)
-                ? !_mesa_is_cube_face(textarget)
-                : ((*texObj)->Target != textarget);
-         }
-
-      if (err) {
-         _mesa_error(ctx, GL_INVALID_OPERATION,
-                     "%s(invalid or mismatched texture target)", caller);
-         return false;
+      } else {
+         /* We're being called by glFramebufferTextureLayer() and
+          * textarget is not used.  The only legal texture types for
+          * that function are 3D and 1D/2D arrays textures.
+          */
+         err = ((*texObj)->Target != GL_TEXTURE_3D) &&
+            ((*texObj)->Target != GL_TEXTURE_1D_ARRAY) &&
+            ((*texObj)->Target != GL_TEXTURE_2D_ARRAY) &&
+            ((*texObj)->Target != GL_TEXTURE_CUBE_MAP_ARRAY) &&
+            ((*texObj)->Target != GL_TEXTURE_2D_MULTISAMPLE_ARRAY);
       }
+   }
+   else {
+      /* Make sure textarget is consistent with the texture's type */
+      err = ((*texObj)->Target == GL_TEXTURE_CUBE_MAP)
+          ? !_mesa_is_cube_face(textarget)
+          : ((*texObj)->Target != textarget);
+   }
 
-      /* Page 306 (page 328 of the PDF) of the OpenGL 4.5 (Core Profile)
-       * spec says:
-       *
-       *    "An INVALID_VALUE error is generated if texture is non-zero
-       *     and layer is negative."
-       */
-      if (zoffset < 0) {
+   if (err) {
+      _mesa_error(ctx, GL_INVALID_OPERATION,
+                  "%s(invalid or mismatched texture target)", caller);
+      return false;
+   }
+
+   /* Page 306 (page 328 of the PDF) of the OpenGL 4.5 (Core Profile)
+    * spec says:
+    *
+    *    "An INVALID_VALUE error is generated if texture is non-zero
+    *     and layer is negative."
+    */
+   if (zoffset < 0) {
+      _mesa_error(ctx, GL_INVALID_VALUE,
+                  "%s(layer %u < 0)", caller, zoffset);
+      return false;
+   }
+
+   if ((*texObj)->Target == GL_TEXTURE_3D) {
+      const GLuint maxSize = 1 << (ctx->Const.Max3DTextureLevels - 1);
+      if (zoffset >= maxSize) {
          _mesa_error(ctx, GL_INVALID_VALUE,
-                     "%s(layer %u < 0)", caller, zoffset);
+                     "%s(invalid zoffset %u)", caller, zoffset);
          return false;
       }
-
-      if ((*texObj)->Target == GL_TEXTURE_3D) {
-         const GLuint maxSize = 1 << (ctx->Const.Max3DTextureLevels - 1);
-         if (zoffset >= maxSize) {
-            _mesa_error(ctx, GL_INVALID_VALUE,
-                        "%s(invalid zoffset %u)", caller, zoffset);
-            return false;
-         }
-      }
-      else if (((*texObj)->Target == GL_TEXTURE_1D_ARRAY) ||
-               ((*texObj)->Target == GL_TEXTURE_2D_ARRAY) ||
-               ((*texObj)->Target == GL_TEXTURE_CUBE_MAP_ARRAY) ||
-               ((*texObj)->Target == GL_TEXTURE_2D_MULTISAMPLE_ARRAY)) {
-         if (zoffset >= ctx->Const.MaxArrayTextureLayers) {
-            _mesa_error(ctx, GL_INVALID_VALUE,
-                        "%s(layer %u >= GL_MAX_ARRAY_TEXTURE_LAYERS)",
-                        caller, zoffset);
-            return false;
-         }
-      }
-
-      maxLevelsTarget = textarget ? textarget : (*texObj)->Target;
-      if ((level < 0) ||
-          (level >= _mesa_max_texture_levels(ctx, maxLevelsTarget))) {
+   }
+   else if (((*texObj)->Target == GL_TEXTURE_1D_ARRAY) ||
+            ((*texObj)->Target == GL_TEXTURE_2D_ARRAY) ||
+            ((*texObj)->Target == GL_TEXTURE_CUBE_MAP_ARRAY) ||
+            ((*texObj)->Target == GL_TEXTURE_2D_MULTISAMPLE_ARRAY)) {
+      if (zoffset >= ctx->Const.MaxArrayTextureLayers) {
          _mesa_error(ctx, GL_INVALID_VALUE,
-                     "%s(invalid level %d)", caller, level);
+                     "%s(layer %u >= GL_MAX_ARRAY_TEXTURE_LAYERS)",
+                     caller, zoffset);
          return false;
       }
+   }
+
+   maxLevelsTarget = textarget ? textarget : (*texObj)->Target;
+   if ((level < 0) ||
+       (level >= _mesa_max_texture_levels(ctx, maxLevelsTarget))) {
+      _mesa_error(ctx, GL_INVALID_VALUE,
+                  "%s(invalid level %d)", caller, level);
+      return false;
+   }
 
    return true;
 }
