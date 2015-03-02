@@ -1674,6 +1674,9 @@ struct gl_array_attrib
    /** The default vertex array object */
    struct gl_vertex_array_object *DefaultVAO;
 
+   /** The last VAO accessed by a DSA function */
+   struct gl_vertex_array_object *LastLookedUpVAO;
+
    /** Array objects (GL_ARB/APPLE_vertex_array_object) */
    struct _mesa_HashTable *Objects;
 

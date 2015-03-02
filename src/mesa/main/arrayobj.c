@@ -100,20 +100,28 @@ _mesa_lookup_vao_err(struct gl_context *ctx, GLuint id, const char *caller)
 
       return ctx->Array.DefaultVAO;
    } else {
-      struct gl_vertex_array_object *vao =
-         (struct gl_vertex_array_object *)
-         _mesa_HashLookup(ctx->Array.Objects, id);
+      struct gl_vertex_array_object *vao;
 
-      /* The ARB_direct_state_access specification says:
-       *
-       *    "An INVALID_OPERATION error is generated if <vaobj> is not
-       *     [compatibility profile: zero or] the name of an existing
-       *     vertex array object."
-       */
-      if (!vao || !vao->EverBound) {
-         _mesa_error(ctx, GL_INVALID_OPERATION,
-                     "%s(non-existent vaobj=%u)", caller, id);
-         return NULL;
+      if (ctx->Array.LastLookedUpVAO &&
+          ctx->Array.LastLookedUpVAO->Name == id) {
+         vao = ctx->Array.LastLookedUpVAO;
+      } else {
+         vao = (struct gl_vertex_array_object *)
+            _mesa_HashLookup(ctx->Array.Objects, id);
+
+         /* The ARB_direct_state_access specification says:
+          *
+          *    "An INVALID_OPERATION error is generated if <vaobj> is not
+          *     [compatibility profile: zero or] the name of an existing
+          *     vertex array object."
+          */
+         if (!vao || !vao->EverBound) {
+            _mesa_error(ctx, GL_INVALID_OPERATION,
+                        "%s(non-existent vaobj=%u)", caller, id);
+            return NULL;
+         }
+
+         _mesa_reference_vao(ctx, &ctx->Array.LastLookedUpVAO, vao);
       }
 
       return vao;
@@ -516,6 +524,9 @@ _mesa_DeleteVertexArrays(GLsizei n, const GLuint *ids)
 
 	 /* The ID is immediately freed for re-use */
 	 remove_array_object(ctx, obj);
+
+         if (ctx->Array.LastLookedUpVAO == obj)
+            _mesa_reference_vao(ctx, &ctx->Array.LastLookedUpVAO, NULL);
 
          /* Unreference the array object. 
           * If refcount hits zero, the object will be deleted.
