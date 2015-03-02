@@ -128,10 +128,11 @@ type_to_bit(const struct gl_context *ctx, GLenum type)
  * Sets the VertexBinding field in the vertex attribute given by attribIndex.
  */
 static void
-vertex_attrib_binding(struct gl_context *ctx, GLuint attribIndex,
+vertex_attrib_binding(struct gl_context *ctx,
+                      struct gl_vertex_array_object *vao,
+                      GLuint attribIndex,
                       GLuint bindingIndex)
 {
-   struct gl_vertex_array_object *vao = ctx->Array.VAO;
    struct gl_vertex_attrib_array *array = &vao->VertexAttrib[attribIndex];
 
    if (array->VertexBinding != bindingIndex) {
@@ -480,7 +481,7 @@ update_array(struct gl_context *ctx,
    }
 
    /* Reset the vertex attrib binding */
-   vertex_attrib_binding(ctx, attrib, attrib);
+   vertex_attrib_binding(ctx, ctx->Array.VAO, attrib, attrib);
 
    /* The Stride and Ptr fields are not set by update_array_format() */
    array = &ctx->Array.VAO->VertexAttrib[attrib];
@@ -1446,6 +1447,7 @@ _mesa_VertexAttribDivisor(GLuint index, GLuint divisor)
    GET_CURRENT_CONTEXT(ctx);
 
    const GLuint genericIndex = VERT_ATTRIB_GENERIC(index);
+   struct gl_vertex_array_object * const vao = ctx->Array.VAO;
 
    if (!ctx->Extensions.ARB_instanced_arrays) {
       _mesa_error(ctx, GL_INVALID_OPERATION, "glVertexAttribDivisor()");
@@ -1458,7 +1460,7 @@ _mesa_VertexAttribDivisor(GLuint index, GLuint divisor)
       return;
    }
 
-   assert(genericIndex < ARRAY_SIZE(ctx->Array.VAO->VertexAttrib));
+   assert(genericIndex < ARRAY_SIZE(vao->VertexAttrib));
 
    /* The ARB_vertex_attrib_binding spec says:
     *
@@ -1471,7 +1473,7 @@ _mesa_VertexAttribDivisor(GLuint index, GLuint divisor)
     *       VertexAttribBinding(index, index);
     *       VertexBindingDivisor(index, divisor);"
     */
-   vertex_attrib_binding(ctx, genericIndex, genericIndex);
+   vertex_attrib_binding(ctx, vao, genericIndex, genericIndex);
    vertex_binding_divisor(ctx, genericIndex, divisor);
 }
 
@@ -1999,7 +2001,8 @@ _mesa_VertexAttribBinding(GLuint attribIndex, GLuint bindingIndex)
    assert(VERT_ATTRIB_GENERIC(attribIndex) <
           ARRAY_SIZE(ctx->Array.VAO->VertexAttrib));
 
-   vertex_attrib_binding(ctx, VERT_ATTRIB_GENERIC(attribIndex),
+   vertex_attrib_binding(ctx, ctx->Array.VAO,
+                         VERT_ATTRIB_GENERIC(attribIndex),
                          VERT_ATTRIB_GENERIC(bindingIndex));
 }
 
