@@ -518,6 +518,12 @@
       <param name="bindingindex" type="GLuint" />
    </function>
 
+   <function name="VertexArrayBindingDivisor" offset="assign">
+      <param name="vaobj" type="GLuint" />
+      <param name="bindingindex" type="GLuint" />
+      <param name="divisor" type="GLuint" />
+   </function>
+
    <!-- Sampler object functions -->
 
    <function name="CreateSamplers" offset="assign">

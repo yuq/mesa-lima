@@ -340,6 +340,8 @@ _mesa_VertexArrayAttribBinding(GLuint vaobj, GLuint attribIndex,
 extern void GLAPIENTRY
 _mesa_VertexBindingDivisor(GLuint bindingIndex, GLuint divisor);
 
+extern void GLAPIENTRY
+_mesa_VertexArrayBindingDivisor(GLuint vaobj, GLuint bindingIndex, GLuint divisor);
 
 extern void
 _mesa_copy_client_array(struct gl_context *ctx,
