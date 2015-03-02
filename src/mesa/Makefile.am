@@ -79,7 +79,7 @@ EXTRA_DIST = \
 
 BUILT_SOURCES = \
 	main/get_hash.h \
-        main/format_info.c \
+	main/format_info.h \
 	main/git_sha1.h \
 	main/format_pack.c \
 	main/format_unpack.c \
@@ -99,7 +99,7 @@ main/get_hash.h: ../mapi/glapi/gen/gl_and_es_API.xml main/get_hash_params.py 	\
 		-f $< > $@.tmp;						\
 	mv $@.tmp $@;
 
-main/format_info.c: main/formats.csv                                    \
+main/format_info.h: main/formats.csv                                    \
                     main/format_parser.py main/format_info.py
 	$(AM_V_GEN)set -e;						\
 	$(PYTHON2) $(PYTHON_FLAGS) $(srcdir)/main/format_info.py        \
@@ -122,7 +122,7 @@ main/format_unpack.c: main/format_unpack.py main/formats.csv	\
 			$(srcdir)/main/formats.csv			\
 		| $(INDENT) $(INDENT_FLAGS) > $@;
 
-main/formats.c: main/format_info.c
+main/formats.c: main/format_info.h
 
 noinst_LTLIBRARIES = $(ARCH_LIBS)
 if NEED_LIBMESA

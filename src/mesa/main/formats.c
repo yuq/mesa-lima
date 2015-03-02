@@ -75,7 +75,7 @@ struct gl_format_info
    mesa_array_format ArrayFormat;
 };
 
-#include "format_info.c"
+#include "format_info.h"
 
 static const struct gl_format_info *
 _mesa_get_format_info(mesa_format format)
