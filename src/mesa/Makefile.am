@@ -93,7 +93,7 @@ CLEANFILES = \
 GET_HASH_GEN = main/get_hash_generator.py
 
 main/get_hash.h: ../mapi/glapi/gen/gl_and_es_API.xml main/get_hash_params.py 	\
-		 $(GET_HASH_GEN) Makefile
+		 $(GET_HASH_GEN)
 	$(AM_V_GEN)set -e;						\
 	$(PYTHON2) $(PYTHON_FLAGS) $(srcdir)/$(GET_HASH_GEN)		\
 		-f $< > $@.tmp;						\
