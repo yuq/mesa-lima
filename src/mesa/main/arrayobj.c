@@ -75,6 +75,53 @@ _mesa_lookup_vao(struct gl_context *ctx, GLuint id)
 
 
 /**
+ * Looks up the array object for the given ID.
+ *
+ * Unlike _mesa_lookup_vao, this function generates a GL_INVALID_OPERATION
+ * error if the array object does not exist. It also returns the default
+ * array object when ctx is a compatibility profile context and id is zero.
+ */
+struct gl_vertex_array_object *
+_mesa_lookup_vao_err(struct gl_context *ctx, GLuint id, const char *caller)
+{
+   /* The ARB_direct_state_access specification says:
+    *
+    *    "<vaobj> is [compatibility profile:
+    *     zero, indicating the default vertex array object, or]
+    *     the name of the vertex array object."
+    */
+   if (id == 0) {
+      if (ctx->API == API_OPENGL_CORE) {
+         _mesa_error(ctx, GL_INVALID_OPERATION,
+                     "%s(zero is not valid vaobj name in a core profile "
+                     "context)", caller);
+         return NULL;
+      }
+
+      return ctx->Array.DefaultVAO;
+   } else {
+      struct gl_vertex_array_object *vao =
+         (struct gl_vertex_array_object *)
+         _mesa_HashLookup(ctx->Array.Objects, id);
+
+      /* The ARB_direct_state_access specification says:
+       *
+       *    "An INVALID_OPERATION error is generated if <vaobj> is not
+       *     [compatibility profile: zero or] the name of an existing
+       *     vertex array object."
+       */
+      if (!vao || !vao->EverBound) {
+         _mesa_error(ctx, GL_INVALID_OPERATION,
+                     "%s(non-existent vaobj=%u)", caller, id);
+         return NULL;
+      }
+
+      return vao;
+   }
+}
+
+
+/**
  * For all the vertex binding points in the array object, unbind any pointers
  * to any buffer objects (VBOs).
  * This is done just prior to array object destruction.
