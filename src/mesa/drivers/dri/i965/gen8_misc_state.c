@@ -29,7 +29,7 @@
 /**
  * Define the base addresses which some state is referenced from.
  */
-static void upload_state_base_address(struct brw_context *brw)
+void gen8_upload_state_base_address(struct brw_context *brw)
 {
    uint32_t mocs_wb = brw->gen >= 9 ? SKL_MOCS_WB : BDW_MOCS_WB;
    int pkt_len = brw->gen >= 9 ? 19 : 16;
@@ -78,5 +78,5 @@ const struct brw_tracked_state gen8_state_base_address = {
       .brw = BRW_NEW_BATCH |
              BRW_NEW_PROGRAM_CACHE,
    },
-   .emit = upload_state_base_address
+   .emit = gen8_upload_state_base_address
 };
