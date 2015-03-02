@@ -69,7 +69,7 @@ if HAVE_SHARED_GLAPI
 BUILT_SOURCES += shared-glapi/glapi_mapi_tmp.h
 
 lib_LTLIBRARIES += shared-glapi/libglapi.la
-shared_glapi_libglapi_la_SOURCES = $(MAPI_GLAPI_FILES)
+shared_glapi_libglapi_la_SOURCES = $(MAPI_GLAPI_FILES) shared-glapi/glapi_mapi_tmp.h
 shared_glapi_libglapi_la_CPPFLAGS = \
 	$(AM_CPPFLAGS) \
 	-DMAPI_MODE_GLAPI \
@@ -118,7 +118,7 @@ glapi_libglapi_la_CPPFLAGS = \
 	-I$(top_srcdir)/src/mesa
 
 if HAVE_SHARED_GLAPI
-glapi_libglapi_la_SOURCES += $(MAPI_BRIDGE_FILES)
+glapi_libglapi_la_SOURCES += $(MAPI_BRIDGE_FILES) glapi/glapi_mapi_tmp.h
 glapi_libglapi_la_CPPFLAGS += \
 	-DMAPI_MODE_BRIDGE \
 	-DMAPI_ABI_HEADER=\"glapi/glapi_mapi_tmp.h\"
