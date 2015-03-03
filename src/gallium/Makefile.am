@@ -114,9 +114,7 @@ EXTRA_DIST = \
 	docs \
 	README.portability \
 	SConscript \
-	state_trackers/egl \
 	state_trackers/gbm \
-	targets/egl-static \
 	targets/gbm \
 	winsys/sw/gdi \
 	winsys/sw/hgl
