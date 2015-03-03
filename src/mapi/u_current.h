@@ -63,7 +63,7 @@ u_current_set_context(const void *ptr);
 void *
 u_current_get_context_internal(void);
 
-static INLINE const struct mapi_table *
+static inline const struct mapi_table *
 u_current_get_table(void)
 {
 #ifdef GLX_USE_TLS
@@ -74,7 +74,7 @@ u_current_get_table(void)
 #endif
 }
 
-static INLINE const void *
+static inline const void *
 u_current_get_context(void)
 {
 #ifdef GLX_USE_TLS

@@ -80,7 +80,7 @@ struct u_tsd {
 };
 
 
-static INLINE unsigned long
+static inline unsigned long
 u_thread_self(void)
 {
    /*
@@ -104,7 +104,7 @@ u_thread_self(void)
 }
 
 
-static INLINE void
+static inline void
 u_tsd_init(struct u_tsd *tsd)
 {
    if (tss_create(&tsd->key, NULL/*free*/) != 0) {
@@ -115,7 +115,7 @@ u_tsd_init(struct u_tsd *tsd)
 }
 
 
-static INLINE void *
+static inline void *
 u_tsd_get(struct u_tsd *tsd)
 {
    if (tsd->initMagic != INIT_MAGIC) {
@@ -125,7 +125,7 @@ u_tsd_get(struct u_tsd *tsd)
 }
 
 
-static INLINE void
+static inline void
 u_tsd_set(struct u_tsd *tsd, void *ptr)
 {
    if (tsd->initMagic != INIT_MAGIC) {
@@ -138,7 +138,7 @@ u_tsd_set(struct u_tsd *tsd, void *ptr)
 }
 
 
-static INLINE void
+static inline void
 u_tsd_destroy(struct u_tsd *tsd)
 {
    if (tsd->initMagic != INIT_MAGIC) {

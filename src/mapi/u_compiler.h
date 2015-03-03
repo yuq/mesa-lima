@@ -3,12 +3,6 @@
 
 #include "c99_compat.h" /* inline, __func__, etc. */
 
-
-/* XXX: Use standard `inline` keyword instead */
-#ifndef INLINE
-#  define INLINE inline
-#endif
-
 /* Function visibility */
 #ifndef PUBLIC
 #  if defined(__GNUC__) || (defined(__SUNPRO_C) && (__SUNPRO_C >= 0x590))
