@@ -62,7 +62,6 @@ include Makefile.sources
 EXTRA_DIST = \
 	drivers/haiku \
 	drivers/SConscript \
-	drivers/windows \
 	main/format_info.py \
 	main/format_pack.py \
 	main/format_parser.py \
