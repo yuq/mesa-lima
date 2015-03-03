@@ -109,13 +109,6 @@ emit_array_index(
 	return LLVMBuildAdd(gallivm->builder, addr, lp_build_const_int32(gallivm, offset), "");
 }
 
-static LLVMValueRef
-emit_fetch(
-	struct lp_build_tgsi_context *bld_base,
-	const struct tgsi_full_src_register *reg,
-	enum tgsi_opcode_type type,
-	unsigned swizzle);
-
 LLVMValueRef
 radeon_llvm_emit_fetch_double(
 	struct lp_build_tgsi_context *bld_base,
@@ -158,7 +151,7 @@ emit_array_fetch(
 
 	for (i = 0; i < size; ++i) {
 		tmp_reg.Register.Index = i + range.First;
-		LLVMValueRef temp = emit_fetch(bld_base, &tmp_reg, type, swizzle);
+		LLVMValueRef temp = radeon_llvm_emit_fetch(bld_base, &tmp_reg, type, swizzle);
 		result = LLVMBuildInsertElement(builder, result, temp,
 			lp_build_const_int32(gallivm, i), "");
 	}
@@ -172,12 +165,10 @@ static bool uses_temp_indirect_addressing(
 	return (bld->indirect_files & (1 << TGSI_FILE_TEMPORARY));
 }
 
-static LLVMValueRef
-emit_fetch(
-	struct lp_build_tgsi_context *bld_base,
-	const struct tgsi_full_src_register *reg,
-	enum tgsi_opcode_type type,
-	unsigned swizzle)
+LLVMValueRef radeon_llvm_emit_fetch(struct lp_build_tgsi_context *bld_base,
+				    const struct tgsi_full_src_register *reg,
+				    enum tgsi_opcode_type type,
+				    unsigned swizzle)
 {
 	struct radeon_llvm_context * ctx = radeon_llvm_context(bld_base);
 	struct lp_build_tgsi_soa_context *bld = lp_soa_context(bld_base);
@@ -188,7 +179,7 @@ emit_fetch(
 		LLVMValueRef values[TGSI_NUM_CHANNELS];
 		unsigned chan;
 		for (chan = 0; chan < TGSI_NUM_CHANNELS; chan++) {
-			values[chan] = emit_fetch(bld_base, reg, type, chan);
+			values[chan] = radeon_llvm_emit_fetch(bld_base, reg, type, chan);
 		}
 		return lp_build_gather_values(bld_base->base.gallivm, values,
 					      TGSI_NUM_CHANNELS);
@@ -1546,10 +1537,10 @@ void radeon_llvm_context_init(struct radeon_llvm_context * ctx)
 	bld_base->emit_declaration = emit_declaration;
 	bld_base->emit_immediate = emit_immediate;
 
-	bld_base->emit_fetch_funcs[TGSI_FILE_IMMEDIATE] = emit_fetch;
-	bld_base->emit_fetch_funcs[TGSI_FILE_INPUT] = emit_fetch;
-	bld_base->emit_fetch_funcs[TGSI_FILE_TEMPORARY] = emit_fetch;
-	bld_base->emit_fetch_funcs[TGSI_FILE_OUTPUT] = emit_fetch;
+	bld_base->emit_fetch_funcs[TGSI_FILE_IMMEDIATE] = radeon_llvm_emit_fetch;
+	bld_base->emit_fetch_funcs[TGSI_FILE_INPUT] = radeon_llvm_emit_fetch;
+	bld_base->emit_fetch_funcs[TGSI_FILE_TEMPORARY] = radeon_llvm_emit_fetch;
+	bld_base->emit_fetch_funcs[TGSI_FILE_OUTPUT] = radeon_llvm_emit_fetch;
 	bld_base->emit_fetch_funcs[TGSI_FILE_SYSTEM_VALUE] = fetch_system_value;
 
 	/* Allocate outputs */
