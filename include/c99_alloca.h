@@ -35,6 +35,10 @@
 
 #  define alloca _alloca
 
+#elif defined(__sun)
+
+#  include <alloca.h>
+
 #else /* !defined(_MSC_VER) */
 
 #  include <stdlib.h>
