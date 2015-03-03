@@ -2618,30 +2618,30 @@ check_layered_texture_target(struct gl_context *ctx, GLenum target,
 {
    *layered = GL_TRUE;
 
-         switch (target) {
-         case GL_TEXTURE_3D:
-         case GL_TEXTURE_1D_ARRAY_EXT:
-         case GL_TEXTURE_2D_ARRAY_EXT:
-         case GL_TEXTURE_CUBE_MAP:
-         case GL_TEXTURE_CUBE_MAP_ARRAY:
-         case GL_TEXTURE_2D_MULTISAMPLE_ARRAY:
-            return true;
-         case GL_TEXTURE_1D:
-         case GL_TEXTURE_2D:
-         case GL_TEXTURE_RECTANGLE:
-         case GL_TEXTURE_2D_MULTISAMPLE:
-            /* These texture types are valid to pass to
-             * glFramebufferTexture(), but since they aren't layered, it
-             * is equivalent to calling glFramebufferTexture{1D,2D}().
-             */
-            *layered = GL_FALSE;
-            return true;
-         }
+   switch (target) {
+   case GL_TEXTURE_3D:
+   case GL_TEXTURE_1D_ARRAY_EXT:
+   case GL_TEXTURE_2D_ARRAY_EXT:
+   case GL_TEXTURE_CUBE_MAP:
+   case GL_TEXTURE_CUBE_MAP_ARRAY:
+   case GL_TEXTURE_2D_MULTISAMPLE_ARRAY:
+      return true;
+   case GL_TEXTURE_1D:
+   case GL_TEXTURE_2D:
+   case GL_TEXTURE_RECTANGLE:
+   case GL_TEXTURE_2D_MULTISAMPLE:
+      /* These texture types are valid to pass to
+       * glFramebufferTexture(), but since they aren't layered, it
+       * is equivalent to calling glFramebufferTexture{1D,2D}().
+       */
+      *layered = GL_FALSE;
+      return true;
+   }
 
-      _mesa_error(ctx, GL_INVALID_OPERATION,
-                  "%s(invalid texture target %s)", caller,
-                  _mesa_lookup_enum_by_nr(target));
-      return false;
+   _mesa_error(ctx, GL_INVALID_OPERATION,
+               "%s(invalid texture target %s)", caller,
+               _mesa_lookup_enum_by_nr(target));
+   return false;
 }
 
 
@@ -2655,23 +2655,23 @@ static bool
 check_texture_target(struct gl_context *ctx, GLenum target,
                      const char *caller)
 {
-         /* We're being called by glFramebufferTextureLayer() and
-          * textarget is not used.  The only legal texture types for
-          * that function are 3D and 1D/2D arrays textures.
-          */
-         switch (target) {
-         case GL_TEXTURE_3D:
-         case GL_TEXTURE_1D_ARRAY:
-         case GL_TEXTURE_2D_ARRAY:
-         case GL_TEXTURE_CUBE_MAP_ARRAY:
-         case GL_TEXTURE_2D_MULTISAMPLE_ARRAY:
-            return true;
-         }
+   /* We're being called by glFramebufferTextureLayer() and
+    * textarget is not used.  The only legal texture types for
+    * that function are 3D and 1D/2D arrays textures.
+    */
+   switch (target) {
+   case GL_TEXTURE_3D:
+   case GL_TEXTURE_1D_ARRAY:
+   case GL_TEXTURE_2D_ARRAY:
+   case GL_TEXTURE_CUBE_MAP_ARRAY:
+   case GL_TEXTURE_2D_MULTISAMPLE_ARRAY:
+      return true;
+   }
 
-      _mesa_error(ctx, GL_INVALID_OPERATION,
-                  "%s(invalid texture target %s)", caller,
-                  _mesa_lookup_enum_by_nr(target));
-      return false;
+   _mesa_error(ctx, GL_INVALID_OPERATION,
+               "%s(invalid texture target %s)", caller,
+               _mesa_lookup_enum_by_nr(target));
+   return false;
 }
 
 
