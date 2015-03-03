@@ -778,7 +778,7 @@ _mesa_ClampColor(GLenum target, GLenum clamp)
       }
       FLUSH_VERTICES(ctx, _NEW_FRAG_CLAMP);
       ctx->Color.ClampFragmentColor = clamp;
-      _mesa_update_clamp_fragment_color(ctx);
+      _mesa_update_clamp_fragment_color(ctx, ctx->DrawBuffer);
       break;
    case GL_CLAMP_READ_COLOR_ARB:
       ctx->Color.ClampReadColor = clamp;
@@ -807,10 +807,10 @@ get_clamp_color(const struct gl_framebuffer *fb, GLenum clamp)
 }
 
 GLboolean
-_mesa_get_clamp_fragment_color(const struct gl_context *ctx)
+_mesa_get_clamp_fragment_color(const struct gl_context *ctx,
+                               const struct gl_framebuffer *drawFb)
 {
-   return get_clamp_color(ctx->DrawBuffer,
-                                ctx->Color.ClampFragmentColor);
+   return get_clamp_color(drawFb, ctx->Color.ClampFragmentColor);
 }
 
 GLboolean
@@ -830,19 +830,20 @@ _mesa_get_clamp_read_color(const struct gl_context *ctx)
  * Update the ctx->Color._ClampFragmentColor field
  */
 void
-_mesa_update_clamp_fragment_color(struct gl_context *ctx)
+_mesa_update_clamp_fragment_color(struct gl_context *ctx,
+                                  const struct gl_framebuffer *drawFb)
 {
-   struct gl_framebuffer *fb = ctx->DrawBuffer;
-
    /* Don't clamp if:
     * - there is no colorbuffer
     * - all colorbuffers are unsigned normalized, so clamping has no effect
     * - there is an integer colorbuffer
     */
-   if (!fb || !fb->_HasSNormOrFloatColorBuffer || fb->_IntegerColor)
+   if (!drawFb || !drawFb->_HasSNormOrFloatColorBuffer ||
+       drawFb->_IntegerColor)
       ctx->Color._ClampFragmentColor = GL_FALSE;
    else
-      ctx->Color._ClampFragmentColor = _mesa_get_clamp_fragment_color(ctx);
+      ctx->Color._ClampFragmentColor =
+         _mesa_get_clamp_fragment_color(ctx, drawFb);
 }
 
 /**

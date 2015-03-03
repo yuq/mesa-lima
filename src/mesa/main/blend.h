@@ -102,7 +102,8 @@ extern void GLAPIENTRY
 _mesa_ClampColor(GLenum target, GLenum clamp);
 
 extern GLboolean
-_mesa_get_clamp_fragment_color(const struct gl_context *ctx);
+_mesa_get_clamp_fragment_color(const struct gl_context *ctx,
+                               const struct gl_framebuffer *drawFb);
 
 extern GLboolean
 _mesa_get_clamp_vertex_color(const struct gl_context *ctx,
@@ -112,7 +113,8 @@ extern GLboolean
 _mesa_get_clamp_read_color(const struct gl_context *ctx);
 
 extern void
-_mesa_update_clamp_fragment_color(struct gl_context *ctx);
+_mesa_update_clamp_fragment_color(struct gl_context *ctx,
+                                  const struct gl_framebuffer *drawFb);
 
 extern void
 _mesa_update_clamp_vertex_color(struct gl_context *ctx,
