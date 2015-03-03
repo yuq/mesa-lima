@@ -111,18 +111,6 @@ typedef unsigned char boolean;
 #endif
 
 
-/* Function visibility */
-#ifndef PUBLIC
-#  if defined(__GNUC__) || (defined(__SUNPRO_C) && (__SUNPRO_C >= 0x590))
-#    define PUBLIC __attribute__((visibility("default")))
-#  elif defined(_MSC_VER)
-#    define PUBLIC __declspec(dllexport)
-#  else
-#    define PUBLIC
-#  endif
-#endif
-
-
 /* XXX: Use standard `__func__` instead */
 #ifndef __FUNCTION__
 #  define __FUNCTION__ __func__

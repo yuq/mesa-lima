@@ -83,26 +83,6 @@ extern "C" {
 #endif
 
 
-/**
- * PUBLIC/USED macros
- *
- * If we build the library with gcc's -fvisibility=hidden flag, we'll
- * use the PUBLIC macro to mark functions that are to be exported.
- *
- * We also need to define a USED attribute, so the optimizer doesn't 
- * inline a static function that we later use in an alias. - ajax
- */
-#ifndef PUBLIC
-#  if defined(__GNUC__) || (defined(__SUNPRO_C) && (__SUNPRO_C >= 0x590))
-#    define PUBLIC __attribute__((visibility("default")))
-#    define USED __attribute__((used))
-#  else
-#    define PUBLIC
-#    define USED
-#  endif
-#endif
-
-
 /* XXX: Use standard `__func__` instead */
 #ifndef __FUNCTION__
 #  define __FUNCTION__ __func__
