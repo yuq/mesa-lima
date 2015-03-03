@@ -84,6 +84,14 @@ static void intel_client_wait_sync(struct gl_context *ctx, struct gl_sync_object
 {
    struct intel_sync_object *sync = (struct intel_sync_object *)s;
 
+   /* DRM_IOCTL_I915_GEM_WAIT uses a signed 64 bit timeout and returns
+    * immediately for timeouts <= 0.  The best we can do is to clamp the
+    * timeout to INT64_MAX.  This limits the maximum timeout from 584 years to
+    * 292 years - likely not a big deal.
+    */
+   if (timeout > INT64_MAX)
+      timeout = INT64_MAX;
+
    if (sync->bo && drm_intel_gem_bo_wait(sync->bo, timeout) == 0) {
       s->StatusFlag = 1;
       drm_intel_bo_unreference(sync->bo);
