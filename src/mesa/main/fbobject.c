@@ -465,7 +465,7 @@ set_texture_attachment(struct gl_context *ctx,
                        struct gl_framebuffer *fb,
                        struct gl_renderbuffer_attachment *att,
                        struct gl_texture_object *texObj,
-                       GLenum texTarget, GLuint level, GLuint zoffset,
+                       GLenum texTarget, GLuint level, GLuint layer,
                        GLboolean layered)
 {
    struct gl_renderbuffer *rb = att->Renderbuffer;
@@ -489,7 +489,7 @@ set_texture_attachment(struct gl_context *ctx,
    /* always update these fields */
    att->TextureLevel = level;
    att->CubeMapFace = _mesa_tex_target_to_face(texTarget);
-   att->Zoffset = zoffset;
+   att->Zoffset = layer;
    att->Layered = layered;
    att->Complete = GL_FALSE;
 
@@ -2563,14 +2563,7 @@ reuse_framebuffer_texture_attachment(struct gl_framebuffer *fb,
 
 /**
  * Common code called by gl*FramebufferTexture*() to retrieve the correct
- * texture object pointer and check for associated errors.
- *
- * \param textarget is the textarget that was passed to the
- * glFramebufferTexture...() function, or 0 if the corresponding function
- * doesn't have a textarget parameter.
- *
- * \param layered is true if this function was called from
- * gl*FramebufferTexture(), false otherwise.
+ * texture object pointer.
  *
  * \param texObj where the pointer to the texture object is returned.  Note
  * that a successful call may return texObj = NULL.
@@ -2578,20 +2571,12 @@ reuse_framebuffer_texture_attachment(struct gl_framebuffer *fb,
  * \return true if no errors, false if errors
  */
 static bool
-get_texture_for_framebuffer(struct gl_context *ctx,
-                            GLuint texture, GLenum textarget,
-                            GLint level, GLuint zoffset, GLboolean *layered,
-                            const char *caller,
+get_texture_for_framebuffer(struct gl_context *ctx, GLuint texture,
+                            bool layered, const char *caller,
                             struct gl_texture_object **texObj)
 {
-   GLenum maxLevelsTarget;
-   GLboolean err = GL_TRUE;
-
    *texObj = NULL; /* This will get returned if texture = 0. */
 
-   /* The textarget, level, and zoffset parameters are only validated if
-    * texture is non-zero.
-    */
    if (!texture)
       return true;
 
@@ -2602,31 +2587,45 @@ get_texture_for_framebuffer(struct gl_context *ctx,
        * The OpenGL 4.5 core spec (02.02.2015) in Section 9.2 Binding and
        * Managing Framebuffer Objects specifies a different error
        * depending upon the calling function (PDF pages 325-328).
-       * *FramebufferTexture (where *layered = GL_TRUE) throws invalid
+       * *FramebufferTexture (where layered = GL_TRUE) throws invalid
        * value, while the other commands throw invalid operation (where
-       * *layered = GL_FALSE).
+       * layered = GL_FALSE).
        */
-      const GLenum error = *layered ? GL_INVALID_VALUE :
+      const GLenum error = layered ? GL_INVALID_VALUE :
                            GL_INVALID_OPERATION;
       _mesa_error(ctx, error,
                   "%s(non-existent texture %u)", caller, texture);
       return false;
    }
 
-   if (textarget == 0) {
-      if (*layered) {
-         /* We're being called by gl*FramebufferTexture() and textarget
-          * is not used.
-          */
-         switch ((*texObj)->Target) {
+   return true;
+}
+
+
+/**
+ * Common code called by gl*FramebufferTexture() to verify the texture target
+ * and decide whether or not the attachment should truly be considered
+ * layered.
+ *
+ * \param layered true if attachment should be considered layered, false if
+ * not
+ *
+ * \return true if no errors, false if errors
+ */
+static bool
+check_layered_texture_target(struct gl_context *ctx, GLenum target,
+                             const char *caller, GLboolean *layered)
+{
+   *layered = GL_TRUE;
+
+         switch (target) {
          case GL_TEXTURE_3D:
          case GL_TEXTURE_1D_ARRAY_EXT:
          case GL_TEXTURE_2D_ARRAY_EXT:
          case GL_TEXTURE_CUBE_MAP:
          case GL_TEXTURE_CUBE_MAP_ARRAY:
          case GL_TEXTURE_2D_MULTISAMPLE_ARRAY:
-            err = false;
-            break;
+            return true;
          case GL_TEXTURE_1D:
          case GL_TEXTURE_2D:
          case GL_TEXTURE_RECTANGLE:
@@ -2635,74 +2634,187 @@ get_texture_for_framebuffer(struct gl_context *ctx,
              * glFramebufferTexture(), but since they aren't layered, it
              * is equivalent to calling glFramebufferTexture{1D,2D}().
              */
-            err = false;
-            *layered = false;
-            textarget = (*texObj)->Target;
-            break;
-         default:
-            err = true;
-            break;
+            *layered = GL_FALSE;
+            return true;
          }
-      } else {
+
+      _mesa_error(ctx, GL_INVALID_OPERATION,
+                  "%s(invalid texture target %s)", caller,
+                  _mesa_lookup_enum_by_nr(target));
+      return false;
+}
+
+
+/**
+ * Common code called by gl*FramebufferTextureLayer() to verify the texture
+ * target.
+ *
+ * \return true if no errors, false if errors
+ */
+static bool
+check_texture_target(struct gl_context *ctx, GLenum target,
+                     const char *caller)
+{
          /* We're being called by glFramebufferTextureLayer() and
           * textarget is not used.  The only legal texture types for
           * that function are 3D and 1D/2D arrays textures.
           */
-         err = ((*texObj)->Target != GL_TEXTURE_3D) &&
-            ((*texObj)->Target != GL_TEXTURE_1D_ARRAY) &&
-            ((*texObj)->Target != GL_TEXTURE_2D_ARRAY) &&
-            ((*texObj)->Target != GL_TEXTURE_CUBE_MAP_ARRAY) &&
-            ((*texObj)->Target != GL_TEXTURE_2D_MULTISAMPLE_ARRAY);
+         switch (target) {
+         case GL_TEXTURE_3D:
+         case GL_TEXTURE_1D_ARRAY:
+         case GL_TEXTURE_2D_ARRAY:
+         case GL_TEXTURE_CUBE_MAP_ARRAY:
+         case GL_TEXTURE_2D_MULTISAMPLE_ARRAY:
+            return true;
+         }
+
+      _mesa_error(ctx, GL_INVALID_OPERATION,
+                  "%s(invalid texture target %s)", caller,
+                  _mesa_lookup_enum_by_nr(target));
+      return false;
+}
+
+
+/**
+ * Common code called by glFramebufferTexture*D() to verify the texture
+ * target.
+ *
+ * \return true if no errors, false if errors
+ */
+static bool
+check_textarget(struct gl_context *ctx, int dims, GLenum target,
+                GLenum textarget, const char *caller)
+{
+   bool err = false;
+
+   switch (dims) {
+   case 1:
+      switch (textarget) {
+      case GL_TEXTURE_1D:
+         break;
+      case GL_TEXTURE_1D_ARRAY:
+         err = !ctx->Extensions.EXT_texture_array;
+         break;
+      default:
+         err = true;
       }
-   }
-   else {
-      /* Make sure textarget is consistent with the texture's type */
-      err = ((*texObj)->Target == GL_TEXTURE_CUBE_MAP)
-          ? !_mesa_is_cube_face(textarget)
-          : ((*texObj)->Target != textarget);
+      break;
+   case 2:
+      switch (textarget) {
+      case GL_TEXTURE_2D:
+         break;
+      case GL_TEXTURE_RECTANGLE:
+         err = _mesa_is_gles(ctx)
+            || !ctx->Extensions.NV_texture_rectangle;
+         break;
+      case GL_TEXTURE_CUBE_MAP_POSITIVE_X:
+      case GL_TEXTURE_CUBE_MAP_NEGATIVE_X:
+      case GL_TEXTURE_CUBE_MAP_POSITIVE_Y:
+      case GL_TEXTURE_CUBE_MAP_NEGATIVE_Y:
+      case GL_TEXTURE_CUBE_MAP_POSITIVE_Z:
+      case GL_TEXTURE_CUBE_MAP_NEGATIVE_Z:
+         err = !ctx->Extensions.ARB_texture_cube_map;
+         break;
+      case GL_TEXTURE_2D_ARRAY:
+         err = (_mesa_is_gles(ctx) && ctx->Version < 30)
+               || !ctx->Extensions.EXT_texture_array;
+         break;
+      case GL_TEXTURE_2D_MULTISAMPLE:
+      case GL_TEXTURE_2D_MULTISAMPLE_ARRAY:
+         err = _mesa_is_gles(ctx)
+               || !ctx->Extensions.ARB_texture_multisample;
+         break;
+      default:
+         err = true;
+      }
+      break;
+   case 3:
+      if (textarget != GL_TEXTURE_3D)
+         err = true;
+      break;
+   default:
+      err = true;
    }
 
    if (err) {
       _mesa_error(ctx, GL_INVALID_OPERATION,
-                  "%s(invalid or mismatched texture target)", caller);
+                  "%s(invalid textarget %s)",
+                  caller, _mesa_lookup_enum_by_nr(textarget));
       return false;
    }
 
+   /* Make sure textarget is consistent with the texture's type */
+   err = (target == GL_TEXTURE_CUBE_MAP) ?
+          !_mesa_is_cube_face(textarget): (target != textarget);
+
+   if (err) {
+      _mesa_error(ctx, GL_INVALID_OPERATION,
+                  "%s(mismatched texture target)", caller);
+      return false;
+   }
+
+   return true;
+}
+
+
+/**
+ * Common code called by gl*FramebufferTextureLayer() and
+ * glFramebufferTexture3D() to validate the layer.
+ *
+ * \return true if no errors, false if errors
+ */
+static bool
+check_layer(struct gl_context *ctx, GLenum target, GLint layer,
+            const char *caller)
+{
    /* Page 306 (page 328 of the PDF) of the OpenGL 4.5 (Core Profile)
     * spec says:
     *
     *    "An INVALID_VALUE error is generated if texture is non-zero
     *     and layer is negative."
     */
-   if (zoffset < 0) {
+   if (layer < 0) {
       _mesa_error(ctx, GL_INVALID_VALUE,
-                  "%s(layer %u < 0)", caller, zoffset);
+                  "%s(layer %u < 0)", caller, layer);
       return false;
    }
 
-   if ((*texObj)->Target == GL_TEXTURE_3D) {
+   if (target == GL_TEXTURE_3D) {
       const GLuint maxSize = 1 << (ctx->Const.Max3DTextureLevels - 1);
-      if (zoffset >= maxSize) {
+      if (layer >= maxSize) {
          _mesa_error(ctx, GL_INVALID_VALUE,
-                     "%s(invalid zoffset %u)", caller, zoffset);
+                     "%s(invalid layer %u)", caller, layer);
          return false;
       }
    }
-   else if (((*texObj)->Target == GL_TEXTURE_1D_ARRAY) ||
-            ((*texObj)->Target == GL_TEXTURE_2D_ARRAY) ||
-            ((*texObj)->Target == GL_TEXTURE_CUBE_MAP_ARRAY) ||
-            ((*texObj)->Target == GL_TEXTURE_2D_MULTISAMPLE_ARRAY)) {
-      if (zoffset >= ctx->Const.MaxArrayTextureLayers) {
+   else if ((target == GL_TEXTURE_1D_ARRAY) ||
+            (target == GL_TEXTURE_2D_ARRAY) ||
+            (target == GL_TEXTURE_CUBE_MAP_ARRAY) ||
+            (target == GL_TEXTURE_2D_MULTISAMPLE_ARRAY)) {
+      if (layer >= ctx->Const.MaxArrayTextureLayers) {
          _mesa_error(ctx, GL_INVALID_VALUE,
                      "%s(layer %u >= GL_MAX_ARRAY_TEXTURE_LAYERS)",
-                     caller, zoffset);
+                     caller, layer);
          return false;
       }
    }
 
-   maxLevelsTarget = textarget ? textarget : (*texObj)->Target;
+   return true;
+}
+
+
+/**
+ * Common code called by all gl*FramebufferTexture*() entry points to verify
+ * the level.
+ *
+ * \return true if no errors, false if errors
+ */
+static bool
+check_level(struct gl_context *ctx, GLenum target, GLint level,
+            const char *caller)
+{
    if ((level < 0) ||
-       (level >= _mesa_max_texture_levels(ctx, maxLevelsTarget))) {
+       (level >= _mesa_max_texture_levels(ctx, target))) {
       _mesa_error(ctx, GL_INVALID_VALUE,
                   "%s(invalid level %d)", caller, level);
       return false;
@@ -2716,7 +2828,7 @@ void
 _mesa_framebuffer_texture(struct gl_context *ctx, struct gl_framebuffer *fb,
                           GLenum attachment,
                           struct gl_texture_object *texObj, GLenum textarget,
-                          GLint level, GLuint zoffset, GLboolean layered,
+                          GLint level, GLuint layer, GLboolean layered,
                           const char *caller)
 {
    struct gl_renderbuffer_attachment *att;
@@ -2745,7 +2857,7 @@ _mesa_framebuffer_texture(struct gl_context *ctx, struct gl_framebuffer *fb,
           level == fb->Attachment[BUFFER_STENCIL].TextureLevel &&
           _mesa_tex_target_to_face(textarget) ==
           fb->Attachment[BUFFER_STENCIL].CubeMapFace &&
-          zoffset == fb->Attachment[BUFFER_STENCIL].Zoffset) {
+          layer == fb->Attachment[BUFFER_STENCIL].Zoffset) {
          /* The texture object is already attached to the stencil attachment
           * point. Don't create a new renderbuffer; just reuse the stencil
           * attachment's. This is required to prevent a GL error in
@@ -2758,13 +2870,13 @@ _mesa_framebuffer_texture(struct gl_context *ctx, struct gl_framebuffer *fb,
                  level == fb->Attachment[BUFFER_DEPTH].TextureLevel &&
                  _mesa_tex_target_to_face(textarget) ==
                  fb->Attachment[BUFFER_DEPTH].CubeMapFace &&
-                 zoffset == fb->Attachment[BUFFER_DEPTH].Zoffset) {
+                 layer == fb->Attachment[BUFFER_DEPTH].Zoffset) {
          /* As above, but with depth and stencil transposed. */
          reuse_framebuffer_texture_attachment(fb, BUFFER_STENCIL,
                                               BUFFER_DEPTH);
       } else {
          set_texture_attachment(ctx, fb, att, texObj, textarget,
-                                level, zoffset, layered);
+                                level, layer, layered);
 
          if (attachment == GL_DEPTH_STENCIL_ATTACHMENT) {
             /* Above we created a new renderbuffer and attached it to the
@@ -2801,56 +2913,50 @@ _mesa_framebuffer_texture(struct gl_context *ctx, struct gl_framebuffer *fb,
 }
 
 
-void GLAPIENTRY
-_mesa_FramebufferTexture1D(GLenum target, GLenum attachment,
-                           GLenum textarget, GLuint texture, GLint level)
+static void
+framebuffer_texture_with_dims(int dims, GLenum target,
+                              GLenum attachment, GLenum textarget,
+                              GLuint texture, GLint level, GLint layer,
+                              const char *caller)
 {
    GET_CURRENT_CONTEXT(ctx);
    struct gl_framebuffer *fb;
    struct gl_texture_object *texObj;
-   GLboolean layered = GL_FALSE;
-
-   if (texture != 0) {
-      GLboolean error;
-
-      switch (textarget) {
-      case GL_TEXTURE_1D:
-         error = GL_FALSE;
-         break;
-      case GL_TEXTURE_1D_ARRAY:
-         error = !ctx->Extensions.EXT_texture_array;
-         break;
-      default:
-         error = GL_TRUE;
-      }
-
-      if (error) {
-         _mesa_error(ctx, GL_INVALID_OPERATION,
-                     "glFramebufferTexture1D(invalid textarget %s)",
-                     _mesa_lookup_enum_by_nr(textarget));
-         return;
-      }
-   }
 
    /* Get the framebuffer object */
    fb = get_framebuffer_target(ctx, target);
    if (!fb) {
-      _mesa_error(ctx, GL_INVALID_ENUM,
-                  "glFramebufferTexture1D(invalid target %s)",
+      _mesa_error(ctx, GL_INVALID_ENUM, "%s(invalid target %s)", caller,
                   _mesa_lookup_enum_by_nr(target));
       return;
    }
 
    /* Get the texture object */
-   if (!get_texture_for_framebuffer(ctx, texture, textarget, level, 0,
-                                    &layered, "glFramebufferTexture1D",
-                                    &texObj)) {
-      /* Error already recorded */
+   if (!get_texture_for_framebuffer(ctx, texture, false, caller, &texObj))
       return;
+
+   if (texObj) {
+      if (!check_textarget(ctx, dims, texObj->Target, textarget, caller))
+         return;
+
+      if ((dims == 3) && !check_layer(ctx, texObj->Target, layer, caller))
+         return;
    }
 
+   if (!check_level(ctx, textarget, level, caller))
+      return;
+
    _mesa_framebuffer_texture(ctx, fb, attachment, texObj, textarget, level,
-                             0, layered, "glFramebufferTexture1D");
+                             layer, GL_FALSE, caller);
+}
+
+
+void GLAPIENTRY
+_mesa_FramebufferTexture1D(GLenum target, GLenum attachment,
+                           GLenum textarget, GLuint texture, GLint level)
+{
+   framebuffer_texture_with_dims(1, target, attachment, textarget, texture,
+                                 level, 0, "glFramebufferTexture1D");
 }
 
 
@@ -2858,109 +2964,18 @@ void GLAPIENTRY
 _mesa_FramebufferTexture2D(GLenum target, GLenum attachment,
                            GLenum textarget, GLuint texture, GLint level)
 {
-   GET_CURRENT_CONTEXT(ctx);
-   struct gl_framebuffer *fb;
-   struct gl_texture_object *texObj;
-   GLboolean layered = GL_FALSE;
-
-   if (texture != 0) {
-      GLboolean error;
-
-      switch (textarget) {
-      case GL_TEXTURE_2D:
-         error = GL_FALSE;
-         break;
-      case GL_TEXTURE_RECTANGLE:
-         error = _mesa_is_gles(ctx)
-            || !ctx->Extensions.NV_texture_rectangle;
-         break;
-      case GL_TEXTURE_CUBE_MAP_POSITIVE_X:
-      case GL_TEXTURE_CUBE_MAP_NEGATIVE_X:
-      case GL_TEXTURE_CUBE_MAP_POSITIVE_Y:
-      case GL_TEXTURE_CUBE_MAP_NEGATIVE_Y:
-      case GL_TEXTURE_CUBE_MAP_POSITIVE_Z:
-      case GL_TEXTURE_CUBE_MAP_NEGATIVE_Z:
-         error = !ctx->Extensions.ARB_texture_cube_map;
-         break;
-      case GL_TEXTURE_2D_ARRAY:
-         error = (_mesa_is_gles(ctx) && ctx->Version < 30)
-            || !ctx->Extensions.EXT_texture_array;
-         break;
-      case GL_TEXTURE_2D_MULTISAMPLE:
-      case GL_TEXTURE_2D_MULTISAMPLE_ARRAY:
-         error = _mesa_is_gles(ctx)
-            || !ctx->Extensions.ARB_texture_multisample;
-         break;
-      default:
-         error = GL_TRUE;
-      }
-
-      if (error) {
-         _mesa_error(ctx, GL_INVALID_OPERATION,
-                     "glFramebufferTexture2D(invalid textarget %s)",
-                     _mesa_lookup_enum_by_nr(textarget));
-         return;
-      }
-   }
-
-   /* Get the framebuffer object */
-   fb = get_framebuffer_target(ctx, target);
-   if (!fb) {
-      _mesa_error(ctx, GL_INVALID_ENUM,
-                  "glFramebufferTexture2D(invalid target %s)",
-                  _mesa_lookup_enum_by_nr(target));
-      return;
-   }
-
-   /* Get the texture object */
-   if (!get_texture_for_framebuffer(ctx, texture, textarget, level, 0,
-                                    &layered, "glFramebufferTexture2D",
-                                    &texObj)) {
-      /* Error already recorded */
-      return;
-   }
-
-   _mesa_framebuffer_texture(ctx, fb, attachment, texObj, textarget, level,
-                             0, layered, "glFramebufferTexture2D");
+   framebuffer_texture_with_dims(2, target, attachment, textarget, texture,
+                                 level, 0, "glFramebufferTexture2D");
 }
 
 
 void GLAPIENTRY
 _mesa_FramebufferTexture3D(GLenum target, GLenum attachment,
                            GLenum textarget, GLuint texture,
-                           GLint level, GLint zoffset)
+                           GLint level, GLint layer)
 {
-   GET_CURRENT_CONTEXT(ctx);
-   struct gl_framebuffer *fb;
-   struct gl_texture_object *texObj;
-   GLboolean layered = GL_FALSE;
-
-   if ((texture != 0) && (textarget != GL_TEXTURE_3D)) {
-      _mesa_error(ctx, GL_INVALID_OPERATION,
-                  "glFramebufferTexture3D(invalid textarget %s)",
-                  _mesa_lookup_enum_by_nr(textarget));
-      return;
-   }
-
-   /* Get the framebuffer object */
-   fb = get_framebuffer_target(ctx, target);
-   if (!fb) {
-      _mesa_error(ctx, GL_INVALID_ENUM,
-                  "glFramebufferTexture3D(invalid target %s)",
-                  _mesa_lookup_enum_by_nr(target));
-      return;
-   }
-
-   /* Get the texture object */
-   if (!get_texture_for_framebuffer(ctx, texture, textarget, level, zoffset,
-                                    &layered, "glFramebufferTexture3D",
-                                    &texObj)) {
-      /* Error already recorded */
-      return;
-   }
-
-   _mesa_framebuffer_texture(ctx, fb, attachment, texObj, textarget, level,
-                             zoffset, layered, "glFramebufferTexture3D");
+   framebuffer_texture_with_dims(3, target, attachment, textarget, texture,
+                                 level, layer, "glFramebufferTexture3D");
 }
 
 
@@ -2971,7 +2986,8 @@ _mesa_FramebufferTextureLayer(GLenum target, GLenum attachment,
    GET_CURRENT_CONTEXT(ctx);
    struct gl_framebuffer *fb;
    struct gl_texture_object *texObj;
-   GLboolean layered = GL_FALSE;
+
+   const char *func = "glFramebufferTextureLayer";
 
    /* Get the framebuffer object */
    fb = get_framebuffer_target(ctx, target);
@@ -2983,15 +2999,22 @@ _mesa_FramebufferTextureLayer(GLenum target, GLenum attachment,
    }
 
    /* Get the texture object */
-   if (!get_texture_for_framebuffer(ctx, texture, 0, level, layer,
-                                    &layered, "glFramebufferTextureLayer",
-                                    &texObj)) {
-      /* Error already recorded */
+   if (!get_texture_for_framebuffer(ctx, texture, false, func, &texObj))
       return;
+
+   if (texObj) {
+      if (!check_texture_target(ctx, texObj->Target, func))
+         return;
+
+      if (!check_layer(ctx, texObj->Target, layer, func))
+         return;
+
+      if (!check_level(ctx, texObj->Target, level, func))
+         return;
    }
 
    _mesa_framebuffer_texture(ctx, fb, attachment, texObj, 0, level,
-                             layer, layered, "glFramebufferTextureLayer");
+                             layer, GL_FALSE, func);
 }
 
 
@@ -3002,26 +3025,31 @@ _mesa_NamedFramebufferTextureLayer(GLuint framebuffer, GLenum attachment,
    GET_CURRENT_CONTEXT(ctx);
    struct gl_framebuffer *fb;
    struct gl_texture_object *texObj;
-   GLboolean layered = GL_FALSE;
+
+   const char *func = "glNamedFramebufferTextureLayer";
 
    /* Get the framebuffer object */
-   fb = _mesa_lookup_framebuffer_err(ctx, framebuffer,
-                                     "glNamedFramebufferTextureLayer");
+   fb = _mesa_lookup_framebuffer_err(ctx, framebuffer, func);
    if (!fb)
       return;
 
    /* Get the texture object */
-   if (!get_texture_for_framebuffer(ctx, texture, 0, level, layer,
-                                    &layered,
-                                    "glNamedFramebufferTextureLayer",
-                                    &texObj)) {
-      /* Error already recorded */
+   if (!get_texture_for_framebuffer(ctx, texture, false, func, &texObj))
       return;
+
+   if (texObj) {
+      if (!check_texture_target(ctx, texObj->Target, func))
+         return;
+
+      if (!check_layer(ctx, texObj->Target, layer, func))
+         return;
+
+      if (!check_level(ctx, texObj->Target, level, func))
+         return;
    }
 
    _mesa_framebuffer_texture(ctx, fb, attachment, texObj, 0, level,
-                             layer, layered,
-                             "glNamedFramebufferTextureLayer");
+                             layer, GL_FALSE, func);
 }
 
 
@@ -3032,7 +3060,9 @@ _mesa_FramebufferTexture(GLenum target, GLenum attachment,
    GET_CURRENT_CONTEXT(ctx);
    struct gl_framebuffer *fb;
    struct gl_texture_object *texObj;
-   GLboolean layered = GL_TRUE;
+   GLboolean layered;
+
+   const char *func = "FramebufferTexture";
 
    if (!_mesa_has_geometry_shaders(ctx)) {
       _mesa_error(ctx, GL_INVALID_OPERATION,
@@ -3050,15 +3080,19 @@ _mesa_FramebufferTexture(GLenum target, GLenum attachment,
    }
 
    /* Get the texture object */
-   if (!get_texture_for_framebuffer(ctx, texture, 0, level, 0,
-                                    &layered, "glFramebufferTexture",
-                                    &texObj)) {
-      /* Error already recorded */
+   if (!get_texture_for_framebuffer(ctx, texture, true, func, &texObj))
       return;
+
+   if (texObj) {
+      if (!check_layered_texture_target(ctx, texObj->Target, func, &layered))
+         return;
+
+      if (!check_level(ctx, texObj->Target, level, func))
+         return;
    }
 
    _mesa_framebuffer_texture(ctx, fb, attachment, texObj, 0, level,
-                             0, layered, "glFramebufferTexture");
+                             0, layered, func);
 }
 
 
@@ -3069,7 +3103,9 @@ _mesa_NamedFramebufferTexture(GLuint framebuffer, GLenum attachment,
    GET_CURRENT_CONTEXT(ctx);
    struct gl_framebuffer *fb;
    struct gl_texture_object *texObj;
-   GLboolean layered = GL_TRUE;
+   GLboolean layered;
+
+   const char *func = "glNamedFramebufferTexture";
 
    if (!_mesa_has_geometry_shaders(ctx)) {
       _mesa_error(ctx, GL_INVALID_OPERATION,
@@ -3078,21 +3114,25 @@ _mesa_NamedFramebufferTexture(GLuint framebuffer, GLenum attachment,
    }
 
    /* Get the framebuffer object */
-   fb = _mesa_lookup_framebuffer_err(ctx, framebuffer,
-                                     "glNamedFramebufferTexture");
+   fb = _mesa_lookup_framebuffer_err(ctx, framebuffer, func);
    if (!fb)
       return;
 
    /* Get the texture object */
-   if (!get_texture_for_framebuffer(ctx, texture, 0, level, 0,
-                                    &layered, "glNamedFramebufferTexture",
-                                    &texObj)) {
-      /* Error already recorded */
+   if (!get_texture_for_framebuffer(ctx, texture, true, func, &texObj))
       return;
+
+   if (texObj) {
+      if (!check_layered_texture_target(ctx, texObj->Target, func,
+                                        &layered))
+         return;
+
+      if (!check_level(ctx, texObj->Target, level, func))
+         return;
    }
 
    _mesa_framebuffer_texture(ctx, fb, attachment, texObj, 0, level,
-                             0, layered, "glNamedFramebufferTexture");
+                             0, layered, func);
 }
 
 

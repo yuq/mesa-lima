@@ -119,7 +119,7 @@ extern void
 _mesa_framebuffer_texture(struct gl_context *ctx, struct gl_framebuffer *fb,
                           GLenum attachment,
                           struct gl_texture_object *texObj, GLenum textarget,
-                          GLint level, GLuint zoffset, GLboolean layered,
+                          GLint level, GLuint layer, GLboolean layered,
                           const char *caller);
 
 
@@ -206,7 +206,7 @@ _mesa_FramebufferTexture2D(GLenum target, GLenum attachment,
 extern void GLAPIENTRY
 _mesa_FramebufferTexture3D(GLenum target, GLenum attachment,
                               GLenum textarget, GLuint texture,
-                              GLint level, GLint zoffset);
+                              GLint level, GLint layer);
 
 extern void GLAPIENTRY
 _mesa_FramebufferTextureLayer(GLenum target, GLenum attachment,
