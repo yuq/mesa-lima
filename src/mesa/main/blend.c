@@ -821,9 +821,10 @@ _mesa_get_clamp_vertex_color(const struct gl_context *ctx,
 }
 
 GLboolean
-_mesa_get_clamp_read_color(const struct gl_context *ctx)
+_mesa_get_clamp_read_color(const struct gl_context *ctx,
+                           const struct gl_framebuffer *readFb)
 {
-   return get_clamp_color(ctx->ReadBuffer, ctx->Color.ClampReadColor);
+   return get_clamp_color(readFb, ctx->Color.ClampReadColor);
 }
 
 /**
