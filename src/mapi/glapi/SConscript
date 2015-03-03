@@ -27,6 +27,7 @@ if env['platform'] == 'windows':
         env.Append(CPPDEFINES = ['_GLAPI_NO_EXPORTS'])
 
 env.Append(CPPPATH = [
+    '#/src',
     '#/src/mapi',
     '#/src/mesa',
     Dir('..'), # src/mapi build path
