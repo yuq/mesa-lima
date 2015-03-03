@@ -136,11 +136,6 @@ if HAVE_DRICOMMON
 SUBDIRS += state_trackers/dri targets/dri
 endif
 
-## the egl target depends on vega
-if HAVE_OPENVG
-SUBDIRS += state_trackers/vega
-endif
-
 if HAVE_X11_DRIVER
 SUBDIRS += state_trackers/glx/xlib targets/libgl-xlib
 endif

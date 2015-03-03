@@ -692,11 +692,6 @@ AC_ARG_ENABLE([gles2],
         [enable support for OpenGL ES 2.x API @<:@default=disabled@:>@])],
     [enable_gles2="$enableval"],
     [enable_gles2=no])
-AC_ARG_ENABLE([openvg],
-    [AS_HELP_STRING([--enable-openvg],
-        [enable support for OpenVG API @<:@default=disabled@:>@])],
-    [enable_openvg="$enableval"],
-    [enable_openvg=no])
 
 AC_ARG_ENABLE([dri],
     [AS_HELP_STRING([--enable-dri],
@@ -827,7 +822,6 @@ if test "x$enable_opengl" = xno -a \
         "x$enable_gles1" = xno -a \
         "x$enable_gles2" = xno -a \
         "x$enable_nine" = xno -a \
-        "x$enable_openvg" = xno -a \
         "x$enable_xa" = xno -a \
         "x$enable_xvmc" = xno -a \
         "x$enable_vdpau" = xno -a \
@@ -1546,29 +1540,6 @@ if test "x$enable_xa" = xyes; then
     enable_gallium_loader=$enable_shared_pipe_drivers
 fi
 AM_CONDITIONAL(HAVE_ST_XA, test "x$enable_xa" = xyes)
-
-dnl
-dnl OpenVG configuration
-dnl
-VG_LIB_DEPS=""
-
-if test "x$enable_openvg" = xyes; then
-    if test "x$enable_egl" = xno; then
-        AC_MSG_ERROR([cannot enable OpenVG without EGL])
-    fi
-    if test -z "$with_gallium_drivers"; then
-        AC_MSG_ERROR([cannot enable OpenVG without Gallium])
-    fi
-
-    AC_MSG_ERROR([Cannot enable OpenVG, because egl_gallium has been removed and
-                  OpenVG has not been integrated into standard libEGL yet])
-
-    EGL_CLIENT_APIS="$EGL_CLIENT_APIS "'$(VG_LIB)'
-    VG_LIB_DEPS="$VG_LIB_DEPS $SELINUX_LIBS $PTHREAD_LIBS"
-    VG_PC_LIB_PRIV="-lm $CLOCK_LIB $PTHREAD_LIBS $DLOPEN_LIBS"
-    AC_SUBST([VG_PC_LIB_PRIV])
-fi
-AM_CONDITIONAL(HAVE_OPENVG, test "x$enable_openvg" = xyes)
 
 dnl
 dnl Gallium G3DVL configuration
@@ -2400,7 +2371,6 @@ AC_CONFIG_FILES([Makefile
 		src/gallium/state_trackers/osmesa/Makefile
 		src/gallium/state_trackers/va/Makefile
 		src/gallium/state_trackers/vdpau/Makefile
-		src/gallium/state_trackers/vega/Makefile
 		src/gallium/state_trackers/xa/Makefile
 		src/gallium/state_trackers/xvmc/Makefile
 		src/gallium/targets/d3dadapter9/Makefile
@@ -2478,7 +2448,6 @@ echo "        includedir:      $includedir"
 dnl API info
 echo ""
 echo "        OpenGL:          $enable_opengl (ES1: $enable_gles1 ES2: $enable_gles2)"
-echo "        OpenVG:          $enable_openvg"
 
 dnl Driver info
 echo ""

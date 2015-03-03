@@ -106,14 +106,6 @@ Tracker that implements the client-side DRI protocol, for providing direct
 acceleration services to X11 servers with the DRI extension. Supports DRI1
 and DRI2. Only GL is supported.
 
-.. _egl:
-
-EGL
-^^^
-
-Tracker for the Khronos EGL standard, used to set up GL and GLES contexts
-without extra knowledge of the underlying windowing system.
-
 GLX
 ^^^
 
@@ -123,11 +115,6 @@ MesaGL
 Tracker implementing a GL state machine. Not usable as a standalone tracker;
 Mesa should be built with another state tracker, such as :ref:`DRI` or
 :ref:`EGL`.
-
-OpenVG
-^^^^^^
-
-Tracker that implements the Khronos OpenVG standard.
 
 VDPAU
 ^^^^^
