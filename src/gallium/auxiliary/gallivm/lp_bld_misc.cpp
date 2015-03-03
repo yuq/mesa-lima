@@ -493,7 +493,7 @@ lp_build_create_jit_compiler_for_module(LLVMExecutionEngineRef *OutJIT,
    builder.setMCPU(MCPU);
 #endif
 
-   ShaderMemoryManager *MM;
+   ShaderMemoryManager *MM = NULL;
    if (useMCJIT) {
 #if HAVE_LLVM > 0x0303
        BaseMemoryManager* JMM = reinterpret_cast<BaseMemoryManager*>(CMM);
