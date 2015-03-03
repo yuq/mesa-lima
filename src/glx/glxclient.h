@@ -56,10 +56,10 @@
 #if defined( HAVE_PTHREAD )
 # include <pthread.h>
 #endif
+#include "util/macros.h"
 
 #include "glxextensions.h"
 
-#define ARRAY_SIZE(a) (sizeof (a) / sizeof ((a)[0]))
 
 #define GLX_MAJOR_VERSION 1       /* current version numbers */
 #define GLX_MINOR_VERSION 4
