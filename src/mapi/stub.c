@@ -29,13 +29,13 @@
 #include <string.h>
 #include <assert.h>
 
+#include "util/macros.h"
 #include "u_current.h"
 #include "u_thread.h"
 #include "entry.h"
 #include "stub.h"
 #include "table.h"
 
-#define ARRAY_SIZE(x) (sizeof(x)/sizeof((x)[0]))
 
 struct mapi_stub {
    const void *name;
