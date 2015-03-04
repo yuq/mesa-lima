@@ -72,6 +72,9 @@ struct ilo_cp {
 
    struct ilo_builder builder;
    struct intel_bo *last_submitted_bo;
+
+   uint32_t active_lost;
+   uint32_t pending_lost;
 };
 
 struct ilo_cp *

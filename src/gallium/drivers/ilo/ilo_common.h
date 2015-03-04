@@ -63,6 +63,7 @@ enum ilo_debug {
    ILO_DEBUG_CS        = 1 << 4,
    ILO_DEBUG_DRAW      = ILO_DEBUG_HOT << 5,
    ILO_DEBUG_SUBMIT    = 1 << 6,
+   ILO_DEBUG_HANG      = 1 << 7,
 
    /* flags that affect the behaviors of the driver */
    ILO_DEBUG_NOHW      = 1 << 20,
@@ -82,7 +83,7 @@ struct ilo_dev_info {
    bool has_timestamp;
    bool has_gen7_sol_reset;
 
-   /* use ilo_dev_gen() */
+   /* use ilo_dev_gen() to access */
    int gen_opaque;
 
    int gt;

@@ -105,6 +105,35 @@ ilo_cp_end_batch(struct ilo_cp *cp, unsigned *used)
    return bo;
 }
 
+static bool
+ilo_cp_detect_hang(struct ilo_cp *cp)
+{
+   uint32_t active_lost, pending_lost;
+   bool guilty = false;
+
+   if (likely(!(ilo_debug & ILO_DEBUG_HANG)))
+      return false;
+
+   /* wait and get reset stats */
+   if (intel_bo_wait(cp->last_submitted_bo, -1) ||
+       intel_winsys_get_reset_stats(cp->winsys, cp->render_ctx,
+          &active_lost, &pending_lost))
+      return false;
+
+   if (cp->active_lost != active_lost) {
+      ilo_err("GPU hang caused by bo %p\n", cp->last_submitted_bo);
+      cp->active_lost = active_lost;
+      guilty = true;
+   }
+
+   if (cp->pending_lost != pending_lost) {
+      ilo_err("GPU hang detected\n");
+      cp->pending_lost = pending_lost;
+   }
+
+   return guilty;
+}
+
 /**
  * Flush the command parser and execute the commands.  When the parser buffer
  * is empty, the callback is not invoked.
@@ -132,13 +161,20 @@ ilo_cp_submit_internal(struct ilo_cp *cp)
    cp->one_off_flags = 0;
 
    if (!err) {
+      bool guilty;
+
       if (cp->last_submitted_bo)
          intel_bo_unreference(cp->last_submitted_bo);
       cp->last_submitted_bo = bo;
       intel_bo_reference(cp->last_submitted_bo);
 
-      if (ilo_debug & ILO_DEBUG_BATCH)
+      guilty = ilo_cp_detect_hang(cp);
+
+      if (unlikely((ilo_debug & ILO_DEBUG_BATCH) || guilty)) {
          ilo_builder_decode(&cp->builder);
+         if (guilty)
+            abort();
+      }
 
       if (cp->submit_callback)
          cp->submit_callback(cp, cp->submit_callback_data);

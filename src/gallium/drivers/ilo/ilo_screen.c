@@ -48,13 +48,14 @@ struct ilo_fence {
 int ilo_debug;
 
 static const struct debug_named_value ilo_debug_flags[] = {
-   { "batch",     ILO_DEBUG_BATCH,    "Dump batch/state/surface/instruction buffers" },
+   { "batch",     ILO_DEBUG_BATCH,    "Dump batch/dynamic/surface/instruction buffers" },
    { "vs",        ILO_DEBUG_VS,       "Dump vertex shaders" },
    { "gs",        ILO_DEBUG_GS,       "Dump geometry shaders" },
    { "fs",        ILO_DEBUG_FS,       "Dump fragment shaders" },
    { "cs",        ILO_DEBUG_CS,       "Dump compute shaders" },
    { "draw",      ILO_DEBUG_DRAW,     "Show draw information" },
    { "submit",    ILO_DEBUG_SUBMIT,   "Show batch buffer submissions" },
+   { "hang",      ILO_DEBUG_HANG,     "Detect GPU hangs" },
    { "nohw",      ILO_DEBUG_NOHW,     "Do not send commands to HW" },
    { "nocache",   ILO_DEBUG_NOCACHE,  "Always invalidate HW caches" },
    { "nohiz",     ILO_DEBUG_NOHIZ,    "Disable HiZ" },

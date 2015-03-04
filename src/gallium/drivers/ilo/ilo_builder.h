@@ -171,7 +171,7 @@ ilo_builder_writer_checked_record(struct ilo_builder *builder,
                                   enum ilo_builder_item_type item,
                                   unsigned offset, unsigned size)
 {
-   if (unlikely(ilo_debug & ILO_DEBUG_BATCH)) {
+   if (unlikely(ilo_debug & (ILO_DEBUG_BATCH | ILO_DEBUG_HANG))) {
       if (!ilo_builder_writer_record(builder, which, item, offset, size)) {
          builder->unrecoverable_error = true;
          builder->writers[which].item_used = 0;
