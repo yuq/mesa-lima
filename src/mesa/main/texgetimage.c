@@ -1088,19 +1088,6 @@ _mesa_GetTextureImage(GLuint texture, GLint level, GLenum format,
    /* Must handle special case GL_TEXTURE_CUBE_MAP. */
    if (texObj->Target == GL_TEXTURE_CUBE_MAP) {
 
-      /* Error checking */
-      if (texObj->NumLayers < 6) {
-         /* Not enough image planes for a cube map.  The spec does not say
-          * what should happen in this case because the user has always
-          * specified each cube face separately (using
-          * GL_TEXTURE_CUBE_MAP_POSITIVE_X+i) in previous GL versions.
-          * This is addressed in Khronos Bug 13223.
-          */
-         _mesa_error(ctx, GL_INVALID_OPERATION,
-                     "glGetTextureImage(insufficient cube map storage)");
-         return;
-      }
-
       /*
        * What do we do if the user created a texture with the following code
        * and then called this function with its handle?
