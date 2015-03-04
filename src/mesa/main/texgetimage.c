@@ -1101,6 +1101,8 @@ _mesa_GetTextureImage(GLuint texture, GLint level, GLenum format,
       /* Copy each face. */
       for (i = 0; i < 6; ++i) {
          texImage = texObj->Image[i][level];
+         assert(texImage);
+
          _mesa_get_texture_image(ctx, texObj, texImage, texObj->Target, level,
                                  format, type, bufSize, pixels, true);
 
@@ -1306,8 +1308,7 @@ _mesa_GetCompressedTextureImage(GLuint texture, GLint level,
       /* Copy each face. */
       for (i = 0; i < 6; ++i) {
          texImage = texObj->Image[i][level];
-         if (!texImage)
-            return;
+         assert(texImage);
 
          _mesa_get_compressed_texture_image(ctx, texObj, texImage,
                                             texObj->Target, level,

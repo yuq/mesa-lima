@@ -3677,6 +3677,8 @@ texturesubimage(struct gl_context *ctx, GLuint dims,
       /* Copy in each face. */
       for (i = 0; i < 6; ++i) {
          texImage = texObj->Image[i][level];
+         assert(texImage);
+
          _mesa_texture_sub_image(ctx, 3, texObj, texImage, texObj->Target,
                                  level, xoffset, yoffset, zoffset,
                                  width, height, 1, format,
@@ -3686,8 +3688,7 @@ texturesubimage(struct gl_context *ctx, GLuint dims,
    }
    else {
       texImage = _mesa_select_tex_image(texObj, texObj->Target, level);
-      if (!texImage)
-         return;
+      assert(texImage);
 
       _mesa_texture_sub_image(ctx, dims, texObj, texImage, texObj->Target,
                               level, xoffset, yoffset, zoffset,
