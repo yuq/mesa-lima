@@ -332,7 +332,7 @@ namespace {
       PM.add(new llvm::DataLayout(mod));
 #elif HAVE_LLVM < 0x0306
       PM.add(new llvm::DataLayoutPass(mod));
-#else
+#elif HAVE_LLVM < 0x0307
       PM.add(new llvm::DataLayoutPass());
 #endif
       PM.add(llvm::createInternalizePass(export_list));
