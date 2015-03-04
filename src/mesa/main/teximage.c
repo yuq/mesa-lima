@@ -5354,6 +5354,14 @@ _mesa_TexBufferRange(GLenum target, GLenum internalFormat, GLuint buffer,
                   buffer);
       return;
    } else {
+
+      /* OpenGL 4.5 core spec (02.02.2015) says in Section 8.9 Buffer
+       * Textures (PDF page 254):
+       *    "If buffer is zero, then any buffer object attached to the buffer
+       *    texture is detached, the values offset and size are ignored and
+       *    the state for offset and size for the buffer texture are reset to
+       *    zero."
+       */
       offset = 0;
       size = 0;
    }
@@ -5382,8 +5390,7 @@ _mesa_TextureBuffer(GLuint texture, GLenum internalFormat, GLuint buffer)
       bufObj = NULL;
 
    /* Get the texture object by Name. */
-   texObj = _mesa_lookup_texture_err(ctx, texture,
-                                     "glTextureBuffer(texture)");
+   texObj = _mesa_lookup_texture_err(ctx, texture, "glTextureBuffer");
    if (!texObj)
       return;
 
