@@ -32,7 +32,7 @@
  */
 
 
-#include "u_compiler.h"
+#include "c99_compat.h"
 #include "u_thread.h"
 #include "u_execmem.h"
 

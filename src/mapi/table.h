@@ -28,7 +28,7 @@
 #ifndef _TABLE_H_
 #define _TABLE_H_
 
-#include "u_compiler.h"
+#include "c99_compat.h"
 #include "entry.h"
 
 #define MAPI_TMP_TABLE
@@ -36,6 +36,8 @@
 
 #define MAPI_TABLE_NUM_SLOTS (MAPI_TABLE_NUM_STATIC + MAPI_TABLE_NUM_DYNAMIC)
 #define MAPI_TABLE_SIZE (MAPI_TABLE_NUM_SLOTS * sizeof(mapi_func))
+
+struct mapi_table;
 
 extern const mapi_func table_noop_array[];
 

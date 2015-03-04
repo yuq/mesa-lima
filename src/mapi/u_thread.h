@@ -44,7 +44,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include "u_compiler.h"
+#include "c99_compat.h"
 
 #include "c11/threads.h"
 
