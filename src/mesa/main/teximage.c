@@ -5303,11 +5303,12 @@ _mesa_TexBuffer(GLenum target, GLenum internalFormat, GLuint buffer)
       return;
    }
 
-   bufObj = _mesa_lookup_bufferobj(ctx, buffer);
-   if (!bufObj && buffer) {
-      _mesa_error(ctx, GL_INVALID_OPERATION, "glTexBuffer(buffer %u)", buffer);
-      return;
-   }
+   if (buffer) {
+      bufObj = _mesa_lookup_bufferobj_err(ctx, buffer, "glTexBuffer");
+      if (!bufObj)
+         return;
+   } else
+      bufObj = NULL;
 
    texObj = _mesa_get_current_tex_object(ctx, target);
    if (!texObj)
@@ -5387,12 +5388,12 @@ _mesa_TextureBuffer(GLuint texture, GLenum internalFormat, GLuint buffer)
       return;
    }
 
-   bufObj = _mesa_lookup_bufferobj(ctx, buffer);
-   if (!bufObj && buffer) {
-      _mesa_error(ctx, GL_INVALID_OPERATION, "glTextureBuffer(buffer %u)",
-                  buffer);
-      return;
-   }
+   if (buffer) {
+      bufObj = _mesa_lookup_bufferobj_err(ctx, buffer, "glTextureBuffer");
+      if (!bufObj)
+         return;
+   } else
+      bufObj = NULL;
 
    /* Get the texture object by Name. */
    texObj = _mesa_lookup_texture_err(ctx, texture,
