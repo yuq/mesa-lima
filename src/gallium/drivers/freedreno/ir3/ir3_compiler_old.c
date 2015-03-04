@@ -195,6 +195,7 @@ compile_init(struct ir3_compile_context *ctx, struct ir3_shader_variant *so,
 			info->file_max[TGSI_FILE_INPUT] + 1 +
 			info->file_max[TGSI_FILE_OUTPUT] + 1;
 
+	so->first_driver_param = ~0;
 	so->first_immediate = ctx->base_reg[TGSI_FILE_IMMEDIATE];
 	ctx->immediate_idx = 4 * (ctx->info.file_max[TGSI_FILE_IMMEDIATE] + 1);
 
