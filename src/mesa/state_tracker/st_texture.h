@@ -55,13 +55,7 @@ struct st_texture_image
 {
    struct gl_texture_image base;
 
-   /** Used to store texture data that doesn't fit in the parent
-    * object's mipmap buffer.
-    */
-   GLubyte *TexData;
-
    /* If stImage->pt != NULL, image data is stored here.
-    * Else if stImage->TexData != NULL, image is stored there.
     * Else there is no image data.
     */
    struct pipe_resource *pt;
