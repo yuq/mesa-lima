@@ -1559,6 +1559,12 @@ fs_generator::enable_debug(const char *shader_name)
 static bool
 brw_supports_simd16_3src(const struct brw_context *brw)
 {
+   /* WaDisableSIMD16On3SrcInstr: 3-source instructions don't work in SIMD16
+    * on a few steppings of Skylake.
+    */
+   if (brw->gen == 9)
+      return brw->revision != 2 && brw->revision != 3 && brw->revision != -1;
+
    return brw->is_haswell || brw->gen >= 8;
 }
 
