@@ -67,21 +67,7 @@ gen8_pipe_control(struct ilo_render *r, uint32_t dw1)
 static void
 gen8_wa_pre_depth(struct ilo_render *r)
 {
-   /*
-    * From the Ivy Bridge PRM, volume 2 part 1, page 315:
-    *
-    *     "Driver must send a least one PIPE_CONTROL command with CS Stall and
-    *      a post sync operation prior to the group of depth
-    *      commands(3DSTATE_DEPTH_BUFFER, 3DSTATE_CLEAR_PARAMS,
-    *      3DSTATE_STENCIL_BUFFER, and 3DSTATE_HIER_DEPTH_BUFFER)."
-    */
-   const uint32_t dw1 = GEN6_PIPE_CONTROL_CS_STALL |
-                        GEN6_PIPE_CONTROL_WRITE_IMM;
-
    ILO_DEV_ASSERT(r->dev, 8, 8);
-
-   if ((r->state.current_pipe_control_dw1 & dw1) != dw1)
-      gen8_pipe_control(r, dw1);
 
    /*
     * From the Ivy Bridge PRM, volume 2 part 1, page 315:

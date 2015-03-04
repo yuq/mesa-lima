@@ -59,7 +59,6 @@ gen7_pipe_control(struct ilo_render *r, uint32_t dw1)
 
    gen6_PIPE_CONTROL(r->builder, dw1, bo, 0, 0);
 
-
    r->state.current_pipe_control_dw1 |= dw1;
    r->state.deferred_pipe_control_dw1 &= ~dw1;
 }
@@ -76,7 +75,7 @@ gen7_wa_post_3dstate_push_constant_alloc_ps(struct ilo_render *r)
     */
    const uint32_t dw1 = GEN6_PIPE_CONTROL_CS_STALL;
 
-   ILO_DEV_ASSERT(r->dev, 7, 7.5);
+   ILO_DEV_ASSERT(r->dev, 7, 7);
 
    r->state.deferred_pipe_control_dw1 |= dw1;
 }
@@ -96,7 +95,7 @@ gen7_wa_pre_vs(struct ilo_render *r)
    const uint32_t dw1 = GEN6_PIPE_CONTROL_DEPTH_STALL |
                         GEN6_PIPE_CONTROL_WRITE_IMM;
 
-   ILO_DEV_ASSERT(r->dev, 7, 7.5);
+   ILO_DEV_ASSERT(r->dev, 7, 7);
 
    if ((r->state.current_pipe_control_dw1 & dw1) != dw1)
       gen7_pipe_control(r, dw1);
@@ -114,7 +113,7 @@ gen7_wa_pre_3dstate_sf_depth_bias(struct ilo_render *r)
     */
    const uint32_t dw1 = GEN6_PIPE_CONTROL_CS_STALL;
 
-   ILO_DEV_ASSERT(r->dev, 7, 7.5);
+   ILO_DEV_ASSERT(r->dev, 7, 7);
 
    if ((r->state.current_pipe_control_dw1 & dw1) != dw1)
       gen7_pipe_control(r, dw1);
@@ -143,21 +142,23 @@ gen7_wa_pre_3dstate_multisample(struct ilo_render *r)
 static void
 gen7_wa_pre_depth(struct ilo_render *r)
 {
-   /*
-    * From the Ivy Bridge PRM, volume 2 part 1, page 315:
-    *
-    *     "Driver must send a least one PIPE_CONTROL command with CS Stall and
-    *      a post sync operation prior to the group of depth
-    *      commands(3DSTATE_DEPTH_BUFFER, 3DSTATE_CLEAR_PARAMS,
-    *      3DSTATE_STENCIL_BUFFER, and 3DSTATE_HIER_DEPTH_BUFFER)."
-    */
-   const uint32_t dw1 = GEN6_PIPE_CONTROL_CS_STALL |
-                        GEN6_PIPE_CONTROL_WRITE_IMM;
-
    ILO_DEV_ASSERT(r->dev, 7, 7.5);
 
-   if ((r->state.current_pipe_control_dw1 & dw1) != dw1)
-      gen7_pipe_control(r, dw1);
+   if (ilo_dev_gen(r->dev) == ILO_GEN(7)) {
+      /*
+       * From the Ivy Bridge PRM, volume 2 part 1, page 315:
+       *
+       *     "Driver must send a least one PIPE_CONTROL command with CS Stall
+       *      and a post sync operation prior to the group of depth
+       *      commands(3DSTATE_DEPTH_BUFFER, 3DSTATE_CLEAR_PARAMS,
+       *      3DSTATE_STENCIL_BUFFER, and 3DSTATE_HIER_DEPTH_BUFFER)."
+       */
+      const uint32_t dw1 = GEN6_PIPE_CONTROL_CS_STALL |
+                           GEN6_PIPE_CONTROL_WRITE_IMM;
+
+      if ((r->state.current_pipe_control_dw1 & dw1) != dw1)
+         gen7_pipe_control(r, dw1);
+   }
 
    /*
     * From the Ivy Bridge PRM, volume 2 part 1, page 315:
@@ -215,7 +216,7 @@ gen7_wa_post_ps_and_later(struct ilo_render *r)
     */
    const uint32_t dw1 = GEN6_PIPE_CONTROL_DEPTH_STALL;
 
-   ILO_DEV_ASSERT(r->dev, 7, 7.5);
+   ILO_DEV_ASSERT(r->dev, 7, 7);
 
    r->state.deferred_pipe_control_dw1 |= dw1;
 }
@@ -253,7 +254,7 @@ gen7_draw_common_urb(struct ilo_render *r,
       vs_entry_size *= sizeof(float) * 4;
       vs_total_size = r->dev->urb_size - offset;
 
-      if (ilo_dev_gen(r->dev) < ILO_GEN(8))
+      if (ilo_dev_gen(r->dev) == ILO_GEN(7))
          gen7_wa_pre_vs(r);
 
       gen7_3DSTATE_URB_VS(r->builder,
@@ -344,7 +345,7 @@ gen7_draw_vs(struct ilo_render *r,
    const bool emit_3dstate_vs = (DIRTY(VS) || r->instruction_bo_changed);
 
    /* emit depth stall before any of the VS commands */
-   if (ilo_dev_gen(r->dev) < ILO_GEN(8)) {
+   if (ilo_dev_gen(r->dev) == ILO_GEN(7)) {
       if (emit_3dstate_binding_table || emit_3dstate_sampler_state ||
           emit_3dstate_constant_vs || emit_3dstate_vs)
          gen7_wa_pre_vs(r);
@@ -513,7 +514,9 @@ gen7_draw_sf(struct ilo_render *r,
    if (DIRTY(RASTERIZER) || DIRTY(FB)) {
       struct pipe_surface *zs = vec->fb.state.zsbuf;
 
-      gen7_wa_pre_3dstate_sf_depth_bias(r);
+      if (ilo_dev_gen(r->dev) == ILO_GEN(7))
+         gen7_wa_pre_3dstate_sf_depth_bias(r);
+
       gen7_3DSTATE_SF(r->builder,
             (vec->rasterizer) ? &vec->rasterizer->sf : NULL,
             (zs) ? zs->format : PIPE_FORMAT_NONE,
@@ -558,9 +561,7 @@ gen7_draw_wm(struct ilo_render *r,
    if (DIRTY(FS) || DIRTY(BLEND) || r->instruction_bo_changed) {
       const bool dual_blend = vec->blend->dual_blend;
 
-      if ((ilo_dev_gen(r->dev) == ILO_GEN(7) ||
-           ilo_dev_gen(r->dev) == ILO_GEN(7.5)) &&
-          r->hw_ctx_changed)
+      if (r->hw_ctx_changed)
          gen7_wa_pre_3dstate_ps_max_threads(r);
 
       gen7_3DSTATE_PS(r->builder, vec->fs, dual_blend);
@@ -572,21 +573,23 @@ gen7_draw_wm(struct ilo_render *r,
             r->state.SCISSOR_RECT);
    }
 
-   /* XXX what is the best way to know if this workaround is needed? */
    {
       const bool emit_3dstate_ps = (DIRTY(FS) || DIRTY(BLEND));
       const bool emit_3dstate_depth_buffer =
          (DIRTY(FB) || DIRTY(DSA) || r->state_bo_changed);
 
-      if (emit_3dstate_ps ||
-          session->pcb_fs_changed ||
-          session->viewport_changed ||
-          session->binding_table_fs_changed ||
-          session->sampler_fs_changed ||
-          session->cc_changed ||
-          session->blend_changed ||
-          session->dsa_changed)
-         gen7_wa_post_ps_and_later(r);
+      if (ilo_dev_gen(r->dev) == ILO_GEN(7)) {
+         /* XXX what is the best way to know if this workaround is needed? */
+         if (emit_3dstate_ps ||
+             session->pcb_fs_changed ||
+             session->viewport_changed ||
+             session->binding_table_fs_changed ||
+             session->sampler_fs_changed ||
+             session->cc_changed ||
+             session->blend_changed ||
+             session->dsa_changed)
+            gen7_wa_post_ps_and_later(r);
+      }
 
       if (emit_3dstate_depth_buffer)
          gen7_wa_pre_depth(r);
@@ -716,7 +719,8 @@ gen7_rectlist_pcb_alloc(struct ilo_render *r,
 
    gen7_3DSTATE_PUSH_CONSTANT_ALLOC_PS(r->builder, offset, size);
 
-   gen7_wa_post_3dstate_push_constant_alloc_ps(r);
+   if (ilo_dev_gen(r->dev) == ILO_GEN(7))
+      gen7_wa_post_3dstate_push_constant_alloc_ps(r);
 }
 
 static void
@@ -760,7 +764,8 @@ gen7_rectlist_vs_to_sf(struct ilo_render *r,
 
    gen6_disable_3DSTATE_CLIP(r->builder);
 
-   gen7_wa_pre_3dstate_sf_depth_bias(r);
+   if (ilo_dev_gen(r->dev) == ILO_GEN(7))
+      gen7_wa_pre_3dstate_sf_depth_bias(r);
 
    gen7_3DSTATE_SF(r->builder, NULL, blitter->fb.dst.base.format,
          blitter->fb.num_samples);
@@ -860,7 +865,8 @@ ilo_render_emit_rectlist_commands_gen7(struct ilo_render *r,
    gen7_rectlist_pcb_alloc(r, blitter);
 
    /* needed for any VS-related commands */
-   gen7_wa_pre_vs(r);
+   if (ilo_dev_gen(r->dev) == ILO_GEN(7))
+      gen7_wa_pre_vs(r);
 
    gen7_rectlist_urb(r, blitter);
 
