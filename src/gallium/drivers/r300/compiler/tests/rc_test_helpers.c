@@ -541,9 +541,14 @@ unsigned load_program(
 	unsigned *count;
 	char **string_store;
 	unsigned i = 0;
+	int n;
 
 	memset(line, 0, sizeof(line));
-	snprintf(path, PATH_MAX, TEST_PATH "/%s", filename);
+	n = snprintf(path, PATH_MAX, TEST_PATH "/%s", filename);
+	if (n < 0 || n >= PATH_MAX) {
+		return 0;
+	}
+
 	file = fopen(path, "r");
 	if (!file) {
 		return 0;
