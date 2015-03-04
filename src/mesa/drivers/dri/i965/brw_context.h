@@ -1076,6 +1076,10 @@ struct brw_context
 
    int gen;
    int gt;
+   /* GT revision. This will be -1 if the revision couldn't be determined (eg,
+    * if the kernel doesn't support the query).
+    */
+   int revision;
 
    bool is_g4x;
    bool is_baytrail;
