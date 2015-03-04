@@ -879,6 +879,10 @@ _mesa_cube_level_complete(const struct gl_texture_object *texObj,
    if (texObj->Target != GL_TEXTURE_CUBE_MAP)
       return GL_FALSE;
 
+   /* Make sure we have enough image planes for a cube map. */
+   if (texObj->NumLayers < 6)
+      return GL_FALSE;
+
    if ((level < 0) || (level >= MAX_TEXTURE_LEVELS))
       return GL_FALSE;
 
