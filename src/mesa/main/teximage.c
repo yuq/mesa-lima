@@ -5289,6 +5289,56 @@ _mesa_texture_buffer_range(struct gl_context *ctx,
 }
 
 
+/**
+ * Check for errors related to the texture buffer range.
+ * Return false if errors are found, true if none are found.
+ */
+static bool
+check_texture_buffer_range(struct gl_context *ctx,
+                           struct gl_buffer_object *bufObj,
+                           GLintptr offset, GLsizeiptr size,
+                           const char *caller)
+{
+   /* OpenGL 4.5 core spec (02.02.2015) says in Section 8.9 Buffer
+    * Textures (PDF page 245):
+    *    "An INVALID_VALUE error is generated if offset is negative, if
+    *    size is less than or equal to zero, or if offset + size is greater
+    *    than the value of BUFFER_SIZE for the buffer bound to target."
+    */
+   if (offset < 0) {
+      _mesa_error(ctx, GL_INVALID_VALUE, "%s(offset=%d < 0)", caller,
+                  (int) offset);
+      return false;
+   }
+
+   if (size <= 0) {
+      _mesa_error(ctx, GL_INVALID_VALUE, "%s(size=%d <= 0)", caller,
+                  (int) size);
+      return false;
+   }
+
+   if (offset + size > bufObj->Size) {
+      _mesa_error(ctx, GL_INVALID_VALUE,
+                  "%s(offset=%d + size=%d > buffer_size=%d)", caller,
+                  (int) offset, (int) size, (int) bufObj->Size);
+      return false;
+   }
+
+   /* OpenGL 4.5 core spec (02.02.2015) says in Section 8.9 Buffer
+    * Textures (PDF page 245):
+    *    "An INVALID_VALUE error is generated if offset is not an integer
+    *    multiple of the value of TEXTURE_BUFFER_OFFSET_ALIGNMENT."
+    */
+   if (offset % ctx->Const.TextureBufferOffsetAlignment) {
+      _mesa_error(ctx, GL_INVALID_VALUE,
+                  "%s(invalid offset alignment)", caller);
+      return false;
+   }
+
+   return true;
+}
+
+
 /** GL_ARB_texture_buffer_object */
 void GLAPIENTRY
 _mesa_TexBuffer(GLenum target, GLenum internalFormat, GLuint buffer)
@@ -5336,23 +5386,15 @@ _mesa_TexBufferRange(GLenum target, GLenum internalFormat, GLuint buffer,
       return;
    }
 
-   bufObj = _mesa_lookup_bufferobj(ctx, buffer);
-   if (bufObj) {
-      if (offset < 0 ||
-          size <= 0 ||
-          (offset + size) > bufObj->Size) {
-         _mesa_error(ctx, GL_INVALID_VALUE, "glTexBufferRange");
+   if (buffer) {
+      bufObj = _mesa_lookup_bufferobj_err(ctx, buffer, "glTexBufferRange");
+      if (!bufObj)
          return;
-      }
-      if (offset % ctx->Const.TextureBufferOffsetAlignment) {
-         _mesa_error(ctx, GL_INVALID_VALUE,
-                     "glTexBufferRange(invalid offset alignment)");
+
+      if (!check_texture_buffer_range(ctx, bufObj, offset, size,
+          "glTexBufferRange"))
          return;
-      }
-   } else if (buffer) {
-      _mesa_error(ctx, GL_INVALID_OPERATION, "glTexBufferRange(buffer %u)",
-                  buffer);
-      return;
+
    } else {
 
       /* OpenGL 4.5 core spec (02.02.2015) says in Section 8.9 Buffer
@@ -5364,6 +5406,7 @@ _mesa_TexBufferRange(GLenum target, GLenum internalFormat, GLuint buffer,
        */
       offset = 0;
       size = 0;
+      bufObj = NULL;
    }
 
    texObj = _mesa_get_current_tex_object(ctx, target);
