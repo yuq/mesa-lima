@@ -45,7 +45,8 @@
 
 static void
 emit_mrt(struct fd_ringbuffer *ring, unsigned nr_bufs,
-		struct pipe_surface **bufs, uint32_t *bases, uint32_t bin_w)
+		 struct pipe_surface **bufs, uint32_t *bases, uint32_t bin_w,
+		 bool decode_srgb)
 {
 	enum a3xx_tile_mode tile_mode;
 	unsigned i;
@@ -57,6 +58,7 @@ emit_mrt(struct fd_ringbuffer *ring, unsigned nr_bufs,
 	}
 
 	for (i = 0; i < 4; i++) {
+		enum pipe_format pformat = 0;
 		enum a3xx_color_fmt format = 0;
 		enum a3xx_color_swap swap = WZYX;
 		bool srgb = false;
@@ -73,7 +75,11 @@ emit_mrt(struct fd_ringbuffer *ring, unsigned nr_bufs,
 			slice = fd_resource_slice(rsc, psurf->u.tex.level);
 			format = fd3_pipe2color(psurf->format);
 			swap = fd3_pipe2swap(psurf->format);
-			srgb = util_format_is_srgb(psurf->format);
+			pformat = psurf->format;
+			if (decode_srgb)
+				srgb = util_format_is_srgb(psurf->format);
+			else
+				pformat = util_format_linear(pformat);
 
 			debug_assert(psurf->u.tex.first_layer == psurf->u.tex.last_layer);
 
@@ -108,7 +114,7 @@ emit_mrt(struct fd_ringbuffer *ring, unsigned nr_bufs,
 		OUT_PKT0(ring, REG_A3XX_SP_FS_IMAGE_OUTPUT_REG(i), 1);
 		OUT_RING(ring, COND((i < nr_bufs) && bufs[i],
 							A3XX_SP_FS_IMAGE_OUTPUT_REG_MRTFORMAT(
-									fd3_fs_output_format(bufs[i]->format))));
+									fd3_fs_output_format(pformat))));
 	}
 }
 
@@ -447,7 +453,7 @@ emit_mem2gmem_surf(struct fd_context *ctx, uint32_t bases[],
 
 	assert(bufs > 0);
 
-	emit_mrt(ring, bufs, psurf, bases, bin_w);
+	emit_mrt(ring, bufs, psurf, bases, bin_w, false);
 
 	OUT_PKT0(ring, REG_A3XX_RB_MODE_CONTROL, 1);
 	OUT_RING(ring, A3XX_RB_MODE_CONTROL_RENDER_MODE(RB_RENDERING_PASS) |
@@ -654,7 +660,7 @@ fd3_emit_sysmem_prep(struct fd_context *ctx)
 	OUT_RING(ring, A3XX_RB_FRAME_BUFFER_DIMENSION_WIDTH(pfb->width) |
 			A3XX_RB_FRAME_BUFFER_DIMENSION_HEIGHT(pfb->height));
 
-	emit_mrt(ring, pfb->nr_cbufs, pfb->cbufs, NULL, 0);
+	emit_mrt(ring, pfb->nr_cbufs, pfb->cbufs, NULL, 0, true);
 
 	/* setup scissor/offset for current tile: */
 	OUT_PKT0(ring, REG_A3XX_RB_WINDOW_OFFSET, 1);
@@ -945,7 +951,7 @@ fd3_emit_tile_renderprep(struct fd_context *ctx, struct fd_tile *tile)
 	OUT_RING(ring, CP_SET_BIN_1_X1(x1) | CP_SET_BIN_1_Y1(y1));
 	OUT_RING(ring, CP_SET_BIN_2_X2(x2) | CP_SET_BIN_2_Y2(y2));
 
-	emit_mrt(ring, pfb->nr_cbufs, pfb->cbufs, gmem->cbuf_base, gmem->bin_w);
+	emit_mrt(ring, pfb->nr_cbufs, pfb->cbufs, gmem->cbuf_base, gmem->bin_w, true);
 
 	/* setup scissor/offset for current tile: */
 	OUT_PKT0(ring, REG_A3XX_RB_WINDOW_OFFSET, 1);
