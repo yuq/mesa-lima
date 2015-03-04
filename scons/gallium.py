@@ -369,20 +369,16 @@ def generate(env):
             'HAVE___BUILTIN_FFS',
             'HAVE___BUILTIN_FFSLL',
             'HAVE_FUNC_ATTRIBUTE_FLATTEN',
+            # GCC 3.0
+            'HAVE_FUNC_ATTRIBUTE_FORMAT',
+            'HAVE_FUNC_ATTRIBUTE_PACKED',
+            # GCC 3.4
+            'HAVE___BUILTIN_CTZ',
+            'HAVE___BUILTIN_POPCOUNT',
+            'HAVE___BUILTIN_POPCOUNTLL',
+            'HAVE___BUILTIN_CLZ',
+            'HAVE___BUILTIN_CLZLL',
         ]
-        if distutils.version.LooseVersion(ccversion) >= distutils.version.LooseVersion('3'):
-            cppdefines += [
-                'HAVE_FUNC_ATTRIBUTE_FORMAT',
-                'HAVE_FUNC_ATTRIBUTE_PACKED',
-            ]
-        if distutils.version.LooseVersion(ccversion) >= distutils.version.LooseVersion('3.4'):
-            cppdefines += [
-                'HAVE___BUILTIN_CTZ',
-                'HAVE___BUILTIN_POPCOUNT',
-                'HAVE___BUILTIN_POPCOUNTLL',
-                'HAVE___BUILTIN_CLZ',
-                'HAVE___BUILTIN_CLZLL',
-            ]
         if distutils.version.LooseVersion(ccversion) >= distutils.version.LooseVersion('4.5'):
             cppdefines += ['HAVE___BUILTIN_UNREACHABLE']
     env.Append(CPPDEFINES = cppdefines)
@@ -420,8 +416,7 @@ def generate(env):
                 '-m32',
                 #'-march=pentium4',
             ]
-            if distutils.version.LooseVersion(ccversion) >= distutils.version.LooseVersion('4.2') \
-               and platform != 'haiku':
+            if platform != 'haiku':
                 # NOTE: We need to ensure stack is realigned given that we
                 # produce shared objects, and have no control over the stack
                 # alignment policy of the application. Therefore we need
