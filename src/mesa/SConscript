@@ -10,6 +10,8 @@ from sys import executable as python_cmd
 
 env = env.Clone()
 
+env.MSVC2013Compat()
+
 env.Append(CPPPATH = [
     '#/src',
     '#/src/mapi',

@@ -87,6 +87,25 @@ def createInstallMethods(env):
     env.AddMethod(install_shared_library, 'InstallSharedLibrary')
 
 
+def msvc2013_compat(env):
+    if env['gcc']:
+        env.Append(CCFLAGS = [
+            '-Werror=vla',
+            '-Werror=pointer-arith',
+        ])
+
+def msvc2008_compat(env):
+    msvc2013_compat(env)
+    if env['gcc']:
+        env.Append(CFLAGS = [
+            '-Werror=declaration-after-statement',
+        ])
+
+def createMSVCCompatMethods(env):
+    env.AddMethod(msvc2013_compat, 'MSVC2013Compat')
+    env.AddMethod(msvc2008_compat, 'MSVC2008Compat')
+
+
 def num_jobs():
     try:
         return int(os.environ['NUMBER_OF_PROCESSORS'])
@@ -443,13 +462,6 @@ def generate(env):
             '-Wmissing-prototypes',
             '-std=gnu99',
         ]
-        if distutils.version.LooseVersion(ccversion) >= distutils.version.LooseVersion('4.2'):
-            ccflags += [
-                '-Wpointer-arith',
-            ]
-            cflags += [
-                '-Wdeclaration-after-statement',
-            ]
     if icc:
         cflags += [
             '-std=gnu99',
@@ -617,6 +629,7 @@ def generate(env):
     # Custom builders and methods
     env.Tool('custom')
     createInstallMethods(env)
+    createMSVCCompatMethods(env)
 
     env.PkgCheckModules('X11', ['x11', 'xext', 'xdamage', 'xfixes', 'glproto >= 1.4.13'])
     env.PkgCheckModules('XCB', ['x11-xcb', 'xcb-glx >= 1.8.1', 'xcb-dri2 >= 1.8'])

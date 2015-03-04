@@ -8,6 +8,8 @@ Import('*')
 
 env = env.Clone()
 
+env.MSVC2013Compat()
+
 env.Append(CPPDEFINES = [
     'MAPI_MODE_UTIL',
 ])
