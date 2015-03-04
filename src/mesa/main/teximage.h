@@ -209,11 +209,11 @@ _mesa_texture_image_multisample(struct gl_context *ctx, GLuint dims,
 
 extern void
 _mesa_texture_buffer_range(struct gl_context *ctx,
-                           struct gl_texture_object *texObj, GLenum target, 
+                           struct gl_texture_object *texObj,
                            GLenum internalFormat,
                            struct gl_buffer_object *bufObj,
-                           GLintptr offset, GLsizeiptr size, bool range,
-                           bool dsa);
+                           GLintptr offset, GLsizeiptr size,
+                           const char *caller);
 /*@}*/
 
 

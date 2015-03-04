@@ -5243,23 +5243,33 @@ _mesa_validate_texbuffer_format(const struct gl_context *ctx,
 
 void
 _mesa_texture_buffer_range(struct gl_context *ctx,
-                           struct gl_texture_object *texObj, GLenum target,
+                           struct gl_texture_object *texObj,
                            GLenum internalFormat,
                            struct gl_buffer_object *bufObj,
-                           GLintptr offset, GLsizeiptr size, bool range,
-                           bool dsa)
+                           GLintptr offset, GLsizeiptr size,
+                           const char *caller)
 {
    mesa_format format;
 
-   FLUSH_VERTICES(ctx, 0);
+   /* NOTE: ARB_texture_buffer_object has interactions with
+    * the compatibility profile that are not implemented.
+    */
+   if (!(ctx->API == API_OPENGL_CORE &&
+         ctx->Extensions.ARB_texture_buffer_object)) {
+      _mesa_error(ctx, GL_INVALID_OPERATION,
+                  "%s(ARB_texture_buffer_object is not"
+                  " implemented for the compatibility profile)", caller);
+      return;
+   }
 
    format = _mesa_validate_texbuffer_format(ctx, internalFormat);
    if (format == MESA_FORMAT_NONE) {
       _mesa_error(ctx, GL_INVALID_ENUM,
-                  "glTex%sBuffer%s(internalFormat 0x%x)", dsa ? "ture" : "",
-                  range ? "Range" : "", internalFormat);
+                  "%s(internalFormat 0x%x)", caller, internalFormat);
       return;
    }
+
+   FLUSH_VERTICES(ctx, 0);
 
    _mesa_lock_texture(ctx, texObj);
    {
@@ -5294,15 +5304,6 @@ _mesa_TexBuffer(GLenum target, GLenum internalFormat, GLuint buffer)
       return;
    }
 
-   /* NOTE: ARB_texture_buffer_object has interactions with
-    * the compatibility profile that are not implemented.
-    */
-   if (!(ctx->API == API_OPENGL_CORE &&
-         ctx->Extensions.ARB_texture_buffer_object)) {
-      _mesa_error(ctx, GL_INVALID_OPERATION, "glTexBuffer");
-      return;
-   }
-
    if (buffer) {
       bufObj = _mesa_lookup_bufferobj_err(ctx, buffer, "glTexBuffer");
       if (!bufObj)
@@ -5314,8 +5315,8 @@ _mesa_TexBuffer(GLenum target, GLenum internalFormat, GLuint buffer)
    if (!texObj)
       return;
 
-   _mesa_texture_buffer_range(ctx, texObj, target, internalFormat, bufObj, 0,
-                              buffer ? -1 : 0, false, false);
+   _mesa_texture_buffer_range(ctx, texObj, internalFormat, bufObj, 0,
+                              buffer ? -1 : 0, "glTexBuffer");
 }
 
 
@@ -5332,12 +5333,6 @@ _mesa_TexBufferRange(GLenum target, GLenum internalFormat, GLuint buffer,
    /* Need to catch this before it gets to _mesa_get_current_tex_object */
    if (target != GL_TEXTURE_BUFFER_ARB) {
       _mesa_error(ctx, GL_INVALID_ENUM, "glTexBufferRange(target)");
-      return;
-   }
-
-   if (!(ctx->API == API_OPENGL_CORE &&
-         ctx->Extensions.ARB_texture_buffer_range)) {
-      _mesa_error(ctx, GL_INVALID_OPERATION, "glTexBufferRange");
       return;
    }
 
@@ -5367,8 +5362,8 @@ _mesa_TexBufferRange(GLenum target, GLenum internalFormat, GLuint buffer,
    if (!texObj)
       return;
 
-   _mesa_texture_buffer_range(ctx, texObj, target, internalFormat, bufObj,
-                              offset, size, true, false);
+   _mesa_texture_buffer_range(ctx, texObj, internalFormat, bufObj,
+                              offset, size, "glTexBufferRange");
 }
 
 void GLAPIENTRY
@@ -5378,15 +5373,6 @@ _mesa_TextureBuffer(GLuint texture, GLenum internalFormat, GLuint buffer)
    struct gl_buffer_object *bufObj;
 
    GET_CURRENT_CONTEXT(ctx);
-
-   /* NOTE: ARB_texture_buffer_object has interactions with
-    * the compatibility profile that are not implemented.
-    */
-   if (!(ctx->API == API_OPENGL_CORE &&
-         ctx->Extensions.ARB_texture_buffer_object)) {
-      _mesa_error(ctx, GL_INVALID_OPERATION, "glTextureBuffer");
-      return;
-   }
 
    if (buffer) {
       bufObj = _mesa_lookup_bufferobj_err(ctx, buffer, "glTextureBuffer");
@@ -5406,8 +5392,8 @@ _mesa_TextureBuffer(GLuint texture, GLenum internalFormat, GLuint buffer)
       return;
    }
 
-   _mesa_texture_buffer_range(ctx, texObj, texObj->Target, internalFormat,
-                              bufObj, 0, buffer ? -1 : 0, false, true);
+   _mesa_texture_buffer_range(ctx, texObj, internalFormat,
+                              bufObj, 0, buffer ? -1 : 0, "glTextureBuffer");
 }
 
 static GLboolean
