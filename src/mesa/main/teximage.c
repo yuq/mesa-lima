@@ -5290,6 +5290,25 @@ _mesa_texture_buffer_range(struct gl_context *ctx,
 
 
 /**
+ * Make sure the texture buffer target is GL_TEXTURE_BUFFER.
+ * Return true if it is, and return false if it is not
+ * (and throw INVALID ENUM as dictated in the OpenGL 4.5
+ * core spec, 02.02.2015, PDF page 245).
+ */
+static bool
+check_texture_buffer_target(struct gl_context *ctx, GLenum target,
+                            const char *caller)
+{
+   if (target != GL_TEXTURE_BUFFER_ARB) {
+      _mesa_error(ctx, GL_INVALID_ENUM,
+                  "%s(texture target is not GL_TEXTURE_BUFFER)", caller);
+      return false;
+   }
+   else
+      return true;
+}
+
+/**
  * Check for errors related to the texture buffer range.
  * Return false if errors are found, true if none are found.
  */
@@ -5348,11 +5367,11 @@ _mesa_TexBuffer(GLenum target, GLenum internalFormat, GLuint buffer)
 
    GET_CURRENT_CONTEXT(ctx);
 
-   /* Need to catch this before it gets to _mesa_get_current_tex_object */
-   if (target != GL_TEXTURE_BUFFER_ARB) {
-      _mesa_error(ctx, GL_INVALID_ENUM, "glTexBuffer(target)");
+   /* Need to catch a bad target before it gets to
+    * _mesa_get_current_tex_object.
+    */
+   if (!check_texture_buffer_target(ctx, target, "glTexBuffer"))
       return;
-   }
 
    if (buffer) {
       bufObj = _mesa_lookup_bufferobj_err(ctx, buffer, "glTexBuffer");
@@ -5380,11 +5399,11 @@ _mesa_TexBufferRange(GLenum target, GLenum internalFormat, GLuint buffer,
 
    GET_CURRENT_CONTEXT(ctx);
 
-   /* Need to catch this before it gets to _mesa_get_current_tex_object */
-   if (target != GL_TEXTURE_BUFFER_ARB) {
-      _mesa_error(ctx, GL_INVALID_ENUM, "glTexBufferRange(target)");
+   /* Need to catch a bad target before it gets to
+    * _mesa_get_current_tex_object.
+    */
+   if (!check_texture_buffer_target(ctx, target, "glTexBufferRange"))
       return;
-   }
 
    if (buffer) {
       bufObj = _mesa_lookup_bufferobj_err(ctx, buffer, "glTexBufferRange");
@@ -5437,10 +5456,8 @@ _mesa_TextureBuffer(GLuint texture, GLenum internalFormat, GLuint buffer)
    if (!texObj)
       return;
 
-   if (texObj->Target != GL_TEXTURE_BUFFER_ARB) {
-      _mesa_error(ctx, GL_INVALID_ENUM, "glTextureBuffer(target)");
+   if (!check_texture_buffer_target(ctx, texObj->Target, "glTextureBuffer"))
       return;
-   }
 
    _mesa_texture_buffer_range(ctx, texObj, internalFormat,
                               bufObj, 0, buffer ? -1 : 0, "glTextureBuffer");
