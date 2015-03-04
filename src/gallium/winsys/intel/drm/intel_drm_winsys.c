@@ -55,6 +55,12 @@ struct intel_winsys {
    struct drm_intel_decode *decode;
 };
 
+static drm_intel_context *
+gem_ctx(const struct intel_context *ctx)
+{
+   return (drm_intel_context *) ctx;
+}
+
 static drm_intel_bo *
 gem_bo(const struct intel_bo *bo)
 {
@@ -244,7 +250,7 @@ void
 intel_winsys_destroy_context(struct intel_winsys *winsys,
                              struct intel_context *ctx)
 {
-   drm_intel_gem_context_destroy((drm_intel_context *) ctx);
+   drm_intel_gem_context_destroy(gem_ctx(ctx));
 }
 
 int
@@ -252,6 +258,18 @@ intel_winsys_read_reg(struct intel_winsys *winsys,
                       uint32_t reg, uint64_t *val)
 {
    return drm_intel_reg_read(winsys->bufmgr, reg, val);
+}
+
+int
+intel_winsys_get_reset_stats(struct intel_winsys *winsys,
+                             struct intel_context *ctx,
+                             uint32_t *active_lost,
+                             uint32_t *pending_lost)
+{
+   uint32_t reset_count;
+
+   return drm_intel_get_reset_stats(gem_ctx(ctx),
+         &reset_count, active_lost, pending_lost);
 }
 
 struct intel_bo *
@@ -305,6 +323,18 @@ intel_winsys_alloc_bo(struct intel_winsys *winsys,
    }
 
    return (struct intel_bo *) bo;
+}
+
+struct intel_bo *
+intel_winsys_import_userptr(struct intel_winsys *winsys,
+                            const char *name,
+                            void *userptr,
+                            enum intel_tiling_mode tiling,
+                            unsigned long pitch,
+                            unsigned long height,
+                            unsigned long flags)
+{
+   return NULL;
 }
 
 struct intel_bo *
@@ -494,6 +524,12 @@ intel_bo_map(struct intel_bo *bo, bool write_enable)
    }
 
    return gem_bo(bo)->virtual;
+}
+
+void *
+intel_bo_map_async(struct intel_bo *bo)
+{
+   return NULL;
 }
 
 void *

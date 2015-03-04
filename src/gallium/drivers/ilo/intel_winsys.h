@@ -112,6 +112,17 @@ intel_winsys_read_reg(struct intel_winsys *winsys,
                       uint32_t reg, uint64_t *val);
 
 /**
+ * Return the numbers of submissions lost due to GPU reset.
+ *
+ * \param active_lost      Number of lost active/guilty submissions
+ * \param pending_lost     Number of lost pending/innocent submissions
+ */
+int
+intel_winsys_get_reset_stats(struct intel_winsys *winsys,
+                             struct intel_context *ctx,
+                             uint32_t *active_lost,
+                             uint32_t *pending_lost);
+/**
  * Allocate a buffer object.
  *
  * \param name             Informative description of the bo.
@@ -140,6 +151,19 @@ intel_winsys_alloc_buffer(struct intel_winsys *winsys,
    return intel_winsys_alloc_bo(winsys, name,
          INTEL_TILING_NONE, size, 1, cpu_init);
 }
+
+/**
+ * Create a bo from a user memory pointer.  Both \p userptr and (\p pitch * \p
+ * height) must be page aligned.
+ */
+struct intel_bo *
+intel_winsys_import_userptr(struct intel_winsys *winsys,
+                            const char *name,
+                            void *userptr,
+                            enum intel_tiling_mode tiling,
+                            unsigned long pitch,
+                            unsigned long height,
+                            unsigned long flags);
 
 /**
  * Create a bo from a winsys handle.
@@ -223,10 +247,14 @@ intel_bo_unreference(struct intel_bo *bo);
  * sequential writes, but reads would be very slow.  Callers always have a
  * linear view of the bo.
  *
- * map_gtt_async() is similar to map_gtt(), except that it does not block.
+ * map_async() and map_gtt_async() work similar to map() and map_gtt()
+ * respectively, except that they do not block.
  */
 void *
 intel_bo_map(struct intel_bo *bo, bool write_enable);
+
+void *
+intel_bo_map_async(struct intel_bo *bo);
 
 void *
 intel_bo_map_gtt(struct intel_bo *bo);
