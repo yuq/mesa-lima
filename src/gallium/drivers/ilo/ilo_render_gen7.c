@@ -64,6 +64,23 @@ gen7_pipe_control(struct ilo_render *r, uint32_t dw1)
 }
 
 static void
+gen7_3dprimitive(struct ilo_render *r,
+                 const struct pipe_draw_info *info,
+                 const struct ilo_ib_state *ib)
+{
+   ILO_DEV_ASSERT(r->dev, 7, 7.5);
+
+   if (r->state.deferred_pipe_control_dw1)
+      gen7_pipe_control(r, r->state.deferred_pipe_control_dw1);
+
+   /* 3DPRIMITIVE */
+   gen7_3DPRIMITIVE(r->builder, info, ib);
+
+   r->state.current_pipe_control_dw1 = 0;
+   r->state.deferred_pipe_control_dw1 = 0;
+}
+
+static void
 gen7_wa_post_3dstate_push_constant_alloc_ps(struct ilo_render *r)
 {
    /*
@@ -649,21 +666,6 @@ gen7_draw_wm_multisample(struct ilo_render *r,
 }
 
 void
-gen7_draw_vf_draw(struct ilo_render *r,
-                  const struct ilo_state_vector *vec,
-                  struct ilo_render_draw_session *session)
-{
-   if (r->state.deferred_pipe_control_dw1)
-      gen7_pipe_control(r, r->state.deferred_pipe_control_dw1);
-
-   /* 3DPRIMITIVE */
-   gen7_3DPRIMITIVE(r->builder, vec->draw, &vec->ib);
-
-   r->state.current_pipe_control_dw1 = 0;
-   r->state.deferred_pipe_control_dw1 = 0;
-}
-
-void
 ilo_render_emit_draw_commands_gen7(struct ilo_render *render,
                                    const struct ilo_state_vector *vec,
                                    struct ilo_render_draw_session *session)
@@ -696,7 +698,8 @@ ilo_render_emit_draw_commands_gen7(struct ilo_render *render,
    gen6_draw_wm_raster(render, vec, session);
    gen6_draw_sf_rect(render, vec, session);
    gen6_draw_vf(render, vec, session);
-   gen7_draw_vf_draw(render, vec, session);
+
+   gen7_3dprimitive(render, vec->draw, &vec->ib);
 }
 
 static void
@@ -893,7 +896,10 @@ ilo_render_emit_rectlist_commands_gen7(struct ilo_render *r,
    gen6_3DSTATE_DRAWING_RECTANGLE(r->builder, 0, 0,
          blitter->fb.width, blitter->fb.height);
 
-   gen7_3DPRIMITIVE(r->builder, &blitter->draw, NULL);
+   if (ilo_dev_gen(r->dev) == ILO_GEN(7))
+      gen7_wa_post_ps_and_later(r);
+
+   gen7_3dprimitive(r, &blitter->draw, NULL);
 }
 
 int

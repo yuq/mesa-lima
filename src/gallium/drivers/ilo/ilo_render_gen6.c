@@ -41,7 +41,7 @@
 /**
  * A wrapper for gen6_PIPE_CONTROL().
  */
-static inline void
+static void
 gen6_pipe_control(struct ilo_render *r, uint32_t dw1)
 {
    struct intel_bo *bo = (dw1 & GEN6_PIPE_CONTROL_WRITE__MASK) ?
@@ -53,6 +53,20 @@ gen6_pipe_control(struct ilo_render *r, uint32_t dw1)
 
    r->state.current_pipe_control_dw1 |= dw1;
 
+   assert(!r->state.deferred_pipe_control_dw1);
+}
+
+static void
+gen6_3dprimitive(struct ilo_render *r,
+                 const struct pipe_draw_info *info,
+                 const struct ilo_ib_state *ib)
+{
+   ILO_DEV_ASSERT(r->dev, 6, 6);
+
+   /* 3DPRIMITIVE */
+   gen6_3DPRIMITIVE(r->builder, info, ib);
+
+   r->state.current_pipe_control_dw1 = 0;
    assert(!r->state.deferred_pipe_control_dw1);
 }
 
@@ -482,18 +496,6 @@ gen6_draw_vf_statistics(struct ilo_render *r,
       gen6_3DSTATE_VF_STATISTICS(r->builder, false);
 }
 
-static void
-gen6_draw_vf_draw(struct ilo_render *r,
-                  const struct ilo_state_vector *vec,
-                  struct ilo_render_draw_session *session)
-{
-   /* 3DPRIMITIVE */
-   gen6_3DPRIMITIVE(r->builder, vec->draw, &vec->ib);
-
-   r->state.current_pipe_control_dw1 = 0;
-   assert(!r->state.deferred_pipe_control_dw1);
-}
-
 void
 gen6_draw_vs(struct ilo_render *r,
              const struct ilo_state_vector *vec,
@@ -850,7 +852,8 @@ ilo_render_emit_draw_commands_gen6(struct ilo_render *render,
    gen6_draw_wm_raster(render, vec, session);
    gen6_draw_sf_rect(render, vec, session);
    gen6_draw_vf(render, vec, session);
-   gen6_draw_vf_draw(render, vec, session);
+
+   gen6_3dprimitive(render, vec->draw, &vec->ib);
 }
 
 static void
@@ -995,7 +998,7 @@ ilo_render_emit_rectlist_commands_gen6(struct ilo_render *r,
    gen6_3DSTATE_DRAWING_RECTANGLE(r->builder, 0, 0,
          blitter->fb.width, blitter->fb.height);
 
-   gen6_3DPRIMITIVE(r->builder, &blitter->draw, NULL);
+   gen6_3dprimitive(r, &blitter->draw, NULL);
 }
 
 int

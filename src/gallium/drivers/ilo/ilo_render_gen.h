@@ -439,9 +439,4 @@ gen7_draw_sol(struct ilo_render *r,
               const struct ilo_state_vector *vec,
               struct ilo_render_draw_session *session);
 
-void
-gen7_draw_vf_draw(struct ilo_render *r,
-                  const struct ilo_state_vector *vec,
-                  struct ilo_render_draw_session *session);
-
 #endif /* ILO_RENDER_GEN_H */
