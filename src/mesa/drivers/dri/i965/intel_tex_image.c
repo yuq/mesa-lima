@@ -408,7 +408,8 @@ intel_gettexsubimage_tiled_memcpy(struct gl_context *ctx,
        texImage->TexFormat == MESA_FORMAT_R8G8B8X8_UNORM)
       return false;
 
-   if (!intel_get_memcpy(texImage->TexFormat, format, type, &mem_copy, &cpp))
+   if (!intel_get_memcpy(texImage->TexFormat, format, type, &mem_copy, &cpp,
+                         INTEL_DOWNLOAD))
       return false;
 
    /* If this is a nontrivial texture view, let another path handle it instead. */
