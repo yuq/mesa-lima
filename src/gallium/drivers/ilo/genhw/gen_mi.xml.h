@@ -32,39 +32,45 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
 
-#define GEN75_MI_ALU_NOOP					0x0
-#define GEN75_MI_ALU_LOAD					0x80
-#define GEN75_MI_ALU_LOADINV					0x480
-#define GEN75_MI_ALU_LOAD0					0x81
-#define GEN75_MI_ALU_LOAD1					0x481
-#define GEN75_MI_ALU_ADD					0x100
-#define GEN75_MI_ALU_SUB					0x101
-#define GEN75_MI_ALU_AND					0x102
-#define GEN75_MI_ALU_OR						0x103
-#define GEN75_MI_ALU_XOR					0x104
-#define GEN75_MI_ALU_STORE					0x180
-#define GEN75_MI_ALU_STOREINV					0x580
-#define GEN75_MI_ALU_R0						0x0
-#define GEN75_MI_ALU_R1						0x1
-#define GEN75_MI_ALU_R2						0x2
-#define GEN75_MI_ALU_R3						0x3
-#define GEN75_MI_ALU_R4						0x4
-#define GEN75_MI_ALU_R5						0x5
-#define GEN75_MI_ALU_R6						0x6
-#define GEN75_MI_ALU_R7						0x7
-#define GEN75_MI_ALU_R8						0x8
-#define GEN75_MI_ALU_R9						0x9
-#define GEN75_MI_ALU_R10					0xa
-#define GEN75_MI_ALU_R11					0xb
-#define GEN75_MI_ALU_R12					0xc
-#define GEN75_MI_ALU_R13					0xd
-#define GEN75_MI_ALU_R14					0xe
-#define GEN75_MI_ALU_R15					0xf
-#define GEN75_MI_ALU_SRCA					0x20
-#define GEN75_MI_ALU_SRCB					0x21
-#define GEN75_MI_ALU_ACCU					0x31
-#define GEN75_MI_ALU_ZF						0x32
-#define GEN75_MI_ALU_CF						0x33
+enum gen_mi_alu_opcode {
+    GEN75_MI_ALU_NOOP					      = 0x0,
+    GEN75_MI_ALU_LOAD					      = 0x80,
+    GEN75_MI_ALU_LOADINV				      = 0x480,
+    GEN75_MI_ALU_LOAD0					      = 0x81,
+    GEN75_MI_ALU_LOAD1					      = 0x481,
+    GEN75_MI_ALU_ADD					      = 0x100,
+    GEN75_MI_ALU_SUB					      = 0x101,
+    GEN75_MI_ALU_AND					      = 0x102,
+    GEN75_MI_ALU_OR					      = 0x103,
+    GEN75_MI_ALU_XOR					      = 0x104,
+    GEN75_MI_ALU_STORE					      = 0x180,
+    GEN75_MI_ALU_STOREINV				      = 0x580,
+};
+
+enum gen_mi_alu_operand {
+    GEN75_MI_ALU_R0					      = 0x0,
+    GEN75_MI_ALU_R1					      = 0x1,
+    GEN75_MI_ALU_R2					      = 0x2,
+    GEN75_MI_ALU_R3					      = 0x3,
+    GEN75_MI_ALU_R4					      = 0x4,
+    GEN75_MI_ALU_R5					      = 0x5,
+    GEN75_MI_ALU_R6					      = 0x6,
+    GEN75_MI_ALU_R7					      = 0x7,
+    GEN75_MI_ALU_R8					      = 0x8,
+    GEN75_MI_ALU_R9					      = 0x9,
+    GEN75_MI_ALU_R10					      = 0xa,
+    GEN75_MI_ALU_R11					      = 0xb,
+    GEN75_MI_ALU_R12					      = 0xc,
+    GEN75_MI_ALU_R13					      = 0xd,
+    GEN75_MI_ALU_R14					      = 0xe,
+    GEN75_MI_ALU_R15					      = 0xf,
+    GEN75_MI_ALU_SRCA					      = 0x20,
+    GEN75_MI_ALU_SRCB					      = 0x21,
+    GEN75_MI_ALU_ACCU					      = 0x31,
+    GEN75_MI_ALU_ZF					      = 0x32,
+    GEN75_MI_ALU_CF					      = 0x33,
+};
+
 #define GEN6_MI_TYPE__MASK					0xe0000000
 #define GEN6_MI_TYPE__SHIFT					29
 #define GEN6_MI_TYPE_MI						(0x0 << 29)

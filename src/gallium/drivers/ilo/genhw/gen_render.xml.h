@@ -139,37 +139,37 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define GEN6_MOCS_LLC__SHIFT					0
 #define GEN6_MOCS_LLC_PTE					0x0
 #define GEN6_MOCS_LLC_UC					0x1
-#define GEN6_MOCS_LLC_ON					0x2
+#define GEN6_MOCS_LLC_WB					0x2
 #define GEN7_MOCS_LLC__MASK					0x00000002
 #define GEN7_MOCS_LLC__SHIFT					1
 #define GEN7_MOCS_LLC_PTE					(0x0 << 1)
-#define GEN7_MOCS_LLC_ON					(0x1 << 1)
+#define GEN7_MOCS_LLC_WB					(0x1 << 1)
 #define GEN75_MOCS_LLC__MASK					0x00000006
 #define GEN75_MOCS_LLC__SHIFT					1
 #define GEN75_MOCS_LLC_PTE					(0x0 << 1)
 #define GEN75_MOCS_LLC_UC					(0x1 << 1)
-#define GEN75_MOCS_LLC_ON					(0x2 << 1)
+#define GEN75_MOCS_LLC_WB					(0x2 << 1)
 #define GEN75_MOCS_LLC_ELLC					(0x3 << 1)
 #define GEN7_MOCS_L3__MASK					0x00000001
 #define GEN7_MOCS_L3__SHIFT					0
 #define GEN7_MOCS_L3_UC						0x0
-#define GEN7_MOCS_L3_ON						0x1
-#define GEN8_MOCS_LLC__MASK					0x00000060
-#define GEN8_MOCS_LLC__SHIFT					5
-#define GEN8_MOCS_LLC_PTE					(0x0 << 5)
-#define GEN8_MOCS_LLC_UC					(0x1 << 5)
-#define GEN8_MOCS_LLC_WT					(0x2 << 5)
-#define GEN8_MOCS_LLC_WB					(0x3 << 5)
-#define GEN8_MOCS_L3__MASK					0x00000018
-#define GEN8_MOCS_L3__SHIFT					3
-#define GEN8_MOCS_L3_ELLC_ONLY					(0x0 << 3)
-#define GEN8_MOCS_L3_LLC_ONLY					(0x1 << 3)
-#define GEN8_MOCS_L3_LLC					(0x2 << 3)
-#define GEN8_MOCS_L3_ON						(0x3 << 3)
+#define GEN7_MOCS_L3_WB						0x1
+#define GEN8_MOCS_MT__MASK					0x00000060
+#define GEN8_MOCS_MT__SHIFT					5
+#define GEN8_MOCS_MT_PTE					(0x0 << 5)
+#define GEN8_MOCS_MT_UC						(0x1 << 5)
+#define GEN8_MOCS_MT_WT						(0x2 << 5)
+#define GEN8_MOCS_MT_WB						(0x3 << 5)
+#define GEN8_MOCS_CT__MASK					0x00000018
+#define GEN8_MOCS_CT__SHIFT					3
+#define GEN8_MOCS_CT_ELLC					(0x0 << 3)
+#define GEN8_MOCS_CT_LLC_ONLY					(0x1 << 3)
+#define GEN8_MOCS_CT_LLC					(0x2 << 3)
+#define GEN8_MOCS_CT_L3						(0x3 << 3)
 #define GEN9_MOCS__MASK						0x0000007f
 #define GEN9_MOCS__SHIFT					0
-#define GEN9_MOCS_WT						0x5
-#define GEN9_MOCS_WB						0x9
+#define GEN9_MOCS_MT_WT_CT_L3					0x5
+#define GEN9_MOCS_MT_WB_CT_L3					0x9
 #define GEN6_SBA_ADDR__MASK					0xfffff000
 #define GEN6_SBA_ADDR__SHIFT					12
 #define GEN6_SBA_ADDR__SHR					12

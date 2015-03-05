@@ -32,206 +32,263 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
 
-#define GEN6_OPCODE_ILLEGAL					0x0
-#define GEN6_OPCODE_MOV						0x1
-#define GEN6_OPCODE_SEL						0x2
-#define GEN6_OPCODE_MOVI					0x3
-#define GEN6_OPCODE_NOT						0x4
-#define GEN6_OPCODE_AND						0x5
-#define GEN6_OPCODE_OR						0x6
-#define GEN6_OPCODE_XOR						0x7
-#define GEN6_OPCODE_SHR						0x8
-#define GEN6_OPCODE_SHL						0x9
-#define GEN6_OPCODE_DIM						0xa
-#define GEN6_OPCODE_ASR						0xc
-#define GEN6_OPCODE_CMP						0x10
-#define GEN6_OPCODE_CMPN					0x11
-#define GEN7_OPCODE_CSEL					0x12
-#define GEN7_OPCODE_F32TO16					0x13
-#define GEN7_OPCODE_F16TO32					0x14
-#define GEN7_OPCODE_BFREV					0x17
-#define GEN7_OPCODE_BFE						0x18
-#define GEN7_OPCODE_BFI1					0x19
-#define GEN7_OPCODE_BFI2					0x1a
-#define GEN6_OPCODE_JMPI					0x20
-#define GEN7_OPCODE_BRD						0x21
-#define GEN6_OPCODE_IF						0x22
-#define GEN7_OPCODE_BRC						0x23
-#define GEN6_OPCODE_ELSE					0x24
-#define GEN6_OPCODE_ENDIF					0x25
-#define GEN6_OPCODE_CASE					0x26
-#define GEN6_OPCODE_WHILE					0x27
-#define GEN6_OPCODE_BREAK					0x28
-#define GEN6_OPCODE_CONT					0x29
-#define GEN6_OPCODE_HALT					0x2a
-#define GEN75_OPCODE_CALLA					0x2b
-#define GEN6_OPCODE_CALL					0x2c
-#define GEN6_OPCODE_RETURN					0x2d
-#define GEN8_OPCODE_GOTO					0x2e
-#define GEN6_OPCODE_WAIT					0x30
-#define GEN6_OPCODE_SEND					0x31
-#define GEN6_OPCODE_SENDC					0x32
-#define GEN6_OPCODE_MATH					0x38
-#define GEN6_OPCODE_ADD						0x40
-#define GEN6_OPCODE_MUL						0x41
-#define GEN6_OPCODE_AVG						0x42
-#define GEN6_OPCODE_FRC						0x43
-#define GEN6_OPCODE_RNDU					0x44
-#define GEN6_OPCODE_RNDD					0x45
-#define GEN6_OPCODE_RNDE					0x46
-#define GEN6_OPCODE_RNDZ					0x47
-#define GEN6_OPCODE_MAC						0x48
-#define GEN6_OPCODE_MACH					0x49
-#define GEN6_OPCODE_LZD						0x4a
-#define GEN7_OPCODE_FBH						0x4b
-#define GEN7_OPCODE_FBL						0x4c
-#define GEN7_OPCODE_CBIT					0x4d
-#define GEN7_OPCODE_ADDC					0x4e
-#define GEN7_OPCODE_SUBB					0x4f
-#define GEN6_OPCODE_SAD2					0x50
-#define GEN6_OPCODE_SADA2					0x51
-#define GEN6_OPCODE_DP4						0x54
-#define GEN6_OPCODE_DPH						0x55
-#define GEN6_OPCODE_DP3						0x56
-#define GEN6_OPCODE_DP2						0x57
-#define GEN6_OPCODE_LINE					0x59
-#define GEN6_OPCODE_PLN						0x5a
-#define GEN6_OPCODE_MAD						0x5b
-#define GEN6_OPCODE_LRP						0x5c
-#define GEN6_OPCODE_NOP						0x7e
-#define GEN6_ALIGN_1						0x0
-#define GEN6_ALIGN_16						0x1
-#define GEN6_MASKCTRL_NORMAL					0x0
-#define GEN6_MASKCTRL_NOMASK					0x1
-#define GEN6_DEPCTRL_NORMAL					0x0
-#define GEN6_DEPCTRL_NODDCLR					0x1
-#define GEN6_DEPCTRL_NODDCHK					0x2
-#define GEN6_DEPCTRL_NEITHER					0x3
-#define GEN6_QTRCTRL_1Q						0x0
-#define GEN6_QTRCTRL_2Q						0x1
-#define GEN6_QTRCTRL_3Q						0x2
-#define GEN6_QTRCTRL_4Q						0x3
-#define GEN6_QTRCTRL_1H						0x0
-#define GEN6_QTRCTRL_2H						0x2
-#define GEN6_THREADCTRL_NORMAL					0x0
-#define GEN6_THREADCTRL_ATOMIC					0x1
-#define GEN6_THREADCTRL_SWITCH					0x2
-#define GEN6_PREDCTRL_NONE					0x0
-#define GEN6_PREDCTRL_NORMAL					0x1
-#define GEN6_PREDCTRL_ANYV					0x2
-#define GEN6_PREDCTRL_ALLV					0x3
-#define GEN6_PREDCTRL_ANY2H					0x4
-#define GEN6_PREDCTRL_ALL2H					0x5
-#define GEN6_PREDCTRL_X						0x2
-#define GEN6_PREDCTRL_Y						0x3
-#define GEN6_PREDCTRL_Z						0x4
-#define GEN6_PREDCTRL_W						0x5
-#define GEN6_PREDCTRL_ANY4H					0x6
-#define GEN6_PREDCTRL_ALL4H					0x7
-#define GEN6_PREDCTRL_ANY8H					0x8
-#define GEN6_PREDCTRL_ALL8H					0x9
-#define GEN6_PREDCTRL_ANY16H					0xa
-#define GEN6_PREDCTRL_ALL16H					0xb
-#define GEN7_PREDCTRL_ANY32H					0xc
-#define GEN7_PREDCTRL_ALL32H					0xd
-#define GEN6_EXECSIZE_1						0x0
-#define GEN6_EXECSIZE_2						0x1
-#define GEN6_EXECSIZE_4						0x2
-#define GEN6_EXECSIZE_8						0x3
-#define GEN6_EXECSIZE_16					0x4
-#define GEN6_EXECSIZE_32					0x5
-#define GEN6_COND_NONE						0x0
-#define GEN6_COND_Z						0x1
-#define GEN6_COND_NZ						0x2
-#define GEN6_COND_G						0x3
-#define GEN6_COND_GE						0x4
-#define GEN6_COND_L						0x5
-#define GEN6_COND_LE						0x6
-#define GEN6_COND_O						0x8
-#define GEN6_COND_U						0x9
-#define GEN6_MATH_INV						0x1
-#define GEN6_MATH_LOG						0x2
-#define GEN6_MATH_EXP						0x3
-#define GEN6_MATH_SQRT						0x4
-#define GEN6_MATH_RSQ						0x5
-#define GEN6_MATH_SIN						0x6
-#define GEN6_MATH_COS						0x7
-#define GEN6_MATH_FDIV						0x9
-#define GEN6_MATH_POW						0xa
-#define GEN6_MATH_INT_DIV					0xb
-#define GEN6_MATH_INT_DIV_QUOTIENT				0xc
-#define GEN6_MATH_INT_DIV_REMAINDER				0xd
-#define GEN8_MATH_INVM						0xe
-#define GEN8_MATH_RSQRTM					0xf
-#define GEN6_SFID_NULL						0x0
-#define GEN6_SFID_SAMPLER					0x2
-#define GEN6_SFID_GATEWAY					0x3
-#define GEN6_SFID_DP_SAMPLER					0x4
-#define GEN6_SFID_DP_RC						0x5
-#define GEN6_SFID_URB						0x6
-#define GEN6_SFID_SPAWNER					0x7
-#define GEN6_SFID_VME						0x8
-#define GEN6_SFID_DP_CC						0x9
-#define GEN7_SFID_DP_DC0					0xa
-#define GEN7_SFID_PI						0xb
-#define GEN75_SFID_DP_DC1					0xc
-#define GEN6_FILE_ARF						0x0
-#define GEN6_FILE_GRF						0x1
-#define GEN6_FILE_MRF						0x2
-#define GEN6_FILE_IMM						0x3
-#define GEN6_TYPE_UD						0x0
-#define GEN6_TYPE_D						0x1
-#define GEN6_TYPE_UW						0x2
-#define GEN6_TYPE_W						0x3
-#define GEN6_TYPE_UB						0x4
-#define GEN6_TYPE_B						0x5
-#define GEN7_TYPE_DF						0x6
-#define GEN6_TYPE_F						0x7
-#define GEN8_TYPE_UQ						0x8
-#define GEN8_TYPE_Q						0x9
-#define GEN8_TYPE_HF						0xa
-#define GEN6_TYPE_UV_IMM					0x4
-#define GEN6_TYPE_VF_IMM					0x5
-#define GEN6_TYPE_V_IMM						0x6
-#define GEN8_TYPE_DF_IMM					0xa
-#define GEN8_TYPE_HF_IMM					0xb
-#define GEN7_TYPE_F_3SRC					0x0
-#define GEN7_TYPE_D_3SRC					0x1
-#define GEN7_TYPE_UD_3SRC					0x2
-#define GEN7_TYPE_DF_3SRC					0x3
-#define GEN6_VERTSTRIDE_0					0x0
-#define GEN6_VERTSTRIDE_1					0x1
-#define GEN6_VERTSTRIDE_2					0x2
-#define GEN6_VERTSTRIDE_4					0x3
-#define GEN6_VERTSTRIDE_8					0x4
-#define GEN6_VERTSTRIDE_16					0x5
-#define GEN6_VERTSTRIDE_32					0x6
-#define GEN6_VERTSTRIDE_VXH					0xf
-#define GEN6_WIDTH_1						0x0
-#define GEN6_WIDTH_2						0x1
-#define GEN6_WIDTH_4						0x2
-#define GEN6_WIDTH_8						0x3
-#define GEN6_WIDTH_16						0x4
-#define GEN6_HORZSTRIDE_0					0x0
-#define GEN6_HORZSTRIDE_1					0x1
-#define GEN6_HORZSTRIDE_2					0x2
-#define GEN6_HORZSTRIDE_4					0x3
-#define GEN6_ADDRMODE_DIRECT					0x0
-#define GEN6_ADDRMODE_INDIRECT					0x1
-#define GEN6_SWIZZLE_X						0x0
-#define GEN6_SWIZZLE_Y						0x1
-#define GEN6_SWIZZLE_Z						0x2
-#define GEN6_SWIZZLE_W						0x3
-#define GEN6_ARF_NULL						0x0
-#define GEN6_ARF_A0						0x10
-#define GEN6_ARF_ACC0						0x20
-#define GEN6_ARF_F0						0x30
-#define GEN6_ARF_SR0						0x70
-#define GEN6_ARF_CR0						0x80
-#define GEN6_ARF_N0						0x90
-#define GEN6_ARF_IP						0xa0
-#define GEN6_ARF_TDR						0xb0
-#define GEN7_ARF_TM0						0xc0
+enum gen_eu_opcode {
+    GEN6_OPCODE_ILLEGAL					      = 0x0,
+    GEN6_OPCODE_MOV					      = 0x1,
+    GEN6_OPCODE_SEL					      = 0x2,
+    GEN6_OPCODE_MOVI					      = 0x3,
+    GEN6_OPCODE_NOT					      = 0x4,
+    GEN6_OPCODE_AND					      = 0x5,
+    GEN6_OPCODE_OR					      = 0x6,
+    GEN6_OPCODE_XOR					      = 0x7,
+    GEN6_OPCODE_SHR					      = 0x8,
+    GEN6_OPCODE_SHL					      = 0x9,
+    GEN6_OPCODE_DIM					      = 0xa,
+    GEN6_OPCODE_ASR					      = 0xc,
+    GEN6_OPCODE_CMP					      = 0x10,
+    GEN6_OPCODE_CMPN					      = 0x11,
+    GEN7_OPCODE_CSEL					      = 0x12,
+    GEN7_OPCODE_F32TO16					      = 0x13,
+    GEN7_OPCODE_F16TO32					      = 0x14,
+    GEN7_OPCODE_BFREV					      = 0x17,
+    GEN7_OPCODE_BFE					      = 0x18,
+    GEN7_OPCODE_BFI1					      = 0x19,
+    GEN7_OPCODE_BFI2					      = 0x1a,
+    GEN6_OPCODE_JMPI					      = 0x20,
+    GEN7_OPCODE_BRD					      = 0x21,
+    GEN6_OPCODE_IF					      = 0x22,
+    GEN7_OPCODE_BRC					      = 0x23,
+    GEN6_OPCODE_ELSE					      = 0x24,
+    GEN6_OPCODE_ENDIF					      = 0x25,
+    GEN6_OPCODE_CASE					      = 0x26,
+    GEN6_OPCODE_WHILE					      = 0x27,
+    GEN6_OPCODE_BREAK					      = 0x28,
+    GEN6_OPCODE_CONT					      = 0x29,
+    GEN6_OPCODE_HALT					      = 0x2a,
+    GEN75_OPCODE_CALLA					      = 0x2b,
+    GEN6_OPCODE_CALL					      = 0x2c,
+    GEN6_OPCODE_RETURN					      = 0x2d,
+    GEN8_OPCODE_GOTO					      = 0x2e,
+    GEN6_OPCODE_WAIT					      = 0x30,
+    GEN6_OPCODE_SEND					      = 0x31,
+    GEN6_OPCODE_SENDC					      = 0x32,
+    GEN6_OPCODE_MATH					      = 0x38,
+    GEN6_OPCODE_ADD					      = 0x40,
+    GEN6_OPCODE_MUL					      = 0x41,
+    GEN6_OPCODE_AVG					      = 0x42,
+    GEN6_OPCODE_FRC					      = 0x43,
+    GEN6_OPCODE_RNDU					      = 0x44,
+    GEN6_OPCODE_RNDD					      = 0x45,
+    GEN6_OPCODE_RNDE					      = 0x46,
+    GEN6_OPCODE_RNDZ					      = 0x47,
+    GEN6_OPCODE_MAC					      = 0x48,
+    GEN6_OPCODE_MACH					      = 0x49,
+    GEN6_OPCODE_LZD					      = 0x4a,
+    GEN7_OPCODE_FBH					      = 0x4b,
+    GEN7_OPCODE_FBL					      = 0x4c,
+    GEN7_OPCODE_CBIT					      = 0x4d,
+    GEN7_OPCODE_ADDC					      = 0x4e,
+    GEN7_OPCODE_SUBB					      = 0x4f,
+    GEN6_OPCODE_SAD2					      = 0x50,
+    GEN6_OPCODE_SADA2					      = 0x51,
+    GEN6_OPCODE_DP4					      = 0x54,
+    GEN6_OPCODE_DPH					      = 0x55,
+    GEN6_OPCODE_DP3					      = 0x56,
+    GEN6_OPCODE_DP2					      = 0x57,
+    GEN6_OPCODE_LINE					      = 0x59,
+    GEN6_OPCODE_PLN					      = 0x5a,
+    GEN6_OPCODE_MAD					      = 0x5b,
+    GEN6_OPCODE_LRP					      = 0x5c,
+    GEN6_OPCODE_NOP					      = 0x7e,
+};
+
+enum gen_eu_access_mode {
+    GEN6_ALIGN_1					      = 0x0,
+    GEN6_ALIGN_16					      = 0x1,
+};
+
+enum gen_eu_mask_control {
+    GEN6_MASKCTRL_NORMAL				      = 0x0,
+    GEN6_MASKCTRL_NOMASK				      = 0x1,
+};
+
+enum gen_eu_dependency_control {
+    GEN6_DEPCTRL_NORMAL					      = 0x0,
+    GEN6_DEPCTRL_NODDCLR				      = 0x1,
+    GEN6_DEPCTRL_NODDCHK				      = 0x2,
+    GEN6_DEPCTRL_NEITHER				      = 0x3,
+};
+
+enum gen_eu_quarter_control {
+    GEN6_QTRCTRL_1Q					      = 0x0,
+    GEN6_QTRCTRL_2Q					      = 0x1,
+    GEN6_QTRCTRL_3Q					      = 0x2,
+    GEN6_QTRCTRL_4Q					      = 0x3,
+    GEN6_QTRCTRL_1H					      = 0x0,
+    GEN6_QTRCTRL_2H					      = 0x2,
+};
+
+enum gen_eu_thread_control {
+    GEN6_THREADCTRL_NORMAL				      = 0x0,
+    GEN6_THREADCTRL_ATOMIC				      = 0x1,
+    GEN6_THREADCTRL_SWITCH				      = 0x2,
+};
+
+enum gen_eu_predicate_control {
+    GEN6_PREDCTRL_NONE					      = 0x0,
+    GEN6_PREDCTRL_NORMAL				      = 0x1,
+    GEN6_PREDCTRL_ANYV					      = 0x2,
+    GEN6_PREDCTRL_ALLV					      = 0x3,
+    GEN6_PREDCTRL_ANY2H					      = 0x4,
+    GEN6_PREDCTRL_ALL2H					      = 0x5,
+    GEN6_PREDCTRL_X					      = 0x2,
+    GEN6_PREDCTRL_Y					      = 0x3,
+    GEN6_PREDCTRL_Z					      = 0x4,
+    GEN6_PREDCTRL_W					      = 0x5,
+    GEN6_PREDCTRL_ANY4H					      = 0x6,
+    GEN6_PREDCTRL_ALL4H					      = 0x7,
+    GEN6_PREDCTRL_ANY8H					      = 0x8,
+    GEN6_PREDCTRL_ALL8H					      = 0x9,
+    GEN6_PREDCTRL_ANY16H				      = 0xa,
+    GEN6_PREDCTRL_ALL16H				      = 0xb,
+    GEN7_PREDCTRL_ANY32H				      = 0xc,
+    GEN7_PREDCTRL_ALL32H				      = 0xd,
+};
+
+enum gen_eu_exec_size {
+    GEN6_EXECSIZE_1					      = 0x0,
+    GEN6_EXECSIZE_2					      = 0x1,
+    GEN6_EXECSIZE_4					      = 0x2,
+    GEN6_EXECSIZE_8					      = 0x3,
+    GEN6_EXECSIZE_16					      = 0x4,
+    GEN6_EXECSIZE_32					      = 0x5,
+};
+
+enum gen_eu_condition_modifier {
+    GEN6_COND_NONE					      = 0x0,
+    GEN6_COND_Z						      = 0x1,
+    GEN6_COND_NZ					      = 0x2,
+    GEN6_COND_G						      = 0x3,
+    GEN6_COND_GE					      = 0x4,
+    GEN6_COND_L						      = 0x5,
+    GEN6_COND_LE					      = 0x6,
+    GEN6_COND_O						      = 0x8,
+    GEN6_COND_U						      = 0x9,
+};
+
+enum gen_eu_math_function_control {
+    GEN6_MATH_INV					      = 0x1,
+    GEN6_MATH_LOG					      = 0x2,
+    GEN6_MATH_EXP					      = 0x3,
+    GEN6_MATH_SQRT					      = 0x4,
+    GEN6_MATH_RSQ					      = 0x5,
+    GEN6_MATH_SIN					      = 0x6,
+    GEN6_MATH_COS					      = 0x7,
+    GEN6_MATH_FDIV					      = 0x9,
+    GEN6_MATH_POW					      = 0xa,
+    GEN6_MATH_INT_DIV					      = 0xb,
+    GEN6_MATH_INT_DIV_QUOTIENT				      = 0xc,
+    GEN6_MATH_INT_DIV_REMAINDER				      = 0xd,
+    GEN8_MATH_INVM					      = 0xe,
+    GEN8_MATH_RSQRTM					      = 0xf,
+};
+
+enum gen_eu_shared_function_id {
+    GEN6_SFID_NULL					      = 0x0,
+    GEN6_SFID_SAMPLER					      = 0x2,
+    GEN6_SFID_GATEWAY					      = 0x3,
+    GEN6_SFID_DP_SAMPLER				      = 0x4,
+    GEN6_SFID_DP_RC					      = 0x5,
+    GEN6_SFID_URB					      = 0x6,
+    GEN6_SFID_SPAWNER					      = 0x7,
+    GEN6_SFID_VME					      = 0x8,
+    GEN6_SFID_DP_CC					      = 0x9,
+    GEN7_SFID_DP_DC0					      = 0xa,
+    GEN7_SFID_PI					      = 0xb,
+    GEN75_SFID_DP_DC1					      = 0xc,
+};
+
+enum gen_eu_reg_file {
+    GEN6_FILE_ARF					      = 0x0,
+    GEN6_FILE_GRF					      = 0x1,
+    GEN6_FILE_MRF					      = 0x2,
+    GEN6_FILE_IMM					      = 0x3,
+};
+
+enum gen_eu_reg_type {
+    GEN6_TYPE_UD					      = 0x0,
+    GEN6_TYPE_D						      = 0x1,
+    GEN6_TYPE_UW					      = 0x2,
+    GEN6_TYPE_W						      = 0x3,
+    GEN6_TYPE_UB					      = 0x4,
+    GEN6_TYPE_B						      = 0x5,
+    GEN7_TYPE_DF					      = 0x6,
+    GEN6_TYPE_F						      = 0x7,
+    GEN8_TYPE_UQ					      = 0x8,
+    GEN8_TYPE_Q						      = 0x9,
+    GEN8_TYPE_HF					      = 0xa,
+    GEN6_TYPE_UV_IMM					      = 0x4,
+    GEN6_TYPE_VF_IMM					      = 0x5,
+    GEN6_TYPE_V_IMM					      = 0x6,
+    GEN8_TYPE_DF_IMM					      = 0xa,
+    GEN8_TYPE_HF_IMM					      = 0xb,
+    GEN7_TYPE_F_3SRC					      = 0x0,
+    GEN7_TYPE_D_3SRC					      = 0x1,
+    GEN7_TYPE_UD_3SRC					      = 0x2,
+    GEN7_TYPE_DF_3SRC					      = 0x3,
+};
+
+enum gen_eu_vertical_stride {
+    GEN6_VERTSTRIDE_0					      = 0x0,
+    GEN6_VERTSTRIDE_1					      = 0x1,
+    GEN6_VERTSTRIDE_2					      = 0x2,
+    GEN6_VERTSTRIDE_4					      = 0x3,
+    GEN6_VERTSTRIDE_8					      = 0x4,
+    GEN6_VERTSTRIDE_16					      = 0x5,
+    GEN6_VERTSTRIDE_32					      = 0x6,
+    GEN6_VERTSTRIDE_VXH					      = 0xf,
+};
+
+enum gen_eu_width {
+    GEN6_WIDTH_1					      = 0x0,
+    GEN6_WIDTH_2					      = 0x1,
+    GEN6_WIDTH_4					      = 0x2,
+    GEN6_WIDTH_8					      = 0x3,
+    GEN6_WIDTH_16					      = 0x4,
+};
+
+enum gen_eu_horizontal_stride {
+    GEN6_HORZSTRIDE_0					      = 0x0,
+    GEN6_HORZSTRIDE_1					      = 0x1,
+    GEN6_HORZSTRIDE_2					      = 0x2,
+    GEN6_HORZSTRIDE_4					      = 0x3,
+};
+
+enum gen_eu_addressing_mode {
+    GEN6_ADDRMODE_DIRECT				      = 0x0,
+    GEN6_ADDRMODE_INDIRECT				      = 0x1,
+};
+
+enum gen_eu_swizzle {
+    GEN6_SWIZZLE_X					      = 0x0,
+    GEN6_SWIZZLE_Y					      = 0x1,
+    GEN6_SWIZZLE_Z					      = 0x2,
+    GEN6_SWIZZLE_W					      = 0x3,
+};
+
+enum gen_eu_arf_reg {
+    GEN6_ARF_NULL					      = 0x0,
+    GEN6_ARF_A0						      = 0x10,
+    GEN6_ARF_ACC0					      = 0x20,
+    GEN6_ARF_F0						      = 0x30,
+    GEN6_ARF_SR0					      = 0x70,
+    GEN6_ARF_CR0					      = 0x80,
+    GEN6_ARF_N0						      = 0x90,
+    GEN6_ARF_IP						      = 0xa0,
+    GEN6_ARF_TDR					      = 0xb0,
+    GEN7_ARF_TM0					      = 0xc0,
+};
+
 #define GEN6_INST_SATURATE					(0x1 << 31)
 #define GEN6_INST_DEBUGCTRL					(0x1 << 30)
 #define GEN6_INST_CMPTCTRL					(0x1 << 29)
