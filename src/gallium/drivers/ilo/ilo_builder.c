@@ -99,10 +99,8 @@ ilo_builder_writer_reset(struct ilo_builder *builder,
       writer->ptr = NULL;
    }
 
-   if (writer->bo) {
-      intel_bo_unreference(writer->bo);
-      writer->bo = NULL;
-   }
+   intel_bo_unref(writer->bo);
+   writer->bo = NULL;
 
    writer->used = 0;
    writer->stolen = 0;
@@ -168,8 +166,7 @@ ilo_builder_writer_alloc_and_map(struct ilo_builder *builder,
 
       bo = alloc_writer_bo(builder->winsys, which, writer->size);
       if (bo) {
-         if (writer->bo)
-            intel_bo_unreference(writer->bo);
+         intel_bo_unref(writer->bo);
          writer->bo = bo;
       } else if (writer->bo) {
          /* reuse the old bo */
@@ -273,7 +270,7 @@ ilo_builder_writer_grow(struct ilo_builder *builder,
    }
 
    if (!new_ptr) {
-      intel_bo_unreference(new_bo);
+      intel_bo_unref(new_bo);
       return false;
    }
 
@@ -282,7 +279,7 @@ ilo_builder_writer_grow(struct ilo_builder *builder,
    else if (!preserve)
       FREE(writer->ptr);
 
-   intel_bo_unreference(writer->bo);
+   intel_bo_unref(writer->bo);
 
    writer->size = new_size;
    writer->bo = new_bo;

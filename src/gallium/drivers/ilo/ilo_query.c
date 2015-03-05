@@ -107,9 +107,7 @@ ilo_destroy_query(struct pipe_context *pipe, struct pipe_query *query)
 {
    struct ilo_query *q = ilo_query(query);
 
-   if (q->bo)
-      intel_bo_unreference(q->bo);
-
+   intel_bo_unref(q->bo);
    FREE(q);
 }
 

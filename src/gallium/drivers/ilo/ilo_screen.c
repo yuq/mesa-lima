@@ -600,15 +600,13 @@ ilo_fence_reference(struct pipe_screen *screen,
    if (likely(p)) {
       old = ilo_fence(*p);
       *p = f;
-   }
-   else {
+   } else {
       old = NULL;
    }
 
    STATIC_ASSERT(&((struct ilo_fence *) NULL)->reference == NULL);
    if (pipe_reference(&old->reference, &fence->reference)) {
-      if (old->bo)
-         intel_bo_unreference(old->bo);
+      intel_bo_unref(old->bo);
       FREE(old);
    }
 }
@@ -621,7 +619,7 @@ ilo_fence_signalled(struct pipe_screen *screen,
 
    /* mark signalled if the bo is idle */
    if (fence->bo && !intel_bo_is_busy(fence->bo)) {
-      intel_bo_unreference(fence->bo);
+      intel_bo_unref(fence->bo);
       fence->bo = NULL;
    }
 
@@ -645,7 +643,7 @@ ilo_fence_finish(struct pipe_screen *screen,
       return false;
 
    /* mark signalled */
-   intel_bo_unreference(fence->bo);
+   intel_bo_unref(fence->bo);
    fence->bo = NULL;
 
    return true;
@@ -666,9 +664,7 @@ ilo_fence_create(struct pipe_screen *screen, struct intel_bo *bo)
 
    pipe_reference_init(&fence->reference, 1);
 
-   if (bo)
-      intel_bo_reference(bo);
-   fence->bo = bo;
+   fence->bo = intel_bo_ref(bo);
 
    return fence;
 }

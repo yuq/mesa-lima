@@ -464,16 +464,20 @@ intel_winsys_decode_bo(struct intel_winsys *winsys,
    intel_bo_unmap(bo);
 }
 
-void
-intel_bo_reference(struct intel_bo *bo)
+struct intel_bo *
+intel_bo_ref(struct intel_bo *bo)
 {
-   drm_intel_bo_reference(gem_bo(bo));
+   if (bo)
+      drm_intel_bo_reference(gem_bo(bo));
+
+   return bo;
 }
 
 void
-intel_bo_unreference(struct intel_bo *bo)
+intel_bo_unref(struct intel_bo *bo)
 {
-   drm_intel_bo_unreference(gem_bo(bo));
+   if (bo)
+      drm_intel_bo_unreference(gem_bo(bo));
 }
 
 int

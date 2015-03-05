@@ -203,17 +203,17 @@ intel_winsys_decode_bo(struct intel_winsys *winsys,
                        struct intel_bo *bo, int used);
 
 /**
- * Increase the reference count of \p bo.
+ * Increase the reference count of \p bo.  No-op when \p bo is NULL.
  */
-void
-intel_bo_reference(struct intel_bo *bo);
+struct intel_bo *
+intel_bo_ref(struct intel_bo *bo);
 
 /**
  * Decrease the reference count of \p bo.  When the reference count reaches
- * zero, \p bo is destroyed.
+ * zero, \p bo is destroyed.  No-op when \p bo is NULL.
  */
 void
-intel_bo_unreference(struct intel_bo *bo);
+intel_bo_unref(struct intel_bo *bo);
 
 /**
  * Set the tiling of \p bo.  The info is used by GTT mapping and bo export.

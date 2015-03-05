@@ -171,7 +171,7 @@ tex_import_handle(struct ilo_texture *tex,
    if (!ilo_layout_update_for_imported_bo(&tex->layout,
             winsys_to_surface_tiling(tiling), pitch)) {
       ilo_err("imported handle has incompatible tiling/pitch\n");
-      intel_bo_unreference(tex->bo);
+      intel_bo_unref(tex->bo);
       tex->bo = NULL;
       return false;
    }
@@ -197,7 +197,7 @@ tex_create_bo(struct ilo_texture *tex)
          surface_to_winsys_tiling(tex->layout.tiling);
 
       if (intel_bo_set_tiling(bo, tiling, tex->layout.bo_stride)) {
-         intel_bo_unreference(bo);
+         intel_bo_unref(bo);
          bo = NULL;
       }
    }
@@ -278,14 +278,11 @@ tex_create_mcs(struct ilo_texture *tex)
 static void
 tex_destroy(struct ilo_texture *tex)
 {
-   if (tex->aux_bo)
-      intel_bo_unreference(tex->aux_bo);
-
    if (tex->separate_s8)
       tex_destroy(tex->separate_s8);
 
-   if (tex->bo)
-      intel_bo_unreference(tex->bo);
+   intel_bo_unref(tex->aux_bo);
+   intel_bo_unref(tex->bo);
 
    tex_free_slices(tex);
    FREE(tex);
@@ -418,7 +415,7 @@ buf_create_bo(struct ilo_buffer *buf)
 static void
 buf_destroy(struct ilo_buffer *buf)
 {
-   intel_bo_unreference(buf->bo);
+   intel_bo_unref(buf->bo);
    FREE(buf);
 }
 
@@ -554,7 +551,7 @@ ilo_buffer_rename_bo(struct ilo_buffer *buf)
    struct intel_bo *old_bo = buf->bo;
 
    if (buf_create_bo(buf)) {
-      intel_bo_unreference(old_bo);
+      intel_bo_unref(old_bo);
       return true;
    }
    else {
@@ -573,7 +570,7 @@ ilo_texture_rename_bo(struct ilo_texture *tex)
       return false;
 
    if (tex_create_bo(tex)) {
-      intel_bo_unreference(old_bo);
+      intel_bo_unref(old_bo);
       return true;
    }
    else {

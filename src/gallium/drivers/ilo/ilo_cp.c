@@ -163,10 +163,8 @@ ilo_cp_submit_internal(struct ilo_cp *cp)
    if (!err) {
       bool guilty;
 
-      if (cp->last_submitted_bo)
-         intel_bo_unreference(cp->last_submitted_bo);
-      cp->last_submitted_bo = bo;
-      intel_bo_reference(cp->last_submitted_bo);
+      intel_bo_unref(cp->last_submitted_bo);
+      cp->last_submitted_bo = intel_bo_ref(bo);
 
       guilty = ilo_cp_detect_hang(cp);
 

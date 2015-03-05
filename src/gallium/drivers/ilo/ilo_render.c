@@ -154,9 +154,7 @@ ilo_render_create(struct ilo_builder *builder)
 void
 ilo_render_destroy(struct ilo_render *render)
 {
-   if (render->workaround_bo)
-      intel_bo_unreference(render->workaround_bo);
-
+   intel_bo_unref(render->workaround_bo);
    FREE(render);
 }
 
