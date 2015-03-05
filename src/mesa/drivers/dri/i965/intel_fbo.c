@@ -916,6 +916,51 @@ intel_blit_framebuffer(struct gl_context *ctx,
 }
 
 /**
+ * Gen4-5 implementation of glBlitFrameBuffer().
+ *
+ * Tries BLT, Meta, then swrast.
+ *
+ * Gen4-5 have a single ring for both 3D and BLT operations, so there's no
+ * inter-ring synchronization issues like on Gen6+.  It is apparently faster
+ * than using the 3D pipeline.  Original Gen4 also has to rebase and copy
+ * miptree slices in order to render to unaligned locations.
+ */
+static void
+gen4_blit_framebuffer(struct gl_context *ctx,
+                      struct gl_framebuffer *readFb,
+                      struct gl_framebuffer *drawFb,
+                      GLint srcX0, GLint srcY0, GLint srcX1, GLint srcY1,
+                      GLint dstX0, GLint dstY0, GLint dstX1, GLint dstY1,
+                      GLbitfield mask, GLenum filter)
+{
+   /* Page 679 of OpenGL 4.4 spec says:
+    * "Added BlitFramebuffer to commands affected by conditional rendering in
+    *  section 10.10 (Bug 9562)."
+    */
+   if (!_mesa_check_conditional_render(ctx))
+      return;
+
+   mask = intel_blit_framebuffer_with_blitter(ctx, readFb, drawFb,
+                                              srcX0, srcY0, srcX1, srcY1,
+                                              dstX0, dstY0, dstX1, dstY1,
+                                              mask, filter);
+   if (mask == 0x0)
+      return;
+
+   mask = _mesa_meta_BlitFramebuffer(ctx, readFb, drawFb,
+                                     srcX0, srcY0, srcX1, srcY1,
+                                     dstX0, dstY0, dstX1, dstY1,
+                                     mask, filter);
+   if (mask == 0x0)
+      return;
+
+   _swrast_BlitFramebuffer(ctx, readFb, drawFb,
+                           srcX0, srcY0, srcX1, srcY1,
+                           dstX0, dstY0, dstX1, dstY1,
+                           mask, filter);
+}
+
+/**
  * Does the renderbuffer have hiz enabled?
  */
 bool
@@ -1049,7 +1094,10 @@ intel_fbo_init(struct brw_context *brw)
    dd->UnmapRenderbuffer = intel_unmap_renderbuffer;
    dd->RenderTexture = intel_render_texture;
    dd->ValidateFramebuffer = intel_validate_framebuffer;
-   dd->BlitFramebuffer = intel_blit_framebuffer;
+   if (brw->gen >= 6)
+      dd->BlitFramebuffer = intel_blit_framebuffer;
+   else
+      dd->BlitFramebuffer = gen4_blit_framebuffer;
    dd->EGLImageTargetRenderbufferStorage =
       intel_image_target_renderbuffer_storage;
 
