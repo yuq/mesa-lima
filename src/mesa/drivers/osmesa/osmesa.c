@@ -33,6 +33,7 @@
  */
 
 
+#include <stdio.h>
 #include "main/glheader.h"
 #include "GL/osmesa.h"
 #include "main/api_exec.h"
