@@ -25,7 +25,6 @@
  *    Chia-I Wu <olv@lunarg.com>
  */
 
-#include "u_macros.h"
 
 __asm__(".text\n"
         ".balign 32\n"

@@ -26,7 +26,6 @@
  */
 
 #include <string.h>
-#include "u_macros.h"
 
 __asm__(".text");
 

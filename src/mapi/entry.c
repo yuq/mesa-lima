@@ -27,7 +27,9 @@
 
 #include "entry.h"
 #include "u_current.h"
-#include "u_macros.h"
+
+#define _U_STRINGIFY(x) #x
+#define U_STRINGIFY(x) _U_STRINGIFY(x)
 
 /* define macros for use by assembly dispatchers */
 #define ENTRY_CURRENT_TABLE U_STRINGIFY(u_current_table)

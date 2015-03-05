@@ -19,7 +19,6 @@ MAPI_UTIL_FILES = \
 	u_current.h \
 	u_execmem.c \
 	u_execmem.h \
-	u_macros.h \
 	u_thread.h
 
 MAPI_BRIDGE_FILES = \
