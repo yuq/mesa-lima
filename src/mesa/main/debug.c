@@ -118,11 +118,6 @@ void _mesa_print_info( struct gl_context *ctx )
     */
    _mesa_debug(NULL, "Mesa GL_EXTENSIONS = %s\n", ctx->Extensions.String);
 
-#if defined(THREADS)
-   _mesa_debug(NULL, "Mesa thread-safe: YES\n");
-#else
-   _mesa_debug(NULL, "Mesa thread-safe: NO\n");
-#endif
 #if defined(USE_X86_ASM)
    _mesa_debug(NULL, "Mesa x86-optimized: YES\n");
 #else
