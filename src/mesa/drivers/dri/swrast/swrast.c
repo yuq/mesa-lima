@@ -32,6 +32,7 @@
  * The back-buffer is allocated by the driver and is private.
  */
 
+#include <stdio.h>
 #include "main/api_exec.h"
 #include "main/context.h"
 #include "main/extensions.h"
