@@ -38,8 +38,10 @@
 
 static uint32_t
 ilo_blitter_blt_begin(struct ilo_blitter *blitter, int max_cmd_size,
-                      struct intel_bo *dst, enum intel_tiling_mode dst_tiling,
-                      struct intel_bo *src, enum intel_tiling_mode src_tiling)
+                      struct intel_bo *dst,
+                      enum gen_surface_tiling dst_tiling,
+                      struct intel_bo *src,
+                      enum gen_surface_tiling src_tiling)
 {
    struct ilo_cp *cp = blitter->ilo->cp;
    struct intel_bo *aper_check[2];
@@ -64,12 +66,19 @@ ilo_blitter_blt_begin(struct ilo_blitter *blitter, int max_cmd_size,
    /* set BCS_SWCTRL */
    swctrl = 0x0;
 
-   if (dst_tiling == INTEL_TILING_Y) {
+   assert(dst_tiling == GEN6_TILING_NONE ||
+          dst_tiling == GEN6_TILING_X ||
+          dst_tiling == GEN6_TILING_Y);
+   assert(src_tiling == GEN6_TILING_NONE ||
+          src_tiling == GEN6_TILING_X ||
+          src_tiling == GEN6_TILING_Y);
+
+   if (dst_tiling == GEN6_TILING_Y) {
       swctrl |= GEN6_REG_BCS_SWCTRL_DST_TILING_Y << 16 |
                 GEN6_REG_BCS_SWCTRL_DST_TILING_Y;
    }
 
-   if (src && src_tiling == INTEL_TILING_Y) {
+   if (src && src_tiling == GEN6_TILING_Y) {
       swctrl |= GEN6_REG_BCS_SWCTRL_SRC_TILING_Y << 16 |
                 GEN6_REG_BCS_SWCTRL_SRC_TILING_Y;
    }
@@ -136,7 +145,7 @@ buf_clear_region(struct ilo_blitter *blitter,
 
    ilo_blitter_blt_begin(blitter, GEN6_COLOR_BLT__SIZE *
          (1 + size / 32764 / gen6_blt_max_scanlines),
-         dst.bo, INTEL_TILING_NONE, NULL, INTEL_TILING_NONE);
+         dst.bo, GEN6_TILING_NONE, NULL, GEN6_TILING_NONE);
 
    while (size) {
       unsigned width, height;
@@ -188,7 +197,7 @@ buf_copy_region(struct ilo_blitter *blitter,
 
    ilo_blitter_blt_begin(blitter, GEN6_SRC_COPY_BLT__SIZE *
          (1 + size / 32764 / gen6_blt_max_scanlines),
-         dst_buf->bo, INTEL_TILING_NONE, src_buf->bo, INTEL_TILING_NONE);
+         dst_buf->bo, GEN6_TILING_NONE, src_buf->bo, GEN6_TILING_NONE);
 
    while (size) {
       unsigned width, height;
@@ -239,8 +248,8 @@ tex_clear_region(struct ilo_blitter *blitter,
    uint32_t swctrl;
    int slice;
 
-   /* no W-tiling support */
-   if (dst_tex->separate_s8)
+   /* no W-tiling nor separate stencil support */
+   if (dst_tex->layout.tiling == GEN8_TILING_W || dst_tex->separate_s8)
       return false;
 
    if (dst_tex->layout.bo_stride > max_extent)
@@ -256,7 +265,7 @@ tex_clear_region(struct ilo_blitter *blitter,
 
    swctrl = ilo_blitter_blt_begin(blitter,
          GEN6_XY_COLOR_BLT__SIZE * dst_box->depth,
-         dst_tex->bo, dst_tex->layout.tiling, NULL, INTEL_TILING_NONE);
+         dst_tex->bo, dst_tex->layout.tiling, NULL, GEN6_TILING_NONE);
 
    for (slice = 0; slice < dst_box->depth; slice++) {
       unsigned x, y;
@@ -299,8 +308,9 @@ tex_copy_region(struct ilo_blitter *blitter,
    uint32_t swctrl;
    int cpp, xscale, slice;
 
-   /* no W-tiling support */
-   if (dst_tex->separate_s8 || src_tex->separate_s8)
+   /* no W-tiling nor separate stencil support */
+   if (dst_tex->layout.tiling == GEN8_TILING_W || dst_tex->separate_s8 ||
+       src_tex->layout.tiling == GEN8_TILING_W || src_tex->separate_s8)
       return false;
 
    if (dst_tex->layout.bo_stride > max_extent ||

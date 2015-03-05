@@ -53,7 +53,7 @@ struct gen6_blt_xy_bo {
    uint32_t offset;
    int16_t pitch;
 
-   enum intel_tiling_mode tiling;
+   enum gen_surface_tiling tiling;
    int16_t x, y;
 };
 
@@ -170,10 +170,11 @@ gen6_XY_COLOR_BLT(struct ilo_builder *builder,
            gen6_blt_translate_write_mask(write_mask) |
            (cmd_len - 2);
 
-   if (dst->tiling != INTEL_TILING_NONE) {
+   if (dst->tiling != GEN6_TILING_NONE) {
       dw[0] |= GEN6_BLITTER_BR00_DST_TILED;
 
-      dst_align = (dst->tiling == INTEL_TILING_Y) ? 128 : 512;
+      assert(dst->tiling == GEN6_TILING_X || dst->tiling == GEN6_TILING_Y);
+      dst_align = (dst->tiling == GEN6_TILING_Y) ? 128 : 512;
       /* in dwords when tiled */
       dst_pitch_shift = 2;
    }
@@ -273,18 +274,20 @@ gen6_XY_SRC_COPY_BLT(struct ilo_builder *builder,
            gen6_blt_translate_write_mask(write_mask) |
            (cmd_len - 2);
 
-   if (dst->tiling != INTEL_TILING_NONE) {
+   if (dst->tiling != GEN6_TILING_NONE) {
       dw[0] |= GEN6_BLITTER_BR00_DST_TILED;
 
-      dst_align = (dst->tiling == INTEL_TILING_Y) ? 128 : 512;
+      assert(dst->tiling == GEN6_TILING_X || dst->tiling == GEN6_TILING_Y);
+      dst_align = (dst->tiling == GEN6_TILING_Y) ? 128 : 512;
       /* in dwords when tiled */
       dst_pitch_shift = 2;
    }
 
-   if (src->tiling != INTEL_TILING_NONE) {
+   if (src->tiling != GEN6_TILING_NONE) {
       dw[0] |= GEN6_BLITTER_BR00_SRC_TILED;
 
-      src_align = (src->tiling == INTEL_TILING_Y) ? 128 : 512;
+      assert(src->tiling == GEN6_TILING_X || src->tiling == GEN6_TILING_Y);
+      src_align = (src->tiling == GEN6_TILING_Y) ? 128 : 512;
       /* in dwords when tiled */
       src_pitch_shift = 2;
    }

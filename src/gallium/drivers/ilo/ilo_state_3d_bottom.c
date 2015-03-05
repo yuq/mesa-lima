@@ -910,7 +910,7 @@ struct ilo_zs_surface_info {
       struct intel_bo *bo;
       unsigned stride;
       unsigned qpitch;
-      enum intel_tiling_mode tiling;
+      enum gen_surface_tiling tiling;
       uint32_t offset;
    } zs, stencil, hiz;
 
@@ -1082,7 +1082,7 @@ zs_init_info(const struct ilo_dev_info *dev,
       assert(tex->layout.aux_layer_height % 4 == 0);
       info->hiz.qpitch = tex->layout.aux_layer_height / 4;
 
-      info->hiz.tiling = INTEL_TILING_Y;
+      info->hiz.tiling = GEN6_TILING_Y;
 
       /* offset to the level */
       if (ilo_dev_gen(dev) == ILO_GEN(6))
@@ -1175,7 +1175,7 @@ ilo_gpe_init_zs_surface(const struct ilo_dev_info *dev,
 
    if (info.zs.bo) {
       /* required for GEN6+ */
-      assert(info.zs.tiling == INTEL_TILING_Y);
+      assert(info.zs.tiling == GEN6_TILING_Y);
       assert(info.zs.stride > 0 && info.zs.stride < 128 * 1024 &&
             info.zs.stride % 128 == 0);
       assert(info.width <= info.zs.stride);

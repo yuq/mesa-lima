@@ -678,7 +678,7 @@ view_init_for_texture_gen6(const struct ilo_dev_info *dev,
     *
     *     "For linear surfaces, this field (X Offset) must be zero"
     */
-   if (tex->layout.tiling == INTEL_TILING_NONE) {
+   if (tex->layout.tiling == GEN6_TILING_NONE) {
       if (is_rt) {
          const int elem_size = util_format_get_blocksize(format);
          assert(pitch % elem_size == 0);
@@ -706,9 +706,10 @@ view_init_for_texture_gen6(const struct ilo_dev_info *dev,
            (width - 1) << GEN6_SURFACE_DW2_WIDTH__SHIFT |
            lod << GEN6_SURFACE_DW2_MIP_COUNT_LOD__SHIFT;
 
+   assert(tex->layout.tiling != GEN8_TILING_W);
    dw[3] = (depth - 1) << GEN6_SURFACE_DW3_DEPTH__SHIFT |
            (pitch - 1) << GEN6_SURFACE_DW3_PITCH__SHIFT |
-           ilo_gpe_gen6_translate_winsys_tiling(tex->layout.tiling);
+           tex->layout.tiling;
 
    dw[4] = first_level << GEN6_SURFACE_DW4_MIN_LOD__SHIFT |
            first_layer << 17 |
@@ -1042,7 +1043,7 @@ view_init_for_texture_gen7(const struct ilo_dev_info *dev,
     *
     *     "For linear surfaces, this field (X Offset) must be zero."
     */
-   if (tex->layout.tiling == INTEL_TILING_NONE) {
+   if (tex->layout.tiling == GEN6_TILING_NONE) {
       if (is_rt) {
          const int elem_size = util_format_get_blocksize(format);
          assert(pitch % elem_size == 0);
@@ -1104,8 +1105,7 @@ view_init_for_texture_gen7(const struct ilo_dev_info *dev,
          break;
       }
 
-      dw[0] |= ilo_gpe_gen6_translate_winsys_tiling(tex->layout.tiling) <<
-         GEN8_SURFACE_DW0_TILING__SHIFT;
+      dw[0] |= tex->layout.tiling << GEN8_SURFACE_DW0_TILING__SHIFT;
    } else {
       assert(tex->layout.align_i == 4 || tex->layout.align_i == 8);
       assert(tex->layout.align_j == 2 || tex->layout.align_j == 4);
@@ -1116,8 +1116,8 @@ view_init_for_texture_gen7(const struct ilo_dev_info *dev,
       if (tex->layout.align_i == 8)
          dw[0] |= GEN7_SURFACE_DW0_HALIGN_8;
 
-      dw[0] |= ilo_gpe_gen6_translate_winsys_tiling(tex->layout.tiling) <<
-         GEN7_SURFACE_DW0_TILING__SHIFT;
+      assert(tex->layout.tiling != GEN8_TILING_W);
+      dw[0] |= tex->layout.tiling << GEN7_SURFACE_DW0_TILING__SHIFT;
 
       if (tex->layout.walk == ILO_LAYOUT_WALK_LOD)
          dw[0] |= GEN7_SURFACE_DW0_ARYSPC_LOD0;

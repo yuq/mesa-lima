@@ -88,13 +88,12 @@ resource_get_transfer_method(struct pipe_resource *res,
 
    if (res->target == PIPE_BUFFER) {
       tiled = false;
-   }
-   else {
+   } else {
       struct ilo_texture *tex = ilo_texture(res);
       bool need_convert = false;
 
       /* we may need to convert on the fly */
-      if (tex->separate_s8 || tex->layout.format == PIPE_FORMAT_S8_UINT) {
+      if (tex->layout.tiling == GEN8_TILING_W || tex->separate_s8) {
          /* on GEN6, separate stencil is enabled only when HiZ is */
          if (ilo_dev_gen(&is->dev) >= ILO_GEN(7) ||
              ilo_texture_can_enable_hiz(tex, transfer->level,
@@ -115,7 +114,7 @@ resource_get_transfer_method(struct pipe_resource *res,
          return true;
       }
 
-      tiled = (tex->layout.tiling != INTEL_TILING_NONE);
+      tiled = (tex->layout.tiling != GEN6_TILING_NONE);
    }
 
    if (tiled)
@@ -204,7 +203,7 @@ xfer_alloc_staging_res(struct ilo_transfer *xfer)
 
    if (xfer->staging.res && xfer->staging.res->target != PIPE_BUFFER) {
       assert(ilo_texture(xfer->staging.res)->layout.tiling ==
-            INTEL_TILING_NONE);
+            GEN6_TILING_NONE);
    }
 
    return (xfer->staging.res != NULL);
@@ -525,23 +524,21 @@ tex_tile_choose_offset_func(const struct ilo_texture *tex,
                             unsigned *tiles_per_row)
 {
    switch (tex->layout.tiling) {
-   case INTEL_TILING_X:
+   default:
+      assert(!"unknown tiling");
+      /* fall through */
+   case GEN6_TILING_NONE:
+      *tiles_per_row = tex->layout.bo_stride;
+      return tex_tile_none_offset;
+   case GEN6_TILING_X:
       *tiles_per_row = tex->layout.bo_stride / 512;
       return tex_tile_x_offset;
-   case INTEL_TILING_Y:
+   case GEN6_TILING_Y:
       *tiles_per_row = tex->layout.bo_stride / 128;
       return tex_tile_y_offset;
-   case INTEL_TILING_NONE:
-   default:
-      /* W-tiling */
-      if (tex->layout.format == PIPE_FORMAT_S8_UINT) {
-         *tiles_per_row = tex->layout.bo_stride / 64;
-         return tex_tile_w_offset;
-      }
-      else {
-         *tiles_per_row = tex->layout.bo_stride;
-         return tex_tile_none_offset;
-      }
+   case GEN8_TILING_W:
+      *tiles_per_row = tex->layout.bo_stride / 64;
+      return tex_tile_w_offset;
    }
 }
 
@@ -554,7 +551,7 @@ tex_staging_sys_map_bo(struct ilo_texture *tex,
    const bool prefer_cpu = (is->dev.has_llc || for_read_back);
    void *ptr;
 
-   if (prefer_cpu && (tex->layout.tiling == INTEL_TILING_NONE ||
+   if (prefer_cpu && (tex->layout.tiling == GEN6_TILING_NONE ||
                       !linear_view))
       ptr = intel_bo_map(tex->bo, !for_read_back);
    else

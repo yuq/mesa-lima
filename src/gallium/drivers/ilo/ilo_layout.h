@@ -28,7 +28,7 @@
 #ifndef ILO_LAYOUT_H
 #define ILO_LAYOUT_H
 
-#include "intel_winsys.h"
+#include "genhw/genhw.h"
 
 #include "ilo_common.h"
 
@@ -99,7 +99,7 @@ struct ilo_layout {
 
    /* bitmask of valid tiling modes */
    unsigned valid_tilings;
-   enum intel_tiling_mode tiling;
+   enum gen_surface_tiling tiling;
 
    /* mipmap alignments */
    unsigned align_i;
@@ -129,7 +129,7 @@ void ilo_layout_init(struct ilo_layout *layout,
 
 bool
 ilo_layout_update_for_imported_bo(struct ilo_layout *layout,
-                                  enum intel_tiling_mode tiling,
+                                  enum gen_surface_tiling tiling,
                                   unsigned bo_stride);
 
 /**
@@ -167,23 +167,21 @@ ilo_layout_mem_to_raw(const struct ilo_layout *layout,
    unsigned tile_w, tile_h;
 
    switch (layout->tiling) {
-   case INTEL_TILING_NONE:
-      if (layout->format == PIPE_FORMAT_S8_UINT) {
-         /* W-tile */
-         tile_w = 64;
-         tile_h = 64;
-      } else {
-         tile_w = 1;
-         tile_h = 1;
-      }
+   case GEN6_TILING_NONE:
+      tile_w = 1;
+      tile_h = 1;
       break;
-   case INTEL_TILING_X:
+   case GEN6_TILING_X:
       tile_w = 512;
       tile_h = 8;
       break;
-   case INTEL_TILING_Y:
+   case GEN6_TILING_Y:
       tile_w = 128;
       tile_h = 32;
+      break;
+   case GEN8_TILING_W:
+      tile_w = 64;
+      tile_h = 64;
       break;
    default:
       assert(!"unknown tiling");

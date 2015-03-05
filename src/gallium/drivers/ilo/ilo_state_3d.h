@@ -35,25 +35,6 @@
 #include "ilo_state.h"
 
 /**
- * Translate winsys tiling to hardware tiling.
- */
-static inline int
-ilo_gpe_gen6_translate_winsys_tiling(enum intel_tiling_mode tiling)
-{
-   switch (tiling) {
-   case INTEL_TILING_NONE:
-      return GEN6_TILING_NONE;
-   case INTEL_TILING_X:
-      return GEN6_TILING_X;
-   case INTEL_TILING_Y:
-      return GEN6_TILING_Y;
-   default:
-      assert(!"unknown tiling");
-      return GEN6_TILING_NONE;
-   }
-}
-
-/**
  * Translate a pipe texture target to the matching hardware surface type.
  */
 static inline int
