@@ -62,6 +62,7 @@
 #undef __WIN32__
 #endif
 
+#include <stdio.h>
 #include "glxheader.h"
 #include "xmesaP.h"
 #include "main/api_exec.h"

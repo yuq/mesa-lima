@@ -40,7 +40,7 @@
  */
 
 
-
+#include <stdio.h>
 #include "glxheader.h"
 #include "glxapi.h"
 #include "main/context.h"
