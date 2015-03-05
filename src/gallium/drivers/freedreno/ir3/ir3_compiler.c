@@ -3337,7 +3337,7 @@ ir3_compile_shader(struct ir3_shader_variant *so,
 	if (key.binning_pass) {
 		for (i = 0, j = 0; i < so->outputs_count; i++) {
 			unsigned name = sem2name(so->outputs[i].semantic);
-			unsigned idx = sem2name(so->outputs[i].semantic);
+			unsigned idx = sem2idx(so->outputs[i].semantic);
 
 			/* throw away everything but first position/psize */
 			if ((idx == 0) && ((name == TGSI_SEMANTIC_POSITION) ||
