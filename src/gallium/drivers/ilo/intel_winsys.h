@@ -126,43 +126,24 @@ intel_winsys_get_reset_stats(struct intel_winsys *winsys,
  * Allocate a buffer object.
  *
  * \param name             Informative description of the bo.
- * \param tiling           Tiling mode.
- * \param pitch            Pitch of the bo.
- * \param height           Height of the bo.
+ * \param size             Size of the bo.
  * \param cpu_init         Will be initialized by CPU.
  */
 struct intel_bo *
 intel_winsys_alloc_bo(struct intel_winsys *winsys,
                       const char *name,
-                      enum intel_tiling_mode tiling,
-                      unsigned long pitch,
-                      unsigned long height,
+                      unsigned long size,
                       bool cpu_init);
 
 /**
- * Allocate a linear buffer object.
- */
-static inline struct intel_bo *
-intel_winsys_alloc_buffer(struct intel_winsys *winsys,
-                          const char *name,
-                          unsigned long size,
-                          bool cpu_init)
-{
-   return intel_winsys_alloc_bo(winsys, name,
-         INTEL_TILING_NONE, size, 1, cpu_init);
-}
-
-/**
- * Create a bo from a user memory pointer.  Both \p userptr and (\p pitch * \p
- * height) must be page aligned.
+ * Create a bo from a user memory pointer.  Both \p userptr and \p size must
+ * be page aligned.
  */
 struct intel_bo *
 intel_winsys_import_userptr(struct intel_winsys *winsys,
                             const char *name,
                             void *userptr,
-                            enum intel_tiling_mode tiling,
-                            unsigned long pitch,
-                            unsigned long height,
+                            unsigned long size,
                             unsigned long flags);
 
 /**
@@ -177,7 +158,8 @@ intel_winsys_import_handle(struct intel_winsys *winsys,
                            unsigned long *pitch);
 
 /**
- * Export \p bo as a winsys handle for inter-process sharing.
+ * Export \p bo as a winsys handle for inter-process sharing.  \p tiling and
+ * \p pitch must match those set by \p intel_bo_set_tiling().
  */
 int
 intel_winsys_export_handle(struct intel_winsys *winsys,
@@ -232,6 +214,14 @@ intel_bo_reference(struct intel_bo *bo);
  */
 void
 intel_bo_unreference(struct intel_bo *bo);
+
+/**
+ * Set the tiling of \p bo.  The info is used by GTT mapping and bo export.
+ */
+int
+intel_bo_set_tiling(struct intel_bo *bo,
+                    enum intel_tiling_mode tiling,
+                    unsigned long pitch);
 
 /**
  * Map \p bo for CPU access.  Recursive mapping is allowed.

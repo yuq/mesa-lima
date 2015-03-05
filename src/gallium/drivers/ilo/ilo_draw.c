@@ -183,7 +183,7 @@ ilo_init_draw_query(struct ilo_context *ilo, struct ilo_query *q)
    q->stride <<= q->in_pairs;
 
    bo_size = (q->stride > 4096) ? q->stride : 4096;
-   q->bo = intel_winsys_alloc_buffer(ilo->winsys, "query", bo_size, false);
+   q->bo = intel_winsys_alloc_bo(ilo->winsys, "query", bo_size, false);
    if (!q->bo)
       return false;
 

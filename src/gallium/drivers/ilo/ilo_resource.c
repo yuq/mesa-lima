@@ -185,16 +185,24 @@ tex_create_bo(struct ilo_texture *tex)
    struct ilo_screen *is = ilo_screen(tex->base.screen);
    const char *name = resource_get_bo_name(&tex->base);
    const bool cpu_init = resource_get_cpu_init(&tex->base);
-   enum intel_tiling_mode tiling;
+   struct intel_bo *bo;
 
-   /* no native support */
-   if (tex->layout.tiling == GEN8_TILING_W)
-      tiling = INTEL_TILING_NONE;
-   else
-      tiling = surface_to_winsys_tiling(tex->layout.tiling);
+   bo = intel_winsys_alloc_bo(is->winsys, name,
+         tex->layout.bo_stride * tex->layout.bo_height, cpu_init);
 
-   tex->bo = intel_winsys_alloc_bo(is->winsys, name, tiling,
-         tex->layout.bo_stride, tex->layout.bo_height, cpu_init);
+   /* set the tiling for transfer and export */
+   if (bo && (tex->layout.tiling == GEN6_TILING_X ||
+              tex->layout.tiling == GEN6_TILING_Y)) {
+      const enum intel_tiling_mode tiling =
+         surface_to_winsys_tiling(tex->layout.tiling);
+
+      if (intel_bo_set_tiling(bo, tiling, tex->layout.bo_stride)) {
+         intel_bo_unreference(bo);
+         bo = NULL;
+      }
+   }
+
+   tex->bo = bo;
 
    return (tex->bo != NULL);
 }
@@ -230,7 +238,7 @@ tex_create_hiz(struct ilo_texture *tex)
    struct ilo_screen *is = ilo_screen(tex->base.screen);
    unsigned lv;
 
-   tex->aux_bo = intel_winsys_alloc_buffer(is->winsys, "hiz texture",
+   tex->aux_bo = intel_winsys_alloc_bo(is->winsys, "hiz texture",
          tex->layout.aux_stride * tex->layout.aux_height, false);
    if (!tex->aux_bo)
       return false;
@@ -259,7 +267,7 @@ tex_create_mcs(struct ilo_texture *tex)
 
    assert(tex->layout.aux_enables == (1 << (tex->base.last_level + 1)) - 1);
 
-   tex->aux_bo = intel_winsys_alloc_buffer(is->winsys, "mcs texture",
+   tex->aux_bo = intel_winsys_alloc_bo(is->winsys, "mcs texture",
          tex->layout.aux_stride * tex->layout.aux_height, false);
    if (!tex->aux_bo)
       return false;
@@ -383,7 +391,7 @@ tex_get_handle(struct ilo_texture *tex, struct winsys_handle *handle)
    enum intel_tiling_mode tiling;
    int err;
 
-   /* no native support */
+   /* must match what tex_create_bo() sets */
    if (tex->layout.tiling == GEN8_TILING_W)
       tiling = INTEL_TILING_NONE;
    else
@@ -402,8 +410,7 @@ buf_create_bo(struct ilo_buffer *buf)
    const char *name = resource_get_bo_name(&buf->base);
    const bool cpu_init = resource_get_cpu_init(&buf->base);
 
-   buf->bo = intel_winsys_alloc_buffer(is->winsys, name,
-         buf->bo_size, cpu_init);
+   buf->bo = intel_winsys_alloc_bo(is->winsys, name, buf->bo_size, cpu_init);
 
    return (buf->bo != NULL);
 }

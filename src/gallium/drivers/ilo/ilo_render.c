@@ -113,7 +113,7 @@ ilo_render_create(struct ilo_builder *builder)
    render->dev = builder->dev;
    render->builder = builder;
 
-   render->workaround_bo = intel_winsys_alloc_buffer(builder->winsys,
+   render->workaround_bo = intel_winsys_alloc_bo(builder->winsys,
          "PIPE_CONTROL workaround", 4096, false);
    if (!render->workaround_bo) {
       ilo_warn("failed to allocate PIPE_CONTROL workaround bo\n");

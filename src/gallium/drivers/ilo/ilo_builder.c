@@ -139,7 +139,7 @@ alloc_writer_bo(struct intel_winsys *winsys,
       [ILO_BUILDER_WRITER_INSTRUCTION] = "instruction",
    };
 
-   return intel_winsys_alloc_buffer(winsys, writer_names[which], size, true);
+   return intel_winsys_alloc_bo(winsys, writer_names[which], size, true);
 }
 
 static void *

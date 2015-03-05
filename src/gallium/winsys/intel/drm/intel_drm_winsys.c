@@ -275,51 +275,17 @@ intel_winsys_get_reset_stats(struct intel_winsys *winsys,
 struct intel_bo *
 intel_winsys_alloc_bo(struct intel_winsys *winsys,
                       const char *name,
-                      enum intel_tiling_mode tiling,
-                      unsigned long pitch,
-                      unsigned long height,
+                      unsigned long size,
                       bool cpu_init)
 {
    const unsigned int alignment = 4096; /* always page-aligned */
-   unsigned long size;
    drm_intel_bo *bo;
-
-   switch (tiling) {
-   case INTEL_TILING_X:
-      if (pitch % 512)
-         return NULL;
-      break;
-   case INTEL_TILING_Y:
-      if (pitch % 128)
-         return NULL;
-      break;
-   default:
-      break;
-   }
-
-   if (pitch > ULONG_MAX / height)
-      return NULL;
-
-   size = pitch * height;
 
    if (cpu_init) {
       bo = drm_intel_bo_alloc(winsys->bufmgr, name, size, alignment);
-   }
-   else {
+   } else {
       bo = drm_intel_bo_alloc_for_render(winsys->bufmgr,
             name, size, alignment);
-   }
-
-   if (bo && tiling != INTEL_TILING_NONE) {
-      uint32_t real_tiling = tiling;
-      int err;
-
-      err = drm_intel_bo_set_tiling(bo, &real_tiling, pitch);
-      if (err || real_tiling != tiling) {
-         assert(!"tiling mismatch");
-         drm_intel_bo_unreference(bo);
-         return NULL;
-      }
    }
 
    return (struct intel_bo *) bo;
@@ -329,9 +295,7 @@ struct intel_bo *
 intel_winsys_import_userptr(struct intel_winsys *winsys,
                             const char *name,
                             void *userptr,
-                            enum intel_tiling_mode tiling,
-                            unsigned long pitch,
-                            unsigned long height,
+                            unsigned long size,
                             unsigned long flags)
 {
    return NULL;
@@ -510,6 +474,36 @@ void
 intel_bo_unreference(struct intel_bo *bo)
 {
    drm_intel_bo_unreference(gem_bo(bo));
+}
+
+int
+intel_bo_set_tiling(struct intel_bo *bo,
+                    enum intel_tiling_mode tiling,
+                    unsigned long pitch)
+{
+   uint32_t real_tiling = tiling;
+   int err;
+
+   switch (tiling) {
+   case INTEL_TILING_X:
+      if (pitch % 512)
+         return -1;
+      break;
+   case INTEL_TILING_Y:
+      if (pitch % 128)
+         return -1;
+      break;
+   default:
+      break;
+   }
+
+   err = drm_intel_bo_set_tiling(gem_bo(bo), &real_tiling, pitch);
+   if (err || real_tiling != tiling) {
+      assert(!"tiling mismatch");
+      return -1;
+   }
+
+   return 0;
 }
 
 void *
