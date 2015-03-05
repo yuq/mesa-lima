@@ -24,6 +24,7 @@
  *
  */
 
+#include <stdio.h>
 #include <xf86drm.h>
 #include <nouveau_drm.h>
 #include "nouveau_driver.h"
