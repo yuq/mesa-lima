@@ -49,6 +49,7 @@
  */
 
 
+#include <stdio.h>
 #include "GL/osmesa.h"
 
 #include "glapi/glapi.h"  /* for OSMesaGetProcAddress below */
