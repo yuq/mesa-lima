@@ -266,6 +266,7 @@ void brw_fb_WRITE(struct brw_compile *p,
 		   unsigned msg_length,
 		   unsigned response_length,
 		   bool eot,
+		   bool last_render_target,
 		   bool header_present);
 
 void brw_SAMPLE(struct brw_compile *p,

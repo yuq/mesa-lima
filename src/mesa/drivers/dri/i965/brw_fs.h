@@ -370,10 +370,12 @@ public:
    bool optimize_frontfacing_ternary(nir_alu_instr *instr,
                                      const fs_reg &result);
 
-   int setup_color_payload(fs_reg *dst, fs_reg color, unsigned components);
+   int setup_color_payload(fs_reg *dst, fs_reg color, unsigned components,
+                           bool use_2nd_half);
    void emit_alpha_test();
    fs_inst *emit_single_fb_write(fs_reg color1, fs_reg color2,
-                                 fs_reg src0_alpha, unsigned components);
+                                 fs_reg src0_alpha, unsigned components,
+                                 bool use_2nd_half = false);
    void emit_fb_writes();
    void emit_urb_writes();
 

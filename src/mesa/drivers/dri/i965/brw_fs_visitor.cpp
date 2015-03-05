@@ -3363,7 +3363,8 @@ fs_visitor::emit_interpolation_setup_gen6()
 }
 
 int
-fs_visitor::setup_color_payload(fs_reg *dst, fs_reg color, unsigned components)
+fs_visitor::setup_color_payload(fs_reg *dst, fs_reg color, unsigned components,
+                                bool use_2nd_half)
 {
    brw_wm_prog_key *key = (brw_wm_prog_key*) this->key;
    fs_inst *inst;
@@ -3381,7 +3382,7 @@ fs_visitor::setup_color_payload(fs_reg *dst, fs_reg color, unsigned components)
       colors_enabled = (1 << components) - 1;
    }
 
-   if (dispatch_width == 8 || brw->gen >= 6) {
+   if (dispatch_width == 8 || (brw->gen >= 6 && !do_dual_src)) {
       /* SIMD8 write looks like:
        * m + 0: r0
        * m + 1: r1
@@ -3412,6 +3413,33 @@ fs_visitor::setup_color_payload(fs_reg *dst, fs_reg color, unsigned components)
          len++;
       }
       return len;
+   } else if (brw->gen >= 6 && do_dual_src) {
+      /* SIMD16 dual source blending for gen6+.
+       *
+       * From the SNB PRM, volume 4, part 1, page 193:
+       *
+       * "The dual source render target messages only have SIMD8 forms due to
+       *  maximum message length limitations. SIMD16 pixel shaders must send two
+       *  of these messages to cover all of the pixels. Each message contains
+       *  two colors (4 channels each) for each pixel in the message payload."
+       *
+       * So in SIMD16 dual source blending we will send 2 SIMD8 messages,
+       * each one will call this function twice (one for each color involved),
+       * so in each pass we only write 4 registers. Notice that the second
+       * SIMD8 message needs to read color data from the 2nd half of the color
+       * registers, so it needs to call this with use_2nd_half = true.
+       */
+      for (unsigned i = 0; i < 4; ++i) {
+         if (colors_enabled & (1 << i)) {
+            dst[i] = fs_reg(GRF, alloc.allocate(1), color.type);
+            inst = emit(MOV(dst[i], half(offset(color, i),
+                                         use_2nd_half ? 1 : 0)));
+            inst->saturate = key->clamp_fragment_color;
+            if (use_2nd_half)
+               inst->force_sechalf = true;
+         }
+      }
+      return 4;
    } else {
       /* pre-gen6 SIMD16 single source DP write looks like:
        * m + 0: r0
@@ -3495,7 +3523,8 @@ fs_visitor::emit_alpha_test()
 
 fs_inst *
 fs_visitor::emit_single_fb_write(fs_reg color0, fs_reg color1,
-                                 fs_reg src0_alpha, unsigned components)
+                                 fs_reg src0_alpha, unsigned components,
+                                 bool use_2nd_half)
 {
    assert(stage == MESA_SHADER_FRAGMENT);
    brw_wm_prog_data *prog_data = (brw_wm_prog_data*) this->prog_data;
@@ -3555,7 +3584,8 @@ fs_visitor::emit_single_fb_write(fs_reg color0, fs_reg color1,
        * alpha out the pipeline to our null renderbuffer to support
        * alpha-testing, alpha-to-coverage, and so on.
        */
-      length += setup_color_payload(sources + length, this->outputs[0], 0);
+      length += setup_color_payload(sources + length, this->outputs[0], 0,
+                                    false);
    } else if (color1.file == BAD_FILE) {
       if (src0_alpha.file != BAD_FILE) {
          sources[length] = fs_reg(GRF, alloc.allocate(reg_size),
@@ -3565,10 +3595,13 @@ fs_visitor::emit_single_fb_write(fs_reg color0, fs_reg color1,
          length++;
       }
 
-      length += setup_color_payload(sources + length, color0, components);
+      length += setup_color_payload(sources + length, color0, components,
+                                    false);
    } else {
-      length += setup_color_payload(sources + length, color0, components);
-      length += setup_color_payload(sources + length, color1, components);
+      length += setup_color_payload(sources + length, color0, components,
+                                    use_2nd_half);
+      length += setup_color_payload(sources + length, color1, components,
+                                    use_2nd_half);
    }
 
    if (source_depth_to_render_target) {
@@ -3637,12 +3670,6 @@ fs_visitor::emit_fb_writes()
    brw_wm_prog_data *prog_data = (brw_wm_prog_data*) this->prog_data;
    brw_wm_prog_key *key = (brw_wm_prog_key*) this->key;
 
-   if (do_dual_src) {
-      no16("GL_ARB_blend_func_extended not yet supported in SIMD16.");
-      if (dispatch_width == 16)
-         do_dual_src = false;
-   }
-
    fs_inst *inst;
    if (do_dual_src) {
       if (INTEL_DEBUG & DEBUG_SHADER_TIME)
@@ -3653,6 +3680,30 @@ fs_visitor::emit_fb_writes()
       inst = emit_single_fb_write(this->outputs[0], this->dual_src_output,
                                   reg_undef, 4);
       inst->target = 0;
+
+      /* SIMD16 dual source blending requires to send two SIMD8 dual source
+       * messages, where each message contains color data for 8 pixels. Color
+       * data for the first group of pixels is stored in the "lower" half of
+       * the color registers, so in SIMD16, the previous message did:
+       * m + 0: r0
+       * m + 1: g0
+       * m + 2: b0
+       * m + 3: a0
+       *
+       * Here goes the second message, which packs color data for the
+       * remaining 8 pixels. Color data for these pixels is stored in the
+       * "upper" half of the color registers, so we need to do:
+       * m + 0: r1
+       * m + 1: g1
+       * m + 2: b1
+       * m + 3: a1
+       */
+      if (dispatch_width == 16) {
+         inst = emit_single_fb_write(this->outputs[0], this->dual_src_output,
+                                     reg_undef, 4, true);
+         inst->target = 0;
+      }
+
       prog_data->dual_src_blend = true;
    } else if (key->nr_color_regions > 0) {
       for (int target = 0; target < key->nr_color_regions; target++) {

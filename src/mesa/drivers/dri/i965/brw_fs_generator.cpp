@@ -214,15 +214,22 @@ fs_generator::fire_fb_write(fs_inst *inst,
 
    if (inst->opcode == FS_OPCODE_REP_FB_WRITE)
       msg_control = BRW_DATAPORT_RENDER_TARGET_WRITE_SIMD16_SINGLE_SOURCE_REPLICATED;
-   else if (prog_data->dual_src_blend)
-      msg_control = BRW_DATAPORT_RENDER_TARGET_WRITE_SIMD8_DUAL_SOURCE_SUBSPAN01;
-   else if (dispatch_width == 16)
+   else if (prog_data->dual_src_blend) {
+      if (dispatch_width == 8 || !inst->eot)
+         msg_control = BRW_DATAPORT_RENDER_TARGET_WRITE_SIMD8_DUAL_SOURCE_SUBSPAN01;
+      else
+         msg_control = BRW_DATAPORT_RENDER_TARGET_WRITE_SIMD8_DUAL_SOURCE_SUBSPAN23;
+   } else if (dispatch_width == 16)
       msg_control = BRW_DATAPORT_RENDER_TARGET_WRITE_SIMD16_SINGLE_SOURCE;
    else
       msg_control = BRW_DATAPORT_RENDER_TARGET_WRITE_SIMD8_SINGLE_SOURCE_SUBSPAN01;
 
    uint32_t surf_index =
       prog_data->binding_table.render_target_start + inst->target;
+
+   bool last_render_target = inst->eot ||
+                             (prog_data->dual_src_blend && dispatch_width == 16);
+
 
    brw_fb_WRITE(p,
                 dispatch_width,
@@ -233,6 +240,7 @@ fs_generator::fire_fb_write(fs_inst *inst,
                 nr,
                 0,
                 inst->eot,
+                last_render_target,
                 inst->header_present);
 
    brw_mark_surface_used(&prog_data->base, surf_index);
@@ -369,6 +377,7 @@ fs_generator::generate_blorp_fb_write(fs_inst *inst)
                 inst->target,
                 inst->mlen,
                 0,
+                true,
                 true,
                 inst->header_present);
 }

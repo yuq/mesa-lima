@@ -2292,6 +2292,7 @@ void brw_fb_WRITE(struct brw_compile *p,
                   unsigned msg_length,
                   unsigned response_length,
                   bool eot,
+                  bool last_render_target,
                   bool header_present)
 {
    struct brw_context *brw = p->brw;
@@ -2333,7 +2334,7 @@ void brw_fb_WRITE(struct brw_compile *p,
 			    msg_type,
 			    msg_length,
 			    header_present,
-			    eot, /* last render target write */
+			    last_render_target,
 			    response_length,
 			    eot,
 			    0 /* send_commit_msg */);
