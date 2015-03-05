@@ -29,6 +29,7 @@
  */
 
 
+#include "c11/threads.h"
 #include "glapi/glapi_priv.h"
 #include "u_execmem.h"
 
@@ -336,7 +337,7 @@ void
 init_glapi_relocs_once( void )
 {
 #if defined(HAVE_PTHREAD) || defined(GLX_USE_TLS)
-   static pthread_once_t once_control = PTHREAD_ONCE_INIT;
-   pthread_once( & once_control, init_glapi_relocs );
+   static once_flag flag = ONCE_FLAG_INIT;
+   call_once(&flag, init_glapi_relocs);
 #endif
 }
