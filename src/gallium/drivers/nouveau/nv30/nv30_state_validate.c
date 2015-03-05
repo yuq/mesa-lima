@@ -456,7 +456,7 @@ nv30_state_context_switch(struct nv30_context *nv30)
 }
 
 boolean
-nv30_state_validate(struct nv30_context *nv30, boolean hwtnl)
+nv30_state_validate(struct nv30_context *nv30, uint32_t mask, boolean hwtnl)
 {
    struct nouveau_screen *screen = &nv30->screen->base;
    struct nouveau_pushbuf *push = nv30->base.pushbuf;
@@ -481,14 +481,16 @@ nv30_state_validate(struct nv30_context *nv30, boolean hwtnl)
    else
       validate = swtnl_validate_list;
 
-   if (nv30->dirty) {
+   mask &= nv30->dirty;
+
+   if (mask) {
       while (validate->func) {
-         if (nv30->dirty & validate->mask)
+         if (mask & validate->mask)
             validate->func(nv30);
          validate++;
       }
 
-      nv30->dirty = 0;
+      nv30->dirty &= ~mask;
    }
 
    nouveau_pushbuf_bufctx(push, bctx);

@@ -130,7 +130,7 @@ nv30_render_draw_elements(struct vbuf_render *render,
                        NOUVEAU_BO_LOW | NOUVEAU_BO_RD, 0, 0);
    }
 
-   if (!nv30_state_validate(nv30, FALSE))
+   if (!nv30_state_validate(nv30, ~0, FALSE))
       return;
 
    BEGIN_NV04(push, NV30_3D(VERTEX_BEGIN_END), 1);
@@ -175,7 +175,7 @@ nv30_render_draw_arrays(struct vbuf_render *render, unsigned start, uint nr)
                        NOUVEAU_BO_LOW | NOUVEAU_BO_RD, 0, 0);
    }
 
-   if (!nv30_state_validate(nv30, FALSE))
+   if (!nv30_state_validate(nv30, ~0, FALSE))
       return;
 
    BEGIN_NV04(push, NV30_3D(VERTEX_BEGIN_END), 1);
