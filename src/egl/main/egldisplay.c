@@ -35,13 +35,14 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
+#include "c11/threads.h"
+
 #include "eglcontext.h"
 #include "eglcurrent.h"
 #include "eglsurface.h"
 #include "egldisplay.h"
 #include "egldriver.h"
 #include "eglglobals.h"
-#include "eglmutex.h"
 #include "egllog.h"
 
 /* Includes for _eglNativePlatformDetectNativeDisplay */
@@ -260,7 +261,7 @@ _eglFindDisplay(_EGLPlatformType plat, void *plat_dpy)
    if (plat == _EGL_INVALID_PLATFORM)
       return NULL;
 
-   _eglLockMutex(_eglGlobal.Mutex);
+   mtx_lock(_eglGlobal.Mutex);
 
    /* search the display list first */
    dpy = _eglGlobal.DisplayList;
@@ -274,7 +275,7 @@ _eglFindDisplay(_EGLPlatformType plat, void *plat_dpy)
    if (!dpy) {
       dpy = calloc(1, sizeof(_EGLDisplay));
       if (dpy) {
-         _eglInitMutex(&dpy->Mutex);
+         mtx_init(&dpy->Mutex, mtx_plain);
          dpy->Platform = plat;
          dpy->PlatformDisplay = plat_dpy;
 
@@ -284,7 +285,7 @@ _eglFindDisplay(_EGLPlatformType plat, void *plat_dpy)
       }
    }
 
-   _eglUnlockMutex(_eglGlobal.Mutex);
+   mtx_unlock(_eglGlobal.Mutex);
 
    return dpy;
 }
@@ -344,14 +345,14 @@ _eglCheckDisplayHandle(EGLDisplay dpy)
 {
    _EGLDisplay *cur;
 
-   _eglLockMutex(_eglGlobal.Mutex);
+   mtx_lock(_eglGlobal.Mutex);
    cur = _eglGlobal.DisplayList;
    while (cur) {
       if (cur == (_EGLDisplay *) dpy)
          break;
       cur = cur->Next;
    }
-   _eglUnlockMutex(_eglGlobal.Mutex);
+   mtx_unlock(_eglGlobal.Mutex);
    return (cur != NULL);
 }
 

@@ -32,10 +32,10 @@
 #define EGLDISPLAY_INCLUDED
 
 #include "c99_compat.h"
+#include "c11/threads.h"
 
 #include "egltypedefs.h"
 #include "egldefines.h"
-#include "eglmutex.h"
 #include "eglarray.h"
 
 
@@ -132,7 +132,7 @@ struct _egl_display
    /* used to link displays */
    _EGLDisplay *Next;
 
-   _EGLMutex Mutex;
+   mtx_t Mutex;
 
    _EGLPlatformType Platform; /**< The type of the platform display */
    void *PlatformDisplay;     /**< A pointer to the platform display */
