@@ -80,30 +80,6 @@ struct u_tsd {
 };
 
 
-static inline unsigned long
-u_thread_self(void)
-{
-   /*
-    * XXX: Callers of u_thread_self assume it is a lightweight function,
-    * returning a numeric value.  But unfortunately C11's thrd_current() gives
-    * no such guarantees.  In fact, it's pretty hard to have a compliant
-    * implementation of thrd_current() on Windows with such characteristics.
-    * So for now, we side-step this mess and use Windows thread primitives
-    * directly here.
-    *
-    * FIXME: On the other hand, u_thread_self() is a bad
-    * abstraction.  Even with pthreads, there is no guarantee that
-    * pthread_self() will return numeric IDs -- we should be using
-    * pthread_equal() instead of assuming we can compare thread ids...
-    */
-#ifdef _WIN32
-   return GetCurrentThreadId();
-#else
-   return (unsigned long) (uintptr_t) thrd_current();
-#endif
-}
-
-
 static inline void
 u_tsd_init(struct u_tsd *tsd)
 {
