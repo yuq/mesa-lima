@@ -53,6 +53,7 @@
 #undef __WIN32__
 #endif
 
+#include <stdio.h>
 #include "xm_api.h"
 #include "xm_st.h"
 
