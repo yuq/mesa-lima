@@ -350,21 +350,22 @@ ilo_builder_dynamic_used(const struct ilo_builder *builder)
 }
 
 /**
- * Write a surface state to the surface buffer.  The offset, in bytes, of the
- * state is returned.
+ * Reserve a region from the surface buffer.  Both the offset, in bytes, and
+ * the pointer to the reserved region are returned.  The pointer is only valid
+ * until the next reserve call.
  *
  * Note that \p alignment is in bytes and \p len is in DWords.
  */
 static inline uint32_t
-ilo_builder_surface_write(struct ilo_builder *builder,
-                          enum ilo_builder_item_type item,
-                          unsigned alignment, unsigned len,
-                          const uint32_t *dw)
+ilo_builder_surface_pointer(struct ilo_builder *builder,
+                            enum ilo_builder_item_type item,
+                            unsigned alignment, unsigned len,
+                            uint32_t **dw)
 {
    assert(item == ILO_BUILDER_ITEM_SURFACE ||
           item == ILO_BUILDER_ITEM_BINDING_TABLE);
 
-   return ilo_builder_dynamic_write(builder, item, alignment, len, dw);
+   return ilo_builder_dynamic_pointer(builder, item, alignment, len, dw);
 }
 
 /**

@@ -1585,11 +1585,12 @@ gen7_3DSTATE_CONSTANT_GS(struct ilo_builder *builder,
 
 static inline uint32_t
 gen6_BINDING_TABLE_STATE(struct ilo_builder *builder,
-                         uint32_t *surface_states,
+                         const uint32_t *surface_states,
                          int num_surface_states)
 {
    const int state_align = 32;
    const int state_len = num_surface_states;
+   uint32_t state_offset, *dw;
 
    ILO_DEV_ASSERT(builder->dev, 6, 8);
 
@@ -1603,8 +1604,11 @@ gen6_BINDING_TABLE_STATE(struct ilo_builder *builder,
    if (!num_surface_states)
       return 0;
 
-   return ilo_builder_surface_write(builder, ILO_BUILDER_ITEM_BINDING_TABLE,
-         state_align, state_len, surface_states);
+   state_offset = ilo_builder_surface_pointer(builder,
+         ILO_BUILDER_ITEM_BINDING_TABLE, state_align, state_len, &dw);
+   memcpy(dw, surface_states, state_len << 2);
+
+   return state_offset;
 }
 
 static inline uint32_t
@@ -1612,23 +1616,32 @@ gen6_SURFACE_STATE(struct ilo_builder *builder,
                    const struct ilo_view_surface *surf,
                    bool for_render)
 {
-   const int state_align =
-      (ilo_dev_gen(builder->dev) >= ILO_GEN(8)) ? 64 : 32;
-   const int state_len =
-      (ilo_dev_gen(builder->dev) >= ILO_GEN(8)) ? 13 :
-      (ilo_dev_gen(builder->dev) >= ILO_GEN(7)) ? 8 : 6;
-   uint32_t state_offset;
+   int state_align, state_len;
+   uint32_t state_offset, *dw;
 
    ILO_DEV_ASSERT(builder->dev, 6, 8);
 
-   state_offset = ilo_builder_surface_write(builder, ILO_BUILDER_ITEM_SURFACE,
-         state_align, state_len, surf->payload);
+   if (ilo_dev_gen(builder->dev) >= ILO_GEN(8)) {
+      state_align = 64;
+      state_len = 13;
 
-   if (surf->bo) {
-      if (ilo_dev_gen(builder->dev) >= ILO_GEN(8)) {
+      state_offset = ilo_builder_surface_pointer(builder,
+            ILO_BUILDER_ITEM_SURFACE, state_align, state_len, &dw);
+      memcpy(dw, surf->payload, state_len << 2);
+
+      if (surf->bo) {
          ilo_builder_surface_reloc64(builder, state_offset, 8, surf->bo,
                surf->payload[8], (for_render) ? INTEL_RELOC_WRITE : 0);
-      } else {
+      }
+   } else {
+      state_align = 32;
+      state_len = (ilo_dev_gen(builder->dev) >= ILO_GEN(7)) ? 8 : 6;
+
+      state_offset = ilo_builder_surface_pointer(builder,
+            ILO_BUILDER_ITEM_SURFACE, state_align, state_len, &dw);
+      memcpy(dw, surf->payload, state_len << 2);
+
+      if (surf->bo) {
          ilo_builder_surface_reloc(builder, state_offset, 1, surf->bo,
                surf->payload[1], (for_render) ? INTEL_RELOC_WRITE : 0);
       }
