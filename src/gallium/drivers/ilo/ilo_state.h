@@ -302,6 +302,8 @@ struct ilo_view_surface {
    /* SURFACE_STATE */
    uint32_t payload[13];
    struct intel_bo *bo;
+
+   uint32_t scanout;
 };
 
 struct ilo_view_cso {
