@@ -48,8 +48,8 @@
  *                 drivers!  No changes to the public glapi interface.
  */
 
+#include "c11/threads.h"
 #include "u_current.h"
-#include "u_thread.h"
 
 #ifndef MAPI_MODE_UTIL
 
@@ -112,8 +112,8 @@ struct mapi_table *u_current_table =
    (struct mapi_table *) table_noop_array;
 void *u_current_context;
 
-struct u_tsd u_current_table_tsd;
-static struct u_tsd u_current_context_tsd;
+tss_t u_current_table_tsd;
+static tss_t u_current_context_tsd;
 static int ThreadSafe;
 
 #endif /* defined(GLX_USE_TLS) */
@@ -124,8 +124,8 @@ void
 u_current_destroy(void)
 {
 #if !defined(GLX_USE_TLS)
-   u_tsd_destroy(&u_current_table_tsd);
-   u_tsd_destroy(&u_current_context_tsd);
+   tss_delete(u_current_table_tsd);
+   tss_delete(u_current_context_tsd);
 #endif
 }
 
@@ -135,8 +135,8 @@ u_current_destroy(void)
 static void
 u_current_init_tsd(void)
 {
-   u_tsd_init(&u_current_table_tsd);
-   u_tsd_init(&u_current_context_tsd);
+   tss_create(&u_current_table_tsd, NULL);
+   tss_create(&u_current_context_tsd, NULL);
 }
 
 /**
@@ -233,7 +233,7 @@ u_current_set_context(const void *ptr)
 #if defined(GLX_USE_TLS)
    u_current_context = (void *) ptr;
 #else
-   u_tsd_set(&u_current_context_tsd, (void *) ptr);
+   tss_set(u_current_context_tsd, (void *) ptr);
    u_current_context = (ThreadSafe) ? NULL : (void *) ptr;
 #endif
 }
@@ -249,9 +249,7 @@ u_current_get_context_internal(void)
 #if defined(GLX_USE_TLS)
    return u_current_context;
 #else
-   return (ThreadSafe)
-      ? u_tsd_get(&u_current_context_tsd)
-      : u_current_context;
+   return ThreadSafe ? tss_get(u_current_context_tsd) : u_current_context;
 #endif
 }
 
@@ -273,7 +271,7 @@ u_current_set_table(const struct mapi_table *tbl)
 #if defined(GLX_USE_TLS)
    u_current_table = (struct mapi_table *) tbl;
 #else
-   u_tsd_set(&u_current_table_tsd, (void *) tbl);
+   tss_set(u_current_table_tsd, (void *) tbl);
    u_current_table = (ThreadSafe) ? NULL : (void *) tbl;
 #endif
 }
@@ -287,7 +285,9 @@ u_current_get_table_internal(void)
 #if defined(GLX_USE_TLS)
    return u_current_table;
 #else
-   return (struct mapi_table *) ((ThreadSafe) ?
-         u_tsd_get(&u_current_table_tsd) : (void *) u_current_table);
+   if (ThreadSafe)
+      return (struct mapi_table *) tss_get(u_current_table_tsd);
+   else
+      return (struct mapi_table *) u_current_table;
 #endif
 }

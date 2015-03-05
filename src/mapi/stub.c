@@ -28,10 +28,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include "c11/threads.h"
 
 #include "util/macros.h"
 #include "u_current.h"
-#include "u_thread.h"
 #include "entry.h"
 #include "stub.h"
 #include "table.h"
@@ -54,16 +54,8 @@ static int next_dynamic_slot = MAPI_TABLE_NUM_STATIC;
 void
 stub_init_once(void)
 {
-#ifdef HAVE_PTHREAD
-   static pthread_once_t once = PTHREAD_ONCE_INIT;
-   pthread_once(&once, entry_patch_public);
-#else
-   static int first = 1;
-   if (first) {
-      first = 0;
-      entry_patch_public();
-   }
-#endif
+   static once_flag flag = ONCE_FLAG_INIT;
+   call_once(&flag, entry_patch_public);
 }
 
 static int
