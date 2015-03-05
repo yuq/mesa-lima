@@ -1377,24 +1377,13 @@ link_fs_input_layout_qualifiers(struct gl_shader_program *prog,
        *   "If gl_FragCoord is redeclared in any fragment shader in a program,
        *    it must be redeclared in all the fragment shaders in that program
        *    that have a static use gl_FragCoord."
-       *
-       * Exclude the case when one of the 'linked_shader' or 'shader' redeclares
-       * gl_FragCoord with no layout qualifiers but the other one doesn't
-       * redeclare it. If we strictly follow GLSL 1.50 spec's language, it
-       * should be a link error. But, generating link error for this case will
-       * be a wrong behaviour which spec didn't intend to do and it could also
-       * break some applications.
        */
       if ((linked_shader->redeclares_gl_fragcoord
            && !shader->redeclares_gl_fragcoord
-           && shader->uses_gl_fragcoord
-           && (linked_shader->origin_upper_left
-               || linked_shader->pixel_center_integer))
+           && shader->uses_gl_fragcoord)
           || (shader->redeclares_gl_fragcoord
               && !linked_shader->redeclares_gl_fragcoord
-              && linked_shader->uses_gl_fragcoord
-              && (shader->origin_upper_left
-                  || shader->pixel_center_integer))) {
+              && linked_shader->uses_gl_fragcoord)) {
              linker_error(prog, "fragment shader defined with conflicting "
                          "layout qualifiers for gl_FragCoord\n");
       }
