@@ -1694,6 +1694,21 @@ fs_visitor::emit_math(enum opcode opcode, fs_reg dst, fs_reg src0, fs_reg src1)
 }
 
 void
+fs_visitor::emit_discard_jump()
+{
+   /* For performance, after a discard, jump to the end of the
+    * shader if all relevant channels have been discarded.
+    */
+   fs_inst *discard_jump = emit(FS_OPCODE_DISCARD_JUMP);
+   discard_jump->flag_subreg = 1;
+
+   discard_jump->predicate = (dispatch_width == 8)
+                             ? BRW_PREDICATE_ALIGN1_ANY8H
+                             : BRW_PREDICATE_ALIGN1_ANY16H;
+   discard_jump->predicate_inverse = true;
+}
+
+void
 fs_visitor::assign_curb_setup()
 {
    if (dispatch_width == 8) {

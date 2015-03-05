@@ -1363,18 +1363,8 @@ fs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
       cmp->flag_subreg = 1;
 
       if (brw->gen >= 6) {
-         /* For performance, after a discard, jump to the end of the shader.
-         * Only jump if all relevant channels have been discarded.
-         */
-         fs_inst *discard_jump = emit(FS_OPCODE_DISCARD_JUMP);
-         discard_jump->flag_subreg = 1;
-
-         discard_jump->predicate = (dispatch_width == 8)
-                                 ? BRW_PREDICATE_ALIGN1_ANY8H
-                                 : BRW_PREDICATE_ALIGN1_ANY16H;
-         discard_jump->predicate_inverse = true;
+         emit_discard_jump();
       }
-
       break;
    }
 
