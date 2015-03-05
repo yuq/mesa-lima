@@ -338,6 +338,20 @@ ilo_builder_init(struct ilo_builder *builder,
    builder->dev = dev;
    builder->winsys = winsys;
 
+   /* gen6_SURFACE_STATE() may override this */
+   switch (ilo_dev_gen(dev)) {
+   case ILO_GEN(8):
+      builder->mocs = GEN8_MOCS_MT_WB | GEN8_MOCS_CT_L3;
+      break;
+   case ILO_GEN(7.5):
+   case ILO_GEN(7):
+      builder->mocs = GEN7_MOCS_L3_WB;
+      break;
+   default:
+      builder->mocs = 0;
+      break;
+   }
+
    for (i = 0; i < ILO_BUILDER_WRITER_COUNT; i++)
       ilo_builder_writer_init(builder, i);
 }

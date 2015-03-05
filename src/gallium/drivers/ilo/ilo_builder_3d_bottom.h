@@ -1182,6 +1182,8 @@ gen6_3DSTATE_DEPTH_BUFFER(struct ilo_builder *builder,
       dw[6] = zs->payload[4];
       dw[7] = zs->payload[5];
 
+      dw[5] |= builder->mocs << GEN8_DEPTH_DW5_MOCS__SHIFT;
+
       if (zs->bo) {
          ilo_builder_batch_reloc64(builder, pos + 2, zs->bo,
                zs->payload[1], INTEL_RELOC_WRITE);
@@ -1191,6 +1193,11 @@ gen6_3DSTATE_DEPTH_BUFFER(struct ilo_builder *builder,
       dw[4] = zs->payload[3];
       dw[5] = zs->payload[4];
       dw[6] = zs->payload[5];
+
+      if (ilo_dev_gen(builder->dev) >= ILO_GEN(7))
+         dw[4] |= builder->mocs << GEN7_DEPTH_DW4_MOCS__SHIFT;
+      else
+         dw[6] |= builder->mocs << GEN6_DEPTH_DW6_MOCS__SHIFT;
 
       if (zs->bo) {
          ilo_builder_batch_reloc(builder, pos + 2, zs->bo,
@@ -1220,6 +1227,8 @@ gen6_3DSTATE_STENCIL_BUFFER(struct ilo_builder *builder,
    dw[2] = 0;
 
    if (ilo_dev_gen(builder->dev) >= ILO_GEN(8)) {
+      dw[1] |= builder->mocs << GEN8_STENCIL_DW1_MOCS__SHIFT;
+
       dw[3] = 0;
       dw[4] = zs->payload[8];
 
@@ -1228,6 +1237,8 @@ gen6_3DSTATE_STENCIL_BUFFER(struct ilo_builder *builder,
                zs->separate_s8_bo, zs->payload[7], INTEL_RELOC_WRITE);
       }
    } else {
+      dw[1] |= builder->mocs << GEN6_STENCIL_DW1_MOCS__SHIFT;
+
       if (zs->separate_s8_bo) {
          ilo_builder_batch_reloc(builder, pos + 2,
                zs->separate_s8_bo, zs->payload[7], INTEL_RELOC_WRITE);
@@ -1256,6 +1267,8 @@ gen6_3DSTATE_HIER_DEPTH_BUFFER(struct ilo_builder *builder,
    dw[2] = 0;
 
    if (ilo_dev_gen(builder->dev) >= ILO_GEN(8)) {
+      dw[1] |= builder->mocs << GEN8_HIZ_DW1_MOCS__SHIFT;
+
       dw[3] = 0;
       dw[4] = zs->payload[11];
 
@@ -1264,6 +1277,8 @@ gen6_3DSTATE_HIER_DEPTH_BUFFER(struct ilo_builder *builder,
                zs->hiz_bo, zs->payload[10], INTEL_RELOC_WRITE);
       }
    } else {
+      dw[1] |= builder->mocs << GEN6_HIZ_DW1_MOCS__SHIFT;
+
       if (zs->hiz_bo) {
          ilo_builder_batch_reloc(builder, pos + 2,
                zs->hiz_bo, zs->payload[10], INTEL_RELOC_WRITE);

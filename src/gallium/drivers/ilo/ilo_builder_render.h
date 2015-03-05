@@ -201,10 +201,13 @@ ilo_builder_batch_patch_sba(struct ilo_builder *builder)
 
    if (ilo_dev_gen(builder->dev) >= ILO_GEN(8)) {
       ilo_builder_batch_reloc64(builder, builder->sba_instruction_pos,
-            inst->bo, 1, 0);
+            inst->bo,
+            builder->mocs << GEN8_SBA_MOCS__SHIFT | GEN6_SBA_ADDR_MODIFIED,
+            0);
    } else {
-      ilo_builder_batch_reloc(builder, builder->sba_instruction_pos,
-            inst->bo, 1, 0);
+      ilo_builder_batch_reloc(builder, builder->sba_instruction_pos, inst->bo,
+            builder->mocs << GEN6_SBA_MOCS__SHIFT | GEN6_SBA_ADDR_MODIFIED,
+            0);
    }
 }
 
@@ -227,12 +230,18 @@ gen6_state_base_address(struct ilo_builder *builder, bool init_all)
    pos = ilo_builder_batch_pointer(builder, cmd_len, &dw);
 
    dw[0] = GEN6_RENDER_CMD(COMMON, STATE_BASE_ADDRESS) | (cmd_len - 2);
-   dw[1] = init_all;
+   dw[1] = builder->mocs << GEN6_SBA_MOCS__SHIFT |
+           builder->mocs << GEN6_SBA_DW1_GENERAL_STATELESS_MOCS__SHIFT |
+           init_all;
 
-   ilo_builder_batch_reloc(builder, pos + 2, bat->bo, 1, 0);
-   ilo_builder_batch_reloc(builder, pos + 3, bat->bo, 1, 0);
+   ilo_builder_batch_reloc(builder, pos + 2, bat->bo,
+         builder->mocs << GEN6_SBA_MOCS__SHIFT | GEN6_SBA_ADDR_MODIFIED,
+         0);
+   ilo_builder_batch_reloc(builder, pos + 3, bat->bo,
+         builder->mocs << GEN6_SBA_MOCS__SHIFT | GEN6_SBA_ADDR_MODIFIED,
+         0);
 
-   dw[4] = init_all;
+   dw[4] = builder->mocs << GEN6_SBA_MOCS__SHIFT | init_all;
 
    /*
     * Since the instruction writer has WRITER_FLAG_APPEND set, it is tempting
@@ -268,12 +277,16 @@ gen8_state_base_address(struct ilo_builder *builder, bool init_all)
    pos = ilo_builder_batch_pointer(builder, cmd_len, &dw);
 
    dw[0] = GEN6_RENDER_CMD(COMMON, STATE_BASE_ADDRESS) | (cmd_len - 2);
-   dw[1] = init_all;
+   dw[1] = builder->mocs << GEN8_SBA_MOCS__SHIFT | init_all;
    dw[2] = 0;
-   dw[3] = 0;
-   ilo_builder_batch_reloc64(builder, pos + 4, bat->bo, 1, 0);
-   ilo_builder_batch_reloc64(builder, pos + 6, bat->bo, 1, 0);
-   dw[8] = init_all;
+   dw[3] = builder->mocs << GEN8_SBA_DW3_STATELESS_MOCS__SHIFT;
+   ilo_builder_batch_reloc64(builder, pos + 4, bat->bo,
+         builder->mocs << GEN8_SBA_MOCS__SHIFT | GEN6_SBA_ADDR_MODIFIED,
+         0);
+   ilo_builder_batch_reloc64(builder, pos + 6, bat->bo,
+         builder->mocs << GEN8_SBA_MOCS__SHIFT | GEN6_SBA_ADDR_MODIFIED,
+         0);
+   dw[8] = builder->mocs << GEN8_SBA_MOCS__SHIFT | init_all;
    dw[9] = 0;
 
    ilo_builder_batch_patch_sba(builder);

@@ -100,6 +100,7 @@ struct ilo_builder_snapshot {
 struct ilo_builder {
    const struct ilo_dev_info *dev;
    struct intel_winsys *winsys;
+   uint32_t mocs;
 
    struct ilo_builder_writer writers[ILO_BUILDER_WRITER_COUNT];
    bool unrecoverable_error;
