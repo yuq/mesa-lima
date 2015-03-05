@@ -62,8 +62,3 @@
 				 devid == PCI_CHIP_E7221_G || \
 				 devid == PCI_CHIP_I915_GM || \
 				 IS_945(devid))
-
-#define IS_GEN2(devid)		(devid == PCI_CHIP_I830_M || \
-				 devid == PCI_CHIP_845_G ||  \
-				 devid == PCI_CHIP_I855_GM ||	\
-				 devid == PCI_CHIP_I865_G)
