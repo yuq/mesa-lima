@@ -33,6 +33,7 @@
 #define GLX_GLXEXT_PROTOTYPES
 #include "GL/glx.h"
 
+#include <stdio.h>
 #include <X11/Xmd.h>
 #include <GL/glxproto.h>
 
