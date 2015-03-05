@@ -48,9 +48,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <pthread.h>
-#ifdef _WIN32
 #include <stdint.h>
-#endif
 #include "GL/glxproto.h"
 #include "glxconfig.h"
 #include "glxhash.h"
