@@ -112,11 +112,9 @@ struct mapi_table *u_current_table =
    (struct mapi_table *) table_noop_array;
 void *u_current_context;
 
-#ifdef THREADS
 struct u_tsd u_current_table_tsd;
 static struct u_tsd u_current_context_tsd;
 static int ThreadSafe;
-#endif /* THREADS */
 
 #endif /* defined(GLX_USE_TLS) */
 /*@}*/
@@ -125,14 +123,14 @@ static int ThreadSafe;
 void
 u_current_destroy(void)
 {
-#if defined(THREADS) && !defined(GLX_USE_TLS)
+#if !defined(GLX_USE_TLS)
    u_tsd_destroy(&u_current_table_tsd);
    u_tsd_destroy(&u_current_context_tsd);
 #endif
 }
 
 
-#if defined(THREADS) && !defined(GLX_USE_TLS)
+#if !defined(GLX_USE_TLS)
 
 static void
 u_current_init_tsd(void)
@@ -234,11 +232,9 @@ u_current_set_context(const void *ptr)
 
 #if defined(GLX_USE_TLS)
    u_current_context = (void *) ptr;
-#elif defined(THREADS)
+#else
    u_tsd_set(&u_current_context_tsd, (void *) ptr);
    u_current_context = (ThreadSafe) ? NULL : (void *) ptr;
-#else
-   u_current_context = (void *) ptr;
 #endif
 }
 
@@ -252,12 +248,10 @@ u_current_get_context_internal(void)
 {
 #if defined(GLX_USE_TLS)
    return u_current_context;
-#elif defined(THREADS)
+#else
    return (ThreadSafe)
       ? u_tsd_get(&u_current_context_tsd)
       : u_current_context;
-#else
-   return u_current_context;
 #endif
 }
 
@@ -278,11 +272,9 @@ u_current_set_table(const struct mapi_table *tbl)
 
 #if defined(GLX_USE_TLS)
    u_current_table = (struct mapi_table *) tbl;
-#elif defined(THREADS)
+#else
    u_tsd_set(&u_current_table_tsd, (void *) tbl);
    u_current_table = (ThreadSafe) ? NULL : (void *) tbl;
-#else
-   u_current_table = (struct mapi_table *) tbl;
 #endif
 }
 
@@ -294,10 +286,8 @@ u_current_get_table_internal(void)
 {
 #if defined(GLX_USE_TLS)
    return u_current_table;
-#elif defined(THREADS)
+#else
    return (struct mapi_table *) ((ThreadSafe) ?
          u_tsd_get(&u_current_table_tsd) : (void *) u_current_table);
-#else
-   return u_current_table;
 #endif
 }

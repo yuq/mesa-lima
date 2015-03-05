@@ -120,11 +120,9 @@ fill_in_entrypoint_offset(_glapi_proc entrypoint, unsigned int offset)
 
 #if defined(GLX_USE_TLS)
    *((unsigned int *)(code +  8)) = 4 * offset;
-#elif defined(THREADS)
+#else
    *((unsigned int *)(code + 11)) = 4 * offset;
    *((unsigned int *)(code + 22)) = 4 * offset;
-#else
-   *((unsigned int *)(code +  7)) = 4 * offset;
 #endif
 }
 

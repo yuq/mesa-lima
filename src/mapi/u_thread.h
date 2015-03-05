@@ -48,12 +48,6 @@
 
 #include "c11/threads.h"
 
-#if defined(HAVE_PTHREAD) || defined(_WIN32)
-#ifndef THREADS
-#define THREADS
-#endif
-#endif
-
 /*
  * Error messages
  */
