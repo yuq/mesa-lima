@@ -80,7 +80,7 @@ _mesa_validate_pbo_access(GLuint dimensions,
     */
    if (!_mesa_is_bufferobj(pack->BufferObj)) {
       offset = 0;
-      size = clientMemSize;
+      size = (clientMemSize == INT_MAX) ? UINTPTR_MAX : clientMemSize;
    } else {
       offset = (uintptr_t)ptr;
       size = pack->BufferObj->Size;
