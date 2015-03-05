@@ -27,8 +27,6 @@
  * makes it easier to do backend-specific optimizations than doing so
  * in the GLSL IR or in the native code.
  */
-extern "C" {
-
 #include <sys/types.h>
 
 #include "main/macros.h"
@@ -41,7 +39,6 @@ extern "C" {
 #include "brw_context.h"
 #include "brw_eu.h"
 #include "brw_wm.h"
-}
 #include "brw_vec4.h"
 #include "brw_fs.h"
 #include "main/uniforms.h"

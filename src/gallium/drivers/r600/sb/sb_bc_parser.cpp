@@ -32,10 +32,8 @@
 #define BCP_DUMP(q)
 #endif
 
-extern "C" {
 #include "r600_pipe.h"
 #include "r600_shader.h"
-}
 
 #include <stack>
 

@@ -25,6 +25,9 @@ include Makefile.sources
 
 noinst_LTLIBRARIES = libmesautil.la
 
+AM_CPPFLAGS = \
+	-I$(top_srcdir)/include
+
 libmesautil_la_CPPFLAGS = \
 	$(DEFINES) \
 	-I$(top_srcdir)/include \

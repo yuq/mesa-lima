@@ -27,10 +27,8 @@
 #ifndef SB_BC_H_
 #define SB_BC_H_
 
-extern "C" {
 #include <stdint.h>
 #include "r600_isa.h"
-}
 
 #include <cstdio>
 #include <string>

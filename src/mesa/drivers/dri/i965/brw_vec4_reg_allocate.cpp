@@ -21,11 +21,8 @@
  * IN THE SOFTWARE.
  */
 
-extern "C" {
 #include "main/macros.h"
 #include "util/register_allocate.h"
-} /* extern "C" */
-
 #include "brw_vec4.h"
 #include "brw_vs.h"
 #include "brw_cfg.h"

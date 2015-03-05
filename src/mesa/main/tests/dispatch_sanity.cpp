@@ -41,7 +41,6 @@
 
 #include <gtest/gtest.h>
 
-extern "C" {
 #include "GL/gl.h"
 #include "GL/glext.h"
 #include "main/compiler.h"
@@ -62,7 +61,6 @@ extern "C" {
 #endif
 
 #include "main/dispatch.h"
-}
 
 struct function {
    const char *name;

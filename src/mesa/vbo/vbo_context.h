@@ -58,6 +58,10 @@
 
 #include "main/macros.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct vbo_context {
    struct gl_client_array currval[VBO_ATTRIB_MAX];
    
@@ -174,5 +178,9 @@ vbo_get_default_vals_as_union(GLenum format)
       return NULL;
    }
 }
+
+#ifdef __cplusplus
+} // extern "C"
+#endif
 
 #endif

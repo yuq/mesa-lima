@@ -21,10 +21,8 @@
  * IN THE SOFTWARE.
  */
 
-extern "C" {
 #include "main/macros.h"
 #include "brw_context.h"
-}
 #include "brw_vs.h"
 #include "brw_gs.h"
 #include "brw_fs.h"

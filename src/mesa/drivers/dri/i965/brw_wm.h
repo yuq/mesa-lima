@@ -57,6 +57,10 @@
 #define AA_SOMETIMES 1
 #define AA_ALWAYS    2
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * Compile a fragment shader.
  *
@@ -85,5 +89,9 @@ bool brw_wm_prog_data_compare(const void *a, const void *b);
 
 void
 brw_upload_wm_prog(struct brw_context *brw);
+
+#ifdef __cplusplus
+} // extern "C"
+#endif
 
 #endif

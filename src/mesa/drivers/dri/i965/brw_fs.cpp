@@ -28,8 +28,6 @@
  * from the LIR.
  */
 
-extern "C" {
-
 #include <sys/types.h>
 
 #include "util/hash_table.h"
@@ -43,7 +41,6 @@ extern "C" {
 #include "brw_context.h"
 #include "brw_eu.h"
 #include "brw_wm.h"
-}
 #include "brw_fs.h"
 #include "brw_cfg.h"
 #include "brw_dead_control_flow.h"

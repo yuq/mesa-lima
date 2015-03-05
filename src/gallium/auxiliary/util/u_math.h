@@ -41,18 +41,17 @@
 
 #include "pipe/p_compiler.h"
 
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-
 #include "c99_math.h"
 #include <float.h>
 #include <stdarg.h>
 
 #ifdef PIPE_OS_UNIX
 #include <strings.h> /* for ffs */
+#endif
+
+
+#ifdef __cplusplus
+extern "C" {
 #endif
 
 
