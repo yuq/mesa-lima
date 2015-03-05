@@ -201,8 +201,11 @@ clGetDeviceInfo(cl_device_id d_dev, cl_device_info param,
       break;
 
    case CL_DEVICE_SINGLE_FP_CONFIG:
+      // This is the "mandated minimum single precision floating-point
+      // capability" for OpenCL 1.1.  In OpenCL 1.2, nothing is required for
+      // custom devices.
       buf.as_scalar<cl_device_fp_config>() =
-         CL_FP_DENORM | CL_FP_INF_NAN | CL_FP_ROUND_TO_NEAREST;
+         CL_FP_INF_NAN | CL_FP_ROUND_TO_NEAREST;
       break;
 
    case CL_DEVICE_DOUBLE_FP_CONFIG:
