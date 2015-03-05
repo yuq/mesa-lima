@@ -26,6 +26,7 @@
  **************************************************************************/
 
 
+#include <stdio.h>
 #include "main/glheader.h"
 #include "main/context.h"
 
