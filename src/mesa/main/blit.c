@@ -28,6 +28,7 @@
  */
 
 #include <stdbool.h>
+#include <stdio.h>
 
 #include "context.h"
 #include "enums.h"

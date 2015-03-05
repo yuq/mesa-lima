@@ -23,6 +23,7 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
+#include <stdio.h>
 #include "mtypes.h"
 #include "attrib.h"
 #include "colormac.h"

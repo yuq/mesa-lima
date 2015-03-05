@@ -28,6 +28,7 @@
  * Texture state handling.
  */
 
+#include <stdio.h>
 #include "glheader.h"
 #include "bufferobj.h"
 #include "colormac.h"

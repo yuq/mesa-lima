@@ -29,6 +29,7 @@
  */
 
 
+#include <stdio.h>
 #include "main/glheader.h"
 #include "main/context.h"
 #include "main/blend.h"

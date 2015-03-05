@@ -24,6 +24,7 @@
  */
 
 
+#include <stdio.h>
 #include <inttypes.h>  /* for PRId64 macro */
 
 #include "glheader.h"

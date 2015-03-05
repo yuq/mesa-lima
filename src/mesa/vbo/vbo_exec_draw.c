@@ -25,6 +25,7 @@
  *    Keith Whitwell <keithw@vmware.com>
  */
 
+#include <stdio.h>
 #include "main/glheader.h"
 #include "main/bufferobj.h"
 #include "main/compiler.h"

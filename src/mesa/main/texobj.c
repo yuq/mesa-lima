@@ -28,6 +28,7 @@
  */
 
 
+#include <stdio.h>
 #include "bufferobj.h"
 #include "colortab.h"
 #include "context.h"

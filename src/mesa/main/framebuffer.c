@@ -29,7 +29,7 @@
  * ushorts, uints, etc.
  */
 
-
+#include <stdio.h>
 #include "glheader.h"
 #include "imports.h"
 #include "blend.h"
