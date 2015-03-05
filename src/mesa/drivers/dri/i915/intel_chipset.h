@@ -53,16 +53,6 @@
 #define IS_PNVG(devid)	(devid == PCI_CHIP_PNV_G)
 #define IS_PNV(devid) (IS_PNVG(devid) || IS_PNVGM(devid))
 
-#define IS_MOBILE(devid)	(devid == PCI_CHIP_I855_GM || \
-				 devid == PCI_CHIP_I915_GM || \
-				 devid == PCI_CHIP_I945_GM || \
-				 devid == PCI_CHIP_I945_GME || \
-				 devid == PCI_CHIP_I965_GM || \
-				 devid == PCI_CHIP_I965_GME || \
-				 devid == PCI_CHIP_GM45_GM || \
-				 IS_PNV(devid) || \
-				 devid == PCI_CHIP_ILM_G)
-
 #define IS_915(devid)		(devid == PCI_CHIP_I915_G || \
 				 devid == PCI_CHIP_E7221_G || \
 				 devid == PCI_CHIP_I915_GM)
