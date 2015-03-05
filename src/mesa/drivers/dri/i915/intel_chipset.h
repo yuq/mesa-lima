@@ -49,10 +49,6 @@
 #define PCI_CHIP_PNV_GM			0xA011
 #define PCI_CHIP_PNV_G			0xA001
 
-#define IS_PNVGM(devid)	(devid == PCI_CHIP_PNV_GM)
-#define IS_PNVG(devid)	(devid == PCI_CHIP_PNV_G)
-#define IS_PNV(devid) (IS_PNVG(devid) || IS_PNVGM(devid))
-
 #define IS_915(devid)		(devid == PCI_CHIP_I915_G || \
 				 devid == PCI_CHIP_E7221_G || \
 				 devid == PCI_CHIP_I915_GM)
@@ -62,7 +58,9 @@
 				 devid == PCI_CHIP_I945_GME || \
 				 devid == PCI_CHIP_G33_G || \
 				 devid == PCI_CHIP_Q33_G || \
-				 devid == PCI_CHIP_Q35_G || IS_PNV(devid))
+				 devid == PCI_CHIP_Q35_G || \
+				 devid == PCI_CHIP_PNV_G || \
+				 devid == PCI_CHIP_PNV_GM)
 
 #define IS_GEN3(devid)		(IS_915(devid) ||	\
 				 IS_945(devid))
