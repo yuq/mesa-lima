@@ -64,9 +64,6 @@
 				 devid == PCI_CHIP_Q33_G || \
 				 devid == PCI_CHIP_Q35_G || IS_PNV(devid))
 
-#define IS_9XX(devid)		(IS_915(devid) || \
-				 IS_945(devid))
-
 #define IS_GEN3(devid)		(IS_915(devid) ||	\
 				 IS_945(devid))
 
