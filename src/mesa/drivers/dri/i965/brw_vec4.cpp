@@ -1334,6 +1334,8 @@ vec4_visitor::dump_instruction(backend_instruction *be_inst, FILE *file)
    }
 
    fprintf(file, "%s", brw_instruction_name(inst->opcode));
+   if (inst->saturate)
+      fprintf(file, ".sat");
    if (inst->conditional_mod) {
       fprintf(file, "%s", conditional_modifier[inst->conditional_mod]);
       if (!inst->predicate &&
