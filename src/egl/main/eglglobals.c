@@ -30,14 +30,13 @@
 
 #include <stdlib.h>
 #include <assert.h>
-#include "c11/threads.h"
-
 #include "eglglobals.h"
 #include "egldisplay.h"
 #include "egldriver.h"
+#include "eglmutex.h"
 
 
-static mtx_t _eglGlobalMutex = _MTX_INITIALIZER_NP;
+static _EGLMutex _eglGlobalMutex = _EGL_MUTEX_INITIALIZER;
 
 struct _egl_global _eglGlobal =
 {
@@ -85,7 +84,7 @@ _eglAddAtExitCall(void (*func)(void))
    if (func) {
       static EGLBoolean registered = EGL_FALSE;
 
-      mtx_lock(_eglGlobal.Mutex);
+      _eglLockMutex(_eglGlobal.Mutex);
 
       if (!registered) {
          atexit(_eglAtExit);
@@ -95,6 +94,6 @@ _eglAddAtExitCall(void (*func)(void))
       assert(_eglGlobal.NumAtExitCalls < ARRAY_SIZE(_eglGlobal.AtExitCalls));
       _eglGlobal.AtExitCalls[_eglGlobal.NumAtExitCalls++] = func;
 
-      mtx_unlock(_eglGlobal.Mutex);
+      _eglUnlockMutex(_eglGlobal.Mutex);
    }
 }

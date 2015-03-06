@@ -87,8 +87,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include "c99_compat.h"
-#include "c11/threads.h"
-#include "eglcompiler.h"
 
 #include "eglglobals.h"
 #include "eglcontext.h"
@@ -277,7 +275,7 @@ _eglLockDisplay(EGLDisplay display)
 {
    _EGLDisplay *dpy = _eglLookupDisplay(display);
    if (dpy)
-      mtx_lock(&dpy->Mutex);
+      _eglLockMutex(&dpy->Mutex);
    return dpy;
 }
 
@@ -288,7 +286,7 @@ _eglLockDisplay(EGLDisplay display)
 static inline void
 _eglUnlockDisplay(_EGLDisplay *dpy)
 {
-   mtx_unlock(&dpy->Mutex);
+   _eglUnlockMutex(&dpy->Mutex);
 }
 
 
@@ -898,7 +896,7 @@ eglWaitClient(void)
       RETURN_EGL_SUCCESS(NULL, EGL_TRUE);
 
    disp = ctx->Resource.Display;
-   mtx_lock(&disp->Mutex);
+   _eglLockMutex(&disp->Mutex);
 
    /* let bad current context imply bad current surface */
    if (_eglGetContextHandle(ctx) == EGL_NO_CONTEXT ||
@@ -944,7 +942,7 @@ eglWaitNative(EGLint engine)
       RETURN_EGL_SUCCESS(NULL, EGL_TRUE);
 
    disp = ctx->Resource.Display;
-   mtx_lock(&disp->Mutex);
+   _eglLockMutex(&disp->Mutex);
 
    /* let bad current context imply bad current surface */
    if (_eglGetContextHandle(ctx) == EGL_NO_CONTEXT ||
@@ -1459,10 +1457,10 @@ eglReleaseThread(void)
 
             t->CurrentAPIIndex = i;
 
-            mtx_lock(&disp->Mutex);
+            _eglLockMutex(&disp->Mutex);
             drv = disp->Driver;
             (void) drv->API.MakeCurrent(drv, disp, NULL, NULL, NULL);
-            mtx_unlock(&disp->Mutex);
+            _eglUnlockMutex(&disp->Mutex);
          }
       }
 

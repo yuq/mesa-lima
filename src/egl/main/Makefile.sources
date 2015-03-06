@@ -26,6 +26,7 @@ LIBEGL_C_FILES := \
 	eglmisc.h \
 	eglmode.c \
 	eglmode.h \
+	eglmutex.h \
 	eglscreen.c \
 	eglscreen.h \
 	eglstring.c \

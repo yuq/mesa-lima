@@ -1,8 +1,6 @@
 /**************************************************************************
  *
- * Copyright 2008 VMware, Inc.
- * Copyright 2009-2010 Chia-I Wu <olvaffe@gmail.com>
- * Copyright 2010-2011 LunarG, Inc.
+ * Copyright 2009 Chia-I Wu <olvaffe@gmail.com>
  * All Rights Reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
@@ -28,46 +26,41 @@
  **************************************************************************/
 
 
-#ifndef EGLGLOBALS_INCLUDED
-#define EGLGLOBALS_INCLUDED
+#ifndef EGLMUTEX_INCLUDED
+#define EGLMUTEX_INCLUDED
 
-#include <stdbool.h>
+#include "c99_compat.h"
 
-#include "egltypedefs.h"
-#include "eglmutex.h"
+#include "eglcompiler.h"
 
+#include "c11/threads.h"
 
-/**
- * Global library data
- */
-struct _egl_global
+typedef mtx_t _EGLMutex;
+
+static inline void _eglInitMutex(_EGLMutex *m)
 {
-   _EGLMutex *Mutex;
+   mtx_init(m, mtx_plain);
+}
 
-   /* the list of all displays */
-   _EGLDisplay *DisplayList;
+static inline void
+_eglDestroyMutex(_EGLMutex *m)
+{
+   mtx_destroy(m);
+}
 
-   EGLint NumAtExitCalls;
-   void (*AtExitCalls[10])(void);
+static inline void
+_eglLockMutex(_EGLMutex *m)
+{
+   mtx_lock(m);
+}
 
-   struct _egl_client_extensions {
-      bool EXT_client_extensions;
-      bool EXT_platform_base;
-      bool EXT_platform_x11;
-      bool EXT_platform_wayland;
-      bool MESA_platform_gbm;
-      bool KHR_get_all_proc_addresses;
-   } ClientExtensions;
+static inline void
+_eglUnlockMutex(_EGLMutex *m)
+{
+   mtx_unlock(m);
+}
 
-   const char *ClientExtensionString;
-};
-
-
-extern struct _egl_global _eglGlobal;
-
-
-extern void
-_eglAddAtExitCall(void (*func)(void));
+#define _EGL_MUTEX_INITIALIZER _MTX_INITIALIZER_NP
 
 
-#endif /* EGLGLOBALS_INCLUDED */
+#endif /* EGLMUTEX_INCLUDED */

@@ -31,6 +31,7 @@
 #include "c99_compat.h"
 
 #include "egllog.h"
+#include "eglmutex.h"
 #include "eglcurrent.h"
 #include "eglglobals.h"
 
@@ -46,7 +47,7 @@ static _EGLThreadInfo dummy_thread = _EGL_THREAD_INFO_INITIALIZER;
 #if HAVE_PTHREAD
 #include <pthread.h>
 
-static mtx_t _egl_TSDMutex = _MTX_INITIALIZER_NP;
+static _EGLMutex _egl_TSDMutex = _EGL_MUTEX_INITIALIZER;
 static EGLBoolean _egl_TSDInitialized;
 static pthread_key_t _egl_TSD;
 static void (*_egl_FreeTSD)(_EGLThreadInfo *);
@@ -75,7 +76,7 @@ static inline _EGLThreadInfo *_eglGetTSD(void)
 
 static inline void _eglFiniTSD(void)
 {
-   mtx_lock(&_egl_TSDMutex);
+   _eglLockMutex(&_egl_TSDMutex);
    if (_egl_TSDInitialized) {
       _EGLThreadInfo *t = _eglGetTSD();
 
@@ -84,18 +85,18 @@ static inline void _eglFiniTSD(void)
          _egl_FreeTSD((void *) t);
       pthread_key_delete(_egl_TSD);
    }
-   mtx_unlock(&_egl_TSDMutex);
+   _eglUnlockMutex(&_egl_TSDMutex);
 }
 
 static inline EGLBoolean _eglInitTSD(void (*dtor)(_EGLThreadInfo *))
 {
    if (!_egl_TSDInitialized) {
-      mtx_lock(&_egl_TSDMutex);
+      _eglLockMutex(&_egl_TSDMutex);
 
       /* check again after acquiring lock */
       if (!_egl_TSDInitialized) {
          if (pthread_key_create(&_egl_TSD, (void (*)(void *)) dtor) != 0) {
-            mtx_unlock(&_egl_TSDMutex);
+            _eglUnlockMutex(&_egl_TSDMutex);
             return EGL_FALSE;
          }
          _egl_FreeTSD = dtor;
@@ -103,7 +104,7 @@ static inline EGLBoolean _eglInitTSD(void (*dtor)(_EGLThreadInfo *))
          _egl_TSDInitialized = EGL_TRUE;
       }
 
-      mtx_unlock(&_egl_TSDMutex);
+      _eglUnlockMutex(&_egl_TSDMutex);
    }
 
    return EGL_TRUE;
