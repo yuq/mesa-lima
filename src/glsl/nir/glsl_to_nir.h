@@ -32,7 +32,7 @@
 extern "C" {
 #endif
 
-nir_shader *glsl_to_nir(exec_list *ir, bool native_integers,
+nir_shader *glsl_to_nir(exec_list *ir,
                         const nir_shader_compiler_options *options);
 
 #ifdef __cplusplus

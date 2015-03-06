@@ -551,7 +551,9 @@ brw_initialize_context_constants(struct brw_context *brw)
       ctx->Const.Program[MESA_SHADER_FRAGMENT].MaxInputComponents = 128;
    }
 
-   static const nir_shader_compiler_options nir_options = {};
+   static const nir_shader_compiler_options nir_options = {
+      .native_integers = true,
+   };
 
    /* We want the GLSL compiler to emit code that uses condition codes */
    for (int i = 0; i < MESA_SHADER_STAGES; i++) {

@@ -43,7 +43,7 @@ namespace {
 class nir_visitor : public ir_visitor
 {
 public:
-   nir_visitor(nir_shader *shader, bool supports_ints);
+   nir_visitor(nir_shader *shader);
    ~nir_visitor();
 
    virtual void visit(ir_variable *);
@@ -125,12 +125,11 @@ private:
 }; /* end of anonymous namespace */
 
 nir_shader *
-glsl_to_nir(exec_list *ir, bool native_integers,
-            const nir_shader_compiler_options *options)
+glsl_to_nir(exec_list *ir, const nir_shader_compiler_options *options)
 {
    nir_shader *shader = nir_shader_create(NULL, options);
 
-   nir_visitor v1(shader, native_integers);
+   nir_visitor v1(shader);
    nir_function_visitor v2(&v1);
    v2.run(ir);
    visit_exec_list(ir, &v1);
@@ -138,9 +137,9 @@ glsl_to_nir(exec_list *ir, bool native_integers,
    return shader;
 }
 
-nir_visitor::nir_visitor(nir_shader *shader, bool supports_ints)
+nir_visitor::nir_visitor(nir_shader *shader)
 {
-   this->supports_ints = supports_ints;
+   this->supports_ints = shader->options->native_integers;
    this->shader = shader;
    this->is_global = true;
    this->var_table = _mesa_hash_table_create(NULL, _mesa_hash_pointer,

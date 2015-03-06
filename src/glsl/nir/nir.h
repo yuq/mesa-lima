@@ -1370,6 +1370,12 @@ typedef struct nir_shader_compiler_options {
    bool lower_fsqrt;
    /** lowers fneg and ineg to fsub and isub. */
    bool lower_negate;
+
+   /**
+    * Does the driver support real 32-bit integers?  (Otherwise, integers
+    * are simulated by floats.)
+    */
+   bool native_integers;
 } nir_shader_compiler_options;
 
 typedef struct nir_shader {
