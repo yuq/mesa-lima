@@ -138,6 +138,10 @@ __glXGetCurrentContext(void)
 
 # endif /* defined( GLX_USE_TLS ) */
 
+#elif defined( THREADS )
+
+#error Unknown threading method specified.
+
 #else
 
 /* not thread safe */
