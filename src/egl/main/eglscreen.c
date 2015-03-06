@@ -44,20 +44,20 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
+#include "c11/threads.h"
 
 #include "egldisplay.h"
 #include "eglcurrent.h"
 #include "eglmode.h"
 #include "eglsurface.h"
 #include "eglscreen.h"
-#include "eglmutex.h"
 
 
 #ifdef EGL_MESA_screen_surface
 
 
 /* ugh, no atomic op? */
-static _EGLMutex _eglNextScreenHandleMutex = _EGL_MUTEX_INITIALIZER;
+static mtx_t _eglNextScreenHandleMutex = _MTX_INITIALIZER_NP;
 static EGLScreenMESA _eglNextScreenHandle = 1;
 
 
@@ -70,10 +70,10 @@ _eglAllocScreenHandle(void)
 {
    EGLScreenMESA s;
 
-   _eglLockMutex(&_eglNextScreenHandleMutex);
+   mtx_lock(&_eglNextScreenHandleMutex);
    s = _eglNextScreenHandle;
    _eglNextScreenHandle += _EGL_SCREEN_MAX_MODES;
-   _eglUnlockMutex(&_eglNextScreenHandleMutex);
+   mtx_unlock(&_eglNextScreenHandleMutex);
 
    return s;
 }
