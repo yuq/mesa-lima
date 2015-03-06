@@ -34,10 +34,28 @@
 #include "shaderobj.h"
 #include "program/hash_table.h"
 #include "../glsl/program.h"
+#include "uniforms.h"
+#include "main/enums.h"
 
 extern "C" {
 #include "shaderapi.h"
 }
+
+/**
+ * Declare convenience functions to return resource data in a given type.
+ * Warning! this is not type safe so be *very* careful when using these.
+ */
+#define DECL_RESOURCE_FUNC(name, type) \
+const type * RESOURCE_ ## name (gl_program_resource *res) { \
+   assert(res->Data); \
+   return (type *) res->Data; \
+}
+
+DECL_RESOURCE_FUNC(VAR, ir_variable);
+DECL_RESOURCE_FUNC(UBO, gl_uniform_block);
+DECL_RESOURCE_FUNC(UNI, gl_uniform_storage);
+DECL_RESOURCE_FUNC(ATC, gl_active_atomic_buffer);
+DECL_RESOURCE_FUNC(XFB, gl_transform_feedback_varying_info);
 
 void GLAPIENTRY
 _mesa_BindAttribLocation(GLhandleARB program, GLuint index,
@@ -497,4 +515,45 @@ _mesa_GetFragDataLocation(GLuint program, const GLchar *name)
    }
 
    return -1;
+}
+
+const char*
+_mesa_program_resource_name(struct gl_program_resource *res)
+{
+   switch (res->Type) {
+   case GL_UNIFORM_BLOCK:
+      return RESOURCE_UBO(res)->Name;
+   case GL_TRANSFORM_FEEDBACK_VARYING:
+      return RESOURCE_XFB(res)->Name;
+   case GL_PROGRAM_INPUT:
+   case GL_PROGRAM_OUTPUT:
+      return RESOURCE_VAR(res)->name;
+   case GL_UNIFORM:
+      return RESOURCE_UNI(res)->name;
+   default:
+      assert(!"support for resource type not implemented");
+   }
+   return NULL;
+}
+
+
+unsigned
+_mesa_program_resource_array_size(struct gl_program_resource *res)
+{
+   switch (res->Type) {
+   case GL_TRANSFORM_FEEDBACK_VARYING:
+      return RESOURCE_XFB(res)->Size > 1 ?
+             RESOURCE_XFB(res)->Size : 0;
+   case GL_PROGRAM_INPUT:
+   case GL_PROGRAM_OUTPUT:
+      return RESOURCE_VAR(res)->data.max_array_access;
+   case GL_UNIFORM:
+      return RESOURCE_UNI(res)->array_elements;
+   case GL_ATOMIC_COUNTER_BUFFER:
+   case GL_UNIFORM_BLOCK:
+      return 0;
+   default:
+      assert(!"support for resource type not implemented");
+   }
+   return 0;
 }

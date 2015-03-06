@@ -219,6 +219,13 @@ extern GLuint GLAPIENTRY
 _mesa_CreateShaderProgramv(GLenum type, GLsizei count,
                            const GLchar* const *strings);
 
+/* GL_ARB_program_resource_query */
+extern const char*
+_mesa_program_resource_name(struct gl_program_resource *res);
+
+extern unsigned
+_mesa_program_resource_array_size(struct gl_program_resource *res);
+
 #ifdef __cplusplus
 }
 #endif
