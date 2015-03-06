@@ -908,10 +908,8 @@ layout_calculate_bo_size(struct ilo_layout *layout,
        */
       if (ilo_dev_gen(params->dev) >= ILO_GEN(7.5) &&
           (params->templ->bind & PIPE_BIND_SAMPLER_VIEW) &&
-          layout->tiling == GEN6_TILING_NONE) {
-         layout->bo_height +=
-            (64 + layout->bo_stride - 1) / layout->bo_stride;
-      }
+          layout->tiling == GEN6_TILING_NONE)
+         h += (64 + layout->bo_stride - 1) / layout->bo_stride;
 
       /*
        * From the Sandy Bridge PRM, volume 4 part 1, page 81:
