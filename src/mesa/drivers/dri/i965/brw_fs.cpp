@@ -1561,6 +1561,17 @@ fs_visitor::emit_sampleid_setup()
    return reg;
 }
 
+void
+fs_visitor::resolve_source_modifiers(fs_reg *src)
+{
+   if (!src->abs && !src->negate)
+      return;
+
+   fs_reg temp = retype(vgrf(1), src->type);
+   emit(MOV(temp, *src));
+   *src = temp;
+}
+
 fs_reg
 fs_visitor::fix_math_operand(fs_reg src)
 {

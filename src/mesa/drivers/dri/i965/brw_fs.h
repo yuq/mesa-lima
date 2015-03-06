@@ -299,6 +299,7 @@ public:
                      int texunit);
    fs_reg emit_mcs_fetch(fs_reg coordinate, int components, fs_reg sampler);
    void emit_gen6_gather_wa(uint8_t wa, fs_reg dst);
+   void resolve_source_modifiers(fs_reg *src);
    fs_reg fix_math_operand(fs_reg src);
    fs_inst *emit_math(enum opcode op, fs_reg dst, fs_reg src0);
    fs_inst *emit_math(enum opcode op, fs_reg dst, fs_reg src0, fs_reg src1);
