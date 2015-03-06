@@ -251,7 +251,8 @@ nir_visitor::visit(ir_variable *ir)
       break;
 
    case ir_var_shader_in:
-      if (ir->data.location == VARYING_SLOT_FACE) {
+      if (stage == MESA_SHADER_FRAGMENT &&
+          ir->data.location == VARYING_SLOT_FACE) {
          /* For whatever reason, GLSL IR makes gl_FrontFacing an input */
          var->data.location = SYSTEM_VALUE_FRONT_FACE;
          var->data.mode = nir_var_system_value;
