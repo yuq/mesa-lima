@@ -36,23 +36,6 @@
 #include "ilo_render_gen.h"
 
 static void
-gen7_3dprimitive(struct ilo_render *r,
-                 const struct pipe_draw_info *info,
-                 const struct ilo_ib_state *ib)
-{
-   ILO_DEV_ASSERT(r->dev, 7, 7.5);
-
-   if (r->state.deferred_pipe_control_dw1)
-      ilo_render_pipe_control(r, r->state.deferred_pipe_control_dw1);
-
-   /* 3DPRIMITIVE */
-   gen7_3DPRIMITIVE(r->builder, info, ib);
-
-   r->state.current_pipe_control_dw1 = 0;
-   r->state.deferred_pipe_control_dw1 = 0;
-}
-
-static void
 gen7_wa_post_3dstate_push_constant_alloc_ps(struct ilo_render *r)
 {
    /*
@@ -671,7 +654,7 @@ ilo_render_emit_draw_commands_gen7(struct ilo_render *render,
    gen6_draw_sf_rect(render, vec, session);
    gen6_draw_vf(render, vec, session);
 
-   gen7_3dprimitive(render, vec->draw, &vec->ib);
+   ilo_render_3dprimitive(render, vec->draw, &vec->ib);
 }
 
 static void
@@ -871,7 +854,7 @@ ilo_render_emit_rectlist_commands_gen7(struct ilo_render *r,
    if (ilo_dev_gen(r->dev) == ILO_GEN(7))
       gen7_wa_post_ps_and_later(r);
 
-   gen7_3dprimitive(r, &blitter->draw, NULL);
+   ilo_render_3dprimitive(r, &blitter->draw, NULL);
 }
 
 int

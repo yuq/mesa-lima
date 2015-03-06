@@ -30,6 +30,7 @@
 
 #include "ilo_common.h"
 #include "ilo_builder.h"
+#include "ilo_builder_3d.h"
 #include "ilo_builder_render.h"
 #include "ilo_state.h"
 #include "ilo_render.h"
@@ -372,6 +373,29 @@ ilo_render_pipe_control(struct ilo_render *r, uint32_t dw1)
 
    r->state.current_pipe_control_dw1 |= dw1;
    r->state.deferred_pipe_control_dw1 &= ~dw1;
+}
+
+/**
+ * A convenient wrapper for gen{6,7}_3DPRIMITIVE().
+ */
+static inline void
+ilo_render_3dprimitive(struct ilo_render *r,
+                       const struct pipe_draw_info *info,
+                       const struct ilo_ib_state *ib)
+{
+   ILO_DEV_ASSERT(r->dev, 6, 8);
+
+   if (r->state.deferred_pipe_control_dw1)
+      ilo_render_pipe_control(r, r->state.deferred_pipe_control_dw1);
+
+   /* 3DPRIMITIVE */
+   if (ilo_dev_gen(r->dev) >= ILO_GEN(7))
+      gen7_3DPRIMITIVE(r->builder, info, ib);
+   else
+      gen6_3DPRIMITIVE(r->builder, info, ib);
+
+   r->state.current_pipe_control_dw1 = 0;
+   assert(!r->state.deferred_pipe_control_dw1);
 }
 
 void

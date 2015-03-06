@@ -36,23 +36,6 @@
 #include "ilo_render_gen.h"
 
 static void
-gen8_3dprimitive(struct ilo_render *r,
-                 const struct pipe_draw_info *info,
-                 const struct ilo_ib_state *ib)
-{
-   ILO_DEV_ASSERT(r->dev, 8, 8);
-
-   if (r->state.deferred_pipe_control_dw1)
-      ilo_render_pipe_control(r, r->state.deferred_pipe_control_dw1);
-
-   /* 3DPRIMITIVE */
-   gen7_3DPRIMITIVE(r->builder, info, ib);
-
-   r->state.current_pipe_control_dw1 = 0;
-   r->state.deferred_pipe_control_dw1 = 0;
-}
-
-static void
 gen8_wa_pre_depth(struct ilo_render *r)
 {
    ILO_DEV_ASSERT(r->dev, 8, 8);
@@ -298,7 +281,7 @@ ilo_render_emit_draw_commands_gen8(struct ilo_render *render,
    gen6_draw_sf_rect(render, vec, session);
    gen8_draw_vf(render, vec, session);
 
-   gen8_3dprimitive(render, vec->draw, &vec->ib);
+   ilo_render_3dprimitive(render, vec->draw, &vec->ib);
 }
 
 int

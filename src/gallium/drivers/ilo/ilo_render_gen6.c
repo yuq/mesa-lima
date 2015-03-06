@@ -38,20 +38,6 @@
 #include "ilo_state.h"
 #include "ilo_render_gen.h"
 
-static void
-gen6_3dprimitive(struct ilo_render *r,
-                 const struct pipe_draw_info *info,
-                 const struct ilo_ib_state *ib)
-{
-   ILO_DEV_ASSERT(r->dev, 6, 6);
-
-   /* 3DPRIMITIVE */
-   gen6_3DPRIMITIVE(r->builder, info, ib);
-
-   r->state.current_pipe_control_dw1 = 0;
-   assert(!r->state.deferred_pipe_control_dw1);
-}
-
 /**
  * This should be called before PIPE_CONTROL.
  */
@@ -835,7 +821,7 @@ ilo_render_emit_draw_commands_gen6(struct ilo_render *render,
    gen6_draw_sf_rect(render, vec, session);
    gen6_draw_vf(render, vec, session);
 
-   gen6_3dprimitive(render, vec->draw, &vec->ib);
+   ilo_render_3dprimitive(render, vec->draw, &vec->ib);
 }
 
 static void
@@ -980,7 +966,7 @@ ilo_render_emit_rectlist_commands_gen6(struct ilo_render *r,
    gen6_3DSTATE_DRAWING_RECTANGLE(r->builder, 0, 0,
          blitter->fb.width, blitter->fb.height);
 
-   gen6_3dprimitive(r, &blitter->draw, NULL);
+   ilo_render_3dprimitive(r, &blitter->draw, NULL);
 }
 
 int
