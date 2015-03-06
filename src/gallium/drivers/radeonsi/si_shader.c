@@ -2546,6 +2546,7 @@ void si_shader_binary_read_config(const struct si_screen *sscreen,
 		case R_00B848_COMPUTE_PGM_RSRC1:
 			shader->num_sgprs = MAX2(shader->num_sgprs, (G_00B028_SGPRS(value) + 1) * 8);
 			shader->num_vgprs = MAX2(shader->num_vgprs, (G_00B028_VGPRS(value) + 1) * 4);
+			shader->float_mode =  G_00B028_FLOAT_MODE(value);
 			break;
 		case R_00B02C_SPI_SHADER_PGM_RSRC2_PS:
 			shader->lds_size = MAX2(shader->lds_size, G_00B02C_EXTRA_LDS_SIZE(value));

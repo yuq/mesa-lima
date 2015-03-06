@@ -149,6 +149,7 @@ struct si_shader {
 	unsigned			num_vgprs;
 	unsigned			lds_size;
 	unsigned			spi_ps_input_ena;
+	unsigned			float_mode;
 	unsigned			scratch_bytes_per_wave;
 	unsigned			spi_shader_col_format;
 	unsigned			spi_shader_z_format;
