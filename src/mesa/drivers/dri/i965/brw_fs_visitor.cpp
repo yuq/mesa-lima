@@ -1889,15 +1889,26 @@ fs_visitor::emit_texture_gen7(ir_texture_opcode op, fs_reg dst,
       length++;
       break;
    case ir_txf:
-      /* Unfortunately, the parameters for LD are intermixed: u, lod, v, r. */
+      /* Unfortunately, the parameters for LD are intermixed: u, lod, v, r.
+       * On Gen9 they are u, v, lod, r
+       */
+
       emit(MOV(retype(sources[length], BRW_REGISTER_TYPE_D), coordinate));
       coordinate = offset(coordinate, 1);
       length++;
 
+      if (brw->gen >= 9) {
+         if (coord_components >= 2) {
+            emit(MOV(retype(sources[length], BRW_REGISTER_TYPE_D), coordinate));
+            coordinate = offset(coordinate, 1);
+         }
+         length++;
+      }
+
       emit(MOV(retype(sources[length], BRW_REGISTER_TYPE_D), lod));
       length++;
 
-      for (int i = 1; i < coord_components; i++) {
+      for (int i = brw->gen >= 9 ? 2 : 1; i < coord_components; i++) {
 	 emit(MOV(retype(sources[length], BRW_REGISTER_TYPE_D), coordinate));
 	 coordinate = offset(coordinate, 1);
 	 length++;
