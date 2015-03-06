@@ -95,19 +95,33 @@ gen6_blorp_emit_vertex_buffer_state(struct brw_context *brw,
    if (brw->gen >= 7)
       dw0 |= GEN7_VB0_ADDRESS_MODIFYENABLE;
 
-   if (brw->gen == 7)
+   switch (brw->gen) {
+   case 7:
       dw0 |= GEN7_MOCS_L3 << 16;
+      break;
+   case 8:
+      dw0 |= BDW_MOCS_WB << 16;
+      break;
+   case 9:
+      dw0 |= SKL_MOCS_WB << 16;
+      break;
+   }
 
    BEGIN_BATCH(batch_length);
    OUT_BATCH((_3DSTATE_VERTEX_BUFFERS << 16) | (batch_length - 2));
    OUT_BATCH(dw0);
-   /* start address */
-   OUT_RELOC(brw->batch.bo, I915_GEM_DOMAIN_VERTEX, 0,
-             vertex_offset);
-   /* end address */
-   OUT_RELOC(brw->batch.bo, I915_GEM_DOMAIN_VERTEX, 0,
-             vertex_offset + vbo_size - 1);
-   OUT_BATCH(0);
+   if (brw->gen >= 8) {
+      OUT_RELOC64(brw->batch.bo, I915_GEM_DOMAIN_VERTEX, 0, vertex_offset);
+      OUT_BATCH(vbo_size);
+   } else {
+      /* start address */
+      OUT_RELOC(brw->batch.bo, I915_GEM_DOMAIN_VERTEX, 0,
+                vertex_offset);
+      /* end address */
+      OUT_RELOC(brw->batch.bo, I915_GEM_DOMAIN_VERTEX, 0,
+                vertex_offset + vbo_size - 1);
+      OUT_BATCH(0);
+   }
    ADVANCE_BATCH();
 }
 
