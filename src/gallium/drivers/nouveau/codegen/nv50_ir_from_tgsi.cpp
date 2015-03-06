@@ -20,11 +20,9 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-extern "C" {
 #include "tgsi/tgsi_dump.h"
 #include "tgsi/tgsi_scan.h"
 #include "tgsi/tgsi_util.h"
-}
 
 #include <set>
 
