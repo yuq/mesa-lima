@@ -29,7 +29,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include "c99_compat.h"
-#include "c11/threads.h"
 
 #include "egllog.h"
 #include "eglcurrent.h"
@@ -42,9 +41,14 @@
 
 /* a fallback thread info to guarantee that every thread always has one */
 static _EGLThreadInfo dummy_thread = _EGL_THREAD_INFO_INITIALIZER;
+
+
+#if HAVE_PTHREAD
+#include <pthread.h>
+
 static mtx_t _egl_TSDMutex = _MTX_INITIALIZER_NP;
 static EGLBoolean _egl_TSDInitialized;
-static tss_t _egl_TSD;
+static pthread_key_t _egl_TSD;
 static void (*_egl_FreeTSD)(_EGLThreadInfo *);
 
 #ifdef GLX_USE_TLS
@@ -54,7 +58,7 @@ static __thread const _EGLThreadInfo *_egl_TLS
 
 static inline void _eglSetTSD(const _EGLThreadInfo *t)
 {
-   tss_set(_egl_TSD, (const void *) t);
+   pthread_setspecific(_egl_TSD, (const void *) t);
 #ifdef GLX_USE_TLS
    _egl_TLS = t;
 #endif
@@ -65,7 +69,7 @@ static inline _EGLThreadInfo *_eglGetTSD(void)
 #ifdef GLX_USE_TLS
    return (_EGLThreadInfo *) _egl_TLS;
 #else
-   return (_EGLThreadInfo *) tss_get(_egl_TSD);
+   return (_EGLThreadInfo *) pthread_getspecific(_egl_TSD);
 #endif
 }
 
@@ -78,7 +82,7 @@ static inline void _eglFiniTSD(void)
       _egl_TSDInitialized = EGL_FALSE;
       if (t && _egl_FreeTSD)
          _egl_FreeTSD((void *) t);
-      tss_delete(_egl_TSD);
+      pthread_key_delete(_egl_TSD);
    }
    mtx_unlock(&_egl_TSDMutex);
 }
@@ -90,7 +94,7 @@ static inline EGLBoolean _eglInitTSD(void (*dtor)(_EGLThreadInfo *))
 
       /* check again after acquiring lock */
       if (!_egl_TSDInitialized) {
-         if (tss_create(&_egl_TSD, (void (*)(void *)) dtor) != thrd_success) {
+         if (pthread_key_create(&_egl_TSD, (void (*)(void *)) dtor) != 0) {
             mtx_unlock(&_egl_TSDMutex);
             return EGL_FALSE;
          }
@@ -104,6 +108,38 @@ static inline EGLBoolean _eglInitTSD(void (*dtor)(_EGLThreadInfo *))
 
    return EGL_TRUE;
 }
+
+#else /* HAVE_PTHREAD */
+static const _EGLThreadInfo *_egl_TSD;
+static void (*_egl_FreeTSD)(_EGLThreadInfo *);
+
+static inline void _eglSetTSD(const _EGLThreadInfo *t)
+{
+   _egl_TSD = t;
+}
+
+static inline _EGLThreadInfo *_eglGetTSD(void)
+{
+   return (_EGLThreadInfo *) _egl_TSD;
+}
+
+static inline void _eglFiniTSD(void)
+{
+   if (_egl_FreeTSD && _egl_TSD)
+      _egl_FreeTSD((_EGLThreadInfo *) _egl_TSD);
+}
+
+static inline EGLBoolean _eglInitTSD(void (*dtor)(_EGLThreadInfo *))
+{
+   if (!_egl_FreeTSD && dtor) {
+      _egl_FreeTSD = dtor;
+      _eglAddAtExitCall(_eglFiniTSD);
+   }
+   return EGL_TRUE;
+}
+
+#endif /* !HAVE_PTHREAD */
+
 
 static void
 _eglInitThreadInfo(_EGLThreadInfo *t)
