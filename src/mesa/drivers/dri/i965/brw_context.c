@@ -68,6 +68,8 @@
 #include "tnl/t_pipeline.h"
 #include "util/ralloc.h"
 
+#include "glsl/nir/nir.h"
+
 /***************************************
  * Mesa's Driver Functions
  ***************************************/
@@ -549,6 +551,8 @@ brw_initialize_context_constants(struct brw_context *brw)
       ctx->Const.Program[MESA_SHADER_FRAGMENT].MaxInputComponents = 128;
    }
 
+   static const nir_shader_compiler_options nir_options = {};
+
    /* We want the GLSL compiler to emit code that uses condition codes */
    for (int i = 0; i < MESA_SHADER_STAGES; i++) {
       ctx->Const.ShaderCompilerOptions[i].MaxIfDepth = brw->gen < 6 ? 16 : UINT_MAX;
@@ -562,6 +566,7 @@ brw_initialize_context_constants(struct brw_context *brw)
 	 (i == MESA_SHADER_FRAGMENT);
       ctx->Const.ShaderCompilerOptions[i].EmitNoIndirectUniform = false;
       ctx->Const.ShaderCompilerOptions[i].LowerClipDistance = true;
+      ctx->Const.ShaderCompilerOptions[i].NirOptions = &nir_options;
    }
 
    ctx->Const.ShaderCompilerOptions[MESA_SHADER_VERTEX].OptimizeForAOS = true;

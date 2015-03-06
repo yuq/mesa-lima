@@ -82,9 +82,12 @@ count_nir_instrs(nir_shader *nir)
 void
 fs_visitor::emit_nir_code()
 {
+   const nir_shader_compiler_options *options =
+      ctx->Const.ShaderCompilerOptions[stage].NirOptions;
+
    /* first, lower the GLSL IR shader to NIR */
    lower_output_reads(shader->base.ir);
-   nir_shader *nir = glsl_to_nir(shader->base.ir, NULL, true);
+   nir_shader *nir = glsl_to_nir(shader->base.ir, true, options);
    nir_validate_shader(nir);
 
    nir_lower_global_vars_to_local(nir);

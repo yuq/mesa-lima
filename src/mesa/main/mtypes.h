@@ -3036,7 +3036,7 @@ struct gl_shader_compiler_options
 
    struct gl_sl_pragmas DefaultPragmas; /**< Default #pragma settings */
 
-   struct nir_shader_compiler_options *NirOptions;
+   const struct nir_shader_compiler_options *NirOptions;
 };
 
 
