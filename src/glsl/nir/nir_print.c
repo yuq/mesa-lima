@@ -844,10 +844,6 @@ nir_print_shader(nir_shader *shader, FILE *fp)
    print_var_state state;
    init_print_state(&state);
 
-   for (unsigned i = 0; i < shader->num_user_structures; i++) {
-      glsl_print_struct(shader->user_structures[i], fp);
-   }
-
    struct hash_entry *entry;
 
    hash_table_foreach(shader->uniforms, entry) {

@@ -42,9 +42,6 @@ nir_shader_create(void *mem_ctx, const nir_shader_compiler_options *options)
 
    shader->options = options;
 
-   shader->num_user_structures = 0;
-   shader->user_structures = NULL;
-
    exec_list_make_empty(&shader->functions);
    exec_list_make_empty(&shader->registers);
    exec_list_make_empty(&shader->globals);

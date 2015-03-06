@@ -154,17 +154,6 @@ glsl_to_nir(exec_list *ir, _mesa_glsl_parse_state *state,
 
    nir_shader *shader = nir_shader_create(NULL, options);
 
-   if (state) {
-      shader->num_user_structures = state->num_user_structures;
-      shader->user_structures = ralloc_array(shader, glsl_type *,
-                                             shader->num_user_structures);
-      memcpy(shader->user_structures, state->user_structures,
-            shader->num_user_structures * sizeof(glsl_type *));
-   } else {
-      shader->num_user_structures = 0;
-      shader->user_structures = NULL;
-   }
-
    nir_visitor v1(shader, native_integers);
    nir_function_visitor v2(&v1);
    v2.run(ir);

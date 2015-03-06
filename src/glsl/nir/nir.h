@@ -1400,10 +1400,6 @@ typedef struct nir_shader {
    /** list of global register in the shader */
    struct exec_list registers;
 
-   /** structures used in this shader */
-   unsigned num_user_structures;
-   struct glsl_type **user_structures;
-
    /** next available global register index */
    unsigned reg_alloc;
 
