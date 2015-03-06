@@ -185,6 +185,8 @@ ways that the dispatch table pointer can be accessed.  There are four
 different methods that can be used:</p>
 
 <ol>
+<li>Using <tt>_glapi_Dispatch</tt> directly in builds for non-multithreaded
+environments.</li>
 <li>Using <tt>_glapi_Dispatch</tt> and <tt>_glapi_get_dispatch</tt> in
 multithreaded environments.</li>
 <li>Using <tt>_glapi_Dispatch</tt> and <tt>pthread_getspecific</tt> in
@@ -202,8 +204,9 @@ terribly relevant.</p>
 few preprocessor defines.</p>
 
 <ul>
-<li>If <tt>GLX_USE_TLS</tt> is defined, method #3 is used.</li>
-<li>If <tt>HAVE_PTHREAD</tt> is defined, method #2 is used.</li>
+<li>If <tt>GLX_USE_TLS</tt> is defined, method #4 is used.</li>
+<li>If <tt>HAVE_PTHREAD</tt> is defined, method #3 is used.</li>
+<li>If <tt>WIN32_THREADS</tt> is defined, method #2 is used.</li>
 <li>If none of the preceding are defined, method #1 is used.</li>
 </ul>
 
