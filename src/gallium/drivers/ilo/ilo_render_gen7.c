@@ -35,34 +35,6 @@
 #include "ilo_state.h"
 #include "ilo_render_gen.h"
 
-/**
- * A wrapper for gen6_PIPE_CONTROL().
- */
-static void
-gen7_pipe_control(struct ilo_render *r, uint32_t dw1)
-{
-   struct intel_bo *bo = (dw1 & GEN6_PIPE_CONTROL_WRITE__MASK) ?
-      r->workaround_bo : NULL;
-
-   ILO_DEV_ASSERT(r->dev, 7, 7.5);
-
-   if (dw1 & GEN6_PIPE_CONTROL_CS_STALL) {
-      /* CS stall cannot be set alone */
-      const uint32_t mask = GEN6_PIPE_CONTROL_RENDER_CACHE_FLUSH |
-                            GEN6_PIPE_CONTROL_DEPTH_CACHE_FLUSH |
-                            GEN6_PIPE_CONTROL_PIXEL_SCOREBOARD_STALL |
-                            GEN6_PIPE_CONTROL_DEPTH_STALL |
-                            GEN6_PIPE_CONTROL_WRITE__MASK;
-      if (!(dw1 & mask))
-         dw1 |= GEN6_PIPE_CONTROL_PIXEL_SCOREBOARD_STALL;
-   }
-
-   gen6_PIPE_CONTROL(r->builder, dw1, bo, 0, 0);
-
-   r->state.current_pipe_control_dw1 |= dw1;
-   r->state.deferred_pipe_control_dw1 &= ~dw1;
-}
-
 static void
 gen7_3dprimitive(struct ilo_render *r,
                  const struct pipe_draw_info *info,
@@ -71,7 +43,7 @@ gen7_3dprimitive(struct ilo_render *r,
    ILO_DEV_ASSERT(r->dev, 7, 7.5);
 
    if (r->state.deferred_pipe_control_dw1)
-      gen7_pipe_control(r, r->state.deferred_pipe_control_dw1);
+      ilo_render_pipe_control(r, r->state.deferred_pipe_control_dw1);
 
    /* 3DPRIMITIVE */
    gen7_3DPRIMITIVE(r->builder, info, ib);
@@ -115,7 +87,7 @@ gen7_wa_pre_vs(struct ilo_render *r)
    ILO_DEV_ASSERT(r->dev, 7, 7);
 
    if ((r->state.current_pipe_control_dw1 & dw1) != dw1)
-      gen7_pipe_control(r, dw1);
+      ilo_render_pipe_control(r, dw1);
 }
 
 static void
@@ -133,7 +105,7 @@ gen7_wa_pre_3dstate_sf_depth_bias(struct ilo_render *r)
    ILO_DEV_ASSERT(r->dev, 7, 7);
 
    if ((r->state.current_pipe_control_dw1 & dw1) != dw1)
-      gen7_pipe_control(r, dw1);
+      ilo_render_pipe_control(r, dw1);
 }
 
 static void
@@ -153,7 +125,7 @@ gen7_wa_pre_3dstate_multisample(struct ilo_render *r)
    ILO_DEV_ASSERT(r->dev, 7, 7.5);
 
    if ((r->state.current_pipe_control_dw1 & dw1) != dw1)
-      gen7_pipe_control(r, dw1);
+      ilo_render_pipe_control(r, dw1);
 }
 
 static void
@@ -174,7 +146,7 @@ gen7_wa_pre_depth(struct ilo_render *r)
                            GEN6_PIPE_CONTROL_WRITE_IMM;
 
       if ((r->state.current_pipe_control_dw1 & dw1) != dw1)
-         gen7_pipe_control(r, dw1);
+         ilo_render_pipe_control(r, dw1);
    }
 
    /*
@@ -190,9 +162,9 @@ gen7_wa_pre_depth(struct ilo_render *r)
     *      guarantee that the pipeline from WM onwards is already flushed
     *      (e.g., via a preceding MI_FLUSH)."
     */
-   gen7_pipe_control(r, GEN6_PIPE_CONTROL_DEPTH_STALL);
-   gen7_pipe_control(r, GEN6_PIPE_CONTROL_DEPTH_CACHE_FLUSH);
-   gen7_pipe_control(r, GEN6_PIPE_CONTROL_DEPTH_STALL);
+   ilo_render_pipe_control(r, GEN6_PIPE_CONTROL_DEPTH_STALL);
+   ilo_render_pipe_control(r, GEN6_PIPE_CONTROL_DEPTH_CACHE_FLUSH);
+   ilo_render_pipe_control(r, GEN6_PIPE_CONTROL_DEPTH_STALL);
 }
 
 static void
@@ -210,7 +182,7 @@ gen7_wa_pre_3dstate_ps_max_threads(struct ilo_render *r)
    ILO_DEV_ASSERT(r->dev, 7, 7.5);
 
    if ((r->state.current_pipe_control_dw1 & dw1) != dw1)
-      gen7_pipe_control(r, dw1);
+      ilo_render_pipe_control(r, dw1);
 }
 
 static void

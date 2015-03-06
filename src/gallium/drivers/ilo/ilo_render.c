@@ -253,10 +253,7 @@ ilo_render_emit_flush(struct ilo_render *render)
    if (ilo_dev_gen(render->dev) == ILO_GEN(6))
       gen6_wa_pre_pipe_control(render, dw1);
 
-   gen6_PIPE_CONTROL(render->builder, dw1, NULL, 0, 0);
-
-   render->state.current_pipe_control_dw1 |= dw1;
-   render->state.deferred_pipe_control_dw1 &= ~dw1;
+   ilo_render_pipe_control(render, dw1);
 
    assert(ilo_builder_batch_used(render->builder) <= batch_used +
          ilo_render_get_flush_len(render));

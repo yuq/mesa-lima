@@ -38,24 +38,6 @@
 #include "ilo_state.h"
 #include "ilo_render_gen.h"
 
-/**
- * A wrapper for gen6_PIPE_CONTROL().
- */
-static void
-gen6_pipe_control(struct ilo_render *r, uint32_t dw1)
-{
-   struct intel_bo *bo = (dw1 & GEN6_PIPE_CONTROL_WRITE__MASK) ?
-      r->workaround_bo : NULL;
-
-   ILO_DEV_ASSERT(r->dev, 6, 6);
-
-   gen6_PIPE_CONTROL(r->builder, dw1, bo, 0, 0);
-
-   r->state.current_pipe_control_dw1 |= dw1;
-
-   assert(!r->state.deferred_pipe_control_dw1);
-}
-
 static void
 gen6_3dprimitive(struct ilo_render *r,
                  const struct pipe_draw_info *info,
@@ -120,14 +102,14 @@ gen6_wa_pre_pipe_control(struct ilo_render *r, uint32_t dw1)
       const uint32_t direct_wa = GEN6_PIPE_CONTROL_CS_STALL |
                                  GEN6_PIPE_CONTROL_PIXEL_SCOREBOARD_STALL;
 
-      gen6_pipe_control(r, direct_wa);
+      ilo_render_pipe_control(r, direct_wa);
    }
 
    if (indirect_wa_cond &&
        !(r->state.current_pipe_control_dw1 & GEN6_PIPE_CONTROL_WRITE__MASK)) {
       const uint32_t indirect_wa = GEN6_PIPE_CONTROL_WRITE_IMM;
 
-      gen6_pipe_control(r, indirect_wa);
+      ilo_render_pipe_control(r, indirect_wa);
    }
 }
 
@@ -158,7 +140,7 @@ gen6_wa_post_3dstate_constant_vs(struct ilo_render *r)
    gen6_wa_pre_pipe_control(r, dw1);
 
    if ((r->state.current_pipe_control_dw1 & dw1) != dw1)
-      gen6_pipe_control(r, dw1);
+      ilo_render_pipe_control(r, dw1);
 }
 
 static void
@@ -178,7 +160,7 @@ gen6_wa_pre_3dstate_wm_max_threads(struct ilo_render *r)
    gen6_wa_pre_pipe_control(r, dw1);
 
    if ((r->state.current_pipe_control_dw1 & dw1) != dw1)
-      gen6_pipe_control(r, dw1);
+      ilo_render_pipe_control(r, dw1);
 }
 
 static void
@@ -200,7 +182,7 @@ gen6_wa_pre_3dstate_multisample(struct ilo_render *r)
    gen6_wa_pre_pipe_control(r, dw1);
 
    if ((r->state.current_pipe_control_dw1 & dw1) != dw1)
-      gen6_pipe_control(r, dw1);
+      ilo_render_pipe_control(r, dw1);
 }
 
 static void
@@ -226,9 +208,9 @@ gen6_wa_pre_depth(struct ilo_render *r)
    gen6_wa_pre_pipe_control(r, GEN6_PIPE_CONTROL_DEPTH_STALL |
                                GEN6_PIPE_CONTROL_DEPTH_CACHE_FLUSH);
 
-   gen6_pipe_control(r, GEN6_PIPE_CONTROL_DEPTH_STALL);
-   gen6_pipe_control(r, GEN6_PIPE_CONTROL_DEPTH_CACHE_FLUSH);
-   gen6_pipe_control(r, GEN6_PIPE_CONTROL_DEPTH_STALL);
+   ilo_render_pipe_control(r, GEN6_PIPE_CONTROL_DEPTH_STALL);
+   ilo_render_pipe_control(r, GEN6_PIPE_CONTROL_DEPTH_CACHE_FLUSH);
+   ilo_render_pipe_control(r, GEN6_PIPE_CONTROL_DEPTH_STALL);
 }
 
 #define DIRTY(state) (session->pipe_dirty & ILO_DIRTY_ ## state)
