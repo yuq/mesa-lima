@@ -737,8 +737,7 @@ layout_want_mcs(struct ilo_layout *layout,
     *     "This field must be set to 0 for all SINT MSRTs when all RT channels
     *      are not written"
     */
-   if (templ->nr_samples > 1 && !layout->interleaved_samples &&
-       !util_format_is_pure_sint(templ->format)) {
+   if (templ->nr_samples > 1 && !util_format_is_pure_sint(templ->format)) {
       want_mcs = true;
    } else if (templ->nr_samples <= 1) {
       /*
