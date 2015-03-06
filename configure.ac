@@ -658,6 +658,9 @@ mingw*)
     ;;
 *)
     AX_PTHREAD
+    if test "x$ax_pthread_ok" = xno; then
+        AC_MSG_ERROR([Building mesa on this platform requires pthreads])
+    fi
     ;;
 esac
 dnl AX_PTHREADS leaves PTHREAD_LIBS empty for gcc and sets PTHREAD_CFLAGS
