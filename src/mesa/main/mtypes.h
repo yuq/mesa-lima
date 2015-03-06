@@ -2604,6 +2604,16 @@ struct gl_active_atomic_buffer
 };
 
 /**
+ * Active resource in a gl_shader_program
+ */
+struct gl_program_resource
+{
+   GLenum Type; /** Program interface type. */
+   const void *Data; /** Pointer to resource associated data structure. */
+   uint8_t StageReferences; /** Bitmask of shader stage references. */
+};
+
+/**
  * A GLSL program object.
  * Basically a linked collection of vertex and fragment shaders.
  */
@@ -2776,6 +2786,10 @@ struct gl_shader_program
     * \c NULL.
     */
    struct gl_shader *_LinkedShaders[MESA_SHADER_STAGES];
+
+   /** List of all active resources after linking. */
+   struct gl_program_resource *ProgramResourceList;
+   unsigned NumProgramResourceList;
 
    /* True if any of the fragment shaders attached to this program use:
     * #extension ARB_fragment_coord_conventions: enable
