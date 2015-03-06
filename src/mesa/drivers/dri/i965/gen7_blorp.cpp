@@ -47,7 +47,9 @@
 static void
 gen7_blorp_emit_urb_config(struct brw_context *brw)
 {
-   unsigned urb_size = (brw->is_haswell && brw->gt == 3) ? 32 : 16;
+   const unsigned urb_size =
+      (brw->gen >= 8 || (brw->is_haswell && brw->gt == 3)) ? 32 : 16;
+
    gen7_emit_push_constant_state(brw,
                                  urb_size / 2 /* vs_size */,
                                  0 /* hs_size */,
@@ -348,7 +350,7 @@ gen7_blorp_emit_gs_disable(struct brw_context *brw)
     * whole fixed function pipeline" means to emit a PIPE_CONTROL with the "CS
     * Stall" bit set.
     */
-   if (!brw->is_haswell && brw->gt == 2 && brw->gs.enabled)
+   if (brw->gen < 8 && !brw->is_haswell && brw->gt == 2 && brw->gs.enabled)
       gen7_emit_cs_stall_flush(brw);
 
    BEGIN_BATCH(7);
