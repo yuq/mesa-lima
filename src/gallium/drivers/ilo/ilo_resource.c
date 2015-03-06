@@ -220,6 +220,9 @@ tex_create_separate_stencil(struct ilo_texture *tex)
     */
    templ.format = PIPE_FORMAT_S8_UINT;
 
+   /* no stencil texturing */
+   templ.bind &= ~PIPE_BIND_SAMPLER_VIEW;
+
    s8 = tex->base.screen->resource_create(tex->base.screen, &templ);
    if (!s8)
       return false;

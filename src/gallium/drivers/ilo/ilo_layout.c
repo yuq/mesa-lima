@@ -460,8 +460,7 @@ layout_get_valid_tilings(const struct ilo_layout *layout,
 {
    const struct pipe_resource *templ = params->templ;
    const enum pipe_format format = layout->format;
-   /* W-tiling is too restrictive */
-   unsigned valid_tilings = LAYOUT_TILING_ALL & ~LAYOUT_TILING_W;
+   unsigned valid_tilings = LAYOUT_TILING_ALL;
 
    /*
     * From the Sandy Bridge PRM, volume 1 part 2, page 32:
@@ -496,8 +495,7 @@ layout_get_valid_tilings(const struct ilo_layout *layout,
    if (templ->bind & PIPE_BIND_DEPTH_STENCIL) {
       switch (format) {
       case PIPE_FORMAT_S8_UINT:
-         /* this is the only case LAYOUT_TILING_W is valid */
-         valid_tilings = LAYOUT_TILING_W;
+         valid_tilings &= LAYOUT_TILING_W;
          break;
       default:
          valid_tilings &= LAYOUT_TILING_Y;
@@ -532,6 +530,13 @@ layout_get_valid_tilings(const struct ilo_layout *layout,
           ilo_dev_gen(params->dev) <= ILO_GEN(7.5) &&
           layout->format == PIPE_FORMAT_R32G32B32_FLOAT)
          valid_tilings &= ~LAYOUT_TILING_Y;
+
+      valid_tilings &= ~LAYOUT_TILING_W;
+   }
+
+   if (templ->bind & PIPE_BIND_SAMPLER_VIEW) {
+      if (ilo_dev_gen(params->dev) < ILO_GEN(8))
+         valid_tilings &= ~LAYOUT_TILING_W;
    }
 
    /* no conflicting binding flags */
@@ -545,33 +550,39 @@ layout_init_tiling(struct ilo_layout *layout,
                    struct ilo_layout_params *params)
 {
    const struct pipe_resource *templ = params->templ;
-   unsigned valid_tilings = layout_get_valid_tilings(layout, params);
+   unsigned preferred_tilings;
 
-   layout->valid_tilings = valid_tilings;
+   layout->valid_tilings = layout_get_valid_tilings(layout, params);
+
+   preferred_tilings = layout->valid_tilings;
+
+   /* no fencing nor BLT support */
+   if (preferred_tilings & ~LAYOUT_TILING_W)
+      preferred_tilings &= ~LAYOUT_TILING_W;
 
    if (templ->bind & (PIPE_BIND_RENDER_TARGET | PIPE_BIND_SAMPLER_VIEW)) {
       /*
        * heuristically set a minimum width/height for enabling tiling
        */
-      if (layout->width0 < 64 && (valid_tilings & ~LAYOUT_TILING_X))
-         valid_tilings &= ~LAYOUT_TILING_X;
+      if (layout->width0 < 64 && (preferred_tilings & ~LAYOUT_TILING_X))
+         preferred_tilings &= ~LAYOUT_TILING_X;
 
       if ((layout->width0 < 32 || layout->height0 < 16) &&
           (layout->width0 < 16 || layout->height0 < 32) &&
-          (valid_tilings & ~LAYOUT_TILING_Y))
-         valid_tilings &= ~LAYOUT_TILING_Y;
+          (preferred_tilings & ~LAYOUT_TILING_Y))
+         preferred_tilings &= ~LAYOUT_TILING_Y;
    } else {
       /* force linear if we are not sure where the texture is bound to */
-      if (valid_tilings & LAYOUT_TILING_NONE)
-         valid_tilings &= LAYOUT_TILING_NONE;
+      if (preferred_tilings & LAYOUT_TILING_NONE)
+         preferred_tilings &= LAYOUT_TILING_NONE;
    }
 
    /* prefer tiled over linear */
-   if (valid_tilings & LAYOUT_TILING_Y)
+   if (preferred_tilings & LAYOUT_TILING_Y)
       layout->tiling = GEN6_TILING_Y;
-   else if (valid_tilings & LAYOUT_TILING_X)
+   else if (preferred_tilings & LAYOUT_TILING_X)
       layout->tiling = GEN6_TILING_X;
-   else if (valid_tilings & LAYOUT_TILING_W)
+   else if (preferred_tilings & LAYOUT_TILING_W)
       layout->tiling = GEN8_TILING_W;
    else
       layout->tiling = GEN6_TILING_NONE;
