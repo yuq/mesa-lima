@@ -143,7 +143,7 @@ ilo_context_create(struct pipe_screen *screen, void *priv)
    if (!ilo)
       return NULL;
 
-   ilo->winsys = is->winsys;
+   ilo->winsys = is->dev.winsys;
    ilo->dev = &is->dev;
 
    /*

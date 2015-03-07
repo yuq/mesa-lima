@@ -35,7 +35,11 @@
 #define ILO_DEV_ASSERT(dev, min_gen, max_gen) \
    ilo_dev_assert(dev, ILO_GEN(min_gen), ILO_GEN(max_gen))
 
+struct intel_winsys;
+
 struct ilo_dev_info {
+   struct intel_winsys *winsys;
+
    /* these mirror intel_winsys_info */
    int devid;
    size_t aperture_total;

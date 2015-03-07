@@ -559,7 +559,7 @@ ilo_get_timestamp(struct pipe_screen *screen)
       uint32_t dw[2];
    } timestamp;
 
-   intel_winsys_read_reg(is->winsys, GEN6_REG_TIMESTAMP, &timestamp.val);
+   intel_winsys_read_reg(is->dev.winsys, GEN6_REG_TIMESTAMP, &timestamp.val);
 
    /*
     * From the Ivy Bridge PRM, volume 1 part 3, page 107:
@@ -664,7 +664,7 @@ ilo_screen_destroy(struct pipe_screen *screen)
    struct ilo_screen *is = ilo_screen(screen);
 
    /* as it seems, winsys is owned by the screen */
-   intel_winsys_destroy(is->winsys);
+   intel_winsys_destroy(is->dev.winsys);
 
    FREE(is);
 }
@@ -820,9 +820,9 @@ ilo_screen_create(struct intel_winsys *ws)
    if (!is)
       return NULL;
 
-   is->winsys = ws;
+   is->dev.winsys = ws;
 
-   info = intel_winsys_get_info(is->winsys);
+   info = intel_winsys_get_info(is->dev.winsys);
    if (!init_dev(&is->dev, info)) {
       FREE(is);
       return NULL;

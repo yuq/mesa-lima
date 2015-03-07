@@ -163,7 +163,7 @@ tex_import_handle(struct ilo_texture *tex,
    enum intel_tiling_mode tiling;
    unsigned long pitch;
 
-   tex->bo = intel_winsys_import_handle(is->winsys, name, handle,
+   tex->bo = intel_winsys_import_handle(is->dev.winsys, name, handle,
          tex->layout.bo_height, &tiling, &pitch);
    if (!tex->bo)
       return false;
@@ -187,7 +187,7 @@ tex_create_bo(struct ilo_texture *tex)
    const bool cpu_init = resource_get_cpu_init(&tex->base);
    struct intel_bo *bo;
 
-   bo = intel_winsys_alloc_bo(is->winsys, name,
+   bo = intel_winsys_alloc_bo(is->dev.winsys, name,
          tex->layout.bo_stride * tex->layout.bo_height, cpu_init);
 
    /* set the tiling for transfer and export */
@@ -241,7 +241,7 @@ tex_create_hiz(struct ilo_texture *tex)
    struct ilo_screen *is = ilo_screen(tex->base.screen);
    unsigned lv;
 
-   tex->aux_bo = intel_winsys_alloc_bo(is->winsys, "hiz texture",
+   tex->aux_bo = intel_winsys_alloc_bo(is->dev.winsys, "hiz texture",
          tex->layout.aux_stride * tex->layout.aux_height, false);
    if (!tex->aux_bo)
       return false;
@@ -270,7 +270,7 @@ tex_create_mcs(struct ilo_texture *tex)
 
    assert(tex->layout.aux_enables == (1 << (tex->base.last_level + 1)) - 1);
 
-   tex->aux_bo = intel_winsys_alloc_bo(is->winsys, "mcs texture",
+   tex->aux_bo = intel_winsys_alloc_bo(is->dev.winsys, "mcs texture",
          tex->layout.aux_stride * tex->layout.aux_height, false);
    if (!tex->aux_bo)
       return false;
@@ -397,7 +397,7 @@ tex_get_handle(struct ilo_texture *tex, struct winsys_handle *handle)
    else
       tiling = surface_to_winsys_tiling(tex->layout.tiling);
 
-   err = intel_winsys_export_handle(is->winsys, tex->bo, tiling,
+   err = intel_winsys_export_handle(is->dev.winsys, tex->bo, tiling,
          tex->layout.bo_stride, tex->layout.bo_height, handle);
 
    return !err;
@@ -410,7 +410,7 @@ buf_create_bo(struct ilo_buffer *buf)
    const char *name = resource_get_bo_name(&buf->base);
    const bool cpu_init = resource_get_cpu_init(&buf->base);
 
-   buf->bo = intel_winsys_alloc_bo(is->winsys, name, buf->bo_size, cpu_init);
+   buf->bo = intel_winsys_alloc_bo(is->dev.winsys, name, buf->bo_size, cpu_init);
 
    return (buf->bo != NULL);
 }
