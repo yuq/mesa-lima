@@ -1450,8 +1450,6 @@ i915ValidateFragmentProgram(struct i915_context *i915)
 
    if (s2 != i915->state.Ctx[I915_CTXREG_LIS2] ||
        s4 != i915->state.Ctx[I915_CTXREG_LIS4]) {
-      int k;
-
       I915_STATECHANGE(i915, I915_UPLOAD_CTX);
 
       /* Must do this *after* statechange, so as not to affect
@@ -1471,8 +1469,7 @@ i915ValidateFragmentProgram(struct i915_context *i915)
       i915->state.Ctx[I915_CTXREG_LIS2] = s2;
       i915->state.Ctx[I915_CTXREG_LIS4] = s4;
 
-      k = intel->vtbl.check_vertex_size(intel, intel->vertex_size);
-      assert(k);
+      assert(intel->vtbl.check_vertex_size(intel, intel->vertex_size));
    }
 
    if (!p->params_uptodate)
