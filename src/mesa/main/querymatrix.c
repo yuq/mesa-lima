@@ -75,7 +75,7 @@ _mesa_QueryMatrixxOES(GLfixed mantissa[16], GLint exponent[16])
     * we can return immediately, as _mesa_GetInteger() will have
     * logged the necessary error already.
     */
-   for (i = 0; i < sizeof(modes)/sizeof(modes[0]); i++) {
+   for (i = 0; i < ARRAY_SIZE(modes); i++) {
       if (modes[i].currentMode == currentMode) {
          desiredMatrix = modes[i].desiredMatrix;
          break;
