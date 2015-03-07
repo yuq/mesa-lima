@@ -2,6 +2,7 @@ C_SOURCES := \
 	core/ilo_core.h \
 	core/ilo_debug.c \
 	core/ilo_debug.h \
+	core/ilo_dev.h \
 	core/intel_winsys.h \
 	ilo_blit.c \
 	ilo_blit.h \

@@ -25,11 +25,47 @@
  *    Chia-I Wu <olv@lunarg.com>
  */
 
-#ifndef ILO_COMMON_H
-#define ILO_COMMON_H
+#ifndef ILO_DEV_H
+#define ILO_DEV_H
 
-#include "core/ilo_core.h"
-#include "core/ilo_debug.h"
-#include "core/ilo_dev.h"
+#include "ilo_core.h"
 
-#endif /* ILO_COMMON_H */
+#define ILO_GEN(gen) ((int) (gen * 100))
+
+#define ILO_DEV_ASSERT(dev, min_gen, max_gen) \
+   ilo_dev_assert(dev, ILO_GEN(min_gen), ILO_GEN(max_gen))
+
+struct ilo_dev_info {
+   /* these mirror intel_winsys_info */
+   int devid;
+   size_t aperture_total;
+   size_t aperture_mappable;
+   bool has_llc;
+   bool has_address_swizzling;
+   bool has_logical_context;
+   bool has_ppgtt;
+   bool has_timestamp;
+   bool has_gen7_sol_reset;
+
+   /* use ilo_dev_gen() to access */
+   int gen_opaque;
+
+   int gt;
+   int eu_count;
+   int thread_count;
+   int urb_size;
+};
+
+static inline int
+ilo_dev_gen(const struct ilo_dev_info *dev)
+{
+   return dev->gen_opaque;
+}
+
+static inline void
+ilo_dev_assert(const struct ilo_dev_info *dev, int min_opqaue, int max_opqaue)
+{
+   assert(dev->gen_opaque >= min_opqaue && dev->gen_opaque <= max_opqaue);
+}
+
+#endif /* ILO_DEV_H */
