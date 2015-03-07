@@ -176,5 +176,11 @@ do {                       \
 #  endif
 #endif
 
+#ifdef HAVE_FUNC_ATTRIBUTE_UNUSED
+#define UNUSED __attribute__((unused))
+#else
+#define UNUSED
+#endif
+
 
 #endif /* UTIL_MACROS_H */

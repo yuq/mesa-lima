@@ -369,6 +369,7 @@ def generate(env):
             'HAVE___BUILTIN_FFS',
             'HAVE___BUILTIN_FFSLL',
             'HAVE_FUNC_ATTRIBUTE_FLATTEN',
+            'HAVE_FUNC_ATTRIBUTE_UNUSED',
             # GCC 3.0
             'HAVE_FUNC_ATTRIBUTE_FORMAT',
             'HAVE_FUNC_ATTRIBUTE_PACKED',
