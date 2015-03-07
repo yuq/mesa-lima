@@ -1460,7 +1460,7 @@ read_shader(const char *fname)
 
    fclose(f);
 
-   shader = _mesa_strdup(buffer);
+   shader = strdup(buffer);
    free(buffer);
 
    return shader;

@@ -481,24 +481,6 @@ _mesa_half_to_float(GLhalfARB val)
 /** \name String */
 /*@{*/
 
-/**
- * Implemented using malloc() and strcpy.
- * Note that NULL is handled accordingly.
- */
-char *
-_mesa_strdup( const char *s )
-{
-   if (s) {
-      size_t l = strlen(s);
-      char *s2 = malloc(l + 1);
-      if (s2)
-         strcpy(s2, s);
-      return s2;
-   }
-   else {
-      return NULL;
-   }
-}
 
 /** Compute simple checksum/hash for a string */
 unsigned int
