@@ -161,4 +161,48 @@ llrintf(float f)
 #endif
 
 
+#if defined(fpclassify)
+/* ISO C99 says that fpclassify is a macro.  Assume that any implementation
+ * of fpclassify, whether it's in a C99 compiler or not, will be a macro.
+ */
+#elif defined(__cplusplus)
+/* For C++, fpclassify() should be defined in <cmath> */
+#elif defined(_MSC_VER)
+/* Not required on VS2013 and above.  Oddly, the fpclassify() function
+ * doesn't exist in such a form on MSVC.  This is an implementation using
+ * slightly different lower-level Windows functions.
+ */
+#include <float.h>
+
+static inline enum {FP_NAN, FP_INFINITE, FP_ZERO, FP_SUBNORMAL, FP_NORMAL}
+fpclassify(double x)
+{
+   switch(_fpclass(x)) {
+   case _FPCLASS_SNAN: /* signaling NaN */
+   case _FPCLASS_QNAN: /* quiet NaN */
+      return FP_NAN;
+   case _FPCLASS_NINF: /* negative infinity */
+   case _FPCLASS_PINF: /* positive infinity */
+      return FP_INFINITE;
+   case _FPCLASS_NN:   /* negative normal */
+   case _FPCLASS_PN:   /* positive normal */
+      return FP_NORMAL;
+   case _FPCLASS_ND:   /* negative denormalized */
+   case _FPCLASS_PD:   /* positive denormalized */
+      return FP_SUBNORMAL;
+   case _FPCLASS_NZ:   /* negative zero */
+   case _FPCLASS_PZ:   /* positive zero */
+      return FP_ZERO;
+   default:
+      /* Should never get here; but if we do, this will guarantee
+       * that the pattern is not treated like a number.
+       */
+      return FP_NAN;
+   }
+}
+#else
+#error "Need to include or define an fpclassify function"
+#endif
+
+
 #endif /* #define _C99_MATH_H_ */
