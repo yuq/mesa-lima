@@ -49,13 +49,12 @@ _mesa_QueryMatrixxOES(GLfixed mantissa[16], GLint exponent[16])
     * NaN or Inf).  In case of error, everything is invalid.
     */
    GLbitfield rv;
-   register unsigned int i;
-   unsigned int bit;
+   unsigned i, bit;
 
    /* This data structure defines the mapping between the current matrix
     * mode and the desired matrix identifier.
     */
-   static struct {
+   static const struct {
       GLenum currentMode;
       GLenum desiredMatrix;
    } modes[] = {
