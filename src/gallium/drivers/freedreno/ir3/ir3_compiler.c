@@ -1696,6 +1696,26 @@ trans_txq(const struct instr_translater *t,
 		add_dst_reg_wrmask(ctx, instr, dst, 0, dst->WriteMask);
 		add_src_reg_wrmask(ctx, instr, level, level->SwizzleX, 0x1);
 	}
+
+	if (dst->WriteMask & TGSI_WRITEMASK_W) {
+		/* The # of levels comes from getinfo.z. We need to add 1 to it, since
+		 * the value in TEX_CONST_0 is zero-based.
+		 */
+		struct tgsi_dst_register tmp_dst;
+		struct tgsi_src_register *tmp_src;
+
+		tmp_src = get_internal_temp(ctx, &tmp_dst);
+		instr = instr_create(ctx, 5, OPC_GETINFO);
+		instr->cat5.type = get_utype(ctx);
+		instr->cat5.samp = samp->Index;
+		instr->cat5.tex  = samp->Index;
+		add_dst_reg_wrmask(ctx, instr, &tmp_dst, 0, TGSI_WRITEMASK_Z);
+
+		instr = instr_create(ctx, 2, OPC_ADD_U);
+		add_dst_reg(ctx, instr, dst, 3);
+		add_src_reg(ctx, instr, tmp_src, src_swiz(tmp_src, 2));
+		ir3_reg_create(instr, 0, IR3_REG_IMMED)->iim_val = 1;
+	}
 }
 
 /* DDX/DDY */
