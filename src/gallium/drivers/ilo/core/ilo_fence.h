@@ -25,30 +25,49 @@
  *    Chia-I Wu <olv@lunarg.com>
  */
 
-#ifndef ILO_SCREEN_H
-#define ILO_SCREEN_H
+#ifndef ILO_FENCE_H
+#define ILO_FENCE_H
 
-#include "pipe/p_screen.h"
+#include "intel_winsys.h"
 
-#include "ilo_common.h"
+#include "ilo_core.h"
+#include "ilo_dev.h"
 
-struct intel_bo;
-
-struct ilo_fence;
-
-struct ilo_screen {
-   struct pipe_screen base;
-
-   struct ilo_dev dev;
+struct ilo_fence {
+   struct intel_bo *seq_bo;
 };
 
-static inline struct ilo_screen *
-ilo_screen(struct pipe_screen *screen)
+static inline void
+ilo_fence_init(struct ilo_fence *fence, const struct ilo_dev *dev)
 {
-   return (struct ilo_screen *) screen;
+   /* no-op */
 }
 
-struct pipe_fence_handle *
-ilo_screen_fence_create(struct pipe_screen *screen, struct intel_bo *bo);
+static inline void
+ilo_fence_cleanup(struct ilo_fence *fence)
+{
+   intel_bo_unref(fence->seq_bo);
+}
 
-#endif /* ILO_SCREEN_H */
+/**
+ * Set the sequence bo for waiting.  The fence is considered signaled when
+ * there is no sequence bo.
+ */
+static inline void
+ilo_fence_set_seq_bo(struct ilo_fence *fence, struct intel_bo *seq_bo)
+{
+   intel_bo_unref(fence->seq_bo);
+   fence->seq_bo = intel_bo_ref(seq_bo);
+}
+
+/**
+ * Wait for the fence to be signaled or until \p timeout nanoseconds has
+ * passed.  It will wait indefinitely when \p timeout is negative.
+ */
+static inline bool
+ilo_fence_wait(struct ilo_fence *fence, int64_t timeout)
+{
+   return (!fence->seq_bo || intel_bo_wait(fence->seq_bo, timeout) == 0);
+}
+
+#endif /* ILO_FENCE_H */

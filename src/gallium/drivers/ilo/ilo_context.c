@@ -62,8 +62,7 @@ ilo_flush(struct pipe_context *pipe,
          (flags & PIPE_FLUSH_END_OF_FRAME) ? "frame end" : "user request");
 
    if (f) {
-      *f = (struct pipe_fence_handle *)
-         ilo_fence_create(pipe->screen, ilo->cp->last_submitted_bo);
+      *f = ilo_screen_fence_create(pipe->screen, ilo->cp->last_submitted_bo);
    }
 }
 

@@ -31,6 +31,7 @@
 #include "vl/vl_decoder.h"
 #include "vl/vl_video_buffer.h"
 #include "genhw/genhw.h" /* for GEN6_REG_TIMESTAMP */
+#include "core/ilo_fence.h"
 #include "core/intel_winsys.h"
 
 #include "ilo_context.h"
@@ -40,9 +41,10 @@
 #include "ilo_public.h"
 #include "ilo_screen.h"
 
-struct ilo_fence {
+struct pipe_fence_handle {
    struct pipe_reference reference;
-   struct intel_bo *bo;
+
+   struct ilo_fence fence;
 };
 
 static float
@@ -579,81 +581,67 @@ ilo_get_timestamp(struct pipe_screen *screen)
 }
 
 static void
-ilo_fence_reference(struct pipe_screen *screen,
-                    struct pipe_fence_handle **p,
-                    struct pipe_fence_handle *f)
+ilo_screen_fence_reference(struct pipe_screen *screen,
+                           struct pipe_fence_handle **ptr,
+                           struct pipe_fence_handle *fence)
 {
-   struct ilo_fence *fence = ilo_fence(f);
-   struct ilo_fence *old;
+   struct pipe_fence_handle *old;
 
-   if (likely(p)) {
-      old = ilo_fence(*p);
-      *p = f;
+   if (likely(ptr)) {
+      old = *ptr;
+      *ptr = fence;
    } else {
       old = NULL;
    }
 
-   STATIC_ASSERT(&((struct ilo_fence *) NULL)->reference == NULL);
+   STATIC_ASSERT(&((struct pipe_fence_handle *) NULL)->reference == NULL);
    if (pipe_reference(&old->reference, &fence->reference)) {
-      intel_bo_unref(old->bo);
+      ilo_fence_cleanup(&old->fence);
       FREE(old);
    }
 }
 
 static boolean
-ilo_fence_signalled(struct pipe_screen *screen,
-                    struct pipe_fence_handle *f)
+ilo_screen_fence_finish(struct pipe_screen *screen,
+                        struct pipe_fence_handle *fence,
+                        uint64_t timeout)
 {
-   struct ilo_fence *fence = ilo_fence(f);
+   const int64_t wait_timeout = (timeout > INT64_MAX) ? -1 : timeout;
+   bool signaled;
 
-   /* mark signalled if the bo is idle */
-   if (fence->bo && !intel_bo_is_busy(fence->bo)) {
-      intel_bo_unref(fence->bo);
-      fence->bo = NULL;
-   }
+   signaled = ilo_fence_wait(&fence->fence, wait_timeout);
+   /* XXX not thread safe */
+   if (signaled)
+      ilo_fence_set_seq_bo(&fence->fence, NULL);
 
-   return (fence->bo == NULL);
+   return signaled;
 }
 
 static boolean
-ilo_fence_finish(struct pipe_screen *screen,
-                 struct pipe_fence_handle *f,
-                 uint64_t timeout)
+ilo_screen_fence_signalled(struct pipe_screen *screen,
+                           struct pipe_fence_handle *fence)
 {
-   struct ilo_fence *fence = ilo_fence(f);
-   const int64_t wait_timeout = (timeout > INT64_MAX) ? -1 : timeout;
-
-   /* already signalled */
-   if (!fence->bo)
-      return true;
-
-   /* wait and see if it returns error */
-   if (intel_bo_wait(fence->bo, wait_timeout))
-      return false;
-
-   /* mark signalled */
-   intel_bo_unref(fence->bo);
-   fence->bo = NULL;
-
-   return true;
+   return ilo_screen_fence_finish(screen, fence, 0);
 }
 
 /**
  * Create a fence for \p bo.  When \p bo is not NULL, it must be submitted
  * before waited on or checked.
  */
-struct ilo_fence *
-ilo_fence_create(struct pipe_screen *screen, struct intel_bo *bo)
+struct pipe_fence_handle *
+ilo_screen_fence_create(struct pipe_screen *screen, struct intel_bo *bo)
 {
-   struct ilo_fence *fence;
+   struct ilo_screen *is = ilo_screen(screen);
+   struct pipe_fence_handle *fence;
 
-   fence = CALLOC_STRUCT(ilo_fence);
+   fence = CALLOC_STRUCT(pipe_fence_handle);
    if (!fence)
       return NULL;
 
    pipe_reference_init(&fence->reference, 1);
 
-   fence->bo = intel_bo_ref(bo);
+   ilo_fence_init(&fence->fence, &is->dev);
+   ilo_fence_set_seq_bo(&fence->fence, bo);
 
    return fence;
 }
@@ -700,9 +688,9 @@ ilo_screen_create(struct intel_winsys *ws)
 
    is->base.flush_frontbuffer = NULL;
 
-   is->base.fence_reference = ilo_fence_reference;
-   is->base.fence_signalled = ilo_fence_signalled;
-   is->base.fence_finish = ilo_fence_finish;
+   is->base.fence_reference = ilo_screen_fence_reference;
+   is->base.fence_signalled = ilo_screen_fence_signalled;
+   is->base.fence_finish = ilo_screen_fence_finish;
 
    is->base.get_driver_query_info = NULL;
 
