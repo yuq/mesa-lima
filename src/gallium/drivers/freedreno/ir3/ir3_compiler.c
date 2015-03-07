@@ -1641,6 +1641,7 @@ trans_txq(const struct instr_translater *t,
 	struct tgsi_dst_register *dst = &inst->Dst[0].Register;
 	struct tgsi_src_register *level = &inst->Src[0].Register;
 	struct tgsi_src_register *samp = &inst->Src[1].Register;
+	const struct target_info *tgt = &tex_targets[inst->Texture.Texture];
 	struct tex_info tinf;
 
 	memset(&tinf, 0, sizeof(tinf));
@@ -1654,8 +1655,47 @@ trans_txq(const struct instr_translater *t,
 	instr->cat5.tex  = samp->Index;
 	instr->flags |= tinf.flags;
 
-	add_dst_reg_wrmask(ctx, instr, dst, 0, dst->WriteMask);
-	add_src_reg_wrmask(ctx, instr, level, level->SwizzleX, 0x1);
+	if (tgt->array && (dst->WriteMask & (1 << tgt->dims))) {
+		/* Array size actually ends up in .w rather than .z. This doesn't
+		 * matter for miplevel 0, but for higher mips the value in z is
+		 * minified whereas w stays. Also, the value in TEX_CONST_3_DEPTH is
+		 * returned, which means that we have to add 1 to it for arrays.
+		 */
+		struct tgsi_dst_register tmp_dst;
+		struct tgsi_src_register *tmp_src;
+		type_t type_mov = get_utype(ctx);
+
+		tmp_src = get_internal_temp(ctx, &tmp_dst);
+		add_dst_reg_wrmask(ctx, instr, &tmp_dst, 0,
+						   dst->WriteMask | TGSI_WRITEMASK_W);
+		add_src_reg_wrmask(ctx, instr, level, level->SwizzleX, 0x1);
+
+		if (dst->WriteMask & TGSI_WRITEMASK_X) {
+			instr = instr_create(ctx, 1, 0);
+			instr->cat1.src_type = type_mov;
+			instr->cat1.dst_type = type_mov;
+			add_dst_reg(ctx, instr, dst, 0);
+			add_src_reg(ctx, instr, tmp_src, src_swiz(tmp_src, 0));
+		}
+
+		if (tgt->dims == 2) {
+			if (dst->WriteMask & TGSI_WRITEMASK_Y) {
+				instr = instr_create(ctx, 1, 0);
+				instr->cat1.src_type = type_mov;
+				instr->cat1.dst_type = type_mov;
+				add_dst_reg(ctx, instr, dst, 1);
+				add_src_reg(ctx, instr, tmp_src, src_swiz(tmp_src, 1));
+			}
+		}
+
+		instr = instr_create(ctx, 2, OPC_ADD_U);
+		add_dst_reg(ctx, instr, dst, tgt->dims);
+		add_src_reg(ctx, instr, tmp_src, src_swiz(tmp_src, 3));
+		ir3_reg_create(instr, 0, IR3_REG_IMMED)->iim_val = 1;
+	} else {
+		add_dst_reg_wrmask(ctx, instr, dst, 0, dst->WriteMask);
+		add_src_reg_wrmask(ctx, instr, level, level->SwizzleX, 0x1);
+	}
 }
 
 /* DDX/DDY */
