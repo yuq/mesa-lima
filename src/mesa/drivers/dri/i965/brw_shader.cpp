@@ -584,7 +584,7 @@ brw_saturate_immediate(enum brw_reg_type type, struct brw_reg *reg)
       unsigned ud;
       int d;
       float f;
-   } imm = { reg->dw1.ud }, sat_imm;
+   } imm = { reg->dw1.ud }, sat_imm = { 0 };
 
    switch (type) {
    case BRW_REGISTER_TYPE_UD:
