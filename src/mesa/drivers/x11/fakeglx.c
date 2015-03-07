@@ -40,6 +40,7 @@
  */
 
 
+#include <string.h>
 #include <stdio.h>
 #include "glxheader.h"
 #include "glxapi.h"
@@ -846,7 +847,7 @@ register_with_display(Display *dpy)
       ext = dpy->ext_procs;  /* new extension is at head of list */
       assert(c->extension == ext->codes.extension);
       (void) c; /* silence warning */
-      ext->name = _mesa_strdup(extName);
+      ext->name = strdup(extName);
       ext->close_display = close_display_callback;
    }
 }
