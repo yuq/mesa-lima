@@ -28,17 +28,7 @@
 #ifndef ILO_COMMON_H
 #define ILO_COMMON_H
 
-#include "pipe/p_compiler.h"
-#include "pipe/p_defines.h"
-#include "pipe/p_format.h"
-
-#include "util/u_debug.h"
-#include "util/u_double_list.h"
-#include "util/u_format.h"
-#include "util/u_inlines.h"
-#include "util/u_math.h"
-#include "util/u_memory.h"
-#include "util/u_pointer.h"
+#include "core/ilo_core.h"
 
 #define ILO_GEN(gen) ((int) (gen * 100))
 
@@ -51,9 +41,6 @@
 
 #define ILO_DEV_ASSERT(dev, min_gen, max_gen) \
    ilo_dev_assert(dev, ILO_GEN(min_gen), ILO_GEN(max_gen))
-
-#define ILO_PRIM_RECTANGLES PIPE_PRIM_MAX
-#define ILO_PRIM_MAX (PIPE_PRIM_MAX + 1)
 
 enum ilo_debug {
    ILO_DEBUG_BATCH     = 1 << 0,

@@ -1,4 +1,5 @@
 C_SOURCES := \
+	core/ilo_core.h \
 	core/intel_winsys.h \
 	ilo_blit.c \
 	ilo_blit.h \
