@@ -45,23 +45,6 @@ struct ilo_fence {
    struct intel_bo *bo;
 };
 
-int ilo_debug;
-
-static const struct debug_named_value ilo_debug_flags[] = {
-   { "batch",     ILO_DEBUG_BATCH,    "Dump batch/dynamic/surface/instruction buffers" },
-   { "vs",        ILO_DEBUG_VS,       "Dump vertex shaders" },
-   { "gs",        ILO_DEBUG_GS,       "Dump geometry shaders" },
-   { "fs",        ILO_DEBUG_FS,       "Dump fragment shaders" },
-   { "cs",        ILO_DEBUG_CS,       "Dump compute shaders" },
-   { "draw",      ILO_DEBUG_DRAW,     "Show draw information" },
-   { "submit",    ILO_DEBUG_SUBMIT,   "Show batch buffer submissions" },
-   { "hang",      ILO_DEBUG_HANG,     "Detect GPU hangs" },
-   { "nohw",      ILO_DEBUG_NOHW,     "Do not send commands to HW" },
-   { "nocache",   ILO_DEBUG_NOCACHE,  "Always invalidate HW caches" },
-   { "nohiz",     ILO_DEBUG_NOHIZ,    "Disable HiZ" },
-   DEBUG_NAMED_VALUE_END
-};
-
 static float
 ilo_get_paramf(struct pipe_screen *screen, enum pipe_capf param)
 {
@@ -831,7 +814,7 @@ ilo_screen_create(struct intel_winsys *ws)
    struct ilo_screen *is;
    const struct intel_winsys_info *info;
 
-   ilo_debug = debug_get_flags_option("ILO_DEBUG", ilo_debug_flags, 0);
+   ilo_debug_init("ILO_DEBUG");
 
    is = CALLOC_STRUCT(ilo_screen);
    if (!is)

@@ -25,48 +25,27 @@
  *    Chia-I Wu <olv@lunarg.com>
  */
 
-#ifndef ILO_COMMON_H
-#define ILO_COMMON_H
+#include "ilo_debug.h"
 
-#include "core/ilo_core.h"
-#include "core/ilo_debug.h"
-
-#define ILO_GEN(gen) ((int) (gen * 100))
-
-#define ILO_DEV_ASSERT(dev, min_gen, max_gen) \
-   ilo_dev_assert(dev, ILO_GEN(min_gen), ILO_GEN(max_gen))
-
-struct ilo_dev_info {
-   /* these mirror intel_winsys_info */
-   int devid;
-   size_t aperture_total;
-   size_t aperture_mappable;
-   bool has_llc;
-   bool has_address_swizzling;
-   bool has_logical_context;
-   bool has_ppgtt;
-   bool has_timestamp;
-   bool has_gen7_sol_reset;
-
-   /* use ilo_dev_gen() to access */
-   int gen_opaque;
-
-   int gt;
-   int eu_count;
-   int thread_count;
-   int urb_size;
+static const struct debug_named_value ilo_debug_flags[] = {
+   { "batch",     ILO_DEBUG_BATCH,    "Dump batch/dynamic/surface/instruction buffers" },
+   { "vs",        ILO_DEBUG_VS,       "Dump vertex shaders" },
+   { "gs",        ILO_DEBUG_GS,       "Dump geometry shaders" },
+   { "fs",        ILO_DEBUG_FS,       "Dump fragment shaders" },
+   { "cs",        ILO_DEBUG_CS,       "Dump compute shaders" },
+   { "draw",      ILO_DEBUG_DRAW,     "Show draw information" },
+   { "submit",    ILO_DEBUG_SUBMIT,   "Show batch buffer submissions" },
+   { "hang",      ILO_DEBUG_HANG,     "Detect GPU hangs" },
+   { "nohw",      ILO_DEBUG_NOHW,     "Do not send commands to HW" },
+   { "nocache",   ILO_DEBUG_NOCACHE,  "Always invalidate HW caches" },
+   { "nohiz",     ILO_DEBUG_NOHIZ,    "Disable HiZ" },
+   DEBUG_NAMED_VALUE_END
 };
 
-static inline int
-ilo_dev_gen(const struct ilo_dev_info *dev)
-{
-   return dev->gen_opaque;
-}
+int ilo_debug;
 
-static inline void
-ilo_dev_assert(const struct ilo_dev_info *dev, int min_opqaue, int max_opqaue)
+void
+ilo_debug_init(const char *name)
 {
-   assert(dev->gen_opaque >= min_opqaue && dev->gen_opaque <= max_opqaue);
+   ilo_debug = debug_get_flags_option(name, ilo_debug_flags, 0);
 }
-
-#endif /* ILO_COMMON_H */
