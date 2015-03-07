@@ -1,4 +1,5 @@
 C_SOURCES := \
+	core/intel_winsys.h \
 	ilo_blit.c \
 	ilo_blit.h \
 	ilo_blitter.c \
@@ -56,7 +57,6 @@ C_SOURCES := \
 	ilo_transfer.h \
 	ilo_video.c \
 	ilo_video.h \
-	intel_winsys.h \
 	\
 	shader/ilo_shader_cs.c \
 	shader/ilo_shader_fs.c \

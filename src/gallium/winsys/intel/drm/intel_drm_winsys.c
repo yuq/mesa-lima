@@ -41,7 +41,7 @@
 #include "util/u_inlines.h"
 #include "util/u_memory.h"
 #include "util/u_debug.h"
-#include "ilo/intel_winsys.h"
+#include "ilo/core/intel_winsys.h"
 #include "intel_drm_public.h"
 
 struct intel_winsys {

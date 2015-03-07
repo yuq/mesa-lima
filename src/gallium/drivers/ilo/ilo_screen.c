@@ -31,7 +31,7 @@
 #include "vl/vl_decoder.h"
 #include "vl/vl_video_buffer.h"
 #include "genhw/genhw.h" /* for GEN6_REG_TIMESTAMP */
-#include "intel_winsys.h"
+#include "core/intel_winsys.h"
 
 #include "ilo_context.h"
 #include "ilo_format.h"

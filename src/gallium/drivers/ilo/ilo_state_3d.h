@@ -29,7 +29,7 @@
 #define ILO_STATE_3D_H
 
 #include "genhw/genhw.h"
-#include "intel_winsys.h"
+#include "core/intel_winsys.h"
 
 #include "ilo_common.h"
 #include "ilo_state.h"

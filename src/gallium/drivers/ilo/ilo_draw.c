@@ -26,7 +26,7 @@
  */
 
 #include "util/u_prim.h"
-#include "intel_winsys.h"
+#include "core/intel_winsys.h"
 
 #include "ilo_render.h"
 #include "ilo_blit.h"

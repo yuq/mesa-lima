@@ -28,7 +28,7 @@
 #ifndef ILO_RESOURCE_H
 #define ILO_RESOURCE_H
 
-#include "intel_winsys.h"
+#include "core/intel_winsys.h"
 
 #include "ilo_common.h"
 #include "ilo_layout.h"

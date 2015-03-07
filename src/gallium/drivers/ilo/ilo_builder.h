@@ -28,7 +28,7 @@
 #ifndef ILO_BUILDER_H
 #define ILO_BUILDER_H
 
-#include "intel_winsys.h"
+#include "core/intel_winsys.h"
 #include "ilo_common.h"
 
 enum ilo_builder_writer_type {

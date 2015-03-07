@@ -27,7 +27,7 @@
 
 #include "genhw/genhw.h" /* for SBE setup */
 #include "tgsi/tgsi_parse.h"
-#include "intel_winsys.h"
+#include "core/intel_winsys.h"
 
 #include "shader/ilo_shader_internal.h"
 #include "ilo_builder.h"
