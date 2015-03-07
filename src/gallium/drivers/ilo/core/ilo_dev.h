@@ -60,6 +60,12 @@ struct ilo_dev {
    int urb_size;
 };
 
+bool
+ilo_dev_init(struct ilo_dev *dev, struct intel_winsys *winsys);
+
+void
+ilo_dev_cleanup(struct ilo_dev *dev);
+
 static inline int
 ilo_dev_gen(const struct ilo_dev *dev)
 {
