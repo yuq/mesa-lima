@@ -411,7 +411,7 @@ static const struct ilo_dp_cap ilo_dp_caps[] = {
  * format.  Return -1 on errors.
  */
 int
-ilo_translate_color_format(const struct ilo_dev_info *dev,
+ilo_translate_color_format(const struct ilo_dev *dev,
                            enum pipe_format format)
 {
    static const int format_mapping[PIPE_FORMAT_COUNT] = {
@@ -675,7 +675,7 @@ ilo_translate_color_format(const struct ilo_dev_info *dev,
 }
 
 static bool
-ilo_format_supports_zs(const struct ilo_dev_info *dev,
+ilo_format_supports_zs(const struct ilo_dev *dev,
                        enum pipe_format format)
 {
    switch (format) {
@@ -693,7 +693,7 @@ ilo_format_supports_zs(const struct ilo_dev_info *dev,
 }
 
 static bool
-ilo_format_supports_rt(const struct ilo_dev_info *dev,
+ilo_format_supports_rt(const struct ilo_dev *dev,
                        enum pipe_format format)
 {
    const int idx = ilo_translate_format(dev, format, PIPE_BIND_RENDER_TARGET);
@@ -714,7 +714,7 @@ ilo_format_supports_rt(const struct ilo_dev_info *dev,
 }
 
 static bool
-ilo_format_supports_sampler(const struct ilo_dev_info *dev,
+ilo_format_supports_sampler(const struct ilo_dev *dev,
                             enum pipe_format format)
 {
    const int idx = ilo_translate_format(dev, format, PIPE_BIND_SAMPLER_VIEW);
@@ -735,7 +735,7 @@ ilo_format_supports_sampler(const struct ilo_dev_info *dev,
 }
 
 static bool
-ilo_format_supports_vb(const struct ilo_dev_info *dev,
+ilo_format_supports_vb(const struct ilo_dev *dev,
                        enum pipe_format format)
 {
    const int idx = ilo_translate_format(dev, format, PIPE_BIND_VERTEX_BUFFER);
@@ -754,7 +754,7 @@ ilo_is_format_supported(struct pipe_screen *screen,
                         unsigned bindings)
 {
    struct ilo_screen *is = ilo_screen(screen);
-   const struct ilo_dev_info *dev = &is->dev;
+   const struct ilo_dev *dev = &is->dev;
    unsigned bind;
 
    if (!util_format_is_supported(format, bindings))

@@ -44,7 +44,7 @@ struct ilo_state_vector;
  * Render Engine.
  */
 struct ilo_render {
-   const struct ilo_dev_info *dev;
+   const struct ilo_dev *dev;
    struct ilo_builder *builder;
 
    struct intel_bo *workaround_bo;

@@ -78,7 +78,7 @@ struct ilo_cp {
 };
 
 struct ilo_cp *
-ilo_cp_create(const struct ilo_dev_info *dev,
+ilo_cp_create(const struct ilo_dev *dev,
               struct intel_winsys *winsys,
               struct ilo_shader_cache *shc);
 

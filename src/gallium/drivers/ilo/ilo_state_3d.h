@@ -62,63 +62,63 @@ ilo_gpe_gen6_translate_texture(enum pipe_texture_target target)
 }
 
 void
-ilo_gpe_init_ve(const struct ilo_dev_info *dev,
+ilo_gpe_init_ve(const struct ilo_dev *dev,
                 unsigned num_states,
                 const struct pipe_vertex_element *states,
                 struct ilo_ve_state *ve);
 
 void
-ilo_gpe_set_ve_edgeflag(const struct ilo_dev_info *dev,
+ilo_gpe_set_ve_edgeflag(const struct ilo_dev *dev,
                         struct ilo_ve_cso *cso);
 
 void
-ilo_gpe_init_ve_nosrc(const struct ilo_dev_info *dev,
+ilo_gpe_init_ve_nosrc(const struct ilo_dev *dev,
                       int comp0, int comp1, int comp2, int comp3,
                       struct ilo_ve_cso *cso);
 
 void
-ilo_gpe_set_viewport_cso(const struct ilo_dev_info *dev,
+ilo_gpe_set_viewport_cso(const struct ilo_dev *dev,
                          const struct pipe_viewport_state *state,
                          struct ilo_viewport_cso *vp);
 
 void
-ilo_gpe_set_scissor(const struct ilo_dev_info *dev,
+ilo_gpe_set_scissor(const struct ilo_dev *dev,
                     unsigned start_slot,
                     unsigned num_states,
                     const struct pipe_scissor_state *states,
                     struct ilo_scissor_state *scissor);
 
 void
-ilo_gpe_set_scissor_null(const struct ilo_dev_info *dev,
+ilo_gpe_set_scissor_null(const struct ilo_dev *dev,
                          struct ilo_scissor_state *scissor);
 
 void
-ilo_gpe_init_rasterizer(const struct ilo_dev_info *dev,
+ilo_gpe_init_rasterizer(const struct ilo_dev *dev,
                         const struct pipe_rasterizer_state *state,
                         struct ilo_rasterizer_state *rasterizer);
 void
-ilo_gpe_init_dsa(const struct ilo_dev_info *dev,
+ilo_gpe_init_dsa(const struct ilo_dev *dev,
                  const struct pipe_depth_stencil_alpha_state *state,
                  struct ilo_dsa_state *dsa);
 
 void
-ilo_gpe_init_blend(const struct ilo_dev_info *dev,
+ilo_gpe_init_blend(const struct ilo_dev *dev,
                    const struct pipe_blend_state *state,
                    struct ilo_blend_state *blend);
 
 void
-ilo_gpe_init_sampler_cso(const struct ilo_dev_info *dev,
+ilo_gpe_init_sampler_cso(const struct ilo_dev *dev,
                          const struct pipe_sampler_state *state,
                          struct ilo_sampler_cso *sampler);
 
 void
-ilo_gpe_init_view_surface_null(const struct ilo_dev_info *dev,
+ilo_gpe_init_view_surface_null(const struct ilo_dev *dev,
                                unsigned width, unsigned height,
                                unsigned depth, unsigned level,
                                struct ilo_view_surface *surf);
 
 void
-ilo_gpe_init_view_surface_for_buffer(const struct ilo_dev_info *dev,
+ilo_gpe_init_view_surface_for_buffer(const struct ilo_dev *dev,
                                      const struct ilo_buffer *buf,
                                      unsigned offset, unsigned size,
                                      unsigned struct_size,
@@ -127,7 +127,7 @@ ilo_gpe_init_view_surface_for_buffer(const struct ilo_dev_info *dev,
                                      struct ilo_view_surface *surf);
 
 void
-ilo_gpe_init_view_surface_for_texture(const struct ilo_dev_info *dev,
+ilo_gpe_init_view_surface_for_texture(const struct ilo_dev *dev,
                                       const struct ilo_texture *tex,
                                       enum pipe_format format,
                                       unsigned first_level,
@@ -138,29 +138,29 @@ ilo_gpe_init_view_surface_for_texture(const struct ilo_dev_info *dev,
                                       struct ilo_view_surface *surf);
 
 void
-ilo_gpe_init_zs_surface(const struct ilo_dev_info *dev,
+ilo_gpe_init_zs_surface(const struct ilo_dev *dev,
                         const struct ilo_texture *tex,
                         enum pipe_format format, unsigned level,
                         unsigned first_layer, unsigned num_layers,
                         struct ilo_zs_surface *zs);
 
 void
-ilo_gpe_init_vs_cso(const struct ilo_dev_info *dev,
+ilo_gpe_init_vs_cso(const struct ilo_dev *dev,
                     const struct ilo_shader_state *vs,
                     struct ilo_shader_cso *cso);
 
 void
-ilo_gpe_init_gs_cso(const struct ilo_dev_info *dev,
+ilo_gpe_init_gs_cso(const struct ilo_dev *dev,
                     const struct ilo_shader_state *gs,
                     struct ilo_shader_cso *cso);
 
 void
-ilo_gpe_init_fs_cso(const struct ilo_dev_info *dev,
+ilo_gpe_init_fs_cso(const struct ilo_dev *dev,
                     const struct ilo_shader_state *fs,
                     struct ilo_shader_cso *cso);
 
 void
-ilo_gpe_set_fb(const struct ilo_dev_info *dev,
+ilo_gpe_set_fb(const struct ilo_dev *dev,
                const struct pipe_framebuffer_state *state,
                struct ilo_fb_state *fb);
 

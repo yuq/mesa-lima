@@ -328,7 +328,7 @@ ilo_builder_writer_record(struct ilo_builder *builder,
  */
 void
 ilo_builder_init(struct ilo_builder *builder,
-                 const struct ilo_dev_info *dev,
+                 const struct ilo_dev *dev,
                  struct intel_winsys *winsys)
 {
    int i;

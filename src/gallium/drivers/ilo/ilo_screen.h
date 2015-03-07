@@ -39,7 +39,7 @@ struct ilo_fence;
 struct ilo_screen {
    struct pipe_screen base;
 
-   struct ilo_dev_info dev;
+   struct ilo_dev dev;
 };
 
 static inline struct ilo_screen *

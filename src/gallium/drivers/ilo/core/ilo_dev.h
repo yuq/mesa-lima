@@ -37,7 +37,7 @@
 
 struct intel_winsys;
 
-struct ilo_dev_info {
+struct ilo_dev {
    struct intel_winsys *winsys;
 
    /* these mirror intel_winsys_info */
@@ -61,13 +61,13 @@ struct ilo_dev_info {
 };
 
 static inline int
-ilo_dev_gen(const struct ilo_dev_info *dev)
+ilo_dev_gen(const struct ilo_dev *dev)
 {
    return dev->gen_opaque;
 }
 
 static inline void
-ilo_dev_assert(const struct ilo_dev_info *dev, int min_opqaue, int max_opqaue)
+ilo_dev_assert(const struct ilo_dev *dev, int min_opqaue, int max_opqaue)
 {
    assert(dev->gen_opaque >= min_opqaue && dev->gen_opaque <= max_opqaue);
 }

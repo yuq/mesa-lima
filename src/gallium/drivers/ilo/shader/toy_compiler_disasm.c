@@ -70,7 +70,7 @@ struct disasm_src_operand {
 };
 
 struct disasm_inst {
-   const struct ilo_dev_info *dev;
+   const struct ilo_dev *dev;
 
    unsigned has_jip:1;
    unsigned has_uip:1;
@@ -1936,7 +1936,7 @@ disasm_printer_print_inst(struct disasm_printer *printer,
 }
 
 static void
-disasm_uncompact_3src(const struct ilo_dev_info *dev,
+disasm_uncompact_3src(const struct ilo_dev *dev,
                       uint64_t compact, uint32_t *dw)
 {
    const struct toy_compaction_table *tbl =
@@ -2014,7 +2014,7 @@ disasm_uncompact_3src(const struct ilo_dev_info *dev,
 }
 
 static void
-disasm_uncompact(const struct ilo_dev_info *dev,
+disasm_uncompact(const struct ilo_dev *dev,
                  uint64_t compact, uint32_t *dw)
 {
    const struct toy_compaction_table *tbl =
@@ -2109,7 +2109,7 @@ disasm_uncompact(const struct ilo_dev_info *dev,
 }
 
 void
-toy_compiler_disassemble(const struct ilo_dev_info *dev,
+toy_compiler_disassemble(const struct ilo_dev *dev,
                          const void *kernel, int size,
                          bool dump_hex)
 {

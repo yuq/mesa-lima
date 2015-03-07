@@ -39,7 +39,7 @@
 #include "ilo_state_3d.h"
 
 static void
-ve_init_cso(const struct ilo_dev_info *dev,
+ve_init_cso(const struct ilo_dev *dev,
             const struct pipe_vertex_element *state,
             unsigned vb_index,
             struct ilo_ve_cso *cso)
@@ -79,7 +79,7 @@ ve_init_cso(const struct ilo_dev_info *dev,
 }
 
 void
-ilo_gpe_init_ve(const struct ilo_dev_info *dev,
+ilo_gpe_init_ve(const struct ilo_dev *dev,
                 unsigned num_states,
                 const struct pipe_vertex_element *states,
                 struct ilo_ve_state *ve)
@@ -119,7 +119,7 @@ ilo_gpe_init_ve(const struct ilo_dev_info *dev,
 }
 
 void
-ilo_gpe_set_ve_edgeflag(const struct ilo_dev_info *dev,
+ilo_gpe_set_ve_edgeflag(const struct ilo_dev *dev,
                         struct ilo_ve_cso *cso)
 {
    int format;
@@ -176,7 +176,7 @@ ilo_gpe_set_ve_edgeflag(const struct ilo_dev_info *dev,
 }
 
 void
-ilo_gpe_init_ve_nosrc(const struct ilo_dev_info *dev,
+ilo_gpe_init_ve_nosrc(const struct ilo_dev *dev,
                           int comp0, int comp1, int comp2, int comp3,
                           struct ilo_ve_cso *cso)
 {
@@ -198,7 +198,7 @@ ilo_gpe_init_ve_nosrc(const struct ilo_dev_info *dev,
 }
 
 void
-ilo_gpe_init_vs_cso(const struct ilo_dev_info *dev,
+ilo_gpe_init_vs_cso(const struct ilo_dev *dev,
                     const struct ilo_shader_state *vs,
                     struct ilo_shader_cso *cso)
 {
@@ -251,7 +251,7 @@ ilo_gpe_init_vs_cso(const struct ilo_dev_info *dev,
 }
 
 static void
-gs_init_cso_gen6(const struct ilo_dev_info *dev,
+gs_init_cso_gen6(const struct ilo_dev *dev,
                  const struct ilo_shader_state *gs,
                  struct ilo_shader_cso *cso)
 {
@@ -353,7 +353,7 @@ gs_init_cso_gen6(const struct ilo_dev_info *dev,
 }
 
 static void
-gs_init_cso_gen7(const struct ilo_dev_info *dev,
+gs_init_cso_gen7(const struct ilo_dev *dev,
                  const struct ilo_shader_state *gs,
                  struct ilo_shader_cso *cso)
 {
@@ -400,7 +400,7 @@ gs_init_cso_gen7(const struct ilo_dev_info *dev,
 }
 
 void
-ilo_gpe_init_gs_cso(const struct ilo_dev_info *dev,
+ilo_gpe_init_gs_cso(const struct ilo_dev *dev,
                     const struct ilo_shader_state *gs,
                     struct ilo_shader_cso *cso)
 {
@@ -411,7 +411,7 @@ ilo_gpe_init_gs_cso(const struct ilo_dev_info *dev,
 }
 
 static void
-view_init_null_gen6(const struct ilo_dev_info *dev,
+view_init_null_gen6(const struct ilo_dev *dev,
                     unsigned width, unsigned height,
                     unsigned depth, unsigned level,
                     struct ilo_view_surface *surf)
@@ -465,7 +465,7 @@ view_init_null_gen6(const struct ilo_dev_info *dev,
 }
 
 static void
-view_init_for_buffer_gen6(const struct ilo_dev_info *dev,
+view_init_for_buffer_gen6(const struct ilo_dev *dev,
                           const struct ilo_buffer *buf,
                           unsigned offset, unsigned size,
                           unsigned struct_size,
@@ -556,7 +556,7 @@ view_init_for_buffer_gen6(const struct ilo_dev_info *dev,
 }
 
 static void
-view_init_for_texture_gen6(const struct ilo_dev_info *dev,
+view_init_for_texture_gen6(const struct ilo_dev *dev,
                            const struct ilo_texture *tex,
                            enum pipe_format format,
                            unsigned first_level,
@@ -720,7 +720,7 @@ view_init_for_texture_gen6(const struct ilo_dev_info *dev,
 }
 
 static void
-view_init_null_gen7(const struct ilo_dev_info *dev,
+view_init_null_gen7(const struct ilo_dev *dev,
                     unsigned width, unsigned height,
                     unsigned depth, unsigned level,
                     struct ilo_view_surface *surf)
@@ -791,7 +791,7 @@ view_init_null_gen7(const struct ilo_dev_info *dev,
 }
 
 static void
-view_init_for_buffer_gen7(const struct ilo_dev_info *dev,
+view_init_for_buffer_gen7(const struct ilo_dev *dev,
                           const struct ilo_buffer *buf,
                           unsigned offset, unsigned size,
                           unsigned struct_size,
@@ -918,7 +918,7 @@ view_init_for_buffer_gen7(const struct ilo_dev_info *dev,
 }
 
 static void
-view_init_for_texture_gen7(const struct ilo_dev_info *dev,
+view_init_for_texture_gen7(const struct ilo_dev *dev,
                            const struct ilo_texture *tex,
                            enum pipe_format format,
                            unsigned first_level,
@@ -1185,7 +1185,7 @@ view_init_for_texture_gen7(const struct ilo_dev_info *dev,
 }
 
 void
-ilo_gpe_init_view_surface_null(const struct ilo_dev_info *dev,
+ilo_gpe_init_view_surface_null(const struct ilo_dev *dev,
                                unsigned width, unsigned height,
                                unsigned depth, unsigned level,
                                struct ilo_view_surface *surf)
@@ -1203,7 +1203,7 @@ ilo_gpe_init_view_surface_null(const struct ilo_dev_info *dev,
 }
 
 void
-ilo_gpe_init_view_surface_for_buffer(const struct ilo_dev_info *dev,
+ilo_gpe_init_view_surface_for_buffer(const struct ilo_dev *dev,
                                      const struct ilo_buffer *buf,
                                      unsigned offset, unsigned size,
                                      unsigned struct_size,
@@ -1225,7 +1225,7 @@ ilo_gpe_init_view_surface_for_buffer(const struct ilo_dev_info *dev,
 }
 
 void
-ilo_gpe_init_view_surface_for_texture(const struct ilo_dev_info *dev,
+ilo_gpe_init_view_surface_for_texture(const struct ilo_dev *dev,
                                       const struct ilo_texture *tex,
                                       enum pipe_format format,
                                       unsigned first_level,
@@ -1254,7 +1254,7 @@ ilo_gpe_init_view_surface_for_texture(const struct ilo_dev_info *dev,
 }
 
 static void
-sampler_init_border_color_gen6(const struct ilo_dev_info *dev,
+sampler_init_border_color_gen6(const struct ilo_dev *dev,
                                const union pipe_color_union *color,
                                uint32_t *dw, int num_dwords)
 {
@@ -1403,7 +1403,7 @@ gen6_translate_shadow_func(unsigned func)
 }
 
 void
-ilo_gpe_init_sampler_cso(const struct ilo_dev_info *dev,
+ilo_gpe_init_sampler_cso(const struct ilo_dev *dev,
                          const struct pipe_sampler_state *state,
                          struct ilo_sampler_cso *sampler)
 {

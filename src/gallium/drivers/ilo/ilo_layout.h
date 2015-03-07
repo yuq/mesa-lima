@@ -124,7 +124,7 @@ struct ilo_layout {
 };
 
 void ilo_layout_init(struct ilo_layout *layout,
-                     const struct ilo_dev_info *dev,
+                     const struct ilo_dev *dev,
                      const struct pipe_resource *templ);
 
 bool

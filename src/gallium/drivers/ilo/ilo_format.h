@@ -38,7 +38,7 @@ void
 ilo_init_format_functions(struct ilo_screen *is);
 
 int
-ilo_translate_color_format(const struct ilo_dev_info *dev,
+ilo_translate_color_format(const struct ilo_dev *dev,
                            enum pipe_format format);
 
 /**
@@ -49,7 +49,7 @@ ilo_translate_color_format(const struct ilo_dev_info *dev,
  * caveats that the callers should be aware of before calling this function.
  */
 static inline int
-ilo_translate_format(const struct ilo_dev_info *dev,
+ilo_translate_format(const struct ilo_dev *dev,
                      enum pipe_format format, unsigned bind)
 {
    switch (bind) {
@@ -127,21 +127,21 @@ ilo_translate_format(const struct ilo_dev_info *dev,
 }
 
 static inline int
-ilo_translate_render_format(const struct ilo_dev_info *dev,
+ilo_translate_render_format(const struct ilo_dev *dev,
                             enum pipe_format format)
 {
    return ilo_translate_format(dev, format, PIPE_BIND_RENDER_TARGET);
 }
 
 static inline int
-ilo_translate_texture_format(const struct ilo_dev_info *dev,
+ilo_translate_texture_format(const struct ilo_dev *dev,
                              enum pipe_format format)
 {
    return ilo_translate_format(dev, format, PIPE_BIND_SAMPLER_VIEW);
 }
 
 static inline int
-ilo_translate_vertex_format(const struct ilo_dev_info *dev,
+ilo_translate_vertex_format(const struct ilo_dev *dev,
                             enum pipe_format format)
 {
    return ilo_translate_format(dev, format, PIPE_BIND_VERTEX_BUFFER);

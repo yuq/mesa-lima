@@ -453,7 +453,7 @@ void
 ilo_finalize_compute_states(struct ilo_context *ilo);
 
 void
-ilo_state_vector_init(const struct ilo_dev_info *dev,
+ilo_state_vector_init(const struct ilo_dev *dev,
                       struct ilo_state_vector *vec);
 
 void

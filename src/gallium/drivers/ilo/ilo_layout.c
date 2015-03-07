@@ -40,7 +40,7 @@ enum {
 };
 
 struct ilo_layout_params {
-   const struct ilo_dev_info *dev;
+   const struct ilo_dev *dev;
    const struct pipe_resource *templ;
 
    bool compressed;
@@ -1300,7 +1300,7 @@ layout_calculate_mcs_size(struct ilo_layout *layout,
  */
 static void
 layout_init_for_transfer(struct ilo_layout *layout,
-                         const struct ilo_dev_info *dev,
+                         const struct ilo_dev *dev,
                          const struct pipe_resource *templ)
 {
    const unsigned num_layers = (templ->target == PIPE_TEXTURE_3D) ?
@@ -1345,7 +1345,7 @@ layout_init_for_transfer(struct ilo_layout *layout,
  * Initialize the layout.  Callers should zero-initialize \p layout first.
  */
 void ilo_layout_init(struct ilo_layout *layout,
-                     const struct ilo_dev_info *dev,
+                     const struct ilo_dev *dev,
                      const struct pipe_resource *templ)
 {
    struct ilo_layout_params params;

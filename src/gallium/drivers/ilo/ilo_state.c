@@ -300,7 +300,7 @@ static void *
 ilo_create_blend_state(struct pipe_context *pipe,
                        const struct pipe_blend_state *state)
 {
-   const struct ilo_dev_info *dev = ilo_context(pipe)->dev;
+   const struct ilo_dev *dev = ilo_context(pipe)->dev;
    struct ilo_blend_state *blend;
 
    blend = MALLOC_STRUCT(ilo_blend_state);
@@ -331,7 +331,7 @@ static void *
 ilo_create_sampler_state(struct pipe_context *pipe,
                          const struct pipe_sampler_state *state)
 {
-   const struct ilo_dev_info *dev = ilo_context(pipe)->dev;
+   const struct ilo_dev *dev = ilo_context(pipe)->dev;
    struct ilo_sampler_cso *sampler;
 
    sampler = MALLOC_STRUCT(ilo_sampler_cso);
@@ -401,7 +401,7 @@ static void *
 ilo_create_rasterizer_state(struct pipe_context *pipe,
                             const struct pipe_rasterizer_state *state)
 {
-   const struct ilo_dev_info *dev = ilo_context(pipe)->dev;
+   const struct ilo_dev *dev = ilo_context(pipe)->dev;
    struct ilo_rasterizer_state *rast;
 
    rast = MALLOC_STRUCT(ilo_rasterizer_state);
@@ -433,7 +433,7 @@ static void *
 ilo_create_depth_stencil_alpha_state(struct pipe_context *pipe,
                                      const struct pipe_depth_stencil_alpha_state *state)
 {
-   const struct ilo_dev_info *dev = ilo_context(pipe)->dev;
+   const struct ilo_dev *dev = ilo_context(pipe)->dev;
    struct ilo_dsa_state *dsa;
 
    dsa = MALLOC_STRUCT(ilo_dsa_state);
@@ -574,7 +574,7 @@ ilo_create_vertex_elements_state(struct pipe_context *pipe,
                                  unsigned num_elements,
                                  const struct pipe_vertex_element *elements)
 {
-   const struct ilo_dev_info *dev = ilo_context(pipe)->dev;
+   const struct ilo_dev *dev = ilo_context(pipe)->dev;
    struct ilo_ve_state *ve;
 
    ve = MALLOC_STRUCT(ilo_ve_state);
@@ -660,7 +660,7 @@ ilo_set_constant_buffer(struct pipe_context *pipe,
                         uint shader, uint index,
                         struct pipe_constant_buffer *buf)
 {
-   const struct ilo_dev_info *dev = ilo_context(pipe)->dev;
+   const struct ilo_dev *dev = ilo_context(pipe)->dev;
    struct ilo_state_vector *vec = &ilo_context(pipe)->state_vector;
    struct ilo_cbuf_state *cbuf = &vec->cbuf[shader];
    const unsigned count = 1;
@@ -728,7 +728,7 @@ static void
 ilo_set_framebuffer_state(struct pipe_context *pipe,
                           const struct pipe_framebuffer_state *state)
 {
-   const struct ilo_dev_info *dev = ilo_context(pipe)->dev;
+   const struct ilo_dev *dev = ilo_context(pipe)->dev;
    struct ilo_state_vector *vec = &ilo_context(pipe)->state_vector;
 
    ilo_gpe_set_fb(dev, state, &vec->fb);
@@ -753,7 +753,7 @@ ilo_set_scissor_states(struct pipe_context *pipe,
                        unsigned num_scissors,
                        const struct pipe_scissor_state *scissors)
 {
-   const struct ilo_dev_info *dev = ilo_context(pipe)->dev;
+   const struct ilo_dev *dev = ilo_context(pipe)->dev;
    struct ilo_state_vector *vec = &ilo_context(pipe)->state_vector;
 
    ilo_gpe_set_scissor(dev, start_slot, num_scissors,
@@ -768,7 +768,7 @@ ilo_set_viewport_states(struct pipe_context *pipe,
                         unsigned num_viewports,
                         const struct pipe_viewport_state *viewports)
 {
-   const struct ilo_dev_info *dev = ilo_context(pipe)->dev;
+   const struct ilo_dev *dev = ilo_context(pipe)->dev;
    struct ilo_state_vector *vec = &ilo_context(pipe)->state_vector;
 
    if (viewports) {
@@ -988,7 +988,7 @@ ilo_create_sampler_view(struct pipe_context *pipe,
                         struct pipe_resource *res,
                         const struct pipe_sampler_view *templ)
 {
-   const struct ilo_dev_info *dev = ilo_context(pipe)->dev;
+   const struct ilo_dev *dev = ilo_context(pipe)->dev;
    struct ilo_view_cso *view;
 
    view = MALLOC_STRUCT(ilo_view_cso);
@@ -1044,7 +1044,7 @@ ilo_create_surface(struct pipe_context *pipe,
                    struct pipe_resource *res,
                    const struct pipe_surface *templ)
 {
-   const struct ilo_dev_info *dev = ilo_context(pipe)->dev;
+   const struct ilo_dev *dev = ilo_context(pipe)->dev;
    struct ilo_surface_cso *surf;
 
    surf = MALLOC_STRUCT(ilo_surface_cso);
@@ -1289,7 +1289,7 @@ ilo_init_state_functions(struct ilo_context *ilo)
 }
 
 void
-ilo_state_vector_init(const struct ilo_dev_info *dev,
+ilo_state_vector_init(const struct ilo_dev *dev,
                       struct ilo_state_vector *vec)
 {
    ilo_gpe_set_scissor_null(dev, &vec->scissor);

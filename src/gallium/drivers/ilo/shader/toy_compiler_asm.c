@@ -31,7 +31,7 @@
 #define CG_REG_NUM(origin) ((origin) >> CG_REG_SHIFT)
 
 struct codegen {
-   const struct ilo_dev_info *dev;
+   const struct ilo_dev *dev;
    const struct toy_inst *inst;
    int pc;
 
@@ -402,7 +402,7 @@ static const struct toy_compaction_table toy_compaction_table_gen8 = {
 };
 
 const struct toy_compaction_table *
-toy_compiler_get_compaction_table(const struct ilo_dev_info *dev)
+toy_compiler_get_compaction_table(const struct ilo_dev *dev)
 {
    switch (ilo_dev_gen(dev)) {
    case ILO_GEN(8):
@@ -1028,7 +1028,7 @@ translate_swizzle(enum toy_swizzle swizzle)
  * Prepare for generating an instruction.
  */
 static void
-codegen_prepare(struct codegen *cg, const struct ilo_dev_info *dev,
+codegen_prepare(struct codegen *cg, const struct ilo_dev *dev,
                 const struct toy_inst *inst, int pc, int rect_linear_width)
 {
    int i;

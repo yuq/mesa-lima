@@ -670,7 +670,7 @@ ilo_screen_destroy(struct pipe_screen *screen)
 }
 
 static bool
-init_dev(struct ilo_dev_info *dev, const struct intel_winsys_info *info)
+init_dev(struct ilo_dev *dev, const struct intel_winsys_info *info)
 {
    dev->devid = info->devid;
    dev->aperture_total = info->aperture_total;
