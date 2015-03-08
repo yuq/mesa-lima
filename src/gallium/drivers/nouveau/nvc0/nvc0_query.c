@@ -1418,7 +1418,7 @@ nvc0_screen_get_driver_query_info(struct pipe_screen *pscreen,
    if (id < NVC0_QUERY_DRV_STAT_COUNT) {
       info->name = nvc0_drv_stat_names[id];
       info->query_type = NVC0_QUERY_DRV_STAT(id);
-      info->max_value = ~0ULL;
+      info->max_value = 0;
       info->uses_byte_units = !!strstr(info->name, "bytes");
       return 1;
    } else
@@ -1427,15 +1427,14 @@ nvc0_screen_get_driver_query_info(struct pipe_screen *pscreen,
       if (screen->base.class_3d >= NVE4_3D_CLASS) {
          info->name = nve4_pm_query_names[id - NVC0_QUERY_DRV_STAT_COUNT];
          info->query_type = NVE4_PM_QUERY(id - NVC0_QUERY_DRV_STAT_COUNT);
-         info->max_value = (id < NVE4_PM_QUERY_METRIC_MP_OCCUPANCY) ?
-            ~0ULL : 100;
+         info->max_value = (id < NVE4_PM_QUERY_METRIC_MP_OCCUPANCY) ? 0 : 100;
          info->uses_byte_units = FALSE;
          return 1;
       } else
       if (screen->compute) {
          info->name = nvc0_pm_query_names[id - NVC0_QUERY_DRV_STAT_COUNT];
          info->query_type = NVC0_PM_QUERY(id - NVC0_QUERY_DRV_STAT_COUNT);
-         info->max_value = ~0ULL;
+         info->max_value = 0;
          info->uses_byte_units = FALSE;
          return 1;
       }
