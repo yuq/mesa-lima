@@ -98,14 +98,6 @@ extern "C" {
 #elif defined(__APPLE__)
 #include <CoreFoundation/CFByteOrder.h>
 #define CPU_TO_LE32( x )	CFSwapInt32HostToLittle( x )
-#elif (defined(_AIX))
-static inline GLuint CPU_TO_LE32(GLuint x)
-{
-   return (((x & 0x000000ff) << 24) |
-           ((x & 0x0000ff00) <<  8) |
-           ((x & 0x00ff0000) >>  8) |
-           ((x & 0xff000000) >> 24));
-}
 #elif defined(__OpenBSD__)
 #include <sys/types.h>
 #define CPU_TO_LE32( x )	htole32( x )
