@@ -759,18 +759,23 @@ fs_visitor::emit_shader_time_end()
    reset.set_smear(2);
    fs_inst *test = emit(AND(reg_null_d, reset, fs_reg(1u)));
    test->conditional_mod = BRW_CONDITIONAL_Z;
+   test->force_writemask_all = true;
    emit(IF(BRW_PREDICATE_NORMAL));
 
    fs_reg start = shader_start_time;
    start.negate = true;
    fs_reg diff = fs_reg(GRF, alloc.allocate(1), BRW_REGISTER_TYPE_UD, 1);
-   emit(ADD(diff, start, shader_end_time));
+   fs_inst *add = ADD(diff, start, shader_end_time);
+   add->force_writemask_all = true;
+   emit(add);
 
    /* If there were no instructions between the two timestamp gets, the diff
     * is 2 cycles.  Remove that overhead, so I can forget about that when
     * trying to determine the time taken for single instructions.
     */
-   emit(ADD(diff, diff, fs_reg(-2u)));
+   add = ADD(diff, diff, fs_reg(-2u));
+   add->force_writemask_all = true;
+   emit(add);
 
    emit_shader_time_write(type, diff);
    emit_shader_time_write(written_type, fs_reg(1u));
