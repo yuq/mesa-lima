@@ -224,16 +224,6 @@ st_texture_image_unmap(struct st_context *st,
 extern const GLuint *
 st_texture_depth_offsets(struct pipe_resource *pt, GLuint level);
 
-
-/* Upload an image into a texture
- */
-extern void
-st_texture_image_data(struct st_context *st,
-                      struct pipe_resource *dst,
-                      GLuint face, GLuint level, void *src,
-                      GLuint src_row_pitch, GLuint src_image_pitch);
-
-
 /* Copy an image between two textures
  */
 extern void
