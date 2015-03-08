@@ -151,6 +151,7 @@ struct brw_wm_prog_data;
 
 enum brw_pipeline {
    BRW_RENDER_PIPELINE,
+   BRW_COMPUTE_PIPELINE,
 
    BRW_NUM_PIPELINES
 };
@@ -1411,6 +1412,7 @@ struct brw_context
 
    int num_atoms[BRW_NUM_PIPELINES];
    const struct brw_tracked_state render_atoms[57];
+   const struct brw_tracked_state compute_atoms[1];
 
    /* If (INTEL_DEBUG & DEBUG_BATCH) */
    struct {

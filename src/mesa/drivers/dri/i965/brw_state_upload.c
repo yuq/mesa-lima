@@ -246,6 +246,10 @@ static const struct brw_tracked_state *gen7_render_atoms[] =
    &haswell_cut_index,
 };
 
+static const struct brw_tracked_state *gen7_compute_atoms[] =
+{
+};
+
 static const struct brw_tracked_state *gen8_render_atoms[] =
 {
    /* Command packets: */
@@ -322,6 +326,10 @@ static const struct brw_tracked_state *gen8_render_atoms[] =
    &gen8_pma_fix,
 };
 
+static const struct brw_tracked_state *gen8_compute_atoms[] =
+{
+};
+
 static void
 brw_upload_initial_gpu_state(struct brw_context *brw)
 {
@@ -359,8 +367,10 @@ brw_get_pipeline_atoms(struct brw_context *brw,
    switch (pipeline) {
    case BRW_RENDER_PIPELINE:
       return brw->render_atoms;
+   case BRW_COMPUTE_PIPELINE:
+      return brw->compute_atoms;
    default:
-      STATIC_ASSERT(BRW_NUM_PIPELINES == 1);
+      STATIC_ASSERT(BRW_NUM_PIPELINES == 2);
       unreachable("Unsupported pipeline");
       return NULL;
    }
@@ -397,6 +407,10 @@ void brw_init_state( struct brw_context *brw )
                  ARRAY_SIZE(brw->render_atoms));
    STATIC_ASSERT(ARRAY_SIZE(gen8_render_atoms) <=
                  ARRAY_SIZE(brw->render_atoms));
+   STATIC_ASSERT(ARRAY_SIZE(gen7_compute_atoms) <=
+                 ARRAY_SIZE(brw->compute_atoms));
+   STATIC_ASSERT(ARRAY_SIZE(gen8_compute_atoms) <=
+                 ARRAY_SIZE(brw->compute_atoms));
 
    brw_init_caches(brw);
 
@@ -404,10 +418,16 @@ void brw_init_state( struct brw_context *brw )
       brw_copy_pipeline_atoms(brw, BRW_RENDER_PIPELINE,
                               gen8_render_atoms,
                               ARRAY_SIZE(gen8_render_atoms));
+      brw_copy_pipeline_atoms(brw, BRW_COMPUTE_PIPELINE,
+                              gen8_compute_atoms,
+                              ARRAY_SIZE(gen8_compute_atoms));
    } else if (brw->gen == 7) {
       brw_copy_pipeline_atoms(brw, BRW_RENDER_PIPELINE,
                               gen7_render_atoms,
                               ARRAY_SIZE(gen7_render_atoms));
+      brw_copy_pipeline_atoms(brw, BRW_COMPUTE_PIPELINE,
+                              gen7_compute_atoms,
+                              ARRAY_SIZE(gen7_compute_atoms));
    } else if (brw->gen == 6) {
       brw_copy_pipeline_atoms(brw, BRW_RENDER_PIPELINE,
                               gen6_atoms, ARRAY_SIZE(gen6_atoms));
@@ -769,4 +789,16 @@ void
 brw_render_state_finished(struct brw_context *brw)
 {
    brw_pipeline_state_finished(brw, BRW_RENDER_PIPELINE);
+}
+
+void
+brw_upload_compute_state(struct brw_context *brw)
+{
+   brw_upload_pipeline_state(brw, BRW_COMPUTE_PIPELINE);
+}
+
+void
+brw_compute_state_finished(struct brw_context *brw)
+{
+   brw_pipeline_state_finished(brw, BRW_COMPUTE_PIPELINE);
 }
