@@ -765,6 +765,7 @@ fs_visitor::emit_shader_time_end()
    fs_reg start = shader_start_time;
    start.negate = true;
    fs_reg diff = fs_reg(GRF, alloc.allocate(1), BRW_REGISTER_TYPE_UD, 1);
+   diff.set_smear(0);
    fs_inst *add = ADD(diff, start, shader_end_time);
    add->force_writemask_all = true;
    emit(add);
