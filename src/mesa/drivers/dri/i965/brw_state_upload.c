@@ -596,26 +596,45 @@ brw_upload_programs(struct brw_context *brw)
    brw_upload_wm_prog(brw);
 }
 
-/***********************************************************************
- * Emit all state:
- */
-void brw_upload_render_state(struct brw_context *brw)
+static inline void
+merge_ctx_state(struct brw_context *brw,
+                struct brw_state_flags *state)
+{
+   state->mesa |= brw->state.dirty.mesa;
+   state->brw |= brw->state.dirty.brw;
+}
+
+static inline void
+check_and_emit_atom(struct brw_context *brw,
+                    struct brw_state_flags *state,
+                    const struct brw_tracked_state *atom)
+{
+   if (check_state(state, &atom->dirty)) {
+      atom->emit(brw);
+      merge_ctx_state(brw, state);
+   }
+}
+
+static inline void
+brw_upload_pipeline_state(struct brw_context *brw,
+                          enum brw_pipeline pipeline)
 {
    struct gl_context *ctx = &brw->ctx;
-   struct brw_state_flags *state = &brw->state.dirty;
+   struct brw_state_flags *brw_state = &brw->state.dirty;
    int i;
    static int dirty_count = 0;
+   struct brw_state_flags state = brw->state.pipelines[pipeline];
 
-   state->mesa |= brw->NewGLState;
+   brw_state->mesa |= brw->NewGLState;
    brw->NewGLState = 0;
 
-   state->brw |= ctx->NewDriverState;
+   brw_state->brw |= ctx->NewDriverState;
    ctx->NewDriverState = 0;
 
    if (0) {
       /* Always re-emit all state. */
-      state->mesa |= ~0;
-      state->brw |= ~0ull;
+      brw_state->mesa |= ~0;
+      brw_state->brw |= ~0ull;
    }
 
    if (brw->fragment_program != ctx->FragmentProgram._Current) {
@@ -643,7 +662,9 @@ void brw_upload_render_state(struct brw_context *brw)
       brw->state.dirty.brw |= BRW_NEW_NUM_SAMPLES;
    }
 
-   if ((state->mesa | state->brw) == 0)
+   /* Exit early if no state is flagged as dirty */
+   merge_ctx_state(brw, &state);
+   if ((state.mesa | state.brw) == 0)
       return;
 
    /* Emit Sandybridge workaround flushes on every primitive, for safety. */
@@ -651,6 +672,11 @@ void brw_upload_render_state(struct brw_context *brw)
       intel_emit_post_sync_nonzero_flush(brw);
 
    brw_upload_programs(brw);
+   merge_ctx_state(brw, &state);
+
+   const struct brw_tracked_state *atoms =
+      brw_get_pipeline_atoms(brw, pipeline);
+   const int num_atoms = brw->num_atoms[pipeline];
 
    if (unlikely(INTEL_DEBUG)) {
       /* Debug version which enforces various sanity checks on the
@@ -659,15 +685,13 @@ void brw_upload_render_state(struct brw_context *brw)
        */
       struct brw_state_flags examined, prev;
       memset(&examined, 0, sizeof(examined));
-      prev = *state;
+      prev = state;
 
-      for (i = 0; i < brw->num_atoms[BRW_RENDER_PIPELINE]; i++) {
-	 const struct brw_tracked_state *atom = &brw->render_atoms[i];
+      for (i = 0; i < num_atoms; i++) {
+	 const struct brw_tracked_state *atom = &atoms[i];
 	 struct brw_state_flags generated;
 
-	 if (check_state(state, &atom->dirty)) {
-	    atom->emit(brw);
-	 }
+         check_and_emit_atom(brw, &state, atom);
 
 	 accumulate_state(&examined, &atom->dirty);
 
@@ -675,26 +699,24 @@ void brw_upload_render_state(struct brw_context *brw)
 	  * if (examined & generated)
 	  *     fail;
 	  */
-	 xor_states(&generated, &prev, state);
+	 xor_states(&generated, &prev, &state);
 	 assert(!check_state(&examined, &generated));
-	 prev = *state;
+	 prev = state;
       }
    }
    else {
-      for (i = 0; i < brw->num_atoms[BRW_RENDER_PIPELINE]; i++) {
-	 const struct brw_tracked_state *atom = &brw->render_atoms[i];
+      for (i = 0; i < num_atoms; i++) {
+	 const struct brw_tracked_state *atom = &atoms[i];
 
-	 if (check_state(state, &atom->dirty)) {
-	    atom->emit(brw);
-	 }
+         check_and_emit_atom(brw, &state, atom);
       }
    }
 
    if (unlikely(INTEL_DEBUG & DEBUG_STATE)) {
       STATIC_ASSERT(ARRAY_SIZE(brw_bits) == BRW_NUM_STATE_BITS + 1);
 
-      brw_update_dirty_count(mesa_bits, state->mesa);
-      brw_update_dirty_count(brw_bits, state->brw);
+      brw_update_dirty_count(mesa_bits, state.mesa);
+      brw_update_dirty_count(brw_bits, state.brw);
       if (dirty_count++ % 1000 == 0) {
 	 brw_print_dirty_count(mesa_bits);
 	 brw_print_dirty_count(brw_bits);
@@ -703,6 +725,32 @@ void brw_upload_render_state(struct brw_context *brw)
    }
 }
 
+/***********************************************************************
+ * Emit all state:
+ */
+void brw_upload_render_state(struct brw_context *brw)
+{
+   brw_upload_pipeline_state(brw, BRW_RENDER_PIPELINE);
+}
+
+static inline void
+brw_pipeline_state_finished(struct brw_context *brw,
+                            enum brw_pipeline pipeline)
+{
+   struct brw_state_flags *state = &brw->state.dirty;
+
+   /* Save all dirty state into the other pipelines */
+   for (int i = 0; i < BRW_NUM_PIPELINES; i++) {
+      if (i != pipeline) {
+         brw->state.pipelines[i].mesa |= state->mesa;
+         brw->state.pipelines[i].brw |= state->brw;
+      } else {
+         memset(&brw->state.pipelines[i], 0, sizeof(struct brw_state_flags));
+      }
+   }
+
+   memset(state, 0, sizeof(*state));
+}
 
 /**
  * Clear dirty bits to account for the fact that the state emitted by
@@ -715,6 +763,5 @@ void brw_upload_render_state(struct brw_context *brw)
 void
 brw_render_state_finished(struct brw_context *brw)
 {
-   struct brw_state_flags *state = &brw->state.dirty;
-   memset(state, 0, sizeof(*state));
+   brw_pipeline_state_finished(brw, BRW_RENDER_PIPELINE);
 }
