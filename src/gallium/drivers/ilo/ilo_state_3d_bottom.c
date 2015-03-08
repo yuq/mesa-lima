@@ -1032,12 +1032,12 @@ zs_init_info(const struct ilo_dev *dev,
 
    if (format != PIPE_FORMAT_S8_UINT) {
       info->zs.bo = tex->bo;
-      info->zs.stride = tex->layout.bo_stride;
+      info->zs.stride = tex->image.bo_stride;
 
-      assert(tex->layout.layer_height % 4 == 0);
-      info->zs.qpitch = tex->layout.layer_height / 4;
+      assert(tex->image.layer_height % 4 == 0);
+      info->zs.qpitch = tex->image.layer_height / 4;
 
-      info->zs.tiling = tex->layout.tiling;
+      info->zs.tiling = tex->image.tiling;
       info->zs.offset = 0;
    }
 
@@ -1056,41 +1056,41 @@ zs_init_info(const struct ilo_dev *dev,
        * For GEN7, we still dobule the stride because we did not double the
        * slice widths when initializing the layout.
        */
-      info->stencil.stride = s8_tex->layout.bo_stride * 2;
+      info->stencil.stride = s8_tex->image.bo_stride * 2;
 
-      assert(s8_tex->layout.layer_height % 4 == 0);
-      info->stencil.qpitch = s8_tex->layout.layer_height / 4;
+      assert(s8_tex->image.layer_height % 4 == 0);
+      info->stencil.qpitch = s8_tex->image.layer_height / 4;
 
-      info->stencil.tiling = s8_tex->layout.tiling;
+      info->stencil.tiling = s8_tex->image.tiling;
 
       if (ilo_dev_gen(dev) == ILO_GEN(6)) {
          unsigned x, y;
 
-         assert(s8_tex->layout.walk == ILO_LAYOUT_WALK_LOD);
+         assert(s8_tex->image.walk == ILO_IMAGE_WALK_LOD);
 
          /* offset to the level */
-         ilo_layout_get_slice_pos(&s8_tex->layout, level, 0, &x, &y);
-         ilo_layout_pos_to_mem(&s8_tex->layout, x, y, &x, &y);
-         info->stencil.offset = ilo_layout_mem_to_raw(&s8_tex->layout, x, y);
+         ilo_image_get_slice_pos(&s8_tex->image, level, 0, &x, &y);
+         ilo_image_pos_to_mem(&s8_tex->image, x, y, &x, &y);
+         info->stencil.offset = ilo_image_mem_to_raw(&s8_tex->image, x, y);
       }
    }
 
    if (ilo_texture_can_enable_hiz(tex, level, first_layer, num_layers)) {
       info->hiz.bo = tex->aux_bo;
-      info->hiz.stride = tex->layout.aux_stride;
+      info->hiz.stride = tex->image.aux_stride;
 
-      assert(tex->layout.aux_layer_height % 4 == 0);
-      info->hiz.qpitch = tex->layout.aux_layer_height / 4;
+      assert(tex->image.aux_layer_height % 4 == 0);
+      info->hiz.qpitch = tex->image.aux_layer_height / 4;
 
       info->hiz.tiling = GEN6_TILING_Y;
 
       /* offset to the level */
       if (ilo_dev_gen(dev) == ILO_GEN(6))
-         info->hiz.offset = tex->layout.aux_offsets[level];
+         info->hiz.offset = tex->image.aux_offsets[level];
    }
 
-   info->width = tex->layout.width0;
-   info->height = tex->layout.height0;
+   info->width = tex->image.width0;
+   info->height = tex->image.height0;
    info->depth = (tex->base.target == PIPE_TEXTURE_3D) ?
       tex->base.depth0 : num_layers;
 

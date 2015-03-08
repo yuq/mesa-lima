@@ -25,7 +25,6 @@
  *    Chia-I Wu <olv@lunarg.com>
  */
 
-#include "ilo_layout.h"
 #include "ilo_screen.h"
 #include "ilo_resource.h"
 
@@ -164,11 +163,11 @@ tex_import_handle(struct ilo_texture *tex,
    unsigned long pitch;
 
    tex->bo = intel_winsys_import_handle(is->dev.winsys, name, handle,
-         tex->layout.bo_height, &tiling, &pitch);
+         tex->image.bo_height, &tiling, &pitch);
    if (!tex->bo)
       return false;
 
-   if (!ilo_layout_update_for_imported_bo(&tex->layout,
+   if (!ilo_image_update_for_imported_bo(&tex->image,
             winsys_to_surface_tiling(tiling), pitch)) {
       ilo_err("imported handle has incompatible tiling/pitch\n");
       intel_bo_unref(tex->bo);
@@ -188,15 +187,15 @@ tex_create_bo(struct ilo_texture *tex)
    struct intel_bo *bo;
 
    bo = intel_winsys_alloc_bo(is->dev.winsys, name,
-         tex->layout.bo_stride * tex->layout.bo_height, cpu_init);
+         tex->image.bo_stride * tex->image.bo_height, cpu_init);
 
    /* set the tiling for transfer and export */
-   if (bo && (tex->layout.tiling == GEN6_TILING_X ||
-              tex->layout.tiling == GEN6_TILING_Y)) {
+   if (bo && (tex->image.tiling == GEN6_TILING_X ||
+              tex->image.tiling == GEN6_TILING_Y)) {
       const enum intel_tiling_mode tiling =
-         surface_to_winsys_tiling(tex->layout.tiling);
+         surface_to_winsys_tiling(tex->image.tiling);
 
-      if (intel_bo_set_tiling(bo, tiling, tex->layout.bo_stride)) {
+      if (intel_bo_set_tiling(bo, tiling, tex->image.bo_stride)) {
          intel_bo_unref(bo);
          bo = NULL;
       }
@@ -229,7 +228,7 @@ tex_create_separate_stencil(struct ilo_texture *tex)
 
    tex->separate_s8 = ilo_texture(s8);
 
-   assert(tex->separate_s8->layout.format == PIPE_FORMAT_S8_UINT);
+   assert(tex->separate_s8->image.format == PIPE_FORMAT_S8_UINT);
 
    return true;
 }
@@ -242,12 +241,12 @@ tex_create_hiz(struct ilo_texture *tex)
    unsigned lv;
 
    tex->aux_bo = intel_winsys_alloc_bo(is->dev.winsys, "hiz texture",
-         tex->layout.aux_stride * tex->layout.aux_height, false);
+         tex->image.aux_stride * tex->image.aux_height, false);
    if (!tex->aux_bo)
       return false;
 
    for (lv = 0; lv <= templ->last_level; lv++) {
-      if (tex->layout.aux_enables & (1 << lv)) {
+      if (tex->image.aux_enables & (1 << lv)) {
          const unsigned num_slices = (templ->target == PIPE_TEXTURE_3D) ?
             u_minify(templ->depth0, lv) : templ->array_size;
          unsigned flags = ILO_TEXTURE_HIZ;
@@ -268,10 +267,10 @@ tex_create_mcs(struct ilo_texture *tex)
 {
    struct ilo_screen *is = ilo_screen(tex->base.screen);
 
-   assert(tex->layout.aux_enables == (1 << (tex->base.last_level + 1)) - 1);
+   assert(tex->image.aux_enables == (1 << (tex->base.last_level + 1)) - 1);
 
    tex->aux_bo = intel_winsys_alloc_bo(is->dev.winsys, "mcs texture",
-         tex->layout.aux_stride * tex->layout.aux_height, false);
+         tex->image.aux_stride * tex->image.aux_height, false);
    if (!tex->aux_bo)
       return false;
 
@@ -306,19 +305,19 @@ tex_alloc_bos(struct ilo_texture *tex,
    }
 
    /* allocate separate stencil resource */
-   if (tex->layout.separate_stencil && !tex_create_separate_stencil(tex))
+   if (tex->image.separate_stencil && !tex_create_separate_stencil(tex))
       return false;
 
-   switch (tex->layout.aux) {
-   case ILO_LAYOUT_AUX_HIZ:
+   switch (tex->image.aux) {
+   case ILO_IMAGE_AUX_HIZ:
       if (!tex_create_hiz(tex)) {
          /* Separate Stencil Buffer requires HiZ to be enabled */
          if (ilo_dev_gen(&is->dev) == ILO_GEN(6) &&
-             tex->layout.separate_stencil)
+             tex->image.separate_stencil)
             return false;
       }
       break;
-   case ILO_LAYOUT_AUX_MCS:
+   case ILO_IMAGE_AUX_MCS:
       if (!tex_create_mcs(tex))
          return false;
       break;
@@ -330,21 +329,21 @@ tex_alloc_bos(struct ilo_texture *tex,
 }
 
 static bool
-tex_init_layout(struct ilo_texture *tex)
+tex_init_image(struct ilo_texture *tex)
 {
    struct ilo_screen *is = ilo_screen(tex->base.screen);
    const struct pipe_resource *templ = &tex->base;
-   struct ilo_layout *layout = &tex->layout;
+   struct ilo_image *img = &tex->image;
 
-   ilo_layout_init(layout, &is->dev, templ);
+   ilo_image_init(img, &is->dev, templ);
 
-   if (layout->bo_height > ilo_max_resource_size / layout->bo_stride)
+   if (img->bo_height > ilo_max_resource_size / img->bo_stride)
       return false;
 
    if (templ->flags & PIPE_RESOURCE_FLAG_MAP_PERSISTENT) {
       /* require on-the-fly tiling/untiling or format conversion */
-      if (layout->tiling == GEN8_TILING_W || layout->separate_stencil ||
-          layout->format != templ->format)
+      if (img->tiling == GEN8_TILING_W || img->separate_stencil ||
+          img->format != templ->format)
          return false;
    }
 
@@ -371,7 +370,7 @@ tex_create(struct pipe_screen *screen,
 
    tex->imported = (handle != NULL);
 
-   if (!tex_init_layout(tex)) {
+   if (!tex_init_image(tex)) {
       FREE(tex);
       return NULL;
    }
@@ -392,13 +391,13 @@ tex_get_handle(struct ilo_texture *tex, struct winsys_handle *handle)
    int err;
 
    /* must match what tex_create_bo() sets */
-   if (tex->layout.tiling == GEN8_TILING_W)
+   if (tex->image.tiling == GEN8_TILING_W)
       tiling = INTEL_TILING_NONE;
    else
-      tiling = surface_to_winsys_tiling(tex->layout.tiling);
+      tiling = surface_to_winsys_tiling(tex->image.tiling);
 
    err = intel_winsys_export_handle(is->dev.winsys, tex->bo, tiling,
-         tex->layout.bo_stride, tex->layout.bo_height, handle);
+         tex->image.bo_stride, tex->image.bo_height, handle);
 
    return !err;
 }
@@ -481,15 +480,15 @@ static boolean
 ilo_can_create_resource(struct pipe_screen *screen,
                         const struct pipe_resource *templ)
 {
-   struct ilo_layout layout;
+   struct ilo_image img;
 
    if (templ->target == PIPE_BUFFER)
       return (templ->width0 <= ilo_max_resource_size);
 
-   memset(&layout, 0, sizeof(layout));
-   ilo_layout_init(&layout, &ilo_screen(screen)->dev, templ);
+   memset(&img, 0, sizeof(img));
+   ilo_image_init(&img, &ilo_screen(screen)->dev, templ);
 
-   return (layout.bo_height <= ilo_max_resource_size / layout.bo_stride);
+   return (img.bo_height <= ilo_max_resource_size / img.bo_stride);
 }
 
 static struct pipe_resource *

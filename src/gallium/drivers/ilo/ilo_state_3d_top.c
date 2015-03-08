@@ -584,11 +584,11 @@ view_init_for_texture_gen6(const struct ilo_dev *dev,
       surface_format = ilo_format_translate_texture(dev, format);
    assert(surface_format >= 0);
 
-   width = tex->layout.width0;
-   height = tex->layout.height0;
+   width = tex->image.width0;
+   height = tex->image.height0;
    depth = (tex->base.target == PIPE_TEXTURE_3D) ?
       tex->base.depth0 : num_layers;
-   pitch = tex->layout.bo_stride;
+   pitch = tex->image.bo_stride;
 
    if (surface_type == GEN6_SURFTYPE_CUBE) {
       /*
@@ -642,10 +642,10 @@ view_init_for_texture_gen6(const struct ilo_dev *dev,
    }
 
    /* non-full array spacing is supported only on GEN7+ */
-   assert(tex->layout.walk != ILO_LAYOUT_WALK_LOD);
+   assert(tex->image.walk != ILO_IMAGE_WALK_LOD);
    /* non-interleaved samples are supported only on GEN7+ */
    if (tex->base.nr_samples > 1)
-      assert(tex->layout.interleaved_samples);
+      assert(tex->image.interleaved_samples);
 
    if (is_rt) {
       assert(num_levels == 1);
@@ -673,7 +673,7 @@ view_init_for_texture_gen6(const struct ilo_dev *dev,
     *
     *     "For linear surfaces, this field (X Offset) must be zero"
     */
-   if (tex->layout.tiling == GEN6_TILING_NONE) {
+   if (tex->image.tiling == GEN6_TILING_NONE) {
       if (is_rt) {
          const int elem_size = util_format_get_blocksize(format);
          assert(pitch % elem_size == 0);
@@ -701,10 +701,10 @@ view_init_for_texture_gen6(const struct ilo_dev *dev,
            (width - 1) << GEN6_SURFACE_DW2_WIDTH__SHIFT |
            lod << GEN6_SURFACE_DW2_MIP_COUNT_LOD__SHIFT;
 
-   assert(tex->layout.tiling != GEN8_TILING_W);
+   assert(tex->image.tiling != GEN8_TILING_W);
    dw[3] = (depth - 1) << GEN6_SURFACE_DW3_DEPTH__SHIFT |
            (pitch - 1) << GEN6_SURFACE_DW3_PITCH__SHIFT |
-           tex->layout.tiling;
+           tex->image.tiling;
 
    dw[4] = first_level << GEN6_SURFACE_DW4_MIN_LOD__SHIFT |
            first_layer << 17 |
@@ -714,8 +714,8 @@ view_init_for_texture_gen6(const struct ilo_dev *dev,
 
    dw[5] = 0;
 
-   assert(tex->layout.align_j == 2 || tex->layout.align_j == 4);
-   if (tex->layout.align_j == 4)
+   assert(tex->image.align_j == 2 || tex->image.align_j == 4);
+   if (tex->image.align_j == 4)
       dw[5] |= GEN6_SURFACE_DW5_VALIGN_4;
 }
 
@@ -946,11 +946,11 @@ view_init_for_texture_gen7(const struct ilo_dev *dev,
       surface_format = ilo_format_translate_texture(dev, format);
    assert(surface_format >= 0);
 
-   width = tex->layout.width0;
-   height = tex->layout.height0;
+   width = tex->image.width0;
+   height = tex->image.height0;
    depth = (tex->base.target == PIPE_TEXTURE_3D) ?
       tex->base.depth0 : num_layers;
-   pitch = tex->layout.bo_stride;
+   pitch = tex->image.bo_stride;
 
    if (surface_type == GEN6_SURFTYPE_CUBE) {
       /*
@@ -1030,7 +1030,7 @@ view_init_for_texture_gen7(const struct ilo_dev *dev,
     *
     *     "For linear surfaces, this field (X Offset) must be zero."
     */
-   if (tex->layout.tiling == GEN6_TILING_NONE) {
+   if (tex->image.tiling == GEN6_TILING_NONE) {
       if (is_rt) {
          const int elem_size = util_format_get_blocksize(format);
          assert(pitch % elem_size == 0);
@@ -1062,7 +1062,7 @@ view_init_for_texture_gen7(const struct ilo_dev *dev,
    }
 
    if (ilo_dev_gen(dev) >= ILO_GEN(8)) {
-      switch (tex->layout.align_j) {
+      switch (tex->image.align_j) {
       case 4:
          dw[0] |= GEN7_SURFACE_DW0_VALIGN_4;
          break;
@@ -1077,7 +1077,7 @@ view_init_for_texture_gen7(const struct ilo_dev *dev,
          break;
       }
 
-      switch (tex->layout.align_i) {
+      switch (tex->image.align_i) {
       case 4:
          dw[0] |= GEN8_SURFACE_DW0_HALIGN_4;
          break;
@@ -1092,21 +1092,21 @@ view_init_for_texture_gen7(const struct ilo_dev *dev,
          break;
       }
 
-      dw[0] |= tex->layout.tiling << GEN8_SURFACE_DW0_TILING__SHIFT;
+      dw[0] |= tex->image.tiling << GEN8_SURFACE_DW0_TILING__SHIFT;
    } else {
-      assert(tex->layout.align_i == 4 || tex->layout.align_i == 8);
-      assert(tex->layout.align_j == 2 || tex->layout.align_j == 4);
+      assert(tex->image.align_i == 4 || tex->image.align_i == 8);
+      assert(tex->image.align_j == 2 || tex->image.align_j == 4);
 
-      if (tex->layout.align_j == 4)
+      if (tex->image.align_j == 4)
          dw[0] |= GEN7_SURFACE_DW0_VALIGN_4;
 
-      if (tex->layout.align_i == 8)
+      if (tex->image.align_i == 8)
          dw[0] |= GEN7_SURFACE_DW0_HALIGN_8;
 
-      assert(tex->layout.tiling != GEN8_TILING_W);
-      dw[0] |= tex->layout.tiling << GEN7_SURFACE_DW0_TILING__SHIFT;
+      assert(tex->image.tiling != GEN8_TILING_W);
+      dw[0] |= tex->image.tiling << GEN7_SURFACE_DW0_TILING__SHIFT;
 
-      if (tex->layout.walk == ILO_LAYOUT_WALK_LOD)
+      if (tex->image.walk == ILO_IMAGE_WALK_LOD)
          dw[0] |= GEN7_SURFACE_DW0_ARYSPC_LOD0;
       else
          dw[0] |= GEN7_SURFACE_DW0_ARYSPC_FULL;
@@ -1119,8 +1119,8 @@ view_init_for_texture_gen7(const struct ilo_dev *dev,
       dw[0] |= GEN7_SURFACE_DW0_CUBE_FACE_ENABLES__MASK;
 
    if (ilo_dev_gen(dev) >= ILO_GEN(8)) {
-      assert(tex->layout.layer_height % 4 == 0);
-      dw[1] = tex->layout.layer_height / 4;
+      assert(tex->image.layer_height % 4 == 0);
+      dw[1] = tex->image.layer_height / 4;
    } else {
       dw[1] = 0;
    }
@@ -1139,7 +1139,7 @@ view_init_for_texture_gen7(const struct ilo_dev *dev,
     * means the samples are interleaved.  The layouts are the same when the
     * number of samples is 1.
     */
-   if (tex->layout.interleaved_samples && tex->base.nr_samples > 1) {
+   if (tex->image.interleaved_samples && tex->base.nr_samples > 1) {
       assert(!is_rt);
       dw[4] |= GEN7_SURFACE_DW4_MSFMT_DEPTH_STENCIL;
    }

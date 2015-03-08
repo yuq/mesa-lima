@@ -25,50 +25,51 @@
  *    Chia-I Wu <olv@lunarg.com>
  */
 
-#ifndef ILO_LAYOUT_H
-#define ILO_LAYOUT_H
+#ifndef ILO_IMAGE_H
+#define ILO_IMAGE_H
 
 #include "genhw/genhw.h"
 
-#include "ilo_common.h"
+#include "ilo_core.h"
+#include "ilo_dev.h"
 
 struct pipe_resource;
 
-enum ilo_layout_walk_type {
+enum ilo_image_walk_type {
    /*
     * Array layers of an LOD are packed together vertically.  This maps to
     * ARYSPC_LOD0 for non-mipmapped 2D textures, and is extended to support
     * mipmapped stencil textures and HiZ on GEN6.
     */
-   ILO_LAYOUT_WALK_LOD,
+   ILO_IMAGE_WALK_LOD,
 
    /*
     * LODs of an array layer are packed together.  This maps to ARYSPC_FULL
     * and is used for mipmapped 2D textures.
     */
-   ILO_LAYOUT_WALK_LAYER,
+   ILO_IMAGE_WALK_LAYER,
 
    /*
     * 3D slices of an LOD are packed together, horizontally with wrapping.
     * Used for 3D textures.
     */
-   ILO_LAYOUT_WALK_3D,
+   ILO_IMAGE_WALK_3D,
 };
 
-enum ilo_layout_aux_type {
-   ILO_LAYOUT_AUX_NONE,
-   ILO_LAYOUT_AUX_HIZ,
-   ILO_LAYOUT_AUX_MCS,
+enum ilo_image_aux_type {
+   ILO_IMAGE_AUX_NONE,
+   ILO_IMAGE_AUX_HIZ,
+   ILO_IMAGE_AUX_MCS,
 };
 
-struct ilo_layout_lod {
+struct ilo_image_lod {
    /* physical position */
    unsigned x;
    unsigned y;
 
    /*
     * Physical size of an LOD slice.  There may be multiple slices when the
-    * walk type is not ILO_LAYOUT_WALK_LAYER.
+    * walk type is not ILO_IMAGE_WALK_LAYER.
     */
    unsigned slice_width;
    unsigned slice_height;
@@ -77,8 +78,8 @@ struct ilo_layout_lod {
 /**
  * Texture layout.
  */
-struct ilo_layout {
-   enum ilo_layout_aux_type aux;
+struct ilo_image {
+   enum ilo_image_aux_type aux;
 
    /* physical width0, height0, and format */
    unsigned width0;
@@ -94,7 +95,7 @@ struct ilo_layout {
    unsigned block_height;
    unsigned block_size;
 
-   enum ilo_layout_walk_type walk;
+   enum ilo_image_walk_type walk;
    bool interleaved_samples;
 
    /* bitmask of valid tiling modes */
@@ -105,9 +106,9 @@ struct ilo_layout {
    unsigned align_i;
    unsigned align_j;
 
-   struct ilo_layout_lod lods[PIPE_MAX_TEXTURE_LEVELS];
+   struct ilo_image_lod lods[PIPE_MAX_TEXTURE_LEVELS];
 
-   /* physical height of layers for ILO_LAYOUT_WALK_LAYER */
+   /* physical height of layers for ILO_IMAGE_WALK_LAYER */
    unsigned layer_height;
 
    /* distance in bytes between two pixel block rows */
@@ -123,50 +124,51 @@ struct ilo_layout {
    unsigned aux_height;
 };
 
-void ilo_layout_init(struct ilo_layout *layout,
-                     const struct ilo_dev *dev,
-                     const struct pipe_resource *templ);
+void
+ilo_image_init(struct ilo_image *img,
+               const struct ilo_dev *dev,
+               const struct pipe_resource *templ);
 
 bool
-ilo_layout_update_for_imported_bo(struct ilo_layout *layout,
-                                  enum gen_surface_tiling tiling,
-                                  unsigned bo_stride);
+ilo_image_update_for_imported_bo(struct ilo_image *img,
+                                 enum gen_surface_tiling tiling,
+                                 unsigned bo_stride);
 
 /**
  * Convert from pixel position to 2D memory offset.
  */
 static inline void
-ilo_layout_pos_to_mem(const struct ilo_layout *layout,
-                      unsigned pos_x, unsigned pos_y,
-                      unsigned *mem_x, unsigned *mem_y)
+ilo_image_pos_to_mem(const struct ilo_image *img,
+                     unsigned pos_x, unsigned pos_y,
+                     unsigned *mem_x, unsigned *mem_y)
 {
-   assert(pos_x % layout->block_width == 0);
-   assert(pos_y % layout->block_height == 0);
+   assert(pos_x % img->block_width == 0);
+   assert(pos_y % img->block_height == 0);
 
-   *mem_x = pos_x / layout->block_width * layout->block_size;
-   *mem_y = pos_y / layout->block_height;
+   *mem_x = pos_x / img->block_width * img->block_size;
+   *mem_y = pos_y / img->block_height;
 }
 
 /**
  * Convert from 2D memory offset to linear offset.
  */
 static inline unsigned
-ilo_layout_mem_to_linear(const struct ilo_layout *layout,
-                         unsigned mem_x, unsigned mem_y)
+ilo_image_mem_to_linear(const struct ilo_image *img,
+                        unsigned mem_x, unsigned mem_y)
 {
-   return mem_y * layout->bo_stride + mem_x;
+   return mem_y * img->bo_stride + mem_x;
 }
 
 /**
  * Convert from 2D memory offset to raw offset.
  */
 static inline unsigned
-ilo_layout_mem_to_raw(const struct ilo_layout *layout,
-                      unsigned mem_x, unsigned mem_y)
+ilo_image_mem_to_raw(const struct ilo_image *img,
+                     unsigned mem_x, unsigned mem_y)
 {
    unsigned tile_w, tile_h;
 
-   switch (layout->tiling) {
+   switch (img->tiling) {
    case GEN6_TILING_NONE:
       tile_w = 1;
       tile_h = 1;
@@ -193,27 +195,27 @@ ilo_layout_mem_to_raw(const struct ilo_layout *layout,
    assert(mem_x % tile_w == 0);
    assert(mem_y % tile_h == 0);
 
-   return mem_y * layout->bo_stride + mem_x * tile_h;
+   return mem_y * img->bo_stride + mem_x * tile_h;
 }
 
 /**
  * Return the stride, in bytes, between slices within a level.
  */
 static inline unsigned
-ilo_layout_get_slice_stride(const struct ilo_layout *layout, unsigned level)
+ilo_image_get_slice_stride(const struct ilo_image *img, unsigned level)
 {
    unsigned h;
 
-   switch (layout->walk) {
-   case ILO_LAYOUT_WALK_LOD:
-      h = layout->lods[level].slice_height;
+   switch (img->walk) {
+   case ILO_IMAGE_WALK_LOD:
+      h = img->lods[level].slice_height;
       break;
-   case ILO_LAYOUT_WALK_LAYER:
-      h = layout->layer_height;
+   case ILO_IMAGE_WALK_LAYER:
+      h = img->layer_height;
       break;
-   case ILO_LAYOUT_WALK_3D:
+   case ILO_IMAGE_WALK_3D:
       if (level == 0) {
-         h = layout->lods[0].slice_height;
+         h = img->lods[0].slice_height;
          break;
       }
       /* fall through */
@@ -223,71 +225,71 @@ ilo_layout_get_slice_stride(const struct ilo_layout *layout, unsigned level)
       break;
    }
 
-   assert(h % layout->block_height == 0);
+   assert(h % img->block_height == 0);
 
-   return (h / layout->block_height) * layout->bo_stride;
+   return (h / img->block_height) * img->bo_stride;
 }
 
 /**
  * Return the physical size, in bytes, of a slice in a level.
  */
 static inline unsigned
-ilo_layout_get_slice_size(const struct ilo_layout *layout, unsigned level)
+ilo_image_get_slice_size(const struct ilo_image *img, unsigned level)
 {
-   const unsigned w = layout->lods[level].slice_width;
-   const unsigned h = layout->lods[level].slice_height;
+   const unsigned w = img->lods[level].slice_width;
+   const unsigned h = img->lods[level].slice_height;
 
-   assert(w % layout->block_width == 0);
-   assert(h % layout->block_height == 0);
+   assert(w % img->block_width == 0);
+   assert(h % img->block_height == 0);
 
-   return (w / layout->block_width * layout->block_size) *
-      (h / layout->block_height);
+   return (w / img->block_width * img->block_size) *
+      (h / img->block_height);
 }
 
 /**
  * Return the pixel position of a slice.
  */
 static inline void
-ilo_layout_get_slice_pos(const struct ilo_layout *layout,
-                         unsigned level, unsigned slice,
-                         unsigned *x, unsigned *y)
+ilo_image_get_slice_pos(const struct ilo_image *img,
+                        unsigned level, unsigned slice,
+                        unsigned *x, unsigned *y)
 {
-   switch (layout->walk) {
-   case ILO_LAYOUT_WALK_LOD:
-      *x = layout->lods[level].x;
-      *y = layout->lods[level].y + layout->lods[level].slice_height * slice;
+   switch (img->walk) {
+   case ILO_IMAGE_WALK_LOD:
+      *x = img->lods[level].x;
+      *y = img->lods[level].y + img->lods[level].slice_height * slice;
       break;
-   case ILO_LAYOUT_WALK_LAYER:
-      *x = layout->lods[level].x;
-      *y = layout->lods[level].y + layout->layer_height * slice;
+   case ILO_IMAGE_WALK_LAYER:
+      *x = img->lods[level].x;
+      *y = img->lods[level].y + img->layer_height * slice;
       break;
-   case ILO_LAYOUT_WALK_3D:
+   case ILO_IMAGE_WALK_3D:
       {
          /* slices are packed horizontally with wrapping */
          const unsigned sx = slice & ((1 << level) - 1);
          const unsigned sy = slice >> level;
 
-         *x = layout->lods[level].x + layout->lods[level].slice_width * sx;
-         *y = layout->lods[level].y + layout->lods[level].slice_height * sy;
+         *x = img->lods[level].x + img->lods[level].slice_width * sx;
+         *y = img->lods[level].y + img->lods[level].slice_height * sy;
 
          /* should not overlap with the next level */
-         if (level + 1 < Elements(layout->lods) &&
-             layout->lods[level + 1].y) {
-            assert(*y + layout->lods[level].slice_height <=
-                  layout->lods[level + 1].y);
+         if (level + 1 < Elements(img->lods) &&
+             img->lods[level + 1].y) {
+            assert(*y + img->lods[level].slice_height <=
+                  img->lods[level + 1].y);
          }
          break;
       }
    default:
-      assert(!"unknown layout walk type");
+      assert(!"unknown img walk type");
       *x = 0;
       *y = 0;
       break;
    }
 
    /* should not exceed the bo size */
-   assert(*y + layout->lods[level].slice_height <=
-         layout->bo_height * layout->block_height);
+   assert(*y + img->lods[level].slice_height <=
+         img->bo_height * img->block_height);
 }
 
-#endif /* ILO_LAYOUT_H */
+#endif /* ILO_IMAGE_H */

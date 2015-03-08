@@ -7,6 +7,8 @@ C_SOURCES := \
 	core/ilo_format.c \
 	core/ilo_format.h \
 	core/ilo_fence.h \
+	core/ilo_image.c \
+	core/ilo_image.h \
 	core/intel_winsys.h \
 	ilo_blit.c \
 	ilo_blit.h \
@@ -34,8 +36,6 @@ C_SOURCES := \
 	ilo_draw.h \
 	ilo_gpgpu.c \
 	ilo_gpgpu.h \
-	ilo_layout.c \
-	ilo_layout.h \
 	ilo_public.h \
 	ilo_query.c \
 	ilo_query.h \

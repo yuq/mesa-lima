@@ -29,9 +29,9 @@
 #define ILO_RESOURCE_H
 
 #include "core/intel_winsys.h"
+#include "core/ilo_image.h"
 
 #include "ilo_common.h"
-#include "ilo_layout.h"
 #include "ilo_screen.h"
 
 enum ilo_texture_flags {
@@ -108,7 +108,7 @@ struct ilo_texture {
 
    bool imported;
 
-   struct ilo_layout layout;
+   struct ilo_image image;
 
    /* XXX thread-safety */
    struct intel_bo *bo;

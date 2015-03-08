@@ -25,21 +25,22 @@
  *    Chia-I Wu <olv@lunarg.com>
  */
 
-#include "ilo_layout.h"
+#include "ilo_debug.h"
+#include "ilo_image.h"
 
 enum {
-   LAYOUT_TILING_NONE = 1 << GEN6_TILING_NONE,
-   LAYOUT_TILING_X = 1 << GEN6_TILING_X,
-   LAYOUT_TILING_Y = 1 << GEN6_TILING_Y,
-   LAYOUT_TILING_W = 1 << GEN8_TILING_W,
+   IMAGE_TILING_NONE = 1 << GEN6_TILING_NONE,
+   IMAGE_TILING_X    = 1 << GEN6_TILING_X,
+   IMAGE_TILING_Y    = 1 << GEN6_TILING_Y,
+   IMAGE_TILING_W    = 1 << GEN8_TILING_W,
 
-   LAYOUT_TILING_ALL = (LAYOUT_TILING_NONE |
-                        LAYOUT_TILING_X |
-                        LAYOUT_TILING_Y |
-                        LAYOUT_TILING_W)
+   IMAGE_TILING_ALL  = (IMAGE_TILING_NONE |
+                        IMAGE_TILING_X |
+                        IMAGE_TILING_Y |
+                        IMAGE_TILING_W)
 };
 
-struct ilo_layout_params {
+struct ilo_image_params {
    const struct ilo_dev *dev;
    const struct pipe_resource *templ;
 
@@ -50,15 +51,15 @@ struct ilo_layout_params {
 };
 
 static void
-layout_get_slice_size(const struct ilo_layout *layout,
-                      const struct ilo_layout_params *params,
-                      unsigned level, unsigned *width, unsigned *height)
+img_get_slice_size(const struct ilo_image *img,
+                   const struct ilo_image_params *params,
+                   unsigned level, unsigned *width, unsigned *height)
 {
    const struct pipe_resource *templ = params->templ;
    unsigned w, h;
 
-   w = u_minify(layout->width0, level);
-   h = u_minify(layout->height0, level);
+   w = u_minify(img->width0, level);
+   h = u_minify(img->height0, level);
 
    /*
     * From the Sandy Bridge PRM, volume 1 part 1, page 114:
@@ -67,8 +68,8 @@ layout_get_slice_size(const struct ilo_layout *layout,
     *      sizing algorithm presented in Non-Power-of-Two Mipmaps above. Then,
     *      if necessary, they are padded out to compression block boundaries."
     */
-   w = align(w, layout->block_width);
-   h = align(h, layout->block_height);
+   w = align(w, img->block_width);
+   h = align(h, img->block_height);
 
    /*
     * From the Sandy Bridge PRM, volume 1 part 1, page 111:
@@ -109,7 +110,7 @@ layout_get_slice_size(const struct ilo_layout *layout,
     *   w = align(w, 2) * 2;
     *   y = align(y, 2) * 2;
     */
-   if (layout->interleaved_samples) {
+   if (img->interleaved_samples) {
       switch (templ->nr_samples) {
       case 0:
       case 1:
@@ -144,38 +145,38 @@ layout_get_slice_size(const struct ilo_layout *layout,
     * To make things easier (for transfer), we will just double the stencil
     * stride in 3DSTATE_STENCIL_BUFFER.
     */
-   w = align(w, layout->align_i);
-   h = align(h, layout->align_j);
+   w = align(w, img->align_i);
+   h = align(h, img->align_j);
 
    *width = w;
    *height = h;
 }
 
 static unsigned
-layout_get_num_layers(const struct ilo_layout *layout,
-                      const struct ilo_layout_params *params)
+img_get_num_layers(const struct ilo_image *img,
+                   const struct ilo_image_params *params)
 {
    const struct pipe_resource *templ = params->templ;
    unsigned num_layers = templ->array_size;
 
    /* samples of the same index are stored in a layer */
-   if (templ->nr_samples > 1 && !layout->interleaved_samples)
+   if (templ->nr_samples > 1 && !img->interleaved_samples)
       num_layers *= templ->nr_samples;
 
    return num_layers;
 }
 
 static void
-layout_init_layer_height(struct ilo_layout *layout,
-                         struct ilo_layout_params *params)
+img_init_layer_height(struct ilo_image *img,
+                      struct ilo_image_params *params)
 {
    const struct pipe_resource *templ = params->templ;
    unsigned num_layers;
 
-   if (layout->walk != ILO_LAYOUT_WALK_LAYER)
+   if (img->walk != ILO_IMAGE_WALK_LAYER)
       return;
 
-   num_layers = layout_get_num_layers(layout, params);
+   num_layers = img_get_num_layers(img, params);
    if (num_layers <= 1)
       return;
 
@@ -213,19 +214,19 @@ layout_init_layer_height(struct ilo_layout *layout,
     * slices.  Since we use texel rows everywhere, we do not need to divide
     * QPitch by 4.
     */
-   layout->layer_height = params->h0 + params->h1 +
-      ((ilo_dev_gen(params->dev) >= ILO_GEN(7)) ? 12 : 11) * layout->align_j;
+   img->layer_height = params->h0 + params->h1 +
+      ((ilo_dev_gen(params->dev) >= ILO_GEN(7)) ? 12 : 11) * img->align_j;
 
    if (ilo_dev_gen(params->dev) == ILO_GEN(6) && templ->nr_samples > 1 &&
-       layout->height0 % 4 == 1)
-      layout->layer_height += 4;
+       img->height0 % 4 == 1)
+      img->layer_height += 4;
 
-   params->max_y += layout->layer_height * (num_layers - 1);
+   params->max_y += img->layer_height * (num_layers - 1);
 }
 
 static void
-layout_init_lods(struct ilo_layout *layout,
-                 struct ilo_layout_params *params)
+img_init_lods(struct ilo_image *img,
+              struct ilo_image_params *params)
 {
    const struct pipe_resource *templ = params->templ;
    unsigned cur_x, cur_y;
@@ -236,16 +237,16 @@ layout_init_lods(struct ilo_layout *layout,
    for (lv = 0; lv <= templ->last_level; lv++) {
       unsigned lod_w, lod_h;
 
-      layout_get_slice_size(layout, params, lv, &lod_w, &lod_h);
+      img_get_slice_size(img, params, lv, &lod_w, &lod_h);
 
-      layout->lods[lv].x = cur_x;
-      layout->lods[lv].y = cur_y;
-      layout->lods[lv].slice_width = lod_w;
-      layout->lods[lv].slice_height = lod_h;
+      img->lods[lv].x = cur_x;
+      img->lods[lv].y = cur_y;
+      img->lods[lv].slice_width = lod_w;
+      img->lods[lv].slice_height = lod_h;
 
-      switch (layout->walk) {
-      case ILO_LAYOUT_WALK_LOD:
-         lod_h *= layout_get_num_layers(layout, params);
+      switch (img->walk) {
+      case ILO_IMAGE_WALK_LOD:
+         lod_h *= img_get_num_layers(img, params);
          if (lv == 1)
             cur_x += lod_w;
          else
@@ -253,19 +254,19 @@ layout_init_lods(struct ilo_layout *layout,
 
          /* every LOD begins at tile boundaries */
          if (templ->last_level > 0) {
-            assert(layout->format == PIPE_FORMAT_S8_UINT);
+            assert(img->format == PIPE_FORMAT_S8_UINT);
             cur_x = align(cur_x, 64);
             cur_y = align(cur_y, 64);
          }
          break;
-      case ILO_LAYOUT_WALK_LAYER:
+      case ILO_IMAGE_WALK_LAYER:
          /* MIPLAYOUT_BELOW */
          if (lv == 1)
             cur_x += lod_w;
          else
             cur_y += lod_h;
          break;
-      case ILO_LAYOUT_WALK_3D:
+      case ILO_IMAGE_WALK_3D:
          {
             const unsigned num_slices = u_minify(templ->depth0, lv);
             const unsigned num_slices_per_row = 1 << lv;
@@ -280,25 +281,25 @@ layout_init_lods(struct ilo_layout *layout,
          break;
       }
 
-      if (params->max_x < layout->lods[lv].x + lod_w)
-         params->max_x = layout->lods[lv].x + lod_w;
-      if (params->max_y < layout->lods[lv].y + lod_h)
-         params->max_y = layout->lods[lv].y + lod_h;
+      if (params->max_x < img->lods[lv].x + lod_w)
+         params->max_x = img->lods[lv].x + lod_w;
+      if (params->max_y < img->lods[lv].y + lod_h)
+         params->max_y = img->lods[lv].y + lod_h;
    }
 
-   if (layout->walk == ILO_LAYOUT_WALK_LAYER) {
-      params->h0 = layout->lods[0].slice_height;
+   if (img->walk == ILO_IMAGE_WALK_LAYER) {
+      params->h0 = img->lods[0].slice_height;
 
       if (templ->last_level > 0)
-         params->h1 = layout->lods[1].slice_height;
+         params->h1 = img->lods[1].slice_height;
       else
-         layout_get_slice_size(layout, params, 1, &cur_x, &params->h1);
+         img_get_slice_size(img, params, 1, &cur_x, &params->h1);
    }
 }
 
 static void
-layout_init_alignments(struct ilo_layout *layout,
-                       struct ilo_layout_params *params)
+img_init_alignments(struct ilo_image *img,
+                    struct ilo_image_params *params)
 {
    const struct pipe_resource *templ = params->templ;
 
@@ -392,33 +393,33 @@ layout_init_alignments(struct ilo_layout *layout,
 
    if (params->compressed) {
       /* this happens to be the case */
-      layout->align_i = layout->block_width;
-      layout->align_j = layout->block_height;
+      img->align_i = img->block_width;
+      img->align_j = img->block_height;
    } else if (templ->bind & PIPE_BIND_DEPTH_STENCIL) {
       if (ilo_dev_gen(params->dev) >= ILO_GEN(7)) {
-         switch (layout->format) {
+         switch (img->format) {
          case PIPE_FORMAT_Z16_UNORM:
-            layout->align_i = 8;
-            layout->align_j = 4;
+            img->align_i = 8;
+            img->align_j = 4;
             break;
          case PIPE_FORMAT_S8_UINT:
-            layout->align_i = 8;
-            layout->align_j = 8;
+            img->align_i = 8;
+            img->align_j = 8;
             break;
          default:
-            layout->align_i = 4;
-            layout->align_j = 4;
+            img->align_i = 4;
+            img->align_j = 4;
             break;
          }
       } else {
-         switch (layout->format) {
+         switch (img->format) {
          case PIPE_FORMAT_S8_UINT:
-            layout->align_i = 4;
-            layout->align_j = 2;
+            img->align_i = 4;
+            img->align_j = 2;
             break;
          default:
-            layout->align_i = 4;
-            layout->align_j = 4;
+            img->align_i = 4;
+            img->align_j = 4;
             break;
          }
       }
@@ -427,15 +428,15 @@ layout_init_alignments(struct ilo_layout *layout,
          (templ->nr_samples > 1) ||
          (ilo_dev_gen(params->dev) >= ILO_GEN(8)) ||
          (ilo_dev_gen(params->dev) >= ILO_GEN(7) &&
-          layout->tiling == GEN6_TILING_Y &&
+          img->tiling == GEN6_TILING_Y &&
           (templ->bind & PIPE_BIND_RENDER_TARGET));
 
       if (ilo_dev_gen(params->dev) >= ILO_GEN(7) &&
           ilo_dev_gen(params->dev) <= ILO_GEN(7.5) && valign_4)
-         assert(layout->format != PIPE_FORMAT_R32G32B32_FLOAT);
+         assert(img->format != PIPE_FORMAT_R32G32B32_FLOAT);
 
-      layout->align_i = 4;
-      layout->align_j = (valign_4) ? 4 : 2;
+      img->align_i = 4;
+      img->align_j = (valign_4) ? 4 : 2;
    }
 
    /*
@@ -444,23 +445,23 @@ layout_init_alignments(struct ilo_layout *layout,
     * size, slices start at block boundaries, and many of the computations
     * work.
     */
-   assert(layout->align_i % layout->block_width == 0);
-   assert(layout->align_j % layout->block_height == 0);
+   assert(img->align_i % img->block_width == 0);
+   assert(img->align_j % img->block_height == 0);
 
    /* make sure align() works */
-   assert(util_is_power_of_two(layout->align_i) &&
-          util_is_power_of_two(layout->align_j));
-   assert(util_is_power_of_two(layout->block_width) &&
-          util_is_power_of_two(layout->block_height));
+   assert(util_is_power_of_two(img->align_i) &&
+          util_is_power_of_two(img->align_j));
+   assert(util_is_power_of_two(img->block_width) &&
+          util_is_power_of_two(img->block_height));
 }
 
 static unsigned
-layout_get_valid_tilings(const struct ilo_layout *layout,
-                         const struct ilo_layout_params *params)
+img_get_valid_tilings(const struct ilo_image *img,
+                      const struct ilo_image_params *params)
 {
    const struct pipe_resource *templ = params->templ;
-   const enum pipe_format format = layout->format;
-   unsigned valid_tilings = LAYOUT_TILING_ALL;
+   const enum pipe_format format = img->format;
+   unsigned valid_tilings = IMAGE_TILING_ALL;
 
    /*
     * From the Sandy Bridge PRM, volume 1 part 2, page 32:
@@ -469,7 +470,7 @@ layout_get_valid_tilings(const struct ilo_layout *layout,
     *                        X-Major required for Async Flips"
     */
    if (unlikely(templ->bind & PIPE_BIND_SCANOUT))
-      valid_tilings &= LAYOUT_TILING_X;
+      valid_tilings &= IMAGE_TILING_X;
 
    /*
     * From the Sandy Bridge PRM, volume 3 part 2, page 158:
@@ -478,7 +479,7 @@ layout_get_valid_tilings(const struct ilo_layout *layout,
     *      be in linear memory, it cannot be tiled."
     */
    if (unlikely(templ->bind & (PIPE_BIND_CURSOR | PIPE_BIND_LINEAR)))
-      valid_tilings &= LAYOUT_TILING_NONE;
+      valid_tilings &= IMAGE_TILING_NONE;
 
    /*
     * From the Sandy Bridge PRM, volume 2 part 1, page 318:
@@ -495,10 +496,10 @@ layout_get_valid_tilings(const struct ilo_layout *layout,
    if (templ->bind & PIPE_BIND_DEPTH_STENCIL) {
       switch (format) {
       case PIPE_FORMAT_S8_UINT:
-         valid_tilings &= LAYOUT_TILING_W;
+         valid_tilings &= IMAGE_TILING_W;
          break;
       default:
-         valid_tilings &= LAYOUT_TILING_Y;
+         valid_tilings &= IMAGE_TILING_Y;
          break;
       }
    }
@@ -515,8 +516,8 @@ layout_get_valid_tilings(const struct ilo_layout *layout,
        *     "NOTE: 128 BPP format color buffer (render target) supports
        *      Linear, TiledX and TiledY."
        */
-      if (ilo_dev_gen(params->dev) < ILO_GEN(7.5) && layout->block_size == 16)
-         valid_tilings &= ~LAYOUT_TILING_Y;
+      if (ilo_dev_gen(params->dev) < ILO_GEN(7.5) && img->block_size == 16)
+         valid_tilings &= ~IMAGE_TILING_Y;
 
       /*
        * From the Ivy Bridge PRM, volume 4 part 1, page 63:
@@ -528,15 +529,15 @@ layout_get_valid_tilings(const struct ilo_layout *layout,
        */
       if (ilo_dev_gen(params->dev) >= ILO_GEN(7) &&
           ilo_dev_gen(params->dev) <= ILO_GEN(7.5) &&
-          layout->format == PIPE_FORMAT_R32G32B32_FLOAT)
-         valid_tilings &= ~LAYOUT_TILING_Y;
+          img->format == PIPE_FORMAT_R32G32B32_FLOAT)
+         valid_tilings &= ~IMAGE_TILING_Y;
 
-      valid_tilings &= ~LAYOUT_TILING_W;
+      valid_tilings &= ~IMAGE_TILING_W;
    }
 
    if (templ->bind & PIPE_BIND_SAMPLER_VIEW) {
       if (ilo_dev_gen(params->dev) < ILO_GEN(8))
-         valid_tilings &= ~LAYOUT_TILING_W;
+         valid_tilings &= ~IMAGE_TILING_W;
    }
 
    /* no conflicting binding flags */
@@ -546,51 +547,51 @@ layout_get_valid_tilings(const struct ilo_layout *layout,
 }
 
 static void
-layout_init_tiling(struct ilo_layout *layout,
-                   struct ilo_layout_params *params)
+img_init_tiling(struct ilo_image *img,
+                struct ilo_image_params *params)
 {
    const struct pipe_resource *templ = params->templ;
    unsigned preferred_tilings;
 
-   layout->valid_tilings = layout_get_valid_tilings(layout, params);
+   img->valid_tilings = img_get_valid_tilings(img, params);
 
-   preferred_tilings = layout->valid_tilings;
+   preferred_tilings = img->valid_tilings;
 
    /* no fencing nor BLT support */
-   if (preferred_tilings & ~LAYOUT_TILING_W)
-      preferred_tilings &= ~LAYOUT_TILING_W;
+   if (preferred_tilings & ~IMAGE_TILING_W)
+      preferred_tilings &= ~IMAGE_TILING_W;
 
    if (templ->bind & (PIPE_BIND_RENDER_TARGET | PIPE_BIND_SAMPLER_VIEW)) {
       /*
        * heuristically set a minimum width/height for enabling tiling
        */
-      if (layout->width0 < 64 && (preferred_tilings & ~LAYOUT_TILING_X))
-         preferred_tilings &= ~LAYOUT_TILING_X;
+      if (img->width0 < 64 && (preferred_tilings & ~IMAGE_TILING_X))
+         preferred_tilings &= ~IMAGE_TILING_X;
 
-      if ((layout->width0 < 32 || layout->height0 < 16) &&
-          (layout->width0 < 16 || layout->height0 < 32) &&
-          (preferred_tilings & ~LAYOUT_TILING_Y))
-         preferred_tilings &= ~LAYOUT_TILING_Y;
+      if ((img->width0 < 32 || img->height0 < 16) &&
+          (img->width0 < 16 || img->height0 < 32) &&
+          (preferred_tilings & ~IMAGE_TILING_Y))
+         preferred_tilings &= ~IMAGE_TILING_Y;
    } else {
       /* force linear if we are not sure where the texture is bound to */
-      if (preferred_tilings & LAYOUT_TILING_NONE)
-         preferred_tilings &= LAYOUT_TILING_NONE;
+      if (preferred_tilings & IMAGE_TILING_NONE)
+         preferred_tilings &= IMAGE_TILING_NONE;
    }
 
    /* prefer tiled over linear */
-   if (preferred_tilings & LAYOUT_TILING_Y)
-      layout->tiling = GEN6_TILING_Y;
-   else if (preferred_tilings & LAYOUT_TILING_X)
-      layout->tiling = GEN6_TILING_X;
-   else if (preferred_tilings & LAYOUT_TILING_W)
-      layout->tiling = GEN8_TILING_W;
+   if (preferred_tilings & IMAGE_TILING_Y)
+      img->tiling = GEN6_TILING_Y;
+   else if (preferred_tilings & IMAGE_TILING_X)
+      img->tiling = GEN6_TILING_X;
+   else if (preferred_tilings & IMAGE_TILING_W)
+      img->tiling = GEN8_TILING_W;
    else
-      layout->tiling = GEN6_TILING_NONE;
+      img->tiling = GEN6_TILING_NONE;
 }
 
 static void
-layout_init_walk_gen7(struct ilo_layout *layout,
-                      struct ilo_layout_params *params)
+img_init_walk_gen7(struct ilo_image *img,
+                   struct ilo_image_params *params)
 {
    const struct pipe_resource *templ = params->templ;
 
@@ -608,10 +609,10 @@ layout_init_walk_gen7(struct ilo_layout *layout,
        *     "note that the depth buffer and stencil buffer have an implied
        *      value of ARYSPC_FULL"
        */
-      layout->walk = (templ->target == PIPE_TEXTURE_3D) ?
-         ILO_LAYOUT_WALK_3D : ILO_LAYOUT_WALK_LAYER;
+      img->walk = (templ->target == PIPE_TEXTURE_3D) ?
+         ILO_IMAGE_WALK_3D : ILO_IMAGE_WALK_LAYER;
 
-      layout->interleaved_samples = true;
+      img->interleaved_samples = true;
    } else {
       /*
        * From the Ivy Bridge PRM, volume 4 part 1, page 66:
@@ -626,18 +627,18 @@ layout_init_walk_gen7(struct ilo_layout *layout,
       if (templ->nr_samples > 1)
          assert(templ->last_level == 0);
 
-      layout->walk =
-         (templ->target == PIPE_TEXTURE_3D) ? ILO_LAYOUT_WALK_3D :
-         (templ->last_level > 0) ? ILO_LAYOUT_WALK_LAYER :
-         ILO_LAYOUT_WALK_LOD;
+      img->walk =
+         (templ->target == PIPE_TEXTURE_3D) ? ILO_IMAGE_WALK_3D :
+         (templ->last_level > 0) ? ILO_IMAGE_WALK_LAYER :
+         ILO_IMAGE_WALK_LOD;
 
-      layout->interleaved_samples = false;
+      img->interleaved_samples = false;
    }
 }
 
 static void
-layout_init_walk_gen6(struct ilo_layout *layout,
-                      struct ilo_layout_params *params)
+img_init_walk_gen6(struct ilo_image *img,
+                   struct ilo_image_params *params)
 {
    /*
     * From the Sandy Bridge PRM, volume 1 part 1, page 115:
@@ -650,35 +651,35 @@ layout_init_walk_gen6(struct ilo_layout *layout,
     *
     * GEN6 does not support compact spacing otherwise.
     */
-   layout->walk =
-      (params->templ->target == PIPE_TEXTURE_3D) ? ILO_LAYOUT_WALK_3D :
-      (layout->format == PIPE_FORMAT_S8_UINT) ? ILO_LAYOUT_WALK_LOD :
-      ILO_LAYOUT_WALK_LAYER;
+   img->walk =
+      (params->templ->target == PIPE_TEXTURE_3D) ? ILO_IMAGE_WALK_3D :
+      (img->format == PIPE_FORMAT_S8_UINT) ? ILO_IMAGE_WALK_LOD :
+      ILO_IMAGE_WALK_LAYER;
 
    /* GEN6 supports only interleaved samples */
-   layout->interleaved_samples = true;
+   img->interleaved_samples = true;
 }
 
 static void
-layout_init_walk(struct ilo_layout *layout,
-                 struct ilo_layout_params *params)
+img_init_walk(struct ilo_image *img,
+              struct ilo_image_params *params)
 {
    if (ilo_dev_gen(params->dev) >= ILO_GEN(7))
-      layout_init_walk_gen7(layout, params);
+      img_init_walk_gen7(img, params);
    else
-      layout_init_walk_gen6(layout, params);
+      img_init_walk_gen6(img, params);
 }
 
 static void
-layout_init_size_and_format(struct ilo_layout *layout,
-                            struct ilo_layout_params *params)
+img_init_size_and_format(struct ilo_image *img,
+                         struct ilo_image_params *params)
 {
    const struct pipe_resource *templ = params->templ;
    enum pipe_format format = templ->format;
    bool require_separate_stencil = false;
 
-   layout->width0 = templ->width0;
-   layout->height0 = templ->height0;
+   img->width0 = templ->width0;
+   img->height0 = templ->height0;
 
    /*
     * From the Sandy Bridge PRM, volume 2 part 1, page 317:
@@ -692,7 +693,7 @@ layout_init_size_and_format(struct ilo_layout *layout,
       if (ilo_dev_gen(params->dev) >= ILO_GEN(7))
          require_separate_stencil = true;
       else
-         require_separate_stencil = (layout->aux == ILO_LAYOUT_AUX_HIZ);
+         require_separate_stencil = (img->aux == ILO_IMAGE_AUX_HIZ);
    }
 
    switch (format) {
@@ -702,30 +703,30 @@ layout_init_size_and_format(struct ilo_layout *layout,
    case PIPE_FORMAT_Z24_UNORM_S8_UINT:
       if (require_separate_stencil) {
          format = PIPE_FORMAT_Z24X8_UNORM;
-         layout->separate_stencil = true;
+         img->separate_stencil = true;
       }
       break;
    case PIPE_FORMAT_Z32_FLOAT_S8X24_UINT:
       if (require_separate_stencil) {
          format = PIPE_FORMAT_Z32_FLOAT;
-         layout->separate_stencil = true;
+         img->separate_stencil = true;
       }
       break;
    default:
       break;
    }
 
-   layout->format = format;
-   layout->block_width = util_format_get_blockwidth(format);
-   layout->block_height = util_format_get_blockheight(format);
-   layout->block_size = util_format_get_blocksize(format);
+   img->format = format;
+   img->block_width = util_format_get_blockwidth(format);
+   img->block_height = util_format_get_blockheight(format);
+   img->block_size = util_format_get_blocksize(format);
 
    params->compressed = util_format_is_compressed(format);
 }
 
 static bool
-layout_want_mcs(struct ilo_layout *layout,
-                struct ilo_layout_params *params)
+img_want_mcs(struct ilo_image *img,
+             struct ilo_image_params *params)
 {
    const struct pipe_resource *templ = params->templ;
    bool want_mcs = false;
@@ -765,9 +766,9 @@ layout_want_mcs(struct ilo_layout *layout,
        *        32bpp, 64bpp and 128bpp.
        *      ..."
        */
-      if (layout->tiling != GEN6_TILING_NONE &&
+      if (img->tiling != GEN6_TILING_NONE &&
           templ->last_level == 0 && templ->array_size == 1) {
-         switch (layout->block_size) {
+         switch (img->block_size) {
          case 4:
          case 8:
          case 16:
@@ -783,8 +784,8 @@ layout_want_mcs(struct ilo_layout *layout,
 }
 
 static bool
-layout_want_hiz(const struct ilo_layout *layout,
-                const struct ilo_layout_params *params)
+img_want_hiz(const struct ilo_image *img,
+             const struct ilo_image_params *params)
 {
    const struct pipe_resource *templ = params->templ;
    const struct util_format_description *desc =
@@ -804,7 +805,7 @@ layout_want_hiz(const struct ilo_layout *layout,
       return false;
 
    /*
-    * As can be seen in layout_calculate_hiz_size(), HiZ may not be enabled
+    * As can be seen in img_calculate_hiz_size(), HiZ may not be enabled
     * for every level.  This is generally fine except on GEN6, where HiZ and
     * separate stencil are enabled and disabled at the same time.  When the
     * format is PIPE_FORMAT_Z32_FLOAT_S8X24_UINT, enabling and disabling HiZ
@@ -819,17 +820,17 @@ layout_want_hiz(const struct ilo_layout *layout,
 }
 
 static void
-layout_init_aux(struct ilo_layout *layout,
-                struct ilo_layout_params *params)
+img_init_aux(struct ilo_image *img,
+             struct ilo_image_params *params)
 {
-   if (layout_want_hiz(layout, params))
-      layout->aux = ILO_LAYOUT_AUX_HIZ;
-   else if (layout_want_mcs(layout, params))
-      layout->aux = ILO_LAYOUT_AUX_MCS;
+   if (img_want_hiz(img, params))
+      img->aux = ILO_IMAGE_AUX_HIZ;
+   else if (img_want_mcs(img, params))
+      img->aux = ILO_IMAGE_AUX_MCS;
 }
 
 static void
-layout_align(struct ilo_layout *layout, struct ilo_layout_params *params)
+img_align(struct ilo_image *img, struct ilo_image_params *params)
 {
    const struct pipe_resource *templ = params->templ;
    int align_w = 1, align_h = 1, pad_h = 0;
@@ -857,14 +858,14 @@ layout_align(struct ilo_layout *layout, struct ilo_layout_params *params)
     *      alignment and QPitch calculation."
     */
    if (templ->bind & PIPE_BIND_SAMPLER_VIEW) {
-      align_w = MAX2(align_w, layout->align_i);
-      align_h = MAX2(align_h, layout->align_j);
+      align_w = MAX2(align_w, img->align_i);
+      align_h = MAX2(align_h, img->align_j);
 
       if (templ->target == PIPE_TEXTURE_CUBE)
          pad_h += 2;
 
       if (params->compressed)
-         align_h = MAX2(align_h, layout->align_j * 2);
+         align_h = MAX2(align_h, img->align_j * 2);
    }
 
    /*
@@ -881,7 +882,7 @@ layout_align(struct ilo_layout *layout, struct ilo_layout_params *params)
     * ilo_texture_can_enable_hiz(), we always return true for the first slice.
     * To avoid out-of-bound access, we have to pad.
     */
-   if (layout->aux == ILO_LAYOUT_AUX_HIZ &&
+   if (img->aux == ILO_IMAGE_AUX_HIZ &&
        templ->last_level == 0 &&
        templ->array_size == 1 &&
        templ->depth0 == 1) {
@@ -895,19 +896,19 @@ layout_align(struct ilo_layout *layout, struct ilo_layout_params *params)
 
 /* note that this may force the texture to be linear */
 static void
-layout_calculate_bo_size(struct ilo_layout *layout,
-                         struct ilo_layout_params *params)
+img_calculate_bo_size(struct ilo_image *img,
+                      struct ilo_image_params *params)
 {
-   assert(params->max_x % layout->block_width == 0);
-   assert(params->max_y % layout->block_height == 0);
-   assert(layout->layer_height % layout->block_height == 0);
+   assert(params->max_x % img->block_width == 0);
+   assert(params->max_y % img->block_height == 0);
+   assert(img->layer_height % img->block_height == 0);
 
-   layout->bo_stride =
-      (params->max_x / layout->block_width) * layout->block_size;
-   layout->bo_height = params->max_y / layout->block_height;
+   img->bo_stride =
+      (params->max_x / img->block_width) * img->block_size;
+   img->bo_height = params->max_y / img->block_height;
 
    while (true) {
-      unsigned w = layout->bo_stride, h = layout->bo_height;
+      unsigned w = img->bo_stride, h = img->bo_height;
       unsigned align_w, align_h;
 
       /*
@@ -919,8 +920,8 @@ layout_calculate_bo_size(struct ilo_layout *layout,
        */
       if (ilo_dev_gen(params->dev) >= ILO_GEN(7.5) &&
           (params->templ->bind & PIPE_BIND_SAMPLER_VIEW) &&
-          layout->tiling == GEN6_TILING_NONE)
-         h += (64 + layout->bo_stride - 1) / layout->bo_stride;
+          img->tiling == GEN6_TILING_NONE)
+         h += (64 + img->bo_stride - 1) / img->bo_stride;
 
       /*
        * From the Sandy Bridge PRM, volume 4 part 1, page 81:
@@ -936,9 +937,9 @@ layout_calculate_bo_size(struct ilo_layout *layout,
        *
        * Different requirements may exist when the bo is used in different
        * places, but our alignments here should be good enough that we do not
-       * need to check layout->templ->bind.
+       * need to check params->templ->bind.
        */
-      switch (layout->tiling) {
+      switch (img->tiling) {
       case GEN6_TILING_X:
          align_w = 512;
          align_h = 8;
@@ -959,7 +960,7 @@ layout_calculate_bo_size(struct ilo_layout *layout,
          align_h = 64;
          break;
       default:
-         assert(layout->tiling == GEN6_TILING_NONE);
+         assert(img->tiling == GEN6_TILING_NONE);
          /* some good enough values */
          align_w = 64;
          align_h = 2;
@@ -970,7 +971,7 @@ layout_calculate_bo_size(struct ilo_layout *layout,
       h = align(h, align_h);
 
       /* make sure the bo is mappable */
-      if (layout->tiling != GEN6_TILING_NONE) {
+      if (img->tiling != GEN6_TILING_NONE) {
          /*
           * Usually only the first 256MB of the GTT is mappable.
           *
@@ -980,15 +981,15 @@ layout_calculate_bo_size(struct ilo_layout *layout,
 
          /*
           * Be conservative.  We may be able to switch from VALIGN_4 to
-          * VALIGN_2 if the layout was Y-tiled, but let's keep it simple.
+          * VALIGN_2 if the image was Y-tiled, but let's keep it simple.
           */
          if (mappable_gtt_size / w / 4 < h) {
-            if (layout->valid_tilings & LAYOUT_TILING_NONE) {
-               layout->tiling = GEN6_TILING_NONE;
+            if (img->valid_tilings & IMAGE_TILING_NONE) {
+               img->tiling = GEN6_TILING_NONE;
                /* MCS support for non-MSRTs is limited to tiled RTs */
-               if (layout->aux == ILO_LAYOUT_AUX_MCS &&
+               if (img->aux == ILO_IMAGE_AUX_MCS &&
                    params->templ->nr_samples <= 1)
-                  layout->aux = ILO_LAYOUT_AUX_NONE;
+                  img->aux = ILO_IMAGE_AUX_NONE;
 
                continue;
             } else {
@@ -997,26 +998,26 @@ layout_calculate_bo_size(struct ilo_layout *layout,
          }
       }
 
-      layout->bo_stride = w;
-      layout->bo_height = h;
+      img->bo_stride = w;
+      img->bo_height = h;
       break;
    }
 }
 
 static void
-layout_calculate_hiz_size(struct ilo_layout *layout,
-                          struct ilo_layout_params *params)
+img_calculate_hiz_size(struct ilo_image *img,
+                       struct ilo_image_params *params)
 {
    const struct pipe_resource *templ = params->templ;
    const unsigned hz_align_j = 8;
-   enum ilo_layout_walk_type hz_walk;
+   enum ilo_image_walk_type hz_walk;
    unsigned hz_width, hz_height, lv;
    unsigned hz_clear_w, hz_clear_h;
 
-   assert(layout->aux == ILO_LAYOUT_AUX_HIZ);
+   assert(img->aux == ILO_IMAGE_AUX_HIZ);
 
-   assert(layout->walk == ILO_LAYOUT_WALK_LAYER ||
-          layout->walk == ILO_LAYOUT_WALK_3D);
+   assert(img->walk == ILO_IMAGE_WALK_LAYER ||
+          img->walk == ILO_IMAGE_WALK_3D);
 
    /*
     * From the Sandy Bridge PRM, volume 2 part 1, page 312:
@@ -1027,12 +1028,12 @@ layout_calculate_hiz_size(struct ilo_layout *layout,
     *      buffer's state delivered to hardware each time a new depth buffer
     *      state with modified LOD is delivered."
     *
-    * We will put all LODs in a single bo with ILO_LAYOUT_WALK_LOD.
+    * We will put all LODs in a single bo with ILO_IMAGE_WALK_LOD.
     */
    if (ilo_dev_gen(params->dev) >= ILO_GEN(7))
-      hz_walk = layout->walk;
+      hz_walk = img->walk;
    else
-      hz_walk = ILO_LAYOUT_WALK_LOD;
+      hz_walk = ILO_IMAGE_WALK_LOD;
 
    /*
     * See the Sandy Bridge PRM, volume 2 part 1, page 312, and the Ivy Bridge
@@ -1042,7 +1043,7 @@ layout_calculate_hiz_size(struct ilo_layout *layout,
     * memory row.
     */
    switch (hz_walk) {
-   case ILO_LAYOUT_WALK_LOD:
+   case ILO_IMAGE_WALK_LOD:
       {
          unsigned lod_tx[PIPE_MAX_TEXTURE_LEVELS];
          unsigned lod_ty[PIPE_MAX_TEXTURE_LEVELS];
@@ -1059,8 +1060,8 @@ layout_calculate_hiz_size(struct ilo_layout *layout,
             lod_tx[lv] = cur_tx;
             lod_ty[lv] = cur_ty;
 
-            tw = align(layout->lods[lv].slice_width, 16);
-            th = align(layout->lods[lv].slice_height, hz_align_j) *
+            tw = align(img->lods[lv].slice_width, 16);
+            th = align(img->lods[lv].slice_height, hz_align_j) *
                templ->array_size / 2;
             /* convert to Y-tiles */
             tw = align(tw, 128) / 128;
@@ -1079,14 +1080,14 @@ layout_calculate_hiz_size(struct ilo_layout *layout,
 
          /* convert tile offsets to memory offsets */
          for (lv = 0; lv <= templ->last_level; lv++) {
-            layout->aux_offsets[lv] =
+            img->aux_offsets[lv] =
                (lod_ty[lv] * hz_width + lod_tx[lv]) * 4096;
          }
          hz_width *= 128;
          hz_height *= 32;
       }
       break;
-   case ILO_LAYOUT_WALK_LAYER:
+   case ILO_IMAGE_WALK_LAYER:
       {
          const unsigned h0 = align(params->h0, hz_align_j);
          const unsigned h1 = align(params->h1, hz_align_j);
@@ -1094,21 +1095,21 @@ layout_calculate_hiz_size(struct ilo_layout *layout,
             ((ilo_dev_gen(params->dev) >= ILO_GEN(7)) ? 12 : 11) * hz_align_j;
          const unsigned hz_qpitch = h0 + h1 + htail;
 
-         hz_width = align(layout->lods[0].slice_width, 16);
+         hz_width = align(img->lods[0].slice_width, 16);
 
          hz_height = hz_qpitch * templ->array_size / 2;
          if (ilo_dev_gen(params->dev) >= ILO_GEN(7))
             hz_height = align(hz_height, 8);
 
-         layout->aux_layer_height = hz_qpitch;
+         img->aux_layer_height = hz_qpitch;
       }
       break;
-   case ILO_LAYOUT_WALK_3D:
-      hz_width = align(layout->lods[0].slice_width, 16);
+   case ILO_IMAGE_WALK_3D:
+      hz_width = align(img->lods[0].slice_width, 16);
 
       hz_height = 0;
       for (lv = 0; lv <= templ->last_level; lv++) {
-         const unsigned h = align(layout->lods[lv].slice_height, hz_align_j);
+         const unsigned h = align(img->lods[lv].slice_height, hz_align_j);
          /* according to the formula, slices are packed together vertically */
          hz_height += h * u_minify(templ->depth0, lv);
       }
@@ -1152,30 +1153,30 @@ layout_calculate_hiz_size(struct ilo_layout *layout,
    }
 
    for (lv = 0; lv <= templ->last_level; lv++) {
-      if (u_minify(layout->width0, lv) % hz_clear_w ||
-          u_minify(layout->height0, lv) % hz_clear_h)
+      if (u_minify(img->width0, lv) % hz_clear_w ||
+          u_minify(img->height0, lv) % hz_clear_h)
          break;
-      layout->aux_enables |= 1 << lv;
+      img->aux_enables |= 1 << lv;
    }
 
-   /* we padded to allow this in layout_align() */
+   /* we padded to allow this in img_align() */
    if (templ->last_level == 0 && templ->array_size == 1 && templ->depth0 == 1)
-      layout->aux_enables |= 0x1;
+      img->aux_enables |= 0x1;
 
    /* align to Y-tile */
-   layout->aux_stride = align(hz_width, 128);
-   layout->aux_height = align(hz_height, 32);
+   img->aux_stride = align(hz_width, 128);
+   img->aux_height = align(hz_height, 32);
 }
 
 static void
-layout_calculate_mcs_size(struct ilo_layout *layout,
-                          struct ilo_layout_params *params)
+img_calculate_mcs_size(struct ilo_image *img,
+                       struct ilo_image_params *params)
 {
    const struct pipe_resource *templ = params->templ;
    int mcs_width, mcs_height, mcs_cpp;
    int downscale_x, downscale_y;
 
-   assert(layout->aux == ILO_LAYOUT_AUX_MCS);
+   assert(img->aux == ILO_IMAGE_AUX_MCS);
 
    if (templ->nr_samples > 1) {
       /*
@@ -1219,8 +1220,8 @@ layout_calculate_mcs_size(struct ilo_layout *layout,
        * clear rectangle cannot be masked.  The scale-down clear rectangle
        * thus must be aligned to 2x2, and we need to pad.
        */
-      mcs_width = align(layout->width0, downscale_x * 2);
-      mcs_height = align(layout->height0, downscale_y * 2);
+      mcs_width = align(img->width0, downscale_x * 2);
+      mcs_height = align(img->height0, downscale_y * 2);
    } else {
       /*
        * From the Ivy Bridge PRM, volume 2 part 1, page 327:
@@ -1255,13 +1256,13 @@ layout_calculate_mcs_size(struct ilo_layout *layout,
        * anything except for the size of the allocated MCS.  Let's see if we
        * hit out-of-bound access.
        */
-      switch (layout->tiling) {
+      switch (img->tiling) {
       case GEN6_TILING_X:
-         downscale_x = 64 / layout->block_size;
+         downscale_x = 64 / img->block_size;
          downscale_y = 2;
          break;
       case GEN6_TILING_Y:
-         downscale_x = 32 / layout->block_size;
+         downscale_x = 32 / img->block_size;
          downscale_y = 4;
          break;
       default:
@@ -1283,15 +1284,15 @@ layout_calculate_mcs_size(struct ilo_layout *layout,
        * The scaled-down clear rectangle must be aligned to 4x4 instead of
        * 2x2, and we need to pad.
        */
-      mcs_width = align(layout->width0, downscale_x * 4) / downscale_x;
-      mcs_height = align(layout->height0, downscale_y * 4) / downscale_y;
+      mcs_width = align(img->width0, downscale_x * 4) / downscale_x;
+      mcs_height = align(img->height0, downscale_y * 4) / downscale_y;
       mcs_cpp = 16; /* an OWord */
    }
 
-   layout->aux_enables = (1 << (templ->last_level + 1)) - 1;
+   img->aux_enables = (1 << (templ->last_level + 1)) - 1;
    /* align to Y-tile */
-   layout->aux_stride = align(mcs_width * mcs_cpp, 128);
-   layout->aux_height = align(mcs_height, 32);
+   img->aux_stride = align(mcs_width * mcs_cpp, 128);
+   img->aux_height = align(mcs_height, 32);
 }
 
 /**
@@ -1299,9 +1300,9 @@ layout_calculate_mcs_size(struct ilo_layout *layout,
  * space.
  */
 static void
-layout_init_for_transfer(struct ilo_layout *layout,
-                         const struct ilo_dev *dev,
-                         const struct pipe_resource *templ)
+img_init_for_transfer(struct ilo_image *img,
+                      const struct ilo_dev *dev,
+                      const struct pipe_resource *templ)
 {
    const unsigned num_layers = (templ->target == PIPE_TEXTURE_3D) ?
       templ->depth0 : templ->array_size;
@@ -1310,52 +1311,52 @@ layout_init_for_transfer(struct ilo_layout *layout,
    assert(templ->last_level == 0);
    assert(templ->nr_samples <= 1);
 
-   layout->aux = ILO_LAYOUT_AUX_NONE;
-   layout->width0 = templ->width0;
-   layout->height0 = templ->height0;
-   layout->format = templ->format;
-   layout->block_width = util_format_get_blockwidth(templ->format);
-   layout->block_height = util_format_get_blockheight(templ->format);
-   layout->block_size = util_format_get_blocksize(templ->format);
-   layout->walk = ILO_LAYOUT_WALK_LOD;
+   img->aux = ILO_IMAGE_AUX_NONE;
+   img->width0 = templ->width0;
+   img->height0 = templ->height0;
+   img->format = templ->format;
+   img->block_width = util_format_get_blockwidth(templ->format);
+   img->block_height = util_format_get_blockheight(templ->format);
+   img->block_size = util_format_get_blocksize(templ->format);
+   img->walk = ILO_IMAGE_WALK_LOD;
 
-   layout->valid_tilings = LAYOUT_TILING_NONE;
-   layout->tiling = GEN6_TILING_NONE;
+   img->valid_tilings = IMAGE_TILING_NONE;
+   img->tiling = GEN6_TILING_NONE;
 
-   layout->align_i = layout->block_width;
-   layout->align_j = layout->block_height;
+   img->align_i = img->block_width;
+   img->align_j = img->block_height;
 
-   assert(util_is_power_of_two(layout->block_width) &&
-          util_is_power_of_two(layout->block_height));
+   assert(util_is_power_of_two(img->block_width) &&
+          util_is_power_of_two(img->block_height));
 
    /* use packed layout */
-   layer_width = align(templ->width0, layout->align_i);
-   layer_height = align(templ->height0, layout->align_j);
+   layer_width = align(templ->width0, img->align_i);
+   layer_height = align(templ->height0, img->align_j);
 
-   layout->lods[0].slice_width = layer_width;
-   layout->lods[0].slice_height = layer_height;
+   img->lods[0].slice_width = layer_width;
+   img->lods[0].slice_height = layer_height;
 
-   layout->bo_stride = (layer_width / layout->block_width) * layout->block_size;
-   layout->bo_stride = align(layout->bo_stride, 64);
+   img->bo_stride = (layer_width / img->block_width) * img->block_size;
+   img->bo_stride = align(img->bo_stride, 64);
 
-   layout->bo_height = (layer_height / layout->block_height) * num_layers;
+   img->bo_height = (layer_height / img->block_height) * num_layers;
 }
 
 /**
- * Initialize the layout.  Callers should zero-initialize \p layout first.
+ * Initialize the image.  Callers should zero-initialize \p img first.
  */
-void ilo_layout_init(struct ilo_layout *layout,
-                     const struct ilo_dev *dev,
-                     const struct pipe_resource *templ)
+void ilo_image_init(struct ilo_image *img,
+                    const struct ilo_dev *dev,
+                    const struct pipe_resource *templ)
 {
-   struct ilo_layout_params params;
+   struct ilo_image_params params;
    bool transfer_only;
 
    /* use transfer layout when the texture is never bound to GPU */
    transfer_only = !(templ->bind & ~(PIPE_BIND_TRANSFER_WRITE |
                                      PIPE_BIND_TRANSFER_READ));
    if (transfer_only && templ->last_level == 0 && templ->nr_samples <= 1) {
-      layout_init_for_transfer(layout, dev, templ);
+      img_init_for_transfer(img, dev, templ);
       return;
    }
 
@@ -1364,23 +1365,23 @@ void ilo_layout_init(struct ilo_layout *layout,
    params.templ = templ;
 
    /* note that there are dependencies between these functions */
-   layout_init_aux(layout, &params);
-   layout_init_size_and_format(layout, &params);
-   layout_init_walk(layout, &params);
-   layout_init_tiling(layout, &params);
-   layout_init_alignments(layout, &params);
-   layout_init_lods(layout, &params);
-   layout_init_layer_height(layout, &params);
+   img_init_aux(img, &params);
+   img_init_size_and_format(img, &params);
+   img_init_walk(img, &params);
+   img_init_tiling(img, &params);
+   img_init_alignments(img, &params);
+   img_init_lods(img, &params);
+   img_init_layer_height(img, &params);
 
-   layout_align(layout, &params);
-   layout_calculate_bo_size(layout, &params);
+   img_align(img, &params);
+   img_calculate_bo_size(img, &params);
 
-   switch (layout->aux) {
-   case ILO_LAYOUT_AUX_HIZ:
-      layout_calculate_hiz_size(layout, &params);
+   switch (img->aux) {
+   case ILO_IMAGE_AUX_HIZ:
+      img_calculate_hiz_size(img, &params);
       break;
-   case ILO_LAYOUT_AUX_MCS:
-      layout_calculate_mcs_size(layout, &params);
+   case ILO_IMAGE_AUX_MCS:
+      img_calculate_mcs_size(img, &params);
       break;
    default:
       break;
@@ -1391,11 +1392,11 @@ void ilo_layout_init(struct ilo_layout *layout,
  * Update the tiling mode and bo stride (for imported resources).
  */
 bool
-ilo_layout_update_for_imported_bo(struct ilo_layout *layout,
-                                  enum gen_surface_tiling tiling,
-                                  unsigned bo_stride)
+ilo_image_update_for_imported_bo(struct ilo_image *img,
+                                 enum gen_surface_tiling tiling,
+                                 unsigned bo_stride)
 {
-   if (!(layout->valid_tilings & (1 << tiling)))
+   if (!(img->valid_tilings & (1 << tiling)))
       return false;
 
    if ((tiling == GEN6_TILING_X && bo_stride % 512) ||
@@ -1403,8 +1404,8 @@ ilo_layout_update_for_imported_bo(struct ilo_layout *layout,
        (tiling == GEN8_TILING_W && bo_stride % 64))
       return false;
 
-   layout->tiling = tiling;
-   layout->bo_stride = bo_stride;
+   img->tiling = tiling;
+   img->bo_stride = bo_stride;
 
    return true;
 }
