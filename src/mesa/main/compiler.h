@@ -57,9 +57,6 @@ extern "C" {
 # elif !defined(__sparc__) && defined(__sparc)
 #  define __sparc__
 # endif
-# if !defined(__volatile)
-#  define __volatile volatile
-# endif
 #endif
 
 
