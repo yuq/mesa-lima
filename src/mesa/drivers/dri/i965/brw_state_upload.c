@@ -174,7 +174,7 @@ static const struct brw_tracked_state *gen6_atoms[] =
    &brw_vertices,
 };
 
-static const struct brw_tracked_state *gen7_atoms[] =
+static const struct brw_tracked_state *gen7_render_atoms[] =
 {
    /* Command packets: */
 
@@ -246,7 +246,7 @@ static const struct brw_tracked_state *gen7_atoms[] =
    &haswell_cut_index,
 };
 
-static const struct brw_tracked_state *gen8_atoms[] =
+static const struct brw_tracked_state *gen8_render_atoms[] =
 {
    /* Command packets: */
    &gen8_state_base_address,
@@ -352,48 +352,68 @@ brw_upload_initial_gpu_state(struct brw_context *brw)
    }
 }
 
-void brw_init_state( struct brw_context *brw )
+static inline const struct brw_tracked_state *
+brw_get_pipeline_atoms(struct brw_context *brw,
+                       enum brw_pipeline pipeline)
 {
-   struct gl_context *ctx = &brw->ctx;
-   const struct brw_tracked_state **atoms;
-   int num_atoms;
-
-   STATIC_ASSERT(ARRAY_SIZE(gen4_atoms) <= ARRAY_SIZE(brw->atoms));
-   STATIC_ASSERT(ARRAY_SIZE(gen6_atoms) <= ARRAY_SIZE(brw->atoms));
-   STATIC_ASSERT(ARRAY_SIZE(gen7_atoms) <= ARRAY_SIZE(brw->atoms));
-   STATIC_ASSERT(ARRAY_SIZE(gen8_atoms) <= ARRAY_SIZE(brw->atoms));
-
-   brw_init_caches(brw);
-
-   if (brw->gen >= 8) {
-      atoms = gen8_atoms;
-      num_atoms = ARRAY_SIZE(gen8_atoms);
-   } else if (brw->gen == 7) {
-      atoms = gen7_atoms;
-      num_atoms = ARRAY_SIZE(gen7_atoms);
-   } else if (brw->gen == 6) {
-      atoms = gen6_atoms;
-      num_atoms = ARRAY_SIZE(gen6_atoms);
-   } else {
-      atoms = gen4_atoms;
-      num_atoms = ARRAY_SIZE(gen4_atoms);
+   switch (pipeline) {
+   case BRW_RENDER_PIPELINE:
+      return brw->render_atoms;
+   default:
+      STATIC_ASSERT(BRW_NUM_PIPELINES == 1);
+      unreachable("Unsupported pipeline");
+      return NULL;
    }
+}
 
-   brw->num_atoms = num_atoms;
-
+static void
+brw_copy_pipeline_atoms(struct brw_context *brw,
+                        enum brw_pipeline pipeline,
+                        const struct brw_tracked_state **atoms,
+                        int num_atoms)
+{
    /* This is to work around brw_context::atoms being declared const.  We want
     * it to be const, but it needs to be initialized somehow!
     */
    struct brw_tracked_state *context_atoms =
-      (struct brw_tracked_state *) &brw->atoms[0];
+      (struct brw_tracked_state *) brw_get_pipeline_atoms(brw, pipeline);
 
-   for (int i = 0; i < num_atoms; i++)
+   for (int i = 0; i < num_atoms; i++) {
       context_atoms[i] = *atoms[i];
+      assert(context_atoms[i].dirty.mesa | context_atoms[i].dirty.brw);
+      assert(context_atoms[i].emit);
+   }
 
-   while (num_atoms--) {
-      assert((*atoms)->dirty.mesa | (*atoms)->dirty.brw);
-      assert((*atoms)->emit);
-      atoms++;
+   brw->num_atoms[pipeline] = num_atoms;
+}
+
+void brw_init_state( struct brw_context *brw )
+{
+   struct gl_context *ctx = &brw->ctx;
+
+   STATIC_ASSERT(ARRAY_SIZE(gen4_atoms) <= ARRAY_SIZE(brw->render_atoms));
+   STATIC_ASSERT(ARRAY_SIZE(gen6_atoms) <= ARRAY_SIZE(brw->render_atoms));
+   STATIC_ASSERT(ARRAY_SIZE(gen7_render_atoms) <=
+                 ARRAY_SIZE(brw->render_atoms));
+   STATIC_ASSERT(ARRAY_SIZE(gen8_render_atoms) <=
+                 ARRAY_SIZE(brw->render_atoms));
+
+   brw_init_caches(brw);
+
+   if (brw->gen >= 8) {
+      brw_copy_pipeline_atoms(brw, BRW_RENDER_PIPELINE,
+                              gen8_render_atoms,
+                              ARRAY_SIZE(gen8_render_atoms));
+   } else if (brw->gen == 7) {
+      brw_copy_pipeline_atoms(brw, BRW_RENDER_PIPELINE,
+                              gen7_render_atoms,
+                              ARRAY_SIZE(gen7_render_atoms));
+   } else if (brw->gen == 6) {
+      brw_copy_pipeline_atoms(brw, BRW_RENDER_PIPELINE,
+                              gen6_atoms, ARRAY_SIZE(gen6_atoms));
+   } else {
+      brw_copy_pipeline_atoms(brw, BRW_RENDER_PIPELINE,
+                              gen4_atoms, ARRAY_SIZE(gen4_atoms));
    }
 
    brw_upload_initial_gpu_state(brw);
@@ -641,8 +661,8 @@ void brw_upload_render_state(struct brw_context *brw)
       memset(&examined, 0, sizeof(examined));
       prev = *state;
 
-      for (i = 0; i < brw->num_atoms; i++) {
-	 const struct brw_tracked_state *atom = &brw->atoms[i];
+      for (i = 0; i < brw->num_atoms[BRW_RENDER_PIPELINE]; i++) {
+	 const struct brw_tracked_state *atom = &brw->render_atoms[i];
 	 struct brw_state_flags generated;
 
 	 if (check_state(state, &atom->dirty)) {
@@ -661,8 +681,8 @@ void brw_upload_render_state(struct brw_context *brw)
       }
    }
    else {
-      for (i = 0; i < brw->num_atoms; i++) {
-	 const struct brw_tracked_state *atom = &brw->atoms[i];
+      for (i = 0; i < brw->num_atoms[BRW_RENDER_PIPELINE]; i++) {
+	 const struct brw_tracked_state *atom = &brw->render_atoms[i];
 
 	 if (check_state(state, &atom->dirty)) {
 	    atom->emit(brw);

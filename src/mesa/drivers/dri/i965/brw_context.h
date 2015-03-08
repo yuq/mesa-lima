@@ -149,6 +149,12 @@ struct brw_vue_prog_key;
 struct brw_wm_prog_key;
 struct brw_wm_prog_data;
 
+enum brw_pipeline {
+   BRW_RENDER_PIPELINE,
+
+   BRW_NUM_PIPELINES
+};
+
 enum brw_cache_id {
    BRW_CACHE_FS_PROG,
    BRW_CACHE_BLORP_BLIT_PROG,
@@ -1402,8 +1408,8 @@ struct brw_context
       int entries_per_oa_snapshot;
    } perfmon;
 
-   int num_atoms;
-   const struct brw_tracked_state atoms[57];
+   int num_atoms[BRW_NUM_PIPELINES];
+   const struct brw_tracked_state render_atoms[57];
 
    /* If (INTEL_DEBUG & DEBUG_BATCH) */
    struct {
