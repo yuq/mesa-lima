@@ -579,7 +579,7 @@ brw_upload_programs(struct brw_context *brw)
 /***********************************************************************
  * Emit all state:
  */
-void brw_upload_state(struct brw_context *brw)
+void brw_upload_render_state(struct brw_context *brw)
 {
    struct gl_context *ctx = &brw->ctx;
    struct brw_state_flags *state = &brw->state.dirty;
@@ -686,11 +686,11 @@ void brw_upload_state(struct brw_context *brw)
 
 /**
  * Clear dirty bits to account for the fact that the state emitted by
- * brw_upload_state() has been committed to the hardware.  This is a separate
- * call from brw_upload_state() because it's possible that after the call to
- * brw_upload_state(), we will discover that we've run out of aperture space,
- * and need to rewind the batch buffer to the state it had before the
- * brw_upload_state() call.
+ * brw_upload_render_state() has been committed to the hardware. This is a
+ * separate call from brw_upload_render_state() because it's possible that
+ * after the call to brw_upload_render_state(), we will discover that we've
+ * run out of aperture space, and need to rewind the batch buffer to the state
+ * it had before the brw_upload_render_state() call.
  */
 void
 brw_clear_dirty_bits(struct brw_context *brw)

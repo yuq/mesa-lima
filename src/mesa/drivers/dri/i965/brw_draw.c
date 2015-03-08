@@ -430,8 +430,9 @@ static void brw_try_draw_prims( struct gl_context *ctx,
 
    intel_prepare_render(brw);
 
-   /* This workaround has to happen outside of brw_upload_state() because it
-    * may flush the batchbuffer for a blit, affecting the state flags.
+   /* This workaround has to happen outside of brw_upload_render_state()
+    * because it may flush the batchbuffer for a blit, affecting the state
+    * flags.
     */
    brw_workaround_depthstencil_alignment(brw, 0);
 
@@ -508,7 +509,7 @@ retry:
        */
       if (brw->state.dirty.brw) {
 	 brw->no_batch_wrap = true;
-	 brw_upload_state(brw);
+	 brw_upload_render_state(brw);
       }
 
       brw_emit_prim(brw, &prims[i], brw->primitive);
