@@ -363,6 +363,30 @@ emit_system_values_block(nir_block *block, void *void_visitor)
 
       nir_intrinsic_instr *intrin = nir_instr_as_intrinsic(instr);
       switch (intrin->intrinsic) {
+      case nir_intrinsic_load_vertex_id:
+         unreachable("should be lowered by lower_vertex_id().");
+
+      case nir_intrinsic_load_vertex_id_zero_base:
+         assert(v->stage == MESA_SHADER_VERTEX);
+         reg = &v->nir_system_values[SYSTEM_VALUE_VERTEX_ID_ZERO_BASE];
+         if (reg->file == BAD_FILE)
+            *reg = *v->emit_vs_system_value(SYSTEM_VALUE_VERTEX_ID_ZERO_BASE);
+         break;
+
+      case nir_intrinsic_load_base_vertex:
+         assert(v->stage == MESA_SHADER_VERTEX);
+         reg = &v->nir_system_values[SYSTEM_VALUE_BASE_VERTEX];
+         if (reg->file == BAD_FILE)
+            *reg = *v->emit_vs_system_value(SYSTEM_VALUE_BASE_VERTEX);
+         break;
+
+      case nir_intrinsic_load_instance_id:
+         assert(v->stage == MESA_SHADER_VERTEX);
+         reg = &v->nir_system_values[SYSTEM_VALUE_INSTANCE_ID];
+         if (reg->file == BAD_FILE)
+            *reg = *v->emit_vs_system_value(SYSTEM_VALUE_INSTANCE_ID);
+         break;
+
       case nir_intrinsic_load_sample_pos:
          assert(v->stage == MESA_SHADER_FRAGMENT);
          reg = &v->nir_system_values[SYSTEM_VALUE_SAMPLE_POS];
@@ -1343,6 +1367,33 @@ fs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
       emit(MOV(retype(dest, BRW_REGISTER_TYPE_D),
                *emit_frontfacing_interpolation()));
       break;
+
+   case nir_intrinsic_load_vertex_id:
+      unreachable("should be lowered by lower_vertex_id()");
+
+   case nir_intrinsic_load_vertex_id_zero_base: {
+      fs_reg vertex_id = nir_system_values[SYSTEM_VALUE_VERTEX_ID_ZERO_BASE];
+      assert(vertex_id.file != BAD_FILE);
+      dest.type = vertex_id.type;
+      emit(MOV(dest, vertex_id));
+      break;
+   }
+
+   case nir_intrinsic_load_base_vertex: {
+      fs_reg base_vertex = nir_system_values[SYSTEM_VALUE_BASE_VERTEX];
+      assert(base_vertex.file != BAD_FILE);
+      dest.type = base_vertex.type;
+      emit(MOV(dest, base_vertex));
+      break;
+   }
+
+   case nir_intrinsic_load_instance_id: {
+      fs_reg instance_id = nir_system_values[SYSTEM_VALUE_INSTANCE_ID];
+      assert(instance_id.file != BAD_FILE);
+      dest.type = instance_id.type;
+      emit(MOV(dest, instance_id));
+      break;
+   }
 
    case nir_intrinsic_load_sample_mask_in: {
       fs_reg sample_mask_in = nir_system_values[SYSTEM_VALUE_SAMPLE_MASK_IN];
