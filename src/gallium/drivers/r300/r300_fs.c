@@ -170,7 +170,6 @@ static void get_external_state(
         }
 
         state->unit[i].non_normalized_coords = !s->state.normalized_coords;
-        state->unit[i].convert_unorm_to_snorm = 0;
 
         /* Pass texture swizzling to the compiler, some lowering passes need it. */
         if (state->unit[i].compare_mode_enabled) {
