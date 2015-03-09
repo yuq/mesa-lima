@@ -199,11 +199,32 @@ fs_visitor::nir_setup_inputs(nir_shader *shader)
    struct hash_entry *entry;
    hash_table_foreach(shader->inputs, entry) {
       nir_variable *var = (nir_variable *) entry->data;
+      enum brw_reg_type type = brw_type_for_base_type(var->type);
       fs_reg input = offset(nir_inputs, var->data.driver_location);
 
       fs_reg reg;
       switch (stage) {
-      case MESA_SHADER_VERTEX:
+      case MESA_SHADER_VERTEX: {
+         /* Our ATTR file is indexed by VERT_ATTRIB_*, which is the value
+          * stored in nir_variable::location.
+          *
+          * However, NIR's load_input intrinsics use a different index - an
+          * offset into a single contiguous array containing all inputs.
+          * This index corresponds to the nir_variable::driver_location field.
+          *
+          * So, we need to copy from fs_reg(ATTR, var->location) to
+          * offset(nir_inputs, var->data.driver_location).
+          */
+         unsigned components = var->type->without_array()->components();
+         unsigned array_length = var->type->is_array() ? var->type->length : 1;
+         for (unsigned i = 0; i < array_length; i++) {
+            for (unsigned j = 0; j < components; j++) {
+               emit(MOV(retype(offset(input, components * i + j), type),
+                        offset(fs_reg(ATTR, var->data.location + i, type), j)));
+            }
+         }
+         break;
+      }
       case MESA_SHADER_GEOMETRY:
       case MESA_SHADER_COMPUTE:
          unreachable("fs_visitor not used for these stages yet.");
