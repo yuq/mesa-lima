@@ -199,18 +199,27 @@ fs_visitor::nir_setup_inputs(nir_shader *shader)
    struct hash_entry *entry;
    hash_table_foreach(shader->inputs, entry) {
       nir_variable *var = (nir_variable *) entry->data;
-      fs_reg varying = offset(nir_inputs, var->data.driver_location);
+      fs_reg input = offset(nir_inputs, var->data.driver_location);
 
       fs_reg reg;
-      if (var->data.location == VARYING_SLOT_POS) {
-         reg = *emit_fragcoord_interpolation(var->data.pixel_center_integer,
-                                             var->data.origin_upper_left);
-         emit_percomp(MOV(varying, reg), 0xF);
-      } else {
-         emit_general_interpolation(varying, var->name, var->type,
-                                    (glsl_interp_qualifier) var->data.interpolation,
-                                    var->data.location, var->data.centroid,
-                                    var->data.sample);
+      switch (stage) {
+      case MESA_SHADER_VERTEX:
+      case MESA_SHADER_GEOMETRY:
+      case MESA_SHADER_COMPUTE:
+         unreachable("fs_visitor not used for these stages yet.");
+         break;
+      case MESA_SHADER_FRAGMENT:
+         if (var->data.location == VARYING_SLOT_POS) {
+            reg = *emit_fragcoord_interpolation(var->data.pixel_center_integer,
+                                                var->data.origin_upper_left);
+            emit_percomp(MOV(input, reg), 0xF);
+         } else {
+            emit_general_interpolation(input, var->name, var->type,
+                                       (glsl_interp_qualifier) var->data.interpolation,
+                                       var->data.location, var->data.centroid,
+                                       var->data.sample);
+         }
+         break;
       }
    }
 }
