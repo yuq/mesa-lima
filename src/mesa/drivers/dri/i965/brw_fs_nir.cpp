@@ -255,7 +255,17 @@ fs_visitor::nir_setup_outputs(nir_shader *shader)
       nir_variable *var = (nir_variable *) entry->data;
       fs_reg reg = offset(nir_outputs, var->data.driver_location);
 
-      if (var->data.index > 0) {
+      int vector_elements =
+         var->type->is_array() ? var->type->fields.array->vector_elements
+                               : var->type->vector_elements;
+
+      if (stage == MESA_SHADER_VERTEX) {
+         for (int i = 0; i < ALIGN(type_size(var->type), 4) / 4; i++) {
+            int output = var->data.location + i;
+            this->outputs[output] = offset(reg, 4 * i);
+            this->output_components[output] = vector_elements;
+         }
+      } else if (var->data.index > 0) {
          assert(var->data.location == FRAG_RESULT_DATA0);
          assert(var->data.index == 1);
          this->dual_src_output = reg;
@@ -274,10 +284,6 @@ fs_visitor::nir_setup_outputs(nir_shader *shader)
          /* gl_FragData or a user-defined FS output */
          assert(var->data.location >= FRAG_RESULT_DATA0 &&
                 var->data.location < FRAG_RESULT_DATA0 + BRW_MAX_DRAW_BUFFERS);
-
-         int vector_elements =
-            var->type->is_array() ? var->type->fields.array->vector_elements
-                                  : var->type->vector_elements;
 
          /* General color output. */
          for (unsigned int i = 0; i < MAX2(1, var->type->length); i++) {
