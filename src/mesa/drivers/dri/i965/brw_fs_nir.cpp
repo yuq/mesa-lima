@@ -108,9 +108,6 @@ fs_visitor::emit_nir_code()
    nir_lower_io(nir);
    nir_validate_shader(nir);
 
-   nir_lower_locals_to_regs(nir);
-   nir_validate_shader(nir);
-
    nir_remove_dead_variables(nir);
    nir_validate_shader(nir);
 
@@ -124,6 +121,9 @@ fs_visitor::emit_nir_code()
    nir_validate_shader(nir);
 
    nir_optimize(nir);
+
+   nir_lower_locals_to_regs(nir);
+   nir_validate_shader(nir);
 
    nir_lower_to_source_mods(nir);
    nir_validate_shader(nir);
