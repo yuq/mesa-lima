@@ -476,6 +476,19 @@ vec4_gs_visitor::visit(ir_emit_vertex *ir)
 {
    this->current_annotation = "emit vertex: safety check";
 
+   /* Haswell and later hardware ignores the "Render Stream Select" bits
+    * from the 3DSTATE_STREAMOUT packet when the SOL stage is disabled,
+    * and instead sends all primitives down the pipeline for rasterization.
+    * If the SOL stage is enabled, "Render Stream Select" is honored and
+    * primitives bound to non-zero streams are discarded after stream output.
+    *
+    * Since the only purpose of primives sent to non-zero streams is to
+    * be recorded by transform feedback, we can simply discard all geometry
+    * bound to these streams when transform feedback is disabled.
+    */
+   if (ir->stream_id() > 0 && shader_prog->TransformFeedback.NumVarying == 0)
+      return;
+
    /* To ensure that we don't output more vertices than the shader specified
     * using max_vertices, do the logic inside a conditional of the form "if
     * (vertex_count < MAX)"
