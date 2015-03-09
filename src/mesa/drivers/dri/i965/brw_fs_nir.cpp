@@ -1612,7 +1612,6 @@ fs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
 void
 fs_visitor::nir_emit_texture(nir_tex_instr *instr)
 {
-   brw_wm_prog_key *key = (brw_wm_prog_key*) this->key;
    unsigned sampler = instr->sampler_index;
    fs_reg sampler_reg(sampler);
 
@@ -1709,10 +1708,12 @@ fs_visitor::nir_emit_texture(nir_tex_instr *instr)
    }
 
    if (instr->op == nir_texop_txf_ms) {
-      if (brw->gen >= 7 && key->tex.compressed_multisample_layout_mask & (1<<sampler))
+      if (brw->gen >= 7 &&
+          key_tex->compressed_multisample_layout_mask & (1 << sampler)) {
          mcs = emit_mcs_fetch(coordinate, instr->coord_components, sampler_reg);
-      else
+      } else {
          mcs = fs_reg(0u);
+      }
    }
 
    for (unsigned i = 0; i < 3; i++) {

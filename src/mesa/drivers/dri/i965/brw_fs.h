@@ -417,6 +417,8 @@ public:
    void visit_atomic_counter_intrinsic(ir_call *ir);
 
    const void *const key;
+   const struct brw_sampler_prog_key_data *key_tex;
+
    struct brw_stage_prog_data *prog_data;
    unsigned int sanity_param_count;
 

@@ -1860,19 +1860,6 @@ fs_visitor::emit_texture_gen7(ir_texture_opcode op, fs_reg dst,
    return inst;
 }
 
-static struct brw_sampler_prog_key_data *
-get_tex(gl_shader_stage stage, const void *key)
-{
-   switch (stage) {
-   case MESA_SHADER_FRAGMENT:
-      return &((brw_wm_prog_key*) key)->tex;
-   case MESA_SHADER_VERTEX:
-      return &((brw_vue_prog_key*) key)->tex;
-   default:
-      unreachable("unhandled shader stage");
-   }
-}
-
 fs_reg
 fs_visitor::rescale_texcoord(fs_reg coordinate, int coord_components,
                              bool is_rect, uint32_t sampler, int texunit)
@@ -1880,7 +1867,6 @@ fs_visitor::rescale_texcoord(fs_reg coordinate, int coord_components,
    fs_inst *inst = NULL;
    bool needs_gl_clamp = true;
    fs_reg scale_x, scale_y;
-   struct brw_sampler_prog_key_data *tex = get_tex(stage, this->key);
 
    /* The 965 requires the EU to do the normalization of GL rectangle
     * texture coordinates.  We use the program parameter state
@@ -1888,8 +1874,8 @@ fs_visitor::rescale_texcoord(fs_reg coordinate, int coord_components,
     */
    if (is_rect &&
        (brw->gen < 6 ||
-        (brw->gen >= 6 && (tex->gl_clamp_mask[0] & (1 << sampler) ||
-                           tex->gl_clamp_mask[1] & (1 << sampler))))) {
+        (brw->gen >= 6 && (key_tex->gl_clamp_mask[0] & (1 << sampler) ||
+                           key_tex->gl_clamp_mask[1] & (1 << sampler))))) {
       struct gl_program_parameter_list *params = prog->Parameters;
       int tokens[STATE_LENGTH] = {
 	 STATE_INTERNAL,
@@ -1950,7 +1936,7 @@ fs_visitor::rescale_texcoord(fs_reg coordinate, int coord_components,
       needs_gl_clamp = false;
 
       for (int i = 0; i < 2; i++) {
-	 if (tex->gl_clamp_mask[i] & (1 << sampler)) {
+	 if (key_tex->gl_clamp_mask[i] & (1 << sampler)) {
 	    fs_reg chan = coordinate;
 	    chan = offset(chan, i);
 
@@ -1975,7 +1961,7 @@ fs_visitor::rescale_texcoord(fs_reg coordinate, int coord_components,
 
    if (coord_components > 0 && needs_gl_clamp) {
       for (int i = 0; i < MIN2(coord_components, 3); i++) {
-	 if (tex->gl_clamp_mask[i] & (1 << sampler)) {
+	 if (key_tex->gl_clamp_mask[i] & (1 << sampler)) {
 	    fs_reg chan = coordinate;
 	    chan = offset(chan, i);
 
@@ -2033,14 +2019,13 @@ fs_visitor::emit_texture(ir_texture_opcode op,
                          uint32_t sampler,
                          fs_reg sampler_reg, int texunit)
 {
-   struct brw_sampler_prog_key_data *tex = get_tex(stage, this->key);
    fs_inst *inst = NULL;
 
    if (op == ir_tg4) {
       /* When tg4 is used with the degenerate ZERO/ONE swizzles, don't bother
        * emitting anything other than setting up the constant result.
        */
-      int swiz = GET_SWZ(tex->swizzles[sampler], gather_component);
+      int swiz = GET_SWZ(key_tex->swizzles[sampler], gather_component);
       if (swiz == SWIZZLE_ZERO || swiz == SWIZZLE_ONE) {
 
          fs_reg res = vgrf(glsl_type::vec4_type);
@@ -2094,7 +2079,7 @@ fs_visitor::emit_texture(ir_texture_opcode op,
          gather_channel(gather_component, sampler) << 16; /* M0.2:16-17 */
 
       if (brw->gen == 6)
-         emit_gen6_gather_wa(tex->gen6_gather_wa[sampler], dst);
+         emit_gen6_gather_wa(key_tex->gen6_gather_wa[sampler], dst);
    }
 
    /* fixup #layers for cube map arrays */
@@ -2121,7 +2106,6 @@ fs_visitor::emit_texture(ir_texture_opcode op,
 void
 fs_visitor::visit(ir_texture *ir)
 {
-   const struct brw_sampler_prog_key_data *tex = get_tex(stage, this->key);
    uint32_t sampler =
       _mesa_get_sampler_uniform_value(ir->sampler, shader_prog, prog);
 
@@ -2238,11 +2222,13 @@ fs_visitor::visit(ir_texture *ir)
       ir->lod_info.sample_index->accept(this);
       sample_index = this->result;
 
-      if (brw->gen >= 7 && tex->compressed_multisample_layout_mask & (1<<sampler))
+      if (brw->gen >= 7 &&
+          key_tex->compressed_multisample_layout_mask & (1 << sampler)) {
          mcs = emit_mcs_fetch(coordinate, ir->coordinate->type->vector_elements,
                               sampler_reg);
-      else
+      } else {
          mcs = fs_reg(0u);
+      }
       break;
    default:
       unreachable("Unrecognized texture opcode");
@@ -2302,15 +2288,14 @@ fs_visitor::emit_gen6_gather_wa(uint8_t wa, fs_reg dst)
 uint32_t
 fs_visitor::gather_channel(int orig_chan, uint32_t sampler)
 {
-   struct brw_sampler_prog_key_data *tex = get_tex(stage, this->key);
-   int swiz = GET_SWZ(tex->swizzles[sampler], orig_chan);
+   int swiz = GET_SWZ(key_tex->swizzles[sampler], orig_chan);
    switch (swiz) {
       case SWIZZLE_X: return 0;
       case SWIZZLE_Y:
          /* gather4 sampler is broken for green channel on RG32F --
           * we must ask for blue instead.
           */
-         if (tex->gather_channel_quirk_mask & (1<<sampler))
+         if (key_tex->gather_channel_quirk_mask & (1 << sampler))
             return 2;
          return 1;
       case SWIZZLE_Z: return 2;
@@ -2342,16 +2327,14 @@ fs_visitor::swizzle_result(ir_texture_opcode op, int dest_components,
    if (op == ir_txs || op == ir_lod || op == ir_tg4)
       return;
 
-   struct brw_sampler_prog_key_data *tex = get_tex(stage, this->key);
-
    if (dest_components == 1) {
       /* Ignore DEPTH_TEXTURE_MODE swizzling. */
-   } else if (tex->swizzles[sampler] != SWIZZLE_NOOP) {
+   } else if (key_tex->swizzles[sampler] != SWIZZLE_NOOP) {
       fs_reg swizzled_result = vgrf(glsl_type::vec4_type);
       swizzled_result.type = orig_val.type;
 
       for (int i = 0; i < 4; i++) {
-	 int swiz = GET_SWZ(tex->swizzles[sampler], i);
+	 int swiz = GET_SWZ(key_tex->swizzles[sampler], i);
 	 fs_reg l = swizzled_result;
 	 l = offset(l, i);
 
@@ -2361,7 +2344,7 @@ fs_visitor::swizzle_result(ir_texture_opcode op, int dest_components,
 	    emit(MOV(l, fs_reg(1.0f)));
 	 } else {
             emit(MOV(l, offset(orig_val,
-                               GET_SWZ(tex->swizzles[sampler], i))));
+                               GET_SWZ(key_tex->swizzles[sampler], i))));
 	 }
       }
       this->result = swizzled_result;
@@ -4034,6 +4017,18 @@ fs_visitor::fs_visitor(struct brw_context *brw,
 void
 fs_visitor::init()
 {
+   switch (stage) {
+   case MESA_SHADER_FRAGMENT:
+      key_tex = &((const brw_wm_prog_key *) key)->tex;
+      break;
+   case MESA_SHADER_VERTEX:
+   case MESA_SHADER_GEOMETRY:
+      key_tex = &((const brw_vue_prog_key *) key)->tex;
+      break;
+   default:
+      unreachable("unhandled shader stage");
+   }
+
    this->failed = false;
    this->simd16_unsupported = false;
    this->no16_msg = NULL;
