@@ -102,6 +102,9 @@ fs_visitor::emit_nir_code()
    nir_lower_var_copies(nir);
    nir_validate_shader(nir);
 
+   /* Get rid of split copies */
+   nir_optimize(nir);
+
    nir_lower_io(nir);
    nir_validate_shader(nir);
 
