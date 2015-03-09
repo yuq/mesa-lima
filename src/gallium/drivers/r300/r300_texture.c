@@ -176,7 +176,9 @@ uint32_t r300_translate_texformat(enum pipe_format format,
             format != PIPE_FORMAT_RGTC2_UNORM &&
             format != PIPE_FORMAT_RGTC2_SNORM &&
             format != PIPE_FORMAT_LATC2_UNORM &&
-            format != PIPE_FORMAT_LATC2_SNORM) {
+            format != PIPE_FORMAT_LATC2_SNORM &&
+            format != PIPE_FORMAT_RGTC1_UNORM &&
+            format != PIPE_FORMAT_LATC1_UNORM) {
             result |= r300_get_swizzle_combined(desc->swizzle, swizzle_view,
                                                 TRUE);
         } else {
