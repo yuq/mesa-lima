@@ -3840,12 +3840,17 @@ fs_visitor::run_vs()
    if (INTEL_DEBUG & DEBUG_SHADER_TIME)
       emit_shader_time_begin();
 
-   foreach_in_list(ir_instruction, ir, shader->base.ir) {
-      base_ir = ir;
-      this->result = reg_undef;
-      ir->accept(this);
+   if (getenv("INTEL_USE_NIR") != NULL) {
+      emit_nir_code();
+   } else {
+      foreach_in_list(ir_instruction, ir, shader->base.ir) {
+         base_ir = ir;
+         this->result = reg_undef;
+         ir->accept(this);
+      }
+      base_ir = NULL;
    }
-   base_ir = NULL;
+
    if (failed)
       return false;
 
