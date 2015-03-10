@@ -2281,8 +2281,13 @@ fs_visitor::demote_pull_constants()
 	 if (inst->src[i].file != UNIFORM)
 	    continue;
 
-         int pull_index = pull_constant_loc[inst->src[i].reg +
-                                            inst->src[i].reg_offset];
+         int pull_index;
+         unsigned location = inst->src[i].reg + inst->src[i].reg_offset;
+         if (location >= uniforms) /* Out of bounds access */
+            pull_index = -1;
+         else
+            pull_index = pull_constant_loc[location];
+
          if (pull_index == -1)
 	    continue;
 
