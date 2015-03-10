@@ -234,6 +234,16 @@ extern struct gl_program_resource *
 _mesa_program_resource_find_name(struct gl_shader_program *shProg,
                                  GLenum interface, const char *name);
 
+extern struct gl_program_resource *
+_mesa_program_resource_find_index(struct gl_shader_program *shProg,
+                                  GLenum interface, GLuint index);
+
+extern bool
+_mesa_get_program_resource_name(struct gl_shader_program *shProg,
+                                GLenum interface, GLuint index,
+                                GLsizei bufSize, GLsizei *length,
+                                GLchar *name, const char *caller);
+
 #ifdef __cplusplus
 }
 #endif

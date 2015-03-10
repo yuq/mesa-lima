@@ -245,6 +245,29 @@ _mesa_GetProgramResourceName(GLuint program, GLenum programInterface,
                              GLuint index, GLsizei bufSize, GLsizei *length,
                              GLchar *name)
 {
+   GET_CURRENT_CONTEXT(ctx);
+   struct gl_shader_program *shProg =
+      _mesa_lookup_shader_program_err(ctx, program,
+                                      "glGetProgramResourceName");
+
+   /* Set user friendly return values in case of errors. */
+   if (name)
+      *name = '\0';
+   if (length)
+      *length = 0;
+
+   if (!shProg || !name)
+      return;
+
+   if (programInterface == GL_ATOMIC_COUNTER_BUFFER ||
+       !supported_interface_enum(programInterface)) {
+      _mesa_error(ctx, GL_INVALID_ENUM, "glGetProgramResourceName(%s)",
+                  _mesa_lookup_enum_by_nr(programInterface));
+      return;
+   }
+
+   _mesa_get_program_resource_name(shProg, programInterface, index, bufSize,
+                                   length, name, "glGetProgramResourceName");
 }
 
 void GLAPIENTRY

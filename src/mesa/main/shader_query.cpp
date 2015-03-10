@@ -648,3 +648,109 @@ _mesa_program_resource_index(struct gl_shader_program *shProg,
       return calc_resource_index(shProg, res);
    }
 }
+
+/* Find a program resource with specific index in given interface.
+ */
+struct gl_program_resource *
+_mesa_program_resource_find_index(struct gl_shader_program *shProg,
+                                  GLenum interface, GLuint index)
+{
+   struct gl_program_resource *res = shProg->ProgramResourceList;
+   int idx = -1;
+
+   for (unsigned i = 0; i < shProg->NumProgramResourceList; i++, res++) {
+      if (res->Type != interface)
+         continue;
+
+      switch (res->Type) {
+      case GL_UNIFORM_BLOCK:
+      case GL_ATOMIC_COUNTER_BUFFER:
+         if (_mesa_program_resource_index(shProg, res) == index)
+            return res;
+
+      case GL_TRANSFORM_FEEDBACK_VARYING:
+      case GL_PROGRAM_INPUT:
+      case GL_PROGRAM_OUTPUT:
+      case GL_UNIFORM:
+         if (++idx == (int) index)
+            return res;
+         break;
+      default:
+         assert(!"not implemented for given interface");
+      }
+   }
+   return NULL;
+}
+
+/* Get full name of a program resource.
+ */
+bool
+_mesa_get_program_resource_name(struct gl_shader_program *shProg,
+                                GLenum interface, GLuint index,
+                                GLsizei bufSize, GLsizei *length,
+                                GLchar *name, const char *caller)
+{
+   GET_CURRENT_CONTEXT(ctx);
+
+   /* Find resource with given interface and index. */
+   struct gl_program_resource *res =
+      _mesa_program_resource_find_index(shProg, interface, index);
+
+   /* The error INVALID_VALUE is generated if <index> is greater than
+   * or equal to the number of entries in the active resource list for
+   * <programInterface>.
+   */
+   if (!res) {
+      _mesa_error(ctx, GL_INVALID_VALUE, "%s(index %u)", caller, index);
+      return false;
+   }
+
+   if (bufSize < 0) {
+      _mesa_error(ctx, GL_INVALID_VALUE, "%s(bufSize %d)", caller, bufSize);
+      return false;
+   }
+
+   GLsizei localLength;
+
+   if (length == NULL)
+      length = &localLength;
+
+   _mesa_copy_string(name, bufSize, length, _mesa_program_resource_name(res));
+
+   /* Page 61 (page 73 of the PDF) in section 2.11 of the OpenGL ES 3.0
+    * spec says:
+    *
+    *     "If the active uniform is an array, the uniform name returned in
+    *     name will always be the name of the uniform array appended with
+    *     "[0]"."
+    *
+    * The same text also appears in the OpenGL 4.2 spec.  It does not,
+    * however, appear in any previous spec.  Previous specifications are
+    * ambiguous in this regard.  However, either name can later be passed
+    * to glGetUniformLocation (and related APIs), so there shouldn't be any
+    * harm in always appending "[0]" to uniform array names.
+    *
+    * Geometry shader stage has different naming convention where the 'normal'
+    * condition is an array, therefore for variables referenced in geometry
+    * stage we do not add '[0]'.
+    *
+    * Note, that TCS outputs and TES inputs should not have index appended
+    * either.
+    */
+   bool add_index = !(((interface == GL_PROGRAM_INPUT) &&
+                       res->StageReferences & (1 << MESA_SHADER_GEOMETRY)));
+
+   if (add_index && _mesa_program_resource_array_size(res)) {
+      int i;
+
+      /* The comparison is strange because *length does *NOT* include the
+       * terminating NUL, but maxLength does.
+       */
+      for (i = 0; i < 3 && (*length + i + 1) < bufSize; i++)
+         name[*length + i] = "[0]"[i];
+
+      name[*length + i] = '\0';
+      *length += i;
+   }
+   return true;
+}
