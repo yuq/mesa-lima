@@ -303,7 +303,7 @@ i915_disassemble_program(const GLuint * program, GLuint sz)
 
    printf("\t\tBEGIN\n");
 
-   assert(program[0] & 0x1ff + 2 == sz);
+   assert((program[0] & 0x1ff) + 2 == sz);
 
    program++;
    for (i = 1; i < sz; i += 3, program += 3) {
