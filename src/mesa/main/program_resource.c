@@ -150,11 +150,94 @@ _mesa_GetProgramInterfaceiv(GLuint program, GLenum programInterface,
    }
 }
 
+static bool
+is_xfb_marker(const char *str)
+{
+   static const char *markers[] = {
+      "gl_NextBuffer",
+      "gl_SkipComponents1",
+      "gl_SkipComponents2",
+      "gl_SkipComponents3",
+      "gl_SkipComponents4",
+      NULL
+   };
+   const char **m = markers;
+
+   if (strncmp(str, "gl_", 3) != 0)
+      return false;
+
+   for (; *m; m++)
+      if (strcmp(*m, str) == 0)
+         return true;
+
+   return false;
+}
+
+/**
+ * Checks if given name index is legal for GetProgramResourceIndex,
+ * check is written to be compatible with GL_ARB_array_of_arrays.
+ */
+static bool
+valid_program_resource_index_name(const GLchar *name)
+{
+   const char *array = strstr(name, "[");
+   const char *close = strrchr(name, ']');
+
+   /* Not array, no need for the check. */
+   if (!array)
+      return true;
+
+   /* Last array index has to be zero. */
+   if (!close || *--close != '0')
+      return false;
+
+   return true;
+}
+
 GLuint GLAPIENTRY
 _mesa_GetProgramResourceIndex(GLuint program, GLenum programInterface,
                               const GLchar *name)
 {
-   return 0;
+   GET_CURRENT_CONTEXT(ctx);
+   struct gl_program_resource *res;
+   struct gl_shader_program *shProg =
+      _mesa_lookup_shader_program_err(ctx, program,
+                                      "glGetProgramResourceIndex");
+   if (!shProg || !name)
+      return GL_INVALID_INDEX;
+
+   /*
+    * For the interface TRANSFORM_FEEDBACK_VARYING, the value INVALID_INDEX
+    * should be returned when querying the index assigned to the special names
+    * "gl_NextBuffer", "gl_SkipComponents1", "gl_SkipComponents2",
+    * "gl_SkipComponents3", and "gl_SkipComponents4".
+    */
+   if (programInterface == GL_TRANSFORM_FEEDBACK_VARYING &&
+       is_xfb_marker(name))
+      return GL_INVALID_INDEX;
+
+   switch (programInterface) {
+   case GL_PROGRAM_INPUT:
+   case GL_PROGRAM_OUTPUT:
+   case GL_UNIFORM:
+   case GL_UNIFORM_BLOCK:
+   case GL_TRANSFORM_FEEDBACK_VARYING:
+      /* Validate name syntax for arrays. */
+      if (!valid_program_resource_index_name(name))
+         return GL_INVALID_INDEX;
+
+      res = _mesa_program_resource_find_name(shProg, programInterface, name);
+      if (!res)
+         return GL_INVALID_INDEX;
+
+      return _mesa_program_resource_index(shProg, res);
+   case GL_ATOMIC_COUNTER_BUFFER:
+   default:
+      _mesa_error(ctx, GL_INVALID_ENUM, "glGetProgramResourceIndex(%s)",
+                  _mesa_lookup_enum_by_nr(programInterface));
+   }
+
+   return GL_INVALID_INDEX;
 }
 
 void GLAPIENTRY

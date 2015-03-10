@@ -557,3 +557,94 @@ _mesa_program_resource_array_size(struct gl_program_resource *res)
    }
    return 0;
 }
+
+static int
+array_index_of_resource(struct gl_program_resource *res,
+                        const char *name)
+{
+   assert(res->Data);
+
+   switch (res->Type) {
+   case GL_PROGRAM_INPUT:
+   case GL_PROGRAM_OUTPUT:
+      return get_matching_index(RESOURCE_VAR(res), name);
+   default:
+      assert(!"support for resource type not implemented");
+   }
+}
+
+/* Find a program resource with specific name in given interface.
+ */
+struct gl_program_resource *
+_mesa_program_resource_find_name(struct gl_shader_program *shProg,
+                                 GLenum interface, const char *name)
+{
+   struct gl_program_resource *res = shProg->ProgramResourceList;
+   for (unsigned i = 0; i < shProg->NumProgramResourceList; i++, res++) {
+      if (res->Type != interface)
+         continue;
+
+      /* Resource basename. */
+      const char *rname = _mesa_program_resource_name(res);
+      unsigned baselen = strlen(rname);
+
+      switch (interface) {
+      case GL_TRANSFORM_FEEDBACK_VARYING:
+      case GL_UNIFORM_BLOCK:
+      case GL_UNIFORM:
+         if (strncmp(rname, name, baselen) == 0) {
+            /* Basename match, check if array or struct. */
+            if (name[baselen] == '\0' ||
+                name[baselen] == '[' ||
+                name[baselen] == '.') {
+               return res;
+            }
+         }
+         break;
+      case GL_PROGRAM_INPUT:
+      case GL_PROGRAM_OUTPUT:
+         if (array_index_of_resource(res, name) >= 0)
+            return res;
+         break;
+      default:
+         assert(!"not implemented for given interface");
+      }
+   }
+   return NULL;
+}
+
+static GLuint
+calc_resource_index(struct gl_shader_program *shProg,
+                    struct gl_program_resource *res)
+{
+   unsigned i;
+   GLuint index = 0;
+   for (i = 0; i < shProg->NumProgramResourceList; i++) {
+      if (&shProg->ProgramResourceList[i] == res)
+         return index;
+      if (shProg->ProgramResourceList[i].Type == res->Type)
+         index++;
+   }
+   return GL_INVALID_INDEX;
+}
+
+/**
+ * Calculate index for the given resource.
+ */
+GLuint
+_mesa_program_resource_index(struct gl_shader_program *shProg,
+                             struct gl_program_resource *res)
+{
+   if (!res)
+      return GL_INVALID_INDEX;
+
+   switch (res->Type) {
+   case GL_UNIFORM_BLOCK:
+      return RESOURCE_UBO(res)- shProg->UniformBlocks;
+   case GL_ATOMIC_COUNTER_BUFFER:
+      return RESOURCE_ATC(res) - shProg->AtomicBuffers;
+   case GL_TRANSFORM_FEEDBACK_VARYING:
+   default:
+      return calc_resource_index(shProg, res);
+   }
+}

@@ -226,6 +226,14 @@ _mesa_program_resource_name(struct gl_program_resource *res);
 extern unsigned
 _mesa_program_resource_array_size(struct gl_program_resource *res);
 
+extern GLuint
+_mesa_program_resource_index(struct gl_shader_program *shProg,
+                             struct gl_program_resource *res);
+
+extern struct gl_program_resource *
+_mesa_program_resource_find_name(struct gl_shader_program *shProg,
+                                 GLenum interface, const char *name);
+
 #ifdef __cplusplus
 }
 #endif
