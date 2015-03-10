@@ -293,7 +293,8 @@ fs_visitor::try_copy_propagate(fs_inst *inst, int arg, acp_entry *entry)
 
    if (entry->src.file == IMM)
       return false;
-   assert(entry->src.file == GRF || entry->src.file == UNIFORM);
+   assert(entry->src.file == GRF || entry->src.file == UNIFORM ||
+          entry->src.file == ATTR);
 
    if (entry->opcode == SHADER_OPCODE_LOAD_PAYLOAD &&
        inst->opcode == SHADER_OPCODE_LOAD_PAYLOAD)
@@ -394,6 +395,7 @@ fs_visitor::try_copy_propagate(fs_inst *inst, int arg, acp_entry *entry)
       inst->src[arg].reg_offset = entry->src.reg_offset;
       inst->src[arg].subreg_offset = entry->src.subreg_offset;
       break;
+   case ATTR:
    case GRF:
       {
          assert(entry->src.width % inst->src[arg].width == 0);
@@ -634,6 +636,7 @@ can_propagate_from(fs_inst *inst)
            ((inst->src[0].file == GRF &&
              (inst->src[0].reg != inst->dst.reg ||
               inst->src[0].reg_offset != inst->dst.reg_offset)) ||
+            inst->src[0].file == ATTR ||
             inst->src[0].file == UNIFORM ||
             inst->src[0].file == IMM) &&
            inst->src[0].type == inst->dst.type &&
