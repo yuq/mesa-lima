@@ -839,3 +839,269 @@ _mesa_program_resource_location_index(struct gl_shader_program *shProg,
 
    return RESOURCE_VAR(res)->data.index;
 }
+
+static uint8_t
+stage_from_enum(GLenum ref)
+{
+   switch (ref) {
+   case GL_REFERENCED_BY_VERTEX_SHADER:
+      return MESA_SHADER_VERTEX;
+   case GL_REFERENCED_BY_GEOMETRY_SHADER:
+      return MESA_SHADER_GEOMETRY;
+   case GL_REFERENCED_BY_FRAGMENT_SHADER:
+      return MESA_SHADER_FRAGMENT;
+   default:
+      assert(!"shader stage not supported");
+      return MESA_SHADER_STAGES;
+   }
+}
+
+/**
+ * Check if resource is referenced by given 'referenced by' stage enum.
+ * ATC and UBO resources hold stage references of their own.
+ */
+static bool
+is_resource_referenced(struct gl_shader_program *shProg,
+                       struct gl_program_resource *res,
+                       GLuint index, uint8_t stage)
+{
+   if (res->Type == GL_ATOMIC_COUNTER_BUFFER)
+      return RESOURCE_ATC(res)->StageReferences[stage];
+
+   if (res->Type == GL_UNIFORM_BLOCK)
+      return shProg->UniformBlockStageIndex[stage][index] != -1;
+
+   return res->StageReferences & (1 << stage);
+}
+
+static unsigned
+get_buffer_property(struct gl_shader_program *shProg,
+                    struct gl_program_resource *res, const GLenum prop,
+                    GLint *val, const char *caller)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   if (res->Type != GL_UNIFORM_BLOCK &&
+       res->Type != GL_ATOMIC_COUNTER_BUFFER)
+      goto invalid_operation;
+
+   if (res->Type == GL_UNIFORM_BLOCK) {
+      switch (prop) {
+      case GL_BUFFER_BINDING:
+         *val = RESOURCE_UBO(res)->Binding;
+         return 1;
+      case GL_BUFFER_DATA_SIZE:
+         *val = RESOURCE_UBO(res)->UniformBufferSize;
+         return 1;
+      case GL_NUM_ACTIVE_VARIABLES:
+         *val = RESOURCE_UBO(res)->NumUniforms;
+         return 1;
+      case GL_ACTIVE_VARIABLES:
+         for (unsigned i = 0; i < RESOURCE_UBO(res)->NumUniforms; i++) {
+            const char *iname = RESOURCE_UBO(res)->Uniforms[i].IndexName;
+            struct gl_program_resource *uni =
+               _mesa_program_resource_find_name(shProg, GL_UNIFORM, iname);
+            *val++ =
+               _mesa_program_resource_index(shProg, uni);
+         }
+         return RESOURCE_UBO(res)->NumUniforms;
+      }
+   } else if (res->Type == GL_ATOMIC_COUNTER_BUFFER) {
+      switch (prop) {
+      case GL_BUFFER_BINDING:
+         *val = RESOURCE_ATC(res)->Binding;
+         return 1;
+      case GL_BUFFER_DATA_SIZE:
+         *val = RESOURCE_ATC(res)->MinimumSize;
+         return 1;
+      case GL_NUM_ACTIVE_VARIABLES:
+         *val = RESOURCE_ATC(res)->NumUniforms;
+         return 1;
+      case GL_ACTIVE_VARIABLES:
+         for (unsigned i = 0; i < RESOURCE_ATC(res)->NumUniforms; i++)
+            *val++ = RESOURCE_ATC(res)->Uniforms[i];
+         return RESOURCE_ATC(res)->NumUniforms;
+      }
+   }
+   assert(!"support for property type not implemented");
+
+invalid_operation:
+   _mesa_error(ctx, GL_INVALID_OPERATION, "%s(%s prop %s)", caller,
+               _mesa_lookup_enum_by_nr(res->Type),
+               _mesa_lookup_enum_by_nr(prop));
+
+   return 0;
+}
+
+unsigned
+_mesa_program_resource_prop(struct gl_shader_program *shProg,
+                            struct gl_program_resource *res, GLuint index,
+                            const GLenum prop, GLint *val, const char *caller)
+{
+   GET_CURRENT_CONTEXT(ctx);
+
+#define VALIDATE_TYPE(type)\
+   if (res->Type != type)\
+      goto invalid_operation;
+
+   switch(prop) {
+   case GL_NAME_LENGTH:
+      if (res->Type == GL_ATOMIC_COUNTER_BUFFER)
+         goto invalid_operation;
+      /* Base name +3 if array '[0]' + terminator. */
+      *val = strlen(_mesa_program_resource_name(res)) +
+         (_mesa_program_resource_array_size(res) > 0 ? 3 : 0) + 1;
+      return 1;
+   case GL_TYPE:
+      switch (res->Type) {
+      case GL_UNIFORM:
+         *val = RESOURCE_UNI(res)->type->gl_type;
+         return 1;
+      case GL_PROGRAM_INPUT:
+      case GL_PROGRAM_OUTPUT:
+         *val = RESOURCE_VAR(res)->type->gl_type;
+         return 1;
+      case GL_TRANSFORM_FEEDBACK_VARYING:
+         *val = RESOURCE_XFB(res)->Type;
+         return 1;
+      default:
+         goto invalid_operation;
+      }
+   case GL_ARRAY_SIZE:
+      switch (res->Type) {
+      case GL_UNIFORM:
+            *val = MAX2(RESOURCE_UNI(res)->array_elements, 1);
+            return 1;
+      case GL_PROGRAM_INPUT:
+      case GL_PROGRAM_OUTPUT:
+         *val = MAX2(RESOURCE_VAR(res)->type->length, 1);
+         return 1;
+      case GL_TRANSFORM_FEEDBACK_VARYING:
+         *val = MAX2(RESOURCE_XFB(res)->Size, 1);
+         return 1;
+      default:
+         goto invalid_operation;
+      }
+   case GL_OFFSET:
+      VALIDATE_TYPE(GL_UNIFORM);
+      *val = RESOURCE_UNI(res)->offset;
+      return 1;
+   case GL_BLOCK_INDEX:
+      VALIDATE_TYPE(GL_UNIFORM);
+      *val = RESOURCE_UNI(res)->block_index;
+      return 1;
+   case GL_ARRAY_STRIDE:
+      VALIDATE_TYPE(GL_UNIFORM);
+      *val = RESOURCE_UNI(res)->array_stride;
+      return 1;
+   case GL_MATRIX_STRIDE:
+      VALIDATE_TYPE(GL_UNIFORM);
+      *val = RESOURCE_UNI(res)->matrix_stride;
+      return 1;
+   case GL_IS_ROW_MAJOR:
+      VALIDATE_TYPE(GL_UNIFORM);
+      *val = RESOURCE_UNI(res)->row_major;
+      return 1;
+   case GL_ATOMIC_COUNTER_BUFFER_INDEX:
+      VALIDATE_TYPE(GL_UNIFORM);
+      *val = RESOURCE_UNI(res)->atomic_buffer_index;
+      return 1;
+   case GL_BUFFER_BINDING:
+   case GL_BUFFER_DATA_SIZE:
+   case GL_NUM_ACTIVE_VARIABLES:
+   case GL_ACTIVE_VARIABLES:
+      return get_buffer_property(shProg, res, prop, val, caller);
+   case GL_REFERENCED_BY_VERTEX_SHADER:
+   case GL_REFERENCED_BY_GEOMETRY_SHADER:
+   case GL_REFERENCED_BY_FRAGMENT_SHADER:
+      switch (res->Type) {
+      case GL_UNIFORM:
+      case GL_PROGRAM_INPUT:
+      case GL_PROGRAM_OUTPUT:
+      case GL_UNIFORM_BLOCK:
+      case GL_ATOMIC_COUNTER_BUFFER:
+         *val = is_resource_referenced(shProg, res, index,
+                                       stage_from_enum(prop));
+         return 1;
+      default:
+         goto invalid_operation;
+      }
+   case GL_LOCATION:
+      switch (res->Type) {
+      case GL_UNIFORM:
+      case GL_PROGRAM_INPUT:
+      case GL_PROGRAM_OUTPUT:
+         *val = program_resource_location(shProg, res,
+                                          _mesa_program_resource_name(res));
+         return 1;
+      default:
+         goto invalid_operation;
+      }
+   case GL_LOCATION_INDEX:
+      if (res->Type != GL_PROGRAM_OUTPUT)
+         goto invalid_operation;
+      *val = RESOURCE_VAR(res)->data.index;
+      return 1;
+
+   /* GL_ARB_tessellation_shader */
+   case GL_IS_PER_PATCH:
+   case GL_REFERENCED_BY_TESS_CONTROL_SHADER:
+   case GL_REFERENCED_BY_TESS_EVALUATION_SHADER:
+   /* GL_ARB_compute_shader */
+   case GL_REFERENCED_BY_COMPUTE_SHADER:
+   default:
+      _mesa_error(ctx, GL_INVALID_ENUM, "%s(%s prop %s)", caller,
+                  _mesa_lookup_enum_by_nr(res->Type),
+                  _mesa_lookup_enum_by_nr(prop));
+      return 0;
+   }
+
+#undef VALIDATE_TYPE
+
+invalid_operation:
+   _mesa_error(ctx, GL_INVALID_OPERATION, "%s(%s prop %s)", caller,
+               _mesa_lookup_enum_by_nr(res->Type),
+               _mesa_lookup_enum_by_nr(prop));
+   return 0;
+}
+
+extern void
+_mesa_get_program_resourceiv(struct gl_shader_program *shProg,
+                             GLenum interface, GLuint index, GLsizei propCount,
+                             const GLenum *props, GLsizei bufSize,
+                             GLsizei *length, GLint *params)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   GLint *val = (GLint *) params;
+   const GLenum *prop = props;
+   GLsizei amount = 0;
+
+   struct gl_program_resource *res =
+      _mesa_program_resource_find_index(shProg, interface, index);
+
+   /* No such resource found or bufSize negative. */
+   if (!res || bufSize < 0) {
+      _mesa_error(ctx, GL_INVALID_VALUE,
+                  "glGetProgramResourceiv(%s index %d bufSize %d)",
+                  _mesa_lookup_enum_by_nr(interface), index, bufSize);
+      return;
+   }
+
+   /* Write propCount values until error occurs or bufSize reached. */
+   for (int i = 0; i < propCount && i < bufSize; i++, val++, prop++) {
+      int props_written =
+         _mesa_program_resource_prop(shProg, res, index, *prop, val,
+                                     "glGetProgramResourceiv");
+      if (props_written) {
+         amount += props_written;
+      } else {
+         /* Error happened. */
+         return;
+      }
+   }
+
+   /* If <length> is not NULL, the actual number of integer values
+    * written to <params> will be written to <length>.
+    */
+   if (length)
+      *length = amount;
+}

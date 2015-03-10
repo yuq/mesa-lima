@@ -252,6 +252,18 @@ extern GLint
 _mesa_program_resource_location_index(struct gl_shader_program *shProg,
                                       GLenum interface, const char *name);
 
+extern unsigned
+_mesa_program_resource_prop(struct gl_shader_program *shProg,
+                            struct gl_program_resource *res, GLuint index,
+                            const GLenum prop, GLint *val, const char *caller);
+
+extern void
+_mesa_get_program_resourceiv(struct gl_shader_program *shProg,
+                             GLenum interface, GLuint index,
+                             GLsizei propCount, const GLenum *props,
+                             GLsizei bufSize, GLsizei *length,
+                             GLint *params);
+
 #ifdef __cplusplus
 }
 #endif

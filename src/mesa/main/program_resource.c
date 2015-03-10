@@ -276,6 +276,28 @@ _mesa_GetProgramResourceiv(GLuint program, GLenum programInterface,
                            const GLenum *props, GLsizei bufSize,
                            GLsizei *length, GLint *params)
 {
+   GET_CURRENT_CONTEXT(ctx);
+   struct gl_shader_program *shProg =
+      _mesa_lookup_shader_program_err(ctx, program, "glGetProgramResourceiv");
+
+   if (!shProg || !params)
+      return;
+
+   /* The error INVALID_VALUE is generated if <propCount> is zero.
+    * Note that we check < 0 here because it makes sense to bail early.
+    */
+   if (propCount <= 0) {
+      _mesa_error(ctx, GL_INVALID_VALUE,
+                  "glGetProgramResourceiv(propCount <= 0)");
+      return;
+   }
+
+   /* No need to write any properties, user requested none. */
+   if (bufSize == 0)
+      return;
+
+   _mesa_get_program_resourceiv(shProg, programInterface, index,
+                                propCount, props, bufSize, length, params);
 }
 
 /**
