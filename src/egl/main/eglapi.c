@@ -102,6 +102,7 @@
 #include "eglmode.h"
 #include "eglimage.h"
 #include "eglsync.h"
+#include "eglstring.h"
 
 
 /**
@@ -343,6 +344,111 @@ eglGetPlatformDisplayEXT(EGLenum platform, void *native_display,
 }
 
 /**
+ * Copy the extension into the string and update the string pointer.
+ */
+static EGLint
+_eglAppendExtension(char **str, const char *ext)
+{
+   char *s = *str;
+   size_t len = strlen(ext);
+
+   if (s) {
+      memcpy(s, ext, len);
+      s[len++] = ' ';
+      s[len] = '\0';
+
+      *str += len;
+   }
+   else {
+      len++;
+   }
+
+   return (EGLint) len;
+}
+
+/**
+ * Examine the individual extension enable/disable flags and recompute
+ * the driver's Extensions string.
+ */
+static void
+_eglCreateExtensionsString(_EGLDisplay *dpy)
+{
+#define _EGL_CHECK_EXTENSION(ext)                                          \
+   do {                                                                    \
+      if (dpy->Extensions.ext) {                                           \
+         _eglAppendExtension(&exts, "EGL_" #ext);                          \
+         assert(exts <= dpy->ExtensionsString + _EGL_MAX_EXTENSIONS_LEN);  \
+      }                                                                    \
+   } while (0)
+
+   char *exts = dpy->ExtensionsString;
+
+   _EGL_CHECK_EXTENSION(MESA_screen_surface);
+   _EGL_CHECK_EXTENSION(MESA_copy_context);
+   _EGL_CHECK_EXTENSION(MESA_drm_display);
+   _EGL_CHECK_EXTENSION(MESA_drm_image);
+   _EGL_CHECK_EXTENSION(MESA_configless_context);
+
+   _EGL_CHECK_EXTENSION(WL_bind_wayland_display);
+   _EGL_CHECK_EXTENSION(WL_create_wayland_buffer_from_image);
+
+   _EGL_CHECK_EXTENSION(KHR_image_base);
+   _EGL_CHECK_EXTENSION(KHR_image_pixmap);
+   if (dpy->Extensions.KHR_image_base && dpy->Extensions.KHR_image_pixmap)
+      _eglAppendExtension(&exts, "EGL_KHR_image");
+
+   _EGL_CHECK_EXTENSION(KHR_vg_parent_image);
+   _EGL_CHECK_EXTENSION(KHR_get_all_proc_addresses);
+   _EGL_CHECK_EXTENSION(KHR_gl_texture_2D_image);
+   _EGL_CHECK_EXTENSION(KHR_gl_texture_cubemap_image);
+   _EGL_CHECK_EXTENSION(KHR_gl_texture_3D_image);
+   _EGL_CHECK_EXTENSION(KHR_gl_renderbuffer_image);
+
+   _EGL_CHECK_EXTENSION(KHR_reusable_sync);
+   _EGL_CHECK_EXTENSION(KHR_fence_sync);
+
+   _EGL_CHECK_EXTENSION(KHR_surfaceless_context);
+   _EGL_CHECK_EXTENSION(KHR_create_context);
+
+   _EGL_CHECK_EXTENSION(NOK_swap_region);
+   _EGL_CHECK_EXTENSION(NOK_texture_from_pixmap);
+
+   _EGL_CHECK_EXTENSION(ANDROID_image_native_buffer);
+
+   _EGL_CHECK_EXTENSION(CHROMIUM_sync_control);
+
+   _EGL_CHECK_EXTENSION(EXT_create_context_robustness);
+   _EGL_CHECK_EXTENSION(EXT_buffer_age);
+   _EGL_CHECK_EXTENSION(EXT_swap_buffers_with_damage);
+   _EGL_CHECK_EXTENSION(EXT_image_dma_buf_import);
+
+   _EGL_CHECK_EXTENSION(NV_post_sub_buffer);
+#undef _EGL_CHECK_EXTENSION
+}
+
+static void
+_eglCreateAPIsString(_EGLDisplay *dpy)
+{
+   if (dpy->ClientAPIs & EGL_OPENGL_BIT)
+      strcat(dpy->ClientAPIsString, "OpenGL ");
+
+   if (dpy->ClientAPIs & EGL_OPENGL_ES_BIT)
+      strcat(dpy->ClientAPIsString, "OpenGL_ES ");
+
+   if (dpy->ClientAPIs & EGL_OPENGL_ES2_BIT)
+      strcat(dpy->ClientAPIsString, "OpenGL_ES2 ");
+
+   if (dpy->ClientAPIs & EGL_OPENGL_ES3_BIT_KHR)
+      strcat(dpy->ClientAPIsString, "OpenGL_ES3 ");
+
+   if (dpy->ClientAPIs & EGL_OPENVG_BIT)
+      strcat(dpy->ClientAPIsString, "OpenVG ");
+
+   assert(strlen(dpy->ClientAPIsString) < sizeof(dpy->ClientAPIsString));
+}
+
+
+/**
  * This is typically the second EGL function that an application calls.
  * Here we load/initialize the actual hardware driver.
  */
@@ -377,6 +483,12 @@ eglInitialize(EGLDisplay dpy, EGLint *major, EGLint *minor)
        * EGL_KHR_get_all_proc_addresses also.
        */
       disp->Extensions.KHR_get_all_proc_addresses = EGL_TRUE;
+
+      _eglCreateExtensionsString(disp);
+      _eglCreateAPIsString(disp);
+      _eglsnprintf(disp->VersionString, sizeof(disp->VersionString),
+              "%d.%d (%s)", disp->VersionMajor, disp->VersionMinor,
+              disp->Driver->Name);
    }
 
    /* Update applications version of major and minor if not NULL */
