@@ -38,8 +38,6 @@ struct ir3;
 struct ir3_instruction;
 struct ir3_block;
 
-struct ir3 * fd_asm_parse(const char *src);
-
 struct ir3_info {
 	uint16_t sizedwords;
 	uint16_t instrs_count;   /* expanded to account for rpt's */
@@ -313,8 +311,16 @@ struct ir3_heap_chunk;
 struct ir3 {
 	unsigned instrs_count, instrs_sz;
 	struct ir3_instruction **instrs;
+
+	/* Track bary.f (and ldlv) instructions.. this is needed in
+	 * scheduling to ensure that all varying fetches happen before
+	 * any potential kill instructions.  The hw gets grumpy if all
+	 * threads in a group are killed before the last bary.f gets
+	 * a chance to signal end of input (ei).
+	 */
 	unsigned baryfs_count, baryfs_sz;
 	struct ir3_instruction **baryfs;
+
 	struct ir3_block *block;
 	unsigned heap_idx;
 	struct ir3_heap_chunk *chunk;
@@ -503,6 +509,13 @@ static inline bool reg_gpr(struct ir3_register *r)
 	return true;
 }
 
+#define array_insert(arr, val) do { \
+		if (arr ## _count == arr ## _sz) { \
+			arr ## _sz = MAX2(2 * arr ## _sz, 16); \
+			arr = realloc(arr, arr ## _sz * sizeof(arr[0])); \
+		} \
+		arr[arr ##_count++] = val; \
+	} while (0)
 
 /* iterator for an instructions's sources (reg), also returns src #: */
 #define foreach_src_n(__srcreg, __n, __instr) \

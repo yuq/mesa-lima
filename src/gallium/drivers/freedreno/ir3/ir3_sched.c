@@ -199,7 +199,8 @@ static unsigned delay_calc(struct ir3_sched_ctx *ctx,
 }
 
 /* A negative return value signals that an instruction has been newly
- * scheduled, return back up to the top of the stack (to block_sched())
+ * SCHEDULED (or DELAYED due to address or predicate register already
+ * in use), return back up to the top of the stack (to block_sched())
  */
 static int trysched(struct ir3_sched_ctx *ctx,
 		struct ir3_instruction *instr)
@@ -252,9 +253,10 @@ static int trysched(struct ir3_sched_ctx *ctx,
 		unsigned i;
 
 		for (i = 0; i < ir->baryfs_count; i++) {
-			if (ir->baryfs[i]->depth == DEPTH_UNUSED)
+			struct ir3_instruction *baryf = ir->baryfs[i];
+			if (baryf->depth == DEPTH_UNUSED)
 				continue;
-			delay = trysched(ctx, ir->baryfs[i]);
+			delay = trysched(ctx, baryf);
 			if (delay)
 				return delay;
 		}

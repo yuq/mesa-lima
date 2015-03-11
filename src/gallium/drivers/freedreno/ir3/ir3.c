@@ -588,21 +588,10 @@ static void insert_instr(struct ir3 *shader,
 	static uint32_t serialno = 0;
 	instr->serialno = ++serialno;
 #endif
-	if (shader->instrs_count == shader->instrs_sz) {
-		shader->instrs_sz = MAX2(2 * shader->instrs_sz, 16);
-		shader->instrs = realloc(shader->instrs,
-				shader->instrs_sz * sizeof(shader->instrs[0]));
-	}
-	shader->instrs[shader->instrs_count++] = instr;
+	array_insert(shader->instrs, instr);
 
-	if (is_input(instr)) {
-		if (shader->baryfs_count == shader->baryfs_sz) {
-			shader->baryfs_sz = MAX2(2 * shader->baryfs_sz, 16);
-			shader->baryfs = realloc(shader->baryfs,
-					shader->baryfs_sz * sizeof(shader->baryfs[0]));
-		}
-		shader->baryfs[shader->baryfs_count++] = instr;
-	}
+	if (is_input(instr))
+		array_insert(shader->baryfs, instr);
 }
 
 struct ir3_block * ir3_block_create(struct ir3 *shader,
