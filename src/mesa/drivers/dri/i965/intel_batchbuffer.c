@@ -33,6 +33,9 @@
 #include "intel_fbo.h"
 #include "brw_context.h"
 
+#include <xf86drm.h>
+#include <i915_drm.h>
+
 static void
 intel_batchbuffer_reset(struct brw_context *brw);
 
@@ -226,6 +229,44 @@ brw_finish_batch(struct brw_context *brw)
    brw->cache.bo_used_by_gpu = true;
 }
 
+static void
+throttle(struct brw_context *brw)
+{
+   /* Wait for the swapbuffers before the one we just emitted, so we
+    * don't get too many swaps outstanding for apps that are GPU-heavy
+    * but not CPU-heavy.
+    *
+    * We're using intelDRI2Flush (called from the loader before
+    * swapbuffer) and glFlush (for front buffer rendering) as the
+    * indicator that a frame is done and then throttle when we get
+    * here as we prepare to render the next frame.  At this point for
+    * round trips for swap/copy and getting new buffers are done and
+    * we'll spend less time waiting on the GPU.
+    *
+    * Unfortunately, we don't have a handle to the batch containing
+    * the swap, and getting our hands on that doesn't seem worth it,
+    * so we just use the first batch we emitted after the last swap.
+    */
+   if (brw->need_swap_throttle && brw->throttle_batch[0]) {
+      if (brw->throttle_batch[1]) {
+         if (!brw->disable_throttling)
+            drm_intel_bo_wait_rendering(brw->throttle_batch[1]);
+         drm_intel_bo_unreference(brw->throttle_batch[1]);
+      }
+      brw->throttle_batch[1] = brw->throttle_batch[0];
+      brw->throttle_batch[0] = NULL;
+      brw->need_swap_throttle = false;
+      /* Throttling here is more precise than the throttle ioctl, so skip it */
+      brw->need_flush_throttle = false;
+   }
+
+   if (brw->need_flush_throttle) {
+      __DRIscreen *psp = brw->intelScreen->driScrnPriv;
+      drmCommandNone(psp->fd, DRM_I915_GEM_THROTTLE);
+      brw->need_flush_throttle = false;
+   }
+}
+
 /* TODO: Push this whole function into bufmgr.
  */
 static int
@@ -260,6 +301,7 @@ do_flush_locked(struct brw_context *brw)
       if (ret == 0) {
          if (unlikely(INTEL_DEBUG & DEBUG_AUB))
             brw_annotate_aub(brw);
+
 	 if (brw->hw_ctx == NULL || batch->ring != RENDER_RING) {
 	    ret = drm_intel_bo_mrb_exec(batch->bo, 4 * batch->used, NULL, 0, 0,
 					flags);
@@ -268,6 +310,8 @@ do_flush_locked(struct brw_context *brw)
 						4 * batch->used, flags);
 	 }
       }
+
+      throttle(brw);
    }
 
    if (unlikely(INTEL_DEBUG & DEBUG_BATCH))
