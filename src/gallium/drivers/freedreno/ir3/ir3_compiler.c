@@ -771,6 +771,7 @@ add_dst_reg_wrmask(struct ir3_compile_context *ctx,
 			compile_assert(ctx, ctx->block->address == instr->address);
 
 		instr->address = ctx->block->address;
+		array_insert(ctx->ir->indirects, instr);
 	}
 
 	reg = ir3_reg_create(instr, regid(num, chan), flags);
@@ -901,6 +902,7 @@ add_src_reg_wrmask(struct ir3_compile_context *ctx,
 			compile_assert(ctx, ctx->block->address == instr->address);
 
 		instr->address = ctx->block->address;
+		array_insert(ctx->ir->indirects, instr);
 	}
 
 	reg = ir3_reg_create(instr, regid(num, chan), flags);

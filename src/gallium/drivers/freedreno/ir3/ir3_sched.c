@@ -262,6 +262,36 @@ static int trysched(struct ir3_sched_ctx *ctx,
 		}
 	}
 
+	/* if instruction writes address register, we need to ensure
+	 * that the instructions which use the address register value
+	 * have all their other dependencies scheduled.
+	 * TODO we may possibly need to do the same thing with predicate
+	 * register usage, but for now we get by without since the
+	 * predicate usage patterns are more simple
+	 */
+	if (writes_addr(instr)) {
+		struct ir3 *ir = instr->block->shader;
+		unsigned i;
+
+		for (i = 0; i < ir->indirects_count; i++) {
+			struct ir3_instruction *indirect = ir->indirects[i];
+			if (indirect->depth == DEPTH_UNUSED)
+				continue;
+			if (indirect->address != instr)
+				continue;
+			/* NOTE: avoid recursively scheduling the dependency
+			 * on ourself (ie. avoid infinite recursion):
+			 */
+			foreach_ssa_src(src, indirect) {
+				if (src == instr)
+					continue;
+				delay = trysched(ctx, src);
+				if (delay)
+					return delay;
+			}
+		}
+	}
+
 	/* if this is a write to address/predicate register, and that
 	 * register is currently in use, we need to defer until it is
 	 * free:

@@ -321,6 +321,19 @@ struct ir3 {
 	unsigned baryfs_count, baryfs_sz;
 	struct ir3_instruction **baryfs;
 
+	/* Track all indirect instructions (read and write).  To avoid
+	 * deadlock scenario where an address register gets scheduled,
+	 * but other dependent src instructions cannot be scheduled due
+	 * to dependency on a *different* address register value, the
+	 * scheduler needs to ensure that all dependencies other than
+	 * the instruction other than the address register are scheduled
+	 * before the one that writes the address register.  Having a
+	 * convenient list of instructions that reference some address
+	 * register simplifies this.
+	 */
+	unsigned indirects_count, indirects_sz;
+	struct ir3_instruction **indirects;
+
 	struct ir3_block *block;
 	unsigned heap_idx;
 	struct ir3_heap_chunk *chunk;
