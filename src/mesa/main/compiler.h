@@ -113,15 +113,6 @@ extern "C" {
 #define LE32_TO_CPU( x )	CPU_TO_LE32( x )
 
 
-/**
- * LONGSTRING macro
- * gcc -pedantic warns about long string literals, LONGSTRING silences that.
- */
-#if !defined(__GNUC__)
-# define LONGSTRING
-#else
-# define LONGSTRING __extension__
-#endif
 
 #define IEEE_ONE 0x3f800000
 
