@@ -147,45 +147,41 @@ _mesa_GetActiveAttrib(GLhandleARB program, GLuint desired_index,
       return;
    }
 
-   exec_list *const ir = shProg->_LinkedShaders[MESA_SHADER_VERTEX]->ir;
-   unsigned current_index = 0;
+   struct gl_program_resource *res =
+      _mesa_program_resource_find_index(shProg, GL_PROGRAM_INPUT,
+                                        desired_index);
 
-   foreach_in_list(ir_instruction, node, ir) {
-      const ir_variable *const var = node->as_variable();
-
-      if (!is_active_attrib(var))
-         continue;
-
-      if (current_index == desired_index) {
-         const char *var_name = var->name;
-
-         /* Since gl_VertexID may be lowered to gl_VertexIDMESA, we need to
-          * consider gl_VertexIDMESA as gl_VertexID for purposes of checking
-          * active attributes.
-          */
-         if (var->data.mode == ir_var_system_value &&
-             var->data.location == SYSTEM_VALUE_VERTEX_ID_ZERO_BASE) {
-            var_name = "gl_VertexID";
-         }
-
-	 _mesa_copy_string(name, maxLength, length, var_name);
-
-	 if (size)
-	    *size = (var->type->is_array()) ? var->type->length : 1;
-
-	 if (type)
-	    *type = var->type->gl_type;
-
-	 return;
-      }
-
-      current_index++;
+   /* User asked for index that does not exist. */
+   if (!res) {
+      _mesa_error(ctx, GL_INVALID_VALUE, "glGetActiveAttrib(index)");
+      return;
    }
 
-   /* If the loop did not return early, the caller must have asked for
-    * an index that did not exit.  Set an error.
+   const ir_variable *const var = RESOURCE_VAR(res);
+
+   if (!is_active_attrib(var))
+      return;
+
+   const char *var_name = var->name;
+
+   /* Since gl_VertexID may be lowered to gl_VertexIDMESA, we need to
+    * consider gl_VertexIDMESA as gl_VertexID for purposes of checking
+    * active attributes.
     */
-   _mesa_error(ctx, GL_INVALID_VALUE, "glGetActiveAttrib(index)");
+   if (var->data.mode == ir_var_system_value &&
+       var->data.location == SYSTEM_VALUE_VERTEX_ID_ZERO_BASE) {
+      var_name = "gl_VertexID";
+   }
+
+   _mesa_copy_string(name, maxLength, length, var_name);
+
+   if (size)
+      _mesa_program_resource_prop(shProg, res, desired_index, GL_ARRAY_SIZE,
+                                  size, "glGetActiveAttrib");
+
+   if (type)
+      _mesa_program_resource_prop(shProg, res, desired_index, GL_TYPE,
+                                  (GLint *) type, "glGetActiveAttrib");
 }
 
 /* Locations associated with shader variables (array or non-array) can be
