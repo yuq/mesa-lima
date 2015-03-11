@@ -62,7 +62,6 @@ enum adreno_stencil_op fd_stencil_op(unsigned op);
 #define FD_DBG_NOBYPASS 0x0040
 #define FD_DBG_FRAGHALF 0x0080
 #define FD_DBG_NOBIN    0x0100
-#define FD_DBG_NOOPT    0x0200
 #define FD_DBG_OPTMSGS  0x0400
 #define FD_DBG_OPTDUMP  0x0800
 #define FD_DBG_GLSL120  0x1000

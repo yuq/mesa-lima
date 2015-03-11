@@ -122,7 +122,6 @@ ir3_SOURCES := \
 	ir3/ir3.c \
 	ir3/ir3_compiler.c \
 	ir3/ir3_compiler.h \
-	ir3/ir3_compiler_old.c \
 	ir3/ir3_cp.c \
 	ir3/ir3_depth.c \
 	ir3/ir3_dump.c \
