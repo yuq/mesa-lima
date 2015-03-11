@@ -113,25 +113,6 @@ extern "C" {
 #define LE32_TO_CPU( x )	CPU_TO_LE32( x )
 
 
-
-/**
- * Create a macro so that asm functions can be linked into compilers other
- * than GNU C
- */
-#ifndef _ASMAPI
-#if defined(_WIN32)
-#define _ASMAPI __cdecl
-#else
-#define _ASMAPI
-#endif
-#ifdef	PTR_DECL_IN_FRONT
-#define	_ASMAPIP * _ASMAPI
-#else
-#define	_ASMAPIP _ASMAPI *
-#endif
-#endif
-
-
 /**
  * LONGSTRING macro
  * gcc -pedantic warns about long string literals, LONGSTRING silences that.
