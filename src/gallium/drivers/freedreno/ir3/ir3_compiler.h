@@ -32,6 +32,9 @@
 #include "ir3_shader.h"
 
 
+int ir3_compile_shader_nir(struct ir3_shader_variant *so,
+		const struct tgsi_token *tokens, struct ir3_shader_key key);
+
 int ir3_compile_shader(struct ir3_shader_variant *so,
 		const struct tgsi_token *tokens,
 		struct ir3_shader_key key, bool cp);

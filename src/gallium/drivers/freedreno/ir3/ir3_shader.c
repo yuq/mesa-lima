@@ -177,10 +177,20 @@ create_variant(struct ir3_shader *shader, struct ir3_shader_key key)
 		tgsi_dump(tokens, 0);
 	}
 
-	ret = ir3_compile_shader(v, tokens, key, true);
+	if (fd_mesa_debug & FD_DBG_NIR) {
+		ret = ir3_compile_shader_nir(v, tokens, key);
+		if (ret)
+			reset_variant(v, "NIR compiler failed, fallback to TGSI!");
+	} else {
+		ret = -1;
+	}
+
 	if (ret) {
-		reset_variant(v, "new compiler failed, trying without copy propagation!");
-		ret = ir3_compile_shader(v, tokens, key, false);
+		ret = ir3_compile_shader(v, tokens, key, true);
+		if (ret) {
+			reset_variant(v, "new compiler failed, trying without copy propagation!");
+			ret = ir3_compile_shader(v, tokens, key, false);
+		}
 	}
 
 	if (ret) {

@@ -71,6 +71,7 @@ static const struct debug_named_value debug_options[] = {
 		{"optdump",   FD_DBG_OPTDUMP,"Dump shader DAG to .dot files"},
 		{"glsl120",   FD_DBG_GLSL120,"Temporary flag to force GLSL 120 (rather than 130) on a3xx+"},
 		{"nocp",      FD_DBG_NOCP,   "Disable copy-propagation"},
+		{"nir",       FD_DBG_NIR,    "Enable experimental NIR compiler"},
 		DEBUG_NAMED_VALUE_END
 };
 
@@ -345,6 +346,10 @@ fd_screen_get_shader_param(struct pipe_screen *pscreen, unsigned shader,
 	case PIPE_SHADER_CAP_MAX_TEX_INDIRECTIONS:
 		return 16384;
 	case PIPE_SHADER_CAP_MAX_CONTROL_FLOW_DEPTH:
+		/* for now, let someone else flatten if/else when using NIR: */
+		if ((fd_mesa_debug & FD_DBG_NIR) &&
+				(is_a3xx(screen) || is_a4xx(screen)))
+			return 0;
 		return 8; /* XXX */
 	case PIPE_SHADER_CAP_MAX_INPUTS:
 	case PIPE_SHADER_CAP_MAX_OUTPUTS:

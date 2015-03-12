@@ -215,6 +215,7 @@ static void print_usage(void)
 	printf("    --saturate-t MASK - bitmask of samplers to saturate T coord\n");
 	printf("    --saturate-r MASK - bitmask of samplers to saturate R coord\n");
 	printf("    --nocp            - disable copy propagation\n");
+	printf("    --nir             - use NIR compiler\n");
 	printf("    --help            - show this message\n");
 }
 
@@ -229,6 +230,7 @@ int main(int argc, char **argv)
 	const char *info;
 	void *ptr;
 	size_t size;
+	int use_nir = 0;
 
 	fd_mesa_debug |= FD_DBG_DISASM;
 
@@ -293,6 +295,11 @@ int main(int argc, char **argv)
 			n++;
 			continue;
 		}
+		if (!strcmp(argv[n], "--nir")) {
+			use_nir = true;
+			n++;
+			continue;
+		}
 
 		if (!strcmp(argv[n], "--help")) {
 			print_usage();
@@ -333,8 +340,13 @@ int main(int argc, char **argv)
 		break;
 	}
 
-	info = "compiler";
-	ret = ir3_compile_shader(&v, toks, key, true);
+	if (use_nir) {
+		info = "NIR compiler";
+		ret = ir3_compile_shader_nir(&v, toks, key);
+	} else {
+		info = "TGSI compiler";
+		ret = ir3_compile_shader(&v, toks, key, true);
+	}
 
 	if (ret) {
 		reset_variant(&v, "compiler failed, trying without copy propagation!");
@@ -347,4 +359,12 @@ int main(int argc, char **argv)
 		return ret;
 	}
 	dump_info(&v, info);
+}
+
+void _mesa_error_no_memory(const char *caller);
+
+void
+_mesa_error_no_memory(const char *caller)
+{
+	fprintf(stderr, "Mesa error: out of memory in %s", caller);
 }
