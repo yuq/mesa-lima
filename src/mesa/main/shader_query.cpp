@@ -428,29 +428,8 @@ _mesa_GetFragDataIndex(GLuint program, const GLchar *name)
    if (shProg->_LinkedShaders[MESA_SHADER_FRAGMENT] == NULL)
       return -1;
 
-   exec_list *ir = shProg->_LinkedShaders[MESA_SHADER_FRAGMENT]->ir;
-   foreach_in_list(ir_instruction, node, ir) {
-      const ir_variable *const var = node->as_variable();
-
-      /* The extra check against FRAG_RESULT_DATA0 is because
-       * glGetFragDataLocation cannot be used on "conventional" attributes.
-       *
-       * From page 95 of the OpenGL 3.0 spec:
-       *
-       *     "If name is not an active attribute, if name is a conventional
-       *     attribute, or if an error occurs, -1 will be returned."
-       */
-      if (var == NULL
-          || var->data.mode != ir_var_shader_out
-          || var->data.location == -1
-          || var->data.location < FRAG_RESULT_DATA0)
-         continue;
-
-      if (get_matching_index(var, (const char *) name) >= 0)
-         return var->data.index;
-   }
-
-   return -1;
+   return _mesa_program_resource_location_index(shProg, GL_PROGRAM_OUTPUT,
+                                                name);
 }
 
 GLint GLAPIENTRY
