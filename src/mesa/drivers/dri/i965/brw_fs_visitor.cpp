@@ -1005,7 +1005,7 @@ fs_visitor::emit_urb_writes()
 
          fs_inst *inst =
             abld.emit(SHADER_OPCODE_URB_WRITE_SIMD8, reg_undef, payload);
-         inst->eot = last;
+         inst->eot = last && stage == MESA_SHADER_VERTEX;
          inst->mlen = length + 1;
          inst->offset = urb_offset;
          urb_offset = slot + 1;
