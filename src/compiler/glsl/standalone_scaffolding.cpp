@@ -95,6 +95,18 @@ _mesa_new_linked_shader(gl_shader_stage stage)
    return shader;
 }
 
+GLbitfield
+_mesa_program_state_flags(const gl_state_index state[STATE_LENGTH])
+{
+   return 0;
+}
+
+char *
+_mesa_program_state_string(const gl_state_index state[STATE_LENGTH])
+{
+   return NULL;
+}
+
 void
 _mesa_delete_shader(struct gl_context *ctx, struct gl_shader *sh)
 {
