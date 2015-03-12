@@ -28,6 +28,7 @@
 #include "program/prog_to_nir.h"
 #include "brw_fs.h"
 #include "brw_fs_surface_builder.h"
+#include "brw_vec4_gs_visitor.h"
 #include "brw_nir.h"
 #include "brw_fs_surface_builder.h"
 #include "brw_vec4_gs_visitor.h"
@@ -102,6 +103,7 @@ fs_visitor::nir_setup_outputs()
 
       switch (stage) {
       case MESA_SHADER_VERTEX:
+      case MESA_SHADER_GEOMETRY:
          for (unsigned int i = 0; i < ALIGN(type_size_scalar(var->type), 4) / 4; i++) {
             int output = var->data.location + i;
             this->outputs[output] = offset(reg, bld, 4 * i);
@@ -1194,6 +1196,375 @@ emit_pixel_interpolater_send(const fs_builder &bld,
    return inst;
 }
 
+/**
+ * Computes 1 << x, given a D/UD register containing some value x.
+ */
+static fs_reg
+intexp2(const fs_builder &bld, const fs_reg &x)
+{
+   assert(x.type == BRW_REGISTER_TYPE_UD || x.type == BRW_REGISTER_TYPE_D);
+
+   fs_reg result = bld.vgrf(x.type, 1);
+   fs_reg one = bld.vgrf(x.type, 1);
+
+   bld.MOV(one, retype(fs_reg(1), one.type));
+   bld.SHL(result, one, x);
+   return result;
+}
+
+void
+fs_visitor::emit_gs_end_primitive(const nir_src &vertex_count_nir_src)
+{
+   assert(stage == MESA_SHADER_GEOMETRY);
+
+   struct brw_gs_prog_data *gs_prog_data =
+      (struct brw_gs_prog_data *) prog_data;
+
+   /* We can only do EndPrimitive() functionality when the control data
+    * consists of cut bits.  Fortunately, the only time it isn't is when the
+    * output type is points, in which case EndPrimitive() is a no-op.
+    */
+   if (gs_prog_data->control_data_format !=
+       GEN7_GS_CONTROL_DATA_FORMAT_GSCTL_CUT) {
+      return;
+   }
+
+   /* Cut bits use one bit per vertex. */
+   assert(gs_compile->control_data_bits_per_vertex == 1);
+
+   fs_reg vertex_count = get_nir_src(vertex_count_nir_src);
+   vertex_count.type = BRW_REGISTER_TYPE_UD;
+
+   /* Cut bit n should be set to 1 if EndPrimitive() was called after emitting
+    * vertex n, 0 otherwise.  So all we need to do here is mark bit
+    * (vertex_count - 1) % 32 in the cut_bits register to indicate that
+    * EndPrimitive() was called after emitting vertex (vertex_count - 1);
+    * vec4_gs_visitor::emit_control_data_bits() will take care of the rest.
+    *
+    * Note that if EndPrimitive() is called before emitting any vertices, this
+    * will cause us to set bit 31 of the control_data_bits register to 1.
+    * That's fine because:
+    *
+    * - If max_vertices < 32, then vertex number 31 (zero-based) will never be
+    *   output, so the hardware will ignore cut bit 31.
+    *
+    * - If max_vertices == 32, then vertex number 31 is guaranteed to be the
+    *   last vertex, so setting cut bit 31 has no effect (since the primitive
+    *   is automatically ended when the GS terminates).
+    *
+    * - If max_vertices > 32, then the ir_emit_vertex visitor will reset the
+    *   control_data_bits register to 0 when the first vertex is emitted.
+    */
+
+   const fs_builder abld = bld.annotate("end primitive");
+
+   /* control_data_bits |= 1 << ((vertex_count - 1) % 32) */
+   fs_reg prev_count = bld.vgrf(BRW_REGISTER_TYPE_UD, 1);
+   abld.ADD(prev_count, vertex_count, fs_reg(0xffffffffu));
+   fs_reg mask = intexp2(abld, prev_count);
+   /* Note: we're relying on the fact that the GEN SHL instruction only pays
+    * attention to the lower 5 bits of its second source argument, so on this
+    * architecture, 1 << (vertex_count - 1) is equivalent to 1 <<
+    * ((vertex_count - 1) % 32).
+    */
+   abld.OR(this->control_data_bits, this->control_data_bits, mask);
+}
+
+void
+fs_visitor::emit_gs_control_data_bits(const fs_reg &vertex_count)
+{
+   assert(stage == MESA_SHADER_GEOMETRY);
+   assert(gs_compile->control_data_bits_per_vertex != 0);
+
+   struct brw_gs_prog_data *gs_prog_data =
+      (struct brw_gs_prog_data *) prog_data;
+
+   const fs_builder abld = bld.annotate("emit control data bits");
+   const fs_builder fwa_bld = bld.exec_all();
+
+   /* We use a single UD register to accumulate control data bits (32 bits
+    * for each of the SIMD8 channels).  So we need to write a DWord (32 bits)
+    * at a time.
+    *
+    * Unfortunately, the URB_WRITE_SIMD8 message uses 128-bit (OWord) offsets.
+    * We have select a 128-bit group via the Global and Per-Slot Offsets, then
+    * use the Channel Mask phase to enable/disable which DWord within that
+    * group to write.  (Remember, different SIMD8 channels may have emitted
+    * different numbers of vertices, so we may need per-slot offsets.)
+    *
+    * Channel masking presents an annoying problem: we may have to replicate
+    * the data up to 4 times:
+    *
+    * Msg = Handles, Per-Slot Offsets, Channel Masks, Data, Data, Data, Data.
+    *
+    * To avoid penalizing shaders that emit a small number of vertices, we
+    * can avoid these sometimes: if the size of the control data header is
+    * <= 128 bits, then there is only 1 OWord.  All SIMD8 channels will land
+    * land in the same 128-bit group, so we can skip per-slot offsets.
+    *
+    * Similarly, if the control data header is <= 32 bits, there is only one
+    * DWord, so we can skip channel masks.
+    */
+   enum opcode opcode = SHADER_OPCODE_URB_WRITE_SIMD8;
+
+   fs_reg channel_mask, per_slot_offset;
+
+   if (gs_compile->control_data_header_size_bits > 32) {
+      opcode = SHADER_OPCODE_URB_WRITE_SIMD8_MASKED;
+      channel_mask = vgrf(glsl_type::uint_type);
+   }
+
+   if (gs_compile->control_data_header_size_bits > 128) {
+      opcode = SHADER_OPCODE_URB_WRITE_SIMD8_MASKED_PER_SLOT;
+      per_slot_offset = vgrf(glsl_type::uint_type);
+   }
+
+   /* Figure out which DWord we're trying to write to using the formula:
+    *
+    *    dword_index = (vertex_count - 1) * bits_per_vertex / 32
+    *
+    * Since bits_per_vertex is a power of two, and is known at compile
+    * time, this can be optimized to:
+    *
+    *    dword_index = (vertex_count - 1) >> (6 - log2(bits_per_vertex))
+    */
+   if (opcode != SHADER_OPCODE_URB_WRITE_SIMD8) {
+      fs_reg dword_index = bld.vgrf(BRW_REGISTER_TYPE_UD, 1);
+      fs_reg prev_count = bld.vgrf(BRW_REGISTER_TYPE_UD, 1);
+      abld.ADD(prev_count, vertex_count, fs_reg(0xffffffffu));
+      unsigned log2_bits_per_vertex =
+         _mesa_fls(gs_compile->control_data_bits_per_vertex);
+      abld.SHR(dword_index, prev_count, fs_reg(6u - log2_bits_per_vertex));
+
+      if (per_slot_offset.file != BAD_FILE) {
+         /* Set the per-slot offset to dword_index / 4, so that we'll write to
+          * the appropriate OWord within the control data header.
+          */
+         abld.SHR(per_slot_offset, dword_index, fs_reg(2u));
+      }
+
+      /* Set the channel masks to 1 << (dword_index % 4), so that we'll
+       * write to the appropriate DWORD within the OWORD.
+       */
+      fs_reg channel = bld.vgrf(BRW_REGISTER_TYPE_UD, 1);
+      fwa_bld.AND(channel, dword_index, fs_reg(3u));
+      channel_mask = intexp2(fwa_bld, channel);
+      /* Then the channel masks need to be in bits 23:16. */
+      fwa_bld.SHL(channel_mask, channel_mask, fs_reg(16u));
+   }
+
+   /* Store the control data bits in the message payload and send it. */
+   int mlen = 2;
+   if (channel_mask.file != BAD_FILE)
+      mlen += 4; /* channel masks, plus 3 extra copies of the data */
+   if (per_slot_offset.file != BAD_FILE)
+      mlen++;
+
+   fs_reg payload = bld.vgrf(BRW_REGISTER_TYPE_UD, mlen);
+   fs_reg *sources = ralloc_array(mem_ctx, fs_reg, mlen);
+   int i = 0;
+   sources[i++] = fs_reg(retype(brw_vec8_grf(1, 0), BRW_REGISTER_TYPE_UD));
+   if (per_slot_offset.file != BAD_FILE)
+      sources[i++] = per_slot_offset;
+   if (channel_mask.file != BAD_FILE)
+      sources[i++] = channel_mask;
+   while (i < mlen) {
+      sources[i++] = this->control_data_bits;
+   }
+
+   abld.LOAD_PAYLOAD(payload, sources, mlen, mlen);
+   fs_inst *inst = abld.emit(opcode, reg_undef, payload);
+   inst->mlen = mlen;
+   /* We need to increment Global Offset by 256-bits to make room for
+    * Broadwell's extra "Vertex Count" payload at the beginning of the
+    * URB entry.  Since this is an OWord message, Global Offset is counted
+    * in 128-bit units, so we must set it to 2.
+    */
+   if (gs_prog_data->static_vertex_count == -1)
+      inst->offset = 2;
+}
+
+void
+fs_visitor::set_gs_stream_control_data_bits(const fs_reg &vertex_count,
+                                            unsigned stream_id)
+{
+   /* control_data_bits |= stream_id << ((2 * (vertex_count - 1)) % 32) */
+
+   /* Note: we are calling this *before* increasing vertex_count, so
+    * this->vertex_count == vertex_count - 1 in the formula above.
+    */
+
+   /* Stream mode uses 2 bits per vertex */
+   assert(gs_compile->control_data_bits_per_vertex == 2);
+
+   /* Must be a valid stream */
+   assert(stream_id >= 0 && stream_id < MAX_VERTEX_STREAMS);
+
+   /* Control data bits are initialized to 0 so we don't have to set any
+    * bits when sending vertices to stream 0.
+    */
+   if (stream_id == 0)
+      return;
+
+   const fs_builder abld = bld.annotate("set stream control data bits", NULL);
+
+   /* reg::sid = stream_id */
+   fs_reg sid = bld.vgrf(BRW_REGISTER_TYPE_UD, 1);
+   abld.MOV(sid, fs_reg(stream_id));
+
+   /* reg:shift_count = 2 * (vertex_count - 1) */
+   fs_reg shift_count = bld.vgrf(BRW_REGISTER_TYPE_UD, 1);
+   abld.SHL(shift_count, vertex_count, fs_reg(1u));
+
+   /* Note: we're relying on the fact that the GEN SHL instruction only pays
+    * attention to the lower 5 bits of its second source argument, so on this
+    * architecture, stream_id << 2 * (vertex_count - 1) is equivalent to
+    * stream_id << ((2 * (vertex_count - 1)) % 32).
+    */
+   fs_reg mask = bld.vgrf(BRW_REGISTER_TYPE_UD, 1);
+   abld.SHL(mask, sid, shift_count);
+   abld.OR(this->control_data_bits, this->control_data_bits, mask);
+}
+
+void
+fs_visitor::emit_gs_vertex(const nir_src &vertex_count_nir_src,
+                           unsigned stream_id)
+{
+   assert(stage == MESA_SHADER_GEOMETRY);
+
+   struct brw_gs_prog_data *gs_prog_data =
+      (struct brw_gs_prog_data *) prog_data;
+
+   fs_reg vertex_count = get_nir_src(vertex_count_nir_src);
+   vertex_count.type = BRW_REGISTER_TYPE_UD;
+
+   /* Haswell and later hardware ignores the "Render Stream Select" bits
+    * from the 3DSTATE_STREAMOUT packet when the SOL stage is disabled,
+    * and instead sends all primitives down the pipeline for rasterization.
+    * If the SOL stage is enabled, "Render Stream Select" is honored and
+    * primitives bound to non-zero streams are discarded after stream output.
+    *
+    * Since the only purpose of primives sent to non-zero streams is to
+    * be recorded by transform feedback, we can simply discard all geometry
+    * bound to these streams when transform feedback is disabled.
+    */
+   if (stream_id > 0 && !nir->info.has_transform_feedback_varyings)
+      return;
+
+   /* If we're outputting 32 control data bits or less, then we can wait
+    * until the shader is over to output them all.  Otherwise we need to
+    * output them as we go.  Now is the time to do it, since we're about to
+    * output the vertex_count'th vertex, so it's guaranteed that the
+    * control data bits associated with the (vertex_count - 1)th vertex are
+    * correct.
+    */
+   if (gs_compile->control_data_header_size_bits > 32) {
+      const fs_builder abld =
+         bld.annotate("emit vertex: emit control data bits");
+
+      /* Only emit control data bits if we've finished accumulating a batch
+       * of 32 bits.  This is the case when:
+       *
+       *     (vertex_count * bits_per_vertex) % 32 == 0
+       *
+       * (in other words, when the last 5 bits of vertex_count *
+       * bits_per_vertex are 0).  Assuming bits_per_vertex == 2^n for some
+       * integer n (which is always the case, since bits_per_vertex is
+       * always 1 or 2), this is equivalent to requiring that the last 5-n
+       * bits of vertex_count are 0:
+       *
+       *     vertex_count & (2^(5-n) - 1) == 0
+       *
+       * 2^(5-n) == 2^5 / 2^n == 32 / bits_per_vertex, so this is
+       * equivalent to:
+       *
+       *     vertex_count & (32 / bits_per_vertex - 1) == 0
+       *
+       * TODO: If vertex_count is an immediate, we could do some of this math
+       *       at compile time...
+       */
+      fs_inst *inst =
+         abld.AND(bld.null_reg_d(), vertex_count,
+                  fs_reg(32u / gs_compile->control_data_bits_per_vertex - 1u));
+      inst->conditional_mod = BRW_CONDITIONAL_Z;
+
+      abld.IF(BRW_PREDICATE_NORMAL);
+      /* If vertex_count is 0, then no control data bits have been
+       * accumulated yet, so we can skip emitting them.
+       */
+      abld.CMP(bld.null_reg_d(), vertex_count, fs_reg(0u),
+               BRW_CONDITIONAL_NEQ);
+      abld.IF(BRW_PREDICATE_NORMAL);
+      emit_gs_control_data_bits(vertex_count);
+      abld.emit(BRW_OPCODE_ENDIF);
+
+      /* Reset control_data_bits to 0 so we can start accumulating a new
+       * batch.
+       *
+       * Note: in the case where vertex_count == 0, this neutralizes the
+       * effect of any call to EndPrimitive() that the shader may have
+       * made before outputting its first vertex.
+       */
+      inst = abld.MOV(this->control_data_bits, fs_reg(0u));
+      inst->force_writemask_all = true;
+      abld.emit(BRW_OPCODE_ENDIF);
+   }
+
+   emit_urb_writes(vertex_count);
+
+   /* In stream mode we have to set control data bits for all vertices
+    * unless we have disabled control data bits completely (which we do
+    * do for GL_POINTS outputs that don't use streams).
+    */
+   if (gs_compile->control_data_header_size_bits > 0 &&
+       gs_prog_data->control_data_format ==
+          GEN7_GS_CONTROL_DATA_FORMAT_GSCTL_SID) {
+      set_gs_stream_control_data_bits(vertex_count, stream_id);
+   }
+}
+
+void
+fs_visitor::emit_gs_input_load(const fs_reg &dst,
+                               const nir_src &vertex_src,
+                               unsigned input_offset,
+                               unsigned num_components)
+{
+   const brw_vue_prog_data *vue_prog_data = (const brw_vue_prog_data *) prog_data;
+   const unsigned vertex = nir_src_as_const_value(vertex_src)->u[0];
+
+   const unsigned array_stride = vue_prog_data->urb_read_length * 8;
+
+   const bool pushed = 4 * input_offset < array_stride;
+
+   if (input_offset == 0) {
+      /* This is the VUE header, containing VARYING_SLOT_LAYER [.y],
+       * VARYING_SLOT_VIEWPORT [.z], and VARYING_SLOT_PSIZ [.w].
+       * Only gl_PointSize is available as a GS input, so they must
+       * be asking for that input.
+       */
+      if (pushed) {
+         bld.MOV(dst, fs_reg(ATTR, array_stride * vertex + 3, dst.type));
+      } else {
+         fs_reg tmp = bld.vgrf(dst.type, 4);
+         fs_inst *inst = bld.emit(SHADER_OPCODE_URB_READ_SIMD8, tmp,
+                                  fs_reg(vertex), fs_reg(0));
+         inst->regs_written = 4;
+         bld.MOV(dst, offset(tmp, bld, 3));
+      }
+   } else {
+      if (pushed) {
+         int index = vertex * array_stride + 4 * input_offset;
+         for (unsigned i = 0; i < num_components; i++) {
+            bld.MOV(offset(dst, bld, i), fs_reg(ATTR, index + i, dst.type));
+         }
+      } else {
+         fs_inst *inst = bld.emit(SHADER_OPCODE_URB_READ_SIMD8, dst,
+                                  fs_reg(vertex), fs_reg(input_offset));
+         inst->regs_written = num_components;
+      }
+   }
+}
+
 void
 fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr)
 {
@@ -1579,6 +1950,14 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
       break;
    }
 
+   case nir_intrinsic_load_per_vertex_input_indirect:
+      assert(!"Not allowed");
+      /* fallthrough */
+   case nir_intrinsic_load_per_vertex_input:
+      emit_gs_input_load(dest, instr->src[0], instr->const_index[0],
+                         instr->num_components);
+      break;
+
    /* Handle ARB_gpu_shader5 interpolation intrinsics
     *
     * It's worth a quick word of explanation as to why we handle the full
@@ -1928,6 +2307,18 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
       }
       break;
    }
+
+   case nir_intrinsic_emit_vertex_with_counter:
+      emit_gs_vertex(instr->src[0], instr->const_index[0]);
+      break;
+
+   case nir_intrinsic_end_primitive_with_counter:
+      emit_gs_end_primitive(instr->src[0]);
+      break;
+
+   case nir_intrinsic_set_vertex_count:
+      bld.MOV(this->final_gs_vertex_count, get_nir_src(instr->src[0]));
+      break;
 
    default:
       unreachable("unknown intrinsic");

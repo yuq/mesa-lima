@@ -43,6 +43,7 @@
 #include "brw_wm.h"
 #include "brw_fs.h"
 #include "brw_cs.h"
+#include "brw_vec4_gs_visitor.h"
 #include "brw_cfg.h"
 #include "brw_dead_control_flow.h"
 #include "main/uniforms.h"
@@ -1361,6 +1362,57 @@ fs_visitor::emit_discard_jump()
 }
 
 void
+fs_visitor::emit_gs_thread_end()
+{
+   assert(stage == MESA_SHADER_GEOMETRY);
+
+   struct brw_gs_prog_data *gs_prog_data =
+      (struct brw_gs_prog_data *) prog_data;
+
+   if (gs_compile->control_data_header_size_bits > 0) {
+      emit_gs_control_data_bits(this->final_gs_vertex_count);
+   }
+
+   const fs_builder abld = bld.annotate("thread end");
+   fs_inst *inst;
+
+   if (gs_prog_data->static_vertex_count != -1) {
+      foreach_in_list_reverse(fs_inst, prev, &this->instructions) {
+         if (prev->opcode == SHADER_OPCODE_URB_WRITE_SIMD8 ||
+             prev->opcode == SHADER_OPCODE_URB_WRITE_SIMD8_MASKED ||
+             prev->opcode == SHADER_OPCODE_URB_WRITE_SIMD8_PER_SLOT ||
+             prev->opcode == SHADER_OPCODE_URB_WRITE_SIMD8_MASKED_PER_SLOT) {
+            prev->eot = true;
+
+            /* Delete now dead instructions. */
+            foreach_in_list_reverse_safe(exec_node, dead, &this->instructions) {
+               if (dead == prev)
+                  break;
+               dead->remove();
+            }
+            return;
+         } else if (prev->is_control_flow() || prev->has_side_effects()) {
+            break;
+         }
+      }
+      fs_reg hdr = abld.vgrf(BRW_REGISTER_TYPE_UD, 1);
+      abld.MOV(hdr, fs_reg(retype(brw_vec8_grf(1, 0), BRW_REGISTER_TYPE_UD)));
+      inst = abld.emit(SHADER_OPCODE_URB_WRITE_SIMD8, reg_undef, hdr);
+      inst->mlen = 1;
+   } else {
+      fs_reg payload = abld.vgrf(BRW_REGISTER_TYPE_UD, 2);
+      fs_reg *sources = ralloc_array(mem_ctx, fs_reg, 2);
+      sources[0] = fs_reg(retype(brw_vec8_grf(1, 0), BRW_REGISTER_TYPE_UD));
+      sources[1] = this->final_gs_vertex_count;
+      abld.LOAD_PAYLOAD(payload, sources, 2, 2);
+      inst = abld.emit(SHADER_OPCODE_URB_WRITE_SIMD8, reg_undef, payload);
+      inst->mlen = 2;
+   }
+   inst->eot = true;
+   inst->offset = 0;
+}
+
+void
 fs_visitor::assign_curb_setup()
 {
    if (dispatch_width == 8) {
@@ -1532,6 +1584,26 @@ fs_visitor::assign_urb_setup()
 }
 
 void
+fs_visitor::convert_attr_sources_to_hw_regs(fs_inst *inst)
+{
+   for (int i = 0; i < inst->sources; i++) {
+      if (inst->src[i].file == ATTR) {
+         int grf = payload.num_regs +
+                   prog_data->curb_read_length +
+                   inst->src[i].reg +
+                   inst->src[i].reg_offset;
+
+         inst->src[i].file = HW_REG;
+         inst->src[i].fixed_hw_reg =
+            stride(byte_offset(retype(brw_vec8_grf(grf, 0), inst->src[i].type),
+                               inst->src[i].subreg_offset),
+                   inst->exec_size * inst->src[i].stride,
+                   inst->exec_size, inst->src[i].stride);
+      }
+   }
+}
+
+void
 fs_visitor::assign_vs_urb_setup()
 {
    brw_vs_prog_data *vs_prog_data = (brw_vs_prog_data *) prog_data;
@@ -1548,23 +1620,43 @@ fs_visitor::assign_vs_urb_setup()
 
    /* Rewrite all ATTR file references to the hw grf that they land in. */
    foreach_block_and_inst(block, fs_inst, inst, cfg) {
-      for (int i = 0; i < inst->sources; i++) {
-         if (inst->src[i].file == ATTR) {
-            int grf = payload.num_regs +
-                      prog_data->curb_read_length +
-                      inst->src[i].reg +
-                      inst->src[i].reg_offset;
-
-            inst->src[i].file = HW_REG;
-            inst->src[i].fixed_hw_reg =
-               stride(byte_offset(retype(brw_vec8_grf(grf, 0), inst->src[i].type),
-                                  inst->src[i].subreg_offset),
-                      inst->exec_size * inst->src[i].stride,
-                      inst->exec_size, inst->src[i].stride);
-         }
-      }
+      convert_attr_sources_to_hw_regs(inst);
    }
 }
+
+void
+fs_visitor::assign_gs_urb_setup()
+{
+   assert(stage == MESA_SHADER_GEOMETRY);
+
+   brw_vue_prog_data *vue_prog_data = (brw_vue_prog_data *) prog_data;
+
+   first_non_payload_grf +=
+      8 * vue_prog_data->urb_read_length * nir->info.gs.vertices_in;
+
+   const unsigned first_icp_handle = payload.num_regs -
+      (vue_prog_data->include_vue_handles ? nir->info.gs.vertices_in : 0);
+
+   foreach_block_and_inst(block, fs_inst, inst, cfg) {
+      /* Lower URB_READ_SIMD8 opcodes into real messages. */
+      if (inst->opcode == SHADER_OPCODE_URB_READ_SIMD8) {
+         assert(inst->src[0].file == IMM);
+         inst->src[0] = retype(brw_vec8_grf(first_icp_handle +
+                                            inst->src[0].fixed_hw_reg.dw1.ud,
+                                            0), BRW_REGISTER_TYPE_UD);
+         /* for now, assume constant - we can do per-slot offsets later */
+         assert(inst->src[1].file == IMM);
+         inst->offset = inst->src[1].fixed_hw_reg.dw1.ud;
+         inst->src[1] = fs_reg();
+         inst->mlen = 1;
+         inst->base_mrf = -1;
+      }
+
+      /* Rewrite all ATTR file references to HW_REGs. */
+      convert_attr_sources_to_hw_regs(inst);
+   }
+}
+
 
 /**
  * Split large virtual GRFs into separate components if we can.
@@ -4763,6 +4855,45 @@ fs_visitor::setup_vs_payload()
  *
  */
 void
+fs_visitor::setup_gs_payload()
+{
+   assert(stage == MESA_SHADER_GEOMETRY);
+
+   struct brw_gs_prog_data *gs_prog_data =
+      (struct brw_gs_prog_data *) prog_data;
+   struct brw_vue_prog_data *vue_prog_data =
+      (struct brw_vue_prog_data *) prog_data;
+
+   /* R0: thread header, R1: output URB handles */
+   payload.num_regs = 2;
+
+   if (gs_prog_data->include_primitive_id) {
+      /* R2: Primitive ID 0..7 */
+      payload.num_regs++;
+   }
+
+   /* Use a maximum of 32 registers for push-model inputs. */
+   const unsigned max_push_components = 32;
+
+   /* If pushing our inputs would take too many registers, reduce the URB read
+    * length (which is in HWords, or 8 registers), and resort to pulling.
+    *
+    * Note that the GS reads <URB Read Length> HWords for every vertex - so we
+    * have to multiply by VerticesIn to obtain the total storage requirement.
+    */
+   if (8 * vue_prog_data->urb_read_length * nir->info.gs.vertices_in >
+       max_push_components) {
+      gs_prog_data->base.include_vue_handles = true;
+
+      /* R3..RN: ICP Handles for each incoming vertex (when using pull model) */
+      payload.num_regs += nir->info.gs.vertices_in;
+
+      vue_prog_data->urb_read_length =
+         ROUND_DOWN_TO(max_push_components / nir->info.gs.vertices_in, 8) / 8;
+   }
+}
+
+void
 fs_visitor::setup_cs_payload()
 {
    assert(devinfo->gen >= 7);
@@ -5011,6 +5142,55 @@ fs_visitor::run_vs(gl_clip_plane *clip_planes)
 
    assign_curb_setup();
    assign_vs_urb_setup();
+
+   fixup_3src_null_dest();
+   allocate_registers();
+
+   return !failed;
+}
+
+bool
+fs_visitor::run_gs()
+{
+   assert(stage == MESA_SHADER_GEOMETRY);
+
+   setup_gs_payload();
+
+   this->final_gs_vertex_count = vgrf(glsl_type::uint_type);
+
+   if (gs_compile->control_data_header_size_bits > 0) {
+      /* Create a VGRF to store accumulated control data bits. */
+      this->control_data_bits = vgrf(glsl_type::uint_type);
+
+      /* If we're outputting more than 32 control data bits, then EmitVertex()
+       * will set control_data_bits to 0 after emitting the first vertex.
+       * Otherwise, we need to initialize it to 0 here.
+       */
+      if (gs_compile->control_data_header_size_bits <= 32) {
+         const fs_builder abld = bld.annotate("initialize control data bits");
+         abld.MOV(this->control_data_bits, fs_reg(0u));
+      }
+   }
+
+   if (shader_time_index >= 0)
+      emit_shader_time_begin();
+
+   emit_nir_code();
+
+   emit_gs_thread_end();
+
+   if (shader_time_index >= 0)
+      emit_shader_time_end();
+
+   if (failed)
+      return false;
+
+   calculate_cfg();
+
+   optimize();
+
+   assign_curb_setup();
+   assign_gs_urb_setup();
 
    fixup_3src_null_dest();
    allocate_registers();

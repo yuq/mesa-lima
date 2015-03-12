@@ -880,7 +880,7 @@ void fs_visitor::compute_clip_distance(gl_clip_plane *clip_planes)
 }
 
 void
-fs_visitor::emit_urb_writes()
+fs_visitor::emit_urb_writes(const fs_reg &gs_vertex_count)
 {
    int slot, urb_offset, length;
    int starting_urb_offset = 0;
@@ -916,9 +916,13 @@ fs_visitor::emit_urb_writes()
       return;
    }
 
+   opcode opcode = SHADER_OPCODE_URB_WRITE_SIMD8;
+   int header_size = 1;
+   fs_reg per_slot_offsets;
+
    if (stage == MESA_SHADER_GEOMETRY) {
       const struct brw_gs_prog_data *gs_prog_data =
-         (const struct brw_gs_prog_data *) prog_data;
+         (const struct brw_gs_prog_data *) this->prog_data;
 
       /* We need to increment the Global Offset to skip over the control data
        * header and the extra "Vertex Count" field (1 HWord) at the beginning
@@ -927,6 +931,27 @@ fs_visitor::emit_urb_writes()
       starting_urb_offset = 2 * gs_prog_data->control_data_header_size_hwords;
       if (gs_prog_data->static_vertex_count == -1)
          starting_urb_offset += 2;
+
+      /* We also need to use per-slot offsets.  The per-slot offset is the
+       * Vertex Count.  SIMD8 mode processes 8 different primitives at a
+       * time; each may output a different number of vertices.
+       */
+      opcode = SHADER_OPCODE_URB_WRITE_SIMD8_PER_SLOT;
+      header_size++;
+
+      /* The URB offset is in 128-bit units, so we need to multiply by 2 */
+      const int output_vertex_size_owords =
+         gs_prog_data->output_vertex_size_hwords * 2;
+
+      fs_reg offset;
+      if (gs_vertex_count.file == IMM) {
+         per_slot_offsets = fs_reg(output_vertex_size_owords *
+                                   gs_vertex_count.fixed_hw_reg.dw1.ud);
+      } else {
+         per_slot_offsets = vgrf(glsl_type::int_type);
+         bld.MUL(per_slot_offsets, gs_vertex_count,
+                 fs_reg(output_vertex_size_owords));
+      }
    }
 
    length = 0;
@@ -1023,19 +1048,25 @@ fs_visitor::emit_urb_writes()
       if (length == 8 || last)
          flush = true;
       if (flush) {
-         fs_reg *payload_sources = ralloc_array(mem_ctx, fs_reg, length + 1);
-         fs_reg payload = fs_reg(GRF, alloc.allocate(length + 1),
+         fs_reg *payload_sources =
+            ralloc_array(mem_ctx, fs_reg, length + header_size);
+         fs_reg payload = fs_reg(GRF, alloc.allocate(length + header_size),
                                  BRW_REGISTER_TYPE_F);
          payload_sources[0] =
             fs_reg(retype(brw_vec8_grf(1, 0), BRW_REGISTER_TYPE_UD));
 
-         memcpy(&payload_sources[1], sources, length * sizeof sources[0]);
-         abld.LOAD_PAYLOAD(payload, payload_sources, length + 1, 1);
+         if (opcode == SHADER_OPCODE_URB_WRITE_SIMD8_PER_SLOT)
+            payload_sources[1] = per_slot_offsets;
 
-         fs_inst *inst =
-            abld.emit(SHADER_OPCODE_URB_WRITE_SIMD8, reg_undef, payload);
+         memcpy(&payload_sources[header_size], sources,
+                length * sizeof sources[0]);
+
+         abld.LOAD_PAYLOAD(payload, payload_sources, length + header_size,
+                           header_size);
+
+         fs_inst *inst = abld.emit(opcode, reg_undef, payload);
          inst->eot = last && stage == MESA_SHADER_VERTEX;
-         inst->mlen = length + 1;
+         inst->mlen = length + header_size;
          inst->offset = urb_offset;
          urb_offset = starting_urb_offset + slot + 1;
          length = 0;

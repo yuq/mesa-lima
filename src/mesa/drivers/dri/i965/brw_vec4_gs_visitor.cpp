@@ -29,6 +29,7 @@
 
 #include "brw_vec4_gs_visitor.h"
 #include "gen6_gs_visitor.h"
+#include "brw_fs.h"
 
 namespace brw {
 
@@ -811,6 +812,30 @@ brw_compile_gs(const struct brw_compiler *compiler, void *log_data,
    /* Now that prog_data setup is done, we are ready to actually compile the
     * program.
     */
+
+   if (compiler->scalar_gs) {
+      /* TODO: Support instanced GS.  We have basically no tests... */
+      assert(prog_data->invocations == 1);
+
+      fs_visitor v(compiler, log_data, mem_ctx, &c, prog_data, shader,
+                   shader_time_index);
+      if (v.run_gs()) {
+         prog_data->base.dispatch_mode = DISPATCH_MODE_SIMD8;
+
+         fs_generator g(compiler, log_data, mem_ctx, &c.key,
+                        &prog_data->base.base, v.promoted_constants,
+                        false, "GS");
+         if (unlikely(INTEL_DEBUG & DEBUG_GS)) {
+            const char *label =
+               shader->info.label ? shader->info.label : "unnamed";
+            char *name = ralloc_asprintf(mem_ctx, "%s geometry shader %s",
+                                         label, shader->info.name);
+            g.enable_debug(name);
+         }
+         g.generate_code(v.cfg, 8);
+         return g.get_assembly(final_assembly_size);
+      }
+   }
 
    if (compiler->devinfo->gen >= 7) {
       /* Compile the geometry shader in DUAL_OBJECT dispatch mode, if we can do
