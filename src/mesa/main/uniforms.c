@@ -911,7 +911,6 @@ GLint GLAPIENTRY
 _mesa_GetUniformLocation(GLuint programObj, const GLcharARB *name)
 {
    struct gl_shader_program *shProg;
-   GLuint index, offset;
 
    GET_CURRENT_CONTEXT(ctx);
 
@@ -931,23 +930,7 @@ _mesa_GetUniformLocation(GLuint programObj, const GLcharARB *name)
       return -1;
    }
 
-   index = _mesa_get_uniform_location(shProg, name, &offset);
-   if (index == GL_INVALID_INDEX)
-      return -1;
-
-   /* From the GL_ARB_uniform_buffer_object spec:
-    *
-    *     "The value -1 will be returned if <name> does not correspond to an
-    *      active uniform variable name in <program>, if <name> is associated
-    *      with a named uniform block, or if <name> starts with the reserved
-    *      prefix "gl_"."
-    */
-   if (shProg->UniformStorage[index].block_index != -1 ||
-       shProg->UniformStorage[index].atomic_buffer_index != -1)
-      return -1;
-
-   /* location in remap table + array element offset */
-   return shProg->UniformStorage[index].remap_location + offset;
+   return _mesa_program_resource_location(shProg, GL_UNIFORM, name);
 }
 
 GLuint GLAPIENTRY
