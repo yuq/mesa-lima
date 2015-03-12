@@ -527,6 +527,15 @@ vec4_vs_visitor::get_vp_src_reg(const prog_src_register &src)
 
          /* Add the small constant index to the address register */
          src_reg reladdr = src_reg(this, glsl_type::int_type);
+
+         /* We have to use a message header on Skylake to get SIMD4x2 mode.
+          * Reserve space for the register.
+          */
+         if (brw->gen >= 9) {
+            reladdr.reg_offset++;
+            alloc.sizes[reladdr.reg] = 2;
+         }
+
          dst_reg dst_reladdr = dst_reg(reladdr);
          dst_reladdr.writemask = WRITEMASK_X;
          emit(ADD(dst_reladdr, this->vp_addr_reg, src_reg(src.Index)));

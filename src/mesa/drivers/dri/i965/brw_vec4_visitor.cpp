@@ -1783,6 +1783,15 @@ vec4_visitor::visit(ir_expression *ir)
 
       if (brw->gen >= 7) {
          dst_reg grf_offset = dst_reg(this, glsl_type::int_type);
+
+         /* We have to use a message header on Skylake to get SIMD4x2 mode.
+          * Reserve space for the register.
+          */
+         if (brw->gen >= 9) {
+            grf_offset.reg_offset++;
+            alloc.sizes[grf_offset.reg] = 2;
+         }
+
          grf_offset.type = offset.type;
 
          emit(MOV(grf_offset, offset));
@@ -3477,6 +3486,15 @@ vec4_visitor::emit_pull_constant_load(bblock_t *block, vec4_instruction *inst,
 
    if (brw->gen >= 7) {
       dst_reg grf_offset = dst_reg(this, glsl_type::int_type);
+
+      /* We have to use a message header on Skylake to get SIMD4x2 mode.
+       * Reserve space for the register.
+       */
+      if (brw->gen >= 9) {
+         grf_offset.reg_offset++;
+         alloc.sizes[grf_offset.reg] = 2;
+      }
+
       grf_offset.type = offset.type;
       emit_before(block, inst, MOV(grf_offset, offset));
 
