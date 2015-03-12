@@ -141,38 +141,45 @@ fs_visitor::nir_setup_outputs(nir_shader *shader)
          var->type->is_array() ? var->type->fields.array->vector_elements
                                : var->type->vector_elements;
 
-      if (stage == MESA_SHADER_VERTEX) {
+      switch (stage) {
+      case MESA_SHADER_VERTEX:
          for (int i = 0; i < ALIGN(type_size(var->type), 4) / 4; i++) {
             int output = var->data.location + i;
             this->outputs[output] = offset(reg, bld, 4 * i);
             this->output_components[output] = vector_elements;
          }
-      } else if (var->data.index > 0) {
-         assert(var->data.location == FRAG_RESULT_DATA0);
-         assert(var->data.index == 1);
-         this->dual_src_output = reg;
-         this->do_dual_src = true;
-      } else if (var->data.location == FRAG_RESULT_COLOR) {
-         /* Writing gl_FragColor outputs to all color regions. */
-         for (unsigned int i = 0; i < MAX2(key->nr_color_regions, 1); i++) {
-            this->outputs[i] = reg;
-            this->output_components[i] = 4;
-         }
-      } else if (var->data.location == FRAG_RESULT_DEPTH) {
-         this->frag_depth = reg;
-      } else if (var->data.location == FRAG_RESULT_SAMPLE_MASK) {
-         this->sample_mask = reg;
-      } else {
-         /* gl_FragData or a user-defined FS output */
-         assert(var->data.location >= FRAG_RESULT_DATA0 &&
-                var->data.location < FRAG_RESULT_DATA0 + BRW_MAX_DRAW_BUFFERS);
+         break;
+      case MESA_SHADER_FRAGMENT:
+         if (var->data.index > 0) {
+            assert(var->data.location == FRAG_RESULT_DATA0);
+            assert(var->data.index == 1);
+            this->dual_src_output = reg;
+            this->do_dual_src = true;
+         } else if (var->data.location == FRAG_RESULT_COLOR) {
+            /* Writing gl_FragColor outputs to all color regions. */
+            for (unsigned int i = 0; i < MAX2(key->nr_color_regions, 1); i++) {
+               this->outputs[i] = reg;
+               this->output_components[i] = 4;
+            }
+         } else if (var->data.location == FRAG_RESULT_DEPTH) {
+            this->frag_depth = reg;
+         } else if (var->data.location == FRAG_RESULT_SAMPLE_MASK) {
+            this->sample_mask = reg;
+         } else {
+            /* gl_FragData or a user-defined FS output */
+            assert(var->data.location >= FRAG_RESULT_DATA0 &&
+                   var->data.location < FRAG_RESULT_DATA0+BRW_MAX_DRAW_BUFFERS);
 
-         /* General color output. */
-         for (unsigned int i = 0; i < MAX2(1, var->type->length); i++) {
-            int output = var->data.location - FRAG_RESULT_DATA0 + i;
-            this->outputs[output] = offset(reg, bld, vector_elements * i);
-            this->output_components[output] = vector_elements;
+            /* General color output. */
+            for (unsigned int i = 0; i < MAX2(1, var->type->length); i++) {
+               int output = var->data.location - FRAG_RESULT_DATA0 + i;
+               this->outputs[output] = offset(reg, bld, vector_elements * i);
+               this->output_components[output] = vector_elements;
+            }
          }
+         break;
+      default:
+         unreachable("unhandled shader stage");
       }
    }
 }
