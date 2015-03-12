@@ -54,7 +54,7 @@ static __thread const _EGLThreadInfo *_egl_TLS
 
 static inline void _eglSetTSD(const _EGLThreadInfo *t)
 {
-   tss_set(_egl_TSD, (const void *) t);
+   tss_set(_egl_TSD, (void *) t);
 #ifdef GLX_USE_TLS
    _egl_TLS = t;
 #endif
