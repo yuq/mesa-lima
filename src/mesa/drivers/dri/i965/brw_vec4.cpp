@@ -1700,8 +1700,6 @@ vec4_visitor::run()
    move_push_constants_to_pull_constants();
    split_virtual_grfs();
 
-   const char *stage_name = stage == MESA_SHADER_GEOMETRY ? "gs" : "vs";
-
 #define OPT(pass, args...) ({                                          \
       pass_num++;                                                      \
       bool this_progress = pass(args);                                 \
@@ -1709,7 +1707,7 @@ vec4_visitor::run()
       if (unlikely(INTEL_DEBUG & DEBUG_OPTIMIZER) && this_progress) {  \
          char filename[64];                                            \
          snprintf(filename, 64, "%s-%04d-%02d-%02d-" #pass,            \
-                  stage_name, shader_prog ? shader_prog->Name : 0, iteration, pass_num); \
+                  stage_abbrev, shader_prog ? shader_prog->Name : 0, iteration, pass_num); \
                                                                        \
          backend_visitor::dump_instructions(filename);                 \
       }                                                                \
@@ -1722,7 +1720,7 @@ vec4_visitor::run()
    if (unlikely(INTEL_DEBUG & DEBUG_OPTIMIZER)) {
       char filename[64];
       snprintf(filename, 64, "%s-%04d-00-start",
-               stage_name, shader_prog ? shader_prog->Name : 0);
+               stage_abbrev, shader_prog ? shader_prog->Name : 0);
 
       backend_visitor::dump_instructions(filename);
    }

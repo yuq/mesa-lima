@@ -3766,8 +3766,6 @@ fs_visitor::calculate_register_pressure()
 void
 fs_visitor::optimize()
 {
-   const char *stage_name = stage == MESA_SHADER_VERTEX ? "vs" : "fs";
-
    split_virtual_grfs();
 
    move_uniform_array_access_to_pull_constants();
@@ -3781,7 +3779,7 @@ fs_visitor::optimize()
       if (unlikely(INTEL_DEBUG & DEBUG_OPTIMIZER) && this_progress) {   \
          char filename[64];                                             \
          snprintf(filename, 64, "%s%d-%04d-%02d-%02d-" #pass,              \
-                  stage_name, dispatch_width, shader_prog ? shader_prog->Name : 0, iteration, pass_num); \
+                  stage_abbrev, dispatch_width, shader_prog ? shader_prog->Name : 0, iteration, pass_num); \
                                                                         \
          backend_visitor::dump_instructions(filename);                  \
       }                                                                 \
@@ -3793,7 +3791,8 @@ fs_visitor::optimize()
    if (unlikely(INTEL_DEBUG & DEBUG_OPTIMIZER)) {
       char filename[64];
       snprintf(filename, 64, "%s%d-%04d-00-start",
-               stage_name, dispatch_width, shader_prog ? shader_prog->Name : 0);
+               stage_abbrev, dispatch_width,
+               shader_prog ? shader_prog->Name : 0);
 
       backend_visitor::dump_instructions(filename);
    }
@@ -3885,9 +3884,6 @@ fs_visitor::allocate_registers()
    }
 
    if (!allocated_without_spills) {
-      const char *stage_name = stage == MESA_SHADER_VERTEX ?
-         "Vertex" : "Fragment";
-
       /* We assume that any spilling is worse than just dropping back to
        * SIMD8.  There's probably actually some intermediate point where
        * SIMD16 with a couple of spills is still better.
