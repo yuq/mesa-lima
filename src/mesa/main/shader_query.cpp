@@ -754,3 +754,70 @@ _mesa_get_program_resource_name(struct gl_shader_program *shProg,
    }
    return true;
 }
+
+static GLint
+program_resource_location(struct gl_shader_program *shProg,
+                          struct gl_program_resource *res, const char *name)
+{
+   unsigned index, offset;
+   int array_index = -1;
+
+   if (res->Type == GL_PROGRAM_INPUT || res->Type == GL_PROGRAM_OUTPUT) {
+      array_index = array_index_of_resource(res, name);
+      if (array_index < 0)
+         return -1;
+   }
+
+   /* VERT_ATTRIB_GENERIC0 and FRAG_RESULT_DATA0 are decremented as these
+    * offsets are used internally to differentiate between built-in attributes
+    * and user-defined attributes.
+    */
+   switch (res->Type) {
+   case GL_PROGRAM_INPUT:
+      return RESOURCE_VAR(res)->data.location + array_index - VERT_ATTRIB_GENERIC0;
+   case GL_PROGRAM_OUTPUT:
+      return RESOURCE_VAR(res)->data.location + array_index - FRAG_RESULT_DATA0;
+   case GL_UNIFORM:
+      index = _mesa_get_uniform_location(shProg, name, &offset);
+
+      if (index == GL_INVALID_INDEX)
+         return -1;
+
+      /* From the GL_ARB_uniform_buffer_object spec:
+       *
+       *     "The value -1 will be returned if <name> does not correspond to an
+       *     active uniform variable name in <program>, if <name> is associated
+       *     with a named uniform block, or if <name> starts with the reserved
+       *     prefix "gl_"."
+       */
+      if (RESOURCE_UNI(res)->block_index != -1 ||
+          RESOURCE_UNI(res)->atomic_buffer_index != -1)
+         return -1;
+
+      /* location in remap table + array element offset */
+      return RESOURCE_UNI(res)->remap_location + offset;
+
+   default:
+      return -1;
+   }
+}
+
+/**
+ * Function implements following location queries:
+ *    glGetAttribLocation
+ *    glGetFragDataLocation
+ *    glGetUniformLocation
+ */
+GLint
+_mesa_program_resource_location(struct gl_shader_program *shProg,
+                                GLenum interface, const char *name)
+{
+   struct gl_program_resource *res =
+      _mesa_program_resource_find_name(shProg, interface, name);
+
+   /* Resource not found. */
+   if (!res)
+      return -1;
+
+   return program_resource_location(shProg, res, name);
+}

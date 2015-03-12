@@ -278,11 +278,90 @@ _mesa_GetProgramResourceiv(GLuint program, GLenum programInterface,
 {
 }
 
+/**
+ * Function verifies syntax of given name for GetProgramResourceLocation
+ * and GetProgramResourceLocationIndex for the following cases:
+ *
+ * "array element portion of a string passed to GetProgramResourceLocation
+ * or GetProgramResourceLocationIndex must not have, a "+" sign, extra
+ * leading zeroes, or whitespace".
+ *
+ * Check is written to be compatible with GL_ARB_array_of_arrays.
+ */
+static bool
+invalid_array_element_syntax(const GLchar *name)
+{
+   char *first = strchr(name, '[');
+   char *last = strrchr(name, '[');
+
+   if (!first)
+      return false;
+
+   /* No '+' or ' ' allowed anywhere. */
+   if (strchr(first, '+') || strchr(first, ' '))
+      return true;
+
+   /* Check that last array index is 0. */
+   if (last[1] == '0' && last[2] != ']')
+      return true;
+
+   return false;
+}
+
+static struct gl_shader_program *
+lookup_linked_program(GLuint program, const char *caller)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   struct gl_shader_program *prog =
+      _mesa_lookup_shader_program_err(ctx, program, caller);
+
+   if (!prog)
+      return NULL;
+
+   if (prog->LinkStatus == GL_FALSE) {
+      _mesa_error(ctx, GL_INVALID_OPERATION, "%s(program not linked)",
+                  caller);
+      return NULL;
+   }
+   return prog;
+}
+
 GLint GLAPIENTRY
 _mesa_GetProgramResourceLocation(GLuint program, GLenum programInterface,
                                  const GLchar *name)
 {
-   return -1;
+   GET_CURRENT_CONTEXT(ctx);
+   struct gl_shader_program *shProg =
+      lookup_linked_program(program, "glGetProgramResourceLocation");
+
+   if (!shProg || !name || invalid_array_element_syntax(name))
+      return -1;
+
+   /* Validate programInterface. */
+   switch (programInterface) {
+   case GL_UNIFORM:
+   case GL_PROGRAM_INPUT:
+   case GL_PROGRAM_OUTPUT:
+      break;
+
+   /* For reference valid cases requiring additional extension support:
+    * GL_ARB_shader_subroutine
+    * GL_ARB_tessellation_shader
+    * GL_ARB_compute_shader
+    */
+   case GL_VERTEX_SUBROUTINE_UNIFORM:
+   case GL_TESS_CONTROL_SUBROUTINE_UNIFORM:
+   case GL_TESS_EVALUATION_SUBROUTINE_UNIFORM:
+   case GL_GEOMETRY_SUBROUTINE_UNIFORM:
+   case GL_FRAGMENT_SUBROUTINE_UNIFORM:
+   case GL_COMPUTE_SUBROUTINE_UNIFORM:
+
+   default:
+      _mesa_error(ctx, GL_INVALID_ENUM, "glGetProgramResourceLocation(%s %s)",
+                  _mesa_lookup_enum_by_nr(programInterface), name);
+   }
+
+   return _mesa_program_resource_location(shProg, programInterface, name);
 }
 
 GLint GLAPIENTRY
