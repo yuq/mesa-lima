@@ -90,7 +90,8 @@ brw_cs_emit(struct brw_context *brw,
 
    /* Now the main event: Visit the shader IR and generate our CS IR for it.
     */
-   fs_visitor v8(brw, mem_ctx, key, prog_data, prog, cp, 8);
+   fs_visitor v8(brw, mem_ctx, MESA_SHADER_COMPUTE, key, &prog_data->base, prog,
+                 &cp->Base, 8);
    if (!v8.run_cs()) {
       fail_msg = v8.fail_msg;
    } else if (local_workgroup_size <= 8 * brw->max_cs_threads) {
@@ -98,7 +99,8 @@ brw_cs_emit(struct brw_context *brw,
       prog_data->simd_size = 8;
    }
 
-   fs_visitor v16(brw, mem_ctx, key, prog_data, prog, cp, 16);
+   fs_visitor v16(brw, mem_ctx, MESA_SHADER_COMPUTE, key, &prog_data->base, prog,
+                  &cp->Base, 16);
    if (likely(!(INTEL_DEBUG & DEBUG_NO16)) &&
        !fail_msg && !v8.simd16_unsupported &&
        local_workgroup_size <= 16 * brw->max_cs_threads) {

@@ -1895,7 +1895,8 @@ brw_vs_emit(struct brw_context *brw,
    }
 
    if (brw->scalar_vs && (prog || use_nir)) {
-      fs_visitor v(brw, mem_ctx, &c->key, prog_data, prog, &c->vp->program, 8);
+      fs_visitor v(brw, mem_ctx, MESA_SHADER_VERTEX, &c->key,
+                   &prog_data->base.base, prog, &c->vp->program.Base, 8);
       if (!v.run_vs()) {
          if (prog) {
             prog->LinkStatus = false;

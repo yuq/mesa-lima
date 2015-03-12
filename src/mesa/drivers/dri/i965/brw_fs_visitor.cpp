@@ -4144,64 +4144,21 @@ fs_visitor::resolve_bool_comparison(ir_rvalue *rvalue, fs_reg *reg)
 
 fs_visitor::fs_visitor(struct brw_context *brw,
                        void *mem_ctx,
-                       const struct brw_wm_prog_key *key,
-                       struct brw_wm_prog_data *prog_data,
+                       gl_shader_stage stage,
+                       const void *key,
+                       struct brw_stage_prog_data *prog_data,
                        struct gl_shader_program *shader_prog,
-                       struct gl_fragment_program *fp,
+                       struct gl_program *prog,
                        unsigned dispatch_width)
-   : backend_visitor(brw, shader_prog, &fp->Base, &prog_data->base,
-                     MESA_SHADER_FRAGMENT),
+   : backend_visitor(brw, shader_prog, prog, prog_data, stage),
      reg_null_f(retype(brw_null_vec(dispatch_width), BRW_REGISTER_TYPE_F)),
      reg_null_d(retype(brw_null_vec(dispatch_width), BRW_REGISTER_TYPE_D)),
      reg_null_ud(retype(brw_null_vec(dispatch_width), BRW_REGISTER_TYPE_UD)),
-     key(key), prog_data(&prog_data->base),
+     key(key), prog_data(prog_data),
      dispatch_width(dispatch_width), promoted_constants(0)
 {
    this->mem_ctx = mem_ctx;
-   init();
-}
 
-fs_visitor::fs_visitor(struct brw_context *brw,
-                       void *mem_ctx,
-                       const struct brw_vs_prog_key *key,
-                       struct brw_vs_prog_data *prog_data,
-                       struct gl_shader_program *shader_prog,
-                       struct gl_vertex_program *cp,
-                       unsigned dispatch_width)
-   : backend_visitor(brw, shader_prog, &cp->Base, &prog_data->base.base,
-                     MESA_SHADER_VERTEX),
-     reg_null_f(retype(brw_null_vec(dispatch_width), BRW_REGISTER_TYPE_F)),
-     reg_null_d(retype(brw_null_vec(dispatch_width), BRW_REGISTER_TYPE_D)),
-     reg_null_ud(retype(brw_null_vec(dispatch_width), BRW_REGISTER_TYPE_UD)),
-     key(key), prog_data(&prog_data->base.base),
-     dispatch_width(dispatch_width), promoted_constants(0)
-{
-   this->mem_ctx = mem_ctx;
-   init();
-}
-
-fs_visitor::fs_visitor(struct brw_context *brw,
-                       void *mem_ctx,
-                       const struct brw_cs_prog_key *key,
-                       struct brw_cs_prog_data *prog_data,
-                       struct gl_shader_program *shader_prog,
-                       struct gl_compute_program *cp,
-                       unsigned dispatch_width)
-   : backend_visitor(brw, shader_prog, &cp->Base, &prog_data->base,
-                     MESA_SHADER_COMPUTE),
-     reg_null_f(retype(brw_null_vec(dispatch_width), BRW_REGISTER_TYPE_F)),
-     reg_null_d(retype(brw_null_vec(dispatch_width), BRW_REGISTER_TYPE_D)),
-     reg_null_ud(retype(brw_null_vec(dispatch_width), BRW_REGISTER_TYPE_UD)),
-     key(key), prog_data(&prog_data->base),
-     dispatch_width(dispatch_width), promoted_constants(0)
-{
-   this->mem_ctx = mem_ctx;
-   init();
-}
-
-void
-fs_visitor::init()
-{
    switch (stage) {
    case MESA_SHADER_FRAGMENT:
       key_tex = &((const brw_wm_prog_key *) key)->tex;

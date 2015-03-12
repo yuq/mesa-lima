@@ -75,30 +75,14 @@ public:
 
    fs_visitor(struct brw_context *brw,
               void *mem_ctx,
-              const struct brw_wm_prog_key *key,
-              struct brw_wm_prog_data *prog_data,
+              gl_shader_stage stage,
+              const void *key,
+              struct brw_stage_prog_data *prog_data,
               struct gl_shader_program *shader_prog,
-              struct gl_fragment_program *fp,
-              unsigned dispatch_width);
-
-   fs_visitor(struct brw_context *brw,
-              void *mem_ctx,
-              const struct brw_vs_prog_key *key,
-              struct brw_vs_prog_data *prog_data,
-              struct gl_shader_program *shader_prog,
-              struct gl_vertex_program *cp,
-              unsigned dispatch_width);
-
-   fs_visitor(struct brw_context *brw,
-              void *mem_ctx,
-              const struct brw_cs_prog_key *key,
-              struct brw_cs_prog_data *prog_data,
-              struct gl_shader_program *shader_prog,
-              struct gl_compute_program *cp,
+              struct gl_program *prog,
               unsigned dispatch_width);
 
    ~fs_visitor();
-   void init();
 
    fs_reg *variable_storage(ir_variable *var);
    fs_reg vgrf(const glsl_type *const type);
