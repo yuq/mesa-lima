@@ -46,6 +46,7 @@ _mesa_GetActiveUniform(GLuint program, GLuint index,
 {
    GET_CURRENT_CONTEXT(ctx);
    struct gl_shader_program *shProg;
+   struct gl_program_resource *res;
 
    if (maxLength < 0) {
       _mesa_error(ctx, GL_INVALID_VALUE, "glGetActiveUniform(maxLength < 0)");
@@ -56,27 +57,25 @@ _mesa_GetActiveUniform(GLuint program, GLuint index,
    if (!shProg)
       return;
 
-   if (index >= shProg->NumUserUniformStorage) {
+   res = _mesa_program_resource_find_index((struct gl_shader_program *) shProg,
+                                           GL_UNIFORM, index);
+
+   if (!res) {
       _mesa_error(ctx, GL_INVALID_VALUE, "glGetActiveUniform(index)");
       return;
    }
 
-   const struct gl_uniform_storage *const uni = &shProg->UniformStorage[index];
-
-   if (nameOut) {
-      _mesa_get_uniform_name(uni, maxLength, length, nameOut);
-   }
-
-   if (size) {
-      /* array_elements is zero for non-arrays, but the API requires that 1 be
-       * returned.
-       */
-      *size = MAX2(1, uni->array_elements);
-   }
-
-   if (type) {
-      *type = uni->type->gl_type;
-   }
+   if (nameOut)
+      _mesa_get_program_resource_name(shProg, GL_UNIFORM, index, maxLength,
+                                      length, nameOut, "glGetActiveUniform");
+   if (type)
+      _mesa_program_resource_prop((struct gl_shader_program *) shProg,
+                                  res, index, GL_TYPE, (GLint*) type,
+                                  "glGetActiveUniform");
+   if (size)
+      _mesa_program_resource_prop((struct gl_shader_program *) shProg,
+                                  res, index, GL_ARRAY_SIZE, (GLint*) size,
+                                  "glGetActiveUniform");
 }
 
 static GLenum
