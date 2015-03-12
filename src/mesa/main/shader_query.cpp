@@ -41,6 +41,10 @@ extern "C" {
 #include "shaderapi.h"
 }
 
+static GLint
+program_resource_location(struct gl_shader_program *shProg,
+                          struct gl_program_resource *res, const char *name);
+
 /**
  * Declare convenience functions to return resource data in a given type.
  * Warning! this is not type safe so be *very* careful when using these.
@@ -266,31 +270,25 @@ _mesa_GetAttribLocation(GLhandleARB program, const GLcharARB * name)
    if (shProg->_LinkedShaders[MESA_SHADER_VERTEX] == NULL)
       return -1;
 
-   exec_list *ir = shProg->_LinkedShaders[MESA_SHADER_VERTEX]->ir;
-   foreach_in_list(ir_instruction, node, ir) {
-      const ir_variable *const var = node->as_variable();
+   struct gl_program_resource *res =
+      _mesa_program_resource_find_name(shProg, GL_PROGRAM_INPUT, name);
 
-      /* The extra check against VERT_ATTRIB_GENERIC0 is because
-       * glGetAttribLocation cannot be used on "conventional" attributes.
-       *
-       * From page 95 of the OpenGL 3.0 spec:
-       *
-       *     "If name is not an active attribute, if name is a conventional
-       *     attribute, or if an error occurs, -1 will be returned."
-       */
-      if (var == NULL
-	  || var->data.mode != ir_var_shader_in
-	  || var->data.location == -1
-	  || var->data.location < VERT_ATTRIB_GENERIC0)
-	 continue;
+   if (!res)
+      return -1;
 
-      int index = get_matching_index(var, (const char *) name);
+   GLint loc = program_resource_location(shProg, res, name);
 
-      if (index >= 0)
-         return var->data.location + index - VERT_ATTRIB_GENERIC0;
-   }
-
-   return -1;
+   /* The extra check against against 0 is made because of builtin-attribute
+    * locations that have offset applied. Function program_resource_location
+    * can return built-in attribute locations < 0 and glGetAttribLocation
+    * cannot be used on "conventional" attributes.
+    *
+    * From page 95 of the OpenGL 3.0 spec:
+    *
+    *     "If name is not an active attribute, if name is a conventional
+    *     attribute, or if an error occurs, -1 will be returned."
+    */
+   return (loc >= 0) ? loc : -1;
 }
 
 
