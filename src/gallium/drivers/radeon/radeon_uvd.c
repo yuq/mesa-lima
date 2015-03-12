@@ -304,6 +304,8 @@ static unsigned calc_dpb_size(struct ruvd_decoder *dec)
 
 		// IT surface buffer
 		dpb_size += align(width_in_mb * height_in_mb * 32, 64);
+
+		dpb_size = MAX2(dpb_size, 30 * 1024 * 1024);
 		break;
 
 	default:
