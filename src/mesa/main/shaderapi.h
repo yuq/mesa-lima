@@ -248,6 +248,10 @@ extern GLint
 _mesa_program_resource_location(struct gl_shader_program *shProg,
                                 GLenum interface, const char *name);
 
+extern GLint
+_mesa_program_resource_location_index(struct gl_shader_program *shProg,
+                                      GLenum interface, const char *name);
+
 #ifdef __cplusplus
 }
 #endif

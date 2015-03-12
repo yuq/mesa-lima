@@ -821,3 +821,21 @@ _mesa_program_resource_location(struct gl_shader_program *shProg,
 
    return program_resource_location(shProg, res, name);
 }
+
+/**
+ * Function implements following index queries:
+ *    glGetFragDataIndex
+ */
+GLint
+_mesa_program_resource_location_index(struct gl_shader_program *shProg,
+                                      GLenum interface, const char *name)
+{
+   struct gl_program_resource *res =
+      _mesa_program_resource_find_name(shProg, interface, name);
+
+   /* Non-existent variable or resource is not referenced by fragment stage. */
+   if (!res || !(res->StageReferences & (1 << MESA_SHADER_FRAGMENT)))
+      return -1;
+
+   return RESOURCE_VAR(res)->data.index;
+}

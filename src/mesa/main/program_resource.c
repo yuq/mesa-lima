@@ -364,9 +364,32 @@ _mesa_GetProgramResourceLocation(GLuint program, GLenum programInterface,
    return _mesa_program_resource_location(shProg, programInterface, name);
 }
 
+/**
+ * Returns output index for dual source blending.
+ */
 GLint GLAPIENTRY
 _mesa_GetProgramResourceLocationIndex(GLuint program, GLenum programInterface,
                                       const GLchar *name)
 {
-   return -1;
+   GET_CURRENT_CONTEXT(ctx);
+   struct gl_shader_program *shProg =
+      lookup_linked_program(program, "glGetProgramResourceLocationIndex");
+
+   if (!shProg || !name || invalid_array_element_syntax(name))
+      return -1;
+
+   /* From the GL_ARB_program_interface_query spec:
+    *
+    * "For GetProgramResourceLocationIndex, <programInterface> must be
+    * PROGRAM_OUTPUT."
+    */
+   if (programInterface != GL_PROGRAM_OUTPUT) {
+      _mesa_error(ctx, GL_INVALID_ENUM,
+                  "glGetProgramResourceLocationIndex(%s)",
+                  _mesa_lookup_enum_by_nr(programInterface));
+      return -1;
+   }
+
+   return _mesa_program_resource_location_index(shProg, GL_PROGRAM_OUTPUT,
+                                                name);
 }
