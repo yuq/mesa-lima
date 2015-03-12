@@ -868,13 +868,13 @@ void
 fs_visitor::emit_urb_writes()
 {
    int slot, urb_offset, length;
-   struct brw_vs_prog_data *vs_prog_data =
-      (struct brw_vs_prog_data *) prog_data;
-   const struct brw_vs_prog_key *key =
+   const struct brw_vue_prog_data *vue_prog_data =
+      (const struct brw_vue_prog_data *) this->prog_data;
+   const struct brw_vs_prog_key *vs_key =
       (const struct brw_vs_prog_key *) this->key;
    const GLbitfield64 psiz_mask =
       VARYING_BIT_LAYER | VARYING_BIT_VIEWPORT | VARYING_BIT_PSIZ;
-   const struct brw_vue_map *vue_map = &vs_prog_data->base.vue_map;
+   const struct brw_vue_map *vue_map = &vue_prog_data->vue_map;
    bool flush;
    fs_reg sources[8];
 
@@ -961,11 +961,11 @@ fs_visitor::emit_urb_writes()
             break;
          }
 
-         if ((varying == VARYING_SLOT_COL0 ||
+         if (stage == MESA_SHADER_VERTEX && vs_key->clamp_vertex_color &&
+             (varying == VARYING_SLOT_COL0 ||
               varying == VARYING_SLOT_COL1 ||
               varying == VARYING_SLOT_BFC0 ||
-              varying == VARYING_SLOT_BFC1) &&
-             key->clamp_vertex_color) {
+              varying == VARYING_SLOT_BFC1)) {
             /* We need to clamp these guys, so do a saturating MOV into a
              * temp register and use that for the payload.
              */
