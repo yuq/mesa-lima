@@ -1058,12 +1058,12 @@ _mesa_get_program_resourceiv(struct gl_shader_program *shProg,
       int props_written =
          _mesa_program_resource_prop(shProg, res, index, *prop, val,
                                      "glGetProgramResourceiv");
-      if (props_written) {
-         amount += props_written;
-      } else {
-         /* Error happened. */
+
+      /* Error happened. */
+      if (props_written == 0)
          return;
-      }
+
+      amount += props_written;
    }
 
    /* If <length> is not NULL, the actual number of integer values

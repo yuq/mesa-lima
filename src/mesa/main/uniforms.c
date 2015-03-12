@@ -1061,6 +1061,81 @@ _mesa_UniformBlockBinding(GLuint program,
    }
 }
 
+
+/**
+ * Generic program resource property query.
+ */
+static void
+mesa_bufferiv(struct gl_shader_program *shProg, GLenum type,
+              GLuint index, GLenum pname, GLint *params, const char *caller)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   struct gl_program_resource *res =
+      _mesa_program_resource_find_index(shProg, type, index);
+
+   if (!res) {
+      _mesa_error(ctx, GL_INVALID_VALUE, "%s(bufferindex %d)", caller, index);
+      return;
+   }
+
+   switch (pname) {
+   case GL_UNIFORM_BLOCK_BINDING:
+   case GL_ATOMIC_COUNTER_BUFFER_BINDING:
+      _mesa_program_resource_prop(shProg, res, index, GL_BUFFER_BINDING,
+                                  params, caller);
+      return;
+   case GL_UNIFORM_BLOCK_DATA_SIZE:
+   case GL_ATOMIC_COUNTER_BUFFER_DATA_SIZE:
+      _mesa_program_resource_prop(shProg, res, index, GL_BUFFER_DATA_SIZE,
+                                  params, caller);
+      return;
+   case GL_UNIFORM_BLOCK_NAME_LENGTH:
+      _mesa_program_resource_prop(shProg, res, index, GL_NAME_LENGTH,
+                                  params, caller);
+      return;
+   case GL_UNIFORM_BLOCK_ACTIVE_UNIFORMS:
+   case GL_ATOMIC_COUNTER_BUFFER_ACTIVE_ATOMIC_COUNTERS:
+      _mesa_program_resource_prop(shProg, res, index, GL_NUM_ACTIVE_VARIABLES,
+                                  params, caller);
+      return;
+   case GL_UNIFORM_BLOCK_ACTIVE_UNIFORM_INDICES:
+   case GL_ATOMIC_COUNTER_BUFFER_ACTIVE_ATOMIC_COUNTER_INDICES:
+      _mesa_program_resource_prop(shProg, res, index, GL_ACTIVE_VARIABLES,
+                                  params, caller);
+      return;
+   case GL_UNIFORM_BLOCK_REFERENCED_BY_VERTEX_SHADER:
+   case GL_ATOMIC_COUNTER_BUFFER_REFERENCED_BY_VERTEX_SHADER:
+      _mesa_program_resource_prop(shProg, res, index,
+                                  GL_REFERENCED_BY_VERTEX_SHADER, params,
+                                  caller);
+      return;
+   case GL_UNIFORM_BLOCK_REFERENCED_BY_GEOMETRY_SHADER:
+   case GL_ATOMIC_COUNTER_BUFFER_REFERENCED_BY_GEOMETRY_SHADER:
+      _mesa_program_resource_prop(shProg, res, index,
+                                  GL_REFERENCED_BY_GEOMETRY_SHADER, params,
+                                  caller);
+      return;
+   case GL_UNIFORM_BLOCK_REFERENCED_BY_FRAGMENT_SHADER:
+   case GL_ATOMIC_COUNTER_BUFFER_REFERENCED_BY_FRAGMENT_SHADER:
+      _mesa_program_resource_prop(shProg, res, index,
+                                  GL_REFERENCED_BY_FRAGMENT_SHADER, params,
+                                  caller);
+      return;
+   case GL_ATOMIC_COUNTER_BUFFER_REFERENCED_BY_TESS_CONTROL_SHADER:
+      params[0] = GL_FALSE;
+      return;
+   case GL_ATOMIC_COUNTER_BUFFER_REFERENCED_BY_TESS_EVALUATION_SHADER:
+      params[0] = GL_FALSE;
+      return;
+   default:
+      _mesa_error(ctx, GL_INVALID_ENUM,
+                  "%s(pname 0x%x (%s))", caller, pname,
+                  _mesa_lookup_enum_by_nr(pname));
+      return;
+   }
+}
+
+
 void GLAPIENTRY
 _mesa_GetActiveUniformBlockiv(GLuint program,
 			      GLuint uniformBlockIndex,
@@ -1069,8 +1144,6 @@ _mesa_GetActiveUniformBlockiv(GLuint program,
 {
    GET_CURRENT_CONTEXT(ctx);
    struct gl_shader_program *shProg;
-   struct gl_uniform_block *block;
-   unsigned i;
 
    if (!ctx->Extensions.ARB_uniform_buffer_object) {
       _mesa_error(ctx, GL_INVALID_OPERATION, "glGetActiveUniformBlockiv");
@@ -1082,81 +1155,8 @@ _mesa_GetActiveUniformBlockiv(GLuint program,
    if (!shProg)
       return;
 
-   if (uniformBlockIndex >= shProg->NumUniformBlocks) {
-      _mesa_error(ctx, GL_INVALID_VALUE,
-		  "glGetActiveUniformBlockiv(block index %u >= %u)",
-		  uniformBlockIndex, shProg->NumUniformBlocks);
-      return;
-   }
-
-   block = &shProg->UniformBlocks[uniformBlockIndex];
-
-   switch (pname) {
-   case GL_UNIFORM_BLOCK_BINDING:
-      params[0] = block->Binding;
-      return;
-
-   case GL_UNIFORM_BLOCK_DATA_SIZE:
-      params[0] = block->UniformBufferSize;
-      return;
-
-   case GL_UNIFORM_BLOCK_NAME_LENGTH:
-      params[0] = strlen(block->Name) + 1;
-      return;
-
-   case GL_UNIFORM_BLOCK_ACTIVE_UNIFORMS: {
-      unsigned count = 0;
-
-      for (i = 0; i < block->NumUniforms; i++) {
-	 unsigned offset;
-         const int idx =
-            _mesa_get_uniform_location(shProg,
-                                       block->Uniforms[i].IndexName,
-                                       &offset);
-         if (idx != -1)
-            count++;
-      }
-
-      params[0] = count;
-      return;
-   }
-
-   case GL_UNIFORM_BLOCK_ACTIVE_UNIFORM_INDICES: {
-      unsigned count = 0;
-
-      for (i = 0; i < block->NumUniforms; i++) {
-	 unsigned offset;
-         const int idx =
-            _mesa_get_uniform_location(shProg,
-                                       block->Uniforms[i].IndexName,
-                                       &offset);
-
-         if (idx != -1)
-            params[count++] = idx;
-      }
-      return;
-   }
-
-   case GL_UNIFORM_BLOCK_REFERENCED_BY_VERTEX_SHADER:
-      params[0] = shProg->UniformBlockStageIndex[MESA_SHADER_VERTEX][uniformBlockIndex] != -1;
-      return;
-
-   case GL_UNIFORM_BLOCK_REFERENCED_BY_GEOMETRY_SHADER:
-      if (!_mesa_has_geometry_shaders(ctx))
-         break;
-      params[0] = shProg->UniformBlockStageIndex[MESA_SHADER_GEOMETRY][uniformBlockIndex] != -1;
-      return;
-
-   case GL_UNIFORM_BLOCK_REFERENCED_BY_FRAGMENT_SHADER:
-      params[0] = shProg->UniformBlockStageIndex[MESA_SHADER_FRAGMENT][uniformBlockIndex] != -1;
-      return;
-
-   default:
-      _mesa_error(ctx, GL_INVALID_ENUM,
-		  "glGetActiveUniformBlockiv(pname 0x%x (%s))",
-		  pname, _mesa_lookup_enum_by_nr(pname));
-      return;
-   }
+   mesa_bufferiv(shProg, GL_UNIFORM_BLOCK, uniformBlockIndex, pname, params,
+                 "glGetActiveUniformBlockiv");
 }
 
 void GLAPIENTRY
@@ -1282,8 +1282,6 @@ _mesa_GetActiveAtomicCounterBufferiv(GLuint program, GLuint bufferIndex,
 {
    GET_CURRENT_CONTEXT(ctx);
    struct gl_shader_program *shProg;
-   struct gl_active_atomic_buffer *ab;
-   GLuint i;
 
    if (!ctx->Extensions.ARB_shader_atomic_counters) {
       _mesa_error(ctx, GL_INVALID_OPERATION,
@@ -1296,49 +1294,8 @@ _mesa_GetActiveAtomicCounterBufferiv(GLuint program, GLuint bufferIndex,
    if (!shProg)
       return;
 
-   if (bufferIndex >= shProg->NumAtomicBuffers) {
-      _mesa_error(ctx, GL_INVALID_VALUE,
-                  "glGetActiveAtomicCounterBufferiv(bufferIndex)");
-      return;
-   }
-
-   ab = &shProg->AtomicBuffers[bufferIndex];
-
-   switch (pname) {
-   case GL_ATOMIC_COUNTER_BUFFER_BINDING:
-      params[0] = ab->Binding;
-      return;
-   case GL_ATOMIC_COUNTER_BUFFER_DATA_SIZE:
-      params[0] = ab->MinimumSize;
-      return;
-   case GL_ATOMIC_COUNTER_BUFFER_ACTIVE_ATOMIC_COUNTERS:
-      params[0] = ab->NumUniforms;
-      return;
-   case GL_ATOMIC_COUNTER_BUFFER_ACTIVE_ATOMIC_COUNTER_INDICES:
-      for (i = 0; i < ab->NumUniforms; ++i)
-         params[i] = ab->Uniforms[i];
-      return;
-   case GL_ATOMIC_COUNTER_BUFFER_REFERENCED_BY_VERTEX_SHADER:
-      params[0] = ab->StageReferences[MESA_SHADER_VERTEX];
-      return;
-   case GL_ATOMIC_COUNTER_BUFFER_REFERENCED_BY_GEOMETRY_SHADER:
-      params[0] = ab->StageReferences[MESA_SHADER_GEOMETRY];
-      return;
-   case GL_ATOMIC_COUNTER_BUFFER_REFERENCED_BY_FRAGMENT_SHADER:
-      params[0] = ab->StageReferences[MESA_SHADER_FRAGMENT];
-      return;
-   case GL_ATOMIC_COUNTER_BUFFER_REFERENCED_BY_TESS_CONTROL_SHADER:
-      params[0] = GL_FALSE;
-      return;
-   case GL_ATOMIC_COUNTER_BUFFER_REFERENCED_BY_TESS_EVALUATION_SHADER:
-      params[0] = GL_FALSE;
-      return;
-   default:
-      _mesa_error(ctx, GL_INVALID_ENUM,
-                  "glGetActiveAtomicCounterBufferiv(pname 0x%x (%s))",
-                  pname, _mesa_lookup_enum_by_nr(pname));
-      return;
-   }
+   mesa_bufferiv(shProg, GL_ATOMIC_COUNTER_BUFFER, bufferIndex, pname, params,
+                 "glGetActiveAtomicCounterBufferiv");
 }
 
 void GLAPIENTRY
