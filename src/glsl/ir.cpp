@@ -1689,8 +1689,8 @@ ir_variable::ir_variable(const struct glsl_type *type, const char *name,
 
       if (type->is_interface())
          this->init_interface_type(type);
-      else if (type->is_array() && type->fields.array->is_interface())
-         this->init_interface_type(type->fields.array);
+      else if (type->without_array()->is_interface())
+         this->init_interface_type(type->without_array());
    }
 }
 

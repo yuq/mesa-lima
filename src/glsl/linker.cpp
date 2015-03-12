@@ -1387,8 +1387,10 @@ public:
 
    virtual ir_visitor_status visit(ir_variable *var)
    {
+      const glsl_type *type_without_array;
       fixup_type(&var->type, var->data.max_array_access,
                  var->data.from_ssbo_unsized_array);
+      type_without_array = var->type->without_array();
       if (var->type->is_interface()) {
          if (interface_contains_unsized_arrays(var->type)) {
             const glsl_type *new_type =
@@ -1398,11 +1400,10 @@ public:
             var->type = new_type;
             var->change_interface_type(new_type);
          }
-      } else if (var->type->is_array() &&
-                 var->type->fields.array->is_interface()) {
-         if (interface_contains_unsized_arrays(var->type->fields.array)) {
+      } else if (type_without_array->is_interface()) {
+         if (interface_contains_unsized_arrays(type_without_array)) {
             const glsl_type *new_type =
-               resize_interface_members(var->type->fields.array,
+               resize_interface_members(type_without_array,
                                         var->get_max_ifc_array_access(),
                                         var->is_in_shader_storage_block());
             var->change_interface_type(new_type);
