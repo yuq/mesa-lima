@@ -31,8 +31,6 @@
 
 #include "gen6_gs_visitor.h"
 
-const unsigned MAX_GS_INPUT_VERTICES = 6;
-
 namespace brw {
 
 void

@@ -30,8 +30,6 @@
 #include "brw_vec4_gs_visitor.h"
 #include "gen6_gs_visitor.h"
 
-const unsigned MAX_GS_INPUT_VERTICES = 6;
-
 namespace brw {
 
 vec4_gs_visitor::vec4_gs_visitor(const struct brw_compiler *compiler,

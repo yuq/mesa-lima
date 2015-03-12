@@ -955,6 +955,8 @@ struct intel_batchbuffer {
    } saved;
 };
 
+#define MAX_GS_INPUT_VERTICES 6
+
 #define BRW_MAX_XFB_STREAMS 4
 
 struct brw_transform_feedback_object {
