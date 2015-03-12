@@ -198,16 +198,16 @@ static uint32_t profile2stream_type(struct ruvd_decoder *dec, unsigned family)
 }
 
 /* calculate size of reference picture buffer */
-static unsigned calc_dpb_size(const struct pipe_video_codec *templ)
+static unsigned calc_dpb_size(struct ruvd_decoder *dec)
 {
 	unsigned width_in_mb, height_in_mb, image_size, dpb_size;
 
 	// always align them to MB size for dpb calculation
-	unsigned width = align(templ->width, VL_MACROBLOCK_WIDTH);
-	unsigned height = align(templ->height, VL_MACROBLOCK_HEIGHT);
+	unsigned width = align(dec->base.width, VL_MACROBLOCK_WIDTH);
+	unsigned height = align(dec->base.height, VL_MACROBLOCK_HEIGHT);
 
 	// always one more for currently decoded picture
-	unsigned max_references = templ->max_references + 1;
+	unsigned max_references = dec->base.max_references + 1;
 
 	// aligned size of a single frame
 	image_size = width * height;
@@ -218,20 +218,57 @@ static unsigned calc_dpb_size(const struct pipe_video_codec *templ)
 	width_in_mb = width / VL_MACROBLOCK_WIDTH;
 	height_in_mb = align(height / VL_MACROBLOCK_HEIGHT, 2);
 
-	switch (u_reduce_video_profile(templ->profile)) {
-	case PIPE_VIDEO_FORMAT_MPEG4_AVC:
-		// the firmware seems to allways assume a minimum of ref frames
-		max_references = MAX2(NUM_H264_REFS, max_references);
+	switch (u_reduce_video_profile(dec->base.profile)) {
+	case PIPE_VIDEO_FORMAT_MPEG4_AVC: {
+		if (!dec->use_legacy) {
+			unsigned fs_in_mb = width_in_mb * height_in_mb;
+			unsigned alignment = 64, num_dpb_buffer;
 
-		// reference picture buffer
-		dpb_size = image_size * max_references;
-
-		// macroblock context buffer
-		dpb_size += width_in_mb * height_in_mb * max_references * 192;
-
-		// IT surface buffer
-		dpb_size += width_in_mb * height_in_mb * 32;
+			if (dec->stream_type == RUVD_CODEC_H264_PERF)
+				alignment = 256;
+			switch(dec->base.level) {
+			case 30:
+				num_dpb_buffer = 8100 / fs_in_mb;
+				break;
+			case 31:
+				num_dpb_buffer = 18000 / fs_in_mb;
+				break;
+			case 32:
+				num_dpb_buffer = 20480 / fs_in_mb;
+				break;
+			case 41:
+				num_dpb_buffer = 32768 / fs_in_mb;
+				break;
+			case 42:
+				num_dpb_buffer = 34816 / fs_in_mb;
+				break;
+			case 50:
+				num_dpb_buffer = 110400 / fs_in_mb;
+				break;
+			case 51:
+				num_dpb_buffer = 184320 / fs_in_mb;
+				break;
+			default:
+				num_dpb_buffer = 184320 / fs_in_mb;
+				break;
+			}
+			num_dpb_buffer++;
+			max_references = MAX2(MIN2(NUM_H264_REFS, num_dpb_buffer), max_references);
+			dpb_size = image_size * max_references;
+			dpb_size += max_references * align(width_in_mb * height_in_mb  * 192, alignment);
+			dpb_size += align(width_in_mb * height_in_mb * 32, alignment);
+		} else {
+			// the firmware seems to allways assume a minimum of ref frames
+			max_references = MAX2(NUM_H264_REFS, max_references);
+			// reference picture buffer
+			dpb_size = image_size * max_references;
+			// macroblock context buffer
+			dpb_size += width_in_mb * height_in_mb * max_references * 192;
+			// IT surface buffer
+			dpb_size += width_in_mb * height_in_mb * 32;
+		}
 		break;
+	}
 
 	case PIPE_VIDEO_FORMAT_VC1:
 		// the firmware seems to allways assume a minimum of ref frames
@@ -303,10 +340,8 @@ static struct ruvd_h264 get_h264_msg(struct ruvd_decoder *dec, struct pipe_h264_
 		assert(0);
 		break;
 	}
-	if (((dec->base.width * dec->base.height) >> 8) <= 1620)
-		result.level = 30;
-	else
-		result.level = 41;
+
+	result.level = dec->base.level;
 
 	result.sps_info_flags = 0;
 	result.sps_info_flags |= pic->pps->sps->direct_8x8_inference_flag << 0;
@@ -785,8 +820,8 @@ struct pipe_video_codec *ruvd_create_decoder(struct pipe_context *context,
 					     ruvd_set_dtb set_dtb)
 {
 	struct radeon_winsys* ws = ((struct r600_common_context *)context)->ws;
-	unsigned dpb_size = calc_dpb_size(templ);
 	struct r600_common_context *rctx = (struct r600_common_context*)context;
+	unsigned dpb_size;
 	unsigned width = templ->width, height = templ->height;
 	unsigned bs_buf_size;
 	struct radeon_info info;
@@ -864,6 +899,8 @@ struct pipe_video_codec *ruvd_create_decoder(struct pipe_context *context,
 		rvid_clear_buffer(context, &dec->msg_fb_it_buffers[i]);
 		rvid_clear_buffer(context, &dec->bs_buffers[i]);
 	}
+
+	dpb_size = calc_dpb_size(dec);
 
 	if (!rvid_create_buffer(dec->screen, &dec->dpb, dpb_size, PIPE_USAGE_DEFAULT)) {
 		RVID_ERR("Can't allocated dpb.\n");
