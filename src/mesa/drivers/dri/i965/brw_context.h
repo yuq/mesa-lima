@@ -605,6 +605,12 @@ struct brw_ff_gs_prog_data {
    unsigned svbi_postincrement_value;
 };
 
+enum shader_dispatch_mode {
+   DISPATCH_MODE_4X1_SINGLE = 0,
+   DISPATCH_MODE_4X2_DUAL_INSTANCE = 1,
+   DISPATCH_MODE_4X2_DUAL_OBJECT = 2,
+   DISPATCH_MODE_SIMD8 = 3,
+};
 
 /* Note: brw_vue_prog_data_compare() must be updated when adding fields to
  * this struct!
@@ -622,7 +628,7 @@ struct brw_vue_prog_data {
     */
    GLuint urb_entry_size;
 
-   bool simd8;
+   enum shader_dispatch_mode dispatch_mode;
 };
 
 
@@ -718,14 +724,6 @@ struct brw_gs_prog_data
    bool include_primitive_id;
 
    int invocations;
-
-   /**
-    * Dispatch mode, can be any of:
-    * GEN7_GS_DISPATCH_MODE_DUAL_OBJECT
-    * GEN7_GS_DISPATCH_MODE_DUAL_INSTANCE
-    * GEN7_GS_DISPATCH_MODE_SINGLE
-    */
-   int dispatch_mode;
 
    /**
     * Gen6 transform feedback enabled flag.

@@ -106,7 +106,7 @@ vec4_gs_visitor::setup_payload()
     * to be interleaved, so one register contains two attribute slots.
     */
    int attributes_per_reg =
-      c->prog_data.dispatch_mode == GEN7_GS_DISPATCH_MODE_DUAL_OBJECT ? 1 : 2;
+      c->prog_data.base.dispatch_mode == DISPATCH_MODE_4X2_DUAL_OBJECT ? 1 : 2;
 
    /* If a geometry shader tries to read from an input that wasn't written by
     * the vertex shader, that produces undefined results, but it shouldn't
@@ -655,7 +655,7 @@ brw_gs_emit(struct brw_context *brw,
        */
       if (c->prog_data.invocations <= 1 &&
           likely(!(INTEL_DEBUG & DEBUG_NO_DUAL_OBJECT_GS))) {
-         c->prog_data.dispatch_mode = GEN7_GS_DISPATCH_MODE_DUAL_OBJECT;
+         c->prog_data.base.dispatch_mode = DISPATCH_MODE_4X2_DUAL_OBJECT;
 
          vec4_gs_visitor v(brw, c, prog, mem_ctx, true /* no_spills */);
          if (v.run()) {
@@ -690,9 +690,9 @@ brw_gs_emit(struct brw_context *brw,
     * SINGLE mode.
     */
    if (c->prog_data.invocations <= 1 || brw->gen < 7)
-      c->prog_data.dispatch_mode = GEN7_GS_DISPATCH_MODE_SINGLE;
+      c->prog_data.base.dispatch_mode = DISPATCH_MODE_4X1_SINGLE;
    else
-      c->prog_data.dispatch_mode = GEN7_GS_DISPATCH_MODE_DUAL_INSTANCE;
+      c->prog_data.base.dispatch_mode = DISPATCH_MODE_4X2_DUAL_INSTANCE;
 
    vec4_gs_visitor *gs = NULL;
    const unsigned *ret = NULL;

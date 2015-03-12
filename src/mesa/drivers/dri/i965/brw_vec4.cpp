@@ -1894,6 +1894,8 @@ brw_vs_emit(struct brw_context *brw,
             brw_create_nir(brw, NULL, &c->vp->program.Base, MESA_SHADER_VERTEX);
       }
 
+      prog_data->base.dispatch_mode = DISPATCH_MODE_SIMD8;
+
       fs_visitor v(brw, mem_ctx, MESA_SHADER_VERTEX, &c->key,
                    &prog_data->base.base, prog, &c->vp->program.Base, 8);
       if (!v.run_vs()) {
@@ -1926,11 +1928,12 @@ brw_vs_emit(struct brw_context *brw,
       g.generate_code(v.cfg, 8);
       assembly = g.get_assembly(final_assembly_size);
 
-      prog_data->base.simd8 = true;
       c->base.last_scratch = v.last_scratch;
    }
 
    if (!assembly) {
+      prog_data->base.dispatch_mode = DISPATCH_MODE_4X2_DUAL_OBJECT;
+
       vec4_vs_visitor v(brw, c, prog_data, prog, mem_ctx);
       if (!v.run()) {
          if (prog) {
