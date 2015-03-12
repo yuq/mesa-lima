@@ -79,6 +79,33 @@ _mesa_GetActiveUniform(GLuint program, GLuint index,
    }
 }
 
+static GLenum
+resource_prop_from_uniform_prop(GLenum uni_prop)
+{
+   switch (uni_prop) {
+   case GL_UNIFORM_TYPE:
+      return GL_TYPE;
+   case GL_UNIFORM_SIZE:
+      return GL_ARRAY_SIZE;
+   case GL_UNIFORM_NAME_LENGTH:
+      return GL_NAME_LENGTH;
+   case GL_UNIFORM_BLOCK_INDEX:
+      return GL_BLOCK_INDEX;
+   case GL_UNIFORM_OFFSET:
+      return GL_OFFSET;
+   case GL_UNIFORM_ARRAY_STRIDE:
+      return GL_ARRAY_STRIDE;
+   case GL_UNIFORM_MATRIX_STRIDE:
+      return GL_MATRIX_STRIDE;
+   case GL_UNIFORM_IS_ROW_MAJOR:
+      return GL_IS_ROW_MAJOR;
+   case GL_UNIFORM_ATOMIC_COUNTER_BUFFER_INDEX:
+      return GL_ATOMIC_COUNTER_BUFFER_INDEX;
+   default:
+      return 0;
+   }
+}
+
 extern "C" void GLAPIENTRY
 _mesa_GetActiveUniformsiv(GLuint program,
 			  GLsizei uniformCount,
@@ -88,7 +115,8 @@ _mesa_GetActiveUniformsiv(GLuint program,
 {
    GET_CURRENT_CONTEXT(ctx);
    struct gl_shader_program *shProg;
-   GLsizei i;
+   struct gl_program_resource *res;
+   GLenum res_prop;
 
    if (uniformCount < 0) {
       _mesa_error(ctx, GL_INVALID_VALUE,
@@ -100,80 +128,21 @@ _mesa_GetActiveUniformsiv(GLuint program,
    if (!shProg)
       return;
 
-   for (i = 0; i < uniformCount; i++) {
-      GLuint index = uniformIndices[i];
+   res_prop = resource_prop_from_uniform_prop(pname);
 
-      if (index >= shProg->NumUserUniformStorage) {
-	 _mesa_error(ctx, GL_INVALID_VALUE, "glGetActiveUniformsiv(index)");
-	 return;
-      }
-   }
-
-   for (i = 0; i < uniformCount; i++) {
-      GLuint index = uniformIndices[i];
-      const struct gl_uniform_storage *uni = &shProg->UniformStorage[index];
-
-      switch (pname) {
-      case GL_UNIFORM_TYPE:
-	 params[i] = uni->type->gl_type;
-	 break;
-
-      case GL_UNIFORM_SIZE:
-	 /* array_elements is zero for non-arrays, but the API requires that 1 be
-	  * returned.
-	  */
-	 params[i] = MAX2(1, uni->array_elements);
-	 break;
-
-      case GL_UNIFORM_NAME_LENGTH:
-	 params[i] = strlen(uni->name) + 1;
-
-         /* Page 61 (page 73 of the PDF) in section 2.11 of the OpenGL ES 3.0
-          * spec says:
-          *
-          *     "If the active uniform is an array, the uniform name returned
-          *     in name will always be the name of the uniform array appended
-          *     with "[0]"."
-          */
-         if (uni->array_elements != 0)
-            params[i] += 3;
-	 break;
-
-      case GL_UNIFORM_BLOCK_INDEX:
-	 params[i] = uni->block_index;
-	 break;
-
-      case GL_UNIFORM_OFFSET:
-	 params[i] = uni->offset;
-	 break;
-
-      case GL_UNIFORM_ARRAY_STRIDE:
-	 params[i] = uni->array_stride;
-	 break;
-
-      case GL_UNIFORM_MATRIX_STRIDE:
-	 params[i] = uni->matrix_stride;
-	 break;
-
-      case GL_UNIFORM_IS_ROW_MAJOR:
-	 params[i] = uni->row_major;
-	 break;
-
-      case GL_UNIFORM_ATOMIC_COUNTER_BUFFER_INDEX:
-         if (!ctx->Extensions.ARB_shader_atomic_counters)
-            goto invalid_enum;
-         params[i] = uni->atomic_buffer_index;
+   for (int i = 0; i < uniformCount; i++) {
+      res = _mesa_program_resource_find_index(shProg, GL_UNIFORM,
+                                              uniformIndices[i]);
+      if (!res) {
+         _mesa_error(ctx, GL_INVALID_VALUE, "glGetActiveUniformsiv(index)");
          break;
-
-      default:
-         goto invalid_enum;
       }
+
+      if (!_mesa_program_resource_prop(shProg, res, uniformIndices[i],
+                                       res_prop, &params[i],
+                                       "glGetActiveUniformsiv"))
+         break;
    }
-
-   return;
-
- invalid_enum:
-   _mesa_error(ctx, GL_INVALID_ENUM, "glGetActiveUniformsiv(pname)");
 }
 
 static struct gl_uniform_storage *
