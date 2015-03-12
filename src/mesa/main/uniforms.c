@@ -986,9 +986,9 @@ _mesa_GetUniformIndices(GLuint program,
    }
 
    for (i = 0; i < uniformCount; i++) {
-      unsigned offset;
-      uniformIndices[i] = _mesa_get_uniform_location(shProg,
-						     uniformNames[i], &offset);
+      struct gl_program_resource *res =
+         _mesa_program_resource_find_name(shProg, GL_UNIFORM, uniformNames[i]);
+      uniformIndices[i] = _mesa_program_resource_index(shProg, res);
    }
 }
 
