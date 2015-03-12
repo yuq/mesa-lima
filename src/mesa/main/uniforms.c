@@ -1168,7 +1168,6 @@ _mesa_GetActiveUniformBlockName(GLuint program,
 {
    GET_CURRENT_CONTEXT(ctx);
    struct gl_shader_program *shProg;
-   struct gl_uniform_block *block;
 
    if (!ctx->Extensions.ARB_uniform_buffer_object) {
       _mesa_error(ctx, GL_INVALID_OPERATION, "glGetActiveUniformBlockiv");
@@ -1187,18 +1186,11 @@ _mesa_GetActiveUniformBlockName(GLuint program,
    if (!shProg)
       return;
 
-   if (uniformBlockIndex >= shProg->NumUniformBlocks) {
-      _mesa_error(ctx, GL_INVALID_VALUE,
-		  "glGetActiveUniformBlockiv(block index %u >= %u)",
-		  uniformBlockIndex, shProg->NumUniformBlocks);
-      return;
-   }
-
-   block = &shProg->UniformBlocks[uniformBlockIndex];
-
-   if (uniformBlockName) {
-      _mesa_copy_string(uniformBlockName, bufSize, length, block->Name);
-   }
+   if (uniformBlockName)
+      _mesa_get_program_resource_name(shProg, GL_UNIFORM_BLOCK,
+                                      uniformBlockIndex, bufSize, length,
+                                      uniformBlockName,
+                                      "glGetActiveUniformBlockName");
 }
 
 void GLAPIENTRY
