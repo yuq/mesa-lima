@@ -1226,15 +1226,8 @@ _mesa_GetActiveUniformName(GLuint program, GLuint uniformIndex,
    if (!shProg)
       return;
 
-   if (uniformIndex >= shProg->NumUserUniformStorage) {
-      _mesa_error(ctx, GL_INVALID_VALUE, "glGetActiveUniform(index)");
-      return;
-   }
-
-   if (uniformName) {
-      _mesa_get_uniform_name(& shProg->UniformStorage[uniformIndex],
-                             bufSize, length, uniformName);
-   }
+   _mesa_get_program_resource_name(shProg, GL_UNIFORM, uniformIndex, bufSize,
+                                   length, uniformName, "glGetActiveUniformName");
 }
 
 void
