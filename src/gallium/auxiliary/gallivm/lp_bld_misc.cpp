@@ -502,7 +502,7 @@ lp_build_create_jit_compiler_for_module(LLVMExecutionEngineRef *OutJIT,
 
 #if HAVE_LLVM >= 0x0306
        builder.setMCJITMemoryManager(std::unique_ptr<RTDyldMemoryManager>(MM));
-       MM = NULL; // onwership taken by std::unique_ptr
+       MM = NULL; // ownership taken by std::unique_ptr
 #else
        builder.setMCJITMemoryManager(MM);
 #endif
