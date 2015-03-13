@@ -1382,6 +1382,8 @@ void radeon_llvm_context_init(struct radeon_llvm_context * ctx)
 	bld_base->op_actions[TGSI_OPCODE_AND].emit = emit_and;
 	bld_base->op_actions[TGSI_OPCODE_ARL].emit = emit_arl;
 	bld_base->op_actions[TGSI_OPCODE_BGNLOOP].emit = bgnloop_emit;
+	bld_base->op_actions[TGSI_OPCODE_BREV].emit = build_tgsi_intrinsic_nomem;
+	bld_base->op_actions[TGSI_OPCODE_BREV].intr_name = "llvm.AMDGPU.brev";
 	bld_base->op_actions[TGSI_OPCODE_BRK].emit = brk_emit;
 	bld_base->op_actions[TGSI_OPCODE_CEIL].emit = build_tgsi_intrinsic_nomem;
 	bld_base->op_actions[TGSI_OPCODE_CEIL].intr_name = "ceil";
@@ -1415,6 +1417,8 @@ void radeon_llvm_context_init(struct radeon_llvm_context * ctx)
 	bld_base->op_actions[TGSI_OPCODE_FSNE].emit = emit_fcmp;
 	bld_base->op_actions[TGSI_OPCODE_IABS].emit = build_tgsi_intrinsic_nomem;
 	bld_base->op_actions[TGSI_OPCODE_IABS].intr_name = "llvm.AMDIL.abs.";
+	bld_base->op_actions[TGSI_OPCODE_IBFE].emit = build_tgsi_intrinsic_nomem;
+	bld_base->op_actions[TGSI_OPCODE_IBFE].intr_name = "llvm.AMDGPU.bfe.i32";
 	bld_base->op_actions[TGSI_OPCODE_IDIV].emit = emit_idiv;
 	bld_base->op_actions[TGSI_OPCODE_IF].emit = if_emit;
 	bld_base->op_actions[TGSI_OPCODE_UIF].emit = uif_emit;
@@ -1442,6 +1446,8 @@ void radeon_llvm_context_init(struct radeon_llvm_context * ctx)
 	bld_base->op_actions[TGSI_OPCODE_UMSB].emit = emit_umsb;
 	bld_base->op_actions[TGSI_OPCODE_NOT].emit = emit_not;
 	bld_base->op_actions[TGSI_OPCODE_OR].emit = emit_or;
+	bld_base->op_actions[TGSI_OPCODE_POPC].emit = build_tgsi_intrinsic_nomem;
+	bld_base->op_actions[TGSI_OPCODE_POPC].intr_name = "llvm.ctpop.i32";
 	bld_base->op_actions[TGSI_OPCODE_POW].emit = build_tgsi_intrinsic_nomem;
 	bld_base->op_actions[TGSI_OPCODE_POW].intr_name = "llvm.pow.f32";
 	bld_base->op_actions[TGSI_OPCODE_ROUND].emit = build_tgsi_intrinsic_nomem;
@@ -1481,6 +1487,8 @@ void radeon_llvm_context_init(struct radeon_llvm_context * ctx)
 	bld_base->op_actions[TGSI_OPCODE_TRUNC].emit = build_tgsi_intrinsic_nomem;
 	bld_base->op_actions[TGSI_OPCODE_TRUNC].intr_name = "llvm.AMDGPU.trunc";
 	bld_base->op_actions[TGSI_OPCODE_UADD].emit = emit_uadd;
+	bld_base->op_actions[TGSI_OPCODE_UBFE].emit = build_tgsi_intrinsic_nomem;
+	bld_base->op_actions[TGSI_OPCODE_UBFE].intr_name = "llvm.AMDGPU.bfe.u32";
 	bld_base->op_actions[TGSI_OPCODE_UDIV].emit = emit_udiv;
 	bld_base->op_actions[TGSI_OPCODE_UMAX].emit = build_tgsi_intrinsic_nomem;
 	bld_base->op_actions[TGSI_OPCODE_UMAX].intr_name = "llvm.AMDGPU.umax";
