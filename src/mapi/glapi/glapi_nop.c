@@ -44,6 +44,7 @@
  */
 
 
+#include <stdlib.h>
 #include <string.h>
 #include "glapi/glapi_priv.h"
 
