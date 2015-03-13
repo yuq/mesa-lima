@@ -729,7 +729,7 @@ dest(FILE *file, struct brw_context *brw, brw_inst *inst)
          if (err == -1)
             return 0;
          if (brw_inst_dst_da1_subreg_nr(brw, inst))
-            format(file, ".%d", brw_inst_dst_da1_subreg_nr(brw, inst) /
+            format(file, ".%ld", brw_inst_dst_da1_subreg_nr(brw, inst) /
                    reg_type_size[brw_inst_dst_reg_type(brw, inst)]);
          string(file, "<");
          err |= control(file, "horiz stride", horiz_stride,
@@ -740,7 +740,7 @@ dest(FILE *file, struct brw_context *brw, brw_inst *inst)
       } else {
          string(file, "g[a0");
          if (brw_inst_dst_ia_subreg_nr(brw, inst))
-            format(file, ".%d", brw_inst_dst_ia_subreg_nr(brw, inst) /
+            format(file, ".%ld", brw_inst_dst_ia_subreg_nr(brw, inst) /
                    reg_type_size[brw_inst_dst_reg_type(brw, inst)]);
          if (brw_inst_dst_ia1_addr_imm(brw, inst))
             format(file, " %d", brw_inst_dst_ia1_addr_imm(brw, inst));
@@ -758,7 +758,7 @@ dest(FILE *file, struct brw_context *brw, brw_inst *inst)
          if (err == -1)
             return 0;
          if (brw_inst_dst_da16_subreg_nr(brw, inst))
-            format(file, ".%d", brw_inst_dst_da16_subreg_nr(brw, inst) /
+            format(file, ".%ld", brw_inst_dst_da16_subreg_nr(brw, inst) /
                    reg_type_size[brw_inst_dst_reg_type(brw, inst)]);
          string(file, "<1>");
          err |= control(file, "writemask", writemask,
@@ -789,7 +789,7 @@ dest_3src(FILE *file, struct brw_context *brw, brw_inst *inst)
    if (err == -1)
       return 0;
    if (brw_inst_3src_dst_subreg_nr(brw, inst))
-      format(file, ".%d", brw_inst_3src_dst_subreg_nr(brw, inst));
+      format(file, ".%ld", brw_inst_3src_dst_subreg_nr(brw, inst));
    string(file, "<1>");
    err |= control(file, "writemask", writemask,
                   brw_inst_3src_dst_writemask(brw, inst), NULL);
@@ -1225,9 +1225,9 @@ brw_disassemble_inst(FILE *file, struct brw_context *brw, brw_inst *inst,
       string(file, "(");
       err |= control(file, "predicate inverse", pred_inv,
                      brw_inst_pred_inv(brw, inst), NULL);
-      format(file, "f%d", brw->gen >= 7 ? brw_inst_flag_reg_nr(brw, inst) : 0);
+      format(file, "f%ld", brw->gen >= 7 ? brw_inst_flag_reg_nr(brw, inst) : 0);
       if (brw_inst_flag_subreg_nr(brw, inst))
-         format(file, ".%d", brw_inst_flag_subreg_nr(brw, inst));
+         format(file, ".%ld", brw_inst_flag_subreg_nr(brw, inst));
       if (brw_inst_access_mode(brw, inst) == BRW_ALIGN_1) {
          err |= control(file, "predicate control align1", pred_ctrl_align1,
                         brw_inst_pred_control(brw, inst), NULL);
@@ -1261,10 +1261,10 @@ brw_disassemble_inst(FILE *file, struct brw_context *brw, brw_inst *inst,
           (brw->gen < 6 || (opcode != BRW_OPCODE_SEL &&
                             opcode != BRW_OPCODE_IF &&
                             opcode != BRW_OPCODE_WHILE))) {
-         format(file, ".f%d",
+         format(file, ".f%ld",
                 brw->gen >= 7 ? brw_inst_flag_reg_nr(brw, inst) : 0);
          if (brw_inst_flag_subreg_nr(brw, inst))
-            format(file, ".%d", brw_inst_flag_subreg_nr(brw, inst));
+            format(file, ".%ld", brw_inst_flag_subreg_nr(brw, inst));
       }
    }
 
@@ -1276,7 +1276,7 @@ brw_disassemble_inst(FILE *file, struct brw_context *brw, brw_inst *inst,
    }
 
    if (opcode == BRW_OPCODE_SEND && brw->gen < 6)
-      format(file, " %d", brw_inst_base_mrf(brw, inst));
+      format(file, " %ld", brw_inst_base_mrf(brw, inst));
 
    if (has_uip(brw, opcode)) {
       /* Instructions that have UIP also have JIP. */
@@ -1297,7 +1297,7 @@ brw_disassemble_inst(FILE *file, struct brw_context *brw, brw_inst *inst,
       pad(file, 16);
       format(file, "Jump: %d", brw_inst_gen4_jump_count(brw, inst));
       pad(file, 32);
-      format(file, "Pop: %d", brw_inst_gen4_pop_count(brw, inst));
+      format(file, "Pop: %ld", brw_inst_gen4_pop_count(brw, inst));
    } else if (brw->gen < 6 && (opcode == BRW_OPCODE_IF ||
                                opcode == BRW_OPCODE_IFF ||
                                opcode == BRW_OPCODE_HALT)) {
@@ -1305,7 +1305,7 @@ brw_disassemble_inst(FILE *file, struct brw_context *brw, brw_inst *inst,
       format(file, "Jump: %d", brw_inst_gen4_jump_count(brw, inst));
    } else if (brw->gen < 6 && opcode == BRW_OPCODE_ENDIF) {
       pad(file, 16);
-      format(file, "Pop: %d", brw_inst_gen4_pop_count(brw, inst));
+      format(file, "Pop: %ld", brw_inst_gen4_pop_count(brw, inst));
    } else if (opcode == BRW_OPCODE_JMPI) {
       pad(file, 16);
       err |= src1(file, brw, inst);
@@ -1374,13 +1374,13 @@ brw_disassemble_inst(FILE *file, struct brw_context *brw, brw_inst *inst,
             break;
          case BRW_SFID_SAMPLER:
             if (brw->gen >= 5) {
-               format(file, " (%d, %d, %d, %d)",
+               format(file, " (%ld, %ld, %ld, %ld)",
                       brw_inst_binding_table_index(brw, inst),
                       brw_inst_sampler(brw, inst),
                       brw_inst_sampler_msg_type(brw, inst),
                       brw_inst_sampler_simd_mode(brw, inst));
             } else {
-               format(file, " (%d, %d, %d, ",
+               format(file, " (%ld, %ld, %ld, ",
                       brw_inst_binding_table_index(brw, inst),
                       brw_inst_sampler(brw, inst),
                       brw_inst_sampler_msg_type(brw, inst));
@@ -1395,13 +1395,13 @@ brw_disassemble_inst(FILE *file, struct brw_context *brw, brw_inst *inst,
          case GEN6_SFID_DATAPORT_SAMPLER_CACHE:
             /* aka BRW_SFID_DATAPORT_READ on Gen4-5 */
             if (brw->gen >= 6) {
-               format(file, " (%d, %d, %d, %d)",
+               format(file, " (%ld, %ld, %ld, %ld)",
                       brw_inst_binding_table_index(brw, inst),
                       brw_inst_dp_msg_control(brw, inst),
                       brw_inst_dp_msg_type(brw, inst),
                       brw->gen >= 7 ? 0 : brw_inst_dp_write_commit(brw, inst));
             } else {
-               format(file, " (%d, %d, %d)",
+               format(file, " (%ld, %ld, %ld)",
                       brw_inst_binding_table_index(brw, inst),
                       brw_inst_dp_read_msg_control(brw, inst),
                       brw_inst_dp_read_msg_type(brw, inst));
@@ -1431,16 +1431,16 @@ brw_disassemble_inst(FILE *file, struct brw_context *brw, brw_inst *inst,
                if (brw->gen < 7 && brw_inst_dp_write_commit(brw, inst))
                   string(file, " WriteCommit");
             } else {
-               format(file, " MsgCtrl = 0x%x",
+               format(file, " MsgCtrl = 0x%lx",
                       brw_inst_dp_write_msg_control(brw, inst));
             }
 
-            format(file, " Surface = %d", brw_inst_binding_table_index(brw, inst));
+            format(file, " Surface = %ld", brw_inst_binding_table_index(brw, inst));
             break;
          }
 
          case BRW_SFID_URB:
-            format(file, " %d", brw_inst_urb_global_offset(brw, inst));
+            format(file, " %ld", brw_inst_urb_global_offset(brw, inst));
 
             space = 1;
             if (brw->gen >= 7) {
@@ -1473,7 +1473,7 @@ brw_disassemble_inst(FILE *file, struct brw_context *brw, brw_inst *inst,
                               dp_dc0_msg_type_gen7,
                               brw_inst_dp_msg_type(brw, inst), &space);
 
-               format(file, ", %d, ", brw_inst_binding_table_index(brw, inst));
+               format(file, ", %ld, ", brw_inst_binding_table_index(brw, inst));
 
                switch (brw_inst_dp_msg_type(brw, inst)) {
                case GEN7_DATAPORT_DC_UNTYPED_ATOMIC_OP:
@@ -1481,7 +1481,7 @@ brw_disassemble_inst(FILE *file, struct brw_context *brw, brw_inst *inst,
                           brw_inst_imm_ud(brw, inst) >> 8 & 0xf, &space);
                   break;
                default:
-                  format(file, "%d", brw_inst_dp_msg_control(brw, inst));
+                  format(file, "%ld", brw_inst_dp_msg_control(brw, inst));
                }
                format(file, ")");
                break;
@@ -1498,7 +1498,7 @@ brw_disassemble_inst(FILE *file, struct brw_context *brw, brw_inst *inst,
                               dp_dc1_msg_type_hsw,
                               brw_inst_dp_msg_type(brw, inst), &space);
 
-               format(file, ", Surface = %d, ",
+               format(file, ", Surface = %ld, ",
                       brw_inst_binding_table_index(brw, inst));
 
                switch (brw_inst_dp_msg_type(brw, inst)) {
@@ -1532,7 +1532,7 @@ brw_disassemble_inst(FILE *file, struct brw_context *brw, brw_inst *inst,
 
          case GEN7_SFID_PIXEL_INTERPOLATOR:
             if (brw->gen >= 7) {
-               format(file, " (%s, %s, 0x%02x)",
+               format(file, " (%s, %s, 0x%02lx)",
                       brw_inst_pi_nopersp(brw, inst) ? "linear" : "persp",
                       pixel_interpolator_msg_types[brw_inst_pi_message_type(brw, inst)],
                       brw_inst_pi_message_data(brw, inst));
@@ -1547,8 +1547,8 @@ brw_disassemble_inst(FILE *file, struct brw_context *brw, brw_inst *inst,
 
          if (space)
             string(file, " ");
-         format(file, "mlen %d", brw_inst_mlen(brw, inst));
-         format(file, " rlen %d", brw_inst_rlen(brw, inst));
+         format(file, "mlen %ld", brw_inst_mlen(brw, inst));
+         format(file, " rlen %ld", brw_inst_rlen(brw, inst));
       }
    }
    pad(file, 64);
