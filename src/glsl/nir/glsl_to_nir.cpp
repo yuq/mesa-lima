@@ -1894,5 +1894,7 @@ nir_visitor::visit(ir_dereference_array *ir)
 void
 nir_visitor::visit(ir_barrier *ir)
 {
-   unreachable("Not implemented!");
+   nir_intrinsic_instr *instr =
+      nir_intrinsic_instr_create(this->shader, nir_intrinsic_barrier);
+   nir_instr_insert_after_cf_list(this->cf_node_list, &instr->instr);
 }
