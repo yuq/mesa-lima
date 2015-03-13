@@ -769,6 +769,28 @@ backend_reg::is_accumulator() const
 }
 
 bool
+backend_instruction::is_commutative() const
+{
+   switch (opcode) {
+   case BRW_OPCODE_AND:
+   case BRW_OPCODE_OR:
+   case BRW_OPCODE_XOR:
+   case BRW_OPCODE_ADD:
+   case BRW_OPCODE_MUL:
+      return true;
+   case BRW_OPCODE_SEL:
+      /* MIN and MAX are commutative. */
+      if (conditional_mod == BRW_CONDITIONAL_GE ||
+          conditional_mod == BRW_CONDITIONAL_L) {
+         return true;
+      }
+      /* fallthrough */
+   default:
+      return false;
+   }
+}
+
+bool
 backend_instruction::is_3src() const
 {
    return opcode < ARRAY_SIZE(opcode_descs) && opcode_descs[opcode].nsrc == 3;

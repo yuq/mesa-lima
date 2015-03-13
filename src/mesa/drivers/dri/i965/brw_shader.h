@@ -94,6 +94,7 @@ struct backend_instruction : public exec_node {
    bool is_tex() const;
    bool is_math() const;
    bool is_control_flow() const;
+   bool is_commutative() const;
    bool can_do_source_mods() const;
    bool can_do_saturate() const;
    bool can_do_cmod() const;
