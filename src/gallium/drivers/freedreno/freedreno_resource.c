@@ -215,7 +215,14 @@ setup_slices(struct fd_resource *rsc, uint32_t alignment)
 
 		slice->pitch = align(width, 32);
 		slice->offset = size;
-		slice->size0 = align(slice->pitch * height * rsc->cpp, alignment);
+		/* 1d array, 2d array, 3d textures (but not cube!) must all have the
+		 * same layer size for each miplevel on a3xx. These are also the
+		 * targets that have non-1 alignment.
+		 */
+		if (level == 0 || layers_in_level == 1 || alignment == 1)
+			slice->size0 = align(slice->pitch * height * rsc->cpp, alignment);
+		else
+			slice->size0 = rsc->slices[0].size0;
 
 		size += slice->size0 * depth * layers_in_level;
 
