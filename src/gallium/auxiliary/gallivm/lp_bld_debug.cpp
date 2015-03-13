@@ -399,18 +399,22 @@ disassemble(const void* func, llvm::raw_ostream & Out)
             break;
          }
       }
-   }
 
-   /*
-    * Print GDB command, useful to verify output.
-    */
-
-   if (0) {
-      _debug_printf("disassemble %p %p\n", bytes, bytes + pc);
+      if (pc >= extent) {
+         Out << "disassembly larger than " << extent << "bytes, aborting\n";
+         break;
+      }
    }
 
    Out << "\n";
    Out.flush();
+
+   /*
+    * Print GDB command, useful to verify output.
+    */
+   if (0) {
+      _debug_printf("disassemble %p %p\n", bytes, bytes + pc);
+   }
 
    return pc;
 }
