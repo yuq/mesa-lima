@@ -597,6 +597,9 @@ string(FILE *file, const char *string)
 }
 
 static int
+format(FILE *f, const char *format, ...) PRINTFLIKE(2, 3);
+
+static int
 format(FILE *f, const char *format, ...)
 {
    char buf[1024];
