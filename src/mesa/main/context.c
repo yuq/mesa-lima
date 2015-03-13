@@ -931,8 +931,8 @@ nop_glFlush(void)
  * populated with pointers to "no-op" functions.  In turn, the no-op
  * functions will call nop_handler() above.
  */
-struct _glapi_table *
-_mesa_alloc_dispatch_table(void)
+static struct _glapi_table *
+alloc_dispatch_table(void)
 {
    /* Find the larger of Mesa's dispatch table and libGL's dispatch table.
     * In practice, this'll be the same for stand-alone Mesa.  But for DRI
@@ -1001,7 +1001,7 @@ create_beginend_table(const struct gl_context *ctx)
 {
    struct _glapi_table *table;
 
-   table = _mesa_alloc_dispatch_table();
+   table = alloc_dispatch_table();
    if (!table)
       return NULL;
 
@@ -1140,7 +1140,7 @@ _mesa_initialize_context(struct gl_context *ctx,
       goto fail;
 
    /* setup the API dispatch tables with all nop functions */
-   ctx->OutsideBeginEnd = _mesa_alloc_dispatch_table();
+   ctx->OutsideBeginEnd = alloc_dispatch_table();
    if (!ctx->OutsideBeginEnd)
       goto fail;
    ctx->Exec = ctx->OutsideBeginEnd;
@@ -1167,7 +1167,7 @@ _mesa_initialize_context(struct gl_context *ctx,
    switch (ctx->API) {
    case API_OPENGL_COMPAT:
       ctx->BeginEnd = create_beginend_table(ctx);
-      ctx->Save = _mesa_alloc_dispatch_table();
+      ctx->Save = alloc_dispatch_table();
       if (!ctx->BeginEnd || !ctx->Save)
          goto fail;
 
