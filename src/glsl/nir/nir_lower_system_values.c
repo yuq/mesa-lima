@@ -70,6 +70,9 @@ convert_instr(nir_intrinsic_instr *instr)
    case SYSTEM_VALUE_INVOCATION_ID:
       op = nir_intrinsic_load_invocation_id;
       break;
+   case SYSTEM_VALUE_LOCAL_INVOCATION_ID:
+      op = nir_intrinsic_load_local_invocation_id;
+      break;
    default:
       unreachable("not reached");
    }

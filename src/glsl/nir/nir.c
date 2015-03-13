@@ -1457,6 +1457,8 @@ nir_system_value_from_intrinsic(nir_intrinsic_op intrin)
       return SYSTEM_VALUE_SAMPLE_POS;
    case nir_intrinsic_load_sample_mask_in:
       return SYSTEM_VALUE_SAMPLE_MASK_IN;
+   case nir_intrinsic_load_local_invocation_id:
+      return SYSTEM_VALUE_LOCAL_INVOCATION_ID;
    /* FINISHME: Add tessellation intrinsics.
       return SYSTEM_VALUE_TESS_COORD;
       return SYSTEM_VALUE_VERTICES_IN;

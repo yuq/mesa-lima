@@ -141,6 +141,7 @@ SYSTEM_VALUE(sample_id, 1)
 SYSTEM_VALUE(sample_pos, 2)
 SYSTEM_VALUE(sample_mask_in, 1)
 SYSTEM_VALUE(invocation_id, 1)
+SYSTEM_VALUE(local_invocation_id, 3)
 
 /*
  * The format of the indices depends on the type of the load.  For uniforms,
