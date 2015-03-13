@@ -1575,6 +1575,10 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
       break;
    }
 
+   case nir_intrinsic_barrier:
+      emit_barrier();
+      break;
+
    default:
       unreachable("unknown intrinsic");
    }
