@@ -105,6 +105,21 @@ static void vid_dec_h264_BeginFrame(vid_dec_PrivateType *priv)
 
    priv->picture.h264.num_ref_frames = priv->picture.h264.pps->sps->max_num_ref_frames;
 
+   if (!priv->codec) {
+      struct pipe_video_codec templat = {};
+      omx_base_video_PortType *port;
+
+      port = (omx_base_video_PortType *)priv->ports[OMX_BASE_FILTER_INPUTPORT_INDEX];
+      templat.profile = priv->profile;
+      templat.entrypoint = PIPE_VIDEO_ENTRYPOINT_BITSTREAM;
+      templat.chroma_format = PIPE_VIDEO_CHROMA_FORMAT_420;
+      templat.max_references = 2;
+      templat.expect_chunked_decode = true;
+      templat.width = port->sPortParam.format.video.nFrameWidth;
+      templat.height = port->sPortParam.format.video.nFrameHeight;
+
+      priv->codec = priv->pipe->create_video_codec(priv->pipe, &templat);
+   }
    priv->codec->begin_frame(priv->codec, priv->target, &priv->picture.base);
    priv->frame_started = true;
 }
