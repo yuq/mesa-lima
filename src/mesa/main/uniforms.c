@@ -938,7 +938,6 @@ _mesa_GetUniformBlockIndex(GLuint program,
 			   const GLchar *uniformBlockName)
 {
    GET_CURRENT_CONTEXT(ctx);
-   GLuint i;
    struct gl_shader_program *shProg;
 
    if (!ctx->Extensions.ARB_uniform_buffer_object) {
@@ -951,12 +950,13 @@ _mesa_GetUniformBlockIndex(GLuint program,
    if (!shProg)
       return GL_INVALID_INDEX;
 
-   for (i = 0; i < shProg->NumUniformBlocks; i++) {
-      if (!strcmp(shProg->UniformBlocks[i].Name, uniformBlockName))
-	 return i;
-   }
+   struct gl_program_resource *res =
+      _mesa_program_resource_find_name(shProg, GL_UNIFORM_BLOCK,
+                                       uniformBlockName);
+   if (!res)
+      return GL_INVALID_INDEX;
 
-   return GL_INVALID_INDEX;
+   return _mesa_program_resource_index(shProg, res);
 }
 
 void GLAPIENTRY
