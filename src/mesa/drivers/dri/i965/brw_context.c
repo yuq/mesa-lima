@@ -835,6 +835,7 @@ brwCreateContext(gl_api api,
    brw->max_ds_threads = devinfo->max_ds_threads;
    brw->max_gs_threads = devinfo->max_gs_threads;
    brw->max_wm_threads = devinfo->max_wm_threads;
+   brw->max_cs_threads = devinfo->max_cs_threads;
    brw->urb.size = devinfo->urb.size;
    brw->urb.min_vs_entries = devinfo->urb.min_vs_entries;
    brw->urb.max_vs_entries = devinfo->urb.max_vs_entries;

@@ -1238,6 +1238,7 @@ struct brw_context
    int max_ds_threads;
    int max_gs_threads;
    int max_wm_threads;
+   int max_cs_threads;
 
    /* BRW_NEW_URB_ALLOCATIONS:
     */

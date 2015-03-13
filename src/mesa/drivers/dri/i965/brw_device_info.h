@@ -71,6 +71,7 @@ struct brw_device_info
    unsigned max_ds_threads;
    unsigned max_gs_threads;
    unsigned max_wm_threads;
+   unsigned max_cs_threads;
 
    struct {
       unsigned size;
