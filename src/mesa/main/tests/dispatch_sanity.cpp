@@ -119,20 +119,14 @@ offset_to_proc_name_safe(unsigned offset)
 }
 
 /* Scan through the dispatch table and check that all the functions in
- * _glapi_proc *table exist. When found, set their pointers in the table
- * to _mesa_generic_nop.  */
+ * _glapi_proc *table exist.
+ */
 static void
 validate_functions(struct gl_context *ctx, const struct function *function_table)
 {
    _glapi_proc *table = (_glapi_proc *) ctx->Exec;
 
    for (unsigned i = 0; function_table[i].name != NULL; i++) {
-      /* The context version is >= the GL version where the
-         function was introduced. Therefore, the function cannot
-         be set to the nop function.
-       */
-      bool cant_be_nop = ctx->Version >= function_table[i].Version;
-
       const int offset = (function_table[i].offset != -1)
          ? function_table[i].offset
          : _glapi_get_proc_offset(function_table[i].name);
@@ -142,27 +136,6 @@ validate_functions(struct gl_context *ctx, const struct function *function_table
       ASSERT_EQ(offset,
                 _glapi_get_proc_offset(function_table[i].name))
          << "Function: " << function_table[i].name;
-      if (cant_be_nop) {
-         EXPECT_NE((_glapi_proc) _mesa_generic_nop, table[offset])
-            << "Function: " << function_table[i].name
-            << " at offset " << offset;
-      }
-
-      table[offset] = (_glapi_proc) _mesa_generic_nop;
-   }
-}
-
-/* Scan through the table and ensure that there is nothing except
- * _mesa_generic_nop (as set by validate_functions().  */
-static void
-validate_nops(struct gl_context *ctx)
-{
-   _glapi_proc *table = (_glapi_proc *) ctx->Exec;
-
-   const unsigned size = _glapi_get_dispatch_table_size();
-   for (unsigned i = 0; i < size; i++) {
-      EXPECT_EQ((_glapi_proc) _mesa_generic_nop, table[i])
-         << "i = " << i << " (" << offset_to_proc_name_safe(i) << ")";
    }
 }
 
@@ -170,21 +143,18 @@ TEST_F(DispatchSanity_test, GL31_CORE)
 {
    SetUpCtx(API_OPENGL_CORE, 31);
    validate_functions(&ctx, gl_core_functions_possible);
-   validate_nops(&ctx);
 }
 
 TEST_F(DispatchSanity_test, GLES11)
 {
    SetUpCtx(API_OPENGLES, 11);
    validate_functions(&ctx, gles11_functions_possible);
-   validate_nops(&ctx);
 }
 
 TEST_F(DispatchSanity_test, GLES2)
 {
    SetUpCtx(API_OPENGLES2, 20);
    validate_functions(&ctx, gles2_functions_possible);
-   validate_nops(&ctx);
 }
 
 TEST_F(DispatchSanity_test, GLES3)
@@ -192,7 +162,6 @@ TEST_F(DispatchSanity_test, GLES3)
    SetUpCtx(API_OPENGLES2, 30);
    validate_functions(&ctx, gles2_functions_possible);
    validate_functions(&ctx, gles3_functions_possible);
-   validate_nops(&ctx);
 }
 
 const struct function gl_core_functions_possible[] = {
