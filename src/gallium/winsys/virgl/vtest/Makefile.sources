@@ -1,0 +1,3 @@
+C_SOURCES := \
+	virgl_vtest_winsys.c \
+	virgl_vtest_socket.c

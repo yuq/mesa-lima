@@ -2425,6 +2425,7 @@ AC_CONFIG_FILES([Makefile
 		src/gallium/winsys/sw/xlib/Makefile
 		src/gallium/winsys/vc4/drm/Makefile
 		src/gallium/winsys/virgl/drm/Makefile
+		src/gallium/winsys/virgl/vtest/Makefile
 		src/gbm/Makefile
 		src/gbm/main/gbm.pc
 		src/glsl/Makefile

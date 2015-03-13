@@ -84,7 +84,7 @@ endif
 
 ## virgl
 if HAVE_GALLIUM_VIRGL
-SUBDIRS += drivers/virgl winsys/virgl/drm
+SUBDIRS += drivers/virgl winsys/virgl/drm winsys/virgl/vtest
 endif
 
 ## the sw winsys'
