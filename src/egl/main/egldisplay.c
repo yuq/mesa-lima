@@ -56,11 +56,6 @@
 #ifdef HAVE_DRM_PLATFORM
 #include <gbm.h>
 #endif
-#ifdef HAVE_FBDEV_PLATFORM
-#include <stdint.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#endif
 
 
 /**
@@ -74,7 +69,6 @@ static const struct {
    { _EGL_PLATFORM_X11, "x11" },
    { _EGL_PLATFORM_WAYLAND, "wayland" },
    { _EGL_PLATFORM_DRM, "drm" },
-   { _EGL_PLATFORM_FBDEV, "fbdev" },
    { _EGL_PLATFORM_NULL, "null" },
    { _EGL_PLATFORM_ANDROID, "android" },
    { _EGL_PLATFORM_HAIKU, "haiku" }
@@ -144,18 +138,8 @@ _eglPointerIsDereferencable(void *p)
 static _EGLPlatformType
 _eglNativePlatformDetectNativeDisplay(void *nativeDisplay)
 {
-#ifdef HAVE_FBDEV_PLATFORM
-   struct stat buf;
-#endif
-
    if (nativeDisplay == EGL_DEFAULT_DISPLAY)
       return _EGL_INVALID_PLATFORM;
-
-#ifdef HAVE_FBDEV_PLATFORM
-   /* fbdev is the only platform that can be a file descriptor. */
-   if (fstat((intptr_t) nativeDisplay, &buf) == 0 && S_ISCHR(buf.st_mode))
-      return _EGL_PLATFORM_FBDEV;
-#endif
 
    if (_eglPointerIsDereferencable(nativeDisplay)) {
       void *first_pointer = *(void **) nativeDisplay;
