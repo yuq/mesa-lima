@@ -2418,7 +2418,6 @@ AC_CONFIG_FILES([Makefile
 		src/gallium/winsys/radeon/drm/Makefile
 		src/gallium/winsys/svga/drm/Makefile
 		src/gallium/winsys/sw/dri/Makefile
-		src/gallium/winsys/sw/fbdev/Makefile
 		src/gallium/winsys/sw/kms-dri/Makefile
 		src/gallium/winsys/sw/null/Makefile
 		src/gallium/winsys/sw/wrapper/Makefile

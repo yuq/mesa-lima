@@ -96,10 +96,6 @@ if HAVE_DRI2
 SUBDIRS += winsys/sw/kms-dri
 endif
 
-if HAVE_EGL_PLATFORM_FBDEV
-SUBDIRS += winsys/sw/fbdev
-endif
-
 SUBDIRS += winsys/sw/wrapper
 
 ##
