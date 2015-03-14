@@ -2368,7 +2368,6 @@ AC_CONFIG_FILES([Makefile
 		src/gallium/auxiliary/Makefile
 		src/gallium/auxiliary/pipe-loader/Makefile
 		src/gallium/drivers/freedreno/Makefile
-		src/gallium/drivers/galahad/Makefile
 		src/gallium/drivers/i915/Makefile
 		src/gallium/drivers/ilo/Makefile
 		src/gallium/drivers/llvmpipe/Makefile

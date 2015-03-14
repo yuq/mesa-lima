@@ -11,7 +11,6 @@ SUBDIRS += auxiliary
 ##
 
 SUBDIRS += \
-	drivers/galahad \
 	drivers/noop \
 	drivers/trace \
 	drivers/rbug
