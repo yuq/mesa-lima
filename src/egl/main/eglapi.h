@@ -71,7 +71,6 @@ typedef EGLBoolean (*SwapBuffers_t)(_EGLDriver *drv, _EGLDisplay *dpy, _EGLSurfa
 typedef EGLBoolean (*CopyBuffers_t)(_EGLDriver *drv, _EGLDisplay *dpy, _EGLSurface *surface, void *native_pixmap_target);
 
 /* misc funcs */
-typedef const char *(*QueryString_t)(_EGLDriver *drv, _EGLDisplay *dpy, EGLint name);
 typedef EGLBoolean (*WaitClient_t)(_EGLDriver *drv, _EGLDisplay *dpy, _EGLContext *ctx);
 typedef EGLBoolean (*WaitNative_t)(_EGLDriver *drv, _EGLDisplay *dpy, EGLint engine);
 
@@ -170,7 +169,6 @@ struct _egl_api
    SwapBuffers_t SwapBuffers;
    CopyBuffers_t CopyBuffers;
 
-   QueryString_t QueryString;
    WaitClient_t WaitClient;
    WaitNative_t WaitNative;
    GetProcAddress_t GetProcAddress;

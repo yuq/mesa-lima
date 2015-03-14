@@ -32,7 +32,6 @@
 #include "eglconfig.h"
 #include "eglcontext.h"
 #include "eglsurface.h"
-#include "eglmisc.h"
 #include "eglscreen.h"
 #include "eglmode.h"
 #include "eglsync.h"
@@ -85,7 +84,6 @@ _eglInitDriverFallbacks(_EGLDriver *drv)
    drv->API.WaitClient = (WaitClient_t) _eglReturnFalse;
    drv->API.WaitNative = (WaitNative_t) _eglReturnFalse;
    drv->API.GetProcAddress = (GetProcAddress_t) _eglReturnFalse;
-   drv->API.QueryString = _eglQueryString;
 
 #ifdef EGL_MESA_screen_surface
    drv->API.CopyContextMESA = (CopyContextMESA_t) _eglReturnFalse;

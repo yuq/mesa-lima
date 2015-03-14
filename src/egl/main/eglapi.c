@@ -526,7 +526,6 @@ eglQueryString(EGLDisplay dpy, EGLint name)
 {
    _EGLDisplay *disp;
    _EGLDriver *drv;
-   const char *ret;
 
    if (dpy == EGL_NO_DISPLAY && name == EGL_EXTENSIONS) {
       RETURN_EGL_SUCCESS(NULL, _eglGlobal.ClientExtensionString);
@@ -534,9 +533,19 @@ eglQueryString(EGLDisplay dpy, EGLint name)
 
    disp = _eglLockDisplay(dpy);
    _EGL_CHECK_DISPLAY(disp, NULL, drv);
-   ret = drv->API.QueryString(drv, disp, name);
 
-   RETURN_EGL_EVAL(disp, ret);
+   switch (name) {
+   case EGL_VENDOR:
+      RETURN_EGL_SUCCESS(disp, _EGL_VENDOR_STRING);
+   case EGL_VERSION:
+      RETURN_EGL_SUCCESS(disp, disp->VersionString);
+   case EGL_EXTENSIONS:
+      RETURN_EGL_SUCCESS(disp, disp->ExtensionsString);
+   case EGL_CLIENT_APIS:
+      RETURN_EGL_SUCCESS(disp, disp->ClientAPIsString);
+   default:
+      RETURN_EGL_ERROR(disp, EGL_BAD_PARAMETER, NULL);
+   }
 }
 
 
