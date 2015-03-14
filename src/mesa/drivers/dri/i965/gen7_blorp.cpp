@@ -529,17 +529,6 @@ gen7_blorp_emit_ps_config(struct brw_context *brw,
       dw5 |= prog_data->first_curbe_grf << GEN7_PS_DISPATCH_START_GRF_SHIFT_0;
    }
 
-   switch (params->fast_clear_op) {
-   case GEN7_FAST_CLEAR_OP_FAST_CLEAR:
-      dw4 |= GEN7_PS_RENDER_TARGET_FAST_CLEAR_ENABLE;
-      break;
-   case GEN7_FAST_CLEAR_OP_RESOLVE:
-      dw4 |= GEN7_PS_RENDER_TARGET_RESOLVE_ENABLE;
-      break;
-   default:
-      break;
-   }
-
    BEGIN_BATCH(8);
    OUT_BATCH(_3DSTATE_PS << 16 | (8 - 2));
    OUT_BATCH(params->use_wm_prog ? prog_offset : 0);

@@ -208,13 +208,6 @@ struct brw_blorp_prog_data
 };
 
 
-enum gen7_fast_clear_op {
-   GEN7_FAST_CLEAR_OP_NONE,
-   GEN7_FAST_CLEAR_OP_FAST_CLEAR,
-   GEN7_FAST_CLEAR_OP_RESOLVE,
-};
-
-
 class brw_blorp_params
 {
 public:
@@ -232,7 +225,6 @@ public:
    brw_blorp_surface_info src;
    brw_blorp_surface_info dst;
    enum gen6_hiz_op hiz_op;
-   enum gen7_fast_clear_op fast_clear_op;
    bool use_wm_prog;
    brw_blorp_wm_push_constants wm_push_consts;
    bool color_write_disable[4];
