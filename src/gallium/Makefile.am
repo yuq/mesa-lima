@@ -114,8 +114,6 @@ EXTRA_DIST = \
 	docs \
 	README.portability \
 	SConscript \
-	state_trackers/gbm \
-	targets/gbm \
 	winsys/sw/gdi \
 	winsys/sw/hgl
 
