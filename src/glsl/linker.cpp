@@ -1250,8 +1250,7 @@ public:
                resize_interface_members(var->type->fields.array,
                                         var->get_max_ifc_array_access());
             var->change_interface_type(new_type);
-            var->type =
-               glsl_type::get_array_instance(new_type, var->type->length);
+            var->type = update_interface_members_array(var->type, new_type);
          }
       } else if (const glsl_type *ifc_type = var->get_interface_type()) {
          /* Store a pointer to the variable in the unnamed_interfaces
@@ -1296,6 +1295,21 @@ private:
          *type = glsl_type::get_array_instance((*type)->fields.array,
                                                max_array_access + 1);
          assert(*type != NULL);
+      }
+   }
+
+   static const glsl_type *
+   update_interface_members_array(const glsl_type *type,
+                                  const glsl_type *new_interface_type)
+   {
+      const glsl_type *element_type = type->fields.array;
+      if (element_type->is_array()) {
+         const glsl_type *new_array_type =
+            update_interface_members_array(element_type, new_interface_type);
+         return glsl_type::get_array_instance(new_array_type, type->length);
+      } else {
+         return glsl_type::get_array_instance(new_interface_type,
+                                              type->length);
       }
    }
 
