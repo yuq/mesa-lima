@@ -1866,6 +1866,12 @@ brw_fragment_program_const(const struct gl_fragment_program *p)
    return (const struct brw_fragment_program *) p;
 }
 
+static inline struct brw_compute_program *
+brw_compute_program(struct gl_compute_program *p)
+{
+   return (struct brw_compute_program *) p;
+}
+
 /**
  * Pre-gen6, the register file of the EUs was shared between threads,
  * and each thread used some subset allocated on a 16-register block

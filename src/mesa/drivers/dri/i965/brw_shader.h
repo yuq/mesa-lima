@@ -287,6 +287,9 @@ bool brw_gs_precompile(struct gl_context *ctx,
 bool brw_fs_precompile(struct gl_context *ctx,
                        struct gl_shader_program *shader_prog,
                        struct gl_program *prog);
+bool brw_cs_precompile(struct gl_context *ctx,
+                       struct gl_shader_program *shader_prog,
+                       struct gl_program *prog);
 
 #ifdef __cplusplus
 }

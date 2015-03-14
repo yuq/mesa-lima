@@ -73,6 +73,7 @@ brw_shader_precompile(struct gl_context *ctx,
    struct gl_shader *vs = sh_prog->_LinkedShaders[MESA_SHADER_VERTEX];
    struct gl_shader *gs = sh_prog->_LinkedShaders[MESA_SHADER_GEOMETRY];
    struct gl_shader *fs = sh_prog->_LinkedShaders[MESA_SHADER_FRAGMENT];
+   struct gl_shader *cs = sh_prog->_LinkedShaders[MESA_SHADER_COMPUTE];
 
    if (fs && !brw_fs_precompile(ctx, sh_prog, fs->Program))
       return false;
@@ -81,6 +82,9 @@ brw_shader_precompile(struct gl_context *ctx,
       return false;
 
    if (vs && !brw_vs_precompile(ctx, sh_prog, vs->Program))
+      return false;
+
+   if (cs && !brw_cs_precompile(ctx, sh_prog, cs->Program))
       return false;
 
    return true;

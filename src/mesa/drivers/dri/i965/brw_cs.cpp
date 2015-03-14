@@ -254,3 +254,31 @@ brw_upload_cs_prog(struct brw_context *brw)
    }
    brw->cs.base.prog_data = &brw->cs.prog_data->base;
 }
+
+
+extern "C" bool
+brw_cs_precompile(struct gl_context *ctx,
+                  struct gl_shader_program *shader_prog,
+                  struct gl_program *prog)
+{
+   struct brw_context *brw = brw_context(ctx);
+   struct brw_cs_prog_key key;
+
+   struct gl_compute_program *cp = (struct gl_compute_program *) prog;
+   struct brw_compute_program *bcp = brw_compute_program(cp);
+
+   memset(&key, 0, sizeof(key));
+   key.program_string_id = bcp->id;
+
+   brw_setup_tex_for_precompile(brw, &key.tex, prog);
+
+   uint32_t old_prog_offset = brw->cs.base.prog_offset;
+   struct brw_cs_prog_data *old_prog_data = brw->cs.prog_data;
+
+   bool success = brw_codegen_cs_prog(brw, shader_prog, bcp, &key);
+
+   brw->cs.base.prog_offset = old_prog_offset;
+   brw->cs.prog_data = old_prog_data;
+
+   return success;
+}
