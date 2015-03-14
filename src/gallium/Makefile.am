@@ -100,10 +100,6 @@ if HAVE_EGL_PLATFORM_FBDEV
 SUBDIRS += winsys/sw/fbdev
 endif
 
-if HAVE_EGL_PLATFORM_WAYLAND
-SUBDIRS += winsys/sw/wayland
-endif
-
 SUBDIRS += winsys/sw/wrapper
 
 ##
