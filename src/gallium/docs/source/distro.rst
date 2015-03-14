@@ -12,13 +12,6 @@ Intel i915
 
 Driver for Intel i915 and i945 chipsets.
 
-Identity
-^^^^^^^^
-
-Wrapper driver. The identity driver is a simple skeleton that passes through
-all of its :ref:`Context` and :ref:`Screen` methods to an underlying Context
-and Screen, and as such, it is an excellent starting point for new drivers.
-
 LLVM Softpipe
 ^^^^^^^^^^^^^
 
