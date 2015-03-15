@@ -165,6 +165,7 @@ static bool match_layout_qualifier(const char *s1, const char *s2,
 %token IMAGE1DSHADOW IMAGE2DSHADOW IMAGE1DARRAYSHADOW IMAGE2DARRAYSHADOW
 %token COHERENT VOLATILE RESTRICT READONLY WRITEONLY
 %token ATOMIC_UINT
+%token SHARED
 %token STRUCT VOID_TOK WHILE
 %token <identifier> IDENTIFIER TYPE_IDENTIFIER NEW_IDENTIFIER
 %type <identifier> any_identifier
@@ -1928,6 +1929,11 @@ storage_qualifier:
    {
       memset(& $$, 0, sizeof($$));
       $$.flags.q.buffer = 1;
+   }
+   | SHARED
+   {
+      memset(& $$, 0, sizeof($$));
+      $$.flags.q.shared_storage = 1;
    }
    ;
 

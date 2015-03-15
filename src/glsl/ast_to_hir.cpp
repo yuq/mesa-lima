@@ -3089,6 +3089,12 @@ apply_type_qualifier_to_variable(const struct ast_type_qualifier *qual,
                        "members");
    }
 
+   if (qual->flags.q.shared_storage && state->stage != MESA_SHADER_COMPUTE) {
+      _mesa_glsl_error(loc, state,
+                       "the shared storage qualifiers can only be used with "
+                       "compute shaders");
+   }
+
    if (qual->flags.q.row_major || qual->flags.q.column_major) {
       validate_matrix_layout_for_type(state, loc, var->type, var);
    }
