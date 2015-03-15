@@ -2206,7 +2206,7 @@ static void si_emit_msaa_config(struct r600_common_context *rctx, struct r600_at
 	struct radeon_winsys_cs *cs = sctx->b.rings.gfx.cs;
 
 	cayman_emit_msaa_config(cs, sctx->framebuffer.nr_samples,
-				sctx->ps_iter_samples);
+				sctx->ps_iter_samples, 0);
 }
 
 const struct r600_atom si_atom_msaa_config = { si_emit_msaa_config, 10 }; /* number of CS dwords */
