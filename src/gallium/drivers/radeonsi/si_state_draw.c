@@ -156,6 +156,14 @@ static void si_emit_rasterizer_prim_state(struct si_context *sctx)
 	unsigned rast_prim = sctx->current_rast_prim;
 	struct si_state_rasterizer *rs = sctx->emitted.named.rasterizer;
 
+	/* Skip this if not rendering lines. */
+	if (rast_prim != PIPE_PRIM_LINES &&
+	    rast_prim != PIPE_PRIM_LINE_LOOP &&
+	    rast_prim != PIPE_PRIM_LINE_STRIP &&
+	    rast_prim != PIPE_PRIM_LINES_ADJACENCY &&
+	    rast_prim != PIPE_PRIM_LINE_STRIP_ADJACENCY)
+		return;
+
 	if (rast_prim == sctx->last_rast_prim &&
 	    rs->pa_sc_line_stipple == sctx->last_sc_line_stipple)
 		return;
