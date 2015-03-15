@@ -2093,6 +2093,8 @@ static void si_set_framebuffer_state(struct pipe_context *ctx,
 		constbuf.buffer_size = sctx->framebuffer.nr_samples * 2 * 4;
 		ctx->set_constant_buffer(ctx, PIPE_SHADER_FRAGMENT,
 					 SI_DRIVER_STATE_CONST_BUF, &constbuf);
+
+		sctx->msaa_sample_locs.dirty = true;
 	}
 }
 
@@ -2196,9 +2198,18 @@ static void si_emit_framebuffer_state(struct si_context *sctx, struct r600_atom 
         /* PA_SC_WINDOW_SCISSOR_TL is set in si_init_config() */
 	r600_write_context_reg(cs, R_028208_PA_SC_WINDOW_SCISSOR_BR,
 			       S_028208_BR_X(state->width) | S_028208_BR_Y(state->height));
+}
+
+static void si_emit_msaa_sample_locs(struct r600_common_context *rctx,
+				     struct r600_atom *atom)
+{
+	struct si_context *sctx = (struct si_context *)rctx;
+	struct radeon_winsys_cs *cs = sctx->b.rings.gfx.cs;
 
 	cayman_emit_msaa_sample_locs(cs, sctx->framebuffer.nr_samples);
 }
+
+const struct r600_atom si_atom_msaa_sample_locs = { si_emit_msaa_sample_locs, 18 }; /* number of CS dwords */
 
 static void si_emit_msaa_config(struct r600_common_context *rctx, struct r600_atom *atom)
 {

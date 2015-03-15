@@ -151,6 +151,7 @@ struct si_context {
 			struct r600_atom *streamout_begin;
 			struct r600_atom *streamout_enable; /* must be after streamout_begin */
 			struct r600_atom *framebuffer;
+			struct r600_atom *msaa_sample_locs;
 			struct r600_atom *db_render_state;
 			struct r600_atom *msaa_config;
 			struct r600_atom *clip_regs;
@@ -181,6 +182,7 @@ struct si_context {
 	unsigned			border_color_offset;
 
 	struct r600_atom		clip_regs;
+	struct r600_atom		msaa_sample_locs;
 	struct r600_atom		msaa_config;
 	int				ps_iter_samples;
 

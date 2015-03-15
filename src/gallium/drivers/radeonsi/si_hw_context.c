@@ -145,6 +145,7 @@ void si_begin_new_cs(struct si_context *ctx)
 
 	ctx->clip_regs.dirty = true;
 	ctx->framebuffer.atom.dirty = true;
+	ctx->msaa_sample_locs.dirty = true;
 	ctx->msaa_config.dirty = true;
 	ctx->db_render_state.dirty = true;
 	ctx->b.streamout.enable_atom.dirty = true;
