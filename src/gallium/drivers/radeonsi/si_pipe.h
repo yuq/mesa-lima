@@ -47,7 +47,8 @@
 #define SI_TRACE_CS_DWORDS		6
 
 #define SI_MAX_DRAW_CS_DWORDS \
-	(/*derived prim state:*/ 3 + /*draw regs:*/ 16 + /*draw packets:*/ 31)
+	(/*scratch:*/ 3 + /*derived prim state:*/ 3 + \
+	 /*draw regs:*/ 16 + /*draw packets:*/ 31)
 
 /* Instruction cache. */
 #define SI_CONTEXT_INV_ICACHE		(R600_CONTEXT_PRIVATE_FLAG << 0)
