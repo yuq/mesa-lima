@@ -19,6 +19,7 @@ i965_FILES = \
 	brw_clip_util.c \
 	brw_context.c \
 	brw_context.h \
+	brw_cs.cpp \
 	brw_cubemap_normalize.cpp \
 	brw_curbe.c \
 	brw_dead_control_flow.cpp \

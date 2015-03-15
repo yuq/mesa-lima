@@ -1,5 +1,5 @@
 /*
- * Copyright © 2014 Intel Corporation
+ * Copyright (c) 2014 - 2015 Intel Corporation
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -22,27 +22,27 @@
  */
 
 
-#ifndef BRW_CS_H
-#define BRW_CS_H
+#include "brw_context.h"
+#include "brw_cs.h"
 
-#include "brw_program.h"
+extern "C"
+bool
+brw_cs_prog_data_compare(const void *in_a, const void *in_b)
+{
+   const struct brw_cs_prog_data *a =
+      (const struct brw_cs_prog_data *)in_a;
+   const struct brw_cs_prog_data *b =
+      (const struct brw_cs_prog_data *)in_b;
 
-struct brw_cs_prog_key {
-   uint32_t program_string_id;
-   struct brw_sampler_prog_key_data tex;
-};
+   /* Compare the base structure. */
+   if (!brw_stage_prog_data_compare(&a->base, &b->base))
+      return false;
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+   /* Compare the rest of the structure. */
+   const unsigned offset = sizeof(struct brw_stage_prog_data);
+   if (memcmp(((char *) a) + offset, ((char *) b) + offset,
+              sizeof(struct brw_cs_prog_data) - offset))
+      return false;
 
-bool brw_cs_prog_data_compare(const void *a, const void *b);
-
-void
-brw_upload_cs_prog(struct brw_context *brw);
-
-#ifdef __cplusplus
+   return true;
 }
-#endif
-
-#endif /* BRW_CS_H */
