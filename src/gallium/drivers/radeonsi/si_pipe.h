@@ -47,7 +47,7 @@
 #define SI_TRACE_CS_DWORDS		6
 
 #define SI_MAX_DRAW_CS_DWORDS \
-	(/*derived prim state:*/ 6 + /*draw regs:*/ 16 + /*draw packets:*/ 31)
+	(/*derived prim state:*/ 3 + /*draw regs:*/ 16 + /*draw packets:*/ 31)
 
 /* Instruction cache. */
 #define SI_CONTEXT_INV_ICACHE		(R600_CONTEXT_PRIVATE_FLAG << 0)
@@ -163,7 +163,6 @@ struct si_context {
 	struct si_framebuffer		framebuffer;
 	struct si_vertex_element	*vertex_elements;
 	unsigned			pa_sc_line_stipple;
-	unsigned			pa_su_sc_mode_cntl;
 	/* for saving when using blitter */
 	struct pipe_stencil_ref		stencil_ref;
 	/* shaders */

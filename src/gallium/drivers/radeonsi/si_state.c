@@ -605,7 +605,6 @@ static void *si_create_rs_state(struct pipe_context *ctx,
 	struct si_state_rasterizer *rs = CALLOC_STRUCT(si_state_rasterizer);
 	struct si_pm4_state *pm4 = &rs->pm4;
 	unsigned tmp;
-	unsigned prov_vtx = 1, polygon_dual_mode;
 	float psize_min, psize_max;
 
 	if (rs == NULL) {
@@ -620,28 +619,11 @@ static void *si_create_rs_state(struct pipe_context *ctx,
 	rs->line_smooth = state->line_smooth;
 	rs->poly_smooth = state->poly_smooth;
 
-	polygon_dual_mode = (state->fill_front != PIPE_POLYGON_MODE_FILL ||
-				state->fill_back != PIPE_POLYGON_MODE_FILL);
-
-	if (state->flatshade_first)
-		prov_vtx = 0;
-
 	rs->flatshade = state->flatshade;
 	rs->sprite_coord_enable = state->sprite_coord_enable;
 	rs->pa_sc_line_stipple = state->line_stipple_enable ?
 				S_028A0C_LINE_PATTERN(state->line_stipple_pattern) |
 				S_028A0C_REPEAT_COUNT(state->line_stipple_factor) : 0;
-	rs->pa_su_sc_mode_cntl =
-		S_028814_PROVOKING_VTX_LAST(prov_vtx) |
-		S_028814_CULL_FRONT(state->rasterizer_discard || (state->cull_face & PIPE_FACE_FRONT) ? 1 : 0) |
-		S_028814_CULL_BACK(state->rasterizer_discard || (state->cull_face & PIPE_FACE_BACK) ? 1 : 0) |
-		S_028814_FACE(!state->front_ccw) |
-		S_028814_POLY_OFFSET_FRONT_ENABLE(util_get_offset(state, state->fill_front)) |
-		S_028814_POLY_OFFSET_BACK_ENABLE(util_get_offset(state, state->fill_back)) |
-		S_028814_POLY_OFFSET_PARA_ENABLE(state->offset_point || state->offset_line) |
-		S_028814_POLY_MODE(polygon_dual_mode) |
-		S_028814_POLYMODE_FRONT_PTYPE(si_translate_fill(state->fill_front)) |
-		S_028814_POLYMODE_BACK_PTYPE(si_translate_fill(state->fill_back));
 	rs->pa_cl_clip_cntl =
 		S_028810_PS_UCP_MODE(3) |
 		S_028810_DX_CLIP_SPACE_DEF(state->clip_halfz) |
@@ -698,7 +680,18 @@ static void *si_create_rs_state(struct pipe_context *ctx,
 		       S_028BE4_QUANT_MODE(V_028BE4_X_16_8_FIXED_POINT_1_256TH));
 
 	si_pm4_set_reg(pm4, R_028B7C_PA_SU_POLY_OFFSET_CLAMP, fui(state->offset_clamp));
-
+	si_pm4_set_reg(pm4, R_028814_PA_SU_SC_MODE_CNTL,
+		S_028814_PROVOKING_VTX_LAST(!state->flatshade_first) |
+		S_028814_CULL_FRONT((state->cull_face & PIPE_FACE_FRONT) ? 1 : 0) |
+		S_028814_CULL_BACK((state->cull_face & PIPE_FACE_BACK) ? 1 : 0) |
+		S_028814_FACE(!state->front_ccw) |
+		S_028814_POLY_OFFSET_FRONT_ENABLE(util_get_offset(state, state->fill_front)) |
+		S_028814_POLY_OFFSET_BACK_ENABLE(util_get_offset(state, state->fill_back)) |
+		S_028814_POLY_OFFSET_PARA_ENABLE(state->offset_point || state->offset_line) |
+		S_028814_POLY_MODE(state->fill_front != PIPE_POLYGON_MODE_FILL ||
+				   state->fill_back != PIPE_POLYGON_MODE_FILL) |
+		S_028814_POLYMODE_FRONT_PTYPE(si_translate_fill(state->fill_front)) |
+		S_028814_POLYMODE_BACK_PTYPE(si_translate_fill(state->fill_back)));
 	return rs;
 }
 
@@ -714,7 +707,6 @@ static void si_bind_rs_state(struct pipe_context *ctx, void *state)
 
 	// TODO
 	sctx->pa_sc_line_stipple = rs->pa_sc_line_stipple;
-	sctx->pa_su_sc_mode_cntl = rs->pa_su_sc_mode_cntl;
 
 	if (sctx->framebuffer.nr_samples > 1 &&
 	    (!old_rs || old_rs->multisample_enable != rs->multisample_enable))

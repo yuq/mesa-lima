@@ -163,12 +163,6 @@ static void si_emit_rasterizer_prim_state(struct si_context *sctx)
 		S_028A0C_AUTO_RESET_CNTL(rast_prim == PIPE_PRIM_LINES ? 1 :
 					 rast_prim == PIPE_PRIM_LINE_STRIP ? 2 : 0));
 
-	r600_write_context_reg(cs, R_028814_PA_SU_SC_MODE_CNTL,
-		sctx->pa_su_sc_mode_cntl |
-		S_028814_PROVOKING_VTX_LAST(rast_prim == PIPE_PRIM_QUADS ||
-					    rast_prim == PIPE_PRIM_QUAD_STRIP ||
-					    rast_prim == PIPE_PRIM_POLYGON));
-
 	sctx->last_rast_prim = rast_prim;
 }
 

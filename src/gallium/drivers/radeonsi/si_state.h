@@ -62,7 +62,6 @@ struct si_state_rasterizer {
 	bool			line_stipple_enable;
 	unsigned		sprite_coord_enable;
 	unsigned		pa_sc_line_stipple;
-	unsigned		pa_su_sc_mode_cntl;
 	unsigned		pa_cl_clip_cntl;
 	unsigned		clip_plane_enable;
 	float			offset_units;
