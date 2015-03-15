@@ -644,7 +644,12 @@ static void declare_system_value(
 	}
 
 	case TGSI_SEMANTIC_SAMPLEMASK:
-		value = LLVMGetParam(radeon_bld->main_fn, SI_PARAM_SAMPLE_COVERAGE);
+		/* Smoothing isn't MSAA in GL, but it's MSAA in hardware.
+		 * Therefore, force gl_SampleMaskIn to 1 for GL. */
+		if (si_shader_ctx->shader->key.ps.poly_line_smoothing)
+			value = uint_bld->one;
+		else
+			value = LLVMGetParam(radeon_bld->main_fn, SI_PARAM_SAMPLE_COVERAGE);
 		break;
 
 	default:
@@ -826,6 +831,34 @@ static void si_alpha_test(struct lp_build_tgsi_context *bld_base,
 	}
 
 	si_shader_ctx->shader->db_shader_control |= S_02880C_KILL_ENABLE(1);
+}
+
+static void si_scale_alpha_by_sample_mask(struct lp_build_tgsi_context *bld_base,
+					  LLVMValueRef alpha_ptr)
+{
+	struct si_shader_context *si_shader_ctx = si_shader_context(bld_base);
+	struct gallivm_state *gallivm = bld_base->base.gallivm;
+	LLVMValueRef coverage, alpha;
+
+	/* alpha = alpha * popcount(coverage) / SI_NUM_SMOOTH_AA_SAMPLES */
+	coverage = LLVMGetParam(si_shader_ctx->radeon_bld.main_fn,
+				SI_PARAM_SAMPLE_COVERAGE);
+	coverage = bitcast(bld_base, TGSI_TYPE_SIGNED, coverage);
+
+	coverage = build_intrinsic(gallivm->builder, "llvm.ctpop.i32",
+				   bld_base->int_bld.elem_type,
+				   &coverage, 1, LLVMReadNoneAttribute);
+
+	coverage = LLVMBuildUIToFP(gallivm->builder, coverage,
+				   bld_base->base.elem_type, "");
+
+	coverage = LLVMBuildFMul(gallivm->builder, coverage,
+				 lp_build_const_float(gallivm,
+					1.0 / SI_NUM_SMOOTH_AA_SAMPLES), "");
+
+	alpha = LLVMBuildLoad(gallivm->builder, alpha_ptr, "");
+	alpha = LLVMBuildFMul(gallivm->builder, alpha, coverage, "");
+	LLVMBuildStore(gallivm->builder, alpha, alpha_ptr);
 }
 
 static void si_llvm_emit_clipvertex(struct lp_build_tgsi_context * bld_base,
@@ -1361,6 +1394,9 @@ static void si_llvm_emit_fs_epilogue(struct lp_build_tgsi_context * bld_base)
 			if (semantic_index == 0 &&
 			    si_shader_ctx->shader->key.ps.alpha_func != PIPE_FUNC_ALWAYS)
 				si_alpha_test(bld_base, alpha_ptr);
+
+			if (si_shader_ctx->shader->key.ps.poly_line_smoothing)
+				si_scale_alpha_by_sample_mask(bld_base, alpha_ptr);
 			break;
 		default:
 			target = 0;

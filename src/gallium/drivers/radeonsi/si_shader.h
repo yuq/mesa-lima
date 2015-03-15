@@ -126,6 +126,7 @@ union si_shader_key {
 		unsigned	alpha_func:3;
 		unsigned	alpha_to_one:1;
 		unsigned	poly_stipple:1;
+		unsigned	poly_line_smoothing:1;
 	} ps;
 	struct {
 		unsigned	instance_divisors[SI_NUM_VERTEX_BUFFERS];

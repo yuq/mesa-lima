@@ -41,6 +41,7 @@
  * the number shouldn't be a commonly-used one. */
 #define SI_BASE_VERTEX_UNKNOWN INT_MIN
 #define SI_RESTART_INDEX_UNKNOWN INT_MIN
+#define SI_NUM_SMOOTH_AA_SAMPLES 8
 
 #define SI_TRACE_CS 0
 #define SI_TRACE_CS_DWORDS		6
