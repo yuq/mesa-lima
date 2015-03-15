@@ -162,7 +162,6 @@ struct si_context {
 
 	struct si_framebuffer		framebuffer;
 	struct si_vertex_element	*vertex_elements;
-	unsigned			pa_sc_line_stipple;
 	/* for saving when using blitter */
 	struct pipe_stencil_ref		stencil_ref;
 	/* shaders */
@@ -227,6 +226,7 @@ struct si_context {
 	int			last_prim;
 	int			last_multi_vgt_param;
 	int			last_rast_prim;
+	unsigned		last_sc_line_stipple;
 	int			current_rast_prim; /* primitive type after TES, GS */
 
 	/* Scratch buffer */

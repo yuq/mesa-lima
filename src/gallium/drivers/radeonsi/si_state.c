@@ -705,9 +705,6 @@ static void si_bind_rs_state(struct pipe_context *ctx, void *state)
 	if (state == NULL)
 		return;
 
-	// TODO
-	sctx->pa_sc_line_stipple = rs->pa_sc_line_stipple;
-
 	if (sctx->framebuffer.nr_samples > 1 &&
 	    (!old_rs || old_rs->multisample_enable != rs->multisample_enable))
 		sctx->db_render_state.dirty = true;
@@ -716,7 +713,6 @@ static void si_bind_rs_state(struct pipe_context *ctx, void *state)
 	si_update_fb_rs_state(sctx);
 
 	sctx->clip_regs.dirty = true;
-	sctx->last_rast_prim = -1; /* reset this so that it gets updated */
 }
 
 static void si_delete_rs_state(struct pipe_context *ctx, void *state)
