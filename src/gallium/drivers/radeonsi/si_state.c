@@ -617,6 +617,8 @@ static void *si_create_rs_state(struct pipe_context *ctx,
 	rs->clip_plane_enable = state->clip_plane_enable;
 	rs->line_stipple_enable = state->line_stipple_enable;
 	rs->poly_stipple_enable = state->poly_stipple_enable;
+	rs->line_smooth = state->line_smooth;
+	rs->poly_smooth = state->poly_smooth;
 
 	polygon_dual_mode = (state->fill_front != PIPE_POLYGON_MODE_FILL ||
 				state->fill_back != PIPE_POLYGON_MODE_FILL);
@@ -686,7 +688,9 @@ static void *si_create_rs_state(struct pipe_context *ctx,
 	si_pm4_set_reg(pm4, R_028A08_PA_SU_LINE_CNTL, S_028A08_WIDTH(tmp));
 	si_pm4_set_reg(pm4, R_028A48_PA_SC_MODE_CNTL_0,
 		       S_028A48_LINE_STIPPLE_ENABLE(state->line_stipple_enable) |
-		       S_028A48_MSAA_ENABLE(state->multisample) |
+		       S_028A48_MSAA_ENABLE(state->multisample ||
+					    state->poly_smooth ||
+					    state->line_smooth) |
 		       S_028A48_VPORT_SCISSOR_ENABLE(state->scissor));
 
 	si_pm4_set_reg(pm4, R_028BE4_PA_SU_VTX_CNTL,
@@ -945,9 +949,14 @@ static void si_emit_db_render_state(struct si_context *sctx, struct r600_atom *s
 		r600_write_context_reg(cs, R_028010_DB_RENDER_OVERRIDE2, 0);
 	}
 
-	db_shader_control = S_02880C_Z_ORDER(V_02880C_EARLY_Z_THEN_LATE_Z) |
-			    S_02880C_ALPHA_TO_MASK_DISABLE(sctx->framebuffer.cb0_is_integer) |
+	db_shader_control = S_02880C_ALPHA_TO_MASK_DISABLE(sctx->framebuffer.cb0_is_integer) |
 		            sctx->ps_db_shader_control;
+
+	/* Bug workaround for smoothing (overrasterization) on SI. */
+	if (sctx->b.chip_class == SI && sctx->smoothing_enabled)
+		db_shader_control |= S_02880C_Z_ORDER(V_02880C_LATE_Z);
+	else
+		db_shader_control |= S_02880C_Z_ORDER(V_02880C_EARLY_Z_THEN_LATE_Z);
 
 	/* Disable the gl_SampleMask fragment shader output if MSAA is disabled. */
 	if (sctx->framebuffer.nr_samples <= 1 || (rs && !rs->multisample_enable))
@@ -2094,7 +2103,18 @@ static void si_set_framebuffer_state(struct pipe_context *ctx,
 		ctx->set_constant_buffer(ctx, PIPE_SHADER_FRAGMENT,
 					 SI_DRIVER_STATE_CONST_BUF, &constbuf);
 
-		sctx->msaa_sample_locs.dirty = true;
+		/* Smoothing (only possible with nr_samples == 1) uses the same
+		 * sample locations as the MSAA it simulates.
+		 *
+		 * Therefore, don't update the sample locations when
+		 * transitioning from no AA to smoothing-equivalent AA, and
+		 * vice versa.
+		 */
+		if ((sctx->framebuffer.nr_samples != 1 ||
+		     old_nr_samples != SI_NUM_SMOOTH_AA_SAMPLES) &&
+		    (sctx->framebuffer.nr_samples != SI_NUM_SMOOTH_AA_SAMPLES ||
+		     old_nr_samples != 1))
+			sctx->msaa_sample_locs.dirty = true;
 	}
 }
 
@@ -2205,8 +2225,10 @@ static void si_emit_msaa_sample_locs(struct r600_common_context *rctx,
 {
 	struct si_context *sctx = (struct si_context *)rctx;
 	struct radeon_winsys_cs *cs = sctx->b.rings.gfx.cs;
+	unsigned nr_samples = sctx->framebuffer.nr_samples;
 
-	cayman_emit_msaa_sample_locs(cs, sctx->framebuffer.nr_samples);
+	cayman_emit_msaa_sample_locs(cs, nr_samples > 1 ? nr_samples :
+						SI_NUM_SMOOTH_AA_SAMPLES);
 }
 
 const struct r600_atom si_atom_msaa_sample_locs = { si_emit_msaa_sample_locs, 18 }; /* number of CS dwords */
@@ -2217,7 +2239,8 @@ static void si_emit_msaa_config(struct r600_common_context *rctx, struct r600_at
 	struct radeon_winsys_cs *cs = sctx->b.rings.gfx.cs;
 
 	cayman_emit_msaa_config(cs, sctx->framebuffer.nr_samples,
-				sctx->ps_iter_samples, 0);
+				sctx->ps_iter_samples,
+				sctx->smoothing_enabled ? SI_NUM_SMOOTH_AA_SAMPLES : 0);
 }
 
 const struct r600_atom si_atom_msaa_config = { si_emit_msaa_config, 10 }; /* number of CS dwords */

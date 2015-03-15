@@ -68,6 +68,8 @@ struct si_state_rasterizer {
 	float			offset_units;
 	float			offset_scale;
 	bool			poly_stipple_enable;
+	bool			line_smooth;
+	bool			poly_smooth;
 };
 
 struct si_state_dsa {

@@ -186,6 +186,7 @@ struct si_context {
 	struct r600_atom		msaa_sample_locs;
 	struct r600_atom		msaa_config;
 	int				ps_iter_samples;
+	bool				smoothing_enabled;
 
 	/* Vertex and index buffers. */
 	bool			vertex_buffers_dirty;

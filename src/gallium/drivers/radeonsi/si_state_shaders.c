@@ -373,6 +373,11 @@ static INLINE void si_shader_selector_key(struct pipe_context *ctx,
 		key->ps.export_16bpc = sctx->framebuffer.export_16bpc;
 
 		if (rs) {
+			bool is_poly = (sctx->current_rast_prim >= PIPE_PRIM_TRIANGLES &&
+					sctx->current_rast_prim <= PIPE_PRIM_POLYGON) ||
+				       sctx->current_rast_prim >= PIPE_PRIM_TRIANGLES_ADJACENCY;
+			bool is_line = !is_poly && sctx->current_rast_prim != PIPE_PRIM_POINTS;
+
 			key->ps.color_two_side = rs->two_side;
 
 			if (sctx->queued.named.blend) {
@@ -381,10 +386,10 @@ static INLINE void si_shader_selector_key(struct pipe_context *ctx,
 						       !sctx->framebuffer.cb0_is_integer;
 			}
 
-			key->ps.poly_stipple = rs->poly_stipple_enable &&
-					       ((sctx->current_rast_prim >= PIPE_PRIM_TRIANGLES &&
-						 sctx->current_rast_prim <= PIPE_PRIM_POLYGON) ||
-						sctx->current_rast_prim >= PIPE_PRIM_TRIANGLES_ADJACENCY);
+			key->ps.poly_stipple = rs->poly_stipple_enable && is_poly;
+			key->ps.poly_line_smoothing = ((is_poly && rs->poly_smooth) ||
+						       (is_line && rs->line_smooth)) &&
+						      sctx->framebuffer.nr_samples <= 1;
 		}
 
 		key->ps.alpha_func = PIPE_FUNC_ALWAYS;
@@ -920,6 +925,14 @@ void si_update_shaders(struct si_context *sctx)
 	if (sctx->ps_db_shader_control != sctx->ps_shader->current->db_shader_control) {
 		sctx->ps_db_shader_control = sctx->ps_shader->current->db_shader_control;
 		sctx->db_render_state.dirty = true;
+	}
+
+	if (sctx->smoothing_enabled != sctx->ps_shader->current->key.ps.poly_line_smoothing) {
+		sctx->smoothing_enabled = sctx->ps_shader->current->key.ps.poly_line_smoothing;
+		sctx->msaa_config.dirty = true;
+
+		if (sctx->b.chip_class == SI)
+			sctx->db_render_state.dirty = true;
 	}
 }
 
