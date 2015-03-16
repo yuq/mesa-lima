@@ -135,6 +135,25 @@ nir_opt_peephole_select_block(nir_block *block, void *void_state)
     * selects.
     */
 
+   nir_block *prev_block = nir_cf_node_as_block(nir_cf_node_prev(prev_node));
+   assert(prev_block->cf_node.type == nir_cf_node_block);
+
+   /* First, we move the remaining instructions from the blocks to the
+    * block before.  We have already guaranteed that this is safe by
+    * calling block_check_for_allowed_instrs()
+    */
+   nir_foreach_instr_safe(then_block, instr) {
+      exec_node_remove(&instr->node);
+      instr->block = prev_block;
+      exec_list_push_tail(&prev_block->instr_list, &instr->node);
+   }
+
+   nir_foreach_instr_safe(else_block, instr) {
+      exec_node_remove(&instr->node);
+      instr->block = prev_block;
+      exec_list_push_tail(&prev_block->instr_list, &instr->node);
+   }
+
    nir_foreach_instr_safe(block, instr) {
       if (instr->type != nir_instr_type_phi)
          break;
@@ -151,19 +170,7 @@ nir_opt_peephole_select_block(nir_block *block, void *void_state)
          assert(src->src.is_ssa);
 
          unsigned idx = src->pred == then_block ? 1 : 2;
-
-         if (src->src.ssa->parent_instr->block == src->pred) {
-            /* We already know that this instruction must be a move with
-             * this phi's in this block as its only users.
-             */
-            nir_alu_instr *mov = nir_instr_as_alu(src->src.ssa->parent_instr);
-            assert(mov->instr.type == nir_instr_type_alu);
-            assert(mov->op == nir_op_fmov || mov->op == nir_op_imov);
-
-            nir_alu_src_copy(&sel->src[idx], &mov->src[0], state->mem_ctx);
-         } else {
-            nir_src_copy(&sel->src[idx].src, &src->src, state->mem_ctx);
-         }
+         nir_src_copy(&sel->src[idx].src, &src->src, state->mem_ctx);
       }
 
       nir_ssa_dest_init(&sel->instr, &sel->dest.dest,
