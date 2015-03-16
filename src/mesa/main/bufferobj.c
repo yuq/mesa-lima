@@ -2051,14 +2051,15 @@ void GLAPIENTRY
 _mesa_GetBufferPointerv(GLenum target, GLenum pname, GLvoid **params)
 {
    GET_CURRENT_CONTEXT(ctx);
-   struct gl_buffer_object * bufObj;
+   struct gl_buffer_object *bufObj;
 
-   if (pname != GL_BUFFER_MAP_POINTER_ARB) {
-      _mesa_error(ctx, GL_INVALID_ENUM, "glGetBufferPointervARB(pname)");
+   if (pname != GL_BUFFER_MAP_POINTER) {
+      _mesa_error(ctx, GL_INVALID_ENUM, "glGetBufferPointerv(pname != "
+                  "GL_BUFFER_MAP_POINTER)");
       return;
    }
 
-   bufObj = get_buffer(ctx, "glGetBufferPointervARB", target,
+   bufObj = get_buffer(ctx, "glGetBufferPointerv", target,
                        GL_INVALID_OPERATION);
    if (!bufObj)
       return;
