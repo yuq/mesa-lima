@@ -226,7 +226,7 @@ GLES3.1, GLSL ES 3.1
   GL_ARB_stencil_texturing                             DONE (i965/gen8+, nv50, nvc0, r600, radeonsi, llvmpipe, softpipe)
   GL_ARB_vertex_attrib_binding                         DONE (all drivers)
   GS5 Enhanced textureGather                           DONE (i965, nvc0, r600, radeonsi)
-  GS5 Packing/bitfield/conversion functions            DONE (i965, nvc0, r600)
+  GS5 Packing/bitfield/conversion functions            DONE (i965, nvc0, r600, radeonsi)
   GL_EXT_shader_integer_mix                            DONE (all drivers that support GLSL)
 
 
