@@ -283,7 +283,7 @@ struct r600_shader_ctx {
 	unsigned				type;
 	unsigned				file_offset[TGSI_FILE_COUNT];
 	unsigned				temp_reg;
-	struct r600_shader_tgsi_instruction	*inst_info;
+	const struct r600_shader_tgsi_instruction	*inst_info;
 	struct r600_bytecode			*bc;
 	struct r600_shader			*shader;
 	struct r600_shader_src			src[4];
@@ -316,7 +316,7 @@ struct r600_shader_tgsi_instruction {
 };
 
 static int emit_gs_ring_writes(struct r600_shader_ctx *ctx, bool ind);
-static struct r600_shader_tgsi_instruction r600_shader_tgsi_instruction[], eg_shader_tgsi_instruction[], cm_shader_tgsi_instruction[];
+static const struct r600_shader_tgsi_instruction r600_shader_tgsi_instruction[], eg_shader_tgsi_instruction[], cm_shader_tgsi_instruction[];
 static int tgsi_helper_tempx_replicate(struct r600_shader_ctx *ctx);
 static inline void callstack_push(struct r600_shader_ctx *ctx, unsigned reason);
 static void fc_pushlevel(struct r600_shader_ctx *ctx, int type);
@@ -7270,7 +7270,7 @@ static int tgsi_umad(struct r600_shader_ctx *ctx)
 	return 0;
 }
 
-static struct r600_shader_tgsi_instruction r600_shader_tgsi_instruction[] = {
+static const struct r600_shader_tgsi_instruction r600_shader_tgsi_instruction[] = {
 	[TGSI_OPCODE_ARL]	= { ALU_OP0_NOP, tgsi_r600_arl},
 	[TGSI_OPCODE_MOV]	= { ALU_OP1_MOV, tgsi_op2},
 	[TGSI_OPCODE_LIT]	= { ALU_OP0_NOP, tgsi_lit},
@@ -7475,7 +7475,7 @@ static struct r600_shader_tgsi_instruction r600_shader_tgsi_instruction[] = {
 	[TGSI_OPCODE_LAST]	= { ALU_OP0_NOP, tgsi_unsupported},
 };
 
-static struct r600_shader_tgsi_instruction eg_shader_tgsi_instruction[] = {
+static const struct r600_shader_tgsi_instruction eg_shader_tgsi_instruction[] = {
 	[TGSI_OPCODE_ARL]	= { ALU_OP0_NOP, tgsi_eg_arl},
 	[TGSI_OPCODE_MOV]	= { ALU_OP1_MOV, tgsi_op2},
 	[TGSI_OPCODE_LIT]	= { ALU_OP0_NOP, tgsi_lit},
@@ -7674,7 +7674,7 @@ static struct r600_shader_tgsi_instruction eg_shader_tgsi_instruction[] = {
 	[TGSI_OPCODE_LAST]	= { ALU_OP0_NOP, tgsi_unsupported},
 };
 
-static struct r600_shader_tgsi_instruction cm_shader_tgsi_instruction[] = {
+static const struct r600_shader_tgsi_instruction cm_shader_tgsi_instruction[] = {
 	[TGSI_OPCODE_ARL]	= { ALU_OP0_NOP, tgsi_eg_arl},
 	[TGSI_OPCODE_MOV]	= { ALU_OP1_MOV, tgsi_op2},
 	[TGSI_OPCODE_LIT]	= { ALU_OP0_NOP, tgsi_lit},
