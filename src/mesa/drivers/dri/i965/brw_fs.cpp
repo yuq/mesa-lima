@@ -2491,6 +2491,7 @@ fs_visitor::opt_algebraic()
             inst->opcode = BRW_OPCODE_MUL;
             inst->src[0] = inst->src[2];
             inst->src[2] = reg_undef;
+            progress = true;
          } else if (inst->src[1].is_one()) {
             inst->opcode = BRW_OPCODE_ADD;
             inst->src[1] = inst->src[2];
@@ -2521,8 +2522,16 @@ fs_visitor::opt_algebraic()
       default:
 	 break;
       }
-   }
 
+      /* Swap if src[0] is immediate. */
+      if (progress && inst->is_commutative()) {
+         if (inst->src[0].file == IMM) {
+            fs_reg tmp = inst->src[1];
+            inst->src[1] = inst->src[0];
+            inst->src[0] = tmp;
+         }
+      }
+   }
    return progress;
 }
 
