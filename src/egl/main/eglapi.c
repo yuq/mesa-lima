@@ -514,6 +514,7 @@ eglTerminate(EGLDisplay dpy)
 
       drv->API.Terminate(drv, disp);
       /* do not reset disp->Driver */
+      disp->ClientAPIsString[0] = 0;
       disp->Initialized = EGL_FALSE;
    }
 
