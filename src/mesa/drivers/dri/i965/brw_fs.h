@@ -514,6 +514,8 @@ public:
    bool spilled_any_registers;
 
    const unsigned dispatch_width; /**< 8 or 16 */
+
+   unsigned promoted_constants;
 };
 
 /**
@@ -529,6 +531,7 @@ public:
                 const void *key,
                 struct brw_stage_prog_data *prog_data,
                 struct gl_program *fp,
+                unsigned promoted_constants,
                 bool runtime_check_aads_emit,
                 const char *stage_abbrev);
    ~fs_generator();
@@ -640,6 +643,7 @@ private:
    unsigned dispatch_width; /**< 8 or 16 */
 
    exec_list discard_halt_patches;
+   unsigned promoted_constants;
    bool runtime_check_aads_emit;
    bool debug_flag;
    const char *shader_name;

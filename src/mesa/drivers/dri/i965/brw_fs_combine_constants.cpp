@@ -286,6 +286,7 @@ fs_visitor::opt_combine_constants()
          reg.subreg_offset = 0;
       }
    }
+   promoted_constants = table.len;
 
    /* Rewrite the immediate sources to refer to the new GRFs. */
    for (int i = 0; i < table.len; i++) {

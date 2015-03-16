@@ -4068,7 +4068,7 @@ brw_wm_fs_emit(struct brw_context *brw,
    }
 
    fs_generator g(brw, mem_ctx, (void *) key, &prog_data->base,
-                  &fp->Base, v.runtime_check_aads_emit, "FS");
+                  &fp->Base, v.promoted_constants, v.runtime_check_aads_emit, "FS");
 
    if (unlikely(INTEL_DEBUG & DEBUG_WM)) {
       char *name;

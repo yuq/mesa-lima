@@ -126,13 +126,15 @@ fs_generator::fs_generator(struct brw_context *brw,
                            const void *key,
                            struct brw_stage_prog_data *prog_data,
                            struct gl_program *prog,
+                           unsigned promoted_constants,
                            bool runtime_check_aads_emit,
                            const char *stage_abbrev)
 
    : brw(brw), key(key),
      prog_data(prog_data),
-     prog(prog), runtime_check_aads_emit(runtime_check_aads_emit),
-     debug_flag(false), stage_abbrev(stage_abbrev), mem_ctx(mem_ctx)
+     prog(prog), promoted_constants(promoted_constants),
+     runtime_check_aads_emit(runtime_check_aads_emit), debug_flag(false),
+     stage_abbrev(stage_abbrev), mem_ctx(mem_ctx)
 {
    ctx = &brw->ctx;
 
@@ -1563,6 +1565,7 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
       brw_set_default_compression_control(p, BRW_COMPRESSION_COMPRESSED);
 
    int start_offset = p->next_insn_offset;
+   int spill_count = 0, fill_count = 0;
    int loop_count = 0;
 
    struct annotation_info annotation;
@@ -1959,14 +1962,17 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
 
       case SHADER_OPCODE_GEN4_SCRATCH_WRITE:
 	 generate_scratch_write(inst, src[0]);
+         spill_count++;
 	 break;
 
       case SHADER_OPCODE_GEN4_SCRATCH_READ:
 	 generate_scratch_read(inst, dst);
+         fill_count++;
 	 break;
 
       case SHADER_OPCODE_GEN7_SCRATCH_READ:
 	 generate_scratch_read_gen7(inst, dst);
+         fill_count++;
 	 break;
 
       case SHADER_OPCODE_URB_WRITE_SIMD8:
@@ -2111,10 +2117,10 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
 
    if (unlikely(debug_flag)) {
       fprintf(stderr, "Native code for %s\n"
-              "SIMD%d shader: %d instructions. %d loops. Compacted %d to %d"
+              "SIMD%d shader: %d instructions. %d loops. %d:%d spills:fills. Promoted %u constants. Compacted %d to %d"
               " bytes (%.0f%%)\n",
-              shader_name,
-              dispatch_width, before_size / 16, loop_count, before_size, after_size,
+              shader_name, dispatch_width, before_size / 16, loop_count,
+              spill_count, fill_count, promoted_constants, before_size, after_size,
               100.0f * (before_size - after_size) / before_size);
 
       dump_assembly(p->store, annotation.ann_count, annotation.ann, brw, prog);
@@ -2126,10 +2132,10 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
                   MESA_DEBUG_SOURCE_SHADER_COMPILER,
                   MESA_DEBUG_TYPE_OTHER,
                   MESA_DEBUG_SEVERITY_NOTIFICATION,
-                  "%s SIMD%d shader: %d inst, %d loops, "
-                  "compacted %d to %d bytes.\n",
+                  "%s SIMD%d shader: %d inst, %d loops, %d:%d spills:fills, "
+                  "Promoted %u constants, compacted %d to %d bytes.\n",
                   stage_abbrev, dispatch_width, before_size / 16, loop_count,
-                  before_size, after_size);
+                  spill_count, fill_count, promoted_constants, before_size, after_size);
 
    return start_offset;
 }
