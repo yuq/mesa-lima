@@ -258,7 +258,7 @@ vc4_setup_slices(struct vc4_resource *rsc)
 
                 if (!rsc->tiled) {
                         slice->tiling = VC4_TILING_FORMAT_LINEAR;
-                        level_width = align(level_width, 16);
+                        level_width = align(level_width, utile_w);
                 } else {
                         if (vc4_size_is_lt(level_width, level_height,
                                            rsc->cpp)) {
