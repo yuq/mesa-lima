@@ -51,16 +51,14 @@
 
 #include "state_tracker/sw_winsys.h"
 #include "state_tracker/drm_driver.h"
+#include "kms_dri_sw_winsys.h"
 
-#if 0
+#ifdef DEBUG
 #define DEBUG_PRINT(msg, ...) fprintf(stderr, msg, __VA_ARGS__)
 #else
 #define DEBUG_PRINT(msg, ...)
 #endif
 
-struct sw_winsys;
-
-struct sw_winsys *kms_dri_create_winsys(int fd);
 
 struct kms_sw_displaytarget
 {
