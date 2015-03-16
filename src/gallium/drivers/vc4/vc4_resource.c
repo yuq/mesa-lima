@@ -256,7 +256,7 @@ vc4_setup_slices(struct vc4_resource *rsc)
                         level_height = u_minify(pot_height, i);
                 }
 
-                if (rsc->tiled == VC4_TILING_FORMAT_LINEAR) {
+                if (!rsc->tiled) {
                         slice->tiling = VC4_TILING_FORMAT_LINEAR;
                         level_width = align(level_width, 16);
                 } else {
