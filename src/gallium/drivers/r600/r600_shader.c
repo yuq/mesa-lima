@@ -2543,8 +2543,10 @@ out_err:
 
 static int tgsi_unsupported(struct r600_shader_ctx *ctx)
 {
+	const unsigned tgsi_opcode =
+		ctx->parse.FullToken.FullInstruction.Instruction.Opcode;
 	R600_ERR("%s tgsi opcode unsupported\n",
-		 tgsi_get_opcode_name(ctx->inst_info->tgsi_opcode));
+		 tgsi_get_opcode_name(tgsi_opcode));
 	return -EINVAL;
 }
 
@@ -2639,7 +2641,7 @@ static int tgsi_op2_s(struct r600_shader_ctx *ctx, int swap, int trans_only)
 			r600_bytecode_src(&alu.src[1], &ctx->src[0], i);
 		}
 		/* handle some special cases */
-		switch (ctx->inst_info->tgsi_opcode) {
+		switch (inst->Instruction.Opcode) {
 		case TGSI_OPCODE_SUB:
 			r600_bytecode_src_toggle_neg(&alu.src[1]);
 			break;
@@ -2738,7 +2740,7 @@ static int cayman_emit_float_instr(struct r600_shader_ctx *ctx)
 			r600_bytecode_src(&alu.src[j], &ctx->src[j], 0);
 
 			/* RSQ should take the absolute value of src */
-			if (ctx->inst_info->tgsi_opcode == TGSI_OPCODE_RSQ) {
+			if (inst->Instruction.Opcode == TGSI_OPCODE_RSQ) {
 				r600_bytecode_src_set_abs(&alu.src[j]);
 			}
 		}
@@ -3079,6 +3081,7 @@ static int tgsi_scs(struct r600_shader_ctx *ctx)
 
 static int tgsi_kill(struct r600_shader_ctx *ctx)
 {
+	const struct tgsi_full_instruction *inst = &ctx->parse.FullToken.FullInstruction;
 	struct r600_bytecode_alu alu;
 	int i, r;
 
@@ -3090,7 +3093,7 @@ static int tgsi_kill(struct r600_shader_ctx *ctx)
 
 		alu.src[0].sel = V_SQ_ALU_SRC_0;
 
-		if (ctx->inst_info->tgsi_opcode == TGSI_OPCODE_KILL) {
+		if (inst->Instruction.Opcode == TGSI_OPCODE_KILL) {
 			alu.src[1].sel = V_SQ_ALU_SRC_1;
 			alu.src[1].neg = 1;
 		} else {
@@ -4945,7 +4948,7 @@ static int tgsi_dp(struct r600_shader_ctx *ctx)
 		alu.dst.chan = i;
 		alu.dst.write = (inst->Dst[0].Register.WriteMask >> i) & 1;
 		/* handle some special cases */
-		switch (ctx->inst_info->tgsi_opcode) {
+		switch (inst->Instruction.Opcode) {
 		case TGSI_OPCODE_DP2:
 			if (i > 1) {
 				alu.src[0].sel = alu.src[1].sel = V_SQ_ALU_SRC_0;
