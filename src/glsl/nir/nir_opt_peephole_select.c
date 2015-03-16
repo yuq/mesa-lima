@@ -56,6 +56,31 @@ block_check_for_allowed_instrs(nir_block *block)
 {
    nir_foreach_instr(block, instr) {
       switch (instr->type) {
+      case nir_instr_type_intrinsic: {
+         nir_intrinsic_instr *intrin = nir_instr_as_intrinsic(instr);
+
+         switch (intrin->intrinsic) {
+         case nir_intrinsic_load_var:
+            switch (intrin->variables[0]->var->data.mode) {
+            case nir_var_shader_in:
+            case nir_var_uniform:
+               break;
+
+            default:
+               return false;
+            }
+            break;
+
+         default:
+            return false;
+         }
+
+         break;
+      }
+
+      case nir_instr_type_load_const:
+         break;
+
       case nir_instr_type_alu: {
          /* It must be a move operation */
          nir_alu_instr *mov = nir_instr_as_alu(instr);
