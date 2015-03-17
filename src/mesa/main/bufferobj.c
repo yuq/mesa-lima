@@ -1636,7 +1636,7 @@ _mesa_buffer_sub_data(struct gl_context *ctx, struct gl_buffer_object *bufObj,
 
    if (bufObj->Immutable &&
        !(bufObj->StorageFlags & GL_DYNAMIC_STORAGE_BIT)) {
-      _mesa_error(ctx, GL_INVALID_OPERATION, func);
+      _mesa_error(ctx, GL_INVALID_OPERATION, "%s", func);
       return;
    }
 
