@@ -278,8 +278,20 @@ if test "x$GCC" = xyes; then
     # - non-Linux/Posix OpenGL portions needs to build on MSVC 2013 (which
     #   supports most of C99)
     # - the rest has no compiler compiler restrictions
-    MSVC2013_COMPAT_CFLAGS="-Werror=vla -Werror=pointer-arith"
-    MSVC2013_COMPAT_CXXFLAGS="-Werror=vla -Werror=pointer-arith"
+    MSVC2013_COMPAT_CFLAGS="-Werror=pointer-arith"
+    MSVC2013_COMPAT_CXXFLAGS="-Werror=pointer-arith"
+
+    # Enable -Werror=vla if compiler supports it
+    save_CFLAGS="$CFLAGS"
+    AC_MSG_CHECKING([whether $CC supports -Werror=vla])
+    CFLAGS="$CFLAGS -Werror=vla"
+    AC_LINK_IFELSE([AC_LANG_PROGRAM()],
+		   [MSVC2013_COMPAT_CFLAGS="$MSVC2013_COMPAT_CFLAGS -Werror=vla";
+		    MSVC2013_COMPAT_CXXFLAGS="$MSVC2013_COMPAT_CXXFLAGS -Werror=vla";
+		    AC_MSG_RESULT([yes])],
+		    AC_MSG_RESULT([no]));
+    CFLAGS="$save_CFLAGS"
+
     MSVC2008_COMPAT_CFLAGS="$MSVC2013_COMPAT_CFLAGS -Werror=declaration-after-statement"
     MSVC2008_COMPAT_CXXFLAGS="$MSVC2013_COMPAT_CXXFLAGS"
 fi
