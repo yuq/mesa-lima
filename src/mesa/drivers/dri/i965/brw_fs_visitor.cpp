@@ -288,7 +288,7 @@ fs_visitor::visit(ir_dereference_array *ir)
    this->result = src;
 }
 
-void
+fs_inst *
 fs_visitor::emit_lrp(const fs_reg &dst, const fs_reg &x, const fs_reg &y,
                      const fs_reg &a)
 {
@@ -305,12 +305,12 @@ fs_visitor::emit_lrp(const fs_reg &dst, const fs_reg &x, const fs_reg &y,
       emit(ADD(one_minus_a, negative_a, fs_reg(1.0f)));
       emit(MUL(x_times_one_minus_a, x, one_minus_a));
 
-      emit(ADD(dst, x_times_one_minus_a, y_times_a));
+      return emit(ADD(dst, x_times_one_minus_a, y_times_a));
    } else {
       /* The LRP instruction actually does op1 * op0 + op2 * (1 - op0), so
        * we need to reorder the operands.
        */
-      emit(LRP(dst, a, y, x));
+      return emit(LRP(dst, a, y, x));
    }
 }
 

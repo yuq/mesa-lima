@@ -303,8 +303,8 @@ public:
    fs_reg fix_math_operand(fs_reg src);
    fs_inst *emit_math(enum opcode op, fs_reg dst, fs_reg src0);
    fs_inst *emit_math(enum opcode op, fs_reg dst, fs_reg src0, fs_reg src1);
-   void emit_lrp(const fs_reg &dst, const fs_reg &x, const fs_reg &y,
-                 const fs_reg &a);
+   fs_inst *emit_lrp(const fs_reg &dst, const fs_reg &x, const fs_reg &y,
+                     const fs_reg &a);
    void emit_minmax(enum brw_conditional_mod conditionalmod, const fs_reg &dst,
                     const fs_reg &src0, const fs_reg &src1);
    void emit_discard_jump();
