@@ -2726,10 +2726,18 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
       goto done;
    }
 
-   unsigned first;
-   for (first = 0; first <= MESA_SHADER_FRAGMENT; first++) {
-      if (prog->_LinkedShaders[first] != NULL)
-	 break;
+   unsigned first, last;
+
+   first = MESA_SHADER_STAGES;
+   last = 0;
+
+   /* Determine first and last stage. */
+   for (unsigned i = 0; i < MESA_SHADER_STAGES; i++) {
+      if (!prog->_LinkedShaders[i])
+         continue;
+      if (first == MESA_SHADER_STAGES)
+         first = i;
+      last = i;
    }
 
    if (num_tfeedback_decls != 0) {
@@ -2758,13 +2766,9 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
     * ensures that inter-shader outputs written to in an earlier stage are
     * eliminated if they are (transitively) not used in a later stage.
     */
-   int last, next;
-   for (last = MESA_SHADER_FRAGMENT; last >= 0; last--) {
-      if (prog->_LinkedShaders[last] != NULL)
-         break;
-   }
+   int next;
 
-   if (last >= 0 && last < MESA_SHADER_FRAGMENT) {
+   if (first < MESA_SHADER_FRAGMENT) {
       gl_shader *const sh = prog->_LinkedShaders[last];
 
       if (first == MESA_SHADER_GEOMETRY) {
@@ -2776,13 +2780,14 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
           * MESA_SHADER_GEOMETRY.
           */
          if (!assign_varying_locations(ctx, mem_ctx, prog,
-                                       NULL, sh,
+                                       NULL, prog->_LinkedShaders[first],
                                        num_tfeedback_decls, tfeedback_decls,
                                        prog->Geom.VerticesIn))
             goto done;
       }
 
-      if (num_tfeedback_decls != 0 || prog->SeparateShader) {
+      if (last != MESA_SHADER_FRAGMENT &&
+         (num_tfeedback_decls != 0 || prog->SeparateShader)) {
          /* There was no fragment shader, but we still have to assign varying
           * locations for use by transform feedback.
           */
