@@ -215,6 +215,11 @@ struct _mesa_glsl_parse_state {
       return ARB_uniform_buffer_object_enable || is_version(140, 300);
    }
 
+   bool has_shader_storage_buffer_objects() const
+   {
+      return ARB_shader_storage_buffer_object_enable || is_version(430, 0);
+   }
+
    bool has_separate_shader_objects() const
    {
       return ARB_separate_shader_objects_enable || is_version(410, 310)
@@ -462,6 +467,8 @@ struct _mesa_glsl_parse_state {
    bool ARB_shader_precision_warn;
    bool ARB_shader_stencil_export_enable;
    bool ARB_shader_stencil_export_warn;
+   bool ARB_shader_storage_buffer_object_enable;
+   bool ARB_shader_storage_buffer_object_warn;
    bool ARB_shader_texture_lod_enable;
    bool ARB_shader_texture_lod_warn;
    bool ARB_shading_language_420pack_enable;
