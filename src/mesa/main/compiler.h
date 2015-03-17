@@ -60,26 +60,6 @@ extern "C" {
 #endif
 
 
-/**
- * Disable assorted warnings
- */
-#if defined(_WIN32) && !defined(__CYGWIN__)
-#  if !defined(__GNUC__) /* mingw environment */
-#    pragma warning( disable : 4068 ) /* unknown pragma */
-#    pragma warning( disable : 4710 ) /* function 'foo' not inlined */
-#    pragma warning( disable : 4711 ) /* function 'foo' selected for automatic inline expansion */
-#    pragma warning( disable : 4127 ) /* conditional expression is constant */
-#    if defined(MESA_MINWARN)
-#      pragma warning( disable : 4244 ) /* '=' : conversion from 'const double ' to 'float ', possible loss of data */
-#      pragma warning( disable : 4018 ) /* '<' : signed/unsigned mismatch */
-#      pragma warning( disable : 4305 ) /* '=' : truncation from 'const double ' to 'float ' */
-#      pragma warning( disable : 4550 ) /* 'function' undefined; assuming extern returning int */
-#      pragma warning( disable : 4761 ) /* integral size mismatch in argument; conversion supplied */
-#    endif
-#  endif
-#endif
-
-
 /* XXX: Use standard `__func__` instead */
 #ifndef __FUNCTION__
 #  define __FUNCTION__ __func__
