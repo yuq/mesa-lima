@@ -1243,8 +1243,7 @@ fs_visitor::nir_emit_alu(nir_alu_instr *instr)
       break;
 
    case nir_op_flrp:
-      /* TODO emulate for gen < 6 */
-      inst = emit(LRP(result, op[2], op[1], op[0]));
+      inst = emit_lrp(result, op[0], op[1], op[2]);
       inst->saturate = instr->dest.saturate;
       break;
 
