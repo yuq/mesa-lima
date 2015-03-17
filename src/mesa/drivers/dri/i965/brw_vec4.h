@@ -367,6 +367,8 @@ public:
 				dst_reg dst,
 				src_reg orig_src,
 				int base_offset);
+   src_reg emit_resolve_reladdr(int scratch_loc[], bblock_t *block,
+                                vec4_instruction *inst, src_reg src);
 
    bool try_emit_mad(ir_expression *ir);
    bool try_emit_b2f_of_compare(ir_expression *ir);

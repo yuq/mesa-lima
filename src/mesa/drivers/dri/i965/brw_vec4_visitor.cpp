@@ -3352,6 +3352,39 @@ vec4_visitor::emit_scratch_write(bblock_t *block, vec4_instruction *inst,
 }
 
 /**
+ * Checks if \p src and/or \p src.reladdr require a scratch read, and if so,
+ * adds the scratch read(s) before \p inst. The function also checks for
+ * recursive reladdr scratch accesses, issuing the corresponding scratch
+ * loads and rewriting reladdr references accordingly.
+ *
+ * \return \p src if it did not require a scratch load, otherwise, the
+ * register holding the result of the scratch load that the caller should
+ * use to rewrite src.
+ */
+src_reg
+vec4_visitor::emit_resolve_reladdr(int scratch_loc[], bblock_t *block,
+                                   vec4_instruction *inst, src_reg src)
+{
+   /* Resolve recursive reladdr scratch access by calling ourselves
+    * with src.reladdr
+    */
+   if (src.reladdr)
+      *src.reladdr = emit_resolve_reladdr(scratch_loc, block, inst,
+                                          *src.reladdr);
+
+   /* Now handle scratch access on src */
+   if (src.file == GRF && scratch_loc[src.reg] != -1) {
+      dst_reg temp = dst_reg(this, glsl_type::vec4_type);
+      emit_scratch_read(block, inst, temp, src, scratch_loc[src.reg]);
+      src.reg = temp.reg;
+      src.reg_offset = temp.reg_offset;
+      src.reladdr = NULL;
+   }
+
+   return src;
+}
+
+/**
  * We can't generally support array access in GRF space, because a
  * single instruction's destination can only span 2 contiguous
  * registers.  So, we send all GRF arrays that get variable index
@@ -3368,20 +3401,31 @@ vec4_visitor::move_grf_array_access_to_scratch()
     * scratch.
     */
    foreach_block_and_inst(block, vec4_instruction, inst, cfg) {
-      if (inst->dst.file == GRF && inst->dst.reladdr &&
-	  scratch_loc[inst->dst.reg] == -1) {
-	 scratch_loc[inst->dst.reg] = c->last_scratch;
-	 c->last_scratch += this->alloc.sizes[inst->dst.reg];
+      if (inst->dst.file == GRF && inst->dst.reladdr) {
+         if (scratch_loc[inst->dst.reg] == -1) {
+            scratch_loc[inst->dst.reg] = c->last_scratch;
+            c->last_scratch += this->alloc.sizes[inst->dst.reg];
+         }
+
+         for (src_reg *iter = inst->dst.reladdr;
+              iter->reladdr;
+              iter = iter->reladdr) {
+            if (iter->file == GRF && scratch_loc[iter->reg] == -1) {
+               scratch_loc[iter->reg] = c->last_scratch;
+               c->last_scratch += this->alloc.sizes[iter->reg];
+            }
+         }
       }
 
       for (int i = 0 ; i < 3; i++) {
-	 src_reg *src = &inst->src[i];
-
-	 if (src->file == GRF && src->reladdr &&
-	     scratch_loc[src->reg] == -1) {
-	    scratch_loc[src->reg] = c->last_scratch;
-	    c->last_scratch += this->alloc.sizes[src->reg];
-	 }
+         for (src_reg *iter = &inst->src[i];
+              iter->reladdr;
+              iter = iter->reladdr) {
+            if (iter->file == GRF && scratch_loc[iter->reg] == -1) {
+               scratch_loc[iter->reg] = c->last_scratch;
+               c->last_scratch += this->alloc.sizes[iter->reg];
+            }
+         }
       }
    }
 
@@ -3395,23 +3439,27 @@ vec4_visitor::move_grf_array_access_to_scratch()
       base_ir = inst->ir;
       current_annotation = inst->annotation;
 
-      if (inst->dst.file == GRF && scratch_loc[inst->dst.reg] != -1) {
-	 emit_scratch_write(block, inst, scratch_loc[inst->dst.reg]);
-      }
+      /* First handle scratch access on the dst. Notice we have to handle
+       * the case where the dst's reladdr also points to scratch space.
+       */
+      if (inst->dst.reladdr)
+         *inst->dst.reladdr = emit_resolve_reladdr(scratch_loc, block, inst,
+                                                   *inst->dst.reladdr);
 
+      /* Now that we have handled any (possibly recursive) reladdr scratch
+       * accesses for dst we can safely do the scratch write for dst itself
+       */
+      if (inst->dst.file == GRF && scratch_loc[inst->dst.reg] != -1)
+         emit_scratch_write(block, inst, scratch_loc[inst->dst.reg]);
+
+      /* Now handle scratch access on any src. In this case, since inst->src[i]
+       * already is a src_reg, we can just call emit_resolve_reladdr with
+       * inst->src[i] and it will take care of handling scratch loads for
+       * both src and src.reladdr (recursively).
+       */
       for (int i = 0 ; i < 3; i++) {
-	 if (inst->src[i].file != GRF || scratch_loc[inst->src[i].reg] == -1)
-	    continue;
-
-	 dst_reg temp = dst_reg(this, glsl_type::vec4_type);
-
-	 emit_scratch_read(block, inst, temp, inst->src[i],
-			   scratch_loc[inst->src[i].reg]);
-
-	 inst->src[i].file = temp.file;
-	 inst->src[i].reg = temp.reg;
-	 inst->src[i].reg_offset = temp.reg_offset;
-	 inst->src[i].reladdr = NULL;
+         inst->src[i] = emit_resolve_reladdr(scratch_loc, block, inst,
+                                             inst->src[i]);
       }
    }
 }
