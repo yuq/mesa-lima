@@ -551,7 +551,12 @@ brw_initialize_context_constants(struct brw_context *brw)
       ctx->Const.Program[MESA_SHADER_FRAGMENT].MaxInputComponents = 128;
    }
 
-   static const nir_shader_compiler_options nir_options = {
+   static const nir_shader_compiler_options gen4_nir_options = {
+      .native_integers = true,
+      .lower_ffma = true,
+   };
+
+   static const nir_shader_compiler_options gen6_nir_options = {
       .native_integers = true,
    };
 
@@ -568,7 +573,10 @@ brw_initialize_context_constants(struct brw_context *brw)
 	 (i == MESA_SHADER_FRAGMENT);
       ctx->Const.ShaderCompilerOptions[i].EmitNoIndirectUniform = false;
       ctx->Const.ShaderCompilerOptions[i].LowerClipDistance = true;
-      ctx->Const.ShaderCompilerOptions[i].NirOptions = &nir_options;
+      if (brw->gen >= 6)
+         ctx->Const.ShaderCompilerOptions[i].NirOptions = &gen6_nir_options;
+      else
+         ctx->Const.ShaderCompilerOptions[i].NirOptions = &gen4_nir_options;
    }
 
    ctx->Const.ShaderCompilerOptions[MESA_SHADER_VERTEX].OptimizeForAOS = true;
