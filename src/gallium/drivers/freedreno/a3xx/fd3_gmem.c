@@ -468,6 +468,7 @@ fd3_emit_tile_mem2gmem(struct fd_context *ctx, struct fd_tile *tile)
 	struct fd3_emit emit = {
 			.vtx = &fd3_ctx->blit_vbuf_state,
 			.prog = &ctx->blit_prog,
+			.sprite_coord_enable = 1,
 			.key = {
 				.half_precision = fd3_half_precision(format),
 			},

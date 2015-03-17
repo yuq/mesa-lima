@@ -158,6 +158,7 @@ fd3_draw_vbo(struct fd_context *ctx, const struct pipe_draw_info *info)
 		},
 		.format = pipe_surface_format(pfb->cbufs[0]),
 		.rasterflat = ctx->rasterizer && ctx->rasterizer->flatshade,
+		.sprite_coord_enable = ctx->rasterizer ? ctx->rasterizer->sprite_coord_enable : 0,
 	};
 	unsigned dirty;
 

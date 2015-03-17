@@ -365,31 +365,40 @@ fd3_program_emit(struct fd_ringbuffer *ring, struct fd3_emit *emit)
 				COND(vp->writes_psize, A3XX_VPC_ATTR_PSIZE));
 		OUT_RING(ring, 0x00000000);
 	} else {
-		uint32_t vinterp[4], flatshade[2];
+		uint32_t vinterp[4], flatshade[2], vpsrepl[4];
 
 		memset(vinterp, 0, sizeof(vinterp));
 		memset(flatshade, 0, sizeof(flatshade));
+		memset(vpsrepl, 0, sizeof(vpsrepl));
 
 		/* figure out VARYING_INTERP / FLAT_SHAD register values: */
 		for (j = -1; (j = ir3_next_varying(fp, j)) < (int)fp->inputs_count; ) {
 			uint32_t interp = fp->inputs[j].interpolate;
+
+			/* TODO might be cleaner to just +8 in SP_VS_VPC_DST_REG
+			 * instead.. rather than -8 everywhere else..
+			 */
+			uint32_t inloc = fp->inputs[j].inloc - 8;
+
+			/* currently assuming varyings aligned to 4 (not
+			 * packed):
+			 */
+			debug_assert((inloc % 4) == 0);
+
 			if ((interp == TGSI_INTERPOLATE_CONSTANT) ||
 					((interp == TGSI_INTERPOLATE_COLOR) && emit->rasterflat)) {
-				/* TODO might be cleaner to just +8 in SP_VS_VPC_DST_REG
-				 * instead.. rather than -8 everywhere else..
-				 */
-				uint32_t loc = fp->inputs[j].inloc - 8;
-
-				/* currently assuming varyings aligned to 4 (not
-				 * packed):
-				 */
-				debug_assert((loc % 4) == 0);
-
+				uint32_t loc = inloc;
 				for (i = 0; i < 4; i++, loc++) {
 					vinterp[loc / 16] |= FLAT << ((loc % 16) * 2);
 					flatshade[loc / 32] |= 1 << (loc % 32);
 				}
 			}
+
+			/* TODO: Figure out if there's a way to make it spit out 0's and
+			 * 1's for the .z and .w components.
+			 */
+			if (emit->sprite_coord_enable & (1 << sem2idx(fp->inputs[j].semantic)))
+				vpsrepl[inloc / 16] |= 0x09 << ((inloc % 16) * 2);
 		}
 
 		OUT_PKT0(ring, REG_A3XX_VPC_ATTR, 2);
@@ -407,10 +416,10 @@ fd3_program_emit(struct fd_ringbuffer *ring, struct fd3_emit *emit)
 		OUT_RING(ring, vinterp[3]);    /* VPC_VARYING_INTERP[3].MODE */
 
 		OUT_PKT0(ring, REG_A3XX_VPC_VARYING_PS_REPL_MODE(0), 4);
-		OUT_RING(ring, fp->shader->vpsrepl[0]);    /* VPC_VARYING_PS_REPL[0].MODE */
-		OUT_RING(ring, fp->shader->vpsrepl[1]);    /* VPC_VARYING_PS_REPL[1].MODE */
-		OUT_RING(ring, fp->shader->vpsrepl[2]);    /* VPC_VARYING_PS_REPL[2].MODE */
-		OUT_RING(ring, fp->shader->vpsrepl[3]);    /* VPC_VARYING_PS_REPL[3].MODE */
+		OUT_RING(ring, vpsrepl[0]);    /* VPC_VARYING_PS_REPL[0].MODE */
+		OUT_RING(ring, vpsrepl[1]);    /* VPC_VARYING_PS_REPL[1].MODE */
+		OUT_RING(ring, vpsrepl[2]);    /* VPC_VARYING_PS_REPL[2].MODE */
+		OUT_RING(ring, vpsrepl[3]);    /* VPC_VARYING_PS_REPL[3].MODE */
 
 		OUT_PKT0(ring, REG_A3XX_SP_FS_FLAT_SHAD_MODE_REG_0, 2);
 		OUT_RING(ring, flatshade[0]);        /* SP_FS_FLAT_SHAD_MODE_REG_0 */
@@ -436,19 +445,6 @@ fd3_program_emit(struct fd_ringbuffer *ring, struct fd3_emit *emit)
 	}
 }
 
-/* hack.. until we figure out how to deal w/ vpsrepl properly.. */
-static void
-fix_blit_fp(struct pipe_context *pctx)
-{
-	struct fd_context *ctx = fd_context(pctx);
-	struct fd3_shader_stateobj *so = ctx->blit_prog.fp;
-
-	so->shader->vpsrepl[0] = 0x99999999;
-	so->shader->vpsrepl[1] = 0x99999999;
-	so->shader->vpsrepl[2] = 0x99999999;
-	so->shader->vpsrepl[3] = 0x99999999;
-}
-
 void
 fd3_prog_init(struct pipe_context *pctx)
 {
@@ -459,6 +455,4 @@ fd3_prog_init(struct pipe_context *pctx)
 	pctx->delete_vs_state = fd3_vp_state_delete;
 
 	fd_prog_init(pctx);
-
-	fix_blit_fp(pctx);
 }

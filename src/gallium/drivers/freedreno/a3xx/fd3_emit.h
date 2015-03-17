@@ -55,6 +55,8 @@ struct fd3_emit {
 	struct ir3_shader_key key;
 	enum pipe_format format;
 	uint32_t dirty;
+
+	uint32_t sprite_coord_enable;
 	bool rasterflat;
 
 	/* cached to avoid repeated lookups of same variants: */
