@@ -113,6 +113,7 @@ size2indextype(unsigned index_size)
 /* this is same for a2xx/a3xx, so split into helper: */
 static inline void
 fd_draw_emit(struct fd_context *ctx, struct fd_ringbuffer *ring,
+		enum pc_di_primtype primtype,
 		enum pc_di_vis_cull_mode vismode,
 		const struct pipe_draw_info *info)
 {
@@ -138,7 +139,7 @@ fd_draw_emit(struct fd_context *ctx, struct fd_ringbuffer *ring,
 		src_sel = DI_SRC_SEL_AUTO_INDEX;
 	}
 
-	fd_draw(ctx, ring, ctx->primtypes[info->mode], vismode, src_sel,
+	fd_draw(ctx, ring, primtype, vismode, src_sel,
 			info->count, info->instance_count - 1,
 			idx_type, idx_size, idx_offset, idx_bo);
 }
