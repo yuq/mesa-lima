@@ -3838,6 +3838,26 @@ fs_visitor::allocate_registers()
       prog_data->total_scratch = brw_get_scratch_size(last_scratch);
 }
 
+static bool
+env_var_as_boolean(const char *var_name, bool default_value)
+{
+   const char *str = getenv(var_name);
+   if (str == NULL)
+      return default_value;
+
+   if (strcmp(str, "1") == 0 ||
+       strcasecmp(str, "true") == 0 ||
+       strcasecmp(str, "yes") == 0) {
+      return true;
+   } else if (strcmp(str, "0") == 0 ||
+              strcasecmp(str, "false") == 0 ||
+              strcasecmp(str, "no") == 0) {
+      return false;
+   } else {
+      return default_value;
+   }
+}
+
 bool
 fs_visitor::run_vs()
 {
@@ -3849,7 +3869,7 @@ fs_visitor::run_vs()
    if (INTEL_DEBUG & DEBUG_SHADER_TIME)
       emit_shader_time_begin();
 
-   if (getenv("INTEL_USE_NIR") != NULL) {
+   if (env_var_as_boolean("INTEL_USE_NIR", false)) {
       emit_nir_code();
    } else {
       foreach_in_list(ir_instruction, ir, shader->base.ir) {
@@ -3923,7 +3943,7 @@ fs_visitor::run_fs()
        * functions called "main").
        */
       if (shader) {
-         if (getenv("INTEL_USE_NIR") != NULL) {
+         if (env_var_as_boolean("INTEL_USE_NIR", false)) {
             emit_nir_code();
          } else {
             foreach_in_list(ir_instruction, ir, shader->base.ir) {
