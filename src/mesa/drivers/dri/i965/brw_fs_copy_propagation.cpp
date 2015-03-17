@@ -502,9 +502,9 @@ fs_visitor::try_constant_propagate(fs_inst *inst, acp_entry *entry)
       case SHADER_OPCODE_POW:
       case SHADER_OPCODE_INT_QUOTIENT:
       case SHADER_OPCODE_INT_REMAINDER:
-         if (devinfo->gen < 8)
-            break;
-         /* fallthrough */
+         /* Allow constant propagation into src1 regardless of generation, and
+          * let constant combining promote the constant on Gen < 8.
+          */
       case BRW_OPCODE_BFI1:
       case BRW_OPCODE_ASR:
       case BRW_OPCODE_SHL:

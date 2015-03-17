@@ -62,9 +62,13 @@ could_coissue(const struct brw_device_info *devinfo, const fs_inst *inst)
  * Returns true for instructions that don't support immediate sources.
  */
 static bool
-must_promote_imm(const fs_inst *inst)
+must_promote_imm(const struct brw_device_info *devinfo, const fs_inst *inst)
 {
    switch (inst->opcode) {
+   case SHADER_OPCODE_POW:
+   case SHADER_OPCODE_INT_QUOTIENT:
+   case SHADER_OPCODE_INT_REMAINDER:
+      return devinfo->gen < 8;
    case BRW_OPCODE_MAD:
    case BRW_OPCODE_LRP:
       return true;
@@ -207,7 +211,7 @@ fs_visitor::opt_combine_constants()
    foreach_block_and_inst(block, fs_inst, inst, cfg) {
       ip++;
 
-      if (!could_coissue(devinfo, inst) && !must_promote_imm(inst))
+      if (!could_coissue(devinfo, inst) && !must_promote_imm(devinfo, inst))
          continue;
 
       for (int i = 0; i < inst->sources; i++) {
@@ -225,7 +229,7 @@ fs_visitor::opt_combine_constants()
             imm->block = intersection;
             imm->uses->push_tail(link(const_ctx, &inst->src[i]));
             imm->uses_by_coissue += could_coissue(devinfo, inst);
-            imm->must_promote = imm->must_promote || must_promote_imm(inst);
+            imm->must_promote = imm->must_promote || must_promote_imm(devinfo, inst);
             imm->last_use_ip = ip;
          } else {
             imm = new_imm(&table, const_ctx);
@@ -235,7 +239,7 @@ fs_visitor::opt_combine_constants()
             imm->uses->push_tail(link(const_ctx, &inst->src[i]));
             imm->val = val;
             imm->uses_by_coissue = could_coissue(devinfo, inst);
-            imm->must_promote = must_promote_imm(inst);
+            imm->must_promote = must_promote_imm(devinfo, inst);
             imm->first_use_ip = ip;
             imm->last_use_ip = ip;
          }
