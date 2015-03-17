@@ -725,7 +725,7 @@ nir_alu_instr_channel_used(nir_alu_instr *instr, unsigned src, unsigned channel)
  * used for a source
  */
 static inline unsigned
-nir_ssa_alu_instr_src_components(nir_alu_instr *instr, unsigned src)
+nir_ssa_alu_instr_src_components(const nir_alu_instr *instr, unsigned src)
 {
    assert(instr->dest.dest.is_ssa);
 
