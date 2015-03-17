@@ -4242,9 +4242,17 @@ _mesa_CopyTextureSubImage3D(GLuint texture, GLint level,
       return;
    }
 
-   _mesa_copy_texture_sub_image(ctx, 3, texObj, texObj->Target, level,
-                                xoffset, yoffset, zoffset,
-                                x, y, width, height, self);
+   if (texObj->Target == GL_TEXTURE_CUBE_MAP) {
+      /* Act like CopyTexSubImage2D */
+      _mesa_copy_texture_sub_image(ctx, 2, texObj,
+                                   GL_TEXTURE_CUBE_MAP_POSITIVE_X + zoffset,
+                                   level, xoffset, yoffset, 0,
+                                   x, y, width, height, self);
+   }
+   else
+      _mesa_copy_texture_sub_image(ctx, 3, texObj, texObj->Target, level,
+                                   xoffset, yoffset, zoffset,
+                                   x, y, width, height, self);
 }
 
 static bool
