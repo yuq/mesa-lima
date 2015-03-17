@@ -748,7 +748,7 @@ static void txp_fetch_args(
 	const struct tgsi_full_instruction * inst = emit_data->inst;
 	LLVMValueRef src_w;
 	unsigned chan;
-	LLVMValueRef coords[4];
+	LLVMValueRef coords[5];
 
 	emit_data->dst_type = LLVMVectorType(bld_base->base.elem_type, 4);
 	src_w = lp_build_emit_fetch(bld_base, emit_data->inst, 0, TGSI_CHAN_W);

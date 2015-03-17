@@ -1572,7 +1572,7 @@ static void tex_fetch_args(
 	const struct tgsi_full_instruction * inst = emit_data->inst;
 	unsigned opcode = inst->Instruction.Opcode;
 	unsigned target = inst->Texture.Texture;
-	LLVMValueRef coords[4];
+	LLVMValueRef coords[5];
 	LLVMValueRef address[16];
 	int ref_pos;
 	unsigned num_coords = tgsi_util_get_texture_coord_dim(target, &ref_pos);
