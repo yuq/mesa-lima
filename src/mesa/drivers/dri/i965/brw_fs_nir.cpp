@@ -25,6 +25,7 @@
 #include "glsl/ir_optimization.h"
 #include "glsl/nir/glsl_to_nir.h"
 #include "brw_fs.h"
+#include "brw_nir.h"
 
 static void
 nir_optimize(nir_shader *nir)
@@ -154,6 +155,14 @@ fs_visitor::emit_nir_code()
 
    nir_convert_from_ssa(nir);
    nir_validate_shader(nir);
+
+   /* This is the last pass we run before we start emitting stuff.  It
+    * determines when we need to insert boolean resolves on Gen <= 5.  We
+    * run it last because it stashes data in instr->pass_flags and we don't
+    * want that to be squashed by other NIR passes.
+    */
+   if (brw->gen <= 5)
+      brw_nir_analyze_boolean_resolves(nir);
 
    /* emit the arrays used for inputs and outputs - load/store intrinsics will
     * be converted to reads/writes of these arrays
@@ -1260,6 +1269,17 @@ fs_visitor::nir_emit_alu(nir_alu_instr *instr)
 
    default:
       unreachable("unhandled instruction");
+   }
+
+   /* If we need to do a boolean resolve, replace the result with -(x & 1)
+    * to sign extend the low bit to 0/~0
+    */
+   if (brw->gen <= 5 &&
+       (instr->instr.pass_flags & BRW_NIR_BOOLEAN_MASK) == BRW_NIR_BOOLEAN_NEEDS_RESOLVE) {
+      fs_reg masked = vgrf(glsl_type::int_type);
+      emit(AND(masked, result, fs_reg(1)));
+      masked.negate = true;
+      emit(MOV(result, masked));
    }
 }
 
