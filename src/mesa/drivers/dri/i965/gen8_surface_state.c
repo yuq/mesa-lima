@@ -324,11 +324,11 @@ gen8_emit_null_surface_state(struct brw_context *brw,
  * While it is only used for the front/back buffer currently, it should be
  * usable for further buffers when doing ARB_draw_buffer support.
  */
-static void
+static uint32_t
 gen8_update_renderbuffer_surface(struct brw_context *brw,
                                  struct gl_renderbuffer *rb,
-                                 bool layered,
-                                 unsigned unit)
+                                 bool layered, unsigned unit /* unused */,
+                                 uint32_t surf_index)
 {
    struct gl_context *ctx = &brw->ctx;
    struct intel_renderbuffer *irb = intel_renderbuffer(rb);
@@ -341,14 +341,13 @@ gen8_update_renderbuffer_surface(struct brw_context *brw,
    uint32_t tiling = mt->tiling;
    uint32_t format = 0;
    uint32_t surf_type;
+   uint32_t offset;
    bool is_array = false;
    int depth = MAX2(irb->layer_count, 1);
    const int min_array_element = (mt->format == MESA_FORMAT_S_UINT8) ?
       irb->mt_layer : (irb->mt_layer / MAX2(mt->num_samples, 1));
    GLenum gl_target =
       rb->TexImage ? rb->TexImage->TexObject->Target : GL_TEXTURE_2D;
-   uint32_t surf_index =
-      brw->wm.prog_data->binding_table.render_target_start + unit;
    /* FINISHME: Use PTE MOCS on Skylake. */
    uint32_t mocs = brw->gen >= 9 ? SKL_MOCS_WT : BDW_MOCS_PTE;
 
@@ -393,8 +392,7 @@ gen8_update_renderbuffer_surface(struct brw_context *brw,
       aux_mode = GEN8_SURFACE_AUX_MODE_MCS;
    }
 
-   uint32_t *surf =
-      allocate_surface_state(brw, &brw->wm.base.surf_offset[surf_index]);
+   uint32_t *surf = allocate_surface_state(brw, &offset);
 
    surf[0] = (surf_type << BRW_SURFACE_TYPE_SHIFT) |
              (is_array ? GEN7_SURFACE_IS_ARRAY : 0) |
@@ -439,7 +437,7 @@ gen8_update_renderbuffer_surface(struct brw_context *brw,
    if (aux_mt) {
       *((uint64_t *) &surf[10]) = aux_mt->bo->offset64;
       drm_intel_bo_emit_reloc(brw->batch.bo,
-                              brw->wm.base.surf_offset[surf_index] + 10 * 4,
+                              offset + 10 * 4,
                               aux_mt->bo, 0,
                               I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER);
    } else {
@@ -449,11 +447,13 @@ gen8_update_renderbuffer_surface(struct brw_context *brw,
    surf[12] = 0;
 
    drm_intel_bo_emit_reloc(brw->batch.bo,
-                           brw->wm.base.surf_offset[surf_index] + 8 * 4,
+                           offset + 8 * 4,
                            mt->bo,
                            mt->offset,
                            I915_GEM_DOMAIN_RENDER,
                            I915_GEM_DOMAIN_RENDER);
+
+   return offset;
 }
 
 void

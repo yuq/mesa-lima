@@ -448,11 +448,11 @@ gen7_emit_null_surface_state(struct brw_context *brw,
  * While it is only used for the front/back buffer currently, it should be
  * usable for further buffers when doing ARB_draw_buffer support.
  */
-static void
+static uint32_t
 gen7_update_renderbuffer_surface(struct brw_context *brw,
-				 struct gl_renderbuffer *rb,
-				 bool layered,
-				 unsigned int unit)
+                                 struct gl_renderbuffer *rb,
+                                 bool layered, unsigned unit /* unused */,
+                                 uint32_t surf_index)
 {
    struct gl_context *ctx = &brw->ctx;
    struct intel_renderbuffer *irb = intel_renderbuffer(rb);
@@ -464,17 +464,15 @@ gen7_update_renderbuffer_surface(struct brw_context *brw,
    bool is_array = false;
    int depth = MAX2(irb->layer_count, 1);
    const uint8_t mocs = GEN7_MOCS_L3;
+   uint32_t offset;
 
    int min_array_element = irb->mt_layer / MAX2(mt->num_samples, 1);
 
    GLenum gl_target = rb->TexImage ?
                          rb->TexImage->TexObject->Target : GL_TEXTURE_2D;
 
-   uint32_t surf_index =
-      brw->wm.prog_data->binding_table.render_target_start + unit;
-
    uint32_t *surf = brw_state_batch(brw, AUB_TRACE_SURFACE_STATE, 8 * 4, 32,
-                                    &brw->wm.base.surf_offset[surf_index]);
+                                    &offset);
    memset(surf, 0, 8 * 4);
 
    intel_miptree_used_for_rendering(irb->mt);
@@ -539,7 +537,7 @@ gen7_update_renderbuffer_surface(struct brw_context *brw,
              (depth - 1) << GEN7_SURFACE_RENDER_TARGET_VIEW_EXTENT_SHIFT;
 
    if (irb->mt->mcs_mt) {
-      gen7_set_surface_mcs_info(brw, surf, brw->wm.base.surf_offset[surf_index],
+      gen7_set_surface_mcs_info(brw, surf, offset,
                                 irb->mt->mcs_mt, true /* is RT */);
    }
 
@@ -553,13 +551,15 @@ gen7_update_renderbuffer_surface(struct brw_context *brw,
    }
 
    drm_intel_bo_emit_reloc(brw->batch.bo,
-			   brw->wm.base.surf_offset[surf_index] + 4,
-			   mt->bo,
-			   surf[1] - mt->bo->offset64,
-			   I915_GEM_DOMAIN_RENDER,
-			   I915_GEM_DOMAIN_RENDER);
+                           offset + 4,
+                           mt->bo,
+                           surf[1] - mt->bo->offset64,
+                           I915_GEM_DOMAIN_RENDER,
+                           I915_GEM_DOMAIN_RENDER);
 
    gen7_check_surface_setup(surf, true /* is_render_target */);
+
+   return offset;
 }
 
 void

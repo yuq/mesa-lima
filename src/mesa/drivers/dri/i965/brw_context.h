@@ -967,10 +967,10 @@ struct brw_context
                                      unsigned unit,
                                      uint32_t *surf_offset,
                                      bool for_gather);
-      void (*update_renderbuffer_surface)(struct brw_context *brw,
-					  struct gl_renderbuffer *rb,
-					  bool layered,
-					  unsigned unit);
+      uint32_t (*update_renderbuffer_surface)(struct brw_context *brw,
+                                              struct gl_renderbuffer *rb,
+                                              bool layered, unsigned unit,
+                                              uint32_t surf_index);
 
       void (*emit_texture_surface_state)(struct brw_context *brw,
                                          struct intel_mipmap_tree *mt,
