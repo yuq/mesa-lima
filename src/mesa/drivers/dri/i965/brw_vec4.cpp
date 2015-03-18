@@ -1040,22 +1040,10 @@ vec4_visitor::opt_register_coalesce()
        * we're eliminating.  To do that, keep track of which of our source
        * channels we've seen initialized.
        */
-      bool chans_needed[4] = {false, false, false, false};
-      int chans_remaining = 0;
-      int swizzle_mask = 0;
-      for (int i = 0; i < 4; i++) {
-	 int chan = BRW_GET_SWZ(inst->src[0].swizzle, i);
-
-	 if (!(inst->dst.writemask & (1 << i)))
-	    continue;
-
-         swizzle_mask |= (1 << chan);
-
-	 if (!chans_needed[chan]) {
-	    chans_needed[chan] = true;
-	    chans_remaining++;
-	 }
-      }
+      const unsigned chans_needed =
+         brw_apply_inv_swizzle_to_mask(inst->src[0].swizzle,
+                                       inst->dst.writemask);
+      unsigned chans_remaining = chans_needed;
 
       /* Now walk up the instruction stream trying to see if we can rewrite
        * everything writing to the temporary to write into the destination
@@ -1088,20 +1076,13 @@ vec4_visitor::opt_register_coalesce()
             /* If we can't handle the swizzle, bail. */
             if (!scan_inst->can_reswizzle(inst->dst.writemask,
                                           inst->src[0].swizzle,
-                                          swizzle_mask)) {
+                                          chans_needed)) {
                break;
             }
 
 	    /* Mark which channels we found unconditional writes for. */
-	    if (!scan_inst->predicate) {
-	       for (int i = 0; i < 4; i++) {
-		  if (scan_inst->dst.writemask & (1 << i) &&
-		      chans_needed[i]) {
-		     chans_needed[i] = false;
-		     chans_remaining--;
-		  }
-	       }
-	    }
+	    if (!scan_inst->predicate)
+               chans_remaining &= ~scan_inst->dst.writemask;
 
 	    if (chans_remaining == 0)
 	       break;
