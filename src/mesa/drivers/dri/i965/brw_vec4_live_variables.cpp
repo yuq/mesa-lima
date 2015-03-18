@@ -96,7 +96,7 @@ vec4_live_variables::setup_def_use()
 	  * variable, and thus qualify for being in def[].
 	  */
 	 if (inst->dst.file == GRF &&
-	     v->alloc.sizes[inst->dst.reg] == 1 &&
+	     alloc.sizes[inst->dst.reg] == 1 &&
 	     !inst->predicate) {
             for (int c = 0; c < 4; c++) {
                if (inst->dst.writemask & (1 << c)) {
@@ -175,12 +175,13 @@ vec4_live_variables::compute_live_variables()
    }
 }
 
-vec4_live_variables::vec4_live_variables(vec4_visitor *v, cfg_t *cfg)
-   : v(v), cfg(cfg)
+vec4_live_variables::vec4_live_variables(const simple_allocator &alloc,
+                                         cfg_t *cfg)
+   : alloc(alloc), cfg(cfg)
 {
    mem_ctx = ralloc_context(NULL);
 
-   num_vars = v->alloc.count * 4;
+   num_vars = alloc.count * 4;
    block_data = rzalloc_array(mem_ctx, struct block_data, cfg->num_blocks);
 
    bitset_words = BITSET_WORDS(num_vars);
@@ -279,7 +280,7 @@ vec4_visitor::calculate_live_intervals()
     * The control flow-aware analysis was done at a channel level, while at
     * this point we're distilling it down to vgrfs.
     */
-   this->live_intervals = new(mem_ctx) vec4_live_variables(this, cfg);
+   this->live_intervals = new(mem_ctx) vec4_live_variables(alloc, cfg);
 
    foreach_block (block, cfg) {
       struct block_data *bd = &live_intervals->block_data[block->num];

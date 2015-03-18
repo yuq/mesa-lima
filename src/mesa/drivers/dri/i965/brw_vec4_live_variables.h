@@ -60,7 +60,7 @@ class vec4_live_variables {
 public:
    DECLARE_RALLOC_CXX_OPERATORS(vec4_live_variables)
 
-   vec4_live_variables(vec4_visitor *v, cfg_t *cfg);
+   vec4_live_variables(const simple_allocator &alloc, cfg_t *cfg);
    ~vec4_live_variables();
 
    int num_vars;
@@ -73,7 +73,7 @@ protected:
    void setup_def_use();
    void compute_live_variables();
 
-   vec4_visitor *v;
+   const simple_allocator &alloc;
    cfg_t *cfg;
    void *mem_ctx;
 };
