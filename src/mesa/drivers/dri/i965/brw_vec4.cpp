@@ -1006,9 +1006,7 @@ vec4_visitor::opt_register_coalesce()
                                                   inst, block) {
          _scan_inst = scan_inst;
 
-	 if (scan_inst->dst.file == GRF &&
-	     scan_inst->dst.reg == inst->src[0].reg &&
-	     scan_inst->dst.reg_offset == inst->src[0].reg_offset) {
+         if (inst->src[0].in_range(scan_inst->dst, scan_inst->regs_written)) {
             /* Found something writing to the reg we want to coalesce away. */
             if (to_mrf) {
                /* SEND instructions can't have MRF as a destination. */
@@ -1032,6 +1030,10 @@ vec4_visitor::opt_register_coalesce()
                break;
             }
 
+            /* This doesn't handle coalescing of multiple registers. */
+            if (scan_inst->regs_written > 1)
+               break;
+
 	    /* Mark which channels we found unconditional writes for. */
 	    if (!scan_inst->predicate)
                chans_remaining &= ~scan_inst->dst.writemask;
@@ -1047,11 +1049,9 @@ vec4_visitor::opt_register_coalesce()
           */
 	 bool interfered = false;
 	 for (int i = 0; i < 3; i++) {
-	    if (scan_inst->src[i].file == GRF &&
-		scan_inst->src[i].reg == inst->src[0].reg &&
-		scan_inst->src[i].reg_offset == inst->src[0].reg_offset) {
+            if (inst->src[0].in_range(scan_inst->src[i],
+                                      scan_inst->regs_read(i)))
 	       interfered = true;
-	    }
 	 }
 	 if (interfered)
 	    break;
@@ -1059,10 +1059,8 @@ vec4_visitor::opt_register_coalesce()
          /* If somebody else writes our destination here, we can't coalesce
           * before that.
           */
-         if (scan_inst->dst.file == inst->dst.file &&
-             scan_inst->dst.reg == inst->dst.reg) {
+         if (inst->dst.in_range(scan_inst->dst, scan_inst->regs_written))
 	    break;
-         }
 
          /* Check for reads of the register we're trying to coalesce into.  We
           * can't go rewriting instructions above that to put some other value
@@ -1075,11 +1073,9 @@ vec4_visitor::opt_register_coalesce()
             }
          } else {
             for (int i = 0; i < 3; i++) {
-               if (scan_inst->src[i].file == inst->dst.file &&
-                   scan_inst->src[i].reg == inst->dst.reg &&
-                   scan_inst->src[i].reg_offset == inst->src[0].reg_offset) {
+               if (inst->dst.in_range(scan_inst->src[i],
+                                      scan_inst->regs_read(i)))
                   interfered = true;
-               }
             }
             if (interfered)
                break;
