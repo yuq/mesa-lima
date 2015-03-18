@@ -53,7 +53,7 @@ public:
    src_reg(class vec4_visitor *v, const struct glsl_type *type);
    src_reg(class vec4_visitor *v, const struct glsl_type *type, int size);
 
-   explicit src_reg(dst_reg reg);
+   explicit src_reg(const dst_reg &reg);
 
    unsigned swizzle; /**< BRW_SWIZZLE_XYZW macros from brw_reg.h. */
 
@@ -113,7 +113,7 @@ public:
    dst_reg(struct brw_reg reg);
    dst_reg(class vec4_visitor *v, const struct glsl_type *type);
 
-   explicit dst_reg(src_reg reg);
+   explicit dst_reg(const src_reg &reg);
 
    bool equals(const dst_reg &r) const;
 

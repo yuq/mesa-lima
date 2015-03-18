@@ -123,7 +123,7 @@ src_reg::src_reg(struct brw_reg reg)
    this->type = reg.type;
 }
 
-src_reg::src_reg(dst_reg reg)
+src_reg::src_reg(const dst_reg &reg)
 {
    init();
 
@@ -194,7 +194,7 @@ dst_reg::dst_reg(struct brw_reg reg)
    this->type = reg.type;
 }
 
-dst_reg::dst_reg(src_reg reg)
+dst_reg::dst_reg(const src_reg &reg)
 {
    init();
 
