@@ -453,6 +453,15 @@ public:
    }
 
    /**
+    * Determine whether or not a variable is part of a shader storage block.
+    */
+   inline bool is_in_shader_storage_block() const
+   {
+      return this->data.mode == ir_var_shader_storage &&
+             this->interface_type != NULL;
+   }
+
+   /**
     * Determine whether or not a variable is the declaration of an interface
     * block
     *
@@ -776,6 +785,11 @@ public:
       unsigned image_coherent:1;
       unsigned image_volatile:1;
       unsigned image_restrict:1;
+
+      /**
+       * ARB_shader_storage_buffer_object
+       */
+      unsigned from_ssbo_unsized_array:1; /**< unsized array buffer variable. */
 
       /**
        * Emit a warning if this variable is accessed.

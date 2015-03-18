@@ -877,30 +877,40 @@ validate_intrastage_arrays(struct gl_shader_program *prog,
     * In addition, set the type of the linked variable to the
     * explicitly sized array.
     */
-   if (var->type->is_array() && existing->type->is_array() &&
-       (var->type->fields.array == existing->type->fields.array) &&
-       ((var->type->length == 0)|| (existing->type->length == 0))) {
-      if (var->type->length != 0) {
-         if (var->type->length <= existing->data.max_array_access) {
-            linker_error(prog, "%s `%s' declared as type "
-                         "`%s' but outermost dimension has an index"
-                         " of `%i'\n",
-                         mode_string(var),
-                         var->name, var->type->name,
-                         existing->data.max_array_access);
+   if (var->type->is_array() && existing->type->is_array()) {
+      if ((var->type->fields.array == existing->type->fields.array) &&
+          ((var->type->length == 0)|| (existing->type->length == 0))) {
+         if (var->type->length != 0) {
+            if (var->type->length <= existing->data.max_array_access) {
+               linker_error(prog, "%s `%s' declared as type "
+                           "`%s' but outermost dimension has an index"
+                           " of `%i'\n",
+                           mode_string(var),
+                           var->name, var->type->name,
+                           existing->data.max_array_access);
+            }
+            existing->type = var->type;
+            return true;
+         } else if (existing->type->length != 0) {
+            if(existing->type->length <= var->data.max_array_access &&
+               !existing->data.from_ssbo_unsized_array) {
+               linker_error(prog, "%s `%s' declared as type "
+                           "`%s' but outermost dimension has an index"
+                           " of `%i'\n",
+                           mode_string(var),
+                           var->name, existing->type->name,
+                           var->data.max_array_access);
+            }
+            return true;
          }
-         existing->type = var->type;
-         return true;
-      } else if (existing->type->length != 0) {
-         if(existing->type->length <= var->data.max_array_access) {
-            linker_error(prog, "%s `%s' declared as type "
-                         "`%s' but outermost dimension has an index"
-                         " of `%i'\n",
-                         mode_string(var),
-                         var->name, existing->type->name,
-                         var->data.max_array_access);
-         }
-         return true;
+      } else {
+         /* The arrays of structs could have different glsl_type pointers but
+          * they are actually the same type. Use record_compare() to check that.
+          */
+         if (existing->type->fields.array->is_record() &&
+             var->type->fields.array->is_record() &&
+             existing->type->fields.array->record_compare(var->type->fields.array))
+            return true;
       }
    }
    return false;
@@ -959,12 +969,24 @@ cross_validate_globals(struct gl_shader_program *prog,
                       && existing->type->record_compare(var->type)) {
                      existing->type = var->type;
                   } else {
-                     linker_error(prog, "%s `%s' declared as type "
-                                  "`%s' and type `%s'\n",
-                                  mode_string(var),
-                                  var->name, var->type->name,
-                                  existing->type->name);
-                     return;
+                     /* If it is an unsized array in a Shader Storage Block,
+                      * two different shaders can access to different elements.
+                      * Because of that, they might be converted to different
+                      * sized arrays, then check that they are compatible but
+                      * ignore the array size.
+                      */
+                     if (!(var->data.mode == ir_var_shader_storage &&
+                           var->data.from_ssbo_unsized_array &&
+                           existing->data.mode == ir_var_shader_storage &&
+                           existing->data.from_ssbo_unsized_array &&
+                           var->type->gl_type == existing->type->gl_type)) {
+                        linker_error(prog, "%s `%s' declared as type "
+                                    "`%s' and type `%s'\n",
+                                    mode_string(var),
+                                    var->name, var->type->name,
+                                    existing->type->name);
+                        return;
+                     }
                   }
 	       }
 	    }
@@ -1364,12 +1386,14 @@ public:
 
    virtual ir_visitor_status visit(ir_variable *var)
    {
-      fixup_type(&var->type, var->data.max_array_access);
+      fixup_type(&var->type, var->data.max_array_access,
+                 var->data.from_ssbo_unsized_array);
       if (var->type->is_interface()) {
          if (interface_contains_unsized_arrays(var->type)) {
             const glsl_type *new_type =
                resize_interface_members(var->type,
-                                        var->get_max_ifc_array_access());
+                                        var->get_max_ifc_array_access(),
+                                        var->is_in_shader_storage_block());
             var->type = new_type;
             var->change_interface_type(new_type);
          }
@@ -1378,7 +1402,8 @@ public:
          if (interface_contains_unsized_arrays(var->type->fields.array)) {
             const glsl_type *new_type =
                resize_interface_members(var->type->fields.array,
-                                        var->get_max_ifc_array_access());
+                                        var->get_max_ifc_array_access(),
+                                        var->is_in_shader_storage_block());
             var->change_interface_type(new_type);
             var->type = update_interface_members_array(var->type, new_type);
          }
@@ -1419,9 +1444,10 @@ private:
     * If the type pointed to by \c type represents an unsized array, replace
     * it with a sized array whose size is determined by max_array_access.
     */
-   static void fixup_type(const glsl_type **type, unsigned max_array_access)
+   static void fixup_type(const glsl_type **type, unsigned max_array_access,
+                          bool from_ssbo_unsized_array)
    {
-      if ((*type)->is_unsized_array()) {
+      if (!from_ssbo_unsized_array && (*type)->is_unsized_array()) {
          *type = glsl_type::get_array_instance((*type)->fields.array,
                                                max_array_access + 1);
          assert(*type != NULL);
@@ -1464,14 +1490,23 @@ private:
     */
    static const glsl_type *
    resize_interface_members(const glsl_type *type,
-                            const unsigned *max_ifc_array_access)
+                            const unsigned *max_ifc_array_access,
+                            bool is_ssbo)
    {
       unsigned num_fields = type->length;
       glsl_struct_field *fields = new glsl_struct_field[num_fields];
       memcpy(fields, type->fields.structure,
              num_fields * sizeof(*fields));
       for (unsigned i = 0; i < num_fields; i++) {
-         fixup_type(&fields[i].type, max_ifc_array_access[i]);
+         /* If SSBO last member is unsized array, we don't replace it by a sized
+          * array.
+          */
+         if (is_ssbo && i == (num_fields - 1))
+            fixup_type(&fields[i].type, max_ifc_array_access[i],
+                       true);
+         else
+            fixup_type(&fields[i].type, max_ifc_array_access[i],
+                       false);
       }
       glsl_interface_packing packing =
          (glsl_interface_packing) type->interface_packing;
