@@ -58,7 +58,7 @@ public:
 
    explicit src_reg(dst_reg reg);
 
-   GLuint swizzle; /**< BRW_SWIZZLE_XYZW macros from brw_reg.h. */
+   unsigned swizzle; /**< BRW_SWIZZLE_XYZW macros from brw_reg.h. */
 
    src_reg *reladdr;
 };
