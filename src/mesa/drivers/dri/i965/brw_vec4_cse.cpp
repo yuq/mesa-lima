@@ -114,6 +114,7 @@ instructions_match(vec4_instruction *a, vec4_instruction *b)
           a->conditional_mod == b->conditional_mod &&
           a->dst.type == b->dst.type &&
           a->dst.writemask == b->dst.writemask &&
+          a->regs_written == b->regs_written &&
           operands_match(a, b);
 }
 
@@ -160,21 +161,29 @@ vec4_visitor::opt_cse_local(bblock_t *block)
              */
             bool no_existing_temp = entry->tmp.file == BAD_FILE;
             if (no_existing_temp && !entry->generator->dst.is_null()) {
-               entry->tmp = src_reg(this, glsl_type::float_type);
-               entry->tmp.type = inst->dst.type;
-               entry->tmp.swizzle = BRW_SWIZZLE_XYZW;
+               entry->tmp = retype(src_reg(GRF, alloc.allocate(
+                                              entry->generator->regs_written),
+                                           NULL), inst->dst.type);
 
-               vec4_instruction *copy = MOV(entry->generator->dst, entry->tmp);
-               entry->generator->insert_after(block, copy);
+               for (unsigned i = 0; i < entry->generator->regs_written; ++i) {
+                  vec4_instruction *copy = MOV(offset(entry->generator->dst, i),
+                                               offset(entry->tmp, i));
+                  entry->generator->insert_after(block, copy);
+               }
+
                entry->generator->dst = dst_reg(entry->tmp);
             }
 
             /* dest <- temp */
             if (!inst->dst.is_null()) {
                assert(inst->dst.type == entry->tmp.type);
-               vec4_instruction *copy = MOV(inst->dst, entry->tmp);
-               copy->force_writemask_all = inst->force_writemask_all;
-               inst->insert_before(block, copy);
+
+               for (unsigned i = 0; i < inst->regs_written; ++i) {
+                  vec4_instruction *copy = MOV(offset(inst->dst, i),
+                                               offset(entry->tmp, i));
+                  copy->force_writemask_all = inst->force_writemask_all;
+                  inst->insert_before(block, copy);
+               }
             }
 
             /* Set our iterator so that next time through the loop inst->next
