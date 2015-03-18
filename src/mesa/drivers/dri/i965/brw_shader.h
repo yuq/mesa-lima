@@ -54,6 +54,7 @@ struct backend_reg
    bool is_negative_one() const;
    bool is_null() const;
    bool is_accumulator() const;
+   bool in_range(const backend_reg &r, unsigned n) const;
 #endif
 
    enum register_file file; /**< Register file: GRF, MRF, IMM. */

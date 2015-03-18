@@ -769,6 +769,15 @@ backend_reg::is_accumulator() const
 }
 
 bool
+backend_reg::in_range(const backend_reg &r, unsigned n) const
+{
+   return (file == r.file &&
+           reg == r.reg &&
+           reg_offset >= r.reg_offset &&
+           reg_offset < r.reg_offset + n);
+}
+
+bool
 backend_instruction::is_commutative() const
 {
    switch (opcode) {
