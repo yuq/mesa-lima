@@ -2044,9 +2044,10 @@ validate_binding_qualifier(struct _mesa_glsl_parse_state *state,
                            ir_variable *var,
                            const ast_type_qualifier *qual)
 {
-   if (var->data.mode != ir_var_uniform) {
+   if (var->data.mode != ir_var_uniform && var->data.mode != ir_var_shader_storage) {
       _mesa_glsl_error(loc, state,
-                       "the \"binding\" qualifier only applies to uniforms");
+                       "the \"binding\" qualifier only applies to uniforms and "
+                       "shader storage buffer objects");
       return false;
    }
 
@@ -2070,11 +2071,29 @@ validate_binding_qualifier(struct _mesa_glsl_parse_state *state,
        *
        * The implementation-dependent maximum is GL_MAX_UNIFORM_BUFFER_BINDINGS.
        */
-      if (max_index >= ctx->Const.MaxUniformBufferBindings) {
+      if (var->data.mode == ir_var_uniform &&
+         max_index >= ctx->Const.MaxUniformBufferBindings) {
          _mesa_glsl_error(loc, state, "layout(binding = %d) for %d UBOs exceeds "
                           "the maximum number of UBO binding points (%d)",
                           qual->binding, elements,
                           ctx->Const.MaxUniformBufferBindings);
+         return false;
+      }
+      /* SSBOs. From page 67 of the GLSL 4.30 specification:
+       * "If the binding point for any uniform or shader storage block instance
+       *  is less than zero, or greater than or equal to the
+       *  implementation-dependent maximum number of uniform buffer bindings, a
+       *  compile-time error will occur. When the binding identifier is used
+       *  with a uniform or shader storage block instanced as an array of size
+       *  N, all elements of the array from binding through binding + N – 1 must
+       *  be within this range."
+       */
+      if (var->data.mode == ir_var_shader_storage &&
+         max_index >= ctx->Const.MaxShaderStorageBufferBindings) {
+         _mesa_glsl_error(loc, state, "layout(binding = %d) for %d SSBOs exceeds "
+                          "the maximum number of SSBO binding points (%d)",
+                          qual->binding, elements,
+                          ctx->Const.MaxShaderStorageBufferBindings);
          return false;
       }
    } else if (var->type->is_sampler() ||
@@ -5955,8 +5974,8 @@ ast_interface_block::hir(exec_list *instructions,
          if (state->symbols->get_variable(var->name) != NULL)
             _mesa_glsl_error(&loc, state, "`%s' redeclared", var->name);
 
-         /* Propagate the "binding" keyword into this UBO's fields;
-          * the UBO declaration itself doesn't get an ir_variable unless it
+         /* Propagate the "binding" keyword into this UBO/SSBO's fields.
+          * The UBO declaration itself doesn't get an ir_variable unless it
           * has an instance name.  This is ugly.
           */
          var->data.explicit_binding = this->layout.flags.q.explicit_binding;
