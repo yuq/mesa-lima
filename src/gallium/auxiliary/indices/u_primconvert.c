@@ -129,11 +129,13 @@ util_primconvert_draw_vbo(struct primconvert_context *pc,
    new_info.index_bias = info->index_bias;
    new_info.start_instance = info->start_instance;
    new_info.instance_count = info->instance_count;
-
+   new_info.primitive_restart = info->primitive_restart;
+   new_info.restart_index = info->restart_index;
    if (info->indexed) {
       u_index_translator(pc->primtypes_mask,
                          info->mode, pc->saved_ib.index_size, info->count,
                          pc->api_pv, pc->api_pv,
+                         info->primitive_restart ? PR_ENABLE : PR_DISABLE,
                          &new_info.mode, &new_ib.index_size, &new_info.count,
                          &trans_func);
       src = ib->user_buffer;
@@ -159,7 +161,7 @@ util_primconvert_draw_vbo(struct primconvert_context *pc,
                   &new_ib.offset, &new_ib.buffer, &dst);
 
    if (info->indexed) {
-      trans_func(src, info->start, new_info.count, dst);
+      trans_func(src, info->start, info->count, new_info.count, info->restart_index, dst);
    }
    else {
       gen_func(info->start, new_info.count, dst);
