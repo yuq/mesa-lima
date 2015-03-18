@@ -437,7 +437,7 @@ vec4_visitor::opt_copy_propagation(bool do_constant_prop)
 	  * the new value, so clear it.
 	  */
 	 bool direct_copy = is_direct_copy(inst);
-	 entries[reg].saturatemask = 0x0;
+         entries[reg].saturatemask &= ~inst->dst.writemask;
 	 for (int i = 0; i < 4; i++) {
 	    if (inst->dst.writemask & (1 << i)) {
                entries[reg].value[i] = direct_copy ? &inst->src[0] : NULL;
