@@ -343,7 +343,10 @@ try_copy_propagate(struct brw_context *brw, vec4_instruction *inst,
        */
       switch(inst->opcode) {
       case BRW_OPCODE_SEL:
-         if (inst->src[1].file != IMM ||
+         if (arg != 0 ||
+             inst->src[0].type != BRW_REGISTER_TYPE_F ||
+             inst->src[1].file != IMM ||
+             inst->src[1].type != BRW_REGISTER_TYPE_F ||
              inst->src[1].fixed_hw_reg.dw1.f < 0.0 ||
              inst->src[1].fixed_hw_reg.dw1.f > 1.0) {
             return false;
