@@ -518,6 +518,10 @@ ir_algebraic_visitor::handle_expression(ir_expression *ir)
       if (is_vec_negative_one(op_const[1]))
          return neg(ir->operands[0]);
 
+      if (op_expr[0] && op_expr[0]->operation == ir_unop_b2f &&
+          op_expr[1] && op_expr[1]->operation == ir_unop_b2f) {
+         return b2f(logic_and(op_expr[0]->operands[0], op_expr[1]->operands[0]));
+      }
 
       /* Reassociate multiplication of constants so that we can do
        * constant folding.
