@@ -30,40 +30,25 @@
  * Translate GLSL IR to TGSI.
  */
 
-#include <stdio.h>
-#include "main/compiler.h"
-#include "ir.h"
-#include "ir_visitor.h"
-#include "ir_expression_flattening.h"
-#include "glsl_types.h"
-#include "glsl_parser_extras.h"
-#include "../glsl/program.h"
-#include "ir_optimization.h"
-#include "ast.h"
+#include "st_glsl_to_tgsi.h"
 
-#include "main/mtypes.h"
+#include "glsl_parser_extras.h"
+#include "ir_optimization.h"
+
+#include "main/errors.h"
 #include "main/shaderobj.h"
 #include "main/uniforms.h"
 #include "main/shaderapi.h"
-#include "program/hash_table.h"
 #include "program/prog_instruction.h"
-#include "program/prog_optimize.h"
-#include "program/prog_print.h"
-#include "program/program.h"
-#include "program/prog_parameter.h"
 #include "program/sampler.h"
 
-#include "pipe/p_compiler.h"
 #include "pipe/p_context.h"
 #include "pipe/p_screen.h"
-#include "pipe/p_shader_tokens.h"
-#include "pipe/p_state.h"
-#include "util/u_math.h"
 #include "tgsi/tgsi_ureg.h"
 #include "tgsi/tgsi_info.h"
-#include "st_context.h"
+#include "util/u_math.h"
+#include "util/u_memory.h"
 #include "st_program.h"
-#include "st_glsl_to_tgsi.h"
 #include "st_mesa_to_tgsi.h"
 
 
