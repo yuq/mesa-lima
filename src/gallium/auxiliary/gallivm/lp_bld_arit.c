@@ -2564,16 +2564,9 @@ lp_build_rsqrt(struct lp_build_context *bld,
           * All numbers smaller than FLT_MIN will result in +infinity
           * (rsqrtps treats all denormals as zero).
           */
-         /*
-          * Certain non-c99 compilers don't know INFINITY and might not support
-          * hacks to evaluate it at compile time neither.
-          */
-         const unsigned posinf_int = 0x7F800000;
          LLVMValueRef cmp;
          LLVMValueRef flt_min = lp_build_const_vec(bld->gallivm, type, FLT_MIN);
-         LLVMValueRef inf = lp_build_const_int_vec(bld->gallivm, type, posinf_int);
-
-         inf = LLVMBuildBitCast(builder, inf, lp_build_vec_type(bld->gallivm, type), "");
+         LLVMValueRef inf = lp_build_const_vec(bld->gallivm, type, INFINITY);
 
          for (i = 0; i < num_iterations; ++i) {
             res = lp_build_rsqrt_refine(bld, a, res);
