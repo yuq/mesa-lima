@@ -74,9 +74,8 @@ is_channel_updated(vec4_instruction *inst, src_reg *values[4], int ch)
    if (!src || src->file != GRF)
       return false;
 
-   return (src->reg == inst->dst.reg &&
-	   src->reg_offset == inst->dst.reg_offset &&
-	   inst->dst.writemask & (1 << BRW_GET_SWZ(src->swizzle, ch)));
+   return (src->in_range(inst->dst, inst->regs_written) &&
+           inst->dst.writemask & (1 << BRW_GET_SWZ(src->swizzle, ch)));
 }
 
 static unsigned
@@ -396,6 +395,10 @@ vec4_visitor::opt_copy_propagation(bool do_constant_prop)
 	 if (inst->src[i].file != GRF ||
 	     inst->src[i].reladdr)
 	    continue;
+
+         /* We only handle single-register copies. */
+         if (inst->regs_read(i) != 1)
+            continue;
 
 	 int reg = (alloc.offsets[inst->src[i].reg] +
 		    inst->src[i].reg_offset);
