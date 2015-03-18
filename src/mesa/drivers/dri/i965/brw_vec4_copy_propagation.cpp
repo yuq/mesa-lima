@@ -440,7 +440,7 @@ vec4_visitor::opt_copy_propagation(bool do_constant_prop)
 	 entries[reg].saturatemask = 0x0;
 	 for (int i = 0; i < 4; i++) {
 	    if (inst->dst.writemask & (1 << i)) {
-               entries[reg].value[i] = (!inst->saturate && direct_copy) ? &inst->src[0] : NULL;
+               entries[reg].value[i] = direct_copy ? &inst->src[0] : NULL;
                entries[reg].saturatemask |= (((inst->saturate && direct_copy) ? 1 : 0) << i);
 	    }
 	 }
