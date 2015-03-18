@@ -97,6 +97,7 @@ optimizations = [
    (('fmin', ('fmax', ('fmin', ('fmax', a, 0.0), 1.0), 0.0), 1.0), ('fmin', ('fmax', a, 0.0), 1.0)),
    # Emulating booleans
    (('fmul', ('b2f', a), ('b2f', b)), ('b2f', ('iand', a, b))),
+   (('fsat', ('fadd', ('b2f', a), ('b2f', b))), ('b2f', ('ior', a, b))),
    # Comparison with the same args.  Note that these are not done for
    # the float versions because NaN always returns false on float
    # inequalities.
