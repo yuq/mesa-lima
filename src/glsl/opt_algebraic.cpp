@@ -421,6 +421,18 @@ ir_algebraic_visitor::handle_expression(ir_expression *ir)
       break;
    }
 
+   case ir_unop_saturate:
+      if (op_expr[0] && op_expr[0]->operation == ir_binop_add) {
+         ir_expression *b2f_0 = op_expr[0]->operands[0]->as_expression();
+         ir_expression *b2f_1 = op_expr[0]->operands[1]->as_expression();
+
+         if (b2f_0 && b2f_0->operation == ir_unop_b2f &&
+             b2f_1 && b2f_1->operation == ir_unop_b2f) {
+            return b2f(logic_or(b2f_0->operands[0], b2f_1->operands[0]));
+         }
+      }
+      break;
+
    case ir_binop_add:
       if (is_vec_zero(op_const[0]))
 	 return ir->operands[1];
