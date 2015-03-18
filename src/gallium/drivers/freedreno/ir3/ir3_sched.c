@@ -283,7 +283,7 @@ static int trysched(struct ir3_sched_ctx *ctx,
 			 * on ourself (ie. avoid infinite recursion):
 			 */
 			foreach_ssa_src(src, indirect) {
-				if (src == instr)
+				if ((src == instr) || (src->address == instr))
 					continue;
 				delay = trysched(ctx, src);
 				if (delay)
