@@ -693,7 +693,7 @@ void brw_upload_render_state(struct brw_context *brw)
  * it had before the brw_upload_render_state() call.
  */
 void
-brw_clear_dirty_bits(struct brw_context *brw)
+brw_render_state_finished(struct brw_context *brw)
 {
    struct brw_state_flags *state = &brw->state.dirty;
    memset(state, 0, sizeof(*state));

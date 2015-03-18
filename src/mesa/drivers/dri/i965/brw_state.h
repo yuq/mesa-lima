@@ -169,7 +169,7 @@ brw_depthbuffer_format(struct brw_context *brw);
  * brw_state.c
  */
 void brw_upload_render_state(struct brw_context *brw);
-void brw_clear_dirty_bits(struct brw_context *brw);
+void brw_render_state_finished(struct brw_context *brw);
 void brw_init_state(struct brw_context *brw);
 void brw_destroy_state(struct brw_context *brw);
 

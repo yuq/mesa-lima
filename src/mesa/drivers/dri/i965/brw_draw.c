@@ -534,7 +534,7 @@ retry:
        * reset the dirty bits.
        */
       if (brw->state.dirty.brw)
-         brw_clear_dirty_bits(brw);
+         brw_render_state_finished(brw);
    }
 
    if (brw->always_flush_batch)
