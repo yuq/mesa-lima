@@ -67,7 +67,7 @@ static const struct debug_named_value debug_options[] = {
 		{"nobypass",  FD_DBG_NOBYPASS, "Disable GMEM bypass"},
 		{"fraghalf",  FD_DBG_FRAGHALF, "Use half-precision in fragment shader"},
 		{"nobin",     FD_DBG_NOBIN,  "Disable hw binning"},
-		{"optmsgs",   FD_DBG_OPTMSGS,"Enable optimizater debug messages"},
+		{"optmsgs",   FD_DBG_OPTMSGS,"Enable optimizer debug messages"},
 		{"optdump",   FD_DBG_OPTDUMP,"Dump shader DAG to .dot files"},
 		{"glsl120",   FD_DBG_GLSL120,"Temporary flag to force GLSL 120 (rather than 130) on a3xx+"},
 		{"nocp",      FD_DBG_NOCP,   "Disable copy-propagation"},
