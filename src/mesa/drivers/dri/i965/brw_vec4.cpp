@@ -133,24 +133,7 @@ src_reg::src_reg(const dst_reg &reg)
    this->type = reg.type;
    this->reladdr = reg.reladdr;
    this->fixed_hw_reg = reg.fixed_hw_reg;
-
-   int swizzles[4];
-   int next_chan = 0;
-   int last = 0;
-
-   for (int i = 0; i < 4; i++) {
-      if (!(reg.writemask & (1 << i)))
-         continue;
-
-      swizzles[next_chan++] = last = i;
-   }
-
-   for (; next_chan < 4; next_chan++) {
-      swizzles[next_chan] = last;
-   }
-
-   this->swizzle = BRW_SWIZZLE4(swizzles[0], swizzles[1],
-                                swizzles[2], swizzles[3]);
+   this->swizzle = brw_swizzle_for_mask(reg.writemask);
 }
 
 void
@@ -202,14 +185,7 @@ dst_reg::dst_reg(const src_reg &reg)
    this->reg = reg.reg;
    this->reg_offset = reg.reg_offset;
    this->type = reg.type;
-   /* How should we do writemasking when converting from a src_reg?  It seems
-    * pretty obvious that for src.xxxx the caller wants to write to src.x, but
-    * what about for src.wx?  Just special-case src.xxxx for now.
-    */
-   if (reg.swizzle == BRW_SWIZZLE_XXXX)
-      this->writemask = WRITEMASK_X;
-   else
-      this->writemask = WRITEMASK_XYZW;
+   this->writemask = brw_mask_for_swizzle(reg.swizzle);
    this->reladdr = reg.reladdr;
    this->fixed_hw_reg = reg.fixed_hw_reg;
 }
