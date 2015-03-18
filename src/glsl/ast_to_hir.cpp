@@ -3378,6 +3378,18 @@ ast_declarator_list::hir(exec_list *instructions,
 
    decl_type = this->type->glsl_type(& type_name, state);
 
+   /* Section 4.3.7 "Buffer Variables" of the GLSL 4.30 spec:
+    *    "Buffer variables may only be declared inside interface blocks
+    *    (section 4.3.9 “Interface Blocks”), which are then referred to as
+    *    shader storage blocks. It is a compile-time error to declare buffer
+    *    variables at global scope (outside a block)."
+    */
+   if (type->qualifier.flags.q.buffer && !decl_type->is_interface()) {
+      _mesa_glsl_error(&loc, state,
+                       "buffer variables cannot be declared outside "
+                       "interface blocks");
+   }
+
    /* An offset-qualified atomic counter declaration sets the default
     * offset for the next declaration within the same atomic counter
     * buffer.
