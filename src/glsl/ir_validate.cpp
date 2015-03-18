@@ -543,9 +543,9 @@ ir_validate::visit_leave(ir_expression *ir)
    case ir_binop_logic_and:
    case ir_binop_logic_xor:
    case ir_binop_logic_or:
-      assert(ir->type == glsl_type::bool_type);
-      assert(ir->operands[0]->type == glsl_type::bool_type);
-      assert(ir->operands[1]->type == glsl_type::bool_type);
+      assert(ir->type->base_type == GLSL_TYPE_BOOL);
+      assert(ir->operands[0]->type->base_type == GLSL_TYPE_BOOL);
+      assert(ir->operands[1]->type->base_type == GLSL_TYPE_BOOL);
       break;
 
    case ir_binop_dot:
