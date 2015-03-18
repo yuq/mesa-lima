@@ -23,6 +23,10 @@
 
 #include <math.h>
 
+#ifdef __SSE4_1__
+#include <smmintrin.h>
+#endif
+
 /* The C standard library has functions round()/rint()/nearbyint() that round
  * their arguments according to the rounding mode set in the floating-point
  * control register. While there are trunc()/ceil()/floor() functions that do
@@ -45,7 +49,15 @@
 static inline float
 _mesa_roundevenf(float x)
 {
+#ifdef __SSE4_1__
+   float ret;
+   __m128 m = _mm_load_ss(&x);
+   m = _mm_round_ss(m, m, _MM_FROUND_CUR_DIRECTION | _MM_FROUND_NO_EXC);
+   _mm_store_ss(&ret, m);
+   return ret;
+#else
    return rintf(x);
+#endif
 }
 
 /**
@@ -54,5 +66,13 @@ _mesa_roundevenf(float x)
 static inline double
 _mesa_roundeven(double x)
 {
+#ifdef __SSE4_1__
+   double ret;
+   __m128d m = _mm_load_sd(&x);
+   m = _mm_round_sd(m, m, _MM_FROUND_CUR_DIRECTION | _MM_FROUND_NO_EXC);
+   _mm_store_sd(&ret, m);
+   return ret;
+#else
    return rint(x);
+#endif
 }
