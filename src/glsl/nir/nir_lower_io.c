@@ -110,6 +110,77 @@ deref_has_indirect(nir_deref_var *deref)
    return false;
 }
 
+static bool
+mark_indirect_uses_block(nir_block *block, void *void_state)
+{
+   struct set *indirect_set = void_state;
+
+   nir_foreach_instr(block, instr) {
+      if (instr->type != nir_instr_type_intrinsic)
+         continue;
+
+      nir_intrinsic_instr *intrin = nir_instr_as_intrinsic(instr);
+
+      for (unsigned i = 0;
+           i < nir_intrinsic_infos[intrin->intrinsic].num_variables; i++) {
+         if (deref_has_indirect(intrin->variables[i]))
+            _mesa_set_add(indirect_set, intrin->variables[i]->var);
+      }
+   }
+
+   return true;
+}
+
+/* Identical to nir_assign_var_locations_packed except that it assigns
+ * locations to the variables that are used 100% directly first and then
+ * assigns locations to variables that are used indirectly.
+ */
+void
+nir_assign_var_locations_scalar_direct_first(nir_shader *shader,
+                                             struct exec_list *var_list,
+                                             unsigned *direct_size,
+                                             unsigned *size)
+{
+   struct set *indirect_set = _mesa_set_create(NULL, _mesa_hash_pointer,
+                                               _mesa_key_pointer_equal);
+
+   nir_foreach_overload(shader, overload) {
+      if (overload->impl)
+         nir_foreach_block(overload->impl, mark_indirect_uses_block,
+                           indirect_set);
+   }
+
+   unsigned location = 0;
+
+   foreach_list_typed(nir_variable, var, node, var_list) {
+      if (var->data.mode == nir_var_uniform && var->interface_type != NULL)
+         continue;
+
+      if (_mesa_set_search(indirect_set, var))
+         continue;
+
+      var->data.driver_location = location;
+      location += type_size(var->type);
+   }
+
+   *direct_size = location;
+
+   foreach_list_typed(nir_variable, var, node, var_list) {
+      if (var->data.mode == nir_var_uniform && var->interface_type != NULL)
+         continue;
+
+      if (!_mesa_set_search(indirect_set, var))
+         continue;
+
+      var->data.driver_location = location;
+      location += type_size(var->type);
+   }
+
+   *size = location;
+
+   _mesa_set_destroy(indirect_set, NULL);
+}
+
 static unsigned
 get_io_offset(nir_deref_var *deref, nir_instr *instr, nir_src *indirect,
               struct lower_io_state *state)
