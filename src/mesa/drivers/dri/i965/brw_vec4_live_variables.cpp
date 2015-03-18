@@ -76,12 +76,10 @@ vec4_live_variables::setup_def_use()
 	 /* Set use[] for this instruction */
 	 for (unsigned int i = 0; i < 3; i++) {
 	    if (inst->src[i].file == GRF) {
-	       int reg = inst->src[i].reg;
-
-               for (int j = 0; j < 4; j++) {
-                  int c = BRW_GET_SWZ(inst->src[i].swizzle, j);
-                  if (!BITSET_TEST(bd->def, reg * 4 + c))
-                     BITSET_SET(bd->use, reg * 4 + c);
+               for (int c = 0; c < 4; c++) {
+                  const unsigned v = var_from_reg(alloc, inst->src[i], c);
+                  if (!BITSET_TEST(bd->def, v))
+                     BITSET_SET(bd->use, v);
                }
 	    }
 	 }
@@ -100,9 +98,9 @@ vec4_live_variables::setup_def_use()
 	     !inst->predicate) {
             for (int c = 0; c < 4; c++) {
                if (inst->dst.writemask & (1 << c)) {
-                  int reg = inst->dst.reg;
-                  if (!BITSET_TEST(bd->use, reg * 4 + c))
-                     BITSET_SET(bd->def, reg * 4 + c);
+                  const unsigned v = var_from_reg(alloc, inst->dst, c);
+                  if (!BITSET_TEST(bd->use, v))
+                     BITSET_SET(bd->def, v);
                }
             }
          }
@@ -250,24 +248,20 @@ vec4_visitor::calculate_live_intervals()
    foreach_block_and_inst(block, vec4_instruction, inst, cfg) {
       for (unsigned int i = 0; i < 3; i++) {
 	 if (inst->src[i].file == GRF) {
-	    int reg = inst->src[i].reg;
-
-            for (int j = 0; j < 4; j++) {
-               int c = BRW_GET_SWZ(inst->src[i].swizzle, j);
-
-               start[reg * 4 + c] = MIN2(start[reg * 4 + c], ip);
-               end[reg * 4 + c] = ip;
+            for (int c = 0; c < 4; c++) {
+               const unsigned v = var_from_reg(alloc, inst->src[i], c);
+               start[v] = MIN2(start[v], ip);
+               end[v] = ip;
             }
 	 }
       }
 
       if (inst->dst.file == GRF) {
-         int reg = inst->dst.reg;
-
          for (int c = 0; c < 4; c++) {
             if (inst->dst.writemask & (1 << c)) {
-               start[reg * 4 + c] = MIN2(start[reg * 4 + c], ip);
-               end[reg * 4 + c] = ip;
+               const unsigned v = var_from_reg(alloc, inst->dst, c);
+               start[v] = MIN2(start[v], ip);
+               end[v] = ip;
             }
          }
       }
