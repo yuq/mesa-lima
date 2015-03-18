@@ -176,12 +176,12 @@ GL 4.3, GLSL 4.30:
 GL 4.4, GLSL 4.40:
 
   GL_MAX_VERTEX_ATTRIB_STRIDE                          DONE (all drivers)
-  GL_ARB_buffer_storage                                DONE (i965, nv30, nv50, nvc0, r600, radeonsi)
+  GL_ARB_buffer_storage                                DONE (i965, nv50, nvc0, r600, radeonsi)
   GL_ARB_clear_texture                                 DONE (i965)
   GL_ARB_enhanced_layouts                              not started
   GL_ARB_multi_bind                                    DONE (all drivers)
   GL_ARB_query_buffer_object                           not started
-  GL_ARB_texture_mirror_clamp_to_edge                  DONE (i965, nv30, nv50, nvc0, r600, radeonsi, llvmpipe, softpipe)
+  GL_ARB_texture_mirror_clamp_to_edge                  DONE (i965, nv50, nvc0, r600, radeonsi, llvmpipe, softpipe)
   GL_ARB_texture_stencil8                              not started
   GL_ARB_vertex_type_10f_11f_11f_rev                   DONE (i965, nv50, nvc0, r600, radeonsi, llvmpipe, softpipe)
 
