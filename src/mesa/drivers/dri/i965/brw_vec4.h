@@ -256,7 +256,6 @@ public:
    vec4_instruction *IF(src_reg src0, src_reg src1,
                         enum brw_conditional_mod condition);
    vec4_instruction *IF(enum brw_predicate predicate);
-   EMIT1(PULL_CONSTANT_LOAD)
    EMIT1(SCRATCH_READ)
    EMIT2(SCRATCH_WRITE)
    EMIT3(LRP)
