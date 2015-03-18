@@ -631,7 +631,7 @@ src_reg::src_reg(class vec4_visitor *v, const struct glsl_type *type)
    if (type->is_array() || type->is_record()) {
       this->swizzle = BRW_SWIZZLE_NOOP;
    } else {
-      this->swizzle = swizzle_for_size(type->vector_elements);
+      this->swizzle = brw_swizzle_for_size(type->vector_elements);
    }
 
    this->type = brw_type_for_base_type(type);
@@ -1807,7 +1807,7 @@ vec4_visitor::visit(ir_expression *ir)
          pull->mlen = 1;
       }
 
-      packed_consts.swizzle = swizzle_for_size(ir->type->vector_elements);
+      packed_consts.swizzle = brw_swizzle_for_size(ir->type->vector_elements);
       packed_consts.swizzle += BRW_SWIZZLE4(const_offset % 16 / 4,
                                             const_offset % 16 / 4,
                                             const_offset % 16 / 4,
@@ -1955,7 +1955,7 @@ vec4_visitor::visit(ir_dereference_variable *ir)
       return;
 
    if (type->is_scalar() || type->is_vector() || type->is_matrix())
-      this->result.swizzle = swizzle_for_size(type->vector_elements);
+      this->result.swizzle = brw_swizzle_for_size(type->vector_elements);
 }
 
 
@@ -2014,7 +2014,7 @@ vec4_visitor::visit(ir_dereference_array *ir)
 
    /* If the type is smaller than a vec4, replicate the last channel out. */
    if (ir->type->is_scalar() || ir->type->is_vector() || ir->type->is_matrix())
-      src.swizzle = swizzle_for_size(ir->type->vector_elements);
+      src.swizzle = brw_swizzle_for_size(ir->type->vector_elements);
    else
       src.swizzle = BRW_SWIZZLE_NOOP;
    src.type = brw_type_for_base_type(ir->type);
@@ -2039,7 +2039,7 @@ vec4_visitor::visit(ir_dereference_record *ir)
 
    /* If the type is smaller than a vec4, replicate the last channel out. */
    if (ir->type->is_scalar() || ir->type->is_vector() || ir->type->is_matrix())
-      this->result.swizzle = swizzle_for_size(ir->type->vector_elements);
+      this->result.swizzle = brw_swizzle_for_size(ir->type->vector_elements);
    else
       this->result.swizzle = BRW_SWIZZLE_NOOP;
    this->result.type = brw_type_for_base_type(ir->type);
@@ -2110,7 +2110,7 @@ vec4_visitor::emit_block_move(dst_reg *dst, src_reg *src,
 
    dst->writemask = (1 << type->vector_elements) - 1;
 
-   src->swizzle = swizzle_for_size(type->vector_elements);
+   src->swizzle = brw_swizzle_for_size(type->vector_elements);
 
    vec4_instruction *inst = emit(MOV(*dst, *src));
    inst->predicate = predicate;
@@ -2198,7 +2198,7 @@ vec4_visitor::visit(ir_assignment *ir)
        */
       assert(src.swizzle ==
              (ir->rhs->type->is_matrix()
-              ? swizzle_for_size(ir->rhs->type->vector_elements)
+              ? brw_swizzle_for_size(ir->rhs->type->vector_elements)
               : BRW_SWIZZLE_NOOP));
 
       emit_block_move(&dst, &src, ir->rhs->type, predicate);

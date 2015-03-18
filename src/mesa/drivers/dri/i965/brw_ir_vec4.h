@@ -32,9 +32,6 @@ namespace brw {
 
 class dst_reg;
 
-unsigned
-swizzle_for_size(int size);
-
 class src_reg : public backend_reg
 {
 public:

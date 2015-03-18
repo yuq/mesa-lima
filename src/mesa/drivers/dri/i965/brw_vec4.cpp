@@ -40,26 +40,6 @@ using namespace brw;
 
 namespace brw {
 
-/**
- * Common helper for constructing swizzles.  When only a subset of
- * channels of a vec4 are used, we don't want to reference the other
- * channels, as that will tell optimization passes that those other
- * channels are used.
- */
-unsigned
-swizzle_for_size(int size)
-{
-   static const unsigned size_swizzles[4] = {
-      BRW_SWIZZLE4(SWIZZLE_X, SWIZZLE_X, SWIZZLE_X, SWIZZLE_X),
-      BRW_SWIZZLE4(SWIZZLE_X, SWIZZLE_Y, SWIZZLE_Y, SWIZZLE_Y),
-      BRW_SWIZZLE4(SWIZZLE_X, SWIZZLE_Y, SWIZZLE_Z, SWIZZLE_Z),
-      BRW_SWIZZLE4(SWIZZLE_X, SWIZZLE_Y, SWIZZLE_Z, SWIZZLE_W),
-   };
-
-   assert((size >= 1) && (size <= 4));
-   return size_swizzles[size - 1];
-}
-
 void
 src_reg::init()
 {
@@ -75,7 +55,7 @@ src_reg::src_reg(register_file file, int reg, const glsl_type *type)
    this->file = file;
    this->reg = reg;
    if (type && (type->is_scalar() || type->is_vector() || type->is_matrix()))
-      this->swizzle = swizzle_for_size(type->vector_elements);
+      this->swizzle = brw_swizzle_for_size(type->vector_elements);
    else
       this->swizzle = BRW_SWIZZLE_XYZW;
 }
