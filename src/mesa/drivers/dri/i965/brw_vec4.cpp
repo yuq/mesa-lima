@@ -1143,15 +1143,12 @@ vec4_visitor::split_virtual_grfs()
     * to split.
     */
    foreach_block_and_inst(block, vec4_instruction, inst, cfg) {
-      /* If there's a SEND message loading from a GRF on gen7+, it needs to be
-       * contiguous.
-       */
-      if (inst->is_send_from_grf()) {
-         for (int i = 0; i < 3; i++) {
-            if (inst->src[i].file == GRF) {
-               split_grf[inst->src[i].reg] = false;
-            }
-         }
+      if (inst->dst.file == GRF && inst->regs_written > 1)
+         split_grf[inst->dst.reg] = false;
+
+      for (int i = 0; i < 3; i++) {
+         if (inst->src[i].file == GRF && inst->regs_read(i) > 1)
+            split_grf[inst->src[i].reg] = false;
       }
    }
 
