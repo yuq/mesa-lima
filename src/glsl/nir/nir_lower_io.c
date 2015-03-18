@@ -76,8 +76,8 @@ type_size(const struct glsl_type *type)
    return 0;
 }
 
-static void
-assign_var_locations(struct exec_list *var_list, unsigned *size)
+void
+nir_assign_var_locations_scalar(struct exec_list *var_list, unsigned *size)
 {
    unsigned location = 0;
 
@@ -94,14 +94,6 @@ assign_var_locations(struct exec_list *var_list, unsigned *size)
    }
 
    *size = location;
-}
-
-static void
-assign_var_locations_shader(nir_shader *shader)
-{
-   assign_var_locations(&shader->inputs, &shader->num_inputs);
-   assign_var_locations(&shader->outputs, &shader->num_outputs);
-   assign_var_locations(&shader->uniforms, &shader->num_uniforms);
 }
 
 static bool
@@ -304,8 +296,6 @@ nir_lower_io_impl(nir_function_impl *impl)
 void
 nir_lower_io(nir_shader *shader)
 {
-   assign_var_locations_shader(shader);
-
    nir_foreach_overload(shader, overload) {
       if (overload->impl)
          nir_lower_io_impl(overload->impl);

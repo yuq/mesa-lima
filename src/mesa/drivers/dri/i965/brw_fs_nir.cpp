@@ -105,6 +105,10 @@ fs_visitor::emit_nir_code()
    /* Get rid of split copies */
    nir_optimize(nir);
 
+   nir_assign_var_locations_scalar(&nir->uniforms, &nir->num_uniforms);
+   nir_assign_var_locations_scalar(&nir->inputs, &nir->num_inputs);
+   nir_assign_var_locations_scalar(&nir->outputs, &nir->num_outputs);
+
    nir_lower_io(nir);
    nir_validate_shader(nir);
 

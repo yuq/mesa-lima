@@ -1577,6 +1577,9 @@ void nir_lower_global_vars_to_local(nir_shader *shader);
 
 void nir_lower_locals_to_regs(nir_shader *shader);
 
+void nir_assign_var_locations_scalar(struct exec_list *var_list,
+                                     unsigned *size);
+
 void nir_lower_io(nir_shader *shader);
 
 void nir_lower_vars_to_ssa(nir_shader *shader);
