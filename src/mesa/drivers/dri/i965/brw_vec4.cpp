@@ -978,43 +978,25 @@ vec4_instruction::can_reswizzle(int dst_writemask,
 void
 vec4_instruction::reswizzle(int dst_writemask, int swizzle)
 {
-   int new_writemask = 0;
-   int new_swizzle[4] = { 0 };
-
-   /* Dot product instructions write a single result into all channels. */
+   /* Destination write mask doesn't correspond to source swizzle for the dot
+    * product and pack_bytes instructions.
+    */
    if (opcode != BRW_OPCODE_DP4 && opcode != BRW_OPCODE_DPH &&
-       opcode != BRW_OPCODE_DP3 && opcode != BRW_OPCODE_DP2) {
+       opcode != BRW_OPCODE_DP3 && opcode != BRW_OPCODE_DP2 &&
+       opcode != VEC4_OPCODE_PACK_BYTES) {
       for (int i = 0; i < 3; i++) {
          if (src[i].file == BAD_FILE || src[i].file == IMM)
             continue;
 
-         /* Destination write mask doesn't correspond to source swizzle for the
-          * pack_bytes instruction.
-          */
-         if (opcode == VEC4_OPCODE_PACK_BYTES)
-            continue;
-
-         for (int c = 0; c < 4; c++) {
-            new_swizzle[c] = BRW_GET_SWZ(src[i].swizzle, BRW_GET_SWZ(swizzle, c));
-         }
-
-         src[i].swizzle = BRW_SWIZZLE4(new_swizzle[0], new_swizzle[1],
-                                       new_swizzle[2], new_swizzle[3]);
+         src[i].swizzle = brw_compose_swizzle(swizzle, src[i].swizzle);
       }
    }
 
-   for (int c = 0; c < 4; c++) {
-      int bit = 1 << BRW_GET_SWZ(swizzle, c);
-      /* Skip components of the swizzle not used by the dst. */
-      if (!(dst_writemask & (1 << c)))
-         continue;
-      /* If we were populating this component, then populate the
-       * corresponding channel of the new dst.
-       */
-      if (dst.writemask & bit)
-         new_writemask |= (1 << c);
-   }
-   dst.writemask = new_writemask;
+   /* Apply the specified swizzle and writemask to the original mask of
+    * written components.
+    */
+   dst.writemask = dst_writemask &
+                   brw_apply_swizzle_to_mask(swizzle, dst.writemask);
 }
 
 /*
