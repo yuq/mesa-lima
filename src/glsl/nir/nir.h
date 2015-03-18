@@ -1380,13 +1380,13 @@ typedef struct nir_shader_compiler_options {
 
 typedef struct nir_shader {
    /** hash table of name -> uniform nir_variable */
-   struct hash_table *uniforms;
+   struct exec_list uniforms;
 
    /** hash table of name -> input nir_variable */
-   struct hash_table *inputs;
+   struct exec_list inputs;
 
    /** hash table of name -> output nir_variable */
-   struct hash_table *outputs;
+   struct exec_list outputs;
 
    /** Set of driver-specific options for the shader.
     *

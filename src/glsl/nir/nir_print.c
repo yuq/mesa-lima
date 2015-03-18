@@ -844,18 +844,16 @@ nir_print_shader(nir_shader *shader, FILE *fp)
    print_var_state state;
    init_print_state(&state);
 
-   struct hash_entry *entry;
-
-   hash_table_foreach(shader->uniforms, entry) {
-      print_var_decl((nir_variable *) entry->data, &state, fp);
+   foreach_list_typed(nir_variable, var, node, &shader->uniforms) {
+      print_var_decl(var, &state, fp);
    }
 
-   hash_table_foreach(shader->inputs, entry) {
-      print_var_decl((nir_variable *) entry->data, &state, fp);
+   foreach_list_typed(nir_variable, var, node, &shader->inputs) {
+      print_var_decl(var, &state, fp);
    }
 
-   hash_table_foreach(shader->outputs, entry) {
-      print_var_decl((nir_variable *) entry->data, &state, fp);
+   foreach_list_typed(nir_variable, var, node, &shader->outputs) {
+      print_var_decl(var, &state, fp);
    }
 
    foreach_list_typed(nir_variable, var, node, &shader->globals) {

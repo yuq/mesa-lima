@@ -77,14 +77,11 @@ type_size(const struct glsl_type *type)
 }
 
 static void
-assign_var_locations(struct hash_table *ht, unsigned *size)
+assign_var_locations(struct exec_list *var_list, unsigned *size)
 {
    unsigned location = 0;
 
-   struct hash_entry *entry;
-   hash_table_foreach(ht, entry) {
-      nir_variable *var = (nir_variable *) entry->data;
-
+   foreach_list_typed(nir_variable, var, node, var_list) {
       /*
        * UBO's have their own address spaces, so don't count them towards the
        * number of global uniforms
@@ -102,9 +99,9 @@ assign_var_locations(struct hash_table *ht, unsigned *size)
 static void
 assign_var_locations_shader(nir_shader *shader)
 {
-   assign_var_locations(shader->inputs, &shader->num_inputs);
-   assign_var_locations(shader->outputs, &shader->num_outputs);
-   assign_var_locations(shader->uniforms, &shader->num_uniforms);
+   assign_var_locations(&shader->inputs, &shader->num_inputs);
+   assign_var_locations(&shader->outputs, &shader->num_outputs);
+   assign_var_locations(&shader->uniforms, &shader->num_uniforms);
 }
 
 static bool

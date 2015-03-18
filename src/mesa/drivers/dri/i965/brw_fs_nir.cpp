@@ -196,9 +196,7 @@ fs_visitor::emit_nir_code()
 void
 fs_visitor::nir_setup_inputs(nir_shader *shader)
 {
-   struct hash_entry *entry;
-   hash_table_foreach(shader->inputs, entry) {
-      nir_variable *var = (nir_variable *) entry->data;
+   foreach_list_typed(nir_variable, var, node, &shader->inputs) {
       enum brw_reg_type type = brw_type_for_base_type(var->type);
       fs_reg input = offset(nir_inputs, var->data.driver_location);
 
@@ -250,9 +248,7 @@ fs_visitor::nir_setup_outputs(nir_shader *shader)
 {
    brw_wm_prog_key *key = (brw_wm_prog_key*) this->key;
 
-   struct hash_entry *entry;
-   hash_table_foreach(shader->outputs, entry) {
-      nir_variable *var = (nir_variable *) entry->data;
+   foreach_list_typed(nir_variable, var, node, &shader->outputs) {
       fs_reg reg = offset(nir_outputs, var->data.driver_location);
 
       int vector_elements =
@@ -304,10 +300,7 @@ fs_visitor::nir_setup_uniforms(nir_shader *shader)
    if (dispatch_width != 8)
       return;
 
-   struct hash_entry *entry;
-   hash_table_foreach(shader->uniforms, entry) {
-      nir_variable *var = (nir_variable *) entry->data;
-
+   foreach_list_typed(nir_variable, var, node, &shader->uniforms) {
       /* UBO's and atomics don't take up space in the uniform file */
 
       if (var->interface_type != NULL || var->type->contains_atomic())

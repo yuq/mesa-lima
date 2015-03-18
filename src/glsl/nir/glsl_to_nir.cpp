@@ -352,15 +352,15 @@ nir_visitor::visit(ir_variable *ir)
       break;
 
    case nir_var_shader_in:
-      _mesa_hash_table_insert(shader->inputs, var->name, var);
+      exec_list_push_tail(&shader->inputs, &var->node);
       break;
 
    case nir_var_shader_out:
-      _mesa_hash_table_insert(shader->outputs, var->name, var);
+      exec_list_push_tail(&shader->outputs, &var->node);
       break;
 
    case nir_var_uniform:
-      _mesa_hash_table_insert(shader->uniforms, var->name, var);
+      exec_list_push_tail(&shader->uniforms, &var->node);
       break;
 
    case nir_var_system_value:
