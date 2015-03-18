@@ -198,7 +198,7 @@ GL 4.5, GLSL 4.50:
   - Framebuffer object                                 started (Laura Ekstrand)
   - Renderbuffer object                                DONE
   - Texture object                                     DONE
-  - Vertex array object                                started (Fredrik Höglund)
+  - Vertex array object                                DONE
   - Sampler object                                     DONE
   - Program Pipeline object                            DONE
   - Query object                                       DONE (will require changes when GL_ARB_query_buffer_object lands)
