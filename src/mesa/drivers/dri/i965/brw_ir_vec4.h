@@ -111,7 +111,8 @@ public:
 
    dst_reg();
    dst_reg(register_file file, int reg);
-   dst_reg(register_file file, int reg, const glsl_type *type, int writemask);
+   dst_reg(register_file file, int reg, const glsl_type *type,
+           unsigned writemask);
    dst_reg(struct brw_reg reg);
    dst_reg(class vec4_visitor *v, const struct glsl_type *type);
 
@@ -119,7 +120,7 @@ public:
 
    bool equals(const dst_reg &r) const;
 
-   int writemask; /**< Bitfield of WRITEMASK_[XYZW] */
+   unsigned writemask; /**< Bitfield of WRITEMASK_[XYZW] */
 
    src_reg *reladdr;
 };

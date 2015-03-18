@@ -195,7 +195,7 @@ dst_reg::dst_reg(register_file file, int reg)
 }
 
 dst_reg::dst_reg(register_file file, int reg, const glsl_type *type,
-                 int writemask)
+                 unsigned writemask)
 {
    init();
 
