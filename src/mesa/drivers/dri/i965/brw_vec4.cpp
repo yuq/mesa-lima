@@ -459,59 +459,26 @@ vec4_visitor::opt_reduce_swizzle()
           inst->is_send_from_grf())
          continue;
 
-      int swizzle[4];
+      unsigned swizzle;
 
       /* Determine which channels of the sources are read. */
       switch (inst->opcode) {
       case VEC4_OPCODE_PACK_BYTES:
-         swizzle[0] = 0;
-         swizzle[1] = 1;
-         swizzle[2] = 2;
-         swizzle[3] = 3;
-         break;
       case BRW_OPCODE_DP4:
       case BRW_OPCODE_DPH: /* FINISHME: DPH reads only three channels of src0,
                             *           but all four of src1.
                             */
-         swizzle[0] = 0;
-         swizzle[1] = 1;
-         swizzle[2] = 2;
-         swizzle[3] = 3;
+         swizzle = brw_swizzle_for_size(4);
          break;
       case BRW_OPCODE_DP3:
-         swizzle[0] = 0;
-         swizzle[1] = 1;
-         swizzle[2] = 2;
-         swizzle[3] = -1;
+         swizzle = brw_swizzle_for_size(3);
          break;
       case BRW_OPCODE_DP2:
-         swizzle[0] = 0;
-         swizzle[1] = 1;
-         swizzle[2] = -1;
-         swizzle[3] = -1;
+         swizzle = brw_swizzle_for_size(2);
          break;
       default:
-         swizzle[0] = inst->dst.writemask & WRITEMASK_X ? 0 : -1;
-         swizzle[1] = inst->dst.writemask & WRITEMASK_Y ? 1 : -1;
-         swizzle[2] = inst->dst.writemask & WRITEMASK_Z ? 2 : -1;
-         swizzle[3] = inst->dst.writemask & WRITEMASK_W ? 3 : -1;
+         swizzle = brw_swizzle_for_mask(inst->dst.writemask);
          break;
-      }
-
-      /* Resolve unread channels (-1) by assigning them the swizzle of the
-       * first channel that is used.
-       */
-      int first_used_channel = 0;
-      for (int i = 0; i < 4; i++) {
-         if (swizzle[i] != -1) {
-            first_used_channel = swizzle[i];
-            break;
-         }
-      }
-      for (int i = 0; i < 4; i++) {
-         if (swizzle[i] == -1) {
-            swizzle[i] = first_used_channel;
-         }
       }
 
       /* Update sources' swizzles. */
@@ -521,12 +488,8 @@ vec4_visitor::opt_reduce_swizzle()
              inst->src[i].file != UNIFORM)
             continue;
 
-         int swiz[4];
-         for (int j = 0; j < 4; j++) {
-            swiz[j] = BRW_GET_SWZ(inst->src[i].swizzle, swizzle[j]);
-         }
-
-         unsigned new_swizzle = BRW_SWIZZLE4(swiz[0], swiz[1], swiz[2], swiz[3]);
+         const unsigned new_swizzle =
+            brw_compose_swizzle(swizzle, inst->src[i].swizzle);
          if (inst->src[i].swizzle != new_swizzle) {
             inst->src[i].swizzle = new_swizzle;
             progress = true;
