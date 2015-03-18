@@ -232,13 +232,7 @@ vec4_visitor::opt_cse_local(bblock_t *block)
              * more -- a sure sign they'll fail operands_match().
              */
             if (src->file == GRF) {
-               assert((unsigned)(src->reg * 4 + 3) < (alloc.count * 4));
-
-               int last_reg_use = MAX2(MAX2(virtual_grf_end[src->reg * 4 + 0],
-                                            virtual_grf_end[src->reg * 4 + 1]),
-                                       MAX2(virtual_grf_end[src->reg * 4 + 2],
-                                            virtual_grf_end[src->reg * 4 + 3]));
-               if (last_reg_use < ip) {
+               if (var_range_end(var_from_reg(alloc, *src), 4) < ip) {
                   entry->remove();
                   ralloc_free(entry);
                   break;

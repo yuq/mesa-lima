@@ -25,6 +25,7 @@
 #include "brw_fs.h"
 #include "brw_cfg.h"
 #include "brw_vs.h"
+#include "brw_vec4_live_variables.h"
 #include "brw_dead_control_flow.h"
 
 extern "C" {
@@ -981,10 +982,7 @@ vec4_visitor::opt_register_coalesce()
       /* Can't coalesce this GRF if someone else was going to
        * read it later.
        */
-      if (this->virtual_grf_end[inst->src[0].reg * 4 + 0] > ip ||
-          this->virtual_grf_end[inst->src[0].reg * 4 + 1] > ip ||
-          this->virtual_grf_end[inst->src[0].reg * 4 + 2] > ip ||
-          this->virtual_grf_end[inst->src[0].reg * 4 + 3] > ip)
+      if (var_range_end(var_from_reg(alloc, inst->src[0]), 4) > ip)
 	 continue;
 
       /* We need to check interference with the final destination between this

@@ -201,6 +201,8 @@ public:
    bool opt_vector_float();
    bool opt_reduce_swizzle();
    bool dead_code_eliminate();
+   int var_range_start(unsigned v, unsigned n) const;
+   int var_range_end(unsigned v, unsigned n) const;
    bool virtual_grf_interferes(int a, int b);
    bool opt_copy_propagation(bool do_constant_prop = true);
    bool opt_cse_local(bblock_t *block);

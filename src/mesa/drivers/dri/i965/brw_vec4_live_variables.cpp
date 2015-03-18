@@ -300,25 +300,33 @@ vec4_visitor::invalidate_live_intervals()
    live_intervals = NULL;
 }
 
+int
+vec4_visitor::var_range_start(unsigned v, unsigned n) const
+{
+   int start = INT_MAX;
+
+   for (unsigned i = 0; i < n; i++)
+      start = MIN2(start, virtual_grf_start[v + i]);
+
+   return start;
+}
+
+int
+vec4_visitor::var_range_end(unsigned v, unsigned n) const
+{
+   int end = INT_MIN;
+
+   for (unsigned i = 0; i < n; i++)
+      end = MAX2(end, virtual_grf_end[v + i]);
+
+   return end;
+}
+
 bool
 vec4_visitor::virtual_grf_interferes(int a, int b)
 {
-   int start_a = MIN2(MIN2(virtual_grf_start[a * 4 + 0],
-                           virtual_grf_start[a * 4 + 1]),
-                      MIN2(virtual_grf_start[a * 4 + 2],
-                           virtual_grf_start[a * 4 + 3]));
-   int start_b = MIN2(MIN2(virtual_grf_start[b * 4 + 0],
-                           virtual_grf_start[b * 4 + 1]),
-                      MIN2(virtual_grf_start[b * 4 + 2],
-                           virtual_grf_start[b * 4 + 3]));
-   int end_a = MAX2(MAX2(virtual_grf_end[a * 4 + 0],
-                         virtual_grf_end[a * 4 + 1]),
-                    MAX2(virtual_grf_end[a * 4 + 2],
-                         virtual_grf_end[a * 4 + 3]));
-   int end_b = MAX2(MAX2(virtual_grf_end[b * 4 + 0],
-                         virtual_grf_end[b * 4 + 1]),
-                    MAX2(virtual_grf_end[b * 4 + 2],
-                         virtual_grf_end[b * 4 + 3]));
-   return !(end_a <= start_b ||
-            end_b <= start_a);
+   return !((var_range_end(4 * a, 4) <=
+             var_range_start(4 * b, 4)) ||
+            (var_range_end(4 * b, 4) <=
+             var_range_start(4 * a, 4)));
 }
