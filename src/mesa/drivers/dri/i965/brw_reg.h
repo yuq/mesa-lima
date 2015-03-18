@@ -87,7 +87,7 @@ struct brw_context;
 #define BRW_SWIZZLE_ZWZW      BRW_SWIZZLE4(2,3,2,3)
 
 static inline bool
-brw_is_single_value_swizzle(int swiz)
+brw_is_single_value_swizzle(unsigned swiz)
 {
    return (swiz == BRW_SWIZZLE_XXXX ||
            swiz == BRW_SWIZZLE_YYYY ||
