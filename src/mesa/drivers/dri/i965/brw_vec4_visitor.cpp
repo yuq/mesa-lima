@@ -756,20 +756,15 @@ vec4_visitor::setup_builtin_uniform_values(ir_variable *ir)
          &this->prog->Parameters->ParameterValues[index][0];
 
       assert(this->uniforms < uniform_array_size);
-      this->uniform_vector_size[this->uniforms] = 0;
-      /* Add each of the unique swizzled channels of the element.
-       * This will end up matching the size of the glsl_type of this field.
-       */
-      int last_swiz = -1;
-      for (unsigned int j = 0; j < 4; j++) {
-	 int swiz = GET_SWZ(slots[i].swizzle, j);
-	 last_swiz = swiz;
 
-	 stage_prog_data->param[this->uniforms * 4 + j] = &values[swiz];
-	 assert(this->uniforms < uniform_array_size);
-	 if (swiz <= last_swiz)
-	    this->uniform_vector_size[this->uniforms]++;
-      }
+      for (unsigned j = 0; j < 4; j++)
+	 stage_prog_data->param[this->uniforms * 4 + j] =
+            &values[GET_SWZ(slots[i].swizzle, j)];
+
+      this->uniform_vector_size[this->uniforms] =
+         (ir->type->is_scalar() || ir->type->is_vector() ||
+          ir->type->is_matrix() ? ir->type->vector_elements : 4);
+
       this->uniforms++;
    }
 }
