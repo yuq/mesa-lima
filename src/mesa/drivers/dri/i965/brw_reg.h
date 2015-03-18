@@ -95,6 +95,103 @@ brw_is_single_value_swizzle(int swiz)
            swiz == BRW_SWIZZLE_WWWW);
 }
 
+/**
+ * Compute the swizzle obtained from the application of \p swz0 on the result
+ * of \p swz1.  The argument ordering is expected to match function
+ * composition.
+ */
+static inline unsigned
+brw_compose_swizzle(unsigned swz0, unsigned swz1)
+{
+   return BRW_SWIZZLE4(
+      BRW_GET_SWZ(swz1, BRW_GET_SWZ(swz0, 0)),
+      BRW_GET_SWZ(swz1, BRW_GET_SWZ(swz0, 1)),
+      BRW_GET_SWZ(swz1, BRW_GET_SWZ(swz0, 2)),
+      BRW_GET_SWZ(swz1, BRW_GET_SWZ(swz0, 3)));
+}
+
+/**
+ * Return the result of applying swizzle \p swz to shuffle the bits of \p mask
+ * (AKA image).
+ */
+static inline unsigned
+brw_apply_swizzle_to_mask(unsigned swz, unsigned mask)
+{
+   unsigned result = 0;
+
+   for (unsigned i = 0; i < 4; i++) {
+      if (mask & (1 << BRW_GET_SWZ(swz, i)))
+         result |= 1 << i;
+   }
+
+   return result;
+}
+
+/**
+ * Return the result of applying the inverse of swizzle \p swz to shuffle the
+ * bits of \p mask (AKA preimage).  Useful to find out which components are
+ * read from a swizzled source given the instruction writemask.
+ */
+static inline unsigned
+brw_apply_inv_swizzle_to_mask(unsigned swz, unsigned mask)
+{
+   unsigned result = 0;
+
+   for (unsigned i = 0; i < 4; i++) {
+      if (mask & (1 << i))
+         result |= 1 << BRW_GET_SWZ(swz, i);
+   }
+
+   return result;
+}
+
+/**
+ * Construct an identity swizzle for the set of enabled channels given by \p
+ * mask.  The result will only reference channels enabled in the provided \p
+ * mask, assuming that \p mask is non-zero.  The constructed swizzle will
+ * satisfy the property that for any instruction OP and any mask:
+ *
+ *    brw_OP(p, brw_writemask(dst, mask),
+ *           brw_swizzle(src, brw_swizzle_for_mask(mask)));
+ *
+ * will be equivalent to the same instruction without swizzle:
+ *
+ *    brw_OP(p, brw_writemask(dst, mask), src);
+ */
+static inline unsigned
+brw_swizzle_for_mask(unsigned mask)
+{
+   unsigned last = (mask ? ffs(mask) - 1 : 0);
+   unsigned swz[4];
+
+   for (unsigned i = 0; i < 4; i++)
+      last = swz[i] = (mask & (1 << i) ? i : last);
+
+   return BRW_SWIZZLE4(swz[0], swz[1], swz[2], swz[3]);
+}
+
+/**
+ * Construct an identity swizzle for the first \p n components of a vector.
+ * When only a subset of channels of a vec4 are used we don't want to
+ * reference the other channels, as that will tell optimization passes that
+ * those other channels are used.
+ */
+static inline unsigned
+brw_swizzle_for_size(unsigned n)
+{
+   return brw_swizzle_for_mask((1 << n) - 1);
+}
+
+/**
+ * Converse of brw_swizzle_for_mask().  Returns the mask of components
+ * accessed by the specified swizzle \p swz.
+ */
+static inline unsigned
+brw_mask_for_swizzle(unsigned swz)
+{
+   return brw_apply_inv_swizzle_to_mask(swz, ~0);
+}
+
 enum PACKED brw_reg_type {
    BRW_REGISTER_TYPE_UD = 0,
    BRW_REGISTER_TYPE_D,
