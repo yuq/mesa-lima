@@ -1929,43 +1929,16 @@ vec4_visitor::visit(ir_expression *ir)
 void
 vec4_visitor::visit(ir_swizzle *ir)
 {
-   src_reg src;
-   int i = 0;
-   int swizzle[4];
-
    /* Note that this is only swizzles in expressions, not those on the left
     * hand side of an assignment, which do write masking.  See ir_assignment
     * for that.
     */
+   const unsigned swz = brw_compose_swizzle(
+      brw_swizzle_for_size(ir->type->vector_elements),
+      BRW_SWIZZLE4(ir->mask.x, ir->mask.y, ir->mask.z, ir->mask.w));
 
    ir->val->accept(this);
-   src = this->result;
-   assert(src.file != BAD_FILE);
-
-   for (i = 0; i < ir->type->vector_elements; i++) {
-      switch (i) {
-      case 0:
-	 swizzle[i] = BRW_GET_SWZ(src.swizzle, ir->mask.x);
-	 break;
-      case 1:
-	 swizzle[i] = BRW_GET_SWZ(src.swizzle, ir->mask.y);
-	 break;
-      case 2:
-	 swizzle[i] = BRW_GET_SWZ(src.swizzle, ir->mask.z);
-	 break;
-      case 3:
-	 swizzle[i] = BRW_GET_SWZ(src.swizzle, ir->mask.w);
-	    break;
-      }
-   }
-   for (; i < 4; i++) {
-      /* Replicate the last channel out. */
-      swizzle[i] = swizzle[ir->type->vector_elements - 1];
-   }
-
-   src.swizzle = BRW_SWIZZLE4(swizzle[0], swizzle[1], swizzle[2], swizzle[3]);
-
-   this->result = src;
+   this->result = swizzle(this->result, swz);
 }
 
 void
@@ -2247,22 +2220,12 @@ vec4_visitor::visit(ir_assignment *ir)
 
    last_rhs_inst = (vec4_instruction *)this->instructions.get_tail();
 
-   src_reg src = this->result;
-
    int swizzles[4];
-   int first_enabled_chan = 0;
    int src_chan = 0;
 
    assert(ir->lhs->type->is_vector() ||
 	  ir->lhs->type->is_scalar());
    dst.writemask = ir->write_mask;
-
-   for (int i = 0; i < 4; i++) {
-      if (dst.writemask & (1 << i)) {
-	 first_enabled_chan = BRW_GET_SWZ(src.swizzle, i);
-	 break;
-      }
-   }
 
    /* Swizzle a small RHS vector into the channels being written.
     *
@@ -2270,14 +2233,12 @@ vec4_visitor::visit(ir_assignment *ir)
     * present on the RHS while in our instructions we need to make
     * those channels appear in the slots of the vec4 they're written to.
     */
-   for (int i = 0; i < 4; i++) {
-      if (dst.writemask & (1 << i))
-	 swizzles[i] = BRW_GET_SWZ(src.swizzle, src_chan++);
-      else
-	 swizzles[i] = first_enabled_chan;
-   }
-   src.swizzle = BRW_SWIZZLE4(swizzles[0], swizzles[1],
-			      swizzles[2], swizzles[3]);
+   for (int i = 0; i < 4; i++)
+      swizzles[i] = (ir->write_mask & (1 << i) ? src_chan++ : 0);
+
+   src_reg src = swizzle(this->result,
+                         BRW_SWIZZLE4(swizzles[0], swizzles[1],
+                                      swizzles[2], swizzles[3]));
 
    if (try_rewrite_rhs_to_dst(ir, dst, src, pre_rhs_inst, last_rhs_inst)) {
       return;
