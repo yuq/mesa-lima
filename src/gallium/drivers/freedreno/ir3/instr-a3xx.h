@@ -317,8 +317,9 @@ typedef struct PACKED {
 			uint32_t unknown : 20;
 		};
 		/* for immediate: */
-		int32_t iim_val;
-		float   fim_val;
+		int32_t  iim_val;
+		uint32_t uim_val;
+		float    fim_val;
 	};
 
 	/* dword1: */

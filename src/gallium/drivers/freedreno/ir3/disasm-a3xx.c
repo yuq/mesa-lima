@@ -180,6 +180,8 @@ static void print_instr_cat1(instr_t *instr)
 	if (cat1->src_im) {
 		if (type_float(cat1->src_type))
 			printf("(%f)", cat1->fim_val);
+		else if (type_uint(cat1->src_type))
+			printf("0x%08x", cat1->uim_val);
 		else
 			printf("%d", cat1->iim_val);
 	} else if (cat1->src_rel && !cat1->src_c) {

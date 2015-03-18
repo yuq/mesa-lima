@@ -79,8 +79,9 @@ struct ir3_register {
 		 */
 		int   num;
 		/* immediate: */
-		int   iim_val;
-		float fim_val;
+		int32_t  iim_val;
+		uint32_t uim_val;
+		float    fim_val;
 		/* relative: */
 		int   offset;
 	};
@@ -604,6 +605,160 @@ int ir3_block_ra(struct ir3_block *block, enum shader_t type,
 void ir3_block_legalize(struct ir3_block *block,
 		bool *has_samp, int *max_bary);
 
+/* ************************************************************************* */
+/* instruction helpers */
+
+static inline struct ir3_instruction *
+ir3_MOV(struct ir3_block *block, struct ir3_instruction *src, type_t type)
+{
+	struct ir3_instruction *instr =
+		ir3_instr_create(block, 1, 0);
+	ir3_reg_create(instr, 0, 0);   /* dst */
+	ir3_reg_create(instr, 0, IR3_REG_SSA)->instr = src;
+	instr->cat1.src_type = type;
+	instr->cat1.dst_type = type;
+	return instr;
+}
+
+static inline struct ir3_instruction *
+ir3_COV(struct ir3_block *block, struct ir3_instruction *src,
+		type_t src_type, type_t dst_type)
+{
+	struct ir3_instruction *instr =
+		ir3_instr_create(block, 1, 0);
+	ir3_reg_create(instr, 0, 0);   /* dst */
+	ir3_reg_create(instr, 0, IR3_REG_SSA)->instr = src;
+	instr->cat1.src_type = src_type;
+	instr->cat1.dst_type = dst_type;
+	return instr;
+}
+
+#define INSTR1(CAT, name)                                                \
+static inline struct ir3_instruction *                                   \
+ir3_##name(struct ir3_block *block,                                      \
+		struct ir3_instruction *a, unsigned aflags)                      \
+{                                                                        \
+	struct ir3_instruction *instr =                                      \
+		ir3_instr_create(block, CAT, OPC_##name);                        \
+	ir3_reg_create(instr, 0, 0);   /* dst */                             \
+	ir3_reg_create(instr, 0, IR3_REG_SSA | aflags)->instr = a;           \
+	return instr;                                                        \
+}
+
+#define INSTR2(CAT, name)                                                \
+static inline struct ir3_instruction *                                   \
+ir3_##name(struct ir3_block *block,                                      \
+		struct ir3_instruction *a, unsigned aflags,                      \
+		struct ir3_instruction *b, unsigned bflags)                      \
+{                                                                        \
+	struct ir3_instruction *instr =                                      \
+		ir3_instr_create(block, CAT, OPC_##name);                        \
+	ir3_reg_create(instr, 0, 0);   /* dst */                             \
+	ir3_reg_create(instr, 0, IR3_REG_SSA | aflags)->instr = a;           \
+	ir3_reg_create(instr, 0, IR3_REG_SSA | bflags)->instr = b;           \
+	return instr;                                                        \
+}
+
+#define INSTR3(CAT, name)                                                \
+static inline struct ir3_instruction *                                   \
+ir3_##name(struct ir3_block *block,                                      \
+		struct ir3_instruction *a, unsigned aflags,                      \
+		struct ir3_instruction *b, unsigned bflags,                      \
+		struct ir3_instruction *c, unsigned cflags)                      \
+{                                                                        \
+	struct ir3_instruction *instr =                                      \
+		ir3_instr_create(block, CAT, OPC_##name);                        \
+	ir3_reg_create(instr, 0, 0);   /* dst */                             \
+	ir3_reg_create(instr, 0, IR3_REG_SSA | aflags)->instr = a;           \
+	ir3_reg_create(instr, 0, IR3_REG_SSA | bflags)->instr = b;           \
+	ir3_reg_create(instr, 0, IR3_REG_SSA | cflags)->instr = c;           \
+	return instr;                                                        \
+}
+
+/* cat0 instructions: */
+INSTR1(0, KILL);
+
+/* cat2 instructions, most 2 src but some 1 src: */
+INSTR2(2, ADD_F)
+INSTR2(2, MIN_F)
+INSTR2(2, MAX_F)
+INSTR2(2, MUL_F)
+INSTR1(2, SIGN_F)
+INSTR2(2, CMPS_F)
+INSTR1(2, ABSNEG_F)
+INSTR2(2, CMPV_F)
+INSTR1(2, FLOOR_F)
+INSTR1(2, CEIL_F)
+INSTR1(2, RNDNE_F)
+INSTR1(2, RNDAZ_F)
+INSTR1(2, TRUNC_F)
+INSTR2(2, ADD_U)
+INSTR2(2, ADD_S)
+INSTR2(2, SUB_U)
+INSTR2(2, SUB_S)
+INSTR2(2, CMPS_U)
+INSTR2(2, CMPS_S)
+INSTR2(2, MIN_U)
+INSTR2(2, MIN_S)
+INSTR2(2, MAX_U)
+INSTR2(2, MAX_S)
+INSTR1(2, ABSNEG_S)
+INSTR2(2, AND_B)
+INSTR2(2, OR_B)
+INSTR1(2, NOT_B)
+INSTR2(2, XOR_B)
+INSTR2(2, CMPV_U)
+INSTR2(2, CMPV_S)
+INSTR2(2, MUL_U)
+INSTR2(2, MUL_S)
+INSTR2(2, MULL_U)
+INSTR1(2, BFREV_B)
+INSTR1(2, CLZ_S)
+INSTR1(2, CLZ_B)
+INSTR2(2, SHL_B)
+INSTR2(2, SHR_B)
+INSTR2(2, ASHR_B)
+INSTR2(2, BARY_F)
+INSTR2(2, MGEN_B)
+INSTR2(2, GETBIT_B)
+INSTR1(2, SETRM)
+INSTR1(2, CBITS_B)
+INSTR2(2, SHB)
+INSTR2(2, MSAD)
+
+/* cat3 instructions: */
+INSTR3(3, MAD_U16)
+INSTR3(3, MADSH_U16)
+INSTR3(3, MAD_S16)
+INSTR3(3, MADSH_M16)
+INSTR3(3, MAD_U24)
+INSTR3(3, MAD_S24)
+INSTR3(3, MAD_F16)
+INSTR3(3, MAD_F32)
+INSTR3(3, SEL_B16)
+INSTR3(3, SEL_B32)
+INSTR3(3, SEL_S16)
+INSTR3(3, SEL_S32)
+INSTR3(3, SEL_F16)
+INSTR3(3, SEL_F32)
+INSTR3(3, SAD_S16)
+INSTR3(3, SAD_S32)
+
+/* cat4 instructions: */
+INSTR1(4, RCP)
+INSTR1(4, RSQ)
+INSTR1(4, LOG2)
+INSTR1(4, EXP2)
+INSTR1(4, SIN)
+INSTR1(4, COS)
+INSTR1(4, SQRT)
+
+/* cat5 instructions: */
+INSTR1(5, DSX)
+INSTR1(5, DSY)
+
+/* cat6 instructions: */
+INSTR2(6, LDLV)
 
 /* ************************************************************************* */
 /* split this out or find some helper to use.. like main/bitset.h.. */
