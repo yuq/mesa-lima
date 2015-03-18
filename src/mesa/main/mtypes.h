@@ -2548,7 +2548,7 @@ struct gl_shader
    GLchar *Label;   /**< GL_KHR_debug */
    GLboolean DeletePending;
    GLboolean CompileStatus;
-   GLboolean IsES;         /**< True if this shader uses GLSL ES */
+   bool IsES;              /**< True if this shader uses GLSL ES */
 
    GLuint SourceChecksum;       /**< for debug/logging purposes */
    const GLchar *Source;  /**< Source code string */
@@ -2924,7 +2924,7 @@ struct gl_shader_program
    GLchar *InfoLog;
 
    unsigned Version;       /**< GLSL version used for linking */
-   GLboolean IsES;         /**< True if this program uses GLSL ES */
+   bool IsES;              /**< True if this program uses GLSL ES */
 
    /**
     * Per-stage shaders resulting from the first stage of linking.
