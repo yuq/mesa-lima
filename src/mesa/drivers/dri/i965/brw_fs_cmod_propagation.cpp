@@ -94,20 +94,21 @@ opt_cmod_propagation_local(bblock_t *block)
                 scan_inst->dst.reg_offset != inst->src[0].reg_offset)
                break;
 
-            /* This must be done before the dst.type check because the result
-             * type of the AND will always be D, but the result of the CMP
-             * could be anything.  The assumption is that the AND is just
-             * figuring out what the result of the previous comparison was
-             * instead of doing a new comparison with a different type.
-             */
-            if (inst->opcode == BRW_OPCODE_AND) {
-               if (scan_inst->opcode == BRW_OPCODE_CMP) {
-                  inst->remove(block);
-                  progress = true;
-               }
-
+            /* CMP's result is the same regardless of dest type. */
+            if (inst->conditional_mod == BRW_CONDITIONAL_NZ &&
+                scan_inst->opcode == BRW_OPCODE_CMP &&
+                (inst->dst.type == BRW_REGISTER_TYPE_D ||
+                 inst->dst.type == BRW_REGISTER_TYPE_UD)) {
+               inst->remove(block);
+               progress = true;
                break;
             }
+
+            /* If the AND wasn't handled by the previous case, it isn't safe
+             * to remove it.
+             */
+            if (inst->opcode == BRW_OPCODE_AND)
+               break;
 
             /* Comparisons operate differently for ints and floats */
             if (scan_inst->dst.type != inst->dst.type)
