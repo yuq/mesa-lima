@@ -563,12 +563,8 @@ vec4_visitor::pack_uniform_registers()
 	    continue;
 
 	 inst->src[i].reg = new_loc[src];
-
-	 int sx = BRW_GET_SWZ(inst->src[i].swizzle, 0) + new_chan[src];
-	 int sy = BRW_GET_SWZ(inst->src[i].swizzle, 1) + new_chan[src];
-	 int sz = BRW_GET_SWZ(inst->src[i].swizzle, 2) + new_chan[src];
-	 int sw = BRW_GET_SWZ(inst->src[i].swizzle, 3) + new_chan[src];
-	 inst->src[i].swizzle = BRW_SWIZZLE4(sx, sy, sz, sw);
+         inst->src[i].swizzle += BRW_SWIZZLE4(new_chan[src], new_chan[src],
+                                              new_chan[src], new_chan[src]);
       }
    }
 }

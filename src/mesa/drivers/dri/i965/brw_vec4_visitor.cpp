@@ -3334,18 +3334,9 @@ vec4_visitor::emit_scratch_write(bblock_t *block, vec4_instruction *inst,
     * weren't initialized, it will confuse live interval analysis, which will
     * make spilling fail to make progress.
     */
-   src_reg temp = src_reg(this, glsl_type::vec4_type);
-   temp.type = inst->dst.type;
-   int first_writemask_chan = ffs(inst->dst.writemask) - 1;
-   int swizzles[4];
-   for (int i = 0; i < 4; i++)
-      if (inst->dst.writemask & (1 << i))
-         swizzles[i] = i;
-      else
-         swizzles[i] = first_writemask_chan;
-   temp.swizzle = BRW_SWIZZLE4(swizzles[0], swizzles[1],
-                               swizzles[2], swizzles[3]);
-
+   const src_reg temp = swizzle(retype(src_reg(this, glsl_type::vec4_type),
+                                       inst->dst.type),
+                                brw_swizzle_for_mask(inst->dst.writemask));
    dst_reg dst = dst_reg(brw_writemask(brw_vec8_grf(0, 0),
 				       inst->dst.writemask));
    vec4_instruction *write = SCRATCH_WRITE(dst, temp, index);

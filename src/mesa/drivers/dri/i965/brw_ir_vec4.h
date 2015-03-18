@@ -83,11 +83,7 @@ static inline src_reg
 swizzle(src_reg reg, unsigned swizzle)
 {
    assert(reg.file != HW_REG);
-   reg.swizzle = BRW_SWIZZLE4(
-      BRW_GET_SWZ(reg.swizzle, BRW_GET_SWZ(swizzle, 0)),
-      BRW_GET_SWZ(reg.swizzle, BRW_GET_SWZ(swizzle, 1)),
-      BRW_GET_SWZ(reg.swizzle, BRW_GET_SWZ(swizzle, 2)),
-      BRW_GET_SWZ(reg.swizzle, BRW_GET_SWZ(swizzle, 3)));
+   reg.swizzle = brw_compose_swizzle(swizzle, reg.swizzle);
    return reg;
 }
 

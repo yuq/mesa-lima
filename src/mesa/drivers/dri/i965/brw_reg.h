@@ -895,10 +895,8 @@ brw_swizzle(struct brw_reg reg, unsigned x, unsigned y, unsigned z, unsigned w)
 {
    assert(reg.file != BRW_IMMEDIATE_VALUE);
 
-   reg.dw1.bits.swizzle = BRW_SWIZZLE4(BRW_GET_SWZ(reg.dw1.bits.swizzle, x),
-                                       BRW_GET_SWZ(reg.dw1.bits.swizzle, y),
-                                       BRW_GET_SWZ(reg.dw1.bits.swizzle, z),
-                                       BRW_GET_SWZ(reg.dw1.bits.swizzle, w));
+   reg.dw1.bits.swizzle = brw_compose_swizzle(BRW_SWIZZLE4(x, y, z, w),
+                                              reg.dw1.bits.swizzle);
    return reg;
 }
 

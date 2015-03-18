@@ -274,10 +274,10 @@ try_copy_propagate(struct brw_context *brw, vec4_instruction *inst,
     */
    int s[4];
    for (int i = 0; i < 4; i++) {
-      s[i] = BRW_GET_SWZ(entry->value[i]->swizzle,
-			 BRW_GET_SWZ(inst->src[arg].swizzle, i));
+      s[i] = BRW_GET_SWZ(entry->value[i]->swizzle, i);
    }
-   value.swizzle = BRW_SWIZZLE4(s[0], s[1], s[2], s[3]);
+   value.swizzle = brw_compose_swizzle(inst->src[arg].swizzle,
+                                       BRW_SWIZZLE4(s[0], s[1], s[2], s[3]));
 
    if (value.file != UNIFORM &&
        value.file != GRF &&
