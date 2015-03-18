@@ -105,7 +105,9 @@ fs_visitor::emit_nir_code()
    /* Get rid of split copies */
    nir_optimize(nir);
 
-   nir_assign_var_locations_scalar(&nir->uniforms, &nir->num_uniforms);
+   nir_assign_var_locations_scalar_direct_first(nir, &nir->uniforms,
+                                                &num_direct_uniforms,
+                                                &nir->num_uniforms);
    nir_assign_var_locations_scalar(&nir->inputs, &nir->num_inputs);
    nir_assign_var_locations_scalar(&nir->outputs, &nir->num_outputs);
 
@@ -168,7 +170,6 @@ fs_visitor::emit_nir_code()
    }
 
    if (nir->num_uniforms > 0) {
-      nir_uniforms = fs_reg(UNIFORM, 0);
       nir_setup_uniforms(nir);
    }
 
@@ -299,7 +300,13 @@ void
 fs_visitor::nir_setup_uniforms(nir_shader *shader)
 {
    uniforms = shader->num_uniforms;
-   param_size[0] = shader->num_uniforms;
+
+   /* We split the uniform register file in half.  The first half is
+    * entirely direct uniforms.  The second half is indirect.
+    */
+   param_size[0] = num_direct_uniforms;
+   if (shader->num_uniforms > num_direct_uniforms)
+      param_size[num_direct_uniforms] = shader->num_uniforms - num_direct_uniforms;
 
    if (dispatch_width != 8)
       return;
@@ -1456,11 +1463,19 @@ fs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
    case nir_intrinsic_load_uniform_indirect:
       has_indirect = true;
    case nir_intrinsic_load_uniform: {
-      unsigned index = 0;
+      unsigned index = instr->const_index[0];
+
+      fs_reg uniform_reg;
+      if (index < num_direct_uniforms) {
+         uniform_reg = fs_reg(UNIFORM, 0);
+      } else {
+         uniform_reg = fs_reg(UNIFORM, num_direct_uniforms);
+         index -= num_direct_uniforms;
+      }
+
       for (int i = 0; i < instr->const_index[1]; i++) {
          for (unsigned j = 0; j < instr->num_components; j++) {
-            fs_reg src = offset(retype(nir_uniforms, dest.type),
-                                instr->const_index[0] + index);
+            fs_reg src = offset(retype(uniform_reg, dest.type), index);
             if (has_indirect)
                src.reladdr = new(mem_ctx) fs_reg(get_nir_src(instr->src[0]));
             index++;

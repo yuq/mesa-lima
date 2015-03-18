@@ -435,6 +435,9 @@ public:
    /** Number of uniform variable components visited. */
    unsigned uniforms;
 
+   /** Total number of direct uniforms we can get from NIR */
+   unsigned num_direct_uniforms;
+
    /** Byte-offset for the next available spot in the scratch space buffer. */
    unsigned last_scratch;
 
@@ -468,7 +471,6 @@ public:
    fs_reg *nir_globals;
    fs_reg nir_inputs;
    fs_reg nir_outputs;
-   fs_reg nir_uniforms;
    fs_reg *nir_system_values;
 
    /** @{ debug annotation info */
