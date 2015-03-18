@@ -522,7 +522,7 @@ fs_visitor::nir_emit_if(nir_if *if_stmt)
    /* first, put the condition into f0 */
    fs_inst *inst = emit(MOV(reg_null_d,
                             retype(get_nir_src(if_stmt->condition),
-                                   BRW_REGISTER_TYPE_UD)));
+                                   BRW_REGISTER_TYPE_D)));
    inst->conditional_mod = BRW_CONDITIONAL_NZ;
 
    emit(IF(BRW_PREDICATE_NORMAL));
@@ -598,9 +598,9 @@ static brw_reg_type
 brw_type_for_nir_type(nir_alu_type type)
 {
    switch (type) {
-   case nir_type_bool:
    case nir_type_unsigned:
       return BRW_REGISTER_TYPE_UD;
+   case nir_type_bool:
    case nir_type_int:
       return BRW_REGISTER_TYPE_D;
    case nir_type_float:
@@ -1279,7 +1279,7 @@ fs_visitor::nir_emit_alu(nir_alu_instr *instr)
       fs_reg masked = vgrf(glsl_type::int_type);
       emit(AND(masked, result, fs_reg(1)));
       masked.negate = true;
-      emit(MOV(result, masked));
+      emit(MOV(retype(result, BRW_REGISTER_TYPE_D), masked));
    }
 }
 
