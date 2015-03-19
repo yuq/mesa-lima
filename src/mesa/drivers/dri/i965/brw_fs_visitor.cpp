@@ -3287,7 +3287,7 @@ fs_visitor::emit_untyped_atomic(unsigned atomic_op, unsigned surf_index,
 
    /* Emit the instruction. */
    fs_inst *inst = emit(SHADER_OPCODE_UNTYPED_ATOMIC, dst, src_payload,
-                        fs_reg(atomic_op), fs_reg(surf_index));
+                        fs_reg(surf_index), fs_reg(atomic_op));
    inst->mlen = mlen;
 }
 

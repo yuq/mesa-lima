@@ -2962,7 +2962,7 @@ vec4_visitor::emit_untyped_atomic(unsigned atomic_op, unsigned surf_index,
     */
    vec4_instruction *inst = emit(SHADER_OPCODE_UNTYPED_ATOMIC, dst,
                                  brw_message_reg(0),
-                                 src_reg(atomic_op), src_reg(surf_index));
+                                 src_reg(surf_index), src_reg(atomic_op));
    inst->mlen = mlen;
 }
 
