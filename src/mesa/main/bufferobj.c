@@ -3092,6 +3092,37 @@ bind_uniform_buffer(struct gl_context *ctx,
 }
 
 /**
+ * Binds a buffer object to a shader storage buffer binding point.
+ *
+ * Unlike set_ssbo_binding(), this function also flushes vertices
+ * and updates NewDriverState.  It also checks if the binding
+ * has actually changed before updating it.
+ */
+static void
+bind_shader_storage_buffer(struct gl_context *ctx,
+                           GLuint index,
+                           struct gl_buffer_object *bufObj,
+                           GLintptr offset,
+                           GLsizeiptr size,
+                           GLboolean autoSize)
+{
+   struct gl_shader_storage_buffer_binding *binding =
+      &ctx->ShaderStorageBufferBindings[index];
+
+   if (binding->BufferObject == bufObj &&
+       binding->Offset == offset &&
+       binding->Size == size &&
+       binding->AutomaticSize == autoSize) {
+      return;
+   }
+
+   FLUSH_VERTICES(ctx, 0);
+   ctx->NewDriverState |= ctx->DriverFlags.NewShaderStorageBuffer;
+
+   set_ssbo_binding(ctx, binding, bufObj, offset, size, autoSize);
+}
+
+/**
  * Bind a region of a buffer object to a uniform block binding point.
  * \param index  the uniform buffer binding point index
  * \param bufObj  the buffer object
@@ -3147,6 +3178,28 @@ bind_buffer_base_uniform_buffer(struct gl_context *ctx,
       bind_uniform_buffer(ctx, index, bufObj, -1, -1, GL_TRUE);
    else
       bind_uniform_buffer(ctx, index, bufObj, 0, 0, GL_TRUE);
+}
+
+/**
+ * Bind a buffer object to a shader storage block binding point.
+ * As above, but offset = 0.
+ */
+static void
+bind_buffer_base_shader_storage_buffer(struct gl_context *ctx,
+                                       GLuint index,
+                                       struct gl_buffer_object *bufObj)
+{
+   if (index >= ctx->Const.MaxShaderStorageBufferBindings) {
+      _mesa_error(ctx, GL_INVALID_VALUE, "glBindBufferBase(index=%d)", index);
+      return;
+   }
+
+   _mesa_reference_buffer_object(ctx, &ctx->ShaderStorageBuffer, bufObj);
+
+   if (bufObj == ctx->Shared->NullBufferObj)
+      bind_shader_storage_buffer(ctx, index, bufObj, -1, -1, GL_TRUE);
+   else
+      bind_shader_storage_buffer(ctx, index, bufObj, 0, 0, GL_TRUE);
 }
 
 /**
@@ -4239,6 +4292,9 @@ _mesa_BindBufferBase(GLenum target, GLuint index, GLuint buffer)
       return;
    case GL_UNIFORM_BUFFER:
       bind_buffer_base_uniform_buffer(ctx, index, bufObj);
+      return;
+   case GL_SHADER_STORAGE_BUFFER:
+      bind_buffer_base_shader_storage_buffer(ctx, index, bufObj);
       return;
    case GL_ATOMIC_COUNTER_BUFFER:
       bind_atomic_buffer(ctx, index, bufObj, 0, 0,
