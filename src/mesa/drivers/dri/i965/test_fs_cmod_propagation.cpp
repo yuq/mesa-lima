@@ -459,7 +459,7 @@ TEST_F(cmod_propagation_test, andnz_one)
 
    v->emit(BRW_OPCODE_CMP, retype(dest, BRW_REGISTER_TYPE_F), src0, zero)
       ->conditional_mod = BRW_CONDITIONAL_L;
-   v->emit(BRW_OPCODE_AND, v->reg_null_f, dest, one)
+   v->emit(BRW_OPCODE_AND, v->reg_null_d, dest, one)
       ->conditional_mod = BRW_CONDITIONAL_NZ;
 
    /* = Before =
@@ -494,7 +494,7 @@ TEST_F(cmod_propagation_test, andnz_non_one)
 
    v->emit(BRW_OPCODE_CMP, retype(dest, BRW_REGISTER_TYPE_F), src0, zero)
       ->conditional_mod = BRW_CONDITIONAL_L;
-   v->emit(BRW_OPCODE_AND, v->reg_null_f, dest, nonone)
+   v->emit(BRW_OPCODE_AND, v->reg_null_d, dest, nonone)
       ->conditional_mod = BRW_CONDITIONAL_NZ;
 
    /* = Before =
@@ -529,7 +529,7 @@ TEST_F(cmod_propagation_test, andz_one)
 
    v->emit(BRW_OPCODE_CMP, retype(dest, BRW_REGISTER_TYPE_F), src0, zero)
       ->conditional_mod = BRW_CONDITIONAL_L;
-   v->emit(BRW_OPCODE_AND, v->reg_null_f, dest, one)
+   v->emit(BRW_OPCODE_AND, v->reg_null_d, dest, one)
       ->conditional_mod = BRW_CONDITIONAL_Z;
 
    /* = Before =
