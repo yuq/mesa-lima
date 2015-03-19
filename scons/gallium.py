@@ -510,6 +510,7 @@ def generate(env):
             '/wd4056', # overflow in floating-point constant arithmetic
             '/wd4244', # conversion from 'type1' to 'type2', possible loss of data
             '/wd4305', # truncation from 'type1' to 'type2'
+            '/wd4351', # new behavior: elements of array 'array' will be default initialized
             '/wd4756', # overflow in constant arithmetic
             '/wd4800', # forcing value to bool 'true' or 'false' (performance warning)
             '/wd4996', # disable deprecated POSIX name warnings
