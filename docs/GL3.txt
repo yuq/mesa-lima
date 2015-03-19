@@ -193,15 +193,15 @@ GL 4.5, GLSL 4.50:
   GL_ARB_cull_distance                                 not started
   GL_ARB_derivative_control                            DONE (i965, nv50, nvc0, r600)
   GL_ARB_direct_state_access                           started
-  - Transform Feedback object                          started (Martin Peres)
+  - Transform Feedback object                          DONE
   - Buffer object                                      DONE
   - Framebuffer object                                 started (Laura Ekstrand)
-  - Renderbuffer object                                started (Martin Peres)
+  - Renderbuffer object                                DONE
   - Texture object                                     DONE
   - Vertex array object                                started (Fredrik Höglund)
-  - Sampler object                                     started (Martin Peres)
-  - Program Pipeline object                            started (Martin Peres)
-  - Query object                                       started (Martin Peres)
+  - Sampler object                                     DONE
+  - Program Pipeline object                            DONE
+  - Query object                                       DONE (will require changes when GL_ARB_query_buffer_object lands)
   GL_ARB_get_texture_sub_image                         started (Brian Paul)
   GL_ARB_shader_texture_image_samples                  not started
   GL_ARB_texture_barrier                               DONE (nv50, nvc0, r600, radeonsi)
