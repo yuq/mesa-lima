@@ -1553,6 +1553,15 @@ fs_generator::enable_debug(const char *shader_name)
    this->shader_name = shader_name;
 }
 
+/**
+ * Some hardware doesn't support SIMD16 instructions with 3 sources.
+ */
+static bool
+brw_supports_simd16_3src(const struct brw_context *brw)
+{
+   return brw->is_haswell || brw->gen >= 8;
+}
+
 int
 fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
 {
@@ -1646,7 +1655,7 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
       case BRW_OPCODE_MAD:
          assert(brw->gen >= 6);
 	 brw_set_default_access_mode(p, BRW_ALIGN_16);
-         if (dispatch_width == 16 && brw->gen < 8 && !brw->is_haswell) {
+         if (dispatch_width == 16 && !brw_supports_simd16_3src(brw)) {
 	    brw_set_default_compression_control(p, BRW_COMPRESSION_NONE);
             brw_inst *f = brw_MAD(p, firsthalf(dst), firsthalf(src[0]), firsthalf(src[1]), firsthalf(src[2]));
 	    brw_set_default_compression_control(p, BRW_COMPRESSION_2NDHALF);
@@ -1667,7 +1676,7 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
       case BRW_OPCODE_LRP:
          assert(brw->gen >= 6);
 	 brw_set_default_access_mode(p, BRW_ALIGN_16);
-         if (dispatch_width == 16 && brw->gen < 8 && !brw->is_haswell) {
+         if (dispatch_width == 16 && !brw_supports_simd16_3src(brw)) {
 	    brw_set_default_compression_control(p, BRW_COMPRESSION_NONE);
             brw_inst *f = brw_LRP(p, firsthalf(dst), firsthalf(src[0]), firsthalf(src[1]), firsthalf(src[2]));
 	    brw_set_default_compression_control(p, BRW_COMPRESSION_2NDHALF);
@@ -1804,7 +1813,7 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
       case BRW_OPCODE_BFE:
          assert(brw->gen >= 7);
          brw_set_default_access_mode(p, BRW_ALIGN_16);
-         if (dispatch_width == 16 && brw->gen < 8 && !brw->is_haswell) {
+         if (dispatch_width == 16 && !brw_supports_simd16_3src(brw)) {
             brw_set_default_compression_control(p, BRW_COMPRESSION_NONE);
             brw_BFE(p, firsthalf(dst), firsthalf(src[0]), firsthalf(src[1]), firsthalf(src[2]));
             brw_set_default_compression_control(p, BRW_COMPRESSION_2NDHALF);
@@ -1844,7 +1853,8 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
           * Otherwise we would be able to emit compressed instructions like we
           * do for the other three-source instructions.
           */
-         if (dispatch_width == 16 && brw->gen < 8) {
+         if (dispatch_width == 16 &&
+             (brw->is_haswell || !brw_supports_simd16_3src(brw))) {
             brw_set_default_compression_control(p, BRW_COMPRESSION_NONE);
             brw_BFI2(p, firsthalf(dst), firsthalf(src[0]), firsthalf(src[1]), firsthalf(src[2]));
             brw_set_default_compression_control(p, BRW_COMPRESSION_2NDHALF);
