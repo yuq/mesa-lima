@@ -3335,7 +3335,7 @@ fs_visitor::emit_untyped_surface_read(unsigned surf_index, fs_reg dst,
 
    /* Emit the instruction. */
    inst = emit(SHADER_OPCODE_UNTYPED_SURFACE_READ, dst, src_payload,
-               fs_reg(surf_index));
+               fs_reg(surf_index), fs_reg(1));
    inst->mlen = mlen;
 }
 

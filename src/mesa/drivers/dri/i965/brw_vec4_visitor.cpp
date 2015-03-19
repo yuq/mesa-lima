@@ -2978,7 +2978,8 @@ vec4_visitor::emit_untyped_surface_read(unsigned surf_index, dst_reg dst,
     * channels will be masked out.
     */
    vec4_instruction *inst = emit(SHADER_OPCODE_UNTYPED_SURFACE_READ, dst,
-                                 brw_message_reg(0), src_reg(surf_index));
+                                 brw_message_reg(0),
+                                 src_reg(surf_index), src_reg(1));
    inst->mlen = 1;
 }
 
