@@ -2538,7 +2538,6 @@ LLVMValueRef
 lp_build_rsqrt(struct lp_build_context *bld,
                LLVMValueRef a)
 {
-   LLVMBuilderRef builder = bld->gallivm->builder;
    const struct lp_type type = bld->type;
 
    assert(lp_check_value(type, a));
