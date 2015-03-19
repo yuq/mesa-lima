@@ -196,7 +196,8 @@ public:
     * in particular.  No support for other instruction types (assignments,
     * jumps, calls, etc.) is planned.
     */
-   virtual bool equals(ir_instruction *ir, enum ir_node_type ignore = ir_type_unset);
+   virtual bool equals(const ir_instruction *ir,
+                       enum ir_node_type ignore = ir_type_unset) const;
 
 protected:
    ir_instruction(enum ir_node_type t)
@@ -1611,7 +1612,8 @@ public:
     */
    ir_expression(int op, ir_rvalue *op0, ir_rvalue *op1, ir_rvalue *op2);
 
-   virtual bool equals(ir_instruction *ir, enum ir_node_type ignore = ir_type_unset);
+   virtual bool equals(const ir_instruction *ir,
+                       enum ir_node_type ignore = ir_type_unset) const;
 
    virtual ir_expression *clone(void *mem_ctx, struct hash_table *ht) const;
 
@@ -1922,7 +1924,8 @@ public:
 
    virtual ir_visitor_status accept(ir_hierarchical_visitor *);
 
-   virtual bool equals(ir_instruction *ir, enum ir_node_type ignore = ir_type_unset);
+   virtual bool equals(const ir_instruction *ir,
+                       enum ir_node_type ignore = ir_type_unset) const;
 
    /**
     * Return a string representing the ir_texture_opcode.
@@ -2023,7 +2026,8 @@ public:
 
    virtual ir_visitor_status accept(ir_hierarchical_visitor *);
 
-   virtual bool equals(ir_instruction *ir, enum ir_node_type ignore = ir_type_unset);
+   virtual bool equals(const ir_instruction *ir,
+                       enum ir_node_type ignore = ir_type_unset) const;
 
    bool is_lvalue() const
    {
@@ -2076,7 +2080,8 @@ public:
 
    virtual ir_constant *constant_expression_value(struct hash_table *variable_context = NULL);
 
-   virtual bool equals(ir_instruction *ir, enum ir_node_type ignore = ir_type_unset);
+   virtual bool equals(const ir_instruction *ir,
+                       enum ir_node_type ignore = ir_type_unset) const;
 
    /**
     * Get the variable that is ultimately referenced by an r-value
@@ -2122,7 +2127,8 @@ public:
 
    virtual ir_constant *constant_expression_value(struct hash_table *variable_context = NULL);
 
-   virtual bool equals(ir_instruction *ir, enum ir_node_type ignore = ir_type_unset);
+   virtual bool equals(const ir_instruction *ir,
+                       enum ir_node_type ignore = ir_type_unset) const;
 
    /**
     * Get the variable that is ultimately referenced by an r-value
@@ -2232,7 +2238,8 @@ public:
 
    virtual ir_visitor_status accept(ir_hierarchical_visitor *);
 
-   virtual bool equals(ir_instruction *ir, enum ir_node_type ignore = ir_type_unset);
+   virtual bool equals(const ir_instruction *ir,
+                       enum ir_node_type ignore = ir_type_unset) const;
 
    /**
     * Get a particular component of a constant as a specific type
