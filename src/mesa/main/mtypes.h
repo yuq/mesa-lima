@@ -3403,6 +3403,15 @@ struct gl_constants
    GLuint UniformBufferOffsetAlignment;
    /** @} */
 
+   /** @{
+    * GL_ARB_shader_storage_buffer_object
+    */
+   GLuint MaxCombinedShaderStorageBlocks;
+   GLuint MaxShaderStorageBufferBindings;
+   GLuint MaxShaderStorageBlockSize;
+   GLuint ShaderStorageBufferOffsetAlignment;
+   /** @} */
+
    /**
     * GL_ARB_explicit_uniform_location
     */
@@ -4049,6 +4058,20 @@ struct gl_uniform_buffer_binding
    GLboolean AutomaticSize;
 };
 
+struct gl_shader_storage_buffer_binding
+{
+   struct gl_buffer_object *BufferObject;
+   /** Start of shader storage block data in the buffer */
+   GLintptr Offset;
+   /** Size of data allowed to be referenced from the buffer (in bytes) */
+   GLsizeiptr Size;
+   /**
+    * glBindBufferBase() indicates that the Size should be ignored and only
+    * limited by the current size of the BufferObject.
+    */
+   GLboolean AutomaticSize;
+};
+
 /**
  * ARB_shader_image_load_store image unit.
  */
@@ -4296,6 +4319,12 @@ struct gl_context
    struct gl_buffer_object *UniformBuffer;
 
    /**
+    * Current GL_ARB_shader_storage_buffer_object binding referenced by
+    * GL_SHADER_STORAGE_BUFFER target for glBufferData, glMapBuffer, etc.
+    */
+   struct gl_buffer_object *ShaderStorageBuffer;
+
+   /**
     * Array of uniform buffers for GL_ARB_uniform_buffer_object and GL 3.1.
     * This is set up using glBindBufferRange() or glBindBufferBase().  They are
     * associated with uniform blocks by glUniformBlockBinding()'s state in the
@@ -4303,6 +4332,15 @@ struct gl_context
     */
    struct gl_uniform_buffer_binding
       UniformBufferBindings[MAX_COMBINED_UNIFORM_BUFFERS];
+
+   /**
+    * Array of shader storage buffers for ARB_shader_storage_buffer_object
+    * and GL 4.3. This is set up using glBindBufferRange() or
+    * glBindBufferBase().  They are associated with shader storage blocks by
+    * glShaderStorageBlockBinding()'s state in the shader program.
+    */
+   struct gl_shader_storage_buffer_binding
+      ShaderStorageBufferBindings[MAX_COMBINED_SHADER_STORAGE_BUFFERS];
 
    /**
     * Object currently associated with the GL_ATOMIC_COUNTER_BUFFER

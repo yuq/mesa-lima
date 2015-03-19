@@ -112,6 +112,11 @@ get_buffer_target(struct gl_context *ctx, GLenum target)
          return &ctx->UniformBuffer;
       }
       break;
+   case GL_SHADER_STORAGE_BUFFER:
+      if (ctx->Extensions.ARB_shader_storage_buffer_object) {
+         return &ctx->ShaderStorageBuffer;
+      }
+      break;
    case GL_ATOMIC_COUNTER_BUFFER:
       if (ctx->Extensions.ARB_shader_atomic_counters) {
          return &ctx->AtomicBuffer;
