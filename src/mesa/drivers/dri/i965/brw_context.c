@@ -567,6 +567,15 @@ brw_initialize_context_constants(struct brw_context *brw)
     * However, unaligned accesses are slower, so enforce buffer alignment.
     */
    ctx->Const.UniformBufferOffsetAlignment = 16;
+
+   /* ShaderStorageBufferOffsetAlignment should be a cacheline (64 bytes) so
+    * that we can safely have the CPU and GPU writing the same SSBO on
+    * non-cachecoherent systems (our Atom CPUs). With UBOs, the GPU never
+    * writes, so there's no problem. For an SSBO, the GPU and the CPU can
+    * be updating disjoint regions of the buffer simultaneously and that will
+    * break if the regions overlap the same cacheline.
+    */
+   ctx->Const.ShaderStorageBufferOffsetAlignment = 64;
    ctx->Const.TextureBufferOffsetAlignment = 16;
    ctx->Const.MaxTextureBufferSize = 128 * 1024 * 1024;
 
