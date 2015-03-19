@@ -191,6 +191,8 @@ emit_fetch(
 		break;
 
 	case TGSI_FILE_TEMPORARY:
+		if (reg->Register.Index >= ctx->temps_count)
+			return LLVMGetUndef(tgsi2llvmtype(bld_base, type));
 		if (uses_temp_indirect_addressing(bld_base)) {
 			ptr = lp_get_temp_ptr_soa(bld, reg->Register.Index, swizzle);
 			break;
@@ -395,6 +397,8 @@ emit_store(
 					break;
 
 				case TGSI_FILE_TEMPORARY:
+					if (range.First + i >= ctx->temps_count)
+						continue;
 					if (uses_temp_indirect_addressing(bld_base))
 						temp_ptr = lp_get_temp_ptr_soa(bld, i + range.First, chan_index);
 					else
@@ -416,6 +420,8 @@ emit_store(
 				break;
 
 			case TGSI_FILE_TEMPORARY:
+				if (reg->Register.Index >= ctx->temps_count)
+					continue;
 				if (uses_temp_indirect_addressing(bld_base)) {
 					temp_ptr = NULL;
 					break;
