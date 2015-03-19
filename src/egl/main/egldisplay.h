@@ -153,8 +153,8 @@ struct _egl_display
    _EGLExtensions Extensions; /**< Extensions supported */
 
    /* these fields are derived from above */
-   char VersionString[1000];                       /**< EGL_VERSION */
-   char ClientAPIsString[1000];                    /**< EGL_CLIENT_APIS */
+   char VersionString[100];                        /**< EGL_VERSION */
+   char ClientAPIsString[100];                     /**< EGL_CLIENT_APIS */
    char ExtensionsString[_EGL_MAX_EXTENSIONS_LEN]; /**< EGL_EXTENSIONS */
 
    _EGLArray *Screens;
