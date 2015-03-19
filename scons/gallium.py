@@ -35,7 +35,7 @@ import os
 import os.path
 import re
 import subprocess
-import platform as _platform
+import platform as host_platform
 import sys
 import tempfile
 
@@ -147,6 +147,17 @@ def check_cc(env, cc, expr, cpp_opt = '-E'):
     return result
 
 
+def check_prog(env, prog):
+    """Check whether this program exists."""
+
+    sys.stdout.write('Checking for %s ... ' % prog)
+
+    result = env.Detect(prog)
+
+    sys.stdout.write(' %s\n' % ['no', 'yes'][int(bool(result))])
+    return result
+
+
 def generate(env):
     """Common environment generation code"""
 
@@ -186,7 +197,7 @@ def generate(env):
     env['gcc'] = 0
     env['clang'] = 0
     env['msvc'] = 0
-    if _platform.system() == 'Windows':
+    if host_platform.system() == 'Windows':
         env['msvc'] = check_cc(env, 'MSVC', 'defined(_MSC_VER)', '/E')
     if not env['msvc']:
         env['gcc'] = check_cc(env, 'GCC', 'defined(__GNUC__) && !defined(__clang__)')
@@ -210,10 +221,10 @@ def generate(env):
 
     # Determine whether we are cross compiling; in particular, whether we need
     # to compile code generators with a different compiler as the target code.
-    host_platform = _platform.system().lower()
-    if host_platform.startswith('cygwin'):
-        host_platform = 'cygwin'
-    host_machine = os.environ.get('PROCESSOR_ARCHITEW6432', os.environ.get('PROCESSOR_ARCHITECTURE', _platform.machine()))
+    hosthost_platform = host_platform.system().lower()
+    if hosthost_platform.startswith('cygwin'):
+        hosthost_platform = 'cygwin'
+    host_machine = os.environ.get('PROCESSOR_ARCHITEW6432', os.environ.get('PROCESSOR_ARCHITECTURE', host_platform.machine()))
     host_machine = {
         'x86': 'x86',
         'i386': 'x86',
@@ -224,7 +235,7 @@ def generate(env):
         'AMD64': 'x86_64',
         'x86_64': 'x86_64',
     }.get(host_machine, 'generic')
-    env['crosscompile'] = platform != host_platform
+    env['crosscompile'] = platform != hosthost_platform
     if machine == 'x86_64' and host_machine != 'x86_64':
         env['crosscompile'] = True
     env['hostonly'] = False
@@ -630,7 +641,22 @@ def generate(env):
             # disable all MSVC extensions.
             '-DYY_USE_CONST=',
         ])
+    if host_platform.system() == 'Windows':
+        # Prefer winflexbison binaries, as not only they are easier to install
+        # (no additional dependencies), but also better Windows support.
+        if check_prog(env, 'win_flex'):
+            env["LEX"] = 'win_flex'
+            env.Append(LEXFLAGS = [
+                # windows compatibility (uses <io.h> instead of <unistd.h> and
+                # _isatty, _fileno functions)
+                '--wincompat'
+            ])
+
     env.Tool('yacc')
+    if host_platform.system() == 'Windows':
+        if check_prog(env, 'win_bison'):
+            env["YACC"] = 'win_bison'
+
     if env['llvm']:
         env.Tool('llvm')
     
