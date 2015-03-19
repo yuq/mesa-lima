@@ -3157,6 +3157,40 @@ bind_buffer_range_uniform_buffer(struct gl_context *ctx,
    bind_uniform_buffer(ctx, index, bufObj, offset, size, GL_FALSE);
 }
 
+/**
+ * Bind a region of a buffer object to a shader storage block binding point.
+ * \param index  the shader storage buffer binding point index
+ * \param bufObj  the buffer object
+ * \param offset  offset to the start of buffer object region
+ * \param size  size of the buffer object region
+ */
+static void
+bind_buffer_range_shader_storage_buffer(struct gl_context *ctx,
+                                        GLuint index,
+                                        struct gl_buffer_object *bufObj,
+                                        GLintptr offset,
+                                        GLsizeiptr size)
+{
+   if (index >= ctx->Const.MaxShaderStorageBufferBindings) {
+      _mesa_error(ctx, GL_INVALID_VALUE, "glBindBufferRange(index=%d)", index);
+      return;
+   }
+
+   if (offset & (ctx->Const.ShaderStorageBufferOffsetAlignment - 1)) {
+      _mesa_error(ctx, GL_INVALID_VALUE,
+                  "glBindBufferRange(offset misaligned %d/%d)", (int) offset,
+                  ctx->Const.ShaderStorageBufferOffsetAlignment);
+      return;
+   }
+
+   if (bufObj == ctx->Shared->NullBufferObj) {
+      offset = -1;
+      size = -1;
+   }
+
+   _mesa_reference_buffer_object(ctx, &ctx->ShaderStorageBuffer, bufObj);
+   bind_shader_storage_buffer(ctx, index, bufObj, offset, size, GL_FALSE);
+}
 
 /**
  * Bind a buffer object to a uniform block binding point.
@@ -4226,6 +4260,9 @@ _mesa_BindBufferRange(GLenum target, GLuint index,
       return;
    case GL_UNIFORM_BUFFER:
       bind_buffer_range_uniform_buffer(ctx, index, bufObj, offset, size);
+      return;
+   case GL_SHADER_STORAGE_BUFFER:
+      bind_buffer_range_shader_storage_buffer(ctx, index, bufObj, offset, size);
       return;
    case GL_ATOMIC_COUNTER_BUFFER:
       bind_atomic_buffer(ctx, index, bufObj, offset, size,
