@@ -5382,7 +5382,7 @@ ast_process_structure_or_interface_block(exec_list *instructions,
          if (is_interface && field_type->contains_opaque()) {
             YYLTYPE loc = decl_list->get_location();
             _mesa_glsl_error(&loc, state,
-                             "uniform in non-default uniform block contains "
+                             "uniform/buffer in non-default interface block contains "
                              "opaque variable");
          }
 
@@ -5393,8 +5393,8 @@ ast_process_structure_or_interface_block(exec_list *instructions,
              * FINISHME: structures.
              */
             YYLTYPE loc = decl_list->get_location();
-            _mesa_glsl_error(&loc, state, "atomic counter in structure or "
-                             "uniform block");
+            _mesa_glsl_error(&loc, state, "atomic counter in structure, "
+                             "shader storage block or uniform block");
          }
 
          if (field_type->contains_image()) {
@@ -5404,7 +5404,8 @@ ast_process_structure_or_interface_block(exec_list *instructions,
              */
             YYLTYPE loc = decl_list->get_location();
             _mesa_glsl_error(&loc, state,
-                             "image in structure or uniform block");
+                             "image in structure, shader storage block or "
+                             "uniform block");
          }
 
          const struct ast_type_qualifier *const qual =
@@ -5413,9 +5414,9 @@ ast_process_structure_or_interface_block(exec_list *instructions,
              qual->flags.q.packed ||
              qual->flags.q.shared) {
             _mesa_glsl_error(&loc, state,
-                             "uniform block layout qualifiers std140, packed, and "
-                             "shared can only be applied to uniform blocks, not "
-                             "members");
+                             "uniform/shader storage block layout qualifiers "
+                             "std140, packed, and shared can only be applied "
+                             "to uniform/shader storage blocks, not members");
          }
 
          if (qual->flags.q.constant) {
