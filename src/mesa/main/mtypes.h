@@ -1459,6 +1459,7 @@ typedef enum {
    USAGE_UNIFORM_BUFFER = 0x1,
    USAGE_TEXTURE_BUFFER = 0x2,
    USAGE_ATOMIC_COUNTER_BUFFER = 0x4,
+   USAGE_SHADER_STORAGE_BUFFER = 0x8,
 } gl_buffer_usage;
 
 
@@ -4033,6 +4034,12 @@ struct gl_driver_flags
     * gl_shader_program::UniformBlocks
     */
    uint64_t NewUniformBuffer;
+
+   /**
+    * gl_context::ShaderStorageBufferBindings
+    * gl_shader_program::ShaderStorageBlocks
+    */
+   uint64_t NewShaderStorageBuffer;
 
    uint64_t NewTextureBuffer;
 
