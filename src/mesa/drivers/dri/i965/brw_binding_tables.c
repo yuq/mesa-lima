@@ -50,15 +50,13 @@
  * This copies brw_stage_state::surf_offset[] into the indirect state section
  * of the batchbuffer (allocated by brw_state_batch()).
  */
-static void
+void
 brw_upload_binding_table(struct brw_context *brw,
                          uint32_t packet_name,
                          GLbitfield brw_new_binding_table,
+                         const struct brw_stage_prog_data *prog_data,
                          struct brw_stage_state *stage_state)
 {
-   /* BRW_NEW_*_PROG_DATA */
-   struct brw_stage_prog_data *prog_data = stage_state->prog_data;
-
    if (prog_data->binding_table.size_bytes == 0) {
       /* There are no surfaces; skip making the binding table altogether. */
       if (stage_state->bind_bo_offset == 0 && brw->gen < 9)
@@ -103,9 +101,12 @@ brw_upload_binding_table(struct brw_context *brw,
 static void
 brw_vs_upload_binding_table(struct brw_context *brw)
 {
+   /* BRW_NEW_VS_PROG_DATA */
+   const struct brw_stage_prog_data *prog_data = brw->vs.base.prog_data;
    brw_upload_binding_table(brw,
                             _3DSTATE_BINDING_TABLE_POINTERS_VS,
-                            BRW_NEW_VS_BINDING_TABLE, &brw->vs.base);
+                            BRW_NEW_VS_BINDING_TABLE, prog_data,
+                            &brw->vs.base);
 }
 
 const struct brw_tracked_state brw_vs_binding_table = {
@@ -124,9 +125,12 @@ const struct brw_tracked_state brw_vs_binding_table = {
 static void
 brw_upload_wm_binding_table(struct brw_context *brw)
 {
+   /* BRW_NEW_FS_PROG_DATA */
+   const struct brw_stage_prog_data *prog_data = brw->wm.base.prog_data;
    brw_upload_binding_table(brw,
                             _3DSTATE_BINDING_TABLE_POINTERS_PS,
-                            BRW_NEW_PS_BINDING_TABLE, &brw->wm.base);
+                            BRW_NEW_PS_BINDING_TABLE, prog_data,
+                            &brw->wm.base);
 }
 
 const struct brw_tracked_state brw_wm_binding_table = {
@@ -147,9 +151,12 @@ brw_gs_upload_binding_table(struct brw_context *brw)
    if (brw->geometry_program == NULL)
       return;
 
+   /* BRW_NEW_GS_PROG_DATA */
+   const struct brw_stage_prog_data *prog_data = brw->gs.base.prog_data;
    brw_upload_binding_table(brw,
                             _3DSTATE_BINDING_TABLE_POINTERS_GS,
-                            BRW_NEW_GS_BINDING_TABLE, &brw->gs.base);
+                            BRW_NEW_GS_BINDING_TABLE, prog_data,
+                            &brw->gs.base);
 }
 
 const struct brw_tracked_state brw_gs_binding_table = {

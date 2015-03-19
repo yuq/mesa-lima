@@ -159,6 +159,13 @@ brw_state_dirty(struct brw_context *brw, GLuint mesa_flags, uint64_t brw_flags)
            (brw->ctx.NewDriverState & brw_flags)) != 0;
 }
 
+/* brw_binding_tables.c */
+void brw_upload_binding_table(struct brw_context *brw,
+                              uint32_t packet_name,
+                              GLbitfield brw_new_binding_table,
+                              const struct brw_stage_prog_data *prog_data,
+                              struct brw_stage_state *stage_state);
+
 /* brw_misc_state.c */
 void brw_upload_invariant_state(struct brw_context *brw);
 uint32_t
