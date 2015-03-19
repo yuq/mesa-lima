@@ -1264,6 +1264,17 @@ _mesa_DeleteBuffers(GLsizei n, const GLuint *ids)
             _mesa_BindBuffer( GL_UNIFORM_BUFFER, 0 );
          }
 
+         /* unbind SSBO binding points */
+         for (j = 0; j < ctx->Const.MaxShaderStorageBufferBindings; j++) {
+            if (ctx->ShaderStorageBufferBindings[j].BufferObject == bufObj) {
+               _mesa_BindBufferBase(GL_SHADER_STORAGE_BUFFER, j, 0);
+            }
+         }
+
+         if (ctx->ShaderStorageBuffer == bufObj) {
+            _mesa_BindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+         }
+
          /* unbind Atomci Buffer binding points */
          for (j = 0; j < ctx->Const.MaxAtomicBufferBindings; j++) {
             if (ctx->AtomicBufferBindings[j].BufferObject == bufObj) {
