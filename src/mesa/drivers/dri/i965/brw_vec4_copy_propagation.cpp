@@ -330,10 +330,17 @@ try_copy_propagate(struct brw_context *brw, vec4_instruction *inst,
    if (value.equals(inst->src[arg]))
       return false;
 
-   /* Limit saturate propagation only to SEL with src1 bounded within 1.0 and 1.0
-    * otherwise, skip copy propagate altogether
-    */
-   if (entry->saturatemask & (1 << arg)) {
+   const unsigned dst_saturate_mask = inst->dst.writemask &
+      brw_apply_swizzle_to_mask(inst->src[arg].swizzle, entry->saturatemask);
+
+   if (dst_saturate_mask) {
+      /* We either saturate all or nothing. */
+      if (dst_saturate_mask != inst->dst.writemask)
+         return false;
+
+      /* Limit saturate propagation only to SEL with src1 bounded within 1.0
+       * and 1.0 otherwise, skip copy propagate altogether
+       */
       switch(inst->opcode) {
       case BRW_OPCODE_SEL:
          if (inst->src[1].file != IMM ||
