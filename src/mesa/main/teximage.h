@@ -196,7 +196,8 @@ _mesa_copy_texture_sub_image(struct gl_context *ctx, GLuint dims,
                              GLenum target, GLint level,
                              GLint xoffset, GLint yoffset, GLint zoffset,
                              GLint x, GLint y,
-                             GLsizei width, GLsizei height, bool dsa);
+                             GLsizei width, GLsizei height,
+                             const char *caller);
 
 extern void
 _mesa_texture_image_multisample(struct gl_context *ctx, GLuint dims,
