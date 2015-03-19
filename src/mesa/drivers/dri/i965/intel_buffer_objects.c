@@ -106,6 +106,8 @@ alloc_buffer_object(struct brw_context *brw,
     */
    if (intel_obj->Base.UsageHistory & USAGE_UNIFORM_BUFFER)
       brw->ctx.NewDriverState |= BRW_NEW_UNIFORM_BUFFER;
+   if (intel_obj->Base.UsageHistory & USAGE_SHADER_STORAGE_BUFFER)
+      brw->ctx.NewDriverState |= BRW_NEW_UNIFORM_BUFFER;
    if (intel_obj->Base.UsageHistory & USAGE_TEXTURE_BUFFER)
       brw->ctx.NewDriverState |= BRW_NEW_TEXTURE_BUFFER;
    if (intel_obj->Base.UsageHistory & USAGE_ATOMIC_COUNTER_BUFFER)
