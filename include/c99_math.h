@@ -71,6 +71,7 @@ roundf(float x)
 #endif
 
 #ifndef INFINITY
+#include <float.h> // DBL_MAX
 #define INFINITY (DBL_MAX + DBL_MAX)
 #endif
 
