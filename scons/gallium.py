@@ -622,6 +622,14 @@ def generate(env):
 
     # Load tools
     env.Tool('lex')
+    if env['msvc']:
+        env.Append(LEXFLAGS = [
+            # Force flex to use const keyword in prototypes, as relies on
+            # __cplusplus or __STDC__ macro to determine whether it's safe to
+            # use const keyword, but MSVC never defines __STDC__ unless we
+            # disable all MSVC extensions.
+            '-DYY_USE_CONST=',
+        ])
     env.Tool('yacc')
     if env['llvm']:
         env.Tool('llvm')
