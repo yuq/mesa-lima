@@ -591,6 +591,9 @@ brw_initialize_context_constants(struct brw_context *brw)
    ctx->Const.MaxCombinedShaderStorageBlocks = 12 * 3;
    ctx->Const.MaxShaderStorageBufferBindings = 36;
 
+   if (_mesa_extension_override_enables.ARB_compute_shader)
+      ctx->Const.MaxShaderStorageBufferBindings += 12;
+
    if (brw->gen >= 6) {
       ctx->Const.MaxVarying = 32;
       ctx->Const.Program[MESA_SHADER_VERTEX].MaxOutputComponents = 128;
