@@ -338,8 +338,8 @@ try_copy_propagate(struct brw_context *brw, vec4_instruction *inst,
       if (dst_saturate_mask != inst->dst.writemask)
          return false;
 
-      /* Limit saturate propagation only to SEL with src1 bounded within 1.0
-       * and 1.0 otherwise, skip copy propagate altogether
+      /* Limit saturate propagation only to SEL with src1 bounded within 0.0
+       * and 1.0, otherwise skip copy propagate altogether.
        */
       switch(inst->opcode) {
       case BRW_OPCODE_SEL:
@@ -451,8 +451,9 @@ vec4_visitor::opt_copy_propagation(bool do_constant_prop)
 	 for (int i = 0; i < 4; i++) {
 	    if (inst->dst.writemask & (1 << i)) {
                entries[reg].value[i] = direct_copy ? &inst->src[0] : NULL;
-               entries[reg].saturatemask |= (((inst->saturate && direct_copy) ? 1 : 0) << i);
-	    }
+               entries[reg].saturatemask |=
+                  inst->saturate && direct_copy ? 1 << i : 0;
+            }
 	 }
 
 	 /* Clear the records for any registers whose current value came from
@@ -463,7 +464,7 @@ vec4_visitor::opt_copy_propagation(bool do_constant_prop)
 	 else {
 	    for (unsigned i = 0; i < alloc.total_size; i++) {
 	       for (int j = 0; j < 4; j++) {
-		  if (is_channel_updated(inst, entries[i].value, j)){
+		  if (is_channel_updated(inst, entries[i].value, j)) {
 		     entries[i].value[j] = NULL;
 		     entries[i].saturatemask &= ~(1 << j);
                   }
