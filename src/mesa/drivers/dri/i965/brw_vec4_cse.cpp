@@ -114,6 +114,7 @@ instructions_match(vec4_instruction *a, vec4_instruction *b)
           a->conditional_mod == b->conditional_mod &&
           a->dst.type == b->dst.type &&
           a->dst.writemask == b->dst.writemask &&
+          a->force_writemask_all == b->force_writemask_all &&
           a->regs_written == b->regs_written &&
           operands_match(a, b);
 }
@@ -168,6 +169,8 @@ vec4_visitor::opt_cse_local(bblock_t *block)
                for (unsigned i = 0; i < entry->generator->regs_written; ++i) {
                   vec4_instruction *copy = MOV(offset(entry->generator->dst, i),
                                                offset(entry->tmp, i));
+                  copy->force_writemask_all =
+                     entry->generator->force_writemask_all;
                   entry->generator->insert_after(block, copy);
                }
 
