@@ -1003,8 +1003,8 @@ _mesa_lookup_bufferobj_locked(struct gl_context *ctx, GLuint buffer)
 
 /**
  * A convenience function for direct state access functions that throws
- * GL_INVALID_OPERATION if buffer is not the name of a buffer object in the
- * hash table.
+ * GL_INVALID_OPERATION if buffer is not the name of an existing
+ * buffer object.
  */
 struct gl_buffer_object *
 _mesa_lookup_bufferobj_err(struct gl_context *ctx, GLuint buffer,
@@ -1013,9 +1013,11 @@ _mesa_lookup_bufferobj_err(struct gl_context *ctx, GLuint buffer,
    struct gl_buffer_object *bufObj;
 
    bufObj = _mesa_lookup_bufferobj(ctx, buffer);
-   if (!bufObj)
+   if (!bufObj || bufObj == &DummyBufferObject) {
       _mesa_error(ctx, GL_INVALID_OPERATION,
-                  "%s(non-generated buffer name %u)", caller, buffer);
+                  "%s(non-existent buffer object %u)", caller, buffer);
+      return NULL;
+   }
 
    return bufObj;
 }
