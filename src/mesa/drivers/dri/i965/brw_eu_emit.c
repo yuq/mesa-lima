@@ -772,21 +772,6 @@ brw_set_sampler_message(struct brw_compile *p,
    }
 }
 
-void brw_set_indirect_send_descriptor(struct brw_compile *p,
-                                      brw_inst *insn,
-                                      unsigned sfid,
-                                      struct brw_reg descriptor)
-{
-   /* Only a0.0 may be used as SEND's descriptor operand. */
-   assert(descriptor.file == BRW_ARCHITECTURE_REGISTER_FILE);
-   assert(descriptor.type == BRW_REGISTER_TYPE_UD);
-   assert(descriptor.nr == BRW_ARF_ADDRESS);
-   assert(descriptor.subnr == 0);
-
-   brw_set_message_descriptor(p, insn, sfid, 0, 0, false, false);
-   brw_set_src1(p, insn, descriptor);
-}
-
 static void
 gen7_set_dp_scratch_message(struct brw_compile *p,
                             brw_inst *inst,
@@ -2494,6 +2479,49 @@ void brw_urb_WRITE(struct brw_compile *p,
 		       response_length,
 		       offset,
 		       swizzle);
+}
+
+struct brw_inst *
+brw_send_indirect_message(struct brw_compile *p,
+                          unsigned sfid,
+                          struct brw_reg dst,
+                          struct brw_reg payload,
+                          struct brw_reg desc)
+{
+   const struct brw_context *brw = p->brw;
+   struct brw_inst *send, *setup;
+
+   assert(desc.type == BRW_REGISTER_TYPE_UD);
+
+   if (desc.file == BRW_IMMEDIATE_VALUE) {
+      setup = send = next_insn(p, BRW_OPCODE_SEND);
+      brw_set_src1(p, send, desc);
+
+   } else {
+      struct brw_reg addr = retype(brw_address_reg(0), BRW_REGISTER_TYPE_UD);
+
+      brw_push_insn_state(p);
+      brw_set_default_access_mode(p, BRW_ALIGN_1);
+      brw_set_default_mask_control(p, BRW_MASK_DISABLE);
+      brw_set_default_predicate_control(p, BRW_PREDICATE_NONE);
+
+      /* Load the indirect descriptor to an address register using OR so the
+       * caller can specify additional descriptor bits with the usual
+       * brw_set_*_message() helper functions.
+       */
+      setup = brw_OR(p, addr, desc, brw_imm_ud(0));
+
+      brw_pop_insn_state(p);
+
+      send = next_insn(p, BRW_OPCODE_SEND);
+      brw_set_src1(p, send, addr);
+   }
+
+   brw_set_dest(p, send, dst);
+   brw_set_src0(p, send, retype(payload, BRW_REGISTER_TYPE_UD));
+   brw_inst_set_sfid(brw, send, sfid);
+
+   return setup;
 }
 
 static int
