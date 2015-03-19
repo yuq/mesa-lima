@@ -233,6 +233,11 @@ GLuint translate_tex_format(struct brw_context *brw,
 int brw_get_texture_swizzle(const struct gl_context *ctx,
                             const struct gl_texture_object *t);
 
+void brw_update_renderbuffer_surfaces(struct brw_context *brw,
+                                      const struct gl_framebuffer *fb,
+                                      uint32_t render_target_start,
+                                      uint32_t *surf_offset);
+
 /* gen7_wm_surface_state.c */
 uint32_t gen7_surface_tiling_mode(uint32_t tiling);
 uint32_t gen7_surface_msaa_bits(unsigned num_samples, enum intel_msaa_layout l);

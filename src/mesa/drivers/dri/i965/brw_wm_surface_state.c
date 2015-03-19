@@ -731,40 +731,49 @@ brw_update_renderbuffer_surface(struct brw_context *brw,
 /**
  * Construct SURFACE_STATE objects for renderbuffers/draw buffers.
  */
-static void
-brw_update_renderbuffer_surfaces(struct brw_context *brw)
+void
+brw_update_renderbuffer_surfaces(struct brw_context *brw,
+                                 const struct gl_framebuffer *fb,
+                                 uint32_t render_target_start,
+                                 uint32_t *surf_offset)
 {
-   struct gl_context *ctx = &brw->ctx;
-   /* _NEW_BUFFERS */
-   const struct gl_framebuffer *fb = ctx->DrawBuffer;
    GLuint i;
 
-   /* _NEW_BUFFERS | _NEW_COLOR */
    /* Update surfaces for drawing buffers */
-   if (ctx->DrawBuffer->_NumColorDrawBuffers >= 1) {
-      for (i = 0; i < ctx->DrawBuffer->_NumColorDrawBuffers; i++) {
-         const uint32_t surf_index =
-            brw->wm.prog_data->binding_table.render_target_start + i;
+   if (fb->_NumColorDrawBuffers >= 1) {
+      for (i = 0; i < fb->_NumColorDrawBuffers; i++) {
+         const uint32_t surf_index = render_target_start + i;
 
-	 if (intel_renderbuffer(ctx->DrawBuffer->_ColorDrawBuffers[i])) {
-            brw->wm.base.surf_offset[surf_index] =
+	 if (intel_renderbuffer(fb->_ColorDrawBuffers[i])) {
+            surf_offset[surf_index] = 
                brw->vtbl.update_renderbuffer_surface(
-                  brw, ctx->DrawBuffer->_ColorDrawBuffers[i],
-                  ctx->DrawBuffer->MaxNumLayers > 0, i, surf_index);
+                  brw, fb->_ColorDrawBuffers[i],
+                  fb->MaxNumLayers > 0, i, surf_index);
 	 } else {
             brw->vtbl.emit_null_surface_state(
                brw, fb->Width, fb->Height, fb->Visual.samples,
-               &brw->wm.base.surf_offset[surf_index]);
+               &surf_offset[surf_index]);
 	 }
       }
    } else {
-      const uint32_t surf_index =
-         brw->wm.prog_data->binding_table.render_target_start;
-
+      const uint32_t surf_index = render_target_start;
       brw->vtbl.emit_null_surface_state(
          brw, fb->Width, fb->Height, fb->Visual.samples,
-         &brw->wm.base.surf_offset[surf_index]);
+         &surf_offset[surf_index]);
    }
+}
+
+static void
+update_renderbuffer_surfaces(struct brw_context *brw)
+{
+   const struct gl_context *ctx = &brw->ctx;
+
+   /* _NEW_BUFFERS | _NEW_COLOR */
+   const struct gl_framebuffer *fb = ctx->DrawBuffer;
+   brw_update_renderbuffer_surfaces(
+      brw, fb,
+      brw->wm.prog_data->binding_table.render_target_start,
+      brw->wm.base.surf_offset);
    brw->ctx.NewDriverState |= BRW_NEW_SURFACES;
 }
 
@@ -775,7 +784,7 @@ const struct brw_tracked_state brw_renderbuffer_surfaces = {
       .brw = BRW_NEW_BATCH |
              BRW_NEW_FS_PROG_DATA,
    },
-   .emit = brw_update_renderbuffer_surfaces,
+   .emit = update_renderbuffer_surfaces,
 };
 
 const struct brw_tracked_state gen6_renderbuffer_surfaces = {
@@ -783,7 +792,7 @@ const struct brw_tracked_state gen6_renderbuffer_surfaces = {
       .mesa = _NEW_BUFFERS,
       .brw = BRW_NEW_BATCH,
    },
-   .emit = brw_update_renderbuffer_surfaces,
+   .emit = update_renderbuffer_surfaces,
 };
 
 
