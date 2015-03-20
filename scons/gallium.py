@@ -351,6 +351,7 @@ def generate(env):
                 '_SCL_SECURE_NO_WARNINGS',
                 '_SCL_SECURE_NO_DEPRECATE',
                 '_ALLOW_KEYWORD_MACROS',
+                '_HAS_EXCEPTIONS=0', # Tell C++ STL to not use exceptions
             ]
         if env['build'] in ('debug', 'checked'):
             cppdefines += ['_DEBUG']
