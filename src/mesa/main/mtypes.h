@@ -3275,9 +3275,10 @@ struct gl_framebuffer
     * polygon face orientation, and polygon stipple will have to be inverted.
     */
    GLuint Name;
+   GLint RefCount;
+
    GLchar *Label;       /**< GL_KHR_debug */
 
-   GLint RefCount;
    GLboolean DeletePending;
 
    /**
@@ -3311,6 +3312,13 @@ struct gl_framebuffer
    GLboolean _AllColorBuffersFixedPoint; /* no integer, no float */
    GLboolean _HasSNormOrFloatColorBuffer;
 
+   /**
+    * The maximum number of layers in the framebuffer, or 0 if the framebuffer
+    * is not layered.  For cube maps and cube map arrays, each cube face
+    * counts as a layer.
+    */
+   GLuint MaxNumLayers;
+
    /** Array of all renderbuffer attachments, indexed by BUFFER_* tokens. */
    struct gl_renderbuffer_attachment Attachment[BUFFER_COUNT];
 
@@ -3326,13 +3334,6 @@ struct gl_framebuffer
    GLint _ColorReadBufferIndex; /* -1 = None */
    struct gl_renderbuffer *_ColorDrawBuffers[MAX_DRAW_BUFFERS];
    struct gl_renderbuffer *_ColorReadBuffer;
-
-   /**
-    * The maximum number of layers in the framebuffer, or 0 if the framebuffer
-    * is not layered.  For cube maps and cube map arrays, each cube face
-    * counts as a layer.
-    */
-   GLuint MaxNumLayers;
 
    /** Delete this framebuffer */
    void (*Delete)(struct gl_framebuffer *fb);
