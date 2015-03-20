@@ -288,6 +288,16 @@ do_gs_prog(struct brw_context *brw,
    return true;
 }
 
+static bool
+brw_gs_state_dirty(struct brw_context *brw)
+{
+   return brw_state_dirty(brw,
+                          _NEW_TEXTURE,
+                          BRW_NEW_GEOMETRY_PROGRAM |
+                          BRW_NEW_TRANSFORM_FEEDBACK |
+                          BRW_NEW_VUE_MAP_VS);
+}
+
 static void
 brw_gs_populate_key(struct brw_context *brw,
                     struct brw_gs_prog_key *key)
@@ -322,11 +332,7 @@ brw_upload_gs_prog(struct brw_context *brw)
    struct brw_geometry_program *gp =
       (struct brw_geometry_program *) brw->geometry_program;
 
-   if (!brw_state_dirty(brw,
-                        _NEW_TEXTURE,
-                        BRW_NEW_GEOMETRY_PROGRAM |
-                        BRW_NEW_TRANSFORM_FEEDBACK |
-                        BRW_NEW_VUE_MAP_VS))
+   if (!brw_gs_state_dirty(brw))
       return;
 
    if (gp == NULL) {

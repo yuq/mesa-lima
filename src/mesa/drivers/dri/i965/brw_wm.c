@@ -421,6 +421,27 @@ brw_populate_sampler_prog_key_data(struct gl_context *ctx,
    }
 }
 
+static bool
+brw_wm_state_dirty (struct brw_context *brw)
+{
+   return brw_state_dirty(brw,
+                          _NEW_BUFFERS |
+                          _NEW_COLOR |
+                          _NEW_DEPTH |
+                          _NEW_FRAG_CLAMP |
+                          _NEW_HINT |
+                          _NEW_LIGHT |
+                          _NEW_LINE |
+                          _NEW_MULTISAMPLE |
+                          _NEW_POLYGON |
+                          _NEW_STENCIL |
+                          _NEW_TEXTURE,
+                          BRW_NEW_FRAGMENT_PROGRAM |
+                          BRW_NEW_REDUCED_PRIMITIVE |
+                          BRW_NEW_STATS_WM |
+                          BRW_NEW_VUE_MAP_GEOM_OUT);
+}
+
 static void brw_wm_populate_key( struct brw_context *brw,
 				 struct brw_wm_prog_key *key )
 {
@@ -590,22 +611,7 @@ brw_upload_wm_prog(struct brw_context *brw)
    struct brw_fragment_program *fp = (struct brw_fragment_program *)
       brw->fragment_program;
 
-   if (!brw_state_dirty(brw,
-                        _NEW_BUFFERS |
-                        _NEW_COLOR |
-                        _NEW_DEPTH |
-                        _NEW_FRAG_CLAMP |
-                        _NEW_HINT |
-                        _NEW_LIGHT |
-                        _NEW_LINE |
-                        _NEW_MULTISAMPLE |
-                        _NEW_POLYGON |
-                        _NEW_STENCIL |
-                        _NEW_TEXTURE,
-                        BRW_NEW_FRAGMENT_PROGRAM |
-                        BRW_NEW_REDUCED_PRIMITIVE |
-                        BRW_NEW_STATS_WM |
-                        BRW_NEW_VUE_MAP_GEOM_OUT))
+   if (!brw_wm_state_dirty(brw))
       return;
 
    brw_wm_populate_key(brw, &key);

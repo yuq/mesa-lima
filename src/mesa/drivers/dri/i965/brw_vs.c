@@ -401,6 +401,20 @@ brw_setup_vue_key_clip_info(struct brw_context *brw,
    }
 }
 
+static bool
+brw_vs_state_dirty(struct brw_context *brw)
+{
+   return brw_state_dirty(brw,
+                          _NEW_BUFFERS |
+                          _NEW_LIGHT |
+                          _NEW_POINT |
+                          _NEW_POLYGON |
+                          _NEW_TEXTURE |
+                          _NEW_TRANSFORM,
+                          BRW_NEW_VERTEX_PROGRAM |
+                          BRW_NEW_VS_ATTRIB_WORKAROUNDS);
+}
+
 static void
 brw_vs_populate_key(struct brw_context *brw,
                     struct brw_vs_prog_key *key)
@@ -459,15 +473,7 @@ brw_upload_vs_prog(struct brw_context *brw)
    struct brw_vertex_program *vp =
       (struct brw_vertex_program *)brw->vertex_program;
 
-   if (!brw_state_dirty(brw,
-                        _NEW_BUFFERS |
-                        _NEW_LIGHT |
-                        _NEW_POINT |
-                        _NEW_POLYGON |
-                        _NEW_TEXTURE |
-                        _NEW_TRANSFORM,
-                        BRW_NEW_VERTEX_PROGRAM |
-                        BRW_NEW_VS_ATTRIB_WORKAROUNDS))
+   if (!brw_vs_state_dirty(brw))
       return;
 
    brw_vs_populate_key(brw, &key);

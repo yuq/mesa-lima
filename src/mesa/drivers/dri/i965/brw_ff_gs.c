@@ -147,6 +147,16 @@ static void compile_ff_gs_prog(struct brw_context *brw,
    ralloc_free(mem_ctx);
 }
 
+static bool
+brw_ff_gs_state_dirty(struct brw_context *brw)
+{
+   return brw_state_dirty(brw,
+                          _NEW_LIGHT,
+                          BRW_NEW_PRIMITIVE |
+                          BRW_NEW_TRANSFORM_FEEDBACK |
+                          BRW_NEW_VS_PROG_DATA);
+}
+
 static void
 brw_ff_gs_populate_key(struct brw_context *brw,
                        struct brw_ff_gs_prog_key *key)
@@ -227,11 +237,7 @@ brw_upload_ff_gs_prog(struct brw_context *brw)
 {
    struct brw_ff_gs_prog_key key;
 
-   if (!brw_state_dirty(brw,
-                        _NEW_LIGHT,
-                        BRW_NEW_PRIMITIVE |
-                        BRW_NEW_TRANSFORM_FEEDBACK |
-                        BRW_NEW_VS_PROG_DATA))
+   if (!brw_ff_gs_state_dirty(brw))
       return;
 
    /* Populate the key:
