@@ -1117,7 +1117,6 @@ struct brw_context
 
    GLuint NewGLState;
    struct {
-      struct brw_state_flags dirty;
       struct brw_state_flags pipelines[BRW_NUM_PIPELINES];
    } state;
 

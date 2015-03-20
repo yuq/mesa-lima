@@ -624,9 +624,7 @@ merge_ctx_state(struct brw_context *brw,
                 struct brw_state_flags *state)
 {
    state->mesa |= brw->NewGLState;
-   assert(brw->state.dirty.mesa == 0);
    state->brw |= brw->ctx.NewDriverState;
-   assert(brw->state.dirty.brw == 0ull);
 }
 
 static inline void
@@ -645,7 +643,6 @@ brw_upload_pipeline_state(struct brw_context *brw,
                           enum brw_pipeline pipeline)
 {
    struct gl_context *ctx = &brw->ctx;
-   struct brw_state_flags *brw_state = &brw->state.dirty;
    int i;
    static int dirty_count = 0;
    struct brw_state_flags state = brw->state.pipelines[pipeline];
@@ -758,8 +755,6 @@ static inline void
 brw_pipeline_state_finished(struct brw_context *brw,
                             enum brw_pipeline pipeline)
 {
-   struct brw_state_flags *state = &brw->state.dirty;
-
    /* Save all dirty state into the other pipelines */
    for (int i = 0; i < BRW_NUM_PIPELINES; i++) {
       if (i != pipeline) {
@@ -772,7 +767,6 @@ brw_pipeline_state_finished(struct brw_context *brw,
 
    brw->NewGLState = 0;
    brw->ctx.NewDriverState = 0ull;
-   memset(state, 0, sizeof(*state));
 }
 
 /**
