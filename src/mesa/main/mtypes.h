@@ -1539,12 +1539,12 @@ struct gl_client_array
    GLenum Format;               /**< default: GL_RGBA, but may be GL_BGRA */
    GLsizei Stride;		/**< user-specified stride */
    GLsizei StrideB;		/**< actual stride in bytes */
+   GLuint _ElementSize;         /**< size of each element in bytes */
    const GLubyte *Ptr;          /**< Points to array data */
    GLboolean Enabled;		/**< Enabled flag is a boolean */
    GLboolean Normalized;        /**< GL_ARB_vertex_program */
    GLboolean Integer;           /**< Integer-valued? */
    GLuint InstanceDivisor;      /**< GL_ARB_instanced_arrays */
-   GLuint _ElementSize;         /**< size of each element in bytes */
 
    struct gl_buffer_object *BufferObj;/**< GL_ARB_vertex_buffer_object */
 };
