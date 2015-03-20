@@ -1605,9 +1605,11 @@ struct gl_vertex_array_object
 {
    /** Name of the VAO as received from glGenVertexArray. */
    GLuint Name;
-   GLchar *Label;       /**< GL_KHR_debug */
 
    GLint RefCount;
+
+   GLchar *Label;       /**< GL_KHR_debug */
+
    mtx_t Mutex;
 
    /**
