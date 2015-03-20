@@ -1831,6 +1831,8 @@ lp_build_round_altivec(struct lp_build_context *bld,
    assert(lp_check_value(type, a));
    assert(util_cpu_caps.has_altivec);
 
+   (void)type;
+
    switch (mode) {
    case LP_BUILD_ROUND_NEAREST:
       intrinsic = "llvm.ppc.altivec.vrfin";
