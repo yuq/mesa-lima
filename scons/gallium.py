@@ -642,6 +642,13 @@ def generate(env):
             # disable all MSVC extensions.
             '-DYY_USE_CONST=',
         ])
+        # Flex relies on __STDC_VERSION__>=199901L to decide when to include
+        # C99 inttypes.h.  We always have inttypes.h available with MSVC
+        # (either the one bundled with MSVC 2013, or the one we bundle
+        # ourselves), but we can't just define __STDC_VERSION__ without
+        # breaking stuff, as MSVC doesn't fully support C99.  There's also no
+        # way to premptively include stdint.
+        env.Append(CCFLAGS = ['-FIinttypes.h'])
     if host_platform.system() == 'Windows':
         # Prefer winflexbison binaries, as not only they are easier to install
         # (no additional dependencies), but also better Windows support.
