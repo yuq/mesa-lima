@@ -1388,15 +1388,14 @@ struct gl_texture_unit
 struct gl_texture_attrib
 {
    GLuint CurrentUnit;   /**< GL_ACTIVE_TEXTURE */
-   struct gl_texture_unit Unit[MAX_COMBINED_TEXTURE_IMAGE_UNITS];
+
+   /** GL_ARB_seamless_cubemap */
+   GLboolean CubeMapSeamless;
 
    struct gl_texture_object *ProxyTex[NUM_TEXTURE_TARGETS];
 
    /** GL_ARB_texture_buffer_object */
    struct gl_buffer_object *BufferObject;
-
-   /** GL_ARB_seamless_cubemap */
-   GLboolean CubeMapSeamless;
 
    /** Texture coord units/sets used for fragment texturing */
    GLbitfield _EnabledCoordUnits;
@@ -1415,6 +1414,8 @@ struct gl_texture_attrib
 
    /** Largest index + 1 of texture units that have had any CurrentTex set. */
    GLint NumCurrentTexUsed;
+
+   struct gl_texture_unit Unit[MAX_COMBINED_TEXTURE_IMAGE_UNITS];
 };
 
 
