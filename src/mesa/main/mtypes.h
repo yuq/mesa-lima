@@ -1349,6 +1349,9 @@ struct gl_texture_unit
 
    GLfloat LodBias;		/**< for biasing mipmap levels */
 
+   /** Texture targets that have a non-default texture bound */
+   GLbitfield _BoundTextures;
+
    /** Current sampler object (GL_ARB_sampler_objects) */
    struct gl_sampler_object *Sampler;
 
@@ -1375,8 +1378,6 @@ struct gl_texture_unit
    /** Points to highest priority, complete and enabled texture object */
    struct gl_texture_object *_Current;
 
-   /** Texture targets that have a non-default texture bound */
-   GLbitfield _BoundTextures;
 };
 
 
