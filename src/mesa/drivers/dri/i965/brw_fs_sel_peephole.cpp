@@ -176,7 +176,9 @@ fs_visitor::opt_peephole_sel()
          /* Check that the MOVs are the right form. */
          if (!then_mov[i]->dst.equals(else_mov[i]->dst) ||
              then_mov[i]->is_partial_write() ||
-             else_mov[i]->is_partial_write()) {
+             else_mov[i]->is_partial_write() ||
+             then_mov[i]->conditional_mod != BRW_CONDITIONAL_NONE ||
+             else_mov[i]->conditional_mod != BRW_CONDITIONAL_NONE) {
             movs = i;
             break;
          }
