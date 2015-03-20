@@ -693,15 +693,16 @@ struct gl_colorbuffer_attrib
     * \name Logic op
     */
    /*@{*/
-   GLenum LogicOp;			/**< Logic operator */
    GLboolean IndexLogicOpEnabled;	/**< Color index logic op enabled flag */
    GLboolean ColorLogicOpEnabled;	/**< RGBA logic op enabled flag */
+   GLenum LogicOp;			/**< Logic operator */
+
    /*@}*/
 
    GLboolean DitherFlag;		/**< Dither enable flag */
 
-   GLenum ClampFragmentColor; /**< GL_TRUE, GL_FALSE or GL_FIXED_ONLY_ARB */
    GLboolean _ClampFragmentColor; /** < with GL_FIXED_ONLY_ARB resolved */
+   GLenum ClampFragmentColor; /**< GL_TRUE, GL_FALSE or GL_FIXED_ONLY_ARB */
    GLenum ClampReadColor;     /**< GL_TRUE, GL_FALSE or GL_FIXED_ONLY_ARB */
 
    GLboolean sRGBEnabled;    /**< Framebuffer sRGB blending/updating requested */
@@ -799,6 +800,7 @@ struct gl_eval_attrib
 struct gl_fog_attrib
 {
    GLboolean Enabled;		/**< Fog enabled flag */
+   GLboolean ColorSumEnabled;
    GLfloat ColorUnclamped[4];            /**< Fog color */
    GLfloat Color[4];		/**< Fog color */
    GLfloat Density;		/**< Density >= 0.0 */
@@ -806,7 +808,6 @@ struct gl_fog_attrib
    GLfloat End;			/**< End distance in eye coords */
    GLfloat Index;		/**< Fog index */
    GLenum Mode;			/**< Fog mode */
-   GLboolean ColorSumEnabled;
    GLenum FogCoordinateSource;  /**< GL_EXT_fog_coord */
    GLfloat _Scale;		/**< (End == Start) ? 1.0 : 1.0 / (End - Start) */
    GLenum FogDistanceMode;     /**< GL_NV_fog_distance */
