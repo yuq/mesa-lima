@@ -399,7 +399,7 @@ brw_clear_cache(struct brw_context *brw, struct brw_cache *cache)
    /* We need to make sure that the programs get regenerated, since
     * any offsets leftover in brw_context will no longer be valid.
     */
-   brw->state.dirty.mesa |= ~0;
+   brw->NewGLState |= ~0;
    brw->ctx.NewDriverState |= ~0ull;
    intel_batchbuffer_flush(brw);
 }

@@ -438,7 +438,7 @@ void brw_init_state( struct brw_context *brw )
 
    brw_upload_initial_gpu_state(brw);
 
-   brw->state.dirty.mesa = ~0;
+   brw->NewGLState = ~0;
    brw->ctx.NewDriverState = ~0ull;
 
    /* ~0 is a nonsensical value which won't match anything we program, so
@@ -623,7 +623,8 @@ static inline void
 merge_ctx_state(struct brw_context *brw,
                 struct brw_state_flags *state)
 {
-   state->mesa |= brw->state.dirty.mesa;
+   state->mesa |= brw->NewGLState;
+   assert(brw->state.dirty.mesa == 0);
    state->brw |= brw->ctx.NewDriverState;
    assert(brw->state.dirty.brw == 0ull);
 }
@@ -649,12 +650,9 @@ brw_upload_pipeline_state(struct brw_context *brw,
    static int dirty_count = 0;
    struct brw_state_flags state = brw->state.pipelines[pipeline];
 
-   brw_state->mesa |= brw->NewGLState;
-   brw->NewGLState = 0;
-
    if (0) {
       /* Always re-emit all state. */
-      brw_state->mesa |= ~0;
+      brw->NewGLState = ~0;
       ctx->NewDriverState = ~0ull;
    }
 
@@ -765,13 +763,14 @@ brw_pipeline_state_finished(struct brw_context *brw,
    /* Save all dirty state into the other pipelines */
    for (int i = 0; i < BRW_NUM_PIPELINES; i++) {
       if (i != pipeline) {
-         brw->state.pipelines[i].mesa |= state->mesa;
+         brw->state.pipelines[i].mesa |= brw->NewGLState;
          brw->state.pipelines[i].brw |= brw->ctx.NewDriverState;
       } else {
          memset(&brw->state.pipelines[i], 0, sizeof(struct brw_state_flags));
       }
    }
 
+   brw->NewGLState = 0;
    brw->ctx.NewDriverState = 0ull;
    memset(state, 0, sizeof(*state));
 }
