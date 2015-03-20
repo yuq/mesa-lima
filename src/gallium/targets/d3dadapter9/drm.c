@@ -39,7 +39,7 @@
 #include "xmlconfig.h"
 #include "xmlpool.h"
 
-#include <libdrm/drm.h>
+#include <drm.h>
 #include <sys/ioctl.h>
 #include <fcntl.h>
 #include <stdio.h>
