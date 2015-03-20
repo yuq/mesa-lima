@@ -335,6 +335,18 @@ fs_visitor::emit_minmax(enum brw_conditional_mod conditionalmod, const fs_reg &d
    }
 }
 
+void
+fs_visitor::emit_uniformize(const fs_reg &dst, const fs_reg &src)
+{
+   const fs_reg chan_index = vgrf(glsl_type::uint_type);
+
+   emit(SHADER_OPCODE_FIND_LIVE_CHANNEL, component(chan_index, 0))
+      ->force_writemask_all = true;
+   emit(SHADER_OPCODE_BROADCAST, component(dst, 0),
+        src, component(chan_index, 0))
+      ->force_writemask_all = true;
+}
+
 bool
 fs_visitor::try_emit_saturate(ir_expression *ir)
 {

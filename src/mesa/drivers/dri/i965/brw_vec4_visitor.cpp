@@ -1374,6 +1374,17 @@ vec4_visitor::emit_pull_constant_load_reg(dst_reg dst,
 }
 
 void
+vec4_visitor::emit_uniformize(const dst_reg &dst, const src_reg &src)
+{
+   const src_reg chan_index(this, glsl_type::uint_type);
+
+   emit(SHADER_OPCODE_FIND_LIVE_CHANNEL, dst_reg(chan_index))
+      ->force_writemask_all = true;
+   emit(SHADER_OPCODE_BROADCAST, dst, src, chan_index)
+      ->force_writemask_all = true;
+}
+
+void
 vec4_visitor::visit(ir_expression *ir)
 {
    unsigned int operand;

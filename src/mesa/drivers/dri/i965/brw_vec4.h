@@ -299,6 +299,9 @@ public:
    void emit_lrp(const dst_reg &dst,
                  const src_reg &x, const src_reg &y, const src_reg &a);
 
+   /** Copy any live channel from \p src to the first channel of \p dst. */
+   void emit_uniformize(const dst_reg &dst, const src_reg &src);
+
    void emit_block_move(dst_reg *dst, src_reg *src,
                         const struct glsl_type *type, brw_predicate predicate);
 

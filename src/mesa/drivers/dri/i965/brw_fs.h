@@ -325,6 +325,8 @@ public:
    void emit_minmax(enum brw_conditional_mod conditionalmod, const fs_reg &dst,
                     const fs_reg &src0, const fs_reg &src1);
    void emit_discard_jump();
+   /** Copy any live channel from \p src to the first channel of \p dst. */
+   void emit_uniformize(const fs_reg &dst, const fs_reg &src);
    bool try_emit_b2f_of_comparison(ir_expression *ir);
    bool try_emit_saturate(ir_expression *ir);
    bool try_emit_line(ir_expression *ir);
