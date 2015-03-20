@@ -439,17 +439,17 @@ void brw_init_state( struct brw_context *brw )
    brw_upload_initial_gpu_state(brw);
 
    brw->state.dirty.mesa = ~0;
-   brw->state.dirty.brw = ~0ull;
+   brw->ctx.NewDriverState = ~0ull;
 
    /* ~0 is a nonsensical value which won't match anything we program, so
     * the programming will take effect on the first time around.
     */
    brw->pma_stall_bits = ~0;
 
-   /* Make sure that brw->state.dirty.brw has enough bits to hold all possible
+   /* Make sure that brw->ctx.NewDriverState has enough bits to hold all possible
     * dirty flags.
     */
-   STATIC_ASSERT(BRW_NUM_STATE_BITS <= 8 * sizeof(brw->state.dirty.brw));
+   STATIC_ASSERT(BRW_NUM_STATE_BITS <= 8 * sizeof(brw->ctx.NewDriverState));
 
    ctx->DriverFlags.NewTransformFeedback = BRW_NEW_TRANSFORM_FEEDBACK;
    ctx->DriverFlags.NewTransformFeedbackProg = BRW_NEW_TRANSFORM_FEEDBACK;
@@ -624,7 +624,8 @@ merge_ctx_state(struct brw_context *brw,
                 struct brw_state_flags *state)
 {
    state->mesa |= brw->state.dirty.mesa;
-   state->brw |= brw->state.dirty.brw;
+   state->brw |= brw->ctx.NewDriverState;
+   assert(brw->state.dirty.brw == 0ull);
 }
 
 static inline void
@@ -651,40 +652,37 @@ brw_upload_pipeline_state(struct brw_context *brw,
    brw_state->mesa |= brw->NewGLState;
    brw->NewGLState = 0;
 
-   brw_state->brw |= ctx->NewDriverState;
-   ctx->NewDriverState = 0;
-
    if (0) {
       /* Always re-emit all state. */
       brw_state->mesa |= ~0;
-      brw_state->brw |= ~0ull;
+      ctx->NewDriverState = ~0ull;
    }
 
    if (pipeline == BRW_RENDER_PIPELINE) {
       if (brw->fragment_program != ctx->FragmentProgram._Current) {
          brw->fragment_program = ctx->FragmentProgram._Current;
-         brw->state.dirty.brw |= BRW_NEW_FRAGMENT_PROGRAM;
+         brw->ctx.NewDriverState |= BRW_NEW_FRAGMENT_PROGRAM;
       }
 
       if (brw->geometry_program != ctx->GeometryProgram._Current) {
          brw->geometry_program = ctx->GeometryProgram._Current;
-         brw->state.dirty.brw |= BRW_NEW_GEOMETRY_PROGRAM;
+         brw->ctx.NewDriverState |= BRW_NEW_GEOMETRY_PROGRAM;
       }
 
       if (brw->vertex_program != ctx->VertexProgram._Current) {
          brw->vertex_program = ctx->VertexProgram._Current;
-         brw->state.dirty.brw |= BRW_NEW_VERTEX_PROGRAM;
+         brw->ctx.NewDriverState |= BRW_NEW_VERTEX_PROGRAM;
       }
    }
 
    if (brw->meta_in_progress != _mesa_meta_in_progress(ctx)) {
       brw->meta_in_progress = _mesa_meta_in_progress(ctx);
-      brw->state.dirty.brw |= BRW_NEW_META_IN_PROGRESS;
+      brw->ctx.NewDriverState |= BRW_NEW_META_IN_PROGRESS;
    }
 
    if (brw->num_samples != ctx->DrawBuffer->Visual.samples) {
       brw->num_samples = ctx->DrawBuffer->Visual.samples;
-      brw->state.dirty.brw |= BRW_NEW_NUM_SAMPLES;
+      brw->ctx.NewDriverState |= BRW_NEW_NUM_SAMPLES;
    }
 
    /* Exit early if no state is flagged as dirty */
@@ -768,12 +766,13 @@ brw_pipeline_state_finished(struct brw_context *brw,
    for (int i = 0; i < BRW_NUM_PIPELINES; i++) {
       if (i != pipeline) {
          brw->state.pipelines[i].mesa |= state->mesa;
-         brw->state.pipelines[i].brw |= state->brw;
+         brw->state.pipelines[i].brw |= brw->ctx.NewDriverState;
       } else {
          memset(&brw->state.pipelines[i], 0, sizeof(struct brw_state_flags));
       }
    }
 
+   brw->ctx.NewDriverState = 0ull;
    memset(state, 0, sizeof(*state));
 }
 

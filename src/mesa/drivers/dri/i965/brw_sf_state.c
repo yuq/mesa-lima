@@ -109,7 +109,7 @@ static void upload_sf_vp(struct brw_context *brw)
       sfv->scissor.ymax = ctx->DrawBuffer->Height - ctx->DrawBuffer->_Ymin - 1;
    }
 
-   brw->state.dirty.brw |= BRW_NEW_SF_VP;
+   brw->ctx.NewDriverState |= BRW_NEW_SF_VP;
 }
 
 const struct brw_tracked_state brw_sf_vp = {
@@ -291,7 +291,7 @@ static void upload_sf_unit( struct brw_context *brw )
 					     (sf->sf5.viewport_transform << 1)),
 			   I915_GEM_DOMAIN_INSTRUCTION, 0);
 
-   brw->state.dirty.brw |= BRW_NEW_GEN4_UNIT_STATE;
+   brw->ctx.NewDriverState |= BRW_NEW_GEN4_UNIT_STATE;
 }
 
 const struct brw_tracked_state brw_sf_unit = {

@@ -134,7 +134,7 @@ static void calculate_curbe_offsets( struct brw_context *brw )
                  brw->curbe.vs_start,
                  brw->curbe.vs_size );
 
-      brw->state.dirty.brw |= BRW_NEW_CURBE_OFFSETS;
+      brw->ctx.NewDriverState |= BRW_NEW_CURBE_OFFSETS;
    }
 }
 
@@ -292,7 +292,7 @@ emit:
     * We've found no documented reason why this should be necessary.
     */
    if (brw->gen == 4 && !brw->is_g4x &&
-       (brw->state.dirty.brw & (BRW_NEW_BATCH | BRW_NEW_PSP)) == 0) {
+       (brw->ctx.NewDriverState & (BRW_NEW_BATCH | BRW_NEW_PSP)) == 0) {
       BEGIN_BATCH(1);
       OUT_BATCH(MI_FLUSH);
       ADVANCE_BATCH();

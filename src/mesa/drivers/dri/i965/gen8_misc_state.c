@@ -69,7 +69,7 @@ static void upload_state_base_address(struct brw_context *brw)
    }
    ADVANCE_BATCH();
 
-   brw->state.dirty.brw |= BRW_NEW_STATE_BASE_ADDRESS;
+   brw->ctx.NewDriverState |= BRW_NEW_STATE_BASE_ADDRESS;
 }
 
 const struct brw_tracked_state gen8_state_base_address = {

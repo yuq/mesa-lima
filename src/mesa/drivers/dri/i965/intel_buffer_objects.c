@@ -107,11 +107,11 @@ alloc_buffer_object(struct brw_context *brw,
    /* the buffer might be bound as a uniform buffer, need to update it
     */
    if (intel_obj->Base.UsageHistory & USAGE_UNIFORM_BUFFER)
-      brw->state.dirty.brw |= BRW_NEW_UNIFORM_BUFFER;
+      brw->ctx.NewDriverState |= BRW_NEW_UNIFORM_BUFFER;
    if (intel_obj->Base.UsageHistory & USAGE_TEXTURE_BUFFER)
-      brw->state.dirty.brw |= BRW_NEW_TEXTURE_BUFFER;
+      brw->ctx.NewDriverState |= BRW_NEW_TEXTURE_BUFFER;
    if (intel_obj->Base.UsageHistory & USAGE_ATOMIC_COUNTER_BUFFER)
-      brw->state.dirty.brw |= BRW_NEW_ATOMIC_BUFFER;
+      brw->ctx.NewDriverState |= BRW_NEW_ATOMIC_BUFFER;
 
    mark_buffer_inactive(intel_obj);
 }

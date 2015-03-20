@@ -156,7 +156,7 @@ static inline bool
 brw_state_dirty(struct brw_context *brw, GLuint mesa_flags, uint64_t brw_flags)
 {
    return ((brw->state.dirty.mesa & mesa_flags) |
-           (brw->state.dirty.brw & brw_flags)) != 0;
+           (brw->ctx.NewDriverState & brw_flags)) != 0;
 }
 
 /* brw_misc_state.c */

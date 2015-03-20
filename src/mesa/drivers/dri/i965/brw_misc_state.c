@@ -98,7 +98,7 @@ static void upload_pipelined_state_pointers(struct brw_context *brw )
 	     brw->cc.state_offset);
    ADVANCE_BATCH();
 
-   brw->state.dirty.brw |= BRW_NEW_PSP;
+   brw->ctx.NewDriverState |= BRW_NEW_PSP;
 }
 
 static void upload_psp_urb_cbs(struct brw_context *brw )
@@ -1014,7 +1014,7 @@ static void upload_state_base_address( struct brw_context *brw )
     * obvious.
     */
 
-   brw->state.dirty.brw |= BRW_NEW_STATE_BASE_ADDRESS;
+   brw->ctx.NewDriverState |= BRW_NEW_STATE_BASE_ADDRESS;
 }
 
 const struct brw_tracked_state brw_state_base_address = {

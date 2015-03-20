@@ -276,7 +276,7 @@ retry:
    /* We've smashed all state compared to what the normal 3D pipeline
     * rendering tracks for GL.
     */
-   brw->state.dirty.brw = ~0ull;
+   brw->ctx.NewDriverState = ~0ull;
    brw->no_depth_or_stencil = false;
    brw->ib.type = -1;
 

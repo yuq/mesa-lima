@@ -84,7 +84,7 @@ brw_upload_binding_table(struct brw_context *brw,
              prog_data->binding_table.size_bytes);
    }
 
-   brw->state.dirty.brw |= brw_new_binding_table;
+   brw->ctx.NewDriverState |= brw_new_binding_table;
 
    if (brw->gen >= 7) {
       BEGIN_BATCH(2);

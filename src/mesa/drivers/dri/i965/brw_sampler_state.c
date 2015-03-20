@@ -573,7 +573,7 @@ brw_upload_sampler_state_table(struct brw_context *brw,
       /* Flag that the sampler state table pointer has changed; later atoms
        * will handle it.
        */
-      brw->state.dirty.brw |= BRW_NEW_SAMPLER_STATE_TABLE;
+      brw->ctx.NewDriverState |= BRW_NEW_SAMPLER_STATE_TABLE;
    }
 }
 

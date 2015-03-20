@@ -376,7 +376,7 @@ set_fast_clear_op(struct brw_context *brw, uint32_t op)
     * 3DSTATE_PS.
     */
    brw->wm.fast_clear_op = op;
-   brw->state.dirty.brw |= BRW_NEW_FRAGMENT_PROGRAM;
+   brw->ctx.NewDriverState |= BRW_NEW_FRAGMENT_PROGRAM;
 }
 
 static void
@@ -401,7 +401,7 @@ use_rectlist(struct brw_context *brw, bool enable)
     * clear color value.
     */
    brw->state.dirty.mesa |= _NEW_LIGHT | _NEW_BUFFERS;
-   brw->state.dirty.brw |= BRW_NEW_FRAGMENT_PROGRAM;
+   brw->ctx.NewDriverState |= BRW_NEW_FRAGMENT_PROGRAM;
 }
 
 bool

@@ -85,7 +85,7 @@ gen6_update_sol_surfaces(struct brw_context *brw)
       }
    }
 
-   brw->state.dirty.brw |= BRW_NEW_SURFACES;
+   brw->ctx.NewDriverState |= BRW_NEW_SURFACES;
 }
 
 const struct brw_tracked_state gen6_sol_surface = {
@@ -131,7 +131,7 @@ brw_gs_upload_binding_table(struct brw_context *brw)
       }
       if (!need_binding_table) {
          if (brw->ff_gs.bind_bo_offset != 0) {
-            brw->state.dirty.brw |= BRW_NEW_GS_BINDING_TABLE;
+            brw->ctx.NewDriverState |= BRW_NEW_GS_BINDING_TABLE;
             brw->ff_gs.bind_bo_offset = 0;
          }
          return;
@@ -162,7 +162,7 @@ brw_gs_upload_binding_table(struct brw_context *brw)
       if (!need_binding_table) {
          if (brw->gs.base.bind_bo_offset != 0) {
             brw->gs.base.bind_bo_offset = 0;
-            brw->state.dirty.brw |= BRW_NEW_GS_BINDING_TABLE;
+            brw->ctx.NewDriverState |= BRW_NEW_GS_BINDING_TABLE;
          }
          return;
       }
@@ -179,7 +179,7 @@ brw_gs_upload_binding_table(struct brw_context *brw)
              BRW_MAX_SURFACES * sizeof(uint32_t));
    }
 
-   brw->state.dirty.brw |= BRW_NEW_GS_BINDING_TABLE;
+   brw->ctx.NewDriverState |= BRW_NEW_GS_BINDING_TABLE;
 }
 
 const struct brw_tracked_state gen6_gs_binding_table = {

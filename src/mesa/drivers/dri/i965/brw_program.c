@@ -136,7 +136,7 @@ brwProgramStringNotify(struct gl_context *ctx,
          brw_fragment_program_const(brw->fragment_program);
 
       if (newFP == curFP)
-	 brw->state.dirty.brw |= BRW_NEW_FRAGMENT_PROGRAM;
+	 brw->ctx.NewDriverState |= BRW_NEW_FRAGMENT_PROGRAM;
       newFP->id = get_new_program_id(brw->intelScreen);
 
       brw_add_texrect_params(prog);
@@ -151,7 +151,7 @@ brwProgramStringNotify(struct gl_context *ctx,
          brw_vertex_program_const(brw->vertex_program);
 
       if (newVP == curVP)
-	 brw->state.dirty.brw |= BRW_NEW_VERTEX_PROGRAM;
+	 brw->ctx.NewDriverState |= BRW_NEW_VERTEX_PROGRAM;
       if (newVP->program.IsPositionInvariant) {
 	 _mesa_insert_mvp_code(ctx, &newVP->program);
       }

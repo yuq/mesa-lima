@@ -181,9 +181,9 @@ brw_new_batch(struct brw_context *brw)
     * purposes means everything).
     */
    if (brw->hw_ctx == NULL)
-      brw->state.dirty.brw |= BRW_NEW_CONTEXT;
+      brw->ctx.NewDriverState |= BRW_NEW_CONTEXT;
 
-   brw->state.dirty.brw |= BRW_NEW_BATCH;
+   brw->ctx.NewDriverState |= BRW_NEW_BATCH;
 
    brw->state_batch_count = 0;
 
