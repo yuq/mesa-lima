@@ -2232,8 +2232,9 @@ enum gl_frag_depth_layout
 struct gl_program
 {
    GLuint Id;
-   GLubyte *String;  /**< Null-terminated program text */
    GLint RefCount;
+   GLubyte *String;  /**< Null-terminated program text */
+
    GLenum Target;    /**< GL_VERTEX/FRAGMENT_PROGRAM_ARB, GL_GEOMETRY_PROGRAM_NV */
    GLenum Format;    /**< String encoding format */
 
@@ -2536,18 +2537,20 @@ struct gl_shader
    GLenum Type;
    gl_shader_stage Stage;
    GLuint Name;  /**< AKA the handle */
-   GLchar *Label;   /**< GL_KHR_debug */
    GLint RefCount;  /**< Reference count */
+   GLchar *Label;   /**< GL_KHR_debug */
    GLboolean DeletePending;
    GLboolean CompileStatus;
-   const GLchar *Source;  /**< Source code string */
+   GLboolean IsES;         /**< True if this shader uses GLSL ES */
+
    GLuint SourceChecksum;       /**< for debug/logging purposes */
+   const GLchar *Source;  /**< Source code string */
+
    struct gl_program *Program;  /**< Post-compile assembly code */
    GLchar *InfoLog;
    struct gl_sl_pragmas Pragmas;
 
    unsigned Version;       /**< GLSL version used for linking */
-   GLboolean IsES;         /**< True if this shader uses GLSL ES */
 
    /**
     * \name Sampler tracking
@@ -2591,8 +2594,8 @@ struct gl_shader
     *
     * These fields are only set post-linking.
     */
-   struct gl_uniform_block *UniformBlocks;
    unsigned NumUniformBlocks;
+   struct gl_uniform_block *UniformBlocks;
 
    struct exec_list *ir;
    struct glsl_symbol_table *symbols;
@@ -2882,8 +2885,8 @@ struct gl_shader_program
     */
    unsigned LastClipDistanceArraySize;
 
-   struct gl_uniform_block *UniformBlocks;
    unsigned NumUniformBlocks;
+   struct gl_uniform_block *UniformBlocks;
 
    /**
     * Indices into the _LinkedShaders's UniformBlocks[] array for each stage
