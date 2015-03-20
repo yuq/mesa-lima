@@ -509,6 +509,7 @@ def generate(env):
             '/wd4018', # signed/unsigned mismatch
             '/wd4056', # overflow in floating-point constant arithmetic
             '/wd4244', # conversion from 'type1' to 'type2', possible loss of data
+            '/wd4267', # 'var' : conversion from 'size_t' to 'type', possible loss of data
             '/wd4305', # truncation from 'type1' to 'type2'
             '/wd4351', # new behavior: elements of array 'array' will be default initialized
             '/wd4756', # overflow in constant arithmetic
