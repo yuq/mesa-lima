@@ -27,6 +27,7 @@
 #include <stdbool.h>
 
 #include "brw_context.h"
+#include "brw_program.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -40,6 +41,12 @@ bool brw_gs_prog_data_compare(const void *a, const void *b);
 
 void
 brw_upload_gs_prog(struct brw_context *brw);
+
+bool
+brw_compile_gs_prog(struct brw_context *brw,
+                    struct gl_shader_program *prog,
+                    struct brw_geometry_program *gp,
+                    struct brw_gs_prog_key *key);
 
 #ifdef __cplusplus
 } /* extern "C" */

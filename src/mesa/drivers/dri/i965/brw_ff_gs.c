@@ -45,8 +45,9 @@
 
 #include "util/ralloc.h"
 
-static void compile_ff_gs_prog(struct brw_context *brw,
-                               struct brw_ff_gs_prog_key *key)
+void
+brw_compile_ff_gs_prog(struct brw_context *brw,
+                       struct brw_ff_gs_prog_key *key)
 {
    struct brw_ff_gs_compile c;
    const GLuint *program;
@@ -253,7 +254,7 @@ brw_upload_ff_gs_prog(struct brw_context *brw)
       if (!brw_search_cache(&brw->cache, BRW_CACHE_FF_GS_PROG,
 			    &key, sizeof(key),
 			    &brw->ff_gs.prog_offset, &brw->ff_gs.prog_data)) {
-	 compile_ff_gs_prog( brw, &key );
+         brw_compile_ff_gs_prog(brw, &key);
       }
    }
 }

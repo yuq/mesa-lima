@@ -187,11 +187,11 @@ brw_vs_prog_data_compare(const void *in_a, const void *in_b)
    return true;
 }
 
-static bool
-do_vs_prog(struct brw_context *brw,
-	   struct gl_shader_program *prog,
-	   struct brw_vertex_program *vp,
-	   struct brw_vs_prog_key *key)
+bool
+brw_compile_vs_prog(struct brw_context *brw,
+                    struct gl_shader_program *prog,
+                    struct brw_vertex_program *vp,
+                    struct brw_vs_prog_key *key)
 {
    GLuint program_size;
    const GLuint *program;
@@ -468,6 +468,7 @@ void
 brw_upload_vs_prog(struct brw_context *brw)
 {
    struct gl_context *ctx = &brw->ctx;
+   struct gl_shader_program **current = ctx->_Shader->CurrentProgram;
    struct brw_vs_prog_key key;
    /* BRW_NEW_VERTEX_PROGRAM */
    struct brw_vertex_program *vp =
@@ -481,9 +482,8 @@ brw_upload_vs_prog(struct brw_context *brw)
    if (!brw_search_cache(&brw->cache, BRW_CACHE_VS_PROG,
 			 &key, sizeof(key),
 			 &brw->vs.base.prog_offset, &brw->vs.prog_data)) {
-      bool success =
-         do_vs_prog(brw, ctx->_Shader->CurrentProgram[MESA_SHADER_VERTEX], vp,
-                    &key);
+      bool success = brw_compile_vs_prog(brw, current[MESA_SHADER_VERTEX],
+                                         vp, &key);
       (void) success;
       assert(success);
    }
@@ -524,7 +524,7 @@ brw_vs_precompile(struct gl_context *ctx,
       (prog->OutputsWritten & (VARYING_BIT_COL0 | VARYING_BIT_COL1 |
                                VARYING_BIT_BFC0 | VARYING_BIT_BFC1));
 
-   success = do_vs_prog(brw, shader_prog, bvp, &key);
+   success = brw_compile_vs_prog(brw, shader_prog, bvp, &key);
 
    brw->vs.base.prog_offset = old_prog_offset;
    brw->vs.prog_data = old_prog_data;

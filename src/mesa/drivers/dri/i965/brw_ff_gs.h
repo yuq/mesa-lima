@@ -115,4 +115,8 @@ void gen6_brw_upload_ff_gs_prog(struct brw_context *brw);
 void
 brw_upload_ff_gs_prog(struct brw_context *brw);
 
+void
+brw_compile_ff_gs_prog(struct brw_context *brw,
+                       struct brw_ff_gs_prog_key *key);
+
 #endif
