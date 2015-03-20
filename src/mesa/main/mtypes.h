@@ -1883,21 +1883,13 @@ struct gl_transform_feedback_info
 struct gl_transform_feedback_object
 {
    GLuint Name;  /**< AKA the object ID */
-   GLchar *Label;     /**< GL_KHR_debug */
    GLint RefCount;
+   GLchar *Label;     /**< GL_KHR_debug */
    GLboolean Active;  /**< Is transform feedback enabled? */
    GLboolean Paused;  /**< Is transform feedback paused? */
    GLboolean EndedAnytime; /**< Has EndTransformFeedback been called
                                 at least once? */
    GLboolean EverBound; /**< Has this object been bound? */
-
-   /**
-    * The shader program active when BeginTransformFeedback() was called.
-    * When active and unpaused, this equals ctx->Shader.CurrentProgram[stage],
-    * where stage is the pipeline stage that is the source of data for
-    * transform feedback.
-    */
-   struct gl_shader_program *shader_program;
 
    /**
     * GLES: if Active is true, remaining number of primitives which can be
@@ -1909,6 +1901,14 @@ struct gl_transform_feedback_object
     * Not tracked for desktop GL since it's unnecessary.
     */
    unsigned GlesRemainingPrims;
+
+   /**
+    * The shader program active when BeginTransformFeedback() was called.
+    * When active and unpaused, this equals ctx->Shader.CurrentProgram[stage],
+    * where stage is the pipeline stage that is the source of data for
+    * transform feedback.
+    */
+   struct gl_shader_program *shader_program;
 
    /** The feedback buffers */
    GLuint BufferNames[MAX_FEEDBACK_BUFFERS];
