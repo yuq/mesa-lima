@@ -583,17 +583,20 @@ brw_print_dirty_count(struct dirty_bit_map *bit_map)
    }
 }
 
-static void
-brw_upload_programs(struct brw_context *brw)
+static inline void
+brw_upload_programs(struct brw_context *brw,
+                    enum brw_pipeline pipeline)
 {
-   brw_upload_vs_prog(brw);
+   if (pipeline == BRW_RENDER_PIPELINE) {
+      brw_upload_vs_prog(brw);
 
-   if (brw->gen < 6)
-      brw_upload_ff_gs_prog(brw);
-   else
-      brw_upload_gs_prog(brw);
+      if (brw->gen < 6)
+         brw_upload_ff_gs_prog(brw);
+      else
+         brw_upload_gs_prog(brw);
 
-   brw_upload_wm_prog(brw);
+      brw_upload_wm_prog(brw);
+   }
 }
 
 static inline void
@@ -637,19 +640,21 @@ brw_upload_pipeline_state(struct brw_context *brw,
       brw_state->brw |= ~0ull;
    }
 
-   if (brw->fragment_program != ctx->FragmentProgram._Current) {
-      brw->fragment_program = ctx->FragmentProgram._Current;
-      brw->state.dirty.brw |= BRW_NEW_FRAGMENT_PROGRAM;
-   }
+   if (pipeline == BRW_RENDER_PIPELINE) {
+      if (brw->fragment_program != ctx->FragmentProgram._Current) {
+         brw->fragment_program = ctx->FragmentProgram._Current;
+         brw->state.dirty.brw |= BRW_NEW_FRAGMENT_PROGRAM;
+      }
 
-   if (brw->geometry_program != ctx->GeometryProgram._Current) {
-      brw->geometry_program = ctx->GeometryProgram._Current;
-      brw->state.dirty.brw |= BRW_NEW_GEOMETRY_PROGRAM;
-   }
+      if (brw->geometry_program != ctx->GeometryProgram._Current) {
+         brw->geometry_program = ctx->GeometryProgram._Current;
+         brw->state.dirty.brw |= BRW_NEW_GEOMETRY_PROGRAM;
+      }
 
-   if (brw->vertex_program != ctx->VertexProgram._Current) {
-      brw->vertex_program = ctx->VertexProgram._Current;
-      brw->state.dirty.brw |= BRW_NEW_VERTEX_PROGRAM;
+      if (brw->vertex_program != ctx->VertexProgram._Current) {
+         brw->vertex_program = ctx->VertexProgram._Current;
+         brw->state.dirty.brw |= BRW_NEW_VERTEX_PROGRAM;
+      }
    }
 
    if (brw->meta_in_progress != _mesa_meta_in_progress(ctx)) {
@@ -671,7 +676,7 @@ brw_upload_pipeline_state(struct brw_context *brw,
    if (brw->gen == 6)
       intel_emit_post_sync_nonzero_flush(brw);
 
-   brw_upload_programs(brw);
+   brw_upload_programs(brw, pipeline);
    merge_ctx_state(brw, &state);
 
    const struct brw_tracked_state *atoms =
