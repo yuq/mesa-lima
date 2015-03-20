@@ -1710,6 +1710,9 @@ struct gl_array_attrib
    GLuint RestartIndex;
    /*@}*/
 
+   /** One of the DRAW_xxx flags, not consumed by drivers */
+   gl_draw_method DrawMethod;
+
    /* GL_ARB_vertex_buffer_object */
    struct gl_buffer_object *ArrayBufferObj;
 
@@ -1718,9 +1721,6 @@ struct gl_array_attrib
     * The array pointer is set up only by the VBO module.
     */
    const struct gl_client_array **_DrawArrays; /**< 0..VERT_ATTRIB_MAX-1 */
-
-   /** One of the DRAW_xxx flags, not consumed by drivers */
-   gl_draw_method DrawMethod;
 
    /** Legal array datatypes and the API for which they have been computed */
    GLbitfield LegalTypesMask;
