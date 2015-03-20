@@ -341,7 +341,7 @@ clGetDeviceInfo(cl_device_id d_dev, cl_device_info param,
       break;
 
    case CL_DEVICE_OPENCL_C_VERSION:
-      buf.as_string() = "OpenCL C 1.1";
+      buf.as_string() = "OpenCL C 1.1 ";
       break;
 
    case CL_DEVICE_PARENT_DEVICE:
