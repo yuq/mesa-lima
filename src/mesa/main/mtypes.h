@@ -847,16 +847,17 @@ struct gl_light_attrib
    struct gl_material Material;
 
    GLboolean Enabled;			/**< Lighting enabled flag */
+   GLboolean ColorMaterialEnabled;
+
    GLenum ShadeModel;			/**< GL_FLAT or GL_SMOOTH */
    GLenum ProvokingVertex;              /**< GL_EXT_provoking_vertex */
    GLenum ColorMaterialFace;		/**< GL_FRONT, BACK or FRONT_AND_BACK */
    GLenum ColorMaterialMode;		/**< GL_AMBIENT, GL_DIFFUSE, etc */
    GLbitfield _ColorMaterialBitmask;	/**< bitmask formed from Face and Mode */
-   GLboolean ColorMaterialEnabled;
-   GLenum ClampVertexColor;             /**< GL_TRUE, GL_FALSE, GL_FIXED_ONLY */
-   GLboolean _ClampVertexColor;
 
-   struct gl_light EnabledList;         /**< List sentinel */
+
+   GLboolean _ClampVertexColor;
+   GLenum ClampVertexColor;             /**< GL_TRUE, GL_FALSE, GL_FIXED_ONLY */
 
    /** 
     * Derived state for optimizations: 
@@ -864,6 +865,8 @@ struct gl_light_attrib
    /*@{*/
    GLboolean _NeedEyeCoords;		
    GLboolean _NeedVertices;		/**< Use fast shader? */
+   struct gl_light EnabledList;         /**< List sentinel */
+
    GLfloat _BaseColor[2][3];
    /*@}*/
 };
