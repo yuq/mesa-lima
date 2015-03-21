@@ -599,11 +599,11 @@ NineDevice9_SetCursorProperties( struct NineDevice9 *This,
                                  UINT YHotSpot,
                                  IDirect3DSurface9 *pCursorBitmap )
 {
-    /* TODO: hardware cursor */
     struct NineSurface9 *surf = NineSurface9(pCursorBitmap);
     struct pipe_context *pipe = This->pipe;
     struct pipe_box box;
     struct pipe_transfer *transfer;
+    BOOL hw_cursor;
     void *ptr;
 
     DBG_FLAG(DBG_SWAPCHAIN, "This=%p XHotSpot=%u YHotSpot=%u "
@@ -613,6 +613,7 @@ NineDevice9_SetCursorProperties( struct NineDevice9 *This,
 
     This->cursor.w = MIN2(surf->desc.Width, This->cursor.image->width0);
     This->cursor.h = MIN2(surf->desc.Height, This->cursor.image->height0);
+    hw_cursor = This->cursor.w == 32 && This->cursor.h == 32;
 
     u_box_origin_2d(This->cursor.w, This->cursor.h, &box);
 
@@ -643,15 +644,20 @@ NineDevice9_SetCursorProperties( struct NineDevice9 *This,
                                  lock.pBits, lock.Pitch,
                                  This->cursor.w, This->cursor.h);
 
-        if (!This->cursor.software &&
-            This->cursor.w == 32 && This->cursor.h == 32)
-            ID3DPresent_SetCursor(This->swapchains[0]->present,
-                                  lock.pBits, &This->cursor.hotspot,
-                                  This->cursor.visible);
+        if (hw_cursor)
+            hw_cursor = ID3DPresent_SetCursor(This->swapchains[0]->present,
+                                              lock.pBits,
+                                              &This->cursor.hotspot,
+                                              This->cursor.visible) == D3D_OK;
 
         NineSurface9_UnlockRect(surf);
     }
     pipe->transfer_unmap(pipe, transfer);
+
+    /* hide cursor if we emulate it */
+    if (!hw_cursor)
+        ID3DPresent_SetCursor(This->swapchains[0]->present, NULL, NULL, FALSE);
+    This->cursor.software = !hw_cursor;
 
     return D3D_OK;
 }
