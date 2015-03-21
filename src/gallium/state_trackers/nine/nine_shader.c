@@ -2493,8 +2493,8 @@ DECL_SPECIAL(TEXLDD)
         tx_src_param(tx, &tx->insn.src[2]),
         tx_src_param(tx, &tx->insn.src[3])
     };
-    assert(tx->insn.src[3].idx >= 0 &&
-           tx->insn.src[3].idx < Elements(tx->sampler_targets));
+    assert(tx->insn.src[1].idx >= 0 &&
+           tx->insn.src[1].idx < Elements(tx->sampler_targets));
     target = tx->sampler_targets[tx->insn.src[1].idx];
 
     ureg_TXD(tx->ureg, dst, target, src[0], src[2], src[3], src[1]);
@@ -2509,8 +2509,8 @@ DECL_SPECIAL(TEXLDL)
        tx_src_param(tx, &tx->insn.src[0]),
        tx_src_param(tx, &tx->insn.src[1])
     };
-    assert(tx->insn.src[3].idx >= 0 &&
-           tx->insn.src[3].idx < Elements(tx->sampler_targets));
+    assert(tx->insn.src[1].idx >= 0 &&
+           tx->insn.src[1].idx < Elements(tx->sampler_targets));
     target = tx->sampler_targets[tx->insn.src[1].idx];
 
     ureg_TXL(tx->ureg, dst, target, src[0], src[1]);
