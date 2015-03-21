@@ -64,3 +64,5 @@ if HAVE_EGL_PLATFORM_DRM
 libegl_dri2_la_SOURCES += platform_drm.c
 AM_CFLAGS += -DHAVE_DRM_PLATFORM
 endif
+
+EXTRA_DIST = SConscript
