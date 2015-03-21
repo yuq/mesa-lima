@@ -196,6 +196,9 @@ clGetDeviceInfo(cl_device_id d_dev, cl_device_info param,
       break;
 
    case CL_DEVICE_MEM_BASE_ADDR_ALIGN:
+      buf.as_scalar<cl_uint>() = 128 * 8;
+      break;
+
    case CL_DEVICE_MIN_DATA_TYPE_ALIGN_SIZE:
       buf.as_scalar<cl_uint>() = 128;
       break;
