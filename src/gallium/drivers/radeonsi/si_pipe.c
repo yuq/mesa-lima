@@ -398,8 +398,12 @@ static int si_get_shader_param(struct pipe_screen* pscreen, unsigned shader, enu
 			return max_const_buffer_size;
 		}
 		default:
-			return 0;
+			/* If compute shaders don't require a special value
+			 * for this cap, we can return the same value we
+			 * do for other shader types. */
+			break;
 		}
+		break;
 	default:
 		/* TODO: support tessellation */
 		return 0;
