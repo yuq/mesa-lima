@@ -301,7 +301,13 @@ clGetDeviceInfo(cl_device_id d_dev, cl_device_info param,
       break;
 
    case CL_DEVICE_EXTENSIONS:
-      buf.as_string() = dev.has_doubles() ? "cl_khr_fp64" : "";
+      buf.as_string() =
+         "cl_khr_global_int32_base_atomics"
+         " cl_khr_global_int32_extended_atomics"
+         " cl_khr_local_int32_base_atomics"
+         " cl_khr_local_int32_extended_atomics"
+         " cl_khr_byte_addressable_store"
+         + std::string(dev.has_doubles() ? " cl_khr_fp64" : "");
       break;
 
    case CL_DEVICE_PLATFORM:
