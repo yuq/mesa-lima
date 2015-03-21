@@ -682,7 +682,7 @@ NineDevice9_SetCursorPosition( struct NineDevice9 *This,
     This->cursor.pos.y = Y;
 
     if (!This->cursor.software)
-        ID3DPresent_SetCursorPos(swap->present, &This->cursor.pos);
+        This->cursor.software = ID3DPresent_SetCursorPos(swap->present, &This->cursor.pos) != D3D_OK;
 }
 
 BOOL WINAPI
@@ -695,7 +695,7 @@ NineDevice9_ShowCursor( struct NineDevice9 *This,
 
     This->cursor.visible = bShow && (This->cursor.hotspot.x != -1);
     if (!This->cursor.software)
-        ID3DPresent_SetCursor(This->swapchains[0]->present, NULL, NULL, bShow);
+        This->cursor.software = ID3DPresent_SetCursor(This->swapchains[0]->present, NULL, NULL, bShow) != D3D_OK;
 
     return old;
 }
