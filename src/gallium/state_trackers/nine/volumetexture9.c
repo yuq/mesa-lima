@@ -90,6 +90,9 @@ NineVolumeTexture9_ctor( struct NineVolumeTexture9 *This,
             PIPE_BIND_TRANSFER_READ |
             PIPE_BIND_TRANSFER_WRITE;
     }
+    if (Usage & D3DUSAGE_SOFTWAREPROCESSING)
+        DBG("Application asked for Software Vertex Processing, "
+            "but this is unimplemented\n");
 
     This->volumes = CALLOC(info->last_level + 1, sizeof(*This->volumes));
     if (!This->volumes)

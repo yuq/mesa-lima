@@ -199,6 +199,11 @@ NineDevice9_ctor( struct NineDevice9 *This,
     if (!(This->params.BehaviorFlags & D3DCREATE_FPU_PRESERVE))
         nine_setup_fpu();
 
+    if (This->params.BehaviorFlags & D3DCREATE_SOFTWARE_VERTEXPROCESSING)
+        DBG("Application asked full Software Vertex Processing. Ignoring.\n");
+    if (This->params.BehaviorFlags & D3DCREATE_MIXED_VERTEXPROCESSING)
+        DBG("Application asked mixed Software Vertex Processing. Ignoring.\n");
+
     This->pipe = This->screen->context_create(This->screen, NULL);
     if (!This->pipe) { return E_OUTOFMEMORY; } /* guess */
 

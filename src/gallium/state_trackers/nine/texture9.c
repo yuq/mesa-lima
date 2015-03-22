@@ -125,6 +125,11 @@ NineTexture9_ctor( struct NineTexture9 *This,
             PIPE_BIND_TRANSFER_READ |
             PIPE_BIND_TRANSFER_WRITE;
     }
+
+    if (Usage & D3DUSAGE_SOFTWAREPROCESSING)
+        DBG("Application asked for Software Vertex Processing, "
+            "but this is unimplemented\n");
+
     if (pSharedHandle)
         info->bind |= PIPE_BIND_SHARED;
 
