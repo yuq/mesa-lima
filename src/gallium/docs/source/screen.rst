@@ -462,6 +462,12 @@ get_vendor
 
 Returns the screen vendor.
 
+get_device_vendor
+^^^^^^^^^^^^^^^^^
+
+Returns the actual vendor of the device driving the screen
+(as opposed to the driver vendor).
+
 .. _get_param:
 
 get_param

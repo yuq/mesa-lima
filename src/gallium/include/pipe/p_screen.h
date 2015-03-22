@@ -72,6 +72,14 @@ struct pipe_screen {
    const char *(*get_vendor)( struct pipe_screen * );
 
    /**
+    * Returns the device vendor.
+    *
+    * The returned value should return the actual device vendor/manufacturer,
+    * rather than a potentially generic driver string.
+    */
+   const char *(*get_device_vendor)( struct pipe_screen * );
+
+   /**
     * Query an integer-valued capability/parameter/limit
     * \param param  one of PIPE_CAP_x
     */
