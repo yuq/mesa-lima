@@ -95,6 +95,13 @@ fd_screen_get_vendor(struct pipe_screen *pscreen)
 	return "freedreno";
 }
 
+static const char *
+fd_screen_get_device_vendor(struct pipe_screen *pscreen)
+{
+	return "Qualcomm";
+}
+
+
 static uint64_t
 fd_screen_get_timestamp(struct pipe_screen *pscreen)
 {
@@ -531,6 +538,7 @@ fd_screen_create(struct fd_device *dev)
 
 	pscreen->get_name = fd_screen_get_name;
 	pscreen->get_vendor = fd_screen_get_vendor;
+	pscreen->get_device_vendor = fd_screen_get_device_vendor;
 
 	pscreen->get_timestamp = fd_screen_get_timestamp;
 

@@ -332,6 +332,11 @@ static const char* r600_get_vendor(struct pipe_screen* pscreen)
 	return "X.Org";
 }
 
+static const char* r600_get_device_vendor(struct pipe_screen* pscreen)
+{
+	return "AMD";
+}
+
 static const char* r600_get_name(struct pipe_screen* pscreen)
 {
 	struct r600_common_screen *rscreen = (struct r600_common_screen*)pscreen;
@@ -825,6 +830,7 @@ bool r600_common_screen_init(struct r600_common_screen *rscreen,
 
 	rscreen->b.get_name = r600_get_name;
 	rscreen->b.get_vendor = r600_get_vendor;
+	rscreen->b.get_device_vendor = r600_get_device_vendor;
 	rscreen->b.get_compute_param = r600_get_compute_param;
 	rscreen->b.get_paramf = r600_get_paramf;
 	rscreen->b.get_driver_query_info = r600_get_driver_query_info;

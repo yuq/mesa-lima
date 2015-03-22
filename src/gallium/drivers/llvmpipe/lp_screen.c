@@ -589,6 +589,7 @@ llvmpipe_create_screen(struct sw_winsys *winsys)
 
    screen->base.get_name = llvmpipe_get_name;
    screen->base.get_vendor = llvmpipe_get_vendor;
+   screen->base.get_device_vendor = llvmpipe_get_vendor; // TODO should be the CPU vendor
    screen->base.get_param = llvmpipe_get_param;
    screen->base.get_shader_param = llvmpipe_get_shader_param;
    screen->base.get_paramf = llvmpipe_get_paramf;

@@ -515,6 +515,12 @@ ilo_get_vendor(struct pipe_screen *screen)
 }
 
 static const char *
+ilo_get_device_vendor(struct pipe_screen *screen)
+{
+   return "Intel";
+}
+
+static const char *
 ilo_get_name(struct pipe_screen *screen)
 {
    struct ilo_screen *is = ilo_screen(screen);
@@ -844,6 +850,7 @@ ilo_screen_create(struct intel_winsys *ws)
    is->base.destroy = ilo_screen_destroy;
    is->base.get_name = ilo_get_name;
    is->base.get_vendor = ilo_get_vendor;
+   is->base.get_device_vendor = ilo_get_device_vendor;
    is->base.get_param = ilo_get_param;
    is->base.get_paramf = ilo_get_paramf;
    is->base.get_shader_param = ilo_get_shader_param;

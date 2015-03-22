@@ -472,6 +472,7 @@ vc4_screen_create(int fd)
 
         pscreen->get_name = vc4_screen_get_name;
         pscreen->get_vendor = vc4_screen_get_vendor;
+        pscreen->get_device_vendor = vc4_screen_get_vendor;
 
         return pscreen;
 }

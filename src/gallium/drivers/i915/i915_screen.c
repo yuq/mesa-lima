@@ -55,6 +55,12 @@ i915_get_vendor(struct pipe_screen *screen)
 }
 
 static const char *
+i915_get_device_vendor(struct pipe_screen *screen)
+{
+   return "Intel";
+}
+
+static const char *
 i915_get_name(struct pipe_screen *screen)
 {
    static char buffer[128];
@@ -548,6 +554,7 @@ i915_screen_create(struct i915_winsys *iws)
 
    is->base.get_name = i915_get_name;
    is->base.get_vendor = i915_get_vendor;
+   is->base.get_device_vendor = i915_get_device_vendor;
    is->base.get_param = i915_get_param;
    is->base.get_shader_param = i915_get_shader_param;
    is->base.get_paramf = i915_get_paramf;
