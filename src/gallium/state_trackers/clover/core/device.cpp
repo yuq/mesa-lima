@@ -192,7 +192,7 @@ device::device_name() const {
 
 std::string
 device::vendor_name() const {
-   return pipe->get_vendor(pipe);
+   return pipe->get_device_vendor(pipe);
 }
 
 enum pipe_shader_ir
