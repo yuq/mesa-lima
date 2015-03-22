@@ -611,9 +611,15 @@ NineDevice9_SetCursorProperties( struct NineDevice9 *This,
 
     user_assert(pCursorBitmap, D3DERR_INVALIDCALL);
 
-    This->cursor.w = MIN2(surf->desc.Width, This->cursor.image->width0);
-    This->cursor.h = MIN2(surf->desc.Height, This->cursor.image->height0);
-    hw_cursor = This->cursor.w == 32 && This->cursor.h == 32;
+    if (This->swapchains[0]->params.Windowed) {
+        This->cursor.w = MIN2(surf->desc.Width, 32);
+        This->cursor.h = MIN2(surf->desc.Height, 32);
+        hw_cursor = 1; /* always use hw cursor for windowed mode */
+    } else {
+        This->cursor.w = MIN2(surf->desc.Width, This->cursor.image->width0);
+        This->cursor.h = MIN2(surf->desc.Height, This->cursor.image->height0);
+        hw_cursor = This->cursor.w == 32 && This->cursor.h == 32;
+    }
 
     u_box_origin_2d(This->cursor.w, This->cursor.h, &box);
 
