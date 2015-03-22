@@ -147,7 +147,7 @@ struct pipe_screen {
     */
    boolean (*can_create_resource)(struct pipe_screen *screen,
                                   const struct pipe_resource *templat);
-                               
+
    /**
     * Create a new texture object, using the given template info.
     */
