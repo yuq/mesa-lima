@@ -658,6 +658,11 @@ brw_process_driconf_options(struct brw_context *brw)
       driQueryOptionb(options, "allow_glsl_extension_directive_midshader");
 }
 
+/* drop when libdrm 2.4.61 is released */
+#ifndef I915_PARAM_REVISION
+#define I915_PARAM_REVISION 32
+#endif
+
 static int
 brw_get_revision(int fd)
 {
