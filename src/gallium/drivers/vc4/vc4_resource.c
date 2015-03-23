@@ -373,13 +373,13 @@ vc4_resource_create(struct pipe_screen *pscreen,
                 rsc->tiled = true;
         }
 
+        if (tmpl->target != PIPE_BUFFER)
+                rsc->vc4_format = get_resource_texture_format(prsc);
+
         vc4_setup_slices(rsc);
         vc4_resource_bo_alloc(rsc);
         if (!rsc->bo)
                 goto fail;
-
-        if (tmpl->target != PIPE_BUFFER)
-                rsc->vc4_format = get_resource_texture_format(prsc);
 
         return prsc;
 fail:
