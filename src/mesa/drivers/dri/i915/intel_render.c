@@ -67,42 +67,42 @@
 #define HAVE_ELTS        0
 
 static const uint32_t hw_prim[GL_POLYGON + 1] = {
-   0,
-   PRIM3D_LINELIST,
-   PRIM3D_LINESTRIP,
-   PRIM3D_LINESTRIP,
-   PRIM3D_TRILIST,
-   PRIM3D_TRISTRIP,
-   PRIM3D_TRIFAN,
-   0,
-   0,
-   PRIM3D_POLY
+   [GL_POINTS] = 0,
+   [GL_LINES ] = PRIM3D_LINELIST,
+   [GL_LINE_LOOP] = PRIM3D_LINESTRIP,
+   [GL_LINE_STRIP] = PRIM3D_LINESTRIP,
+   [GL_TRIANGLES] = PRIM3D_TRILIST,
+   [GL_TRIANGLE_STRIP] = PRIM3D_TRISTRIP,
+   [GL_TRIANGLE_FAN] = PRIM3D_TRIFAN,
+   [GL_QUADS] = 0,
+   [GL_QUAD_STRIP] = 0,
+   [GL_POLYGON] = PRIM3D_POLY,
 };
 
 static const GLenum reduced_prim[GL_POLYGON + 1] = {
-   GL_POINTS,
-   GL_LINES,
-   GL_LINES,
-   GL_LINES,
-   GL_TRIANGLES,
-   GL_TRIANGLES,
-   GL_TRIANGLES,
-   GL_TRIANGLES,
-   GL_TRIANGLES,
-   GL_TRIANGLES
+   [GL_POINTS] = GL_POINTS,
+   [GL_LINES] = GL_LINES,
+   [GL_LINE_LOOP] = GL_LINES,
+   [GL_LINE_STRIP] = GL_LINES,
+   [GL_TRIANGLES] = GL_TRIANGLES,
+   [GL_TRIANGLE_STRIP] = GL_TRIANGLES,
+   [GL_TRIANGLE_FAN] = GL_TRIANGLES,
+   [GL_QUADS] = GL_TRIANGLES,
+   [GL_QUAD_STRIP] = GL_TRIANGLES,
+   [GL_POLYGON] = GL_TRIANGLES,
 };
 
 static const int scale_prim[GL_POLYGON + 1] = {
-   0,                           /* fallback case */
-   1,
-   2,
-   2,
-   1,
-   3,
-   3,
-   0,                           /* fallback case */
-   0,                           /* fallback case */
-   3
+   [GL_POINTS] = 0,             /* fallback case */
+   [GL_LINES] = 1,
+   [GL_LINE_LOOP] = 2,
+   [GL_LINE_STRIP] = 2,
+   [GL_TRIANGLES] = 1,
+   [GL_TRIANGLE_STRIP] = 3,
+   [GL_TRIANGLE_FAN] = 3,
+   [GL_QUADS] = 0,              /* fallback case */
+   [GL_QUAD_STRIP] = 0,         /* fallback case */
+   [GL_POLYGON] = 3,
 };
 
 
