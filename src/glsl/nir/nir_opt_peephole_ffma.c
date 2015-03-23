@@ -38,6 +38,41 @@ struct peephole_ffma_state {
    bool progress;
 };
 
+static inline bool
+are_all_uses_fadd(nir_ssa_def *def)
+{
+   if (def->if_uses->entries > 0)
+      return false;
+
+   struct set_entry *use_iter;
+   set_foreach(def->uses, use_iter) {
+      nir_instr *use_instr = (nir_instr *)use_iter->key;
+
+      if (use_instr->type != nir_instr_type_alu)
+         return false;
+
+      nir_alu_instr *use_alu = nir_instr_as_alu(use_instr);
+      switch (use_alu->op) {
+      case nir_op_fadd:
+         break; /* This one's ok */
+
+      case nir_op_imov:
+      case nir_op_fmov:
+      case nir_op_fneg:
+      case nir_op_fabs:
+         assert(use_alu->dest.dest.is_ssa);
+         if (!are_all_uses_fadd(&use_alu->dest.dest.ssa))
+            return false;
+         break;
+
+      default:
+         return false;
+      }
+   }
+
+   return true;
+}
+
 static nir_alu_instr *
 get_mul_for_src(nir_alu_src *src, uint8_t swizzle[4], bool *negate, bool *abs)
 {
@@ -66,6 +101,12 @@ get_mul_for_src(nir_alu_src *src, uint8_t swizzle[4], bool *negate, bool *abs)
       break;
 
    case nir_op_fmul:
+      /* Only absorbe a fmul into a ffma if the fmul is is only used in fadd
+       * operations.  This prevents us from being too agressive with our
+       * fusing which can actually lead to more instructions.
+       */
+      if (!are_all_uses_fadd(&alu->dest.dest.ssa))
+         return NULL;
       break;
 
    default:
