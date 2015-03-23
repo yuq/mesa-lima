@@ -502,15 +502,15 @@ fs_visitor::try_emit_b2f_of_comparison(ir_expression *ir)
     *     and(16)         g4<1>D          g2<8,8,1>D      1D
     *     and(16)         m6<1>D          -g4<8,8,1>D     0x3f800000UD
     *
-    * When the comparison is either == 0.0 or != 0.0 using the knowledge that
-    * the true (or false) case already results in zero would allow better code
-    * generation by possibly avoiding a load-immediate instruction.
+    * When the comparison is != 0.0 using the knowledge that the false case
+    * already results in zero would allow better code generation by possibly
+    * avoiding a load-immediate instruction.
     */
    ir_expression *cmp = ir->operands[0]->as_expression();
    if (cmp == NULL)
       return false;
 
-   if (cmp->operation == ir_binop_equal || cmp->operation == ir_binop_nequal) {
+   if (cmp->operation == ir_binop_nequal) {
       for (unsigned i = 0; i < 2; i++) {
          ir_constant *c = cmp->operands[i]->as_constant();
          if (c == NULL || !c->is_zero())
@@ -538,7 +538,7 @@ fs_visitor::try_emit_b2f_of_comparison(ir_expression *ir)
 
             fs_inst *inst = emit(SEL(this->result, op[i ^ 1], fs_reg(1.0f)));
             inst->predicate = BRW_PREDICATE_NORMAL;
-            inst->predicate_inverse = cmp->operation == ir_binop_equal;
+            inst->predicate_inverse = true;
             return true;
          }
       }
