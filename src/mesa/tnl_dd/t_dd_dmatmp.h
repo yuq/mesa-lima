@@ -316,7 +316,8 @@ static void TAG(render_poly_verts)(struct gl_context *ctx,
       }
 
       FLUSH();
-   } else if (ctx->Light.ShadeModel == GL_SMOOTH) {
+   } else if (ctx->Light.ShadeModel == GL_SMOOTH ||
+              ctx->Light.ProvokingVertex == GL_FIRST_VERTEX_CONVENTION) {
       TAG(render_tri_fan_verts)( ctx, start, count, flags );
    } else {
       unreachable("Cannot draw primitive; validate_render should have "
@@ -458,7 +459,8 @@ static bool TAG(validate_render)(struct gl_context *ctx,
          ok = true;
          break;
       case GL_POLYGON:
-         ok = (HAVE_POLYGONS) || ctx->Light.ShadeModel == GL_SMOOTH;
+         ok = (HAVE_POLYGONS) || ctx->Light.ShadeModel == GL_SMOOTH ||
+              ctx->Light.ProvokingVertex == GL_FIRST_VERTEX_CONVENTION;
          break;
       case GL_QUAD_STRIP:
          ok = VB->Elts ||
