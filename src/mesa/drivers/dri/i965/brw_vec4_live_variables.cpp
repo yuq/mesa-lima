@@ -76,10 +76,13 @@ vec4_live_variables::setup_def_use()
 	 /* Set use[] for this instruction */
 	 for (unsigned int i = 0; i < 3; i++) {
 	    if (inst->src[i].file == GRF) {
-               for (int c = 0; c < 4; c++) {
-                  const unsigned v = var_from_reg(alloc, inst->src[i], c);
-                  if (!BITSET_TEST(bd->def, v))
-                     BITSET_SET(bd->use, v);
+               for (unsigned j = 0; j < inst->regs_read(i); j++) {
+                  for (int c = 0; c < 4; c++) {
+                     const unsigned v =
+                        var_from_reg(alloc, offset(inst->src[i], j), c);
+                     if (!BITSET_TEST(bd->def, v))
+                        BITSET_SET(bd->use, v);
+                  }
                }
 	    }
 	 }
@@ -93,14 +96,15 @@ vec4_live_variables::setup_def_use()
 	  * are the things that screen off preceding definitions of a
 	  * variable, and thus qualify for being in def[].
 	  */
-	 if (inst->dst.file == GRF &&
-	     alloc.sizes[inst->dst.reg] == 1 &&
-	     !inst->predicate) {
-            for (int c = 0; c < 4; c++) {
-               if (inst->dst.writemask & (1 << c)) {
-                  const unsigned v = var_from_reg(alloc, inst->dst, c);
-                  if (!BITSET_TEST(bd->use, v))
-                     BITSET_SET(bd->def, v);
+	 if (inst->dst.file == GRF && !inst->predicate) {
+            for (unsigned i = 0; i < inst->regs_written; i++) {
+               for (int c = 0; c < 4; c++) {
+                  if (inst->dst.writemask & (1 << c)) {
+                     const unsigned v =
+                        var_from_reg(alloc, offset(inst->dst, i), c);
+                     if (!BITSET_TEST(bd->use, v))
+                        BITSET_SET(bd->def, v);
+                  }
                }
             }
          }
@@ -179,7 +183,7 @@ vec4_live_variables::vec4_live_variables(const simple_allocator &alloc,
 {
    mem_ctx = ralloc_context(NULL);
 
-   num_vars = alloc.count * 4;
+   num_vars = alloc.total_size * 4;
    block_data = rzalloc_array(mem_ctx, struct block_data, cfg->num_blocks);
 
    bitset_words = BITSET_WORDS(num_vars);
@@ -229,14 +233,14 @@ vec4_visitor::calculate_live_intervals()
    if (this->live_intervals)
       return;
 
-   int *start = ralloc_array(mem_ctx, int, this->alloc.count * 4);
-   int *end = ralloc_array(mem_ctx, int, this->alloc.count * 4);
+   int *start = ralloc_array(mem_ctx, int, this->alloc.total_size * 4);
+   int *end = ralloc_array(mem_ctx, int, this->alloc.total_size * 4);
    ralloc_free(this->virtual_grf_start);
    ralloc_free(this->virtual_grf_end);
    this->virtual_grf_start = start;
    this->virtual_grf_end = end;
 
-   for (unsigned i = 0; i < this->alloc.count * 4; i++) {
+   for (unsigned i = 0; i < this->alloc.total_size * 4; i++) {
       start[i] = MAX_INSTRUCTION;
       end[i] = -1;
    }
@@ -248,20 +252,26 @@ vec4_visitor::calculate_live_intervals()
    foreach_block_and_inst(block, vec4_instruction, inst, cfg) {
       for (unsigned int i = 0; i < 3; i++) {
 	 if (inst->src[i].file == GRF) {
-            for (int c = 0; c < 4; c++) {
-               const unsigned v = var_from_reg(alloc, inst->src[i], c);
-               start[v] = MIN2(start[v], ip);
-               end[v] = ip;
+            for (unsigned j = 0; j < inst->regs_read(i); j++) {
+               for (int c = 0; c < 4; c++) {
+                  const unsigned v =
+                     var_from_reg(alloc, offset(inst->src[i], j), c);
+                  start[v] = MIN2(start[v], ip);
+                  end[v] = ip;
+               }
             }
 	 }
       }
 
       if (inst->dst.file == GRF) {
-         for (int c = 0; c < 4; c++) {
-            if (inst->dst.writemask & (1 << c)) {
-               const unsigned v = var_from_reg(alloc, inst->dst, c);
-               start[v] = MIN2(start[v], ip);
-               end[v] = ip;
+         for (unsigned i = 0; i < inst->regs_written; i++) {
+            for (int c = 0; c < 4; c++) {
+               if (inst->dst.writemask & (1 << c)) {
+                  const unsigned v =
+                     var_from_reg(alloc, offset(inst->dst, i), c);
+                  start[v] = MIN2(start[v], ip);
+                  end[v] = ip;
+               }
             }
          }
       }
@@ -325,8 +335,8 @@ vec4_visitor::var_range_end(unsigned v, unsigned n) const
 bool
 vec4_visitor::virtual_grf_interferes(int a, int b)
 {
-   return !((var_range_end(4 * a, 4) <=
-             var_range_start(4 * b, 4)) ||
-            (var_range_end(4 * b, 4) <=
-             var_range_start(4 * a, 4)));
+   return !((var_range_end(4 * alloc.offsets[a], 4 * alloc.sizes[a]) <=
+             var_range_start(4 * alloc.offsets[b], 4 * alloc.sizes[b])) ||
+            (var_range_end(4 * alloc.offsets[b], 4 * alloc.sizes[b]) <=
+             var_range_start(4 * alloc.offsets[a], 4 * alloc.sizes[a])));
 }
