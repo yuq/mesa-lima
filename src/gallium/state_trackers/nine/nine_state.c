@@ -225,9 +225,6 @@ update_vertex_elements(struct NineDevice9 *device)
     memset(used_streams, 0, device->caps.MaxStreams);
     vs = device->state.vs ? device->state.vs : device->ff.vs;
 
-    if (!vdecl) /* no inputs */
-        return;
-
     if (vdecl) {
         for (n = 0; n < vs->num_inputs; ++n) {
             DBG("looking up input %u (usage %u) from vdecl(%p)\n",
