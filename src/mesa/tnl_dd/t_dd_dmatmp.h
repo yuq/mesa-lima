@@ -370,28 +370,33 @@ static void TAG(render_quads_verts)(struct gl_context *ctx,
                                     GLuint count,
                                     GLuint flags)
 {
-   LOCAL_VARS;
-   GLuint j;
+   if (ctx->Light.ShadeModel == GL_SMOOTH ||
+       ctx->Light.ProvokingVertex == GL_LAST_VERTEX_CONVENTION) {
+      LOCAL_VARS;
+      GLuint j;
 
-   /* Emit whole number of quads in total. */
-   count -= count & 3;
+      /* Emit whole number of quads in total. */
+      count -= count & 3;
 
-   /* Hardware doesn't have a quad primitive type -- try to simulate it using
-    * triangle primitive.  This is a win for gears, but is it useful in the
-    * broader world?
-    */
-   INIT(GL_TRIANGLES);
-
-   for (j = 0; j + 3 < count; j += 4) {
-      void *tmp = ALLOC_VERTS(6);
-      /* Send v0, v1, v3
+      /* Hardware doesn't have a quad primitive type -- try to simulate it using
+       * triangle primitive.  This is a win for gears, but is it useful in the
+       * broader world?
        */
-      tmp = EMIT_VERTS(ctx, start + j,     2, tmp);
-      tmp = EMIT_VERTS(ctx, start + j + 3, 1, tmp);
-      /* Send v1, v2, v3
-       */
-      tmp = EMIT_VERTS(ctx, start + j + 1, 3, tmp);
-      (void) tmp;
+      INIT(GL_TRIANGLES);
+
+      for (j = 0; j + 3 < count; j += 4) {
+         void *tmp = ALLOC_VERTS(6);
+         /* Send v0, v1, v3
+          */
+         tmp = EMIT_VERTS(ctx, start + j,     2, tmp);
+         tmp = EMIT_VERTS(ctx, start + j + 3, 1, tmp);
+         /* Send v1, v2, v3
+          */
+         tmp = EMIT_VERTS(ctx, start + j + 1, 3, tmp);
+         (void) tmp;
+      }
+   } else {
+      unreachable("Cannot draw primitive");
    }
 }
 
@@ -465,7 +470,8 @@ static bool TAG(validate_render)(struct gl_context *ctx,
          ok = VB->Elts || ctx->Light.ShadeModel == GL_SMOOTH;
          break;
       case GL_QUADS:
-         ok = true; /* flatshading is ok. */
+         ok = ctx->Light.ShadeModel == GL_SMOOTH ||
+              ctx->Light.ProvokingVertex == GL_LAST_VERTEX_CONVENTION;
          break;
       default:
          break;
