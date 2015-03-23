@@ -928,10 +928,18 @@ intelFastRenderClippedPoly(struct gl_context * ctx, const GLuint * elts, GLuint 
    const GLuint *start = (const GLuint *) V(elts[0]);
    int i, j;
 
-   for (i = 2; i < n; i++) {
-      COPY_DWORDS(j, vb, vertsize, V(elts[i - 1]));
-      COPY_DWORDS(j, vb, vertsize, V(elts[i]));
-      COPY_DWORDS(j, vb, vertsize, start);
+   if (ctx->Light.ProvokingVertex == GL_LAST_VERTEX_CONVENTION) {
+      for (i = 2; i < n; i++) {
+         COPY_DWORDS(j, vb, vertsize, V(elts[i - 1]));
+         COPY_DWORDS(j, vb, vertsize, V(elts[i]));
+         COPY_DWORDS(j, vb, vertsize, start);
+      }
+   } else {
+      for (i = 2; i < n; i++) {
+         COPY_DWORDS(j, vb, vertsize, start);
+         COPY_DWORDS(j, vb, vertsize, V(elts[i - 1]));
+         COPY_DWORDS(j, vb, vertsize, V(elts[i]));
+      }
    }
 }
 
