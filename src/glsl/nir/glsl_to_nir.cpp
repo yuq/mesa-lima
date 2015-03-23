@@ -1210,6 +1210,9 @@ nir_visitor::visit(ir_expression *ir)
    case ir_binop_bit_and:
    case ir_binop_bit_or:
    case ir_binop_bit_xor:
+   case ir_binop_logic_and:
+   case ir_binop_logic_or:
+   case ir_binop_logic_xor:
    case ir_binop_lshift:
    case ir_binop_rshift:
       switch (ir->operation) {
@@ -1269,6 +1272,24 @@ nir_visitor::visit(ir_expression *ir)
          break;
       case ir_binop_bit_xor:
          op = nir_op_ixor;
+         break;
+      case ir_binop_logic_and:
+         if (supports_ints)
+            op = nir_op_iand;
+         else
+            op = nir_op_fand;
+         break;
+      case ir_binop_logic_or:
+         if (supports_ints)
+            op = nir_op_ior;
+         else
+            op = nir_op_for;
+         break;
+      case ir_binop_logic_xor:
+         if (supports_ints)
+            op - nir_op_ixor;
+         else
+            op = nir_op_fxor;
          break;
       case ir_binop_lshift:
          op = nir_op_ishl;
@@ -1443,24 +1464,6 @@ nir_visitor::visit(ir_expression *ir)
                unreachable("not reached");
          }
       }
-      break;
-   case ir_binop_logic_and:
-      if (supports_ints)
-         emit(nir_op_iand, dest_size, srcs);
-      else
-         emit(nir_op_fand, dest_size, srcs);
-      break;
-   case ir_binop_logic_or:
-      if (supports_ints)
-         emit(nir_op_ior, dest_size, srcs);
-      else
-         emit(nir_op_for, dest_size, srcs);
-      break;
-   case ir_binop_logic_xor:
-      if (supports_ints)
-         emit(nir_op_ixor, dest_size, srcs);
-      else
-         emit(nir_op_fxor, dest_size, srcs);
       break;
    case ir_binop_dot:
       switch (ir->operands[0]->type->vector_elements) {
