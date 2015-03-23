@@ -66,7 +66,7 @@
 
 #define HAVE_ELTS        0
 
-static uint32_t hw_prim[GL_POLYGON + 1] = {
+static const uint32_t hw_prim[GL_POLYGON + 1] = {
    0,
    PRIM3D_LINELIST,
    PRIM3D_LINESTRIP,
