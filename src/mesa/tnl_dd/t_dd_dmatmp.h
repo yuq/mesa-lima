@@ -409,7 +409,7 @@ static void TAG(render_noop)(struct gl_context *ctx,
    (void) flags;
 }
 
-static tnl_render_func TAG(render_tab_verts)[GL_POLYGON+2] =
+static const tnl_render_func TAG(render_tab_verts)[GL_POLYGON+2] =
 {
    TAG(render_points_verts),
    TAG(render_lines_verts),
