@@ -123,8 +123,17 @@ if test "x$INDENT" != "xcat"; then
 fi
 
 AX_CHECK_PYTHON_MAKO_MODULE($PYTHON_MAKO_REQUIRED)
-if test -n "$PYTHON2" -a "x$acv_mako_found" != "xyes"; then
-    AC_MSG_ERROR([Python mako module v$PYTHON_MAKO_REQUIRED or higher not found])
+
+if test -z "$PYTHON2"; then
+    if test ! -f "$srcdir/src/util/format_srgb.c"; then
+        AC_MSG_ERROR([Python not found - unable to generate sources])
+    fi
+else
+    if test "x$acv_mako_found" = xno; then
+        if test ! -f "$srcdir/src/mesa/main/format_unpack.c"; then
+            AC_MSG_ERROR([Python mako module v$PYTHON_MAKO_REQUIRED or higher not found])
+        fi
+    fi
 fi
 
 AC_PROG_INSTALL
