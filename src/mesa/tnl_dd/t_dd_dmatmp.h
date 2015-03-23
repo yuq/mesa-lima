@@ -332,8 +332,7 @@ static void TAG(render_quad_strip_verts)(struct gl_context *ctx,
 {
    GLuint j, nr;
 
-   if (ctx->Light.ShadeModel != GL_FLAT ||
-       !TNL_CONTEXT(ctx)->vb.AttribPtr[_TNL_ATTRIB_COLOR0]->stride) {
+   if (ctx->Light.ShadeModel == GL_SMOOTH) {
       LOCAL_VARS;
       const unsigned dmasz = GET_SUBSEQUENT_VB_MAX_VERTS() & ~1;
       unsigned currentsz;
@@ -463,9 +462,7 @@ static bool TAG(validate_render)(struct gl_context *ctx,
               ctx->Light.ProvokingVertex == GL_FIRST_VERTEX_CONVENTION;
          break;
       case GL_QUAD_STRIP:
-         ok = VB->Elts ||
-              (ctx->Light.ShadeModel != GL_FLAT ||
-               VB->AttribPtr[_TNL_ATTRIB_COLOR0]->stride == 0);
+         ok = VB->Elts || ctx->Light.ShadeModel == GL_SMOOTH;
          break;
       case GL_QUADS:
          ok = true; /* flatshading is ok. */
