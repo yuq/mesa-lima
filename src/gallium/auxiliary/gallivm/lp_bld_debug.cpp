@@ -276,12 +276,6 @@ disassemble(const void* func, llvm::raw_ostream & Out)
 #endif
    OwningPtr<TargetMachine> TM(T->createTargetMachine(Triple, sys::getHostCPUName(), "", options));
 
-#if HAVE_LLVM >= 0x0306
-   const TargetInstrInfo *TII = TM->getSubtargetImpl()->getInstrInfo();
-#else
-   const TargetInstrInfo *TII = TM->getInstrInfo();
-#endif
-
    /*
     * Wrap the data in a MemoryObject
     */
@@ -336,7 +330,7 @@ disassemble(const void* func, llvm::raw_ostream & Out)
 
       pc += Size;
 
-      const MCInstrDesc &TID = TII->get(Inst.getOpcode());
+      const MCInstrDesc &TID = MII->get(Inst.getOpcode());
 
       /*
        * Keep track of forward jumps to a nearby address.
