@@ -1779,6 +1779,12 @@ void brw_create_constant_surface(struct brw_context *brw,
                                  uint32_t size,
                                  uint32_t *out_offset,
                                  bool dword_pitch);
+void brw_create_buffer_surface(struct brw_context *brw,
+                               drm_intel_bo *bo,
+                               uint32_t offset,
+                               uint32_t size,
+                               uint32_t *out_offset,
+                               bool dword_pitch);
 void brw_update_buffer_texture_surface(struct gl_context *ctx,
                                        unsigned unit,
                                        uint32_t *surf_offset);
