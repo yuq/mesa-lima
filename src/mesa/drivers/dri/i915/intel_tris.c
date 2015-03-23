@@ -426,11 +426,7 @@ intel_draw_point(struct intel_context *intel, intelVertexPtr v0)
    GLuint *vb = intel_get_prim_space(intel, 1);
    int j;
 
-   /* Adjust for sub pixel position -- still required for conform. */
-   *(float *) &vb[0] = v0->v.x;
-   *(float *) &vb[1] = v0->v.y;
-   for (j = 2; j < vertsize; j++)
-      vb[j] = v0->ui[j];
+   COPY_DWORDS(j, vb, vertsize, v0);
 }
 
 
