@@ -891,31 +891,16 @@ intelRenderClippedPoly(struct gl_context * ctx, const GLuint * elts, GLuint n)
 {
    struct intel_context *intel = intel_context(ctx);
    TNLcontext *tnl = TNL_CONTEXT(ctx);
-   struct vertex_buffer *VB = &TNL_CONTEXT(ctx)->vb;
    GLuint prim = intel->render_primitive;
 
    /* Render the new vertices as an unclipped polygon.
     */
-   {
-      GLuint *tmp = VB->Elts;
-      VB->Elts = (GLuint *) elts;
-      tnl->Driver.Render.PrimTabElts[GL_POLYGON] (ctx, 0, n,
-                                                  PRIM_BEGIN | PRIM_END);
-      VB->Elts = tmp;
-   }
+   _tnl_RenderClippedPolygon(ctx, elts, n);
 
    /* Restore the render primitive
     */
    if (prim != GL_POLYGON)
       tnl->Driver.Render.PrimitiveNotify(ctx, prim);
-}
-
-static void
-intelRenderClippedLine(struct gl_context * ctx, GLuint ii, GLuint jj)
-{
-   TNLcontext *tnl = TNL_CONTEXT(ctx);
-
-   tnl->Driver.Render.Line(ctx, ii, jj);
 }
 
 static void
@@ -1044,7 +1029,7 @@ intelChooseRenderState(struct gl_context * ctx)
       else {
          tnl->Driver.Render.PrimTabVerts = _tnl_render_tab_verts;
          tnl->Driver.Render.PrimTabElts = _tnl_render_tab_elts;
-         tnl->Driver.Render.ClippedLine = intelRenderClippedLine;
+         tnl->Driver.Render.ClippedLine = _tnl_RenderClippedLine;
          tnl->Driver.Render.ClippedPolygon = intelRenderClippedPoly;
       }
    }
