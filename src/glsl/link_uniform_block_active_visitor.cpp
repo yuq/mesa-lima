@@ -44,6 +44,7 @@ process_block(void *mem_ctx, struct hash_table *ht, ir_variable *var)
 
       b->type = block_type;
       b->has_instance_name = var->is_interface_instance();
+      b->is_shader_storage = var->data.mode == ir_var_shader_storage;
 
       if (var->data.explicit_binding) {
          b->has_binding = true;
