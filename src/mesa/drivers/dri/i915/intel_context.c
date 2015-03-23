@@ -474,8 +474,8 @@ intelInitContext(struct intel_context *intel,
 
    ctx->Const.MinLineWidth = 1.0;
    ctx->Const.MinLineWidthAA = 1.0;
-   ctx->Const.MaxLineWidth = 5.0;
-   ctx->Const.MaxLineWidthAA = 5.0;
+   ctx->Const.MaxLineWidth = 7.0;
+   ctx->Const.MaxLineWidthAA = 7.0;
    ctx->Const.LineWidthGranularity = 0.5;
 
    ctx->Const.MinPointSize = 1.0;
