@@ -1077,15 +1077,6 @@ glsl_type::std140_base_alignment(bool row_major) const
       return base_alignment;
    }
 
-   /* A sampler may never occur in a UBO (without bindless of some sort),
-    * however it is convenient to use this alignment function even with
-    * regular uniforms. This allows use of this function on uniform structs
-    * that contain samplers.
-    */
-   if (this->is_sampler()) {
-      return 0;
-   }
-
    assert(!"not reached");
    return -1;
 }
