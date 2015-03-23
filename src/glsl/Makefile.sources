@@ -57,6 +57,7 @@ NIR_FILES = \
 	nir/nir_to_ssa.c \
 	nir/nir_types.h \
 	nir/nir_validate.c \
+	nir/nir_vla.h \
 	nir/nir_worklist.c \
 	nir/nir_worklist.h \
 	nir/nir_types.cpp \

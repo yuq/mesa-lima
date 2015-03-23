@@ -46,6 +46,7 @@ EXTRA_DIST = tests glcpp/tests README TODO glcpp/README	\
 	glcpp/glcpp-lex.l				\
 	glcpp/glcpp-parse.y				\
 	nir/nir_algebraic.py				\
+	nir/nir_builder_opcodes_h.py			\
 	nir/nir_constant_expressions.py			\
 	nir/nir_opcodes.py				\
 	nir/nir_opcodes_c.py				\
