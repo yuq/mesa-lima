@@ -52,8 +52,6 @@ nir_optimize(nir_shader *nir)
       nir_validate_shader(nir);
       progress |= nir_opt_algebraic(nir);
       nir_validate_shader(nir);
-      progress |= nir_opt_peephole_ffma(nir);
-      nir_validate_shader(nir);
       progress |= nir_opt_constant_folding(nir);
       nir_validate_shader(nir);
       progress |= nir_opt_remove_phis(nir);
@@ -148,6 +146,12 @@ fs_visitor::emit_nir_code()
    nir_validate_shader(nir);
 
    nir_optimize(nir);
+
+   if (brw->gen >= 6) {
+      /* Try and fuse multiply-adds */
+      nir_opt_peephole_ffma(nir);
+      nir_validate_shader(nir);
+   }
 
    nir_opt_algebraic_late(nir);
    nir_validate_shader(nir);

@@ -558,6 +558,11 @@ brw_initialize_context_constants(struct brw_context *brw)
 
    static const nir_shader_compiler_options gen6_nir_options = {
       .native_integers = true,
+      /* In order to help allow for better CSE at the NIR level we tell NIR
+       * to split all ffma instructions during opt_algebraic and we then
+       * re-combine them as a later step.
+       */
+      .lower_ffma = true,
    };
 
    /* We want the GLSL compiler to emit code that uses condition codes */
