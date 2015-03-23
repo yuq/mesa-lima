@@ -123,9 +123,7 @@ if test "x$INDENT" != "xcat"; then
 fi
 
 AX_CHECK_PYTHON_MAKO_MODULE($PYTHON_MAKO_REQUIRED)
-if test -n "$PYTHON2" -a "x$acv_mako_found" = "xyes"; then
-    AC_MSG_RESULT(yes)
-else
+if test -n "$PYTHON2" -a "x$acv_mako_found" != "xyes"; then
     AC_MSG_ERROR([Python mako module v$PYTHON_MAKO_REQUIRED or higher not found])
 fi
 
