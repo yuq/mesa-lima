@@ -64,6 +64,9 @@ i965_FILES = \
 	brw_gs_surface_state.c \
 	brw_inst.h \
 	brw_interpolation_map.c \
+	brw_ir_allocator.h \
+	brw_ir_fs.h \
+	brw_ir_vec4.h \
 	brw_lower_texture_gradients.cpp \
 	brw_lower_unnormalized_offset.cpp \
 	brw_meta_fast_clear.c \
