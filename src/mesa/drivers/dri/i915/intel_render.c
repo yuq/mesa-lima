@@ -54,9 +54,7 @@
  * dma buffers.  Use strip/fan hardware primitives where possible.
  * Try to simulate missing primitives with indexed vertices.
  */
-#define HAVE_POINTS      0      /* Has it, but can't use because subpixel has to
-                                 * be adjusted for points on the INTEL/I845G
-                                 */
+#define HAVE_POINTS      1
 #define HAVE_LINES       1
 #define HAVE_LINE_STRIPS 1
 #define HAVE_TRIANGLES   1
@@ -67,7 +65,7 @@
 #define HAVE_ELTS        0
 
 static const uint32_t hw_prim[GL_POLYGON + 1] = {
-   [GL_POINTS] = 0,
+   [GL_POINTS] = PRIM3D_POINTLIST,
    [GL_LINES ] = PRIM3D_LINELIST,
    [GL_LINE_LOOP] = PRIM3D_LINESTRIP,
    [GL_LINE_STRIP] = PRIM3D_LINESTRIP,
@@ -93,7 +91,7 @@ static const GLenum reduced_prim[GL_POLYGON + 1] = {
 };
 
 static const int scale_prim[GL_POLYGON + 1] = {
-   [GL_POINTS] = 0,             /* fallback case */
+   [GL_POINTS] = 1,
    [GL_LINES] = 1,
    [GL_LINE_LOOP] = 2,
    [GL_LINE_STRIP] = 2,
