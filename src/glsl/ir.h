@@ -142,39 +142,17 @@ public:
     * Additional downcast functions will be added as needed.
     */
    /*@{*/
-   class ir_rvalue *as_rvalue()
-   {
-      assume(this != NULL);
-      if (ir_type == ir_type_dereference_array ||
-          ir_type == ir_type_dereference_record ||
-          ir_type == ir_type_dereference_variable ||
-          ir_type == ir_type_constant ||
-          ir_type == ir_type_expression ||
-          ir_type == ir_type_swizzle ||
-          ir_type == ir_type_texture)
-         return (class ir_rvalue *) this;
-      return NULL;
+   #define AS_BASE(TYPE)                                \
+   class ir_##TYPE *as_##TYPE()                         \
+   {                                                    \
+      assume(this != NULL);                             \
+      return is_##TYPE() ? (ir_##TYPE *) this : NULL;   \
    }
 
-   class ir_dereference *as_dereference()
-   {
-      assume(this != NULL);
-      if (ir_type == ir_type_dereference_array ||
-          ir_type == ir_type_dereference_record ||
-          ir_type == ir_type_dereference_variable)
-         return (class ir_dereference *) this;
-      return NULL;
-   }
-
-   class ir_jump *as_jump()
-   {
-      assume(this != NULL);
-      if (ir_type == ir_type_loop_jump ||
-          ir_type == ir_type_return ||
-          ir_type == ir_type_discard)
-         return (class ir_jump *) this;
-      return NULL;
-   }
+   AS_BASE(rvalue)
+   AS_BASE(dereference)
+   AS_BASE(jump)
+   #undef AS_BASE
 
    #define AS_CHILD(TYPE) \
    class ir_##TYPE * as_##TYPE() \
