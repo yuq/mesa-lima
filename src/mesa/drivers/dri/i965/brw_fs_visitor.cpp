@@ -2003,7 +2003,7 @@ fs_visitor::emit_texture_gen7(ir_texture_opcode op, fs_reg dst,
 
    fs_reg src_payload = fs_reg(GRF, alloc.allocate(mlen),
                                BRW_REGISTER_TYPE_F);
-   emit(LOAD_PAYLOAD(src_payload, sources, length));
+   emit(LOAD_PAYLOAD(src_payload, sources, length, header_size));
 
    /* Generate the SEND */
    enum opcode opcode;
@@ -2170,7 +2170,7 @@ fs_visitor::emit_mcs_fetch(fs_reg coordinate, int components, fs_reg sampler)
       coordinate = offset(coordinate, 1);
    }
 
-   emit(LOAD_PAYLOAD(payload, sources, components));
+   emit(LOAD_PAYLOAD(payload, sources, components, 0));
 
    fs_inst *inst = emit(SHADER_OPCODE_TXF_MCS, dest, payload, sampler);
    inst->base_mrf = -1;
@@ -2280,7 +2280,7 @@ fs_visitor::emit_texture(ir_texture_opcode op,
             fixed_payload[i] = offset(dst, i);
          }
       }
-      emit(LOAD_PAYLOAD(dst, fixed_payload, components));
+      emit(LOAD_PAYLOAD(dst, fixed_payload, components, 0));
    }
 
    swizzle_result(op, dest_type->vector_elements, dst, sampler);
@@ -3296,7 +3296,7 @@ fs_visitor::emit_untyped_atomic(unsigned atomic_op, unsigned surf_index,
    int mlen = 1 + (length - 1) * reg_width;
    fs_reg src_payload = fs_reg(GRF, alloc.allocate(mlen),
                                BRW_REGISTER_TYPE_UD);
-   emit(LOAD_PAYLOAD(src_payload, sources, length));
+   emit(LOAD_PAYLOAD(src_payload, sources, length, 1));
 
    /* Emit the instruction. */
    fs_inst *inst = emit(SHADER_OPCODE_UNTYPED_ATOMIC, dst, src_payload,
@@ -3344,7 +3344,7 @@ fs_visitor::emit_untyped_surface_read(unsigned surf_index, fs_reg dst,
    int mlen = 1 + reg_width;
    fs_reg src_payload = fs_reg(GRF, alloc.allocate(mlen),
                                BRW_REGISTER_TYPE_UD);
-   fs_inst *inst = emit(LOAD_PAYLOAD(src_payload, sources, 2));
+   fs_inst *inst = emit(LOAD_PAYLOAD(src_payload, sources, 2, 1));
 
    /* Emit the instruction. */
    inst = emit(SHADER_OPCODE_UNTYPED_SURFACE_READ, dst, src_payload,
@@ -3727,7 +3727,7 @@ fs_visitor::emit_single_fb_write(fs_reg color0, fs_reg color1,
    brw_wm_prog_key *key = (brw_wm_prog_key*) this->key;
 
    this->current_annotation = "FB write header";
-   int header_size = 2;
+   int header_size = 2, payload_header_size;
    int reg_size = exec_size / 8;
 
    /* We can potentially have a message length of up to 15, so we have to set
@@ -3776,6 +3776,8 @@ fs_visitor::emit_single_fb_write(fs_reg color0, fs_reg color1,
       emit(FS_OPCODE_SET_OMASK, sources[length], this->sample_mask);
       length++;
    }
+
+   payload_header_size = length;
 
    if (color0.file == BAD_FILE) {
       /* Even if there's no color buffers enabled, we still need to send
@@ -3837,7 +3839,7 @@ fs_visitor::emit_single_fb_write(fs_reg color0, fs_reg color1,
    if (devinfo->gen >= 7) {
       /* Send from the GRF */
       fs_reg payload = fs_reg(GRF, -1, BRW_REGISTER_TYPE_F);
-      load = emit(LOAD_PAYLOAD(payload, sources, length));
+      load = emit(LOAD_PAYLOAD(payload, sources, length, payload_header_size));
       payload.reg = alloc.allocate(load->regs_written);
       payload.width = dispatch_width;
       load->dst = payload;
@@ -3846,7 +3848,7 @@ fs_visitor::emit_single_fb_write(fs_reg color0, fs_reg color1,
    } else {
       /* Send from the MRF */
       load = emit(LOAD_PAYLOAD(fs_reg(MRF, 1, BRW_REGISTER_TYPE_F),
-                               sources, length));
+                               sources, length, payload_header_size));
       write = emit(FS_OPCODE_FB_WRITE);
       write->exec_size = exec_size;
       write->base_mrf = 1;
@@ -4149,7 +4151,7 @@ fs_visitor::emit_urb_writes()
          payload_sources[0] = dummy;
 
          memcpy(&payload_sources[1], sources, length * sizeof sources[0]);
-         emit(LOAD_PAYLOAD(payload, payload_sources, length + 1));
+         emit(LOAD_PAYLOAD(payload, payload_sources, length + 1, 1));
 
          inst = emit(SHADER_OPCODE_URB_WRITE_SIMD8, reg_undef, payload);
          inst->eot = last;

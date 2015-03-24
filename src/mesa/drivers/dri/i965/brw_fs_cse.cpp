@@ -181,7 +181,8 @@ create_copy_instr(fs_visitor *v, fs_inst *inst, fs_reg src, bool negate)
       fs_reg *sources = ralloc_array(v->mem_ctx, fs_reg, written / dst_width);
       for (int i = 0; i < written / dst_width; i++)
          sources[i] = offset(src, i);
-      copy = v->LOAD_PAYLOAD(dst, sources, written / dst_width);
+      copy = v->LOAD_PAYLOAD(dst, sources, written / dst_width,
+                             inst->header_size);
    } else {
       copy = v->MOV(dst, src);
       copy->force_writemask_all = inst->force_writemask_all;

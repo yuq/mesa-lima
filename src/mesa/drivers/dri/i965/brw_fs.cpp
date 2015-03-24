@@ -355,8 +355,12 @@ fs_visitor::CMP(fs_reg dst, fs_reg src0, fs_reg src1,
 }
 
 fs_inst *
-fs_visitor::LOAD_PAYLOAD(const fs_reg &dst, fs_reg *src, int sources)
+fs_visitor::LOAD_PAYLOAD(const fs_reg &dst, fs_reg *src, int sources,
+                         int header_size)
 {
+   for (int i = 0; i < header_size; i++)
+      assert(src[i].file != GRF || src[i].width * type_sz(src[i].type) == 32);
+
    uint8_t exec_size = dst.width;
    for (int i = 0; i < sources; ++i) {
       assert(src[i].width % dst.width == 0);
