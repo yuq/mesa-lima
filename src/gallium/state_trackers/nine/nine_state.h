@@ -81,6 +81,8 @@
 #define NINE_STATE_COMMIT_DSA  (1 << 0)
 #define NINE_STATE_COMMIT_RASTERIZER (1 << 1)
 #define NINE_STATE_COMMIT_BLEND (1 << 2)
+#define NINE_STATE_COMMIT_CONST_VS (1 << 3)
+#define NINE_STATE_COMMIT_CONST_PS (1 << 4)
 
 
 #define NINE_MAX_SIMULTANEOUS_RENDERTARGETS 4
@@ -218,6 +220,8 @@ struct nine_state
         struct pipe_depth_stencil_alpha_state dsa;
         struct pipe_rasterizer_state rast;
         struct pipe_blend_state blend;
+        struct pipe_constant_buffer cb_vs;
+        struct pipe_constant_buffer cb_ps;
     } pipe;
 };
 
@@ -235,6 +239,7 @@ struct NineDevice9;
 void nine_update_state_framebuffer(struct NineDevice9 *);
 boolean nine_update_state(struct NineDevice9 *);
 
+void nine_state_restore_non_cso(struct NineDevice9 *device);
 void nine_state_set_defaults(struct NineDevice9 *, const D3DCAPS9 *,
                              boolean is_reset);
 void nine_state_clear(struct nine_state *, const boolean device);

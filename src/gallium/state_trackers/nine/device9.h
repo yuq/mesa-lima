@@ -184,10 +184,6 @@ NineDevice9_GetCSO( struct NineDevice9 *This );
 const D3DCAPS9 *
 NineDevice9_GetCaps( struct NineDevice9 *This );
 
-/* Mask: 0x1 = constant buffers, 0x2 = stipple */
-void
-NineDevice9_RestoreNonCSOState( struct NineDevice9 *This, unsigned mask );
-
 /*** Direct3D public ***/
 
 HRESULT WINAPI

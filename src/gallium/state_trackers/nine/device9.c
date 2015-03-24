@@ -119,68 +119,6 @@ NineDevice9_SetDefaultState( struct NineDevice9 *This, boolean is_reset )
             This, (IDirect3DSurface9 *)This->swapchains[0]->zsbuf);
 }
 
-void
-NineDevice9_RestoreNonCSOState( struct NineDevice9 *This, unsigned mask )
-{
-    struct pipe_context *pipe = This->pipe;
-
-    DBG("This=%p mask=%u\n", This, mask);
-
-    if (mask & 0x1) {
-        struct pipe_constant_buffer cb;
-        cb.buffer_offset = 0;
-        cb.buffer_size = This->vs_const_size;
-
-        if (This->prefer_user_constbuf) {
-            cb.buffer = NULL;
-            cb.user_buffer = This->state.vs_const_f;
-            if (!This->driver_caps.user_cbufs) {
-                u_upload_data(This->constbuf_uploader,
-                              0,
-                              cb.buffer_size,
-                              cb.user_buffer,
-                              &cb.buffer_offset,
-                              &cb.buffer);
-                u_upload_unmap(This->constbuf_uploader);
-                cb.user_buffer = NULL;
-            }
-        } else {
-            cb.buffer = This->constbuf_vs;
-            cb.user_buffer = NULL;
-        }
-        pipe->set_constant_buffer(pipe, PIPE_SHADER_VERTEX, 0, &cb);
-
-        cb.buffer_size = This->ps_const_size;
-        if (This->prefer_user_constbuf) {
-            cb.user_buffer = This->state.ps_const_f;
-            if (!This->driver_caps.user_cbufs) {
-                u_upload_data(This->constbuf_uploader,
-                              0,
-                              cb.buffer_size,
-                              cb.user_buffer,
-                              &cb.buffer_offset,
-                              &cb.buffer);
-                u_upload_unmap(This->constbuf_uploader);
-                cb.user_buffer = NULL;
-            }
-        } else {
-            cb.buffer = This->constbuf_ps;
-        }
-        pipe->set_constant_buffer(pipe, PIPE_SHADER_FRAGMENT, 0, &cb);
-    }
-
-    if (mask & 0x2) {
-        struct pipe_poly_stipple stipple;
-        memset(&stipple, ~0, sizeof(stipple));
-        pipe->set_polygon_stipple(pipe, &stipple);
-    }
-
-    This->state.changed.group = NINE_STATE_ALL;
-    This->state.changed.vtxbuf = (1ULL << This->caps.MaxStreams) - 1;
-    This->state.changed.ucp = (1 << PIPE_MAX_CLIP_PLANES) - 1;
-    This->state.changed.texture = NINE_PS_SAMPLERS_MASK | NINE_VS_SAMPLERS_MASK;
-}
-
 #define GET_PCAP(n) pScreen->get_param(pScreen, PIPE_CAP_##n)
 HRESULT
 NineDevice9_ctor( struct NineDevice9 *This,
@@ -455,7 +393,12 @@ NineDevice9_ctor( struct NineDevice9 *This,
     nine_ff_init(This); /* initialize fixed function code */
 
     NineDevice9_SetDefaultState(This, FALSE);
-    NineDevice9_RestoreNonCSOState(This, ~0);
+
+    {
+        struct pipe_poly_stipple stipple;
+        memset(&stipple, ~0, sizeof(stipple));
+        This->pipe->set_polygon_stipple(This->pipe, &stipple);
+    }
 
     This->update = &This->state;
     nine_update_state(This);

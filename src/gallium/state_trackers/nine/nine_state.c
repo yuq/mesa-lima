@@ -61,6 +61,275 @@ prepare_rasterizer(struct NineDevice9 *device)
     device->state.commit |= NINE_STATE_COMMIT_RASTERIZER;
 }
 
+#define DO_UPLOAD_CONST_F(buf,p,c,d) \
+    do { \
+        DBG("upload ConstantF [%u .. %u]\n", x, (x) + (c) - 1); \
+        box.x = (p) * 4 * sizeof(float); \
+        box.width = (c) * 4 * sizeof(float); \
+        pipe->transfer_inline_write(pipe, buf, 0, usage, &box, &((d)[p * 4]), \
+                                    0, 0); \
+    } while(0)
+
+/* OK, this is a bit ugly ... */
+static void
+upload_constants(struct NineDevice9 *device, unsigned shader_type)
+{
+    struct pipe_context *pipe = device->pipe;
+    struct pipe_resource *buf;
+    struct pipe_box box;
+    const void *data;
+    const float *const_f;
+    const int *const_i;
+    const BOOL *const_b;
+    uint32_t data_b[NINE_MAX_CONST_B];
+    uint16_t dirty_i;
+    uint16_t dirty_b;
+    const unsigned usage = PIPE_TRANSFER_WRITE | PIPE_TRANSFER_DISCARD_RANGE;
+    unsigned x = 0; /* silence warning */
+    unsigned i, c;
+    struct nine_range *r, *p, *lconstf_ranges;
+    float *lconstf_data;
+
+    box.y = 0;
+    box.z = 0;
+    box.height = 1;
+    box.depth = 1;
+
+    if (shader_type == PIPE_SHADER_VERTEX) {
+        DBG("VS\n");
+        buf = device->constbuf_vs;
+
+        const_f = device->state.vs_const_f;
+        for (p = r = device->state.changed.vs_const_f; r; p = r, r = r->next)
+            DO_UPLOAD_CONST_F(buf, r->bgn, r->end - r->bgn, const_f);
+        if (p) {
+            nine_range_pool_put_chain(&device->range_pool,
+                                      device->state.changed.vs_const_f, p);
+            device->state.changed.vs_const_f = NULL;
+        }
+
+        dirty_i = device->state.changed.vs_const_i;
+        device->state.changed.vs_const_i = 0;
+        const_i = &device->state.vs_const_i[0][0];
+
+        dirty_b = device->state.changed.vs_const_b;
+        device->state.changed.vs_const_b = 0;
+        const_b = device->state.vs_const_b;
+
+        lconstf_ranges = device->state.vs->lconstf.ranges;
+        lconstf_data = device->state.vs->lconstf.data;
+
+        device->state.ff.clobber.vs_const = TRUE;
+        device->state.changed.group &= ~NINE_STATE_VS_CONST;
+    } else {
+        DBG("PS\n");
+        buf = device->constbuf_ps;
+
+        const_f = device->state.ps_const_f;
+        for (p = r = device->state.changed.ps_const_f; r; p = r, r = r->next)
+            DO_UPLOAD_CONST_F(buf, r->bgn, r->end - r->bgn, const_f);
+        if (p) {
+            nine_range_pool_put_chain(&device->range_pool,
+                                      device->state.changed.ps_const_f, p);
+            device->state.changed.ps_const_f = NULL;
+        }
+
+        dirty_i = device->state.changed.ps_const_i;
+        device->state.changed.ps_const_i = 0;
+        const_i = &device->state.ps_const_i[0][0];
+
+        dirty_b = device->state.changed.ps_const_b;
+        device->state.changed.ps_const_b = 0;
+        const_b = device->state.ps_const_b;
+
+        lconstf_ranges = NULL;
+        lconstf_data = NULL;
+
+        device->state.ff.clobber.ps_const = TRUE;
+        device->state.changed.group &= ~NINE_STATE_PS_CONST;
+    }
+
+    /* write range from min to max changed, it's not much data */
+    /* bool1 */
+    if (dirty_b) {
+       c = util_last_bit(dirty_b);
+       i = ffs(dirty_b) - 1;
+       x = buf->width0 - (NINE_MAX_CONST_B - i) * 4;
+       c -= i;
+       memcpy(data_b, &(const_b[i]), c * sizeof(uint32_t));
+       box.x = x;
+       box.width = c * 4;
+       DBG("upload ConstantB [%u .. %u]\n", x, x + c - 1);
+       pipe->transfer_inline_write(pipe, buf, 0, usage, &box, data_b, 0, 0);
+    }
+
+    /* int4 */
+    for (c = 0, i = 0; dirty_i; i++, dirty_i >>= 1) {
+        if (dirty_i & 1) {
+            if (!c)
+                x = i;
+            ++c;
+        } else
+        if (c) {
+            DBG("upload ConstantI [%u .. %u]\n", x, x + c - 1);
+            data = &const_i[x * 4];
+            box.x  = buf->width0 - (NINE_MAX_CONST_I * 4 + NINE_MAX_CONST_B) * 4;
+            box.x += x * 4 * sizeof(int);
+            box.width = c * 4 * sizeof(int);
+            c = 0;
+            pipe->transfer_inline_write(pipe, buf, 0, usage, &box, data, 0, 0);
+        }
+    }
+    if (c) {
+        DBG("upload ConstantI [%u .. %u]\n", x, x + c - 1);
+        data = &const_i[x * 4];
+        box.x  = buf->width0 - (NINE_MAX_CONST_I * 4 + NINE_MAX_CONST_B) * 4;
+        box.x += x * 4 * sizeof(int);
+        box.width = c * 4 * sizeof(int);
+        pipe->transfer_inline_write(pipe, buf, 0, usage, &box, data, 0, 0);
+    }
+
+    /* TODO: only upload these when shader itself changes */
+    if (lconstf_ranges) {
+        unsigned n = 0;
+        struct nine_range *r = lconstf_ranges;
+        while (r) {
+            box.x = r->bgn * 4 * sizeof(float);
+            n += r->end - r->bgn;
+            box.width = (r->end - r->bgn) * 4 * sizeof(float);
+            data = &lconstf_data[4 * n];
+            pipe->transfer_inline_write(pipe, buf, 0, usage, &box, data, 0, 0);
+            r = r->next;
+        }
+    }
+}
+
+static void
+prepare_vs_constants_userbuf(struct NineDevice9 *device)
+{
+    struct nine_state *state = &device->state;
+    struct pipe_constant_buffer cb;
+    cb.buffer = NULL;
+    cb.buffer_offset = 0;
+    cb.buffer_size = device->state.vs->const_used_size;
+    cb.user_buffer = device->state.vs_const_f;
+
+    if (!cb.buffer_size)
+        return;
+
+    if (state->changed.vs_const_i) {
+        int *idst = (int *)&state->vs_const_f[4 * device->max_vs_const_f];
+        memcpy(idst, state->vs_const_i, sizeof(state->vs_const_i));
+        state->changed.vs_const_i = 0;
+    }
+    if (state->changed.vs_const_b) {
+        int *idst = (int *)&state->vs_const_f[4 * device->max_vs_const_f];
+        uint32_t *bdst = (uint32_t *)&idst[4 * NINE_MAX_CONST_I];
+        memcpy(bdst, state->vs_const_b, sizeof(state->vs_const_b));
+        state->changed.vs_const_b = 0;
+    }
+
+    if (device->state.vs->lconstf.ranges) {
+        /* TODO: Can we make it so that we don't have to copy everything ? */
+        const struct nine_lconstf *lconstf =  &device->state.vs->lconstf;
+        const struct nine_range *r = lconstf->ranges;
+        unsigned n = 0;
+        float *dst = device->state.vs_lconstf_temp;
+        float *src = (float *)cb.user_buffer;
+        memcpy(dst, src, cb.buffer_size);
+        while (r) {
+            unsigned p = r->bgn;
+            unsigned c = r->end - r->bgn;
+            memcpy(&dst[p * 4], &lconstf->data[n * 4], c * 4 * sizeof(float));
+            n += c;
+            r = r->next;
+        }
+        cb.user_buffer = dst;
+    }
+
+    if (!device->driver_caps.user_cbufs) {
+        u_upload_data(device->constbuf_uploader,
+                      0,
+                      cb.buffer_size,
+                      cb.user_buffer,
+                      &cb.buffer_offset,
+                      &cb.buffer);
+        u_upload_unmap(device->constbuf_uploader);
+        cb.user_buffer = NULL;
+    }
+
+    state->pipe.cb_vs = cb;
+
+    if (device->state.changed.vs_const_f) {
+        struct nine_range *r = device->state.changed.vs_const_f;
+        struct nine_range *p = r;
+        while (p->next)
+            p = p->next;
+        nine_range_pool_put_chain(&device->range_pool, r, p);
+        device->state.changed.vs_const_f = NULL;
+    }
+    state->changed.group &= ~NINE_STATE_VS_CONST;
+    state->commit |= NINE_STATE_COMMIT_CONST_VS;
+}
+
+static void
+prepare_ps_constants_userbuf(struct NineDevice9 *device)
+{
+    struct nine_state *state = &device->state;
+    struct pipe_constant_buffer cb;
+    cb.buffer = NULL;
+    cb.buffer_offset = 0;
+    cb.buffer_size = device->state.ps->const_used_size;
+    cb.user_buffer = device->state.ps_const_f;
+
+    if (!cb.buffer_size)
+        return;
+
+    if (state->changed.ps_const_i) {
+        int *idst = (int *)&state->ps_const_f[4 * device->max_ps_const_f];
+        memcpy(idst, state->ps_const_i, sizeof(state->ps_const_i));
+        state->changed.ps_const_i = 0;
+    }
+    if (state->changed.ps_const_b) {
+        int *idst = (int *)&state->ps_const_f[4 * device->max_ps_const_f];
+        uint32_t *bdst = (uint32_t *)&idst[4 * NINE_MAX_CONST_I];
+        memcpy(bdst, state->ps_const_b, sizeof(state->ps_const_b));
+        state->changed.ps_const_b = 0;
+    }
+
+    /* Upload special constants needed to implement PS1.x instructions like TEXBEM,TEXBEML and BEM */
+    if (device->state.ps->bumpenvmat_needed) {
+        memcpy(device->state.ps_lconstf_temp, cb.user_buffer, cb.buffer_size);
+        memcpy(&device->state.ps_lconstf_temp[4 * 8], &device->state.bumpmap_vars, sizeof(device->state.bumpmap_vars));
+
+        cb.user_buffer = device->state.ps_lconstf_temp;
+    }
+
+    if (!device->driver_caps.user_cbufs) {
+        u_upload_data(device->constbuf_uploader,
+                      0,
+                      cb.buffer_size,
+                      cb.user_buffer,
+                      &cb.buffer_offset,
+                      &cb.buffer);
+        u_upload_unmap(device->constbuf_uploader);
+        cb.user_buffer = NULL;
+    }
+
+    state->pipe.cb_ps = cb;
+
+    if (device->state.changed.ps_const_f) {
+        struct nine_range *r = device->state.changed.ps_const_f;
+        struct nine_range *p = r;
+        while (p->next)
+            p = p->next;
+        nine_range_pool_put_chain(&device->range_pool, r, p);
+        device->state.changed.ps_const_f = NULL;
+    }
+    state->changed.group &= ~NINE_STATE_PS_CONST;
+    state->commit |= NINE_STATE_COMMIT_CONST_PS;
+}
+
 /* State preparation incremental */
 
 /* State preparation + State commit */
@@ -382,276 +651,6 @@ update_ps(struct NineDevice9 *device)
     return changed_group;
 }
 
-#define DO_UPLOAD_CONST_F(buf,p,c,d) \
-    do { \
-        DBG("upload ConstantF [%u .. %u]\n", x, (x) + (c) - 1); \
-        box.x = (p) * 4 * sizeof(float); \
-        box.width = (c) * 4 * sizeof(float); \
-        pipe->transfer_inline_write(pipe, buf, 0, usage, &box, &((d)[p * 4]), \
-                                    0, 0); \
-    } while(0)
-
-/* OK, this is a bit ugly ... */
-static void
-update_constants(struct NineDevice9 *device, unsigned shader_type)
-{
-    struct pipe_context *pipe = device->pipe;
-    struct pipe_resource *buf;
-    struct pipe_box box;
-    const void *data;
-    const float *const_f;
-    const int *const_i;
-    const BOOL *const_b;
-    uint32_t data_b[NINE_MAX_CONST_B];
-    uint16_t dirty_i;
-    uint16_t dirty_b;
-    const unsigned usage = PIPE_TRANSFER_WRITE | PIPE_TRANSFER_DISCARD_RANGE;
-    unsigned x = 0; /* silence warning */
-    unsigned i, c;
-    struct nine_range *r, *p, *lconstf_ranges;
-    float *lconstf_data;
-
-    box.y = 0;
-    box.z = 0;
-    box.height = 1;
-    box.depth = 1;
-
-    if (shader_type == PIPE_SHADER_VERTEX) {
-        DBG("VS\n");
-        buf = device->constbuf_vs;
-
-        const_f = device->state.vs_const_f;
-        for (p = r = device->state.changed.vs_const_f; r; p = r, r = r->next)
-            DO_UPLOAD_CONST_F(buf, r->bgn, r->end - r->bgn, const_f);
-        if (p) {
-            nine_range_pool_put_chain(&device->range_pool,
-                                      device->state.changed.vs_const_f, p);
-            device->state.changed.vs_const_f = NULL;
-        }
-
-        dirty_i = device->state.changed.vs_const_i;
-        device->state.changed.vs_const_i = 0;
-        const_i = &device->state.vs_const_i[0][0];
-
-        dirty_b = device->state.changed.vs_const_b;
-        device->state.changed.vs_const_b = 0;
-        const_b = device->state.vs_const_b;
-
-        lconstf_ranges = device->state.vs->lconstf.ranges;
-        lconstf_data = device->state.vs->lconstf.data;
-
-        device->state.ff.clobber.vs_const = TRUE;
-        device->state.changed.group &= ~NINE_STATE_VS_CONST;
-    } else {
-        DBG("PS\n");
-        buf = device->constbuf_ps;
-
-        const_f = device->state.ps_const_f;
-        for (p = r = device->state.changed.ps_const_f; r; p = r, r = r->next)
-            DO_UPLOAD_CONST_F(buf, r->bgn, r->end - r->bgn, const_f);
-        if (p) {
-            nine_range_pool_put_chain(&device->range_pool,
-                                      device->state.changed.ps_const_f, p);
-            device->state.changed.ps_const_f = NULL;
-        }
-
-        dirty_i = device->state.changed.ps_const_i;
-        device->state.changed.ps_const_i = 0;
-        const_i = &device->state.ps_const_i[0][0];
-
-        dirty_b = device->state.changed.ps_const_b;
-        device->state.changed.ps_const_b = 0;
-        const_b = device->state.ps_const_b;
-
-        lconstf_ranges = NULL;
-        lconstf_data = NULL;
-
-        device->state.ff.clobber.ps_const = TRUE;
-        device->state.changed.group &= ~NINE_STATE_PS_CONST;
-    }
-
-    /* write range from min to max changed, it's not much data */
-    /* bool1 */
-    if (dirty_b) {
-       c = util_last_bit(dirty_b);
-       i = ffs(dirty_b) - 1;
-       x = buf->width0 - (NINE_MAX_CONST_B - i) * 4;
-       c -= i;
-       memcpy(data_b, &(const_b[i]), c * sizeof(uint32_t));
-       box.x = x;
-       box.width = c * 4;
-       DBG("upload ConstantB [%u .. %u]\n", x, x + c - 1);
-       pipe->transfer_inline_write(pipe, buf, 0, usage, &box, data_b, 0, 0);
-    }
-
-    /* int4 */
-    for (c = 0, i = 0; dirty_i; i++, dirty_i >>= 1) {
-        if (dirty_i & 1) {
-            if (!c)
-                x = i;
-            ++c;
-        } else
-        if (c) {
-            DBG("upload ConstantI [%u .. %u]\n", x, x + c - 1);
-            data = &const_i[x * 4];
-            box.x  = buf->width0 - (NINE_MAX_CONST_I * 4 + NINE_MAX_CONST_B) * 4;
-            box.x += x * 4 * sizeof(int);
-            box.width = c * 4 * sizeof(int);
-            c = 0;
-            pipe->transfer_inline_write(pipe, buf, 0, usage, &box, data, 0, 0);
-        }
-    }
-    if (c) {
-        DBG("upload ConstantI [%u .. %u]\n", x, x + c - 1);
-        data = &const_i[x * 4];
-        box.x  = buf->width0 - (NINE_MAX_CONST_I * 4 + NINE_MAX_CONST_B) * 4;
-        box.x += x * 4 * sizeof(int);
-        box.width = c * 4 * sizeof(int);
-        pipe->transfer_inline_write(pipe, buf, 0, usage, &box, data, 0, 0);
-    }
-
-    /* TODO: only upload these when shader itself changes */
-    if (lconstf_ranges) {
-        unsigned n = 0;
-        struct nine_range *r = lconstf_ranges;
-        while (r) {
-            box.x = r->bgn * 4 * sizeof(float);
-            n += r->end - r->bgn;
-            box.width = (r->end - r->bgn) * 4 * sizeof(float);
-            data = &lconstf_data[4 * n];
-            pipe->transfer_inline_write(pipe, buf, 0, usage, &box, data, 0, 0);
-            r = r->next;
-        }
-    }
-}
-
-static void
-update_vs_constants_userbuf(struct NineDevice9 *device)
-{
-    struct nine_state *state = &device->state;
-    struct pipe_context *pipe = device->pipe;
-    struct pipe_constant_buffer cb;
-    cb.buffer = NULL;
-    cb.buffer_offset = 0;
-    cb.buffer_size = device->state.vs->const_used_size;
-    cb.user_buffer = device->state.vs_const_f;
-
-    if (!cb.buffer_size)
-        return;
-
-    if (state->changed.vs_const_i) {
-        int *idst = (int *)&state->vs_const_f[4 * device->max_vs_const_f];
-        memcpy(idst, state->vs_const_i, sizeof(state->vs_const_i));
-        state->changed.vs_const_i = 0;
-    }
-    if (state->changed.vs_const_b) {
-        int *idst = (int *)&state->vs_const_f[4 * device->max_vs_const_f];
-        uint32_t *bdst = (uint32_t *)&idst[4 * NINE_MAX_CONST_I];
-        memcpy(bdst, state->vs_const_b, sizeof(state->vs_const_b));
-        state->changed.vs_const_b = 0;
-    }
-
-    if (device->state.vs->lconstf.ranges) {
-        /* TODO: Can we make it so that we don't have to copy everything ? */
-        const struct nine_lconstf *lconstf =  &device->state.vs->lconstf;
-        const struct nine_range *r = lconstf->ranges;
-        unsigned n = 0;
-        float *dst = device->state.vs_lconstf_temp;
-        float *src = (float *)cb.user_buffer;
-        memcpy(dst, src, cb.buffer_size);
-        while (r) {
-            unsigned p = r->bgn;
-            unsigned c = r->end - r->bgn;
-            memcpy(&dst[p * 4], &lconstf->data[n * 4], c * 4 * sizeof(float));
-            n += c;
-            r = r->next;
-        }
-        cb.user_buffer = dst;
-    }
-
-    if (!device->driver_caps.user_cbufs) {
-        u_upload_data(device->constbuf_uploader,
-                      0,
-                      cb.buffer_size,
-                      cb.user_buffer,
-                      &cb.buffer_offset,
-                      &cb.buffer);
-        u_upload_unmap(device->constbuf_uploader);
-        cb.user_buffer = NULL;
-    }
-
-    pipe->set_constant_buffer(pipe, PIPE_SHADER_VERTEX, 0, &cb);
-
-    if (device->state.changed.vs_const_f) {
-        struct nine_range *r = device->state.changed.vs_const_f;
-        struct nine_range *p = r;
-        while (p->next)
-            p = p->next;
-        nine_range_pool_put_chain(&device->range_pool, r, p);
-        device->state.changed.vs_const_f = NULL;
-    }
-    state->changed.group &= ~NINE_STATE_VS_CONST;
-}
-
-static void
-update_ps_constants_userbuf(struct NineDevice9 *device)
-{
-    struct nine_state *state = &device->state;
-    struct pipe_context *pipe = device->pipe;
-    struct pipe_constant_buffer cb;
-    int i;
-    cb.buffer = NULL;
-    cb.buffer_offset = 0;
-    cb.buffer_size = device->state.ps->const_used_size;
-    cb.user_buffer = device->state.ps_const_f;
-
-    if (!cb.buffer_size)
-        return;
-
-    if (state->changed.ps_const_i) {
-        int *idst = (int *)&state->ps_const_f[4 * device->max_ps_const_f];
-        memcpy(idst, state->ps_const_i, sizeof(state->ps_const_i));
-        state->changed.ps_const_i = 0;
-    }
-    if (state->changed.ps_const_b) {
-        int *idst = (int *)&state->ps_const_f[4 * device->max_ps_const_f];
-        uint32_t *bdst = (uint32_t *)&idst[4 * NINE_MAX_CONST_I];
-        memcpy(bdst, state->ps_const_b, sizeof(state->ps_const_b));
-        state->changed.ps_const_b = 0;
-    }
-
-    /* Upload special constants needed to implement PS1.x instructions like TEXBEM,TEXBEML and BEM */
-    if (device->state.ps->bumpenvmat_needed) {
-        memcpy(device->state.ps_lconstf_temp, cb.user_buffer, cb.buffer_size);
-        memcpy(&device->state.ps_lconstf_temp[4 * 8], &device->state.bumpmap_vars, sizeof(device->state.bumpmap_vars));
-
-        cb.user_buffer = device->state.ps_lconstf_temp;
-    }
-
-    if (!device->driver_caps.user_cbufs) {
-        u_upload_data(device->constbuf_uploader,
-                      0,
-                      cb.buffer_size,
-                      cb.user_buffer,
-                      &cb.buffer_offset,
-                      &cb.buffer);
-        u_upload_unmap(device->constbuf_uploader);
-        cb.user_buffer = NULL;
-    }
-
-    pipe->set_constant_buffer(pipe, PIPE_SHADER_FRAGMENT, 0, &cb);
-
-    if (device->state.changed.ps_const_f) {
-        struct nine_range *r = device->state.changed.ps_const_f;
-        struct nine_range *p = r;
-        while (p->next)
-            p = p->next;
-        nine_range_pool_put_chain(&device->range_pool, r, p);
-        device->state.changed.ps_const_f = NULL;
-    }
-    state->changed.group &= ~NINE_STATE_PS_CONST;
-}
-
 static void
 update_vertex_buffers(struct NineDevice9 *device)
 {
@@ -905,6 +904,22 @@ commit_index_buffer(struct NineDevice9 *device)
         pipe->set_index_buffer(pipe, NULL);
 }
 
+static inline void
+commit_vs_constants(struct NineDevice9 *device)
+{
+    struct pipe_context *pipe = device->pipe;
+
+    pipe->set_constant_buffer(pipe, PIPE_SHADER_VERTEX, 0, &device->state.pipe.cb_vs);
+}
+
+static inline void
+commit_ps_constants(struct NineDevice9 *device)
+{
+    struct pipe_context *pipe = device->pipe;
+
+    pipe->set_constant_buffer(pipe, PIPE_SHADER_FRAGMENT, 0, &device->state.pipe.cb_ps);
+}
+
 /* State Update */
 
 #define NINE_STATE_FREQ_GROUP_0 \
@@ -1034,14 +1049,14 @@ nine_update_state(struct NineDevice9 *device)
 
         if (device->prefer_user_constbuf) {
             if ((group & (NINE_STATE_VS_CONST | NINE_STATE_VS)) && state->vs)
-                update_vs_constants_userbuf(device);
+                prepare_vs_constants_userbuf(device);
             if ((group & (NINE_STATE_PS_CONST | NINE_STATE_PS)) && state->ps)
-                update_ps_constants_userbuf(device);
+                prepare_ps_constants_userbuf(device);
         } else {
             if ((group & NINE_STATE_VS_CONST) && state->vs)
-                update_constants(device, PIPE_SHADER_VERTEX);
+                upload_constants(device, PIPE_SHADER_VERTEX);
             if ((group & NINE_STATE_PS_CONST) && state->ps)
-                update_constants(device, PIPE_SHADER_FRAGMENT);
+                upload_constants(device, PIPE_SHADER_FRAGMENT);
         }
     }
     if (state->changed.vtxbuf)
@@ -1053,6 +1068,10 @@ nine_update_state(struct NineDevice9 *device)
         commit_dsa(device);
     if (state->commit & NINE_STATE_COMMIT_RASTERIZER)
         commit_rasterizer(device);
+    if (state->commit & NINE_STATE_COMMIT_CONST_VS)
+        commit_vs_constants(device);
+    if (state->commit & NINE_STATE_COMMIT_CONST_PS)
+        commit_ps_constants(device);
 
     state->commit = 0;
 
@@ -1219,6 +1238,18 @@ static const DWORD nine_samp_state_defaults[NINED3DSAMP_LAST + 1] =
     [NINED3DSAMP_MINLOD] = 0,
     [NINED3DSAMP_SHADOW] = 0
 };
+
+void nine_state_restore_non_cso(struct NineDevice9 *device)
+{
+    struct nine_state *state = &device->state;
+
+    state->changed.group = NINE_STATE_ALL;
+    state->changed.vtxbuf = (1ULL << device->caps.MaxStreams) - 1;
+    state->changed.ucp = (1 << PIPE_MAX_CLIP_PLANES) - 1;
+    state->changed.texture = NINE_PS_SAMPLERS_MASK | NINE_VS_SAMPLERS_MASK;
+    state->commit |= NINE_STATE_COMMIT_CONST_VS | NINE_STATE_COMMIT_CONST_PS;
+}
+
 void
 nine_state_set_defaults(struct NineDevice9 *device, const D3DCAPS9 *caps,
                         boolean is_reset)
@@ -1256,6 +1287,9 @@ nine_state_set_defaults(struct NineDevice9 *device, const D3DCAPS9 *caps,
     /* Set changed flags to initialize driver.
      */
     state->changed.group = NINE_STATE_ALL;
+    state->changed.vtxbuf = (1ULL << device->caps.MaxStreams) - 1;
+    state->changed.ucp = (1 << PIPE_MAX_CLIP_PLANES) - 1;
+    state->changed.texture = NINE_PS_SAMPLERS_MASK | NINE_VS_SAMPLERS_MASK;
 
     state->ff.changed.transform[0] = ~0;
     state->ff.changed.transform[D3DTS_WORLD / 32] |= 1 << (D3DTS_WORLD % 32);
@@ -1271,6 +1305,23 @@ nine_state_set_defaults(struct NineDevice9 *device, const D3DCAPS9 *caps,
     if (!is_reset) {
         state->dummy_vbo_bound_at = -1;
         state->vbo_bound_done = FALSE;
+    }
+
+    if (!device->prefer_user_constbuf) {
+        /* fill cb_vs and cb_ps for the non user constbuf path */
+        struct pipe_constant_buffer cb;
+
+        cb.buffer_offset = 0;
+        cb.buffer_size = device->vs_const_size;
+        cb.buffer = device->constbuf_vs;
+        cb.user_buffer = NULL;
+        state->pipe.cb_vs = cb;
+
+        cb.buffer_size = device->ps_const_size;
+        cb.buffer = device->constbuf_ps;
+        state->pipe.cb_ps = cb;
+
+        state->commit |= NINE_STATE_COMMIT_CONST_VS | NINE_STATE_COMMIT_CONST_PS;
     }
 }
 
