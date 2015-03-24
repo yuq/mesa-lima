@@ -26,7 +26,6 @@ AM_CFLAGS = \
 	-I$(top_srcdir)/src/gbm/main \
 	$(DEFINES) \
 	$(VISIBILITY_CFLAGS) \
-	$(MSVC2013_COMPAT_CFLAGS) \
 	$(EGL_CFLAGS) \
 	-D_EGL_NATIVE_PLATFORM=$(EGL_NATIVE_PLATFORM) \
 	-D_EGL_DRIVER_SEARCH_DIR=\"$(libdir)/egl\" \
