@@ -137,7 +137,7 @@ print_dest(nir_dest *dest, FILE *fp)
 }
 
 static void
-print_alu_src(nir_alu_src *src, FILE *fp)
+print_alu_src(nir_alu_src *src, uint8_t read_mask, FILE *fp)
 {
    if (src->negate)
       fprintf(fp, "-");
@@ -146,13 +146,25 @@ print_alu_src(nir_alu_src *src, FILE *fp)
 
    print_src(&src->src, fp);
 
-   if (src->swizzle[0] != 0 ||
-       src->swizzle[1] != 1 ||
-       src->swizzle[2] != 2 ||
-       src->swizzle[3] != 3) {
+   bool print_swizzle = false;
+   for (unsigned i = 0; i < 4; i++) {
+      if (read_mask >> i == 0)
+         break;
+
+      if (src->swizzle[i] != i) {
+         print_swizzle = true;
+         break;
+      }
+   }
+
+   if (print_swizzle) {
       fprintf(fp, ".");
-      for (unsigned i = 0; i < 4; i++)
+      for (unsigned i = 0; i < 4; i++) {
+         if (read_mask >> i == 0)
+            break;
+
          fprintf(fp, "%c", "xyzw"[src->swizzle[i]]);
+      }
    }
 
    if (src->abs)
@@ -189,7 +201,7 @@ print_alu_instr(nir_alu_instr *instr, FILE *fp)
       if (i != 0)
          fprintf(fp, ", ");
 
-      print_alu_src(&instr->src[i], fp);
+      print_alu_src(&instr->src[i], instr->dest.write_mask, fp);
    }
 }
 
