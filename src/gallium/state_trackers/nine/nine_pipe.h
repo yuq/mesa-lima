@@ -39,7 +39,7 @@ extern const D3DFORMAT nine_pipe_to_d3d9_format_map[PIPE_FORMAT_COUNT];
 
 void nine_convert_dsa_state(struct pipe_depth_stencil_alpha_state *, const DWORD *);
 void nine_convert_rasterizer_state(struct pipe_rasterizer_state *, const DWORD *);
-void nine_convert_blend_state(struct cso_context *, const DWORD *);
+void nine_convert_blend_state(struct pipe_blend_state *, const DWORD *);
 void nine_convert_sampler_state(struct cso_context *, int idx, const DWORD *);
 
 void nine_pipe_context_clear(struct NineDevice9 *);

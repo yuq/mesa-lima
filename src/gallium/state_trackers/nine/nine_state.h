@@ -80,6 +80,7 @@
 
 #define NINE_STATE_COMMIT_DSA  (1 << 0)
 #define NINE_STATE_COMMIT_RASTERIZER (1 << 1)
+#define NINE_STATE_COMMIT_BLEND (1 << 2)
 
 
 #define NINE_MAX_SIMULTANEOUS_RENDERTARGETS 4
@@ -216,6 +217,7 @@ struct nine_state
     struct {
         struct pipe_depth_stencil_alpha_state dsa;
         struct pipe_rasterizer_state rast;
+        struct pipe_blend_state blend;
     } pipe;
 };
 

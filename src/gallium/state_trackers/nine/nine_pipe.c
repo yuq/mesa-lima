@@ -143,7 +143,7 @@ nine_convert_blend_state_fixup(struct pipe_blend_state *blend, const DWORD *rs)
 }
 
 void
-nine_convert_blend_state(struct cso_context *ctx, const DWORD *rs)
+nine_convert_blend_state(struct pipe_blend_state *blend_state, const DWORD *rs)
 {
     struct pipe_blend_state blend;
 
@@ -187,7 +187,7 @@ nine_convert_blend_state(struct cso_context *ctx, const DWORD *rs)
 
     /* blend.force_srgb = !!rs[D3DRS_SRGBWRITEENABLE]; */
 
-    cso_set_blend(ctx, &blend);
+    *blend_state = blend;
 }
 
 void
