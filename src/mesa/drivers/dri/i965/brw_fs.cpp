@@ -430,7 +430,7 @@ fs_visitor::VARYING_PULL_CONSTANT_LOAD(const fs_reg &dst,
 
    if (devinfo->gen < 7) {
       inst->base_mrf = 13;
-      inst->header_present = true;
+      inst->header_size = 1;
       if (devinfo->gen == 4)
          inst->mlen = 3;
       else
@@ -478,7 +478,7 @@ fs_inst::equals(fs_inst *inst) const
            base_mrf == inst->base_mrf &&
            target == inst->target &&
            eot == inst->eot &&
-           header_present == inst->header_present &&
+           header_size == inst->header_size &&
            shadow_compare == inst->shadow_compare &&
            exec_size == inst->exec_size &&
            offset == inst->offset);
@@ -2611,10 +2611,10 @@ fs_visitor::opt_zero_samples()
        * parameters is avoided because it seems to cause a GPU hang but I
        * can't find any documentation indicating that this is expected.
        */
-      while (inst->mlen > inst->header_present + dispatch_width / 8 &&
-             load_payload->src[(inst->mlen - inst->header_present) /
+      while (inst->mlen > inst->header_size + dispatch_width / 8 &&
+             load_payload->src[(inst->mlen - inst->header_size) /
                                (dispatch_width / 8) +
-                               inst->header_present - 1].is_zero()) {
+                               inst->header_size - 1].is_zero()) {
          inst->mlen -= dispatch_width / 8;
          progress = true;
       }
@@ -2683,7 +2683,7 @@ fs_visitor::opt_sampler_eot()
     * we have enough space, but it will make sure the dead code eliminator kills
     * the instruction that this will replace.
     */
-   if (tex_inst->header_present)
+   if (tex_inst->header_size != 0)
       return true;
 
    fs_reg send_header = vgrf(load_payload->sources + 1);
@@ -2709,7 +2709,7 @@ fs_visitor::opt_sampler_eot()
 
    new_load_payload->regs_written = load_payload->regs_written + 1;
    tex_inst->mlen++;
-   tex_inst->header_present = true;
+   tex_inst->header_size = 1;
    tex_inst->insert_before(cfg->blocks[cfg->num_blocks - 1], new_load_payload);
    tex_inst->src[0] = send_header;
    tex_inst->dst = reg_null_ud;
@@ -3047,7 +3047,7 @@ fs_visitor::emit_repclear_shader()
       write->saturate = key->clamp_fragment_color;
       write->base_mrf = color_mrf;
       write->target = 0;
-      write->header_present = false;
+      write->header_size = 0;
       write->mlen = 1;
    } else {
       assume(key->nr_color_regions > 0);
@@ -3056,7 +3056,7 @@ fs_visitor::emit_repclear_shader()
          write->saturate = key->clamp_fragment_color;
          write->base_mrf = base_mrf;
          write->target = i;
-         write->header_present = true;
+         write->header_size = 2;
          write->mlen = 3;
       }
    }

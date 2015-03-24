@@ -1583,7 +1583,7 @@ fs_visitor::emit_texture_gen4(ir_texture_opcode op, fs_reg dst,
    fs_inst *inst = emit(opcode, dst, reg_undef, fs_reg(sampler));
    inst->base_mrf = base_mrf;
    inst->mlen = mlen;
-   inst->header_present = true;
+   inst->header_size = 1;
    inst->regs_written = simd16 ? 8 : 4;
 
    if (simd16) {
@@ -1654,7 +1654,7 @@ fs_visitor::emit_texture_gen4_simd16(ir_texture_opcode op, fs_reg dst,
    fs_inst *inst = emit(opcode, dst, reg_undef, fs_reg(sampler));
    inst->base_mrf = message.reg - 1;
    inst->mlen = msg_end.reg - inst->base_mrf;
-   inst->header_present = true;
+   inst->header_size = 1;
    inst->regs_written = 8;
 
    return inst;
@@ -1677,7 +1677,7 @@ fs_visitor::emit_texture_gen5(ir_texture_opcode op, fs_reg dst,
                               bool has_offset)
 {
    int reg_width = dispatch_width / 8;
-   bool header_present = false;
+   unsigned header_size = 0;
 
    fs_reg message(MRF, 2, BRW_REGISTER_TYPE_F, dispatch_width);
    fs_reg msg_coords = message;
@@ -1686,7 +1686,7 @@ fs_visitor::emit_texture_gen5(ir_texture_opcode op, fs_reg dst,
       /* The offsets set up by the ir_texture visitor are in the
        * m1 header, so we can't go headerless.
        */
-      header_present = true;
+      header_size = 1;
       message.reg--;
    }
 
@@ -1789,7 +1789,7 @@ fs_visitor::emit_texture_gen5(ir_texture_opcode op, fs_reg dst,
    fs_inst *inst = emit(opcode, dst, reg_undef, fs_reg(sampler));
    inst->base_mrf = message.reg;
    inst->mlen = msg_end.reg - message.reg;
-   inst->header_present = header_present;
+   inst->header_size = header_size;
    inst->regs_written = 4 * reg_width;
 
    if (inst->mlen > MAX_SAMPLER_MESSAGE_SIZE) {
@@ -1818,7 +1818,7 @@ fs_visitor::emit_texture_gen7(ir_texture_opcode op, fs_reg dst,
                               fs_reg offset_value)
 {
    int reg_width = dispatch_width / 8;
-   bool header_present = false;
+   unsigned header_size = 0;
 
    fs_reg *sources = ralloc_array(mem_ctx, fs_reg, MAX_SAMPLER_MESSAGE_SIZE);
    for (int i = 0; i < MAX_SAMPLER_MESSAGE_SIZE; i++) {
@@ -1838,7 +1838,7 @@ fs_visitor::emit_texture_gen7(ir_texture_opcode op, fs_reg dst,
        * The sampler index is only 4-bits, so for larger sampler numbers we
        * need to offset the Sampler State Pointer in the header.
        */
-      header_present = true;
+      header_size = 1;
       sources[0] = fs_reg(GRF, alloc.allocate(1), BRW_REGISTER_TYPE_UD);
       length++;
    }
@@ -1997,7 +1997,7 @@ fs_visitor::emit_texture_gen7(ir_texture_opcode op, fs_reg dst,
 
    int mlen;
    if (reg_width == 2)
-      mlen = length * reg_width - header_present;
+      mlen = length * reg_width - header_size;
    else
       mlen = length * reg_width;
 
@@ -2029,7 +2029,7 @@ fs_visitor::emit_texture_gen7(ir_texture_opcode op, fs_reg dst,
    fs_inst *inst = emit(opcode, dst, src_payload, sampler);
    inst->base_mrf = -1;
    inst->mlen = mlen;
-   inst->header_present = header_present;
+   inst->header_size = header_size;
    inst->regs_written = 4 * reg_width;
 
    if (inst->mlen > MAX_SAMPLER_MESSAGE_SIZE) {
@@ -2175,7 +2175,7 @@ fs_visitor::emit_mcs_fetch(fs_reg coordinate, int components, fs_reg sampler)
    fs_inst *inst = emit(SHADER_OPCODE_TXF_MCS, dest, payload, sampler);
    inst->base_mrf = -1;
    inst->mlen = components * reg_width;
-   inst->header_present = false;
+   inst->header_size = 0;
    inst->regs_written = 4 * reg_width; /* we only care about one reg of
                                         * response, but the sampler always
                                         * writes 4/8
@@ -3395,7 +3395,7 @@ fs_visitor::emit_dummy_fs()
       write->base_mrf = 2;
       write->mlen = 4 * reg_width;
    } else {
-      write->header_present = true;
+      write->header_size = 2;
       write->base_mrf = 0;
       write->mlen = 2 + 4 * reg_width;
    }
@@ -3727,7 +3727,7 @@ fs_visitor::emit_single_fb_write(fs_reg color0, fs_reg color1,
    brw_wm_prog_key *key = (brw_wm_prog_key*) this->key;
 
    this->current_annotation = "FB write header";
-   bool header_present = true;
+   int header_size = 2;
    int reg_size = dispatch_width / 8;
 
    /* We can potentially have a message length of up to 15, so we have to set
@@ -3747,12 +3747,14 @@ fs_visitor::emit_single_fb_write(fs_reg color0, fs_reg color1,
        (devinfo->is_haswell || devinfo->gen >= 8 || !prog_data->uses_kill) &&
        color1.file == BAD_FILE &&
        key->nr_color_regions == 1) {
-      header_present = false;
+      header_size = 0;
    }
 
-   if (header_present)
+   if (header_size != 0) {
+      assert(header_size == 2);
       /* Allocate 2 registers for a header */
       length += 2;
+   }
 
    if (payload.aa_dest_stencil_reg) {
       sources[length] = fs_reg(GRF, alloc.allocate(1));
@@ -3851,7 +3853,7 @@ fs_visitor::emit_single_fb_write(fs_reg color0, fs_reg color1,
    }
 
    write->mlen = load->regs_written;
-   write->header_present = header_present;
+   write->header_size = header_size;
    if (prog_data->uses_kill) {
       write->predicate = BRW_PREDICATE_NORMAL;
       write->flag_subreg = 1;

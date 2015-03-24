@@ -179,7 +179,7 @@ instructions_match(fs_inst *a, fs_inst *b, bool *negate)
                           a->regs_written == b->regs_written &&
                           a->base_mrf == b->base_mrf &&
                           a->eot == b->eot &&
-                          a->header_present == b->header_present &&
+                          a->header_size == b->header_size &&
                           a->shadow_compare == b->shadow_compare)
                        : true) &&
           operands_match(a, b, negate);
