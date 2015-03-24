@@ -398,7 +398,7 @@ public:
    void emit_alpha_test();
    fs_inst *emit_single_fb_write(fs_reg color1, fs_reg color2,
                                  fs_reg src0_alpha, unsigned components,
-                                 bool use_2nd_half = false);
+                                 unsigned exec_size, bool use_2nd_half = false);
    void emit_fb_writes();
    void emit_urb_writes();
    void emit_cs_terminate();

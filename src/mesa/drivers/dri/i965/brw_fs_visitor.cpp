@@ -3720,7 +3720,7 @@ fs_visitor::emit_alpha_test()
 fs_inst *
 fs_visitor::emit_single_fb_write(fs_reg color0, fs_reg color1,
                                  fs_reg src0_alpha, unsigned components,
-                                 bool use_2nd_half)
+                                 unsigned exec_size, bool use_2nd_half)
 {
    assert(stage == MESA_SHADER_FRAGMENT);
    brw_wm_prog_data *prog_data = (brw_wm_prog_data*) this->prog_data;
@@ -3728,7 +3728,7 @@ fs_visitor::emit_single_fb_write(fs_reg color0, fs_reg color1,
 
    this->current_annotation = "FB write header";
    int header_size = 2;
-   int reg_size = dispatch_width / 8;
+   int reg_size = exec_size / 8;
 
    /* We can potentially have a message length of up to 15, so we have to set
     * base_mrf to either 0 or 1 in order to fit in m0..m15.
@@ -3848,7 +3848,7 @@ fs_visitor::emit_single_fb_write(fs_reg color0, fs_reg color1,
       load = emit(LOAD_PAYLOAD(fs_reg(MRF, 1, BRW_REGISTER_TYPE_F),
                                sources, length));
       write = emit(FS_OPCODE_FB_WRITE);
-      write->exec_size = dispatch_width;
+      write->exec_size = exec_size;
       write->base_mrf = 1;
    }
 
@@ -3873,7 +3873,7 @@ fs_visitor::emit_fb_writes()
       this->current_annotation = ralloc_asprintf(this->mem_ctx,
 						 "FB dual-source write");
       inst = emit_single_fb_write(this->outputs[0], this->dual_src_output,
-                                  reg_undef, 4);
+                                  reg_undef, 4, 8);
       inst->target = 0;
 
       /* SIMD16 dual source blending requires to send two SIMD8 dual source
@@ -3895,7 +3895,7 @@ fs_visitor::emit_fb_writes()
        */
       if (dispatch_width == 16) {
          inst = emit_single_fb_write(this->outputs[0], this->dual_src_output,
-                                     reg_undef, 4, true);
+                                     reg_undef, 4, 8, true);
          inst->target = 0;
       }
 
@@ -3915,7 +3915,8 @@ fs_visitor::emit_fb_writes()
 
          inst = emit_single_fb_write(this->outputs[target], reg_undef,
                                      src0_alpha,
-                                     this->output_components[target]);
+                                     this->output_components[target],
+                                     dispatch_width);
          inst->target = target;
       }
    }
@@ -3925,7 +3926,8 @@ fs_visitor::emit_fb_writes()
        * alpha out the pipeline to our null renderbuffer to support
        * alpha-testing, alpha-to-coverage, and so on.
        */
-      inst = emit_single_fb_write(reg_undef, reg_undef, reg_undef, 0);
+      inst = emit_single_fb_write(reg_undef, reg_undef, reg_undef, 0,
+                                  dispatch_width);
       inst->target = 0;
    }
 
