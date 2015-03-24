@@ -185,6 +185,29 @@ instructions_match(fs_inst *a, fs_inst *b, bool *negate)
           operands_match(a, b, negate);
 }
 
+static fs_inst *
+create_copy_instr(fs_visitor *v, fs_inst *inst, fs_reg src, bool negate)
+{
+   int written = inst->regs_written;
+   int dst_width = inst->dst.width / 8;
+   fs_reg dst = inst->dst;
+   fs_inst *copy;
+
+   if (written > dst_width) {
+      fs_reg *sources = ralloc_array(v->mem_ctx, fs_reg, written / dst_width);
+      for (int i = 0; i < written / dst_width; i++)
+         sources[i] = offset(src, i);
+      copy = v->LOAD_PAYLOAD(dst, sources, written / dst_width);
+   } else {
+      copy = v->MOV(dst, src);
+      copy->force_writemask_all = inst->force_writemask_all;
+      copy->src[0].negate = negate;
+   }
+   assert(copy->regs_written == written);
+
+   return copy;
+}
+
 bool
 fs_visitor::opt_cse_local(bblock_t *block)
 {
@@ -230,49 +253,27 @@ fs_visitor::opt_cse_local(bblock_t *block)
             bool no_existing_temp = entry->tmp.file == BAD_FILE;
             if (no_existing_temp && !entry->generator->dst.is_null()) {
                int written = entry->generator->regs_written;
-               int dst_width = entry->generator->dst.width / 8;
-               assert(written % dst_width == 0);
+               assert((written * 8) % entry->generator->dst.width == 0);
 
-               fs_reg orig_dst = entry->generator->dst;
-               fs_reg tmp = fs_reg(GRF, alloc.allocate(written),
-                                   orig_dst.type, orig_dst.width);
-               entry->tmp = tmp;
-               entry->generator->dst = tmp;
+               entry->tmp = fs_reg(GRF, alloc.allocate(written),
+                                   entry->generator->dst.type,
+                                   entry->generator->dst.width);
 
-               fs_inst *copy;
-               if (written > dst_width) {
-                  fs_reg *sources = ralloc_array(mem_ctx, fs_reg, written / dst_width);
-                  for (int i = 0; i < written / dst_width; i++)
-                     sources[i] = offset(tmp, i);
-                  copy = LOAD_PAYLOAD(orig_dst, sources, written / dst_width);
-               } else {
-                  copy = MOV(orig_dst, tmp);
-                  copy->force_writemask_all =
-                     entry->generator->force_writemask_all;
-               }
+               fs_inst *copy = create_copy_instr(this, entry->generator,
+                                                 entry->tmp, false);
                entry->generator->insert_after(block, copy);
+
+               entry->generator->dst = entry->tmp;
             }
 
             /* dest <- temp */
             if (!inst->dst.is_null()) {
-               int written = inst->regs_written;
-               int dst_width = inst->dst.width / 8;
-               assert(written == entry->generator->regs_written);
-               assert(dst_width == entry->generator->dst.width / 8);
+               assert(inst->regs_written == entry->generator->regs_written);
+               assert(inst->dst.width == entry->generator->dst.width);
                assert(inst->dst.type == entry->tmp.type);
-               fs_reg dst = inst->dst;
-               fs_reg tmp = entry->tmp;
-               fs_inst *copy;
-               if (written > dst_width) {
-                  fs_reg *sources = ralloc_array(mem_ctx, fs_reg, written / dst_width);
-                  for (int i = 0; i < written / dst_width; i++)
-                     sources[i] = offset(tmp, i);
-                  copy = LOAD_PAYLOAD(dst, sources, written / dst_width);
-               } else {
-                  copy = MOV(dst, tmp);
-                  copy->force_writemask_all = inst->force_writemask_all;
-                  copy->src[0].negate = negate;
-               }
+
+               fs_inst *copy = create_copy_instr(this, inst,
+                                                 entry->tmp, negate);
                inst->insert_before(block, copy);
             }
 
