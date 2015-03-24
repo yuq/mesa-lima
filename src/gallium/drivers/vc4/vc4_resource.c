@@ -33,11 +33,23 @@
 #include "vc4_resource.h"
 #include "vc4_tiling.h"
 
+static bool miptree_debug = false;
+
 static void
 vc4_resource_bo_alloc(struct vc4_resource *rsc)
 {
         struct pipe_resource *prsc = &rsc->base.b;
         struct pipe_screen *pscreen = prsc->screen;
+
+        if (miptree_debug) {
+                fprintf(stderr, "alloc %p: size %d + offset %d -> %d\n",
+                        rsc,
+                        rsc->slices[0].size,
+                        rsc->slices[0].offset,
+                        rsc->slices[0].offset +
+                        rsc->slices[0].size +
+                        rsc->cube_map_stride * (prsc->array_size - 1));
+        }
 
         vc4_bo_unreference(&rsc->bo);
         rsc->bo = vc4_bo_alloc(vc4_screen(pscreen),
@@ -267,6 +279,22 @@ vc4_setup_slices(struct vc4_resource *rsc)
                 slice->size = level_height * slice->stride;
 
                 offset += slice->size;
+
+                if (miptree_debug) {
+                        static const char tiling_chars[] = {
+                                [VC4_TILING_FORMAT_LINEAR] = 'R',
+                                [VC4_TILING_FORMAT_LT] = 'L',
+                                [VC4_TILING_FORMAT_T] = 'T'
+                        };
+                        fprintf(stderr,
+                                "rsc setup %p (format %d), %dx%d: "
+                                "level %d (%c) -> %dx%d, stride %d@0x%08x\n",
+                                rsc, rsc->vc4_format,
+                                prsc->width0, prsc->height0,
+                                i, tiling_chars[slice->tiling],
+                                level_width, level_height,
+                                slice->stride, slice->offset);
+                }
         }
 
         /* The texture base pointer that has to point to level 0 doesn't have
@@ -384,6 +412,15 @@ vc4_resource_from_handle(struct pipe_screen *pscreen,
         slice->tiling = VC4_TILING_FORMAT_LINEAR;
 
         rsc->vc4_format = get_resource_texture_format(prsc);
+
+        if (miptree_debug) {
+                fprintf(stderr,
+                        "rsc import %p (format %d), %dx%d: "
+                        "level 0 (R) -> stride %d@0x%08x\n",
+                        rsc, rsc->vc4_format,
+                        prsc->width0, prsc->height0,
+                        slice->stride, slice->offset);
+        }
 
         return prsc;
 
