@@ -55,6 +55,9 @@ endif
 
 EXTRA_DIST = egl/docs getopt hgl SConscript
 
+AM_CFLAGS = $(VISIBILITY_CFLAGS)
+AM_CXXFLAGS = $(VISIBILITY_CXXFLAGS)
+
 AM_CPPFLAGS = \
 	-I$(top_srcdir)/include/ \
 	-I$(top_srcdir)/src/mapi/ \
