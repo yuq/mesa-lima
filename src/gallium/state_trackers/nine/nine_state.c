@@ -119,7 +119,6 @@ upload_constants(struct NineDevice9 *device, unsigned shader_type)
         lconstf_ranges = device->state.vs->lconstf.ranges;
         lconstf_data = device->state.vs->lconstf.data;
 
-        device->state.ff.clobber.vs_const = TRUE;
         device->state.changed.group &= ~NINE_STATE_VS_CONST;
     } else {
         DBG("PS\n");
@@ -145,7 +144,6 @@ upload_constants(struct NineDevice9 *device, unsigned shader_type)
         lconstf_ranges = NULL;
         lconstf_data = NULL;
 
-        device->state.ff.clobber.ps_const = TRUE;
         device->state.changed.group &= ~NINE_STATE_PS_CONST;
     }
 
@@ -909,7 +907,10 @@ commit_vs_constants(struct NineDevice9 *device)
 {
     struct pipe_context *pipe = device->pipe;
 
-    pipe->set_constant_buffer(pipe, PIPE_SHADER_VERTEX, 0, &device->state.pipe.cb_vs);
+    if (unlikely(!device->state.vs))
+        pipe->set_constant_buffer(pipe, PIPE_SHADER_VERTEX, 0, &device->state.pipe.cb_vs_ff);
+    else
+        pipe->set_constant_buffer(pipe, PIPE_SHADER_VERTEX, 0, &device->state.pipe.cb_vs);
 }
 
 static inline void
@@ -917,7 +918,10 @@ commit_ps_constants(struct NineDevice9 *device)
 {
     struct pipe_context *pipe = device->pipe;
 
-    pipe->set_constant_buffer(pipe, PIPE_SHADER_FRAGMENT, 0, &device->state.pipe.cb_ps);
+    if (unlikely(!device->state.ps))
+        pipe->set_constant_buffer(pipe, PIPE_SHADER_FRAGMENT, 0, &device->state.pipe.cb_ps_ff);
+    else
+        pipe->set_constant_buffer(pipe, PIPE_SHADER_FRAGMENT, 0, &device->state.pipe.cb_ps);
 }
 
 /* State Update */

@@ -1763,28 +1763,22 @@ nine_ff_load_viewport_info(struct NineDevice9 *device)
 void
 nine_ff_update(struct NineDevice9 *device)
 {
-    struct pipe_context *pipe = device->pipe;
     struct nine_state *state = &device->state;
+    struct pipe_constant_buffer cb;
 
     DBG("vs=%p ps=%p\n", device->state.vs, device->state.ps);
 
     /* NOTE: the only reference belongs to the hash table */
-    if (!device->state.vs)
+    if (!device->state.vs) {
         device->ff.vs = nine_ff_get_vs(device);
-    if (!device->state.ps)
+        device->state.changed.group |= NINE_STATE_VS;
+    }
+    if (!device->state.ps) {
         device->ff.ps = nine_ff_get_ps(device);
+        device->state.changed.group |= NINE_STATE_PS;
+    }
 
     if (!device->state.vs) {
-        if (device->state.ff.clobber.vs_const) {
-            device->state.ff.clobber.vs_const = FALSE;
-            device->state.changed.group |=
-                NINE_STATE_FF_VSTRANSF |
-                NINE_STATE_FF_MATERIAL |
-                NINE_STATE_FF_LIGHTING |
-                NINE_STATE_FF_OTHER;
-            device->state.ff.changed.transform[0] |= 0xff000c;
-            device->state.ff.changed.transform[8] |= 0xff;
-        }
         nine_ff_load_vs_transforms(device);
         nine_ff_load_tex_matrices(device);
         nine_ff_load_lights(device);
@@ -1793,79 +1787,45 @@ nine_ff_update(struct NineDevice9 *device)
 
         memset(state->ff.changed.transform, 0, sizeof(state->ff.changed.transform));
 
-        device->state.changed.group |= NINE_STATE_VS;
-        device->state.changed.group |= NINE_STATE_VS_CONST;
+        cb.buffer_offset = 0;
+        cb.buffer = NULL;
+        cb.user_buffer = device->ff.vs_const;
+        cb.buffer_size = NINE_FF_NUM_VS_CONST * 4 * sizeof(float);
 
-        if (device->prefer_user_constbuf) {
-            struct pipe_context *pipe = device->pipe;
-            struct pipe_constant_buffer cb;
-            cb.buffer_offset = 0;
-            cb.buffer = NULL;
-            cb.user_buffer = device->ff.vs_const;
-            cb.buffer_size = NINE_FF_NUM_VS_CONST * 4 * sizeof(float);
-
-            if (!device->driver_caps.user_cbufs) {
-                u_upload_data(device->constbuf_uploader,
-                              0,
-                              cb.buffer_size,
-                              cb.user_buffer,
-                              &cb.buffer_offset,
-                              &cb.buffer);
-                u_upload_unmap(device->constbuf_uploader);
-                cb.user_buffer = NULL;
-            }
-            pipe->set_constant_buffer(pipe, PIPE_SHADER_VERTEX, 0, &cb);
-        } else {
-            struct pipe_box box;
-            u_box_1d(0, NINE_FF_NUM_VS_CONST * 4 * sizeof(float), &box);
-            pipe->transfer_inline_write(pipe, device->constbuf_vs, 0,
-                                        0, &box,
-                                        device->ff.vs_const, 0, 0);
-            nine_ranges_insert(&device->state.changed.vs_const_f, 0, NINE_FF_NUM_VS_CONST,
-                               &device->range_pool);
+        if (!device->driver_caps.user_cbufs) {
+            u_upload_data(device->constbuf_uploader,
+                          0,
+                          cb.buffer_size,
+                          cb.user_buffer,
+                          &cb.buffer_offset,
+                          &cb.buffer);
+            u_upload_unmap(device->constbuf_uploader);
+            cb.user_buffer = NULL;
         }
+        state->pipe.cb_vs_ff = cb;
+        state->commit |= NINE_STATE_COMMIT_CONST_VS;
     }
 
     if (!device->state.ps) {
-        if (device->state.ff.clobber.ps_const) {
-            device->state.ff.clobber.ps_const = FALSE;
-            device->state.changed.group |=
-                NINE_STATE_FF_PSSTAGES |
-                NINE_STATE_FF_OTHER;
-        }
         nine_ff_load_ps_params(device);
 
-        device->state.changed.group |= NINE_STATE_PS;
-        device->state.changed.group |= NINE_STATE_PS_CONST;
+        cb.buffer_offset = 0;
+        cb.buffer = NULL;
+        cb.user_buffer = device->ff.ps_const;
+        cb.buffer_size = NINE_FF_NUM_PS_CONST * 4 * sizeof(float);
 
-        if (device->prefer_user_constbuf) {
-            struct pipe_context *pipe = device->pipe;
-            struct pipe_constant_buffer cb;
-            cb.buffer_offset = 0;
-            cb.buffer = NULL;
-            cb.user_buffer = device->ff.ps_const;
-            cb.buffer_size = NINE_FF_NUM_PS_CONST * 4 * sizeof(float);
-
-            if (!device->driver_caps.user_cbufs) {
-                u_upload_data(device->constbuf_uploader,
-                              0,
-                              cb.buffer_size,
-                              cb.user_buffer,
-                              &cb.buffer_offset,
-                              &cb.buffer);
-                u_upload_unmap(device->constbuf_uploader);
-                cb.user_buffer = NULL;
-            }
-            pipe->set_constant_buffer(pipe, PIPE_SHADER_FRAGMENT, 0, &cb);
-        } else {
-            struct pipe_box box;
-            u_box_1d(0, NINE_FF_NUM_PS_CONST * 4 * sizeof(float), &box);
-            pipe->transfer_inline_write(pipe, device->constbuf_ps, 0,
-                                        0, &box,
-                                        device->ff.ps_const, 0, 0);
-            nine_ranges_insert(&device->state.changed.ps_const_f, 0, NINE_FF_NUM_PS_CONST,
-                               &device->range_pool);
+        if (!device->driver_caps.user_cbufs) {
+            u_upload_data(device->constbuf_uploader,
+                          0,
+                          cb.buffer_size,
+                          cb.user_buffer,
+                          &cb.buffer_offset,
+                          &cb.buffer);
+            u_upload_unmap(device->constbuf_uploader);
+            cb.user_buffer = NULL;
         }
+        state->pipe.cb_ps_ff = cb;
+        state->commit |= NINE_STATE_COMMIT_CONST_PS;
     }
 
     device->state.changed.group &= ~NINE_STATE_FF;
