@@ -1613,6 +1613,7 @@ void nir_convert_to_ssa(nir_shader *shader);
 void nir_convert_from_ssa(nir_shader *shader);
 
 bool nir_opt_algebraic(nir_shader *shader);
+bool nir_opt_algebraic_late(nir_shader *shader);
 bool nir_opt_constant_folding(nir_shader *shader);
 
 bool nir_opt_global_to_local(nir_shader *shader);

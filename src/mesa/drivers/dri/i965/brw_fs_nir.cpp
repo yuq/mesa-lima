@@ -147,6 +147,9 @@ fs_visitor::emit_nir_code()
 
    nir_optimize(nir);
 
+   nir_opt_algebraic_late(nir);
+   nir_validate_shader(nir);
+
    nir_lower_locals_to_regs(nir);
    nir_validate_shader(nir);
 

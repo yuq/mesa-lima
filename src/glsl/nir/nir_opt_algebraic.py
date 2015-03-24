@@ -195,4 +195,13 @@ for op in ['flt', 'fge', 'feq', 'fne',
        ('bcsel', 'a', (op, 'd', 'b'), (op, 'd', 'c'))),
    ]
 
+# This section contains "late" optimizations that should be run after the
+# regular optimizations have finished.  Optimizations should go here if
+# they help code generation but do not necessarily produce code that is
+# more easily optimizable.
+late_optimizations = [
+]
+
 print nir_algebraic.AlgebraicPass("nir_opt_algebraic", optimizations).render()
+print nir_algebraic.AlgebraicPass("nir_opt_algebraic_late",
+                                  late_optimizations).render()
