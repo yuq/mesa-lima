@@ -69,13 +69,12 @@ nine_convert_dsa_state(struct pipe_depth_stencil_alpha_state *dsa_state,
     *dsa_state = dsa;
 }
 
-/* TODO: Keep a static copy in device so we don't have to memset every time ? */
 void
-nine_convert_rasterizer_state(struct cso_context *ctx, const DWORD *rs)
+nine_convert_rasterizer_state(struct pipe_rasterizer_state *rast_state, const DWORD *rs)
 {
     struct pipe_rasterizer_state rast;
 
-    memset(&rast, 0, sizeof(rast)); /* memcmp safety */
+    memset(&rast, 0, sizeof(rast));
 
     rast.flatshade = rs[D3DRS_SHADEMODE] == D3DSHADE_FLAT;
  /* rast.light_twoside = 0; */
@@ -122,7 +121,7 @@ nine_convert_rasterizer_state(struct cso_context *ctx, const DWORD *rs)
     rast.offset_scale = asfloat(rs[D3DRS_SLOPESCALEDEPTHBIAS]);
  /* rast.offset_clamp = 0.0f; */
 
-    cso_set_rasterizer(ctx, &rast);
+    *rast_state = rast;
 }
 
 static inline void

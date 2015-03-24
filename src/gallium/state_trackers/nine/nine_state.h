@@ -79,6 +79,7 @@
 #define NINE_STATE_UNHANDLED   (1 << 24)
 
 #define NINE_STATE_COMMIT_DSA  (1 << 0)
+#define NINE_STATE_COMMIT_RASTERIZER (1 << 1)
 
 
 #define NINE_MAX_SIMULTANEOUS_RENDERTARGETS 4
@@ -214,6 +215,7 @@ struct nine_state
     uint32_t commit;
     struct {
         struct pipe_depth_stencil_alpha_state dsa;
+        struct pipe_rasterizer_state rast;
     } pipe;
 };
 
