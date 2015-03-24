@@ -568,6 +568,10 @@ brw_instruction_name(enum opcode op)
       return "pull_constant_load";
    case VS_OPCODE_PULL_CONSTANT_LOAD_GEN7:
       return "pull_constant_load_gen7";
+
+   case VS_OPCODE_SET_SIMD4X2_HEADER_GEN9:
+      return "set_simd4x2_header_gen9";
+
    case VS_OPCODE_UNPACK_FLAGS_SIMD4X2:
       return "unpack_flags_simd4x2";
 
