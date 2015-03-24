@@ -83,10 +83,6 @@ optimizations = [
    (('inot', ('fge', a, b)), ('flt', a, b)),
    (('inot', ('ilt', a, b)), ('ige', a, b)),
    (('inot', ('ige', a, b)), ('ilt', a, b)),
-   (('flt', ('fadd', a, b), 0.0), ('flt', a, ('fneg', b))),
-   (('fge', ('fadd', a, b), 0.0), ('fge', a, ('fneg', b))),
-   (('feq', ('fadd', a, b), 0.0), ('feq', a, ('fneg', b))),
-   (('fne', ('fadd', a, b), 0.0), ('fne', a, ('fneg', b))),
    (('fge', ('fneg', ('fabs', a)), 0.0), ('feq', a, 0.0)),
    (('bcsel', ('flt', a, b), a, b), ('fmin', a, b)),
    (('bcsel', ('flt', a, b), b, a), ('fmax', a, b)),
@@ -200,6 +196,10 @@ for op in ['flt', 'fge', 'feq', 'fne',
 # they help code generation but do not necessarily produce code that is
 # more easily optimizable.
 late_optimizations = [
+   (('flt', ('fadd', a, b), 0.0), ('flt', a, ('fneg', b))),
+   (('fge', ('fadd', a, b), 0.0), ('fge', a, ('fneg', b))),
+   (('feq', ('fadd', a, b), 0.0), ('feq', a, ('fneg', b))),
+   (('fne', ('fadd', a, b), 0.0), ('fne', a, ('fneg', b))),
 ]
 
 print nir_algebraic.AlgebraicPass("nir_opt_algebraic", optimizations).render()
