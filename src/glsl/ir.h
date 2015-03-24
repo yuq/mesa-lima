@@ -109,6 +109,31 @@ public:
    virtual ir_instruction *clone(void *mem_ctx,
 				 struct hash_table *ht) const = 0;
 
+   bool is_rvalue() const
+   {
+      return ir_type == ir_type_dereference_array ||
+             ir_type == ir_type_dereference_record ||
+             ir_type == ir_type_dereference_variable ||
+             ir_type == ir_type_constant ||
+             ir_type == ir_type_expression ||
+             ir_type == ir_type_swizzle ||
+             ir_type == ir_type_texture;
+   }
+
+   bool is_dereference() const
+   {
+      return ir_type == ir_type_dereference_array ||
+             ir_type == ir_type_dereference_record ||
+             ir_type == ir_type_dereference_variable;
+   }
+
+   bool is_jump() const
+   {
+      return ir_type == ir_type_loop_jump ||
+             ir_type == ir_type_return ||
+             ir_type == ir_type_discard;
+   }
+
    /**
     * \name IR instruction downcast functions
     *
