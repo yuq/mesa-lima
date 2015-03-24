@@ -65,6 +65,8 @@ struct vc4_bo *
 vc4_bo_alloc(struct vc4_screen *screen, uint32_t size, const char *name)
 {
         struct vc4_bo *bo;
+        int ret;
+
         size = align(size, 4096);
 
         bo = vc4_bo_from_cache(screen, size, name);
@@ -81,21 +83,30 @@ vc4_bo_alloc(struct vc4_screen *screen, uint32_t size, const char *name)
         bo->name = name;
         bo->private = true;
 
-        struct drm_mode_create_dumb create;
-        memset(&create, 0, sizeof(create));
+        if (!using_vc4_simulator) {
+                struct drm_vc4_create_bo create;
+                memset(&create, 0, sizeof(create));
 
-        create.width = 128;
-        create.bpp = 8;
-        create.height = (size + 127) / 128;
+                create.size = size;
 
-        int ret = drmIoctl(screen->fd, DRM_IOCTL_MODE_CREATE_DUMB, &create);
+                ret = drmIoctl(screen->fd, DRM_IOCTL_VC4_CREATE_BO, &create);
+                bo->handle = create.handle;
+        } else {
+                struct drm_mode_create_dumb create;
+                memset(&create, 0, sizeof(create));
+
+                create.width = 128;
+                create.bpp = 8;
+                create.height = (size + 127) / 128;
+
+                ret = drmIoctl(screen->fd, DRM_IOCTL_MODE_CREATE_DUMB, &create);
+                bo->handle = create.handle;
+                assert(create.size >= size);
+        }
         if (ret != 0) {
                 fprintf(stderr, "create ioctl failure\n");
                 abort();
         }
-
-        bo->handle = create.handle;
-        assert(create.size >= size);
 
         return bo;
 }
@@ -371,25 +382,35 @@ vc4_bo_wait(struct vc4_bo *bo, uint64_t timeout_ns)
 void *
 vc4_bo_map_unsynchronized(struct vc4_bo *bo)
 {
+        uint64_t offset;
         int ret;
 
         if (bo->map)
                 return bo->map;
 
-        struct drm_mode_map_dumb map;
-        memset(&map, 0, sizeof(map));
-        map.handle = bo->handle;
-        ret = drmIoctl(bo->screen->fd, DRM_IOCTL_MODE_MAP_DUMB, &map);
+        if (!using_vc4_simulator) {
+                struct drm_vc4_mmap_bo map;
+                memset(&map, 0, sizeof(map));
+                map.handle = bo->handle;
+                ret = drmIoctl(bo->screen->fd, DRM_IOCTL_VC4_MMAP_BO, &map);
+                offset = map.offset;
+        } else {
+                struct drm_mode_map_dumb map;
+                memset(&map, 0, sizeof(map));
+                map.handle = bo->handle;
+                ret = drmIoctl(bo->screen->fd, DRM_IOCTL_MODE_MAP_DUMB, &map);
+                offset = map.offset;
+        }
         if (ret != 0) {
                 fprintf(stderr, "map ioctl failure\n");
                 abort();
         }
 
         bo->map = mmap(NULL, bo->size, PROT_READ | PROT_WRITE, MAP_SHARED,
-                       bo->screen->fd, map.offset);
+                       bo->screen->fd, offset);
         if (bo->map == MAP_FAILED) {
                 fprintf(stderr, "mmap of bo %d (offset 0x%016llx, size %d) failed\n",
-                        bo->handle, (long long)map.offset, bo->size);
+                        bo->handle, (long long)offset, bo->size);
                 abort();
         }
 
