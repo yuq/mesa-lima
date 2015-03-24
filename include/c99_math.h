@@ -82,7 +82,8 @@ roundf(float x)
 #endif /* _MSC_VER */
 
 
-#if __STDC_VERSION__ < 199901L && (!defined(__cplusplus) || defined(_MSC_VER))
+#if (defined(_MSC_VER) && _MSC_VER < 1800) || \
+    (!defined(_MSC_VER) && __STDC_VERSION__ < 199901L && !defined(__cplusplus))
 static inline long int
 lrint(double d)
 {
