@@ -404,11 +404,11 @@ vc4_resource_from_handle(struct pipe_screen *pscreen,
         if (!rsc->bo)
                 goto fail;
 
-#ifdef USE_VC4_SIMULATOR
-        slice->stride = align(prsc->width0 * rsc->cpp, 16);
-#else
-        slice->stride = handle->stride;
-#endif
+        if (!using_vc4_simulator)
+                slice->stride = handle->stride;
+        else
+                slice->stride = align(prsc->width0 * rsc->cpp, 16);
+
         slice->tiling = VC4_TILING_FORMAT_LINEAR;
 
         rsc->vc4_format = get_resource_texture_format(prsc);

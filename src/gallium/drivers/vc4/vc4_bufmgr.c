@@ -318,13 +318,19 @@ vc4_wait_seqno(struct vc4_screen *screen, uint64_t seqno, uint64_t timeout_ns)
         if (screen->finished_seqno >= seqno)
                 return true;
 
-#ifndef USE_VC4_SIMULATOR
         struct drm_vc4_wait_seqno wait;
         memset(&wait, 0, sizeof(wait));
         wait.seqno = seqno;
         wait.timeout_ns = timeout_ns;
 
-        int ret = drmIoctl(screen->fd, DRM_IOCTL_VC4_WAIT_SEQNO, &wait);
+        int ret;
+        if (!using_vc4_simulator)
+                ret = drmIoctl(screen->fd, DRM_IOCTL_VC4_WAIT_SEQNO, &wait);
+        else {
+                wait.seqno = screen->finished_seqno;
+                ret = 0;
+        }
+
         if (ret == -ETIME) {
                 return false;
         } else if (ret != 0) {
@@ -334,15 +340,11 @@ vc4_wait_seqno(struct vc4_screen *screen, uint64_t seqno, uint64_t timeout_ns)
                 screen->finished_seqno = wait.seqno;
                 return true;
         }
-#else
-        return true;
-#endif
 }
 
 bool
 vc4_bo_wait(struct vc4_bo *bo, uint64_t timeout_ns)
 {
-#ifndef USE_VC4_SIMULATOR
         struct vc4_screen *screen = bo->screen;
 
         struct drm_vc4_wait_bo wait;
@@ -350,7 +352,12 @@ vc4_bo_wait(struct vc4_bo *bo, uint64_t timeout_ns)
         wait.handle = bo->handle;
         wait.timeout_ns = timeout_ns;
 
-        int ret = drmIoctl(screen->fd, DRM_IOCTL_VC4_WAIT_BO, &wait);
+        int ret;
+        if (!using_vc4_simulator)
+                ret = drmIoctl(screen->fd, DRM_IOCTL_VC4_WAIT_BO, &wait);
+        else
+                ret = 0;
+
         if (ret == -ETIME) {
                 return false;
         } else if (ret != 0) {
@@ -359,9 +366,6 @@ vc4_bo_wait(struct vc4_bo *bo, uint64_t timeout_ns)
         } else {
                 return true;
         }
-#else
-        return true;
-#endif
 }
 
 void *

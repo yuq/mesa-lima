@@ -38,6 +38,12 @@
 #include "vc4_cl.h"
 #include "vc4_qir.h"
 
+#ifdef USE_VC4_SIMULATOR
+#define using_vc4_simulator true
+#else
+#define using_vc4_simulator false
+#endif
+
 #define VC4_DIRTY_BLEND         (1 <<  0)
 #define VC4_DIRTY_RASTERIZER    (1 <<  1)
 #define VC4_DIRTY_ZSA           (1 <<  2)
