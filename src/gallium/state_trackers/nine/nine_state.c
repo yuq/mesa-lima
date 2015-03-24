@@ -37,6 +37,12 @@
 
 #define DBG_CHANNEL DBG_DEVICE
 
+/* State preparation only */
+
+/* State preparation incremental */
+
+/* State preparation + State commit */
+
 static uint32_t
 update_framebuffer(struct NineDevice9 *device)
 {
@@ -174,14 +180,6 @@ update_viewport(struct NineDevice9 *device)
     }
 
     pipe->set_viewport_states(pipe, 0, 1, &pvport);
-}
-
-static inline void
-update_scissor(struct NineDevice9 *device)
-{
-    struct pipe_context *pipe = device->pipe;
-
-    pipe->set_scissor_states(pipe, 0, 1, &device->state.scissor);
 }
 
 static inline void
@@ -665,27 +663,6 @@ update_vertex_buffers(struct NineDevice9 *device)
     state->changed.vtxbuf = 0;
 }
 
-static inline void
-update_index_buffer(struct NineDevice9 *device)
-{
-    struct pipe_context *pipe = device->pipe;
-    if (device->state.idxbuf)
-        pipe->set_index_buffer(pipe, &device->state.idxbuf->buffer);
-    else
-        pipe->set_index_buffer(pipe, NULL);
-}
-
-/* TODO: only go through dirty textures */
-static void
-validate_textures(struct NineDevice9 *device)
-{
-    struct NineBaseTexture9 *tex, *ptr;
-    LIST_FOR_EACH_ENTRY_SAFE(tex, ptr, &device->update_textures, list) {
-        list_delinit(&tex->list);
-        NineBaseTexture9_Validate(tex);
-    }
-}
-
 static inline boolean
 update_sampler_derived(struct nine_state *state, unsigned s)
 {
@@ -864,6 +841,27 @@ update_textures_and_samplers(struct NineDevice9 *device)
     state->changed.texture = 0;
 }
 
+/* State commit only */
+
+static inline void
+commit_scissor(struct NineDevice9 *device)
+{
+    struct pipe_context *pipe = device->pipe;
+
+    pipe->set_scissor_states(pipe, 0, 1, &device->state.scissor);
+}
+
+static inline void
+commit_index_buffer(struct NineDevice9 *device)
+{
+    struct pipe_context *pipe = device->pipe;
+    if (device->state.idxbuf)
+        pipe->set_index_buffer(pipe, &device->state.idxbuf->buffer);
+    else
+        pipe->set_index_buffer(pipe, NULL);
+}
+
+/* State Update */
 
 #define NINE_STATE_FREQ_GROUP_0 \
    (NINE_STATE_FB |             \
@@ -884,6 +882,17 @@ update_textures_and_samplers(struct NineDevice9 *device)
     (NINE_STATE_TEXTURE | \
      NINE_STATE_VS | \
      NINE_STATE_PS)
+
+/* TODO: only go through dirty textures */
+static void
+validate_textures(struct NineDevice9 *device)
+{
+    struct NineBaseTexture9 *tex, *ptr;
+    LIST_FOR_EACH_ENTRY_SAFE(tex, ptr, &device->update_textures, list) {
+        list_delinit(&tex->list);
+        NineBaseTexture9_Validate(tex);
+    }
+}
 
 void
 nine_update_state_framebuffer(struct NineDevice9 *device)
@@ -931,7 +940,7 @@ nine_update_state(struct NineDevice9 *device)
         if (group & NINE_STATE_VIEWPORT)
             update_viewport(device);
         if (group & NINE_STATE_SCISSOR)
-            update_scissor(device);
+            commit_scissor(device);
 
         if (group & NINE_STATE_DSA)
             update_dsa(device);
@@ -973,7 +982,7 @@ nine_update_state(struct NineDevice9 *device)
             update_textures_and_samplers(device);
 
         if (group & NINE_STATE_IDXBUF)
-            update_index_buffer(device);
+            commit_index_buffer(device);
 
         if ((group & (NINE_STATE_VDECL | NINE_STATE_VS)) ||
             state->changed.stream_freq & ~1)
@@ -1002,6 +1011,7 @@ nine_update_state(struct NineDevice9 *device)
     return TRUE;
 }
 
+/* State defaults */
 
 static const DWORD nine_render_state_defaults[NINED3DRS_LAST + 1] =
 {
@@ -1468,6 +1478,8 @@ const uint32_t nine_render_state_group[NINED3DRS_LAST + 1] =
     [D3DRS_DESTBLENDALPHA] = NINE_STATE_BLEND,
     [D3DRS_BLENDOPALPHA] = NINE_STATE_BLEND
 };
+
+/* Misc */
 
 D3DMATRIX *
 nine_state_access_transform(struct nine_state *state, D3DTRANSFORMSTATETYPE t,
