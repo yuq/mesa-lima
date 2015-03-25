@@ -174,17 +174,34 @@ create_copy_instr(fs_visitor *v, fs_inst *inst, fs_reg src, bool negate)
 {
    int written = inst->regs_written;
    int dst_width = inst->dst.width / 8;
-   fs_reg dst = inst->dst;
    fs_inst *copy;
 
    if (written > dst_width) {
-      fs_reg *sources = ralloc_array(v->mem_ctx, fs_reg, written / dst_width);
-      for (int i = 0; i < written / dst_width; i++)
-         sources[i] = offset(src, i);
-      copy = v->LOAD_PAYLOAD(dst, sources, written / dst_width,
-                             inst->header_size);
+      fs_reg *payload;
+      int sources, header_size;
+      if (inst->opcode == SHADER_OPCODE_LOAD_PAYLOAD) {
+         sources = inst->sources;
+         header_size = inst->header_size;
+      } else {
+         assert(written % dst_width == 0);
+         sources = written / dst_width;
+         header_size = 0;
+      }
+
+      assert(src.file == GRF);
+      payload = ralloc_array(v->mem_ctx, fs_reg, sources);
+      for (int i = 0; i < header_size; i++) {
+         payload[i] = src;
+         payload[i].width = 8;
+         src.reg_offset++;
+      }
+      for (int i = header_size; i < sources; i++) {
+         payload[i] = src;
+         src = offset(src, 1);
+      }
+      copy = v->LOAD_PAYLOAD(inst->dst, payload, sources, header_size);
    } else {
-      copy = v->MOV(dst, src);
+      copy = v->MOV(inst->dst, src);
       copy->force_writemask_all = inst->force_writemask_all;
       copy->src[0].negate = negate;
    }

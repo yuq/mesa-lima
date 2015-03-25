@@ -358,28 +358,18 @@ fs_inst *
 fs_visitor::LOAD_PAYLOAD(const fs_reg &dst, fs_reg *src, int sources,
                          int header_size)
 {
+   assert(dst.width % 8 == 0);
+   fs_inst *inst = new(mem_ctx) fs_inst(SHADER_OPCODE_LOAD_PAYLOAD, dst.width,
+                                        dst, src, sources);
+   inst->header_size = header_size;
+
    for (int i = 0; i < header_size; i++)
       assert(src[i].file != GRF || src[i].width * type_sz(src[i].type) == 32);
+   inst->regs_written = header_size;
 
-   uint8_t exec_size = dst.width;
-   for (int i = 0; i < sources; ++i) {
-      assert(src[i].width % dst.width == 0);
-      if (src[i].width > exec_size)
-         exec_size = src[i].width;
-   }
-
-   fs_inst *inst = new(mem_ctx) fs_inst(SHADER_OPCODE_LOAD_PAYLOAD, exec_size,
-                                        dst, src, sources);
-   inst->regs_written = 0;
-   for (int i = 0; i < sources; ++i) {
-      /* The LOAD_PAYLOAD instruction only really makes sense if we are
-       * dealing with whole registers.  If this ever changes, we can deal
-       * with it later.
-       */
-      int size = inst->src[i].effective_width * type_sz(src[i].type);
-      assert(size % 32 == 0);
-      inst->regs_written += (size + 31) / 32;
-   }
+   for (int i = header_size; i < sources; ++i)
+      assert(src[i].file != GRF || src[i].width == dst.width);
+   inst->regs_written += (sources - header_size) * (dst.width / 8);
 
    return inst;
 }
@@ -537,9 +527,13 @@ fs_inst::is_copy_payload(const brw::simple_allocator &grf_alloc) const
    if (grf_alloc.sizes[reg.reg] != this->regs_written)
       return false;
 
-   for (int i = 1; i < this->sources; i++)
-      if (!this->src[i].equals(::offset(reg, i)))
+   for (int i = 0; i < this->sources; i++) {
+      reg.type = this->src[i].type;
+      reg.width = this->src[i].width;
+      if (!this->src[i].equals(reg))
          return false;
+      reg = ::offset(reg, 1);
+   }
 
    return true;
 }
@@ -3429,99 +3423,108 @@ fs_visitor::lower_load_payload()
 {
    bool progress = false;
 
-   int vgrf_to_reg[alloc.count];
-   int reg_count = 0;
-   for (unsigned i = 0; i < alloc.count; ++i) {
-      vgrf_to_reg[i] = reg_count;
-      reg_count += alloc.sizes[i];
-   }
-
-   struct {
-      bool written:1; /* Whether this register has ever been written */
-      bool force_writemask_all:1;
-      bool force_sechalf:1;
-   } metadata[reg_count];
-   memset(metadata, 0, sizeof(metadata));
-
    foreach_block_and_inst_safe (block, fs_inst, inst, cfg) {
-      if (inst->dst.file == GRF) {
-         const int dst_reg = vgrf_to_reg[inst->dst.reg] + inst->dst.reg_offset;
-         bool force_sechalf = inst->force_sechalf &&
-                              !inst->force_writemask_all;
-         bool toggle_sechalf = inst->dst.width == 16 &&
-                               type_sz(inst->dst.type) == 4 &&
-                               !inst->force_writemask_all;
-         for (int i = 0; i < inst->regs_written; ++i) {
-            metadata[dst_reg + i].written = true;
-            metadata[dst_reg + i].force_sechalf = force_sechalf;
-            metadata[dst_reg + i].force_writemask_all = inst->force_writemask_all;
-            force_sechalf = (toggle_sechalf != force_sechalf);
+      if (inst->opcode != SHADER_OPCODE_LOAD_PAYLOAD)
+         continue;
+
+      assert(inst->dst.file == MRF || inst->dst.file == GRF);
+      assert(inst->saturate == false);
+
+      fs_reg dst = inst->dst;
+
+      /* Get rid of COMPR4.  We'll add it back in if we need it */
+      if (dst.file == MRF)
+         dst.reg = dst.reg & ~BRW_MRF_COMPR4;
+
+      dst.width = 8;
+      for (uint8_t i = 0; i < inst->header_size; i++) {
+         if (inst->src[i].file != BAD_FILE) {
+            fs_reg mov_dst = retype(dst, BRW_REGISTER_TYPE_UD);
+            fs_reg mov_src = retype(inst->src[i], BRW_REGISTER_TYPE_UD);
+            mov_src.width = 8;
+            fs_inst *mov = MOV(mov_dst, mov_src);
+            mov->force_writemask_all = true;
+            inst->insert_before(block, mov);
          }
+         dst = offset(dst, 1);
       }
 
-      if (inst->opcode == SHADER_OPCODE_LOAD_PAYLOAD) {
-         assert(inst->dst.file == MRF || inst->dst.file == GRF);
-         fs_reg dst = inst->dst;
+      dst.width = inst->exec_size;
+      if (inst->dst.file == MRF && (inst->dst.reg & BRW_MRF_COMPR4) &&
+          inst->exec_size > 8) {
+         /* In this case, the payload portion of the LOAD_PAYLOAD isn't
+          * a straightforward copy.  Instead, the result of the
+          * LOAD_PAYLOAD is treated as interleaved and the first four
+          * non-header sources are unpacked as:
+          *
+          * m + 0: r0
+          * m + 1: g0
+          * m + 2: b0
+          * m + 3: a0
+          * m + 4: r1
+          * m + 5: g1
+          * m + 6: b1
+          * m + 7: a1
+          *
+          * This is used for gen <= 5 fb writes.
+          */
+         assert(inst->exec_size == 16);
+         assert(inst->header_size + 4 <= inst->sources);
+         for (uint8_t i = inst->header_size; i < inst->header_size + 4; i++) {
+            if (inst->src[i].file != BAD_FILE) {
+               if (devinfo->has_compr4) {
+                  fs_reg compr4_dst = retype(dst, inst->src[i].type);
+                  compr4_dst.reg |= BRW_MRF_COMPR4;
 
-         for (int i = 0; i < inst->sources; i++) {
-            dst.width = inst->src[i].effective_width;
-            dst.type = inst->src[i].type;
-
-            if (inst->src[i].file == BAD_FILE) {
-               /* Do nothing but otherwise increment as normal */
-            } else if (dst.file == MRF &&
-                       dst.width == 8 &&
-                       devinfo->has_compr4 &&
-                       i + 4 < inst->sources &&
-                       inst->src[i + 4].equals(horiz_offset(inst->src[i], 8))) {
-               fs_reg compr4_dst = dst;
-               compr4_dst.reg += BRW_MRF_COMPR4;
-               compr4_dst.width = 16;
-               fs_reg compr4_src = inst->src[i];
-               compr4_src.width = 16;
-               fs_inst *mov = MOV(compr4_dst, compr4_src);
-               mov->force_writemask_all = true;
-               inst->insert_before(block, mov);
-               /* Mark i+4 as BAD_FILE so we don't emit a MOV for it */
-               inst->src[i + 4].file = BAD_FILE;
-            } else {
-               fs_inst *mov = MOV(dst, inst->src[i]);
-               if (inst->src[i].file == GRF) {
-                  int src_reg = vgrf_to_reg[inst->src[i].reg] +
-                                inst->src[i].reg_offset;
-                  mov->force_sechalf = metadata[src_reg].force_sechalf;
-                  mov->force_writemask_all = metadata[src_reg].force_writemask_all;
+                  fs_inst *mov = MOV(compr4_dst, inst->src[i]);
+                  mov->force_writemask_all = inst->force_writemask_all;
+                  inst->insert_before(block, mov);
                } else {
-                  /* We don't have any useful metadata for immediates or
-                   * uniforms.  Assume that any of the channels of the
-                   * destination may be used.
-                   */
-                  assert(inst->src[i].file == IMM ||
-                         inst->src[i].file == UNIFORM);
-                  mov->force_writemask_all = true;
-               }
+                  /* Platform doesn't have COMPR4.  We have to fake it */
+                  fs_reg mov_dst = retype(dst, inst->src[i].type);
+                  mov_dst.width = 8;
 
-               if (dst.file == GRF) {
-                  const int dst_reg = vgrf_to_reg[dst.reg] + dst.reg_offset;
-                  const bool force_writemask = mov->force_writemask_all;
-                  metadata[dst_reg].force_writemask_all = force_writemask;
-                  metadata[dst_reg].force_sechalf = mov->force_sechalf;
-                  if (dst.width * type_sz(dst.type) > 32) {
-                     assert(!mov->force_sechalf);
-                     metadata[dst_reg + 1].force_writemask_all = force_writemask;
-                     metadata[dst_reg + 1].force_sechalf = !force_writemask;
-                  }
-               }
+                  fs_inst *mov = MOV(mov_dst, half(inst->src[i], 0));
+                  mov->force_writemask_all = inst->force_writemask_all;
+                  inst->insert_before(block, mov);
 
-               inst->insert_before(block, mov);
+                  mov = MOV(offset(mov_dst, 4), half(inst->src[i], 1));
+                  mov->force_writemask_all = inst->force_writemask_all;
+                  mov->force_sechalf = true;
+                  inst->insert_before(block, mov);
+               }
             }
 
-            dst = offset(dst, 1);
+            dst.reg++;
          }
 
-         inst->remove(block);
-         progress = true;
+         /* The loop above only ever incremented us through the first set
+          * of 4 registers.  However, thanks to the magic of COMPR4, we
+          * actually wrote to the first 8 registers, so we need to take
+          * that into account now.
+          */
+         dst.reg += 4;
+
+         /* The COMPR4 code took care of the first 4 sources.  We'll let
+          * the regular path handle any remaining sources.  Yes, we are
+          * modifying the instruction but we're about to delete it so
+          * this really doesn't hurt anything.
+          */
+         inst->header_size += 4;
       }
+
+      for (uint8_t i = inst->header_size; i < inst->sources; i++) {
+         if (inst->src[i].file != BAD_FILE) {
+            fs_inst *mov = MOV(retype(dst, inst->src[i].type),
+                               inst->src[i]);
+            mov->force_writemask_all = inst->force_writemask_all;
+            inst->insert_before(block, mov);
+         }
+         dst = offset(dst, 1);
+      }
+
+      inst->remove(block);
+      progress = true;
    }
 
    if (progress)

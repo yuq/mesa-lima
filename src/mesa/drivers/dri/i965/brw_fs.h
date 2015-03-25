@@ -394,8 +394,8 @@ public:
    bool optimize_frontfacing_ternary(nir_alu_instr *instr,
                                      const fs_reg &result);
 
-   int setup_color_payload(fs_reg *dst, fs_reg color, unsigned components,
-                           bool use_2nd_half);
+   void setup_color_payload(fs_reg *dst, fs_reg color, unsigned components,
+                            unsigned exec_size, bool use_2nd_half);
    void emit_alpha_test();
    fs_inst *emit_single_fb_write(fs_reg color1, fs_reg color2,
                                  fs_reg src0_alpha, unsigned components,
