@@ -368,6 +368,10 @@ static void
 gen8_emit_pma_stall_workaround(struct brw_context *brw)
 {
    uint32_t bits = 0;
+
+   if (brw->gen >= 9)
+      return;
+
    if (pma_fix_enable(brw))
       bits |= GEN8_HIZ_NP_PMA_FIX_ENABLE | GEN8_HIZ_NP_EARLY_Z_FAILS_DISABLE;
 
@@ -400,7 +404,8 @@ gen8_hiz_exec(struct brw_context *brw, struct intel_mipmap_tree *mt,
       return;
 
    /* Disable the PMA stall fix since we're about to do a HiZ operation. */
-   write_pma_stall_bits(brw, 0);
+   if (brw->gen == 8)
+      write_pma_stall_bits(brw, 0);
 
    assert(mt->first_level == 0);
    assert(mt->logical_depth0 >= 1);
