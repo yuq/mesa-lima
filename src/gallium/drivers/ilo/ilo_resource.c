@@ -452,7 +452,7 @@ buf_create(struct pipe_screen *screen, const struct pipe_resource *templ)
    if ((templ->bind & PIPE_BIND_VERTEX_BUFFER) &&
         ilo_dev_gen(&is->dev) < ILO_GEN(7.5)) {
       /*
-       * As noted in ilo_translate_format(), we treat some 3-component formats
+       * As noted in ilo_format_translate(), we treat some 3-component formats
        * as 4-component formats to work around hardware limitations.  Imagine
        * the case where the vertex buffer holds a single
        * PIPE_FORMAT_R16G16B16_FLOAT vertex, and buf->bo_size is 6.  The

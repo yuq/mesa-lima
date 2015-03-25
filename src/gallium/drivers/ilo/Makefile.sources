@@ -4,6 +4,8 @@ C_SOURCES := \
 	core/ilo_debug.h \
 	core/ilo_dev.c \
 	core/ilo_dev.h \
+	core/ilo_format.c \
+	core/ilo_format.h \
 	core/ilo_fence.h \
 	core/intel_winsys.h \
 	ilo_blit.c \
@@ -30,8 +32,6 @@ C_SOURCES := \
 	ilo_cp.h \
 	ilo_draw.c \
 	ilo_draw.h \
-	ilo_format.c \
-	ilo_format.h \
 	ilo_gpgpu.c \
 	ilo_gpgpu.h \
 	ilo_layout.c \

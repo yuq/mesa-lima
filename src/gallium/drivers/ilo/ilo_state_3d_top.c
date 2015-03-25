@@ -26,13 +26,13 @@
  */
 
 #include "genhw/genhw.h"
+#include "core/ilo_format.h"
 #include "util/u_dual_blend.h"
 #include "util/u_framebuffer.h"
 #include "util/u_half.h"
 #include "util/u_resource.h"
 
 #include "ilo_context.h"
-#include "ilo_format.h"
 #include "ilo_resource.h"
 #include "ilo_shader.h"
 #include "ilo_state.h"
@@ -62,7 +62,7 @@ ve_init_cso(const struct ilo_dev *dev,
                      GEN6_VFCOMP_STORE_1_FP;
    }
 
-   format = ilo_translate_vertex_format(dev, state->src_format);
+   format = ilo_format_translate_vertex(dev, state->src_format);
 
    STATIC_ASSERT(Elements(cso->payload) >= 2);
    cso->payload[0] =
@@ -485,7 +485,7 @@ view_init_for_buffer_gen6(const struct ilo_dev *dev,
     * structure in a buffer.
     */
 
-   surface_format = ilo_translate_color_format(dev, elem_format);
+   surface_format = ilo_format_translate_color(dev, elem_format);
 
    num_entries = size / struct_size;
    /* see if there is enough space to fit another element */
@@ -579,9 +579,9 @@ view_init_for_texture_gen6(const struct ilo_dev *dev,
       format = PIPE_FORMAT_Z32_FLOAT;
 
    if (is_rt)
-      surface_format = ilo_translate_render_format(dev, format);
+      surface_format = ilo_format_translate_render(dev, format);
    else
-      surface_format = ilo_translate_texture_format(dev, format);
+      surface_format = ilo_format_translate_texture(dev, format);
    assert(surface_format >= 0);
 
    width = tex->layout.width0;
@@ -812,7 +812,7 @@ view_init_for_buffer_gen7(const struct ilo_dev *dev,
    surface_type = (structured) ? GEN7_SURFTYPE_STRBUF : GEN6_SURFTYPE_BUFFER;
 
    surface_format = (typed) ?
-      ilo_translate_color_format(dev, elem_format) : GEN6_FORMAT_RAW;
+      ilo_format_translate_color(dev, elem_format) : GEN6_FORMAT_RAW;
 
    num_entries = size / struct_size;
    /* see if there is enough space to fit another element */
@@ -941,9 +941,9 @@ view_init_for_texture_gen7(const struct ilo_dev *dev,
       format = PIPE_FORMAT_Z32_FLOAT;
 
    if (is_rt)
-      surface_format = ilo_translate_render_format(dev, format);
+      surface_format = ilo_format_translate_render(dev, format);
    else
-      surface_format = ilo_translate_texture_format(dev, format);
+      surface_format = ilo_format_translate_texture(dev, format);
    assert(surface_format >= 0);
 
    width = tex->layout.width0;

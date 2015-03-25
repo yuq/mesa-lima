@@ -26,12 +26,12 @@
  */
 
 #include "genhw/genhw.h"
+#include "core/ilo_format.h"
 #include "util/u_dual_blend.h"
 #include "util/u_framebuffer.h"
 #include "util/u_half.h"
 
 #include "ilo_context.h"
-#include "ilo_format.h"
 #include "ilo_resource.h"
 #include "ilo_shader.h"
 #include "ilo_state.h"
@@ -2162,8 +2162,8 @@ fb_set_blend_caps(const struct ilo_dev *dev,
    caps->can_alpha_test = !util_format_is_pure_integer(format);
 
    caps->dst_alpha_forced_one =
-      (ilo_translate_render_format(dev, format) !=
-       ilo_translate_color_format(dev, format));
+      (ilo_format_translate_render(dev, format) !=
+       ilo_format_translate_color(dev, format));
 
    /* sanity check */
    if (caps->dst_alpha_forced_one) {
@@ -2178,8 +2178,8 @@ fb_set_blend_caps(const struct ilo_dev *dev,
          break;
       }
 
-      assert(ilo_translate_render_format(dev, format) ==
-             ilo_translate_color_format(dev, render_format));
+      assert(ilo_format_translate_render(dev, format) ==
+             ilo_format_translate_color(dev, render_format));
    }
 }
 

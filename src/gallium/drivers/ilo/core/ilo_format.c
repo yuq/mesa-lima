@@ -26,9 +26,6 @@
  */
 
 #include "genhw/genhw.h"
-#include "vl/vl_video_buffer.h"
-
-#include "ilo_screen.h"
 #include "ilo_format.h"
 
 struct ilo_vf_cap {
@@ -406,12 +403,95 @@ static const struct ilo_dp_cap ilo_dp_caps[] = {
 #undef CAP
 };
 
+bool
+ilo_format_support_vb(const struct ilo_dev *dev,
+                      enum pipe_format format)
+{
+   const int idx = ilo_format_translate(dev, format, PIPE_BIND_VERTEX_BUFFER);
+   const struct ilo_vf_cap *cap = (idx >= 0 && idx < Elements(ilo_vf_caps)) ?
+      &ilo_vf_caps[idx] : NULL;
+
+   return (cap && cap->vertex_element &&
+         ilo_dev_gen(dev) >= cap->vertex_element);
+}
+
+bool
+ilo_format_support_sol(const struct ilo_dev *dev,
+                       enum pipe_format format)
+{
+   const int idx = ilo_format_translate(dev, format, PIPE_BIND_STREAM_OUTPUT);
+   const struct ilo_sol_cap *cap = (idx >= 0 && idx < Elements(ilo_sol_caps)) ?
+      &ilo_sol_caps[idx] : NULL;
+
+   return (cap && cap->buffer && ilo_dev_gen(dev) >= cap->buffer);
+}
+
+bool
+ilo_format_support_sampler(const struct ilo_dev *dev,
+                           enum pipe_format format)
+{
+   const int idx = ilo_format_translate(dev, format, PIPE_BIND_SAMPLER_VIEW);
+   const struct ilo_sampler_cap *cap = (idx >= 0 &&
+         idx < Elements(ilo_sampler_caps)) ? &ilo_sampler_caps[idx] : NULL;
+
+   if (!cap || !cap->sampling)
+      return false;
+
+   assert(!cap->filtering || cap->filtering >= cap->sampling);
+
+   if (util_format_is_pure_integer(format))
+      return (ilo_dev_gen(dev) >= cap->sampling);
+   else if (cap->filtering)
+      return (ilo_dev_gen(dev) >= cap->filtering);
+   else
+      return false;
+}
+
+bool
+ilo_format_support_rt(const struct ilo_dev *dev,
+                      enum pipe_format format)
+{
+   const int idx = ilo_format_translate(dev, format, PIPE_BIND_RENDER_TARGET);
+   const struct ilo_dp_cap *cap = (idx >= 0 && idx < Elements(ilo_dp_caps)) ?
+      &ilo_dp_caps[idx] : NULL;
+
+   if (!cap || !cap->rt_write)
+      return false;
+
+   assert(!cap->rt_write_blending || cap->rt_write_blending >= cap->rt_write);
+
+   if (util_format_is_pure_integer(format))
+      return (ilo_dev_gen(dev) >= cap->rt_write);
+   else if (cap->rt_write_blending)
+      return (ilo_dev_gen(dev) >= cap->rt_write_blending);
+   else
+      return false;
+}
+
+bool
+ilo_format_support_zs(const struct ilo_dev *dev,
+                      enum pipe_format format)
+{
+   switch (format) {
+   case PIPE_FORMAT_Z16_UNORM:
+   case PIPE_FORMAT_Z24X8_UNORM:
+   case PIPE_FORMAT_Z32_FLOAT:
+   case PIPE_FORMAT_Z24_UNORM_S8_UINT:
+   case PIPE_FORMAT_Z32_FLOAT_S8X24_UINT:
+      return true;
+   case PIPE_FORMAT_S8_UINT:
+      /* TODO separate stencil */
+   default:
+      return false;
+   }
+}
+
 /**
  * Translate a color (non-depth/stencil) pipe format to the matching hardware
  * format.  Return -1 on errors.
  */
 int
-ilo_translate_color_format(const struct ilo_dev *dev,
+ilo_format_translate_color(const struct ilo_dev *dev,
                            enum pipe_format format)
 {
    static const int format_mapping[PIPE_FORMAT_COUNT] = {
@@ -672,134 +752,4 @@ ilo_translate_color_format(const struct ilo_dev *dev,
       sfmt = -1;
 
    return sfmt;
-}
-
-static bool
-ilo_format_supports_zs(const struct ilo_dev *dev,
-                       enum pipe_format format)
-{
-   switch (format) {
-   case PIPE_FORMAT_Z16_UNORM:
-   case PIPE_FORMAT_Z24X8_UNORM:
-   case PIPE_FORMAT_Z32_FLOAT:
-   case PIPE_FORMAT_Z24_UNORM_S8_UINT:
-   case PIPE_FORMAT_Z32_FLOAT_S8X24_UINT:
-      return true;
-   case PIPE_FORMAT_S8_UINT:
-      /* TODO separate stencil */
-   default:
-      return false;
-   }
-}
-
-static bool
-ilo_format_supports_rt(const struct ilo_dev *dev,
-                       enum pipe_format format)
-{
-   const int idx = ilo_translate_format(dev, format, PIPE_BIND_RENDER_TARGET);
-   const struct ilo_dp_cap *cap = (idx >= 0 && idx < Elements(ilo_dp_caps)) ?
-      &ilo_dp_caps[idx] : NULL;
-
-   if (!cap || !cap->rt_write)
-      return false;
-
-   assert(!cap->rt_write_blending || cap->rt_write_blending >= cap->rt_write);
-
-   if (util_format_is_pure_integer(format))
-      return (ilo_dev_gen(dev) >= cap->rt_write);
-   else if (cap->rt_write_blending)
-      return (ilo_dev_gen(dev) >= cap->rt_write_blending);
-   else
-      return false;
-}
-
-static bool
-ilo_format_supports_sampler(const struct ilo_dev *dev,
-                            enum pipe_format format)
-{
-   const int idx = ilo_translate_format(dev, format, PIPE_BIND_SAMPLER_VIEW);
-   const struct ilo_sampler_cap *cap = (idx >= 0 &&
-         idx < Elements(ilo_sampler_caps)) ? &ilo_sampler_caps[idx] : NULL;
-
-   if (!cap || !cap->sampling)
-      return false;
-
-   assert(!cap->filtering || cap->filtering >= cap->sampling);
-
-   if (util_format_is_pure_integer(format))
-      return (ilo_dev_gen(dev) >= cap->sampling);
-   else if (cap->filtering)
-      return (ilo_dev_gen(dev) >= cap->filtering);
-   else
-      return false;
-}
-
-static bool
-ilo_format_supports_vb(const struct ilo_dev *dev,
-                       enum pipe_format format)
-{
-   const int idx = ilo_translate_format(dev, format, PIPE_BIND_VERTEX_BUFFER);
-   const struct ilo_vf_cap *cap = (idx >= 0 && idx < Elements(ilo_vf_caps)) ?
-      &ilo_vf_caps[idx] : NULL;
-
-   return (cap && cap->vertex_element &&
-         ilo_dev_gen(dev) >= cap->vertex_element);
-}
-
-static boolean
-ilo_is_format_supported(struct pipe_screen *screen,
-                        enum pipe_format format,
-                        enum pipe_texture_target target,
-                        unsigned sample_count,
-                        unsigned bindings)
-{
-   struct ilo_screen *is = ilo_screen(screen);
-   const struct ilo_dev *dev = &is->dev;
-   unsigned bind;
-
-   if (!util_format_is_supported(format, bindings))
-      return false;
-
-   /* no MSAA support yet */
-   if (sample_count > 1)
-      return false;
-
-   bind = (bindings & PIPE_BIND_DEPTH_STENCIL);
-   if (bind && !ilo_format_supports_zs(dev, format))
-      return false;
-
-   bind = (bindings & PIPE_BIND_RENDER_TARGET);
-   if (bind && !ilo_format_supports_rt(dev, format))
-      return false;
-
-   bind = (bindings & PIPE_BIND_SAMPLER_VIEW);
-   if (bind && !ilo_format_supports_sampler(dev, format))
-      return false;
-
-   bind = (bindings & PIPE_BIND_VERTEX_BUFFER);
-   if (bind && !ilo_format_supports_vb(dev, format))
-      return false;
-
-   (void) ilo_sol_caps;
-
-   return true;
-}
-
-static boolean
-ilo_is_video_format_supported(struct pipe_screen *screen,
-                              enum pipe_format format,
-                              enum pipe_video_profile profile,
-                              enum pipe_video_entrypoint entrypoint)
-{
-   return vl_video_buffer_is_format_supported(screen, format, profile, entrypoint);
-}
-
-/**
- * Initialize format-related functions.
- */
-void
-ilo_init_format_functions(struct ilo_screen *is)
-{
-   is->base.is_format_supported = ilo_is_format_supported;
-   is->base.is_video_format_supported = ilo_is_video_format_supported;
 }

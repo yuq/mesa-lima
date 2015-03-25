@@ -29,16 +29,31 @@
 #define ILO_FORMAT_H
 
 #include "genhw/genhw.h"
+#include "ilo_core.h"
+#include "ilo_dev.h"
 
-#include "ilo_common.h"
+bool
+ilo_format_support_vb(const struct ilo_dev *dev,
+                      enum pipe_format format);
 
-struct ilo_screen;
+bool
+ilo_format_support_sol(const struct ilo_dev *dev,
+                       enum pipe_format format);
 
-void
-ilo_init_format_functions(struct ilo_screen *is);
+bool
+ilo_format_support_sampler(const struct ilo_dev *dev,
+                           enum pipe_format format);
+
+bool
+ilo_format_support_rt(const struct ilo_dev *dev,
+                      enum pipe_format format);
+
+bool
+ilo_format_support_zs(const struct ilo_dev *dev,
+                      enum pipe_format format);
 
 int
-ilo_translate_color_format(const struct ilo_dev *dev,
+ilo_format_translate_color(const struct ilo_dev *dev,
                            enum pipe_format format);
 
 /**
@@ -49,7 +64,7 @@ ilo_translate_color_format(const struct ilo_dev *dev,
  * caveats that the callers should be aware of before calling this function.
  */
 static inline int
-ilo_translate_format(const struct ilo_dev *dev,
+ilo_format_translate(const struct ilo_dev *dev,
                      enum pipe_format format, unsigned bind)
 {
    switch (bind) {
@@ -63,7 +78,7 @@ ilo_translate_format(const struct ilo_dev *dev,
       case PIPE_FORMAT_B8G8R8X8_UNORM:
          return GEN6_FORMAT_B8G8R8A8_UNORM;
       default:
-         return ilo_translate_color_format(dev, format);
+         return ilo_format_translate_color(dev, format);
       }
       break;
    case PIPE_BIND_SAMPLER_VIEW:
@@ -89,12 +104,12 @@ ilo_translate_format(const struct ilo_dev *dev,
       case PIPE_FORMAT_ETC1_RGB8:
          return GEN6_FORMAT_R8G8B8X8_UNORM;
       default:
-         return ilo_translate_color_format(dev, format);
+         return ilo_format_translate_color(dev, format);
       }
       break;
    case PIPE_BIND_VERTEX_BUFFER:
       if (ilo_dev_gen(dev) >= ILO_GEN(7.5))
-         return ilo_translate_color_format(dev, format);
+         return ilo_format_translate_color(dev, format);
 
       /*
        * Some 3-component formats are not supported as vertex element formats.
@@ -115,8 +130,11 @@ ilo_translate_format(const struct ilo_dev *dev,
       case PIPE_FORMAT_R8G8B8_SINT:
          return GEN6_FORMAT_R8G8B8A8_SINT;
       default:
-         return ilo_translate_color_format(dev, format);
+         return ilo_format_translate_color(dev, format);
       }
+      break;
+   case PIPE_BIND_STREAM_OUTPUT:
+      return ilo_format_translate_color(dev, format);
       break;
    default:
       assert(!"cannot translate format");
@@ -127,24 +145,24 @@ ilo_translate_format(const struct ilo_dev *dev,
 }
 
 static inline int
-ilo_translate_render_format(const struct ilo_dev *dev,
+ilo_format_translate_render(const struct ilo_dev *dev,
                             enum pipe_format format)
 {
-   return ilo_translate_format(dev, format, PIPE_BIND_RENDER_TARGET);
+   return ilo_format_translate(dev, format, PIPE_BIND_RENDER_TARGET);
 }
 
 static inline int
-ilo_translate_texture_format(const struct ilo_dev *dev,
+ilo_format_translate_texture(const struct ilo_dev *dev,
                              enum pipe_format format)
 {
-   return ilo_translate_format(dev, format, PIPE_BIND_SAMPLER_VIEW);
+   return ilo_format_translate(dev, format, PIPE_BIND_SAMPLER_VIEW);
 }
 
 static inline int
-ilo_translate_vertex_format(const struct ilo_dev *dev,
+ilo_format_translate_vertex(const struct ilo_dev *dev,
                             enum pipe_format format)
 {
-   return ilo_translate_format(dev, format, PIPE_BIND_VERTEX_BUFFER);
+   return ilo_format_translate(dev, format, PIPE_BIND_VERTEX_BUFFER);
 }
 
 #endif /* ILO_FORMAT_H */

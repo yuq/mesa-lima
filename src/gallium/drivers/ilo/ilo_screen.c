@@ -32,10 +32,10 @@
 #include "vl/vl_video_buffer.h"
 #include "genhw/genhw.h" /* for GEN6_REG_TIMESTAMP */
 #include "core/ilo_fence.h"
+#include "core/ilo_format.h"
 #include "core/intel_winsys.h"
 
 #include "ilo_context.h"
-#include "ilo_format.h"
 #include "ilo_resource.h"
 #include "ilo_transfer.h" /* for ILO_TRANSFER_MAP_BUFFER_ALIGNMENT */
 #include "ilo_public.h"
@@ -580,6 +580,51 @@ ilo_get_timestamp(struct pipe_screen *screen)
    return (uint64_t) timestamp.dw[1] * 80;
 }
 
+static boolean
+ilo_is_format_supported(struct pipe_screen *screen,
+                        enum pipe_format format,
+                        enum pipe_texture_target target,
+                        unsigned sample_count,
+                        unsigned bindings)
+{
+   struct ilo_screen *is = ilo_screen(screen);
+   const struct ilo_dev *dev = &is->dev;
+
+   if (!util_format_is_supported(format, bindings))
+      return false;
+
+   /* no MSAA support yet */
+   if (sample_count > 1)
+      return false;
+
+   if ((bindings & PIPE_BIND_DEPTH_STENCIL) &&
+       !ilo_format_support_zs(dev, format))
+      return false;
+
+   if ((bindings & PIPE_BIND_RENDER_TARGET) &&
+       !ilo_format_support_rt(dev, format))
+      return false;
+
+   if ((bindings & PIPE_BIND_SAMPLER_VIEW) &&
+       !ilo_format_support_sampler(dev, format))
+      return false;
+
+   if ((bindings & PIPE_BIND_VERTEX_BUFFER) &&
+       !ilo_format_support_vb(dev, format))
+      return false;
+
+   return true;
+}
+
+static boolean
+ilo_is_video_format_supported(struct pipe_screen *screen,
+                              enum pipe_format format,
+                              enum pipe_video_profile profile,
+                              enum pipe_video_entrypoint entrypoint)
+{
+   return vl_video_buffer_is_format_supported(screen, format, profile, entrypoint);
+}
+
 static void
 ilo_screen_fence_reference(struct pipe_screen *screen,
                            struct pipe_fence_handle **ptr,
@@ -686,6 +731,9 @@ ilo_screen_create(struct intel_winsys *ws)
 
    is->base.get_timestamp = ilo_get_timestamp;
 
+   is->base.is_format_supported = ilo_is_format_supported;
+   is->base.is_video_format_supported = ilo_is_video_format_supported;
+
    is->base.flush_frontbuffer = NULL;
 
    is->base.fence_reference = ilo_screen_fence_reference;
@@ -694,7 +742,6 @@ ilo_screen_create(struct intel_winsys *ws)
 
    is->base.get_driver_query_info = NULL;
 
-   ilo_init_format_functions(is);
    ilo_init_context_functions(is);
    ilo_init_resource_functions(is);
 
