@@ -1743,7 +1743,7 @@ fs_visitor::nir_emit_texture(nir_tex_instr *instr)
 
    int lod_components = 0, offset_components = 0;
 
-   fs_reg coordinate, shadow_comparitor, lod, lod2, sample_index, mcs, offset;
+   fs_reg coordinate, shadow_comparitor, lod, lod2, sample_index, mcs, tex_offset;
 
    for (unsigned i = 0; i < instr->num_srcs; i++) {
       fs_reg src = get_nir_src(instr->src[i].src);
@@ -1789,7 +1789,7 @@ fs_visitor::nir_emit_texture(nir_tex_instr *instr)
          sample_index = retype(src, BRW_REGISTER_TYPE_UD);
          break;
       case nir_tex_src_offset:
-         offset = retype(src, BRW_REGISTER_TYPE_D);
+         tex_offset = retype(src, BRW_REGISTER_TYPE_D);
          if (instr->is_array)
             offset_components = instr->coord_components - 1;
          else
@@ -1832,7 +1832,7 @@ fs_visitor::nir_emit_texture(nir_tex_instr *instr)
    for (unsigned i = 0; i < 3; i++) {
       if (instr->const_offset[i] != 0) {
          assert(offset_components == 0);
-         offset = fs_reg(brw_texture_offset(ctx, instr->const_offset, 3));
+         tex_offset = fs_reg(brw_texture_offset(ctx, instr->const_offset, 3));
          break;
       }
    }
@@ -1874,7 +1874,7 @@ fs_visitor::nir_emit_texture(nir_tex_instr *instr)
 
    emit_texture(op, dest_type, coordinate, instr->coord_components,
                 shadow_comparitor, lod, lod2, lod_components, sample_index,
-                offset, mcs, gather_component,
+                tex_offset, mcs, gather_component,
                 is_cube_array, is_rect, sampler, sampler_reg, texunit);
 
    fs_reg dest = get_nir_dest(instr->dest);
