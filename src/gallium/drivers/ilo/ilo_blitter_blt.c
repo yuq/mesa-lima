@@ -258,14 +258,14 @@ tex_clear_region(struct ilo_blitter *blitter,
    if (dst_box->width * cpp > gen6_blt_max_bytes_per_scanline)
       return false;
 
-   dst.bo = dst_tex->bo;
+   dst.bo = dst_tex->image.bo;
    dst.offset = 0;
    dst.pitch = dst_tex->image.bo_stride;
    dst.tiling = dst_tex->image.tiling;
 
    swctrl = ilo_blitter_blt_begin(blitter,
          GEN6_XY_COLOR_BLT__SIZE * dst_box->depth,
-         dst_tex->bo, dst_tex->image.tiling, NULL, GEN6_TILING_NONE);
+         dst_tex->image.bo, dst_tex->image.tiling, NULL, GEN6_TILING_NONE);
 
    for (slice = 0; slice < dst_box->depth; slice++) {
       unsigned x, y;
@@ -347,12 +347,12 @@ tex_copy_region(struct ilo_blitter *blitter,
       break;
    }
 
-   dst.bo = dst_tex->bo;
+   dst.bo = dst_tex->image.bo;
    dst.offset = 0;
    dst.pitch = dst_tex->image.bo_stride;
    dst.tiling = dst_tex->image.tiling;
 
-   src.bo = src_tex->bo;
+   src.bo = src_tex->image.bo;
    src.offset = 0;
    src.pitch = src_tex->image.bo_stride;
    src.tiling = src_tex->image.tiling;

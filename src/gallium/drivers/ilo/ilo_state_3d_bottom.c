@@ -1031,7 +1031,7 @@ zs_init_info(const struct ilo_dev *dev,
    }
 
    if (format != PIPE_FORMAT_S8_UINT) {
-      info->zs.bo = tex->bo;
+      info->zs.bo = tex->image.bo;
       info->zs.stride = tex->image.bo_stride;
 
       assert(tex->image.layer_height % 4 == 0);
@@ -1045,7 +1045,7 @@ zs_init_info(const struct ilo_dev *dev,
       const struct ilo_texture *s8_tex =
          (tex->separate_s8) ? tex->separate_s8 : tex;
 
-      info->stencil.bo = s8_tex->bo;
+      info->stencil.bo = s8_tex->image.bo;
 
       /*
        * From the Sandy Bridge PRM, volume 2 part 1, page 329:
@@ -1076,7 +1076,7 @@ zs_init_info(const struct ilo_dev *dev,
    }
 
    if (ilo_texture_can_enable_hiz(tex, level, first_layer, num_layers)) {
-      info->hiz.bo = tex->aux_bo;
+      info->hiz.bo = tex->image.aux_bo;
       info->hiz.stride = tex->image.aux_stride;
 
       assert(tex->image.aux_layer_height % 4 == 0);

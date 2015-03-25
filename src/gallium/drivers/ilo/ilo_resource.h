@@ -111,10 +111,7 @@ struct ilo_texture {
    struct ilo_image image;
 
    /* XXX thread-safety */
-   struct intel_bo *bo;
    struct ilo_texture_slice *slices[PIPE_MAX_TEXTURE_LEVELS];
-
-   struct intel_bo *aux_bo;
 
    struct ilo_texture *separate_s8;
 };
@@ -149,7 +146,7 @@ static inline struct intel_bo *
 ilo_resource_get_bo(struct pipe_resource *res)
 {
    return (res->target == PIPE_BUFFER) ?
-      ilo_buffer(res)->bo : ilo_texture(res)->bo;
+      ilo_buffer(res)->bo : ilo_texture(res)->image.bo;
 }
 
 static inline struct ilo_texture_slice *
@@ -206,7 +203,7 @@ ilo_texture_can_enable_hiz(const struct ilo_texture *tex, unsigned level,
    const struct ilo_texture_slice *slice =
       ilo_texture_get_slice(tex, level, 0);
 
-   return (tex->aux_bo && (slice->flags & ILO_TEXTURE_HIZ));
+   return (tex->image.aux_bo && (slice->flags & ILO_TEXTURE_HIZ));
 }
 
 #endif /* ILO_RESOURCE_H */

@@ -553,9 +553,9 @@ tex_staging_sys_map_bo(struct ilo_texture *tex,
 
    if (prefer_cpu && (tex->image.tiling == GEN6_TILING_NONE ||
                       !linear_view))
-      ptr = intel_bo_map(tex->bo, !for_read_back);
+      ptr = intel_bo_map(tex->image.bo, !for_read_back);
    else
-      ptr = intel_bo_map_gtt(tex->bo);
+      ptr = intel_bo_map_gtt(tex->image.bo);
 
    return ptr;
 }
@@ -563,7 +563,7 @@ tex_staging_sys_map_bo(struct ilo_texture *tex,
 static void
 tex_staging_sys_unmap_bo(struct ilo_texture *tex)
 {
-   intel_bo_unmap(tex->bo);
+   intel_bo_unmap(tex->image.bo);
 }
 
 static bool

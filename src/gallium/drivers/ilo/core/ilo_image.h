@@ -29,6 +29,7 @@
 #define ILO_IMAGE_H
 
 #include "genhw/genhw.h"
+#include "intel_winsys.h"
 
 #include "ilo_core.h"
 #include "ilo_dev.h"
@@ -122,6 +123,9 @@ struct ilo_image {
    unsigned aux_layer_height;
    unsigned aux_stride;
    unsigned aux_height;
+
+   struct intel_bo *bo;
+   struct intel_bo *aux_bo;
 };
 
 void
@@ -133,6 +137,27 @@ bool
 ilo_image_update_for_imported_bo(struct ilo_image *img,
                                  enum gen_surface_tiling tiling,
                                  unsigned bo_stride);
+
+static inline void
+ilo_image_cleanup(struct ilo_image *img)
+{
+   intel_bo_unref(img->bo);
+   intel_bo_unref(img->aux_bo);
+}
+
+static inline void
+ilo_image_set_bo(struct ilo_image *img, struct intel_bo *bo)
+{
+   intel_bo_unref(img->bo);
+   img->bo = intel_bo_ref(bo);
+}
+
+static inline void
+ilo_image_set_aux_bo(struct ilo_image *img, struct intel_bo *bo)
+{
+   intel_bo_unref(img->aux_bo);
+   img->aux_bo = intel_bo_ref(bo);
+}
 
 /**
  * Convert from pixel position to 2D memory offset.

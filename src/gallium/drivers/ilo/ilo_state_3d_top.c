@@ -1246,7 +1246,7 @@ ilo_gpe_init_view_surface_for_texture(const struct ilo_dev *dev,
    }
 
    /* do not increment reference count */
-   surf->bo = tex->bo;
+   surf->bo = tex->image.bo;
 
    /* assume imported RTs are scanouts */
    surf->scanout = ((tex->base.bind & PIPE_BIND_SCANOUT) ||

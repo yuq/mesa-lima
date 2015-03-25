@@ -161,19 +161,22 @@ tex_import_handle(struct ilo_texture *tex,
    const char *name = resource_get_bo_name(&tex->base);
    enum intel_tiling_mode tiling;
    unsigned long pitch;
+   struct intel_bo *bo;
 
-   tex->bo = intel_winsys_import_handle(is->dev.winsys, name, handle,
+   bo = intel_winsys_import_handle(is->dev.winsys, name, handle,
          tex->image.bo_height, &tiling, &pitch);
-   if (!tex->bo)
+   if (!bo)
       return false;
 
    if (!ilo_image_update_for_imported_bo(&tex->image,
             winsys_to_surface_tiling(tiling), pitch)) {
       ilo_err("imported handle has incompatible tiling/pitch\n");
-      intel_bo_unref(tex->bo);
-      tex->bo = NULL;
+      intel_bo_unref(bo);
       return false;
    }
+
+   ilo_image_set_bo(&tex->image, bo);
+   intel_bo_unref(bo);
 
    return true;
 }
@@ -200,10 +203,13 @@ tex_create_bo(struct ilo_texture *tex)
          bo = NULL;
       }
    }
+   if (!bo)
+      return false;
 
-   tex->bo = bo;
+   ilo_image_set_bo(&tex->image, bo);
+   intel_bo_unref(bo);
 
-   return (tex->bo != NULL);
+   return true;
 }
 
 static bool
@@ -238,12 +244,15 @@ tex_create_hiz(struct ilo_texture *tex)
 {
    const struct pipe_resource *templ = &tex->base;
    struct ilo_screen *is = ilo_screen(tex->base.screen);
+   struct intel_bo *bo;
    unsigned lv;
 
-   tex->aux_bo = intel_winsys_alloc_bo(is->dev.winsys, "hiz texture",
+   bo = intel_winsys_alloc_bo(is->dev.winsys, "hiz texture",
          tex->image.aux_stride * tex->image.aux_height, false);
-   if (!tex->aux_bo)
+   if (!bo)
       return false;
+
+   ilo_image_set_aux_bo(&tex->image, bo);
 
    for (lv = 0; lv <= templ->last_level; lv++) {
       if (tex->image.aux_enables & (1 << lv)) {
@@ -266,13 +275,16 @@ static bool
 tex_create_mcs(struct ilo_texture *tex)
 {
    struct ilo_screen *is = ilo_screen(tex->base.screen);
+   struct intel_bo *bo;
 
    assert(tex->image.aux_enables == (1 << (tex->base.last_level + 1)) - 1);
 
-   tex->aux_bo = intel_winsys_alloc_bo(is->dev.winsys, "mcs texture",
+   bo = intel_winsys_alloc_bo(is->dev.winsys, "mcs texture",
          tex->image.aux_stride * tex->image.aux_height, false);
-   if (!tex->aux_bo)
+   if (!bo)
       return false;
+
+   ilo_image_set_aux_bo(&tex->image, bo);
 
    return true;
 }
@@ -283,8 +295,7 @@ tex_destroy(struct ilo_texture *tex)
    if (tex->separate_s8)
       tex_destroy(tex->separate_s8);
 
-   intel_bo_unref(tex->aux_bo);
-   intel_bo_unref(tex->bo);
+   ilo_image_cleanup(&tex->image);
 
    tex_free_slices(tex);
    FREE(tex);
@@ -396,7 +407,7 @@ tex_get_handle(struct ilo_texture *tex, struct winsys_handle *handle)
    else
       tiling = surface_to_winsys_tiling(tex->image.tiling);
 
-   err = intel_winsys_export_handle(is->dev.winsys, tex->bo, tiling,
+   err = intel_winsys_export_handle(is->dev.winsys, tex->image.bo, tiling,
          tex->image.bo_stride, tex->image.bo_height, handle);
 
    return !err;
@@ -565,18 +576,9 @@ ilo_buffer_rename_bo(struct ilo_buffer *buf)
 bool
 ilo_texture_rename_bo(struct ilo_texture *tex)
 {
-   struct intel_bo *old_bo = tex->bo;
-
    /* an imported texture cannot be renamed */
    if (tex->imported)
       return false;
 
-   if (tex_create_bo(tex)) {
-      intel_bo_unref(old_bo);
-      return true;
-   }
-   else {
-      tex->bo = old_bo;
-      return false;
-   }
+   return tex_create_bo(tex);
 }
