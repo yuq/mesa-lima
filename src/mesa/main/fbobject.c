@@ -1400,7 +1400,6 @@ create_render_buffers(struct gl_context *ctx, GLsizei n, GLuint *renderbuffers,
                       bool dsa)
 {
    const char *func = dsa ? "glCreateRenderbuffers" : "glGenRenderbuffers";
-   struct gl_renderbuffer *obj;
    GLuint first;
    GLint i;
 
@@ -1419,13 +1418,11 @@ create_render_buffers(struct gl_context *ctx, GLsizei n, GLuint *renderbuffers,
       renderbuffers[i] = name;
 
       if (dsa) {
-         obj = allocate_renderbuffer(ctx, name, func);
+         allocate_renderbuffer(ctx, name, func);
       } else {
-         obj = &DummyRenderbuffer;
-
-         /* insert the object into the hash table */
+         /* insert a dummy renderbuffer into the hash table */
          mtx_lock(&ctx->Shared->Mutex);
-         _mesa_HashInsert(ctx->Shared->RenderBuffers, name, obj);
+         _mesa_HashInsert(ctx->Shared->RenderBuffers, name, &DummyRenderbuffer);
          mtx_unlock(&ctx->Shared->Mutex);
       }
    }
