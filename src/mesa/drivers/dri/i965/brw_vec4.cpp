@@ -1823,7 +1823,7 @@ brw_vs_emit(struct brw_context *brw,
    if (unlikely(INTEL_DEBUG & DEBUG_VS))
       brw_dump_ir("vertex", prog, &shader->base, &c->vp->program.Base);
 
-   if (prog && brw->gen >= 8 && brw->scalar_vs) {
+   if (prog && brw->scalar_vs) {
       fs_visitor v(brw, mem_ctx, &c->key, prog_data, prog, &c->vp->program, 8);
       if (!v.run_vs()) {
          if (prog) {
