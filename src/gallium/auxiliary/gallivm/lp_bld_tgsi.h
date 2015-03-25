@@ -188,6 +188,7 @@ struct lp_build_sampler_soa
                         boolean is_fetch,
                         unsigned texture_index,
                         unsigned sampler_index,
+                        LLVMValueRef context_ptr,
                         const LLVMValueRef *coords,
                         const LLVMValueRef *offsets,
                         const struct lp_derivatives *derivs,
@@ -202,6 +203,7 @@ struct lp_build_sampler_soa
                        struct lp_type type,
                        unsigned unit,
                        unsigned target,
+                       LLVMValueRef context_ptr,
                        boolean need_nr_mips,
                        enum lp_sampler_lod_property,
                        LLVMValueRef explicit_lod, /* optional */
@@ -237,6 +239,7 @@ lp_build_tgsi_soa(struct gallivm_state *gallivm,
                   const struct lp_bld_tgsi_system_values *system_values,
                   const LLVMValueRef (*inputs)[4],
                   LLVMValueRef (*outputs)[4],
+                  LLVMValueRef context_ptr,
                   struct lp_build_sampler_soa *sampler,
                   const struct tgsi_shader_info *info,
                   const struct lp_build_tgsi_gs_iface *gs_iface);
@@ -449,6 +452,7 @@ struct lp_build_tgsi_soa_context
    LLVMValueRef consts_sizes[LP_MAX_TGSI_CONST_BUFFERS];
    const LLVMValueRef (*inputs)[TGSI_NUM_CHANNELS];
    LLVMValueRef (*outputs)[TGSI_NUM_CHANNELS];
+   LLVMValueRef context_ptr;
 
    const struct lp_build_sampler_soa *sampler;
 

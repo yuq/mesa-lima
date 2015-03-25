@@ -620,6 +620,7 @@ generate_vs(struct draw_llvm_variant *variant,
                      system_values,
                      inputs,
                      outputs,
+                     context_ptr,
                      draw_sampler,
                      &llvm->draw->vs.vertex_shader->info,
                      NULL);
@@ -1630,9 +1631,7 @@ draw_llvm_generate(struct draw_llvm *llvm, struct draw_llvm_variant *variant,
    LLVMBuildStore(builder, lp_build_zero(gallivm, lp_int_type(vs_type)), clipmask_bool_ptr);
 
    /* code generated texture sampling */
-   sampler = draw_llvm_sampler_soa_create(
-      draw_llvm_variant_key_samplers(key),
-      context_ptr);
+   sampler = draw_llvm_sampler_soa_create(draw_llvm_variant_key_samplers(key));
 
    if (elts) {
       start = zero;
@@ -2163,8 +2162,7 @@ draw_gs_llvm_generate(struct draw_llvm *llvm,
       draw_gs_jit_context_num_constants(variant->gallivm, context_ptr);
 
    /* code generated texture sampling */
-   sampler = draw_llvm_sampler_soa_create(variant->key.samplers,
-                                          context_ptr);
+   sampler = draw_llvm_sampler_soa_create(variant->key.samplers);
 
    mask_val = generate_mask_value(variant, gs_type);
    lp_build_mask_begin(&mask, gallivm, gs_type, mask_val);
@@ -2187,6 +2185,7 @@ draw_gs_llvm_generate(struct draw_llvm *llvm,
                      &system_values,
                      NULL,
                      outputs,
+                     context_ptr,
                      sampler,
                      &llvm->draw->gs.geometry_shader->info,
                      (const struct lp_build_tgsi_gs_iface *)&gs_iface);
