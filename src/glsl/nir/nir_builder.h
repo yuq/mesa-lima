@@ -162,4 +162,48 @@ nir_##op(nir_builder *build, nir_ssa_def *src0,                           \
 
 #include "nir_builder_opcodes.h"
 
+/**
+ * Similar to nir_fmov, but takes a nir_alu_src instead of a nir_ssa_def.
+ */
+static inline nir_ssa_def *
+nir_fmov_alu(nir_builder *build, nir_alu_src src, unsigned num_components)
+{
+   nir_alu_instr *mov = nir_alu_instr_create(build->shader, nir_op_fmov);
+   nir_ssa_dest_init(&mov->instr, &mov->dest.dest, num_components, NULL);
+   mov->dest.write_mask = (1 << num_components) - 1;
+   mov->src[0] = src;
+   nir_instr_insert_after_cf_list(build->cf_node_list, &mov->instr);
+
+   return &mov->dest.dest.ssa;
+}
+
+static inline nir_ssa_def *
+nir_imov_alu(nir_builder *build, nir_alu_src src, unsigned num_components)
+{
+   nir_alu_instr *mov = nir_alu_instr_create(build->shader, nir_op_imov);
+   nir_ssa_dest_init(&mov->instr, &mov->dest.dest, num_components, NULL);
+   mov->dest.write_mask = (1 << num_components) - 1;
+   mov->src[0] = src;
+   nir_instr_insert_after_cf_list(build->cf_node_list, &mov->instr);
+
+   return &mov->dest.dest.ssa;
+}
+
+/**
+ * Construct an fmov or imov that reswizzles the source's components.
+ */
+static inline nir_ssa_def *
+nir_swizzle(nir_builder *build, nir_ssa_def *src, unsigned swiz[4],
+            unsigned num_components, bool use_fmov)
+{
+   nir_alu_src alu_src;
+   memset(&alu_src, 0, sizeof(alu_src));
+   alu_src.src = nir_src_for_ssa(src);
+   for (int i = 0; i < 4; i++)
+      alu_src.swizzle[i] = swiz[i];
+
+   return use_fmov ? nir_fmov_alu(build, alu_src, num_components) :
+                     nir_imov_alu(build, alu_src, num_components);
+}
+
 #endif /* NIR_BUILDER_H */
