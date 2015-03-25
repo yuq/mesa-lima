@@ -1287,7 +1287,7 @@ nir_visitor::visit(ir_expression *ir)
          break;
       case ir_binop_logic_xor:
          if (supports_ints)
-            op - nir_op_ixor;
+            op = nir_op_ixor;
          else
             op = nir_op_fxor;
          break;
