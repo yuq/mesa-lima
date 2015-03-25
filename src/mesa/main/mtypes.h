@@ -42,6 +42,7 @@
 #include "main/config.h"
 #include "glapi/glapi.h"
 #include "math/m_matrix.h"	/* GLmatrix */
+#include "glsl/shader_enums.h"
 #include "util/simple_list.h"	/* struct simple_node */
 #include "main/formats.h"       /* MESA_FORMAT_COUNT */
 
@@ -278,13 +279,6 @@ typedef enum
 #define VARYING_BIT_PNTC BITFIELD64_BIT(VARYING_SLOT_PNTC)
 #define VARYING_BIT_VAR(V) BITFIELD64_BIT(VARYING_SLOT_VAR0 + (V))
 /*@}*/
-
-/**
- * Bitflags for system values.
- */
-#define SYSTEM_BIT_SAMPLE_ID BITFIELD64_BIT(SYSTEM_VALUE_SAMPLE_ID)
-#define SYSTEM_BIT_SAMPLE_POS BITFIELD64_BIT(SYSTEM_VALUE_SAMPLE_POS)
-#define SYSTEM_BIT_SAMPLE_MASK_IN BITFIELD64_BIT(SYSTEM_VALUE_SAMPLE_MASK_IN)
 
 /**
  * Determine if the given gl_varying_slot appears in the fragment shader.
@@ -2079,140 +2073,6 @@ typedef enum
    PROGRAM_UNDEFINED,   /**< Invalid/TBD value */
    PROGRAM_FILE_MAX
 } gl_register_file;
-
-
-/**
- * If the register file is PROGRAM_SYSTEM_VALUE, the register index will be
- * one of these values.
- */
-typedef enum
-{
-   /**
-    * \name Vertex shader system values
-    */
-   /*@{*/
-   /**
-    * OpenGL-style vertex ID.
-    *
-    * Section 2.11.7 (Shader Execution), subsection Shader Inputs, of the
-    * OpenGL 3.3 core profile spec says:
-    *
-    *     "gl_VertexID holds the integer index i implicitly passed by
-    *     DrawArrays or one of the other drawing commands defined in section
-    *     2.8.3."
-    *
-    * Section 2.8.3 (Drawing Commands) of the same spec says:
-    *
-    *     "The commands....are equivalent to the commands with the same base
-    *     name (without the BaseVertex suffix), except that the ith element
-    *     transferred by the corresponding draw call will be taken from
-    *     element indices[i] + basevertex of each enabled array."
-    *
-    * Additionally, the overview in the GL_ARB_shader_draw_parameters spec
-    * says:
-    *
-    *     "In unextended GL, vertex shaders have inputs named gl_VertexID and
-    *     gl_InstanceID, which contain, respectively the index of the vertex
-    *     and instance. The value of gl_VertexID is the implicitly passed
-    *     index of the vertex being processed, which includes the value of
-    *     baseVertex, for those commands that accept it."
-    *
-    * gl_VertexID gets basevertex added in.  This differs from DirectX where
-    * SV_VertexID does \b not get basevertex added in.
-    *
-    * \note
-    * If all system values are available, \c SYSTEM_VALUE_VERTEX_ID will be
-    * equal to \c SYSTEM_VALUE_VERTEX_ID_ZERO_BASE plus
-    * \c SYSTEM_VALUE_BASE_VERTEX.
-    *
-    * \sa SYSTEM_VALUE_VERTEX_ID_ZERO_BASE, SYSTEM_VALUE_BASE_VERTEX
-    */
-   SYSTEM_VALUE_VERTEX_ID,
-
-   /**
-    * Instanced ID as supplied to gl_InstanceID
-    *
-    * Values assigned to gl_InstanceID always begin with zero, regardless of
-    * the value of baseinstance.
-    *
-    * Section 11.1.3.9 (Shader Inputs) of the OpenGL 4.4 core profile spec
-    * says:
-    *
-    *     "gl_InstanceID holds the integer instance number of the current
-    *     primitive in an instanced draw call (see section 10.5)."
-    *
-    * Through a big chain of pseudocode, section 10.5 describes that
-    * baseinstance is not counted by gl_InstanceID.  In that section, notice
-    *
-    *     "If an enabled vertex attribute array is instanced (it has a
-    *     non-zero divisor as specified by VertexAttribDivisor), the element
-    *     index that is transferred to the GL, for all vertices, is given by
-    *
-    *         floor(instance/divisor) + baseinstance
-    *
-    *     If an array corresponding to an attribute required by a vertex
-    *     shader is not enabled, then the corresponding element is taken from
-    *     the current attribute state (see section 10.2)."
-    *
-    * Note that baseinstance is \b not included in the value of instance.
-    */
-   SYSTEM_VALUE_INSTANCE_ID,
-
-   /**
-    * DirectX-style vertex ID.
-    *
-    * Unlike \c SYSTEM_VALUE_VERTEX_ID, this system value does \b not include
-    * the value of basevertex.
-    *
-    * \sa SYSTEM_VALUE_VERTEX_ID, SYSTEM_VALUE_BASE_VERTEX
-    */
-   SYSTEM_VALUE_VERTEX_ID_ZERO_BASE,
-
-   /**
-    * Value of \c basevertex passed to \c glDrawElementsBaseVertex and similar
-    * functions.
-    *
-    * \sa SYSTEM_VALUE_VERTEX_ID, SYSTEM_VALUE_VERTEX_ID_ZERO_BASE
-    */
-   SYSTEM_VALUE_BASE_VERTEX,
-   /*@}*/
-
-   /**
-    * \name Geometry shader system values
-    */
-   /*@{*/
-   SYSTEM_VALUE_INVOCATION_ID,
-   /*@}*/
-
-   /**
-    * \name Fragment shader system values
-    */
-   /*@{*/
-   SYSTEM_VALUE_FRONT_FACE,     /**< (not done yet) */
-   SYSTEM_VALUE_SAMPLE_ID,
-   SYSTEM_VALUE_SAMPLE_POS,
-   SYSTEM_VALUE_SAMPLE_MASK_IN,
-   /*@}*/
-
-   SYSTEM_VALUE_MAX             /**< Number of values */
-} gl_system_value;
-
-
-/**
- * The possible interpolation qualifiers that can be applied to a fragment
- * shader input in GLSL.
- *
- * Note: INTERP_QUALIFIER_NONE must be 0 so that memsetting the
- * gl_fragment_program data structure to 0 causes the default behavior.
- */
-enum glsl_interp_qualifier
-{
-   INTERP_QUALIFIER_NONE = 0,
-   INTERP_QUALIFIER_SMOOTH,
-   INTERP_QUALIFIER_FLAT,
-   INTERP_QUALIFIER_NOPERSPECTIVE,
-   INTERP_QUALIFIER_COUNT /**< Number of interpolation qualifiers */
-};
 
 
 /**

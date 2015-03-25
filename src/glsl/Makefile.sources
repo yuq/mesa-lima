@@ -185,7 +185,8 @@ LIBGLSL_FILES = \
 	opt_vectorize.cpp \
 	program.h \
 	s_expression.cpp \
-	s_expression.h
+	s_expression.h \
+	shader_enums.h
 
 # glsl_compiler
 
