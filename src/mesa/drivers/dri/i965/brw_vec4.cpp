@@ -1823,7 +1823,7 @@ brw_vs_emit(struct brw_context *brw,
    if (unlikely(INTEL_DEBUG & DEBUG_VS))
       brw_dump_ir("vertex", prog, &shader->base, &c->vp->program.Base);
 
-   if (prog && brw->scalar_vs) {
+   if (brw->scalar_vs && (prog || brw_env_var_as_boolean("INTEL_USE_NIR", false))) {
       fs_visitor v(brw, mem_ctx, &c->key, prog_data, prog, &c->vp->program, 8);
       if (!v.run_vs()) {
          if (prog) {
@@ -1841,9 +1841,15 @@ brw_vs_emit(struct brw_context *brw,
                      &c->vp->program.Base, v.promoted_constants,
                      v.runtime_check_aads_emit, "VS");
       if (INTEL_DEBUG & DEBUG_VS) {
-         char *name = ralloc_asprintf(mem_ctx, "%s vertex shader %d",
-                                      prog->Label ? prog->Label : "unnamed",
-                                      prog->Name);
+         char *name;
+         if (prog) {
+            name = ralloc_asprintf(mem_ctx, "%s vertex shader %d",
+                                   prog->Label ? prog->Label : "unnamed",
+                                   prog->Name);
+         } else {
+            name = ralloc_asprintf(mem_ctx, "vertex program %d",
+                                   c->vp->program.Base.Id);
+         }
          g.enable_debug(name);
       }
       g.generate_code(v.cfg, 8);
