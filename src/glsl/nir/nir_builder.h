@@ -47,6 +47,41 @@ nir_builder_insert_after_cf_list(nir_builder *build,
    build->cf_node_list = cf_node_list;
 }
 
+static inline nir_ssa_def *
+nir_build_imm(nir_builder *build, unsigned num_components, nir_const_value value)
+{
+   nir_load_const_instr *load_const =
+      nir_load_const_instr_create(build->shader, num_components);
+   if (!load_const)
+      return NULL;
+
+   load_const->value = value;
+
+   nir_instr_insert_after_cf_list(build->cf_node_list, &load_const->instr);
+
+   return &load_const->def;
+}
+
+static inline nir_ssa_def *
+nir_imm_float(nir_builder *build, float x)
+{
+   nir_const_value v = { { .f = {x, 0, 0, 0} } };
+   return nir_build_imm(build, 1, v);
+}
+
+static inline nir_ssa_def *
+nir_imm_vec4(nir_builder *build, float x, float y, float z, float w)
+{
+   nir_const_value v = { { .f = {x, y, z, w} } };
+   return nir_build_imm(build, 4, v);
+}
+
+static inline nir_ssa_def *
+nir_imm_int(nir_builder *build, int x)
+{
+   nir_const_value v = { { .i = {x, 0, 0, 0} } };
+   return nir_build_imm(build, 1, v);
+}
 
 static inline nir_ssa_def *
 nir_build_alu(nir_builder *build, nir_op op, nir_ssa_def *src0,
