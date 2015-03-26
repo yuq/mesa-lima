@@ -121,4 +121,7 @@ bool rvce_is_fw_version_supported(struct r600_common_screen *rscreen);
 /* init vce fw 40.2.2 specific callbacks */
 void radeon_vce_40_2_2_init(struct rvce_encoder *enc);
 
+/* init vce fw 50 specific callbacks */
+void radeon_vce_50_init(struct rvce_encoder *enc);
+
 #endif
