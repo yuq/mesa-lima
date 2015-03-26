@@ -181,6 +181,10 @@ optimizations = [
    (('bcsel', a, b, b), b),
    (('fcsel', a, b, b), b),
 
+   # Conversions
+   (('f2i', ('ftrunc', a)), ('f2i', a)),
+   (('f2u', ('ftrunc', a)), ('f2u', a)),
+
    # Subtracts
    (('fsub', a, ('fsub', 0.0, b)), ('fadd', a, b)),
    (('isub', a, ('isub', 0, b)), ('iadd', a, b)),
