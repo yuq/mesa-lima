@@ -2344,7 +2344,7 @@ exec_sample(struct tgsi_exec_machine *mach,
 {
    const uint resource_unit = inst->Src[1].Register.Index;
    const uint sampler_unit = inst->Src[2].Register.Index;
-   union tgsi_exec_channel r[4], c1;
+   union tgsi_exec_channel r[5], c1;
    const union tgsi_exec_channel *lod = &ZeroVec;
    enum tgsi_sampler_control control = tgsi_sampler_lod_none;
    uint chan;
