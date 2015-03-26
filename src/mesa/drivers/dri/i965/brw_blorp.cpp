@@ -155,7 +155,8 @@ brw_blorp_surface_info::compute_tile_offsets(uint32_t *tile_x,
 }
 
 
-brw_blorp_params::brw_blorp_params(unsigned num_varyings)
+brw_blorp_params::brw_blorp_params(unsigned num_varyings,
+                                   unsigned num_draw_buffers)
    : x0(0),
      y0(0),
      x1(0),
@@ -163,12 +164,9 @@ brw_blorp_params::brw_blorp_params(unsigned num_varyings)
      depth_format(0),
      hiz_op(GEN6_HIZ_OP_NONE),
      use_wm_prog(false),
-     num_varyings(num_varyings)
+     num_varyings(num_varyings),
+     num_draw_buffers(num_draw_buffers)
 {
-   color_write_disable[0] = false;
-   color_write_disable[1] = false;
-   color_write_disable[2] = false;
-   color_write_disable[3] = false;
 }
 
 extern "C" {

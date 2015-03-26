@@ -211,7 +211,8 @@ struct brw_blorp_prog_data
 class brw_blorp_params
 {
 public:
-   explicit brw_blorp_params(unsigned num_varyings = 0);
+   brw_blorp_params(unsigned num_varyings = 0,
+                    unsigned num_draw_buffers = 1);
 
    virtual uint32_t get_wm_prog(struct brw_context *brw,
                                 brw_blorp_prog_data **prog_data) const = 0;
@@ -227,8 +228,8 @@ public:
    enum gen6_hiz_op hiz_op;
    bool use_wm_prog;
    brw_blorp_wm_push_constants wm_push_consts;
-   bool color_write_disable[4];
    const unsigned num_varyings;
+   const unsigned num_draw_buffers;
 };
 
 
