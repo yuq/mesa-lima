@@ -39,6 +39,7 @@ event::~event() {
 void
 event::trigger() {
    if (!--wait_count) {
+      cv.notify_all();
       action_ok(*this);
 
       while (!_chain.empty()) {
@@ -71,6 +72,15 @@ event::chain(event &ev) {
       _chain.push_back(ev);
    }
    ev.deps.push_back(*this);
+}
+
+void
+event::wait() const {
+   for (event &ev : deps)
+      ev.wait();
+
+   std::unique_lock<std::mutex> lock(mutex);
+   cv.wait(lock, [=]{ return !wait_count; });
 }
 
 hard_event::hard_event(command_queue &q, cl_command_type command,
@@ -119,6 +129,8 @@ hard_event::command() const {
 void
 hard_event::wait() const {
    pipe_screen *screen = queue()->device().pipe;
+
+   event::wait();
 
    if (status() == CL_QUEUED)
       queue()->flush();
@@ -207,8 +219,7 @@ soft_event::command() const {
 
 void
 soft_event::wait() const {
-   for (event &ev : deps)
-      ev.wait();
+   event::wait();
 
    if (status() != CL_COMPLETE)
       throw error(CL_EXEC_STATUS_ERROR_FOR_EVENTS_IN_WAIT_LIST);

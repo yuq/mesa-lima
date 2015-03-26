@@ -23,6 +23,7 @@
 #ifndef CLOVER_CORE_EVENT_HPP
 #define CLOVER_CORE_EVENT_HPP
 
+#include <condition_variable>
 #include <functional>
 
 #include "core/object.hpp"
@@ -68,7 +69,7 @@ namespace clover {
       virtual cl_int status() const = 0;
       virtual command_queue *queue() const = 0;
       virtual cl_command_type command() const = 0;
-      virtual void wait() const = 0;
+      virtual void wait() const;
 
       virtual struct pipe_fence_handle *fence() const {
          return NULL;
@@ -87,6 +88,8 @@ namespace clover {
       action action_ok;
       action action_fail;
       std::vector<intrusive_ref<event>> _chain;
+      mutable std::condition_variable cv;
+      mutable std::mutex mutex;
    };
 
    ///
