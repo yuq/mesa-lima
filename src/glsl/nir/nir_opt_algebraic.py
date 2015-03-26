@@ -153,6 +153,12 @@ optimizations = [
    (('flog', ('frsq', a)), ('fmul', -0.5, ('flog', a))),
    (('flog2', ('fpow', a, b)), ('fmul', b, ('flog2', a))),
    (('flog', ('fpow', a, b)), ('fmul', b, ('flog', a))),
+   (('fadd', ('flog2', a), ('flog2', b)), ('flog2', ('fmul', a, b))),
+   (('fadd', ('flog', a), ('flog', b)), ('flog', ('fmul', a, b))),
+   (('fadd', ('flog2', a), ('fneg', ('flog2', b))), ('flog2', ('fdiv', a, b))),
+   (('fadd', ('flog', a), ('fneg', ('flog', b))), ('flog', ('fdiv', a, b))),
+   (('fmul', ('fexp2', a), ('fexp2', b)), ('fexp2', ('fadd', a, b))),
+   (('fmul', ('fexp', a), ('fexp', b)), ('fexp', ('fadd', a, b))),
    # Division and reciprocal
    (('fdiv', 1.0, a), ('frcp', a)),
    (('frcp', ('frcp', a)), a),
