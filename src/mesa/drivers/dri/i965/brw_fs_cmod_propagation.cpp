@@ -111,7 +111,9 @@ opt_cmod_propagation_local(bblock_t *block)
                break;
 
             /* Comparisons operate differently for ints and floats */
-            if (scan_inst->dst.type != inst->dst.type)
+            if (scan_inst->dst.type != inst->dst.type &&
+                (scan_inst->dst.type == BRW_REGISTER_TYPE_F ||
+                 inst->dst.type == BRW_REGISTER_TYPE_F))
                break;
 
             /* If the instruction generating inst's source also wrote the
