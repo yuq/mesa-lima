@@ -183,6 +183,44 @@ static unsigned get_cpb_num(struct rvce_encoder *enc)
 }
 
 /**
+ * Get the slot for the currently encoded frame
+ */
+struct rvce_cpb_slot *current_slot(struct rvce_encoder *enc)
+{
+	return LIST_ENTRY(struct rvce_cpb_slot, enc->cpb_slots.prev, list);
+}
+
+/**
+ * Get the slot for L0
+ */
+struct rvce_cpb_slot *l0_slot(struct rvce_encoder *enc)
+{
+	return LIST_ENTRY(struct rvce_cpb_slot, enc->cpb_slots.next, list);
+}
+
+/**
+ * Get the slot for L1
+ */
+struct rvce_cpb_slot *l1_slot(struct rvce_encoder *enc)
+{
+	return LIST_ENTRY(struct rvce_cpb_slot, enc->cpb_slots.next->next, list);
+}
+
+/**
+ * Calculate the offsets into the CPB
+ */
+void rvce_frame_offset(struct rvce_encoder *enc, struct rvce_cpb_slot *slot,
+		       unsigned *luma_offset, unsigned *chroma_offset)
+{
+	unsigned pitch = align(enc->luma->level[0].pitch_bytes, 128);
+	unsigned vpitch = align(enc->luma->npix_y, 16);
+	unsigned fsize = pitch * (vpitch + vpitch / 2);
+
+	*luma_offset = slot->index * fsize;
+	*chroma_offset = *luma_offset + pitch * vpitch;
+}
+
+/**
  * destroy this video encoder
  */
 static void rvce_destroy(struct pipe_video_codec *encoder)

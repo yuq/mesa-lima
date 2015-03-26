@@ -104,6 +104,13 @@ struct rvce_encoder {
 	bool use_vui;
 };
 
+/* CPB handling functions */
+struct rvce_cpb_slot *current_slot(struct rvce_encoder *enc);
+struct rvce_cpb_slot *l0_slot(struct rvce_encoder *enc);
+struct rvce_cpb_slot *l1_slot(struct rvce_encoder *enc);
+void rvce_frame_offset(struct rvce_encoder *enc, struct rvce_cpb_slot *slot,
+		       unsigned *luma_offset, unsigned *chroma_offset);
+
 struct pipe_video_codec *rvce_create_encoder(struct pipe_context *context,
 					     const struct pipe_video_codec *templat,
 					     struct radeon_winsys* ws,
