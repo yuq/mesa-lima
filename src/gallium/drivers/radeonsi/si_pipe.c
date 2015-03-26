@@ -69,6 +69,11 @@ static void si_destroy_context(struct pipe_context *context)
 	si_pm4_cleanup(sctx);
 
 	r600_common_context_cleanup(&sctx->b);
+
+#if HAVE_LLVM >= 0x0306
+	LLVMDisposeTargetMachine(sctx->tm);
+#endif
+
 	FREE(sctx);
 }
 
@@ -77,6 +82,12 @@ static struct pipe_context *si_create_context(struct pipe_screen *screen, void *
 	struct si_context *sctx = CALLOC_STRUCT(si_context);
 	struct si_screen* sscreen = (struct si_screen *)screen;
 	struct radeon_winsys *ws = sscreen->b.ws;
+	LLVMTargetRef r600_target;
+#if HAVE_LLVM >= 0x0306
+	const char *triple = "amdgcn--";
+#else
+	const char *triple = "r600--";
+#endif
 	int shader, i;
 
 	if (sctx == NULL)
@@ -169,6 +180,17 @@ static struct pipe_context *si_create_context(struct pipe_screen *screen, void *
 	 * GPU lockups, but the maximum value seems to always work.
 	 */
 	sctx->scratch_waves = 32 * sscreen->b.info.max_compute_units;
+
+#if HAVE_LLVM >= 0x0306
+	/* Initialize LLVM TargetMachine */
+	r600_target = radeon_llvm_get_r600_target(triple);
+	sctx->tm = LLVMCreateTargetMachine(r600_target, triple,
+					   r600_get_llvm_processor_name(sscreen->b.family),
+					   "+DumpCode,+vgpr-spilling",
+					   LLVMCodeGenLevelDefault,
+					   LLVMRelocDefault,
+					   LLVMCodeModelDefault);
+#endif
 
 	return &sctx->b.b;
 fail:
@@ -445,12 +467,6 @@ static void si_destroy_screen(struct pipe_screen* pscreen)
 	if (!sscreen->b.ws->unref(sscreen->b.ws))
 		return;
 
-#if HAVE_LLVM >= 0x0306
-	// r600_destroy_common_screen() frees sscreen, so we need to make
-	// sure to dispose the TargetMachine before we call it.
-	LLVMDisposeTargetMachine(sscreen->tm);
-#endif
-
 	r600_destroy_common_screen(&sscreen->b);
 }
 
@@ -508,12 +524,7 @@ static bool si_initialize_pipe_config(struct si_screen *sscreen)
 struct pipe_screen *radeonsi_screen_create(struct radeon_winsys *ws)
 {
 	struct si_screen *sscreen = CALLOC_STRUCT(si_screen);
-	LLVMTargetRef r600_target;
-#if HAVE_LLVM >= 0x0306
-	const char *triple = "amdgcn--";
-#else
-	const char *triple = "r600--";
-#endif
+
 	if (sscreen == NULL) {
 		return NULL;
 	}
@@ -541,13 +552,5 @@ struct pipe_screen *radeonsi_screen_create(struct radeon_winsys *ws)
 	/* Create the auxiliary context. This must be done last. */
 	sscreen->b.aux_context = sscreen->b.b.context_create(&sscreen->b.b, NULL);
 
-#if HAVE_LLVM >= 0x0306
-	/* Initialize LLVM TargetMachine */
-	r600_target = radeon_llvm_get_r600_target(triple);
-	sscreen->tm = LLVMCreateTargetMachine(r600_target, triple,
-				r600_get_llvm_processor_name(sscreen->b.family),
-				"+DumpCode,+vgpr-spilling", LLVMCodeGenLevelDefault, LLVMRelocDefault,
-				LLVMCodeModelDefault);
-#endif
 	return &sscreen->b.b;
 }

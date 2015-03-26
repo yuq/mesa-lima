@@ -183,9 +183,10 @@ static inline struct si_shader* si_get_vs_state(struct si_context *sctx)
 }
 
 /* radeonsi_shader.c */
-int si_shader_create(struct si_screen *sscreen, struct si_shader *shader);
+int si_shader_create(struct si_screen *sscreen, LLVMTargetMachineRef tm,
+		     struct si_shader *shader);
 int si_compile_llvm(struct si_screen *sscreen, struct si_shader *shader,
-		    LLVMModuleRef mod);
+		    LLVMTargetMachineRef tm, LLVMModuleRef mod);
 void si_shader_destroy(struct pipe_context *ctx, struct si_shader *shader);
 unsigned si_shader_io_get_unique_index(unsigned semantic_name, unsigned index);
 int si_shader_binary_read(struct si_screen *sscreen, struct si_shader *shader,

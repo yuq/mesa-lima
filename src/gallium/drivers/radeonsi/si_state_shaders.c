@@ -405,6 +405,7 @@ static INLINE void si_shader_selector_key(struct pipe_context *ctx,
 static int si_shader_select(struct pipe_context *ctx,
 			    struct si_shader_selector *sel)
 {
+	struct si_context *sctx = (struct si_context *)ctx;
 	union si_shader_key key;
 	struct si_shader * shader = NULL;
 	int r;
@@ -444,7 +445,8 @@ static int si_shader_select(struct pipe_context *ctx,
 
 		shader->next_variant = sel->current;
 		sel->current = shader;
-		r = si_shader_create((struct si_screen*)ctx->screen, shader);
+		r = si_shader_create((struct si_screen*)ctx->screen, sctx->tm,
+				     shader);
 		if (unlikely(r)) {
 			R600_ERR("Failed to build shader variant (type=%u) %d\n",
 				 sel->type, r);

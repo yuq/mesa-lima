@@ -85,7 +85,6 @@ struct si_compute;
 
 struct si_screen {
 	struct r600_common_screen	b;
-	LLVMTargetMachineRef		tm;
 };
 
 struct si_sampler_view {
@@ -202,6 +201,8 @@ struct si_context {
 	struct pipe_constant_buffer null_const_buf; /* used for set_constant_buffer(NULL) on CIK */
 	struct pipe_resource	*esgs_ring;
 	struct pipe_resource	*gsvs_ring;
+
+	LLVMTargetMachineRef		tm;
 
 	/* SI state handling */
 	union si_state	queued;

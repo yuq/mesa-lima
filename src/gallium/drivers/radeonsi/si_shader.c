@@ -72,6 +72,7 @@ struct si_shader_context
 	int param_streamout_offset[4];
 	int param_vertex_id;
 	int param_instance_id;
+	LLVMTargetMachineRef tm;
 	LLVMValueRef const_md;
 	LLVMValueRef const_resource[SI_NUM_CONST_BUFFERS];
 	LLVMValueRef ddxy_lds;
@@ -2697,13 +2698,13 @@ int si_shader_binary_read(struct si_screen *sscreen,
 }
 
 int si_compile_llvm(struct si_screen *sscreen, struct si_shader *shader,
-							LLVMModuleRef mod)
+		    LLVMTargetMachineRef tm, LLVMModuleRef mod)
 {
 	int r = 0;
 	bool dump = r600_can_dump_shader(&sscreen->b,
 			shader->selector ? shader->selector->tokens : NULL);
 	r = radeon_llvm_compile(mod, &shader->binary,
-		r600_get_llvm_processor_name(sscreen->b.family), dump, sscreen->tm);
+		r600_get_llvm_processor_name(sscreen->b.family), dump, tm);
 
 	if (r) {
 		return r;
@@ -2791,7 +2792,7 @@ static int si_generate_gs_copy_shader(struct si_screen *sscreen,
 		fprintf(stderr, "Copy Vertex Shader for Geometry Shader:\n\n");
 
 	r = si_compile_llvm(sscreen, si_shader_ctx->shader,
-			    bld_base->base.gallivm->module);
+			    si_shader_ctx->tm, bld_base->base.gallivm->module);
 
 	radeon_llvm_dispose(&si_shader_ctx->radeon_bld);
 
@@ -2836,7 +2837,8 @@ static void si_dump_key(unsigned shader, union si_shader_key *key)
 	}
 }
 
-int si_shader_create(struct si_screen *sscreen, struct si_shader *shader)
+int si_shader_create(struct si_screen *sscreen, LLVMTargetMachineRef tm,
+		     struct si_shader *shader)
 {
 	struct si_shader_selector *sel = shader->selector;
 	struct tgsi_token *tokens = sel->tokens;
@@ -2909,6 +2911,7 @@ int si_shader_create(struct si_screen *sscreen, struct si_shader *shader)
 	si_shader_ctx.shader = shader;
 	si_shader_ctx.type = tgsi_get_processor_type(tokens);
 	si_shader_ctx.screen = sscreen;
+	si_shader_ctx.tm = tm;
 
 	switch (si_shader_ctx.type) {
 	case TGSI_PROCESSOR_VERTEX:
@@ -2964,7 +2967,7 @@ int si_shader_create(struct si_screen *sscreen, struct si_shader *shader)
 	radeon_llvm_finalize_module(&si_shader_ctx.radeon_bld);
 
 	mod = bld_base->base.gallivm->module;
-	r = si_compile_llvm(sscreen, shader, mod);
+	r = si_compile_llvm(sscreen, shader, tm, mod);
 	if (r) {
 		fprintf(stderr, "LLVM failed to compile shader\n");
 		goto out;
