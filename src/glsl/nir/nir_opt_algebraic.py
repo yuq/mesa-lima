@@ -139,6 +139,12 @@ optimizations = [
    (('fpow', a, 1.0), a),
    (('fpow', a, 2.0), ('fmul', a, a)),
    (('fpow', 2.0, a), ('fexp2', a)),
+   (('fsqrt', ('fexp2', a)), ('fexp2', ('fmul', 0.5, a))),
+   (('fsqrt', ('fexp', a)), ('fexp', ('fmul', 0.5, a))),
+   (('frcp', ('fexp2', a)), ('fexp2', ('fneg', a))),
+   (('frcp', ('fexp', a)), ('fexp', ('fneg', a))),
+   (('frsq', ('fexp2', a)), ('fexp2', ('fmul', -0.5, a))),
+   (('frsq', ('fexp', a)), ('fexp', ('fmul', -0.5, a))),
    # Division and reciprocal
    (('fdiv', 1.0, a), ('frcp', a)),
    (('frcp', ('frcp', a)), a),
