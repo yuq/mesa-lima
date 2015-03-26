@@ -94,6 +94,8 @@ optimizations = [
    (('fsat', a), ('fmin', ('fmax', a, 0.0), 1.0), 'options->lower_fsat'),
    (('fsat', ('fsat', a)), ('fsat', a)),
    (('fmin', ('fmax', ('fmin', ('fmax', a, 0.0), 1.0), 0.0), 1.0), ('fmin', ('fmax', a, 0.0), 1.0)),
+   (('ior', ('flt', a, b), ('flt', a, c)), ('flt', a, ('fmax', b, c))),
+   (('ior', ('fge', a, b), ('fge', a, c)), ('fge', a, ('fmin', b, c))),
    # Emulating booleans
    (('fmul', ('b2f', a), ('b2f', b)), ('b2f', ('iand', a, b))),
    (('fsat', ('fadd', ('b2f', a), ('b2f', b))), ('b2f', ('ior', a, b))),
