@@ -322,7 +322,11 @@ disassemble(const void* func, llvm::raw_ostream & Out)
       /*
        * Print the instruction.
        */
+#if HAVE_LLVM >= 0x0307
+      Printer->printInst(&Inst, Out, "", *STI);
+#else
       Printer->printInst(&Inst, Out, "");
+#endif
 
       /*
        * Advance.
