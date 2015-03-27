@@ -3527,8 +3527,8 @@ struct gl_constants
    GLboolean ForceGLSLExtensionsWarn;
 
    /**
-    * If non-zero, forces GLSL shaders without the #version directive to behave
-    * as if they began with "#version ForceGLSLVersion".
+    * If non-zero, forces GLSL shaders to behave as if they began
+    * with "#version ForceGLSLVersion".
     */
    GLuint ForceGLSLVersion;
 
