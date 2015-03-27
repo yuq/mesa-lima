@@ -37,6 +37,7 @@ NIR_FILES = \
 	nir/nir_lower_phis_to_scalar.c \
 	nir/nir_lower_samplers.cpp \
 	nir/nir_lower_system_values.c \
+	nir/nir_lower_tex_projector.c \
 	nir/nir_lower_to_source_mods.c \
 	nir/nir_lower_vars_to_ssa.c \
 	nir/nir_lower_var_copies.c \
