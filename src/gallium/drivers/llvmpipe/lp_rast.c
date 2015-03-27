@@ -91,6 +91,9 @@ lp_rast_tile_begin(struct lp_rasterizer_task *task,
                    const struct cmd_bin *bin,
                    int x, int y)
 {
+   unsigned i;
+   struct lp_scene *scene = task->scene;
+
    LP_DBG(DEBUG_RAST, "%s %d,%d\n", __FUNCTION__, x, y);
 
    task->bin = bin;
@@ -104,9 +107,18 @@ lp_rast_tile_begin(struct lp_rasterizer_task *task,
    task->thread_data.vis_counter = 0;
    task->ps_invocations = 0;
 
-   /* reset pointers to color and depth tile(s) */
-   memset(task->color_tiles, 0, sizeof(task->color_tiles));
-   task->depth_tile = NULL;
+   for (i = 0; i < task->scene->fb.nr_cbufs; i++) {
+      if (task->scene->fb.cbufs[i]) {
+         task->color_tiles[i] = scene->cbufs[i].map +
+                                scene->cbufs[i].stride * task->y +
+                                scene->cbufs[i].format_bytes * task->x;
+      }
+   }
+   if (task->scene->fb.zsbuf) {
+      task->depth_tile = scene->zsbuf.map +
+                         scene->zsbuf.stride * task->y +
+                         scene->zsbuf.format_bytes * task->x;
+   }
 }
 
 
@@ -186,7 +198,7 @@ lp_rast_clear_zstencil(struct lp_rasterizer_task *task,
 
    if (scene->fb.zsbuf) {
       unsigned layer;
-      uint8_t *dst_layer = lp_rast_get_depth_tile_pointer(task, LP_TEX_USAGE_READ_WRITE);
+      uint8_t *dst_layer = task->depth_tile;
       block_size = util_format_get_blocksize(scene->fb.zsbuf->format);
 
       clear_value &= clear_mask;
