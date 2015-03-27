@@ -2357,30 +2357,30 @@ lp_build_sample_nop(struct gallivm_state *gallivm,
 
 
 /**
- * Build texture sampling code.
+ * Build the actual texture sampling code.
  * 'texel' will return a vector of four LLVMValueRefs corresponding to
  * R, G, B, A.
  * \param type  vector float type to use for coords, etc.
  * \param is_fetch  if this is a texel fetch instruction.
  * \param derivs  partial derivatives of (s,t,r,q) with respect to x and y
  */
-void
-lp_build_sample_soa(struct gallivm_state *gallivm,
-                    const struct lp_static_texture_state *static_texture_state,
-                    const struct lp_static_sampler_state *static_sampler_state,
-                    struct lp_sampler_dynamic_state *dynamic_state,
-                    struct lp_type type,
-                    boolean is_fetch,
-                    unsigned texture_index,
-                    unsigned sampler_index,
-                    LLVMValueRef context_ptr,
-                    const LLVMValueRef *coords,
-                    const LLVMValueRef *offsets,
-                    const struct lp_derivatives *derivs, /* optional */
-                    LLVMValueRef lod_bias, /* optional */
-                    LLVMValueRef explicit_lod, /* optional */
-                    enum lp_sampler_lod_property lod_property,
-                    LLVMValueRef texel_out[4])
+static void
+lp_build_sample_soa_code(struct gallivm_state *gallivm,
+                         const struct lp_static_texture_state *static_texture_state,
+                         const struct lp_static_sampler_state *static_sampler_state,
+                         struct lp_sampler_dynamic_state *dynamic_state,
+                         struct lp_type type,
+                         boolean is_fetch,
+                         unsigned texture_index,
+                         unsigned sampler_index,
+                         LLVMValueRef context_ptr,
+                         const LLVMValueRef *coords,
+                         const LLVMValueRef *offsets,
+                         const struct lp_derivatives *derivs, /* optional */
+                         LLVMValueRef lod_bias, /* optional */
+                         LLVMValueRef explicit_lod, /* optional */
+                         enum lp_sampler_lod_property lod_property,
+                         LLVMValueRef texel_out[4])
 {
    unsigned target = static_texture_state->target;
    unsigned dims = texture_dims(target);
@@ -2887,6 +2887,390 @@ lp_build_sample_soa(struct gallivm_state *gallivm,
          texel_out[chan] = LLVMBuildBitCast(builder, texel_out[chan],
                                             lp_build_vec_type(gallivm, type), "");
       }
+   }
+}
+
+
+#define USE_TEX_FUNC_CALL 1
+
+#define LP_MAX_TEX_FUNC_ARGS 32
+
+#define LP_SAMPLER_FUNC_LOD_BIAS        (1 << 0)
+#define LP_SAMPLER_FUNC_LOD_EXPLICIT    (1 << 1)
+#define LP_SAMPLER_FUNC_EXPLICITDERIVS  (1 << 2)
+#define LP_SAMPLER_FUNC_SHADOW          (1 << 3)
+#define LP_SAMPLER_FUNC_OFFSETS         (1 << 4)
+#define LP_SAMPLER_FUNC_LOD_PROPERTY_SHIFT 5
+
+
+static inline void
+get_target_info(enum pipe_texture_target target,
+                unsigned *num_coords, unsigned *num_derivs,
+                unsigned *num_offsets, unsigned *layer)
+{
+   unsigned dims = texture_dims(target);
+   *num_coords = dims;
+   *num_offsets = dims;
+   *num_derivs = (target == PIPE_TEXTURE_CUBE ||
+                  target == PIPE_TEXTURE_CUBE_ARRAY) ? 3 : dims;
+   *layer = has_layer_coord(target) ? 2: 0;
+   if (target == PIPE_TEXTURE_CUBE_ARRAY) {
+      /*
+       * dims doesn't include r coord for cubes - this is handled
+       * by layer instead, but need to fix up for cube arrays...
+       */
+      *layer = 3;
+      *num_coords = 3;
+   }
+}
+
+
+/**
+ * Generate the function body for a texture sampling function.
+ */
+static void
+lp_build_sample_gen_func(struct gallivm_state *gallivm,
+                         const struct lp_static_texture_state *static_texture_state,
+                         const struct lp_static_sampler_state *static_sampler_state,
+                         struct lp_sampler_dynamic_state *dynamic_state,
+                         struct lp_type type,
+                         boolean is_fetch,
+                         unsigned texture_index,
+                         unsigned sampler_index,
+                         LLVMValueRef function,
+                         unsigned num_args,
+                         unsigned sampler_bits,
+                         enum lp_sampler_lod_property lod_property)
+{
+
+   LLVMBuilderRef old_builder;
+   LLVMBasicBlockRef block;
+   LLVMValueRef coords[5];
+   LLVMValueRef offsets[3] = { NULL };
+   LLVMValueRef lod_bias = NULL;
+   LLVMValueRef explicit_lod = NULL;
+   LLVMValueRef context_ptr;
+   LLVMValueRef texel_out[4];
+   struct lp_derivatives derivs;
+   struct lp_derivatives *deriv_ptr = NULL;
+   unsigned num_param = 0;
+   unsigned i, num_coords, num_derivs, num_offsets, layer;
+
+   get_target_info(static_texture_state->target,
+                   &num_coords, &num_derivs, &num_offsets, &layer);
+
+   /* "unpack" arguments */
+   context_ptr = LLVMGetParam(function, num_param++);
+   for (i = 0; i < num_coords; i++) {
+      coords[i] = LLVMGetParam(function, num_param++);
+   }
+   for (i = num_coords; i < 5; i++) {
+      /* This is rather unfortunate... */
+      coords[i] = lp_build_undef(gallivm, type);
+   }
+   if (layer) {
+      coords[layer] = LLVMGetParam(function, num_param++);
+   }
+   if (sampler_bits & LP_SAMPLER_FUNC_SHADOW) {
+      coords[4] = LLVMGetParam(function, num_param++);
+   }
+   if (sampler_bits & LP_SAMPLER_FUNC_OFFSETS) {
+      for (i = 0; i < num_offsets; i++) {
+         offsets[i] = LLVMGetParam(function, num_param++);
+      }
+   }
+   if (sampler_bits & LP_SAMPLER_FUNC_LOD_BIAS) {
+      lod_bias = LLVMGetParam(function, num_param++);
+   }
+   else if (sampler_bits & LP_SAMPLER_FUNC_LOD_EXPLICIT) {
+      explicit_lod = LLVMGetParam(function, num_param++);
+   }
+   else if (sampler_bits & LP_SAMPLER_FUNC_EXPLICITDERIVS) {
+      for (i = 0; i < num_derivs; i++) {
+         derivs.ddx[i] = LLVMGetParam(function, num_param++);
+         derivs.ddy[i] = LLVMGetParam(function, num_param++);
+      }
+      deriv_ptr = &derivs;
+   }
+
+   assert(num_args == num_param);
+
+   /*
+    * Function body
+    */
+
+   old_builder = gallivm->builder;
+   block = LLVMAppendBasicBlockInContext(gallivm->context, function, "entry");
+   gallivm->builder = LLVMCreateBuilderInContext(gallivm->context);
+   LLVMPositionBuilderAtEnd(gallivm->builder, block);
+
+   lp_build_sample_soa_code(gallivm,
+                            static_texture_state,
+                            static_sampler_state,
+                            dynamic_state,
+                            type,
+                            is_fetch,
+                            texture_index,
+                            sampler_index,
+                            context_ptr,
+                            coords,
+                            offsets,
+                            deriv_ptr,
+                            lod_bias,
+                            explicit_lod,
+                            lod_property,
+                            texel_out);
+
+   LLVMBuildAggregateRet(gallivm->builder, texel_out, 4);
+
+   LLVMDisposeBuilder(gallivm->builder);
+   gallivm->builder = old_builder;
+
+   gallivm_verify_function(gallivm, function);
+}
+
+
+/**
+ * Call the matching function for texture sampling.
+ * If there's no match, generate a new one.
+ */
+static void
+lp_build_sample_soa_func(struct gallivm_state *gallivm,
+                         const struct lp_static_texture_state *static_texture_state,
+                         const struct lp_static_sampler_state *static_sampler_state,
+                         struct lp_sampler_dynamic_state *dynamic_state,
+                         struct lp_type type,
+                         boolean is_fetch,
+                         unsigned texture_index,
+                         unsigned sampler_index,
+                         LLVMValueRef context_ptr,
+                         const LLVMValueRef *coords,
+                         const LLVMValueRef *offsets,
+                         const struct lp_derivatives *derivs, /* optional */
+                         LLVMValueRef lod_bias, /* optional */
+                         LLVMValueRef explicit_lod, /* optional */
+                         enum lp_sampler_lod_property lod_property,
+                         LLVMValueRef texel_out[4])
+{
+   LLVMBuilderRef builder = gallivm->builder;
+   LLVMModuleRef module = LLVMGetGlobalParent(LLVMGetBasicBlockParent(
+                             LLVMGetInsertBlock(builder)));
+   LLVMValueRef function, inst;
+   LLVMValueRef args[LP_MAX_TEX_FUNC_ARGS];
+   LLVMBasicBlockRef bb;
+   LLVMValueRef tex_ret;
+   unsigned num_args = 0;
+   unsigned sampler_bits = 0;
+   char func_name[64];
+   unsigned i, num_coords, num_derivs, num_offsets, layer;
+
+   get_target_info(static_texture_state->target,
+                   &num_coords, &num_derivs, &num_offsets, &layer);
+
+   /*
+    * texture function matches are found by name.
+    * Thus the name has to include both the texture and sampler unit
+    * (which covers all static state) plus the actual texture functions
+    * (which is determined here somewhat awkwardly by presence of the
+    * corresponding LLVMValueRefs). Additionally, lod_property also
+    * has to be included (it could change if the lod for instance comes
+    * from a shader uniform or a temp reg).
+    */
+   if (static_sampler_state->compare_mode != PIPE_TEX_COMPARE_NONE) {
+      sampler_bits |= LP_SAMPLER_FUNC_SHADOW;
+   }
+   if (offsets[0]) {
+      sampler_bits |= LP_SAMPLER_FUNC_OFFSETS;
+   }
+   if (lod_bias) {
+      sampler_bits |= LP_SAMPLER_FUNC_LOD_BIAS;
+   }
+   else if (explicit_lod) {
+      sampler_bits |= LP_SAMPLER_FUNC_LOD_EXPLICIT;
+   }
+   else if (derivs) {
+      sampler_bits |= LP_SAMPLER_FUNC_EXPLICITDERIVS;
+   }
+   sampler_bits |= lod_property << LP_SAMPLER_FUNC_LOD_PROPERTY_SHIFT;
+
+   util_snprintf(func_name, sizeof(func_name), "texfunc_res_%d_sam_%d_%x",
+                 texture_index, sampler_index, sampler_bits);
+
+   function = LLVMGetNamedFunction(module, func_name);
+
+   if(!function) {
+      LLVMTypeRef arg_types[LP_MAX_TEX_FUNC_ARGS];
+      LLVMTypeRef ret_type;
+      LLVMTypeRef function_type;
+      LLVMTypeRef val_type[4];
+      unsigned num_param = 0;
+
+      /*
+       * Generate the function prototype.
+       */
+
+      arg_types[num_param++] = LLVMTypeOf(context_ptr);
+      for (i = 0; i < num_coords; i++) {
+         arg_types[num_param++] = LLVMTypeOf(coords[0]);
+         assert(LLVMTypeOf(coords[0]) == LLVMTypeOf(coords[i]));
+      }
+      if (layer) {
+         arg_types[num_param++] = LLVMTypeOf(coords[layer]);
+         assert(LLVMTypeOf(coords[0]) == LLVMTypeOf(coords[layer]));
+      }
+      if (sampler_bits & LP_SAMPLER_FUNC_SHADOW) {
+         arg_types[num_param++] = LLVMTypeOf(coords[0]);
+      }
+      if (sampler_bits & LP_SAMPLER_FUNC_OFFSETS) {
+         for (i = 0; i < num_offsets; i++) {
+            arg_types[num_param++] = LLVMTypeOf(offsets[0]);
+            assert(LLVMTypeOf(offsets[0]) == LLVMTypeOf(offsets[i]));
+         }
+      }
+      if (sampler_bits & LP_SAMPLER_FUNC_LOD_BIAS) {
+         arg_types[num_param++] = LLVMTypeOf(lod_bias);
+      }
+      else if (sampler_bits & LP_SAMPLER_FUNC_LOD_EXPLICIT) {
+         arg_types[num_param++] = LLVMTypeOf(explicit_lod);
+      }
+      else if (sampler_bits & LP_SAMPLER_FUNC_EXPLICITDERIVS) {
+         for (i = 0; i < num_derivs; i++) {
+            arg_types[num_param++] = LLVMTypeOf(derivs->ddx[i]);
+            arg_types[num_param++] = LLVMTypeOf(derivs->ddy[i]);
+            assert(LLVMTypeOf(derivs->ddx[0]) == LLVMTypeOf(derivs->ddx[i]));
+            assert(LLVMTypeOf(derivs->ddy[0]) == LLVMTypeOf(derivs->ddy[i]));
+         }
+      }
+
+      ret_type = LLVMVoidTypeInContext(gallivm->context);
+      val_type[0] = val_type[1] = val_type[2] = val_type[3] =
+         lp_build_vec_type(gallivm, type);
+      ret_type = LLVMStructTypeInContext(gallivm->context, val_type, 4, 0);
+      function_type = LLVMFunctionType(ret_type, arg_types, num_param, 0);
+      function = LLVMAddFunction(module, func_name, function_type);
+
+      for (i = 0; i < num_param; ++i) {
+         if(LLVMGetTypeKind(arg_types[i]) == LLVMPointerTypeKind) {
+            LLVMAddAttribute(LLVMGetParam(function, i), LLVMNoAliasAttribute);
+         }
+      }
+
+      LLVMSetFunctionCallConv(function, LLVMFastCallConv);
+      LLVMSetLinkage(function, LLVMPrivateLinkage);
+
+      lp_build_sample_gen_func(gallivm,
+                               static_texture_state,
+                               static_sampler_state,
+                               dynamic_state,
+                               type,
+                               is_fetch,
+                               texture_index,
+                               sampler_index,
+                               function,
+                               num_param,
+                               sampler_bits,
+                               lod_property);
+   }
+
+   num_args = 0;
+   args[num_args++] = context_ptr;
+   for (i = 0; i < num_coords; i++) {
+      args[num_args++] = coords[i];
+   }
+   if (layer) {
+      args[num_args++] = coords[layer];
+   }
+   if (sampler_bits & LP_SAMPLER_FUNC_SHADOW) {
+      args[num_args++] = coords[4];
+   }
+   if (sampler_bits & LP_SAMPLER_FUNC_OFFSETS) {
+      for (i = 0; i < num_offsets; i++) {
+         args[num_args++] = offsets[i];
+      }
+   }
+   if (sampler_bits & LP_SAMPLER_FUNC_LOD_BIAS) {
+      args[num_args++] = lod_bias;
+   }
+   else if (sampler_bits & LP_SAMPLER_FUNC_LOD_EXPLICIT) {
+      args[num_args++] = explicit_lod;
+   }
+   else if (sampler_bits & LP_SAMPLER_FUNC_EXPLICITDERIVS) {
+      for (i = 0; i < num_derivs; i++) {
+         args[num_args++] = derivs->ddx[i];
+         args[num_args++] = derivs->ddy[i];
+      }
+   }
+
+   assert(num_args <= LP_MAX_TEX_FUNC_ARGS);
+
+   tex_ret = LLVMBuildCall(builder, function, args, num_args, "");
+   bb = LLVMGetInsertBlock(builder);
+   inst = LLVMGetLastInstruction(bb);
+   LLVMSetInstructionCallConv(inst, LLVMFastCallConv);
+
+   for (i = 0; i < 4; i++) {
+      texel_out[i] = LLVMBuildExtractValue(gallivm->builder, tex_ret, i, "");
+   }
+}
+
+
+/**
+ * Build texture sampling code.
+ * Either via a function call or inline it directly.
+ */
+void
+lp_build_sample_soa(struct gallivm_state *gallivm,
+                    const struct lp_static_texture_state *static_texture_state,
+                    const struct lp_static_sampler_state *static_sampler_state,
+                    struct lp_sampler_dynamic_state *dynamic_state,
+                    struct lp_type type,
+                    boolean is_fetch,
+                    unsigned texture_index,
+                    unsigned sampler_index,
+                    LLVMValueRef context_ptr,
+                    const LLVMValueRef *coords,
+                    const LLVMValueRef *offsets,
+                    const struct lp_derivatives *derivs, /* optional */
+                    LLVMValueRef lod_bias, /* optional */
+                    LLVMValueRef explicit_lod, /* optional */
+                    enum lp_sampler_lod_property lod_property,
+                    LLVMValueRef texel_out[4])
+{
+   if (USE_TEX_FUNC_CALL) {
+      lp_build_sample_soa_func(gallivm,
+                               static_texture_state,
+                               static_sampler_state,
+                               dynamic_state,
+                               type,
+                               is_fetch,
+                               texture_index,
+                               sampler_index,
+                               context_ptr,
+                               coords,
+                               offsets,
+                               derivs,
+                               lod_bias,
+                               explicit_lod,
+                               lod_property,
+                               texel_out);
+   }
+   else {
+      lp_build_sample_soa_code(gallivm,
+                               static_texture_state,
+                               static_sampler_state,
+                               dynamic_state,
+                               type,
+                               is_fetch,
+                               texture_index,
+                               sampler_index,
+                               context_ptr,
+                               coords,
+                               offsets,
+                               derivs,
+                               lod_bias,
+                               explicit_lod,
+                               lod_property,
+                               texel_out);
    }
 }
 
