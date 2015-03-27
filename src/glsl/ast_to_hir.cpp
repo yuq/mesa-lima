@@ -5776,6 +5776,9 @@ ast_interface_block::hir(exec_list *instructions,
       var->data.matrix_layout = matrix_layout == GLSL_MATRIX_LAYOUT_INHERITED
          ? GLSL_MATRIX_LAYOUT_COLUMN_MAJOR : matrix_layout;
 
+      if (var_mode == ir_var_shader_in || var_mode == ir_var_uniform)
+         var->data.read_only = true;
+
       if (state->stage == MESA_SHADER_GEOMETRY && var_mode == ir_var_shader_in)
          handle_geometry_shader_input_decl(state, loc, var);
 
@@ -5815,6 +5818,9 @@ ast_interface_block::hir(exec_list *instructions,
          var->data.centroid = fields[i].centroid;
          var->data.sample = fields[i].sample;
          var->init_interface_type(block_type);
+
+         if (var_mode == ir_var_shader_in || var_mode == ir_var_uniform)
+            var->data.read_only = true;
 
          if (fields[i].matrix_layout == GLSL_MATRIX_LAYOUT_INHERITED) {
             var->data.matrix_layout = matrix_layout == GLSL_MATRIX_LAYOUT_INHERITED
