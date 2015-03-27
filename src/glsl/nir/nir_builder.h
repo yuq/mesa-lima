@@ -28,6 +28,8 @@ struct exec_list;
 
 typedef struct nir_builder {
    struct exec_list *cf_node_list;
+   nir_instr *before_instr;
+
    nir_shader *shader;
    nir_function_impl *impl;
 } nir_builder;
@@ -47,6 +49,23 @@ nir_builder_insert_after_cf_list(nir_builder *build,
    build->cf_node_list = cf_node_list;
 }
 
+static inline void
+nir_builder_insert_before_instr(nir_builder *build, nir_instr *before_instr)
+{
+   build->before_instr = before_instr;
+}
+
+static inline void
+nir_builder_instr_insert(nir_builder *build, nir_instr *instr)
+{
+   if (build->cf_node_list) {
+      nir_instr_insert_after_cf_list(build->cf_node_list, instr);
+   } else {
+      assert(build->before_instr);
+      nir_instr_insert_before(build->before_instr, instr);
+   }
+}
+
 static inline nir_ssa_def *
 nir_build_imm(nir_builder *build, unsigned num_components, nir_const_value value)
 {
@@ -57,7 +76,7 @@ nir_build_imm(nir_builder *build, unsigned num_components, nir_const_value value
 
    load_const->value = value;
 
-   nir_instr_insert_after_cf_list(build->cf_node_list, &load_const->instr);
+   nir_builder_instr_insert(build, &load_const->instr);
 
    return &load_const->def;
 }
@@ -125,7 +144,7 @@ nir_build_alu(nir_builder *build, nir_op op, nir_ssa_def *src0,
    nir_ssa_dest_init(&instr->instr, &instr->dest.dest, num_components, NULL);
    instr->dest.write_mask = (1 << num_components) - 1;
 
-   nir_instr_insert_after_cf_list(build->cf_node_list, &instr->instr);
+   nir_builder_instr_insert(build, &instr->instr);
 
    return &instr->dest.dest.ssa;
 }
@@ -172,7 +191,7 @@ nir_fmov_alu(nir_builder *build, nir_alu_src src, unsigned num_components)
    nir_ssa_dest_init(&mov->instr, &mov->dest.dest, num_components, NULL);
    mov->dest.write_mask = (1 << num_components) - 1;
    mov->src[0] = src;
-   nir_instr_insert_after_cf_list(build->cf_node_list, &mov->instr);
+   nir_builder_instr_insert(build, &mov->instr);
 
    return &mov->dest.dest.ssa;
 }
@@ -184,7 +203,7 @@ nir_imov_alu(nir_builder *build, nir_alu_src src, unsigned num_components)
    nir_ssa_dest_init(&mov->instr, &mov->dest.dest, num_components, NULL);
    mov->dest.write_mask = (1 << num_components) - 1;
    mov->src[0] = src;
-   nir_instr_insert_after_cf_list(build->cf_node_list, &mov->instr);
+   nir_builder_instr_insert(build, &mov->instr);
 
    return &mov->dest.dest.ssa;
 }
