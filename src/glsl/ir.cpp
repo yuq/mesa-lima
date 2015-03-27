@@ -380,10 +380,12 @@ ir_expression::ir_expression(int op, ir_rvalue *op0, ir_rvalue *op1)
       } else if (op1->type->is_scalar()) {
 	 this->type = op0->type;
       } else {
-	 /* FINISHME: matrix types */
-	 assert(!op0->type->is_matrix() && !op1->type->is_matrix());
-	 assert(op0->type == op1->type);
-	 this->type = op0->type;
+         if (this->operation == ir_binop_mul) {
+            this->type = glsl_type::get_mul_type(op0->type, op1->type);
+         } else {
+            assert(op0->type == op1->type);
+            this->type = op0->type;
+         }
       }
       break;
 
