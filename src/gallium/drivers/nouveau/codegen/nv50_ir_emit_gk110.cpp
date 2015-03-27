@@ -1184,6 +1184,7 @@ CodeEmitterGK110::emitTEX(const TexInstruction *i)
    if (i->tex.useOffsets == 1) {
       switch (i->op) {
       case OP_TXF: code[1] |= 0x200; break;
+      case OP_TXD: code[1] |= 0x00400000; break;
       default: code[1] |= 0x800; break;
       }
    }
