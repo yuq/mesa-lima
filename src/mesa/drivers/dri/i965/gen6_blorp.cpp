@@ -992,7 +992,7 @@ gen6_blorp_emit_primitive(struct brw_context *brw,
              GEN4_3DPRIM_VERTEXBUFFER_ACCESS_SEQUENTIAL);
    OUT_BATCH(3); /* vertex count per instance */
    OUT_BATCH(0);
-   OUT_BATCH(1); /* instance count */
+   OUT_BATCH(params->num_layers); /* instance count */
    OUT_BATCH(0);
    OUT_BATCH(0);
    ADVANCE_BATCH();

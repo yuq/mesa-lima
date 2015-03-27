@@ -156,7 +156,8 @@ brw_blorp_surface_info::compute_tile_offsets(uint32_t *tile_x,
 
 
 brw_blorp_params::brw_blorp_params(unsigned num_varyings,
-                                   unsigned num_draw_buffers)
+                                   unsigned num_draw_buffers,
+                                   unsigned num_layers)
    : x0(0),
      y0(0),
      x1(0),
@@ -165,7 +166,8 @@ brw_blorp_params::brw_blorp_params(unsigned num_varyings,
      hiz_op(GEN6_HIZ_OP_NONE),
      use_wm_prog(false),
      num_varyings(num_varyings),
-     num_draw_buffers(num_draw_buffers)
+     num_draw_buffers(num_draw_buffers),
+     num_layers(num_layers)
 {
 }
 
