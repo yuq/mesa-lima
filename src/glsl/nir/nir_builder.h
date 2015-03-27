@@ -225,4 +225,23 @@ nir_swizzle(nir_builder *build, nir_ssa_def *src, unsigned swiz[4],
                      nir_imov_alu(build, alu_src, num_components);
 }
 
+/**
+ * Turns a nir_src into a nir_ssa_def * so it can be passed to
+ * nir_build_alu()-based builder calls.
+ */
+static inline nir_ssa_def *
+nir_ssa_for_src(nir_builder *build, nir_src src, int num_components)
+{
+   if (src.is_ssa && src.ssa->num_components == num_components)
+      return src.ssa;
+
+   nir_alu_src alu;
+   memset(&alu, 0, sizeof(alu));
+   alu.src = src;
+   for (int j = 0; j < 4; j++)
+      alu.swizzle[j] = j;
+
+   return nir_imov_alu(build, alu, num_components);
+}
+
 #endif /* NIR_BUILDER_H */
