@@ -46,6 +46,12 @@ LOCAL_STATIC_LIBRARIES := \
 	libmesa_loader
 
 LOCAL_SHARED_LIBRARIES := libdrm
+
+ifeq ($(shell echo "$(MESA_ANDROID_VERSION) >= 4.2" | bc),1)
+LOCAL_SHARED_LIBRARIES += \
+	libsync
+endif
+
 LOCAL_MODULE := libmesa_egl_dri2
 
 include $(MESA_COMMON_MK)
