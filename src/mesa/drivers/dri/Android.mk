@@ -45,7 +45,8 @@ MESA_DRI_WHOLE_STATIC_LIBRARIES := \
 	libmesa_glsl \
 	libmesa_megadriver_stub \
 	libmesa_dri_common \
-	libmesa_dricore
+	libmesa_dricore \
+	libmesa_util
 
 MESA_DRI_SHARED_LIBRARIES := \
 	libcutils \
