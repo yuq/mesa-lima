@@ -33,7 +33,7 @@ endif
 LOCAL_C_INCLUDES += \
 	$(MESA_TOP)/include
 
-MESA_VERSION=$(shell cat $(MESA_TOP)/VERSION)
+MESA_VERSION := $(shell cat $(MESA_TOP)/VERSION)
 # define ANDROID_VERSION (e.g., 4.0.x => 0x0400)
 LOCAL_CFLAGS += \
 	-DPACKAGE_VERSION=\"$(MESA_VERSION)\" \
