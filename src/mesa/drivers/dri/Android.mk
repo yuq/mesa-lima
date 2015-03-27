@@ -35,7 +35,6 @@ MESA_DRI_CFLAGS := \
 	-DHAVE_ANDROID_PLATFORM
 
 MESA_DRI_C_INCLUDES := \
-	$(MESA_TOP)/src \
 	$(call intermediates-dir-for,STATIC_LIBRARIES,libmesa_dri_common) \
 	$(addprefix $(MESA_TOP)/, $(mesa_dri_common_INCLUDES)) \
 	external/expat/lib
