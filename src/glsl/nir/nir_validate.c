@@ -680,8 +680,7 @@ validate_cf_node(nir_cf_node *node, validate_state *state)
       break;
 
    default:
-      assert(!"Invalid ALU instruction type");
-      break;
+      unreachable("Invalid CF node type");
    }
 }
 
