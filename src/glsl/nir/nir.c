@@ -108,7 +108,7 @@ nir_function_create(nir_shader *shader, const char *name)
 
    exec_list_push_tail(&shader->functions, &func->node);
    exec_list_make_empty(&func->overload_list);
-   func->name = name;
+   func->name = ralloc_strdup(func, name);
    func->shader = shader;
 
    return func;
