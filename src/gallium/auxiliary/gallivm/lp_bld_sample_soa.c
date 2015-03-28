@@ -2900,7 +2900,8 @@ lp_build_sample_soa_code(struct gallivm_state *gallivm,
 #define LP_SAMPLER_FUNC_EXPLICITDERIVS  (1 << 2)
 #define LP_SAMPLER_FUNC_SHADOW          (1 << 3)
 #define LP_SAMPLER_FUNC_OFFSETS         (1 << 4)
-#define LP_SAMPLER_FUNC_LOD_PROPERTY_SHIFT 5
+#define LP_SAMPLER_FUNC_FETCH           (1 << 5)
+#define LP_SAMPLER_FUNC_LOD_PROPERTY_SHIFT 6
 
 
 static inline void
@@ -3091,6 +3092,9 @@ lp_build_sample_soa_func(struct gallivm_state *gallivm,
    else if (derivs) {
       sampler_bits |= LP_SAMPLER_FUNC_EXPLICITDERIVS;
    }
+   if (is_fetch) {
+      sampler_bits |= LP_SAMPLER_FUNC_FETCH;
+   }
    sampler_bits |= lod_property << LP_SAMPLER_FUNC_LOD_PROPERTY_SHIFT;
 
    util_snprintf(func_name, sizeof(func_name), "texfunc_res_%d_sam_%d_%x",
@@ -3142,7 +3146,6 @@ lp_build_sample_soa_func(struct gallivm_state *gallivm,
          }
       }
 
-      ret_type = LLVMVoidTypeInContext(gallivm->context);
       val_type[0] = val_type[1] = val_type[2] = val_type[3] =
          lp_build_vec_type(gallivm, type);
       ret_type = LLVMStructTypeInContext(gallivm->context, val_type, 4, 0);
