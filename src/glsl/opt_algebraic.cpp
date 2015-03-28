@@ -290,6 +290,20 @@ ir_algebraic_visitor::handle_expression(ir_expression *ir)
    ir_expression *op_expr[4] = {NULL, NULL, NULL, NULL};
    unsigned int i;
 
+   if (ir->operation == ir_binop_mul &&
+       ir->operands[0]->type->is_matrix() &&
+       ir->operands[1]->type->is_vector()) {
+      ir_expression *matrix_mul = ir->operands[0]->as_expression();
+
+      if (matrix_mul && matrix_mul->operation == ir_binop_mul &&
+         matrix_mul->operands[0]->type->is_matrix() &&
+         matrix_mul->operands[1]->type->is_matrix()) {
+
+         return mul(matrix_mul->operands[0],
+                    mul(matrix_mul->operands[1], ir->operands[1]));
+      }
+   }
+
    assert(ir->get_num_operands() <= 4);
    for (i = 0; i < ir->get_num_operands(); i++) {
       if (ir->operands[i]->type->is_matrix())
