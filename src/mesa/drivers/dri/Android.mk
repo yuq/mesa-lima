@@ -37,6 +37,8 @@ MESA_DRI_CFLAGS := \
 MESA_DRI_C_INCLUDES := \
 	$(call intermediates-dir-for,STATIC_LIBRARIES,libmesa_dri_common) \
 	$(addprefix $(MESA_TOP)/, $(mesa_dri_common_INCLUDES)) \
+	$(MESA_TOP)/src/gallium/include \
+	$(MESA_TOP)/src/gallium/auxiliary \
 	external/expat/lib
 
 MESA_DRI_WHOLE_STATIC_LIBRARIES := \

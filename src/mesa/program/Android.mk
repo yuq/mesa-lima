@@ -73,7 +73,9 @@ LOCAL_C_INCLUDES := \
 	$(intermediates) \
 	$(MESA_TOP)/src/mapi \
 	$(MESA_TOP)/src/mesa \
-	$(MESA_TOP)/src/glsl
+	$(MESA_TOP)/src/glsl \
+	$(MESA_TOP)/src/gallium/auxiliary \
+	$(MESA_TOP)/src/gallium/include
 
 include $(MESA_COMMON_MK)
 include $(BUILD_STATIC_LIBRARY)

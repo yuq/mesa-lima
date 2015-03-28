@@ -63,6 +63,7 @@ LOCAL_C_INCLUDES := \
 	$(call intermediates-dir-for STATIC_LIBRARIES,libmesa_program,,) \
 	$(MESA_TOP)/src/mapi \
 	$(MESA_TOP)/src/glsl \
+	$(MESA_TOP)/src/gallium/include \
 	$(MESA_TOP)/src/gallium/auxiliary
 
 LOCAL_WHOLE_STATIC_LIBRARIES := \
