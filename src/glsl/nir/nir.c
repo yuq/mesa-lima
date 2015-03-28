@@ -1834,13 +1834,11 @@ void
 nir_ssa_def_init(nir_instr *instr, nir_ssa_def *def,
                  unsigned num_components, const char *name)
 {
-   void *mem_ctx = ralloc_parent(instr);
-
    def->name = name;
    def->parent_instr = instr;
-   def->uses = _mesa_set_create(mem_ctx, _mesa_hash_pointer,
+   def->uses = _mesa_set_create(instr, _mesa_hash_pointer,
                                 _mesa_key_pointer_equal);
-   def->if_uses = _mesa_set_create(mem_ctx, _mesa_hash_pointer,
+   def->if_uses = _mesa_set_create(instr, _mesa_hash_pointer,
                                    _mesa_key_pointer_equal);
    def->num_components = num_components;
 
