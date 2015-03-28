@@ -285,10 +285,10 @@ nir_block_create(void *mem_ctx)
    cf_init(&block->cf_node, nir_cf_node_block);
 
    block->successors[0] = block->successors[1] = NULL;
-   block->predecessors = _mesa_set_create(mem_ctx, _mesa_hash_pointer,
+   block->predecessors = _mesa_set_create(block, _mesa_hash_pointer,
                                           _mesa_key_pointer_equal);
    block->imm_dom = NULL;
-   block->dom_frontier = _mesa_set_create(mem_ctx, _mesa_hash_pointer,
+   block->dom_frontier = _mesa_set_create(block, _mesa_hash_pointer,
                                           _mesa_key_pointer_equal);
 
    exec_list_make_empty(&block->instr_list);
