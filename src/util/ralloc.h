@@ -235,6 +235,13 @@ void ralloc_free(void *ptr);
 void ralloc_steal(const void *new_ctx, void *ptr);
 
 /**
+ * Reparent all children from one context to another.
+ *
+ * This effectively calls ralloc_steal(new_ctx, child) for all children of \p old_ctx.
+ */
+void ralloc_adopt(const void *new_ctx, void *old_ctx);
+
+/**
  * Return the given pointer's ralloc context.
  */
 void *ralloc_parent(const void *ptr);
