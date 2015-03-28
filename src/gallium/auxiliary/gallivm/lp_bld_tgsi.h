@@ -182,20 +182,9 @@ struct lp_build_sampler_soa
    (*destroy)( struct lp_build_sampler_soa *sampler );
 
    void
-   (*emit_fetch_texel)( const struct lp_build_sampler_soa *sampler,
-                        struct gallivm_state *gallivm,
-                        struct lp_type type,
-                        boolean is_fetch,
-                        unsigned texture_index,
-                        unsigned sampler_index,
-                        LLVMValueRef context_ptr,
-                        const LLVMValueRef *coords,
-                        const LLVMValueRef *offsets,
-                        const struct lp_derivatives *derivs,
-                        LLVMValueRef lod_bias, /* optional */
-                        LLVMValueRef explicit_lod, /* optional */
-                        enum lp_sampler_lod_property,
-                        LLVMValueRef *texel);
+   (*emit_tex_sample)(const struct lp_build_sampler_soa *sampler,
+                      struct gallivm_state *gallivm,
+                      const struct lp_sampler_params *params);
 
    void
    (*emit_size_query)( const struct lp_build_sampler_soa *sampler,

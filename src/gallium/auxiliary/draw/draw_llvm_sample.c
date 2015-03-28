@@ -229,38 +229,19 @@ draw_llvm_sampler_soa_destroy(struct lp_build_sampler_soa *sampler)
 static void
 draw_llvm_sampler_soa_emit_fetch_texel(const struct lp_build_sampler_soa *base,
                                        struct gallivm_state *gallivm,
-                                       struct lp_type type,
-                                       boolean is_fetch,
-                                       unsigned texture_index,
-                                       unsigned sampler_index,
-                                       LLVMValueRef context_ptr,
-                                       const LLVMValueRef *coords,
-                                       const LLVMValueRef *offsets,
-                                       const struct lp_derivatives *derivs,
-                                       LLVMValueRef lod_bias, /* optional */
-                                       LLVMValueRef explicit_lod, /* optional */
-                                       enum lp_sampler_lod_property lod_property,
-                                       LLVMValueRef *texel)
+                                       const struct lp_sampler_params *params)
 {
    struct draw_llvm_sampler_soa *sampler = (struct draw_llvm_sampler_soa *)base;
+   unsigned texture_index = params->texture_index;
+   unsigned sampler_index = params->sampler_index;
 
    assert(texture_index < PIPE_MAX_SHADER_SAMPLER_VIEWS);
    assert(sampler_index < PIPE_MAX_SAMPLERS);
 
-   lp_build_sample_soa(gallivm,
-                       &sampler->dynamic_state.static_state[texture_index].texture_state,
+   lp_build_sample_soa(&sampler->dynamic_state.static_state[texture_index].texture_state,
                        &sampler->dynamic_state.static_state[sampler_index].sampler_state,
                        &sampler->dynamic_state.base,
-                       type,
-                       is_fetch,
-                       texture_index,
-                       sampler_index,
-                       context_ptr,
-                       coords,
-                       offsets,
-                       derivs,
-                       lod_bias, explicit_lod, lod_property,
-                       texel);
+                       gallivm, params);
 }
 
 
@@ -306,7 +287,7 @@ draw_llvm_sampler_soa_create(const struct draw_sampler_static_state *static_stat
       return NULL;
 
    sampler->base.destroy = draw_llvm_sampler_soa_destroy;
-   sampler->base.emit_fetch_texel = draw_llvm_sampler_soa_emit_fetch_texel;
+   sampler->base.emit_tex_sample = draw_llvm_sampler_soa_emit_fetch_texel;
    sampler->base.emit_size_query = draw_llvm_sampler_soa_emit_size_query;
    sampler->dynamic_state.base.width = draw_llvm_texture_width;
    sampler->dynamic_state.base.height = draw_llvm_texture_height;

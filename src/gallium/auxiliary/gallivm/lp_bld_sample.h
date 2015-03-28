@@ -68,6 +68,37 @@ enum lp_sampler_lod_property {
 };
 
 
+enum lp_sampler_lod_control {
+   LP_SAMPLER_LOD_IMPLICIT,
+   LP_SAMPLER_LOD_BIAS,
+   LP_SAMPLER_LOD_EXPLICIT,
+   LP_SAMPLER_LOD_DERIVATIVES,
+};
+
+
+#define LP_SAMPLER_SHADOW             (1 << 0)
+#define LP_SAMPLER_OFFSETS            (1 << 1)
+#define LP_SAMPLER_FETCH              (1 << 2)
+#define LP_SAMPLER_LOD_CONTROL_SHIFT        3
+#define LP_SAMPLER_LOD_CONTROL_MASK   (3 << 3)
+#define LP_SAMPLER_LOD_PROPERTY_SHIFT       5
+#define LP_SAMPLER_LOD_PROPERTY_MASK  (3 << 5)
+
+struct lp_sampler_params
+{
+   struct lp_type type;
+   unsigned texture_index;
+   unsigned sampler_index;
+   unsigned sample_key;
+   LLVMValueRef context_ptr;
+   const LLVMValueRef *coords;
+   const LLVMValueRef *offsets;
+   LLVMValueRef lod;
+   const struct lp_derivatives *derivs;
+   LLVMValueRef *texel;
+};
+
+
 /**
  * Texture static state.
  *
@@ -531,22 +562,11 @@ lp_build_sample_offset(struct lp_build_context *bld,
 
 
 void
-lp_build_sample_soa(struct gallivm_state *gallivm,
-                    const struct lp_static_texture_state *static_texture_state,
+lp_build_sample_soa(const struct lp_static_texture_state *static_texture_state,
                     const struct lp_static_sampler_state *static_sampler_state,
                     struct lp_sampler_dynamic_state *dynamic_texture_state,
-                    struct lp_type fp_type,
-                    boolean is_fetch,
-                    unsigned texture_index,
-                    unsigned sampler_index,
-                    LLVMValueRef context_ptr,
-                    const LLVMValueRef *coords,
-                    const LLVMValueRef *offsets,
-                    const struct lp_derivatives *derivs,
-                    LLVMValueRef lod_bias,
-                    LLVMValueRef explicit_lod,
-                    enum lp_sampler_lod_property lod_property,
-                    LLVMValueRef texel_out[4]);
+                    struct gallivm_state *gallivm,
+                    const struct lp_sampler_params *params);
 
 
 void

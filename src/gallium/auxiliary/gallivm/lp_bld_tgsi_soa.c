@@ -1964,16 +1964,19 @@ emit_tex( struct lp_build_tgsi_soa_context *bld,
           unsigned sampler_reg)
 {
    unsigned unit = inst->Src[sampler_reg].Register.Index;
-   LLVMValueRef lod_bias, explicit_lod;
    LLVMValueRef oow = NULL;
+   LLVMValueRef lod = NULL;
    LLVMValueRef coords[5];
    LLVMValueRef offsets[3] = { NULL };
    struct lp_derivatives derivs;
-   struct lp_derivatives *deriv_ptr = NULL;
+   struct lp_sampler_params params;
    enum lp_sampler_lod_property lod_property = LP_SAMPLER_LOD_SCALAR;
    unsigned num_derivs, num_offsets, i;
    unsigned shadow_coord = 0;
    unsigned layer_coord = 0;
+   unsigned sample_key = 0;
+
+   memset(&params, 0, sizeof(params));
 
    if (!bld->sampler) {
       _debug_printf("warning: found texture instruction but no sampler generator supplied\n");
@@ -2053,7 +2056,6 @@ emit_tex( struct lp_build_tgsi_soa_context *bld,
    /* Note lod and especially projected are illegal in a LOT of cases */
    if (modifier == LP_BLD_TEX_MODIFIER_LOD_BIAS ||
        modifier == LP_BLD_TEX_MODIFIER_EXPLICIT_LOD) {
-      LLVMValueRef lod;
       if (inst->Texture.Texture == TGSI_TEXTURE_SHADOWCUBE ||
           inst->Texture.Texture == TGSI_TEXTURE_CUBE_ARRAY) {
          /* note that shadow cube array with bias/explicit lod does not exist */
@@ -2063,18 +2065,12 @@ emit_tex( struct lp_build_tgsi_soa_context *bld,
          lod = lp_build_emit_fetch(&bld->bld_base, inst, 0, 3);
       }
       if (modifier == LP_BLD_TEX_MODIFIER_LOD_BIAS) {
-         lod_bias = lod;
-         explicit_lod = NULL;
+         sample_key |= LP_SAMPLER_LOD_BIAS << LP_SAMPLER_LOD_CONTROL_SHIFT;
       }
       else if (modifier == LP_BLD_TEX_MODIFIER_EXPLICIT_LOD) {
-         lod_bias = NULL;
-         explicit_lod = lod;
+         sample_key |= LP_SAMPLER_LOD_EXPLICIT << LP_SAMPLER_LOD_CONTROL_SHIFT;
       }
       lod_property = lp_build_lod_property(&bld->bld_base, inst, 0);
-   }
-   else {
-      lod_bias = NULL;
-      explicit_lod = NULL;
    }
 
    if (modifier == LP_BLD_TEX_MODIFIER_PROJECTED) {
@@ -2104,6 +2100,7 @@ emit_tex( struct lp_build_tgsi_soa_context *bld,
    }
    /* Shadow coord occupies always 5th slot. */
    if (shadow_coord) {
+      sample_key |= LP_SAMPLER_SHADOW;
       if (shadow_coord == 4) {
          coords[4] = lp_build_emit_fetch(&bld->bld_base, inst, 1, 0);
       }
@@ -2116,11 +2113,12 @@ emit_tex( struct lp_build_tgsi_soa_context *bld,
 
    if (modifier == LP_BLD_TEX_MODIFIER_EXPLICIT_DERIV) {
       unsigned dim;
+      sample_key |= LP_SAMPLER_LOD_DERIVATIVES << LP_SAMPLER_LOD_CONTROL_SHIFT;
       for (dim = 0; dim < num_derivs; ++dim) {
          derivs.ddx[dim] = lp_build_emit_fetch(&bld->bld_base, inst, 1, dim);
          derivs.ddy[dim] = lp_build_emit_fetch(&bld->bld_base, inst, 2, dim);
       }
-      deriv_ptr = &derivs;
+      params.derivs = &derivs;
       /*
        * could also check all src regs if constant but I doubt such
        * cases exist in practice.
@@ -2137,26 +2135,30 @@ emit_tex( struct lp_build_tgsi_soa_context *bld,
          lod_property = LP_SAMPLER_LOD_PER_ELEMENT;
       }
    }
+   sample_key |= lod_property << LP_SAMPLER_LOD_PROPERTY_SHIFT;
 
    /* some advanced gather instructions (txgo) would require 4 offsets */
    if (inst->Texture.NumOffsets == 1) {
       unsigned dim;
+      sample_key |= LP_SAMPLER_OFFSETS;
       for (dim = 0; dim < num_offsets; dim++) {
          offsets[dim] = lp_build_emit_fetch_texoffset(&bld->bld_base, inst, 0, dim);
       }
    }
 
-   bld->sampler->emit_fetch_texel(bld->sampler,
-                                  bld->bld_base.base.gallivm,
-                                  bld->bld_base.base.type,
-                                  FALSE,
-                                  unit, unit,
-                                  bld->context_ptr,
-                                  coords,
-                                  offsets,
-                                  deriv_ptr,
-                                  lod_bias, explicit_lod, lod_property,
-                                  texel);
+   params.type = bld->bld_base.base.type;
+   params.sample_key = sample_key;
+   params.texture_index = unit;
+   params.sampler_index = unit;
+   params.context_ptr = bld->context_ptr;
+   params.coords = coords;
+   params.offsets = offsets;
+   params.lod = lod;
+   params.texel = texel;
+
+   bld->sampler->emit_tex_sample(bld->sampler,
+                                 bld->bld_base.base.gallivm,
+                                 &params);
 }
 
 static void
@@ -2168,15 +2170,18 @@ emit_sample(struct lp_build_tgsi_soa_context *bld,
 {
    struct gallivm_state *gallivm = bld->bld_base.base.gallivm;
    unsigned texture_unit, sampler_unit;
-   LLVMValueRef lod_bias, explicit_lod;
+   LLVMValueRef lod = NULL;
    LLVMValueRef coords[5];
    LLVMValueRef offsets[3] = { NULL };
    struct lp_derivatives derivs;
-   struct lp_derivatives *deriv_ptr = NULL;
+   struct lp_sampler_params params;
    enum lp_sampler_lod_property lod_property = LP_SAMPLER_LOD_SCALAR;
 
    unsigned num_offsets, num_derivs, i;
    unsigned layer_coord = 0;
+   unsigned sample_key = 0;
+
+   memset(&params, 0, sizeof(params));
 
    if (!bld->sampler) {
       _debug_printf("warning: found texture instruction but no sampler generator supplied\n");
@@ -2238,25 +2243,19 @@ emit_sample(struct lp_build_tgsi_soa_context *bld,
 
    if (modifier == LP_BLD_TEX_MODIFIER_LOD_BIAS ||
        modifier == LP_BLD_TEX_MODIFIER_EXPLICIT_LOD) {
-      LLVMValueRef lod = lp_build_emit_fetch(&bld->bld_base, inst, 3, 0);
+      lod = lp_build_emit_fetch(&bld->bld_base, inst, 3, 0);
       if (modifier == LP_BLD_TEX_MODIFIER_LOD_BIAS) {
-         lod_bias = lod;
-         explicit_lod = NULL;
+         sample_key |= LP_SAMPLER_LOD_BIAS << LP_SAMPLER_LOD_CONTROL_SHIFT;
       }
       else if (modifier == LP_BLD_TEX_MODIFIER_EXPLICIT_LOD) {
-         lod_bias = NULL;
-         explicit_lod = lod;
+         sample_key |= LP_SAMPLER_LOD_EXPLICIT << LP_SAMPLER_LOD_CONTROL_SHIFT;
       }
       lod_property = lp_build_lod_property(&bld->bld_base, inst, 0);
    }
    else if (modifier == LP_BLD_TEX_MODIFIER_LOD_ZERO) {
-      lod_bias = NULL;
       /* XXX might be better to explicitly pass the level zero information */
-      explicit_lod = lp_build_const_vec(gallivm, bld->bld_base.base.type, 0.0F);
-   }
-   else {
-      lod_bias = NULL;
-      explicit_lod = NULL;
+      sample_key |= LP_SAMPLER_LOD_EXPLICIT << LP_SAMPLER_LOD_CONTROL_SHIFT;
+      lod = lp_build_const_vec(gallivm, bld->bld_base.base.type, 0.0F);
    }
 
    for (i = 0; i < num_derivs; i++) {
@@ -2275,16 +2274,18 @@ emit_sample(struct lp_build_tgsi_soa_context *bld,
    }
    /* Shadow coord occupies always 5th slot. */
    if (compare) {
+      sample_key |= LP_SAMPLER_SHADOW;
       coords[4] = lp_build_emit_fetch(&bld->bld_base, inst, 3, 0);
    }
 
    if (modifier == LP_BLD_TEX_MODIFIER_EXPLICIT_DERIV) {
       unsigned dim;
+      sample_key |= LP_SAMPLER_LOD_DERIVATIVES << LP_SAMPLER_LOD_CONTROL_SHIFT;
       for (dim = 0; dim < num_derivs; ++dim) {
          derivs.ddx[dim] = lp_build_emit_fetch(&bld->bld_base, inst, 3, dim);
          derivs.ddy[dim] = lp_build_emit_fetch(&bld->bld_base, inst, 4, dim);
       }
-      deriv_ptr = &derivs;
+      params.derivs = &derivs;
       /*
        * could also check all src regs if constant but I doubt such
        * cases exist in practice.
@@ -2305,22 +2306,26 @@ emit_sample(struct lp_build_tgsi_soa_context *bld,
    /* some advanced gather instructions (txgo) would require 4 offsets */
    if (inst->Texture.NumOffsets == 1) {
       unsigned dim;
+      sample_key |= LP_SAMPLER_OFFSETS;
       for (dim = 0; dim < num_offsets; dim++) {
          offsets[dim] = lp_build_emit_fetch_texoffset(&bld->bld_base, inst, 0, dim);
       }
    }
+   sample_key |= lod_property << LP_SAMPLER_LOD_PROPERTY_SHIFT;
 
-   bld->sampler->emit_fetch_texel(bld->sampler,
-                                  bld->bld_base.base.gallivm,
-                                  bld->bld_base.base.type,
-                                  FALSE,
-                                  texture_unit, sampler_unit,
-                                  bld->context_ptr,
-                                  coords,
-                                  offsets,
-                                  deriv_ptr,
-                                  lod_bias, explicit_lod, lod_property,
-                                  texel);
+   params.type = bld->bld_base.base.type;
+   params.sample_key = sample_key;
+   params.texture_index = texture_unit;
+   params.sampler_index = sampler_unit;
+   params.context_ptr = bld->context_ptr;
+   params.coords = coords;
+   params.offsets = offsets;
+   params.lod = lod;
+   params.texel = texel;
+
+   bld->sampler->emit_tex_sample(bld->sampler,
+                                 bld->bld_base.base.gallivm,
+                                 &params);
 
    if (inst->Src[1].Register.SwizzleX != PIPE_SWIZZLE_RED ||
        inst->Src[1].Register.SwizzleY != PIPE_SWIZZLE_GREEN ||
@@ -2347,9 +2352,13 @@ emit_fetch_texels( struct lp_build_tgsi_soa_context *bld,
    LLVMValueRef explicit_lod = NULL;
    LLVMValueRef coords[5];
    LLVMValueRef offsets[3] = { NULL };
+   struct lp_sampler_params params;
    enum lp_sampler_lod_property lod_property = LP_SAMPLER_LOD_SCALAR;
    unsigned dims, i;
    unsigned layer_coord = 0;
+   unsigned sample_key = LP_SAMPLER_FETCH;
+
+   memset(&params, 0, sizeof(params));
 
    if (!bld->sampler) {
       _debug_printf("warning: found texture instruction but no sampler generator supplied\n");
@@ -2399,6 +2408,7 @@ emit_fetch_texels( struct lp_build_tgsi_soa_context *bld,
    if (target != TGSI_TEXTURE_BUFFER &&
        target != TGSI_TEXTURE_2D_MSAA &&
        target != TGSI_TEXTURE_2D_ARRAY_MSAA) {
+      sample_key |= LP_SAMPLER_LOD_EXPLICIT << LP_SAMPLER_LOD_CONTROL_SHIFT;
       explicit_lod = lp_build_emit_fetch(&bld->bld_base, inst, 0, 3);
       lod_property = lp_build_lod_property(&bld->bld_base, inst, 0);
    }
@@ -2416,22 +2426,27 @@ emit_fetch_texels( struct lp_build_tgsi_soa_context *bld,
 
    if (inst->Texture.NumOffsets == 1) {
       unsigned dim;
+      sample_key |= LP_SAMPLER_OFFSETS;
       for (dim = 0; dim < dims; dim++) {
          offsets[dim] = lp_build_emit_fetch_texoffset(&bld->bld_base, inst, 0, dim);
       }
    }
+   sample_key |= lod_property << LP_SAMPLER_LOD_PROPERTY_SHIFT;
 
-   bld->sampler->emit_fetch_texel(bld->sampler,
-                                  bld->bld_base.base.gallivm,
-                                  bld->bld_base.base.type,
-                                  TRUE,
-                                  unit, unit,
-                                  bld->context_ptr,
-                                  coords,
-                                  offsets,
-                                  NULL,
-                                  NULL, explicit_lod, lod_property,
-                                  texel);
+   params.type = bld->bld_base.base.type;
+   params.sample_key = sample_key;
+   params.texture_index = unit;
+   params.sampler_index = unit;
+   params.context_ptr = bld->context_ptr;
+   params.coords = coords;
+   params.offsets = offsets;
+   params.derivs = NULL;
+   params.lod = explicit_lod;
+   params.texel = texel;
+
+   bld->sampler->emit_tex_sample(bld->sampler,
+                                 bld->bld_base.base.gallivm,
+                                 &params);
 
    if (is_samplei &&
        (inst->Src[1].Register.SwizzleX != PIPE_SWIZZLE_RED ||
