@@ -525,6 +525,12 @@ static inline struct ir3_instruction *ssa(struct ir3_register *reg)
 	return NULL;
 }
 
+static inline bool conflicts(struct ir3_instruction *a,
+		struct ir3_instruction *b)
+{
+	return (a && b) && (a != b);
+}
+
 static inline bool reg_gpr(struct ir3_register *r)
 {
 	if (r->flags & (IR3_REG_CONST | IR3_REG_IMMED | IR3_REG_ADDR))

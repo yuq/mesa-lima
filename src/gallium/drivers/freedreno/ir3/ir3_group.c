@@ -118,12 +118,6 @@ static void instr_insert_mov(void *arr, int idx, struct ir3_instruction *instr)
 static struct group_ops instr_ops = { instr_get, instr_insert_mov };
 
 
-
-static bool conflicts(struct ir3_instruction *a, struct ir3_instruction *b)
-{
-	return (a && b) && (a != b);
-}
-
 static void group_n(struct group_ops *ops, void *arr, unsigned n)
 {
 	unsigned i, j;
