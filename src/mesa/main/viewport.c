@@ -72,16 +72,6 @@ set_viewport_no_notify(struct gl_context *ctx, unsigned idx,
    ctx->ViewportArray[idx].Y = y;
    ctx->ViewportArray[idx].Height = height;
    ctx->NewState |= _NEW_VIEWPORT;
-
-#if 1
-   /* XXX remove this someday.  Currently the DRI drivers rely on
-    * the WindowMap matrix being up to date in the driver's Viewport
-    * and DepthRange functions.
-    */
-   _mesa_get_viewport_xform(ctx, idx, scale, translate);
-   _math_matrix_viewport(&ctx->ViewportArray[idx]._WindowMap,
-                         scale, translate, ctx->DrawBuffer->_DepthMaxF);
-#endif
 }
 
 struct gl_viewport_inputs {
@@ -140,8 +130,8 @@ _mesa_Viewport(GLint x, GLint y, GLsizei width, GLsizei height)
 
 
 /**
- * Set new viewport parameters and update derived state (the _WindowMap
- * matrix).  Usually called from _mesa_Viewport().
+ * Set new viewport parameters and update derived state.
+ * Usually called from _mesa_Viewport().
  * 
  * \param ctx GL context.
  * \param idx    Index of the viewport to be updated.
@@ -255,16 +245,6 @@ set_depth_range_no_notify(struct gl_context *ctx, unsigned idx,
    ctx->ViewportArray[idx].Near = CLAMP(nearval, 0.0, 1.0);
    ctx->ViewportArray[idx].Far = CLAMP(farval, 0.0, 1.0);
    ctx->NewState |= _NEW_VIEWPORT;
-
-#if 1
-   /* XXX remove this someday.  Currently the DRI drivers rely on
-    * the WindowMap matrix being up to date in the driver's Viewport
-    * and DepthRange functions.
-    */
-   _mesa_get_viewport_xform(ctx, idx, scale, translate);
-   _math_matrix_viewport(&ctx->ViewportArray[idx]._WindowMap,
-                         scale, translate, ctx->DrawBuffer->_DepthMaxF);
-#endif
 }
 
 void
@@ -388,7 +368,6 @@ _mesa_DepthRangeIndexed(GLuint index, GLclampd nearval, GLclampd farval)
  */
 void _mesa_init_viewport(struct gl_context *ctx)
 {
-   GLfloat depthMax = 65535.0F; /* sorf of arbitrary */
    unsigned i;
 
    ctx->Transform.ClipOrigin = GL_LOWER_LEFT;
@@ -398,8 +377,6 @@ void _mesa_init_viewport(struct gl_context *ctx)
     * so just initialize all of them.
     */
    for (i = 0; i < MAX_VIEWPORTS; i++) {
-      double scale[3], translate[3];
-
       /* Viewport group */
       ctx->ViewportArray[i].X = 0;
       ctx->ViewportArray[i].Y = 0;
@@ -407,26 +384,9 @@ void _mesa_init_viewport(struct gl_context *ctx)
       ctx->ViewportArray[i].Height = 0;
       ctx->ViewportArray[i].Near = 0.0;
       ctx->ViewportArray[i].Far = 1.0;
-      _math_matrix_ctr(&ctx->ViewportArray[i]._WindowMap);
-
-      _mesa_get_viewport_xform(ctx, i, scale, translate);
-      _math_matrix_viewport(&ctx->ViewportArray[i]._WindowMap,
-                            scale, translate, depthMax);
    }
 }
 
-
-/** 
- * Free the context viewport attribute group data.
- * \param ctx  the GL context.
- */
-void _mesa_free_viewport_data(struct gl_context *ctx)
-{
-   unsigned i;
-
-   for (i = 0; i < MAX_VIEWPORTS; i++)
-      _math_matrix_dtr(&ctx->ViewportArray[i]._WindowMap);
-}
 
 extern void GLAPIENTRY
 _mesa_ClipControl(GLenum origin, GLenum depth)
