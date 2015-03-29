@@ -44,6 +44,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "main/state.h"
 #include "main/core.h"
 #include "main/stencil.h"
+#include "main/viewport.h"
 
 #include "vbo/vbo.h"
 #include "tnl/tnl.h"
@@ -1352,9 +1353,8 @@ void radeonUpdateWindow( struct gl_context *ctx )
    __DRIdrawable *dPriv = radeon_get_drawable(&rmesa->radeon);
    GLfloat xoffset = 0.0;
    GLfloat yoffset = dPriv ? (GLfloat) dPriv->h : 0;
-   const GLfloat *v = ctx->ViewportArray[0]._WindowMap.m;
    const GLboolean render_to_fbo = (ctx->DrawBuffer ? _mesa_is_user_fbo(ctx->DrawBuffer) : 0);
-   const GLfloat depthScale = 1.0F / ctx->DrawBuffer->_DepthMaxF;
+   double scale[3], translate[3];
    GLfloat y_scale, y_bias;
 
    if (render_to_fbo) {
@@ -1365,12 +1365,13 @@ void radeonUpdateWindow( struct gl_context *ctx )
       y_bias = yoffset;
    }
 
-   float_ui32_type sx = { v[MAT_SX] };
-   float_ui32_type tx = { v[MAT_TX] + xoffset + SUBPIXEL_X };
-   float_ui32_type sy = { v[MAT_SY] * y_scale };
-   float_ui32_type ty = { (v[MAT_TY] * y_scale) + y_bias + SUBPIXEL_Y };
-   float_ui32_type sz = { v[MAT_SZ] * depthScale };
-   float_ui32_type tz = { v[MAT_TZ] * depthScale };
+   _mesa_get_viewport_xform(ctx, 0, scale, translate);
+   float_ui32_type sx = { scale[0] };
+   float_ui32_type sy = { scale[1] * y_scale };
+   float_ui32_type sz = { scale[2] };
+   float_ui32_type tx = { translate[0] + xoffset + SUBPIXEL_X };
+   float_ui32_type ty = { (translate[1] * y_scale) + y_bias + SUBPIXEL_Y };
+   float_ui32_type tz = { translate[2] };
 
    RADEON_STATECHANGE( rmesa, vpt );
 
