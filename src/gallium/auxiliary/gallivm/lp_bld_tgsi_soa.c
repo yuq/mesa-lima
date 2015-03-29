@@ -1961,7 +1961,8 @@ emit_tex( struct lp_build_tgsi_soa_context *bld,
           const struct tgsi_full_instruction *inst,
           enum lp_build_tex_modifier modifier,
           LLVMValueRef *texel,
-          unsigned sampler_reg)
+          unsigned sampler_reg,
+          enum lp_sampler_op_type sampler_op)
 {
    unsigned unit = inst->Src[sampler_reg].Register.Index;
    LLVMValueRef oow = NULL;
@@ -1974,7 +1975,7 @@ emit_tex( struct lp_build_tgsi_soa_context *bld,
    unsigned num_derivs, num_offsets, i;
    unsigned shadow_coord = 0;
    unsigned layer_coord = 0;
-   unsigned sample_key = LP_SAMPLER_OP_TEXTURE << LP_SAMPLER_OP_TYPE_SHIFT;
+   unsigned sample_key = sampler_op << LP_SAMPLER_OP_TYPE_SHIFT;
 
    memset(&params, 0, sizeof(params));
 
@@ -2137,7 +2138,7 @@ emit_tex( struct lp_build_tgsi_soa_context *bld,
    }
    sample_key |= lod_property << LP_SAMPLER_LOD_PROPERTY_SHIFT;
 
-   /* some advanced gather instructions (txgo) would require 4 offsets */
+   /* we don't handle the 4 offset version of tg4 */
    if (inst->Texture.NumOffsets == 1) {
       unsigned dim;
       sample_key |= LP_SAMPLER_OFFSETS;
@@ -2972,7 +2973,7 @@ tex_emit(
    struct lp_build_tgsi_soa_context * bld = lp_soa_context(bld_base);
 
    emit_tex(bld, emit_data->inst, LP_BLD_TEX_MODIFIER_NONE,
-            emit_data->output, 1);
+            emit_data->output, 1, LP_SAMPLER_OP_TEXTURE);
 }
 
 static void
@@ -2984,7 +2985,7 @@ tex2_emit(
    struct lp_build_tgsi_soa_context * bld = lp_soa_context(bld_base);
 
    emit_tex(bld, emit_data->inst, LP_BLD_TEX_MODIFIER_NONE,
-            emit_data->output, 2);
+            emit_data->output, 2, LP_SAMPLER_OP_TEXTURE);
 }
 
 static void
@@ -2996,7 +2997,7 @@ txb_emit(
    struct lp_build_tgsi_soa_context * bld = lp_soa_context(bld_base);
 
    emit_tex(bld, emit_data->inst, LP_BLD_TEX_MODIFIER_LOD_BIAS,
-            emit_data->output, 1);
+            emit_data->output, 1, LP_SAMPLER_OP_TEXTURE);
 }
 
 static void
@@ -3008,7 +3009,7 @@ txb2_emit(
    struct lp_build_tgsi_soa_context * bld = lp_soa_context(bld_base);
 
    emit_tex(bld, emit_data->inst, LP_BLD_TEX_MODIFIER_LOD_BIAS,
-            emit_data->output, 2);
+            emit_data->output, 2, LP_SAMPLER_OP_TEXTURE);
 }
 
 static void
@@ -3020,7 +3021,7 @@ txd_emit(
    struct lp_build_tgsi_soa_context * bld = lp_soa_context(bld_base);
 
    emit_tex(bld, emit_data->inst, LP_BLD_TEX_MODIFIER_EXPLICIT_DERIV,
-            emit_data->output, 3);
+            emit_data->output, 3, LP_SAMPLER_OP_TEXTURE);
 }
 
 static void
@@ -3032,7 +3033,7 @@ txl_emit(
    struct lp_build_tgsi_soa_context * bld = lp_soa_context(bld_base);
 
    emit_tex(bld, emit_data->inst, LP_BLD_TEX_MODIFIER_EXPLICIT_LOD,
-            emit_data->output, 1);
+            emit_data->output, 1, LP_SAMPLER_OP_TEXTURE);
 }
 
 static void
@@ -3044,7 +3045,7 @@ txl2_emit(
    struct lp_build_tgsi_soa_context * bld = lp_soa_context(bld_base);
 
    emit_tex(bld, emit_data->inst, LP_BLD_TEX_MODIFIER_EXPLICIT_LOD,
-            emit_data->output, 2);
+            emit_data->output, 2, LP_SAMPLER_OP_TEXTURE);
 }
 
 static void
@@ -3056,7 +3057,19 @@ txp_emit(
    struct lp_build_tgsi_soa_context * bld = lp_soa_context(bld_base);
 
    emit_tex(bld, emit_data->inst, LP_BLD_TEX_MODIFIER_PROJECTED,
-            emit_data->output, 1);
+            emit_data->output, 1, LP_SAMPLER_OP_TEXTURE);
+}
+
+static void
+tg4_emit(
+   const struct lp_build_tgsi_action * action,
+   struct lp_build_tgsi_context * bld_base,
+   struct lp_build_emit_data * emit_data)
+{
+   struct lp_build_tgsi_soa_context * bld = lp_soa_context(bld_base);
+
+   emit_tex(bld, emit_data->inst, LP_BLD_TEX_MODIFIER_NONE,
+            emit_data->output, 2, LP_SAMPLER_OP_GATHER);
 }
 
 static void
@@ -3775,6 +3788,7 @@ lp_build_tgsi_soa(struct gallivm_state *gallivm,
    bld.bld_base.op_actions[TGSI_OPCODE_TEX2].emit = tex2_emit;
    bld.bld_base.op_actions[TGSI_OPCODE_TXB2].emit = txb2_emit;
    bld.bld_base.op_actions[TGSI_OPCODE_TXL2].emit = txl2_emit;
+   bld.bld_base.op_actions[TGSI_OPCODE_TG4].emit = tg4_emit;
    /* DX10 sampling ops */
    bld.bld_base.op_actions[TGSI_OPCODE_SAMPLE].emit = sample_emit;
    bld.bld_base.op_actions[TGSI_OPCODE_SAMPLE_B].emit = sample_b_emit;

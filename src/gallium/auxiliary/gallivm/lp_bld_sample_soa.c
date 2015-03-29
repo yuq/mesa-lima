@@ -840,6 +840,7 @@ lp_build_masklerp2d(struct lp_build_context *bld,
  */
 static void
 lp_build_sample_image_linear(struct lp_build_sample_context *bld,
+                             boolean is_gather,
                              LLVMValueRef size,
                              LLVMValueRef linear_mask,
                              LLVMValueRef row_stride_vec,
@@ -853,6 +854,7 @@ lp_build_sample_image_linear(struct lp_build_sample_context *bld,
    LLVMBuilderRef builder = bld->gallivm->builder;
    struct lp_build_context *ivec_bld = &bld->int_coord_bld;
    struct lp_build_context *coord_bld = &bld->coord_bld;
+   struct lp_build_context *texel_bld = &bld->texel_bld;
    const unsigned dims = bld->dims;
    LLVMValueRef width_vec;
    LLVMValueRef height_vec;
@@ -875,7 +877,16 @@ lp_build_sample_image_linear(struct lp_build_sample_context *bld,
    seamless_cube_filter = (bld->static_texture_state->target == PIPE_TEXTURE_CUBE ||
                            bld->static_texture_state->target == PIPE_TEXTURE_CUBE_ARRAY) &&
                           bld->static_sampler_state->seamless_cube_map;
-   accurate_cube_corners = ACCURATE_CUBE_CORNERS && seamless_cube_filter;
+   /*
+    * XXX I don't know how this is really supposed to work with gather. From GL
+    * spec wording (not gather specific) it sounds like the 4th missing texel
+    * should be an average of the other 3, hence for gather could return this.
+    * This is however NOT how the code here works, which just fixes up the
+    * weights used for filtering instead. And of course for gather there is
+    * no filter to tweak...
+    */
+   accurate_cube_corners = ACCURATE_CUBE_CORNERS && seamless_cube_filter &&
+                           !is_gather;
 
    lp_build_extract_image_sizes(bld,
                                 &bld->int_size_bld,
@@ -1160,10 +1171,11 @@ lp_build_sample_image_linear(struct lp_build_sample_context *bld,
                              data_ptr, mipoffsets, neighbors[0][1]);
 
    if (dims == 1) {
+      assert(!is_gather);
       if (bld->static_sampler_state->compare_mode == PIPE_TEX_COMPARE_NONE) {
          /* Interpolate two samples from 1D image to produce one color */
          for (chan = 0; chan < 4; chan++) {
-            colors_out[chan] = lp_build_lerp(&bld->texel_bld, s_fpart,
+            colors_out[chan] = lp_build_lerp(texel_bld, s_fpart,
                                              neighbors[0][0][chan],
                                              neighbors[0][1][chan],
                                              0);
@@ -1174,7 +1186,7 @@ lp_build_sample_image_linear(struct lp_build_sample_context *bld,
          cmpval0 = lp_build_sample_comparefunc(bld, coords[4], neighbors[0][0][0]);
          cmpval1 = lp_build_sample_comparefunc(bld, coords[4], neighbors[0][1][0]);
          /* simplified lerp, AND mask with weight and add */
-         colors_out[0] = lp_build_masklerp(&bld->texel_bld, s_fpart,
+         colors_out[0] = lp_build_masklerp(texel_bld, s_fpart,
                                            cmpval0, cmpval1);
          colors_out[1] = colors_out[2] = colors_out[3] = colors_out[0];
       }
@@ -1301,15 +1313,38 @@ lp_build_sample_image_linear(struct lp_build_sample_context *bld,
       }
 
       if (bld->static_sampler_state->compare_mode == PIPE_TEX_COMPARE_NONE) {
-         /* Bilinear interpolate the four samples from the 2D image / 3D slice */
-         for (chan = 0; chan < 4; chan++) {
-            colors0[chan] = lp_build_lerp_2d(&bld->texel_bld,
-                                             s_fpart, t_fpart,
-                                             neighbors[0][0][chan],
-                                             neighbors[0][1][chan],
-                                             neighbors[1][0][chan],
-                                             neighbors[1][1][chan],
-                                             0);
+         if (is_gather) {
+            /*
+             * Just assign the red channel (no component selection yet).
+             * This is a bit hackish, we usually do the swizzle at the
+             * end of sampling (much less values to swizzle), but this
+             * obviously cannot work when using gather.
+             */
+            unsigned chan_swiz = bld->static_texture_state->swizzle_r;
+            colors0[0] = lp_build_swizzle_soa_channel(texel_bld,
+                                                      neighbors[1][0],
+                                                      chan_swiz);
+            colors0[1] = lp_build_swizzle_soa_channel(texel_bld,
+                                                      neighbors[1][1],
+                                                      chan_swiz);
+            colors0[2] = lp_build_swizzle_soa_channel(texel_bld,
+                                                      neighbors[0][1],
+                                                      chan_swiz);
+            colors0[3] = lp_build_swizzle_soa_channel(texel_bld,
+                                                      neighbors[0][0],
+                                                      chan_swiz);
+         }
+         else {
+            /* Bilinear interpolate the four samples from the 2D image / 3D slice */
+            for (chan = 0; chan < 4; chan++) {
+               colors0[chan] = lp_build_lerp_2d(texel_bld,
+                                                s_fpart, t_fpart,
+                                                neighbors[0][0][chan],
+                                                neighbors[0][1][chan],
+                                                neighbors[1][0][chan],
+                                                neighbors[1][1][chan],
+                                                0);
+            }
          }
       }
       else {
@@ -1318,9 +1353,34 @@ lp_build_sample_image_linear(struct lp_build_sample_context *bld,
          cmpval01 = lp_build_sample_comparefunc(bld, coords[4], neighbors[0][1][0]);
          cmpval10 = lp_build_sample_comparefunc(bld, coords[4], neighbors[1][0][0]);
          cmpval11 = lp_build_sample_comparefunc(bld, coords[4], neighbors[1][1][0]);
-         colors0[0] = lp_build_masklerp2d(&bld->texel_bld, s_fpart, t_fpart,
-                                          cmpval00, cmpval01, cmpval10, cmpval11);
-         colors0[1] = colors0[2] = colors0[3] = colors0[0];
+
+         if (is_gather) {
+            /* more hacks for swizzling, should be X, ONE or ZERO... */
+            unsigned chan_swiz = bld->static_texture_state->swizzle_r;
+            if (chan_swiz <= PIPE_SWIZZLE_ALPHA) {
+               colors0[0] = lp_build_select(texel_bld, cmpval10,
+                                            texel_bld->one, texel_bld->zero);
+               colors0[1] = lp_build_select(texel_bld, cmpval11,
+                                            texel_bld->one, texel_bld->zero);
+               colors0[2] = lp_build_select(texel_bld, cmpval01,
+                                            texel_bld->one, texel_bld->zero);
+               colors0[3] = lp_build_select(texel_bld, cmpval00,
+                                            texel_bld->one, texel_bld->zero);
+            }
+            else if (chan_swiz == PIPE_SWIZZLE_ZERO) {
+               colors0[0] = colors0[1] = colors0[2] = colors0[3] =
+                            texel_bld->zero;
+            }
+            else {
+               colors0[0] = colors0[1] = colors0[2] = colors0[3] =
+                            texel_bld->one;
+            }
+         }
+         else {
+            colors0[0] = lp_build_masklerp2d(texel_bld, s_fpart, t_fpart,
+                                             cmpval00, cmpval01, cmpval10, cmpval11);
+            colors0[1] = colors0[2] = colors0[3] = colors0[0];
+         }
       }
 
       if (accurate_cube_corners) {
@@ -1340,6 +1400,8 @@ lp_build_sample_image_linear(struct lp_build_sample_context *bld,
       if (dims == 3) {
          LLVMValueRef neighbors1[2][2][4];
          LLVMValueRef colors1[4];
+
+         assert(!is_gather);
 
          /* get x0/x1/y0/y1 texels at z1 */
          lp_build_sample_texel_soa(bld,
@@ -1366,7 +1428,7 @@ lp_build_sample_image_linear(struct lp_build_sample_context *bld,
          if (bld->static_sampler_state->compare_mode == PIPE_TEX_COMPARE_NONE) {
             /* Bilinear interpolate the four samples from the second Z slice */
             for (chan = 0; chan < 4; chan++) {
-               colors1[chan] = lp_build_lerp_2d(&bld->texel_bld,
+               colors1[chan] = lp_build_lerp_2d(texel_bld,
                                                 s_fpart, t_fpart,
                                                 neighbors1[0][0][chan],
                                                 neighbors1[0][1][chan],
@@ -1376,7 +1438,7 @@ lp_build_sample_image_linear(struct lp_build_sample_context *bld,
             }
             /* Linearly interpolate the two samples from the two 3D slices */
             for (chan = 0; chan < 4; chan++) {
-               colors_out[chan] = lp_build_lerp(&bld->texel_bld,
+               colors_out[chan] = lp_build_lerp(texel_bld,
                                                 r_fpart,
                                                 colors0[chan], colors1[chan],
                                                 0);
@@ -1388,13 +1450,13 @@ lp_build_sample_image_linear(struct lp_build_sample_context *bld,
             cmpval01 = lp_build_sample_comparefunc(bld, coords[4], neighbors[0][1][0]);
             cmpval10 = lp_build_sample_comparefunc(bld, coords[4], neighbors[1][0][0]);
             cmpval11 = lp_build_sample_comparefunc(bld, coords[4], neighbors[1][1][0]);
-            colors1[0] = lp_build_masklerp2d(&bld->texel_bld, s_fpart, t_fpart,
+            colors1[0] = lp_build_masklerp2d(texel_bld, s_fpart, t_fpart,
                                              cmpval00, cmpval01, cmpval10, cmpval11);
             /* Linearly interpolate the two samples from the two 3D slices */
-            colors_out[0] = lp_build_lerp(&bld->texel_bld,
-                                             r_fpart,
-                                             colors0[0], colors1[0],
-                                             0);
+            colors_out[0] = lp_build_lerp(texel_bld,
+                                          r_fpart,
+                                          colors0[0], colors1[0],
+                                          0);
             colors_out[1] = colors_out[2] = colors_out[3] = colors_out[0];
          }
       }
@@ -1418,6 +1480,7 @@ static void
 lp_build_sample_mipmap(struct lp_build_sample_context *bld,
                        unsigned img_filter,
                        unsigned mip_filter,
+                       boolean is_gather,
                        LLVMValueRef *coords,
                        const LLVMValueRef *offsets,
                        LLVMValueRef ilevel0,
@@ -1459,7 +1522,7 @@ lp_build_sample_mipmap(struct lp_build_sample_context *bld,
    }
    else {
       assert(img_filter == PIPE_TEX_FILTER_LINEAR);
-      lp_build_sample_image_linear(bld, size0, NULL,
+      lp_build_sample_image_linear(bld, is_gather, size0, NULL,
                                    row_stride0_vec, img_stride0_vec,
                                    data_ptr0, mipoff0, coords, offsets,
                                    colors0);
@@ -1520,7 +1583,7 @@ lp_build_sample_mipmap(struct lp_build_sample_context *bld,
                                           colors1);
          }
          else {
-            lp_build_sample_image_linear(bld, size1, NULL,
+            lp_build_sample_image_linear(bld, FALSE, size1, NULL,
                                          row_stride1_vec, img_stride1_vec,
                                          data_ptr1, mipoff1, coords, offsets,
                                          colors1);
@@ -1594,7 +1657,7 @@ lp_build_sample_mipmap_both(struct lp_build_sample_context *bld,
       mipoff0 = lp_build_get_mip_offsets(bld, ilevel0);
    }
 
-   lp_build_sample_image_linear(bld, size0, linear_mask,
+   lp_build_sample_image_linear(bld, FALSE, size0, linear_mask,
                                 row_stride0_vec, img_stride0_vec,
                                 data_ptr0, mipoff0, coords, offsets,
                                 colors0);
@@ -1638,7 +1701,7 @@ lp_build_sample_mipmap_both(struct lp_build_sample_context *bld,
             mipoff1 = lp_build_get_mip_offsets(bld, ilevel1);
          }
 
-         lp_build_sample_image_linear(bld, size1, linear_mask,
+         lp_build_sample_image_linear(bld, FALSE, size1, linear_mask,
                                       row_stride1_vec, img_stride1_vec,
                                       data_ptr1, mipoff1, coords, offsets,
                                       colors1);
@@ -2061,6 +2124,7 @@ lp_build_clamp_border_color(struct lp_build_sample_context *bld,
 static void
 lp_build_sample_general(struct lp_build_sample_context *bld,
                         unsigned sampler_unit,
+                        boolean is_gather,
                         LLVMValueRef *coords,
                         const LLVMValueRef *offsets,
                         LLVMValueRef lod_positive,
@@ -2105,6 +2169,7 @@ lp_build_sample_general(struct lp_build_sample_context *bld,
    if (min_filter == mag_filter) {
       /* no need to distinguish between minification and magnification */
       lp_build_sample_mipmap(bld, min_filter, mip_filter,
+                             is_gather,
                              coords, offsets,
                              ilevel0, ilevel1, lod_fpart,
                              texels);
@@ -2126,7 +2191,7 @@ lp_build_sample_general(struct lp_build_sample_context *bld,
          lp_build_if(&if_ctx, bld->gallivm, lod_positive);
          {
             /* Use the minification filter */
-            lp_build_sample_mipmap(bld, min_filter, mip_filter,
+            lp_build_sample_mipmap(bld, min_filter, mip_filter, FALSE,
                                    coords, offsets,
                                    ilevel0, ilevel1, lod_fpart,
                                    texels);
@@ -2135,6 +2200,7 @@ lp_build_sample_general(struct lp_build_sample_context *bld,
          {
             /* Use the magnification filter */
             lp_build_sample_mipmap(bld, mag_filter, PIPE_TEX_MIPFILTER_NONE,
+                                   FALSE,
                                    coords, offsets,
                                    ilevel0, NULL, NULL,
                                    texels);
@@ -2187,7 +2253,7 @@ lp_build_sample_general(struct lp_build_sample_context *bld,
              * All pixels require just nearest filtering, which is way
              * cheaper than linear, hence do a separate path for that.
              */
-            lp_build_sample_mipmap(bld, PIPE_TEX_FILTER_NEAREST,
+            lp_build_sample_mipmap(bld, PIPE_TEX_FILTER_NEAREST, FALSE,
                                    mip_filter_for_nearest,
                                    coords, offsets,
                                    ilevel0, ilevel1, lod_fpart,
@@ -2488,6 +2554,16 @@ lp_build_sample_soa_code(struct gallivm_state *gallivm,
    } else {
       derived_sampler_state.min_mip_filter = PIPE_TEX_MIPFILTER_NONE;
    }
+   if (op_type == LP_SAMPLER_OP_GATHER) {
+      /*
+       * gather4 is exactly like GL_LINEAR filtering but in the end skipping
+       * the actual filtering. Using mostly the same paths, so cube face
+       * selection, coord wrapping etc. all naturally uses the same code.
+       */
+      derived_sampler_state.min_mip_filter = PIPE_TEX_MIPFILTER_NONE;
+      derived_sampler_state.min_img_filter = PIPE_TEX_FILTER_LINEAR;
+      derived_sampler_state.mag_img_filter = PIPE_TEX_FILTER_LINEAR;
+   }
    mip_filter = derived_sampler_state.min_mip_filter;
 
    if (0) {
@@ -2673,6 +2749,7 @@ lp_build_sample_soa_code(struct gallivm_state *gallivm,
       LLVMValueRef lod_fpart = NULL, lod_positive = NULL;
       LLVMValueRef ilevel0 = NULL, ilevel1 = NULL;
       boolean use_aos = util_format_fits_8unorm(bld.format_desc) &&
+                        op_is_tex &&
                         /* not sure this is strictly needed or simply impossible */
                         derived_sampler_state.compare_mode == PIPE_TEX_COMPARE_NONE &&
                         lp_is_simple_wrap_mode(derived_sampler_state.wrap_s);
@@ -2743,6 +2820,7 @@ lp_build_sample_soa_code(struct gallivm_state *gallivm,
 
          else {
             lp_build_sample_general(&bld, sampler_index,
+                                    op_type == LP_SAMPLER_OP_GATHER,
                                     newcoords, offsets,
                                     lod_positive, lod_fpart,
                                     ilevel0, ilevel1,
@@ -2889,6 +2967,7 @@ lp_build_sample_soa_code(struct gallivm_state *gallivm,
                newcoords4[4] = lp_build_extract_range(gallivm, newcoords[4], 4*i, 4);
 
                lp_build_sample_general(&bld4, sampler_index,
+                                       op_type == LP_SAMPLER_OP_GATHER,
                                        newcoords4, offsets4,
                                        lod_positive4, lod_fpart4,
                                        ilevel04, ilevel14,
@@ -2905,7 +2984,7 @@ lp_build_sample_soa_code(struct gallivm_state *gallivm,
       }
    }
 
-   if (target != PIPE_BUFFER) {
+   if (target != PIPE_BUFFER && op_type != LP_SAMPLER_OP_GATHER) {
       apply_sampler_swizzle(&bld, texel_out);
    }
 
