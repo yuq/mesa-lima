@@ -76,13 +76,21 @@ enum lp_sampler_lod_control {
 };
 
 
+enum lp_sampler_op_type {
+   LP_SAMPLER_OP_TEXTURE,
+   LP_SAMPLER_OP_FETCH,
+   LP_SAMPLER_OP_GATHER
+};
+
+
 #define LP_SAMPLER_SHADOW             (1 << 0)
 #define LP_SAMPLER_OFFSETS            (1 << 1)
-#define LP_SAMPLER_FETCH              (1 << 2)
-#define LP_SAMPLER_LOD_CONTROL_SHIFT        3
-#define LP_SAMPLER_LOD_CONTROL_MASK   (3 << 3)
-#define LP_SAMPLER_LOD_PROPERTY_SHIFT       5
-#define LP_SAMPLER_LOD_PROPERTY_MASK  (3 << 5)
+#define LP_SAMPLER_OP_TYPE_SHIFT            2
+#define LP_SAMPLER_OP_TYPE_MASK       (3 << 2)
+#define LP_SAMPLER_LOD_CONTROL_SHIFT        4
+#define LP_SAMPLER_LOD_CONTROL_MASK   (3 << 4)
+#define LP_SAMPLER_LOD_PROPERTY_SHIFT       6
+#define LP_SAMPLER_LOD_PROPERTY_MASK  (3 << 6)
 
 struct lp_sampler_params
 {

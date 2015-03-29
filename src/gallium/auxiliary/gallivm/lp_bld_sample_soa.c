@@ -2391,9 +2391,10 @@ lp_build_sample_soa_code(struct gallivm_state *gallivm,
    LLVMValueRef tex_width, newcoords[5];
    enum lp_sampler_lod_property lod_property;
    enum lp_sampler_lod_control lod_control;
+   enum lp_sampler_op_type op_type;
    LLVMValueRef lod_bias = NULL;
    LLVMValueRef explicit_lod = NULL;
-   boolean is_fetch = !!(sample_key & LP_SAMPLER_FETCH);
+   boolean op_is_tex;
 
    if (0) {
       enum pipe_format fmt = static_texture_state->format;
@@ -2404,6 +2405,10 @@ lp_build_sample_soa_code(struct gallivm_state *gallivm,
                      LP_SAMPLER_LOD_PROPERTY_SHIFT;
    lod_control = (sample_key & LP_SAMPLER_LOD_CONTROL_MASK) >>
                     LP_SAMPLER_LOD_CONTROL_SHIFT;
+   op_type = (sample_key & LP_SAMPLER_OP_TYPE_MASK) >>
+                 LP_SAMPLER_OP_TYPE_SHIFT;
+
+   op_is_tex = op_type == LP_SAMPLER_OP_TEXTURE;
 
    if (lod_control == LP_SAMPLER_LOD_BIAS) {
       lod_bias = lod;
@@ -2534,7 +2539,7 @@ lp_build_sample_soa_code(struct gallivm_state *gallivm,
        (gallivm_debug & GALLIVM_DEBUG_NO_RHO_APPROX) &&
        (static_texture_state->target == PIPE_TEXTURE_CUBE ||
         static_texture_state->target == PIPE_TEXTURE_CUBE_ARRAY) &&
-       (!is_fetch && mip_filter != PIPE_TEX_MIPFILTER_NONE)) {
+       (op_is_tex && mip_filter != PIPE_TEX_MIPFILTER_NONE)) {
       /*
        * special case for using per-pixel lod even for implicit lod,
        * which is generally never required (ok by APIs) except to please
@@ -2548,23 +2553,23 @@ lp_build_sample_soa_code(struct gallivm_state *gallivm,
    }
    else if (lod_property == LP_SAMPLER_LOD_PER_ELEMENT ||
        (explicit_lod || lod_bias || derivs)) {
-      if ((is_fetch && target != PIPE_BUFFER) ||
-          (!is_fetch && mip_filter != PIPE_TEX_MIPFILTER_NONE)) {
+      if ((!op_is_tex && target != PIPE_BUFFER) ||
+          (op_is_tex && mip_filter != PIPE_TEX_MIPFILTER_NONE)) {
          bld.num_mips = type.length;
          bld.num_lods = type.length;
       }
-      else if (!is_fetch && min_img_filter != mag_img_filter) {
+      else if (op_is_tex && min_img_filter != mag_img_filter) {
          bld.num_mips = 1;
          bld.num_lods = type.length;
       }
    }
    /* TODO: for true scalar_lod should only use 1 lod value */
-   else if ((is_fetch && explicit_lod && target != PIPE_BUFFER) ||
-            (!is_fetch && mip_filter != PIPE_TEX_MIPFILTER_NONE)) {
+   else if ((!op_is_tex && explicit_lod && target != PIPE_BUFFER) ||
+            (op_is_tex && mip_filter != PIPE_TEX_MIPFILTER_NONE)) {
       bld.num_mips = num_quads;
       bld.num_lods = num_quads;
    }
-   else if (!is_fetch && min_img_filter != mag_img_filter) {
+   else if (op_is_tex && min_img_filter != mag_img_filter) {
       bld.num_mips = 1;
       bld.num_lods = num_quads;
    }
@@ -2658,7 +2663,7 @@ lp_build_sample_soa_code(struct gallivm_state *gallivm,
                           texel_out);
    }
 
-   else if (is_fetch) {
+   else if (op_type == LP_SAMPLER_OP_FETCH) {
       lp_build_fetch_texel(&bld, texture_index, newcoords,
                            lod, offsets,
                            texel_out);
@@ -2786,18 +2791,18 @@ lp_build_sample_soa_code(struct gallivm_state *gallivm,
              (gallivm_debug & GALLIVM_DEBUG_NO_RHO_APPROX) &&
              (static_texture_state->target == PIPE_TEXTURE_CUBE ||
               static_texture_state->target == PIPE_TEXTURE_CUBE_ARRAY) &&
-             (!is_fetch && mip_filter != PIPE_TEX_MIPFILTER_NONE)) {
+             (op_is_tex && mip_filter != PIPE_TEX_MIPFILTER_NONE)) {
             bld4.num_mips = type4.length;
             bld4.num_lods = type4.length;
          }
          if (lod_property == LP_SAMPLER_LOD_PER_ELEMENT &&
              (explicit_lod || lod_bias || derivs)) {
-            if ((is_fetch && target != PIPE_BUFFER) ||
-                (!is_fetch && mip_filter != PIPE_TEX_MIPFILTER_NONE)) {
+            if ((!op_is_tex && target != PIPE_BUFFER) ||
+                (op_is_tex && mip_filter != PIPE_TEX_MIPFILTER_NONE)) {
                bld4.num_mips = type4.length;
                bld4.num_lods = type4.length;
             }
-            else if (!is_fetch && min_img_filter != mag_img_filter) {
+            else if (op_is_tex && min_img_filter != mag_img_filter) {
                bld4.num_mips = 1;
                bld4.num_lods = type4.length;
             }

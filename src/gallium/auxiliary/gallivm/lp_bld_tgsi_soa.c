@@ -1974,7 +1974,7 @@ emit_tex( struct lp_build_tgsi_soa_context *bld,
    unsigned num_derivs, num_offsets, i;
    unsigned shadow_coord = 0;
    unsigned layer_coord = 0;
-   unsigned sample_key = 0;
+   unsigned sample_key = LP_SAMPLER_OP_TEXTURE << LP_SAMPLER_OP_TYPE_SHIFT;
 
    memset(&params, 0, sizeof(params));
 
@@ -2179,7 +2179,7 @@ emit_sample(struct lp_build_tgsi_soa_context *bld,
 
    unsigned num_offsets, num_derivs, i;
    unsigned layer_coord = 0;
-   unsigned sample_key = 0;
+   unsigned sample_key = LP_SAMPLER_OP_TEXTURE << LP_SAMPLER_OP_TYPE_SHIFT;
 
    memset(&params, 0, sizeof(params));
 
@@ -2356,7 +2356,7 @@ emit_fetch_texels( struct lp_build_tgsi_soa_context *bld,
    enum lp_sampler_lod_property lod_property = LP_SAMPLER_LOD_SCALAR;
    unsigned dims, i;
    unsigned layer_coord = 0;
-   unsigned sample_key = LP_SAMPLER_FETCH;
+   unsigned sample_key = LP_SAMPLER_OP_FETCH << LP_SAMPLER_OP_TYPE_SHIFT;
 
    memset(&params, 0, sizeof(params));
 
