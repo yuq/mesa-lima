@@ -229,7 +229,7 @@ upload_raster(struct brw_context *brw)
    bool render_to_fbo = _mesa_is_user_fbo(brw->ctx.DrawBuffer);
 
    /* _NEW_POLYGON */
-   if ((ctx->Polygon.FrontFace == GL_CCW) ^ render_to_fbo)
+   if (ctx->Polygon._FrontBit == render_to_fbo)
       dw1 |= GEN8_RASTER_FRONT_WINDING_CCW;
 
    if (ctx->Polygon.CullFlag) {

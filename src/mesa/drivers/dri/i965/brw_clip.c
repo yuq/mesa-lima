@@ -224,8 +224,7 @@ brw_upload_clip_prog(struct brw_context *brw)
 	       key.offset_factor = ctx->Polygon.OffsetFactor * ctx->DrawBuffer->_MRD;
 	    }
 
-	    switch (ctx->Polygon.FrontFace) {
-	    case GL_CCW:
+	    if (!ctx->Polygon._FrontBit) {
 	       key.fill_ccw = fill_front;
 	       key.fill_cw = fill_back;
 	       key.offset_ccw = offset_front;
@@ -233,8 +232,7 @@ brw_upload_clip_prog(struct brw_context *brw)
 	       if (ctx->Light.Model.TwoSide &&
 		   key.fill_cw != CLIP_CULL)
 		  key.copy_bfc_cw = 1;
-	       break;
-	    case GL_CW:
+	    } else {
 	       key.fill_cw = fill_front;
 	       key.fill_ccw = fill_back;
 	       key.offset_cw = offset_front;
@@ -242,7 +240,6 @@ brw_upload_clip_prog(struct brw_context *brw)
 	       if (ctx->Light.Model.TwoSide &&
 		   key.fill_ccw != CLIP_CULL)
 		  key.copy_bfc_ccw = 1;
-	       break;
 	    }
 	 }
       }

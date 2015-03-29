@@ -120,7 +120,7 @@ upload_sf_state(struct brw_context *brw)
    dw1 |= (brw_depthbuffer_format(brw) << GEN7_SF_DEPTH_BUFFER_SURFACE_FORMAT_SHIFT);
 
    /* _NEW_POLYGON */
-   if ((ctx->Polygon.FrontFace == GL_CCW) ^ render_to_fbo)
+   if (ctx->Polygon._FrontBit == render_to_fbo)
       dw1 |= GEN6_SF_WINDING_CCW;
 
    if (ctx->Polygon.OffsetFill)

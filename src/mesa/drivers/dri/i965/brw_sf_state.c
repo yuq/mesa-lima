@@ -183,10 +183,10 @@ static void upload_sf_unit( struct brw_context *brw )
       sf->sf6.scissor = 1;
 
    /* _NEW_POLYGON */
-   if (ctx->Polygon.FrontFace == GL_CCW)
-      sf->sf5.front_winding = BRW_FRONTWINDING_CCW;
-   else
+   if (ctx->Polygon._FrontBit)
       sf->sf5.front_winding = BRW_FRONTWINDING_CW;
+   else
+      sf->sf5.front_winding = BRW_FRONTWINDING_CCW;
 
    /* _NEW_BUFFERS
     * The viewport is inverted for rendering to a FBO, and that inverts

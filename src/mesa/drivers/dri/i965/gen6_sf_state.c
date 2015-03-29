@@ -290,7 +290,7 @@ upload_sf_state(struct brw_context *brw)
    dw4 = 0;
 
    /* _NEW_POLYGON */
-   if ((ctx->Polygon.FrontFace == GL_CCW) ^ render_to_fbo)
+   if (ctx->Polygon._FrontBit == render_to_fbo)
       dw2 |= GEN6_SF_WINDING_CCW;
 
    if (ctx->Polygon.OffsetFill)

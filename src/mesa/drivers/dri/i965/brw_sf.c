@@ -204,7 +204,7 @@ brw_upload_sf_prog(struct brw_context *brw)
        * face orientation, just as we invert the viewport in
        * sf_unit_create_from_key().
        */
-      key.frontface_ccw = (ctx->Polygon.FrontFace == GL_CCW) != render_to_fbo;
+      key.frontface_ccw = ctx->Polygon._FrontBit == render_to_fbo;
    }
 
    if (!brw_search_cache(&brw->cache, BRW_CACHE_SF_PROG,
