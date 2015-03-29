@@ -167,7 +167,7 @@ setup_vertex_format(struct gl_context *ctx)
          EMIT_ATTR( _TNL_ATTRIB_POINTSIZE, EMIT_1F, pointSize );
 
       _tnl_install_attrs( ctx, map, e,
-                          ctx->ViewportArray[0]._WindowMap.m,
+                          tnl->_WindowMap.m,
                           sizeof(SWvertex) );
 
       swsetup->last_index_bitset = index_bitset;
@@ -265,7 +265,8 @@ _swsetup_Wakeup( struct gl_context *ctx )
 void 
 _swsetup_Translate( struct gl_context *ctx, const void *vertex, SWvertex *dest )
 {
-   const GLfloat *m = ctx->ViewportArray[0]._WindowMap.m;
+   TNLcontext *tnl = TNL_CONTEXT(ctx);
+   const GLfloat *m = tnl->_WindowMap.m;
    GLfloat tmp[4];
    GLuint i;
 
