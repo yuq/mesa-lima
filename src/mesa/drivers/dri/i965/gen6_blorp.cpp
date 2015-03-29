@@ -950,8 +950,8 @@ gen6_blorp_emit_drawing_rectangle(struct brw_context *brw,
    BEGIN_BATCH(4);
    OUT_BATCH(_3DSTATE_DRAWING_RECTANGLE << 16 | (4 - 2));
    OUT_BATCH(0);
-   OUT_BATCH(((params->x1 - 1) & 0xffff) |
-             ((params->y1 - 1) << 16));
+   OUT_BATCH(((MAX2(params->x1, params->x0) - 1) & 0xffff) |
+             ((MAX2(params->y1, params->y0) - 1) << 16));
    OUT_BATCH(0);
    ADVANCE_BATCH();
 }
