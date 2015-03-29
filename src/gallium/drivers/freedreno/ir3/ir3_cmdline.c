@@ -225,7 +225,6 @@ static void print_usage(void)
 	printf("    --binning-pass    - generate binning pass shader (VERT)\n");
 	printf("    --color-two-side  - emulate two-sided color (FRAG)\n");
 	printf("    --half-precision  - use half-precision\n");
-	printf("    --alpha           - generate render-to-alpha shader (FRAG)\n");
 	printf("    --saturate-s MASK - bitmask of samplers to saturate S coord\n");
 	printf("    --saturate-t MASK - bitmask of samplers to saturate T coord\n");
 	printf("    --saturate-r MASK - bitmask of samplers to saturate R coord\n");
@@ -278,13 +277,6 @@ int main(int argc, char **argv)
 		if (!strcmp(argv[n], "--half-precision")) {
 			debug_printf(" %s", argv[n]);
 			key.half_precision = true;
-			n++;
-			continue;
-		}
-
-		if (!strcmp(argv[n], "--alpha")) {
-			debug_printf(" %s", argv[n]);
-			key.alpha = true;
 			n++;
 			continue;
 		}

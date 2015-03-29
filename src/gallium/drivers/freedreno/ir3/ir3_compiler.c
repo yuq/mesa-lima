@@ -3496,23 +3496,6 @@ ir3_compile_shader(struct ir3_shader_variant *so,
 		block->noutputs = j * 4;
 	}
 
-	/* for rendering to alpha format, we only need the .w component,
-	 * and we need it to be in the .x position:
-	 */
-	if (key.alpha) {
-		for (i = 0, j = 0; i < so->outputs_count; i++) {
-			unsigned name = sem2name(so->outputs[i].semantic);
-
-			/* move .w component to .x and discard others: */
-			if (name == TGSI_SEMANTIC_COLOR) {
-				block->outputs[(i*4)+0] = block->outputs[(i*4)+3];
-				block->outputs[(i*4)+1] = NULL;
-				block->outputs[(i*4)+2] = NULL;
-				block->outputs[(i*4)+3] = NULL;
-			}
-		}
-	}
-
 	/* if we want half-precision outputs, mark the output registers
 	 * as half:
 	 */

@@ -218,6 +218,9 @@ fd4_program_emit(struct fd_ringbuffer *ring, struct fd4_emit *emit)
 	color_regid = ir3_find_output_regid(s[FS].v,
 		ir3_semantic_name(TGSI_SEMANTIC_COLOR, 0));
 
+	if (util_format_is_alpha(emit->pformat))
+		color_regid += 3;
+
 	/* TODO get these dynamically: */
 	face_regid = s[FS].v->frag_face ? regid(0,0) : regid(63,0);
 	coord_regid = s[FS].v->frag_coord ? regid(0,0) : regid(63,0);

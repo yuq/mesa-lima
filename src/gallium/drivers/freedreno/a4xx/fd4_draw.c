@@ -97,9 +97,6 @@ fixup_shader_state(struct fd_context *ctx, struct ir3_shader_key *key)
 		if (last_key->half_precision != key->half_precision)
 			ctx->prog.dirty |= FD_SHADER_DIRTY_FP;
 
-		if (last_key->alpha != key->alpha)
-			ctx->prog.dirty |= FD_SHADER_DIRTY_FP;
-
 		if (last_key->rasterflat != key->rasterflat)
 			ctx->prog.dirty |= FD_SHADER_DIRTY_FP;
 
@@ -120,7 +117,6 @@ fd4_draw_vbo(struct fd_context *ctx, const struct pipe_draw_info *info)
 			/* do binning pass first: */
 			.binning_pass = true,
 			.color_two_side = ctx->rasterizer ? ctx->rasterizer->light_twoside : false,
-			.alpha = util_format_is_alpha(pipe_surface_format(pfb->cbufs[0])),
 			.rasterflat = ctx->rasterizer && ctx->rasterizer->flatshade,
 			// TODO set .half_precision based on render target format,
 			// ie. float16 and smaller use half, float32 use full..
@@ -134,6 +130,7 @@ fd4_draw_vbo(struct fd_context *ctx, const struct pipe_draw_info *info)
 			.fsaturate_r = fd4_ctx->fsaturate_r,
 		},
 		.format = fd4_emit_format(pfb->cbufs[0]),
+		.pformat = pipe_surface_format(pfb->cbufs[0]),
 	};
 	unsigned dirty;
 

@@ -202,6 +202,9 @@ fd3_program_emit(struct fd_ringbuffer *ring, struct fd3_emit *emit)
 	color_regid = ir3_find_output_regid(fp,
 		ir3_semantic_name(TGSI_SEMANTIC_COLOR, 0));
 
+	if (util_format_is_alpha(emit->format))
+		color_regid += 3;
+
 	/* we could probably divide this up into things that need to be
 	 * emitted if frag-prog is dirty vs if vert-prog is dirty..
 	 */
