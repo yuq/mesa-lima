@@ -107,11 +107,12 @@ static void dump_instr_name(struct ir3_dump_ctx *ctx,
 static void dump_reg_name(struct ir3_dump_ctx *ctx,
 		struct ir3_register *reg, bool followssa)
 {
-	if ((reg->flags & IR3_REG_ABS) && (reg->flags & IR3_REG_NEGATE))
+	if ((reg->flags & (IR3_REG_FABS | IR3_REG_SABS)) &&
+			(reg->flags & (IR3_REG_FNEG | IR3_REG_SNEG | IR3_REG_BNOT)))
 		fprintf(ctx->f, "(absneg)");
-	else if (reg->flags & IR3_REG_NEGATE)
+	else if (reg->flags & (IR3_REG_FNEG | IR3_REG_SNEG | IR3_REG_BNOT))
 		fprintf(ctx->f, "(neg)");
-	else if (reg->flags & IR3_REG_ABS)
+	else if (reg->flags & (IR3_REG_FABS | IR3_REG_SABS))
 		fprintf(ctx->f, "(abs)");
 
 	if (reg->flags & IR3_REG_IMMED) {

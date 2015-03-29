@@ -886,10 +886,11 @@ add_src_reg_wrmask(struct ir3_compile_context *ctx,
 	else
 		compile_assert(ctx, src->Index < (1 << 6));
 
+	/* NOTE: abs/neg modifiers in tgsi only apply to float */
 	if (src->Absolute)
-		flags |= IR3_REG_ABS;
+		flags |= IR3_REG_FABS;
 	if (src->Negate)
-		flags |= IR3_REG_NEGATE;
+		flags |= IR3_REG_FNEG;
 
 	if (src->Indirect) {
 		flags |= IR3_REG_RELATIV;
@@ -1246,9 +1247,11 @@ vectorize(struct ir3_compile_context *ctx, struct ir3_instruction *instr,
 				} else {
 					reg = add_src_reg(ctx, cur, src, src_swiz(src, i));
 				}
-				reg->flags |= flags & ~IR3_REG_NEGATE;
-				if (flags & IR3_REG_NEGATE)
-					reg->flags ^= IR3_REG_NEGATE;
+				reg->flags |= flags & ~(IR3_REG_FNEG | IR3_REG_SNEG);
+				if (flags & IR3_REG_FNEG)
+					reg->flags ^= IR3_REG_FNEG;
+				if (flags & IR3_REG_SNEG)
+					reg->flags ^= IR3_REG_SNEG;
 			}
 			va_end(ap);
 		}
@@ -1869,7 +1872,7 @@ trans_cmp(const struct instr_translater *t,
 	case TGSI_OPCODE_FSLT:
 		/* absneg.s dst, (neg)tmp0 */
 		instr = instr_create(ctx, 2, OPC_ABSNEG_S);
-		vectorize(ctx, instr, dst, 1, tmp_src, IR3_REG_NEGATE);
+		vectorize(ctx, instr, dst, 1, tmp_src, IR3_REG_SNEG);
 		break;
 	case TGSI_OPCODE_CMP:
 		a1 = &inst->Src[1].Register;
@@ -1951,7 +1954,7 @@ trans_icmp(const struct instr_translater *t,
 
 	/* absneg.s dst, (neg)tmp */
 	instr = instr_create(ctx, 2, OPC_ABSNEG_S);
-	vectorize(ctx, instr, dst, 1, tmp_src, IR3_REG_NEGATE);
+	vectorize(ctx, instr, dst, 1, tmp_src, IR3_REG_SNEG);
 
 	put_dst(ctx, inst, dst);
 }
@@ -2490,19 +2493,19 @@ trans_idiv(const struct instr_translater *t,
 	if (type_sint(src_type)) {
 		/* absneg.f af, (abs)af */
 		instr = instr_create(ctx, 2, OPC_ABSNEG_F);
-		vectorize(ctx, instr, &af_dst, 1, af_src, IR3_REG_ABS);
+		vectorize(ctx, instr, &af_dst, 1, af_src, IR3_REG_FABS);
 
 		/* absneg.f bf, (abs)bf */
 		instr = instr_create(ctx, 2, OPC_ABSNEG_F);
-		vectorize(ctx, instr, &bf_dst, 1, bf_src, IR3_REG_ABS);
+		vectorize(ctx, instr, &bf_dst, 1, bf_src, IR3_REG_FABS);
 
 		/* absneg.s a, (abs)numerator */
 		instr = instr_create(ctx, 2, OPC_ABSNEG_S);
-		vectorize(ctx, instr, &a_dst, 1, a, IR3_REG_ABS);
+		vectorize(ctx, instr, &a_dst, 1, a, IR3_REG_SABS);
 
 		/* absneg.s b, (abs)denominator */
 		instr = instr_create(ctx, 2, OPC_ABSNEG_S);
-		vectorize(ctx, instr, &b_dst, 1, b, IR3_REG_ABS);
+		vectorize(ctx, instr, &b_dst, 1, b, IR3_REG_SABS);
 	} else {
 		/* mov.u32u32 a, numerator */
 		instr = instr_create(ctx, 1, 0);
@@ -2617,7 +2620,7 @@ trans_idiv(const struct instr_translater *t,
 
 		/* absneg.s b, (neg)q */
 		instr = instr_create(ctx, 2, OPC_ABSNEG_S);
-		vectorize(ctx, instr, &b_dst, 1, q_src, IR3_REG_NEGATE);
+		vectorize(ctx, instr, &b_dst, 1, q_src, IR3_REG_SNEG);
 
 		/* sel.b dst, b, r, q */
 		instr = instr_create(ctx, 3, OPC_SEL_B32);
@@ -2693,14 +2696,16 @@ instr_cat2(const struct instr_translater *t,
 
 	switch (t->tgsi_opc) {
 	case TGSI_OPCODE_ABS:
+		src0_flags = IR3_REG_FABS;
+		break;
 	case TGSI_OPCODE_IABS:
-		src0_flags = IR3_REG_ABS;
+		src0_flags = IR3_REG_SABS;
 		break;
 	case TGSI_OPCODE_INEG:
-		src0_flags = IR3_REG_NEGATE;
+		src0_flags = IR3_REG_SNEG;
 		break;
 	case TGSI_OPCODE_SUB:
-		src1_flags = IR3_REG_NEGATE;
+		src1_flags = IR3_REG_FNEG;
 		break;
 	}
 

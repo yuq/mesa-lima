@@ -52,7 +52,8 @@ static bool is_eligible_mov(struct ir3_instruction *instr)
 		if (dst->flags & (IR3_REG_ADDR | IR3_REG_RELATIV))
 			return false;
 		/* TODO: propagate abs/neg modifiers if possible */
-		if (src->flags & (IR3_REG_ABS | IR3_REG_NEGATE | IR3_REG_RELATIV))
+		if (src->flags & (IR3_REG_FABS | IR3_REG_FNEG |
+				IR3_REG_SABS | IR3_REG_SNEG | IR3_REG_RELATIV))
 			return false;
 		if (!src_instr)
 			return false;

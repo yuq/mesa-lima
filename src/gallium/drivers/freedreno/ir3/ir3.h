@@ -57,20 +57,31 @@ struct ir3_register {
 		IR3_REG_HALF   = 0x004,
 		IR3_REG_RELATIV= 0x008,
 		IR3_REG_R      = 0x010,
-		IR3_REG_NEGATE = 0x020,
-		IR3_REG_ABS    = 0x040,
-		IR3_REG_EVEN   = 0x080,
-		IR3_REG_POS_INF= 0x100,
+		/* Most instructions, it seems, can do float abs/neg but not
+		 * integer.  The CP pass needs to know what is intended (int or
+		 * float) in order to do the right thing.  For this reason the
+		 * abs/neg flags are split out into float and int variants.  In
+		 * addition, .b (bitwise) operations, the negate is actually a
+		 * bitwise not, so split that out into a new flag to make it
+		 * more clear.
+		 */
+		IR3_REG_FNEG   = 0x020,
+		IR3_REG_FABS   = 0x040,
+		IR3_REG_SNEG   = 0x080,
+		IR3_REG_SABS   = 0x100,
+		IR3_REG_BNOT   = 0x200,
+		IR3_REG_EVEN   = 0x400,
+		IR3_REG_POS_INF= 0x800,
 		/* (ei) flag, end-input?  Set on last bary, presumably to signal
 		 * that the shader needs no more input:
 		 */
-		IR3_REG_EI     = 0x200,
+		IR3_REG_EI     = 0x1000,
 		/* meta-flags, for intermediate stages of IR, ie.
 		 * before register assignment is done:
 		 */
-		IR3_REG_SSA    = 0x1000,   /* 'instr' is ptr to assigning instr */
-		IR3_REG_IA     = 0x2000,   /* meta-input dst is "assigned" */
-		IR3_REG_ADDR   = 0x4000,   /* register is a0.x */
+		IR3_REG_SSA    = 0x2000,   /* 'instr' is ptr to assigning instr */
+		IR3_REG_IA     = 0x4000,   /* meta-input dst is "assigned" */
+		IR3_REG_ADDR   = 0x8000,   /* register is a0.x */
 	} flags;
 	union {
 		/* normal registers:
@@ -521,6 +532,140 @@ static inline bool reg_gpr(struct ir3_register *r)
 	if ((reg_num(r) == REG_A0) || (reg_num(r) == REG_P0))
 		return false;
 	return true;
+}
+
+/* some cat2 instructions (ie. those which are not float can embed an
+ * immediate:
+ */
+static inline bool ir3_cat2_immed(opc_t opc)
+{
+	switch (opc) {
+	case OPC_ADD_U:
+	case OPC_ADD_S:
+	case OPC_SUB_U:
+	case OPC_SUB_S:
+	case OPC_CMPS_U:
+	case OPC_CMPS_S:
+	case OPC_MIN_U:
+	case OPC_MIN_S:
+	case OPC_MAX_U:
+	case OPC_MAX_S:
+	case OPC_CMPV_U:
+	case OPC_CMPV_S:
+	case OPC_MUL_U:
+	case OPC_MUL_S:
+	case OPC_MULL_U:
+	case OPC_CLZ_S:
+	case OPC_ABSNEG_S:
+	case OPC_AND_B:
+	case OPC_OR_B:
+	case OPC_NOT_B:
+	case OPC_XOR_B:
+	case OPC_BFREV_B:
+	case OPC_CLZ_B:
+	case OPC_SHL_B:
+	case OPC_SHR_B:
+	case OPC_ASHR_B:
+	case OPC_MGEN_B:
+	case OPC_GETBIT_B:
+	case OPC_CBITS_B:
+	case OPC_BARY_F:
+		return true;
+
+	default:
+		return false;
+	}
+}
+
+
+/* map cat2 instruction to valid abs/neg flags: */
+static inline unsigned ir3_cat2_absneg(opc_t opc)
+{
+	switch (opc) {
+	case OPC_ADD_F:
+	case OPC_MIN_F:
+	case OPC_MAX_F:
+	case OPC_MUL_F:
+	case OPC_SIGN_F:
+	case OPC_CMPS_F:
+	case OPC_ABSNEG_F:
+	case OPC_CMPV_F:
+	case OPC_FLOOR_F:
+	case OPC_CEIL_F:
+	case OPC_RNDNE_F:
+	case OPC_RNDAZ_F:
+	case OPC_TRUNC_F:
+	case OPC_BARY_F:
+		return IR3_REG_FABS | IR3_REG_FNEG;
+
+	case OPC_ADD_U:
+	case OPC_ADD_S:
+	case OPC_SUB_U:
+	case OPC_SUB_S:
+	case OPC_CMPS_U:
+	case OPC_CMPS_S:
+	case OPC_MIN_U:
+	case OPC_MIN_S:
+	case OPC_MAX_U:
+	case OPC_MAX_S:
+	case OPC_CMPV_U:
+	case OPC_CMPV_S:
+	case OPC_MUL_U:
+	case OPC_MUL_S:
+	case OPC_MULL_U:
+	case OPC_CLZ_S:
+		return 0;
+
+	case OPC_ABSNEG_S:
+		return IR3_REG_SABS | IR3_REG_SNEG;
+
+	case OPC_AND_B:
+	case OPC_OR_B:
+	case OPC_NOT_B:
+	case OPC_XOR_B:
+	case OPC_BFREV_B:
+	case OPC_CLZ_B:
+	case OPC_SHL_B:
+	case OPC_SHR_B:
+	case OPC_ASHR_B:
+	case OPC_MGEN_B:
+	case OPC_GETBIT_B:
+	case OPC_CBITS_B:
+		return IR3_REG_BNOT;
+
+	default:
+		return 0;
+	}
+}
+
+/* map cat3 instructions to valid abs/neg flags: */
+static inline unsigned ir3_cat3_absneg(opc_t opc)
+{
+	switch (opc) {
+	case OPC_MAD_F16:
+	case OPC_MAD_F32:
+	case OPC_SEL_F16:
+	case OPC_SEL_F32:
+		return IR3_REG_FNEG;
+
+	case OPC_MAD_U16:
+	case OPC_MADSH_U16:
+	case OPC_MAD_S16:
+	case OPC_MADSH_M16:
+	case OPC_MAD_U24:
+	case OPC_MAD_S24:
+	case OPC_SEL_S16:
+	case OPC_SEL_S32:
+	case OPC_SAD_S16:
+	case OPC_SAD_S32:
+		/* neg *may* work on 3rd src.. */
+
+	case OPC_SEL_B16:
+	case OPC_SEL_B32:
+
+	default:
+		return 0;
+	}
 }
 
 #define array_insert(arr, val) do { \
