@@ -1392,8 +1392,8 @@ fill_tex_info(struct ir3_compile_context *ctx,
 	/*
 	 * lay out the first argument in the proper order:
 	 *  - actual coordinates first
-	 *  - array index
 	 *  - shadow reference
+	 *  - array index
 	 *  - projection w
 	 *
 	 * bias/lod go into the second arg
