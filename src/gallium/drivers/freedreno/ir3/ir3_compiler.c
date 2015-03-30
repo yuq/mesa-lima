@@ -3412,6 +3412,15 @@ compile_instructions(struct ir3_compile_context *ctx)
 
 			break;
 		}
+		case TGSI_TOKEN_TYPE_PROPERTY: {
+			struct tgsi_full_property *prop =
+				&ctx->parser.FullToken.FullProperty;
+			switch (prop->Property.PropertyName) {
+			case TGSI_PROPERTY_FS_COLOR0_WRITES_ALL_CBUFS:
+				ctx->so->color0_mrt = !!prop->u[0].Data;
+				break;
+			}
+		}
 		default:
 			break;
 		}

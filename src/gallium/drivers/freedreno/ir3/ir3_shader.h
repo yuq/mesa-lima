@@ -133,7 +133,7 @@ struct ir3_shader_variant {
 	 * to bary.f instructions
 	 */
 	uint8_t pos_regid;
-	bool frag_coord, frag_face;
+	bool frag_coord, frag_face, color0_mrt;
 
 	/* varyings/outputs: */
 	unsigned outputs_count;
