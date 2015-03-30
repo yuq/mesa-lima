@@ -366,18 +366,14 @@ tgsi_to_qir_umul(struct vc4_compile *c,
                  struct tgsi_full_instruction *tgsi_inst,
                  enum qop op, struct qreg *src, int i)
 {
-        struct qreg src0_hi = qir_SHR(c, src[0 * 4 + i],
-                                      qir_uniform_ui(c, 24));
-        struct qreg src0_lo = qir_AND(c, src[0 * 4 + i],
-                                      qir_uniform_ui(c, 0xffffff));
-        struct qreg src1_hi = qir_SHR(c, src[1 * 4 + i],
-                                      qir_uniform_ui(c, 24));
-        struct qreg src1_lo = qir_AND(c, src[1 * 4 + i],
-                                      qir_uniform_ui(c, 0xffffff));
+        struct qreg src0 = src[0 * 4 + i];
+        struct qreg src0_hi = qir_SHR(c, src0, qir_uniform_ui(c, 24));
+        struct qreg src1 = src[1 * 4 + i];
+        struct qreg src1_hi = qir_SHR(c, src1, qir_uniform_ui(c, 24));
 
-        struct qreg hilo = qir_MUL24(c, src0_hi, src1_lo);
-        struct qreg lohi = qir_MUL24(c, src0_lo, src1_hi);
-        struct qreg lolo = qir_MUL24(c, src0_lo, src1_lo);
+        struct qreg hilo = qir_MUL24(c, src0_hi, src1);
+        struct qreg lohi = qir_MUL24(c, src0, src1_hi);
+        struct qreg lolo = qir_MUL24(c, src0, src1);
 
         return qir_ADD(c, lolo, qir_SHL(c,
                                         qir_ADD(c, hilo, lohi),
