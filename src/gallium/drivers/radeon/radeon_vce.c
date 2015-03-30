@@ -242,6 +242,8 @@ static void rvce_begin_frame(struct pipe_video_codec *encoder,
 		enc->config_extension(enc);
 		enc->motion_estimation(enc);
 		enc->rdo(enc);
+		if (enc->use_vui)
+			enc->vui(enc);
 		enc->pic_control(enc);
 		enc->feedback(enc);
 		flush(enc);
@@ -351,6 +353,9 @@ struct pipe_video_codec *rvce_create_encoder(struct pipe_context *context,
 	enc = CALLOC_STRUCT(rvce_encoder);
 	if (!enc)
 		return NULL;
+
+	if ((rscreen->info.drm_major > 2) || (rscreen->info.drm_minor >= 42))
+		enc->use_vui = true;
 
 	enc->base = *templ;
 	enc->base.context = context;

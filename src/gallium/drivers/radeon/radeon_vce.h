@@ -75,6 +75,7 @@ struct rvce_encoder {
 	void (*pic_control)(struct rvce_encoder *enc);
 	void (*motion_estimation)(struct rvce_encoder *enc);
 	void (*rdo)(struct rvce_encoder *enc);
+	void (*vui)(struct rvce_encoder *enc);
 	void (*encode)(struct rvce_encoder *enc);
 	void (*destroy)(struct rvce_encoder *enc);
 
@@ -100,6 +101,7 @@ struct rvce_encoder {
 	struct rvid_buffer		*fb;
 	struct rvid_buffer		cpb;
 	struct pipe_h264_enc_picture_desc pic;
+	bool use_vui;
 };
 
 struct pipe_video_codec *rvce_create_encoder(struct pipe_context *context,
