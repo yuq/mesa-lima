@@ -499,25 +499,25 @@ ptn_xpd(nir_builder *b, nir_alu_dest dest, nir_ssa_def **src)
 static void
 ptn_dp2(nir_builder *b, nir_alu_dest dest, nir_ssa_def **src)
 {
-   ptn_move_dest(b, dest, ptn_channel(b, nir_fdot2(b, src[0], src[1]), X));
+   ptn_move_dest(b, dest, nir_fdot2(b, src[0], src[1]));
 }
 
 static void
 ptn_dp3(nir_builder *b, nir_alu_dest dest, nir_ssa_def **src)
 {
-   ptn_move_dest(b, dest, ptn_channel(b, nir_fdot3(b, src[0], src[1]), X));
+   ptn_move_dest(b, dest, nir_fdot3(b, src[0], src[1]));
 }
 
 static void
 ptn_dp4(nir_builder *b, nir_alu_dest dest, nir_ssa_def **src)
 {
-   ptn_move_dest(b, dest, ptn_channel(b, nir_fdot4(b, src[0], src[1]), X));
+   ptn_move_dest(b, dest, nir_fdot4(b, src[0], src[1]));
 }
 
 static void
 ptn_dph(nir_builder *b, nir_alu_dest dest, nir_ssa_def **src)
 {
-   nir_ssa_def *dp3 = ptn_channel(b, nir_fdot3(b, src[0], src[1]), X);
+   nir_ssa_def *dp3 = nir_fdot3(b, src[0], src[1]);
    ptn_move_dest(b, dest, nir_fadd(b, dp3, ptn_channel(b, src[1], W)));
 }
 
