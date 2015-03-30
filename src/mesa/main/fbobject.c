@@ -1218,8 +1218,10 @@ allocate_renderbuffer(struct gl_context *ctx, GLuint renderbuffer,
       return NULL;
    }
    assert(newRb->AllocStorage);
+   mtx_lock(&ctx->Shared->Mutex);
    _mesa_HashInsert(ctx->Shared->RenderBuffers, renderbuffer, newRb);
    newRb->RefCount = 1; /* referenced by hash table */
+   mtx_unlock(&ctx->Shared->Mutex);
 
    return newRb;
 }
