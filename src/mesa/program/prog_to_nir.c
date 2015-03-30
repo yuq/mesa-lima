@@ -931,8 +931,8 @@ setup_registers_and_variables(struct ptn_compile *c)
    struct nir_shader *shader = b->shader;
 
    /* Create input variables. */
-   const int last_input = _mesa_fls(c->prog->InputsRead);
-   for (int i = 0; i <= last_input; i++) {
+   const int num_inputs = _mesa_flsll(c->prog->InputsRead);
+   for (int i = 0; i < num_inputs; i++) {
       if (!(c->prog->InputsRead & BITFIELD64_BIT(i)))
          continue;
       nir_variable *var = rzalloc(shader, nir_variable);
