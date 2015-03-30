@@ -95,6 +95,7 @@ fd_context_render(struct pipe_context *pctx)
 {
 	struct fd_context *ctx = fd_context(pctx);
 	struct pipe_framebuffer_state *pfb = &ctx->framebuffer;
+	int i;
 
 	DBG("needs_flush: %d", ctx->needs_flush);
 
@@ -116,8 +117,9 @@ fd_context_render(struct pipe_context *pctx)
 	ctx->gmem_reason = 0;
 	ctx->num_draws = 0;
 
-	if (pfb->cbufs[0])
-		fd_resource(pfb->cbufs[0]->texture)->dirty = false;
+	for (i = 0; i < pfb->nr_cbufs; i++)
+		if (pfb->cbufs[i])
+			fd_resource(pfb->cbufs[i]->texture)->dirty = false;
 	if (pfb->zsbuf)
 		fd_resource(pfb->zsbuf->texture)->dirty = false;
 }

@@ -92,7 +92,7 @@ fd_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 		surf = pfb->cbufs[i]->texture;
 
 		fd_resource(surf)->dirty = true;
-		buffers |= FD_BUFFER_COLOR;
+		buffers |= PIPE_CLEAR_COLOR0 << i;
 
 		if (surf->nr_samples > 1)
 			ctx->gmem_reason |= FD_GMEM_MSAA_ENABLED;
@@ -147,6 +147,7 @@ fd_clear(struct pipe_context *pctx, unsigned buffers,
 	struct pipe_framebuffer_state *pfb = &ctx->framebuffer;
 	struct pipe_scissor_state *scissor = fd_context_get_scissor(ctx);
 	unsigned cleared_buffers;
+	int i;
 
 	/* for bookkeeping about which buffers have been cleared (and thus
 	 * can fully or partially skip mem2gmem) we need to ignore buffers
@@ -173,7 +174,9 @@ fd_clear(struct pipe_context *pctx, unsigned buffers,
 	ctx->needs_flush = true;
 
 	if (buffers & PIPE_CLEAR_COLOR)
-		fd_resource(pfb->cbufs[0]->texture)->dirty = true;
+		for (i = 0; i < pfb->nr_cbufs; i++)
+			if (buffers & (PIPE_CLEAR_COLOR0 << i))
+				fd_resource(pfb->cbufs[i]->texture)->dirty = true;
 
 	if (buffers & (PIPE_CLEAR_DEPTH | PIPE_CLEAR_STENCIL)) {
 		fd_resource(pfb->zsbuf->texture)->dirty = true;

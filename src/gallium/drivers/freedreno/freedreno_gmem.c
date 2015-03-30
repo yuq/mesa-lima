@@ -319,7 +319,7 @@ void
 fd_gmem_render_tiles(struct fd_context *ctx)
 {
 	struct pipe_framebuffer_state *pfb = &ctx->framebuffer;
-	uint32_t timestamp = 0;
+	uint32_t i, timestamp = 0;
 	bool sysmem = false;
 
 	if (ctx->emit_sysmem_prep) {
@@ -373,8 +373,9 @@ fd_gmem_render_tiles(struct fd_context *ctx)
 
 	/* update timestamps on render targets: */
 	timestamp = fd_ringbuffer_timestamp(ctx->ring);
-	if (pfb->cbufs[0])
-		fd_resource(pfb->cbufs[0]->texture)->timestamp = timestamp;
+	for (i = 0; i < pfb->nr_cbufs; i++)
+		if (pfb->cbufs[i])
+			fd_resource(pfb->cbufs[i]->texture)->timestamp = timestamp;
 	if (pfb->zsbuf)
 		fd_resource(pfb->zsbuf->texture)->timestamp = timestamp;
 
