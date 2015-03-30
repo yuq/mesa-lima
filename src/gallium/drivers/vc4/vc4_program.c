@@ -367,13 +367,13 @@ tgsi_to_qir_umul(struct vc4_compile *c,
                  enum qop op, struct qreg *src, int i)
 {
         struct qreg src0_hi = qir_SHR(c, src[0 * 4 + i],
-                                      qir_uniform_ui(c, 16));
+                                      qir_uniform_ui(c, 24));
         struct qreg src0_lo = qir_AND(c, src[0 * 4 + i],
-                                      qir_uniform_ui(c, 0xffff));
+                                      qir_uniform_ui(c, 0xffffff));
         struct qreg src1_hi = qir_SHR(c, src[1 * 4 + i],
-                                      qir_uniform_ui(c, 16));
+                                      qir_uniform_ui(c, 24));
         struct qreg src1_lo = qir_AND(c, src[1 * 4 + i],
-                                      qir_uniform_ui(c, 0xffff));
+                                      qir_uniform_ui(c, 0xffffff));
 
         struct qreg hilo = qir_MUL24(c, src0_hi, src1_lo);
         struct qreg lohi = qir_MUL24(c, src0_lo, src1_hi);
@@ -381,7 +381,7 @@ tgsi_to_qir_umul(struct vc4_compile *c,
 
         return qir_ADD(c, lolo, qir_SHL(c,
                                         qir_ADD(c, hilo, lohi),
-                                        qir_uniform_ui(c, 16)));
+                                        qir_uniform_ui(c, 24)));
 }
 
 static struct qreg
