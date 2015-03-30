@@ -248,6 +248,14 @@ qir_opt_algebraic(struct vc4_compile *c)
                         }
                         break;
 
+                case QOP_MUL24:
+                        if (replace_x_0_with_0(c, inst, 0) ||
+                            replace_x_0_with_0(c, inst, 1)) {
+                                progress = true;
+                                break;
+                        }
+                        break;
+
                 case QOP_AND:
                         if (replace_x_0_with_0(c, inst, 0) ||
                             replace_x_0_with_0(c, inst, 1)) {
