@@ -256,8 +256,13 @@ disassemble(const void* func, llvm::raw_ostream & Out)
    }
 
 
+#if HAVE_LLVM >= 0x0307
+   OwningPtr<MCInstPrinter> Printer(
+         T->createMCInstPrinter(llvm::Triple(Triple), AsmPrinterVariant, *AsmInfo, *MII, *MRI));
+#else
    OwningPtr<MCInstPrinter> Printer(
          T->createMCInstPrinter(AsmPrinterVariant, *AsmInfo, *MII, *MRI, *STI));
+#endif
    if (!Printer) {
       Out << "error: no instruction printer for target " << Triple.c_str() << "\n";
       Out.flush();
