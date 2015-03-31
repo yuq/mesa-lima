@@ -955,9 +955,9 @@ src0_3src(FILE *file, struct brw_context *brw, brw_inst *inst)
       string(file, "<0,1,0>");
    else
       string(file, "<4,4,1>");
+   err |= src_swizzle(file, brw_inst_3src_src0_swizzle(brw, inst));
    err |= control(file, "src da16 reg type", three_source_reg_encoding,
                   brw_inst_3src_src_type(brw, inst), NULL);
-   err |= src_swizzle(file, brw_inst_3src_src0_swizzle(brw, inst));
    return err;
 }
 
@@ -981,9 +981,9 @@ src1_3src(FILE *file, struct brw_context *brw, brw_inst *inst)
       string(file, "<0,1,0>");
    else
       string(file, "<4,4,1>");
+   err |= src_swizzle(file, brw_inst_3src_src1_swizzle(brw, inst));
    err |= control(file, "src da16 reg type", three_source_reg_encoding,
                   brw_inst_3src_src_type(brw, inst), NULL);
-   err |= src_swizzle(file, brw_inst_3src_src1_swizzle(brw, inst));
    return err;
 }
 
@@ -1008,9 +1008,9 @@ src2_3src(FILE *file, struct brw_context *brw, brw_inst *inst)
       string(file, "<0,1,0>");
    else
       string(file, "<4,4,1>");
+   err |= src_swizzle(file, brw_inst_3src_src2_swizzle(brw, inst));
    err |= control(file, "src da16 reg type", three_source_reg_encoding,
                   brw_inst_3src_src_type(brw, inst), NULL);
-   err |= src_swizzle(file, brw_inst_3src_src2_swizzle(brw, inst));
    return err;
 }
 
