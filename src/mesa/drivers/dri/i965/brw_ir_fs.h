@@ -225,6 +225,7 @@ public:
    bool is_partial_write() const;
    int regs_read(int arg) const;
    bool can_do_source_mods(struct brw_context *brw);
+   bool has_side_effects() const;
 
    bool reads_flag() const;
    bool writes_flag() const;

@@ -531,6 +531,12 @@ fs_inst::can_do_source_mods(struct brw_context *brw)
    return true;
 }
 
+bool
+fs_inst::has_side_effects() const
+{
+   return this->eot || backend_instruction::has_side_effects();
+}
+
 void
 fs_reg::init()
 {
