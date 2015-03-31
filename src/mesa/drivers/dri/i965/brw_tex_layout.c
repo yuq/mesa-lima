@@ -289,7 +289,8 @@ use_linear_1d_layout(struct brw_context *brw,
       GLenum base_format = _mesa_get_format_base_format(mt->format);
 
       if (base_format != GL_DEPTH_COMPONENT &&
-          base_format != GL_DEPTH_STENCIL)
+          base_format != GL_DEPTH_STENCIL &&
+          base_format != GL_STENCIL_INDEX)
          return true;
    }
 
