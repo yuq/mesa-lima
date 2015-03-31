@@ -487,7 +487,7 @@ static int emit_cat6(struct ir3_instruction *instr, void *ptr,
 
 	iassert(instr->regs_count >= 2);
 
-	if (instr->cat6.offset) {
+	if (instr->cat6.offset || instr->opc == OPC_LDG) {
 		instr_cat6a_t *cat6a = ptr;
 
 		cat6->has_off = true;

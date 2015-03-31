@@ -151,6 +151,7 @@ static void vectorize(struct ir3_compile_context *ctx,
 static void create_mov(struct ir3_compile_context *ctx,
 		struct tgsi_dst_register *dst, struct tgsi_src_register *src);
 static type_t get_ftype(struct ir3_compile_context *ctx);
+static type_t get_utype(struct ir3_compile_context *ctx);
 
 static unsigned setup_arrays(struct ir3_compile_context *ctx, unsigned file, unsigned i)
 {
@@ -252,7 +253,7 @@ compile_init(struct ir3_compile_context *ctx, struct ir3_shader_variant *so,
 	 * the assembler what the max addr reg value can be:
 	 */
 	if (info->indirect_files & FM(CONSTANT))
-		so->constlen = ctx->info.file_max[TGSI_FILE_CONSTANT] + 1;
+		so->constlen = MIN2(255, ctx->info.const_file_max[0] + 1);
 
 	i = 0;
 	i += setup_arrays(ctx, TGSI_FILE_INPUT, i);
@@ -261,12 +262,13 @@ compile_init(struct ir3_compile_context *ctx, struct ir3_shader_variant *so,
 	/* any others? we don't track arrays for const..*/
 
 	/* Immediates go after constants: */
-	if (so->type == SHADER_VERTEX) {
-		so->first_driver_param = info->file_max[TGSI_FILE_CONSTANT] + 1;
-		so->first_immediate = so->first_driver_param + 1;
-	} else {
-		so->first_immediate = info->file_max[TGSI_FILE_CONSTANT] + 1;
-	}
+	so->first_immediate = so->first_driver_param =
+		info->const_file_max[0] + 1;
+	/* 1 unit for the vertex id base */
+	if (so->type == SHADER_VERTEX)
+		so->first_immediate++;
+	/* 4 (vec4) units for ubo base addresses */
+	so->first_immediate += 4;
 	ctx->immediate_idx = 4 * (ctx->info.file_max[TGSI_FILE_IMMEDIATE] + 1);
 
 	ret = tgsi_parse_init(&ctx->parser, ctx->tokens);
@@ -717,6 +719,80 @@ ssa_src(struct ir3_compile_context *ctx, struct ir3_register *reg,
 		reg->offset = regid(off, chan);
 
 		instr = array_fanin(ctx, aid, src->File);
+	} else if (src->File == TGSI_FILE_CONSTANT && src->Dimension) {
+		const struct tgsi_full_src_register *fsrc = (const void *)src;
+		struct ir3_instruction *temp = NULL;
+		int ubo_regid = regid(ctx->so->first_driver_param, 0) +
+			fsrc->Dimension.Index - 1;
+		int offset = 0;
+
+		/* We don't handle indirect UBO array accesses... yet. */
+		compile_assert(ctx, !fsrc->Dimension.Indirect);
+		/* UBOs start at index 1. */
+		compile_assert(ctx, fsrc->Dimension.Index > 0);
+
+		if (src->Indirect) {
+			/* In case of an indirect index, it will have been loaded into an
+			 * address register. There will be a sequence of
+			 *
+			 *   shl.b x, val, 2
+			 *   mova a0, x
+			 *
+			 * We rely on this sequence to get the original val out and shift
+			 * it by 4, since we're dealing in vec4 units.
+			 */
+			compile_assert(ctx, ctx->block->address);
+			compile_assert(ctx, ctx->block->address->regs[1]->instr->opc ==
+						   OPC_SHL_B);
+
+			temp = instr = instr_create(ctx, 2, OPC_SHL_B);
+			ir3_reg_create(instr, 0, 0);
+			ir3_reg_create(instr, 0, IR3_REG_HALF | IR3_REG_SSA)->instr =
+				ctx->block->address->regs[1]->instr->regs[1]->instr;
+			ir3_reg_create(instr, 0, IR3_REG_IMMED)->iim_val = 4;
+		} else if (src->Index >= 64) {
+			/* Otherwise it's a plain index (in vec4 units). Move it into a
+			 * register.
+			 */
+			temp = instr = instr_create(ctx, 1, 0);
+			instr->cat1.src_type = get_utype(ctx);
+			instr->cat1.dst_type = get_utype(ctx);
+			ir3_reg_create(instr, 0, 0);
+			ir3_reg_create(instr, 0, IR3_REG_IMMED)->iim_val = src->Index * 16;
+		} else {
+			/* The offset is small enough to fit into the ldg instruction
+			 * directly.
+			 */
+			offset = src->Index * 16;
+		}
+
+		if (temp) {
+			/* If there was an offset (most common), add it to the buffer
+			 * address.
+			 */
+			instr = instr_create(ctx, 2, OPC_ADD_S);
+			ir3_reg_create(instr, 0, 0);
+			ir3_reg_create(instr, 0, IR3_REG_SSA)->instr = temp;
+			ir3_reg_create(instr, ubo_regid, IR3_REG_CONST);
+		} else {
+			/* Otherwise just load the buffer address directly */
+			instr = instr_create(ctx, 1, 0);
+			instr->cat1.src_type = get_utype(ctx);
+			instr->cat1.dst_type = get_utype(ctx);
+			ir3_reg_create(instr, 0, 0);
+			ir3_reg_create(instr, ubo_regid, IR3_REG_CONST);
+		}
+
+		temp = instr;
+
+		instr = instr_create(ctx, 6, OPC_LDG);
+		instr->cat6.type = TYPE_U32;
+		instr->cat6.offset = offset + chan * 4;
+		ir3_reg_create(instr, 0, 0);
+		ir3_reg_create(instr, 0, IR3_REG_SSA)->instr = temp;
+		ir3_reg_create(instr, 0, IR3_REG_IMMED)->iim_val = 1;
+
+		reg->flags &= ~(IR3_REG_RELATIV | IR3_REG_CONST);
 	} else {
 		/* normal case (not relative addressed GPR) */
 		instr = ssa_instr_get(ctx, src->File, regid(src->Index, chan));
@@ -3183,7 +3259,8 @@ decl_sv(struct ir3_compile_context *ctx, struct tgsi_full_declaration *decl)
 		instr->cat1.src_type = get_stype(ctx);
 		instr->cat1.dst_type = get_stype(ctx);
 		ir3_reg_create(instr, 0, 0);
-		ir3_reg_create(instr, regid(so->first_driver_param, 0), IR3_REG_CONST);
+		ir3_reg_create(instr, regid(so->first_driver_param + 4, 0),
+					   IR3_REG_CONST);
 		break;
 	case TGSI_SEMANTIC_INSTANCEID:
 		ctx->instance_id = instr = create_input(ctx->block, NULL, r);
