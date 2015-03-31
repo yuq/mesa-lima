@@ -1615,6 +1615,7 @@ void nir_lower_samplers(nir_shader *shader,
 
 void nir_lower_system_values(nir_shader *shader);
 void nir_lower_tex_projector(nir_shader *shader);
+void nir_lower_idiv(nir_shader *shader);
 
 void nir_lower_atomics(nir_shader *shader);
 void nir_lower_to_source_mods(nir_shader *shader);

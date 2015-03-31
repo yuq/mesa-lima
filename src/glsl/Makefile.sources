@@ -33,6 +33,7 @@ NIR_FILES = \
 	nir/nir_lower_atomics.c \
 	nir/nir_lower_global_vars_to_local.c \
 	nir/nir_lower_locals_to_regs.c \
+	nir/nir_lower_idiv.c \
 	nir/nir_lower_io.c \
 	nir/nir_lower_phis_to_scalar.c \
 	nir/nir_lower_samplers.cpp \
