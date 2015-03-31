@@ -2280,6 +2280,12 @@ vc4_get_compiled_shader(struct vc4_context *vc4, enum qstage stage,
                         j++;
                 }
         }
+        if (shader->ubo_size) {
+                fprintf(stderr, "SHADER-DB: %s prog %d/%d: %d UBO uniforms\n",
+                        qir_get_stage_name(c->stage),
+                        c->program_id, c->variant_id,
+                        shader->ubo_size / 4);
+        }
 
         qir_compile_destroy(c);
 
