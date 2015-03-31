@@ -96,6 +96,10 @@ optimizations = [
    (('fmin', ('fmax', ('fmin', ('fmax', a, 0.0), 1.0), 0.0), 1.0), ('fmin', ('fmax', a, 0.0), 1.0)),
    (('ior', ('flt', a, b), ('flt', a, c)), ('flt', a, ('fmax', b, c))),
    (('ior', ('fge', a, b), ('fge', a, c)), ('fge', a, ('fmin', b, c))),
+   (('slt', a, b), ('b2f', ('flt', a, b)), 'options->lower_scmp'),
+   (('sge', a, b), ('b2f', ('fge', a, b)), 'options->lower_scmp'),
+   (('seq', a, b), ('b2f', ('feq', a, b)), 'options->lower_scmp'),
+   (('sne', a, b), ('b2f', ('fne', a, b)), 'options->lower_scmp'),
    # Emulating booleans
    (('fmul', ('b2f', a), ('b2f', b)), ('b2f', ('iand', a, b))),
    (('fsat', ('fadd', ('b2f', a), ('b2f', b))), ('b2f', ('ior', a, b))),

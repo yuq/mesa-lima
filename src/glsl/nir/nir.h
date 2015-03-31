@@ -1382,6 +1382,9 @@ typedef struct nir_shader_compiler_options {
    /** lowers fneg and ineg to fsub and isub. */
    bool lower_negate;
 
+   /* lower {slt,sge,seq,sne} to {flt,fge,feq,fne} + b2f: */
+   bool lower_scmp;
+
    /**
     * Does the driver support real 32-bit integers?  (Otherwise, integers
     * are simulated by floats.)
