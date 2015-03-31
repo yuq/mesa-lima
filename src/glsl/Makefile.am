@@ -252,8 +252,6 @@ nir/nir_opcodes.h: nir/nir_opcodes.py nir/nir_opcodes_h.py
 	$(MKDIR_P) nir;							\
 	$(PYTHON2) $(PYTHON_FLAGS) $(srcdir)/nir/nir_opcodes_h.py > $@
 
-nir/nir.h: nir/nir_opcodes.h
-
 nir/nir_opcodes.c: nir/nir_opcodes.py nir/nir_opcodes_c.py
 	$(MKDIR_P) nir;							\
 	$(PYTHON2) $(PYTHON_FLAGS) $(srcdir)/nir/nir_opcodes_c.py > $@
