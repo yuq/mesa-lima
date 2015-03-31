@@ -3297,7 +3297,47 @@ lp_build_sample_soa(const struct lp_static_texture_state *static_texture_state,
                     struct gallivm_state *gallivm,
                     const struct lp_sampler_params *params)
 {
+   boolean use_tex_func = FALSE;
+
+   /*
+    * Do not use a function call if the sampling is "simple enough".
+    * We define this by
+    * a) format
+    * b) no mips (either one level only or no mip filter)
+    * No mips will definitely make the code smaller, though
+    * the format requirement is a bit iffy - there's some (SoA) formats
+    * which definitely generate less code. This does happen to catch
+    * some important cases though which are hurt quite a bit by using
+    * a call (though not really because of the call overhead but because
+    * they are reusing the same texture unit with some of the same
+    * parameters).
+    * Ideally we'd let llvm recognize this stuff by doing IPO passes.
+    */
+
    if (USE_TEX_FUNC_CALL) {
+      const struct util_format_description *format_desc;
+      boolean simple_format;
+      boolean simple_tex;
+      enum lp_sampler_op_type op_type;
+      format_desc = util_format_description(static_texture_state->format);
+      simple_format = !format_desc ||
+                         (util_format_is_rgba8_variant(format_desc) &&
+                          format_desc->colorspace == UTIL_FORMAT_COLORSPACE_RGB);
+
+      op_type = (params->sample_key & LP_SAMPLER_OP_TYPE_MASK) >>
+                    LP_SAMPLER_OP_TYPE_SHIFT;
+      simple_tex =
+         op_type != LP_SAMPLER_OP_TEXTURE ||
+           ((static_sampler_state->min_mip_filter == PIPE_TEX_MIPFILTER_NONE ||
+             static_texture_state->level_zero_only == TRUE) &&
+            static_sampler_state->min_img_filter == static_sampler_state->mag_img_filter &&
+            (static_sampler_state->min_img_filter == PIPE_TEX_FILTER_NEAREST ||
+             static_sampler_state->min_img_filter == PIPE_TEX_FILTER_NEAREST));
+
+      use_tex_func = format_desc && !(simple_format && simple_tex);
+   }
+
+   if (use_tex_func) {
       lp_build_sample_soa_func(gallivm,
                                static_texture_state,
                                static_sampler_state,
