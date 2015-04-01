@@ -1656,19 +1656,6 @@ dnl
 dnl OpenCL configuration
 dnl
 
-AC_ARG_WITH([libclc-path],
-   [AS_HELP_STRING([--with-libclc-path],
-         [DEPRECATED: See http://dri.freedesktop.org/wiki/GalliumCompute#How_to_Install])],
-   [LIBCLC_PATH="$withval"],
-   [LIBCLC_PATH=''])
-
-if test -n "$LIBCLC_PATH"; then
-   AC_MSG_ERROR([The --with-libclc-path option has been deprecated.
-                  Please review the updated build instructions for clover:
-		  http://dri.freedesktop.org/wiki/GalliumCompute])
-fi
-
-
 AC_ARG_WITH([clang-libdir],
    [AS_HELP_STRING([--with-clang-libdir],
          [Path to Clang libraries @<:@default=llvm-config --libdir@:>@])],
