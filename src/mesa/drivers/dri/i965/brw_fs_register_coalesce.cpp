@@ -64,21 +64,6 @@ is_nop_mov(const fs_inst *inst)
 }
 
 static bool
-is_copy_payload(const fs_visitor *v, const fs_inst *inst)
-{
-   if (v->alloc.sizes[inst->src[0].reg] != inst->regs_written)
-      return false;
-
-   fs_reg reg = inst->src[0];
-
-   for (int i = 0; i < inst->sources; i++)
-      if (!inst->src[i].equals(offset(reg, i)))
-         return false;
-
-   return true;
-}
-
-static bool
 is_coalesce_candidate(const fs_visitor *v, const fs_inst *inst)
 {
    if ((inst->opcode != BRW_OPCODE_MOV &&
@@ -99,7 +84,7 @@ is_coalesce_candidate(const fs_visitor *v, const fs_inst *inst)
       return false;
 
    if (inst->opcode == SHADER_OPCODE_LOAD_PAYLOAD) {
-      if (!is_copy_payload(v, inst)) {
+      if (!inst->is_copy_payload(v->alloc)) {
          return false;
       }
    }

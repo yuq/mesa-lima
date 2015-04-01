@@ -521,6 +521,26 @@ fs_inst::is_send_from_grf() const
 }
 
 bool
+fs_inst::is_copy_payload(const brw::simple_allocator &grf_alloc) const
+{
+   if (this->opcode != SHADER_OPCODE_LOAD_PAYLOAD)
+      return false;
+
+   fs_reg reg = this->src[0];
+   if (reg.file != GRF || reg.reg_offset != 0 || reg.stride == 0)
+      return false;
+
+   if (grf_alloc.sizes[reg.reg] != this->regs_written)
+      return false;
+
+   for (int i = 1; i < this->sources; i++)
+      if (!this->src[i].equals(::offset(reg, i)))
+         return false;
+
+   return true;
+}
+
+bool
 fs_inst::can_do_source_mods(const struct brw_device_info *devinfo)
 {
    if (devinfo->gen == 6 && is_math())
