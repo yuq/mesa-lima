@@ -163,6 +163,8 @@ fs_visitor::emit_nir_code()
    nir_validate_shader(nir);
    nir_copy_prop(nir);
    nir_validate_shader(nir);
+   nir_opt_dce(nir);
+   nir_validate_shader(nir);
 
    if (unlikely(debug_enabled)) {
       fprintf(stderr, "NIR (SSA form) for %s shader:\n", stage_name);
