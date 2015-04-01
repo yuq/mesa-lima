@@ -303,7 +303,8 @@ C_SOURCES := \
 	util/u_video.h
 
 NIR_SOURCES := \
-	nir/tgsi_to_nir.c
+	nir/tgsi_to_nir.c \
+	nir/tgsi_to_nir.h
 
 VL_SOURCES := \
 	vl/vl_compositor.c \
