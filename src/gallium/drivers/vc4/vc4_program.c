@@ -1069,8 +1069,13 @@ ntq_emit_alu(struct vc4_compile *c, nir_alu_instr *instr)
         case nir_op_fsign:
                 *dest = ntq_fsign(c, src[0]);
                 break;
+
         case nir_op_fabs:
                 *dest = qir_FMAXABS(c, src[0], src[0]);
+                break;
+        case nir_op_iabs:
+                *dest = qir_MAX(c, src[0],
+                                qir_SUB(c, qir_uniform_ui(c, 0), src[0]));
                 break;
 
         default:
