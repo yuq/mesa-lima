@@ -3107,15 +3107,23 @@ decl_in(struct ir3_compile_context *ctx, struct tgsi_full_declaration *decl)
 				} else {
 					bool use_ldlv = false;
 
-					/* I don't believe it is valid to not have Interp
-					 * on a normal frag shader input, and various parts
-					 * that that handle flat/smooth shading make this
-					 * assumption as well.
+					/* if no interpolation given, pick based on
+					 * semantic:
 					 */
-					compile_assert(ctx, decl->Declaration.Interpolate);
+					if (!decl->Declaration.Interpolate) {
+						switch (decl->Semantic.Name) {
+						case TGSI_SEMANTIC_COLOR:
+							so->inputs[n].interpolate =
+									TGSI_INTERPOLATE_COLOR;
+							break;
+						default:
+							so->inputs[n].interpolate =
+									TGSI_INTERPOLATE_LINEAR;
+						}
+					}
 
 					if (ctx->flat_bypass) {
-						switch (decl->Interp.Interpolate) {
+						switch (so->inputs[n].interpolate) {
 						case TGSI_INTERPOLATE_COLOR:
 							if (!ctx->so->key.rasterflat)
 								break;
@@ -3162,7 +3170,7 @@ decl_sv(struct ir3_compile_context *ctx, struct tgsi_full_declaration *decl)
 	so->inputs[n].compmask = 1;
 	so->inputs[n].regid = r;
 	so->inputs[n].inloc = ctx->next_inloc;
-	so->inputs[n].interpolate = false;
+	so->inputs[n].interpolate = TGSI_INTERPOLATE_CONSTANT;
 
 	struct ir3_instruction *instr = NULL;
 
