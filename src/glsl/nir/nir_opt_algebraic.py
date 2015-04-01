@@ -172,9 +172,6 @@ optimizations = [
    (('iadd', a, ('isub', 0, b)), ('isub', a, b)),
    (('fabs', ('fsub', 0.0, a)), ('fabs', a)),
    (('iabs', ('isub', 0, a)), ('iabs', a)),
-
-# This one may not be exact
-   (('feq', ('fadd', a, b), 0.0), ('feq', a, ('fneg', b))),
 ]
 
 # Add optimizations to handle the case where the result of a ternary is
