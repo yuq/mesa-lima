@@ -69,7 +69,6 @@ C_SOURCES := \
 	indices/u_indices_priv.h \
 	indices/u_primconvert.c \
 	indices/u_primconvert.h \
-	nir/tgsi_to_nir.c \
 	os/os_memory_aligned.h \
 	os/os_memory_debug.h \
 	os/os_memory_stdc.h \
@@ -302,6 +301,9 @@ C_SOURCES := \
 	util/u_vbuf.c \
 	util/u_vbuf.h \
 	util/u_video.h
+
+NIR_SOURCES := \
+	nir/tgsi_to_nir.c
 
 VL_SOURCES := \
 	vl/vl_compositor.c \

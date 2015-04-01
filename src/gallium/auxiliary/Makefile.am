@@ -22,6 +22,7 @@ AM_CXXFLAGS = \
 
 libgallium_la_SOURCES = \
 	$(C_SOURCES) \
+	$(NIR_SOURCES) \
 	$(GENERATED_SOURCES)
 
 if HAVE_MESA_LLVM
