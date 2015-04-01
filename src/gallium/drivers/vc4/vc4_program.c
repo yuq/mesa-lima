@@ -925,15 +925,27 @@ ntq_emit_alu(struct vc4_compile *c, nir_alu_instr *instr)
         case nir_op_fmax:
                 *dest = qir_FMAX(c, src[0], src[1]);
                 break;
+
         case nir_op_f2i:
+        case nir_op_f2u:
                 *dest = qir_FTOI(c, src[0]);
                 break;
         case nir_op_i2f:
+        case nir_op_u2f:
                 *dest = qir_ITOF(c, src[0]);
                 break;
         case nir_op_b2f:
                 *dest = qir_AND(c, src[0], qir_uniform_f(c, 1.0));
                 break;
+        case nir_op_b2i:
+                *dest = qir_AND(c, src[0], qir_uniform_ui(c, 1));
+                break;
+        case nir_op_i2b:
+        case nir_op_f2b:
+                qir_SF(c, src[0]);
+                *dest = qir_SEL_X_0_ZC(c, qir_uniform_ui(c, ~0));
+                break;
+
         case nir_op_iadd:
                 *dest = qir_ADD(c, src[0], src[1]);
                 break;
