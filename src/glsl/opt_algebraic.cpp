@@ -574,6 +574,8 @@ ir_algebraic_visitor::handle_expression(ir_expression *ir)
             continue;
 
          ir_expression *add_expr = floor_expr->operands[0]->as_expression();
+         if (!add_expr)
+            continue;
 
          for (int j = 0; j < 2; j++) {
             ir_expression *abs_expr = add_expr->operands[j]->as_expression();
