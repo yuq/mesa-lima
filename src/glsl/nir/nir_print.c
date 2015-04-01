@@ -137,21 +137,21 @@ print_dest(nir_dest *dest, FILE *fp)
 }
 
 static void
-print_alu_src(nir_alu_src *src, uint8_t read_mask, FILE *fp)
+print_alu_src(nir_alu_instr *instr, unsigned src, FILE *fp)
 {
-   if (src->negate)
+   if (instr->src[src].negate)
       fprintf(fp, "-");
-   if (src->abs)
+   if (instr->src[src].abs)
       fprintf(fp, "abs(");
 
-   print_src(&src->src, fp);
+   print_src(&instr->src[src].src, fp);
 
    bool print_swizzle = false;
    for (unsigned i = 0; i < 4; i++) {
-      if (read_mask >> i == 0)
-         break;
+      if (!nir_alu_instr_channel_used(instr, src, i))
+         continue;
 
-      if (src->swizzle[i] != i) {
+      if (instr->src[src].swizzle[i] != i) {
          print_swizzle = true;
          break;
       }
@@ -160,14 +160,14 @@ print_alu_src(nir_alu_src *src, uint8_t read_mask, FILE *fp)
    if (print_swizzle) {
       fprintf(fp, ".");
       for (unsigned i = 0; i < 4; i++) {
-         if (read_mask >> i == 0)
-            break;
+         if (!nir_alu_instr_channel_used(instr, src, i))
+            continue;
 
-         fprintf(fp, "%c", "xyzw"[src->swizzle[i]]);
+         fprintf(fp, "%c", "xyzw"[instr->src[src].swizzle[i]]);
       }
    }
 
-   if (src->abs)
+   if (instr->src[src].abs)
       fprintf(fp, ")");
 }
 
@@ -201,7 +201,7 @@ print_alu_instr(nir_alu_instr *instr, FILE *fp)
       if (i != 0)
          fprintf(fp, ", ");
 
-      print_alu_src(&instr->src[i], instr->dest.write_mask, fp);
+      print_alu_src(instr, i, fp);
    }
 }
 
