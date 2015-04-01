@@ -1333,6 +1333,7 @@ create_buffers(GLsizei n, GLuint *buffers, bool dsa)
          buf = ctx->Driver.NewBufferObject(ctx, buffers[i]);
          if (!buf) {
             _mesa_error(ctx, GL_OUT_OF_MEMORY, "%s", func);
+            mtx_unlock(&ctx->Shared->Mutex);
             return;
          }
       }
