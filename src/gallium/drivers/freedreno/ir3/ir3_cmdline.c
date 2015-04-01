@@ -99,6 +99,15 @@ static void dump_info(struct ir3_shader_variant *so, const char *str)
 					(regid >> 2), "xyzw"[regid & 0x3], i);
 		}
 
+		for (i = 0; i < so->immediates_count; i++) {
+			debug_printf("@const(c%d.x)\t", so->first_immediate + i);
+			debug_printf("0x%08x, 0x%08x, 0x%08x, 0x%08x\n",
+					so->immediates[i].val[0],
+					so->immediates[i].val[1],
+					so->immediates[i].val[2],
+					so->immediates[i].val[3]);
+		}
+
 		disasm_a3xx(bin, so->info.sizedwords, 0, so->type);
 
 		debug_printf("; %s: outputs:", type);
