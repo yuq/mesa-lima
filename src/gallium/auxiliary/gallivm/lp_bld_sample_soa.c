@@ -3330,9 +3330,7 @@ lp_build_sample_soa(const struct lp_static_texture_state *static_texture_state,
          op_type != LP_SAMPLER_OP_TEXTURE ||
            ((static_sampler_state->min_mip_filter == PIPE_TEX_MIPFILTER_NONE ||
              static_texture_state->level_zero_only == TRUE) &&
-            static_sampler_state->min_img_filter == static_sampler_state->mag_img_filter &&
-            (static_sampler_state->min_img_filter == PIPE_TEX_FILTER_NEAREST ||
-             static_sampler_state->min_img_filter == PIPE_TEX_FILTER_NEAREST));
+            static_sampler_state->min_img_filter == static_sampler_state->mag_img_filter);
 
       use_tex_func = format_desc && !(simple_format && simple_tex);
    }
