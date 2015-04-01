@@ -72,7 +72,6 @@ static void dump_info(struct ir3_shader_variant *so, const char *str)
 
 		debug_printf("; %s: %s\n", type, str);
 
-if (block) {
 		for (i = 0; i < block->ninputs; i++) {
 			if (!block->inputs[i]) {
 				debug_printf("; in%d unused\n", i);
@@ -99,28 +98,6 @@ if (block) {
 					(reg->flags & IR3_REG_HALF) ? "h" : "",
 					(regid >> 2), "xyzw"[regid & 0x3], i);
 		}
-} else {
-		/* hack to deal w/ old compiler:
-		 * TODO maybe we can just keep this path?  I guess should
-		 * be good enough (other than not able to deal w/ half)
-		 */
-		for (i = 0; i < so->inputs_count; i++) {
-			unsigned j, regid = so->inputs[i].regid;
-			for (j = 0; j < so->inputs[i].ncomp; j++) {
-				debug_printf("@in(r%d.%c)\tin%d\n",
-						(regid >> 2), "xyzw"[regid & 0x3], (i * 4) + j);
-				regid++;
-			}
-		}
-		for (i = 0; i < so->outputs_count; i++) {
-			unsigned j, regid = so->outputs[i].regid;
-			for (j = 0; j < 4; j++) {
-				debug_printf("@out(r%d.%c)\tout%d\n",
-						(regid >> 2), "xyzw"[regid & 0x3], (i * 4) + j);
-				regid++;
-			}
-		}
-}
 
 		disasm_a3xx(bin, so->info.sizedwords, 0, so->type);
 
