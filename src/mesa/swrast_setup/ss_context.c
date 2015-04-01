@@ -27,7 +27,7 @@
 
 #include "main/glheader.h"
 #include "main/imports.h"
-#include "main/colormac.h"
+#include "main/macros.h"
 #include "tnl/tnl.h"
 #include "tnl/t_context.h"
 #include "tnl/t_pipeline.h"
