@@ -43,7 +43,6 @@ string = """/*
 
 #include <stdint.h>
 
-#include "colormac.h"
 #include "format_unpack.h"
 #include "format_utils.h"
 #include "macros.h"
