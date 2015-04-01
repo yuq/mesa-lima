@@ -32,6 +32,9 @@ extern "C" {
 #endif
 
 
+#include "mtypes.h"
+
+
 struct dd_function_table;
 
 static inline struct gl_sampler_object *
