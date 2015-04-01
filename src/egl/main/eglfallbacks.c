@@ -32,8 +32,6 @@
 #include "eglconfig.h"
 #include "eglcontext.h"
 #include "eglsurface.h"
-#include "eglscreen.h"
-#include "eglmode.h"
 #include "eglsync.h"
 
 
@@ -84,22 +82,6 @@ _eglInitDriverFallbacks(_EGLDriver *drv)
    drv->API.WaitClient = (WaitClient_t) _eglReturnFalse;
    drv->API.WaitNative = (WaitNative_t) _eglReturnFalse;
    drv->API.GetProcAddress = (GetProcAddress_t) _eglReturnFalse;
-
-#ifdef EGL_MESA_screen_surface
-   drv->API.CopyContextMESA = (CopyContextMESA_t) _eglReturnFalse;
-   drv->API.CreateScreenSurfaceMESA =
-      (CreateScreenSurfaceMESA_t) _eglReturnFalse;
-   drv->API.ShowScreenSurfaceMESA = (ShowScreenSurfaceMESA_t) _eglReturnFalse;
-   drv->API.ChooseModeMESA = _eglChooseModeMESA;
-   drv->API.GetModesMESA = _eglGetModesMESA;
-   drv->API.GetModeAttribMESA = _eglGetModeAttribMESA;
-   drv->API.GetScreensMESA = _eglGetScreensMESA;
-   drv->API.ScreenPositionMESA = _eglScreenPositionMESA;
-   drv->API.QueryScreenMESA = _eglQueryScreenMESA;
-   drv->API.QueryScreenSurfaceMESA = _eglQueryScreenSurfaceMESA;
-   drv->API.QueryScreenModeMESA = _eglQueryScreenModeMESA;
-   drv->API.QueryModeStringMESA = _eglQueryModeStringMESA;
-#endif /* EGL_MESA_screen_surface */
 
    drv->API.CreateImageKHR = NULL;
    drv->API.DestroyImageKHR = NULL;

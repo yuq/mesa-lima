@@ -98,8 +98,6 @@
 #include "egldriver.h"
 #include "eglsurface.h"
 #include "eglconfig.h"
-#include "eglscreen.h"
-#include "eglmode.h"
 #include "eglimage.h"
 #include "eglsync.h"
 #include "eglstring.h"
@@ -154,12 +152,6 @@
 
 #define _EGL_CHECK_CONFIG(disp, conf, ret, drv) \
    _EGL_CHECK_OBJECT(disp, Config, conf, ret, drv)
-
-#define _EGL_CHECK_SCREEN(disp, scrn, ret, drv) \
-   _EGL_CHECK_OBJECT(disp, Screen, scrn, ret, drv)
-
-#define _EGL_CHECK_MODE(disp, m, ret, drv) \
-   _EGL_CHECK_OBJECT(disp, Mode, m, ret, drv)
 
 #define _EGL_CHECK_SYNC(disp, s, ret, drv) \
    _EGL_CHECK_OBJECT(disp, Sync, s, ret, drv)
@@ -234,40 +226,6 @@ _eglCheckSync(_EGLDisplay *disp, _EGLSync *s, const char *msg)
    }
    return drv;
 }
-
-
-#ifdef EGL_MESA_screen_surface
-
-
-static inline _EGLDriver *
-_eglCheckScreen(_EGLDisplay *disp, _EGLScreen *scrn, const char *msg)
-{
-   _EGLDriver *drv = _eglCheckDisplay(disp, msg);
-   if (!drv)
-      return NULL;
-   if (!scrn) {
-      _eglError(EGL_BAD_SCREEN_MESA, msg);
-      return NULL;
-   }
-   return drv;
-}
-
-
-static inline _EGLDriver *
-_eglCheckMode(_EGLDisplay *disp, _EGLMode *m, const char *msg)
-{
-   _EGLDriver *drv = _eglCheckDisplay(disp, msg);
-   if (!drv)
-      return NULL;
-   if (!m) {
-      _eglError(EGL_BAD_MODE_MESA, msg);
-      return NULL;
-   }
-   return drv;
-}
-
-
-#endif /* EGL_MESA_screen_surface */
 
 
 /**
@@ -383,7 +341,6 @@ _eglCreateExtensionsString(_EGLDisplay *dpy)
 
    char *exts = dpy->ExtensionsString;
 
-   _EGL_CHECK_EXTENSION(MESA_screen_surface);
    _EGL_CHECK_EXTENSION(MESA_copy_context);
    _EGL_CHECK_EXTENSION(MESA_drm_display);
    _EGL_CHECK_EXTENSION(MESA_drm_image);
@@ -1196,20 +1153,6 @@ eglGetProcAddress(const char *procname)
       { "eglWaitGL", (_EGLProc) eglWaitGL },
       { "eglWaitNative", (_EGLProc) eglWaitNative },
 #endif /* _EGL_GET_CORE_ADDRESSES */
-#ifdef EGL_MESA_screen_surface
-      { "eglChooseModeMESA", (_EGLProc) eglChooseModeMESA },
-      { "eglGetModesMESA", (_EGLProc) eglGetModesMESA },
-      { "eglGetModeAttribMESA", (_EGLProc) eglGetModeAttribMESA },
-      { "eglCopyContextMESA", (_EGLProc) eglCopyContextMESA },
-      { "eglGetScreensMESA", (_EGLProc) eglGetScreensMESA },
-      { "eglCreateScreenSurfaceMESA", (_EGLProc) eglCreateScreenSurfaceMESA },
-      { "eglShowScreenSurfaceMESA", (_EGLProc) eglShowScreenSurfaceMESA },
-      { "eglScreenPositionMESA", (_EGLProc) eglScreenPositionMESA },
-      { "eglQueryScreenMESA", (_EGLProc) eglQueryScreenMESA },
-      { "eglQueryScreenSurfaceMESA", (_EGLProc) eglQueryScreenSurfaceMESA },
-      { "eglQueryScreenModeMESA", (_EGLProc) eglQueryScreenModeMESA },
-      { "eglQueryModeStringMESA", (_EGLProc) eglQueryModeStringMESA },
-#endif /* EGL_MESA_screen_surface */
 #ifdef EGL_MESA_drm_display
       { "eglGetDRMDisplayMESA", (_EGLProc) eglGetDRMDisplayMESA },
 #endif
@@ -1271,227 +1214,6 @@ eglGetProcAddress(const char *procname)
 
    RETURN_EGL_SUCCESS(NULL, ret);
 }
-
-
-#ifdef EGL_MESA_screen_surface
-
-
-/*
- * EGL_MESA_screen extension
- */
-
-EGLBoolean EGLAPIENTRY
-eglChooseModeMESA(EGLDisplay dpy, EGLScreenMESA screen,
-                  const EGLint *attrib_list, EGLModeMESA *modes,
-                  EGLint modes_size, EGLint *num_modes)
-{
-   _EGLDisplay *disp = _eglLockDisplay(dpy);
-   _EGLScreen *scrn = _eglLookupScreen(screen, disp);
-   _EGLDriver *drv;
-   EGLBoolean ret;
-
-   _EGL_CHECK_SCREEN(disp, scrn, EGL_FALSE, drv);
-   ret = drv->API.ChooseModeMESA(drv, disp, scrn, attrib_list,
-         modes, modes_size, num_modes);
-
-   RETURN_EGL_EVAL(disp, ret);
-}
-
-
-EGLBoolean EGLAPIENTRY
-eglGetModesMESA(EGLDisplay dpy, EGLScreenMESA screen, EGLModeMESA *modes,
-                EGLint mode_size, EGLint *num_mode)
-{
-   _EGLDisplay *disp = _eglLockDisplay(dpy);
-   _EGLScreen *scrn = _eglLookupScreen(screen, disp);
-   _EGLDriver *drv;
-   EGLBoolean ret;
-
-   _EGL_CHECK_SCREEN(disp, scrn, EGL_FALSE, drv);
-   ret = drv->API.GetModesMESA(drv, disp, scrn, modes, mode_size, num_mode);
-
-   RETURN_EGL_EVAL(disp, ret);
-}
-
-
-EGLBoolean EGLAPIENTRY
-eglGetModeAttribMESA(EGLDisplay dpy, EGLModeMESA mode,
-                     EGLint attribute, EGLint *value)
-{
-   _EGLDisplay *disp = _eglLockDisplay(dpy);
-   _EGLMode *m = _eglLookupMode(mode, disp);
-   _EGLDriver *drv;
-   EGLBoolean ret;
-
-   _EGL_CHECK_MODE(disp, m, EGL_FALSE, drv);
-   ret = drv->API.GetModeAttribMESA(drv, disp, m, attribute, value);
-
-   RETURN_EGL_EVAL(disp, ret);
-}
-
-
-EGLBoolean EGLAPIENTRY
-eglCopyContextMESA(EGLDisplay dpy, EGLContext source, EGLContext dest,
-                   EGLint mask)
-{
-   _EGLDisplay *disp = _eglLockDisplay(dpy);
-   _EGLContext *source_context = _eglLookupContext(source, disp);
-   _EGLContext *dest_context = _eglLookupContext(dest, disp);
-   _EGLDriver *drv;
-   EGLBoolean ret;
-
-   _EGL_CHECK_CONTEXT(disp, source_context, EGL_FALSE, drv);
-   if (!dest_context)
-      RETURN_EGL_ERROR(disp, EGL_BAD_CONTEXT, EGL_FALSE);
-
-   ret = drv->API.CopyContextMESA(drv, disp,
-         source_context, dest_context, mask);
-
-   RETURN_EGL_EVAL(disp, ret);
-}
-
-
-EGLBoolean EGLAPIENTRY
-eglGetScreensMESA(EGLDisplay dpy, EGLScreenMESA *screens,
-                  EGLint max_screens, EGLint *num_screens)
-{
-   _EGLDisplay *disp = _eglLockDisplay(dpy);
-   _EGLDriver *drv;
-   EGLBoolean ret;
-
-   _EGL_CHECK_DISPLAY(disp, EGL_FALSE, drv);
-   ret = drv->API.GetScreensMESA(drv, disp, screens, max_screens, num_screens);
-
-   RETURN_EGL_EVAL(disp, ret);
-}
-
-
-EGLSurface EGLAPIENTRY
-eglCreateScreenSurfaceMESA(EGLDisplay dpy, EGLConfig config,
-                           const EGLint *attrib_list)
-{
-   _EGLDisplay *disp = _eglLockDisplay(dpy);
-   _EGLConfig *conf = _eglLookupConfig(config, disp);
-   _EGLDriver *drv;
-   _EGLSurface *surf;
-   EGLSurface ret;
-
-   _EGL_CHECK_CONFIG(disp, conf, EGL_NO_SURFACE, drv);
-
-   surf = drv->API.CreateScreenSurfaceMESA(drv, disp, conf, attrib_list);
-   ret = (surf) ? _eglLinkSurface(surf) : EGL_NO_SURFACE;
-
-   RETURN_EGL_EVAL(disp, ret);
-}
-
-
-EGLBoolean EGLAPIENTRY
-eglShowScreenSurfaceMESA(EGLDisplay dpy, EGLint screen,
-                         EGLSurface surface, EGLModeMESA mode)
-{
-   _EGLDisplay *disp = _eglLockDisplay(dpy);
-   _EGLScreen *scrn = _eglLookupScreen((EGLScreenMESA) screen, disp);
-   _EGLSurface *surf = _eglLookupSurface(surface, disp);
-   _EGLMode *m = _eglLookupMode(mode, disp);
-   _EGLDriver *drv;
-   EGLBoolean ret;
-
-   _EGL_CHECK_SCREEN(disp, scrn, EGL_FALSE, drv);
-   if (!surf && surface != EGL_NO_SURFACE)
-      RETURN_EGL_ERROR(disp, EGL_BAD_SURFACE, EGL_FALSE);
-   if (!m && mode != EGL_NO_MODE_MESA)
-      RETURN_EGL_ERROR(disp, EGL_BAD_MODE_MESA, EGL_FALSE);
-
-   ret = drv->API.ShowScreenSurfaceMESA(drv, disp, scrn, surf, m);
-
-   RETURN_EGL_EVAL(disp, ret);
-}
-
-
-EGLBoolean EGLAPIENTRY
-eglScreenPositionMESA(EGLDisplay dpy, EGLScreenMESA screen, EGLint x, EGLint y)
-{
-   _EGLDisplay *disp = _eglLockDisplay(dpy);
-   _EGLScreen *scrn = _eglLookupScreen(screen, disp);
-   _EGLDriver *drv;
-   EGLBoolean ret;
-
-   _EGL_CHECK_SCREEN(disp, scrn, EGL_FALSE, drv);
-   ret = drv->API.ScreenPositionMESA(drv, disp, scrn, x, y);
-
-   RETURN_EGL_EVAL(disp, ret);
-}
-
-
-EGLBoolean EGLAPIENTRY
-eglQueryScreenMESA(EGLDisplay dpy, EGLScreenMESA screen,
-                   EGLint attribute, EGLint *value)
-{
-   _EGLDisplay *disp = _eglLockDisplay(dpy);
-   _EGLScreen *scrn = _eglLookupScreen(screen, disp);
-   _EGLDriver *drv;
-   EGLBoolean ret;
-
-   _EGL_CHECK_SCREEN(disp, scrn, EGL_FALSE, drv);
-   ret = drv->API.QueryScreenMESA(drv, disp, scrn, attribute, value);
-
-   RETURN_EGL_EVAL(disp, ret);
-}
-
-
-EGLBoolean EGLAPIENTRY
-eglQueryScreenSurfaceMESA(EGLDisplay dpy, EGLScreenMESA screen,
-                          EGLSurface *surface)
-{
-   _EGLDisplay *disp = _eglLockDisplay(dpy);
-   _EGLScreen *scrn = _eglLookupScreen((EGLScreenMESA) screen, disp);
-   _EGLDriver *drv;
-   _EGLSurface *surf;
-   EGLBoolean ret;
-
-   _EGL_CHECK_SCREEN(disp, scrn, EGL_FALSE, drv);
-   ret = drv->API.QueryScreenSurfaceMESA(drv, disp, scrn, &surf);
-   if (ret && surface)
-      *surface = _eglGetSurfaceHandle(surf);
-
-   RETURN_EGL_EVAL(disp, ret);
-}
-
-
-EGLBoolean EGLAPIENTRY
-eglQueryScreenModeMESA(EGLDisplay dpy, EGLScreenMESA screen, EGLModeMESA *mode)
-{
-   _EGLDisplay *disp = _eglLockDisplay(dpy);
-   _EGLScreen *scrn = _eglLookupScreen((EGLScreenMESA) screen, disp);
-   _EGLDriver *drv;
-   _EGLMode *m;
-   EGLBoolean ret;
-
-   _EGL_CHECK_SCREEN(disp, scrn, EGL_FALSE, drv);
-   ret = drv->API.QueryScreenModeMESA(drv, disp, scrn, &m);
-   if (ret && mode)
-      *mode = m->Handle;
-
-   RETURN_EGL_EVAL(disp, ret);
-}
-
-
-const char * EGLAPIENTRY
-eglQueryModeStringMESA(EGLDisplay dpy, EGLModeMESA mode)
-{
-   _EGLDisplay *disp = _eglLockDisplay(dpy);
-   _EGLMode *m = _eglLookupMode(mode, disp);
-   _EGLDriver *drv;
-   const char *ret;
-
-   _EGL_CHECK_MODE(disp, m, NULL, drv);
-   ret = drv->API.QueryModeStringMESA(drv, disp, m);
-
-   RETURN_EGL_EVAL(disp, ret);
-}
-
-
-#endif /* EGL_MESA_screen_surface */
 
 
 #ifdef EGL_MESA_drm_display
