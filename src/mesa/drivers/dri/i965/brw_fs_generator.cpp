@@ -1602,7 +1602,7 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
          brw_set_default_compression_control(p, BRW_COMPRESSION_COMPRESSED);
          break;
       default:
-         unreachable(!"Invalid instruction width");
+         unreachable("Invalid instruction width");
       }
 
       switch (inst->opcode) {
