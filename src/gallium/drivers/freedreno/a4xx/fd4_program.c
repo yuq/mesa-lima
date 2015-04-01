@@ -497,7 +497,7 @@ static void
 fix_blit_fp(struct pipe_context *pctx)
 {
 	struct fd_context *ctx = fd_context(pctx);
-	struct fd4_shader_stateobj *so = ctx->blit_prog.fp;
+	struct fd4_shader_stateobj *so = ctx->blit_prog[0].fp;
 
 	so->shader->vpsrepl[0] = 0x99999999;
 	so->shader->vpsrepl[1] = 0x99999999;

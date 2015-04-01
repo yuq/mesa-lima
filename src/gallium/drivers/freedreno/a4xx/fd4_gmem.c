@@ -282,7 +282,7 @@ fd4_emit_tile_mem2gmem(struct fd_context *ctx, struct fd_tile *tile)
 	struct pipe_framebuffer_state *pfb = &ctx->framebuffer;
 	struct fd4_emit emit = {
 			.vtx = &fd4_ctx->blit_vbuf_state,
-			.prog = &ctx->blit_prog,
+			.prog = &ctx->blit_prog[0],
 			.key = key,
 			.format = fd4_emit_format(pfb->cbufs[0]),
 	};

@@ -252,7 +252,7 @@ fd_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 
 	/* Render targets. */
 	case PIPE_CAP_MAX_RENDER_TARGETS:
-		return 1;
+		return screen->max_rts;
 
 	/* Queries. */
 	case PIPE_CAP_QUERY_TIME_ELAPSED:
