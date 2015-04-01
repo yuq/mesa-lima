@@ -105,8 +105,10 @@ struct _mesa_glsl_parse_state {
    {
       unsigned required_version = this->es_shader ?
          required_glsl_es_version : required_glsl_version;
+      unsigned this_version = this->forced_language_version
+         ? this->forced_language_version : this->language_version;
       return required_version != 0
-         && this->language_version >= required_version;
+         && this_version >= required_version;
    }
 
    bool check_version(unsigned required_glsl_version,
