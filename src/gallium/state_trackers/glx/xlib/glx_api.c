@@ -1636,7 +1636,7 @@ get_config( XMesaVisual xmvis, int attrib, int *value, GLboolean fbconfig )
       case GLX_MAX_PBUFFER_WIDTH:
          if (!fbconfig)
             return GLX_BAD_ATTRIBUTE;
-         /* XXX or MAX_WIDTH? */
+         /* XXX should be same as ctx->Const.MaxRenderbufferSize */
          *value = DisplayWidth(xmvis->display, xmvis->visinfo->screen);
          break;
       case GLX_MAX_PBUFFER_HEIGHT:
