@@ -46,15 +46,15 @@
 #ifndef RALLOC_H
 #define RALLOC_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include <stddef.h>
 #include <stdarg.h>
 #include <stdbool.h>
 
 #include "macros.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /**
  * \def ralloc(ctx, type)
