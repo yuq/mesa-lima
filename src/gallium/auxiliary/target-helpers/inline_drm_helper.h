@@ -430,7 +430,7 @@ dd_configuration(enum drm_conf conf)
 
 #if defined(GALLIUM_I915)
    if (strcmp(driver_name, "i915") == 0)
-      return NULL;
+      return configuration_query(conf);
    else
 #endif
 #if defined(GALLIUM_ILO)

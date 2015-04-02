@@ -989,7 +989,7 @@ i915_texture_from_handle(struct pipe_screen * screen,
 
    assert(screen);
 
-   buffer = iws->buffer_from_handle(iws, whandle, &tiling, &stride);
+   buffer = iws->buffer_from_handle(iws, whandle, template->height0, &tiling, &stride);
 
    /* Only supports one type */
    if ((template->target != PIPE_TEXTURE_2D &&
