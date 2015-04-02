@@ -387,40 +387,6 @@ fs_generator::generate_blorp_fb_write(fs_inst *inst)
                 inst->header_present);
 }
 
-/* Computes the integer pixel x,y values from the origin.
- *
- * This is the basis of gl_FragCoord computation, but is also used
- * pre-gen6 for computing the deltas from v0 for computing
- * interpolation.
- */
-void
-fs_generator::generate_pixel_xy(struct brw_reg dst, bool is_x)
-{
-   struct brw_reg g1_uw = retype(brw_vec1_grf(1, 0), BRW_REGISTER_TYPE_UW);
-   struct brw_reg src;
-   struct brw_reg deltas;
-
-   if (is_x) {
-      src = stride(suboffset(g1_uw, 4), 2, 4, 0);
-      deltas = brw_imm_v(0x10101010);
-   } else {
-      src = stride(suboffset(g1_uw, 5), 2, 4, 0);
-      deltas = brw_imm_v(0x11001100);
-   }
-
-   if (dispatch_width == 16) {
-      dst = vec16(dst);
-   }
-
-   /* We do this SIMD8 or SIMD16, but since the destination is UW we
-    * don't do compression in the SIMD16 case.
-    */
-   brw_push_insn_state(p);
-   brw_set_default_compression_control(p, BRW_COMPRESSION_NONE);
-   brw_ADD(p, dst, src, deltas);
-   brw_pop_insn_state(p);
-}
-
 void
 fs_generator::generate_linterp(fs_inst *inst,
 			     struct brw_reg dst, struct brw_reg *src)
@@ -1948,12 +1914,6 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
 	 } else {
 	    generate_math_gen4(inst, dst, src[0]);
 	 }
-	 break;
-      case FS_OPCODE_PIXEL_X:
-	 generate_pixel_xy(dst, true);
-	 break;
-      case FS_OPCODE_PIXEL_Y:
-	 generate_pixel_xy(dst, false);
 	 break;
       case FS_OPCODE_CINTERP:
 	 brw_MOV(p, dst, src[0]);

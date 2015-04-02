@@ -512,11 +512,6 @@ brw_instruction_name(enum opcode op)
    case FS_OPCODE_DDY_FINE:
       return "ddy_fine";
 
-   case FS_OPCODE_PIXEL_X:
-      return "pixel_x";
-   case FS_OPCODE_PIXEL_Y:
-      return "pixel_y";
-
    case FS_OPCODE_CINTERP:
       return "cinterp";
    case FS_OPCODE_LINTERP:

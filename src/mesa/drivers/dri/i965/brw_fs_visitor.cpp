@@ -3428,14 +3428,19 @@ fs_visitor::interp_reg(int location, int channel)
 void
 fs_visitor::emit_interpolation_setup_gen4()
 {
+   struct brw_reg g1_uw = retype(brw_vec1_grf(1, 0), BRW_REGISTER_TYPE_UW);
+
    this->current_annotation = "compute pixel centers";
    this->pixel_x = vgrf(glsl_type::uint_type);
    this->pixel_y = vgrf(glsl_type::uint_type);
    this->pixel_x.type = BRW_REGISTER_TYPE_UW;
    this->pixel_y.type = BRW_REGISTER_TYPE_UW;
-
-   emit(FS_OPCODE_PIXEL_X, this->pixel_x);
-   emit(FS_OPCODE_PIXEL_Y, this->pixel_y);
+   emit(ADD(this->pixel_x,
+            fs_reg(stride(suboffset(g1_uw, 4), 2, 4, 0)),
+            fs_reg(brw_imm_v(0x10101010))));
+   emit(ADD(this->pixel_y,
+            fs_reg(stride(suboffset(g1_uw, 5), 2, 4, 0)),
+            fs_reg(brw_imm_v(0x11001100))));
 
    this->current_annotation = "compute pixel deltas from v0";
    if (brw->has_pln) {
