@@ -245,9 +245,9 @@ brw_alloc_reg_set(struct intel_screen *screen, int reg_width)
    assert(reg == ra_reg_count);
 
    /* Add a special class for aligned pairs, which we'll put delta_x/y
-    * in on gen5 so that we can do PLN.
+    * in on Gen <= 6 so that we can do PLN.
     */
-   if (devinfo->has_pln && reg_width == 1 && devinfo->gen < 6) {
+   if (devinfo->has_pln && reg_width == 1 && devinfo->gen <= 6) {
       aligned_pairs_class = ra_alloc_reg_class(regs);
 
       for (int i = 0; i < pairs_reg_count; i++) {

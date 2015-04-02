@@ -428,7 +428,7 @@ fs_generator::generate_linterp(fs_inst *inst,
 
    if (brw->has_pln &&
        delta_y.nr == delta_x.nr + 1 &&
-       (brw->gen >= 6 || (delta_x.nr & 1) == 0)) {
+       (brw->gen >= 7 || (delta_x.nr & 1) == 0)) {
       brw_PLN(p, dst, interp, delta_x);
    } else {
       brw_LINE(p, brw_null_reg(), interp, delta_x);
