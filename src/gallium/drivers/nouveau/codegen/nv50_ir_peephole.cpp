@@ -2315,7 +2315,8 @@ NV50PostRaConstantFolding::visit(BasicBlock *bb)
              i->src(0).getFile() != FILE_GPR ||
              i->src(1).getFile() != FILE_GPR ||
              i->src(2).getFile() != FILE_GPR ||
-             i->getDef(0)->reg.data.id != i->getSrc(2)->reg.data.id)
+             i->getDef(0)->reg.data.id != i->getSrc(2)->reg.data.id ||
+             !isFloatType(i->dType))
             break;
 
          def = i->getSrc(1)->getInsn();
