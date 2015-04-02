@@ -529,6 +529,16 @@ nir_src_for_reg(nir_register *reg)
    return src;
 }
 
+static inline nir_instr *
+nir_src_get_parent_instr(const nir_src *src)
+{
+   if (src->is_ssa) {
+      return src->ssa->parent_instr;
+   } else {
+      return src->reg.reg->parent_instr;
+   }
+}
+
 static inline nir_dest
 nir_dest_for_reg(nir_register *reg)
 {

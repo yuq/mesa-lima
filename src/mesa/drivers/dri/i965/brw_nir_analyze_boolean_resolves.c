@@ -43,13 +43,7 @@
 static uint8_t
 get_resolve_status_for_src(nir_src *src)
 {
-   nir_instr *src_instr;
-   if (src->is_ssa) {
-      src_instr = src->ssa->parent_instr;
-   } else {
-      src_instr = src->reg.reg->parent_instr;
-   }
-
+   nir_instr *src_instr = nir_src_get_parent_instr(src);
    if (src_instr) {
       uint8_t resolve_status = src_instr->pass_flags & BRW_NIR_BOOLEAN_MASK;
 
@@ -72,13 +66,7 @@ get_resolve_status_for_src(nir_src *src)
 static bool
 src_mark_needs_resolve(nir_src *src, void *void_state)
 {
-   nir_instr *src_instr;
-   if (src->is_ssa) {
-      src_instr = src->ssa->parent_instr;
-   } else {
-      src_instr = src->reg.reg->parent_instr;
-   }
-
+   nir_instr *src_instr = nir_src_get_parent_instr(src);
    if (src_instr) {
       uint8_t resolve_status = src_instr->pass_flags & BRW_NIR_BOOLEAN_MASK;
 
