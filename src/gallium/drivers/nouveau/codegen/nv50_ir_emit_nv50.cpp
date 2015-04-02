@@ -1942,7 +1942,7 @@ CodeEmitterNV50::getMinEncodingSize(const Instruction *i) const
 
    // check constraints on short MAD
    if (info.srcNr >= 2 && i->srcExists(2)) {
-      if (!i->defExists(0) ||
+      if (!i->defExists(0) || !isFloatType(i->dType) ||
           i->def(0).rep()->reg.data.id != i->src(2).rep()->reg.data.id)
          return 8;
    }
