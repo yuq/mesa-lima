@@ -191,8 +191,6 @@ unop("fround_even", tfloat, "_mesa_roundevenf(src0)")
 
 unop("fsin", tfloat, "sinf(src0)")
 unop("fcos", tfloat, "cosf(src0)")
-unop("fsin_reduced", tfloat, "sinf(src0)")
-unop("fcos_reduced", tfloat, "cosf(src0)")
 
 
 # Partial derivatives.
