@@ -144,6 +144,11 @@ brw_link_shader(struct gl_context *ctx, struct gl_shader_program *shProg)
 
       _mesa_copy_linked_program_data((gl_shader_stage) stage, shProg, prog);
 
+      /* Temporary memory context for any new IR. */
+      void *mem_ctx = ralloc_context(NULL);
+
+      ralloc_adopt(mem_ctx, shader->base.ir);
+
       bool progress;
 
       /* lower_packing_builtins() inserts arithmetic instructions, so it
@@ -249,6 +254,13 @@ brw_link_shader(struct gl_context *ctx, struct gl_shader_program *shProg)
       brw_add_texrect_params(prog);
 
       _mesa_reference_program(ctx, &prog, NULL);
+
+      /* Now that we've finished altering the linked IR, reparent any live IR back
+       * to the permanent memory context, and free the temporary one (discarding any
+       * junk we optimized away).
+       */
+      reparent_ir(shader->base.ir, shader->base.ir);
+      ralloc_free(mem_ctx);
 
       if (ctx->_Shader->Flags & GLSL_DUMP) {
          fprintf(stderr, "\n");
