@@ -101,8 +101,8 @@ get_mul_for_src(nir_alu_src *src, uint8_t swizzle[4], bool *negate, bool *abs)
       break;
 
    case nir_op_fmul:
-      /* Only absorbe a fmul into a ffma if the fmul is is only used in fadd
-       * operations.  This prevents us from being too agressive with our
+      /* Only absorb a fmul into a ffma if the fmul is is only used in fadd
+       * operations.  This prevents us from being too aggressive with our
        * fusing which can actually lead to more instructions.
        */
       if (!are_all_uses_fadd(&alu->dest.dest.ssa))
