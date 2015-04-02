@@ -283,6 +283,15 @@ void brw_emit_sampler_state(struct brw_context *brw,
                             bool non_normalized_coordinates,
                             uint32_t border_color_offset);
 
+void brw_update_sampler_state(struct brw_context *brw,
+                              GLenum target, bool tex_cube_map_seamless,
+                              GLfloat tex_unit_lod_bias,
+                              mesa_format format, GLenum base_format,
+                              bool is_integer_format,
+                              const struct gl_sampler_object *sampler,
+                              uint32_t *sampler_state,
+                              uint32_t batch_offset_for_sampler_state);
+
 /* gen6_sf_state.c */
 void
 calculate_attr_overrides(const struct brw_context *brw,
