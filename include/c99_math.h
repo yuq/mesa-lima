@@ -83,7 +83,11 @@ roundf(float x)
 
 
 #if (defined(_MSC_VER) && _MSC_VER < 1800) || \
-    (!defined(_MSC_VER) && __STDC_VERSION__ < 199901L && !defined(__cplusplus))
+    (!defined(_MSC_VER) && \
+     __STDC_VERSION__ < 199901L && \
+     (!defined(_XOPEN_SOURCE) || _XOPEN_SOURCE < 600) && \
+     !defined(__cplusplus))
+
 static inline long int
 lrint(double d)
 {
@@ -135,6 +139,7 @@ llrintf(float f)
 
    return rounded;
 }
+
 #endif /* C99 */
 
 
