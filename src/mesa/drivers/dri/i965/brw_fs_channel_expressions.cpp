@@ -232,8 +232,6 @@ ir_channel_expressions_visitor::visit_leave(ir_assignment *ir)
    case ir_unop_round_even:
    case ir_unop_sin:
    case ir_unop_cos:
-   case ir_unop_sin_reduced:
-   case ir_unop_cos_reduced:
    case ir_unop_dFdx:
    case ir_unop_dFdx_coarse:
    case ir_unop_dFdx_fine:

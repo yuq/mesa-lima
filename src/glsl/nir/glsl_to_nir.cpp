@@ -1087,12 +1087,6 @@ nir_visitor::visit(ir_expression *ir)
    case ir_unop_round_even: emit(nir_op_fround_even, dest_size, srcs); break;
    case ir_unop_sin:   emit(nir_op_fsin,   dest_size, srcs); break;
    case ir_unop_cos:   emit(nir_op_fcos,   dest_size, srcs); break;
-   case ir_unop_sin_reduced:
-      emit(nir_op_fsin_reduced, dest_size, srcs);
-      break;
-   case ir_unop_cos_reduced:
-      emit(nir_op_fcos_reduced, dest_size, srcs);
-      break;
    case ir_unop_dFdx:        emit(nir_op_fddx,        dest_size, srcs); break;
    case ir_unop_dFdy:        emit(nir_op_fddy,        dest_size, srcs); break;
    case ir_unop_dFdx_fine:   emit(nir_op_fddx_fine,   dest_size, srcs); break;

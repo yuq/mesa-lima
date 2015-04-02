@@ -1411,11 +1411,9 @@ vec4_visitor::visit(ir_expression *ir)
    case ir_unop_log:
       unreachable("not reached: should be handled by ir_explog_to_explog2");
    case ir_unop_sin:
-   case ir_unop_sin_reduced:
       emit_math(SHADER_OPCODE_SIN, result_dst, op[0]);
       break;
    case ir_unop_cos:
-   case ir_unop_cos_reduced:
       emit_math(SHADER_OPCODE_COS, result_dst, op[0]);
       break;
 

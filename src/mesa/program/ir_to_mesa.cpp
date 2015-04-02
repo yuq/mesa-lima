@@ -1122,12 +1122,6 @@ ir_to_mesa_visitor::visit(ir_expression *ir)
    case ir_unop_cos:
       emit_scalar(ir, OPCODE_COS, result_dst, op[0]);
       break;
-   case ir_unop_sin_reduced:
-      emit_scs(ir, OPCODE_SIN, result_dst, op[0]);
-      break;
-   case ir_unop_cos_reduced:
-      emit_scs(ir, OPCODE_COS, result_dst, op[0]);
-      break;
 
    case ir_unop_dFdx:
       emit(ir, OPCODE_DDX, result_dst, op[0]);

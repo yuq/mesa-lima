@@ -240,8 +240,6 @@ ir_expression::ir_expression(int op, ir_rvalue *op0)
    case ir_unop_round_even:
    case ir_unop_sin:
    case ir_unop_cos:
-   case ir_unop_sin_reduced:
-   case ir_unop_cos_reduced:
    case ir_unop_dFdx:
    case ir_unop_dFdx_coarse:
    case ir_unop_dFdx_fine:
@@ -542,8 +540,6 @@ static const char *const operator_strs[] = {
    "round_even",
    "sin",
    "cos",
-   "sin_reduced",
-   "cos_reduced",
    "dFdx",
    "dFdxCoarse",
    "dFdxFine",
