@@ -1616,6 +1616,8 @@ void nir_lower_tex_projector(nir_shader *shader);
 void nir_lower_atomics(nir_shader *shader);
 void nir_lower_to_source_mods(nir_shader *shader);
 
+void nir_normalize_cubemap_coords(nir_shader *shader);
+
 void nir_live_variables_impl(nir_function_impl *impl);
 bool nir_ssa_defs_interfere(nir_ssa_def *a, nir_ssa_def *b);
 
