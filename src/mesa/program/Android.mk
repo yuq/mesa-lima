@@ -44,6 +44,7 @@ include $(CLEAR_VARS)
 
 LOCAL_MODULE := libmesa_program
 LOCAL_MODULE_CLASS := STATIC_LIBRARIES
+LOCAL_STATIC_LIBRARIES := libmesa_glsl
 
 intermediates := $(call local-intermediates-dir)
 
