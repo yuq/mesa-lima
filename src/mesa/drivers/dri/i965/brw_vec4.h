@@ -314,9 +314,6 @@ public:
    void emit_scalar(ir_instruction *ir, enum prog_opcode op,
 		    dst_reg dst, src_reg src0, src_reg src1);
 
-   void emit_scs(ir_instruction *ir, enum prog_opcode op,
-		 dst_reg dst, const src_reg &src);
-
    src_reg fix_3src_operand(src_reg src);
 
    void emit_math(enum opcode opcode, const dst_reg &dst, const src_reg &src0,
