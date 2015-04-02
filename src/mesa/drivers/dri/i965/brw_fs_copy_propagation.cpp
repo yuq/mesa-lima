@@ -475,7 +475,6 @@ fs_visitor::try_constant_propagate(fs_inst *inst, acp_entry *entry)
          continue;
 
       fs_reg val = entry->src;
-      val.effective_width = inst->src[i].effective_width;
       val.type = inst->src[i].type;
 
       if (inst->src[i].abs) {
@@ -699,13 +698,13 @@ fs_visitor::opt_copy_propagate_local(void *copy_prop_ctx, bblock_t *block,
                  inst->dst.file == GRF) {
          int offset = 0;
          for (int i = 0; i < inst->sources; i++) {
-            int regs_written = ((inst->src[i].effective_width *
-                                 type_sz(inst->src[i].type)) + 31) / 32;
+            int effective_width = i < inst->header_size ? 8 : inst->exec_size;
+            int regs_written = effective_width / 8;
             if (inst->src[i].file == GRF) {
                acp_entry *entry = ralloc(copy_prop_ctx, acp_entry);
                entry->dst = inst->dst;
                entry->dst.reg_offset = offset;
-               entry->dst.width = inst->src[i].effective_width;
+               entry->dst.width = effective_width;
                entry->src = inst->src[i];
                entry->regs_written = regs_written;
                entry->opcode = inst->opcode;

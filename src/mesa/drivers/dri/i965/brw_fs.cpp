@@ -90,31 +90,6 @@ fs_inst::init(enum opcode opcode, uint8_t exec_size, const fs_reg &dst,
    }
    assert(this->exec_size != 0);
 
-   for (unsigned i = 0; i < sources; ++i) {
-      switch (this->src[i].file) {
-      case BAD_FILE:
-         this->src[i].effective_width = 8;
-         break;
-      case GRF:
-      case HW_REG:
-      case ATTR:
-         assert(this->src[i].width > 0);
-         if (this->src[i].width == 1) {
-            this->src[i].effective_width = this->exec_size;
-         } else {
-            this->src[i].effective_width = this->src[i].width;
-         }
-         break;
-      case IMM:
-      case UNIFORM:
-         this->src[i].effective_width = this->exec_size;
-         break;
-      default:
-         unreachable("Invalid source register file");
-      }
-   }
-   this->dst.effective_width = this->exec_size;
-
    this->conditional_mod = BRW_CONDITIONAL_NONE;
 
    /* This will be the case for almost all instructions. */

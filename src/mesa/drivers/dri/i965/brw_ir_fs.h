@@ -68,14 +68,6 @@ public:
     */
    uint8_t width;
 
-   /**
-    * Returns the effective register width when used as a source in the
-    * given instruction.  Registers such as uniforms and immediates
-    * effectively take on the width of the instruction in which they are
-    * used.
-    */
-   uint8_t effective_width;
-
    /** Register region horizontal stride */
    uint8_t stride;
 };
