@@ -55,9 +55,6 @@ MESA_DRI_SHARED_LIBRARIES := \
 	libglapi \
 	liblog
 
-# All DRI modules must add this to LOCAL_GENERATED_SOURCES.
-MESA_DRI_OPTIONS_H := $(call intermediates-dir-for,STATIC_LIBRARIES,libmesa_dri_common)/xmlpool/options.h
-
 #-----------------------------------------------
 # Build drivers and libmesa_dri_common
 
