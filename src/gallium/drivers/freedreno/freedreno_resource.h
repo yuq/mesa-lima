@@ -30,6 +30,7 @@
 #define FREEDRENO_RESOURCE_H_
 
 #include "util/u_double_list.h"
+#include "util/u_range.h"
 #include "util/u_transfer.h"
 
 #include "freedreno_util.h"
@@ -68,6 +69,8 @@ struct fd_resource {
 	struct fd_resource_slice slices[MAX_MIP_LEVELS];
 	uint32_t timestamp;
 	bool dirty, reading;
+	/* buffer range that has been initialized */
+	struct util_range valid_buffer_range;
 
 	struct list_head list;
 };

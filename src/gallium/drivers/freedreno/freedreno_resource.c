@@ -59,12 +59,19 @@ realloc_bo(struct fd_resource *rsc, uint32_t size)
 	rsc->timestamp = 0;
 	rsc->dirty = rsc->reading = false;
 	list_delinit(&rsc->list);
+	util_range_set_empty(&rsc->valid_buffer_range);
 }
 
 static void fd_resource_transfer_flush_region(struct pipe_context *pctx,
 		struct pipe_transfer *ptrans,
 		const struct pipe_box *box)
 {
+	struct fd_resource *rsc = fd_resource(ptrans->resource);
+
+	if (ptrans->resource->target == PIPE_BUFFER)
+		util_range_add(&rsc->valid_buffer_range,
+					   ptrans->box.x + box->x,
+					   ptrans->box.x + box->x + box->width);
 }
 
 static void
@@ -75,6 +82,11 @@ fd_resource_transfer_unmap(struct pipe_context *pctx,
 	struct fd_resource *rsc = fd_resource(ptrans->resource);
 	if (!(ptrans->usage & PIPE_TRANSFER_UNSYNCHRONIZED))
 		fd_bo_cpu_fini(rsc->bo);
+
+	util_range_add(&rsc->valid_buffer_range,
+				   ptrans->box.x,
+				   ptrans->box.x + ptrans->box.width);
+
 	pipe_resource_reference(&ptrans->resource, NULL);
 	util_slab_free(&ctx->transfer_pool, ptrans);
 }
@@ -120,6 +132,13 @@ fd_resource_transfer_map(struct pipe_context *pctx,
 
 	if (usage & PIPE_TRANSFER_DISCARD_WHOLE_RESOURCE) {
 		realloc_bo(rsc, fd_bo_size(rsc->bo));
+	} else if ((usage & PIPE_TRANSFER_WRITE) &&
+			   prsc->target == PIPE_BUFFER &&
+			   !util_ranges_intersect(&rsc->valid_buffer_range,
+									  box->x, box->x + box->width)) {
+		/* We are trying to write to a previously uninitialized range. No need
+		 * to wait.
+		 */
 	} else if (!(usage & PIPE_TRANSFER_UNSYNCHRONIZED)) {
 		/* If the GPU is writing to the resource, or if it is reading from the
 		 * resource and we're trying to write to it, flush the renders.
@@ -172,6 +191,7 @@ fd_resource_destroy(struct pipe_screen *pscreen,
 	if (rsc->bo)
 		fd_bo_del(rsc->bo);
 	list_delinit(&rsc->list);
+	util_range_destroy(&rsc->valid_buffer_range);
 	FREE(rsc);
 }
 
@@ -282,6 +302,8 @@ fd_resource_create(struct pipe_screen *pscreen,
 	list_inithead(&rsc->list);
 	prsc->screen = pscreen;
 
+	util_range_init(&rsc->valid_buffer_range);
+
 	rsc->base.vtbl = &fd_resource_vtbl;
 	rsc->cpp = util_format_get_blocksize(tmpl->format);
 
@@ -345,6 +367,8 @@ fd_resource_from_handle(struct pipe_screen *pscreen,
 	pipe_reference_init(&prsc->reference, 1);
 	list_inithead(&rsc->list);
 	prsc->screen = pscreen;
+
+	util_range_init(&rsc->valid_buffer_range);
 
 	rsc->bo = fd_screen_bo_from_handle(pscreen, handle, &slice->pitch);
 	if (!rsc->bo)
