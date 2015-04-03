@@ -27,7 +27,7 @@ ifeq ($(LOCAL_MODULE_CLASS),)
 LOCAL_MODULE_CLASS := STATIC_LIBRARIES
 endif
 
-intermediates := $(call local-intermediates-dir)
+intermediates := $(call local-generated-sources-dir)
 
 sources := \
 	glsl_lexer.cpp \
@@ -43,7 +43,6 @@ sources := \
 LOCAL_SRC_FILES := $(filter-out $(sources), $(LOCAL_SRC_FILES))
 
 LOCAL_C_INCLUDES += \
-	$(intermediates) \
 	$(intermediates)/glcpp \
 	$(intermediates)/nir \
 	$(MESA_TOP)/src/glsl/glcpp \

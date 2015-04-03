@@ -46,7 +46,7 @@ LOCAL_MODULE := libmesa_program
 LOCAL_MODULE_CLASS := STATIC_LIBRARIES
 LOCAL_STATIC_LIBRARIES := libmesa_glsl
 
-intermediates := $(call local-intermediates-dir)
+intermediates := $(call local-generated-sources-dir)
 
 # TODO(chadv): In Makefile.sources, move these vars to a different list so we can
 # remove this kludge.
@@ -72,7 +72,6 @@ $(intermediates)/program/lex.yy.c: $(LOCAL_PATH)/program_lexer.l
 	$(local-l-to-c)
 
 LOCAL_C_INCLUDES := \
-	$(intermediates) \
 	$(MESA_TOP)/src/mapi \
 	$(MESA_TOP)/src/mesa \
 	$(MESA_TOP)/src/glsl \

@@ -45,7 +45,7 @@ LOCAL_MODULE := libmesa_util
 
 LOCAL_MODULE_CLASS := STATIC_LIBRARIES
 
-intermediates := $(call local-intermediates-dir)
+intermediates := $(call local-generated-sources-dir)
 LOCAL_GENERATED_SOURCES := $(addprefix $(intermediates)/,$(MESA_UTIL_GENERATED_FILES))
 
 $(LOCAL_GENERATED_SOURCES): PRIVATE_PYTHON := $(MESA_PYTHON2)
@@ -80,7 +80,7 @@ LOCAL_MODULE := libmesa_util
 
 LOCAL_MODULE_CLASS := STATIC_LIBRARIES
 
-intermediates := $(call local-intermediates-dir)
+intermediates := $(call local-generated-sources-dir)
 LOCAL_GENERATED_SOURCES := $(addprefix $(intermediates)/,$(MESA_UTIL_GENERATED_FILES))
 
 $(LOCAL_GENERATED_SOURCES): PRIVATE_PYTHON := $(MESA_PYTHON2)
