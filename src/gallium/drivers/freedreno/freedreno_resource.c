@@ -64,16 +64,6 @@ static void fd_resource_transfer_flush_region(struct pipe_context *pctx,
 		struct pipe_transfer *ptrans,
 		const struct pipe_box *box)
 {
-	struct fd_context *ctx = fd_context(pctx);
-	struct fd_resource *rsc = fd_resource(ptrans->resource);
-
-	if (rsc->dirty)
-		fd_context_render(pctx);
-
-	if (rsc->timestamp) {
-		fd_pipe_wait(ctx->screen->pipe, rsc->timestamp);
-		rsc->timestamp = 0;
-	}
 }
 
 static void
@@ -127,13 +117,19 @@ fd_resource_transfer_map(struct pipe_context *pctx,
 	if (usage & PIPE_TRANSFER_WRITE)
 		op |= DRM_FREEDRENO_PREP_WRITE;
 
-	/* some state trackers (at least XA) don't do this.. */
-	if (!(usage & (PIPE_TRANSFER_FLUSH_EXPLICIT | PIPE_TRANSFER_DISCARD_WHOLE_RESOURCE)))
-		fd_resource_transfer_flush_region(pctx, ptrans, box);
-
 	if (usage & PIPE_TRANSFER_DISCARD_WHOLE_RESOURCE) {
 		realloc_bo(rsc, fd_bo_size(rsc->bo));
 	} else if (!(usage & PIPE_TRANSFER_UNSYNCHRONIZED)) {
+		/* If the GPU is writing to the resource, or if it is reading from the
+		 * resource and we're trying to write to it, flush the renders.
+		 */
+		if (rsc->dirty)
+			fd_context_render(pctx);
+
+		/* The GPU keeps track of how the various bo's are being used, and
+		 * will wait if necessary for the proper operation to have
+		 * completed.
+		 */
 		ret = fd_bo_cpu_prep(rsc->bo, ctx->screen->pipe, op);
 		if (ret)
 			goto fail;
