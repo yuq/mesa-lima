@@ -24,7 +24,7 @@
 # use c99 compiler by default
 ifeq ($(LOCAL_CC),)
 ifeq ($(LOCAL_IS_HOST_MODULE),true)
-LOCAL_CC := $(HOST_CC) -std=c99
+LOCAL_CC := $(HOST_CC) -std=c99 -D_GNU_SOURCE
 else
 LOCAL_CC := $(TARGET_CC) -std=c99
 endif
