@@ -104,6 +104,9 @@ fs_visitor::emit_nir_code()
    nir_lower_tex_projector(nir);
    nir_validate_shader(nir);
 
+   nir_normalize_cubemap_coords(nir);
+   nir_validate_shader(nir);
+
    nir_split_var_copies(nir);
    nir_validate_shader(nir);
 
