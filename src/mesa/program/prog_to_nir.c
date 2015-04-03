@@ -153,8 +153,7 @@ ptn_get_src(struct ptn_compile *c, const struct prog_src_register *prog_src)
       nir_intrinsic_instr *load =
          nir_intrinsic_instr_create(b->shader, nir_intrinsic_load_var);
       load->num_components = 4;
-      load->variables[0] =
-         nir_deref_var_create(b->shader, c->input_vars[prog_src->Index]);
+      load->variables[0] = nir_deref_var_create(load, c->input_vars[prog_src->Index]);
 
       nir_ssa_dest_init(&load->instr, &load->dest, 4, NULL);
       nir_instr_insert_after_cf_list(b->cf_node_list, &load->instr);
@@ -918,7 +917,7 @@ ptn_add_output_stores(struct ptn_compile *c)
          nir_intrinsic_instr_create(b->shader, nir_intrinsic_store_var);
       store->num_components = 4;
       store->variables[0] =
-         nir_deref_var_create(b->shader, c->output_vars[var->data.location]);
+         nir_deref_var_create(store, c->output_vars[var->data.location]);
       store->src[0].reg.reg = c->output_regs[var->data.location];
       nir_instr_insert_after_cf_list(c->build.cf_node_list, &store->instr);
    }
@@ -962,7 +961,7 @@ setup_registers_and_variables(struct ptn_compile *c)
             nir_intrinsic_instr *load_x =
                nir_intrinsic_instr_create(shader, nir_intrinsic_load_var);
             load_x->num_components = 1;
-            load_x->variables[0] = nir_deref_var_create(shader, var);
+            load_x->variables[0] = nir_deref_var_create(load_x, var);
             nir_ssa_dest_init(&load_x->instr, &load_x->dest, 1, NULL);
             nir_instr_insert_after_cf_list(b->cf_node_list, &load_x->instr);
 
@@ -978,7 +977,7 @@ setup_registers_and_variables(struct ptn_compile *c)
             nir_intrinsic_instr *store =
                nir_intrinsic_instr_create(shader, nir_intrinsic_store_var);
             store->num_components = 4;
-            store->variables[0] = nir_deref_var_create(shader, fullvar);
+            store->variables[0] = nir_deref_var_create(store, fullvar);
             store->src[0] = nir_src_for_ssa(f001);
             nir_instr_insert_after_cf_list(b->cf_node_list, &store->instr);
 

@@ -543,7 +543,7 @@ copy_deref_var(void *mem_ctx, nir_deref_var *deref)
    nir_deref_var *ret = nir_deref_var_create(mem_ctx, deref->var);
    ret->deref.type = deref->deref.type;
    if (deref->deref.child)
-      ret->deref.child = nir_copy_deref(mem_ctx, deref->deref.child);
+      ret->deref.child = nir_copy_deref(ret, deref->deref.child);
    return ret;
 }
 
@@ -558,7 +558,7 @@ copy_deref_array(void *mem_ctx, nir_deref_array *deref)
    }
    ret->deref.type = deref->deref.type;
    if (deref->deref.child)
-      ret->deref.child = nir_copy_deref(mem_ctx, deref->deref.child);
+      ret->deref.child = nir_copy_deref(ret, deref->deref.child);
    return ret;
 }
 
@@ -568,7 +568,7 @@ copy_deref_struct(void *mem_ctx, nir_deref_struct *deref)
    nir_deref_struct *ret = nir_deref_struct_create(mem_ctx, deref->index);
    ret->deref.type = deref->deref.type;
    if (deref->deref.child)
-      ret->deref.child = nir_copy_deref(mem_ctx, deref->deref.child);
+      ret->deref.child = nir_copy_deref(ret, deref->deref.child);
    return ret;
 }
 
