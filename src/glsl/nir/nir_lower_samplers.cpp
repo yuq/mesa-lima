@@ -90,7 +90,7 @@ lower_sampler(nir_tex_instr *instr, struct gl_shader_program *shader_program,
                ralloc_asprintf_append(&name, "[%u]", deref_array->base_offset);
             break;
          case nir_deref_array_type_indirect: {
-            instr->src = reralloc(mem_ctx, instr->src, nir_tex_src,
+            instr->src = reralloc(instr, instr->src, nir_tex_src,
                                   instr->num_srcs + 1);
             memset(&instr->src[instr->num_srcs], 0, sizeof *instr->src);
             instr->src[instr->num_srcs].src_type = nir_tex_src_sampler_offset;
