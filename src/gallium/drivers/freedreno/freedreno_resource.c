@@ -57,7 +57,8 @@ realloc_bo(struct fd_resource *rsc, uint32_t size)
 
 	rsc->bo = fd_bo_new(screen->dev, size, flags);
 	rsc->timestamp = 0;
-	rsc->dirty = false;
+	rsc->dirty = rsc->reading = false;
+	list_delinit(&rsc->list);
 }
 
 static void fd_resource_transfer_flush_region(struct pipe_context *pctx,
@@ -170,6 +171,7 @@ fd_resource_destroy(struct pipe_screen *pscreen,
 	struct fd_resource *rsc = fd_resource(prsc);
 	if (rsc->bo)
 		fd_bo_del(rsc->bo);
+	list_delinit(&rsc->list);
 	FREE(rsc);
 }
 
@@ -277,6 +279,7 @@ fd_resource_create(struct pipe_screen *pscreen,
 	*prsc = *tmpl;
 
 	pipe_reference_init(&prsc->reference, 1);
+	list_inithead(&rsc->list);
 	prsc->screen = pscreen;
 
 	rsc->base.vtbl = &fd_resource_vtbl;
@@ -340,6 +343,7 @@ fd_resource_from_handle(struct pipe_screen *pscreen,
 	*prsc = *tmpl;
 
 	pipe_reference_init(&prsc->reference, 1);
+	list_inithead(&rsc->list);
 	prsc->screen = pscreen;
 
 	rsc->bo = fd_screen_bo_from_handle(pscreen, handle, &slice->pitch);

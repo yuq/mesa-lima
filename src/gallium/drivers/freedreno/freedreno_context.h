@@ -165,6 +165,9 @@ struct fd_context {
 	struct fd_bo *query_bo;
 	uint32_t query_tile_stride;
 
+	/* list of resources used by currently-unsubmitted renders */
+	struct list_head used_resources;
+
 	/* table with PIPE_PRIM_MAX entries mapping PIPE_PRIM_x to
 	 * DI_PT_x value to use for draw initiator.  There are some
 	 * slight differences between generation:

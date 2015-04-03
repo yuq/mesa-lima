@@ -95,6 +95,7 @@ fd_context_render(struct pipe_context *pctx)
 {
 	struct fd_context *ctx = fd_context(pctx);
 	struct pipe_framebuffer_state *pfb = &ctx->framebuffer;
+	struct fd_resource *rsc, *rsc_tmp;
 	int i;
 
 	DBG("needs_flush: %d", ctx->needs_flush);
@@ -122,6 +123,15 @@ fd_context_render(struct pipe_context *pctx)
 			fd_resource(pfb->cbufs[i]->texture)->dirty = false;
 	if (pfb->zsbuf)
 		fd_resource(pfb->zsbuf->texture)->dirty = false;
+
+	/* go through all the used resources and clear their reading flag */
+	LIST_FOR_EACH_ENTRY_SAFE(rsc, rsc_tmp, &ctx->used_resources, list) {
+		assert(rsc->reading);
+		rsc->reading = false;
+		list_delinit(&rsc->list);
+	}
+
+	assert(LIST_IS_EMPTY(&ctx->used_resources));
 }
 
 static void
