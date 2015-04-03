@@ -275,6 +275,16 @@ is_logic_op(enum opcode opcode)
            opcode == BRW_OPCODE_NOT);
 }
 
+static bool
+can_change_source_types(fs_inst *inst)
+{
+   return !inst->src[0].abs && !inst->src[0].negate &&
+          (inst->opcode == BRW_OPCODE_MOV ||
+           (inst->opcode == BRW_OPCODE_SEL &&
+            inst->predicate != BRW_PREDICATE_NONE &&
+            !inst->src[1].abs && !inst->src[1].negate));
+}
+
 bool
 fs_visitor::try_copy_propagate(fs_inst *inst, int arg, acp_entry *entry)
 {
@@ -346,7 +356,9 @@ fs_visitor::try_copy_propagate(fs_inst *inst, int arg, acp_entry *entry)
         type_sz(inst->src[arg].type)) % type_sz(entry->src.type) != 0)
       return false;
 
-   if (has_source_modifiers && entry->dst.type != inst->src[arg].type)
+   if (has_source_modifiers &&
+       entry->dst.type != inst->src[arg].type &&
+       !can_change_source_types(inst))
       return false;
 
    if (brw->gen >= 8 && (entry->src.negate || entry->src.abs) &&
@@ -412,9 +424,23 @@ fs_visitor::try_copy_propagate(fs_inst *inst, int arg, acp_entry *entry)
       break;
    }
 
-   if (!inst->src[arg].abs) {
-      inst->src[arg].abs = entry->src.abs;
-      inst->src[arg].negate ^= entry->src.negate;
+   if (has_source_modifiers) {
+      if (entry->dst.type != inst->src[arg].type) {
+         /* We are propagating source modifiers from a MOV with a different
+          * type.  If we got here, then we can just change the source and
+          * destination types of the instruction and keep going.
+          */
+         assert(can_change_source_types(inst));
+         for (int i = 0; i < inst->sources; i++) {
+            inst->src[i].type = entry->dst.type;
+         }
+         inst->dst.type = entry->dst.type;
+      }
+
+      if (!inst->src[arg].abs) {
+         inst->src[arg].abs = entry->src.abs;
+         inst->src[arg].negate ^= entry->src.negate;
+      }
    }
 
    return true;
