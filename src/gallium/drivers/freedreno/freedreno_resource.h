@@ -66,7 +66,7 @@ struct fd_resource {
 	uint32_t layer_size;
 	struct fd_resource_slice slices[MAX_MIP_LEVELS];
 	uint32_t timestamp;
-	bool dirty;
+	bool dirty, reading;
 };
 
 static INLINE struct fd_resource *

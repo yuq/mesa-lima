@@ -123,7 +123,8 @@ fd_resource_transfer_map(struct pipe_context *pctx,
 		/* If the GPU is writing to the resource, or if it is reading from the
 		 * resource and we're trying to write to it, flush the renders.
 		 */
-		if (rsc->dirty)
+		if (rsc->dirty ||
+			((ptrans->usage & PIPE_TRANSFER_WRITE) && rsc->reading))
 			fd_context_render(pctx);
 
 		/* The GPU keeps track of how the various bo's are being used, and
