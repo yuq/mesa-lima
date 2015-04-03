@@ -162,8 +162,6 @@ fd4_sampler_view_create(struct pipe_context *pctx, struct pipe_resource *prsc,
 	so->base.reference.count = 1;
 	so->base.context = pctx;
 
-	so->tex_resource =  rsc;
-
 	so->texconst0 =
 		A4XX_TEX_CONST_0_TYPE(tex_type(prsc->target)) |
 		A4XX_TEX_CONST_0_FMT(fd4_pipe2tex(cso->format)) |

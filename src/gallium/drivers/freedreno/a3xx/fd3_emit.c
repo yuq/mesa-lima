@@ -262,7 +262,7 @@ emit_textures(struct fd_context *ctx, struct fd_ringbuffer *ring,
 			const struct fd3_pipe_sampler_view *view = tex->textures[i] ?
 					fd3_pipe_sampler_view(tex->textures[i]) :
 					&dummy_view;
-			struct fd_resource *rsc = view->tex_resource;
+			struct fd_resource *rsc = fd_resource(view->base.texture);
 			unsigned start = view->base.u.tex.first_level;
 			unsigned end   = view->base.u.tex.last_level;
 
