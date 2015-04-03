@@ -39,7 +39,7 @@ static __inline void TAG(quad)( CTX_ARG,
    GLuint j;
 
    if (DO_DEBUG_VERTS) {
-      fprintf(stderr, "%s\n", __FUNCTION__);
+      fprintf(stderr, "%s\n", __func__);
       PRINT_VERTEX(v0);
       PRINT_VERTEX(v1);
       PRINT_VERTEX(v2);
@@ -63,7 +63,7 @@ static __inline void TAG(quad)( CTX_ARG,
    GLuint j;
 
    if (DO_DEBUG_VERTS) {
-      fprintf(stderr, "%s\n", __FUNCTION__);
+      fprintf(stderr, "%s\n", __func__);
       PRINT_VERTEX(v0);
       PRINT_VERTEX(v1);
       PRINT_VERTEX(v2);
@@ -90,7 +90,7 @@ static __inline void TAG(triangle)( CTX_ARG,
    GLuint j;
 
    if (DO_DEBUG_VERTS) {
-      fprintf(stderr, "%s\n", __FUNCTION__);
+      fprintf(stderr, "%s\n", __func__);
       PRINT_VERTEX(v0);
       PRINT_VERTEX(v1);
       PRINT_VERTEX(v2);
@@ -139,7 +139,7 @@ static void TAG(fast_clipped_poly)( struct gl_context *ctx, const GLuint *elts,
    GLuint i,j;
 
    if (DO_DEBUG_VERTS) {
-      fprintf(stderr, "%s\n", __FUNCTION__);
+      fprintf(stderr, "%s\n", __func__);
       PRINT_VERTEX(VERT(elts[0]));
       PRINT_VERTEX(VERT(elts[1]));
    }

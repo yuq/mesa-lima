@@ -121,7 +121,7 @@ static void TAG(triangle)( struct gl_context *ctx, GLuint e0, GLuint e1, GLuint 
    GLuint facing = 0;
    LOCAL_VARS(3);
 
-/*     fprintf(stderr, "%s\n", __FUNCTION__); */
+/*     fprintf(stderr, "%s\n", __func__); */
 
    v[0] = (VERTEX *)GET_VERTEX(e0);
    v[1] = (VERTEX *)GET_VERTEX(e1);
