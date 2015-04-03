@@ -560,6 +560,12 @@ brw_initialize_context_constants(struct brw_context *brw)
       .lower_ffma = true,
    };
 
+   bool use_nir_default[MESA_SHADER_STAGES];
+   use_nir_default[MESA_SHADER_VERTEX] = false;
+   use_nir_default[MESA_SHADER_GEOMETRY] = false;
+   use_nir_default[MESA_SHADER_FRAGMENT] = false;
+   use_nir_default[MESA_SHADER_COMPUTE] = false;
+
    /* We want the GLSL compiler to emit code that uses condition codes */
    for (int i = 0; i < MESA_SHADER_STAGES; i++) {
       ctx->Const.ShaderCompilerOptions[i].MaxIfDepth = brw->gen < 6 ? 16 : UINT_MAX;
@@ -573,7 +579,9 @@ brw_initialize_context_constants(struct brw_context *brw)
 	 (i == MESA_SHADER_FRAGMENT);
       ctx->Const.ShaderCompilerOptions[i].EmitNoIndirectUniform = false;
       ctx->Const.ShaderCompilerOptions[i].LowerClipDistance = true;
-      ctx->Const.ShaderCompilerOptions[i].NirOptions = &nir_options;
+
+      if (brw_env_var_as_boolean("INTEL_USE_NIR", use_nir_default[i]))
+         ctx->Const.ShaderCompilerOptions[i].NirOptions = &nir_options;
    }
 
    ctx->Const.ShaderCompilerOptions[MESA_SHADER_VERTEX].OptimizeForAOS = true;

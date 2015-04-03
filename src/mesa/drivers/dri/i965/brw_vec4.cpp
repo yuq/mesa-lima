@@ -1823,7 +1823,9 @@ brw_vs_emit(struct brw_context *brw,
    if (unlikely(INTEL_DEBUG & DEBUG_VS))
       brw_dump_ir("vertex", prog, &shader->base, &c->vp->program.Base);
 
-   if (brw->scalar_vs && (prog || brw_env_var_as_boolean("INTEL_USE_NIR", false))) {
+   if (brw->scalar_vs &&
+       (prog ||
+        brw->ctx.Const.ShaderCompilerOptions[MESA_SHADER_VERTEX].NirOptions)) {
       fs_visitor v(brw, mem_ctx, &c->key, prog_data, prog, &c->vp->program, 8);
       if (!v.run_vs()) {
          if (prog) {
