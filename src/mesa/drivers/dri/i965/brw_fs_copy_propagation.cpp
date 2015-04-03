@@ -307,7 +307,7 @@ fs_visitor::try_copy_propagate(fs_inst *inst, int arg, acp_entry *entry)
     * instead. See also resolve_ud_negate() and comment in
     * fs_generator::generate_code.
     */
-   if (inst->src[arg].type == BRW_REGISTER_TYPE_UD &&
+   if (entry->src.type == BRW_REGISTER_TYPE_UD &&
        entry->src.negate)
       return false;
 
