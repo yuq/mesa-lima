@@ -535,3 +535,15 @@ xa_surface_format(const struct xa_surface *srf)
 {
     return srf->fdesc.xa_format;
 }
+
+/*
+ * _mesa_error_no_memory() is expected by NIR to be provided by the
+ * user.  Normally this is in mesa st, but other state trackers
+ * must provide their own.
+ */
+void _mesa_error_no_memory(const char *caller);
+void
+_mesa_error_no_memory(const char *caller)
+{
+	debug_printf("Mesa error: out of memory in %s", caller);
+}
