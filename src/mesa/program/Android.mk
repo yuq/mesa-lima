@@ -78,5 +78,7 @@ LOCAL_C_INCLUDES := \
 	$(MESA_TOP)/src/gallium/auxiliary \
 	$(MESA_TOP)/src/gallium/include
 
+LOCAL_EXPORT_C_INCLUDE_DIRS := $(intermediates)
+
 include $(MESA_COMMON_MK)
 include $(BUILD_STATIC_LIBRARY)

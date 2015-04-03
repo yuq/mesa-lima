@@ -39,6 +39,8 @@ intermediates := $(call local-generated-sources-dir)
 LOCAL_C_INCLUDES := \
     $(MESA_DRI_C_INCLUDES)
 
+LOCAL_EXPORT_C_INCLUDE_DIRS := $(intermediates)
+
 # swrast only
 ifeq ($(MESA_GPU_DRIVERS),swrast)
 LOCAL_CFLAGS := -D__NOT_HAVE_DRM_H
