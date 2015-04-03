@@ -68,7 +68,7 @@ TESTS_ENVIRONMENT= \
 	export PYTHON2=$(PYTHON2); \
 	export PYTHON_FLAGS=$(PYTHON_FLAGS);
 
-noinst_LTLIBRARIES = libglsl.la libglcpp.la
+noinst_LTLIBRARIES = libnir.la libglsl.la libglcpp.la
 check_PROGRAMS =					\
 	glcpp/glcpp					\
 	glsl_test					\
@@ -146,6 +146,12 @@ libglsl_la_SOURCES =					\
 	glsl_parser.cpp					\
 	glsl_parser.h					\
 	$(LIBGLSL_FILES)				\
+	$(NIR_FILES)
+
+libnir_la_SOURCES =					\
+	glsl_types.cpp					\
+	builtin_types.cpp				\
+	glsl_symbol_table.cpp				\
 	$(NIR_FILES)
 
 glsl_compiler_SOURCES = \
