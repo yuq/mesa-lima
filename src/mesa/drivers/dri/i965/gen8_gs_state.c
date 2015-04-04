@@ -82,6 +82,8 @@ gen8_upload_gs_state(struct brw_context *brw)
       uint32_t dw7 = (brw->gs.prog_data->control_data_header_size_hwords <<
                       GEN7_GS_CONTROL_DATA_HEADER_SIZE_SHIFT) |
                       brw->gs.prog_data->dispatch_mode |
+                     ((brw->gs.prog_data->invocations - 1) <<
+                      GEN7_GS_INSTANCE_CONTROL_SHIFT) |
                       GEN6_GS_STATISTICS_ENABLE |
                       (brw->gs.prog_data->include_primitive_id ?
                        GEN7_GS_INCLUDE_PRIMITIVE_ID : 0) |
