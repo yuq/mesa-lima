@@ -448,7 +448,7 @@ fs_visitor::emit_fragment_program_code()
             break;
 
          case TEXTURE_CUBE_INDEX: {
-            coord_components = 4;
+            coord_components = 3;
 
             fs_reg temp = vgrf(glsl_type::float_type);
             fs_reg cubecoord = vgrf(glsl_type::vec3_type);
