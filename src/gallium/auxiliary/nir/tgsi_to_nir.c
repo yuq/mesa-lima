@@ -630,6 +630,12 @@ ttn_dph(nir_builder *b, nir_op op, nir_alu_dest dest, nir_ssa_def **src)
 }
 
 static void
+ttn_umad(nir_builder *b, nir_op op, nir_alu_dest dest, nir_ssa_def **src)
+{
+   ttn_move_dest(b, dest, nir_iadd(b, nir_imul(b, src[0], src[1]), src[2]));
+}
+
+static void
 ttn_arr(nir_builder *b, nir_op op, nir_alu_dest dest, nir_ssa_def **src)
 {
    ttn_move_dest(b, dest, nir_ffloor(b, nir_fadd(b, src[0], nir_imm_float(b, 0.5))));
@@ -1071,7 +1077,7 @@ static const nir_op op_trans[TGSI_OPCODE_LAST] = {
    [TGSI_OPCODE_U2F] = nir_op_u2f,
    [TGSI_OPCODE_UADD] = nir_op_iadd,
    [TGSI_OPCODE_UDIV] = nir_op_udiv,
-   [TGSI_OPCODE_UMAD] = 0, /* XXX */
+   [TGSI_OPCODE_UMAD] = 0,
    [TGSI_OPCODE_UMAX] = nir_op_umax,
    [TGSI_OPCODE_UMIN] = nir_op_umin,
    [TGSI_OPCODE_UMOD] = nir_op_umod,
@@ -1218,6 +1224,10 @@ ttn_emit_instruction(struct ttn_compile *c)
 
    case TGSI_OPCODE_DPH:
       ttn_dph(b, op_trans[tgsi_op], dest, src);
+      break;
+
+   case TGSI_OPCODE_UMAD:
+      ttn_umad(b, op_trans[tgsi_op], dest, src);
       break;
 
    case TGSI_OPCODE_LRP:
