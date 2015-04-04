@@ -1630,6 +1630,7 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
          }
          break;
       case 16:
+      case 32:
          brw_set_default_compression_control(p, BRW_COMPRESSION_COMPRESSED);
          break;
       default:
