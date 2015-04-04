@@ -417,7 +417,8 @@ fd3_program_emit(struct fd_ringbuffer *ring, struct fd3_emit *emit,
 			 * 1's for the .z and .w components.
 			 */
 			if (emit->sprite_coord_enable & (1 << sem2idx(fp->inputs[j].semantic)))
-				vpsrepl[inloc / 16] |= 0x09 << ((inloc % 16) * 2);
+				vpsrepl[inloc / 16] |= (emit->sprite_coord_mode ? 0x0d : 0x09)
+					<< ((inloc % 16) * 2);
 		}
 
 		OUT_PKT0(ring, REG_A3XX_VPC_ATTR, 2);

@@ -56,6 +56,7 @@ struct fd3_emit {
 	uint32_t dirty;
 
 	uint32_t sprite_coord_enable;
+	bool sprite_coord_mode;
 	bool rasterflat;
 
 	/* cached to avoid repeated lookups of same variants: */
