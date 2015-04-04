@@ -201,16 +201,13 @@ wrap_mode_needs_border_color(unsigned wrap_mode)
 static void
 upload_default_color(struct brw_context *brw,
                      const struct gl_sampler_object *sampler,
-                     int unit,
+                     mesa_format format, GLenum base_format,
+                     bool is_integer_format,
                      uint32_t *sdc_offset)
 {
-   struct gl_context *ctx = &brw->ctx;
-   struct gl_texture_unit *texUnit = &ctx->Texture.Unit[unit];
-   struct gl_texture_object *texObj = texUnit->_Current;
-   struct gl_texture_image *firstImage = texObj->Image[0][texObj->BaseLevel];
    union gl_color_union color;
 
-   switch (firstImage->_BaseFormat) {
+   switch (base_format) {
    case GL_DEPTH_COMPONENT:
       /* GL specs that border color for depth textures is taken from the
        * R channel, while the hardware uses A.  Spam R into all the
@@ -257,7 +254,7 @@ upload_default_color(struct brw_context *brw,
     * where we've initialized the A channel to 1.0.  We also have to set
     * the border color alpha to 1.0 in that case.
     */
-   if (firstImage->_BaseFormat == GL_RGB)
+   if (base_format == GL_RGB)
       color.ui[3] = float_as_int(1.0);
 
    if (brw->gen >= 8) {
@@ -269,7 +266,7 @@ upload_default_color(struct brw_context *brw,
       uint32_t *sdc = brw_state_batch(brw, AUB_TRACE_SAMPLER_DEFAULT_COLOR,
                                       4 * 4, 64, sdc_offset);
       memcpy(sdc, color.ui, 4 * 4);
-   } else if (brw->is_haswell && texObj->_IsIntegerFormat) {
+   } else if (brw->is_haswell && is_integer_format) {
       /* Haswell's integer border color support is completely insane:
        * SAMPLER_BORDER_COLOR_STATE is 20 DWords.  The first four are
        * for float colors.  The next 12 DWords are MBZ and only exist to
@@ -283,7 +280,6 @@ upload_default_color(struct brw_context *brw,
       memset(sdc, 0, 20 * 4);
       sdc = &sdc[16];
 
-      mesa_format format = firstImage->TexFormat;
       int bits_per_channel = _mesa_get_format_bits(format, GL_RED_BITS);
 
       /* From the Haswell PRM, "Command Reference: Structures", Page 36:
@@ -314,7 +310,7 @@ upload_default_color(struct brw_context *brw,
          ((uint16_t *) sdc)[5] = c[3]; /* A -> DWord 3, bits 31:16 */
          break;
       case 32:
-         if (firstImage->_BaseFormat == GL_RG) {
+         if (base_format == GL_RG) {
             /* Careful inspection of the tables reveals that for RG32 formats,
              * the green channel needs to go where blue normally belongs.
              */
@@ -510,7 +506,11 @@ brw_update_sampler_state(struct brw_context *brw,
    if (wrap_mode_needs_border_color(wrap_s) ||
        wrap_mode_needs_border_color(wrap_t) ||
        wrap_mode_needs_border_color(wrap_r)) {
-      upload_default_color(brw, sampler, unit, &border_color_offset);
+      const struct gl_texture_image *first_image =
+         texObj->Image[0][texObj->BaseLevel];
+      upload_default_color(brw, sampler,
+                           first_image->TexFormat, first_image->_BaseFormat,
+                           texObj->_IsIntegerFormat, &border_color_offset);
    }
 
    const bool non_normalized_coords = texObj->Target == GL_TEXTURE_RECTANGLE;
