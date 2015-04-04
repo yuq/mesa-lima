@@ -42,6 +42,45 @@
 #include <errno.h>
 
 static void
+fd_invalidate_resource(struct fd_context *ctx, struct pipe_resource *prsc)
+{
+	int i;
+
+	/* Go through the entire state and see if the resource is bound
+	 * anywhere. If it is, mark the relevant state as dirty. This is called on
+	 * realloc_bo.
+	 */
+
+	/* Constbufs */
+	for (i = 1; i < PIPE_MAX_CONSTANT_BUFFERS && !(ctx->dirty & FD_DIRTY_CONSTBUF); i++) {
+		if (ctx->constbuf[PIPE_SHADER_VERTEX].cb[i].buffer == prsc)
+			ctx->dirty |= FD_DIRTY_CONSTBUF;
+		if (ctx->constbuf[PIPE_SHADER_FRAGMENT].cb[i].buffer == prsc)
+			ctx->dirty |= FD_DIRTY_CONSTBUF;
+	}
+
+	/* VBOs */
+	for (i = 0; i < ctx->vtx.vertexbuf.count && !(ctx->dirty & FD_DIRTY_VTXBUF); i++) {
+		if (ctx->vtx.vertexbuf.vb[i].buffer == prsc)
+			ctx->dirty |= FD_DIRTY_VTXBUF;
+	}
+
+	/* Index buffer */
+	if (ctx->indexbuf.buffer == prsc)
+		ctx->dirty |= FD_DIRTY_INDEXBUF;
+
+	/* Textures */
+	for (i = 0; i < ctx->verttex.num_textures && !(ctx->dirty & FD_DIRTY_VERTTEX); i++) {
+		if (ctx->verttex.textures[i]->texture == prsc)
+			ctx->dirty |= FD_DIRTY_VERTTEX;
+	}
+	for (i = 0; i < ctx->fragtex.num_textures && !(ctx->dirty & FD_DIRTY_FRAGTEX); i++) {
+		if (ctx->fragtex.textures[i]->texture == prsc)
+			ctx->dirty |= FD_DIRTY_FRAGTEX;
+	}
+}
+
+static void
 realloc_bo(struct fd_resource *rsc, uint32_t size)
 {
 	struct fd_screen *screen = fd_screen(rsc->base.b.screen);
@@ -132,6 +171,7 @@ fd_resource_transfer_map(struct pipe_context *pctx,
 
 	if (usage & PIPE_TRANSFER_DISCARD_WHOLE_RESOURCE) {
 		realloc_bo(rsc, fd_bo_size(rsc->bo));
+		fd_invalidate_resource(ctx, prsc);
 	} else if ((usage & PIPE_TRANSFER_WRITE) &&
 			   prsc->target == PIPE_BUFFER &&
 			   !util_ranges_intersect(&rsc->valid_buffer_range,
