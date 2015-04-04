@@ -562,6 +562,11 @@ draw_llvm_create_variant(struct draw_llvm *llvm,
 
    memcpy(&variant->key, key, shader->variant_key_size);
 
+   if (gallivm_debug & (GALLIVM_DEBUG_TGSI | GALLIVM_DEBUG_IR)) {
+      tgsi_dump(llvm->draw->vs.vertex_shader->state.tokens, 0);
+      draw_llvm_dump_variant_key(&variant->key);
+   }
+
    vertex_header = create_jit_vertex_header(variant->gallivm, num_inputs);
 
    variant->vertex_header_ptr_type = LLVMPointerType(vertex_header, 0);
@@ -605,11 +610,6 @@ generate_vs(struct draw_llvm_variant *variant,
       draw_jit_context_vs_constants(variant->gallivm, context_ptr);
    LLVMValueRef num_consts_ptr =
       draw_jit_context_num_vs_constants(variant->gallivm, context_ptr);
-
-   if (gallivm_debug & (GALLIVM_DEBUG_TGSI | GALLIVM_DEBUG_IR)) {
-      tgsi_dump(tokens, 0);
-      draw_llvm_dump_variant_key(&variant->key);
-   }
 
    lp_build_tgsi_soa(variant->gallivm,
                      tokens,
