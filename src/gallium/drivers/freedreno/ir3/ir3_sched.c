@@ -110,6 +110,11 @@ static struct ir3_instruction * prev(struct ir3_instruction *instr)
 	return p;
 }
 
+static bool is_sfu_or_mem(struct ir3_instruction *instr)
+{
+	return is_sfu(instr) || is_mem(instr);
+}
+
 static void schedule(struct ir3_sched_ctx *ctx,
 		struct ir3_instruction *instr, bool remove)
 {
@@ -119,7 +124,7 @@ static void schedule(struct ir3_sched_ctx *ctx,
 	 * a nop.. ideally we'd know about this constraint in the
 	 * scheduling and depth calculation..
 	 */
-	if (ctx->scheduled && is_sfu(ctx->scheduled) && is_sfu(instr))
+	if (ctx->scheduled && is_sfu_or_mem(ctx->scheduled) && is_sfu_or_mem(instr))
 		schedule(ctx, ir3_instr_create(block, 0, OPC_NOP), false);
 
 	/* remove from depth list:
