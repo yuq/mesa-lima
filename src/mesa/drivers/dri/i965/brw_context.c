@@ -558,6 +558,7 @@ brw_initialize_context_constants(struct brw_context *brw)
        * re-combine them as a later step.
        */
       .lower_ffma = true,
+      .lower_sub = true,
    };
 
    /* We want the GLSL compiler to emit code that uses condition codes */

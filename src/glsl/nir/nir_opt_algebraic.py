@@ -192,8 +192,8 @@ optimizations = [
    # Subtracts
    (('fsub', a, ('fsub', 0.0, b)), ('fadd', a, b)),
    (('isub', a, ('isub', 0, b)), ('iadd', a, b)),
-   (('fsub', a, b), ('fadd', a, ('fneg', b)), '!options->lower_negate'),
-   (('isub', a, b), ('iadd', a, ('ineg', b)), '!options->lower_negate'),
+   (('fsub', a, b), ('fadd', a, ('fneg', b)), 'options->lower_sub'),
+   (('isub', a, b), ('iadd', a, ('ineg', b)), 'options->lower_sub'),
    (('fneg', a), ('fsub', 0.0, a), 'options->lower_negate'),
    (('ineg', a), ('isub', 0, a), 'options->lower_negate'),
    (('fadd', a, ('fsub', 0.0, b)), ('fsub', a, b)),

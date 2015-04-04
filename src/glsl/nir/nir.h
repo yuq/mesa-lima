@@ -1382,6 +1382,8 @@ typedef struct nir_shader_compiler_options {
    bool lower_fsqrt;
    /** lowers fneg and ineg to fsub and isub. */
    bool lower_negate;
+   /** lowers fsub and isub to fadd+fneg and iadd+ineg. */
+   bool lower_sub;
 
    /* lower {slt,sge,seq,sne} to {flt,fge,feq,fne} + b2f: */
    bool lower_scmp;
