@@ -29,7 +29,8 @@
 #include "nv50/nv50_resource.h"
 
 uint32_t
-nv50_tex_choose_tile_dims_helper(unsigned nx, unsigned ny, unsigned nz)
+nv50_tex_choose_tile_dims_helper(unsigned nx, unsigned ny, unsigned nz,
+                                 boolean is_3d)
 {
    uint32_t tile_mode = 0x000;
 
@@ -41,7 +42,7 @@ nv50_tex_choose_tile_dims_helper(unsigned nx, unsigned ny, unsigned nz)
    else
    if (ny >  8) tile_mode = 0x010; /* height 16 tiles */
 
-   if (nz == 1)
+   if (!is_3d)
       return tile_mode;
    else
       if (tile_mode > 0x020)
@@ -52,14 +53,15 @@ nv50_tex_choose_tile_dims_helper(unsigned nx, unsigned ny, unsigned nz)
    if (nz > 8) return tile_mode | 0x400; /* depth 16 tiles */
    if (nz > 4) return tile_mode | 0x300; /* depth 8 tiles */
    if (nz > 2) return tile_mode | 0x200; /* depth 4 tiles */
+   if (nz > 1) return tile_mode | 0x100; /* depth 2 tiles */
 
-   return tile_mode | 0x100;
+   return tile_mode;
 }
 
 static uint32_t
-nv50_tex_choose_tile_dims(unsigned nx, unsigned ny, unsigned nz)
+nv50_tex_choose_tile_dims(unsigned nx, unsigned ny, unsigned nz, boolean is_3d)
 {
-   return nv50_tex_choose_tile_dims_helper(nx, ny * 2, nz);
+   return nv50_tex_choose_tile_dims_helper(nx, ny * 2, nz, is_3d);
 }
 
 static uint32_t
@@ -304,7 +306,7 @@ nv50_miptree_init_layout_tiled(struct nv50_miptree *mt)
 
       lvl->offset = mt->total_size;
 
-      lvl->tile_mode = nv50_tex_choose_tile_dims(nbx, nby, d);
+      lvl->tile_mode = nv50_tex_choose_tile_dims(nbx, nby, d, mt->layout_3d);
 
       tsx = NV50_TILE_SIZE_X(lvl->tile_mode); /* x is tile row pitch in bytes */
       tsy = NV50_TILE_SIZE_Y(lvl->tile_mode);
