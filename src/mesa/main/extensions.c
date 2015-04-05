@@ -186,6 +186,7 @@ static const struct extension extension_table[] = {
    { "GL_ARB_texture_rectangle",                   o(NV_texture_rectangle),                    GL,             2004 },
    { "GL_ARB_texture_rgb10_a2ui",                  o(ARB_texture_rgb10_a2ui),                  GL,             2009 },
    { "GL_ARB_texture_rg",                          o(ARB_texture_rg),                          GL,             2008 },
+   { "GL_ARB_texture_stencil8",                    o(ARB_texture_stencil8),                    GL,             2013 },
    { "GL_ARB_texture_storage",                     o(dummy_true),                              GL,             2011 },
    { "GL_ARB_texture_storage_multisample",         o(ARB_texture_multisample),                 GL,             2012 },
    { "GL_ARB_texture_view",                        o(ARB_texture_view),                        GL,             2012 },
