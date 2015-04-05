@@ -40,8 +40,6 @@ set_viewport_no_notify(struct gl_context *ctx, unsigned idx,
                        GLfloat x, GLfloat y,
                        GLfloat width, GLfloat height)
 {
-   double scale[3], translate[3];
-
    /* clamp width and height to the implementation dependent range */
    width  = MIN2(width, (GLfloat) ctx->Const.MaxViewportWidth);
    height = MIN2(height, (GLfloat) ctx->Const.MaxViewportHeight);
@@ -236,8 +234,6 @@ static void
 set_depth_range_no_notify(struct gl_context *ctx, unsigned idx,
                           GLclampd nearval, GLclampd farval)
 {
-   double scale[3], translate[3];
-
    if (ctx->ViewportArray[idx].Near == nearval &&
        ctx->ViewportArray[idx].Far == farval)
       return;
