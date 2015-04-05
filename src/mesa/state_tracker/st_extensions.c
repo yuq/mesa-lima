@@ -650,6 +650,9 @@ void st_init_extensions(struct pipe_screen *screen,
                           ARRAY_SIZE(vertex_mapping), PIPE_BUFFER,
                           PIPE_BIND_VERTEX_BUFFER);
 
+   if (extensions->ARB_stencil_texturing)
+      extensions->ARB_texture_stencil8 = GL_TRUE;
+
    /* Figure out GLSL support. */
    glsl_feature_level = screen->get_param(screen, PIPE_CAP_GLSL_FEATURE_LEVEL);
 
