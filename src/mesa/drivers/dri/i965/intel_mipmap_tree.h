@@ -492,6 +492,13 @@ struct intel_mipmap_tree
     */
    uint32_t fast_clear_color_value;
 
+   /**
+    * Disable allocation of auxiliary buffers, such as the HiZ buffer and MCS
+    * buffer. This is useful for sharing the miptree bo with an external client
+    * that doesn't understand auxiliary buffers.
+    */
+   bool disable_aux_buffers;
+
    /* These are also refcounted:
     */
    GLuint refcount;

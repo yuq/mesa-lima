@@ -59,7 +59,8 @@ intel_miptree_alloc_mcs(struct brw_context *brw,
  * created, based on the chip generation and the surface type.
  */
 static enum intel_msaa_layout
-compute_msaa_layout(struct brw_context *brw, mesa_format format, GLenum target)
+compute_msaa_layout(struct brw_context *brw, mesa_format format, GLenum target,
+                    bool disable_aux_buffers)
 {
    /* Prior to Gen7, all MSAA surfaces used IMS layout. */
    if (brw->gen < 7)
@@ -84,6 +85,11 @@ compute_msaa_layout(struct brw_context *brw, mesa_format format, GLenum target)
        * which is expensive.
        */
       if (brw->gen == 7 && _mesa_get_format_datatype(format) == GL_INT) {
+         return INTEL_MSAA_LAYOUT_UMS;
+      } else if (disable_aux_buffers) {
+         /* We can't use the CMS layout because it uses an aux buffer, the MCS
+          * buffer. So fallback to UMS, which is identical to CMS without the
+          * MCS. */
          return INTEL_MSAA_LAYOUT_UMS;
       } else {
          return INTEL_MSAA_LAYOUT_CMS;
@@ -174,6 +180,9 @@ intel_is_non_msrt_mcs_buffer_supported(struct brw_context *brw,
 {
    /* MCS support does not exist prior to Gen7 */
    if (brw->gen < 7)
+      return false;
+
+   if (mt->disable_aux_buffers)
       return false;
 
    /* MCS is only supported for color buffers */
@@ -276,6 +285,7 @@ intel_miptree_create_layout(struct brw_context *brw,
    mt->logical_height0 = height0;
    mt->logical_depth0 = depth0;
    mt->fast_clear_state = INTEL_FAST_CLEAR_STATE_NO_MCS;
+   mt->disable_aux_buffers = false; /* hardcoded for now */
    exec_list_make_empty(&mt->hiz_map);
 
    /* The cpp is bytes per (1, blockheight)-sized block for compressed
@@ -293,7 +303,8 @@ intel_miptree_create_layout(struct brw_context *brw,
 
    if (num_samples > 1) {
       /* Adjust width/height/depth for MSAA */
-      mt->msaa_layout = compute_msaa_layout(brw, format, mt->target);
+      mt->msaa_layout = compute_msaa_layout(brw, format,
+                                            mt->target, mt->disable_aux_buffers);
       if (mt->msaa_layout == INTEL_MSAA_LAYOUT_IMS) {
          /* From the Ivybridge PRM, Volume 1, Part 1, page 108:
           * "If the surface is multisampled and it is a depth or stencil
@@ -439,6 +450,9 @@ intel_miptree_create_layout(struct brw_context *brw,
       mt->array_layout = ALL_SLICES_AT_EACH_LOD;
 
    brw_miptree_layout(brw, mt);
+
+   if (mt->disable_aux_buffers)
+      assert(mt->msaa_layout != INTEL_MSAA_LAYOUT_CMS);
 
    return mt;
 }
@@ -1313,6 +1327,7 @@ intel_miptree_alloc_mcs(struct brw_context *brw,
 {
    assert(brw->gen >= 7); /* MCS only used on Gen7+ */
    assert(mt->mcs_mt == NULL);
+   assert(!mt->disable_aux_buffers);
 
    /* Choose the correct format for the MCS buffer.  All that really matters
     * is that we allocate the right buffer size, since we'll always be
@@ -1379,6 +1394,7 @@ intel_miptree_alloc_non_msrt_mcs(struct brw_context *brw,
                                  struct intel_mipmap_tree *mt)
 {
    assert(mt->mcs_mt == NULL);
+   assert(!mt->disable_aux_buffers);
 
    /* The format of the MCS buffer is opaque to the driver; all that matters
     * is that we get its size and pitch right.  We'll pretend that the format
@@ -1692,6 +1708,9 @@ intel_miptree_wants_hiz_buffer(struct brw_context *brw,
    if (mt->hiz_buf != NULL)
       return false;
 
+   if (mt->disable_aux_buffers)
+      return false;
+
    switch (mt->format) {
    case MESA_FORMAT_Z_FLOAT32:
    case MESA_FORMAT_Z32_FLOAT_S8X24_UINT:
@@ -1709,6 +1728,7 @@ intel_miptree_alloc_hiz(struct brw_context *brw,
 			struct intel_mipmap_tree *mt)
 {
    assert(mt->hiz_buf == NULL);
+   assert(!mt->disable_aux_buffers);
 
    if (brw->gen == 7) {
       mt->hiz_buf = intel_gen7_hiz_buf_create(brw, mt);
