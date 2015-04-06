@@ -798,22 +798,3 @@ brw_depth_format(struct brw_context *brw, mesa_format format)
       unreachable("Unexpected depth format.");
    }
 }
-
-/** Can HiZ be enabled on a depthbuffer of the given format? */
-bool
-brw_is_hiz_depth_format(struct brw_context *brw, mesa_format format)
-{
-   if (!brw->has_hiz)
-      return false;
-
-   switch (format) {
-   case MESA_FORMAT_Z_FLOAT32:
-   case MESA_FORMAT_Z32_FLOAT_S8X24_UINT:
-   case MESA_FORMAT_Z24_UNORM_X8_UINT:
-   case MESA_FORMAT_Z24_UNORM_S8_UINT:
-   case MESA_FORMAT_Z_UNORM16:
-      return true;
-   default:
-      return false;
-   }
-}

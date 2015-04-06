@@ -561,7 +561,7 @@ intel_renderbuffer_update_wrapper(struct brw_context *brw,
 
    intel_renderbuffer_set_draw_offset(irb);
 
-   if (mt->hiz_buf == NULL && brw_is_hiz_depth_format(brw, rb->Format)) {
+   if (intel_miptree_wants_hiz_buffer(brw, mt)) {
       intel_miptree_alloc_hiz(brw, mt);
       if (!mt->hiz_buf)
 	 return false;
@@ -1032,7 +1032,7 @@ intel_renderbuffer_move_to_temp(struct brw_context *brw,
                                  INTEL_MIPTREE_TILING_ANY,
                                  false);
 
-   if (brw_is_hiz_depth_format(brw, new_mt->format)) {
+   if (intel_miptree_wants_hiz_buffer(brw, new_mt)) {
       intel_miptree_alloc_hiz(brw, new_mt);
    }
 

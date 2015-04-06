@@ -632,12 +632,15 @@ intel_miptree_copy_teximage(struct brw_context *brw,
  * functions on a miptree without HiZ. In that case, each function is a no-op.
  */
 
+bool
+intel_miptree_wants_hiz_buffer(struct brw_context *brw,
+			       struct intel_mipmap_tree *mt);
+
 /**
  * \brief Allocate the miptree's embedded HiZ miptree.
  * \see intel_mipmap_tree:hiz_mt
  * \return false if allocation failed
  */
-
 bool
 intel_miptree_alloc_hiz(struct brw_context *brw,
 			struct intel_mipmap_tree *mt);

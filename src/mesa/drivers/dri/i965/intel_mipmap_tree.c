@@ -403,7 +403,8 @@ intel_miptree_create_layout(struct brw_context *brw,
    if (!for_bo &&
        _mesa_get_format_base_format(format) == GL_DEPTH_STENCIL &&
        (brw->must_use_separate_stencil ||
-	(brw->has_separate_stencil && brw_is_hiz_depth_format(brw, format)))) {
+	(brw->has_separate_stencil &&
+         intel_miptree_wants_hiz_buffer(brw, mt)))) {
       const bool force_all_slices_at_each_lod = brw->gen == 6;
       mt->stencil_mt = intel_miptree_create(brw,
                                             mt->target,
@@ -843,7 +844,7 @@ intel_miptree_create_for_renderbuffer(struct brw_context *brw,
    if (!mt)
       goto fail;
 
-   if (brw_is_hiz_depth_format(brw, format)) {
+   if (intel_miptree_wants_hiz_buffer(brw, mt)) {
       ok = intel_miptree_alloc_hiz(brw, mt);
       if (!ok)
          goto fail;
@@ -1681,6 +1682,27 @@ intel_hiz_miptree_buf_create(struct brw_context *brw,
    return buf;
 }
 
+bool
+intel_miptree_wants_hiz_buffer(struct brw_context *brw,
+                               struct intel_mipmap_tree *mt)
+{
+   if (!brw->has_hiz)
+      return false;
+
+   if (mt->hiz_buf != NULL)
+      return false;
+
+   switch (mt->format) {
+   case MESA_FORMAT_Z_FLOAT32:
+   case MESA_FORMAT_Z32_FLOAT_S8X24_UINT:
+   case MESA_FORMAT_Z24_UNORM_X8_UINT:
+   case MESA_FORMAT_Z24_UNORM_S8_UINT:
+   case MESA_FORMAT_Z_UNORM16:
+      return true;
+   default:
+      return false;
+   }
+}
 
 bool
 intel_miptree_alloc_hiz(struct brw_context *brw,
