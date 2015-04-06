@@ -286,7 +286,8 @@ st_prepare_vertex_program(struct gl_context *ctx,
             /* fall through */
          case VARYING_SLOT_VAR0:
          default:
-            assert(attr < VARYING_SLOT_MAX);
+            assert(attr >= VARYING_SLOT_VAR0 ||
+                   (attr >= VARYING_SLOT_TEX0 && attr <= VARYING_SLOT_TEX7));
             stvp->output_semantic_name[slot] = TGSI_SEMANTIC_GENERIC;
             stvp->output_semantic_index[slot] =
                st_get_generic_varying_index(st, attr);
@@ -663,7 +664,8 @@ st_translate_fragment_program(struct st_context *st,
              * consumed for the TEXi varyings, and we can base the locations of
              * the user varyings on VAR0.  Otherwise, we use TEX0 as base index.
              */
-            assert(attr >= VARYING_SLOT_TEX0);
+            assert(attr >= VARYING_SLOT_VAR0 || attr == VARYING_SLOT_PNTC ||
+                   (attr >= VARYING_SLOT_TEX0 && attr <= VARYING_SLOT_TEX7));
             input_semantic_name[slot] = TGSI_SEMANTIC_GENERIC;
             input_semantic_index[slot] = st_get_generic_varying_index(st, attr);
             if (attr == VARYING_SLOT_PNTC)
