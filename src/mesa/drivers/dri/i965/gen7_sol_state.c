@@ -245,17 +245,17 @@ upload_3dstate_streamout(struct brw_context *brw, bool active,
        * point by reading less and offsetting the register index in the
        * SO_DECLs.
        */
-      dw2 |= urb_entry_read_offset << SO_STREAM_0_VERTEX_READ_OFFSET_SHIFT;
-      dw2 |= (urb_entry_read_length - 1) << SO_STREAM_0_VERTEX_READ_LENGTH_SHIFT;
+      dw2 |= SET_FIELD(urb_entry_read_offset, SO_STREAM_0_VERTEX_READ_OFFSET);
+      dw2 |= SET_FIELD(urb_entry_read_length - 1, SO_STREAM_0_VERTEX_READ_LENGTH);
 
-      dw2 |= urb_entry_read_offset << SO_STREAM_1_VERTEX_READ_OFFSET_SHIFT;
-      dw2 |= (urb_entry_read_length - 1) << SO_STREAM_1_VERTEX_READ_LENGTH_SHIFT;
+      dw2 |= SET_FIELD(urb_entry_read_offset, SO_STREAM_1_VERTEX_READ_OFFSET);
+      dw2 |= SET_FIELD(urb_entry_read_length - 1, SO_STREAM_1_VERTEX_READ_LENGTH);
 
-      dw2 |= urb_entry_read_offset << SO_STREAM_2_VERTEX_READ_OFFSET_SHIFT;
-      dw2 |= (urb_entry_read_length - 1) << SO_STREAM_2_VERTEX_READ_LENGTH_SHIFT;
+      dw2 |= SET_FIELD(urb_entry_read_offset, SO_STREAM_2_VERTEX_READ_OFFSET);
+      dw2 |= SET_FIELD(urb_entry_read_length - 1, SO_STREAM_2_VERTEX_READ_LENGTH);
 
-      dw2 |= urb_entry_read_offset << SO_STREAM_3_VERTEX_READ_OFFSET_SHIFT;
-      dw2 |= (urb_entry_read_length - 1) << SO_STREAM_3_VERTEX_READ_LENGTH_SHIFT;
+      dw2 |= SET_FIELD(urb_entry_read_offset, SO_STREAM_3_VERTEX_READ_OFFSET);
+      dw2 |= SET_FIELD(urb_entry_read_length - 1, SO_STREAM_3_VERTEX_READ_LENGTH);
    }
 
    BEGIN_BATCH(3);
