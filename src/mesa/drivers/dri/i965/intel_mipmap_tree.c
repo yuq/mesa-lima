@@ -246,7 +246,8 @@ intel_miptree_create_layout(struct brw_context *brw,
                             GLuint depth0,
                             bool for_bo,
                             GLuint num_samples,
-                            bool force_all_slices_at_each_lod)
+                            bool force_all_slices_at_each_lod,
+                            bool disable_aux_buffers)
 {
    struct intel_mipmap_tree *mt = calloc(sizeof(*mt), 1);
    if (!mt)
@@ -285,7 +286,7 @@ intel_miptree_create_layout(struct brw_context *brw,
    mt->logical_height0 = height0;
    mt->logical_depth0 = depth0;
    mt->fast_clear_state = INTEL_FAST_CLEAR_STATE_NO_MCS;
-   mt->disable_aux_buffers = false; /* hardcoded for now */
+   mt->disable_aux_buffers = disable_aux_buffers;
    exec_list_make_empty(&mt->hiz_map);
 
    /* The cpp is bytes per (1, blockheight)-sized block for compressed
@@ -629,7 +630,8 @@ intel_miptree_create(struct brw_context *brw,
 				      first_level, last_level, width0,
 				      height0, depth0,
                                     false, num_samples,
-                                    force_all_slices_at_each_lod);
+                                    force_all_slices_at_each_lod,
+                                    false /*disable_aux_buffers*/);
    /*
     * pitch == 0 || height == 0  indicates the null texture
     */
@@ -720,7 +722,8 @@ intel_miptree_create_for_bo(struct brw_context *brw,
                             uint32_t width,
                             uint32_t height,
                             uint32_t depth,
-                            int pitch)
+                            int pitch,
+                            bool disable_aux_buffers)
 {
    struct intel_mipmap_tree *mt;
    uint32_t tiling, swizzle;
@@ -744,7 +747,8 @@ intel_miptree_create_for_bo(struct brw_context *brw,
    mt = intel_miptree_create_layout(brw, target, format,
                                     0, 0,
                                     width, height, depth,
-                                    true, 0, false);
+                                    true, 0, false,
+                                    disable_aux_buffers);
    if (!mt) {
       free(mt);
       return mt;
@@ -795,7 +799,8 @@ intel_update_winsys_renderbuffer_miptree(struct brw_context *intel,
                                                  width,
                                                  height,
                                                  1,
-                                                 pitch);
+                                                 pitch,
+                                                 false);
    if (!singlesample_mt)
       goto fail;
 

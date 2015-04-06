@@ -390,7 +390,8 @@ intel_image_target_renderbuffer_storage(struct gl_context *ctx,
                                          image->width,
                                          image->height,
                                          1,
-                                         image->pitch);
+                                         image->pitch,
+                                         false /*disable_aux_buffers*/);
    if (!irb->mt)
       return;
 

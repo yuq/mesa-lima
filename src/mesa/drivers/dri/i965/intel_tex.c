@@ -340,7 +340,8 @@ intel_set_texture_storage_for_buffer_object(struct gl_context *ctx,
                                   image->TexFormat,
                                   buffer_offset,
                                   image->Width, image->Height, image->Depth,
-                                  row_stride);
+                                  row_stride,
+                                  false /*disable_aux_buffers*/);
    if (!intel_texobj->mt)
       return false;
 

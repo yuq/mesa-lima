@@ -544,7 +544,8 @@ intel_miptree_create_for_bo(struct brw_context *brw,
                             uint32_t width,
                             uint32_t height,
                             uint32_t depth,
-                            int pitch);
+                            int pitch,
+                            bool disable_aux_buffers);
 
 void
 intel_update_winsys_renderbuffer_miptree(struct brw_context *intel,

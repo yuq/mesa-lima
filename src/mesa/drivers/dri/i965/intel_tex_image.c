@@ -169,7 +169,8 @@ intel_set_texture_image_bo(struct gl_context *ctx,
    ctx->Driver.FreeTextureImageBuffer(ctx, image);
 
    intel_image->mt = intel_miptree_create_for_bo(brw, bo, image->TexFormat,
-                                                 0, width, height, 1, pitch);
+                                                 0, width, height, 1, pitch,
+                                                 false /*disable_aux_buffers*/);
    if (intel_image->mt == NULL)
        return;
    intel_image->mt->target = target;
