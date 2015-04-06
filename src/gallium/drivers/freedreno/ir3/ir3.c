@@ -97,7 +97,10 @@ static uint32_t reg(struct ir3_register *reg, struct ir3_info *info,
 {
 	reg_t val = { .dummy32 = 0 };
 
-	assert(!(reg->flags & ~valid_flags));
+	if (reg->flags & ~valid_flags) {
+		debug_printf("INVALID FLAGS: %x vs %x\n",
+				reg->flags, valid_flags);
+	}
 
 	if (!(reg->flags & IR3_REG_R))
 		repeat = 0;
