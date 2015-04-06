@@ -217,6 +217,7 @@ emit_textures(struct fd_context *ctx, struct fd_ringbuffer *ring,
 			uint16_t *bcolor = (uint16_t *)((uint8_t *)ptr +
 					(BORDERCOLOR_SIZE * tex_off[sb]) +
 					(BORDERCOLOR_SIZE * i));
+			uint32_t *bcolor32 = (uint32_t *)&bcolor[16];
 
 			/*
 			 * XXX HACK ALERT XXX
@@ -231,7 +232,35 @@ emit_textures(struct fd_context *ctx, struct fd_ringbuffer *ring,
 				const struct util_format_description *desc =
 					util_format_description(tex->textures[i]->format);
 				for (j = 0; j < 4; j++) {
-					if (desc->swizzle[j] < 4)
+					if (desc->swizzle[j] >= 4)
+						continue;
+
+					const struct util_format_channel_description *chan =
+						&desc->channel[desc->swizzle[j]];
+					int size = chan->size;
+
+					/* The Z16 texture format we use seems to look in the
+					 * 32-bit border color slots
+					 */
+					if (desc->colorspace == UTIL_FORMAT_COLORSPACE_ZS)
+						size = 32;
+
+					/* Formats like R11G11B10 or RGB9_E5 don't specify
+					 * per-channel sizes properly.
+					 */
+					if (desc->layout == UTIL_FORMAT_LAYOUT_OTHER)
+						size = 16;
+
+					if (chan->pure_integer && size > 16)
+						bcolor32[desc->swizzle[j] + 4] =
+							sampler->base.border_color.i[j];
+					else if (size > 16)
+						bcolor32[desc->swizzle[j]] =
+							fui(sampler->base.border_color.f[j]);
+					else if (chan->pure_integer)
+						bcolor[desc->swizzle[j] + 8] =
+							sampler->base.border_color.i[j];
+					else
 						bcolor[desc->swizzle[j]] =
 							util_float_to_half(sampler->base.border_color.f[j]);
 				}
