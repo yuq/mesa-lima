@@ -78,7 +78,8 @@ vc4_simulator_pin_bos(struct drm_device *dev, struct vc4_exec_info *exec)
 {
         struct drm_vc4_submit_cl *args = exec->args;
         struct vc4_context *vc4 = dev->vc4;
-        struct vc4_bo **bos = vc4->bo_pointers.base;
+        struct vc4_job *job = vc4->job;
+        struct vc4_bo **bos = job->bo_pointers.base;
 
         exec->bo_count = args->bo_handle_count;
         exec->bo = calloc(exec->bo_count, sizeof(void *));

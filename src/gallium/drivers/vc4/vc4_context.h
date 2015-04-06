@@ -190,12 +190,16 @@ struct vc4_vertex_stateobj {
         unsigned num_elements;
 };
 
-struct vc4_context {
-        struct pipe_context base;
-
-        int fd;
-        struct vc4_screen *screen;
-
+/**
+ * A complete bin/render job.
+ *
+ * This is all of the state necessary to submit a bin/render to the kernel.
+ * We want to be able to have multiple in progress at a time, so that we don't
+ * need to flush an existing CL just to switch to rendering to a new render
+ * target (which would mean reading back from the old render target when
+ * starting to render to it again).
+ */
+struct vc4_job {
         struct vc4_cl bcl;
         struct vc4_cl shader_rec;
         struct vc4_cl uniforms;
@@ -238,11 +242,6 @@ struct vc4_context {
         bool msaa;
 	/** @} */
 
-        struct slab_mempool transfer_pool;
-        struct blitter_context *blitter;
-
-        /** bitfield of VC4_DIRTY_* */
-        uint32_t dirty;
         /* Bitmask of PIPE_CLEAR_* of buffers that were cleared before the
          * first rendering.
          */
@@ -267,11 +266,22 @@ struct vc4_context {
          * the current job.
          */
         uint32_t draw_calls_queued;
+};
 
-        /** Maximum index buffer valid for the current shader_rec. */
-        uint32_t max_index;
-        /** Last index bias baked into the current shader_rec. */
-        uint32_t last_index_bias;
+struct vc4_context {
+        struct pipe_context base;
+
+        int fd;
+        struct vc4_screen *screen;
+
+        /** The render job for the currently bound FBO. */
+        struct vc4_job *job;
+
+        struct slab_mempool transfer_pool;
+        struct blitter_context *blitter;
+
+        /** bitfield of VC4_DIRTY_* */
+        uint32_t dirty;
 
         struct primconvert_context *primconvert;
 
@@ -288,6 +298,11 @@ struct vc4_context {
         unsigned int reg_class_a;
 
         uint8_t prim_mode;
+
+        /** Maximum index buffer valid for the current shader_rec. */
+        uint32_t max_index;
+        /** Last index bias baked into the current shader_rec. */
+        uint32_t last_index_bias;
 
         /** Seqno of the last CL flush's job. */
         uint64_t last_emit_seqno;
@@ -398,9 +413,9 @@ void vc4_write_uniforms(struct vc4_context *vc4,
                         struct vc4_texture_stateobj *texstate);
 
 void vc4_flush(struct pipe_context *pctx);
-void vc4_job_init(struct vc4_context *vc4);
-void vc4_job_submit(struct vc4_context *vc4);
-void vc4_job_reset(struct vc4_context *vc4);
+void vc4_job_init(struct vc4_job *job);
+void vc4_job_submit(struct vc4_context *vc4, struct vc4_job *job);
+void vc4_job_reset(struct vc4_job *job);
 bool vc4_cl_references_bo(struct pipe_context *pctx, struct vc4_bo *bo,
                           bool include_reads);
 void vc4_emit_state(struct pipe_context *pctx);

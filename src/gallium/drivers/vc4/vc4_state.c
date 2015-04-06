@@ -406,6 +406,7 @@ vc4_set_framebuffer_state(struct pipe_context *pctx,
                           const struct pipe_framebuffer_state *framebuffer)
 {
         struct vc4_context *vc4 = vc4_context(pctx);
+        struct vc4_job *job = vc4->job;
         struct pipe_framebuffer_state *cso = &vc4->framebuffer;
         unsigned i;
 
@@ -430,14 +431,14 @@ vc4_set_framebuffer_state(struct pipe_context *pctx,
                 struct vc4_resource *rsc =
                         vc4_resource(cso->cbufs[0]->texture);
                 if (!rsc->writes)
-                        vc4->cleared |= PIPE_CLEAR_COLOR0;
+                        job->cleared |= PIPE_CLEAR_COLOR0;
         }
 
         if (cso->zsbuf) {
                 struct vc4_resource *rsc =
                         vc4_resource(cso->zsbuf->texture);
                 if (!rsc->writes)
-                        vc4->cleared |= PIPE_CLEAR_DEPTH | PIPE_CLEAR_STENCIL;
+                        job->cleared |= PIPE_CLEAR_DEPTH | PIPE_CLEAR_STENCIL;
         }
 
         /* Nonzero texture mipmap levels are laid out as if they were in
@@ -460,21 +461,21 @@ vc4_set_framebuffer_state(struct pipe_context *pctx,
                          rsc->cpp);
         }
 
-        vc4->msaa = false;
+        job->msaa = false;
         if (cso->cbufs[0])
-                vc4->msaa = cso->cbufs[0]->texture->nr_samples > 1;
+                job->msaa = cso->cbufs[0]->texture->nr_samples > 1;
         else if (cso->zsbuf)
-                vc4->msaa = cso->zsbuf->texture->nr_samples > 1;
+                job->msaa = cso->zsbuf->texture->nr_samples > 1;
 
-        if (vc4->msaa) {
-                vc4->tile_width = 32;
-                vc4->tile_height = 32;
+        if (job->msaa) {
+                job->tile_width = 32;
+                job->tile_height = 32;
         } else {
-                vc4->tile_width = 64;
-                vc4->tile_height = 64;
+                job->tile_width = 64;
+                job->tile_height = 64;
         }
-        vc4->draw_tiles_x = DIV_ROUND_UP(cso->width, vc4->tile_width);
-        vc4->draw_tiles_y = DIV_ROUND_UP(cso->height, vc4->tile_height);
+        job->draw_tiles_x = DIV_ROUND_UP(cso->width, job->tile_width);
+        job->draw_tiles_y = DIV_ROUND_UP(cso->height, job->tile_height);
 
         vc4->dirty |= VC4_DIRTY_FRAMEBUFFER;
 }

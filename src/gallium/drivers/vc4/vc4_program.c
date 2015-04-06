@@ -2520,6 +2520,7 @@ vc4_setup_shared_key(struct vc4_context *vc4, struct vc4_key *key,
 static void
 vc4_update_compiled_fs(struct vc4_context *vc4, uint8_t prim_mode)
 {
+        struct vc4_job *job = vc4->job;
         struct vc4_fs_key local_key;
         struct vc4_fs_key *key = &local_key;
 
@@ -2546,7 +2547,7 @@ vc4_update_compiled_fs(struct vc4_context *vc4, uint8_t prim_mode)
         } else {
                 key->logicop_func = PIPE_LOGICOP_COPY;
         }
-        if (vc4->msaa) {
+        if (job->msaa) {
                 key->msaa = vc4->rasterizer->base.multisample;
                 key->sample_coverage = (vc4->rasterizer->base.multisample &&
                                         vc4->sample_mask != (1 << VC4_MAX_SAMPLES) - 1);

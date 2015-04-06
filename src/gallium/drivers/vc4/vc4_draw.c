@@ -33,7 +33,7 @@
 #include "vc4_resource.h"
 
 static void
-vc4_get_draw_cl_space(struct vc4_context *vc4, int vert_count)
+vc4_get_draw_cl_space(struct vc4_job *job, int vert_count)
 {
         /* The SW-5891 workaround may cause us to emit multiple shader recs
          * and draw packets.
@@ -43,7 +43,7 @@ vc4_get_draw_cl_space(struct vc4_context *vc4, int vert_count)
         /* Binner gets our packet state -- vc4_emit.c contents,
          * and the primitive itself.
          */
-        cl_ensure_space(&vc4->bcl,
+        cl_ensure_space(&job->bcl,
                         256 + (VC4_PACKET_GL_ARRAY_PRIMITIVE_SIZE +
                                VC4_PACKET_GL_SHADER_STATE_SIZE) * num_draws);
 
@@ -53,7 +53,7 @@ vc4_get_draw_cl_space(struct vc4_context *vc4, int vert_count)
          * sized shader_rec (104 bytes base for 8 vattrs plus 32 bytes of
          * vattr stride).
          */
-        cl_ensure_space(&vc4->shader_rec,
+        cl_ensure_space(&job->shader_rec,
                         (12 * sizeof(uint32_t) + 104 + 8 * 32) * num_draws);
 
         /* Uniforms are covered by vc4_write_uniforms(). */
@@ -61,8 +61,8 @@ vc4_get_draw_cl_space(struct vc4_context *vc4, int vert_count)
         /* There could be up to 16 textures per stage, plus misc other
          * pointers.
          */
-        cl_ensure_space(&vc4->bo_handles, (2 * 16 + 20) * sizeof(uint32_t));
-        cl_ensure_space(&vc4->bo_pointers,
+        cl_ensure_space(&job->bo_handles, (2 * 16 + 20) * sizeof(uint32_t));
+        cl_ensure_space(&job->bo_pointers,
                         (2 * 16 + 20) * sizeof(struct vc4_bo *));
 }
 
@@ -72,22 +72,24 @@ vc4_get_draw_cl_space(struct vc4_context *vc4, int vert_count)
 static void
 vc4_start_draw(struct vc4_context *vc4, int vert_count)
 {
-        if (vc4->needs_flush)
+        struct vc4_job *job = vc4->job;
+
+        if (job->needs_flush)
                 return;
 
-        vc4_get_draw_cl_space(vc4, 0);
+        vc4_get_draw_cl_space(job, 0);
 
-        struct vc4_cl_out *bcl = cl_start(&vc4->bcl);
+        struct vc4_cl_out *bcl = cl_start(&job->bcl);
         //   Tile state data is 48 bytes per tile, I think it can be thrown away
         //   as soon as binning is finished.
         cl_u8(&bcl, VC4_PACKET_TILE_BINNING_MODE_CONFIG);
         cl_u32(&bcl, 0); /* tile alloc addr, filled by kernel */
         cl_u32(&bcl, 0); /* tile alloc size, filled by kernel */
         cl_u32(&bcl, 0); /* tile state addr, filled by kernel */
-        cl_u8(&bcl, vc4->draw_tiles_x);
-        cl_u8(&bcl, vc4->draw_tiles_y);
+        cl_u8(&bcl, job->draw_tiles_x);
+        cl_u8(&bcl, job->draw_tiles_y);
         /* Other flags are filled by kernel. */
-        cl_u8(&bcl, vc4->msaa ? VC4_BIN_CONFIG_MS_MODE_4X : 0);
+        cl_u8(&bcl, job->msaa ? VC4_BIN_CONFIG_MS_MODE_4X : 0);
 
         /* START_TILE_BINNING resets the statechange counters in the hardware,
          * which are what is used when a primitive is binned to a tile to
@@ -105,12 +107,12 @@ vc4_start_draw(struct vc4_context *vc4, int vert_count)
         cl_u8(&bcl, (VC4_PRIMITIVE_LIST_FORMAT_16_INDEX |
                      VC4_PRIMITIVE_LIST_FORMAT_TYPE_TRIANGLES));
 
-        vc4->needs_flush = true;
-        vc4->draw_calls_queued++;
-        vc4->draw_width = vc4->framebuffer.width;
-        vc4->draw_height = vc4->framebuffer.height;
+        job->needs_flush = true;
+        job->draw_calls_queued++;
+        job->draw_width = vc4->framebuffer.width;
+        job->draw_height = vc4->framebuffer.height;
 
-        cl_end(&vc4->bcl, bcl);
+        cl_end(&job->bcl, bcl);
 }
 
 static void
@@ -128,9 +130,11 @@ vc4_update_shadow_textures(struct pipe_context *pctx,
 }
 
 static void
-vc4_emit_gl_shader_state(struct vc4_context *vc4, const struct pipe_draw_info *info,
+vc4_emit_gl_shader_state(struct vc4_context *vc4,
+                         const struct pipe_draw_info *info,
                          uint32_t extra_index_bias)
 {
+        struct vc4_job *job = vc4->job;
         /* VC4_DIRTY_VTXSTATE */
         struct vc4_vertex_stateobj *vtx = vc4->vtx;
         /* VC4_DIRTY_VTXBUF */
@@ -142,7 +146,7 @@ vc4_emit_gl_shader_state(struct vc4_context *vc4, const struct pipe_draw_info *i
         uint32_t num_elements_emit = MAX2(vtx->num_elements, 1);
         /* Emit the shader record. */
         struct vc4_cl_out *shader_rec =
-                cl_start_shader_reloc(&vc4->shader_rec, 3 + num_elements_emit);
+                cl_start_shader_reloc(&job->shader_rec, 3 + num_elements_emit);
         /* VC4_DIRTY_PRIM_MODE | VC4_DIRTY_RASTERIZER */
         cl_u16(&shader_rec,
                VC4_SHADER_FLAG_ENABLE_CLIPPING |
@@ -154,21 +158,21 @@ vc4_emit_gl_shader_state(struct vc4_context *vc4, const struct pipe_draw_info *i
         /* VC4_DIRTY_COMPILED_FS */
         cl_u8(&shader_rec, 0); /* fs num uniforms (unused) */
         cl_u8(&shader_rec, vc4->prog.fs->num_inputs);
-        cl_reloc(vc4, &vc4->shader_rec, &shader_rec, vc4->prog.fs->bo, 0);
+        cl_reloc(job, &job->shader_rec, &shader_rec, vc4->prog.fs->bo, 0);
         cl_u32(&shader_rec, 0); /* UBO offset written by kernel */
 
         /* VC4_DIRTY_COMPILED_VS */
         cl_u16(&shader_rec, 0); /* vs num uniforms */
         cl_u8(&shader_rec, vc4->prog.vs->vattrs_live);
         cl_u8(&shader_rec, vc4->prog.vs->vattr_offsets[8]);
-        cl_reloc(vc4, &vc4->shader_rec, &shader_rec, vc4->prog.vs->bo, 0);
+        cl_reloc(job, &job->shader_rec, &shader_rec, vc4->prog.vs->bo, 0);
         cl_u32(&shader_rec, 0); /* UBO offset written by kernel */
 
         /* VC4_DIRTY_COMPILED_CS */
         cl_u16(&shader_rec, 0); /* cs num uniforms */
         cl_u8(&shader_rec, vc4->prog.cs->vattrs_live);
         cl_u8(&shader_rec, vc4->prog.cs->vattr_offsets[8]);
-        cl_reloc(vc4, &vc4->shader_rec, &shader_rec, vc4->prog.cs->bo, 0);
+        cl_reloc(job, &job->shader_rec, &shader_rec, vc4->prog.cs->bo, 0);
         cl_u32(&shader_rec, 0); /* UBO offset written by kernel */
 
         uint32_t max_index = 0xffff;
@@ -186,7 +190,7 @@ vc4_emit_gl_shader_state(struct vc4_context *vc4, const struct pipe_draw_info *i
                 uint32_t elem_size =
                         util_format_get_blocksize(elem->src_format);
 
-                cl_reloc(vc4, &vc4->shader_rec, &shader_rec, rsc->bo, offset);
+                cl_reloc(job, &job->shader_rec, &shader_rec, rsc->bo, offset);
                 cl_u8(&shader_rec, elem_size - 1);
                 cl_u8(&shader_rec, vb->stride);
                 cl_u8(&shader_rec, vc4->prog.vs->vattr_offsets[i]);
@@ -201,16 +205,16 @@ vc4_emit_gl_shader_state(struct vc4_context *vc4, const struct pipe_draw_info *i
         if (vtx->num_elements == 0) {
                 assert(num_elements_emit == 1);
                 struct vc4_bo *bo = vc4_bo_alloc(vc4->screen, 4096, "scratch VBO");
-                cl_reloc(vc4, &vc4->shader_rec, &shader_rec, bo, 0);
+                cl_reloc(job, &job->shader_rec, &shader_rec, bo, 0);
                 cl_u8(&shader_rec, 16 - 1); /* element size */
                 cl_u8(&shader_rec, 0); /* stride */
                 cl_u8(&shader_rec, 0); /* VS VPM offset */
                 cl_u8(&shader_rec, 0); /* CS VPM offset */
                 vc4_bo_unreference(&bo);
         }
-        cl_end(&vc4->shader_rec, shader_rec);
+        cl_end(&job->shader_rec, shader_rec);
 
-        struct vc4_cl_out *bcl = cl_start(&vc4->bcl);
+        struct vc4_cl_out *bcl = cl_start(&job->bcl);
         /* the actual draw call. */
         cl_u8(&bcl, VC4_PACKET_GL_SHADER_STATE);
         assert(vtx->num_elements <= 8);
@@ -218,7 +222,7 @@ vc4_emit_gl_shader_state(struct vc4_context *vc4, const struct pipe_draw_info *i
          * attributes.  This field also contains the offset into shader_rec.
          */
         cl_u32(&bcl, num_elements_emit & 0x7);
-        cl_end(&vc4->bcl, bcl);
+        cl_end(&job->bcl, bcl);
 
         vc4_write_uniforms(vc4, vc4->prog.fs,
                            &vc4->constbuf[PIPE_SHADER_FRAGMENT],
@@ -232,7 +236,7 @@ vc4_emit_gl_shader_state(struct vc4_context *vc4, const struct pipe_draw_info *i
 
         vc4->last_index_bias = info->index_bias + extra_index_bias;
         vc4->max_index = max_index;
-        vc4->shader_rec_count++;
+        job->shader_rec_count++;
 }
 
 /**
@@ -259,8 +263,9 @@ static void
 vc4_hw_2116_workaround(struct pipe_context *pctx)
 {
         struct vc4_context *vc4 = vc4_context(pctx);
+        struct vc4_job *job = vc4->job;
 
-        if (vc4->draw_calls_queued == 0x1ef0) {
+        if (job->draw_calls_queued == 0x1ef0) {
                 perf_debug("Flushing batch due to HW-2116 workaround "
                            "(too many draw calls per scene\n");
                 vc4_flush(pctx);
@@ -271,6 +276,7 @@ static void
 vc4_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 {
         struct vc4_context *vc4 = vc4_context(pctx);
+        struct vc4_job *job = vc4->job;
 
         if (info->mode >= PIPE_PRIM_QUADS) {
                 util_primconvert_save_index_buffer(vc4->primconvert, &vc4->indexbuf);
@@ -287,7 +293,7 @@ vc4_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 
         vc4_hw_2116_workaround(pctx);
 
-        vc4_get_draw_cl_space(vc4, info->count);
+        vc4_get_draw_cl_space(job, info->count);
 
         if (vc4->prim_mode != info->mode) {
                 vc4->prim_mode = info->mode;
@@ -297,7 +303,7 @@ vc4_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
         vc4_start_draw(vc4, info->count);
         vc4_update_compiled_shaders(vc4, info->mode);
 
-        uint32_t start_draw_calls_queued = vc4->draw_calls_queued;
+        uint32_t start_draw_calls_queued = job->draw_calls_queued;
         vc4_emit_state(pctx);
 
         if ((vc4->dirty & (VC4_DIRTY_VTXBUF |
@@ -319,7 +325,7 @@ vc4_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
         /* Note that the primitive type fields match with OpenGL/gallium
          * definitions, up to but not including QUADS.
          */
-        struct vc4_cl_out *bcl = cl_start(&vc4->bcl);
+        struct vc4_cl_out *bcl = cl_start(&job->bcl);
         if (info->indexed) {
                 uint32_t offset = vc4->indexbuf.offset;
                 uint32_t index_size = vc4->indexbuf.index_size;
@@ -341,7 +347,7 @@ vc4_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
                 }
                 struct vc4_resource *rsc = vc4_resource(prsc);
 
-                cl_start_reloc(&vc4->bcl, &bcl, 1);
+                cl_start_reloc(&job->bcl, &bcl, 1);
                 cl_u8(&bcl, VC4_PACKET_GL_INDEXED_PRIMITIVE);
                 cl_u8(&bcl,
                       info->mode |
@@ -349,7 +355,7 @@ vc4_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
                        VC4_INDEX_BUFFER_U16:
                        VC4_INDEX_BUFFER_U8));
                 cl_u32(&bcl, info->count);
-                cl_reloc(vc4, &vc4->bcl, &bcl, rsc->bo, offset);
+                cl_reloc(job, &job->bcl, &bcl, rsc->bo, offset);
                 cl_u32(&bcl, vc4->max_index);
 
                 if (vc4->indexbuf.index_size == 4 || vc4->indexbuf.user_buffer)
@@ -376,10 +382,10 @@ vc4_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
                          * plus whatever remainder.
                          */
                         if (extra_index_bias) {
-                                cl_end(&vc4->bcl, bcl);
+                                cl_end(&job->bcl, bcl);
                                 vc4_emit_gl_shader_state(vc4, info,
                                                          extra_index_bias);
-                                bcl = cl_start(&vc4->bcl);
+                                bcl = cl_start(&job->bcl);
                         }
 
                         if (start + count > max_verts) {
@@ -425,20 +431,20 @@ vc4_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
                         start = 0;
                 }
         }
-        cl_end(&vc4->bcl, bcl);
+        cl_end(&job->bcl, bcl);
 
         /* No flushes of the job should have happened between when we started
          * emitting state for our draw and when we just emitted our draw's
          * primitives.
          */
-        assert(start_draw_calls_queued == vc4->draw_calls_queued);
+        assert(start_draw_calls_queued == job->draw_calls_queued);
 
         if (vc4->zsa && vc4->zsa->base.depth.enabled) {
-                vc4->resolve |= PIPE_CLEAR_DEPTH;
+                job->resolve |= PIPE_CLEAR_DEPTH;
         }
         if (vc4->zsa && vc4->zsa->base.stencil[0].enabled)
-                vc4->resolve |= PIPE_CLEAR_STENCIL;
-        vc4->resolve |= PIPE_CLEAR_COLOR0;
+                job->resolve |= PIPE_CLEAR_STENCIL;
+        job->resolve |= PIPE_CLEAR_COLOR0;
 
         if (vc4_debug & VC4_DEBUG_ALWAYS_FLUSH)
                 vc4_flush(pctx);
@@ -460,11 +466,12 @@ vc4_clear(struct pipe_context *pctx, unsigned buffers,
           const union pipe_color_union *color, double depth, unsigned stencil)
 {
         struct vc4_context *vc4 = vc4_context(pctx);
+        struct vc4_job *job = vc4->job;
 
         /* We can't flag new buffers for clearing once we've queued draws.  We
          * could avoid this by using the 3d engine to clear.
          */
-        if (vc4->draw_calls_queued) {
+        if (job->draw_calls_queued) {
                 perf_debug("Flushing rendering to process new clear.\n");
                 vc4_flush(pctx);
         }
@@ -488,7 +495,7 @@ vc4_clear(struct pipe_context *pctx, unsigned buffers,
         }
 
         if (buffers & PIPE_CLEAR_COLOR0) {
-                vc4->clear_color[0] = vc4->clear_color[1] =
+                job->clear_color[0] = job->clear_color[1] =
                         pack_rgba(vc4->framebuffer.cbufs[0]->format,
                                   color->f);
         }
@@ -497,16 +504,16 @@ vc4_clear(struct pipe_context *pctx, unsigned buffers,
                 /* Though the depth buffer is stored with Z in the high 24,
                  * for this field we just need to store it in the low 24.
                  */
-                vc4->clear_depth = util_pack_z(PIPE_FORMAT_Z24X8_UNORM, depth);
-                vc4->clear_stencil = stencil;
+                job->clear_depth = util_pack_z(PIPE_FORMAT_Z24X8_UNORM, depth);
+                job->clear_stencil = stencil;
         }
 
-        vc4->draw_min_x = 0;
-        vc4->draw_min_y = 0;
-        vc4->draw_max_x = vc4->framebuffer.width;
-        vc4->draw_max_y = vc4->framebuffer.height;
-        vc4->cleared |= buffers;
-        vc4->resolve |= buffers;
+        job->draw_min_x = 0;
+        job->draw_min_y = 0;
+        job->draw_max_x = vc4->framebuffer.width;
+        job->draw_max_y = vc4->framebuffer.height;
+        job->cleared |= buffers;
+        job->resolve |= buffers;
 
         vc4_start_draw(vc4, 0);
 }

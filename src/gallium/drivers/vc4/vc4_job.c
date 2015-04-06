@@ -30,57 +30,51 @@
 #include "vc4_context.h"
 
 void
-vc4_job_init(struct vc4_context *vc4)
+vc4_job_init(struct vc4_job *job)
 {
-        vc4_init_cl(vc4, &vc4->bcl);
-        vc4_init_cl(vc4, &vc4->shader_rec);
-        vc4_init_cl(vc4, &vc4->uniforms);
-        vc4_init_cl(vc4, &vc4->bo_handles);
-        vc4_init_cl(vc4, &vc4->bo_pointers);
-        vc4_job_reset(vc4);
+        vc4_init_cl(job, &job->bcl);
+        vc4_init_cl(job, &job->shader_rec);
+        vc4_init_cl(job, &job->uniforms);
+        vc4_init_cl(job, &job->bo_handles);
+        vc4_init_cl(job, &job->bo_pointers);
+        vc4_job_reset(job);
 }
 
 void
-vc4_job_reset(struct vc4_context *vc4)
+vc4_job_reset(struct vc4_job *job)
 {
-        struct vc4_bo **referenced_bos = vc4->bo_pointers.base;
-        for (int i = 0; i < cl_offset(&vc4->bo_handles) / 4; i++) {
+        struct vc4_bo **referenced_bos = job->bo_pointers.base;
+        for (int i = 0; i < cl_offset(&job->bo_handles) / 4; i++) {
                 vc4_bo_unreference(&referenced_bos[i]);
         }
-        vc4_reset_cl(&vc4->bcl);
-        vc4_reset_cl(&vc4->shader_rec);
-        vc4_reset_cl(&vc4->uniforms);
-        vc4_reset_cl(&vc4->bo_handles);
-        vc4_reset_cl(&vc4->bo_pointers);
-        vc4->shader_rec_count = 0;
+        vc4_reset_cl(&job->bcl);
+        vc4_reset_cl(&job->shader_rec);
+        vc4_reset_cl(&job->uniforms);
+        vc4_reset_cl(&job->bo_handles);
+        vc4_reset_cl(&job->bo_pointers);
+        job->shader_rec_count = 0;
 
-        vc4->needs_flush = false;
-        vc4->draw_calls_queued = 0;
+        job->needs_flush = false;
+        job->draw_calls_queued = 0;
 
-        /* We have no hardware context saved between our draw calls, so we
-         * need to flag the next draw as needing all state emitted.  Emitting
-         * all state at the start of our draws is also what ensures that we
-         * return to the state we need after a previous tile has finished.
-         */
-        vc4->dirty = ~0;
-        vc4->resolve = 0;
-        vc4->cleared = 0;
+        job->resolve = 0;
+        job->cleared = 0;
 
-        vc4->draw_min_x = ~0;
-        vc4->draw_min_y = ~0;
-        vc4->draw_max_x = 0;
-        vc4->draw_max_y = 0;
+        job->draw_min_x = ~0;
+        job->draw_min_y = ~0;
+        job->draw_max_x = 0;
+        job->draw_max_y = 0;
 
-        pipe_surface_reference(&vc4->color_write, NULL);
-        pipe_surface_reference(&vc4->color_read, NULL);
-        pipe_surface_reference(&vc4->msaa_color_write, NULL);
-        pipe_surface_reference(&vc4->zs_write, NULL);
-        pipe_surface_reference(&vc4->zs_read, NULL);
-        pipe_surface_reference(&vc4->msaa_zs_write, NULL);
+        pipe_surface_reference(&job->color_write, NULL);
+        pipe_surface_reference(&job->color_read, NULL);
+        pipe_surface_reference(&job->msaa_color_write, NULL);
+        pipe_surface_reference(&job->zs_write, NULL);
+        pipe_surface_reference(&job->zs_read, NULL);
+        pipe_surface_reference(&job->msaa_zs_write, NULL);
 }
 
 static void
-vc4_submit_setup_rcl_surface(struct vc4_context *vc4,
+vc4_submit_setup_rcl_surface(struct vc4_job *job,
                              struct drm_vc4_submit_rcl_surface *submit_surf,
                              struct pipe_surface *psurf,
                              bool is_depth, bool is_write)
@@ -93,7 +87,7 @@ vc4_submit_setup_rcl_surface(struct vc4_context *vc4,
         }
 
         struct vc4_resource *rsc = vc4_resource(psurf->texture);
-        submit_surf->hindex = vc4_gem_hindex(vc4, rsc->bo);
+        submit_surf->hindex = vc4_gem_hindex(job, rsc->bo);
         submit_surf->offset = surf->offset;
 
         if (psurf->texture->nr_samples <= 1) {
@@ -124,7 +118,7 @@ vc4_submit_setup_rcl_surface(struct vc4_context *vc4,
 }
 
 static void
-vc4_submit_setup_rcl_render_config_surface(struct vc4_context *vc4,
+vc4_submit_setup_rcl_render_config_surface(struct vc4_job *job,
                                            struct drm_vc4_submit_rcl_surface *submit_surf,
                                            struct pipe_surface *psurf)
 {
@@ -136,7 +130,7 @@ vc4_submit_setup_rcl_render_config_surface(struct vc4_context *vc4,
         }
 
         struct vc4_resource *rsc = vc4_resource(psurf->texture);
-        submit_surf->hindex = vc4_gem_hindex(vc4, rsc->bo);
+        submit_surf->hindex = vc4_gem_hindex(job, rsc->bo);
         submit_surf->offset = surf->offset;
 
         if (psurf->texture->nr_samples <= 1) {
@@ -153,7 +147,7 @@ vc4_submit_setup_rcl_render_config_surface(struct vc4_context *vc4,
 }
 
 static void
-vc4_submit_setup_rcl_msaa_surface(struct vc4_context *vc4,
+vc4_submit_setup_rcl_msaa_surface(struct vc4_job *job,
                                   struct drm_vc4_submit_rcl_surface *submit_surf,
                                   struct pipe_surface *psurf)
 {
@@ -165,7 +159,7 @@ vc4_submit_setup_rcl_msaa_surface(struct vc4_context *vc4,
         }
 
         struct vc4_resource *rsc = vc4_resource(psurf->texture);
-        submit_surf->hindex = vc4_gem_hindex(vc4, rsc->bo);
+        submit_surf->hindex = vc4_gem_hindex(job, rsc->bo);
         submit_surf->offset = surf->offset;
         submit_surf->bits = 0;
         rsc->writes++;
@@ -175,60 +169,60 @@ vc4_submit_setup_rcl_msaa_surface(struct vc4_context *vc4,
  * Submits the job to the kernel and then reinitializes it.
  */
 void
-vc4_job_submit(struct vc4_context *vc4)
+vc4_job_submit(struct vc4_context *vc4, struct vc4_job *job)
 {
-        if (!vc4->needs_flush)
+        if (!job->needs_flush)
                 return;
 
         /* The RCL setup would choke if the draw bounds cause no drawing, so
          * just drop the drawing if that's the case.
          */
-        if (vc4->draw_max_x <= vc4->draw_min_x ||
-            vc4->draw_max_y <= vc4->draw_min_y) {
-                vc4_job_reset(vc4);
+        if (job->draw_max_x <= job->draw_min_x ||
+            job->draw_max_y <= job->draw_min_y) {
+                vc4_job_reset(job);
                 return;
         }
 
         if (vc4_debug & VC4_DEBUG_CL) {
                 fprintf(stderr, "BCL:\n");
-                vc4_dump_cl(vc4->bcl.base, cl_offset(&vc4->bcl), false);
+                vc4_dump_cl(job->bcl.base, cl_offset(&job->bcl), false);
         }
 
-        if (cl_offset(&vc4->bcl) > 0) {
+        if (cl_offset(&job->bcl) > 0) {
                 /* Increment the semaphore indicating that binning is done and
                  * unblocking the render thread.  Note that this doesn't act
                  * until the FLUSH completes.
                  */
-                cl_ensure_space(&vc4->bcl, 8);
-                struct vc4_cl_out *bcl = cl_start(&vc4->bcl);
+                cl_ensure_space(&job->bcl, 8);
+                struct vc4_cl_out *bcl = cl_start(&job->bcl);
                 cl_u8(&bcl, VC4_PACKET_INCREMENT_SEMAPHORE);
                 /* The FLUSH caps all of our bin lists with a
                  * VC4_PACKET_RETURN.
                  */
                 cl_u8(&bcl, VC4_PACKET_FLUSH);
-                cl_end(&vc4->bcl, bcl);
+                cl_end(&job->bcl, bcl);
         }
         struct drm_vc4_submit_cl submit;
         memset(&submit, 0, sizeof(submit));
 
-        cl_ensure_space(&vc4->bo_handles, 6 * sizeof(uint32_t));
-        cl_ensure_space(&vc4->bo_pointers, 6 * sizeof(struct vc4_bo *));
+        cl_ensure_space(&job->bo_handles, 6 * sizeof(uint32_t));
+        cl_ensure_space(&job->bo_pointers, 6 * sizeof(struct vc4_bo *));
 
-        vc4_submit_setup_rcl_surface(vc4, &submit.color_read,
-                                     vc4->color_read, false, false);
-        vc4_submit_setup_rcl_render_config_surface(vc4, &submit.color_write,
-                                                   vc4->color_write);
-        vc4_submit_setup_rcl_surface(vc4, &submit.zs_read,
-                                     vc4->zs_read, true, false);
-        vc4_submit_setup_rcl_surface(vc4, &submit.zs_write,
-                                     vc4->zs_write, true, true);
+        vc4_submit_setup_rcl_surface(job, &submit.color_read,
+                                     job->color_read, false, false);
+        vc4_submit_setup_rcl_render_config_surface(job, &submit.color_write,
+                                                   job->color_write);
+        vc4_submit_setup_rcl_surface(job, &submit.zs_read,
+                                     job->zs_read, true, false);
+        vc4_submit_setup_rcl_surface(job, &submit.zs_write,
+                                     job->zs_write, true, true);
 
-        vc4_submit_setup_rcl_msaa_surface(vc4, &submit.msaa_color_write,
-                                          vc4->msaa_color_write);
-        vc4_submit_setup_rcl_msaa_surface(vc4, &submit.msaa_zs_write,
-                                          vc4->msaa_zs_write);
+        vc4_submit_setup_rcl_msaa_surface(job, &submit.msaa_color_write,
+                                          job->msaa_color_write);
+        vc4_submit_setup_rcl_msaa_surface(job, &submit.msaa_zs_write,
+                                          job->msaa_zs_write);
 
-        if (vc4->msaa) {
+        if (job->msaa) {
                 /* This bit controls how many pixels the general
                  * (i.e. subsampled) loads/stores are iterating over
                  * (multisample loads replicate out to the other samples).
@@ -240,29 +234,29 @@ vc4_job_submit(struct vc4_context *vc4)
                 submit.color_write.bits |= VC4_RENDER_CONFIG_DECIMATE_MODE_4X;
         }
 
-        submit.bo_handles = (uintptr_t)vc4->bo_handles.base;
-        submit.bo_handle_count = cl_offset(&vc4->bo_handles) / 4;
-        submit.bin_cl = (uintptr_t)vc4->bcl.base;
-        submit.bin_cl_size = cl_offset(&vc4->bcl);
-        submit.shader_rec = (uintptr_t)vc4->shader_rec.base;
-        submit.shader_rec_size = cl_offset(&vc4->shader_rec);
-        submit.shader_rec_count = vc4->shader_rec_count;
-        submit.uniforms = (uintptr_t)vc4->uniforms.base;
-        submit.uniforms_size = cl_offset(&vc4->uniforms);
+        submit.bo_handles = (uintptr_t)job->bo_handles.base;
+        submit.bo_handle_count = cl_offset(&job->bo_handles) / 4;
+        submit.bin_cl = (uintptr_t)job->bcl.base;
+        submit.bin_cl_size = cl_offset(&job->bcl);
+        submit.shader_rec = (uintptr_t)job->shader_rec.base;
+        submit.shader_rec_size = cl_offset(&job->shader_rec);
+        submit.shader_rec_count = job->shader_rec_count;
+        submit.uniforms = (uintptr_t)job->uniforms.base;
+        submit.uniforms_size = cl_offset(&job->uniforms);
 
-        assert(vc4->draw_min_x != ~0 && vc4->draw_min_y != ~0);
-        submit.min_x_tile = vc4->draw_min_x / vc4->tile_width;
-        submit.min_y_tile = vc4->draw_min_y / vc4->tile_height;
-        submit.max_x_tile = (vc4->draw_max_x - 1) / vc4->tile_width;
-        submit.max_y_tile = (vc4->draw_max_y - 1) / vc4->tile_height;
-        submit.width = vc4->draw_width;
-        submit.height = vc4->draw_height;
-        if (vc4->cleared) {
+        assert(job->draw_min_x != ~0 && job->draw_min_y != ~0);
+        submit.min_x_tile = job->draw_min_x / job->tile_width;
+        submit.min_y_tile = job->draw_min_y / job->tile_height;
+        submit.max_x_tile = (job->draw_max_x - 1) / job->tile_width;
+        submit.max_y_tile = (job->draw_max_y - 1) / job->tile_height;
+        submit.width = job->draw_width;
+        submit.height = job->draw_height;
+        if (job->cleared) {
                 submit.flags |= VC4_SUBMIT_CL_USE_CLEAR_COLOR;
-                submit.clear_color[0] = vc4->clear_color[0];
-                submit.clear_color[1] = vc4->clear_color[1];
-                submit.clear_z = vc4->clear_depth;
-                submit.clear_s = vc4->clear_stencil;
+                submit.clear_color[0] = job->clear_color[0];
+                submit.clear_color[1] = job->clear_color[1];
+                submit.clear_z = job->clear_depth;
+                submit.clear_s = job->clear_stencil;
         }
 
         if (!(vc4_debug & VC4_DEBUG_NORAST)) {
@@ -300,5 +294,5 @@ vc4_job_submit(struct vc4_context *vc4)
                 }
         }
 
-        vc4_job_reset(vc4);
+        vc4_job_reset(vc4->job);
 }
