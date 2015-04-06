@@ -129,11 +129,13 @@ vc4_setup_rcl(struct vc4_context *vc4)
                                            branch_size +
                                            color_store_size));
 
-        cl_u8(&vc4->rcl, VC4_PACKET_CLEAR_COLORS);
-        cl_u32(&vc4->rcl, vc4->clear_color[0]);
-        cl_u32(&vc4->rcl, vc4->clear_color[1]);
-        cl_u32(&vc4->rcl, vc4->clear_depth);
-        cl_u8(&vc4->rcl, vc4->clear_stencil);
+        if (vc4->cleared) {
+                cl_u8(&vc4->rcl, VC4_PACKET_CLEAR_COLORS);
+                cl_u32(&vc4->rcl, vc4->clear_color[0]);
+                cl_u32(&vc4->rcl, vc4->clear_color[1]);
+                cl_u32(&vc4->rcl, vc4->clear_depth);
+                cl_u8(&vc4->rcl, vc4->clear_stencil);
+        }
 
         /* The rendering mode config determines the pointer that's used for
          * VC4_PACKET_STORE_MS_TILE_BUFFER address computations.  The kernel
