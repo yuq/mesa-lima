@@ -11,6 +11,7 @@ C_SOURCES := \
 	vc4_emit.c \
 	vc4_fence.c \
 	vc4_formats.c \
+	vc4_job.c \
 	vc4_opt_algebraic.c \
 	vc4_opt_constant_folding.c \
 	vc4_opt_copy_propagation.c \

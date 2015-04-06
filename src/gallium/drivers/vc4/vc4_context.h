@@ -326,6 +326,9 @@ void vc4_write_uniforms(struct vc4_context *vc4,
                         struct vc4_texture_stateobj *texstate);
 
 void vc4_flush(struct pipe_context *pctx);
+void vc4_job_init(struct vc4_context *vc4);
+void vc4_job_submit(struct vc4_context *vc4);
+void vc4_job_reset(struct vc4_context *vc4);
 bool vc4_cl_references_bo(struct pipe_context *pctx, struct vc4_bo *bo);
 void vc4_emit_state(struct pipe_context *pctx);
 void vc4_generate_code(struct vc4_context *vc4, struct vc4_compile *c);
