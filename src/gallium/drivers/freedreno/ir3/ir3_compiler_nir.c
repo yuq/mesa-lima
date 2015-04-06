@@ -244,6 +244,8 @@ compile_init(struct ir3_shader_variant *so,
 		free((void *)lowered_tokens);
 
 	so->first_immediate = ctx->s->num_uniforms;
+	/* for now, now driver params: */
+	so->first_driver_param = so->first_immediate;
 
 	return ctx;
 }
