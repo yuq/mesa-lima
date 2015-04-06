@@ -140,6 +140,7 @@ fd_resource_transfer_map(struct pipe_context *pctx,
 	struct fd_context *ctx = fd_context(pctx);
 	struct fd_resource *rsc = fd_resource(prsc);
 	struct fd_resource_slice *slice = fd_resource_slice(rsc, level);
+	struct fd_transfer *trans;
 	struct pipe_transfer *ptrans;
 	enum pipe_format format = prsc->format;
 	uint32_t op = 0;
@@ -154,7 +155,8 @@ fd_resource_transfer_map(struct pipe_context *pctx,
 		return NULL;
 
 	/* util_slab_alloc() doesn't zero: */
-	memset(ptrans, 0, sizeof(*ptrans));
+	trans = fd_transfer(ptrans);
+	memset(trans, 0, sizeof(*trans));
 
 	pipe_resource_reference(&ptrans->resource, prsc);
 	ptrans->level = level;

@@ -81,6 +81,17 @@ fd_resource(struct pipe_resource *ptex)
 	return (struct fd_resource *)ptex;
 }
 
+struct fd_transfer {
+	struct pipe_transfer base;
+	void *staging;
+};
+
+static INLINE struct fd_transfer *
+fd_transfer(struct pipe_transfer *ptrans)
+{
+	return (struct fd_transfer *)ptrans;
+}
+
 static INLINE struct fd_resource_slice *
 fd_resource_slice(struct fd_resource *rsc, unsigned level)
 {

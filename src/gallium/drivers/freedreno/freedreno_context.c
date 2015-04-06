@@ -222,7 +222,7 @@ fd_context_init(struct fd_context *ctx, struct pipe_screen *pscreen,
 
 	util_dynarray_init(&ctx->draw_patches);
 
-	util_slab_create(&ctx->transfer_pool, sizeof(struct pipe_transfer),
+	util_slab_create(&ctx->transfer_pool, sizeof(struct fd_transfer),
 			16, UTIL_SLAB_SINGLETHREADED);
 
 	fd_draw_init(pctx);
