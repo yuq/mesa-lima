@@ -540,10 +540,10 @@ static inline bool reg_gpr(struct ir3_register *r)
 	return true;
 }
 
-/* some cat2 instructions (ie. those which are not float can embed an
+/* some cat2 instructions (ie. those which are not float) can embed an
  * immediate:
  */
-static inline bool ir3_cat2_immed(opc_t opc)
+static inline bool ir3_cat2_int(opc_t opc)
 {
 	switch (opc) {
 	case OPC_ADD_U:

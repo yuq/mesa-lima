@@ -115,7 +115,7 @@ static bool valid_flags(struct ir3_instruction *instr, unsigned n,
 	case 2:
 		valid_flags = ir3_cat2_absneg(instr->opc) | IR3_REG_CONST;
 
-		if (ir3_cat2_immed(instr->opc))
+		if (ir3_cat2_int(instr->opc))
 			valid_flags |= IR3_REG_IMMED;
 
 		if (flags & ~valid_flags)
@@ -199,6 +199,15 @@ static void combine_flags(unsigned *dstflags, unsigned srcflags)
 
 static struct ir3_instruction * instr_cp(struct ir3_instruction *instr, unsigned *flags);
 
+/* the "plain" MAD's (ie. the ones that don't shift first src prior to
+ * multiply) can swap their first two srcs if src[0] is !CONST and
+ * src[1] is CONST:
+ */
+static bool is_valid_mad(struct ir3_instruction *instr)
+{
+	return (instr->category == 3) && is_mad(instr->opc);
+}
+
 /**
  * Handle cp for a given src register.  This additionally handles
  * the cases of collapsing immedate/const (which replace the src
@@ -255,8 +264,23 @@ reg_cp(struct ir3_instruction *instr, struct ir3_register *reg, unsigned n)
 
 		combine_flags(&new_flags, reg->flags);
 
-		if (!valid_flags(instr, n, new_flags))
-			return;
+		if (!valid_flags(instr, n, new_flags)) {
+			/* special case for "normal" mad instructions, we can
+			 * try swapping the first two args if that fits better.
+			 */
+			if ((n == 1) && is_valid_mad(instr) &&
+					!(instr->regs[0 + 1]->flags & IR3_REG_CONST) &&
+					valid_flags(instr, 0, new_flags)) {
+				/* swap src[0] and src[1]: */
+				struct ir3_register *tmp;
+				tmp = instr->regs[0 + 1];
+				instr->regs[0 + 1] = instr->regs[1 + 1];
+				instr->regs[1 + 1] = tmp;
+				n = 0;
+			} else {
+				return;
+			}
+		}
 
 		/* Here we handle the special case of mov from
 		 * CONST and/or RELATIV.  These need to be handled
@@ -305,7 +329,7 @@ reg_cp(struct ir3_instruction *instr, struct ir3_register *reg, unsigned n)
 
 			debug_assert((instr->category == 6) ||
 					((instr->category == 2) &&
-						ir3_cat2_immed(instr->opc)));
+						ir3_cat2_int(instr->opc)));
 
 			if (new_flags & IR3_REG_SABS)
 				iim_val = abs(iim_val);
