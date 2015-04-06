@@ -383,6 +383,12 @@ intel_image_target_renderbuffer_storage(struct gl_context *ctx,
 
    irb = intel_renderbuffer(rb);
    intel_miptree_release(&irb->mt);
+
+   /* Disable creation of the miptree's aux buffers because the driver exposes
+    * no EGL API to manage them. That is, there is no API for resolving the aux
+    * buffer's content to the main buffer nor for invalidating the aux buffer's
+    * content.
+    */
    irb->mt = intel_miptree_create_for_bo(brw,
                                          image->bo,
                                          image->format,
@@ -391,7 +397,7 @@ intel_image_target_renderbuffer_storage(struct gl_context *ctx,
                                          image->height,
                                          1,
                                          image->pitch,
-                                         false /*disable_aux_buffers*/);
+                                         true /*disable_aux_buffers*/);
    if (!irb->mt)
       return;
 

@@ -154,7 +154,8 @@ intel_set_texture_image_bo(struct gl_context *ctx,
                            uint32_t offset,
                            GLuint width, GLuint height,
                            GLuint pitch,
-                           GLuint tile_x, GLuint tile_y)
+                           GLuint tile_x, GLuint tile_y,
+                           bool disable_aux_buffers)
 {
    struct brw_context *brw = brw_context(ctx);
    struct intel_texture_image *intel_image = intel_texture_image(image);
@@ -170,7 +171,7 @@ intel_set_texture_image_bo(struct gl_context *ctx,
 
    intel_image->mt = intel_miptree_create_for_bo(brw, bo, image->TexFormat,
                                                  0, width, height, 1, pitch,
-                                                 false /*disable_aux_buffers*/);
+                                                 disable_aux_buffers);
    if (intel_image->mt == NULL)
        return;
    intel_image->mt->target = target;
@@ -254,7 +255,8 @@ intelSetTexBuffer2(__DRIcontext *pDRICtx, GLint target,
                               rb->Base.Base.Width,
                               rb->Base.Base.Height,
                               rb->mt->pitch,
-                              0, 0);
+                              0, 0,
+                              false /*disable_aux_buffers*/);
    _mesa_unlock_texture(&brw->ctx, texObj);
 }
 
@@ -344,12 +346,18 @@ intel_image_target_texture_2d(struct gl_context *ctx, GLenum target,
       return;
    }
 
+   /* Disable creation of the texture's aux buffers because the driver exposes
+    * no EGL API to manage them. That is, there is no API for resolving the aux
+    * buffer's content to the main buffer nor for invalidating the aux buffer's
+    * content.
+    */
    intel_set_texture_image_bo(ctx, texImage, image->bo,
                               target, image->internal_format,
                               image->format, image->offset,
                               image->width,  image->height,
                               image->pitch,
-                              image->tile_x, image->tile_y);
+                              image->tile_x, image->tile_y,
+                              true /*disable_aux_buffers*/);
 }
 
 /**
