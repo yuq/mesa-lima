@@ -637,11 +637,6 @@ intel_miptree_copy_teximage(struct brw_context *brw,
                             struct intel_texture_image *intelImage,
                             struct intel_mipmap_tree *dst_mt, bool invalidate);
 
-bool
-intel_miptree_alloc_mcs(struct brw_context *brw,
-                        struct intel_mipmap_tree *mt,
-                        GLuint num_samples);
-
 /**
  * \name Miptree HiZ functions
  * \{

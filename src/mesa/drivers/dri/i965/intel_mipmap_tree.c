@@ -49,6 +49,11 @@
 
 #define FILE_DEBUG_FLAG DEBUG_MIPTREE
 
+static bool
+intel_miptree_alloc_mcs(struct brw_context *brw,
+                        struct intel_mipmap_tree *mt,
+                        GLuint num_samples);
+
 /**
  * Determine which MSAA layout should be used by the MSAA surface being
  * created, based on the chip generation and the surface type.
@@ -1300,7 +1305,7 @@ intel_miptree_copy_teximage(struct brw_context *brw,
    intel_obj->needs_validate = true;
 }
 
-bool
+static bool
 intel_miptree_alloc_mcs(struct brw_context *brw,
                         struct intel_mipmap_tree *mt,
                         GLuint num_samples)
