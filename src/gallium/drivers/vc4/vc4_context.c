@@ -118,10 +118,12 @@ vc4_setup_rcl(struct vc4_context *vc4)
         uint32_t tilecoords_size = 3;
         uint32_t branch_size = 5 + reloc_size;
         uint32_t color_store_size = 1;
+        uint32_t semaphore_size = 1;
         cl_ensure_space(&vc4->rcl,
                         clear_size +
                         config_size +
                         loadstore_size +
+                        semaphore_size +
                         xtiles * ytiles * (loadstore_size * 4 +
                                            tilecoords_size * 3 +
                                            branch_size +
