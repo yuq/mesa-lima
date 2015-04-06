@@ -530,19 +530,6 @@ struct intel_mipmap_tree *intel_miptree_create(struct brw_context *brw,
                                                bool force_all_slices_at_each_lod);
 
 struct intel_mipmap_tree *
-intel_miptree_create_layout(struct brw_context *brw,
-                            GLenum target,
-                            mesa_format format,
-                            GLuint first_level,
-                            GLuint last_level,
-                            GLuint width0,
-                            GLuint height0,
-                            GLuint depth0,
-                            bool for_bo,
-                            GLuint num_samples,
-                            bool force_all_slices_at_each_lod);
-
-struct intel_mipmap_tree *
 intel_miptree_create_for_bo(struct brw_context *brw,
                             drm_intel_bo *bo,
                             mesa_format format,

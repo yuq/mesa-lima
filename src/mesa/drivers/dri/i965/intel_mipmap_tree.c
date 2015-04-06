@@ -226,7 +226,7 @@ intel_depth_format_for_depthstencil_format(mesa_format format) {
  *        intel_miptree_create_for_bo(). If true, then do not create
  *        \c stencil_mt.
  */
-struct intel_mipmap_tree *
+static struct intel_mipmap_tree *
 intel_miptree_create_layout(struct brw_context *brw,
                             GLenum target,
                             mesa_format format,
