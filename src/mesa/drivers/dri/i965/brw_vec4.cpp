@@ -25,6 +25,7 @@
 #include "brw_fs.h"
 #include "brw_cfg.h"
 #include "brw_vs.h"
+#include "brw_nir.h"
 #include "brw_vec4_live_variables.h"
 #include "brw_dead_control_flow.h"
 
@@ -1809,6 +1810,8 @@ brw_vs_emit(struct brw_context *brw,
    bool start_busy = false;
    double start_time = 0;
    const unsigned *assembly = NULL;
+   bool use_nir =
+      brw->ctx.Const.ShaderCompilerOptions[MESA_SHADER_VERTEX].NirOptions != NULL;
 
    if (unlikely(brw->perf_debug)) {
       start_busy = (brw->batch.last_bo &&
@@ -1823,9 +1826,17 @@ brw_vs_emit(struct brw_context *brw,
    if (unlikely(INTEL_DEBUG & DEBUG_VS))
       brw_dump_ir("vertex", prog, &shader->base, &c->vp->program.Base);
 
-   if (brw->scalar_vs &&
-       (prog ||
-        brw->ctx.Const.ShaderCompilerOptions[MESA_SHADER_VERTEX].NirOptions)) {
+   if (use_nir && !c->vp->program.Base.nir) {
+      /* Normally we generate NIR in LinkShader() or ProgramStringNotify(), but
+       * Mesa's fixed-function vertex program handling doesn't notify the driver
+       * at all.  Just do it here, at the last minute, even though it's lame.
+       */
+      assert(c->vp->program.Base.Id == 0 && prog == NULL);
+      c->vp->program.Base.nir =
+         brw_create_nir(brw, NULL, &c->vp->program.Base, MESA_SHADER_VERTEX);
+   }
+
+   if (brw->scalar_vs && (prog || use_nir)) {
       fs_visitor v(brw, mem_ctx, &c->key, prog_data, prog, &c->vp->program, 8);
       if (!v.run_vs()) {
          if (prog) {

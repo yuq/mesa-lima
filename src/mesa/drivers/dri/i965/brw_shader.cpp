@@ -27,6 +27,7 @@
 #include "brw_gs.h"
 #include "brw_fs.h"
 #include "brw_cfg.h"
+#include "brw_nir.h"
 #include "glsl/ir_optimization.h"
 #include "glsl/glsl_parser_extras.h"
 #include "main/shaderapi.h"
@@ -229,6 +230,8 @@ brw_link_shader(struct gl_context *ctx, struct gl_shader_program *shProg)
 
    for (stage = 0; stage < ARRAY_SIZE(shProg->_LinkedShaders); stage++) {
       struct gl_shader *shader = shProg->_LinkedShaders[stage];
+      const struct gl_shader_compiler_options *options =
+         &ctx->Const.ShaderCompilerOptions[stage];
 
       if (!shader)
 	 continue;
@@ -276,6 +279,9 @@ brw_link_shader(struct gl_context *ctx, struct gl_shader_program *shProg)
       _mesa_reference_program(ctx, &shader->Program, prog);
 
       brw_add_texrect_params(prog);
+
+      if (options->NirOptions)
+         prog->nir = brw_create_nir(brw, shProg, prog, (gl_shader_stage) stage);
 
       _mesa_reference_program(ctx, &prog, NULL);
    }

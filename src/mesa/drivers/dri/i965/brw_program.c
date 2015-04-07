@@ -43,6 +43,7 @@
 
 #include "brw_context.h"
 #include "brw_shader.h"
+#include "brw_nir.h"
 #include "brw_wm.h"
 #include "intel_batchbuffer.h"
 
@@ -141,6 +142,10 @@ brwProgramStringNotify(struct gl_context *ctx,
 
       brw_add_texrect_params(prog);
 
+      if (ctx->Const.ShaderCompilerOptions[MESA_SHADER_FRAGMENT].NirOptions) {
+         prog->nir = brw_create_nir(brw, NULL, prog, MESA_SHADER_FRAGMENT);
+      }
+
       brw_fs_precompile(ctx, NULL, prog);
       break;
    }
@@ -162,6 +167,10 @@ brwProgramStringNotify(struct gl_context *ctx,
       _tnl_program_string(ctx, target, prog);
 
       brw_add_texrect_params(prog);
+
+      if (ctx->Const.ShaderCompilerOptions[MESA_SHADER_VERTEX].NirOptions) {
+         prog->nir = brw_create_nir(brw, NULL, prog, MESA_SHADER_VERTEX);
+      }
 
       brw_vs_precompile(ctx, NULL, prog);
       break;

@@ -2087,6 +2087,8 @@ struct gl_program
 
    struct prog_instruction *Instructions;
 
+   struct nir_shader *nir;
+
    GLbitfield64 InputsRead;     /**< Bitmask of which input regs are read */
    GLbitfield64 OutputsWritten; /**< Bitmask of which output regs are written */
    GLbitfield SystemValuesRead;   /**< Bitmask of SYSTEM_VALUE_x inputs used */

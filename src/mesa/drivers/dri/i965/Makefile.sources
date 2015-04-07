@@ -77,6 +77,7 @@ i965_FILES = \
 	brw_misc_state.c \
 	brw_multisample_state.h \
 	brw_nir.h \
+	brw_nir.c \
 	brw_nir_analyze_boolean_resolves.c \
 	brw_object_purgeable.c \
 	brw_packed_float.c \
