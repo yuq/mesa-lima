@@ -41,17 +41,12 @@ get_sampler_index(struct gl_shader_program *shader_program,
 {
    unsigned location;
    if (!shader_program->UniformHash->get(location, name)) {
-      linker_error(shader_program,
-                   "failed to find sampler named %s.\n", name);
+      assert(!"failed to find sampler");
       return 0;
    }
 
    if (!shader_program->UniformStorage[location].sampler[stage].active) {
-      assert(0 && "cannot return a sampler");
-      linker_error(shader_program,
-                   "cannot return a sampler named %s, because it is not "
-                   "used in this shader stage. This is a driver bug.\n",
-                   name);
+      assert(!"cannot return a sampler");
       return 0;
    }
 
