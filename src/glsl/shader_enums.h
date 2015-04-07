@@ -23,8 +23,8 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef PIPELINE_H
-#define PIPELINE_H
+#ifndef SHADER_ENUMS_H
+#define SHADER_ENUMS_H
 
 /**
  * Bitflags for system values.
@@ -167,4 +167,4 @@ enum glsl_interp_qualifier
 };
 
 
-#endif /* PIPELINE_H */
+#endif /* SHADER_ENUMS_H */
