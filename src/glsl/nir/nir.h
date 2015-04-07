@@ -1612,7 +1612,7 @@ void nir_lower_phis_to_scalar(nir_shader *shader);
 
 void nir_lower_samplers(nir_shader *shader,
                         struct gl_shader_program *shader_program,
-                        struct gl_program *prog);
+                        gl_shader_stage stage);
 
 void nir_lower_system_values(nir_shader *shader);
 void nir_lower_tex_projector(nir_shader *shader);

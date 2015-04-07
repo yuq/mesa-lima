@@ -141,7 +141,7 @@ fs_visitor::emit_nir_code()
    nir_validate_shader(nir);
 
    if (shader_prog) {
-      nir_lower_samplers(nir, shader_prog, shader->base.Program);
+      nir_lower_samplers(nir, shader_prog, stage);
       nir_validate_shader(nir);
    }
 

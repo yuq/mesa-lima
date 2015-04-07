@@ -36,11 +36,9 @@ extern "C" {
 }
 
 static unsigned
-get_sampler_index(struct gl_shader_program *shader_program, const char *name,
-                  const struct gl_program *prog)
+get_sampler_index(struct gl_shader_program *shader_program,
+                  gl_shader_stage stage, const char *name)
 {
-   GLuint shader = _mesa_program_enum_to_shader_stage(prog->Target);
-
    unsigned location;
    if (!shader_program->UniformHash->get(location, name)) {
       linker_error(shader_program,
@@ -48,7 +46,7 @@ get_sampler_index(struct gl_shader_program *shader_program, const char *name,
       return 0;
    }
 
-   if (!shader_program->UniformStorage[location].sampler[shader].active) {
+   if (!shader_program->UniformStorage[location].sampler[stage].active) {
       assert(0 && "cannot return a sampler");
       linker_error(shader_program,
                    "cannot return a sampler named %s, because it is not "
@@ -57,12 +55,12 @@ get_sampler_index(struct gl_shader_program *shader_program, const char *name,
       return 0;
    }
 
-   return shader_program->UniformStorage[location].sampler[shader].index;
+   return shader_program->UniformStorage[location].sampler[stage].index;
 }
 
 static void
 lower_sampler(nir_tex_instr *instr, struct gl_shader_program *shader_program,
-              const struct gl_program *prog, void *mem_ctx)
+              gl_shader_stage stage, void *mem_ctx)
 {
    if (instr->sampler == NULL)
       return;
@@ -133,7 +131,7 @@ lower_sampler(nir_tex_instr *instr, struct gl_shader_program *shader_program,
       }
    }
 
-   instr->sampler_index += get_sampler_index(shader_program, name, prog);
+   instr->sampler_index += get_sampler_index(shader_program, stage, name);
 
    instr->sampler = NULL;
 }
@@ -141,7 +139,7 @@ lower_sampler(nir_tex_instr *instr, struct gl_shader_program *shader_program,
 typedef struct {
    void *mem_ctx;
    struct gl_shader_program *shader_program;
-   struct gl_program *prog;
+   gl_shader_stage stage;
 } lower_state;
 
 static bool
@@ -152,7 +150,7 @@ lower_block_cb(nir_block *block, void *_state)
    nir_foreach_instr(block, instr) {
       if (instr->type == nir_instr_type_tex) {
          nir_tex_instr *tex_instr = nir_instr_as_tex(instr);
-         lower_sampler(tex_instr, state->shader_program, state->prog,
+         lower_sampler(tex_instr, state->shader_program, state->stage,
                        state->mem_ctx);
       }
    }
@@ -162,23 +160,23 @@ lower_block_cb(nir_block *block, void *_state)
 
 static void
 lower_impl(nir_function_impl *impl, struct gl_shader_program *shader_program,
-           struct gl_program *prog)
+           gl_shader_stage stage)
 {
    lower_state state;
 
    state.mem_ctx = ralloc_parent(impl);
    state.shader_program = shader_program;
-   state.prog = prog;
+   state.stage = stage;
 
    nir_foreach_block(impl, lower_block_cb, &state);
 }
 
 extern "C" void
 nir_lower_samplers(nir_shader *shader, struct gl_shader_program *shader_program,
-                   struct gl_program *prog)
+                   gl_shader_stage stage)
 {
    nir_foreach_overload(shader, overload) {
       if (overload->impl)
-         lower_impl(overload->impl, shader_program, prog);
+         lower_impl(overload->impl, shader_program, stage);
    }
 }
