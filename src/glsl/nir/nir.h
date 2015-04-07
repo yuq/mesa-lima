@@ -1480,26 +1480,26 @@ void nir_metadata_require(nir_function_impl *impl, nir_metadata required);
 void nir_metadata_preserve(nir_function_impl *impl, nir_metadata preserved);
 
 /** creates an instruction with default swizzle/writemask/etc. with NULL registers */
-nir_alu_instr *nir_alu_instr_create(void *mem_ctx, nir_op op);
+nir_alu_instr *nir_alu_instr_create(nir_shader *shader, nir_op op);
 
-nir_jump_instr *nir_jump_instr_create(void *mem_ctx, nir_jump_type type);
+nir_jump_instr *nir_jump_instr_create(nir_shader *shader, nir_jump_type type);
 
-nir_load_const_instr *nir_load_const_instr_create(void *mem_ctx,
+nir_load_const_instr *nir_load_const_instr_create(nir_shader *shader,
                                                   unsigned num_components);
 
-nir_intrinsic_instr *nir_intrinsic_instr_create(void *mem_ctx,
+nir_intrinsic_instr *nir_intrinsic_instr_create(nir_shader *shader,
                                                 nir_intrinsic_op op);
 
-nir_call_instr *nir_call_instr_create(void *mem_ctx,
+nir_call_instr *nir_call_instr_create(nir_shader *shader,
                                       nir_function_overload *callee);
 
-nir_tex_instr *nir_tex_instr_create(void *mem_ctx, unsigned num_srcs);
+nir_tex_instr *nir_tex_instr_create(nir_shader *shader, unsigned num_srcs);
 
-nir_phi_instr *nir_phi_instr_create(void *mem_ctx);
+nir_phi_instr *nir_phi_instr_create(nir_shader *shader);
 
-nir_parallel_copy_instr *nir_parallel_copy_instr_create(void *mem_ctx);
+nir_parallel_copy_instr *nir_parallel_copy_instr_create(nir_shader *shader);
 
-nir_ssa_undef_instr *nir_ssa_undef_instr_create(void *mem_ctx,
+nir_ssa_undef_instr *nir_ssa_undef_instr_create(nir_shader *shader,
                                                 unsigned num_components);
 
 nir_deref_var *nir_deref_var_create(void *mem_ctx, nir_variable *var);

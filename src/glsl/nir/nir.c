@@ -381,11 +381,11 @@ alu_src_init(nir_alu_src *src)
 }
 
 nir_alu_instr *
-nir_alu_instr_create(void *mem_ctx, nir_op op)
+nir_alu_instr_create(nir_shader *shader, nir_op op)
 {
    unsigned num_srcs = nir_op_infos[op].num_inputs;
    nir_alu_instr *instr =
-      ralloc_size(mem_ctx,
+      ralloc_size(shader,
                   sizeof(nir_alu_instr) + num_srcs * sizeof(nir_alu_src));
 
    instr_init(&instr->instr, nir_instr_type_alu);
@@ -398,18 +398,18 @@ nir_alu_instr_create(void *mem_ctx, nir_op op)
 }
 
 nir_jump_instr *
-nir_jump_instr_create(void *mem_ctx, nir_jump_type type)
+nir_jump_instr_create(nir_shader *shader, nir_jump_type type)
 {
-   nir_jump_instr *instr = ralloc(mem_ctx, nir_jump_instr);
+   nir_jump_instr *instr = ralloc(shader, nir_jump_instr);
    instr_init(&instr->instr, nir_instr_type_jump);
    instr->type = type;
    return instr;
 }
 
 nir_load_const_instr *
-nir_load_const_instr_create(void *mem_ctx, unsigned num_components)
+nir_load_const_instr_create(nir_shader *shader, unsigned num_components)
 {
-   nir_load_const_instr *instr = ralloc(mem_ctx, nir_load_const_instr);
+   nir_load_const_instr *instr = ralloc(shader, nir_load_const_instr);
    instr_init(&instr->instr, nir_instr_type_load_const);
 
    nir_ssa_def_init(&instr->instr, &instr->def, num_components, NULL);
@@ -418,11 +418,11 @@ nir_load_const_instr_create(void *mem_ctx, unsigned num_components)
 }
 
 nir_intrinsic_instr *
-nir_intrinsic_instr_create(void *mem_ctx, nir_intrinsic_op op)
+nir_intrinsic_instr_create(nir_shader *shader, nir_intrinsic_op op)
 {
    unsigned num_srcs = nir_intrinsic_infos[op].num_srcs;
    nir_intrinsic_instr *instr =
-      ralloc_size(mem_ctx,
+      ralloc_size(shader,
                   sizeof(nir_intrinsic_instr) + num_srcs * sizeof(nir_src));
 
    instr_init(&instr->instr, nir_instr_type_intrinsic);
@@ -438,9 +438,9 @@ nir_intrinsic_instr_create(void *mem_ctx, nir_intrinsic_op op)
 }
 
 nir_call_instr *
-nir_call_instr_create(void *mem_ctx, nir_function_overload *callee)
+nir_call_instr_create(nir_shader *shader, nir_function_overload *callee)
 {
-   nir_call_instr *instr = ralloc(mem_ctx, nir_call_instr);
+   nir_call_instr *instr = ralloc(shader, nir_call_instr);
    instr_init(&instr->instr, nir_instr_type_call);
 
    instr->callee = callee;
@@ -452,9 +452,9 @@ nir_call_instr_create(void *mem_ctx, nir_function_overload *callee)
 }
 
 nir_tex_instr *
-nir_tex_instr_create(void *mem_ctx, unsigned num_srcs)
+nir_tex_instr_create(nir_shader *shader, unsigned num_srcs)
 {
-   nir_tex_instr *instr = ralloc(mem_ctx, nir_tex_instr);
+   nir_tex_instr *instr = ralloc(shader, nir_tex_instr);
    instr_init(&instr->instr, nir_instr_type_tex);
 
    dest_init(&instr->dest);
@@ -472,9 +472,9 @@ nir_tex_instr_create(void *mem_ctx, unsigned num_srcs)
 }
 
 nir_phi_instr *
-nir_phi_instr_create(void *mem_ctx)
+nir_phi_instr_create(nir_shader *shader)
 {
-   nir_phi_instr *instr = ralloc(mem_ctx, nir_phi_instr);
+   nir_phi_instr *instr = ralloc(shader, nir_phi_instr);
    instr_init(&instr->instr, nir_instr_type_phi);
 
    dest_init(&instr->dest);
@@ -483,9 +483,9 @@ nir_phi_instr_create(void *mem_ctx)
 }
 
 nir_parallel_copy_instr *
-nir_parallel_copy_instr_create(void *mem_ctx)
+nir_parallel_copy_instr_create(nir_shader *shader)
 {
-   nir_parallel_copy_instr *instr = ralloc(mem_ctx, nir_parallel_copy_instr);
+   nir_parallel_copy_instr *instr = ralloc(shader, nir_parallel_copy_instr);
    instr_init(&instr->instr, nir_instr_type_parallel_copy);
 
    exec_list_make_empty(&instr->entries);
@@ -494,9 +494,9 @@ nir_parallel_copy_instr_create(void *mem_ctx)
 }
 
 nir_ssa_undef_instr *
-nir_ssa_undef_instr_create(void *mem_ctx, unsigned num_components)
+nir_ssa_undef_instr_create(nir_shader *shader, unsigned num_components)
 {
-   nir_ssa_undef_instr *instr = ralloc(mem_ctx, nir_ssa_undef_instr);
+   nir_ssa_undef_instr *instr = ralloc(shader, nir_ssa_undef_instr);
    instr_init(&instr->instr, nir_instr_type_ssa_undef);
 
    nir_ssa_def_init(&instr->instr, &instr->def, num_components, NULL);
