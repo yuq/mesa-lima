@@ -445,7 +445,7 @@ nir_call_instr_create(void *mem_ctx, nir_function_overload *callee)
 
    instr->callee = callee;
    instr->num_params = callee->num_params;
-   instr->params = ralloc_array(mem_ctx, nir_deref_var *, instr->num_params);
+   instr->params = ralloc_array(instr, nir_deref_var *, instr->num_params);
    instr->return_deref = NULL;
 
    return instr;
