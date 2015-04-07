@@ -36,7 +36,7 @@ extern "C" {
 }
 
 static unsigned
-get_sampler_index(struct gl_shader_program *shader_program,
+get_sampler_index(const struct gl_shader_program *shader_program,
                   gl_shader_stage stage, const char *name)
 {
    unsigned location;
@@ -54,7 +54,7 @@ get_sampler_index(struct gl_shader_program *shader_program,
 }
 
 static void
-lower_sampler(nir_tex_instr *instr, struct gl_shader_program *shader_program,
+lower_sampler(nir_tex_instr *instr, const struct gl_shader_program *shader_program,
               gl_shader_stage stage, void *mem_ctx)
 {
    if (instr->sampler == NULL)
@@ -133,7 +133,7 @@ lower_sampler(nir_tex_instr *instr, struct gl_shader_program *shader_program,
 
 typedef struct {
    void *mem_ctx;
-   struct gl_shader_program *shader_program;
+   const struct gl_shader_program *shader_program;
    gl_shader_stage stage;
 } lower_state;
 
@@ -154,7 +154,7 @@ lower_block_cb(nir_block *block, void *_state)
 }
 
 static void
-lower_impl(nir_function_impl *impl, struct gl_shader_program *shader_program,
+lower_impl(nir_function_impl *impl, const struct gl_shader_program *shader_program,
            gl_shader_stage stage)
 {
    lower_state state;
@@ -167,7 +167,7 @@ lower_impl(nir_function_impl *impl, struct gl_shader_program *shader_program,
 }
 
 extern "C" void
-nir_lower_samplers(nir_shader *shader, struct gl_shader_program *shader_program,
+nir_lower_samplers(nir_shader *shader, const struct gl_shader_program *shader_program,
                    gl_shader_stage stage)
 {
    nir_foreach_overload(shader, overload) {
