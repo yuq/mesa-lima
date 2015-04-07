@@ -78,7 +78,7 @@ brw_blorp_blit_miptrees(struct brw_context *brw,
 
    DBG("%s from %dx %s mt %p %d %d (%f,%f) (%f,%f)"
        "to %dx %s mt %p %d %d (%f,%f) (%f,%f) (flip %d,%d)\n",
-       __FUNCTION__,
+       __func__,
        src_mt->num_samples, _mesa_get_format_name(src_mt->format), src_mt,
        src_level, src_layer, src_x0, src_y0, src_x1, src_y1,
        dst_mt->num_samples, _mesa_get_format_name(dst_mt->format), dst_mt,

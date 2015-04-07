@@ -29,7 +29,7 @@ using namespace brw;
 
 int ret = 0;
 
-#define register_coalesce(v) _register_coalesce(v, __FUNCTION__)
+#define register_coalesce(v) _register_coalesce(v, __func__)
 
 class register_coalesce_test : public ::testing::Test {
    virtual void SetUp();

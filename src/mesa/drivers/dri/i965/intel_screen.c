@@ -706,7 +706,7 @@ intel_create_image_from_fds(__DRIscreen *screen,
 
    if (f->nplanes == 1) {
       image->offset = image->offsets[0];
-      intel_image_warn_if_unaligned(image, __FUNCTION__);
+      intel_image_warn_if_unaligned(image, __func__);
    }
 
    return image;
@@ -797,7 +797,7 @@ intel_from_planar(__DRIimage *parent, int plane, void *loaderPrivate)
     image->pitch = stride;
     image->offset = offset;
 
-    intel_image_warn_if_unaligned(image, __FUNCTION__);
+    intel_image_warn_if_unaligned(image, __func__);
 
     return image;
 }

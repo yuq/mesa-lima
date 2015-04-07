@@ -194,7 +194,7 @@ intel_hiz_exec(struct brw_context *brw, struct intel_mipmap_tree *mt,
    }
 
    DBG("%s %s to mt %p level %d layer %d\n",
-       __FUNCTION__, opname, mt, level, layer);
+       __func__, opname, mt, level, layer);
 
    if (brw->gen >= 8) {
       gen8_hiz_exec(brw, mt, level, layer, op);

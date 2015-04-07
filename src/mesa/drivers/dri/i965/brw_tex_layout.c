@@ -459,7 +459,7 @@ brw_miptree_layout(struct brw_context *brw, struct intel_mipmap_tree *mt)
       }
       break;
    }
-   DBG("%s: %dx%dx%d\n", __FUNCTION__,
+   DBG("%s: %dx%dx%d\n", __func__,
        mt->total_width, mt->total_height, mt->cpp);
 }
 

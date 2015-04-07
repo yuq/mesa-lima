@@ -468,7 +468,7 @@ gen7_update_renderbuffer_surface(struct brw_context *brw,
    format = brw->render_target_format[rb_format];
    if (unlikely(!brw->format_supported_as_render_target[rb_format])) {
       _mesa_problem(ctx, "%s: renderbuffer format %s unsupported\n",
-                    __FUNCTION__, _mesa_get_format_name(rb_format));
+                    __func__, _mesa_get_format_name(rb_format));
    }
 
    switch (gl_target) {

@@ -45,7 +45,7 @@ intel_miptree_create_for_teximage(struct brw_context *brw,
    intel_miptree_get_dimensions_for_image(&intelImage->base.Base,
                                           &width, &height, &depth);
 
-   DBG("%s\n", __FUNCTION__);
+   DBG("%s\n", __func__);
 
    /* Figure out image dimensions at start level. */
    for (i = intelImage->base.Base.Level; i > 0; i--) {
@@ -98,7 +98,7 @@ intelTexImage(struct gl_context * ctx,
    bool tex_busy = intelImage->mt && drm_intel_bo_busy(intelImage->mt->bo);
 
    DBG("%s mesa_format %s target %s format %s type %s level %d %dx%dx%d\n",
-       __FUNCTION__, _mesa_get_format_name(texImage->TexFormat),
+       __func__, _mesa_get_format_name(texImage->TexFormat),
        _mesa_lookup_enum_by_nr(texImage->TexObject->Target),
        _mesa_lookup_enum_by_nr(format), _mesa_lookup_enum_by_nr(type),
        texImage->Level, texImage->Width, texImage->Height, texImage->Depth);
@@ -131,7 +131,7 @@ intelTexImage(struct gl_context * ctx,
       return;
 
    DBG("%s: upload image %dx%dx%d pixels %p\n",
-       __FUNCTION__, texImage->Width, texImage->Height, texImage->Depth,
+       __func__, texImage->Width, texImage->Height, texImage->Depth,
        pixels);
 
    _mesa_store_teximage(ctx, dims, texImage,
@@ -438,7 +438,7 @@ intel_gettexsubimage_tiled_memcpy(struct gl_context *ctx,
 
    error = brw_bo_map(brw, bo, false /* write enable */, "miptree");
    if (error) {
-      DBG("%s: failed to map bo\n", __FUNCTION__);
+      DBG("%s: failed to map bo\n", __func__);
       return false;
    }
 
@@ -447,7 +447,7 @@ intel_gettexsubimage_tiled_memcpy(struct gl_context *ctx,
    DBG("%s: level=%d x,y=(%d,%d) (w,h)=(%d,%d) format=0x%x type=0x%x "
        "mesa_format=0x%x tiling=%d "
        "packing=(alignment=%d row_length=%d skip_pixels=%d skip_rows=%d)\n",
-       __FUNCTION__, texImage->Level, xoffset, yoffset, width, height,
+       __func__, texImage->Level, xoffset, yoffset, width, height,
        format, type, texImage->TexFormat, image->mt->tiling,
        packing->Alignment, packing->RowLength, packing->SkipPixels,
        packing->SkipRows);
@@ -480,7 +480,7 @@ intel_get_tex_image(struct gl_context *ctx,
    struct brw_context *brw = brw_context(ctx);
    bool ok;
 
-   DBG("%s\n", __FUNCTION__);
+   DBG("%s\n", __func__);
 
    if (_mesa_is_bufferobj(ctx->Pack.BufferObj)) {
       if (_mesa_meta_pbo_GetTexSubImage(ctx, 3, texImage, 0, 0, 0,
@@ -489,7 +489,7 @@ intel_get_tex_image(struct gl_context *ctx,
                                         pixels, &ctx->Pack))
          return;
 
-      perf_debug("%s: fallback to CPU mapping in PBO case\n", __FUNCTION__);
+      perf_debug("%s: fallback to CPU mapping in PBO case\n", __func__);
    }
 
    ok = intel_gettexsubimage_tiled_memcpy(ctx, texImage, 0, 0,
@@ -501,7 +501,7 @@ intel_get_tex_image(struct gl_context *ctx,
 
    _mesa_meta_GetTexImage(ctx, format, type, pixels, texImage);
 
-   DBG("%s - DONE\n", __FUNCTION__);
+   DBG("%s - DONE\n", __func__);
 }
 
 void

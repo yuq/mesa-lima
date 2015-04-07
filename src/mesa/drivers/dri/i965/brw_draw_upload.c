@@ -413,7 +413,7 @@ brw_prepare_vertices(struct brw_context *brw)
    }
 
    if (0)
-      fprintf(stderr, "%s %d..%d\n", __FUNCTION__, min_index, max_index);
+      fprintf(stderr, "%s %d..%d\n", __func__, min_index, max_index);
 
    /* Accumulate the list of enabled arrays. */
    brw->vb.nr_enabled = 0;
