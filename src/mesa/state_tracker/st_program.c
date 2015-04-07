@@ -403,7 +403,7 @@ st_translate_vertex_program(struct st_context *st,
    return vpv;
 
 fail:
-   debug_printf("%s: failed to translate Mesa program:\n", __FUNCTION__);
+   debug_printf("%s: failed to translate Mesa program:\n", __func__);
    _mesa_print_program(&stvp->Base.Base);
    debug_assert(0);
 
