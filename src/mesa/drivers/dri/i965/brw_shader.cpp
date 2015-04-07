@@ -199,6 +199,9 @@ process_glsl_ir(struct brw_context *brw,
                                         options, ctx->Const.NativeIntegers) || progress;
    } while (progress);
 
+   if (options->NirOptions != NULL)
+      lower_output_reads(shader->ir);
+
    validate_ir_tree(shader->ir);
 
    /* Now that we've finished altering the linked IR, reparent any live IR back

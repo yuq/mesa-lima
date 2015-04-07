@@ -90,7 +90,6 @@ fs_visitor::emit_nir_code()
    nir_shader *nir;
    /* First, lower the GLSL IR or Mesa IR to NIR */
    if (shader_prog) {
-      lower_output_reads(shader->base.ir);
       nir = glsl_to_nir(&shader->base, options);
    } else {
       nir = prog_to_nir(prog, options);
