@@ -104,8 +104,7 @@ util_primconvert_save_rasterizer_state(struct primconvert_context *pc,
     * we would actually need to save/restore rasterizer state.  As
     * it is, we just need to make note of the pv.
     */
-   pc->api_pv = (rast->flatshade
-                 && !rast->flatshade_first) ? PV_LAST : PV_FIRST;
+   pc->api_pv = rast->flatshade_first ? PV_FIRST : PV_LAST;
 }
 
 void
