@@ -514,8 +514,7 @@ public:
    fs_reg pixel_y;
    fs_reg wpos_w;
    fs_reg pixel_w;
-   fs_reg delta_x[BRW_WM_BARYCENTRIC_INTERP_MODE_COUNT];
-   fs_reg delta_y[BRW_WM_BARYCENTRIC_INTERP_MODE_COUNT];
+   fs_reg delta_xy[BRW_WM_BARYCENTRIC_INTERP_MODE_COUNT];
    fs_reg shader_start_time;
    fs_reg userplane[MAX_CLIP_PLANES];
 

@@ -704,6 +704,13 @@ brw_vec8_grf(unsigned nr, unsigned subnr)
    return brw_vec8_reg(BRW_GENERAL_REGISTER_FILE, nr, subnr);
 }
 
+/** Construct float[16] general-purpose register */
+static inline struct brw_reg
+brw_vec16_grf(unsigned nr, unsigned subnr)
+{
+   return brw_vec16_reg(BRW_GENERAL_REGISTER_FILE, nr, subnr);
+}
+
 
 static inline struct brw_reg
 brw_uw8_grf(unsigned nr, unsigned subnr)

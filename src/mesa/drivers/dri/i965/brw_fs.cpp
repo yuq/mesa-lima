@@ -1265,8 +1265,7 @@ fs_visitor::emit_fragcoord_interpolation(bool pixel_center_integer,
       emit(MOV(wpos, fs_reg(brw_vec8_grf(payload.source_depth_reg, 0))));
    } else {
       emit(FS_OPCODE_LINTERP, wpos,
-           this->delta_x[BRW_WM_PERSPECTIVE_PIXEL_BARYCENTRIC],
-           this->delta_y[BRW_WM_PERSPECTIVE_PIXEL_BARYCENTRIC],
+           this->delta_xy[BRW_WM_PERSPECTIVE_PIXEL_BARYCENTRIC],
            interp_reg(VARYING_SLOT_POS, 2));
    }
    wpos = offset(wpos, 1);
@@ -1308,8 +1307,7 @@ fs_visitor::emit_linterp(const fs_reg &attr, const fs_reg &interp,
       barycoord_mode = BRW_WM_PERSPECTIVE_PIXEL_BARYCENTRIC;
    }
    return emit(FS_OPCODE_LINTERP, attr,
-               this->delta_x[barycoord_mode],
-               this->delta_y[barycoord_mode], interp);
+               this->delta_xy[barycoord_mode], interp);
 }
 
 void
@@ -1859,8 +1857,8 @@ fs_visitor::assign_urb_setup()
     */
    foreach_block_and_inst(block, fs_inst, inst, cfg) {
       if (inst->opcode == FS_OPCODE_LINTERP) {
-	 assert(inst->src[2].file == HW_REG);
-	 inst->src[2].fixed_hw_reg.nr += urb_start;
+	 assert(inst->src[1].file == HW_REG);
+	 inst->src[1].fixed_hw_reg.nr += urb_start;
       }
 
       if (inst->opcode == FS_OPCODE_CINTERP) {
@@ -2114,25 +2112,16 @@ fs_visitor::compact_virtual_grfs()
       }
    }
 
-   /* Patch all the references to delta_x/delta_y, since they're used in
-    * register allocation.  If they're unused, switch them to BAD_FILE so
-    * we don't think some random VGRF is delta_x/delta_y.
+   /* Patch all the references to delta_xy, since they're used in register
+    * allocation.  If they're unused, switch them to BAD_FILE so we don't
+    * think some random VGRF is delta_xy.
     */
-   for (unsigned i = 0; i < ARRAY_SIZE(delta_x); i++) {
-      if (delta_x[i].file == GRF) {
-         if (remap_table[delta_x[i].reg] != -1) {
-            delta_x[i].reg = remap_table[delta_x[i].reg];
+   for (unsigned i = 0; i < ARRAY_SIZE(delta_xy); i++) {
+      if (delta_xy[i].file == GRF) {
+         if (remap_table[delta_xy[i].reg] != -1) {
+            delta_xy[i].reg = remap_table[delta_xy[i].reg];
          } else {
-            delta_x[i].file = BAD_FILE;
-         }
-      }
-   }
-   for (unsigned i = 0; i < ARRAY_SIZE(delta_y); i++) {
-      if (delta_y[i].file == GRF) {
-         if (remap_table[delta_y[i].reg] != -1) {
-            delta_y[i].reg = remap_table[delta_y[i].reg];
-         } else {
-            delta_y[i].file = BAD_FILE;
+            delta_xy[i].file = BAD_FILE;
          }
       }
    }
@@ -2685,14 +2674,9 @@ fs_visitor::opt_register_renaming()
    if (progress) {
       invalidate_live_intervals();
 
-      for (unsigned i = 0; i < ARRAY_SIZE(delta_x); i++) {
-         if (delta_x[i].file == GRF && remap[delta_x[i].reg] != -1) {
-            delta_x[i].reg = remap[delta_x[i].reg];
-         }
-      }
-      for (unsigned i = 0; i < ARRAY_SIZE(delta_y); i++) {
-         if (delta_y[i].file == GRF && remap[delta_y[i].reg] != -1) {
-            delta_y[i].reg = remap[delta_y[i].reg];
+      for (unsigned i = 0; i < ARRAY_SIZE(delta_xy); i++) {
+         if (delta_xy[i].file == GRF && remap[delta_xy[i].reg] != -1) {
+            delta_xy[i].reg = remap[delta_xy[i].reg];
          }
       }
    }

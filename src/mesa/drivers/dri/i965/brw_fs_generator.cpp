@@ -391,12 +391,31 @@ void
 fs_generator::generate_linterp(fs_inst *inst,
 			     struct brw_reg dst, struct brw_reg *src)
 {
+   /* PLN reads:
+    *                      /   in SIMD16   \
+    *    -----------------------------------
+    *   | src1+0 | src1+1 | src1+2 | src1+3 |
+    *   |-----------------------------------|
+    *   |(x0, x1)|(y0, y1)|(x2, x3)|(y2, y3)|
+    *    -----------------------------------
+    *
+    * but for the LINE/MAC pair, the LINE reads Xs and the MAC reads Ys:
+    *
+    *    -----------------------------------
+    *   | src1+0 | src1+1 | src1+2 | src1+3 |
+    *   |-----------------------------------|
+    *   |(x0, x1)|(y0, y1)|        |        | in SIMD8
+    *   |-----------------------------------|
+    *   |(x0, x1)|(x2, x3)|(y0, y1)|(y2, y3)| in SIMD16
+    *    -----------------------------------
+    *
+    * See also: emit_interpolation_setup_gen4().
+    */
    struct brw_reg delta_x = src[0];
-   struct brw_reg delta_y = src[1];
-   struct brw_reg interp = src[2];
+   struct brw_reg delta_y = offset(src[0], dispatch_width / 8);
+   struct brw_reg interp = src[1];
 
    if (brw->has_pln &&
-       delta_y.nr == delta_x.nr + 1 &&
        (brw->gen >= 7 || (delta_x.nr & 1) == 0)) {
       brw_PLN(p, dst, interp, delta_x);
    } else {

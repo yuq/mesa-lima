@@ -593,8 +593,7 @@ fs_visitor::emit_interpolate_expression(ir_expression *ir)
 
    /* 1. collect interpolation factors */
 
-   fs_reg dst_x = vgrf(glsl_type::get_instance(ir->type->base_type, 2, 1));
-   fs_reg dst_y = offset(dst_x, 1);
+   fs_reg dst_xy = vgrf(glsl_type::get_instance(ir->type->base_type, 2, 1));
 
    /* for most messages, we need one reg of ignored data; the hardware requires mlen==1
     * even when there is no payload. in the per-slot offset case, we'll replace this with
@@ -606,7 +605,7 @@ fs_visitor::emit_interpolate_expression(ir_expression *ir)
 
    switch (ir->operation) {
    case ir_unop_interpolate_at_centroid:
-      inst = emit(FS_OPCODE_INTERPOLATE_AT_CENTROID, dst_x, src, fs_reg(0u));
+      inst = emit(FS_OPCODE_INTERPOLATE_AT_CENTROID, dst_xy, src, fs_reg(0u));
       break;
 
    case ir_binop_interpolate_at_sample: {
@@ -614,7 +613,7 @@ fs_visitor::emit_interpolate_expression(ir_expression *ir)
       assert(sample_num || !"nonconstant sample number should have been lowered.");
 
       unsigned msg_data = sample_num->value.i[0] << 4;
-      inst = emit(FS_OPCODE_INTERPOLATE_AT_SAMPLE, dst_x, src, fs_reg(msg_data));
+      inst = emit(FS_OPCODE_INTERPOLATE_AT_SAMPLE, dst_xy, src, fs_reg(msg_data));
       break;
    }
 
@@ -623,7 +622,7 @@ fs_visitor::emit_interpolate_expression(ir_expression *ir)
       if (const_offset) {
          unsigned msg_data = pack_pixel_offset(const_offset->value.f[0]) |
                             (pack_pixel_offset(const_offset->value.f[1]) << 4);
-         inst = emit(FS_OPCODE_INTERPOLATE_AT_SHARED_OFFSET, dst_x, src,
+         inst = emit(FS_OPCODE_INTERPOLATE_AT_SHARED_OFFSET, dst_xy, src,
                      fs_reg(msg_data));
       } else {
          /* pack the operands: hw wants offsets as 4 bit signed ints */
@@ -656,7 +655,7 @@ fs_visitor::emit_interpolate_expression(ir_expression *ir)
          }
 
          mlen = 2 * reg_width;
-         inst = emit(FS_OPCODE_INTERPOLATE_AT_PER_SLOT_OFFSET, dst_x, src,
+         inst = emit(FS_OPCODE_INTERPOLATE_AT_PER_SLOT_OFFSET, dst_xy, src,
                      fs_reg(0u));
       }
       break;
@@ -678,8 +677,7 @@ fs_visitor::emit_interpolate_expression(ir_expression *ir)
 
    for (int i = 0; i < ir->type->vector_elements; i++) {
       int ch = swiz ? ((*(int *)&swiz->mask) >> 2*i) & 3 : i;
-      emit(FS_OPCODE_LINTERP, res,
-           dst_x, dst_y,
+      emit(FS_OPCODE_LINTERP, res, dst_xy,
            fs_reg(interp_reg(var->data.location, ch)));
       res = offset(res, 1);
    }
@@ -3443,31 +3441,31 @@ fs_visitor::emit_interpolation_setup_gen4()
             fs_reg(brw_imm_v(0x11001100))));
 
    this->current_annotation = "compute pixel deltas from v0";
-   if (brw->has_pln) {
-      this->delta_x[BRW_WM_PERSPECTIVE_PIXEL_BARYCENTRIC] =
-         vgrf(glsl_type::vec2_type);
-      this->delta_y[BRW_WM_PERSPECTIVE_PIXEL_BARYCENTRIC] =
-         offset(this->delta_x[BRW_WM_PERSPECTIVE_PIXEL_BARYCENTRIC], 1);
+
+   this->delta_xy[BRW_WM_PERSPECTIVE_PIXEL_BARYCENTRIC] =
+      vgrf(glsl_type::vec2_type);
+   const fs_reg &delta_xy = this->delta_xy[BRW_WM_PERSPECTIVE_PIXEL_BARYCENTRIC];
+   const fs_reg xstart(negate(brw_vec1_grf(1, 0)));
+   const fs_reg ystart(negate(brw_vec1_grf(1, 1)));
+
+   if (brw->has_pln && dispatch_width == 16) {
+      emit(ADD(half(offset(delta_xy, 0), 0), half(this->pixel_x, 0), xstart));
+      emit(ADD(half(offset(delta_xy, 0), 1), half(this->pixel_y, 0), ystart));
+      emit(ADD(half(offset(delta_xy, 1), 0), half(this->pixel_x, 1), xstart))
+         ->force_sechalf = true;
+      emit(ADD(half(offset(delta_xy, 1), 1), half(this->pixel_y, 1), ystart))
+         ->force_sechalf = true;
    } else {
-      this->delta_x[BRW_WM_PERSPECTIVE_PIXEL_BARYCENTRIC] =
-         vgrf(glsl_type::float_type);
-      this->delta_y[BRW_WM_PERSPECTIVE_PIXEL_BARYCENTRIC] =
-         vgrf(glsl_type::float_type);
+      emit(ADD(offset(delta_xy, 0), this->pixel_x, xstart));
+      emit(ADD(offset(delta_xy, 1), this->pixel_y, ystart));
    }
-   emit(ADD(this->delta_x[BRW_WM_PERSPECTIVE_PIXEL_BARYCENTRIC],
-            this->pixel_x, fs_reg(negate(brw_vec1_grf(1, 0)))));
-   emit(ADD(this->delta_y[BRW_WM_PERSPECTIVE_PIXEL_BARYCENTRIC],
-            this->pixel_y, fs_reg(negate(brw_vec1_grf(1, 1)))));
 
    this->current_annotation = "compute pos.w and 1/pos.w";
    /* Compute wpos.w.  It's always in our setup, since it's needed to
     * interpolate the other attributes.
     */
    this->wpos_w = vgrf(glsl_type::float_type);
-   emit(FS_OPCODE_LINTERP, wpos_w,
-        this->delta_x[BRW_WM_PERSPECTIVE_PIXEL_BARYCENTRIC],
-        this->delta_y[BRW_WM_PERSPECTIVE_PIXEL_BARYCENTRIC],
-	interp_reg(VARYING_SLOT_POS, 3));
+   emit(FS_OPCODE_LINTERP, wpos_w, delta_xy, interp_reg(VARYING_SLOT_POS, 3));
    /* Compute the pixel 1/W value from wpos.w. */
    this->pixel_w = vgrf(glsl_type::float_type);
    emit_math(SHADER_OPCODE_RCP, this->pixel_w, wpos_w);
@@ -3509,8 +3507,7 @@ fs_visitor::emit_interpolation_setup_gen6()
 
    for (int i = 0; i < BRW_WM_BARYCENTRIC_INTERP_MODE_COUNT; ++i) {
       uint8_t reg = payload.barycentric_coord_reg[i];
-      this->delta_x[i] = fs_reg(brw_vec8_grf(reg, 0));
-      this->delta_y[i] = fs_reg(brw_vec8_grf(reg + 1, 0));
+      this->delta_xy[i] = fs_reg(brw_vec16_grf(reg, 0));
    }
 
    this->current_annotation = NULL;

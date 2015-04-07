@@ -1482,8 +1482,7 @@ fs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
        */
       no16("interpolate_at_* not yet supported in SIMD16 mode.");
 
-      fs_reg dst_x = vgrf(2);
-      fs_reg dst_y = offset(dst_x, 1);
+      fs_reg dst_xy = vgrf(2);
 
       /* For most messages, we need one reg of ignored data; the hardware
        * requires mlen==1 even when there is no payload. in the per-slot
@@ -1495,7 +1494,7 @@ fs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
 
       switch (instr->intrinsic) {
       case nir_intrinsic_interp_var_at_centroid:
-         inst = emit(FS_OPCODE_INTERPOLATE_AT_CENTROID, dst_x, src, fs_reg(0u));
+         inst = emit(FS_OPCODE_INTERPOLATE_AT_CENTROID, dst_xy, src, fs_reg(0u));
          break;
 
       case nir_intrinsic_interp_var_at_sample: {
@@ -1503,7 +1502,7 @@ fs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
          nir_const_value *const_sample = nir_src_as_const_value(instr->src[0]);
          assert(const_sample);
          unsigned msg_data = const_sample ? const_sample->i[0] << 4 : 0;
-         inst = emit(FS_OPCODE_INTERPOLATE_AT_SAMPLE, dst_x, src,
+         inst = emit(FS_OPCODE_INTERPOLATE_AT_SAMPLE, dst_xy, src,
                      fs_reg(msg_data));
          break;
       }
@@ -1515,7 +1514,7 @@ fs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
             unsigned off_x = MIN2((int)(const_offset->f[0] * 16), 7) & 0xf;
             unsigned off_y = MIN2((int)(const_offset->f[1] * 16), 7) & 0xf;
 
-            inst = emit(FS_OPCODE_INTERPOLATE_AT_SHARED_OFFSET, dst_x, src,
+            inst = emit(FS_OPCODE_INTERPOLATE_AT_SHARED_OFFSET, dst_xy, src,
                         fs_reg(off_x | (off_y << 4)));
          } else {
             src = vgrf(glsl_type::ivec2_type);
@@ -1548,7 +1547,7 @@ fs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
             }
 
             mlen = 2;
-            inst = emit(FS_OPCODE_INTERPOLATE_AT_PER_SLOT_OFFSET, dst_x, src,
+            inst = emit(FS_OPCODE_INTERPOLATE_AT_PER_SLOT_OFFSET, dst_xy, src,
                         fs_reg(0u));
          }
          break;
@@ -1567,7 +1566,7 @@ fs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
          fs_reg src = interp_reg(instr->variables[0]->var->data.location, j);
          src.type = dest.type;
 
-         emit(FS_OPCODE_LINTERP, dest, dst_x, dst_y, src);
+         emit(FS_OPCODE_LINTERP, dest, dst_xy, src);
          dest = offset(dest, 1);
       }
       break;

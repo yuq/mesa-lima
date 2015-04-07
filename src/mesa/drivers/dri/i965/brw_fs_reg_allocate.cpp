@@ -244,7 +244,7 @@ brw_alloc_reg_set(struct intel_screen *screen, int reg_width)
    }
    assert(reg == ra_reg_count);
 
-   /* Add a special class for aligned pairs, which we'll put delta_x/y
+   /* Add a special class for aligned pairs, which we'll put delta_xy
     * in on Gen <= 6 so that we can do PLN.
     */
    if (devinfo->has_pln && reg_width == 1 && devinfo->gen <= 6) {
@@ -558,14 +558,14 @@ fs_visitor::assign_regs(bool allow_spilling)
        * second operand of a PLN instruction needs to be an
        * even-numbered register, so we have a special register class
        * wm_aligned_pairs_class to handle this case.  pre-GEN6 always
-       * uses this->delta_x[BRW_WM_PERSPECTIVE_PIXEL_BARYCENTRIC] as the
+       * uses this->delta_xy[BRW_WM_PERSPECTIVE_PIXEL_BARYCENTRIC] as the
        * second operand of a PLN instruction (since it doesn't support
        * any other interpolation modes).  So all we need to do is find
        * that register and set it to the appropriate class.
        */
       if (screen->wm_reg_sets[rsi].aligned_pairs_class >= 0 &&
-          this->delta_x[BRW_WM_PERSPECTIVE_PIXEL_BARYCENTRIC].file == GRF &&
-          this->delta_x[BRW_WM_PERSPECTIVE_PIXEL_BARYCENTRIC].reg == i) {
+          this->delta_xy[BRW_WM_PERSPECTIVE_PIXEL_BARYCENTRIC].file == GRF &&
+          this->delta_xy[BRW_WM_PERSPECTIVE_PIXEL_BARYCENTRIC].reg == i) {
          c = screen->wm_reg_sets[rsi].aligned_pairs_class;
       }
 
