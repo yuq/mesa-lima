@@ -159,8 +159,10 @@ int r600_pipe_shader_create(struct pipe_context *ctx,
 		goto error;
 	}
 
-	/* disable SB for geom shaders - it can't handle the CF_EMIT instructions */
-	use_sb &= (shader->shader.processor_type != TGSI_PROCESSOR_GEOMETRY);
+    /* disable SB for geom shaders on R6xx/R7xx due to some mysterious gs piglit regressions with it enabled. */
+    if (rctx->b.chip_class <= R700) {
+	    use_sb &= (shader->shader.processor_type != TGSI_PROCESSOR_GEOMETRY);
+    }
 	/* disable SB for shaders using CF_INDEX_0/1 (sampler/ubo array indexing) as it doesn't handle those currently */
 	use_sb &= !shader->shader.uses_index_registers;
 
@@ -1141,6 +1143,8 @@ static int fetch_gs_input(struct r600_shader_ctx *ctx, struct tgsi_full_src_regi
 		for (i = 0; i < 3; i++) {
 			treg[i] = r600_get_temp(ctx);
 		}
+		r600_add_gpr_array(ctx->shader, treg[0], 3, 0x0F);
+
 		t2 = r600_get_temp(ctx);
 		for (i = 0; i < 3; i++) {
 			memset(&alu, 0, sizeof(struct r600_bytecode_alu));
@@ -1935,9 +1939,9 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 		ctx.bc->index_reg[1] = ctx.bc->ar_reg + 3;
 	}
 
+	shader->max_arrays = 0;
+	shader->num_arrays = 0;
 	if (indirect_gprs) {
-		shader->max_arrays = 0;
-		shader->num_arrays = 0;
 
 		if (ctx.info.indirect_files & (1 << TGSI_FILE_INPUT)) {
 			r600_add_gpr_array(shader, ctx.file_offset[TGSI_FILE_INPUT],

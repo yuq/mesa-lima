@@ -1463,7 +1463,7 @@ unsigned post_scheduler::try_add_instruction(node *n) {
 		value *d = a->dst.empty() ? NULL : a->dst[0];
 
 		if (d && d->is_special_reg()) {
-			assert(a->bc.op_ptr->flags & AF_MOVA);
+			assert((a->bc.op_ptr->flags & AF_MOVA) || d->is_geometry_emit());
 			d = NULL;
 		}
 
