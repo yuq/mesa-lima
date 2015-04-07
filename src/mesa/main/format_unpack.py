@@ -332,7 +332,7 @@ _mesa_unpack_rgba_row(mesa_format format, GLuint n,
       unpack_float_ycbcr_rev(src, dst, n);
       break;
    default:
-      _mesa_problem(NULL, "%s: bad format %s", __FUNCTION__,
+      _mesa_problem(NULL, "%s: bad format %s", __func__,
                     _mesa_get_format_name(format));
       return;
    }
@@ -401,7 +401,7 @@ _mesa_unpack_uint_rgba_row(mesa_format format, GLuint n,
       break;
 %endfor
    default:
-      _mesa_problem(NULL, "%s: bad format %s", __FUNCTION__,
+      _mesa_problem(NULL, "%s: bad format %s", __func__,
                     _mesa_get_format_name(format));
       return;
    }

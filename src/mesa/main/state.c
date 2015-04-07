@@ -482,7 +482,7 @@ _mesa_set_varying_vp_inputs( struct gl_context *ctx,
           ctx->FragmentProgram._TexEnvProgram) {
          ctx->NewState |= _NEW_VARYING_VP_INPUTS;
       }
-      /*printf("%s %x\n", __FUNCTION__, varying_inputs);*/
+      /*printf("%s %x\n", __func__, varying_inputs);*/
    }
 }
 
