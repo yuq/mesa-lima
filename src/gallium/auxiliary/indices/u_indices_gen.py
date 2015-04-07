@@ -142,8 +142,12 @@ def do_tri( intype, outtype, ptr, v0, v1, v2, inpv, outpv ):
             tri( intype, outtype, ptr, v2, v0, v1 )
 
 def do_quad( intype, outtype, ptr, v0, v1, v2, v3, inpv, outpv ):
-    do_tri( intype, outtype, ptr+'+0',  v0, v1, v3, inpv, outpv );
-    do_tri( intype, outtype, ptr+'+3',  v1, v2, v3, inpv, outpv );
+    if inpv == LAST:
+        do_tri( intype, outtype, ptr+'+0',  v0, v1, v3, inpv, outpv );
+        do_tri( intype, outtype, ptr+'+3',  v1, v2, v3, inpv, outpv );
+    else:
+        do_tri( intype, outtype, ptr+'+0',  v0, v1, v2, inpv, outpv );
+        do_tri( intype, outtype, ptr+'+3',  v0, v2, v3, inpv, outpv );
 
 def name(intype, outtype, inpv, outpv, pr, prim):
     if intype == GENERATE:
@@ -331,7 +335,10 @@ def quadstrip(intype, outtype, inpv, outpv, pr):
         print '         i += 4;'
         print '         goto restart;'
         print '      }'
-    do_quad( intype, outtype, 'out+j', 'i+2', 'i+0', 'i+1', 'i+3', inpv, outpv );
+    if inpv == LAST:
+        do_quad( intype, outtype, 'out+j', 'i+2', 'i+0', 'i+1', 'i+3', inpv, outpv );
+    else:
+        do_quad( intype, outtype, 'out+j', 'i+0', 'i+1', 'i+3', 'i+2', inpv, outpv );
     print '   }'
     postamble()
 
