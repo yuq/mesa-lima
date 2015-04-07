@@ -43,7 +43,7 @@
  */
 
 struct ptn_compile {
-   struct gl_program *prog;
+   const struct gl_program *prog;
    nir_builder build;
    bool error;
 
@@ -1052,7 +1052,7 @@ setup_registers_and_variables(struct ptn_compile *c)
 }
 
 struct nir_shader *
-prog_to_nir(struct gl_program *prog, const nir_shader_compiler_options *options)
+prog_to_nir(const struct gl_program *prog, const nir_shader_compiler_options *options)
 {
    struct ptn_compile *c;
    struct nir_shader *s;

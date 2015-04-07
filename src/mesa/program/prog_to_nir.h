@@ -28,7 +28,7 @@
 extern "C" {
 #endif
 
-struct nir_shader *prog_to_nir(struct gl_program *prog,
+struct nir_shader *prog_to_nir(const struct gl_program *prog,
                                const nir_shader_compiler_options *options);
 
 #ifdef __cplusplus
