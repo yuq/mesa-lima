@@ -129,8 +129,11 @@ gen8_emit_buffer_surface_state(struct brw_context *brw,
 
    surf[2] = SET_FIELD((buffer_size - 1) & 0x7f, GEN7_SURFACE_WIDTH) |
              SET_FIELD(((buffer_size - 1) >> 7) & 0x3fff, GEN7_SURFACE_HEIGHT);
-   surf[3] = SET_FIELD(((buffer_size - 1) >> 21) & 0x3f, BRW_SURFACE_DEPTH) |
-             (pitch - 1);
+   if (surface_format == BRW_SURFACEFORMAT_RAW)
+      surf[3] = SET_FIELD(((buffer_size - 1) >> 21) & 0x3ff, BRW_SURFACE_DEPTH);
+   else
+      surf[3] = SET_FIELD(((buffer_size - 1) >> 21) & 0x3f, BRW_SURFACE_DEPTH);
+   surf[3] |= (pitch - 1);
    surf[7] = SET_FIELD(HSW_SCS_RED,   GEN7_SURFACE_SCS_R) |
              SET_FIELD(HSW_SCS_GREEN, GEN7_SURFACE_SCS_G) |
              SET_FIELD(HSW_SCS_BLUE,  GEN7_SURFACE_SCS_B) |
