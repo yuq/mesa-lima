@@ -41,6 +41,7 @@ public:
    fs_reg(enum brw_reg_file file, int nr, enum brw_reg_type type);
 
    bool equals(const fs_reg &r) const;
+   bool negative_equals(const fs_reg &r) const;
    bool is_contiguous() const;
 
    /**

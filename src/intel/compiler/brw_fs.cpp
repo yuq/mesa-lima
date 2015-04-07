@@ -454,6 +454,13 @@ fs_reg::equals(const fs_reg &r) const
 }
 
 bool
+fs_reg::negative_equals(const fs_reg &r) const
+{
+   return (this->backend_reg::negative_equals(r) &&
+           stride == r.stride);
+}
+
+bool
 fs_reg::is_contiguous() const
 {
    return stride == 1;

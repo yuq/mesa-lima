@@ -685,6 +685,12 @@ backend_reg::equals(const backend_reg &r) const
 }
 
 bool
+backend_reg::negative_equals(const backend_reg &r) const
+{
+   return brw_regs_negative_equal(this, &r) && offset == r.offset;
+}
+
+bool
 backend_reg::is_zero() const
 {
    if (file != IMM)

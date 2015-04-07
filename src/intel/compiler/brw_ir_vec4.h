@@ -43,6 +43,7 @@ public:
    src_reg(struct ::brw_reg reg);
 
    bool equals(const src_reg &r) const;
+   bool negative_equals(const src_reg &r) const;
 
    src_reg(class vec4_visitor *v, const struct glsl_type *type);
    src_reg(class vec4_visitor *v, const struct glsl_type *type, int size);

@@ -376,6 +376,13 @@ src_reg::equals(const src_reg &r) const
 }
 
 bool
+src_reg::negative_equals(const src_reg &r) const
+{
+   return this->backend_reg::negative_equals(r) &&
+          !reladdr && !r.reladdr;
+}
+
+bool
 vec4_visitor::opt_vector_float()
 {
    bool progress = false;

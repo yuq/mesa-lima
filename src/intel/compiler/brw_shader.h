@@ -59,6 +59,7 @@ struct backend_reg : private brw_reg
    }
 
    bool equals(const backend_reg &r) const;
+   bool negative_equals(const backend_reg &r) const;
 
    bool is_zero() const;
    bool is_one() const;
