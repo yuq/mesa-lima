@@ -356,7 +356,7 @@ i915_emit_state(struct intel_context *intel)
    assert(get_dirty(state) == 0);
 
    if (INTEL_DEBUG & DEBUG_STATE)
-      fprintf(stderr, "%s dirty: %x\n", __FUNCTION__, dirty);
+      fprintf(stderr, "%s dirty: %x\n", __func__, dirty);
 
    if (dirty & I915_UPLOAD_INVARIENT) {
       if (INTEL_DEBUG & DEBUG_STATE)
