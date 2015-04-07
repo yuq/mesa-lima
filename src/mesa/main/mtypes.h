@@ -389,25 +389,6 @@ typedef enum
                             BUFFER_BIT_COLOR6 | \
                             BUFFER_BIT_COLOR7)
 
-
-/**
- * Shader stages. Note that these will become 5 with tessellation.
- *
- * The order must match how shaders are ordered in the pipeline.
- * The GLSL linker assumes that if i<j, then the j-th shader is
- * executed later than the i-th shader.
- */
-typedef enum
-{
-   MESA_SHADER_VERTEX = 0,
-   MESA_SHADER_GEOMETRY = 1,
-   MESA_SHADER_FRAGMENT = 2,
-   MESA_SHADER_COMPUTE = 3,
-} gl_shader_stage;
-
-#define MESA_SHADER_STAGES (MESA_SHADER_COMPUTE + 1)
-
-
 /**
  * Framebuffer configuration (aka visual / pixelformat)
  * Note: some of these fields should be boolean, but it appears that

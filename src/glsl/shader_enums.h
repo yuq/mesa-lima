@@ -27,6 +27,23 @@
 #define SHADER_ENUMS_H
 
 /**
+ * Shader stages. Note that these will become 5 with tessellation.
+ *
+ * The order must match how shaders are ordered in the pipeline.
+ * The GLSL linker assumes that if i<j, then the j-th shader is
+ * executed later than the i-th shader.
+ */
+typedef enum
+{
+   MESA_SHADER_VERTEX = 0,
+   MESA_SHADER_GEOMETRY = 1,
+   MESA_SHADER_FRAGMENT = 2,
+   MESA_SHADER_COMPUTE = 3,
+} gl_shader_stage;
+
+#define MESA_SHADER_STAGES (MESA_SHADER_COMPUTE + 1)
+
+/**
  * Bitflags for system values.
  */
 #define SYSTEM_BIT_SAMPLE_ID ((uint64_t)1 << SYSTEM_VALUE_SAMPLE_ID)
