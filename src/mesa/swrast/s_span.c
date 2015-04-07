@@ -1143,7 +1143,7 @@ _swrast_write_rgba_span( struct gl_context *ctx, SWspan *span)
    struct gl_framebuffer *fb = ctx->DrawBuffer;
 
    /*
-   printf("%s()  interp 0x%x  array 0x%x\n", __FUNCTION__,
+   printf("%s()  interp 0x%x  array 0x%x\n", __func__,
           span->interpMask, span->arrayMask);
    */
 
