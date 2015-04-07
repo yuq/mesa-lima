@@ -109,7 +109,8 @@ nir_lower_tex_projector_block(nir_block *block, void *void_state)
       /* Now move the later tex sources down the array so that the projector
        * disappears.
        */
-      nir_src dead = {.is_ssa = false, .ssa = NULL};
+      nir_src dead;
+      memset(&dead, 0, sizeof dead);
       nir_instr_rewrite_src(&tex->instr, &tex->src[proj_index].src, dead);
       memmove(&tex->src[proj_index],
               &tex->src[proj_index + 1],
