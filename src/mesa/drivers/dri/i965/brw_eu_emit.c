@@ -1008,7 +1008,6 @@ ALU2(DP4)
 ALU2(DPH)
 ALU2(DP3)
 ALU2(DP2)
-ALU2(PLN)
 ALU3F(MAD)
 ALU3F(LRP)
 ALU1(BFREV)
@@ -1110,6 +1109,19 @@ brw_LINE(struct brw_compile *p, struct brw_reg dest,
    src0.width = BRW_WIDTH_1;
    src0.hstride = BRW_HORIZONTAL_STRIDE_0;
    return brw_alu2(p, BRW_OPCODE_LINE, dest, src0, src1);
+}
+
+brw_inst *
+brw_PLN(struct brw_compile *p, struct brw_reg dest,
+        struct brw_reg src0, struct brw_reg src1)
+{
+   src0.vstride = BRW_VERTICAL_STRIDE_0;
+   src0.width = BRW_WIDTH_1;
+   src0.hstride = BRW_HORIZONTAL_STRIDE_0;
+   src1.vstride = BRW_VERTICAL_STRIDE_8;
+   src1.width = BRW_WIDTH_8;
+   src1.hstride = BRW_HORIZONTAL_STRIDE_1;
+   return brw_alu2(p, BRW_OPCODE_PLN, dest, src0, src1);
 }
 
 brw_inst *
