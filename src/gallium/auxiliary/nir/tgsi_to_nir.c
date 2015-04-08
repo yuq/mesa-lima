@@ -340,17 +340,18 @@ ttn_get_dest(struct ttn_compile *c, struct tgsi_full_dst_register *tgsi_fdst)
 {
    struct tgsi_dst_register *tgsi_dst = &tgsi_fdst->Register;
    nir_alu_dest dest;
+   unsigned index = tgsi_dst->Index;
 
    memset(&dest, 0, sizeof(dest));
 
    if (tgsi_dst->File == TGSI_FILE_TEMPORARY) {
-      dest.dest.reg.reg = c->temp_regs[tgsi_dst->Index].reg;
-      dest.dest.reg.base_offset = c->temp_regs[tgsi_dst->Index].offset;
+      dest.dest.reg.reg = c->temp_regs[index].reg;
+      dest.dest.reg.base_offset = c->temp_regs[index].offset;
    } else if (tgsi_dst->File == TGSI_FILE_OUTPUT) {
-      dest.dest.reg.reg = c->output_regs[tgsi_dst->Index].reg;
-      dest.dest.reg.base_offset = c->output_regs[tgsi_dst->Index].offset;
+      dest.dest.reg.reg = c->output_regs[index].reg;
+      dest.dest.reg.base_offset = c->output_regs[index].offset;
    } else if (tgsi_dst->File == TGSI_FILE_ADDRESS) {
-      assert(tgsi_dst->Index == 0);
+      assert(index == 0);
       dest.dest.reg.reg = c->addr_reg;
    }
 
