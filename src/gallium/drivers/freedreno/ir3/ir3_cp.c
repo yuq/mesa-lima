@@ -89,7 +89,7 @@ static unsigned cp_flags(unsigned flags)
 	flags &= (IR3_REG_CONST | IR3_REG_IMMED |
 			IR3_REG_FNEG | IR3_REG_FABS |
 			IR3_REG_SNEG | IR3_REG_SABS |
-			IR3_REG_BNOT);
+			IR3_REG_BNOT | IR3_REG_RELATIV);
 	return flags;
 }
 
@@ -102,6 +102,10 @@ static bool valid_flags(struct ir3_instruction *instr, unsigned n,
 	/* clear flags that are 'ok' */
 	switch (instr->category) {
 	case 1:
+		valid_flags = IR3_REG_IMMED | IR3_REG_RELATIV;
+		if (flags & ~valid_flags)
+			return false;
+		break;
 	case 5:
 		/* no flags allowed */
 		if (flags)
@@ -113,7 +117,8 @@ static bool valid_flags(struct ir3_instruction *instr, unsigned n,
 			return false;
 		break;
 	case 2:
-		valid_flags = ir3_cat2_absneg(instr->opc) | IR3_REG_CONST;
+		valid_flags = ir3_cat2_absneg(instr->opc) |
+				IR3_REG_CONST | IR3_REG_RELATIV;
 
 		if (ir3_cat2_int(instr->opc))
 			valid_flags |= IR3_REG_IMMED;
@@ -140,19 +145,19 @@ static bool valid_flags(struct ir3_instruction *instr, unsigned n,
 		}
 		break;
 	case 3:
-		valid_flags = ir3_cat3_absneg(instr->opc) | IR3_REG_CONST;
+		valid_flags = ir3_cat3_absneg(instr->opc) |
+				IR3_REG_CONST | IR3_REG_RELATIV;
 
 		if (flags & ~valid_flags)
 			return false;
 
-		if (flags & IR3_REG_CONST) {
-			/* cannot deal w/ const in 2nd src: */
-			/* TODO in some common cases, like mad, we can swap
-			 * first two args.. possibly we should allow that here
-			 * and fixup in legalize?
-			 */
+		if (flags & (IR3_REG_CONST | IR3_REG_RELATIV)) {
+			/* cannot deal w/ const/relativ in 2nd src: */
 			if (n == 1)
 				return false;
+		}
+
+		if (flags & IR3_REG_CONST) {
 			/* cannot be const + ABS|NEG: */
 			if (flags & (IR3_REG_FABS | IR3_REG_FNEG |
 					IR3_REG_SABS | IR3_REG_SNEG | IR3_REG_BNOT))
@@ -240,16 +245,17 @@ reg_cp(struct ir3_instruction *instr, struct ir3_register *reg, unsigned n)
 
 	if (!valid_flags(instr, n, reg->flags)) {
 		/* insert an absneg.f */
-		if (reg->flags & (IR3_REG_SNEG | IR3_REG_SABS)) {
+		if (reg->flags & (IR3_REG_SNEG | IR3_REG_SABS | IR3_REG_BNOT)) {
 			debug_assert(!(reg->flags & (IR3_REG_FNEG | IR3_REG_FABS)));
 			reg->instr = ir3_ABSNEG_S(instr->block,
 					reg->instr, cp_flags(src_flags));
 		} else {
-			debug_assert(!(reg->flags & (IR3_REG_SNEG | IR3_REG_SABS)));
+			debug_assert(!(reg->flags & (IR3_REG_SNEG | IR3_REG_SABS | IR3_REG_BNOT)));
 			reg->instr = ir3_ABSNEG_F(instr->block,
 					reg->instr, cp_flags(src_flags));
 		}
 		reg->flags &= ~cp_flags(src_flags);
+		debug_assert(valid_flags(instr, n, reg->flags));
 		/* send it through instr_cp() again since
 		 * the absneg src might be a mov from const
 		 * that could be cleaned up:
@@ -269,7 +275,7 @@ reg_cp(struct ir3_instruction *instr, struct ir3_register *reg, unsigned n)
 			 * try swapping the first two args if that fits better.
 			 */
 			if ((n == 1) && is_valid_mad(instr) &&
-					!(instr->regs[0 + 1]->flags & IR3_REG_CONST) &&
+					!(instr->regs[0 + 1]->flags & (IR3_REG_CONST | IR3_REG_RELATIV)) &&
 					valid_flags(instr, 0, new_flags)) {
 				/* swap src[0] and src[1]: */
 				struct ir3_register *tmp;
@@ -327,7 +333,8 @@ reg_cp(struct ir3_instruction *instr, struct ir3_register *reg, unsigned n)
 		if (src_reg->flags & IR3_REG_IMMED) {
 			int32_t iim_val = src_reg->iim_val;
 
-			debug_assert((instr->category == 6) ||
+			debug_assert((instr->category == 1) ||
+					(instr->category == 6) ||
 					((instr->category == 2) &&
 						ir3_cat2_int(instr->opc)));
 
