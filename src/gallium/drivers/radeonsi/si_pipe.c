@@ -85,8 +85,6 @@ static struct pipe_context *si_create_context(struct pipe_screen *screen, void *
 	LLVMTargetRef r600_target;
 #if HAVE_LLVM >= 0x0306
 	const char *triple = "amdgcn--";
-#else
-	const char *triple = "r600--";
 #endif
 	int shader, i;
 
