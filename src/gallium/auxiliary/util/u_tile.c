@@ -214,7 +214,7 @@ s8x24_get_tile_rgba(const unsigned *src,
    unsigned i, j;
 
    for (i = 0; i < h; i++) {
-      uint32_t *pRow = p;
+      uint32_t *pRow = (uint32_t *)p;
 
       for (j = 0; j < w; j++, pRow += 4) {
          pRow[0] =
@@ -241,7 +241,7 @@ x24s8_get_tile_rgba(const unsigned *src,
    unsigned i, j;
 
    for (i = 0; i < h; i++) {
-      uint32_t *pRow = p;
+      uint32_t *pRow = (uint32_t *)p;
       for (j = 0; j < w; j++, pRow += 4) {
          pRow[0] =
          pRow[1] =
@@ -265,7 +265,7 @@ s8_get_tile_rgba(const unsigned char *src,
    unsigned i, j;
 
    for (i = 0; i < h; i++) {
-      uint32_t *pRow = p;
+      uint32_t *pRow = (uint32_t *)p;
       for (j = 0; j < w; j++, pRow += 4) {
          pRow[0] =
          pRow[1] =
