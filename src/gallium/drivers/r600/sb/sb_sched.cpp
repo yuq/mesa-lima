@@ -825,6 +825,9 @@ void post_scheduler::init_regmap() {
 
 void post_scheduler::process_alu(container_node *c) {
 
+	if (c->empty())
+		return;
+
 	ucm.clear();
 	alu.reset();
 
