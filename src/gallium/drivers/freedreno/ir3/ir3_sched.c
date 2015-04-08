@@ -267,36 +267,6 @@ static int trysched(struct ir3_sched_ctx *ctx,
 		}
 	}
 
-	/* if instruction writes address register, we need to ensure
-	 * that the instructions which use the address register value
-	 * have all their other dependencies scheduled.
-	 * TODO we may possibly need to do the same thing with predicate
-	 * register usage, but for now we get by without since the
-	 * predicate usage patterns are more simple
-	 */
-	if (writes_addr(instr)) {
-		struct ir3 *ir = instr->block->shader;
-		unsigned i;
-
-		for (i = 0; i < ir->indirects_count; i++) {
-			struct ir3_instruction *indirect = ir->indirects[i];
-			if (indirect->depth == DEPTH_UNUSED)
-				continue;
-			if (indirect->address != instr)
-				continue;
-			/* NOTE: avoid recursively scheduling the dependency
-			 * on ourself (ie. avoid infinite recursion):
-			 */
-			foreach_ssa_src(src, indirect) {
-				if ((src == instr) || (src->address == instr))
-					continue;
-				delay = trysched(ctx, src);
-				if (delay)
-					return delay;
-			}
-		}
-	}
-
 	/* if this is a write to address/predicate register, and that
 	 * register is currently in use, we need to defer until it is
 	 * free:
@@ -390,8 +360,48 @@ static int block_sched_undelayed(struct ir3_sched_ctx *ctx,
 	/* detect if we've gotten ourselves into an impossible situation
 	 * and bail if needed
 	 */
-	if (all_delayed && (attempted > 0))
-		ctx->error = true;
+	if (all_delayed && (attempted > 0)) {
+		if (pred_in_use) {
+			/* TODO we probably need to keep a list of instructions
+			 * that reference predicate, similar to indirects
+			 */
+			ctx->error = true;
+			return DELAYED;
+		}
+		if (addr_in_use) {
+			struct ir3 *ir = ctx->addr->block->shader;
+			struct ir3_instruction *new_addr =
+					ir3_instr_clone(ctx->addr);
+			unsigned i;
+
+			/* original addr is scheduled, but new one isn't: */
+			new_addr->flags &= ~IR3_INSTR_MARK;
+
+			for (i = 0; i < ir->indirects_count; i++) {
+				struct ir3_instruction *indirect = ir->indirects[i];
+
+				/* skip instructions already scheduled: */
+				if (indirect->flags & IR3_INSTR_MARK)
+					continue;
+
+				/* remap remaining instructions using current addr
+				 * to new addr:
+				 */
+				if (indirect->address == ctx->addr)
+					indirect->address = new_addr;
+			}
+
+			/* all remaining indirects remapped to new addr: */
+			ctx->addr = NULL;
+
+			/* not really, but this will trigger us to go back to
+			 * main trysched() loop now that we've resolved the
+			 * conflict by duplicating the instr that writes to
+			 * the address register.
+			 */
+			return SCHEDULED;
+		}
+	}
 
 	return cnt;
 }
