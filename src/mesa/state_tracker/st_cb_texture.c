@@ -738,6 +738,11 @@ st_TexSubImage(struct gl_context *ctx, GLuint dims,
    if (gl_target == GL_TEXTURE_CUBE_MAP) {
       gl_target = GL_TEXTURE_2D;
    }
+   /* TexSubImage can specify subsets of cube map array faces
+    * so we need to upload via 2D array instead */
+   if (gl_target == GL_TEXTURE_CUBE_MAP_ARRAY) {
+      gl_target = GL_TEXTURE_2D_ARRAY;
+   }
 
    /* Initialize the source texture description. */
    memset(&src_templ, 0, sizeof(src_templ));
