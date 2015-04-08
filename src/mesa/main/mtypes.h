@@ -2090,6 +2090,7 @@ struct gl_program
    struct nir_shader *nir;
 
    GLbitfield64 InputsRead;     /**< Bitmask of which input regs are read */
+   GLbitfield64 DoubleInputsRead;     /**< Bitmask of which input regs are read  and are doubles */
    GLbitfield64 OutputsWritten; /**< Bitmask of which output regs are written */
    GLbitfield SystemValuesRead;   /**< Bitmask of SYSTEM_VALUE_x inputs used */
    GLbitfield InputFlags[MAX_PROGRAM_INPUTS];   /**< PROG_PARAM_BIT_x flags */
