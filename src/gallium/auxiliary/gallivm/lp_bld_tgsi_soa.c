@@ -944,20 +944,38 @@ gather_outputs(struct lp_build_tgsi_soa_context * bld)
  * with a little work.
  */
 static LLVMValueRef
-build_gather(struct lp_build_context *bld,
+build_gather(struct lp_build_tgsi_context *bld_base,
              LLVMValueRef base_ptr,
              LLVMValueRef indexes,
-             LLVMValueRef *overflow_mask)
+             LLVMValueRef overflow_mask)
 {
-   LLVMBuilderRef builder = bld->gallivm->builder;
+   struct gallivm_state *gallivm = bld_base->base.gallivm;
+   LLVMBuilderRef builder = gallivm->builder;
+   struct lp_build_context *uint_bld = &bld_base->uint_bld;
+   struct lp_build_context *bld = &bld_base->base;
    LLVMValueRef res = bld->undef;
    unsigned i;
-   LLVMValueRef temp_ptr = NULL;
+
+   /*
+    * overflow_mask is a vector telling us which channels
+    * in the vector overflowed. We use the overflow behavior for
+    * constant buffers which is defined as:
+    * Out of bounds access to constant buffer returns 0 in all
+    * components. Out of bounds behavior is always with respect
+    * to the size of the buffer bound at that slot.
+    */
 
    if (overflow_mask) {
-      temp_ptr = lp_build_alloca(
-         bld->gallivm,
-         lp_build_vec_type(bld->gallivm, bld->type), "");
+      /*
+       * We avoid per-element control flow here (also due to llvm going crazy,
+       * though I suspect it's better anyway since overflow is likely rare).
+       * Note that since we still fetch from buffers even if num_elements was
+       * zero (in this case we'll fetch from index zero) the jit func callers
+       * MUST provide valid fake constant buffers of size 4x32 (the values do
+       * not matter), otherwise we'd still need (not per element though)
+       * control flow.
+       */
+      indexes = lp_build_select(uint_bld, overflow_mask, uint_bld->zero, indexes);
    }
 
    /*
@@ -968,53 +986,16 @@ build_gather(struct lp_build_context *bld,
       LLVMValueRef index = LLVMBuildExtractElement(builder,
                                                    indexes, ii, "");
       LLVMValueRef scalar_ptr, scalar;
-      LLVMValueRef overflow;
-      struct lp_build_if_state if_ctx;
 
-      /*
-       * overflow_mask is a boolean vector telling us which channels
-       * in the vector overflowed. We use the overflow behavior for
-       * constant buffers which is defined as:
-       * Out of bounds access to constant buffer returns 0 in all
-       * componenets. Out of bounds behavior is always with respect
-       * to the size of the buffer bound at that slot.
-       */
-      if (overflow_mask) {
-         overflow = LLVMBuildExtractElement(builder, *overflow_mask,
-                                            ii, "");
-         lp_build_if(&if_ctx, bld->gallivm, overflow);
-         {
-            LLVMValueRef val = LLVMBuildLoad(builder, temp_ptr, "");
-            val = LLVMBuildInsertElement(
-               builder, val,
-               LLVMConstNull(LLVMFloatTypeInContext(bld->gallivm->context)),
-               ii, "");
-            LLVMBuildStore(builder, val, temp_ptr);
-         }
-         lp_build_else(&if_ctx);
-         {
-            LLVMValueRef val = LLVMBuildLoad(builder, temp_ptr, "");
+      scalar_ptr = LLVMBuildGEP(builder, base_ptr,
+                                &index, 1, "gather_ptr");
+      scalar = LLVMBuildLoad(builder, scalar_ptr, "");
 
-            scalar_ptr = LLVMBuildGEP(builder, base_ptr,
-                                      &index, 1, "gather_ptr");
-            scalar = LLVMBuildLoad(builder, scalar_ptr, "");
-
-            val = LLVMBuildInsertElement(builder, val, scalar, ii, "");
-
-            LLVMBuildStore(builder, val, temp_ptr);
-         }
-         lp_build_endif(&if_ctx);
-      } else {
-         scalar_ptr = LLVMBuildGEP(builder, base_ptr,
-                                   &index, 1, "gather_ptr");
-         scalar = LLVMBuildLoad(builder, scalar_ptr, "");
-
-         res = LLVMBuildInsertElement(builder, res, scalar, ii, "");
-      }
+      res = LLVMBuildInsertElement(builder, res, scalar, ii, "");
    }
 
    if (overflow_mask) {
-      res = LLVMBuildLoad(builder, temp_ptr, "gather_val");
+      res = lp_build_select(bld, overflow_mask, bld->zero, res);
    }
 
    return res;
@@ -1247,17 +1228,15 @@ emit_fetch_constant(
       num_consts = lp_build_broadcast_scalar(uint_bld, num_consts);
       /* Construct a boolean vector telling us which channels
        * overflow the bound constant buffer */
-      overflow_mask = LLVMBuildICmp(builder, LLVMIntUGE,
-                                    indirect_index,
-                                    num_consts, "");
+      overflow_mask = lp_build_compare(gallivm, uint_bld->type, PIPE_FUNC_GEQUAL,
+                                       indirect_index, num_consts);
 
       /* index_vec = indirect_index * 4 + swizzle */
       index_vec = lp_build_shl_imm(uint_bld, indirect_index, 2);
       index_vec = lp_build_add(uint_bld, index_vec, swizzle_vec);
 
       /* Gather values from the constant buffer */
-      res = build_gather(&bld_base->base, consts_ptr, index_vec,
-                         &overflow_mask);
+      res = build_gather(bld_base, consts_ptr, index_vec, overflow_mask);
    }
    else {
       LLVMValueRef index;  /* index into the const buffer */
@@ -1319,7 +1298,7 @@ emit_fetch_immediate(
                                            FALSE);
 
          /* Gather values from the immediate register array */
-         res = build_gather(&bld_base->base, imms_array, index_vec, NULL);
+         res = build_gather(bld_base, imms_array, index_vec, NULL);
       } else {
          LLVMValueRef lindex = lp_build_const_int32(gallivm,
                                         reg->Register.Index * 4 + swizzle);
@@ -1373,7 +1352,7 @@ emit_fetch_input(
       inputs_array = LLVMBuildBitCast(builder, bld->inputs_array, fptr_type, "");
 
       /* Gather values from the input register array */
-      res = build_gather(&bld_base->base, inputs_array, index_vec, NULL);
+      res = build_gather(bld_base, inputs_array, index_vec, NULL);
    } else {
       if (bld->indirect_files & (1 << TGSI_FILE_INPUT)) {
          LLVMValueRef lindex = lp_build_const_int32(gallivm,
@@ -1495,7 +1474,7 @@ emit_fetch_temporary(
       temps_array = LLVMBuildBitCast(builder, bld->temps_array, fptr_type, "");
 
       /* Gather values from the temporary register array */
-      res = build_gather(&bld_base->base, temps_array, index_vec, NULL);
+      res = build_gather(bld_base, temps_array, index_vec, NULL);
    }
    else {
       LLVMValueRef temp_ptr;
