@@ -1431,6 +1431,9 @@ typedef struct nir_shader {
     * access plus one
     */
    unsigned num_inputs, num_uniforms, num_outputs;
+
+   /** the number of uniforms that are only accessed directly */
+   unsigned num_direct_uniforms;
 } nir_shader;
 
 #define nir_foreach_overload(shader, overload)                        \

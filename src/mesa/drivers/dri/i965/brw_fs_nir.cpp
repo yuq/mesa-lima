@@ -120,7 +120,7 @@ fs_visitor::emit_nir_code()
 
    if (shader_prog) {
       nir_assign_var_locations_scalar_direct_first(nir, &nir->uniforms,
-                                                   &num_direct_uniforms,
+                                                   &nir->num_direct_uniforms,
                                                    &nir->num_uniforms);
    } else {
       /* ARB programs generally create a giant array of "uniform" data, and allow
@@ -128,7 +128,7 @@ fs_visitor::emit_nir_code()
        * analysis, it's all or nothing.  num_direct_uniforms is only useful when
        * we have some direct and some indirect access; it doesn't matter here.
        */
-      num_direct_uniforms = 0;
+      nir->num_direct_uniforms = 0;
    }
    nir_assign_var_locations_scalar(&nir->inputs, &nir->num_inputs);
    nir_assign_var_locations_scalar(&nir->outputs, &nir->num_outputs);
@@ -343,6 +343,7 @@ void
 fs_visitor::nir_setup_uniforms(nir_shader *shader)
 {
    uniforms = shader->num_uniforms;
+   num_direct_uniforms = shader->num_direct_uniforms;
 
    /* We split the uniform register file in half.  The first half is
     * entirely direct uniforms.  The second half is indirect.
