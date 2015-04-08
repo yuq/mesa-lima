@@ -516,6 +516,7 @@ vc4_create_sampler_view(struct pipe_context *pctx, struct pipe_resource *prsc,
                         const struct pipe_sampler_view *cso)
 {
         struct pipe_sampler_view *so = malloc(sizeof(*so));
+        struct vc4_resource *rsc = vc4_resource(prsc);
 
         if (!so)
                 return NULL;
@@ -527,8 +528,12 @@ vc4_create_sampler_view(struct pipe_context *pctx, struct pipe_resource *prsc,
         /* There is no hardware level clamping, and the start address of a
          * texture may be misaligned, so in that case we have to copy to a
          * temporary.
+         *
+         * Also, Raspberry Pi doesn't support sampling from raster textures,
+         * so we also have to copy to a temporary then.
          */
-        if (so->u.tex.first_level) {
+        if (so->u.tex.first_level ||
+            rsc->vc4_format == VC4_TEXTURE_TYPE_RGBA32R) {
                 struct vc4_resource *shadow_parent = vc4_resource(prsc);
                 struct pipe_resource tmpl = shadow_parent->base.b;
                 struct vc4_resource *clone;
@@ -574,8 +579,10 @@ vc4_set_sampler_views(struct pipe_context *pctx, unsigned shader,
 
         for (i = 0; i < nr; i++) {
                 if (views[i]) {
+                        struct vc4_resource *rsc =
+                                vc4_resource(views[i]->texture);
                         new_nr = i + 1;
-                        if (views[i]->u.tex.first_level != 0)
+                        if (rsc->shadow_parent)
                                 vc4_update_shadow_baselevel_texture(pctx, views[i]);
                 }
                 pipe_sampler_view_reference(&stage_tex->textures[i], views[i]);
