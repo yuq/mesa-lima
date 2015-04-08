@@ -651,20 +651,38 @@ vc4_update_shadow_baselevel_texture(struct pipe_context *pctx,
                 return;
 
         for (int i = 0; i <= shadow->base.b.last_level; i++) {
-                struct pipe_box box = {
-                        .x = 0,
-                        .y = 0,
-                        .z = 0,
-                        .width = u_minify(shadow->base.b.width0, i),
-                        .height = u_minify(shadow->base.b.height0, i),
-                        .depth = 1,
+                unsigned width = u_minify(shadow->base.b.width0, i);
+                unsigned height = u_minify(shadow->base.b.height0, i);
+                struct pipe_blit_info info = {
+                        .dst = {
+                                .resource = &shadow->base.b,
+                                .level = i,
+                                .box = {
+                                        .x = 0,
+                                        .y = 0,
+                                        .z = 0,
+                                        .width = width,
+                                        .height = height,
+                                        .depth = 1,
+                                },
+                                .format = shadow->base.b.format,
+                        },
+                        .src = {
+                                .resource = &orig->base.b,
+                                .level = view->u.tex.first_level + i,
+                                .box = {
+                                        .x = 0,
+                                        .y = 0,
+                                        .z = 0,
+                                        .width = width,
+                                        .height = height,
+                                        .depth = 1,
+                                },
+                                .format = orig->base.b.format,
+                        },
+                        .mask = ~0,
                 };
-
-                util_resource_copy_region(pctx,
-                                          &shadow->base.b, i, 0, 0, 0,
-                                          &orig->base.b,
-                                          view->u.tex.first_level + i,
-                                          &box);
+                pctx->blit(pctx, &info);
         }
 
         shadow->writes = orig->writes;
