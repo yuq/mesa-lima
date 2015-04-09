@@ -1021,13 +1021,11 @@ ttn_tex(struct ttn_compile *c, nir_alu_dest dest, nir_ssa_def **src)
 
    unsigned src_number = 0;
 
-   if (tgsi_inst->Instruction.Opcode != TGSI_OPCODE_TXQ) {
-      instr->src[src_number].src =
-         nir_src_for_ssa(nir_swizzle(b, src[0], SWIZ(X, Y, Z, W),
-                                     instr->coord_components, false));
-      instr->src[src_number].src_type = nir_tex_src_coord;
-      src_number++;
-   }
+   instr->src[src_number].src =
+      nir_src_for_ssa(nir_swizzle(b, src[0], SWIZ(X, Y, Z, W),
+                                  instr->coord_components, false));
+   instr->src[src_number].src_type = nir_tex_src_coord;
+   src_number++;
 
    if (tgsi_inst->Instruction.Opcode == TGSI_OPCODE_TXP) {
       instr->src[src_number].src = nir_src_for_ssa(ttn_channel(b, src[0], W));
@@ -1064,6 +1062,48 @@ ttn_tex(struct ttn_compile *c, nir_alu_dest dest, nir_ssa_def **src)
 
    /* Resolve the writemask on the texture op. */
    ttn_move_dest(b, dest, &instr->dest.ssa);
+}
+
+/* TGSI_OPCODE_TXQ is actually two distinct operations:
+ *
+ *     dst.x = texture\_width(unit, lod)
+ *     dst.y = texture\_height(unit, lod)
+ *     dst.z = texture\_depth(unit, lod)
+ *     dst.w = texture\_levels(unit)
+ *
+ * dst.xyz map to NIR txs opcode, and dst.w maps to query_levels
+ */
+static void
+ttn_txq(struct ttn_compile *c, nir_alu_dest dest, nir_ssa_def **src)
+{
+   nir_builder *b = &c->build;
+   struct tgsi_full_instruction *tgsi_inst = &c->token->FullInstruction;
+   nir_tex_instr *txs, *qlv;
+
+   txs = nir_tex_instr_create(b->shader, 1);
+   txs->op = nir_texop_txs;
+   setup_texture_info(txs, tgsi_inst->Texture.Texture);
+
+   qlv = nir_tex_instr_create(b->shader, 0);
+   qlv->op = nir_texop_query_levels;
+   setup_texture_info(qlv, tgsi_inst->Texture.Texture);
+
+   assert(tgsi_inst->Src[1].Register.File == TGSI_FILE_SAMPLER);
+   txs->sampler_index = tgsi_inst->Src[1].Register.Index;
+   qlv->sampler_index = tgsi_inst->Src[1].Register.Index;
+
+   /* only single src, the lod: */
+   txs->src[0].src = nir_src_for_ssa(ttn_channel(b, src[0], X));
+   txs->src[0].src_type = nir_tex_src_lod;
+
+   nir_ssa_dest_init(&txs->instr, &txs->dest, 3, NULL);
+   nir_instr_insert_after_cf_list(b->cf_node_list, &txs->instr);
+
+   nir_ssa_dest_init(&qlv->instr, &qlv->dest, 1, NULL);
+   nir_instr_insert_after_cf_list(b->cf_node_list, &qlv->instr);
+
+   ttn_move_dest_masked(b, dest, &txs->dest.ssa, TGSI_WRITEMASK_XYZ);
+   ttn_move_dest_masked(b, dest, &qlv->dest.ssa, TGSI_WRITEMASK_W);
 }
 
 static const nir_op op_trans[TGSI_OPCODE_LAST] = {
@@ -1389,13 +1429,16 @@ ttn_emit_instruction(struct ttn_compile *c)
    case TGSI_OPCODE_TXL:
    case TGSI_OPCODE_TXB:
    case TGSI_OPCODE_TXD:
-   case TGSI_OPCODE_TXQ:
    case TGSI_OPCODE_TXL2:
    case TGSI_OPCODE_TXB2:
    case TGSI_OPCODE_TXQ_LZ:
    case TGSI_OPCODE_TXF:
    case TGSI_OPCODE_TG4:
       ttn_tex(c, dest, src);
+      break;
+
+   case TGSI_OPCODE_TXQ:
+      ttn_txq(c, dest, src);
       break;
 
    case TGSI_OPCODE_NOP:
