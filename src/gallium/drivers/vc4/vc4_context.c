@@ -349,6 +349,7 @@ vc4_flush(struct pipe_context *pctx)
          * unblocking the render thread.  Note that this doesn't act until the
          * FLUSH completes.
          */
+        cl_ensure_space(&vc4->bcl, 8);
         cl_u8(&vc4->bcl, VC4_PACKET_INCREMENT_SEMAPHORE);
         /* The FLUSH caps all of our bin lists with a VC4_PACKET_RETURN. */
         cl_u8(&vc4->bcl, VC4_PACKET_FLUSH);
