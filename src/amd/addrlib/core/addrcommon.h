@@ -445,21 +445,16 @@ static inline UINT_32 NextPow2(
 
 /**
 ***************************************************************************************************
-*   Log2
+*   Log2NonPow2
 *
 *   @brief
-*       Compute log of base 2
+*       Compute log of base 2 no matter the target is power of 2 or not
 ***************************************************************************************************
 */
-static inline UINT_32 Log2(
+static inline UINT_32 Log2NonPow2(
     UINT_32 x)      ///< [in] the value should calculate log based 2
 {
     UINT_32 y;
-
-    //
-    // Assert that x is a power of two.
-    //
-    ADDR_ASSERT(IsPow2(x));
 
     y = 0;
     while (x > 1)
@@ -469,6 +464,23 @@ static inline UINT_32 Log2(
     }
 
     return y;
+}
+
+/**
+***************************************************************************************************
+*   Log2
+*
+*   @brief
+*       Compute log of base 2
+***************************************************************************************************
+*/
+static inline UINT_32 Log2(
+    UINT_32 x)      ///< [in] the value should calculate log based 2
+{
+    // Assert that x is a power of two.
+    ADDR_ASSERT(IsPow2(x));
+
+    return Log2NonPow2(x);
 }
 
 /**
