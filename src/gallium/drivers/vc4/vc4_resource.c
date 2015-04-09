@@ -26,7 +26,6 @@
 #include "util/u_format.h"
 #include "util/u_inlines.h"
 #include "util/u_surface.h"
-#include "util/u_blitter.h"
 
 #include "vc4_screen.h"
 #include "vc4_context.h"
@@ -574,69 +573,6 @@ vc4_flush_resource(struct pipe_context *pctx, struct pipe_resource *resource)
         /* All calls to flush_resource are followed by a flush of the context,
          * so there's nothing to do.
          */
-}
-
-static bool
-render_blit(struct pipe_context *ctx, struct pipe_blit_info *info)
-{
-        struct vc4_context *vc4 = vc4_context(ctx);
-
-        if (!util_blitter_is_blit_supported(vc4->blitter, info)) {
-                fprintf(stderr, "blit unsupported %s -> %s",
-                    util_format_short_name(info->src.resource->format),
-                    util_format_short_name(info->dst.resource->format));
-                return false;
-        }
-
-        util_blitter_save_vertex_buffer_slot(vc4->blitter, vc4->vertexbuf.vb);
-        util_blitter_save_vertex_elements(vc4->blitter, vc4->vtx);
-        util_blitter_save_vertex_shader(vc4->blitter, vc4->prog.bind_vs);
-        util_blitter_save_rasterizer(vc4->blitter, vc4->rasterizer);
-        util_blitter_save_viewport(vc4->blitter, &vc4->viewport);
-        util_blitter_save_scissor(vc4->blitter, &vc4->scissor);
-        util_blitter_save_fragment_shader(vc4->blitter, vc4->prog.bind_fs);
-        util_blitter_save_blend(vc4->blitter, vc4->blend);
-        util_blitter_save_depth_stencil_alpha(vc4->blitter, vc4->zsa);
-        util_blitter_save_stencil_ref(vc4->blitter, &vc4->stencil_ref);
-        util_blitter_save_sample_mask(vc4->blitter, vc4->sample_mask);
-        util_blitter_save_framebuffer(vc4->blitter, &vc4->framebuffer);
-        util_blitter_save_fragment_sampler_states(vc4->blitter,
-                        vc4->fragtex.num_samplers,
-                        (void **)vc4->fragtex.samplers);
-        util_blitter_save_fragment_sampler_views(vc4->blitter,
-                        vc4->fragtex.num_textures, vc4->fragtex.textures);
-
-        util_blitter_blit(vc4->blitter, info);
-
-        return true;
-}
-
-/* Optimal hardware path for blitting pixels.
- * Scaling, format conversion, up- and downsampling (resolve) are allowed.
- */
-static void
-vc4_blit(struct pipe_context *pctx, const struct pipe_blit_info *blit_info)
-{
-        struct pipe_blit_info info = *blit_info;
-
-        if (info.src.resource->nr_samples > 1 &&
-            info.dst.resource->nr_samples <= 1 &&
-            !util_format_is_depth_or_stencil(info.src.resource->format) &&
-            !util_format_is_pure_integer(info.src.resource->format)) {
-                fprintf(stderr, "color resolve unimplemented");
-                return;
-        }
-
-        if (util_try_blit_via_copy_region(pctx, &info)) {
-                return; /* done */
-        }
-
-        if (info.mask & PIPE_MASK_S) {
-                fprintf(stderr, "cannot blit stencil, skipping");
-                info.mask &= ~PIPE_MASK_S;
-        }
-
-        render_blit(pctx, &info);
 }
 
 void

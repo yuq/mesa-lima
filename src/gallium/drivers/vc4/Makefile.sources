@@ -1,4 +1,5 @@
 C_SOURCES := \
+	vc4_blit.c \
 	vc4_bufmgr.c \
 	vc4_bufmgr.h \
 	vc4_cl.c \
