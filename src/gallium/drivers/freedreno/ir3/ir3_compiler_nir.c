@@ -606,6 +606,34 @@ create_frag_face(struct ir3_compile *ctx, unsigned comp)
 	}
 }
 
+/* helper for instructions that produce multiple consecutive scalar
+ * outputs which need to have a split/fanout meta instruction inserted
+ */
+static void
+split_dest(struct ir3_block *block, struct ir3_instruction **dst,
+		struct ir3_instruction *src)
+{
+	struct ir3_instruction *prev = NULL;
+	for (int i = 0, j = 0; i < 4; i++) {
+		struct ir3_instruction *split =
+				ir3_instr_create(block, -1, OPC_META_FO);
+		ir3_reg_create(split, 0, IR3_REG_SSA);
+		ir3_reg_create(split, 0, IR3_REG_SSA)->instr = src;
+		split->fo.off = i;
+
+		if (prev) {
+			split->cp.left = prev;
+			split->cp.left_cnt++;
+			prev->cp.right = split;
+			prev->cp.right_cnt++;
+		}
+		prev = split;
+
+		if (src->regs[0]->wrmask & (1 << i))
+			dst[j++] = split;
+	}
+}
+
 /*
  * Adreno uses uint rather than having dedicated bool type,
  * which (potentially) requires some conversion, in particular
@@ -1153,13 +1181,50 @@ emit_undef(struct ir3_compile *ctx, nir_ssa_undef_instr *undef)
  */
 
 static void
+tex_info(nir_tex_instr *tex, unsigned *flagsp, unsigned *coordsp)
+{
+	unsigned coords, flags = 0;
+
+	/* note: would use tex->coord_components.. except txs.. also,
+	 * since array index goes after shadow ref, we don't want to
+	 * count it:
+	 */
+	switch (tex->sampler_dim) {
+	case GLSL_SAMPLER_DIM_1D:
+	case GLSL_SAMPLER_DIM_BUF:
+		coords = 1;
+		break;
+	case GLSL_SAMPLER_DIM_2D:
+	case GLSL_SAMPLER_DIM_RECT:
+	case GLSL_SAMPLER_DIM_EXTERNAL:
+	case GLSL_SAMPLER_DIM_MS:
+		coords = 2;
+		break;
+	case GLSL_SAMPLER_DIM_3D:
+	case GLSL_SAMPLER_DIM_CUBE:
+		coords = 3;
+		flags |= IR3_INSTR_3D;
+		break;
+	}
+
+	if (tex->is_shadow)
+		flags |= IR3_INSTR_S;
+
+	if (tex->is_array)
+		flags |= IR3_INSTR_A;
+
+	*flagsp = flags;
+	*coordsp = coords;
+}
+
+static void
 emit_tex(struct ir3_compile *ctx, nir_tex_instr *tex)
 {
 	struct ir3_block *b = ctx->block;
 	struct ir3_instruction **dst, *sam, *src0[12], *src1[4];
 	struct ir3_instruction **coord, *lod, *compare, *proj, **off, **ddx, **ddy;
 	bool has_bias = false, has_lod = false, has_proj = false, has_off = false;
-	unsigned i, coords, flags = 0;
+	unsigned i, coords, flags;
 	unsigned nsrc0 = 0, nsrc1 = 0;
 	type_t type;
 	opc_t opc;
@@ -1215,9 +1280,7 @@ emit_tex(struct ir3_compile *ctx, nir_tex_instr *tex)
 	 * bias/lod go into the second arg
 	 */
 
-	coords = tex->coord_components;
-	if (tex->is_array)       /* array idx goes after shadow ref */
-		coords--;
+	tex_info(tex, &flags, &coords);
 
 	/* insert tex coords: */
 	for (i = 0; i < coords; i++)
@@ -1229,19 +1292,13 @@ emit_tex(struct ir3_compile *ctx, nir_tex_instr *tex)
 		 * TODO: y coord should be (int)0 in some cases..
 		 */
 		src0[nsrc0++] = create_immed(b, fui(0.5));
-	} else if (coords == 3) {
-		flags |= IR3_INSTR_3D;
 	}
 
-	if (tex->is_shadow) {
+	if (tex->is_shadow)
 		src0[nsrc0++] = compare;
-		flags |= IR3_INSTR_S;
-	}
 
-	if (tex->is_array) {
+	if (tex->is_array)
 		src0[nsrc0++] = coord[coords];
-		flags |= IR3_INSTR_A;
-	}
 
 	if (has_proj) {
 		src0[nsrc0++] = proj;
@@ -1310,31 +1367,12 @@ emit_tex(struct ir3_compile *ctx, nir_tex_instr *tex)
 		break;
 	}
 
-	sam = ir3_SAM(b, opc, type, 0xf, flags,
-			tex->sampler_index, tex->sampler_index,
+	sam = ir3_SAM(b, opc, type, TGSI_WRITEMASK_XYZW,
+			flags, tex->sampler_index, tex->sampler_index,
 			create_collect(b, src0, nsrc0),
 			create_collect(b, src1, nsrc1));
 
-	// TODO maybe split this out into a helper, for other cases that
-	// write multiple?
-	struct ir3_instruction *prev = NULL;
-	for (int i = 0; i < 4; i++) {
-		struct ir3_instruction *split =
-				ir3_instr_create(b, -1, OPC_META_FO);
-		ir3_reg_create(split, 0, IR3_REG_SSA);
-		ir3_reg_create(split, 0, IR3_REG_SSA)->instr = sam;
-		split->fo.off = i;
-
-		if (prev) {
-			split->cp.left = prev;
-			split->cp.left_cnt++;
-			prev->cp.right = split;
-			prev->cp.right_cnt++;
-		}
-		prev = split;
-
-		dst[i] = split;
-	}
+	split_dest(b, dst, sam);
 }
 
 
