@@ -130,6 +130,7 @@ vc4_cl_validate(struct drm_device *dev, struct vc4_exec_info *exec)
 			      bin,
 			      args->bin_cl_size,
 			      true,
+			      args->bin_cl_size != 0,
 			      exec);
 	if (ret)
 		goto fail;
@@ -139,6 +140,7 @@ vc4_cl_validate(struct drm_device *dev, struct vc4_exec_info *exec)
 			      render,
 			      args->render_cl_size,
 			      false,
+			      args->bin_cl_size != 0,
 			      exec);
 	if (ret)
 		goto fail;

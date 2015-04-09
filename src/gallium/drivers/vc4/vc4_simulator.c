@@ -151,14 +151,16 @@ vc4_simulator_flush(struct vc4_context *vc4, struct drm_vc4_submit_cl *args)
         if (ret)
                 return ret;
 
-        int bfc = simpenrose_do_binning(exec.ct0ca, exec.ct0ea);
-        if (bfc != 1) {
-                fprintf(stderr, "Binning returned %d flushes, should be 1.\n",
-                        bfc);
-                fprintf(stderr, "Relocated binning command list:\n");
-                vc4_dump_cl(screen->simulator_mem_base + exec.ct0ca,
-                            exec.ct0ea - exec.ct0ca, false);
-                abort();
+        if (exec.ct0ca != exec.ct0ea) {
+                int bfc = simpenrose_do_binning(exec.ct0ca, exec.ct0ea);
+                if (bfc != 1) {
+                        fprintf(stderr, "Binning returned %d flushes, should be 1.\n",
+                                bfc);
+                        fprintf(stderr, "Relocated binning command list:\n");
+                        vc4_dump_cl(screen->simulator_mem_base + exec.ct0ca,
+                                    exec.ct0ea - exec.ct0ca, false);
+                        abort();
+                }
         }
         int rfc = simpenrose_do_rendering(exec.ct1ca, exec.ct1ea);
         if (rfc != 1) {
