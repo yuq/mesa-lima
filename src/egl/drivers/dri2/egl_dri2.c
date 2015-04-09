@@ -194,6 +194,15 @@ dri2_add_config(_EGLDisplay *disp, const __DRIconfig *dri_config, int id,
          dri_masks[3] = value;
          break;
 
+      case __DRI_ATTRIB_ACCUM_RED_SIZE:
+      case __DRI_ATTRIB_ACCUM_GREEN_SIZE:
+      case __DRI_ATTRIB_ACCUM_BLUE_SIZE:
+      case __DRI_ATTRIB_ACCUM_ALPHA_SIZE:
+         /* Don't expose visuals with the accumulation buffer. */
+         if (value > 0)
+            return NULL;
+         break;
+
       default:
 	 key = dri2_to_egl_attribute_map[attrib];
 	 if (key != 0)
