@@ -908,6 +908,34 @@ INSTR1(4, SQRT)
 INSTR1(5, DSX)
 INSTR1(5, DSY)
 
+static inline struct ir3_instruction *
+ir3_SAM(struct ir3_block *block, opc_t opc, type_t type,
+		unsigned wrmask, unsigned flags, unsigned samp, unsigned tex,
+		struct ir3_instruction *src0, struct ir3_instruction *src1)
+{
+	struct ir3_instruction *sam;
+	struct ir3_register *reg;
+
+	sam = ir3_instr_create(block, 5, opc);
+	sam->flags |= flags;
+	ir3_reg_create(sam, 0, 0)->wrmask = wrmask;
+	if (src0) {
+		reg = ir3_reg_create(sam, 0, IR3_REG_SSA);
+		reg->wrmask = (1 << (src0->regs_count - 1)) - 1;
+		reg->instr = src0;
+	}
+	if (src1) {
+		reg = ir3_reg_create(sam, 0, IR3_REG_SSA);
+		reg->instr = src1;
+		reg->wrmask = (1 << (src1->regs_count - 1)) - 1;
+	}
+	sam->cat5.samp = samp;
+	sam->cat5.tex  = tex;
+	sam->cat5.type  = type;
+
+	return sam;
+}
+
 /* cat6 instructions: */
 INSTR2(6, LDLV)
 

@@ -440,6 +440,9 @@ create_collect(struct ir3_block *block, struct ir3_instruction **arr,
 {
 	struct ir3_instruction *collect;
 
+	if (arrsz == 0)
+		return NULL;
+
 	collect = ir3_instr_create2(block, -1, OPC_META_FI, 1 + arrsz);
 	ir3_reg_create(collect, 0, 0);
 	for (unsigned i = 0; i < arrsz; i++)
@@ -1153,11 +1156,12 @@ static void
 emit_tex(struct ir3_compile *ctx, nir_tex_instr *tex)
 {
 	struct ir3_block *b = ctx->block;
-	struct ir3_instruction **dst, *src0, *src1, *sam;
+	struct ir3_instruction **dst, *sam, *src0[12], *src1[4];
 	struct ir3_instruction **coord, *lod, *compare, *proj, **off, **ddx, **ddy;
-	struct ir3_register *reg;
 	bool has_bias = false, has_lod = false, has_proj = false, has_off = false;
 	unsigned i, coords, flags = 0;
+	unsigned nsrc0 = 0, nsrc1 = 0;
+	type_t type;
 	opc_t opc;
 
 	/* TODO: might just be one component for gathers? */
@@ -1211,61 +1215,51 @@ emit_tex(struct ir3_compile *ctx, nir_tex_instr *tex)
 	 * bias/lod go into the second arg
 	 */
 
-	src0 = ir3_instr_create2(b, -1, OPC_META_FI, 12);
-	ir3_reg_create(src0, 0, 0);
-
 	coords = tex->coord_components;
 	if (tex->is_array)       /* array idx goes after shadow ref */
 		coords--;
 
 	/* insert tex coords: */
 	for (i = 0; i < coords; i++)
-		ir3_reg_create(src0, 0, IR3_REG_SSA)->instr = coord[i];
+		src0[nsrc0++] = coord[i];
 
 	if (coords == 1) {
 		/* hw doesn't do 1d, so we treat it as 2d with
 		 * height of 1, and patch up the y coord.
 		 * TODO: y coord should be (int)0 in some cases..
 		 */
-		ir3_reg_create(src0, 0, IR3_REG_SSA)->instr =
-				create_immed(b, fui(0.5));
+		src0[nsrc0++] = create_immed(b, fui(0.5));
+	} else if (coords == 3) {
+		flags |= IR3_INSTR_3D;
 	}
 
 	if (tex->is_shadow) {
-		ir3_reg_create(src0, 0, IR3_REG_SSA)->instr = compare;
+		src0[nsrc0++] = compare;
 		flags |= IR3_INSTR_S;
 	}
 
 	if (tex->is_array) {
-		ir3_reg_create(src0, 0, IR3_REG_SSA)->instr = coord[coords];
+		src0[nsrc0++] = coord[coords];
 		flags |= IR3_INSTR_A;
 	}
 
 	if (has_proj) {
-		ir3_reg_create(src0, 0, IR3_REG_SSA)->instr = proj;
+		src0[nsrc0++] = proj;
 		flags |= IR3_INSTR_P;
 	}
 
 	/* pad to 4, then ddx/ddy: */
 	if (tex->op == nir_texop_txd) {
-		while (src0->regs_count < 5) {
-			ir3_reg_create(src0, 0, IR3_REG_SSA)->instr =
-					create_immed(b, fui(0.0));
-		}
-		for (i = 0; i < coords; i++) {
-			ir3_reg_create(src0, 0, IR3_REG_SSA)->instr = ddx[i];
-		}
-		if (coords < 2) {
-			ir3_reg_create(src0, 0, IR3_REG_SSA)->instr =
-					create_immed(b, fui(0.0));
-		}
-		for (i = 0; i < coords; i++) {
-			ir3_reg_create(src0, 0, IR3_REG_SSA)->instr = ddy[i];
-		}
-		if (coords < 2) {
-			ir3_reg_create(src0, 0, IR3_REG_SSA)->instr =
-					create_immed(b, fui(0.0));
-		}
+		while (nsrc0 < 4)
+			src0[nsrc0++] = create_immed(b, fui(0.0));
+		for (i = 0; i < coords; i++)
+			src0[nsrc0++] = ddx[i];
+		if (coords < 2)
+			src0[nsrc0++] = create_immed(b, fui(0.0));
+		for (i = 0; i < coords; i++)
+			src0[nsrc0++] = ddy[i];
+		if (coords < 2)
+			src0[nsrc0++] = create_immed(b, fui(0.0));
 	}
 
 	/*
@@ -1275,25 +1269,16 @@ emit_tex(struct ir3_compile *ctx, nir_tex_instr *tex)
 	 *  - bias
 	 */
 	if (has_off | has_lod | has_bias) {
-		src1 = ir3_instr_create2(b, -1, OPC_META_FI, 5);
-		ir3_reg_create(src1, 0, 0);
-
 		if (has_off) {
-			for (i = 0; i < coords; i++) {
-				ir3_reg_create(src0, 0, IR3_REG_SSA)->instr = off[i];
-			}
-			if (coords < 2) {
-				ir3_reg_create(src0, 0, IR3_REG_SSA)->instr =
-						create_immed(b, fui(0.0));
-			}
+			for (i = 0; i < coords; i++)
+				src1[nsrc1++] = off[i];
+			if (coords < 2)
+				src1[nsrc1++] = create_immed(b, fui(0.0));
 			flags |= IR3_INSTR_O;
 		}
 
-		if (has_lod | has_bias) {
-			ir3_reg_create(src1, 0, IR3_REG_SSA)->instr = lod;
-		}
-	} else {
-		src1 = NULL;
+		if (has_lod | has_bias)
+			src1[nsrc1++] = lod;
 	}
 
 	switch (tex->op) {
@@ -1311,32 +1296,24 @@ emit_tex(struct ir3_compile *ctx, nir_tex_instr *tex)
 		return;
 	}
 
-	sam = ir3_instr_create(b, 5, opc);
-	sam->flags |= flags;
-	ir3_reg_create(sam, 0, 0)->wrmask = 0xf;  // TODO proper wrmask??
-	reg = ir3_reg_create(sam, 0, IR3_REG_SSA);
-	reg->wrmask = (1 << (src0->regs_count - 1)) - 1;
-	reg->instr = src0;
-	if (src1) {
-		reg = ir3_reg_create(sam, 0, IR3_REG_SSA);
-		reg->instr = src1;
-		reg->wrmask = (1 << (src1->regs_count - 1)) - 1;
-	}
-	sam->cat5.samp = tex->sampler_index;
-	sam->cat5.tex  = tex->sampler_index;
-
 	switch (tex->dest_type) {
 	case nir_type_invalid:
 	case nir_type_float:
-		sam->cat5.type = TYPE_F32;
+		type = TYPE_F32;
 		break;
 	case nir_type_int:
-		sam->cat5.type = TYPE_S32;
+		type = TYPE_S32;
 		break;
 	case nir_type_unsigned:
 	case nir_type_bool:
-		sam->cat5.type = TYPE_U32;
+		type = TYPE_U32;
+		break;
 	}
+
+	sam = ir3_SAM(b, opc, type, 0xf, flags,
+			tex->sampler_index, tex->sampler_index,
+			create_collect(b, src0, nsrc0),
+			create_collect(b, src1, nsrc1));
 
 	// TODO maybe split this out into a helper, for other cases that
 	// write multiple?
