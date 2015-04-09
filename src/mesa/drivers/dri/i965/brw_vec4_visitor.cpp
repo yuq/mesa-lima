@@ -1074,11 +1074,12 @@ vec4_visitor::visit(ir_variable *ir)
       break;
 
    case ir_var_uniform:
+   case ir_var_shader_storage:
       reg = new(this->mem_ctx) dst_reg(UNIFORM, this->uniforms);
 
       /* Thanks to the lower_ubo_reference pass, we will see only
-       * ir_binop_ubo_load expressions and not ir_dereference_variable for UBO
-       * variables, so no need for them to be in variable_ht.
+       * ir_binop_{ubo,ssbo}_load expressions and not ir_dereference_variable
+       * for UBO/SSBO variables, so no need for them to be in variable_ht.
        *
        * Some uniforms, such as samplers and atomic counters, have no actual
        * storage, so we should ignore them.
