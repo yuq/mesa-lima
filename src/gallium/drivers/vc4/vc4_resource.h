@@ -46,9 +46,6 @@ struct vc4_surface {
         struct pipe_surface base;
         uint32_t offset;
         uint32_t stride;
-        uint32_t width;
-        uint16_t height;
-        uint16_t depth;
         uint8_t tiling;
 };
 
