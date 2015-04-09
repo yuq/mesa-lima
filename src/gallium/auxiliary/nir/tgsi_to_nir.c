@@ -867,58 +867,9 @@ ttn_endloop(struct ttn_compile *c)
 }
 
 static void
-ttn_tex(struct ttn_compile *c, nir_alu_dest dest, nir_ssa_def **src)
+setup_texture_info(nir_tex_instr *instr, unsigned texture)
 {
-   nir_builder *b = &c->build;
-   struct tgsi_full_instruction *tgsi_inst = &c->token->FullInstruction;
-   nir_tex_instr *instr;
-   nir_texop op;
-   unsigned num_srcs;
-
-   switch (tgsi_inst->Instruction.Opcode) {
-   case TGSI_OPCODE_TEX:
-      op = nir_texop_tex;
-      num_srcs = 1;
-      break;
-   case TGSI_OPCODE_TXP:
-      op = nir_texop_tex;
-      num_srcs = 2;
-      break;
-   case TGSI_OPCODE_TXB:
-      op = nir_texop_txb;
-      num_srcs = 2;
-      break;
-   case TGSI_OPCODE_TXL:
-      op = nir_texop_txl;
-      num_srcs = 2;
-      break;
-   case TGSI_OPCODE_TXF:
-      op = nir_texop_txf;
-      num_srcs = 1;
-      break;
-   case TGSI_OPCODE_TXD:
-      op = nir_texop_txd;
-      num_srcs = 3;
-      break;
-   default:
-      fprintf(stderr, "unknown TGSI tex op %d\n", tgsi_inst->Instruction.Opcode);
-      abort();
-   }
-
-   if (tgsi_inst->Texture.Texture == TGSI_TEXTURE_SHADOW1D ||
-       tgsi_inst->Texture.Texture == TGSI_TEXTURE_SHADOW1D_ARRAY ||
-       tgsi_inst->Texture.Texture == TGSI_TEXTURE_SHADOW2D ||
-       tgsi_inst->Texture.Texture == TGSI_TEXTURE_SHADOW2D_ARRAY ||
-       tgsi_inst->Texture.Texture == TGSI_TEXTURE_SHADOWRECT ||
-       tgsi_inst->Texture.Texture == TGSI_TEXTURE_SHADOWCUBE ||
-       tgsi_inst->Texture.Texture == TGSI_TEXTURE_SHADOWCUBE_ARRAY) {
-      num_srcs++;
-   }
-
-   instr = nir_tex_instr_create(b->shader, num_srcs);
-   instr->op = op;
-
-   switch (tgsi_inst->Texture.Texture) {
+   switch (texture) {
    case TGSI_TEXTURE_1D:
       instr->sampler_dim = GLSL_SAMPLER_DIM_1D;
       break;
@@ -985,10 +936,65 @@ ttn_tex(struct ttn_compile *c, nir_alu_dest dest, nir_ssa_def **src)
       instr->is_shadow = true;
       break;
    default:
-      fprintf(stderr, "Unknown TGSI texture target %d\n",
-              tgsi_inst->Texture.Texture);
+      fprintf(stderr, "Unknown TGSI texture target %d\n", texture);
       abort();
    }
+}
+
+static void
+ttn_tex(struct ttn_compile *c, nir_alu_dest dest, nir_ssa_def **src)
+{
+   nir_builder *b = &c->build;
+   struct tgsi_full_instruction *tgsi_inst = &c->token->FullInstruction;
+   nir_tex_instr *instr;
+   nir_texop op;
+   unsigned num_srcs;
+
+   switch (tgsi_inst->Instruction.Opcode) {
+   case TGSI_OPCODE_TEX:
+      op = nir_texop_tex;
+      num_srcs = 1;
+      break;
+   case TGSI_OPCODE_TXP:
+      op = nir_texop_tex;
+      num_srcs = 2;
+      break;
+   case TGSI_OPCODE_TXB:
+      op = nir_texop_txb;
+      num_srcs = 2;
+      break;
+   case TGSI_OPCODE_TXL:
+      op = nir_texop_txl;
+      num_srcs = 2;
+      break;
+   case TGSI_OPCODE_TXF:
+      op = nir_texop_txf;
+      num_srcs = 1;
+      break;
+   case TGSI_OPCODE_TXD:
+      op = nir_texop_txd;
+      num_srcs = 3;
+      break;
+
+   default:
+      fprintf(stderr, "unknown TGSI tex op %d\n", tgsi_inst->Instruction.Opcode);
+      abort();
+   }
+
+   if (tgsi_inst->Texture.Texture == TGSI_TEXTURE_SHADOW1D ||
+       tgsi_inst->Texture.Texture == TGSI_TEXTURE_SHADOW1D_ARRAY ||
+       tgsi_inst->Texture.Texture == TGSI_TEXTURE_SHADOW2D ||
+       tgsi_inst->Texture.Texture == TGSI_TEXTURE_SHADOW2D_ARRAY ||
+       tgsi_inst->Texture.Texture == TGSI_TEXTURE_SHADOWRECT ||
+       tgsi_inst->Texture.Texture == TGSI_TEXTURE_SHADOWCUBE ||
+       tgsi_inst->Texture.Texture == TGSI_TEXTURE_SHADOWCUBE_ARRAY) {
+      num_srcs++;
+   }
+
+   instr = nir_tex_instr_create(b->shader, num_srcs);
+   instr->op = op;
+
+   setup_texture_info(instr, tgsi_inst->Texture.Texture);
 
    switch (instr->sampler_dim) {
    case GLSL_SAMPLER_DIM_1D:
