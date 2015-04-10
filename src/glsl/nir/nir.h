@@ -986,8 +986,11 @@ nir_tex_instr_dest_size(nir_tex_instr *instr)
       return ret;
    }
 
-   case nir_texop_query_levels:
+   case nir_texop_lod:
       return 2;
+
+   case nir_texop_query_levels:
+      return 1;
 
    default:
       if (instr->is_shadow && instr->is_new_style_shadow)
