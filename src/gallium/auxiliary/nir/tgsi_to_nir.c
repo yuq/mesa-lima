@@ -948,7 +948,7 @@ ttn_tex(struct ttn_compile *c, nir_alu_dest dest, nir_ssa_def **src)
    struct tgsi_full_instruction *tgsi_inst = &c->token->FullInstruction;
    nir_tex_instr *instr;
    nir_texop op;
-   unsigned num_srcs;
+   unsigned num_srcs, samp = 1;
 
    switch (tgsi_inst->Instruction.Opcode) {
    case TGSI_OPCODE_TEX:
@@ -974,6 +974,7 @@ ttn_tex(struct ttn_compile *c, nir_alu_dest dest, nir_ssa_def **src)
    case TGSI_OPCODE_TXD:
       op = nir_texop_txd;
       num_srcs = 3;
+      samp = 3;
       break;
 
    default:
@@ -1016,8 +1017,8 @@ ttn_tex(struct ttn_compile *c, nir_alu_dest dest, nir_ssa_def **src)
    if (instr->is_array)
       instr->coord_components++;
 
-   assert(tgsi_inst->Src[1].Register.File == TGSI_FILE_SAMPLER);
-   instr->sampler_index = tgsi_inst->Src[1].Register.Index;
+   assert(tgsi_inst->Src[samp].Register.File == TGSI_FILE_SAMPLER);
+   instr->sampler_index = tgsi_inst->Src[samp].Register.Index;
 
    unsigned src_number = 0;
 
@@ -1042,6 +1043,19 @@ ttn_tex(struct ttn_compile *c, nir_alu_dest dest, nir_ssa_def **src)
    if (tgsi_inst->Instruction.Opcode == TGSI_OPCODE_TXL) {
       instr->src[src_number].src = nir_src_for_ssa(ttn_channel(b, src[0], W));
       instr->src[src_number].src_type = nir_tex_src_lod;
+      src_number++;
+   }
+
+   if (tgsi_inst->Instruction.Opcode == TGSI_OPCODE_TXD) {
+      instr->src[src_number].src =
+         nir_src_for_ssa(nir_swizzle(b, src[1], SWIZ(X, Y, Z, W),
+              instr->coord_components, false));
+      instr->src[src_number].src_type = nir_tex_src_ddx;
+      src_number++;
+      instr->src[src_number].src =
+         nir_src_for_ssa(nir_swizzle(b, src[2], SWIZ(X, Y, Z, W),
+              instr->coord_components, false));
+      instr->src[src_number].src_type = nir_tex_src_ddy;
       src_number++;
    }
 
