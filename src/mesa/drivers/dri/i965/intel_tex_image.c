@@ -320,17 +320,9 @@ intel_image_target_texture_2d(struct gl_context *ctx, GLenum target,
    if (image == NULL)
       return;
 
-   /**
-    * Images originating via EGL_EXT_image_dma_buf_import can be used only
-    * with GL_OES_EGL_image_external only.
+   /* We support external textures only for EGLImages created with
+    * EGL_EXT_image_dma_buf_import. We may lift that restriction in the future.
     */
-   if (image->dma_buf_imported && target != GL_TEXTURE_EXTERNAL_OES) {
-      _mesa_error(ctx, GL_INVALID_OPERATION,
-            "glEGLImageTargetTexture2DOES(dma buffers can be used with "
-               "GL_OES_EGL_image_external only");
-      return;
-   }
-
    if (target == GL_TEXTURE_EXTERNAL_OES && !image->dma_buf_imported) {
       _mesa_error(ctx, GL_INVALID_OPERATION,
             "glEGLImageTargetTexture2DOES(external target is enabled only "
