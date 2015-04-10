@@ -1579,6 +1579,7 @@ void radeon_llvm_finalize_module(struct radeon_llvm_context * ctx)
 	LLVMAddLICMPass(gallivm->passmgr);
 	LLVMAddAggressiveDCEPass(gallivm->passmgr);
 	LLVMAddCFGSimplificationPass(gallivm->passmgr);
+	LLVMAddInstructionCombiningPass(gallivm->passmgr);
 
 	/* Run the pass */
 	LLVMRunFunctionPassManager(gallivm->passmgr, ctx->main_fn);
