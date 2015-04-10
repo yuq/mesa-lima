@@ -1157,6 +1157,28 @@ fs_visitor::nir_emit_alu(nir_alu_instr *instr)
    }
 }
 
+static fs_reg
+fs_reg_for_nir_reg(fs_visitor *v, nir_register *nir_reg,
+                   unsigned base_offset, nir_src *indirect)
+{
+   fs_reg reg;
+   if (nir_reg->is_global)
+      reg = v->nir_globals[nir_reg->index];
+   else
+      reg = v->nir_locals[nir_reg->index];
+
+   reg = offset(reg, base_offset * nir_reg->num_components);
+   if (indirect) {
+      int multiplier = nir_reg->num_components * (v->dispatch_width / 8);
+
+      reg.reladdr = new(v->mem_ctx) fs_reg(v->vgrf(glsl_type::int_type));
+      v->emit(v->MUL(*reg.reladdr, v->get_nir_src(*indirect),
+                     fs_reg(multiplier)));
+   }
+
+   return reg;
+}
+
 fs_reg
 fs_visitor::get_nir_src(nir_src src)
 {
@@ -1171,44 +1193,22 @@ fs_visitor::get_nir_src(nir_src src)
 
       return reg;
    } else {
-      fs_reg reg;
-      if (src.reg.reg->is_global)
-         reg = nir_globals[src.reg.reg->index];
-      else
-         reg = nir_locals[src.reg.reg->index];
+      fs_reg reg = fs_reg_for_nir_reg(this, src.reg.reg, src.reg.base_offset,
+                                      src.reg.indirect);
 
       /* to avoid floating-point denorm flushing problems, set the type by
        * default to D - instructions that need floating point semantics will set
        * this to F if they need to
        */
-      reg = retype(offset(reg, src.reg.base_offset), BRW_REGISTER_TYPE_D);
-      if (src.reg.indirect) {
-         reg.reladdr = new(mem_ctx) fs_reg();
-         *reg.reladdr = retype(get_nir_src(*src.reg.indirect),
-                               BRW_REGISTER_TYPE_D);
-      }
-
-      return reg;
+      return retype(reg, BRW_REGISTER_TYPE_D);
    }
 }
 
 fs_reg
 fs_visitor::get_nir_dest(nir_dest dest)
 {
-   fs_reg reg;
-   if (dest.reg.reg->is_global)
-      reg = nir_globals[dest.reg.reg->index];
-   else
-      reg = nir_locals[dest.reg.reg->index];
-
-   reg = offset(reg, dest.reg.base_offset);
-   if (dest.reg.indirect) {
-      reg.reladdr = new(mem_ctx) fs_reg();
-      *reg.reladdr = retype(get_nir_src(*dest.reg.indirect),
-                            BRW_REGISTER_TYPE_D);
-   }
-
-   return reg;
+   return fs_reg_for_nir_reg(this, dest.reg.reg, dest.reg.base_offset,
+                             dest.reg.indirect);
 }
 
 void
