@@ -28,7 +28,7 @@
 #include "nir.h"
 
 struct locals_to_regs_state {
-   void *mem_ctx;
+   nir_shader *shader;
    nir_function_impl *impl;
 
    /* A hash table mapping derefs to registers */
@@ -142,11 +142,11 @@ get_deref_reg_src(nir_deref_var *deref, nir_instr *instr,
 
       if (src.reg.indirect) {
          nir_load_const_instr *load_const =
-            nir_load_const_instr_create(state->mem_ctx, 1);
+            nir_load_const_instr_create(state->shader, 1);
          load_const->value.u[0] = glsl_get_length(parent_type);
          nir_instr_insert_before(instr, &load_const->instr);
 
-         nir_alu_instr *mul = nir_alu_instr_create(state->mem_ctx, nir_op_imul);
+         nir_alu_instr *mul = nir_alu_instr_create(state->shader, nir_op_imul);
          mul->src[0].src = *src.reg.indirect;
          mul->src[1].src.is_ssa = true;
          mul->src[1].src.ssa = &load_const->def;
@@ -160,15 +160,15 @@ get_deref_reg_src(nir_deref_var *deref, nir_instr *instr,
 
       if (deref_array->deref_array_type == nir_deref_array_type_indirect) {
          if (src.reg.indirect == NULL) {
-            src.reg.indirect = ralloc(state->mem_ctx, nir_src);
+            src.reg.indirect = ralloc(state->shader, nir_src);
             nir_src_copy(src.reg.indirect, &deref_array->indirect,
-                         state->mem_ctx);
+                         state->shader);
          } else {
-            nir_alu_instr *add = nir_alu_instr_create(state->mem_ctx,
+            nir_alu_instr *add = nir_alu_instr_create(state->shader,
                                                       nir_op_iadd);
             add->src[0].src = *src.reg.indirect;
             nir_src_copy(&add->src[1].src, &deref_array->indirect,
-                         state->mem_ctx);
+                         state->shader);
             add->dest.write_mask = 1;
             nir_ssa_dest_init(&add->instr, &add->dest.dest, 1, NULL);
             nir_instr_insert_before(instr, &add->instr);
@@ -198,7 +198,7 @@ lower_locals_to_regs_block(nir_block *block, void *void_state)
          if (intrin->variables[0]->var->data.mode != nir_var_local)
             continue;
 
-         nir_alu_instr *mov = nir_alu_instr_create(state->mem_ctx, nir_op_imov);
+         nir_alu_instr *mov = nir_alu_instr_create(state->shader, nir_op_imov);
          mov->src[0].src = get_deref_reg_src(intrin->variables[0],
                                              &intrin->instr, state);
          mov->dest.write_mask = (1 << intrin->num_components) - 1;
@@ -207,9 +207,9 @@ lower_locals_to_regs_block(nir_block *block, void *void_state)
                               intrin->num_components, NULL);
             nir_ssa_def_rewrite_uses(&intrin->dest.ssa,
                                      nir_src_for_ssa(&mov->dest.dest.ssa),
-                                     state->mem_ctx);
+                                     state->shader);
          } else {
-            nir_dest_copy(&mov->dest.dest, &intrin->dest, state->mem_ctx);
+            nir_dest_copy(&mov->dest.dest, &intrin->dest, state->shader);
          }
          nir_instr_insert_before(&intrin->instr, &mov->instr);
 
@@ -224,8 +224,8 @@ lower_locals_to_regs_block(nir_block *block, void *void_state)
          nir_src reg_src = get_deref_reg_src(intrin->variables[0],
                                              &intrin->instr, state);
 
-         nir_alu_instr *mov = nir_alu_instr_create(state->mem_ctx, nir_op_imov);
-         nir_src_copy(&mov->src[0].src, &intrin->src[0], state->mem_ctx);
+         nir_alu_instr *mov = nir_alu_instr_create(state->shader, nir_op_imov);
+         nir_src_copy(&mov->src[0].src, &intrin->src[0], state->shader);
          mov->dest.write_mask = (1 << intrin->num_components) - 1;
          mov->dest.dest.is_ssa = false;
          mov->dest.dest.reg.reg = reg_src.reg.reg;
@@ -255,7 +255,7 @@ nir_lower_locals_to_regs_impl(nir_function_impl *impl)
 {
    struct locals_to_regs_state state;
 
-   state.mem_ctx = ralloc_parent(impl);
+   state.shader = impl->overload->function->shader;
    state.impl = impl;
    state.regs_table = _mesa_hash_table_create(NULL, hash_deref, derefs_equal);
 
