@@ -255,9 +255,14 @@ compile_init(struct ir3_shader_variant *so,
 	if (lowered_tokens != tokens)
 		free((void *)lowered_tokens);
 
-	so->first_immediate = ctx->s->num_uniforms;
-	/* for now, now driver params: */
-	so->first_driver_param = so->first_immediate;
+	so->first_driver_param = so->first_immediate = ctx->s->num_uniforms;
+
+	/* one (vec4) slot for vertex id base: */
+	if (so->type == SHADER_VERTEX)
+		so->first_immediate++;
+
+	/* reserve 4 (vec4) slots for ubo base addresses: */
+	so->first_immediate += 4;
 
 	return ctx;
 }
@@ -1067,6 +1072,22 @@ emit_intrinisic_store_var(struct ir3_compile *ctx, nir_intrinsic_instr *intr)
 	}
 }
 
+static void add_sysval_input(struct ir3_compile *ctx, unsigned name,
+		struct ir3_instruction *instr)
+{
+	struct ir3_shader_variant *so = ctx->so;
+	unsigned r = regid(so->inputs_count, 0);
+	unsigned n = so->inputs_count++;
+
+	so->inputs[n].semantic = ir3_semantic_name(name, 0);
+	so->inputs[n].compmask = 1;
+	so->inputs[n].regid = r;
+	so->inputs[n].interpolate = TGSI_INTERPOLATE_CONSTANT;
+	so->total_in++;
+
+	ctx->block->inputs[r] = instr;
+}
+
 static void
 emit_intrinisic(struct ir3_compile *ctx, nir_intrinsic_instr *intr)
 {
@@ -1127,6 +1148,32 @@ emit_intrinisic(struct ir3_compile *ctx, nir_intrinsic_instr *intr)
 			unsigned n = idx * 4 + i;
 			b->outputs[n] = src[i];
 		}
+		break;
+	case nir_intrinsic_load_base_vertex:
+		if (!ctx->basevertex) {
+			/* first four vec4 sysval's reserved for UBOs: */
+			unsigned r = regid(ctx->so->first_driver_param + 4, 0);
+			ctx->basevertex = create_uniform(ctx, r);
+			add_sysval_input(ctx, TGSI_SEMANTIC_BASEVERTEX,
+					ctx->basevertex);
+		}
+		dst[0] = ctx->basevertex;
+		break;
+	case nir_intrinsic_load_vertex_id_zero_base:
+		if (!ctx->vertex_id) {
+			ctx->vertex_id = create_input(ctx->block, NULL, 0);
+			add_sysval_input(ctx, TGSI_SEMANTIC_VERTEXID_NOBASE,
+					ctx->vertex_id);
+		}
+		dst[0] = ctx->vertex_id;
+		break;
+	case nir_intrinsic_load_instance_id:
+		if (!ctx->instance_id) {
+			ctx->instance_id = create_input(ctx->block, NULL, 0);
+			add_sysval_input(ctx, TGSI_SEMANTIC_INSTANCEID,
+					ctx->instance_id);
+		}
+		dst[0] = ctx->instance_id;
 		break;
 	case nir_intrinsic_discard_if:
 	case nir_intrinsic_discard: {
