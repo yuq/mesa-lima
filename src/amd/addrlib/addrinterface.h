@@ -1964,7 +1964,49 @@ ADDR_E_RETURNCODE ADDR_API AddrConvertTileIndex(
     const ADDR_CONVERT_TILEINDEX_INPUT* pIn,
     ADDR_CONVERT_TILEINDEX_OUTPUT*      pOut);
 
+/**
+***************************************************************************************************
+*   ADDR_GET_MACROMODEINDEX_INPUT
+*
+*   @brief
+*       Input structure for AddrGetMacroModeIndex
+***************************************************************************************************
+*/
+typedef struct _ADDR_GET_MACROMODEINDEX_INPUT
+{
+    UINT_32             size;               ///< Size of this structure in bytes
+    ADDR_SURFACE_FLAGS  flags;              ///< Surface flag
+    INT_32              tileIndex;          ///< Tile index
+    UINT_32             bpp;                ///< Bits per pixel
+    UINT_32             numFrags;           ///< Number of color fragments
+} ADDR_GET_MACROMODEINDEX_INPUT;
 
+/**
+***************************************************************************************************
+*   ADDR_GET_MACROMODEINDEX_OUTPUT
+*
+*   @brief
+*       Output structure for AddrGetMacroModeIndex
+***************************************************************************************************
+*/
+typedef struct _ADDR_GET_MACROMODEINDEX_OUTPUT
+{
+    UINT_32             size;            ///< Size of this structure in bytes
+    INT_32              macroModeIndex;  ///< Index in macro tile mode table if there is one (CI)
+} ADDR_GET_MACROMODEINDEX_OUTPUT;
+
+/**
+***************************************************************************************************
+*   AddrGetMacroModeIndex
+*
+*   @brief
+*       Get macro mode index based on input parameters
+***************************************************************************************************
+*/
+ADDR_E_RETURNCODE ADDR_API AddrGetMacroModeIndex(
+    ADDR_HANDLE                          hLib,
+    const ADDR_GET_MACROMODEINDEX_INPUT* pIn,
+    ADDR_GET_MACROMODEINDEX_OUTPUT*      pOut);
 
 /**
 ***************************************************************************************************

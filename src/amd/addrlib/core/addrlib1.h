@@ -143,6 +143,10 @@ public:
         const ADDR_CONVERT_TILEINDEX_INPUT* pIn,
         ADDR_CONVERT_TILEINDEX_OUTPUT* pOut) const;
 
+    ADDR_E_RETURNCODE GetMacroModeIndex(
+        const ADDR_GET_MACROMODEINDEX_INPUT* pIn,
+        ADDR_GET_MACROMODEINDEX_OUTPUT* pOut) const;
+
     ADDR_E_RETURNCODE ConvertTileIndex1(
         const ADDR_CONVERT_TILEINDEX1_INPUT* pIn,
         ADDR_CONVERT_TILEINDEX_OUTPUT* pOut) const;

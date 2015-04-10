@@ -1081,6 +1081,43 @@ ADDR_E_RETURNCODE AddrLib1::ConvertTileIndex(
 
 /**
 ***************************************************************************************************
+*   AddrLib1::GetMacroModeIndex
+*
+*   @brief
+*       Get macro mode index based on input info
+*
+*   @return
+*       ADDR_E_RETURNCODE
+***************************************************************************************************
+*/
+ADDR_E_RETURNCODE AddrLib1::GetMacroModeIndex(
+    const ADDR_GET_MACROMODEINDEX_INPUT* pIn, ///< [in] input structure
+    ADDR_GET_MACROMODEINDEX_OUTPUT*      pOut ///< [out] output structure
+    ) const
+{
+    ADDR_E_RETURNCODE returnCode = ADDR_OK;
+
+    if (GetFillSizeFieldsFlags())
+    {
+        if ((pIn->size != sizeof(ADDR_GET_MACROMODEINDEX_INPUT)) ||
+            (pOut->size != sizeof(ADDR_GET_MACROMODEINDEX_OUTPUT)))
+        {
+            returnCode = ADDR_PARAMSIZEMISMATCH;
+        }
+    }
+
+    if (returnCode == ADDR_OK)
+    {
+        ADDR_TILEINFO tileInfo = {0};
+        pOut->macroModeIndex = HwlComputeMacroModeIndex(pIn->tileIndex, pIn->flags, pIn->bpp,
+                                                        pIn->numFrags, &tileInfo);
+    }
+
+    return returnCode;
+}
+
+/**
+***************************************************************************************************
 *   AddrLib1::ConvertTileIndex1
 *
 *   @brief

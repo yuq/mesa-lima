@@ -911,6 +911,38 @@ ADDR_E_RETURNCODE ADDR_API AddrConvertTileIndex(
 
 /**
 ***************************************************************************************************
+*   AddrGetMacroModeIndex
+*
+*   @brief
+*       Get macro mode index based on input parameters
+*
+*   @return
+*       ADDR_OK if successful, otherwise an error code of ADDR_E_RETURNCODE
+***************************************************************************************************
+*/
+ADDR_E_RETURNCODE ADDR_API AddrGetMacroModeIndex(
+    ADDR_HANDLE                          hLib, ///< address lib handle
+    const ADDR_GET_MACROMODEINDEX_INPUT* pIn,  ///< [in] input
+    ADDR_GET_MACROMODEINDEX_OUTPUT*      pOut) ///< [out] macro mode index
+{
+    AddrLib1* pLib = AddrLib1::GetAddrLib1(hLib);
+
+    ADDR_E_RETURNCODE returnCode;
+
+    if (pLib != NULL)
+    {
+        returnCode = pLib->GetMacroModeIndex(pIn, pOut);
+    }
+    else
+    {
+        returnCode = ADDR_ERROR;
+    }
+
+    return returnCode;
+}
+
+/**
+***************************************************************************************************
 *   AddrConvertTileIndex1
 *
 *   @brief
