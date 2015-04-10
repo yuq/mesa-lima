@@ -1699,6 +1699,8 @@ fs_visitor::emit_math(enum opcode opcode, fs_reg dst, fs_reg src0, fs_reg src1)
 void
 fs_visitor::emit_discard_jump()
 {
+   assert(((brw_wm_prog_data*) this->prog_data)->uses_kill);
+
    /* For performance, after a discard, jump to the end of the
     * shader if all relevant channels have been discarded.
     */
@@ -3958,7 +3960,8 @@ fs_visitor::run_fs()
       if (failed)
 	 return false;
 
-      emit(FS_OPCODE_PLACEHOLDER_HALT);
+      if (wm_prog_data->uses_kill)
+         emit(FS_OPCODE_PLACEHOLDER_HALT);
 
       if (wm_key->alpha_test_func)
          emit_alpha_test();
