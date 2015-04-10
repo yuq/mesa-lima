@@ -97,11 +97,7 @@ private:
    uint64_t pos;
 
 public:
-#if HAVE_LLVM >= 0x0307
-   raw_debug_ostream() : raw_ostream(SK_FD), pos(0) { }
-#else
    raw_debug_ostream() : pos(0) { }
-#endif
 
    void write_impl(const char *Ptr, size_t Size);
 
