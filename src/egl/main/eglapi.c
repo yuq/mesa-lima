@@ -1657,13 +1657,30 @@ EGLSyncKHR EGLAPIENTRY
 eglCreateSyncKHR(EGLDisplay dpy, EGLenum type, const EGLint *attrib_list)
 {
    _EGLDisplay *disp = _eglLockDisplay(dpy);
+   _EGLContext *ctx = _eglGetCurrentContext();
    _EGLDriver *drv;
    _EGLSync *sync;
    EGLSyncKHR ret;
 
    _EGL_CHECK_DISPLAY(disp, EGL_NO_SYNC_KHR, drv);
-   if (!disp->Extensions.KHR_reusable_sync)
-      RETURN_EGL_EVAL(disp, EGL_NO_SYNC_KHR);
+
+   /* return an error if the client API doesn't support GL_OES_EGL_sync */
+   if (!ctx || ctx->Resource.Display != dpy ||
+       ctx->ClientAPI != EGL_OPENGL_ES_API)
+      RETURN_EGL_ERROR(disp, EGL_BAD_MATCH, EGL_NO_SYNC_KHR);
+
+   switch (type) {
+   case EGL_SYNC_FENCE_KHR:
+      if (!disp->Extensions.KHR_fence_sync)
+         RETURN_EGL_ERROR(disp, EGL_BAD_ATTRIBUTE, EGL_NO_SYNC_KHR);
+      break;
+   case EGL_SYNC_REUSABLE_KHR:
+      if (!disp->Extensions.KHR_reusable_sync)
+         RETURN_EGL_ERROR(disp, EGL_BAD_ATTRIBUTE, EGL_NO_SYNC_KHR);
+      break;
+   default:
+      RETURN_EGL_ERROR(disp, EGL_BAD_ATTRIBUTE, EGL_NO_SYNC_KHR);
+   }
 
    sync = drv->API.CreateSyncKHR(drv, disp, type, attrib_list);
    ret = (sync) ? _eglLinkSync(sync) : EGL_NO_SYNC_KHR;
@@ -1681,7 +1698,8 @@ eglDestroySyncKHR(EGLDisplay dpy, EGLSyncKHR sync)
    EGLBoolean ret;
 
    _EGL_CHECK_SYNC(disp, s, EGL_FALSE, drv);
-   assert(disp->Extensions.KHR_reusable_sync);
+   assert(disp->Extensions.KHR_reusable_sync ||
+          disp->Extensions.KHR_fence_sync);
 
    _eglUnlinkSync(s);
    ret = drv->API.DestroySyncKHR(drv, disp, s);
@@ -1699,7 +1717,12 @@ eglClientWaitSyncKHR(EGLDisplay dpy, EGLSyncKHR sync, EGLint flags, EGLTimeKHR t
    EGLint ret;
 
    _EGL_CHECK_SYNC(disp, s, EGL_FALSE, drv);
-   assert(disp->Extensions.KHR_reusable_sync);
+   assert(disp->Extensions.KHR_reusable_sync ||
+          disp->Extensions.KHR_fence_sync);
+
+   if (s->SyncStatus == EGL_SIGNALED_KHR)
+      RETURN_EGL_EVAL(disp, EGL_CONDITION_SATISFIED_KHR);
+
    ret = drv->API.ClientWaitSyncKHR(drv, disp, s, flags, timeout);
 
    RETURN_EGL_EVAL(disp, ret);
@@ -1731,7 +1754,8 @@ eglGetSyncAttribKHR(EGLDisplay dpy, EGLSyncKHR sync, EGLint attribute, EGLint *v
    EGLBoolean ret;
 
    _EGL_CHECK_SYNC(disp, s, EGL_FALSE, drv);
-   assert(disp->Extensions.KHR_reusable_sync);
+   assert(disp->Extensions.KHR_reusable_sync ||
+          disp->Extensions.KHR_fence_sync);
    ret = drv->API.GetSyncAttribKHR(drv, disp, s, attribute, value);
 
    RETURN_EGL_EVAL(disp, ret);

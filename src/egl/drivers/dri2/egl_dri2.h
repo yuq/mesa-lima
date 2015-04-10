@@ -74,6 +74,7 @@
 #include "egllog.h"
 #include "eglsurface.h"
 #include "eglimage.h"
+#include "eglsync.h"
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof((a)[0]))
 
@@ -164,6 +165,7 @@ struct dri2_egl_display
    const __DRIimageExtension      *image;
    const __DRIrobustnessExtension *robustness;
    const __DRI2configQueryExtension *config;
+   const __DRI2fenceExtension *fence;
    int                       fd;
 
    int                       own_device;
@@ -283,6 +285,12 @@ struct dri2_egl_image
    __DRIimage *dri_image;
 };
 
+struct dri2_egl_sync {
+   _EGLSync base;
+   int refcount;
+   void *fence;
+};
+
 /* From xmlpool/options.h, user exposed so should be stable */
 #define DRI_CONF_VBLANK_NEVER 0
 #define DRI_CONF_VBLANK_DEF_INTERVAL_0 1
@@ -292,6 +300,7 @@ struct dri2_egl_image
 /* standard typecasts */
 _EGL_DRIVER_STANDARD_TYPECASTS(dri2_egl)
 _EGL_DRIVER_TYPECAST(dri2_egl_image, _EGLImage, obj)
+_EGL_DRIVER_TYPECAST(dri2_egl_sync, _EGLSync, obj)
 
 extern const __DRIimageLookupExtension image_lookup_extension;
 extern const __DRIuseInvalidateExtension use_invalidate;

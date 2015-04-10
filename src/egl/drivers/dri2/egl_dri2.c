@@ -51,6 +51,7 @@
 #endif
 
 #include "egl_dri2.h"
+#include "../util/u_atomic.h"
 
 const __DRIuseInvalidateExtension use_invalidate = {
    .base = { __DRI_USE_INVALIDATE, 1 }
@@ -527,6 +528,10 @@ dri2_setup_screen(_EGLDisplay *disp)
          disp->Extensions.EXT_create_context_robustness = EGL_TRUE;
    }
 
+   if (dri2_dpy->fence) {
+      disp->Extensions.KHR_fence_sync = EGL_TRUE;
+   }
+
    if (dri2_dpy->image) {
       if (dri2_dpy->image->base.version >= 10 &&
           dri2_dpy->image->getCapabilities != NULL) {
@@ -620,6 +625,9 @@ dri2_create_screen(_EGLDisplay *disp)
 	 if (strcmp(extensions[i]->name, __DRI2_CONFIG_QUERY) == 0) {
 	    dri2_dpy->config = (__DRI2configQueryExtension *) extensions[i];
 	 }
+         if (strcmp(extensions[i]->name, __DRI2_FENCE) == 0) {
+            dri2_dpy->fence = (__DRI2fenceExtension *) extensions[i];
+         }
       }
    } else {
       assert(dri2_dpy->swrast);
@@ -2181,6 +2189,90 @@ dri2_query_wayland_buffer_wl(_EGLDriver *drv, _EGLDisplay *disp,
 #endif
 
 static void
+dri2_egl_ref_sync(struct dri2_egl_sync *sync)
+{
+   p_atomic_inc(&sync->refcount);
+}
+
+static void
+dri2_egl_unref_sync(struct dri2_egl_display *dri2_dpy,
+                    struct dri2_egl_sync *dri2_sync)
+{
+   if (p_atomic_dec_zero(&dri2_sync->refcount)) {
+      dri2_dpy->fence->destroy_fence(dri2_dpy->dri_screen, dri2_sync->fence);
+      free(dri2_sync);
+   }
+}
+
+static _EGLSync *
+dri2_create_sync(_EGLDriver *drv, _EGLDisplay *dpy,
+                 EGLenum type, const EGLint *attrib_list)
+{
+   _EGLContext *ctx = _eglGetCurrentContext();
+   struct dri2_egl_display *dri2_dpy = dri2_egl_display(dpy);
+   struct dri2_egl_context *dri2_ctx = dri2_egl_context(ctx);
+   struct dri2_egl_sync *dri2_sync;
+
+   dri2_sync = calloc(1, sizeof(struct dri2_egl_sync));
+   if (!dri2_sync) {
+      _eglError(EGL_BAD_ALLOC, "eglCreateSyncKHR");
+      return NULL;
+   }
+
+   if (!_eglInitSync(&dri2_sync->base, dpy, type, attrib_list)) {
+      free(dri2_sync);
+      return NULL;
+   }
+
+   switch (type) {
+   case EGL_SYNC_FENCE_KHR:
+      dri2_sync->fence = dri2_dpy->fence->create_fence(dri2_ctx->dri_context);
+      break;
+   }
+
+   p_atomic_set(&dri2_sync->refcount, 1);
+   return &dri2_sync->base;
+}
+
+static EGLBoolean
+dri2_destroy_sync(_EGLDriver *drv, _EGLDisplay *dpy, _EGLSync *sync)
+{
+   struct dri2_egl_display *dri2_dpy = dri2_egl_display(dpy);
+   struct dri2_egl_sync *dri2_sync = dri2_egl_sync(sync);
+
+   dri2_egl_unref_sync(dri2_dpy, dri2_sync);
+   return EGL_TRUE;
+}
+
+static EGLint
+dri2_client_wait_sync(_EGLDriver *drv, _EGLDisplay *dpy, _EGLSync *sync,
+                      EGLint flags, EGLTimeKHR timeout)
+{
+   _EGLContext *ctx = _eglGetCurrentContext();
+   struct dri2_egl_display *dri2_dpy = dri2_egl_display(dpy);
+   struct dri2_egl_context *dri2_ctx = dri2_egl_context(ctx);
+   struct dri2_egl_sync *dri2_sync = dri2_egl_sync(sync);
+   unsigned wait_flags = 0;
+   EGLint ret = EGL_CONDITION_SATISFIED_KHR;
+
+   if (flags & EGL_SYNC_FLUSH_COMMANDS_BIT_KHR)
+      wait_flags |= __DRI2_FENCE_FLAG_FLUSH_COMMANDS;
+
+   /* the sync object should take a reference while waiting */
+   dri2_egl_ref_sync(dri2_sync);
+
+   if (dri2_dpy->fence->client_wait_sync(dri2_ctx->dri_context,
+                                         dri2_sync->fence, wait_flags,
+                                         timeout))
+      dri2_sync->base.SyncStatus = EGL_SIGNALED_KHR;
+   else
+      ret = EGL_TIMEOUT_EXPIRED_KHR;
+
+   dri2_egl_unref_sync(dri2_dpy, dri2_sync);
+   return ret;
+}
+
+static void
 dri2_unload(_EGLDriver *drv)
 {
    struct dri2_egl_driver *dri2_drv = dri2_egl_driver(drv);
@@ -2292,6 +2384,9 @@ _eglBuiltInDriverDRI2(const char *args)
    dri2_drv->base.API.QueryWaylandBufferWL = dri2_query_wayland_buffer_wl;
 #endif
    dri2_drv->base.API.GetSyncValuesCHROMIUM = dri2_get_sync_values_chromium;
+   dri2_drv->base.API.CreateSyncKHR = dri2_create_sync;
+   dri2_drv->base.API.ClientWaitSyncKHR = dri2_client_wait_sync;
+   dri2_drv->base.API.DestroySyncKHR = dri2_destroy_sync;
 
    dri2_drv->base.Name = "DRI2";
    dri2_drv->base.Unload = dri2_unload;
