@@ -152,6 +152,4 @@ nir_lower_idiv(nir_shader *shader)
       if (overload->impl)
          convert_impl(overload->impl);
    }
-
-   exec_list_make_empty(&shader->system_values);
 }
