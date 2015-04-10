@@ -960,7 +960,8 @@ typedef struct {
 static inline unsigned
 nir_tex_instr_dest_size(nir_tex_instr *instr)
 {
-   if (instr->op == nir_texop_txs) {
+   switch (instr->op) {
+   case nir_texop_txs: {
       unsigned ret;
       switch (instr->sampler_dim) {
          case GLSL_SAMPLER_DIM_1D:
@@ -985,13 +986,15 @@ nir_tex_instr_dest_size(nir_tex_instr *instr)
       return ret;
    }
 
-   if (instr->op == nir_texop_query_levels)
+   case nir_texop_query_levels:
       return 2;
 
-   if (instr->is_shadow && instr->is_new_style_shadow)
-      return 1;
+   default:
+      if (instr->is_shadow && instr->is_new_style_shadow)
+         return 1;
 
-   return 4;
+      return 4;
+   }
 }
 
 static inline unsigned
