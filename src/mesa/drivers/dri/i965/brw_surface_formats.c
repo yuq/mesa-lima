@@ -590,6 +590,12 @@ brw_init_surface_formats(struct brw_context *brw)
       case BRW_SURFACEFORMAT_L16_UNORM:
          render = BRW_SURFACEFORMAT_R16_UNORM;
          break;
+      case BRW_SURFACEFORMAT_R16G16B16X16_UNORM:
+         render = BRW_SURFACEFORMAT_R16G16B16A16_UNORM;
+         break;
+      case BRW_SURFACEFORMAT_R16G16B16X16_FLOAT:
+         render = BRW_SURFACEFORMAT_R16G16B16A16_FLOAT;
+         break;
       case BRW_SURFACEFORMAT_B8G8R8X8_UNORM:
 	 /* XRGB is handled as ARGB because the chips in this family
 	  * cannot render to XRGB targets.  This means that we have to
