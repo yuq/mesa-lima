@@ -55,7 +55,7 @@ struct deref_node {
 };
 
 struct lower_variables_state {
-   void *mem_ctx;
+   nir_shader *shader;
    void *dead_ctx;
    nir_function_impl *impl;
 
@@ -112,12 +112,12 @@ type_get_length(const struct glsl_type *type)
 
 static struct deref_node *
 deref_node_create(struct deref_node *parent,
-                  const struct glsl_type *type, void *mem_ctx)
+                  const struct glsl_type *type, nir_shader *shader)
 {
    size_t size = sizeof(struct deref_node) +
                  type_get_length(type) * sizeof(struct deref_node *);
 
-   struct deref_node *node = rzalloc_size(mem_ctx, size);
+   struct deref_node *node = rzalloc_size(shader, size);
    node->type = type;
    node->parent = parent;
    node->deref = NULL;
@@ -469,7 +469,7 @@ lower_copies_to_load_store(struct deref_node *node,
    set_foreach(node->copies, copy_entry) {
       nir_intrinsic_instr *copy = (void *)copy_entry->key;
 
-      nir_lower_var_copy_instr(copy, state->mem_ctx);
+      nir_lower_var_copy_instr(copy, state->shader);
 
       for (unsigned i = 0; i < 2; ++i) {
          struct deref_node *arg_node =
@@ -527,7 +527,7 @@ get_const_initializer_load(const nir_deref_var *deref,
    }
 
    nir_load_const_instr *load =
-      nir_load_const_instr_create(state->mem_ctx,
+      nir_load_const_instr_create(state->shader,
                                   glsl_get_vector_elements(tail->type));
 
    matrix_offset *= load->def.num_components;
@@ -618,7 +618,7 @@ get_ssa_def_for_block(struct deref_node *node, nir_block *block,
     * given block.  This means that we need to add an undef and use that.
     */
    nir_ssa_undef_instr *undef =
-      nir_ssa_undef_instr_create(state->mem_ctx,
+      nir_ssa_undef_instr_create(state->shader,
                                  glsl_get_vector_elements(node->type));
    nir_instr_insert_before_cf_list(&state->impl->body, &undef->instr);
    def_stack_push(node, &undef->def, state);
@@ -698,7 +698,7 @@ rename_variables_block(nir_block *block, struct lower_variables_state *state)
                 * should result in an undefined value.
                 */
                nir_ssa_undef_instr *undef =
-                  nir_ssa_undef_instr_create(state->mem_ctx,
+                  nir_ssa_undef_instr_create(state->shader,
                                              intrin->num_components);
 
                nir_instr_insert_before(&intrin->instr, &undef->instr);
@@ -706,14 +706,14 @@ rename_variables_block(nir_block *block, struct lower_variables_state *state)
 
                nir_ssa_def_rewrite_uses(&intrin->dest.ssa,
                                         nir_src_for_ssa(&undef->def),
-                                        state->mem_ctx);
+                                        state->shader);
                continue;
             }
 
             if (!node->lower_to_ssa)
                continue;
 
-            nir_alu_instr *mov = nir_alu_instr_create(state->mem_ctx,
+            nir_alu_instr *mov = nir_alu_instr_create(state->shader,
                                                       nir_op_imov);
             mov->src[0].src.is_ssa = true;
             mov->src[0].src.ssa = get_ssa_def_for_block(node, block, state);
@@ -731,7 +731,7 @@ rename_variables_block(nir_block *block, struct lower_variables_state *state)
 
             nir_ssa_def_rewrite_uses(&intrin->dest.ssa,
                                      nir_src_for_ssa(&mov->dest.dest.ssa),
-                                     state->mem_ctx);
+                                     state->shader);
             break;
          }
 
@@ -754,7 +754,7 @@ rename_variables_block(nir_block *block, struct lower_variables_state *state)
 
             assert(intrin->src[0].is_ssa);
 
-            nir_alu_instr *mov = nir_alu_instr_create(state->mem_ctx,
+            nir_alu_instr *mov = nir_alu_instr_create(state->shader,
                                                       nir_op_imov);
             mov->src[0].src.is_ssa = true;
             mov->src[0].src.ssa = intrin->src[0].ssa;
@@ -891,7 +891,7 @@ insert_phi_nodes(struct lower_variables_state *state)
                continue;
 
             if (has_already[next->index] < iter_count) {
-               nir_phi_instr *phi = nir_phi_instr_create(state->mem_ctx);
+               nir_phi_instr *phi = nir_phi_instr_create(state->shader);
                nir_ssa_dest_init(&phi->instr, &phi->dest,
                                  glsl_get_vector_elements(node->type), NULL);
                nir_instr_insert_before_block(next, &phi->instr);
@@ -942,8 +942,8 @@ nir_lower_vars_to_ssa_impl(nir_function_impl *impl)
 {
    struct lower_variables_state state;
 
-   state.mem_ctx = ralloc_parent(impl);
-   state.dead_ctx = ralloc_context(state.mem_ctx);
+   state.shader = impl->overload->function->shader;
+   state.dead_ctx = ralloc_context(state.shader);
    state.impl = impl;
 
    state.deref_var_nodes = _mesa_hash_table_create(state.dead_ctx,
