@@ -99,6 +99,10 @@ struct ir3_compile {
 	 */
 	bool flat_bypass;
 
+	/* on a3xx, we need to add one to # of array levels:
+	 */
+	bool levels_add_one;
+
 	/* for looking up which system value is which */
 	unsigned sysval_semantics[8];
 
@@ -216,9 +220,11 @@ compile_init(struct ir3_shader_variant *so,
 	} else if (ir3_shader_gpuid(so->shader) >= 400) {
 		/* need special handling for "flat" */
 		ctx->flat_bypass = true;
+		ctx->levels_add_one = false;
 	} else {
 		/* no special handling for "flat" */
 		ctx->flat_bypass = false;
+		ctx->levels_add_one = true;
 	}
 
 	switch (so->type) {
@@ -1375,6 +1381,63 @@ emit_tex(struct ir3_compile *ctx, nir_tex_instr *tex)
 	split_dest(b, dst, sam);
 }
 
+static void
+emit_tex_query_levels(struct ir3_compile *ctx, nir_tex_instr *tex)
+{
+	struct ir3_block *b = ctx->block;
+	struct ir3_instruction **dst, *sam;
+
+	dst = get_dst(ctx, &tex->dest, 1);
+
+	sam = ir3_SAM(b, OPC_GETINFO, TYPE_U32, TGSI_WRITEMASK_Z, 0,
+			tex->sampler_index, tex->sampler_index, NULL, NULL);
+
+	/* even though there is only one component, since it ends
+	 * up in .z rather than .x, we need a split_dest()
+	 */
+	split_dest(b, dst, sam);
+
+	/* The # of levels comes from getinfo.z. We need to add 1 to it, since
+	 * the value in TEX_CONST_0 is zero-based.
+	 */
+	if (ctx->levels_add_one)
+		dst[0] = ir3_ADD_U(b, dst[0], 0, create_immed(b, 1), 0);
+}
+
+static void
+emit_tex_txs(struct ir3_compile *ctx, nir_tex_instr *tex)
+{
+	struct ir3_block *b = ctx->block;
+	struct ir3_instruction **dst, *sam, *lod;
+	unsigned flags, coords;
+
+	tex_info(tex, &flags, &coords);
+
+	dst = get_dst(ctx, &tex->dest, 4);
+
+	compile_assert(ctx, tex->num_srcs == 1);
+	compile_assert(ctx, tex->src[0].src_type == nir_tex_src_lod);
+
+	lod = get_src(ctx, &tex->src[0].src)[0];
+
+	sam = ir3_SAM(b, OPC_GETSIZE, TYPE_U32, TGSI_WRITEMASK_XYZW, flags,
+			tex->sampler_index, tex->sampler_index, lod, NULL);
+
+	split_dest(b, dst, sam);
+
+	/* Array size actually ends up in .w rather than .z. This doesn't
+	 * matter for miplevel 0, but for higher mips the value in z is
+	 * minified whereas w stays. Also, the value in TEX_CONST_3_DEPTH is
+	 * returned, which means that we have to add 1 to it for arrays.
+	 */
+	if (tex->is_array) {
+		if (ctx->levels_add_one) {
+			dst[coords] = ir3_ADD_U(b, dst[3], 0, create_immed(b, 1), 0);
+		} else {
+			dst[coords] = ir3_MOV(b, dst[3], TYPE_U32);
+		}
+	}
+}
 
 static void
 emit_instr(struct ir3_compile *ctx, nir_instr *instr)
@@ -1392,10 +1455,23 @@ emit_instr(struct ir3_compile *ctx, nir_instr *instr)
 	case nir_instr_type_ssa_undef:
 		emit_undef(ctx, nir_instr_as_ssa_undef(instr));
 		break;
-	case nir_instr_type_tex:
-		emit_tex(ctx, nir_instr_as_tex(instr));
+	case nir_instr_type_tex: {
+		nir_tex_instr *tex = nir_instr_as_tex(instr);
+		/* couple tex instructions get special-cased:
+		 */
+		switch (tex->op) {
+		case nir_texop_txs:
+			emit_tex_txs(ctx, tex);
+			break;
+		case nir_texop_query_levels:
+			emit_tex_query_levels(ctx, tex);
+			break;
+		default:
+			emit_tex(ctx, tex);
+			break;
+		}
 		break;
-
+	}
 	case nir_instr_type_call:
 	case nir_instr_type_jump:
 	case nir_instr_type_phi:
@@ -1490,7 +1566,8 @@ setup_input(struct ir3_compile *ctx, nir_variable *in)
 				/* with NIR, we need to infer TGSI_INTERPOLATE_COLOR
 				 * from the semantic name:
 				 */
-				if (semantic_name == TGSI_SEMANTIC_COLOR)
+				if ((semantic_name == TGSI_SEMANTIC_COLOR) ||
+						(semantic_name == TGSI_SEMANTIC_BCOLOR))
 					so->inputs[n].interpolate = TGSI_INTERPOLATE_COLOR;
 
 				if (ctx->flat_bypass) {
