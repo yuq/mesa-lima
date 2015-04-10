@@ -465,6 +465,7 @@ static void *si_create_shader_state(struct pipe_context *ctx,
 				    const struct pipe_shader_state *state,
 				    unsigned pipe_shader_type)
 {
+	struct si_screen *sscreen = (struct si_screen *)ctx->screen;
 	struct si_shader_selector *sel = CALLOC_STRUCT(si_shader_selector);
 	int i;
 
@@ -493,6 +494,9 @@ static void *si_create_shader_state(struct pipe_context *ctx,
 			}
 		}
 	}
+
+	if (sscreen->b.debug_flags & DBG_PRECOMPILE)
+		si_shader_select(ctx, sel);
 
 	return sel;
 }

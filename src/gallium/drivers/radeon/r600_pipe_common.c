@@ -323,6 +323,7 @@ static const struct debug_named_value common_debug_options[] = {
 	{ "notiling", DBG_NO_TILING, "Disable tiling" },
 	{ "switch_on_eop", DBG_SWITCH_ON_EOP, "Program WD/IA to switch on end-of-packet." },
 	{ "forcedma", DBG_FORCE_DMA, "Use asynchronous DMA for all operations when possible." },
+	{ "precompile", DBG_PRECOMPILE, "Compile one shader variant at shader creation." },
 
 	DEBUG_NAMED_VALUE_END /* must be last */
 };
