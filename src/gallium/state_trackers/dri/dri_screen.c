@@ -365,6 +365,7 @@ dri_destroy_screen_helper(struct dri_screen * screen)
       screen->base.screen->destroy(screen->base.screen);
 
    dri_destroy_option_cache(screen);
+   pipe_mutex_destroy(screen->opencl_func_mutex);
 }
 
 void
