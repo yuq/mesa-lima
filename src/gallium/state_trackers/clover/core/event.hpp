@@ -70,6 +70,10 @@ namespace clover {
       virtual cl_command_type command() const = 0;
       virtual void wait() const = 0;
 
+      virtual struct pipe_fence_handle *fence() const {
+         return NULL;
+      }
+
       const intrusive_ref<clover::context> context;
 
    protected:
@@ -115,6 +119,10 @@ namespace clover {
       const lazy<cl_ulong> &time_end() const;
 
       friend class command_queue;
+
+      virtual struct pipe_fence_handle *fence() const {
+         return _fence;
+      }
 
    private:
       virtual void fence(pipe_fence_handle *fence);

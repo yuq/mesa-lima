@@ -4,6 +4,7 @@ CPP_SOURCES := \
 	api/dispatch.cpp \
 	api/dispatch.hpp \
 	api/event.cpp \
+	api/interop.cpp \
 	api/kernel.cpp \
 	api/memory.cpp \
 	api/platform.cpp \
