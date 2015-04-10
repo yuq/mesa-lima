@@ -30,6 +30,7 @@
 
 #include "eglsync.h"
 #include "eglcurrent.h"
+#include "egldriver.h"
 #include "egllog.h"
 
 
@@ -144,13 +145,19 @@ _eglGetSyncAttribKHR(_EGLDriver *drv, _EGLDisplay *dpy, _EGLSync *sync,
                      EGLint attribute, EGLint *value)
 {
    if (!value)
-      return _eglError(EGL_BAD_PARAMETER, "eglGetConfigs");
+      return _eglError(EGL_BAD_PARAMETER, "eglGetSyncAttribKHR");
 
    switch (attribute) {
    case EGL_SYNC_TYPE_KHR:
       *value = sync->Type;
       break;
    case EGL_SYNC_STATUS_KHR:
+      /* update the sync status */
+      if (sync->SyncStatus != EGL_SIGNALED_KHR &&
+          (sync->Type == EGL_SYNC_FENCE_KHR ||
+           sync->Type == EGL_SYNC_CL_EVENT_KHR))
+         drv->API.ClientWaitSyncKHR(drv, dpy, sync, 0, 0);
+
       *value = sync->SyncStatus;
       break;
    case EGL_SYNC_CONDITION_KHR:
