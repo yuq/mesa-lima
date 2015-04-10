@@ -1520,6 +1520,9 @@ nir_deref_struct *nir_deref_struct_create(void *mem_ctx, unsigned field_index);
 
 nir_deref *nir_copy_deref(void *mem_ctx, nir_deref *deref);
 
+nir_load_const_instr *
+nir_deref_get_const_initializer_load(nir_shader *shader, nir_deref_var *deref);
+
 void nir_instr_insert_before(nir_instr *instr, nir_instr *before);
 void nir_instr_insert_after(nir_instr *instr, nir_instr *after);
 
