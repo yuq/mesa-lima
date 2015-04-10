@@ -153,6 +153,8 @@ ttn_emit_declaration(struct ttn_compile *c)
    } else if (file == TGSI_FILE_ADDRESS) {
       c->addr_reg = nir_local_reg_create(b->impl);
       c->addr_reg->num_components = 4;
+   } else if (file == TGSI_FILE_SYSTEM_VALUE) {
+      /* Nothing to record for system values. */
    } else if (file == TGSI_FILE_SAMPLER) {
       /* Nothing to record for samplers. */
    } else {
@@ -323,6 +325,38 @@ ttn_src_for_file_and_index(struct ttn_compile *c, unsigned file, unsigned index,
       src = nir_src_for_ssa(c->imm_defs[index]);
       assert(!indirect);
       break;
+
+   case TGSI_FILE_SYSTEM_VALUE: {
+      nir_intrinsic_instr *load;
+      nir_intrinsic_op op;
+      unsigned ncomp = 1;
+
+      switch (c->scan->system_value_semantic_name[index]) {
+      case TGSI_SEMANTIC_VERTEXID_NOBASE:
+         op = nir_intrinsic_load_vertex_id_zero_base;
+         break;
+      case TGSI_SEMANTIC_VERTEXID:
+         op = nir_intrinsic_load_vertex_id;
+         break;
+      case TGSI_SEMANTIC_BASEVERTEX:
+         op = nir_intrinsic_load_base_vertex;
+         break;
+      case TGSI_SEMANTIC_INSTANCEID:
+         op = nir_intrinsic_load_instance_id;
+         break;
+      default:
+         unreachable("bad system value");
+      }
+
+      load = nir_intrinsic_instr_create(b->shader, op);
+      load->num_components = ncomp;
+
+      nir_ssa_dest_init(&load->instr, &load->dest, ncomp, NULL);
+      nir_instr_insert_after_cf_list(b->cf_node_list, &load->instr);
+
+      src = nir_src_for_ssa(&load->dest.ssa);
+      break;
+   }
 
    case TGSI_FILE_INPUT:
    case TGSI_FILE_CONSTANT: {
