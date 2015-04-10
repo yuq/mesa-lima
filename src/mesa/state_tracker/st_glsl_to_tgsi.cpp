@@ -5383,7 +5383,8 @@ st_translate_program(
        * program constant) has to happen before creating this linkage.
        */
       for (unsigned i = 0; i < MESA_SHADER_STAGES; i++) {
-         if (program->shader_program->_LinkedShaders[i] == NULL)
+         if (program->shader_program->_LinkedShaders[i] == NULL ||
+             program->shader_program->_LinkedShaders[i]->Program == NULL)
             continue;
 
          _mesa_associate_uniform_storage(ctx, program->shader_program,
