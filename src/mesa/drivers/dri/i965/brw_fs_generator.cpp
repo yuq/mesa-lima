@@ -1046,7 +1046,7 @@ fs_generator::generate_uniform_pull_constant_load_gen7(fs_inst *inst,
 
       brw_push_insn_state(p);
       brw_set_default_mask_control(p, BRW_MASK_DISABLE);
-      brw_MOV(p, src, retype(brw_vec4_grf(0, 0), BRW_REGISTER_TYPE_UD));
+      brw_MOV(p, vec8(src), retype(brw_vec8_grf(0, 0), BRW_REGISTER_TYPE_UD));
       brw_set_default_access_mode(p, BRW_ALIGN_1);
 
       brw_MOV(p, get_element_ud(src, 2),
