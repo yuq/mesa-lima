@@ -531,6 +531,8 @@ dri2_setup_screen(_EGLDisplay *disp)
    if (dri2_dpy->fence) {
       disp->Extensions.KHR_fence_sync = EGL_TRUE;
       disp->Extensions.KHR_wait_sync = EGL_TRUE;
+      if (dri2_dpy->fence->get_fence_from_cl_event)
+         disp->Extensions.KHR_cl_event2 = EGL_TRUE;
    }
 
    if (dri2_dpy->image) {
@@ -2207,7 +2209,8 @@ dri2_egl_unref_sync(struct dri2_egl_display *dri2_dpy,
 
 static _EGLSync *
 dri2_create_sync(_EGLDriver *drv, _EGLDisplay *dpy,
-                 EGLenum type, const EGLint *attrib_list)
+                 EGLenum type, const EGLint *attrib_list,
+                 const EGLAttribKHR *attrib_list64)
 {
    _EGLContext *ctx = _eglGetCurrentContext();
    struct dri2_egl_display *dri2_dpy = dri2_egl_display(dpy);
@@ -2220,7 +2223,8 @@ dri2_create_sync(_EGLDriver *drv, _EGLDisplay *dpy,
       return NULL;
    }
 
-   if (!_eglInitSync(&dri2_sync->base, dpy, type, attrib_list)) {
+   if (!_eglInitSync(&dri2_sync->base, dpy, type, attrib_list,
+                     attrib_list64)) {
       free(dri2_sync);
       return NULL;
    }
@@ -2228,6 +2232,23 @@ dri2_create_sync(_EGLDriver *drv, _EGLDisplay *dpy,
    switch (type) {
    case EGL_SYNC_FENCE_KHR:
       dri2_sync->fence = dri2_dpy->fence->create_fence(dri2_ctx->dri_context);
+      break;
+
+   case EGL_SYNC_CL_EVENT_KHR:
+      dri2_sync->fence = dri2_dpy->fence->get_fence_from_cl_event(
+                                 dri2_dpy->dri_screen,
+                                 dri2_sync->base.CLEvent);
+      /* this can only happen if the cl_event passed in is invalid. */
+      if (!dri2_sync->fence) {
+         _eglError(EGL_BAD_ATTRIBUTE, "eglCreateSyncKHR");
+         free(dri2_sync);
+         return NULL;
+      }
+
+      /* the initial status must be "signaled" if the cl_event is signaled */
+      if (dri2_dpy->fence->client_wait_sync(dri2_ctx->dri_context,
+                                            dri2_sync->fence, 0, 0))
+         dri2_sync->base.SyncStatus = EGL_SIGNALED_KHR;
       break;
    }
 

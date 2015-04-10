@@ -407,6 +407,7 @@ _eglCreateExtensionsString(_EGLDisplay *dpy)
    _EGL_CHECK_EXTENSION(KHR_reusable_sync);
    _EGL_CHECK_EXTENSION(KHR_fence_sync);
    _EGL_CHECK_EXTENSION(KHR_wait_sync);
+   _EGL_CHECK_EXTENSION(KHR_cl_event2);
 
    _EGL_CHECK_EXTENSION(KHR_surfaceless_context);
    _EGL_CHECK_EXTENSION(KHR_create_context);
@@ -1215,6 +1216,7 @@ eglGetProcAddress(const char *procname)
       { "eglCreateImageKHR", (_EGLProc) eglCreateImageKHR },
       { "eglDestroyImageKHR", (_EGLProc) eglDestroyImageKHR },
       { "eglCreateSyncKHR", (_EGLProc) eglCreateSyncKHR },
+      { "eglCreateSync64KHR", (_EGLProc) eglCreateSync64KHR },
       { "eglDestroySyncKHR", (_EGLProc) eglDestroySyncKHR },
       { "eglClientWaitSyncKHR", (_EGLProc) eglClientWaitSyncKHR },
       { "eglWaitSyncKHR", (_EGLProc) eglWaitSyncKHR },
@@ -1655,8 +1657,9 @@ eglDestroyImageKHR(EGLDisplay dpy, EGLImageKHR image)
 }
 
 
-EGLSyncKHR EGLAPIENTRY
-eglCreateSyncKHR(EGLDisplay dpy, EGLenum type, const EGLint *attrib_list)
+static EGLSyncKHR
+_eglCreateSync(EGLDisplay dpy, EGLenum type, const EGLint *attrib_list,
+               const EGLAttribKHR *attrib_list64, EGLBoolean is64)
 {
    _EGLDisplay *disp = _eglLockDisplay(dpy);
    _EGLContext *ctx = _eglGetCurrentContext();
@@ -1665,6 +1668,9 @@ eglCreateSyncKHR(EGLDisplay dpy, EGLenum type, const EGLint *attrib_list)
    EGLSyncKHR ret;
 
    _EGL_CHECK_DISPLAY(disp, EGL_NO_SYNC_KHR, drv);
+
+   if (!disp->Extensions.KHR_cl_event2 && is64)
+      RETURN_EGL_EVAL(disp, EGL_NO_SYNC_KHR);
 
    /* return an error if the client API doesn't support GL_OES_EGL_sync */
    if (!ctx || ctx->Resource.Display != dpy ||
@@ -1680,14 +1686,32 @@ eglCreateSyncKHR(EGLDisplay dpy, EGLenum type, const EGLint *attrib_list)
       if (!disp->Extensions.KHR_reusable_sync)
          RETURN_EGL_ERROR(disp, EGL_BAD_ATTRIBUTE, EGL_NO_SYNC_KHR);
       break;
+   case EGL_SYNC_CL_EVENT_KHR:
+      if (!disp->Extensions.KHR_cl_event2)
+         RETURN_EGL_ERROR(disp, EGL_BAD_ATTRIBUTE, EGL_NO_SYNC_KHR);
+      break;
    default:
       RETURN_EGL_ERROR(disp, EGL_BAD_ATTRIBUTE, EGL_NO_SYNC_KHR);
    }
 
-   sync = drv->API.CreateSyncKHR(drv, disp, type, attrib_list);
+   sync = drv->API.CreateSyncKHR(drv, disp, type, attrib_list, attrib_list64);
    ret = (sync) ? _eglLinkSync(sync) : EGL_NO_SYNC_KHR;
 
    RETURN_EGL_EVAL(disp, ret);
+}
+
+
+EGLSyncKHR EGLAPIENTRY
+eglCreateSyncKHR(EGLDisplay dpy, EGLenum type, const EGLint *attrib_list)
+{
+   return _eglCreateSync(dpy, type, attrib_list, NULL, EGL_FALSE);
+}
+
+
+EGLSyncKHR EGLAPIENTRY
+eglCreateSync64KHR(EGLDisplay dpy, EGLenum type, const EGLAttribKHR *attrib_list)
+{
+   return _eglCreateSync(dpy, type, NULL, attrib_list, EGL_TRUE);
 }
 
 

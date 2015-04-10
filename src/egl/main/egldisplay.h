@@ -107,6 +107,7 @@ struct _egl_extensions
    EGLBoolean KHR_reusable_sync;
    EGLBoolean KHR_fence_sync;
    EGLBoolean KHR_wait_sync;
+   EGLBoolean KHR_cl_event2;
 
    EGLBoolean KHR_surfaceless_context;
    EGLBoolean KHR_create_context;
