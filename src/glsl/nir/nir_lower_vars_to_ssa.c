@@ -90,32 +90,12 @@ struct lower_variables_state {
    struct hash_table *phi_table;
 };
 
-static int
-type_get_length(const struct glsl_type *type)
-{
-   switch (glsl_get_base_type(type)) {
-   case GLSL_TYPE_STRUCT:
-   case GLSL_TYPE_ARRAY:
-      return glsl_get_length(type);
-   case GLSL_TYPE_FLOAT:
-   case GLSL_TYPE_INT:
-   case GLSL_TYPE_UINT:
-   case GLSL_TYPE_BOOL:
-      if (glsl_type_is_matrix(type))
-         return glsl_get_matrix_columns(type);
-      else
-         return glsl_get_vector_elements(type);
-   default:
-      unreachable("Invalid deref base type");
-   }
-}
-
 static struct deref_node *
 deref_node_create(struct deref_node *parent,
                   const struct glsl_type *type, nir_shader *shader)
 {
    size_t size = sizeof(struct deref_node) +
-                 type_get_length(type) * sizeof(struct deref_node *);
+                 glsl_get_length(type) * sizeof(struct deref_node *);
 
    struct deref_node *node = rzalloc_size(shader, size);
    node->type = type;
@@ -165,7 +145,7 @@ get_deref_node(nir_deref_var *deref, struct lower_variables_state *state)
       case nir_deref_type_struct: {
          nir_deref_struct *deref_struct = nir_deref_as_struct(tail);
 
-         assert(deref_struct->index < type_get_length(node->type));
+         assert(deref_struct->index < glsl_get_length(node->type));
 
          if (node->children[deref_struct->index] == NULL)
             node->children[deref_struct->index] =
@@ -184,7 +164,7 @@ get_deref_node(nir_deref_var *deref, struct lower_variables_state *state)
              * out-of-bounds offset.  We need to handle this at least
              * somewhat gracefully.
              */
-            if (arr->base_offset >= type_get_length(node->type))
+            if (arr->base_offset >= glsl_get_length(node->type))
                return NULL;
 
             if (node->children[arr->base_offset] == NULL)

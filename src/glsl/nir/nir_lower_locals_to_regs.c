@@ -100,15 +100,8 @@ get_reg_for_deref(nir_deref_var *deref, struct locals_to_regs_state *state)
    unsigned array_size = 1;
    nir_deref *tail = &deref->deref;
    while (tail->child) {
-      if (tail->child->deref_type == nir_deref_type_array) {
-         /* Multiply by the parent's type. */
-         if (glsl_type_is_matrix(tail->type)) {
-            array_size *= glsl_get_matrix_columns(tail->type);
-         } else {
-            assert(glsl_get_length(tail->type) > 0);
-            array_size *= glsl_get_length(tail->type);
-         }
-      }
+      if (tail->child->deref_type == nir_deref_type_array)
+         array_size *= glsl_get_length(tail->type);
       tail = tail->child;
    }
 
