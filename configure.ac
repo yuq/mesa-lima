@@ -1633,6 +1633,10 @@ if test "x$enable_nine" = xyes; then
     if test "x$with_gallium_drivers" = xswrast; then
         AC_MSG_ERROR([nine requires at least one non-swrast gallium driver])
     fi
+    if test $GCC_VERSION_MAJOR -lt 4 -o $GCC_VERSION_MAJOR -eq 4 -a $GCC_VERSION_MINOR -lt 6; then
+        AC_MSG_ERROR([gcc >= 4.6 is required to build nine])
+    fi
+
     if test "x$enable_dri3" = xno; then
         AC_MSG_WARN([using nine together with wine requires DRI3 enabled system])
     fi
