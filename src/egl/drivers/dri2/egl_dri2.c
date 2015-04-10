@@ -530,6 +530,7 @@ dri2_setup_screen(_EGLDisplay *disp)
 
    if (dri2_dpy->fence) {
       disp->Extensions.KHR_fence_sync = EGL_TRUE;
+      disp->Extensions.KHR_wait_sync = EGL_TRUE;
    }
 
    if (dri2_dpy->image) {
@@ -2272,6 +2273,19 @@ dri2_client_wait_sync(_EGLDriver *drv, _EGLDisplay *dpy, _EGLSync *sync,
    return ret;
 }
 
+static EGLint
+dri2_server_wait_sync(_EGLDriver *drv, _EGLDisplay *dpy, _EGLSync *sync)
+{
+   _EGLContext *ctx = _eglGetCurrentContext();
+   struct dri2_egl_display *dri2_dpy = dri2_egl_display(dpy);
+   struct dri2_egl_context *dri2_ctx = dri2_egl_context(ctx);
+   struct dri2_egl_sync *dri2_sync = dri2_egl_sync(sync);
+
+   dri2_dpy->fence->server_wait_sync(dri2_ctx->dri_context,
+                                     dri2_sync->fence, 0);
+   return EGL_TRUE;
+}
+
 static void
 dri2_unload(_EGLDriver *drv)
 {
@@ -2386,6 +2400,7 @@ _eglBuiltInDriverDRI2(const char *args)
    dri2_drv->base.API.GetSyncValuesCHROMIUM = dri2_get_sync_values_chromium;
    dri2_drv->base.API.CreateSyncKHR = dri2_create_sync;
    dri2_drv->base.API.ClientWaitSyncKHR = dri2_client_wait_sync;
+   dri2_drv->base.API.WaitSyncKHR = dri2_server_wait_sync;
    dri2_drv->base.API.DestroySyncKHR = dri2_destroy_sync;
 
    dri2_drv->base.Name = "DRI2";

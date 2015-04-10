@@ -406,6 +406,7 @@ _eglCreateExtensionsString(_EGLDisplay *dpy)
 
    _EGL_CHECK_EXTENSION(KHR_reusable_sync);
    _EGL_CHECK_EXTENSION(KHR_fence_sync);
+   _EGL_CHECK_EXTENSION(KHR_wait_sync);
 
    _EGL_CHECK_EXTENSION(KHR_surfaceless_context);
    _EGL_CHECK_EXTENSION(KHR_create_context);
@@ -1216,6 +1217,7 @@ eglGetProcAddress(const char *procname)
       { "eglCreateSyncKHR", (_EGLProc) eglCreateSyncKHR },
       { "eglDestroySyncKHR", (_EGLProc) eglDestroySyncKHR },
       { "eglClientWaitSyncKHR", (_EGLProc) eglClientWaitSyncKHR },
+      { "eglWaitSyncKHR", (_EGLProc) eglWaitSyncKHR },
       { "eglSignalSyncKHR", (_EGLProc) eglSignalSyncKHR },
       { "eglGetSyncAttribKHR", (_EGLProc) eglGetSyncAttribKHR },
 #ifdef EGL_NOK_swap_region
@@ -1724,6 +1726,32 @@ eglClientWaitSyncKHR(EGLDisplay dpy, EGLSyncKHR sync, EGLint flags, EGLTimeKHR t
       RETURN_EGL_EVAL(disp, EGL_CONDITION_SATISFIED_KHR);
 
    ret = drv->API.ClientWaitSyncKHR(drv, disp, s, flags, timeout);
+
+   RETURN_EGL_EVAL(disp, ret);
+}
+
+
+EGLint EGLAPIENTRY
+eglWaitSyncKHR(EGLDisplay dpy, EGLSyncKHR sync, EGLint flags)
+{
+   _EGLDisplay *disp = _eglLockDisplay(dpy);
+   _EGLSync *s = _eglLookupSync(sync, disp);
+   _EGLContext *ctx = _eglGetCurrentContext();
+   _EGLDriver *drv;
+   EGLint ret;
+
+   _EGL_CHECK_SYNC(disp, s, EGL_FALSE, drv);
+   assert(disp->Extensions.KHR_wait_sync);
+
+   /* return an error if the client API doesn't support GL_OES_EGL_sync */
+   if (ctx == EGL_NO_CONTEXT || ctx->ClientAPI != EGL_OPENGL_ES_API)
+      RETURN_EGL_ERROR(disp, EGL_BAD_MATCH, EGL_FALSE);
+
+   /* the API doesn't allow any flags yet */
+   if (flags != 0)
+      RETURN_EGL_ERROR(disp, EGL_BAD_PARAMETER, EGL_FALSE);
+
+   ret = drv->API.WaitSyncKHR(drv, disp, s);
 
    RETURN_EGL_EVAL(disp, ret);
 }

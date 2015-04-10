@@ -105,6 +105,7 @@ typedef EGLBoolean (*DestroyImageKHR_t)(_EGLDriver *drv, _EGLDisplay *dpy, _EGLI
 typedef _EGLSync *(*CreateSyncKHR_t)(_EGLDriver *drv, _EGLDisplay *dpy, EGLenum type, const EGLint *attrib_list);
 typedef EGLBoolean (*DestroySyncKHR_t)(_EGLDriver *drv, _EGLDisplay *dpy, _EGLSync *sync);
 typedef EGLint (*ClientWaitSyncKHR_t)(_EGLDriver *drv, _EGLDisplay *dpy, _EGLSync *sync, EGLint flags, EGLTimeKHR timeout);
+typedef EGLint (*WaitSyncKHR_t)(_EGLDriver *drv, _EGLDisplay *dpy, _EGLSync *sync);
 typedef EGLBoolean (*SignalSyncKHR_t)(_EGLDriver *drv, _EGLDisplay *dpy, _EGLSync *sync, EGLenum mode);
 typedef EGLBoolean (*GetSyncAttribKHR_t)(_EGLDriver *drv, _EGLDisplay *dpy, _EGLSync *sync, EGLint attribute, EGLint *value);
 
@@ -201,6 +202,7 @@ struct _egl_api
    CreateSyncKHR_t CreateSyncKHR;
    DestroySyncKHR_t DestroySyncKHR;
    ClientWaitSyncKHR_t ClientWaitSyncKHR;
+   WaitSyncKHR_t WaitSyncKHR;
    SignalSyncKHR_t SignalSyncKHR;
    GetSyncAttribKHR_t GetSyncAttribKHR;
 
