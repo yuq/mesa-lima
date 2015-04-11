@@ -135,6 +135,14 @@ get_deref_reg_src(nir_deref_var *deref, nir_instr *instr,
    src.reg.base_offset = 0;
    src.reg.indirect = NULL;
 
+   /* It is possible for a user to create a shader that has an array with a
+    * single element and then proceed to access it indirectly.  Indirectly
+    * accessing a non-array register is not allowed in NIR.  In order to
+    * handle this case we just convert it to a direct reference.
+    */
+   if (src.reg.reg->num_array_elems == 0)
+      return src;
+
    nir_deref *tail = &deref->deref;
    while (tail->child != NULL) {
       const struct glsl_type *parent_type = tail->type;
