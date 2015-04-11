@@ -1791,7 +1791,7 @@ ast_function_expression::hir(exec_list *instructions,
       return value;
    }
 
-   return ir_rvalue::error_value(ctx);
+   unreachable("not reached");
 }
 
 ir_rvalue *
