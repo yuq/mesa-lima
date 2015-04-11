@@ -925,10 +925,6 @@ intelDestroyContext(__DRIcontext * driContextPriv)
       (struct brw_context *) driContextPriv->driverPrivate;
    struct gl_context *ctx = &brw->ctx;
 
-   assert(brw); /* should never be null */
-   if (!brw)
-      return;
-
    /* Dump a final BMP in case the application doesn't call SwapBuffers */
    if (INTEL_DEBUG & DEBUG_AUB) {
       intel_batchbuffer_flush(brw);
