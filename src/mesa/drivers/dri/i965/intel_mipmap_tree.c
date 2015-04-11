@@ -749,10 +749,8 @@ intel_miptree_create_for_bo(struct brw_context *brw,
                                     width, height, depth,
                                     true, 0, false,
                                     disable_aux_buffers);
-   if (!mt) {
-      free(mt);
-      return mt;
-   }
+   if (!mt)
+      return NULL;
 
    drm_intel_bo_reference(bo);
    mt->bo = bo;
