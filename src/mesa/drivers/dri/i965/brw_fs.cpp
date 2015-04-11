@@ -953,6 +953,8 @@ fs_inst::regs_read(int arg) const
       return mlen;
    } else if (opcode == FS_OPCODE_INTERPOLATE_AT_PER_SLOT_OFFSET && arg == 0) {
       return mlen;
+   } else if (opcode == FS_OPCODE_LINTERP && arg == 0) {
+      return exec_size / 4;
    }
 
    switch (src[arg].file) {
@@ -1982,17 +1984,6 @@ fs_visitor::split_virtual_grfs()
                split_points[reg + j] = true;
          }
       }
-   }
-
-   if (brw->has_pln &&
-       this->delta_x[BRW_WM_PERSPECTIVE_PIXEL_BARYCENTRIC].file == GRF) {
-      /* PLN opcodes rely on the delta_xy being contiguous.  We only have to
-       * check this for BRW_WM_PERSPECTIVE_PIXEL_BARYCENTRIC, because prior to
-       * Gen6, that was the only supported interpolation mode, and since Gen6,
-       * delta_x and delta_y are in fixed hardware registers.
-       */
-      int vgrf = this->delta_x[BRW_WM_PERSPECTIVE_PIXEL_BARYCENTRIC].reg;
-      split_points[vgrf_to_reg[vgrf] + 1] = false;
    }
 
    foreach_block_and_inst(block, fs_inst, inst, cfg) {
