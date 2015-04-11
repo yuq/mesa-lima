@@ -4349,6 +4349,7 @@ struct st_translate {
    struct ureg_src *constants;
    int num_constants;
    struct ureg_src *immediates;
+   int num_immediates;
    struct ureg_dst outputs[PIPE_MAX_SHADER_OUTPUTS];
    struct ureg_src inputs[PIPE_MAX_SHADER_INPUTS];
    struct ureg_dst address[3];
@@ -4569,6 +4570,7 @@ src_register(struct st_translate *t, const st_src_reg *reg)
                   t->constants[reg->index] : ureg_imm4f(t->ureg, 0, 0, 0, 0);
 
    case PROGRAM_IMMEDIATE:
+      assert(reg->index >= 0 && reg->index < t->num_immediates);
       return t->immediates[reg->index];
 
    case PROGRAM_INPUT:
@@ -4689,6 +4691,7 @@ translate_tex_offset(struct st_translate *t,
 
    switch (in_offset->file) {
    case PROGRAM_IMMEDIATE:
+      assert(in_offset->index >= 0 && in_offset->index < t->num_immediates);
       imm_src = t->immediates[in_offset->index];
 
       offset.File = imm_src.File;
@@ -5334,6 +5337,8 @@ st_translate_program(
       ret = PIPE_ERROR_OUT_OF_MEMORY;
       goto out;
    }
+   t->num_immediates = program->num_immediates;
+
    i = 0;
    foreach_in_list(immediate_storage, imm, &program->immediates) {
       assert(i < program->num_immediates);
@@ -5385,6 +5390,7 @@ out:
       free(t->constants);
       t->num_constants = 0;
       free(t->immediates);
+      t->num_immediates = 0;
 
       if (t->error) {
          debug_printf("%s: translate error flag set\n", __func__);
