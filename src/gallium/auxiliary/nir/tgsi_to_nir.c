@@ -1001,6 +1001,11 @@ ttn_tex(struct ttn_compile *c, nir_alu_dest dest, nir_ssa_def **src)
       op = nir_texop_txl;
       num_srcs = 2;
       break;
+   case TGSI_OPCODE_TXL2:
+      op = nir_texop_txl;
+      num_srcs = 2;
+      samp = 2;
+      break;
    case TGSI_OPCODE_TXF:
       op = nir_texop_txf;
       num_srcs = 1;
@@ -1078,6 +1083,12 @@ ttn_tex(struct ttn_compile *c, nir_alu_dest dest, nir_ssa_def **src)
 
    if (tgsi_inst->Instruction.Opcode == TGSI_OPCODE_TXL) {
       instr->src[src_number].src = nir_src_for_ssa(ttn_channel(b, src[0], W));
+      instr->src[src_number].src_type = nir_tex_src_lod;
+      src_number++;
+   }
+
+   if (tgsi_inst->Instruction.Opcode == TGSI_OPCODE_TXL2) {
+      instr->src[src_number].src = nir_src_for_ssa(ttn_channel(b, src[1], X));
       instr->src[src_number].src_type = nir_tex_src_lod;
       src_number++;
    }
