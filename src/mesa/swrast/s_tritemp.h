@@ -92,7 +92,7 @@
 
 
 #ifndef MAX_GLUINT
-#define MAX_GLUINT	0xffffffff
+#define MAX_GLUINT	0xffffffffu
 #endif
 
 
