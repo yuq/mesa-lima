@@ -303,6 +303,11 @@ declare_var(struct ir3_compile *ctx, nir_variable *var)
 			(length * sizeof(arr->arr[0])));
 	arr->length = length;
 	arr->aid = ++ctx->num_arrays;
+	/* Some shaders end up reading array elements without first writing..
+	 * so initialize things to prevent null instr ptrs later:
+	 */
+	for (unsigned i = 0; i < length; i++)
+		arr->arr[i] = create_immed(ctx->block, 0);
 	_mesa_hash_table_insert(ctx->var_ht, var, arr);
 }
 
@@ -733,6 +738,8 @@ emit_alu(struct ir3_compile *ctx, nir_alu_instr *alu)
 		compile_assert(ctx, !asrc->negate);
 
 		src[i] = get_src(ctx, &asrc->src)[asrc->swizzle[chan]];
+
+		compile_assert(ctx, src[i]);
 	}
 
 	switch (alu->op) {
@@ -1613,8 +1620,9 @@ setup_input(struct ir3_compile *ctx, nir_variable *in)
 				/* with NIR, we need to infer TGSI_INTERPOLATE_COLOR
 				 * from the semantic name:
 				 */
-				if ((semantic_name == TGSI_SEMANTIC_COLOR) ||
-						(semantic_name == TGSI_SEMANTIC_BCOLOR))
+				if ((in->data.interpolation == INTERP_QUALIFIER_NONE) &&
+						((semantic_name == TGSI_SEMANTIC_COLOR) ||
+							(semantic_name == TGSI_SEMANTIC_BCOLOR)))
 					so->inputs[n].interpolate = TGSI_INTERPOLATE_COLOR;
 
 				if (ctx->flat_bypass) {
