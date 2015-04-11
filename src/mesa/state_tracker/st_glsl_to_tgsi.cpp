@@ -4347,6 +4347,7 @@ struct st_translate {
 
    struct ureg_dst arrays[MAX_ARRAYS];
    struct ureg_src *constants;
+   int num_constants;
    struct ureg_src *immediates;
    struct ureg_dst outputs[PIPE_MAX_SHADER_OUTPUTS];
    struct ureg_src inputs[PIPE_MAX_SHADER_INPUTS];
@@ -4557,15 +4558,15 @@ src_register(struct st_translate *t, const st_src_reg *reg)
 
    case PROGRAM_UNIFORM:
       assert(reg->index >= 0);
-      return t->constants[reg->index];
+      return reg->index < t->num_constants ?
+               t->constants[reg->index] : ureg_imm4f(t->ureg, 0, 0, 0, 0);
    case PROGRAM_STATE_VAR:
    case PROGRAM_CONSTANT:       /* ie, immediate */
       if (reg->has_index2)
          return ureg_src_register(TGSI_FILE_CONSTANT, reg->index);
-      else if (reg->index < 0)
-         return ureg_DECL_constant(t->ureg, 0);
       else
-         return t->constants[reg->index];
+         return reg->index >= 0 && reg->index < t->num_constants ?
+                  t->constants[reg->index] : ureg_imm4f(t->ureg, 0, 0, 0, 0);
 
    case PROGRAM_IMMEDIATE:
       return t->immediates[reg->index];
@@ -5283,6 +5284,7 @@ st_translate_program(
          ret = PIPE_ERROR_OUT_OF_MEMORY;
          goto out;
       }
+      t->num_constants = proginfo->Parameters->NumParameters;
 
       for (i = 0; i < proginfo->Parameters->NumParameters; i++) {
          switch (proginfo->Parameters->Parameters[i].Type) {
@@ -5383,6 +5385,7 @@ out:
       free(t->insn);
       free(t->labels);
       free(t->constants);
+      t->num_constants = 0;
       free(t->immediates);
 
       if (t->error) {
