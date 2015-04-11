@@ -35,7 +35,6 @@ static void
 assign(unsigned int *reg_hw_locations, backend_reg *reg)
 {
    if (reg->file == GRF) {
-      assert(reg->reg_offset >= 0);
       reg->reg = reg_hw_locations[reg->reg] + reg->reg_offset;
       reg->reg_offset = 0;
    }

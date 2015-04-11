@@ -34,7 +34,6 @@ static void
 assign_reg(unsigned *reg_hw_locations, fs_reg *reg)
 {
    if (reg->file == GRF) {
-      assert(reg->reg_offset >= 0);
       reg->reg = reg_hw_locations[reg->reg] + reg->reg_offset;
       reg->reg_offset = 0;
    }
