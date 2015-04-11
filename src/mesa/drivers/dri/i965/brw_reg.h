@@ -265,7 +265,7 @@ struct brw_indirect {
 };
 
 
-static inline int
+static inline unsigned
 type_sz(unsigned type)
 {
    switch(type) {
