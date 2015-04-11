@@ -313,6 +313,7 @@ public:
    int num_address_regs;
    int samplers_used;
    bool indirect_addr_consts;
+   int wpos_transform_const;
 
    int glsl_version;
    bool native_integers;
@@ -3337,6 +3338,7 @@ glsl_to_tgsi_visitor::glsl_to_tgsi_visitor()
    num_address_regs = 0;
    samplers_used = 0;
    indirect_addr_consts = false;
+   wpos_transform_const = -1;
    glsl_version = 0;
    native_integers = false;
    mem_ctx = ralloc_context(NULL);
@@ -4824,28 +4826,19 @@ compile_tgsi_instruction(struct st_translate *t,
  */
 static void
 emit_wpos_adjustment( struct st_translate *t,
-                      const struct gl_program *program,
+                      int wpos_transform_const,
                       boolean invert,
                       GLfloat adjX, GLfloat adjY[2])
 {
    struct ureg_program *ureg = t->ureg;
 
+   assert(wpos_transform_const >= 0);
+
    /* Fragment program uses fragment position input.
     * Need to replace instances of INPUT[WPOS] with temp T
-    * where T = INPUT[WPOS] by y is inverted.
+    * where T = INPUT[WPOS] is inverted by Y.
     */
-   static const gl_state_index wposTransformState[STATE_LENGTH]
-      = { STATE_INTERNAL, STATE_FB_WPOS_Y_TRANSFORM,
-          (gl_state_index)0, (gl_state_index)0, (gl_state_index)0 };
-
-   /* XXX: note we are modifying the incoming shader here!  Need to
-    * do this before emitting the constant decls below, or this
-    * will be missed:
-    */
-   unsigned wposTransConst = _mesa_add_state_reference(program->Parameters,
-                                                       wposTransformState);
-
-   struct ureg_src wpostrans = ureg_DECL_constant( ureg, wposTransConst );
+   struct ureg_src wpostrans = ureg_DECL_constant(ureg, wpos_transform_const);
    struct ureg_dst wpos_temp = ureg_DECL_temporary( ureg );
    struct ureg_src wpos_input = t->inputs[t->inputMapping[VARYING_SLOT_POS]];
 
@@ -4909,7 +4902,8 @@ static void
 emit_wpos(struct st_context *st,
           struct st_translate *t,
           const struct gl_program *program,
-          struct ureg_program *ureg)
+          struct ureg_program *ureg,
+          int wpos_transform_const)
 {
    const struct gl_fragment_program *fp =
       (const struct gl_fragment_program *) program;
@@ -5006,7 +5000,7 @@ emit_wpos(struct st_context *st,
 
    /* we invert after adjustment so that we avoid the MOV to temporary,
     * and reuse the adjustment ADD instead */
-   emit_wpos_adjustment(t, program, invert, adjX, adjY);
+   emit_wpos_adjustment(t, wpos_transform_const, invert, adjX, adjY);
 }
 
 /**
@@ -5145,10 +5139,9 @@ st_translate_program(
       }
 
       if (proginfo->InputsRead & VARYING_BIT_POS) {
-         /* Must do this after setting up t->inputs, and before
-          * emitting constant references, below:
-          */
-          emit_wpos(st_context(ctx), t, proginfo, ureg);
+          /* Must do this after setting up t->inputs. */
+          emit_wpos(st_context(ctx), t, proginfo, ureg,
+                    program->wpos_transform_const);
       }
 
       if (proginfo->InputsRead & VARYING_BIT_FACE)
@@ -5538,6 +5531,17 @@ get_mesa_program(struct gl_context *ctx,
 
    do_set_program_inouts(shader->ir, prog, shader->Stage);
    count_resources(v, prog);
+
+   /* This must be done before the uniform storage is associated. */
+   if (shader->Type == GL_FRAGMENT_SHADER &&
+       prog->InputsRead & VARYING_BIT_POS){
+      static const gl_state_index wposTransformState[STATE_LENGTH] = {
+         STATE_INTERNAL, STATE_FB_WPOS_Y_TRANSFORM
+      };
+
+      v->wpos_transform_const = _mesa_add_state_reference(prog->Parameters,
+                                                          wposTransformState);
+   }
 
    _mesa_reference_program(ctx, &shader->Program, prog);
 
