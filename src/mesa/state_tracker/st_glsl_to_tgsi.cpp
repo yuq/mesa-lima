@@ -5117,15 +5117,6 @@ st_translate_program(
    t->outputMapping = outputMapping;
    t->ureg = ureg;
 
-   if (program->shader_program) {
-      for (i = 0; i < program->shader_program->NumUserUniformStorage; i++) {
-         struct gl_uniform_storage *const storage =
-               &program->shader_program->UniformStorage[i];
-
-         _mesa_uniform_detach_all_driver_storage(storage);
-      }
-   }
-
    /*
     * Declare input attributes.
     */
@@ -5358,21 +5349,6 @@ st_translate_program(
    for (i = 0; i < t->labels_count; i++) {
       ureg_fixup_label(ureg, t->labels[i].token,
                        t->insn[t->labels[i].branch_target]);
-   }
-
-   if (program->shader_program) {
-      /* This has to be done last.  Any operation the can cause
-       * prog->ParameterValues to get reallocated (e.g., anything that adds a
-       * program constant) has to happen before creating this linkage.
-       */
-      for (unsigned i = 0; i < MESA_SHADER_STAGES; i++) {
-         if (program->shader_program->_LinkedShaders[i] == NULL ||
-             program->shader_program->_LinkedShaders[i]->Program == NULL)
-            continue;
-
-         _mesa_associate_uniform_storage(ctx, program->shader_program,
-               program->shader_program->_LinkedShaders[i]->Program->Parameters);
-      }
    }
 
 out:
