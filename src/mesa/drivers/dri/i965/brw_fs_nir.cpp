@@ -1515,6 +1515,7 @@ fs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
 
    case nir_intrinsic_load_uniform_indirect:
       has_indirect = true;
+      /* fallthrough */
    case nir_intrinsic_load_uniform: {
       unsigned index = instr->const_index[0];
 
@@ -1742,6 +1743,7 @@ fs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
 
    case nir_intrinsic_store_output_indirect:
       has_indirect = true;
+      /* fallthrough */
    case nir_intrinsic_store_output: {
       fs_reg src = get_nir_src(instr->src[0]);
       unsigned index = 0;
