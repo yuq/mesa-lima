@@ -982,7 +982,7 @@ ttn_tex(struct ttn_compile *c, nir_alu_dest dest, nir_ssa_def **src)
    struct tgsi_full_instruction *tgsi_inst = &c->token->FullInstruction;
    nir_tex_instr *instr;
    nir_texop op;
-   unsigned num_srcs, samp = 1;
+   unsigned num_srcs, samp = 1, i;
 
    switch (tgsi_inst->Instruction.Opcode) {
    case TGSI_OPCODE_TEX:
@@ -1025,6 +1025,8 @@ ttn_tex(struct ttn_compile *c, nir_alu_dest dest, nir_ssa_def **src)
        tgsi_inst->Texture.Texture == TGSI_TEXTURE_SHADOWCUBE_ARRAY) {
       num_srcs++;
    }
+
+   num_srcs += tgsi_inst->Texture.NumOffsets;
 
    instr = nir_tex_instr_create(b->shader, num_srcs);
    instr->op = op;
@@ -1100,6 +1102,31 @@ ttn_tex(struct ttn_compile *c, nir_alu_dest dest, nir_ssa_def **src)
          instr->src[src_number].src = nir_src_for_ssa(ttn_channel(b, src[0], W));
 
       instr->src[src_number].src_type = nir_tex_src_comparitor;
+      src_number++;
+   }
+
+   for (i = 0; i < tgsi_inst->Texture.NumOffsets; i++) {
+      struct tgsi_texture_offset *tex_offset = &tgsi_inst->TexOffsets[i];
+      /* since TexOffset ins't using tgsi_full_src_register we get to
+       * do some extra gymnastics:
+       */
+      nir_alu_src src;
+
+      memset(&src, 0, sizeof(src));
+
+      src.src = ttn_src_for_file_and_index(c,
+                                           tex_offset->File,
+                                           tex_offset->Index,
+                                           NULL);
+
+      src.swizzle[0] = tex_offset->SwizzleX;
+      src.swizzle[1] = tex_offset->SwizzleY;
+      src.swizzle[2] = tex_offset->SwizzleZ;
+      src.swizzle[3] = TGSI_SWIZZLE_W;
+
+      instr->src[src_number].src_type = nir_tex_src_offset;
+      instr->src[src_number].src = nir_src_for_ssa(
+         nir_fmov_alu(b, src, nir_tex_instr_src_size(instr, src_number)));
       src_number++;
    }
 
