@@ -3015,7 +3015,7 @@ glsl_to_tgsi_visitor::visit(ir_texture *ir)
       break;
    case ir_query_levels:
       opcode = TGSI_OPCODE_TXQ;
-      lod_info = st_src_reg(PROGRAM_IMMEDIATE, 0, GLSL_TYPE_INT);
+      lod_info = undef_src;
       levels_src = get_temp(ir->type);
       break;
    case ir_txf:
@@ -4550,7 +4550,7 @@ src_register(struct st_translate *t, const st_src_reg *reg)
 {
    switch(reg->file) {
    case PROGRAM_UNDEFINED:
-      return ureg_src_undef();
+      return ureg_imm4f(t->ureg, 0, 0, 0, 0);
 
    case PROGRAM_TEMPORARY:
    case PROGRAM_ARRAY:
@@ -4751,10 +4751,8 @@ compile_tgsi_instruction(struct st_translate *t,
                              inst->saturate,
                              clamp_dst_color_output);
 
-   for (i = 0; i < num_src; i++) {
-      assert(inst->src[i].file != PROGRAM_UNDEFINED);
+   for (i = 0; i < num_src; i++)
       src[i] = translate_src(t, &inst->src[i]);
-   }
 
    switch(inst->op) {
    case TGSI_OPCODE_BGNLOOP:
