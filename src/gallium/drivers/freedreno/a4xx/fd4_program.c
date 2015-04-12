@@ -184,7 +184,24 @@ setup_stages(struct fd4_emit *emit, struct stage *s)
 	 * space and FS taking entire remaining space.  We probably don't
 	 * need to do that the same way, but for now mimic what the blob
 	 * does to make it easier to diff against register values from blob
+	 *
+	 * NOTE: if VS.instrlen + FS.instrlen > 64, then one or both shaders
+	 * is run from external memory.
 	 */
+	if ((s[VS].instrlen + s[FS].instrlen) > 64) {
+		/* prioritize FS for internal memory: */
+		if (s[FS].instrlen < 64) {
+			/* if FS can fit, kick VS out to external memory: */
+			s[VS].instrlen = 0;
+		} else if (s[VS].instrlen < 64) {
+			/* otherwise if VS can fit, kick out FS: */
+			s[FS].instrlen = 0;
+		} else {
+			/* neither can fit, run both from external memory: */
+			s[VS].instrlen = 0;
+			s[FS].instrlen = 0;
+		}
+	}
 	s[VS].constlen = 66;
 	s[FS].constlen = 128 - s[VS].constlen;
 	s[VS].instroff = 0;
@@ -279,7 +296,11 @@ fd4_program_emit(struct fd_ringbuffer *ring, struct fd4_emit *emit)
 			COND(emit->key.binning_pass, A4XX_SP_SP_CTRL_REG_BINNING_PASS));
 
 	OUT_PKT0(ring, REG_A4XX_SP_INSTR_CACHE_CTRL, 1);
-	OUT_RING(ring, 0x1c3);   /* XXX SP_INSTR_CACHE_CTRL */
+	OUT_RING(ring, 0x7f | /* XXX */
+			COND(s[VS].instrlen, A4XX_SP_INSTR_CACHE_CTRL_VS_BUFFER) |
+			COND(s[FS].instrlen, A4XX_SP_INSTR_CACHE_CTRL_FS_BUFFER) |
+			COND(s[VS].instrlen && s[FS].instrlen,
+					A4XX_SP_INSTR_CACHE_CTRL_INSTR_BUFFER));
 
 	OUT_PKT0(ring, REG_A4XX_SP_VS_LENGTH_REG, 1);
 	OUT_RING(ring, s[VS].v->instrlen);      /* SP_VS_LENGTH_REG */
@@ -486,10 +507,12 @@ fd4_program_emit(struct fd_ringbuffer *ring, struct fd4_emit *emit)
 			OUT_RING(ring, s[FS].v->shader->vpsrepl[i]);   /* VPC_VARYING_PS_REPL[i] */
 	}
 
-	emit_shader(ring, s[VS].v);
+	if (s[VS].instrlen)
+		emit_shader(ring, s[VS].v);
 
 	if (!emit->key.binning_pass)
-		emit_shader(ring, s[FS].v);
+		if (s[FS].instrlen)
+			emit_shader(ring, s[FS].v);
 }
 
 /* hack.. until we figure out how to deal w/ vpsrepl properly.. */
