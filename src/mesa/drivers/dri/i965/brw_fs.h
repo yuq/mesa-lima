@@ -388,6 +388,7 @@ public:
                                  bool use_2nd_half = false);
    void emit_fb_writes();
    void emit_urb_writes();
+   void emit_cs_terminate();
 
    void emit_shader_time_begin();
    void emit_shader_time_end();

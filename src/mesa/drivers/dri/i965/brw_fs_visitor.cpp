@@ -4156,6 +4156,28 @@ fs_visitor::resolve_ud_negate(fs_reg *reg)
    *reg = temp;
 }
 
+void
+fs_visitor::emit_cs_terminate()
+{
+   assert(brw->gen >= 7);
+
+   /* We are getting the thread ID from the compute shader header */
+   assert(stage == MESA_SHADER_COMPUTE);
+
+   /* We can't directly send from g0, since sends with EOT have to use
+    * g112-127. So, copy it to a virtual register, The register allocator will
+    * make sure it uses the appropriate register range.
+    */
+   struct brw_reg g0 = retype(brw_vec8_grf(0, 0), BRW_REGISTER_TYPE_UD);
+   fs_reg payload = fs_reg(GRF, alloc.allocate(1), BRW_REGISTER_TYPE_UD);
+   fs_inst *inst = emit(MOV(payload, g0));
+   inst->force_writemask_all = true;
+
+   /* Send a message to the thread spawner to terminate the thread. */
+   inst = emit(CS_OPCODE_CS_TERMINATE, reg_undef, payload);
+   inst->eot = true;
+}
+
 /**
  * Resolve the result of a Gen4-5 CMP instruction to a proper boolean.
  *
