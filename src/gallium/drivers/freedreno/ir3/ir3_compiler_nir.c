@@ -975,6 +975,53 @@ emit_alu(struct ir3_compile *ctx, nir_alu_instr *alu)
 	}
 }
 
+/* handles direct/indirect UBO reads: */
+static void
+emit_intrinsic_load_ubo(struct ir3_compile *ctx, nir_intrinsic_instr *intr,
+		struct ir3_instruction **dst)
+{
+	struct ir3_block *b = ctx->block;
+	struct ir3_instruction *addr, *src0, *src1;
+	/* UBO addresses are the first driver params: */
+	unsigned ubo = regid(ctx->so->first_driver_param, 0);
+	unsigned off = intr->const_index[0];
+
+	/* First src is ubo index, which could either be an immed or not: */
+	src0 = get_src(ctx, &intr->src[0])[0];
+	if (is_same_type_mov(src0) &&
+			(src0->regs[1]->flags & IR3_REG_IMMED)) {
+		addr = create_uniform(ctx, ubo + src0->regs[1]->iim_val);
+	} else {
+		addr = create_uniform_indirect(ctx, ubo, get_addr(ctx, src0));
+	}
+
+	if (intr->intrinsic == nir_intrinsic_load_ubo_indirect) {
+		/* For load_ubo_indirect, second src is indirect offset: */
+		src1 = get_src(ctx, &intr->src[1])[0];
+
+		/* and add offset to addr: */
+		addr = ir3_ADD_S(b, addr, 0, src1, 0);
+	}
+
+	/* if offset is to large to encode in the ldg, split it out: */
+	if ((off + (intr->num_components * 4)) > 1024) {
+		/* split out the minimal amount to improve the odds that
+		 * cp can fit the immediate in the add.s instruction:
+		 */
+		unsigned off2 = off + (intr->num_components * 4) - 1024;
+		addr = ir3_ADD_S(b, addr, 0, create_immed(b, off2), 0);
+		off -= off2;
+	}
+
+	for (int i = 0; i < intr->num_components; i++) {
+		struct ir3_instruction *load =
+				ir3_LDG(b, addr, 0, create_immed(b, 1), 0);
+		load->cat6.type = TYPE_U32;
+		load->cat6.offset = off + i * 4;    /* byte offset */
+		dst[i] = load;
+	}
+}
+
 /* handles array reads: */
 static void
 emit_intrinisic_load_var(struct ir3_compile *ctx, nir_intrinsic_instr *intr,
@@ -1123,6 +1170,10 @@ emit_intrinisic(struct ir3_compile *ctx, nir_intrinsic_instr *intr)
 			dst[i] = create_uniform_indirect(ctx, n,
 					get_addr(ctx, src[0]));
 		}
+		break;
+	case nir_intrinsic_load_ubo:
+	case nir_intrinsic_load_ubo_indirect:
+		emit_intrinsic_load_ubo(ctx, intr, dst);
 		break;
 	case nir_intrinsic_load_input:
 		compile_assert(ctx, intr->const_index[1] == 1);

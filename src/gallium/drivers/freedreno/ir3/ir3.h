@@ -961,6 +961,7 @@ ir3_SAM(struct ir3_block *block, opc_t opc, type_t type,
 
 /* cat6 instructions: */
 INSTR2(6, LDLV)
+INSTR2(6, LDG)
 
 /* ************************************************************************* */
 /* split this out or find some helper to use.. like main/bitset.h.. */
