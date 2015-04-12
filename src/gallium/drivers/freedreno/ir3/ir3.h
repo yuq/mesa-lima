@@ -458,6 +458,29 @@ static inline bool is_nop(struct ir3_instruction *instr)
 	return is_flow(instr) && (instr->opc == OPC_NOP);
 }
 
+/* Is it a non-transformative (ie. not type changing) mov?  This can
+ * also include absneg.s/absneg.f, which for the most part can be
+ * treated as a mov (single src argument).
+ */
+static inline bool is_same_type_mov(struct ir3_instruction *instr)
+{
+	struct ir3_register *dst = instr->regs[0];
+
+	/* mov's that write to a0.x or p0.x are special: */
+	if (dst->num == regid(REG_P0, 0))
+		return false;
+	if (dst->num == regid(REG_A0, 0))
+		return false;
+
+	if ((instr->category == 1) &&
+			(instr->cat1.src_type == instr->cat1.dst_type))
+		return true;
+	if ((instr->category == 2) && ((instr->opc == OPC_ABSNEG_F) ||
+			(instr->opc == OPC_ABSNEG_S)))
+		return true;
+	return false;
+}
+
 static inline bool is_alu(struct ir3_instruction *instr)
 {
 	return (1 <= instr->category) && (instr->category <= 3);

@@ -34,30 +34,6 @@
  * Copy Propagate:
  */
 
-
-/* Is it a non-transformative (ie. not type changing) mov?  This can
- * also include absneg.s/absneg.f, which for the most part can be
- * treated as a mov (single src argument).
- */
-static bool is_same_type_mov(struct ir3_instruction *instr)
-{
-	struct ir3_register *dst = instr->regs[0];
-
-	/* mov's that write to a0.x or p0.x are special: */
-	if (dst->num == regid(REG_P0, 0))
-		return false;
-	if (dst->num == regid(REG_A0, 0))
-		return false;
-
-	if ((instr->category == 1) &&
-			(instr->cat1.src_type == instr->cat1.dst_type))
-		return true;
-	if ((instr->category == 2) && ((instr->opc == OPC_ABSNEG_F) ||
-			(instr->opc == OPC_ABSNEG_S)))
-		return true;
-	return false;
-}
-
 /* is it a type preserving mov, with ok flags? */
 static bool is_eligible_mov(struct ir3_instruction *instr, bool allow_flags)
 {
