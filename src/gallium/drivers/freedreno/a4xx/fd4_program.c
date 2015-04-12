@@ -392,7 +392,7 @@ fd4_program_emit(struct fd_ringbuffer *ring, struct fd4_emit *emit)
 					A4XX_RB_RENDER_CONTROL2_YCOORD));
 
 	OUT_PKT0(ring, REG_A4XX_RB_FS_OUTPUT_REG, 1);
-	OUT_RING(ring, A4XX_RB_FS_OUTPUT_REG_COLOR_PIPE_ENABLE |
+	OUT_RING(ring, A4XX_RB_FS_OUTPUT_REG_MRT(1) |
 			COND(s[FS].v->writes_pos, A4XX_RB_FS_OUTPUT_REG_FRAG_WRITES_Z));
 
 	OUT_PKT0(ring, REG_A4XX_SP_FS_OUTPUT_REG, 1);
