@@ -3877,6 +3877,9 @@ fs_visitor::run_vs()
 
    emit_urb_writes();
 
+   if (INTEL_DEBUG & DEBUG_SHADER_TIME)
+      emit_shader_time_end();
+
    calculate_cfg();
 
    optimize();
