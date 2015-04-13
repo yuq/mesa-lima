@@ -544,6 +544,50 @@ fs_generator::generate_math_g45(fs_inst *inst,
 }
 
 void
+fs_generator::generate_get_buffer_size(fs_inst *inst,
+                                       struct brw_reg dst,
+                                       struct brw_reg src,
+                                       struct brw_reg surf_index)
+{
+   assert(devinfo->gen >= 7);
+   assert(surf_index.file == BRW_IMMEDIATE_VALUE);
+
+   uint32_t simd_mode;
+   int rlen = 4;
+
+   switch (inst->exec_size) {
+   case 8:
+      simd_mode = BRW_SAMPLER_SIMD_MODE_SIMD8;
+      break;
+   case 16:
+      simd_mode = BRW_SAMPLER_SIMD_MODE_SIMD16;
+      break;
+   default:
+      unreachable("Invalid width for texture instruction");
+   }
+
+   if (simd_mode == BRW_SAMPLER_SIMD_MODE_SIMD16) {
+      rlen = 8;
+      dst = vec16(dst);
+   }
+
+   brw_SAMPLE(p,
+              retype(dst, BRW_REGISTER_TYPE_UW),
+              inst->base_mrf,
+              src,
+              surf_index.dw1.ud,
+              0,
+              GEN5_SAMPLER_MESSAGE_SAMPLE_RESINFO,
+              rlen, /* response length */
+              inst->mlen,
+              inst->header_size > 0,
+              simd_mode,
+              BRW_SAMPLER_RETURN_FORMAT_SINT32);
+
+   brw_mark_surface_used(prog_data, surf_index.dw1.ud);
+}
+
+void
 fs_generator::generate_tex(fs_inst *inst, struct brw_reg dst, struct brw_reg src,
                            struct brw_reg sampler_index)
 {
@@ -1915,6 +1959,9 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
          assert(src[0].type == BRW_REGISTER_TYPE_UW);
          src[0].subnr = 4 * type_sz(src[0].type);
          brw_MOV(p, dst, stride(src[0], 8, 4, 1));
+         break;
+      case FS_OPCODE_GET_BUFFER_SIZE:
+         generate_get_buffer_size(inst, dst, src[0], src[1]);
          break;
       case SHADER_OPCODE_TEX:
       case FS_OPCODE_TXB:

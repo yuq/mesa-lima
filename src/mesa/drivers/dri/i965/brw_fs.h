@@ -431,6 +431,9 @@ private:
 			 struct brw_reg *src);
    void generate_tex(fs_inst *inst, struct brw_reg dst, struct brw_reg src,
                      struct brw_reg sampler_index);
+   void generate_get_buffer_size(fs_inst *inst, struct brw_reg dst,
+                                 struct brw_reg src,
+                                 struct brw_reg surf_index);
    void generate_math_gen6(fs_inst *inst,
                            struct brw_reg dst,
                            struct brw_reg src0,
