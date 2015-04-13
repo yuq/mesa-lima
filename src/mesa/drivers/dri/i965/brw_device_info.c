@@ -269,9 +269,6 @@ static const struct brw_device_info brw_device_info_bdw_gt3 = {
    }
 };
 
-/* Thread counts and URB limits are placeholders, and may not be accurate.
- * These were copied from Haswell GT1, above.
- */
 static const struct brw_device_info brw_device_info_chv = {
    GEN8_FEATURES, .is_cherryview = 1, .gt = 1,
    .has_llc = false,
