@@ -2669,8 +2669,10 @@ int si_shader_binary_read(struct si_screen *sscreen,
 				binary->code[i]);
 			}
 		}
-		fprintf(stderr, "SGPRS: %d\nVGPRS: %d\nCode Size: %d bytes\nLDS: %d blocks\n"
-				"Scratch: %d bytes per wave\n",
+
+		fprintf(stderr, "*** SHADER STATS ***\n"
+			"SGPRS: %d\nVGPRS: %d\nCode Size: %d bytes\nLDS: %d blocks\n"
+			"Scratch: %d bytes per wave\n********************\n",
 			shader->num_sgprs, shader->num_vgprs, binary->code_size,
 			shader->lds_size, shader->scratch_bytes_per_wave);
 	}
