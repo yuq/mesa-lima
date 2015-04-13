@@ -1593,11 +1593,16 @@ ast_function_expression::handle_method(exec_list *instructions,
 
       if (op->type->is_array()) {
          if (op->type->is_unsized_array()) {
-            _mesa_glsl_error(&loc, state, "length called on unsized array");
-            goto fail;
+            if (!state->has_shader_storage_buffer_objects()) {
+               _mesa_glsl_error(&loc, state, "length called on unsized array"
+                                             " only available with "
+                                             "ARB_shader_storage_buffer_object");
+            }
+            /* Calculate length of an unsized array in run-time */
+            result = new(ctx) ir_expression(ir_unop_ssbo_unsized_array_length, op);
+         } else {
+            result = new(ctx) ir_constant(op->type->array_size());
          }
-
-         result = new(ctx) ir_constant(op->type->array_size());
       } else if (op->type->is_vector()) {
          if (state->ARB_shading_language_420pack_enable) {
             /* .length() returns int. */

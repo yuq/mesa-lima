@@ -1425,9 +1425,26 @@ enum ir_expression_operation {
    ir_unop_interpolate_at_centroid,
 
    /**
+    * Ask the driver for the total size of a buffer block.
+    *
+    * operand0 is the ir_constant buffer block index in the linked shader.
+    */
+   ir_unop_get_buffer_size,
+
+   /**
+    * Calculate length of an unsized array inside a buffer block.
+    * This opcode is going to be replaced in a lowering pass inside
+    * the linker.
+    *
+    * operand0 is the unsized array's ir_value for the calculation
+    * of its length.
+    */
+   ir_unop_ssbo_unsized_array_length,
+
+   /**
     * A sentinel marking the last of the unary operations.
     */
-   ir_last_unop = ir_unop_interpolate_at_centroid,
+   ir_last_unop = ir_unop_ssbo_unsized_array_length,
 
    ir_binop_add,
    ir_binop_sub,
