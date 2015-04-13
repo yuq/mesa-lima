@@ -1860,33 +1860,37 @@ src_does_not_use_reg(nir_src *src, void *void_reg)
 void
 nir_instr_rewrite_src(nir_instr *instr, nir_src *src, nir_src new_src)
 {
-   if (src->is_ssa) {
-      nir_ssa_def *old_ssa = src->ssa;
-      *src = new_src;
-      if (old_ssa && nir_foreach_src(instr, src_does_not_use_def, old_ssa)) {
-         struct set_entry *entry = _mesa_set_search(old_ssa->uses, instr);
-         assert(entry);
-         _mesa_set_remove(old_ssa->uses, entry);
-      }
-   } else {
-      if (src->reg.indirect)
-         nir_instr_rewrite_src(instr, src->reg.indirect, new_src);
+   nir_src old_src = *src;
+   *src = new_src;
 
-      nir_register *old_reg = src->reg.reg;
-      *src = new_src;
-      if (old_reg && nir_foreach_src(instr, src_does_not_use_reg, old_reg)) {
-         struct set_entry *entry = _mesa_set_search(old_reg->uses, instr);
-         assert(entry);
-         _mesa_set_remove(old_reg->uses, entry);
+   for (nir_src *iter_src = &old_src; iter_src;
+        iter_src = iter_src->is_ssa ? NULL : iter_src->reg.indirect) {
+      if (iter_src->is_ssa) {
+         nir_ssa_def *ssa = iter_src->ssa;
+         if (ssa && nir_foreach_src(instr, src_does_not_use_def, ssa)) {
+            struct set_entry *entry = _mesa_set_search(ssa->uses, instr);
+            assert(entry);
+            _mesa_set_remove(ssa->uses, entry);
+         }
+      } else {
+         nir_register *reg = iter_src->reg.reg;
+         if (reg && nir_foreach_src(instr, src_does_not_use_reg, reg)) {
+            struct set_entry *entry = _mesa_set_search(reg->uses, instr);
+            assert(entry);
+            _mesa_set_remove(reg->uses, entry);
+         }
       }
    }
 
-   if (new_src.is_ssa) {
-      if (new_src.ssa)
-         _mesa_set_add(new_src.ssa->uses, instr);
-   } else {
-      if (new_src.reg.reg)
-         _mesa_set_add(new_src.reg.reg->uses, instr);
+   for (nir_src *iter_src = &new_src; iter_src;
+        iter_src = iter_src->is_ssa ? NULL : iter_src->reg.indirect) {
+      if (iter_src->is_ssa) {
+         if (iter_src->ssa)
+            _mesa_set_add(iter_src->ssa->uses, instr);
+      } else {
+         if (iter_src->reg.reg)
+            _mesa_set_add(iter_src->reg.reg->uses, instr);
+      }
    }
 }
 
