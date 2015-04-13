@@ -223,8 +223,8 @@ brw_blorp_copytexsubimage(struct brw_context *brw,
    struct intel_mipmap_tree *src_mt = src_irb->mt;
    struct intel_mipmap_tree *dst_mt = intel_image->mt;
 
-   /* BLORP is not supported before Gen6. */
-   if (brw->gen < 6 || brw->gen >= 8)
+   /* BLORP is only supported for Gen6-7. */
+   if (brw->gen < 6 || brw->gen > 7)
       return false;
 
    if (_mesa_get_format_base_format(src_rb->Format) !=
