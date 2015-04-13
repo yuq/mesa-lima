@@ -145,7 +145,7 @@ operands_match(const fs_inst *a, const fs_inst *b, bool *negate)
       xs[1].fixed_hw_reg.dw1.f = xs1_imm;
       ys[1].fixed_hw_reg.dw1.f = ys1_imm;
 
-      *negate = (xs0_negate + xs1_negate) != (ys0_negate + ys1_negate);
+      *negate = (xs0_negate != xs1_negate) != (ys0_negate != ys1_negate);
       return ret;
    } else if (!a->is_commutative()) {
       bool match = true;
