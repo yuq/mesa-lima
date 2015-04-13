@@ -972,6 +972,17 @@ struct brw_context
 					  bool layered,
 					  unsigned unit);
 
+      void (*emit_texture_surface_state)(struct brw_context *brw,
+                                         struct intel_mipmap_tree *mt,
+                                         GLenum target,
+                                         unsigned min_layer,
+                                         unsigned max_layer,
+                                         unsigned min_level,
+                                         unsigned max_level,
+                                         unsigned format,
+                                         unsigned swizzle,
+                                         uint32_t *surf_offset,
+                                         bool rw, bool for_gather);
       void (*emit_buffer_surface_state)(struct brw_context *brw,
                                         uint32_t *out_offset,
                                         drm_intel_bo *bo,
