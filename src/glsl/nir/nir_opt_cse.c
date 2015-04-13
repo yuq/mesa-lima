@@ -37,18 +37,19 @@ struct cse_state {
 };
 
 static bool
-nir_alu_srcs_equal(nir_alu_instr *alu1, nir_alu_instr *alu2, unsigned src)
+nir_alu_srcs_equal(nir_alu_instr *alu1, nir_alu_instr *alu2, unsigned src1,
+                   unsigned src2)
 {
-   if (alu1->src[src].abs != alu2->src[src].abs ||
-       alu1->src[src].negate != alu2->src[src].negate)
+   if (alu1->src[src1].abs != alu2->src[src2].abs ||
+       alu1->src[src1].negate != alu2->src[src2].negate)
       return false;
 
-   for (unsigned i = 0; i < nir_ssa_alu_instr_src_components(alu1, src); i++) {
-      if (alu1->src[src].swizzle[i] != alu2->src[src].swizzle[i])
+   for (unsigned i = 0; i < nir_ssa_alu_instr_src_components(alu1, src1); i++) {
+      if (alu1->src[src1].swizzle[i] != alu2->src[src2].swizzle[i])
          return false;
    }
 
-   return nir_srcs_equal(alu1->src[src].src, alu2->src[src].src);
+   return nir_srcs_equal(alu1->src[src1].src, alu2->src[src2].src);
 }
 
 static bool
@@ -71,9 +72,17 @@ nir_instrs_equal(nir_instr *instr1, nir_instr *instr2)
       if (alu1->dest.dest.ssa.num_components != alu2->dest.dest.ssa.num_components)
          return false;
 
-      for (unsigned i = 0; i < nir_op_infos[alu1->op].num_inputs; i++) {
-         if (!nir_alu_srcs_equal(alu1, alu2, i))
-            return false;
+      if (nir_op_infos[alu1->op].algebraic_properties & NIR_OP_IS_COMMUTATIVE) {
+         assert(nir_op_infos[alu1->op].num_inputs == 2);
+         return (nir_alu_srcs_equal(alu1, alu2, 0, 0) &&
+                 nir_alu_srcs_equal(alu1, alu2, 1, 1)) ||
+                (nir_alu_srcs_equal(alu1, alu2, 0, 1) &&
+                 nir_alu_srcs_equal(alu1, alu2, 1, 0));
+      } else {
+         for (unsigned i = 0; i < nir_op_infos[alu1->op].num_inputs; i++) {
+            if (!nir_alu_srcs_equal(alu1, alu2, i, i))
+               return false;
+         }
       }
       return true;
    }
