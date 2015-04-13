@@ -151,12 +151,14 @@ nir_instrs_equal(nir_instr *instr1, nir_instr *instr2)
 static bool
 src_is_ssa(nir_src *src, void *data)
 {
+   (void) data;
    return src->is_ssa;
 }
 
 static bool
 dest_is_ssa(nir_dest *dest, void *data)
 {
+   (void) data;
    return dest->is_ssa;
 }
 

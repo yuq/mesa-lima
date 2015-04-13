@@ -1570,7 +1570,7 @@ void nir_print_instr(const nir_instr *instr, FILE *fp);
 #ifdef DEBUG
 void nir_validate_shader(nir_shader *shader);
 #else
-static inline void nir_validate_shader(nir_shader *shader) { }
+static inline void nir_validate_shader(nir_shader *shader) { (void) shader; }
 #endif /* DEBUG */
 
 void nir_calc_dominance_impl(nir_function_impl *impl);
