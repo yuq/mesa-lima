@@ -2543,6 +2543,7 @@ if test "x$MESA_LLVM" = x1; then
     echo "        LLVM_CFLAGS:     $LLVM_CFLAGS"
     echo "        LLVM_CXXFLAGS:   $LLVM_CXXFLAGS"
     echo "        LLVM_CPPFLAGS:   $LLVM_CPPFLAGS"
+    echo "        LLVM_LDFLAGS:    $LLVM_LDFLAGS"
     echo ""
 fi
 echo "        PYTHON2:         $PYTHON2"
