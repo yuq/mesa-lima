@@ -311,14 +311,6 @@ ntq_umul(struct vc4_compile *c, struct qreg src0, struct qreg src1)
                                         qir_uniform_ui(c, 24)));
 }
 
-static struct qreg
-ntq_idiv(struct vc4_compile *c, struct qreg src0, struct qreg src1)
-{
-        return qir_FTOI(c, qir_FMUL(c,
-                                    qir_ITOF(c, src0),
-                                    qir_RCP(c, qir_ITOF(c, src1))));
-}
-
 static void
 ntq_emit_tex(struct vc4_compile *c, nir_tex_instr *instr)
 {
@@ -982,9 +974,6 @@ ntq_emit_alu(struct vc4_compile *c, nir_alu_instr *instr)
 
         case nir_op_imul:
                 *dest = ntq_umul(c, src[0], src[1]);
-                break;
-        case nir_op_idiv:
-                *dest = ntq_idiv(c, src[0], src[1]);
                 break;
 
         case nir_op_seq:
@@ -2096,6 +2085,7 @@ vc4_shader_ntq(struct vc4_context *vc4, enum qstage stage,
         c->s = tgsi_to_nir(tokens, &nir_options);
         nir_opt_global_to_local(c->s);
         nir_convert_to_ssa(c->s);
+        nir_lower_idiv(c->s);
 
         vc4_optimize_nir(c->s);
 
