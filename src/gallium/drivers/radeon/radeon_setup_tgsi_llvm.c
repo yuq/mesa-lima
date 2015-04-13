@@ -637,6 +637,34 @@ static void uif_emit(
 	if_cond_emit(action, bld_base, emit_data, cond);
 }
 
+static void kill_if_fetch_args(
+	struct lp_build_tgsi_context * bld_base,
+	struct lp_build_emit_data * emit_data)
+{
+	const struct tgsi_full_instruction * inst = emit_data->inst;
+	struct gallivm_state *gallivm = bld_base->base.gallivm;
+	LLVMBuilderRef builder = gallivm->builder;
+	unsigned i;
+	LLVMValueRef conds[TGSI_NUM_CHANNELS];
+
+	for (i = 0; i < TGSI_NUM_CHANNELS; i++) {
+		LLVMValueRef value = lp_build_emit_fetch(bld_base, inst, 0, i);
+		conds[i] = LLVMBuildFCmp(builder, LLVMRealOLT, value,
+					bld_base->base.zero, "");
+	}
+
+	/* Or the conditions together */
+	for (i = TGSI_NUM_CHANNELS - 1; i > 0; i--) {
+		conds[i - 1] = LLVMBuildOr(builder, conds[i], conds[i - 1], "");
+	}
+
+	emit_data->dst_type = LLVMVoidTypeInContext(gallivm->context);
+	emit_data->arg_count = 1;
+	emit_data->args[0] = LLVMBuildSelect(builder, conds[0],
+					lp_build_const_float(gallivm, -1.0f),
+					bld_base->base.zero, "");
+}
+
 static void kil_emit(
 	const struct lp_build_tgsi_action * action,
 	struct lp_build_tgsi_context * bld_base,
@@ -1467,6 +1495,7 @@ void radeon_llvm_context_init(struct radeon_llvm_context * ctx)
 	bld_base->op_actions[TGSI_OPCODE_ISLT].emit = emit_icmp;
 	bld_base->op_actions[TGSI_OPCODE_ISSG].emit = emit_ssg;
 	bld_base->op_actions[TGSI_OPCODE_I2F].emit = emit_i2f;
+	bld_base->op_actions[TGSI_OPCODE_KILL_IF].fetch_args = kill_if_fetch_args;
 	bld_base->op_actions[TGSI_OPCODE_KILL_IF].emit = kil_emit;
 	bld_base->op_actions[TGSI_OPCODE_KILL_IF].intr_name = "llvm.AMDGPU.kill";
 	bld_base->op_actions[TGSI_OPCODE_KILL].emit = lp_build_tgsi_intrinsic;
