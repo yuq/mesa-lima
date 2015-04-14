@@ -37,20 +37,18 @@ struct cse_state {
 };
 
 static bool
-nir_alu_srcs_equal(nir_alu_src src1, nir_alu_src src2, uint8_t read_mask)
+nir_alu_srcs_equal(nir_alu_instr *alu1, nir_alu_instr *alu2, unsigned src)
 {
-   if (src1.abs != src2.abs || src1.negate != src2.negate)
+   if (alu1->src[src].abs != alu2->src[src].abs ||
+       alu1->src[src].negate != alu2->src[src].negate)
       return false;
 
-   for (int i = 0; i < 4; ++i) {
-      if (!(read_mask & (1 << i)))
-         continue;
-
-      if (src1.swizzle[i] != src2.swizzle[i])
+   for (unsigned i = 0; i < nir_ssa_alu_instr_src_components(alu1, src); i++) {
+      if (alu1->src[src].swizzle[i] != alu2->src[src].swizzle[i])
          return false;
    }
 
-   return nir_srcs_equal(src1.src, src2.src);
+   return nir_srcs_equal(alu1->src[src].src, alu2->src[src].src);
 }
 
 static bool
@@ -74,8 +72,7 @@ nir_instrs_equal(nir_instr *instr1, nir_instr *instr2)
          return false;
 
       for (unsigned i = 0; i < nir_op_infos[alu1->op].num_inputs; i++) {
-         if (!nir_alu_srcs_equal(alu1->src[i], alu2->src[i],
-                                 (1 << alu1->dest.dest.ssa.num_components) - 1))
+         if (!nir_alu_srcs_equal(alu1, alu2, i))
             return false;
       }
       return true;
