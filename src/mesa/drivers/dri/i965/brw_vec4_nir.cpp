@@ -861,6 +861,14 @@ vec4_visitor::nir_emit_alu(nir_alu_instr *instr)
       inst->saturate = instr->dest.saturate;
       break;
 
+   case nir_op_fddx:
+   case nir_op_fddx_coarse:
+   case nir_op_fddx_fine:
+   case nir_op_fddy:
+   case nir_op_fddy_coarse:
+   case nir_op_fddy_fine:
+      unreachable("derivatives are not valid in vertex shaders");
+
    default:
       unreachable("Unimplemented ALU operation");
    }
