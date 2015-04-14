@@ -56,10 +56,13 @@ static void
 vc4_nir_lower_input(struct vc4_compile *c, nir_builder *b,
                     nir_intrinsic_instr *intr)
 {
-        /* All TGSI-to-NIR inputs are vec4. */
-        assert(intr->num_components == 4);
-
         nir_builder_insert_before_instr(b, &intr->instr);
+
+        if (c->stage == QSTAGE_FRAG && intr->const_index[0] ==
+            VC4_NIR_TLB_COLOR_READ_INPUT) {
+                /* This doesn't need any lowering. */
+                return;
+        }
 
         nir_variable *input_var = NULL;
         foreach_list_typed(nir_variable, var, node, &c->s->inputs) {
@@ -71,6 +74,9 @@ vc4_nir_lower_input(struct vc4_compile *c, nir_builder *b,
         assert(input_var);
         int semantic_name = input_var->data.location;
         int semantic_index = input_var->data.index;
+
+        /* All TGSI-to-NIR inputs are vec4. */
+        assert(intr->num_components == 4);
 
         /* Generate scalar loads equivalent to the original VEC4. */
         nir_ssa_def *dests[4];
@@ -145,6 +151,12 @@ vc4_nir_lower_output(struct vc4_compile *c, nir_builder *b,
                 return;
         }
 
+        /* Color output is lowered by vc4_nir_lower_blend(). */
+        if (c->stage == QSTAGE_FRAG && semantic_name == TGSI_SEMANTIC_COLOR) {
+                intr->const_index[0] *= 4;
+                return;
+        }
+
         /* All TGSI-to-NIR outputs are VEC4. */
         assert(intr->num_components == 4);
 
@@ -170,7 +182,11 @@ static void
 vc4_nir_lower_uniform(struct vc4_compile *c, nir_builder *b,
                       nir_intrinsic_instr *intr)
 {
-        /* All TGSI-to-NIR uniform loads are vec4. */
+        /* All TGSI-to-NIR uniform loads are vec4, but we may create dword
+         * loads in our lowering passes.
+         */
+        if (intr->num_components == 1)
+                return;
         assert(intr->num_components == 4);
 
         nir_builder_insert_before_instr(b, &intr->instr);

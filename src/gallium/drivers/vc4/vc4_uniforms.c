@@ -257,9 +257,14 @@ vc4_write_uniforms(struct vc4_context *vc4, struct vc4_compiled_shader *shader,
                                                          uinfo->data[i]));
                         break;
 
-                case QUNIFORM_BLEND_CONST_COLOR:
+                case QUNIFORM_BLEND_CONST_COLOR_X:
+                case QUNIFORM_BLEND_CONST_COLOR_Y:
+                case QUNIFORM_BLEND_CONST_COLOR_Z:
+                case QUNIFORM_BLEND_CONST_COLOR_W:
                         cl_aligned_f(&uniforms,
-                                     CLAMP(vc4->blend_color.color[uinfo->data[i]], 0, 1));
+                                     CLAMP(vc4->blend_color.color[uinfo->contents[i] -
+                                                                  QUNIFORM_BLEND_CONST_COLOR_X],
+                                           0, 1));
                         break;
 
                 case QUNIFORM_STENCIL:
@@ -321,7 +326,10 @@ vc4_set_shader_uniform_dirty_flags(struct vc4_compiled_shader *shader)
                         dirty |= VC4_DIRTY_TEXSTATE;
                         break;
 
-                case QUNIFORM_BLEND_CONST_COLOR:
+                case QUNIFORM_BLEND_CONST_COLOR_X:
+                case QUNIFORM_BLEND_CONST_COLOR_Y:
+                case QUNIFORM_BLEND_CONST_COLOR_Z:
+                case QUNIFORM_BLEND_CONST_COLOR_W:
                         dirty |= VC4_DIRTY_BLEND_COLOR;
                         break;
 

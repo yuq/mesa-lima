@@ -39,6 +39,8 @@
 #include "vc4_screen.h"
 #include "pipe/p_state.h"
 
+struct nir_builder;
+
 enum qfile {
         QFILE_NULL,
         QFILE_TEMP,
@@ -242,7 +244,11 @@ enum quniform_contents {
 
         QUNIFORM_TEXTURE_BORDER_COLOR,
 
-        QUNIFORM_BLEND_CONST_COLOR,
+        QUNIFORM_BLEND_CONST_COLOR_X,
+        QUNIFORM_BLEND_CONST_COLOR_Y,
+        QUNIFORM_BLEND_CONST_COLOR_Z,
+        QUNIFORM_BLEND_CONST_COLOR_W,
+
         QUNIFORM_STENCIL,
 
         QUNIFORM_ALPHA_REF,
@@ -414,6 +420,11 @@ struct vc4_compile {
         uint32_t variant_id;
 };
 
+/* Special nir_load_input intrinsic index for loading the current TLB
+ * destination color.
+ */
+#define VC4_NIR_TLB_COLOR_READ_INPUT		2000000000
+
 /* Special offset for nir_load_uniform values to get a QUNIFORM_*
  * state-dependent value.
  */
@@ -458,9 +469,12 @@ bool qir_opt_cse(struct vc4_compile *c);
 bool qir_opt_dead_code(struct vc4_compile *c);
 bool qir_opt_small_immediates(struct vc4_compile *c);
 bool qir_opt_vpm_writes(struct vc4_compile *c);
+void vc4_nir_lower_blend(struct vc4_compile *c);
 void vc4_nir_lower_io(struct vc4_compile *c);
 nir_ssa_def *vc4_nir_get_state_uniform(struct nir_builder *b,
                                        enum quniform_contents contents);
+nir_ssa_def *vc4_nir_get_swizzled_channel(struct nir_builder *b,
+                                          nir_ssa_def **srcs, int swiz);
 void qir_lower_uniforms(struct vc4_compile *c);
 
 void qpu_schedule_instructions(struct vc4_compile *c);
