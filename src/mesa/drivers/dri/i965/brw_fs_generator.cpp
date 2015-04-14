@@ -1940,6 +1940,16 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
       case FS_OPCODE_LINTERP:
 	 generate_linterp(inst, dst, src);
 	 break;
+      case FS_OPCODE_PIXEL_X:
+         assert(src[0].type == BRW_REGISTER_TYPE_UW);
+         src[0].subnr = 0 * type_sz(src[0].type);
+         brw_MOV(p, dst, stride(src[0], 8, 4, 1));
+         break;
+      case FS_OPCODE_PIXEL_Y:
+         assert(src[0].type == BRW_REGISTER_TYPE_UW);
+         src[0].subnr = 4 * type_sz(src[0].type);
+         brw_MOV(p, dst, stride(src[0], 8, 4, 1));
+         break;
       case SHADER_OPCODE_TEX:
       case FS_OPCODE_TXB:
       case SHADER_OPCODE_TXD:

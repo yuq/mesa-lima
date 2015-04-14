@@ -3478,27 +3478,58 @@ fs_visitor::emit_interpolation_setup_gen6()
 {
    struct brw_reg g1_uw = retype(brw_vec1_grf(1, 0), BRW_REGISTER_TYPE_UW);
 
-   /* If the pixel centers end up used, the setup is the same as for gen4. */
    this->current_annotation = "compute pixel centers";
-   fs_reg int_pixel_x = vgrf(glsl_type::uint_type);
-   fs_reg int_pixel_y = vgrf(glsl_type::uint_type);
-   int_pixel_x.type = BRW_REGISTER_TYPE_UW;
-   int_pixel_y.type = BRW_REGISTER_TYPE_UW;
-   emit(ADD(int_pixel_x,
-            fs_reg(stride(suboffset(g1_uw, 4), 2, 4, 0)),
-            fs_reg(brw_imm_v(0x10101010))));
-   emit(ADD(int_pixel_y,
-            fs_reg(stride(suboffset(g1_uw, 5), 2, 4, 0)),
-            fs_reg(brw_imm_v(0x11001100))));
+   if (brw->gen >= 8 || dispatch_width == 8) {
+      /* The "Register Region Restrictions" page says for BDW (and newer,
+       * presumably):
+       *
+       *     "When destination spans two registers, the source may be one or
+       *      two registers. The destination elements must be evenly split
+       *      between the two registers."
+       *
+       * Thus we can do a single add(16) in SIMD8 or an add(32) in SIMD16 to
+       * compute our pixel centers.
+       */
+      fs_reg int_pixel_xy(GRF, alloc.allocate(dispatch_width / 8),
+                          BRW_REGISTER_TYPE_UW, dispatch_width * 2);
+      emit(ADD(int_pixel_xy,
+               fs_reg(stride(suboffset(g1_uw, 4), 1, 4, 0)),
+               fs_reg(brw_imm_v(0x11001010))))
+         ->force_writemask_all = true;
 
-   /* As of gen6, we can no longer mix float and int sources.  We have
-    * to turn the integer pixel centers into floats for their actual
-    * use.
-    */
-   this->pixel_x = vgrf(glsl_type::float_type);
-   this->pixel_y = vgrf(glsl_type::float_type);
-   emit(MOV(this->pixel_x, int_pixel_x));
-   emit(MOV(this->pixel_y, int_pixel_y));
+      this->pixel_x = vgrf(glsl_type::float_type);
+      this->pixel_y = vgrf(glsl_type::float_type);
+      emit(FS_OPCODE_PIXEL_X, this->pixel_x, int_pixel_xy);
+      emit(FS_OPCODE_PIXEL_Y, this->pixel_y, int_pixel_xy);
+   } else {
+      /* The "Register Region Restrictions" page says for SNB, IVB, HSW:
+       *
+       *     "When destination spans two registers, the source MUST span two
+       *      registers."
+       *
+       * Since the GRF source of the ADD will only read a single register, we
+       * must do two separate ADDs in SIMD16.
+       */
+      fs_reg int_pixel_x = vgrf(glsl_type::uint_type);
+      fs_reg int_pixel_y = vgrf(glsl_type::uint_type);
+      int_pixel_x.type = BRW_REGISTER_TYPE_UW;
+      int_pixel_y.type = BRW_REGISTER_TYPE_UW;
+      emit(ADD(int_pixel_x,
+               fs_reg(stride(suboffset(g1_uw, 4), 2, 4, 0)),
+               fs_reg(brw_imm_v(0x10101010))));
+      emit(ADD(int_pixel_y,
+               fs_reg(stride(suboffset(g1_uw, 5), 2, 4, 0)),
+               fs_reg(brw_imm_v(0x11001100))));
+
+      /* As of gen6, we can no longer mix float and int sources.  We have
+       * to turn the integer pixel centers into floats for their actual
+       * use.
+       */
+      this->pixel_x = vgrf(glsl_type::float_type);
+      this->pixel_y = vgrf(glsl_type::float_type);
+      emit(MOV(this->pixel_x, int_pixel_x));
+      emit(MOV(this->pixel_y, int_pixel_y));
+   }
 
    this->current_annotation = "compute pos.w";
    this->pixel_w = fs_reg(brw_vec8_grf(payload.source_w_reg, 0));
