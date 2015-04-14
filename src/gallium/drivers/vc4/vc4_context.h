@@ -303,6 +303,11 @@ struct vc4_depth_stencil_alpha_state {
         uint32_t stencil_uniforms[3];
 };
 
+#define perf_debug(...) do {                            \
+        if (unlikely(vc4_debug & VC4_DEBUG_PERF))       \
+                fprintf(stderr, __VA_ARGS__);           \
+} while (0)
+
 static inline struct vc4_context *
 vc4_context(struct pipe_context *pcontext)
 {

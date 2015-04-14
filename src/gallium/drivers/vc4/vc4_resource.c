@@ -586,6 +586,9 @@ vc4_update_shadow_baselevel_texture(struct pipe_context *pctx,
         if (shadow->writes == orig->writes)
                 return;
 
+        perf_debug("Updating shadow texture due to %s\n",
+                   view->u.tex.first_level ? "base level" : "raster layout");
+
         for (int i = 0; i <= shadow->base.b.last_level; i++) {
                 unsigned width = u_minify(shadow->base.b.width0, i);
                 unsigned height = u_minify(shadow->base.b.height0, i);
@@ -645,6 +648,8 @@ vc4_update_shadow_index_buffer(struct pipe_context *pctx,
 
         if (shadow->writes == orig->writes)
                 return;
+
+        perf_debug("Fallback conversion for %d uint indices\n", count);
 
         struct pipe_transfer *src_transfer;
         uint32_t *src = pipe_buffer_map_range(pctx, &orig->base.b,

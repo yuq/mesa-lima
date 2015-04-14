@@ -22,6 +22,7 @@
  * IN THE SOFTWARE.
  */
 
+#include "util/u_prim.h"
 #include "util/u_format.h"
 #include "util/u_pack_color.h"
 #include "indices/u_primconvert.h"
@@ -139,6 +140,8 @@ vc4_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
                 util_primconvert_save_index_buffer(vc4->primconvert, &vc4->indexbuf);
                 util_primconvert_save_rasterizer_state(vc4->primconvert, &vc4->rasterizer->base);
                 util_primconvert_draw_vbo(vc4->primconvert, info);
+                perf_debug("Fallback conversion for %d %s vertices\n",
+                           info->count, u_prim_name(info->mode));
                 return;
         }
 
@@ -303,8 +306,10 @@ vc4_clear(struct pipe_context *pctx, unsigned buffers,
         /* We can't flag new buffers for clearing once we've queued draws.  We
          * could avoid this by using the 3d engine to clear.
          */
-        if (vc4->draw_call_queued)
+        if (vc4->draw_call_queued) {
+                perf_debug("Flushing rendering to process new clear.");
                 vc4_flush(pctx);
+        }
 
         if (buffers & PIPE_CLEAR_COLOR0) {
                 vc4->clear_color[0] = vc4->clear_color[1] =
