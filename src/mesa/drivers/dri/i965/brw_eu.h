@@ -99,6 +99,7 @@ struct brw_compile {
 
 void brw_pop_insn_state( struct brw_compile *p );
 void brw_push_insn_state( struct brw_compile *p );
+void brw_set_default_exec_size(struct brw_compile *p, unsigned value);
 void brw_set_default_mask_control( struct brw_compile *p, unsigned value );
 void brw_set_default_saturate( struct brw_compile *p, bool enable );
 void brw_set_default_access_mode( struct brw_compile *p, unsigned access_mode );

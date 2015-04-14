@@ -110,6 +110,12 @@ brw_swap_cmod(uint32_t cmod)
    }
 }
 
+void
+brw_set_default_exec_size(struct brw_compile *p, unsigned value)
+{
+   brw_inst_set_exec_size(p->brw, p->current, value);
+}
+
 void brw_set_default_predicate_control( struct brw_compile *p, unsigned pc )
 {
    brw_inst_set_pred_control(p->brw, p->current, pc);
@@ -228,6 +234,7 @@ brw_init_compile(struct brw_context *brw, struct brw_compile *p, void *mem_ctx)
 
    /* Some defaults?
     */
+   brw_set_default_exec_size(p, BRW_EXECUTE_8);
    brw_set_default_mask_control(p, BRW_MASK_ENABLE); /* what does this do? */
    brw_set_default_saturate(p, 0);
    brw_set_default_compression_control(p, BRW_COMPRESSION_NONE);

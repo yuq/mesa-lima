@@ -36,25 +36,6 @@
 
 #include "util/ralloc.h"
 
-/***********************************************************************
- * Internal helper for constructing instructions
- */
-
-static void guess_execution_size(struct brw_compile *p,
-				 brw_inst *insn,
-				 struct brw_reg reg)
-{
-   const struct brw_context *brw = p->brw;
-
-   if (reg.width == BRW_WIDTH_8 && p->compressed) {
-      brw_inst_set_exec_size(brw, insn, BRW_EXECUTE_16);
-   } else {
-      /* Register width definitions are compatible with BRW_EXECUTE_* enums. */
-      brw_inst_set_exec_size(brw, insn, reg.width);
-   }
-}
-
-
 /**
  * Prior to Sandybridge, the SEND instruction accepted non-MRF source
  * registers, implicitly moving the operand to a message register.
@@ -76,6 +57,7 @@ gen6_resolve_implied_move(struct brw_compile *p,
 
    if (src->file != BRW_ARCHITECTURE_REGISTER_FILE || src->nr != BRW_ARF_NULL) {
       brw_push_insn_state(p);
+      brw_set_default_exec_size(p, BRW_EXECUTE_8);
       brw_set_default_mask_control(p, BRW_MASK_DISABLE);
       brw_set_default_compression_control(p, BRW_COMPRESSION_NONE);
       brw_MOV(p, retype(brw_message_reg(msg_reg_nr), BRW_REGISTER_TYPE_UD),
@@ -215,10 +197,12 @@ brw_set_dest(struct brw_compile *p, brw_inst *inst, struct brw_reg dest)
       }
    }
 
-   /* NEW: Set the execution size based on dest.width and
-    * inst->compression_control:
+   /* Generators should set a default exec_size of either 8 (SIMD4x2 or SIMD8)
+    * or 16 (SIMD16), as that's normally correct.  However, when dealing with
+    * small registers, we automatically reduce it to match the register size.
     */
-   guess_execution_size(p, inst, dest);
+   if (dest.width < BRW_EXECUTE_8)
+      brw_inst_set_exec_size(brw, inst, dest.width);
 }
 
 extern int reg_type_size[];
@@ -874,7 +858,6 @@ brw_alu3(struct brw_compile *p, unsigned opcode, struct brw_reg dest,
    brw_inst_set_3src_dst_reg_nr(brw, inst, dest.nr);
    brw_inst_set_3src_dst_subreg_nr(brw, inst, dest.subnr / 16);
    brw_inst_set_3src_dst_writemask(brw, inst, dest.dw1.bits.writemask);
-   guess_execution_size(p, inst, dest);
 
    assert(src0.file == BRW_GENERAL_REGISTER_FILE);
    assert(src0.address_mode == BRW_ADDRESS_DIRECT);
@@ -2015,6 +1998,7 @@ void brw_oword_block_write_scratch(struct brw_compile *p,
     */
    {
       brw_push_insn_state(p);
+      brw_set_default_exec_size(p, BRW_EXECUTE_8);
       brw_set_default_mask_control(p, BRW_MASK_DISABLE);
       brw_set_default_compression_control(p, BRW_COMPRESSION_NONE);
 
@@ -2135,6 +2119,7 @@ brw_oword_block_read_scratch(struct brw_compile *p,
 
    {
       brw_push_insn_state(p);
+      brw_set_default_exec_size(p, BRW_EXECUTE_8);
       brw_set_default_compression_control(p, BRW_COMPRESSION_NONE);
       brw_set_default_mask_control(p, BRW_MASK_DISABLE);
 
@@ -2228,6 +2213,7 @@ void brw_oword_block_read(struct brw_compile *p,
    mrf = retype(mrf, BRW_REGISTER_TYPE_UD);
 
    brw_push_insn_state(p);
+   brw_set_default_exec_size(p, BRW_EXECUTE_8);
    brw_set_default_predicate_control(p, BRW_PREDICATE_NONE);
    brw_set_default_compression_control(p, BRW_COMPRESSION_NONE);
    brw_set_default_mask_control(p, BRW_MASK_DISABLE);

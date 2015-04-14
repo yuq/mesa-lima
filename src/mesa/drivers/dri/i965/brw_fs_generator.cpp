@@ -207,6 +207,7 @@ fs_generator::fire_fb_write(fs_inst *inst,
 
    if (brw->gen < 6) {
       brw_push_insn_state(p);
+      brw_set_default_exec_size(p, BRW_EXECUTE_8);
       brw_set_default_mask_control(p, BRW_MASK_DISABLE);
       brw_set_default_predicate_control(p, BRW_PREDICATE_NONE);
       brw_set_default_compression_control(p, BRW_COMPRESSION_NONE);
@@ -287,11 +288,13 @@ fs_generator::generate_fb_write(fs_inst *inst, struct brw_reg payload)
       }
 
       if (brw->gen >= 6) {
+         brw_push_insn_state(p);
+         brw_set_default_exec_size(p, BRW_EXECUTE_16);
 	 brw_set_default_compression_control(p, BRW_COMPRESSION_COMPRESSED);
 	 brw_MOV(p,
 		 retype(payload, BRW_REGISTER_TYPE_UD),
 		 retype(brw_vec8_grf(0, 0), BRW_REGISTER_TYPE_UD));
-	 brw_set_default_compression_control(p, BRW_COMPRESSION_NONE);
+         brw_pop_insn_state(p);
 
          if (inst->target > 0 && key->replicate_alpha) {
             /* Set "Source0 Alpha Present to RenderTarget" bit in message
@@ -448,12 +451,14 @@ fs_generator::generate_math_gen6(fs_inst *inst,
    if (dispatch_width == 8) {
       gen6_math(p, dst, op, src0, src1);
    } else if (dispatch_width == 16) {
+      brw_push_insn_state(p);
+      brw_set_default_exec_size(p, BRW_EXECUTE_8);
       brw_set_default_compression_control(p, BRW_COMPRESSION_NONE);
       gen6_math(p, firsthalf(dst), op, firsthalf(src0), firsthalf(src1));
       brw_set_default_compression_control(p, BRW_COMPRESSION_2NDHALF);
       gen6_math(p, sechalf(dst), op, sechalf(src0),
                 binop ? sechalf(src1) : brw_null_reg());
-      brw_set_default_compression_control(p, BRW_COMPRESSION_COMPRESSED);
+      brw_pop_insn_state(p);
    }
 }
 
@@ -472,6 +477,7 @@ fs_generator::generate_math_gen4(fs_inst *inst,
                 inst->base_mrf, src,
                 BRW_MATH_PRECISION_FULL);
    } else if (dispatch_width == 16) {
+      brw_set_default_exec_size(p, BRW_EXECUTE_8);
       brw_set_default_compression_control(p, BRW_COMPRESSION_NONE);
       gen4_math(p, firsthalf(dst),
 	        op,
@@ -718,6 +724,7 @@ fs_generator::generate_tex(fs_inst *inst, struct brw_reg dst, struct brw_reg src
          }
 
          brw_push_insn_state(p);
+         brw_set_default_exec_size(p, BRW_EXECUTE_8);
          brw_set_default_mask_control(p, BRW_MASK_DISABLE);
          brw_set_default_compression_control(p, BRW_COMPRESSION_NONE);
          /* Explicitly set up the message header by copying g0 to the MRF. */
@@ -1333,6 +1340,7 @@ fs_generator::generate_set_simd4x2_offset(fs_inst *inst,
    assert(value.file == BRW_IMMEDIATE_VALUE);
 
    brw_push_insn_state(p);
+   brw_set_default_exec_size(p, BRW_EXECUTE_8);
    brw_set_default_compression_control(p, BRW_COMPRESSION_NONE);
    brw_set_default_mask_control(p, BRW_MASK_DISABLE);
    brw_MOV(p, retype(brw_vec1_reg(dst.file, dst.nr, 0), value.type), value);
@@ -1358,8 +1366,6 @@ fs_generator::generate_set_omask(fs_inst *inst,
    assert(stride_8_8_1 || stride_0_1_0);
    assert(dst.type == BRW_REGISTER_TYPE_UW);
 
-   if (dispatch_width == 16)
-      dst = vec16(dst);
    brw_push_insn_state(p);
    brw_set_default_compression_control(p, BRW_COMPRESSION_NONE);
    brw_set_default_mask_control(p, BRW_MASK_DISABLE);
@@ -1387,6 +1393,7 @@ fs_generator::generate_set_sample_id(fs_inst *inst,
           src0.type == BRW_REGISTER_TYPE_UD);
 
    brw_push_insn_state(p);
+   brw_set_default_exec_size(p, BRW_EXECUTE_8);
    brw_set_default_compression_control(p, BRW_COMPRESSION_NONE);
    brw_set_default_mask_control(p, BRW_MASK_DISABLE);
    struct brw_reg reg = retype(stride(src1, 1, 4, 0), BRW_REGISTER_TYPE_UW);
@@ -1606,6 +1613,7 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
       brw_set_default_saturate(p, inst->saturate);
       brw_set_default_mask_control(p, inst->force_writemask_all);
       brw_set_default_acc_write_control(p, inst->writes_accumulator);
+      brw_set_default_exec_size(p, cvt(inst->exec_size) - 1);
 
       switch (inst->exec_size) {
       case 1:
@@ -1653,6 +1661,7 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
          assert(brw->gen >= 6);
 	 brw_set_default_access_mode(p, BRW_ALIGN_16);
          if (dispatch_width == 16 && !brw_supports_simd16_3src(brw)) {
+            brw_set_default_exec_size(p, BRW_EXECUTE_8);
 	    brw_set_default_compression_control(p, BRW_COMPRESSION_NONE);
             brw_inst *f = brw_MAD(p, firsthalf(dst), firsthalf(src[0]), firsthalf(src[1]), firsthalf(src[2]));
 	    brw_set_default_compression_control(p, BRW_COMPRESSION_2NDHALF);
@@ -1674,6 +1683,7 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
          assert(brw->gen >= 6);
 	 brw_set_default_access_mode(p, BRW_ALIGN_16);
          if (dispatch_width == 16 && !brw_supports_simd16_3src(brw)) {
+            brw_set_default_exec_size(p, BRW_EXECUTE_8);
 	    brw_set_default_compression_control(p, BRW_COMPRESSION_NONE);
             brw_inst *f = brw_LRP(p, firsthalf(dst), firsthalf(src[0]), firsthalf(src[1]), firsthalf(src[2]));
 	    brw_set_default_compression_control(p, BRW_COMPRESSION_2NDHALF);
@@ -1747,6 +1757,7 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
           */
          if (dispatch_width == 16 && brw->gen == 7 && !brw->is_haswell) {
             if (dst.file == BRW_GENERAL_REGISTER_FILE) {
+               brw_set_default_exec_size(p, BRW_EXECUTE_8);
                brw_set_default_compression_control(p, BRW_COMPRESSION_NONE);
                brw_CMP(p, firsthalf(dst), inst->conditional_mod,
                           firsthalf(src[0]), firsthalf(src[1]));
@@ -1811,6 +1822,7 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
          assert(brw->gen >= 7);
          brw_set_default_access_mode(p, BRW_ALIGN_16);
          if (dispatch_width == 16 && !brw_supports_simd16_3src(brw)) {
+            brw_set_default_exec_size(p, BRW_EXECUTE_8);
             brw_set_default_compression_control(p, BRW_COMPRESSION_NONE);
             brw_BFE(p, firsthalf(dst), firsthalf(src[0]), firsthalf(src[1]), firsthalf(src[2]));
             brw_set_default_compression_control(p, BRW_COMPRESSION_2NDHALF);
@@ -1830,6 +1842,7 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
           *    "Force BFI instructions to be executed always in SIMD8."
           */
          if (dispatch_width == 16 && brw->is_haswell) {
+            brw_set_default_exec_size(p, BRW_EXECUTE_8);
             brw_set_default_compression_control(p, BRW_COMPRESSION_NONE);
             brw_BFI1(p, firsthalf(dst), firsthalf(src[0]), firsthalf(src[1]));
             brw_set_default_compression_control(p, BRW_COMPRESSION_2NDHALF);
@@ -1852,6 +1865,7 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
           */
          if (dispatch_width == 16 &&
              (brw->is_haswell || !brw_supports_simd16_3src(brw))) {
+            brw_set_default_exec_size(p, BRW_EXECUTE_8);
             brw_set_default_compression_control(p, BRW_COMPRESSION_NONE);
             brw_BFI2(p, firsthalf(dst), firsthalf(src[0]), firsthalf(src[1]), firsthalf(src[2]));
             brw_set_default_compression_control(p, BRW_COMPRESSION_2NDHALF);
