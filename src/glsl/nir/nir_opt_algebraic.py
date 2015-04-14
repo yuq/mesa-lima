@@ -133,7 +133,7 @@ optimizations = [
    (('ishr', 0, a), 0),
    (('ishr', a, 0), a),
    (('ushr', 0, a), 0),
-   (('ushr', a, 0), 0),
+   (('ushr', a, 0), a),
    # Exponential/logarithmic identities
    (('fexp2', ('flog2', a)), a), # 2^lg2(a) = a
    (('fexp',  ('flog',  a)), a), # e^ln(a)  = a
