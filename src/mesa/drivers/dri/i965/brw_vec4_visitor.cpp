@@ -2630,7 +2630,7 @@ vec4_visitor::visit(ir_texture *ir)
 
    if (ir->offset != NULL && !has_nonconstant_offset) {
       inst->offset =
-         brw_texture_offset(ctx, ir->offset->as_constant()->value.i,
+         brw_texture_offset(ir->offset->as_constant()->value.i,
                             ir->offset->type->vector_elements);
    }
 

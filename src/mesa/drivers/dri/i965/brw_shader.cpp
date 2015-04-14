@@ -393,14 +393,8 @@ brw_math_function(enum opcode op)
 }
 
 uint32_t
-brw_texture_offset(struct gl_context *ctx, int *offsets,
-                   unsigned num_components)
+brw_texture_offset(int *offsets, unsigned num_components)
 {
-   /* If the driver does not support GL_ARB_gpu_shader5, the offset
-    * must be constant.
-    */
-   assert(offsets != NULL || ctx->Extensions.ARB_gpu_shader5);
-
    if (!offsets) return 0;  /* nonconstant offset; caller will handle it. */
 
    /* Combine all three offsets into a single unsigned dword:

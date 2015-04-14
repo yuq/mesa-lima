@@ -1707,7 +1707,7 @@ fs_visitor::nir_emit_texture(nir_tex_instr *instr)
    for (unsigned i = 0; i < 3; i++) {
       if (instr->const_offset[i] != 0) {
          assert(offset_components == 0);
-         tex_offset = fs_reg(brw_texture_offset(ctx, instr->const_offset, 3));
+         tex_offset = fs_reg(brw_texture_offset(instr->const_offset, 3));
          break;
       }
    }

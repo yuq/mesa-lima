@@ -2351,7 +2351,7 @@ fs_visitor::visit(ir_texture *ir)
           * offset, and a non-constant offset.
           */
          offset_value =
-            fs_reg(brw_texture_offset(ctx, const_offset->value.i,
+            fs_reg(brw_texture_offset(const_offset->value.i,
                                       const_offset->type->vector_elements));
       } else {
          ir->offset->accept(this);
