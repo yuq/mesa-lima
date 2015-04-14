@@ -5532,14 +5532,12 @@ get_mesa_program(struct gl_context *ctx,
    v->emit(NULL, TGSI_OPCODE_END);
 
    if (ctx->_Shader->Flags & GLSL_DUMP) {
-      printf("\n");
-      printf("GLSL IR for linked %s program %d:\n",
+      _mesa_log("\n");
+      _mesa_log("GLSL IR for linked %s program %d:\n",
              _mesa_shader_stage_to_string(shader->Stage),
              shader_program->Name);
-      _mesa_print_ir(stdout, shader->ir, NULL);
-      printf("\n");
-      printf("\n");
-      fflush(stdout);
+      _mesa_print_ir(_mesa_get_log_file(), shader->ir, NULL);
+      _mesa_log("\n\n");
    }
 
    prog->Instructions = NULL;
