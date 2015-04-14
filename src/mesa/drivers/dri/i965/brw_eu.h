@@ -70,6 +70,7 @@ struct brw_compile {
    bool single_program_flow;
    bool compressed;
    struct brw_context *brw;
+   const struct brw_device_info *devinfo;
 
    /* Control flow stacks:
     * - if_stack contains IF and ELSE instructions which must be patched

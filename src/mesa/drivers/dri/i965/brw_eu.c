@@ -218,6 +218,7 @@ brw_init_compile(struct brw_context *brw, struct brw_compile *p, void *mem_ctx)
    memset(p, 0, sizeof(*p));
 
    p->brw = brw;
+   p->devinfo = brw->intelScreen->devinfo;
    /*
     * Set the initial instruction store array size to 1024, if found that
     * isn't enough, then it will double the store size at brw_next_insn()
