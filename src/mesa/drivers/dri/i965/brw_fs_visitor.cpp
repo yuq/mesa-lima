@@ -1839,6 +1839,15 @@ fs_visitor::emit_texture_gen7(ir_texture_opcode op, fs_reg dst,
       offset_value.file != BAD_FILE && offset_value.file != IMM;
    bool coordinate_done = false;
 
+   /* The sampler can only meaningfully compute LOD for fragment shader
+    * messages. For all other stages, we change the opcode to ir_txl and
+    * hardcode the LOD to 0.
+    */
+   if (stage != MESA_SHADER_FRAGMENT && op == ir_tex) {
+      op = ir_txl;
+      lod = fs_reg(0.0f);
+   }
+
    /* Set up the LOD info */
    switch (op) {
    case ir_tex:
