@@ -583,7 +583,7 @@ vc4_update_shadow_baselevel_texture(struct pipe_context *pctx,
         struct vc4_resource *orig = vc4_resource(shadow->shadow_parent);
         assert(orig);
 
-        if (shadow->writes == orig->writes)
+        if (shadow->writes == orig->writes && orig->bo->private)
                 return;
 
         perf_debug("Updating shadow texture due to %s\n",

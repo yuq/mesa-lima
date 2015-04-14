@@ -578,13 +578,8 @@ vc4_set_sampler_views(struct pipe_context *pctx, unsigned shader,
         vc4->dirty |= VC4_DIRTY_TEXSTATE;
 
         for (i = 0; i < nr; i++) {
-                if (views[i]) {
-                        struct vc4_resource *rsc =
-                                vc4_resource(views[i]->texture);
+                if (views[i])
                         new_nr = i + 1;
-                        if (rsc->shadow_parent)
-                                vc4_update_shadow_baselevel_texture(pctx, views[i]);
-                }
                 pipe_sampler_view_reference(&stage_tex->textures[i], views[i]);
                 stage_tex->dirty_samplers |= (1 << i);
         }
