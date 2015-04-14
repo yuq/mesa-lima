@@ -633,15 +633,22 @@ struct intel_mipmap_tree
     * The SURFACE_STATE bits associated with the last fast color clear to this
     * color mipmap tree, if any.
     *
-    * This value will only ever contain ones in bits 28-31, so it is safe to
-    * OR into dword 7 of SURFACE_STATE.
+    * Prior to GEN9 there is a single bit for RGBA clear values which gives you
+    * the option of 2^4 clear colors. Each bit determines if the color channel
+    * is fully saturated or unsaturated (Cherryview does add a 32b value per
+    * channel, but it is globally applied instead of being part of the render
+    * surface state). Starting with GEN9, the surface state accepts a 32b value
+    * for each color channel.
     *
     * @see RENDER_SURFACE_STATE.RedClearColor
     * @see RENDER_SURFACE_STATE.GreenClearColor
     * @see RENDER_SURFACE_STATE.BlueClearColor
     * @see RENDER_SURFACE_STATE.AlphaClearColor
     */
-   uint32_t fast_clear_color_value;
+   union {
+      uint32_t fast_clear_color_value;
+      union gl_color_union gen9_fast_clear_color;
+   };
 
    /**
     * Disable allocation of auxiliary buffers, such as the HiZ buffer and MCS

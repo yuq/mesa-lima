@@ -204,7 +204,7 @@ brw_draw_rectlist(struct gl_context *ctx, struct rect *rect, int num_instances)
 }
 
 static void
-get_fast_clear_rect(struct gl_framebuffer *fb,
+get_fast_clear_rect(struct brw_context *brw, struct gl_framebuffer *fb,
                     struct intel_renderbuffer *irb, struct rect *rect)
 {
    unsigned int x_align, y_align;
@@ -228,7 +228,14 @@ get_fast_clear_rect(struct gl_framebuffer *fb,
        */
       intel_get_non_msrt_mcs_alignment(irb->mt, &x_align, &y_align);
       x_align *= 16;
-      y_align *= 32;
+
+      /* SKL+ line alignment requirement for Y-tiled are half those of the prior
+       * generations.
+       */
+      if (brw->gen >= 9)
+         y_align *= 16;
+      else
+         y_align *= 32;
 
       /* From the Ivy Bridge PRM, Vol2 Part1 11.7 "MCS Buffer for Render
        * Target(s)", beneath the "Fast Color Clear" bullet (p327):
@@ -265,8 +272,10 @@ get_fast_clear_rect(struct gl_framebuffer *fb,
        *     terms of (width,height) of the RT.
        *
        *     MSAA  Width of Clear Rect  Height of Clear Rect
+       *      2X     Ceil(1/8*width)      Ceil(1/2*height)
        *      4X     Ceil(1/8*width)      Ceil(1/2*height)
        *      8X     Ceil(1/2*width)      Ceil(1/2*height)
+       *     16X         width            Ceil(1/2*height)
        *
        * The text "with upper left co-ordinate to coincide with actual
        * rectangle being cleared" is a little confusing--it seems to imply
@@ -288,6 +297,9 @@ get_fast_clear_rect(struct gl_framebuffer *fb,
          break;
       case 8:
          x_scaledown = 2;
+         break;
+      case 16:
+         x_scaledown = 1;
          break;
       default:
          unreachable("Unexpected sample count for fast clear");
@@ -357,18 +369,25 @@ is_color_fast_clear_compatible(struct brw_context *brw,
 
 /**
  * Convert the given color to a bitfield suitable for ORing into DWORD 7 of
- * SURFACE_STATE.
+ * SURFACE_STATE (DWORD 12-15 on SKL+).
  */
-static uint32_t
-compute_fast_clear_color_bits(const union gl_color_union *color)
+static void
+set_fast_clear_color(struct brw_context *brw,
+                     struct intel_mipmap_tree *mt,
+                     const union gl_color_union *color)
 {
-   uint32_t bits = 0;
-   for (int i = 0; i < 4; i++) {
-      /* Testing for non-0 works for integer and float colors */
-      if (color->f[i] != 0.0f)
-         bits |= 1 << (GEN7_SURFACE_CLEAR_COLOR_SHIFT + (3 - i));
+   if (brw->gen >= 9) {
+      mt->gen9_fast_clear_color = *color;
+   } else {
+      mt->fast_clear_color_value = 0;
+      for (int i = 0; i < 4; i++) {
+         /* Testing for non-0 works for integer and float colors */
+         if (color->f[i] != 0.0f) {
+             mt->fast_clear_color_value |=
+                1 << (GEN7_SURFACE_CLEAR_COLOR_SHIFT + (3 - i));
+         }
+      }
    }
-   return bits;
 }
 
 static const uint32_t fast_clear_color[4] = { ~0, ~0, ~0, ~0 };
@@ -510,8 +529,7 @@ brw_meta_fast_clear(struct brw_context *brw, struct gl_framebuffer *fb,
 
       switch (clear_type) {
       case FAST_CLEAR:
-         irb->mt->fast_clear_color_value =
-            compute_fast_clear_color_bits(&ctx->Color.ClearColor);
+         set_fast_clear_color(brw, irb->mt, &ctx->Color.ClearColor);
          irb->need_downsample = true;
 
          /* If the buffer is already in INTEL_FAST_CLEAR_STATE_CLEAR, the
@@ -527,7 +545,7 @@ brw_meta_fast_clear(struct brw_context *brw, struct gl_framebuffer *fb,
          irb->mt->fast_clear_state = INTEL_FAST_CLEAR_STATE_RESOLVED;
          irb->need_downsample = true;
          fast_clear_buffers |= 1 << index;
-         get_fast_clear_rect(fb, irb, &fast_clear_rect);
+         get_fast_clear_rect(brw, fb, irb, &fast_clear_rect);
          break;
 
       case REP_CLEAR:
@@ -662,8 +680,9 @@ get_resolve_rect(struct brw_context *brw,
     *
     * The scaledown factors in the table that follows are related to the
     * alignment size returned by intel_get_non_msrt_mcs_alignment() by a
-    * multiplier.  For IVB and HSW, we divide by two, for BDW we multiply
-    * by 8 and 16 and 8 and 8 for SKL.
+    * multiplier. For IVB and HSW, we divide by two, for BDW we multiply
+    * by 8 and 16. Similar to the fast clear, SKL eases the BDW vertical scaling
+    * by a factor of 2.
     */
 
    intel_get_non_msrt_mcs_alignment(mt, &x_align, &y_align);
@@ -709,6 +728,10 @@ brw_meta_resolve_color(struct brw_context *brw,
 
    brw_bind_rep_write_shader(brw, (float *) fast_clear_color);
 
+   /* SKL+ also has a resolve mode for compressed render targets and thus more
+    * bits to let us select the type of resolve.  For fast clear resolves, it
+    * turns out we can use the same value as pre-SKL though.
+    */
    set_fast_clear_op(brw, GEN7_PS_RENDER_TARGET_RESOLVE_ENABLE);
 
    mt->fast_clear_state = INTEL_FAST_CLEAR_STATE_RESOLVED;

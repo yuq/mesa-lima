@@ -187,7 +187,21 @@ gen8_emit_fast_clear_color(struct brw_context *brw,
                            struct intel_mipmap_tree *mt,
                            uint32_t *surf)
 {
-   surf[7] |= mt->fast_clear_color_value;
+   if (brw->gen >= 9) {
+#define check_fast_clear_val(x) \
+      assert(mt->gen9_fast_clear_color.f[x] == 0.0 || \
+             mt->gen9_fast_clear_color.f[x] == 1.0)
+      check_fast_clear_val(0);
+      check_fast_clear_val(1);
+      check_fast_clear_val(2);
+      check_fast_clear_val(3);
+#undef check_fast_clear_val
+      surf[12] = mt->gen9_fast_clear_color.ui[0];
+      surf[13] = mt->gen9_fast_clear_color.ui[1];
+      surf[14] = mt->gen9_fast_clear_color.ui[2];
+      surf[15] = mt->gen9_fast_clear_color.ui[3];
+   } else
+      surf[7] |= mt->fast_clear_color_value;
 }
 
 static void

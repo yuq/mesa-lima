@@ -192,6 +192,12 @@ intel_tiling_supports_non_msrt_mcs(struct brw_context *brw, unsigned tiling)
  *
  *     - MCS buffer for non-MSRT is supported only for RT formats 32bpp,
  *       64bpp, and 128bpp.
+ *
+ * From the Skylake documentation, it is made clear that X-tiling is no longer
+ * supported:
+ *
+ *     - MCS and Lossless compression is supported for TiledY/TileYs/TileYf
+ *     non-MSRTs only.
  */
 static bool
 intel_miptree_supports_non_msrt_fast_clear(struct brw_context *brw,
@@ -1495,6 +1501,17 @@ intel_miptree_alloc_non_msrt_mcs(struct brw_context *brw,
    intel_get_non_msrt_mcs_alignment(mt, &block_width_px, &block_height);
    unsigned width_divisor = block_width_px * 4;
    unsigned height_divisor = block_height * 8;
+
+   /* The Skylake MCS is twice as tall as the Broadwell MCS.
+    *
+    * In pre-Skylake, each bit in the MCS contained the state of 2 cachelines
+    * in the main surface. In Skylake, it's two bits.  The extra bit
+    * doubles the MCS height, not width, because in Skylake the MCS is always
+    * Y-tiled.
+    */
+   if (brw->gen >= 9)
+      height_divisor /= 2;
+
    unsigned mcs_width =
       ALIGN(mt->logical_width0, width_divisor) / width_divisor;
    unsigned mcs_height =
