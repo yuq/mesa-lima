@@ -784,14 +784,6 @@ intel_miptree_unmap(struct brw_context *brw,
 		    unsigned int level,
 		    unsigned int slice);
 
-uint32_t
-intel_miptree_choose_tiling(struct brw_context *brw,
-                            mesa_format format,
-                            uint32_t width0,
-                            uint32_t num_samples,
-                            enum intel_miptree_tiling_mode requested,
-                            struct intel_mipmap_tree *mt);
-
 void
 intel_hiz_exec(struct brw_context *brw, struct intel_mipmap_tree *mt,
 	       unsigned int level, unsigned int layer, enum gen6_hiz_op op);
