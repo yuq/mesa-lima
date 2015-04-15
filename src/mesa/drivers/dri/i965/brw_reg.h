@@ -53,7 +53,7 @@
 extern "C" {
 #endif
 
-struct brw_context;
+struct brw_device_info;
 
 /** Number of general purpose registers (VS, WM, etc) */
 #define BRW_MAX_GRF 128
@@ -218,7 +218,7 @@ enum PACKED brw_reg_type {
    BRW_REGISTER_TYPE_Q,
 };
 
-unsigned brw_reg_type_to_hw_type(const struct brw_context *brw,
+unsigned brw_reg_type_to_hw_type(const struct brw_device_info *devinfo,
                                  enum brw_reg_type type, unsigned file);
 const char *brw_reg_type_letters(unsigned brw_reg_type);
 

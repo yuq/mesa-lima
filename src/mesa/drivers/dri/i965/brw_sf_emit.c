@@ -730,7 +730,6 @@ void brw_emit_point_setup(struct brw_sf_compile *c, bool allocate)
 void brw_emit_anyprim_setup( struct brw_sf_compile *c )
 {
    struct brw_compile *p = &c->func;
-   struct brw_context *brw = p->brw;
    struct brw_reg payload_prim = brw_uw1_reg(BRW_GENERAL_REGISTER_FILE, 1, 0);
    struct brw_reg payload_attr = get_element_ud(brw_vec1_reg(BRW_GENERAL_REGISTER_FILE, 1, 0), 0);
    struct brw_reg primmask;
@@ -752,7 +751,7 @@ void brw_emit_anyprim_setup( struct brw_sf_compile *c )
 					       (1<<_3DPRIM_POLYGON) |
 					       (1<<_3DPRIM_RECTLIST) |
 					       (1<<_3DPRIM_TRIFAN_NOSTIPPLE)));
-   brw_inst_set_cond_modifier(brw, brw_last_inst, BRW_CONDITIONAL_Z);
+   brw_inst_set_cond_modifier(p->devinfo, brw_last_inst, BRW_CONDITIONAL_Z);
    jmp = brw_JMPI(p, brw_imm_d(0), BRW_PREDICATE_NORMAL) - p->store;
    brw_emit_tri_setup(c, false);
    brw_land_fwd_jump(p, jmp);
@@ -763,13 +762,13 @@ void brw_emit_anyprim_setup( struct brw_sf_compile *c )
 					       (1<<_3DPRIM_LINESTRIP_CONT) |
 					       (1<<_3DPRIM_LINESTRIP_BF) |
 					       (1<<_3DPRIM_LINESTRIP_CONT_BF)));
-   brw_inst_set_cond_modifier(brw, brw_last_inst, BRW_CONDITIONAL_Z);
+   brw_inst_set_cond_modifier(p->devinfo, brw_last_inst, BRW_CONDITIONAL_Z);
    jmp = brw_JMPI(p, brw_imm_d(0), BRW_PREDICATE_NORMAL) - p->store;
    brw_emit_line_setup(c, false);
    brw_land_fwd_jump(p, jmp);
 
    brw_AND(p, v1_null_ud, payload_attr, brw_imm_ud(1<<BRW_SPRITE_POINT_ENABLE));
-   brw_inst_set_cond_modifier(brw, brw_last_inst, BRW_CONDITIONAL_Z);
+   brw_inst_set_cond_modifier(p->devinfo, brw_last_inst, BRW_CONDITIONAL_Z);
    jmp = brw_JMPI(p, brw_imm_d(0), BRW_PREDICATE_NORMAL) - p->store;
    brw_emit_point_sprite_setup(c, false);
    brw_land_fwd_jump(p, jmp);

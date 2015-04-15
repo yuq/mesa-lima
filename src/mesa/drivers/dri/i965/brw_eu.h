@@ -346,16 +346,16 @@ void brw_shader_time_add(struct brw_compile *p,
  * instruction.
  */
 static inline unsigned
-brw_jump_scale(const struct brw_context *brw)
+brw_jump_scale(const struct brw_device_info *devinfo)
 {
    /* Broadwell measures jump targets in bytes. */
-   if (brw->gen >= 8)
+   if (devinfo->gen >= 8)
       return 16;
 
    /* Ironlake and later measure jump targets in 64-bit data chunks (in order
     * (to support compaction), so each 128-bit instruction requires 2 chunks.
     */
-   if (brw->gen >= 5)
+   if (devinfo->gen >= 5)
       return 2;
 
    /* Gen4 simply uses the number of 128-bit instructions. */
@@ -475,11 +475,11 @@ void brw_debug_compact_uncompact(struct brw_context *brw, brw_inst *orig,
                                  brw_inst *uncompacted);
 
 static inline int
-next_offset(const struct brw_context *brw, void *store, int offset)
+next_offset(const struct brw_device_info *devinfo, void *store, int offset)
 {
    brw_inst *insn = (brw_inst *)((char *)store + offset);
 
-   if (brw_inst_cmpt_control(brw, insn))
+   if (brw_inst_cmpt_control(devinfo, insn))
       return offset + 8;
    else
       return offset + 16;

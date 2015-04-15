@@ -164,7 +164,7 @@ fs_generator::patch_discard_jumps_to_fb_writes()
    if (brw->gen < 6 || this->discard_halt_patches.is_empty())
       return false;
 
-   int scale = brw_jump_scale(brw);
+   int scale = brw_jump_scale(p->devinfo);
 
    /* There is a somewhat strange undocumented requirement of using
     * HALT, according to the simulator.  If some channel has HALTed to
@@ -178,17 +178,17 @@ fs_generator::patch_discard_jumps_to_fb_writes()
     * tests.
     */
    brw_inst *last_halt = gen6_HALT(p);
-   brw_inst_set_uip(brw, last_halt, 1 * scale);
-   brw_inst_set_jip(brw, last_halt, 1 * scale);
+   brw_inst_set_uip(p->devinfo, last_halt, 1 * scale);
+   brw_inst_set_jip(p->devinfo, last_halt, 1 * scale);
 
    int ip = p->nr_insn;
 
    foreach_in_list(ip_record, patch_ip, &discard_halt_patches) {
       brw_inst *patch = &p->store[patch_ip->ip];
 
-      assert(brw_inst_opcode(brw, patch) == BRW_OPCODE_HALT);
+      assert(brw_inst_opcode(p->devinfo, patch) == BRW_OPCODE_HALT);
       /* HALT takes a half-instruction distance from the pre-incremented IP. */
-      brw_inst_set_uip(brw, patch, (ip - patch_ip->ip) * scale);
+      brw_inst_set_uip(p->devinfo, patch, (ip - patch_ip->ip) * scale);
    }
 
    this->discard_halt_patches.make_empty();
@@ -337,10 +337,10 @@ fs_generator::generate_fb_write(fs_inst *inst, struct brw_reg payload)
               v1_null_ud,
               retype(brw_vec1_grf(1, 6), BRW_REGISTER_TYPE_UD),
               brw_imm_ud(1<<26));
-      brw_inst_set_cond_modifier(brw, brw_last_inst, BRW_CONDITIONAL_NZ);
+      brw_inst_set_cond_modifier(p->devinfo, brw_last_inst, BRW_CONDITIONAL_NZ);
 
       int jmp = brw_JMPI(p, brw_imm_ud(0), BRW_PREDICATE_NORMAL) - p->store;
-      brw_inst_set_exec_size(brw, brw_last_inst, BRW_EXECUTE_1);
+      brw_inst_set_exec_size(p->devinfo, brw_last_inst, BRW_EXECUTE_1);
       {
          /* Don't send AA data */
          fire_fb_write(inst, offset(payload, 1), implied_header, inst->mlen-1);
@@ -361,14 +361,14 @@ fs_generator::generate_urb_write(fs_inst *inst, struct brw_reg payload)
    brw_set_src0(p, insn, payload);
    brw_set_src1(p, insn, brw_imm_d(0));
 
-   brw_inst_set_sfid(brw, insn, BRW_SFID_URB);
-   brw_inst_set_urb_opcode(brw, insn, GEN8_URB_OPCODE_SIMD8_WRITE);
+   brw_inst_set_sfid(p->devinfo, insn, BRW_SFID_URB);
+   brw_inst_set_urb_opcode(p->devinfo, insn, GEN8_URB_OPCODE_SIMD8_WRITE);
 
-   brw_inst_set_mlen(brw, insn, inst->mlen);
-   brw_inst_set_rlen(brw, insn, 0);
-   brw_inst_set_eot(brw, insn, inst->eot);
-   brw_inst_set_header_present(brw, insn, true);
-   brw_inst_set_urb_global_offset(brw, insn, inst->offset);
+   brw_inst_set_mlen(p->devinfo, insn, inst->mlen);
+   brw_inst_set_rlen(p->devinfo, insn, 0);
+   brw_inst_set_eot(p->devinfo, insn, inst->eot);
+   brw_inst_set_header_present(p->devinfo, insn, true);
+   brw_inst_set_urb_global_offset(p->devinfo, insn, inst->offset);
 }
 
 void
@@ -793,8 +793,8 @@ fs_generator::generate_tex(fs_inst *inst, struct brw_reg dst, struct brw_reg src
    }
 
    if (is_combined_send) {
-      brw_inst_set_eot(brw, brw_last_inst, true);
-      brw_inst_set_opcode(brw, brw_last_inst, BRW_OPCODE_SENDC);
+      brw_inst_set_eot(p->devinfo, brw_last_inst, true);
+      brw_inst_set_opcode(p->devinfo, brw_last_inst, BRW_OPCODE_SENDC);
    }
 }
 
@@ -1091,7 +1091,7 @@ fs_generator::generate_uniform_pull_constant_load_gen7(fs_inst *inst,
 
       /* a0.0 = surf_index & 0xff */
       brw_inst *insn_and = brw_next_insn(p, BRW_OPCODE_AND);
-      brw_inst_set_exec_size(p->brw, insn_and, BRW_EXECUTE_1);
+      brw_inst_set_exec_size(p->devinfo, insn_and, BRW_EXECUTE_1);
       brw_set_dest(p, insn_and, addr);
       brw_set_src0(p, insn_and, vec1(retype(index, BRW_REGISTER_TYPE_UD)));
       brw_set_src1(p, insn_and, brw_imm_ud(0x0ff));
@@ -1162,11 +1162,11 @@ fs_generator::generate_varying_pull_constant_load(fs_inst *inst,
    gen6_resolve_implied_move(p, &header, inst->base_mrf);
 
    brw_inst *send = brw_next_insn(p, BRW_OPCODE_SEND);
-   brw_inst_set_qtr_control(brw, send, BRW_COMPRESSION_NONE);
+   brw_inst_set_qtr_control(p->devinfo, send, BRW_COMPRESSION_NONE);
    brw_set_dest(p, send, retype(dst, BRW_REGISTER_TYPE_UW));
    brw_set_src0(p, send, header);
    if (brw->gen < 6)
-      brw_inst_set_base_mrf(brw, send, inst->base_mrf);
+      brw_inst_set_base_mrf(p->devinfo, send, inst->base_mrf);
 
    /* Our surface is set up as floats, regardless of what actual data is
     * stored in it.
@@ -1239,7 +1239,7 @@ fs_generator::generate_varying_pull_constant_load_gen7(fs_inst *inst,
 
       /* a0.0 = surf_index & 0xff */
       brw_inst *insn_and = brw_next_insn(p, BRW_OPCODE_AND);
-      brw_inst_set_exec_size(p->brw, insn_and, BRW_EXECUTE_1);
+      brw_inst_set_exec_size(p->devinfo, insn_and, BRW_EXECUTE_1);
       brw_set_dest(p, insn_and, addr);
       brw_set_src0(p, insn_and, vec1(retype(index, BRW_REGISTER_TYPE_UD)));
       brw_set_src1(p, insn_and, brw_imm_ud(0x0ff));
@@ -1658,8 +1658,8 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
 	    brw_set_default_compression_control(p, BRW_COMPRESSION_COMPRESSED);
 
             if (inst->conditional_mod) {
-               brw_inst_set_cond_modifier(brw, f, inst->conditional_mod);
-               brw_inst_set_cond_modifier(brw, s, inst->conditional_mod);
+               brw_inst_set_cond_modifier(p->devinfo, f, inst->conditional_mod);
+               brw_inst_set_cond_modifier(p->devinfo, s, inst->conditional_mod);
                multiple_instructions_emitted = true;
             }
 	 } else {
@@ -1680,8 +1680,8 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
 	    brw_set_default_compression_control(p, BRW_COMPRESSION_COMPRESSED);
 
             if (inst->conditional_mod) {
-               brw_inst_set_cond_modifier(brw, f, inst->conditional_mod);
-               brw_inst_set_cond_modifier(brw, s, inst->conditional_mod);
+               brw_inst_set_cond_modifier(p->devinfo, f, inst->conditional_mod);
+               brw_inst_set_cond_modifier(p->devinfo, s, inst->conditional_mod);
                multiple_instructions_emitted = true;
             }
 	 } else {
@@ -2115,9 +2115,9 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
          brw_inst *last = &p->store[last_insn_offset / 16];
 
          if (inst->conditional_mod)
-            brw_inst_set_cond_modifier(brw, last, inst->conditional_mod);
-         brw_inst_set_no_dd_clear(brw, last, inst->no_dd_clear);
-         brw_inst_set_no_dd_check(brw, last, inst->no_dd_check);
+            brw_inst_set_cond_modifier(p->devinfo, last, inst->conditional_mod);
+         brw_inst_set_no_dd_clear(p->devinfo, last, inst->no_dd_clear);
+         brw_inst_set_no_dd_check(p->devinfo, last, inst->no_dd_check);
       }
    }
 

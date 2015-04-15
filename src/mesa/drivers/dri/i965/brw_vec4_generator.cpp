@@ -901,7 +901,7 @@ vec4_generator::generate_scratch_read(vec4_instruction *inst,
    brw_set_dest(p, send, dst);
    brw_set_src0(p, send, header);
    if (brw->gen < 6)
-      brw_inst_set_cond_modifier(brw, send, inst->base_mrf);
+      brw_inst_set_cond_modifier(p->devinfo, send, inst->base_mrf);
    brw_set_dp_read_message(p, send,
 			   255, /* binding table index: stateless access */
 			   BRW_DATAPORT_OWORD_DUAL_BLOCK_1OWORD,
@@ -972,7 +972,7 @@ vec4_generator::generate_scratch_write(vec4_instruction *inst,
    brw_set_dest(p, send, dst);
    brw_set_src0(p, send, header);
    if (brw->gen < 6)
-      brw_inst_set_cond_modifier(brw, send, inst->base_mrf);
+      brw_inst_set_cond_modifier(p->devinfo, send, inst->base_mrf);
    brw_set_dp_write_message(p, send,
 			    255, /* binding table index: stateless access */
 			    BRW_DATAPORT_OWORD_DUAL_BLOCK_1OWORD,
@@ -1018,7 +1018,7 @@ vec4_generator::generate_pull_constant_load(vec4_instruction *inst,
    brw_set_dest(p, send, dst);
    brw_set_src0(p, send, header);
    if (brw->gen < 6)
-      brw_inst_set_cond_modifier(brw, send, inst->base_mrf);
+      brw_inst_set_cond_modifier(p->devinfo, send, inst->base_mrf);
    brw_set_dp_read_message(p, send,
 			   surf_index,
 			   BRW_DATAPORT_OWORD_DUAL_BLOCK_1OWORD,
@@ -1066,7 +1066,7 @@ vec4_generator::generate_pull_constant_load_gen7(vec4_instruction *inst,
 
       /* a0.0 = surf_index & 0xff */
       brw_inst *insn_and = brw_next_insn(p, BRW_OPCODE_AND);
-      brw_inst_set_exec_size(p->brw, insn_and, BRW_EXECUTE_1);
+      brw_inst_set_exec_size(p->devinfo, insn_and, BRW_EXECUTE_1);
       brw_set_dest(p, insn_and, addr);
       brw_set_src0(p, insn_and, vec1(retype(surf_index, BRW_REGISTER_TYPE_UD)));
       brw_set_src1(p, insn_and, brw_imm_ud(0x0ff));
@@ -1339,7 +1339,7 @@ vec4_generator::generate_code(const cfg_t *cfg)
             gen6_IF(p, inst->conditional_mod, src[0], src[1]);
          } else {
             brw_inst *if_inst = brw_IF(p, BRW_EXECUTE_8);
-            brw_inst_set_pred_control(brw, if_inst, inst->predicate);
+            brw_inst_set_pred_control(p->devinfo, if_inst, inst->predicate);
          }
          break;
 
@@ -1553,16 +1553,16 @@ vec4_generator::generate_code(const cfg_t *cfg)
          src[0].hstride = BRW_HORIZONTAL_STRIDE_0;
          dst.subnr = offset * 4;
          struct brw_inst *insn = brw_MOV(p, dst, src[0]);
-         brw_inst_set_exec_size(brw, insn, BRW_EXECUTE_4);
-         brw_inst_set_no_dd_clear(brw, insn, true);
-         brw_inst_set_no_dd_check(brw, insn, inst->no_dd_check);
+         brw_inst_set_exec_size(p->devinfo, insn, BRW_EXECUTE_4);
+         brw_inst_set_no_dd_clear(p->devinfo, insn, true);
+         brw_inst_set_no_dd_check(p->devinfo, insn, inst->no_dd_check);
 
          src[0].subnr = 16;
          dst.subnr = 16 + offset * 4;
          insn = brw_MOV(p, dst, src[0]);
-         brw_inst_set_exec_size(brw, insn, BRW_EXECUTE_4);
-         brw_inst_set_no_dd_clear(brw, insn, inst->no_dd_clear);
-         brw_inst_set_no_dd_check(brw, insn, true);
+         brw_inst_set_exec_size(p->devinfo, insn, BRW_EXECUTE_4);
+         brw_inst_set_no_dd_clear(p->devinfo, insn, inst->no_dd_clear);
+         brw_inst_set_no_dd_check(p->devinfo, insn, true);
 
          brw_set_default_access_mode(p, BRW_ALIGN_16);
          break;
@@ -1590,9 +1590,9 @@ vec4_generator::generate_code(const cfg_t *cfg)
          brw_inst *last = &p->store[pre_emit_nr_insn];
 
          if (inst->conditional_mod)
-            brw_inst_set_cond_modifier(brw, last, inst->conditional_mod);
-         brw_inst_set_no_dd_clear(brw, last, inst->no_dd_clear);
-         brw_inst_set_no_dd_check(brw, last, inst->no_dd_check);
+            brw_inst_set_cond_modifier(p->devinfo, last, inst->conditional_mod);
+         brw_inst_set_no_dd_clear(p->devinfo, last, inst->no_dd_clear);
+         brw_inst_set_no_dd_check(p->devinfo, last, inst->no_dd_check);
       }
    }
 

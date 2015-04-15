@@ -67,20 +67,20 @@ test_compact_instruction(struct brw_compile *p, brw_inst src)
  * become meaningless once fuzzing twiddles a related bit.
  */
 static void
-clear_pad_bits(const struct brw_context *brw, brw_inst *inst)
+clear_pad_bits(const struct brw_device_info *devinfo, brw_inst *inst)
 {
-   if (brw_inst_opcode(brw, inst) != BRW_OPCODE_SEND &&
-       brw_inst_opcode(brw, inst) != BRW_OPCODE_SENDC &&
-       brw_inst_opcode(brw, inst) != BRW_OPCODE_BREAK &&
-       brw_inst_opcode(brw, inst) != BRW_OPCODE_CONTINUE &&
-       brw_inst_src0_reg_file(brw, inst) != BRW_IMMEDIATE_VALUE &&
-       brw_inst_src1_reg_file(brw, inst) != BRW_IMMEDIATE_VALUE) {
+   if (brw_inst_opcode(devinfo, inst) != BRW_OPCODE_SEND &&
+       brw_inst_opcode(devinfo, inst) != BRW_OPCODE_SENDC &&
+       brw_inst_opcode(devinfo, inst) != BRW_OPCODE_BREAK &&
+       brw_inst_opcode(devinfo, inst) != BRW_OPCODE_CONTINUE &&
+       brw_inst_src0_reg_file(devinfo, inst) != BRW_IMMEDIATE_VALUE &&
+       brw_inst_src1_reg_file(devinfo, inst) != BRW_IMMEDIATE_VALUE) {
       brw_inst_set_bits(inst, 127, 111, 0);
    }
 }
 
 static bool
-skip_bit(const struct brw_context *brw, brw_inst *src, int bit)
+skip_bit(const struct brw_device_info *devinfo, brw_inst *src, int bit)
 {
    /* pad bit */
    if (bit == 7)
@@ -99,12 +99,12 @@ skip_bit(const struct brw_context *brw, brw_inst *src, int bit)
       return true;
 
    /* sometimes these are pad bits. */
-   if (brw_inst_opcode(brw, src) != BRW_OPCODE_SEND &&
-       brw_inst_opcode(brw, src) != BRW_OPCODE_SENDC &&
-       brw_inst_opcode(brw, src) != BRW_OPCODE_BREAK &&
-       brw_inst_opcode(brw, src) != BRW_OPCODE_CONTINUE &&
-       brw_inst_src0_reg_file(brw, src) != BRW_IMMEDIATE_VALUE &&
-       brw_inst_src1_reg_file(brw, src) != BRW_IMMEDIATE_VALUE &&
+   if (brw_inst_opcode(devinfo, src) != BRW_OPCODE_SEND &&
+       brw_inst_opcode(devinfo, src) != BRW_OPCODE_SENDC &&
+       brw_inst_opcode(devinfo, src) != BRW_OPCODE_BREAK &&
+       brw_inst_opcode(devinfo, src) != BRW_OPCODE_CONTINUE &&
+       brw_inst_src0_reg_file(devinfo, src) != BRW_IMMEDIATE_VALUE &&
+       brw_inst_src1_reg_file(devinfo, src) != BRW_IMMEDIATE_VALUE &&
        bit >= 121) {
       return true;
    }
@@ -116,20 +116,20 @@ static bool
 test_fuzz_compact_instruction(struct brw_compile *p, brw_inst src)
 {
    for (int bit0 = 0; bit0 < 128; bit0++) {
-      if (skip_bit(p->brw, &src, bit0))
+      if (skip_bit(p->devinfo, &src, bit0))
 	 continue;
 
       for (int bit1 = 0; bit1 < 128; bit1++) {
          brw_inst instr = src;
 	 uint32_t *bits = (uint32_t *)&instr;
 
-         if (skip_bit(p->brw, &src, bit1))
+         if (skip_bit(p->devinfo, &src, bit1))
 	    continue;
 
 	 bits[bit0 / 32] ^= (1 << (bit0 & 31));
 	 bits[bit1 / 32] ^= (1 << (bit1 & 31));
 
-         clear_pad_bits(p->brw, &instr);
+         clear_pad_bits(p->devinfo, &instr);
 
 	 if (!test_compact_instruction(p, instr)) {
 	    printf("  twiddled bits for fuzzing %d, %d\n", bit0, bit1);
@@ -233,7 +233,7 @@ gen_f0_1_MOV_GRF_GRF(struct brw_compile *p)
    brw_push_insn_state(p);
    brw_set_default_predicate_control(p, true);
    brw_inst *mov = brw_MOV(p, g0, g2);
-   brw_inst_set_flag_subreg_nr(p->brw, mov, 1);
+   brw_inst_set_flag_subreg_nr(p->devinfo, mov, 1);
    brw_pop_insn_state(p);
 }
 
