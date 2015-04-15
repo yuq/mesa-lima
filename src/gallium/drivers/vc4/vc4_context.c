@@ -29,6 +29,7 @@
 #include "util/u_inlines.h"
 #include "util/u_memory.h"
 #include "util/u_blitter.h"
+#include "util/u_upload_mgr.h"
 #include "indices/u_primconvert.h"
 #include "pipe/p_screen.h"
 
@@ -410,6 +411,9 @@ vc4_context_destroy(struct pipe_context *pctx)
         if (vc4->primconvert)
                 util_primconvert_destroy(vc4->primconvert);
 
+        if (vc4->uploader)
+                u_upload_destroy(vc4->uploader);
+
         util_slab_destroy(&vc4->transfer_pool);
 
         pipe_surface_reference(&vc4->framebuffer.cbufs[0], NULL);
@@ -465,6 +469,9 @@ vc4_context_create(struct pipe_screen *pscreen, void *priv)
                                                    (1 << PIPE_PRIM_QUADS) - 1);
         if (!vc4->primconvert)
                 goto fail;
+
+        vc4->uploader = u_upload_create(pctx, 16 * 1024, 4,
+                                        PIPE_BIND_INDEX_BUFFER);
 
         vc4_debug |= saved_shaderdb_flag;
 

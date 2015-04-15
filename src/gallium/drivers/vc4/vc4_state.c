@@ -304,24 +304,8 @@ vc4_set_index_buffer(struct pipe_context *pctx,
 
         if (ib) {
                 assert(!ib->user_buffer);
-
-                if (ib->index_size == 4) {
-                        struct pipe_resource tmpl = *ib->buffer;
-                        assert(tmpl.format == PIPE_FORMAT_R8_UNORM);
-                        assert(tmpl.height0 == 1);
-                        tmpl.width0 = (tmpl.width0 - ib->offset) / 2;
-                        struct pipe_resource *pshadow =
-                                vc4_resource_create(&vc4->screen->base, &tmpl);
-                        struct vc4_resource *shadow = vc4_resource(pshadow);
-                        pipe_resource_reference(&shadow->shadow_parent, ib->buffer);
-
-                        pipe_resource_reference(&vc4->indexbuf.buffer, NULL);
-                        vc4->indexbuf.buffer = pshadow;
-                        vc4->indexbuf.index_size = 2;
-                } else {
-                        pipe_resource_reference(&vc4->indexbuf.buffer, ib->buffer);
-                        vc4->indexbuf.index_size = ib->index_size;
-                }
+                pipe_resource_reference(&vc4->indexbuf.buffer, ib->buffer);
+                vc4->indexbuf.index_size = ib->index_size;
                 vc4->indexbuf.offset = ib->offset;
         } else {
                 pipe_resource_reference(&vc4->indexbuf.buffer, NULL);

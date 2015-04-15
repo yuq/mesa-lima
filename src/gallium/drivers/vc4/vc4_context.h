@@ -243,6 +243,8 @@ struct vc4_context {
         /** Seqno of the last CL flush's job. */
         uint64_t last_emit_seqno;
 
+        struct u_upload_mgr *uploader;
+
         /** @{ Current pipeline state objects */
         struct pipe_scissor_state scissor;
         struct pipe_blend_state *blend;
