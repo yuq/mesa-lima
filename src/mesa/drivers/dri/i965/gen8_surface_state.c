@@ -255,8 +255,11 @@ gen8_emit_texture_surface_state(struct brw_context *brw,
    surf[5] = SET_FIELD(min_level - mt->first_level, GEN7_SURFACE_MIN_LOD) |
              (max_level - min_level - 1); /* mip count */
 
-   if (brw->gen >= 9)
+   if (brw->gen >= 9) {
       surf[5] |= SET_FIELD(tr_mode, GEN9_SURFACE_TRMODE);
+      /* Disable Mip Tail by setting a large value. */
+      surf[5] |= SET_FIELD(15, GEN9_SURFACE_MIP_TAIL_START_LOD);
+   }
 
    if (aux_mt) {
       surf[6] = SET_FIELD(mt->qpitch / 4, GEN8_SURFACE_AUX_QPITCH) |
@@ -478,8 +481,11 @@ gen8_update_renderbuffer_surface(struct brw_context *brw,
 
    surf[5] = irb->mt_level - irb->mt->first_level;
 
-   if (brw->gen >= 9)
+   if (brw->gen >= 9) {
       surf[5] |= SET_FIELD(tr_mode, GEN9_SURFACE_TRMODE);
+      /* Disable Mip Tail by setting a large value. */
+      surf[5] |= SET_FIELD(15, GEN9_SURFACE_MIP_TAIL_START_LOD);
+   }
 
    if (aux_mt) {
       surf[6] = SET_FIELD(mt->qpitch / 4, GEN8_SURFACE_AUX_QPITCH) |

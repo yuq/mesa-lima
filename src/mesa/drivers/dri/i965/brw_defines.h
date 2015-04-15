@@ -598,6 +598,9 @@
 #define GEN9_SURFACE_TRMODE_TILEYF         1
 #define GEN9_SURFACE_TRMODE_TILEYS         2
 
+#define GEN9_SURFACE_MIP_TAIL_START_LOD_SHIFT      8
+#define GEN9_SURFACE_MIP_TAIL_START_LOD_MASK       INTEL_MASK(11, 8)
+
 /* Surface state DW6 */
 #define GEN7_SURFACE_MCS_ENABLE                 (1 << 0)
 #define GEN7_SURFACE_MCS_PITCH_SHIFT            3
