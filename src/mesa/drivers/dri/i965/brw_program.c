@@ -346,7 +346,7 @@ print_shader_time_line(const char *stage, const char *name,
 {
    fprintf(stderr, "%-6s%-18s", stage, name);
 
-   if (shader_num != -1)
+   if (shader_num != 0)
       fprintf(stderr, "%4d: ", shader_num);
    else
       fprintf(stderr, "    : ");
@@ -443,7 +443,7 @@ brw_report_shader_time(struct brw_context *brw)
       if (scaled[i] == 0)
          continue;
 
-      int shader_num = -1;
+      int shader_num = 0;
       if (prog) {
          shader_num = prog->Name;
 
@@ -456,7 +456,6 @@ brw_report_shader_time(struct brw_context *brw)
              (brw->shader_time.types[i] == ST_FS8 ||
               brw->shader_time.types[i] == ST_FS16)) {
             shader_name = "ff";
-            shader_num = -1;
          } else {
             shader_name = "glsl";
          }
@@ -464,7 +463,6 @@ brw_report_shader_time(struct brw_context *brw)
          shader_num = brw->shader_time.programs[i]->Id;
          if (shader_num == 0) {
             shader_name = "ff";
-            shader_num = -1;
          } else {
             shader_name = "prog";
          }
@@ -495,10 +493,10 @@ brw_report_shader_time(struct brw_context *brw)
    }
 
    fprintf(stderr, "\n");
-   print_shader_time_line("total", "vs", -1, total_by_type[ST_VS], total);
-   print_shader_time_line("total", "gs", -1, total_by_type[ST_GS], total);
-   print_shader_time_line("total", "fs8", -1, total_by_type[ST_FS8], total);
-   print_shader_time_line("total", "fs16", -1, total_by_type[ST_FS16], total);
+   print_shader_time_line("total", "vs", 0, total_by_type[ST_VS], total);
+   print_shader_time_line("total", "gs", 0, total_by_type[ST_GS], total);
+   print_shader_time_line("total", "fs8", 0, total_by_type[ST_FS8], total);
+   print_shader_time_line("total", "fs16", 0, total_by_type[ST_FS16], total);
 }
 
 static void
