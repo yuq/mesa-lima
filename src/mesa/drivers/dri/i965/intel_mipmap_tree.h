@@ -753,7 +753,11 @@ brw_miptree_get_vertical_slice_pitch(const struct brw_context *brw,
                                      const struct intel_mipmap_tree *mt,
                                      unsigned level);
 
-void brw_miptree_layout(struct brw_context *brw, struct intel_mipmap_tree *mt);
+void
+brw_miptree_layout(struct brw_context *brw,
+                   bool for_bo,
+                   enum intel_miptree_tiling_mode requested,
+                   struct intel_mipmap_tree *mt);
 
 void *intel_miptree_map_raw(struct brw_context *brw,
                             struct intel_mipmap_tree *mt);
@@ -779,6 +783,14 @@ intel_miptree_unmap(struct brw_context *brw,
 		    struct intel_mipmap_tree *mt,
 		    unsigned int level,
 		    unsigned int slice);
+
+uint32_t
+intel_miptree_choose_tiling(struct brw_context *brw,
+                            mesa_format format,
+                            uint32_t width0,
+                            uint32_t num_samples,
+                            enum intel_miptree_tiling_mode requested,
+                            struct intel_mipmap_tree *mt);
 
 void
 intel_hiz_exec(struct brw_context *brw, struct intel_mipmap_tree *mt,

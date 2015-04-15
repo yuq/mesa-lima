@@ -459,7 +459,10 @@ brw_miptree_layout_texture_3d(struct brw_context *brw,
 }
 
 void
-brw_miptree_layout(struct brw_context *brw, struct intel_mipmap_tree *mt)
+brw_miptree_layout(struct brw_context *brw,
+                   bool for_bo,
+                   enum intel_miptree_tiling_mode requested,
+                   struct intel_mipmap_tree *mt)
 {
    bool multisampled = mt->num_samples > 1;
    bool gen6_hiz_or_stencil = false;
@@ -543,6 +546,11 @@ brw_miptree_layout(struct brw_context *brw, struct intel_mipmap_tree *mt)
    DBG("%s: %dx%dx%d\n", __func__,
        mt->total_width, mt->total_height, mt->cpp);
 
+   if (!mt->total_width || !mt->total_height) {
+      intel_miptree_release(&mt);
+      return;
+   }
+
    /* On Gen9+ the alignment values are expressed in multiples of the block
     * size
     */
@@ -552,5 +560,11 @@ brw_miptree_layout(struct brw_context *brw, struct intel_mipmap_tree *mt)
       mt->align_w /= i;
       mt->align_h /= j;
    }
+
+   if (!for_bo)
+      mt->tiling = intel_miptree_choose_tiling(brw, mt->format,
+                                               mt->logical_width0,
+                                               mt->num_samples,
+                                               requested, mt);
 }
 
