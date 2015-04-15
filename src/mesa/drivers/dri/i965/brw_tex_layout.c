@@ -40,6 +40,81 @@
 #define FILE_DEBUG_FLAG DEBUG_MIPTREE
 
 static unsigned int
+tr_mode_horizontal_texture_alignment(const struct brw_context *brw,
+                                     const struct intel_mipmap_tree *mt)
+{
+   const unsigned *align_yf, *align_ys;
+   const unsigned bpp = _mesa_get_format_bytes(mt->format) * 8;
+   unsigned ret_align, divisor;
+
+   /* Horizontal alignment tables for TRMODE_{YF,YS}. Value in below
+    * tables specifies the horizontal alignment requirement in elements
+    * for the surface. An element is defined as a pixel in uncompressed
+    * surface formats, and as a compression block in compressed surface
+    * formats. For MSFMT_DEPTH_STENCIL type multisampled surfaces, an
+    * element is a sample.
+    */
+   const unsigned align_1d_yf[] = {4096, 2048, 1024, 512, 256};
+   const unsigned align_1d_ys[] = {65536, 32768, 16384, 8192, 4096};
+   const unsigned align_2d_yf[] = {64, 64, 32, 32, 16};
+   const unsigned align_2d_ys[] = {256, 256, 128, 128, 64};
+   const unsigned align_3d_yf[] = {16, 8, 8, 8, 4};
+   const unsigned align_3d_ys[] = {64, 32, 32, 32, 16};
+   int i = 0;
+
+   /* Alignment computations below assume bpp >= 8 and a power of 2. */
+   assert (bpp >= 8 && bpp <= 128 && is_power_of_two(bpp));
+
+   switch(mt->target) {
+   case GL_TEXTURE_1D:
+   case GL_TEXTURE_1D_ARRAY:
+      align_yf = align_1d_yf;
+      align_ys = align_1d_ys;
+      break;
+   case GL_TEXTURE_2D:
+   case GL_TEXTURE_RECTANGLE:
+   case GL_TEXTURE_2D_ARRAY:
+   case GL_TEXTURE_CUBE_MAP:
+   case GL_TEXTURE_CUBE_MAP_ARRAY:
+   case GL_TEXTURE_2D_MULTISAMPLE:
+   case GL_TEXTURE_2D_MULTISAMPLE_ARRAY:
+      align_yf = align_2d_yf;
+      align_ys = align_2d_ys;
+      break;
+   case GL_TEXTURE_3D:
+      align_yf = align_3d_yf;
+      align_ys = align_3d_ys;
+      break;
+   default:
+      unreachable("not reached");
+   }
+
+   /* Compute array index. */
+   i = ffs(bpp/8) - 1;
+
+   ret_align = mt->tr_mode == INTEL_MIPTREE_TRMODE_YF ?
+               align_yf[i] : align_ys[i];
+
+   assert(is_power_of_two(mt->num_samples));
+
+   switch (mt->num_samples) {
+   case 2:
+   case 4:
+      divisor = 2;
+      break;
+   case 8:
+   case 16:
+      divisor = 4;
+      break;
+   default:
+      divisor = 1;
+      break;
+   }
+   return ret_align / divisor;
+}
+
+
+static unsigned int
 intel_horizontal_texture_alignment_unit(struct brw_context *brw,
                                         struct intel_mipmap_tree *mt)
 {
@@ -87,6 +162,12 @@ intel_horizontal_texture_alignment_unit(struct brw_context *brw,
 
    if (mt->format == MESA_FORMAT_S_UINT8)
       return 8;
+
+   if (brw->gen >= 9 && mt->tr_mode != INTEL_MIPTREE_TRMODE_NONE) {
+      uint32_t align = tr_mode_horizontal_texture_alignment(brw, mt);
+      /* XY_FAST_COPY_BLT doesn't support horizontal alignment < 32. */
+      return align < 32 ? 32 : align;
+   }
 
    if (brw->gen >= 7 && mt->format == MESA_FORMAT_Z_UNORM16)
       return 8;
