@@ -132,6 +132,7 @@ extern const struct brw_tracked_state gen7_sol_state;
 extern const struct brw_tracked_state gen7_urb;
 extern const struct brw_tracked_state gen7_vs_state;
 extern const struct brw_tracked_state gen7_wm_state;
+extern const struct brw_tracked_state gen7_hw_binding_tables;
 extern const struct brw_tracked_state haswell_cut_index;
 extern const struct brw_tracked_state gen8_blend_state;
 extern const struct brw_tracked_state gen8_disable_stages;
@@ -371,6 +372,11 @@ void
 gen7_upload_constant_state(struct brw_context *brw,
                            const struct brw_stage_state *stage_state,
                            bool active, unsigned opcode);
+
+void gen7_rs_control(struct brw_context *brw, int enable);
+void gen7_enable_hw_binding_tables(struct brw_context *brw);
+void gen7_disable_hw_binding_tables(struct brw_context *brw);
+void gen7_reset_hw_bt_pool_offsets(struct brw_context *brw);
 
 #ifdef __cplusplus
 }

@@ -192,6 +192,8 @@ static const struct brw_tracked_state *gen7_render_atoms[] =
    &gen6_color_calc_state,	/* must do before cc unit */
    &gen6_depth_stencil_state,	/* must do before cc unit */
 
+   &gen7_hw_binding_tables, /* Enable hw-generated binding tables for Haswell */
+
    &gen6_vs_push_constants, /* Before vs_state */
    &gen6_gs_push_constants, /* Before gs_state */
    &gen6_wm_push_constants, /* Before wm_surfaces and constant_buffer */
@@ -267,6 +269,8 @@ static const struct brw_tracked_state *gen8_render_atoms[] =
    &gen7_urb,
    &gen8_blend_state,
    &gen6_color_calc_state,
+
+   &gen7_hw_binding_tables, /* Enable hw-generated binding tables for Broadwell */
 
    &gen6_vs_push_constants, /* Before vs_state */
    &gen6_gs_push_constants, /* Before gs_state */

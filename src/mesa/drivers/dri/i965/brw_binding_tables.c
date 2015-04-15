@@ -170,6 +170,106 @@ const struct brw_tracked_state brw_gs_binding_table = {
    .emit = brw_gs_upload_binding_table,
 };
 
+/**
+ * Disable hardware binding table support, falling back to the
+ * older software-generated binding table mechanism.
+ */
+void
+gen7_disable_hw_binding_tables(struct brw_context *brw)
+{
+   if (!brw->use_resource_streamer)
+      return;
+   /* From the Haswell PRM, Volume 7: 3D Media GPGPU,
+    * 3DSTATE_BINDING_TABLE_POOL_ALLOC > Programming Note:
+    *
+    * "When switching between HW and SW binding table generation, SW must
+    * issue a state cache invalidate."
+    */
+   brw_emit_pipe_control_flush(brw, PIPE_CONTROL_STATE_CACHE_INVALIDATE);
+
+   int pkt_len = brw->gen >= 8 ? 4 : 3;
+
+   BEGIN_BATCH(pkt_len);
+   OUT_BATCH(_3DSTATE_BINDING_TABLE_POOL_ALLOC << 16 | (pkt_len - 2));
+   if (brw->gen >= 8) {
+      OUT_BATCH(0);
+      OUT_BATCH(0);
+      OUT_BATCH(0);
+   } else {
+      OUT_BATCH(HSW_BT_POOL_ALLOC_MUST_BE_ONE);
+      OUT_BATCH(0);
+   }
+   ADVANCE_BATCH();
+}
+
+/**
+ * Enable hardware binding tables and set up the binding table pool.
+ */
+void
+gen7_enable_hw_binding_tables(struct brw_context *brw)
+{
+   if (!brw->use_resource_streamer)
+      return;
+
+   if (!brw->hw_bt_pool.bo) {
+      /* We use a single re-usable buffer object for the lifetime of the
+       * context and size it to maximum allowed binding tables that can be
+       * programmed per batch:
+       *
+       * From the Haswell PRM, Volume 7: 3D Media GPGPU,
+       * 3DSTATE_BINDING_TABLE_POOL_ALLOC > Programming Note:
+       * "A maximum of 16,383 Binding tables are allowed in any batch buffer"
+       */
+      static const int max_size = 16383 * 4;
+      brw->hw_bt_pool.bo = drm_intel_bo_alloc(brw->bufmgr, "hw_bt",
+                                              max_size, 64);
+      brw->hw_bt_pool.next_offset = 0;
+   }
+
+   /* From the Haswell PRM, Volume 7: 3D Media GPGPU,
+    * 3DSTATE_BINDING_TABLE_POOL_ALLOC > Programming Note:
+    *
+    * "When switching between HW and SW binding table generation, SW must
+    * issue a state cache invalidate."
+    */
+   brw_emit_pipe_control_flush(brw, PIPE_CONTROL_STATE_CACHE_INVALIDATE);
+
+   int pkt_len = brw->gen >= 8 ? 4 : 3;
+   uint32_t dw1 = BRW_HW_BINDING_TABLE_ENABLE;
+   if (brw->is_haswell) {
+      dw1 |= SET_FIELD(GEN7_MOCS_L3, GEN7_HW_BT_POOL_MOCS) |
+             HSW_BT_POOL_ALLOC_MUST_BE_ONE;
+   } else if (brw->gen >= 8) {
+      dw1 |= BDW_MOCS_WB;
+   }
+
+   BEGIN_BATCH(pkt_len);
+   OUT_BATCH(_3DSTATE_BINDING_TABLE_POOL_ALLOC << 16 | (pkt_len - 2));
+   if (brw->gen >= 8) {
+      OUT_RELOC64(brw->hw_bt_pool.bo, I915_GEM_DOMAIN_SAMPLER, 0, dw1);
+      OUT_BATCH(brw->hw_bt_pool.bo->size);
+   } else {
+      OUT_RELOC(brw->hw_bt_pool.bo, I915_GEM_DOMAIN_SAMPLER, 0, dw1);
+      OUT_RELOC(brw->hw_bt_pool.bo, I915_GEM_DOMAIN_SAMPLER, 0,
+             brw->hw_bt_pool.bo->size);
+   }
+   ADVANCE_BATCH();
+}
+
+void
+gen7_reset_hw_bt_pool_offsets(struct brw_context *brw)
+{
+   brw->hw_bt_pool.next_offset = 0;
+}
+
+const struct brw_tracked_state gen7_hw_binding_tables = {
+   .dirty = {
+      .mesa = 0,
+      .brw = BRW_NEW_BATCH,
+   },
+   .emit = gen7_enable_hw_binding_tables
+};
+
 /** @} */
 
 /**

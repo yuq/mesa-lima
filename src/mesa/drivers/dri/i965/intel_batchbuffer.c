@@ -33,6 +33,7 @@
 #include "intel_fbo.h"
 #include "brw_context.h"
 #include "brw_defines.h"
+#include "brw_state.h"
 
 #include <xf86drm.h>
 #include <i915_drm.h>
@@ -390,6 +391,9 @@ _intel_batchbuffer_flush(struct brw_context *brw,
       fprintf(stderr, "waiting for idle\n");
       drm_intel_bo_wait_rendering(brw->batch.bo);
    }
+
+   if (brw->use_resource_streamer)
+      gen7_reset_hw_bt_pool_offsets(brw);
 
    /* Start a new batch buffer. */
    brw_new_batch(brw);
