@@ -282,7 +282,7 @@ brw_disassemble(struct brw_context *brw,
 		    ((uint32_t *)insn)[0]);
 	 }
 
-	 brw_uncompact_instruction(brw, &uncompacted, compacted);
+	 brw_uncompact_instruction(brw->intelScreen->devinfo, &uncompacted, compacted);
 	 insn = &uncompacted;
 	 offset += 8;
       } else {
