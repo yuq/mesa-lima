@@ -697,9 +697,10 @@ brw_render_target_supported(struct brw_context *brw,
     * available to fake it like we do for XRGB8888.  Force them to being
     * unsupported.
     */
-   if ((rb->_BaseFormat != GL_RGBA &&
-	rb->_BaseFormat != GL_RG &&
-	rb->_BaseFormat != GL_RED) && _mesa_is_format_integer_color(format))
+   if (_mesa_is_format_integer_color(format) &&
+       rb->_BaseFormat != GL_RGBA &&
+       rb->_BaseFormat != GL_RG &&
+       rb->_BaseFormat != GL_RED)
       return false;
 
    /* Under some conditions, MSAA is not supported for formats whose width is
