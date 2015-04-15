@@ -28,7 +28,7 @@ ir3_compiler_SOURCES = \
 
 ir3_compiler_LDADD = \
 	libfreedreno.la \
-	../../auxiliary/libgallium.la \
+	$(top_builddir)/src/gallium/auxiliary/libgallium.la \
 	$(top_builddir)/src/glsl/libnir.la \
 	$(top_builddir)/src/libglsl_util.la \
 	$(top_builddir)/src/util/libmesautil.la \
