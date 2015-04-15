@@ -524,6 +524,7 @@ intel_emit_linear_blit(struct brw_context *brw,
 {
    struct gl_context *ctx = &brw->ctx;
    GLuint pitch, height;
+   int16_t src_x, dst_x;
    bool ok;
 
    /* The pitch given to the GPU must be DWORD aligned, and
@@ -532,11 +533,13 @@ intel_emit_linear_blit(struct brw_context *brw,
     */
    pitch = ROUND_DOWN_TO(MIN2(size, (1 << 15) - 1), 4);
    height = (pitch == 0) ? 1 : size / pitch;
+   src_x = src_offset % 64;
+   dst_x = dst_offset % 64;
    ok = intelEmitCopyBlit(brw, 1,
-			  pitch, src_bo, src_offset, I915_TILING_NONE,
-			  pitch, dst_bo, dst_offset, I915_TILING_NONE,
-			  0, 0, /* src x/y */
-			  0, 0, /* dst x/y */
+			  pitch, src_bo, src_offset - src_x, I915_TILING_NONE,
+			  pitch, dst_bo, dst_offset - dst_x, I915_TILING_NONE,
+			  src_x, 0, /* src x/y */
+			  dst_x, 0, /* dst x/y */
 			  pitch, height, /* w, h */
 			  GL_COPY);
    if (!ok)
@@ -544,15 +547,18 @@ intel_emit_linear_blit(struct brw_context *brw,
 
    src_offset += pitch * height;
    dst_offset += pitch * height;
+   src_x = src_offset % 64;
+   dst_x = dst_offset % 64;
    size -= pitch * height;
    assert (size < (1 << 15));
    pitch = ALIGN(size, 4);
+
    if (size != 0) {
       ok = intelEmitCopyBlit(brw, 1,
-			     pitch, src_bo, src_offset, I915_TILING_NONE,
-			     pitch, dst_bo, dst_offset, I915_TILING_NONE,
-			     0, 0, /* src x/y */
-			     0, 0, /* dst x/y */
+			     pitch, src_bo, src_offset - src_x, I915_TILING_NONE,
+			     pitch, dst_bo, dst_offset - dst_x, I915_TILING_NONE,
+			     src_x, 0, /* src x/y */
+			     dst_x, 0, /* dst x/y */
 			     size, 1, /* w, h */
 			     GL_COPY);
       if (!ok)
