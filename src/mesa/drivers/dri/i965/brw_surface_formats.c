@@ -307,6 +307,34 @@ const struct surface_format_info surface_formats[] = {
    SF( x,  x,  x,  x,  x,  x,  x,  x,  x, ETC2_EAC_SRGB8_A8)
    SF( x,  x,  x,  x,  x,  x,  x,  x,  x, R8G8B8_UINT)
    SF( x,  x,  x,  x,  x,  x,  x,  x,  x, R8G8B8_SINT)
+   SF(80, 80,  x,  x,  x,  x,  x,  x,  x, ASTC_LDR_2D_4x4_FLT16)
+   SF(80, 80,  x,  x,  x,  x,  x,  x,  x, ASTC_LDR_2D_5x4_FLT16)
+   SF(80, 80,  x,  x,  x,  x,  x,  x,  x, ASTC_LDR_2D_5x5_FLT16)
+   SF(80, 80,  x,  x,  x,  x,  x,  x,  x, ASTC_LDR_2D_6x5_FLT16)
+   SF(80, 80,  x,  x,  x,  x,  x,  x,  x, ASTC_LDR_2D_6x6_FLT16)
+   SF(80, 80,  x,  x,  x,  x,  x,  x,  x, ASTC_LDR_2D_8x5_FLT16)
+   SF(80, 80,  x,  x,  x,  x,  x,  x,  x, ASTC_LDR_2D_8x6_FLT16)
+   SF(80, 80,  x,  x,  x,  x,  x,  x,  x, ASTC_LDR_2D_8x8_FLT16)
+   SF(80, 80,  x,  x,  x,  x,  x,  x,  x, ASTC_LDR_2D_10x5_FLT16)
+   SF(80, 80,  x,  x,  x,  x,  x,  x,  x, ASTC_LDR_2D_10x6_FLT16)
+   SF(80, 80,  x,  x,  x,  x,  x,  x,  x, ASTC_LDR_2D_10x8_FLT16)
+   SF(80, 80,  x,  x,  x,  x,  x,  x,  x, ASTC_LDR_2D_10x10_FLT16)
+   SF(80, 80,  x,  x,  x,  x,  x,  x,  x, ASTC_LDR_2D_12x10_FLT16)
+   SF(80, 80,  x,  x,  x,  x,  x,  x,  x, ASTC_LDR_2D_12x12_FLT16)
+   SF(80, 80,  x,  x,  x,  x,  x,  x,  x, ASTC_LDR_2D_4x4_U8sRGB)
+   SF(80, 80,  x,  x,  x,  x,  x,  x,  x, ASTC_LDR_2D_5x4_U8sRGB)
+   SF(80, 80,  x,  x,  x,  x,  x,  x,  x, ASTC_LDR_2D_5x5_U8sRGB)
+   SF(80, 80,  x,  x,  x,  x,  x,  x,  x, ASTC_LDR_2D_6x5_U8sRGB)
+   SF(80, 80,  x,  x,  x,  x,  x,  x,  x, ASTC_LDR_2D_6x6_U8sRGB)
+   SF(80, 80,  x,  x,  x,  x,  x,  x,  x, ASTC_LDR_2D_8x5_U8sRGB)
+   SF(80, 80,  x,  x,  x,  x,  x,  x,  x, ASTC_LDR_2D_8x6_U8sRGB)
+   SF(80, 80,  x,  x,  x,  x,  x,  x,  x, ASTC_LDR_2D_8x8_U8sRGB)
+   SF(80, 80,  x,  x,  x,  x,  x,  x,  x, ASTC_LDR_2D_10x5_U8sRGB)
+   SF(80, 80,  x,  x,  x,  x,  x,  x,  x, ASTC_LDR_2D_10x6_U8sRGB)
+   SF(80, 80,  x,  x,  x,  x,  x,  x,  x, ASTC_LDR_2D_10x8_U8sRGB)
+   SF(80, 80,  x,  x,  x,  x,  x,  x,  x, ASTC_LDR_2D_10x10_U8sRGB)
+   SF(80, 80,  x,  x,  x,  x,  x,  x,  x, ASTC_LDR_2D_12x10_U8sRGB)
+   SF(80, 80,  x,  x,  x,  x,  x,  x,  x, ASTC_LDR_2D_12x12_U8sRGB)
 };
 #undef x
 #undef Y
@@ -502,6 +530,35 @@ brw_format_for_mesa_format(mesa_format mesa_format)
       [MESA_FORMAT_BPTC_SRGB_ALPHA_UNORM] = BRW_SURFACEFORMAT_BC7_UNORM_SRGB,
       [MESA_FORMAT_BPTC_RGB_SIGNED_FLOAT] = BRW_SURFACEFORMAT_BC6H_SF16,
       [MESA_FORMAT_BPTC_RGB_UNSIGNED_FLOAT] = BRW_SURFACEFORMAT_BC6H_UF16,
+
+      [MESA_FORMAT_RGBA_ASTC_4x4]           = BRW_SURFACEFORMAT_ASTC_LDR_2D_4x4_FLT16,
+      [MESA_FORMAT_RGBA_ASTC_5x4]           = BRW_SURFACEFORMAT_ASTC_LDR_2D_5x4_FLT16,
+      [MESA_FORMAT_RGBA_ASTC_5x5]           = BRW_SURFACEFORMAT_ASTC_LDR_2D_5x5_FLT16,
+      [MESA_FORMAT_RGBA_ASTC_6x5]           = BRW_SURFACEFORMAT_ASTC_LDR_2D_6x5_FLT16,
+      [MESA_FORMAT_RGBA_ASTC_6x6]           = BRW_SURFACEFORMAT_ASTC_LDR_2D_6x6_FLT16,
+      [MESA_FORMAT_RGBA_ASTC_8x5]           = BRW_SURFACEFORMAT_ASTC_LDR_2D_8x5_FLT16,
+      [MESA_FORMAT_RGBA_ASTC_8x6]           = BRW_SURFACEFORMAT_ASTC_LDR_2D_8x6_FLT16,
+      [MESA_FORMAT_RGBA_ASTC_8x8]           = BRW_SURFACEFORMAT_ASTC_LDR_2D_8x8_FLT16,
+      [MESA_FORMAT_RGBA_ASTC_10x5]          = BRW_SURFACEFORMAT_ASTC_LDR_2D_10x5_FLT16,
+      [MESA_FORMAT_RGBA_ASTC_10x6]          = BRW_SURFACEFORMAT_ASTC_LDR_2D_10x6_FLT16,
+      [MESA_FORMAT_RGBA_ASTC_10x8]          = BRW_SURFACEFORMAT_ASTC_LDR_2D_10x8_FLT16,
+      [MESA_FORMAT_RGBA_ASTC_10x10]         = BRW_SURFACEFORMAT_ASTC_LDR_2D_10x10_FLT16,
+      [MESA_FORMAT_RGBA_ASTC_12x10]         = BRW_SURFACEFORMAT_ASTC_LDR_2D_12x10_FLT16,
+      [MESA_FORMAT_RGBA_ASTC_12x12]         = BRW_SURFACEFORMAT_ASTC_LDR_2D_12x12_FLT16,
+      [MESA_FORMAT_SRGB8_ALPHA8_ASTC_4x4]   = BRW_SURFACEFORMAT_ASTC_LDR_2D_4x4_U8sRGB,
+      [MESA_FORMAT_SRGB8_ALPHA8_ASTC_5x4]   = BRW_SURFACEFORMAT_ASTC_LDR_2D_5x4_U8sRGB,
+      [MESA_FORMAT_SRGB8_ALPHA8_ASTC_5x5]   = BRW_SURFACEFORMAT_ASTC_LDR_2D_5x5_U8sRGB,
+      [MESA_FORMAT_SRGB8_ALPHA8_ASTC_6x5]   = BRW_SURFACEFORMAT_ASTC_LDR_2D_6x5_U8sRGB,
+      [MESA_FORMAT_SRGB8_ALPHA8_ASTC_6x6]   = BRW_SURFACEFORMAT_ASTC_LDR_2D_6x6_U8sRGB,
+      [MESA_FORMAT_SRGB8_ALPHA8_ASTC_8x5]   = BRW_SURFACEFORMAT_ASTC_LDR_2D_8x5_U8sRGB,
+      [MESA_FORMAT_SRGB8_ALPHA8_ASTC_8x6]   = BRW_SURFACEFORMAT_ASTC_LDR_2D_8x6_U8sRGB,
+      [MESA_FORMAT_SRGB8_ALPHA8_ASTC_8x8]   = BRW_SURFACEFORMAT_ASTC_LDR_2D_8x8_U8sRGB,
+      [MESA_FORMAT_SRGB8_ALPHA8_ASTC_10x5]  = BRW_SURFACEFORMAT_ASTC_LDR_2D_10x5_U8sRGB,
+      [MESA_FORMAT_SRGB8_ALPHA8_ASTC_10x6]  = BRW_SURFACEFORMAT_ASTC_LDR_2D_10x6_U8sRGB,
+      [MESA_FORMAT_SRGB8_ALPHA8_ASTC_10x8]  = BRW_SURFACEFORMAT_ASTC_LDR_2D_10x8_U8sRGB,
+      [MESA_FORMAT_SRGB8_ALPHA8_ASTC_10x10] = BRW_SURFACEFORMAT_ASTC_LDR_2D_10x10_U8sRGB,
+      [MESA_FORMAT_SRGB8_ALPHA8_ASTC_12x10] = BRW_SURFACEFORMAT_ASTC_LDR_2D_12x10_U8sRGB,
+      [MESA_FORMAT_SRGB8_ALPHA8_ASTC_12x12] = BRW_SURFACEFORMAT_ASTC_LDR_2D_12x12_U8sRGB,
 
       [MESA_FORMAT_A_SNORM8] = 0,
       [MESA_FORMAT_L_SNORM8] = 0,
@@ -767,6 +824,36 @@ translate_tex_format(struct brw_context *brw,
          mesa_format = MESA_FORMAT_RGB_DXT1;
       }
       return brw_format_for_mesa_format(mesa_format);
+
+   case MESA_FORMAT_RGBA_ASTC_4x4:
+   case MESA_FORMAT_RGBA_ASTC_5x4:
+   case MESA_FORMAT_RGBA_ASTC_5x5:
+   case MESA_FORMAT_RGBA_ASTC_6x5:
+   case MESA_FORMAT_RGBA_ASTC_6x6:
+   case MESA_FORMAT_RGBA_ASTC_8x5:
+   case MESA_FORMAT_RGBA_ASTC_8x6:
+   case MESA_FORMAT_RGBA_ASTC_8x8:
+   case MESA_FORMAT_RGBA_ASTC_10x5:
+   case MESA_FORMAT_RGBA_ASTC_10x6:
+   case MESA_FORMAT_RGBA_ASTC_10x8:
+   case MESA_FORMAT_RGBA_ASTC_10x10:
+   case MESA_FORMAT_RGBA_ASTC_12x10:
+   case MESA_FORMAT_RGBA_ASTC_12x12: {
+      GLuint brw_fmt = brw_format_for_mesa_format(mesa_format);
+
+      /**
+       * On Gen9+, it is possible to process these formats using the LDR
+       * Profile or the Full Profile mode of the hardware. Because, it isn't
+       * possible to determine if an HDR or LDR texture is being rendered, we
+       * can't determine which mode to enable in the hardware. Therefore, to
+       * handle all cases, always default to Full profile unless we are
+       * processing sRGBs, which are incompatible with this mode.
+       */
+      if (brw->gen >= 9)
+         brw_fmt |= GEN9_SURFACE_ASTC_HDR_FORMAT_BIT;
+
+      return brw_fmt;
+   }
 
    default:
       assert(brw_format_for_mesa_format(mesa_format) != 0);
