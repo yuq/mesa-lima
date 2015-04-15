@@ -116,6 +116,15 @@ env.Prepend(LIBS = [compiler, glsl])
 
 compiler_objs += env.StaticObject("glsl/main.cpp")
 
+# GLSL generated sources
+
+env.CodeGenerate(
+    target = 'glsl/ir_expression_operation.h',
+    script = 'glsl/ir_expression_operation.py',
+    source = [],
+    command = python_cmd + ' $SCRIPT > $TARGET'
+)
+
 glsl_compiler = env.Program(
     target = 'glsl_compiler',
     source = compiler_objs,

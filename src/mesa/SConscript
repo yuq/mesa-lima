@@ -11,6 +11,7 @@ env.MSVC2013Compat()
 
 env.Append(CPPPATH = [
     '../compiler/nir',  # for generated nir_opcodes.h, etc
+    '../compiler/glsl',  # for generated headers
     '#/src',
     Dir('../mapi'), # src/mapi build path
     '#/src/mapi',
