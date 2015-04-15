@@ -1454,8 +1454,8 @@ struct brw_context
 
    struct {
       drm_intel_bo *bo;
-      struct gl_shader_program **shader_programs;
-      struct gl_program **programs;
+      const char **names;
+      int *ids;
       enum shader_time_shader_type *types;
       uint64_t *cumulative;
       int num_entries;

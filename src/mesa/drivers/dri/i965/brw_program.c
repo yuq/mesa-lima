@@ -294,10 +294,8 @@ brw_init_shader_time(struct brw_context *brw)
    brw->shader_time.bo = drm_intel_bo_alloc(brw->bufmgr, "shader time",
                                             max_entries * SHADER_TIME_STRIDE,
                                             4096);
-   brw->shader_time.shader_programs = rzalloc_array(brw, struct gl_shader_program *,
-                                                    max_entries);
-   brw->shader_time.programs = rzalloc_array(brw, struct gl_program *,
-                                             max_entries);
+   brw->shader_time.names = rzalloc_array(brw, const char *, max_entries);
+   brw->shader_time.ids = rzalloc_array(brw, int, max_entries);
    brw->shader_time.types = rzalloc_array(brw, enum shader_time_shader_type,
                                           max_entries);
    brw->shader_time.cumulative = rzalloc_array(brw, uint64_t,
@@ -434,36 +432,15 @@ brw_report_shader_time(struct brw_context *brw)
    fprintf(stderr, "\n");
    fprintf(stderr, "type          ID                  cycles spent                   %% of total\n");
    for (int s = 0; s < brw->shader_time.num_entries; s++) {
-      const char *shader_name;
       const char *stage;
       /* Work back from the sorted pointers times to a time to print. */
       int i = sorted[s] - scaled;
-      struct gl_shader_program *prog = brw->shader_time.shader_programs[i];
 
       if (scaled[i] == 0)
          continue;
 
-      int shader_num = 0;
-      if (prog) {
-         shader_num = prog->Name;
-
-         if (prog->Label) {
-            shader_name = prog->Label;
-         } else if (shader_num == 0) {
-            shader_name = "ff";
-         } else {
-            shader_name = "glsl";
-         }
-      } else if (brw->shader_time.programs[i]) {
-         shader_num = brw->shader_time.programs[i]->Id;
-         if (shader_num == 0) {
-            shader_name = "ff";
-         } else {
-            shader_name = "prog";
-         }
-      } else {
-         shader_name = "other";
-      }
+      int shader_num = brw->shader_time.ids[i];
+      const char *shader_name = brw->shader_time.names[i];
 
       switch (brw->shader_time.types[i]) {
       case ST_VS:
@@ -543,19 +520,24 @@ brw_get_shader_time_index(struct brw_context *brw,
                           struct gl_program *prog,
                           enum shader_time_shader_type type)
 {
-   struct gl_context *ctx = &brw->ctx;
-
    int shader_time_index = brw->shader_time.num_entries++;
    assert(shader_time_index < brw->shader_time.max_entries);
    brw->shader_time.types[shader_time_index] = type;
 
-   _mesa_reference_shader_program(ctx,
-                                  &brw->shader_time.shader_programs[shader_time_index],
-                                  shader_prog);
+   int id = shader_prog ? shader_prog->Name : prog->Id;
+   const char *name;
+   if (id == 0) {
+      name = "ff";
+   } else if (!shader_prog) {
+      name = "prog";
+   } else if (shader_prog->Label) {
+      name = ralloc_strdup(brw->shader_time.names, shader_prog->Label);
+   } else {
+      name = "glsl";
+   }
 
-   _mesa_reference_program(ctx,
-                           &brw->shader_time.programs[shader_time_index],
-                           prog);
+   brw->shader_time.names[shader_time_index] = name;
+   brw->shader_time.ids[shader_time_index] = id;
 
    return shader_time_index;
 }
