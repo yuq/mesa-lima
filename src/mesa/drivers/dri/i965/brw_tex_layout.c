@@ -179,6 +179,70 @@ intel_horizontal_texture_alignment_unit(struct brw_context *brw,
 }
 
 static unsigned int
+tr_mode_vertical_texture_alignment(const struct brw_context *brw,
+                                   const struct intel_mipmap_tree *mt)
+{
+   const unsigned *align_yf, *align_ys;
+   const unsigned bpp = _mesa_get_format_bytes(mt->format) * 8;
+   unsigned ret_align, divisor;
+
+   /* Vertical alignment tables for TRMODE_YF and TRMODE_YS. */
+   const unsigned align_2d_yf[] = {64, 32, 32, 16, 16};
+   const unsigned align_2d_ys[] = {256, 128, 128, 64, 64};
+   const unsigned align_3d_yf[] = {16, 16, 16, 8, 8};
+   const unsigned align_3d_ys[] = {32, 32, 32, 16, 16};
+   int i = 0;
+
+   assert(brw->gen >= 9 &&
+          mt->target != GL_TEXTURE_1D &&
+          mt->target != GL_TEXTURE_1D_ARRAY);
+
+   /* Alignment computations below assume bpp >= 8 and a power of 2. */
+   assert (bpp >= 8 && bpp <= 128 && is_power_of_two(bpp)) ;
+
+   switch(mt->target) {
+   case GL_TEXTURE_2D:
+   case GL_TEXTURE_RECTANGLE:
+   case GL_TEXTURE_2D_ARRAY:
+   case GL_TEXTURE_CUBE_MAP:
+   case GL_TEXTURE_CUBE_MAP_ARRAY:
+   case GL_TEXTURE_2D_MULTISAMPLE:
+   case GL_TEXTURE_2D_MULTISAMPLE_ARRAY:
+      align_yf = align_2d_yf;
+      align_ys = align_2d_ys;
+      break;
+   case GL_TEXTURE_3D:
+      align_yf = align_3d_yf;
+      align_ys = align_3d_ys;
+      break;
+   default:
+      unreachable("not reached");
+   }
+
+   /* Compute array index. */
+   i = ffs(bpp / 8) - 1;
+
+   ret_align = mt->tr_mode == INTEL_MIPTREE_TRMODE_YF ?
+               align_yf[i] : align_ys[i];
+
+   assert(is_power_of_two(mt->num_samples));
+
+   switch (mt->num_samples) {
+   case 4:
+   case 8:
+      divisor = 2;
+      break;
+   case 16:
+      divisor = 4;
+      break;
+   default:
+      divisor = 1;
+      break;
+   }
+   return ret_align / divisor;
+}
+
+static unsigned int
 intel_vertical_texture_alignment_unit(struct brw_context *brw,
                                       const struct intel_mipmap_tree *mt)
 {
@@ -211,6 +275,12 @@ intel_vertical_texture_alignment_unit(struct brw_context *brw,
 
    if (mt->format == MESA_FORMAT_S_UINT8)
       return brw->gen >= 7 ? 8 : 4;
+
+   if (mt->tr_mode != INTEL_MIPTREE_TRMODE_NONE) {
+      uint32_t align = tr_mode_vertical_texture_alignment(brw, mt);
+      /* XY_FAST_COPY_BLT doesn't support vertical alignment < 64 */
+      return align < 64 ? 64 : align;
+   }
 
    /* Broadwell only supports VALIGN of 4, 8, and 16.  The BSpec says 4
     * should always be used, except for stencil buffers, which should be 8.
