@@ -83,8 +83,18 @@ surface_tiling_mode(uint32_t tiling)
 }
 
 static unsigned
-vertical_alignment(const struct intel_mipmap_tree *mt)
+vertical_alignment(const struct brw_context *brw,
+                   const struct intel_mipmap_tree *mt,
+                   uint32_t surf_type)
 {
+   /* On Gen9+ vertical alignment is ignored for 1D surfaces and when
+    * tr_mode is not TRMODE_NONE.
+    */
+   if (brw->gen > 8 &&
+       (mt->tr_mode != INTEL_MIPTREE_TRMODE_NONE ||
+        surf_type == BRW_SURFACE_1D))
+      return 0;
+
    switch (mt->align_h) {
    case 4:
       return GEN8_SURFACE_VALIGN_4;
@@ -98,8 +108,18 @@ vertical_alignment(const struct intel_mipmap_tree *mt)
 }
 
 static unsigned
-horizontal_alignment(const struct intel_mipmap_tree *mt)
+horizontal_alignment(const struct brw_context *brw,
+                     const struct intel_mipmap_tree *mt,
+                     uint32_t surf_type)
 {
+   /* On Gen9+ horizontal alignment is ignored when tr_mode is not
+    * TRMODE_NONE.
+    */
+   if (brw->gen > 8 &&
+       (mt->tr_mode != INTEL_MIPTREE_TRMODE_NONE ||
+        gen9_use_linear_1d_layout(brw, mt)))
+      return 0;
+
    switch (mt->align_w) {
    case 4:
       return GEN8_SURFACE_HALIGN_4;
@@ -210,8 +230,8 @@ gen8_emit_texture_surface_state(struct brw_context *brw,
 
    surf[0] = SET_FIELD(surf_type, BRW_SURFACE_TYPE) |
              format << BRW_SURFACE_FORMAT_SHIFT |
-             vertical_alignment(mt) |
-             horizontal_alignment(mt) |
+             vertical_alignment(brw, mt, surf_type) |
+             horizontal_alignment(brw, mt, surf_type) |
              tiling_mode;
 
    if (surf_type == BRW_SURFACE_CUBE) {
@@ -438,8 +458,8 @@ gen8_update_renderbuffer_surface(struct brw_context *brw,
    surf[0] = (surf_type << BRW_SURFACE_TYPE_SHIFT) |
              (is_array ? GEN7_SURFACE_IS_ARRAY : 0) |
              (format << BRW_SURFACE_FORMAT_SHIFT) |
-             vertical_alignment(mt) |
-             horizontal_alignment(mt) |
+             vertical_alignment(brw, mt, surf_type) |
+             horizontal_alignment(brw, mt, surf_type) |
              surface_tiling_mode(tiling);
 
    surf[1] = SET_FIELD(mocs, GEN8_SURFACE_MOCS) | mt->qpitch >> 2;
