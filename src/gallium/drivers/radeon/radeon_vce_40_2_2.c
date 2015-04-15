@@ -287,6 +287,23 @@ static void encode(struct rvce_encoder *enc)
 	RVCE_CS(enc->bs_size); // videoBitstreamRingSize
 	RVCE_END();
 
+	if (enc->use_2p) {
+		unsigned aux_offset = enc->cpb.res->buf->size -
+			RVCE_MAX_AUX_BUFFER_NUM * RVCE_MAX_BITSTREAM_OUTPUT_ROW_SIZE;
+		RVCE_BEGIN(0x05000002); // auxiliary buffer
+		for (i = 0; i < 4; ++i) {
+			RVCE_CS(aux_offset);
+			aux_offset += RVCE_MAX_BITSTREAM_OUTPUT_ROW_SIZE;
+		}
+		for (i = 0; i < 4; ++i)
+			RVCE_CS(0x00000000);
+		for (i = 0; i < 4; ++i)
+			RVCE_CS(RVCE_MAX_BITSTREAM_OUTPUT_ROW_SIZE);
+		for (i = 0; i < 4; ++i)
+			RVCE_CS(0x00000000);
+		RVCE_END();
+	}
+
 	RVCE_BEGIN(0x03000001); // encode
 	RVCE_CS(0x00000000); // insertHeaders
 	RVCE_CS(0x00000000); // pictureStructure

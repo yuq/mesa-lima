@@ -400,6 +400,8 @@ struct pipe_video_codec *rvce_create_encoder(struct pipe_context *context,
 		enc->use_vm = true;
 	if ((rscreen->info.drm_major > 2) || (rscreen->info.drm_minor >= 42))
 		enc->use_vui = true;
+	if (rscreen->info.family >= CHIP_TONGA)
+		enc->use_2p = true;
 
 	enc->base = *templ;
 	enc->base.context = context;
@@ -439,6 +441,9 @@ struct pipe_video_codec *rvce_create_encoder(struct pipe_context *context,
 	cpb_size = cpb_size * align(tmp_surf->npix_y, 16);
 	cpb_size = cpb_size * 3 / 2;
 	cpb_size = cpb_size * enc->cpb_num;
+	if (enc->use_2p)
+		cpb_size +=  RVCE_MAX_AUX_BUFFER_NUM *
+			RVCE_MAX_BITSTREAM_OUTPUT_ROW_SIZE;
 	tmp_buf->destroy(tmp_buf);
 	if (!rvid_create_buffer(enc->screen, &enc->cpb, cpb_size, PIPE_USAGE_DEFAULT)) {
 		RVID_ERR("Can't create CPB buffer.\n");
