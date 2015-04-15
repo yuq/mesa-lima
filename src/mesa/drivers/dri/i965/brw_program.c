@@ -447,14 +447,9 @@ brw_report_shader_time(struct brw_context *brw)
       if (prog) {
          shader_num = prog->Name;
 
-         /* The fixed function fragment shader generates GLSL IR with a Name
-          * of 0, and nothing else does.
-          */
          if (prog->Label) {
             shader_name = prog->Label;
-         } else if (shader_num == 0 &&
-             (brw->shader_time.types[i] == ST_FS8 ||
-              brw->shader_time.types[i] == ST_FS16)) {
+         } else if (shader_num == 0) {
             shader_name = "ff";
          } else {
             shader_name = "glsl";
