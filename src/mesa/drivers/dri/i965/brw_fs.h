@@ -639,6 +639,7 @@ private:
    bool patch_discard_jumps_to_fb_writes();
 
    struct brw_context *brw;
+   const struct brw_device_info *devinfo;
 
    struct brw_compile *p;
    const void * const key;
