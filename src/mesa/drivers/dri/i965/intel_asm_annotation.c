@@ -33,7 +33,8 @@
 
 void
 dump_assembly(void *assembly, int num_annotations, struct annotation *annotation,
-              struct brw_context *brw, const struct gl_program *prog)
+              const struct brw_device_info *devinfo,
+              const struct gl_program *prog)
 {
    const char *last_annotation_string = NULL;
    const void *last_annotation_ir = NULL;
@@ -79,7 +80,7 @@ dump_assembly(void *assembly, int num_annotations, struct annotation *annotation
             fprintf(stderr, "   %s\n", last_annotation_string);
       }
 
-      brw_disassemble(brw->intelScreen->devinfo, assembly, start_offset, end_offset, stderr);
+      brw_disassemble(devinfo, assembly, start_offset, end_offset, stderr);
 
       if (annotation[i].block_end) {
          fprintf(stderr, "   END B%d", annotation[i].block_end->num);
@@ -94,7 +95,7 @@ dump_assembly(void *assembly, int num_annotations, struct annotation *annotation
    fprintf(stderr, "\n");
 }
 
-void annotate(struct brw_context *brw,
+void annotate(const struct brw_device_info *devinfo,
               struct annotation_info *annotation, const struct cfg_t *cfg,
               struct backend_instruction *inst, unsigned offset)
 {
@@ -129,7 +130,7 @@ void annotate(struct brw_context *brw,
     * There's also only complication from emitting an annotation without
     * a corresponding hardware instruction to disassemble.
     */
-   if (brw->gen >= 6 && inst->opcode == BRW_OPCODE_DO) {
+   if (devinfo->gen >= 6 && inst->opcode == BRW_OPCODE_DO) {
       annotation->ann_count--;
    }
 

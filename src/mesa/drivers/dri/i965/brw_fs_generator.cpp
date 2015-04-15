@@ -1573,7 +1573,7 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
       bool multiple_instructions_emitted = false;
 
       if (unlikely(debug_flag))
-         annotate(brw, &annotation, cfg, inst, p->next_insn_offset);
+         annotate(p->devinfo, &annotation, cfg, inst, p->next_insn_offset);
 
       for (unsigned int i = 0; i < inst->sources; i++) {
 	 src[i] = brw_reg_from_fs_reg(&inst->src[i]);
@@ -2128,7 +2128,8 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
               spill_count, fill_count, promoted_constants, before_size, after_size,
               100.0f * (before_size - after_size) / before_size);
 
-      dump_assembly(p->store, annotation.ann_count, annotation.ann, brw, prog);
+      dump_assembly(p->store, annotation.ann_count, annotation.ann,
+                    p->devinfo, prog);
       ralloc_free(annotation.ann);
    }
 

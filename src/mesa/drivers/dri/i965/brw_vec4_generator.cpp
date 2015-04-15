@@ -1151,7 +1151,7 @@ vec4_generator::generate_code(const cfg_t *cfg)
       struct brw_reg src[3], dst;
 
       if (unlikely(debug_flag))
-         annotate(brw, &annotation, cfg, inst, p->next_insn_offset);
+         annotate(p->devinfo, &annotation, cfg, inst, p->next_insn_offset);
 
       for (unsigned int i = 0; i < 3; i++) {
 	 src[i] = inst->get_src(this->prog_data, i);
@@ -1618,7 +1618,8 @@ vec4_generator::generate_code(const cfg_t *cfg)
               before_size / 16, loop_count, before_size, after_size,
               100.0f * (before_size - after_size) / before_size);
 
-      dump_assembly(p->store, annotation.ann_count, annotation.ann, brw, prog);
+      dump_assembly(p->store, annotation.ann_count, annotation.ann,
+                    p->devinfo, prog);
       ralloc_free(annotation.ann);
    }
 
