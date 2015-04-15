@@ -244,14 +244,12 @@ static void brw_ff_gs_ff_sync(struct brw_ff_gs_compile *c, int num_prim)
 void
 brw_ff_gs_quads(struct brw_ff_gs_compile *c, struct brw_ff_gs_prog_key *key)
 {
-   struct brw_context *brw = c->func.brw;
-
    brw_ff_gs_alloc_regs(c, 4, false);
    brw_ff_gs_initialize_header(c);
    /* Use polygons for correct edgeflag behaviour. Note that vertex 3
     * is the PV for quads, but vertex 0 for polygons:
     */
-   if (brw->gen == 5)
+   if (c->func.devinfo->gen == 5)
       brw_ff_gs_ff_sync(c, 1);
    brw_ff_gs_overwrite_header_dw2(
       c, ((_3DPRIM_POLYGON << URB_WRITE_PRIM_TYPE_SHIFT)
@@ -284,12 +282,10 @@ void
 brw_ff_gs_quad_strip(struct brw_ff_gs_compile *c,
                      struct brw_ff_gs_prog_key *key)
 {
-   struct brw_context *brw = c->func.brw;
-
    brw_ff_gs_alloc_regs(c, 4, false);
    brw_ff_gs_initialize_header(c);
 
-   if (brw->gen == 5)
+   if (c->func.devinfo->gen == 5)
       brw_ff_gs_ff_sync(c, 1);
    brw_ff_gs_overwrite_header_dw2(
       c, ((_3DPRIM_POLYGON << URB_WRITE_PRIM_TYPE_SHIFT)
@@ -320,12 +316,10 @@ brw_ff_gs_quad_strip(struct brw_ff_gs_compile *c,
 
 void brw_ff_gs_lines(struct brw_ff_gs_compile *c)
 {
-   struct brw_context *brw = c->func.brw;
-
    brw_ff_gs_alloc_regs(c, 2, false);
    brw_ff_gs_initialize_header(c);
 
-   if (brw->gen == 5)
+   if (c->func.devinfo->gen == 5)
       brw_ff_gs_ff_sync(c, 1);
    brw_ff_gs_overwrite_header_dw2(
       c, ((_3DPRIM_LINESTRIP << URB_WRITE_PRIM_TYPE_SHIFT)

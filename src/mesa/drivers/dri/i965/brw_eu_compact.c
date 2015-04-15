@@ -1306,7 +1306,7 @@ update_gen4_jump_count(const struct brw_device_info *devinfo, brw_inst *insn,
 }
 
 void
-brw_init_compaction_tables(struct brw_context *brw)
+brw_init_compaction_tables(const struct brw_device_info *devinfo)
 {
    static bool initialized;
    if (initialized || p_atomic_cmpxchg(&initialized, false, true) != false)
@@ -1329,7 +1329,7 @@ brw_init_compaction_tables(struct brw_context *brw)
    assert(gen8_subreg_table[ARRAY_SIZE(gen8_subreg_table) - 1] != 0);
    assert(gen8_src_index_table[ARRAY_SIZE(gen8_src_index_table) - 1] != 0);
 
-   switch (brw->gen) {
+   switch (devinfo->gen) {
    case 9:
    case 8:
       control_index_table = gen8_control_index_table;

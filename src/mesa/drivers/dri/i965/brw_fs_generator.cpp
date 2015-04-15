@@ -139,7 +139,7 @@ fs_generator::fs_generator(struct brw_context *brw,
    ctx = &brw->ctx;
 
    p = rzalloc(mem_ctx, struct brw_compile);
-   brw_init_compile(brw, p, mem_ctx);
+   brw_init_compile(brw->intelScreen->devinfo, p, mem_ctx);
 }
 
 fs_generator::~fs_generator()

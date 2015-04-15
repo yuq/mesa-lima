@@ -250,14 +250,14 @@ struct {
 };
 
 static bool
-run_tests(struct brw_context *brw)
+run_tests(const struct brw_device_info *devinfo)
 {
    bool fail = false;
 
    for (int i = 0; i < ARRAY_SIZE(tests); i++) {
       for (int align_16 = 0; align_16 <= 1; align_16++) {
 	 struct brw_compile *p = rzalloc(NULL, struct brw_compile);
-	 brw_init_compile(brw, p, p);
+	 brw_init_compile(devinfo, p, p);
 
 	 brw_set_default_predicate_control(p, BRW_PREDICATE_NONE);
 	 if (align_16)
@@ -288,15 +288,12 @@ run_tests(struct brw_context *brw)
 int
 main(int argc, char **argv)
 {
-   struct brw_context *brw = calloc(1, sizeof(*brw));
    struct brw_device_info *devinfo = calloc(1, sizeof(*devinfo));
-   brw->intelScreen = calloc(1, sizeof(*brw->intelScreen));
-   brw->intelScreen->devinfo = devinfo;
-   brw->gen = devinfo->gen = 6;
+   devinfo->gen = 6;
    bool fail = false;
 
-   for (brw->gen = 6; brw->gen <= 7; brw->gen++) {
-      fail |= run_tests(brw);
+   for (devinfo->gen = 6; devinfo->gen <= 7; devinfo->gen++) {
+      fail |= run_tests(devinfo);
    }
 
    return fail;

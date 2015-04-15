@@ -60,7 +60,7 @@ static void compile_sf_prog( struct brw_context *brw,
    mem_ctx = ralloc_context(NULL);
    /* Begin the compilation:
     */
-   brw_init_compile(brw, &c.func, mem_ctx);
+   brw_init_compile(brw->intelScreen->devinfo, &c.func, mem_ctx);
 
    c.key = *key;
    c.vue_map = brw->vue_map_geom_out;

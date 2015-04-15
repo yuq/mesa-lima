@@ -48,8 +48,8 @@ gen6_resolve_implied_move(struct brw_compile *p,
 			  struct brw_reg *src,
 			  unsigned msg_reg_nr)
 {
-   struct brw_context *brw = p->brw;
-   if (brw->gen < 6)
+   const struct brw_device_info *devinfo = p->devinfo;
+   if (devinfo->gen < 6)
       return;
 
    if (src->file == BRW_MESSAGE_REGISTER_FILE)
@@ -78,8 +78,8 @@ gen7_convert_mrf_to_grf(struct brw_compile *p, struct brw_reg *reg)
     * Since we're pretending to have 16 MRFs anyway, we may as well use the
     * registers required for messages with EOT.
     */
-   struct brw_context *brw = p->brw;
-   if (brw->gen >= 7 && reg->file == BRW_MESSAGE_REGISTER_FILE) {
+   const struct brw_device_info *devinfo = p->devinfo;
+   if (devinfo->gen >= 7 && reg->file == BRW_MESSAGE_REGISTER_FILE) {
       reg->file = BRW_GENERAL_REGISTER_FILE;
       reg->nr += GEN7_MRF_HACK_START;
    }

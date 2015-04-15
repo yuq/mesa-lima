@@ -69,7 +69,6 @@ struct brw_compile {
 
    bool single_program_flow;
    bool compressed;
-   struct brw_context *brw;
    const struct brw_device_info *devinfo;
 
    /* Control flow stacks:
@@ -110,7 +109,7 @@ void brw_set_default_predicate_inverse(struct brw_compile *p, bool predicate_inv
 void brw_set_default_flag_reg(struct brw_compile *p, int reg, int subreg);
 void brw_set_default_acc_write_control(struct brw_compile *p, unsigned value);
 
-void brw_init_compile(struct brw_context *, struct brw_compile *p,
+void brw_init_compile(const struct brw_device_info *, struct brw_compile *p,
 		      void *mem_ctx);
 void brw_disassemble(const struct brw_device_info *devinfo, void *assembly,
                      int start, int end, FILE *out);
@@ -463,7 +462,7 @@ enum brw_conditional_mod brw_negate_cmod(uint32_t cmod);
 enum brw_conditional_mod brw_swap_cmod(uint32_t cmod);
 
 /* brw_eu_compact.c */
-void brw_init_compaction_tables(struct brw_context *brw);
+void brw_init_compaction_tables(const struct brw_device_info *devinfo);
 void brw_compact_instructions(struct brw_compile *p, int start_offset,
                               int num_annotations, struct annotation *annotation);
 void brw_uncompact_instruction(const struct brw_device_info *devinfo,

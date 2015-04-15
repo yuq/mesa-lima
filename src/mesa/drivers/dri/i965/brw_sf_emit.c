@@ -192,7 +192,6 @@ static int count_flatshaded_attributes(struct brw_sf_compile *c)
 static void do_flatshade_triangle( struct brw_sf_compile *c )
 {
    struct brw_compile *p = &c->func;
-   struct brw_context *brw = p->brw;
    GLuint nr;
    GLuint jmpi = 1;
 
@@ -201,7 +200,7 @@ static void do_flatshade_triangle( struct brw_sf_compile *c )
    if (c->key.primitive == SF_UNFILLED_TRIS)
       return;
 
-   if (brw->gen == 5)
+   if (p->devinfo->gen == 5)
        jmpi = 2;
 
    nr = count_flatshaded_attributes(c);
@@ -225,7 +224,6 @@ static void do_flatshade_triangle( struct brw_sf_compile *c )
 static void do_flatshade_line( struct brw_sf_compile *c )
 {
    struct brw_compile *p = &c->func;
-   struct brw_context *brw = p->brw;
    GLuint nr;
    GLuint jmpi = 1;
 
@@ -234,7 +232,7 @@ static void do_flatshade_line( struct brw_sf_compile *c )
    if (c->key.primitive == SF_UNFILLED_TRIS)
       return;
 
-   if (brw->gen == 5)
+   if (p->devinfo->gen == 5)
        jmpi = 2;
 
    nr = count_flatshaded_attributes(c);

@@ -147,7 +147,7 @@ vec4_generator::vec4_generator(struct brw_context *brw,
      debug_flag(debug_flag)
 {
    p = rzalloc(mem_ctx, struct brw_compile);
-   brw_init_compile(brw, p, mem_ctx);
+   brw_init_compile(brw->intelScreen->devinfo, p, mem_ctx);
 }
 
 vec4_generator::~vec4_generator()

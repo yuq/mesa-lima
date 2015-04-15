@@ -62,7 +62,7 @@ static void compile_clip_prog( struct brw_context *brw,
 
    /* Begin the compilation:
     */
-   brw_init_compile(brw, &c.func, mem_ctx);
+   brw_init_compile(brw->intelScreen->devinfo, &c.func, mem_ctx);
 
    c.func.single_program_flow = 1;
 

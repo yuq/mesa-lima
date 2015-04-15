@@ -128,7 +128,7 @@ void brw_set_default_predicate_inverse(struct brw_compile *p, bool predicate_inv
 
 void brw_set_default_flag_reg(struct brw_compile *p, int reg, int subreg)
 {
-   if (p->brw->gen >= 7)
+   if (p->devinfo->gen >= 7)
       brw_inst_set_flag_reg_nr(p->devinfo, p->current, reg);
 
    brw_inst_set_flag_subreg_nr(p->devinfo, p->current, subreg);
@@ -143,11 +143,9 @@ void
 brw_set_default_compression_control(struct brw_compile *p,
 			    enum brw_compression compression_control)
 {
-   struct brw_context *brw = p->brw;
-
    p->compressed = (compression_control == BRW_COMPRESSION_COMPRESSED);
 
-   if (brw->gen >= 6) {
+   if (p->devinfo->gen >= 6) {
       /* Since we don't use the SIMD32 support in gen6, we translate
        * the pre-gen6 compression control here.
        */
@@ -188,9 +186,7 @@ void brw_set_default_saturate( struct brw_compile *p, bool enable )
 
 void brw_set_default_acc_write_control(struct brw_compile *p, unsigned value)
 {
-   struct brw_context *brw = p->brw;
-
-   if (brw->gen >= 6)
+   if (p->devinfo->gen >= 6)
       brw_inst_set_acc_wr_control(p->devinfo, p->current, value);
 }
 
@@ -213,12 +209,12 @@ void brw_pop_insn_state( struct brw_compile *p )
 /***********************************************************************
  */
 void
-brw_init_compile(struct brw_context *brw, struct brw_compile *p, void *mem_ctx)
+brw_init_compile(const struct brw_device_info *devinfo,
+                 struct brw_compile *p, void *mem_ctx)
 {
    memset(p, 0, sizeof(*p));
 
-   p->brw = brw;
-   p->devinfo = brw->intelScreen->devinfo;
+   p->devinfo = devinfo;
    /*
     * Set the initial instruction store array size to 1024, if found that
     * isn't enough, then it will double the store size at brw_next_insn()
@@ -250,7 +246,7 @@ brw_init_compile(struct brw_context *brw, struct brw_compile *p, void *mem_ctx)
    p->loop_stack = rzalloc_array(mem_ctx, int, p->loop_stack_array_size);
    p->if_depth_in_loop = rzalloc_array(mem_ctx, int, p->loop_stack_array_size);
 
-   brw_init_compaction_tables(brw);
+   brw_init_compaction_tables(devinfo);
 }
 
 

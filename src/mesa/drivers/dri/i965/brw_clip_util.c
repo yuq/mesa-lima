@@ -417,7 +417,6 @@ void brw_clip_init_clipmask( struct brw_clip_compile *c )
 {
    struct brw_compile *p = &c->func;
    struct brw_reg incoming = get_element_ud(c->reg.R0, 2);
-   struct brw_context *brw = p->brw;
 
    /* Shift so that lowest outcode bit is rightmost:
     */
@@ -429,7 +428,7 @@ void brw_clip_init_clipmask( struct brw_clip_compile *c )
       /* Rearrange userclip outcodes so that they come directly after
        * the fixed plane bits.
        */
-      if (brw->gen == 5 || brw->is_g4x)
+      if (p->devinfo->gen == 5 || p->devinfo->is_g4x)
          brw_AND(p, tmp, incoming, brw_imm_ud(0xff<<14));
       else
          brw_AND(p, tmp, incoming, brw_imm_ud(0x3f<<14));
@@ -444,9 +443,8 @@ void brw_clip_init_clipmask( struct brw_clip_compile *c )
 void brw_clip_ff_sync(struct brw_clip_compile *c)
 {
     struct brw_compile *p = &c->func;
-    struct brw_context *brw = p->brw;
 
-    if (brw->gen == 5) {
+    if (p->devinfo->gen == 5) {
         brw_AND(p, brw_null_reg(), c->reg.ff_sync, brw_imm_ud(0x1));
         brw_inst_set_cond_modifier(p->devinfo, brw_last_inst, BRW_CONDITIONAL_Z);
         brw_IF(p, BRW_EXECUTE_1);
@@ -467,11 +465,9 @@ void brw_clip_ff_sync(struct brw_clip_compile *c)
 
 void brw_clip_init_ff_sync(struct brw_clip_compile *c)
 {
-    struct brw_context *brw = c->func.brw;
+    struct brw_compile *p = &c->func;
 
-    if (brw->gen == 5) {
-	struct brw_compile *p = &c->func;
-
+    if (p->devinfo->gen == 5) {
         brw_MOV(p, c->reg.ff_sync, brw_imm_ud(0));
     }
 }
