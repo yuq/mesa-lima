@@ -103,9 +103,9 @@ const struct opcode_desc opcode_descs[128] = {
 };
 
 static bool
-has_jip(struct brw_context *brw, enum opcode opcode)
+has_jip(const struct brw_device_info *devinfo, enum opcode opcode)
 {
-   if (brw->gen < 6)
+   if (devinfo->gen < 6)
       return false;
 
    return opcode == BRW_OPCODE_IF ||
@@ -118,22 +118,22 @@ has_jip(struct brw_context *brw, enum opcode opcode)
 }
 
 static bool
-has_uip(struct brw_context *brw, enum opcode opcode)
+has_uip(const struct brw_device_info *devinfo, enum opcode opcode)
 {
-   if (brw->gen < 6)
+   if (devinfo->gen < 6)
       return false;
 
-   return (brw->gen >= 7 && opcode == BRW_OPCODE_IF) ||
-          (brw->gen >= 8 && opcode == BRW_OPCODE_ELSE) ||
+   return (devinfo->gen >= 7 && opcode == BRW_OPCODE_IF) ||
+          (devinfo->gen >= 8 && opcode == BRW_OPCODE_ELSE) ||
           opcode == BRW_OPCODE_BREAK ||
           opcode == BRW_OPCODE_CONTINUE ||
           opcode == BRW_OPCODE_HALT;
 }
 
 static bool
-has_branch_ctrl(struct brw_context *brw, enum opcode opcode)
+has_branch_ctrl(const struct brw_device_info *devinfo, enum opcode opcode)
 {
-   if (brw->gen < 8)
+   if (devinfo->gen < 8)
       return false;
 
    return opcode == BRW_OPCODE_IF ||
@@ -718,10 +718,9 @@ reg(FILE *file, unsigned _reg_file, unsigned _reg_nr)
 }
 
 static int
-dest(FILE *file, struct brw_context *brw, brw_inst *inst)
+dest(FILE *file, const struct brw_device_info *devinfo, brw_inst *inst)
 {
    int err = 0;
-   const struct brw_device_info *devinfo = brw->intelScreen->devinfo;
 
    if (brw_inst_access_mode(devinfo, inst) == BRW_ALIGN_1) {
       if (brw_inst_dst_address_mode(devinfo, inst) == BRW_ADDRESS_DIRECT) {
@@ -776,13 +775,12 @@ dest(FILE *file, struct brw_context *brw, brw_inst *inst)
 }
 
 static int
-dest_3src(FILE *file, struct brw_context *brw, brw_inst *inst)
+dest_3src(FILE *file, const struct brw_device_info *devinfo, brw_inst *inst)
 {
    int err = 0;
    uint32_t reg_file;
-   const struct brw_device_info *devinfo = brw->intelScreen->devinfo;
 
-   if (brw->gen == 6 && brw_inst_3src_dst_reg_file(devinfo, inst))
+   if (devinfo->gen == 6 && brw_inst_3src_dst_reg_file(devinfo, inst))
       reg_file = BRW_MESSAGE_REGISTER_FILE;
    else
       reg_file = BRW_GENERAL_REGISTER_FILE;
@@ -819,7 +817,7 @@ src_align1_region(FILE *file,
 
 static int
 src_da1(FILE *file,
-        const struct brw_context *brw,
+        const struct brw_device_info *devinfo,
         unsigned opcode,
         unsigned type, unsigned _reg_file,
         unsigned _vert_stride, unsigned _width, unsigned _horiz_stride,
@@ -828,7 +826,7 @@ src_da1(FILE *file,
 {
    int err = 0;
 
-   if (brw->gen >= 8 && is_logic_instruction(opcode))
+   if (devinfo->gen >= 8 && is_logic_instruction(opcode))
       err |= control(file, "bitnot", m_bitnot, _negate, NULL);
    else
       err |= control(file, "negate", m_negate, _negate, NULL);
@@ -847,7 +845,7 @@ src_da1(FILE *file,
 
 static int
 src_ia1(FILE *file,
-        const struct brw_context *brw,
+        const struct brw_device_info *devinfo,
         unsigned opcode,
         unsigned type,
         unsigned _reg_file,
@@ -860,7 +858,7 @@ src_ia1(FILE *file,
 {
    int err = 0;
 
-   if (brw->gen >= 8 && is_logic_instruction(opcode))
+   if (devinfo->gen >= 8 && is_logic_instruction(opcode))
       err |= control(file, "bitnot", m_bitnot, _negate, NULL);
    else
       err |= control(file, "negate", m_negate, _negate, NULL);
@@ -902,7 +900,7 @@ src_swizzle(FILE *file, unsigned swiz)
 
 static int
 src_da16(FILE *file,
-         const struct brw_context *brw,
+         const struct brw_device_info *devinfo,
          unsigned opcode,
          unsigned _reg_type,
          unsigned _reg_file,
@@ -915,7 +913,7 @@ src_da16(FILE *file,
 {
    int err = 0;
 
-   if (brw->gen >= 8 && is_logic_instruction(opcode))
+   if (devinfo->gen >= 8 && is_logic_instruction(opcode))
       err |= control(file, "bitnot", m_bitnot, _negate, NULL);
    else
       err |= control(file, "negate", m_negate, _negate, NULL);
@@ -938,10 +936,9 @@ src_da16(FILE *file,
 }
 
 static int
-src0_3src(FILE *file, struct brw_context *brw, brw_inst *inst)
+src0_3src(FILE *file, const struct brw_device_info *devinfo, brw_inst *inst)
 {
    int err = 0;
-   const struct brw_device_info *devinfo = brw->intelScreen->devinfo;
    unsigned src0_subreg_nr = brw_inst_3src_src0_subreg_nr(devinfo, inst);
 
    err |= control(file, "negate", m_negate,
@@ -965,10 +962,9 @@ src0_3src(FILE *file, struct brw_context *brw, brw_inst *inst)
 }
 
 static int
-src1_3src(FILE *file, struct brw_context *brw, brw_inst *inst)
+src1_3src(FILE *file, const struct brw_device_info *devinfo, brw_inst *inst)
 {
    int err = 0;
-   const struct brw_device_info *devinfo = brw->intelScreen->devinfo;
    unsigned src1_subreg_nr = brw_inst_3src_src1_subreg_nr(devinfo, inst);
 
    err |= control(file, "negate", m_negate,
@@ -993,10 +989,9 @@ src1_3src(FILE *file, struct brw_context *brw, brw_inst *inst)
 
 
 static int
-src2_3src(FILE *file, struct brw_context *brw, brw_inst *inst)
+src2_3src(FILE *file, const struct brw_device_info *devinfo, brw_inst *inst)
 {
    int err = 0;
-   const struct brw_device_info *devinfo = brw->intelScreen->devinfo;
    unsigned src2_subreg_nr = brw_inst_3src_src2_subreg_nr(devinfo, inst);
 
    err |= control(file, "negate", m_negate,
@@ -1020,9 +1015,8 @@ src2_3src(FILE *file, struct brw_context *brw, brw_inst *inst)
 }
 
 static int
-imm(FILE *file, struct brw_context *brw, unsigned type, brw_inst *inst)
+imm(FILE *file, const struct brw_device_info *devinfo, unsigned type, brw_inst *inst)
 {
-   const struct brw_device_info *devinfo = brw->intelScreen->devinfo;
    switch (type) {
    case BRW_HW_REG_TYPE_UD:
       format(file, "0x%08xUD", brw_inst_imm_ud(devinfo, inst));
@@ -1063,15 +1057,14 @@ imm(FILE *file, struct brw_context *brw, unsigned type, brw_inst *inst)
 }
 
 static int
-src0(FILE *file, struct brw_context *brw, brw_inst *inst)
+src0(FILE *file, const struct brw_device_info *devinfo, brw_inst *inst)
 {
-   const struct brw_device_info *devinfo = brw->intelScreen->devinfo;
    if (brw_inst_src0_reg_file(devinfo, inst) == BRW_IMMEDIATE_VALUE) {
-      return imm(file, brw, brw_inst_src0_reg_type(devinfo, inst), inst);
+      return imm(file, devinfo, brw_inst_src0_reg_type(devinfo, inst), inst);
    } else if (brw_inst_access_mode(devinfo, inst) == BRW_ALIGN_1) {
       if (brw_inst_src0_address_mode(devinfo, inst) == BRW_ADDRESS_DIRECT) {
          return src_da1(file,
-                        brw,
+                        devinfo,
                         brw_inst_opcode(devinfo, inst),
                         brw_inst_src0_reg_type(devinfo, inst),
                         brw_inst_src0_reg_file(devinfo, inst),
@@ -1084,7 +1077,7 @@ src0(FILE *file, struct brw_context *brw, brw_inst *inst)
                         brw_inst_src0_negate(devinfo, inst));
       } else {
          return src_ia1(file,
-                        brw,
+                        devinfo,
                         brw_inst_opcode(devinfo, inst),
                         brw_inst_src0_reg_type(devinfo, inst),
                         brw_inst_src0_reg_file(devinfo, inst),
@@ -1100,7 +1093,7 @@ src0(FILE *file, struct brw_context *brw, brw_inst *inst)
    } else {
       if (brw_inst_src0_address_mode(devinfo, inst) == BRW_ADDRESS_DIRECT) {
          return src_da16(file,
-                         brw,
+                         devinfo,
                          brw_inst_opcode(devinfo, inst),
                          brw_inst_src0_reg_type(devinfo, inst),
                          brw_inst_src0_reg_file(devinfo, inst),
@@ -1121,15 +1114,14 @@ src0(FILE *file, struct brw_context *brw, brw_inst *inst)
 }
 
 static int
-src1(FILE *file, struct brw_context *brw, brw_inst *inst)
+src1(FILE *file, const struct brw_device_info *devinfo, brw_inst *inst)
 {
-   const struct brw_device_info *devinfo = brw->intelScreen->devinfo;
    if (brw_inst_src1_reg_file(devinfo, inst) == BRW_IMMEDIATE_VALUE) {
-      return imm(file, brw, brw_inst_src1_reg_type(devinfo, inst), inst);
+      return imm(file, devinfo, brw_inst_src1_reg_type(devinfo, inst), inst);
    } else if (brw_inst_access_mode(devinfo, inst) == BRW_ALIGN_1) {
       if (brw_inst_src1_address_mode(devinfo, inst) == BRW_ADDRESS_DIRECT) {
          return src_da1(file,
-                        brw,
+                        devinfo,
                         brw_inst_opcode(devinfo, inst),
                         brw_inst_src1_reg_type(devinfo, inst),
                         brw_inst_src1_reg_file(devinfo, inst),
@@ -1142,7 +1134,7 @@ src1(FILE *file, struct brw_context *brw, brw_inst *inst)
                         brw_inst_src1_negate(devinfo, inst));
       } else {
          return src_ia1(file,
-                        brw,
+                        devinfo,
                         brw_inst_opcode(devinfo, inst),
                         brw_inst_src1_reg_type(devinfo, inst),
                         brw_inst_src1_reg_file(devinfo, inst),
@@ -1158,7 +1150,7 @@ src1(FILE *file, struct brw_context *brw, brw_inst *inst)
    } else {
       if (brw_inst_src1_address_mode(devinfo, inst) == BRW_ADDRESS_DIRECT) {
          return src_da16(file,
-                         brw,
+                         devinfo,
                          brw_inst_opcode(devinfo, inst),
                          brw_inst_src1_reg_type(devinfo, inst),
                          brw_inst_src1_reg_file(devinfo, inst),
@@ -1179,9 +1171,8 @@ src1(FILE *file, struct brw_context *brw, brw_inst *inst)
 }
 
 static int
-qtr_ctrl(FILE *file, struct brw_context *brw, brw_inst *inst)
+qtr_ctrl(FILE *file, const struct brw_device_info *devinfo, brw_inst *inst)
 {
-   const struct brw_device_info *devinfo = brw->intelScreen->devinfo;
    int qtr_ctl = brw_inst_qtr_control(devinfo, inst);
    int exec_size = 1 << brw_inst_exec_size(devinfo, inst);
 
@@ -1211,23 +1202,22 @@ qtr_ctrl(FILE *file, struct brw_context *brw, brw_inst *inst)
 
 #ifdef DEBUG
 static __attribute__((__unused__)) int
-brw_disassemble_imm(struct brw_context *brw,
+brw_disassemble_imm(const struct brw_device_info *devinfo,
                     uint32_t dw3, uint32_t dw2, uint32_t dw1, uint32_t dw0)
 {
    brw_inst inst;
    inst.data[0] = (((uint64_t) dw1) << 32) | ((uint64_t) dw0);
    inst.data[1] = (((uint64_t) dw3) << 32) | ((uint64_t) dw2);
-   return brw_disassemble_inst(stderr, brw, &inst, false);
+   return brw_disassemble_inst(stderr, devinfo, &inst, false);
 }
 #endif
 
 int
-brw_disassemble_inst(FILE *file, struct brw_context *brw, brw_inst *inst,
-                     bool is_compacted)
+brw_disassemble_inst(FILE *file, const struct brw_device_info *devinfo,
+                     brw_inst *inst, bool is_compacted)
 {
    int err = 0;
    int space = 0;
-   const struct brw_device_info *devinfo = brw->intelScreen->devinfo;
 
    const enum opcode opcode = brw_inst_opcode(devinfo, inst);
 
@@ -1268,11 +1258,11 @@ brw_disassemble_inst(FILE *file, struct brw_context *brw, brw_inst *inst,
        * control flow doesn't update flags.
        */
       if (brw_inst_cond_modifier(devinfo, inst) &&
-          (brw->gen < 6 || (opcode != BRW_OPCODE_SEL &&
+          (devinfo->gen < 6 || (opcode != BRW_OPCODE_SEL &&
                             opcode != BRW_OPCODE_IF &&
                             opcode != BRW_OPCODE_WHILE))) {
          format(file, ".f%ld",
-                brw->gen >= 7 ? brw_inst_flag_reg_nr(devinfo, inst) : 0);
+                devinfo->gen >= 7 ? brw_inst_flag_reg_nr(devinfo, inst) : 0);
          if (brw_inst_flag_subreg_nr(devinfo, inst))
             format(file, ".%ld", brw_inst_flag_subreg_nr(devinfo, inst));
       }
@@ -1285,66 +1275,66 @@ brw_disassemble_inst(FILE *file, struct brw_context *brw, brw_inst *inst,
       string(file, ")");
    }
 
-   if (opcode == BRW_OPCODE_SEND && brw->gen < 6)
+   if (opcode == BRW_OPCODE_SEND && devinfo->gen < 6)
       format(file, " %ld", brw_inst_base_mrf(devinfo, inst));
 
-   if (has_uip(brw, opcode)) {
+   if (has_uip(devinfo, opcode)) {
       /* Instructions that have UIP also have JIP. */
       pad(file, 16);
       format(file, "JIP: %d", brw_inst_jip(devinfo, inst));
       pad(file, 32);
       format(file, "UIP: %d", brw_inst_uip(devinfo, inst));
-   } else if (has_jip(brw, opcode)) {
+   } else if (has_jip(devinfo, opcode)) {
       pad(file, 16);
-      if (brw->gen >= 7) {
+      if (devinfo->gen >= 7) {
          format(file, "JIP: %d", brw_inst_jip(devinfo, inst));
       } else {
          format(file, "JIP: %d", brw_inst_gen6_jump_count(devinfo, inst));
       }
-   } else if (brw->gen < 6 && (opcode == BRW_OPCODE_BREAK ||
+   } else if (devinfo->gen < 6 && (opcode == BRW_OPCODE_BREAK ||
                                opcode == BRW_OPCODE_CONTINUE ||
                                opcode == BRW_OPCODE_ELSE)) {
       pad(file, 16);
       format(file, "Jump: %d", brw_inst_gen4_jump_count(devinfo, inst));
       pad(file, 32);
       format(file, "Pop: %ld", brw_inst_gen4_pop_count(devinfo, inst));
-   } else if (brw->gen < 6 && (opcode == BRW_OPCODE_IF ||
+   } else if (devinfo->gen < 6 && (opcode == BRW_OPCODE_IF ||
                                opcode == BRW_OPCODE_IFF ||
                                opcode == BRW_OPCODE_HALT)) {
       pad(file, 16);
       format(file, "Jump: %d", brw_inst_gen4_jump_count(devinfo, inst));
-   } else if (brw->gen < 6 && opcode == BRW_OPCODE_ENDIF) {
+   } else if (devinfo->gen < 6 && opcode == BRW_OPCODE_ENDIF) {
       pad(file, 16);
       format(file, "Pop: %ld", brw_inst_gen4_pop_count(devinfo, inst));
    } else if (opcode == BRW_OPCODE_JMPI) {
       pad(file, 16);
-      err |= src1(file, brw, inst);
+      err |= src1(file, devinfo, inst);
    } else if (opcode_descs[opcode].nsrc == 3) {
       pad(file, 16);
-      err |= dest_3src(file, brw, inst);
+      err |= dest_3src(file, devinfo, inst);
 
       pad(file, 32);
-      err |= src0_3src(file, brw, inst);
+      err |= src0_3src(file, devinfo, inst);
 
       pad(file, 48);
-      err |= src1_3src(file, brw, inst);
+      err |= src1_3src(file, devinfo, inst);
 
       pad(file, 64);
-      err |= src2_3src(file, brw, inst);
+      err |= src2_3src(file, devinfo, inst);
    } else {
       if (opcode_descs[opcode].ndst > 0) {
          pad(file, 16);
-         err |= dest(file, brw, inst);
+         err |= dest(file, devinfo, inst);
       }
 
       if (opcode_descs[opcode].nsrc > 0) {
          pad(file, 32);
-         err |= src0(file, brw, inst);
+         err |= src0(file, devinfo, inst);
       }
 
       if (opcode_descs[opcode].nsrc > 1) {
          pad(file, 48);
-         err |= src1(file, brw, inst);
+         err |= src1(file, devinfo, inst);
       }
    }
 
@@ -1354,7 +1344,7 @@ brw_disassemble_inst(FILE *file, struct brw_context *brw, brw_inst *inst,
       if (brw_inst_src1_reg_file(devinfo, inst) != BRW_IMMEDIATE_VALUE) {
          /* show the indirect descriptor source */
          pad(file, 48);
-         err |= src1(file, brw, inst);
+         err |= src1(file, devinfo, inst);
       }
 
       newline(file);
@@ -1362,7 +1352,7 @@ brw_disassemble_inst(FILE *file, struct brw_context *brw, brw_inst *inst,
       space = 0;
 
       fprintf(file, "            ");
-      err |= control(file, "SFID", brw->gen >= 6 ? gen6_sfid : gen4_sfid,
+      err |= control(file, "SFID", devinfo->gen >= 6 ? gen6_sfid : gen4_sfid,
                      sfid, &space);
 
 
@@ -1383,7 +1373,7 @@ brw_disassemble_inst(FILE *file, struct brw_context *brw, brw_inst *inst,
                            brw_inst_math_msg_precision(devinfo, inst), &space);
             break;
          case BRW_SFID_SAMPLER:
-            if (brw->gen >= 5) {
+            if (devinfo->gen >= 5) {
                format(file, " (%ld, %ld, %ld, %ld)",
                       brw_inst_binding_table_index(devinfo, inst),
                       brw_inst_sampler(devinfo, inst),
@@ -1394,7 +1384,7 @@ brw_disassemble_inst(FILE *file, struct brw_context *brw, brw_inst *inst,
                       brw_inst_binding_table_index(devinfo, inst),
                       brw_inst_sampler(devinfo, inst),
                       brw_inst_sampler_msg_type(devinfo, inst));
-               if (!brw->is_g4x) {
+               if (!devinfo->is_g4x) {
                   err |= control(file, "sampler target format",
                                  sampler_target_format,
                                  brw_inst_sampler_return_format(devinfo, inst), NULL);
@@ -1404,12 +1394,12 @@ brw_disassemble_inst(FILE *file, struct brw_context *brw, brw_inst *inst,
             break;
          case GEN6_SFID_DATAPORT_SAMPLER_CACHE:
             /* aka BRW_SFID_DATAPORT_READ on Gen4-5 */
-            if (brw->gen >= 6) {
+            if (devinfo->gen >= 6) {
                format(file, " (%ld, %ld, %ld, %ld)",
                       brw_inst_binding_table_index(devinfo, inst),
                       brw_inst_dp_msg_control(devinfo, inst),
                       brw_inst_dp_msg_type(devinfo, inst),
-                      brw->gen >= 7 ? 0 : brw_inst_dp_write_commit(devinfo, inst));
+                      devinfo->gen >= 7 ? 0 : brw_inst_dp_write_commit(devinfo, inst));
             } else {
                format(file, " (%ld, %ld, %ld)",
                       brw_inst_binding_table_index(devinfo, inst),
@@ -1423,22 +1413,22 @@ brw_disassemble_inst(FILE *file, struct brw_context *brw, brw_inst *inst,
             unsigned msg_type = brw_inst_dp_write_msg_type(devinfo, inst);
 
             err |= control(file, "DP rc message type",
-                           brw->gen >= 6 ? dp_rc_msg_type_gen6
+                           devinfo->gen >= 6 ? dp_rc_msg_type_gen6
                                          : dp_write_port_msg_type,
                            msg_type, &space);
 
             bool is_rt_write = msg_type ==
-               (brw->gen >= 6 ? GEN6_DATAPORT_WRITE_MESSAGE_RENDER_TARGET_WRITE
-                              : BRW_DATAPORT_WRITE_MESSAGE_RENDER_TARGET_WRITE);
+               (devinfo->gen >= 6 ? GEN6_DATAPORT_WRITE_MESSAGE_RENDER_TARGET_WRITE
+                                  : BRW_DATAPORT_WRITE_MESSAGE_RENDER_TARGET_WRITE);
 
             if (is_rt_write) {
                err |= control(file, "RT message type", m_rt_write_subtype,
                               brw_inst_rt_message_type(devinfo, inst), &space);
-               if (brw->gen >= 6 && brw_inst_rt_slot_group(devinfo, inst))
+               if (devinfo->gen >= 6 && brw_inst_rt_slot_group(devinfo, inst))
                   string(file, " Hi");
                if (brw_inst_rt_last(devinfo, inst))
                   string(file, " LastRT");
-               if (brw->gen < 7 && brw_inst_dp_write_commit(devinfo, inst))
+               if (devinfo->gen < 7 && brw_inst_dp_write_commit(devinfo, inst))
                   string(file, " WriteCommit");
             } else {
                format(file, " MsgCtrl = 0x%lx",
@@ -1453,22 +1443,22 @@ brw_disassemble_inst(FILE *file, struct brw_context *brw, brw_inst *inst,
             format(file, " %ld", brw_inst_urb_global_offset(devinfo, inst));
 
             space = 1;
-            if (brw->gen >= 7) {
+            if (devinfo->gen >= 7) {
                err |= control(file, "urb opcode", gen7_urb_opcode,
                               brw_inst_urb_opcode(devinfo, inst), &space);
-            } else if (brw->gen >= 5) {
+            } else if (devinfo->gen >= 5) {
                err |= control(file, "urb opcode", gen5_urb_opcode,
                               brw_inst_urb_opcode(devinfo, inst), &space);
             }
             err |= control(file, "urb swizzle", urb_swizzle,
                            brw_inst_urb_swizzle_control(devinfo, inst), &space);
-            if (brw->gen < 7) {
+            if (devinfo->gen < 7) {
                err |= control(file, "urb allocate", urb_allocate,
                               brw_inst_urb_allocate(devinfo, inst), &space);
                err |= control(file, "urb used", urb_used,
                               brw_inst_urb_used(devinfo, inst), &space);
             }
-            if (brw->gen < 8) {
+            if (devinfo->gen < 8) {
                err |= control(file, "urb complete", urb_complete,
                               brw_inst_urb_complete(devinfo, inst), &space);
             }
@@ -1476,7 +1466,7 @@ brw_disassemble_inst(FILE *file, struct brw_context *brw, brw_inst *inst,
          case BRW_SFID_THREAD_SPAWNER:
             break;
          case GEN7_SFID_DATAPORT_DATA_CACHE:
-            if (brw->gen >= 7) {
+            if (devinfo->gen >= 7) {
                format(file, " (");
 
                err |= control(file, "DP DC0 message type",
@@ -1499,7 +1489,7 @@ brw_disassemble_inst(FILE *file, struct brw_context *brw, brw_inst *inst,
             /* FALLTHROUGH */
 
          case HSW_SFID_DATAPORT_DATA_CACHE_1: {
-            if (brw->gen >= 7) {
+            if (devinfo->gen >= 7) {
                format(file, " (");
 
                unsigned msg_ctrl = brw_inst_dp_msg_control(devinfo, inst);
@@ -1541,7 +1531,7 @@ brw_disassemble_inst(FILE *file, struct brw_context *brw, brw_inst *inst,
          }
 
          case GEN7_SFID_PIXEL_INTERPOLATOR:
-            if (brw->gen >= 7) {
+            if (devinfo->gen >= 7) {
                format(file, " (%s, %s, 0x%02lx)",
                       brw_inst_pi_nopersp(devinfo, inst) ? "linear" : "persp",
                       pixel_interpolator_msg_types[brw_inst_pi_message_type(devinfo, inst)],
@@ -1567,7 +1557,7 @@ brw_disassemble_inst(FILE *file, struct brw_context *brw, brw_inst *inst,
       space = 1;
       err |= control(file, "access mode", access_mode,
                      brw_inst_access_mode(devinfo, inst), &space);
-      if (brw->gen >= 6) {
+      if (devinfo->gen >= 6) {
          err |= control(file, "write enable control", wectrl,
                         brw_inst_mask_control(devinfo, inst), &space);
       } else {
@@ -1578,8 +1568,8 @@ brw_disassemble_inst(FILE *file, struct brw_context *brw, brw_inst *inst,
                      ((brw_inst_no_dd_check(devinfo, inst) << 1) |
                       brw_inst_no_dd_clear(devinfo, inst)), &space);
 
-      if (brw->gen >= 6)
-         err |= qtr_ctrl(file, brw, inst);
+      if (devinfo->gen >= 6)
+         err |= qtr_ctrl(file, devinfo, inst);
       else {
          if (brw_inst_qtr_control(devinfo, inst) == BRW_COMPRESSION_COMPRESSED &&
              opcode_descs[opcode].ndst > 0 &&
@@ -1595,10 +1585,10 @@ brw_disassemble_inst(FILE *file, struct brw_context *brw, brw_inst *inst,
       err |= control(file, "compaction", cmpt_ctrl, is_compacted, &space);
       err |= control(file, "thread control", thread_ctrl,
                      brw_inst_thread_control(devinfo, inst), &space);
-      if (has_branch_ctrl(brw, opcode)) {
+      if (has_branch_ctrl(devinfo, opcode)) {
          err |= control(file, "branch ctrl", branch_ctrl,
                         brw_inst_branch_control(devinfo, inst), &space);
-      } else if (brw->gen >= 6) {
+      } else if (devinfo->gen >= 6) {
          err |= control(file, "acc write control", accwr,
                         brw_inst_acc_wr_control(devinfo, inst), &space);
       }

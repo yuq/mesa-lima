@@ -262,7 +262,7 @@ const unsigned *brw_get_program( struct brw_compile *p,
 }
 
 void
-brw_disassemble(struct brw_context *brw,
+brw_disassemble(const struct brw_device_info *devinfo,
                 void *assembly, int start, int end, FILE *out)
 {
    bool dump_hex = false;
@@ -270,7 +270,7 @@ brw_disassemble(struct brw_context *brw,
    for (int offset = start; offset < end;) {
       brw_inst *insn = assembly + offset;
       brw_inst uncompacted;
-      bool compacted = brw_inst_cmpt_control(brw->intelScreen->devinfo, insn);
+      bool compacted = brw_inst_cmpt_control(devinfo, insn);
       if (0)
          fprintf(out, "0x%08x: ", offset);
 
@@ -282,7 +282,7 @@ brw_disassemble(struct brw_context *brw,
 		    ((uint32_t *)insn)[0]);
 	 }
 
-	 brw_uncompact_instruction(brw->intelScreen->devinfo, &uncompacted, compacted);
+	 brw_uncompact_instruction(devinfo, &uncompacted, compacted);
 	 insn = &uncompacted;
 	 offset += 8;
       } else {
@@ -296,6 +296,6 @@ brw_disassemble(struct brw_context *brw,
 	 offset += 16;
       }
 
-      brw_disassemble_inst(out, brw, insn, compacted);
+      brw_disassemble_inst(out, devinfo, insn, compacted);
    }
 }

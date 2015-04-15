@@ -112,7 +112,7 @@ void brw_set_default_acc_write_control(struct brw_compile *p, unsigned value);
 
 void brw_init_compile(struct brw_context *, struct brw_compile *p,
 		      void *mem_ctx);
-void brw_disassemble(struct brw_context *brw, void *assembly,
+void brw_disassemble(const struct brw_device_info *devinfo, void *assembly,
                      int start, int end, FILE *out);
 const unsigned *brw_get_program( struct brw_compile *p, unsigned *sz );
 
@@ -471,7 +471,7 @@ void brw_uncompact_instruction(const struct brw_device_info *devinfo,
 bool brw_try_compact_instruction(const struct brw_device_info *devinfo,
                                  brw_compact_inst *dst, brw_inst *src);
 
-void brw_debug_compact_uncompact(struct brw_context *brw,
+void brw_debug_compact_uncompact(const struct brw_device_info *devinfo,
                                  brw_inst *orig, brw_inst *uncompacted);
 
 static inline int

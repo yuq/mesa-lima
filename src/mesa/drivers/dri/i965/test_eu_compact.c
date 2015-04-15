@@ -31,8 +31,6 @@
 static bool
 test_compact_instruction(struct brw_compile *p, brw_inst src)
 {
-   struct brw_context *brw = p->brw;
-
    brw_compact_inst dst;
    memset(&dst, 0xd0, sizeof(dst));
 
@@ -41,7 +39,7 @@ test_compact_instruction(struct brw_compile *p, brw_inst src)
 
       brw_uncompact_instruction(p->devinfo, &uncompacted, &dst);
       if (memcmp(&uncompacted, &src, sizeof(src))) {
-	 brw_debug_compact_uncompact(brw, &src, &uncompacted);
+	 brw_debug_compact_uncompact(p->devinfo, &src, &uncompacted);
 	 return false;
       }
    } else {
@@ -51,7 +49,7 @@ test_compact_instruction(struct brw_compile *p, brw_inst src)
       if (memcmp(&unchanged, &dst, sizeof(dst))) {
 	 fprintf(stderr, "Failed to compact, but dst changed\n");
 	 fprintf(stderr, "  Instruction: ");
-	 brw_disassemble_inst(stderr, brw, &src, false);
+	 brw_disassemble_inst(stderr, p->devinfo, &src, false);
 	 return false;
       }
    }

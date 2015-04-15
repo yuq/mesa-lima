@@ -1622,7 +1622,7 @@ void brw_fs_alloc_reg_sets(struct intel_screen *screen);
 void brw_vec4_alloc_reg_set(struct intel_screen *screen);
 
 /* brw_disasm.c */
-int brw_disassemble_inst(FILE *file, struct brw_context *brw,
+int brw_disassemble_inst(FILE *file, const struct brw_device_info *devinfo,
                          struct brw_inst *inst, bool is_compacted);
 
 /* brw_vs.c */

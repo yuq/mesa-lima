@@ -79,7 +79,7 @@ dump_assembly(void *assembly, int num_annotations, struct annotation *annotation
             fprintf(stderr, "   %s\n", last_annotation_string);
       }
 
-      brw_disassemble(brw, assembly, start_offset, end_offset, stderr);
+      brw_disassemble(brw->intelScreen->devinfo, assembly, start_offset, end_offset, stderr);
 
       if (annotation[i].block_end) {
          fprintf(stderr, "   END B%d", annotation[i].block_end->num);

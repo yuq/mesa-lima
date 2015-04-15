@@ -1218,18 +1218,18 @@ brw_uncompact_instruction(const struct brw_device_info *devinfo, brw_inst *dst,
    }
 }
 
-void brw_debug_compact_uncompact(struct brw_context *brw,
+void brw_debug_compact_uncompact(const struct brw_device_info *devinfo,
                                  brw_inst *orig,
                                  brw_inst *uncompacted)
 {
    fprintf(stderr, "Instruction compact/uncompact changed (gen%d):\n",
-           brw->gen);
+           devinfo->gen);
 
    fprintf(stderr, "  before: ");
-   brw_disassemble_inst(stderr, brw, orig, true);
+   brw_disassemble_inst(stderr, devinfo, orig, true);
 
    fprintf(stderr, "  after:  ");
-   brw_disassemble_inst(stderr, brw, uncompacted, false);
+   brw_disassemble_inst(stderr, devinfo, uncompacted, false);
 
    uint32_t *before_bits = (uint32_t *)orig;
    uint32_t *after_bits = (uint32_t *)uncompacted;
@@ -1365,7 +1365,6 @@ void
 brw_compact_instructions(struct brw_compile *p, int start_offset,
                          int num_annotations, struct annotation *annotation)
 {
-   struct brw_context *brw = p->brw;
    const struct brw_device_info *devinfo = p->devinfo;
    void *store = p->store + start_offset / 16;
    /* For an instruction at byte offset 16*i before compaction, this is the
@@ -1400,7 +1399,7 @@ brw_compact_instructions(struct brw_compile *p, int start_offset,
             brw_inst uncompacted;
             brw_uncompact_instruction(devinfo, &uncompacted, dst);
             if (memcmp(&saved, &uncompacted, sizeof(uncompacted))) {
-               brw_debug_compact_uncompact(brw, &saved, &uncompacted);
+               brw_debug_compact_uncompact(devinfo, &saved, &uncompacted);
             }
          }
 

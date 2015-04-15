@@ -117,7 +117,8 @@ static void compile_clip_prog( struct brw_context *brw,
 
    if (unlikely(INTEL_DEBUG & DEBUG_CLIP)) {
       fprintf(stderr, "clip:\n");
-      brw_disassemble(brw, c.func.store, 0, program_size, stderr);
+      brw_disassemble(brw->intelScreen->devinfo, c.func.store,
+                      0, program_size, stderr);
       fprintf(stderr, "\n");
    }
 
