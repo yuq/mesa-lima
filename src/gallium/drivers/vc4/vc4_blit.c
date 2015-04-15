@@ -138,6 +138,9 @@ vc4_tile_blit(struct pipe_context *pctx, const struct pipe_blit_info *info)
                 return false;
         }
 
+        if (info->dst.resource->format != info->src.resource->format)
+                return false;
+
         struct vc4_surface *dst_surf =
                 vc4_get_blit_surface(pctx, info->dst.resource, info->dst.level);
         struct vc4_surface *src_surf =
