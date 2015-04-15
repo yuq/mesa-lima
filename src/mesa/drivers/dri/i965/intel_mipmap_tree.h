@@ -330,6 +330,13 @@ struct intel_miptree_aux_buffer
    struct intel_mipmap_tree *mt; /**< hiz miptree used with Gen6 */
 };
 
+/* Tile resource modes */
+enum intel_miptree_tr_mode {
+   INTEL_MIPTREE_TRMODE_NONE,
+   INTEL_MIPTREE_TRMODE_YF,
+   INTEL_MIPTREE_TRMODE_YS
+};
+
 struct intel_mipmap_tree
 {
    /** Buffer object containing the pixel data. */
@@ -338,6 +345,7 @@ struct intel_mipmap_tree
    uint32_t pitch; /**< pitch in bytes. */
 
    uint32_t tiling; /**< One of the I915_TILING_* flags */
+   enum intel_miptree_tr_mode tr_mode;
 
    /* Effectively the key:
     */

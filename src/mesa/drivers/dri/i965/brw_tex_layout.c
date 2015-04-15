@@ -568,6 +568,8 @@ brw_miptree_layout(struct brw_context *brw,
 {
    bool gen6_hiz_or_stencil = false;
 
+   mt->tr_mode = INTEL_MIPTREE_TRMODE_NONE;
+
    if (brw->gen == 6 && mt->array_layout == ALL_SLICES_AT_EACH_LOD) {
       const GLenum base_format = _mesa_get_format_base_format(mt->format);
       gen6_hiz_or_stencil = _mesa_is_depth_or_stencil_format(base_format);
