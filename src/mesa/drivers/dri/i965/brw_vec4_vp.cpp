@@ -528,14 +528,6 @@ vec4_vs_visitor::get_vp_src_reg(const prog_src_register &src)
          /* Add the small constant index to the address register */
          src_reg reladdr = src_reg(this, glsl_type::int_type);
 
-         /* We have to use a message header on Skylake to get SIMD4x2 mode.
-          * Reserve space for the register.
-          */
-         if (brw->gen >= 9) {
-            reladdr.reg_offset++;
-            alloc.sizes[reladdr.reg] = 2;
-         }
-
          dst_reg dst_reladdr = dst_reg(reladdr);
          dst_reladdr.writemask = WRITEMASK_X;
          emit(ADD(dst_reladdr, this->vp_addr_reg, src_reg(src.Index)));
@@ -553,20 +545,11 @@ vec4_vs_visitor::get_vp_src_reg(const prog_src_register &src)
 
          result = src_reg(this, glsl_type::vec4_type);
          src_reg surf_index = src_reg(unsigned(prog_data->base.binding_table.pull_constants_start));
-         vec4_instruction *load;
-         if (brw->gen >= 7) {
-            load = new(mem_ctx)
-               vec4_instruction(VS_OPCODE_PULL_CONSTANT_LOAD_GEN7,
-                                dst_reg(result), surf_index, reladdr);
-            load->mlen = 1;
-         } else {
-            load = new(mem_ctx)
-               vec4_instruction(VS_OPCODE_PULL_CONSTANT_LOAD,
-                                dst_reg(result), surf_index, reladdr);
-            load->base_mrf = 14;
-            load->mlen = 1;
-         }
-         emit(load);
+
+         emit_pull_constant_load_reg(dst_reg(result),
+                                     surf_index,
+                                     reladdr,
+                                     NULL, NULL /* before_block/inst */);
          break;
       }
 

@@ -364,6 +364,11 @@ public:
 				dst_reg dst,
 				src_reg orig_src,
 				int base_offset);
+   void emit_pull_constant_load_reg(dst_reg dst,
+                                    src_reg surf_index,
+                                    src_reg offset,
+                                    bblock_t *before_block,
+                                    vec4_instruction *before_inst);
    src_reg emit_resolve_reladdr(int scratch_loc[], bblock_t *block,
                                 vec4_instruction *inst, src_reg src);
 

@@ -1296,6 +1296,63 @@ vec4_visitor::emit_lrp(const dst_reg &dst,
    }
 }
 
+/**
+ * Emits the instructions needed to perform a pull constant load. before_block
+ * and before_inst can be NULL in which case the instruction will be appended
+ * to the end of the instruction list.
+ */
+void
+vec4_visitor::emit_pull_constant_load_reg(dst_reg dst,
+                                          src_reg surf_index,
+                                          src_reg offset_reg,
+                                          bblock_t *before_block,
+                                          vec4_instruction *before_inst)
+{
+   assert((before_inst == NULL && before_block == NULL) ||
+          (before_inst && before_block));
+
+   vec4_instruction *pull;
+
+   if (brw->gen >= 7) {
+      dst_reg grf_offset = dst_reg(this, glsl_type::int_type);
+
+      /* We have to use a message header on Skylake to get SIMD4x2 mode.
+       * Reserve space for the register.
+       */
+      if (brw->gen >= 9) {
+         grf_offset.reg_offset++;
+         alloc.sizes[grf_offset.reg] = 2;
+      }
+
+      grf_offset.type = offset_reg.type;
+
+      pull = MOV(grf_offset, offset_reg);
+
+      if (before_inst)
+         emit_before(before_block, before_inst, pull);
+      else
+         emit(pull);
+
+      pull = new(mem_ctx) vec4_instruction(VS_OPCODE_PULL_CONSTANT_LOAD_GEN7,
+                                           dst,
+                                           surf_index,
+                                           src_reg(grf_offset));
+      pull->mlen = 1;
+   } else {
+      pull = new(mem_ctx) vec4_instruction(VS_OPCODE_PULL_CONSTANT_LOAD,
+                                           dst,
+                                           surf_index,
+                                           offset_reg);
+      pull->base_mrf = 14;
+      pull->mlen = 1;
+   }
+
+   if (before_inst)
+      emit_before(before_block, before_inst, pull);
+   else
+      emit(pull);
+}
+
 void
 vec4_visitor::visit(ir_expression *ir)
 {
@@ -1774,36 +1831,10 @@ vec4_visitor::visit(ir_expression *ir)
          emit(SHR(dst_reg(offset), op[1], src_reg(4)));
       }
 
-      if (brw->gen >= 7) {
-         dst_reg grf_offset = dst_reg(this, glsl_type::int_type);
-
-         /* We have to use a message header on Skylake to get SIMD4x2 mode.
-          * Reserve space for the register.
-          */
-         if (brw->gen >= 9) {
-            grf_offset.reg_offset++;
-            alloc.sizes[grf_offset.reg] = 2;
-         }
-
-         grf_offset.type = offset.type;
-
-         emit(MOV(grf_offset, offset));
-
-         vec4_instruction *pull =
-            emit(new(mem_ctx) vec4_instruction(VS_OPCODE_PULL_CONSTANT_LOAD_GEN7,
-                                               dst_reg(packed_consts),
-                                               surf_index,
-                                               src_reg(grf_offset)));
-         pull->mlen = 1;
-      } else {
-         vec4_instruction *pull =
-            emit(new(mem_ctx) vec4_instruction(VS_OPCODE_PULL_CONSTANT_LOAD,
-                                               dst_reg(packed_consts),
-                                               surf_index,
-                                               offset));
-         pull->base_mrf = 14;
-         pull->mlen = 1;
-      }
+      emit_pull_constant_load_reg(dst_reg(packed_consts),
+                                  surf_index,
+                                  offset,
+                                  NULL, NULL /* before_block/inst */);
 
       packed_consts.swizzle = brw_swizzle_for_size(ir->type->vector_elements);
       packed_consts.swizzle += BRW_SWIZZLE4(const_offset % 16 / 4,
@@ -3475,32 +3506,11 @@ vec4_visitor::emit_pull_constant_load(bblock_t *block, vec4_instruction *inst,
    src_reg index = src_reg(prog_data->base.binding_table.pull_constants_start);
    src_reg offset = get_pull_constant_offset(block, inst, orig_src.reladdr,
                                              reg_offset);
-   vec4_instruction *load;
 
-   if (brw->gen >= 7) {
-      dst_reg grf_offset = dst_reg(this, glsl_type::int_type);
-
-      /* We have to use a message header on Skylake to get SIMD4x2 mode.
-       * Reserve space for the register.
-       */
-      if (brw->gen >= 9) {
-         grf_offset.reg_offset++;
-         alloc.sizes[grf_offset.reg] = 2;
-      }
-
-      grf_offset.type = offset.type;
-      emit_before(block, inst, MOV(grf_offset, offset));
-
-      load = new(mem_ctx) vec4_instruction(VS_OPCODE_PULL_CONSTANT_LOAD_GEN7,
-                                           temp, index, src_reg(grf_offset));
-      load->mlen = 1;
-   } else {
-      load = new(mem_ctx) vec4_instruction(VS_OPCODE_PULL_CONSTANT_LOAD,
-                                           temp, index, offset);
-      load->base_mrf = 14;
-      load->mlen = 1;
-   }
-   emit_before(block, inst, load);
+   emit_pull_constant_load_reg(temp,
+                               index,
+                               offset,
+                               block, inst);
 }
 
 /**
