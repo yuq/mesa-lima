@@ -205,16 +205,16 @@ gen8_emit_texture_surface_state(struct brw_context *brw,
       assert(brw->gen < 8 || mt->num_samples > 1 || mt->align_w == 16);
    }
 
+   const uint32_t surf_type = translate_tex_target(target);
    uint32_t *surf = allocate_surface_state(brw, surf_offset, surf_index);
 
-   surf[0] = translate_tex_target(target) << BRW_SURFACE_TYPE_SHIFT |
+   surf[0] = SET_FIELD(surf_type, BRW_SURFACE_TYPE) |
              format << BRW_SURFACE_FORMAT_SHIFT |
              vertical_alignment(mt) |
              horizontal_alignment(mt) |
              tiling_mode;
 
-   if (target == GL_TEXTURE_CUBE_MAP ||
-       target == GL_TEXTURE_CUBE_MAP_ARRAY) {
+   if (surf_type == BRW_SURFACE_CUBE) {
       surf[0] |= BRW_SURFACE_CUBEFACE_ENABLES;
    }
 
