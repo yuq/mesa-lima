@@ -2003,6 +2003,10 @@ gen6_upload_push_constants(struct brw_context *brw,
                            struct brw_stage_state *stage_state,
                            enum aub_state_struct_type type);
 
+bool
+gen9_use_linear_1d_layout(const struct brw_context *brw,
+                          const struct intel_mipmap_tree *mt);
+
 #ifdef __cplusplus
 }
 #endif

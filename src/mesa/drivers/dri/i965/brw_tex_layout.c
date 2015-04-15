@@ -500,9 +500,9 @@ align_cube(struct intel_mipmap_tree *mt)
       mt->total_height += 2;
 }
 
-static bool
-use_linear_1d_layout(struct brw_context *brw,
-                     struct intel_mipmap_tree *mt)
+bool
+gen9_use_linear_1d_layout(const struct brw_context *brw,
+                          const struct intel_mipmap_tree *mt)
 {
    /* On Gen9+ the mipmap levels of a 1D surface are all laid out in a
     * horizontal line. This isn't done for depth/stencil buffers however
@@ -527,7 +527,7 @@ brw_miptree_layout_texture_array(struct brw_context *brw,
 				 struct intel_mipmap_tree *mt)
 {
    unsigned height = mt->physical_height0;
-   bool layout_1d = use_linear_1d_layout(brw, mt);
+   bool layout_1d = gen9_use_linear_1d_layout(brw, mt);
    int physical_qpitch;
 
    if (layout_1d)
@@ -749,7 +749,7 @@ intel_miptree_set_total_width_height(struct brw_context *brw,
          break;
       case INTEL_MSAA_LAYOUT_NONE:
       case INTEL_MSAA_LAYOUT_IMS:
-         if (use_linear_1d_layout(brw, mt))
+         if (gen9_use_linear_1d_layout(brw, mt))
             gen9_miptree_layout_1d(mt);
          else
             brw_miptree_layout_2d(mt);
