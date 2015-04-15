@@ -42,6 +42,7 @@
 
 #include "ir3_compiler.h"
 #include "ir3_shader.h"
+#include "ir3_nir.h"
 
 #include "instr-a3xx.h"
 #include "ir3.h"
@@ -149,7 +150,7 @@ static struct nir_shader *to_nir(const struct tgsi_token *tokens)
 		progress |= nir_copy_prop(s);
 		progress |= nir_opt_dce(s);
 		progress |= nir_opt_cse(s);
-		progress |= nir_opt_peephole_select(s);
+		progress |= ir3_nir_lower_if_else(s);
 		progress |= nir_opt_algebraic(s);
 		progress |= nir_opt_constant_folding(s);
 

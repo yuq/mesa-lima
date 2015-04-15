@@ -1,7 +1,7 @@
 /* -*- mode: C; c-file-style: "k&r"; tab-width 4; indent-tabs-mode: t; -*- */
 
 /*
- * Copyright (C) 2013 Rob Clark <robclark@freedesktop.org>
+ * Copyright (C) 2015 Rob Clark <robclark@freedesktop.org>
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -26,17 +26,11 @@
  *    Rob Clark <robclark@freedesktop.org>
  */
 
-#ifndef IR3_COMPILER_H_
-#define IR3_COMPILER_H_
+#ifndef IR3_NIR_H_
+#define IR3_NIR_H_
 
-#include "ir3_shader.h"
+#include "glsl/nir/nir.h"
 
+bool ir3_nir_lower_if_else(nir_shader *shader);
 
-int ir3_compile_shader_nir(struct ir3_shader_variant *so,
-		const struct tgsi_token *tokens, struct ir3_shader_key key);
-
-int ir3_compile_shader(struct ir3_shader_variant *so,
-		const struct tgsi_token *tokens,
-		struct ir3_shader_key key, bool cp);
-
-#endif /* IR3_COMPILER_H_ */
+#endif /* IR3_NIR_H_ */
