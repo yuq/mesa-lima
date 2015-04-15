@@ -592,6 +592,12 @@
 #define GEN7_SURFACE_MOCS_SHIFT                 16
 #define GEN7_SURFACE_MOCS_MASK                  INTEL_MASK(19, 16)
 
+#define GEN9_SURFACE_TRMODE_SHIFT          18
+#define GEN9_SURFACE_TRMODE_MASK           INTEL_MASK(19, 18)
+#define GEN9_SURFACE_TRMODE_NONE           0
+#define GEN9_SURFACE_TRMODE_TILEYF         1
+#define GEN9_SURFACE_TRMODE_TILEYS         2
+
 /* Surface state DW6 */
 #define GEN7_SURFACE_MCS_ENABLE                 (1 << 0)
 #define GEN7_SURFACE_MCS_PITCH_SHIFT            3

@@ -57,6 +57,19 @@ swizzle_to_scs(unsigned swizzle)
 }
 
 static uint32_t
+surface_tiling_resource_mode(uint32_t tr_mode)
+{
+   switch (tr_mode) {
+   case INTEL_MIPTREE_TRMODE_YF:
+      return GEN9_SURFACE_TRMODE_TILEYF;
+   case INTEL_MIPTREE_TRMODE_YS:
+      return GEN9_SURFACE_TRMODE_TILEYS;
+   default:
+      return GEN9_SURFACE_TRMODE_NONE;
+   }
+}
+
+static uint32_t
 surface_tiling_mode(uint32_t tiling)
 {
    switch (tiling) {
@@ -166,6 +179,7 @@ gen8_emit_texture_surface_state(struct brw_context *brw,
    uint32_t mocs_wb = brw->gen >= 9 ? SKL_MOCS_WB : BDW_MOCS_WB;
    int surf_index = surf_offset - &brw->wm.base.surf_offset[0];
    unsigned tiling_mode, pitch;
+   const unsigned tr_mode = surface_tiling_resource_mode(mt->tr_mode);
 
    if (mt->format == MESA_FORMAT_S_UINT8) {
       tiling_mode = GEN8_SURFACE_TILING_W;
@@ -220,6 +234,9 @@ gen8_emit_texture_surface_state(struct brw_context *brw,
 
    surf[5] = SET_FIELD(min_level - mt->first_level, GEN7_SURFACE_MIN_LOD) |
              (max_level - min_level - 1); /* mip count */
+
+   if (brw->gen >= 9)
+      surf[5] |= SET_FIELD(tr_mode, GEN9_SURFACE_TRMODE);
 
    if (aux_mt) {
       surf[6] = SET_FIELD(mt->qpitch / 4, GEN8_SURFACE_AUX_QPITCH) |
@@ -351,6 +368,7 @@ gen8_update_renderbuffer_surface(struct brw_context *brw,
    unsigned height = mt->logical_height0;
    unsigned pitch = mt->pitch;
    uint32_t tiling = mt->tiling;
+   unsigned tr_mode = surface_tiling_resource_mode(mt->tr_mode);
    uint32_t format = 0;
    uint32_t surf_type;
    uint32_t offset;
@@ -439,6 +457,9 @@ gen8_update_renderbuffer_surface(struct brw_context *brw,
       surf[4] |= gen7_surface_msaa_bits(mt->num_samples, mt->msaa_layout);
 
    surf[5] = irb->mt_level - irb->mt->first_level;
+
+   if (brw->gen >= 9)
+      surf[5] |= SET_FIELD(tr_mode, GEN9_SURFACE_TRMODE);
 
    if (aux_mt) {
       surf[6] = SET_FIELD(mt->qpitch / 4, GEN8_SURFACE_AUX_QPITCH) |
