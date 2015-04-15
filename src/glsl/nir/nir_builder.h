@@ -29,6 +29,7 @@ struct exec_list;
 typedef struct nir_builder {
    struct exec_list *cf_node_list;
    nir_instr *before_instr;
+   nir_instr *after_instr;
 
    nir_shader *shader;
    nir_function_impl *impl;
@@ -47,12 +48,24 @@ nir_builder_insert_after_cf_list(nir_builder *build,
                                  struct exec_list *cf_node_list)
 {
    build->cf_node_list = cf_node_list;
+   build->before_instr = NULL;
+   build->after_instr = NULL;
 }
 
 static inline void
 nir_builder_insert_before_instr(nir_builder *build, nir_instr *before_instr)
 {
+   build->cf_node_list = NULL;
    build->before_instr = before_instr;
+   build->after_instr = NULL;
+}
+
+static inline void
+nir_builder_insert_after_instr(nir_builder *build, nir_instr *after_instr)
+{
+   build->cf_node_list = NULL;
+   build->before_instr = NULL;
+   build->after_instr = after_instr;
 }
 
 static inline void
@@ -60,9 +73,12 @@ nir_builder_instr_insert(nir_builder *build, nir_instr *instr)
 {
    if (build->cf_node_list) {
       nir_instr_insert_after_cf_list(build->cf_node_list, instr);
-   } else {
-      assert(build->before_instr);
+   } else if (build->before_instr) {
       nir_instr_insert_before(build->before_instr, instr);
+   } else {
+      assert(build->after_instr);
+      nir_instr_insert_after(build->after_instr, instr);
+      build->after_instr = instr;
    }
 }
 
