@@ -136,8 +136,6 @@ fs_generator::fs_generator(struct brw_context *brw,
      runtime_check_aads_emit(runtime_check_aads_emit), debug_flag(false),
      stage_abbrev(stage_abbrev), mem_ctx(mem_ctx)
 {
-   ctx = &brw->ctx;
-
    p = rzalloc(mem_ctx, struct brw_compile);
    brw_init_compile(brw->intelScreen->devinfo, p, mem_ctx);
 }
@@ -2091,14 +2089,7 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
          break;
 
       default:
-	 if (inst->opcode < (int) ARRAY_SIZE(opcode_descs)) {
-	    _mesa_problem(ctx, "Unsupported opcode `%s' in %s",
-			  opcode_descs[inst->opcode].name, stage_abbrev);
-	 } else {
-	    _mesa_problem(ctx, "Unsupported opcode %d in %s", inst->opcode,
-                          stage_abbrev);
-	 }
-	 abort();
+         unreachable("Unsupported opcode");
 
       case SHADER_OPCODE_LOAD_PAYLOAD:
          unreachable("Should be lowered by lower_load_payload()");
