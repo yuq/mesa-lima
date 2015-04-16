@@ -3035,18 +3035,8 @@ void si_init_config(struct si_context *sctx)
 
 	si_cmd_context_control(pm4);
 
-	si_pm4_set_reg(pm4, R_028A10_VGT_OUTPUT_PATH_CNTL, 0x0);
-	si_pm4_set_reg(pm4, R_028A14_VGT_HOS_CNTL, 0x0);
 	si_pm4_set_reg(pm4, R_028A18_VGT_HOS_MAX_TESS_LEVEL, 0x0);
 	si_pm4_set_reg(pm4, R_028A1C_VGT_HOS_MIN_TESS_LEVEL, 0x0);
-	si_pm4_set_reg(pm4, R_028A20_VGT_HOS_REUSE_DEPTH, 0x0);
-	si_pm4_set_reg(pm4, R_028A24_VGT_GROUP_PRIM_TYPE, 0x0);
-	si_pm4_set_reg(pm4, R_028A28_VGT_GROUP_FIRST_DECR, 0x0);
-	si_pm4_set_reg(pm4, R_028A2C_VGT_GROUP_DECR, 0x0);
-	si_pm4_set_reg(pm4, R_028A30_VGT_GROUP_VECT_0_CNTL, 0x0);
-	si_pm4_set_reg(pm4, R_028A34_VGT_GROUP_VECT_1_CNTL, 0x0);
-	si_pm4_set_reg(pm4, R_028A38_VGT_GROUP_VECT_0_FMT_CNTL, 0x0);
-	si_pm4_set_reg(pm4, R_028A3C_VGT_GROUP_VECT_1_FMT_CNTL, 0x0);
 
 	/* FIXME calculate these values somehow ??? */
 	si_pm4_set_reg(pm4, R_028A54_VGT_GS_PER_ES, 0x80);
