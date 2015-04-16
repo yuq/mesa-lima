@@ -554,12 +554,12 @@ static void si_set_viewport_states(struct pipe_context *ctx,
 		pm4 = &viewport->pm4;
 
 		viewport->viewport = state[idx];
-		si_pm4_set_reg(pm4, R_02843C_PA_CL_VPORT_XSCALE_0 + offset, fui(state[idx].scale[0]));
-		si_pm4_set_reg(pm4, R_028440_PA_CL_VPORT_XOFFSET_0 + offset, fui(state[idx].translate[0]));
-		si_pm4_set_reg(pm4, R_028444_PA_CL_VPORT_YSCALE_0 + offset, fui(state[idx].scale[1]));
-		si_pm4_set_reg(pm4, R_028448_PA_CL_VPORT_YOFFSET_0 + offset, fui(state[idx].translate[1]));
-		si_pm4_set_reg(pm4, R_02844C_PA_CL_VPORT_ZSCALE_0 + offset, fui(state[idx].scale[2]));
-		si_pm4_set_reg(pm4, R_028450_PA_CL_VPORT_ZOFFSET_0 + offset, fui(state[idx].translate[2]));
+		si_pm4_set_reg(pm4, R_02843C_PA_CL_VPORT_XSCALE + offset, fui(state[idx].scale[0]));
+		si_pm4_set_reg(pm4, R_028440_PA_CL_VPORT_XOFFSET + offset, fui(state[idx].translate[0]));
+		si_pm4_set_reg(pm4, R_028444_PA_CL_VPORT_YSCALE + offset, fui(state[idx].scale[1]));
+		si_pm4_set_reg(pm4, R_028448_PA_CL_VPORT_YOFFSET + offset, fui(state[idx].translate[1]));
+		si_pm4_set_reg(pm4, R_02844C_PA_CL_VPORT_ZSCALE + offset, fui(state[idx].scale[2]));
+		si_pm4_set_reg(pm4, R_028450_PA_CL_VPORT_ZOFFSET + offset, fui(state[idx].translate[2]));
 
 		si_pm4_set_state(sctx, viewport[i], viewport);
 	}
