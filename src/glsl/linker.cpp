@@ -2552,7 +2552,7 @@ build_stageref(struct gl_shader_program *shProg, const char *name)
 
 static bool
 add_interface_variables(struct gl_shader_program *shProg,
-                        struct gl_shader *sh, GLenum interface)
+                        struct gl_shader *sh, GLenum programInterface)
 {
    foreach_in_list(ir_instruction, node, sh->ir) {
       ir_variable *var = node->as_variable();
@@ -2572,18 +2572,18 @@ add_interface_variables(struct gl_shader_program *shProg,
              var->data.location != SYSTEM_VALUE_INSTANCE_ID)
          continue;
       case ir_var_shader_in:
-         if (interface != GL_PROGRAM_INPUT)
+         if (programInterface != GL_PROGRAM_INPUT)
             continue;
          break;
       case ir_var_shader_out:
-         if (interface != GL_PROGRAM_OUTPUT)
+         if (programInterface != GL_PROGRAM_OUTPUT)
             continue;
          break;
       default:
          continue;
       };
 
-      if (!add_program_resource(shProg, interface, var,
+      if (!add_program_resource(shProg, programInterface, var,
                                 build_stageref(shProg, var->name)))
          return false;
    }

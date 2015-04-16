@@ -544,18 +544,18 @@ array_index_of_resource(struct gl_program_resource *res,
  */
 struct gl_program_resource *
 _mesa_program_resource_find_name(struct gl_shader_program *shProg,
-                                 GLenum interface, const char *name)
+                                 GLenum programInterface, const char *name)
 {
    struct gl_program_resource *res = shProg->ProgramResourceList;
    for (unsigned i = 0; i < shProg->NumProgramResourceList; i++, res++) {
-      if (res->Type != interface)
+      if (res->Type != programInterface)
          continue;
 
       /* Resource basename. */
       const char *rname = _mesa_program_resource_name(res);
       unsigned baselen = strlen(rname);
 
-      switch (interface) {
+      switch (programInterface) {
       case GL_TRANSFORM_FEEDBACK_VARYING:
       case GL_UNIFORM_BLOCK:
       case GL_UNIFORM:
@@ -620,13 +620,13 @@ _mesa_program_resource_index(struct gl_shader_program *shProg,
  */
 struct gl_program_resource *
 _mesa_program_resource_find_index(struct gl_shader_program *shProg,
-                                  GLenum interface, GLuint index)
+                                  GLenum programInterface, GLuint index)
 {
    struct gl_program_resource *res = shProg->ProgramResourceList;
    int idx = -1;
 
    for (unsigned i = 0; i < shProg->NumProgramResourceList; i++, res++) {
-      if (res->Type != interface)
+      if (res->Type != programInterface)
          continue;
 
       switch (res->Type) {
@@ -653,7 +653,7 @@ _mesa_program_resource_find_index(struct gl_shader_program *shProg,
  */
 bool
 _mesa_get_program_resource_name(struct gl_shader_program *shProg,
-                                GLenum interface, GLuint index,
+                                GLenum programInterface, GLuint index,
                                 GLsizei bufSize, GLsizei *length,
                                 GLchar *name, const char *caller)
 {
@@ -661,7 +661,7 @@ _mesa_get_program_resource_name(struct gl_shader_program *shProg,
 
    /* Find resource with given interface and index. */
    struct gl_program_resource *res =
-      _mesa_program_resource_find_index(shProg, interface, index);
+      _mesa_program_resource_find_index(shProg, programInterface, index);
 
    /* The error INVALID_VALUE is generated if <index> is greater than
    * or equal to the number of entries in the active resource list for
@@ -704,7 +704,7 @@ _mesa_get_program_resource_name(struct gl_shader_program *shProg,
     * Note, that TCS outputs and TES inputs should not have index appended
     * either.
     */
-   bool add_index = !(((interface == GL_PROGRAM_INPUT) &&
+   bool add_index = !(((programInterface == GL_PROGRAM_INPUT) &&
                        res->StageReferences & (1 << MESA_SHADER_GEOMETRY)));
 
    if (add_index && _mesa_program_resource_array_size(res)) {
@@ -777,10 +777,10 @@ program_resource_location(struct gl_shader_program *shProg,
  */
 GLint
 _mesa_program_resource_location(struct gl_shader_program *shProg,
-                                GLenum interface, const char *name)
+                                GLenum programInterface, const char *name)
 {
    struct gl_program_resource *res =
-      _mesa_program_resource_find_name(shProg, interface, name);
+      _mesa_program_resource_find_name(shProg, programInterface, name);
 
    /* Resource not found. */
    if (!res)
@@ -795,10 +795,10 @@ _mesa_program_resource_location(struct gl_shader_program *shProg,
  */
 GLint
 _mesa_program_resource_location_index(struct gl_shader_program *shProg,
-                                      GLenum interface, const char *name)
+                                      GLenum programInterface, const char *name)
 {
    struct gl_program_resource *res =
-      _mesa_program_resource_find_name(shProg, interface, name);
+      _mesa_program_resource_find_name(shProg, programInterface, name);
 
    /* Non-existent variable or resource is not referenced by fragment stage. */
    if (!res || !(res->StageReferences & (1 << MESA_SHADER_FRAGMENT)))
@@ -1033,7 +1033,7 @@ invalid_operation:
 
 extern void
 _mesa_get_program_resourceiv(struct gl_shader_program *shProg,
-                             GLenum interface, GLuint index, GLsizei propCount,
+                             GLenum programInterface, GLuint index, GLsizei propCount,
                              const GLenum *props, GLsizei bufSize,
                              GLsizei *length, GLint *params)
 {
@@ -1043,13 +1043,13 @@ _mesa_get_program_resourceiv(struct gl_shader_program *shProg,
    GLsizei amount = 0;
 
    struct gl_program_resource *res =
-      _mesa_program_resource_find_index(shProg, interface, index);
+      _mesa_program_resource_find_index(shProg, programInterface, index);
 
    /* No such resource found or bufSize negative. */
    if (!res || bufSize < 0) {
       _mesa_error(ctx, GL_INVALID_VALUE,
                   "glGetProgramResourceiv(%s index %d bufSize %d)",
-                  _mesa_lookup_enum_by_nr(interface), index, bufSize);
+                  _mesa_lookup_enum_by_nr(programInterface), index, bufSize);
       return;
    }
 

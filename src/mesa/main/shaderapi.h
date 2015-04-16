@@ -232,25 +232,25 @@ _mesa_program_resource_index(struct gl_shader_program *shProg,
 
 extern struct gl_program_resource *
 _mesa_program_resource_find_name(struct gl_shader_program *shProg,
-                                 GLenum interface, const char *name);
+                                 GLenum programInterface, const char *name);
 
 extern struct gl_program_resource *
 _mesa_program_resource_find_index(struct gl_shader_program *shProg,
-                                  GLenum interface, GLuint index);
+                                  GLenum programInterface, GLuint index);
 
 extern bool
 _mesa_get_program_resource_name(struct gl_shader_program *shProg,
-                                GLenum interface, GLuint index,
+                                GLenum programInterface, GLuint index,
                                 GLsizei bufSize, GLsizei *length,
                                 GLchar *name, const char *caller);
 
 extern GLint
 _mesa_program_resource_location(struct gl_shader_program *shProg,
-                                GLenum interface, const char *name);
+                                GLenum programInterface, const char *name);
 
 extern GLint
 _mesa_program_resource_location_index(struct gl_shader_program *shProg,
-                                      GLenum interface, const char *name);
+                                      GLenum programInterface, const char *name);
 
 extern unsigned
 _mesa_program_resource_prop(struct gl_shader_program *shProg,
@@ -259,7 +259,7 @@ _mesa_program_resource_prop(struct gl_shader_program *shProg,
 
 extern void
 _mesa_get_program_resourceiv(struct gl_shader_program *shProg,
-                             GLenum interface, GLuint index,
+                             GLenum programInterface, GLuint index,
                              GLsizei propCount, const GLenum *props,
                              GLsizei bufSize, GLsizei *length,
                              GLint *params);
