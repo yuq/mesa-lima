@@ -86,6 +86,8 @@ struct brw_compiler {
        */
       int aligned_pairs_class;
    } fs_reg_sets[2];
+
+   void (*shader_debug_log)(void *, const char *str, ...) PRINTFLIKE(2, 3);
 };
 
 enum PACKED register_file {

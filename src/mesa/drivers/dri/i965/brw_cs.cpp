@@ -128,7 +128,8 @@ brw_cs_emit(struct brw_context *brw,
       return NULL;
    }
 
-   fs_generator g(brw, mem_ctx, (void*) key, &prog_data->base, &cp->Base,
+   fs_generator g(brw->intelScreen->compiler,
+                  mem_ctx, (void*) key, &prog_data->base, &cp->Base,
                   v8.promoted_constants, v8.runtime_check_aads_emit, "CS");
    if (INTEL_DEBUG & DEBUG_CS) {
       char *name = ralloc_asprintf(mem_ctx, "%s compute shader %d",

@@ -134,7 +134,7 @@ vec4_instruction::get_src(const struct brw_vue_prog_data *prog_data, int i)
    return brw_reg;
 }
 
-vec4_generator::vec4_generator(struct brw_context *brw,
+vec4_generator::vec4_generator(const struct brw_compiler *compiler,
                                struct gl_shader_program *shader_prog,
                                struct gl_program *prog,
                                struct brw_vue_prog_data *prog_data,
@@ -142,13 +142,13 @@ vec4_generator::vec4_generator(struct brw_context *brw,
                                bool debug_flag,
                                const char *stage_name,
                                const char *stage_abbrev)
-   : brw(brw), devinfo(brw->intelScreen->devinfo),
+   : compiler(compiler), devinfo(compiler->devinfo),
      shader_prog(shader_prog), prog(prog), prog_data(prog_data),
      mem_ctx(mem_ctx), stage_name(stage_name), stage_abbrev(stage_abbrev),
      debug_flag(debug_flag)
 {
    p = rzalloc(mem_ctx, struct brw_codegen);
-   brw_init_codegen(brw->intelScreen->devinfo, p, mem_ctx);
+   brw_init_codegen(devinfo, p, mem_ctx);
 }
 
 vec4_generator::~vec4_generator()
@@ -1626,16 +1626,11 @@ vec4_generator::generate_code(const cfg_t *cfg)
       ralloc_free(annotation.ann);
    }
 
-   static GLuint msg_id = 0;
-   _mesa_gl_debug(&brw->ctx, &msg_id,
-                  MESA_DEBUG_SOURCE_SHADER_COMPILER,
-                  MESA_DEBUG_TYPE_OTHER,
-                  MESA_DEBUG_SEVERITY_NOTIFICATION,
-                  "%s vec4 shader: %d inst, %d loops, "
-                  "compacted %d to %d bytes.\n",
-                  stage_abbrev,
-                  before_size / 16, loop_count,
-                  before_size, after_size);
+   compiler->shader_debug_log(log_data,
+                              "%s vec4 shader: %d inst, %d loops, "
+                              "compacted %d to %d bytes.\n",
+                              stage_abbrev, before_size / 16, loop_count,
+                              before_size, after_size);
 }
 
 const unsigned *

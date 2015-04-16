@@ -1910,7 +1910,8 @@ brw_vs_emit(struct brw_context *brw,
          return NULL;
       }
 
-      fs_generator g(brw, mem_ctx, (void *) &c->key, &prog_data->base.base,
+      fs_generator g(brw->intelScreen->compiler,
+                     mem_ctx, (void *) &c->key, &prog_data->base.base,
                      &c->vp->program.Base, v.promoted_constants,
                      v.runtime_check_aads_emit, "VS");
       if (INTEL_DEBUG & DEBUG_VS) {
@@ -1947,7 +1948,8 @@ brw_vs_emit(struct brw_context *brw,
          return NULL;
       }
 
-      vec4_generator g(brw, prog, &c->vp->program.Base, &prog_data->base,
+      vec4_generator g(brw->intelScreen->compiler,
+                       prog, &c->vp->program.Base, &prog_data->base,
                        mem_ctx, INTEL_DEBUG & DEBUG_VS, "vertex", "VS");
       assembly = g.generate_assembly(v.cfg, final_assembly_size);
    }

@@ -121,7 +121,7 @@ brw_reg_from_fs_reg(fs_reg *reg)
    return brw_reg;
 }
 
-fs_generator::fs_generator(struct brw_context *brw,
+fs_generator::fs_generator(const struct brw_compiler *compiler,
                            void *mem_ctx,
                            const void *key,
                            struct brw_stage_prog_data *prog_data,
@@ -130,7 +130,7 @@ fs_generator::fs_generator(struct brw_context *brw,
                            bool runtime_check_aads_emit,
                            const char *stage_abbrev)
 
-   : brw(brw), devinfo(brw->intelScreen->devinfo), key(key),
+   : compiler(compiler), devinfo(compiler->devinfo), key(key),
      prog_data(prog_data),
      prog(prog), promoted_constants(promoted_constants),
      runtime_check_aads_emit(runtime_check_aads_emit), debug_flag(false),
@@ -2173,15 +2173,13 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
       ralloc_free(annotation.ann);
    }
 
-   static GLuint msg_id = 0;
-   _mesa_gl_debug(&brw->ctx, &msg_id,
-                  MESA_DEBUG_SOURCE_SHADER_COMPILER,
-                  MESA_DEBUG_TYPE_OTHER,
-                  MESA_DEBUG_SEVERITY_NOTIFICATION,
-                  "%s SIMD%d shader: %d inst, %d loops, %d:%d spills:fills, "
-                  "Promoted %u constants, compacted %d to %d bytes.\n",
-                  stage_abbrev, dispatch_width, before_size / 16, loop_count,
-                  spill_count, fill_count, promoted_constants, before_size, after_size);
+   compiler->shader_debug_log(log_data,
+                              "%s SIMD%d shader: %d inst, %d loops, "
+                              "%d:%d spills:fills, Promoted %u constants, "
+                              "compacted %d to %d bytes.\n",
+                              stage_abbrev, dispatch_width, before_size / 16,
+                              loop_count, spill_count, fill_count,
+                              promoted_constants, before_size, after_size);
 
    return start_offset;
 }

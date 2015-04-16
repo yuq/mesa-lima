@@ -398,7 +398,7 @@ public:
 class fs_generator
 {
 public:
-   fs_generator(struct brw_context *brw,
+   fs_generator(const struct brw_compiler *compiler,
                 void *mem_ctx,
                 const void *key,
                 struct brw_stage_prog_data *prog_data,
@@ -493,7 +493,7 @@ private:
 
    bool patch_discard_jumps_to_fb_writes();
 
-   struct brw_context *brw;
+   const struct brw_compiler *compiler;
    const struct brw_device_info *devinfo;
 
    struct brw_codegen *p;

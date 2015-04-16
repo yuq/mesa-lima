@@ -4081,7 +4081,8 @@ brw_wm_fs_emit(struct brw_context *brw,
       prog_data->no_8 = false;
    }
 
-   fs_generator g(brw, mem_ctx, (void *) key, &prog_data->base,
+   fs_generator g(brw->intelScreen->compiler,
+                  mem_ctx, (void *) key, &prog_data->base,
                   &fp->Base, v.promoted_constants, v.runtime_check_aads_emit, "FS");
 
    if (unlikely(INTEL_DEBUG & DEBUG_WM)) {
