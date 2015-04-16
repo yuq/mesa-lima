@@ -1882,7 +1882,7 @@ brw_vs_emit(struct brw_context *brw,
    if (unlikely(INTEL_DEBUG & DEBUG_VS))
       brw_dump_ir("vertex", prog, &shader->base, &c->vp->program.Base);
 
-   if (brw->scalar_vs) {
+   if (brw->intelScreen->compiler->scalar_vs) {
       if (!c->vp->program.Base.nir) {
          /* Normally we generate NIR in LinkShader() or
           * ProgramStringNotify(), but Mesa's fixed-function vertex program

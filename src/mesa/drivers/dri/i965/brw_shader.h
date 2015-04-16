@@ -89,6 +89,9 @@ struct brw_compiler {
 
    void (*shader_debug_log)(void *, const char *str, ...) PRINTFLIKE(2, 3);
    void (*shader_perf_log)(void *, const char *str, ...) PRINTFLIKE(2, 3);
+
+   bool scalar_vs;
+   struct gl_shader_compiler_options glsl_compiler_options[MESA_SHADER_STAGES];
 };
 
 enum PACKED register_file {

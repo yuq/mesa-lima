@@ -39,6 +39,7 @@
 #include "swrast/s_renderbuffer.h"
 #include "util/ralloc.h"
 #include "brw_shader.h"
+#include "glsl/nir/nir.h"
 
 #include "utils.h"
 #include "xmlpool.h"

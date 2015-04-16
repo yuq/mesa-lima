@@ -84,6 +84,54 @@ brw_compiler_create(void *mem_ctx, const struct brw_device_info *devinfo)
    brw_fs_alloc_reg_sets(compiler);
    brw_vec4_alloc_reg_set(compiler);
 
+   if (devinfo->gen >= 8 && !(INTEL_DEBUG & DEBUG_VEC4VS))
+      compiler->scalar_vs = true;
+
+   nir_shader_compiler_options *nir_options =
+      rzalloc(compiler, nir_shader_compiler_options);
+   nir_options->native_integers = true;
+   /* In order to help allow for better CSE at the NIR level we tell NIR
+    * to split all ffma instructions during opt_algebraic and we then
+    * re-combine them as a later step.
+    */
+   nir_options->lower_ffma = true;
+   nir_options->lower_sub = true;
+
+   /* We want the GLSL compiler to emit code that uses condition codes */
+   for (int i = 0; i < MESA_SHADER_STAGES; i++) {
+      compiler->glsl_compiler_options[i].MaxUnrollIterations = 32;
+      compiler->glsl_compiler_options[i].MaxIfDepth =
+         devinfo->gen < 6 ? 16 : UINT_MAX;
+
+      compiler->glsl_compiler_options[i].EmitCondCodes = true;
+      compiler->glsl_compiler_options[i].EmitNoNoise = true;
+      compiler->glsl_compiler_options[i].EmitNoMainReturn = true;
+      compiler->glsl_compiler_options[i].EmitNoIndirectInput = true;
+      compiler->glsl_compiler_options[i].EmitNoIndirectOutput =
+	 (i == MESA_SHADER_FRAGMENT);
+      compiler->glsl_compiler_options[i].EmitNoIndirectTemp =
+	 (i == MESA_SHADER_FRAGMENT);
+      compiler->glsl_compiler_options[i].EmitNoIndirectUniform = false;
+      compiler->glsl_compiler_options[i].LowerClipDistance = true;
+   }
+
+   compiler->glsl_compiler_options[MESA_SHADER_VERTEX].OptimizeForAOS = true;
+   compiler->glsl_compiler_options[MESA_SHADER_GEOMETRY].OptimizeForAOS = true;
+
+   if (compiler->scalar_vs) {
+      /* If we're using the scalar backend for vertex shaders, we need to
+       * configure these accordingly.
+       */
+      compiler->glsl_compiler_options[MESA_SHADER_VERTEX].EmitNoIndirectOutput = true;
+      compiler->glsl_compiler_options[MESA_SHADER_VERTEX].EmitNoIndirectTemp = true;
+      compiler->glsl_compiler_options[MESA_SHADER_VERTEX].OptimizeForAOS = false;
+
+      compiler->glsl_compiler_options[MESA_SHADER_VERTEX].NirOptions = nir_options;
+   }
+
+   compiler->glsl_compiler_options[MESA_SHADER_FRAGMENT].NirOptions = nir_options;
+   compiler->glsl_compiler_options[MESA_SHADER_COMPUTE].NirOptions = nir_options;
+
    return compiler;
 }
 
@@ -139,7 +187,7 @@ is_scalar_shader_stage(struct brw_context *brw, int stage)
    case MESA_SHADER_FRAGMENT:
       return true;
    case MESA_SHADER_VERTEX:
-      return brw->scalar_vs;
+      return brw->intelScreen->compiler->scalar_vs;
    default:
       return false;
    }
