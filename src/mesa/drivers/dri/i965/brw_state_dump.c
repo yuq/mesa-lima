@@ -308,10 +308,17 @@ static void dump_sf_clip_viewport_state(struct brw_context *brw,
    batch_out(brw, name, offset, 3, "m30 = %f\n", vp->viewport.m30);
    batch_out(brw, name, offset, 4, "m31 = %f\n", vp->viewport.m31);
    batch_out(brw, name, offset, 5, "m32 = %f\n", vp->viewport.m32);
-   batch_out(brw, name, offset, 6, "guardband xmin = %f\n", vp->guardband.xmin);
-   batch_out(brw, name, offset, 7, "guardband xmax = %f\n", vp->guardband.xmax);
-   batch_out(brw, name, offset, 8, "guardband ymin = %f\n", vp->guardband.ymin);
-   batch_out(brw, name, offset, 9, "guardband ymax = %f\n", vp->guardband.ymax);
+   batch_out(brw, name, offset, 8, "guardband xmin = %f\n", vp->guardband.xmin);
+   batch_out(brw, name, offset, 9, "guardband xmax = %f\n", vp->guardband.xmax);
+   batch_out(brw, name, offset, 9, "guardband ymin = %f\n", vp->guardband.ymin);
+   batch_out(brw, name, offset, 10, "guardband ymax = %f\n", vp->guardband.ymax);
+   if (brw->gen >= 8) {
+      float *cc_vp = brw->batch.bo->virtual + offset;
+      batch_out(brw, name, offset, 12, "Min extents: %.2fx%.2f\n",
+                cc_vp[12], cc_vp[14]);
+      batch_out(brw, name, offset, 14, "Max extents: %.2fx%.2f\n",
+                cc_vp[13], cc_vp[15]);
+   }
 }
 
 
