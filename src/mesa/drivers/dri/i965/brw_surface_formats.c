@@ -311,6 +311,12 @@ const struct surface_format_info surface_formats[] = {
 #undef x
 #undef Y
 
+const char *
+brw_surface_format_name(unsigned format)
+{
+   return surface_formats[format].name;
+}
+
 uint32_t
 brw_format_for_mesa_format(mesa_format mesa_format)
 {

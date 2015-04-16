@@ -31,6 +31,7 @@
 #include "brw_context.h"
 #include "brw_defines.h"
 #include "brw_eu.h"
+#include "brw_state.h"
 
 static void
 batch_out(struct brw_context *brw, const char *name, uint32_t offset,
@@ -60,19 +61,6 @@ get_965_surfacetype(unsigned int surfacetype)
     case 3: return "CUBE";
     case 4: return "BUFFER";
     case 7: return "NULL";
-    default: return "unknown";
-    }
-}
-
-static const char *
-get_965_surface_format(unsigned int surface_format)
-{
-    switch (surface_format) {
-    case 0x000: return "r32g32b32a32_float";
-    case 0x0c1: return "b8g8r8a8_unorm";
-    case 0x100: return "b5g6r5_unorm";
-    case 0x102: return "b5g5r5a1_unorm";
-    case 0x104: return "b4g4r4a4_unorm";
     default: return "unknown";
     }
 }
@@ -176,7 +164,7 @@ static void dump_surface_state(struct brw_context *brw, uint32_t offset)
 
    batch_out(brw, name, offset, 0, "%s %s\n",
 	     get_965_surfacetype(GET_FIELD(surf[0], BRW_SURFACE_TYPE)),
-	     get_965_surface_format(GET_FIELD(surf[0], BRW_SURFACE_FORMAT)));
+             brw_surface_format_name(GET_FIELD(surf[0], BRW_SURFACE_FORMAT)));
    batch_out(brw, name, offset, 1, "offset\n");
    batch_out(brw, name, offset, 2, "%dx%d size, %d mips\n",
 	     GET_FIELD(surf[2], BRW_SURFACE_WIDTH) + 1,
@@ -200,7 +188,7 @@ static void dump_gen7_surface_state(struct brw_context *brw, uint32_t offset)
 
    batch_out(brw, name, offset, 0, "%s %s %s\n",
              get_965_surfacetype(GET_FIELD(surf[0], BRW_SURFACE_TYPE)),
-             get_965_surface_format(GET_FIELD(surf[0], BRW_SURFACE_FORMAT)),
+             brw_surface_format_name(GET_FIELD(surf[0], BRW_SURFACE_FORMAT)),
              (surf[0] & GEN7_SURFACE_IS_ARRAY) ? "array" : "");
    batch_out(brw, name, offset, 1, "offset\n");
    batch_out(brw, name, offset, 2, "%dx%d size, %d mips, %d slices\n",
