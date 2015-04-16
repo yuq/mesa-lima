@@ -32,6 +32,19 @@
 #include "glsl/glsl_parser_extras.h"
 #include "main/shaderapi.h"
 
+struct brw_compiler *
+brw_compiler_create(void *mem_ctx, const struct brw_device_info *devinfo)
+{
+   struct brw_compiler *compiler = rzalloc(mem_ctx, struct brw_compiler);
+
+   compiler->devinfo = devinfo;
+
+   brw_fs_alloc_reg_sets(compiler);
+   brw_vec4_alloc_reg_set(compiler);
+
+   return compiler;
+}
+
 struct gl_shader *
 brw_new_shader(struct gl_context *ctx, GLuint name, GLuint type)
 {

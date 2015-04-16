@@ -38,6 +38,7 @@
 #include "main/version.h"
 #include "swrast/s_renderbuffer.h"
 #include "util/ralloc.h"
+#include "brw_shader.h"
 
 #include "utils.h"
 #include "xmlpool.h"
@@ -1406,8 +1407,8 @@ __DRIconfig **intelInitScreen2(__DRIscreen *psp)
    psp->extensions = !intelScreen->has_context_reset_notification
       ? intelScreenExtensions : intelRobustScreenExtensions;
 
-   brw_fs_alloc_reg_sets(intelScreen);
-   brw_vec4_alloc_reg_set(intelScreen);
+   intelScreen->compiler = brw_compiler_create(intelScreen,
+                                               intelScreen->devinfo);
 
    return (const __DRIconfig**) intel_screen_make_configs(psp);
 }

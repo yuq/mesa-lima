@@ -1613,10 +1613,10 @@ void brw_upload_cs_urb_state(struct brw_context *brw);
 
 /* brw_fs_reg_allocate.cpp
  */
-void brw_fs_alloc_reg_sets(struct intel_screen *screen);
+void brw_fs_alloc_reg_sets(struct brw_compiler *compiler);
 
 /* brw_vec4_reg_allocate.cpp */
-void brw_vec4_alloc_reg_set(struct intel_screen *screen);
+void brw_vec4_alloc_reg_set(struct brw_compiler *compiler);
 
 /* brw_disasm.c */
 int brw_disassemble_inst(FILE *file, const struct brw_device_info *devinfo,

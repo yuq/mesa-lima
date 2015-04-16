@@ -71,9 +71,9 @@ fs_visitor::assign_regs_trivial()
 }
 
 static void
-brw_alloc_reg_set(struct intel_screen *screen, int reg_width)
+brw_alloc_reg_set(struct brw_compiler *compiler, int reg_width)
 {
-   const struct brw_device_info *devinfo = screen->devinfo;
+   const struct brw_device_info *devinfo = compiler->devinfo;
    int base_reg_count = BRW_MAX_GRF;
    int index = reg_width - 1;
 
@@ -112,9 +112,9 @@ brw_alloc_reg_set(struct intel_screen *screen, int reg_width)
       class_sizes[class_count++] = 8;
    }
 
-   memset(screen->wm_reg_sets[index].class_to_ra_reg_range, 0,
-          sizeof(screen->wm_reg_sets[index].class_to_ra_reg_range));
-   int *class_to_ra_reg_range = screen->wm_reg_sets[index].class_to_ra_reg_range;
+   memset(compiler->fs_reg_sets[index].class_to_ra_reg_range, 0,
+          sizeof(compiler->fs_reg_sets[index].class_to_ra_reg_range));
+   int *class_to_ra_reg_range = compiler->fs_reg_sets[index].class_to_ra_reg_range;
 
    /* Compute the total number of registers across all classes. */
    int ra_reg_count = 0;
@@ -144,16 +144,16 @@ brw_alloc_reg_set(struct intel_screen *screen, int reg_width)
          class_to_ra_reg_range[i] = class_to_ra_reg_range[i-1];
    }
 
-   uint8_t *ra_reg_to_grf = ralloc_array(screen, uint8_t, ra_reg_count);
-   struct ra_regs *regs = ra_alloc_reg_set(screen, ra_reg_count);
+   uint8_t *ra_reg_to_grf = ralloc_array(compiler, uint8_t, ra_reg_count);
+   struct ra_regs *regs = ra_alloc_reg_set(compiler, ra_reg_count);
    if (devinfo->gen >= 6)
       ra_set_allocate_round_robin(regs);
-   int *classes = ralloc_array(screen, int, class_count);
+   int *classes = ralloc_array(compiler, int, class_count);
    int aligned_pairs_class = -1;
 
    /* Allocate space for q values.  We allocate class_count + 1 because we
     * want to leave room for the aligned pairs class if we have it. */
-   unsigned int **q_values = ralloc_array(screen, unsigned int *,
+   unsigned int **q_values = ralloc_array(compiler, unsigned int *,
                                           class_count + 1);
    for (int i = 0; i < class_count + 1; ++i)
       q_values[i] = ralloc_array(q_values, unsigned int, class_count + 1);
@@ -273,20 +273,20 @@ brw_alloc_reg_set(struct intel_screen *screen, int reg_width)
 
    ralloc_free(q_values);
 
-   screen->wm_reg_sets[index].regs = regs;
-   for (unsigned i = 0; i < ARRAY_SIZE(screen->wm_reg_sets[index].classes); i++)
-      screen->wm_reg_sets[index].classes[i] = -1;
+   compiler->fs_reg_sets[index].regs = regs;
+   for (unsigned i = 0; i < ARRAY_SIZE(compiler->fs_reg_sets[index].classes); i++)
+      compiler->fs_reg_sets[index].classes[i] = -1;
    for (int i = 0; i < class_count; i++)
-      screen->wm_reg_sets[index].classes[class_sizes[i] - 1] = classes[i];
-   screen->wm_reg_sets[index].ra_reg_to_grf = ra_reg_to_grf;
-   screen->wm_reg_sets[index].aligned_pairs_class = aligned_pairs_class;
+      compiler->fs_reg_sets[index].classes[class_sizes[i] - 1] = classes[i];
+   compiler->fs_reg_sets[index].ra_reg_to_grf = ra_reg_to_grf;
+   compiler->fs_reg_sets[index].aligned_pairs_class = aligned_pairs_class;
 }
 
 void
-brw_fs_alloc_reg_sets(struct intel_screen *screen)
+brw_fs_alloc_reg_sets(struct brw_compiler *compiler)
 {
-   brw_alloc_reg_set(screen, 1);
-   brw_alloc_reg_set(screen, 2);
+   brw_alloc_reg_set(compiler, 1);
+   brw_alloc_reg_set(compiler, 2);
 }
 
 static int
@@ -524,7 +524,7 @@ fs_visitor::setup_mrf_hack_interference(struct ra_graph *g, int first_mrf_node)
 bool
 fs_visitor::assign_regs(bool allow_spilling)
 {
-   struct intel_screen *screen = brw->intelScreen;
+   struct brw_compiler *compiler = brw->intelScreen->compiler;
    /* Most of this allocation was written for a reg_width of 1
     * (dispatch_width == 8).  In extending to SIMD16, the code was
     * left in place and it was converted to have the hardware
@@ -534,7 +534,7 @@ fs_visitor::assign_regs(bool allow_spilling)
    int reg_width = dispatch_width / 8;
    unsigned hw_reg_mapping[this->alloc.count];
    int payload_node_count = ALIGN(this->first_non_payload_grf, reg_width);
-   int rsi = reg_width - 1; /* Which screen->wm_reg_sets[] to use */
+   int rsi = reg_width - 1; /* Which compiler->fs_reg_sets[] to use */
    calculate_live_intervals();
 
    int node_count = this->alloc.count;
@@ -544,15 +544,15 @@ fs_visitor::assign_regs(bool allow_spilling)
    if (devinfo->gen >= 7)
       node_count += BRW_MAX_GRF - GEN7_MRF_HACK_START;
    struct ra_graph *g =
-      ra_alloc_interference_graph(screen->wm_reg_sets[rsi].regs, node_count);
+      ra_alloc_interference_graph(compiler->fs_reg_sets[rsi].regs, node_count);
 
    for (unsigned i = 0; i < this->alloc.count; i++) {
       unsigned size = this->alloc.sizes[i];
       int c;
 
-      assert(size <= ARRAY_SIZE(screen->wm_reg_sets[rsi].classes) &&
+      assert(size <= ARRAY_SIZE(compiler->fs_reg_sets[rsi].classes) &&
              "Register allocation relies on split_virtual_grfs()");
-      c = screen->wm_reg_sets[rsi].classes[size - 1];
+      c = compiler->fs_reg_sets[rsi].classes[size - 1];
 
       /* Special case: on pre-GEN6 hardware that supports PLN, the
        * second operand of a PLN instruction needs to be an
@@ -563,10 +563,10 @@ fs_visitor::assign_regs(bool allow_spilling)
        * any other interpolation modes).  So all we need to do is find
        * that register and set it to the appropriate class.
        */
-      if (screen->wm_reg_sets[rsi].aligned_pairs_class >= 0 &&
+      if (compiler->fs_reg_sets[rsi].aligned_pairs_class >= 0 &&
           this->delta_xy[BRW_WM_PERSPECTIVE_PIXEL_BARYCENTRIC].file == GRF &&
           this->delta_xy[BRW_WM_PERSPECTIVE_PIXEL_BARYCENTRIC].reg == i) {
-         c = screen->wm_reg_sets[rsi].aligned_pairs_class;
+         c = compiler->fs_reg_sets[rsi].aligned_pairs_class;
       }
 
       ra_set_node_class(g, i, c);
@@ -595,7 +595,7 @@ fs_visitor::assign_regs(bool allow_spilling)
           */
          if (inst->eot) {
             int size = alloc.sizes[inst->src[0].reg];
-            int reg = screen->wm_reg_sets[rsi].class_to_ra_reg_range[size] - 1;
+            int reg = compiler->fs_reg_sets[rsi].class_to_ra_reg_range[size] - 1;
             ra_set_node_reg(g, inst->src[0].reg, reg);
             break;
          }
@@ -663,7 +663,7 @@ fs_visitor::assign_regs(bool allow_spilling)
    for (unsigned i = 0; i < this->alloc.count; i++) {
       int reg = ra_get_node_reg(g, i);
 
-      hw_reg_mapping[i] = screen->wm_reg_sets[rsi].ra_reg_to_grf[reg];
+      hw_reg_mapping[i] = compiler->fs_reg_sets[rsi].ra_reg_to_grf[reg];
       this->grf_used = MAX2(this->grf_used,
 			    hw_reg_mapping[i] + this->alloc.sizes[i]);
    }

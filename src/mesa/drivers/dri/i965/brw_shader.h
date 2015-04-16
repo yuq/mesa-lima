@@ -36,6 +36,58 @@
 #define MAX_SAMPLER_MESSAGE_SIZE 11
 #define MAX_VGRF_SIZE 16
 
+struct brw_compiler {
+   const struct brw_device_info *devinfo;
+
+   struct {
+      struct ra_regs *regs;
+
+      /**
+       * Array of the ra classes for the unaligned contiguous register
+       * block sizes used.
+       */
+      int *classes;
+
+      /**
+       * Mapping for register-allocated objects in *regs to the first
+       * GRF for that object.
+       */
+      uint8_t *ra_reg_to_grf;
+   } vec4_reg_set;
+
+   struct {
+      struct ra_regs *regs;
+
+      /**
+       * Array of the ra classes for the unaligned contiguous register
+       * block sizes used, indexed by register size.
+       */
+      int classes[16];
+
+      /**
+       * Mapping from classes to ra_reg ranges.  Each of the per-size
+       * classes corresponds to a range of ra_reg nodes.  This array stores
+       * those ranges in the form of first ra_reg in each class and the
+       * total number of ra_reg elements in the last array element.  This
+       * way the range of the i'th class is given by:
+       * [ class_to_ra_reg_range[i], class_to_ra_reg_range[i+1] )
+       */
+      int class_to_ra_reg_range[17];
+
+      /**
+       * Mapping for register-allocated objects in *regs to the first
+       * GRF for that object.
+       */
+      uint8_t *ra_reg_to_grf;
+
+      /**
+       * ra class for the aligned pairs we use for PLN, which doesn't
+       * appear in *classes.
+       */
+      int aligned_pairs_class;
+   } fs_reg_sets[2];
+};
+
 enum PACKED register_file {
    BAD_FILE,
    GRF,
@@ -222,6 +274,9 @@ bool brw_abs_immediate(enum brw_reg_type type, struct brw_reg *reg);
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+struct brw_compiler *
+brw_compiler_create(void *mem_ctx, const struct brw_device_info *devinfo);
 
 bool brw_vs_precompile(struct gl_context *ctx,
                        struct gl_shader_program *shader_prog,

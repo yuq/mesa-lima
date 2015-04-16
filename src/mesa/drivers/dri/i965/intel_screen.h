@@ -63,53 +63,7 @@ struct intel_screen
 
    int winsys_msaa_samples_override;
 
-   struct {
-      struct ra_regs *regs;
-
-      /**
-       * Array of the ra classes for the unaligned contiguous register
-       * block sizes used.
-       */
-      int *classes;
-
-      /**
-       * Mapping for register-allocated objects in *regs to the first
-       * GRF for that object.
-       */
-      uint8_t *ra_reg_to_grf;
-   } vec4_reg_set;
-
-   struct {
-      struct ra_regs *regs;
-
-      /**
-       * Array of the ra classes for the unaligned contiguous register
-       * block sizes used, indexed by register size.
-       */
-      int classes[16];
-
-      /**
-       * Mapping from classes to ra_reg ranges.  Each of the per-size
-       * classes corresponds to a range of ra_reg nodes.  This array stores
-       * those ranges in the form of first ra_reg in each class and the
-       * total number of ra_reg elements in the last array element.  This
-       * way the range of the i'th class is given by:
-       * [ class_to_ra_reg_range[i], class_to_ra_reg_range[i+1] )
-       */
-      int class_to_ra_reg_range[17];
-
-      /**
-       * Mapping for register-allocated objects in *regs to the first
-       * GRF for that object.
-       */
-      uint8_t *ra_reg_to_grf;
-
-      /**
-       * ra class for the aligned pairs we use for PLN, which doesn't
-       * appear in *classes.
-       */
-      int aligned_pairs_class;
-   } wm_reg_sets[2];
+   struct brw_compiler *compiler;
 
    /**
    * Configuration cache with default values for all contexts
