@@ -44,8 +44,7 @@
 
 #define RADEON_FLUSH_ASYNC		(1 << 0)
 #define RADEON_FLUSH_KEEP_TILING_FLAGS	(1 << 1) /* needs DRM 2.12.0 */
-#define RADEON_FLUSH_COMPUTE		(1 << 2)
-#define RADEON_FLUSH_END_OF_FRAME       (1 << 3)
+#define RADEON_FLUSH_END_OF_FRAME       (1 << 2)
 
 /* Tiling flags. */
 enum radeon_bo_layout {
@@ -134,6 +133,9 @@ enum radeon_family {
     CHIP_KABINI,
     CHIP_HAWAII,
     CHIP_MULLINS,
+    CHIP_TONGA,
+    CHIP_ICELAND,
+    CHIP_CARRIZO,
     CHIP_LAST,
 };
 
@@ -148,10 +150,12 @@ enum chip_class {
     CAYMAN,
     SI,
     CIK,
+    VI,
 };
 
 enum ring_type {
     RING_GFX = 0,
+    RING_COMPUTE,
     RING_DMA,
     RING_UVD,
     RING_VCE,
@@ -516,6 +520,11 @@ struct radeon_winsys {
      * Destroy a context.
      */
     void (*ctx_destroy)(struct radeon_winsys_ctx *ctx);
+
+    /**
+     * Query a GPU reset status.
+     */
+    enum pipe_reset_status (*ctx_query_reset_status)(struct radeon_winsys_ctx *ctx);
 
     /**
      * Create a command stream.

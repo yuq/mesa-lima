@@ -550,6 +550,7 @@ static void radeon_drm_cs_flush(struct radeon_winsys_cs *rcs,
 
         default:
         case RING_GFX:
+        case RING_COMPUTE:
             cs->cst->flags[0] = 0;
             cs->cst->flags[1] = RADEON_CS_RING_GFX;
             cs->cst->cs.num_chunks = 2;
@@ -565,7 +566,7 @@ static void radeon_drm_cs_flush(struct radeon_winsys_cs *rcs,
                 cs->cst->flags[0] |= RADEON_CS_END_OF_FRAME;
                 cs->cst->cs.num_chunks = 3;
             }
-            if (flags & RADEON_FLUSH_COMPUTE) {
+            if (cs->base.ring_type == RING_COMPUTE) {
                 cs->cst->flags[1] = RADEON_CS_RING_COMPUTE;
                 cs->cst->cs.num_chunks = 3;
             }
