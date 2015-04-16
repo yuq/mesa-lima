@@ -22,6 +22,7 @@
 # IN THE SOFTWARE.
 
 import mako.template
+import sys
 
 ir_expression_operation = [
    # Name        operands  string  comment
@@ -318,7 +319,7 @@ def name_from_item(item):
    return "ir_{}op_{}".format(("un", "bin", "tri", "quad")[item[1]-1], item[0])
 
 if __name__ == "__main__":
-   enum_template = mako.template.Template("""/*
+   copyright = """/*
  * Copyright (C) 2010 Intel Corporation
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
@@ -340,7 +341,8 @@ if __name__ == "__main__":
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-
+"""
+   enum_template = mako.template.Template(copyright + """
 /* Update ir_expression::get_num_operands() and operator_strs when
  * updating this list.
  */
@@ -362,15 +364,28 @@ ${item}
    ir_last_opcode = ir_quadop_${lasts[3][0]}
 };""")
 
-   lasts = [None, None, None, None]
-   for item in reversed(ir_expression_operation):
-      if isinstance(item, str):
-         continue
+   strings_template = mako.template.Template(copyright + """
+static const char *const operator_strs[] = {
+% for item in values:
+%  if not isinstance(item, str):
+   "${item[2] if item[2] is not None else item[0]}",
+%  endif
+% endfor
+};""")
 
-      i = item[1] - 1
-      if lasts[i] is None:
-         lasts[i] = (item[0], i)
+   if sys.argv[1] == "enum":
+      lasts = [None, None, None, None]
+      for item in reversed(ir_expression_operation):
+         if isinstance(item, str):
+            continue
 
-   print(enum_template.render(values=ir_expression_operation,
-                              lasts=lasts,
-                              name_from_item=name_from_item))
+         i = item[1] - 1
+         if lasts[i] is None:
+            lasts[i] = (item[0], i)
+
+      print(enum_template.render(values=ir_expression_operation,
+                                 lasts=lasts,
+                                 name_from_item=name_from_item))
+   elif sys.argv[1] == "strings":
+      print(strings_template.render(values=ir_expression_operation,
+                                    name_from_item=name_from_item))

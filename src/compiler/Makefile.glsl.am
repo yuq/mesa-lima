@@ -199,7 +199,11 @@ glsl/glcpp/glcpp-lex.c: glsl/glcpp/glcpp-lex.l
 
 glsl/ir_expression_operation.h: glsl/ir_expression_operation.py
 	$(MKDIR_GEN)
-	$(PYTHON_GEN) $(srcdir)/glsl/ir_expression_operation.py > $@ || ($(RM) $@; false)
+	$(PYTHON_GEN) $(srcdir)/glsl/ir_expression_operation.py enum > $@ || ($(RM) $@; false)
+
+glsl/ir_expression_operation_strings.h: glsl/ir_expression_operation.py
+	$(MKDIR_GEN)
+	$(PYTHON_GEN) $(srcdir)/glsl/ir_expression_operation.py strings > $@ || ($(RM) $@; false)
 
 # Only the parsers (specifically the header files generated at the same time)
 # need to be in BUILT_SOURCES. Though if we list the parser headers YACC is
@@ -211,6 +215,7 @@ BUILT_SOURCES +=					\
 	glsl/glsl_parser.cpp				\
 	glsl/glsl_lexer.cpp				\
 	glsl/ir_expression_operation.h			\
+	glsl/ir_expression_operation_strings.h		\
 	glsl/glcpp/glcpp-parse.c			\
 	glsl/glcpp/glcpp-lex.c
 CLEANFILES +=						\
@@ -219,6 +224,7 @@ CLEANFILES +=						\
 	glsl/glsl_parser.cpp				\
 	glsl/glsl_lexer.cpp				\
 	glsl/ir_expression_operation.h			\
+	glsl/ir_expression_operation_strings.h		\
 	glsl/glcpp/glcpp-parse.c			\
 	glsl/glcpp/glcpp-lex.c
 
