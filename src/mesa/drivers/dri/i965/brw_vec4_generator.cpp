@@ -142,7 +142,8 @@ vec4_generator::vec4_generator(struct brw_context *brw,
                                bool debug_flag,
                                const char *stage_name,
                                const char *stage_abbrev)
-   : brw(brw), shader_prog(shader_prog), prog(prog), prog_data(prog_data),
+   : brw(brw), devinfo(brw->intelScreen->devinfo),
+     shader_prog(shader_prog), prog(prog), prog_data(prog_data),
      mem_ctx(mem_ctx), stage_name(stage_name), stage_abbrev(stage_abbrev),
      debug_flag(debug_flag)
 {
@@ -235,7 +236,7 @@ vec4_generator::generate_tex(vec4_instruction *inst,
 {
    int msg_type = -1;
 
-   if (brw->gen >= 5) {
+   if (devinfo->gen >= 5) {
       switch (inst->opcode) {
       case SHADER_OPCODE_TEX:
       case SHADER_OPCODE_TXL:
@@ -248,7 +249,7 @@ vec4_generator::generate_tex(vec4_instruction *inst,
       case SHADER_OPCODE_TXD:
          if (inst->shadow_compare) {
             /* Gen7.5+.  Otherwise, lowered by brw_lower_texture_gradients(). */
-            assert(brw->gen >= 8 || brw->is_haswell);
+            assert(devinfo->gen >= 8 || devinfo->is_haswell);
             msg_type = HSW_SAMPLER_MESSAGE_SAMPLE_DERIV_COMPARE;
          } else {
             msg_type = GEN5_SAMPLER_MESSAGE_SAMPLE_DERIVS;
@@ -258,13 +259,13 @@ vec4_generator::generate_tex(vec4_instruction *inst,
 	 msg_type = GEN5_SAMPLER_MESSAGE_SAMPLE_LD;
 	 break;
       case SHADER_OPCODE_TXF_CMS:
-         if (brw->gen >= 7)
+         if (devinfo->gen >= 7)
             msg_type = GEN7_SAMPLER_MESSAGE_SAMPLE_LD2DMS;
          else
             msg_type = GEN5_SAMPLER_MESSAGE_SAMPLE_LD;
          break;
       case SHADER_OPCODE_TXF_MCS:
-         assert(brw->gen >= 7);
+         assert(devinfo->gen >= 7);
          msg_type = GEN7_SAMPLER_MESSAGE_SAMPLE_LD_MCS;
          break;
       case SHADER_OPCODE_TXS:
@@ -326,7 +327,7 @@ vec4_generator::generate_tex(vec4_instruction *inst,
     * use an implied move from g0 to the first message register.
     */
    if (inst->header_present) {
-      if (brw->gen < 6 && !inst->offset) {
+      if (devinfo->gen < 6 && !inst->offset) {
          /* Set up an implied move from g0 to the MRF. */
          src = brw_vec8_grf(0, 0);
       } else {
@@ -345,7 +346,7 @@ vec4_generator::generate_tex(vec4_instruction *inst,
             /* Set the texel offset bits in DWord 2. */
             dw2 = inst->offset;
 
-         if (brw->gen >= 9)
+         if (devinfo->gen >= 9)
             /* SKL+ overloads BRW_SAMPLER_SIMD_MODE_SIMD4X2 to also do SIMD8D,
              * based on bit 22 in the header.
              */
@@ -504,7 +505,7 @@ vec4_generator::generate_gs_thread_end(vec4_instruction *inst)
                  inst->base_mrf, /* starting mrf reg nr */
                  src,
                  BRW_URB_WRITE_EOT | inst->urb_write_flags,
-                 brw->gen >= 8 ? 2 : 1,/* message len */
+                 devinfo->gen >= 8 ? 2 : 1,/* message len */
                  0,              /* response len */
                  0,              /* urb destination offset */
                  BRW_URB_SWIZZLE_INTERLEAVE);
@@ -536,7 +537,7 @@ vec4_generator::generate_gs_set_write_offset(struct brw_reg dst,
    brw_push_insn_state(p);
    brw_set_default_access_mode(p, BRW_ALIGN_1);
    brw_set_default_mask_control(p, BRW_MASK_DISABLE);
-   assert(brw->gen >= 7 &&
+   assert(devinfo->gen >= 7 &&
           src1.file == BRW_IMMEDIATE_VALUE &&
           src1.type == BRW_REGISTER_TYPE_UD &&
           src1.dw1.ud <= USHRT_MAX);
@@ -553,7 +554,7 @@ vec4_generator::generate_gs_set_vertex_count(struct brw_reg dst,
    brw_push_insn_state(p);
    brw_set_default_mask_control(p, BRW_MASK_DISABLE);
 
-   if (brw->gen >= 8) {
+   if (devinfo->gen >= 8) {
       /* Move the vertex count into the second MRF for the EOT write. */
       brw_MOV(p, retype(brw_message_reg(dst.nr + 1), BRW_REGISTER_TYPE_UD),
               src);
@@ -824,7 +825,7 @@ vec4_generator::generate_oword_dual_block_offsets(struct brw_reg m1,
 {
    int second_vertex_offset;
 
-   if (brw->gen >= 6)
+   if (devinfo->gen >= 6)
       second_vertex_offset = 1;
    else
       second_vertex_offset = 16;
@@ -887,9 +888,9 @@ vec4_generator::generate_scratch_read(vec4_instruction *inst,
 
    uint32_t msg_type;
 
-   if (brw->gen >= 6)
+   if (devinfo->gen >= 6)
       msg_type = GEN6_DATAPORT_READ_MESSAGE_OWORD_DUAL_BLOCK_READ;
-   else if (brw->gen == 5 || brw->is_g4x)
+   else if (devinfo->gen == 5 || devinfo->is_g4x)
       msg_type = G45_DATAPORT_READ_MESSAGE_OWORD_DUAL_BLOCK_READ;
    else
       msg_type = BRW_DATAPORT_READ_MESSAGE_OWORD_DUAL_BLOCK_READ;
@@ -900,7 +901,7 @@ vec4_generator::generate_scratch_read(vec4_instruction *inst,
    brw_inst *send = brw_next_insn(p, BRW_OPCODE_SEND);
    brw_set_dest(p, send, dst);
    brw_set_src0(p, send, header);
-   if (brw->gen < 6)
+   if (devinfo->gen < 6)
       brw_inst_set_cond_modifier(p->devinfo, send, inst->base_mrf);
    brw_set_dp_read_message(p, send,
 			   255, /* binding table index: stateless access */
@@ -937,9 +938,9 @@ vec4_generator::generate_scratch_write(vec4_instruction *inst,
 
    uint32_t msg_type;
 
-   if (brw->gen >= 7)
+   if (devinfo->gen >= 7)
       msg_type = GEN7_DATAPORT_DC_OWORD_DUAL_BLOCK_WRITE;
-   else if (brw->gen == 6)
+   else if (devinfo->gen == 6)
       msg_type = GEN6_DATAPORT_WRITE_MESSAGE_OWORD_DUAL_BLOCK_WRITE;
    else
       msg_type = BRW_DATAPORT_WRITE_MESSAGE_OWORD_DUAL_BLOCK_WRITE;
@@ -951,7 +952,7 @@ vec4_generator::generate_scratch_write(vec4_instruction *inst,
     * guaranteed and write commits only matter for inter-thread
     * synchronization.
     */
-   if (brw->gen >= 6) {
+   if (devinfo->gen >= 6) {
       write_commit = false;
    } else {
       /* The visitor set up our destination register to be g0.  This
@@ -971,7 +972,7 @@ vec4_generator::generate_scratch_write(vec4_instruction *inst,
    brw_inst *send = brw_next_insn(p, BRW_OPCODE_SEND);
    brw_set_dest(p, send, dst);
    brw_set_src0(p, send, header);
-   if (brw->gen < 6)
+   if (devinfo->gen < 6)
       brw_inst_set_cond_modifier(p->devinfo, send, inst->base_mrf);
    brw_set_dp_write_message(p, send,
 			    255, /* binding table index: stateless access */
@@ -1004,9 +1005,9 @@ vec4_generator::generate_pull_constant_load(vec4_instruction *inst,
 
    uint32_t msg_type;
 
-   if (brw->gen >= 6)
+   if (devinfo->gen >= 6)
       msg_type = GEN6_DATAPORT_READ_MESSAGE_OWORD_DUAL_BLOCK_READ;
-   else if (brw->gen == 5 || brw->is_g4x)
+   else if (devinfo->gen == 5 || devinfo->is_g4x)
       msg_type = G45_DATAPORT_READ_MESSAGE_OWORD_DUAL_BLOCK_READ;
    else
       msg_type = BRW_DATAPORT_READ_MESSAGE_OWORD_DUAL_BLOCK_READ;
@@ -1017,7 +1018,7 @@ vec4_generator::generate_pull_constant_load(vec4_instruction *inst,
    brw_inst *send = brw_next_insn(p, BRW_OPCODE_SEND);
    brw_set_dest(p, send, dst);
    brw_set_src0(p, send, header);
-   if (brw->gen < 6)
+   if (devinfo->gen < 6)
       brw_inst_set_cond_modifier(p->devinfo, send, inst->base_mrf);
    brw_set_dp_read_message(p, send,
 			   surf_index,
@@ -1208,7 +1209,7 @@ vec4_generator::generate_code(const cfg_t *cfg)
          break;
 
       case BRW_OPCODE_MAD:
-         assert(brw->gen >= 6);
+         assert(devinfo->gen >= 6);
          brw_MAD(p, dst, src[0], src[1], src[2]);
          break;
 
@@ -1271,47 +1272,47 @@ vec4_generator::generate_code(const cfg_t *cfg)
          break;
 
       case BRW_OPCODE_F32TO16:
-         assert(brw->gen >= 7);
+         assert(devinfo->gen >= 7);
          brw_F32TO16(p, dst, src[0]);
          break;
 
       case BRW_OPCODE_F16TO32:
-         assert(brw->gen >= 7);
+         assert(devinfo->gen >= 7);
          brw_F16TO32(p, dst, src[0]);
          break;
 
       case BRW_OPCODE_LRP:
-         assert(brw->gen >= 6);
+         assert(devinfo->gen >= 6);
          brw_LRP(p, dst, src[0], src[1], src[2]);
          break;
 
       case BRW_OPCODE_BFREV:
-         assert(brw->gen >= 7);
+         assert(devinfo->gen >= 7);
          /* BFREV only supports UD type for src and dst. */
          brw_BFREV(p, retype(dst, BRW_REGISTER_TYPE_UD),
                    retype(src[0], BRW_REGISTER_TYPE_UD));
          break;
       case BRW_OPCODE_FBH:
-         assert(brw->gen >= 7);
+         assert(devinfo->gen >= 7);
          /* FBH only supports UD type for dst. */
          brw_FBH(p, retype(dst, BRW_REGISTER_TYPE_UD), src[0]);
          break;
       case BRW_OPCODE_FBL:
-         assert(brw->gen >= 7);
+         assert(devinfo->gen >= 7);
          /* FBL only supports UD type for dst. */
          brw_FBL(p, retype(dst, BRW_REGISTER_TYPE_UD), src[0]);
          break;
       case BRW_OPCODE_CBIT:
-         assert(brw->gen >= 7);
+         assert(devinfo->gen >= 7);
          /* CBIT only supports UD type for dst. */
          brw_CBIT(p, retype(dst, BRW_REGISTER_TYPE_UD), src[0]);
          break;
       case BRW_OPCODE_ADDC:
-         assert(brw->gen >= 7);
+         assert(devinfo->gen >= 7);
          brw_ADDC(p, dst, src[0], src[1]);
          break;
       case BRW_OPCODE_SUBB:
-         assert(brw->gen >= 7);
+         assert(devinfo->gen >= 7);
          brw_SUBB(p, dst, src[0], src[1]);
          break;
       case BRW_OPCODE_MAC:
@@ -1319,23 +1320,23 @@ vec4_generator::generate_code(const cfg_t *cfg)
          break;
 
       case BRW_OPCODE_BFE:
-         assert(brw->gen >= 7);
+         assert(devinfo->gen >= 7);
          brw_BFE(p, dst, src[0], src[1], src[2]);
          break;
 
       case BRW_OPCODE_BFI1:
-         assert(brw->gen >= 7);
+         assert(devinfo->gen >= 7);
          brw_BFI1(p, dst, src[0], src[1]);
          break;
       case BRW_OPCODE_BFI2:
-         assert(brw->gen >= 7);
+         assert(devinfo->gen >= 7);
          brw_BFI2(p, dst, src[0], src[1], src[2]);
          break;
 
       case BRW_OPCODE_IF:
          if (inst->src[0].file != BAD_FILE) {
             /* The instruction has an embedded compare (only allowed on gen6) */
-            assert(brw->gen == 6);
+            assert(devinfo->gen == 6);
             gen6_IF(p, inst->conditional_mod, src[0], src[1]);
          } else {
             brw_inst *if_inst = brw_IF(p, BRW_EXECUTE_8);
@@ -1376,10 +1377,10 @@ vec4_generator::generate_code(const cfg_t *cfg)
       case SHADER_OPCODE_SIN:
       case SHADER_OPCODE_COS:
          assert(inst->conditional_mod == BRW_CONDITIONAL_NONE);
-         if (brw->gen >= 7) {
+         if (devinfo->gen >= 7) {
             gen6_math(p, dst, brw_math_function(inst->opcode), src[0],
                       brw_null_reg());
-         } else if (brw->gen == 6) {
+         } else if (devinfo->gen == 6) {
             generate_math_gen6(inst, dst, src[0], brw_null_reg());
          } else {
             generate_math1_gen4(inst, dst, src[0]);
@@ -1390,9 +1391,9 @@ vec4_generator::generate_code(const cfg_t *cfg)
       case SHADER_OPCODE_INT_QUOTIENT:
       case SHADER_OPCODE_INT_REMAINDER:
          assert(inst->conditional_mod == BRW_CONDITIONAL_NONE);
-         if (brw->gen >= 7) {
+         if (devinfo->gen >= 7) {
             gen6_math(p, dst, brw_math_function(inst->opcode), src[0], src[1]);
-         } else if (brw->gen == 6) {
+         } else if (devinfo->gen == 6) {
             generate_math_gen6(inst, dst, src[0], src[1]);
          } else {
             generate_math2_gen4(inst, dst, src[0], src[1]);
@@ -1569,13 +1570,7 @@ vec4_generator::generate_code(const cfg_t *cfg)
       }
 
       default:
-         if (inst->opcode < (int) ARRAY_SIZE(opcode_descs)) {
-            _mesa_problem(&brw->ctx, "Unsupported opcode in `%s' in vec4\n",
-                          opcode_descs[inst->opcode].name);
-         } else {
-            _mesa_problem(&brw->ctx, "Unsupported opcode %d in vec4", inst->opcode);
-         }
-         abort();
+         unreachable("Unsupported opcode");
       }
 
       if (inst->opcode == VEC4_OPCODE_PACK_BYTES) {

@@ -514,6 +514,7 @@ private:
                                       struct brw_reg surf_index);
 
    struct brw_context *brw;
+   const struct brw_device_info *devinfo;
 
    struct brw_compile *p;
 
