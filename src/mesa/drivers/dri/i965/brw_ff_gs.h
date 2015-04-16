@@ -71,7 +71,7 @@ struct brw_ff_gs_prog_key {
 };
 
 struct brw_ff_gs_compile {
-   struct brw_compile func;
+   struct brw_codegen func;
    struct brw_ff_gs_prog_key key;
    struct brw_ff_gs_prog_data prog_data;
 
@@ -116,7 +116,7 @@ void
 brw_upload_ff_gs_prog(struct brw_context *brw);
 
 void
-brw_compile_ff_gs_prog(struct brw_context *brw,
+brw_codegen_ff_gs_prog(struct brw_context *brw,
                        struct brw_ff_gs_prog_key *key);
 
 #endif

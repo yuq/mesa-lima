@@ -128,7 +128,7 @@ static void brw_clip_line_alloc_regs( struct brw_clip_compile *c )
  */
 static void clip_and_emit_line( struct brw_clip_compile *c )
 {
-   struct brw_compile *p = &c->func;
+   struct brw_codegen *p = &c->func;
    struct brw_indirect vtx0     = brw_indirect(0, 0);
    struct brw_indirect vtx1      = brw_indirect(1, 0);
    struct brw_indirect newvtx0   = brw_indirect(2, 0);

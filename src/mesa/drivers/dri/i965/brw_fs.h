@@ -641,7 +641,7 @@ private:
    struct brw_context *brw;
    const struct brw_device_info *devinfo;
 
-   struct brw_compile *p;
+   struct brw_codegen *p;
    const void * const key;
    struct brw_stage_prog_data * const prog_data;
 

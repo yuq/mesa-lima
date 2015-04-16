@@ -111,22 +111,22 @@ brw_swap_cmod(uint32_t cmod)
 }
 
 void
-brw_set_default_exec_size(struct brw_compile *p, unsigned value)
+brw_set_default_exec_size(struct brw_codegen *p, unsigned value)
 {
    brw_inst_set_exec_size(p->devinfo, p->current, value);
 }
 
-void brw_set_default_predicate_control( struct brw_compile *p, unsigned pc )
+void brw_set_default_predicate_control( struct brw_codegen *p, unsigned pc )
 {
    brw_inst_set_pred_control(p->devinfo, p->current, pc);
 }
 
-void brw_set_default_predicate_inverse(struct brw_compile *p, bool predicate_inverse)
+void brw_set_default_predicate_inverse(struct brw_codegen *p, bool predicate_inverse)
 {
    brw_inst_set_pred_inv(p->devinfo, p->current, predicate_inverse);
 }
 
-void brw_set_default_flag_reg(struct brw_compile *p, int reg, int subreg)
+void brw_set_default_flag_reg(struct brw_codegen *p, int reg, int subreg)
 {
    if (p->devinfo->gen >= 7)
       brw_inst_set_flag_reg_nr(p->devinfo, p->current, reg);
@@ -134,13 +134,13 @@ void brw_set_default_flag_reg(struct brw_compile *p, int reg, int subreg)
    brw_inst_set_flag_subreg_nr(p->devinfo, p->current, subreg);
 }
 
-void brw_set_default_access_mode( struct brw_compile *p, unsigned access_mode )
+void brw_set_default_access_mode( struct brw_codegen *p, unsigned access_mode )
 {
    brw_inst_set_access_mode(p->devinfo, p->current, access_mode);
 }
 
 void
-brw_set_default_compression_control(struct brw_compile *p,
+brw_set_default_compression_control(struct brw_codegen *p,
 			    enum brw_compression compression_control)
 {
    p->compressed = (compression_control == BRW_COMPRESSION_COMPRESSED);
@@ -174,23 +174,23 @@ brw_set_default_compression_control(struct brw_compile *p,
    }
 }
 
-void brw_set_default_mask_control( struct brw_compile *p, unsigned value )
+void brw_set_default_mask_control( struct brw_codegen *p, unsigned value )
 {
    brw_inst_set_mask_control(p->devinfo, p->current, value);
 }
 
-void brw_set_default_saturate( struct brw_compile *p, bool enable )
+void brw_set_default_saturate( struct brw_codegen *p, bool enable )
 {
    brw_inst_set_saturate(p->devinfo, p->current, enable);
 }
 
-void brw_set_default_acc_write_control(struct brw_compile *p, unsigned value)
+void brw_set_default_acc_write_control(struct brw_codegen *p, unsigned value)
 {
    if (p->devinfo->gen >= 6)
       brw_inst_set_acc_wr_control(p->devinfo, p->current, value);
 }
 
-void brw_push_insn_state( struct brw_compile *p )
+void brw_push_insn_state( struct brw_codegen *p )
 {
    assert(p->current != &p->stack[BRW_EU_MAX_INSN_STACK-1]);
    memcpy(p->current + 1, p->current, sizeof(brw_inst));
@@ -198,7 +198,7 @@ void brw_push_insn_state( struct brw_compile *p )
    p->current++;
 }
 
-void brw_pop_insn_state( struct brw_compile *p )
+void brw_pop_insn_state( struct brw_codegen *p )
 {
    assert(p->current != p->stack);
    p->current--;
@@ -209,8 +209,8 @@ void brw_pop_insn_state( struct brw_compile *p )
 /***********************************************************************
  */
 void
-brw_init_compile(const struct brw_device_info *devinfo,
-                 struct brw_compile *p, void *mem_ctx)
+brw_init_codegen(const struct brw_device_info *devinfo,
+                 struct brw_codegen *p, void *mem_ctx)
 {
    memset(p, 0, sizeof(*p));
 
@@ -250,7 +250,7 @@ brw_init_compile(const struct brw_device_info *devinfo,
 }
 
 
-const unsigned *brw_get_program( struct brw_compile *p,
+const unsigned *brw_get_program( struct brw_codegen *p,
 			       unsigned *sz )
 {
    *sz = p->next_insn_offset;

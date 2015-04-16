@@ -78,7 +78,7 @@ GLboolean brw_link_shader(struct gl_context *ctx, struct gl_shader_program *prog
 struct gl_shader *brw_new_shader(struct gl_context *ctx, GLuint name, GLuint type);
 
 bool brw_color_buffer_write_enabled(struct brw_context *brw);
-bool brw_compile_wm_prog(struct brw_context *brw,
+bool brw_codegen_wm_prog(struct brw_context *brw,
                          struct gl_shader_program *prog,
                          struct brw_fragment_program *fp,
                          struct brw_wm_prog_key *key);

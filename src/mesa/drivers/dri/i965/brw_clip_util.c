@@ -70,7 +70,7 @@ static struct brw_reg make_plane_ud(GLuint x, GLuint y, GLuint z, GLuint w)
 
 void brw_clip_init_planes( struct brw_clip_compile *c )
 {
-   struct brw_compile *p = &c->func;
+   struct brw_codegen *p = &c->func;
 
    if (!c->key.nr_userclip) {
       brw_MOV(p, get_element_ud(c->reg.fixed_planes, 0), make_plane_ud( 0,    0, 0xff, 1));
@@ -90,7 +90,7 @@ void brw_clip_init_planes( struct brw_clip_compile *c )
  */
 void brw_clip_project_position(struct brw_clip_compile *c, struct brw_reg pos )
 {
-   struct brw_compile *p = &c->func;
+   struct brw_codegen *p = &c->func;
 
    /* calc rhw
     */
@@ -107,7 +107,7 @@ void brw_clip_project_position(struct brw_clip_compile *c, struct brw_reg pos )
 static void brw_clip_project_vertex( struct brw_clip_compile *c,
 				     struct brw_indirect vert_addr )
 {
-   struct brw_compile *p = &c->func;
+   struct brw_codegen *p = &c->func;
    struct brw_reg tmp = get_tmp(c);
    GLuint hpos_offset = brw_varying_to_offset(&c->vue_map, VARYING_SLOT_POS);
    GLuint ndc_offset = brw_varying_to_offset(&c->vue_map,
@@ -138,7 +138,7 @@ void brw_clip_interp_vertex( struct brw_clip_compile *c,
 			     struct brw_reg t0,
 			     bool force_edgeflag)
 {
-   struct brw_compile *p = &c->func;
+   struct brw_codegen *p = &c->func;
    struct brw_reg t_nopersp, v0_ndc_copy;
    GLuint slot;
 
@@ -316,7 +316,7 @@ void brw_clip_emit_vue(struct brw_clip_compile *c,
                        enum brw_urb_write_flags flags,
 		       GLuint header)
 {
-   struct brw_compile *p = &c->func;
+   struct brw_codegen *p = &c->func;
    bool allocate = flags & BRW_URB_WRITE_ALLOCATE;
 
    brw_clip_ff_sync(c);
@@ -357,7 +357,7 @@ void brw_clip_emit_vue(struct brw_clip_compile *c,
 
 void brw_clip_kill_thread(struct brw_clip_compile *c)
 {
-   struct brw_compile *p = &c->func;
+   struct brw_codegen *p = &c->func;
 
    brw_clip_ff_sync(c);
    /* Send an empty message to kill the thread and release any
@@ -400,7 +400,7 @@ struct brw_reg brw_clip_plane_stride( struct brw_clip_compile *c )
 void brw_clip_copy_flatshaded_attributes( struct brw_clip_compile *c,
 			   GLuint to, GLuint from )
 {
-   struct brw_compile *p = &c->func;
+   struct brw_codegen *p = &c->func;
 
    for (int i = 0; i < c->vue_map.num_slots; i++) {
       if (c->key.interpolation_mode.mode[i] == INTERP_QUALIFIER_FLAT) {
@@ -415,7 +415,7 @@ void brw_clip_copy_flatshaded_attributes( struct brw_clip_compile *c,
 
 void brw_clip_init_clipmask( struct brw_clip_compile *c )
 {
-   struct brw_compile *p = &c->func;
+   struct brw_codegen *p = &c->func;
    struct brw_reg incoming = get_element_ud(c->reg.R0, 2);
 
    /* Shift so that lowest outcode bit is rightmost:
@@ -442,7 +442,7 @@ void brw_clip_init_clipmask( struct brw_clip_compile *c )
 
 void brw_clip_ff_sync(struct brw_clip_compile *c)
 {
-    struct brw_compile *p = &c->func;
+    struct brw_codegen *p = &c->func;
 
     if (p->devinfo->gen == 5) {
         brw_AND(p, brw_null_reg(), c->reg.ff_sync, brw_imm_ud(0x1));
@@ -465,7 +465,7 @@ void brw_clip_ff_sync(struct brw_clip_compile *c)
 
 void brw_clip_init_ff_sync(struct brw_clip_compile *c)
 {
-    struct brw_compile *p = &c->func;
+    struct brw_codegen *p = &c->func;
 
     if (p->devinfo->gen == 5) {
         brw_MOV(p, c->reg.ff_sync, brw_imm_ud(0));

@@ -160,7 +160,7 @@ brw_wm_prog_data_compare(const void *in_a, const void *in_b)
  * we'll use one of two code generators.
  */
 bool
-brw_compile_wm_prog(struct brw_context *brw,
+brw_codegen_wm_prog(struct brw_context *brw,
                     struct gl_shader_program *prog,
                     struct brw_fragment_program *fp,
                     struct brw_wm_prog_key *key)
@@ -621,7 +621,7 @@ brw_upload_wm_prog(struct brw_context *brw)
    if (!brw_search_cache(&brw->cache, BRW_CACHE_FS_PROG,
 			 &key, sizeof(key),
 			 &brw->wm.base.prog_offset, &brw->wm.prog_data)) {
-      bool success = brw_compile_wm_prog(brw, current, fp, &key);
+      bool success = brw_codegen_wm_prog(brw, current, fp, &key);
       (void) success;
       assert(success);
    }

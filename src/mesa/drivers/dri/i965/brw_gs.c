@@ -35,7 +35,7 @@
 
 
 bool
-brw_compile_gs_prog(struct brw_context *brw,
+brw_codegen_gs_prog(struct brw_context *brw,
                     struct gl_shader_program *prog,
                     struct brw_geometry_program *gp,
                     struct brw_gs_prog_key *key)
@@ -365,7 +365,7 @@ brw_upload_gs_prog(struct brw_context *brw)
    if (!brw_search_cache(&brw->cache, BRW_CACHE_GS_PROG,
                          &key, sizeof(key),
                          &stage_state->prog_offset, &brw->gs.prog_data)) {
-      bool success = brw_compile_gs_prog(brw, current[MESA_SHADER_GEOMETRY],
+      bool success = brw_codegen_gs_prog(brw, current[MESA_SHADER_GEOMETRY],
                                          gp, &key);
       assert(success);
       (void)success;
@@ -402,7 +402,7 @@ brw_gs_precompile(struct gl_context *ctx,
     */
    key.input_varyings = gp->Base.InputsRead;
 
-   success = brw_compile_gs_prog(brw, shader_prog, bgp, &key);
+   success = brw_codegen_gs_prog(brw, shader_prog, bgp, &key);
 
    brw->gs.base.prog_offset = old_prog_offset;
    brw->gs.prog_data = old_prog_data;

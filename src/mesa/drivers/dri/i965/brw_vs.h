@@ -76,7 +76,7 @@ void
 brw_upload_vs_prog(struct brw_context *brw);
 
 bool
-brw_compile_vs_prog(struct brw_context *brw,
+brw_codegen_vs_prog(struct brw_context *brw,
                     struct gl_shader_program *prog,
                     struct brw_vertex_program *vp,
                     struct brw_vs_prog_key *key);

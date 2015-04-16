@@ -102,7 +102,7 @@ static void brw_ff_gs_alloc_regs(struct brw_ff_gs_compile *c,
  */
 static void brw_ff_gs_initialize_header(struct brw_ff_gs_compile *c)
 {
-   struct brw_compile *p = &c->func;
+   struct brw_codegen *p = &c->func;
    brw_MOV(p, c->reg.header, c->reg.R0);
 }
 
@@ -116,7 +116,7 @@ static void brw_ff_gs_initialize_header(struct brw_ff_gs_compile *c)
 static void brw_ff_gs_overwrite_header_dw2(struct brw_ff_gs_compile *c,
                                            unsigned dw2)
 {
-   struct brw_compile *p = &c->func;
+   struct brw_codegen *p = &c->func;
    brw_MOV(p, get_element_ud(c->reg.header, 2), brw_imm_ud(dw2));
 }
 
@@ -130,7 +130,7 @@ static void brw_ff_gs_overwrite_header_dw2(struct brw_ff_gs_compile *c,
  */
 static void brw_ff_gs_overwrite_header_dw2_from_r0(struct brw_ff_gs_compile *c)
 {
-   struct brw_compile *p = &c->func;
+   struct brw_codegen *p = &c->func;
    brw_AND(p, get_element_ud(c->reg.header, 2), get_element_ud(c->reg.R0, 2),
            brw_imm_ud(0x1f));
    brw_SHL(p, get_element_ud(c->reg.header, 2),
@@ -146,7 +146,7 @@ static void brw_ff_gs_overwrite_header_dw2_from_r0(struct brw_ff_gs_compile *c)
 static void brw_ff_gs_offset_header_dw2(struct brw_ff_gs_compile *c,
                                         int offset)
 {
-   struct brw_compile *p = &c->func;
+   struct brw_codegen *p = &c->func;
    brw_ADD(p, get_element_d(c->reg.header, 2), get_element_d(c->reg.header, 2),
            brw_imm_d(offset));
 }
@@ -168,7 +168,7 @@ static void brw_ff_gs_emit_vue(struct brw_ff_gs_compile *c,
                                struct brw_reg vert,
                                bool last)
 {
-   struct brw_compile *p = &c->func;
+   struct brw_codegen *p = &c->func;
    int write_offset = 0;
    bool complete = false;
 
@@ -226,7 +226,7 @@ static void brw_ff_gs_emit_vue(struct brw_ff_gs_compile *c,
  */
 static void brw_ff_gs_ff_sync(struct brw_ff_gs_compile *c, int num_prim)
 {
-   struct brw_compile *p = &c->func;
+   struct brw_codegen *p = &c->func;
 
    brw_MOV(p, get_element_ud(c->reg.header, 1), brw_imm_ud(num_prim));
    brw_ff_sync(p,
@@ -339,7 +339,7 @@ void
 gen6_sol_program(struct brw_ff_gs_compile *c, struct brw_ff_gs_prog_key *key,
 	         unsigned num_verts, bool check_edge_flags)
 {
-   struct brw_compile *p = &c->func;
+   struct brw_codegen *p = &c->func;
    brw_inst *inst;
    c->prog_data.svbi_postincrement_value = num_verts;
 

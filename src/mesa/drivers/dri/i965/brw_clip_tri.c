@@ -139,7 +139,7 @@ void brw_clip_tri_alloc_regs( struct brw_clip_compile *c,
 
 void brw_clip_tri_init_vertices( struct brw_clip_compile *c )
 {
-   struct brw_compile *p = &c->func;
+   struct brw_codegen *p = &c->func;
    struct brw_reg tmp0 = c->reg.loopcount; /* handy temporary */
 
    /* Initial list of indices for incoming vertexes:
@@ -179,7 +179,7 @@ void brw_clip_tri_init_vertices( struct brw_clip_compile *c )
 
 void brw_clip_tri_flat_shade( struct brw_clip_compile *c )
 {
-   struct brw_compile *p = &c->func;
+   struct brw_codegen *p = &c->func;
    struct brw_reg tmp0 = c->reg.loopcount; /* handy temporary */
 
    brw_AND(p, tmp0, get_element_ud(c->reg.R0, 2), brw_imm_ud(PRIM_MASK));
@@ -234,7 +234,7 @@ static inline void
 load_clip_distance(struct brw_clip_compile *c, struct brw_indirect vtx,
                 struct brw_reg dst, GLuint hpos_offset, int cond)
 {
-   struct brw_compile *p = &c->func;
+   struct brw_codegen *p = &c->func;
 
    dst = vec4(dst);
    brw_AND(p, vec1(brw_null_reg()), c->reg.vertex_src_mask, brw_imm_ud(1));
@@ -260,7 +260,7 @@ load_clip_distance(struct brw_clip_compile *c, struct brw_indirect vtx,
  */
 void brw_clip_tri( struct brw_clip_compile *c )
 {
-   struct brw_compile *p = &c->func;
+   struct brw_codegen *p = &c->func;
    struct brw_indirect vtx = brw_indirect(0, 0);
    struct brw_indirect vtxPrev = brw_indirect(1, 0);
    struct brw_indirect vtxOut = brw_indirect(2, 0);
@@ -452,7 +452,7 @@ void brw_clip_tri( struct brw_clip_compile *c )
 
 void brw_clip_tri_emit_polygon(struct brw_clip_compile *c)
 {
-   struct brw_compile *p = &c->func;
+   struct brw_codegen *p = &c->func;
 
    /* for (loopcount = nr_verts-2; loopcount > 0; loopcount--)
     */
@@ -508,7 +508,7 @@ static void do_clip_tri( struct brw_clip_compile *c )
 
 static void maybe_do_clip_tri( struct brw_clip_compile *c )
 {
-   struct brw_compile *p = &c->func;
+   struct brw_codegen *p = &c->func;
 
    brw_CMP(p, vec1(brw_null_reg()), BRW_CONDITIONAL_NZ, c->reg.planemask, brw_imm_ud(0));
    brw_IF(p, BRW_EXECUTE_1);
@@ -533,7 +533,7 @@ static void brw_clip_test( struct brw_clip_compile *c )
     struct brw_indirect vt1 = brw_indirect(1, 0);
     struct brw_indirect vt2 = brw_indirect(2, 0);
 
-    struct brw_compile *p = &c->func;
+    struct brw_codegen *p = &c->func;
     struct brw_reg tmp0 = c->reg.loopcount; /* handy temporary */
 
     GLuint hpos_offset = brw_varying_to_offset(&c->vue_map,
@@ -629,7 +629,7 @@ static void brw_clip_test( struct brw_clip_compile *c )
 
 void brw_emit_tri_clip( struct brw_clip_compile *c )
 {
-   struct brw_compile *p = &c->func;
+   struct brw_codegen *p = &c->func;
    brw_clip_tri_alloc_regs(c, 3 + c->key.nr_userclip + 6);
    brw_clip_tri_init_vertices(c);
    brw_clip_init_clipmask(c);

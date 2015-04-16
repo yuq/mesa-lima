@@ -43,7 +43,7 @@ void
 brw_upload_gs_prog(struct brw_context *brw);
 
 bool
-brw_compile_gs_prog(struct brw_context *brw,
+brw_codegen_gs_prog(struct brw_context *brw,
                     struct gl_shader_program *prog,
                     struct brw_geometry_program *gp,
                     struct brw_gs_prog_key *key);

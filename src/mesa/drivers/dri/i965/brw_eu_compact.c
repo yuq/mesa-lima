@@ -1362,7 +1362,7 @@ brw_init_compaction_tables(const struct brw_device_info *devinfo)
 }
 
 void
-brw_compact_instructions(struct brw_compile *p, int start_offset,
+brw_compact_instructions(struct brw_codegen *p, int start_offset,
                          int num_annotations, struct annotation *annotation)
 {
    const struct brw_device_info *devinfo = p->devinfo;

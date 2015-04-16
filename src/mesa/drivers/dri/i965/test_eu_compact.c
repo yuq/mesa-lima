@@ -29,7 +29,7 @@
 #include "brw_eu.h"
 
 static bool
-test_compact_instruction(struct brw_compile *p, brw_inst src)
+test_compact_instruction(struct brw_codegen *p, brw_inst src)
 {
    brw_compact_inst dst;
    memset(&dst, 0xd0, sizeof(dst));
@@ -111,7 +111,7 @@ skip_bit(const struct brw_device_info *devinfo, brw_inst *src, int bit)
 }
 
 static bool
-test_fuzz_compact_instruction(struct brw_compile *p, brw_inst src)
+test_fuzz_compact_instruction(struct brw_codegen *p, brw_inst src)
 {
    for (int bit0 = 0; bit0 < 128; bit0++) {
       if (skip_bit(p->devinfo, &src, bit0))
@@ -140,7 +140,7 @@ test_fuzz_compact_instruction(struct brw_compile *p, brw_inst src)
 }
 
 static void
-gen_ADD_GRF_GRF_GRF(struct brw_compile *p)
+gen_ADD_GRF_GRF_GRF(struct brw_codegen *p)
 {
    struct brw_reg g0 = brw_vec8_grf(0, 0);
    struct brw_reg g2 = brw_vec8_grf(2, 0);
@@ -150,7 +150,7 @@ gen_ADD_GRF_GRF_GRF(struct brw_compile *p)
 }
 
 static void
-gen_ADD_GRF_GRF_IMM(struct brw_compile *p)
+gen_ADD_GRF_GRF_IMM(struct brw_codegen *p)
 {
    struct brw_reg g0 = brw_vec8_grf(0, 0);
    struct brw_reg g2 = brw_vec8_grf(2, 0);
@@ -159,7 +159,7 @@ gen_ADD_GRF_GRF_IMM(struct brw_compile *p)
 }
 
 static void
-gen_ADD_GRF_GRF_IMM_d(struct brw_compile *p)
+gen_ADD_GRF_GRF_IMM_d(struct brw_codegen *p)
 {
    struct brw_reg g0 = retype(brw_vec8_grf(0, 0), BRW_REGISTER_TYPE_D);
    struct brw_reg g2 = retype(brw_vec8_grf(2, 0), BRW_REGISTER_TYPE_D);
@@ -168,7 +168,7 @@ gen_ADD_GRF_GRF_IMM_d(struct brw_compile *p)
 }
 
 static void
-gen_MOV_GRF_GRF(struct brw_compile *p)
+gen_MOV_GRF_GRF(struct brw_codegen *p)
 {
    struct brw_reg g0 = brw_vec8_grf(0, 0);
    struct brw_reg g2 = brw_vec8_grf(2, 0);
@@ -177,7 +177,7 @@ gen_MOV_GRF_GRF(struct brw_compile *p)
 }
 
 static void
-gen_ADD_MRF_GRF_GRF(struct brw_compile *p)
+gen_ADD_MRF_GRF_GRF(struct brw_codegen *p)
 {
    struct brw_reg m6 = brw_vec8_reg(BRW_MESSAGE_REGISTER_FILE, 6, 0);
    struct brw_reg g2 = brw_vec8_grf(2, 0);
@@ -187,7 +187,7 @@ gen_ADD_MRF_GRF_GRF(struct brw_compile *p)
 }
 
 static void
-gen_ADD_vec1_GRF_GRF_GRF(struct brw_compile *p)
+gen_ADD_vec1_GRF_GRF_GRF(struct brw_codegen *p)
 {
    struct brw_reg g0 = brw_vec1_grf(0, 0);
    struct brw_reg g2 = brw_vec1_grf(2, 0);
@@ -197,7 +197,7 @@ gen_ADD_vec1_GRF_GRF_GRF(struct brw_compile *p)
 }
 
 static void
-gen_PLN_MRF_GRF_GRF(struct brw_compile *p)
+gen_PLN_MRF_GRF_GRF(struct brw_codegen *p)
 {
    struct brw_reg m6 = brw_vec8_reg(BRW_MESSAGE_REGISTER_FILE, 6, 0);
    struct brw_reg interp = brw_vec1_grf(2, 0);
@@ -207,7 +207,7 @@ gen_PLN_MRF_GRF_GRF(struct brw_compile *p)
 }
 
 static void
-gen_f0_0_MOV_GRF_GRF(struct brw_compile *p)
+gen_f0_0_MOV_GRF_GRF(struct brw_codegen *p)
 {
    struct brw_reg g0 = brw_vec8_grf(0, 0);
    struct brw_reg g2 = brw_vec8_grf(2, 0);
@@ -223,7 +223,7 @@ gen_f0_0_MOV_GRF_GRF(struct brw_compile *p)
  * interact with it.
  */
 static void
-gen_f0_1_MOV_GRF_GRF(struct brw_compile *p)
+gen_f0_1_MOV_GRF_GRF(struct brw_codegen *p)
 {
    struct brw_reg g0 = brw_vec8_grf(0, 0);
    struct brw_reg g2 = brw_vec8_grf(2, 0);
@@ -236,7 +236,7 @@ gen_f0_1_MOV_GRF_GRF(struct brw_compile *p)
 }
 
 struct {
-   void (*func)(struct brw_compile *p);
+   void (*func)(struct brw_codegen *p);
 } tests[] = {
    { gen_MOV_GRF_GRF },
    { gen_ADD_GRF_GRF_GRF },
@@ -256,8 +256,8 @@ run_tests(const struct brw_device_info *devinfo)
 
    for (int i = 0; i < ARRAY_SIZE(tests); i++) {
       for (int align_16 = 0; align_16 <= 1; align_16++) {
-	 struct brw_compile *p = rzalloc(NULL, struct brw_compile);
-	 brw_init_compile(devinfo, p, p);
+	 struct brw_codegen *p = rzalloc(NULL, struct brw_codegen);
+	 brw_init_codegen(devinfo, p, p);
 
 	 brw_set_default_predicate_control(p, BRW_PREDICATE_NONE);
 	 if (align_16)

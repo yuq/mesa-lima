@@ -101,7 +101,7 @@ have_attr(struct brw_sf_compile *c, GLuint attr)
 static void copy_bfc( struct brw_sf_compile *c,
 		      struct brw_reg vert )
 {
-   struct brw_compile *p = &c->func;
+   struct brw_codegen *p = &c->func;
    GLuint i;
 
    for (i = 0; i < 2; i++) {
@@ -116,7 +116,7 @@ static void copy_bfc( struct brw_sf_compile *c,
 
 static void do_twoside_color( struct brw_sf_compile *c )
 {
-   struct brw_compile *p = &c->func;
+   struct brw_codegen *p = &c->func;
    GLuint backface_conditional = c->key.frontface_ccw ? BRW_CONDITIONAL_G : BRW_CONDITIONAL_L;
 
    /* Already done in clip program:
@@ -159,7 +159,7 @@ static void copy_flatshaded_attributes(struct brw_sf_compile *c,
                                        struct brw_reg dst,
                                        struct brw_reg src)
 {
-   struct brw_compile *p = &c->func;
+   struct brw_codegen *p = &c->func;
    int i;
 
    for (i = 0; i < c->vue_map.num_slots; i++) {
@@ -191,7 +191,7 @@ static int count_flatshaded_attributes(struct brw_sf_compile *c)
  */
 static void do_flatshade_triangle( struct brw_sf_compile *c )
 {
-   struct brw_compile *p = &c->func;
+   struct brw_codegen *p = &c->func;
    GLuint nr;
    GLuint jmpi = 1;
 
@@ -223,7 +223,7 @@ static void do_flatshade_triangle( struct brw_sf_compile *c )
 
 static void do_flatshade_line( struct brw_sf_compile *c )
 {
-   struct brw_compile *p = &c->func;
+   struct brw_codegen *p = &c->func;
    GLuint nr;
    GLuint jmpi = 1;
 
@@ -305,7 +305,7 @@ static void alloc_regs( struct brw_sf_compile *c )
 
 static void copy_z_inv_w( struct brw_sf_compile *c )
 {
-   struct brw_compile *p = &c->func;
+   struct brw_codegen *p = &c->func;
    GLuint i;
 
    /* Copy both scalars with a single MOV:
@@ -397,7 +397,7 @@ calculate_point_sprite_mask(struct brw_sf_compile *c, GLuint reg)
 }
 
 static void
-set_predicate_control_flag_value(struct brw_compile *p,
+set_predicate_control_flag_value(struct brw_codegen *p,
                                  struct brw_sf_compile *c,
                                  unsigned value)
 {
@@ -415,7 +415,7 @@ set_predicate_control_flag_value(struct brw_compile *p,
 
 void brw_emit_tri_setup(struct brw_sf_compile *c, bool allocate)
 {
-   struct brw_compile *p = &c->func;
+   struct brw_codegen *p = &c->func;
    GLuint i;
 
    c->flag_value = 0xff;
@@ -504,7 +504,7 @@ void brw_emit_tri_setup(struct brw_sf_compile *c, bool allocate)
 
 void brw_emit_line_setup(struct brw_sf_compile *c, bool allocate)
 {
-   struct brw_compile *p = &c->func;
+   struct brw_codegen *p = &c->func;
    GLuint i;
 
    c->flag_value = 0xff;
@@ -576,7 +576,7 @@ void brw_emit_line_setup(struct brw_sf_compile *c, bool allocate)
 
 void brw_emit_point_sprite_setup(struct brw_sf_compile *c, bool allocate)
 {
-   struct brw_compile *p = &c->func;
+   struct brw_codegen *p = &c->func;
    GLuint i;
 
    c->flag_value = 0xff;
@@ -668,7 +668,7 @@ void brw_emit_point_sprite_setup(struct brw_sf_compile *c, bool allocate)
  */
 void brw_emit_point_setup(struct brw_sf_compile *c, bool allocate)
 {
-   struct brw_compile *p = &c->func;
+   struct brw_codegen *p = &c->func;
    GLuint i;
 
    c->flag_value = 0xff;
@@ -727,7 +727,7 @@ void brw_emit_point_setup(struct brw_sf_compile *c, bool allocate)
 
 void brw_emit_anyprim_setup( struct brw_sf_compile *c )
 {
-   struct brw_compile *p = &c->func;
+   struct brw_codegen *p = &c->func;
    struct brw_reg payload_prim = brw_uw1_reg(BRW_GENERAL_REGISTER_FILE, 1, 0);
    struct brw_reg payload_attr = get_element_ud(brw_vec1_reg(BRW_GENERAL_REGISTER_FILE, 1, 0), 0);
    struct brw_reg primmask;

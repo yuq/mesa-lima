@@ -516,7 +516,7 @@ private:
    struct brw_context *brw;
    const struct brw_device_info *devinfo;
 
-   struct brw_compile *p;
+   struct brw_codegen *p;
 
    struct gl_shader_program *shader_prog;
    const struct gl_program *prog;
