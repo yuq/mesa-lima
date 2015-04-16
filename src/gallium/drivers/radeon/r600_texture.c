@@ -243,10 +243,11 @@ static boolean r600_texture_get_handle(struct pipe_screen* screen,
 				       RADEON_LAYOUT_TILED : RADEON_LAYOUT_LINEAR,
 				       surface->level[0].mode >= RADEON_SURF_MODE_2D ?
 				       RADEON_LAYOUT_TILED : RADEON_LAYOUT_LINEAR,
+				       surface->pipe_config,
 				       surface->bankw, surface->bankh,
 				       surface->tile_split,
 				       surface->stencil_tile_split,
-				       surface->mtilea,
+				       surface->mtilea, surface->num_banks,
 				       surface->level[0].pitch_bytes,
 				       (surface->flags & RADEON_SURF_SCANOUT) != 0);
 

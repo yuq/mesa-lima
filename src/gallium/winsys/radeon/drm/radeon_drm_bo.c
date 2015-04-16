@@ -774,10 +774,11 @@ static void radeon_bo_set_tiling(struct pb_buffer *_buf,
                                  struct radeon_winsys_cs *rcs,
                                  enum radeon_bo_layout microtiled,
                                  enum radeon_bo_layout macrotiled,
+                                 unsigned pipe_config,
                                  unsigned bankw, unsigned bankh,
                                  unsigned tile_split,
                                  unsigned stencil_tile_split,
-                                 unsigned mtilea,
+                                 unsigned mtilea, unsigned num_banks,
                                  uint32_t pitch,
                                  bool scanout)
 {

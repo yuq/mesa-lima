@@ -486,10 +486,11 @@ static void amdgpu_bo_set_tiling(struct pb_buffer *_buf,
                                  struct radeon_winsys_cs *rcs,
                                  enum radeon_bo_layout microtiled,
                                  enum radeon_bo_layout macrotiled,
+                                 unsigned pipe_config,
                                  unsigned bankw, unsigned bankh,
                                  unsigned tile_split,
                                  unsigned stencil_tile_split,
-                                 unsigned mtilea,
+                                 unsigned mtilea, unsigned num_banks,
                                  uint32_t pitch,
                                  bool scanout)
 {
@@ -504,11 +505,13 @@ static void amdgpu_bo_set_tiling(struct pb_buffer *_buf,
    else
       tiling_flags |= AMDGPU_TILING_SET(ARRAY_MODE, 1); /* LINEAR_ALIGNED */
 
+   tiling_flags |= AMDGPU_TILING_SET(PIPE_CONFIG, pipe_config);
    tiling_flags |= AMDGPU_TILING_SET(BANK_WIDTH, util_logbase2(bankw));
    tiling_flags |= AMDGPU_TILING_SET(BANK_HEIGHT, util_logbase2(bankh));
    if (tile_split)
       tiling_flags |= AMDGPU_TILING_SET(TILE_SPLIT, eg_tile_split_rev(tile_split));
    tiling_flags |= AMDGPU_TILING_SET(MACRO_TILE_ASPECT, util_logbase2(mtilea));
+   tiling_flags |= AMDGPU_TILING_SET(NUM_BANKS, util_logbase2(num_banks)-1);
 
    if (scanout)
       tiling_flags |= AMDGPU_TILING_SET(MICRO_TILE_MODE, 0); /* DISPLAY_MICRO_TILING */
