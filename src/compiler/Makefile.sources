@@ -39,6 +39,7 @@ LIBGLSL_FILES = \
 	glsl/ir_equals.cpp \
 	glsl/ir_expression_flattening.cpp \
 	glsl/ir_expression_flattening.h \
+	glsl/ir_expression_operation_strings.h \
 	glsl/ir_function_can_inline.cpp \
 	glsl/ir_function_detect_recursion.cpp \
 	glsl/ir_function_inlining.h \
