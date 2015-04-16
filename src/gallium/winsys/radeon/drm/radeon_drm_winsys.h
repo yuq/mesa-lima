@@ -30,7 +30,7 @@
 #ifndef RADEON_DRM_WINSYS_H
 #define RADEON_DRM_WINSYS_H
 
-#include "radeon_winsys.h"
+#include "gallium/drivers/radeon/radeon_winsys.h"
 #include "os/os_thread.h"
 #include <radeon_drm.h>
 

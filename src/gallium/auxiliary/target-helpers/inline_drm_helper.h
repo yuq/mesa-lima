@@ -28,19 +28,19 @@
 #endif
 
 #if GALLIUM_R300
-#include "radeon/drm/radeon_winsys.h"
+#include "radeon/radeon_winsys.h"
 #include "radeon/drm/radeon_drm_public.h"
 #include "r300/r300_public.h"
 #endif
 
 #if GALLIUM_R600
-#include "radeon/drm/radeon_winsys.h"
+#include "radeon/radeon_winsys.h"
 #include "radeon/drm/radeon_drm_public.h"
 #include "r600/r600_public.h"
 #endif
 
 #if GALLIUM_RADEONSI
-#include "radeon/drm/radeon_winsys.h"
+#include "radeon/radeon_winsys.h"
 #include "radeon/drm/radeon_drm_public.h"
 #include "radeonsi/si_public.h"
 #endif

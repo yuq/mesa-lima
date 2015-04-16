@@ -39,7 +39,6 @@
 #include "vl/vl_defines.h"
 #include "vl/vl_video_buffer.h"
 
-#include "radeon/drm/radeon_winsys.h"
 #include "r600_pipe_common.h"
 #include "radeon_video.h"
 #include "radeon_vce.h"

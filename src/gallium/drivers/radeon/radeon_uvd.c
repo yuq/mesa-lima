@@ -45,7 +45,6 @@
 #include "vl/vl_defines.h"
 #include "vl/vl_mpeg12_decoder.h"
 
-#include "radeon/drm/radeon_winsys.h"
 #include "r600_pipe_common.h"
 #include "radeon_video.h"
 #include "radeon_uvd.h"

@@ -34,7 +34,7 @@
 
 #include <stdio.h>
 
-#include "radeon/drm/radeon_winsys.h"
+#include "radeon/radeon_winsys.h"
 
 #include "util/u_blitter.h"
 #include "util/u_double_list.h"
