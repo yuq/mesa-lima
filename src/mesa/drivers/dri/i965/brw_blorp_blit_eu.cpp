@@ -29,7 +29,7 @@
 brw_blorp_eu_emitter::brw_blorp_eu_emitter(struct brw_context *brw,
                                            bool debug_flag)
    : mem_ctx(ralloc_context(NULL)),
-     generator(brw->intelScreen->compiler,
+     generator(brw->intelScreen->compiler, brw,
                mem_ctx, (void *) rzalloc(mem_ctx, struct brw_wm_prog_key),
                (struct brw_stage_prog_data *) rzalloc(mem_ctx, struct brw_wm_prog_data),
                NULL, 0, false, "BLORP")

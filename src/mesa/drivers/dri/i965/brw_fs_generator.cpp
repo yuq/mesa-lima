@@ -121,7 +121,7 @@ brw_reg_from_fs_reg(fs_reg *reg)
    return brw_reg;
 }
 
-fs_generator::fs_generator(const struct brw_compiler *compiler,
+fs_generator::fs_generator(const struct brw_compiler *compiler, void *log_data,
                            void *mem_ctx,
                            const void *key,
                            struct brw_stage_prog_data *prog_data,
@@ -130,7 +130,8 @@ fs_generator::fs_generator(const struct brw_compiler *compiler,
                            bool runtime_check_aads_emit,
                            const char *stage_abbrev)
 
-   : compiler(compiler), devinfo(compiler->devinfo), key(key),
+   : compiler(compiler), log_data(log_data),
+     devinfo(compiler->devinfo), key(key),
      prog_data(prog_data),
      prog(prog), promoted_constants(promoted_constants),
      runtime_check_aads_emit(runtime_check_aads_emit), debug_flag(false),

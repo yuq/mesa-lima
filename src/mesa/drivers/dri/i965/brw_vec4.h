@@ -427,7 +427,7 @@ private:
 class vec4_generator
 {
 public:
-   vec4_generator(const struct brw_compiler *compiler,
+   vec4_generator(const struct brw_compiler *compiler, void *log_data,
                   struct gl_shader_program *shader_prog,
                   struct gl_program *prog,
                   struct brw_vue_prog_data *prog_data,
@@ -510,6 +510,8 @@ private:
    void generate_unpack_flags(struct brw_reg dst);
 
    const struct brw_compiler *compiler;
+   void *log_data; /* Passed to compiler->*_log functions */
+
    const struct brw_device_info *devinfo;
 
    struct brw_codegen *p;

@@ -135,6 +135,7 @@ vec4_instruction::get_src(const struct brw_vue_prog_data *prog_data, int i)
 }
 
 vec4_generator::vec4_generator(const struct brw_compiler *compiler,
+                               void *log_data,
                                struct gl_shader_program *shader_prog,
                                struct gl_program *prog,
                                struct brw_vue_prog_data *prog_data,
@@ -142,7 +143,7 @@ vec4_generator::vec4_generator(const struct brw_compiler *compiler,
                                bool debug_flag,
                                const char *stage_name,
                                const char *stage_abbrev)
-   : compiler(compiler), devinfo(compiler->devinfo),
+   : compiler(compiler), log_data(log_data), devinfo(compiler->devinfo),
      shader_prog(shader_prog), prog(prog), prog_data(prog_data),
      mem_ctx(mem_ctx), stage_name(stage_name), stage_abbrev(stage_abbrev),
      debug_flag(debug_flag)
