@@ -537,6 +537,7 @@ array_index_of_resource(struct gl_program_resource *res,
       return get_matching_index(RESOURCE_VAR(res), name);
    default:
       assert(!"support for resource type not implemented");
+      return -1;
    }
 }
 
