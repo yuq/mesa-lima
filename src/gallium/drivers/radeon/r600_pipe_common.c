@@ -306,6 +306,7 @@ static const struct debug_named_value common_debug_options[] = {
 	{ "compute", DBG_COMPUTE, "Print compute info" },
 	{ "vm", DBG_VM, "Print virtual addresses when creating resources" },
 	{ "trace_cs", DBG_TRACE_CS, "Trace cs and write rlockup_<csid>.c file with faulty cs" },
+	{ "info", DBG_INFO, "Print driver information" },
 
 	/* shaders */
 	{ "fs", DBG_FS, "Print fetch shaders" },
@@ -874,6 +875,32 @@ bool r600_common_screen_init(struct r600_common_screen *rscreen,
 		}
 	}
 
+	if (rscreen->debug_flags & DBG_INFO) {
+		printf("pci_id = 0x%x\n", rscreen->info.pci_id);
+		printf("family = %i\n", rscreen->info.family);
+		printf("chip_class = %i\n", rscreen->info.chip_class);
+		printf("gart_size = %i MB\n", (int)(rscreen->info.gart_size >> 20));
+		printf("vram_size = %i MB\n", (int)(rscreen->info.vram_size >> 20));
+		printf("max_sclk = %i\n", rscreen->info.max_sclk);
+		printf("max_compute_units = %i\n", rscreen->info.max_compute_units);
+		printf("max_se = %i\n", rscreen->info.max_se);
+		printf("max_sh_per_se = %i\n", rscreen->info.max_sh_per_se);
+		printf("drm = %i.%i.%i\n", rscreen->info.drm_major,
+		       rscreen->info.drm_minor, rscreen->info.drm_patchlevel);
+		printf("has_uvd = %i\n", rscreen->info.has_uvd);
+		printf("vce_fw_version = %i\n", rscreen->info.vce_fw_version);
+		printf("r600_num_backends = %i\n", rscreen->info.r600_num_backends);
+		printf("r600_clock_crystal_freq = %i\n", rscreen->info.r600_clock_crystal_freq);
+		printf("r600_tiling_config = 0x%x\n", rscreen->info.r600_tiling_config);
+		printf("r600_num_tile_pipes = %i\n", rscreen->info.r600_num_tile_pipes);
+		printf("r600_max_pipes = %i\n", rscreen->info.r600_max_pipes);
+		printf("r600_virtual_address = %i\n", rscreen->info.r600_virtual_address);
+		printf("r600_has_dma = %i\n", rscreen->info.r600_has_dma);
+		printf("r600_backend_map = %i\n", rscreen->info.r600_backend_map);
+		printf("r600_backend_map_valid = %i\n", rscreen->info.r600_backend_map_valid);
+		printf("si_tile_mode_array_valid = %i\n", rscreen->info.si_tile_mode_array_valid);
+		printf("cik_macrotile_mode_array_valid = %i\n", rscreen->info.cik_macrotile_mode_array_valid);
+	}
 	return true;
 }
 

@@ -84,6 +84,7 @@
 #define DBG_SWITCH_ON_EOP	(1 << 15)
 #define DBG_FORCE_DMA		(1 << 16)
 #define DBG_PRECOMPILE		(1 << 17)
+#define DBG_INFO		(1 << 18)
 /* The maximum allowed bit is 20. */
 
 #define R600_MAP_BUFFER_ALIGNMENT 64
