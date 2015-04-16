@@ -162,13 +162,7 @@ ir_expression_operation = [
    ("vote_any", 1, None, None),
    ("vote_all", 1, None, None),
    ("vote_eq", 1, None, None),
-
-"""
-   /**
-    * A sentinel marking the last of the unary operations.
-    */
-   ir_last_unop = ir_unop_vote_eq,
-""",
+   "",
    ("add", 2, "+", None),
    ("sub", 2, "-", None),
    ("mul", 2, "*", "Floating-point or low 32-bit integer multiply."),
@@ -284,11 +278,6 @@ ir_expression_operation = [
    ("interpolate_at_sample", 2, None, None),
 """
    /**
-    * A sentinel marking the last of the binary operations.
-    */
-   ir_last_binop = ir_binop_interpolate_at_sample,
-
-   /**
     * \\name Fused floating-point multiply-add, part of ARB_gpu_shader5.
     */
    /*@{*/""",
@@ -319,25 +308,10 @@ ir_expression_operation = [
     * operand2 is the index in operand0 to be modified
     */""",
    ("vector_insert", 3, None, None),
-"""
-   /**
-    * A sentinel marking the last of the ternary operations.
-    */
-   ir_last_triop = ir_triop_vector_insert,
-""",
+   "",
    ("bitfield_insert", 4, None, None),
    "",
    ("vector", 4, None, None),
-"""
-   /**
-    * A sentinel marking the last of the ternary operations.
-    */
-   ir_last_quadop = ir_quadop_vector,
-
-   /**
-    * A sentinel marking the last of all operations.
-    */
-   ir_last_opcode = ir_quadop_vector""",
 ]
 
 def name_from_item(item):
@@ -378,7 +352,25 @@ ${item}
    ${name_from_item(item)},${"" if item[3] is None else " /**< {} */".format(item[3])}
 %  endif
 % endfor
+
+   /**
+    * Sentinels marking the last of each kind of operation;
+    */
+% for (name, i) in lasts:
+   ir_last_${("un", "bin", "tri", "quad")[i]}op = ${name_from_item((name, i+1))},
+% endfor
+   ir_last_opcode = ir_quadop_${lasts[3][0]}
 };""")
 
+   lasts = [None, None, None, None]
+   for item in reversed(ir_expression_operation):
+      if isinstance(item, str):
+         continue
+
+      i = item[1] - 1
+      if lasts[i] is None:
+         lasts[i] = (item[0], i)
+
    print(enum_template.render(values=ir_expression_operation,
+                              lasts=lasts,
                               name_from_item=name_from_item))
