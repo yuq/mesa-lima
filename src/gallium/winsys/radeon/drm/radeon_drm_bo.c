@@ -42,7 +42,7 @@
 #include <fcntl.h>
 #include <stdio.h>
 
-extern const struct pb_vtbl radeon_bo_vtbl;
+static const struct pb_vtbl radeon_bo_vtbl;
 
 static INLINE struct radeon_bo *radeon_bo(struct pb_buffer *bo)
 {
@@ -471,7 +471,7 @@ static void radeon_bo_fence(struct pb_buffer *buf,
 {
 }
 
-const struct pb_vtbl radeon_bo_vtbl = {
+static const struct pb_vtbl radeon_bo_vtbl = {
     radeon_bo_destroy,
     NULL, /* never called */
     NULL, /* never called */
