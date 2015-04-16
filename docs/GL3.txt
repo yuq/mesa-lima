@@ -220,6 +220,7 @@ GLES3.1, GLSL ES 3.1
   GL_ARB_program_interface_query                       DONE (all drivers)
   GL_ARB_shader_atomic_counters                        DONE (i965)
   GL_ARB_shader_image_load_store                       in progress (curro)
+  GL_ARB_shader_image_size                             not started
   GL_ARB_shader_storage_buffer_object                  not started
   GL_ARB_shading_language_packing                      DONE (all drivers)
   GL_ARB_separate_shader_objects                       DONE (all drivers)
