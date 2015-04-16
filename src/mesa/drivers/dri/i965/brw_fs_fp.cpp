@@ -251,7 +251,7 @@ fs_visitor::emit_fragment_program_code()
             cmp->predicate = BRW_PREDICATE_NORMAL;
             cmp->flag_subreg = 1;
 
-            if (brw->gen >= 6)
+            if (devinfo->gen >= 6)
                emit_discard_jump();
          }
          break;
@@ -319,7 +319,7 @@ fs_visitor::emit_fragment_program_code()
       case OPCODE_MAD:
          for (int i = 0; i < 4; i++) {
             if (fpi->DstReg.WriteMask & (1 << i)) {
-               if (brw->gen >= 6) {
+               if (devinfo->gen >= 6) {
                   emit(MAD(offset(dst, i), offset(src[2], i),
                            offset(src[1], i), offset(src[0], i)));
                } else {

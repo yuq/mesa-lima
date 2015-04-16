@@ -281,7 +281,7 @@ vec4_gs_visitor::emit_urb_write_opcode(bool complete)
    /* We need to increment Global Offset by 1 to make room for Broadwell's
     * extra "Vertex Count" payload at the beginning of the URB entry.
     */
-   if (brw->gen >= 8)
+   if (devinfo->gen >= 8)
       inst->offset++;
 
    inst->urb_write_flags = BRW_URB_WRITE_PER_SLOT_OFFSET;
@@ -424,7 +424,7 @@ vec4_gs_visitor::emit_control_data_bits()
        * URB entry.  Since this is an OWord message, Global Offset is counted
        * in 128-bit units, so we must set it to 2.
        */
-      if (brw->gen >= 8)
+      if (devinfo->gen >= 8)
          inst->offset = 2;
       inst->base_mrf = base_mrf;
       inst->mlen = 2;

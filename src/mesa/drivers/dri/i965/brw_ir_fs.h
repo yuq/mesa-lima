@@ -224,7 +224,7 @@ public:
    bool is_send_from_grf() const;
    bool is_partial_write() const;
    int regs_read(int arg) const;
-   bool can_do_source_mods(struct brw_context *brw);
+   bool can_do_source_mods(const struct brw_device_info *devinfo);
    bool has_side_effects() const;
 
    bool reads_flag() const;

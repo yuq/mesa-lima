@@ -104,7 +104,8 @@ is_logic_op(enum opcode opcode)
 }
 
 static bool
-try_constant_propagate(struct brw_context *brw, vec4_instruction *inst,
+try_constant_propagate(const struct brw_device_info *devinfo,
+                       vec4_instruction *inst,
                        int arg, struct copy_entry *entry)
 {
    /* For constant propagation, we only handle the same constant
@@ -132,14 +133,14 @@ try_constant_propagate(struct brw_context *brw, vec4_instruction *inst,
    }
 
    if (inst->src[arg].abs) {
-      if ((brw->gen >= 8 && is_logic_op(inst->opcode)) ||
+      if ((devinfo->gen >= 8 && is_logic_op(inst->opcode)) ||
           !brw_abs_immediate(value.type, &value.fixed_hw_reg)) {
          return false;
       }
    }
 
    if (inst->src[arg].negate) {
-      if ((brw->gen >= 8 && is_logic_op(inst->opcode)) ||
+      if ((devinfo->gen >= 8 && is_logic_op(inst->opcode)) ||
           !brw_negate_immediate(value.type, &value.fixed_hw_reg)) {
          return false;
       }
@@ -157,7 +158,7 @@ try_constant_propagate(struct brw_context *brw, vec4_instruction *inst,
    case SHADER_OPCODE_POW:
    case SHADER_OPCODE_INT_QUOTIENT:
    case SHADER_OPCODE_INT_REMAINDER:
-      if (brw->gen < 8)
+      if (devinfo->gen < 8)
          break;
       /* fallthrough */
    case BRW_OPCODE_DP2:
@@ -246,7 +247,8 @@ try_constant_propagate(struct brw_context *brw, vec4_instruction *inst,
 }
 
 static bool
-try_copy_propagate(struct brw_context *brw, vec4_instruction *inst,
+try_copy_propagate(const struct brw_device_info *devinfo,
+                   vec4_instruction *inst,
                    int arg, struct copy_entry *entry)
 {
    /* For constant propagation, we only handle the same constant
@@ -283,7 +285,7 @@ try_copy_propagate(struct brw_context *brw, vec4_instruction *inst,
        value.file != ATTR)
       return false;
 
-   if (brw->gen >= 8 && (value.negate || value.abs) &&
+   if (devinfo->gen >= 8 && (value.negate || value.abs) &&
        is_logic_op(inst->opcode)) {
       return false;
    }
@@ -301,7 +303,7 @@ try_copy_propagate(struct brw_context *brw, vec4_instruction *inst,
     * instructions.
     */
    if ((has_source_modifiers || value.file == UNIFORM ||
-        value.swizzle != BRW_SWIZZLE_XYZW) && !inst->can_do_source_mods(brw))
+        value.swizzle != BRW_SWIZZLE_XYZW) && !inst->can_do_source_mods(devinfo))
       return false;
 
    if (has_source_modifiers && value.type != inst->src[arg].type)
@@ -433,10 +435,10 @@ vec4_visitor::opt_copy_propagation(bool do_constant_prop)
 	 if (c != 4)
 	    continue;
 
-         if (do_constant_prop && try_constant_propagate(brw, inst, i, &entry))
+         if (do_constant_prop && try_constant_propagate(devinfo, inst, i, &entry))
             progress = true;
 
-	 if (try_copy_propagate(brw, inst, i, &entry))
+	 if (try_copy_propagate(devinfo, inst, i, &entry))
 	    progress = true;
       }
 

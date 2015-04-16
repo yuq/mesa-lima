@@ -721,6 +721,7 @@ backend_visitor::backend_visitor(struct brw_context *brw,
                                  struct brw_stage_prog_data *stage_prog_data,
                                  gl_shader_stage stage)
    : brw(brw),
+     devinfo(brw->intelScreen->devinfo),
      ctx(&brw->ctx),
      shader(shader_prog ?
         (struct brw_shader *)shader_prog->_LinkedShaders[stage] : NULL),
@@ -1183,7 +1184,7 @@ backend_visitor::assign_common_binding_table_offsets(uint32_t next_binding_table
    }
 
    if (prog->UsesGather) {
-      if (brw->gen >= 8) {
+      if (devinfo->gen >= 8) {
          stage_prog_data->binding_table.gather_texture_start =
             stage_prog_data->binding_table.texture_start;
       } else {

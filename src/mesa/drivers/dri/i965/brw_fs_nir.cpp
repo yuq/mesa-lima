@@ -324,7 +324,7 @@ emit_system_values_block(nir_block *block, void *void_visitor)
 
       case nir_intrinsic_load_sample_mask_in:
          assert(v->stage == MESA_SHADER_FRAGMENT);
-         assert(v->brw->gen >= 7);
+         assert(v->devinfo->gen >= 7);
          reg = &v->nir_system_values[SYSTEM_VALUE_SAMPLE_MASK_IN];
          if (reg->file == BAD_FILE)
             *reg = fs_reg(retype(brw_vec8_grf(v->payload.sample_mask_in_reg, 0),
@@ -408,7 +408,7 @@ fs_visitor::nir_emit_if(nir_if *if_stmt)
 
    emit(BRW_OPCODE_ENDIF);
 
-   if (!try_replace_with_sel() && brw->gen < 6) {
+   if (!try_replace_with_sel() && devinfo->gen < 6) {
       no16("Can't support (non-uniform) control flow on SIMD16\n");
    }
 }
@@ -416,7 +416,7 @@ fs_visitor::nir_emit_if(nir_if *if_stmt)
 void
 fs_visitor::nir_emit_loop(nir_loop *loop)
 {
-   if (brw->gen < 6) {
+   if (devinfo->gen < 6) {
       no16("Can't support (non-uniform) control flow on SIMD16\n");
    }
 
@@ -517,7 +517,7 @@ fs_visitor::optimize_frontfacing_ternary(nir_alu_instr *instr,
 
    fs_reg tmp = vgrf(glsl_type::int_type);
 
-   if (brw->gen >= 6) {
+   if (devinfo->gen >= 6) {
       /* Bit 15 of g0.0 is 0 if the polygon is front facing. */
       fs_reg g0 = fs_reg(retype(brw_vec1_grf(0, 0), BRW_REGISTER_TYPE_W));
 
@@ -785,7 +785,7 @@ fs_visitor::nir_emit_alu(nir_alu_instr *instr)
       break;
 
    case nir_op_imul: {
-      if (brw->gen >= 8) {
+      if (devinfo->gen >= 8) {
          emit(MUL(result, op[0], op[1]));
          break;
       } else {
@@ -793,14 +793,14 @@ fs_visitor::nir_emit_alu(nir_alu_instr *instr)
          nir_const_value *value1 = nir_src_as_const_value(instr->src[1].src);
 
          if (value0 && value0->u[0] < (1 << 16)) {
-            if (brw->gen < 7) {
+            if (devinfo->gen < 7) {
                emit(MUL(result, op[0], op[1]));
             } else {
                emit(MUL(result, op[1], op[0]));
             }
             break;
          } else if (value1 && value1->u[0] < (1 << 16)) {
-            if (brw->gen < 7) {
+            if (devinfo->gen < 7) {
                emit(MUL(result, op[1], op[0]));
             } else {
                emit(MUL(result, op[0], op[1]));
@@ -809,7 +809,7 @@ fs_visitor::nir_emit_alu(nir_alu_instr *instr)
          }
       }
 
-      if (brw->gen >= 7)
+      if (devinfo->gen >= 7)
          no16("SIMD16 explicit accumulator operands unsupported\n");
 
       struct brw_reg acc = retype(brw_acc_reg(dispatch_width), result.type);
@@ -822,7 +822,7 @@ fs_visitor::nir_emit_alu(nir_alu_instr *instr)
 
    case nir_op_imul_high:
    case nir_op_umul_high: {
-      if (brw->gen >= 7)
+      if (devinfo->gen >= 7)
          no16("SIMD16 explicit accumulator operands unsupported\n");
 
       struct brw_reg acc = retype(brw_acc_reg(dispatch_width), result.type);
@@ -838,7 +838,7 @@ fs_visitor::nir_emit_alu(nir_alu_instr *instr)
       break;
 
    case nir_op_uadd_carry: {
-      if (brw->gen >= 7)
+      if (devinfo->gen >= 7)
          no16("SIMD16 explicit accumulator operands unsupported\n");
 
       struct brw_reg acc = retype(brw_acc_reg(dispatch_width),
@@ -850,7 +850,7 @@ fs_visitor::nir_emit_alu(nir_alu_instr *instr)
    }
 
    case nir_op_usub_borrow: {
-      if (brw->gen >= 7)
+      if (devinfo->gen >= 7)
          no16("SIMD16 explicit accumulator operands unsupported\n");
 
       struct brw_reg acc = retype(brw_acc_reg(dispatch_width),
@@ -888,27 +888,27 @@ fs_visitor::nir_emit_alu(nir_alu_instr *instr)
       break;
 
    case nir_op_inot:
-      if (brw->gen >= 8) {
+      if (devinfo->gen >= 8) {
          resolve_source_modifiers(&op[0]);
       }
       emit(NOT(result, op[0]));
       break;
    case nir_op_ixor:
-      if (brw->gen >= 8) {
+      if (devinfo->gen >= 8) {
          resolve_source_modifiers(&op[0]);
          resolve_source_modifiers(&op[1]);
       }
       emit(XOR(result, op[0], op[1]));
       break;
    case nir_op_ior:
-      if (brw->gen >= 8) {
+      if (devinfo->gen >= 8) {
          resolve_source_modifiers(&op[0]);
          resolve_source_modifiers(&op[1]);
       }
       emit(OR(result, op[0], op[1]));
       break;
    case nir_op_iand:
-      if (brw->gen >= 8) {
+      if (devinfo->gen >= 8) {
          resolve_source_modifiers(&op[0]);
          resolve_source_modifiers(&op[1]);
       }
@@ -1013,7 +1013,7 @@ fs_visitor::nir_emit_alu(nir_alu_instr *instr)
    case nir_op_fmin:
    case nir_op_imin:
    case nir_op_umin:
-      if (brw->gen >= 6) {
+      if (devinfo->gen >= 6) {
          inst = emit(BRW_OPCODE_SEL, result, op[0], op[1]);
          inst->conditional_mod = BRW_CONDITIONAL_L;
       } else {
@@ -1027,7 +1027,7 @@ fs_visitor::nir_emit_alu(nir_alu_instr *instr)
    case nir_op_fmax:
    case nir_op_imax:
    case nir_op_umax:
-      if (brw->gen >= 6) {
+      if (devinfo->gen >= 6) {
          inst = emit(BRW_OPCODE_SEL, result, op[0], op[1]);
          inst->conditional_mod = BRW_CONDITIONAL_GE;
       } else {
@@ -1148,7 +1148,7 @@ fs_visitor::nir_emit_alu(nir_alu_instr *instr)
    /* If we need to do a boolean resolve, replace the result with -(x & 1)
     * to sign extend the low bit to 0/~0
     */
-   if (brw->gen <= 5 &&
+   if (devinfo->gen <= 5 &&
        (instr->instr.pass_flags & BRW_NIR_BOOLEAN_MASK) == BRW_NIR_BOOLEAN_NEEDS_RESOLVE) {
       fs_reg masked = vgrf(glsl_type::int_type);
       emit(AND(masked, result, fs_reg(1)));
@@ -1257,7 +1257,7 @@ fs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
       cmp->predicate = BRW_PREDICATE_NORMAL;
       cmp->flag_subreg = 1;
 
-      if (brw->gen >= 6) {
+      if (devinfo->gen >= 6) {
          emit_discard_jump();
       }
       break;
@@ -1676,7 +1676,7 @@ fs_visitor::nir_emit_texture(nir_tex_instr *instr)
       case nir_tex_src_sampler_offset: {
          /* Figure out the highest possible sampler index and mark it as used */
          uint32_t max_used = sampler + instr->sampler_array_size - 1;
-         if (instr->op == nir_texop_tg4 && brw->gen < 8) {
+         if (instr->op == nir_texop_tg4 && devinfo->gen < 8) {
             max_used += stage_prog_data->binding_table.gather_texture_start;
          } else {
             max_used += stage_prog_data->binding_table.texture_start;
@@ -1696,7 +1696,7 @@ fs_visitor::nir_emit_texture(nir_tex_instr *instr)
    }
 
    if (instr->op == nir_texop_txf_ms) {
-      if (brw->gen >= 7 &&
+      if (devinfo->gen >= 7 &&
           key_tex->compressed_multisample_layout_mask & (1 << sampler)) {
          mcs = emit_mcs_fetch(coordinate, instr->coord_components, sampler_reg);
       } else {

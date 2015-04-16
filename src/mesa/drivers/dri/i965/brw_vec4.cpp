@@ -239,9 +239,9 @@ vec4_instruction::regs_read(unsigned arg) const
 }
 
 bool
-vec4_instruction::can_do_source_mods(struct brw_context *brw)
+vec4_instruction::can_do_source_mods(const struct brw_device_info *devinfo)
 {
-   if (brw->gen == 6 && is_math())
+   if (devinfo->gen == 6 && is_math())
       return false;
 
    if (is_send_from_grf())
@@ -783,7 +783,7 @@ vec4_visitor::is_dep_ctrl_unsafe(const vec4_instruction *inst)
     * multiply, DepCtrl must not be used."
     * May apply to future SoCs as well.
     */
-   if (brw->is_cherryview) {
+   if (devinfo->is_cherryview) {
       if (inst->opcode == BRW_OPCODE_MUL &&
          IS_DWORD(inst->src[0]) &&
          IS_DWORD(inst->src[1]))
@@ -791,7 +791,7 @@ vec4_visitor::is_dep_ctrl_unsafe(const vec4_instruction *inst)
    }
 #undef IS_DWORD
 
-   if (brw->gen >= 8) {
+   if (devinfo->gen >= 8) {
       if (inst->opcode == BRW_OPCODE_F32TO16)
          return true;
    }
@@ -1012,7 +1012,7 @@ vec4_visitor::opt_register_coalesce()
                if (scan_inst->mlen)
                   break;
 
-               if (brw->gen == 6) {
+               if (devinfo->gen == 6) {
                   /* gen6 math instructions must have the destination be
                    * GRF, so no compute-to-MRF for them.
                    */
@@ -1209,9 +1209,9 @@ vec4_visitor::dump_instruction(backend_instruction *be_inst, FILE *file)
    if (inst->conditional_mod) {
       fprintf(file, "%s", conditional_modifier[inst->conditional_mod]);
       if (!inst->predicate &&
-          (brw->gen < 5 || (inst->opcode != BRW_OPCODE_SEL &&
-                            inst->opcode != BRW_OPCODE_IF &&
-                            inst->opcode != BRW_OPCODE_WHILE))) {
+          (devinfo->gen < 5 || (inst->opcode != BRW_OPCODE_SEL &&
+                                inst->opcode != BRW_OPCODE_IF &&
+                                inst->opcode != BRW_OPCODE_WHILE))) {
          fprintf(file, ".f0.%d", inst->flag_subreg);
       }
    }
@@ -1488,7 +1488,7 @@ vec4_vs_visitor::setup_attributes(int payload_reg)
    unsigned vue_entries =
       MAX2(nr_attributes, prog_data->vue_map.num_slots);
 
-   if (brw->gen == 6)
+   if (devinfo->gen == 6)
       prog_data->urb_entry_size = ALIGN(vue_entries, 8) / 8;
    else
       prog_data->urb_entry_size = ALIGN(vue_entries, 4) / 4;
@@ -1504,7 +1504,7 @@ vec4_visitor::setup_uniforms(int reg)
    /* The pre-gen6 VS requires that some push constants get loaded no
     * matter what, or the GPU would hang.
     */
-   if (brw->gen < 6 && this->uniforms == 0) {
+   if (devinfo->gen < 6 && this->uniforms == 0) {
       assert(this->uniforms < this->uniform_array_size);
       this->uniform_vector_size[this->uniforms] = 1;
 
@@ -1557,7 +1557,7 @@ vec4_visitor::assign_binding_table_offsets()
 src_reg
 vec4_visitor::get_timestamp()
 {
-   assert(brw->gen >= 7);
+   assert(devinfo->gen >= 7);
 
    src_reg ts = src_reg(brw_reg(BRW_ARCHITECTURE_REGISTER_FILE,
                                 BRW_ARF_TIMESTAMP,

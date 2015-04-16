@@ -325,7 +325,7 @@ fs_visitor::try_copy_propagate(fs_inst *inst, int arg, acp_entry *entry)
 
    if ((has_source_modifiers || entry->src.file == UNIFORM ||
         !entry->src.is_contiguous()) &&
-       !inst->can_do_source_mods(brw))
+       !inst->can_do_source_mods(devinfo))
       return false;
 
    if (has_source_modifiers &&
@@ -361,7 +361,7 @@ fs_visitor::try_copy_propagate(fs_inst *inst, int arg, acp_entry *entry)
        !can_change_source_types(inst))
       return false;
 
-   if (brw->gen >= 8 && (entry->src.negate || entry->src.abs) &&
+   if (devinfo->gen >= 8 && (entry->src.negate || entry->src.abs) &&
        is_logic_op(inst->opcode)) {
       return false;
    }
@@ -479,14 +479,14 @@ fs_visitor::try_constant_propagate(fs_inst *inst, acp_entry *entry)
       val.type = inst->src[i].type;
 
       if (inst->src[i].abs) {
-         if ((brw->gen >= 8 && is_logic_op(inst->opcode)) ||
+         if ((devinfo->gen >= 8 && is_logic_op(inst->opcode)) ||
              !brw_abs_immediate(val.type, &val.fixed_hw_reg)) {
             continue;
          }
       }
 
       if (inst->src[i].negate) {
-         if ((brw->gen >= 8 && is_logic_op(inst->opcode)) ||
+         if ((devinfo->gen >= 8 && is_logic_op(inst->opcode)) ||
              !brw_negate_immediate(val.type, &val.fixed_hw_reg)) {
             continue;
          }
@@ -502,7 +502,7 @@ fs_visitor::try_constant_propagate(fs_inst *inst, acp_entry *entry)
       case SHADER_OPCODE_POW:
       case SHADER_OPCODE_INT_QUOTIENT:
       case SHADER_OPCODE_INT_REMAINDER:
-         if (brw->gen < 8)
+         if (devinfo->gen < 8)
             break;
          /* fallthrough */
       case BRW_OPCODE_BFI1:

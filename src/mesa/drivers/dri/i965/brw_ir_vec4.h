@@ -168,7 +168,7 @@ public:
    unsigned regs_read(unsigned arg) const;
    bool can_reswizzle(int dst_writemask, int swizzle, int swizzle_mask);
    void reswizzle(int dst_writemask, int swizzle);
-   bool can_do_source_mods(struct brw_context *brw);
+   bool can_do_source_mods(const struct brw_device_info *devinfo);
 
    bool reads_flag()
    {

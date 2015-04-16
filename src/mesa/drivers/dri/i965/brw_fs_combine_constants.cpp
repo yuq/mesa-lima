@@ -42,9 +42,9 @@
  * replaced with a GRF source.
  */
 static bool
-could_coissue(const struct brw_context *brw, const fs_inst *inst)
+could_coissue(const struct brw_device_info *devinfo, const fs_inst *inst)
 {
-   if (brw->gen != 7)
+   if (devinfo->gen != 7)
       return false;
 
    switch (inst->opcode) {
@@ -207,7 +207,7 @@ fs_visitor::opt_combine_constants()
    foreach_block_and_inst(block, fs_inst, inst, cfg) {
       ip++;
 
-      if (!could_coissue(brw, inst) && !must_promote_imm(inst))
+      if (!could_coissue(devinfo, inst) && !must_promote_imm(inst))
          continue;
 
       for (int i = 0; i < inst->sources; i++) {
@@ -224,7 +224,7 @@ fs_visitor::opt_combine_constants()
                imm->inst = NULL;
             imm->block = intersection;
             imm->uses->push_tail(link(const_ctx, &inst->src[i]));
-            imm->uses_by_coissue += could_coissue(brw, inst);
+            imm->uses_by_coissue += could_coissue(devinfo, inst);
             imm->must_promote = imm->must_promote || must_promote_imm(inst);
             imm->last_use_ip = ip;
          } else {
@@ -234,7 +234,7 @@ fs_visitor::opt_combine_constants()
             imm->uses = new(const_ctx) exec_list();
             imm->uses->push_tail(link(const_ctx, &inst->src[i]));
             imm->val = val;
-            imm->uses_by_coissue = could_coissue(brw, inst);
+            imm->uses_by_coissue = could_coissue(devinfo, inst);
             imm->must_promote = must_promote_imm(inst);
             imm->first_use_ip = ip;
             imm->last_use_ip = ip;

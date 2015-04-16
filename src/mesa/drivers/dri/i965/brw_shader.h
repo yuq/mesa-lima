@@ -169,6 +169,7 @@ protected:
 public:
 
    struct brw_context * const brw;
+   const struct brw_device_info * const devinfo;
    struct gl_context * const ctx;
    struct brw_shader * const shader;
    struct gl_shader_program * const shader_prog;

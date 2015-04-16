@@ -390,7 +390,7 @@ fs_visitor::setup_payload_interference(struct ra_graph *g,
           * in the arguments.  Pre-gen6, the deltas are computed in normal
           * VGRFs.
           */
-         if (brw->gen >= 6) {
+         if (devinfo->gen >= 6) {
             int delta_x_arg = 0;
             if (inst->src[delta_x_arg].file == HW_REG &&
                 inst->src[delta_x_arg].fixed_hw_reg.file ==
@@ -443,7 +443,7 @@ fs_visitor::setup_payload_interference(struct ra_graph *g,
        * The alternative would be to have per-physical-register classes, which
        * would just be silly.
        */
-      if (brw->intelScreen->devinfo->gen <= 5 && dispatch_width == 16) {
+      if (devinfo->gen <= 5 && dispatch_width == 16) {
          /* We have to divide by 2 here because we only have even numbered
           * registers.  Some of the payload registers will be odd, but
           * that's ok because their physical register numbers have already
@@ -541,7 +541,7 @@ fs_visitor::assign_regs(bool allow_spilling)
    int first_payload_node = node_count;
    node_count += payload_node_count;
    int first_mrf_hack_node = node_count;
-   if (brw->gen >= 7)
+   if (devinfo->gen >= 7)
       node_count += BRW_MAX_GRF - GEN7_MRF_HACK_START;
    struct ra_graph *g =
       ra_alloc_interference_graph(screen->wm_reg_sets[rsi].regs, node_count);
@@ -579,7 +579,7 @@ fs_visitor::assign_regs(bool allow_spilling)
    }
 
    setup_payload_interference(g, payload_node_count, first_payload_node);
-   if (brw->gen >= 7) {
+   if (devinfo->gen >= 7) {
       setup_mrf_hack_interference(g, first_mrf_hack_node);
 
       foreach_block_and_inst(block, fs_inst, inst, cfg) {
@@ -694,7 +694,7 @@ fs_visitor::emit_unspill(bblock_t *block, fs_inst *inst, fs_reg dst,
 
    for (int i = 0; i < count / reg_size; i++) {
       /* The gen7 descriptor-based offset is 12 bits of HWORD units. */
-      bool gen7_read = brw->gen >= 7 && spill_offset < (1 << 12) * REG_SIZE;
+      bool gen7_read = devinfo->gen >= 7 && spill_offset < (1 << 12) * REG_SIZE;
 
       fs_inst *unspill_inst =
          new(mem_ctx) fs_inst(gen7_read ?
