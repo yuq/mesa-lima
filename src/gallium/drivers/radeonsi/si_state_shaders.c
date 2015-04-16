@@ -1016,7 +1016,7 @@ bcolor:
 static void si_init_gs_rings(struct si_context *sctx)
 {
 	unsigned esgs_ring_size = 128 * 1024;
-	unsigned gsvs_ring_size = 64 * 1024 * 1024;
+	unsigned gsvs_ring_size = 60 * 1024 * 1024;
 
 	assert(!sctx->gs_rings);
 	sctx->gs_rings = CALLOC_STRUCT(si_pm4_state);
@@ -1028,6 +1028,12 @@ static void si_init_gs_rings(struct si_context *sctx)
 					     PIPE_USAGE_DEFAULT, gsvs_ring_size);
 
 	if (sctx->b.chip_class >= CIK) {
+		if (sctx->b.chip_class >= VI) {
+			/* The maximum sizes are 63.999 MB on VI, because
+			 * the register fields only have 18 bits. */
+			assert(esgs_ring_size / 256 < (1 << 18));
+			assert(gsvs_ring_size / 256 < (1 << 18));
+		}
 		si_pm4_set_reg(sctx->gs_rings, R_030900_VGT_ESGS_RING_SIZE,
 			       esgs_ring_size / 256);
 		si_pm4_set_reg(sctx->gs_rings, R_030904_VGT_GSVS_RING_SIZE,

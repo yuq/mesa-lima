@@ -61,7 +61,7 @@ unsigned si_array_mode(unsigned mode)
 
 uint32_t si_num_banks(struct si_screen *sscreen, struct r600_texture *tex)
 {
-	if (sscreen->b.chip_class == CIK &&
+	if (sscreen->b.chip_class >= CIK &&
 	    sscreen->b.info.cik_macrotile_mode_array_valid) {
 		unsigned index, tileb;
 
@@ -1846,6 +1846,9 @@ static void si_initialize_color_surface(struct si_context *sctx,
 	surf->cb_color_info = color_info;
 	surf->cb_color_attrib = color_attrib;
 
+	if (sctx->b.chip_class >= VI)
+		surf->cb_dcc_control = S_028C78_OVERWRITE_COMBINER_DISABLE(1);
+
 	if (rtex->fmask.size) {
 		surf->cb_color_fmask = (offset + rtex->fmask.offset) >> 8;
 		surf->cb_color_fmask_slice = S_028C88_TILE_MAX(rtex->fmask.slice_tile_max);
@@ -1991,6 +1994,10 @@ static void si_init_depth_surface(struct si_context *sctx,
 		db_htile_surface = 0;
 	}
 
+	/* Bug workaround. */
+	if (sctx->b.chip_class >= VI)
+		s_info |= S_028044_TILE_STENCIL_DISABLE(1);
+
 	assert(levelinfo->nblk_x % 8 == 0 && levelinfo->nblk_y % 8 == 0);
 
 	surf->db_depth_view = S_028008_SLICE_START(surf->base.u.tex.first_layer) |
@@ -2084,7 +2091,7 @@ static void si_set_framebuffer_state(struct pipe_context *ctx,
 	si_update_fb_rs_state(sctx);
 	si_update_fb_blend_state(sctx);
 
-	sctx->framebuffer.atom.num_dw = state->nr_cbufs*15 + (8 - state->nr_cbufs)*3;
+	sctx->framebuffer.atom.num_dw = state->nr_cbufs*16 + (8 - state->nr_cbufs)*3;
 	sctx->framebuffer.atom.num_dw += state->zsbuf ? 26 : 4;
 	sctx->framebuffer.atom.num_dw += 3; /* WINDOW_SCISSOR_BR */
 	sctx->framebuffer.atom.num_dw += 18; /* MSAA sample locations */
@@ -2163,20 +2170,24 @@ static void si_emit_framebuffer_state(struct si_context *sctx, struct r600_atom 
 				RADEON_PRIO_COLOR_META);
 		}
 
-		r600_write_context_reg_seq(cs, R_028C60_CB_COLOR0_BASE + i * 0x3C, 13);
+		r600_write_context_reg_seq(cs, R_028C60_CB_COLOR0_BASE + i * 0x3C,
+					   sctx->b.chip_class >= VI ? 14 : 13);
 		radeon_emit(cs, cb->cb_color_base);	/* R_028C60_CB_COLOR0_BASE */
 		radeon_emit(cs, cb->cb_color_pitch);	/* R_028C64_CB_COLOR0_PITCH */
 		radeon_emit(cs, cb->cb_color_slice);	/* R_028C68_CB_COLOR0_SLICE */
 		radeon_emit(cs, cb->cb_color_view);	/* R_028C6C_CB_COLOR0_VIEW */
 		radeon_emit(cs, cb->cb_color_info | tex->cb_color_info); /* R_028C70_CB_COLOR0_INFO */
 		radeon_emit(cs, cb->cb_color_attrib);	/* R_028C74_CB_COLOR0_ATTRIB */
-		radeon_emit(cs, 0);			/* R_028C78 unused */
+		radeon_emit(cs, cb->cb_dcc_control);	/* R_028C78_CB_COLOR0_DCC_CONTROL */
 		radeon_emit(cs, tex->cmask.base_address_reg);	/* R_028C7C_CB_COLOR0_CMASK */
 		radeon_emit(cs, tex->cmask.slice_tile_max);	/* R_028C80_CB_COLOR0_CMASK_SLICE */
 		radeon_emit(cs, cb->cb_color_fmask);		/* R_028C84_CB_COLOR0_FMASK */
 		radeon_emit(cs, cb->cb_color_fmask_slice);	/* R_028C88_CB_COLOR0_FMASK_SLICE */
 		radeon_emit(cs, tex->color_clear_value[0]);	/* R_028C8C_CB_COLOR0_CLEAR_WORD0 */
 		radeon_emit(cs, tex->color_clear_value[1]);	/* R_028C90_CB_COLOR0_CLEAR_WORD1 */
+
+		if (sctx->b.chip_class >= VI)
+			radeon_emit(cs, 0);	/* R_028C94_CB_COLOR0_DCC_BASE */
 	}
 	/* set CB_COLOR1_INFO for possible dual-src blending */
 	if (i == 1 && state->cbufs[0]) {
@@ -2332,7 +2343,7 @@ si_create_sampler_view_custom(struct pipe_context *ctx,
 
 	/* Buffer resource. */
 	if (texture->target == PIPE_BUFFER) {
-		unsigned stride;
+		unsigned stride, num_records;
 
 		desc = util_format_description(state->format);
 		first_non_void = util_format_get_first_non_void_channel(state->format);
@@ -2341,10 +2352,16 @@ si_create_sampler_view_custom(struct pipe_context *ctx,
 		format = si_translate_buffer_dataformat(ctx->screen, desc, first_non_void);
 		num_format = si_translate_buffer_numformat(ctx->screen, desc, first_non_void);
 
+		num_records = state->u.buf.last_element + 1 - state->u.buf.first_element;
+		num_records = MIN2(num_records, texture->width0 / stride);
+
+		if (sctx->b.chip_class >= VI)
+			num_records *= stride;
+
 		view->state[4] = va;
 		view->state[5] = S_008F04_BASE_ADDRESS_HI(va >> 32) |
 				 S_008F04_STRIDE(stride);
-		view->state[6] = state->u.buf.last_element + 1 - state->u.buf.first_element;
+		view->state[6] = num_records;
 		view->state[7] = S_008F0C_DST_SEL_X(si_map_swizzle(desc->swizzle[0])) |
 				 S_008F0C_DST_SEL_Y(si_map_swizzle(desc->swizzle[1])) |
 				 S_008F0C_DST_SEL_Z(si_map_swizzle(desc->swizzle[2])) |
@@ -3167,6 +3184,15 @@ static void si_init_config(struct si_context *sctx)
 			si_pm4_set_reg(pm4, R_028350_PA_SC_RASTER_CONFIG, 0x3a00161a);
 			si_pm4_set_reg(pm4, R_028354_PA_SC_RASTER_CONFIG_1, 0x0000002e);
 			break;
+		case CHIP_TONGA:
+			si_pm4_set_reg(pm4, R_028350_PA_SC_RASTER_CONFIG, 0x16000012);
+			si_pm4_set_reg(pm4, R_028354_PA_SC_RASTER_CONFIG_1, 0x0000002a);
+			break;
+		case CHIP_ICELAND:
+		case CHIP_CARRIZO:
+			si_pm4_set_reg(pm4, R_028350_PA_SC_RASTER_CONFIG, 0x00000002);
+			si_pm4_set_reg(pm4, R_028354_PA_SC_RASTER_CONFIG_1, 0x00000000);
+			break;
 		case CHIP_KAVERI:
 			/* XXX todo */
 		case CHIP_KABINI:
@@ -3259,6 +3285,13 @@ static void si_init_config(struct si_context *sctx)
 		si_pm4_set_reg(pm4, R_00B118_SPI_SHADER_PGM_RSRC3_VS, S_00B118_CU_EN(0xffff));
 		si_pm4_set_reg(pm4, R_00B11C_SPI_SHADER_LATE_ALLOC_VS, S_00B11C_LIMIT(0));
 		si_pm4_set_reg(pm4, R_00B01C_SPI_SHADER_PGM_RSRC3_PS, S_00B01C_CU_EN(0xffff));
+	}
+
+	if (sctx->b.chip_class >= VI) {
+		si_pm4_set_reg(pm4, R_028424_CB_DCC_CONTROL,
+			       S_028424_OVERWRITE_COMBINER_MRT_SHARING_DISABLE(1));
+		si_pm4_set_reg(pm4, R_028C58_VGT_VERTEX_REUSE_BLOCK_CNTL, 30);
+		si_pm4_set_reg(pm4, R_028C5C_VGT_OUT_DEALLOC_CNTL, 32);
 	}
 
 	sctx->init_config = pm4;

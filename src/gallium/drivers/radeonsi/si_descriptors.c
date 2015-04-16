@@ -429,7 +429,8 @@ static bool si_upload_vertex_buffer_descriptors(struct si_context *sctx)
 		desc[0] = va & 0xFFFFFFFF;
 		desc[1] = S_008F04_BASE_ADDRESS_HI(va >> 32) |
 			  S_008F04_STRIDE(vb->stride);
-		if (vb->stride)
+
+		if (sctx->b.chip_class <= CIK && vb->stride)
 			/* Round up by rounding down and adding 1 */
 			desc[2] = (vb->buffer->width0 - offset -
 				   sctx->vertex_elements->format_size[i]) /
@@ -593,6 +594,9 @@ void si_set_ring_buffer(struct pipe_context *ctx, uint shader, uint slot,
 			break;
 		}
 
+		if (sctx->b.chip_class >= VI && stride)
+			num_records *= stride;
+
 		/* Set the descriptor. */
 		uint32_t *desc = buffers->desc.list + slot*4;
 		desc[0] = va;
@@ -682,7 +686,12 @@ static void si_set_streamout_targets(struct pipe_context *ctx,
 			struct pipe_resource *buffer = targets[i]->buffer;
 			uint64_t va = r600_resource(buffer)->gpu_address;
 
-			/* Set the descriptor. */
+			/* Set the descriptor.
+			 *
+			 * On VI, the format must be non-INVALID, otherwise
+			 * the buffer will be considered not bound and store
+			 * instructions will be no-ops.
+			 */
 			uint32_t *desc = buffers->desc.list + bufidx*4;
 			desc[0] = va;
 			desc[1] = S_008F04_BASE_ADDRESS_HI(va >> 32);
@@ -690,7 +699,8 @@ static void si_set_streamout_targets(struct pipe_context *ctx,
 			desc[3] = S_008F0C_DST_SEL_X(V_008F0C_SQ_SEL_X) |
 				  S_008F0C_DST_SEL_Y(V_008F0C_SQ_SEL_Y) |
 				  S_008F0C_DST_SEL_Z(V_008F0C_SQ_SEL_Z) |
-				  S_008F0C_DST_SEL_W(V_008F0C_SQ_SEL_W);
+				  S_008F0C_DST_SEL_W(V_008F0C_SQ_SEL_W) |
+				  S_008F0C_DATA_FORMAT(V_008F0C_BUF_DATA_FORMAT_32);
 
 			/* Set the resource. */
 			pipe_resource_reference(&buffers->buffers[bufidx],

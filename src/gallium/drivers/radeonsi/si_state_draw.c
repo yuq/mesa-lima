@@ -318,7 +318,8 @@ static unsigned si_get_ia_multi_vgt_param(struct si_context *sctx,
 		S_028AA8_PARTIAL_VS_WAVE_ON(partial_vs_wave) |
 		S_028AA8_PARTIAL_ES_WAVE_ON(partial_es_wave) |
 		S_028AA8_PRIMGROUP_SIZE(primgroup_size - 1) |
-		S_028AA8_WD_SWITCH_ON_EOP(sctx->b.chip_class >= CIK ? wd_switch_on_eop : 0);
+		S_028AA8_WD_SWITCH_ON_EOP(sctx->b.chip_class >= CIK ? wd_switch_on_eop : 0) |
+		S_028AA8_MAX_PRIMGRP_IN_WAVE(sctx->b.chip_class >= VI ? 2 : 0);
 }
 
 static unsigned si_get_ls_hs_config(struct si_context *sctx,
@@ -473,12 +474,24 @@ static void si_emit_draw_packets(struct si_context *sctx,
 	if (info->indexed) {
 		radeon_emit(cs, PKT3(PKT3_INDEX_TYPE, 0, 0));
 
-		if (ib->index_size == 4) {
-			radeon_emit(cs, V_028A7C_VGT_INDEX_32 | (SI_BIG_ENDIAN ?
-					V_028A7C_VGT_DMA_SWAP_32_BIT : 0));
-		} else {
-			radeon_emit(cs, V_028A7C_VGT_INDEX_16 | (SI_BIG_ENDIAN ?
-					V_028A7C_VGT_DMA_SWAP_16_BIT : 0));
+		/* index type */
+		switch (ib->index_size) {
+		case 1:
+			radeon_emit(cs, V_028A7C_VGT_INDEX_8);
+			break;
+		case 2:
+			radeon_emit(cs, V_028A7C_VGT_INDEX_16 |
+				    (SI_BIG_ENDIAN && sctx->b.chip_class <= CIK ?
+					     V_028A7C_VGT_DMA_SWAP_16_BIT : 0));
+			break;
+		case 4:
+			radeon_emit(cs, V_028A7C_VGT_INDEX_32 |
+				    (SI_BIG_ENDIAN && sctx->b.chip_class <= CIK ?
+					     V_028A7C_VGT_DMA_SWAP_32_BIT : 0));
+			break;
+		default:
+			assert(!"unreachable");
+			return;
 		}
 	}
 
@@ -604,8 +617,13 @@ void si_emit_cache_flush(struct r600_common_context *sctx, struct r600_atom *ato
 
 	if (sctx->flags & SI_CONTEXT_INV_TC_L1)
 		cp_coher_cntl |= S_0085F0_TCL1_ACTION_ENA(1);
-	if (sctx->flags & SI_CONTEXT_INV_TC_L2)
+	if (sctx->flags & SI_CONTEXT_INV_TC_L2) {
 		cp_coher_cntl |= S_0085F0_TC_ACTION_ENA(1);
+
+		/* TODO: this might not be needed. */
+		if (sctx->chip_class >= VI)
+			cp_coher_cntl |= S_0301F0_TC_WB_ACTION_ENA(1);
+	}
 
 	if (sctx->flags & SI_CONTEXT_FLUSH_AND_INV_CB) {
 		cp_coher_cntl |= S_0085F0_CB_ACTION_ENA(1) |
@@ -754,7 +772,8 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 		ib.offset = sctx->index_buffer.offset;
 
 		/* Translate or upload, if needed. */
-		if (ib.index_size == 1) {
+		/* 8-bit indices are supported on VI. */
+		if (sctx->b.chip_class <= CIK && ib.index_size == 1) {
 			struct pipe_resource *out_buffer = NULL;
 			unsigned out_offset, start, count, start_offset;
 			void *ptr;
@@ -789,6 +808,8 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 		}
 	}
 
+	/* TODO: VI should read index buffers through TC, so this shouldn't be
+	 * needed on VI. */
 	if (info->indexed && r600_resource(ib.buffer)->TC_L2_dirty) {
 		sctx->b.flags |= SI_CONTEXT_INV_TC_L2;
 		r600_resource(ib.buffer)->TC_L2_dirty = false;
@@ -822,7 +843,7 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 
 	/* Workaround for a VGT hang when streamout is enabled.
 	 * It must be done after drawing. */
-	if (sctx->b.family == CHIP_HAWAII &&
+	if ((sctx->b.family == CHIP_HAWAII || sctx->b.family == CHIP_TONGA) &&
 	    (sctx->b.streamout.streamout_enabled ||
 	     sctx->b.streamout.prims_gen_query_enabled)) {
 		sctx->b.flags |= SI_CONTEXT_VGT_STREAMOUT_SYNC;

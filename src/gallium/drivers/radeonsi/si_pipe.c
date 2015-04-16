@@ -184,7 +184,9 @@ static struct pipe_context *si_create_context(struct pipe_screen *screen, void *
 	r600_target = radeon_llvm_get_r600_target(triple);
 	sctx->tm = LLVMCreateTargetMachine(r600_target, triple,
 					   r600_get_llvm_processor_name(sscreen->b.family),
-					   "+DumpCode,+vgpr-spilling",
+					   sctx->b.chip_class >= VI ?
+						   "+DumpCode" :
+						   "+DumpCode,+vgpr-spilling",
 					   LLVMCodeGenLevelDefault,
 					   LLVMRelocDefault,
 					   LLVMCodeModelDefault);

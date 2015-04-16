@@ -2787,6 +2787,7 @@ static void txq_fetch_args(
 	struct si_shader_context *si_shader_ctx = si_shader_context(bld_base);
 	const struct tgsi_full_instruction *inst = emit_data->inst;
 	struct gallivm_state *gallivm = bld_base->base.gallivm;
+	LLVMBuilderRef builder = gallivm->builder;
 	unsigned target = inst->Texture.Texture;
 	LLVMValueRef res_ptr;
 
@@ -2807,10 +2808,26 @@ static void txq_fetch_args(
 		LLVMTypeRef v8i32 = LLVMVectorType(i32, 8);
 
 		/* Read the size from the buffer descriptor directly. */
-		LLVMValueRef size = res_ptr;
-		size = LLVMBuildBitCast(gallivm->builder, size, v8i32, "");
-		size = LLVMBuildExtractElement(gallivm->builder, size,
-					      lp_build_const_int32(gallivm, 6), "");
+		LLVMValueRef res = LLVMBuildBitCast(builder, res_ptr, v8i32, "");
+		LLVMValueRef size = LLVMBuildExtractElement(builder, res,
+						lp_build_const_int32(gallivm, 6), "");
+
+		if (si_shader_ctx->screen->b.chip_class >= VI) {
+			/* On VI, the descriptor contains the size in bytes,
+			 * but TXQ must return the size in elements.
+			 * The stride is always non-zero for resources using TXQ.
+			 */
+			LLVMValueRef stride =
+				LLVMBuildExtractElement(builder, res,
+							lp_build_const_int32(gallivm, 5), "");
+			stride = LLVMBuildLShr(builder, stride,
+					       lp_build_const_int32(gallivm, 16), "");
+			stride = LLVMBuildAnd(builder, stride,
+					      lp_build_const_int32(gallivm, 0x3FFF), "");
+
+			size = LLVMBuildUDiv(builder, size, stride, "");
+		}
+
 		emit_data->args[0] = size;
 		return;
 	}
