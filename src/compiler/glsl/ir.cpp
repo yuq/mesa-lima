@@ -500,18 +500,6 @@ ir_expression::get_num_operands(ir_expression_operation op)
 
 #include "ir_expression_operation_strings.h"
 
-const char *ir_expression::operator_string(ir_expression_operation op)
-{
-   assert((unsigned int) op < ARRAY_SIZE(operator_strs));
-   assert(ARRAY_SIZE(operator_strs) == (ir_quadop_vector + 1));
-   return operator_strs[op];
-}
-
-const char *ir_expression::operator_string()
-{
-   return operator_string(this->operation);
-}
-
 const char*
 depth_layout_string(ir_depth_layout layout)
 {
@@ -531,9 +519,8 @@ depth_layout_string(ir_depth_layout layout)
 ir_expression_operation
 ir_expression::get_operator(const char *str)
 {
-   const int operator_count = sizeof(operator_strs) / sizeof(operator_strs[0]);
-   for (int op = 0; op < operator_count; op++) {
-      if (strcmp(str, operator_strs[op]) == 0)
+   for (int op = 0; op <= int(ir_last_opcode); op++) {
+      if (strcmp(str, ir_expression_operation_strings[op]) == 0)
 	 return (ir_expression_operation) op;
    }
    return (ir_expression_operation) -1;

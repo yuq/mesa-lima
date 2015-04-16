@@ -1363,6 +1363,8 @@ public:
 
 #include "ir_expression_operation.h"
 
+extern const char *const ir_expression_operation_strings[ir_last_opcode + 1];
+
 class ir_expression : public ir_rvalue {
 public:
    ir_expression(int op, const struct glsl_type *type,
@@ -1428,17 +1430,6 @@ public:
              operation == ir_binop_ubo_load ||
              operation == ir_quadop_vector;
    }
-
-   /**
-    * Return a string representing this expression's operator.
-    */
-   const char *operator_string();
-
-   /**
-    * Return a string representing this expression's operator.
-    */
-   static const char *operator_string(ir_expression_operation);
-
 
    /**
     * Do a reverse-lookup to translate the given string into an operator.

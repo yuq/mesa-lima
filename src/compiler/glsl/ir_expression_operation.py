@@ -365,7 +365,7 @@ ${item}
 };""")
 
    strings_template = mako.template.Template(copyright + """
-static const char *const operator_strs[] = {
+const char *const ir_expression_operation_strings[] = {
 % for item in values:
 %  if not isinstance(item, str):
    "${item[2] if item[2] is not None else item[0]}",
