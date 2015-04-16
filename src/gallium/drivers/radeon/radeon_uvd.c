@@ -870,7 +870,7 @@ error:
 }
 
 /* calculate top/bottom offset */
-static unsigned texture_offset(struct radeon_surface *surface, unsigned layer)
+static unsigned texture_offset(struct radeon_surf *surface, unsigned layer)
 {
 	return surface->level[0].offset +
 		layer * surface->level[0].slice_size;
@@ -905,8 +905,8 @@ static unsigned bank_wh(unsigned bankwh)
 /**
  * fill decoding target field from the luma and chroma surfaces
  */
-void ruvd_set_dt_surfaces(struct ruvd_msg *msg, struct radeon_surface *luma,
-			  struct radeon_surface *chroma)
+void ruvd_set_dt_surfaces(struct ruvd_msg *msg, struct radeon_surf *luma,
+			  struct radeon_surf *chroma)
 {
 	msg->body.decode.dt_pitch = luma->level[0].pitch_bytes;
 	switch (luma->level[0].mode) {

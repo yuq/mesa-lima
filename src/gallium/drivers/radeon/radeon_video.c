@@ -132,7 +132,7 @@ void rvid_clear_buffer(struct pipe_context *context, struct rvid_buffer* buffer)
  */
 void rvid_join_surfaces(struct radeon_winsys* ws, unsigned bind,
 			struct pb_buffer** buffers[VL_NUM_COMPONENTS],
-			struct radeon_surface *surfaces[VL_NUM_COMPONENTS])
+			struct radeon_surf *surfaces[VL_NUM_COMPONENTS])
 {
 	unsigned best_tiling, best_wh, off;
 	unsigned size, alignment;

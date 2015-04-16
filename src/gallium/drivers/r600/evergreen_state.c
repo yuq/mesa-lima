@@ -664,7 +664,7 @@ evergreen_create_sampler_view_custom(struct pipe_context *ctx,
 	unsigned height, depth, width;
 	unsigned macro_aspect, tile_split, bankh, bankw, nbanks, fmask_bankh;
 	enum pipe_format pipe_format = state->format;
-	struct radeon_surface_level *surflevel;
+	struct radeon_surf_level *surflevel;
 	unsigned base_level, first_level, last_level;
 	uint64_t va;
 
@@ -918,7 +918,7 @@ static void evergreen_emit_scissor_state(struct r600_context *rctx, struct r600_
 /**
  * This function intializes the CB* register values for RATs.  It is meant
  * to be used for 1D aligned buffers that do not have an associated
- * radeon_surface.
+ * radeon_surf.
  */
 void evergreen_init_color_surface_rat(struct r600_context *rctx,
 					struct r600_surface *surf)
@@ -1163,7 +1163,7 @@ static void evergreen_init_depth_surface(struct r600_context *rctx,
 	struct r600_screen *rscreen = rctx->screen;
 	struct r600_texture *rtex = (struct r600_texture*)surf->base.texture;
 	unsigned level = surf->base.u.tex.level;
-	struct radeon_surface_level *levelinfo = &rtex->surface.level[level];
+	struct radeon_surf_level *levelinfo = &rtex->surface.level[level];
 	uint64_t offset;
 	unsigned format, array_mode;
 	unsigned macro_aspect, tile_split, bankh, bankw, nbanks;

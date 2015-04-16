@@ -353,6 +353,6 @@ struct pipe_video_codec *ruvd_create_decoder(struct pipe_context *context,
 					     ruvd_set_dtb set_dtb);
 
 /* fill decoding target field from the luma and chroma surfaces */
-void ruvd_set_dt_surfaces(struct ruvd_msg *msg, struct radeon_surface *luma,
-			  struct radeon_surface *chroma);
+void ruvd_set_dt_surfaces(struct ruvd_msg *msg, struct radeon_surf *luma,
+			  struct radeon_surf *chroma);
 #endif

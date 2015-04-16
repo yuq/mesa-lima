@@ -50,7 +50,7 @@ struct r600_common_screen;
 /* driver dependent callback */
 typedef void (*rvce_get_buffer)(struct pipe_resource *resource,
 				struct radeon_winsys_cs_handle **handle,
-				struct radeon_surface **surface);
+				struct radeon_surf **surface);
 
 /* Coded picture buffer slot */
 struct rvce_cpb_slot {
@@ -88,8 +88,8 @@ struct rvce_encoder {
 	rvce_get_buffer			get_buffer;
 
 	struct radeon_winsys_cs_handle*	handle;
-	struct radeon_surface*		luma;
-	struct radeon_surface*		chroma;
+	struct radeon_surf*		luma;
+	struct radeon_surf*		chroma;
 
 	struct radeon_winsys_cs_handle*	bs_handle;
 	unsigned			bs_size;

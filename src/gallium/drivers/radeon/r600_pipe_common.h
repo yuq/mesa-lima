@@ -199,7 +199,7 @@ struct r600_texture {
 	unsigned			dirty_level_mask; /* each bit says if that mipmap is compressed */
 	struct r600_texture		*flushed_depth_texture;
 	boolean				is_flushing_texture;
-	struct radeon_surface		surface;
+	struct radeon_surf		surface;
 
 	/* Colorbuffer compression and fast clear. */
 	struct r600_fmask_info		fmask;

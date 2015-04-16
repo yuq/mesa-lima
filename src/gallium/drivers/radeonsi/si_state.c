@@ -1852,7 +1852,7 @@ static void si_init_depth_surface(struct si_context *sctx,
 	struct si_screen *sscreen = sctx->screen;
 	struct r600_texture *rtex = (struct r600_texture*)surf->base.texture;
 	unsigned level = surf->base.u.tex.level;
-	struct radeon_surface_level *levelinfo = &rtex->surface.level[level];
+	struct radeon_surf_level *levelinfo = &rtex->surface.level[level];
 	unsigned format, tile_mode_index, array_mode;
 	unsigned macro_aspect, tile_split, stile_split, bankh, bankw, nbanks, pipe_config;
 	uint32_t z_info, s_info, db_depth_info;
@@ -2258,7 +2258,7 @@ static struct pipe_sampler_view *si_create_sampler_view(struct pipe_context *ctx
 	unsigned char state_swizzle[4], swizzle[4];
 	unsigned height, depth, width;
 	enum pipe_format pipe_format = state->format;
-	struct radeon_surface_level *surflevel;
+	struct radeon_surf_level *surflevel;
 	int first_non_void;
 	uint64_t va;
 

@@ -103,5 +103,6 @@ radeon_drm_winsys(struct radeon_winsys *base)
 }
 
 void radeon_drm_ws_queue_cs(struct radeon_drm_winsys *ws, struct radeon_drm_cs *cs);
+void radeon_surface_init_functions(struct radeon_drm_winsys *ws);
 
 #endif
