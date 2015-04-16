@@ -121,7 +121,8 @@ bool r600_init_resource(struct r600_common_screen *rscreen,
 		/* Older kernels didn't always flush the HDP cache before
 		 * CS execution
 		 */
-		if (rscreen->info.drm_minor < 40) {
+		if (rscreen->info.drm_major == 2 &&
+		    rscreen->info.drm_minor < 40) {
 			res->domains = RADEON_DOMAIN_GTT;
 			flags |= RADEON_FLAG_GTT_WC;
 			break;
@@ -147,7 +148,8 @@ bool r600_init_resource(struct r600_common_screen *rscreen,
 		 * Write-combined CPU mappings are fine, the kernel ensures all CPU
 		 * writes finish before the GPU executes a command stream.
 		 */
-		if (rscreen->info.drm_minor < 40)
+		if (rscreen->info.drm_major == 2 &&
+		    rscreen->info.drm_minor < 40)
 			res->domains = RADEON_DOMAIN_GTT;
 		else if (res->domains & RADEON_DOMAIN_VRAM)
 			flags |= RADEON_FLAG_CPU_ACCESS;

@@ -1178,7 +1178,9 @@ static uint32_t si_translate_texformat(struct pipe_screen *screen,
 				       int first_non_void)
 {
 	struct si_screen *sscreen = (struct si_screen*)screen;
-	bool enable_compressed_formats = sscreen->b.info.drm_minor >= 31;
+	bool enable_compressed_formats = (sscreen->b.info.drm_major == 2 &&
+					  sscreen->b.info.drm_minor >= 31) ||
+					 sscreen->b.info.drm_major == 3;
 	boolean uniform = TRUE;
 	int i;
 
@@ -1626,7 +1628,6 @@ boolean si_is_format_supported(struct pipe_screen *screen,
                                unsigned sample_count,
                                unsigned usage)
 {
-	struct si_screen *sscreen = (struct si_screen *)screen;
 	unsigned retval = 0;
 
 	if (target >= PIPE_MAX_TEXTURE_TYPES) {
@@ -1638,8 +1639,7 @@ boolean si_is_format_supported(struct pipe_screen *screen,
 		return FALSE;
 
 	if (sample_count > 1) {
-		/* 2D tiling on CIK is supported since DRM 2.35.0 */
-		if (sscreen->b.chip_class >= CIK && sscreen->b.info.drm_minor < 35)
+		if (!screen->get_param(screen, PIPE_CAP_TEXTURE_MULTISAMPLE))
 			return FALSE;
 
 		switch (sample_count) {

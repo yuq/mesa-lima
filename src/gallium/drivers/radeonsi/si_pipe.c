@@ -271,7 +271,9 @@ static int si_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 	case PIPE_CAP_TEXTURE_MULTISAMPLE:
 		/* 2D tiling on CIK is supported since DRM 2.35.0 */
 		return sscreen->b.chip_class < CIK ||
-		       sscreen->b.info.drm_minor >= 35;
+		       (sscreen->b.info.drm_major == 2 &&
+			sscreen->b.info.drm_minor >= 35) ||
+		       sscreen->b.info.drm_major == 3;
 
         case PIPE_CAP_MIN_MAP_BUFFER_ALIGNMENT:
                 return R600_MAP_BUFFER_ALIGNMENT;

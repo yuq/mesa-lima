@@ -928,7 +928,9 @@ bool r600_common_screen_init(struct r600_common_screen *rscreen,
 	pipe_mutex_init(rscreen->aux_context_lock);
 	pipe_mutex_init(rscreen->gpu_load_mutex);
 
-	if (rscreen->info.drm_minor >= 28 && (rscreen->debug_flags & DBG_TRACE_CS)) {
+	if (((rscreen->info.drm_major == 2 && rscreen->info.drm_minor >= 28) ||
+	     rscreen->info.drm_major == 3) &&
+	    (rscreen->debug_flags & DBG_TRACE_CS)) {
 		rscreen->trace_bo = (struct r600_resource*)pipe_buffer_create(&rscreen->b,
 										PIPE_BIND_CUSTOM,
 										PIPE_USAGE_STAGING,

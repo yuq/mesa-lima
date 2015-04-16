@@ -490,7 +490,7 @@ static unsigned r600_texture_get_htile_size(struct r600_common_screen *rscreen,
 	unsigned num_pipes = rscreen->tiling_info.num_channels;
 
 	if (rscreen->chip_class <= EVERGREEN &&
-	    rscreen->info.drm_minor < 26)
+	    rscreen->info.drm_major == 2 && rscreen->info.drm_minor < 26)
 		return 0;
 
 	/* HW bug on R6xx. */
@@ -502,7 +502,7 @@ static unsigned r600_texture_get_htile_size(struct r600_common_screen *rscreen,
 	/* HTILE is broken with 1D tiling on old kernels and CIK. */
 	if (rscreen->chip_class >= CIK &&
 	    rtex->surface.level[0].mode == RADEON_SURF_MODE_1D &&
-	    rscreen->info.drm_minor < 38)
+	    rscreen->info.drm_major == 2 && rscreen->info.drm_minor < 38)
 		return 0;
 
 	switch (num_pipes) {
@@ -1261,7 +1261,9 @@ void evergreen_do_fast_color_clear(struct r600_common_context *rctx,
 
 		/* fast color clear with 1D tiling doesn't work on old kernels and CIK */
 		if (tex->surface.level[0].mode == RADEON_SURF_MODE_1D &&
-		    rctx->chip_class >= CIK && rctx->screen->info.drm_minor < 38) {
+		    rctx->chip_class >= CIK &&
+		    rctx->screen->info.drm_major == 2 &&
+		    rctx->screen->info.drm_minor < 38) {
 			continue;
 		}
 
