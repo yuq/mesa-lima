@@ -30,9 +30,6 @@
 #include "util/u_memory.h"
 #include "vl/vl_decoder.h"
 
-#include <llvm-c/Target.h>
-#include <llvm-c/TargetMachine.h>
-
 /*
  * pipe_context
  */
