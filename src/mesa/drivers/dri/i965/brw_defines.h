@@ -530,9 +530,11 @@
 #define GEN7_SURFACE_ARYSPC_FULL	(0 << 10)
 #define GEN7_SURFACE_ARYSPC_LOD0	(1 << 10)
 
-/* Surface state DW0 */
+/* Surface state DW1 */
 #define GEN8_SURFACE_MOCS_SHIFT         24
 #define GEN8_SURFACE_MOCS_MASK          INTEL_MASK(30, 24)
+#define GEN8_SURFACE_QPITCH_SHIFT       0
+#define GEN8_SURFACE_QPITCH_MASK        INTEL_MASK(14, 0)
 
 /* Surface state DW2 */
 #define BRW_SURFACE_HEIGHT_SHIFT	19
