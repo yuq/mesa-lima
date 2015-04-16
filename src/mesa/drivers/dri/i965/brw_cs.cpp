@@ -297,6 +297,14 @@ brw_upload_cs_state(struct brw_context *brw)
    struct brw_cs_prog_data *cs_prog_data = brw->cs.prog_data;
    struct brw_stage_prog_data *prog_data = &cs_prog_data->base;
 
+   if (INTEL_DEBUG & DEBUG_SHADER_TIME) {
+      brw->vtbl.emit_buffer_surface_state(
+         brw, &stage_state->surf_offset[
+                 prog_data->binding_table.shader_time_start],
+         brw->shader_time.bo, 0, BRW_SURFACEFORMAT_RAW,
+         brw->shader_time.bo->size, 1, true);
+   }
+
    uint32_t *bind = (uint32_t*) brw_state_batch(brw, AUB_TRACE_BINDING_TABLE,
                                             prog_data->binding_table.size_bytes,
                                             32, &stage_state->bind_bo_offset);

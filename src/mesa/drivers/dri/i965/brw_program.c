@@ -323,7 +323,8 @@ get_written_and_reset(struct brw_context *brw, int i,
                       uint64_t *written, uint64_t *reset)
 {
    enum shader_time_shader_type type = brw->shader_time.types[i];
-   assert(type == ST_VS || type == ST_GS || type == ST_FS8 || type == ST_FS16);
+   assert(type == ST_VS || type == ST_GS || type == ST_FS8 ||
+          type == ST_FS16 || type == ST_CS);
 
    /* Find where we recorded written and reset. */
    int wi, ri;
@@ -363,7 +364,7 @@ brw_report_shader_time(struct brw_context *brw)
 
    uint64_t scaled[brw->shader_time.num_entries];
    uint64_t *sorted[brw->shader_time.num_entries];
-   uint64_t total_by_type[ST_FS16 + 1];
+   uint64_t total_by_type[ST_CS + 1];
    memset(total_by_type, 0, sizeof(total_by_type));
    double total = 0;
    for (int i = 0; i < brw->shader_time.num_entries; i++) {
@@ -381,6 +382,8 @@ brw_report_shader_time(struct brw_context *brw)
       case ST_FS8_RESET:
       case ST_FS16_WRITTEN:
       case ST_FS16_RESET:
+      case ST_CS_WRITTEN:
+      case ST_CS_RESET:
          /* We'll handle these when along with the time. */
          scaled[i] = 0;
          continue;
@@ -389,6 +392,7 @@ brw_report_shader_time(struct brw_context *brw)
       case ST_GS:
       case ST_FS8:
       case ST_FS16:
+      case ST_CS:
          get_written_and_reset(brw, i, &written, &reset);
          break;
 
@@ -413,6 +417,7 @@ brw_report_shader_time(struct brw_context *brw)
       case ST_GS:
       case ST_FS8:
       case ST_FS16:
+      case ST_CS:
          total_by_type[type] += scaled[i];
          break;
       default:
@@ -455,6 +460,9 @@ brw_report_shader_time(struct brw_context *brw)
       case ST_FS16:
          stage = "fs16";
          break;
+      case ST_CS:
+         stage = "cs";
+         break;
       default:
          stage = "other";
          break;
@@ -469,6 +477,7 @@ brw_report_shader_time(struct brw_context *brw)
    print_shader_time_line("total", "gs", 0, total_by_type[ST_GS], total);
    print_shader_time_line("total", "fs8", 0, total_by_type[ST_FS8], total);
    print_shader_time_line("total", "fs16", 0, total_by_type[ST_FS16], total);
+   print_shader_time_line("total", "cs", 0, total_by_type[ST_CS], total);
 }
 
 static void

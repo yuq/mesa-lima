@@ -758,6 +758,11 @@ fs_visitor::emit_shader_time_end()
          reset_type = ST_FS16_RESET;
       }
       break;
+   case MESA_SHADER_COMPUTE:
+      type = ST_CS;
+      written_type = ST_CS_WRITTEN;
+      reset_type = ST_CS_RESET;
+      break;
    default:
       unreachable("fs_visitor::emit_shader_time_end missing code");
    }
@@ -4139,12 +4144,18 @@ fs_visitor::run_cs()
 
    setup_cs_payload();
 
+   if (INTEL_DEBUG & DEBUG_SHADER_TIME)
+      emit_shader_time_begin();
+
    emit_nir_code();
 
    if (failed)
       return false;
 
    emit_cs_terminate();
+
+   if (INTEL_DEBUG & DEBUG_SHADER_TIME)
+      emit_shader_time_end();
 
    calculate_cfg();
 

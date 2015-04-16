@@ -834,6 +834,9 @@ enum shader_time_shader_type {
    ST_FS16,
    ST_FS16_WRITTEN,
    ST_FS16_RESET,
+   ST_CS,
+   ST_CS_WRITTEN,
+   ST_CS_RESET,
 };
 
 struct brw_vertex_buffer {
