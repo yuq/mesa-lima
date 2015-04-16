@@ -566,13 +566,13 @@ create_frag_coord(struct ir3_compile *ctx, unsigned comp)
 		 * to subtract (integer) 8 and divide by 16 (right-
 		 * shift by 4) then convert to float:
 		 *
-		 *    add.s tmp, src, -8
+		 *    sub.s tmp, src, 8
 		 *    shr.b tmp, tmp, 4
 		 *    mov.u32f32 dst, tmp
 		 *
 		 */
-		instr = ir3_ADD_S(block, ctx->frag_coord[comp], 0,
-				create_immed(block, -8), 0);
+		instr = ir3_SUB_S(block, ctx->frag_coord[comp], 0,
+				create_immed(block, 8), 0);
 		instr = ir3_SHR_B(block, instr, 0,
 				create_immed(block, 4), 0);
 		instr = ir3_COV(block, instr, TYPE_U32, TYPE_F32);
@@ -1381,6 +1381,29 @@ emit_tex(struct ir3_compile *ctx, nir_tex_instr *tex)
 		}
 	}
 
+	switch (tex->op) {
+	case nir_texop_tex:      opc = OPC_SAM;      break;
+	case nir_texop_txb:      opc = OPC_SAMB;     break;
+	case nir_texop_txl:      opc = OPC_SAML;     break;
+	case nir_texop_txd:      opc = OPC_SAMGQ;    break;
+	case nir_texop_txf:      opc = OPC_ISAML;    break;
+	case nir_texop_txf_ms:
+	case nir_texop_txs:
+	case nir_texop_lod:
+	case nir_texop_tg4:
+	case nir_texop_query_levels:
+		compile_error(ctx, "Unhandled NIR tex type: %d\n", tex->op);
+		return;
+	}
+
+	tex_info(tex, &flags, &coords);
+
+	/* scale up integer coords for TXF based on the LOD */
+	if (opc == OPC_ISAML) {
+		assert(has_lod);
+		for (i = 0; i < coords; i++)
+			coord[i] = ir3_SHL_B(b, coord[i], 0, lod, 0);
+	}
 	/*
 	 * lay out the first argument in the proper order:
 	 *  - actual coordinates first
@@ -1391,8 +1414,6 @@ emit_tex(struct ir3_compile *ctx, nir_tex_instr *tex)
 	 *
 	 * bias/lod go into the second arg
 	 */
-
-	tex_info(tex, &flags, &coords);
 
 	/* insert tex coords: */
 	for (i = 0; i < coords; i++)
@@ -1448,21 +1469,6 @@ emit_tex(struct ir3_compile *ctx, nir_tex_instr *tex)
 
 		if (has_lod | has_bias)
 			src1[nsrc1++] = lod;
-	}
-
-	switch (tex->op) {
-	case nir_texop_tex:      opc = OPC_SAM;      break;
-	case nir_texop_txb:      opc = OPC_SAMB;     break;
-	case nir_texop_txl:      opc = OPC_SAML;     break;
-	case nir_texop_txd:      opc = OPC_SAMGQ;    break;
-	case nir_texop_txf:      opc = OPC_ISAML;    break;
-	case nir_texop_txf_ms:
-	case nir_texop_txs:
-	case nir_texop_lod:
-	case nir_texop_tg4:
-	case nir_texop_query_levels:
-		compile_error(ctx, "Unhandled NIR tex type: %d\n", tex->op);
-		return;
 	}
 
 	switch (tex->dest_type) {
@@ -1694,7 +1700,8 @@ setup_input(struct ir3_compile *ctx, nir_variable *in)
 
 				so->inputs[n].bary = true;
 
-				instr = create_frag_input(ctx, idx, use_ldlv);
+				instr = create_frag_input(ctx,
+						so->inputs[n].inloc + i - 8, use_ldlv);
 			}
 		} else {
 			instr = create_input(ctx->block, NULL, idx);
