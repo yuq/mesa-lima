@@ -297,7 +297,7 @@ static GLboolean r200UpdateTextureEnv( struct gl_context *ctx, int unit, int slo
 	R200_TXA_TFACTOR_SEL_MASK | R200_TXA_TFACTOR1_SEL_MASK);
 
    if ( R200_DEBUG & RADEON_TEXTURE ) {
-      fprintf( stderr, "%s( %p, %d )\n", __FUNCTION__, (void *)ctx, unit );
+      fprintf( stderr, "%s( %p, %d )\n", __func__, (void *)ctx, unit );
    }
 
    /* Set the texture environment state.  Isn't this nice and clean?
@@ -1182,7 +1182,7 @@ static GLboolean r200_validate_texgen( struct gl_context *ctx, GLuint unit )
 						    (unit * 4));
 
    if (0) 
-      fprintf(stderr, "%s unit %d\n", __FUNCTION__, unit);
+      fprintf(stderr, "%s unit %d\n", __func__, unit);
 
    if (texUnit->TexGenEnabled & S_BIT) {
       mode = texUnit->GenS.Mode;
@@ -1392,7 +1392,7 @@ static void setup_hardware_state(r200ContextPtr rmesa, radeonTexObj *t)
 
       } else {
 	 _mesa_problem(NULL, "unexpected texture format in %s",
-		       __FUNCTION__);
+		       __func__);
 	 return;
       }
    }

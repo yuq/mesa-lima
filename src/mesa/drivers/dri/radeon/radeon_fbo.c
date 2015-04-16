@@ -856,7 +856,7 @@ radeon_validate_framebuffer(struct gl_context *ctx, struct gl_framebuffer *fb)
 			fb->_Status = GL_FRAMEBUFFER_UNSUPPORTED;
 			radeon_print(RADEON_TEXTURE, RADEON_TRACE,
 						"%s: HW doesn't support format %s as output format of attachment %d\n",
-						__FUNCTION__, _mesa_get_format_name(mesa_format), i);
+						__func__, _mesa_get_format_name(mesa_format), i);
 			return;
 		}
 	}

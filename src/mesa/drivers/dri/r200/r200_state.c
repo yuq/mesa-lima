@@ -261,7 +261,7 @@ static void r200_set_blend_state( struct gl_context * ctx )
 
    default:
       fprintf( stderr, "[%s:%u] Invalid RGB blend equation (0x%04x).\n",
-         __FUNCTION__, __LINE__, ctx->Color.Blend[0].EquationRGB );
+         __func__, __LINE__, ctx->Color.Blend[0].EquationRGB );
       return;
    }
 
@@ -295,7 +295,7 @@ static void r200_set_blend_state( struct gl_context * ctx )
 
    default:
       fprintf( stderr, "[%s:%u] Invalid A blend equation (0x%04x).\n",
-         __FUNCTION__, __LINE__, ctx->Color.Blend[0].EquationA );
+         __func__, __LINE__, ctx->Color.Blend[0].EquationA );
       return;
    }
 
@@ -723,7 +723,7 @@ static void r200PolygonOffset( struct gl_context *ctx,
 /*    factor *= 2; */
 /*    constant *= 2; */
 
-/*    fprintf(stderr, "%s f:%f u:%f\n", __FUNCTION__, factor, constant); */
+/*    fprintf(stderr, "%s f:%f u:%f\n", __func__, factor, constant); */
 
    R200_STATECHANGE( rmesa, zbs );
    rmesa->hw.zbs.cmd[ZBS_SE_ZBIAS_FACTOR]   = factoru.ui32;
@@ -867,7 +867,7 @@ static void update_light_colors( struct gl_context *ctx, GLuint p )
 {
    struct gl_light *l = &ctx->Light.Light[p];
 
-/*     fprintf(stderr, "%s\n", __FUNCTION__); */
+/*     fprintf(stderr, "%s\n", __func__); */
 
    if (l->Enabled) {
       r200ContextPtr rmesa = R200_CONTEXT(ctx);
@@ -996,7 +996,7 @@ void r200UpdateMaterial( struct gl_context *ctx )
       mask &= ~ctx->Light._ColorMaterialBitmask;
 
    if (R200_DEBUG & RADEON_STATE)
-      fprintf(stderr, "%s\n", __FUNCTION__);
+      fprintf(stderr, "%s\n", __func__);
 
    if (mask & MAT_BIT_FRONT_EMISSION) {
       fcmd[MTL_EMMISSIVE_RED]   = mat[MAT_ATTRIB_FRONT_EMISSION][0];
@@ -1668,7 +1668,7 @@ static void r200Enable( struct gl_context *ctx, GLenum cap, GLboolean state )
    GLuint p, flag;
 
    if ( R200_DEBUG & RADEON_STATE )
-      fprintf( stderr, "%s( %s = %s )\n", __FUNCTION__,
+      fprintf( stderr, "%s( %s = %s )\n", __func__,
 	       _mesa_lookup_enum_by_nr( cap ),
 	       state ? "GL_TRUE" : "GL_FALSE" );
 
@@ -2050,7 +2050,7 @@ void r200LightingSpaceChange( struct gl_context *ctx )
    GLboolean tmp;
 
    if (R200_DEBUG & RADEON_STATE)
-      fprintf(stderr, "%s %d BEFORE %x\n", __FUNCTION__, ctx->_NeedEyeCoords,
+      fprintf(stderr, "%s %d BEFORE %x\n", __func__, ctx->_NeedEyeCoords,
 	      rmesa->hw.tcl.cmd[TCL_LIGHT_MODEL_CTL_0]);
 
    if (ctx->_NeedEyeCoords)
@@ -2066,7 +2066,7 @@ void r200LightingSpaceChange( struct gl_context *ctx )
    }
 
    if (R200_DEBUG & RADEON_STATE)
-      fprintf(stderr, "%s %d AFTER %x\n", __FUNCTION__, ctx->_NeedEyeCoords,
+      fprintf(stderr, "%s %d AFTER %x\n", __func__, ctx->_NeedEyeCoords,
 	      rmesa->hw.tcl.cmd[TCL_LIGHT_MODEL_CTL_0]);
 }
 
@@ -2109,7 +2109,7 @@ static void update_texturematrix( struct gl_context *ctx )
    int unit;
 
    if (R200_DEBUG & RADEON_STATE)
-      fprintf(stderr, "%s before COMPSEL: %x\n", __FUNCTION__,
+      fprintf(stderr, "%s before COMPSEL: %x\n", __func__,
 	      rmesa->hw.vtx.cmd[VTX_TCL_OUTPUT_COMPSEL]);
 
    rmesa->TexMatEnabled = 0;
@@ -2167,7 +2167,7 @@ GLboolean r200ValidateBuffers(struct gl_context *ctx)
    int i, ret;
 
 	if (RADEON_DEBUG & RADEON_IOCTL)
-		fprintf(stderr, "%s\n", __FUNCTION__);
+		fprintf(stderr, "%s\n", __func__);
    radeon_cs_space_reset_bos(rmesa->radeon.cmdbuf.cs);
 
    rrb = radeon_get_colorbuffer(&rmesa->radeon);
@@ -2317,7 +2317,7 @@ static void r200WrapRunPipeline( struct gl_context *ctx )
    GLboolean has_material;
 
    if (0)
-      fprintf(stderr, "%s, newstate: %x\n", __FUNCTION__, rmesa->radeon.NewGLState);
+      fprintf(stderr, "%s, newstate: %x\n", __func__, rmesa->radeon.NewGLState);
 
    /* Validate state:
     */

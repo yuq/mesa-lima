@@ -68,7 +68,7 @@ static void r200Clear( struct gl_context *ctx, GLbitfield mask )
 
    if ( swmask ) {
       if (R200_DEBUG & RADEON_FALLBACKS)
-	 fprintf(stderr, "%s: swrast clear, mask: %x\n", __FUNCTION__, swmask);
+	 fprintf(stderr, "%s: swrast clear, mask: %x\n", __func__, swmask);
       _swrast_Clear( ctx, swmask );
    }
 

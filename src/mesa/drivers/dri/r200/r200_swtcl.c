@@ -210,7 +210,7 @@ static void r200_predict_emit_size( r200ContextPtr rmesa )
       if (rcommonEnsureCmdBufSpace(&rmesa->radeon,
 	       state_size +
 	       vertex_array_size + prim_size,
-	       __FUNCTION__))
+	       __func__))
 	 rmesa->radeon.swtcl.emit_prediction = radeonCountStateEmitSize(&rmesa->radeon);
       else
 	 rmesa->radeon.swtcl.emit_prediction = state_size;

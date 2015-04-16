@@ -1447,7 +1447,7 @@ int r200SanityCmdBuffer( r200ContextPtr rmesa,
       }
    }
 
-   fprintf(stderr, "leaving %s\n\n\n", __FUNCTION__);
+   fprintf(stderr, "leaving %s\n\n\n", __func__);
 
    return 0;
 }
