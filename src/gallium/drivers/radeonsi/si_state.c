@@ -1948,12 +1948,6 @@ static void si_init_depth_surface(struct si_context *sctx,
 		z_info |= S_028040_TILE_SURFACE_ENABLE(1) |
 			  S_028040_ALLOW_EXPCLEAR(1);
 
-		/* This is optimal for the clear value of 1.0 and using
-		 * the LESS and LEQUAL test functions. Set this to 0
-		 * for the opposite case. This can only be changed when
-		 * clearing. */
-		z_info |= S_028040_ZRANGE_PRECISION(1);
-
 		/* Use all of the htile_buffer for depth, because we don't
 		 * use HTILE for stencil because of FAST_STENCIL_DISABLE. */
 		s_info |= S_028044_TILE_STENCIL_DISABLE(1);
@@ -2183,7 +2177,8 @@ static void si_emit_framebuffer_state(struct si_context *sctx, struct r600_atom 
 
 		r600_write_context_reg_seq(cs, R_02803C_DB_DEPTH_INFO, 9);
 		radeon_emit(cs, zb->db_depth_info);	/* R_02803C_DB_DEPTH_INFO */
-		radeon_emit(cs, zb->db_z_info);		/* R_028040_DB_Z_INFO */
+		radeon_emit(cs, zb->db_z_info |		/* R_028040_DB_Z_INFO */
+			    S_028040_ZRANGE_PRECISION(rtex->depth_clear_value != 0));
 		radeon_emit(cs, zb->db_stencil_info);	/* R_028044_DB_STENCIL_INFO */
 		radeon_emit(cs, zb->db_depth_base);	/* R_028048_DB_Z_READ_BASE */
 		radeon_emit(cs, zb->db_stencil_base);	/* R_02804C_DB_STENCIL_READ_BASE */
