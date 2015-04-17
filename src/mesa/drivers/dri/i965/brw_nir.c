@@ -186,3 +186,21 @@ brw_create_nir(struct brw_context *brw,
 
    return nir;
 }
+
+enum brw_reg_type
+brw_type_for_nir_type(nir_alu_type type)
+{
+   switch (type) {
+   case nir_type_unsigned:
+      return BRW_REGISTER_TYPE_UD;
+   case nir_type_bool:
+   case nir_type_int:
+      return BRW_REGISTER_TYPE_D;
+   case nir_type_float:
+      return BRW_REGISTER_TYPE_F;
+   default:
+      unreachable("unknown type");
+   }
+
+   return BRW_REGISTER_TYPE_F;
+}
