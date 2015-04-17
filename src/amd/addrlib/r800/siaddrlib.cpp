@@ -3274,7 +3274,7 @@ VOID SiAddrLib::InitEquationTable()
         UINT_32 bpp = 1 << (log2ElementBytes + 3);
 
         // Loop all possible tile index
-        for (INT_32 tileIndex = 0; tileIndex < m_noOfEntries; tileIndex++)
+        for (INT_32 tileIndex = 0; tileIndex < static_cast<INT_32>(m_noOfEntries); tileIndex++)
         {
             UINT_32 equationIndex = ADDR_INVALID_EQUATION_INDEX;
 

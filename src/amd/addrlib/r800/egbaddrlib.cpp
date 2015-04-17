@@ -4486,19 +4486,25 @@ ADDR_E_RETURNCODE EgBasedAddrLib::HwlComputeSurfaceInfo(
             retCode = ADDR_INVALIDPARAMS;
         }
 
-        // Returns an index
-        pOut->tileIndex = HwlPostCheckTileIndex(pOut->pTileInfo,
-                                                pOut->tileMode,
-                                                pOut->tileType,
-                                                pOut->tileIndex);
-
-        if (IsMacroTiled(pOut->tileMode) && (pOut->macroModeIndex == TileIndexInvalid))
+        // In case client uses tile info as input and would like to calculate a correct size and
+        // alignment together with tile info as output when the tile info is not suppose to have any
+        // matching indices in tile mode tables.
+        if (pIn->flags.skipIndicesOutput == FALSE)
         {
-            pOut->macroModeIndex = HwlComputeMacroModeIndex(pOut->tileIndex,
-                                                            pIn->flags,
-                                                            pIn->bpp,
-                                                            pIn->numSamples,
-                                                            pOut->pTileInfo);
+            // Returns an index
+            pOut->tileIndex = HwlPostCheckTileIndex(pOut->pTileInfo,
+                                                    pOut->tileMode,
+                                                    pOut->tileType,
+                                                    pOut->tileIndex);
+
+            if (IsMacroTiled(pOut->tileMode) && (pOut->macroModeIndex == TileIndexInvalid))
+            {
+                pOut->macroModeIndex = HwlComputeMacroModeIndex(pOut->tileIndex,
+                                                                pIn->flags,
+                                                                pIn->bpp,
+                                                                pIn->numSamples,
+                                                                pOut->pTileInfo);
+            }
         }
 
         // Resets pTileInfo to NULL if the internal tile info is used
