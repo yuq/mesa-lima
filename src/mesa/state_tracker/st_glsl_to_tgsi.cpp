@@ -5365,7 +5365,7 @@ out:
          debug_printf("%s: translate error flag set\n", __func__);
       }
 
-      free(t);
+      FREE(t);
    }
 
    return ret;
