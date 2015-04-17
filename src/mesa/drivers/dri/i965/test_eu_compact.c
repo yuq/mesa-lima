@@ -291,7 +291,10 @@ int
 main(int argc, char **argv)
 {
    struct brw_context *brw = calloc(1, sizeof(*brw));
-   brw->gen = 6;
+   struct brw_device_info *devinfo = calloc(1, sizeof(*devinfo));
+   brw->intelScreen = calloc(1, sizeof(*brw->intelScreen));
+   brw->intelScreen->devinfo = devinfo;
+   brw->gen = devinfo->gen = 6;
    bool fail = false;
 
    for (brw->gen = 6; brw->gen <= 7; brw->gen++) {

@@ -31,6 +31,7 @@ class cmod_propagation_test : public ::testing::Test {
 
 public:
    struct brw_context *brw;
+   struct brw_device_info *devinfo;
    struct gl_context *ctx;
    struct brw_wm_prog_data *prog_data;
    struct gl_shader_program *shader_prog;
@@ -51,6 +52,9 @@ public:
 void cmod_propagation_test::SetUp()
 {
    brw = (struct brw_context *)calloc(1, sizeof(*brw));
+   devinfo = (struct brw_device_info *)calloc(1, sizeof(*brw));
+   brw->intelScreen = (struct intel_screen *)calloc(1, sizeof(*brw->intelScreen));
+   brw->intelScreen->devinfo = devinfo;
    ctx = &brw->ctx;
 
    fp = ralloc(NULL, struct brw_fragment_program);
@@ -61,7 +65,7 @@ void cmod_propagation_test::SetUp()
 
    _mesa_init_fragment_program(ctx, &fp->program, GL_FRAGMENT_SHADER, 0);
 
-   brw->gen = 4;
+   brw->gen = devinfo->gen = 4;
 }
 
 static fs_inst *
