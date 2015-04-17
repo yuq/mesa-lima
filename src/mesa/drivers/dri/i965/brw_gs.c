@@ -126,7 +126,8 @@ brw_compile_gs_prog(struct brw_context *brw,
       outputs_written |= BITFIELD64_BIT(VARYING_SLOT_CLIP_DIST1);
    }
 
-   brw_compute_vue_map(brw, &c.prog_data.base.vue_map, outputs_written);
+   brw_compute_vue_map(brw->intelScreen->devinfo,
+                       &c.prog_data.base.vue_map, outputs_written);
 
    /* Compute the output vertex size.
     *
@@ -248,7 +249,8 @@ brw_compile_gs_prog(struct brw_context *brw,
    c.prog_data.output_topology =
       get_hw_prim_for_gl_prim(gp->program.OutputType);
 
-   brw_compute_vue_map(brw, &c.input_vue_map, c.key.input_varyings);
+   brw_compute_vue_map(brw->intelScreen->devinfo,
+                       &c.input_vue_map, c.key.input_varyings);
 
    /* GS inputs are read from the VUE 256 bits (2 vec4's) at a time, so we
     * need to program a URB read length of ceiling(num_slots / 2).

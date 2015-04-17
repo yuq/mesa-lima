@@ -1793,7 +1793,7 @@ fs_visitor::calculate_urb_setup()
           * (geometry or vertex shader).
           */
          struct brw_vue_map prev_stage_vue_map;
-         brw_compute_vue_map(brw, &prev_stage_vue_map,
+         brw_compute_vue_map(devinfo, &prev_stage_vue_map,
                              key->input_slots_valid);
          int first_slot = 2 * BRW_SF_URB_ENTRY_READ_OFFSET;
          assert(prev_stage_vue_map.num_slots <= first_slot + 32);
