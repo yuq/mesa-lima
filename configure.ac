@@ -1641,7 +1641,7 @@ if test "x$enable_nine" = xyes; then
     if ! echo "$with_gallium_drivers" | grep -q 'swrast'; then
         AC_MSG_ERROR([nine requires the gallium swrast driver])
     fi
-    if test "x$with_gallium_drivers" == xswrast; then
+    if test "x$with_gallium_drivers" = xswrast; then
         AC_MSG_ERROR([nine requires at least one non-swrast gallium driver])
     fi
     if test "x$enable_dri3" = xno; then
