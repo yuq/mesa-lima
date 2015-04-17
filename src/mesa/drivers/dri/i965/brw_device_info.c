@@ -164,8 +164,12 @@ static const struct brw_device_info brw_device_info_byt = {
    },
 };
 
+#define HSW_FEATURES             \
+   GEN7_FEATURES,                \
+   .is_haswell = true
+
 static const struct brw_device_info brw_device_info_hsw_gt1 = {
-   GEN7_FEATURES, .is_haswell = true, .gt = 1,
+   HSW_FEATURES, .gt = 1,
    .max_vs_threads = 70,
    .max_hs_threads = 70,
    .max_ds_threads = 70,
@@ -182,7 +186,7 @@ static const struct brw_device_info brw_device_info_hsw_gt1 = {
 };
 
 static const struct brw_device_info brw_device_info_hsw_gt2 = {
-   GEN7_FEATURES, .is_haswell = true, .gt = 2,
+   HSW_FEATURES, .gt = 2,
    .max_vs_threads = 280,
    .max_hs_threads = 256,
    .max_ds_threads = 280,
@@ -199,7 +203,7 @@ static const struct brw_device_info brw_device_info_hsw_gt2 = {
 };
 
 static const struct brw_device_info brw_device_info_hsw_gt3 = {
-   GEN7_FEATURES, .is_haswell = true, .gt = 3,
+   HSW_FEATURES, .gt = 3,
    .max_vs_threads = 280,
    .max_hs_threads = 256,
    .max_ds_threads = 280,
