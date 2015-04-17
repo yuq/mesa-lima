@@ -1372,6 +1372,8 @@ __DRIconfig **intelInitScreen2(__DRIscreen *psp)
    if (!intelScreen->devinfo)
       return false;
 
+   brw_process_intel_debug_variable(intelScreen);
+
    intelScreen->hw_must_use_separate_stencil = intelScreen->devinfo->gen >= 7;
 
    intelScreen->hw_has_swizzling = intel_detect_swizzling(intelScreen);
