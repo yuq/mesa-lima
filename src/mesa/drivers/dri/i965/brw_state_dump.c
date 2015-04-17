@@ -33,6 +33,33 @@
 #include "brw_eu.h"
 #include "brw_state.h"
 
+static const char *sampler_mip_filter[] = {
+   "NONE",
+   "NEAREST",
+   "RSVD",
+   "LINEAR"
+};
+
+static const char *sampler_mag_filter[] = {
+   "NEAREST",
+   "LINEAR",
+   "ANISOTROPIC",
+   "FLEXIBLE (GEN8+)",
+   "RSVD", "RSVD",
+   "MONO",
+   "RSVD"
+};
+
+static const char *sampler_addr_mode[] = {
+   "WRAP",
+   "MIRROR",
+   "CLAMP",
+   "CUBE",
+   "CLAMP_BORDER",
+   "MIRROR_ONCE",
+   "HALF_BORDER"
+};
+
 static void
 batch_out(struct brw_context *brw, const char *name, uint32_t offset,
 	  int index, char *fmt, ...) PRINTFLIKE(5, 6);
@@ -253,6 +280,45 @@ static void dump_sampler_state(struct brw_context *brw,
       batch_out(brw, name, offset, 1, "wrapping, lod\n");
       batch_out(brw, name, offset, 2, "default color pointer\n");
       batch_out(brw, name, offset, 3, "chroma key, aniso\n");
+
+      samp += 4;
+      offset += 4 * sizeof(uint32_t);
+   }
+}
+
+static void gen7_dump_sampler_state(struct brw_context *brw,
+                                    uint32_t offset, uint32_t size)
+{
+   const uint32_t *samp = brw->batch.bo->virtual + offset;
+   char name[20];
+
+   for (int i = 0; i < size / 16; i++) {
+      sprintf(name, "SAMPLER_STATE %d", i);
+      batch_out(brw, name, offset, i,
+                "Disabled = %s, Base Mip: %u.%u, Mip/Mag/Min Filter: %s/%s/%s, LOD Bias: %d.%d\n",
+                GET_BITS(samp[0], 31, 31) ? "yes" : "no",
+                GET_BITS(samp[0], 26, 23),
+                GET_BITS(samp[0], 22, 22),
+                sampler_mip_filter[GET_FIELD(samp[0], BRW_SAMPLER_MIP_FILTER)],
+                sampler_mag_filter[GET_FIELD(samp[0], BRW_SAMPLER_MAG_FILTER)],
+                /* min filter defs are the same as mag */
+                sampler_mag_filter[GET_FIELD(samp[0], BRW_SAMPLER_MIN_FILTER)],
+                GET_BITS(samp[0], 13, 10),
+                GET_BITS(samp[0], 9, 1)
+               );
+      batch_out(brw, name, offset, i+1, "Min LOD: %u.%u, Max LOD: %u.%u\n",
+                GET_BITS(samp[1], 31, 28),
+                GET_BITS(samp[1], 27, 20),
+                GET_BITS(samp[1], 19, 16),
+                GET_BITS(samp[1], 15, 8)
+               );
+      batch_out(brw, name, offset, i+2, "Border Color\n"); /* FINISHME: gen8+ */
+      batch_out(brw, name, offset, i+3, "Max aniso: RATIO %d:1, TC[XYZ] Address Control: %s|%s|%s\n",
+                (GET_FIELD(samp[3], BRW_SAMPLER_MAX_ANISOTROPY) + 1) * 2,
+                sampler_addr_mode[GET_FIELD(samp[3], BRW_SAMPLER_TCX_WRAP_MODE)],
+                sampler_addr_mode[GET_FIELD(samp[3], BRW_SAMPLER_TCY_WRAP_MODE)],
+                sampler_addr_mode[GET_FIELD(samp[3], BRW_SAMPLER_TCZ_WRAP_MODE)]
+               );
 
       samp += 4;
       offset += 4 * sizeof(uint32_t);
@@ -563,7 +629,10 @@ dump_state_batch(struct brw_context *brw)
 	 }
 	 break;
       case AUB_TRACE_SAMPLER_STATE:
-         dump_sampler_state(brw, offset, size);
+         if (brw->gen >= 7)
+            gen7_dump_sampler_state(brw, offset, size);
+         else
+            dump_sampler_state(brw, offset, size);
 	 break;
       case AUB_TRACE_SAMPLER_DEFAULT_COLOR:
 	 dump_sdc(brw, offset);

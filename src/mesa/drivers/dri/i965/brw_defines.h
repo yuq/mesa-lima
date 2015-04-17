@@ -38,6 +38,7 @@
       fieldval & field ## _MASK;                                        \
    })
 
+#define GET_BITS(data, high, low) ((data & INTEL_MASK((high), (low))) >> (low))
 #define GET_FIELD(word, field) (((word)  & field ## _MASK) >> field ## _SHIFT)
 
 #ifndef BRW_DEFINES_H
