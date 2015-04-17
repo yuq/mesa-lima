@@ -669,29 +669,6 @@ brw_process_driconf_options(struct brw_context *brw)
       driQueryOptionb(options, "allow_glsl_extension_directive_midshader");
 }
 
-/* drop when libdrm 2.4.61 is released */
-#ifndef I915_PARAM_REVISION
-#define I915_PARAM_REVISION 32
-#endif
-
-static int
-brw_get_revision(int fd)
-{
-   struct drm_i915_getparam gp;
-   int revision;
-   int ret;
-
-   memset(&gp, 0, sizeof(gp));
-   gp.param = I915_PARAM_REVISION;
-   gp.value = &revision;
-
-   ret = drmCommandWriteRead(fd, DRM_I915_GETPARAM, &gp, sizeof(gp));
-   if (ret)
-      revision = -1;
-
-   return revision;
-}
-
 GLboolean
 brwCreateContext(gl_api api,
 	         const struct gl_config *mesaVis,
@@ -750,7 +727,6 @@ brwCreateContext(gl_api api,
    brw->has_negative_rhw_bug = devinfo->has_negative_rhw_bug;
    brw->needs_unlit_centroid_workaround =
       devinfo->needs_unlit_centroid_workaround;
-   brw->revision = brw_get_revision(sPriv->fd);
 
    brw->must_use_separate_stencil = screen->hw_must_use_separate_stencil;
    brw->has_swizzling = screen->hw_has_swizzling;

@@ -166,7 +166,8 @@ static const struct brw_device_info brw_device_info_byt = {
 
 #define HSW_FEATURES             \
    GEN7_FEATURES,                \
-   .is_haswell = true
+   .is_haswell = true,           \
+   .supports_simd16_3src = true
 
 static const struct brw_device_info brw_device_info_hsw_gt1 = {
    HSW_FEATURES, .gt = 1,
@@ -225,6 +226,7 @@ static const struct brw_device_info brw_device_info_hsw_gt3 = {
    .must_use_separate_stencil = true,               \
    .has_llc = true,                                 \
    .has_pln = true,                                 \
+   .supports_simd16_3src = true,                    \
    .max_vs_threads = 504,                           \
    .max_hs_threads = 504,                           \
    .max_ds_threads = 504,                           \
@@ -305,27 +307,42 @@ static const struct brw_device_info brw_device_info_chv = {
       .max_gs_entries = 640,                        \
    }
 
+static const struct brw_device_info brw_device_info_skl_early = {
+   GEN9_FEATURES, .gt = 1,
+   .supports_simd16_3src = false,
+};
+
 static const struct brw_device_info brw_device_info_skl_gt1 = {
-   GEN9_FEATURES, .gt = 1
+   GEN9_FEATURES, .gt = 1,
+   .supports_simd16_3src = true,
 };
 
 static const struct brw_device_info brw_device_info_skl_gt2 = {
-   GEN9_FEATURES, .gt = 2
+   GEN9_FEATURES, .gt = 2,
+   .supports_simd16_3src = true,
 };
 
 static const struct brw_device_info brw_device_info_skl_gt3 = {
-   GEN9_FEATURES, .gt = 3
+   GEN9_FEATURES, .gt = 3,
+   .supports_simd16_3src = true,
 };
 
 const struct brw_device_info *
-brw_get_device_info(int devid)
+brw_get_device_info(int devid, int revision)
 {
+   const struct brw_device_info *devinfo;
    switch (devid) {
 #undef CHIPSET
-#define CHIPSET(id, family, name) case id: return &brw_device_info_##family;
+#define CHIPSET(id, family, name) \
+   case id: devinfo = &brw_device_info_##family; break;
 #include "pci_ids/i965_pci_ids.h"
    default:
       fprintf(stderr, "i965_dri.so does not support the 0x%x PCI ID.\n", devid);
       return NULL;
    }
+
+   if (devinfo->gen == 9 && (revision == 2 || revision == 3 || revision == -1))
+      return &brw_device_info_skl_early;
+
+   return devinfo;
 }

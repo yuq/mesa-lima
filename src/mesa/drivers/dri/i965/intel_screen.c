@@ -1304,6 +1304,29 @@ set_max_gl_versions(struct intel_screen *screen)
    }
 }
 
+/* drop when libdrm 2.4.61 is released */
+#ifndef I915_PARAM_REVISION
+#define I915_PARAM_REVISION 32
+#endif
+
+static int
+brw_get_revision(int fd)
+{
+   struct drm_i915_getparam gp;
+   int revision;
+   int ret;
+
+   memset(&gp, 0, sizeof(gp));
+   gp.param = I915_PARAM_REVISION;
+   gp.value = &revision;
+
+   ret = drmCommandWriteRead(fd, DRM_I915_GETPARAM, &gp, sizeof(gp));
+   if (ret)
+      revision = -1;
+
+   return revision;
+}
+
 /**
  * This is the driver specific part of the createNewScreen entry point.
  * Called when using DRI2.
@@ -1340,7 +1363,8 @@ __DRIconfig **intelInitScreen2(__DRIscreen *psp)
        return false;
 
    intelScreen->deviceID = drm_intel_bufmgr_gem_get_devid(intelScreen->bufmgr);
-   intelScreen->devinfo = brw_get_device_info(intelScreen->deviceID);
+   intelScreen->devinfo = brw_get_device_info(intelScreen->deviceID,
+                                              brw_get_revision(psp->fd));
    if (!intelScreen->devinfo)
       return false;
 

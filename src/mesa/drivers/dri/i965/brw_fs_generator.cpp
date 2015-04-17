@@ -1534,24 +1534,11 @@ fs_generator::enable_debug(const char *shader_name)
    this->shader_name = shader_name;
 }
 
-/**
- * Some hardware doesn't support SIMD16 instructions with 3 sources.
- */
-static bool
-brw_supports_simd16_3src(const struct brw_context *brw)
-{
-   /* WaDisableSIMD16On3SrcInstr: 3-source instructions don't work in SIMD16
-    * on a few steppings of Skylake.
-    */
-   if (brw->gen == 9)
-      return brw->revision != 2 && brw->revision != 3 && brw->revision != -1;
-
-   return brw->is_haswell || brw->gen >= 8;
-}
-
 int
 fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
 {
+   const struct brw_device_info *devinfo = brw->intelScreen->devinfo;
+
    /* align to 64 byte boundary. */
    while (p->next_insn_offset % 64)
       brw_NOP(p);
@@ -1647,7 +1634,7 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
       case BRW_OPCODE_MAD:
          assert(brw->gen >= 6);
 	 brw_set_default_access_mode(p, BRW_ALIGN_16);
-         if (dispatch_width == 16 && !brw_supports_simd16_3src(brw)) {
+         if (dispatch_width == 16 && !devinfo->supports_simd16_3src) {
             brw_set_default_exec_size(p, BRW_EXECUTE_8);
 	    brw_set_default_compression_control(p, BRW_COMPRESSION_NONE);
             brw_inst *f = brw_MAD(p, firsthalf(dst), firsthalf(src[0]), firsthalf(src[1]), firsthalf(src[2]));
@@ -1669,7 +1656,7 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
       case BRW_OPCODE_LRP:
          assert(brw->gen >= 6);
 	 brw_set_default_access_mode(p, BRW_ALIGN_16);
-         if (dispatch_width == 16 && !brw_supports_simd16_3src(brw)) {
+         if (dispatch_width == 16 && !devinfo->supports_simd16_3src) {
             brw_set_default_exec_size(p, BRW_EXECUTE_8);
 	    brw_set_default_compression_control(p, BRW_COMPRESSION_NONE);
             brw_inst *f = brw_LRP(p, firsthalf(dst), firsthalf(src[0]), firsthalf(src[1]), firsthalf(src[2]));
@@ -1808,7 +1795,7 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
       case BRW_OPCODE_BFE:
          assert(brw->gen >= 7);
          brw_set_default_access_mode(p, BRW_ALIGN_16);
-         if (dispatch_width == 16 && !brw_supports_simd16_3src(brw)) {
+         if (dispatch_width == 16 && !devinfo->supports_simd16_3src) {
             brw_set_default_exec_size(p, BRW_EXECUTE_8);
             brw_set_default_compression_control(p, BRW_COMPRESSION_NONE);
             brw_BFE(p, firsthalf(dst), firsthalf(src[0]), firsthalf(src[1]), firsthalf(src[2]));
@@ -1851,7 +1838,7 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
           * do for the other three-source instructions.
           */
          if (dispatch_width == 16 &&
-             (brw->is_haswell || !brw_supports_simd16_3src(brw))) {
+             (brw->is_haswell || !devinfo->supports_simd16_3src)) {
             brw_set_default_exec_size(p, BRW_EXECUTE_8);
             brw_set_default_compression_control(p, BRW_COMPRESSION_NONE);
             brw_BFI2(p, firsthalf(dst), firsthalf(src[0]), firsthalf(src[1]), firsthalf(src[2]));
