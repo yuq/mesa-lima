@@ -602,7 +602,7 @@ vec4_instruction_scheduler::get_register_pressure_benefit(backend_instruction *b
 schedule_node::schedule_node(backend_instruction *inst,
                              instruction_scheduler *sched)
 {
-   struct brw_context *brw = sched->bv->brw;
+   const struct brw_device_info *devinfo = sched->bv->devinfo;
 
    this->inst = inst;
    this->child_array_size = 0;
@@ -619,8 +619,8 @@ schedule_node::schedule_node(backend_instruction *inst,
     */
    if (!sched->post_reg_alloc)
       this->latency = 1;
-   else if (brw->gen >= 6)
-      set_latency_gen7(brw->is_haswell);
+   else if (devinfo->gen >= 6)
+      set_latency_gen7(devinfo->is_haswell);
    else
       set_latency_gen4();
 }
@@ -896,7 +896,7 @@ fs_instruction_scheduler::calculate_deps()
          last_conditional_mod[inst->flag_subreg] = n;
       }
 
-      if (inst->writes_accumulator_implicitly(v->brw) &&
+      if (inst->writes_accumulator_implicitly(v->devinfo) &&
           !inst->dst.is_accumulator()) {
          add_dep(last_accumulator_write, n);
          last_accumulator_write = n;
@@ -1021,7 +1021,7 @@ fs_instruction_scheduler::calculate_deps()
          last_conditional_mod[inst->flag_subreg] = n;
       }
 
-      if (inst->writes_accumulator_implicitly(v->brw)) {
+      if (inst->writes_accumulator_implicitly(v->devinfo)) {
          last_accumulator_write = n;
       }
    }
@@ -1136,7 +1136,7 @@ vec4_instruction_scheduler::calculate_deps()
          last_conditional_mod = n;
       }
 
-      if (inst->writes_accumulator_implicitly(v->brw) &&
+      if (inst->writes_accumulator_implicitly(v->devinfo) &&
           !inst->dst.is_accumulator()) {
          add_dep(last_accumulator_write, n);
          last_accumulator_write = n;
@@ -1226,7 +1226,7 @@ vec4_instruction_scheduler::calculate_deps()
          last_conditional_mod = n;
       }
 
-      if (inst->writes_accumulator_implicitly(v->brw)) {
+      if (inst->writes_accumulator_implicitly(v->devinfo)) {
          last_accumulator_write = n;
       }
    }
@@ -1235,7 +1235,6 @@ vec4_instruction_scheduler::calculate_deps()
 schedule_node *
 fs_instruction_scheduler::choose_instruction_to_schedule()
 {
-   struct brw_context *brw = v->brw;
    schedule_node *chosen = NULL;
 
    if (mode == SCHEDULE_PRE || mode == SCHEDULE_POST) {
@@ -1303,7 +1302,7 @@ fs_instruction_scheduler::choose_instruction_to_schedule()
              * then the MRFs for the next SEND, then the next SEND, then the
              * MRFs, etc., without ever consuming the results of a send.
              */
-            if (brw->gen < 7) {
+            if (v->devinfo->gen < 7) {
                fs_inst *chosen_inst = (fs_inst *)chosen->inst;
 
                /* We use regs_written > 1 as our test for the kind of send
@@ -1381,7 +1380,7 @@ vec4_instruction_scheduler::issue_time(backend_instruction *inst)
 void
 instruction_scheduler::schedule_instructions(bblock_t *block)
 {
-   struct brw_context *brw = bv->brw;
+   const struct brw_device_info *devinfo = bv->devinfo;
    backend_instruction *inst = block->end();
    time = 0;
 
@@ -1451,7 +1450,7 @@ instruction_scheduler::schedule_instructions(bblock_t *block)
        * the next math instruction isn't going to make progress until the first
        * is done.
        */
-      if (brw->gen < 6 && chosen->inst->is_math()) {
+      if (devinfo->gen < 6 && chosen->inst->is_math()) {
          foreach_in_list(schedule_node, n, &instructions) {
             if (n->inst->is_math())
                n->unblocked_time = MAX2(n->unblocked_time,

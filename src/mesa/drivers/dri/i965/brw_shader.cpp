@@ -999,10 +999,10 @@ backend_instruction::reads_accumulator_implicitly() const
 }
 
 bool
-backend_instruction::writes_accumulator_implicitly(struct brw_context *brw) const
+backend_instruction::writes_accumulator_implicitly(const struct brw_device_info *devinfo) const
 {
    return writes_accumulator ||
-          (brw->gen < 6 &&
+          (devinfo->gen < 6 &&
            ((opcode >= BRW_OPCODE_ADD && opcode < BRW_OPCODE_NOP) ||
             (opcode >= FS_OPCODE_DDX_COARSE && opcode <= FS_OPCODE_LINTERP &&
              opcode != FS_OPCODE_CINTERP)));

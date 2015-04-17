@@ -100,7 +100,7 @@ struct backend_instruction : public exec_node {
    bool can_do_saturate() const;
    bool can_do_cmod() const;
    bool reads_accumulator_implicitly() const;
-   bool writes_accumulator_implicitly(struct brw_context *brw) const;
+   bool writes_accumulator_implicitly(const struct brw_device_info *devinfo) const;
 
    void remove(bblock_t *block);
    void insert_after(bblock_t *block, backend_instruction *inst);
