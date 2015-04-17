@@ -1,5 +1,5 @@
 /*
- * Copyright © 2007 Intel Corporation
+ * Copyright © 2007-2015 Intel Corporation
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -80,6 +80,25 @@ batch_out(struct brw_context *brw, const char *name, uint32_t offset,
 
    fprintf(stderr, "0x%08x:      0x%08x: %8s: ",
 	   offset + index * 4, data[index], name);
+   va_start(va, fmt);
+   vfprintf(stderr, fmt, va);
+   va_end(va);
+}
+
+static void
+batch_out64(struct brw_context *brw, const char *name, uint32_t offset,
+            int index, char *fmt, ...)
+{
+   uint32_t *tmp = brw->batch.bo->virtual + offset;
+
+   /* Swap the dwords since we want to handle this as a 64b value, but the data
+    * is typically emitted as dwords.
+    */
+   uint64_t data = ((uint64_t)tmp[index + 1]) << 32 | tmp[index];
+   va_list va;
+
+   fprintf(stderr, "0x%08x:      0x%016" PRIx64 ": %8s: ",
+          offset + index * 4, data, name);
    va_start(va, fmt);
    vfprintf(stderr, fmt, va);
    va_end(va);
@@ -547,6 +566,92 @@ static void dump_blend_state(struct brw_context *brw, uint32_t offset)
 }
 
 static void
+gen8_dump_blend_state(struct brw_context *brw, uint32_t offset, uint32_t size)
+{
+   const uint32_t *blend = brw->batch.bo->virtual + offset;
+   const char *logicop[] =
+   {
+        "LOGICOP_CLEAR (BLACK)",
+        "LOGICOP_NOR",
+        "LOGICOP_AND_INVERTED",
+        "LOGICOP_COPY_INVERTED",
+        "LOGICOP_AND_REVERSE",
+        "LOGICOP_INVERT",
+        "LOGICOP_XOR",
+        "LOGICOP_NAND",
+        "LOGICOP_AND",
+        "LOGICOP_EQUIV",
+        "LOGICOP_NOOP",
+        "LOGICOP_OR_INVERTED",
+        "LOGICOP_COPY",
+        "LOGICOP_OR_REVERSE",
+        "LOGICOP_OR",
+        "LOGICOP_SET (WHITE)"
+   };
+
+   const char *blend_function[] =
+   { "ADD", "SUBTRACT", "REVERSE_SUBTRACT", "MIN", "MAX};" };
+
+   const char *blend_factor[0x1b] =
+   {
+      "RSVD",
+      "ONE",
+      "SRC_COLOR", "SRC_ALPHA",
+      "DST_ALPHA", "DST_COLOR",
+      "SRC_ALPHA_SATURATE",
+      "CONST_COLOR", "CONST_ALPHA",
+      "SRC1_COLOR", "SRC1_ALPHA",
+      "RSVD", "RSVD", "RSVD", "RSVD", "RSVD", "RSVD",
+      "ZERO",
+      "INV_SRC_COLOR", "INV_SRC_ALPHA",
+      "INV_DST_ALPHA", "INV_DST_COLOR",
+      "RSVD",
+      "INV_CONST_COLOR", "INV_CONST_ALPHA",
+      "INV_SRC1_COLOR", "INV_SRC1_ALPHA"
+   };
+
+   batch_out(brw, "BLEND", offset, 0, "Alpha blend/test\n");
+
+   if (((size) % 2) != 0)
+      fprintf(stderr, "Invalid blend state size %d\n", size);
+
+   for (int i = 1; i < size / 4; i += 2) {
+      char name[sizeof("BLEND_ENTRYXXX")];
+      sprintf(name, "BLEND_ENTRY%02d", (i - 1) / 2);
+      if (blend[i + 1] & GEN8_BLEND_LOGIC_OP_ENABLE) {
+         batch_out(brw, name, offset, i + 1, "%s\n",
+                   logicop[GET_FIELD(blend[i + 1],
+                                     GEN8_BLEND_LOGIC_OP_FUNCTION)]);
+      } else if (blend[i] & GEN8_BLEND_COLOR_BUFFER_BLEND_ENABLE) {
+         batch_out64(brw, name, offset, i,
+                   "\n\t\t\tColor Buffer Blend factor %s,%s,%s,%s (src,dst,src alpha, dst alpha)"
+                   "\n\t\t\tfunction %s,%s (color, alpha), Disables: %c%c%c%c\n",
+                   blend_factor[GET_FIELD(blend[i],
+                                          GEN8_BLEND_SRC_BLEND_FACTOR)],
+                   blend_factor[GET_FIELD(blend[i],
+                                          GEN8_BLEND_DST_BLEND_FACTOR)],
+                   blend_factor[GET_FIELD(blend[i],
+                                          GEN8_BLEND_SRC_ALPHA_BLEND_FACTOR)],
+                   blend_factor[GET_FIELD(blend[i],
+                                          GEN8_BLEND_DST_ALPHA_BLEND_FACTOR)],
+                   blend_function[GET_FIELD(blend[i],
+                                            GEN8_BLEND_COLOR_BLEND_FUNCTION)],
+                   blend_function[GET_FIELD(blend[i],
+                                            GEN8_BLEND_ALPHA_BLEND_FUNCTION)],
+                   blend[i] & GEN8_BLEND_WRITE_DISABLE_RED ? 'R' : '-',
+                   blend[i] & GEN8_BLEND_WRITE_DISABLE_GREEN ? 'G' : '-',
+                   blend[i] & GEN8_BLEND_WRITE_DISABLE_BLUE ? 'B' : '-',
+                   blend[i] & GEN8_BLEND_WRITE_DISABLE_ALPHA ? 'A' : '-'
+                   );
+      } else if (!blend[i] && (blend[i + 1] == 0xb)) {
+         batch_out64(brw, name, offset, i, "NOP blend state\n");
+      } else {
+         batch_out64(brw, name, offset, i, "????\n");
+      }
+   }
+}
+
+static void
 dump_scissor(struct brw_context *brw, uint32_t offset)
 {
    const char *name = "SCISSOR";
@@ -704,7 +809,10 @@ dump_state_batch(struct brw_context *brw)
 	    dump_cc_state_gen4(brw, offset);
 	 break;
       case AUB_TRACE_BLEND_STATE:
-	 dump_blend_state(brw, offset);
+         if (brw->gen >= 8)
+            gen8_dump_blend_state(brw, offset, size);
+         else
+            dump_blend_state(brw, offset);
 	 break;
       case AUB_TRACE_BINDING_TABLE:
 	 dump_binding_table(brw, offset, size);
