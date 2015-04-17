@@ -273,6 +273,8 @@ get_render_node_from_id_path_tag(struct udev *udev,
                (struct udev_enumerate *));
    UDEV_SYMBOL(struct udev_list_entry *, udev_enumerate_get_list_entry,
                (struct udev_enumerate *));
+   UDEV_SYMBOL(void, udev_enumerate_unref,
+               (struct udev_enumerate *));
    UDEV_SYMBOL(struct udev_list_entry *, udev_list_entry_get_next,
                (struct udev_list_entry *));
    UDEV_SYMBOL(const char *, udev_list_entry_get_name,
@@ -306,6 +308,8 @@ get_render_node_from_id_path_tag(struct udev *udev,
       }
       udev_device_unref(device);
    }
+
+   udev_enumerate_unref(e);
 
    if (found) {
       path_res = strdup(udev_device_get_devnode(device));
