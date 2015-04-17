@@ -652,6 +652,45 @@ brw_swizzle_for_nir_swizzle(uint8_t swizzle[4])
    return BRW_SWIZZLE4(swizzle[0], swizzle[1], swizzle[2], swizzle[3]);
 }
 
+static enum brw_conditional_mod
+brw_conditional_for_nir_comparison(nir_op op)
+{
+   switch (op) {
+   case nir_op_flt:
+   case nir_op_ilt:
+   case nir_op_ult:
+      return BRW_CONDITIONAL_L;
+
+   case nir_op_fge:
+   case nir_op_ige:
+   case nir_op_uge:
+      return BRW_CONDITIONAL_GE;
+
+   case nir_op_feq:
+   case nir_op_ieq:
+   case nir_op_ball_fequal2:
+   case nir_op_ball_iequal2:
+   case nir_op_ball_fequal3:
+   case nir_op_ball_iequal3:
+   case nir_op_ball_fequal4:
+   case nir_op_ball_iequal4:
+      return BRW_CONDITIONAL_Z;
+
+   case nir_op_fne:
+   case nir_op_ine:
+   case nir_op_bany_fnequal2:
+   case nir_op_bany_inequal2:
+   case nir_op_bany_fnequal3:
+   case nir_op_bany_inequal3:
+   case nir_op_bany_fnequal4:
+   case nir_op_bany_inequal4:
+      return BRW_CONDITIONAL_NZ;
+
+   default:
+      unreachable("not reached: bad operation for comparison");
+   }
+}
+
 void
 vec4_visitor::nir_emit_alu(nir_alu_instr *instr)
 {
