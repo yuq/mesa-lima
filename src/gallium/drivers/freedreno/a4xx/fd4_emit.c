@@ -701,11 +701,14 @@ fd4_emit_restore(struct fd_context *ctx)
 	OUT_PKT0(ring, REG_A4XX_TPL1_TP_TEX_OFFSET, 1);
 	OUT_RING(ring, 0x00000000);
 
-	OUT_PKT0(ring, REG_A4XX_UNKNOWN_2381, 1);
-	OUT_RING(ring, 0x00000010);
+	OUT_PKT0(ring, REG_A4XX_TPL1_TP_TEX_COUNT, 1);
+	OUT_RING(ring, A4XX_TPL1_TP_TEX_COUNT_VS(16) |
+			A4XX_TPL1_TP_TEX_COUNT_HS(0) |
+			A4XX_TPL1_TP_TEX_COUNT_DS(0) |
+			A4XX_TPL1_TP_TEX_COUNT_GS(0));
 
-	OUT_PKT0(ring, REG_A4XX_UNKNOWN_23A0, 1);
-	OUT_RING(ring, 0x00000010);
+	OUT_PKT0(ring, REG_A4XX_TPL1_TP_FS_TEX_COUNT, 1);
+	OUT_RING(ring, 16);
 
 	/* we don't use this yet.. probably best to disable.. */
 	OUT_PKT3(ring, CP_SET_DRAW_STATE, 2);

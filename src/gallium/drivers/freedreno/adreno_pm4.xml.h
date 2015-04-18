@@ -12,9 +12,9 @@ The rules-ng-ng source files this header was generated from are:
 - /home/robclark/src/freedreno/envytools/rnndb/freedreno_copyright.xml  (   1453 bytes, from 2013-03-31 16:51:27)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/a2xx.xml          (  32901 bytes, from 2014-06-02 15:21:30)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_common.xml (  10551 bytes, from 2014-11-13 22:44:30)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_pm4.xml    (  14748 bytes, from 2015-04-12 15:01:13)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_pm4.xml    (  14895 bytes, from 2015-04-19 15:23:28)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/a3xx.xml          (  66709 bytes, from 2015-04-12 18:16:35)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/a4xx.xml          (  57486 bytes, from 2015-04-12 18:10:00)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/a4xx.xml          (  59314 bytes, from 2015-04-19 16:21:40)
 
 Copyright (C) 2013-2015 by the following authors:
 - Rob Clark <robdclark@gmail.com> (robclark)
@@ -80,6 +80,7 @@ enum pc_di_primtype {
 	DI_PT_LINESTRIP_ADJ = 11,
 	DI_PT_TRI_ADJ = 12,
 	DI_PT_TRISTRIP_ADJ = 13,
+	DI_PT_PATCHES = 34,
 };
 
 enum pc_di_src_sel {
@@ -377,11 +378,18 @@ static inline uint32_t CP_DRAW_INDX_OFFSET_0_SOURCE_SELECT(enum pc_di_src_sel va
 {
 	return ((val) << CP_DRAW_INDX_OFFSET_0_SOURCE_SELECT__SHIFT) & CP_DRAW_INDX_OFFSET_0_SOURCE_SELECT__MASK;
 }
+#define CP_DRAW_INDX_OFFSET_0_TESSELLATE			0x00000100
 #define CP_DRAW_INDX_OFFSET_0_INDEX_SIZE__MASK			0x00000c00
 #define CP_DRAW_INDX_OFFSET_0_INDEX_SIZE__SHIFT			10
 static inline uint32_t CP_DRAW_INDX_OFFSET_0_INDEX_SIZE(enum a4xx_index_size val)
 {
 	return ((val) << CP_DRAW_INDX_OFFSET_0_INDEX_SIZE__SHIFT) & CP_DRAW_INDX_OFFSET_0_INDEX_SIZE__MASK;
+}
+#define CP_DRAW_INDX_OFFSET_0_TESS_MODE__MASK			0x01f00000
+#define CP_DRAW_INDX_OFFSET_0_TESS_MODE__SHIFT			20
+static inline uint32_t CP_DRAW_INDX_OFFSET_0_TESS_MODE(uint32_t val)
+{
+	return ((val) << CP_DRAW_INDX_OFFSET_0_TESS_MODE__SHIFT) & CP_DRAW_INDX_OFFSET_0_TESS_MODE__MASK;
 }
 
 #define REG_CP_DRAW_INDX_OFFSET_1				0x00000001
