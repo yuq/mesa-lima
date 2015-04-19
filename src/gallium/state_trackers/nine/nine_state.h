@@ -67,17 +67,16 @@
 #define NINE_STATE_BLEND_COLOR (1 << 16)
 #define NINE_STATE_STENCIL_REF (1 << 17)
 #define NINE_STATE_SAMPLE_MASK (1 << 18)
-#define NINE_STATE_MISC_CONST  (1 << 19)
-#define NINE_STATE_FF          (0x1f << 20)
-#define NINE_STATE_FF_VS       (0x17 << 20)
-#define NINE_STATE_FF_PS       (0x18 << 20)
-#define NINE_STATE_FF_LIGHTING (1 << 20)
-#define NINE_STATE_FF_MATERIAL (1 << 21)
-#define NINE_STATE_FF_VSTRANSF (1 << 22)
-#define NINE_STATE_FF_PSSTAGES (1 << 23)
-#define NINE_STATE_FF_OTHER    (1 << 24)
-#define NINE_STATE_ALL          0x1ffffff
-#define NINE_STATE_UNHANDLED   (1 << 25)
+#define NINE_STATE_FF          (0x1f << 19)
+#define NINE_STATE_FF_VS       (0x17 << 19)
+#define NINE_STATE_FF_PS       (0x18 << 19)
+#define NINE_STATE_FF_LIGHTING (1 << 19)
+#define NINE_STATE_FF_MATERIAL (1 << 20)
+#define NINE_STATE_FF_VSTRANSF (1 << 21)
+#define NINE_STATE_FF_PSSTAGES (1 << 22)
+#define NINE_STATE_FF_OTHER    (1 << 23)
+#define NINE_STATE_ALL          0x0ffffff
+#define NINE_STATE_UNHANDLED   (1 << 24)
 
 
 #define NINE_MAX_SIMULTANEOUS_RENDERTARGETS 4

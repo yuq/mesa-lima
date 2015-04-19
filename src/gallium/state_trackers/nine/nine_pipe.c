@@ -110,7 +110,13 @@ nine_convert_rasterizer_state(struct cso_context *ctx, const DWORD *rs)
  /* rast.line_stipple_pattern = 0; */
     rast.sprite_coord_enable = rs[D3DRS_POINTSPRITEENABLE] ? 0xff : 0x00;
     rast.line_width = 1.0f;
-    rast.point_size = rs[NINED3DRS_VSPOINTSIZE] ? 1.0f : asfloat(rs[D3DRS_POINTSIZE]); /* XXX: D3DRS_POINTSIZE_MIN/MAX */
+    if (rs[NINED3DRS_VSPOINTSIZE]) {
+        rast.point_size = 1.0f;
+    } else {
+        rast.point_size = CLAMP(asfloat(rs[D3DRS_POINTSIZE]),
+                asfloat(rs[D3DRS_POINTSIZE_MIN]),
+                asfloat(rs[D3DRS_POINTSIZE_MAX]));
+    }
     rast.offset_units = asfloat(rs[D3DRS_DEPTHBIAS]) * asfloat(rs[NINED3DRS_ZBIASSCALE]);
     rast.offset_scale = asfloat(rs[D3DRS_SLOPESCALEDEPTHBIAS]);
  /* rast.offset_clamp = 0.0f; */
