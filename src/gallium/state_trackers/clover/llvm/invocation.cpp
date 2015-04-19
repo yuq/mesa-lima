@@ -29,21 +29,14 @@
 #include <clang/Basic/TargetInfo.h>
 #include <llvm/Bitcode/BitstreamWriter.h>
 #include <llvm/Bitcode/ReaderWriter.h>
-#if HAVE_LLVM < 0x0305
-#include <llvm/Linker.h>
-#else
 #include <llvm/Linker/Linker.h>
 #include <llvm/IR/DiagnosticInfo.h>
 #include <llvm/IR/DiagnosticPrinter.h>
-#endif
 #include <llvm/IR/DerivedTypes.h>
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Module.h>
 #include <llvm/Support/SourceMgr.h>
 #include <llvm/IRReader/IRReader.h>
-#if HAVE_LLVM < 0x0305
-#include <llvm/ADT/OwningPtr.h>
-#endif
 #if HAVE_LLVM >= 0x0307
 #include <llvm/IR/LegacyPassManager.h>
 #else
@@ -328,9 +321,7 @@ namespace {
          llvm::Function *kernel = *I;
          export_list.push_back(kernel->getName().data());
       }
-#if HAVE_LLVM < 0x0305
-      PM.add(new llvm::DataLayout(mod));
-#elif HAVE_LLVM < 0x0306
+#if HAVE_LLVM < 0x0306
       PM.add(new llvm::DataLayoutPass(mod));
 #elif HAVE_LLVM < 0x0307
       PM.add(new llvm::DataLayoutPass());
@@ -356,11 +347,7 @@ namespace {
       compat::vector<module::argument> args;
       llvm::Function *kernel_func = mod->getFunction(kernel_name);
 
-#if HAVE_LLVM < 0x0305
-         llvm::DataLayout TD(kernel_func->getParent()->getDataLayout());
-#else
-         llvm::DataLayout TD(mod);
-#endif
+      llvm::DataLayout TD(mod);
 
       for (llvm::Function::const_arg_iterator I = kernel_func->arg_begin(),
                                       E = kernel_func->arg_end(); I != E; ++I) {
@@ -651,8 +638,6 @@ namespace {
       return m;
    }
 
-#if HAVE_LLVM >= 0x0305
-
    void
    diagnostic_handler(const llvm::DiagnosticInfo &di, void *data) {
       if (di.getSeverity() == llvm::DS_Error) {
@@ -666,8 +651,6 @@ namespace {
          throw build_error();
       }
    }
-
-#endif
 
    void
    init_targets() {
@@ -721,9 +704,7 @@ clover::compile_program_llvm(const compat::string &source,
    llvm::LLVMContext llvm_ctx;
    unsigned optimization_level;
 
-#if HAVE_LLVM >= 0x0305
    llvm_ctx.setDiagnosticHandler(diagnostic_handler, &r_log);
-#endif
 
    if (get_debug_flags() & DBG_CLC)
       debug_log(source, ".cl");
