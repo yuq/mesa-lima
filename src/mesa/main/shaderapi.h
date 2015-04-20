@@ -272,6 +272,9 @@ extern void GLAPIENTRY
 _mesa_PatchParameterfv(GLenum pname, const GLfloat *values);
 
 /* GL_ARB_shader_subroutine */
+void
+_mesa_shader_program_init_subroutine_defaults(struct gl_shader_program *shProg);
+
 extern GLint GLAPIENTRY
 _mesa_GetSubroutineUniformLocation(GLuint program, GLenum shadertype,
                                    const GLchar *name);

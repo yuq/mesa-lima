@@ -1171,6 +1171,7 @@ _mesa_use_program(struct gl_context *ctx, struct gl_shader_program *shProg)
       use_shader_program(ctx, i, shProg, &ctx->Shader);
    _mesa_active_program(ctx, shProg, "glUseProgram");
 
+   _mesa_shader_program_init_subroutine_defaults(shProg);
    if (ctx->Driver.UseProgram)
       ctx->Driver.UseProgram(ctx, shProg);
 }
@@ -2165,15 +2166,75 @@ GLint GLAPIENTRY
 _mesa_GetSubroutineUniformLocation(GLuint program, GLenum shadertype,
                                    const GLchar *name)
 {
-   return -1;
-}
+   GET_CURRENT_CONTEXT(ctx);
+   const char *api_name = "glGetSubroutineUniformLocation";
+   struct gl_shader_program *shProg;
+   GLenum resource_type;
+   gl_shader_stage stage;
 
+   if (!_mesa_has_shader_subroutine(ctx)) {
+      _mesa_error(ctx, GL_INVALID_OPERATION, api_name);
+      return -1;
+   }
+
+   if (!_mesa_validate_shader_target(ctx, shadertype)) {
+      _mesa_error(ctx, GL_INVALID_OPERATION, api_name);
+      return -1;
+   }
+
+   shProg = _mesa_lookup_shader_program_err(ctx, program, api_name);
+   if (!shProg)
+      return -1;
+
+   stage = _mesa_shader_enum_to_shader_stage(shadertype);
+   if (!shProg->_LinkedShaders[stage]) {
+      _mesa_error(ctx, GL_INVALID_OPERATION, api_name);
+      return -1;
+   }
+
+   resource_type = _mesa_shader_stage_to_subroutine_uniform(stage);
+   return _mesa_program_resource_location(shProg, resource_type, name);
+}
 
 GLuint GLAPIENTRY
 _mesa_GetSubroutineIndex(GLuint program, GLenum shadertype,
                          const GLchar *name)
 {
-   return GL_INVALID_INDEX;
+   GET_CURRENT_CONTEXT(ctx);
+   const char *api_name = "glGetSubroutineIndex";
+   struct gl_shader_program *shProg;
+   struct gl_program_resource *res;
+   GLenum resource_type;
+   gl_shader_stage stage;
+
+   if (!_mesa_has_shader_subroutine(ctx)) {
+      _mesa_error(ctx, GL_INVALID_OPERATION, api_name);
+      return -1;
+   }
+
+   if (!_mesa_validate_shader_target(ctx, shadertype)) {
+      _mesa_error(ctx, GL_INVALID_OPERATION, api_name);
+      return -1;
+   }
+
+   shProg = _mesa_lookup_shader_program_err(ctx, program, api_name);
+   if (!shProg)
+      return -1;
+
+   stage = _mesa_shader_enum_to_shader_stage(shadertype);
+   if (!shProg->_LinkedShaders[stage]) {
+      _mesa_error(ctx, GL_INVALID_OPERATION, api_name);
+      return -1;
+   }
+
+   resource_type = _mesa_shader_stage_to_subroutine(stage);
+   res = _mesa_program_resource_find_name(shProg, resource_type, name);
+   if (!res) {
+      _mesa_error(ctx, GL_INVALID_OPERATION, api_name);
+     return -1;
+   }
+
+   return _mesa_program_resource_index(shProg, res);
 }
 
 
@@ -2181,6 +2242,82 @@ GLvoid GLAPIENTRY
 _mesa_GetActiveSubroutineUniformiv(GLuint program, GLenum shadertype,
                                    GLuint index, GLenum pname, GLint *values)
 {
+   GET_CURRENT_CONTEXT(ctx);
+   const char *api_name = "glGetActiveSubroutineUniformiv";
+   struct gl_shader_program *shProg;
+   struct gl_shader *sh;
+   gl_shader_stage stage;
+   struct gl_program_resource *res;
+   const struct gl_uniform_storage *uni;
+   GLenum resource_type;
+   int count, i, j;
+
+   if (!_mesa_has_shader_subroutine(ctx)) {
+      _mesa_error(ctx, GL_INVALID_OPERATION, api_name);
+      return;
+   }
+
+   if (!_mesa_validate_shader_target(ctx, shadertype)) {
+      _mesa_error(ctx, GL_INVALID_OPERATION, api_name);
+      return;
+   }
+
+   shProg = _mesa_lookup_shader_program_err(ctx, program, api_name);
+   if (!shProg)
+      return;
+
+   stage = _mesa_shader_enum_to_shader_stage(shadertype);
+   resource_type = _mesa_shader_stage_to_subroutine_uniform(stage);
+
+   sh = shProg->_LinkedShaders[stage];
+   if (!sh) {
+      _mesa_error(ctx, GL_INVALID_OPERATION, api_name);
+      return;
+   }
+
+   switch (pname) {
+   case GL_NUM_COMPATIBLE_SUBROUTINES: {
+      res = _mesa_program_resource_find_index(shProg, resource_type, index);
+      if (res) {
+         uni = res->Data;
+         values[0] = uni->num_compatible_subroutines;
+      }
+      break;
+   }
+   case GL_COMPATIBLE_SUBROUTINES: {
+      res = _mesa_program_resource_find_index(shProg, resource_type, index);
+      if (res) {
+         uni = res->Data;
+         count = 0;
+         for (i = 0; i < sh->NumSubroutineFunctions; i++) {
+            struct gl_subroutine_function *fn = &sh->SubroutineFunctions[i];
+            for (j = 0; j < fn->num_compat_types; j++) {
+               if (fn->types[j] == uni->type) {
+                  values[count++] = i;
+                  break;
+               }
+            }
+         }
+      }
+      break;
+   }
+   case GL_UNIFORM_SIZE:
+      res = _mesa_program_resource_find_index(shProg, resource_type, index);
+      if (res) {
+         uni = res->Data;
+         values[0] = uni->array_elements ? uni->array_elements : 1;
+      }
+      break;
+   case GL_UNIFORM_NAME_LENGTH:
+      res = _mesa_program_resource_find_index(shProg, resource_type, index);
+      if (res) {
+         values[0] = strlen(_mesa_program_resource_name(res)) + 1 + ((_mesa_program_resource_array_size(res) != 0) ? 3 : 0);;
+      }
+      break;
+   default:
+      _mesa_error(ctx, GL_INVALID_OPERATION, api_name);
+      return;
+   }
 }
 
 
@@ -2189,6 +2326,37 @@ _mesa_GetActiveSubroutineUniformName(GLuint program, GLenum shadertype,
                                      GLuint index, GLsizei bufsize,
                                      GLsizei *length, GLchar *name)
 {
+   GET_CURRENT_CONTEXT(ctx);
+   const char *api_name = "glGetActiveSubroutineUniformName";
+   struct gl_shader_program *shProg;
+   GLenum resource_type;
+   gl_shader_stage stage;
+
+   if (!_mesa_has_shader_subroutine(ctx)) {
+      _mesa_error(ctx, GL_INVALID_OPERATION, api_name);
+      return;
+   }
+
+   if (!_mesa_validate_shader_target(ctx, shadertype)) {
+      _mesa_error(ctx, GL_INVALID_OPERATION, api_name);
+      return;
+   }
+
+   shProg = _mesa_lookup_shader_program_err(ctx, program, api_name);
+   if (!shProg)
+      return;
+
+   stage = _mesa_shader_enum_to_shader_stage(shadertype);
+   if (!shProg->_LinkedShaders[stage]) {
+      _mesa_error(ctx, GL_INVALID_OPERATION, api_name);
+      return;
+   }
+
+   resource_type = _mesa_shader_stage_to_subroutine_uniform(stage);
+   /* get program resource name */
+   _mesa_get_program_resource_name(shProg, resource_type,
+                                   index, bufsize,
+                                   length, name, api_name);
 }
 
 
@@ -2197,6 +2365,35 @@ _mesa_GetActiveSubroutineName(GLuint program, GLenum shadertype,
                               GLuint index, GLsizei bufsize,
                               GLsizei *length, GLchar *name)
 {
+   GET_CURRENT_CONTEXT(ctx);
+   const char *api_name = "glGetActiveSubroutineName";
+   struct gl_shader_program *shProg;
+   GLenum resource_type;
+   gl_shader_stage stage;
+
+   if (!_mesa_has_shader_subroutine(ctx)) {
+      _mesa_error(ctx, GL_INVALID_OPERATION, api_name);
+      return;
+   }
+
+   if (!_mesa_validate_shader_target(ctx, shadertype)) {
+      _mesa_error(ctx, GL_INVALID_OPERATION, api_name);
+      return;
+   }
+
+   shProg = _mesa_lookup_shader_program_err(ctx, program, api_name);
+   if (!shProg)
+      return;
+
+   stage = _mesa_shader_enum_to_shader_stage(shadertype);
+   if (!shProg->_LinkedShaders[stage]) {
+      _mesa_error(ctx, GL_INVALID_OPERATION, api_name);
+      return;
+   }
+   resource_type = _mesa_shader_stage_to_subroutine(stage);
+   _mesa_get_program_resource_name(shProg, resource_type,
+                                   index, bufsize,
+                                   length, name, api_name);
 }
 
 
@@ -2204,6 +2401,80 @@ GLvoid GLAPIENTRY
 _mesa_UniformSubroutinesuiv(GLenum shadertype, GLsizei count,
                             const GLuint *indices)
 {
+   GET_CURRENT_CONTEXT(ctx);
+   const char *api_name = "glUniformSubroutinesuiv";
+   struct gl_shader_program *shProg;
+   struct gl_shader *sh;
+   gl_shader_stage stage;
+   int i;
+
+   if (!_mesa_has_shader_subroutine(ctx)) {
+      _mesa_error(ctx, GL_INVALID_OPERATION, api_name);
+      return;
+   }
+
+   if (!_mesa_validate_shader_target(ctx, shadertype)) {
+      _mesa_error(ctx, GL_INVALID_OPERATION, api_name);
+      return;
+   }
+
+   stage = _mesa_shader_enum_to_shader_stage(shadertype);
+   shProg = ctx->_Shader->CurrentProgram[stage];
+   if (!shProg) {
+      _mesa_error(ctx, GL_INVALID_OPERATION, api_name);
+      return;
+   }
+
+   sh = shProg->_LinkedShaders[stage];
+   if (!sh) {
+      _mesa_error(ctx, GL_INVALID_OPERATION, api_name);
+      return;
+   }
+
+   if (count != sh->NumSubroutineUniformRemapTable) {
+      _mesa_error(ctx, GL_INVALID_VALUE, api_name);
+      return;
+   }
+
+   i = 0;
+   do {
+      struct gl_uniform_storage *uni = sh->SubroutineUniformRemapTable[i];
+      int uni_count = uni->array_elements ? uni->array_elements : 1;
+      int j, k;
+
+      for (j = i; j < i + uni_count; j++) {
+         struct gl_subroutine_function *subfn;
+         if (indices[j] >= sh->NumSubroutineFunctions) {
+            _mesa_error(ctx, GL_INVALID_VALUE, api_name);
+            return;
+         }
+
+         subfn = &sh->SubroutineFunctions[indices[j]];
+         for (k = 0; k < subfn->num_compat_types; k++) {
+            if (subfn->types[k] == uni->type)
+               break;
+         }
+         if (k == subfn->num_compat_types) {
+            _mesa_error(ctx, GL_INVALID_OPERATION, api_name);
+            return;
+         }
+      }
+      i += uni_count;
+   } while(i < count);
+
+   FLUSH_VERTICES(ctx, _NEW_PROGRAM_CONSTANTS);
+   i = 0;
+   do {
+      struct gl_uniform_storage *uni = sh->SubroutineUniformRemapTable[i];
+      int uni_count = uni->array_elements ? uni->array_elements : 1;
+
+      memcpy(&uni->storage[0], &indices[i],
+             sizeof(GLuint) * uni_count);
+
+      uni->initialized = true;
+      _mesa_propagate_uniforms_to_driver_storage(uni, 0, uni_count);
+      i += uni_count;
+   } while(i < count);
 }
 
 
@@ -2211,6 +2482,46 @@ GLvoid GLAPIENTRY
 _mesa_GetUniformSubroutineuiv(GLenum shadertype, GLint location,
                               GLuint *params)
 {
+   GET_CURRENT_CONTEXT(ctx);
+   const char *api_name = "glGetUniformSubroutineuiv";
+   struct gl_shader_program *shProg;
+   struct gl_shader *sh;
+   gl_shader_stage stage;
+
+   if (!_mesa_has_shader_subroutine(ctx)) {
+      _mesa_error(ctx, GL_INVALID_OPERATION, api_name);
+      return;
+   }
+
+   if (!_mesa_validate_shader_target(ctx, shadertype)) {
+      _mesa_error(ctx, GL_INVALID_OPERATION, api_name);
+      return;
+   }
+
+   stage = _mesa_shader_enum_to_shader_stage(shadertype);
+   shProg = ctx->_Shader->CurrentProgram[stage];
+   if (!shProg) {
+      _mesa_error(ctx, GL_INVALID_OPERATION, api_name);
+      return;
+   }
+
+   sh = shProg->_LinkedShaders[stage];
+   if (!sh) {
+      _mesa_error(ctx, GL_INVALID_OPERATION, api_name);
+      return;
+   }
+
+   if (location >= sh->NumSubroutineUniformRemapTable) {
+      _mesa_error(ctx, GL_INVALID_VALUE, api_name);
+      return;
+   }
+
+   {
+      struct gl_uniform_storage *uni = sh->SubroutineUniformRemapTable[location];
+      int offset = location - uni->subroutine[stage].index;
+      memcpy(params, &uni->storage[offset],
+	     sizeof(GLuint));
+   }
 }
 
 
@@ -2218,4 +2529,138 @@ GLvoid GLAPIENTRY
 _mesa_GetProgramStageiv(GLuint program, GLenum shadertype,
                         GLenum pname, GLint *values)
 {
+   GET_CURRENT_CONTEXT(ctx);
+   const char *api_name = "glGetProgramStageiv";
+   struct gl_shader_program *shProg;
+   struct gl_shader *sh;
+   gl_shader_stage stage;
+
+   if (!_mesa_has_shader_subroutine(ctx)) {
+      _mesa_error(ctx, GL_INVALID_OPERATION, api_name);
+      return;
+   }
+
+   if (!_mesa_validate_shader_target(ctx, shadertype)) {
+      _mesa_error(ctx, GL_INVALID_OPERATION, api_name);
+      return;
+   }
+
+   shProg = _mesa_lookup_shader_program_err(ctx, program, api_name);
+   if (!shProg)
+      return;
+
+   stage = _mesa_shader_enum_to_shader_stage(shadertype);
+   sh = shProg->_LinkedShaders[stage];
+   if (!sh) {
+      _mesa_error(ctx, GL_INVALID_OPERATION, api_name);
+      return;
+   }
+
+   switch (pname) {
+   case GL_ACTIVE_SUBROUTINES:
+      values[0] = sh->NumSubroutineFunctions;
+      break;
+   case GL_ACTIVE_SUBROUTINE_UNIFORM_LOCATIONS:
+      values[0] = sh->NumSubroutineUniformRemapTable;
+      break;
+   case GL_ACTIVE_SUBROUTINE_UNIFORMS:
+      values[0] = sh->NumSubroutineUniformTypes;
+      break;
+   case GL_ACTIVE_SUBROUTINE_MAX_LENGTH:
+   {
+      unsigned i;
+      GLint max_len = 0;
+      GLenum resource_type;
+      struct gl_program_resource *res;
+
+      resource_type = _mesa_shader_stage_to_subroutine(stage);
+      for (i = 0; i < sh->NumSubroutineFunctions; i++) {
+         res = _mesa_program_resource_find_index(shProg, resource_type, i);
+         if (res) {
+            const GLint len = strlen(_mesa_program_resource_name(res)) + 1;
+            if (len > max_len)
+               max_len = len;
+         }
+      }
+      values[0] = max_len;
+      break;
+   }
+   case GL_ACTIVE_SUBROUTINE_UNIFORM_MAX_LENGTH:
+   {
+      unsigned i;
+      GLint max_len = 0;
+      GLenum resource_type;
+      struct gl_program_resource *res;
+
+      resource_type = _mesa_shader_stage_to_subroutine_uniform(stage);
+      for (i = 0; i < sh->NumSubroutineUniformRemapTable; i++) {
+         res = _mesa_program_resource_find_index(shProg, resource_type, i);
+         if (res) {
+            const GLint len = strlen(_mesa_program_resource_name(res)) + 1+  ((_mesa_program_resource_array_size(res) != 0) ? 3 : 0);
+
+            if (len > max_len)
+               max_len = len;
+         }
+      }
+      values[0] = max_len;
+      break;
+   }
+   default:
+      _mesa_error(ctx, GL_INVALID_ENUM, api_name);
+      values[0] = -1;
+      break;
+   }
+}
+
+static int
+find_compat_subroutine(struct gl_shader *sh, const struct glsl_type *type)
+{
+   int i, j;
+
+   for (i = 0; i < sh->NumSubroutineFunctions; i++) {
+      struct gl_subroutine_function *fn = &sh->SubroutineFunctions[i];
+      for (j = 0; j < fn->num_compat_types; j++) {
+         if (fn->types[j] == type)
+            return i;
+      }
+   }
+   return 0;
+}
+
+static void
+_mesa_shader_init_subroutine_defaults(struct gl_shader *sh)
+{
+   int i, j;
+
+   for (i = 0; i < sh->NumSubroutineUniformRemapTable; i++) {
+      struct gl_uniform_storage *uni = sh->SubroutineUniformRemapTable[i];
+      int uni_count;
+      int val;
+
+      if (!uni)
+         continue;
+      uni_count = uni->array_elements ? uni->array_elements : 1;
+      val = find_compat_subroutine(sh, uni->type);
+
+      for (j = 0; j < uni_count; j++)
+         memcpy(&uni->storage[j], &val, sizeof(int));
+      uni->initialized = true;
+      _mesa_propagate_uniforms_to_driver_storage(uni, 0, uni_count);
+   }
+}
+
+void
+_mesa_shader_program_init_subroutine_defaults(struct gl_shader_program *shProg)
+{
+   int i;
+
+   if (!shProg)
+      return;
+
+   for (i = 0; i < MESA_SHADER_STAGES; i++) {
+      if (!shProg->_LinkedShaders[i])
+         continue;
+
+      _mesa_shader_init_subroutine_defaults(shProg->_LinkedShaders[i]);
+   }
 }
