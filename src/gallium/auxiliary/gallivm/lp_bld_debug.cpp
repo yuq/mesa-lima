@@ -270,7 +270,7 @@ disassemble(const void* func, llvm::raw_ostream & Out)
    }
 
    TargetOptions options;
-#if defined(DEBUG)
+#if defined(DEBUG) && HAVE_LLVM < 0x0307
    options.JITEmitDebugInfo = true;
 #endif
 #if defined(PIPE_ARCH_X86)

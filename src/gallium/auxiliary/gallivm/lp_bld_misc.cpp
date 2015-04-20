@@ -429,7 +429,7 @@ lp_build_create_jit_compiler_for_module(LLVMExecutionEngineRef *OutJIT,
 #endif
 #endif
 
-#if defined(DEBUG)
+#if defined(DEBUG) && HAVE_LLVM < 0x0307
    options.JITEmitDebugInfo = true;
 #endif
 
