@@ -860,13 +860,23 @@ get_buffer_property(struct gl_shader_program *shProg,
          *val = RESOURCE_UBO(res)->UniformBufferSize;
          return 1;
       case GL_NUM_ACTIVE_VARIABLES:
-         *val = RESOURCE_UBO(res)->NumUniforms;
+         *val = 0;
+         for (unsigned i = 0; i < RESOURCE_UBO(res)->NumUniforms; i++) {
+            const char *iname = RESOURCE_UBO(res)->Uniforms[i].IndexName;
+            struct gl_program_resource *uni =
+               _mesa_program_resource_find_name(shProg, GL_UNIFORM, iname);
+            if (!uni)
+               continue;
+            (*val)++;
+         }
          return 1;
       case GL_ACTIVE_VARIABLES:
          for (unsigned i = 0; i < RESOURCE_UBO(res)->NumUniforms; i++) {
             const char *iname = RESOURCE_UBO(res)->Uniforms[i].IndexName;
             struct gl_program_resource *uni =
                _mesa_program_resource_find_name(shProg, GL_UNIFORM, iname);
+            if (!uni)
+               continue;
             *val++ =
                _mesa_program_resource_index(shProg, uni);
          }
