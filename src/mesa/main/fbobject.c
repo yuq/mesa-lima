@@ -2654,10 +2654,19 @@ framebuffer_texture(struct gl_context *ctx, const char *caller, GLenum target,
          }
       }
       else {
-         /* can't render to a non-existant texture */
-         _mesa_error(ctx, GL_INVALID_OPERATION,
-                     "glFramebufferTexture%s(non existant texture)",
-                     caller);
+         /* Can't render to a non-existent texture object.
+          *
+          * The OpenGL 4.5 core spec (02.02.2015) in Section 9.2 Binding and
+          * Managing Framebuffer Objects specifies a different error
+          * depending upon the calling function (PDF pages 325-328).
+          * *FramebufferTexture (where layered = GL_TRUE) throws invalid
+          * value, while the other commands throw invalid operation (where
+          * layered = GL_FALSE).
+          */
+         const GLenum error = layered ? GL_INVALID_VALUE :
+                              GL_INVALID_OPERATION;
+         _mesa_error(ctx, error,
+                     "%s(non-existent texture %u)", caller, texture);
          return;
       }
 
