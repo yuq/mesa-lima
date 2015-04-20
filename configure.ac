@@ -1865,6 +1865,13 @@ strip_unwanted_llvm_flags() {
 	-e 's/-fstack-protector-strong\>//g'
 }
 
+llvm_check_version_for() {
+    if test "${LLVM_VERSION_INT}${LLVM_VERSION_PATCH}" -lt "${1}0${2}${3}"; then
+        AC_MSG_ERROR([LLVM $1.$2.$3 or newer is required for $4])
+    fi
+}
+
+
 
 if test -z "$with_gallium_drivers"; then
     enable_gallium_llvm=no
@@ -1919,22 +1926,10 @@ if test "x$enable_gallium_llvm" = xyes; then
         fi
 
         if test "x$enable_opencl" = xyes; then
+            llvm_check_version_for "3" "5" "0" "opencl"
+
             LLVM_COMPONENTS="${LLVM_COMPONENTS} all-targets ipo linker instrumentation"
-            # LLVM 3.3 >= 177971 requires IRReader
-            if $LLVM_CONFIG --components | grep -qw 'irreader'; then
-                LLVM_COMPONENTS="${LLVM_COMPONENTS} irreader"
-            fi
-            # LLVM 3.4 requires Option
-            if $LLVM_CONFIG --components | grep -qw 'option'; then
-                LLVM_COMPONENTS="${LLVM_COMPONENTS} option"
-            fi
-            # Current OpenCL/Clover and LLVM 3.5 require ObjCARCOpts and ProfileData
-            if $LLVM_CONFIG --components | grep -qw 'objcarcopts'; then
-                LLVM_COMPONENTS="${LLVM_COMPONENTS} objcarcopts"
-            fi
-            if $LLVM_CONFIG --components | grep -qw 'profiledata'; then
-                LLVM_COMPONENTS="${LLVM_COMPONENTS} profiledata"
-            fi
+            LLVM_COMPONENTS="${LLVM_COMPONENTS} irreader option objcarcopts profiledata"
         fi
         DEFINES="${DEFINES} -DHAVE_LLVM=0x0$LLVM_VERSION_INT -DLLVM_VERSION_PATCH=$LLVM_VERSION_PATCH"
         MESA_LLVM=1
@@ -2058,12 +2053,7 @@ radeon_llvm_check() {
     if test "x$enable_gallium_llvm" != "xyes"; then
         AC_MSG_ERROR([--enable-gallium-llvm is required when building $1])
     fi
-    LLVM_REQUIRED_VERSION_MAJOR="3"
-    LLVM_REQUIRED_VERSION_MINOR="4"
-    LLVM_REQUIRED_VERSION_PATCH="2"
-    if test "${LLVM_VERSION_INT}${LLVM_VERSION_PATCH}" -lt "${LLVM_REQUIRED_VERSION_MAJOR}0${LLVM_REQUIRED_VERSION_MINOR}${LLVM_REQUIRED_VERSION_PATCH}"; then
-        AC_MSG_ERROR([LLVM $LLVM_REQUIRED_VERSION_MAJOR.$LLVM_REQUIRED_VERSION_MINOR.$LLVM_REQUIRED_VERSION_PATCH or newer is required for $1])
-    fi
+    llvm_check_version_for "3" "4" "2" $1 
     if test true && $LLVM_CONFIG --targets-built | grep -qvw 'R600' ; then
         AC_MSG_ERROR([LLVM R600 Target not enabled.  You can enable it when building the LLVM
                       sources with the --enable-experimental-targets=R600
