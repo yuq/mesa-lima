@@ -231,7 +231,7 @@ void ir_print_visitor::visit(ir_function_signature *ir)
 
 void ir_print_visitor::visit(ir_function *ir)
 {
-   fprintf(f, "(function %s\n", ir->name);
+   fprintf(f, "(%s function %s\n", ir->is_subroutine ? "subroutine" : "", ir->name);
    indentation++;
    foreach_in_list(ir_function_signature, sig, &ir->signatures) {
       indent();
