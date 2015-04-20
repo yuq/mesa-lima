@@ -710,6 +710,7 @@ void st_init_extensions(struct pipe_screen *screen,
       extensions->OES_depth_texture_cube_map = GL_TRUE;
       extensions->ARB_shading_language_420pack = GL_TRUE;
       extensions->ARB_texture_query_levels = GL_TRUE;
+      extensions->ARB_shader_subroutine = GL_TRUE;
 
       if (!options->disable_shader_bit_encoding) {
          extensions->ARB_shader_bit_encoding = GL_TRUE;
