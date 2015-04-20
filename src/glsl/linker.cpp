@@ -933,6 +933,10 @@ cross_validate_globals(struct gl_shader_program *prog,
 	 if (uniforms_only && (var->data.mode != ir_var_uniform && var->data.mode != ir_var_shader_storage))
 	    continue;
 
+         /* don't cross validate subroutine uniforms */
+         if (var->type->contains_subroutine())
+            continue;
+
 	 /* Don't cross validate temporaries that are at global scope.  These
 	  * will eventually get pulled into the shaders 'main'.
 	  */
@@ -2196,8 +2200,11 @@ update_array_sizes(struct gl_shader_program *prog)
           * Atomic counters are supposed to get deterministic
           * locations assigned based on the declaration ordering and
           * sizes, array compaction would mess that up.
+          *
+          * Subroutine uniforms are not removed.
 	  */
-	 if (var->is_in_buffer_block() || var->type->contains_atomic())
+	 if (var->is_in_buffer_block() || var->type->contains_atomic() ||
+	     var->type->contains_subroutine())
 	    continue;
 
 	 unsigned int size = var->data.max_array_access;
@@ -2788,6 +2795,49 @@ check_resources(struct gl_context *ctx, struct gl_shader_program *prog)
    }
 }
 
+static void
+link_calculate_subroutine_compat(struct gl_context *ctx, struct gl_shader_program *prog)
+{
+   for (unsigned i = 0; i < MESA_SHADER_STAGES; i++) {
+      struct gl_shader *sh = prog->_LinkedShaders[i];
+      int count;
+      if (!sh)
+         continue;
+
+      for (unsigned j = 0; j < sh->NumSubroutineUniformRemapTable; j++) {
+         struct gl_uniform_storage *uni = sh->SubroutineUniformRemapTable[j];
+
+         if (!uni)
+            continue;
+
+         count = 0;
+         for (unsigned f = 0; f < sh->NumSubroutineFunctions; f++) {
+            struct gl_subroutine_function *fn = &sh->SubroutineFunctions[f];
+            for (int k = 0; k < fn->num_compat_types; k++) {
+               if (fn->types[k] == uni->type) {
+                  count++;
+                  break;
+               }
+            }
+         }
+         uni->num_compatible_subroutines = count;
+      }
+   }
+}
+
+static void
+check_subroutine_resources(struct gl_context *ctx, struct gl_shader_program *prog)
+{
+   for (unsigned i = 0; i < MESA_SHADER_STAGES; i++) {
+      struct gl_shader *sh = prog->_LinkedShaders[i];
+
+      if (sh) {
+         if (sh->NumSubroutineUniformRemapTable > MAX_SUBROUTINE_UNIFORM_LOCATIONS)
+            linker_error(prog, "Too many %s shader subroutine uniforms\n",
+                         _mesa_shader_stage_to_string(i));
+      }
+   }
+}
 /**
  * Validate shader image resources.
  */
@@ -2896,6 +2946,59 @@ reserve_explicit_locations(struct gl_shader_program *prog,
    return true;
 }
 
+static bool
+reserve_subroutine_explicit_locations(struct gl_shader_program *prog,
+                                      struct gl_shader *sh,
+                                      ir_variable *var)
+{
+   unsigned slots = var->type->uniform_locations();
+   unsigned max_loc = var->data.location + slots - 1;
+
+   /* Resize remap table if locations do not fit in the current one. */
+   if (max_loc + 1 > sh->NumSubroutineUniformRemapTable) {
+      sh->SubroutineUniformRemapTable =
+         reralloc(sh, sh->SubroutineUniformRemapTable,
+                  gl_uniform_storage *,
+                  max_loc + 1);
+
+      if (!sh->SubroutineUniformRemapTable) {
+         linker_error(prog, "Out of memory during linking.\n");
+         return false;
+      }
+
+      /* Initialize allocated space. */
+      for (unsigned i = sh->NumSubroutineUniformRemapTable; i < max_loc + 1; i++)
+         sh->SubroutineUniformRemapTable[i] = NULL;
+
+      sh->NumSubroutineUniformRemapTable = max_loc + 1;
+   }
+
+   for (unsigned i = 0; i < slots; i++) {
+      unsigned loc = var->data.location + i;
+
+      /* Check if location is already used. */
+      if (sh->SubroutineUniformRemapTable[loc] == INACTIVE_UNIFORM_EXPLICIT_LOCATION) {
+
+         /* ARB_explicit_uniform_location specification states:
+          *     "No two subroutine uniform variables can have the same location
+          *     in the same shader stage, otherwise a compiler or linker error
+          *     will be generated."
+          */
+         linker_error(prog,
+                      "location qualifier for uniform %s overlaps "
+                      "previously used location\n",
+                      var->name);
+         return false;
+      }
+
+      /* Initialize location as inactive before optimization
+       * rounds and location assignment.
+       */
+      sh->SubroutineUniformRemapTable[loc] = INACTIVE_UNIFORM_EXPLICIT_LOCATION;
+   }
+
+   return true;
+}
 /**
  * Check and reserve all explicit uniform locations, called before
  * any optimizations happen to handle also inactive uniforms and
@@ -2928,7 +3031,12 @@ check_explicit_uniform_locations(struct gl_context *ctx,
          ir_variable *var = node->as_variable();
          if (var && (var->data.mode == ir_var_uniform || var->data.mode == ir_var_shader_storage) &&
              var->data.explicit_location) {
-            if (!reserve_explicit_locations(prog, uniform_map, var)) {
+            bool ret;
+            if (var->type->is_subroutine())
+               ret = reserve_subroutine_explicit_locations(prog, sh, var);
+            else
+               ret = reserve_explicit_locations(prog, uniform_map, var);
+            if (!ret) {
                delete uniform_map;
                return;
             }
@@ -3143,10 +3251,39 @@ build_program_resource_list(struct gl_context *ctx,
          return;
    }
 
+   for (unsigned i = 0; i < shProg->NumUniformStorage; i++) {
+      GLenum type;
+      if (!shProg->UniformStorage[i].hidden)
+         continue;
+
+      for (int j = MESA_SHADER_VERTEX; j < MESA_SHADER_STAGES; j++) {
+         if (!shProg->UniformStorage[i].subroutine[j].active)
+            continue;
+
+         type = _mesa_shader_stage_to_subroutine_uniform((gl_shader_stage)j);
+         /* add shader subroutines */
+         if (!add_program_resource(shProg, type, &shProg->UniformStorage[i], 0))
+            return;
+      }
+   }
+
+   for (unsigned i = 0; i < MESA_SHADER_STAGES; i++) {
+      struct gl_shader *sh = shProg->_LinkedShaders[i];
+      GLuint type;
+
+      if (!sh)
+         continue;
+
+      type = _mesa_shader_stage_to_subroutine((gl_shader_stage)i);
+      for (unsigned j = 0; j < sh->NumSubroutineFunctions; j++) {
+         if (!add_program_resource(shProg, type, &sh->SubroutineFunctions[j], 0))
+            return;
+      }
+   }
+
    /* TODO - following extensions will require more resource types:
     *
     *    GL_ARB_shader_storage_buffer_object
-    *    GL_ARB_shader_subroutine
     */
 }
 
@@ -3184,6 +3321,41 @@ validate_sampler_array_indexing(struct gl_context *ctx,
    return true;
 }
 
+void
+link_assign_subroutine_types(struct gl_context *ctx,
+                             struct gl_shader_program *prog)
+{
+   for (unsigned i = 0; i < MESA_SHADER_STAGES; i++) {
+      gl_shader *sh = prog->_LinkedShaders[i];
+
+      if (sh == NULL)
+         continue;
+
+      foreach_in_list(ir_instruction, node, sh->ir) {
+         ir_function *fn = node->as_function();
+         if (!fn)
+            continue;
+
+         if (fn->is_subroutine)
+            sh->NumSubroutineUniformTypes++;
+
+         if (!fn->num_subroutine_types)
+            continue;
+
+         sh->SubroutineFunctions = reralloc(sh, sh->SubroutineFunctions,
+                                            struct gl_subroutine_function,
+                                            sh->NumSubroutineFunctions + 1);
+         sh->SubroutineFunctions[sh->NumSubroutineFunctions].name = ralloc_strdup(sh, fn->name);
+         sh->SubroutineFunctions[sh->NumSubroutineFunctions].num_compat_types = fn->num_subroutine_types;
+         sh->SubroutineFunctions[sh->NumSubroutineFunctions].types =
+            ralloc_array(sh, const struct glsl_type *,
+                         fn->num_subroutine_types);
+         for (int j = 0; j < fn->num_subroutine_types; j++)
+            sh->SubroutineFunctions[sh->NumSubroutineFunctions].types[j] = fn->subroutine_types[j];
+         sh->NumSubroutineFunctions++;
+      }
+   }
+}
 
 void
 link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
@@ -3373,6 +3545,8 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
    }
 
    check_explicit_uniform_locations(ctx, prog);
+   link_assign_subroutine_types(ctx, prog);
+
    if (!prog->LinkStatus)
       goto done;
 
@@ -3630,7 +3804,9 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
    link_assign_atomic_counter_resources(ctx, prog);
    store_fragdepth_layout(prog);
 
+   link_calculate_subroutine_compat(ctx, prog);
    check_resources(ctx, prog);
+   check_subroutine_resources(ctx, prog);
    check_image_resources(ctx, prog);
    link_check_atomic_counter_resources(ctx, prog);
 
