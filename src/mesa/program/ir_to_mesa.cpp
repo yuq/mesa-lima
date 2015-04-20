@@ -534,6 +534,7 @@ type_size(const struct glsl_type *type)
       return size;
    case GLSL_TYPE_SAMPLER:
    case GLSL_TYPE_IMAGE:
+   case GLSL_TYPE_SUBROUTINE:
       /* Samplers take up one slot in UNIFORMS[], but they're baked in
        * at link time.
        */
@@ -1342,6 +1343,7 @@ ir_to_mesa_visitor::visit(ir_expression *ir)
    case ir_unop_dFdx_fine:
    case ir_unop_dFdy_coarse:
    case ir_unop_dFdy_fine:
+   case ir_unop_subroutine_to_int:
       assert(!"not supported");
       break;
 
@@ -2451,6 +2453,7 @@ _mesa_associate_uniform_storage(struct gl_context *ctx,
 	    break;
 	 case GLSL_TYPE_SAMPLER:
 	 case GLSL_TYPE_IMAGE:
+         case GLSL_TYPE_SUBROUTINE:
 	    format = uniform_native;
 	    columns = 1;
 	    break;
