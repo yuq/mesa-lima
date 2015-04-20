@@ -448,6 +448,10 @@ ir_validate::visit_leave(ir_expression *ir)
              ir->operands[0]->type->base_type == GLSL_TYPE_DOUBLE);
       assert(ir->type->base_type == GLSL_TYPE_INT);
       break;
+   case ir_unop_subroutine_to_int:
+      assert(ir->operands[0]->type->base_type == GLSL_TYPE_SUBROUTINE);
+      assert(ir->type->base_type == GLSL_TYPE_INT);
+      break;
    case ir_binop_add:
    case ir_binop_sub:
    case ir_binop_mul:

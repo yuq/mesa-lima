@@ -1108,6 +1108,7 @@ type_size(const struct glsl_type *type)
       return size;
    case GLSL_TYPE_SAMPLER:
    case GLSL_TYPE_IMAGE:
+   case GLSL_TYPE_SUBROUTINE:
       /* Samplers take up one slot in UNIFORMS[], but they're baked in
        * at link time.
        */
@@ -1487,6 +1488,9 @@ glsl_to_tgsi_visitor::visit(ir_expression *ir)
          op[0].negate = ~op[0].negate;
          result_src = op[0];
       }
+      break;
+   case ir_unop_subroutine_to_int:
+      emit_asm(ir, TGSI_OPCODE_MOV, result_dst, op[0]);
       break;
    case ir_unop_abs:
       emit_asm(ir, TGSI_OPCODE_ABS, result_dst, op[0]);

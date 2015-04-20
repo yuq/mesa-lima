@@ -1385,6 +1385,7 @@ enum ir_expression_operation {
 
    ir_unop_noise,
 
+   ir_unop_subroutine_to_int,
    /**
     * Interpolate fs input at centroid
     *

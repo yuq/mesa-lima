@@ -32,6 +32,7 @@ mtx_t glsl_type::mutex = _MTX_INITIALIZER_NP;
 hash_table *glsl_type::array_types = NULL;
 hash_table *glsl_type::record_types = NULL;
 hash_table *glsl_type::interface_types = NULL;
+hash_table *glsl_type::subroutine_types = NULL;
 void *glsl_type::mem_ctx = NULL;
 
 void
@@ -161,6 +162,22 @@ glsl_type::glsl_type(const glsl_struct_field *fields, unsigned num_fields,
    mtx_unlock(&glsl_type::mutex);
 }
 
+glsl_type::glsl_type(const char *subroutine_name) :
+   gl_type(0),
+   base_type(GLSL_TYPE_SUBROUTINE),
+   sampler_dimensionality(0), sampler_shadow(0), sampler_array(0),
+   sampler_type(0), interface_packing(0),
+   vector_elements(0), matrix_columns(0),
+   length(0)
+{
+   mtx_lock(&glsl_type::mutex);
+
+   init_ralloc_type_ctx();
+   assert(subroutine_name != NULL);
+   this->name = ralloc_strdup(this->mem_ctx, subroutine_name);
+   this->vector_elements = 1;
+   mtx_unlock(&glsl_type::mutex);
+}
 
 bool
 glsl_type::contains_sampler() const
@@ -228,6 +245,22 @@ glsl_type::contains_opaque() const {
       return false;
    default:
       return false;
+   }
+}
+
+bool
+glsl_type::contains_subroutine() const
+{
+   if (this->is_array()) {
+      return this->fields.array->contains_subroutine();
+   } else if (this->is_record()) {
+      for (unsigned int i = 0; i < this->length; i++) {
+	 if (this->fields.structure[i].type->contains_subroutine())
+	    return true;
+      }
+      return false;
+   } else {
+      return this->is_subroutine();
    }
 }
 
@@ -836,6 +869,36 @@ glsl_type::get_interface_instance(const glsl_struct_field *fields,
    return (glsl_type *) entry->data;
 }
 
+const glsl_type *
+glsl_type::get_subroutine_instance(const char *subroutine_name)
+{
+   const glsl_type key(subroutine_name);
+
+   mtx_lock(&glsl_type::mutex);
+
+   if (subroutine_types == NULL) {
+      subroutine_types = _mesa_hash_table_create(NULL, record_key_hash,
+                                                 record_key_compare);
+   }
+
+   const struct hash_entry *entry = _mesa_hash_table_search(subroutine_types,
+                                                            &key);
+   if (entry == NULL) {
+      mtx_unlock(&glsl_type::mutex);
+      const glsl_type *t = new glsl_type(subroutine_name);
+      mtx_lock(&glsl_type::mutex);
+
+      entry = _mesa_hash_table_insert(subroutine_types, t, (void *) t);
+   }
+
+   assert(((glsl_type *) entry->data)->base_type == GLSL_TYPE_SUBROUTINE);
+   assert(strcmp(((glsl_type *) entry->data)->name, subroutine_name) == 0);
+
+   mtx_unlock(&glsl_type::mutex);
+
+   return (glsl_type *) entry->data;
+}
+
 
 const glsl_type *
 glsl_type::get_mul_type(const glsl_type *type_a, const glsl_type *type_b)
@@ -968,6 +1031,7 @@ glsl_type::component_slots() const
    case GLSL_TYPE_SAMPLER:
    case GLSL_TYPE_ATOMIC_UINT:
    case GLSL_TYPE_VOID:
+   case GLSL_TYPE_SUBROUTINE:
    case GLSL_TYPE_ERROR:
       break;
    }
@@ -988,6 +1052,7 @@ glsl_type::uniform_locations() const
    case GLSL_TYPE_BOOL:
    case GLSL_TYPE_SAMPLER:
    case GLSL_TYPE_IMAGE:
+   case GLSL_TYPE_SUBROUTINE:
       return 1;
 
    case GLSL_TYPE_STRUCT:
@@ -1341,6 +1406,7 @@ glsl_type::count_attribute_slots() const
    case GLSL_TYPE_IMAGE:
    case GLSL_TYPE_ATOMIC_UINT:
    case GLSL_TYPE_VOID:
+   case GLSL_TYPE_SUBROUTINE:
    case GLSL_TYPE_ERROR:
       break;
    }

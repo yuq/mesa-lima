@@ -59,6 +59,8 @@ type_size(const struct glsl_type *type)
          size += type_size(glsl_get_struct_field(type, i));
       }
       return size;
+   case GLSL_TYPE_SUBROUTINE:
+      return 1;
    case GLSL_TYPE_SAMPLER:
       return 0;
    case GLSL_TYPE_ATOMIC_UINT:

@@ -260,6 +260,7 @@ ir_expression::ir_expression(int op, ir_rvalue *op0)
    case ir_unop_bit_count:
    case ir_unop_find_msb:
    case ir_unop_find_lsb:
+   case ir_unop_subroutine_to_int:
       this->type = glsl_type::get_instance(GLSL_TYPE_INT,
 					   op0->type->vector_elements, 1);
       break;
@@ -568,6 +569,7 @@ static const char *const operator_strs[] = {
    "frexp_sig",
    "frexp_exp",
    "noise",
+   "subroutine_to_int",
    "interpolate_at_centroid",
    "+",
    "-",
