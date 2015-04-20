@@ -815,7 +815,7 @@ glsl_to_tgsi_visitor::get_opcode(ir_instruction *ir, unsigned op,
    case TGSI_OPCODE_##c: \
       if (type == GLSL_TYPE_DOUBLE) \
          op = TGSI_OPCODE_##d; \
-      else if (type == GLSL_TYPE_INT)       \
+      else if (type == GLSL_TYPE_INT || type == GLSL_TYPE_SUBROUTINE)       \
          op = TGSI_OPCODE_##i; \
       else if (type == GLSL_TYPE_UINT) \
          op = TGSI_OPCODE_##u; \
