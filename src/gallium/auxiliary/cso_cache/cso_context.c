@@ -326,7 +326,7 @@ void cso_destroy_context( struct cso_context *ctx )
          ctx->pipe->set_stream_output_targets(ctx->pipe, 0, NULL, NULL);
    }
 
-   /* free fragment sampler views */
+   /* free sampler views for each shader stage */
    for (shader = 0; shader < Elements(ctx->samplers); shader++) {
       struct sampler_info *info = &ctx->samplers[shader];
       for (i = 0; i < PIPE_MAX_SHADER_SAMPLER_VIEWS; i++) {
