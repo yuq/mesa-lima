@@ -271,6 +271,20 @@ intel_miptree_blit(struct brw_context *brw,
    return true;
 }
 
+static bool
+alignment_valid(struct brw_context *brw, unsigned offset, uint32_t tiling)
+{
+   /* Tiled buffers must be page-aligned (4K). */
+   if (tiling != I915_TILING_NONE)
+      return (offset & 4095) == 0;
+
+   /* On Gen8+, linear buffers must be cacheline-aligned. */
+   if (brw->gen >= 8)
+      return (offset & 63) == 0;
+
+   return true;
+}
+
 /* Copy BitBlt
  */
 bool
@@ -296,14 +310,11 @@ intelEmitCopyBlit(struct brw_context *brw,
    bool dst_y_tiled = dst_tiling == I915_TILING_Y;
    bool src_y_tiled = src_tiling == I915_TILING_Y;
 
-   if (dst_tiling != I915_TILING_NONE) {
-      if (dst_offset & 4095)
-	 return false;
-   }
-   if (src_tiling != I915_TILING_NONE) {
-      if (src_offset & 4095)
-	 return false;
-   }
+   if (!alignment_valid(brw, dst_offset, dst_tiling))
+      return false;
+   if (!alignment_valid(brw, src_offset, src_tiling))
+      return false;
+
    if ((dst_y_tiled || src_y_tiled) && brw->gen < 6)
       return false;
 
