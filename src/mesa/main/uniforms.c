@@ -1036,6 +1036,58 @@ _mesa_UniformBlockBinding(GLuint program,
    }
 }
 
+void GLAPIENTRY
+_mesa_ShaderStorageBlockBinding(GLuint program,
+			        GLuint shaderStorageBlockIndex,
+			        GLuint shaderStorageBlockBinding)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   struct gl_shader_program *shProg;
+
+   if (!ctx->Extensions.ARB_shader_storage_buffer_object) {
+      _mesa_error(ctx, GL_INVALID_OPERATION, "glShaderStorageBlockBinding");
+      return;
+   }
+
+   shProg = _mesa_lookup_shader_program_err(ctx, program,
+					    "glShaderStorageBlockBinding");
+   if (!shProg)
+      return;
+
+   if (shaderStorageBlockIndex >= shProg->NumUniformBlocks) {
+      _mesa_error(ctx, GL_INVALID_VALUE,
+		  "glShaderStorageBlockBinding(block index %u >= %u)",
+		  shaderStorageBlockIndex, shProg->NumUniformBlocks);
+      return;
+   }
+
+   if (shaderStorageBlockBinding >= ctx->Const.MaxShaderStorageBufferBindings) {
+      _mesa_error(ctx, GL_INVALID_VALUE,
+		  "glShaderStorageBlockBinding(block binding %u >= %u)",
+		  shaderStorageBlockBinding,
+                  ctx->Const.MaxShaderStorageBufferBindings);
+      return;
+   }
+
+   if (shProg->UniformBlocks[shaderStorageBlockIndex].Binding !=
+       shaderStorageBlockBinding) {
+      int i;
+
+      FLUSH_VERTICES(ctx, 0);
+      ctx->NewDriverState |= ctx->DriverFlags.NewShaderStorageBuffer;
+
+      shProg->UniformBlocks[shaderStorageBlockIndex].Binding = shaderStorageBlockBinding;
+
+      for (i = 0; i < MESA_SHADER_STAGES; i++) {
+	 int stage_index = shProg->UniformBlockStageIndex[i][shaderStorageBlockIndex];
+
+	 if (stage_index != -1) {
+	    struct gl_shader *sh = shProg->_LinkedShaders[i];
+	    sh->UniformBlocks[stage_index].Binding = shaderStorageBlockBinding;
+	 }
+      }
+   }
+}
 
 /**
  * Generic program resource property query.

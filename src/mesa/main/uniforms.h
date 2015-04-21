@@ -225,6 +225,10 @@ _mesa_UniformBlockBinding(GLuint program,
 			  GLuint uniformBlockIndex,
 			  GLuint uniformBlockBinding);
 void GLAPIENTRY
+_mesa_ShaderStorageBlockBinding(GLuint program,
+                                GLuint shaderStorageBlockIndex,
+                                GLuint shaderStorageBlockBinding);
+void GLAPIENTRY
 _mesa_GetActiveAtomicCounterBufferiv(GLuint program, GLuint bufferIndex,
                                      GLenum pname, GLint *params);
 void GLAPIENTRY
