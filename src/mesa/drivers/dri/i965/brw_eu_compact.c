@@ -1405,20 +1405,11 @@ brw_compact_instructions(struct brw_codegen *p, int start_offset,
 
          offset += sizeof(brw_compact_inst);
       } else {
-         /* It appears that the end of thread SEND instruction needs to be
-          * aligned, or the GPU hangs. All uncompacted instructions need to be
-          * aligned on G45.
-          */
-         if ((offset & sizeof(brw_compact_inst)) != 0 &&
-             (((brw_inst_opcode(devinfo, src) == BRW_OPCODE_SEND ||
-                brw_inst_opcode(devinfo, src) == BRW_OPCODE_SENDC) &&
-               brw_inst_eot(devinfo, src)) ||
-              devinfo->is_g4x)) {
+         /* All uncompacted instructions need to be aligned on G45. */
+         if ((offset & sizeof(brw_compact_inst)) != 0 && devinfo->is_g4x){
             brw_compact_inst *align = store + offset;
             memset(align, 0, sizeof(*align));
-            brw_compact_inst_set_opcode(align,
-                                        devinfo->is_g4x ? BRW_OPCODE_NENOP :
-                                                          BRW_OPCODE_NOP);
+            brw_compact_inst_set_opcode(align, BRW_OPCODE_NENOP);
             brw_compact_inst_set_cmpt_control(align, true);
             offset += sizeof(brw_compact_inst);
             compacted_count--;
