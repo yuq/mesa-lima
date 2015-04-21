@@ -634,7 +634,7 @@ _mesa_program_resource_find_index(struct gl_shader_program *shProg,
       case GL_ATOMIC_COUNTER_BUFFER:
          if (_mesa_program_resource_index(shProg, res) == index)
             return res;
-
+         break;
       case GL_TRANSFORM_FEEDBACK_VARYING:
       case GL_PROGRAM_INPUT:
       case GL_PROGRAM_OUTPUT:
