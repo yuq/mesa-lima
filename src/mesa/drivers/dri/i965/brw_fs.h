@@ -673,3 +673,6 @@ private:
 
 bool brw_do_channel_expressions(struct exec_list *instructions);
 bool brw_do_vector_splitting(struct exec_list *instructions);
+void brw_setup_tex_for_precompile(struct brw_context *brw,
+                                  struct brw_sampler_prog_key_data *tex,
+                                  struct gl_program *prog);
