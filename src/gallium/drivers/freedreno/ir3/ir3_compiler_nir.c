@@ -1140,6 +1140,7 @@ static void add_sysval_input(struct ir3_compile *ctx, unsigned name,
 	so->inputs[n].interpolate = TGSI_INTERPOLATE_CONSTANT;
 	so->total_in++;
 
+	ctx->block->ninputs = MAX2(ctx->block->ninputs, r + 1);
 	ctx->block->inputs[r] = instr;
 }
 
@@ -1785,16 +1786,22 @@ emit_instructions(struct ir3_compile *ctx)
 	unsigned noutputs = exec_list_length(&ctx->s->outputs) * 4;
 
 	/* we need to allocate big enough outputs array so that
-	 * we can stuff the kill's at the end:
+	 * we can stuff the kill's at the end.  Likewise for vtx
+	 * shaders, we need to leave room for sysvals:
 	 */
-	if (ctx->so->type == SHADER_FRAGMENT)
+	if (ctx->so->type == SHADER_FRAGMENT) {
 		noutputs += ARRAY_SIZE(ctx->kill);
+	} else if (ctx->so->type == SHADER_VERTEX) {
+		ninputs += 8;
+	}
 
 	ctx->block = ir3_block_create(ctx->ir, 0, ninputs, noutputs);
 
-	if (ctx->so->type == SHADER_FRAGMENT)
+	if (ctx->so->type == SHADER_FRAGMENT) {
 		ctx->block->noutputs -= ARRAY_SIZE(ctx->kill);
-
+	} else if (ctx->so->type == SHADER_VERTEX) {
+		ctx->block->ninputs -= 8;
+	}
 
 	/* for fragment shader, we have a single input register (usually
 	 * r0.xy) which is used as the base for bary.f varying fetch instrs:

@@ -302,7 +302,7 @@ fd4_emit_vertex_bufs(struct fd_ringbuffer *ring, struct fd4_emit *emit)
 
 	for (i = 0; i < vp->inputs_count; i++) {
 		uint8_t semantic = sem2name(vp->inputs[i].semantic);
-		if (semantic == TGSI_SEMANTIC_VERTEXID)
+		if (semantic == TGSI_SEMANTIC_VERTEXID_NOBASE)
 			vertex_regid = vp->inputs[i].regid;
 		else if (semantic == TGSI_SEMANTIC_INSTANCEID)
 			instance_regid = vp->inputs[i].regid;
