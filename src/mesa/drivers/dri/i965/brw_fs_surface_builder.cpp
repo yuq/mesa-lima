@@ -161,3 +161,58 @@ namespace brw {
       }
    }
 }
+
+namespace {
+   namespace image_validity {
+      /**
+       * Check whether there is an image bound at the given index and write
+       * the comparison result to f0.0.  Returns an appropriate predication
+       * mode to use on subsequent image operations.
+       */
+      brw_predicate
+      emit_surface_check(const fs_builder &bld, const fs_reg &image)
+      {
+         const brw_device_info *devinfo = bld.shader->devinfo;
+         const fs_reg size = offset(image, bld, BRW_IMAGE_PARAM_SIZE_OFFSET);
+
+         if (devinfo->gen == 7 && !devinfo->is_haswell) {
+            /* Check the first component of the size field to find out if the
+             * image is bound.  Necessary on IVB for typed atomics because
+             * they don't seem to respect null surfaces and will happily
+             * corrupt or read random memory when no image is bound.
+             */
+            bld.CMP(bld.null_reg_ud(),
+                    retype(size, BRW_REGISTER_TYPE_UD),
+                    fs_reg(0), BRW_CONDITIONAL_NZ);
+
+            return BRW_PREDICATE_NORMAL;
+         } else {
+            /* More recent platforms implement compliant behavior when a null
+             * surface is bound.
+             */
+            return BRW_PREDICATE_NONE;
+         }
+      }
+
+      /**
+       * Check whether the provided coordinates are within the image bounds
+       * and write the comparison result to f0.0.  Returns an appropriate
+       * predication mode to use on subsequent image operations.
+       */
+      brw_predicate
+      emit_bounds_check(const fs_builder &bld, const fs_reg &image,
+                        const fs_reg &addr, unsigned dims)
+      {
+         const fs_reg size = offset(image, bld, BRW_IMAGE_PARAM_SIZE_OFFSET);
+
+         for (unsigned c = 0; c < dims; ++c)
+            set_predicate(c == 0 ? BRW_PREDICATE_NONE : BRW_PREDICATE_NORMAL,
+                          bld.CMP(bld.null_reg_ud(),
+                                  offset(retype(addr, BRW_REGISTER_TYPE_UD), bld, c),
+                                  offset(size, bld, c),
+                                  BRW_CONDITIONAL_L));
+
+         return BRW_PREDICATE_NORMAL;
+      }
+   }
+}
