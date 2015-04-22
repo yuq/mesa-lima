@@ -406,6 +406,9 @@ void brw_init_state( struct brw_context *brw )
 {
    struct gl_context *ctx = &brw->ctx;
 
+   /* Force the first brw_select_pipeline to emit pipeline select */
+   brw->last_pipeline = BRW_NUM_PIPELINES;
+
    STATIC_ASSERT(ARRAY_SIZE(gen4_atoms) <= ARRAY_SIZE(brw->render_atoms));
    STATIC_ASSERT(ARRAY_SIZE(gen6_atoms) <= ARRAY_SIZE(brw->render_atoms));
    STATIC_ASSERT(ARRAY_SIZE(gen7_render_atoms) <=
@@ -655,6 +658,8 @@ brw_upload_pipeline_state(struct brw_context *brw,
    int i;
    static int dirty_count = 0;
    struct brw_state_flags state = brw->state.pipelines[pipeline];
+
+   brw_select_pipeline(brw, pipeline);
 
    if (0) {
       /* Always re-emit all state. */

@@ -1148,6 +1148,8 @@ struct brw_context
       struct brw_state_flags pipelines[BRW_NUM_PIPELINES];
    } state;
 
+   enum brw_pipeline last_pipeline;
+
    struct brw_cache cache;
 
    /** IDs for meta stencil blit shader programs. */

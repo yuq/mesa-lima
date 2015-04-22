@@ -854,6 +854,22 @@ const struct brw_tracked_state brw_line_stipple = {
 };
 
 
+void
+brw_emit_select_pipeline(struct brw_context *brw, enum brw_pipeline pipeline)
+{
+   const bool is_965 = brw->gen == 4 && !brw->is_g4x;
+   const uint32_t _3DSTATE_PIPELINE_SELECT =
+      is_965 ? CMD_PIPELINE_SELECT_965 : CMD_PIPELINE_SELECT_GM45;
+
+   /* Select the pipeline */
+   BEGIN_BATCH(1);
+   OUT_BATCH(_3DSTATE_PIPELINE_SELECT << 16 |
+             (brw->gen >= 9 ? (3 << 8) : 0) |
+             (pipeline == BRW_COMPUTE_PIPELINE ? 2 : 0));
+   ADVANCE_BATCH();
+}
+
+
 /***********************************************************************
  * Misc invariant state packets
  */
@@ -863,12 +879,7 @@ brw_upload_invariant_state(struct brw_context *brw)
 {
    const bool is_965 = brw->gen == 4 && !brw->is_g4x;
 
-   /* Select the 3D pipeline (as opposed to media) */
-   const uint32_t _3DSTATE_PIPELINE_SELECT =
-      is_965 ? CMD_PIPELINE_SELECT_965 : CMD_PIPELINE_SELECT_GM45;
-   BEGIN_BATCH(1);
-   OUT_BATCH(_3DSTATE_PIPELINE_SELECT << 16 | (brw->gen >= 9 ? (3 << 8) : 0));
-   ADVANCE_BATCH();
+   brw_select_pipeline(brw, BRW_RENDER_PIPELINE);
 
    if (brw->gen < 6) {
       /* Disable depth offset clamping. */

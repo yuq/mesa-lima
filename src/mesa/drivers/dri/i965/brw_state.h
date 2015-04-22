@@ -185,6 +185,18 @@ void brw_upload_compute_state(struct brw_context *brw);
 void brw_compute_state_finished(struct brw_context *brw);
 void brw_init_state(struct brw_context *brw);
 void brw_destroy_state(struct brw_context *brw);
+void brw_emit_select_pipeline(struct brw_context *brw,
+                              enum brw_pipeline pipeline);
+
+static inline void
+brw_select_pipeline(struct brw_context *brw, enum brw_pipeline pipeline)
+{
+   if (unlikely(brw->last_pipeline != pipeline)) {
+      assert(pipeline < BRW_NUM_PIPELINES);
+      brw_emit_select_pipeline(brw, pipeline);
+      brw->last_pipeline = pipeline;
+   }
+}
 
 /***********************************************************************
  * brw_state_cache.c
