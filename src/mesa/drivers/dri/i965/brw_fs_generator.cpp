@@ -1529,37 +1529,6 @@ fs_generator::generate_shader_time_add(fs_inst *inst,
 }
 
 void
-fs_generator::generate_untyped_atomic(fs_inst *inst, struct brw_reg dst,
-                                      struct brw_reg payload,
-                                      struct brw_reg atomic_op,
-                                      struct brw_reg surf_index)
-{
-   assert(atomic_op.file == BRW_IMMEDIATE_VALUE &&
-          atomic_op.type == BRW_REGISTER_TYPE_UD &&
-          surf_index.file == BRW_IMMEDIATE_VALUE &&
-	  surf_index.type == BRW_REGISTER_TYPE_UD);
-
-   brw_untyped_atomic(p, dst, payload,
-                      surf_index, atomic_op.dw1.ud,
-                      inst->mlen, true);
-
-   brw_mark_surface_used(prog_data, surf_index.dw1.ud);
-}
-
-void
-fs_generator::generate_untyped_surface_read(fs_inst *inst, struct brw_reg dst,
-                                            struct brw_reg payload,
-                                            struct brw_reg surf_index)
-{
-   assert(surf_index.file == BRW_IMMEDIATE_VALUE &&
-	  surf_index.type == BRW_REGISTER_TYPE_UD);
-
-   brw_untyped_surface_read(p, dst, payload, surf_index, inst->mlen, 1);
-
-   brw_mark_surface_used(prog_data, surf_index.dw1.ud);
-}
-
-void
 fs_generator::enable_debug(const char *shader_name)
 {
    debug_flag = true;
@@ -2046,11 +2015,18 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
          break;
 
       case SHADER_OPCODE_UNTYPED_ATOMIC:
-         generate_untyped_atomic(inst, dst, src[0], src[1], src[2]);
+         assert(src[1].file == BRW_IMMEDIATE_VALUE &&
+                src[2].file == BRW_IMMEDIATE_VALUE);
+         brw_untyped_atomic(p, dst, src[0], src[2], src[1].dw1.ud,
+                            inst->mlen, true);
+         brw_mark_surface_used(prog_data, src[2].dw1.ud);
          break;
 
       case SHADER_OPCODE_UNTYPED_SURFACE_READ:
-         generate_untyped_surface_read(inst, dst, src[0], src[1]);
+         assert(src[1].file == BRW_IMMEDIATE_VALUE);
+         brw_untyped_surface_read(p, dst, src[0], src[1],
+                                  inst->mlen, 1);
+         brw_mark_surface_used(prog_data, src[1].dw1.ud);
          break;
 
       case FS_OPCODE_SET_SIMD4X2_OFFSET:

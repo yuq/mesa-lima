@@ -504,15 +504,6 @@ private:
                                          struct brw_reg dst);
    void generate_unpack_flags(struct brw_reg dst);
 
-   void generate_untyped_atomic(vec4_instruction *inst,
-                                struct brw_reg dst,
-                                struct brw_reg atomic_op,
-                                struct brw_reg surf_index);
-
-   void generate_untyped_surface_read(vec4_instruction *inst,
-                                      struct brw_reg dst,
-                                      struct brw_reg surf_index);
-
    struct brw_context *brw;
    const struct brw_device_info *devinfo;
 

@@ -1111,38 +1111,6 @@ vec4_generator::generate_set_simd4x2_header_gen9(vec4_instruction *inst,
 }
 
 void
-vec4_generator::generate_untyped_atomic(vec4_instruction *inst,
-                                        struct brw_reg dst,
-                                        struct brw_reg atomic_op,
-                                        struct brw_reg surf_index)
-{
-   assert(atomic_op.file == BRW_IMMEDIATE_VALUE &&
-          atomic_op.type == BRW_REGISTER_TYPE_UD &&
-          surf_index.file == BRW_IMMEDIATE_VALUE &&
-	  surf_index.type == BRW_REGISTER_TYPE_UD);
-
-   brw_untyped_atomic(p, dst, brw_message_reg(inst->base_mrf),
-                      surf_index, atomic_op.dw1.ud,
-                      inst->mlen, true);
-
-   brw_mark_surface_used(&prog_data->base, surf_index.dw1.ud);
-}
-
-void
-vec4_generator::generate_untyped_surface_read(vec4_instruction *inst,
-                                              struct brw_reg dst,
-                                              struct brw_reg surf_index)
-{
-   assert(surf_index.file == BRW_IMMEDIATE_VALUE &&
-	  surf_index.type == BRW_REGISTER_TYPE_UD);
-
-   brw_untyped_surface_read(p, dst, brw_message_reg(inst->base_mrf),
-                            surf_index, inst->mlen, 1);
-
-   brw_mark_surface_used(&prog_data->base, surf_index.dw1.ud);
-}
-
-void
 vec4_generator::generate_code(const cfg_t *cfg)
 {
    struct annotation_info annotation;
@@ -1501,11 +1469,18 @@ vec4_generator::generate_code(const cfg_t *cfg)
          break;
 
       case SHADER_OPCODE_UNTYPED_ATOMIC:
-         generate_untyped_atomic(inst, dst, src[0], src[1]);
+         assert(src[0].file == BRW_IMMEDIATE_VALUE &&
+                src[1].file == BRW_IMMEDIATE_VALUE);
+         brw_untyped_atomic(p, dst, brw_message_reg(inst->base_mrf),
+                            src[1], src[0].dw1.ud, inst->mlen, true);
+         brw_mark_surface_used(&prog_data->base, src[1].dw1.ud);
          break;
 
       case SHADER_OPCODE_UNTYPED_SURFACE_READ:
-         generate_untyped_surface_read(inst, dst, src[0]);
+         assert(src[0].file == BRW_IMMEDIATE_VALUE);
+         brw_untyped_surface_read(p, dst, brw_message_reg(inst->base_mrf),
+                                  src[0], inst->mlen, 1);
+         brw_mark_surface_used(&prog_data->base, src[0].dw1.ud);
          break;
 
       case VS_OPCODE_UNPACK_FLAGS_SIMD4X2:
