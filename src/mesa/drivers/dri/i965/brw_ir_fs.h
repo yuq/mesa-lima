@@ -183,10 +183,10 @@ half(fs_reg reg, unsigned idx)
 {
    assert(idx < 2);
 
-   if (reg.file == UNIFORM)
+   if (reg.file == UNIFORM || reg.file == IMM)
       return reg;
 
-   assert(idx == 0 || (reg.file != HW_REG && reg.file != IMM));
+   assert(idx == 0 || reg.file != HW_REG);
    assert(reg.width == 16);
    reg.width = 8;
    return horiz_offset(reg, 8 * idx);
