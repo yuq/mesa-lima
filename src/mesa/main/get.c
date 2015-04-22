@@ -369,6 +369,12 @@ static const int extra_ARB_compute_shader_es31[] = {
    EXTRA_END
 };
 
+static const int extra_ARB_shader_storage_buffer_object_es31[] = {
+   EXT(ARB_shader_storage_buffer_object),
+   EXTRA_API_ES31,
+   EXTRA_END
+};
+
 EXTRA_EXT(ARB_texture_cube_map);
 EXTRA_EXT(EXT_texture_array);
 EXTRA_EXT(NV_fog_distance);
@@ -417,6 +423,7 @@ EXTRA_EXT(EXT_polygon_offset_clamp);
 EXTRA_EXT(ARB_framebuffer_no_attachments);
 EXTRA_EXT(ARB_tessellation_shader);
 EXTRA_EXT(ARB_shader_subroutine);
+EXTRA_EXT(ARB_shader_storage_buffer_object);
 
 static const int
 extra_ARB_color_buffer_float_or_glcore[] = {
