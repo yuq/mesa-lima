@@ -466,10 +466,15 @@ fd4_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 	 * when it changes.
 	 */
 	if (emit->info) {
+		const struct pipe_draw_info *info = emit->info;
 		uint32_t val = fd4_rasterizer_stateobj(ctx->rasterizer)
 				->pc_prim_vtx_cntl;
 
+		if (info->indexed && info->primitive_restart)
+			val |= A4XX_PC_PRIM_VTX_CNTL_PRIMITIVE_RESTART;
+
 		val |= COND(vp->writes_psize, A4XX_PC_PRIM_VTX_CNTL_PSIZE);
+
 		if (fp->total_in > 0) {
 			uint32_t varout = align(fp->total_in, 16) / 16;
 			if (varout > 1)
