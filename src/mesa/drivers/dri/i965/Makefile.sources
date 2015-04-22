@@ -134,7 +134,6 @@ i965_FILES = \
 	brw_multisample_state.h \
 	brw_nir_uniforms.cpp \
 	brw_object_purgeable.c \
-	brw_performance_monitor.c \
 	brw_pipe_control.c \
 	brw_program.c \
 	brw_program.h \

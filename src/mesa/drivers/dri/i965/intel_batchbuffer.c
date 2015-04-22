@@ -175,8 +175,7 @@ do_batch_dump(struct brw_context *brw)
 void
 intel_batchbuffer_emit_render_ring_prelude(struct brw_context *brw)
 {
-   /* We may need to enable and snapshot OA counters. */
-   brw_perf_monitor_new_batch(brw);
+   /* Un-used currently */
 }
 
 /**
@@ -211,9 +210,6 @@ brw_new_batch(struct brw_context *brw)
     */
    if (INTEL_DEBUG & DEBUG_SHADER_TIME)
       brw_collect_and_report_shader_time(brw);
-
-   if (INTEL_DEBUG & DEBUG_PERFMON)
-      brw_dump_perf_monitors(brw);
 }
 
 /**
@@ -240,9 +236,6 @@ brw_finish_batch(struct brw_context *brw)
        */
       if (brw->gen >= 7)
          gen7_restore_default_l3_config(brw);
-
-      /* We may also need to snapshot and disable OA counters. */
-      brw_perf_monitor_finish_batch(brw);
 
       if (brw->is_haswell) {
          /* From the Haswell PRM, Volume 2b, Command Reference: Instructions,

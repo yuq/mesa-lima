@@ -100,71 +100,6 @@ can_do_pipelined_register_writes(struct brw_context *brw)
    return success;
 }
 
-static bool
-can_write_oacontrol(struct brw_context *brw)
-{
-   if (brw->gen < 6 || brw->gen >= 8)
-      return false;
-
-   static int result = -1;
-   if (result != -1)
-      return result;
-
-   /* Set "Select Context ID" to a particular address (which is likely not a
-    * context), but leave all counting disabled.  This should be harmless.
-    */
-   const int expected_value = 0x31337000;
-   const int offset = 110;
-
-   uint32_t *data;
-   /* Set a value in a BO to a known quantity.  The workaround BO already
-    * exists and doesn't contain anything important, so we may as well use it.
-    */
-   drm_intel_bo_map(brw->workaround_bo, true);
-   data = brw->workaround_bo->virtual;
-   data[offset] = 0xffffffff;
-   drm_intel_bo_unmap(brw->workaround_bo);
-
-   /* Write OACONTROL. */
-   BEGIN_BATCH(3);
-   OUT_BATCH(MI_LOAD_REGISTER_IMM | (3 - 2));
-   OUT_BATCH(OACONTROL);
-   OUT_BATCH(expected_value);
-   ADVANCE_BATCH();
-
-   brw_emit_mi_flush(brw);
-
-   /* Save the register's value back to the buffer. */
-   BEGIN_BATCH(3);
-   OUT_BATCH(MI_STORE_REGISTER_MEM | (3 - 2));
-   OUT_BATCH(OACONTROL);
-   OUT_RELOC(brw->workaround_bo,
-             I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
-             offset * sizeof(uint32_t));
-   ADVANCE_BATCH();
-
-   brw_emit_mi_flush(brw);
-
-   /* Set OACONTROL back to zero (everything off). */
-   BEGIN_BATCH(3);
-   OUT_BATCH(MI_LOAD_REGISTER_IMM | (3 - 2));
-   OUT_BATCH(OACONTROL);
-   OUT_BATCH(0);
-   ADVANCE_BATCH();
-
-   intel_batchbuffer_flush(brw);
-
-   /* Check whether the value got written. */
-   drm_intel_bo_map(brw->workaround_bo, false);
-   data = brw->workaround_bo->virtual;
-   bool success = data[offset] == expected_value;
-   drm_intel_bo_unmap(brw->workaround_bo);
-
-   result = success;
-
-   return success;
-}
-
 /**
  * Initializes potential list of extensions if ctx == NULL, or actually enables
  * extensions for a context.
@@ -290,11 +225,6 @@ intelInitExtensions(struct gl_context *ctx)
       ctx->Extensions.ARB_texture_query_levels = ctx->Const.GLSLVersion >= 130;
       ctx->Extensions.ARB_texture_query_lod = true;
       ctx->Extensions.EXT_timer_query = true;
-
-      if (brw->gen == 5 || can_write_oacontrol(brw)) {
-         ctx->Extensions.AMD_performance_monitor = true;
-         ctx->Extensions.INTEL_performance_query = true;
-      }
    }
 
    if (brw->gen >= 6) {
