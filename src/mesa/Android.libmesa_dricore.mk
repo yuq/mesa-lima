@@ -51,11 +51,8 @@ ifeq ($(ARCH_X86_HAVE_SSE4_1),true)
 LOCAL_SRC_FILES += \
 	main/streaming-load-memcpy.c \
 	mesa/main/sse_minmax.c
-LOCAL_CFLAGS := -msse4.1
-endif
-
-ifeq ($(ARCH_X86_HAVE_SSE4_1),true)
-LOCAL_CFLAGS += \
+LOCAL_CFLAGS := \
+	-msse4.1 \
        -DUSE_SSE41
 endif
 
