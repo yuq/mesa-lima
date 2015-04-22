@@ -91,6 +91,8 @@ static struct fd3_format formats[PIPE_FORMAT_COUNT] = {
 	_T(I8_UINT,    8_UINT,  NONE,     WZYX),
 	_T(I8_SINT,    8_SINT,  NONE,     WZYX),
 
+	_T(S8_UINT,    8_UINT,  R8_UNORM, WZYX),
+
 	/* 16-bit */
 	VT(R16_UNORM,   16_UNORM, NONE,     WZYX),
 	VT(R16_SNORM,   16_SNORM, NONE,     WZYX),
@@ -196,6 +198,7 @@ static struct fd3_format formats[PIPE_FORMAT_COUNT] = {
 	_T(Z24X8_UNORM,       X8Z24_UNORM, R8G8B8A8_UNORM, WZYX),
 	_T(Z24_UNORM_S8_UINT, X8Z24_UNORM, R8G8B8A8_UNORM, WZYX),
 	_T(Z32_FLOAT,         Z32_FLOAT,   R8G8B8A8_UNORM, WZYX),
+	_T(Z32_FLOAT_S8X24_UINT, Z32_FLOAT,R8G8B8A8_UNORM, WZYX),
 
 	/* 48-bit */
 	V_(R16G16B16_UNORM,   16_16_16_UNORM, NONE, WZYX),
@@ -296,6 +299,8 @@ fd3_pipe2swap(enum pipe_format format)
 enum a3xx_tex_fetchsize
 fd3_pipe2fetchsize(enum pipe_format format)
 {
+	if (format == PIPE_FORMAT_Z32_FLOAT_S8X24_UINT)
+		format = PIPE_FORMAT_Z32_FLOAT;
 	switch (util_format_get_blocksizebits(format)) {
 	case 8: return TFETCH_1_BYTE;
 	case 16: return TFETCH_2_BYTE;
@@ -324,6 +329,8 @@ fd3_gmem_restore_format(enum pipe_format format)
 		return PIPE_FORMAT_R8G8B8A8_UNORM;
 	case PIPE_FORMAT_Z16_UNORM:
 		return PIPE_FORMAT_R8G8_UNORM;
+	case PIPE_FORMAT_S8_UINT:
+		return PIPE_FORMAT_R8_UNORM;
 	default:
 		return format;
 	}

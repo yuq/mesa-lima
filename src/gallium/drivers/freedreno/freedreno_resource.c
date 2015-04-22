@@ -27,6 +27,7 @@
  */
 
 #include "util/u_format.h"
+#include "util/u_format_zs.h"
 #include "util/u_inlines.h"
 #include "util/u_transfer.h"
 #include "util/u_string.h"
@@ -101,16 +102,51 @@ realloc_bo(struct fd_resource *rsc, uint32_t size)
 	util_range_set_empty(&rsc->valid_buffer_range);
 }
 
+/* Currently this is only used for flushing Z32_S8 texture transfers, but
+ * eventually it should handle everything.
+ */
+static void
+fd_resource_flush(struct fd_transfer *trans, const struct pipe_box *box)
+{
+	struct fd_resource *rsc = fd_resource(trans->base.resource);
+	struct fd_resource_slice *slice = fd_resource_slice(rsc, trans->base.level);
+	struct fd_resource_slice *sslice = fd_resource_slice(rsc->stencil, trans->base.level);
+	enum pipe_format format = trans->base.resource->format;
+
+	float *depth = fd_bo_map(rsc->bo) + slice->offset +
+		(trans->base.box.y + box->y) * slice->pitch * 4 + (trans->base.box.x + box->x) * 4;
+	uint8_t *stencil = fd_bo_map(rsc->stencil->bo) + sslice->offset +
+		(trans->base.box.y + box->y) * sslice->pitch + trans->base.box.x + box->x;
+
+	assert(format == PIPE_FORMAT_Z32_FLOAT_S8X24_UINT ||
+		   format == PIPE_FORMAT_X32_S8X24_UINT);
+
+	if (format != PIPE_FORMAT_X32_S8X24_UINT)
+		util_format_z32_float_s8x24_uint_unpack_z_float(
+				depth, slice->pitch * 4,
+				trans->staging, trans->base.stride,
+				box->width, box->height);
+
+	util_format_z32_float_s8x24_uint_unpack_s_8uint(
+			stencil, sslice->pitch,
+			trans->staging, trans->base.stride,
+			box->width, box->height);
+}
+
 static void fd_resource_transfer_flush_region(struct pipe_context *pctx,
 		struct pipe_transfer *ptrans,
 		const struct pipe_box *box)
 {
 	struct fd_resource *rsc = fd_resource(ptrans->resource);
+	struct fd_transfer *trans = fd_transfer(ptrans);
 
 	if (ptrans->resource->target == PIPE_BUFFER)
 		util_range_add(&rsc->valid_buffer_range,
 					   ptrans->box.x + box->x,
 					   ptrans->box.x + box->x + box->width);
+
+	if (trans->staging)
+		fd_resource_flush(trans, box);
 }
 
 static void
@@ -119,8 +155,19 @@ fd_resource_transfer_unmap(struct pipe_context *pctx,
 {
 	struct fd_context *ctx = fd_context(pctx);
 	struct fd_resource *rsc = fd_resource(ptrans->resource);
-	if (!(ptrans->usage & PIPE_TRANSFER_UNSYNCHRONIZED))
+	struct fd_transfer *trans = fd_transfer(ptrans);
+
+	if (trans->staging && !(ptrans->usage & PIPE_TRANSFER_FLUSH_EXPLICIT)) {
+		struct pipe_box box;
+		u_box_2d(0, 0, ptrans->box.width, ptrans->box.height, &box);
+		fd_resource_flush(trans, &box);
+	}
+
+	if (!(ptrans->usage & PIPE_TRANSFER_UNSYNCHRONIZED)) {
 		fd_bo_cpu_fini(rsc->bo);
+		if (rsc->stencil)
+			fd_bo_cpu_fini(rsc->stencil->bo);
+	}
 
 	util_range_add(&rsc->valid_buffer_range,
 				   ptrans->box.x,
@@ -128,6 +175,9 @@ fd_resource_transfer_unmap(struct pipe_context *pctx,
 
 	pipe_resource_reference(&ptrans->resource, NULL);
 	util_slab_free(&ctx->transfer_pool, ptrans);
+
+	if (trans->staging)
+		free(trans->staging);
 }
 
 static void *
@@ -148,7 +198,8 @@ fd_resource_transfer_map(struct pipe_context *pctx,
 	char *buf;
 	int ret = 0;
 
-	DBG("prsc=%p, level=%u, usage=%x", prsc, level, usage);
+	DBG("prsc=%p, level=%u, usage=%x, box=%dx%d+%d,%d", prsc, level, usage,
+		box->width, box->height, box->x, box->y);
 
 	ptrans = util_slab_alloc(&ctx->transfer_pool);
 	if (!ptrans)
@@ -173,6 +224,8 @@ fd_resource_transfer_map(struct pipe_context *pctx,
 
 	if (usage & PIPE_TRANSFER_DISCARD_WHOLE_RESOURCE) {
 		realloc_bo(rsc, fd_bo_size(rsc->bo));
+		if (rsc->stencil)
+			realloc_bo(rsc->stencil, fd_bo_size(rsc->stencil->bo));
 		fd_invalidate_resource(ctx, prsc);
 	} else if ((usage & PIPE_TRANSFER_WRITE) &&
 			   prsc->target == PIPE_BUFFER &&
@@ -185,7 +238,7 @@ fd_resource_transfer_map(struct pipe_context *pctx,
 		/* If the GPU is writing to the resource, or if it is reading from the
 		 * resource and we're trying to write to it, flush the renders.
 		 */
-		if (rsc->dirty ||
+		if (rsc->dirty || (rsc->stencil && rsc->stencil->dirty) ||
 			((ptrans->usage & PIPE_TRANSFER_WRITE) && rsc->reading))
 			fd_context_render(pctx);
 
@@ -204,8 +257,6 @@ fd_resource_transfer_map(struct pipe_context *pctx,
 		return NULL;
 	}
 
-	*pptrans = ptrans;
-
 	if (rsc->layer_first) {
 		offset = slice->offset +
 			box->y / util_format_get_blockheight(format) * ptrans->stride +
@@ -217,6 +268,47 @@ fd_resource_transfer_map(struct pipe_context *pctx,
 			box->x / util_format_get_blockwidth(format) * rsc->cpp +
 			box->z * slice->size0;
 	}
+
+	if (prsc->format == PIPE_FORMAT_Z32_FLOAT_S8X24_UINT ||
+		prsc->format == PIPE_FORMAT_X32_S8X24_UINT) {
+		trans->base.stride = trans->base.box.width * rsc->cpp * 2;
+		trans->staging = malloc(trans->base.stride * trans->base.box.height);
+		if (!trans->staging)
+			goto fail;
+
+		/* if we're not discarding the whole range (or resource), we must copy
+		 * the real data in.
+		 */
+		if (!(usage & (PIPE_TRANSFER_DISCARD_WHOLE_RESOURCE |
+					   PIPE_TRANSFER_DISCARD_RANGE))) {
+			struct fd_resource_slice *sslice =
+				fd_resource_slice(rsc->stencil, level);
+			void *sbuf = fd_bo_map(rsc->stencil->bo);
+			if (!sbuf)
+				goto fail;
+
+			float *depth = (float *)(buf + slice->offset +
+				box->y * slice->pitch * 4 + box->x * 4);
+			uint8_t *stencil = sbuf + sslice->offset +
+				box->y * sslice->pitch + box->x;
+
+			if (format != PIPE_FORMAT_X32_S8X24_UINT)
+				util_format_z32_float_s8x24_uint_pack_z_float(
+						trans->staging, trans->base.stride,
+						depth, slice->pitch * 4,
+						box->width, box->height);
+
+			util_format_z32_float_s8x24_uint_pack_s_8uint(
+					trans->staging, trans->base.stride,
+					stencil, sslice->pitch,
+					box->width, box->height);
+		}
+
+		buf = trans->staging;
+		offset = 0;
+	}
+
+	*pptrans = ptrans;
 
 	return buf + offset;
 
@@ -347,7 +439,10 @@ fd_resource_create(struct pipe_screen *pscreen,
 	util_range_init(&rsc->valid_buffer_range);
 
 	rsc->base.vtbl = &fd_resource_vtbl;
-	rsc->cpp = util_format_get_blocksize(tmpl->format);
+	if (tmpl->format == PIPE_FORMAT_Z32_FLOAT_S8X24_UINT)
+		rsc->cpp = util_format_get_blocksize(PIPE_FORMAT_Z32_FLOAT);
+	else
+		rsc->cpp = util_format_get_blocksize(tmpl->format);
 
 	assert(rsc->cpp);
 
@@ -373,6 +468,19 @@ fd_resource_create(struct pipe_screen *pscreen,
 	realloc_bo(rsc, size);
 	if (!rsc->bo)
 		goto fail;
+
+	/* There is no native Z32F_S8 sampling or rendering format, so this must
+	 * be emulated via two separate textures. The depth texture still keeps
+	 * its Z32F_S8 format though, and we also keep a reference to a separate
+	 * S8 texture.
+	 */
+	if (tmpl->format == PIPE_FORMAT_Z32_FLOAT_S8X24_UINT) {
+		struct pipe_resource stencil = *tmpl;
+		stencil.format = PIPE_FORMAT_S8_UINT;
+		rsc->stencil = fd_resource(fd_resource_create(pscreen, &stencil));
+		if (!rsc->stencil)
+			goto fail;
+	}
 
 	return prsc;
 fail:
@@ -567,7 +675,7 @@ fd_flush_resource(struct pipe_context *pctx, struct pipe_resource *prsc)
 {
 	struct fd_resource *rsc = fd_resource(prsc);
 
-	if (rsc->dirty)
+	if (rsc->dirty || (rsc->stencil && rsc->stencil->dirty))
 		fd_context_render(pctx);
 }
 

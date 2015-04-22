@@ -383,9 +383,17 @@ fd3_emit_gmem_restore_tex(struct fd_ringbuffer *ring,
 		}
 
 		struct fd_resource *rsc = fd_resource(psurf[i]->texture);
+		enum pipe_format format = fd3_gmem_restore_format(psurf[i]->format);
+		/* The restore blit_zs shader expects stencil in sampler 0, and depth
+		 * in sampler 1
+		 */
+		if (rsc->stencil && i == 0) {
+			rsc = rsc->stencil;
+			format = fd3_gmem_restore_format(rsc->base.b.format);
+		}
+
 		unsigned lvl = psurf[i]->u.tex.level;
 		struct fd_resource_slice *slice = fd_resource_slice(rsc, lvl);
-		enum pipe_format format = fd3_gmem_restore_format(psurf[i]->format);
 
 		debug_assert(psurf[i]->u.tex.first_layer == psurf[i]->u.tex.last_layer);
 
@@ -412,6 +420,9 @@ fd3_emit_gmem_restore_tex(struct fd_ringbuffer *ring,
 	for (i = 0; i < bufs; i++) {
 		if (psurf[i]) {
 			struct fd_resource *rsc = fd_resource(psurf[i]->texture);
+			/* Matches above logic for blit_zs shader */
+			if (rsc->stencil && i == 0)
+				rsc = rsc->stencil;
 			unsigned lvl = psurf[i]->u.tex.level;
 			uint32_t offset = fd_resource_offset(rsc, lvl, psurf[i]->u.tex.first_layer);
 			OUT_RELOC(ring, rsc->bo, offset, 0, 0);

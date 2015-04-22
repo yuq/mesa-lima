@@ -88,8 +88,12 @@ fd_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 	}
 
 	if (fd_stencil_enabled(ctx)) {
+		struct fd_resource *rsc = fd_resource(pfb->zsbuf->texture);
 		buffers |= FD_BUFFER_STENCIL;
-		fd_resource(pfb->zsbuf->texture)->dirty = true;
+		if (rsc->stencil)
+			rsc->stencil->dirty = true;
+		else
+			rsc->dirty = true;
 		ctx->gmem_reason |= FD_GMEM_STENCIL_ENABLED;
 	}
 
@@ -215,7 +219,12 @@ fd_clear(struct pipe_context *pctx, unsigned buffers,
 				fd_resource(pfb->cbufs[i]->texture)->dirty = true;
 
 	if (buffers & (PIPE_CLEAR_DEPTH | PIPE_CLEAR_STENCIL)) {
-		fd_resource(pfb->zsbuf->texture)->dirty = true;
+		struct fd_resource *rsc = fd_resource(pfb->zsbuf->texture);
+		if (rsc->stencil && buffers & PIPE_CLEAR_STENCIL)
+			rsc->stencil->dirty = true;
+		if (!rsc->stencil || buffers & PIPE_CLEAR_DEPTH)
+			rsc->dirty = true;
+
 		ctx->gmem_reason |= FD_GMEM_CLEARS_DEPTH_STENCIL;
 	}
 

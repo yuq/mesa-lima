@@ -77,7 +77,7 @@ static uint32_t bin_width(struct fd_context *ctx)
 }
 
 static uint32_t
-total_size(uint8_t cbuf_cpp[], uint8_t zsbuf_cpp,
+total_size(uint8_t cbuf_cpp[], uint8_t zsbuf_cpp[2],
 		   uint32_t bin_w, uint32_t bin_h, struct fd_gmem_stateobj *gmem)
 {
 	uint32_t total = 0, i;
@@ -89,9 +89,14 @@ total_size(uint8_t cbuf_cpp[], uint8_t zsbuf_cpp,
 		}
 	}
 
-	if (zsbuf_cpp) {
-		gmem->zsbuf_base = align(total, 0x4000);
-		total = gmem->zsbuf_base + zsbuf_cpp * bin_w * bin_h;
+	if (zsbuf_cpp[0]) {
+		gmem->zsbuf_base[0] = align(total, 0x4000);
+		total = gmem->zsbuf_base[0] + zsbuf_cpp[0] * bin_w * bin_h;
+	}
+
+	if (zsbuf_cpp[1]) {
+		gmem->zsbuf_base[1] = align(total, 0x4000);
+		total = gmem->zsbuf_base[1] + zsbuf_cpp[1] * bin_w * bin_h;
 	}
 
 	return total;
@@ -108,13 +113,17 @@ calculate_tiles(struct fd_context *ctx)
 	uint32_t nbins_x = 1, nbins_y = 1;
 	uint32_t bin_w, bin_h;
 	uint32_t max_width = bin_width(ctx);
-	uint8_t cbuf_cpp[4] = {0}, zsbuf_cpp = 0;
+	uint8_t cbuf_cpp[4] = {0}, zsbuf_cpp[2] = {0};
 	uint32_t i, j, t, xoff, yoff;
 	uint32_t tpp_x, tpp_y;
 	bool has_zs = !!(ctx->resolve & (FD_BUFFER_DEPTH | FD_BUFFER_STENCIL));
 
-	if (has_zs)
-		zsbuf_cpp = util_format_get_blocksize(pfb->zsbuf->format);
+	if (has_zs) {
+		struct fd_resource *rsc = fd_resource(pfb->zsbuf->texture);
+		zsbuf_cpp[0] = rsc->cpp;
+		if (rsc->stencil)
+			zsbuf_cpp[1] = rsc->stencil->cpp;
+	}
 	for (i = 0; i < pfb->nr_cbufs; i++) {
 		if (pfb->cbufs[i])
 			cbuf_cpp[i] = util_format_get_blocksize(pfb->cbufs[i]->format);
@@ -122,7 +131,7 @@ calculate_tiles(struct fd_context *ctx)
 			cbuf_cpp[i] = 4;
 	}
 
-	if (gmem->zsbuf_cpp == zsbuf_cpp &&
+	if (!memcmp(gmem->zsbuf_cpp, zsbuf_cpp, sizeof(zsbuf_cpp)) &&
 		!memcmp(gmem->cbuf_cpp, cbuf_cpp, sizeof(cbuf_cpp)) &&
 		!memcmp(&gmem->scissor, scissor, sizeof(gmem->scissor))) {
 		/* everything is up-to-date */
@@ -156,7 +165,7 @@ calculate_tiles(struct fd_context *ctx)
 	 * constraints:
 	 */
 	DBG("binning input: cbuf cpp: %d %d %d %d, zsbuf cpp: %d; %dx%d",
-		cbuf_cpp[0], cbuf_cpp[1], cbuf_cpp[2], cbuf_cpp[3], zsbuf_cpp,
+		cbuf_cpp[0], cbuf_cpp[1], cbuf_cpp[2], cbuf_cpp[3], zsbuf_cpp[0],
 		width, height);
 	while (total_size(cbuf_cpp, zsbuf_cpp, bin_w, bin_h, gmem) > gmem_size) {
 		if (bin_w > bin_h) {
@@ -172,7 +181,7 @@ calculate_tiles(struct fd_context *ctx)
 
 	gmem->scissor = *scissor;
 	memcpy(gmem->cbuf_cpp, cbuf_cpp, sizeof(cbuf_cpp));
-	gmem->zsbuf_cpp = zsbuf_cpp;
+	memcpy(gmem->zsbuf_cpp, zsbuf_cpp, sizeof(zsbuf_cpp));
 	gmem->bin_h = bin_h;
 	gmem->bin_w = bin_w;
 	gmem->nbins_x = nbins_x;

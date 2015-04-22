@@ -72,6 +72,9 @@ struct fd_resource {
 	/* buffer range that has been initialized */
 	struct util_range valid_buffer_range;
 
+	/* reference to the resource holding stencil data for a z32_s8 texture */
+	struct fd_resource *stencil;
+
 	struct list_head list;
 };
 
