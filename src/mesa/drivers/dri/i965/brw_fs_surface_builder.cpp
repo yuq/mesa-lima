@@ -215,4 +215,173 @@ namespace {
          return BRW_PREDICATE_NORMAL;
       }
    }
+
+   namespace image_coordinates {
+      /**
+       * Calculate the offset in memory of the texel given by \p coord.
+       *
+       * This is meant to be used with untyped surface messages to access a
+       * tiled surface, what involves taking into account the tiling and
+       * swizzling modes of the surface manually so it will hopefully not
+       * happen very often.
+       *
+       * The tiling algorithm implemented here matches either the X or Y
+       * tiling layouts supported by the hardware depending on the tiling
+       * coefficients passed to the program as uniforms.  See Volume 1 Part 2
+       * Section 4.5 "Address Tiling Function" of the IVB PRM for an in-depth
+       * explanation of the hardware tiling format.
+       */
+      fs_reg
+      emit_address_calculation(const fs_builder &bld, const fs_reg &image,
+                               const fs_reg &coord, unsigned dims)
+      {
+         const brw_device_info *devinfo = bld.shader->devinfo;
+         const fs_reg off = offset(image, bld, BRW_IMAGE_PARAM_OFFSET_OFFSET);
+         const fs_reg stride = offset(image, bld, BRW_IMAGE_PARAM_STRIDE_OFFSET);
+         const fs_reg tile = offset(image, bld, BRW_IMAGE_PARAM_TILING_OFFSET);
+         const fs_reg swz = offset(image, bld, BRW_IMAGE_PARAM_SWIZZLING_OFFSET);
+         const fs_reg addr = bld.vgrf(BRW_REGISTER_TYPE_UD, 2);
+         const fs_reg tmp = bld.vgrf(BRW_REGISTER_TYPE_UD, 2);
+         const fs_reg minor = bld.vgrf(BRW_REGISTER_TYPE_UD, 2);
+         const fs_reg major = bld.vgrf(BRW_REGISTER_TYPE_UD, 2);
+         const fs_reg dst = bld.vgrf(BRW_REGISTER_TYPE_UD);
+
+         /* Shift the coordinates by the fixed surface offset.  It may be
+          * non-zero if the image is a single slice of a higher-dimensional
+          * surface, or if a non-zero mipmap level of the surface is bound to
+          * the pipeline.  The offset needs to be applied here rather than at
+          * surface state set-up time because the desired slice-level may
+          * start mid-tile, so simply shifting the surface base address
+          * wouldn't give a well-formed tiled surface in the general case.
+          */
+         for (unsigned c = 0; c < 2; ++c)
+            bld.ADD(offset(addr, bld, c), offset(off, bld, c),
+                    (c < dims ?
+                     offset(retype(coord, BRW_REGISTER_TYPE_UD), bld, c) :
+                     fs_reg(0)));
+
+         /* The layout of 3-D textures in memory is sort-of like a tiling
+          * format.  At each miplevel, the slices are arranged in rows of
+          * 2^level slices per row.  The slice row is stored in tmp.y and
+          * the slice within the row is stored in tmp.x.
+          *
+          * The layout of 2-D array textures and cubemaps is much simpler:
+          * Depending on whether the ARYSPC_LOD0 layout is in use it will be
+          * stored in memory as an array of slices, each one being a 2-D
+          * arrangement of miplevels, or as a 2D arrangement of miplevels,
+          * each one being an array of slices.  In either case the separation
+          * between slices of the same LOD is equal to the qpitch value
+          * provided as stride.w.
+          *
+          * This code can be made to handle either 2D arrays and 3D textures
+          * by passing in the miplevel as tile.z for 3-D textures and 0 in
+          * tile.z for 2-D array textures.
+          *
+          * See Volume 1 Part 1 of the Gen7 PRM, sections 6.18.4.7 "Surface
+          * Arrays" and 6.18.6 "3D Surfaces" for a more extensive discussion
+          * of the hardware 3D texture and 2D array layouts.
+          */
+         if (dims > 2) {
+            /* Decompose z into a major (tmp.y) and a minor (tmp.x)
+             * index.
+             */
+            bld.BFE(offset(tmp, bld, 0), offset(tile, bld, 2), fs_reg(0),
+                    offset(retype(coord, BRW_REGISTER_TYPE_UD), bld, 2));
+            bld.SHR(offset(tmp, bld, 1),
+                    offset(retype(coord, BRW_REGISTER_TYPE_UD), bld, 2),
+                    offset(tile, bld, 2));
+
+            /* Take into account the horizontal (tmp.x) and vertical (tmp.y)
+             * slice offset.
+             */
+            for (unsigned c = 0; c < 2; ++c) {
+               bld.MUL(offset(tmp, bld, c),
+                       offset(stride, bld, 2 + c), offset(tmp, bld, c));
+               bld.ADD(offset(addr, bld, c),
+                       offset(addr, bld, c), offset(tmp, bld, c));
+            }
+         }
+
+         if (dims > 1) {
+            /* Calculate the major/minor x and y indices.  In order to
+             * accommodate both X and Y tiling, the Y-major tiling format is
+             * treated as being a bunch of narrow X-tiles placed next to each
+             * other.  This means that the tile width for Y-tiling is actually
+             * the width of one sub-column of the Y-major tile where each 4K
+             * tile has 8 512B sub-columns.
+             *
+             * The major Y value is the row of tiles in which the pixel lives.
+             * The major X value is the tile sub-column in which the pixel
+             * lives; for X tiling, this is the same as the tile column, for Y
+             * tiling, each tile has 8 sub-columns.  The minor X and Y indices
+             * are the position within the sub-column.
+             */
+            for (unsigned c = 0; c < 2; ++c) {
+               /* Calculate the minor x and y indices. */
+               bld.BFE(offset(minor, bld, c), offset(tile, bld, c),
+                       fs_reg(0), offset(addr, bld, c));
+
+               /* Calculate the major x and y indices. */
+               bld.SHR(offset(major, bld, c),
+                       offset(addr, bld, c), offset(tile, bld, c));
+            }
+
+            /* Calculate the texel index from the start of the tile row and
+             * the vertical coordinate of the row.
+             * Equivalent to:
+             *   tmp.x = (major.x << tile.y << tile.x) +
+             *           (minor.y << tile.x) + minor.x
+             *   tmp.y = major.y << tile.y
+             */
+            bld.SHL(tmp, major, offset(tile, bld, 1));
+            bld.ADD(tmp, tmp, offset(minor, bld, 1));
+            bld.SHL(tmp, tmp, offset(tile, bld, 0));
+            bld.ADD(tmp, tmp, minor);
+            bld.SHL(offset(tmp, bld, 1),
+                    offset(major, bld, 1), offset(tile, bld, 1));
+
+            /* Add it to the start of the tile row. */
+            bld.MUL(offset(tmp, bld, 1),
+                    offset(tmp, bld, 1), offset(stride, bld, 1));
+            bld.ADD(tmp, tmp, offset(tmp, bld, 1));
+
+            /* Multiply by the Bpp value. */
+            bld.MUL(dst, tmp, stride);
+
+            if (devinfo->gen < 8 && !devinfo->is_baytrail) {
+               /* Take into account the two dynamically specified shifts.
+                * Both need are used to implement swizzling of X-tiled
+                * surfaces.  For Y-tiled surfaces only one bit needs to be
+                * XOR-ed with bit 6 of the memory address, so a swz value of
+                * 0xff (actually interpreted as 31 by the hardware) will be
+                * provided to cause the relevant bit of tmp.y to be zero and
+                * turn the first XOR into the identity.  For linear surfaces
+                * or platforms lacking address swizzling both shifts will be
+                * 0xff causing the relevant bits of both tmp.x and .y to be
+                * zero, what effectively disables swizzling.
+                */
+               for (unsigned c = 0; c < 2; ++c)
+                  bld.SHR(offset(tmp, bld, c), dst, offset(swz, bld, c));
+
+               /* XOR tmp.x and tmp.y with bit 6 of the memory address. */
+               bld.XOR(tmp, tmp, offset(tmp, bld, 1));
+               bld.AND(tmp, tmp, fs_reg(1 << 6));
+               bld.XOR(dst, dst, tmp);
+            }
+
+         } else {
+            /* Multiply by the Bpp/stride value.  Note that the addr.y may be
+             * non-zero even if the image is one-dimensional because a
+             * vertical offset may have been applied above to select a
+             * non-zero slice or level of a higher-dimensional texture.
+             */
+            bld.MUL(offset(addr, bld, 1),
+                    offset(addr, bld, 1), offset(stride, bld, 1));
+            bld.ADD(addr, addr, offset(addr, bld, 1));
+            bld.MUL(dst, addr, stride);
+         }
+
+         return dst;
+      }
+   }
 }
