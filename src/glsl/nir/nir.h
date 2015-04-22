@@ -497,6 +497,8 @@ typedef struct nir_src {
    bool is_ssa;
 } nir_src;
 
+#define NIR_SRC_INIT (nir_src) { { { NULL } } }
+
 typedef struct {
    union {
       nir_reg_dest reg;
@@ -506,10 +508,12 @@ typedef struct {
    bool is_ssa;
 } nir_dest;
 
+#define NIR_DEST_INIT (nir_dest) { { { NULL } } }
+
 static inline nir_src
 nir_src_for_ssa(nir_ssa_def *def)
 {
-   nir_src src;
+   nir_src src = NIR_SRC_INIT;
 
    src.is_ssa = true;
    src.ssa = def;
@@ -520,7 +524,7 @@ nir_src_for_ssa(nir_ssa_def *def)
 static inline nir_src
 nir_src_for_reg(nir_register *reg)
 {
-   nir_src src;
+   nir_src src = NIR_SRC_INIT;
 
    src.is_ssa = false;
    src.reg.reg = reg;
@@ -543,12 +547,9 @@ nir_src_get_parent_instr(const nir_src *src)
 static inline nir_dest
 nir_dest_for_reg(nir_register *reg)
 {
-   nir_dest dest;
+   nir_dest dest = NIR_DEST_INIT;
 
-   dest.is_ssa = false;
    dest.reg.reg = reg;
-   dest.reg.indirect = NULL;
-   dest.reg.base_offset = 0;
 
    return dest;
 }

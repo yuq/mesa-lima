@@ -276,7 +276,7 @@ construct_value(const nir_search_value *value, nir_alu_type type,
       const nir_search_variable *var = nir_search_value_as_variable(value);
       assert(state->variables_seen & (1 << var->variable));
 
-      nir_alu_src val;
+      nir_alu_src val = { NIR_SRC_INIT };
       nir_alu_src_copy(&val, &state->variables[var->variable], mem_ctx);
 
       assert(!var->is_constant);

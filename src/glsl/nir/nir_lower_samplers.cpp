@@ -95,9 +95,8 @@ lower_sampler(nir_tex_instr *instr, const struct gl_shader_program *shader_progr
 
             instr->sampler_array_size = glsl_get_length(deref->type);
 
-            nir_src empty;
-            memset(&empty, 0, sizeof empty);
-            nir_instr_rewrite_src(&instr->instr, &deref_array->indirect, empty);
+            nir_instr_rewrite_src(&instr->instr, &deref_array->indirect,
+                                  NIR_SRC_INIT);
 
             if (deref_array->deref.child)
                ralloc_strcat(&name, "[0]");
