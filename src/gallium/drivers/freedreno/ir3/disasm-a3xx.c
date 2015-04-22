@@ -516,7 +516,8 @@ static void print_instr_cat6(instr_t *instr)
 			printf("%c[", ss);
 		print_reg_src((reg_t)(cat6->a.src1), true,
 				false, false, cat6->a.src1_im, false, false, false);
-		printf("%+d", cat6->a.off);
+		if (cat6->a.off)
+			printf("%+d", cat6->a.off);
 		if (ss)
 			printf("]");
 		printf(", ");

@@ -625,9 +625,10 @@ typedef union PACKED {
 		uint32_t pad1     : 31;
 
 		/* dword1: */
-		uint32_t pad2     : 17;
+		uint32_t dst      : 8;
+		uint32_t dummy2   : 9;
 		uint32_t type     : 3;
-		uint32_t pad3     : 2;
+		uint32_t dummy3   : 2;
 		uint32_t opc      : 5;
 		uint32_t jmp_tgt  : 1;
 		uint32_t sync     : 1;

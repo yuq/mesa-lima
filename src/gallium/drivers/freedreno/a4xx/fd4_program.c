@@ -455,8 +455,8 @@ fd4_program_emit(struct fd_ringbuffer *ring, struct fd4_emit *emit)
 		memset(vinterp, 0, sizeof(vinterp));
 		memset(flatshade, 0, sizeof(flatshade));
 
-		/* TODO: looks like we need to do int varyings in the frag
-		 * shader on a4xx (no flatshad reg?):
+		/* looks like we need to do int varyings in the frag
+		 * shader on a4xx (no flatshad reg?  or a420.0 bug?):
 		 *
 		 *    (sy)(ss)nop
 		 *    (sy)ldlv.u32 r0.x,l[r0.x], 1
@@ -466,10 +466,9 @@ fd4_program_emit(struct fd_ringbuffer *ring, struct fd4_emit *emit)
 		 *    (rpt5)nop
 		 *    sam (f16)(xyzw)hr0.x, hr0.x, s#0, t#0
 		 *
-		 * for now, don't set FLAT on vinterp[], since that
-		 * at least works well enough for pure float impl (ie.
-		 * pre glsl130).. we'll have to do a bit more work to
-		 * handle this properly:
+		 * Possibly on later a4xx variants we'll be able to use
+		 * something like the code below instead of workaround
+		 * in the shader:
 		 */
 #if 0
 		/* figure out VARYING_INTERP / FLAT_SHAD register values: */
