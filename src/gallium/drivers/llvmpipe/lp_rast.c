@@ -82,7 +82,7 @@ lp_rast_end( struct lp_rasterizer *rast )
 
 
 /**
- * Begining rasterization of a tile.
+ * Beginning rasterization of a tile.
  * \param x  window X position of the tile, in pixels
  * \param y  window Y position of the tile, in pixels
  */

@@ -1028,7 +1028,7 @@ struct brw_context
     * Number of resets observed in the system at context creation.
     *
     * This is tracked in the context so that we can determine that another
-    * reset has occured.
+    * reset has occurred.
     */
    uint32_t reset_count;
 
@@ -1041,7 +1041,7 @@ struct brw_context
    } upload;
 
    /**
-    * Set if rendering has occured to the drawable's front buffer.
+    * Set if rendering has occurred to the drawable's front buffer.
     *
     * This is used in the DRI2 case to detect that glFlush should also copy
     * the contents of the fake front buffer to the real front buffer.

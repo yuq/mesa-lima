@@ -210,7 +210,7 @@ brw_upload_wm_unit(struct brw_context *brw)
    /* _NEW_POLYGON */
    if (ctx->Polygon.OffsetFill) {
       wm->wm5.depth_offset = 1;
-      /* Something wierd going on with legacy_global_depth_bias,
+      /* Something weird going on with legacy_global_depth_bias,
        * offset_constant, scaling and MRD.  This value passes glean
        * but gives some odd results elsewere (eg. the
        * quad-offset-units test).

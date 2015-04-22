@@ -219,9 +219,9 @@ i830AlphaFunc(struct gl_context * ctx, GLenum func, GLfloat ref)
 }
 
 /**
- * Makes sure that the proper enables are set for LogicOp, Independant Alpha
+ * Makes sure that the proper enables are set for LogicOp, Independent Alpha
  * Blend, and Blending.  It needs to be called from numerous places where we
- * could change the LogicOp or Independant Alpha Blend without subsequent
+ * could change the LogicOp or Independent Alpha Blend without subsequent
  * calls to glEnable.
  * 
  * \todo
@@ -369,7 +369,7 @@ i830_set_blend_state(struct gl_context * ctx)
    }
 
    /* This will catch a logicop blend equation.  It will also ensure
-    * independant alpha blend is really in the correct state (either enabled
+    * independent alpha blend is really in the correct state (either enabled
     * or disabled) if blending is already enabled.
     */
 

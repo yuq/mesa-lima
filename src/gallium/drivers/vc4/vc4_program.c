@@ -1398,7 +1398,7 @@ emit_frag_end(struct vc4_compile *c)
                 }
 
                 /* Save the packed value for logic ops.  Can't reuse r4
-                 * becuase other things might smash it (like sRGB)
+                 * because other things might smash it (like sRGB)
                  */
                 packed_dst_color = qir_MOV(c, r4);
         }

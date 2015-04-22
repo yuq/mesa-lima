@@ -336,10 +336,10 @@ void brw_clip_emit_vue(struct brw_clip_compile *c,
    brw_MOV(p, get_element_ud(c->reg.R0, 2), brw_imm_ud(header));
 
 
-   /* Send each vertex as a seperate write to the urb.  This
+   /* Send each vertex as a separate write to the urb.  This
     * is different to the concept in brw_sf_emit.c, where
     * subsequent writes are used to build up a single urb
-    * entry.  Each of these writes instantiates a seperate
+    * entry.  Each of these writes instantiates a separate
     * urb entry - (I think... what about 'allocate'?)
     */
    brw_urb_WRITE(p,

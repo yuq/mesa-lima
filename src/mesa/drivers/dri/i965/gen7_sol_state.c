@@ -164,7 +164,7 @@ gen7_upload_3dstate_so_decl_list(struct brw_context *brw,
        * for fake "hole" components, rather than simply taking the offset
        * for each real varying.  Each hole can have size 1, 2, 3, or 4; we
        * program as many size = 4 holes as we can, then a final hole to
-       * accomodate the final 1, 2, or 3 remaining.
+       * accommodate the final 1, 2, or 3 remaining.
        */
       int skip_components =
          linked_xfb_info->Outputs[i].DstOffset - next_offset[buffer];

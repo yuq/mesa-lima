@@ -452,7 +452,7 @@ i945_texture_layout_2d(struct i915_texture *tex)
 
    tex->stride = align(util_format_get_stride(pt->format, width), 4);
 
-   /* May need to adjust pitch to accomodate the placement of
+   /* May need to adjust pitch to accommodate the placement of
     * the 2nd mipmap level.  This occurs when the alignment
     * constraints of mipmap placement push the right edge of the
     * 2nd mipmap level out past the width of its parent.

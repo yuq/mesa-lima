@@ -1453,7 +1453,7 @@ static void setup_hardware_state(r200ContextPtr rmesa, radeonTexObj *t)
        */
       t->pp_txformat_x |= R200_TEXCOORD_PROJ;
    }
-   /* FIXME: NPOT sizes, Is it correct realy? */
+   /* FIXME: NPOT sizes, is it correct really? */
    t->pp_txsize = (((firstImage->Width - 1) << R200_PP_TX_WIDTHMASK_SHIFT)
 		   | ((firstImage->Height - 1) << R200_PP_TX_HEIGHTMASK_SHIFT));
 

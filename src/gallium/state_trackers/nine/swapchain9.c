@@ -182,7 +182,7 @@ NineSwapChain9_Resize( struct NineSwapChain9 *This,
         This->mode = NULL;
     }
 
-    /* Note: It is the role of the backend to fill if neccessary
+    /* Note: It is the role of the backend to fill if necessary
      * BackBufferWidth and BackBufferHeight */
     ID3DPresent_SetPresentParameters(This->present, pParams, This->mode);
 

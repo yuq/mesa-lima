@@ -197,9 +197,9 @@ i915AlphaFunc(struct gl_context * ctx, GLenum func, GLfloat ref)
 }
 
 /* This function makes sure that the proper enables are
- * set for LogicOp, Independant Alpha Blend, and Blending.
+ * set for LogicOp, Independent Alpha Blend, and Blending.
  * It needs to be called from numerous places where we
- * could change the LogicOp or Independant Alpha Blend without subsequent
+ * could change the LogicOp or Independent Alpha Blend without subsequent
  * calls to glEnable.
  */
 static void

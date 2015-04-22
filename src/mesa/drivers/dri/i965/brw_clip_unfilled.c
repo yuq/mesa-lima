@@ -135,9 +135,9 @@ static void copy_bfc( struct brw_clip_compile *c )
          brw_clip_have_varying(c, VARYING_SLOT_BFC1)))
       return;
 
-   /* In some wierd degnerate cases we can end up testing the
+   /* In some weird degenerate cases we can end up testing the
     * direction twice, once for culling and once for bfc copying.  Oh
-    * well, that's what you get for setting wierd GL state.
+    * well, that's what you get for setting weird GL state.
     */
    if (c->key.copy_bfc_ccw)
       conditional = BRW_CONDITIONAL_GE;
@@ -278,7 +278,7 @@ static void emit_lines(struct brw_clip_compile *c,
    struct brw_indirect v0ptr = brw_indirect(2, 0);
    struct brw_indirect v1ptr = brw_indirect(3, 0);
 
-   /* Need a seperate loop for offset:
+   /* Need a separate loop for offset:
     */
    if (do_offset) {
       brw_MOV(p, c->reg.loopcount, c->reg.nr_verts);

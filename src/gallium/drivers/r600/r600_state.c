@@ -2900,7 +2900,7 @@ static boolean r600_dma_copy_tile(struct r600_context *rctx,
 	for (i = 0; i < ncopy; i++) {
 		cheight = cheight > copy_height ? copy_height : cheight;
 		size = (cheight * pitch) / 4;
-		/* emit reloc before writting cs so that cs is always in consistent state */
+		/* emit reloc before writing cs so that cs is always in consistent state */
 		r600_context_bo_reloc(&rctx->b, &rctx->b.rings.dma, &rsrc->resource, RADEON_USAGE_READ,
 				      RADEON_PRIO_MIN);
 		r600_context_bo_reloc(&rctx->b, &rctx->b.rings.dma, &rdst->resource, RADEON_USAGE_WRITE,

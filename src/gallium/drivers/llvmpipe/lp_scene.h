@@ -63,7 +63,7 @@ struct lp_rast_state;
 #define LP_SCENE_MAX_SIZE (9*1024*1024)
 
 /* The maximum amount of texture storage referenced by a scene is
- * clamped ot this size:
+ * clamped to this size:
  */
 #define LP_SCENE_MAX_RESOURCE_SIZE (64*1024*1024)
 

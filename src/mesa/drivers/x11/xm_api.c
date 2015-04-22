@@ -196,7 +196,7 @@ bits_per_pixel( XMesaVisual xmv )
  * Do this by calling XGetWindowAttributes() for the window and
  * checking if we catch an X error.
  * Input:  dpy - the display
- *         win - the window to check for existance
+ *         win - the window to check for existence
  * Return:  GL_TRUE - window exists
  *          GL_FALSE - window doesn't exist
  */

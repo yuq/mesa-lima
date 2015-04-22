@@ -78,7 +78,7 @@ do {						\
       rmesa->radeon.dma.flush( &rmesa->radeon.glCtx );	\
 } while (0)
 
-/* Can accomodate several state changes and primitive changes without
+/* Can accommodate several state changes and primitive changes without
  * actually firing the buffer.
  */
 #define R200_STATECHANGE( rmesa, ATOM )			\

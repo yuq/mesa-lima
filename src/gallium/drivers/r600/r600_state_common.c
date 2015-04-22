@@ -288,9 +288,9 @@ static void r600_bind_dsa_state(struct pipe_context *ctx, void *state)
 	if (rctx->zwritemask != dsa->zwritemask) {
 		rctx->zwritemask = dsa->zwritemask;
 		if (rctx->b.chip_class >= EVERGREEN) {
-			/* work around some issue when not writting to zbuffer
+			/* work around some issue when not writing to zbuffer
 			 * we are having lockup on evergreen so do not enable
-			 * hyperz when not writting zbuffer
+			 * hyperz when not writing zbuffer
 			 */
 			rctx->db_misc_state.atom.dirty = true;
 		}
