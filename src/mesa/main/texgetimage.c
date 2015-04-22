@@ -285,7 +285,7 @@ get_tex_rgba_compressed(struct gl_context *ctx, GLuint dimensions,
    }
 
    /* Depending on the base format involved we may need to apply a rebase
-    * tranaform (for example: if we download to a Luminance format we want
+    * transform (for example: if we download to a Luminance format we want
     * G=0 and B=0).
     */
    if (baseFormat == GL_LUMINANCE ||
@@ -388,7 +388,7 @@ get_tex_rgba_uncompressed(struct gl_context *ctx, GLuint dimensions,
    }
 
    /* Depending on the base format involved we may need to apply a rebase
-    * tranaform (for example: if we download to a Luminance format we want
+    * transform (for example: if we download to a Luminance format we want
     * G=0 and B=0).
     */
    if (texImage->_BaseFormat == GL_LUMINANCE ||
