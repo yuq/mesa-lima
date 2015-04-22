@@ -2799,6 +2799,8 @@ check_resources(struct gl_context *ctx, struct gl_shader_program *prog)
 
    unsigned blocks[MESA_SHADER_STAGES] = {0};
    unsigned total_uniform_blocks = 0;
+   unsigned shader_blocks[MESA_SHADER_STAGES] = {0};
+   unsigned total_shader_storage_blocks = 0;
 
    for (unsigned i = 0; i < prog->NumUniformBlocks; i++) {
       if (prog->UniformBlocks[i].UniformBufferSize > ctx->Const.MaxUniformBlockSize) {
@@ -2810,8 +2812,15 @@ check_resources(struct gl_context *ctx, struct gl_shader_program *prog)
 
       for (unsigned j = 0; j < MESA_SHADER_STAGES; j++) {
 	 if (prog->UniformBlockStageIndex[j][i] != -1) {
-	    blocks[j]++;
-	    total_uniform_blocks++;
+            struct gl_shader *sh = prog->_LinkedShaders[j];
+            int stage_index = prog->UniformBlockStageIndex[j][i];
+            if (sh && sh->UniformBlocks[stage_index].IsShaderStorage) {
+               shader_blocks[j]++;
+               total_shader_storage_blocks++;
+            } else {
+               blocks[j]++;
+               total_uniform_blocks++;
+            }
 	 }
       }
 
@@ -2831,6 +2840,24 @@ check_resources(struct gl_context *ctx, struct gl_shader_program *prog)
 	       break;
 	    }
 	 }
+      }
+
+      if (total_shader_storage_blocks > ctx->Const.MaxCombinedShaderStorageBlocks) {
+         linker_error(prog, "Too many combined shader storage blocks (%d/%d)\n",
+                      total_shader_storage_blocks,
+                      ctx->Const.MaxCombinedShaderStorageBlocks);
+      } else {
+         for (unsigned i = 0; i < MESA_SHADER_STAGES; i++) {
+            const unsigned max_shader_storage_blocks =
+               ctx->Const.Program[i].MaxShaderStorageBlocks;
+            if (shader_blocks[i] > max_shader_storage_blocks) {
+               linker_error(prog, "Too many %s shader storage blocks (%d/%d)\n",
+                            _mesa_shader_stage_to_string(i),
+                            shader_blocks[i],
+                            max_shader_storage_blocks);
+               break;
+            }
+         }
       }
    }
 }
@@ -2886,6 +2913,7 @@ check_image_resources(struct gl_context *ctx, struct gl_shader_program *prog)
 {
    unsigned total_image_units = 0;
    unsigned fragment_outputs = 0;
+   unsigned total_shader_storage_blocks = 0;
 
    if (!ctx->Extensions.ARB_shader_image_load_store)
       return;
@@ -2901,6 +2929,12 @@ check_image_resources(struct gl_context *ctx, struct gl_shader_program *prog)
 
          total_image_units += sh->NumImages;
 
+         for (unsigned j = 0; j < prog->NumUniformBlocks; j++) {
+            int stage_index = prog->UniformBlockStageIndex[i][j];
+            if (stage_index != -1 && sh->UniformBlocks[stage_index].IsShaderStorage)
+               total_shader_storage_blocks++;
+         }
+
          if (i == MESA_SHADER_FRAGMENT) {
             foreach_in_list(ir_instruction, node, sh->ir) {
                ir_variable *var = node->as_variable();
@@ -2914,9 +2948,10 @@ check_image_resources(struct gl_context *ctx, struct gl_shader_program *prog)
    if (total_image_units > ctx->Const.MaxCombinedImageUniforms)
       linker_error(prog, "Too many combined image uniforms\n");
 
-   if (total_image_units + fragment_outputs >
+   if (total_image_units + fragment_outputs + total_shader_storage_blocks >
        ctx->Const.MaxCombinedShaderOutputResources)
-      linker_error(prog, "Too many combined image uniforms and fragment outputs\n");
+      linker_error(prog, "Too many combined image uniforms, shader storage "
+                         " buffers and fragment outputs\n");
 }
 
 
