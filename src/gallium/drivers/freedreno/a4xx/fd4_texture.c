@@ -169,6 +169,9 @@ fd4_sampler_view_create(struct pipe_context *pctx, struct pipe_resource *prsc,
 		fd4_tex_swiz(cso->format, cso->swizzle_r, cso->swizzle_g,
 				cso->swizzle_b, cso->swizzle_a);
 
+	if (util_format_is_srgb(cso->format))
+		so->texconst0 |= A4XX_TEX_CONST_0_SRGB;
+
 	so->texconst1 =
 		A4XX_TEX_CONST_1_WIDTH(u_minify(prsc->width0, lvl)) |
 		A4XX_TEX_CONST_1_HEIGHT(u_minify(prsc->height0, lvl));

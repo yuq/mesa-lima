@@ -328,6 +328,7 @@ fd4_emit_vertex_bufs(struct fd_ringbuffer *ring, struct fd4_emit *emit)
 			bool switchnext = (i != last) ||
 					(vertex_regid != regid(63, 0)) ||
 					(instance_regid != regid(63, 0));
+			bool isint = util_format_is_pure_integer(pfmt);
 			uint32_t fs = util_format_get_blocksize(pfmt);
 			uint32_t off = vb->buffer_offset + elem->src_offset;
 			uint32_t size = fd_bo_size(rsc->bo) - off;
@@ -350,6 +351,7 @@ fd4_emit_vertex_bufs(struct fd_ringbuffer *ring, struct fd4_emit *emit)
 					A4XX_VFD_DECODE_INSTR_REGID(vp->inputs[i].regid) |
 					A4XX_VFD_DECODE_INSTR_SHIFTCNT(fs) |
 					A4XX_VFD_DECODE_INSTR_LASTCOMPVALID |
+					COND(isint, A4XX_VFD_DECODE_INSTR_INT) |
 					COND(switchnext, A4XX_VFD_DECODE_INSTR_SWITCHNEXT));
 
 			total_in += vp->inputs[i].ncomp;
