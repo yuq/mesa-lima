@@ -1379,29 +1379,6 @@ fs_generator::generate_pixel_interpolator_query(fs_inst *inst,
          inst->size_written / REG_SIZE);
 }
 
-
-/**
- * Sets the first word of a vgrf for gen7+ simd4x2 uniform pull constant
- * sampler LD messages.
- *
- * We don't want to bake it into the send message's code generation because
- * that means we don't get a chance to schedule the instructions.
- */
-void
-fs_generator::generate_set_simd4x2_offset(fs_inst *inst,
-                                          struct brw_reg dst,
-                                          struct brw_reg value)
-{
-   assert(value.file == BRW_IMMEDIATE_VALUE);
-
-   brw_push_insn_state(p);
-   brw_set_default_exec_size(p, BRW_EXECUTE_8);
-   brw_set_default_compression_control(p, BRW_COMPRESSION_NONE);
-   brw_set_default_mask_control(p, BRW_MASK_DISABLE);
-   brw_MOV(p, retype(brw_vec1_reg(dst.file, dst.nr, 0), value.type), value);
-   brw_pop_insn_state(p);
-}
-
 /* Sets vstride=1, width=4, hstride=0 of register src1 during
  * the ADD instruction.
  */
@@ -2002,10 +1979,6 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
 
       case SHADER_OPCODE_MEMORY_FENCE:
          brw_memory_fence(p, dst);
-         break;
-
-      case FS_OPCODE_SET_SIMD4X2_OFFSET:
-         generate_set_simd4x2_offset(inst, dst, src[0]);
          break;
 
       case SHADER_OPCODE_FIND_LIVE_CHANNEL: {

@@ -363,8 +363,6 @@ brw_instruction_name(const struct gen_device_info *devinfo, enum opcode op)
 
    case FS_OPCODE_SET_SAMPLE_ID:
       return "set_sample_id";
-   case FS_OPCODE_SET_SIMD4X2_OFFSET:
-      return "set_simd4x2_offset";
 
    case FS_OPCODE_PACK_HALF_2x16_SPLIT:
       return "pack_half_2x16_split";

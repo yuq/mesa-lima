@@ -442,9 +442,6 @@ private:
                                struct brw_reg src0,
                                struct brw_reg src1);
 
-   void generate_set_simd4x2_offset(fs_inst *inst,
-                                    struct brw_reg dst,
-                                    struct brw_reg offset);
    void generate_discard_jump(fs_inst *inst);
 
    void generate_pack_half_2x16_split(fs_inst *inst,
