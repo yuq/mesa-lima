@@ -1139,11 +1139,9 @@ use_shader_program(struct gl_context *ctx, gl_shader_stage stage,
        */
       switch (stage) {
       case MESA_SHADER_VERTEX:
-	 /* Empty for now. */
-	 break;
+      case MESA_SHADER_TESS_CTRL:
+      case MESA_SHADER_TESS_EVAL:
       case MESA_SHADER_GEOMETRY:
-	 /* Empty for now. */
-	 break;
       case MESA_SHADER_COMPUTE:
          /* Empty for now. */
          break;
