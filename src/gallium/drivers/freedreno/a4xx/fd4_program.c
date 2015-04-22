@@ -217,7 +217,7 @@ fd4_program_emit(struct fd_ringbuffer *ring, struct fd4_emit *emit)
 {
 	struct stage s[MAX_STAGES];
 	uint32_t pos_regid, posz_regid, psize_regid, color_regid;
-	uint32_t face_regid, coord_regid;
+	uint32_t face_regid, coord_regid, zwcoord_regid;
 	int constmode;
 	int i, j, k;
 
@@ -241,6 +241,7 @@ fd4_program_emit(struct fd_ringbuffer *ring, struct fd4_emit *emit)
 	/* TODO get these dynamically: */
 	face_regid = s[FS].v->frag_face ? regid(0,0) : regid(63,0);
 	coord_regid = s[FS].v->frag_coord ? regid(0,0) : regid(63,0);
+	zwcoord_regid = s[FS].v->frag_coord ? regid(0,2) : regid(63,0);
 
 	/* we could probably divide this up into things that need to be
 	 * emitted if frag-prog is dirty vs if vert-prog is dirty..
@@ -249,7 +250,7 @@ fd4_program_emit(struct fd_ringbuffer *ring, struct fd4_emit *emit)
 	OUT_PKT0(ring, REG_A4XX_HLSQ_UPDATE_CONTROL, 1);
 	OUT_RING(ring, 0x00000003);
 
-	OUT_PKT0(ring, REG_A4XX_HLSQ_CONTROL_0_REG, 4);
+	OUT_PKT0(ring, REG_A4XX_HLSQ_CONTROL_0_REG, 5);
 	OUT_RING(ring, A4XX_HLSQ_CONTROL_0_REG_FSTHREADSIZE(FOUR_QUADS) |
 			A4XX_HLSQ_CONTROL_0_REG_CONSTMODE(constmode) |
 			A4XX_HLSQ_CONTROL_0_REG_FSSUPERTHREADENABLE |
@@ -260,14 +261,15 @@ fd4_program_emit(struct fd_ringbuffer *ring, struct fd4_emit *emit)
 			A4XX_HLSQ_CONTROL_0_REG_SPSHADERRESTART |
 			A4XX_HLSQ_CONTROL_0_REG_SPCONSTFULLUPDATE);
 	OUT_RING(ring, A4XX_HLSQ_CONTROL_1_REG_VSTHREADSIZE(TWO_QUADS) |
-			0xfc000000 |          /* XXX */
 			A4XX_HLSQ_CONTROL_1_REG_VSSUPERTHREADENABLE |
-			A4XX_HLSQ_CONTROL_1_REG_COORDREGID(coord_regid));
+			A4XX_HLSQ_CONTROL_1_REG_COORDREGID(coord_regid) |
+			A4XX_HLSQ_CONTROL_1_REG_ZWCOORDREGID(zwcoord_regid));
 	OUT_RING(ring, A4XX_HLSQ_CONTROL_2_REG_PRIMALLOCTHRESHOLD(63) |
 			0x3f3f000 |           /* XXX */
 			A4XX_HLSQ_CONTROL_2_REG_FACEREGID(face_regid));
 	OUT_RING(ring, A4XX_HLSQ_CONTROL_3_REG_REGID(s[FS].v->pos_regid) |
 			0xfcfcfc00);
+	OUT_RING(ring, 0x00fcfcfc);   /* XXX HLSQ_CONTROL_4 */
 
 	OUT_PKT0(ring, REG_A4XX_HLSQ_VS_CONTROL_REG, 5);
 	OUT_RING(ring, A4XX_HLSQ_VS_CONTROL_REG_CONSTLENGTH(s[VS].constlen) |
@@ -410,7 +412,11 @@ fd4_program_emit(struct fd_ringbuffer *ring, struct fd4_emit *emit)
 			COND(s[FS].v->total_in > 0, A4XX_RB_RENDER_CONTROL2_VARYING) |
 			COND(s[FS].v->frag_face, A4XX_RB_RENDER_CONTROL2_FACENESS) |
 			COND(s[FS].v->frag_coord, A4XX_RB_RENDER_CONTROL2_XCOORD |
-					A4XX_RB_RENDER_CONTROL2_YCOORD));
+					A4XX_RB_RENDER_CONTROL2_YCOORD |
+// TODO enabling gl_FragCoord.z is causing lockups on 0ad (but seems
+// to work everywhere else).
+//					A4XX_RB_RENDER_CONTROL2_ZCOORD |
+					A4XX_RB_RENDER_CONTROL2_WCOORD));
 
 	OUT_PKT0(ring, REG_A4XX_RB_FS_OUTPUT_REG, 1);
 	OUT_RING(ring, A4XX_RB_FS_OUTPUT_REG_MRT(1) |
