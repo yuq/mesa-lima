@@ -115,9 +115,6 @@ _mesa_init_shader_state(struct gl_context *ctx)
    options.MaxUnrollIterations = 32;
    options.MaxIfDepth = UINT_MAX;
 
-   /* Default pragma settings */
-   options.DefaultPragmas.Optimize = GL_TRUE;
-
    for (sh = 0; sh < MESA_SHADER_STAGES; ++sh)
       memcpy(&ctx->Const.ShaderCompilerOptions[sh], &options, sizeof(options));
 
@@ -871,9 +868,6 @@ compile_shader(struct gl_context *ctx, GLuint shaderObj)
       return;
 
    options = &ctx->Const.ShaderCompilerOptions[sh->Stage];
-
-   /* set default pragma state for shader */
-   sh->Pragmas = options->DefaultPragmas;
 
    if (!sh->Source) {
       /* If the user called glCompileShader without first calling
