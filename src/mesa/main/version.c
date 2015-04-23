@@ -295,7 +295,51 @@ compute_version(const struct gl_extensions *extensions,
                               extensions->EXT_texture_swizzle);
                               /* ARB_sampler_objects is always enabled in mesa */
 
-   if (ver_3_3) {
+   const GLboolean ver_4_0 = (ver_3_3 &&
+                              consts->GLSLVersion >= 400 &&
+                              extensions->ARB_draw_buffers_blend &&
+                              extensions->ARB_draw_indirect &&
+                              extensions->ARB_gpu_shader5 &&
+                              extensions->ARB_gpu_shader_fp64 &&
+                              extensions->ARB_sample_shading &&
+                              0/*extensions->ARB_shader_subroutine*/ &&
+                              extensions->ARB_tessellation_shader &&
+                              extensions->ARB_texture_buffer_object_rgb32 &&
+                              extensions->ARB_texture_cube_map_array &&
+                              extensions->ARB_texture_query_lod &&
+                              extensions->ARB_transform_feedback2 &&
+                              extensions->ARB_transform_feedback3);
+   const GLboolean ver_4_1 = (ver_4_0 &&
+                              consts->GLSLVersion >= 410 &&
+                              extensions->ARB_ES2_compatibility &&
+                              extensions->ARB_shader_precision &&
+                              0/*extensions->ARB_vertex_attrib_64bit*/ &&
+                              extensions->ARB_viewport_array);
+   const GLboolean ver_4_2 = (ver_4_1 &&
+                              consts->GLSLVersion >= 420 &&
+                              extensions->ARB_base_instance &&
+                              extensions->ARB_conservative_depth &&
+                              extensions->ARB_internalformat_query &&
+                              extensions->ARB_shader_atomic_counters &&
+                              extensions->ARB_shader_image_load_store &&
+                              extensions->ARB_shading_language_420pack &&
+                              extensions->ARB_shading_language_packing &&
+                              extensions->ARB_texture_compression_bptc &&
+                              extensions->ARB_transform_feedback_instanced);
+
+   if (ver_4_2) {
+      major = 4;
+      minor = 2;
+   }
+   else if (ver_4_1) {
+      major = 4;
+      minor = 1;
+   }
+   else if (ver_4_0) {
+      major = 4;
+      minor = 0;
+   }
+   else if (ver_3_3) {
       major = 3;
       minor = 3;
    }
