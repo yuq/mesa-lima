@@ -2053,6 +2053,10 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
          brw_typed_surface_write(p, src[0], src[1], inst->mlen, src[2].dw1.ud);
          break;
 
+      case SHADER_OPCODE_MEMORY_FENCE:
+         brw_memory_fence(p, dst);
+         break;
+
       case FS_OPCODE_SET_SIMD4X2_OFFSET:
          generate_set_simd4x2_offset(inst, dst, src[0]);
          break;

@@ -448,6 +448,10 @@ brw_typed_surface_write(struct brw_codegen *p,
                         unsigned num_channels);
 
 void
+brw_memory_fence(struct brw_codegen *p,
+                 struct brw_reg dst);
+
+void
 brw_pixel_interpolator_query(struct brw_codegen *p,
                              struct brw_reg dest,
                              struct brw_reg mrf,

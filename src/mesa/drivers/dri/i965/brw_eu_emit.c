@@ -3114,6 +3114,76 @@ brw_typed_surface_write(struct brw_codegen *p,
       p, insn, num_channels);
 }
 
+static void
+brw_set_memory_fence_message(struct brw_codegen *p,
+                             struct brw_inst *insn,
+                             enum brw_message_target sfid,
+                             bool commit_enable)
+{
+   const struct brw_device_info *devinfo = p->devinfo;
+
+   brw_set_message_descriptor(p, insn, sfid,
+                              1 /* message length */,
+                              (commit_enable ? 1 : 0) /* response length */,
+                              true /* header present */,
+                              false);
+
+   switch (sfid) {
+   case GEN6_SFID_DATAPORT_RENDER_CACHE:
+      brw_inst_set_dp_msg_type(devinfo, insn, GEN7_DATAPORT_RC_MEMORY_FENCE);
+      break;
+   case GEN7_SFID_DATAPORT_DATA_CACHE:
+      brw_inst_set_dp_msg_type(devinfo, insn, GEN7_DATAPORT_DC_MEMORY_FENCE);
+      break;
+   default:
+      unreachable("Not reached");
+   }
+
+   if (commit_enable)
+      brw_inst_set_dp_msg_control(devinfo, insn, 1 << 5);
+}
+
+void
+brw_memory_fence(struct brw_codegen *p,
+                 struct brw_reg dst)
+{
+   const struct brw_device_info *devinfo = p->devinfo;
+   const bool commit_enable = devinfo->gen == 7 && !devinfo->is_haswell;
+   struct brw_inst *insn;
+
+   /* Set dst as destination for dependency tracking, the MEMORY_FENCE
+    * message doesn't write anything back.
+    */
+   insn = next_insn(p, BRW_OPCODE_SEND);
+   brw_set_dest(p, insn, dst);
+   brw_set_src0(p, insn, dst);
+   brw_set_memory_fence_message(p, insn, GEN7_SFID_DATAPORT_DATA_CACHE,
+                                commit_enable);
+
+   if (devinfo->gen == 7 && !devinfo->is_haswell) {
+      /* IVB does typed surface access through the render cache, so we need to
+       * flush it too.  Use a different register so both flushes can be
+       * pipelined by the hardware.
+       */
+      insn = next_insn(p, BRW_OPCODE_SEND);
+      brw_set_dest(p, insn, offset(dst, 1));
+      brw_set_src0(p, insn, offset(dst, 1));
+      brw_set_memory_fence_message(p, insn, GEN6_SFID_DATAPORT_RENDER_CACHE,
+                                   commit_enable);
+
+      /* Now write the response of the second message into the response of the
+       * first to trigger a pipeline stall -- This way future render and data
+       * cache messages will be properly ordered with respect to past data and
+       * render cache messages.
+       */
+      brw_push_insn_state(p);
+      brw_set_default_compression_control(p, BRW_COMPRESSION_NONE);
+      brw_set_default_mask_control(p, BRW_MASK_DISABLE);
+      brw_MOV(p, dst, offset(dst, 1));
+      brw_pop_insn_state(p);
+   }
+}
+
 void
 brw_pixel_interpolator_query(struct brw_codegen *p,
                              struct brw_reg dest,
