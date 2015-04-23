@@ -198,9 +198,24 @@ upload_sf_state(struct brw_context *brw)
       float line_width =
          roundf(CLAMP(ctx->Line.Width, 0.0, ctx->Const.MaxLineWidth));
       uint32_t line_width_u3_7 = U_FIXED(line_width, 7);
-      /* TODO: line width of 0 is not allowed when MSAA enabled */
-      if (line_width_u3_7 == 0)
-         line_width_u3_7 = 1;
+      /* Line width of 0 is not allowed when MSAA enabled */
+      if (ctx->Multisample._Enabled) {
+         if (line_width_u3_7 == 0)
+             line_width_u3_7 = 1;
+      } else if (ctx->Line.SmoothFlag && ctx->Line.Width < 1.5) {
+         /* For 1 pixel line thickness or less, the general
+          * anti-aliasing algorithm gives up, and a garbage line is
+          * generated.  Setting a Line Width of 0.0 specifies the
+          * rasterization of the "thinnest" (one-pixel-wide),
+          * non-antialiased lines.
+          *
+          * Lines rendered with zero Line Width are rasterized using
+          * Grid Intersection Quantization rules as specified by
+          * bspec section 6.3.12.1 Zero-Width (Cosmetic) Line
+          * Rasterization.
+          */
+         line_width_u3_7 = 0;
+      }
       dw2 |= line_width_u3_7 << GEN6_SF_LINE_WIDTH_SHIFT;
    }
    if (ctx->Line.SmoothFlag) {
