@@ -189,7 +189,6 @@ draw_prim_assembler_prepare_outputs(struct draw_assembler *ia)
    } else {
       ia->primid_slot = -1;
    }
-   ia->primid = 0;
 }
 
 
@@ -233,7 +232,6 @@ draw_prim_assembler_run(struct draw_context *draw,
    asmblr->input_prims = input_prims;
    asmblr->input_verts = input_verts;
    asmblr->needs_primid = needs_primid(asmblr->draw);
-   asmblr->primid = 0;
    asmblr->num_prims = 0;
 
    output_prims->linear = TRUE;
@@ -283,4 +281,15 @@ void
 draw_prim_assembler_destroy(struct draw_assembler *ia)
 {
    FREE(ia);
+}
+
+
+/*
+ * Called at the very begin of the draw call with a new instance
+ * Used to reset state that should persist between primitive restart.
+ */
+void
+draw_prim_assembler_new_instance(struct draw_assembler *asmblr)
+{
+   asmblr->primid = 0;
 }

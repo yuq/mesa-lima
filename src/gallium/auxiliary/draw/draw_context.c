@@ -182,6 +182,7 @@ boolean draw_init(struct draw_context *draw)
 void draw_new_instance(struct draw_context *draw)
 {
    draw_geometry_shader_new_instance(draw->gs.geometry_shader);
+   draw_prim_assembler_new_instance(draw->ia);
 }
 
 
