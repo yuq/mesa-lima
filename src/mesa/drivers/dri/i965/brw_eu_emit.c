@@ -3213,6 +3213,78 @@ brw_pixel_interpolator_query(struct brw_codegen *p,
 }
 
 void
+brw_find_live_channel(struct brw_codegen *p, struct brw_reg dst)
+{
+   const struct brw_device_info *devinfo = p->devinfo;
+   brw_inst *inst;
+
+   assert(devinfo->gen >= 7);
+
+   brw_push_insn_state(p);
+
+   if (brw_inst_access_mode(devinfo, p->current) == BRW_ALIGN_1) {
+      brw_set_default_mask_control(p, BRW_MASK_DISABLE);
+
+      if (devinfo->gen >= 8) {
+         /* Getting the first active channel index is easy on Gen8: Just find
+          * the first bit set in the mask register.  The same register exists
+          * on HSW already but it reads back as all ones when the current
+          * instruction has execution masking disabled, so it's kind of
+          * useless.
+          */
+         inst = brw_FBL(p, vec1(dst),
+                        retype(brw_mask_reg(0), BRW_REGISTER_TYPE_UD));
+
+         /* Quarter control has the effect of magically shifting the value of
+          * this register.  Make sure it's set to zero.
+          */
+         brw_inst_set_qtr_control(devinfo, inst, GEN6_COMPRESSION_1Q);
+      } else {
+         const struct brw_reg flag = retype(brw_flag_reg(1, 0),
+                                            BRW_REGISTER_TYPE_UD);
+
+         brw_MOV(p, flag, brw_imm_ud(0));
+
+         /* Run a 16-wide instruction returning zero with execution masking
+          * and a conditional modifier enabled in order to get the current
+          * execution mask in f1.0.
+          */
+         inst = brw_MOV(p, brw_null_reg(), brw_imm_ud(0));
+         brw_inst_set_exec_size(devinfo, inst, BRW_EXECUTE_16);
+         brw_inst_set_mask_control(devinfo, inst, BRW_MASK_ENABLE);
+         brw_inst_set_cond_modifier(devinfo, inst, BRW_CONDITIONAL_Z);
+         brw_inst_set_flag_reg_nr(devinfo, inst, 1);
+
+         brw_FBL(p, vec1(dst), flag);
+      }
+   } else {
+      brw_set_default_mask_control(p, BRW_MASK_DISABLE);
+
+      if (devinfo->gen >= 8) {
+         /* In SIMD4x2 mode the first active channel index is just the
+          * negation of the first bit of the mask register.
+          */
+         inst = brw_AND(p, brw_writemask(dst, WRITEMASK_X),
+                        negate(retype(brw_mask_reg(0), BRW_REGISTER_TYPE_UD)),
+                        brw_imm_ud(1));
+
+      } else {
+         /* Overwrite the destination without and with execution masking to
+          * find out which of the channels is active.
+          */
+         brw_MOV(p, brw_writemask(vec4(dst), WRITEMASK_X),
+                 brw_imm_ud(1));
+
+         inst = brw_MOV(p, brw_writemask(vec4(dst), WRITEMASK_X),
+                        brw_imm_ud(0));
+         brw_inst_set_mask_control(devinfo, inst, BRW_MASK_ENABLE);
+      }
+   }
+
+   brw_pop_insn_state(p);
+}
+
+void
 brw_broadcast(struct brw_codegen *p,
               struct brw_reg dst,
               struct brw_reg src,

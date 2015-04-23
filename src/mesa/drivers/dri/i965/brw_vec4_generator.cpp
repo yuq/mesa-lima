@@ -1512,6 +1512,10 @@ vec4_generator::generate_code(const cfg_t *cfg)
          brw_memory_fence(p, dst);
          break;
 
+      case SHADER_OPCODE_FIND_LIVE_CHANNEL:
+         brw_find_live_channel(p, dst);
+         break;
+
       case SHADER_OPCODE_BROADCAST:
          brw_broadcast(p, dst, src[0], src[1]);
          break;

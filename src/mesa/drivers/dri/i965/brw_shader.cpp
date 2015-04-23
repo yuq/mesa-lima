@@ -517,6 +517,8 @@ brw_instruction_name(enum opcode op)
    case SHADER_OPCODE_URB_WRITE_SIMD8:
       return "gen8_urb_write_simd8";
 
+   case SHADER_OPCODE_FIND_LIVE_CHANNEL:
+      return "find_live_channel";
    case SHADER_OPCODE_BROADCAST:
       return "broadcast";
 

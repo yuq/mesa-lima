@@ -919,6 +919,14 @@ enum opcode {
    SHADER_OPCODE_URB_WRITE_SIMD8,
 
    /**
+    * Return the index of an arbitrary live channel (i.e. one of the channels
+    * enabled in the current execution mask) and assign it to the first
+    * component of the destination.  Expected to be used as input for the
+    * BROADCAST pseudo-opcode.
+    */
+   SHADER_OPCODE_FIND_LIVE_CHANNEL,
+
+   /**
     * Pick the channel from its first source register given by the index
     * specified as second source.  Useful for variable indexing of surfaces.
     */
