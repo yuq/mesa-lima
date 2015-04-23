@@ -1140,8 +1140,9 @@ generate_scratch_read(struct brw_codegen *p,
    else
       msg_type = BRW_DATAPORT_READ_MESSAGE_OWORD_DUAL_BLOCK_READ;
 
-   const unsigned target_cache = devinfo->gen >= 7 ?
-      BRW_DATAPORT_READ_TARGET_DATA_CACHE :
+   const unsigned target_cache =
+      devinfo->gen >= 7 ? GEN7_SFID_DATAPORT_DATA_CACHE :
+      devinfo->gen >= 6 ? GEN6_SFID_DATAPORT_RENDER_CACHE :
       BRW_DATAPORT_READ_TARGET_RENDER_CACHE;
 
    /* Each of the 8 channel enables is considered for whether each
@@ -1169,6 +1170,10 @@ generate_scratch_write(struct brw_codegen *p,
                        struct brw_reg index)
 {
    const struct gen_device_info *devinfo = p->devinfo;
+   const unsigned target_cache =
+      (devinfo->gen >= 7 ? GEN7_SFID_DATAPORT_DATA_CACHE :
+       devinfo->gen >= 6 ? GEN6_SFID_DATAPORT_RENDER_CACHE :
+       BRW_DATAPORT_READ_TARGET_RENDER_CACHE);
    struct brw_reg header = brw_vec8_grf(0, 0);
    bool write_commit;
 
@@ -1228,6 +1233,7 @@ generate_scratch_write(struct brw_codegen *p,
                             brw_scratch_surface_idx(p),
 			    BRW_DATAPORT_OWORD_DUAL_BLOCK_1OWORD,
 			    msg_type,
+                            target_cache,
 			    3, /* mlen */
 			    true, /* header present */
 			    false, /* not a render target write */
@@ -1245,6 +1251,9 @@ generate_pull_constant_load(struct brw_codegen *p,
                             struct brw_reg offset)
 {
    const struct gen_device_info *devinfo = p->devinfo;
+   const unsigned target_cache =
+      (devinfo->gen >= 6 ? GEN6_SFID_DATAPORT_SAMPLER_CACHE :
+       BRW_DATAPORT_READ_TARGET_DATA_CACHE);
    assert(index.file == BRW_IMMEDIATE_VALUE &&
 	  index.type == BRW_REGISTER_TYPE_UD);
    uint32_t surf_index = index.ud;
@@ -1290,7 +1299,7 @@ generate_pull_constant_load(struct brw_codegen *p,
 			   surf_index,
 			   BRW_DATAPORT_OWORD_DUAL_BLOCK_1OWORD,
 			   msg_type,
-			   BRW_DATAPORT_READ_TARGET_DATA_CACHE,
+                           target_cache,
 			   2, /* mlen */
                            true, /* header_present */
 			   1 /* rlen */);
