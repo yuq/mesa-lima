@@ -138,10 +138,9 @@ update_viewport(struct NineDevice9 *device)
     const D3DVIEWPORT9 *vport = &device->state.viewport;
     struct pipe_viewport_state pvport;
 
-    /* XXX:
-     * I hope D3D clip coordinates are still
+    /* D3D coordinates are:
      * -1 .. +1 for X,Y and
-     *  0 .. +1 for Z (use pipe_rasterizer_state.clip_halfz)
+     *  0 .. +1 for Z (we use pipe_rasterizer_state.clip_halfz)
      */
     pvport.scale[0] = (float)vport->Width * 0.5f;
     pvport.scale[1] = (float)vport->Height * -0.5f;
