@@ -23,7 +23,8 @@
 #ifndef CLOVER_CORE_MODULE_HPP
 #define CLOVER_CORE_MODULE_HPP
 
-#include "util/compat.hpp"
+#include <vector>
+#include <string>
 
 namespace clover {
    struct module {
@@ -40,14 +41,14 @@ namespace clover {
          };
 
          section(resource_id id, enum type type, size_t size,
-                 const compat::vector<char> &data) :
+                 const std::vector<char> &data) :
                  id(id), type(type), size(size), data(data) { }
          section() : id(0), type(text), size(0), data() { }
 
          resource_id id;
          type type;
          size_t size;
-         compat::vector<char> data;
+         std::vector<char> data;
       };
 
       struct argument {
@@ -101,22 +102,22 @@ namespace clover {
 
       struct symbol {
          symbol(const std::string &name, resource_id section,
-                size_t offset, const compat::vector<argument> &args) :
+                size_t offset, const std::vector<argument> &args) :
                 name(name), section(section), offset(offset), args(args) { }
          symbol() : name(), section(0), offset(0), args() { }
 
          std::string name;
          resource_id section;
          size_t offset;
-         compat::vector<argument> args;
+         std::vector<argument> args;
       };
 
-      void serialize(compat::ostream &os) const;
-      static module deserialize(compat::istream &is);
+      void serialize(std::ostream &os) const;
+      static module deserialize(std::istream &is);
       size_t size() const;
 
-      compat::vector<symbol> syms;
-      compat::vector<section> secs;
+      std::vector<symbol> syms;
+      std::vector<section> secs;
    };
 }
 

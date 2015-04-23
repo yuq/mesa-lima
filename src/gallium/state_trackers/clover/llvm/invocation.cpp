@@ -340,11 +340,11 @@ namespace {
       PM.run(*mod);
    }
 
-   compat::vector<module::argument>
+   std::vector<module::argument>
    get_kernel_args(const llvm::Module *mod, const std::string &kernel_name,
                    const clang::LangAS::Map &address_spaces) {
 
-      compat::vector<module::argument> args;
+      std::vector<module::argument> args;
       llvm::Function *kernel_func = mod->getFunction(kernel_name);
 
       llvm::DataLayout TD(mod);
@@ -449,15 +449,16 @@ namespace {
 
       for (unsigned i = 0; i < kernels.size(); ++i) {
          std::string kernel_name = kernels[i]->getName();
-         compat::vector<module::argument> args =
+         std::vector<module::argument> args =
                get_kernel_args(mod, kernel_name, address_spaces);
 
          m.syms.push_back(module::symbol(kernel_name, 0, i, args ));
       }
 
       header.num_bytes = llvm_bitcode.size();
-      std::string data;
-      data.insert(0, (char*)(&header), sizeof(header));
+      std::vector<char> data;
+      data.insert(data.end(), (char*)(&header),
+                              (char*)(&header) + sizeof(header));
       data.insert(data.end(), llvm_bitcode.begin(),
                                   llvm_bitcode.end());
       m.secs.push_back(module::section(0, module::section::text,
@@ -622,15 +623,16 @@ namespace {
 
       // Store the generated ELF binary in the module's text section.
       header.num_bytes = code.size();
-      std::string data;
-      data.append((char*)(&header), sizeof(header));
-      data.append(code.begin(), code.end());
+      std::vector<char> data;
+      data.insert(data.end(), (char*)(&header),
+                              (char*)(&header) + sizeof(header));
+      data.insert(data.end(), code.begin(), code.end());
       m.secs.push_back(module::section(0, module::section::text,
                                        header.num_bytes, data));
 
       for (std::map<std::string, unsigned>::iterator i = kernel_offsets.begin(),
            e = kernel_offsets.end(); i != e; ++i) {
-         compat::vector<module::argument> args =
+         std::vector<module::argument> args =
                get_kernel_args(mod, i->first, address_spaces);
          m.syms.push_back(module::symbol(i->first, 0, i->second, args ));
       }

@@ -23,6 +23,8 @@
 #include "api/util.hpp"
 #include "core/program.hpp"
 
+#include <sstream>
+
 using namespace clover;
 
 namespace {
@@ -94,12 +96,12 @@ clCreateProgramWithBinary(cl_context d_ctx, cl_uint n,
             return { CL_INVALID_VALUE, {} };
 
          try {
-            compat::istream::buffer_t bin(p, l);
-            compat::istream s(bin);
+            std::stringbuf bin( { (char*)p, l } );
+            std::istream s(&bin);
 
             return { CL_SUCCESS, module::deserialize(s) };
 
-         } catch (compat::istream::error &e) {
+         } catch (std::istream::failure &e) {
             return { CL_INVALID_BINARY, {} };
          }
       },
@@ -279,10 +281,10 @@ clGetProgramInfo(cl_program d_prog, cl_program_info param,
 
    case CL_PROGRAM_BINARIES:
       buf.as_matrix<unsigned char>() = map([&](const device &dev) {
-            compat::ostream::buffer_t bin;
-            compat::ostream s(bin);
+            std::stringbuf bin;
+            std::ostream s(&bin);
             prog.binary(dev).serialize(s);
-            return bin;
+            return bin.str();
          },
          prog.devices());
       break;

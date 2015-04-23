@@ -40,7 +40,7 @@ namespace {
          std::istringstream ts(line);
          std::string name, tok;
          module::size_t offset;
-         compat::vector<module::argument> args;
+         std::vector<module::argument> args;
 
          if (!(ts >> name))
             continue;
@@ -83,7 +83,8 @@ namespace {
          throw build_error("translate failed");
 
       unsigned sz = tgsi_num_tokens(prog) * sizeof(tgsi_token);
-      m.secs.push_back({ 0, module::section::text, sz, { (char *)prog, sz } });
+      std::vector<char> data( (char *)prog, (char *)prog + sz );
+      m.secs.push_back({ 0, module::section::text, sz, data });
    }
 }
 

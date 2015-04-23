@@ -27,8 +27,6 @@
 
 #include <stdexcept>
 
-#include "util/compat.hpp"
-
 namespace clover {
    class command_queue;
    class context;
