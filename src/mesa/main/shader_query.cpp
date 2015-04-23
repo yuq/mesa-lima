@@ -291,7 +291,6 @@ _mesa_GetAttribLocation(GLhandleARB program, const GLcharARB * name)
    return (loc >= 0) ? loc : -1;
 }
 
-
 unsigned
 _mesa_count_active_attribs(struct gl_shader_program *shProg)
 {
@@ -300,19 +299,13 @@ _mesa_count_active_attribs(struct gl_shader_program *shProg)
       return 0;
    }
 
-   exec_list *const ir = shProg->_LinkedShaders[MESA_SHADER_VERTEX]->ir;
-   unsigned i = 0;
-
-   foreach_in_list(ir_instruction, node, ir) {
-      const ir_variable *const var = node->as_variable();
-
-      if (!is_active_attrib(var))
-         continue;
-
-      i++;
+   struct gl_program_resource *res = shProg->ProgramResourceList;
+   unsigned count = 0;
+   for (unsigned j = 0; j < shProg->NumProgramResourceList; j++, res++) {
+         if (is_active_attrib(RESOURCE_VAR(res)))
+            count++;
    }
-
-   return i;
+   return count;
 }
 
 
@@ -324,20 +317,16 @@ _mesa_longest_attribute_name_length(struct gl_shader_program *shProg)
       return 0;
    }
 
-   exec_list *const ir = shProg->_LinkedShaders[MESA_SHADER_VERTEX]->ir;
+   struct gl_program_resource *res = shProg->ProgramResourceList;
    size_t longest = 0;
+   for (unsigned j = 0; j < shProg->NumProgramResourceList; j++, res++) {
+      if (res->Type == GL_PROGRAM_INPUT &&
+          res->StageReferences & (1 << MESA_SHADER_VERTEX)) {
 
-   foreach_in_list(ir_instruction, node, ir) {
-      const ir_variable *const var = node->as_variable();
-
-      if (var == NULL
-	  || var->data.mode != ir_var_shader_in
-	  || var->data.location == -1)
-	 continue;
-
-      const size_t len = strlen(var->name);
-      if (len >= longest)
-	 longest = len + 1;
+          const size_t length = strlen(RESOURCE_VAR(res)->name);
+          if (length >= longest)
+             longest = length + 1;
+      }
    }
 
    return longest;
