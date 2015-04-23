@@ -340,6 +340,7 @@ schedule_node::set_latency_gen7(bool is_haswell)
       break;
 
    case SHADER_OPCODE_UNTYPED_ATOMIC:
+   case SHADER_OPCODE_TYPED_ATOMIC:
       /* Test code:
        *   mov(8)    g112<1>ud       0x00000000ud       { align1 WE_all 1Q };
        *   mov(1)    g112.7<1>ud     g1.7<0,1,0>ud      { align1 WE_all };
@@ -359,6 +360,8 @@ schedule_node::set_latency_gen7(bool is_haswell)
 
    case SHADER_OPCODE_UNTYPED_SURFACE_READ:
    case SHADER_OPCODE_UNTYPED_SURFACE_WRITE:
+   case SHADER_OPCODE_TYPED_SURFACE_READ:
+   case SHADER_OPCODE_TYPED_SURFACE_WRITE:
       /* Test code:
        *   mov(8)    g112<1>UD       0x00000000UD       { align1 WE_all 1Q };
        *   mov(1)    g112.7<1>UD     g1.7<0,1,0>UD      { align1 WE_all };

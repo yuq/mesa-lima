@@ -2945,6 +2945,175 @@ brw_untyped_surface_write(struct brw_codegen *p,
       p, insn, num_channels);
 }
 
+static void
+brw_set_dp_typed_atomic_message(struct brw_codegen *p,
+                                struct brw_inst *insn,
+                                unsigned atomic_op,
+                                bool response_expected)
+{
+   const struct brw_device_info *devinfo = p->devinfo;
+   unsigned msg_control =
+      atomic_op | /* Atomic Operation Type: BRW_AOP_* */
+      (response_expected ? 1 << 5 : 0); /* Return data expected */
+
+   if (devinfo->gen >= 8 || devinfo->is_haswell) {
+      if (brw_inst_access_mode(devinfo, p->current) == BRW_ALIGN_1) {
+         if (brw_inst_qtr_control(devinfo, p->current) == GEN6_COMPRESSION_2Q)
+            msg_control |= 1 << 4; /* Use high 8 slots of the sample mask */
+
+         brw_inst_set_dp_msg_type(devinfo, insn,
+                                  HSW_DATAPORT_DC_PORT1_TYPED_ATOMIC_OP);
+      } else {
+         brw_inst_set_dp_msg_type(devinfo, insn,
+                                  HSW_DATAPORT_DC_PORT1_TYPED_ATOMIC_OP_SIMD4X2);
+      }
+
+   } else {
+      brw_inst_set_dp_msg_type(devinfo, insn,
+                               GEN7_DATAPORT_RC_TYPED_ATOMIC_OP);
+
+      if (brw_inst_qtr_control(devinfo, p->current) == GEN6_COMPRESSION_2Q)
+         msg_control |= 1 << 4; /* Use high 8 slots of the sample mask */
+   }
+
+   brw_inst_set_dp_msg_control(devinfo, insn, msg_control);
+}
+
+void
+brw_typed_atomic(struct brw_codegen *p,
+                 struct brw_reg dst,
+                 struct brw_reg payload,
+                 struct brw_reg surface,
+                 unsigned atomic_op,
+                 unsigned msg_length,
+                 bool response_expected) {
+   const struct brw_device_info *devinfo = p->devinfo;
+   const unsigned sfid = (devinfo->gen >= 8 || devinfo->is_haswell ?
+                          HSW_SFID_DATAPORT_DATA_CACHE_1 :
+                          GEN6_SFID_DATAPORT_RENDER_CACHE);
+   const bool align1 = (brw_inst_access_mode(devinfo, p->current) == BRW_ALIGN_1);
+   /* Mask out unused components -- See comment in brw_untyped_atomic(). */
+   const unsigned mask = align1 ? WRITEMASK_XYZW : WRITEMASK_X;
+   struct brw_inst *insn = brw_send_indirect_surface_message(
+      p, sfid, brw_writemask(dst, mask), payload, surface, msg_length,
+      brw_surface_payload_size(p, response_expected,
+                               devinfo->gen >= 8 || devinfo->is_haswell, false),
+      true);
+
+   brw_set_dp_typed_atomic_message(
+      p, insn, atomic_op, response_expected);
+}
+
+static void
+brw_set_dp_typed_surface_read_message(struct brw_codegen *p,
+                                      struct brw_inst *insn,
+                                      unsigned num_channels)
+{
+   const struct brw_device_info *devinfo = p->devinfo;
+   /* Set mask of unused channels. */
+   unsigned msg_control = 0xf & (0xf << num_channels);
+
+   if (devinfo->gen >= 8 || devinfo->is_haswell) {
+      if (brw_inst_access_mode(devinfo, p->current) == BRW_ALIGN_1) {
+         if (brw_inst_qtr_control(devinfo, p->current) == GEN6_COMPRESSION_2Q)
+            msg_control |= 2 << 4; /* Use high 8 slots of the sample mask */
+         else
+            msg_control |= 1 << 4; /* Use low 8 slots of the sample mask */
+      }
+
+      brw_inst_set_dp_msg_type(devinfo, insn,
+                               HSW_DATAPORT_DC_PORT1_TYPED_SURFACE_READ);
+   } else {
+      if (brw_inst_access_mode(devinfo, p->current) == BRW_ALIGN_1) {
+         if (brw_inst_qtr_control(devinfo, p->current) == GEN6_COMPRESSION_2Q)
+            msg_control |= 1 << 5; /* Use high 8 slots of the sample mask */
+      }
+
+      brw_inst_set_dp_msg_type(devinfo, insn,
+                               GEN7_DATAPORT_RC_TYPED_SURFACE_READ);
+   }
+
+   brw_inst_set_dp_msg_control(devinfo, insn, msg_control);
+}
+
+void
+brw_typed_surface_read(struct brw_codegen *p,
+                       struct brw_reg dst,
+                       struct brw_reg payload,
+                       struct brw_reg surface,
+                       unsigned msg_length,
+                       unsigned num_channels)
+{
+   const struct brw_device_info *devinfo = p->devinfo;
+   const unsigned sfid = (devinfo->gen >= 8 || devinfo->is_haswell ?
+                          HSW_SFID_DATAPORT_DATA_CACHE_1 :
+                          GEN6_SFID_DATAPORT_RENDER_CACHE);
+   struct brw_inst *insn = brw_send_indirect_surface_message(
+      p, sfid, dst, payload, surface, msg_length,
+      brw_surface_payload_size(p, num_channels,
+                               devinfo->gen >= 8 || devinfo->is_haswell, false),
+      true);
+
+   brw_set_dp_typed_surface_read_message(
+      p, insn, num_channels);
+}
+
+static void
+brw_set_dp_typed_surface_write_message(struct brw_codegen *p,
+                                       struct brw_inst *insn,
+                                       unsigned num_channels)
+{
+   const struct brw_device_info *devinfo = p->devinfo;
+   /* Set mask of unused channels. */
+   unsigned msg_control = 0xf & (0xf << num_channels);
+
+   if (devinfo->gen >= 8 || devinfo->is_haswell) {
+      if (brw_inst_access_mode(devinfo, p->current) == BRW_ALIGN_1) {
+         if (brw_inst_qtr_control(devinfo, p->current) == GEN6_COMPRESSION_2Q)
+            msg_control |= 2 << 4; /* Use high 8 slots of the sample mask */
+         else
+            msg_control |= 1 << 4; /* Use low 8 slots of the sample mask */
+      }
+
+      brw_inst_set_dp_msg_type(devinfo, insn,
+                               HSW_DATAPORT_DC_PORT1_TYPED_SURFACE_WRITE);
+
+   } else {
+      if (brw_inst_access_mode(devinfo, p->current) == BRW_ALIGN_1) {
+         if (brw_inst_qtr_control(devinfo, p->current) == GEN6_COMPRESSION_2Q)
+            msg_control |= 1 << 5; /* Use high 8 slots of the sample mask */
+      }
+
+      brw_inst_set_dp_msg_type(devinfo, insn,
+                               GEN7_DATAPORT_RC_TYPED_SURFACE_WRITE);
+   }
+
+   brw_inst_set_dp_msg_control(devinfo, insn, msg_control);
+}
+
+void
+brw_typed_surface_write(struct brw_codegen *p,
+                        struct brw_reg payload,
+                        struct brw_reg surface,
+                        unsigned msg_length,
+                        unsigned num_channels)
+{
+   const struct brw_device_info *devinfo = p->devinfo;
+   const unsigned sfid = (devinfo->gen >= 8 || devinfo->is_haswell ?
+                          HSW_SFID_DATAPORT_DATA_CACHE_1 :
+                          GEN6_SFID_DATAPORT_RENDER_CACHE);
+   const bool align1 = (brw_inst_access_mode(devinfo, p->current) == BRW_ALIGN_1);
+   /* Mask out unused components -- See comment in brw_untyped_atomic(). */
+   const unsigned mask = (devinfo->gen == 7 && !devinfo->is_haswell && !align1 ?
+                          WRITEMASK_X : WRITEMASK_XYZW);
+   struct brw_inst *insn = brw_send_indirect_surface_message(
+      p, sfid, brw_writemask(brw_null_reg(), mask),
+      payload, surface, msg_length, 0, true);
+
+   brw_set_dp_typed_surface_write_message(
+      p, insn, num_channels);
+}
+
 void
 brw_pixel_interpolator_query(struct brw_codegen *p,
                              struct brw_reg dest,
