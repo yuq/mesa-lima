@@ -150,6 +150,30 @@ update_viewport(struct NineDevice9 *device)
     pvport.translate[1] = (float)vport->Height * 0.5f + (float)vport->Y;
     pvport.translate[2] = vport->MinZ;
 
+    /* We found R600 and SI cards have some imprecision
+     * on the barycentric coordinates used for interpolation.
+     * Some shaders rely on having something precise.
+     * We found that the proprietary driver has the imprecision issue,
+     * except when the render target width and height are powers of two.
+     * It is using some sort of workaround for these cases
+     * which covers likely all the cases the applications rely
+     * on something precise.
+     * We haven't found the workaround, but it seems like it's better
+     * for applications if the imprecision is biased towards infinity
+     * instead of -infinity (which is what measured). So shift slightly
+     * the viewport: not enough to change rasterization result (in particular
+     * for multisampling), but enough to make the imprecision biased
+     * towards infinity. We do this shift only if render target width and
+     * height are powers of two.
+     * Solves 'red shadows' bug on UE3 games.
+     */
+    if (device->driver_bugs.buggy_barycentrics &&
+        ((vport->Width & (vport->Width-1)) == 0) &&
+        ((vport->Height & (vport->Height-1)) == 0)) {
+        pvport.translate[0] -= 1.0f / 128.0f;
+        pvport.translate[1] -= 1.0f / 128.0f;
+    }
+
     pipe->set_viewport_states(pipe, 0, 1, &pvport);
 }
 

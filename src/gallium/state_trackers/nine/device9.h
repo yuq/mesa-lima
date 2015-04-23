@@ -118,6 +118,10 @@ struct NineDevice9
         boolean ps_integer;
     } driver_caps;
 
+    struct {
+        boolean buggy_barycentrics;
+    } driver_bugs;
+
     struct u_upload_mgr *upload;
 
     struct nine_range_pool range_pool;

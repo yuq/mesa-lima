@@ -310,8 +310,10 @@ NineDevice9_ctor( struct NineDevice9 *This,
             return E_OUTOFMEMORY;
 
         if (strstr(pScreen->get_name(pScreen), "AMD") ||
-            strstr(pScreen->get_name(pScreen), "ATI"))
+            strstr(pScreen->get_name(pScreen), "ATI")) {
             This->prefer_user_constbuf = TRUE;
+            This->driver_bugs.buggy_barycentrics = TRUE;
+        }
 
         tmpl.target = PIPE_BUFFER;
         tmpl.format = PIPE_FORMAT_R8_UNORM;
