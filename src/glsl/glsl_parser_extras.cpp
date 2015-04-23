@@ -1617,6 +1617,7 @@ _mesa_glsl_compile_shader(struct gl_context *ctx, struct gl_shader *shader,
       struct gl_shader_compiler_options *options =
          &ctx->Const.ShaderCompilerOptions[shader->Stage];
 
+      lower_subroutine(shader->ir, state);
       /* Do some optimization at compile time to reduce shader IR size
        * and reduce later work if the same shader is linked multiple times
        */
