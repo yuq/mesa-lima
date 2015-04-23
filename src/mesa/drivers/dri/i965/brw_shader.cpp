@@ -494,6 +494,8 @@ brw_instruction_name(enum opcode op)
       return "untyped_atomic";
    case SHADER_OPCODE_UNTYPED_SURFACE_READ:
       return "untyped_surface_read";
+   case SHADER_OPCODE_UNTYPED_SURFACE_WRITE:
+      return "untyped_surface_write";
 
    case SHADER_OPCODE_LOAD_PAYLOAD:
       return "load_payload";
@@ -1038,6 +1040,7 @@ backend_instruction::has_side_effects() const
    switch (opcode) {
    case SHADER_OPCODE_UNTYPED_ATOMIC:
    case SHADER_OPCODE_GEN4_SCRATCH_WRITE:
+   case SHADER_OPCODE_UNTYPED_SURFACE_WRITE:
    case SHADER_OPCODE_URB_WRITE_SIMD8:
    case FS_OPCODE_FB_WRITE:
       return true;

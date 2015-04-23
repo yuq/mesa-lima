@@ -216,6 +216,7 @@ vec4_instruction::is_send_from_grf()
    case VS_OPCODE_PULL_CONSTANT_LOAD_GEN7:
    case SHADER_OPCODE_UNTYPED_ATOMIC:
    case SHADER_OPCODE_UNTYPED_SURFACE_READ:
+   case SHADER_OPCODE_UNTYPED_SURFACE_WRITE:
       return true;
    default:
       return false;
@@ -232,6 +233,7 @@ vec4_instruction::regs_read(unsigned arg) const
    case SHADER_OPCODE_SHADER_TIME_ADD:
    case SHADER_OPCODE_UNTYPED_ATOMIC:
    case SHADER_OPCODE_UNTYPED_SURFACE_READ:
+   case SHADER_OPCODE_UNTYPED_SURFACE_WRITE:
       return arg == 0 ? mlen : 1;
 
    case VS_OPCODE_PULL_CONSTANT_LOAD_GEN7:

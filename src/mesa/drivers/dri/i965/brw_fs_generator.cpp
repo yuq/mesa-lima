@@ -2030,6 +2030,12 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
          brw_mark_surface_used(prog_data, src[1].dw1.ud);
          break;
 
+      case SHADER_OPCODE_UNTYPED_SURFACE_WRITE:
+         assert(src[2].file == BRW_IMMEDIATE_VALUE);
+         brw_untyped_surface_write(p, src[0], src[1],
+                                   inst->mlen, src[2].dw1.ud);
+         break;
+
       case FS_OPCODE_SET_SIMD4X2_OFFSET:
          generate_set_simd4x2_offset(inst, dst, src[0]);
          break;
