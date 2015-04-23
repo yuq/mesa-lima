@@ -1100,6 +1100,7 @@ vec4_generator::generate_set_simd4x2_header_gen9(vec4_instruction *inst,
    brw_push_insn_state(p);
    brw_set_default_mask_control(p, BRW_MASK_DISABLE);
 
+   brw_set_default_exec_size(p, BRW_EXECUTE_8);
    brw_MOV(p, vec8(dst), retype(brw_vec8_grf(0, 0), BRW_REGISTER_TYPE_UD));
 
    brw_set_default_access_mode(p, BRW_ALIGN_1);
