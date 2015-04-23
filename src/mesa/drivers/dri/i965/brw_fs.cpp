@@ -2536,6 +2536,54 @@ fs_visitor::opt_algebraic()
 }
 
 /**
+ * Optimize sample messages that have constant zero values for the trailing
+ * texture coordinates. We can just reduce the message length for these
+ * instructions instead of reserving a register for it. Trailing parameters
+ * that aren't sent default to zero anyway. This will cause the dead code
+ * eliminator to remove the MOV instruction that would otherwise be emitted to
+ * set up the zero value.
+ */
+bool
+fs_visitor::opt_zero_samples()
+{
+   /* Gen4 infers the texturing opcode based on the message length so we can't
+    * change it.
+    */
+   if (devinfo->gen < 5)
+      return false;
+
+   bool progress = false;
+
+   foreach_block_and_inst(block, fs_inst, inst, cfg) {
+      if (!inst->is_tex())
+         continue;
+
+      fs_inst *load_payload = (fs_inst *) inst->prev;
+
+      if (load_payload->is_head_sentinel() ||
+          load_payload->opcode != SHADER_OPCODE_LOAD_PAYLOAD)
+         continue;
+
+      /* We don't want to remove the message header. Removing all of the
+       * parameters is avoided because it seems to cause a GPU hang but I
+       * can't find any documentation indicating that this is expected.
+       */
+      while (inst->mlen > inst->header_present + dispatch_width / 8 &&
+             load_payload->src[(inst->mlen - inst->header_present) /
+                               (dispatch_width / 8) +
+                               inst->header_present - 1].is_zero()) {
+         inst->mlen -= dispatch_width / 8;
+         progress = true;
+      }
+   }
+
+   if (progress)
+      invalidate_live_intervals();
+
+   return progress;
+}
+
+/**
  * Optimize sample messages which are followed by the final RT write.
  *
  * CHV, and GEN9+ can mark a texturing SEND instruction with EOT to have its
@@ -3818,6 +3866,7 @@ fs_visitor::optimize()
       OPT(opt_register_renaming);
       OPT(opt_redundant_discard_jumps);
       OPT(opt_saturate_propagation);
+      OPT(opt_zero_samples);
       OPT(register_coalesce);
       OPT(compute_to_mrf);
 

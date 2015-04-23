@@ -324,6 +324,7 @@ public:
    bool opt_peephole_predicated_break();
    bool opt_saturate_propagation();
    bool opt_cmod_propagation();
+   bool opt_zero_samples();
    void emit_bool_to_cond_code(ir_rvalue *condition);
    void emit_bool_to_cond_code_of_reg(ir_expression *expr, fs_reg op[3]);
    void emit_if_gen6(ir_if *ir);
