@@ -128,7 +128,7 @@ brw_bind_rep_write_shader(struct brw_context *brw, float *color)
    _mesa_AttachShader(clear->shader_prog, vs);
    _mesa_DeleteShader(vs);
    _mesa_BindAttribLocation(clear->shader_prog, 0, "position");
-   _mesa_ObjectLabel(GL_PROGRAM, clear->shader_prog, -1, "meta clear");
+   _mesa_ObjectLabel(GL_PROGRAM, clear->shader_prog, -1, "meta repclear");
    _mesa_LinkProgram(clear->shader_prog);
 
    clear->color_location =
