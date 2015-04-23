@@ -737,9 +737,9 @@ private:
    B1(interpolateAtOffset)
    B1(interpolateAtSample)
 
-   ir_function_signature *_atomic_intrinsic(builtin_available_predicate avail);
-   ir_function_signature *_atomic_op(const char *intrinsic,
-                                     builtin_available_predicate avail);
+   ir_function_signature *_atomic_counter_intrinsic(builtin_available_predicate avail);
+   ir_function_signature *_atomic_counter_op(const char *intrinsic,
+                                             builtin_available_predicate avail);
 
    B1(min3)
    B1(max3)
@@ -872,13 +872,13 @@ void
 builtin_builder::create_intrinsics()
 {
    add_function("__intrinsic_atomic_read",
-                _atomic_intrinsic(shader_atomic_counters),
+                _atomic_counter_intrinsic(shader_atomic_counters),
                 NULL);
    add_function("__intrinsic_atomic_increment",
-                _atomic_intrinsic(shader_atomic_counters),
+                _atomic_counter_intrinsic(shader_atomic_counters),
                 NULL);
    add_function("__intrinsic_atomic_predecrement",
-                _atomic_intrinsic(shader_atomic_counters),
+                _atomic_counter_intrinsic(shader_atomic_counters),
                 NULL);
 
    add_image_functions(false);
@@ -2541,16 +2541,16 @@ builtin_builder::create_builtins()
                 NULL);
 
    add_function("atomicCounter",
-                _atomic_op("__intrinsic_atomic_read",
-                           shader_atomic_counters),
+                _atomic_counter_op("__intrinsic_atomic_read",
+                                   shader_atomic_counters),
                 NULL);
    add_function("atomicCounterIncrement",
-                _atomic_op("__intrinsic_atomic_increment",
-                           shader_atomic_counters),
+                _atomic_counter_op("__intrinsic_atomic_increment",
+                                   shader_atomic_counters),
                 NULL);
    add_function("atomicCounterDecrement",
-                _atomic_op("__intrinsic_atomic_predecrement",
-                           shader_atomic_counters),
+                _atomic_counter_op("__intrinsic_atomic_predecrement",
+                                   shader_atomic_counters),
                 NULL);
 
    add_function("min3",
@@ -4841,7 +4841,7 @@ builtin_builder::_interpolateAtSample(const glsl_type *type)
 }
 
 ir_function_signature *
-builtin_builder::_atomic_intrinsic(builtin_available_predicate avail)
+builtin_builder::_atomic_counter_intrinsic(builtin_available_predicate avail)
 {
    ir_variable *counter = in_var(glsl_type::atomic_uint_type, "counter");
    MAKE_INTRINSIC(glsl_type::uint_type, avail, 1, counter);
@@ -4849,8 +4849,8 @@ builtin_builder::_atomic_intrinsic(builtin_available_predicate avail)
 }
 
 ir_function_signature *
-builtin_builder::_atomic_op(const char *intrinsic,
-                            builtin_available_predicate avail)
+builtin_builder::_atomic_counter_op(const char *intrinsic,
+                                    builtin_available_predicate avail)
 {
    ir_variable *counter = in_var(glsl_type::atomic_uint_type, "atomic_counter");
    MAKE_SIG(glsl_type::uint_type, avail, 1, counter);
