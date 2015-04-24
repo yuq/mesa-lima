@@ -236,6 +236,8 @@ validate_ssa_def(nir_ssa_def *def, validate_state *state)
    assert(!BITSET_TEST(state->ssa_defs_found, def->index));
    BITSET_SET(state->ssa_defs_found, def->index);
 
+   assert(def->parent_instr == state->instr);
+
    assert(def->num_components <= 4);
 
    ssa_def_validate_state *def_state = ralloc(state->ssa_defs,
