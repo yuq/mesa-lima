@@ -1712,7 +1712,18 @@ public:
    ir_call(ir_function_signature *callee,
 	   ir_dereference_variable *return_deref,
 	   exec_list *actual_parameters)
-      : ir_instruction(ir_type_call), return_deref(return_deref), callee(callee)
+      : ir_instruction(ir_type_call), return_deref(return_deref), callee(callee), sub_var(NULL), array_idx(NULL)
+   {
+      assert(callee->return_type != NULL);
+      actual_parameters->move_nodes_to(& this->actual_parameters);
+      this->use_builtin = callee->is_builtin();
+   }
+
+   ir_call(ir_function_signature *callee,
+	   ir_dereference_variable *return_deref,
+	   exec_list *actual_parameters,
+	   ir_variable *var, ir_rvalue *array_idx)
+      : ir_instruction(ir_type_call), return_deref(return_deref), callee(callee), sub_var(var), array_idx(array_idx)
    {
       assert(callee->return_type != NULL);
       actual_parameters->move_nodes_to(& this->actual_parameters);
@@ -1760,6 +1771,14 @@ public:
 
    /** Should this call only bind to a built-in function? */
    bool use_builtin;
+
+   /*
+    * ARB_shader_subroutine support -
+    * the subroutine uniform variable and array index
+    * rvalue to be used in the lowering pass later.
+    */
+   ir_variable *sub_var;
+   ir_rvalue *array_idx;
 };
 
 
