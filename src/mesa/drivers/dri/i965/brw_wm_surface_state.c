@@ -948,7 +948,7 @@ brw_upload_ubo_surfaces(struct brw_context *brw,
                                       binding->Offset,
                                       binding->BufferObject->Size - binding->Offset);
             brw_create_constant_surface(brw, bo, binding->Offset,
-                                        bo->size - binding->Offset,
+                                        binding->BufferObject->Size - binding->Offset,
                                         &surf_offsets[i],
                                         dword_pitch);
          }
@@ -965,7 +965,7 @@ brw_upload_ubo_surfaces(struct brw_context *brw,
                                       binding->Offset,
                                       binding->BufferObject->Size - binding->Offset);
             brw_create_buffer_surface(brw, bo, binding->Offset,
-                                      bo->size - binding->Offset,
+                                      binding->BufferObject->Size - binding->Offset,
                                       &surf_offsets[i],
                                       dword_pitch);
          }
