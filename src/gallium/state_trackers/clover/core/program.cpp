@@ -52,7 +52,7 @@ program::build(const ref_vector<device> &devs, const char *opts,
 
          _opts.insert({ &dev, opts });
 
-         compat::string log;
+         std::string log;
 
          try {
             auto module = (dev.ir_format() == PIPE_SHADER_IR_TGSI ?

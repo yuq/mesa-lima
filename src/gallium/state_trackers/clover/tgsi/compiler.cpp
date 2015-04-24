@@ -88,11 +88,12 @@ namespace {
 }
 
 module
-clover::compile_program_tgsi(const compat::string &source) {
-   const char *body = source.find("COMP\n");
+clover::compile_program_tgsi(const std::string &source) {
+   const size_t body_pos = source.find("COMP\n");
+   const char *body = &source[body_pos];
    module m;
 
-   read_header({ source.begin(), body }, m);
+   read_header({ source.begin(), source.begin() + body_pos }, m);
    read_body(body, m);
 
    return m;

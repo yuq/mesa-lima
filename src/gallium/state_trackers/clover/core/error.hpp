@@ -54,7 +54,7 @@ namespace clover {
    ///
    class error : public std::runtime_error {
    public:
-      error(cl_int code, compat::string what = "") :
+      error(cl_int code, std::string what = "") :
          std::runtime_error(what), code(code) {
       }
 
@@ -68,7 +68,7 @@ namespace clover {
 
    class build_error : public error {
    public:
-      build_error(const compat::string &what = "") :
+      build_error(const std::string &what = "") :
          error(CL_COMPILE_PROGRAM_FAILURE, what) {
       }
    };

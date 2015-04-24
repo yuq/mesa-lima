@@ -136,7 +136,7 @@ namespace {
                 const std::string &name, const std::string &triple,
                 const std::string &processor, const std::string &opts,
                 clang::LangAS::Map& address_spaces, unsigned &optimization_level,
-                compat::string &r_log) {
+                std::string &r_log) {
 
       clang::CompilerInstance c;
       clang::EmitLLVMOnlyAction act(&llvm_ctx);
@@ -470,7 +470,7 @@ namespace {
    emit_code(LLVMTargetMachineRef tm, LLVMModuleRef mod,
              LLVMCodeGenFileType file_type,
              LLVMMemoryBufferRef *out_buffer,
-             compat::string &r_log) {
+             std::string &r_log) {
       LLVMBool err;
       char *err_message = NULL;
 
@@ -491,7 +491,7 @@ namespace {
    std::vector<char>
    compile_native(const llvm::Module *mod, const std::string &triple,
                   const std::string &processor, unsigned dump_asm,
-                  compat::string &r_log) {
+                  std::string &r_log) {
 
       std::string log;
       LLVMTargetRef target;
@@ -545,7 +545,7 @@ namespace {
    std::map<std::string, unsigned>
    get_kernel_offsets(std::vector<char> &code,
                       const std::vector<llvm::Function *> &kernels,
-                      compat::string &r_log) {
+                      std::string &r_log) {
 
       // One of the libelf implementations
       // (http://www.mr511.de/software/english.htm) requires calling
@@ -611,7 +611,7 @@ namespace {
                        const llvm::Module *mod,
                        const std::vector<llvm::Function *> &kernels,
                        const clang::LangAS::Map &address_spaces,
-                       compat::string &r_log) {
+                       std::string &r_log) {
 
       std::map<std::string, unsigned> kernel_offsets =
             get_kernel_offsets(code, kernels, r_log);
@@ -641,12 +641,12 @@ namespace {
    void
    diagnostic_handler(const llvm::DiagnosticInfo &di, void *data) {
       if (di.getSeverity() == llvm::DS_Error) {
-         std::string message = *(compat::string*)data;
+         std::string message = *(std::string*)data;
          llvm::raw_string_ostream stream(message);
          llvm::DiagnosticPrinterRawOStream dp(stream);
          di.print(dp);
          stream.flush();
-         *(compat::string*)data = message;
+         *(std::string*)data = message;
 
          throw build_error();
       }
@@ -686,12 +686,12 @@ namespace {
 } // End anonymous namespace
 
 module
-clover::compile_program_llvm(const compat::string &source,
+clover::compile_program_llvm(const std::string &source,
                              const header_map &headers,
                              enum pipe_shader_ir ir,
-                             const compat::string &target,
-                             const compat::string &opts,
-                             compat::string &r_log) {
+                             const std::string &target,
+                             const std::string &opts,
+                             std::string &r_log) {
 
    init_targets();
 
