@@ -579,6 +579,34 @@ static const char *const urb_complete[2] = {
    [1] = "complete"
 };
 
+static const char *const gen5_sampler_msg_type[] = {
+   [GEN5_SAMPLER_MESSAGE_SAMPLE]              = "sample",
+   [GEN5_SAMPLER_MESSAGE_SAMPLE_BIAS]         = "sample_b",
+   [GEN5_SAMPLER_MESSAGE_SAMPLE_LOD]          = "sample_l",
+   [GEN5_SAMPLER_MESSAGE_SAMPLE_COMPARE]      = "sample_c",
+   [GEN5_SAMPLER_MESSAGE_SAMPLE_DERIVS]       = "sample_d",
+   [GEN5_SAMPLER_MESSAGE_SAMPLE_BIAS_COMPARE] = "sample_b_c",
+   [GEN5_SAMPLER_MESSAGE_SAMPLE_LOD_COMPARE]  = "sample_l_c",
+   [GEN5_SAMPLER_MESSAGE_SAMPLE_LD]           = "ld",
+   [GEN7_SAMPLER_MESSAGE_SAMPLE_GATHER4]      = "gather4",
+   [GEN5_SAMPLER_MESSAGE_LOD]                 = "lod",
+   [GEN5_SAMPLER_MESSAGE_SAMPLE_RESINFO]      = "resinfo",
+   [GEN7_SAMPLER_MESSAGE_SAMPLE_GATHER4_C]    = "gather4_c",
+   [GEN7_SAMPLER_MESSAGE_SAMPLE_GATHER4_PO]   = "gather4_po",
+   [GEN7_SAMPLER_MESSAGE_SAMPLE_GATHER4_PO_C] = "gather4_po_c",
+   [HSW_SAMPLER_MESSAGE_SAMPLE_DERIV_COMPARE] = "sample_d_c",
+   [GEN7_SAMPLER_MESSAGE_SAMPLE_LD_MCS]       = "ld_mcs",
+   [GEN7_SAMPLER_MESSAGE_SAMPLE_LD2DMS]       = "ld2dms",
+   [GEN7_SAMPLER_MESSAGE_SAMPLE_LD2DSS]       = "ld2dss",
+};
+
+static const char *const gen5_sampler_simd_mode[4] = {
+   [BRW_SAMPLER_SIMD_MODE_SIMD4X2]   = "SIMD4x2",
+   [BRW_SAMPLER_SIMD_MODE_SIMD8]     = "SIMD8",
+   [BRW_SAMPLER_SIMD_MODE_SIMD16]    = "SIMD16",
+   [BRW_SAMPLER_SIMD_MODE_SIMD32_64] = "SIMD32/64",
+};
+
 static const char *const sampler_target_format[4] = {
    [0] = "F",
    [2] = "UD",
@@ -1374,11 +1402,13 @@ brw_disassemble_inst(FILE *file, const struct brw_device_info *devinfo,
             break;
          case BRW_SFID_SAMPLER:
             if (devinfo->gen >= 5) {
-               format(file, " (%ld, %ld, %ld, %ld)",
+               err |= control(file, "sampler message", gen5_sampler_msg_type,
+                              brw_inst_sampler_msg_type(devinfo, inst), &space);
+               err |= control(file, "sampler simd mode", gen5_sampler_simd_mode,
+                              brw_inst_sampler_simd_mode(devinfo, inst), &space);
+               format(file, " Surface = %ld Sampler = %ld",
                       brw_inst_binding_table_index(devinfo, inst),
-                      brw_inst_sampler(devinfo, inst),
-                      brw_inst_sampler_msg_type(devinfo, inst),
-                      brw_inst_sampler_simd_mode(devinfo, inst));
+                      brw_inst_sampler(devinfo, inst));
             } else {
                format(file, " (%ld, %ld, %ld, ",
                       brw_inst_binding_table_index(devinfo, inst),
