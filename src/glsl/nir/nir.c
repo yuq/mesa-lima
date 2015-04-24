@@ -1895,6 +1895,28 @@ nir_instr_rewrite_src(nir_instr *instr, nir_src *src, nir_src new_src)
 }
 
 void
+nir_if_rewrite_condition(nir_if *if_stmt, nir_src new_src)
+{
+   for (nir_src *src = &if_stmt->condition; src;
+        src = src->is_ssa ? NULL : src->reg.indirect) {
+      struct set *uses = src->is_ssa ? src->ssa->if_uses
+                                     : src->reg.reg->if_uses;
+      struct set_entry *entry = _mesa_set_search(uses, if_stmt);
+      assert(entry);
+      _mesa_set_remove(uses, entry);
+   }
+
+   if_stmt->condition = new_src;
+
+   for (nir_src *src = &if_stmt->condition; src;
+        src = src->is_ssa ? NULL : src->reg.indirect) {
+      struct set *uses = src->is_ssa ? src->ssa->if_uses
+                                     : src->reg.reg->if_uses;
+      _mesa_set_add(uses, if_stmt);
+   }
+}
+
+void
 nir_ssa_def_init(nir_instr *instr, nir_ssa_def *def,
                  unsigned num_components, const char *name)
 {
