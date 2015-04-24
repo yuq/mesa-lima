@@ -3320,7 +3320,9 @@ teximage(struct gl_context *ctx, GLboolean compressed, GLuint dims,
 
       if (!sizeOK) {
          _mesa_error(ctx, GL_OUT_OF_MEMORY,
-                     "glTexImage%uD(image too large)", dims);
+                     "glTexImage%uD(image too large: %d x %d x %d, %s format)",
+                     dims, width, height, depth,
+                     _mesa_lookup_enum_by_nr(internalFormat));
          return;
       }
 
