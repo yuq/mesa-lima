@@ -266,6 +266,14 @@ brw_debug_recompile_sampler_key(struct brw_context *brw,
                       old_key->gl_clamp_mask[2], key->gl_clamp_mask[2]);
    found |= key_debug(brw, "gather channel quirk on any texture unit",
                       old_key->gather_channel_quirk_mask, key->gather_channel_quirk_mask);
+   found |= key_debug(brw, "compressed multisample layout",
+                      old_key->compressed_multisample_layout_mask,
+                      key->compressed_multisample_layout_mask);
+
+   for (unsigned int i = 0; i < MAX_SAMPLERS; i++) {
+      found |= key_debug(brw, "textureGather workarounds",
+                         old_key->gen6_gather_wa[i], key->gen6_gather_wa[i]);
+   }
 
    return found;
 }
