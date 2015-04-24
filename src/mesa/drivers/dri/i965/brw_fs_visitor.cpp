@@ -916,8 +916,10 @@ fs_visitor::visit(ir_expression *ir)
                 mul->src[1].type == BRW_REGISTER_TYPE_UD);
          if (mul->src[1].type == BRW_REGISTER_TYPE_D) {
             mul->src[1].type = BRW_REGISTER_TYPE_W;
+            mul->src[1].stride = 2;
          } else {
             mul->src[1].type = BRW_REGISTER_TYPE_UW;
+            mul->src[1].stride = 2;
          }
       }
 
