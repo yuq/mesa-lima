@@ -83,20 +83,29 @@ lower_sampler(nir_tex_instr *instr, const struct gl_shader_program *shader_progr
                ralloc_asprintf_append(&name, "[%u]", deref_array->base_offset);
             break;
          case nir_deref_array_type_indirect: {
-            instr->src = reralloc(instr, instr->src, nir_tex_src,
-                                  instr->num_srcs + 1);
-            memset(&instr->src[instr->num_srcs], 0, sizeof *instr->src);
+            /* First, we have to resize the array of texture sources */
+            nir_tex_src *new_srcs = rzalloc_array(instr, nir_tex_src,
+                                                  instr->num_srcs + 1);
+
+            for (unsigned i = 0; i < instr->num_srcs; i++) {
+               new_srcs[i].src_type = instr->src[i].src_type;
+               nir_instr_move_src(&instr->instr, &new_srcs[i].src,
+                                  &instr->src[i].src);
+            }
+
+            ralloc_free(instr->src);
+            instr->src = new_srcs;
+
+            /* Now we can go ahead and move the source over to being a
+             * first-class texture source.
+             */
             instr->src[instr->num_srcs].src_type = nir_tex_src_sampler_offset;
             instr->num_srcs++;
-
-            nir_instr_rewrite_src(&instr->instr,
-                                  &instr->src[instr->num_srcs - 1].src,
-                                  deref_array->indirect);
+            nir_instr_move_src(&instr->instr,
+                               &instr->src[instr->num_srcs - 1].src,
+                               &deref_array->indirect);
 
             instr->sampler_array_size = glsl_get_length(deref->type);
-
-            nir_instr_rewrite_src(&instr->instr, &deref_array->indirect,
-                                  NIR_SRC_INIT);
 
             if (deref_array->deref.child)
                ralloc_strcat(&name, "[0]");

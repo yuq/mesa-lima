@@ -503,7 +503,7 @@ rewrite_ssa_def(nir_ssa_def *def, void *void_state)
    }
 
    nir_ssa_def_rewrite_uses(def, nir_src_for_reg(reg), state->mem_ctx);
-   assert(def->uses->entries == 0 && def->if_uses->entries == 0);
+   assert(list_empty(&def->uses) && list_empty(&def->if_uses));
 
    if (def->parent_instr->type == nir_instr_type_ssa_undef)
       return true;
@@ -515,12 +515,9 @@ rewrite_ssa_def(nir_ssa_def *def, void *void_state)
     */
    nir_dest *dest = exec_node_data(nir_dest, def, ssa);
 
-   _mesa_set_destroy(dest->ssa.uses, NULL);
-   _mesa_set_destroy(dest->ssa.if_uses, NULL);
-
    *dest = nir_dest_for_reg(reg);
-
-   _mesa_set_add(reg->defs, state->instr);
+   dest->reg.parent_instr = state->instr;
+   list_addtail(&dest->reg.def_link, &reg->defs);
 
    return true;
 }

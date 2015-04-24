@@ -111,9 +111,10 @@ nir_lower_tex_projector_block(nir_block *block, void *void_state)
        */
       nir_instr_rewrite_src(&tex->instr, &tex->src[proj_index].src,
                             NIR_SRC_INIT);
-      memmove(&tex->src[proj_index],
-              &tex->src[proj_index + 1],
-              (tex->num_srcs - proj_index) * sizeof(*tex->src));
+      for (int i = proj_index + 1; i < tex->num_srcs; i++) {
+         tex->src[i-1].src_type = tex->src[i].src_type;
+         nir_instr_move_src(&tex->instr, &tex->src[i-1].src, &tex->src[i].src);
+      }
       tex->num_srcs--;
    }
 
