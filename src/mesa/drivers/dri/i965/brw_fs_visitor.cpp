@@ -892,7 +892,7 @@ fs_visitor::visit(ir_expression *ir)
       }
       break;
    case ir_binop_imul_high: {
-      if (devinfo->gen == 7)
+      if (devinfo->gen >= 7)
          no16("SIMD16 explicit accumulator operands unsupported\n");
 
       struct brw_reg acc = retype(brw_acc_reg(dispatch_width),
@@ -929,7 +929,7 @@ fs_visitor::visit(ir_expression *ir)
       emit_math(SHADER_OPCODE_INT_QUOTIENT, this->result, op[0], op[1]);
       break;
    case ir_binop_carry: {
-      if (devinfo->gen == 7)
+      if (devinfo->gen >= 7)
          no16("SIMD16 explicit accumulator operands unsupported\n");
 
       struct brw_reg acc = retype(brw_acc_reg(dispatch_width),
@@ -940,7 +940,7 @@ fs_visitor::visit(ir_expression *ir)
       break;
    }
    case ir_binop_borrow: {
-      if (devinfo->gen == 7)
+      if (devinfo->gen >= 7)
          no16("SIMD16 explicit accumulator operands unsupported\n");
 
       struct brw_reg acc = retype(brw_acc_reg(dispatch_width),
