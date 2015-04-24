@@ -524,6 +524,11 @@ brw_instruction_name(enum opcode op)
    case FS_OPCODE_LINTERP:
       return "linterp";
 
+   case FS_OPCODE_PIXEL_X:
+      return "pixel_x";
+   case FS_OPCODE_PIXEL_Y:
+      return "pixel_y";
+
    case FS_OPCODE_UNIFORM_PULL_CONSTANT_LOAD:
       return "uniform_pull_const";
    case FS_OPCODE_UNIFORM_PULL_CONSTANT_LOAD_GEN7:
