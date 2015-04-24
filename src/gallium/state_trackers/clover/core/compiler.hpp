@@ -29,7 +29,7 @@
 #include "pipe/p_defines.h"
 
 namespace clover {
-   typedef compat::vector<compat::pair<compat::string,
+   typedef compat::vector<std::pair<compat::string,
                                        compat::string> > header_map;
 
    module compile_program_llvm(const compat::string &source,

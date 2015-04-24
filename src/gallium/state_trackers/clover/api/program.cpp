@@ -216,7 +216,7 @@ clCompileProgram(cl_program d_prog, cl_uint num_devs,
             throw error(CL_INVALID_OPERATION);
 
          if (!any_of(key_equals(name), headers))
-            headers.push_back(compat::pair<compat::string, compat::string>(
+            headers.push_back(std::pair<compat::string, compat::string>(
                                  name, header.source()));
       },
       range(header_names, num_headers),

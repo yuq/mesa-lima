@@ -25,6 +25,8 @@
 
 #include "CL/cl.h"
 
+#include <stdexcept>
+
 #include "util/compat.hpp"
 
 namespace clover {
@@ -50,10 +52,10 @@ namespace clover {
    /// Class that represents an error that can be converted to an
    /// OpenCL status code.
    ///
-   class error : public compat::runtime_error {
+   class error : public std::runtime_error {
    public:
       error(cl_int code, compat::string what = "") :
-         compat::runtime_error(what), code(code) {
+         std::runtime_error(what), code(code) {
       }
 
       cl_int get() const {
