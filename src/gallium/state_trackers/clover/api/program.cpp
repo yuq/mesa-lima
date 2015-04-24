@@ -293,8 +293,7 @@ clGetProgramInfo(cl_program d_prog, cl_program_info param,
 
    case CL_PROGRAM_KERNEL_NAMES:
       buf.as_string() = fold([](const std::string &a, const module::symbol &s) {
-            return ((a.empty() ? "" : a + ";") +
-                    std::string(s.name.begin(), s.name.size()));
+            return ((a.empty() ? "" : a + ";") + s.name);
          }, std::string(), prog.symbols());
       break;
 

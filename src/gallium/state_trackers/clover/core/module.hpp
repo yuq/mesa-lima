@@ -100,12 +100,12 @@ namespace clover {
       };
 
       struct symbol {
-         symbol(const compat::vector<char> &name, resource_id section,
+         symbol(const std::string &name, resource_id section,
                 size_t offset, const compat::vector<argument> &args) :
                 name(name), section(section), offset(offset), args(args) { }
          symbol() : name(), section(0), offset(0), args() { }
 
-         compat::vector<char> name;
+         std::string name;
          resource_id section;
          size_t offset;
          compat::vector<argument> args;

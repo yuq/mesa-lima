@@ -133,6 +133,27 @@ namespace {
       }
    };
 
+   /// (De)serialize a string.
+   template<>
+   struct _serializer<std::string> {
+      static void
+      proc(compat::ostream &os, const std::string &s) {
+         _proc<uint32_t>(os, s.size());
+         os.write(&s[0], s.size() * sizeof(std::string::value_type));
+      }
+
+      static void
+      proc(compat::istream &is, std::string &s) {
+         s.resize(_proc<uint32_t>(is));
+         is.read(&s[0], s.size() * sizeof(std::string::value_type));
+      }
+
+      static void
+      proc(module::size_t &sz, const std::string &s) {
+         sz += sizeof(uint32_t) + sizeof(std::string::value_type) * s.size();
+      }
+   };
+
    /// (De)serialize a module::section.
    template<>
    struct _serializer<module::section> {
