@@ -304,6 +304,7 @@ emit_gmem2mem_surf(struct fd_context *ctx,
 {
 	struct fd_ringbuffer *ring = ctx->ring;
 	struct fd_resource *rsc = fd_resource(psurf->texture);
+	enum pipe_format format = psurf->format;
 	struct fd_resource_slice *slice = fd_resource_slice(rsc, psurf->u.tex.level);
 	uint32_t offset = fd_resource_offset(rsc, psurf->u.tex.level,
 			psurf->u.tex.first_layer);
@@ -313,7 +314,10 @@ emit_gmem2mem_surf(struct fd_context *ctx,
 	OUT_PKT0(ring, REG_A3XX_RB_COPY_CONTROL, 4);
 	OUT_RING(ring, A3XX_RB_COPY_CONTROL_MSAA_RESOLVE(MSAA_ONE) |
 			A3XX_RB_COPY_CONTROL_MODE(mode) |
-			A3XX_RB_COPY_CONTROL_GMEM_BASE(base));
+			A3XX_RB_COPY_CONTROL_GMEM_BASE(base) |
+			COND(format == PIPE_FORMAT_Z32_FLOAT ||
+				 format == PIPE_FORMAT_Z32_FLOAT_S8X24_UINT,
+				 A3XX_RB_COPY_CONTROL_UNK12));
 
 	OUT_RELOCW(ring, rsc->bo, offset, 0, -1);    /* RB_COPY_DEST_BASE */
 	OUT_RING(ring, A3XX_RB_COPY_DEST_PITCH_PITCH(slice->pitch * rsc->cpp));
@@ -453,15 +457,35 @@ emit_mem2gmem_surf(struct fd_context *ctx, uint32_t bases[],
 
 	assert(bufs > 0);
 
-	emit_mrt(ring, bufs, psurf, bases, bin_w, false);
-
 	OUT_PKT0(ring, REG_A3XX_RB_MODE_CONTROL, 1);
 	OUT_RING(ring, A3XX_RB_MODE_CONTROL_RENDER_MODE(RB_RENDERING_PASS) |
 				   A3XX_RB_MODE_CONTROL_MARB_CACHE_SPLIT_MODE |
 				   A3XX_RB_MODE_CONTROL_MRT(bufs - 1));
 
-	OUT_PKT0(ring, REG_A3XX_SP_FS_OUTPUT_REG, 1);
-	OUT_RING(ring, A3XX_SP_FS_OUTPUT_REG_MRT(bufs - 1));
+	emit_mrt(ring, bufs, psurf, bases, bin_w, false);
+
+	if (psurf[0] && psurf[0]->format == PIPE_FORMAT_Z32_FLOAT) {
+		/* Depth is stored as unorm in gmem, so we have to write it in using a
+		 * special blit shader which writes depth.
+		 */
+		OUT_PKT0(ring, REG_A3XX_RB_DEPTH_CONTROL, 1);
+		OUT_RING(ring, (A3XX_RB_DEPTH_CONTROL_FRAG_WRITES_Z |
+						A3XX_RB_DEPTH_CONTROL_Z_WRITE_ENABLE |
+						A3XX_RB_DEPTH_CONTROL_Z_ENABLE |
+						A3XX_RB_DEPTH_CONTROL_EARLY_Z_DISABLE |
+						A3XX_RB_DEPTH_CONTROL_ZFUNC(FUNC_ALWAYS)));
+
+		OUT_PKT0(ring, REG_A3XX_RB_DEPTH_INFO, 2);
+		OUT_RING(ring, A3XX_RB_DEPTH_INFO_DEPTH_BASE(bases[0]) |
+				 A3XX_RB_DEPTH_INFO_DEPTH_FORMAT(DEPTHX_32));
+		OUT_RING(ring, A3XX_RB_DEPTH_PITCH(4 * ctx->gmem.bin_w));
+
+		OUT_PKT0(ring, REG_A3XX_RB_MRT_CONTROL(0), 1);
+		OUT_RING(ring, 0);
+	} else {
+		OUT_PKT0(ring, REG_A3XX_SP_FS_OUTPUT_REG, 1);
+		OUT_RING(ring, A3XX_SP_FS_OUTPUT_REG_MRT(bufs - 1));
+	}
 
 	fd3_emit_gmem_restore_tex(ring, psurf, bufs);
 
@@ -600,7 +624,21 @@ fd3_emit_tile_mem2gmem(struct fd_context *ctx, struct fd_tile *tile)
 	}
 
 	if (fd_gmem_needs_restore(ctx, tile, FD_BUFFER_DEPTH | FD_BUFFER_STENCIL)) {
-		emit.prog = &ctx->blit_prog[0];
+		if (pfb->zsbuf->format != PIPE_FORMAT_Z32_FLOAT_S8X24_UINT &&
+			pfb->zsbuf->format != PIPE_FORMAT_Z32_FLOAT) {
+			/* Non-float can use a regular color write. It's split over 8-bit
+			 * components, so half precision is always sufficient.
+			 */
+			emit.prog = &ctx->blit_prog[0];
+			emit.key.half_precision = true;
+		} else {
+			/* Float depth needs special blit shader that writes depth */
+			if (pfb->zsbuf->format == PIPE_FORMAT_Z32_FLOAT)
+				emit.prog = &ctx->blit_z;
+			else
+				emit.prog = &ctx->blit_zs;
+			emit.key.half_precision = false;
+		}
 		fd3_program_emit(ring, &emit, 1, &pfb->zsbuf);
 		emit_mem2gmem_surf(ctx, &gmem->zsbuf_base, &pfb->zsbuf, 1, bin_w);
 	}

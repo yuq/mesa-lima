@@ -180,6 +180,7 @@ struct fd_context {
 
 	/* shaders used by mem->gmem blits: */
 	struct fd_program_stateobj blit_prog[8]; // TODO move to screen?
+	struct fd_program_stateobj blit_z, blit_zs;
 
 	/* do we need to mem2gmem before rendering.  We don't, if for example,
 	 * there was a glClear() that invalidated the entire previous buffer
