@@ -861,13 +861,10 @@ static void
 compile_shader(struct gl_context *ctx, GLuint shaderObj)
 {
    struct gl_shader *sh;
-   struct gl_shader_compiler_options *options;
 
    sh = _mesa_lookup_shader_err(ctx, shaderObj, "glCompileShader");
    if (!sh)
       return;
-
-   options = &ctx->Const.ShaderCompilerOptions[sh->Stage];
 
    if (!sh->Source) {
       /* If the user called glCompileShader without first calling
