@@ -1868,8 +1868,7 @@ brw_vs_emit(struct brw_context *brw,
       g.generate_code(v.cfg, 8);
       assembly = g.get_assembly(final_assembly_size);
 
-      if (assembly)
-         prog_data->base.simd8 = true;
+      prog_data->base.simd8 = true;
       c->base.last_scratch = v.last_scratch;
    }
 
