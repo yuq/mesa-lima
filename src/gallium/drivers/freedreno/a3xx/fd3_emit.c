@@ -704,6 +704,8 @@ fd3_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 
 		for (i = 0; i < ARRAY_SIZE(blend->rb_mrt); i++) {
 			enum pipe_format format = pipe_surface_format(ctx->framebuffer.cbufs[i]);
+			const struct util_format_description *desc =
+				util_format_description(format);
 			bool is_float = util_format_is_float(format);
 			bool is_int = util_format_is_pure_integer(format);
 			bool has_alpha = util_format_has_alpha(format);
@@ -724,6 +726,18 @@ fd3_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 			} else {
 				blend_control |= blend->rb_mrt[i].blend_control_no_alpha_rgb;
 				control &= ~A3XX_RB_MRT_CONTROL_BLEND2;
+			}
+
+			if (format && util_format_get_component_bits(
+						format, UTIL_FORMAT_COLORSPACE_RGB, 0) < 8) {
+				const struct pipe_rt_blend_state *rt;
+				if (ctx->blend->independent_blend_enable)
+					rt = &ctx->blend->rt[i];
+				else
+					rt = &ctx->blend->rt[0];
+
+				if (!util_format_colormask_full(desc, rt->colormask))
+					control |= A3XX_RB_MRT_CONTROL_READ_DEST_ENABLE;
 			}
 
 			OUT_PKT0(ring, REG_A3XX_RB_MRT_CONTROL(i), 1);
