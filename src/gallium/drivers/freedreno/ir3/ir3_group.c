@@ -50,19 +50,6 @@ static bool check_stop(struct ir3_instruction *instr)
 	return false;
 }
 
-static struct ir3_instruction * create_mov(struct ir3_instruction *instr)
-{
-	struct ir3_instruction *mov;
-
-	mov = ir3_instr_create(instr->block, 1, 0);
-	mov->cat1.src_type = TYPE_F32;
-	mov->cat1.dst_type = TYPE_F32;
-	ir3_reg_create(mov, 0, 0);    /* dst */
-	ir3_reg_create(mov, 0, IR3_REG_SSA)->instr = instr;
-
-	return mov;
-}
-
 /* bleh.. we need to do the same group_n() thing for both inputs/outputs
  * (where we have a simple instr[] array), and fanin nodes (where we have
  * an extra indirection via reg->instr).
@@ -78,7 +65,8 @@ static struct ir3_instruction *arr_get(void *arr, int idx)
 }
 static void arr_insert_mov_out(void *arr, int idx, struct ir3_instruction *instr)
 {
-	((struct ir3_instruction **)arr)[idx] = create_mov(instr);
+	((struct ir3_instruction **)arr)[idx] =
+			ir3_MOV(instr->block, instr, TYPE_F32);
 }
 static void arr_insert_mov_in(void *arr, int idx, struct ir3_instruction *instr)
 {
@@ -113,7 +101,8 @@ static struct ir3_instruction *instr_get(void *arr, int idx)
 }
 static void instr_insert_mov(void *arr, int idx, struct ir3_instruction *instr)
 {
-	((struct ir3_instruction *)arr)->regs[idx+1]->instr = create_mov(instr);
+	((struct ir3_instruction *)arr)->regs[idx+1]->instr =
+			ir3_MOV(instr->block, instr, TYPE_F32);
 }
 static struct group_ops instr_ops = { instr_get, instr_insert_mov };
 
@@ -210,8 +199,8 @@ static void pad_and_group_input(struct ir3_instruction **input, unsigned n)
 		if (instr) {
 			block = instr->block;
 		} else if (block) {
-			instr = ir3_instr_create(block, 0, OPC_NOP);
-			ir3_reg_create(instr, 0, IR3_REG_SSA);    /* dst */
+			instr = ir3_NOP(block);
+			ir3_reg_create(instr, 0, IR3_REG_SSA);    /* dummy dst */
 			input[i] = instr;
 			mask |= (1 << i);
 		}

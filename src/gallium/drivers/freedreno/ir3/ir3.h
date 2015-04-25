@@ -807,6 +807,12 @@ ir3_COV(struct ir3_block *block, struct ir3_instruction *src,
 	return instr;
 }
 
+static inline struct ir3_instruction *
+ir3_NOP(struct ir3_block *block)
+{
+	return ir3_instr_create(block, 0, OPC_NOP);
+}
+
 #define INSTR1(CAT, name)                                                \
 static inline struct ir3_instruction *                                   \
 ir3_##name(struct ir3_block *block,                                      \

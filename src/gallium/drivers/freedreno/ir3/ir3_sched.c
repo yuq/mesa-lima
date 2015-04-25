@@ -125,7 +125,7 @@ static void schedule(struct ir3_sched_ctx *ctx,
 	 * scheduling and depth calculation..
 	 */
 	if (ctx->scheduled && is_sfu_or_mem(ctx->scheduled) && is_sfu_or_mem(instr))
-		schedule(ctx, ir3_instr_create(block, 0, OPC_NOP), false);
+		schedule(ctx, ir3_NOP(block), false);
 
 	/* remove from depth list:
 	 */
@@ -453,7 +453,7 @@ static void block_sched(struct ir3_sched_ctx *ctx, struct ir3_block *block)
 		 * then it is time for nop's:
 		 */
 		while (cnt > ctx->cnt)
-			schedule(ctx, ir3_instr_create(block, 0, OPC_NOP), false);
+			schedule(ctx, ir3_NOP(block), false);
 	}
 
 	/* at this point, scheduled list is in reverse order, so fix that: */

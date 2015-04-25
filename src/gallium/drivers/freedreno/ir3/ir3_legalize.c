@@ -134,14 +134,14 @@ static void legalize(struct ir3_legalize_ctx *ctx)
 		 */
 		if ((n->flags & IR3_INSTR_SS) && (n->category >= 5)) {
 			struct ir3_instruction *nop;
-			nop = ir3_instr_create(block, 0, OPC_NOP);
+			nop = ir3_NOP(block);
 			nop->flags |= IR3_INSTR_SS;
 			n->flags &= ~IR3_INSTR_SS;
 		}
 
 		/* need to be able to set (ss) on first instruction: */
 		if ((shader->instrs_count == 0) && (n->category >= 5))
-			ir3_instr_create(block, 0, OPC_NOP);
+			ir3_NOP(block);
 
 		if (is_nop(n) && shader->instrs_count) {
 			struct ir3_instruction *last =
