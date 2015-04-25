@@ -191,9 +191,9 @@ typedef enum {
 	OPC_LDLV = 31,
 
 	/* meta instructions (category -1): */
-	/* placeholder instr to mark inputs/outputs: */
+	/* placeholder instr to mark shader inputs: */
 	OPC_META_INPUT = 0,
-	OPC_META_OUTPUT = 1,
+	OPC_META_PHI = 1,
 	/* The "fan-in" and "fan-out" instructions are used for keeping
 	 * track of instructions that write to multiple dst registers
 	 * (fan-out) like texture sample instructions, or read multiple
@@ -201,9 +201,6 @@ typedef enum {
 	 */
 	OPC_META_FO = 2,
 	OPC_META_FI = 3,
-	/* branches/flow control */
-	OPC_META_FLOW = 4,
-	OPC_META_PHI = 5,
 
 } opc_t;
 

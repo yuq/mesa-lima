@@ -54,10 +54,8 @@ static void print_instr_name(struct ir3_instruction *instr)
 			/* shouldn't hit here.. just for debugging: */
 			switch (instr->opc) {
 			case OPC_META_INPUT:  printf("_meta:in");   break;
-			case OPC_META_OUTPUT: printf("_meta:out");  break;
 			case OPC_META_FO:     printf("_meta:fo");   break;
 			case OPC_META_FI:     printf("_meta:fi");   break;
-			case OPC_META_FLOW:   printf("_meta:flow"); break;
 
 			default: printf("_meta:%d", instr->opc); break;
 			}

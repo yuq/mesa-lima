@@ -195,16 +195,6 @@ read_file(const char *filename, void **ptr, size_t *size)
 	return 0;
 }
 
-static void reset_variant(struct ir3_shader_variant *v, const char *msg)
-{
-	printf("; %s\n", msg);
-	v->inputs_count = 0;
-	v->outputs_count = 0;
-	v->total_in = 0;
-	v->has_samp = false;
-	v->immediates_count = 0;
-}
-
 static void print_usage(void)
 {
 	printf("Usage: ir3_compiler [OPTIONS]... FILE\n");
@@ -231,7 +221,6 @@ int main(int argc, char **argv)
 	const char *info;
 	void *ptr;
 	size_t size;
-	int use_nir = 0;
 
 	fd_mesa_debug |= FD_DBG_DISASM;
 
@@ -296,11 +285,6 @@ int main(int argc, char **argv)
 			n++;
 			continue;
 		}
-		if (!strcmp(argv[n], "--nir")) {
-			use_nir = true;
-			n++;
-			continue;
-		}
 
 		if (!strcmp(argv[n], "--help")) {
 			print_usage();
@@ -341,20 +325,8 @@ int main(int argc, char **argv)
 		break;
 	}
 
-	if (use_nir) {
-		info = "NIR compiler";
-		ret = ir3_compile_shader_nir(&v, toks, key);
-	} else {
-		info = "TGSI compiler";
-		ret = ir3_compile_shader(&v, toks, key, true);
-	}
-
-	if (ret) {
-		reset_variant(&v, "compiler failed, trying without copy propagation!");
-		info = "compiler (no copy propagation)";
-		ret = ir3_compile_shader(&v, toks, key, false);
-	}
-
+	info = "NIR compiler";
+	ret = ir3_compile_shader_nir(&v, toks, key);
 	if (ret) {
 		fprintf(stderr, "compiler failed!\n");
 		return ret;

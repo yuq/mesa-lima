@@ -364,7 +364,6 @@ struct ir3_block {
 	struct ir3_instruction **outputs;
 	/* only a single address register: */
 	struct ir3_instruction *address;
-	struct ir3_block *parent;
 	struct list_head instr_list;
 };
 

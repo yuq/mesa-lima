@@ -218,33 +218,31 @@ static void block_find_neighbors(struct ir3_block *block)
 {
 	unsigned i;
 
+	/* shader inputs/outputs themselves must be contiguous as well:
+	 *
+	 * NOTE: group inputs first, since we only insert mov's
+	 * *before* the conflicted instr (and that would go badly
+	 * for inputs).  By doing inputs first, we should never
+	 * have a conflict on inputs.. pushing any conflict to
+	 * resolve to the outputs, for stuff like:
+	 *
+	 *     MOV OUT[n], IN[m].wzyx
+	 *
+	 * NOTE: we assume here inputs/outputs are grouped in vec4.
+	 * This logic won't quite cut it if we don't align smaller
+	 * on vec4 boundaries
+	 */
+	for (i = 0; i < block->ninputs; i += 4)
+		pad_and_group_input(&block->inputs[i], 4);
+	for (i = 0; i < block->noutputs; i += 4)
+		group_n(&arr_ops_out, &block->outputs[i], 4);
+
+
 	for (i = 0; i < block->noutputs; i++) {
 		if (block->outputs[i]) {
 			struct ir3_instruction *instr = block->outputs[i];
 			instr_find_neighbors(instr);
 		}
-	}
-
-	/* shader inputs/outputs themselves must be contiguous as well:
-	 */
-	if (!block->parent) {
-		/* NOTE: group inputs first, since we only insert mov's
-		 * *before* the conflicted instr (and that would go badly
-		 * for inputs).  By doing inputs first, we should never
-		 * have a conflict on inputs.. pushing any conflict to
-		 * resolve to the outputs, for stuff like:
-		 *
-		 *     MOV OUT[n], IN[m].wzyx
-		 *
-		 * NOTE: we assume here inputs/outputs are grouped in vec4.
-		 * This logic won't quite cut it if we don't align smaller
-		 * on vec4 boundaries
-		 */
-		for (i = 0; i < block->ninputs; i += 4)
-			pad_and_group_input(&block->inputs[i], 4);
-		for (i = 0; i < block->noutputs; i += 4)
-			group_n(&arr_ops_out, &block->outputs[i], 4);
-
 	}
 }
 

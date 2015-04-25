@@ -70,7 +70,6 @@ static const struct debug_named_value debug_options[] = {
 		{"optmsgs",   FD_DBG_OPTMSGS,"Enable optimizer debug messages"},
 		{"glsl120",   FD_DBG_GLSL120,"Temporary flag to force GLSL 120 (rather than 130) on a3xx+"},
 		{"nocp",      FD_DBG_NOCP,   "Disable copy-propagation"},
-		{"nir",       FD_DBG_NIR,    "Enable experimental NIR compiler"},
 		DEBUG_NAMED_VALUE_END
 };
 
