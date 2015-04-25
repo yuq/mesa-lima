@@ -280,12 +280,6 @@ int main(int argc, char **argv)
 			continue;
 		}
 
-		if (!strcmp(argv[n], "--nocp")) {
-			fd_mesa_debug |= FD_DBG_NOCP;
-			n++;
-			continue;
-		}
-
 		if (!strcmp(argv[n], "--help")) {
 			print_usage();
 			return 0;
