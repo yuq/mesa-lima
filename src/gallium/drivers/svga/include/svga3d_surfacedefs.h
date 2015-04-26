@@ -31,10 +31,6 @@
 
 #include "svga3d_reg.h"
 
-#ifndef ARRAY_SIZE
-#define ARRAY_SIZE(A) (sizeof(A) / sizeof(A[0]))
-#endif
-
 #define max_t(type, x, y)  ((x) > (y) ? (x) : (y))
 
 /*
