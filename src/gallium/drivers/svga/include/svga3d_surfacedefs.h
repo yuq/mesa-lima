@@ -35,8 +35,6 @@
 #define ARRAY_SIZE(A) (sizeof(A) / sizeof(A[0]))
 #endif
 
-#define DIV_ROUND_UP(x, y)  (((x) + (y) - 1) / (y))
-
 #define max_t(type, x, y)  ((x) > (y) ? (x) : (y))
 
 /*
