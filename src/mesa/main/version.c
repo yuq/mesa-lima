@@ -483,6 +483,23 @@ _mesa_compute_version(struct gl_context *ctx)
 
    ctx->Version = _mesa_get_version(&ctx->Extensions, &ctx->Const, ctx->API);
 
+   /* Make sure that the GLSL version lines up with the GL version. In some
+    * cases it can be too high, e.g. if an extension is missing.
+    */
+   if (ctx->API == API_OPENGL_CORE) {
+      switch (ctx->Version) {
+      case 31:
+         ctx->Const.GLSLVersion = 140;
+         break;
+      case 32:
+         ctx->Const.GLSLVersion = 150;
+         break;
+      default:
+         ctx->Const.GLSLVersion = ctx->Version * 10;
+         break;
+      }
+   }
+
    switch (ctx->API) {
    case API_OPENGL_COMPAT:
    case API_OPENGL_CORE:
