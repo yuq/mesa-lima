@@ -1347,12 +1347,10 @@ CodeEmitterGK110::emitVFETCH(const Instruction *i)
    code[1] = 0x7ec00000 | (offset >> 9);
    code[1] |= (size / 4 - 1) << 18;
 
-#if 0
    if (i->perPatch)
-      code[0] |= 0x100;
+      code[1] |= 0x4;
    if (i->getSrc(0)->reg.file == FILE_SHADER_OUTPUT)
-      code[0] |= 0x200; // yes, TCPs can read from *outputs* of other threads
-#endif
+      code[1] |= 0x8; // yes, TCPs can read from *outputs* of other threads
 
    emitPredicate(i);
 
@@ -1371,10 +1369,8 @@ CodeEmitterGK110::emitEXPORT(const Instruction *i)
    code[1] = 0x7f000000 | (offset >> 9);
    code[1] |= (size / 4 - 1) << 18;
 
-#if 0
    if (i->perPatch)
-      code[0] |= 0x100;
-#endif
+      code[1] |= 0x4;
 
    emitPredicate(i);
 
