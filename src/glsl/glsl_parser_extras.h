@@ -500,6 +500,8 @@ struct _mesa_glsl_parse_state {
    bool ARB_shader_bit_encoding_warn;
    bool ARB_shader_image_load_store_enable;
    bool ARB_shader_image_load_store_warn;
+   bool ARB_shader_image_size_enable;
+   bool ARB_shader_image_size_warn;
    bool ARB_shader_precision_enable;
    bool ARB_shader_precision_warn;
    bool ARB_shader_stencil_export_enable;
