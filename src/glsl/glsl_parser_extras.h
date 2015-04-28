@@ -160,7 +160,7 @@ struct _mesa_glsl_parse_state {
    {
       if (!this->has_separate_shader_objects()) {
          const char *const requirement = this->es_shader
-            ? "GL_EXT_separate_shader_objects extension"
+            ? "GL_EXT_separate_shader_objects extension or GLSL ES 310"
             : "GL_ARB_separate_shader_objects extension or GLSL 420";
 
          _mesa_glsl_error(locp, this, "%s explicit location requires %s",
@@ -217,7 +217,7 @@ struct _mesa_glsl_parse_state {
 
    bool has_separate_shader_objects() const
    {
-      return ARB_separate_shader_objects_enable || is_version(410, 0)
+      return ARB_separate_shader_objects_enable || is_version(410, 310)
          || EXT_separate_shader_objects_enable;
    }
 
