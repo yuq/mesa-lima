@@ -40,6 +40,7 @@
 
 #include <stdbool.h>
 #include <stddef.h>
+#include <assert.h>
 
 
 struct list_head
@@ -105,6 +106,14 @@ static inline unsigned list_length(struct list_head *list)
    for (node = list->next; node != list; node = node->next)
       length++;
    return length;
+}
+
+static inline void list_validate(struct list_head *list)
+{
+   struct list_head *node;
+   assert(list->next->prev == list && list->prev->next == list);
+   for (node = list->next; node != list; node = node->next)
+      assert(node->next->prev == node && node->prev->next == node);
 }
 
 #define LIST_INITHEAD(__item) list_inithead(__item)
