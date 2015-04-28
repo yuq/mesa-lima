@@ -565,6 +565,10 @@ _mesa_base_tex_format( struct gl_context *ctx, GLint internalFormat )
       }
    }
 
+   if (ctx->Extensions.KHR_texture_compression_astc_ldr &&
+       _mesa_is_astc_format(internalFormat))
+         return GL_RGBA;
+
    if (_mesa_is_gles3(ctx) || ctx->Extensions.ARB_ES3_compatibility) {
       switch (internalFormat) {
       case GL_COMPRESSED_RGB8_ETC2:
