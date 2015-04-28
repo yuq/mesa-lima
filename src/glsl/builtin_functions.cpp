@@ -194,7 +194,8 @@ shader_bit_encoding(const _mesa_glsl_parse_state *state)
 static bool
 shader_integer_mix(const _mesa_glsl_parse_state *state)
 {
-   return v130(state) && state->EXT_shader_integer_mix_enable;
+   return state->is_version(450, 310) ||
+          v130(state) && state->EXT_shader_integer_mix_enable;
 }
 
 static bool

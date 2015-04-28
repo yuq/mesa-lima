@@ -192,7 +192,7 @@ struct _mesa_glsl_parse_state {
 
    bool has_atomic_counters() const
    {
-      return ARB_shader_atomic_counters_enable || is_version(420, 0);
+      return ARB_shader_atomic_counters_enable || is_version(420, 310);
    }
 
    bool has_explicit_attrib_stream() const
@@ -352,6 +352,16 @@ struct _mesa_glsl_parse_state {
       unsigned MaxFragmentAtomicCounters;
       unsigned MaxCombinedAtomicCounters;
       unsigned MaxAtomicBufferBindings;
+
+      /* These are also atomic counter related, but they weren't added to
+       * until atomic counters were added to core in GLSL 4.20 and GLSL ES
+       * 3.10.
+       */
+      unsigned MaxVertexAtomicCounterBuffers;
+      unsigned MaxGeometryAtomicCounterBuffers;
+      unsigned MaxFragmentAtomicCounterBuffers;
+      unsigned MaxCombinedAtomicCounterBuffers;
+      unsigned MaxAtomicCounterBufferSize;
 
       /* ARB_compute_shader */
       unsigned MaxComputeWorkGroupCount[3];

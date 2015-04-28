@@ -117,6 +117,16 @@ _mesa_glsl_parse_state::_mesa_glsl_parse_state(struct gl_context *_ctx,
    this->Const.MaxFragmentAtomicCounters = ctx->Const.Program[MESA_SHADER_FRAGMENT].MaxAtomicCounters;
    this->Const.MaxCombinedAtomicCounters = ctx->Const.MaxCombinedAtomicCounters;
    this->Const.MaxAtomicBufferBindings = ctx->Const.MaxAtomicBufferBindings;
+   this->Const.MaxVertexAtomicCounterBuffers =
+      ctx->Const.Program[MESA_SHADER_VERTEX].MaxAtomicBuffers;
+   this->Const.MaxGeometryAtomicCounterBuffers =
+      ctx->Const.Program[MESA_SHADER_GEOMETRY].MaxAtomicBuffers;
+   this->Const.MaxFragmentAtomicCounterBuffers =
+      ctx->Const.Program[MESA_SHADER_FRAGMENT].MaxAtomicBuffers;
+   this->Const.MaxCombinedAtomicCounterBuffers =
+      ctx->Const.MaxCombinedAtomicBuffers;
+   this->Const.MaxAtomicCounterBufferSize =
+      ctx->Const.MaxAtomicBufferSize;
 
    /* Compute shader constants */
    for (unsigned i = 0; i < ARRAY_SIZE(this->Const.MaxComputeWorkGroupCount); i++)
