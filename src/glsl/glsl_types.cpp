@@ -124,6 +124,11 @@ glsl_type::glsl_type(const glsl_struct_field *fields, unsigned num_fields,
       this->fields.structure[i].sample = fields[i].sample;
       this->fields.structure[i].matrix_layout = fields[i].matrix_layout;
       this->fields.structure[i].patch = fields[i].patch;
+      this->fields.structure[i].image_read_only = fields[i].image_read_only;
+      this->fields.structure[i].image_write_only = fields[i].image_write_only;
+      this->fields.structure[i].image_coherent = fields[i].image_coherent;
+      this->fields.structure[i].image_volatile = fields[i].image_volatile;
+      this->fields.structure[i].image_restrict = fields[i].image_restrict;
    }
 
    mtx_unlock(&glsl_type::mutex);
@@ -759,6 +764,21 @@ glsl_type::record_compare(const glsl_type *b) const
          return false;
       if (this->fields.structure[i].patch
           != b->fields.structure[i].patch)
+         return false;
+      if (this->fields.structure[i].image_read_only
+          != b->fields.structure[i].image_read_only)
+         return false;
+      if (this->fields.structure[i].image_write_only
+          != b->fields.structure[i].image_write_only)
+         return false;
+      if (this->fields.structure[i].image_coherent
+          != b->fields.structure[i].image_coherent)
+         return false;
+      if (this->fields.structure[i].image_volatile
+          != b->fields.structure[i].image_volatile)
+         return false;
+      if (this->fields.structure[i].image_restrict
+          != b->fields.structure[i].image_restrict)
          return false;
    }
 

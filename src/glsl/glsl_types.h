@@ -810,6 +810,17 @@ struct glsl_struct_field {
     */
    int stream;
 
+
+   /**
+    * Image qualifiers, applicable to buffer variables defined in shader
+    * storage buffer objects (SSBOs)
+    */
+   unsigned image_read_only:1;
+   unsigned image_write_only:1;
+   unsigned image_coherent:1;
+   unsigned image_volatile:1;
+   unsigned image_restrict:1;
+
    glsl_struct_field(const struct glsl_type *_type, const char *_name)
       : type(_type), name(_name), location(-1), interpolation(0), centroid(0),
         sample(0), matrix_layout(GLSL_MATRIX_LAYOUT_INHERITED), patch(0),
