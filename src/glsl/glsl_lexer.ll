@@ -406,11 +406,11 @@ image2DShadow           KEYWORD(130, 300, 0, 0, IMAGE2DSHADOW);
 image1DArrayShadow      KEYWORD(130, 300, 0, 0, IMAGE1DARRAYSHADOW);
 image2DArrayShadow      KEYWORD(130, 300, 0, 0, IMAGE2DARRAYSHADOW);
 
-coherent       KEYWORD_WITH_ALT(420, 300, 420, 310, yyextra->ARB_shader_image_load_store_enable, COHERENT);
-volatile       KEYWORD_WITH_ALT(110, 100, 420, 310, yyextra->ARB_shader_image_load_store_enable, VOLATILE);
-restrict       KEYWORD_WITH_ALT(420, 300, 420, 310, yyextra->ARB_shader_image_load_store_enable, RESTRICT);
-readonly       KEYWORD_WITH_ALT(420, 300, 420, 310, yyextra->ARB_shader_image_load_store_enable, READONLY);
-writeonly      KEYWORD_WITH_ALT(420, 300, 420, 310, yyextra->ARB_shader_image_load_store_enable, WRITEONLY);
+coherent       KEYWORD_WITH_ALT(420, 300, 420, 310, yyextra->ARB_shader_image_load_store_enable || yyextra->ARB_shader_storage_buffer_object_enable, COHERENT);
+volatile       KEYWORD_WITH_ALT(110, 100, 420, 310, yyextra->ARB_shader_image_load_store_enable || yyextra->ARB_shader_storage_buffer_object_enable, VOLATILE);
+restrict       KEYWORD_WITH_ALT(420, 300, 420, 310, yyextra->ARB_shader_image_load_store_enable || yyextra->ARB_shader_storage_buffer_object_enable, RESTRICT);
+readonly       KEYWORD_WITH_ALT(420, 300, 420, 310, yyextra->ARB_shader_image_load_store_enable || yyextra->ARB_shader_storage_buffer_object_enable, READONLY);
+writeonly      KEYWORD_WITH_ALT(420, 300, 420, 310, yyextra->ARB_shader_image_load_store_enable || yyextra->ARB_shader_storage_buffer_object_enable, WRITEONLY);
 
 atomic_uint     KEYWORD_WITH_ALT(420, 300, 420, 310, yyextra->ARB_shader_atomic_counters_enable, ATOMIC_UINT);
 
