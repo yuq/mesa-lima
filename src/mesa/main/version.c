@@ -433,7 +433,23 @@ compute_version_es2(const struct gl_extensions *extensions)
                          extensions->EXT_texture_snorm &&
                          extensions->NV_primitive_restart &&
                          extensions->OES_depth_texture_cube_map);
-   if (ver_3_0) {
+   const bool ver_3_1 = (ver_3_0 &&
+                         extensions->ARB_arrays_of_arrays &&
+                         extensions->ARB_compute_shader &&
+                         extensions->ARB_draw_indirect &&
+                         false /*extensions->ARB_framebuffer_no_attachments*/ &&
+                         extensions->ARB_shader_atomic_counters &&
+                         extensions->ARB_shader_image_load_store &&
+                         false /*extensions->ARB_shader_image_size*/ &&
+                         false /*extensions->ARB_shader_storage_buffer_object*/ &&
+                         extensions->ARB_shading_language_packing &&
+                         extensions->ARB_stencil_texturing &&
+                         extensions->ARB_gpu_shader5 &&
+                         extensions->EXT_shader_integer_mix);
+
+   if (ver_3_1) {
+      return 31;
+   } else if (ver_3_0) {
       return 30;
    } else if (ver_2_0) {
       return 20;
