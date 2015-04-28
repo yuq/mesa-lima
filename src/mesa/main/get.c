@@ -1001,6 +1001,10 @@ find_custom_value(struct gl_context *ctx, const struct value_desc *d, union valu
    case GL_UNIFORM_BUFFER_BINDING:
       v->value_int = ctx->UniformBuffer->Name;
       break;
+   /* GL_ARB_shader_storage_buffer_object */
+   case GL_SHADER_STORAGE_BUFFER_BINDING:
+      v->value_int = ctx->ShaderStorageBuffer->Name;
+      break;
    /* GL_ARB_timer_query */
    case GL_TIMESTAMP:
       if (ctx->Driver.GetTimestamp) {
@@ -1937,6 +1941,33 @@ find_value_indexed(const char *func, GLenum pname, GLuint index, union value *v)
       if (!ctx->Extensions.ARB_uniform_buffer_object)
 	 goto invalid_enum;
       v->value_int = ctx->UniformBufferBindings[index].Size;
+      return TYPE_INT;
+
+   /* ARB_shader_storage_buffer_object */
+   case GL_SHADER_STORAGE_BUFFER_BINDING:
+      if (!ctx->Extensions.ARB_shader_storage_buffer_object)
+         goto invalid_enum;
+      if (index >= ctx->Const.MaxShaderStorageBufferBindings)
+         goto invalid_value;
+      v->value_int = ctx->ShaderStorageBufferBindings[index].BufferObject->Name;
+      return TYPE_INT;
+
+   case GL_SHADER_STORAGE_BUFFER_START:
+      if (!ctx->Extensions.ARB_shader_storage_buffer_object)
+         goto invalid_enum;
+      if (index >= ctx->Const.MaxShaderStorageBufferBindings)
+         goto invalid_value;
+      v->value_int = ctx->ShaderStorageBufferBindings[index].Offset < 0 ? 0 :
+                     ctx->ShaderStorageBufferBindings[index].Offset;
+      return TYPE_INT;
+
+   case GL_SHADER_STORAGE_BUFFER_SIZE:
+      if (!ctx->Extensions.ARB_shader_storage_buffer_object)
+         goto invalid_enum;
+      if (index >= ctx->Const.MaxShaderStorageBufferBindings)
+         goto invalid_value;
+      v->value_int = ctx->ShaderStorageBufferBindings[index].Size < 0 ? 0 :
+                     ctx->ShaderStorageBufferBindings[index].Size;
       return TYPE_INT;
 
    /* ARB_texture_multisample / GL3.2 */
