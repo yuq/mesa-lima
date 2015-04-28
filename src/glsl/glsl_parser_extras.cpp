@@ -143,9 +143,9 @@ _mesa_glsl_parse_state::_mesa_glsl_parse_state(struct gl_context *_ctx,
    this->num_user_structures = 0;
 
    /* supported_versions should be large enough to support the known desktop
-    * GLSL versions plus 2 GLES versions (ES2 & ES3)
+    * GLSL versions plus 3 GLES versions (ES 1.00, ES 3.00, and ES 3.10))
     */
-   STATIC_ASSERT((ARRAY_SIZE(known_desktop_glsl_versions) + 2) ==
+   STATIC_ASSERT((ARRAY_SIZE(known_desktop_glsl_versions) + 3) ==
                  ARRAY_SIZE(this->supported_versions));
 
    /* Populate the list of supported GLSL versions */
@@ -172,6 +172,11 @@ _mesa_glsl_parse_state::_mesa_glsl_parse_state(struct gl_context *_ctx,
    }
    if (_mesa_is_gles3(ctx) || ctx->Extensions.ARB_ES3_compatibility) {
       this->supported_versions[this->num_supported_versions].ver = 300;
+      this->supported_versions[this->num_supported_versions].es = true;
+      this->num_supported_versions++;
+   }
+   if (_mesa_is_gles31(ctx)) {
+      this->supported_versions[this->num_supported_versions].ver = 310;
       this->supported_versions[this->num_supported_versions].es = true;
       this->num_supported_versions++;
    }

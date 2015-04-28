@@ -229,7 +229,7 @@ struct _mesa_glsl_parse_state {
    struct {
       unsigned ver;
       bool es;
-   } supported_versions[14];
+   } supported_versions[15];
 
    bool es_shader;
    unsigned language_version;
