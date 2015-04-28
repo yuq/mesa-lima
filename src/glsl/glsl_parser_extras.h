@@ -175,11 +175,15 @@ struct _mesa_glsl_parse_state {
                                                 const ir_variable *)
    {
       if (!this->has_explicit_attrib_location() ||
-          !this->ARB_explicit_uniform_location_enable) {
+          !this->has_explicit_uniform_location()) {
+         const char *const requirement = this->es_shader
+            ? "GLSL ES 310"
+            : "GL_ARB_explicit_uniform_location and either "
+              "GL_ARB_explicit_attrib_location or GLSL 330.";
+
          _mesa_glsl_error(locp, this,
-                          "uniform explicit location requires "
-                          "GL_ARB_explicit_uniform_location and either "
-                          "GL_ARB_explicit_attrib_location or GLSL 330.");
+                          "uniform explicit location requires %s",
+                          requirement);
          return false;
       }
 
@@ -199,6 +203,11 @@ struct _mesa_glsl_parse_state {
    bool has_explicit_attrib_location() const
    {
       return ARB_explicit_attrib_location_enable || is_version(330, 300);
+   }
+
+   bool has_explicit_uniform_location() const
+   {
+      return ARB_explicit_uniform_location_enable || is_version(430, 310);
    }
 
    bool has_uniform_buffer_objects() const
