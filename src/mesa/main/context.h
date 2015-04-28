@@ -303,12 +303,22 @@ _mesa_is_gles(const struct gl_context *ctx)
 
 
 /**
- * Checks if the context is for GLES 3.x
+ * Checks if the context is for GLES 3.0 or later
  */
 static inline bool
 _mesa_is_gles3(const struct gl_context *ctx)
 {
    return ctx->API == API_OPENGLES2 && ctx->Version >= 30;
+}
+
+
+/**
+ * Checks if the context is for GLES 3.1 or later
+ */
+static inline bool
+_mesa_is_gles31(const struct gl_context *ctx)
+{
+   return ctx->API == API_OPENGLES2 && ctx->Version >= 31;
 }
 
 
