@@ -47,7 +47,7 @@
 #include "util/u_format.h"
 #include "util/u_math.h"
 #include "util/u_memory.h"
-#include "util/u_double_list.h"
+#include "util/list.h"
 
 #include "state_tracker/sw_winsys.h"
 #include "state_tracker/drm_driver.h"

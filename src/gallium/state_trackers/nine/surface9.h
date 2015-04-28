@@ -26,7 +26,7 @@
 #include "resource9.h"
 
 #include "pipe/p_state.h"
-#include "util/u_double_list.h"
+#include "util/list.h"
 #include "util/u_rect.h"
 #include "util/u_inlines.h"
 

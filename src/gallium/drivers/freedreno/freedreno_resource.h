@@ -29,7 +29,7 @@
 #ifndef FREEDRENO_RESOURCE_H_
 #define FREEDRENO_RESOURCE_H_
 
-#include "util/u_double_list.h"
+#include "util/list.h"
 #include "util/u_range.h"
 #include "util/u_transfer.h"
 

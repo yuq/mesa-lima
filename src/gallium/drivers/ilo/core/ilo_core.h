@@ -33,7 +33,7 @@
 #include "pipe/p_format.h"
 
 #include "util/u_debug.h"
-#include "util/u_double_list.h"
+#include "util/list.h"
 #include "util/u_format.h"
 #include "util/u_inlines.h"
 #include "util/u_math.h"

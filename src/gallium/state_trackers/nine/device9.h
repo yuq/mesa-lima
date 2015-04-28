@@ -42,7 +42,7 @@ struct u_upload_mgr;
 struct NineSwapChain9;
 struct NineStateBlock9;
 
-#include "util/u_double_list.h"
+#include "util/list.h"
 
 struct NineDevice9
 {

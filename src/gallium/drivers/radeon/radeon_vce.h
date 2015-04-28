@@ -34,7 +34,7 @@
 #ifndef RADEON_VCE_H
 #define RADEON_VCE_H
 
-#include "util/u_double_list.h"
+#include "util/list.h"
 
 #define RVCE_RELOC(buf, usage, domain) (enc->ws->cs_add_reloc(enc->cs, (buf), (usage), domain, RADEON_PRIO_MIN))
 

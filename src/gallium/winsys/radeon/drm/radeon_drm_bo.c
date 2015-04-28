@@ -29,7 +29,7 @@
 #include "util/u_hash_table.h"
 #include "util/u_memory.h"
 #include "util/simple_list.h"
-#include "util/u_double_list.h"
+#include "util/list.h"
 #include "os/os_thread.h"
 #include "os/os_mman.h"
 #include "os/os_time.h"

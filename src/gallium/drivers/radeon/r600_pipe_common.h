@@ -37,7 +37,7 @@
 #include "radeon/radeon_winsys.h"
 
 #include "util/u_blitter.h"
-#include "util/u_double_list.h"
+#include "util/list.h"
 #include "util/u_range.h"
 #include "util/u_slab.h"
 #include "util/u_suballoc.h"

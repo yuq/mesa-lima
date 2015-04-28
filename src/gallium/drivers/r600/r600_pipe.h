@@ -33,7 +33,7 @@
 #include "r600_public.h"
 
 #include "util/u_suballoc.h"
-#include "util/u_double_list.h"
+#include "util/list.h"
 #include "util/u_transfer.h"
 
 #define R600_NUM_ATOMS 73

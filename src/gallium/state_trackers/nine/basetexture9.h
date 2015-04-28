@@ -25,7 +25,7 @@
 
 #include "resource9.h"
 #include "util/u_inlines.h"
-#include "util/u_double_list.h"
+#include "util/list.h"
 
 struct NineBaseTexture9
 {

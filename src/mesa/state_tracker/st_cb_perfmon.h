@@ -24,7 +24,7 @@
 #ifndef ST_CB_PERFMON_H
 #define ST_CB_PERFMON_H
 
-#include "util/u_double_list.h"
+#include "util/list.h"
 
 /**
  * Subclass of gl_perf_monitor_object
