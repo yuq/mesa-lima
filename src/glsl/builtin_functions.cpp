@@ -220,10 +220,11 @@ gpu_shader5(const _mesa_glsl_parse_state *state)
 }
 
 static bool
-shader_packing_or_gpu_shader5(const _mesa_glsl_parse_state *state)
+shader_packing_or_es31_or_gpu_shader5(const _mesa_glsl_parse_state *state)
 {
    return state->ARB_shading_language_packing_enable ||
-          gpu_shader5(state);
+          state->ARB_gpu_shader5_enable ||
+          state->is_version(400, 310);
 }
 
 static bool
@@ -1162,12 +1163,12 @@ builtin_builder::create_builtins()
 
    add_function("packUnorm2x16",   _packUnorm2x16(shader_packing_or_es3_or_gpu_shader5),   NULL);
    add_function("packSnorm2x16",   _packSnorm2x16(shader_packing_or_es3),                  NULL);
-   add_function("packUnorm4x8",    _packUnorm4x8(shader_packing_or_gpu_shader5),           NULL);
-   add_function("packSnorm4x8",    _packSnorm4x8(shader_packing_or_gpu_shader5),           NULL);
+   add_function("packUnorm4x8",    _packUnorm4x8(shader_packing_or_es31_or_gpu_shader5),   NULL);
+   add_function("packSnorm4x8",    _packSnorm4x8(shader_packing_or_es31_or_gpu_shader5),   NULL);
    add_function("unpackUnorm2x16", _unpackUnorm2x16(shader_packing_or_es3_or_gpu_shader5), NULL);
    add_function("unpackSnorm2x16", _unpackSnorm2x16(shader_packing_or_es3),                NULL);
-   add_function("unpackUnorm4x8",  _unpackUnorm4x8(shader_packing_or_gpu_shader5),         NULL);
-   add_function("unpackSnorm4x8",  _unpackSnorm4x8(shader_packing_or_gpu_shader5),         NULL);
+   add_function("unpackUnorm4x8",  _unpackUnorm4x8(shader_packing_or_es31_or_gpu_shader5), NULL);
+   add_function("unpackSnorm4x8",  _unpackSnorm4x8(shader_packing_or_es31_or_gpu_shader5), NULL);
    add_function("packHalf2x16",    _packHalf2x16(shader_packing_or_es3),                   NULL);
    add_function("unpackHalf2x16",  _unpackHalf2x16(shader_packing_or_es3),                 NULL);
    add_function("packDouble2x32",    _packDouble2x32(fp64),                   NULL);
