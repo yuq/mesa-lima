@@ -186,6 +186,11 @@ struct _mesa_glsl_parse_state {
       return true;
    }
 
+   bool has_atomic_counters() const
+   {
+      return ARB_shader_atomic_counters_enable || is_version(420, 0);
+   }
+
    bool has_explicit_attrib_stream() const
    {
       return ARB_gpu_shader5_enable || is_version(400, 0);

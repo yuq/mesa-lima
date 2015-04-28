@@ -653,7 +653,7 @@ builtin_variable_generator::generate_constants()
       add_const("gl_MaxTextureCoords", state->Const.MaxTextureCoords);
    }
 
-   if (state->ARB_shader_atomic_counters_enable) {
+   if (state->has_atomic_counters()) {
       add_const("gl_MaxVertexAtomicCounters",
                 state->Const.MaxVertexAtomicCounters);
       add_const("gl_MaxGeometryAtomicCounters",

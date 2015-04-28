@@ -359,7 +359,7 @@ tex3d_lod(const _mesa_glsl_parse_state *state)
 static bool
 shader_atomic_counters(const _mesa_glsl_parse_state *state)
 {
-   return state->ARB_shader_atomic_counters_enable;
+   return state->has_atomic_counters();
 }
 
 static bool
