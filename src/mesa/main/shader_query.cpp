@@ -302,8 +302,10 @@ _mesa_count_active_attribs(struct gl_shader_program *shProg)
    struct gl_program_resource *res = shProg->ProgramResourceList;
    unsigned count = 0;
    for (unsigned j = 0; j < shProg->NumProgramResourceList; j++, res++) {
-         if (is_active_attrib(RESOURCE_VAR(res)))
-            count++;
+      if (res->Type == GL_PROGRAM_INPUT &&
+          res->StageReferences & (1 << MESA_SHADER_VERTEX) &&
+          is_active_attrib(RESOURCE_VAR(res)))
+         count++;
    }
    return count;
 }
