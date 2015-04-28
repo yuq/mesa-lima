@@ -35,20 +35,13 @@
 static bool
 check_for_ending(const char *string, const char *ending)
 {
-   int len1, len2;
+   const size_t len1 = strlen(string);
+   const size_t len2 = strlen(ending);
 
-   len1 = strlen(string);
-   len2 = strlen(ending);
-
-   if (len2 > len1) {
+   if (len2 > len1)
       return false;
-   }
 
-   if (strcmp(string + (len1 - len2), ending) == 0) {
-      return true;
-   } else {
-      return false;
-   }
+   return strcmp(string + (len1 - len2), ending) == 0;
 }
 
 /**
@@ -77,12 +70,14 @@ get_gl_override(int *version, bool *fwd_context, bool *compat_context)
 
          n = sscanf(version_str, "%u.%u", &major, &minor);
          if (n != 2) {
-            fprintf(stderr, "error: invalid value for %s: %s\n", env_var, version_str);
+            fprintf(stderr, "error: invalid value for %s: %s\n",
+                    env_var, version_str);
             override_version = 0;
          } else {
             override_version = major * 10 + minor;
             if (override_version < 30 && fc_suffix) {
-               fprintf(stderr, "error: invalid value for %s: %s\n", env_var, version_str);
+               fprintf(stderr, "error: invalid value for %s: %s\n",
+                       env_var, version_str);
             }
          }
       }
@@ -301,7 +296,7 @@ compute_version(const struct gl_extensions *extensions,
                          extensions->ARB_gpu_shader5 &&
                          extensions->ARB_gpu_shader_fp64 &&
                          extensions->ARB_sample_shading &&
-                         0/*extensions->ARB_shader_subroutine*/ &&
+                         false /*extensions->ARB_shader_subroutine*/ &&
                          extensions->ARB_tessellation_shader &&
                          extensions->ARB_texture_buffer_object_rgb32 &&
                          extensions->ARB_texture_cube_map_array &&
@@ -312,7 +307,7 @@ compute_version(const struct gl_extensions *extensions,
                          consts->GLSLVersion >= 410 &&
                          extensions->ARB_ES2_compatibility &&
                          extensions->ARB_shader_precision &&
-                         0/*extensions->ARB_vertex_attrib_64bit*/ &&
+                         false /*extensions->ARB_vertex_attrib_64bit*/ &&
                          extensions->ARB_viewport_array);
    const bool ver_4_2 = (ver_4_1 &&
                          consts->GLSLVersion >= 420 &&
