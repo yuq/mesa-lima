@@ -38,6 +38,7 @@
 #define _UTIL_LIST_H_
 
 
+#include <stdbool.h>
 #include <stddef.h>
 
 
@@ -90,6 +91,20 @@ static inline void list_delinit(struct list_head *item)
     item->next->prev = item->prev;
     item->next = item;
     item->prev = item;
+}
+
+static inline bool list_empty(struct list_head *list)
+{
+   return list->next == list;
+}
+
+static inline unsigned list_length(struct list_head *list)
+{
+   struct list_head *node;
+   unsigned length = 0;
+   for (node = list->next; node != list; node = node->next)
+      length++;
+   return length;
 }
 
 #define LIST_INITHEAD(__item) list_inithead(__item)
