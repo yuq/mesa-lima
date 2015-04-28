@@ -1615,7 +1615,7 @@ trans_samp(const struct instr_translater *t,
 			instr->cat1.src_type = type_mov;
 			instr->cat1.dst_type = type_mov;
 			add_dst_reg(ctx, instr, &tmp_dst, i);
-			add_src_reg(ctx, instr, &zero, 0);
+			add_src_reg(ctx, instr, &zero, zero.SwizzleX);
 			i++;
 		}
 		if (tgt->array) {
@@ -1669,15 +1669,18 @@ trans_samp(const struct instr_translater *t,
 	 */
 	if (inst->Instruction.Opcode == TGSI_OPCODE_TXD) {
 		while (collect->regs_count < 5)
-			ssa_src(ctx, ir3_reg_create(collect, 0, IR3_REG_SSA), &zero, 0);
+			ssa_src(ctx, ir3_reg_create(collect, 0, IR3_REG_SSA),
+					&zero, zero.SwizzleX);
 		for (i = 0; i < tgt->dims; i++)
 			ssa_src(ctx, ir3_reg_create(collect, 0, IR3_REG_SSA), dpdx, i);
 		if (tgt->dims < 2)
-			ssa_src(ctx, ir3_reg_create(collect, 0, IR3_REG_SSA), &zero, 0);
+			ssa_src(ctx, ir3_reg_create(collect, 0, IR3_REG_SSA),
+					&zero, zero.SwizzleX);
 		for (i = 0; i < tgt->dims; i++)
 			ssa_src(ctx, ir3_reg_create(collect, 0, IR3_REG_SSA), dpdy, i);
 		if (tgt->dims < 2)
-			ssa_src(ctx, ir3_reg_create(collect, 0, IR3_REG_SSA), &zero, 0);
+			ssa_src(ctx, ir3_reg_create(collect, 0, IR3_REG_SSA),
+					&zero, zero.SwizzleX);
 		tinf.src_wrmask |= ((1 << (2 * MAX2(tgt->dims, 2))) - 1) << 4;
 	}
 
@@ -1700,7 +1703,8 @@ trans_samp(const struct instr_translater *t,
 			ssa_src(ctx, ir3_reg_create(collect, 0, IR3_REG_SSA),
 					offset, i);
 		if (tgt->dims < 2)
-			ssa_src(ctx, ir3_reg_create(collect, 0, IR3_REG_SSA), &zero, 0);
+			ssa_src(ctx, ir3_reg_create(collect, 0, IR3_REG_SSA),
+					&zero, zero.SwizzleX);
 	}
 	if (inst->Instruction.Opcode == TGSI_OPCODE_TXB2)
 		ssa_src(ctx, ir3_reg_create(collect, 0, IR3_REG_SSA),
