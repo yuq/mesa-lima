@@ -4479,7 +4479,7 @@ builtin_builder::_bitfieldExtract(const glsl_type *type)
    ir_variable *value  = in_var(type, "value");
    ir_variable *offset = in_var(glsl_type::int_type, "offset");
    ir_variable *bits   = in_var(glsl_type::int_type, "bits");
-   MAKE_SIG(type, gpu_shader5, 3, value, offset, bits);
+   MAKE_SIG(type, gpu_shader5_or_es31, 3, value, offset, bits);
 
    body.emit(ret(expr(ir_triop_bitfield_extract, value, offset, bits)));
 
@@ -4493,33 +4493,33 @@ builtin_builder::_bitfieldInsert(const glsl_type *type)
    ir_variable *insert = in_var(type, "insert");
    ir_variable *offset = in_var(glsl_type::int_type, "offset");
    ir_variable *bits   = in_var(glsl_type::int_type, "bits");
-   MAKE_SIG(type, gpu_shader5, 4, base, insert, offset, bits);
+   MAKE_SIG(type, gpu_shader5_or_es31, 4, base, insert, offset, bits);
 
    body.emit(ret(bitfield_insert(base, insert, offset, bits)));
 
    return sig;
 }
 
-UNOP(bitfieldReverse, ir_unop_bitfield_reverse, gpu_shader5)
+UNOP(bitfieldReverse, ir_unop_bitfield_reverse, gpu_shader5_or_es31)
 
 ir_function_signature *
 builtin_builder::_bitCount(const glsl_type *type)
 {
-   return unop(gpu_shader5, ir_unop_bit_count,
+   return unop(gpu_shader5_or_es31, ir_unop_bit_count,
                glsl_type::ivec(type->vector_elements), type);
 }
 
 ir_function_signature *
 builtin_builder::_findLSB(const glsl_type *type)
 {
-   return unop(gpu_shader5, ir_unop_find_lsb,
+   return unop(gpu_shader5_or_es31, ir_unop_find_lsb,
                glsl_type::ivec(type->vector_elements), type);
 }
 
 ir_function_signature *
 builtin_builder::_findMSB(const glsl_type *type)
 {
-   return unop(gpu_shader5, ir_unop_find_msb,
+   return unop(gpu_shader5_or_es31, ir_unop_find_msb,
                glsl_type::ivec(type->vector_elements), type);
 }
 
@@ -4539,7 +4539,7 @@ builtin_builder::_fma(builtin_available_predicate avail, const glsl_type *type)
 ir_function_signature *
 builtin_builder::_ldexp(const glsl_type *x_type, const glsl_type *exp_type)
 {
-   return binop(ir_binop_ldexp, x_type->base_type == GLSL_TYPE_DOUBLE ? fp64 : gpu_shader5, x_type, x_type, exp_type);
+   return binop(ir_binop_ldexp, x_type->base_type == GLSL_TYPE_DOUBLE ? fp64 : gpu_shader5_or_es31, x_type, x_type, exp_type);
 }
 
 ir_function_signature *
@@ -4560,7 +4560,7 @@ builtin_builder::_frexp(const glsl_type *x_type, const glsl_type *exp_type)
 {
    ir_variable *x = in_var(x_type, "x");
    ir_variable *exponent = out_var(exp_type, "exp");
-   MAKE_SIG(x_type, gpu_shader5, 2, x, exponent);
+   MAKE_SIG(x_type, gpu_shader5_or_es31, 2, x, exponent);
 
    const unsigned vec_elem = x_type->vector_elements;
    const glsl_type *bvec = glsl_type::get_instance(GLSL_TYPE_BOOL, vec_elem, 1);
@@ -4609,7 +4609,7 @@ builtin_builder::_uaddCarry(const glsl_type *type)
    ir_variable *x = in_var(type, "x");
    ir_variable *y = in_var(type, "y");
    ir_variable *carry = out_var(type, "carry");
-   MAKE_SIG(type, gpu_shader5, 3, x, y, carry);
+   MAKE_SIG(type, gpu_shader5_or_es31, 3, x, y, carry);
 
    body.emit(assign(carry, ir_builder::carry(x, y)));
    body.emit(ret(add(x, y)));
@@ -4623,7 +4623,7 @@ builtin_builder::_usubBorrow(const glsl_type *type)
    ir_variable *x = in_var(type, "x");
    ir_variable *y = in_var(type, "y");
    ir_variable *borrow = out_var(type, "borrow");
-   MAKE_SIG(type, gpu_shader5, 3, x, y, borrow);
+   MAKE_SIG(type, gpu_shader5_or_es31, 3, x, y, borrow);
 
    body.emit(assign(borrow, ir_builder::borrow(x, y)));
    body.emit(ret(sub(x, y)));
@@ -4641,7 +4641,7 @@ builtin_builder::_mulExtended(const glsl_type *type)
    ir_variable *y = in_var(type, "y");
    ir_variable *msb = out_var(type, "msb");
    ir_variable *lsb = out_var(type, "lsb");
-   MAKE_SIG(glsl_type::void_type, gpu_shader5, 4, x, y, msb, lsb);
+   MAKE_SIG(glsl_type::void_type, gpu_shader5_or_es31, 4, x, y, msb, lsb);
 
    body.emit(assign(msb, imul_high(x, y)));
    body.emit(assign(lsb, mul(x, y)));
