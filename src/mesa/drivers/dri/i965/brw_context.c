@@ -612,6 +612,28 @@ brw_initialize_context_constants(struct brw_context *brw)
       ctx->Const.MaxVertexStreams = MIN2(4, MAX_VERTEX_STREAMS);
 }
 
+static void
+brw_adjust_cs_context_constants(struct brw_context *brw)
+{
+   struct gl_context *ctx = &brw->ctx;
+
+   /* For ES, we set these constants based on SIMD8.
+    *
+    * TODO: Once we can always generate SIMD16, we should update this.
+    *
+    * For GL, we assume we can generate a SIMD16 program, but this currently
+    * is not always true. This allows us to run more test cases, and will be
+    * required based on desktop GL compute shader requirements.
+    */
+   const simd_size = ctx->API == API_OPENGL_CORE ? 16 : 8;
+
+   const uint32_t max_invocations = simd_size * brw->max_cs_threads;
+   ctx->Const.MaxComputeWorkGroupSize[0] = max_invocations;
+   ctx->Const.MaxComputeWorkGroupSize[1] = max_invocations;
+   ctx->Const.MaxComputeWorkGroupSize[2] = max_invocations;
+   ctx->Const.MaxComputeWorkGroupInvocations = max_invocations;
+}
+
 /**
  * Process driconf (drirc) options, setting appropriate context flags.
  *
@@ -842,6 +864,8 @@ brwCreateContext(gl_api api,
    brw->urb.max_hs_entries = devinfo->urb.max_hs_entries;
    brw->urb.max_ds_entries = devinfo->urb.max_ds_entries;
    brw->urb.max_gs_entries = devinfo->urb.max_gs_entries;
+
+   brw_adjust_cs_context_constants(brw);
 
    /* Estimate the size of the mappable aperture into the GTT.  There's an
     * ioctl to get the whole GTT size, but not one to get the mappable subset.
