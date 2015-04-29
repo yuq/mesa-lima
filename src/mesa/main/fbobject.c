@@ -2704,9 +2704,9 @@ static bool
 check_texture_target(struct gl_context *ctx, GLenum target,
                      const char *caller)
 {
-   /* We're being called by glFramebufferTextureLayer() and
-    * textarget is not used.  The only legal texture types for
-    * that function are 3D and 1D/2D arrays textures.
+   /* We're being called by glFramebufferTextureLayer().
+    * The only legal texture types for that function are 3D,
+    * cube-map, and 1D/2D/cube-map array textures.
     */
    switch (target) {
    case GL_TEXTURE_3D:
@@ -2715,6 +2715,11 @@ check_texture_target(struct gl_context *ctx, GLenum target,
    case GL_TEXTURE_CUBE_MAP_ARRAY:
    case GL_TEXTURE_2D_MULTISAMPLE_ARRAY:
       return true;
+   case GL_TEXTURE_CUBE_MAP:
+      /* This target is valid in TextureLayer when ARB_direct_state_access
+       * or OpenGL 4.5 is supported.
+       */
+      return ctx->Extensions.ARB_direct_state_access;
    }
 
    _mesa_error(ctx, GL_INVALID_OPERATION,
@@ -2844,6 +2849,13 @@ check_layer(struct gl_context *ctx, GLenum target, GLint layer,
          _mesa_error(ctx, GL_INVALID_VALUE,
                      "%s(layer %u >= GL_MAX_ARRAY_TEXTURE_LAYERS)",
                      caller, layer);
+         return false;
+      }
+   }
+   else if (target == GL_TEXTURE_CUBE_MAP) {
+      if (layer >= 6) {
+         _mesa_error(ctx, GL_INVALID_VALUE,
+                     "%s(layer %u >= 6)", caller, layer);
          return false;
       }
    }
@@ -3035,6 +3047,7 @@ _mesa_FramebufferTextureLayer(GLenum target, GLenum attachment,
    GET_CURRENT_CONTEXT(ctx);
    struct gl_framebuffer *fb;
    struct gl_texture_object *texObj;
+   GLenum textarget = 0;
 
    const char *func = "glFramebufferTextureLayer";
 
@@ -3060,9 +3073,15 @@ _mesa_FramebufferTextureLayer(GLenum target, GLenum attachment,
 
       if (!check_level(ctx, texObj->Target, level, func))
          return;
+
+      if (texObj->Target == GL_TEXTURE_CUBE_MAP) {
+         assert(layer >= 0 && layer < 6);
+         textarget = GL_TEXTURE_CUBE_MAP_POSITIVE_X + layer;
+         layer = 0;
+      }
    }
 
-   _mesa_framebuffer_texture(ctx, fb, attachment, texObj, 0, level,
+   _mesa_framebuffer_texture(ctx, fb, attachment, texObj, textarget, level,
                              layer, GL_FALSE, func);
 }
 
@@ -3074,6 +3093,7 @@ _mesa_NamedFramebufferTextureLayer(GLuint framebuffer, GLenum attachment,
    GET_CURRENT_CONTEXT(ctx);
    struct gl_framebuffer *fb;
    struct gl_texture_object *texObj;
+   GLenum textarget = 0;
 
    const char *func = "glNamedFramebufferTextureLayer";
 
@@ -3095,9 +3115,15 @@ _mesa_NamedFramebufferTextureLayer(GLuint framebuffer, GLenum attachment,
 
       if (!check_level(ctx, texObj->Target, level, func))
          return;
+
+      if (texObj->Target == GL_TEXTURE_CUBE_MAP) {
+         assert(layer >= 0 && layer < 6);
+         textarget = GL_TEXTURE_CUBE_MAP_POSITIVE_X + layer;
+         layer = 0;
+      }
    }
 
-   _mesa_framebuffer_texture(ctx, fb, attachment, texObj, 0, level,
+   _mesa_framebuffer_texture(ctx, fb, attachment, texObj, textarget, level,
                              layer, GL_FALSE, func);
 }
 
