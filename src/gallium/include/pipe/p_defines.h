@@ -476,6 +476,19 @@ enum pipe_flush_flags
 
 #define PIPE_TIMEOUT_INFINITE 0xffffffffffffffffull
 
+
+/**
+ * Device reset status.
+ */
+enum pipe_reset_status
+{
+   PIPE_NO_RESET = 0,
+   PIPE_GUILTY_CONTEXT_RESET = 1,
+   PIPE_INNOCENT_CONTEXT_RESET = 2,
+   PIPE_UNKNOWN_CONTEXT_RESET = 3
+};
+
+
 /**
  * Implementation capabilities/limits which are queried through
  * pipe_screen::get_param()

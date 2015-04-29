@@ -562,6 +562,10 @@ struct pipe_context {
    void (*invalidate_resource)(struct pipe_context *ctx,
                                struct pipe_resource *resource);
 
+   /**
+    * Return information about unexpected device resets.
+    */
+   enum pipe_reset_status (*get_device_reset_status)(struct pipe_context *ctx);
 };
 
 
