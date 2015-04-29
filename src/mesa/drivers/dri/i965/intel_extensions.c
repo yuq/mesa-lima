@@ -282,8 +282,6 @@ intelInitExtensions(struct gl_context *ctx)
    }
 
    if (brw->gen >= 6) {
-      uint64_t dummy;
-
       ctx->Extensions.ARB_blend_func_extended =
          !driQueryOptionb(&brw->optionCache, "disable_blend_func_extended");
       ctx->Extensions.ARB_conditional_render_inverted = true;
@@ -307,9 +305,7 @@ intelInitExtensions(struct gl_context *ctx)
       ctx->Extensions.EXT_transform_feedback = true;
       ctx->Extensions.OES_depth_texture_cube_map = true;
 
-      /* Test if the kernel has the ioctl. */
-      if (drm_intel_reg_read(brw->bufmgr, TIMESTAMP, &dummy) == 0)
-         ctx->Extensions.ARB_timer_query = true;
+      ctx->Extensions.ARB_timer_query = brw->intelScreen->hw_has_timestamp;
 
       /* Only enable this in core profile because other parts of Mesa behave
        * slightly differently when the extension is enabled.

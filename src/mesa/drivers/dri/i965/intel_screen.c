@@ -1123,6 +1123,27 @@ intel_detect_swizzling(struct intel_screen *screen)
       return true;
 }
 
+static bool
+intel_detect_timestamp(struct intel_screen *screen)
+{
+   uint64_t dummy = 0;
+   int loop = 10;
+
+   /*
+    * On 32bit systems, some old kernels trigger a hw bug resulting in the
+    * TIMESTAMP register being shifted and the low 32bits always zero. Detect
+    * this by repeating the read a few times and check the register is
+    * incrementing every 80ns as expected and not stuck on zero (as would be
+    * the case with the buggy kernel/hw.).
+    */
+   do {
+      if (drm_intel_reg_read(screen->bufmgr, TIMESTAMP, &dummy))
+	 return false;
+   } while ((dummy & 0xffffffff) == 0 && --loop);
+
+   return loop > 0;
+}
+
 /**
  * Return array of MSAA modes supported by the hardware. The array is
  * zero-terminated and sorted in decreasing order.
@@ -1378,6 +1399,7 @@ __DRIconfig **intelInitScreen2(__DRIscreen *psp)
    intelScreen->hw_must_use_separate_stencil = intelScreen->devinfo->gen >= 7;
 
    intelScreen->hw_has_swizzling = intel_detect_swizzling(intelScreen);
+   intelScreen->hw_has_timestamp = intel_detect_timestamp(intelScreen);
 
    const char *force_msaa = getenv("INTEL_FORCE_MSAA");
    if (force_msaa) {
