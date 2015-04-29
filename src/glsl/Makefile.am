@@ -75,7 +75,7 @@ check_PROGRAMS =					\
 	tests/sampler-types-test			\
 	tests/uniform-initializer-test
 
-noinst_PROGRAMS = glsl_compiler
+noinst_PROGRAMS = glsl_compiler spirv2nir
 
 tests_blob_test_SOURCES =				\
 	tests/blob_test.c
@@ -152,6 +152,16 @@ glsl_compiler_SOURCES = \
 	$(GLSL_COMPILER_CXX_FILES)
 
 glsl_compiler_LDADD =					\
+	libglsl.la					\
+	$(top_builddir)/src/libglsl_util.la		\
+	$(PTHREAD_LIBS)
+
+spirv2nir_SOURCES = \
+	standalone_scaffolding.cpp \
+	standalone_scaffolding.h \
+	nir/spirv2nir.c
+
+spirv2nir_LDADD =					\
 	libglsl.la					\
 	$(top_builddir)/src/libglsl_util.la		\
 	$(PTHREAD_LIBS)
