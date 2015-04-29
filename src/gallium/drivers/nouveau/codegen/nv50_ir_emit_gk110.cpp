@@ -971,7 +971,7 @@ CodeEmitterGK110::emitSET(const CmpInstruction *i)
       code[0] |= 0x1c;
    } else {
       switch (i->sType) {
-      case TYPE_F32: op2 = 0x000; op1 = 0x820; break;
+      case TYPE_F32: op2 = 0x000; op1 = 0x800; break;
       case TYPE_F64: op2 = 0x080; op1 = 0x900; break;
       default:
          op2 = 0x1a8;
