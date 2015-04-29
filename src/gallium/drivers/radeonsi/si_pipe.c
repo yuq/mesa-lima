@@ -257,6 +257,9 @@ static int si_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 	case PIPE_CAP_RESOURCE_FROM_USER_MEMORY:
 		return !SI_BIG_ENDIAN && sscreen->b.info.has_userptr;
 
+	case PIPE_CAP_DEVICE_RESET_STATUS_QUERY:
+		return sscreen->b.info.drm_major == 2 && sscreen->b.info.drm_minor >= 43;
+
 	case PIPE_CAP_TEXTURE_MULTISAMPLE:
 		/* 2D tiling on CIK is supported since DRM 2.35.0 */
 		return sscreen->b.chip_class < CIK ||
@@ -293,7 +296,6 @@ static int si_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 	case PIPE_CAP_CONDITIONAL_RENDER_INVERTED:
 	case PIPE_CAP_SAMPLER_VIEW_TARGET:
 	case PIPE_CAP_VERTEXID_NOBASE:
-	case PIPE_CAP_DEVICE_RESET_STATUS_QUERY:
 		return 0;
 
 	case PIPE_CAP_TEXTURE_BORDER_COLOR_QUIRK:

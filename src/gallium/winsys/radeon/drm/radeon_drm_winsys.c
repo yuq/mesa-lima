@@ -59,6 +59,10 @@
 
 #define RADEON_INFO_VA_UNMAP_WORKING	0x25
 
+#ifndef RADEON_INFO_GPU_RESET_COUNTER
+#define RADEON_INFO_GPU_RESET_COUNTER   0x26
+#endif
+
 static struct util_hash_table *fd_tab = NULL;
 pipe_static_mutex(fd_tab_mutex);
 
@@ -566,6 +570,10 @@ static uint64_t radeon_query_value(struct radeon_winsys *rws,
     case RADEON_CURRENT_MCLK:
         radeon_get_drm_value(ws->fd, RADEON_INFO_CURRENT_GPU_MCLK,
                              "current-gpu-mclk", (uint32_t*)&retval);
+        return retval;
+    case RADEON_GPU_RESET_COUNTER:
+        radeon_get_drm_value(ws->fd, RADEON_INFO_GPU_RESET_COUNTER,
+                             "gpu-reset-counter", (uint32_t*)&retval);
         return retval;
     }
     return 0;

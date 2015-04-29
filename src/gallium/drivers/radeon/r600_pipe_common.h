@@ -356,6 +356,7 @@ struct r600_common_context {
 	enum chip_class			chip_class;
 	struct r600_rings		rings;
 	unsigned			initial_gfx_cs_size;
+	unsigned			gpu_reset_counter;
 
 	struct u_upload_mgr		*uploader;
 	struct u_suballocator		*allocator_so_filled_size;
