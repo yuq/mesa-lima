@@ -252,6 +252,8 @@ The integer capabilities:
   existing user memory into the device address space for direct device access.
   The create function is pipe_screen::resource_from_user_memory. The address
   and size must be page-aligned.
+* ``PIPE_CAP_DEVICE_RESET_STATUS_QUERY``:
+  Whether pipe_context::get_device_reset_status is implemented.
 
 
 .. _pipe_capf:
