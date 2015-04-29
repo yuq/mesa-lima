@@ -1169,9 +1169,7 @@ _mesa_initialize_context(struct gl_context *ctx,
       ctx->HasConfig = GL_FALSE;
    }
 
-   if (_mesa_is_desktop_gl(ctx)) {
-      _mesa_override_gl_version(ctx);
-   }
+   _mesa_override_gl_version(ctx);
 
    /* misc one-time initializations */
    one_time_init(ctx);
