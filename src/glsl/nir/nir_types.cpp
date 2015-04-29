@@ -149,9 +149,9 @@ glsl_float_type(void)
 }
 
 const glsl_type *
-glsl_vec4_type(void)
+glsl_int_type(void)
 {
-   return glsl_type::vec4_type;
+   return glsl_type::int_type;
 }
 
 const glsl_type *
@@ -161,7 +161,47 @@ glsl_uint_type(void)
 }
 
 const glsl_type *
+glsl_bool_type(void)
+{
+   return glsl_type::bool_type;
+}
+
+const glsl_type *
+glsl_vec4_type(void)
+{
+   return glsl_type::vec4_type;
+}
+
+const glsl_type *
+glsl_vector_type(enum glsl_base_type base_type, unsigned components)
+{
+   assert(components > 1 && components <= 4);
+   return glsl_type::get_instance(base_type, components, 1);
+}
+
+const glsl_type *
+glsl_matrix_type(enum glsl_base_type base_type, unsigned rows, unsigned columns)
+{
+   assert(rows > 1 && rows <= 4 && columns > 1 && columns <= 4);
+   return glsl_type::get_instance(base_type, rows, columns);
+}
+
+const glsl_type *
 glsl_array_type(const glsl_type *base, unsigned elements)
 {
    return glsl_type::get_array_instance(base, elements);
+}
+
+const glsl_type *
+glsl_struct_type(const glsl_struct_field *fields,
+                 unsigned num_fields, const char *name)
+{
+   return glsl_type::get_record_instance(fields, num_fields, name);
+}
+
+const glsl_type *
+glsl_function_type(const glsl_type *return_type,
+                   const glsl_function_param *params, unsigned num_params)
+{
+   return glsl_type::get_function_instance(return_type, params, num_params);
 }
