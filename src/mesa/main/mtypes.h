@@ -1874,6 +1874,20 @@ struct gl_perf_monitor_state
 
 
 /**
+ * Context state for INTEL_performance_query.
+ */
+struct gl_perf_query_state
+{
+   /** Array of performance monitor groups (indexed by group ID) */
+   const struct gl_perf_monitor_group *Groups;
+   GLuint NumGroups;
+
+   /** The table of all performance query objects. */
+   struct _mesa_HashTable *Objects;
+};
+
+
+/**
  * Names of the various vertex/fragment program register files, etc.
  *
  * NOTE: first four tokens must fit into 2 bits (see t_vb_arbprogram.c)
@@ -4526,6 +4540,7 @@ struct gl_context
    struct gl_transform_feedback_state TransformFeedback;
 
    struct gl_perf_monitor_state PerfMonitor;
+   struct gl_perf_query_state PerfQuery;
 
    struct gl_buffer_object *DrawIndirectBuffer; /** < GL_ARB_draw_indirect */
    struct gl_buffer_object *ParameterBuffer; /** < GL_ARB_indirect_parameters */
