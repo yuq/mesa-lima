@@ -72,6 +72,7 @@ extern const struct function gl_core_functions_possible[];
 extern const struct function gles11_functions_possible[];
 extern const struct function gles2_functions_possible[];
 extern const struct function gles3_functions_possible[];
+extern const struct function gles31_functions_possible[];
 
 class DispatchSanity_test : public ::testing::Test {
 public:
@@ -198,6 +199,15 @@ TEST_F(DispatchSanity_test, GLES3)
    SetUpCtx(API_OPENGLES2, 30);
    validate_functions(&ctx, gles2_functions_possible, nop_table);
    validate_functions(&ctx, gles3_functions_possible, nop_table);
+   validate_nops(&ctx, nop_table);
+}
+
+TEST_F(DispatchSanity_test, GLES31)
+{
+   SetUpCtx(API_OPENGLES2, 31);
+   validate_functions(&ctx, gles2_functions_possible, nop_table);
+   validate_functions(&ctx, gles3_functions_possible, nop_table);
+   validate_functions(&ctx, gles31_functions_possible, nop_table);
    validate_nops(&ctx, nop_table);
 }
 
@@ -1611,3 +1621,88 @@ const struct function gles3_functions_possible[] = {
 
    { NULL, 0, -1 }
 };
+
+const struct function gles31_functions_possible[] = {
+   { "glDispatchCompute", 31, -1 },
+   { "glDispatchComputeIndirect", 31, -1 },
+   { "glDrawArraysIndirect", 31, -1 },
+   { "glDrawElementsIndirect", 31, -1 },
+
+   // FINISHME: These two functions have not been implemented yet.  They come
+   // FINISHME: from the ARB_framebuffer_no_attachments extension.
+   // { "glFramebufferParameteri", 31, -1 },
+   // { "glGetFramebufferParameteriv", 31, -1 },
+
+   { "glGetProgramInterfaceiv", 31, -1 },
+   { "glGetProgramResourceIndex", 31, -1 },
+   { "glGetProgramResourceName", 31, -1 },
+   { "glGetProgramResourceiv", 31, -1 },
+   { "glGetProgramResourceLocation", 31, -1 },
+
+   // We check for the aliased EXT versions in GLES 2
+   // { "glUseProgramStages", 31, -1 },
+   // { "glActiveShaderProgram", 31, -1 },
+   // { "glCreateShaderProgramv", 31, -1 },
+   // { "glBindProgramPipeline", 31, -1 },
+   // { "glDeleteProgramPipelines", 31, -1 },
+   // { "glGenProgramPipelines", 31, -1 },
+   // { "glIsProgramPipeline", 31, -1 },
+   // { "glGetProgramPipelineiv", 31, -1 },
+   // { "glProgramUniform1i", 31, -1 },
+   // { "glProgramUniform2i", 31, -1 },
+   // { "glProgramUniform3i", 31, -1 },
+   // { "glProgramUniform4i", 31, -1 },
+   // { "glProgramUniform1f", 31, -1 },
+   // { "glProgramUniform2f", 31, -1 },
+   // { "glProgramUniform3f", 31, -1 },
+   // { "glProgramUniform4f", 31, -1 },
+   // { "glProgramUniform1iv", 31, -1 },
+   // { "glProgramUniform2iv", 31, -1 },
+   // { "glProgramUniform3iv", 31, -1 },
+   // { "glProgramUniform4iv", 31, -1 },
+   // { "glProgramUniform1fv", 31, -1 },
+   // { "glProgramUniform2fv", 31, -1 },
+   // { "glProgramUniform3fv", 31, -1 },
+   // { "glProgramUniform4fv", 31, -1 },
+   // { "glProgramUniformMatrix2fv", 31, -1 },
+   // { "glProgramUniformMatrix3fv", 31, -1 },
+   // { "glProgramUniformMatrix4fv", 31, -1 },
+   // { "glProgramUniformMatrix2x3fv", 31, -1 },
+   // { "glProgramUniformMatrix3x2fv", 31, -1 },
+   // { "glProgramUniformMatrix2x4fv", 31, -1 },
+   // { "glProgramUniformMatrix4x2fv", 31, -1 },
+   // { "glProgramUniformMatrix3x4fv", 31, -1 },
+   // { "glProgramUniformMatrix4x3fv", 31, -1 },
+   // { "glValidateProgramPipeline", 31, -1 },
+   // { "glGetProgramPipelineInfoLog", 31, -1 },
+
+   // We check for the aliased EXT versions in GLES 3
+   // { "glProgramUniform1ui", 31, -1 },
+   // { "glProgramUniform2ui", 31, -1 },
+   // { "glProgramUniform3ui", 31, -1 },
+   // { "glProgramUniform4ui", 31, -1 },
+   // { "glProgramUniform1uiv", 31, -1 },
+   // { "glProgramUniform2uiv", 31, -1 },
+   // { "glProgramUniform3uiv", 31, -1 },
+   // { "glProgramUniform4uiv", 31, -1 },
+
+   { "glBindImageTexture", 31, -1 },
+   { "glGetBooleani_v", 31, -1 },
+   { "glMemoryBarrier", 31, -1 },
+
+   // FINISHME: This function has not been implemented yet.
+   // { "glMemoryBarrierByRegion", 31, -1 },
+
+   { "glTexStorage2DMultisample", 31, -1 },
+   { "glGetMultisamplefv", 31, -1 },
+   { "glSampleMaski", 31, -1 },
+   { "glGetTexLevelParameteriv", 31, -1 },
+   { "glGetTexLevelParameterfv", 31, -1 },
+   { "glBindVertexBuffer", 31, -1 },
+   { "glVertexAttribFormat", 31, -1 },
+   { "glVertexAttribIFormat", 31, -1 },
+   { "glVertexAttribBinding", 31, -1 },
+   { "glVertexBindingDivisor", 31, -1 },
+
+   { NULL, 0, -1 },
+ };

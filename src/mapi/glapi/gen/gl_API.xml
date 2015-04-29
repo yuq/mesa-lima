@@ -2824,7 +2824,7 @@
         <glx sop="137"/>
     </function>
 
-    <function name="GetTexLevelParameterfv">
+    <function name="GetTexLevelParameterfv" es2="3.1">
         <param name="target" type="GLenum"/>
         <param name="level" type="GLint"/>
         <param name="pname" type="GLenum"/>
@@ -2832,7 +2832,7 @@
         <glx sop="138"/>
     </function>
 
-    <function name="GetTexLevelParameteriv">
+    <function name="GetTexLevelParameteriv" es2="3.1">
         <param name="target" type="GLenum"/>
         <param name="level" type="GLint"/>
         <param name="pname" type="GLenum"/>
