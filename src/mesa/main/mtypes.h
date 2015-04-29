@@ -1860,6 +1860,23 @@ struct gl_perf_monitor_group
 
 
 /**
+ * A query object instance as described in INTEL_performance_query.
+ *
+ * NB: We want to keep this and the corresponding backend structure
+ * relatively lean considering that applications may expect to
+ * allocate enough objects to be able to query around all draw calls
+ * in a frame.
+ */
+struct gl_perf_query_object
+{
+   GLuint Id;          /**< hash table ID/name */
+   unsigned Used:1;    /**< has been used for 1 or more queries */
+   unsigned Active:1;  /**< inside Begin/EndPerfQuery */
+   unsigned Ready:1;   /**< result is ready? */
+};
+
+
+/**
  * Context state for AMD_performance_monitor.
  */
 struct gl_perf_monitor_state
@@ -1878,12 +1895,7 @@ struct gl_perf_monitor_state
  */
 struct gl_perf_query_state
 {
-   /** Array of performance monitor groups (indexed by group ID) */
-   const struct gl_perf_monitor_group *Groups;
-   GLuint NumGroups;
-
-   /** The table of all performance query objects. */
-   struct _mesa_HashTable *Objects;
+   struct _mesa_HashTable *Objects; /**< The table of all performance query objects */
 };
 
 

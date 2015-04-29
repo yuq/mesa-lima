@@ -1,5 +1,5 @@
 /*
- * Copyright © 2012 Intel Corporation
+ * Copyright © 2012,2015 Intel Corporation
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -37,10 +37,6 @@ _mesa_init_performance_queries(struct gl_context *ctx);
 
 extern void
 _mesa_free_performance_queries(struct gl_context *ctx);
-
-unsigned
-_mesa_perf_query_counter_size(const struct gl_perf_monitor_counter *);
-
 
 extern void GLAPIENTRY
 _mesa_GetFirstPerfQueryIdINTEL(GLuint *queryId);
