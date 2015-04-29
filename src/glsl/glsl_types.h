@@ -742,6 +742,10 @@ private:
    /*@}*/
 };
 
+#undef DECL_TYPE
+#undef STRUCT_TYPE
+#endif /* __cplusplus */
+
 struct glsl_struct_field {
    const struct glsl_type *type;
    const char *name;
@@ -797,9 +801,5 @@ glsl_align(unsigned int a, unsigned int align)
 {
    return (a + align - 1) / align * align;
 }
-
-#undef DECL_TYPE
-#undef STRUCT_TYPE
-#endif /* __cplusplus */
 
 #endif /* GLSL_TYPES_H */
