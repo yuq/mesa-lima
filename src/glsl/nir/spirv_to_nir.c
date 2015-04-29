@@ -69,22 +69,16 @@ struct vtn_builder {
    struct vtn_value *entry_point;
 };
 
-static void
+static struct vtn_value *
 vtn_push_value(struct vtn_builder *b, uint32_t value_id,
-               enum vtn_value_type value_type, void *ptr)
+               enum vtn_value_type value_type)
 {
    assert(value_id < b->value_id_bound);
    assert(b->values[value_id].value_type == vtn_value_type_invalid);
 
    b->values[value_id].value_type = value_type;
-   b->values[value_id].ptr = ptr;
-}
 
-static void
-vtn_push_token(struct vtn_builder *b, uint32_t value_id,
-               enum vtn_value_type value_type)
-{
-   vtn_push_value(b, value_id, value_type, NULL);
+   return &b->values[value_id];
 }
 
 static char *
@@ -149,7 +143,7 @@ vtn_handle_decoration(struct vtn_builder *b, SpvOp opcode,
 {
    switch (opcode) {
    case SpvOpDecorationGroup:
-      vtn_push_token(b, w[1], vtn_value_type_undef);
+      vtn_push_value(b, w[1], vtn_value_type_undef);
       break;
 
    case SpvOpDecorate: {
@@ -243,12 +237,12 @@ vtn_handle_instruction(struct vtn_builder *b, SpvOp opcode,
       break;
 
    case SpvOpString:
-      vtn_push_value(b, w[1], vtn_value_type_string,
-                     vtn_string_literal(b, &w[2], count - 2));
+      vtn_push_value(b, w[1], vtn_value_type_string)->str =
+         vtn_string_literal(b, &w[2], count - 2);
       break;
 
    case SpvOpUndef:
-      vtn_push_token(b, w[2], vtn_value_type_undef);
+      vtn_push_value(b, w[2], vtn_value_type_undef);
       break;
 
    case SpvOpMemoryModel:
