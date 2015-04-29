@@ -64,6 +64,9 @@ struct vtn_builder {
 
    unsigned value_id_bound;
    struct vtn_value *values;
+
+   SpvExecutionModel execution_model;
+   struct vtn_value *entry_point;
 };
 
 static void
@@ -89,6 +92,21 @@ vtn_string_literal(struct vtn_builder *b, const uint32_t *words,
                    unsigned word_count)
 {
    return ralloc_strndup(b, (char *)words, (word_count - 2) * sizeof(*words));
+}
+
+static void
+vtn_handle_extension(struct vtn_builder *b, SpvOp opcode,
+                     const uint32_t *w, unsigned count)
+{
+   switch (opcode) {
+   case SpvOpExtInstImport:
+      /* Do nothing for the moment */
+      break;
+
+   case SpvOpExtInst:
+   default:
+      unreachable("Unhandled opcode");
+   }
 }
 
 typedef void (*decoration_foreach_cb)(struct vtn_builder *,
@@ -216,6 +234,7 @@ vtn_handle_instruction(struct vtn_builder *b, SpvOp opcode,
    case SpvOpSourceExtension:
    case SpvOpMemberName:
    case SpvOpLine:
+   case SpvOpExtension:
       /* Unhandled, but these are for debug so that's ok. */
       break;
 
@@ -230,6 +249,22 @@ vtn_handle_instruction(struct vtn_builder *b, SpvOp opcode,
 
    case SpvOpUndef:
       vtn_push_token(b, w[2], vtn_value_type_undef);
+      break;
+
+   case SpvOpMemoryModel:
+      assert(w[1] == SpvAddressingModelLogical);
+      assert(w[2] == SpvMemoryModelGLSL450);
+      break;
+
+   case SpvOpEntryPoint:
+      assert(b->entry_point == NULL);
+      b->entry_point = &b->values[w[2]];
+      b->execution_model = w[1];
+      break;
+
+   case SpvOpExtInstImport:
+   case SpvOpExtInst:
+      vtn_handle_extension(b, opcode, w, count);
       break;
 
    case SpvOpTypeVoid:
