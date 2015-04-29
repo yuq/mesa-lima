@@ -2259,6 +2259,7 @@ enum brw_wm_barycentric_interp_mode {
 # define GEN7_PS_SPF_MODE				(1 << 31)
 # define GEN7_PS_VECTOR_MASK_ENABLE			(1 << 30)
 # define GEN7_PS_SAMPLER_COUNT_SHIFT			27
+# define GEN7_PS_SAMPLER_COUNT_MASK                     INTEL_MASK(29, 27)
 # define GEN7_PS_BINDING_TABLE_ENTRY_COUNT_SHIFT	18
 # define GEN7_PS_FLOATING_POINT_MODE_IEEE_754		(0 << 16)
 # define GEN7_PS_FLOATING_POINT_MODE_ALT		(1 << 16)

@@ -135,8 +135,9 @@ upload_ps_state(struct brw_context *brw)
 
    dw2 = dw4 = dw5 = ksp2 = 0;
 
-   dw2 |=
-      (ALIGN(brw->wm.base.sampler_count, 4) / 4) << GEN7_PS_SAMPLER_COUNT_SHIFT;
+   const unsigned sampler_count =
+      DIV_ROUND_UP(CLAMP(brw->wm.base.sampler_count, 0, 16), 4);
+   dw2 |= SET_FIELD(sampler_count, GEN7_PS_SAMPLER_COUNT);
 
    dw2 |= ((prog_data->base.binding_table.size_bytes / 4) <<
            GEN7_PS_BINDING_TABLE_ENTRY_COUNT_SHIFT);

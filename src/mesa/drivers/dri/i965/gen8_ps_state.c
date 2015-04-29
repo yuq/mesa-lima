@@ -133,8 +133,9 @@ upload_ps_state(struct brw_context *brw)
     */
    dw3 |= GEN7_PS_VECTOR_MASK_ENABLE;
 
-   dw3 |=
-      (ALIGN(brw->wm.base.sampler_count, 4) / 4) << GEN7_PS_SAMPLER_COUNT_SHIFT;
+   const unsigned sampler_count =
+      DIV_ROUND_UP(CLAMP(brw->wm.base.sampler_count, 0, 16), 4);
+   dw3 |= SET_FIELD(sampler_count, GEN7_PS_SAMPLER_COUNT); 
 
    /* BRW_NEW_FS_PROG_DATA */
    dw3 |=
