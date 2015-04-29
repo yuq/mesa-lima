@@ -26,6 +26,7 @@
  */
 
 #include "nir_spirv.h"
+#include "nir_vla.h"
 #include "spirv.h"
 
 struct vtn_decoration;
@@ -35,6 +36,7 @@ enum vtn_value_type {
    vtn_value_type_undef,
    vtn_value_type_string,
    vtn_value_type_decoration_group,
+   vtn_value_type_type,
    vtn_value_type_ssa,
    vtn_value_type_deref,
 };
@@ -46,6 +48,7 @@ struct vtn_value {
    union {
       void *ptr;
       char *str;
+      const struct glsl_type *type;
       nir_ssa_def *ssa;
       nir_deref_var *deref;
    };
@@ -184,11 +187,88 @@ vtn_handle_decoration(struct vtn_builder *b, SpvOp opcode,
    }
 }
 
-static void
+static const struct glsl_type *
 vtn_handle_type(struct vtn_builder *b, SpvOp opcode,
-                const uint32_t *w, unsigned count)
+                const uint32_t *args, unsigned count)
 {
-   unreachable("Unhandled opcode");
+   switch (opcode) {
+   case SpvOpTypeVoid:
+      return glsl_void_type();
+   case SpvOpTypeBool:
+      return glsl_bool_type();
+   case SpvOpTypeInt:
+      return glsl_int_type();
+   case SpvOpTypeFloat:
+      return glsl_float_type();
+
+   case SpvOpTypeVector: {
+      const struct glsl_type *base = b->values[args[0]].type;
+      unsigned elems = args[1];
+
+      assert(glsl_type_is_scalar(base));
+      return glsl_vector_type(glsl_get_base_type(base), elems);
+   }
+
+   case SpvOpTypeMatrix: {
+      const struct glsl_type *base = b->values[args[0]].type;
+      unsigned columns = args[1];
+
+      assert(glsl_type_is_vector(base));
+      return glsl_matrix_type(glsl_get_base_type(base),
+                              glsl_get_vector_elements(base),
+                              columns);
+   }
+
+   case SpvOpTypeArray:
+      return glsl_array_type(b->values[args[0]].type, args[1]);
+
+   case SpvOpTypeStruct: {
+      NIR_VLA(struct glsl_struct_field, fields, count);
+      for (unsigned i = 0; i < count; i++) {
+         /* TODO: Handle decorators */
+         fields[i].type = b->values[args[i]].type;
+         fields[i].name = ralloc_asprintf(b, "field%d", i);
+         fields[i].location = -1;
+         fields[i].interpolation = 0;
+         fields[i].centroid = 0;
+         fields[i].sample = 0;
+         fields[i].matrix_layout = 2;
+         fields[i].stream = -1;
+      }
+      return glsl_struct_type(fields, count, "struct");
+   }
+
+   case SpvOpTypeFunction: {
+      const struct glsl_type *return_type = b->values[args[0]].type;
+      NIR_VLA(struct glsl_function_param, params, count - 1);
+      for (unsigned i = 1; i < count; i++) {
+         params[i - 1].type = b->values[args[i]].type;
+
+         /* FIXME: */
+         params[i - 1].in = true;
+         params[i - 1].out = true;
+      }
+      return glsl_function_type(return_type, params, count - 1);
+   }
+
+   case SpvOpTypePointer:
+      /* FIXME:  For now, we'll just do the really lame thing and return
+       * the same type.  The validator should ensure that the proper number
+       * of dereferences happen
+       */
+      return b->values[args[0]].type;
+
+   case SpvOpTypeSampler:
+   case SpvOpTypeRuntimeArray:
+   case SpvOpTypeOpaque:
+   case SpvOpTypeEvent:
+   case SpvOpTypeDeviceEvent:
+   case SpvOpTypeReserveId:
+   case SpvOpTypeQueue:
+   case SpvOpTypePipe:
+   default:
+      unreachable("Unhandled opcode");
+   }
 }
 
 static void
@@ -279,7 +359,8 @@ vtn_handle_instruction(struct vtn_builder *b, SpvOp opcode,
    case SpvOpTypeReserveId:
    case SpvOpTypeQueue:
    case SpvOpTypePipe:
-      vtn_handle_type(b, opcode, w, count);
+      vtn_push_value(b, w[1], vtn_value_type_type)->type =
+         vtn_handle_type(b, opcode, &w[2], count - 2);
       break;
 
    case SpvOpConstantTrue:
