@@ -80,6 +80,18 @@ radeon_cs_create_fence(struct radeon_winsys_cs *rcs);
 static void radeon_fence_reference(struct pipe_fence_handle **dst,
                                    struct pipe_fence_handle *src);
 
+static struct radeon_winsys_ctx *radeon_drm_ctx_create(struct radeon_winsys *ws)
+{
+    /* No context support here. Just return the winsys pointer
+     * as the "context". */
+    return (struct radeon_winsys_ctx*)ws;
+}
+
+static void radeon_drm_ctx_destroy(struct radeon_winsys_ctx *ctx)
+{
+    /* No context support here. */
+}
+
 static boolean radeon_init_cs_context(struct radeon_cs_context *csc,
                                       struct radeon_drm_winsys *ws)
 {
@@ -158,14 +170,14 @@ static void radeon_destroy_cs_context(struct radeon_cs_context *csc)
 
 
 static struct radeon_winsys_cs *
-radeon_drm_cs_create(struct radeon_winsys *rws,
+radeon_drm_cs_create(struct radeon_winsys_ctx *ctx,
                      enum ring_type ring_type,
                      void (*flush)(void *ctx, unsigned flags,
                                    struct pipe_fence_handle **fence),
                      void *flush_ctx,
                      struct radeon_winsys_cs_handle *trace_buf)
 {
-    struct radeon_drm_winsys *ws = radeon_drm_winsys(rws);
+    struct radeon_drm_winsys *ws = (struct radeon_drm_winsys*)ctx;
     struct radeon_drm_cs *cs;
 
     cs = CALLOC_STRUCT(radeon_drm_cs);
@@ -667,6 +679,8 @@ static void radeon_fence_reference(struct pipe_fence_handle **dst,
 
 void radeon_drm_cs_init_functions(struct radeon_drm_winsys *ws)
 {
+    ws->base.ctx_create = radeon_drm_ctx_create;
+    ws->base.ctx_destroy = radeon_drm_ctx_destroy;
     ws->base.cs_create = radeon_drm_cs_create;
     ws->base.cs_destroy = radeon_drm_cs_destroy;
     ws->base.cs_add_reloc = radeon_drm_cs_add_reloc;

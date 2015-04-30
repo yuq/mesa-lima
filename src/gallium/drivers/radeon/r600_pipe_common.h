@@ -372,6 +372,7 @@ struct r600_common_context {
 
 	struct r600_common_screen	*screen;
 	struct radeon_winsys		*ws;
+	struct radeon_winsys_ctx	*ctx;
 	enum radeon_family		family;
 	enum chip_class			chip_class;
 	struct r600_rings		rings;

@@ -176,7 +176,7 @@ static struct pipe_context *r600_create_context(struct pipe_screen *screen, void
 		goto fail;
 	}
 
-	rctx->b.rings.gfx.cs = ws->cs_create(ws, RING_GFX,
+	rctx->b.rings.gfx.cs = ws->cs_create(rctx->b.ctx, RING_GFX,
 					     r600_context_gfx_flush, rctx,
 					     rscreen->b.trace_bo ?
 						     rscreen->b.trace_bo->cs_buf : NULL);

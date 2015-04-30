@@ -449,6 +449,8 @@ struct r300_context {
 
     /* The interface to the windowing system, etc. */
     struct radeon_winsys *rws;
+    /* The submission context. */
+    struct radeon_winsys_ctx *ctx;
     /* The command stream. */
     struct radeon_winsys_cs *cs;
     /* Screen. */

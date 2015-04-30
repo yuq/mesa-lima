@@ -262,8 +262,12 @@ bool r600_common_context_init(struct r600_common_context *rctx,
 	if (!rctx->uploader)
 		return false;
 
+	rctx->ctx = rctx->ws->ctx_create(rctx->ws);
+	if (!rctx->ctx)
+		return false;
+
 	if (rscreen->info.r600_has_dma && !(rscreen->debug_flags & DBG_NO_ASYNC_DMA)) {
-		rctx->rings.dma.cs = rctx->ws->cs_create(rctx->ws, RING_DMA,
+		rctx->rings.dma.cs = rctx->ws->cs_create(rctx->ctx, RING_DMA,
 							 r600_flush_dma_ring,
 							 rctx, NULL);
 		rctx->rings.dma.flush = r600_flush_dma_ring;
@@ -274,12 +278,12 @@ bool r600_common_context_init(struct r600_common_context *rctx,
 
 void r600_common_context_cleanup(struct r600_common_context *rctx)
 {
-	if (rctx->rings.gfx.cs) {
+	if (rctx->rings.gfx.cs)
 		rctx->ws->cs_destroy(rctx->rings.gfx.cs);
-	}
-	if (rctx->rings.dma.cs) {
+	if (rctx->rings.dma.cs)
 		rctx->ws->cs_destroy(rctx->rings.dma.cs);
-	}
+	if (rctx->ctx)
+		rctx->ws->ctx_destroy(rctx->ctx);
 
 	if (rctx->uploader) {
 		u_upload_destroy(rctx->uploader);

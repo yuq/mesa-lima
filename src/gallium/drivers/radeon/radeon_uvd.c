@@ -761,6 +761,7 @@ struct pipe_video_codec *ruvd_create_decoder(struct pipe_context *context,
 {
 	struct radeon_winsys* ws = ((struct r600_common_context *)context)->ws;
 	unsigned dpb_size = calc_dpb_size(templ);
+	struct r600_common_context *rctx = (struct r600_common_context*)context;
 	unsigned width = templ->width, height = templ->height;
 	unsigned bs_buf_size;
 	struct radeon_info info;
@@ -807,7 +808,7 @@ struct pipe_video_codec *ruvd_create_decoder(struct pipe_context *context,
 	dec->stream_handle = rvid_alloc_stream_handle();
 	dec->screen = context->screen;
 	dec->ws = ws;
-	dec->cs = ws->cs_create(ws, RING_UVD, NULL, NULL, NULL);
+	dec->cs = ws->cs_create(rctx->ctx, RING_UVD, NULL, NULL, NULL);
 	if (!dec->cs) {
 		RVID_ERR("Can't get command submission context.\n");
 		goto error;

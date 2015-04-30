@@ -191,6 +191,7 @@ enum radeon_bo_priority {
 
 struct winsys_handle;
 struct radeon_winsys_cs_handle;
+struct radeon_winsys_ctx;
 
 struct radeon_winsys_cs {
     unsigned                    cdw;  /* Number of used dwords. */
@@ -506,15 +507,26 @@ struct radeon_winsys {
      *************************************************************************/
 
     /**
+     * Create a command submission context.
+     * Various command streams can be submitted to the same context.
+     */
+    struct radeon_winsys_ctx *(*ctx_create)(struct radeon_winsys *ws);
+
+    /**
+     * Destroy a context.
+     */
+    void (*ctx_destroy)(struct radeon_winsys_ctx *ctx);
+
+    /**
      * Create a command stream.
      *
-     * \param ws        The winsys this function is called from.
+     * \param ctx       The submission context
      * \param ring_type The ring type (GFX, DMA, UVD)
      * \param flush     Flush callback function associated with the command stream.
      * \param user      User pointer that will be passed to the flush callback.
      * \param trace_buf Trace buffer when tracing is enabled
      */
-    struct radeon_winsys_cs *(*cs_create)(struct radeon_winsys *ws,
+    struct radeon_winsys_cs *(*cs_create)(struct radeon_winsys_ctx *ctx,
                                           enum ring_type ring_type,
                                           void (*flush)(void *ctx, unsigned flags,
 							struct pipe_fence_handle **fence),
