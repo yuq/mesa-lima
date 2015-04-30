@@ -81,6 +81,7 @@ const struct glsl_type *glsl_uint_type(void);
 const struct glsl_type *glsl_bool_type(void);
 
 const struct glsl_type *glsl_vec4_type(void);
+const struct glsl_type *glsl_scalar_type(enum glsl_base_type base_type);
 const struct glsl_type *glsl_vector_type(enum glsl_base_type base_type,
                                          unsigned components);
 const struct glsl_type *glsl_matrix_type(enum glsl_base_type base_type,
