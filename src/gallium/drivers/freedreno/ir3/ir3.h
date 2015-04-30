@@ -747,12 +747,8 @@ static inline struct ir3_instruction * __ssa_src_n(struct ir3_instruction *instr
 
 
 /* dump: */
-#include <stdio.h>
-void ir3_dump(struct ir3 *shader, const char *name,
-		struct ir3_block *block /* XXX maybe 'block' ptr should move to ir3? */,
-		FILE *f);
-void ir3_dump_instr_single(struct ir3_instruction *instr);
-void ir3_dump_instr_list(struct ir3_instruction *instr);
+void ir3_print(struct ir3 *ir);
+void ir3_print_instr(struct ir3_instruction *instr);
 
 /* flatten if/else: */
 int ir3_block_flatten(struct ir3_block *block);
@@ -765,7 +761,7 @@ void ir3_block_depth(struct ir3_block *block);
 /* copy-propagate: */
 void ir3_block_cp(struct ir3_block *block);
 
-/* group neightbors and insert mov's to resolve conflicts: */
+/* group neighbors and insert mov's to resolve conflicts: */
 void ir3_block_group(struct ir3_block *block);
 
 /* scheduling: */

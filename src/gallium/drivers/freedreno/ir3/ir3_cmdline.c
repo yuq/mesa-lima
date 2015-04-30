@@ -30,6 +30,7 @@
 #include <fcntl.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <err.h>
 
 #include "tgsi/tgsi_parse.h"
@@ -243,7 +244,7 @@ int main(int argc, char **argv)
 
 	while (n < argc) {
 		if (!strcmp(argv[n], "--verbose")) {
-			fd_mesa_debug |=  FD_DBG_OPTDUMP | FD_DBG_MSGS | FD_DBG_OPTMSGS;
+			fd_mesa_debug |= FD_DBG_MSGS | FD_DBG_OPTMSGS;
 			n++;
 			continue;
 		}

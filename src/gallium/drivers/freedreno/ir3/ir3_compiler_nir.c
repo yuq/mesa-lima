@@ -1908,22 +1908,6 @@ fixup_frag_inputs(struct ir3_compile *ctx)
 	block->inputs = inputs;
 }
 
-static void
-compile_dump(struct ir3_compile *ctx)
-{
-	const char *name = (ctx->so->type == SHADER_VERTEX) ? "vert" : "frag";
-	static unsigned n = 0;
-	char fname[16];
-	FILE *f;
-	snprintf(fname, sizeof(fname), "%s-%04u.dot", name, n++);
-	f = fopen(fname, "w");
-	if (!f)
-		return;
-	ir3_block_depth(ctx->block);
-	ir3_dump(ctx->ir, name, ctx->block, f);
-	fclose(f);
-}
-
 int
 ir3_compile_shader_nir(struct ir3_shader_variant *so,
 		const struct tgsi_token *tokens, struct ir3_shader_key key)
@@ -2008,12 +1992,9 @@ ir3_compile_shader_nir(struct ir3_shader_variant *so,
 			block->outputs[block->noutputs++] = ctx->kill[i];
 	}
 
-	if (fd_mesa_debug & FD_DBG_OPTDUMP)
-		compile_dump(ctx);
-
 	if (fd_mesa_debug & FD_DBG_OPTMSGS) {
 		printf("BEFORE CP:\n");
-		ir3_dump_instr_list(block->head);
+		ir3_print(so->ir);
 	}
 
 	ir3_block_depth(block);
@@ -2022,7 +2003,7 @@ ir3_compile_shader_nir(struct ir3_shader_variant *so,
 
 	if (fd_mesa_debug & FD_DBG_OPTMSGS) {
 		printf("BEFORE GROUPING:\n");
-		ir3_dump_instr_list(block->head);
+		ir3_print(so->ir);
 	}
 
 	/* Group left/right neighbors, inserting mov's where needed to
@@ -2030,14 +2011,11 @@ ir3_compile_shader_nir(struct ir3_shader_variant *so,
 	 */
 	ir3_block_group(block);
 
-	if (fd_mesa_debug & FD_DBG_OPTDUMP)
-		compile_dump(ctx);
-
 	ir3_block_depth(block);
 
 	if (fd_mesa_debug & FD_DBG_OPTMSGS) {
 		printf("AFTER DEPTH:\n");
-		ir3_dump_instr_list(block->head);
+		ir3_print(so->ir);
 	}
 
 	ret = ir3_block_sched(block);
@@ -2048,7 +2026,7 @@ ir3_compile_shader_nir(struct ir3_shader_variant *so,
 
 	if (fd_mesa_debug & FD_DBG_OPTMSGS) {
 		printf("AFTER SCHED:\n");
-		ir3_dump_instr_list(block->head);
+		ir3_print(so->ir);
 	}
 
 	ret = ir3_block_ra(block, so->type, so->frag_coord, so->frag_face);
@@ -2059,7 +2037,7 @@ ir3_compile_shader_nir(struct ir3_shader_variant *so,
 
 	if (fd_mesa_debug & FD_DBG_OPTMSGS) {
 		printf("AFTER RA:\n");
-		ir3_dump_instr_list(block->head);
+		ir3_print(so->ir);
 	}
 
 	ir3_block_legalize(block, &so->has_samp, &max_bary);

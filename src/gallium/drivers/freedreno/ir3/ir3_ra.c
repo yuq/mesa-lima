@@ -78,14 +78,14 @@ struct ir3_ra_ctx {
 #define ra_dump_list(msg, n) do { \
 		if (ra_debug) { \
 			debug_printf("-- " msg); \
-			ir3_dump_instr_list(n); \
+			ir3_print(n->block->shader); \
 		} \
 	} while (0)
 
 #define ra_dump_instr(msg, n) do { \
 		if (ra_debug) { \
 			debug_printf(">> " msg); \
-			ir3_dump_instr_single(n); \
+			ir3_print_instr(n); \
 		} \
 	} while (0)
 
