@@ -2518,6 +2518,8 @@ Instruction::isResultEqual(const Instruction *that) const
       case FILE_MEMORY_CONST:
       case FILE_SHADER_INPUT:
          return true;
+      case FILE_SHADER_OUTPUT:
+         return bb->getProgram()->getType() == Program::TYPE_TESSELLATION_EVAL;
       default:
          return false;
       }
