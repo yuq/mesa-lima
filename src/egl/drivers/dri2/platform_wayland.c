@@ -1029,7 +1029,7 @@ dri2_initialize_wayland(_EGLDriver *drv, _EGLDisplay *disp)
    wl_registry_add_listener(dri2_dpy->wl_registry,
                             &registry_listener, dri2_dpy);
    if (roundtrip(dri2_dpy) < 0 || dri2_dpy->wl_drm == NULL)
-      goto cleanup_dpy;
+      goto cleanup_registry;
 
    if (roundtrip(dri2_dpy) < 0 || dri2_dpy->fd == -1)
       goto cleanup_drm;
@@ -1112,6 +1112,9 @@ dri2_initialize_wayland(_EGLDriver *drv, _EGLDisplay *disp)
  cleanup_drm:
    free(dri2_dpy->device_name);
    wl_drm_destroy(dri2_dpy->wl_drm);
+ cleanup_registry:
+   wl_registry_destroy(dri2_dpy->wl_registry);
+   wl_event_queue_destroy(dri2_dpy->wl_queue);
  cleanup_dpy:
    free(dri2_dpy);
    
