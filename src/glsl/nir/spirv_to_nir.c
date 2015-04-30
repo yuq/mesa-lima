@@ -38,11 +38,10 @@ enum vtn_value_type {
    vtn_value_type_decoration_group,
    vtn_value_type_type,
    vtn_value_type_constant,
-   vtn_value_type_variable,
+   vtn_value_type_deref,
    vtn_value_type_function,
    vtn_value_type_block,
    vtn_value_type_ssa,
-   vtn_value_type_deref,
 };
 
 struct vtn_value {
@@ -54,11 +53,10 @@ struct vtn_value {
       char *str;
       const struct glsl_type *type;
       nir_constant *constant;
-      nir_variable *var;
+      nir_deref_var *deref;
       nir_function_impl *impl;
       nir_block *block;
       nir_ssa_def *ssa;
-      nir_deref_var *deref;
    };
 };
 
@@ -353,10 +351,13 @@ vtn_handle_constant(struct vtn_builder *b, SpvOp opcode,
 
 static void
 var_decoration_cb(struct vtn_builder *b, struct vtn_value *val,
-                  const struct vtn_decoration *dec, void *unused)
+                  const struct vtn_decoration *dec, void *void_var)
 {
-   assert(val->value_type == vtn_value_type_variable);
-   nir_variable *var = val->var;
+   assert(val->value_type == vtn_value_type_deref);
+   assert(val->deref->deref.child == NULL);
+   assert(val->deref->var == void_var);
+
+   nir_variable *var = void_var;
    switch (dec->decoration) {
    case SpvDecorationPrecisionLow:
    case SpvDecorationPrecisionMedium:
@@ -446,10 +447,9 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
    case SpvOpVariable: {
       const struct glsl_type *type =
          vtn_value(b, w[1], vtn_value_type_type)->type;
-      struct vtn_value *val = vtn_push_value(b, w[2], vtn_value_type_variable);
+      struct vtn_value *val = vtn_push_value(b, w[2], vtn_value_type_deref);
 
       nir_variable *var = ralloc(b->shader, nir_variable);
-      val->var = var;
 
       var->type = type;
       var->name = ralloc_strdup(var, val->name);
@@ -488,7 +488,71 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
             vtn_value(b, w[4], vtn_value_type_constant)->constant;
       }
 
-      vtn_foreach_decoration(b, val, var_decoration_cb, NULL);
+      val->deref = nir_deref_var_create(b->shader, var);
+
+      vtn_foreach_decoration(b, val, var_decoration_cb, var);
+      break;
+   }
+
+   case SpvOpAccessChain:
+   case SpvOpInBoundsAccessChain: {
+      struct vtn_value *val = vtn_push_value(b, w[2], vtn_value_type_deref);
+      nir_deref_var *base = vtn_value(b, w[3], vtn_value_type_deref)->deref;
+      val->deref = nir_deref_as_var(nir_copy_deref(b, &base->deref));
+
+      nir_deref *tail = &val->deref->deref;
+      while (tail->child)
+         tail = tail->child;
+
+      for (unsigned i = 0; i < count - 3; i++) {
+         assert(w[i + 3] < b->value_id_bound);
+         struct vtn_value *idx_val = &b->values[w[i + 3]];
+
+         enum glsl_base_type base_type = glsl_get_base_type(tail->type);
+         switch (base_type) {
+         case GLSL_TYPE_UINT:
+         case GLSL_TYPE_INT:
+         case GLSL_TYPE_FLOAT:
+         case GLSL_TYPE_DOUBLE:
+         case GLSL_TYPE_BOOL:
+         case GLSL_TYPE_ARRAY: {
+            nir_deref_array *deref_arr = nir_deref_array_create(b);
+            if (base_type == GLSL_TYPE_ARRAY) {
+               deref_arr->deref.type = glsl_get_array_element(tail->type);
+            } else if (glsl_type_is_matrix(tail->type)) {
+               deref_arr->deref.type = glsl_get_column_type(tail->type);
+            } else {
+               assert(glsl_type_is_vector(tail->type));
+               deref_arr->deref.type = glsl_scalar_type(base_type);
+            }
+
+            if (idx_val->value_type == vtn_value_type_constant) {
+               unsigned idx = idx_val->constant->value.u[0];
+               deref_arr->deref_array_type = nir_deref_array_type_direct;
+               deref_arr->base_offset = idx;
+            } else {
+               assert(idx_val->value_type == vtn_value_type_ssa);
+               deref_arr->deref_array_type = nir_deref_array_type_indirect;
+               /* TODO */
+               unreachable("Indirect array accesses not implemented");
+            }
+            tail->child = &deref_arr->deref;
+            break;
+         }
+
+         case GLSL_TYPE_STRUCT: {
+            assert(idx_val->value_type == vtn_value_type_constant);
+            unsigned idx = idx_val->constant->value.u[0];
+            nir_deref_struct *deref_struct = nir_deref_struct_create(b, idx);
+            deref_struct->deref.type = glsl_get_struct_field(tail->type, idx);
+            tail->child = &deref_struct->deref;
+            break;
+         }
+         default:
+            unreachable("Invalid type for deref");
+         }
+         tail = tail->child;
+      }
       break;
    }
 
@@ -497,8 +561,6 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
    case SpvOpStore:
    case SpvOpCopyMemory:
    case SpvOpCopyMemorySized:
-   case SpvOpAccessChain:
-   case SpvOpInBoundsAccessChain:
    case SpvOpArrayLength:
    case SpvOpImagePointer:
    default:
