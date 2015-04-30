@@ -40,6 +40,7 @@ enum vtn_value_type {
    vtn_value_type_constant,
    vtn_value_type_variable,
    vtn_value_type_function,
+   vtn_value_type_block,
    vtn_value_type_ssa,
    vtn_value_type_deref,
 };
@@ -55,6 +56,7 @@ struct vtn_value {
       nir_constant *constant;
       nir_variable *var;
       nir_function_impl *impl;
+      nir_block *block;
       nir_ssa_def *ssa;
       nir_deref_var *deref;
    };
@@ -611,6 +613,17 @@ vtn_handle_instruction(struct vtn_builder *b, SpvOp opcode,
       b->entry_point = &b->values[w[2]];
       b->execution_model = w[1];
       break;
+
+   case SpvOpLabel: {
+      struct exec_node *list_tail = exec_list_get_tail(b->cf_list);
+      nir_cf_node *tail_node = exec_node_data(nir_cf_node, list_tail, node);
+      assert(tail_node->type == nir_cf_node_block);
+      nir_block *block = nir_cf_node_as_block(tail_node);
+
+      assert(exec_list_is_empty(&block->instr_list));
+      vtn_push_value(b, w[1], vtn_value_type_block)->block = block;
+      break;
+   }
 
    case SpvOpExtInstImport:
    case SpvOpExtInst:
