@@ -39,6 +39,7 @@ enum vtn_value_type {
    vtn_value_type_type,
    vtn_value_type_constant,
    vtn_value_type_variable,
+   vtn_value_type_function,
    vtn_value_type_ssa,
    vtn_value_type_deref,
 };
@@ -53,6 +54,7 @@ struct vtn_value {
       const struct glsl_type *type;
       nir_constant *constant;
       nir_variable *var;
+      nir_function_impl *impl;
       nir_ssa_def *ssa;
       nir_deref_var *deref;
    };
@@ -68,6 +70,7 @@ struct vtn_decoration {
 struct vtn_builder {
    nir_shader *shader;
    nir_function_impl *impl;
+   struct exec_list *cf_list;
 
    unsigned value_id_bound;
    struct vtn_value *values;
@@ -502,6 +505,63 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
 }
 
 static void
+vtn_handle_functions(struct vtn_builder *b, SpvOp opcode,
+                     const uint32_t *w, unsigned count)
+{
+   switch (opcode) {
+   case SpvOpFunction: {
+      assert(b->impl == NULL);
+
+      const struct glsl_type *result_type =
+         vtn_value(b, w[1], vtn_value_type_type)->type;
+      struct vtn_value *val = vtn_push_value(b, w[2], vtn_value_type_function);
+      const struct glsl_type *func_type =
+         vtn_value(b, w[4], vtn_value_type_type)->type;
+
+      assert(glsl_get_function_return_type(func_type) == result_type);
+
+      nir_function *func =
+         nir_function_create(b->shader, ralloc_strdup(b->shader, val->name));
+
+      nir_function_overload *overload = nir_function_overload_create(func);
+      overload->num_params = glsl_get_length(func_type);
+      overload->params = ralloc_array(overload, nir_parameter,
+                                      overload->num_params);
+      for (unsigned i = 0; i < overload->num_params; i++) {
+         const struct glsl_function_param *param =
+            glsl_get_function_param(func_type, i);
+         overload->params[i].type = param->type;
+         if (param->in) {
+            if (param->out) {
+               overload->params[i].param_type = nir_parameter_inout;
+            } else {
+               overload->params[i].param_type = nir_parameter_in;
+            }
+         } else {
+            if (param->out) {
+               overload->params[i].param_type = nir_parameter_out;
+            } else {
+               assert(!"Parameter is neither in nor out");
+            }
+         }
+      }
+
+      val->impl = b->impl = nir_function_impl_create(overload);
+      b->cf_list = &b->impl->body;
+
+      break;
+   }
+   case SpvOpFunctionEnd:
+      b->impl = NULL;
+      break;
+   case SpvOpFunctionParameter:
+   case SpvOpFunctionCall:
+   default:
+      unreachable("Unhandled opcode");
+   }
+}
+
+static void
 vtn_handle_texture(struct vtn_builder *b, SpvOp opcode,
                    const uint32_t *w, unsigned count)
 {
@@ -612,6 +672,13 @@ vtn_handle_instruction(struct vtn_builder *b, SpvOp opcode,
    case SpvOpGroupDecorate:
    case SpvOpGroupMemberDecorate:
       vtn_handle_decoration(b, opcode, w, count);
+      break;
+
+   case SpvOpFunction:
+   case SpvOpFunctionEnd:
+   case SpvOpFunctionParameter:
+   case SpvOpFunctionCall:
+      vtn_handle_functions(b, opcode, w, count);
       break;
 
    case SpvOpTextureSample:
