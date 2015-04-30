@@ -38,6 +38,7 @@ enum vtn_value_type {
    vtn_value_type_decoration_group,
    vtn_value_type_type,
    vtn_value_type_constant,
+   vtn_value_type_variable,
    vtn_value_type_ssa,
    vtn_value_type_deref,
 };
@@ -51,6 +52,7 @@ struct vtn_value {
       char *str;
       const struct glsl_type *type;
       nir_constant *constant;
+      nir_variable *var;
       nir_ssa_def *ssa;
       nir_deref_var *deref;
    };
@@ -345,10 +347,158 @@ vtn_handle_constant(struct vtn_builder *b, SpvOp opcode,
 }
 
 static void
+var_decoration_cb(struct vtn_builder *b, struct vtn_value *val,
+                  const struct vtn_decoration *dec, void *unused)
+{
+   assert(val->value_type == vtn_value_type_variable);
+   nir_variable *var = val->var;
+   switch (dec->decoration) {
+   case SpvDecorationPrecisionLow:
+   case SpvDecorationPrecisionMedium:
+   case SpvDecorationPrecisionHigh:
+      break; /* FIXME: Do nothing with these for now. */
+   case SpvDecorationSmooth:
+      var->data.interpolation = INTERP_QUALIFIER_SMOOTH;
+      break;
+   case SpvDecorationNoperspective:
+      var->data.interpolation = INTERP_QUALIFIER_NOPERSPECTIVE;
+      break;
+   case SpvDecorationFlat:
+      var->data.interpolation = INTERP_QUALIFIER_FLAT;
+      break;
+   case SpvDecorationCentroid:
+      var->data.centroid = true;
+      break;
+   case SpvDecorationSample:
+      var->data.sample = true;
+      break;
+   case SpvDecorationInvariant:
+      var->data.invariant = true;
+      break;
+   case SpvDecorationConstant:
+      assert(var->constant_initializer != NULL);
+      var->data.read_only = true;
+      break;
+   case SpvDecorationNonwritable:
+      var->data.read_only = true;
+      break;
+   case SpvDecorationLocation:
+      var->data.explicit_location = true;
+      var->data.location = dec->literals[0];
+      break;
+   case SpvDecorationComponent:
+      var->data.location_frac = dec->literals[0];
+      break;
+   case SpvDecorationIndex:
+      var->data.explicit_index = true;
+      var->data.index = dec->literals[0];
+      break;
+   case SpvDecorationBinding:
+      var->data.explicit_binding = true;
+      var->data.binding = dec->literals[0];
+      break;
+   case SpvDecorationBlock:
+   case SpvDecorationBufferBlock:
+   case SpvDecorationRowMajor:
+   case SpvDecorationColMajor:
+   case SpvDecorationGLSLShared:
+   case SpvDecorationGLSLStd140:
+   case SpvDecorationGLSLStd430:
+   case SpvDecorationGLSLPacked:
+   case SpvDecorationPatch:
+   case SpvDecorationRestrict:
+   case SpvDecorationAliased:
+   case SpvDecorationVolatile:
+   case SpvDecorationCoherent:
+   case SpvDecorationNonreadable:
+   case SpvDecorationUniform:
+      /* This is really nice but we have no use for it right now. */
+   case SpvDecorationNoStaticUse:
+   case SpvDecorationCPacked:
+   case SpvDecorationSaturatedConversion:
+   case SpvDecorationStream:
+   case SpvDecorationDescriptorSet:
+   case SpvDecorationOffset:
+   case SpvDecorationAlignment:
+   case SpvDecorationXfbBuffer:
+   case SpvDecorationStride:
+   case SpvDecorationBuiltIn:
+   case SpvDecorationFuncParamAttr:
+   case SpvDecorationFPRoundingMode:
+   case SpvDecorationFPFastMathMode:
+   case SpvDecorationLinkageAttributes:
+   case SpvDecorationSpecId:
+   default:
+      unreachable("Unhandled variable decoration");
+   }
+}
+
+static void
 vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
                      const uint32_t *w, unsigned count)
 {
-   unreachable("Unhandled opcode");
+   switch (opcode) {
+   case SpvOpVariable: {
+      const struct glsl_type *type =
+         vtn_value(b, w[1], vtn_value_type_type)->type;
+      struct vtn_value *val = vtn_push_value(b, w[2], vtn_value_type_variable);
+
+      nir_variable *var = ralloc(b->shader, nir_variable);
+      val->var = var;
+
+      var->type = type;
+      var->name = ralloc_strdup(var, val->name);
+
+      switch ((SpvStorageClass)w[3]) {
+      case SpvStorageClassUniformConstant:
+         var->data.mode = nir_var_uniform;
+         var->data.read_only = true;
+         break;
+      case SpvStorageClassInput:
+         var->data.mode = nir_var_shader_in;
+         var->data.read_only = true;
+         break;
+      case SpvStorageClassOutput:
+         var->data.mode = nir_var_shader_out;
+         break;
+      case SpvStorageClassPrivateGlobal:
+         var->data.mode = nir_var_global;
+         break;
+      case SpvStorageClassFunction:
+         var->data.mode = nir_var_local;
+         break;
+      case SpvStorageClassUniform:
+      case SpvStorageClassWorkgroupLocal:
+      case SpvStorageClassWorkgroupGlobal:
+      case SpvStorageClassGeneric:
+      case SpvStorageClassPrivate:
+      case SpvStorageClassAtomicCounter:
+      default:
+         unreachable("Unhandled variable storage class");
+      }
+
+      if (count > 4) {
+         assert(count == 5);
+         var->constant_initializer =
+            vtn_value(b, w[4], vtn_value_type_constant)->constant;
+      }
+
+      vtn_foreach_decoration(b, val, var_decoration_cb, NULL);
+      break;
+   }
+
+   case SpvOpVariableArray:
+   case SpvOpLoad:
+   case SpvOpStore:
+   case SpvOpCopyMemory:
+   case SpvOpCopyMemorySized:
+   case SpvOpAccessChain:
+   case SpvOpInBoundsAccessChain:
+   case SpvOpArrayLength:
+   case SpvOpImagePointer:
+   default:
+      unreachable("Unhandled opcode");
+   }
 }
 
 static void
