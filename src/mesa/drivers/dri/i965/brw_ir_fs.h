@@ -156,6 +156,7 @@ component(fs_reg reg, unsigned idx)
    assert(idx < reg.width);
    reg.subreg_offset = idx * type_sz(reg.type);
    reg.width = 1;
+   reg.stride = 0;
    return reg;
 }
 
