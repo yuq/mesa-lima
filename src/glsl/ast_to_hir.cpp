@@ -678,7 +678,7 @@ validate_assignment(struct _mesa_glsl_parse_state *state,
     * is handled by ir_dereference::is_lvalue.
     */
    if (lhs_type->is_unsized_array() && rhs->type->is_array()
-       && (lhs_type->element_type() == rhs->type->element_type())) {
+       && (lhs_type->fields.array == rhs->type->fields.array)) {
       if (is_initializer) {
          return rhs;
       } else {
@@ -820,7 +820,7 @@ do_assignment(exec_list *instructions, struct _mesa_glsl_parse_state *state,
                              var->data.max_array_access);
          }
 
-         var->type = glsl_type::get_array_instance(lhs->type->element_type(),
+         var->type = glsl_type::get_array_instance(lhs->type->fields.array,
                                                    rhs->type->array_size());
          d->type = var->type;
       }
@@ -2330,8 +2330,7 @@ apply_image_qualifier_to_variable(const struct ast_type_qualifier *qual,
                                   struct _mesa_glsl_parse_state *state,
                                   YYLTYPE *loc)
 {
-   const glsl_type *base_type =
-      (var->type->is_array() ? var->type->element_type() : var->type);
+   const glsl_type *base_type = var->type->without_array();
 
    if (base_type->is_image()) {
       if (var->data.mode != ir_var_uniform &&
@@ -2855,7 +2854,7 @@ get_variable_being_redeclared(ir_variable *var, YYLTYPE loc,
     *  type and specify a size."
     */
    if (earlier->type->is_unsized_array() && var->type->is_array()
-       && (var->type->element_type() == earlier->type->element_type())) {
+       && (var->type->fields.array == earlier->type->fields.array)) {
       /* FINISHME: This doesn't match the qualifiers on the two
        * FINISHME: declarations.  It's not 100% clear whether this is
        * FINISHME: required or not.

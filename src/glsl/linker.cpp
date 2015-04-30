@@ -224,7 +224,7 @@ public:
          return visit_continue;
       }
 
-      var->type = glsl_type::get_array_instance(var->type->element_type(),
+      var->type = glsl_type::get_array_instance(var->type->fields.array,
                                                 this->num_vertices);
       var->data.max_array_access = this->num_vertices - 1;
 
@@ -245,7 +245,7 @@ public:
    {
       const glsl_type *const vt = ir->array->type;
       if (vt->is_array())
-         ir->type = vt->element_type();
+         ir->type = vt->fields.array;
       return visit_continue;
    }
 };

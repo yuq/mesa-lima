@@ -863,7 +863,7 @@ process_array_constructor(exec_list *instructions,
 
    if (is_unsized_array) {
       constructor_type =
-	 glsl_type::get_array_instance(constructor_type->element_type(),
+	 glsl_type::get_array_instance(constructor_type->fields.array,
 				       parameter_count);
       assert(constructor_type != NULL);
       assert(constructor_type->length == parameter_count);
@@ -876,7 +876,7 @@ process_array_constructor(exec_list *instructions,
       ir_rvalue *result = ir;
 
       const glsl_base_type element_base_type =
-         constructor_type->element_type()->base_type;
+         constructor_type->fields.array->base_type;
 
       /* Apply implicit conversions (not the scalar constructor rules!). See
        * the spec quote above. */
@@ -896,10 +896,10 @@ process_array_constructor(exec_list *instructions,
 	 }
       }
 
-      if (result->type != constructor_type->element_type()) {
+      if (result->type != constructor_type->fields.array) {
 	 _mesa_glsl_error(loc, state, "type error in array constructor: "
 			  "expected: %s, found %s",
-			  constructor_type->element_type()->name,
+			  constructor_type->fields.array->name,
 			  result->type->name);
          return ir_rvalue::error_value(ctx);
       }
