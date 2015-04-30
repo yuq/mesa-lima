@@ -57,7 +57,7 @@ emit_depth_packets(struct brw_context *brw,
       return;
    }
 
-   intel_emit_depth_stall_flushes(brw);
+   brw_emit_depth_stall_flushes(brw);
 
    /* _NEW_BUFFERS, _NEW_DEPTH, _NEW_STENCIL */
    BEGIN_BATCH(8);

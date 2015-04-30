@@ -580,7 +580,7 @@ brw_emit_depth_stencil_hiz(struct brw_context *brw,
     * non-pipelined state that will need the PIPE_CONTROL workaround.
     */
    if (brw->gen == 6) {
-      intel_emit_depth_stall_flushes(brw);
+      brw_emit_depth_stall_flushes(brw);
    }
 
    unsigned int len;

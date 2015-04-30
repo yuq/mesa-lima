@@ -645,7 +645,7 @@ gen7_blorp_emit_depth_stencil_config(struct brw_context *brw,
 
    /* 3DSTATE_DEPTH_BUFFER */
    {
-      intel_emit_depth_stall_flushes(brw);
+      brw_emit_depth_stall_flushes(brw);
 
       BEGIN_BATCH(7);
       OUT_BATCH(GEN7_3DSTATE_DEPTH_BUFFER << 16 | (7 - 2));
@@ -696,7 +696,7 @@ gen7_blorp_emit_depth_stencil_config(struct brw_context *brw,
 static void
 gen7_blorp_emit_depth_disable(struct brw_context *brw)
 {
-   intel_emit_depth_stall_flushes(brw);
+   brw_emit_depth_stall_flushes(brw);
 
    BEGIN_BATCH(7);
    OUT_BATCH(GEN7_3DSTATE_DEPTH_BUFFER << 16 | (7 - 2));

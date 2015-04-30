@@ -189,7 +189,7 @@ brw_emit_pipe_control_write(struct brw_context *brw, uint32_t flags,
  * already flushed (e.g., via a preceding MI_FLUSH).
  */
 void
-intel_emit_depth_stall_flushes(struct brw_context *brw)
+brw_emit_depth_stall_flushes(struct brw_context *brw)
 {
    assert(brw->gen >= 6 && brw->gen <= 9);
 
@@ -270,7 +270,7 @@ gen7_emit_cs_stall_flush(struct brw_context *brw)
  * really our business.  That leaves only stall at scoreboard.
  */
 void
-intel_emit_post_sync_nonzero_flush(struct brw_context *brw)
+brw_emit_post_sync_nonzero_flush(struct brw_context *brw)
 {
    brw_emit_pipe_control_flush(brw,
                                PIPE_CONTROL_CS_STALL |
@@ -287,7 +287,7 @@ intel_emit_post_sync_nonzero_flush(struct brw_context *brw)
  * This is also used for the always_flush_cache driconf debug option.
  */
 void
-intel_batchbuffer_emit_mi_flush(struct brw_context *brw)
+brw_emit_mi_flush(struct brw_context *brw)
 {
    if (brw->batch.ring == BLT_RING && brw->gen >= 6) {
       BEGIN_BATCH_BLT(4);
@@ -321,7 +321,7 @@ intel_batchbuffer_emit_mi_flush(struct brw_context *brw)
              * Flush Enable =1, a PIPE_CONTROL with any non-zero
              * post-sync-op is required.
              */
-            intel_emit_post_sync_nonzero_flush(brw);
+            brw_emit_post_sync_nonzero_flush(brw);
          }
       }
       brw_emit_pipe_control_flush(brw, flags);

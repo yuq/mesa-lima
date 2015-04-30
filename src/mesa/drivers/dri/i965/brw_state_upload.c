@@ -349,7 +349,7 @@ brw_upload_initial_gpu_state(struct brw_context *brw)
       return;
 
    if (brw->gen == 6)
-      intel_emit_post_sync_nonzero_flush(brw);
+      brw_emit_post_sync_nonzero_flush(brw);
 
    brw_upload_invariant_state(brw);
 
@@ -710,7 +710,7 @@ brw_upload_pipeline_state(struct brw_context *brw,
 
    /* Emit Sandybridge workaround flushes on every primitive, for safety. */
    if (brw->gen == 6)
-      intel_emit_post_sync_nonzero_flush(brw);
+      brw_emit_post_sync_nonzero_flush(brw);
 
    brw_upload_programs(brw, pipeline);
    merge_ctx_state(brw, &state);

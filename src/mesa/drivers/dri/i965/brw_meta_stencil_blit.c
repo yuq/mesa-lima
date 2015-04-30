@@ -500,11 +500,11 @@ brw_meta_fbo_stencil_blit(struct brw_context *brw,
                              .mirror_x = mirror_x, .mirror_y = mirror_y };
    adjust_mip_level(dst_mt, dst_irb->mt_level, dst_irb->mt_layer, &dims);
 
-   intel_batchbuffer_emit_mi_flush(brw);
+   brw_emit_mi_flush(brw);
    _mesa_meta_begin(ctx, MESA_META_ALL);
    brw_meta_stencil_blit(brw,
                          dst_mt, dst_irb->mt_level, dst_irb->mt_layer, &dims);
-   intel_batchbuffer_emit_mi_flush(brw);
+   brw_emit_mi_flush(brw);
 }
 
 void
@@ -524,7 +524,7 @@ brw_meta_stencil_updownsample(struct brw_context *brw,
    if (dst->stencil_mt)
       dst = dst->stencil_mt;
 
-   intel_batchbuffer_emit_mi_flush(brw);
+   brw_emit_mi_flush(brw);
    _mesa_meta_begin(ctx, MESA_META_ALL);
 
    _mesa_GenFramebuffers(1, &fbo);
@@ -535,7 +535,7 @@ brw_meta_stencil_updownsample(struct brw_context *brw,
                                  GL_RENDERBUFFER, rbo);
 
    brw_meta_stencil_blit(brw, dst, 0, 0, &dims);
-   intel_batchbuffer_emit_mi_flush(brw);
+   brw_emit_mi_flush(brw);
 
    _mesa_DeleteRenderbuffers(1, &rbo);
    _mesa_DeleteFramebuffers(1, &fbo);

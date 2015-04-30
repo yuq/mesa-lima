@@ -1076,7 +1076,7 @@ brw_render_cache_set_check_flush(struct brw_context *brw, drm_intel_bo *bo)
    if (!_mesa_set_search(brw->render_cache, bo))
       return;
 
-   intel_batchbuffer_emit_mi_flush(brw);
+   brw_emit_mi_flush(brw);
 }
 
 /**

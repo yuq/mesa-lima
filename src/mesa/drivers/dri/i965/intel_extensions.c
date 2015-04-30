@@ -76,7 +76,7 @@ can_do_pipelined_register_writes(struct brw_context *brw)
    OUT_BATCH(expected_value);
    ADVANCE_BATCH();
 
-   intel_batchbuffer_emit_mi_flush(brw);
+   brw_emit_mi_flush(brw);
 
    /* Save the register's value back to the buffer. */
    BEGIN_BATCH(3);
@@ -132,7 +132,7 @@ can_write_oacontrol(struct brw_context *brw)
    OUT_BATCH(expected_value);
    ADVANCE_BATCH();
 
-   intel_batchbuffer_emit_mi_flush(brw);
+   brw_emit_mi_flush(brw);
 
    /* Save the register's value back to the buffer. */
    BEGIN_BATCH(3);
@@ -143,7 +143,7 @@ can_write_oacontrol(struct brw_context *brw)
              offset * sizeof(uint32_t));
    ADVANCE_BATCH();
 
-   intel_batchbuffer_emit_mi_flush(brw);
+   brw_emit_mi_flush(brw);
 
    /* Set OACONTROL back to zero (everything off). */
    BEGIN_BATCH(3);

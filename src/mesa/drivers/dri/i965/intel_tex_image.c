@@ -490,7 +490,7 @@ intel_get_tex_image(struct gl_context *ctx,
           * See the related comment in intelReadPixels() for a more detailed
           * explanation.
           */
-         intel_batchbuffer_emit_mi_flush(brw);
+         brw_emit_mi_flush(brw);
          return;
       }
 

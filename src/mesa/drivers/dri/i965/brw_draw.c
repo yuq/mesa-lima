@@ -217,7 +217,7 @@ static void brw_emit_prim(struct brw_context *brw,
     * the besides the draw code.
     */
    if (brw->always_flush_cache) {
-      intel_batchbuffer_emit_mi_flush(brw);
+      brw_emit_mi_flush(brw);
    }
 
    /* If indirect, emit a bunch of loads from the indirect BO. */
@@ -284,7 +284,7 @@ static void brw_emit_prim(struct brw_context *brw,
    ADVANCE_BATCH();
 
    if (brw->always_flush_cache) {
-      intel_batchbuffer_emit_mi_flush(brw);
+      brw_emit_mi_flush(brw);
    }
 }
 

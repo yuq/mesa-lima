@@ -623,7 +623,7 @@ brw_meta_fast_clear(struct brw_context *brw, struct gl_framebuffer *fb,
     *     write-flush must be issued before sending any DRAW commands on that
     *     render target.
     */
-   intel_batchbuffer_emit_mi_flush(brw);
+   brw_emit_mi_flush(brw);
 
    /* If we had to fall back to plain clear for any buffers, clear those now
     * by calling into meta.
@@ -677,7 +677,7 @@ brw_meta_resolve_color(struct brw_context *brw,
    GLuint fbo, rbo;
    struct rect rect;
 
-   intel_batchbuffer_emit_mi_flush(brw);
+   brw_emit_mi_flush(brw);
 
    _mesa_meta_begin(ctx, MESA_META_ALL);
 

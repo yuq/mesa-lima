@@ -220,7 +220,7 @@ brw_blorp_exec(struct brw_context *brw, const brw_blorp_params *params)
     * data with different formats, which blorp does for stencil and depth
     * data.
     */
-   intel_batchbuffer_emit_mi_flush(brw);
+   brw_emit_mi_flush(brw);
 
 retry:
    intel_batchbuffer_require_space(brw, estimated_max_batch_usage, RENDER_RING);
@@ -283,7 +283,7 @@ retry:
    /* Flush the sampler cache so any texturing from the destination is
     * coherent.
     */
-   intel_batchbuffer_emit_mi_flush(brw);
+   brw_emit_mi_flush(brw);
 }
 
 brw_hiz_op_params::brw_hiz_op_params(struct intel_mipmap_tree *mt,

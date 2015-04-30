@@ -460,7 +460,7 @@ intelEmitCopyBlit(struct brw_context *brw,
 
    ADVANCE_BATCH_TILED(dst_y_tiled, src_y_tiled);
 
-   intel_batchbuffer_emit_mi_flush(brw);
+   brw_emit_mi_flush(brw);
 
    return true;
 }
@@ -544,7 +544,7 @@ intelEmitImmediateColorExpandBlit(struct brw_context *brw,
 
    intel_batchbuffer_data(brw, src_bits, dwords * 4, BLT_RING);
 
-   intel_batchbuffer_emit_mi_flush(brw);
+   brw_emit_mi_flush(brw);
 
    return true;
 }
@@ -667,5 +667,5 @@ intel_miptree_set_alpha_to_one(struct brw_context *brw,
    OUT_BATCH(0xffffffff); /* white, but only alpha gets written */
    ADVANCE_BATCH_TILED(dst_y_tiled, false);
 
-   intel_batchbuffer_emit_mi_flush(brw);
+   brw_emit_mi_flush(brw);
 }
