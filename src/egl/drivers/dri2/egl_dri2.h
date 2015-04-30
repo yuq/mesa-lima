@@ -200,6 +200,7 @@ struct dri2_egl_display
    int			     authenticated;
    int			     formats;
    uint32_t                  capabilities;
+   int			     is_render_node;
 #endif
 };
 

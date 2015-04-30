@@ -800,12 +800,33 @@ bad_format:
    return NULL;
 }
 
+static char
+is_fd_render_node(int fd)
+{
+   struct stat render;
+
+   if (fstat(fd, &render))
+      return 0;
+
+   if (!S_ISCHR(render.st_mode))
+      return 0;
+
+   if (render.st_rdev & 0x80)
+      return 1;
+   return 0;
+}
+
 static int
 dri2_wl_authenticate(_EGLDisplay *disp, uint32_t id)
 {
    struct dri2_egl_display *dri2_dpy = dri2_egl_display(disp);
    int ret = 0;
 
+   if (dri2_dpy->is_render_node) {
+      _eglLog(_EGL_WARNING, "wayland-egl: client asks server to "
+                            "authenticate for render-nodes");
+      return 0;
+   }
    dri2_dpy->authenticated = 0;
 
    wl_drm_authenticate(dri2_dpy->wl_drm, id);
@@ -847,8 +868,13 @@ drm_handle_device(void *data, struct wl_drm *drm, const char *device)
       return;
    }
 
-   drmGetMagic(dri2_dpy->fd, &magic);
-   wl_drm_authenticate(dri2_dpy->wl_drm, magic);
+   if (is_fd_render_node(dri2_dpy->fd)) {
+      dri2_dpy->is_render_node = 1;
+      dri2_dpy->authenticated = 1;
+   } else {
+      drmGetMagic(dri2_dpy->fd, &magic);
+      wl_drm_authenticate(dri2_dpy->wl_drm, magic);
+   }
 }
 
 static void
@@ -1046,18 +1072,23 @@ dri2_initialize_wayland(_EGLDriver *drv, _EGLDisplay *disp)
    if (!dri2_load_driver(disp))
       goto cleanup_driver_name;
 
-   dri2_dpy->dri2_loader_extension.base.name = __DRI_DRI2_LOADER;
-   dri2_dpy->dri2_loader_extension.base.version = 3;
-   dri2_dpy->dri2_loader_extension.getBuffers = dri2_wl_get_buffers;
-   dri2_dpy->dri2_loader_extension.flushFrontBuffer = dri2_wl_flush_front_buffer;
-   dri2_dpy->dri2_loader_extension.getBuffersWithFormat =
-      dri2_wl_get_buffers_with_format;
+   dri2_dpy->extensions[0] = &image_loader_extension.base;
+   dri2_dpy->extensions[1] = &image_lookup_extension.base;
+   dri2_dpy->extensions[2] = &use_invalidate.base;
 
-   dri2_dpy->extensions[0] = &dri2_dpy->dri2_loader_extension.base;
-   dri2_dpy->extensions[1] = &image_loader_extension.base;
-   dri2_dpy->extensions[2] = &image_lookup_extension.base;
-   dri2_dpy->extensions[3] = &use_invalidate.base;
-   dri2_dpy->extensions[4] = NULL;
+   /* render nodes cannot use Gem names, and thus do not support
+    * the __DRI_DRI2_LOADER extension */
+   if (!dri2_dpy->is_render_node) {
+      dri2_dpy->dri2_loader_extension.base.name = __DRI_DRI2_LOADER;
+      dri2_dpy->dri2_loader_extension.base.version = 3;
+      dri2_dpy->dri2_loader_extension.getBuffers = dri2_wl_get_buffers;
+      dri2_dpy->dri2_loader_extension.flushFrontBuffer = dri2_wl_flush_front_buffer;
+      dri2_dpy->dri2_loader_extension.getBuffersWithFormat =
+         dri2_wl_get_buffers_with_format;
+      dri2_dpy->extensions[3] = &dri2_dpy->dri2_loader_extension.base;
+      dri2_dpy->extensions[4] = NULL;
+   } else
+      dri2_dpy->extensions[3] = NULL;
 
    dri2_dpy->swap_available = EGL_TRUE;
 
@@ -1074,6 +1105,14 @@ dri2_initialize_wayland(_EGLDriver *drv, _EGLDisplay *disp)
    if (dri2_dpy->image->base.version < 7 ||
        dri2_dpy->image->createImageFromFds == NULL)
       dri2_dpy->capabilities &= ~WL_DRM_CAPABILITY_PRIME;
+
+   /* We cannot use Gem names with render-nodes, only prime fds (dma-buf).
+    * The server needs to accept them */
+   if (dri2_dpy->is_render_node &&
+       !(dri2_dpy->capabilities & WL_DRM_CAPABILITY_PRIME)) {
+      _eglLog(_EGL_WARNING, "wayland-egl: display is not render-node capable");
+      goto cleanup_screen;
+   }
 
    types = EGL_WINDOW_BIT;
    for (i = 0; dri2_dpy->driver_configs[i]; i++) {
@@ -1103,6 +1142,8 @@ dri2_initialize_wayland(_EGLDriver *drv, _EGLDisplay *disp)
 
    return EGL_TRUE;
 
+ cleanup_screen:
+   dri2_dpy->core->destroyScreen(dri2_dpy->dri_screen);
  cleanup_driver:
    dlclose(dri2_dpy->driver);
  cleanup_driver_name:
