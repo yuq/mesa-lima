@@ -1498,7 +1498,7 @@ CodeEmitterNVC0::emitPFETCH(const Instruction *i)
    const int src1 = (i->predSrc == 1) ? 2 : 1; // if predSrc == 1, !srcExists(2)
 
    defId(i->def(0), 14);
-   srcId(i, 1, 20);
+   srcId(i, src1, 20);
 }
 
 void
