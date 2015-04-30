@@ -1998,6 +1998,17 @@ bool
 gen9_use_linear_1d_layout(const struct brw_context *brw,
                           const struct intel_mipmap_tree *mt);
 
+/* brw_pipe_control.c */
+void brw_emit_pipe_control_flush(struct brw_context *brw, uint32_t flags);
+void brw_emit_pipe_control_write(struct brw_context *brw, uint32_t flags,
+                                 drm_intel_bo *bo, uint32_t offset,
+                                 uint32_t imm_lower, uint32_t imm_upper);
+void intel_batchbuffer_emit_mi_flush(struct brw_context *brw);
+void intel_emit_post_sync_nonzero_flush(struct brw_context *brw);
+void intel_emit_depth_stall_flushes(struct brw_context *brw);
+void gen7_emit_vs_workaround_flush(struct brw_context *brw);
+void gen7_emit_cs_stall_flush(struct brw_context *brw);
+
 #ifdef __cplusplus
 }
 #endif
