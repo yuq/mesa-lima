@@ -201,6 +201,7 @@ struct dri2_egl_display
    int			     formats;
    uint32_t                  capabilities;
    int			     is_render_node;
+   int			     is_different_gpu;
 #endif
 };
 
@@ -254,6 +255,8 @@ struct dri2_egl_surface
 #ifdef HAVE_WAYLAND_PLATFORM
       struct wl_buffer   *wl_buffer;
       __DRIimage         *dri_image;
+      /* for is_different_gpu case. NULL else */
+      __DRIimage         *linear_copy;
 #endif
 #ifdef HAVE_DRM_PLATFORM
       struct gbm_bo       *bo;
