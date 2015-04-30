@@ -84,6 +84,14 @@ static void si_destroy_context(struct pipe_context *context)
 	FREE(sctx);
 }
 
+static enum pipe_reset_status
+si_amdgpu_get_reset_status(struct pipe_context *ctx)
+{
+	struct si_context *sctx = (struct si_context *)ctx;
+
+	return sctx->b.ws->ctx_query_reset_status(sctx->b.ctx);
+}
+
 static struct pipe_context *si_create_context(struct pipe_screen *screen, void *priv)
 {
 	struct si_context *sctx = CALLOC_STRUCT(si_context);
@@ -106,6 +114,9 @@ static struct pipe_context *si_create_context(struct pipe_screen *screen, void *
 
 	if (!r600_common_context_init(&sctx->b, &sscreen->b))
 		goto fail;
+
+	if (sscreen->b.info.drm_major == 3)
+		sctx->b.b.get_device_reset_status = si_amdgpu_get_reset_status;
 
 	si_init_blit_functions(sctx);
 	si_init_compute_functions(sctx);
@@ -268,7 +279,9 @@ static int si_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 		return !SI_BIG_ENDIAN && sscreen->b.info.has_userptr;
 
 	case PIPE_CAP_DEVICE_RESET_STATUS_QUERY:
-		return sscreen->b.info.drm_major == 2 && sscreen->b.info.drm_minor >= 43;
+		return (sscreen->b.info.drm_major == 2 &&
+			sscreen->b.info.drm_minor >= 43) ||
+		       sscreen->b.info.drm_major == 3;
 
 	case PIPE_CAP_TEXTURE_MULTISAMPLE:
 		/* 2D tiling on CIK is supported since DRM 2.35.0 */
