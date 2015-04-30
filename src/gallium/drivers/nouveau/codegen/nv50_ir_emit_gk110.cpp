@@ -1333,8 +1333,10 @@ CodeEmitterGK110::emitPFETCH(const Instruction *i)
 
    emitPredicate(i);
 
+   const int src1 = (i->predSrc == 1) ? 2 : 1; // if predSrc == 1, !srcExists(2)
+
    defId(i->def(0), 2);
-   srcId(i->src(1), 10);
+   srcId(i, 1, 10);
 }
 
 void
