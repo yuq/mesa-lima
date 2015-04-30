@@ -82,6 +82,7 @@ void ir3_destroy(struct ir3 *shader)
 		free(chunk);
 	}
 	free(shader->indirects);
+	free(shader->predicates);
 	free(shader->baryfs);
 	free(shader);
 }

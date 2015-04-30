@@ -1250,6 +1250,7 @@ emit_intrinisic(struct ir3_compile *ctx, nir_intrinsic_instr *intr)
 		cond->regs[0]->num = regid(REG_P0, 0);
 
 		kill = ir3_KILL(b, cond, 0);
+		array_insert(ctx->ir->predicates, kill);
 
 		ctx->kill[ctx->kill_count++] = kill;
 		ctx->so->has_kill = true;

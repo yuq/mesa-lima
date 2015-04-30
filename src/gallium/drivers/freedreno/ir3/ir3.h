@@ -346,6 +346,9 @@ struct ir3 {
 	 */
 	unsigned indirects_count, indirects_sz;
 	struct ir3_instruction **indirects;
+	/* and same for instructions that consume predicate register: */
+	unsigned predicates_count, predicates_sz;
+	struct ir3_instruction **predicates;
 
 	struct ir3_block *block;
 	unsigned heap_idx;
