@@ -185,6 +185,12 @@ glsl_vec4_type(void)
 }
 
 const glsl_type *
+glsl_scalar_type(enum glsl_base_type base_type)
+{
+   return glsl_type::get_instance(base_type, 1, 1);
+}
+
+const glsl_type *
 glsl_vector_type(enum glsl_base_type base_type, unsigned components)
 {
    assert(components > 1 && components <= 4);
