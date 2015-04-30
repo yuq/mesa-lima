@@ -51,12 +51,9 @@ struct ir3_legalize_ctx {
 static void legalize(struct ir3_legalize_ctx *ctx)
 {
 	struct ir3_block *block = ctx->block;
-	struct ir3_instruction *n;
-	struct ir3 *shader = block->shader;
-	struct ir3_instruction *end =
-			ir3_instr_create(block, 0, OPC_END);
 	struct ir3_instruction *last_input = NULL;
 	struct ir3_instruction *last_rel = NULL;
+	struct list_head instr_list;
 	regmask_t needs_ss_war;       /* write after read */
 	regmask_t needs_ss;
 	regmask_t needs_sy;
@@ -65,9 +62,13 @@ static void legalize(struct ir3_legalize_ctx *ctx)
 	regmask_init(&needs_ss);
 	regmask_init(&needs_sy);
 
-	shader->instrs_count = 0;
+	/* remove all the instructions from the list, we'll be adding
+	 * them back in as we go
+	 */
+	list_replace(&block->instr_list, &instr_list);
+	list_inithead(&block->instr_list);
 
-	for (n = block->head; n; n = n->next) {
+	list_for_each_entry_safe (struct ir3_instruction, n, &instr_list, node) {
 		struct ir3_register *reg;
 		unsigned i;
 
@@ -140,12 +141,12 @@ static void legalize(struct ir3_legalize_ctx *ctx)
 		}
 
 		/* need to be able to set (ss) on first instruction: */
-		if ((shader->instrs_count == 0) && (n->category >= 5))
+		if (list_empty(&block->instr_list) && (n->category >= 5))
 			ir3_NOP(block);
 
-		if (is_nop(n) && shader->instrs_count) {
-			struct ir3_instruction *last =
-					shader->instrs[shader->instrs_count-1];
+		if (is_nop(n) && !list_empty(&block->instr_list)) {
+			struct ir3_instruction *last = list_last_entry(&block->instr_list,
+					struct ir3_instruction, node);
 			if (is_nop(last) && (last->repeat < 5)) {
 				last->repeat++;
 				last->flags |= n->flags;
@@ -153,7 +154,7 @@ static void legalize(struct ir3_legalize_ctx *ctx)
 			}
 		}
 
-		shader->instrs[shader->instrs_count++] = n;
+		list_addtail(&n->node, &block->instr_list);
 
 		if (is_sfu(n))
 			regmask_set(&needs_ss, n->regs[0]);
@@ -192,35 +193,19 @@ static void legalize(struct ir3_legalize_ctx *ctx)
 		 * the (ei) flag:
 		 */
 		if (is_mem(last_input) && (last_input->opc == OPC_LDLV)) {
-			int i, cnt;
+			struct ir3_instruction *baryf;
 
-			/* note that ir3_instr_create() inserts into
-			 * shader->instrs[] and increments the count..
-			 * so we need to bump up the cnt initially (to
-			 * avoid it clobbering the last real instr) and
-			 * restore it after.
-			 */
-			cnt = ++shader->instrs_count;
+			/* (ss)bary.f (ei)r63.x, 0, r0.x */
+			baryf = ir3_instr_create(block, 2, OPC_BARY_F);
+			baryf->flags |= IR3_INSTR_SS;
+			ir3_reg_create(baryf, regid(63, 0), 0);
+			ir3_reg_create(baryf, 0, IR3_REG_IMMED)->iim_val = 0;
+			ir3_reg_create(baryf, regid(0, 0), 0);
 
-			/* inserting instructions would be a bit nicer if list.. */
-			for (i = cnt - 2; i >= 0; i--) {
-				if (shader->instrs[i] == last_input) {
+			/* insert the dummy bary.f after last_input: */
+			list_add(&baryf->node, &last_input->node);
 
-					/* (ss)bary.f (ei)r63.x, 0, r0.x */
-					last_input = ir3_instr_create(block, 2, OPC_BARY_F);
-					last_input->flags |= IR3_INSTR_SS;
-					ir3_reg_create(last_input, regid(63, 0), 0);
-					ir3_reg_create(last_input, 0, IR3_REG_IMMED)->iim_val = 0;
-					ir3_reg_create(last_input, regid(0, 0), 0);
-
-					shader->instrs[i + 1] = last_input;
-
-					break;
-				}
-				shader->instrs[i + 1] = shader->instrs[i];
-			}
-
-			shader->instrs_count = cnt;
+			last_input = baryf;
 		}
 		last_input->regs[0]->flags |= IR3_REG_EI;
 	}
@@ -228,9 +213,11 @@ static void legalize(struct ir3_legalize_ctx *ctx)
 	if (last_rel)
 		last_rel->flags |= IR3_INSTR_UL;
 
-	shader->instrs[shader->instrs_count++] = end;
+	/* create/add 'end' instruction: */
+	ir3_instr_create(block, 0, OPC_END);
 
-	shader->instrs[0]->flags |= IR3_INSTR_SS | IR3_INSTR_SY;
+	list_first_entry(&block->instr_list, struct ir3_instruction, node)
+		->flags |= IR3_INSTR_SS | IR3_INSTR_SY;
 }
 
 void ir3_block_legalize(struct ir3_block *block,

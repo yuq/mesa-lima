@@ -28,6 +28,7 @@
 #include <stdbool.h>
 
 #include "util/u_debug.h"
+#include "util/list.h"
 
 #include "instr-a3xx.h"
 #include "disasm.h"  /* TODO move 'enum shader_t' somewhere else.. */
@@ -290,7 +291,9 @@ struct ir3_instruction {
 	 */
 	struct ir3_instruction *fanin;
 
-	struct ir3_instruction *next;
+	/* Entry in ir3_block's instruction list: */
+	struct list_head node;
+
 #ifdef DEBUG
 	uint32_t serialno;
 #endif
@@ -321,8 +324,6 @@ static inline int ir3_neighbor_count(struct ir3_instruction *instr)
 struct ir3_heap_chunk;
 
 struct ir3 {
-	unsigned instrs_count, instrs_sz;
-	struct ir3_instruction **instrs;
 
 	/* Track bary.f (and ldlv) instructions.. this is needed in
 	 * scheduling to ensure that all varying fetches happen before
@@ -361,7 +362,7 @@ struct ir3_block {
 	/* only a single address register: */
 	struct ir3_instruction *address;
 	struct ir3_block *parent;
-	struct ir3_instruction *head;
+	struct list_head instr_list;
 };
 
 struct ir3 * ir3_create(void);
@@ -402,11 +403,8 @@ static inline void ir3_clear_mark(struct ir3 *shader)
 	 * a block, so tracking the list of instrs globally is
 	 * unlikely to be what we want.
 	 */
-	unsigned i;
-	for (i = 0; i < shader->instrs_count; i++) {
-		struct ir3_instruction *instr = shader->instrs[i];
+	list_for_each_entry (struct ir3_instruction, instr, &shader->block->instr_list, node)
 		instr->flags &= ~IR3_INSTR_MARK;
-	}
 }
 
 static inline int ir3_instr_regno(struct ir3_instruction *instr,
@@ -756,6 +754,7 @@ int ir3_block_flatten(struct ir3_block *block);
 /* depth calculation: */
 int ir3_delayslots(struct ir3_instruction *assigner,
 		struct ir3_instruction *consumer, unsigned n);
+void ir3_insert_by_depth(struct ir3_instruction *instr, struct list_head *list);
 void ir3_block_depth(struct ir3_block *block);
 
 /* copy-propagate: */

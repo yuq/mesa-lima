@@ -81,7 +81,7 @@ void ir3_destroy(struct ir3 *shader)
 		shader->chunk = chunk->next;
 		free(chunk);
 	}
-	free(shader->instrs);
+	free(shader->indirects);
 	free(shader->baryfs);
 	free(shader);
 }
@@ -534,28 +534,32 @@ static int (*emit[])(struct ir3_instruction *instr, void *ptr,
 void * ir3_assemble(struct ir3 *shader, struct ir3_info *info,
 		uint32_t gpu_id)
 {
+	struct ir3_block *block = shader->block;
 	uint32_t *ptr, *dwords;
-	uint32_t i;
 
 	info->max_reg       = -1;
 	info->max_half_reg  = -1;
 	info->max_const     = -1;
 	info->instrs_count  = 0;
+	info->sizedwords    = 0;
+
+	list_for_each_entry (struct ir3_instruction, instr, &block->instr_list, node) {
+		info->sizedwords += 2;
+	}
 
 	/* need a integer number of instruction "groups" (sets of 16
 	 * instructions on a4xx or sets of 4 instructions on a3xx),
 	 * so pad out w/ NOPs if needed: (NOTE each instruction is 64bits)
 	 */
 	if (gpu_id >= 400) {
-		info->sizedwords = 2 * align(shader->instrs_count, 16);
+		info->sizedwords = align(info->sizedwords, 16 * 2);
 	} else {
-		info->sizedwords = 2 * align(shader->instrs_count, 4);
+		info->sizedwords = align(info->sizedwords, 4 * 2);
 	}
 
 	ptr = dwords = calloc(4, info->sizedwords);
 
-	for (i = 0; i < shader->instrs_count; i++) {
-		struct ir3_instruction *instr = shader->instrs[i];
+	list_for_each_entry (struct ir3_instruction, instr, &block->instr_list, node) {
 		int ret = emit[instr->category](instr, dwords, info);
 		if (ret)
 			goto fail;
@@ -581,14 +585,15 @@ static struct ir3_register * reg_create(struct ir3 *shader,
 	return reg;
 }
 
-static void insert_instr(struct ir3 *shader,
+static void insert_instr(struct ir3_block *block,
 		struct ir3_instruction *instr)
 {
+	struct ir3 *shader = block->shader;
 #ifdef DEBUG
 	static uint32_t serialno = 0;
 	instr->serialno = ++serialno;
 #endif
-	array_insert(shader->instrs, instr);
+	list_addtail(&instr->node, &block->instr_list);
 
 	if (is_input(instr))
 		array_insert(shader->baryfs, instr);
@@ -625,6 +630,8 @@ struct ir3_block * ir3_block_create(struct ir3 *shader,
 
 	block->shader = shader;
 
+	list_inithead(&block->instr_list);
+
 	return block;
 }
 
@@ -652,7 +659,7 @@ struct ir3_instruction * ir3_instr_create2(struct ir3_block *block,
 	instr->block = block;
 	instr->category = category;
 	instr->opc = opc;
-	insert_instr(block->shader, instr);
+	insert_instr(block, instr);
 	return instr;
 }
 
@@ -677,7 +684,7 @@ struct ir3_instruction * ir3_instr_clone(struct ir3_instruction *instr)
 	*new_instr = *instr;
 	new_instr->regs = regs;
 
-	insert_instr(instr->block->shader, new_instr);
+	insert_instr(instr->block, new_instr);
 
 	/* clone registers: */
 	new_instr->regs_count = 0;

@@ -186,9 +186,8 @@ void ir3_print_instr(struct ir3_instruction *instr)
 static void
 print_block(struct ir3_block *block, int lvl)
 {
-	struct ir3_instruction *instr;
 	tab(lvl); printf("block {\n");
-	for (instr = block->head; instr; instr = instr->next) {
+	list_for_each_entry (struct ir3_instruction, instr, &block->instr_list, node) {
 		print_instr(instr, lvl+1);
 	}
 	tab(lvl); printf("}\n");

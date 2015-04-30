@@ -75,10 +75,10 @@ struct ir3_ra_ctx {
 #  define ra_debug 0
 #endif
 
-#define ra_dump_list(msg, n) do { \
+#define ra_dump_list(msg, ir) do { \
 		if (ra_debug) { \
 			debug_printf("-- " msg); \
-			ir3_print(n->block->shader); \
+			ir3_print(ir); \
 		} \
 	} while (0)
 
@@ -175,14 +175,13 @@ static void mark_sources(struct ir3_instruction *instr,
 static void compute_liveregs(struct ir3_ra_ctx *ctx,
 		struct ir3_instruction *instr, regmask_t *liveregs)
 {
-	struct ir3_block *block = instr->block;
-	struct ir3_instruction *n;
+	struct ir3_block *block = ctx->block;
 	regmask_t written;
 	unsigned i;
 
 	regmask_init(&written);
 
-	for (n = instr->next; n; n = n->next) {
+	list_for_each_entry (struct ir3_instruction, n, &instr->node, node) {
 		struct ir3_register *r;
 
 		if (is_meta(n))
@@ -411,9 +410,8 @@ static void instr_assign_src(struct ir3_ra_ctx *ctx,
 static void instr_assign_srcs(struct ir3_ra_ctx *ctx,
 		struct ir3_instruction *instr, unsigned name)
 {
-	struct ir3_instruction *n, *src;
-
-	for (n = instr->next; n && !ctx->error; n = n->next) {
+	list_for_each_entry (struct ir3_instruction, n, &instr->node, node) {
+		struct ir3_instruction *src;
 		foreach_ssa_src_n(src, i, n) {
 			unsigned r = i + 1;
 
@@ -424,6 +422,8 @@ static void instr_assign_srcs(struct ir3_ra_ctx *ctx,
 			if (src == instr)
 				instr_assign_src(ctx, n, r, name);
 		}
+		if (ctx->error)
+			break;
 	}
 }
 
@@ -589,14 +589,45 @@ static void instr_assign_array(struct ir3_ra_ctx *ctx,
 
 }
 
-static int block_ra(struct ir3_ra_ctx *ctx, struct ir3_block *block)
+static bool
+block_ra(struct ir3_block *block, void *state)
 {
-	struct ir3_instruction *n;
+	struct ir3_ra_ctx *ctx = state;
 
+	ra_dump_list("-------\n", block->shader);
+
+	/* first pass, assign arrays: */
+	list_for_each_entry (struct ir3_instruction, n, &block->instr_list, node) {
+		if (is_meta(n) && (n->opc == OPC_META_FI) && n->fi.aid) {
+			debug_assert(!n->cp.left);  /* don't think this should happen */
+			ra_dump_instr("ASSIGN ARRAY: ", n);
+			instr_assign_array(ctx, n);
+			ra_dump_list("-------\n", block->shader);
+		}
+
+		if (ctx->error)
+			return false;
+	}
+
+	list_for_each_entry (struct ir3_instruction, n, &block->instr_list, node) {
+		ra_dump_instr("ASSIGN: ", n);
+		instr_alloc_and_assign(ctx, ir3_neighbor_first(n));
+		ra_dump_list("-------\n", block->shader);
+
+		if (ctx->error)
+			return false;
+	}
+
+	return true;
+}
+
+static int
+shader_ra(struct ir3_ra_ctx *ctx, struct ir3_block *block)
+{
 	/* frag shader inputs get pre-assigned, since we have some
 	 * constraints/unknowns about setup for some of these regs:
 	 */
-	if ((ctx->type == SHADER_FRAGMENT) && !block->parent) {
+	if (ctx->type == SHADER_FRAGMENT) {
 		unsigned i = 0, j;
 		if (ctx->frag_face && (i < block->ninputs) && block->inputs[i]) {
 			/* if we have frag_face, it gets hr0.x */
@@ -608,31 +639,23 @@ static int block_ra(struct ir3_ra_ctx *ctx, struct ir3_block *block)
 				instr_assign(ctx, block->inputs[i], j);
 	}
 
-	ra_dump_list("-------\n", block->head);
-
-	/* first pass, assign arrays: */
-	for (n = block->head; n && !ctx->error; n = n->next) {
-		if (is_meta(n) && (n->opc == OPC_META_FI) && n->fi.aid) {
-			debug_assert(!n->cp.left);  /* don't think this should happen */
-			ra_dump_instr("ASSIGN ARRAY: ", n);
-			instr_assign_array(ctx, n);
-			ra_dump_list("-------\n", block->head);
-		}
-	}
-
-	for (n = block->head; n && !ctx->error; n = n->next) {
-		ra_dump_instr("ASSIGN: ", n);
-		instr_alloc_and_assign(ctx, ir3_neighbor_first(n));
-		ra_dump_list("-------\n", block->head);
-	}
+	block_ra(block, ctx);
 
 	return ctx->error ? -1 : 0;
+}
+
+static bool
+block_mark_dst(struct ir3_block *block, void *state)
+{
+	list_for_each_entry (struct ir3_instruction, n, &block->instr_list, node)
+		if (n->regs_count > 0)
+			n->regs[0]->flags |= IR3_REG_SSA;
+	return true;
 }
 
 int ir3_block_ra(struct ir3_block *block, enum shader_t type,
 		bool frag_coord, bool frag_face)
 {
-	struct ir3_instruction *n;
 	struct ir3_ra_ctx ctx = {
 			.block = block,
 			.type = type,
@@ -648,12 +671,10 @@ int ir3_block_ra(struct ir3_block *block, enum shader_t type,
 	 * NOTE: we really should set SSA flag consistently on
 	 * every dst register in the frontend.
 	 */
-	for (n = block->head; n; n = n->next)
-		if (n->regs_count > 0)
-			n->regs[0]->flags |= IR3_REG_SSA;
+	block_mark_dst(block, &ctx);
 
 	ir3_clear_mark(block->shader);
-	ret = block_ra(&ctx, block);
+	ret = shader_ra(&ctx, block);
 
 	return ret;
 }

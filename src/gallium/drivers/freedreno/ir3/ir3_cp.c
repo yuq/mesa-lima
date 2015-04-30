@@ -354,13 +354,6 @@ instr_cp(struct ir3_instruction *instr, unsigned *flags)
 {
 	struct ir3_register *reg;
 
-	/* stay within the block.. don't try to operate across
-	 * basic block boundaries or we'll have problems when
-	 * dealing with multiple basic blocks:
-	 */
-	if (is_meta(instr) && (instr->opc == OPC_META_INPUT))
-		return instr;
-
 	if (is_eligible_mov(instr, !!flags)) {
 		struct ir3_register *reg = instr->regs[1];
 		struct ir3_instruction *src_instr = ssa(reg);
@@ -394,11 +387,11 @@ instr_cp(struct ir3_instruction *instr, unsigned *flags)
 	return instr;
 }
 
-static void block_cp(struct ir3_block *block)
+void ir3_block_cp(struct ir3_block *block)
 {
-	unsigned i;
+	ir3_clear_mark(block->shader);
 
-	for (i = 0; i < block->noutputs; i++) {
+	for (unsigned i = 0; i < block->noutputs; i++) {
 		if (block->outputs[i]) {
 			struct ir3_instruction *out =
 					instr_cp(block->outputs[i], NULL);
@@ -406,10 +399,4 @@ static void block_cp(struct ir3_block *block)
 			block->outputs[i] = out;
 		}
 	}
-}
-
-void ir3_block_cp(struct ir3_block *block)
-{
-	ir3_clear_mark(block->shader);
-	block_cp(block);
 }

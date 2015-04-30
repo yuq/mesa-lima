@@ -88,26 +88,21 @@ deepest(struct ir3_instruction **srcs, unsigned nsrcs)
 	return d;
 }
 
-static unsigned distance(struct ir3_sched_ctx *ctx,
-		struct ir3_instruction *instr, unsigned maxd)
+static unsigned
+distance(struct ir3_sched_ctx *ctx, struct ir3_instruction *instr,
+		unsigned maxd)
 {
-	struct ir3_instruction *n = ctx->scheduled;
+	struct list_head *instr_list = &instr->block->instr_list;
 	unsigned d = 0;
-	while (n && (n != instr) && (d < maxd)) {
+
+	list_for_each_entry_rev (struct ir3_instruction, n, instr_list, node) {
+		if ((n == instr) || (d >= maxd))
+			break;
 		if (is_alu(n) || is_flow(n))
 			d++;
-		n = n->next;
 	}
-	return d;
-}
 
-/* TODO maybe we want double linked list? */
-static struct ir3_instruction * prev(struct ir3_instruction *instr)
-{
-	struct ir3_instruction *p = instr->block->head;
-	while (p && (p->next != instr))
-		p = p->next;
-	return p;
+	return d;
 }
 
 static bool is_sfu_or_mem(struct ir3_instruction *instr)
@@ -125,25 +120,11 @@ static void schedule(struct ir3_sched_ctx *ctx,
 	 * scheduling and depth calculation..
 	 */
 	if (ctx->scheduled && is_sfu_or_mem(ctx->scheduled) && is_sfu_or_mem(instr))
-		schedule(ctx, ir3_NOP(block), false);
+		ir3_NOP(block);
 
 	/* remove from depth list:
 	 */
-	if (remove) {
-		struct ir3_instruction *p = prev(instr);
-
-		/* NOTE: this can happen for inputs which are not
-		 * read.. in that case there is no need to schedule
-		 * the input, so just bail:
-		 */
-		if (instr != (p ? p->next : block->head))
-			return;
-
-		if (p)
-			p->next = instr->next;
-		else
-			block->head = instr->next;
-	}
+	list_delinit(&instr->node);
 
 	if (writes_addr(instr)) {
 		assert(ctx->addr == NULL);
@@ -157,7 +138,7 @@ static void schedule(struct ir3_sched_ctx *ctx,
 
 	instr->flags |= IR3_INSTR_MARK;
 
-	instr->next = ctx->scheduled;
+	list_addtail(&instr->node, &instr->block->instr_list);
 	ctx->scheduled = instr;
 
 	ctx->cnt++;
@@ -284,18 +265,6 @@ static int trysched(struct ir3_sched_ctx *ctx,
 	return SCHEDULED;
 }
 
-static struct ir3_instruction * reverse(struct ir3_instruction *instr)
-{
-	struct ir3_instruction *reversed = NULL;
-	while (instr) {
-		struct ir3_instruction *next = instr->next;
-		instr->next = reversed;
-		reversed = instr;
-		instr = next;
-	}
-	return reversed;
-}
-
 static bool uses_current_addr(struct ir3_sched_ctx *ctx,
 		struct ir3_instruction *instr)
 {
@@ -317,16 +286,14 @@ static bool uses_current_pred(struct ir3_sched_ctx *ctx,
  * other instructions using the current address register:
  */
 static int block_sched_undelayed(struct ir3_sched_ctx *ctx,
-		struct ir3_block *block)
+		struct list_head *unscheduled_list)
 {
-	struct ir3_instruction *instr = block->head;
 	bool addr_in_use = false;
 	bool pred_in_use = false;
 	bool all_delayed = true;
 	unsigned cnt = ~0, attempted = 0;
 
-	while (instr) {
-		struct ir3_instruction *next = instr->next;
+	list_for_each_entry_safe(struct ir3_instruction, instr, unscheduled_list, node) {
 		bool addr = uses_current_addr(ctx, instr);
 		bool pred = uses_current_pred(ctx, instr);
 
@@ -347,8 +314,6 @@ static int block_sched_undelayed(struct ir3_sched_ctx *ctx,
 
 			attempted++;
 		}
-
-		instr = next;
 	}
 
 	if (!addr_in_use)
@@ -408,7 +373,10 @@ static int block_sched_undelayed(struct ir3_sched_ctx *ctx,
 
 static void block_sched(struct ir3_sched_ctx *ctx, struct ir3_block *block)
 {
-	struct ir3_instruction *instr;
+	struct list_head unscheduled_list;
+
+	list_replace(&block->instr_list, &unscheduled_list);
+	list_inithead(&block->instr_list);
 
 	/* schedule all the shader input's (meta-instr) first so that
 	 * the RA step sees that the input registers contain a value
@@ -423,31 +391,22 @@ static void block_sched(struct ir3_sched_ctx *ctx, struct ir3_block *block)
 		}
 	}
 
-	while ((instr = block->head) && !ctx->error) {
-		/* NOTE: always grab next *before* trysched(), in case the
-		 * instruction is actually scheduled (and therefore moved
-		 * from depth list into scheduled list)
-		 */
-		struct ir3_instruction *next = instr->next;
+	list_for_each_entry_safe (struct ir3_instruction, instr, &unscheduled_list, node) {
 		int cnt = trysched(ctx, instr);
 
 		if (cnt == DELAYED)
-			cnt = block_sched_undelayed(ctx, block);
+			cnt = block_sched_undelayed(ctx, &unscheduled_list);
 
 		/* -1 is signal to return up stack, but to us means same as 0: */
 		cnt = MAX2(0, cnt);
 		cnt += ctx->cnt;
-		instr = next;
 
 		/* if deepest remaining instruction cannot be scheduled, try
 		 * the increasingly more shallow instructions until needed
 		 * number of delay slots is filled:
 		 */
-		while (instr && (cnt > ctx->cnt)) {
-			next = instr->next;
+		list_for_each_entry_safe (struct ir3_instruction, instr, &instr->node, node)
 			trysched(ctx, instr);
-			instr = next;
-		}
 
 		/* and if we run out of instructions that can be scheduled,
 		 * then it is time for nop's:
@@ -455,9 +414,6 @@ static void block_sched(struct ir3_sched_ctx *ctx, struct ir3_block *block)
 		while (cnt > ctx->cnt)
 			schedule(ctx, ir3_NOP(block), false);
 	}
-
-	/* at this point, scheduled list is in reverse order, so fix that: */
-	block->head = reverse(ctx->scheduled);
 }
 
 int ir3_block_sched(struct ir3_block *block)
