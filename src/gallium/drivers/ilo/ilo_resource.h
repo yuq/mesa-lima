@@ -29,6 +29,7 @@
 #define ILO_RESOURCE_H
 
 #include "core/intel_winsys.h"
+#include "core/ilo_buffer.h"
 #include "core/ilo_image.h"
 
 #include "ilo_common.h"
@@ -77,13 +78,6 @@ enum ilo_texture_flags {
    ILO_TEXTURE_HIZ            = 1 << 7,
 };
 
-struct ilo_buffer {
-   struct pipe_resource base;
-
-   struct intel_bo *bo;
-   unsigned bo_size;
-};
-
 /**
  * A 3D image slice, cube face, or array layer.
  */
@@ -116,11 +110,17 @@ struct ilo_texture {
    struct ilo_texture *separate_s8;
 };
 
+struct ilo_buffer_resource {
+   struct pipe_resource base;
+
+   struct ilo_buffer buffer;
+};
+
 static inline struct ilo_buffer *
 ilo_buffer(struct pipe_resource *res)
 {
-   return (struct ilo_buffer *)
-      ((res && res->target == PIPE_BUFFER) ? res : NULL);
+   return (res && res->target == PIPE_BUFFER) ?
+      &((struct ilo_buffer_resource *) res)->buffer : NULL;
 }
 
 static inline struct ilo_texture *
@@ -134,10 +134,7 @@ void
 ilo_init_resource_functions(struct ilo_screen *is);
 
 bool
-ilo_buffer_rename_bo(struct ilo_buffer *buf);
-
-bool
-ilo_texture_rename_bo(struct ilo_texture *tex);
+ilo_resource_rename_bo(struct pipe_resource *res);
 
 /**
  * Return the bo of the resource.

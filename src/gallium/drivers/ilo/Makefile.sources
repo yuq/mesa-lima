@@ -1,4 +1,5 @@
 C_SOURCES := \
+	core/ilo_buffer.h \
 	core/ilo_core.h \
 	core/ilo_debug.c \
 	core/ilo_debug.h \

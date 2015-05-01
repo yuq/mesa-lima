@@ -414,21 +414,28 @@ tex_get_handle(struct ilo_texture *tex, struct winsys_handle *handle)
 }
 
 static bool
-buf_create_bo(struct ilo_buffer *buf)
+buf_create_bo(struct ilo_buffer_resource *buf)
 {
    struct ilo_screen *is = ilo_screen(buf->base.screen);
    const char *name = resource_get_bo_name(&buf->base);
    const bool cpu_init = resource_get_cpu_init(&buf->base);
+   struct intel_bo *bo;
 
-   buf->bo = intel_winsys_alloc_bo(is->dev.winsys, name, buf->bo_size, cpu_init);
+   bo = intel_winsys_alloc_bo(is->dev.winsys, name,
+         buf->buffer.bo_size, cpu_init);
+   if (!bo)
+      return false;
 
-   return (buf->bo != NULL);
+   ilo_buffer_set_bo(&buf->buffer, bo);
+   intel_bo_unref(bo);
+
+   return true;
 }
 
 static void
-buf_destroy(struct ilo_buffer *buf)
+buf_destroy(struct ilo_buffer_resource *buf)
 {
-   intel_bo_unref(buf->bo);
+   ilo_buffer_cleanup(&buf->buffer);
    FREE(buf);
 }
 
@@ -436,9 +443,9 @@ static struct pipe_resource *
 buf_create(struct pipe_screen *screen, const struct pipe_resource *templ)
 {
    const struct ilo_screen *is = ilo_screen(screen);
-   struct ilo_buffer *buf;
+   struct ilo_buffer_resource *buf;
 
-   buf = CALLOC_STRUCT(ilo_buffer);
+   buf = CALLOC_STRUCT(ilo_buffer_resource);
    if (!buf)
       return NULL;
 
@@ -446,39 +453,11 @@ buf_create(struct pipe_screen *screen, const struct pipe_resource *templ)
    buf->base.screen = screen;
    pipe_reference_init(&buf->base.reference, 1);
 
-   buf->bo_size = templ->width0;
+   ilo_buffer_init(&buf->buffer, &is->dev,
+         templ->width0, templ->bind, templ->flags);
 
-   /*
-    * From the Sandy Bridge PRM, volume 1 part 1, page 118:
-    *
-    *     "For buffers, which have no inherent "height," padding requirements
-    *      are different. A buffer must be padded to the next multiple of 256
-    *      array elements, with an additional 16 bytes added beyond that to
-    *      account for the L1 cache line."
-    */
-   if (templ->bind & PIPE_BIND_SAMPLER_VIEW)
-      buf->bo_size = align(buf->bo_size, 256) + 16;
-
-   if ((templ->bind & PIPE_BIND_VERTEX_BUFFER) &&
-        ilo_dev_gen(&is->dev) < ILO_GEN(7.5)) {
-      /*
-       * As noted in ilo_format_translate(), we treat some 3-component formats
-       * as 4-component formats to work around hardware limitations.  Imagine
-       * the case where the vertex buffer holds a single
-       * PIPE_FORMAT_R16G16B16_FLOAT vertex, and buf->bo_size is 6.  The
-       * hardware would fail to fetch it at boundary check because the vertex
-       * buffer is expected to hold a PIPE_FORMAT_R16G16B16A16_FLOAT vertex
-       * and that takes at least 8 bytes.
-       *
-       * For the workaround to work, we should add 2 to the bo size.  But that
-       * would waste a page when the bo size is already page aligned.  Let's
-       * round it to page size for now and revisit this when needed.
-       */
-      buf->bo_size = align(buf->bo_size, 4096);
-   }
-
-   if (buf->bo_size < templ->width0 ||
-       buf->bo_size > ilo_max_resource_size ||
+   if (buf->buffer.bo_size < templ->width0 ||
+       buf->buffer.bo_size > ilo_max_resource_size ||
        !buf_create_bo(buf)) {
       FREE(buf);
       return NULL;
@@ -540,7 +519,7 @@ ilo_resource_destroy(struct pipe_screen *screen,
                      struct pipe_resource *res)
 {
    if (res->target == PIPE_BUFFER)
-      buf_destroy(ilo_buffer(res));
+      buf_destroy((struct ilo_buffer_resource *) res);
    else
       tex_destroy(ilo_texture(res));
 }
@@ -559,26 +538,17 @@ ilo_init_resource_functions(struct ilo_screen *is)
 }
 
 bool
-ilo_buffer_rename_bo(struct ilo_buffer *buf)
+ilo_resource_rename_bo(struct pipe_resource *res)
 {
-   struct intel_bo *old_bo = buf->bo;
+   if (res->target == PIPE_BUFFER) {
+      return buf_create_bo((struct ilo_buffer_resource *) res);
+   } else {
+      struct ilo_texture *tex = ilo_texture(res);
 
-   if (buf_create_bo(buf)) {
-      intel_bo_unref(old_bo);
-      return true;
+      /* an imported texture cannot be renamed */
+      if (tex->imported)
+         return false;
+
+      return tex_create_bo(tex);
    }
-   else {
-      buf->bo = old_bo;
-      return false;
-   }
-}
-
-bool
-ilo_texture_rename_bo(struct ilo_texture *tex)
-{
-   /* an imported texture cannot be renamed */
-   if (tex->imported)
-      return false;
-
-   return tex_create_bo(tex);
 }

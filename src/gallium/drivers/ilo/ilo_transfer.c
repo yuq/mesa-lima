@@ -134,17 +134,6 @@ resource_get_transfer_method(struct pipe_resource *res,
 }
 
 /**
- * Rename the bo of the resource.
- */
-static bool
-resource_rename_bo(struct pipe_resource *res)
-{
-   return (res->target == PIPE_BUFFER) ?
-      ilo_buffer_rename_bo(ilo_buffer(res)) :
-      ilo_texture_rename_bo(ilo_texture(res));
-}
-
-/**
  * Return true if usage allows the use of staging bo to avoid blocking.
  */
 static bool
@@ -227,7 +216,7 @@ xfer_unblock(struct ilo_transfer *xfer, bool *resource_renamed)
          unblocked = true;
       }
       else if ((xfer->base.usage & PIPE_TRANSFER_DISCARD_WHOLE_RESOURCE) &&
-               resource_rename_bo(res)) {
+               ilo_resource_rename_bo(res)) {
          renamed = true;
          unblocked = true;
       }
@@ -1087,9 +1076,10 @@ choose_transfer_method(struct ilo_context *ilo, struct ilo_transfer *xfer)
 }
 
 static void
-buf_pwrite(struct ilo_context *ilo, struct ilo_buffer *buf,
+buf_pwrite(struct ilo_context *ilo, struct pipe_resource *res,
            unsigned usage, int offset, int size, const void *data)
 {
+   struct ilo_buffer *buf = ilo_buffer(res);
    bool need_submit;
 
    /* see if we can avoid blocking */
@@ -1097,8 +1087,8 @@ buf_pwrite(struct ilo_context *ilo, struct ilo_buffer *buf,
       bool unblocked = false;
 
       if ((usage & PIPE_TRANSFER_DISCARD_WHOLE_RESOURCE) &&
-          ilo_buffer_rename_bo(buf)) {
-         ilo_state_vector_resource_renamed(&ilo->state_vector, &buf->base);
+          ilo_resource_rename_bo(res)) {
+         ilo_state_vector_resource_renamed(&ilo->state_vector, res);
          unblocked = true;
       }
       else {
@@ -1108,7 +1098,7 @@ buf_pwrite(struct ilo_context *ilo, struct ilo_buffer *buf,
           * allocate a staging buffer to hold the data and pipelined copy it
           * over
           */
-         templ = buf->base;
+         templ = *res;
          templ.width0 = size;
          templ.usage = PIPE_USAGE_STAGING;
          templ.bind = PIPE_BIND_TRANSFER_WRITE;
@@ -1120,7 +1110,7 @@ buf_pwrite(struct ilo_context *ilo, struct ilo_buffer *buf,
 
             u_box_1d(0, size, &staging_box);
             ilo_blitter_blt_copy_resource(ilo->blitter,
-                  &buf->base, 0, offset, 0, 0,
+                  res, 0, offset, 0, 0,
                   staging, 0, &staging_box);
 
             pipe_resource_reference(&staging, NULL);
@@ -1251,7 +1241,7 @@ ilo_transfer_inline_write(struct pipe_context *pipe,
       assert(box->height == 1);
       assert(box->depth == 1);
 
-      buf_pwrite(ilo_context(pipe), ilo_buffer(res),
+      buf_pwrite(ilo_context(pipe), res,
             usage, box->x, box->width, data);
    }
    else {
