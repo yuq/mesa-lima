@@ -41,7 +41,7 @@ static bool is_eligible_mov(struct ir3_instruction *instr, bool allow_flags)
 		struct ir3_register *dst = instr->regs[0];
 		struct ir3_register *src = instr->regs[1];
 		struct ir3_instruction *src_instr = ssa(src);
-		if (dst->flags & (IR3_REG_ADDR | IR3_REG_RELATIV))
+		if (dst->flags & IR3_REG_RELATIV)
 			return false;
 		if (src->flags & IR3_REG_RELATIV)
 			return false;

@@ -385,7 +385,8 @@ create_addr(struct ir3_block *block, struct ir3_instruction *src)
 	instr->regs[1]->flags |= IR3_REG_HALF;
 
 	instr = ir3_MOV(block, instr, TYPE_S16);
-	instr->regs[0]->flags |= IR3_REG_ADDR | IR3_REG_HALF;
+	instr->regs[0]->num = regid(REG_A0, 0);
+	instr->regs[0]->flags |= IR3_REG_HALF;
 	instr->regs[1]->flags |= IR3_REG_HALF;
 
 	return instr;
@@ -589,6 +590,7 @@ create_frag_face(struct ir3_compile *ctx, unsigned comp)
 		compile_assert(ctx, !ctx->frag_face);
 
 		ctx->frag_face = create_input(block, NULL, 0);
+		ctx->frag_face->regs[0]->flags |= IR3_REG_HALF;
 
 		/* for faceness, we always get -1 or 0 (int).. but TGSI expects
 		 * positive vs negative float.. and piglit further seems to
@@ -1981,9 +1983,18 @@ ir3_compile_shader_nir(struct ir3_compiler *compiler,
 	 */
 	if (key.half_precision) {
 		for (i = 0; i < block->noutputs; i++) {
-			if (!block->outputs[i])
+			struct ir3_instruction *out = block->outputs[i];
+			if (!out)
 				continue;
-			block->outputs[i]->regs[0]->flags |= IR3_REG_HALF;
+			out->regs[0]->flags |= IR3_REG_HALF;
+			/* output could be a fanout (ie. texture fetch output)
+			 * in which case we need to propagate the half-reg flag
+			 * up to the definer so that RA sees it:
+			 */
+			if (is_meta(out) && (out->opc == OPC_META_FO)) {
+				out = out->regs[1]->instr;
+				out->regs[0]->flags |= IR3_REG_HALF;
+			}
 		}
 	}
 

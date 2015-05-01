@@ -34,6 +34,7 @@ struct ir3_compiler * ir3_compiler_create(uint32_t gpu_id)
 {
 	struct ir3_compiler *compiler = rzalloc(NULL, struct ir3_compiler);
 	compiler->gpu_id = gpu_id;
+	compiler->set = ir3_ra_alloc_reg_set(compiler);
 	return compiler;
 }
 

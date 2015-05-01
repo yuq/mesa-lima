@@ -83,7 +83,6 @@ struct ir3_register {
 		 */
 		IR3_REG_SSA    = 0x2000,   /* 'instr' is ptr to assigning instr */
 		IR3_REG_IA     = 0x4000,   /* meta-input dst is "assigned" */
-		IR3_REG_ADDR   = 0x8000,   /* register is a0.x */
 	} flags;
 	union {
 		/* normal registers:
@@ -245,6 +244,13 @@ struct ir3_instruction {
 		 */
 #define DEPTH_UNUSED  ~0
 		unsigned depth;
+		/* When we get to the RA stage, we no longer need depth, but
+		 * we do need instruction's position/name:
+		 */
+		struct {
+			uint16_t ip;
+			uint16_t name;
+		};
 	};
 
 	/* Used during CP and RA stages.  For fanin and shader inputs/
@@ -503,6 +509,28 @@ static inline bool is_mem(struct ir3_instruction *instr)
 	return (instr->category == 6);
 }
 
+static inline bool
+is_store(struct ir3_instruction *instr)
+{
+	if (is_mem(instr)) {
+		/* these instructions, the "destination" register is
+		 * actually a source, the address to store to.
+		 */
+		switch (instr->opc) {
+		case OPC_STG:
+		case OPC_STP:
+		case OPC_STL:
+		case OPC_STLW:
+		case OPC_L2G:
+		case OPC_G2L:
+			return true;
+		default:
+			break;
+		}
+	}
+	return false;
+}
+
 static inline bool is_input(struct ir3_instruction *instr)
 {
 	/* in some cases, ldlv is used to fetch varying without
@@ -527,7 +555,7 @@ static inline bool writes_addr(struct ir3_instruction *instr)
 {
 	if (instr->regs_count > 0) {
 		struct ir3_register *dst = instr->regs[0];
-		return !!(dst->flags & IR3_REG_ADDR);
+		return reg_num(dst) == REG_A0;
 	}
 	return false;
 }
@@ -558,7 +586,7 @@ static inline bool conflicts(struct ir3_instruction *a,
 
 static inline bool reg_gpr(struct ir3_register *r)
 {
-	if (r->flags & (IR3_REG_CONST | IR3_REG_IMMED | IR3_REG_ADDR))
+	if (r->flags & (IR3_REG_CONST | IR3_REG_IMMED))
 		return false;
 	if ((reg_num(r) == REG_A0) || (reg_num(r) == REG_P0))
 		return false;
@@ -771,6 +799,7 @@ void ir3_block_group(struct ir3_block *block);
 int ir3_block_sched(struct ir3_block *block);
 
 /* register assignment: */
+struct ir3_ra_reg_set * ir3_ra_alloc_reg_set(void *memctx);
 int ir3_block_ra(struct ir3_block *block, enum shader_t type,
 		bool frag_coord, bool frag_face);
 
