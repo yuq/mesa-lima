@@ -26,12 +26,12 @@
  */
 
 #include "genhw/genhw.h" /* for SBE setup */
-#include "tgsi/tgsi_parse.h"
+#include "core/ilo_builder.h"
 #include "core/ilo_state_3d.h"
 #include "core/intel_winsys.h"
-
 #include "shader/ilo_shader_internal.h"
-#include "ilo_builder.h"
+#include "tgsi/tgsi_parse.h"
+
 #include "ilo_state.h"
 #include "ilo_shader.h"
 

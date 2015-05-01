@@ -26,10 +26,10 @@
  */
 
 #include "genhw/genhw.h"
+#include "core/ilo_builder_mi.h"
+#include "core/ilo_builder_blt.h"
 #include "util/u_pack_color.h"
 
-#include "ilo_builder_mi.h"
-#include "ilo_builder_blt.h"
 #include "ilo_context.h"
 #include "ilo_cp.h"
 #include "ilo_blit.h"

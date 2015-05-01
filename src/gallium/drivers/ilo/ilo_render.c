@@ -26,12 +26,12 @@
  */
 
 #include "genhw/genhw.h"
-#include "util/u_prim.h"
+#include "core/ilo_builder.h"
+#include "core/ilo_builder_mi.h"
+#include "core/ilo_builder_render.h"
 #include "core/intel_winsys.h"
+#include "util/u_prim.h"
 
-#include "ilo_builder.h"
-#include "ilo_builder_mi.h"
-#include "ilo_builder_render.h"
 #include "ilo_query.h"
 #include "ilo_render_gen.h"
 

@@ -30,7 +30,8 @@
 
 #include "genhw/genhw.h"
 
-#include "ilo_common.h"
+#include "ilo_core.h"
+#include "ilo_dev.h"
 #include "ilo_builder_3d_top.h"
 #include "ilo_builder_3d_bottom.h"
 

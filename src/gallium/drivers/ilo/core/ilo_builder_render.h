@@ -29,9 +29,10 @@
 #define ILO_BUILDER_RENDER_H
 
 #include "genhw/genhw.h"
-#include "core/intel_winsys.h"
+#include "intel_winsys.h"
 
-#include "ilo_common.h"
+#include "ilo_core.h"
+#include "ilo_dev.h"
 #include "ilo_builder.h"
 
 static inline void

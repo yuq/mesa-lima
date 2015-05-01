@@ -25,9 +25,9 @@
  *    Chia-I Wu <olv@lunarg.com>
  */
 
+#include "core/ilo_builder_mi.h"
 #include "core/intel_winsys.h"
 
-#include "ilo_builder_mi.h"
 #include "ilo_shader.h"
 #include "ilo_cp.h"
 

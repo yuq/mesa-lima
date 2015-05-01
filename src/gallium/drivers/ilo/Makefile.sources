@@ -1,5 +1,15 @@
 C_SOURCES := \
 	core/ilo_buffer.h \
+	core/ilo_builder.c \
+	core/ilo_builder.h \
+	core/ilo_builder_3d.h \
+	core/ilo_builder_3d_bottom.h \
+	core/ilo_builder_3d_top.h \
+	core/ilo_builder_blt.h \
+	core/ilo_builder_decode.c \
+	core/ilo_builder_media.h \
+	core/ilo_builder_mi.h \
+	core/ilo_builder_render.h \
 	core/ilo_core.h \
 	core/ilo_debug.c \
 	core/ilo_debug.h \
@@ -21,16 +31,6 @@ C_SOURCES := \
 	ilo_blitter_blt.c \
 	ilo_blitter_pipe.c \
 	ilo_blitter_rectlist.c \
-	ilo_builder.c \
-	ilo_builder.h \
-	ilo_builder_3d.h \
-	ilo_builder_3d_bottom.h \
-	ilo_builder_3d_top.h \
-	ilo_builder_blt.h \
-	ilo_builder_decode.c \
-	ilo_builder_media.h \
-	ilo_builder_mi.h \
-	ilo_builder_render.h \
 	ilo_common.h \
 	ilo_context.c \
 	ilo_context.h \

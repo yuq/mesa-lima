@@ -28,8 +28,11 @@
 #ifndef ILO_BUILDER_H
 #define ILO_BUILDER_H
 
-#include "core/intel_winsys.h"
-#include "ilo_common.h"
+#include "intel_winsys.h"
+
+#include "ilo_core.h"
+#include "ilo_debug.h"
+#include "ilo_dev.h"
 
 enum ilo_builder_writer_type {
    ILO_BUILDER_WRITER_BATCH,

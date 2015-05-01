@@ -28,8 +28,9 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include "genhw/genhw.h"
-#include "shader/toy_compiler.h"
-#include "core/intel_winsys.h"
+#include "../shader/toy_compiler.h"
+
+#include "intel_winsys.h"
 #include "ilo_builder.h"
 
 static const uint32_t *

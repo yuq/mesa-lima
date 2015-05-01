@@ -26,13 +26,13 @@
  */
 
 #include "genhw/genhw.h"
+#include "core/ilo_builder_3d.h"
+#include "core/ilo_builder_mi.h"
+#include "core/ilo_builder_render.h"
 #include "util/u_dual_blend.h"
 #include "util/u_prim.h"
 
 #include "ilo_blitter.h"
-#include "ilo_builder_3d.h"
-#include "ilo_builder_mi.h"
-#include "ilo_builder_render.h"
 #include "ilo_query.h"
 #include "ilo_shader.h"
 #include "ilo_state.h"

@@ -28,9 +28,9 @@
 #ifndef ILO_CP_H
 #define ILO_CP_H
 
+#include "core/ilo_builder.h"
 #include "core/intel_winsys.h"
 
-#include "ilo_builder.h"
 #include "ilo_common.h"
 
 struct ilo_cp;

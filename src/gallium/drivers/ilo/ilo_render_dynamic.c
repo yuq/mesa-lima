@@ -25,10 +25,11 @@
  *    Chia-I Wu <olv@lunarg.com>
  */
 
+#include "core/ilo_builder_3d.h"
+#include "core/ilo_builder_media.h"
+
 #include "ilo_common.h"
 #include "ilo_blitter.h"
-#include "ilo_builder_3d.h"
-#include "ilo_builder_media.h"
 #include "ilo_state.h"
 #include "ilo_render_gen.h"
 
