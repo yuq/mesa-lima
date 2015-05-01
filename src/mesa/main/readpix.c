@@ -421,7 +421,7 @@ read_rgba_pixels( struct gl_context *ctx,
                   const struct gl_pixelstore_attrib *packing )
 {
    GLbitfield transferOps;
-   bool dst_is_integer, dst_is_luminance, needs_rebase;
+   bool dst_is_integer, convert_rgb_to_lum, needs_rebase;
    int dst_stride, src_stride, rb_stride;
    uint32_t dst_format, src_format;
    GLubyte *dst, *map;
@@ -442,10 +442,7 @@ read_rgba_pixels( struct gl_context *ctx,
    dst_is_integer = _mesa_is_enum_format_integer(format);
    dst_stride = _mesa_image_row_stride(packing, width, format, type);
    dst_format = _mesa_format_from_format_and_type(format, type);
-   dst_is_luminance = format == GL_LUMINANCE ||
-                      format == GL_LUMINANCE_ALPHA ||
-                      format == GL_LUMINANCE_INTEGER_EXT ||
-                      format == GL_LUMINANCE_ALPHA_INTEGER_EXT;
+   convert_rgb_to_lum = need_rgb_to_luminance_conversion(rb->Format, format);
    dst = (GLubyte *) _mesa_image_address2d(packing, pixels, width, height,
                                            format, type, 0, 0);
 
@@ -493,7 +490,7 @@ read_rgba_pixels( struct gl_context *ctx,
     */
    assert(!transferOps || (transferOps && !dst_is_integer));
 
-   needs_rgba = transferOps || dst_is_luminance;
+   needs_rgba = transferOps || convert_rgb_to_lum;
    rgba = NULL;
    if (needs_rgba) {
       uint32_t rgba_format;
@@ -566,7 +563,7 @@ read_rgba_pixels( struct gl_context *ctx,
     * If the dst format is Luminance, we need to do the conversion by computing
     * L=R+G+B values.
     */
-   if (!dst_is_luminance) {
+   if (!convert_rgb_to_lum) {
       _mesa_format_convert(dst, dst_format, dst_stride,
                            src, src_format, src_stride,
                            width, height,
