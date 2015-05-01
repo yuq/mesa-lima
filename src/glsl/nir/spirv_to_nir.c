@@ -497,6 +497,12 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
             vtn_value(b, w[4], vtn_value_type_constant)->constant;
       }
 
+      if (var->data.mode == nir_var_local) {
+         exec_list_push_tail(&b->impl->locals, &var->node);
+      } else {
+         exec_list_push_tail(&b->shader->globals, &var->node);
+      }
+
       val->deref = nir_deref_var_create(b->shader, var);
 
       vtn_foreach_decoration(b, val, var_decoration_cb, var);
