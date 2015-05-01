@@ -92,12 +92,19 @@ vtn_push_value(struct vtn_builder *b, uint32_t value_id,
 }
 
 static struct vtn_value *
+vtn_untyped_value(struct vtn_builder *b, uint32_t value_id)
+{
+   assert(value_id < b->value_id_bound);
+   return &b->values[value_id];
+}
+
+static struct vtn_value *
 vtn_value(struct vtn_builder *b, uint32_t value_id,
           enum vtn_value_type value_type)
 {
-   assert(value_id < b->value_id_bound);
-   assert(b->values[value_id].value_type == value_type);
-   return &b->values[value_id];
+   struct vtn_value *val = vtn_untyped_value(b, value_id);
+   assert(val->value_type == value_type);
+   return val;
 }
 
 static char *
