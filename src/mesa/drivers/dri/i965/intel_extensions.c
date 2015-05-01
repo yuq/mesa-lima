@@ -64,10 +64,10 @@ can_do_pipelined_register_writes(struct brw_context *brw)
    /* Set a value in a BO to a known quantity.  The workaround BO already
     * exists and doesn't contain anything important, so we may as well use it.
     */
-   drm_intel_bo_map(brw->batch.workaround_bo, true);
-   data = brw->batch.workaround_bo->virtual;
+   drm_intel_bo_map(brw->workaround_bo, true);
+   data = brw->workaround_bo->virtual;
    data[offset] = 0xffffffff;
-   drm_intel_bo_unmap(brw->batch.workaround_bo);
+   drm_intel_bo_unmap(brw->workaround_bo);
 
    /* Write the register. */
    BEGIN_BATCH(3);
@@ -82,7 +82,7 @@ can_do_pipelined_register_writes(struct brw_context *brw)
    BEGIN_BATCH(3);
    OUT_BATCH(MI_STORE_REGISTER_MEM | (3 - 2));
    OUT_BATCH(reg);
-   OUT_RELOC(brw->batch.workaround_bo,
+   OUT_RELOC(brw->workaround_bo,
              I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
              offset * sizeof(uint32_t));
    ADVANCE_BATCH();
@@ -90,10 +90,10 @@ can_do_pipelined_register_writes(struct brw_context *brw)
    intel_batchbuffer_flush(brw);
 
    /* Check whether the value got written. */
-   drm_intel_bo_map(brw->batch.workaround_bo, false);
-   data = brw->batch.workaround_bo->virtual;
+   drm_intel_bo_map(brw->workaround_bo, false);
+   data = brw->workaround_bo->virtual;
    bool success = data[offset] == expected_value;
-   drm_intel_bo_unmap(brw->batch.workaround_bo);
+   drm_intel_bo_unmap(brw->workaround_bo);
 
    result = success;
 
@@ -120,10 +120,10 @@ can_write_oacontrol(struct brw_context *brw)
    /* Set a value in a BO to a known quantity.  The workaround BO already
     * exists and doesn't contain anything important, so we may as well use it.
     */
-   drm_intel_bo_map(brw->batch.workaround_bo, true);
-   data = brw->batch.workaround_bo->virtual;
+   drm_intel_bo_map(brw->workaround_bo, true);
+   data = brw->workaround_bo->virtual;
    data[offset] = 0xffffffff;
-   drm_intel_bo_unmap(brw->batch.workaround_bo);
+   drm_intel_bo_unmap(brw->workaround_bo);
 
    /* Write OACONTROL. */
    BEGIN_BATCH(3);
@@ -138,7 +138,7 @@ can_write_oacontrol(struct brw_context *brw)
    BEGIN_BATCH(3);
    OUT_BATCH(MI_STORE_REGISTER_MEM | (3 - 2));
    OUT_BATCH(OACONTROL);
-   OUT_RELOC(brw->batch.workaround_bo,
+   OUT_RELOC(brw->workaround_bo,
              I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
              offset * sizeof(uint32_t));
    ADVANCE_BATCH();
@@ -155,10 +155,10 @@ can_write_oacontrol(struct brw_context *brw)
    intel_batchbuffer_flush(brw);
 
    /* Check whether the value got written. */
-   drm_intel_bo_map(brw->batch.workaround_bo, false);
-   data = brw->batch.workaround_bo->virtual;
+   drm_intel_bo_map(brw->workaround_bo, false);
+   data = brw->workaround_bo->virtual;
    bool success = data[offset] == expected_value;
-   drm_intel_bo_unmap(brw->batch.workaround_bo);
+   drm_intel_bo_unmap(brw->workaround_bo);
 
    result = success;
 

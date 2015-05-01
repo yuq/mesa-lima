@@ -44,16 +44,6 @@ intel_batchbuffer_init(struct brw_context *brw)
 {
    intel_batchbuffer_reset(brw);
 
-   if (brw->gen >= 6) {
-      /* We can't just use brw_state_batch to get a chunk of space for
-       * the gen6 workaround because it involves actually writing to
-       * the buffer, and the kernel doesn't let us write to the batch.
-       */
-      brw->batch.workaround_bo = drm_intel_bo_alloc(brw->bufmgr,
-						      "pipe_control workaround",
-						      4096, 4096);
-   }
-
    if (!brw->has_llc) {
       brw->batch.cpu_map = malloc(BATCH_SZ);
       brw->batch.map = brw->batch.cpu_map;
@@ -82,7 +72,6 @@ intel_batchbuffer_reset(struct brw_context *brw)
    brw->batch.state_batch_offset = brw->batch.bo->size;
    brw->batch.used = 0;
    brw->batch.needs_sol_reset = false;
-   brw->batch.pipe_controls_since_last_cs_stall = 0;
 
    /* We don't know what ring the new batch will be sent to until we see the
     * first BEGIN_BATCH or BEGIN_BATCH_BLT.  Mark it as unknown.
@@ -114,7 +103,6 @@ intel_batchbuffer_free(struct brw_context *brw)
    free(brw->batch.cpu_map);
    drm_intel_bo_unreference(brw->batch.last_bo);
    drm_intel_bo_unreference(brw->batch.bo);
-   drm_intel_bo_unreference(brw->batch.workaround_bo);
 }
 
 static void

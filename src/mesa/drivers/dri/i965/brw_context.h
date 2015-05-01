@@ -869,8 +869,6 @@ struct intel_batchbuffer {
    drm_intel_bo *bo;
    /** Last BO submitted to the hardware.  Used for glFinish(). */
    drm_intel_bo *last_bo;
-   /** BO for post-sync nonzero writes for gen6 workaround. */
-   drm_intel_bo *workaround_bo;
 
    uint16_t emit, total;
    uint16_t used, reserved_space;
@@ -881,8 +879,6 @@ struct intel_batchbuffer {
    uint32_t state_batch_offset;
    enum brw_gpu_ring ring;
    bool needs_sol_reset;
-
-   uint8_t pipe_controls_since_last_cs_stall;
 
    struct {
       uint16_t used;
@@ -1034,6 +1030,10 @@ struct brw_context
    dri_bufmgr *bufmgr;
 
    drm_intel_context *hw_ctx;
+
+   /** BO for post-sync nonzero writes for gen6 workaround. */
+   drm_intel_bo *workaround_bo;
+   uint8_t pipe_controls_since_last_cs_stall;
 
    /**
     * Set of drm_intel_bo * that have been rendered to within this batchbuffer
@@ -2001,6 +2001,10 @@ gen9_use_linear_1d_layout(const struct brw_context *brw,
                           const struct intel_mipmap_tree *mt);
 
 /* brw_pipe_control.c */
+int brw_init_pipe_control(struct brw_context *brw,
+			  const struct brw_device_info *info);
+void brw_fini_pipe_control(struct brw_context *brw);
+
 void brw_emit_pipe_control_flush(struct brw_context *brw, uint32_t flags);
 void brw_emit_pipe_control_write(struct brw_context *brw, uint32_t flags,
                                  drm_intel_bo *bo, uint32_t offset,

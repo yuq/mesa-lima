@@ -819,6 +819,12 @@ brwCreateContext(gl_api api,
       }
    }
 
+   if (brw_init_pipe_control(brw, devinfo)) {
+      *dri_ctx_error = __DRI_CTX_ERROR_NO_MEMORY;
+      intelDestroyContext(driContextPriv);
+      return false;
+   }
+
    brw_init_state(brw);
 
    intelInitExtensions(ctx);
@@ -942,6 +948,7 @@ intelDestroyContext(__DRIcontext * driContextPriv)
    if (ctx->swrast_context)
       _swrast_DestroyContext(&brw->ctx);
 
+   brw_fini_pipe_control(brw);
    intel_batchbuffer_free(brw);
 
    drm_intel_bo_unreference(brw->throttle_batch[1]);

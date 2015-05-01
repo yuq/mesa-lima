@@ -72,13 +72,13 @@ gen7_cs_stall_every_four_pipe_controls(struct brw_context *brw, uint32_t flags)
    if (brw->gen == 7 && !brw->is_haswell) {
       if (flags & PIPE_CONTROL_CS_STALL) {
          /* If we're doing a CS stall, reset the counter and carry on. */
-         brw->batch.pipe_controls_since_last_cs_stall = 0;
+         brw->pipe_controls_since_last_cs_stall = 0;
          return 0;
       }
 
       /* If this is the fourth pipe control without a CS stall, do one now. */
-      if (++brw->batch.pipe_controls_since_last_cs_stall == 4) {
-         brw->batch.pipe_controls_since_last_cs_stall = 0;
+      if (++brw->pipe_controls_since_last_cs_stall == 4) {
+         brw->pipe_controls_since_last_cs_stall = 0;
          return PIPE_CONTROL_CS_STALL;
       }
    }
@@ -213,7 +213,7 @@ gen7_emit_vs_workaround_flush(struct brw_context *brw)
    brw_emit_pipe_control_write(brw,
                                PIPE_CONTROL_WRITE_IMMEDIATE
                                | PIPE_CONTROL_DEPTH_STALL,
-                               brw->batch.workaround_bo, 0,
+                               brw->workaround_bo, 0,
                                0, 0);
 }
 
@@ -227,7 +227,7 @@ gen7_emit_cs_stall_flush(struct brw_context *brw)
    brw_emit_pipe_control_write(brw,
                                PIPE_CONTROL_CS_STALL
                                | PIPE_CONTROL_WRITE_IMMEDIATE,
-                               brw->batch.workaround_bo, 0,
+                               brw->workaround_bo, 0,
                                0, 0);
 }
 
@@ -277,7 +277,7 @@ brw_emit_post_sync_nonzero_flush(struct brw_context *brw)
                                PIPE_CONTROL_STALL_AT_SCOREBOARD);
 
    brw_emit_pipe_control_write(brw, PIPE_CONTROL_WRITE_IMMEDIATE,
-                               brw->batch.workaround_bo, 0, 0, 0);
+                               brw->workaround_bo, 0, 0, 0);
 }
 
 /* Emit a pipelined flush to either flush render and texture cache for
@@ -328,4 +328,32 @@ brw_emit_mi_flush(struct brw_context *brw)
    }
 
    brw_render_cache_set_clear(brw);
+}
+
+int
+brw_init_pipe_control(struct brw_context *brw,
+                      const struct brw_device_info *devinfo)
+{
+   if (devinfo->gen < 6)
+      return 0;
+
+   /* We can't just use brw_state_batch to get a chunk of space for
+    * the gen6 workaround because it involves actually writing to
+    * the buffer, and the kernel doesn't let us write to the batch.
+    */
+   brw->workaround_bo = drm_intel_bo_alloc(brw->bufmgr,
+                                           "pipe_control workaround",
+                                           4096, 4096);
+   if (brw->workaround_bo == NULL)
+      return -ENOMEM;
+
+   brw->pipe_controls_since_last_cs_stall = 0;
+
+   return 0;
+}
+
+void
+brw_fini_pipe_control(struct brw_context *brw)
+{
+   drm_intel_bo_unreference(brw->workaround_bo);
 }
