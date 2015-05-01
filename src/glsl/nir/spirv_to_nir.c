@@ -519,9 +519,9 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
       while (tail->child)
          tail = tail->child;
 
-      for (unsigned i = 0; i < count - 3; i++) {
-         assert(w[i + 3] < b->value_id_bound);
-         struct vtn_value *idx_val = &b->values[w[i + 3]];
+      for (unsigned i = 0; i < count - 4; i++) {
+         assert(w[i + 4] < b->value_id_bound);
+         struct vtn_value *idx_val = &b->values[w[i + 4]];
 
          enum glsl_base_type base_type = glsl_get_base_type(tail->type);
          switch (base_type) {
@@ -571,10 +571,70 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
       break;
    }
 
+   case SpvOpCopyMemory: {
+      nir_deref_var *dest = vtn_value(b, w[1], vtn_value_type_deref)->deref;
+      nir_deref_var *src = vtn_value(b, w[2], vtn_value_type_deref)->deref;
+
+      nir_intrinsic_instr *copy =
+         nir_intrinsic_instr_create(b->shader, nir_intrinsic_copy_var);
+      copy->variables[0] = nir_deref_as_var(nir_copy_deref(copy, &dest->deref));
+      copy->variables[1] = nir_deref_as_var(nir_copy_deref(copy, &src->deref));
+
+      nir_instr_insert_after_cf_list(b->cf_list, &copy->instr);
+      break;
+   }
+
+   case SpvOpLoad: {
+      struct vtn_value *val = vtn_push_value(b, w[2], vtn_value_type_ssa);
+      nir_deref_var *src = vtn_value(b, w[3], vtn_value_type_deref)->deref;
+      const struct glsl_type *src_type = nir_deref_tail(&src->deref)->type;
+      assert(glsl_type_is_vector_or_scalar(src_type));
+
+      nir_intrinsic_instr *load =
+         nir_intrinsic_instr_create(b->shader, nir_intrinsic_load_var);
+      load->variables[0] = nir_deref_as_var(nir_copy_deref(load, &src->deref));
+      load->num_components = glsl_get_vector_elements(src_type);
+      nir_ssa_dest_init(&load->instr, &load->dest, load->num_components,
+                        val->name);
+
+      nir_instr_insert_after_cf_list(b->cf_list, &load->instr);
+      val->ssa = &load->dest.ssa;
+      break;
+   }
+
+   case SpvOpStore: {
+      nir_deref_var *dest = vtn_value(b, w[1], vtn_value_type_deref)->deref;
+      const struct glsl_type *dest_type = nir_deref_tail(&dest->deref)->type;
+      struct vtn_value *src_val = vtn_untyped_value(b, w[2]);
+      if (src_val->value_type == vtn_value_type_ssa) {
+         assert(glsl_type_is_vector_or_scalar(dest_type));
+         nir_intrinsic_instr *store =
+            nir_intrinsic_instr_create(b->shader, nir_intrinsic_store_var);
+         store->src[0] = nir_src_for_ssa(src_val->ssa);
+         store->variables[0] = nir_deref_as_var(nir_copy_deref(store, &dest->deref));
+         store->num_components = glsl_get_vector_elements(dest_type);
+
+         nir_instr_insert_after_cf_list(b->cf_list, &store->instr);
+      } else {
+         assert(src_val->value_type == vtn_value_type_constant);
+
+         nir_variable *const_tmp = rzalloc(b->shader, nir_variable);
+         const_tmp->type = dest_type;
+         const_tmp->data.mode = nir_var_local;
+         const_tmp->data.read_only = true;
+         exec_list_push_tail(&b->impl->locals, &const_tmp->node);
+
+         nir_intrinsic_instr *copy =
+            nir_intrinsic_instr_create(b->shader, nir_intrinsic_copy_var);
+         copy->variables[0] = nir_deref_as_var(nir_copy_deref(copy, &dest->deref));
+         copy->variables[1] = nir_deref_var_create(copy, const_tmp);
+
+         nir_instr_insert_after_cf_list(b->cf_list, &copy->instr);
+      }
+      break;
+   }
+
    case SpvOpVariableArray:
-   case SpvOpLoad:
-   case SpvOpStore:
-   case SpvOpCopyMemory:
    case SpvOpCopyMemorySized:
    case SpvOpArrayLength:
    case SpvOpImagePointer:
