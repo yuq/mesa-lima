@@ -26,16 +26,14 @@
  */
 
 #include "genhw/genhw.h"
-#include "core/ilo_format.h"
 #include "util/u_dual_blend.h"
 #include "util/u_framebuffer.h"
 #include "util/u_half.h"
 
-#include "ilo_context.h"
-#include "ilo_resource.h"
-#include "ilo_shader.h"
-#include "ilo_state.h"
+#include "ilo_format.h"
 #include "ilo_state_3d.h"
+#include "../ilo_resource.h"
+#include "../ilo_shader.h"
 
 static void
 rasterizer_init_clip(const struct ilo_dev *dev,

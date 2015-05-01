@@ -25,12 +25,12 @@
  *    Chia-I Wu <olv@lunarg.com>
  */
 
+#include "core/ilo_state_3d.h"
 #include "util/u_draw.h"
 #include "util/u_pack_color.h"
 
 #include "ilo_draw.h"
 #include "ilo_state.h"
-#include "ilo_state_3d.h"
 #include "ilo_blit.h"
 #include "ilo_blitter.h"
 

@@ -25,6 +25,7 @@
  *    Chia-I Wu <olv@lunarg.com>
  */
 
+#include "core/ilo_state_3d.h"
 #include "util/u_dynarray.h"
 #include "util/u_helpers.h"
 #include "util/u_upload_mgr.h"
@@ -33,7 +34,6 @@
 #include "ilo_resource.h"
 #include "ilo_shader.h"
 #include "ilo_state.h"
-#include "ilo_state_3d.h"
 
 static void
 finalize_shader_states(struct ilo_state_vector *vec)
