@@ -218,7 +218,8 @@ vtn_handle_type(struct vtn_builder *b, SpvOp opcode,
       return glsl_float_type();
 
    case SpvOpTypeVector: {
-      const struct glsl_type *base = b->values[args[0]].type;
+      const struct glsl_type *base =
+         vtn_value(b, args[0], vtn_value_type_type)->type;
       unsigned elems = args[1];
 
       assert(glsl_type_is_scalar(base));
@@ -226,7 +227,8 @@ vtn_handle_type(struct vtn_builder *b, SpvOp opcode,
    }
 
    case SpvOpTypeMatrix: {
-      const struct glsl_type *base = b->values[args[0]].type;
+      const struct glsl_type *base =
+         vtn_value(b, args[0], vtn_value_type_type)->type;
       unsigned columns = args[1];
 
       assert(glsl_type_is_vector(base));
@@ -242,7 +244,7 @@ vtn_handle_type(struct vtn_builder *b, SpvOp opcode,
       NIR_VLA(struct glsl_struct_field, fields, count);
       for (unsigned i = 0; i < count; i++) {
          /* TODO: Handle decorators */
-         fields[i].type = b->values[args[i]].type;
+         fields[i].type = vtn_value(b, args[i], vtn_value_type_type)->type;
          fields[i].name = ralloc_asprintf(b, "field%d", i);
          fields[i].location = -1;
          fields[i].interpolation = 0;
@@ -258,7 +260,7 @@ vtn_handle_type(struct vtn_builder *b, SpvOp opcode,
       const struct glsl_type *return_type = b->values[args[0]].type;
       NIR_VLA(struct glsl_function_param, params, count - 1);
       for (unsigned i = 1; i < count; i++) {
-         params[i - 1].type = b->values[args[i]].type;
+         params[i - 1].type = vtn_value(b, args[i], vtn_value_type_type)->type;
 
          /* FIXME: */
          params[i - 1].in = true;
@@ -272,7 +274,7 @@ vtn_handle_type(struct vtn_builder *b, SpvOp opcode,
        * the same type.  The validator should ensure that the proper number
        * of dereferences happen
        */
-      return b->values[args[0]].type;
+      return vtn_value(b, args[1], vtn_value_type_type)->type;
 
    case SpvOpTypeSampler:
    case SpvOpTypeRuntimeArray:
