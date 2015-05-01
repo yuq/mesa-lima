@@ -46,8 +46,8 @@
 /**
  * Return true if the conversion L=R+G+B is needed.
  */
-static GLboolean
-need_rgb_to_luminance_conversion(mesa_format texFormat, GLenum format)
+GLboolean
+_mesa_need_rgb_to_luminance_conversion(mesa_format texFormat, GLenum format)
 {
    GLenum baseTexFormat = _mesa_get_format_base_format(texFormat);
 
@@ -105,7 +105,7 @@ get_readpixels_transfer_ops(const struct gl_context *ctx, mesa_format texFormat,
     * have any effect anyway.
     */
    if (_mesa_get_format_datatype(texFormat) == GL_UNSIGNED_NORMALIZED &&
-       !need_rgb_to_luminance_conversion(texFormat, format)) {
+       !_mesa_need_rgb_to_luminance_conversion(texFormat, format)) {
       transferOps &= ~IMAGE_CLAMP_BIT;
    }
 
@@ -149,7 +149,7 @@ _mesa_readpixels_needs_slow_path(const struct gl_context *ctx, GLenum format,
 
    default:
       /* Color formats. */
-      if (need_rgb_to_luminance_conversion(rb->Format, format)) {
+      if (_mesa_need_rgb_to_luminance_conversion(rb->Format, format)) {
          return GL_TRUE;
       }
 
@@ -442,7 +442,8 @@ read_rgba_pixels( struct gl_context *ctx,
    dst_is_integer = _mesa_is_enum_format_integer(format);
    dst_stride = _mesa_image_row_stride(packing, width, format, type);
    dst_format = _mesa_format_from_format_and_type(format, type);
-   convert_rgb_to_lum = need_rgb_to_luminance_conversion(rb->Format, format);
+   convert_rgb_to_lum =
+      _mesa_need_rgb_to_luminance_conversion(rb->Format, format);
    dst = (GLubyte *) _mesa_image_address2d(packing, pixels, width, height,
                                            format, type, 0, 0);
 
