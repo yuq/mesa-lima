@@ -958,6 +958,7 @@ static const __DRIextension *swrast_driver_extensions[] = {
     &driCoreExtension.base,
     &driSWRastExtension.base,
     &driCopySubBufferExtension.base,
+    &dri2ConfigQueryExtension.base,
     &swrast_vtable.base,
     NULL
 };
