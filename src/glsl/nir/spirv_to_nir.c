@@ -114,6 +114,28 @@ vtn_string_literal(struct vtn_builder *b, const uint32_t *words,
    return ralloc_strndup(b, (char *)words, (word_count - 2) * sizeof(*words));
 }
 
+typedef bool (*vtn_instruction_handler)(struct vtn_builder *, SpvOp,
+                                        const uint32_t *, unsigned);
+
+static const uint32_t *
+vtn_foreach_instruction(struct vtn_builder *b, const uint32_t *start,
+                        const uint32_t *end, vtn_instruction_handler handler)
+{
+   const uint32_t *w = start;
+   while (w < end) {
+      SpvOp opcode = w[0] & SpvOpCodeMask;
+      unsigned count = w[0] >> SpvWordCountShift;
+      assert(count >= 1 && w + count <= end);
+
+      if (!handler(b, opcode, w, count))
+         return w;
+
+      w += count;
+   }
+   assert(w == end);
+   return w;
+}
+
 static void
 vtn_handle_extension(struct vtn_builder *b, SpvOp opcode,
                      const uint32_t *w, unsigned count)
@@ -714,30 +736,17 @@ vtn_handle_alu(struct vtn_builder *b, SpvOp opcode,
    unreachable("Unhandled opcode");
 }
 
-static void
-vtn_handle_instruction(struct vtn_builder *b, SpvOp opcode,
-                       const uint32_t *w, unsigned count)
+static bool
+vtn_handle_preamble_instruction(struct vtn_builder *b, SpvOp opcode,
+                                const uint32_t *w, unsigned count)
 {
    switch (opcode) {
    case SpvOpSource:
    case SpvOpSourceExtension:
-   case SpvOpMemberName:
-   case SpvOpLine:
+   case SpvOpCompileFlag:
    case SpvOpExtension:
+   case SpvOpExtInstImport:
       /* Unhandled, but these are for debug so that's ok. */
-      break;
-
-   case SpvOpName:
-      b->values[w[1]].name = vtn_string_literal(b, &w[2], count - 2);
-      break;
-
-   case SpvOpString:
-      vtn_push_value(b, w[1], vtn_value_type_string)->str =
-         vtn_string_literal(b, &w[2], count - 2);
-      break;
-
-   case SpvOpUndef:
-      vtn_push_value(b, w[2], vtn_value_type_undef);
       break;
 
    case SpvOpMemoryModel:
@@ -751,20 +760,32 @@ vtn_handle_instruction(struct vtn_builder *b, SpvOp opcode,
       b->execution_model = w[1];
       break;
 
-   case SpvOpLabel: {
-      struct exec_node *list_tail = exec_list_get_tail(b->cf_list);
-      nir_cf_node *tail_node = exec_node_data(nir_cf_node, list_tail, node);
-      assert(tail_node->type == nir_cf_node_block);
-      nir_block *block = nir_cf_node_as_block(tail_node);
-
-      assert(exec_list_is_empty(&block->instr_list));
-      vtn_push_value(b, w[1], vtn_value_type_block)->block = block;
+   case SpvOpExecutionMode:
+      unreachable("Execution modes not yet implemented");
       break;
-   }
 
-   case SpvOpExtInstImport:
-   case SpvOpExtInst:
-      vtn_handle_extension(b, opcode, w, count);
+   case SpvOpString:
+      vtn_push_value(b, w[1], vtn_value_type_string)->str =
+         vtn_string_literal(b, &w[2], count - 2);
+      break;
+
+   case SpvOpName:
+      b->values[w[1]].name = vtn_string_literal(b, &w[2], count - 2);
+      break;
+
+   case SpvOpMemberName:
+      /* TODO */
+      break;
+
+   case SpvOpLine:
+      break; /* Ignored for now */
+
+   case SpvOpDecorationGroup:
+   case SpvOpDecorate:
+   case SpvOpMemberDecorate:
+   case SpvOpGroupDecorate:
+   case SpvOpGroupMemberDecorate:
+      vtn_handle_decoration(b, opcode, w, count);
       break;
 
    case SpvOpTypeVoid:
@@ -804,6 +825,41 @@ vtn_handle_instruction(struct vtn_builder *b, SpvOp opcode,
       break;
 
    case SpvOpVariable:
+      vtn_handle_variables(b, opcode, w, count);
+      break;
+
+   default:
+      return false; /* End of preamble */
+   }
+
+   return true;
+}
+
+static bool
+vtn_handle_body_instruction(struct vtn_builder *b, SpvOp opcode,
+                            const uint32_t *w, unsigned count)
+{
+   switch (opcode) {
+   case SpvOpLabel: {
+      struct exec_node *list_tail = exec_list_get_tail(b->cf_list);
+      nir_cf_node *tail_node = exec_node_data(nir_cf_node, list_tail, node);
+      assert(tail_node->type == nir_cf_node_block);
+      nir_block *block = nir_cf_node_as_block(tail_node);
+
+      assert(exec_list_is_empty(&block->instr_list));
+      vtn_push_value(b, w[1], vtn_value_type_block)->block = block;
+      break;
+   }
+
+   case SpvOpUndef:
+      vtn_push_value(b, w[2], vtn_value_type_undef);
+      break;
+
+   case SpvOpExtInst:
+      vtn_handle_extension(b, opcode, w, count);
+      break;
+
+   case SpvOpVariable:
    case SpvOpVariableArray:
    case SpvOpLoad:
    case SpvOpStore:
@@ -814,14 +870,6 @@ vtn_handle_instruction(struct vtn_builder *b, SpvOp opcode,
    case SpvOpArrayLength:
    case SpvOpImagePointer:
       vtn_handle_variables(b, opcode, w, count);
-      break;
-
-   case SpvOpDecorationGroup:
-   case SpvOpDecorate:
-   case SpvOpMemberDecorate:
-   case SpvOpGroupDecorate:
-   case SpvOpGroupMemberDecorate:
-      vtn_handle_decoration(b, opcode, w, count);
       break;
 
    case SpvOpFunction:
@@ -953,6 +1001,8 @@ vtn_handle_instruction(struct vtn_builder *b, SpvOp opcode,
    default:
       unreachable("Unhandled opcode");
    }
+
+   return true;
 }
 
 nir_shader *
@@ -979,17 +1029,15 @@ spirv_to_nir(const uint32_t *words, size_t word_count,
    b->value_id_bound = value_id_bound;
    b->values = ralloc_array(b, struct vtn_value, value_id_bound);
 
-   /* Start handling instructions */
    const uint32_t *word_end = words + word_count;
-   while (words < word_end) {
-      SpvOp opcode = words[0] & SpvOpCodeMask;
-      unsigned count = words[0] >> SpvWordCountShift;
-      assert(words + count <= word_end);
 
-      vtn_handle_instruction(b, opcode, words, count);
+   /* Handle all the preamble instructions */
+   words = vtn_foreach_instruction(b, words, word_end,
+                                   vtn_handle_preamble_instruction);
 
-      words += count;
-   }
+   words = vtn_foreach_instruction(b, words, word_end,
+                                   vtn_handle_body_instruction);
+   assert(words == word_end);
 
    ralloc_free(b);
 
