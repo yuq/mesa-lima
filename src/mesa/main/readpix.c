@@ -54,7 +54,10 @@ need_rgb_to_luminance_conversion(mesa_format texFormat, GLenum format)
    return (baseTexFormat == GL_RG ||
            baseTexFormat == GL_RGB ||
            baseTexFormat == GL_RGBA) &&
-          (format == GL_LUMINANCE || format == GL_LUMINANCE_ALPHA);
+          (format == GL_LUMINANCE ||
+           format == GL_LUMINANCE_ALPHA ||
+           format == GL_LUMINANCE_INTEGER_EXT ||
+           format == GL_LUMINANCE_ALPHA_INTEGER_EXT);
 }
 
 
