@@ -66,16 +66,6 @@ enum ilo_texture_flags {
     * flags, the slice has been cleared to ilo_texture_slice::clear_value.
     */
    ILO_TEXTURE_CLEAR          = 1 << 6,
-
-   /*
-    * Set when HiZ can be enabled.
-    *
-    * It is never set in resolve flags.  When set in slice flags, the slice
-    * can have HiZ enabled.  It is to be noted that this bit is always set for
-    * either all or none of the slices in a level, allowing quick check in
-    * case of layered rendering.
-    */
-   ILO_TEXTURE_HIZ            = 1 << 7,
 };
 
 /**
@@ -187,20 +177,6 @@ ilo_texture_set_slice_clear_value(struct ilo_texture *tex, unsigned level,
       slice->clear_value = clear_value;
       slice++;
    }
-}
-
-static inline bool
-ilo_texture_can_enable_hiz(const struct ilo_texture *tex, unsigned level,
-                           unsigned first_slice, unsigned num_slices)
-{
-   /*
-    * Either all or none of the slices in the same level have ILO_TEXTURE_HIZ
-    * set.  It suffices to check only the first slice.
-    */
-   const struct ilo_texture_slice *slice =
-      ilo_texture_get_slice(tex, level, 0);
-
-   return (tex->image.aux.bo && (slice->flags & ILO_TEXTURE_HIZ));
 }
 
 #endif /* ILO_RESOURCE_H */

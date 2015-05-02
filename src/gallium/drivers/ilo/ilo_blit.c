@@ -166,7 +166,7 @@ ilo_blit_resolve_slices_for_hiz(struct ilo_context *ilo,
    unsigned i;
 
    assert(tex->base.target != PIPE_BUFFER &&
-          ilo_texture_can_enable_hiz(tex, level, first_slice, num_slices));
+          ilo_image_can_enable_aux(&tex->image, level));
 
    if (resolve_flags & ILO_TEXTURE_RENDER_WRITE) {
       /*

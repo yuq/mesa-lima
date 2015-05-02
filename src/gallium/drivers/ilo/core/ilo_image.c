@@ -878,9 +878,8 @@ img_align(struct ilo_image *img, struct ilo_image_params *params)
       align_h = MAX2(align_h, 2);
 
    /*
-    * Depth Buffer Clear/Resolve works in 8x4 sample blocks.  In
-    * ilo_texture_can_enable_hiz(), we always return true for the first slice.
-    * To avoid out-of-bound access, we have to pad.
+    * Depth Buffer Clear/Resolve works in 8x4 sample blocks.  Pad to allow HiZ
+    * for unaligned non-mipmapped and non-array images.
     */
    if (img->aux.type == ILO_IMAGE_AUX_HIZ &&
        templ->last_level == 0 &&

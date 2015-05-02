@@ -331,9 +331,7 @@ ilo_blitter_rectlist_clear_zs(struct ilo_blitter *blitter,
    struct pipe_depth_stencil_alpha_state dsa_state;
    uint32_t uses, clear_value;
 
-   if (!ilo_texture_can_enable_hiz(tex,
-            zs->u.tex.level, zs->u.tex.first_layer,
-            zs->u.tex.last_layer - zs->u.tex.first_layer + 1))
+   if (!ilo_image_can_enable_aux(&tex->image, zs->u.tex.level))
       return false;
 
    if (!hiz_can_clear_zs(blitter, tex))
@@ -427,7 +425,7 @@ ilo_blitter_rectlist_resolve_z(struct ilo_blitter *blitter,
    const struct ilo_texture_slice *s =
       ilo_texture_get_slice(tex, level, slice);
 
-   if (!ilo_texture_can_enable_hiz(tex, level, slice, 1))
+   if (!ilo_image_can_enable_aux(&tex->image, level))
       return;
 
    /*
@@ -462,7 +460,7 @@ ilo_blitter_rectlist_resolve_hiz(struct ilo_blitter *blitter,
    struct ilo_texture *tex = ilo_texture(res);
    struct pipe_depth_stencil_alpha_state dsa_state;
 
-   if (!ilo_texture_can_enable_hiz(tex, level, slice, 1))
+   if (!ilo_image_can_enable_aux(&tex->image, level))
       return;
 
    /*

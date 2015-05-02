@@ -217,7 +217,6 @@ tex_create_hiz(struct ilo_texture *tex)
    const struct pipe_resource *templ = &tex->base;
    struct ilo_screen *is = ilo_screen(tex->base.screen);
    struct intel_bo *bo;
-   unsigned lv;
 
    bo = intel_winsys_alloc_bo(is->dev.winsys, "hiz texture",
          tex->image.aux.bo_stride * tex->image.aux.bo_height, false);
@@ -226,17 +225,18 @@ tex_create_hiz(struct ilo_texture *tex)
 
    ilo_image_set_aux_bo(&tex->image, bo);
 
-   for (lv = 0; lv <= templ->last_level; lv++) {
-      if (tex->image.aux.enables & (1 << lv)) {
-         const unsigned num_slices = (templ->target == PIPE_TEXTURE_3D) ?
-            u_minify(templ->depth0, lv) : templ->array_size;
-         unsigned flags = ILO_TEXTURE_HIZ;
+   if (tex->imported) {
+      unsigned lv;
 
-         /* this will trigger a HiZ resolve */
-         if (tex->imported)
-            flags |= ILO_TEXTURE_CPU_WRITE;
+      for (lv = 0; lv <= templ->last_level; lv++) {
+         if (tex->image.aux.enables & (1 << lv)) {
+            const unsigned num_slices = (templ->target == PIPE_TEXTURE_3D) ?
+               u_minify(templ->depth0, lv) : templ->array_size;
+            /* this will trigger HiZ resolves */
+            const unsigned flags = ILO_TEXTURE_CPU_WRITE;
 
-         ilo_texture_set_slice_flags(tex, lv, 0, num_slices, flags, flags);
+            ilo_texture_set_slice_flags(tex, lv, 0, num_slices, flags, flags);
+         }
       }
    }
 

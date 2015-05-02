@@ -179,6 +179,12 @@ ilo_image_set_aux_bo(struct ilo_image *img, struct intel_bo *bo)
    img->aux.bo = intel_bo_ref(bo);
 }
 
+static inline bool
+ilo_image_can_enable_aux(const struct ilo_image *img, unsigned level)
+{
+   return (img->aux.bo && (img->aux.enables & (1 << level)));
+}
+
 /**
  * Convert from pixel position to 2D memory offset.
  */

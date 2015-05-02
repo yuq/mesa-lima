@@ -974,8 +974,7 @@ zs_init_info(const struct ilo_dev *dev,
        *      same value (enabled or disabled) as Hierarchical Depth Buffer
        *      Enable."
        */
-      separate_stencil =
-         ilo_texture_can_enable_hiz(tex, level, first_layer, num_layers);
+      separate_stencil = ilo_image_can_enable_aux(&tex->image, level);
    }
 
    /*
@@ -1073,7 +1072,7 @@ zs_init_info(const struct ilo_dev *dev,
       }
    }
 
-   if (ilo_texture_can_enable_hiz(tex, level, first_layer, num_layers)) {
+   if (ilo_image_can_enable_aux(&tex->image, level)) {
       info->hiz.bo = tex->image.aux.bo;
       info->hiz.stride = tex->image.aux.bo_stride;
 
