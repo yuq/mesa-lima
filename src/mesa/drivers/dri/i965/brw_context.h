@@ -1743,6 +1743,8 @@ void brw_upload_abo_surfaces(struct brw_context *brw,
 bool brw_render_target_supported(struct brw_context *brw,
                                  struct gl_renderbuffer *rb);
 uint32_t brw_depth_format(struct brw_context *brw, mesa_format format);
+mesa_format brw_lower_mesa_image_format(const struct brw_device_info *devinfo,
+                                        mesa_format format);
 
 /* brw_performance_monitor.c */
 void brw_init_performance_monitors(struct brw_context *brw);

@@ -1024,6 +1024,83 @@ const struct brw_tracked_state brw_cs_abo_surfaces = {
    .emit = brw_upload_cs_abo_surfaces,
 };
 
+static uint32_t
+get_image_format(struct brw_context *brw, mesa_format format, GLenum access)
+{
+   if (access == GL_WRITE_ONLY) {
+      return brw_format_for_mesa_format(format);
+   } else {
+      /* Typed surface reads support a very limited subset of the shader
+       * image formats.  Translate it into the closest format the
+       * hardware supports.
+       */
+      if ((_mesa_get_format_bytes(format) >= 16 && brw->gen <= 8) ||
+          (_mesa_get_format_bytes(format) >= 8 &&
+           (brw->gen == 7 && !brw->is_haswell)))
+         return BRW_SURFACEFORMAT_RAW;
+      else
+         return brw_format_for_mesa_format(
+            brw_lower_mesa_image_format(brw->intelScreen->devinfo, format));
+   }
+}
+
+static void
+update_image_surface(struct brw_context *brw,
+                     struct gl_image_unit *u,
+                     GLenum access,
+                     unsigned surface_idx,
+                     uint32_t *surf_offset,
+                     struct brw_image_param *param)
+{
+   if (u->_Valid) {
+      struct gl_texture_object *obj = u->TexObj;
+      const unsigned format = get_image_format(brw, u->_ActualFormat, access);
+
+      if (obj->Target == GL_TEXTURE_BUFFER) {
+         struct intel_buffer_object *intel_obj =
+            intel_buffer_object(obj->BufferObject);
+         const unsigned texel_size = (format == BRW_SURFACEFORMAT_RAW ? 1 :
+                                      _mesa_get_format_bytes(u->_ActualFormat));
+
+         brw->vtbl.emit_buffer_surface_state(
+            brw, surf_offset, intel_obj->buffer, obj->BufferOffset,
+            format, intel_obj->Base.Size / texel_size, texel_size,
+            access != GL_READ_ONLY);
+
+      } else {
+         struct intel_texture_object *intel_obj = intel_texture_object(obj);
+         struct intel_mipmap_tree *mt = intel_obj->mt;
+
+         if (format == BRW_SURFACEFORMAT_RAW) {
+            brw->vtbl.emit_buffer_surface_state(
+               brw, surf_offset, mt->bo, mt->offset,
+               format, mt->bo->size - mt->offset, 1 /* pitch */,
+               access != GL_READ_ONLY);
+
+         } else {
+            const unsigned min_layer = obj->MinLayer + u->Layer;
+            const unsigned min_level = obj->MinLevel + u->Level;
+            const unsigned num_layers = (!u->Layered ? 1 :
+                                         obj->Target == GL_TEXTURE_CUBE_MAP ? 6 :
+                                         mt->logical_depth0);
+            const GLenum target = (obj->Target == GL_TEXTURE_CUBE_MAP ||
+                                   obj->Target == GL_TEXTURE_CUBE_MAP_ARRAY ?
+                                   GL_TEXTURE_2D_ARRAY : obj->Target);
+
+            brw->vtbl.emit_texture_surface_state(
+               brw, mt, target,
+               min_layer, min_layer + num_layers,
+               min_level, min_level + 1,
+               format, SWIZZLE_XYZW,
+               surf_offset, access != GL_READ_ONLY, false);
+         }
+      }
+
+   } else {
+      brw->vtbl.emit_null_surface_state(brw, 1, 1, 1, surf_offset);
+   }
+}
+
 void
 gen4_init_vtable_surface_functions(struct brw_context *brw)
 {
