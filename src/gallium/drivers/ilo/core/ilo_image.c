@@ -299,7 +299,7 @@ img_init_lods(struct ilo_image *img,
 
 static void
 img_init_alignments(struct ilo_image *img,
-                    struct ilo_image_params *params)
+                    const struct ilo_image_params *params)
 {
    const struct pipe_resource *templ = params->templ;
 
@@ -548,7 +548,7 @@ img_get_valid_tilings(const struct ilo_image *img,
 
 static void
 img_init_tiling(struct ilo_image *img,
-                struct ilo_image_params *params)
+                const struct ilo_image_params *params)
 {
    const struct pipe_resource *templ = params->templ;
    unsigned preferred_tilings;
@@ -591,7 +591,7 @@ img_init_tiling(struct ilo_image *img,
 
 static void
 img_init_walk_gen7(struct ilo_image *img,
-                   struct ilo_image_params *params)
+                   const struct ilo_image_params *params)
 {
    const struct pipe_resource *templ = params->templ;
 
@@ -638,7 +638,7 @@ img_init_walk_gen7(struct ilo_image *img,
 
 static void
 img_init_walk_gen6(struct ilo_image *img,
-                   struct ilo_image_params *params)
+                   const struct ilo_image_params *params)
 {
    /*
     * From the Sandy Bridge PRM, volume 1 part 1, page 115:
@@ -662,7 +662,7 @@ img_init_walk_gen6(struct ilo_image *img,
 
 static void
 img_init_walk(struct ilo_image *img,
-              struct ilo_image_params *params)
+              const struct ilo_image_params *params)
 {
    if (ilo_dev_gen(params->dev) >= ILO_GEN(7))
       img_init_walk_gen7(img, params);
@@ -725,8 +725,8 @@ img_init_size_and_format(struct ilo_image *img,
 }
 
 static bool
-img_want_mcs(struct ilo_image *img,
-             struct ilo_image_params *params)
+img_want_mcs(const struct ilo_image *img,
+             const struct ilo_image_params *params)
 {
    const struct pipe_resource *templ = params->templ;
    bool want_mcs = false;
@@ -821,7 +821,7 @@ img_want_hiz(const struct ilo_image *img,
 
 static void
 img_init_aux(struct ilo_image *img,
-             struct ilo_image_params *params)
+             const struct ilo_image_params *params)
 {
    if (img_want_hiz(img, params))
       img->aux.type = ILO_IMAGE_AUX_HIZ;
@@ -897,7 +897,7 @@ img_align(struct ilo_image *img, struct ilo_image_params *params)
 /* note that this may force the texture to be linear */
 static void
 img_calculate_bo_size(struct ilo_image *img,
-                      struct ilo_image_params *params)
+                      const struct ilo_image_params *params)
 {
    assert(params->max_x % img->block_width == 0);
    assert(params->max_y % img->block_height == 0);
@@ -1006,7 +1006,7 @@ img_calculate_bo_size(struct ilo_image *img,
 
 static void
 img_calculate_hiz_size(struct ilo_image *img,
-                       struct ilo_image_params *params)
+                       const struct ilo_image_params *params)
 {
    const struct pipe_resource *templ = params->templ;
    const unsigned hz_align_j = 8;
@@ -1170,7 +1170,7 @@ img_calculate_hiz_size(struct ilo_image *img,
 
 static void
 img_calculate_mcs_size(struct ilo_image *img,
-                       struct ilo_image_params *params)
+                       const struct ilo_image_params *params)
 {
    const struct pipe_resource *templ = params->templ;
    int mcs_width, mcs_height, mcs_cpp;
