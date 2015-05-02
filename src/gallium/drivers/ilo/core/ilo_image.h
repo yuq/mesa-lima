@@ -34,44 +34,52 @@
 #include "ilo_core.h"
 #include "ilo_dev.h"
 
-struct pipe_resource;
-
-enum ilo_image_walk_type {
-   /*
-    * Array layers of an LOD are packed together vertically.  This maps to
-    * ARYSPC_LOD0 for non-mipmapped 2D textures, and is extended to support
-    * mipmapped stencil textures and HiZ on GEN6.
-    */
-   ILO_IMAGE_WALK_LOD,
-
-   /*
-    * LODs of an array layer are packed together.  This maps to ARYSPC_FULL
-    * and is used for mipmapped 2D textures.
-    */
-   ILO_IMAGE_WALK_LAYER,
-
-   /*
-    * 3D slices of an LOD are packed together, horizontally with wrapping.
-    * Used for 3D textures.
-    */
-   ILO_IMAGE_WALK_3D,
-};
-
 enum ilo_image_aux_type {
    ILO_IMAGE_AUX_NONE,
    ILO_IMAGE_AUX_HIZ,
    ILO_IMAGE_AUX_MCS,
 };
 
+enum ilo_image_walk_type {
+   /*
+    * LODs of each array layer are first packed together in MIPLAYOUT_BELOW.
+    * Array layers are then stacked together vertically.
+    *
+    * This can be used for mipmapped 2D textures.
+    */
+   ILO_IMAGE_WALK_LAYER,
+
+   /*
+    * Array layers of each LOD are first stacked together vertically and
+    * tightly.  LODs are then packed together in MIPLAYOUT_BELOW with each LOD
+    * starting at page boundaries.
+    *
+    * This is usually used for non-mipmapped 2D textures, as multiple LODs are
+    * not supported natively.
+    */
+   ILO_IMAGE_WALK_LOD,
+
+   /*
+    * 3D slices of each LOD are first packed together horizontally and tightly
+    * with wrapping.  LODs are then stacked together vertically and tightly.
+    *
+    * This is used for 3D textures.
+    */
+   ILO_IMAGE_WALK_3D,
+};
+
+/*
+ * When the walk type is ILO_IMAGE_WALK_LAYER, there is only a slice in each
+ * LOD and this is used to describe LODs in the first array layer.  Otherwise,
+ * there can be multiple slices in each LOD and this is used to describe the
+ * first slice in each LOD.
+ */
 struct ilo_image_lod {
-   /* physical position */
+   /* physical position in pixels */
    unsigned x;
    unsigned y;
 
-   /*
-    * Physical size of an LOD slice.  There may be multiple slices when the
-    * walk type is not ILO_IMAGE_WALK_LAYER.
-    */
+   /* physical size of a slice in pixels */
    unsigned slice_width;
    unsigned slice_height;
 };
@@ -80,17 +88,15 @@ struct ilo_image_lod {
  * Texture layout.
  */
 struct ilo_image {
-   enum ilo_image_aux_type aux;
-
-   /* physical width0, height0, and format */
+   /* size and format for programming hardware states */
    unsigned width0;
    unsigned height0;
    enum pipe_format format;
    bool separate_stencil;
 
    /*
-    * width, height, and size of pixel blocks, for conversion between 2D
-    * coordinates and memory offsets
+    * width, height, and size of pixel blocks for conversion between pixel
+    * positions and memory offsets
     */
    unsigned block_width;
    unsigned block_height;
@@ -99,34 +105,44 @@ struct ilo_image {
    enum ilo_image_walk_type walk;
    bool interleaved_samples;
 
-   /* bitmask of valid tiling modes */
+   /* bitmask of valid tilings */
    unsigned valid_tilings;
    enum gen_surface_tiling tiling;
 
-   /* mipmap alignments */
+   /* physical LOD slice alignments */
    unsigned align_i;
    unsigned align_j;
 
    struct ilo_image_lod lods[PIPE_MAX_TEXTURE_LEVELS];
 
-   /* physical height of layers for ILO_IMAGE_WALK_LAYER */
-   unsigned layer_height;
+   /* physical layer height for ILO_IMAGE_WALK_LAYER */
+   unsigned walk_layer_height;
 
    /* distance in bytes between two pixel block rows */
    unsigned bo_stride;
    /* number of pixel block rows */
    unsigned bo_height;
 
-   /* bitmask of levels that can use aux */
-   unsigned aux_enables;
-   unsigned aux_offsets[PIPE_MAX_TEXTURE_LEVELS];
-   unsigned aux_layer_height;
-   unsigned aux_stride;
-   unsigned aux_height;
-
    struct intel_bo *bo;
-   struct intel_bo *aux_bo;
+
+   struct {
+      enum ilo_image_aux_type type;
+
+      /* bitmask of levels that can use aux */
+      unsigned enables;
+
+      /* LOD offsets for ILO_IMAGE_WALK_LOD */
+      unsigned walk_lod_offsets[PIPE_MAX_TEXTURE_LEVELS];
+
+      unsigned walk_layer_height;
+      unsigned bo_stride;
+      unsigned bo_height;
+
+      struct intel_bo *bo;
+   } aux;
 };
+
+struct pipe_resource;
 
 void
 ilo_image_init(struct ilo_image *img,
@@ -142,7 +158,7 @@ static inline void
 ilo_image_cleanup(struct ilo_image *img)
 {
    intel_bo_unref(img->bo);
-   intel_bo_unref(img->aux_bo);
+   intel_bo_unref(img->aux.bo);
 }
 
 static inline void
@@ -155,8 +171,8 @@ ilo_image_set_bo(struct ilo_image *img, struct intel_bo *bo)
 static inline void
 ilo_image_set_aux_bo(struct ilo_image *img, struct intel_bo *bo)
 {
-   intel_bo_unref(img->aux_bo);
-   img->aux_bo = intel_bo_ref(bo);
+   intel_bo_unref(img->aux.bo);
+   img->aux.bo = intel_bo_ref(bo);
 }
 
 /**
@@ -232,11 +248,11 @@ ilo_image_get_slice_stride(const struct ilo_image *img, unsigned level)
    unsigned h;
 
    switch (img->walk) {
+   case ILO_IMAGE_WALK_LAYER:
+      h = img->walk_layer_height;
+      break;
    case ILO_IMAGE_WALK_LOD:
       h = img->lods[level].slice_height;
-      break;
-   case ILO_IMAGE_WALK_LAYER:
-      h = img->layer_height;
       break;
    case ILO_IMAGE_WALK_3D:
       if (level == 0) {
@@ -280,13 +296,13 @@ ilo_image_get_slice_pos(const struct ilo_image *img,
                         unsigned *x, unsigned *y)
 {
    switch (img->walk) {
+   case ILO_IMAGE_WALK_LAYER:
+      *x = img->lods[level].x;
+      *y = img->lods[level].y + img->walk_layer_height * slice;
+      break;
    case ILO_IMAGE_WALK_LOD:
       *x = img->lods[level].x;
       *y = img->lods[level].y + img->lods[level].slice_height * slice;
-      break;
-   case ILO_IMAGE_WALK_LAYER:
-      *x = img->lods[level].x;
-      *y = img->lods[level].y + img->layer_height * slice;
       break;
    case ILO_IMAGE_WALK_3D:
       {

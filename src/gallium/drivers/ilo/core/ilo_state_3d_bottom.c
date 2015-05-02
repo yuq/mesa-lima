@@ -1032,8 +1032,8 @@ zs_init_info(const struct ilo_dev *dev,
       info->zs.bo = tex->image.bo;
       info->zs.stride = tex->image.bo_stride;
 
-      assert(tex->image.layer_height % 4 == 0);
-      info->zs.qpitch = tex->image.layer_height / 4;
+      assert(tex->image.walk_layer_height % 4 == 0);
+      info->zs.qpitch = tex->image.walk_layer_height / 4;
 
       info->zs.tiling = tex->image.tiling;
       info->zs.offset = 0;
@@ -1056,8 +1056,8 @@ zs_init_info(const struct ilo_dev *dev,
        */
       info->stencil.stride = s8_tex->image.bo_stride * 2;
 
-      assert(s8_tex->image.layer_height % 4 == 0);
-      info->stencil.qpitch = s8_tex->image.layer_height / 4;
+      assert(s8_tex->image.walk_layer_height % 4 == 0);
+      info->stencil.qpitch = s8_tex->image.walk_layer_height / 4;
 
       info->stencil.tiling = s8_tex->image.tiling;
 
@@ -1074,17 +1074,17 @@ zs_init_info(const struct ilo_dev *dev,
    }
 
    if (ilo_texture_can_enable_hiz(tex, level, first_layer, num_layers)) {
-      info->hiz.bo = tex->image.aux_bo;
-      info->hiz.stride = tex->image.aux_stride;
+      info->hiz.bo = tex->image.aux.bo;
+      info->hiz.stride = tex->image.aux.bo_stride;
 
-      assert(tex->image.aux_layer_height % 4 == 0);
-      info->hiz.qpitch = tex->image.aux_layer_height / 4;
+      assert(tex->image.aux.walk_layer_height % 4 == 0);
+      info->hiz.qpitch = tex->image.aux.walk_layer_height / 4;
 
       info->hiz.tiling = GEN6_TILING_Y;
 
       /* offset to the level */
       if (ilo_dev_gen(dev) == ILO_GEN(6))
-         info->hiz.offset = tex->image.aux_offsets[level];
+         info->hiz.offset = tex->image.aux.walk_lod_offsets[level];
    }
 
    info->width = tex->image.width0;

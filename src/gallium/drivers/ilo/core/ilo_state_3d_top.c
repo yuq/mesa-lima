@@ -1117,8 +1117,8 @@ view_init_for_texture_gen7(const struct ilo_dev *dev,
       dw[0] |= GEN7_SURFACE_DW0_CUBE_FACE_ENABLES__MASK;
 
    if (ilo_dev_gen(dev) >= ILO_GEN(8)) {
-      assert(tex->image.layer_height % 4 == 0);
-      dw[1] = tex->image.layer_height / 4;
+      assert(tex->image.walk_layer_height % 4 == 0);
+      dw[1] = tex->image.walk_layer_height / 4;
    } else {
       dw[1] = 0;
    }

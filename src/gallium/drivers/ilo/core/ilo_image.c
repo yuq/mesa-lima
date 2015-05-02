@@ -214,14 +214,14 @@ img_init_layer_height(struct ilo_image *img,
     * slices.  Since we use texel rows everywhere, we do not need to divide
     * QPitch by 4.
     */
-   img->layer_height = params->h0 + params->h1 +
+   img->walk_layer_height = params->h0 + params->h1 +
       ((ilo_dev_gen(params->dev) >= ILO_GEN(7)) ? 12 : 11) * img->align_j;
 
    if (ilo_dev_gen(params->dev) == ILO_GEN(6) && templ->nr_samples > 1 &&
        img->height0 % 4 == 1)
-      img->layer_height += 4;
+      img->walk_layer_height += 4;
 
-   params->max_y += img->layer_height * (num_layers - 1);
+   params->max_y += img->walk_layer_height * (num_layers - 1);
 }
 
 static void
@@ -245,6 +245,13 @@ img_init_lods(struct ilo_image *img,
       img->lods[lv].slice_height = lod_h;
 
       switch (img->walk) {
+      case ILO_IMAGE_WALK_LAYER:
+         /* MIPLAYOUT_BELOW */
+         if (lv == 1)
+            cur_x += lod_w;
+         else
+            cur_y += lod_h;
+         break;
       case ILO_IMAGE_WALK_LOD:
          lod_h *= img_get_num_layers(img, params);
          if (lv == 1)
@@ -258,13 +265,6 @@ img_init_lods(struct ilo_image *img,
             cur_x = align(cur_x, 64);
             cur_y = align(cur_y, 64);
          }
-         break;
-      case ILO_IMAGE_WALK_LAYER:
-         /* MIPLAYOUT_BELOW */
-         if (lv == 1)
-            cur_x += lod_w;
-         else
-            cur_y += lod_h;
          break;
       case ILO_IMAGE_WALK_3D:
          {
@@ -693,7 +693,7 @@ img_init_size_and_format(struct ilo_image *img,
       if (ilo_dev_gen(params->dev) >= ILO_GEN(7))
          require_separate_stencil = true;
       else
-         require_separate_stencil = (img->aux == ILO_IMAGE_AUX_HIZ);
+         require_separate_stencil = (img->aux.type == ILO_IMAGE_AUX_HIZ);
    }
 
    switch (format) {
@@ -824,9 +824,9 @@ img_init_aux(struct ilo_image *img,
              struct ilo_image_params *params)
 {
    if (img_want_hiz(img, params))
-      img->aux = ILO_IMAGE_AUX_HIZ;
+      img->aux.type = ILO_IMAGE_AUX_HIZ;
    else if (img_want_mcs(img, params))
-      img->aux = ILO_IMAGE_AUX_MCS;
+      img->aux.type = ILO_IMAGE_AUX_MCS;
 }
 
 static void
@@ -882,7 +882,7 @@ img_align(struct ilo_image *img, struct ilo_image_params *params)
     * ilo_texture_can_enable_hiz(), we always return true for the first slice.
     * To avoid out-of-bound access, we have to pad.
     */
-   if (img->aux == ILO_IMAGE_AUX_HIZ &&
+   if (img->aux.type == ILO_IMAGE_AUX_HIZ &&
        templ->last_level == 0 &&
        templ->array_size == 1 &&
        templ->depth0 == 1) {
@@ -901,7 +901,7 @@ img_calculate_bo_size(struct ilo_image *img,
 {
    assert(params->max_x % img->block_width == 0);
    assert(params->max_y % img->block_height == 0);
-   assert(img->layer_height % img->block_height == 0);
+   assert(img->walk_layer_height % img->block_height == 0);
 
    img->bo_stride =
       (params->max_x / img->block_width) * img->block_size;
@@ -987,9 +987,9 @@ img_calculate_bo_size(struct ilo_image *img,
             if (img->valid_tilings & IMAGE_TILING_NONE) {
                img->tiling = GEN6_TILING_NONE;
                /* MCS support for non-MSRTs is limited to tiled RTs */
-               if (img->aux == ILO_IMAGE_AUX_MCS &&
+               if (img->aux.type == ILO_IMAGE_AUX_MCS &&
                    params->templ->nr_samples <= 1)
-                  img->aux = ILO_IMAGE_AUX_NONE;
+                  img->aux.type = ILO_IMAGE_AUX_NONE;
 
                continue;
             } else {
@@ -1014,7 +1014,7 @@ img_calculate_hiz_size(struct ilo_image *img,
    unsigned hz_width, hz_height, lv;
    unsigned hz_clear_w, hz_clear_h;
 
-   assert(img->aux == ILO_IMAGE_AUX_HIZ);
+   assert(img->aux.type == ILO_IMAGE_AUX_HIZ);
 
    assert(img->walk == ILO_IMAGE_WALK_LAYER ||
           img->walk == ILO_IMAGE_WALK_3D);
@@ -1043,6 +1043,23 @@ img_calculate_hiz_size(struct ilo_image *img,
     * memory row.
     */
    switch (hz_walk) {
+   case ILO_IMAGE_WALK_LAYER:
+      {
+         const unsigned h0 = align(params->h0, hz_align_j);
+         const unsigned h1 = align(params->h1, hz_align_j);
+         const unsigned htail =
+            ((ilo_dev_gen(params->dev) >= ILO_GEN(7)) ? 12 : 11) * hz_align_j;
+         const unsigned hz_qpitch = h0 + h1 + htail;
+
+         hz_width = align(img->lods[0].slice_width, 16);
+
+         hz_height = hz_qpitch * templ->array_size / 2;
+         if (ilo_dev_gen(params->dev) >= ILO_GEN(7))
+            hz_height = align(hz_height, 8);
+
+         img->aux.walk_layer_height = hz_qpitch;
+      }
+      break;
    case ILO_IMAGE_WALK_LOD:
       {
          unsigned lod_tx[PIPE_MAX_TEXTURE_LEVELS];
@@ -1080,28 +1097,11 @@ img_calculate_hiz_size(struct ilo_image *img,
 
          /* convert tile offsets to memory offsets */
          for (lv = 0; lv <= templ->last_level; lv++) {
-            img->aux_offsets[lv] =
+            img->aux.walk_lod_offsets[lv] =
                (lod_ty[lv] * hz_width + lod_tx[lv]) * 4096;
          }
          hz_width *= 128;
          hz_height *= 32;
-      }
-      break;
-   case ILO_IMAGE_WALK_LAYER:
-      {
-         const unsigned h0 = align(params->h0, hz_align_j);
-         const unsigned h1 = align(params->h1, hz_align_j);
-         const unsigned htail =
-            ((ilo_dev_gen(params->dev) >= ILO_GEN(7)) ? 12 : 11) * hz_align_j;
-         const unsigned hz_qpitch = h0 + h1 + htail;
-
-         hz_width = align(img->lods[0].slice_width, 16);
-
-         hz_height = hz_qpitch * templ->array_size / 2;
-         if (ilo_dev_gen(params->dev) >= ILO_GEN(7))
-            hz_height = align(hz_height, 8);
-
-         img->aux_layer_height = hz_qpitch;
       }
       break;
    case ILO_IMAGE_WALK_3D:
@@ -1156,16 +1156,16 @@ img_calculate_hiz_size(struct ilo_image *img,
       if (u_minify(img->width0, lv) % hz_clear_w ||
           u_minify(img->height0, lv) % hz_clear_h)
          break;
-      img->aux_enables |= 1 << lv;
+      img->aux.enables |= 1 << lv;
    }
 
    /* we padded to allow this in img_align() */
    if (templ->last_level == 0 && templ->array_size == 1 && templ->depth0 == 1)
-      img->aux_enables |= 0x1;
+      img->aux.enables |= 0x1;
 
    /* align to Y-tile */
-   img->aux_stride = align(hz_width, 128);
-   img->aux_height = align(hz_height, 32);
+   img->aux.bo_stride = align(hz_width, 128);
+   img->aux.bo_height = align(hz_height, 32);
 }
 
 static void
@@ -1176,7 +1176,7 @@ img_calculate_mcs_size(struct ilo_image *img,
    int mcs_width, mcs_height, mcs_cpp;
    int downscale_x, downscale_y;
 
-   assert(img->aux == ILO_IMAGE_AUX_MCS);
+   assert(img->aux.type == ILO_IMAGE_AUX_MCS);
 
    if (templ->nr_samples > 1) {
       /*
@@ -1289,10 +1289,10 @@ img_calculate_mcs_size(struct ilo_image *img,
       mcs_cpp = 16; /* an OWord */
    }
 
-   img->aux_enables = (1 << (templ->last_level + 1)) - 1;
+   img->aux.enables = (1 << (templ->last_level + 1)) - 1;
    /* align to Y-tile */
-   img->aux_stride = align(mcs_width * mcs_cpp, 128);
-   img->aux_height = align(mcs_height, 32);
+   img->aux.bo_stride = align(mcs_width * mcs_cpp, 128);
+   img->aux.bo_height = align(mcs_height, 32);
 }
 
 /**
@@ -1311,7 +1311,7 @@ img_init_for_transfer(struct ilo_image *img,
    assert(templ->last_level == 0);
    assert(templ->nr_samples <= 1);
 
-   img->aux = ILO_IMAGE_AUX_NONE;
+   img->aux.type = ILO_IMAGE_AUX_NONE;
    img->width0 = templ->width0;
    img->height0 = templ->height0;
    img->format = templ->format;
@@ -1376,7 +1376,7 @@ void ilo_image_init(struct ilo_image *img,
    img_align(img, &params);
    img_calculate_bo_size(img, &params);
 
-   switch (img->aux) {
+   switch (img->aux.type) {
    case ILO_IMAGE_AUX_HIZ:
       img_calculate_hiz_size(img, &params);
       break;

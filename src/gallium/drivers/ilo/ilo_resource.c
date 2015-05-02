@@ -248,14 +248,14 @@ tex_create_hiz(struct ilo_texture *tex)
    unsigned lv;
 
    bo = intel_winsys_alloc_bo(is->dev.winsys, "hiz texture",
-         tex->image.aux_stride * tex->image.aux_height, false);
+         tex->image.aux.bo_stride * tex->image.aux.bo_height, false);
    if (!bo)
       return false;
 
    ilo_image_set_aux_bo(&tex->image, bo);
 
    for (lv = 0; lv <= templ->last_level; lv++) {
-      if (tex->image.aux_enables & (1 << lv)) {
+      if (tex->image.aux.enables & (1 << lv)) {
          const unsigned num_slices = (templ->target == PIPE_TEXTURE_3D) ?
             u_minify(templ->depth0, lv) : templ->array_size;
          unsigned flags = ILO_TEXTURE_HIZ;
@@ -277,10 +277,10 @@ tex_create_mcs(struct ilo_texture *tex)
    struct ilo_screen *is = ilo_screen(tex->base.screen);
    struct intel_bo *bo;
 
-   assert(tex->image.aux_enables == (1 << (tex->base.last_level + 1)) - 1);
+   assert(tex->image.aux.enables == (1 << (tex->base.last_level + 1)) - 1);
 
    bo = intel_winsys_alloc_bo(is->dev.winsys, "mcs texture",
-         tex->image.aux_stride * tex->image.aux_height, false);
+         tex->image.aux.bo_stride * tex->image.aux.bo_height, false);
    if (!bo)
       return false;
 
@@ -319,7 +319,7 @@ tex_alloc_bos(struct ilo_texture *tex,
    if (tex->image.separate_stencil && !tex_create_separate_stencil(tex))
       return false;
 
-   switch (tex->image.aux) {
+   switch (tex->image.aux.type) {
    case ILO_IMAGE_AUX_HIZ:
       if (!tex_create_hiz(tex)) {
          /* Separate Stencil Buffer requires HiZ to be enabled */

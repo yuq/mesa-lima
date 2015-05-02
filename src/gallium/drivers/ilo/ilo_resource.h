@@ -200,7 +200,7 @@ ilo_texture_can_enable_hiz(const struct ilo_texture *tex, unsigned level,
    const struct ilo_texture_slice *slice =
       ilo_texture_get_slice(tex, level, 0);
 
-   return (tex->image.aux_bo && (slice->flags & ILO_TEXTURE_HIZ));
+   return (tex->image.aux.bo && (slice->flags & ILO_TEXTURE_HIZ));
 }
 
 #endif /* ILO_RESOURCE_H */
