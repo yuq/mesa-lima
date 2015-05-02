@@ -484,8 +484,6 @@ img_init_tiling(struct ilo_image *img,
          preferred_tilings &= IMAGE_TILING_NONE;
    }
 
-   img->valid_tilings = params->valid_tilings;
-
    /* prefer tiled over linear */
    if (preferred_tilings & IMAGE_TILING_Y)
       img->tiling = GEN6_TILING_Y;
@@ -1349,7 +1347,6 @@ img_init_for_transfer(struct ilo_image *img,
    img->block_size = util_format_get_blocksize(templ->format);
    img->walk = ILO_IMAGE_WALK_LOD;
 
-   img->valid_tilings = IMAGE_TILING_NONE;
    img->tiling = GEN6_TILING_NONE;
 
    img->align_i = img->block_width;
@@ -1397,23 +1394,31 @@ void ilo_image_init(struct ilo_image *img,
    img_init(img, &params);
 }
 
-/**
- * Update the tiling mode and bo stride (for imported resources).
- */
 bool
-ilo_image_update_for_imported_bo(struct ilo_image *img,
-                                 enum gen_surface_tiling tiling,
-                                 unsigned bo_stride)
+ilo_image_init_for_imported(struct ilo_image *img,
+                            const struct ilo_dev *dev,
+                            const struct pipe_resource *templ,
+                            enum gen_surface_tiling tiling,
+                            unsigned bo_stride)
 {
-   if (!(img->valid_tilings & (1 << tiling)))
-      return false;
+   struct ilo_image_params params;
 
    if ((tiling == GEN6_TILING_X && bo_stride % 512) ||
        (tiling == GEN6_TILING_Y && bo_stride % 128) ||
        (tiling == GEN8_TILING_W && bo_stride % 64))
       return false;
 
-   img->tiling = tiling;
+   memset(&params, 0, sizeof(params));
+   params.dev = dev;
+   params.templ = templ;
+   params.valid_tilings = 1 << tiling;
+
+   img_init(img, &params);
+
+   assert(img->tiling == tiling);
+   if (img->bo_stride > bo_stride)
+      return false;
+
    img->bo_stride = bo_stride;
 
    return true;

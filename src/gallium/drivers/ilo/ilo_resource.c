@@ -154,34 +154,6 @@ tex_alloc_slices(struct ilo_texture *tex)
 }
 
 static bool
-tex_import_handle(struct ilo_texture *tex,
-                  const struct winsys_handle *handle)
-{
-   struct ilo_screen *is = ilo_screen(tex->base.screen);
-   const char *name = resource_get_bo_name(&tex->base);
-   enum intel_tiling_mode tiling;
-   unsigned long pitch;
-   struct intel_bo *bo;
-
-   bo = intel_winsys_import_handle(is->dev.winsys, name, handle,
-         tex->image.bo_height, &tiling, &pitch);
-   if (!bo)
-      return false;
-
-   if (!ilo_image_update_for_imported_bo(&tex->image,
-            winsys_to_surface_tiling(tiling), pitch)) {
-      ilo_err("imported handle has incompatible tiling/pitch\n");
-      intel_bo_unref(bo);
-      return false;
-   }
-
-   ilo_image_set_bo(&tex->image, bo);
-   intel_bo_unref(bo);
-
-   return true;
-}
-
-static bool
 tex_create_bo(struct ilo_texture *tex)
 {
    struct ilo_screen *is = ilo_screen(tex->base.screen);
@@ -302,18 +274,12 @@ tex_destroy(struct ilo_texture *tex)
 }
 
 static bool
-tex_alloc_bos(struct ilo_texture *tex,
-              const struct winsys_handle *handle)
+tex_alloc_bos(struct ilo_texture *tex)
 {
    struct ilo_screen *is = ilo_screen(tex->base.screen);
 
-   if (handle) {
-      if (!tex_import_handle(tex, handle))
-         return false;
-   } else {
-      if (!tex_create_bo(tex))
-         return false;
-   }
+   if (!tex->imported && !tex_create_bo(tex))
+      return false;
 
    /* allocate separate stencil resource */
    if (tex->image.separate_stencil && !tex_create_separate_stencil(tex))
@@ -340,13 +306,50 @@ tex_alloc_bos(struct ilo_texture *tex,
 }
 
 static bool
-tex_init_image(struct ilo_texture *tex)
+tex_import_handle(struct ilo_texture *tex,
+                  const struct winsys_handle *handle)
+{
+   struct ilo_screen *is = ilo_screen(tex->base.screen);
+   const struct pipe_resource *templ = &tex->base;
+   const char *name = resource_get_bo_name(&tex->base);
+   enum intel_tiling_mode tiling;
+   unsigned long pitch;
+   struct intel_bo *bo;
+
+   bo = intel_winsys_import_handle(is->dev.winsys, name, handle,
+         tex->image.bo_height, &tiling, &pitch);
+   if (!bo)
+      return false;
+
+   if (!ilo_image_init_for_imported(&tex->image, &is->dev, templ,
+            winsys_to_surface_tiling(tiling), pitch)) {
+      ilo_err("failed to import handle for texture\n");
+      intel_bo_unref(bo);
+      return false;
+   }
+
+   ilo_image_set_bo(&tex->image, bo);
+   intel_bo_unref(bo);
+
+   tex->imported = true;
+
+   return true;
+}
+
+static bool
+tex_init_image(struct ilo_texture *tex,
+               const struct winsys_handle *handle)
 {
    struct ilo_screen *is = ilo_screen(tex->base.screen);
    const struct pipe_resource *templ = &tex->base;
    struct ilo_image *img = &tex->image;
 
-   ilo_image_init(img, &is->dev, templ);
+   if (handle) {
+      if (!tex_import_handle(tex, handle))
+         return false;
+   } else {
+      ilo_image_init(img, &is->dev, templ);
+   }
 
    if (img->bo_height > ilo_max_resource_size / img->bo_stride)
       return false;
@@ -379,14 +382,12 @@ tex_create(struct pipe_screen *screen,
    tex->base.screen = screen;
    pipe_reference_init(&tex->base.reference, 1);
 
-   tex->imported = (handle != NULL);
-
-   if (!tex_init_image(tex)) {
+   if (!tex_init_image(tex, handle)) {
       FREE(tex);
       return NULL;
    }
 
-   if (!tex_alloc_bos(tex, handle)) {
+   if (!tex_alloc_bos(tex)) {
       tex_destroy(tex);
       return NULL;
    }

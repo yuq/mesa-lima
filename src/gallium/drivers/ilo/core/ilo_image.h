@@ -105,8 +105,6 @@ struct ilo_image {
    enum ilo_image_walk_type walk;
    bool interleaved_samples;
 
-   /* bitmask of valid tilings */
-   unsigned valid_tilings;
    enum gen_surface_tiling tiling;
 
    /* physical LOD slice alignments */
@@ -150,9 +148,11 @@ ilo_image_init(struct ilo_image *img,
                const struct pipe_resource *templ);
 
 bool
-ilo_image_update_for_imported_bo(struct ilo_image *img,
-                                 enum gen_surface_tiling tiling,
-                                 unsigned bo_stride);
+ilo_image_init_for_imported(struct ilo_image *img,
+                            const struct ilo_dev *dev,
+                            const struct pipe_resource *templ,
+                            enum gen_surface_tiling tiling,
+                            unsigned bo_stride);
 
 static inline void
 ilo_image_cleanup(struct ilo_image *img)
