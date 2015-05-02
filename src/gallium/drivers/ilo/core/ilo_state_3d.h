@@ -49,8 +49,8 @@
 
 struct intel_bo;
 struct ilo_buffer;
+struct ilo_image;
 struct ilo_shader_state;
-struct ilo_texture;
 
 struct ilo_vb_state {
    struct pipe_vertex_buffer states[PIPE_MAX_ATTRIBS];
@@ -384,19 +384,22 @@ ilo_gpe_init_view_surface_for_buffer(const struct ilo_dev *dev,
                                      struct ilo_view_surface *surf);
 
 void
-ilo_gpe_init_view_surface_for_texture(const struct ilo_dev *dev,
-                                      const struct ilo_texture *tex,
-                                      enum pipe_format format,
-                                      unsigned first_level,
-                                      unsigned num_levels,
-                                      unsigned first_layer,
-                                      unsigned num_layers,
-                                      bool is_rt,
-                                      struct ilo_view_surface *surf);
+ilo_gpe_init_view_surface_for_image(const struct ilo_dev *dev,
+                                    const struct ilo_image *img,
+                                    enum pipe_texture_target target,
+                                    enum pipe_format format,
+                                    unsigned first_level,
+                                    unsigned num_levels,
+                                    unsigned first_layer,
+                                    unsigned num_layers,
+                                    bool is_rt,
+                                    struct ilo_view_surface *surf);
 
 void
 ilo_gpe_init_zs_surface(const struct ilo_dev *dev,
-                        const struct ilo_texture *tex,
+                        const struct ilo_image *img,
+                        const struct ilo_image *s8_img,
+                        enum pipe_texture_target target,
                         enum pipe_format format, unsigned level,
                         unsigned first_layer, unsigned num_layers,
                         struct ilo_zs_surface *zs);

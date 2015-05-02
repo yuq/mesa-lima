@@ -1019,8 +1019,8 @@ ilo_create_sampler_view(struct pipe_context *pipe,
                   "not created for sampling\n");
       }
 
-      ilo_gpe_init_view_surface_for_texture(dev, tex,
-            templ->format,
+      ilo_gpe_init_view_surface_for_image(dev, &tex->image,
+            tex->base.target, templ->format,
             templ->u.tex.first_level,
             templ->u.tex.last_level - templ->u.tex.first_level + 1,
             templ->u.tex.first_layer,
@@ -1045,6 +1045,7 @@ ilo_create_surface(struct pipe_context *pipe,
                    const struct pipe_surface *templ)
 {
    const struct ilo_dev *dev = ilo_context(pipe)->dev;
+   struct ilo_texture *tex = ilo_texture(res);
    struct ilo_surface_cso *surf;
 
    surf = MALLOC_STRUCT(ilo_surface_cso);
@@ -1053,34 +1054,35 @@ ilo_create_surface(struct pipe_context *pipe,
    surf->base = *templ;
    pipe_reference_init(&surf->base.reference, 1);
    surf->base.texture = NULL;
-   pipe_resource_reference(&surf->base.texture, res);
+   pipe_resource_reference(&surf->base.texture, &tex->base);
 
    surf->base.context = pipe;
-   surf->base.width = u_minify(res->width0, templ->u.tex.level);
-   surf->base.height = u_minify(res->height0, templ->u.tex.level);
+   surf->base.width = u_minify(tex->base.width0, templ->u.tex.level);
+   surf->base.height = u_minify(tex->base.height0, templ->u.tex.level);
 
    surf->is_rt = !util_format_is_depth_or_stencil(templ->format);
 
    if (surf->is_rt) {
       /* relax this? */
-      assert(res->target != PIPE_BUFFER);
+      assert(tex->base.target != PIPE_BUFFER);
 
       /*
        * classic i965 sets render_cache_rw for constant buffers and sol
        * surfaces but not render buffers.  Why?
        */
-      ilo_gpe_init_view_surface_for_texture(dev, ilo_texture(res),
+      ilo_gpe_init_view_surface_for_image(dev,
+            &tex->image, tex->base.target,
             templ->format, templ->u.tex.level, 1,
             templ->u.tex.first_layer,
             templ->u.tex.last_layer - templ->u.tex.first_layer + 1,
             true, &surf->u.rt);
-   }
-   else {
+   } else {
       assert(res->target != PIPE_BUFFER);
 
-      ilo_gpe_init_zs_surface(dev, ilo_texture(res),
-            templ->format, templ->u.tex.level,
-            templ->u.tex.first_layer,
+      ilo_gpe_init_zs_surface(dev, &tex->image,
+            (tex->separate_s8) ? &tex->separate_s8->image : NULL,
+            tex->base.target, templ->format,
+            templ->u.tex.level, templ->u.tex.first_layer,
             templ->u.tex.last_layer - templ->u.tex.first_layer + 1,
             &surf->u.zs);
    }
@@ -1294,8 +1296,8 @@ ilo_state_vector_init(const struct ilo_dev *dev,
 {
    ilo_gpe_set_scissor_null(dev, &vec->scissor);
 
-   ilo_gpe_init_zs_surface(dev, NULL, PIPE_FORMAT_NONE,
-         0, 0, 1, &vec->fb.null_zs);
+   ilo_gpe_init_zs_surface(dev, NULL, NULL, PIPE_TEXTURE_2D,
+         PIPE_FORMAT_NONE, 0, 0, 1, &vec->fb.null_zs);
 
    util_dynarray_init(&vec->global_binding.bindings);
 

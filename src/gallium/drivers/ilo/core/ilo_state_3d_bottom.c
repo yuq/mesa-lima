@@ -31,8 +31,8 @@
 #include "util/u_half.h"
 
 #include "ilo_format.h"
+#include "ilo_image.h"
 #include "ilo_state_3d.h"
-#include "../ilo_resource.h"
 #include "../ilo_shader.h"
 
 static void
@@ -934,7 +934,9 @@ zs_init_info_null(const struct ilo_dev *dev,
 
 static void
 zs_init_info(const struct ilo_dev *dev,
-             const struct ilo_texture *tex,
+             const struct ilo_image *img,
+             const struct ilo_image *s8_img,
+             enum pipe_texture_target target,
              enum pipe_format format, unsigned level,
              unsigned first_layer, unsigned num_layers,
              struct ilo_zs_surface_info *info)
@@ -945,7 +947,7 @@ zs_init_info(const struct ilo_dev *dev,
 
    memset(info, 0, sizeof(*info));
 
-   info->surface_type = ilo_gpe_gen6_translate_texture(tex->base.target);
+   info->surface_type = ilo_gpe_gen6_translate_texture(target);
 
    if (info->surface_type == GEN6_SURFTYPE_CUBE) {
       /*
@@ -965,8 +967,7 @@ zs_init_info(const struct ilo_dev *dev,
 
    if (ilo_dev_gen(dev) >= ILO_GEN(7)) {
       separate_stencil = true;
-   }
-   else {
+   } else {
       /*
        * From the Sandy Bridge PRM, volume 2 part 1, page 317:
        *
@@ -974,7 +975,7 @@ zs_init_info(const struct ilo_dev *dev,
        *      same value (enabled or disabled) as Hierarchical Depth Buffer
        *      Enable."
        */
-      separate_stencil = ilo_image_can_enable_aux(&tex->image, level);
+      separate_stencil = ilo_image_can_enable_aux(img, level);
    }
 
    /*
@@ -1028,21 +1029,18 @@ zs_init_info(const struct ilo_dev *dev,
    }
 
    if (format != PIPE_FORMAT_S8_UINT) {
-      info->zs.bo = tex->image.bo;
-      info->zs.stride = tex->image.bo_stride;
+      info->zs.bo = img->bo;
+      info->zs.stride = img->bo_stride;
 
-      assert(tex->image.walk_layer_height % 4 == 0);
-      info->zs.qpitch = tex->image.walk_layer_height / 4;
+      assert(img->walk_layer_height % 4 == 0);
+      info->zs.qpitch = img->walk_layer_height / 4;
 
-      info->zs.tiling = tex->image.tiling;
+      info->zs.tiling = img->tiling;
       info->zs.offset = 0;
    }
 
-   if (tex->separate_s8 || format == PIPE_FORMAT_S8_UINT) {
-      const struct ilo_texture *s8_tex =
-         (tex->separate_s8) ? tex->separate_s8 : tex;
-
-      info->stencil.bo = s8_tex->image.bo;
+   if (s8_img || format == PIPE_FORMAT_S8_UINT) {
+      info->stencil.bo = s8_img->bo;
 
       /*
        * From the Sandy Bridge PRM, volume 2 part 1, page 329:
@@ -1053,43 +1051,42 @@ zs_init_info(const struct ilo_dev *dev,
        * For GEN7, we still dobule the stride because we did not double the
        * slice widths when initializing the layout.
        */
-      info->stencil.stride = s8_tex->image.bo_stride * 2;
+      info->stencil.stride = s8_img->bo_stride * 2;
 
-      assert(s8_tex->image.walk_layer_height % 4 == 0);
-      info->stencil.qpitch = s8_tex->image.walk_layer_height / 4;
+      assert(s8_img->walk_layer_height % 4 == 0);
+      info->stencil.qpitch = s8_img->walk_layer_height / 4;
 
-      info->stencil.tiling = s8_tex->image.tiling;
+      info->stencil.tiling = s8_img->tiling;
 
       if (ilo_dev_gen(dev) == ILO_GEN(6)) {
          unsigned x, y;
 
-         assert(s8_tex->image.walk == ILO_IMAGE_WALK_LOD);
+         assert(s8_img->walk == ILO_IMAGE_WALK_LOD);
 
          /* offset to the level */
-         ilo_image_get_slice_pos(&s8_tex->image, level, 0, &x, &y);
-         ilo_image_pos_to_mem(&s8_tex->image, x, y, &x, &y);
-         info->stencil.offset = ilo_image_mem_to_raw(&s8_tex->image, x, y);
+         ilo_image_get_slice_pos(s8_img, level, 0, &x, &y);
+         ilo_image_pos_to_mem(s8_img, x, y, &x, &y);
+         info->stencil.offset = ilo_image_mem_to_raw(s8_img, x, y);
       }
    }
 
-   if (ilo_image_can_enable_aux(&tex->image, level)) {
-      info->hiz.bo = tex->image.aux.bo;
-      info->hiz.stride = tex->image.aux.bo_stride;
+   if (ilo_image_can_enable_aux(img, level)) {
+      info->hiz.bo = img->aux.bo;
+      info->hiz.stride = img->aux.bo_stride;
 
-      assert(tex->image.aux.walk_layer_height % 4 == 0);
-      info->hiz.qpitch = tex->image.aux.walk_layer_height / 4;
+      assert(img->aux.walk_layer_height % 4 == 0);
+      info->hiz.qpitch = img->aux.walk_layer_height / 4;
 
       info->hiz.tiling = GEN6_TILING_Y;
 
       /* offset to the level */
       if (ilo_dev_gen(dev) == ILO_GEN(6))
-         info->hiz.offset = tex->image.aux.walk_lod_offsets[level];
+         info->hiz.offset = img->aux.walk_lod_offsets[level];
    }
 
-   info->width = tex->image.width0;
-   info->height = tex->image.height0;
-   info->depth = (tex->base.target == PIPE_TEXTURE_3D) ?
-      tex->base.depth0 : num_layers;
+   info->width = img->width0;
+   info->height = img->height0;
+   info->depth = (target == PIPE_TEXTURE_3D) ? img->depth0 : num_layers;
 
    info->lod = level;
    info->first_layer = first_layer;
@@ -1098,7 +1095,9 @@ zs_init_info(const struct ilo_dev *dev,
 
 void
 ilo_gpe_init_zs_surface(const struct ilo_dev *dev,
-                        const struct ilo_texture *tex,
+                        const struct ilo_image *img,
+                        const struct ilo_image *s8_img,
+                        enum pipe_texture_target target,
                         enum pipe_format format, unsigned level,
                         unsigned first_layer, unsigned num_layers,
                         struct ilo_zs_surface *zs)
@@ -1111,10 +1110,11 @@ ilo_gpe_init_zs_surface(const struct ilo_dev *dev,
 
    ILO_DEV_ASSERT(dev, 6, 8);
 
-   if (tex) {
-      zs_init_info(dev, tex, format, level, first_layer, num_layers, &info);
+   if (img) {
+      zs_init_info(dev, img, s8_img, target, format,
+            level, first_layer, num_layers, &info);
 
-      switch (tex->base.nr_samples) {
+      switch (img->sample_count) {
       case 2:
          align_w /= 2;
          break;
