@@ -677,6 +677,8 @@ img_init_size_and_format(struct ilo_image *img,
 
    img->width0 = templ->width0;
    img->height0 = templ->height0;
+   img->depth0 = templ->depth0;
+   img->sample_count = (templ->nr_samples) ? templ->nr_samples : 1;
 
    /*
     * From the Sandy Bridge PRM, volume 2 part 1, page 317:
@@ -1310,6 +1312,8 @@ img_init(struct ilo_image *img,
    img_align(img, params);
    img_calculate_bo_size(img, params);
 
+   img->scanout = (params->templ->bind & PIPE_BIND_SCANOUT);
+
    switch (img->aux.type) {
    case ILO_IMAGE_AUX_HIZ:
       img_calculate_hiz_size(img, params);
@@ -1339,12 +1343,17 @@ img_init_for_transfer(struct ilo_image *img,
    assert(templ->nr_samples <= 1);
 
    img->aux.type = ILO_IMAGE_AUX_NONE;
+
    img->width0 = templ->width0;
    img->height0 = templ->height0;
+   img->depth0 = templ->depth0;
+   img->sample_count = 1;
+
    img->format = templ->format;
    img->block_width = util_format_get_blockwidth(templ->format);
    img->block_height = util_format_get_blockheight(templ->format);
    img->block_size = util_format_get_blocksize(templ->format);
+
    img->walk = ILO_IMAGE_WALK_LOD;
 
    img->tiling = GEN6_TILING_NONE;
@@ -1420,6 +1429,10 @@ ilo_image_init_for_imported(struct ilo_image *img,
       return false;
 
    img->bo_stride = bo_stride;
+
+   /* assume imported RTs are also scanouts */
+   if (!img->scanout)
+      img->scanout = (templ->bind & PIPE_BIND_RENDER_TARGET);
 
    return true;
 }

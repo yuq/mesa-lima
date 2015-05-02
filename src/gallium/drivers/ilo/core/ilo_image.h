@@ -88,9 +88,11 @@ struct ilo_image_lod {
  * Texture layout.
  */
 struct ilo_image {
-   /* size and format for programming hardware states */
+   /* size, format, etc for programming hardware states */
    unsigned width0;
    unsigned height0;
+   unsigned depth0;
+   unsigned sample_count;
    enum pipe_format format;
    bool separate_stencil;
 
@@ -120,6 +122,8 @@ struct ilo_image {
    unsigned bo_stride;
    /* number of pixel block rows */
    unsigned bo_height;
+
+   bool scanout;
 
    struct intel_bo *bo;
 
@@ -310,17 +314,12 @@ ilo_image_get_slice_pos(const struct ilo_image *img,
          const unsigned sx = slice & ((1 << level) - 1);
          const unsigned sy = slice >> level;
 
+         assert(slice < u_minify(img->depth0, level));
+
          *x = img->lods[level].x + img->lods[level].slice_width * sx;
          *y = img->lods[level].y + img->lods[level].slice_height * sy;
-
-         /* should not overlap with the next level */
-         if (level + 1 < Elements(img->lods) &&
-             img->lods[level + 1].y) {
-            assert(*y + img->lods[level].slice_height <=
-                  img->lods[level + 1].y);
-         }
-         break;
       }
+      break;
    default:
       assert(!"unknown img walk type");
       *x = 0;
