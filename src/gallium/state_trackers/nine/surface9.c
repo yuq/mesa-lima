@@ -273,7 +273,7 @@ NineSurface9_AddDirtyRect( struct NineSurface9 *This,
             This->texture == D3DRTYPE_CUBETEXTURE ||
             This->texture == D3DRTYPE_TEXTURE);
 
-    if (This->base.pool != D3DPOOL_MANAGED)
+    if (This->base.pool == D3DPOOL_DEFAULT)
         return;
 
     /* Add a dirty rect to level 0 of the parent texture */
@@ -287,7 +287,7 @@ NineSurface9_AddDirtyRect( struct NineSurface9 *This,
             NineTexture9(This->base.base.container);
 
         NineTexture9_AddDirtyRect(tex, &dirty_rect);
-    } else { /* This->texture == D3DRTYPE_CUBETEXTURE */
+    } else if (This->texture == D3DRTYPE_CUBETEXTURE) {
         struct NineCubeTexture9 *ctex =
             NineCubeTexture9(This->base.base.container);
 

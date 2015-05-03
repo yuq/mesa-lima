@@ -193,12 +193,14 @@ NineVolumeTexture9_AddDirtyBox( struct NineVolumeTexture9 *This,
 {
     DBG("This=%p pDirtybox=%p\n", This, pDirtyBox);
 
-    if (This->base.base.pool != D3DPOOL_MANAGED) {
+    if (This->base.base.pool == D3DPOOL_DEFAULT) {
         return D3D_OK;
     }
-    This->base.managed.dirty = TRUE;
 
-    BASETEX_REGISTER_UPDATE(&This->base);
+    if (This->base.base.pool == D3DPOOL_MANAGED) {
+        This->base.managed.dirty = TRUE;
+        BASETEX_REGISTER_UPDATE(&This->base);
+    }
 
     if (!pDirtyBox) {
         This->dirty_box.x = 0;

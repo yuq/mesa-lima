@@ -295,20 +295,22 @@ NineTexture9_AddDirtyRect( struct NineTexture9 *This,
         pDirtyRect ? pDirtyRect->left : 0, pDirtyRect ? pDirtyRect->top : 0,
         pDirtyRect ? pDirtyRect->right : 0, pDirtyRect ? pDirtyRect->bottom : 0);
 
-    /* Tracking dirty regions on DEFAULT or SYSTEMMEM resources is pointless,
+    /* Tracking dirty regions on DEFAULT resources is pointless,
      * because we always write to the final storage. Just marked it dirty in
      * case we need to generate mip maps.
      */
-    if (This->base.base.pool != D3DPOOL_MANAGED) {
+    if (This->base.base.pool == D3DPOOL_DEFAULT) {
         if (This->base.base.usage & D3DUSAGE_AUTOGENMIPMAP) {
             This->base.dirty_mip = TRUE;
             BASETEX_REGISTER_UPDATE(&This->base);
         }
         return D3D_OK;
     }
-    This->base.managed.dirty = TRUE;
 
-    BASETEX_REGISTER_UPDATE(&This->base);
+    if (This->base.base.pool == D3DPOOL_MANAGED) {
+        This->base.managed.dirty = TRUE;
+        BASETEX_REGISTER_UPDATE(&This->base);
+    }
 
     if (!pDirtyRect) {
         u_box_origin_2d(This->base.base.info.width0,
