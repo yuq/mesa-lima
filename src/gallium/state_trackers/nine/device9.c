@@ -1185,6 +1185,8 @@ NineDevice9_UpdateSurface( struct NineDevice9 *This,
 {
     struct NineSurface9 *dst = NineSurface9(pDestinationSurface);
     struct NineSurface9 *src = NineSurface9(pSourceSurface);
+    int copy_width, copy_height;
+    RECT destRect;
 
     DBG("This=%p pSourceSurface=%p pDestinationSurface=%p "
         "pSourceRect=%p pDestPoint=%p\n", This,
@@ -1196,13 +1198,75 @@ NineDevice9_UpdateSurface( struct NineDevice9 *This,
     if (pDestPoint)
         DBG("pDestPoint = (%u,%u)\n", pDestPoint->x, pDestPoint->y);
 
+    user_assert(dst && src, D3DERR_INVALIDCALL);
+
     user_assert(dst->base.pool == D3DPOOL_DEFAULT, D3DERR_INVALIDCALL);
     user_assert(src->base.pool == D3DPOOL_SYSTEMMEM, D3DERR_INVALIDCALL);
 
     user_assert(dst->desc.MultiSampleType == D3DMULTISAMPLE_NONE, D3DERR_INVALIDCALL);
     user_assert(src->desc.MultiSampleType == D3DMULTISAMPLE_NONE, D3DERR_INVALIDCALL);
 
-    return NineSurface9_CopySurface(dst, src, pDestPoint, pSourceRect);
+    user_assert(!src->lock_count, D3DERR_INVALIDCALL);
+    user_assert(!dst->lock_count, D3DERR_INVALIDCALL);
+
+    user_assert(dst->desc.Format == src->desc.Format, D3DERR_INVALIDCALL);
+    user_assert(!depth_stencil_format(dst->desc.Format), D3DERR_INVALIDCALL);
+
+    if (pSourceRect) {
+        copy_width = pSourceRect->right - pSourceRect->left;
+        copy_height = pSourceRect->bottom - pSourceRect->top;
+
+        user_assert(pSourceRect->left >= 0 &&
+                    copy_width > 0 &&
+                    pSourceRect->right <= src->desc.Width &&
+                    pSourceRect->top >= 0 &&
+                    copy_height > 0 &&
+                    pSourceRect->bottom <= src->desc.Height,
+                    D3DERR_INVALIDCALL);
+    } else {
+        copy_width = src->desc.Width;
+        copy_height = src->desc.Height;
+    }
+
+    destRect.right = copy_width;
+    destRect.bottom = copy_height;
+
+    if (pDestPoint) {
+        user_assert(pDestPoint->x >= 0 && pDestPoint->y >= 0,
+                    D3DERR_INVALIDCALL);
+        destRect.right += pDestPoint->x;
+        destRect.bottom += pDestPoint->y;
+    }
+
+    user_assert(destRect.right <= dst->desc.Width &&
+                destRect.bottom <= dst->desc.Height,
+                D3DERR_INVALIDCALL);
+
+    if (compressed_format(dst->desc.Format)) {
+        const unsigned w = util_format_get_blockwidth(dst->base.info.format);
+        const unsigned h = util_format_get_blockheight(dst->base.info.format);
+
+        if (pDestPoint) {
+            user_assert(!(pDestPoint->x % w) && !(pDestPoint->y % h),
+                        D3DERR_INVALIDCALL);
+        }
+
+        if (pSourceRect) {
+            user_assert(!(pSourceRect->left % w) && !(pSourceRect->top % h),
+                        D3DERR_INVALIDCALL);
+        }
+        if (!(copy_width == src->desc.Width &&
+              copy_width == dst->desc.Width &&
+              copy_height == src->desc.Height &&
+              copy_height == dst->desc.Height)) {
+            user_assert(!(copy_width  % w) && !(copy_height % h),
+                        D3DERR_INVALIDCALL);
+        }
+    }
+
+    NineSurface9_CopyMemToDefault(dst, src, pDestPoint, pSourceRect);
+
+    return D3D_OK;
 }
 
 HRESULT WINAPI
@@ -1267,8 +1331,8 @@ NineDevice9_UpdateTexture( struct NineDevice9 *This,
         struct NineTexture9 *src = NineTexture9(srcb);
 
         for (l = 0; l <= last_level; ++l, ++m)
-            NineSurface9_CopySurface(dst->surfaces[l],
-                                     src->surfaces[m], NULL, NULL);
+            NineSurface9_CopyMemToDefault(dst->surfaces[l],
+                                          src->surfaces[m], NULL, NULL);
     } else
     if (dstb->base.type == D3DRTYPE_CUBETEXTURE) {
         struct NineCubeTexture9 *dst = NineCubeTexture9(dstb);
@@ -1278,8 +1342,8 @@ NineDevice9_UpdateTexture( struct NineDevice9 *This,
         /* GPUs usually have them stored as arrays of mip-mapped 2D textures. */
         for (z = 0; z < 6; ++z) {
             for (l = 0; l <= last_level; ++l, ++m) {
-                NineSurface9_CopySurface(dst->surfaces[l * 6 + z],
-                                         src->surfaces[m * 6 + z], NULL, NULL);
+                 NineSurface9_CopyMemToDefault(dst->surfaces[l * 6 + z],
+                                               src->surfaces[m * 6 + z], NULL, NULL);
             }
             m -= l;
         }
@@ -1320,7 +1384,12 @@ NineDevice9_GetRenderTargetData( struct NineDevice9 *This,
     user_assert(dst->desc.MultiSampleType < 2, D3DERR_INVALIDCALL);
     user_assert(src->desc.MultiSampleType < 2, D3DERR_INVALIDCALL);
 
-    return NineSurface9_CopySurface(dst, src, NULL, NULL);
+    user_assert(src->desc.Width == dst->desc.Width, D3DERR_INVALIDCALL);
+    user_assert(src->desc.Height == dst->desc.Height, D3DERR_INVALIDCALL);
+
+    NineSurface9_CopyDefaultToMem(dst, src);
+
+    return D3D_OK;
 }
 
 HRESULT WINAPI

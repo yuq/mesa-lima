@@ -859,6 +859,8 @@ NineSwapChain9_GetFrontBufferData( struct NineSwapChain9 *This,
     DBG("GetFrontBufferData: This=%p pDestSurface=%p\n",
         This, pDestSurface);
 
+    user_assert(dest_surface->base.pool == D3DPOOL_SYSTEMMEM, D3DERR_INVALIDCALL);
+
     width = dest_surface->desc.Width;
     height = dest_surface->desc.Height;
 
@@ -873,7 +875,7 @@ NineSwapChain9_GetFrontBufferData( struct NineSwapChain9 *This,
     desc.MultiSampleQuality = 0;
     desc.Width = width;
     desc.Height = height;
-    /* NineSurface9_CopySurface needs same format. */
+    /* NineSurface9_CopyDefaultToMem needs same format. */
     desc.Format = dest_surface->desc.Format;
     desc.Usage = D3DUSAGE_RENDERTARGET;
     hr = NineSurface9_new(pDevice, NineUnknown(This), temp_resource, NULL, 0,
@@ -886,7 +888,7 @@ NineSwapChain9_GetFrontBufferData( struct NineSwapChain9 *This,
 
     ID3DPresent_FrontBufferCopy(This->present, temp_handle);
 
-    NineSurface9_CopySurface(dest_surface, temp_surface, NULL, NULL);
+    NineSurface9_CopyDefaultToMem(dest_surface, temp_surface);
 
     ID3DPresent_DestroyD3DWindowBuffer(This->present, temp_handle);
     NineUnknown_Destroy(NineUnknown(temp_surface));

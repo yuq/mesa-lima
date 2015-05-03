@@ -164,6 +164,23 @@ pipe_to_d3d9_format(enum pipe_format format)
     return nine_pipe_to_d3d9_format_map[format];
 }
 
+/* ATI1 and ATI2 are not officially compressed in d3d9 */
+static inline boolean
+compressed_format( D3DFORMAT fmt )
+{
+    switch (fmt) {
+    case D3DFMT_DXT1:
+    case D3DFMT_DXT2:
+    case D3DFMT_DXT3:
+    case D3DFMT_DXT4:
+    case D3DFMT_DXT5:
+        return TRUE;
+    default:
+        break;
+    }
+    return FALSE;
+}
+
 static inline boolean
 depth_stencil_format( D3DFORMAT fmt )
 {
