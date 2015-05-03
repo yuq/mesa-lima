@@ -153,6 +153,8 @@ NineBaseTexture9_SetAutoGenFilterType( struct NineBaseTexture9 *This,
     user_assert(FilterType != D3DTEXF_NONE, D3DERR_INVALIDCALL);
 
     This->mipfilter = FilterType;
+    This->dirty_mip = TRUE;
+    NineBaseTexture9_GenerateMipSubLevels(This);
 
     return D3D_OK;
 }
