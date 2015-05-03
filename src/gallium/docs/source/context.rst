@@ -325,6 +325,11 @@ returned).  Otherwise, if the ``wait`` parameter is FALSE, the call
 will not block and the return value will be TRUE if the query has
 completed or FALSE otherwise.
 
+``get_query_result_resource`` is used to store the result of a query into
+a resource without synchronizing with the CPU. This write will optionally
+wait for the query to complete, and will optionally write whether the value
+is available instead of the value itself.
+
 The interface currently includes the following types of queries:
 
 ``PIPE_QUERY_OCCLUSION_COUNTER`` counts the number of fragments which
