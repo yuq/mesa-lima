@@ -116,6 +116,9 @@ NineVolumeTexture9_ctor( struct NineVolumeTexture9 *This,
             return hr;
     }
 
+    /* Textures start initially dirty */
+    NineVolumeTexture9_AddDirtyBox(This, NULL);
+
     return D3D_OK;
 }
 

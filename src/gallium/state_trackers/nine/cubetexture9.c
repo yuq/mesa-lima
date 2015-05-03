@@ -150,8 +150,12 @@ NineCubeTexture9_ctor( struct NineCubeTexture9 *This,
         }
     }
 
-    for (i = 0; i < 6; ++i) /* width = 0 means empty, depth stays 1 */
+    for (i = 0; i < 6; ++i) {
+        /* Textures start initially dirty */
+        This->dirty_rect[i].width = EdgeLength;
+        This->dirty_rect[i].height = EdgeLength;
         This->dirty_rect[i].depth = 1;
+    }
 
     return D3D_OK;
 }

@@ -202,6 +202,9 @@ NineTexture9_ctor( struct NineTexture9 *This,
             return hr;
     }
 
+    /* Textures start initially dirty */
+    This->dirty_rect.width = Width;
+    This->dirty_rect.height = Height;
     This->dirty_rect.depth = 1; /* widht == 0 means empty, depth stays 1 */
 
     if (pSharedHandle && !*pSharedHandle) {/* Pool == D3DPOOL_SYSTEMMEM */
