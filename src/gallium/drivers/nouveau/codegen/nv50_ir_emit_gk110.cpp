@@ -1316,6 +1316,8 @@ CodeEmitterGK110::emitFlow(const Instruction *i)
    } else
    if (mask & 2) {
       int32_t pcRel = f->target.bb->binPos - (codeSize + 8);
+      if (writeIssueDelays && !(f->target.bb->binPos & 0x3f))
+         pcRel += 8;
       // currently we don't want absolute branches
       assert(!f->absolute);
       code[0] |= (pcRel & 0x1ff) << 23;
