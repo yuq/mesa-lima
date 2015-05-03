@@ -84,10 +84,10 @@ NineVolume9_AddDirtyRegion( struct NineVolume9 *This,
                             const struct pipe_box *box );
 
 HRESULT
-NineVolume9_CopyVolume( struct NineVolume9 *This,
-                        struct NineVolume9 *From,
-                        unsigned dstx, unsigned dsty, unsigned dstz,
-                        struct pipe_box *pSrcBox );
+NineVolume9_CopyMemToDefault( struct NineVolume9 *This,
+                              struct NineVolume9 *From,
+                              unsigned dstx, unsigned dsty, unsigned dstz,
+                              struct pipe_box *pSrcBox );
 
 HRESULT
 NineVolume9_UploadSelf( struct NineVolume9 *This,

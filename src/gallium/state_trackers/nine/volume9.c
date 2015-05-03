@@ -309,42 +309,31 @@ NineVolume9_UnlockBox( struct NineVolume9 *This )
     return D3D_OK;
 }
 
-
+/* When this function is called, we have already checked
+ * The copy regions fit the volumes */
 HRESULT
-NineVolume9_CopyVolume( struct NineVolume9 *This,
-                        struct NineVolume9 *From,
-                        unsigned dstx, unsigned dsty, unsigned dstz,
-                        struct pipe_box *pSrcBox )
+NineVolume9_CopyMemToDefault( struct NineVolume9 *This,
+                              struct NineVolume9 *From,
+                              unsigned dstx, unsigned dsty, unsigned dstz,
+                              struct pipe_box *pSrcBox )
 {
     struct pipe_context *pipe = This->pipe;
     struct pipe_resource *r_dst = This->resource;
-    struct pipe_resource *r_src = From->resource;
-    struct pipe_transfer *transfer;
     struct pipe_box src_box;
     struct pipe_box dst_box;
-    uint8_t *p_dst;
     const uint8_t *p_src;
 
     DBG("This=%p From=%p dstx=%u dsty=%u dstz=%u pSrcBox=%p\n",
         This, From, dstx, dsty, dstz, pSrcBox);
 
-    assert(This->desc.Pool != D3DPOOL_MANAGED &&
-           From->desc.Pool != D3DPOOL_MANAGED);
-    user_assert(This->desc.Format == From->desc.Format, D3DERR_INVALIDCALL);
+    assert(This->desc.Pool == D3DPOOL_DEFAULT &&
+           From->desc.Pool == D3DPOOL_SYSTEMMEM);
 
     dst_box.x = dstx;
     dst_box.y = dsty;
     dst_box.z = dstz;
 
     if (pSrcBox) {
-        /* make sure it doesn't range outside the source volume */
-        user_assert(pSrcBox->x >= 0 &&
-                    (pSrcBox->width - pSrcBox->x) <= From->desc.Width &&
-                    pSrcBox->y >= 0 &&
-                    (pSrcBox->height - pSrcBox->y) <= From->desc.Height &&
-                    pSrcBox->z >= 0 &&
-                    (pSrcBox->depth - pSrcBox->z) <= From->desc.Depth,
-                    D3DERR_INVALIDCALL);
         src_box = *pSrcBox;
     } else {
         src_box.x = 0;
@@ -354,69 +343,20 @@ NineVolume9_CopyVolume( struct NineVolume9 *This,
         src_box.height = From->desc.Height;
         src_box.depth = From->desc.Depth;
     }
-    /* limits */
-    dst_box.width = This->desc.Width - dst_box.x;
-    dst_box.height = This->desc.Height - dst_box.y;
-    dst_box.depth = This->desc.Depth - dst_box.z;
-
-    user_assert(src_box.width <= dst_box.width &&
-                src_box.height <= dst_box.height &&
-                src_box.depth <= dst_box.depth, D3DERR_INVALIDCALL);
 
     dst_box.width = src_box.width;
     dst_box.height = src_box.height;
     dst_box.depth = src_box.depth;
 
-    if (r_dst && r_src) {
-        pipe->resource_copy_region(pipe,
-                                   r_dst, This->level,
-                                   dst_box.x, dst_box.y, dst_box.z,
-                                   r_src, From->level,
-                                   &src_box);
-    } else
-    if (r_dst) {
-        p_src = NineVolume9_GetSystemMemPointer(From,
-            src_box.x, src_box.y, src_box.z);
+    p_src = NineVolume9_GetSystemMemPointer(From,
+         src_box.x, src_box.y, src_box.z);
 
-        pipe->transfer_inline_write(pipe, r_dst, This->level,
-                                    0, /* WRITE|DISCARD are implicit */
-                                    &dst_box, p_src,
-                                    From->stride, From->layer_stride);
-    } else
-    if (r_src) {
-        p_dst = NineVolume9_GetSystemMemPointer(This, 0, 0, 0);
-        p_src = pipe->transfer_map(pipe, r_src, From->level,
-                                   PIPE_TRANSFER_READ,
-                                   &src_box, &transfer);
-        if (!p_src)
-            return D3DERR_DRIVERINTERNALERROR;
+    pipe->transfer_inline_write(pipe, r_dst, This->level,
+                                0, /* WRITE|DISCARD are implicit */
+                                &dst_box, p_src,
+                                From->stride, From->layer_stride);
 
-        util_copy_box(p_dst, This->info.format,
-                      This->stride, This->layer_stride,
-                      dst_box.x, dst_box.y, dst_box.z,
-                      dst_box.width, dst_box.height, dst_box.depth,
-                      p_src,
-                      transfer->stride, transfer->layer_stride,
-                      src_box.x, src_box.y, src_box.z);
-
-        pipe->transfer_unmap(pipe, transfer);
-    } else {
-        p_dst = NineVolume9_GetSystemMemPointer(This, 0, 0, 0);
-        p_src = NineVolume9_GetSystemMemPointer(From, 0, 0, 0);
-
-        util_copy_box(p_dst, This->info.format,
-                      This->stride, This->layer_stride,
-                      dst_box.x, dst_box.y, dst_box.z,
-                      dst_box.width, dst_box.height, dst_box.depth,
-                      p_src,
-                      From->stride, From->layer_stride,
-                      src_box.x, src_box.y, src_box.z);
-    }
-
-    if (This->desc.Pool == D3DPOOL_DEFAULT)
-        NineVolume9_MarkContainerDirty(This);
-    if (!r_dst && This->resource)
-        NineVolume9_AddDirtyRegion(This, &dst_box);
+    NineVolume9_MarkContainerDirty(This);
 
     return D3D_OK;
 }

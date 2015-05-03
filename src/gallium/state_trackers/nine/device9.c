@@ -1353,8 +1353,8 @@ NineDevice9_UpdateTexture( struct NineDevice9 *This,
         struct NineVolumeTexture9 *src = NineVolumeTexture9(srcb);
 
         for (l = 0; l <= last_level; ++l, ++m)
-            NineVolume9_CopyVolume(dst->volumes[l],
-                                   src->volumes[m], 0, 0, 0, NULL);
+            NineVolume9_CopyMemToDefault(dst->volumes[l],
+                                         src->volumes[m], 0, 0, 0, NULL);
     } else{
         assert(!"invalid texture type");
     }
