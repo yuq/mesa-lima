@@ -300,8 +300,10 @@ NineTexture9_AddDirtyRect( struct NineTexture9 *This,
      * case we need to generate mip maps.
      */
     if (This->base.base.pool != D3DPOOL_MANAGED) {
-        if (This->base.base.usage & D3DUSAGE_AUTOGENMIPMAP)
+        if (This->base.base.usage & D3DUSAGE_AUTOGENMIPMAP) {
             This->base.dirty_mip = TRUE;
+            BASETEX_REGISTER_UPDATE(&This->base);
+        }
         return D3D_OK;
     }
     This->base.managed.dirty = TRUE;

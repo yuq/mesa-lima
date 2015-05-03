@@ -259,8 +259,10 @@ NineCubeTexture9_AddDirtyRect( struct NineCubeTexture9 *This,
     user_assert(FaceType < 6, D3DERR_INVALIDCALL);
 
     if (This->base.base.pool != D3DPOOL_MANAGED) {
-        if (This->base.base.usage & D3DUSAGE_AUTOGENMIPMAP)
+        if (This->base.base.usage & D3DUSAGE_AUTOGENMIPMAP) {
             This->base.dirty_mip = TRUE;
+            BASETEX_REGISTER_UPDATE(&This->base);
+        }
         return D3D_OK;
     }
     This->base.managed.dirty = TRUE;
