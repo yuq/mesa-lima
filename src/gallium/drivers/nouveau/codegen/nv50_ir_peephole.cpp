@@ -973,6 +973,33 @@ ConstantFolding::opnd(Instruction *i, ImmediateValue &imm0, int s)
    }
       break;
 
+   case OP_AND:
+   {
+      CmpInstruction *cmp = i->getSrc(t)->getInsn()->asCmp();
+      if (!cmp || cmp->op == OP_SLCT || cmp->getDef(0)->refCount() > 1)
+         return;
+      if (!prog->getTarget()->isOpSupported(cmp->op, TYPE_F32))
+         return;
+      if (imm0.reg.data.f32 != 1.0)
+         return;
+      if (i->getSrc(t)->getInsn()->dType != TYPE_U32)
+         return;
+
+      i->getSrc(t)->getInsn()->dType = TYPE_F32;
+      if (i->src(t).mod != Modifier(0)) {
+         assert(i->src(t).mod == Modifier(NV50_IR_MOD_NOT));
+         i->src(t).mod = Modifier(0);
+         cmp->setCond = inverseCondCode(cmp->setCond);
+      }
+      i->op = OP_MOV;
+      i->setSrc(s, NULL);
+      if (t) {
+         i->setSrc(0, i->getSrc(t));
+         i->setSrc(t, NULL);
+      }
+   }
+      break;
+
    case OP_SHL:
    {
       if (s != 1 || i->src(0).mod != Modifier(0))

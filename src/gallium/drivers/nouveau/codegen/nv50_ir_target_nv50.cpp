@@ -416,6 +416,8 @@ TargetNV50::isOpSupported(operation op, DataType ty) const
       return false;
    case OP_SAD:
       return ty == TYPE_S32;
+   case OP_SET:
+      return !isFloatType(ty);
    default:
       return true;
    }
