@@ -61,10 +61,10 @@ struct vtn_value {
    enum vtn_value_type value_type;
    const char *name;
    struct vtn_decoration *decoration;
+   const struct glsl_type *type;
    union {
       void *ptr;
       char *str;
-      const struct glsl_type *type;
       nir_constant *constant;
       nir_deref_var *deref;
       struct vtn_function *func;
@@ -346,20 +346,21 @@ static void
 vtn_handle_constant(struct vtn_builder *b, SpvOp opcode,
                     const uint32_t *w, unsigned count)
 {
-   const struct glsl_type *type = vtn_value(b, w[1], vtn_value_type_type)->type;
-   nir_constant *constant = ralloc(b, nir_constant);
+   struct vtn_value *val = vtn_push_value(b, w[2], vtn_value_type_constant);
+   val->type = vtn_value(b, w[1], vtn_value_type_type)->type;
+   val->constant = ralloc(b, nir_constant);
    switch (opcode) {
    case SpvOpConstantTrue:
-      assert(type == glsl_bool_type());
-      constant->value.u[0] = NIR_TRUE;
+      assert(val->type == glsl_bool_type());
+      val->constant->value.u[0] = NIR_TRUE;
       break;
    case SpvOpConstantFalse:
-      assert(type == glsl_bool_type());
-      constant->value.u[0] = NIR_FALSE;
+      assert(val->type == glsl_bool_type());
+      val->constant->value.u[0] = NIR_FALSE;
       break;
    case SpvOpConstant:
-      assert(glsl_type_is_scalar(type));
-      constant->value.u[0] = w[3];
+      assert(glsl_type_is_scalar(val->type));
+      val->constant->value.u[0] = w[3];
       break;
    case SpvOpConstantComposite: {
       unsigned elem_count = count - 3;
@@ -367,29 +368,30 @@ vtn_handle_constant(struct vtn_builder *b, SpvOp opcode,
       for (unsigned i = 0; i < elem_count; i++)
          elems[i] = vtn_value(b, w[i + 3], vtn_value_type_constant)->constant;
 
-      switch (glsl_get_base_type(type)) {
+      switch (glsl_get_base_type(val->type)) {
       case GLSL_TYPE_UINT:
       case GLSL_TYPE_INT:
       case GLSL_TYPE_FLOAT:
       case GLSL_TYPE_BOOL:
-         if (glsl_type_is_matrix(type)) {
-            unsigned rows = glsl_get_vector_elements(type);
-            assert(glsl_get_matrix_columns(type) == elem_count);
+         if (glsl_type_is_matrix(val->type)) {
+            unsigned rows = glsl_get_vector_elements(val->type);
+            assert(glsl_get_matrix_columns(val->type) == elem_count);
             for (unsigned i = 0; i < elem_count; i++)
                for (unsigned j = 0; j < rows; j++)
-                  constant->value.u[rows * i + j] = elems[i]->value.u[j];
+                  val->constant->value.u[rows * i + j] = elems[i]->value.u[j];
          } else {
-            assert(glsl_type_is_vector(type));
-            assert(glsl_get_vector_elements(type) == elem_count);
+            assert(glsl_type_is_vector(val->type));
+            assert(glsl_get_vector_elements(val->type) == elem_count);
             for (unsigned i = 0; i < elem_count; i++)
-               constant->value.u[i] = elems[i]->value.u[0];
+               val->constant->value.u[i] = elems[i]->value.u[0];
          }
          ralloc_free(elems);
          break;
 
       case GLSL_TYPE_STRUCT:
       case GLSL_TYPE_ARRAY:
-         constant->elements = elems;
+         ralloc_steal(val->constant, elems);
+         val->constant->elements = elems;
          break;
 
       default:
@@ -401,7 +403,6 @@ vtn_handle_constant(struct vtn_builder *b, SpvOp opcode,
    default:
       unreachable("Unhandled opcode");
    }
-   vtn_push_value(b, w[2], vtn_value_type_constant)->constant = constant;
 }
 
 static void
@@ -644,6 +645,7 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
                         val->name);
 
       nir_instr_insert_after_cf_list(b->cf_list, &load->instr);
+      val->type = src_type;
       val->ssa = &load->dest.ssa;
       break;
    }
