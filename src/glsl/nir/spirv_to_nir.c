@@ -595,8 +595,8 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
             } else {
                assert(idx_val->value_type == vtn_value_type_ssa);
                deref_arr->deref_array_type = nir_deref_array_type_indirect;
-               /* TODO */
-               unreachable("Indirect array accesses not implemented");
+               deref_arr->base_offset = 0;
+               deref_arr->indirect = nir_src_for_ssa(vtn_ssa_value(b, w[1]));
             }
             tail->child = &deref_arr->deref;
             break;
