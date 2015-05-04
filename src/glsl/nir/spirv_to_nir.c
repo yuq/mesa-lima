@@ -65,11 +65,24 @@ vtn_handle_extension(struct vtn_builder *b, SpvOp opcode,
                      const uint32_t *w, unsigned count)
 {
    switch (opcode) {
-   case SpvOpExtInstImport:
-      /* Do nothing for the moment */
+   case SpvOpExtInstImport: {
+      struct vtn_value *val = vtn_push_value(b, w[1], vtn_value_type_extension);
+      if (strcmp((const char *)&w[2], "GLSL.std.450") == 0) {
+         val->ext_handler = vtn_handle_glsl450_instruction;
+      } else {
+         assert(!"Unsupported extension");
+      }
       break;
+   }
 
-   case SpvOpExtInst:
+   case SpvOpExtInst: {
+      struct vtn_value *val = vtn_value(b, w[3], vtn_value_type_extension);
+      bool handled = val->ext_handler(b, w[4], w, count);
+      (void)handled;
+      assert(handled);
+      break;
+   }
+
    default:
       unreachable("Unhandled opcode");
    }
@@ -792,8 +805,11 @@ vtn_handle_preamble_instruction(struct vtn_builder *b, SpvOp opcode,
    case SpvOpSourceExtension:
    case SpvOpCompileFlag:
    case SpvOpExtension:
-   case SpvOpExtInstImport:
       /* Unhandled, but these are for debug so that's ok. */
+      break;
+
+   case SpvOpExtInstImport:
+      vtn_handle_extension(b, opcode, w, count);
       break;
 
    case SpvOpMemoryModel:

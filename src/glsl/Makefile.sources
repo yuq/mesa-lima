@@ -75,6 +75,7 @@ NIR_FILES = \
 	nir/nir_worklist.h \
 	nir/nir_types.cpp \
 	nir/spirv_to_nir.c \
+	nir/spirv_glsl450_to_nir.c \
 	$(NIR_GENERATED_FILES)
 
 # libglsl

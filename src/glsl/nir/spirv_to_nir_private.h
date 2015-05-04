@@ -43,6 +43,7 @@ enum vtn_value_type {
    vtn_value_type_function,
    vtn_value_type_block,
    vtn_value_type_ssa,
+   vtn_value_type_extension,
 };
 
 struct vtn_block {
@@ -74,6 +75,7 @@ struct vtn_value {
       struct vtn_function *func;
       struct vtn_block *block;
       nir_ssa_def *ssa;
+      vtn_instruction_handler ext_handler;
    };
 };
 
@@ -139,3 +141,6 @@ typedef void (*vtn_decoration_foreach_cb)(struct vtn_builder *,
 
 void vtn_foreach_decoration(struct vtn_builder *b, struct vtn_value *value,
                             vtn_decoration_foreach_cb cb, void *data);
+
+bool vtn_handle_glsl450_instruction(struct vtn_builder *b, uint32_t ext_opcode,
+                                    const uint32_t *words, unsigned count);
