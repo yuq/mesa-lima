@@ -1996,7 +1996,7 @@ static EGLBoolean
 dri2_export_dma_buf_image_query_mesa(_EGLDriver *drv, _EGLDisplay *disp,
                                      _EGLImage *img,
                                      EGLint *fourcc, EGLint *nplanes,
-                                     EGLuint64MESA *modifiers)
+                                     EGLuint64KHR *modifiers)
 {
    struct dri2_egl_display *dri2_dpy = dri2_egl_display(disp);
    struct dri2_egl_image *dri2_img = dri2_egl_image(img);

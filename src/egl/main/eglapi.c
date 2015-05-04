@@ -2013,7 +2013,7 @@ eglGetSyncValuesCHROMIUM(EGLDisplay display, EGLSurface surface,
 EGLBoolean EGLAPIENTRY
 eglExportDMABUFImageQueryMESA(EGLDisplay dpy, EGLImageKHR image,
                               EGLint *fourcc, EGLint *nplanes,
-                              EGLuint64MESA *modifiers)
+                              EGLuint64KHR *modifiers)
 {
    _EGLDisplay *disp = _eglLockDisplay(dpy);
    _EGLImage *img = _eglLookupImage(image, disp);
