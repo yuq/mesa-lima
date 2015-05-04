@@ -777,6 +777,15 @@ NIR_DEFINE_CAST(nir_deref_as_var, nir_deref, nir_deref_var, deref)
 NIR_DEFINE_CAST(nir_deref_as_array, nir_deref, nir_deref_array, deref)
 NIR_DEFINE_CAST(nir_deref_as_struct, nir_deref, nir_deref_struct, deref)
 
+/** Returns the tail of a deref chain */
+static inline nir_deref *
+nir_deref_tail(nir_deref *deref)
+{
+   while (deref->child)
+      deref = deref->child;
+   return deref;
+}
+
 typedef struct {
    nir_instr instr;
 
