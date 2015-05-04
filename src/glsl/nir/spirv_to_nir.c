@@ -107,6 +107,12 @@ vtn_value(struct vtn_builder *b, uint32_t value_id,
    return val;
 }
 
+static nir_ssa_def *
+vtn_ssa_value(struct vtn_builder *b, uint32_t value_id)
+{
+   return vtn_value(b, value_id, vtn_value_type_ssa)->ssa;
+}
+
 static char *
 vtn_string_literal(struct vtn_builder *b, const uint32_t *words,
                    unsigned word_count)
