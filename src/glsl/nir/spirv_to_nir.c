@@ -25,109 +25,10 @@
  *
  */
 
-#include "nir_spirv.h"
+#include "spirv_to_nir_private.h"
 #include "nir_vla.h"
-#include "nir_builder.h"
-#include "spirv.h"
 
-struct vtn_decoration;
-
-enum vtn_value_type {
-   vtn_value_type_invalid = 0,
-   vtn_value_type_undef,
-   vtn_value_type_string,
-   vtn_value_type_decoration_group,
-   vtn_value_type_type,
-   vtn_value_type_constant,
-   vtn_value_type_deref,
-   vtn_value_type_function,
-   vtn_value_type_block,
-   vtn_value_type_ssa,
-};
-
-struct vtn_block {
-   const uint32_t *label;
-   const uint32_t *branch;
-   nir_block *block;
-};
-
-struct vtn_function {
-   struct exec_node node;
-
-   nir_function_overload *overload;
-   struct vtn_block *start_block;
-};
-
-struct vtn_value {
-   enum vtn_value_type value_type;
-   const char *name;
-   struct vtn_decoration *decoration;
-   const struct glsl_type *type;
-   union {
-      void *ptr;
-      char *str;
-      nir_constant *constant;
-      nir_deref_var *deref;
-      struct vtn_function *func;
-      struct vtn_block *block;
-      nir_ssa_def *ssa;
-   };
-};
-
-struct vtn_decoration {
-   struct vtn_decoration *next;
-   const uint32_t *literals;
-   struct vtn_value *group;
-   SpvDecoration decoration;
-};
-
-struct vtn_builder {
-   nir_builder nb;
-
-   nir_shader *shader;
-   nir_function_impl *impl;
-   struct vtn_block *block;
-   struct vtn_block *merge_block;
-
-   unsigned value_id_bound;
-   struct vtn_value *values;
-
-   SpvExecutionModel execution_model;
-   struct vtn_value *entry_point;
-
-   struct vtn_function *func;
-   struct exec_list functions;
-};
-
-static struct vtn_value *
-vtn_push_value(struct vtn_builder *b, uint32_t value_id,
-               enum vtn_value_type value_type)
-{
-   assert(value_id < b->value_id_bound);
-   assert(b->values[value_id].value_type == vtn_value_type_invalid);
-
-   b->values[value_id].value_type = value_type;
-
-   return &b->values[value_id];
-}
-
-static struct vtn_value *
-vtn_untyped_value(struct vtn_builder *b, uint32_t value_id)
-{
-   assert(value_id < b->value_id_bound);
-   return &b->values[value_id];
-}
-
-static struct vtn_value *
-vtn_value(struct vtn_builder *b, uint32_t value_id,
-          enum vtn_value_type value_type)
-{
-   struct vtn_value *val = vtn_untyped_value(b, value_id);
-   assert(val->value_type == value_type);
-   return val;
-}
-
-static nir_ssa_def *
+nir_ssa_def *
 vtn_ssa_value(struct vtn_builder *b, uint32_t value_id)
 {
    return vtn_value(b, value_id, vtn_value_type_ssa)->ssa;
@@ -139,9 +40,6 @@ vtn_string_literal(struct vtn_builder *b, const uint32_t *words,
 {
    return ralloc_strndup(b, (char *)words, (word_count - 2) * sizeof(*words));
 }
-
-typedef bool (*vtn_instruction_handler)(struct vtn_builder *, SpvOp,
-                                        const uint32_t *, unsigned);
 
 static const uint32_t *
 vtn_foreach_instruction(struct vtn_builder *b, const uint32_t *start,
@@ -177,16 +75,11 @@ vtn_handle_extension(struct vtn_builder *b, SpvOp opcode,
    }
 }
 
-typedef void (*decoration_foreach_cb)(struct vtn_builder *,
-                                      struct vtn_value *,
-                                      const struct vtn_decoration *,
-                                      void *);
-
 static void
 _foreach_decoration_helper(struct vtn_builder *b,
                            struct vtn_value *base_value,
                            struct vtn_value *value,
-                           decoration_foreach_cb cb, void *data)
+                           vtn_decoration_foreach_cb cb, void *data)
 {
    for (struct vtn_decoration *dec = value->decoration; dec; dec = dec->next) {
       if (dec->group) {
@@ -204,9 +97,9 @@ _foreach_decoration_helper(struct vtn_builder *b,
  * value.  If it encounters a decoration group, it recurses into the group
  * and iterates over all of those decorations as well.
  */
-static void
+void
 vtn_foreach_decoration(struct vtn_builder *b, struct vtn_value *value,
-                       decoration_foreach_cb cb, void *data)
+                       vtn_decoration_foreach_cb cb, void *data)
 {
    _foreach_decoration_helper(b, value, value, cb, data);
 }
