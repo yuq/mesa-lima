@@ -776,6 +776,9 @@ _mesa_GetQueryObjectiv(GLuint id, GLenum pname, GLint *params)
             ctx->Driver.CheckQuery( ctx, q );
          *params = q->Ready;
          break;
+      case GL_QUERY_TARGET:
+         *params = q->Target;
+         break;
       default:
          _mesa_error(ctx, GL_INVALID_ENUM, "glGetQueryObjectivARB(pname)");
          return;
@@ -827,6 +830,9 @@ _mesa_GetQueryObjectuiv(GLuint id, GLenum pname, GLuint *params)
             ctx->Driver.CheckQuery( ctx, q );
          *params = q->Ready;
          break;
+      case GL_QUERY_TARGET:
+         *params = q->Target;
+         break;
       default:
          _mesa_error(ctx, GL_INVALID_ENUM, "glGetQueryObjectuivARB(pname)");
          return;
@@ -867,6 +873,9 @@ _mesa_GetQueryObjecti64v(GLuint id, GLenum pname, GLint64EXT *params)
             ctx->Driver.CheckQuery( ctx, q );
          *params = q->Ready;
          break;
+      case GL_QUERY_TARGET:
+         *params = q->Target;
+         break;
       default:
          _mesa_error(ctx, GL_INVALID_ENUM, "glGetQueryObjecti64vARB(pname)");
          return;
@@ -906,6 +915,9 @@ _mesa_GetQueryObjectui64v(GLuint id, GLenum pname, GLuint64EXT *params)
          if (!q->Ready)
             ctx->Driver.CheckQuery( ctx, q );
          *params = q->Ready;
+         break;
+      case GL_QUERY_TARGET:
+         *params = q->Target;
          break;
       default:
          _mesa_error(ctx, GL_INVALID_ENUM, "glGetQueryObjectui64vARB(pname)");
