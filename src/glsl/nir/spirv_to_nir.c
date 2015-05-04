@@ -86,7 +86,6 @@ struct vtn_builder {
 
    nir_shader *shader;
    nir_function_impl *impl;
-   struct exec_list *cf_list;
    struct vtn_block *block;
    struct vtn_block *merge_block;
 
@@ -630,7 +629,7 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
       copy->variables[0] = nir_deref_as_var(nir_copy_deref(copy, &dest->deref));
       copy->variables[1] = nir_deref_as_var(nir_copy_deref(copy, &src->deref));
 
-      nir_instr_insert_after_cf_list(b->cf_list, &copy->instr);
+      nir_builder_instr_insert(&b->nb, &copy->instr);
       break;
    }
 
@@ -647,7 +646,7 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
       nir_ssa_dest_init(&load->instr, &load->dest, load->num_components,
                         val->name);
 
-      nir_instr_insert_after_cf_list(b->cf_list, &load->instr);
+      nir_builder_instr_insert(&b->nb, &load->instr);
       val->type = src_type;
       val->ssa = &load->dest.ssa;
       break;
@@ -665,7 +664,7 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
          store->variables[0] = nir_deref_as_var(nir_copy_deref(store, &dest->deref));
          store->num_components = glsl_get_vector_elements(dest_type);
 
-         nir_instr_insert_after_cf_list(b->cf_list, &store->instr);
+         nir_builder_instr_insert(&b->nb, &store->instr);
       } else {
          assert(src_val->value_type == vtn_value_type_constant);
 
@@ -680,7 +679,7 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
          copy->variables[0] = nir_deref_as_var(nir_copy_deref(copy, &dest->deref));
          copy->variables[1] = nir_deref_var_create(copy, const_tmp);
 
-         nir_instr_insert_after_cf_list(b->cf_list, &copy->instr);
+         nir_builder_instr_insert(&b->nb, &copy->instr);
       }
       break;
    }
@@ -727,11 +726,6 @@ vtn_handle_alu(struct vtn_builder *b, SpvOp opcode,
    nir_ssa_def *src[4];
    for (unsigned i = 0; i < num_inputs; i++)
       src[i] = vtn_ssa_value(b, w[i + 3]);
-
-   /* We use the builder for some of the instructions.  Go ahead and
-    * initialize it with the current cf_list.
-    */
-   nir_builder_insert_after_cf_list(&b->nb, b->cf_list);
 
    /* Indicates that the first two arguments should be swapped.  This is
     * used for implementing greater-than and less-than-or-equal.
@@ -893,7 +887,7 @@ vtn_handle_alu(struct vtn_builder *b, SpvOp opcode,
    for (unsigned i = 0; i < nir_op_infos[op].num_inputs; i++)
       instr->src[i].src = nir_src_for_ssa(src[i]);
 
-   nir_instr_insert_after_cf_list(b->cf_list, &instr->instr);
+   nir_builder_instr_insert(&b->nb, &instr->instr);
 }
 
 static bool
@@ -1092,7 +1086,7 @@ vtn_handle_body_instruction(struct vtn_builder *b, SpvOp opcode,
    switch (opcode) {
    case SpvOpLabel: {
       struct vtn_block *block = vtn_value(b, w[1], vtn_value_type_block)->block;
-      struct exec_node *list_tail = exec_list_get_tail(b->cf_list);
+      struct exec_node *list_tail = exec_list_get_tail(b->nb.cf_node_list);
       nir_cf_node *tail_node = exec_node_data(nir_cf_node, list_tail, node);
       assert(tail_node->type == nir_cf_node_block);
       block->block = nir_cf_node_as_block(tail_node);
@@ -1288,17 +1282,17 @@ vtn_walk_blocks(struct vtn_builder *b, struct vtn_block *start,
 
          nir_if *if_stmt = nir_if_create(b->shader);
          if_stmt->condition = nir_src_for_ssa(vtn_ssa_value(b, w[1]));
-         nir_cf_node_insert_end(b->cf_list, &if_stmt->cf_node);
+         nir_cf_node_insert_end(b->nb.cf_node_list, &if_stmt->cf_node);
 
-         struct exec_list *old_list = b->cf_list;
+         struct exec_list *old_list = b->nb.cf_node_list;
 
-         b->cf_list = &if_stmt->then_list;
+         nir_builder_insert_after_cf_list(&b->nb, &if_stmt->then_list);
          vtn_walk_blocks(b, then_block, merge_block);
 
-         b->cf_list = &if_stmt->else_list;
+         nir_builder_insert_after_cf_list(&b->nb, &if_stmt->else_list);
          vtn_walk_blocks(b, else_block, merge_block);
 
-         b->cf_list = old_list;
+         nir_builder_insert_after_cf_list(&b->nb, old_list);
          block = merge_block;
          continue;
       }
@@ -1352,7 +1346,7 @@ spirv_to_nir(const uint32_t *words, size_t word_count,
    foreach_list_typed(struct vtn_function, func, node, &b->functions) {
       b->impl = nir_function_impl_create(func->overload);
       nir_builder_init(&b->nb, b->impl);
-      b->cf_list = &b->impl->body;
+      nir_builder_insert_after_cf_list(&b->nb, &b->impl->body);
       vtn_walk_blocks(b, func->start_block, NULL);
    }
 
