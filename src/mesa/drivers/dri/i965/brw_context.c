@@ -626,7 +626,7 @@ brw_adjust_cs_context_constants(struct brw_context *brw)
     * is not always true. This allows us to run more test cases, and will be
     * required based on desktop GL compute shader requirements.
     */
-   const simd_size = ctx->API == API_OPENGL_CORE ? 16 : 8;
+   const int simd_size = ctx->API == API_OPENGL_CORE ? 16 : 8;
 
    const uint32_t max_invocations = simd_size * brw->max_cs_threads;
    ctx->Const.MaxComputeWorkGroupSize[0] = max_invocations;
