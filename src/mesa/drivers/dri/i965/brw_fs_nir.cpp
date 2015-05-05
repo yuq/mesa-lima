@@ -26,6 +26,7 @@
 #include "glsl/nir/glsl_to_nir.h"
 #include "program/prog_to_nir.h"
 #include "brw_fs.h"
+#include "brw_fs_surface_builder.h"
 #include "brw_nir.h"
 
 using namespace brw;
@@ -1257,28 +1258,42 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
    case nir_intrinsic_atomic_counter_inc:
    case nir_intrinsic_atomic_counter_dec:
    case nir_intrinsic_atomic_counter_read: {
-      unsigned surf_index = prog_data->binding_table.abo_start +
-                            (unsigned) instr->const_index[0];
-      fs_reg offset = fs_reg(get_nir_src(instr->src[0]));
+      using namespace surface_access;
 
+      /* Get the arguments of the atomic intrinsic. */
+      const fs_reg offset = get_nir_src(instr->src[0]);
+      const unsigned surface = (stage_prog_data->binding_table.abo_start +
+                                instr->const_index[0]);
+      fs_reg tmp;
+
+      /* Emit a surface read or atomic op. */
       switch (instr->intrinsic) {
-         case nir_intrinsic_atomic_counter_inc:
-            emit_untyped_atomic(BRW_AOP_INC, surf_index, dest, offset,
-                                fs_reg(), fs_reg());
-            break;
-         case nir_intrinsic_atomic_counter_dec:
-            emit_untyped_atomic(BRW_AOP_PREDEC, surf_index, dest, offset,
-                                fs_reg(), fs_reg());
-            break;
-         case nir_intrinsic_atomic_counter_read:
-            emit_untyped_surface_read(surf_index, dest, offset);
-            break;
-         default:
-            unreachable("Unreachable");
+      case nir_intrinsic_atomic_counter_read:
+         tmp = surface_access::emit_untyped_read(
+            bld, fs_reg(surface), offset, 1, 1);
+         break;
+
+      case nir_intrinsic_atomic_counter_inc:
+         tmp = surface_access::emit_untyped_atomic(
+            bld, fs_reg(surface), offset, fs_reg(),
+            fs_reg(), 1, 1, BRW_AOP_INC);
+         break;
+
+      case nir_intrinsic_atomic_counter_dec:
+         tmp = surface_access::emit_untyped_atomic(
+            bld, fs_reg(surface), offset, fs_reg(),
+            fs_reg(), 1, 1, BRW_AOP_PREDEC);
+         break;
+
+      default:
+         unreachable("Unreachable");
       }
 
+      /* Assign the result. */
+      bld.MOV(retype(dest, BRW_REGISTER_TYPE_UD), tmp);
+
       /* Mark the surface as used. */
-      brw_mark_surface_used(stage_prog_data, surf_index);
+      brw_mark_surface_used(stage_prog_data, surface);
       break;
    }
 
