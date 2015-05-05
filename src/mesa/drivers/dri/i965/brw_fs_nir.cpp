@@ -182,8 +182,10 @@ fs_visitor::nir_setup_outputs(nir_shader *shader)
 void
 fs_visitor::nir_setup_uniforms(nir_shader *shader)
 {
-   uniforms = shader->num_uniforms;
    num_direct_uniforms = shader->num_direct_uniforms;
+
+   if (dispatch_width != 8)
+      return;
 
    /* We split the uniform register file in half.  The first half is
     * entirely direct uniforms.  The second half is indirect.
@@ -192,8 +194,7 @@ fs_visitor::nir_setup_uniforms(nir_shader *shader)
    if (shader->num_uniforms > num_direct_uniforms)
       param_size[num_direct_uniforms] = shader->num_uniforms - num_direct_uniforms;
 
-   if (dispatch_width != 8)
-      return;
+   uniforms = shader->num_uniforms;
 
    if (shader_prog) {
       foreach_list_typed(nir_variable, var, node, &shader->uniforms) {
