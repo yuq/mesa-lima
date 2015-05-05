@@ -23,6 +23,7 @@
 #include "device9.h"
 #include "volume9.h"
 #include "basetexture9.h" /* for marking dirty */
+#include "volumetexture9.h"
 #include "nine_helpers.h"
 #include "nine_pipe.h"
 #include "nine_dump.h"
@@ -182,47 +183,23 @@ NineVolume9_GetDesc( struct NineVolume9 *This,
     return D3D_OK;
 }
 
-static inline boolean
-NineVolume9_IsDirty(struct NineVolume9 *This)
-{
-    return This->dirty_box[0].width != 0;
-}
-
 inline void
 NineVolume9_AddDirtyRegion( struct NineVolume9 *This,
                             const struct pipe_box *box )
 {
-    struct pipe_box cover_a, cover_b;
-    float vol[2];
+    D3DBOX dirty_region;
+    struct NineVolumeTexture9 *tex = NineVolumeTexture9(This->base.container);
 
     if (!box) {
-        u_box_3d(0, 0, 0, This->desc.Width, This->desc.Height,
-                 This->desc.Depth, &This->dirty_box[0]);
-        memset(&This->dirty_box[1], 0, sizeof(This->dirty_box[1]));
-        return;
-    }
-    if (!This->dirty_box[0].width) {
-        This->dirty_box[0] = *box;
-        return;
-    }
-
-    u_box_union_3d(&cover_a, &This->dirty_box[0], box);
-    vol[0] = u_box_volume_3d(&cover_a);
-
-    if (This->dirty_box[1].width == 0) {
-        vol[1] = u_box_volume_3d(&This->dirty_box[0]);
-        if (vol[0] > (vol[1] * 1.5f))
-            This->dirty_box[1] = *box;
-        else
-            This->dirty_box[0] = cover_a;
+        NineVolumeTexture9_AddDirtyBox(tex, NULL);
     } else {
-        u_box_union_3d(&cover_b, &This->dirty_box[1], box);
-        vol[1] = u_box_volume_3d(&cover_b);
-
-        if (vol[0] > vol[1])
-            This->dirty_box[1] = cover_b;
-        else
-            This->dirty_box[0] = cover_a;
+        dirty_region.Left = box->x << This->level_actual;
+        dirty_region.Top = box->y << This->level_actual;
+        dirty_region.Front = box->z << This->level_actual;
+        dirty_region.Right = dirty_region.Left + (box->width << This->level_actual);
+        dirty_region.Bottom = dirty_region.Top + (box->height << This->level_actual);
+        dirty_region.Back = dirty_region.Front + (box->depth << This->level_actual);
+        NineVolumeTexture9_AddDirtyBox(tex, &dirty_region);
     }
 }
 
@@ -312,8 +289,7 @@ NineVolume9_LockBox( struct NineVolume9 *This,
 
     if (!(Flags & (D3DLOCK_NO_DIRTY_UPDATE | D3DLOCK_READONLY))) {
         NineVolume9_MarkContainerDirty(This);
-        if (This->desc.Pool == D3DPOOL_MANAGED)
-            NineVolume9_AddDirtyRegion(This, &box);
+        NineVolume9_AddDirtyRegion(This, &box);
     }
 
     ++This->lock_count;
@@ -446,33 +422,35 @@ NineVolume9_CopyVolume( struct NineVolume9 *This,
 }
 
 HRESULT
-NineVolume9_UploadSelf( struct NineVolume9 *This )
+NineVolume9_UploadSelf( struct NineVolume9 *This,
+                        const struct pipe_box *damaged )
 {
     struct pipe_context *pipe = This->pipe;
     struct pipe_resource *res = This->resource;
+    struct pipe_box box;
     uint8_t *ptr;
-    unsigned i;
 
-    DBG("This=%p dirty=%i data=%p res=%p\n", This, NineVolume9_IsDirty(This),
+    DBG("This=%p damaged=%p data=%p res=%p\n", This, damaged,
         This->data, res);
 
     assert(This->desc.Pool == D3DPOOL_MANAGED);
-
-    if (!NineVolume9_IsDirty(This))
-        return D3D_OK;
     assert(res);
 
-    for (i = 0; i < Elements(This->dirty_box); ++i) {
-        const struct pipe_box *box = &This->dirty_box[i];
-        if (box->width == 0)
-            break;
-        ptr = NineVolume9_GetSystemMemPointer(This, box->x, box->y, box->z);
-
-        pipe->transfer_inline_write(pipe, res, This->level,
-                                    0,
-                                    box, ptr, This->stride, This->layer_stride);
+    if (damaged) {
+        box = *damaged;
+    } else {
+        box.x = 0;
+        box.y = 0;
+        box.z = 0;
+        box.width = This->desc.Width;
+        box.height = This->desc.Height;
+        box.depth = This->desc.Depth;
     }
-    NineVolume9_ClearDirtyRegion(This);
+
+    ptr = NineVolume9_GetSystemMemPointer(This, box.x, box.y, box.z);
+
+    pipe->transfer_inline_write(pipe, res, This->level, 0, &box,
+                                ptr, This->stride, This->layer_stride);
 
     return D3D_OK;
 }

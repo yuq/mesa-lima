@@ -310,14 +310,12 @@ NineBaseTexture9_UploadSelf( struct NineBaseTexture9 *This )
                 tex->dirty_box.width, tex->dirty_box.height, tex->dirty_box.depth);
 
             if (tex->dirty_box.width) {
-                for (l = 0; l <= last_level; ++l) {
+                for (l = min_level_dirty; l <= last_level; ++l) {
                     u_box_minify_2d(&box, &tex->dirty_box, l);
-                    NineVolume9_AddDirtyRegion(tex->volumes[l], &tex->dirty_box);
+                    NineVolume9_UploadSelf(tex->volumes[l], &box);
                 }
                 memset(&tex->dirty_box, 0, sizeof(tex->dirty_box));
             }
-            for (l = min_level_dirty; l <= last_level; ++l)
-                NineVolume9_UploadSelf(tex->volumes[l]);
         } else {
             assert(!"invalid texture type");
         }
@@ -361,8 +359,7 @@ NineBaseTexture9_UploadSelf( struct NineBaseTexture9 *This )
                 box.width = u_minify(This->base.info.width0, l);
                 box.height = u_minify(This->base.info.height0, l);
                 box.depth = u_minify(This->base.info.depth0, l);
-                NineVolume9_AddDirtyRegion(tex->volumes[l], &box);
-                NineVolume9_UploadSelf(tex->volumes[l]);
+                NineVolume9_UploadSelf(tex->volumes[l], &box);
             }
         } else {
             assert(!"invalid texture type");
