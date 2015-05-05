@@ -1418,3 +1418,34 @@ backend_shader::assign_common_binding_table_offsets(uint32_t next_binding_table_
 
    /* prog_data->base.binding_table.size will be set by brw_mark_surface_used. */
 }
+
+void
+backend_shader::setup_image_uniform_values(const gl_uniform_storage *storage)
+{
+   const unsigned stage = _mesa_program_enum_to_shader_stage(prog->Target);
+
+   for (unsigned i = 0; i < MAX2(storage->array_elements, 1); i++) {
+      const unsigned image_idx = storage->image[stage].index + i;
+      const brw_image_param *param = &stage_prog_data->image_param[image_idx];
+
+      /* Upload the brw_image_param structure.  The order is expected to match
+       * the BRW_IMAGE_PARAM_*_OFFSET defines.
+       */
+      setup_vector_uniform_values(
+         (const gl_constant_value *)&param->surface_idx, 1);
+      setup_vector_uniform_values(
+         (const gl_constant_value *)param->offset, 2);
+      setup_vector_uniform_values(
+         (const gl_constant_value *)param->size, 3);
+      setup_vector_uniform_values(
+         (const gl_constant_value *)param->stride, 4);
+      setup_vector_uniform_values(
+         (const gl_constant_value *)param->tiling, 3);
+      setup_vector_uniform_values(
+         (const gl_constant_value *)param->swizzling, 2);
+
+      brw_mark_surface_used(
+         stage_prog_data,
+         stage_prog_data->binding_table.image_start + image_idx);
+   }
+}
