@@ -183,13 +183,24 @@ half(fs_reg reg, unsigned idx)
 {
    assert(idx < 2);
 
-   if (reg.file == UNIFORM || reg.file == IMM)
+   switch (reg.file) {
+   case BAD_FILE:
+   case UNIFORM:
+   case IMM:
       return reg;
 
-   assert(idx == 0 || reg.file != HW_REG);
-   assert(reg.width == 16);
-   reg.width = 8;
-   return horiz_offset(reg, 8 * idx);
+   case GRF:
+   case MRF:
+      assert(reg.width == 16);
+      reg.width = 8;
+      return horiz_offset(reg, 8 * idx);
+
+   case ATTR:
+   case HW_REG:
+   default:
+      unreachable("Cannot take half of this register type");
+   }
+   return reg;
 }
 
 static const fs_reg reg_undef;
