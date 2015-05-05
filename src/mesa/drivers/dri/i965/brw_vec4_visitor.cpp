@@ -1860,7 +1860,7 @@ vec4_visitor::visit(ir_expression *ir)
          }
       } else {
          offset = src_reg(this, glsl_type::uint_type);
-         emit(SHR(dst_reg(offset), op[1], src_reg(4)));
+         emit(SHR(dst_reg(offset), op[1], src_reg(4u)));
       }
 
       emit_pull_constant_load_reg(dst_reg(packed_consts),
