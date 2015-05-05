@@ -68,6 +68,13 @@ INTRINSIC(interp_var_at_offset, 1, ARR(2), true, 0, 1, 0,
 #define BARRIER(name) INTRINSIC(name, 0, ARR(), false, 0, 0, 0, 0)
 
 BARRIER(discard)
+
+/*
+ * Memory barrier with semantics analogous to the memoryBarrier() GLSL
+ * intrinsic.
+ */
+BARRIER(memory_barrier)
+
 /** A conditional discard, with a single boolean source. */
 INTRINSIC(discard_if, 1, ARR(1), false, 0, 0, 0, 0)
 
