@@ -634,6 +634,8 @@ nir_visitor::visit(ir_call *ir)
          op = nir_intrinsic_image_atomic_exchange;
       } else if (strcmp(ir->callee_name(), "__intrinsic_image_atomic_comp_swap") == 0) {
          op = nir_intrinsic_image_atomic_comp_swap;
+      } else if (strcmp(ir->callee_name(), "__intrinsic_memory_barrier") == 0) {
+         op = nir_intrinsic_memory_barrier;
       } else {
          unreachable("not reached");
       }
@@ -721,6 +723,8 @@ nir_visitor::visit(ir_call *ir)
                               ir->return_deref->type->vector_elements, NULL);
          break;
       }
+      case nir_intrinsic_memory_barrier:
+         break;
       default:
          unreachable("not reached");
       }
