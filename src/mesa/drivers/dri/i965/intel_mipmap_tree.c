@@ -2630,7 +2630,9 @@ intel_miptree_map(struct brw_context *brw,
    } else if (use_intel_mipree_map_blit(brw, mt, mode, level, slice)) {
       intel_miptree_map_blit(brw, mt, map, level, slice);
 #if defined(USE_SSE41)
-   } else if (!(mode & GL_MAP_WRITE_BIT) && !mt->compressed && cpu_has_sse4_1) {
+   } else if (!(mode & GL_MAP_WRITE_BIT) &&
+              !mt->compressed && cpu_has_sse4_1 &&
+              (mt->pitch % 16 == 0)) {
       intel_miptree_map_movntdqa(brw, mt, map, level, slice);
 #endif
    } else {
