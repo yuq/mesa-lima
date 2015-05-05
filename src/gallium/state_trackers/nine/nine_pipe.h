@@ -27,6 +27,7 @@
 #include "pipe/p_format.h"
 #include "pipe/p_screen.h"
 #include "pipe/p_state.h" /* pipe_box */
+#include "util/macros.h"
 #include "util/u_rect.h"
 #include "util/u_format.h"
 #include "nine_helpers.h"
@@ -79,6 +80,49 @@ rect_to_pipe_box(struct pipe_box *dst, const RECT *src)
     dst->width = src->right - src->left;
     dst->height = src->bottom - src->top;
     dst->depth = 1;
+}
+
+static inline void
+pipe_box_to_rect(RECT *dst, const struct pipe_box *src)
+{
+    dst->left = src->x;
+    dst->right = src->x + src->width;
+    dst->top = src->y;
+    dst->bottom = src->y + src->height;
+}
+
+static inline void
+rect_minify_inclusive(RECT *rect)
+{
+    rect->left = rect->left >> 2;
+    rect->top = rect->top >> 2;
+    rect->right = DIV_ROUND_UP(rect->right, 2);
+    rect->bottom = DIV_ROUND_UP(rect->bottom, 2);
+}
+
+/* We suppose:
+ * 0 <= rect->left < rect->right
+ * 0 <= rect->top < rect->bottom
+ */
+static inline void
+fit_rect_format_inclusive(enum pipe_format format, RECT *rect, int width, int height)
+{
+    const unsigned w = util_format_get_blockwidth(format);
+    const unsigned h = util_format_get_blockheight(format);
+
+    if (util_format_is_compressed(format)) {
+        rect->left = rect->left - rect->left % w;
+        rect->top = rect->top - rect->top % h;
+        rect->right = (rect->right % w) == 0 ?
+            rect->right :
+            rect->right - (rect->right % w) + w;
+        rect->bottom = (rect->bottom % h) == 0 ?
+            rect->bottom :
+            rect->bottom - (rect->bottom % h) + h;
+    }
+
+    rect->right = MIN2(rect->right, width);
+    rect->bottom = MIN2(rect->bottom, height);
 }
 
 static inline boolean

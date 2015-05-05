@@ -1278,6 +1278,7 @@ NineDevice9_UpdateTexture( struct NineDevice9 *This,
     struct NineBaseTexture9 *srcb = NineBaseTexture9(pSourceTexture);
     unsigned l, m;
     unsigned last_level = dstb->base.info.last_level;
+    RECT rect;
 
     DBG("This=%p pSourceTexture=%p pDestinationTexture=%p\n", This,
         pSourceTexture, pDestinationTexture);
@@ -1303,10 +1304,6 @@ NineDevice9_UpdateTexture( struct NineDevice9 *This,
 
     user_assert(dstb->base.type == srcb->base.type, D3DERR_INVALIDCALL);
 
-    /* TODO: We can restrict the update to the dirty portions of the source.
-     * Yes, this seems silly, but it's what MSDN says ...
-     */
-
     /* Find src level that matches dst level 0: */
     user_assert(srcb->base.info.width0 >= dstb->base.info.width0 &&
                 srcb->base.info.height0 >= dstb->base.info.height0 &&
@@ -1330,9 +1327,25 @@ NineDevice9_UpdateTexture( struct NineDevice9 *This,
         struct NineTexture9 *dst = NineTexture9(dstb);
         struct NineTexture9 *src = NineTexture9(srcb);
 
-        for (l = 0; l <= last_level; ++l, ++m)
+        if (src->dirty_rect.width == 0)
+            return D3D_OK;
+
+        pipe_box_to_rect(&rect, &src->dirty_rect);
+        for (l = 0; l < m; ++l)
+            rect_minify_inclusive(&rect);
+
+        for (l = 0; l <= last_level; ++l, ++m) {
+            fit_rect_format_inclusive(dst->base.base.info.format,
+                                      &rect,
+                                      dst->surfaces[l]->desc.Width,
+                                      dst->surfaces[l]->desc.Height);
             NineSurface9_CopyMemToDefault(dst->surfaces[l],
-                                          src->surfaces[m], NULL, NULL);
+                                          src->surfaces[m],
+                                          (POINT *)&rect,
+                                          &rect);
+            rect_minify_inclusive(&rect);
+        }
+        u_box_origin_2d(0, 0, &src->dirty_rect);
     } else
     if (dstb->base.type == D3DRTYPE_CUBETEXTURE) {
         struct NineCubeTexture9 *dst = NineCubeTexture9(dstb);
@@ -1341,10 +1354,25 @@ NineDevice9_UpdateTexture( struct NineDevice9 *This,
 
         /* GPUs usually have them stored as arrays of mip-mapped 2D textures. */
         for (z = 0; z < 6; ++z) {
+            if (src->dirty_rect[z].width == 0)
+                continue;
+
+            pipe_box_to_rect(&rect, &src->dirty_rect[z]);
+            for (l = 0; l < m; ++l)
+                rect_minify_inclusive(&rect);
+
             for (l = 0; l <= last_level; ++l, ++m) {
-                 NineSurface9_CopyMemToDefault(dst->surfaces[l * 6 + z],
-                                               src->surfaces[m * 6 + z], NULL, NULL);
+                fit_rect_format_inclusive(dst->base.base.info.format,
+                                          &rect,
+                                          dst->surfaces[l * 6 + z]->desc.Width,
+                                          dst->surfaces[l * 6 + z]->desc.Height);
+                NineSurface9_CopyMemToDefault(dst->surfaces[l * 6 + z],
+                                              src->surfaces[m * 6 + z],
+                                              (POINT *)&rect,
+                                              &rect);
+                rect_minify_inclusive(&rect);
             }
+            u_box_origin_2d(0, 0, &src->dirty_rect[z]);
             m -= l;
         }
     } else
@@ -1352,9 +1380,12 @@ NineDevice9_UpdateTexture( struct NineDevice9 *This,
         struct NineVolumeTexture9 *dst = NineVolumeTexture9(dstb);
         struct NineVolumeTexture9 *src = NineVolumeTexture9(srcb);
 
+        if (src->dirty_box.width == 0)
+            return D3D_OK;
         for (l = 0; l <= last_level; ++l, ++m)
             NineVolume9_CopyMemToDefault(dst->volumes[l],
                                          src->volumes[m], 0, 0, 0, NULL);
+        u_box_3d(0, 0, 0, 0, 0, 0, &src->dirty_box);
     } else{
         assert(!"invalid texture type");
     }
