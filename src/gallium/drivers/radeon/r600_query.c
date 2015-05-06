@@ -440,7 +440,7 @@ static boolean r600_begin_query(struct pipe_context *ctx,
 	/* Non-GPU queries. */
 	switch (rquery->type) {
 	case PIPE_QUERY_TIMESTAMP_DISJOINT:
-		return;
+		return true;
 	case R600_QUERY_DRAW_CALLS:
 		rquery->begin_result = rctx->num_draw_calls;
 		return true;
