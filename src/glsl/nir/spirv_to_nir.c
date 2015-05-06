@@ -595,6 +595,7 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
 
          nir_variable *const_tmp = rzalloc(b->shader, nir_variable);
          const_tmp->type = dest_type;
+         const_tmp->name = "const_temp";
          const_tmp->data.mode = nir_var_local;
          const_tmp->data.read_only = true;
          exec_list_push_tail(&b->impl->locals, &const_tmp->node);
