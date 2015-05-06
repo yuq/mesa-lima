@@ -25,6 +25,7 @@
  *    Jason Ekstrand <jason.ekstrand@intel.com>
  */
 
+#include "blend.h"
 #include "bufferobj.h"
 #include "buffers.h"
 #include "fbobject.h"
@@ -330,6 +331,10 @@ _mesa_meta_pbo_GetTexSubImage(struct gl_context *ctx, GLuint dims,
 
    _mesa_meta_begin(ctx, ~(MESA_META_PIXEL_TRANSFER |
                            MESA_META_PIXEL_STORE));
+
+   /* GL_CLAMP_FRAGMENT_COLOR doesn't affect ReadPixels and GettexImage */
+   if (ctx->Extensions.ARB_color_buffer_float)
+      _mesa_ClampColor(GL_CLAMP_FRAGMENT_COLOR, GL_FALSE);
 
    _mesa_GenFramebuffers(2, fbos);
 
