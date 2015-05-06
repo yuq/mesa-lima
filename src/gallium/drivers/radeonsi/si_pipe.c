@@ -56,18 +56,22 @@ static void si_destroy_context(struct pipe_context *context)
 
 	if (sctx->pstipple_sampler_state)
 		sctx->b.b.delete_sampler_state(&sctx->b.b, sctx->pstipple_sampler_state);
-	if (sctx->dummy_pixel_shader) {
+	if (sctx->dummy_pixel_shader)
 		sctx->b.b.delete_fs_state(&sctx->b.b, sctx->dummy_pixel_shader);
-	}
 	if (sctx->fixed_func_tcs_shader)
 		sctx->b.b.delete_tcs_state(&sctx->b.b, sctx->fixed_func_tcs_shader);
-	sctx->b.b.delete_depth_stencil_alpha_state(&sctx->b.b, sctx->custom_dsa_flush);
-	sctx->b.b.delete_blend_state(&sctx->b.b, sctx->custom_blend_resolve);
-	sctx->b.b.delete_blend_state(&sctx->b.b, sctx->custom_blend_decompress);
-	sctx->b.b.delete_blend_state(&sctx->b.b, sctx->custom_blend_fastclear);
+	if (sctx->custom_dsa_flush)
+		sctx->b.b.delete_depth_stencil_alpha_state(&sctx->b.b, sctx->custom_dsa_flush);
+	if (sctx->custom_blend_resolve)
+		sctx->b.b.delete_blend_state(&sctx->b.b, sctx->custom_blend_resolve);
+	if (sctx->custom_blend_decompress)
+		sctx->b.b.delete_blend_state(&sctx->b.b, sctx->custom_blend_decompress);
+	if (sctx->custom_blend_fastclear)
+		sctx->b.b.delete_blend_state(&sctx->b.b, sctx->custom_blend_fastclear);
 	util_unreference_framebuffer_state(&sctx->framebuffer.state);
 
-	util_blitter_destroy(sctx->blitter);
+	if (sctx->blitter)
+		util_blitter_destroy(sctx->blitter);
 
 	si_pm4_cleanup(sctx);
 
