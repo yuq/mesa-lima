@@ -83,8 +83,12 @@ optimizations = [
    # Comparison simplifications
    (('inot', ('flt', a, b)), ('fge', a, b)),
    (('inot', ('fge', a, b)), ('flt', a, b)),
+   (('inot', ('feq', a, b)), ('fne', a, b)),
+   (('inot', ('fne', a, b)), ('feq', a, b)),
    (('inot', ('ilt', a, b)), ('ige', a, b)),
    (('inot', ('ige', a, b)), ('ilt', a, b)),
+   (('inot', ('ieq', a, b)), ('ine', a, b)),
+   (('inot', ('ine', a, b)), ('ieq', a, b)),
    (('fge', ('fneg', ('fabs', a)), 0.0), ('feq', a, 0.0)),
    (('bcsel', ('flt', a, b), a, b), ('fmin', a, b)),
    (('bcsel', ('flt', a, b), b, a), ('fmax', a, b)),
