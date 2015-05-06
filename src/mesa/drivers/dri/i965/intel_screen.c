@@ -909,6 +909,7 @@ static const __DRIrobustnessExtension dri2Robustness = {
 
 static const __DRIextension *intelScreenExtensions[] = {
     &intelTexBufferExtension.base,
+    &intelFenceExtension.base,
     &intelFlushExtension.base,
     &intelImageExtension.base,
     &intelRendererQueryExtension.base,
@@ -918,6 +919,7 @@ static const __DRIextension *intelScreenExtensions[] = {
 
 static const __DRIextension *intelRobustScreenExtensions[] = {
     &intelTexBufferExtension.base,
+    &intelFenceExtension.base,
     &intelFlushExtension.base,
     &intelImageExtension.base,
     &intelRendererQueryExtension.base,
