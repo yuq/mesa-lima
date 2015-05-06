@@ -292,6 +292,14 @@ intelInitExtensions(struct gl_context *ctx)
       /* Test if the kernel has the ioctl. */
       if (drm_intel_reg_read(brw->bufmgr, TIMESTAMP, &dummy) == 0)
          ctx->Extensions.ARB_timer_query = true;
+
+      /* Only enable this in core profile because other parts of Mesa behave
+       * slightly differently when the extension is enabled.
+       */
+      if (ctx->API == API_OPENGL_CORE) {
+         ctx->Extensions.ARB_viewport_array = true;
+         ctx->Extensions.AMD_vertex_shader_viewport_index = true;
+      }
    }
 
    if (brw->gen >= 5) {
@@ -311,14 +319,6 @@ intelInitExtensions(struct gl_context *ctx)
          ctx->Extensions.ARB_transform_feedback3 = true;
          ctx->Extensions.ARB_transform_feedback_instanced = true;
          ctx->Extensions.ARB_draw_indirect = true;
-      }
-
-      /* Only enable this in core profile because other parts of Mesa behave
-       * slightly differently when the extension is enabled.
-       */
-      if (ctx->API == API_OPENGL_CORE) {
-         ctx->Extensions.ARB_viewport_array = true;
-         ctx->Extensions.AMD_vertex_shader_viewport_index = true;
       }
 
       ctx->Extensions.ARB_texture_compression_bptc = true;
