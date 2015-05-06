@@ -869,13 +869,6 @@ struct brw_query_object {
    bool flushed;
 };
 
-struct intel_sync_object {
-   struct gl_sync_object Base;
-
-   /** Batch associated with this sync object */
-   drm_intel_bo *bo;
-};
-
 enum brw_gpu_ring {
    UNKNOWN_RING,
    RENDER_RING,

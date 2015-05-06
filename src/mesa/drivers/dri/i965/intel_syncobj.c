@@ -44,12 +44,19 @@
 #include "intel_batchbuffer.h"
 #include "intel_reg.h"
 
-static struct gl_sync_object *
-intel_new_sync_object(struct gl_context *ctx, GLuint id)
-{
-   struct intel_sync_object *sync;
+struct intel_gl_sync_object {
+   struct gl_sync_object Base;
 
-   sync = calloc(1, sizeof(struct intel_sync_object));
+   /** Batch associated with this sync object */
+   drm_intel_bo *bo;
+};
+
+static struct gl_sync_object *
+intel_gl_new_sync_object(struct gl_context *ctx, GLuint id)
+{
+   struct intel_gl_sync_object *sync;
+
+   sync = calloc(1, sizeof(*sync));
    if (!sync)
       return NULL;
 
@@ -57,9 +64,9 @@ intel_new_sync_object(struct gl_context *ctx, GLuint id)
 }
 
 static void
-intel_delete_sync_object(struct gl_context *ctx, struct gl_sync_object *s)
+intel_gl_delete_sync_object(struct gl_context *ctx, struct gl_sync_object *s)
 {
-   struct intel_sync_object *sync = (struct intel_sync_object *)s;
+   struct intel_gl_sync_object *sync = (struct intel_gl_sync_object *)s;
 
    if (sync->bo)
       drm_intel_bo_unreference(sync->bo);
@@ -68,11 +75,11 @@ intel_delete_sync_object(struct gl_context *ctx, struct gl_sync_object *s)
 }
 
 static void
-intel_fence_sync(struct gl_context *ctx, struct gl_sync_object *s,
-	       GLenum condition, GLbitfield flags)
+intel_gl_fence_sync(struct gl_context *ctx, struct gl_sync_object *s,
+                    GLenum condition, GLbitfield flags)
 {
    struct brw_context *brw = brw_context(ctx);
-   struct intel_sync_object *sync = (struct intel_sync_object *)s;
+   struct intel_gl_sync_object *sync = (struct intel_gl_sync_object *)s;
 
    assert(condition == GL_SYNC_GPU_COMMANDS_COMPLETE);
    intel_batchbuffer_emit_mi_flush(brw);
@@ -83,10 +90,11 @@ intel_fence_sync(struct gl_context *ctx, struct gl_sync_object *s,
    intel_batchbuffer_flush(brw);
 }
 
-static void intel_client_wait_sync(struct gl_context *ctx, struct gl_sync_object *s,
-				 GLbitfield flags, GLuint64 timeout)
+static void
+intel_gl_client_wait_sync(struct gl_context *ctx, struct gl_sync_object *s,
+                          GLbitfield flags, GLuint64 timeout)
 {
-   struct intel_sync_object *sync = (struct intel_sync_object *)s;
+   struct intel_gl_sync_object *sync = (struct intel_gl_sync_object *)s;
 
    /* DRM_IOCTL_I915_GEM_WAIT uses a signed 64 bit timeout and returns
     * immediately for timeouts <= 0.  The best we can do is to clamp the
@@ -108,14 +116,15 @@ static void intel_client_wait_sync(struct gl_context *ctx, struct gl_sync_object
  * any batchbuffers coming after this waitsync will naturally not occur until
  * the previous one is done.
  */
-static void intel_server_wait_sync(struct gl_context *ctx, struct gl_sync_object *s,
-				 GLbitfield flags, GLuint64 timeout)
+static void
+intel_gl_server_wait_sync(struct gl_context *ctx, struct gl_sync_object *s,
+                          GLbitfield flags, GLuint64 timeout)
 {
 }
 
 static void intel_check_sync(struct gl_context *ctx, struct gl_sync_object *s)
 {
-   struct intel_sync_object *sync = (struct intel_sync_object *)s;
+   struct intel_gl_sync_object *sync = (struct intel_gl_sync_object *)s;
 
    if (sync->bo && !drm_intel_bo_busy(sync->bo)) {
       drm_intel_bo_unreference(sync->bo);
@@ -124,12 +133,13 @@ static void intel_check_sync(struct gl_context *ctx, struct gl_sync_object *s)
    }
 }
 
-void intel_init_syncobj_functions(struct dd_function_table *functions)
+void
+intel_init_syncobj_functions(struct dd_function_table *functions)
 {
-   functions->NewSyncObject = intel_new_sync_object;
-   functions->DeleteSyncObject = intel_delete_sync_object;
-   functions->FenceSync = intel_fence_sync;
-   functions->CheckSync = intel_check_sync;
-   functions->ClientWaitSync = intel_client_wait_sync;
-   functions->ServerWaitSync = intel_server_wait_sync;
+   functions->NewSyncObject = intel_gl_new_sync_object;
+   functions->DeleteSyncObject = intel_gl_delete_sync_object;
+   functions->FenceSync = intel_gl_fence_sync;
+   functions->CheckSync = intel_gl_check_sync;
+   functions->ClientWaitSync = intel_gl_client_wait_sync;
+   functions->ServerWaitSync = intel_gl_server_wait_sync;
 }
