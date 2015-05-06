@@ -49,7 +49,8 @@
 #define FILE_DEBUG_FLAG DEBUG_MIPTREE
 
 static void *intel_miptree_map_raw(struct brw_context *brw,
-                                   struct intel_mipmap_tree *mt);
+                                   struct intel_mipmap_tree *mt,
+                                   GLbitfield mode);
 
 static void intel_miptree_unmap_raw(struct intel_mipmap_tree *mt);
 
@@ -2411,7 +2412,9 @@ intel_update_r8stencil(struct brw_context *brw,
 }
 
 static void *
-intel_miptree_map_raw(struct brw_context *brw, struct intel_mipmap_tree *mt)
+intel_miptree_map_raw(struct brw_context *brw,
+                      struct intel_mipmap_tree *mt,
+                      GLbitfield mode)
 {
    /* CPU accesses to color buffers don't understand fast color clears, so
     * resolve any pending fast color clears before we map.
@@ -2438,7 +2441,7 @@ intel_miptree_map_raw(struct brw_context *brw, struct intel_mipmap_tree *mt)
    if (mt->tiling != I915_TILING_NONE || mt->is_scanout)
       return brw_bo_map_gtt(brw, bo);
    else
-      return brw_bo_map(brw, bo, true);
+      return brw_bo_map(brw, bo, mode & GL_MAP_WRITE_BIT);
 }
 
 static void
@@ -2469,7 +2472,7 @@ intel_miptree_map_gtt(struct brw_context *brw,
    y /= bh;
    x /= bw;
 
-   base = intel_miptree_map_raw(brw, mt) + mt->offset;
+   base = intel_miptree_map_raw(brw, mt, map->mode) + mt->offset;
 
    if (base == NULL)
       map->ptr = NULL;
@@ -2532,7 +2535,7 @@ intel_miptree_map_blit(struct brw_context *brw,
       }
    }
 
-   map->ptr = intel_miptree_map_raw(brw, map->linear_mt);
+   map->ptr = intel_miptree_map_raw(brw, map->linear_mt, map->mode);
 
    DBG("%s: %d,%d %dx%d from mt %p (%s) %d,%d = %p/%d\n", __func__,
        map->x, map->y, map->w, map->h,
@@ -2594,7 +2597,7 @@ intel_miptree_map_movntdqa(struct brw_context *brw,
    image_x += map->x;
    image_y += map->y;
 
-   void *src = intel_miptree_map_raw(brw, mt);
+   void *src = intel_miptree_map_raw(brw, mt, map->mode);
    if (!src)
       return;
 
@@ -2663,7 +2666,7 @@ intel_miptree_map_s8(struct brw_context *brw,
     */
    if (!(map->mode & GL_MAP_INVALIDATE_RANGE_BIT)) {
       uint8_t *untiled_s8_map = map->ptr;
-      uint8_t *tiled_s8_map = intel_miptree_map_raw(brw, mt);
+      uint8_t *tiled_s8_map = intel_miptree_map_raw(brw, mt, GL_MAP_READ_BIT);
       unsigned int image_x, image_y;
 
       intel_miptree_get_image_offset(mt, level, slice, &image_x, &image_y);
@@ -2700,7 +2703,7 @@ intel_miptree_unmap_s8(struct brw_context *brw,
    if (map->mode & GL_MAP_WRITE_BIT) {
       unsigned int image_x, image_y;
       uint8_t *untiled_s8_map = map->ptr;
-      uint8_t *tiled_s8_map = intel_miptree_map_raw(brw, mt);
+      uint8_t *tiled_s8_map = intel_miptree_map_raw(brw, mt, GL_MAP_WRITE_BIT);
 
       intel_miptree_get_image_offset(mt, level, slice, &image_x, &image_y);
 
@@ -2755,7 +2758,7 @@ intel_miptree_unmap_etc(struct brw_context *brw,
    image_x += map->x;
    image_y += map->y;
 
-   uint8_t *dst = intel_miptree_map_raw(brw, mt)
+   uint8_t *dst = intel_miptree_map_raw(brw, mt, GL_MAP_WRITE_BIT)
                 + image_y * mt->pitch
                 + image_x * mt->cpp;
 
@@ -2806,8 +2809,8 @@ intel_miptree_map_depthstencil(struct brw_context *brw,
     */
    if (!(map->mode & GL_MAP_INVALIDATE_RANGE_BIT)) {
       uint32_t *packed_map = map->ptr;
-      uint8_t *s_map = intel_miptree_map_raw(brw, s_mt);
-      uint32_t *z_map = intel_miptree_map_raw(brw, z_mt);
+      uint8_t *s_map = intel_miptree_map_raw(brw, s_mt, GL_MAP_READ_BIT);
+      uint32_t *z_map = intel_miptree_map_raw(brw, z_mt, GL_MAP_READ_BIT);
       unsigned int s_image_x, s_image_y;
       unsigned int z_image_x, z_image_y;
 
@@ -2867,8 +2870,8 @@ intel_miptree_unmap_depthstencil(struct brw_context *brw,
 
    if (map->mode & GL_MAP_WRITE_BIT) {
       uint32_t *packed_map = map->ptr;
-      uint8_t *s_map = intel_miptree_map_raw(brw, s_mt);
-      uint32_t *z_map = intel_miptree_map_raw(brw, z_mt);
+      uint8_t *s_map = intel_miptree_map_raw(brw, s_mt, GL_MAP_WRITE_BIT);
+      uint32_t *z_map = intel_miptree_map_raw(brw, z_mt, GL_MAP_WRITE_BIT);
       unsigned int s_image_x, s_image_y;
       unsigned int z_image_x, z_image_y;
 
