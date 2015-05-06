@@ -188,6 +188,7 @@ optimizations = [
    (('fcsel', a, b, b), b),
 
    # Conversions
+   (('i2b', ('b2i', a)), a),
    (('f2i', ('ftrunc', a)), ('f2i', a)),
    (('f2u', ('ftrunc', a)), ('f2u', a)),
 
