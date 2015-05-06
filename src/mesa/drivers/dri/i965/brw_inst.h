@@ -393,6 +393,7 @@ FF(urb_per_slot_offset,
    /* 4-6: */ -1, -1, -1, -1, -1, -1, -1, -1,
    /* 7:   */ MD(16), MD(16),
    /* 8:   */ MD(17), MD(17))
+FC(urb_channel_mask_present, MD(15), MD(15), devinfo->gen >= 8)
 FC(urb_complete, MD(15), MD(15), devinfo->gen < 8)
 FC(urb_used, MD(14), MD(14), devinfo->gen < 7)
 FC(urb_allocate, MD(13), MD(13), devinfo->gen < 7)

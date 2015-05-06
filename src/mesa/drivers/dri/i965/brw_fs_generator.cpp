@@ -368,6 +368,14 @@ fs_generator::generate_urb_write(fs_inst *inst, struct brw_reg payload)
    brw_inst_set_sfid(p->devinfo, insn, BRW_SFID_URB);
    brw_inst_set_urb_opcode(p->devinfo, insn, GEN8_URB_OPCODE_SIMD8_WRITE);
 
+   if (inst->opcode == SHADER_OPCODE_URB_WRITE_SIMD8_PER_SLOT ||
+       inst->opcode == SHADER_OPCODE_URB_WRITE_SIMD8_MASKED_PER_SLOT)
+      brw_inst_set_urb_per_slot_offset(p->devinfo, insn, true);
+
+   if (inst->opcode == SHADER_OPCODE_URB_WRITE_SIMD8_MASKED ||
+       inst->opcode == SHADER_OPCODE_URB_WRITE_SIMD8_MASKED_PER_SLOT)
+      brw_inst_set_urb_channel_mask_present(p->devinfo, insn, true);
+
    brw_inst_set_mlen(p->devinfo, insn, inst->mlen);
    brw_inst_set_rlen(p->devinfo, insn, 0);
    brw_inst_set_eot(p->devinfo, insn, inst->eot);
@@ -2002,6 +2010,9 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
 	 break;
 
       case SHADER_OPCODE_URB_WRITE_SIMD8:
+      case SHADER_OPCODE_URB_WRITE_SIMD8_PER_SLOT:
+      case SHADER_OPCODE_URB_WRITE_SIMD8_MASKED:
+      case SHADER_OPCODE_URB_WRITE_SIMD8_MASKED_PER_SLOT:
 	 generate_urb_write(inst, src[0]);
 	 break;
 

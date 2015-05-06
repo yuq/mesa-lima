@@ -408,6 +408,12 @@ brw_instruction_name(enum opcode op)
       return "gen7_scratch_read";
    case SHADER_OPCODE_URB_WRITE_SIMD8:
       return "gen8_urb_write_simd8";
+   case SHADER_OPCODE_URB_WRITE_SIMD8_PER_SLOT:
+      return "gen8_urb_write_simd8_per_slot";
+   case SHADER_OPCODE_URB_WRITE_SIMD8_MASKED:
+      return "gen8_urb_write_simd8_masked";
+   case SHADER_OPCODE_URB_WRITE_SIMD8_MASKED_PER_SLOT:
+      return "gen8_urb_write_simd8_masked_per_slot";
 
    case SHADER_OPCODE_FIND_LIVE_CHANNEL:
       return "find_live_channel";
@@ -961,6 +967,9 @@ backend_instruction::has_side_effects() const
    case SHADER_OPCODE_TYPED_SURFACE_WRITE_LOGICAL:
    case SHADER_OPCODE_MEMORY_FENCE:
    case SHADER_OPCODE_URB_WRITE_SIMD8:
+   case SHADER_OPCODE_URB_WRITE_SIMD8_PER_SLOT:
+   case SHADER_OPCODE_URB_WRITE_SIMD8_MASKED:
+   case SHADER_OPCODE_URB_WRITE_SIMD8_MASKED_PER_SLOT:
    case FS_OPCODE_FB_WRITE:
    case SHADER_OPCODE_BARRIER:
       return true;
