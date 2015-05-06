@@ -117,7 +117,7 @@ ilo_begin_query(struct pipe_context *pipe, struct pipe_query *query)
    struct ilo_query *q = ilo_query(query);
 
    if (q->active)
-      return;
+      return false;
 
    util_query_clear_result(&q->result, q->type);
    q->used = 0;
