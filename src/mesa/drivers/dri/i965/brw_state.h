@@ -330,6 +330,17 @@ void brw_update_sampler_state(struct brw_context *brw,
                               uint32_t *sampler_state,
                               uint32_t batch_offset_for_sampler_state);
 
+/* gen6_wm_state.c */
+void
+gen6_upload_wm_state(struct brw_context *brw,
+                     const struct brw_fragment_program *fp,
+                     const struct brw_wm_prog_data *prog_data,
+                     const struct brw_stage_state *stage_state,
+                     bool multisampled_fbo, int min_inv_per_frag,
+                     bool dual_source_blend_enable, bool kill_enable,
+                     bool color_buffer_write_enable, bool msaa_enabled,
+                     bool line_stipple_enable, bool polygon_stipple_enable);
+
 /* gen6_sf_state.c */
 void
 calculate_attr_overrides(const struct brw_context *brw,
