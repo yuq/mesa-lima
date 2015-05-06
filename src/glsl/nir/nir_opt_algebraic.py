@@ -101,6 +101,7 @@ optimizations = [
    (('seq', a, b), ('b2f', ('feq', a, b)), 'options->lower_scmp'),
    (('sne', a, b), ('b2f', ('fne', a, b)), 'options->lower_scmp'),
    # Emulating booleans
+   (('imul', ('b2i', a), ('b2i', b)), ('b2i', ('iand', a, b))),
    (('fmul', ('b2f', a), ('b2f', b)), ('b2f', ('iand', a, b))),
    (('fsat', ('fadd', ('b2f', a), ('b2f', b))), ('b2f', ('ior', a, b))),
    (('iand', 'a@bool', 1.0), ('b2f', a)),
