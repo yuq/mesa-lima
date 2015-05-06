@@ -184,7 +184,7 @@ class PrintCode(gl_XML.gl_print_base):
                 condition_parts.append('ctx->API == API_OPENGLES')
             if 'es2' in f.api_map:
                 if f.api_map['es2'] > 2.0:
-                    condition_parts.append('(ctx->API == API_OPENGLES2 && ctx->Version >= {})'.format(int(f.api_map['es2'] * 10)))
+                    condition_parts.append('(ctx->API == API_OPENGLES2 && ctx->Version >= {0})'.format(int(f.api_map['es2'] * 10)))
                 else:
                     condition_parts.append('ctx->API == API_OPENGLES2')
             if not condition_parts:
