@@ -57,7 +57,7 @@ static char *
 vtn_string_literal(struct vtn_builder *b, const uint32_t *words,
                    unsigned word_count)
 {
-   return ralloc_strndup(b, (char *)words, (word_count - 2) * sizeof(*words));
+   return ralloc_strndup(b, (char *)words, word_count * sizeof(*words));
 }
 
 static const uint32_t *
