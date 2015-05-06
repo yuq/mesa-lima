@@ -42,27 +42,29 @@ gen6_upload_clip_vp(struct brw_context *brw)
    struct brw_clipper_viewport *vp;
 
    vp = brw_state_batch(brw, AUB_TRACE_CLIP_VP_STATE,
-			sizeof(*vp), 32, &brw->clip.vp_offset);
+                        sizeof(*vp) * ctx->Const.MaxViewports, 32, &brw->clip.vp_offset);
 
-   /* According to the "Vertex X,Y Clamping and Quantization" section of the
-    * Strips and Fans documentation, objects must not have a screen-space
-    * extents of over 8192 pixels, or they may be mis-rasterized.  The maximum
-    * screen space coordinates of a small object may larger, but we have no
-    * way to enforce the object size other than through clipping.
-    *
-    * If you're surprised that we set clip to -gbx to +gbx and it seems like
-    * we'll end up with 16384 wide, note that for a 8192-wide render target,
-    * we'll end up with a normal (-1, 1) clip volume that just covers the
-    * drawable.
-    */
-   const float maximum_post_clamp_delta = 8192;
-   float gbx = maximum_post_clamp_delta / ctx->ViewportArray[0].Width;
-   float gby = maximum_post_clamp_delta / ctx->ViewportArray[0].Height;
+   for (unsigned i = 0; i < ctx->Const.MaxViewports; i++) {
+      /* According to the "Vertex X,Y Clamping and Quantization" section of the
+       * Strips and Fans documentation, objects must not have a screen-space
+       * extents of over 8192 pixels, or they may be mis-rasterized.  The maximum
+       * screen space coordinates of a small object may larger, but we have no
+       * way to enforce the object size other than through clipping.
+       *
+       * If you're surprised that we set clip to -gbx to +gbx and it seems like
+       * we'll end up with 16384 wide, note that for a 8192-wide render target,
+       * we'll end up with a normal (-1, 1) clip volume that just covers the
+       * drawable.
+       */
+      const float maximum_post_clamp_delta = 8192;
+      float gbx = maximum_post_clamp_delta / ctx->ViewportArray[i].Width;
+      float gby = maximum_post_clamp_delta / ctx->ViewportArray[i].Height;
 
-   vp->xmin = -gbx;
-   vp->xmax = gbx;
-   vp->ymin = -gby;
-   vp->ymax = gby;
+      vp[i].xmin = -gbx;
+      vp[i].xmax = gbx;
+      vp[i].ymin = -gby;
+      vp[i].ymax = gby;
+   }
 
    brw->ctx.NewDriverState |= BRW_NEW_CLIP_VP;
 }
