@@ -573,7 +573,16 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
 
       nir_builder_instr_insert(&b->nb, &load->instr);
       val->type = src_type;
-      val->ssa = &load->dest.ssa;
+
+      if (src->var->data.mode == nir_var_uniform &&
+          glsl_get_base_type(src_type) == GLSL_TYPE_BOOL) {
+         /* Uniform boolean loads need to be fixed up since they're defined
+          * to be zero/nonzero rather than NIR_FALSE/NIR_TRUE.
+          */
+         val->ssa = nir_ine(&b->nb, &load->dest.ssa, nir_imm_int(&b->nb, 0));
+      } else {
+         val->ssa = &load->dest.ssa;
+      }
       break;
    }
 
