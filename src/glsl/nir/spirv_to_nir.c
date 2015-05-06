@@ -31,7 +31,26 @@
 nir_ssa_def *
 vtn_ssa_value(struct vtn_builder *b, uint32_t value_id)
 {
-   return vtn_value(b, value_id, vtn_value_type_ssa)->ssa;
+   struct vtn_value *val = vtn_untyped_value(b, value_id);
+   switch (val->value_type) {
+   case vtn_value_type_constant: {
+      assert(glsl_type_is_vector_or_scalar(val->type));
+      unsigned num_components = glsl_get_vector_elements(val->type);
+      nir_load_const_instr *load =
+         nir_load_const_instr_create(b->shader, num_components);
+
+      for (unsigned i = 0; i < num_components; i++)
+         load->value.u[0] = val->constant->value.u[0];
+
+      nir_builder_instr_insert(&b->nb, &load->instr);
+      return &load->def;
+   }
+
+   case vtn_value_type_ssa:
+      return val->ssa;
+   default:
+      unreachable("Invalid type for an SSA value");
+   }
 }
 
 static char *
