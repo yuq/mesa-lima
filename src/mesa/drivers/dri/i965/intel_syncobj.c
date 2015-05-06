@@ -50,6 +50,8 @@ intel_new_sync_object(struct gl_context *ctx, GLuint id)
    struct intel_sync_object *sync;
 
    sync = calloc(1, sizeof(struct intel_sync_object));
+   if (!sync)
+      return NULL;
 
    return &sync->Base;
 }
