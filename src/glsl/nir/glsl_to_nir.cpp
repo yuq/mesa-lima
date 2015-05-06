@@ -1038,7 +1038,7 @@ nir_visitor::visit(ir_expression *ir)
    case ir_unop_rcp:  emit(nir_op_frcp, dest_size, srcs);  break;
    case ir_unop_rsq:  emit(nir_op_frsq, dest_size, srcs);  break;
    case ir_unop_sqrt: emit(nir_op_fsqrt, dest_size, srcs); break;
-   case ir_unop_exp:  emit(nir_op_fexp, dest_size, srcs);  break;
+   case ir_unop_exp:  unreachable("ir_unop_exp should have been lowered");
    case ir_unop_log:  emit(nir_op_flog, dest_size, srcs);  break;
    case ir_unop_exp2: emit(nir_op_fexp2, dest_size, srcs); break;
    case ir_unop_log2: emit(nir_op_flog2, dest_size, srcs); break;
