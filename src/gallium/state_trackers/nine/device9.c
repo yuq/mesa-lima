@@ -186,6 +186,7 @@ NineDevice9_ctor( struct NineDevice9 *This,
     if (FAILED(hr)) { return hr; }
 
     list_inithead(&This->update_textures);
+    list_inithead(&This->managed_textures);
 
     This->screen = pScreen;
     This->caps = *pCaps;

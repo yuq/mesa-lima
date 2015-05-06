@@ -85,6 +85,9 @@ NineBaseTexture9_ctor( struct NineBaseTexture9 *This,
                    util_format_has_depth(util_format_description(This->base.info.format));
 
     list_inithead(&This->list);
+    list_inithead(&This->list2);
+    if (Pool == D3DPOOL_MANAGED)
+        list_add(&This->list2, &This->base.base.device->managed_textures);
 
     return D3D_OK;
 }
@@ -98,7 +101,9 @@ NineBaseTexture9_dtor( struct NineBaseTexture9 *This )
     pipe_sampler_view_reference(&This->view[1], NULL);
 
     if (This->list.prev != NULL && This->list.next != NULL)
-        list_del(&This->list),
+        list_del(&This->list);
+    if (This->list2.prev != NULL && This->list2.next != NULL)
+        list_del(&This->list2);
 
     NineResource9_dtor(&This->base);
 }

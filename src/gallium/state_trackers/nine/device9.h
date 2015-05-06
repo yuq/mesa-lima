@@ -69,6 +69,7 @@ struct NineDevice9
     struct nine_state state;   /* device state */
 
     struct list_head update_textures;
+    struct list_head managed_textures;
 
     boolean is_recording;
     boolean in_scene;
