@@ -59,7 +59,9 @@ intel_delete_sync_object(struct gl_context *ctx, struct gl_sync_object *s)
 {
    struct intel_sync_object *sync = (struct intel_sync_object *)s;
 
-   drm_intel_bo_unreference(sync->bo);
+   if (sync->bo)
+      drm_intel_bo_unreference(sync->bo);
+
    free(sync);
 }
 
