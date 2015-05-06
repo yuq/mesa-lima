@@ -48,13 +48,13 @@
 
 namespace spv {
 
-const int MagicNumber = 0x07230203;
-const int Version = 99;
+static const int MagicNumber = 0x07230203;
+static const int Version = 99;
 
 typedef unsigned int Id;
 
-const unsigned int OpCodeMask = 0xFFFF;
-const unsigned int WordCountShift = 16;
+static const unsigned int OpCodeMask = 0xFFFF;
+static const unsigned int WordCountShift = 16;
 
 enum SourceLanguage {
     SourceLanguageUnknown = 0,
@@ -677,13 +677,13 @@ enum Op {
 
 #ifndef __cplusplus
 
-const int SpvMagicNumber = 0x07230203;
-const int SpvVersion = 99;
+static const int SpvMagicNumber = 0x07230203;
+static const int SpvVersion = 99;
 
 typedef unsigned int SpvId;
 
-const unsigned int SpvOpCodeMask = 0xFFFF;
-const unsigned int SpvWordCountShift = 16;
+static const unsigned int SpvOpCodeMask = 0xFFFF;
+static const unsigned int SpvWordCountShift = 16;
 
 typedef enum SpvSourceLanguage_ {
     SpvSourceLanguageUnknown = 0,
