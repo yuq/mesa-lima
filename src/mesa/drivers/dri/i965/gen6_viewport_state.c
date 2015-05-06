@@ -81,14 +81,14 @@ static void
 gen6_upload_sf_vp(struct brw_context *brw)
 {
    struct gl_context *ctx = &brw->ctx;
-   struct brw_sf_viewport *sfv;
+   struct gen6_sf_viewport *sfv;
    GLfloat y_scale, y_bias;
-   double scale[3], translate[3];
    const bool render_to_fbo = _mesa_is_user_fbo(ctx->DrawBuffer);
 
    sfv = brw_state_batch(brw, AUB_TRACE_SF_VP_STATE,
-			 sizeof(*sfv), 32, &brw->sf.vp_offset);
-   memset(sfv, 0, sizeof(*sfv));
+                         sizeof(*sfv) * ctx->Const.MaxViewports,
+                         32, &brw->sf.vp_offset);
+   memset(sfv, 0, sizeof(*sfv) * ctx->Const.MaxViewports);
 
    /* _NEW_BUFFERS */
    if (render_to_fbo) {
@@ -99,14 +99,19 @@ gen6_upload_sf_vp(struct brw_context *brw)
       y_bias = ctx->DrawBuffer->Height;
    }
 
-   /* _NEW_VIEWPORT */
-   _mesa_get_viewport_xform(ctx, 0, scale, translate);
-   sfv->viewport.m00 = scale[0];
-   sfv->viewport.m11 = scale[1] * y_scale;
-   sfv->viewport.m22 = scale[2];
-   sfv->viewport.m30 = translate[0];
-   sfv->viewport.m31 = translate[1] * y_scale + y_bias;
-   sfv->viewport.m32 = translate[2];
+   for (unsigned i = 0; i < ctx->Const.MaxViewports; i++) {
+      double scale[3], translate[3];
+
+      /* _NEW_VIEWPORT */
+      _mesa_get_viewport_xform(ctx, i, scale, translate);
+      sfv[i].m00 = scale[0];
+      sfv[i].m11 = scale[1] * y_scale;
+      sfv[i].m22 = scale[2];
+      sfv[i].m30 = translate[0];
+      sfv[i].m31 = translate[1] * y_scale + y_bias;
+      sfv[i].m32 = translate[2];
+
+   }
 
    brw->ctx.NewDriverState |= BRW_NEW_SF_VP;
 }
