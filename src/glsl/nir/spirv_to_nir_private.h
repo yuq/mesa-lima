@@ -47,6 +47,9 @@ enum vtn_value_type {
 };
 
 struct vtn_block {
+   /* Merge opcode if this block contains a merge; SpvOpNop otherwise. */
+   SpvOp merge_op;
+   uint32_t merge_block_id;
    const uint32_t *label;
    const uint32_t *branch;
    nir_block *block;
@@ -92,7 +95,6 @@ struct vtn_builder {
    nir_shader *shader;
    nir_function_impl *impl;
    struct vtn_block *block;
-   struct vtn_block *merge_block;
 
    unsigned value_id_bound;
    struct vtn_value *values;
