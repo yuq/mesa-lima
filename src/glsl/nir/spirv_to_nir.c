@@ -1208,9 +1208,6 @@ vtn_walk_blocks(struct vtn_builder *b, struct vtn_block *start,
 {
    struct vtn_block *block = start;
    while (block != end_block) {
-      const uint32_t *w = block->branch;
-      SpvOp branch_op = w[0] & SpvOpCodeMask;
-
       if (block->block != NULL) {
          /* We've already visited this block once before so this is a
           * back-edge.  Back-edges are only allowed to point to a loop
@@ -1219,6 +1216,31 @@ vtn_walk_blocks(struct vtn_builder *b, struct vtn_block *start,
          assert(block == cont_block);
          return;
       }
+
+      if (block->merge_op == SpvOpLoopMerge) {
+         /* This is the jump into a loop. */
+         cont_block = block;
+         break_block = vtn_value(b, block->merge_block_id,
+                                 vtn_value_type_block)->block;
+
+         nir_loop *loop = nir_loop_create(b->shader);
+         nir_cf_node_insert_end(b->nb.cf_node_list, &loop->cf_node);
+
+         struct exec_list *old_list = b->nb.cf_node_list;
+
+         /* Reset the merge_op to prerevent infinite recursion */
+         block->merge_op = SpvOpNop;
+
+         nir_builder_insert_after_cf_list(&b->nb, &loop->body);
+         vtn_walk_blocks(b, block, break_block, cont_block, NULL);
+
+         nir_builder_insert_after_cf_list(&b->nb, old_list);
+         block = break_block;
+         continue;
+      }
+
+      const uint32_t *w = block->branch;
+      SpvOp branch_op = w[0] & SpvOpCodeMask;
 
       b->block = block;
       vtn_foreach_instruction(b, block->label, block->branch,
@@ -1243,25 +1265,7 @@ vtn_walk_blocks(struct vtn_builder *b, struct vtn_block *start,
             return;
          } else if (branch_block == end_block) {
             return;
-         } else if (branch_block->merge_op == SpvOpLoopMerge) {
-            /* This is the jump into a loop. */
-            cont_block = branch_block;
-            break_block = vtn_value(b, branch_block->merge_block_id,
-                                    vtn_value_type_block)->block;
-
-            nir_loop *loop = nir_loop_create(b->shader);
-            nir_cf_node_insert_end(b->nb.cf_node_list, &loop->cf_node);
-
-            struct exec_list *old_list = b->nb.cf_node_list;
-
-            nir_builder_insert_after_cf_list(&b->nb, &loop->body);
-            vtn_walk_blocks(b, branch_block, break_block, cont_block, NULL);
-
-            nir_builder_insert_after_cf_list(&b->nb, old_list);
-            block = break_block;
-            continue;
          } else {
-            /* TODO: Can this ever happen? */
             block = branch_block;
             continue;
          }
