@@ -868,6 +868,7 @@ void
 fs_visitor::emit_urb_writes()
 {
    int slot, urb_offset, length;
+   int starting_urb_offset = 0;
    const struct brw_vue_prog_data *vue_prog_data =
       (const struct brw_vue_prog_data *) this->prog_data;
    const struct brw_vs_prog_key *vs_key =
@@ -900,8 +901,21 @@ fs_visitor::emit_urb_writes()
       return;
    }
 
+   if (stage == MESA_SHADER_GEOMETRY) {
+      const struct brw_gs_prog_data *gs_prog_data =
+         (const struct brw_gs_prog_data *) prog_data;
+
+      /* We need to increment the Global Offset to skip over the control data
+       * header and the extra "Vertex Count" field (1 HWord) at the beginning
+       * of the VUE.  We're counting in OWords, so the units are doubled.
+       */
+      starting_urb_offset = 2 * gs_prog_data->control_data_header_size_hwords;
+      if (gs_prog_data->static_vertex_count == -1)
+         starting_urb_offset += 2;
+   }
+
    length = 0;
-   urb_offset = 0;
+   urb_offset = starting_urb_offset;
    flush = false;
    for (slot = 0; slot < vue_map->num_slots; slot++) {
       int varying = vue_map->slot_to_varying[slot];
@@ -1008,7 +1022,7 @@ fs_visitor::emit_urb_writes()
          inst->eot = last && stage == MESA_SHADER_VERTEX;
          inst->mlen = length + 1;
          inst->offset = urb_offset;
-         urb_offset = slot + 1;
+         urb_offset = starting_urb_offset + slot + 1;
          length = 0;
          flush = false;
       }
