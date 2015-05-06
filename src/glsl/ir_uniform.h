@@ -194,6 +194,11 @@ struct gl_uniform_storage {
     * This is a built-in uniform that should not be modified through any gl API.
     */
    bool builtin;
+
+   /**
+    * This is a shader storage buffer variable, not an uniform.
+    */
+   bool is_shader_storage;
 };
 
 #ifdef __cplusplus

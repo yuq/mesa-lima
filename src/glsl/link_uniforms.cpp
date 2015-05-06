@@ -794,6 +794,9 @@ private:
       if (!this->uniforms[id].builtin)
          this->uniforms[id].storage = this->values;
 
+      this->uniforms[id].is_shader_storage =
+         current_var->is_in_shader_storage_block();
+
       if (this->ubo_block_index != -1) {
          this->uniforms[id].block_index = this->ubo_block_index;
 

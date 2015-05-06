@@ -3406,14 +3406,18 @@ build_program_resource_list(struct gl_shader_program *shProg)
          }
       }
 
-      if (!add_program_resource(shProg, GL_UNIFORM,
+      bool is_shader_storage =  shProg->UniformStorage[i].is_shader_storage;
+      GLenum type = is_shader_storage ? GL_BUFFER_VARIABLE : GL_UNIFORM;
+      if (!add_program_resource(shProg, type,
                                 &shProg->UniformStorage[i], stageref))
          return;
    }
 
-   /* Add program uniform blocks. */
+   /* Add program uniform blocks and shader storage blocks. */
    for (unsigned i = 0; i < shProg->NumUniformBlocks; i++) {
-      if (!add_program_resource(shProg, GL_UNIFORM_BLOCK,
+      bool is_shader_storage = shProg->UniformBlocks[i].IsShaderStorage;
+      GLenum type = is_shader_storage ? GL_SHADER_STORAGE_BLOCK : GL_UNIFORM_BLOCK;
+      if (!add_program_resource(shProg, type,
           &shProg->UniformBlocks[i], 0))
          return;
    }

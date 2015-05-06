@@ -431,6 +431,7 @@ _mesa_program_resource_name(struct gl_program_resource *res)
    const ir_variable *var;
    switch (res->Type) {
    case GL_UNIFORM_BLOCK:
+   case GL_SHADER_STORAGE_BLOCK:
       return RESOURCE_UBO(res)->Name;
    case GL_TRANSFORM_FEEDBACK_VARYING:
       return RESOURCE_XFB(res)->Name;
@@ -445,6 +446,7 @@ _mesa_program_resource_name(struct gl_program_resource *res)
    case GL_PROGRAM_OUTPUT:
       return RESOURCE_VAR(res)->name;
    case GL_UNIFORM:
+   case GL_BUFFER_VARIABLE:
       return RESOURCE_UNI(res)->name;
    case GL_VERTEX_SUBROUTINE_UNIFORM:
    case GL_GEOMETRY_SUBROUTINE_UNIFORM:
@@ -484,6 +486,7 @@ _mesa_program_resource_array_size(struct gl_program_resource *res)
    case GL_COMPUTE_SUBROUTINE_UNIFORM:
    case GL_TESS_CONTROL_SUBROUTINE_UNIFORM:
    case GL_TESS_EVALUATION_SUBROUTINE_UNIFORM:
+   case GL_BUFFER_VARIABLE:
       return RESOURCE_UNI(res)->array_elements;
    case GL_VERTEX_SUBROUTINE:
    case GL_GEOMETRY_SUBROUTINE:
@@ -493,6 +496,7 @@ _mesa_program_resource_array_size(struct gl_program_resource *res)
    case GL_TESS_EVALUATION_SUBROUTINE:
    case GL_ATOMIC_COUNTER_BUFFER:
    case GL_UNIFORM_BLOCK:
+   case GL_SHADER_STORAGE_BLOCK:
       return 0;
    default:
       assert(!"support for resource type not implemented");
@@ -538,6 +542,7 @@ _mesa_program_resource_find_name(struct gl_shader_program *shProg,
       if (strncmp(rname, name, baselen) == 0) {
          switch (programInterface) {
          case GL_UNIFORM_BLOCK:
+         case GL_SHADER_STORAGE_BLOCK:
             /* Basename match, check if array or struct. */
             if (name[baselen] == '\0' ||
                 name[baselen] == '[' ||
@@ -546,6 +551,7 @@ _mesa_program_resource_find_name(struct gl_shader_program *shProg,
             }
             break;
          case GL_TRANSFORM_FEEDBACK_VARYING:
+         case GL_BUFFER_VARIABLE:
          case GL_UNIFORM:
          case GL_VERTEX_SUBROUTINE_UNIFORM:
          case GL_GEOMETRY_SUBROUTINE_UNIFORM:
@@ -607,6 +613,7 @@ _mesa_program_resource_index(struct gl_shader_program *shProg,
 
    switch (res->Type) {
    case GL_UNIFORM_BLOCK:
+   case GL_SHADER_STORAGE_BLOCK:
       return RESOURCE_UBO(res)- shProg->UniformBlocks;
    case GL_ATOMIC_COUNTER_BUFFER:
       return RESOURCE_ATC(res) - shProg->AtomicBuffers;
@@ -632,6 +639,7 @@ _mesa_program_resource_find_index(struct gl_shader_program *shProg,
       switch (res->Type) {
       case GL_UNIFORM_BLOCK:
       case GL_ATOMIC_COUNTER_BUFFER:
+      case GL_SHADER_STORAGE_BLOCK:
          if (_mesa_program_resource_index(shProg, res) == index)
             return res;
          break;
@@ -651,6 +659,7 @@ _mesa_program_resource_find_index(struct gl_shader_program *shProg,
       case GL_COMPUTE_SUBROUTINE:
       case GL_TESS_CONTROL_SUBROUTINE:
       case GL_TESS_EVALUATION_SUBROUTINE:
+      case GL_BUFFER_VARIABLE:
          if (++idx == (int) index)
             return res;
          break;
@@ -804,6 +813,192 @@ program_resource_location(struct gl_shader_program *shProg,
    }
 }
 
+static char*
+get_top_level_name(const char *name)
+{
+   const char *first_dot = strchr(name, '.');
+   const char *first_square_bracket = strchr(name, '[');
+   int name_size = 0;
+   /* From ARB_program_interface_query spec:
+    *
+    * "For the property TOP_LEVEL_ARRAY_SIZE, a single integer identifying the
+    *  number of active array elements of the top-level shader storage block
+    *  member containing to the active variable is written to <params>.  If the
+    *  top-level block member is not declared as an array, the value one is
+    *  written to <params>.  If the top-level block member is an array with no
+    *  declared size, the value zero is written to <params>.
+    */
+
+   /* The buffer variable is on top level.*/
+   if (!first_square_bracket && !first_dot)
+      name_size = strlen(name);
+   else if ((!first_square_bracket ||
+            (first_dot && first_dot < first_square_bracket)))
+      name_size = first_dot - name;
+   else
+      name_size = first_square_bracket - name;
+
+   return strndup(name, name_size);
+}
+
+static char*
+get_var_name(const char *name)
+{
+   const char *first_dot = strchr(name, '.');
+
+   if (!first_dot)
+      return strdup(name);
+
+   return strndup(first_dot+1, strlen(first_dot) - 1);
+}
+
+static GLint
+program_resource_top_level_array_size(struct gl_shader_program *shProg,
+                                      struct gl_program_resource *res,
+                                      const char *name)
+{
+   int block_index = RESOURCE_UNI(res)->block_index;
+   int array_size = -1;
+   char *var_name = get_top_level_name(name);
+   char *interface_name =
+      get_top_level_name(shProg->UniformBlocks[block_index].Name);
+
+   if (strcmp(var_name, interface_name) == 0) {
+      /* Deal with instanced array of SSBOs */
+      char *temp_name = get_var_name(name);
+      free(var_name);
+      var_name = get_top_level_name(temp_name);
+      free(temp_name);
+   }
+
+   for (unsigned i = 0; i < shProg->NumShaders; i++) {
+      if (shProg->Shaders[i] == NULL)
+         continue;
+
+      const gl_shader *stage = shProg->Shaders[i];
+      foreach_in_list(ir_instruction, node, stage->ir) {
+         ir_variable *var = node->as_variable();
+         if (!var || !var->get_interface_type() ||
+             var->data.mode != ir_var_shader_storage)
+            continue;
+
+         const glsl_type *interface = var->get_interface_type();
+
+         if (strcmp(interface_name, interface->name) != 0)
+            continue;
+
+         for (unsigned i = 0; i < interface->length; i++) {
+            const glsl_struct_field *field = &interface->fields.structure[i];
+            if (strcmp(field->name, var_name) != 0)
+               continue;
+            /* From GL_ARB_program_interface_query spec:
+             *
+             * "For the property TOP_LEVEL_ARRAY_SIZE, a single integer
+             * identifying the number of active array elements of the top-level
+             * shader storage block member containing to the active variable is
+             * written to <params>.  If the top-level block member is not
+             * declared as an array, the value one is written to <params>.  If
+             * the top-level block member is an array with no declared size,
+             * the value zero is written to <params>.
+             */
+            if (field->type->is_unsized_array())
+               array_size = 0;
+            else if (field->type->is_array())
+               array_size = field->type->length;
+            else
+               array_size = 1;
+            goto found_top_level_array_size;
+         }
+      }
+   }
+found_top_level_array_size:
+   free(interface_name);
+   free(var_name);
+   return array_size;
+}
+
+static GLint
+program_resource_top_level_array_stride(struct gl_shader_program *shProg,
+                                        struct gl_program_resource *res,
+                                        const char *name)
+{
+   int block_index = RESOURCE_UNI(res)->block_index;
+   int array_stride = -1;
+   char *var_name = get_top_level_name(name);
+   char *interface_name =
+      get_top_level_name(shProg->UniformBlocks[block_index].Name);
+
+   if (strcmp(var_name, interface_name) == 0) {
+      /* Deal with instanced array of SSBOs */
+      char *temp_name = get_var_name(name);
+      free(var_name);
+      var_name = get_top_level_name(temp_name);
+      free(temp_name);
+   }
+
+   for (unsigned i = 0; i < shProg->NumShaders; i++) {
+      if (shProg->Shaders[i] == NULL)
+         continue;
+
+      const gl_shader *stage = shProg->Shaders[i];
+      foreach_in_list(ir_instruction, node, stage->ir) {
+         ir_variable *var = node->as_variable();
+         if (!var || !var->get_interface_type() ||
+             var->data.mode != ir_var_shader_storage)
+            continue;
+
+         const glsl_type *interface = var->get_interface_type();
+
+         if (strcmp(interface_name, interface->name) != 0) {
+            continue;
+         }
+
+         for (unsigned i = 0; i < interface->length; i++) {
+            const glsl_struct_field *field = &interface->fields.structure[i];
+            if (strcmp(field->name, var_name) != 0)
+               continue;
+            /* From GL_ARB_program_interface_query:
+             *
+             * "For the property TOP_LEVEL_ARRAY_STRIDE, a single integer
+             *  identifying the stride between array elements of the top-level
+             *  shader storage block member containing the active variable is
+             *  written to <params>.  For top-level block members declared as
+             *  arrays, the value written is the difference, in basic machine
+             *  units, between the offsets of the active variable for
+             *  consecutive elements in the top-level array.  For top-level
+             *  block members not declared as an array, zero is written to
+             *  <params>."
+             */
+            if (field->type->is_array()) {
+               const enum glsl_matrix_layout matrix_layout =
+                  glsl_matrix_layout(field->matrix_layout);
+               bool row_major = matrix_layout == GLSL_MATRIX_LAYOUT_ROW_MAJOR;
+               const glsl_type *array_type = field->type->fields.array;
+
+               if (interface->interface_packing != GLSL_INTERFACE_PACKING_STD430) {
+                  if (array_type->is_record()) {
+                     array_stride = array_type->std140_size(row_major);
+                     array_stride = glsl_align(array_stride, 16);
+                  } else {
+                     unsigned element_base_align = 0;
+                     element_base_align = array_type->std140_base_alignment(row_major);
+                     array_stride = MAX2(element_base_align, 16);
+                  }
+               } else {
+                  array_stride = array_type->std430_array_stride(row_major);
+               }
+            } else {
+               array_stride = 0;
+            }
+            goto found_top_level_array_size;
+         }
+      }
+   }
+found_top_level_array_size:
+   free(var_name);
+   return array_stride;
+}
+
 /**
  * Function implements following location queries:
  *    glGetUniformLocation
@@ -880,7 +1075,7 @@ is_resource_referenced(struct gl_shader_program *shProg,
    if (res->Type == GL_ATOMIC_COUNTER_BUFFER)
       return RESOURCE_ATC(res)->StageReferences[stage];
 
-   if (res->Type == GL_UNIFORM_BLOCK)
+   if (res->Type == GL_UNIFORM_BLOCK || res->Type == GL_SHADER_STORAGE_BLOCK)
       return shProg->UniformBlockStageIndex[stage][index] != -1;
 
    return res->StageReferences & (1 << stage);
@@ -893,7 +1088,8 @@ get_buffer_property(struct gl_shader_program *shProg,
 {
    GET_CURRENT_CONTEXT(ctx);
    if (res->Type != GL_UNIFORM_BLOCK &&
-       res->Type != GL_ATOMIC_COUNTER_BUFFER)
+       res->Type != GL_ATOMIC_COUNTER_BUFFER &&
+       res->Type != GL_SHADER_STORAGE_BLOCK)
       goto invalid_operation;
 
    if (res->Type == GL_UNIFORM_BLOCK) {
@@ -922,6 +1118,39 @@ get_buffer_property(struct gl_shader_program *shProg,
             struct gl_program_resource *uni =
                _mesa_program_resource_find_name(shProg, GL_UNIFORM, iname,
                                                 NULL);
+            if (!uni)
+               continue;
+            *val++ =
+               _mesa_program_resource_index(shProg, uni);
+         }
+         return RESOURCE_UBO(res)->NumUniforms;
+      }
+   } else if (res->Type == GL_SHADER_STORAGE_BLOCK) {
+      switch (prop) {
+      case GL_BUFFER_BINDING:
+         *val = RESOURCE_UBO(res)->Binding;
+         return 1;
+      case GL_BUFFER_DATA_SIZE:
+         *val = RESOURCE_UBO(res)->UniformBufferSize;
+         return 1;
+      case GL_NUM_ACTIVE_VARIABLES:
+         *val = 0;
+         for (unsigned i = 0; i < RESOURCE_UBO(res)->NumUniforms; i++) {
+            const char *iname = RESOURCE_UBO(res)->Uniforms[i].IndexName;
+            struct gl_program_resource *uni =
+               _mesa_program_resource_find_name(shProg, GL_BUFFER_VARIABLE,
+                                                iname, NULL);
+            if (!uni)
+               continue;
+            (*val)++;
+         }
+         return 1;
+      case GL_ACTIVE_VARIABLES:
+         for (unsigned i = 0; i < RESOURCE_UBO(res)->NumUniforms; i++) {
+            const char *iname = RESOURCE_UBO(res)->Uniforms[i].IndexName;
+            struct gl_program_resource *uni =
+               _mesa_program_resource_find_name(shProg, GL_BUFFER_VARIABLE,
+                                                iname, NULL);
             if (!uni)
                continue;
             *val++ =
@@ -967,6 +1196,10 @@ _mesa_program_resource_prop(struct gl_shader_program *shProg,
    if (res->Type != type)\
       goto invalid_operation;
 
+#define VALIDATE_TYPE_2(type1, type2)\
+   if (res->Type != type1 && res->Type != type2)\
+      goto invalid_operation;
+
    switch(prop) {
    case GL_NAME_LENGTH:
       switch (res->Type) {
@@ -984,6 +1217,7 @@ _mesa_program_resource_prop(struct gl_shader_program *shProg,
    case GL_TYPE:
       switch (res->Type) {
       case GL_UNIFORM:
+      case GL_BUFFER_VARIABLE:
          *val = RESOURCE_UNI(res)->type->gl_type;
          return 1;
       case GL_PROGRAM_INPUT:
@@ -999,6 +1233,7 @@ _mesa_program_resource_prop(struct gl_shader_program *shProg,
    case GL_ARRAY_SIZE:
       switch (res->Type) {
       case GL_UNIFORM:
+      case GL_BUFFER_VARIABLE:
             *val = MAX2(RESOURCE_UNI(res)->array_elements, 1);
             return 1;
       case GL_PROGRAM_INPUT:
@@ -1012,23 +1247,23 @@ _mesa_program_resource_prop(struct gl_shader_program *shProg,
          goto invalid_operation;
       }
    case GL_OFFSET:
-      VALIDATE_TYPE(GL_UNIFORM);
+      VALIDATE_TYPE_2(GL_UNIFORM, GL_BUFFER_VARIABLE);
       *val = RESOURCE_UNI(res)->offset;
       return 1;
    case GL_BLOCK_INDEX:
-      VALIDATE_TYPE(GL_UNIFORM);
+      VALIDATE_TYPE_2(GL_UNIFORM, GL_BUFFER_VARIABLE);
       *val = RESOURCE_UNI(res)->block_index;
       return 1;
    case GL_ARRAY_STRIDE:
-      VALIDATE_TYPE(GL_UNIFORM);
+      VALIDATE_TYPE_2(GL_UNIFORM, GL_BUFFER_VARIABLE);
       *val = RESOURCE_UNI(res)->array_stride;
       return 1;
    case GL_MATRIX_STRIDE:
-      VALIDATE_TYPE(GL_UNIFORM);
+      VALIDATE_TYPE_2(GL_UNIFORM, GL_BUFFER_VARIABLE);
       *val = RESOURCE_UNI(res)->matrix_stride;
       return 1;
    case GL_IS_ROW_MAJOR:
-      VALIDATE_TYPE(GL_UNIFORM);
+      VALIDATE_TYPE_2(GL_UNIFORM, GL_BUFFER_VARIABLE);
       *val = RESOURCE_UNI(res)->row_major;
       return 1;
    case GL_ATOMIC_COUNTER_BUFFER_INDEX:
@@ -1054,6 +1289,8 @@ _mesa_program_resource_prop(struct gl_shader_program *shProg,
       case GL_PROGRAM_INPUT:
       case GL_PROGRAM_OUTPUT:
       case GL_UNIFORM_BLOCK:
+      case GL_BUFFER_VARIABLE:
+      case GL_SHADER_STORAGE_BLOCK:
       case GL_ATOMIC_COUNTER_BUFFER:
          *val = is_resource_referenced(shProg, res, index,
                                        stage_from_enum(prop));
@@ -1117,6 +1354,19 @@ _mesa_program_resource_prop(struct gl_shader_program *shProg,
       }
       return count;
    }
+
+   case GL_TOP_LEVEL_ARRAY_SIZE:
+      VALIDATE_TYPE(GL_BUFFER_VARIABLE);
+      *val = program_resource_top_level_array_size(shProg, res,
+                                                   _mesa_program_resource_name(res));
+      return 1;
+
+   case GL_TOP_LEVEL_ARRAY_STRIDE:
+      VALIDATE_TYPE(GL_BUFFER_VARIABLE);
+      *val = program_resource_top_level_array_stride(shProg, res,
+                                                     _mesa_program_resource_name(res));
+      return 1;
+
    /* GL_ARB_tessellation_shader */
    case GL_IS_PER_PATCH:
       switch (res->Type) {
@@ -1132,6 +1382,7 @@ _mesa_program_resource_prop(struct gl_shader_program *shProg,
    }
 
 #undef VALIDATE_TYPE
+#undef VALIDATE_TYPE_2
 
 invalid_enum:
    _mesa_error(ctx, GL_INVALID_ENUM, "%s(%s prop %s)", caller,
