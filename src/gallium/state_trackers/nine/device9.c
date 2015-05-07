@@ -1582,8 +1582,12 @@ NineDevice9_StretchRect( struct NineDevice9 *This,
 
     user_assert(!scaled || dst != src, D3DERR_INVALIDCALL);
     user_assert(!scaled ||
-                !NineSurface9_IsOffscreenPlain(dst) ||
+                !NineSurface9_IsOffscreenPlain(dst), D3DERR_INVALIDCALL);
+    user_assert(!NineSurface9_IsOffscreenPlain(dst) ||
                 NineSurface9_IsOffscreenPlain(src), D3DERR_INVALIDCALL);
+    user_assert(NineSurface9_IsOffscreenPlain(dst) ||
+                dst->desc.Usage & (D3DUSAGE_RENDERTARGET | D3DUSAGE_DEPTHSTENCIL),
+                D3DERR_INVALIDCALL);
     user_assert(!scaled ||
                 (!util_format_is_compressed(dst->base.info.format) &&
                  !util_format_is_compressed(src->base.info.format)),
