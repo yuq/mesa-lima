@@ -1953,7 +1953,7 @@ glsl_to_tgsi_visitor::visit(ir_expression *ir)
       break;
    case ir_unop_i2b:
       if (native_integers)
-         emit(ir, TGSI_OPCODE_INEG, result_dst, op[0]);
+         emit(ir, TGSI_OPCODE_USNE, result_dst, op[0], st_src_reg_for_int(0));
       else
          emit(ir, TGSI_OPCODE_SNE, result_dst, op[0], st_src_reg_for_float(0.0));
       break;
