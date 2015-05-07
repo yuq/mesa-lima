@@ -2668,6 +2668,7 @@ fs_visitor::opt_sampler_eot()
 
    tex_inst->offset |= fb_write->target << 24;
    tex_inst->eot = true;
+   tex_inst->dst = reg_null_ud;
    fb_write->remove(cfg->blocks[cfg->num_blocks - 1]);
 
    /* If a header is present, marking the eot is sufficient. Otherwise, we need
@@ -2706,7 +2707,6 @@ fs_visitor::opt_sampler_eot()
    tex_inst->header_size = 1;
    tex_inst->insert_before(cfg->blocks[cfg->num_blocks - 1], new_load_payload);
    tex_inst->src[0] = send_header;
-   tex_inst->dst = reg_null_ud;
 
    return true;
 }
