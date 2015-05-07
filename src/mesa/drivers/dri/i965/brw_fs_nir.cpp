@@ -722,9 +722,6 @@ fs_visitor::nir_emit_alu(nir_alu_instr *instr)
       inst->saturate = instr->dest.saturate;
       break;
 
-   case nir_op_flog:
-      unreachable("not reached: should be handled by ir_explog_to_explog2");
-
    case nir_op_fsin:
       inst = emit_math(SHADER_OPCODE_SIN, result, op[0]);
       inst->saturate = instr->dest.saturate;
