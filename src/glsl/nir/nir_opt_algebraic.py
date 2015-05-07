@@ -149,22 +149,16 @@ optimizations = [
    (('ushr', a, 0), a),
    # Exponential/logarithmic identities
    (('fexp2', ('flog2', a)), a), # 2^lg2(a) = a
-   (('fexp',  ('flog',  a)), a), # e^ln(a)  = a
    (('flog2', ('fexp2', a)), a), # lg2(2^a) = a
-   (('flog',  ('fexp',  a)), a), # ln(e^a)  = a
    (('fpow', a, b), ('fexp2', ('fmul', ('flog2', a), b)), 'options->lower_fpow'), # a^b = 2^(lg2(a)*b)
    (('fexp2', ('fmul', ('flog2', a), b)), ('fpow', a, b), '!options->lower_fpow'), # 2^(lg2(a)*b) = a^b
-   (('fexp',  ('fmul', ('flog', a), b)),  ('fpow', a, b), '!options->lower_fpow'), # e^(ln(a)*b) = a^b
    (('fpow', a, 1.0), a),
    (('fpow', a, 2.0), ('fmul', a, a)),
    (('fpow', a, 4.0), ('fmul', ('fmul', a, a), ('fmul', a, a))),
    (('fpow', 2.0, a), ('fexp2', a)),
    (('fsqrt', ('fexp2', a)), ('fexp2', ('fmul', 0.5, a))),
-   (('fsqrt', ('fexp', a)), ('fexp', ('fmul', 0.5, a))),
    (('frcp', ('fexp2', a)), ('fexp2', ('fneg', a))),
-   (('frcp', ('fexp', a)), ('fexp', ('fneg', a))),
    (('frsq', ('fexp2', a)), ('fexp2', ('fmul', -0.5, a))),
-   (('frsq', ('fexp', a)), ('fexp', ('fmul', -0.5, a))),
    (('flog2', ('fsqrt', a)), ('fmul', 0.5, ('flog2', a))),
    (('flog', ('fsqrt', a)), ('fmul', 0.5, ('flog', a))),
    (('flog2', ('frcp', a)), ('fneg', ('flog2', a))),
@@ -178,7 +172,6 @@ optimizations = [
    (('fadd', ('flog2', a), ('fneg', ('flog2', b))), ('flog2', ('fdiv', a, b))),
    (('fadd', ('flog', a), ('fneg', ('flog', b))), ('flog', ('fdiv', a, b))),
    (('fmul', ('fexp2', a), ('fexp2', b)), ('fexp2', ('fadd', a, b))),
-   (('fmul', ('fexp', a), ('fexp', b)), ('fexp', ('fadd', a, b))),
    # Division and reciprocal
    (('fdiv', 1.0, a), ('frcp', a)),
    (('frcp', ('frcp', a)), a),
