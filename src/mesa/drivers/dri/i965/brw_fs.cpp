@@ -3507,6 +3507,7 @@ fs_visitor::lower_load_payload()
             fs_inst *mov = MOV(retype(dst, inst->src[i].type),
                                inst->src[i]);
             mov->force_writemask_all = inst->force_writemask_all;
+            mov->force_sechalf = inst->force_sechalf;
             inst->insert_before(block, mov);
          }
          dst = offset(dst, 1);
