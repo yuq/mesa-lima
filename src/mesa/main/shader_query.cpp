@@ -28,6 +28,7 @@
  * \author Ian Romanick <ian.d.romanick@intel.com>
  */
 
+#include "main/context.h"
 #include "main/core.h"
 #include "glsl_symbol_table.h"
 #include "ir.h"
@@ -986,8 +987,9 @@ _mesa_program_resource_prop(struct gl_shader_program *shProg,
    case GL_ACTIVE_VARIABLES:
       return get_buffer_property(shProg, res, prop, val, caller);
    case GL_REFERENCED_BY_COMPUTE_SHADER:
-      if (!ctx->Extensions.ARB_compute_shader)
+      if (!_mesa_has_compute_shaders(ctx))
          goto invalid_enum;
+      /* fallthrough */
    case GL_REFERENCED_BY_VERTEX_SHADER:
    case GL_REFERENCED_BY_GEOMETRY_SHADER:
    case GL_REFERENCED_BY_FRAGMENT_SHADER:
