@@ -418,6 +418,7 @@ nv50_ir::DataType Instruction::inferSrcType() const
    case TGSI_OPCODE_OR:
    case TGSI_OPCODE_XOR:
    case TGSI_OPCODE_NOT:
+   case TGSI_OPCODE_SHL:
    case TGSI_OPCODE_U2F:
    case TGSI_OPCODE_U2D:
    case TGSI_OPCODE_UADD:
