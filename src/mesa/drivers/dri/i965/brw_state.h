@@ -339,7 +339,8 @@ gen6_upload_wm_state(struct brw_context *brw,
                      bool multisampled_fbo, int min_inv_per_frag,
                      bool dual_source_blend_enable, bool kill_enable,
                      bool color_buffer_write_enable, bool msaa_enabled,
-                     bool line_stipple_enable, bool polygon_stipple_enable);
+                     bool line_stipple_enable, bool polygon_stipple_enable,
+                     bool statistic_enable);
 
 /* gen6_sf_state.c */
 void

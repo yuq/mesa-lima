@@ -73,7 +73,8 @@ gen6_upload_wm_state(struct brw_context *brw,
                      bool multisampled_fbo, int min_inv_per_frag,
                      bool dual_source_blend_enable, bool kill_enable,
                      bool color_buffer_write_enable, bool msaa_enabled,
-                     bool line_stipple_enable, bool polygon_stipple_enable)
+                     bool line_stipple_enable, bool polygon_stipple_enable,
+                     bool statistic_enable)
 {
    uint32_t dw2, dw4, dw5, dw6, ksp0, ksp2;
 
@@ -109,7 +110,10 @@ gen6_upload_wm_state(struct brw_context *brw,
    }
 
    dw2 = dw4 = dw5 = dw6 = ksp2 = 0;
-   dw4 |= GEN6_WM_STATISTICS_ENABLE;
+
+   if (statistic_enable)
+      dw4 |= GEN6_WM_STATISTICS_ENABLE;
+
    dw5 |= GEN6_WM_LINE_AA_WIDTH_1_0;
    dw5 |= GEN6_WM_LINE_END_CAP_AA_WIDTH_0_5;
 
@@ -300,6 +304,9 @@ upload_wm_state(struct brw_context *brw)
                             ctx->Multisample.SampleAlphaToCoverage ||
                             prog_data->uses_omask;
 
+   /* Rendering against the gl-context is always taken into account. */
+   const bool statistic_enable = true;
+
    /* _NEW_LINE | _NEW_POLYGON | _NEW_BUFFERS | _NEW_COLOR |
     * _NEW_MULTISAMPLE
     */
@@ -308,7 +315,8 @@ upload_wm_state(struct brw_context *brw)
                         dual_src_blend_enable, kill_enable,
                         brw_color_buffer_write_enabled(brw),
                         ctx->Multisample.Enabled,
-                        ctx->Line.StippleFlag, ctx->Polygon.StippleFlag);
+                        ctx->Line.StippleFlag, ctx->Polygon.StippleFlag,
+                        statistic_enable);
 }
 
 const struct brw_tracked_state gen6_wm_state = {
