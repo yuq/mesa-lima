@@ -2603,7 +2603,7 @@ framebuffer_texture(struct gl_context *ctx, const char *caller, GLenum target,
       GLboolean err = GL_TRUE;
 
       texObj = _mesa_lookup_texture(ctx, texture);
-      if (texObj != NULL) {
+      if (texObj != NULL && texObj->Target != 0) {
          if (textarget == 0) {
             if (layered) {
                /* We're being called by glFramebufferTexture() and textarget
