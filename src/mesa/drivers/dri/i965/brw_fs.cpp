@@ -2701,6 +2701,7 @@ fs_visitor::opt_sampler_eot()
                                                     load_payload->sources + 1);
 
    new_load_payload->regs_written = load_payload->regs_written + 1;
+   new_load_payload->header_size = 1;
    tex_inst->mlen++;
    tex_inst->header_size = 1;
    tex_inst->insert_before(cfg->blocks[cfg->num_blocks - 1], new_load_payload);
