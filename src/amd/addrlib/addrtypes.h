@@ -33,8 +33,8 @@
 #ifndef __ADDR_TYPES_H__
 #define __ADDR_TYPES_H__
 
-#if defined(__APPLE__) || defined(TCORE_BUILD)
-// External definitions header maintained by Mac driver team (and TCORE team)
+#if defined(__APPLE__) && !defined(HAVE_TSERVER)
+// External definitions header maintained by Apple driver team, but not for diag team under Mac.
 // Helps address compilation issues & reduces code covered by NDA
 #include "addrExtDef.h"
 
@@ -59,7 +59,7 @@ typedef int            INT;
 
 #include <stdarg.h> // va_list...etc need this header
 
-#endif // defined (__APPLE__)
+#endif // defined (__APPLE__) && !defined(HAVE_TSERVER)
 
 /**
 ***************************************************************************************************
@@ -455,7 +455,7 @@ typedef enum _AddrTileType
 //
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-#if !defined(__APPLE__)
+#if !defined(__APPLE__) || defined(HAVE_TSERVER)
 
 #ifndef BOOL_32        // no bool type in C
 /// @brief Boolean type, since none is defined in C
@@ -531,7 +531,7 @@ typedef enum _AddrTileType
 #define UINT_64  unsigned long long OR unsigned __int64
 #endif
 
-#endif // #if !defined(__APPLE__)
+#endif // #if !defined(__APPLE__) || defined(HAVE_TSERVER)
 
 //  ADDR64X is used to print addresses in hex form on both Windows and Linux
 //

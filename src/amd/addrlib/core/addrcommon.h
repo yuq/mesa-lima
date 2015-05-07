@@ -41,7 +41,7 @@
 // Moved from addrinterface.h so __KERNEL__ is not needed any more
 #if ADDR_LNX_KERNEL_BUILD // || (defined(__GNUC__) && defined(__KERNEL__))
     #include "lnx_common_defs.h" // ported from cmmqs
-#elif !defined(__APPLE__)
+#elif !defined(__APPLE__) || defined(HAVE_TSERVER)
     #include <stdlib.h>
     #include <string.h>
 #endif
