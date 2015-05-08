@@ -73,6 +73,14 @@ match_value(const nir_search_value *value, nir_alu_instr *instr, unsigned src,
 {
    uint8_t new_swizzle[4];
 
+   /* If the source is an explicitly sized source, then we need to reset
+    * both the number of components and the swizzle.
+    */
+   if (nir_op_infos[instr->op].input_sizes[src] != 0) {
+      num_components = nir_op_infos[instr->op].input_sizes[src];
+      swizzle = identity_swizzle;
+   }
+
    for (int i = 0; i < num_components; ++i)
       new_swizzle[i] = instr->src[src].swizzle[swizzle[i]];
 
@@ -200,14 +208,6 @@ match_expression(const nir_search_expression *expr, nir_alu_instr *instr,
 
    bool matched = true;
    for (unsigned i = 0; i < nir_op_infos[instr->op].num_inputs; i++) {
-      /* If the source is an explicitly sized source, then we need to reset
-       * both the number of components and the swizzle.
-       */
-      if (nir_op_infos[instr->op].input_sizes[i] != 0) {
-         num_components = nir_op_infos[instr->op].input_sizes[i];
-         swizzle = identity_swizzle;
-      }
-
       if (!match_value(expr->srcs[i], instr, i, num_components,
                        swizzle, state)) {
          matched = false;
