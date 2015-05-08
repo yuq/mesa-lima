@@ -40,6 +40,26 @@
  * We delete the if statement and paste the contents of the always-executed
  * branch into the surrounding control flow, possibly removing more code if
  * the branch had a jump at the end.
+ *
+ * The other way is that control flow can end in a jump so that code after it
+ * never gets executed. In particular, this can happen after optimizing
+ * something like:
+ *
+ * if (true) {
+ *    ...
+ *    break;
+ * }
+ * ...
+ *
+ * We also consider the case where both branches of an if end in a jump, e.g.:
+ *
+ * if (...) {
+ *    break;
+ * } else {
+ *    continue;
+ * }
+ * ...
+ *
  */
 
 static void
@@ -111,30 +131,117 @@ opt_constant_if(nir_if *if_stmt, bool condition)
 }
 
 static bool
-dead_cf_cb(nir_block *block, void *state)
+dead_cf_block(nir_block *block)
 {
-   bool *progress = state;
-
    nir_if *following_if = nir_block_get_following_if(block);
    if (!following_if)
-      return true;
+      return false;
 
   nir_const_value *const_value =
      nir_src_as_const_value(following_if->condition);
 
   if (!const_value)
-     return true;
+     return false;
 
    opt_constant_if(following_if, const_value->u[0] != 0);
-   *progress = true;
    return true;
+}
+
+static bool
+ends_in_jump(nir_block *block)
+{
+   if (exec_list_is_empty(&block->instr_list))
+      return false;
+
+   nir_instr *instr = nir_block_last_instr(block);
+   return instr->type == nir_instr_type_jump;
+}
+
+static bool
+dead_cf_list(struct exec_list *list, bool *list_ends_in_jump)
+{
+   bool progress = false;
+   *list_ends_in_jump = false;
+
+   nir_cf_node *prev = NULL;
+
+   foreach_list_typed(nir_cf_node, cur, node, list) {
+      switch (cur->type) {
+      case nir_cf_node_block: {
+         nir_block *block = nir_cf_node_as_block(cur);
+         if (dead_cf_block(block)) {
+            /* We just deleted the if after this block, so we may have
+             * deleted the block before or after it -- which one is an
+             * implementation detail. Therefore, to recover the place we were
+             * at, we have to use the previous cf_node.
+             */
+
+            if (prev) {
+               cur = nir_cf_node_next(prev);
+            } else {
+               cur = exec_node_data(nir_cf_node, exec_list_get_head(list),
+                                    node);
+            }
+
+            block = nir_cf_node_as_block(cur);
+
+            progress = true;
+         }
+
+         if (ends_in_jump(block)) {
+            *list_ends_in_jump = true;
+
+            if (!exec_node_is_tail_sentinel(cur->node.next)) {
+               remove_after_cf_node(cur);
+               return true;
+            }
+         }
+
+         break;
+      }
+
+      case nir_cf_node_if: {
+         nir_if *if_stmt = nir_cf_node_as_if(cur);
+         bool then_ends_in_jump, else_ends_in_jump;
+         progress |= dead_cf_list(&if_stmt->then_list, &then_ends_in_jump);
+         progress |= dead_cf_list(&if_stmt->else_list, &else_ends_in_jump);
+
+         if (then_ends_in_jump && else_ends_in_jump) {
+            *list_ends_in_jump = true;
+            nir_block *next = nir_cf_node_as_block(nir_cf_node_next(cur));
+            if (!exec_list_is_empty(&next->instr_list) ||
+                !exec_node_is_tail_sentinel(next->cf_node.node.next)) {
+               remove_after_cf_node(cur);
+               return true;
+            }
+         }
+
+         break;
+      }
+
+      case nir_cf_node_loop: {
+         nir_loop *loop = nir_cf_node_as_loop(cur);
+         bool dummy;
+         progress |= dead_cf_list(&loop->body, &dummy);
+
+         break;
+      }
+
+      default:
+         unreachable("unknown cf node type");
+      }
+
+      prev = cur;
+   }
+
+   return progress;
 }
 
 static bool
 opt_dead_cf_impl(nir_function_impl *impl)
 {
-   bool progress = false;
-   nir_foreach_block(impl, dead_cf_cb, &progress);
+   bool dummy;
+   bool progress = dead_cf_list(&impl->body, &dummy);
 
    if (progress)
       nir_metadata_preserve(impl, nir_metadata_none);
