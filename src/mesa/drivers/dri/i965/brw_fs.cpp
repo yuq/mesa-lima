@@ -2658,6 +2658,16 @@ fs_visitor::opt_sampler_eot()
    if (unlikely(tex_inst->is_head_sentinel()) || !tex_inst->is_tex())
       return false;
 
+   /* This optimisation doesn't seem to work for textureGather for some
+    * reason. I can't find any documentation or known workarounds to indicate
+    * that this is expected, but considering that it is probably pretty
+    * unlikely that a shader would directly write out the results from
+    * textureGather we might as well just disable it.
+    */
+   if (tex_inst->opcode == SHADER_OPCODE_TG4 ||
+       tex_inst->opcode == SHADER_OPCODE_TG4_OFFSET)
+      return false;
+
    /* If there's no header present, we need to munge the LOAD_PAYLOAD as well.
     * It's very likely to be the previous instruction.
     */
