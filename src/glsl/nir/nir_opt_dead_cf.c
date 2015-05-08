@@ -29,9 +29,9 @@
 #include "nir_control_flow.h"
 
 /*
- * This file implements an optimization that deletes statically unreachable
- * code. In NIR, one way this can happen if if an if statement has a constant
- * condition:
+ * This file implements an optimization that deletes statically
+ * unreachable/dead code. In NIR, one way this can happen if if an if
+ * statement has a constant condition:
  *
  * if (true) {
  *    ...
@@ -41,7 +41,7 @@
  * branch into the surrounding control flow, possibly removing more code if
  * the branch had a jump at the end.
  *
- * The other way is that control flow can end in a jump so that code after it
+ * Another way is that control flow can end in a jump so that code after it
  * never gets executed. In particular, this can happen after optimizing
  * something like:
  *
@@ -60,6 +60,12 @@
  * }
  * ...
  *
+ * Finally, we also handle removing useless loops, i.e. loops with no side
+ * effects and without any definitions that are used elsewhere. This case is a
+ * little different from the first two in that the code is actually run (it
+ * just never does anything), but there are similar issues with needing to
+ * be careful with restarting after deleting the cf_node (see dead_cf_list())
+ * so this is a convenient place to remove them.
  */
 
 static void
@@ -131,19 +137,107 @@ opt_constant_if(nir_if *if_stmt, bool condition)
 }
 
 static bool
+block_has_no_side_effects(nir_block *block, void *state)
+{
+   (void) state;
+
+   nir_foreach_instr(block, instr) {
+      if (instr->type == nir_instr_type_call)
+         return false;
+
+      /* Return instructions can cause us to skip over other side-effecting
+       * instructions after the loop, so consider them to have side effects
+       * here.
+       */
+
+      if (instr->type == nir_instr_type_jump &&
+          nir_instr_as_jump(instr)->type == nir_jump_return)
+         return false;
+
+      if (instr->type != nir_instr_type_intrinsic)
+         continue;
+
+      nir_intrinsic_instr *intrin = nir_instr_as_intrinsic(instr);
+      if (!nir_intrinsic_infos[intrin->intrinsic].flags &
+          NIR_INTRINSIC_CAN_ELIMINATE)
+         return false;
+   }
+
+   return true;
+}
+
+static bool
+def_not_live_out(nir_ssa_def *def, void *state)
+{
+   nir_block *after = state;
+
+   return !BITSET_TEST(after->live_in, def->live_index);
+}
+
+/*
+ * Test if a loop is dead. A loop is dead if:
+ *
+ * 1) It has no side effects (i.e. intrinsics which could possibly affect the
+ * state of the program aside from producing an SSA value, indicated by a lack
+ * of NIR_INTRINSIC_CAN_ELIMINATE).
+ *
+ * 2) It has no phi nodes after it, since those indicate values inside the
+ * loop being used after the loop.
+ *
+ * 3) If there are no phi nodes after the loop, then the only way a value
+ * defined inside the loop can be used outside the loop is if its definition
+ * dominates the block after the loop. If none of the definitions that
+ * dominate the loop exit are used outside the loop, then the loop is dead
+ * and it can be deleted.
+ */
+
+static bool
+loop_is_dead(nir_loop *loop)
+{
+   nir_block *before = nir_cf_node_as_block(nir_cf_node_prev(&loop->cf_node));
+   nir_block *after = nir_cf_node_as_block(nir_cf_node_next(&loop->cf_node));
+
+   if (!exec_list_is_empty(&after->instr_list) &&
+       nir_block_first_instr(after)->type == nir_instr_type_phi)
+      return false;
+
+   if (!nir_foreach_block_in_cf_node(&loop->cf_node, block_has_no_side_effects,
+                                     NULL))
+      return false;
+
+   for (nir_block *cur = after->imm_dom; cur != before; cur = cur->imm_dom) {
+      nir_foreach_instr(cur, instr) {
+         if (!nir_foreach_ssa_def(instr, def_not_live_out, after))
+            return false;
+      }
+   }
+
+   return true;
+}
+
+static bool
 dead_cf_block(nir_block *block)
 {
    nir_if *following_if = nir_block_get_following_if(block);
-   if (!following_if)
+   if (following_if) {
+     nir_const_value *const_value =
+        nir_src_as_const_value(following_if->condition);
+
+     if (!const_value)
+        return false;
+
+      opt_constant_if(following_if, const_value->u[0] != 0);
+      return true;
+   }
+
+   nir_loop *following_loop = nir_block_get_following_loop(block);
+   if (!following_loop)
       return false;
 
-  nir_const_value *const_value =
-     nir_src_as_const_value(following_if->condition);
+   if (!loop_is_dead(following_loop))
+      return false;
 
-  if (!const_value)
-     return false;
-
-   opt_constant_if(following_if, const_value->u[0] != 0);
+   nir_cf_node_remove(&following_loop->cf_node);
    return true;
 }
 
@@ -170,7 +264,7 @@ dead_cf_list(struct exec_list *list, bool *list_ends_in_jump)
       case nir_cf_node_block: {
          nir_block *block = nir_cf_node_as_block(cur);
          if (dead_cf_block(block)) {
-            /* We just deleted the if after this block, so we may have
+            /* We just deleted the if or loop after this block, so we may have
              * deleted the block before or after it -- which one is an
              * implementation detail. Therefore, to recover the place we were
              * at, we have to use the previous cf_node.
@@ -240,6 +334,9 @@ dead_cf_list(struct exec_list *list, bool *list_ends_in_jump)
 static bool
 opt_dead_cf_impl(nir_function_impl *impl)
 {
+   nir_metadata_require(impl, nir_metadata_live_variables |
+                              nir_metadata_dominance);
+
    bool dummy;
    bool progress = dead_cf_list(&impl->body, &dummy);
 
