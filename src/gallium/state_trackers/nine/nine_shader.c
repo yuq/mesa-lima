@@ -1095,9 +1095,18 @@ _tx_dst_param(struct shader_translator *tx, const struct sm1_dst_param *param)
         assert(param->idx >= 0 && param->idx < 4);
         assert(!param->rel);
         tx->info->rt_mask |= 1 << param->idx;
-        if (ureg_dst_is_undef(tx->regs.oCol[param->idx]))
-            tx->regs.oCol[param->idx] =
-               ureg_DECL_output(tx->ureg, TGSI_SEMANTIC_COLOR, param->idx);
+        if (ureg_dst_is_undef(tx->regs.oCol[param->idx])) {
+            /* ps < 3: oCol[0] will have fog blending afterward
+             * vs < 3: oD1.w (D3DPMISCCAPS_FOGANDSPECULARALPHA) set to 0 even if set */
+            if (!IS_VS && tx->version.major < 3 && param->idx == 0) {
+                tx->regs.oCol[0] = ureg_DECL_temporary(tx->ureg);
+            } else if (IS_VS && tx->version.major < 3 && param->idx == 1) {
+                tx->regs.oCol[1] = ureg_DECL_temporary(tx->ureg);
+            } else {
+                tx->regs.oCol[param->idx] =
+                    ureg_DECL_output(tx->ureg, TGSI_SEMANTIC_COLOR, param->idx);
+            }
+        }
         dst = tx->regs.oCol[param->idx];
         if (IS_VS && tx->version.major < 3)
             dst = ureg_saturate(dst);
@@ -3185,6 +3194,16 @@ tgsi_processor_from_type(unsigned shader_type)
     }
 }
 
+static void
+shader_add_ps_fog_stage(struct shader_translator *tx, struct ureg_src src_col)
+{
+    struct ureg_program *ureg = tx->ureg;
+    struct ureg_dst oCol0 = ureg_DECL_output(ureg, TGSI_SEMANTIC_COLOR, 0);
+
+    /* TODO: fog computation */
+    ureg_MOV(ureg, oCol0, src_col);
+}
+
 #define GET_CAP(n) device->screen->get_param( \
       device->screen, PIPE_CAP_##n)
 #define GET_SHADER_CAP(n) device->screen->get_shader_param( \
@@ -3256,10 +3275,26 @@ nine_translate_shader(struct NineDevice9 *device, struct nine_shader_info *info)
         goto out;
     }
 
-    if (IS_PS && (tx->version.major < 2) && tx->num_temp) {
-        ureg_MOV(tx->ureg, ureg_DECL_output(tx->ureg, TGSI_SEMANTIC_COLOR, 0),
-                 ureg_src(tx->regs.r[0]));
-        info->rt_mask |= 0x1;
+    if (IS_PS && tx->version.major < 3) {
+        if (tx->version.major < 2) {
+            assert(tx->num_temp); /* there must be color output */
+            info->rt_mask |= 0x1;
+            shader_add_ps_fog_stage(tx, ureg_src(tx->regs.r[0]));
+        } else {
+            shader_add_ps_fog_stage(tx, ureg_src(tx->regs.oCol[0]));
+        }
+    }
+
+    if (IS_VS && tx->version.major < 3 && ureg_dst_is_undef(tx->regs.oFog)) {
+        tx->regs.oFog = ureg_DECL_output(tx->ureg, TGSI_SEMANTIC_FOG, 0);
+        ureg_MOV(tx->ureg, ureg_writemask(tx->regs.oFog, TGSI_WRITEMASK_X), ureg_imm1f(tx->ureg, 0.0f));
+    }
+
+    /* vs < 3: oD1.w (D3DPMISCCAPS_FOGANDSPECULARALPHA) set to 0 even if set */
+    if (IS_VS && tx->version.major < 3 && !ureg_dst_is_undef(tx->regs.oCol[1])) {
+        struct ureg_dst dst = ureg_DECL_output(tx->ureg, TGSI_SEMANTIC_COLOR, 1);
+        ureg_MOV(tx->ureg, ureg_writemask(dst, TGSI_WRITEMASK_XYZ), ureg_src(tx->regs.oCol[1]));
+        ureg_MOV(tx->ureg, ureg_writemask(dst, TGSI_WRITEMASK_W), ureg_imm1f(tx->ureg, 0.0f));
     }
 
     if (info->position_t)
