@@ -98,6 +98,7 @@ match_value(const nir_search_value *value, nir_alu_instr *instr, unsigned src,
 
    case nir_search_value_variable: {
       nir_search_variable *var = nir_search_value_as_variable(value);
+      assert(var->variable < NIR_SEARCH_MAX_VARIABLES);
 
       if (state->variables_seen & (1 << var->variable)) {
          if (!nir_srcs_equal(state->variables[var->variable].src,
