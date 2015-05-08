@@ -2628,6 +2628,20 @@ interface_block:
       }
       $$ = block;
    }
+   | memory_qualifier interface_block
+   {
+      ast_interface_block *block = (ast_interface_block *)$2;
+
+      if (!block->layout.flags.q.buffer) {
+            _mesa_glsl_error(& @1, state,
+                             "memory qualifiers can only be used in the "
+                             "declaration of shader storage blocks");
+      }
+      if (!block->layout.merge_qualifier(& @1, state, $1)) {
+         YYERROR;
+      }
+      $$ = block;
+   }
    ;
 
 basic_interface_block:
