@@ -64,7 +64,8 @@ struct nine_ff_vs_key
             uint32_t fog_range : 1;
             uint32_t color0in_one : 1;
             uint32_t color1in_one : 1;
-            uint32_t pad1 : 8;
+            uint32_t fog : 1;
+            uint32_t pad1 : 7;
             uint32_t tc_gen : 24; /* 8 * 3 bits */
             uint32_t pad2 : 8;
             uint32_t tc_idx : 24;
@@ -110,7 +111,7 @@ struct nine_ff_ps_key
                 uint32_t projected : 1;
                 /* that's 32 bit exactly */
             } ts[8];
-            uint32_t fog : 1; /* for vFog with programmable VS */
+            uint32_t fog : 1; /* for vFog coming from VS */
             uint32_t fog_mode : 2;
             uint32_t specular : 1; /* 9 32-bit words with this */
             uint8_t colorarg_b4[3];
@@ -223,7 +224,6 @@ static void nine_ureg_tgsi_dump(struct ureg_program *ureg, boolean override)
  * CONST[28].x___ RS.FogEnd
  * CONST[28]._y__ 1.0f / (RS.FogEnd - RS.FogStart)
  * CONST[28].__z_ RS.FogDensity
- * CONST[29]      RS.FogColor
 
  * CONST[30].x___ TWEENFACTOR
  *
@@ -336,7 +336,6 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
     const struct nine_ff_vs_key *key = vs->key;
     struct ureg_program *ureg = ureg_create(TGSI_PROCESSOR_VERTEX);
     struct ureg_dst oPos, oCol[2], oTex[8], oPsz, oFog;
-    struct ureg_dst rCol[2]; /* oCol if no fog, TEMP otherwise */
     struct ureg_dst rVtx, rNrm;
     struct ureg_dst r[8];
     struct ureg_dst AR;
@@ -421,18 +420,15 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
     oPos = ureg_DECL_output(ureg, TGSI_SEMANTIC_POSITION, 0); /* HPOS */
     oCol[0] = ureg_saturate(ureg_DECL_output(ureg, TGSI_SEMANTIC_COLOR, 0));
     oCol[1] = ureg_saturate(ureg_DECL_output(ureg, TGSI_SEMANTIC_COLOR, 1));
+    if (key->fog) {
+        oFog = ureg_DECL_output(ureg, TGSI_SEMANTIC_FOG, 0);
+        oFog = ureg_writemask(oFog, TGSI_WRITEMASK_X);
+    }
 
     if (key->vertexpointsize || key->pointscale) {
         oPsz = ureg_DECL_output_masked(ureg, TGSI_SEMANTIC_PSIZE, 0,
                                        TGSI_WRITEMASK_X, 0, 1);
         oPsz = ureg_writemask(oPsz, TGSI_WRITEMASK_X);
-    }
-    if (key->fog_mode) {
-        /* We apply fog to the vertex colors, oFog is for programmable shaders only ?
-         */
-        oFog = ureg_DECL_output_masked(ureg, TGSI_SEMANTIC_FOG, 0,
-                                       TGSI_WRITEMASK_X, 0, 1);
-        oFog = ureg_writemask(oFog, TGSI_WRITEMASK_X);
     }
 
     /* Declare TEMPs:
@@ -444,14 +440,6 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
     tmp_z = ureg_writemask(tmp, TGSI_WRITEMASK_Z);
     if (key->lighting || key->vertexblend)
         AR = ureg_DECL_address(ureg);
-
-    if (key->fog_mode) {
-        rCol[0] = r[2];
-        rCol[1] = r[3];
-    } else {
-        rCol[0] = oCol[0];
-        rCol[1] = oCol[1];
-    }
 
     rVtx = ureg_writemask(r[1], TGSI_WRITEMASK_XYZ);
     rNrm = ureg_writemask(r[2], TGSI_WRITEMASK_XYZ);
@@ -852,22 +840,22 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
             ureg_MAD(ureg, ureg_writemask(tmp, TGSI_WRITEMASK_XYZ), vs->mtlA, ureg_src(tmp), vs->mtlE);
             ureg_ADD(ureg, ureg_writemask(tmp, TGSI_WRITEMASK_W  ), vs->mtlA, vs->mtlE);
         }
-        ureg_MAD(ureg, rCol[0], ureg_src(rD), vs->mtlD, ureg_src(tmp));
-        ureg_MUL(ureg, rCol[1], ureg_src(rS), vs->mtlS);
+        ureg_MAD(ureg, oCol[0], ureg_src(rD), vs->mtlD, ureg_src(tmp));
+        ureg_MUL(ureg, oCol[1], ureg_src(rS), vs->mtlS);
     } else
     /* COLOR */
     if (key->darkness) {
         if (key->mtl_emissive == 0 && key->mtl_ambient == 0) {
-            ureg_MAD(ureg, rCol[0], vs->mtlD, ureg_imm4f(ureg, 0.0f, 0.0f, 0.0f, 1.0f), _CONST(19));
+            ureg_MAD(ureg, oCol[0], vs->mtlD, ureg_imm4f(ureg, 0.0f, 0.0f, 0.0f, 1.0f), _CONST(19));
         } else {
-            ureg_MAD(ureg, ureg_writemask(rCol[0], TGSI_WRITEMASK_XYZ), vs->mtlA, _CONST(25), vs->mtlE);
+            ureg_MAD(ureg, ureg_writemask(oCol[0], TGSI_WRITEMASK_XYZ), vs->mtlA, _CONST(25), vs->mtlE);
             ureg_ADD(ureg, ureg_writemask(tmp,     TGSI_WRITEMASK_W), vs->mtlA, vs->mtlE);
-            ureg_ADD(ureg, ureg_writemask(rCol[0], TGSI_WRITEMASK_W), vs->mtlD, _W(tmp));
+            ureg_ADD(ureg, ureg_writemask(oCol[0], TGSI_WRITEMASK_W), vs->mtlD, _W(tmp));
         }
-        ureg_MUL(ureg, rCol[1], ureg_imm4f(ureg, 0.0f, 0.0f, 0.0f, 1.0f), vs->mtlS);
+        ureg_MUL(ureg, oCol[1], ureg_imm4f(ureg, 0.0f, 0.0f, 0.0f, 1.0f), vs->mtlS);
     } else {
-        ureg_MOV(ureg, rCol[0], vs->aCol[0]);
-        ureg_MOV(ureg, rCol[1], vs->aCol[1]);
+        ureg_MOV(ureg, oCol[0], vs->aCol[0]);
+        ureg_MOV(ureg, oCol[1], vs->aCol[1]);
     }
 
     /* === Process fog.
@@ -875,10 +863,6 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
      * exp(x) = ex2(log2(e) * x)
      */
     if (key->fog_mode) {
-        /* Fog doesn't affect alpha, TODO: combine with light code output */
-        ureg_MOV(ureg, ureg_writemask(oCol[0], TGSI_WRITEMASK_W), _W(rCol[0]));
-        ureg_MOV(ureg, ureg_writemask(oCol[1], TGSI_WRITEMASK_W), _W(rCol[1]));
-
         if (key->position_t) {
             ureg_MOV(ureg, ureg_saturate(tmp_x), ureg_scalar(vs->aCol[1], TGSI_SWIZZLE_W));
         } else
@@ -906,8 +890,8 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
             ureg_MUL(ureg, ureg_saturate(tmp_x), _X(tmp), _YYYY(_CONST(28)));
         }
         ureg_MOV(ureg, oFog, _X(tmp));
-        ureg_LRP(ureg, ureg_writemask(oCol[0], TGSI_WRITEMASK_XYZ), _X(tmp), ureg_src(rCol[0]), _CONST(29));
-        ureg_LRP(ureg, ureg_writemask(oCol[1], TGSI_WRITEMASK_XYZ), _X(tmp), ureg_src(rCol[1]), _CONST(29));
+    } else if (key->fog) {
+        ureg_MOV(ureg, oFog, ureg_scalar(vs->aCol[1], TGSI_SWIZZLE_W));
     }
 
     if (key->position_t && device->driver_caps.window_space_position_support)
@@ -1428,6 +1412,7 @@ nine_ff_get_vs(struct NineDevice9 *device)
         key.mtl_specular = state->rs[D3DRS_SPECULARMATERIALSOURCE];
         key.mtl_emissive = state->rs[D3DRS_EMISSIVEMATERIALSOURCE];
     }
+    key.fog = !!state->rs[D3DRS_FOGENABLE];
     key.fog_mode = state->rs[D3DRS_FOGENABLE] ? state->rs[D3DRS_FOGVERTEXMODE] : 0;
     if (key.fog_mode)
         key.fog_range = !key.position_t && state->rs[D3DRS_RANGEFOGENABLE];
@@ -1563,6 +1548,7 @@ nine_ff_get_ps(struct NineDevice9 *device)
         key.ts[s].colorop = key.ts[s].alphaop = D3DTOP_DISABLE;
     if (state->rs[D3DRS_FOGENABLE])
         key.fog_mode = state->rs[D3DRS_FOGTABLEMODE];
+    key.fog = !!state->rs[D3DRS_FOGENABLE];
 
     ps = util_hash_table_get(device->ff.ht_ps, &key);
     if (ps)
@@ -1690,7 +1676,6 @@ nine_ff_load_point_and_fog_params(struct NineDevice9 *device)
     if (isinf(dst[28].y))
         dst[28].y = 0.0f;
     dst[28].z = asfloat(state->rs[D3DRS_FOGDENSITY]);
-    d3dcolor_to_rgba(&dst[29].x, state->rs[D3DRS_FOGCOLOR]);
 }
 
 static void
