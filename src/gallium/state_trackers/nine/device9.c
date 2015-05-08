@@ -548,10 +548,14 @@ NineDevice9_GetAvailableTextureMem( struct NineDevice9 *This )
 HRESULT WINAPI
 NineDevice9_EvictManagedResources( struct NineDevice9 *This )
 {
-    /* We don't really need to do anything here, but might want to free up
-     * the GPU virtual address space by killing pipe_resources.
-     */
-    STUB(D3D_OK);
+    struct NineBaseTexture9 *tex;
+
+    DBG("This=%p\n", This);
+    LIST_FOR_EACH_ENTRY(tex, &This->managed_textures, list2) {
+        NineBaseTexture9_UnLoad(tex);
+    }
+
+    return D3D_OK;
 }
 
 HRESULT WINAPI

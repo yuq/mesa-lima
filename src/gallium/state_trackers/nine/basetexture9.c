@@ -587,6 +587,21 @@ NineBaseTexture9_PreLoad( struct NineBaseTexture9 *This )
         NineBaseTexture9_UploadSelf(This);
 }
 
+void
+NineBaseTexture9_UnLoad( struct NineBaseTexture9 *This )
+{
+    if (This->base.pool != D3DPOOL_MANAGED ||
+        This->managed.lod_resident == -1)
+        return;
+
+    pipe_resource_reference(&This->base.resource, NULL);
+    This->managed.lod_resident = -1;
+    This->managed.dirty = TRUE;
+
+    /* If the texture is bound, we have to re-upload it */
+    BASETEX_REGISTER_UPDATE(This);
+}
+
 #ifdef DEBUG
 void
 NineBaseTexture9_Dump( struct NineBaseTexture9 *This )

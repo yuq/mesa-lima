@@ -95,6 +95,9 @@ NineBaseTexture9_GenerateMipSubLevels( struct NineBaseTexture9 *This );
 void WINAPI
 NineBaseTexture9_PreLoad( struct NineBaseTexture9 *This );
 
+void
+NineBaseTexture9_UnLoad( struct NineBaseTexture9 *This );
+
 /* For D3DPOOL_MANAGED only (after SetLOD change): */
 HRESULT
 NineBaseTexture9_CreatePipeResource( struct NineBaseTexture9 *This,
