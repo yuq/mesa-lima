@@ -705,6 +705,7 @@ ConstantFolding::tryCollapseChainedMULs(Instruction *mul2,
             mul1->setSrc(s1, bld.loadImm(NULL, f * imm1.reg.data.f32));
             mul1->src(s1).mod = Modifier(0);
             mul2->def(0).replace(mul1->getDef(0), false);
+            mul1->saturate = mul2->saturate;
          } else
          if (prog->getTarget()->isPostMultiplySupported(OP_MUL, f, e)) {
             // c = mul a, b
@@ -713,8 +714,8 @@ ConstantFolding::tryCollapseChainedMULs(Instruction *mul2,
             mul2->def(0).replace(mul1->getDef(0), false);
             if (f < 0)
                mul1->src(0).mod *= Modifier(NV50_IR_MOD_NEG);
+            mul1->saturate = mul2->saturate;
          }
-         mul1->saturate = mul2->saturate;
          return;
       }
    }
