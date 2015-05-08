@@ -1732,6 +1732,8 @@ bool nir_foreach_block_reverse(nir_function_impl *impl, nir_foreach_block_cb cb,
  */
 nir_if *nir_block_get_following_if(nir_block *block);
 
+nir_loop *nir_block_get_following_loop(nir_block *block);
+
 void nir_index_local_regs(nir_function_impl *impl);
 void nir_index_global_regs(nir_shader *shader);
 void nir_index_ssa_defs(nir_function_impl *impl);
