@@ -1726,6 +1726,8 @@ bool nir_foreach_block(nir_function_impl *impl, nir_foreach_block_cb cb,
                        void *state);
 bool nir_foreach_block_reverse(nir_function_impl *impl, nir_foreach_block_cb cb,
                                void *state);
+bool nir_foreach_block_in_cf_node(nir_cf_node *node, nir_foreach_block_cb cb,
+                                  void *state);
 
 /* If the following CF node is an if, this function returns that if.
  * Otherwise, it returns NULL.

@@ -1293,6 +1293,13 @@ foreach_cf_node(nir_cf_node *node, nir_foreach_block_cb cb,
 }
 
 bool
+nir_foreach_block_in_cf_node(nir_cf_node *node, nir_foreach_block_cb cb,
+                             void *state)
+{
+   return foreach_cf_node(node, cb, false, state);
+}
+
+bool
 nir_foreach_block(nir_function_impl *impl, nir_foreach_block_cb cb, void *state)
 {
    foreach_list_typed_safe(nir_cf_node, node, node, &impl->body) {
