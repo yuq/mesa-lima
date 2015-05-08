@@ -207,6 +207,11 @@ match_expression(const nir_search_expression *expr, nir_alu_instr *instr,
       }
    }
 
+   /* Stash off the current variables_seen bitmask.  This way we can
+    * restore it prior to matching in the commutative case below.
+    */
+   unsigned variables_seen_stash = state->variables_seen;
+
    bool matched = true;
    for (unsigned i = 0; i < nir_op_infos[instr->op].num_inputs; i++) {
       if (!match_value(expr->srcs[i], instr, i, num_components,
@@ -221,6 +226,13 @@ match_expression(const nir_search_expression *expr, nir_alu_instr *instr,
 
    if (nir_op_infos[instr->op].algebraic_properties & NIR_OP_IS_COMMUTATIVE) {
       assert(nir_op_infos[instr->op].num_inputs == 2);
+
+      /* Restore the variables_seen bitmask.  If we don't do this, then we
+       * could end up with an erroneous failure due to variables found in the
+       * first match attempt above not matching those in the second.
+       */
+      state->variables_seen = variables_seen_stash;
+
       if (!match_value(expr->srcs[0], instr, 1, num_components,
                        swizzle, state))
          return false;
