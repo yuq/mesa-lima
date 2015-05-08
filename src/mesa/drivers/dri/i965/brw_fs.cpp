@@ -2600,9 +2600,12 @@ fs_visitor::opt_zero_samples()
           load_payload->opcode != SHADER_OPCODE_LOAD_PAYLOAD)
          continue;
 
-      /* We don't want to remove the message header. Removing all of the
-       * parameters is avoided because it seems to cause a GPU hang but I
-       * can't find any documentation indicating that this is expected.
+      /* We don't want to remove the message header or the first parameter.
+       * Removing the first parameter is not allowed, see the Haswell PRM
+       * volume 7, page 149:
+       *
+       *     "Parameter 0 is required except for the sampleinfo message, which
+       *      has no parameter 0"
        */
       while (inst->mlen > inst->header_size + dispatch_width / 8 &&
              load_payload->src[(inst->mlen - inst->header_size) /
