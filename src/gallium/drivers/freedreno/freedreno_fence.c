@@ -35,6 +35,7 @@
 struct pipe_fence_handle {
 	struct pipe_reference reference;
 	struct fd_context *ctx;
+	struct fd_screen *screen;
 	uint32_t timestamp;
 };
 
@@ -68,7 +69,7 @@ boolean fd_screen_fence_finish(struct pipe_screen *screen,
 		struct pipe_fence_handle *fence,
 		uint64_t timeout)
 {
-	if (fd_pipe_wait(fence->ctx->screen->pipe, fence->timestamp))
+	if (fd_pipe_wait(fence->screen->pipe, fence->timestamp))
 		return false;
 
 	return true;
@@ -86,6 +87,7 @@ struct pipe_fence_handle * fd_fence_create(struct pipe_context *pctx)
 	pipe_reference_init(&fence->reference, 1);
 
 	fence->ctx = ctx;
+	fence->screen = ctx->screen;
 	fence->timestamp = fd_ringbuffer_timestamp(ctx->ring);
 
 	return fence;
