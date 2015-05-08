@@ -76,10 +76,6 @@ brw_conditional_for_comparison(unsigned int op)
    switch (op) {
    case ir_binop_less:
       return BRW_CONDITIONAL_L;
-   case ir_binop_greater:
-      return BRW_CONDITIONAL_G;
-   case ir_binop_lequal:
-      return BRW_CONDITIONAL_LE;
    case ir_binop_gequal:
       return BRW_CONDITIONAL_GE;
    case ir_binop_equal:
