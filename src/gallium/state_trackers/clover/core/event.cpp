@@ -38,6 +38,7 @@ event::~event() {
 
 std::vector<intrusive_ref<event>>
 event::trigger_self() {
+   std::lock_guard<std::mutex> lock(mutex);
    std::vector<intrusive_ref<event>> evs;
 
    if (!--wait_count)
@@ -61,6 +62,7 @@ event::trigger() {
 
 std::vector<intrusive_ref<event>>
 event::abort_self(cl_int status) {
+   std::lock_guard<std::mutex> lock(mutex);
    std::vector<intrusive_ref<event>> evs;
 
    _status = status;
@@ -81,16 +83,22 @@ event::abort(cl_int status) {
 
 bool
 event::signalled() const {
+   std::lock_guard<std::mutex> lock(mutex);
    return !wait_count;
 }
 
 cl_int
 event::status() const {
+   std::lock_guard<std::mutex> lock(mutex);
    return _status;
 }
 
 void
 event::chain(event &ev) {
+   std::unique_lock<std::mutex> lock(mutex, std::defer_lock);
+   std::unique_lock<std::mutex> lock_ev(ev.mutex, std::defer_lock);
+   std::lock(lock, lock_ev);
+
    if (wait_count) {
       ev.wait_count++;
       _chain.push_back(ev);
