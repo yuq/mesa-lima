@@ -27,7 +27,7 @@ using namespace clover;
 
 event::event(clover::context &ctx, const ref_vector<event> &deps,
              action action_ok, action action_fail) :
-   context(ctx), _status(0), wait_count(1),
+   context(ctx), wait_count(1), _status(0),
    action_ok(action_ok), action_fail(action_fail) {
    for (auto &ev : deps)
       ev.chain(*this);
@@ -84,6 +84,11 @@ event::signalled() const {
    return !wait_count;
 }
 
+cl_int
+event::status() const {
+   return _status;
+}
+
 void
 event::chain(event &ev) {
    if (wait_count) {
@@ -122,8 +127,8 @@ cl_int
 hard_event::status() const {
    pipe_screen *screen = queue()->device().pipe;
 
-   if (_status < 0)
-      return _status;
+   if (event::status() < 0)
+      return event::status();
 
    else if (!_fence)
       return CL_QUEUED;
@@ -213,8 +218,8 @@ soft_event::soft_event(clover::context &ctx, const ref_vector<event> &deps,
 
 cl_int
 soft_event::status() const {
-   if (_status < 0)
-      return _status;
+   if (event::status() < 0)
+      return event::status();
 
    else if (!signalled() ||
             any_of([](const event &ev) {
