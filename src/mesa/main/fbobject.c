@@ -2668,6 +2668,18 @@ framebuffer_texture(struct gl_context *ctx, const char *caller, GLenum target,
          return;
       }
 
+      /* Page 306 (page 328 of the PDF) of the OpenGL 4.5 (Core Profile)
+       * spec says:
+       *
+       *    "An INVALID_VALUE error is generated if texture is non-zero
+       *     and layer is negative."
+       */
+      if (zoffset < 0) {
+         _mesa_error(ctx, GL_INVALID_VALUE,
+                     "glFramebufferTexture%s(layer %u < 0)", caller, zoffset);
+         return;
+      }
+
       if (texObj->Target == GL_TEXTURE_3D) {
          const GLuint maxSize = 1 << (ctx->Const.Max3DTextureLevels - 1);
          if (zoffset >= maxSize) {
