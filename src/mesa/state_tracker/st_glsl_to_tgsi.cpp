@@ -297,6 +297,9 @@ public:
    st_src_reg return_reg;
 };
 
+static st_src_reg undef_src = st_src_reg(PROGRAM_UNDEFINED, 0, GLSL_TYPE_ERROR);
+static st_dst_reg undef_dst = st_dst_reg(PROGRAM_UNDEFINED, SWIZZLE_NOOP, GLSL_TYPE_ERROR);
+
 struct glsl_to_tgsi_visitor : public ir_visitor {
 public:
    glsl_to_tgsi_visitor();
@@ -386,31 +389,19 @@ public:
    /** List of glsl_to_tgsi_instruction */
    exec_list instructions;
 
-   glsl_to_tgsi_instruction *emit_asm(ir_instruction *ir, unsigned op);
-
    glsl_to_tgsi_instruction *emit_asm(ir_instruction *ir, unsigned op,
-                                      st_dst_reg dst, st_src_reg src0);
-
-   glsl_to_tgsi_instruction *emit_asm(ir_instruction *ir, unsigned op,
-                                      st_dst_reg dst, st_dst_reg dst1,
-                                      st_src_reg src0);
-
-   glsl_to_tgsi_instruction *emit_asm(ir_instruction *ir, unsigned op,
-                                      st_dst_reg dst, st_src_reg src0, st_src_reg src1);
-
-   glsl_to_tgsi_instruction *emit_asm(ir_instruction *ir, unsigned op,
-                                      st_dst_reg dst,
-                                      st_src_reg src0, st_src_reg src1, st_src_reg src2);
-
-   glsl_to_tgsi_instruction *emit_asm(ir_instruction *ir, unsigned op,
-                                      st_dst_reg dst,
-                                      st_src_reg src0, st_src_reg src1,
-                                      st_src_reg src2, st_src_reg src3);
+                                      st_dst_reg dst = undef_dst,
+                                      st_src_reg src0 = undef_src,
+                                      st_src_reg src1 = undef_src,
+                                      st_src_reg src2 = undef_src,
+                                      st_src_reg src3 = undef_src);
 
    glsl_to_tgsi_instruction *emit_asm(ir_instruction *ir, unsigned op,
                                       st_dst_reg dst, st_dst_reg dst1,
-                                      st_src_reg src0, st_src_reg src1,
-                                      st_src_reg src2, st_src_reg src3);
+                                      st_src_reg src0 = undef_src,
+                                      st_src_reg src1 = undef_src,
+                                      st_src_reg src2 = undef_src,
+                                      st_src_reg src3 = undef_src);
 
    unsigned get_opcode(ir_instruction *ir, unsigned op,
                     st_dst_reg dst,
@@ -463,10 +454,6 @@ public:
 
    void *mem_ctx;
 };
-
-static st_src_reg undef_src = st_src_reg(PROGRAM_UNDEFINED, 0, GLSL_TYPE_ERROR);
-
-static st_dst_reg undef_dst = st_dst_reg(PROGRAM_UNDEFINED, SWIZZLE_NOOP, GLSL_TYPE_ERROR);
 
 static st_dst_reg address_reg = st_dst_reg(PROGRAM_ADDRESS, WRITEMASK_X, GLSL_TYPE_FLOAT, 0);
 static st_dst_reg address_reg2 = st_dst_reg(PROGRAM_ADDRESS, WRITEMASK_X, GLSL_TYPE_FLOAT, 1);
@@ -718,42 +705,6 @@ glsl_to_tgsi_visitor::emit_asm(ir_instruction *ir, unsigned op,
                                st_src_reg src2, st_src_reg src3)
 {
    return emit_asm(ir, op, dst, undef_dst, src0, src1, src2, src3);
-}
-
-glsl_to_tgsi_instruction *
-glsl_to_tgsi_visitor::emit_asm(ir_instruction *ir, unsigned op,
-                               st_dst_reg dst, st_src_reg src0,
-                               st_src_reg src1, st_src_reg src2)
-{
-   return emit_asm(ir, op, dst, undef_dst, src0, src1, src2, undef_src);
-}
-
-glsl_to_tgsi_instruction *
-glsl_to_tgsi_visitor::emit_asm(ir_instruction *ir, unsigned op,
-                               st_dst_reg dst, st_src_reg src0, st_src_reg src1)
-{
-   return emit_asm(ir, op, dst, undef_dst, src0, src1, undef_src, undef_src);
-}
-
-glsl_to_tgsi_instruction *
-glsl_to_tgsi_visitor::emit_asm(ir_instruction *ir, unsigned op,
-                               st_dst_reg dst, st_src_reg src0)
-{
-   assert(dst.writemask != 0);
-   return emit_asm(ir, op, dst, undef_dst, src0, undef_src, undef_src, undef_src);
-}
-
-glsl_to_tgsi_instruction *
-glsl_to_tgsi_visitor::emit_asm(ir_instruction *ir, unsigned op,
-                               st_dst_reg dst, st_dst_reg dst1, st_src_reg src0)
-{
-   return emit_asm(ir, op, dst, dst1, src0, undef_src, undef_src, undef_src);
-}
-
-glsl_to_tgsi_instruction *
-glsl_to_tgsi_visitor::emit_asm(ir_instruction *ir, unsigned op)
-{
-   return emit_asm(ir, op, undef_dst, undef_dst, undef_src, undef_src, undef_src, undef_src);
 }
 
 /**
