@@ -1158,6 +1158,10 @@ AC_ARG_ENABLE([driglx-direct],
     [driglx_direct="$enableval"],
     [driglx_direct="yes"])
 
+# Check for libcaca
+PKG_CHECK_EXISTS([caca], [have_libcaca=yes], [have_libcaca=no])
+AM_CONDITIONAL([HAVE_LIBCACA], [test x$have_libcaca = xyes])
+
 dnl
 dnl libGL configuration per driver
 dnl
@@ -1534,6 +1538,8 @@ fi
 GBM_PC_LIB_PRIV="$DLOPEN_LIBS"
 AC_SUBST([GBM_PC_REQ_PRIV])
 AC_SUBST([GBM_PC_LIB_PRIV])
+
+AM_CONDITIONAL(HAVE_VULKAN, true)
 
 dnl
 dnl EGL configuration
@@ -2311,6 +2317,13 @@ AC_SUBST([XA_MINOR], $XA_MINOR)
 AC_SUBST([XA_TINY], $XA_TINY)
 AC_SUBST([XA_VERSION], "$XA_MAJOR.$XA_MINOR.$XA_TINY")
 
+PKG_CHECK_MODULES(VALGRIND, [valgrind],
+                  [have_valgrind=yes], [have_valgrind=no])
+if test "x$have_valgrind" = "xyes"; then
+    AC_DEFINE([HAVE_VALGRIND], 1,
+              [Use valgrind intrinsics to suppress false warnings])
+fi
+
 dnl Restore LDFLAGS and CPPFLAGS
 LDFLAGS="$_SAVE_LDFLAGS"
 CPPFLAGS="$_SAVE_CPPFLAGS"
@@ -2419,6 +2432,7 @@ AC_CONFIG_FILES([Makefile
 		src/mesa/drivers/osmesa/osmesa.pc
 		src/mesa/drivers/x11/Makefile
 		src/mesa/main/tests/Makefile
+		src/vulkan/Makefile
 		src/util/Makefile
 		src/util/tests/hash_table/Makefile])
 

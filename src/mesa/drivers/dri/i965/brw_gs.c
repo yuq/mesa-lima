@@ -33,18 +33,22 @@
 #include "brw_state.h"
 #include "brw_ff_gs.h"
 
-
 bool
-brw_codegen_gs_prog(struct brw_context *brw,
+brw_compile_gs_prog(struct brw_context *brw,
                     struct gl_shader_program *prog,
                     struct brw_geometry_program *gp,
-                    struct brw_gs_prog_key *key)
+                    struct brw_gs_prog_key *key,
+                    struct brw_gs_compile_output *output)
 {
-   struct brw_stage_state *stage_state = &brw->gs.base;
    struct brw_gs_compile c;
    memset(&c, 0, sizeof(c));
    c.key = *key;
    c.gp = gp;
+
+   /* We get the bind map as input in the output struct...*/
+   c.prog_data.base.base.map_entries = output->prog_data.base.base.map_entries;
+   memcpy(c.prog_data.base.base.bind_map, output->prog_data.base.base.bind_map,
+          sizeof(c.prog_data.base.base.bind_map));
 
    c.prog_data.include_primitive_id =
       (gp->program.Base.InputsRead & VARYING_BIT_PRIMITIVE_ID) != 0;
@@ -274,18 +278,41 @@ brw_codegen_gs_prog(struct brw_context *brw,
 
       c.prog_data.base.base.total_scratch
          = brw_get_scratch_size(c.base.last_scratch*REG_SIZE);
+   }
 
+   output->mem_ctx = mem_ctx;
+   output->program = program;
+   output->program_size = program_size;
+   memcpy(&output->prog_data, &c.prog_data,
+          sizeof(output->prog_data));
+
+   return true;
+}
+
+bool
+brw_codegen_gs_prog(struct brw_context *brw,
+                    struct gl_shader_program *prog,
+                    struct brw_geometry_program *gp,
+                    struct brw_gs_prog_key *key)
+{
+   struct brw_gs_compile_output output;
+   struct brw_stage_state *stage_state = &brw->gs.base;
+
+   if (brw_compile_gs_prog(brw, prog, gp, key, &output))
+      return false;
+
+   if (output.prog_data.base.base.total_scratch) {
       brw_get_scratch_bo(brw, &stage_state->scratch_bo,
-			 c.prog_data.base.base.total_scratch *
+			 output.prog_data.base.base.total_scratch *
                          brw->max_gs_threads);
    }
 
    brw_upload_cache(&brw->cache, BRW_CACHE_GS_PROG,
-                    &c.key, sizeof(c.key),
-                    program, program_size,
-                    &c.prog_data, sizeof(c.prog_data),
+                    key, sizeof(*key),
+                    output.program, output.program_size,
+                    &output.prog_data, sizeof(output.prog_data),
                     &stage_state->prog_offset, &brw->gs.prog_data);
-   ralloc_free(mem_ctx);
+   ralloc_free(output.mem_ctx);
 
    return true;
 }

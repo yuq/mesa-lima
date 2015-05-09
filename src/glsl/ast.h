@@ -514,6 +514,10 @@ struct ast_type_qualifier {
          unsigned stream:1; /**< Has stream value assigned  */
          unsigned explicit_stream:1; /**< stream value assigned explicitly by shader code */
          /** \} */
+
+         /** \name Vulkan qualifiers */
+         unsigned vk_set:1;
+
       }
       /** \brief Set of flags, accessed by name. */
       q;
@@ -594,6 +598,11 @@ struct ast_type_qualifier {
     * This field is only valid if \c explicit_image_format is set.
     */
    glsl_base_type image_base_type;
+
+   /**
+    * Vulkan descriptor set
+    */
+   int set;
 
    /**
     * Return true if and only if an interpolation qualifier is present.

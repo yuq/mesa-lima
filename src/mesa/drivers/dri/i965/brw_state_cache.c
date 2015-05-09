@@ -427,6 +427,9 @@ brw_destroy_cache(struct brw_context *brw, struct brw_cache *cache)
 
    DBG("%s\n", __func__);
 
+   if (cache->bo == NULL)
+      return;
+
    if (brw->has_llc)
       drm_intel_bo_unmap(cache->bo);
    drm_intel_bo_unreference(cache->bo);

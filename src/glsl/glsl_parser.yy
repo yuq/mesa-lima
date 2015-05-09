@@ -1431,6 +1431,11 @@ layout_qualifier_id:
          $$.binding = $3;
       }
 
+      if (match_layout_qualifier("set", $1, state) == 0) {
+         $$.flags.q.vk_set = 1;
+         $$.set = $3;
+      }
+
       if (state->has_atomic_counters() &&
           match_layout_qualifier("offset", $1, state) == 0) {
          $$.flags.q.explicit_offset = 1;

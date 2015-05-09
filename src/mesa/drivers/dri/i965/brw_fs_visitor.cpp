@@ -1198,14 +1198,20 @@ fs_visitor::visit(ir_expression *ir)
       ir_constant *const_uniform_block = ir->operands[0]->as_constant();
       ir_constant *const_offset = ir->operands[1]->as_constant();
       fs_reg surf_index;
+      uint32_t binding, set, index, set_index;
 
       if (const_uniform_block) {
          /* The block index is a constant, so just emit the binding table entry
           * as an immediate.
           */
-         surf_index = fs_reg(stage_prog_data->binding_table.ubo_start +
-                                 const_uniform_block->value.u[0]);
+         index = const_uniform_block->value.u[0];
+         set = shader->base.UniformBlocks[index].Set;
+         set_index = shader->base.UniformBlocks[index].Index;
+         binding = stage_prog_data->bind_map[set][set_index];
+         surf_index = fs_reg(binding);
       } else {
+         assert(0 && "need more info from the ir for this.");
+
          /* The block index is not a constant. Evaluate the index expression
           * per-channel and add the base UBO index; we have to select a value
           * from any live channel.
@@ -2289,8 +2295,13 @@ fs_visitor::emit_texture(ir_texture_opcode op,
 void
 fs_visitor::visit(ir_texture *ir)
 {
-   uint32_t sampler =
-      _mesa_get_sampler_uniform_value(ir->sampler, shader_prog, prog);
+   uint32_t sampler;
+
+   ir_dereference_variable *deref_var = ir->sampler->as_dereference_variable();
+   assert(deref_var);
+   ir_variable *var = deref_var->var;
+
+   sampler = stage_prog_data->bind_map[var->data.set][var->data.index];
 
    ir_rvalue *nonconst_sampler_index =
       _mesa_get_sampler_array_nonconst_index(ir->sampler);

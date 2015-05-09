@@ -683,6 +683,11 @@ public:
       unsigned explicit_index:1;
 
       /**
+       * Do we have a Vulkan (group, index) qualifier for this variable?
+       */
+      unsigned vk_set:1;
+
+      /**
        * Was an initial binding explicitly set in the shader?
        *
        * If so, constant_value contains an integer ir_constant representing the
@@ -751,8 +756,10 @@ public:
        * \note
        * The GLSL spec only allows the values 0 or 1 for the index in \b dual
        * source blending.
+       *
+       * This is now also used for the Vulkan descriptor set index.
        */
-      unsigned index:1;
+      int16_t index;
 
       /**
        * \brief Layout qualifier for gl_FragDepth.
@@ -799,6 +806,11 @@ public:
        * For array types, this represents the binding point for the first element.
        */
       int16_t binding;
+
+      /**
+       * Vulkan descriptor set for the resource.
+       */
+      int16_t set;
 
       /**
        * Storage location of the base of this variable

@@ -252,6 +252,11 @@ ast_type_qualifier::merge_qualifier(YYLTYPE *loc,
       this->image_base_type = q.image_base_type;
    }
 
+   if (q.flags.q.vk_set) {
+      this->set = q.set;
+      this->index = q.index;
+   }
+
    return true;
 }
 

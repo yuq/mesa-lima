@@ -359,6 +359,9 @@ struct brw_stage_prog_data {
       /** @} */
    } binding_table;
 
+   uint32_t *map_entries;
+   uint32_t *bind_map[4];
+
    GLuint nr_params;       /**< number of float params/constants */
    GLuint nr_pull_params;
 
@@ -1975,6 +1978,12 @@ gen6_upload_push_constants(struct brw_context *brw,
                            const struct brw_stage_prog_data *prog_data,
                            struct brw_stage_state *stage_state,
                            enum aub_state_struct_type type);
+
+struct intel_screen *intel_screen_create(int fd);
+void intel_screen_destroy(struct intel_screen *screen);
+
+struct brw_context *intel_context_create(struct intel_screen *screen);
+void intel_context_destroy(struct brw_context *brw);
 
 #ifdef __cplusplus
 }

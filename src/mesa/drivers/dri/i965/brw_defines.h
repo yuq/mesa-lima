@@ -55,6 +55,7 @@
 # define GEN7_3DPRIM_VERTEXBUFFER_ACCESS_SEQUENTIAL (0 << 8)
 # define GEN7_3DPRIM_VERTEXBUFFER_ACCESS_RANDOM     (1 << 8)
 
+#ifndef _3DPRIM_POINTLIST /* FIXME: Avoid clashing with defines from bdw_pack.h */
 #define _3DPRIM_POINTLIST         0x01
 #define _3DPRIM_LINELIST          0x02
 #define _3DPRIM_LINESTRIP         0x03
@@ -76,6 +77,7 @@
 #define _3DPRIM_LINESTRIP_BF      0x13
 #define _3DPRIM_LINESTRIP_CONT_BF 0x14
 #define _3DPRIM_TRIFAN_NOSTIPPLE  0x15
+#endif
 
 /* We use this offset to be able to pass native primitive types in struct
  * _mesa_prim::mode.  Native primitive types are BRW_PRIM_OFFSET +

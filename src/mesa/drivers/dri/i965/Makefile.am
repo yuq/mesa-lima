@@ -41,7 +41,7 @@ AM_CFLAGS = \
 
 AM_CXXFLAGS = $(AM_CFLAGS)
 
-noinst_LTLIBRARIES = libi965_dri.la
+noinst_LTLIBRARIES = libi965_dri.la libi965_compiler.la
 libi965_dri_la_SOURCES = $(i965_FILES)
 libi965_dri_la_LIBADD = $(INTEL_LIBS)
 
@@ -53,6 +53,15 @@ TEST_LIBS = \
 	$(DRI_LIB_DEPS) \
         $(CLOCK_LIB) \
 	../common/libdri_test_stubs.la
+
+libi965_compiler_la_SOURCES = $(i965_FILES)
+libi965_compiler_la_LIBADD = $(INTEL_LIBS) \
+	../common/libdricommon.la \
+	../common/libmegadriver_stub.la \
+        ../../../libmesa.la \
+	$(DRI_LIB_DEPS) \
+        $(CLOCK_LIB) \
+	../common/libdri_test_stubs.la -lm
 
 TESTS = \
 	test_fs_cmod_propagation \

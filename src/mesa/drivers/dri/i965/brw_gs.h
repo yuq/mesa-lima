@@ -37,6 +37,22 @@ struct gl_context;
 struct gl_shader_program;
 struct gl_program;
 
+struct brw_gs_compile_output {
+   void *mem_ctx;
+   const void *program;
+   uint32_t program_size;
+   struct brw_gs_prog_data prog_data;
+};
+
+struct brw_gs_prog_key;
+
+bool
+brw_compile_gs_prog(struct brw_context *brw,
+                    struct gl_shader_program *prog,
+                    struct brw_geometry_program *gp,
+                    struct brw_gs_prog_key *key,
+                    struct brw_gs_compile_output *output);
+
 bool brw_gs_prog_data_compare(const void *a, const void *b);
 
 void

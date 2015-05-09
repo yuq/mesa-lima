@@ -85,3 +85,4 @@ struct brw_device_info
 };
 
 const struct brw_device_info *brw_get_device_info(int devid, int revision);
+const char *brw_get_device_name(int devid);

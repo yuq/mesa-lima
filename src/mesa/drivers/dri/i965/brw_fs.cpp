@@ -1910,6 +1910,10 @@ fs_visitor::assign_vs_urb_setup()
    unsigned vue_entries =
       MAX2(count, vs_prog_data->base.vue_map.num_slots);
 
+   /* URB entry size is counted in units of 64 bytes (for the 3DSTATE_URB_VS
+    * command).  Each attribute is 16 bytes (4 floats/dwords), so each unit
+    * fits four attributes.
+    */
    vs_prog_data->base.urb_entry_size = ALIGN(vue_entries, 4) / 4;
    vs_prog_data->base.urb_read_length = (count + 1) / 2;
 
@@ -3033,9 +3037,22 @@ fs_visitor::emit_repclear_shader()
    brw_wm_prog_key *key = (brw_wm_prog_key*) this->key;
    int base_mrf = 1;
    int color_mrf = base_mrf + 2;
+   fs_inst *mov;
 
-   fs_inst *mov = emit(MOV(vec4(brw_message_reg(color_mrf)),
-                           fs_reg(UNIFORM, 0, BRW_REGISTER_TYPE_F)));
+   if (uniforms == 1) {
+      mov = emit(MOV(vec4(brw_message_reg(color_mrf)),
+                     fs_reg(UNIFORM, 0, BRW_REGISTER_TYPE_F)));
+   } else {
+      struct brw_reg reg =
+         brw_reg(BRW_GENERAL_REGISTER_FILE,
+                 2, 3, 0, 0, BRW_REGISTER_TYPE_F,
+                 BRW_VERTICAL_STRIDE_8,
+                 BRW_WIDTH_2,
+                 BRW_HORIZONTAL_STRIDE_4, BRW_SWIZZLE_XYZW, WRITEMASK_XYZW);
+
+      mov = emit(MOV(vec4(brw_message_reg(color_mrf)), fs_reg(reg)));
+   }
+
    mov->force_writemask_all = true;
 
    fs_inst *write;
@@ -3065,8 +3082,10 @@ fs_visitor::emit_repclear_shader()
    assign_curb_setup();
 
    /* Now that we have the uniform assigned, go ahead and force it to a vec4. */
-   assert(mov->src[0].file == HW_REG);
-   mov->src[0] = brw_vec4_grf(mov->src[0].fixed_hw_reg.nr, 0);
+   if (uniforms == 1) {
+      assert(mov->src[0].file == HW_REG);
+      mov->src[0] = brw_vec4_grf(mov->src[0].fixed_hw_reg.nr, 0);
+   }
 }
 
 /**
@@ -4081,7 +4100,8 @@ fs_visitor::run_vs()
 {
    assert(stage == MESA_SHADER_VERTEX);
 
-   assign_common_binding_table_offsets(0);
+   if (prog_data->map_entries == NULL)
+      assign_common_binding_table_offsets(0);
    setup_vs_payload();
 
    if (INTEL_DEBUG & DEBUG_SHADER_TIME)
@@ -4129,7 +4149,8 @@ fs_visitor::run_fs()
 
    sanity_param_count = prog->Parameters->NumParameters;
 
-   assign_binding_table_offsets();
+   if (prog_data->map_entries == NULL)
+      assign_binding_table_offsets();
 
    if (devinfo->gen >= 6)
       setup_payload_gen6();

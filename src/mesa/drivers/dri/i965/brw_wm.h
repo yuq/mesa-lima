@@ -90,6 +90,12 @@ bool brw_wm_prog_data_compare(const void *a, const void *b);
 void
 brw_upload_wm_prog(struct brw_context *brw);
 
+unsigned
+brw_compute_barycentric_interp_modes(struct brw_context *brw,
+                                     bool shade_model_flat,
+                                     bool persample_shading,
+                                     const struct gl_fragment_program *fprog);
+
 #ifdef __cplusplus
 } // extern "C"
 #endif

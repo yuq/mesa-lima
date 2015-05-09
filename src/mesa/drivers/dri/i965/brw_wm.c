@@ -46,7 +46,7 @@
  * Return a bitfield where bit n is set if barycentric interpolation mode n
  * (see enum brw_wm_barycentric_interp_mode) is needed by the fragment shader.
  */
-static unsigned
+unsigned
 brw_compute_barycentric_interp_modes(struct brw_context *brw,
                                      bool shade_model_flat,
                                      bool persample_shading,
