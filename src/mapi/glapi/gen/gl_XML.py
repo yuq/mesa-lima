@@ -30,6 +30,7 @@ import xml.etree.ElementTree as ET
 import re, sys, string
 import os.path
 import typeexpr
+import static_data
 
 
 def parse_GL_API( file_name, factory = None ):
@@ -693,6 +694,13 @@ class gl_function( gl_item ):
                     self.offset = -1
                     if offset == "assign":
                         self.assign_offset = 1
+
+                if self.offset == -1:
+                    assert name not in static_data.offsets
+                else:
+                    assert static_data.offsets[name] == self.offset
+            else:
+                assert name not in static_data.offsets
 
 
         if not self.name:

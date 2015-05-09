@@ -75,6 +75,7 @@ EXTRA_DIST= \
 	glX_proto_size.py \
 	glX_server_table.py \
 	remap_helper.py \
+	static_data.py \
 	SConscript \
 	gl_API.dtd
 
@@ -197,6 +198,7 @@ COMMON = $(API_XML) \
 	gl_XML.py \
 	glX_XML.py \
 	license.py \
+	static_data.py \
 	typeexpr.py
 
 COMMON_GLX = $(COMMON) glX_API.xml glX_XML.py glX_proto_common.py
