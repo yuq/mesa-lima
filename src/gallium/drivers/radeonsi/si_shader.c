@@ -1183,6 +1183,7 @@ handle_semantic:
 			continue;
 		case TGSI_SEMANTIC_PRIMID:
 		case TGSI_SEMANTIC_FOG:
+		case TGSI_SEMANTIC_TEXCOORD:
 		case TGSI_SEMANTIC_GENERIC:
 			target = V_008DFC_SQ_EXP_PARAM + param_count;
 			shader->vs_output_param_offset[i] = param_count;

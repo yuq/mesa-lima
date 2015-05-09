@@ -661,8 +661,9 @@ bcolor:
 		    (interpolate == TGSI_INTERPOLATE_COLOR && sctx->flatshade))
 			tmp |= S_028644_FLAT_SHADE(1);
 
-		if (name == TGSI_SEMANTIC_GENERIC &&
-		    sctx->sprite_coord_enable & (1 << index)) {
+		if (name == TGSI_SEMANTIC_PCOORD ||
+		    (name == TGSI_SEMANTIC_TEXCOORD &&
+		     sctx->sprite_coord_enable & (1 << index))) {
 			tmp |= S_028644_PT_SPRITE_TEX(1);
 		}
 
