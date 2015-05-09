@@ -967,8 +967,8 @@ CodeEmitterGK110::emitSET(const CmpInstruction *i)
       code[0] = (code[0] & ~0xfc) | ((code[0] << 3) & 0xe0);
       if (i->defExists(1))
          defId(i->def(1), 2);
-   else
-      code[0] |= 0x1c;
+      else
+         code[0] |= 0x1c;
    } else {
       switch (i->sType) {
       case TYPE_F32: op2 = 0x000; op1 = 0x800; break;
@@ -990,8 +990,12 @@ CodeEmitterGK110::emitSET(const CmpInstruction *i)
       }
       FTZ_(3a);
 
-      if (i->dType == TYPE_F32)
-         code[1] |= 1 << 23;
+      if (i->dType == TYPE_F32) {
+         if (isFloatType(i->sType))
+            code[1] |= 1 << 23;
+         else
+            code[1] |= 1 << 15;
+      }
    }
    if (i->sType == TYPE_S32)
       code[1] |= 1 << 19;

@@ -1078,8 +1078,14 @@ CodeEmitterNVC0::emitSET(const CmpInstruction *i)
    if (!isFloatType(i->sType))
       lo = 0x3;
 
-   if (isFloatType(i->dType) || isSignedIntType(i->sType))
+   if (isSignedIntType(i->sType))
       lo |= 0x20;
+   if (isFloatType(i->dType)) {
+      if (isFloatType(i->sType))
+         lo |= 0x20;
+      else
+         lo |= 0x80;
+   }
 
    switch (i->op) {
    case OP_SET_AND: hi = 0x10000000; break;

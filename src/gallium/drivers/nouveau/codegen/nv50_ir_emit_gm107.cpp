@@ -1830,6 +1830,7 @@ CodeEmitterGM107::emitISET()
    emitCond3(0x31, insn->setCond);
    emitField(0x30, 1, isSignedType(insn->sType));
    emitCC   (0x2f);
+   emitField(0x2c, 1, insn->dType == TYPE_F32);
    emitX    (0x2b);
    emitGPR  (0x08, insn->src(0));
    emitGPR  (0x00, insn->def(0));
