@@ -84,6 +84,9 @@ namespace clover {
       std::vector<intrusive_ref<event>> deps;
 
    private:
+      std::vector<intrusive_ref<event>> trigger_self();
+      std::vector<intrusive_ref<event>> abort_self(cl_int status);
+
       unsigned wait_count;
       action action_ok;
       action action_fail;

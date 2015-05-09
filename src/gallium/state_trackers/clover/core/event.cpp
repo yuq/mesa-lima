@@ -36,28 +36,47 @@ event::event(clover::context &ctx, const ref_vector<event> &deps,
 event::~event() {
 }
 
+std::vector<intrusive_ref<event>>
+event::trigger_self() {
+   std::vector<intrusive_ref<event>> evs;
+
+   if (!--wait_count)
+      std::swap(_chain, evs);
+
+   return evs;
+}
+
 void
 event::trigger() {
-   if (!--wait_count) {
-      cv.notify_all();
-      action_ok(*this);
+   auto evs = trigger_self();
 
-      while (!_chain.empty()) {
-         _chain.back()().trigger();
-         _chain.pop_back();
-      }
+   if (signalled()) {
+      action_ok(*this);
+      cv.notify_all();
    }
+
+   for (event &ev : evs)
+      ev.trigger();
+}
+
+std::vector<intrusive_ref<event>>
+event::abort_self(cl_int status) {
+   std::vector<intrusive_ref<event>> evs;
+
+   _status = status;
+   std::swap(_chain, evs);
+
+   return evs;
 }
 
 void
 event::abort(cl_int status) {
-   _status = status;
+   auto evs = abort_self(status);
+
    action_fail(*this);
 
-   while (!_chain.empty()) {
-      _chain.back()().abort(status);
-      _chain.pop_back();
-   }
+   for (event &ev : evs)
+      ev.abort(status);
 }
 
 bool
