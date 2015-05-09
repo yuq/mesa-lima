@@ -259,9 +259,11 @@ static void *evergreen_create_compute_state(struct pipe_context *ctx,
 	radeon_elf_read(code, header->num_bytes, &shader->binary);
 	r600_create_shader(&shader->bc, &shader->binary, &use_kill);
 
+	/* Upload code + ROdata */
 	shader->code_bo = r600_compute_buffer_alloc_vram(rctx->screen,
 							shader->bc.ndw * 4);
 	p = r600_buffer_map_sync_with_rings(&rctx->b, shader->code_bo, PIPE_TRANSFER_WRITE);
+	//TODO: use util_memcpy_cpu_to_le32 ?
 	memcpy(p, shader->bc.bytecode, shader->bc.ndw * 4);
 	rctx->b.ws->buffer_unmap(shader->code_bo->buf);
 #endif
@@ -616,9 +618,9 @@ static void evergreen_set_compute_resources(struct pipe_context *ctx,
 			start, count);
 
 	for (unsigned i = 0; i < count; i++) {
-		/* The First two vertex buffers are reserved for parameters and
+		/* The First three vertex buffers are reserved for parameters and
 		 * global buffers. */
-		unsigned vtx_id = 2 + i;
+		unsigned vtx_id = 3 + i;
 		if (resources[i]) {
 			struct r600_resource_global *buffer =
 				(struct r600_resource_global*)
@@ -685,9 +687,15 @@ static void evergreen_set_global_binding(struct pipe_context *ctx,
 		*(handles[i]) = util_cpu_to_le32(handle);
 	}
 
+	/* globals for writing */
 	evergreen_set_rat(rctx->cs_shader_state.shader, 0, pool->bo, 0, pool->size_in_dw * 4);
+	/* globals for reading */
 	evergreen_cs_set_vertex_buffer(rctx, 1, 0,
 				(struct pipe_resource*)pool->bo);
+
+	/* constants for reading, LLVM puts them in text segment */
+	evergreen_cs_set_vertex_buffer(rctx, 2, 0,
+				(struct pipe_resource*)rctx->cs_shader_state.shader->code_bo);
 }
 
 /**
