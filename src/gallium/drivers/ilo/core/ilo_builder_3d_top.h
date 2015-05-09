@@ -1051,7 +1051,7 @@ gen7_3DSTATE_STREAMOUT(struct ilo_builder *builder,
                GEN7_SO_DW1_STATISTICS;
       /* API_OPENGL */
       if (true)
-         dw[1] |= GEN7_SO_DW1_REORDER_TRAILING;
+         dw[1] |= GEN7_REORDER_TRAILING << GEN7_SO_DW1_REORDER_MODE__SHIFT;
       if (ilo_dev_gen(builder->dev) < ILO_GEN(8))
          dw[1] |= buf_mask << GEN7_SO_DW1_BUFFER_ENABLES__SHIFT;
 

@@ -61,20 +61,20 @@ rasterizer_init_clip(const struct ilo_dev *dev,
 
       if (ilo_dev_gen(dev) < ILO_GEN(8)) {
          if (state->front_ccw)
-            dw1 |= GEN7_CLIP_DW1_FRONTWINDING_CCW;
+            dw1 |= GEN6_FRONTWINDING_CCW << 20;
 
          switch (state->cull_face) {
          case PIPE_FACE_NONE:
-            dw1 |= GEN7_CLIP_DW1_CULLMODE_NONE;
+            dw1 |= GEN6_CULLMODE_NONE << 16;
             break;
          case PIPE_FACE_FRONT:
-            dw1 |= GEN7_CLIP_DW1_CULLMODE_FRONT;
+            dw1 |= GEN6_CULLMODE_FRONT << 16;
             break;
          case PIPE_FACE_BACK:
-            dw1 |= GEN7_CLIP_DW1_CULLMODE_BACK;
+            dw1 |= GEN6_CULLMODE_BACK << 16;
             break;
          case PIPE_FACE_FRONT_AND_BACK:
-            dw1 |= GEN7_CLIP_DW1_CULLMODE_BOTH;
+            dw1 |= GEN6_CULLMODE_BOTH << 16;
             break;
          }
       }
@@ -83,7 +83,7 @@ rasterizer_init_clip(const struct ilo_dev *dev,
    dw2 = GEN6_CLIP_DW2_CLIP_ENABLE |
          GEN6_CLIP_DW2_XY_TEST_ENABLE |
          state->clip_plane_enable << GEN6_CLIP_DW2_UCP_CLIP_ENABLES__SHIFT |
-         GEN6_CLIP_DW2_CLIPMODE_NORMAL;
+         GEN6_CLIPMODE_NORMAL << 13;
 
    if (state->clip_halfz)
       dw2 |= GEN6_CLIP_DW2_APIMODE_D3D;
@@ -160,7 +160,7 @@ rasterizer_init_sf_gen6(const struct ilo_dev *dev,
     *      CLIP_STATE is clear."
     */
    dw1 = GEN7_SF_DW1_STATISTICS |
-         GEN7_SF_DW1_VIEWPORT_ENABLE;
+         GEN7_SF_DW1_VIEWPORT_TRANSFORM;
 
    /* XXX GEN6 path seems to work fine for GEN7 */
    if (false && ilo_dev_gen(dev) >= ILO_GEN(7)) {
@@ -192,30 +192,30 @@ rasterizer_init_sf_gen6(const struct ilo_dev *dev,
 
    switch (state->fill_front) {
    case PIPE_POLYGON_MODE_FILL:
-      dw1 |= GEN7_SF_DW1_FRONTFACE_SOLID;
+      dw1 |= GEN6_FILLMODE_SOLID << 5;
       break;
    case PIPE_POLYGON_MODE_LINE:
-      dw1 |= GEN7_SF_DW1_FRONTFACE_WIREFRAME;
+      dw1 |= GEN6_FILLMODE_WIREFRAME << 5;
       break;
    case PIPE_POLYGON_MODE_POINT:
-      dw1 |= GEN7_SF_DW1_FRONTFACE_POINT;
+      dw1 |= GEN6_FILLMODE_POINT << 5;
       break;
    }
 
    switch (state->fill_back) {
    case PIPE_POLYGON_MODE_FILL:
-      dw1 |= GEN7_SF_DW1_BACKFACE_SOLID;
+      dw1 |= GEN6_FILLMODE_SOLID << 3;
       break;
    case PIPE_POLYGON_MODE_LINE:
-      dw1 |= GEN7_SF_DW1_BACKFACE_WIREFRAME;
+      dw1 |= GEN6_FILLMODE_WIREFRAME << 3;
       break;
    case PIPE_POLYGON_MODE_POINT:
-      dw1 |= GEN7_SF_DW1_BACKFACE_POINT;
+      dw1 |= GEN6_FILLMODE_POINT << 3;
       break;
    }
 
    if (state->front_ccw)
-      dw1 |= GEN7_SF_DW1_FRONTWINDING_CCW;
+      dw1 |= GEN6_FRONTWINDING_CCW;
 
    dw2 = 0;
 
@@ -239,16 +239,16 @@ rasterizer_init_sf_gen6(const struct ilo_dev *dev,
 
    switch (state->cull_face) {
    case PIPE_FACE_NONE:
-      dw2 |= GEN7_SF_DW2_CULLMODE_NONE;
+      dw2 |= GEN6_CULLMODE_NONE << 29;
       break;
    case PIPE_FACE_FRONT:
-      dw2 |= GEN7_SF_DW2_CULLMODE_FRONT;
+      dw2 |= GEN6_CULLMODE_FRONT << 29;
       break;
    case PIPE_FACE_BACK:
-      dw2 |= GEN7_SF_DW2_CULLMODE_BACK;
+      dw2 |= GEN6_CULLMODE_BACK << 29;
       break;
    case PIPE_FACE_FRONT_AND_BACK:
-      dw2 |= GEN7_SF_DW2_CULLMODE_BOTH;
+      dw2 |= GEN6_CULLMODE_BOTH << 29;
       break;
    }
 
@@ -307,7 +307,7 @@ rasterizer_init_sf_gen6(const struct ilo_dev *dev,
    sf->payload[2] = dw3;
 
    if (state->multisample) {
-      sf->dw_msaa = GEN7_SF_DW2_MSRASTMODE_ON_PATTERN;
+      sf->dw_msaa = GEN6_MSRASTMODE_ON_PATTERN << 8;
 
       /*
        * From the Sandy Bridge PRM, volume 2 part 1, page 251:
@@ -339,20 +339,20 @@ rasterizer_get_sf_raster_gen8(const struct ilo_dev *dev,
    ILO_DEV_ASSERT(dev, 8, 8);
 
    if (state->front_ccw)
-      dw |= GEN8_RASTER_DW1_FRONTWINDING_CCW;
+      dw |= GEN6_FRONTWINDING_CCW << 21;
 
    switch (state->cull_face) {
    case PIPE_FACE_NONE:
-      dw |= GEN8_RASTER_DW1_CULLMODE_NONE;
+      dw |= GEN6_CULLMODE_NONE << 16;
       break;
    case PIPE_FACE_FRONT:
-      dw |= GEN8_RASTER_DW1_CULLMODE_FRONT;
+      dw |= GEN6_CULLMODE_FRONT << 16;
       break;
    case PIPE_FACE_BACK:
-      dw |= GEN8_RASTER_DW1_CULLMODE_BACK;
+      dw |= GEN6_CULLMODE_BACK << 16;
       break;
    case PIPE_FACE_FRONT_AND_BACK:
-      dw |= GEN8_RASTER_DW1_CULLMODE_BOTH;
+      dw |= GEN6_CULLMODE_BOTH << 16;
       break;
    }
 
@@ -371,25 +371,25 @@ rasterizer_get_sf_raster_gen8(const struct ilo_dev *dev,
 
    switch (state->fill_front) {
    case PIPE_POLYGON_MODE_FILL:
-      dw |= GEN8_RASTER_DW1_FRONTFACE_SOLID;
+      dw |= GEN6_FILLMODE_SOLID << 5;
       break;
    case PIPE_POLYGON_MODE_LINE:
-      dw |= GEN8_RASTER_DW1_FRONTFACE_WIREFRAME;
+      dw |= GEN6_FILLMODE_WIREFRAME << 5;
       break;
    case PIPE_POLYGON_MODE_POINT:
-      dw |= GEN8_RASTER_DW1_FRONTFACE_POINT;
+      dw |= GEN6_FILLMODE_POINT << 5;
       break;
    }
 
    switch (state->fill_back) {
    case PIPE_POLYGON_MODE_FILL:
-      dw |= GEN8_RASTER_DW1_BACKFACE_SOLID;
+      dw |= GEN6_FILLMODE_SOLID << 3;
       break;
    case PIPE_POLYGON_MODE_LINE:
-      dw |= GEN8_RASTER_DW1_BACKFACE_WIREFRAME;
+      dw |= GEN6_FILLMODE_WIREFRAME << 3;
       break;
    case PIPE_POLYGON_MODE_POINT:
-      dw |= GEN8_RASTER_DW1_BACKFACE_POINT;
+      dw |= GEN6_FILLMODE_POINT << 3;
       break;
    }
 
@@ -429,7 +429,7 @@ rasterizer_init_sf_gen8(const struct ilo_dev *dev,
    point_width = CLAMP(point_width, 1, 2047);
 
    dw1 = GEN7_SF_DW1_STATISTICS |
-         GEN7_SF_DW1_VIEWPORT_ENABLE;
+         GEN7_SF_DW1_VIEWPORT_TRANSFORM;
 
    dw2 = line_width << GEN7_SF_DW2_LINE_WIDTH__SHIFT;
    if (state->line_smooth)
@@ -497,15 +497,15 @@ rasterizer_init_wm_gen6(const struct ilo_dev *dev,
     *
     * is valid
     */
-   STATIC_ASSERT(GEN6_WM_DW6_MSRASTMODE_OFF_PIXEL == 0 &&
+   STATIC_ASSERT(GEN6_MSRASTMODE_OFF_PIXEL == 0 &&
                  GEN6_WM_DW6_MSDISPMODE_PERSAMPLE == 0);
-   dw6 = GEN6_WM_DW6_ZW_INTERP_PIXEL;
+   dw6 = GEN6_ZW_INTERP_PIXEL << GEN6_WM_DW6_ZW_INTERP__SHIFT;
 
    if (state->bottom_edge_rule)
       dw6 |= GEN6_WM_DW6_POINT_RASTRULE_UPPER_RIGHT;
 
    wm->dw_msaa_rast =
-      (state->multisample) ? GEN6_WM_DW6_MSRASTMODE_ON_PATTERN : 0;
+      (state->multisample) ? (GEN6_MSRASTMODE_ON_PATTERN << 1) : 0;
    wm->dw_msaa_disp = GEN6_WM_DW6_MSDISPMODE_PERPIXEL;
 
    STATIC_ASSERT(Elements(wm->payload) >= 2);
@@ -530,9 +530,9 @@ rasterizer_init_wm_gen7(const struct ilo_dev *dev,
     *
     * is valid
     */
-   STATIC_ASSERT(GEN7_WM_DW1_MSRASTMODE_OFF_PIXEL == 0 &&
+   STATIC_ASSERT(GEN6_MSRASTMODE_OFF_PIXEL == 0 &&
                  GEN7_WM_DW2_MSDISPMODE_PERSAMPLE == 0);
-   dw1 = GEN7_WM_DW1_ZW_INTERP_PIXEL |
+   dw1 = GEN6_ZW_INTERP_PIXEL << GEN7_WM_DW1_ZW_INTERP__SHIFT |
          GEN7_WM_DW1_AA_LINE_WIDTH_2_0;
    dw2 = 0;
 
@@ -549,7 +549,7 @@ rasterizer_init_wm_gen7(const struct ilo_dev *dev,
       dw1 |= GEN7_WM_DW1_POINT_RASTRULE_UPPER_RIGHT;
 
    wm->dw_msaa_rast =
-      (state->multisample) ? GEN7_WM_DW1_MSRASTMODE_ON_PATTERN : 0;
+      (state->multisample) ? GEN6_MSRASTMODE_ON_PATTERN : 0;
    wm->dw_msaa_disp = GEN7_WM_DW2_MSDISPMODE_PERPIXEL;
 
    STATIC_ASSERT(Elements(wm->payload) >= 2);
@@ -565,7 +565,7 @@ rasterizer_get_wm_gen8(const struct ilo_dev *dev,
 
    ILO_DEV_ASSERT(dev, 8, 8);
 
-   dw = GEN7_WM_DW1_ZW_INTERP_PIXEL |
+   dw = GEN6_ZW_INTERP_PIXEL << GEN7_WM_DW1_ZW_INTERP__SHIFT |
         GEN7_WM_DW1_AA_LINE_WIDTH_2_0;
 
    /* same value as in 3DSTATE_SF */
@@ -691,7 +691,7 @@ fs_init_cso_gen6(const struct ilo_dev *dev,
    dw5 |= GEN6_PS_DISPATCH_8 << GEN6_WM_DW5_PS_DISPATCH_MODE__SHIFT;
 
    dw6 = input_count << GEN6_WM_DW6_SF_ATTR_COUNT__SHIFT |
-         GEN6_WM_DW6_PS_POSOFFSET_NONE |
+         GEN6_POSOFFSET_NONE << GEN6_WM_DW6_PS_POSOFFSET__SHIFT |
          interps << GEN6_WM_DW6_BARYCENTRIC_INTERP__SHIFT;
 
    STATIC_ASSERT(Elements(cso->payload) >= 4);
@@ -752,7 +752,7 @@ fs_get_wm_gen7(const struct ilo_dev *dev,
       dw |= GEN7_WM_DW1_PS_KILL_PIXEL;
 
    if (ilo_shader_get_kernel_param(fs, ILO_KERNEL_FS_OUTPUT_Z))
-      dw |= GEN7_WM_DW1_PSCDEPTH_ON;
+      dw |= GEN7_PSCDEPTH_ON << GEN7_WM_DW1_PSCDEPTH__SHIFT;
 
    if (ilo_shader_get_kernel_param(fs, ILO_KERNEL_FS_INPUT_Z))
       dw |= GEN7_WM_DW1_PS_USE_DEPTH;
@@ -779,7 +779,7 @@ fs_init_cso_gen7(const struct ilo_dev *dev,
    dw2 = (true) ? 0 : GEN6_THREADDISP_FP_MODE_ALT;
    dw2 |= ((sampler_count + 3) / 4) << GEN6_THREADDISP_SAMPLER_COUNT__SHIFT;
 
-   dw4 = GEN7_PS_DW4_POSOFFSET_NONE;
+   dw4 = GEN6_POSOFFSET_NONE << GEN7_PS_DW4_POSOFFSET__SHIFT;
 
    /* see brwCreateContext() */
    switch (ilo_dev_gen(dev)) {
@@ -823,12 +823,12 @@ fs_get_psx_gen8(const struct ilo_dev *dev,
 
    ILO_DEV_ASSERT(dev, 8, 8);
 
-   dw = GEN8_PSX_DW1_DISPATCH_ENABLE;
+   dw = GEN8_PSX_DW1_VALID;
 
    if (ilo_shader_get_kernel_param(fs, ILO_KERNEL_FS_USE_KILL))
       dw |= GEN8_PSX_DW1_KILL_PIXEL;
    if (ilo_shader_get_kernel_param(fs, ILO_KERNEL_FS_OUTPUT_Z))
-      dw |= GEN8_PSX_DW1_PSCDEPTH_ON;
+      dw |= GEN7_PSCDEPTH_ON << GEN8_PSX_DW1_PSCDEPTH__SHIFT;
    if (ilo_shader_get_kernel_param(fs, ILO_KERNEL_FS_INPUT_Z))
       dw |= GEN8_PSX_DW1_USE_DEPTH;
    if (ilo_shader_get_kernel_param(fs, ILO_KERNEL_FS_INPUT_W))
@@ -868,7 +868,7 @@ fs_init_cso_gen8(const struct ilo_dev *dev,
 
    /* always 64? */
    dw6 = (64 - 2) << GEN8_PS_DW6_MAX_THREADS__SHIFT |
-         GEN8_PS_DW6_POSOFFSET_NONE;
+         GEN6_POSOFFSET_NONE << GEN8_PS_DW6_POSOFFSET__SHIFT;
    if (ilo_shader_get_kernel_param(fs, ILO_KERNEL_PCB_CBUF0_SIZE))
       dw6 |= GEN8_PS_DW6_PUSH_CONSTANT_ENABLE;
 
@@ -1604,13 +1604,13 @@ blend_init_cso_gen6(const struct ilo_dev *dev,
                      GEN6_RT_DW1_POST_BLEND_CLAMP;
 
    if (!(rt->colormask & PIPE_MASK_A))
-      cso->payload[1] |= GEN6_RT_DW1_WRITE_DISABLE_A;
+      cso->payload[1] |= GEN6_RT_DW1_WRITE_DISABLES_A;
    if (!(rt->colormask & PIPE_MASK_R))
-      cso->payload[1] |= GEN6_RT_DW1_WRITE_DISABLE_R;
+      cso->payload[1] |= GEN6_RT_DW1_WRITE_DISABLES_R;
    if (!(rt->colormask & PIPE_MASK_G))
-      cso->payload[1] |= GEN6_RT_DW1_WRITE_DISABLE_G;
+      cso->payload[1] |= GEN6_RT_DW1_WRITE_DISABLES_G;
    if (!(rt->colormask & PIPE_MASK_B))
-      cso->payload[1] |= GEN6_RT_DW1_WRITE_DISABLE_B;
+      cso->payload[1] |= GEN6_RT_DW1_WRITE_DISABLES_B;
 
    /*
     * From the Sandy Bridge PRM, volume 2 part 1, page 365:
@@ -1649,13 +1649,13 @@ blend_init_cso_gen8(const struct ilo_dev *dev,
                      GEN8_RT_DW1_POST_BLEND_CLAMP;
 
    if (!(rt->colormask & PIPE_MASK_A))
-      cso->payload[0] |= GEN8_RT_DW0_WRITE_DISABLE_A;
+      cso->payload[0] |= GEN8_RT_DW0_WRITE_DISABLES_A;
    if (!(rt->colormask & PIPE_MASK_R))
-      cso->payload[0] |= GEN8_RT_DW0_WRITE_DISABLE_R;
+      cso->payload[0] |= GEN8_RT_DW0_WRITE_DISABLES_R;
    if (!(rt->colormask & PIPE_MASK_G))
-      cso->payload[0] |= GEN8_RT_DW0_WRITE_DISABLE_G;
+      cso->payload[0] |= GEN8_RT_DW0_WRITE_DISABLES_G;
    if (!(rt->colormask & PIPE_MASK_B))
-      cso->payload[0] |= GEN8_RT_DW0_WRITE_DISABLE_B;
+      cso->payload[0] |= GEN8_RT_DW0_WRITE_DISABLES_B;
 
    if (state->logicop_enable) {
       cso->dw_blend = 0;

@@ -66,7 +66,7 @@ gen6_3DSTATE_CLIP(struct ilo_builder *builder,
                   GEN6_INTERP_NONPERSPECTIVE_SAMPLE))
       dw2 |= GEN6_CLIP_DW2_NONPERSPECTIVE_BARYCENTRIC_ENABLE;
 
-   dw3 |= GEN6_CLIP_DW3_RTAINDEX_FORCED_ZERO |
+   dw3 |= GEN6_CLIP_DW3_FORCE_RTAINDEX_ZERO |
           (num_viewports - 1);
 
    ilo_builder_batch_pointer(builder, cmd_len, &dw);
@@ -107,7 +107,7 @@ gen7_internal_3dstate_sf(struct ilo_builder *builder,
 
    if (!sf) {
       dw[1] = 0;
-      dw[2] = (num_samples > 1) ? GEN7_SF_DW2_MSRASTMODE_ON_PATTERN : 0;
+      dw[2] = (num_samples > 1) ? (GEN6_MSRASTMODE_ON_PATTERN << 8) : 0;
       dw[3] = 0;
       dw[4] = 0;
       dw[5] = 0;
@@ -593,23 +593,23 @@ gen8_3DSTATE_WM_HZ_OP(struct ilo_builder *builder, uint32_t op,
    switch (sample_count) {
    case 0:
    case 1:
-      dw1 |= GEN8_WM_HZ_DW1_NUMSAMPLES_1;
+      dw1 |= GEN6_NUMSAMPLES_1 << 13;
       break;
    case 2:
-      dw1 |= GEN8_WM_HZ_DW1_NUMSAMPLES_2;
+      dw1 |= GEN8_NUMSAMPLES_2 << 13;
       break;
    case 4:
-      dw1 |= GEN8_WM_HZ_DW1_NUMSAMPLES_4;
+      dw1 |= GEN6_NUMSAMPLES_4 << 13;
       break;
    case 8:
-      dw1 |= GEN8_WM_HZ_DW1_NUMSAMPLES_8;
+      dw1 |= GEN7_NUMSAMPLES_8 << 13;
       break;
    case 16:
-      dw1 |= GEN8_WM_HZ_DW1_NUMSAMPLES_16;
+      dw1 |= GEN8_NUMSAMPLES_16 << 13;
       break;
    default:
       assert(!"unsupported sample count");
-      dw1 |= GEN8_WM_HZ_DW1_NUMSAMPLES_1;
+      dw1 |= GEN6_NUMSAMPLES_1 << 13;
       break;
    }
 
@@ -772,7 +772,7 @@ gen8_3DSTATE_PS_EXTRA(struct ilo_builder *builder,
    dw1 = cso->payload[3];
 
    if (cc_may_kill)
-      dw1 |= GEN8_PSX_DW1_DISPATCH_ENABLE | GEN8_PSX_DW1_KILL_PIXEL;
+      dw1 |= GEN8_PSX_DW1_VALID | GEN8_PSX_DW1_KILL_PIXEL;
    if (per_sample)
       dw1 |= GEN8_PSX_DW1_PER_SAMPLE;
 
@@ -866,34 +866,35 @@ gen6_3DSTATE_MULTISAMPLE(struct ilo_builder *builder,
                          bool pixel_location_center)
 {
    const uint8_t cmd_len = (ilo_dev_gen(builder->dev) >= ILO_GEN(7)) ? 4 : 3;
+   const enum gen_pixel_location pixloc = (pixel_location_center) ?
+      GEN6_PIXLOC_CENTER : GEN6_PIXLOC_UL_CORNER;
    uint32_t dw1, dw2, dw3, *dw;
 
    ILO_DEV_ASSERT(builder->dev, 6, 7.5);
 
-   dw1 = (pixel_location_center) ? GEN6_MULTISAMPLE_DW1_PIXLOC_CENTER :
-      GEN6_MULTISAMPLE_DW1_PIXLOC_UL_CORNER;
+   dw1 = pixloc << 4;
 
    switch (num_samples) {
    case 0:
    case 1:
-      dw1 |= GEN6_MULTISAMPLE_DW1_NUMSAMPLES_1;
+      dw1 |= GEN6_NUMSAMPLES_1 << 1;
       dw2 = 0;
       dw3 = 0;
       break;
    case 4:
-      dw1 |= GEN6_MULTISAMPLE_DW1_NUMSAMPLES_4;
+      dw1 |= GEN6_NUMSAMPLES_4 << 1;
       dw2 = pattern[0];
       dw3 = 0;
       break;
    case 8:
       assert(ilo_dev_gen(builder->dev) >= ILO_GEN(7));
-      dw1 |= GEN7_MULTISAMPLE_DW1_NUMSAMPLES_8;
+      dw1 |= GEN7_NUMSAMPLES_8 << 1;
       dw2 = pattern[0];
       dw3 = pattern[1];
       break;
    default:
       assert(!"unsupported sample count");
-      dw1 |= GEN6_MULTISAMPLE_DW1_NUMSAMPLES_1;
+      dw1 |= GEN6_NUMSAMPLES_1 << 1;
       dw2 = 0;
       dw3 = 0;
       break;
@@ -914,33 +915,34 @@ gen8_3DSTATE_MULTISAMPLE(struct ilo_builder *builder,
                          bool pixel_location_center)
 {
    const uint8_t cmd_len = 2;
+   const enum gen_pixel_location pixloc = (pixel_location_center) ?
+      GEN6_PIXLOC_CENTER : GEN6_PIXLOC_UL_CORNER;
    uint32_t dw1, *dw;
 
    ILO_DEV_ASSERT(builder->dev, 8, 8);
 
-   dw1 = (pixel_location_center) ? GEN6_MULTISAMPLE_DW1_PIXLOC_CENTER :
-      GEN6_MULTISAMPLE_DW1_PIXLOC_UL_CORNER;
+   dw1 = pixloc << 4;
 
    switch (num_samples) {
    case 0:
    case 1:
-      dw1 |= GEN6_MULTISAMPLE_DW1_NUMSAMPLES_1;
+      dw1 |= GEN6_NUMSAMPLES_1 << 1;
       break;
    case 2:
-      dw1 |= GEN8_MULTISAMPLE_DW1_NUMSAMPLES_2;
+      dw1 |= GEN8_NUMSAMPLES_2 << 1;
       break;
    case 4:
-      dw1 |= GEN6_MULTISAMPLE_DW1_NUMSAMPLES_4;
+      dw1 |= GEN6_NUMSAMPLES_4 << 1;
       break;
    case 8:
-      dw1 |= GEN7_MULTISAMPLE_DW1_NUMSAMPLES_8;
+      dw1 |= GEN7_NUMSAMPLES_8 << 1;
       break;
    case 16:
-      dw1 |= GEN8_MULTISAMPLE_DW1_NUMSAMPLES_16;
+      dw1 |= GEN8_NUMSAMPLES_16 << 1;
       break;
    default:
       assert(!"unsupported sample count");
-      dw1 |= GEN6_MULTISAMPLE_DW1_NUMSAMPLES_1;
+      dw1 |= GEN6_NUMSAMPLES_1 << 1;
       break;
    }
 
@@ -1732,10 +1734,10 @@ gen6_BLEND_STATE(struct ilo_builder *builder,
          if (caps->can_alpha_test)
             dw[1] |= dsa->dw_blend_alpha;
       } else {
-         dw[1] |= GEN6_RT_DW1_WRITE_DISABLE_A |
-                  GEN6_RT_DW1_WRITE_DISABLE_R |
-                  GEN6_RT_DW1_WRITE_DISABLE_G |
-                  GEN6_RT_DW1_WRITE_DISABLE_B |
+         dw[1] |= GEN6_RT_DW1_WRITE_DISABLES_A |
+                  GEN6_RT_DW1_WRITE_DISABLES_R |
+                  GEN6_RT_DW1_WRITE_DISABLES_G |
+                  GEN6_RT_DW1_WRITE_DISABLES_B |
                   dsa->dw_blend_alpha;
       }
 
@@ -1800,10 +1802,10 @@ gen8_BLEND_STATE(struct ilo_builder *builder,
          if (caps->can_logicop)
             dw[1] |= blend->dw_logicop;
       } else {
-         dw[0] |= GEN8_RT_DW0_WRITE_DISABLE_A |
-                  GEN8_RT_DW0_WRITE_DISABLE_R |
-                  GEN8_RT_DW0_WRITE_DISABLE_G |
-                  GEN8_RT_DW0_WRITE_DISABLE_B;
+         dw[0] |= GEN8_RT_DW0_WRITE_DISABLES_A |
+                  GEN8_RT_DW0_WRITE_DISABLES_R |
+                  GEN8_RT_DW0_WRITE_DISABLES_G |
+                  GEN8_RT_DW0_WRITE_DISABLES_B;
       }
 
       dw += 2;

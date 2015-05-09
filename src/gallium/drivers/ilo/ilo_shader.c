@@ -930,7 +930,8 @@ ilo_shader_select_kernel_routing(struct ilo_shader_state *shader,
           src_slot + 1 < routing->source_len &&
           src_semantics[src_slot + 1] == TGSI_SEMANTIC_BCOLOR &&
           src_indices[src_slot + 1] == index) {
-         routing->swizzles[dst_slot] |= GEN8_SBE_SWIZ_INPUTATTR_FACING;
+         routing->swizzles[dst_slot] |= GEN6_INPUTATTR_FACING <<
+            GEN8_SBE_SWIZ_SWIZZLE_SELECT__SHIFT;
          src_slot++;
       }
 
