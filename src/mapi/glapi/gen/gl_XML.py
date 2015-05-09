@@ -626,7 +626,7 @@ class gl_function( gl_item ):
         # Decimal('1.1') }.
         self.api_map = {}
 
-        self.assign_offset = 0
+        self.assign_offset = False
 
         self.static_entry_points = []
 
@@ -685,23 +685,11 @@ class gl_function( gl_item ):
             # Only try to set the offset when a non-alias entry-point
             # is being processed.
 
-            offset = element.get( "offset" )
-            if offset:
-                try:
-                    o = int( offset )
-                    self.offset = o
-                except Exception, e:
-                    self.offset = -1
-                    if offset == "assign":
-                        self.assign_offset = 1
-
-                if self.offset == -1:
-                    assert name not in static_data.offsets
-                else:
-                    assert static_data.offsets[name] == self.offset
+            if name in static_data.offsets:
+                self.offset = static_data.offsets[name]
             else:
-                assert name not in static_data.offsets
-
+                self.offset = -1
+                self.assign_offset = self.exec_flavor != "skip" or name in static_data.unused_functions
 
         if not self.name:
             self.name = true_name
