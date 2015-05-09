@@ -400,7 +400,7 @@ coalesce_phi_nodes_block(nir_block *block, void *void_state)
 }
 
 static void
-agressive_coalesce_parallel_copy(nir_parallel_copy_instr *pcopy,
+aggressive_coalesce_parallel_copy(nir_parallel_copy_instr *pcopy,
                                  struct from_ssa_state *state)
 {
    nir_foreach_parallel_copy_entry(pcopy, entry) {
@@ -429,7 +429,7 @@ agressive_coalesce_parallel_copy(nir_parallel_copy_instr *pcopy,
 }
 
 static bool
-agressive_coalesce_block(nir_block *block, void *void_state)
+aggressive_coalesce_block(nir_block *block, void *void_state)
 {
    struct from_ssa_state *state = void_state;
 
@@ -442,7 +442,7 @@ agressive_coalesce_block(nir_block *block, void *void_state)
 
          start_pcopy = nir_instr_as_parallel_copy(instr);
 
-         agressive_coalesce_parallel_copy(start_pcopy, state);
+         aggressive_coalesce_parallel_copy(start_pcopy, state);
 
          break;
       }
@@ -452,7 +452,7 @@ agressive_coalesce_block(nir_block *block, void *void_state)
       get_parallel_copy_at_end_of_block(block);
 
    if (end_pcopy && end_pcopy != start_pcopy)
-      agressive_coalesce_parallel_copy(end_pcopy, state);
+      aggressive_coalesce_parallel_copy(end_pcopy, state);
 
    return true;
 }
@@ -786,7 +786,7 @@ nir_convert_from_ssa_impl(nir_function_impl *impl)
                               nir_metadata_dominance);
 
    nir_foreach_block(impl, coalesce_phi_nodes_block, &state);
-   nir_foreach_block(impl, agressive_coalesce_block, &state);
+   nir_foreach_block(impl, aggressive_coalesce_block, &state);
 
    nir_foreach_block(impl, resolve_registers_block, &state);
 
