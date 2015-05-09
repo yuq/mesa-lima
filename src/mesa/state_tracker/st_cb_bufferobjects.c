@@ -241,6 +241,9 @@ st_bufferobj_data(struct gl_context *ctx,
    case GL_SHADER_STORAGE_BUFFER:
       bind = PIPE_BIND_SHADER_BUFFER;
       break;
+   case GL_QUERY_BUFFER:
+      bind = PIPE_BIND_QUERY_BUFFER;
+      break;
    default:
       bind = 0;
    }
