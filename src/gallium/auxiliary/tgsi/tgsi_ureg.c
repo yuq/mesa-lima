@@ -107,17 +107,10 @@ struct ureg_program
       unsigned first;
       unsigned last;
       unsigned array_id;
-   } fs_input[UREG_MAX_INPUT];
-   unsigned nr_fs_inputs, nr_fs_input_regs;
+   } input[UREG_MAX_INPUT];
+   unsigned nr_inputs, nr_input_regs;
 
    unsigned vs_inputs[UREG_MAX_INPUT/32];
-
-   struct {
-      unsigned index;
-      unsigned semantic_name;
-      unsigned semantic_index;
-   } input[UREG_MAX_INPUT];
-   unsigned nr_inputs;
 
    struct {
       unsigned index;
@@ -263,35 +256,35 @@ ureg_DECL_fs_input_cyl_centroid(struct ureg_program *ureg,
 {
    unsigned i;
 
-   for (i = 0; i < ureg->nr_fs_inputs; i++) {
-      if (ureg->fs_input[i].semantic_name == semantic_name &&
-          ureg->fs_input[i].semantic_index == semantic_index) {
-         assert(ureg->fs_input[i].interp == interp_mode);
-         assert(ureg->fs_input[i].cylindrical_wrap == cylindrical_wrap);
-         assert(ureg->fs_input[i].interp_location == interp_location);
-         assert(ureg->fs_input[i].array_id == array_id);
+   for (i = 0; i < ureg->nr_inputs; i++) {
+      if (ureg->input[i].semantic_name == semantic_name &&
+          ureg->input[i].semantic_index == semantic_index) {
+         assert(ureg->input[i].interp == interp_mode);
+         assert(ureg->input[i].cylindrical_wrap == cylindrical_wrap);
+         assert(ureg->input[i].interp_location == interp_location);
+         assert(ureg->input[i].array_id == array_id);
          goto out;
       }
    }
 
-   if (ureg->nr_fs_inputs < UREG_MAX_INPUT) {
+   if (ureg->nr_inputs < UREG_MAX_INPUT) {
       assert(array_size >= 1);
-      ureg->fs_input[i].semantic_name = semantic_name;
-      ureg->fs_input[i].semantic_index = semantic_index;
-      ureg->fs_input[i].interp = interp_mode;
-      ureg->fs_input[i].cylindrical_wrap = cylindrical_wrap;
-      ureg->fs_input[i].interp_location = interp_location;
-      ureg->fs_input[i].first = ureg->nr_fs_input_regs;
-      ureg->fs_input[i].last = ureg->nr_fs_input_regs + array_size - 1;
-      ureg->fs_input[i].array_id = array_id;
-      ureg->nr_fs_input_regs += array_size;
-      ureg->nr_fs_inputs++;
+      ureg->input[i].semantic_name = semantic_name;
+      ureg->input[i].semantic_index = semantic_index;
+      ureg->input[i].interp = interp_mode;
+      ureg->input[i].cylindrical_wrap = cylindrical_wrap;
+      ureg->input[i].interp_location = interp_location;
+      ureg->input[i].first = ureg->nr_input_regs;
+      ureg->input[i].last = ureg->nr_input_regs + array_size - 1;
+      ureg->input[i].array_id = array_id;
+      ureg->nr_input_regs += array_size;
+      ureg->nr_inputs++;
    } else {
       set_bad(ureg);
    }
 
 out:
-   return ureg_src_array_register(TGSI_FILE_INPUT, ureg->fs_input[i].first,
+   return ureg_src_array_register(TGSI_FILE_INPUT, ureg->input[i].first,
                                   array_id);
 }
 
@@ -312,19 +305,8 @@ ureg_DECL_input(struct ureg_program *ureg,
                    unsigned semantic_name,
                    unsigned semantic_index)
 {
-   int i = 0;
-
-   if (ureg->nr_inputs < UREG_MAX_INPUT) {
-      i = ureg->nr_inputs;
-      ureg->input[i].index = i;
-      ureg->input[i].semantic_name = semantic_name;
-      ureg->input[i].semantic_index = semantic_index;
-      ureg->nr_inputs++;
-   } else {
-      set_bad(ureg);
-   }
-
-   return ureg_src_register(TGSI_FILE_INPUT, i);
+   return ureg_DECL_fs_input_cyl_centroid(ureg, semantic_name, semantic_index,
+                                          0, 0, 0, 0, 1);
 }
 
 
@@ -1486,23 +1468,23 @@ static void emit_decls( struct ureg_program *ureg )
          }
       }
    } else if (ureg->processor == TGSI_PROCESSOR_FRAGMENT) {
-      for (i = 0; i < ureg->nr_fs_inputs; i++) {
+      for (i = 0; i < ureg->nr_inputs; i++) {
          emit_decl_fs(ureg,
                       TGSI_FILE_INPUT,
-                      ureg->fs_input[i].first,
-                      ureg->fs_input[i].last,
-                      ureg->fs_input[i].semantic_name,
-                      ureg->fs_input[i].semantic_index,
-                      ureg->fs_input[i].interp,
-                      ureg->fs_input[i].cylindrical_wrap,
-                      ureg->fs_input[i].interp_location,
-                      ureg->fs_input[i].array_id);
+                      ureg->input[i].first,
+                      ureg->input[i].last,
+                      ureg->input[i].semantic_name,
+                      ureg->input[i].semantic_index,
+                      ureg->input[i].interp,
+                      ureg->input[i].cylindrical_wrap,
+                      ureg->input[i].interp_location,
+                      ureg->input[i].array_id);
       }
    } else {
       for (i = 0; i < ureg->nr_inputs; i++) {
          emit_decl_semantic(ureg,
                             TGSI_FILE_INPUT,
-                            ureg->input[i].index,
+                            ureg->input[i].first,
                             ureg->input[i].semantic_name,
                             ureg->input[i].semantic_index,
                             TGSI_WRITEMASK_XYZW);
