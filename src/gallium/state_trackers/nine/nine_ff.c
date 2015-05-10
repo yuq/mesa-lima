@@ -113,10 +113,12 @@ struct nine_ff_ps_key
             } ts[8];
             uint32_t fog : 1; /* for vFog coming from VS */
             uint32_t fog_mode : 2;
-            uint32_t specular : 1; /* 9 32-bit words with this */
+            uint32_t specular : 1;
+            uint32_t pad1 : 28;/* 9 32-bit words with this */
             uint8_t colorarg_b4[3];
             uint8_t colorarg_b5[3];
             uint8_t alphaarg_b4[3]; /* 11 32-bit words plus a byte */
+            uint8_t pad2[3];
         };
         uint64_t value64[6]; /* don't forget to resize PixelShader9.ff_key */
         uint32_t value32[12];
