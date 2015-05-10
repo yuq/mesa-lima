@@ -412,6 +412,14 @@ _mesa_ClearNamedFramebufferiv(GLuint framebuffer, GLenum buffer,
 {
    GLint oldfb;
 
+   GET_CURRENT_CONTEXT(ctx);
+   if (!ctx->Extensions.ARB_direct_state_access) {
+      _mesa_error(ctx, GL_INVALID_OPERATION,
+                  "glClearNamedFramebufferiv(GL_ARB_direct_state_access "
+                  "is not supported)");
+      return;
+   }
+
    _mesa_GetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &oldfb);
    _mesa_BindFramebuffer(GL_DRAW_FRAMEBUFFER, framebuffer);
    _mesa_ClearBufferiv(buffer, drawbuffer, value);
@@ -501,6 +509,14 @@ _mesa_ClearNamedFramebufferuiv(GLuint framebuffer, GLenum buffer,
                                GLint drawbuffer, const GLuint *value)
 {
    GLint oldfb;
+
+   GET_CURRENT_CONTEXT(ctx);
+   if (!ctx->Extensions.ARB_direct_state_access) {
+      _mesa_error(ctx, GL_INVALID_OPERATION,
+                  "glClearNamedFramebufferuiv(GL_ARB_direct_state_access "
+                  "is not supported)");
+      return;
+   }
 
    _mesa_GetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &oldfb);
    _mesa_BindFramebuffer(GL_DRAW_FRAMEBUFFER, framebuffer);
@@ -613,6 +629,14 @@ _mesa_ClearNamedFramebufferfv(GLuint framebuffer, GLenum buffer,
 {
    GLint oldfb;
 
+   GET_CURRENT_CONTEXT(ctx);
+   if (!ctx->Extensions.ARB_direct_state_access) {
+      _mesa_error(ctx, GL_INVALID_OPERATION,
+                  "glClearNamedFramebufferfv(GL_ARB_direct_state_access "
+                  "is not supported)");
+      return;
+   }
+
    _mesa_GetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &oldfb);
    _mesa_BindFramebuffer(GL_DRAW_FRAMEBUFFER, framebuffer);
    _mesa_ClearBufferfv(buffer, drawbuffer, value);
@@ -694,6 +718,14 @@ _mesa_ClearNamedFramebufferfi(GLuint framebuffer, GLenum buffer,
                               GLfloat depth, GLint stencil)
 {
    GLint oldfb;
+
+   GET_CURRENT_CONTEXT(ctx);
+   if (!ctx->Extensions.ARB_direct_state_access) {
+      _mesa_error(ctx, GL_INVALID_OPERATION,
+                  "glClearNamedFramebufferfi(GL_ARB_direct_state_access "
+                  "is not supported)");
+      return;
+   }
 
    _mesa_GetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &oldfb);
    _mesa_BindFramebuffer(GL_DRAW_FRAMEBUFFER, framebuffer);
