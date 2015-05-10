@@ -5201,10 +5201,9 @@ st_translate_program(
    }
    else if (procType == TGSI_PROCESSOR_GEOMETRY) {
       for (i = 0; i < numInputs; i++) {
-         t->inputs[i] = ureg_DECL_gs_input(ureg,
-                                           i,
-                                           inputSemanticName[i],
-                                           inputSemanticIndex[i]);
+         t->inputs[i] = ureg_DECL_input(ureg,
+                                        inputSemanticName[i],
+                                        inputSemanticIndex[i]);
       }
 
       for (i = 0; i < numOutputs; i++) {

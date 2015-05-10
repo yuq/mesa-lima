@@ -209,10 +209,9 @@ ureg_DECL_vs_input( struct ureg_program *,
                     unsigned index );
 
 struct ureg_src
-ureg_DECL_gs_input(struct ureg_program *,
-                   unsigned index,
-                   unsigned semantic_name,
-                   unsigned semantic_index);
+ureg_DECL_input(struct ureg_program *,
+                unsigned semantic_name,
+                unsigned semantic_index);
 
 struct ureg_src
 ureg_DECL_system_value(struct ureg_program *,

@@ -116,8 +116,8 @@ struct ureg_program
       unsigned index;
       unsigned semantic_name;
       unsigned semantic_index;
-   } gs_input[UREG_MAX_INPUT];
-   unsigned nr_gs_inputs;
+   } input[UREG_MAX_INPUT];
+   unsigned nr_inputs;
 
    struct {
       unsigned index;
@@ -308,22 +308,23 @@ ureg_DECL_vs_input( struct ureg_program *ureg,
 
 
 struct ureg_src
-ureg_DECL_gs_input(struct ureg_program *ureg,
-                   unsigned index,
+ureg_DECL_input(struct ureg_program *ureg,
                    unsigned semantic_name,
                    unsigned semantic_index)
 {
-   if (ureg->nr_gs_inputs < UREG_MAX_INPUT) {
-      ureg->gs_input[ureg->nr_gs_inputs].index = index;
-      ureg->gs_input[ureg->nr_gs_inputs].semantic_name = semantic_name;
-      ureg->gs_input[ureg->nr_gs_inputs].semantic_index = semantic_index;
-      ureg->nr_gs_inputs++;
+   int i = 0;
+
+   if (ureg->nr_inputs < UREG_MAX_INPUT) {
+      i = ureg->nr_inputs;
+      ureg->input[i].index = i;
+      ureg->input[i].semantic_name = semantic_name;
+      ureg->input[i].semantic_index = semantic_index;
+      ureg->nr_inputs++;
    } else {
       set_bad(ureg);
    }
 
-   /* XXX: Add suport for true 2D input registers. */
-   return ureg_src_register(TGSI_FILE_INPUT, index);
+   return ureg_src_register(TGSI_FILE_INPUT, i);
 }
 
 
@@ -1498,12 +1499,12 @@ static void emit_decls( struct ureg_program *ureg )
                       ureg->fs_input[i].array_id);
       }
    } else {
-      for (i = 0; i < ureg->nr_gs_inputs; i++) {
+      for (i = 0; i < ureg->nr_inputs; i++) {
          emit_decl_semantic(ureg,
                             TGSI_FILE_INPUT,
-                            ureg->gs_input[i].index,
-                            ureg->gs_input[i].semantic_name,
-                            ureg->gs_input[i].semantic_index,
+                            ureg->input[i].index,
+                            ureg->input[i].semantic_name,
+                            ureg->input[i].semantic_index,
                             TGSI_WRITEMASK_XYZW);
       }
    }
