@@ -74,14 +74,13 @@ valid_dest(nir_block *block, nir_dest *dest)
 	 * (so this is run iteratively in a loop).  Therefore if
 	 * we get this far, it should not have any if_uses:
 	 */
-	assert(dest->ssa.if_uses->entries == 0);
+	assert(list_empty(&dest->ssa.if_uses));
 
 	/* The only uses of this definition must be phi's in the
 	 * successor or in the current block
 	 */
-	struct set_entry *entry;
-	set_foreach(dest->ssa.uses, entry) {
-		const nir_instr *dest_instr = entry->key;
+	nir_foreach_use(&dest->ssa, use) {
+		nir_instr *dest_instr = use->parent_instr;
 		if (dest_instr->block == block)
 			continue;
 		if ((dest_instr->type == nir_instr_type_phi) &&
