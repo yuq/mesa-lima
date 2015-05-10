@@ -1097,7 +1097,7 @@ st_translate_mesa_program(
       for (i = 0; i < numInputs; i++) {
          t->inputs[i] = ureg_DECL_input(ureg,
                                         inputSemanticName[i],
-                                        inputSemanticIndex[i]);
+                                        inputSemanticIndex[i], 0, 1);
       }
 
       for (i = 0; i < numOutputs; i++) {
