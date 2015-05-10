@@ -43,6 +43,7 @@ enum pipe_error st_translate_program(
    const struct gl_program *proginfo,
    GLuint numInputs,
    const GLuint inputMapping[],
+   const GLuint inputSlotToAttr[],
    const ubyte inputSemanticName[],
    const ubyte inputSemanticIndex[],
    const GLuint interpMode[],

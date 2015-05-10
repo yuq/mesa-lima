@@ -351,6 +351,7 @@ st_translate_vertex_program(struct st_context *st,
                                    /* inputs */
                                    vpv->num_inputs,
                                    stvp->input_to_index,
+                                   NULL, /* inputSlotToAttr */
                                    NULL, /* input semantic name */
                                    NULL, /* input semantic index */
                                    NULL, /* interp mode */
@@ -482,6 +483,7 @@ st_translate_fragment_program(struct st_context *st,
 
    GLuint outputMapping[FRAG_RESULT_MAX];
    GLuint inputMapping[VARYING_SLOT_MAX];
+   GLuint inputSlotToAttr[VARYING_SLOT_MAX];
    GLuint interpMode[PIPE_MAX_SHADER_INPUTS];  /* XXX size? */
    GLuint interpLocation[PIPE_MAX_SHADER_INPUTS];
    GLuint attr;
@@ -502,6 +504,7 @@ st_translate_fragment_program(struct st_context *st,
       return NULL;
 
    assert(!(key->bitmap && key->drawpixels));
+   memset(inputSlotToAttr, ~0, sizeof(inputSlotToAttr));
 
    if (key->bitmap) {
       /* glBitmap drawing */
@@ -543,6 +546,7 @@ st_translate_fragment_program(struct st_context *st,
          const GLuint slot = fs_num_inputs++;
 
          inputMapping[attr] = slot;
+         inputSlotToAttr[slot] = attr;
          if (stfp->Base.IsCentroid & BITFIELD64_BIT(attr))
             interpLocation[slot] = TGSI_INTERPOLATE_LOC_CENTROID;
          else if (stfp->Base.IsSample & BITFIELD64_BIT(attr))
@@ -778,6 +782,7 @@ st_translate_fragment_program(struct st_context *st,
                            /* inputs */
                            fs_num_inputs,
                            inputMapping,
+                           inputSlotToAttr,
                            input_semantic_name,
                            input_semantic_index,
                            interpMode,
@@ -867,6 +872,7 @@ st_translate_geometry_program(struct st_context *st,
                               struct st_geometry_program *stgp,
                               const struct st_gp_variant_key *key)
 {
+   GLuint inputSlotToAttr[VARYING_SLOT_MAX];
    GLuint inputMapping[VARYING_SLOT_MAX];
    GLuint outputMapping[VARYING_SLOT_MAX];
    struct pipe_context *pipe = st->pipe;
@@ -896,6 +902,7 @@ st_translate_geometry_program(struct st_context *st,
       return NULL;
    }
 
+   memset(inputSlotToAttr, 0, sizeof(inputSlotToAttr));
    memset(inputMapping, 0, sizeof(inputMapping));
    memset(outputMapping, 0, sizeof(outputMapping));
 
@@ -907,6 +914,7 @@ st_translate_geometry_program(struct st_context *st,
          const GLuint slot = gs_num_inputs++;
 
          inputMapping[attr] = slot;
+         inputSlotToAttr[slot] = attr;
 
          switch (attr) {
          case VARYING_SLOT_PRIMITIVE_ID:
@@ -1080,6 +1088,7 @@ st_translate_geometry_program(struct st_context *st,
                         /* inputs */
                         gs_num_inputs,
                         inputMapping,
+                        inputSlotToAttr,
                         input_semantic_name,
                         input_semantic_index,
                         NULL,
