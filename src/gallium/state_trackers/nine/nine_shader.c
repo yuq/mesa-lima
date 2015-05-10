@@ -1979,7 +1979,7 @@ DECL_SPECIAL(DCL)
                 ureg, tgsi.Name, tgsi.Index,
                 nine_tgsi_to_interp_mode(&tgsi),
                 0, /* cylwrap */
-                sem.reg.mod & NINED3DSPDM_CENTROID);
+                sem.reg.mod & NINED3DSPDM_CENTROID, 0, 1);
         } else
         if (!is_input && 0) { /* declare in COLOROUT/DEPTHOUT case */
             /* FragColor or FragDepth */

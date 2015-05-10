@@ -104,8 +104,11 @@ struct ureg_program
       unsigned interp;
       unsigned char cylindrical_wrap;
       unsigned interp_location;
+      unsigned first;
+      unsigned last;
+      unsigned array_id;
    } fs_input[UREG_MAX_INPUT];
-   unsigned nr_fs_inputs;
+   unsigned nr_fs_inputs, nr_fs_input_regs;
 
    unsigned vs_inputs[UREG_MAX_INPUT/32];
 
@@ -254,30 +257,42 @@ ureg_DECL_fs_input_cyl_centroid(struct ureg_program *ureg,
                        unsigned semantic_index,
                        unsigned interp_mode,
                        unsigned cylindrical_wrap,
-                       unsigned interp_location)
+                       unsigned interp_location,
+                       unsigned array_id,
+                       unsigned array_size)
 {
    unsigned i;
 
    for (i = 0; i < ureg->nr_fs_inputs; i++) {
       if (ureg->fs_input[i].semantic_name == semantic_name &&
           ureg->fs_input[i].semantic_index == semantic_index) {
+         assert(ureg->fs_input[i].interp == interp_mode);
+         assert(ureg->fs_input[i].cylindrical_wrap == cylindrical_wrap);
+         assert(ureg->fs_input[i].interp_location == interp_location);
+         assert(ureg->fs_input[i].array_id == array_id);
          goto out;
       }
    }
 
    if (ureg->nr_fs_inputs < UREG_MAX_INPUT) {
+      assert(array_size >= 1);
       ureg->fs_input[i].semantic_name = semantic_name;
       ureg->fs_input[i].semantic_index = semantic_index;
       ureg->fs_input[i].interp = interp_mode;
       ureg->fs_input[i].cylindrical_wrap = cylindrical_wrap;
       ureg->fs_input[i].interp_location = interp_location;
+      ureg->fs_input[i].first = ureg->nr_fs_input_regs;
+      ureg->fs_input[i].last = ureg->nr_fs_input_regs + array_size - 1;
+      ureg->fs_input[i].array_id = array_id;
+      ureg->nr_fs_input_regs += array_size;
       ureg->nr_fs_inputs++;
    } else {
       set_bad(ureg);
    }
 
 out:
-   return ureg_src_register(TGSI_FILE_INPUT, i);
+   return ureg_src_array_register(TGSI_FILE_INPUT, ureg->fs_input[i].first,
+                                  array_id);
 }
 
 
@@ -1281,14 +1296,17 @@ emit_decl_semantic(struct ureg_program *ureg,
 static void
 emit_decl_fs(struct ureg_program *ureg,
              unsigned file,
-             unsigned index,
+             unsigned first,
+             unsigned last,
              unsigned semantic_name,
              unsigned semantic_index,
              unsigned interpolate,
              unsigned cylindrical_wrap,
-             unsigned interpolate_location)
+             unsigned interpolate_location,
+             unsigned array_id)
 {
-   union tgsi_any_token *out = get_tokens(ureg, DOMAIN_DECL, 4);
+   union tgsi_any_token *out = get_tokens(ureg, DOMAIN_DECL,
+                                          array_id ? 5 : 4);
 
    out[0].value = 0;
    out[0].decl.Type = TGSI_TOKEN_TYPE_DECLARATION;
@@ -1297,10 +1315,11 @@ emit_decl_fs(struct ureg_program *ureg,
    out[0].decl.UsageMask = TGSI_WRITEMASK_XYZW; /* FIXME! */
    out[0].decl.Interpolate = 1;
    out[0].decl.Semantic = 1;
+   out[0].decl.Array = array_id != 0;
 
    out[1].value = 0;
-   out[1].decl_range.First = index;
-   out[1].decl_range.Last = index;
+   out[1].decl_range.First = first;
+   out[1].decl_range.Last = last;
 
    out[2].value = 0;
    out[2].decl_interp.Interpolate = interpolate;
@@ -1310,6 +1329,11 @@ emit_decl_fs(struct ureg_program *ureg,
    out[3].value = 0;
    out[3].decl_semantic.Name = semantic_name;
    out[3].decl_semantic.Index = semantic_index;
+
+   if (array_id) {
+      out[4].value = 0;
+      out[4].array.ArrayID = array_id;
+   }
 }
 
 static void
@@ -1464,12 +1488,14 @@ static void emit_decls( struct ureg_program *ureg )
       for (i = 0; i < ureg->nr_fs_inputs; i++) {
          emit_decl_fs(ureg,
                       TGSI_FILE_INPUT,
-                      i,
+                      ureg->fs_input[i].first,
+                      ureg->fs_input[i].last,
                       ureg->fs_input[i].semantic_name,
                       ureg->fs_input[i].semantic_index,
                       ureg->fs_input[i].interp,
                       ureg->fs_input[i].cylindrical_wrap,
-                      ureg->fs_input[i].interp_location);
+                      ureg->fs_input[i].interp_location,
+                      ureg->fs_input[i].array_id);
       }
    } else {
       for (i = 0; i < ureg->nr_gs_inputs; i++) {

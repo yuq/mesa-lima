@@ -172,7 +172,9 @@ ureg_DECL_fs_input_cyl_centroid(struct ureg_program *,
                        unsigned semantic_index,
                        unsigned interp_mode,
                        unsigned cylindrical_wrap,
-                       unsigned interp_location);
+                       unsigned interp_location,
+                       unsigned array_id,
+                       unsigned array_size);
 
 static INLINE struct ureg_src
 ureg_DECL_fs_input_cyl(struct ureg_program *ureg,
@@ -186,7 +188,7 @@ ureg_DECL_fs_input_cyl(struct ureg_program *ureg,
                                  semantic_index,
                                  interp_mode,
                                  cylindrical_wrap,
-                                 0);
+                                 0, 0, 1);
 }
 
 static INLINE struct ureg_src
@@ -199,7 +201,7 @@ ureg_DECL_fs_input(struct ureg_program *ureg,
                                  semantic_name,
                                  semantic_index,
                                  interp_mode,
-                                 0, 0);
+                                 0, 0, 0, 1);
 }
 
 struct ureg_src
@@ -1162,6 +1164,13 @@ ureg_src_dimension_indirect( struct ureg_src reg, struct ureg_src addr,
    return reg;
 }
 
+static INLINE struct ureg_src
+ureg_src_array_offset(struct ureg_src reg, int offset)
+{
+   reg.Index += offset;
+   return reg;
+}
+
 static INLINE struct ureg_dst
 ureg_dst_array_offset( struct ureg_dst reg, int offset )
 {
@@ -1236,8 +1245,9 @@ ureg_dst( struct ureg_src src )
 }
 
 static INLINE struct ureg_src
-ureg_src_register(unsigned file,
-                  unsigned index)
+ureg_src_array_register(unsigned file,
+                        unsigned index,
+                        unsigned array_id)
 {
    struct ureg_src src;
 
@@ -1259,9 +1269,16 @@ ureg_src_register(unsigned file,
    src.DimIndFile = TGSI_FILE_NULL;
    src.DimIndIndex = 0;
    src.DimIndSwizzle = 0;
-   src.ArrayID = 0;
+   src.ArrayID = array_id;
 
    return src;
+}
+
+static INLINE struct ureg_src
+ureg_src_register(unsigned file,
+                  unsigned index)
+{
+   return ureg_src_array_register(file, index, 0);
 }
 
 static INLINE struct ureg_src

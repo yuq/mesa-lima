@@ -5149,7 +5149,7 @@ st_translate_program(
                                                         inputSemanticName[i],
                                                         inputSemanticIndex[i],
                                                         interpMode[i], 0,
-                                                        interpLocation[i]);
+                                                        interpLocation[i], 0, 1);
       }
 
       if (proginfo->InputsRead & VARYING_BIT_POS) {
