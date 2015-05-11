@@ -270,7 +270,7 @@ eglGetDisplay(EGLNativeDisplayType nativeDisplay)
    return _eglGetDisplayHandle(dpy);
 }
 
-EGLDisplay EGLAPIENTRY
+static EGLDisplay EGLAPIENTRY
 eglGetPlatformDisplayEXT(EGLenum platform, void *native_display,
                          const EGLint *attrib_list)
 {
@@ -697,7 +697,7 @@ eglCreateWindowSurface(EGLDisplay dpy, EGLConfig config,
 }
 
 
-EGLSurface EGLAPIENTRY
+static EGLSurface EGLAPIENTRY
 eglCreatePlatformWindowSurfaceEXT(EGLDisplay dpy, EGLConfig config,
                                   void *native_window,
                                   const EGLint *attrib_list)
@@ -750,7 +750,7 @@ eglCreatePixmapSurface(EGLDisplay dpy, EGLConfig config,
                                          attrib_list);
 }
 
-EGLSurface EGLAPIENTRY
+static EGLSurface EGLAPIENTRY
 eglCreatePlatformPixmapSurfaceEXT(EGLDisplay dpy, EGLConfig config,
                                    void *native_pixmap,
                                    const EGLint *attrib_list)
@@ -921,7 +921,7 @@ eglSwapBuffers(EGLDisplay dpy, EGLSurface surface)
 
 #ifdef EGL_EXT_swap_buffers_with_damage
 
-EGLBoolean EGLAPIENTRY
+static EGLBoolean EGLAPIENTRY
 eglSwapBuffersWithDamageEXT(EGLDisplay dpy, EGLSurface surface,
                             EGLint *rects, EGLint n_rects)
 {
@@ -1108,117 +1108,9 @@ eglGetError(void)
 }
 
 
-__eglMustCastToProperFunctionPointerType EGLAPIENTRY
-eglGetProcAddress(const char *procname)
-{
-   static const struct {
-      const char *name;
-      _EGLProc function;
-   } egl_functions[] = {
-      /* core functions should not be queryable, but, well... */
-#ifdef _EGL_GET_CORE_ADDRESSES
-      /* alphabetical order */
-      { "eglBindAPI", (_EGLProc) eglBindAPI },
-      { "eglBindTexImage", (_EGLProc) eglBindTexImage },
-      { "eglChooseConfig", (_EGLProc) eglChooseConfig },
-      { "eglCopyBuffers", (_EGLProc) eglCopyBuffers },
-      { "eglCreateContext", (_EGLProc) eglCreateContext },
-      { "eglCreatePbufferFromClientBuffer", (_EGLProc) eglCreatePbufferFromClientBuffer },
-      { "eglCreatePbufferSurface", (_EGLProc) eglCreatePbufferSurface },
-      { "eglCreatePixmapSurface", (_EGLProc) eglCreatePixmapSurface },
-      { "eglCreateWindowSurface", (_EGLProc) eglCreateWindowSurface },
-      { "eglDestroyContext", (_EGLProc) eglDestroyContext },
-      { "eglDestroySurface", (_EGLProc) eglDestroySurface },
-      { "eglGetConfigAttrib", (_EGLProc) eglGetConfigAttrib },
-      { "eglGetConfigs", (_EGLProc) eglGetConfigs },
-      { "eglGetCurrentContext", (_EGLProc) eglGetCurrentContext },
-      { "eglGetCurrentDisplay", (_EGLProc) eglGetCurrentDisplay },
-      { "eglGetCurrentSurface", (_EGLProc) eglGetCurrentSurface },
-      { "eglGetDisplay", (_EGLProc) eglGetDisplay },
-      { "eglGetError", (_EGLProc) eglGetError },
-      { "eglGetProcAddress", (_EGLProc) eglGetProcAddress },
-      { "eglInitialize", (_EGLProc) eglInitialize },
-      { "eglMakeCurrent", (_EGLProc) eglMakeCurrent },
-      { "eglQueryAPI", (_EGLProc) eglQueryAPI },
-      { "eglQueryContext", (_EGLProc) eglQueryContext },
-      { "eglQueryString", (_EGLProc) eglQueryString },
-      { "eglQuerySurface", (_EGLProc) eglQuerySurface },
-      { "eglReleaseTexImage", (_EGLProc) eglReleaseTexImage },
-      { "eglReleaseThread", (_EGLProc) eglReleaseThread },
-      { "eglSurfaceAttrib", (_EGLProc) eglSurfaceAttrib },
-      { "eglSwapBuffers", (_EGLProc) eglSwapBuffers },
-      { "eglSwapInterval", (_EGLProc) eglSwapInterval },
-      { "eglTerminate", (_EGLProc) eglTerminate },
-      { "eglWaitClient", (_EGLProc) eglWaitClient },
-      { "eglWaitGL", (_EGLProc) eglWaitGL },
-      { "eglWaitNative", (_EGLProc) eglWaitNative },
-#endif /* _EGL_GET_CORE_ADDRESSES */
-#ifdef EGL_MESA_drm_display
-      { "eglGetDRMDisplayMESA", (_EGLProc) eglGetDRMDisplayMESA },
-#endif
-      { "eglCreateImageKHR", (_EGLProc) eglCreateImageKHR },
-      { "eglDestroyImageKHR", (_EGLProc) eglDestroyImageKHR },
-      { "eglCreateSyncKHR", (_EGLProc) eglCreateSyncKHR },
-      { "eglCreateSync64KHR", (_EGLProc) eglCreateSync64KHR },
-      { "eglDestroySyncKHR", (_EGLProc) eglDestroySyncKHR },
-      { "eglClientWaitSyncKHR", (_EGLProc) eglClientWaitSyncKHR },
-      { "eglWaitSyncKHR", (_EGLProc) eglWaitSyncKHR },
-      { "eglSignalSyncKHR", (_EGLProc) eglSignalSyncKHR },
-      { "eglGetSyncAttribKHR", (_EGLProc) eglGetSyncAttribKHR },
-#ifdef EGL_NOK_swap_region
-      { "eglSwapBuffersRegionNOK", (_EGLProc) eglSwapBuffersRegionNOK },
-#endif
-#ifdef EGL_MESA_drm_image
-      { "eglCreateDRMImageMESA", (_EGLProc) eglCreateDRMImageMESA },
-      { "eglExportDRMImageMESA", (_EGLProc) eglExportDRMImageMESA },
-#endif
-#ifdef EGL_WL_bind_wayland_display
-      { "eglBindWaylandDisplayWL", (_EGLProc) eglBindWaylandDisplayWL },
-      { "eglUnbindWaylandDisplayWL", (_EGLProc) eglUnbindWaylandDisplayWL },
-      { "eglQueryWaylandBufferWL", (_EGLProc) eglQueryWaylandBufferWL },
-#endif
-#ifdef EGL_WL_create_wayland_buffer_from_image
-      { "eglCreateWaylandBufferFromImageWL", (_EGLProc) eglCreateWaylandBufferFromImageWL },
-#endif
-      { "eglPostSubBufferNV", (_EGLProc) eglPostSubBufferNV },
-#ifdef EGL_EXT_swap_buffers_with_damage
-      { "eglSwapBuffersWithDamageEXT", (_EGLProc) eglSwapBuffersWithDamageEXT },
-#endif
-      { "eglGetPlatformDisplayEXT", (_EGLProc) eglGetPlatformDisplayEXT },
-      { "eglCreatePlatformWindowSurfaceEXT", (_EGLProc) eglCreatePlatformWindowSurfaceEXT },
-      { "eglCreatePlatformPixmapSurfaceEXT", (_EGLProc) eglCreatePlatformPixmapSurfaceEXT },
-      { "eglGetSyncValuesCHROMIUM", (_EGLProc) eglGetSyncValuesCHROMIUM },
-#ifdef EGL_MESA_dma_buf_image_export
-      { "eglExportDMABUFImageQueryMESA", (_EGLProc) eglExportDMABUFImageQueryMESA },
-      { "eglExportDMABUFImageMESA", (_EGLProc) eglExportDMABUFImageMESA },
-#endif
-      { NULL, NULL }
-   };
-   EGLint i;
-   _EGLProc ret;
-
-   if (!procname)
-      RETURN_EGL_SUCCESS(NULL, NULL);
-
-   ret = NULL;
-   if (strncmp(procname, "egl", 3) == 0) {
-      for (i = 0; egl_functions[i].name; i++) {
-         if (strcmp(egl_functions[i].name, procname) == 0) {
-            ret = egl_functions[i].function;
-            break;
-         }
-      }
-   }
-   if (!ret)
-      ret = _eglGetDriverProc(procname);
-
-   RETURN_EGL_SUCCESS(NULL, ret);
-}
-
-
 #ifdef EGL_MESA_drm_display
 
-EGLDisplay EGLAPIENTRY
+static EGLDisplay EGLAPIENTRY
 eglGetDRMDisplayMESA(int fd)
 {
    _EGLDisplay *dpy = _eglFindDisplay(_EGL_PLATFORM_DRM, (void *) (intptr_t) fd);
@@ -1329,7 +1221,7 @@ eglReleaseThread(void)
 }
 
 
-EGLImageKHR EGLAPIENTRY
+static EGLImageKHR EGLAPIENTRY
 eglCreateImageKHR(EGLDisplay dpy, EGLContext ctx, EGLenum target,
                   EGLClientBuffer buffer, const EGLint *attr_list)
 {
@@ -1358,7 +1250,7 @@ eglCreateImageKHR(EGLDisplay dpy, EGLContext ctx, EGLenum target,
 }
 
 
-EGLBoolean EGLAPIENTRY
+static EGLBoolean EGLAPIENTRY
 eglDestroyImageKHR(EGLDisplay dpy, EGLImageKHR image)
 {
    _EGLDisplay *disp = _eglLockDisplay(dpy);
@@ -1423,21 +1315,21 @@ _eglCreateSync(EGLDisplay dpy, EGLenum type, const EGLint *attrib_list,
 }
 
 
-EGLSyncKHR EGLAPIENTRY
+static EGLSyncKHR EGLAPIENTRY
 eglCreateSyncKHR(EGLDisplay dpy, EGLenum type, const EGLint *attrib_list)
 {
    return _eglCreateSync(dpy, type, attrib_list, NULL, EGL_FALSE);
 }
 
 
-EGLSyncKHR EGLAPIENTRY
+static EGLSyncKHR EGLAPIENTRY
 eglCreateSync64KHR(EGLDisplay dpy, EGLenum type, const EGLAttribKHR *attrib_list)
 {
    return _eglCreateSync(dpy, type, NULL, attrib_list, EGL_TRUE);
 }
 
 
-EGLBoolean EGLAPIENTRY
+static EGLBoolean EGLAPIENTRY
 eglDestroySyncKHR(EGLDisplay dpy, EGLSyncKHR sync)
 {
    _EGLDisplay *disp = _eglLockDisplay(dpy);
@@ -1456,7 +1348,7 @@ eglDestroySyncKHR(EGLDisplay dpy, EGLSyncKHR sync)
 }
 
 
-EGLint EGLAPIENTRY
+static EGLint EGLAPIENTRY
 eglClientWaitSyncKHR(EGLDisplay dpy, EGLSyncKHR sync, EGLint flags, EGLTimeKHR timeout)
 {
    _EGLDisplay *disp = _eglLockDisplay(dpy);
@@ -1477,7 +1369,7 @@ eglClientWaitSyncKHR(EGLDisplay dpy, EGLSyncKHR sync, EGLint flags, EGLTimeKHR t
 }
 
 
-EGLint EGLAPIENTRY
+static EGLint EGLAPIENTRY
 eglWaitSyncKHR(EGLDisplay dpy, EGLSyncKHR sync, EGLint flags)
 {
    _EGLDisplay *disp = _eglLockDisplay(dpy);
@@ -1503,7 +1395,7 @@ eglWaitSyncKHR(EGLDisplay dpy, EGLSyncKHR sync, EGLint flags)
 }
 
 
-EGLBoolean EGLAPIENTRY
+static EGLBoolean EGLAPIENTRY
 eglSignalSyncKHR(EGLDisplay dpy, EGLSyncKHR sync, EGLenum mode)
 {
    _EGLDisplay *disp = _eglLockDisplay(dpy);
@@ -1519,7 +1411,7 @@ eglSignalSyncKHR(EGLDisplay dpy, EGLSyncKHR sync, EGLenum mode)
 }
 
 
-EGLBoolean EGLAPIENTRY
+static EGLBoolean EGLAPIENTRY
 eglGetSyncAttribKHR(EGLDisplay dpy, EGLSyncKHR sync, EGLint attribute, EGLint *value)
 {
    _EGLDisplay *disp = _eglLockDisplay(dpy);
@@ -1538,7 +1430,7 @@ eglGetSyncAttribKHR(EGLDisplay dpy, EGLSyncKHR sync, EGLint attribute, EGLint *v
 
 #ifdef EGL_NOK_swap_region
 
-EGLBoolean EGLAPIENTRY
+static EGLBoolean EGLAPIENTRY
 eglSwapBuffersRegionNOK(EGLDisplay dpy, EGLSurface surface,
 			EGLint numRects, const EGLint *rects)
 {
@@ -1568,7 +1460,7 @@ eglSwapBuffersRegionNOK(EGLDisplay dpy, EGLSurface surface,
 
 #ifdef EGL_MESA_drm_image
 
-EGLImageKHR EGLAPIENTRY
+static EGLImageKHR EGLAPIENTRY
 eglCreateDRMImageMESA(EGLDisplay dpy, const EGLint *attr_list)
 {
    _EGLDisplay *disp = _eglLockDisplay(dpy);
@@ -1586,7 +1478,7 @@ eglCreateDRMImageMESA(EGLDisplay dpy, const EGLint *attr_list)
    RETURN_EGL_EVAL(disp, ret);
 }
 
-EGLBoolean EGLAPIENTRY
+static EGLBoolean EGLAPIENTRY
 eglExportDRMImageMESA(EGLDisplay dpy, EGLImageKHR image,
 		      EGLint *name, EGLint *handle, EGLint *stride)
 {
@@ -1611,7 +1503,7 @@ eglExportDRMImageMESA(EGLDisplay dpy, EGLImageKHR image,
 #ifdef EGL_WL_bind_wayland_display
 struct wl_display;
 
-EGLBoolean EGLAPIENTRY
+static EGLBoolean EGLAPIENTRY
 eglBindWaylandDisplayWL(EGLDisplay dpy, struct wl_display *display)
 {
    _EGLDisplay *disp = _eglLockDisplay(dpy);
@@ -1629,7 +1521,7 @@ eglBindWaylandDisplayWL(EGLDisplay dpy, struct wl_display *display)
    RETURN_EGL_EVAL(disp, ret);
 }
 
-EGLBoolean EGLAPIENTRY
+static EGLBoolean EGLAPIENTRY
 eglUnbindWaylandDisplayWL(EGLDisplay dpy, struct wl_display *display)
 {
    _EGLDisplay *disp = _eglLockDisplay(dpy);
@@ -1647,7 +1539,7 @@ eglUnbindWaylandDisplayWL(EGLDisplay dpy, struct wl_display *display)
    RETURN_EGL_EVAL(disp, ret);
 }
 
-EGLBoolean EGLAPIENTRY
+static EGLBoolean EGLAPIENTRY
 eglQueryWaylandBufferWL(EGLDisplay dpy, struct wl_resource *buffer,
                         EGLint attribute, EGLint *value)
 {
@@ -1668,7 +1560,7 @@ eglQueryWaylandBufferWL(EGLDisplay dpy, struct wl_resource *buffer,
 #endif
 
 #ifdef EGL_WL_create_wayland_buffer_from_image
-struct wl_buffer * EGLAPIENTRY
+static struct wl_buffer * EGLAPIENTRY
 eglCreateWaylandBufferFromImageWL(EGLDisplay dpy, EGLImageKHR image)
 {
    _EGLDisplay *disp = _eglLockDisplay(dpy);
@@ -1690,7 +1582,7 @@ eglCreateWaylandBufferFromImageWL(EGLDisplay dpy, EGLImageKHR image)
 }
 #endif
 
-EGLBoolean EGLAPIENTRY
+static EGLBoolean EGLAPIENTRY
 eglPostSubBufferNV(EGLDisplay dpy, EGLSurface surface,
                    EGLint x, EGLint y, EGLint width, EGLint height)
 {
@@ -1709,7 +1601,7 @@ eglPostSubBufferNV(EGLDisplay dpy, EGLSurface surface,
    RETURN_EGL_EVAL(disp, ret);
 }
 
-EGLBoolean EGLAPIENTRY
+static EGLBoolean EGLAPIENTRY
 eglGetSyncValuesCHROMIUM(EGLDisplay display, EGLSurface surface,
                          EGLuint64KHR *ust, EGLuint64KHR *msc,
                          EGLuint64KHR *sbc)
@@ -1732,7 +1624,7 @@ eglGetSyncValuesCHROMIUM(EGLDisplay display, EGLSurface surface,
 }
 
 #ifdef EGL_MESA_image_dma_buf_export
-EGLBoolean EGLAPIENTRY
+static EGLBoolean EGLAPIENTRY
 eglExportDMABUFImageQueryMESA(EGLDisplay dpy, EGLImageKHR image,
                               EGLint *fourcc, EGLint *nplanes,
                               EGLuint64KHR *modifiers)
@@ -1754,7 +1646,7 @@ eglExportDMABUFImageQueryMESA(EGLDisplay dpy, EGLImageKHR image,
    RETURN_EGL_EVAL(disp, ret);
 }
 
-EGLBoolean EGLAPIENTRY
+static EGLBoolean EGLAPIENTRY
 eglExportDMABUFImageMESA(EGLDisplay dpy, EGLImageKHR image,
                          int *fds, EGLint *strides, EGLint *offsets)
 {
@@ -1774,3 +1666,110 @@ eglExportDMABUFImageMESA(EGLDisplay dpy, EGLImageKHR image,
    RETURN_EGL_EVAL(disp, ret);
 }
 #endif
+
+__eglMustCastToProperFunctionPointerType EGLAPIENTRY
+eglGetProcAddress(const char *procname)
+{
+   static const struct {
+      const char *name;
+      _EGLProc function;
+   } egl_functions[] = {
+      /* core functions should not be queryable, but, well... */
+#ifdef _EGL_GET_CORE_ADDRESSES
+      /* alphabetical order */
+      { "eglBindAPI", (_EGLProc) eglBindAPI },
+      { "eglBindTexImage", (_EGLProc) eglBindTexImage },
+      { "eglChooseConfig", (_EGLProc) eglChooseConfig },
+      { "eglCopyBuffers", (_EGLProc) eglCopyBuffers },
+      { "eglCreateContext", (_EGLProc) eglCreateContext },
+      { "eglCreatePbufferFromClientBuffer", (_EGLProc) eglCreatePbufferFromClientBuffer },
+      { "eglCreatePbufferSurface", (_EGLProc) eglCreatePbufferSurface },
+      { "eglCreatePixmapSurface", (_EGLProc) eglCreatePixmapSurface },
+      { "eglCreateWindowSurface", (_EGLProc) eglCreateWindowSurface },
+      { "eglDestroyContext", (_EGLProc) eglDestroyContext },
+      { "eglDestroySurface", (_EGLProc) eglDestroySurface },
+      { "eglGetConfigAttrib", (_EGLProc) eglGetConfigAttrib },
+      { "eglGetConfigs", (_EGLProc) eglGetConfigs },
+      { "eglGetCurrentContext", (_EGLProc) eglGetCurrentContext },
+      { "eglGetCurrentDisplay", (_EGLProc) eglGetCurrentDisplay },
+      { "eglGetCurrentSurface", (_EGLProc) eglGetCurrentSurface },
+      { "eglGetDisplay", (_EGLProc) eglGetDisplay },
+      { "eglGetError", (_EGLProc) eglGetError },
+      { "eglGetProcAddress", (_EGLProc) eglGetProcAddress },
+      { "eglInitialize", (_EGLProc) eglInitialize },
+      { "eglMakeCurrent", (_EGLProc) eglMakeCurrent },
+      { "eglQueryAPI", (_EGLProc) eglQueryAPI },
+      { "eglQueryContext", (_EGLProc) eglQueryContext },
+      { "eglQueryString", (_EGLProc) eglQueryString },
+      { "eglQuerySurface", (_EGLProc) eglQuerySurface },
+      { "eglReleaseTexImage", (_EGLProc) eglReleaseTexImage },
+      { "eglReleaseThread", (_EGLProc) eglReleaseThread },
+      { "eglSurfaceAttrib", (_EGLProc) eglSurfaceAttrib },
+      { "eglSwapBuffers", (_EGLProc) eglSwapBuffers },
+      { "eglSwapInterval", (_EGLProc) eglSwapInterval },
+      { "eglTerminate", (_EGLProc) eglTerminate },
+      { "eglWaitClient", (_EGLProc) eglWaitClient },
+      { "eglWaitGL", (_EGLProc) eglWaitGL },
+      { "eglWaitNative", (_EGLProc) eglWaitNative },
+#endif /* _EGL_GET_CORE_ADDRESSES */
+#ifdef EGL_MESA_drm_display
+      { "eglGetDRMDisplayMESA", (_EGLProc) eglGetDRMDisplayMESA },
+#endif
+      { "eglCreateImageKHR", (_EGLProc) eglCreateImageKHR },
+      { "eglDestroyImageKHR", (_EGLProc) eglDestroyImageKHR },
+      { "eglCreateSyncKHR", (_EGLProc) eglCreateSyncKHR },
+      { "eglCreateSync64KHR", (_EGLProc) eglCreateSync64KHR },
+      { "eglDestroySyncKHR", (_EGLProc) eglDestroySyncKHR },
+      { "eglClientWaitSyncKHR", (_EGLProc) eglClientWaitSyncKHR },
+      { "eglWaitSyncKHR", (_EGLProc) eglWaitSyncKHR },
+      { "eglSignalSyncKHR", (_EGLProc) eglSignalSyncKHR },
+      { "eglGetSyncAttribKHR", (_EGLProc) eglGetSyncAttribKHR },
+#ifdef EGL_NOK_swap_region
+      { "eglSwapBuffersRegionNOK", (_EGLProc) eglSwapBuffersRegionNOK },
+#endif
+#ifdef EGL_MESA_drm_image
+      { "eglCreateDRMImageMESA", (_EGLProc) eglCreateDRMImageMESA },
+      { "eglExportDRMImageMESA", (_EGLProc) eglExportDRMImageMESA },
+#endif
+#ifdef EGL_WL_bind_wayland_display
+      { "eglBindWaylandDisplayWL", (_EGLProc) eglBindWaylandDisplayWL },
+      { "eglUnbindWaylandDisplayWL", (_EGLProc) eglUnbindWaylandDisplayWL },
+      { "eglQueryWaylandBufferWL", (_EGLProc) eglQueryWaylandBufferWL },
+#endif
+#ifdef EGL_WL_create_wayland_buffer_from_image
+      { "eglCreateWaylandBufferFromImageWL", (_EGLProc) eglCreateWaylandBufferFromImageWL },
+#endif
+      { "eglPostSubBufferNV", (_EGLProc) eglPostSubBufferNV },
+#ifdef EGL_EXT_swap_buffers_with_damage
+      { "eglSwapBuffersWithDamageEXT", (_EGLProc) eglSwapBuffersWithDamageEXT },
+#endif
+      { "eglGetPlatformDisplayEXT", (_EGLProc) eglGetPlatformDisplayEXT },
+      { "eglCreatePlatformWindowSurfaceEXT", (_EGLProc) eglCreatePlatformWindowSurfaceEXT },
+      { "eglCreatePlatformPixmapSurfaceEXT", (_EGLProc) eglCreatePlatformPixmapSurfaceEXT },
+      { "eglGetSyncValuesCHROMIUM", (_EGLProc) eglGetSyncValuesCHROMIUM },
+#ifdef EGL_MESA_dma_buf_image_export
+      { "eglExportDMABUFImageQueryMESA", (_EGLProc) eglExportDMABUFImageQueryMESA },
+      { "eglExportDMABUFImageMESA", (_EGLProc) eglExportDMABUFImageMESA },
+#endif
+      { NULL, NULL }
+   };
+   EGLint i;
+   _EGLProc ret;
+
+   if (!procname)
+      RETURN_EGL_SUCCESS(NULL, NULL);
+
+   ret = NULL;
+   if (strncmp(procname, "egl", 3) == 0) {
+      for (i = 0; egl_functions[i].name; i++) {
+         if (strcmp(egl_functions[i].name, procname) == 0) {
+            ret = egl_functions[i].function;
+            break;
+         }
+      }
+   }
+   if (!ret)
+      ret = _eglGetDriverProc(procname);
+
+   RETURN_EGL_SUCCESS(NULL, ret);
+}

@@ -31,8 +31,6 @@
 #ifndef EGLTYPEDEFS_INCLUDED
 #define EGLTYPEDEFS_INCLUDED
 
-#define EGL_EGLEXT_PROTOTYPES
-
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
 
