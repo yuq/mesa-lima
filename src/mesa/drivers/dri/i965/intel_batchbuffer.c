@@ -743,6 +743,38 @@ intel_batchbuffer_emit_mi_flush(struct brw_context *brw)
    brw_render_cache_set_clear(brw);
 }
 
+static void
+load_sized_register_mem(struct brw_context *brw,
+                        uint32_t reg,
+                        drm_intel_bo *bo,
+                        uint32_t read_domains, uint32_t write_domain,
+                        uint32_t offset,
+                        int size)
+{
+   int i;
+
+   /* MI_LOAD_REGISTER_MEM only exists on Gen7+. */
+   assert(brw->gen >= 7);
+
+   if (brw->gen >= 8) {
+      BEGIN_BATCH(4 * size);
+      for (i = 0; i < size; i++) {
+         OUT_BATCH(GEN7_MI_LOAD_REGISTER_MEM | (4 - 2));
+         OUT_BATCH(reg + i * 4);
+         OUT_RELOC64(bo, read_domains, write_domain, offset + i * 4);
+      }
+      ADVANCE_BATCH();
+   } else {
+      BEGIN_BATCH(3 * size);
+      for (i = 0; i < size; i++) {
+         OUT_BATCH(GEN7_MI_LOAD_REGISTER_MEM | (3 - 2));
+         OUT_BATCH(reg + i * 4);
+         OUT_RELOC(bo, read_domains, write_domain, offset + i * 4);
+      }
+      ADVANCE_BATCH();
+   }
+}
+
 void
 brw_load_register_mem(struct brw_context *brw,
                       uint32_t reg,
@@ -750,20 +782,15 @@ brw_load_register_mem(struct brw_context *brw,
                       uint32_t read_domains, uint32_t write_domain,
                       uint32_t offset)
 {
-   /* MI_LOAD_REGISTER_MEM only exists on Gen7+. */
-   assert(brw->gen >= 7);
+   load_sized_register_mem(brw, reg, bo, read_domains, write_domain, offset, 1);
+}
 
-   if (brw->gen >= 8) {
-      BEGIN_BATCH(4);
-      OUT_BATCH(GEN7_MI_LOAD_REGISTER_MEM | (4 - 2));
-      OUT_BATCH(reg);
-      OUT_RELOC64(bo, read_domains, write_domain, offset);
-      ADVANCE_BATCH();
-   } else {
-      BEGIN_BATCH(3);
-      OUT_BATCH(GEN7_MI_LOAD_REGISTER_MEM | (3 - 2));
-      OUT_BATCH(reg);
-      OUT_RELOC(bo, read_domains, write_domain, offset);
-      ADVANCE_BATCH();
-   }
+void
+brw_load_register_mem64(struct brw_context *brw,
+                        uint32_t reg,
+                        drm_intel_bo *bo,
+                        uint32_t read_domains, uint32_t write_domain,
+                        uint32_t offset)
+{
+   load_sized_register_mem(brw, reg, bo, read_domains, write_domain, offset, 2);
 }
