@@ -715,10 +715,6 @@ dri2_initialize_drm(_EGLDriver *drv, _EGLDisplay *disp)
    }
 #endif
 
-   /* we're supporting EGL 1.4 */
-   disp->VersionMajor = 1;
-   disp->VersionMinor = 4;
-
    /* Fill vtbl last to prevent accidentally calling virtual function during
     * initialization.
     */

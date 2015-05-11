@@ -1129,10 +1129,6 @@ dri2_initialize_x11_swrast(_EGLDriver *drv, _EGLDisplay *disp)
          goto cleanup_configs;
    }
 
-   /* we're supporting EGL 1.4 */
-   disp->VersionMajor = 1;
-   disp->VersionMinor = 4;
-
    /* Fill vtbl last to prevent accidentally calling virtual function during
     * initialization.
     */
@@ -1302,10 +1298,6 @@ dri2_initialize_x11_dri2(_EGLDriver *drv, _EGLDisplay *disp)
       if (!dri2_x11_add_configs_for_visuals(dri2_dpy, disp))
 	 goto cleanup_configs;
    }
-
-   /* we're supporting EGL 1.4 */
-   disp->VersionMajor = 1;
-   disp->VersionMinor = 4;
 
    /* Fill vtbl last to prevent accidentally calling virtual function during
     * initialization.

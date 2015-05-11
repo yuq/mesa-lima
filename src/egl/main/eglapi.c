@@ -407,6 +407,12 @@ _eglCreateAPIsString(_EGLDisplay *dpy)
    assert(strlen(dpy->ClientAPIsString) < sizeof(dpy->ClientAPIsString));
 }
 
+static void
+_eglComputeVersion(_EGLDisplay *disp)
+{
+   disp->VersionMajor = 1;
+   disp->VersionMinor = 4;
+}
 
 /**
  * This is typically the second EGL function that an application calls.
@@ -444,6 +450,7 @@ eglInitialize(EGLDisplay dpy, EGLint *major, EGLint *minor)
        */
       disp->Extensions.KHR_get_all_proc_addresses = EGL_TRUE;
 
+      _eglComputeVersion(disp);
       _eglCreateExtensionsString(disp);
       _eglCreateAPIsString(disp);
       _eglsnprintf(disp->VersionString, sizeof(disp->VersionString),

@@ -1206,10 +1206,6 @@ dri2_initialize_wayland_drm(_EGLDriver *drv, _EGLDisplay *disp)
 
    disp->Extensions.EXT_swap_buffers_with_damage = EGL_TRUE;
 
-   /* we're supporting EGL 1.4 */
-   disp->VersionMajor = 1;
-   disp->VersionMinor = 4;
-
    /* Fill vtbl last to prevent accidentally calling virtual function during
     * initialization.
     */
@@ -1852,10 +1848,6 @@ dri2_initialize_wayland_swrast(_EGLDriver *drv, _EGLDisplay *disp)
       if (dri2_dpy->formats & HAS_RGB565)
         dri2_add_config(disp, config, i + 1, types, NULL, rgb565_masks);
    }
-
-   /* we're supporting EGL 1.4 */
-   disp->VersionMajor = 1;
-   disp->VersionMinor = 4;
 
    /* Fill vtbl last to prevent accidentally calling virtual function during
     * initialization.
