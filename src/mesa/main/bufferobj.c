@@ -91,8 +91,9 @@ get_buffer_target(struct gl_context *ctx, GLenum target)
    case GL_COPY_WRITE_BUFFER:
       return &ctx->CopyWriteBuffer;
    case GL_DRAW_INDIRECT_BUFFER:
-      if (ctx->API == API_OPENGL_CORE &&
-          ctx->Extensions.ARB_draw_indirect) {
+      if ((ctx->API == API_OPENGL_CORE &&
+           ctx->Extensions.ARB_draw_indirect) ||
+           _mesa_is_gles31(ctx)) {
          return &ctx->DrawIndirectBuffer;
       }
       break;
