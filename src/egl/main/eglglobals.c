@@ -50,16 +50,6 @@ struct _egl_global _eglGlobal =
       _eglFiniDisplay
    },
 
-   /* ClientExtensions */
-   {
-      true, /* EGL_EXT_client_extensions */
-      true, /* EGL_EXT_platform_base */
-      true, /* EGL_EXT_platform_x11 */
-      true, /* EGL_EXT_platform_wayland */
-      true, /* EGL_MESA_platform_gbm */
-      true, /* EGL_KHR_client_get_all_proc_addresses */
-   },
-
    /* ClientExtensionsString */
    "EGL_EXT_client_extensions"
    " EGL_EXT_platform_base"
