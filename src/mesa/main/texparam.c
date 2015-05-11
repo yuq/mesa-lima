@@ -500,7 +500,9 @@ set_tex_parameteri(struct gl_context *ctx,
       goto invalid_pname;
 
    case GL_DEPTH_STENCIL_TEXTURE_MODE:
-      if (_mesa_is_desktop_gl(ctx) && ctx->Extensions.ARB_stencil_texturing) {
+      if ((_mesa_is_desktop_gl(ctx) &&
+           ctx->Extensions.ARB_stencil_texturing) ||
+          _mesa_is_gles31(ctx)) {
          bool stencil = params[0] == GL_STENCIL_INDEX;
          if (!stencil && params[0] != GL_DEPTH_COMPONENT)
             goto invalid_param;
