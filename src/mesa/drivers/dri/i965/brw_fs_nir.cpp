@@ -780,41 +780,9 @@ fs_visitor::nir_emit_alu(nir_alu_instr *instr)
       inst->saturate = instr->dest.saturate;
       break;
 
-   case nir_op_imul: {
-      if (devinfo->gen >= 8) {
-         emit(MUL(result, op[0], op[1]));
-         break;
-      } else {
-         nir_const_value *value0 = nir_src_as_const_value(instr->src[0].src);
-         nir_const_value *value1 = nir_src_as_const_value(instr->src[1].src);
-
-         if (value0 && value0->u[0] < (1 << 16)) {
-            if (devinfo->gen < 7) {
-               emit(MUL(result, op[0], op[1]));
-            } else {
-               emit(MUL(result, op[1], op[0]));
-            }
-            break;
-         } else if (value1 && value1->u[0] < (1 << 16)) {
-            if (devinfo->gen < 7) {
-               emit(MUL(result, op[1], op[0]));
-            } else {
-               emit(MUL(result, op[0], op[1]));
-            }
-            break;
-         }
-      }
-
-      if (devinfo->gen >= 7)
-         no16("SIMD16 explicit accumulator operands unsupported\n");
-
-      struct brw_reg acc = retype(brw_acc_reg(dispatch_width), result.type);
-
-      emit(MUL(acc, op[0], op[1]));
-      emit(MACH(reg_null_d, op[0], op[1]));
-      emit(MOV(result, fs_reg(acc)));
+   case nir_op_imul:
+      emit(MUL(result, op[0], op[1]));
       break;
-   }
 
    case nir_op_imul_high:
    case nir_op_umul_high: {

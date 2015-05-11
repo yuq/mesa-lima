@@ -3523,6 +3523,71 @@ fs_visitor::lower_load_payload()
    return progress;
 }
 
+bool
+fs_visitor::lower_integer_multiplication()
+{
+   bool progress = false;
+
+   /* Gen8's MUL instruction can do a 32-bit x 32-bit -> 32-bit operation
+    * directly, but Cherryview cannot.
+    */
+   if (devinfo->gen >= 8 && !devinfo->is_cherryview)
+      return false;
+
+   foreach_block_and_inst_safe(block, fs_inst, inst, cfg) {
+      if (inst->opcode != BRW_OPCODE_MUL ||
+          inst->dst.is_accumulator() ||
+          (inst->dst.type != BRW_REGISTER_TYPE_D &&
+           inst->dst.type != BRW_REGISTER_TYPE_UD))
+         continue;
+
+#define insert(instr) inst->insert_before(block, instr)
+
+      /* The MUL instruction isn't commutative. On Gen <= 6, only the low
+       * 16-bits of src0 are read, and on Gen >= 7 only the low 16-bits of
+       * src1 are used.
+       *
+       * If multiplying by an immediate value that fits in 16-bits, do a
+       * single MUL instruction with that value in the proper location.
+       */
+      if (inst->src[1].file == IMM &&
+          inst->src[1].fixed_hw_reg.dw1.ud < (1 << 16)) {
+         if (devinfo->gen < 7) {
+            fs_reg imm(GRF, alloc.allocate(dispatch_width / 8),
+                       inst->dst.type, dispatch_width);
+            insert(MOV(imm, inst->src[1]));
+            insert(MUL(inst->dst, imm, inst->src[0]));
+         } else {
+            insert(MUL(inst->dst, inst->src[0], inst->src[1]));
+         }
+      } else {
+         if (devinfo->gen >= 7)
+            no16("SIMD16 integer multiply unsupported\n");
+
+         const unsigned channels = dispatch_width;
+         const enum brw_reg_type type = inst->dst.type;
+         const fs_reg acc(retype(brw_acc_reg(channels), type));
+         const fs_reg null(retype(brw_null_vec(channels), type));
+
+         const fs_reg &src0 = inst->src[0];
+         const fs_reg &src1 = inst->src[1];
+
+         insert(MUL(acc, src0, src1));
+         insert(MACH(null, src0, src1));
+         insert(MOV(inst->dst, acc));
+      }
+#undef insert
+
+      inst->remove(block);
+      progress = true;
+   }
+
+   if (progress)
+      invalidate_live_intervals();
+
+   return progress;
+}
+
 void
 fs_visitor::dump_instructions()
 {
@@ -4001,6 +4066,7 @@ fs_visitor::optimize()
    }
 
    OPT(opt_combine_constants);
+   OPT(lower_integer_multiplication);
 
    lower_uniform_pull_constant_loads();
 }
