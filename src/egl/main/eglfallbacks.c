@@ -102,7 +102,7 @@ _eglInitDriverFallbacks(_EGLDriver *drv)
    drv->API.SwapBuffersRegionNOK = NULL;
 #endif
 
-#ifdef EGL_MESA_dma_buf_image_export
+#ifdef EGL_MESA_image_dma_buf_export
    drv->API.ExportDMABUFImageQueryMESA = NULL;
    drv->API.ExportDMABUFImageMESA = NULL;
 #endif
