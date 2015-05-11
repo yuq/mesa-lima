@@ -5589,8 +5589,8 @@ _mesa_texture_image_multisample(struct gl_context *ctx, GLuint dims,
    GLenum sample_count_error;
    bool dsa = strstr(func, "ture") ? true : false;
 
-   if (!(ctx->Extensions.ARB_texture_multisample
-      && _mesa_is_desktop_gl(ctx))) {
+   if (!((ctx->Extensions.ARB_texture_multisample
+         && _mesa_is_desktop_gl(ctx))) && !_mesa_is_gles31(ctx)) {
       _mesa_error(ctx, GL_INVALID_OPERATION, "%s(unsupported)", func);
       return;
    }
