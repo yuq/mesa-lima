@@ -127,9 +127,15 @@ typedef EGLBoolean (EGLAPIENTRYP PFNEGLSWAPBUFFERSREGIONNOK) (EGLDisplay dpy, EG
 #if KHRONOS_SUPPORT_INT64
 #ifndef EGL_MESA_image_dma_buf_export
 #define EGL_MESA_image_dma_buf_export 1
+#ifdef EGL_EGLEXT_PROTOTYPES
 EGLAPI EGLBoolean EGLAPIENTRY eglExportDMABUFImageQueryMESA (EGLDisplay dpy, EGLImageKHR image, EGLint *fourcc, EGLint *nplanes, EGLuint64KHR *modifiers);
 EGLAPI EGLBoolean EGLAPIENTRY eglExportDMABUFImageMESA (EGLDisplay dpy, EGLImageKHR image, int *fds, EGLint *strides, EGLint *offsets);
 #endif
+#endif
+
+typedef EGLBoolean (EGLAPIENTRYP PFNEGLEXPORTDMABUFIMAGEQUERYMESA) (EGLDisplay dpy, EGLImageKHR image, EGLint *fourcc, EGLint *nplanes, EGLuint64KHR *modifiers);
+typedef EGLBoolean (EGLAPIENTRYP PFNEGLEXPORTDMABUFIMAGEMESA) (EGLDisplay dpy, EGLImageKHR image, int *fds, EGLint *strides, EGLint *offsets);
+
 #endif
 #ifdef __cplusplus
 }
