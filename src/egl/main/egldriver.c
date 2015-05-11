@@ -45,10 +45,6 @@
 #include "egldriver.h"
 #include "egllog.h"
 
-#ifdef _EGL_BUILT_IN_DRIVER_HAIKU
-_EGLDriver* _eglBuiltInDriverHaiku(const char* args);
-#endif
-
 typedef struct _egl_module {
    char *Name;
    _EGLMain_t BuiltIn;
