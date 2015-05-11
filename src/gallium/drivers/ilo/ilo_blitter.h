@@ -64,13 +64,7 @@ struct ilo_blitter {
    struct ilo_state_viewport vp;
    uint32_t vp_data[20];
 
-   struct ilo_dsa_state dsa;
-
-   struct {
-      struct pipe_stencil_ref stencil_ref;
-      ubyte alpha_ref;
-      struct pipe_blend_color blend_color;
-   } cc;
+   struct ilo_state_cc cc;
 
    uint32_t depth_clear_value;
 

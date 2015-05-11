@@ -101,38 +101,6 @@ struct ilo_so_state {
    bool enabled;
 };
 
-struct ilo_dsa_state {
-   /* DEPTH_STENCIL_STATE or Gen8+ 3DSTATE_WM_DEPTH_STENCIL */
-   uint32_t payload[3];
-
-   uint32_t dw_blend_alpha;
-   uint32_t dw_ps_blend_alpha;
-   ubyte alpha_ref;
-};
-
-struct ilo_blend_cso {
-   /* BLEND_STATE */
-   uint32_t payload[2];
-
-   uint32_t dw_blend;
-   uint32_t dw_blend_dst_alpha_forced_one;
-};
-
-struct ilo_blend_state {
-   struct ilo_blend_cso cso[ILO_MAX_DRAW_BUFFERS];
-
-   bool dual_blend;
-   bool alpha_to_coverage;
-
-   uint32_t dw_shared;
-   uint32_t dw_alpha_mod;
-   uint32_t dw_logicop;
-
-   /* a part of 3DSTATE_PS_BLEND */
-   uint32_t dw_ps_blend;
-   uint32_t dw_ps_blend_dst_alpha_forced_one;
-};
-
 struct ilo_surface_cso {
    struct pipe_surface base;
 
@@ -152,11 +120,11 @@ struct ilo_fb_state {
    struct ilo_fb_blend_caps {
       bool is_unorm;
       bool is_integer;
+      bool force_dst_alpha_one;
 
       bool can_logicop;
       bool can_blend;
       bool can_alpha_test;
-      bool dst_alpha_forced_one;
    } blend_caps[PIPE_MAX_COLOR_BUFS];
 
    unsigned num_samples;
@@ -184,16 +152,6 @@ void
 ilo_gpe_init_ve_nosrc(const struct ilo_dev *dev,
                       int comp0, int comp1, int comp2, int comp3,
                       struct ilo_ve_cso *cso);
-
-void
-ilo_gpe_init_dsa(const struct ilo_dev *dev,
-                 const struct pipe_depth_stencil_alpha_state *state,
-                 struct ilo_dsa_state *dsa);
-
-void
-ilo_gpe_init_blend(const struct ilo_dev *dev,
-                   const struct pipe_blend_state *state,
-                   struct ilo_blend_state *blend);
 
 void
 ilo_gpe_init_vs_cso(const struct ilo_dev *dev,

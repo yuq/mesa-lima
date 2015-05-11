@@ -453,6 +453,9 @@ draw_session_prepare(struct ilo_render *render,
 
       ilo_state_viewport_full_delta(&vec->viewport.vp, render->dev,
             &session->vp_delta);
+
+      ilo_state_cc_full_delta(&vec->blend->cc, render->dev,
+            &session->cc_delta);
    } else {
       session->prim_changed =
          (render->state.reduced_prim != session->reduced_prim);
@@ -467,6 +470,11 @@ draw_session_prepare(struct ilo_render *render,
       if (vec->dirty & ILO_DIRTY_VIEWPORT) {
          ilo_state_viewport_full_delta(&vec->viewport.vp, render->dev,
                &session->vp_delta);
+      }
+
+      if (vec->dirty & ILO_DIRTY_BLEND) {
+         ilo_state_cc_get_delta(&vec->blend->cc, render->dev,
+               &render->state.cc, &session->cc_delta);
       }
    }
 }
@@ -486,6 +494,7 @@ draw_session_end(struct ilo_render *render,
    render->state.primitive_restart = vec->draw->primitive_restart;
 
    render->state.rs = vec->rasterizer->rs;
+   render->state.cc = vec->blend->cc;
 }
 
 void

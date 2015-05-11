@@ -29,6 +29,7 @@
 #define ILO_STATE_H
 
 #include "core/ilo_state_3d.h"
+#include "core/ilo_state_cc.h"
 #include "core/ilo_state_raster.h"
 #include "core/ilo_state_sampler.h"
 #include "core/ilo_state_surface.h"
@@ -191,6 +192,32 @@ struct ilo_viewport_state {
    uint32_t vp_data[20 * ILO_MAX_VIEWPORTS];
 };
 
+struct ilo_dsa_state {
+   struct ilo_state_cc_depth_info depth;
+
+   struct ilo_state_cc_stencil_info stencil;
+   struct {
+      uint8_t test_mask;
+      uint8_t write_mask;
+   } stencil_front, stencil_back;
+
+   bool alpha_test;
+   float alpha_ref;
+   enum gen_compare_function alpha_func;
+};
+
+struct ilo_blend_state {
+   struct ilo_state_cc_blend_rt_info rt[PIPE_MAX_COLOR_BUFS];
+   struct ilo_state_cc_blend_rt_info dummy_rt;
+   bool dual_blend;
+
+   /* these are invalid until finalize_blend() */
+   struct ilo_state_cc_blend_rt_info effective_rt[PIPE_MAX_COLOR_BUFS];
+   struct ilo_state_cc_info info;
+   struct ilo_state_cc cc;
+   bool alpha_may_kill;
+};
+
 struct ilo_global_binding_cso {
    struct pipe_resource *resource;
    uint32_t *handle;
@@ -240,10 +267,11 @@ struct ilo_state_vector {
 
    struct ilo_shader_state *fs;
 
-   const struct ilo_dsa_state *dsa;
+   struct ilo_state_cc_params_info cc_params;
    struct pipe_stencil_ref stencil_ref;
-   const struct ilo_blend_state *blend;
-   struct pipe_blend_color blend_color;
+   const struct ilo_dsa_state *dsa;
+   struct ilo_blend_state *blend;
+
    struct ilo_fb_state fb;
 
    /* shader resources */

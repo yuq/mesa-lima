@@ -99,32 +99,30 @@ gen6_emit_draw_dynamic_cc(struct ilo_render *r,
    ILO_DEV_ASSERT(r->dev, 6, 8);
 
    /* BLEND_STATE */
-   if (DIRTY(BLEND) || DIRTY(FB) || DIRTY(DSA)) {
-      if (ilo_dev_gen(r->dev) >= ILO_GEN(8)) {
-         r->state.BLEND_STATE = gen8_BLEND_STATE(r->builder,
-               vec->blend, &vec->fb, vec->dsa);
-      } else {
-         r->state.BLEND_STATE = gen6_BLEND_STATE(r->builder,
-               vec->blend, &vec->fb, vec->dsa);
-      }
+   if ((session->cc_delta.dirty & ILO_STATE_CC_BLEND_STATE) ||
+        r->state_bo_changed) {
+      if (ilo_dev_gen(r->dev) >= ILO_GEN(8))
+         r->state.BLEND_STATE = gen8_BLEND_STATE(r->builder, &vec->blend->cc);
+      else
+         r->state.BLEND_STATE = gen6_BLEND_STATE(r->builder, &vec->blend->cc);
 
       session->blend_changed = true;
    }
 
    /* COLOR_CALC_STATE */
-   if (DIRTY(DSA) || DIRTY(STENCIL_REF) || DIRTY(BLEND_COLOR)) {
+   if ((session->cc_delta.dirty & ILO_STATE_CC_COLOR_CALC_STATE) ||
+       r->state_bo_changed) {
       r->state.COLOR_CALC_STATE =
-         gen6_COLOR_CALC_STATE(r->builder, &vec->stencil_ref,
-               vec->dsa->alpha_ref, &vec->blend_color);
-
+         gen6_COLOR_CALC_STATE(r->builder, &vec->blend->cc);
       session->cc_changed = true;
    }
 
    /* DEPTH_STENCIL_STATE */
-   if (ilo_dev_gen(r->dev) < ILO_GEN(8) && DIRTY(DSA)) {
+   if (ilo_dev_gen(r->dev) < ILO_GEN(8) &&
+       ((session->cc_delta.dirty & ILO_STATE_CC_DEPTH_STENCIL_STATE) ||
+        r->state_bo_changed)) {
       r->state.DEPTH_STENCIL_STATE =
-         gen6_DEPTH_STENCIL_STATE(r->builder, vec->dsa);
-
+         gen6_DEPTH_STENCIL_STATE(r->builder, &vec->blend->cc);
       session->dsa_changed = true;
    }
 }
@@ -450,13 +448,12 @@ ilo_render_emit_rectlist_dynamic_states(struct ilo_render *render,
 
    if (blitter->uses & ILO_BLITTER_USE_DSA) {
       render->state.DEPTH_STENCIL_STATE =
-         gen6_DEPTH_STENCIL_STATE(render->builder, &blitter->dsa);
+         gen6_DEPTH_STENCIL_STATE(render->builder, &blitter->cc);
    }
 
    if (blitter->uses & ILO_BLITTER_USE_CC) {
       render->state.COLOR_CALC_STATE =
-         gen6_COLOR_CALC_STATE(render->builder, &blitter->cc.stencil_ref,
-               blitter->cc.alpha_ref, &blitter->cc.blend_color);
+         gen6_COLOR_CALC_STATE(render->builder, &blitter->cc);
    }
 
    if (blitter->uses & ILO_BLITTER_USE_VIEWPORT) {

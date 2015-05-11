@@ -29,7 +29,6 @@
 #include "core/ilo_builder_3d.h"
 #include "core/ilo_builder_mi.h"
 #include "core/ilo_builder_render.h"
-#include "util/u_dual_blend.h"
 #include "util/u_prim.h"
 
 #include "ilo_blitter.h"
@@ -679,18 +678,14 @@ gen6_draw_wm(struct ilo_render *r,
    }
 
    /* 3DSTATE_WM */
-   if (DIRTY(FS) || DIRTY(BLEND) || DIRTY(DSA) ||
+   if (DIRTY(FS) || DIRTY(BLEND) ||
        (session->rs_delta.dirty & ILO_STATE_RASTER_3DSTATE_WM) ||
        r->instruction_bo_changed) {
-      const bool dual_blend = vec->blend->dual_blend;
-      const bool cc_may_kill = (vec->dsa->dw_blend_alpha ||
-                                vec->blend->alpha_to_coverage);
-
       if (ilo_dev_gen(r->dev) == ILO_GEN(6) && r->hw_ctx_changed)
          gen6_wa_pre_3dstate_wm_max_threads(r);
 
       gen6_3DSTATE_WM(r->builder, &vec->rasterizer->rs, vec->fs,
-            dual_blend, cc_may_kill);
+            vec->blend->dual_blend, vec->blend->alpha_may_kill);
    }
 }
 

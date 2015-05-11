@@ -28,7 +28,6 @@
 #include "genhw/genhw.h"
 #include "core/ilo_builder_3d.h"
 #include "core/ilo_builder_render.h"
-#include "util/u_dual_blend.h"
 
 #include "ilo_blitter.h"
 #include "ilo_shader.h"
@@ -93,8 +92,8 @@ gen8_draw_wm(struct ilo_render *r,
    if (session->rs_delta.dirty & ILO_STATE_RASTER_3DSTATE_WM)
       gen8_3DSTATE_WM(r->builder, &vec->rasterizer->rs);
 
-   if (DIRTY(DSA))
-      gen8_3DSTATE_WM_DEPTH_STENCIL(r->builder, vec->dsa);
+   if (session->cc_delta.dirty & ILO_STATE_CC_3DSTATE_WM_DEPTH_STENCIL)
+      gen8_3DSTATE_WM_DEPTH_STENCIL(r->builder, &vec->blend->cc);
 
    /* 3DSTATE_WM_HZ_OP and 3DSTATE_WM_CHROMAKEY */
    if (r->hw_ctx_changed) {
@@ -127,15 +126,14 @@ gen8_draw_wm(struct ilo_render *r,
       gen8_3DSTATE_PS(r->builder, vec->fs);
 
    /* 3DSTATE_PS_EXTRA */
-   if (DIRTY(FS) || DIRTY(DSA) || DIRTY(BLEND)) {
-      const bool cc_may_kill = (vec->dsa->dw_blend_alpha ||
-                                vec->blend->alpha_to_coverage);
-      gen8_3DSTATE_PS_EXTRA(r->builder, vec->fs, cc_may_kill, false);
+   if (DIRTY(FS) || DIRTY(BLEND)) {
+      gen8_3DSTATE_PS_EXTRA(r->builder, vec->fs,
+            vec->blend->alpha_may_kill, false);
    }
 
    /* 3DSTATE_PS_BLEND */
-   if (DIRTY(BLEND) || DIRTY(FB) || DIRTY(DSA))
-      gen8_3DSTATE_PS_BLEND(r->builder, vec->blend, &vec->fb, vec->dsa);
+   if (session->cc_delta.dirty & ILO_STATE_CC_3DSTATE_PS_BLEND)
+      gen8_3DSTATE_PS_BLEND(r->builder, &vec->blend->cc);
 
    /* 3DSTATE_SCISSOR_STATE_POINTERS */
    if (session->scissor_changed) {

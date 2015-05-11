@@ -28,7 +28,6 @@
 #include "genhw/genhw.h"
 #include "core/ilo_builder_3d.h"
 #include "core/ilo_builder_render.h"
-#include "util/u_dual_blend.h"
 
 #include "ilo_blitter.h"
 #include "ilo_shader.h"
@@ -497,12 +496,10 @@ gen7_draw_wm(struct ilo_render *r,
              struct ilo_render_draw_session *session)
 {
    /* 3DSTATE_WM */
-   if (DIRTY(FS) || DIRTY(BLEND) || DIRTY(DSA) ||
+   if (DIRTY(FS) || DIRTY(BLEND) ||
        (session->rs_delta.dirty & ILO_STATE_RASTER_3DSTATE_WM)) {
-      const bool cc_may_kill = (vec->dsa->dw_blend_alpha ||
-                                vec->blend->alpha_to_coverage);
-
-      gen7_3DSTATE_WM(r->builder, &vec->rasterizer->rs, vec->fs, cc_may_kill);
+      gen7_3DSTATE_WM(r->builder, &vec->rasterizer->rs, vec->fs,
+            vec->blend->alpha_may_kill);
    }
 
    /* 3DSTATE_BINDING_TABLE_POINTERS_PS */

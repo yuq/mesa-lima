@@ -35,6 +35,7 @@
 #include "ilo_core.h"
 #include "ilo_dev.h"
 #include "ilo_format.h"
+#include "ilo_state_cc.h"
 #include "ilo_state_raster.h"
 #include "ilo_state_viewport.h"
 #include "ilo_builder.h"
@@ -406,21 +407,19 @@ gen8_3DSTATE_WM(struct ilo_builder *builder,
 
 static inline void
 gen8_3DSTATE_WM_DEPTH_STENCIL(struct ilo_builder *builder,
-                              const struct ilo_dsa_state *dsa)
+                              const struct ilo_state_cc *cc)
 {
    const uint8_t cmd_len = 3;
-   uint32_t dw1, dw2, *dw;
+   uint32_t *dw;
 
    ILO_DEV_ASSERT(builder->dev, 8, 8);
-
-   dw1 = dsa->payload[0];
-   dw2 = dsa->payload[1];
 
    ilo_builder_batch_pointer(builder, cmd_len, &dw);
 
    dw[0] = GEN8_RENDER_CMD(3D, 3DSTATE_WM_DEPTH_STENCIL) | (cmd_len - 2);
-   dw[1] = dw1;
-   dw[2] = dw2;
+   /* see cc_set_gen8_3DSTATE_WM_DEPTH_STENCIL() */
+   dw[1] = cc->ds[0];
+   dw[2] = cc->ds[1];
 }
 
 static inline void
@@ -605,40 +604,18 @@ gen8_3DSTATE_PS_EXTRA(struct ilo_builder *builder,
 
 static inline void
 gen8_3DSTATE_PS_BLEND(struct ilo_builder *builder,
-                      const struct ilo_blend_state *blend,
-                      const struct ilo_fb_state *fb,
-                      const struct ilo_dsa_state *dsa)
+                      const struct ilo_state_cc *cc)
 {
    const uint8_t cmd_len = 2;
-   uint32_t dw1, *dw;
+   uint32_t *dw;
 
    ILO_DEV_ASSERT(builder->dev, 8, 8);
-
-   dw1 = 0;
-   if (blend->alpha_to_coverage && fb->num_samples > 1)
-      dw1 |= GEN8_PS_BLEND_DW1_ALPHA_TO_COVERAGE;
-
-   if (fb->state.nr_cbufs && fb->state.cbufs[0]) {
-      const struct ilo_fb_blend_caps *caps = &fb->blend_caps[0];
-
-      dw1 |= GEN8_PS_BLEND_DW1_WRITABLE_RT;
-      if (caps->can_blend) {
-         if (caps->dst_alpha_forced_one)
-            dw1 |= blend->dw_ps_blend_dst_alpha_forced_one;
-         else
-            dw1 |= blend->dw_ps_blend;
-      }
-
-      if (caps->can_alpha_test)
-         dw1 |= dsa->dw_ps_blend_alpha;
-   } else {
-      dw1 |= dsa->dw_ps_blend_alpha;
-   }
 
    ilo_builder_batch_pointer(builder, cmd_len, &dw);
 
    dw[0] = GEN8_RENDER_CMD(3D, 3DSTATE_PS_BLEND) | (cmd_len - 2);
-   dw[1] = dw1;
+   /* see cc_set_gen8_3DSTATE_PS_BLEND() */
+   dw[1] = cc->blend[0];
 }
 
 static inline void
@@ -1282,179 +1259,61 @@ gen6_SCISSOR_RECT(struct ilo_builder *builder,
 
 static inline uint32_t
 gen6_COLOR_CALC_STATE(struct ilo_builder *builder,
-                      const struct pipe_stencil_ref *stencil_ref,
-                      ubyte alpha_ref,
-                      const struct pipe_blend_color *blend_color)
+                      const struct ilo_state_cc *cc)
 {
    const int state_align = 64;
    const int state_len = 6;
-   uint32_t state_offset, *dw;
 
    ILO_DEV_ASSERT(builder->dev, 6, 8);
 
-   state_offset = ilo_builder_dynamic_pointer(builder,
-         ILO_BUILDER_ITEM_COLOR_CALC, state_align, state_len, &dw);
-
-   dw[0] = stencil_ref->ref_value[0] << 24 |
-           stencil_ref->ref_value[1] << 16 |
-           GEN6_CC_DW0_ALPHATEST_UNORM8;
-   dw[1] = alpha_ref;
-   dw[2] = fui(blend_color->color[0]);
-   dw[3] = fui(blend_color->color[1]);
-   dw[4] = fui(blend_color->color[2]);
-   dw[5] = fui(blend_color->color[3]);
-
-   return state_offset;
+   /* see cc_params_set_gen6_COLOR_CALC_STATE() */
+   return ilo_builder_dynamic_write(builder, ILO_BUILDER_ITEM_COLOR_CALC,
+         state_align, state_len, cc->cc);
 }
 
 static inline uint32_t
 gen6_DEPTH_STENCIL_STATE(struct ilo_builder *builder,
-                         const struct ilo_dsa_state *dsa)
+                         const struct ilo_state_cc *cc)
 {
    const int state_align = 64;
    const int state_len = 3;
 
    ILO_DEV_ASSERT(builder->dev, 6, 7.5);
 
-   STATIC_ASSERT(Elements(dsa->payload) >= state_len);
-
+   /* see cc_set_gen6_DEPTH_STENCIL_STATE() */
    return ilo_builder_dynamic_write(builder, ILO_BUILDER_ITEM_DEPTH_STENCIL,
-         state_align, state_len, dsa->payload);
+         state_align, state_len, cc->ds);
 }
 
 static inline uint32_t
 gen6_BLEND_STATE(struct ilo_builder *builder,
-                 const struct ilo_blend_state *blend,
-                 const struct ilo_fb_state *fb,
-                 const struct ilo_dsa_state *dsa)
+                 const struct ilo_state_cc *cc)
 {
    const int state_align = 64;
-   int state_len;
-   uint32_t state_offset, *dw;
-   unsigned num_targets, i;
+   const int state_len = 2 * cc->blend_state_count;
 
    ILO_DEV_ASSERT(builder->dev, 6, 7.5);
 
-   /*
-    * From the Sandy Bridge PRM, volume 2 part 1, page 376:
-    *
-    *     "The blend state is stored as an array of up to 8 elements..."
-    */
-   num_targets = fb->state.nr_cbufs;
-   assert(num_targets <= 8);
+   if (!state_len)
+      return 0;
 
-   if (!num_targets) {
-      if (!dsa->dw_blend_alpha)
-         return 0;
-      /* to be able to reference alpha func */
-      num_targets = 1;
-   }
-
-   state_len = 2 * num_targets;
-
-   state_offset = ilo_builder_dynamic_pointer(builder,
-         ILO_BUILDER_ITEM_BLEND, state_align, state_len, &dw);
-
-   for (i = 0; i < num_targets; i++) {
-      const struct ilo_blend_cso *cso = &blend->cso[i];
-
-      dw[0] = cso->payload[0];
-      dw[1] = cso->payload[1] | blend->dw_shared;
-
-      if (i < fb->state.nr_cbufs && fb->state.cbufs[i]) {
-         const struct ilo_fb_blend_caps *caps = &fb->blend_caps[i];
-
-         if (caps->can_blend) {
-            if (caps->dst_alpha_forced_one)
-               dw[0] |= cso->dw_blend_dst_alpha_forced_one;
-            else
-               dw[0] |= cso->dw_blend;
-         }
-
-         if (caps->can_logicop)
-            dw[1] |= blend->dw_logicop;
-
-         if (caps->can_alpha_test)
-            dw[1] |= dsa->dw_blend_alpha;
-      } else {
-         dw[1] |= GEN6_RT_DW1_WRITE_DISABLES_A |
-                  GEN6_RT_DW1_WRITE_DISABLES_R |
-                  GEN6_RT_DW1_WRITE_DISABLES_G |
-                  GEN6_RT_DW1_WRITE_DISABLES_B |
-                  dsa->dw_blend_alpha;
-      }
-
-      /*
-       * From the Sandy Bridge PRM, volume 2 part 1, page 356:
-       *
-       *     "When NumSamples = 1, AlphaToCoverage and AlphaToCoverage
-       *      Dither both must be disabled."
-       *
-       * There is no such limitation on GEN7, or for AlphaToOne.  But GL
-       * requires that anyway.
-       */
-      if (fb->num_samples > 1)
-         dw[1] |= blend->dw_alpha_mod;
-
-      dw += 2;
-   }
-
-   return state_offset;
+   /* see cc_set_gen6_BLEND_STATE() */
+   return ilo_builder_dynamic_write(builder, ILO_BUILDER_ITEM_BLEND,
+         state_align, state_len, cc->blend);
 }
 
 static inline uint32_t
 gen8_BLEND_STATE(struct ilo_builder *builder,
-                 const struct ilo_blend_state *blend,
-                 const struct ilo_fb_state *fb,
-                 const struct ilo_dsa_state *dsa)
+                 const struct ilo_state_cc *cc)
 {
    const int state_align = 64;
-   const int state_len = 1 + 2 * fb->state.nr_cbufs;
-   uint32_t state_offset, *dw;
-   unsigned i;
+   const int state_len = 1 + 2 * cc->blend_state_count;
 
    ILO_DEV_ASSERT(builder->dev, 8, 8);
 
-   assert(fb->state.nr_cbufs <= 8);
-
-   state_offset = ilo_builder_dynamic_pointer(builder,
-         ILO_BUILDER_ITEM_BLEND, state_align, state_len, &dw);
-
-   dw[0] = blend->dw_shared;
-   if (fb->num_samples > 1)
-      dw[0] |= blend->dw_alpha_mod;
-   if (!fb->state.nr_cbufs || fb->blend_caps[0].can_alpha_test)
-      dw[0] |= dsa->dw_blend_alpha;
-   dw++;
-
-   for (i = 0; i < fb->state.nr_cbufs; i++) {
-      const struct ilo_fb_blend_caps *caps = &fb->blend_caps[i];
-      const struct ilo_blend_cso *cso = &blend->cso[i];
-
-      dw[0] = cso->payload[0];
-      dw[1] = cso->payload[1];
-
-      if (fb->state.cbufs[i]) {
-         if (caps->can_blend) {
-            if (caps->dst_alpha_forced_one)
-               dw[0] |= cso->dw_blend_dst_alpha_forced_one;
-            else
-               dw[0] |= cso->dw_blend;
-         }
-
-         if (caps->can_logicop)
-            dw[1] |= blend->dw_logicop;
-      } else {
-         dw[0] |= GEN8_RT_DW0_WRITE_DISABLES_A |
-                  GEN8_RT_DW0_WRITE_DISABLES_R |
-                  GEN8_RT_DW0_WRITE_DISABLES_G |
-                  GEN8_RT_DW0_WRITE_DISABLES_B;
-      }
-
-      dw += 2;
-   }
-
-   return state_offset;
+   /* see cc_set_gen8_BLEND_STATE() */
+   return ilo_builder_dynamic_write(builder, ILO_BUILDER_ITEM_BLEND,
+         state_align, state_len, &cc->blend[1]);
 }
 
 #endif /* ILO_BUILDER_3D_BOTTOM_H */

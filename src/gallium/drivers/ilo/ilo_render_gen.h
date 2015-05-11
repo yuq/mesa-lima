@@ -91,6 +91,7 @@ struct ilo_render {
       int so_max_vertices;
 
       struct ilo_state_raster rs;
+      struct ilo_state_cc cc;
 
       uint32_t SF_VIEWPORT;
       uint32_t CLIP_VIEWPORT;
@@ -149,6 +150,7 @@ struct ilo_render_draw_session {
 
    struct ilo_state_raster_delta rs_delta;
    struct ilo_state_viewport_delta vp_delta;
+   struct ilo_state_cc_delta cc_delta;
 
    /* dynamic states */
    bool viewport_changed;

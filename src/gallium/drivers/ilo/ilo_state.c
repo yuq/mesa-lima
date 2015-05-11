@@ -28,6 +28,7 @@
 #include "core/ilo_builder_3d.h" /* for gen6_3d_translate_pipe_prim() */
 #include "core/ilo_format.h"
 #include "core/ilo_state_3d.h"
+#include "util/u_dual_blend.h"
 #include "util/u_dynarray.h"
 #include "util/u_helpers.h"
 #include "util/u_resource.h"
@@ -158,6 +159,112 @@ static enum gen_pixel_location
 ilo_translate_half_pixel_center(bool half_pixel_center)
 {
    return (half_pixel_center) ? GEN6_PIXLOC_CENTER : GEN6_PIXLOC_UL_CORNER;
+}
+
+static enum gen_compare_function
+ilo_translate_compare_func(unsigned func)
+{
+   switch (func) {
+   case PIPE_FUNC_NEVER:               return GEN6_COMPAREFUNCTION_NEVER;
+   case PIPE_FUNC_LESS:                return GEN6_COMPAREFUNCTION_LESS;
+   case PIPE_FUNC_EQUAL:               return GEN6_COMPAREFUNCTION_EQUAL;
+   case PIPE_FUNC_LEQUAL:              return GEN6_COMPAREFUNCTION_LEQUAL;
+   case PIPE_FUNC_GREATER:             return GEN6_COMPAREFUNCTION_GREATER;
+   case PIPE_FUNC_NOTEQUAL:            return GEN6_COMPAREFUNCTION_NOTEQUAL;
+   case PIPE_FUNC_GEQUAL:              return GEN6_COMPAREFUNCTION_GEQUAL;
+   case PIPE_FUNC_ALWAYS:              return GEN6_COMPAREFUNCTION_ALWAYS;
+   default:
+      assert(!"unknown compare function");
+      return GEN6_COMPAREFUNCTION_NEVER;
+   }
+}
+
+static enum gen_stencil_op
+ilo_translate_stencil_op(unsigned stencil_op)
+{
+   switch (stencil_op) {
+   case PIPE_STENCIL_OP_KEEP:          return GEN6_STENCILOP_KEEP;
+   case PIPE_STENCIL_OP_ZERO:          return GEN6_STENCILOP_ZERO;
+   case PIPE_STENCIL_OP_REPLACE:       return GEN6_STENCILOP_REPLACE;
+   case PIPE_STENCIL_OP_INCR:          return GEN6_STENCILOP_INCRSAT;
+   case PIPE_STENCIL_OP_DECR:          return GEN6_STENCILOP_DECRSAT;
+   case PIPE_STENCIL_OP_INCR_WRAP:     return GEN6_STENCILOP_INCR;
+   case PIPE_STENCIL_OP_DECR_WRAP:     return GEN6_STENCILOP_DECR;
+   case PIPE_STENCIL_OP_INVERT:        return GEN6_STENCILOP_INVERT;
+   default:
+      assert(!"unknown stencil op");
+      return GEN6_STENCILOP_KEEP;
+   }
+}
+
+static enum gen_logic_op
+ilo_translate_logicop(unsigned logicop)
+{
+   switch (logicop) {
+   case PIPE_LOGICOP_CLEAR:            return GEN6_LOGICOP_CLEAR;
+   case PIPE_LOGICOP_NOR:              return GEN6_LOGICOP_NOR;
+   case PIPE_LOGICOP_AND_INVERTED:     return GEN6_LOGICOP_AND_INVERTED;
+   case PIPE_LOGICOP_COPY_INVERTED:    return GEN6_LOGICOP_COPY_INVERTED;
+   case PIPE_LOGICOP_AND_REVERSE:      return GEN6_LOGICOP_AND_REVERSE;
+   case PIPE_LOGICOP_INVERT:           return GEN6_LOGICOP_INVERT;
+   case PIPE_LOGICOP_XOR:              return GEN6_LOGICOP_XOR;
+   case PIPE_LOGICOP_NAND:             return GEN6_LOGICOP_NAND;
+   case PIPE_LOGICOP_AND:              return GEN6_LOGICOP_AND;
+   case PIPE_LOGICOP_EQUIV:            return GEN6_LOGICOP_EQUIV;
+   case PIPE_LOGICOP_NOOP:             return GEN6_LOGICOP_NOOP;
+   case PIPE_LOGICOP_OR_INVERTED:      return GEN6_LOGICOP_OR_INVERTED;
+   case PIPE_LOGICOP_COPY:             return GEN6_LOGICOP_COPY;
+   case PIPE_LOGICOP_OR_REVERSE:       return GEN6_LOGICOP_OR_REVERSE;
+   case PIPE_LOGICOP_OR:               return GEN6_LOGICOP_OR;
+   case PIPE_LOGICOP_SET:              return GEN6_LOGICOP_SET;
+   default:
+      assert(!"unknown logicop function");
+      return GEN6_LOGICOP_CLEAR;
+   }
+}
+
+static int
+ilo_translate_blend_func(unsigned blend)
+{
+   switch (blend) {
+   case PIPE_BLEND_ADD:                return GEN6_BLENDFUNCTION_ADD;
+   case PIPE_BLEND_SUBTRACT:           return GEN6_BLENDFUNCTION_SUBTRACT;
+   case PIPE_BLEND_REVERSE_SUBTRACT:   return GEN6_BLENDFUNCTION_REVERSE_SUBTRACT;
+   case PIPE_BLEND_MIN:                return GEN6_BLENDFUNCTION_MIN;
+   case PIPE_BLEND_MAX:                return GEN6_BLENDFUNCTION_MAX;
+   default:
+      assert(!"unknown blend function");
+      return GEN6_BLENDFUNCTION_ADD;
+   }
+}
+
+static int
+ilo_translate_blend_factor(unsigned factor)
+{
+   switch (factor) {
+   case PIPE_BLENDFACTOR_ONE:                return GEN6_BLENDFACTOR_ONE;
+   case PIPE_BLENDFACTOR_SRC_COLOR:          return GEN6_BLENDFACTOR_SRC_COLOR;
+   case PIPE_BLENDFACTOR_SRC_ALPHA:          return GEN6_BLENDFACTOR_SRC_ALPHA;
+   case PIPE_BLENDFACTOR_DST_ALPHA:          return GEN6_BLENDFACTOR_DST_ALPHA;
+   case PIPE_BLENDFACTOR_DST_COLOR:          return GEN6_BLENDFACTOR_DST_COLOR;
+   case PIPE_BLENDFACTOR_SRC_ALPHA_SATURATE: return GEN6_BLENDFACTOR_SRC_ALPHA_SATURATE;
+   case PIPE_BLENDFACTOR_CONST_COLOR:        return GEN6_BLENDFACTOR_CONST_COLOR;
+   case PIPE_BLENDFACTOR_CONST_ALPHA:        return GEN6_BLENDFACTOR_CONST_ALPHA;
+   case PIPE_BLENDFACTOR_SRC1_COLOR:         return GEN6_BLENDFACTOR_SRC1_COLOR;
+   case PIPE_BLENDFACTOR_SRC1_ALPHA:         return GEN6_BLENDFACTOR_SRC1_ALPHA;
+   case PIPE_BLENDFACTOR_ZERO:               return GEN6_BLENDFACTOR_ZERO;
+   case PIPE_BLENDFACTOR_INV_SRC_COLOR:      return GEN6_BLENDFACTOR_INV_SRC_COLOR;
+   case PIPE_BLENDFACTOR_INV_SRC_ALPHA:      return GEN6_BLENDFACTOR_INV_SRC_ALPHA;
+   case PIPE_BLENDFACTOR_INV_DST_ALPHA:      return GEN6_BLENDFACTOR_INV_DST_ALPHA;
+   case PIPE_BLENDFACTOR_INV_DST_COLOR:      return GEN6_BLENDFACTOR_INV_DST_COLOR;
+   case PIPE_BLENDFACTOR_INV_CONST_COLOR:    return GEN6_BLENDFACTOR_INV_CONST_COLOR;
+   case PIPE_BLENDFACTOR_INV_CONST_ALPHA:    return GEN6_BLENDFACTOR_INV_CONST_ALPHA;
+   case PIPE_BLENDFACTOR_INV_SRC1_COLOR:     return GEN6_BLENDFACTOR_INV_SRC1_COLOR;
+   case PIPE_BLENDFACTOR_INV_SRC1_ALPHA:     return GEN6_BLENDFACTOR_INV_SRC1_ALPHA;
+   default:
+      assert(!"unknown blend factor");
+      return GEN6_BLENDFACTOR_ONE;
+   }
 }
 
 static void
@@ -466,6 +573,98 @@ finalize_rasterizer(struct ilo_context *ilo)
    }
 }
 
+static bool
+finalize_blend_rt(struct ilo_context *ilo)
+{
+   struct ilo_state_vector *vec = &ilo->state_vector;
+   const struct ilo_fb_state *fb = &vec->fb;
+   struct ilo_blend_state *blend = vec->blend;
+   struct ilo_state_cc_blend_info *info = &vec->blend->info.blend;
+   bool changed = false;
+   unsigned i;
+
+   if (!(vec->dirty & (ILO_DIRTY_FB | ILO_DIRTY_BLEND)))
+      return false;
+
+   /* set up one for dummy RT writes */
+   if (!fb->state.nr_cbufs) {
+      if (info->rt != &blend->dummy_rt) {
+         info->rt = &blend->dummy_rt;
+         info->rt_count = 1;
+         changed = true;
+      }
+
+      return changed;
+   }
+
+   if (info->rt != blend->effective_rt ||
+       info->rt_count != fb->state.nr_cbufs) {
+      info->rt = blend->effective_rt;
+      info->rt_count = fb->state.nr_cbufs;
+      changed = true;
+   }
+
+   for (i = 0; i < fb->state.nr_cbufs; i++) {
+      const struct ilo_fb_blend_caps *caps = &fb->blend_caps[i];
+      struct ilo_state_cc_blend_rt_info *rt = &blend->effective_rt[i];
+      /* ignore logicop when not UNORM */
+      const bool logicop_enable =
+         (blend->rt[i].logicop_enable && caps->is_unorm);
+
+      if (rt->cv_is_unorm != caps->is_unorm ||
+          rt->cv_is_integer != caps->is_integer ||
+          rt->logicop_enable != logicop_enable ||
+          rt->force_dst_alpha_one != caps->force_dst_alpha_one) {
+         rt->cv_is_unorm = caps->is_unorm;
+         rt->cv_is_integer = caps->is_integer;
+         rt->logicop_enable = logicop_enable;
+         rt->force_dst_alpha_one = caps->force_dst_alpha_one;
+
+         changed = true;
+      }
+   }
+
+   return changed;
+}
+
+static void
+finalize_blend(struct ilo_context *ilo)
+{
+   const struct ilo_dev *dev = ilo->dev;
+   struct ilo_state_vector *vec = &ilo->state_vector;
+   struct ilo_blend_state *blend = vec->blend;
+   struct ilo_state_cc_info *info = &blend->info;
+   const bool sample_count_one = (vec->fb.num_samples <= 1);
+   const bool float_source0_alpha =
+      (!vec->fb.state.nr_cbufs || !vec->fb.state.cbufs[0] ||
+       !util_format_is_pure_integer(vec->fb.state.cbufs[0]->format));
+
+   /* check for non-orthogonal states */
+   if (finalize_blend_rt(ilo) ||
+       info->alpha.cv_sample_count_one != sample_count_one ||
+       info->alpha.cv_float_source0_alpha != float_source0_alpha ||
+       info->alpha.test_enable != vec->dsa->alpha_test ||
+       info->alpha.test_func != vec->dsa->alpha_func ||
+       memcmp(&info->stencil, &vec->dsa->stencil, sizeof(info->stencil)) ||
+       memcmp(&info->depth, &vec->dsa->depth, sizeof(info->depth)) ||
+       memcmp(&info->params, &vec->cc_params, sizeof(info->params))) {
+      info->alpha.cv_sample_count_one = sample_count_one;
+      info->alpha.cv_float_source0_alpha = float_source0_alpha;
+      info->alpha.test_enable = vec->dsa->alpha_test;
+      info->alpha.test_func = vec->dsa->alpha_func;
+      info->stencil = vec->dsa->stencil;
+      info->depth = vec->dsa->depth;
+      info->params = vec->cc_params;
+
+      ilo_state_cc_set_info(&blend->cc, dev, info);
+
+      blend->alpha_may_kill = (info->alpha.alpha_to_coverage ||
+                               info->alpha.test_enable);
+
+      vec->dirty |= ILO_DIRTY_BLEND;
+   }
+}
+
 /**
  * Finalize states.  Some states depend on other states and are
  * incomplete/invalid until finalized.
@@ -483,6 +682,7 @@ ilo_finalize_3d_states(struct ilo_context *ilo,
 
    finalize_rasterizer(ilo);
    finalize_viewport(ilo);
+   finalize_blend(ilo);
 
    u_upload_unmap(ilo->uploader);
 }
@@ -526,12 +726,79 @@ ilo_create_blend_state(struct pipe_context *pipe,
                        const struct pipe_blend_state *state)
 {
    const struct ilo_dev *dev = ilo_context(pipe)->dev;
+   struct ilo_state_cc_info *info;
    struct ilo_blend_state *blend;
+   int i;
 
-   blend = MALLOC_STRUCT(ilo_blend_state);
+   blend = CALLOC_STRUCT(ilo_blend_state);
    assert(blend);
 
-   ilo_gpe_init_blend(dev, state, blend);
+   info = &blend->info;
+
+   info->alpha.cv_float_source0_alpha = true;
+   info->alpha.cv_sample_count_one = true;
+   info->alpha.alpha_to_one = state->alpha_to_one;
+   info->alpha.alpha_to_coverage = state->alpha_to_coverage;
+   info->alpha.test_enable = false;
+   info->alpha.test_func = GEN6_COMPAREFUNCTION_ALWAYS;
+
+   info->stencil.cv_has_buffer = true;
+   info->depth.cv_has_buffer= true;
+
+   info->blend.rt = blend->effective_rt;
+   info->blend.rt_count = 1;
+   info->blend.dither_enable = state->dither;
+
+   for (i = 0; i < ARRAY_SIZE(blend->rt); i++) {
+      const struct pipe_rt_blend_state *rt = &state->rt[i];
+      struct ilo_state_cc_blend_rt_info *rt_info = &blend->rt[i];
+
+      rt_info->cv_has_buffer = true;
+      rt_info->cv_is_unorm = true;
+      rt_info->cv_is_integer = false;
+
+      /* logic op takes precedence over blending */
+      if (state->logicop_enable) {
+         rt_info->logicop_enable = true;
+         rt_info->logicop_func = ilo_translate_logicop(state->logicop_func);
+      } else if (rt->blend_enable) {
+         rt_info->blend_enable = true;
+
+         rt_info->rgb_src = ilo_translate_blend_factor(rt->rgb_src_factor);
+         rt_info->rgb_dst = ilo_translate_blend_factor(rt->rgb_dst_factor);
+         rt_info->rgb_func = ilo_translate_blend_func(rt->rgb_func);
+
+         rt_info->a_src = ilo_translate_blend_factor(rt->alpha_src_factor);
+         rt_info->a_dst = ilo_translate_blend_factor(rt->alpha_dst_factor);
+         rt_info->a_func = ilo_translate_blend_func(rt->alpha_func);
+      }
+
+      if (!(rt->colormask & PIPE_MASK_A))
+         rt_info->argb_write_disables |= (1 << 3);
+      if (!(rt->colormask & PIPE_MASK_R))
+         rt_info->argb_write_disables |= (1 << 2);
+      if (!(rt->colormask & PIPE_MASK_G))
+         rt_info->argb_write_disables |= (1 << 1);
+      if (!(rt->colormask & PIPE_MASK_B))
+         rt_info->argb_write_disables |= (1 << 0);
+
+      if (!state->independent_blend_enable) {
+         for (i = 1; i < ARRAY_SIZE(blend->rt); i++)
+            blend->rt[i] = *rt_info;
+         break;
+      }
+   }
+
+   memcpy(blend->effective_rt, blend->rt, sizeof(blend->rt));
+
+   blend->dummy_rt.argb_write_disables = 0xf;
+
+   if (!ilo_state_cc_init(&blend->cc, dev, &blend->info)) {
+      FREE(blend);
+      return NULL;
+   }
+
+   blend->dual_blend = util_blend_state_is_dual(state, 0);
 
    return blend;
 }
@@ -814,13 +1081,48 @@ static void *
 ilo_create_depth_stencil_alpha_state(struct pipe_context *pipe,
                                      const struct pipe_depth_stencil_alpha_state *state)
 {
-   const struct ilo_dev *dev = ilo_context(pipe)->dev;
    struct ilo_dsa_state *dsa;
+   int i;
 
-   dsa = MALLOC_STRUCT(ilo_dsa_state);
+   dsa = CALLOC_STRUCT(ilo_dsa_state);
    assert(dsa);
 
-   ilo_gpe_init_dsa(dev, state, dsa);
+   dsa->depth.cv_has_buffer = true;
+   dsa->depth.test_enable = state->depth.enabled;
+   dsa->depth.write_enable = state->depth.writemask;
+   dsa->depth.test_func = ilo_translate_compare_func(state->depth.func);
+
+   dsa->stencil.cv_has_buffer = true;
+   for (i = 0; i < ARRAY_SIZE(state->stencil); i++) {
+      const struct pipe_stencil_state *stencil = &state->stencil[i];
+      struct ilo_state_cc_stencil_op_info *op;
+
+      if (!stencil->enabled)
+         break;
+
+      if (i == 0) {
+         dsa->stencil.test_enable = true;
+         dsa->stencil_front.test_mask = stencil->valuemask;
+         dsa->stencil_front.write_mask = stencil->writemask;
+
+         op = &dsa->stencil.front;
+      } else {
+         dsa->stencil.twosided_enable = true;
+         dsa->stencil_back.test_mask = stencil->valuemask;
+         dsa->stencil_back.write_mask = stencil->writemask;
+
+         op = &dsa->stencil.back;
+      }
+
+      op->test_func = ilo_translate_compare_func(stencil->func);
+      op->fail_op = ilo_translate_stencil_op(stencil->fail_op);
+      op->zfail_op = ilo_translate_stencil_op(stencil->zfail_op);
+      op->zpass_op = ilo_translate_stencil_op(stencil->zpass_op);
+   }
+
+   dsa->alpha_test = state->alpha.enabled;
+   dsa->alpha_ref = state->alpha.ref_value;
+   dsa->alpha_func = ilo_translate_compare_func(state->alpha.func);
 
    return dsa;
 }
@@ -831,6 +1133,17 @@ ilo_bind_depth_stencil_alpha_state(struct pipe_context *pipe, void *state)
    struct ilo_state_vector *vec = &ilo_context(pipe)->state_vector;
 
    vec->dsa = state;
+   if (vec->dsa) {
+      vec->cc_params.alpha_ref = vec->dsa->alpha_ref;
+      vec->cc_params.stencil_front.test_mask =
+         vec->dsa->stencil_front.test_mask;
+      vec->cc_params.stencil_front.write_mask =
+         vec->dsa->stencil_front.write_mask;
+      vec->cc_params.stencil_back.test_mask =
+         vec->dsa->stencil_back.test_mask;
+      vec->cc_params.stencil_back.write_mask =
+         vec->dsa->stencil_back.write_mask;
+   }
 
    vec->dirty |= ILO_DIRTY_DSA;
 }
@@ -990,7 +1303,7 @@ ilo_set_blend_color(struct pipe_context *pipe,
 {
    struct ilo_state_vector *vec = &ilo_context(pipe)->state_vector;
 
-   vec->blend_color = *state;
+   memcpy(vec->cc_params.blend_rgba, state->color, sizeof(state->color));
 
    vec->dirty |= ILO_DIRTY_BLEND_COLOR;
 }
@@ -1006,6 +1319,9 @@ ilo_set_stencil_ref(struct pipe_context *pipe,
       return;
 
    vec->stencil_ref = *state;
+
+   vec->cc_params.stencil_front.test_ref = state->ref_value[0];
+   vec->cc_params.stencil_back.test_ref = state->ref_value[1];
 
    vec->dirty |= ILO_DIRTY_STENCIL_REF;
 }

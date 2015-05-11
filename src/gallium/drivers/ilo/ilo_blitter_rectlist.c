@@ -115,18 +115,18 @@ ilo_blitter_set_rectlist(struct ilo_blitter *blitter,
 }
 
 static void
-ilo_blitter_set_clear_values(struct ilo_blitter *blitter,
-                             uint32_t depth, ubyte stencil)
+ilo_blitter_set_depth_clear_value(struct ilo_blitter *blitter,
+                                  uint32_t depth)
 {
    blitter->depth_clear_value = depth;
-   blitter->cc.stencil_ref.ref_value[0] = stencil;
 }
 
 static void
-ilo_blitter_set_dsa(struct ilo_blitter *blitter,
-                    const struct pipe_depth_stencil_alpha_state *state)
+ilo_blitter_set_cc(struct ilo_blitter *blitter,
+                   const struct ilo_state_cc_info *info)
 {
-   ilo_gpe_init_dsa(blitter->ilo->dev, state, &blitter->dsa);
+   memset(&blitter->cc, 0, sizeof(blitter->cc));
+   ilo_state_cc_init(&blitter->cc, blitter->ilo->dev, info);
 }
 
 static void
@@ -337,7 +337,7 @@ ilo_blitter_rectlist_clear_zs(struct ilo_blitter *blitter,
                               double depth, unsigned stencil)
 {
    struct ilo_texture *tex = ilo_texture(zs->texture);
-   struct pipe_depth_stencil_alpha_state dsa_state;
+   struct ilo_state_cc_info info;
    uint32_t uses, clear_value;
 
    if (!ilo_image_can_enable_aux(&tex->image, zs->u.tex.level))
@@ -377,17 +377,20 @@ ilo_blitter_rectlist_clear_zs(struct ilo_blitter *blitter,
     *      - [DevSNB] errata: For stencil buffer only clear, the previous
     *        depth clear value must be delivered during the clear."
     */
-   memset(&dsa_state, 0, sizeof(dsa_state));
+   memset(&info, 0, sizeof(info));
 
-   if (clear_flags & PIPE_CLEAR_DEPTH)
-      dsa_state.depth.writemask = true;
+   if (clear_flags & PIPE_CLEAR_DEPTH) {
+      info.depth.cv_has_buffer = true;
+      info.depth.write_enable = true;
+   }
 
    if (clear_flags & PIPE_CLEAR_STENCIL) {
-      dsa_state.stencil[0].enabled = true;
-      dsa_state.stencil[0].func = PIPE_FUNC_ALWAYS;
-      dsa_state.stencil[0].fail_op = PIPE_STENCIL_OP_KEEP;
-      dsa_state.stencil[0].zpass_op = PIPE_STENCIL_OP_REPLACE;
-      dsa_state.stencil[0].zfail_op = PIPE_STENCIL_OP_KEEP;
+      info.stencil.cv_has_buffer = true;
+      info.stencil.test_enable = true;
+      info.stencil.front.test_func = GEN6_COMPAREFUNCTION_ALWAYS;
+      info.stencil.front.fail_op = GEN6_STENCILOP_KEEP;
+      info.stencil.front.zfail_op = GEN6_STENCILOP_KEEP;
+      info.stencil.front.zpass_op = GEN6_STENCILOP_REPLACE;
 
       /*
        * From the Ivy Bridge PRM, volume 2 part 1, page 277:
@@ -398,11 +401,12 @@ ilo_blitter_rectlist_clear_zs(struct ilo_blitter *blitter,
        *      - DEPTH_STENCIL_STATE::Stencil Test Mask must be 0xFF
        *      - DEPTH_STENCIL_STATE::Back Face Stencil Write Mask must be 0xFF
        *      - DEPTH_STENCIL_STATE::Back Face Stencil Test Mask must be 0xFF"
+       *
+       * Back frace masks will be copied from front face masks.
        */
-      dsa_state.stencil[0].valuemask = 0xff;
-      dsa_state.stencil[0].writemask = 0xff;
-      dsa_state.stencil[1].valuemask = 0xff;
-      dsa_state.stencil[1].writemask = 0xff;
+      info.params.stencil_front.test_ref = (uint8_t) stencil;
+      info.params.stencil_front.test_mask = 0xff;
+      info.params.stencil_front.write_mask = 0xff;
    }
 
    ilo_blitter_set_invariants(blitter);
@@ -410,8 +414,8 @@ ilo_blitter_rectlist_clear_zs(struct ilo_blitter *blitter,
          ILO_STATE_RASTER_EARLYZ_DEPTH_CLEAR,
          clear_flags & PIPE_CLEAR_STENCIL);
 
-   ilo_blitter_set_dsa(blitter, &dsa_state);
-   ilo_blitter_set_clear_values(blitter, clear_value, (ubyte) stencil);
+   ilo_blitter_set_cc(blitter, &info);
+   ilo_blitter_set_depth_clear_value(blitter, clear_value);
    ilo_blitter_set_fb_from_surface(blitter, zs);
 
    uses = ILO_BLITTER_USE_DSA;
@@ -432,7 +436,7 @@ ilo_blitter_rectlist_resolve_z(struct ilo_blitter *blitter,
                                unsigned level, unsigned slice)
 {
    struct ilo_texture *tex = ilo_texture(res);
-   struct pipe_depth_stencil_alpha_state dsa_state;
+   struct ilo_state_cc_info info;
    const struct ilo_texture_slice *s =
       ilo_texture_get_slice(tex, level, slice);
 
@@ -446,17 +450,18 @@ ilo_blitter_rectlist_resolve_z(struct ilo_blitter *blitter,
     *      to NEVER. Depth Buffer Write Enable must be enabled. Stencil Test
     *      Enable and Stencil Buffer Write Enable must be disabled."
     */
-   memset(&dsa_state, 0, sizeof(dsa_state));
-   dsa_state.depth.writemask = true;
-   dsa_state.depth.enabled = true;
-   dsa_state.depth.func = PIPE_FUNC_NEVER;
+   memset(&info, 0, sizeof(info));
+   info.depth.cv_has_buffer = true;
+   info.depth.test_enable = true;
+   info.depth.write_enable = true;
+   info.depth.test_func = GEN6_COMPAREFUNCTION_NEVER;
 
    ilo_blitter_set_invariants(blitter);
    ilo_blitter_set_earlyz_op(blitter,
          ILO_STATE_RASTER_EARLYZ_DEPTH_RESOLVE, false);
 
-   ilo_blitter_set_dsa(blitter, &dsa_state);
-   ilo_blitter_set_clear_values(blitter, s->clear_value, 0);
+   ilo_blitter_set_cc(blitter, &info);
+   ilo_blitter_set_depth_clear_value(blitter, s->clear_value);
    ilo_blitter_set_fb_from_resource(blitter, res, res->format, level, slice);
    ilo_blitter_set_uses(blitter,
          ILO_BLITTER_USE_DSA | ILO_BLITTER_USE_FB_DEPTH);
@@ -470,7 +475,7 @@ ilo_blitter_rectlist_resolve_hiz(struct ilo_blitter *blitter,
                                  unsigned level, unsigned slice)
 {
    struct ilo_texture *tex = ilo_texture(res);
-   struct pipe_depth_stencil_alpha_state dsa_state;
+   struct ilo_state_cc_info info;
 
    if (!ilo_image_can_enable_aux(&tex->image, level))
       return;
@@ -482,14 +487,15 @@ ilo_blitter_rectlist_resolve_hiz(struct ilo_blitter *blitter,
     *      disabled. Depth Buffer Write Enable must be enabled. Stencil Test
     *      Enable and Stencil Buffer Write Enable must be disabled."
     */
-   memset(&dsa_state, 0, sizeof(dsa_state));
-   dsa_state.depth.writemask = true;
+   memset(&info, 0, sizeof(info));
+   info.depth.cv_has_buffer = true;
+   info.depth.write_enable = true;
 
    ilo_blitter_set_invariants(blitter);
    ilo_blitter_set_earlyz_op(blitter,
          ILO_STATE_RASTER_EARLYZ_HIZ_RESOLVE, false);
 
-   ilo_blitter_set_dsa(blitter, &dsa_state);
+   ilo_blitter_set_cc(blitter, &info);
    ilo_blitter_set_fb_from_resource(blitter, res, res->format, level, slice);
    ilo_blitter_set_uses(blitter,
          ILO_BLITTER_USE_DSA | ILO_BLITTER_USE_FB_DEPTH);
