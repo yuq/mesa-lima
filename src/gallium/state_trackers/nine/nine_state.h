@@ -83,6 +83,8 @@
 #define NINE_STATE_COMMIT_BLEND (1 << 2)
 #define NINE_STATE_COMMIT_CONST_VS (1 << 3)
 #define NINE_STATE_COMMIT_CONST_PS (1 << 4)
+#define NINE_STATE_COMMIT_VS (1 << 5)
+#define NINE_STATE_COMMIT_PS (1 << 6)
 
 
 #define NINE_MAX_SIMULTANEOUS_RENDERTARGETS 4
@@ -148,7 +150,6 @@ struct nine_state
     int    vs_const_i[NINE_MAX_CONST_I][4];
     BOOL   vs_const_b[NINE_MAX_CONST_B];
     float *vs_lconstf_temp;
-    uint32_t vs_key;
 
     struct NinePixelShader9 *ps;
     float *ps_const_f;
@@ -156,7 +157,6 @@ struct nine_state
     BOOL   ps_const_b[NINE_MAX_CONST_B];
     float *ps_lconstf_temp;
     uint32_t bumpmap_vars[48];
-    uint32_t ps_key;
 
     struct {
         void *vs;

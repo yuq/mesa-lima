@@ -25,6 +25,8 @@
 
 #include "iunknown.h"
 #include "nine_shader.h"
+#include "nine_state.h"
+#include "basetexture9.h"
 
 struct nine_lconstf;
 
@@ -46,6 +48,12 @@ struct NinePixelShader9
     uint8_t rt_mask;
 
     uint64_t ff_key[6];
+    void *ff_cso;
+
+    uint32_t last_key;
+    void *last_cso;
+
+    uint32_t next_key;
 };
 static inline struct NinePixelShader9 *
 NinePixelShader9( void *data )
@@ -53,9 +61,38 @@ NinePixelShader9( void *data )
     return (struct NinePixelShader9 *)data;
 }
 
+static inline BOOL
+NinePixelShader9_UpdateKey( struct NinePixelShader9 *ps,
+                            struct nine_state *state )
+{
+    uint16_t samplers_shadow;
+    uint32_t samplers_ps1_types;
+    uint32_t key;
+    BOOL res;
+
+    if (unlikely(ps->byte_code.version < 0x20)) {
+        /* no depth textures, but variable targets */
+        uint32_t m = ps->sampler_mask;
+        samplers_ps1_types = 0;
+        while (m) {
+            int s = ffs(m) - 1;
+            m &= ~(1 << s);
+            samplers_ps1_types |= (state->texture[s] ? state->texture[s]->pstype : 1) << (s * 2);
+        }
+        key = samplers_ps1_types;
+    } else {
+        samplers_shadow = (uint16_t)((state->samplers_shadow & NINE_PS_SAMPLERS_MASK) >> NINE_SAMPLER_PS(0));
+        key = samplers_shadow & ps->sampler_mask;
+    }
+
+    res = ps->last_key != key;
+    if (res)
+        ps->next_key = key;
+    return res;
+}
+
 void *
-NinePixelShader9_GetVariant( struct NinePixelShader9 *vs,
-                             uint32_t key );
+NinePixelShader9_GetVariant( struct NinePixelShader9 *ps );
 
 /*** public ***/
 

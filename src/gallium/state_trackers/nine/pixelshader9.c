@@ -46,7 +46,7 @@ NinePixelShader9_ctor( struct NinePixelShader9 *This,
         return hr;
 
     if (cso) {
-        This->variant.cso = cso;
+        This->ff_cso = cso;
         return D3D_OK;
     }
     device = This->base.device;
@@ -69,6 +69,9 @@ NinePixelShader9_ctor( struct NinePixelShader9 *This,
     This->byte_code.size = info.byte_size;
 
     This->variant.cso = info.cso;
+    This->last_cso = info.cso;
+    This->last_key = 0;
+
     This->sampler_mask = info.sampler_mask;
     This->rt_mask = info.rt_mask;
     This->const_used_size = info.const_used_size;
@@ -83,11 +86,12 @@ NinePixelShader9_ctor( struct NinePixelShader9 *This,
 void
 NinePixelShader9_dtor( struct NinePixelShader9 *This )
 {
-    DBG("This=%p cso=%p\n", This, This->variant.cso);
+    DBG("This=%p\n", This);
 
     if (This->base.device) {
         struct pipe_context *pipe = This->base.device->pipe;
         struct nine_shader_variant *var = &This->variant;
+
         do {
             if (var->cso) {
                 if (This->base.device->state.cso.ps == var->cso)
@@ -96,6 +100,12 @@ NinePixelShader9_dtor( struct NinePixelShader9 *This )
             }
             var = var->next;
         } while (var);
+
+        if (This->ff_cso) {
+            if (This->ff_cso == This->base.device->state.cso.ps)
+                pipe->bind_fs_state(pipe, NULL);
+            pipe->delete_fs_state(pipe, This->ff_cso);
+        }
     }
     nine_shader_variants_free(&This->variant);
 
@@ -125,10 +135,16 @@ NinePixelShader9_GetFunction( struct NinePixelShader9 *This,
 }
 
 void *
-NinePixelShader9_GetVariant( struct NinePixelShader9 *This,
-                             uint32_t key )
+NinePixelShader9_GetVariant( struct NinePixelShader9 *This )
 {
-    void *cso = nine_shader_variant_get(&This->variant, key);
+    void *cso;
+    uint32_t key;
+
+    key = This->next_key;
+    if (key == This->last_key)
+        return This->last_cso;
+
+    cso = nine_shader_variant_get(&This->variant, key);
     if (!cso) {
         struct NineDevice9 *device = This->base.device;
         struct nine_shader_info info;
@@ -147,6 +163,10 @@ NinePixelShader9_GetVariant( struct NinePixelShader9 *This,
         nine_shader_variant_add(&This->variant, key, info.cso);
         cso = info.cso;
     }
+
+    This->last_key = key;
+    This->last_cso = cso;
+
     return cso;
 }
 

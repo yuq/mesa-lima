@@ -328,6 +328,70 @@ prepare_ps_constants_userbuf(struct NineDevice9 *device)
     state->commit |= NINE_STATE_COMMIT_CONST_PS;
 }
 
+static inline uint32_t
+prepare_vs(struct NineDevice9 *device, uint8_t shader_changed)
+{
+    struct nine_state *state = &device->state;
+    struct NineVertexShader9 *vs = state->vs;
+    uint32_t changed_group = 0;
+    int has_key_changed = 0;
+
+    if (likely(vs))
+        has_key_changed = NineVertexShader9_UpdateKey(vs, state);
+
+    if (!shader_changed && !has_key_changed)
+        return 0;
+
+    /* likely because we dislike FF */
+    if (likely(vs)) {
+        state->cso.vs = NineVertexShader9_GetVariant(vs);
+    } else {
+        vs = device->ff.vs;
+        state->cso.vs = vs->ff_cso;
+    }
+
+    if (state->rs[NINED3DRS_VSPOINTSIZE] != vs->point_size) {
+        state->rs[NINED3DRS_VSPOINTSIZE] = vs->point_size;
+        changed_group |= NINE_STATE_RASTERIZER;
+    }
+
+    if ((state->bound_samplers_mask_vs & vs->sampler_mask) != vs->sampler_mask)
+        /* Bound dummy sampler. */
+        changed_group |= NINE_STATE_SAMPLER;
+
+    state->commit |= NINE_STATE_COMMIT_VS;
+    return changed_group;
+}
+
+static inline uint32_t
+prepare_ps(struct NineDevice9 *device, uint8_t shader_changed)
+{
+    struct nine_state *state = &device->state;
+    struct NinePixelShader9 *ps = state->ps;
+    uint32_t changed_group = 0;
+    int has_key_changed = 0;
+
+    if (likely(ps))
+        has_key_changed = NinePixelShader9_UpdateKey(ps, state);
+
+    if (!shader_changed && !has_key_changed)
+        return 0;
+
+    if (likely(ps)) {
+        state->cso.ps = NinePixelShader9_GetVariant(ps);
+    } else {
+        ps = device->ff.ps;
+        state->cso.ps = ps->ff_cso;
+    }
+
+    if ((state->bound_samplers_mask_ps & ps->sampler_mask) != ps->sampler_mask)
+        /* Bound dummy sampler. */
+        changed_group |= NINE_STATE_SAMPLER;
+
+    state->commit |= NINE_STATE_COMMIT_PS;
+    return changed_group;
+}
+
 /* State preparation incremental */
 
 /* State preparation + State commit */
@@ -561,92 +625,6 @@ update_vertex_elements(struct NineDevice9 *device)
     cso_set_vertex_elements(device->cso, vs->num_inputs, ve);
 
     state->changed.stream_freq = 0;
-}
-
-static inline uint32_t
-update_shader_variant_keys(struct NineDevice9 *device)
-{
-    struct nine_state *state = &device->state;
-    uint32_t mask = 0;
-    uint32_t vs_key = state->samplers_shadow;
-    uint32_t ps_key = state->samplers_shadow;
-
-    vs_key = (vs_key & NINE_VS_SAMPLERS_MASK) >> NINE_SAMPLER_VS(0);
-    ps_key = (ps_key & NINE_PS_SAMPLERS_MASK) >> NINE_SAMPLER_PS(0);
-
-    if (state->vs) vs_key &= state->vs->sampler_mask;
-    if (state->ps) {
-        if (unlikely(state->ps->byte_code.version < 0x20)) {
-            /* no depth textures, but variable targets */
-            uint32_t m = state->ps->sampler_mask;
-            ps_key = 0;
-            while (m) {
-                int s = ffs(m) - 1;
-                m &= ~(1 << s);
-                ps_key |= (state->texture[s] ? state->texture[s]->pstype : 1) << (s * 2);
-            }
-        } else {
-            ps_key &= state->ps->sampler_mask;
-        }
-    }
-
-    if (state->vs && state->vs_key != vs_key) {
-        state->vs_key = vs_key;
-        mask |= NINE_STATE_VS;
-    }
-    if (state->ps && state->ps_key != ps_key) {
-        state->ps_key = ps_key;
-        mask |= NINE_STATE_PS;
-    }
-    return mask;
-}
-
-static inline uint32_t
-update_vs(struct NineDevice9 *device)
-{
-    struct nine_state *state = &device->state;
-    struct NineVertexShader9 *vs = state->vs;
-    uint32_t changed_group = 0;
-
-    /* likely because we dislike FF */
-    if (likely(vs)) {
-        state->cso.vs = NineVertexShader9_GetVariant(vs, state->vs_key);
-    } else {
-        vs = device->ff.vs;
-        state->cso.vs = vs->variant.cso;
-    }
-    device->pipe->bind_vs_state(device->pipe, state->cso.vs);
-
-    if (state->rs[NINED3DRS_VSPOINTSIZE] != vs->point_size) {
-        state->rs[NINED3DRS_VSPOINTSIZE] = vs->point_size;
-        changed_group |= NINE_STATE_RASTERIZER;
-    }
-
-    if ((state->bound_samplers_mask_vs & vs->sampler_mask) != vs->sampler_mask)
-        /* Bound dummy sampler. */
-        changed_group |= NINE_STATE_SAMPLER;
-    return changed_group;
-}
-
-static inline uint32_t
-update_ps(struct NineDevice9 *device)
-{
-    struct nine_state *state = &device->state;
-    struct NinePixelShader9 *ps = state->ps;
-    uint32_t changed_group = 0;
-
-    if (likely(ps)) {
-        state->cso.ps = NinePixelShader9_GetVariant(ps, state->ps_key);
-    } else {
-        ps = device->ff.ps;
-        state->cso.ps = ps->variant.cso;
-    }
-    device->pipe->bind_fs_state(device->pipe, state->cso.ps);
-
-    if ((state->bound_samplers_mask_ps & ps->sampler_mask) != ps->sampler_mask)
-        /* Bound dummy sampler. */
-        changed_group |= NINE_STATE_SAMPLER;
-    return changed_group;
 }
 
 static void
@@ -924,6 +902,22 @@ commit_ps_constants(struct NineDevice9 *device)
         pipe->set_constant_buffer(pipe, PIPE_SHADER_FRAGMENT, 0, &device->state.pipe.cb_ps);
 }
 
+static inline void
+commit_vs(struct NineDevice9 *device)
+{
+    struct nine_state *state = &device->state;
+
+    device->pipe->bind_vs_state(device->pipe, state->cso.vs);
+}
+
+
+static inline void
+commit_ps(struct NineDevice9 *device)
+{
+    struct nine_state *state = &device->state;
+
+    device->pipe->bind_fs_state(device->pipe, state->cso.ps);
+}
 /* State Update */
 
 #define NINE_STATE_FREQ_GROUP_0 \
@@ -940,11 +934,6 @@ commit_ps_constants(struct NineDevice9 *device)
     NINE_STATE_SAMPLE_MASK)
 
 #define NINE_STATE_FREQ_GROUP_1 ~NINE_STATE_FREQ_GROUP_0
-
-#define NINE_STATE_SHADER_VARIANT_GROUP \
-    (NINE_STATE_TEXTURE | \
-     NINE_STATE_VS | \
-     NINE_STATE_PS)
 
 /* TODO: only go through dirty textures */
 static void
@@ -994,10 +983,7 @@ nine_update_state(struct NineDevice9 *device)
         nine_ff_update(device);
     group = state->changed.group;
 
-    if (group & NINE_STATE_SHADER_VARIANT_GROUP)
-        group |= update_shader_variant_keys(device);
-
-    if (group & NINE_STATE_FREQ_GROUP_0) {
+    if (group & (NINE_STATE_FREQ_GROUP_0 | NINE_STATE_TEXTURE)) {
         if (group & NINE_STATE_FB)
             group = update_framebuffer(device);
         if (group & NINE_STATE_VIEWPORT)
@@ -1010,14 +996,14 @@ nine_update_state(struct NineDevice9 *device)
         if (group & NINE_STATE_BLEND)
             prepare_blend(device);
 
-        if (group & NINE_STATE_VS)
-            group |= update_vs(device);
+        if (group & (NINE_STATE_VS | NINE_STATE_TEXTURE))
+            group |= prepare_vs(device, (group & NINE_STATE_VS) != 0);
 
         if (group & NINE_STATE_RASTERIZER)
             prepare_rasterizer(device);
 
-        if (group & NINE_STATE_PS)
-            group |= update_ps(device);
+        if (group & (NINE_STATE_PS | NINE_STATE_TEXTURE))
+            group |= prepare_ps(device, (group & NINE_STATE_PS) != 0);
 
         if (group & NINE_STATE_BLEND_COLOR) {
             struct pipe_blend_color color;
@@ -1076,6 +1062,10 @@ nine_update_state(struct NineDevice9 *device)
         commit_vs_constants(device);
     if (state->commit & NINE_STATE_COMMIT_CONST_PS)
         commit_ps_constants(device);
+    if (state->commit & NINE_STATE_COMMIT_VS)
+        commit_vs(device);
+    if (state->commit & NINE_STATE_COMMIT_PS)
+        commit_ps(device);
 
     state->commit = 0;
 
