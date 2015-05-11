@@ -70,19 +70,22 @@ lower_sampler(nir_tex_instr *instr, const struct gl_shader_program *shader_progr
       case nir_deref_type_array: {
          nir_deref_array *deref_array = nir_deref_as_array(deref->child);
 
+         assert(deref_array->deref_array_type != nir_deref_array_type_wildcard);
+
+         if (deref_array->deref.child) {
+            ralloc_asprintf_append(&name, "[%u]",
+               deref_array->deref_array_type == nir_deref_array_type_direct ?
+                  deref_array->base_offset : 0);
+         } else {
+            assert(deref->child->type->base_type == GLSL_TYPE_SAMPLER);
+            instr->sampler_index = deref_array->base_offset;
+         }
+
          /* XXX: We're assuming here that the indirect is the last array
           * thing we have.  This should be ok for now as we don't support
           * arrays_of_arrays yet.
           */
-
-         instr->sampler_index *= glsl_get_length(deref->type);
-         switch (deref_array->deref_array_type) {
-         case nir_deref_array_type_direct:
-            instr->sampler_index += deref_array->base_offset;
-            if (deref_array->deref.child)
-               ralloc_asprintf_append(&name, "[%u]", deref_array->base_offset);
-            break;
-         case nir_deref_array_type_indirect: {
+         if (deref_array->deref_array_type == nir_deref_array_type_indirect) {
             /* First, we have to resize the array of texture sources */
             nir_tex_src *new_srcs = rzalloc_array(instr, nir_tex_src,
                                                   instr->num_srcs + 1);
@@ -106,16 +109,6 @@ lower_sampler(nir_tex_instr *instr, const struct gl_shader_program *shader_progr
                                &deref_array->indirect);
 
             instr->sampler_array_size = glsl_get_length(deref->type);
-
-            if (deref_array->deref.child)
-               ralloc_strcat(&name, "[0]");
-            break;
-         }
-
-         case nir_deref_array_type_wildcard:
-            unreachable("Cannot copy samplers");
-         default:
-            unreachable("Invalid deref array type");
          }
          break;
       }
