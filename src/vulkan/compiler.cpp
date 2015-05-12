@@ -676,7 +676,8 @@ static void
 gen7_compute_urb_partition(struct anv_pipeline *pipeline)
 {
    const struct brw_device_info *devinfo = &pipeline->device->info;
-   unsigned vs_size = pipeline->vs_prog_data.base.urb_entry_size;
+   bool vs_present = pipeline->vs_simd8 != NO_KERNEL;
+   unsigned vs_size = vs_present ? pipeline->vs_prog_data.base.urb_entry_size : 1;
    unsigned vs_entry_size_bytes = vs_size * 64;
    bool gs_present = pipeline->gs_vec4 != NO_KERNEL;
    unsigned gs_size = gs_present ? pipeline->gs_prog_data.base.urb_entry_size : 1;
@@ -841,11 +842,8 @@ anv_compiler_run(struct anv_compiler *compiler, struct anv_pipeline *pipeline)
    fail_if(program == NULL || program->Shaders == NULL,
            "failed to create program\n");
 
-   /* FIXME: Only supports vs and fs combo at the moment */
-   assert(pipeline->shaders[VK_SHADER_STAGE_VERTEX]);
-   assert(pipeline->shaders[VK_SHADER_STAGE_FRAGMENT]);
-
-   anv_compile_shader(compiler, program, pipeline, VK_SHADER_STAGE_VERTEX);
+   if (pipeline->shaders[VK_SHADER_STAGE_VERTEX])
+      anv_compile_shader(compiler, program, pipeline, VK_SHADER_STAGE_VERTEX);
    anv_compile_shader(compiler, program, pipeline, VK_SHADER_STAGE_FRAGMENT);
    if (pipeline->shaders[VK_SHADER_STAGE_GEOMETRY])
       anv_compile_shader(compiler, program, pipeline, VK_SHADER_STAGE_GEOMETRY);
@@ -870,18 +868,25 @@ anv_compiler_run(struct anv_compiler *compiler, struct anv_pipeline *pipeline)
    success = really_do_wm_prog(brw, program, bfp, &wm_key, pipeline);
    fail_if(!success, "do_wm_prog failed\n");
    pipeline->prog_data[VK_SHADER_STAGE_FRAGMENT] = &pipeline->wm_prog_data.base;
+   pipeline->active_stages = VK_SHADER_STAGE_FRAGMENT_BIT;
 
 
-   struct brw_vs_prog_key vs_key;
-   struct gl_vertex_program *vp = (struct gl_vertex_program *)
-      program->_LinkedShaders[MESA_SHADER_VERTEX]->Program;
-   struct brw_vertex_program *bvp = brw_vertex_program(vp);
+   if (pipeline->shaders[VK_SHADER_STAGE_VERTEX]) {
+      struct brw_vs_prog_key vs_key;
+      struct gl_vertex_program *vp = (struct gl_vertex_program *)
+         program->_LinkedShaders[MESA_SHADER_VERTEX]->Program;
+      struct brw_vertex_program *bvp = brw_vertex_program(vp);
 
-   brw_vs_populate_key(brw, bvp, &vs_key);
+      brw_vs_populate_key(brw, bvp, &vs_key);
 
-   success = really_do_vs_prog(brw, program, bvp, &vs_key, pipeline);
-   fail_if(!success, "do_wm_prog failed\n");
-   pipeline->prog_data[VK_SHADER_STAGE_VERTEX] = &pipeline->vs_prog_data.base.base;
+      success = really_do_vs_prog(brw, program, bvp, &vs_key, pipeline);
+      fail_if(!success, "do_wm_prog failed\n");
+      pipeline->prog_data[VK_SHADER_STAGE_VERTEX] = &pipeline->vs_prog_data.base.base;
+      pipeline->active_stages |= VK_SHADER_STAGE_VERTEX_BIT;;
+   } else {
+      pipeline->vs_simd8 = NO_KERNEL;
+   }
+
 
    if (pipeline->shaders[VK_SHADER_STAGE_GEOMETRY]) {
       struct brw_gs_prog_key gs_key;
@@ -893,14 +898,10 @@ anv_compiler_run(struct anv_compiler *compiler, struct anv_pipeline *pipeline)
 
       success = really_do_gs_prog(brw, program, bgp, &gs_key, pipeline);
       fail_if(!success, "do_gs_prog failed\n");
-      pipeline->active_stages = VK_SHADER_STAGE_VERTEX_BIT |
-         VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+      pipeline->active_stages |= VK_SHADER_STAGE_GEOMETRY_BIT;
       pipeline->prog_data[VK_SHADER_STAGE_GEOMETRY] = &pipeline->gs_prog_data.base.base;
-
    } else {
       pipeline->gs_vec4 = NO_KERNEL;
-      pipeline->active_stages =
-         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
    }
 
 

@@ -266,6 +266,13 @@ VkResult VKAPI vkCreateGraphicsPipeline(
 
    anv_compiler_run(device->compiler, pipeline);
 
+   /* FIXME: The compiler dead-codes FS inputs when we don't have a VS, so we
+    * hard code this to num_attributes - 2. This is because the attributes
+    * include VUE header and position, which aren't counted as varying
+    * inputs. */
+   if (pipeline->vs_simd8 == NO_KERNEL)
+      pipeline->wm_prog_data.num_varying_inputs = vi_info->attributeCount - 2;
+
    emit_vertex_input(pipeline, vi_info);
    emit_ia_state(pipeline, ia_info);
    emit_rs_state(pipeline, rs_info);
@@ -358,40 +365,50 @@ VkResult VKAPI vkCreateGraphicsPipeline(
    offset = 1;
    length = (vue_prog_data->vue_map.num_slots + 1) / 2 - offset;
 
-   anv_batch_emit(&pipeline->batch, GEN8_3DSTATE_VS,
-                  .KernelStartPointer = pipeline->vs_simd8,
-                  .SingleVertexDispatch = Multiple,
-                  .VectorMaskEnable = Dmask,
-                  .SamplerCount = 0,
-                  .BindingTableEntryCount =
+   if (pipeline->vs_simd8 == NO_KERNEL)
+      anv_batch_emit(&pipeline->batch, GEN8_3DSTATE_VS,
+                     .FunctionEnable = false,
+                     .VertexURBEntryOutputReadOffset = 1,
+                     /* Even if VS is disabled, SBE still gets the amount of
+                      * vertex data to read from this field. We use attribute
+                      * count - 1, as we don't count the VUE header here. */
+                     .VertexURBEntryOutputLength =
+                        DIV_ROUND_UP(vi_info->attributeCount - 1, 2));
+   else
+      anv_batch_emit(&pipeline->batch, GEN8_3DSTATE_VS,
+                     .KernelStartPointer = pipeline->vs_simd8,
+                     .SingleVertexDispatch = Multiple,
+                     .VectorMaskEnable = Dmask,
+                     .SamplerCount = 0,
+                     .BindingTableEntryCount =
                      vue_prog_data->base.binding_table.size_bytes / 4,
-                  .ThreadDispatchPriority = Normal,
-                  .FloatingPointMode = IEEE754,
-                  .IllegalOpcodeExceptionEnable = false,
-                  .AccessesUAV = false,
-                  .SoftwareExceptionEnable = false,
+                     .ThreadDispatchPriority = Normal,
+                     .FloatingPointMode = IEEE754,
+                     .IllegalOpcodeExceptionEnable = false,
+                     .AccessesUAV = false,
+                     .SoftwareExceptionEnable = false,
 
-                  /* FIXME: pointer needs to be assigned outside as it aliases
-                   * PerThreadScratchSpace.
-                   */
-                  .ScratchSpaceBasePointer = 0,
-                  .PerThreadScratchSpace = 0,
+                     /* FIXME: pointer needs to be assigned outside as it aliases
+                      * PerThreadScratchSpace.
+                      */
+                     .ScratchSpaceBasePointer = 0,
+                     .PerThreadScratchSpace = 0,
 
-                  .DispatchGRFStartRegisterForURBData =
+                     .DispatchGRFStartRegisterForURBData =
                      vue_prog_data->base.dispatch_grf_start_reg,
-                  .VertexURBEntryReadLength = vue_prog_data->urb_read_length,
-                  .VertexURBEntryReadOffset = 0,
+                     .VertexURBEntryReadLength = vue_prog_data->urb_read_length,
+                     .VertexURBEntryReadOffset = 0,
 
-                  .MaximumNumberofThreads = device->info.max_vs_threads - 1,
-                  .StatisticsEnable = false,
-                  .SIMD8DispatchEnable = true,
-                  .VertexCacheDisable = ia_info->disableVertexReuse,
-                  .FunctionEnable = true,
+                     .MaximumNumberofThreads = device->info.max_vs_threads - 1,
+                     .StatisticsEnable = false,
+                     .SIMD8DispatchEnable = true,
+                     .VertexCacheDisable = ia_info->disableVertexReuse,
+                     .FunctionEnable = true,
 
-                  .VertexURBEntryOutputReadOffset = offset,
-                  .VertexURBEntryOutputLength = length,
-                  .UserClipDistanceClipTestEnableBitmask = 0,
-                  .UserClipDistanceCullTestEnableBitmask = 0);
+                     .VertexURBEntryOutputReadOffset = offset,
+                     .VertexURBEntryOutputLength = length,
+                     .UserClipDistanceClipTestEnableBitmask = 0,
+                     .UserClipDistanceCullTestEnableBitmask = 0);
 
    const struct brw_wm_prog_data *wm_prog_data = &pipeline->wm_prog_data;
    uint32_t ksp0, ksp2, grf_start0, grf_start2;
