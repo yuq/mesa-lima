@@ -326,6 +326,21 @@ eglGetPlatformDisplayEXT(EGLenum platform, void *native_display,
    return _eglGetDisplayHandle(dpy);
 }
 
+EGLDisplay EGLAPIENTRY
+eglGetPlatformDisplay(EGLenum platform, void *native_display,
+                      const EGLAttrib *attrib_list)
+{
+   EGLDisplay display;
+   EGLint *int_attribs = _eglConvertAttribsToInt(attrib_list);
+
+   if (attrib_list && !int_attribs)
+      RETURN_EGL_ERROR(NULL, EGL_BAD_ALLOC, NULL);
+
+   display = eglGetPlatformDisplayEXT(platform, native_display, int_attribs);
+   free(int_attribs);
+   return display;
+}
+
 /**
  * Copy the extension into the string and update the string pointer.
  */
@@ -752,6 +767,24 @@ eglCreatePlatformWindowSurfaceEXT(EGLDisplay dpy, EGLConfig config,
 }
 
 
+EGLSurface EGLAPIENTRY
+eglCreatePlatformWindowSurface(EGLDisplay dpy, EGLConfig config,
+                               void *native_window,
+                               const EGLAttrib *attrib_list)
+{
+   EGLSurface surface;
+   EGLint *int_attribs = _eglConvertAttribsToInt(attrib_list);
+
+   if (attrib_list && !int_attribs)
+      RETURN_EGL_ERROR(NULL, EGL_BAD_ALLOC, EGL_NO_SURFACE);
+
+   surface = eglCreatePlatformWindowSurfaceEXT(dpy, config, native_window,
+                                               int_attribs);
+   free(int_attribs);
+   return surface;
+}
+
+
 static EGLSurface
 _eglCreatePixmapSurfaceCommon(_EGLDisplay *disp, EGLConfig config,
                               void *native_pixmap, const EGLint *attrib_list)
@@ -802,6 +835,24 @@ eglCreatePlatformPixmapSurfaceEXT(EGLDisplay dpy, EGLConfig config,
 
    return _eglCreatePixmapSurfaceCommon(disp, config, native_pixmap,
                                         attrib_list);
+}
+
+
+EGLSurface EGLAPIENTRY
+eglCreatePlatformPixmapSurface(EGLDisplay dpy, EGLConfig config,
+                               void *native_pixmap,
+                               const EGLAttrib *attrib_list)
+{
+   EGLSurface surface;
+   EGLint *int_attribs = _eglConvertAttribsToInt(attrib_list);
+
+   if (attrib_list && !int_attribs)
+      RETURN_EGL_ERROR(NULL, EGL_BAD_ALLOC, EGL_NO_SURFACE);
+
+   surface = eglCreatePlatformPixmapSurfaceEXT(dpy, config, native_pixmap,
+                                               int_attribs);
+   free(int_attribs);
+   return surface;
 }
 
 
@@ -1794,6 +1845,9 @@ eglGetProcAddress(const char *procname)
       { "eglWaitSync", (_EGLProc) eglWaitSync },
       { "eglCreateImage", (_EGLProc) eglCreateImage },
       { "eglDestroyImage", (_EGLProc) eglDestroyImage },
+      { "eglGetPlatformDisplay", (_EGLProc) eglGetPlatformDisplay },
+      { "eglCreatePlatformWindowSurface", (_EGLProc) eglCreatePlatformWindowSurface },
+      { "eglCreatePlatformPixmapSurface", (_EGLProc) eglCreatePlatformPixmapSurface },
 #ifdef EGL_MESA_drm_display
       { "eglGetDRMDisplayMESA", (_EGLProc) eglGetDRMDisplayMESA },
 #endif
