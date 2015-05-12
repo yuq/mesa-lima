@@ -27,6 +27,8 @@ C_SOURCES := \
 	core/ilo_state_sampler.h \
 	core/ilo_state_surface.c \
 	core/ilo_state_surface.h \
+	core/ilo_state_viewport.c \
+	core/ilo_state_viewport.h \
 	core/ilo_state_zs.c \
 	core/ilo_state_zs.h \
 	core/intel_winsys.h \
