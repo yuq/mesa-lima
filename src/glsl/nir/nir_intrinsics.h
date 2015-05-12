@@ -79,8 +79,29 @@ BARRIER(memory_barrier)
 /** A conditional discard, with a single boolean source. */
 INTRINSIC(discard_if, 1, ARR(1), false, 0, 0, 0, 0)
 
+/**
+ * Basic Geometry Shader intrinsics.
+ *
+ * emit_vertex implements GLSL's EmitStreamVertex() built-in.  It takes a single
+ * index, which is the stream ID to write to.
+ *
+ * end_primitive implements GLSL's EndPrimitive() built-in.
+ */
 INTRINSIC(emit_vertex,   0, ARR(), false, 0, 0, 1, 0)
 INTRINSIC(end_primitive, 0, ARR(), false, 0, 0, 1, 0)
+
+/**
+ * Geometry Shader intrinsics with a vertex count.
+ *
+ * Alternatively, drivers may implement these intrinsics, and use
+ * nir_lower_gs_intrinsics() to convert from the basic intrinsics.
+ *
+ * These maintain a count of the number of vertices emitted, as an additional
+ * unsigned integer source.
+ */
+INTRINSIC(emit_vertex_with_counter, 1, ARR(1), false, 0, 0, 1, 0)
+INTRINSIC(end_primitive_with_counter, 1, ARR(1), false, 0, 0, 1, 0)
+INTRINSIC(set_vertex_count, 1, ARR(1), false, 0, 0, 0, 0)
 
 /*
  * Atomic counters

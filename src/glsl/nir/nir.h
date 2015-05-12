@@ -1883,6 +1883,8 @@ void nir_lower_two_sided_color(nir_shader *shader);
 void nir_lower_atomics(nir_shader *shader);
 void nir_lower_to_source_mods(nir_shader *shader);
 
+bool nir_lower_gs_intrinsics(nir_shader *shader);
+
 bool nir_normalize_cubemap_coords(nir_shader *shader);
 
 void nir_live_variables_impl(nir_function_impl *impl);
