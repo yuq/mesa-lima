@@ -650,7 +650,7 @@ class gl_function( gl_item ):
         name = element.get( "name" )
         alias = element.get( "alias" )
 
-        if is_attr_true(element, "static_dispatch", "true"):
+        if name in static_data.functions:
             self.static_entry_points.append(name)
 
         self.entry_points.append( name )
