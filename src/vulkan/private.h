@@ -85,6 +85,14 @@ vk_error(VkResult error)
    return error;
 }
 
+void __anv_finishme(const char *file, int line, const char *format, ...);
+
+/**
+ * Print a FINISHME message, including its source location.
+ */
+#define anv_finishme(format, ...) \
+   __anv_finishme(__FILE__, __LINE__, format, ##__VA_ARGS__);
+
 /**
  * A dynamically growable, circular buffer.  Elements are added at head and
  * removed from tail. head and tail are free-running uint32_t indices and we

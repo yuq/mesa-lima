@@ -30,6 +30,18 @@
 
 #include "private.h"
 
+void
+__anv_finishme(const char *file, int line, const char *format, ...)
+{
+   va_list ap;
+
+   va_start(ap, format);
+   fprintf(stderr, "%s:%d: FINISHME: ", file, line);
+   vfprintf(stderr, format, ap);
+   fprintf(stderr, "\n");
+   va_end(ap);
+}
+
 int
 anv_vector_init(struct anv_vector *vector, uint32_t element_size, uint32_t size)
 {
