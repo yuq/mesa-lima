@@ -385,8 +385,7 @@ NineBaseTexture9_UploadSelf( struct NineBaseTexture9 *This )
 void WINAPI
 NineBaseTexture9_GenerateMipSubLevels( struct NineBaseTexture9 *This )
 {
-    struct pipe_resource *resource = This->base.resource;
-
+    struct pipe_resource *resource;
     unsigned base_level = 0;
     unsigned last_level = This->base.info.last_level - This->managed.lod;
     unsigned first_layer = 0;
@@ -408,6 +407,8 @@ NineBaseTexture9_GenerateMipSubLevels( struct NineBaseTexture9 *This )
         NineBaseTexture9_UpdateSamplerView(This, 0);
 
     last_layer = util_max_layer(This->view[0]->texture, base_level);
+
+    resource = This->base.resource;
 
     util_gen_mipmap(This->pipe, resource,
                     resource->format, base_level, last_level,
