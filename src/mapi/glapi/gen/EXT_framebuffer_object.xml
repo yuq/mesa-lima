@@ -186,7 +186,7 @@
     <enum name="READ_FRAMEBUFFER_BINDING_EXT" count="1" value="0x8CAA">
         <size name="Get" mode="get"/>
     </enum>
-    <function name="BlitFramebufferEXT" static_dispatch="false" alias="BlitFramebuffer">
+    <function name="BlitFramebufferEXT" alias="BlitFramebuffer">
         <param name="srcX0" type="GLint"/>
         <param name="srcY0" type="GLint"/>
         <param name="srcX1" type="GLint"/>
