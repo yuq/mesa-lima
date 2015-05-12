@@ -93,6 +93,18 @@ void __anv_finishme(const char *file, int line, const char *format, ...);
 #define anv_finishme(format, ...) \
    __anv_finishme(__FILE__, __LINE__, format, ##__VA_ARGS__);
 
+#define stub_return(v) \
+   do { \
+      anv_finishme("stub %s", __func__); \
+      return (v); \
+   } while (0)
+
+#define stub(v) \
+   do { \
+      anv_finishme("stub %s", __func__); \
+      return; \
+   } while (0)
+
 /**
  * A dynamically growable, circular buffer.  Elements are added at head and
  * removed from tail. head and tail are free-running uint32_t indices and we

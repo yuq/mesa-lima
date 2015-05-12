@@ -512,7 +512,7 @@ VkResult VKAPI vkCreateGraphicsPipelineDerivative(
     VkPipeline                                  basePipeline,
     VkPipeline*                                 pPipeline)
 {
-   return VK_UNSUPPORTED;
+   stub_return(VK_UNSUPPORTED);
 }
 
 VkResult VKAPI vkCreateComputePipeline(
@@ -520,7 +520,7 @@ VkResult VKAPI vkCreateComputePipeline(
     const VkComputePipelineCreateInfo*          pCreateInfo,
     VkPipeline*                                 pPipeline)
 {
-   return VK_UNSUPPORTED;
+   stub_return(VK_UNSUPPORTED);
 }
 
 VkResult VKAPI vkStorePipeline(
@@ -529,7 +529,7 @@ VkResult VKAPI vkStorePipeline(
     size_t*                                     pDataSize,
     void*                                       pData)
 {
-   return VK_UNSUPPORTED;
+   stub_return(VK_UNSUPPORTED);
 }
 
 VkResult VKAPI vkLoadPipeline(
@@ -538,7 +538,7 @@ VkResult VKAPI vkLoadPipeline(
     const void*                                 pData,
     VkPipeline*                                 pPipeline)
 {
-   return VK_UNSUPPORTED;
+   stub_return(VK_UNSUPPORTED);
 }
 
 VkResult VKAPI vkLoadPipelineDerivative(
@@ -548,7 +548,7 @@ VkResult VKAPI vkLoadPipelineDerivative(
     VkPipeline                                  basePipeline,
     VkPipeline*                                 pPipeline)
 {
-   return VK_UNSUPPORTED;
+   stub_return(VK_UNSUPPORTED);
 }
 
 // Pipeline layout functions

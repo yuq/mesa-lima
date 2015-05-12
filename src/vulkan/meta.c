@@ -283,6 +283,7 @@ void VKAPI vkCmdCopyBuffer(
     uint32_t                                    regionCount,
     const VkBufferCopy*                         pRegions)
 {
+   stub();
 }
 
 void VKAPI vkCmdCopyImage(
@@ -294,6 +295,7 @@ void VKAPI vkCmdCopyImage(
     uint32_t                                    regionCount,
     const VkImageCopy*                          pRegions)
 {
+   stub();
 }
 
 void VKAPI vkCmdBlitImage(
@@ -305,6 +307,7 @@ void VKAPI vkCmdBlitImage(
     uint32_t                                    regionCount,
     const VkImageBlit*                          pRegions)
 {
+   stub();
 }
 
 void VKAPI vkCmdCopyBufferToImage(
@@ -315,6 +318,7 @@ void VKAPI vkCmdCopyBufferToImage(
     uint32_t                                    regionCount,
     const VkBufferImageCopy*                    pRegions)
 {
+   stub();
 }
 
 void VKAPI vkCmdCopyImageToBuffer(
@@ -325,6 +329,7 @@ void VKAPI vkCmdCopyImageToBuffer(
     uint32_t                                    regionCount,
     const VkBufferImageCopy*                    pRegions)
 {
+   stub();
 }
 
 void VKAPI vkCmdCloneImageData(
@@ -334,6 +339,7 @@ void VKAPI vkCmdCloneImageData(
     VkImage                                     destImage,
     VkImageLayout                               destImageLayout)
 {
+   stub();
 }
 
 void VKAPI vkCmdUpdateBuffer(
@@ -343,6 +349,7 @@ void VKAPI vkCmdUpdateBuffer(
     VkDeviceSize                                dataSize,
     const uint32_t*                             pData)
 {
+   stub();
 }
 
 void VKAPI vkCmdFillBuffer(
@@ -352,6 +359,7 @@ void VKAPI vkCmdFillBuffer(
     VkDeviceSize                                fillSize,
     uint32_t                                    data)
 {
+   stub();
 }
 
 void VKAPI vkCmdClearColorImage(
@@ -362,6 +370,7 @@ void VKAPI vkCmdClearColorImage(
     uint32_t                                    rangeCount,
     const VkImageSubresourceRange*              pRanges)
 {
+   stub();
 }
 
 void VKAPI vkCmdClearDepthStencil(
@@ -373,6 +382,7 @@ void VKAPI vkCmdClearDepthStencil(
     uint32_t                                    rangeCount,
     const VkImageSubresourceRange*              pRanges)
 {
+   stub();
 }
 
 void VKAPI vkCmdResolveImage(
@@ -384,6 +394,7 @@ void VKAPI vkCmdResolveImage(
     uint32_t                                    regionCount,
     const VkImageResolve*                       pRegions)
 {
+   stub();
 }
 
 void

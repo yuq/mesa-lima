@@ -286,7 +286,7 @@ VkResult VKAPI vkGetImageSubresourceInfo(
     size_t*                                     pDataSize,
     void*                                       pData)
 {
-   return VK_UNSUPPORTED;
+   stub_return(VK_UNSUPPORTED);
 }
 
 // Image view functions
@@ -400,5 +400,5 @@ VkResult VKAPI vkCreateDepthStencilView(
     const VkDepthStencilViewCreateInfo*         pCreateInfo,
     VkDepthStencilView*                         pView)
 {
-   return VK_UNSUPPORTED;
+   stub_return(VK_UNSUPPORTED);
 }

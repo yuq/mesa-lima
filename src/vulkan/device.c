@@ -1055,7 +1055,7 @@ VkResult VKAPI vkQueueBindObjectMemoryRange(
     VkDeviceMemory                              mem,
     VkDeviceSize                                memOffset)
 {
-   return VK_UNSUPPORTED;
+   stub_return(VK_UNSUPPORTED);
 }
 
 VkResult vkQueueBindImageMemoryRange(
@@ -1066,7 +1066,7 @@ VkResult vkQueueBindImageMemoryRange(
     VkDeviceMemory                              mem,
     VkDeviceSize                                memOffset)
 {
-   return VK_UNSUPPORTED;
+   stub_return(VK_UNSUPPORTED);
 }
 
 VkResult VKAPI vkCreateFence(
@@ -1074,7 +1074,7 @@ VkResult VKAPI vkCreateFence(
     const VkFenceCreateInfo*                    pCreateInfo,
     VkFence*                                    pFence)
 {
-   return VK_UNSUPPORTED;
+   stub_return(VK_UNSUPPORTED);
 }
 
 VkResult VKAPI vkResetFences(
@@ -1082,14 +1082,14 @@ VkResult VKAPI vkResetFences(
     uint32_t                                    fenceCount,
     VkFence*                                    pFences)
 {
-   return VK_UNSUPPORTED;
+   stub_return(VK_UNSUPPORTED);
 }
 
 VkResult VKAPI vkGetFenceStatus(
     VkDevice                                    device,
     VkFence                                     fence)
 {
-   return VK_UNSUPPORTED;
+   stub_return(VK_UNSUPPORTED);
 }
 
 VkResult VKAPI vkWaitForFences(
@@ -1099,7 +1099,7 @@ VkResult VKAPI vkWaitForFences(
     bool32_t                                    waitAll,
     uint64_t                                    timeout)
 {
-   return VK_UNSUPPORTED;
+   stub_return(VK_UNSUPPORTED);
 }
 
 // Queue semaphore functions
@@ -1109,21 +1109,21 @@ VkResult VKAPI vkCreateSemaphore(
     const VkSemaphoreCreateInfo*                pCreateInfo,
     VkSemaphore*                                pSemaphore)
 {
-   return VK_UNSUPPORTED;
+   stub_return(VK_UNSUPPORTED);
 }
 
 VkResult VKAPI vkQueueSignalSemaphore(
     VkQueue                                     queue,
     VkSemaphore                                 semaphore)
 {
-   return VK_UNSUPPORTED;
+   stub_return(VK_UNSUPPORTED);
 }
 
 VkResult VKAPI vkQueueWaitSemaphore(
     VkQueue                                     queue,
     VkSemaphore                                 semaphore)
 {
-   return VK_UNSUPPORTED;
+   stub_return(VK_UNSUPPORTED);
 }
 
 // Event functions
@@ -1133,28 +1133,28 @@ VkResult VKAPI vkCreateEvent(
     const VkEventCreateInfo*                    pCreateInfo,
     VkEvent*                                    pEvent)
 {
-   return VK_UNSUPPORTED;
+   stub_return(VK_UNSUPPORTED);
 }
 
 VkResult VKAPI vkGetEventStatus(
     VkDevice                                    device,
     VkEvent                                     event)
 {
-   return VK_UNSUPPORTED;
+   stub_return(VK_UNSUPPORTED);
 }
 
 VkResult VKAPI vkSetEvent(
     VkDevice                                    device,
     VkEvent                                     event)
 {
-   return VK_UNSUPPORTED;
+   stub_return(VK_UNSUPPORTED);
 }
 
 VkResult VKAPI vkResetEvent(
     VkDevice                                    device,
     VkEvent                                     event)
 {
-   return VK_UNSUPPORTED;
+   stub_return(VK_UNSUPPORTED);
 }
 
 // Query functions
@@ -1205,7 +1205,7 @@ VkResult VKAPI vkGetQueryPoolResults(
     void*                                       pData,
     VkQueryResultFlags                          flags)
 {
-   return VK_UNSUPPORTED;
+   stub_return(VK_UNSUPPORTED);
 }
 
 // Format capabilities
@@ -1217,7 +1217,7 @@ VkResult VKAPI vkGetFormatInfo(
     size_t*                                     pDataSize,
     void*                                       pData)
 {
-   return VK_UNSUPPORTED;
+   stub_return(VK_UNSUPPORTED);
 }
 
 // Buffer functions
@@ -1429,14 +1429,14 @@ VkResult VKAPI vkBeginDescriptorPoolUpdate(
     VkDevice                                    device,
     VkDescriptorUpdateMode                      updateMode)
 {
-   return VK_UNSUPPORTED;
+   stub_return(VK_UNSUPPORTED);
 }
 
 VkResult VKAPI vkEndDescriptorPoolUpdate(
     VkDevice                                    device,
     VkCmdBuffer                                 cmd)
 {
-   return VK_UNSUPPORTED;
+   stub_return(VK_UNSUPPORTED);
 }
 
 VkResult VKAPI vkCreateDescriptorPool(
@@ -1446,14 +1446,14 @@ VkResult VKAPI vkCreateDescriptorPool(
     const VkDescriptorPoolCreateInfo*           pCreateInfo,
     VkDescriptorPool*                           pDescriptorPool)
 {
-   return VK_UNSUPPORTED;
+   stub_return(VK_UNSUPPORTED);
 }
 
 VkResult VKAPI vkResetDescriptorPool(
     VkDevice                                    device,
     VkDescriptorPool                            descriptorPool)
 {
-   return VK_UNSUPPORTED;
+   stub_return(VK_UNSUPPORTED);
 }
 
 VkResult VKAPI vkAllocDescriptorSets(
@@ -1494,6 +1494,7 @@ void VKAPI vkClearDescriptorSets(
     uint32_t                                    count,
     const VkDescriptorSet*                      pDescriptorSets)
 {
+   stub();
 }
 
 void VKAPI vkUpdateDescriptors(
@@ -1721,7 +1722,7 @@ VkResult VKAPI vkCreateDynamicDepthStencilState(
     const VkDynamicDsStateCreateInfo*           pCreateInfo,
     VkDynamicDsState*                           pState)
 {
-   return VK_UNSUPPORTED;
+   stub_return(VK_UNSUPPORTED);
 }
 
 // Command buffer functions
@@ -2369,6 +2370,7 @@ void VKAPI vkCmdDispatch(
     uint32_t                                    y,
     uint32_t                                    z)
 {
+   stub();
 }
 
 void VKAPI vkCmdDispatchIndirect(
@@ -2376,6 +2378,7 @@ void VKAPI vkCmdDispatchIndirect(
     VkBuffer                                    buffer,
     VkDeviceSize                                offset)
 {
+   stub();
 }
 
 void VKAPI vkCmdSetEvent(
@@ -2383,6 +2386,7 @@ void VKAPI vkCmdSetEvent(
     VkEvent                                     event,
     VkPipeEvent                                 pipeEvent)
 {
+   stub();
 }
 
 void VKAPI vkCmdResetEvent(
@@ -2390,6 +2394,7 @@ void VKAPI vkCmdResetEvent(
     VkEvent                                     event,
     VkPipeEvent                                 pipeEvent)
 {
+   stub();
 }
 
 void VKAPI vkCmdWaitEvents(
@@ -2400,6 +2405,7 @@ void VKAPI vkCmdWaitEvents(
     uint32_t                                    memBarrierCount,
     const void**                                ppMemBarriers)
 {
+   stub();
 }
 
 void VKAPI vkCmdPipelineBarrier(
@@ -2410,6 +2416,7 @@ void VKAPI vkCmdPipelineBarrier(
     uint32_t                                    memBarrierCount,
     const void**                                ppMemBarriers)
 {
+   stub();
 }
 
 static void
@@ -2471,6 +2478,7 @@ void VKAPI vkCmdResetQueryPool(
     uint32_t                                    startQuery,
     uint32_t                                    queryCount)
 {
+   stub();
 }
 
 #define TIMESTAMP 0x44070
@@ -2515,6 +2523,7 @@ void VKAPI vkCmdCopyQueryPoolResults(
     VkDeviceSize                                destStride,
     VkQueryResultFlags                          flags)
 {
+   stub();
 }
 
 void VKAPI vkCmdInitAtomicCounters(
@@ -2524,6 +2533,7 @@ void VKAPI vkCmdInitAtomicCounters(
     uint32_t                                    counterCount,
     const uint32_t*                             pData)
 {
+   stub();
 }
 
 void VKAPI vkCmdLoadAtomicCounters(
@@ -2534,6 +2544,7 @@ void VKAPI vkCmdLoadAtomicCounters(
     VkBuffer                                    srcBuffer,
     VkDeviceSize                                srcOffset)
 {
+   stub();
 }
 
 void VKAPI vkCmdSaveAtomicCounters(
@@ -2544,6 +2555,7 @@ void VKAPI vkCmdSaveAtomicCounters(
     VkBuffer                                    destBuffer,
     VkDeviceSize                                destOffset)
 {
+   stub();
 }
 
 VkResult VKAPI vkCreateFramebuffer(
@@ -2665,4 +2677,5 @@ void VKAPI vkCmdEndRenderPass(
     VkCmdBuffer                                 cmdBuffer,
     VkRenderPass                                renderPass)
 {
+   stub();
 }
