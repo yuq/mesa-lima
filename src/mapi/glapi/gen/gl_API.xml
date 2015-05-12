@@ -6672,7 +6672,7 @@
         <param name="type" type="GLenum"/>
         <param name="stride" type="GLsizei"/>
         <param name="pointer" type="const GLvoid *"/>
-        <glx handcode="true"/>
+        <glx ignore="true" handcode="true"/>
     </function>
 
     <function name="VertexBlendARB" exec="skip">
@@ -6738,7 +6738,7 @@
         <param name="type" type="GLenum"/>
         <param name="stride" type="GLsizei"/>
         <param name="pointer" type="const GLvoid *"/>
-        <glx handcode="true"/>
+        <glx ignore="true" handcode="true"/>
     </function>
 </category>
 
