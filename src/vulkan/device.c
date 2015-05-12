@@ -323,6 +323,8 @@ VkResult VKAPI vkCreateDevice(
 
    pthread_mutex_init(&device->mutex, NULL);
 
+   anv_device_init_meta(device);
+
    *pDevice = (VkDevice) device;
 
    return VK_SUCCESS;
@@ -1739,7 +1741,9 @@ VkResult VKAPI vkCreateCommandBuffer(
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
    cmd_buffer->device = device;
-   
+   cmd_buffer->rs_state = NULL;
+   cmd_buffer->vp_state = NULL;
+
    result = anv_batch_init(&cmd_buffer->batch, device);
    if (result != VK_SUCCESS)
       goto fail;
@@ -2008,7 +2012,9 @@ void VKAPI vkCmdBindDynamicStateObject(
    switch (stateBindPoint) {
    case VK_STATE_BIND_POINT_VIEWPORT:
       vp_state = (struct anv_dynamic_vp_state *) dynamicState;
-
+      /* We emit state immediately, but set cmd_buffer->vp_state to indicate
+       * that vp state has been set in this command buffer. */
+      cmd_buffer->vp_state = vp_state;
       anv_batch_emit(&cmd_buffer->batch, GEN8_3DSTATE_SCISSOR_STATE_POINTERS,
                      .ScissorRectPointer = vp_state->scissor.offset);
       anv_batch_emit(&cmd_buffer->batch, GEN8_3DSTATE_VIEWPORT_STATE_POINTERS_CC,
@@ -2571,6 +2577,27 @@ VkResult VKAPI vkCreateFramebuffer(
    framebuffer->height = pCreateInfo->height;
    framebuffer->layers = pCreateInfo->layers;
 
+   vkCreateDynamicViewportState((VkDevice) device,
+                                &(VkDynamicVpStateCreateInfo) {
+                                   .sType = VK_STRUCTURE_TYPE_DYNAMIC_VP_STATE_CREATE_INFO,
+                                   .viewportAndScissorCount = 2,
+                                   .pViewports = (VkViewport[]) {
+                                      {
+                                         .originX = 0,
+                                         .originY = 0,
+                                         .width = pCreateInfo->width,
+                                         .height = pCreateInfo->height,
+                                         .minDepth = 0,
+                                         .maxDepth = 1
+                                      },
+                                   },
+                                   .pScissors = (VkRect[]) {
+                                      { {  0,  0 },
+                                        { pCreateInfo->width, pCreateInfo->height } },
+                                   }
+                                },
+                                &framebuffer->vp_state);
+
    *pFramebuffer = (VkFramebuffer) framebuffer;
 
    return VK_SUCCESS;
@@ -2583,15 +2610,28 @@ VkResult VKAPI vkCreateRenderPass(
 {
    struct anv_device *device = (struct anv_device *) _device;
    struct anv_render_pass *pass;
+   size_t size;
 
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO);
 
-   pass = anv_device_alloc(device, sizeof(*pass), 8,
+   size = sizeof(*pass) +
+      pCreateInfo->layers * sizeof(struct anv_render_pass_layer);
+   pass = anv_device_alloc(device, size, 8,
                            VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
    if (pass == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
    pass->render_area = pCreateInfo->renderArea;
+
+   pass->num_layers = pCreateInfo->layers;
+
+   pass->num_clear_layers = 0;
+   for (uint32_t i = 0; i < pCreateInfo->layers; i++) {
+      pass->layers[i].color_load_op = pCreateInfo->pColorLoadOps[i];
+      pass->layers[i].clear_color = pCreateInfo->pColorLoadClearValues[i];
+      if (pass->layers[i].color_load_op == VK_ATTACHMENT_LOAD_OP_CLEAR)
+         pass->num_clear_layers++;
+   }
 
    *pRenderPass = (VkRenderPass) pass;
 
@@ -2617,6 +2657,8 @@ void VKAPI vkCmdBeginRenderPass(
                      pass->render_area.offset.x + pass->render_area.extent.width - 1,
                   .DrawingRectangleOriginY = 0,
                   .DrawingRectangleOriginX = 0);
+
+   anv_cmd_buffer_clear(cmd_buffer, pass);
 }
 
 void VKAPI vkCmdEndRenderPass(

@@ -245,6 +245,11 @@ struct anv_instance {
     struct anv_physical_device                  physicalDevice;
 };
 
+struct anv_clear_state {
+   VkPipeline                                   pipeline;
+   VkDynamicRsState                             rs_state;
+};
+
 struct anv_device {
     struct anv_instance *                       instance;
     uint32_t                                    chipset_id;
@@ -260,6 +265,8 @@ struct anv_device {
     struct anv_block_pool                       instruction_block_pool;
     struct anv_block_pool                       surface_state_block_pool;
     struct anv_state_pool                       surface_state_pool;
+
+    struct anv_clear_state                      clear_state;
 
     struct anv_compiler *                       compiler;
     struct anv_aub_writer *                     aub_writer;
@@ -486,6 +493,7 @@ struct anv_cmd_buffer {
    struct anv_pipeline *                        pipeline;
    struct anv_framebuffer *                     framebuffer;
    struct anv_dynamic_rs_state *                rs_state;
+   struct anv_dynamic_vp_state *                vp_state;
 };
 
 void anv_cmd_buffer_dump(struct anv_cmd_buffer *cmd_buffer);
@@ -604,11 +612,29 @@ struct anv_framebuffer {
    uint32_t                                     width;
    uint32_t                                     height;
    uint32_t                                     layers;
+
+   /* Viewport for clears */
+   VkDynamicVpState                             vp_state;
+};
+
+struct anv_render_pass_layer {
+   VkAttachmentLoadOp                           color_load_op;
+   VkClearColor                                 clear_color;
 };
 
 struct anv_render_pass {
    VkRect                                       render_area;
+
+   uint32_t                                     num_clear_layers;
+   uint32_t                                     num_layers;
+   struct anv_render_pass_layer                 layers[0];
 };
+
+void anv_device_init_meta(struct anv_device *device);
+
+void
+anv_cmd_buffer_clear(struct anv_cmd_buffer *cmd_buffer,
+                     struct anv_render_pass *pass);
 
 
 #ifdef __cplusplus
