@@ -941,6 +941,7 @@ fs_generator::generate_ddy(enum opcode opcode,
       brw_push_insn_state(p);
       brw_set_default_access_mode(p, BRW_ALIGN_16);
       if (unroll_to_simd8) {
+         brw_set_default_exec_size(p, BRW_EXECUTE_8);
          brw_set_default_compression_control(p, BRW_COMPRESSION_NONE);
          if (negate_value) {
             brw_ADD(p, firsthalf(dst), firsthalf(src1), negate(firsthalf(src0)));
