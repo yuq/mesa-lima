@@ -432,9 +432,7 @@ brw_miptree_get_horizontal_slice_pitch(const struct brw_context *brw,
                                        const struct intel_mipmap_tree *mt,
                                        unsigned level)
 {
-   assert(brw->gen < 9);
-
-   if (mt->target == GL_TEXTURE_3D ||
+   if ((brw->gen < 9 && mt->target == GL_TEXTURE_3D) ||
        (brw->gen == 4 && mt->target == GL_TEXTURE_CUBE_MAP)) {
       return ALIGN(minify(mt->physical_width0, level), mt->align_w);
    } else {
