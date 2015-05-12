@@ -410,8 +410,7 @@ _eglCreateAPIsString(_EGLDisplay *dpy)
 static void
 _eglComputeVersion(_EGLDisplay *disp)
 {
-   disp->VersionMajor = 1;
-   disp->VersionMinor = 4;
+   disp->Version = 14;
 }
 
 /**
@@ -454,14 +453,14 @@ eglInitialize(EGLDisplay dpy, EGLint *major, EGLint *minor)
       _eglCreateExtensionsString(disp);
       _eglCreateAPIsString(disp);
       _eglsnprintf(disp->VersionString, sizeof(disp->VersionString),
-              "%d.%d (%s)", disp->VersionMajor, disp->VersionMinor,
+              "%d.%d (%s)", disp->Version / 10, disp->Version % 10,
               disp->Driver->Name);
    }
 
    /* Update applications version of major and minor if not NULL */
    if ((major != NULL) && (minor != NULL)) {
-      *major = disp->VersionMajor;
-      *minor = disp->VersionMinor;
+      *major = disp->Version / 10;
+      *minor = disp->Version % 10;
    }
 
    RETURN_EGL_SUCCESS(disp, EGL_TRUE);
