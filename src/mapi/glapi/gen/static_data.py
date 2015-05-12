@@ -545,7 +545,6 @@ functions = [
    "ClientActiveTexture",
    "ClientActiveTextureARB",
    "ClientWaitSync",
-   "ClipControl",
    "ClipPlane",
    "ClipPlanef",
    "ClipPlanex",
