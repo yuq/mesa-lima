@@ -1255,8 +1255,8 @@ eglCreateImageKHR(EGLDisplay dpy, EGLContext ctx, EGLenum target,
 }
 
 
-static EGLBoolean EGLAPIENTRY
-eglDestroyImageKHR(EGLDisplay dpy, EGLImage image)
+EGLBoolean EGLAPIENTRY
+eglDestroyImage(EGLDisplay dpy, EGLImage image)
 {
    _EGLDisplay *disp = _eglLockDisplay(dpy);
    _EGLImage *img = _eglLookupImage(image, disp);
@@ -1327,15 +1327,15 @@ eglCreateSyncKHR(EGLDisplay dpy, EGLenum type, const EGLint *attrib_list)
 }
 
 
-static EGLSync EGLAPIENTRY
-eglCreateSync64KHR(EGLDisplay dpy, EGLenum type, const EGLAttrib *attrib_list)
+EGLSync EGLAPIENTRY
+eglCreateSync(EGLDisplay dpy, EGLenum type, const EGLAttrib *attrib_list)
 {
    return _eglCreateSync(dpy, type, NULL, attrib_list, EGL_TRUE);
 }
 
 
-static EGLBoolean EGLAPIENTRY
-eglDestroySyncKHR(EGLDisplay dpy, EGLSync sync)
+EGLBoolean EGLAPIENTRY
+eglDestroySync(EGLDisplay dpy, EGLSync sync)
 {
    _EGLDisplay *disp = _eglLockDisplay(dpy);
    _EGLSync *s = _eglLookupSync(sync, disp);
@@ -1353,8 +1353,8 @@ eglDestroySyncKHR(EGLDisplay dpy, EGLSync sync)
 }
 
 
-static EGLint EGLAPIENTRY
-eglClientWaitSyncKHR(EGLDisplay dpy, EGLSync sync, EGLint flags, EGLTime timeout)
+EGLint EGLAPIENTRY
+eglClientWaitSync(EGLDisplay dpy, EGLSync sync, EGLint flags, EGLTime timeout)
 {
    _EGLDisplay *disp = _eglLockDisplay(dpy);
    _EGLSync *s = _eglLookupSync(sync, disp);
@@ -1717,15 +1717,19 @@ eglGetProcAddress(const char *procname)
       { "eglWaitClient", (_EGLProc) eglWaitClient },
       { "eglWaitGL", (_EGLProc) eglWaitGL },
       { "eglWaitNative", (_EGLProc) eglWaitNative },
+      { "eglCreateSync", (_EGLProc) eglCreateSync },
+      { "eglDestroySync", (_EGLProc) eglDestroySync },
+      { "eglClientWaitSync", (_EGLProc) eglClientWaitSync },
+      { "eglDestroyImage", (_EGLProc) eglDestroyImage },
 #ifdef EGL_MESA_drm_display
       { "eglGetDRMDisplayMESA", (_EGLProc) eglGetDRMDisplayMESA },
 #endif
       { "eglCreateImageKHR", (_EGLProc) eglCreateImageKHR },
-      { "eglDestroyImageKHR", (_EGLProc) eglDestroyImageKHR },
+      { "eglDestroyImageKHR", (_EGLProc) eglDestroyImage },
       { "eglCreateSyncKHR", (_EGLProc) eglCreateSyncKHR },
-      { "eglCreateSync64KHR", (_EGLProc) eglCreateSync64KHR },
-      { "eglDestroySyncKHR", (_EGLProc) eglDestroySyncKHR },
-      { "eglClientWaitSyncKHR", (_EGLProc) eglClientWaitSyncKHR },
+      { "eglCreateSync64KHR", (_EGLProc) eglCreateSync },
+      { "eglDestroySyncKHR", (_EGLProc) eglDestroySync },
+      { "eglClientWaitSyncKHR", (_EGLProc) eglClientWaitSync },
       { "eglWaitSyncKHR", (_EGLProc) eglWaitSyncKHR },
       { "eglSignalSyncKHR", (_EGLProc) eglSignalSyncKHR },
       { "eglGetSyncAttribKHR", (_EGLProc) eglGetSyncAttribKHR },
