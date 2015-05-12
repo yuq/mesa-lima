@@ -280,9 +280,6 @@ prepare_ps_constants_userbuf(struct NineDevice9 *device)
     cb.buffer_size = device->state.ps->const_used_size;
     cb.user_buffer = device->state.ps_const_f;
 
-    if (!cb.buffer_size)
-        return;
-
     if (state->changed.ps_const_i) {
         int *idst = (int *)&state->ps_const_f[4 * device->max_ps_const_f];
         memcpy(idst, state->ps_const_i, sizeof(state->ps_const_i));
@@ -302,6 +299,27 @@ prepare_ps_constants_userbuf(struct NineDevice9 *device)
 
         cb.user_buffer = device->state.ps_lconstf_temp;
     }
+
+    if (state->ps->byte_code.version < 0x30 &&
+        state->rs[D3DRS_FOGENABLE]) {
+        float *dst = &state->ps_lconstf_temp[4 * 32];
+        if (cb.user_buffer != state->ps_lconstf_temp) {
+            memcpy(state->ps_lconstf_temp, cb.user_buffer, cb.buffer_size);
+            cb.user_buffer = state->ps_lconstf_temp;
+        }
+
+        d3dcolor_to_rgba(dst, state->rs[D3DRS_FOGCOLOR]);
+        if (state->rs[D3DRS_FOGTABLEMODE] == D3DFOG_LINEAR) {
+            dst[4] = asfloat(state->rs[D3DRS_FOGEND]);
+            dst[5] = 1.0f / (asfloat(state->rs[D3DRS_FOGEND]) - asfloat(state->rs[D3DRS_FOGSTART]));
+        } else if (state->rs[D3DRS_FOGTABLEMODE] != D3DFOG_NONE) {
+            dst[4] = asfloat(state->rs[D3DRS_FOGDENSITY]);
+        }
+        cb.buffer_size = 4 * 4 * 34;
+    }
+
+    if (!cb.buffer_size)
+        return;
 
     if (!device->driver_caps.user_cbufs) {
         u_upload_data(device->constbuf_uploader,
@@ -931,7 +949,8 @@ commit_ps(struct NineDevice9 *device)
     NINE_STATE_PS |             \
     NINE_STATE_BLEND_COLOR |    \
     NINE_STATE_STENCIL_REF |    \
-    NINE_STATE_SAMPLE_MASK)
+    NINE_STATE_SAMPLE_MASK |    \
+    NINE_STATE_FOG_SHADER)
 
 #define NINE_STATE_FREQ_GROUP_1 ~NINE_STATE_FREQ_GROUP_0
 
@@ -996,13 +1015,13 @@ nine_update_state(struct NineDevice9 *device)
         if (group & NINE_STATE_BLEND)
             prepare_blend(device);
 
-        if (group & (NINE_STATE_VS | NINE_STATE_TEXTURE))
+        if (group & (NINE_STATE_VS | NINE_STATE_TEXTURE | NINE_STATE_FOG_SHADER))
             group |= prepare_vs(device, (group & NINE_STATE_VS) != 0);
 
         if (group & NINE_STATE_RASTERIZER)
             prepare_rasterizer(device);
 
-        if (group & (NINE_STATE_PS | NINE_STATE_TEXTURE))
+        if (group & (NINE_STATE_PS | NINE_STATE_TEXTURE | NINE_STATE_FOG_SHADER))
             group |= prepare_ps(device, (group & NINE_STATE_PS) != 0);
 
         if (group & NINE_STATE_BLEND_COLOR) {
@@ -1486,13 +1505,13 @@ const uint32_t nine_render_state_group[NINED3DRS_LAST + 1] =
     [D3DRS_ALPHAFUNC] = NINE_STATE_DSA,
     [D3DRS_DITHERENABLE] = NINE_STATE_BLEND,
     [D3DRS_ALPHABLENDENABLE] = NINE_STATE_BLEND,
-    [D3DRS_FOGENABLE] = NINE_STATE_FF_OTHER,
+    [D3DRS_FOGENABLE] = NINE_STATE_FF_OTHER | NINE_STATE_FOG_SHADER | NINE_STATE_PS_CONST,
     [D3DRS_SPECULARENABLE] = NINE_STATE_FF_LIGHTING,
-    [D3DRS_FOGCOLOR] = NINE_STATE_FF_OTHER,
-    [D3DRS_FOGTABLEMODE] = NINE_STATE_FF_OTHER,
-    [D3DRS_FOGSTART] = NINE_STATE_FF_OTHER,
-    [D3DRS_FOGEND] = NINE_STATE_FF_OTHER,
-    [D3DRS_FOGDENSITY] = NINE_STATE_FF_OTHER,
+    [D3DRS_FOGCOLOR] = NINE_STATE_FF_OTHER | NINE_STATE_PS_CONST,
+    [D3DRS_FOGTABLEMODE] = NINE_STATE_FF_OTHER | NINE_STATE_FOG_SHADER | NINE_STATE_PS_CONST,
+    [D3DRS_FOGSTART] = NINE_STATE_FF_OTHER | NINE_STATE_PS_CONST,
+    [D3DRS_FOGEND] = NINE_STATE_FF_OTHER | NINE_STATE_PS_CONST,
+    [D3DRS_FOGDENSITY] = NINE_STATE_FF_OTHER | NINE_STATE_PS_CONST,
     [D3DRS_RANGEFOGENABLE] = NINE_STATE_FF_OTHER,
     [D3DRS_STENCILENABLE] = NINE_STATE_DSA,
     [D3DRS_STENCILFAIL] = NINE_STATE_DSA,

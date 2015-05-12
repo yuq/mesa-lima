@@ -80,6 +80,9 @@ NineVertexShader9_UpdateKey( struct NineVertexShader9 *vs,
     samplers_shadow &= vs->sampler_mask;
     key = samplers_shadow;
 
+    if (vs->byte_code.version < 0x30)
+        key |= state->rs[D3DRS_FOGENABLE] << 8;
+
     res = vs->last_key != key;
     if (res)
         vs->next_key = key;

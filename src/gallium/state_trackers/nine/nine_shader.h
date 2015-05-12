@@ -59,6 +59,9 @@ struct nine_shader_info
     uint16_t sampler_mask_shadow; /* in, which samplers use depth compare */
     uint8_t rt_mask; /* out, which render targets are being written */
 
+    uint8_t fog_enable;
+    uint8_t fog_mode;
+
     unsigned const_i_base; /* in vec4 (16 byte) units */
     unsigned const_b_base; /* in vec4 (16 byte) units */
     unsigned const_used_size;
@@ -133,6 +136,50 @@ nine_shader_variants_free(struct nine_shader_variant *list)
 {
     while (list->next) {
         struct nine_shader_variant *ptr = list->next;
+        list->next = ptr->next;
+        FREE(ptr);
+    }
+}
+
+struct nine_shader_variant64
+{
+    struct nine_shader_variant64 *next;
+    void *cso;
+    uint64_t key;
+};
+
+static inline void *
+nine_shader_variant_get64(struct nine_shader_variant64 *list, uint64_t key)
+{
+    while (list->key != key && list->next)
+        list = list->next;
+    if (list->key == key)
+        return list->cso;
+    return NULL;
+}
+
+static inline boolean
+nine_shader_variant_add64(struct nine_shader_variant64 *list,
+                          uint64_t key, void *cso)
+{
+    while (list->next) {
+        assert(list->key != key);
+        list = list->next;
+    }
+    list->next = MALLOC_STRUCT(nine_shader_variant64);
+    if (!list->next)
+        return FALSE;
+    list->next->next = NULL;
+    list->next->key = key;
+    list->next->cso = cso;
+    return TRUE;
+}
+
+static inline void
+nine_shader_variants_free64(struct nine_shader_variant64 *list)
+{
+    while (list->next) {
+        struct nine_shader_variant64 *ptr = list->next;
         list->next = ptr->next;
         FREE(ptr);
     }

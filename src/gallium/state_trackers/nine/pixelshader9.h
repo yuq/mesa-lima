@@ -33,7 +33,7 @@ struct nine_lconstf;
 struct NinePixelShader9
 {
     struct NineUnknown base;
-    struct nine_shader_variant variant;
+    struct nine_shader_variant64 variant;
 
     struct {
         const DWORD *tokens;
@@ -50,10 +50,10 @@ struct NinePixelShader9
     uint64_t ff_key[6];
     void *ff_cso;
 
-    uint32_t last_key;
+    uint64_t last_key;
     void *last_cso;
 
-    uint32_t next_key;
+    uint64_t next_key;
 };
 static inline struct NinePixelShader9 *
 NinePixelShader9( void *data )
@@ -67,7 +67,7 @@ NinePixelShader9_UpdateKey( struct NinePixelShader9 *ps,
 {
     uint16_t samplers_shadow;
     uint32_t samplers_ps1_types;
-    uint32_t key;
+    uint64_t key;
     BOOL res;
 
     if (unlikely(ps->byte_code.version < 0x20)) {
@@ -83,6 +83,11 @@ NinePixelShader9_UpdateKey( struct NinePixelShader9 *ps,
     } else {
         samplers_shadow = (uint16_t)((state->samplers_shadow & NINE_PS_SAMPLERS_MASK) >> NINE_SAMPLER_PS(0));
         key = samplers_shadow & ps->sampler_mask;
+    }
+
+    if (ps->byte_code.version < 0x30) {
+        key |= ((uint64_t)state->rs[D3DRS_FOGENABLE]) << 32;
+        key |= ((uint64_t)state->rs[D3DRS_FOGTABLEMODE]) << 33;
     }
 
     res = ps->last_key != key;

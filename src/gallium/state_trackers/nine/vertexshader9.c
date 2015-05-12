@@ -60,6 +60,7 @@ NineVertexShader9_ctor( struct NineVertexShader9 *This,
     info.const_b_base = NINE_CONST_B_BASE(device->max_vs_const_f) / 16;
     info.sampler_mask_shadow = 0x0;
     info.sampler_ps1xtypes = 0x0;
+    info.fog_enable = 0;
 
     hr = nine_translate_shader(device, &info);
     if (FAILED(hr))
@@ -161,6 +162,7 @@ NineVertexShader9_GetVariant( struct NineVertexShader9 *This )
         info.const_b_base = NINE_CONST_B_BASE(device->max_vs_const_f) / 16;
         info.byte_code = This->byte_code.tokens;
         info.sampler_mask_shadow = key & 0xf;
+        info.fog_enable = device->state.rs[D3DRS_FOGENABLE];
 
         hr = nine_translate_shader(This->base.device, &info);
         if (FAILED(hr))

@@ -3199,9 +3199,50 @@ shader_add_ps_fog_stage(struct shader_translator *tx, struct ureg_src src_col)
 {
     struct ureg_program *ureg = tx->ureg;
     struct ureg_dst oCol0 = ureg_DECL_output(ureg, TGSI_SEMANTIC_COLOR, 0);
+    struct ureg_src fog_end, fog_coeff, fog_density;
+    struct ureg_src fog_vs, depth, fog_color;
+    struct ureg_dst fog_factor;
 
-    /* TODO: fog computation */
-    ureg_MOV(ureg, oCol0, src_col);
+    if (!tx->info->fog_enable) {
+        ureg_MOV(ureg, oCol0, src_col);
+        return;
+    }
+
+    if (tx->info->fog_mode != D3DFOG_NONE)
+        depth = ureg_scalar(ureg_DECL_fs_input(ureg, TGSI_SEMANTIC_POSITION, 0,
+                                              TGSI_INTERPOLATE_LINEAR),
+                                              TGSI_SWIZZLE_Z);
+
+    nine_info_mark_const_f_used(tx->info, 33);
+    fog_color = NINE_CONSTANT_SRC(32);
+    fog_factor = tx_scratch_scalar(tx);
+
+    if (tx->info->fog_mode == D3DFOG_LINEAR) {
+        fog_end = NINE_CONSTANT_SRC_SWIZZLE(33, X);
+        fog_coeff = NINE_CONSTANT_SRC_SWIZZLE(33, Y);
+        ureg_SUB(ureg, fog_factor, fog_end, depth);
+        ureg_MUL(ureg, ureg_saturate(fog_factor), tx_src_scalar(fog_factor), fog_coeff);
+    } else if (tx->info->fog_mode == D3DFOG_EXP) {
+        fog_density = NINE_CONSTANT_SRC_SWIZZLE(33, X);
+        ureg_MUL(ureg, fog_factor, depth, fog_density);
+        ureg_MUL(ureg, fog_factor, tx_src_scalar(fog_factor), ureg_imm1f(ureg, -1.442695f));
+        ureg_EX2(ureg, fog_factor, tx_src_scalar(fog_factor));
+    } else if (tx->info->fog_mode == D3DFOG_EXP2) {
+        fog_density = NINE_CONSTANT_SRC_SWIZZLE(33, X);
+        ureg_MUL(ureg, fog_factor, depth, fog_density);
+        ureg_MUL(ureg, fog_factor, tx_src_scalar(fog_factor), tx_src_scalar(fog_factor));
+        ureg_MUL(ureg, fog_factor, tx_src_scalar(fog_factor), ureg_imm1f(ureg, -1.442695f));
+        ureg_EX2(ureg, fog_factor, tx_src_scalar(fog_factor));
+    } else {
+        fog_vs = ureg_scalar(ureg_DECL_fs_input(ureg, TGSI_SEMANTIC_FOG, 0,
+                                            TGSI_INTERPOLATE_PERSPECTIVE),
+                                            TGSI_SWIZZLE_X);
+        ureg_MOV(ureg, fog_factor, fog_vs);
+    }
+
+    ureg_LRP(ureg, ureg_writemask(oCol0, TGSI_WRITEMASK_XYZ),
+             tx_src_scalar(fog_factor), src_col, fog_color);
+    ureg_MOV(ureg, ureg_writemask(oCol0, TGSI_WRITEMASK_W), src_col);
 }
 
 #define GET_CAP(n) device->screen->get_param( \
@@ -3285,7 +3326,7 @@ nine_translate_shader(struct NineDevice9 *device, struct nine_shader_info *info)
         }
     }
 
-    if (IS_VS && tx->version.major < 3 && ureg_dst_is_undef(tx->regs.oFog)) {
+    if (IS_VS && tx->version.major < 3 && ureg_dst_is_undef(tx->regs.oFog) && info->fog_enable) {
         tx->regs.oFog = ureg_DECL_output(tx->ureg, TGSI_SEMANTIC_FOG, 0);
         ureg_MOV(tx->ureg, ureg_writemask(tx->regs.oFog, TGSI_WRITEMASK_X), ureg_imm1f(tx->ureg, 0.0f));
     }
