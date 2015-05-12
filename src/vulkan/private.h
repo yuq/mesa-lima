@@ -390,6 +390,8 @@ __gen_combine_address(struct anv_batch *batch, void *location,
    }
 }
    
+#include "gen7_pack.h"
+#include "gen75_pack.h"
 #undef GEN8_3DSTATE_MULTISAMPLE
 #include "gen8_pack.h"
 

@@ -25,6 +25,8 @@
 #include <unistd.h>
 #include <fcntl.h>
 
+#include "private.h"
+
 #include <brw_context.h>
 #include <brw_wm.h> /* brw_new_shader_program is here */
 
@@ -35,8 +37,6 @@
 #include <mesa/main/fbobject.h>
 #include <mesa/program/program.h>
 #include <glsl/program.h>
-
-#include "private.h"
 
 static void
 fail_if(int cond, const char *format, ...)
