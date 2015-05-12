@@ -579,7 +579,7 @@ VkResult VKAPI vkQueueSubmit(
       if (!device->no_hw) {
          ret = anv_gem_execbuffer(device, &cmd_buffer->execbuf);
          if (ret != 0)
-            goto fail;
+            return vk_error(VK_ERROR_UNKNOWN);
 
          for (uint32_t i = 0; i < cmd_buffer->bo_count; i++)
             cmd_buffer->exec2_bos[i]->offset = cmd_buffer->exec2_objects[i].offset;
@@ -589,11 +589,6 @@ VkResult VKAPI vkQueueSubmit(
    }
 
    return VK_SUCCESS;
-
- fail:
-   pthread_mutex_unlock(&device->mutex);
-
-   return vk_error(VK_ERROR_UNKNOWN);
 }
 
 VkResult VKAPI vkQueueAddMemReferences(
