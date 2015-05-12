@@ -535,12 +535,9 @@ const struct function gl_core_functions_possible[] = {
    { "glGetInteger64i_v", 32, -1 },
    { "glGetBufferParameteri64v", 32, -1 },
    { "glFramebufferTexture", 32, -1 },
-
-   /* GL_ARB_geometry_shader4 */
-   { "glProgramParameteriARB", 32, -1 },
-   { "glFramebufferTextureARB", 32, -1 },
-   { "glFramebufferTextureLayerARB", 32, -1 },
-   { "glFramebufferTextureFaceARB", 32, -1 },
+   { "glProgramParameteri", 32, -1 },
+   { "glFramebufferTexture", 32, -1 },
+   { "glFramebufferTextureLayer", 32, -1 },
 
    /* GL 3.3 */
    { "glVertexAttribDivisor", 33, -1 },
