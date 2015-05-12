@@ -137,6 +137,10 @@ root_resource::root_resource(clover::device &dev, memory_obj &obj,
                 PIPE_BIND_TRANSFER_READ |
                 PIPE_BIND_TRANSFER_WRITE);
 
+   if (obj.flags() & CL_MEM_ALLOC_HOST_PTR) {
+      info.usage = PIPE_USAGE_STAGING;
+   }
+
    pipe = dev.pipe->resource_create(dev.pipe, &info);
    if (!pipe)
       throw error(CL_OUT_OF_RESOURCES);
