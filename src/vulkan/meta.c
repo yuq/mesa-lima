@@ -31,8 +31,8 @@
 
 #define GLSL(src) "#version 330\n" #src
 
-void
-anv_device_init_meta(struct anv_device *device)
+static void
+anv_device_init_meta_clear_state(struct anv_device *device)
 {
    VkPipelineIaStateCreateInfo ia_create_info = {
       .sType = VK_STRUCTURE_TYPE_PIPELINE_IA_STATE_CREATE_INFO,
@@ -384,4 +384,10 @@ void VKAPI vkCmdResolveImage(
     uint32_t                                    regionCount,
     const VkImageResolve*                       pRegions)
 {
+}
+
+void
+anv_device_init_meta(struct anv_device *device)
+{
+   anv_device_init_meta_clear_state(device);
 }
