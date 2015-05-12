@@ -1400,6 +1400,17 @@ eglWaitSyncKHR(EGLDisplay dpy, EGLSync sync, EGLint flags)
 }
 
 
+EGLBoolean EGLAPIENTRY
+eglWaitSync(EGLDisplay dpy, EGLSync sync, EGLint flags)
+{
+   /* The KHR version returns EGLint, while the core version returns
+    * EGLBoolean. In both cases, the return values can only be EGL_FALSE and
+    * EGL_TRUE.
+    */
+   return eglWaitSyncKHR(dpy, sync, flags);
+}
+
+
 static EGLBoolean EGLAPIENTRY
 eglSignalSyncKHR(EGLDisplay dpy, EGLSync sync, EGLenum mode)
 {
@@ -1720,6 +1731,7 @@ eglGetProcAddress(const char *procname)
       { "eglCreateSync", (_EGLProc) eglCreateSync },
       { "eglDestroySync", (_EGLProc) eglDestroySync },
       { "eglClientWaitSync", (_EGLProc) eglClientWaitSync },
+      { "eglWaitSync", (_EGLProc) eglWaitSync },
       { "eglDestroyImage", (_EGLProc) eglDestroyImage },
 #ifdef EGL_MESA_drm_display
       { "eglGetDRMDisplayMESA", (_EGLProc) eglGetDRMDisplayMESA },
