@@ -31,7 +31,12 @@ extern "C" {
 PUBLIC bool
 opencl_dri_event_add_ref(cl_event event)
 {
-   return clRetainEvent(event) == CL_SUCCESS;
+   /* This should fail if the event hasn't been created by
+    * clEnqueueReleaseGLObjects or clEnqueueReleaseEGLObjects.
+    *
+    * TODO: implement the CL functions
+    */
+   return false; /*return clRetainEvent(event) == CL_SUCCESS;*/
 }
 
 PUBLIC bool
