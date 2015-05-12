@@ -201,7 +201,7 @@ emit_rs_state(struct anv_pipeline *pipeline, VkPipelineRsStateCreateInfo *info,
                   .CullMode = vk_to_gen_cullmode[info->cullMode],
                   .FrontFaceFillMode = vk_to_gen_fillmode[info->fillMode],
                   .BackFaceFillMode = vk_to_gen_fillmode[info->fillMode],
-                  .ScissorRectangleEnable = true,
+                  .ScissorRectangleEnable = !(extra && extra->disable_scissor),
                   .ViewportZClipTestEnable = info->depthClipEnable);
 
    anv_batch_emit(&pipeline->batch, GEN8_3DSTATE_SBE,

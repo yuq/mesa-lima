@@ -546,6 +546,7 @@ struct anv_pipeline {
 struct anv_pipeline_create_info {
    bool                                         use_repclear;
    bool                                         disable_viewport;
+   bool                                         disable_scissor;
    bool                                         use_rectlist;
 };
 
