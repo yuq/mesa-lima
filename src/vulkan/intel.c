@@ -67,7 +67,7 @@ VkResult VKAPI vkCreateDmaBufImageINTEL(
       goto fail_mem;
    }
 
-   image->mem = mem;
+   image->bo = &mem->bo;
    image->offset = 0;
    image->type = VK_IMAGE_TYPE_2D;
    image->extent = pCreateInfo->extent;

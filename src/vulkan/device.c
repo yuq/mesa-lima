@@ -1028,12 +1028,12 @@ VkResult VKAPI vkQueueBindObjectMemory(
    switch (objType) {
    case VK_OBJECT_TYPE_BUFFER:
       buffer = (struct anv_buffer *) object;
-      buffer->mem = mem;
+      buffer->bo = &mem->bo;
       buffer->offset = memOffset;
       break;
    case VK_OBJECT_TYPE_IMAGE:
       image = (struct anv_image *) object;
-      image->mem = mem;
+      image->bo = &mem->bo;
       image->offset = memOffset;
       break;
    default:
@@ -1236,7 +1236,7 @@ VkResult VKAPI vkCreateBuffer(
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
    buffer->size = pCreateInfo->size;
-   buffer->mem = NULL;
+   buffer->bo = NULL;
    buffer->offset = 0;
 
    *pBuffer = (VkBuffer) buffer;
@@ -2073,7 +2073,7 @@ void VKAPI vkCmdBindIndexBuffer(
    anv_batch_emit(&cmd_buffer->batch, GEN8_3DSTATE_INDEX_BUFFER,
                   .IndexFormat = vk_to_gen_index_type[indexType],
                   .MemoryObjectControlState = 0,
-                  .BufferStartingAddress = { &buffer->mem->bo, buffer->offset + offset },
+                  .BufferStartingAddress = { buffer->bo, buffer->offset + offset },
                   .BufferSize = buffer->size - offset);
 }
 
@@ -2140,7 +2140,7 @@ flush_descriptor_sets(struct anv_cmd_buffer *cmd_buffer)
              * submit time. Surface address is dwords 8-9. */
             anv_reloc_list_add(&cmd_buffer->batch.surf_relocs,
                                view->surface_state.offset + 8 * sizeof(int32_t),
-                               &view->image->mem->bo, view->image->offset);
+                               view->image->bo, view->image->offset);
          }
       }
 
@@ -2161,7 +2161,7 @@ flush_descriptor_sets(struct anv_cmd_buffer *cmd_buffer)
                table[bias + i] = image_view->surface_state.offset;
                anv_reloc_list_add(&cmd_buffer->batch.surf_relocs,
                                   image_view->surface_state.offset + 8 * sizeof(int32_t),
-                                  &image_view->image->mem->bo,
+                                  image_view->image->bo,
                                   image_view->image->offset);
                break;
             case VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
@@ -2175,7 +2175,7 @@ flush_descriptor_sets(struct anv_cmd_buffer *cmd_buffer)
                table[bias + i] = buffer_view->surface_state.offset;
                anv_reloc_list_add(&cmd_buffer->batch.surf_relocs,
                                   buffer_view->surface_state.offset + 8 * sizeof(int32_t),
-                                  &buffer_view->buffer->mem->bo,
+                                  buffer_view->buffer->bo,
                                   buffer_view->buffer->offset + buffer_view->offset);
                break;
 
@@ -2221,7 +2221,7 @@ anv_cmd_buffer_flush_state(struct anv_cmd_buffer *cmd_buffer)
             .MemoryObjectControlState = 0,
             .AddressModifyEnable = true,
             .BufferPitch = pipeline->binding_stride[vb],
-            .BufferStartingAddress = { &buffer->mem->bo, buffer->offset + offset },
+            .BufferStartingAddress = { buffer->bo, buffer->offset + offset },
             .BufferSize = buffer->size - offset
          };
 
@@ -2324,7 +2324,7 @@ void VKAPI vkCmdDrawIndirect(
 {
    struct anv_cmd_buffer *cmd_buffer = (struct anv_cmd_buffer *) cmdBuffer;
    struct anv_buffer *buffer = (struct anv_buffer *) _buffer;
-   struct anv_bo *bo = &buffer->mem->bo;
+   struct anv_bo *bo = buffer->bo;
    uint32_t bo_offset = buffer->offset + offset;
 
    anv_cmd_buffer_flush_state(cmd_buffer);
@@ -2349,7 +2349,7 @@ void VKAPI vkCmdDrawIndexedIndirect(
 {
    struct anv_cmd_buffer *cmd_buffer = (struct anv_cmd_buffer *) cmdBuffer;
    struct anv_buffer *buffer = (struct anv_buffer *) _buffer;
-   struct anv_bo *bo = &buffer->mem->bo;
+   struct anv_bo *bo = buffer->bo;
    uint32_t bo_offset = buffer->offset + offset;
 
    anv_cmd_buffer_flush_state(cmd_buffer);
@@ -2485,7 +2485,7 @@ void VKAPI vkCmdWriteTimestamp(
 {
    struct anv_cmd_buffer *cmd_buffer = (struct anv_cmd_buffer *) cmdBuffer;
    struct anv_buffer *buffer = (struct anv_buffer *) destBuffer;
-   struct anv_bo *bo = &buffer->mem->bo;
+   struct anv_bo *bo = buffer->bo;
 
    switch (timestampType) {
    case VK_TIMESTAMP_TYPE_TOP:

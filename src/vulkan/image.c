@@ -241,7 +241,7 @@ VkResult VKAPI vkCreateImage(
    if (image == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
-   image->mem = NULL;
+   image->bo = NULL;
    image->offset = 0;
    image->type = pCreateInfo->imageType;
    image->extent = pCreateInfo->extent;

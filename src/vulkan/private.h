@@ -439,7 +439,7 @@ struct anv_buffer {
    VkDeviceSize                                 size;
 
    /* Set when bound */
-   struct anv_device_memory *                   mem;
+   struct anv_bo *                              bo;
    VkDeviceSize                                 offset;   
 };
 
@@ -550,7 +550,7 @@ struct anv_image {
    int32_t                                      stride;
 
    /* Set when bound */
-   struct anv_device_memory *                   mem;
+   struct anv_bo *                              bo;
    VkDeviceSize                                 offset;
 };
 
