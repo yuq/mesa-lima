@@ -535,6 +535,18 @@ struct anv_pipeline {
    uint32_t                                     state_raster[GEN8_3DSTATE_RASTER_length];
 };
 
+struct anv_pipeline_create_info {
+   bool                                         use_repclear;
+   bool                                         disable_viewport;
+   bool                                         use_rectlist;
+};
+
+VkResult
+anv_pipeline_create(VkDevice device,
+                    const VkGraphicsPipelineCreateInfo *pCreateInfo,
+                    const struct anv_pipeline_create_info *extra,
+                    VkPipeline *pPipeline);
+
 VkResult anv_pipeline_destroy(struct anv_pipeline *pipeline);
 
 struct anv_compiler *anv_compiler_create(int fd);

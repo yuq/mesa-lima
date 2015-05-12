@@ -1833,9 +1833,6 @@ VkResult VKAPI vkBeginCommandBuffer(
                   .ConstantBufferOffset = 8,
                   .ConstantBufferSize = 4);
 
-   anv_batch_emit(&cmd_buffer->batch, GEN8_3DSTATE_CLIP,
-                  .ClipEnable = true,
-                  .ViewportXYClipTestEnable = true);
    anv_batch_emit(&cmd_buffer->batch, GEN8_3DSTATE_WM_CHROMAKEY,
                   .ChromaKeyKillEnable = false);
    anv_batch_emit(&cmd_buffer->batch, GEN8_3DSTATE_SBE_SWIZ);

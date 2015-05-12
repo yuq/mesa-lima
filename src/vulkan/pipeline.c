@@ -122,7 +122,9 @@ emit_vertex_input(struct anv_pipeline *pipeline, VkPipelineVertexInputCreateInfo
 }
 
 static void
-emit_ia_state(struct anv_pipeline *pipeline, VkPipelineIaStateCreateInfo *info)
+emit_ia_state(struct anv_pipeline *pipeline,
+              VkPipelineIaStateCreateInfo *info,
+              const struct anv_pipeline_create_info *extra)
 {
    static const uint32_t vk_to_gen_primitive_type[] = {
       [VK_PRIMITIVE_TOPOLOGY_POINT_LIST] = _3DPRIM_POINTLIST,
@@ -137,16 +139,22 @@ emit_ia_state(struct anv_pipeline *pipeline, VkPipelineIaStateCreateInfo *info)
       [VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP_ADJ] = _3DPRIM_TRISTRIP_ADJ,
       [VK_PRIMITIVE_TOPOLOGY_PATCH] = _3DPRIM_PATCHLIST_1
    };
+   uint32_t topology = vk_to_gen_primitive_type[info->topology];
+
+   if (extra && extra->use_rectlist)
+      topology = _3DPRIM_RECTLIST;
 
    anv_batch_emit(&pipeline->batch, GEN8_3DSTATE_VF,
                   .IndexedDrawCutIndexEnable = info->primitiveRestartEnable,
                   .CutIndex = info->primitiveRestartIndex);
    anv_batch_emit(&pipeline->batch, GEN8_3DSTATE_VF_TOPOLOGY,
-                  .PrimitiveTopologyType = vk_to_gen_primitive_type[info->topology]);
+                  .PrimitiveTopologyType = topology);
 }
 
 static void
-emit_rs_state(struct anv_pipeline *pipeline, VkPipelineRsStateCreateInfo *info)
+emit_rs_state(struct anv_pipeline *pipeline, VkPipelineRsStateCreateInfo *info,
+              const struct anv_pipeline_create_info *extra)
+
 {
    static const uint32_t vk_to_gen_cullmode[] = {
       [VK_CULL_MODE_NONE] = CULLMODE_NONE,
@@ -173,7 +181,7 @@ emit_rs_state(struct anv_pipeline *pipeline, VkPipelineRsStateCreateInfo *info)
 
    struct GEN8_3DSTATE_SF sf = {
       GEN8_3DSTATE_SF_header,
-      .ViewportTransformEnable = true,
+      .ViewportTransformEnable = !(extra && extra->disable_viewport),
       .TriangleStripListProvokingVertexSelect =
          info->provokingVertex == VK_PROVOKING_VERTEX_FIRST ? 0 : 2,
       .LineStripListProvokingVertexSelect =
@@ -207,8 +215,19 @@ emit_rs_state(struct anv_pipeline *pipeline, VkPipelineRsStateCreateInfo *info)
 }
 
 VkResult VKAPI vkCreateGraphicsPipeline(
+    VkDevice                                    device,
+    const VkGraphicsPipelineCreateInfo*         pCreateInfo,
+    VkPipeline*                                 pPipeline)
+{
+   return anv_pipeline_create(device, pCreateInfo, NULL, pPipeline);
+}
+
+
+VkResult
+anv_pipeline_create(
     VkDevice                                    _device,
     const VkGraphicsPipelineCreateInfo*         pCreateInfo,
+    const struct anv_pipeline_create_info *     extra,
     VkPipeline*                                 pPipeline)
 {
    struct anv_device *device = (struct anv_device *) _device;
@@ -262,7 +281,7 @@ VkResult VKAPI vkCreateGraphicsPipeline(
       }
    }
 
-   pipeline->use_repclear = false;
+   pipeline->use_repclear = extra && extra->use_repclear;
 
    anv_compiler_run(device->compiler, pipeline);
 
@@ -274,8 +293,12 @@ VkResult VKAPI vkCreateGraphicsPipeline(
       pipeline->wm_prog_data.num_varying_inputs = vi_info->attributeCount - 2;
 
    emit_vertex_input(pipeline, vi_info);
-   emit_ia_state(pipeline, ia_info);
-   emit_rs_state(pipeline, rs_info);
+   emit_ia_state(pipeline, ia_info, extra);
+   emit_rs_state(pipeline, rs_info, extra);
+
+   anv_batch_emit(&pipeline->batch, GEN8_3DSTATE_CLIP,
+                  .ClipEnable = true,
+                  .ViewportXYClipTestEnable = !(extra && extra->disable_viewport));
 
    anv_batch_emit(&pipeline->batch, GEN8_3DSTATE_WM,
                   .StatisticsEnable = true,
