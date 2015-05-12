@@ -2913,8 +2913,8 @@ ADDR_E_RETURNCODE AddrLib1::ComputeMicroTileEquation(
                 break;
             case 64:
             case 128:
-                pixelBit[0] = y0;
-                pixelBit[1] = x0;
+                pixelBit[0] = x0;
+                pixelBit[1] = y0;
                 pixelBit[2] = z0;
                 pixelBit[3] = x1;
                 pixelBit[4] = y1;
@@ -3124,8 +3124,8 @@ UINT_32 AddrLib1::ComputePixelIndexWithinMicroTile(
                 break;
             case 64:
             case 128:
-                pixelBit0 = y0;
-                pixelBit1 = x0;
+                pixelBit0 = x0;
+                pixelBit1 = y0;
                 pixelBit2 = z0;
                 pixelBit3 = x1;
                 pixelBit4 = y1;
