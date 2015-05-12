@@ -261,4 +261,14 @@ public:
    bool pi_noperspective:1;   /**< Pixel interpolator noperspective flag */
 };
 
+/**
+ * Set second-half quarter control on \p inst.
+ */
+static inline fs_inst *
+set_sechalf(fs_inst *inst)
+{
+   inst->force_sechalf = true;
+   return inst;
+}
+
 #endif
