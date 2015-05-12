@@ -2712,7 +2712,6 @@ private:
 
    RegScores *score; // for current BB
    std::vector<RegScores> scoreBoards;
-   int cycle;
    int prevData;
    operation prevOp;
 
