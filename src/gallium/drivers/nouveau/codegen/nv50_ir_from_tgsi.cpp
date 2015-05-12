@@ -1316,7 +1316,7 @@ private:
    };
 
 private:
-   const struct tgsi::Source *code;
+   const tgsi::Source *code;
    const struct nv50_ir_prog_info *info;
 
    struct {
@@ -1955,13 +1955,13 @@ isResourceSpecial(const int r)
 }
 
 static inline bool
-isResourceRaw(const struct tgsi::Source *code, const int r)
+isResourceRaw(const tgsi::Source *code, const int r)
 {
    return isResourceSpecial(r) || code->resources[r].raw;
 }
 
 static inline nv50_ir::TexTarget
-getResourceTarget(const struct tgsi::Source *code, int r)
+getResourceTarget(const tgsi::Source *code, int r)
 {
    if (isResourceSpecial(r))
       return nv50_ir::TEX_TARGET_BUFFER;
