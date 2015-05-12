@@ -368,9 +368,11 @@ brw_upload_cs_state(struct brw_context *brw)
 
 extern "C"
 const struct brw_tracked_state brw_cs_state = {
-   .dirty = {
-      .mesa  = 0,
-      .brw   = BRW_NEW_CS_PROG_DATA,
+   /* explicit initialisers aren't valid C++, comment
+    * them for documentation purposes */
+   /* .dirty = */{
+      /* .mesa = */ 0,
+      /* .brw = */  BRW_NEW_CS_PROG_DATA,
    },
-   .emit = brw_upload_cs_state
+   /* .emit = */ brw_upload_cs_state
 };
