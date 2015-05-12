@@ -3561,10 +3561,42 @@ fs_visitor::lower_integer_multiplication()
             insert(MUL(inst->dst, inst->src[0], inst->src[1]));
          }
       } else {
-         if (devinfo->gen >= 7)
+         /* Gen < 8 (and some Gen8+ low-power parts like Cherryview) cannot
+          * do 32-bit integer multiplication in one instruction, but instead
+          * must do a sequence (which actually calculates a 64-bit result):
+          *
+          *    mul(8)  acc0<1>D   g3<8,8,1>D      g4<8,8,1>D
+          *    mach(8) null       g3<8,8,1>D      g4<8,8,1>D
+          *    mov(8)  g2<1>D     acc0<8,8,1>D
+          *
+          * But on Gen > 6, the ability to use second accumulator register
+          * (acc1) for non-float data types was removed, preventing a simple
+          * implementation in SIMD16. A 16-channel result can be calculated by
+          * executing the three instructions twice in SIMD8, once with quarter
+          * control of 1Q for the first eight channels and again with 2Q for
+          * the second eight channels.
+          *
+          * Which accumulator register is implicitly accessed (by AccWrEnable
+          * for instance) is determined by the quarter control. Unfortunately
+          * Ivybridge (and presumably Baytrail) has a hardware bug in which an
+          * implicit accumulator access by an instruction with 2Q will access
+          * acc1 regardless of whether the data type is usable in acc1.
+          *
+          * Specifically, the 2Q mach(8) writes acc1 which does not exist for
+          * integer data types.
+          */
+         if (devinfo->gen == 7 && !devinfo->is_haswell)
             no16("SIMD16 integer multiply unsupported\n");
 
-         const unsigned channels = dispatch_width;
+         /* From the IVB PRM, volume 4 part 3, page 42:
+          *
+          *    "For any DWord operation, including DWord multiply, accumulator
+          *     can store up to 8 channels of data, with only acc0 supported."
+          *
+          * So make the accumulator (and null register) only 8-channels wide on
+          * Gen7+.
+          */
+         const unsigned channels = devinfo->gen >= 7 ? 8 : dispatch_width;
          const enum brw_reg_type type = inst->dst.type;
          const fs_reg acc(retype(brw_acc_reg(channels), type));
          const fs_reg null(retype(brw_null_vec(channels), type));
@@ -3572,9 +3604,19 @@ fs_visitor::lower_integer_multiplication()
          const fs_reg &src0 = inst->src[0];
          const fs_reg &src1 = inst->src[1];
 
-         insert(MUL(acc, src0, src1));
-         insert(MACH(null, src0, src1));
-         insert(MOV(inst->dst, acc));
+         if (devinfo->gen >= 7 && dispatch_width == 16) {
+            insert(MUL(acc, half(src0, 0), half(src1, 0)));
+            insert(MACH(null, half(src0, 0), half(src1, 0)));
+            insert(MOV(half(inst->dst, 0), acc));
+
+            insert(set_sechalf(MUL(acc, half(src0, 1), half(src1, 1))));
+            insert(set_sechalf(MACH(null, half(src0, 1), half(src1, 1))));
+            insert(set_sechalf(MOV(half(inst->dst, 1), acc)));
+         } else {
+            insert(MUL(acc, src0, src1));
+            insert(MACH(null, src0, src1));
+            insert(MOV(inst->dst, acc));
+         }
       }
 #undef insert
 
