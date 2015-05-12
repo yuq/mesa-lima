@@ -9170,15 +9170,13 @@
 </category>
 
 <category name="GL_SGIS_multisample" number="25">
-    <function name="SampleMaskSGIS" offset="assign"
-              exec="skip">
+    <function name="SampleMaskSGIS" offset="assign" exec="skip">
         <param name="value" type="GLclampf"/>
         <param name="invert" type="GLboolean"/>
         <glx rop="2048"/>
     </function>
 
-    <function name="SamplePatternSGIS" offset="assign"
-              exec="skip">
+    <function name="SamplePatternSGIS" offset="assign" exec="skip">
         <param name="pattern" type="GLenum"/>
         <glx rop="2049"/>
     </function>
@@ -12547,8 +12545,7 @@
         <size name="Get" mode="get"/>
     </enum>
 
-    <function name="ActiveStencilFaceEXT" offset="assign"
- deprecated="3.1">
+    <function name="ActiveStencilFaceEXT" offset="assign" deprecated="3.1">
         <param name="face" type="GLenum"/>
         <glx rop="4220"/>
     </function>
@@ -12789,14 +12786,12 @@
     <enum name="BUFFER_FLUSHING_UNMAP_APPLE" count="1" value="0x8A13">
         <size name="GetBufferParameteriv" mode="get"/>
     </enum>
-    <function name="BufferParameteriAPPLE" offset="assign"
- exec="skip">
+    <function name="BufferParameteriAPPLE" offset="assign" exec="skip">
         <param name="target" type="GLenum"/>
         <param name="pname" type="GLenum"/>
         <param name="param" type="GLint"/>
     </function>
-    <function name="FlushMappedBufferRangeAPPLE" offset="assign"
- exec="skip">
+    <function name="FlushMappedBufferRangeAPPLE" offset="assign" exec="skip">
         <param name="target" type="GLenum"/>
         <param name="offset" type="GLintptr"/>
         <param name="size" type="GLsizeiptr"/>
@@ -12911,8 +12906,7 @@
         <param name="zfail" type="GLenum"/>
         <param name="zpass" type="GLenum"/>
     </function>
-    <function name="StencilFuncSeparateATI" offset="assign"
- deprecated="3.1">
+    <function name="StencilFuncSeparateATI" offset="assign" deprecated="3.1">
         <param name="frontfunc" type="GLenum"/>
         <param name="backfunc" type="GLenum"/>
         <param name="ref" type="GLint"/>
@@ -12923,7 +12917,7 @@
 
 <category name="GL_EXT_gpu_program_parameters">
     <function name="ProgramEnvParameters4fvEXT" offset="assign"
- deprecated="3.1">
+	      deprecated="3.1">
         <param name="target" type="GLenum"/>
         <param name="index" type="GLuint"/>
         <param name="count" type="GLsizei"/>
@@ -12931,7 +12925,7 @@
     </function>
 
     <function name="ProgramLocalParameters4fvEXT" offset="assign"
- deprecated="3.1">
+	      deprecated="3.1">
         <param name="target" type="GLenum"/>
         <param name="index" type="GLuint"/>
         <param name="count" type="GLsizei"/>
