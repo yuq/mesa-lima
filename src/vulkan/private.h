@@ -386,6 +386,16 @@ __gen_combine_address(struct anv_batch *batch, void *location,
       __dst;                                            \
    })
 
+#define anv_batch_emit_merge(batch, dwords0, dwords1)                   \
+   do {                                                                 \
+      uint32_t *dw;                                                     \
+                                                                        \
+      assert(ARRAY_SIZE(dwords0) == ARRAY_SIZE(dwords1));               \
+      dw = anv_batch_emit_dwords((batch), ARRAY_SIZE(dwords0));         \
+      for (uint32_t i = 0; i < ARRAY_SIZE(dwords0); i++)                \
+         dw[i] = (dwords0)[i] | (dwords1)[i];                           \
+   } while (0)
+
 struct anv_device_memory {
    struct anv_bo bo;
    VkDeviceSize map_size;

@@ -2236,14 +2236,9 @@ anv_cmd_buffer_flush_state(struct anv_cmd_buffer *cmd_buffer)
    if (cmd_buffer->dirty & ANV_CMD_BUFFER_DESCRIPTOR_SET_DIRTY)
       flush_descriptor_sets(cmd_buffer);
 
-   if (cmd_buffer->dirty & (ANV_CMD_BUFFER_PIPELINE_DIRTY | ANV_CMD_BUFFER_RS_DIRTY)) {
-      /* maybe: anv_batch_merge(batch, GEN8_3DSTATE_SF, a, b) */
-      uint32_t *dw;
-
-      dw = anv_batch_emit_dwords(&cmd_buffer->batch, GEN8_3DSTATE_SF_length);
-      for (uint32_t i = 0; i < GEN8_3DSTATE_SF_length; i++)
-         dw[i] = cmd_buffer->rs_state->state_sf[i] | pipeline->state_sf[i];
-   }
+   if (cmd_buffer->dirty & (ANV_CMD_BUFFER_PIPELINE_DIRTY | ANV_CMD_BUFFER_RS_DIRTY))
+      anv_batch_emit_merge(&cmd_buffer->batch,
+                           cmd_buffer->rs_state->state_sf, pipeline->state_sf);
 
    cmd_buffer->vb_dirty = 0;
    cmd_buffer->dirty = 0;
