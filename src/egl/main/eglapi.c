@@ -1427,8 +1427,8 @@ eglSignalSyncKHR(EGLDisplay dpy, EGLSync sync, EGLenum mode)
 }
 
 
-static EGLBoolean EGLAPIENTRY
-eglGetSyncAttribKHR(EGLDisplay dpy, EGLSync sync, EGLint attribute, EGLint *value)
+EGLBoolean EGLAPIENTRY
+eglGetSyncAttrib(EGLDisplay dpy, EGLSync sync, EGLint attribute, EGLAttrib *value)
 {
    _EGLDisplay *disp = _eglLockDisplay(dpy);
    _EGLSync *s = _eglLookupSync(sync, disp);
@@ -1438,9 +1438,27 @@ eglGetSyncAttribKHR(EGLDisplay dpy, EGLSync sync, EGLint attribute, EGLint *valu
    _EGL_CHECK_SYNC(disp, s, EGL_FALSE, drv);
    assert(disp->Extensions.KHR_reusable_sync ||
           disp->Extensions.KHR_fence_sync);
-   ret = drv->API.GetSyncAttribKHR(drv, disp, s, attribute, value);
+   ret = drv->API.GetSyncAttrib(drv, disp, s, attribute, value);
 
    RETURN_EGL_EVAL(disp, ret);
+}
+
+
+static EGLBoolean EGLAPIENTRY
+eglGetSyncAttribKHR(EGLDisplay dpy, EGLSync sync, EGLint attribute, EGLint *value)
+{
+   EGLAttrib attrib = *value;
+   EGLBoolean result = eglGetSyncAttrib(dpy, sync, attribute, &attrib);
+
+   /* The EGL_KHR_fence_sync spec says this about eglGetSyncAttribKHR:
+    *
+    *    If any error occurs, <*value> is not modified.
+    */
+   if (result == EGL_FALSE)
+      return result;
+
+   *value = attrib;
+   return result;
 }
 
 
@@ -1731,6 +1749,7 @@ eglGetProcAddress(const char *procname)
       { "eglCreateSync", (_EGLProc) eglCreateSync },
       { "eglDestroySync", (_EGLProc) eglDestroySync },
       { "eglClientWaitSync", (_EGLProc) eglClientWaitSync },
+      { "eglGetSyncAttrib", (_EGLProc) eglGetSyncAttrib },
       { "eglWaitSync", (_EGLProc) eglWaitSync },
       { "eglDestroyImage", (_EGLProc) eglDestroyImage },
 #ifdef EGL_MESA_drm_display

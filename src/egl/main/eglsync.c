@@ -141,8 +141,8 @@ _eglInitSync(_EGLSync *sync, _EGLDisplay *dpy, EGLenum type,
 
 
 EGLBoolean
-_eglGetSyncAttribKHR(_EGLDriver *drv, _EGLDisplay *dpy, _EGLSync *sync,
-                     EGLint attribute, EGLint *value)
+_eglGetSyncAttrib(_EGLDriver *drv, _EGLDisplay *dpy, _EGLSync *sync,
+                  EGLint attribute, EGLAttrib *value)
 {
    if (!value)
       return _eglError(EGL_BAD_PARAMETER, "eglGetSyncAttribKHR");

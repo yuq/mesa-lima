@@ -91,7 +91,7 @@ _eglInitDriverFallbacks(_EGLDriver *drv)
    drv->API.ClientWaitSyncKHR = NULL;
    drv->API.WaitSyncKHR = NULL;
    drv->API.SignalSyncKHR = NULL;
-   drv->API.GetSyncAttribKHR = _eglGetSyncAttribKHR;
+   drv->API.GetSyncAttrib = _eglGetSyncAttrib;
 
 #ifdef EGL_MESA_drm_image
    drv->API.CreateDRMImageMESA = NULL;

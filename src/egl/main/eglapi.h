@@ -96,7 +96,7 @@ typedef EGLBoolean (*DestroySyncKHR_t)(_EGLDriver *drv, _EGLDisplay *dpy, _EGLSy
 typedef EGLint (*ClientWaitSyncKHR_t)(_EGLDriver *drv, _EGLDisplay *dpy, _EGLSync *sync, EGLint flags, EGLTime timeout);
 typedef EGLint (*WaitSyncKHR_t)(_EGLDriver *drv, _EGLDisplay *dpy, _EGLSync *sync);
 typedef EGLBoolean (*SignalSyncKHR_t)(_EGLDriver *drv, _EGLDisplay *dpy, _EGLSync *sync, EGLenum mode);
-typedef EGLBoolean (*GetSyncAttribKHR_t)(_EGLDriver *drv, _EGLDisplay *dpy, _EGLSync *sync, EGLint attribute, EGLint *value);
+typedef EGLBoolean (*GetSyncAttrib_t)(_EGLDriver *drv, _EGLDisplay *dpy, _EGLSync *sync, EGLint attribute, EGLAttrib *value);
 
 
 #ifdef EGL_NOK_swap_region
@@ -178,7 +178,7 @@ struct _egl_api
    ClientWaitSyncKHR_t ClientWaitSyncKHR;
    WaitSyncKHR_t WaitSyncKHR;
    SignalSyncKHR_t SignalSyncKHR;
-   GetSyncAttribKHR_t GetSyncAttribKHR;
+   GetSyncAttrib_t GetSyncAttrib;
 
 #ifdef EGL_NOK_swap_region
    SwapBuffersRegionNOK_t SwapBuffersRegionNOK;
