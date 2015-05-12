@@ -31,13 +31,6 @@
 #define NINE_FF_NUM_VS_CONST 256
 #define NINE_FF_NUM_PS_CONST 24
 
-#define NINED3DTSS_TCI_DISABLE                       0
-#define NINED3DTSS_TCI_PASSTHRU                      1
-#define NINED3DTSS_TCI_CAMERASPACENORMAL             2
-#define NINED3DTSS_TCI_CAMERASPACEPOSITION           3
-#define NINED3DTSS_TCI_CAMERASPACEREFLECTIONVECTOR   4
-#define NINED3DTSS_TCI_SPHEREMAP                     5
-
 struct fvec4
 {
     float x, y, z, w;
@@ -66,15 +59,18 @@ struct nine_ff_vs_key
             uint32_t color1in_one : 1;
             uint32_t fog : 1;
             uint32_t pad1 : 7;
-            uint32_t tc_gen : 24; /* 8 * 3 bits */
-            uint32_t pad2 : 8;
-            uint32_t tc_idx : 24;
+            uint32_t tc_dim_input: 16; /* 8 * 2 bits */
+            uint32_t pad2 : 16;
+            uint32_t tc_dim_output: 24; /* 8 * 3 bits */
             uint32_t pad3 : 8;
-            uint32_t tc_dim : 24; /* 8 * 3 bits */
+            uint32_t tc_gen : 24; /* 8 * 3 bits */
             uint32_t pad4 : 8;
+            uint32_t tc_idx : 24;
+            uint32_t pad5 : 8;
+            uint32_t pad6;
         };
-        uint64_t value64[2]; /* don't forget to resize VertexShader9.ff_key */
-        uint32_t value32[4];
+        uint64_t value64[3]; /* don't forget to resize VertexShader9.ff_key */
+        uint32_t value32[6];
     };
 };
 
@@ -108,13 +104,14 @@ struct nine_ff_ps_key
                 uint32_t alphaarg2 : 3;
                 uint32_t resultarg : 1; /* CURRENT:0 or TEMP:1 */
                 uint32_t textarget : 2; /* 1D/2D/3D/CUBE */
-                uint32_t projected : 1;
+                uint32_t pad       : 1;
                 /* that's 32 bit exactly */
             } ts[8];
+            uint32_t projected : 16;
             uint32_t fog : 1; /* for vFog coming from VS */
             uint32_t fog_mode : 2;
             uint32_t specular : 1;
-            uint32_t pad1 : 28;/* 9 32-bit words with this */
+            uint32_t pad1 : 12; /* 9 32-bit words with this */
             uint8_t colorarg_b4[3];
             uint8_t colorarg_b5[3];
             uint8_t alphaarg_b4[3]; /* 11 32-bit words plus a byte */
@@ -337,11 +334,11 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
 {
     const struct nine_ff_vs_key *key = vs->key;
     struct ureg_program *ureg = ureg_create(TGSI_PROCESSOR_VERTEX);
-    struct ureg_dst oPos, oCol[2], oTex[8], oPsz, oFog;
+    struct ureg_dst oPos, oCol[2], oPsz, oFog;
     struct ureg_dst rVtx, rNrm;
     struct ureg_dst r[8];
     struct ureg_dst AR;
-    struct ureg_dst tmp, tmp_x, tmp_z;
+    struct ureg_dst tmp, tmp_x, tmp_y, tmp_z;
     unsigned i, c;
     unsigned label[32], l = 0;
     unsigned num_r = 8;
@@ -439,6 +436,7 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
         r[i] = ureg_DECL_local_temporary(ureg);
     tmp = r[0];
     tmp_x = ureg_writemask(tmp, TGSI_WRITEMASK_X);
+    tmp_y = ureg_writemask(tmp, TGSI_WRITEMASK_Y);
     tmp_z = ureg_writemask(tmp, TGSI_WRITEMASK_Z);
     if (key->lighting || key->vertexblend)
         AR = ureg_DECL_address(ureg);
@@ -551,8 +549,6 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
         ureg_CLAMP(ureg, oPsz, vs->aPsz, _XXXX(cPsz1), _YYYY(cPsz1));
 #endif
     } else if (key->pointscale) {
-        struct ureg_dst tmp_x = ureg_writemask(tmp, TGSI_WRITEMASK_X);
-        struct ureg_dst tmp_y = ureg_writemask(tmp, TGSI_WRITEMASK_Y);
         struct ureg_src cPsz1 = ureg_DECL_constant(ureg, 26);
         struct ureg_src cPsz2 = ureg_DECL_constant(ureg, 27);
 
@@ -573,72 +569,85 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
 #endif
     }
 
-    /* Texture coordinate generation:
-     * XXX: D3DTTFF_PROJECTED, transform matrix
-     */
     for (i = 0; i < 8; ++i) {
-        struct ureg_dst dst[5];
-        struct ureg_src src;
-        unsigned c;
+        struct ureg_dst oTex, input_coord, transformed, t;
+        unsigned c, writemask;
         const unsigned tci = (key->tc_gen >> (i * 3)) & 0x7;
         const unsigned idx = (key->tc_idx >> (i * 3)) & 0x7;
-        const unsigned dim = (key->tc_dim >> (i * 3)) & 0x7;
+        unsigned dim_input = 1 + ((key->tc_dim_input >> (i * 2)) & 0x3);
+        const unsigned dim_output = (key->tc_dim_output >> (i * 3)) & 0x7;
 
+        /* No texture output of index s */
         if (tci == NINED3DTSS_TCI_DISABLE)
             continue;
-        oTex[i] = ureg_DECL_output(ureg, texcoord_sn, i);
+        oTex = ureg_DECL_output(ureg, texcoord_sn, i);
+        input_coord = r[5];
+        transformed = r[6];
 
-        if (tci == NINED3DTSS_TCI_PASSTHRU)
-            vs->aTex[idx] = build_vs_add_input(vs, NINE_DECLUSAGE_i(TEXCOORD,idx));
-
-        if (!dim) {
-            dst[c = 4] = oTex[i];
-        } else {
-            dst[4] = r[5];
-            src = ureg_src(dst[4]);
-            for (c = 0; c < (dim - 1); ++c)
-                dst[c] = ureg_writemask(tmp, (1 << dim) - 1);
-            dst[c] = ureg_writemask(oTex[i], (1 << dim) - 1);
-        }
-
+        /* Get the coordinate */
         switch (tci) {
         case NINED3DTSS_TCI_PASSTHRU:
-            ureg_MOV(ureg, dst[4], vs->aTex[idx]);
+            /* NINED3DTSS_TCI_PASSTHRU => Use texcoord coming from index idx *
+             * Else the idx is used only to determine wrapping mode. */
+            vs->aTex[idx] = build_vs_add_input(vs, NINE_DECLUSAGE_i(TEXCOORD,idx));
+            ureg_MOV(ureg, input_coord, vs->aTex[idx]);
             break;
         case NINED3DTSS_TCI_CAMERASPACENORMAL:
-            assert(dim <= 3);
-            ureg_MOV(ureg, ureg_writemask(dst[4], TGSI_WRITEMASK_XYZ), ureg_src(rNrm));
-            ureg_MOV(ureg, ureg_writemask(dst[4], TGSI_WRITEMASK_W), ureg_imm1f(ureg, 1.0f));
+            ureg_MOV(ureg, ureg_writemask(input_coord, TGSI_WRITEMASK_XYZ), ureg_src(rNrm));
+            ureg_MOV(ureg, ureg_writemask(input_coord, TGSI_WRITEMASK_W), ureg_imm1f(ureg, 1.0f));
+            dim_input = 4;
             break;
         case NINED3DTSS_TCI_CAMERASPACEPOSITION:
-            ureg_MOV(ureg, ureg_writemask(dst[4], TGSI_WRITEMASK_XYZ), ureg_src(rVtx));
-            ureg_MOV(ureg, ureg_writemask(dst[4], TGSI_WRITEMASK_W), ureg_imm1f(ureg, 1.0f));
+            ureg_MOV(ureg, ureg_writemask(input_coord, TGSI_WRITEMASK_XYZ), ureg_src(rVtx));
+            ureg_MOV(ureg, ureg_writemask(input_coord, TGSI_WRITEMASK_W), ureg_imm1f(ureg, 1.0f));
+            dim_input = 4;
             break;
         case NINED3DTSS_TCI_CAMERASPACEREFLECTIONVECTOR:
             tmp.WriteMask = TGSI_WRITEMASK_XYZ;
             ureg_DP3(ureg, tmp_x, ureg_src(rVtx), ureg_src(rNrm));
             ureg_MUL(ureg, tmp, ureg_src(rNrm), _X(tmp));
             ureg_ADD(ureg, tmp, ureg_src(tmp), ureg_src(tmp));
-            ureg_SUB(ureg, ureg_writemask(dst[4], TGSI_WRITEMASK_XYZ), ureg_src(rVtx), ureg_src(tmp));
-            ureg_MOV(ureg, ureg_writemask(dst[4], TGSI_WRITEMASK_W), ureg_imm1f(ureg, 1.0f));
+            ureg_SUB(ureg, ureg_writemask(input_coord, TGSI_WRITEMASK_XYZ), ureg_src(rVtx), ureg_src(tmp));
+            ureg_MOV(ureg, ureg_writemask(input_coord, TGSI_WRITEMASK_W), ureg_imm1f(ureg, 1.0f));
+            dim_input = 4;
             tmp.WriteMask = TGSI_WRITEMASK_XYZW;
             break;
         case NINED3DTSS_TCI_SPHEREMAP:
             assert(!"TODO");
             break;
         default:
+            assert(0);
             break;
         }
-        if (!dim)
-            continue;
-        dst[c].WriteMask = ~dst[c].WriteMask;
-        if (dst[c].WriteMask)
-            ureg_MOV(ureg, dst[c], src); /* store untransformed components */
-        dst[c].WriteMask = ~dst[c].WriteMask;
-        if (dim > 0) ureg_MUL(ureg, dst[0], _XXXX(src), _CONST(128 + i * 4));
-        if (dim > 1) ureg_MAD(ureg, dst[1], _YYYY(src), _CONST(129 + i * 4), ureg_src(tmp));
-        if (dim > 2) ureg_MAD(ureg, dst[2], _ZZZZ(src), _CONST(130 + i * 4), ureg_src(tmp));
-        if (dim > 3) ureg_MAD(ureg, dst[3], _WWWW(src), _CONST(131 + i * 4), ureg_src(tmp));
+
+        /* Apply the transformation */
+        /* dim_output == 0 => do not transform the components.
+         * XYZRHW also disables transformation */
+        if (!dim_output || key->position_t) {
+            transformed = input_coord;
+            writemask = TGSI_WRITEMASK_XYZW;
+        } else {
+            for (c = 0; c < dim_output; c++) {
+                t = ureg_writemask(transformed, 1 << c);
+                switch (dim_input) {
+                /* dim_input = 1 2 3: -> we add trailing 1 to input*/
+                case 1: ureg_MAD(ureg, t, _X(input_coord), _XXXX(_CONST(128 + i * 4 + c)), _YYYY(_CONST(128 + i * 4 + c)));
+                        break;
+                case 2: ureg_DP2(ureg, t, ureg_src(input_coord), _CONST(128 + i * 4 + c));
+                        ureg_ADD(ureg, t, ureg_src(transformed), _ZZZZ(_CONST(128 + i * 4 + c)));
+                        break;
+                case 3: ureg_DP3(ureg, t, ureg_src(input_coord), _CONST(128 + i * 4 + c));
+                        ureg_ADD(ureg, t, ureg_src(transformed), _WWWW(_CONST(128 + i * 4 + c)));
+                        break;
+                case 4: ureg_DP4(ureg, t, ureg_src(input_coord), _CONST(128 + i * 4 + c)); break;
+                default:
+                    assert(0);
+                }
+            }
+            writemask = (1 << dim_output) - 1;
+        }
+
+        ureg_MOV(ureg, ureg_writemask(oTex, writemask), ureg_src(transformed));
     }
 
     /* === Lighting:
@@ -683,8 +692,6 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
      * specular += light.specular * atten * powFact;
      */
     if (key->lighting) {
-        struct ureg_dst tmp_y = ureg_writemask(tmp, TGSI_WRITEMASK_Y);
-
         struct ureg_dst rAtt = ureg_writemask(r[1], TGSI_WRITEMASK_W);
         struct ureg_dst rHit = ureg_writemask(r[3], TGSI_WRITEMASK_XYZ);
         struct ureg_dst rMid = ureg_writemask(r[4], TGSI_WRITEMASK_XYZ);
@@ -1257,10 +1264,18 @@ nine_ff_build_ps(struct NineDevice9 *device, struct nine_ff_ps_key *key)
             if (key->ts[s].colorop == D3DTOP_BUMPENVMAP ||
                 key->ts[s].colorop == D3DTOP_BUMPENVMAPLUMINANCE) {
             }
-            if (key->ts[s].projected)
-                ureg_TXP(ureg, ps.rTex, target, ps.vT[s], ps.s[s]);
-            else
+            if (key->projected & (3 << (s *2))) {
+                unsigned dim = 1 + ((key->projected >> (2 * s)) & 3);
+                if (dim == 4)
+                    ureg_TXP(ureg, ps.rTex, target, ps.vT[s], ps.s[s]);
+                else {
+                    ureg_RCP(ureg, ureg_writemask(ps.rTmp, TGSI_WRITEMASK_X), ureg_scalar(ps.vT[s], dim-1));
+                    ureg_MUL(ureg, ps.rTmp, _XXXX(ps.rTmpSrc), ps.vT[s]);
+                    ureg_TEX(ureg, ps.rTex, target, ps.rTmpSrc, ps.s[s]);
+                }
+            } else {
                 ureg_TEX(ureg, ps.rTex, target, ps.vT[s], ps.s[s]);
+            }
         }
 
         if (s == 0 &&
@@ -1393,7 +1408,7 @@ nine_ff_get_vs(struct NineDevice9 *device)
             else if (usage % NINE_DECLUSAGE_COUNT == NINE_DECLUSAGE_TEXCOORD) {
                 s = usage / NINE_DECLUSAGE_COUNT;
                 if (s < 8)
-                    input_texture_coord[s] = 1;
+                    input_texture_coord[s] = nine_decltype_get_dim(state->vdecl->decls[i].Type);
                 else
                     DBG("FF given texture coordinate >= 8. Ignoring\n");
             }
@@ -1436,7 +1451,7 @@ nine_ff_get_vs(struct NineDevice9 *device)
 
     for (s = 0; s < 8; ++s) {
         unsigned gen = (state->ff.tex_stage[s][D3DTSS_TEXCOORDINDEX] >> 16) + 1;
-        unsigned dim = MIN2(state->ff.tex_stage[s][D3DTSS_TEXTURETRANSFORMFLAGS] & 0x7, 4);
+        unsigned dim;
 
         if (key.position_t && gen > NINED3DTSS_TCI_PASSTHRU)
             gen = NINED3DTSS_TCI_PASSTHRU;
@@ -1446,7 +1461,14 @@ nine_ff_get_vs(struct NineDevice9 *device)
 
         key.tc_gen |= gen << (s * 3);
         key.tc_idx |= (state->ff.tex_stage[s][D3DTSS_TEXCOORDINDEX] & 7) << (s * 3);
-        key.tc_dim |= dim << (s * 3);
+        key.tc_dim_input |= ((input_texture_coord[s]-1) & 0x3) << (s * 2);
+
+        dim = state->ff.tex_stage[s][D3DTSS_TEXTURETRANSFORMFLAGS] & 0x7;
+        if (dim > 4)
+            dim = input_texture_coord[s];
+        if (dim == 1) /* NV behaviour */
+            dim = 0;
+        key.tc_dim_output |= dim << (s * 3);
     }
 
     vs = util_hash_table_get(device->ff.ht_vs, &key);
@@ -1531,8 +1553,6 @@ nine_ff_get_ps(struct NineDevice9 *device)
         }
         key.ts[s].resultarg = state->ff.tex_stage[s][D3DTSS_RESULTARG] == D3DTA_TEMP;
 
-        key.ts[s].projected = !!(state->ff.tex_stage[s][D3DTSS_TEXTURETRANSFORMFLAGS] & D3DTTFF_PROJECTED);
-
         if (state->texture[s]) {
             switch (state->texture[s]->base.type) {
             case D3DRTYPE_TEXTURE:       key.ts[s].textarget = 1; break;
@@ -1546,6 +1566,9 @@ nine_ff_get_ps(struct NineDevice9 *device)
             key.ts[s].textarget = 1;
         }
     }
+
+    key.projected = nine_ff_get_projected_key(state);
+
     for (; s < 8; ++s)
         key.ts[s].colorop = key.ts[s].alphaop = D3DTOP_DISABLE;
     if (state->rs[D3DRS_FOGENABLE])
@@ -1691,7 +1714,7 @@ nine_ff_load_tex_matrices(struct NineDevice9 *device)
         return;
     for (s = 0; s < 8; ++s) {
         if (IS_D3DTS_DIRTY(state, TEXTURE0 + s))
-            M[32 + s] = *nine_state_access_transform(state, D3DTS_TEXTURE0 + s, FALSE);
+            nine_d3d_matrix_transpose(&M[32 + s], nine_state_access_transform(state, D3DTS_TEXTURE0 + s, FALSE));
     }
 }
 

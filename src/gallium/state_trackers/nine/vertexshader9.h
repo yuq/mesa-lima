@@ -54,7 +54,7 @@ struct NineVertexShader9
 
     const struct pipe_stream_output_info *so;
 
-    uint64_t ff_key[2];
+    uint64_t ff_key[3];
     void *ff_cso;
 
     uint32_t last_key;
