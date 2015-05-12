@@ -234,4 +234,31 @@ nir_ssa_for_src(nir_builder *build, nir_src src, int num_components)
    return nir_imov_alu(build, alu, num_components);
 }
 
+static inline nir_ssa_def *
+nir_load_var(nir_builder *build, nir_variable *var)
+{
+   const unsigned num_components = glsl_get_vector_elements(var->type);
+
+   nir_intrinsic_instr *load =
+      nir_intrinsic_instr_create(build->shader, nir_intrinsic_load_var);
+   load->num_components = num_components;
+   load->variables[0] = nir_deref_var_create(load, var);
+   nir_ssa_dest_init(&load->instr, &load->dest, num_components, NULL);
+   nir_builder_instr_insert(build, &load->instr);
+   return &load->dest.ssa;
+}
+
+static inline void
+nir_store_var(nir_builder *build, nir_variable *var, nir_ssa_def *value)
+{
+   const unsigned num_components = glsl_get_vector_elements(var->type);
+
+   nir_intrinsic_instr *store =
+      nir_intrinsic_instr_create(build->shader, nir_intrinsic_store_var);
+   store->num_components = num_components;
+   store->variables[0] = nir_deref_var_create(store, var);
+   store->src[0] = nir_src_for_ssa(value);
+   nir_builder_instr_insert(build, &store->instr);
+}
+
 #endif /* NIR_BUILDER_H */
