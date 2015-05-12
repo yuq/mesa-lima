@@ -2216,7 +2216,7 @@ dri2_egl_unref_sync(struct dri2_egl_display *dri2_dpy,
 static _EGLSync *
 dri2_create_sync(_EGLDriver *drv, _EGLDisplay *dpy,
                  EGLenum type, const EGLint *attrib_list,
-                 const EGLAttribKHR *attrib_list64)
+                 const EGLAttrib *attrib_list64)
 {
    _EGLContext *ctx = _eglGetCurrentContext();
    struct dri2_egl_display *dri2_dpy = dri2_egl_display(dpy);
@@ -2282,7 +2282,7 @@ dri2_destroy_sync(_EGLDriver *drv, _EGLDisplay *dpy, _EGLSync *sync)
 
 static EGLint
 dri2_client_wait_sync(_EGLDriver *drv, _EGLDisplay *dpy, _EGLSync *sync,
-                      EGLint flags, EGLTimeKHR timeout)
+                      EGLint flags, EGLTime timeout)
 {
    _EGLContext *ctx = _eglGetCurrentContext();
    struct dri2_egl_display *dri2_dpy = dri2_egl_display(dpy);

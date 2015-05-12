@@ -1226,7 +1226,7 @@ eglReleaseThread(void)
 }
 
 
-static EGLImageKHR EGLAPIENTRY
+static EGLImage EGLAPIENTRY
 eglCreateImageKHR(EGLDisplay dpy, EGLContext ctx, EGLenum target,
                   EGLClientBuffer buffer, const EGLint *attr_list)
 {
@@ -1234,7 +1234,7 @@ eglCreateImageKHR(EGLDisplay dpy, EGLContext ctx, EGLenum target,
    _EGLContext *context = _eglLookupContext(ctx, disp);
    _EGLDriver *drv;
    _EGLImage *img;
-   EGLImageKHR ret;
+   EGLImage ret;
 
    _EGL_CHECK_DISPLAY(disp, EGL_NO_IMAGE_KHR, drv);
    if (!disp->Extensions.KHR_image_base)
@@ -1256,7 +1256,7 @@ eglCreateImageKHR(EGLDisplay dpy, EGLContext ctx, EGLenum target,
 
 
 static EGLBoolean EGLAPIENTRY
-eglDestroyImageKHR(EGLDisplay dpy, EGLImageKHR image)
+eglDestroyImageKHR(EGLDisplay dpy, EGLImage image)
 {
    _EGLDisplay *disp = _eglLockDisplay(dpy);
    _EGLImage *img = _eglLookupImage(image, disp);
@@ -1276,15 +1276,15 @@ eglDestroyImageKHR(EGLDisplay dpy, EGLImageKHR image)
 }
 
 
-static EGLSyncKHR
+static EGLSync
 _eglCreateSync(EGLDisplay dpy, EGLenum type, const EGLint *attrib_list,
-               const EGLAttribKHR *attrib_list64, EGLBoolean is64)
+               const EGLAttrib *attrib_list64, EGLBoolean is64)
 {
    _EGLDisplay *disp = _eglLockDisplay(dpy);
    _EGLContext *ctx = _eglGetCurrentContext();
    _EGLDriver *drv;
    _EGLSync *sync;
-   EGLSyncKHR ret;
+   EGLSync ret;
 
    _EGL_CHECK_DISPLAY(disp, EGL_NO_SYNC_KHR, drv);
 
@@ -1320,22 +1320,22 @@ _eglCreateSync(EGLDisplay dpy, EGLenum type, const EGLint *attrib_list,
 }
 
 
-static EGLSyncKHR EGLAPIENTRY
+static EGLSync EGLAPIENTRY
 eglCreateSyncKHR(EGLDisplay dpy, EGLenum type, const EGLint *attrib_list)
 {
    return _eglCreateSync(dpy, type, attrib_list, NULL, EGL_FALSE);
 }
 
 
-static EGLSyncKHR EGLAPIENTRY
-eglCreateSync64KHR(EGLDisplay dpy, EGLenum type, const EGLAttribKHR *attrib_list)
+static EGLSync EGLAPIENTRY
+eglCreateSync64KHR(EGLDisplay dpy, EGLenum type, const EGLAttrib *attrib_list)
 {
    return _eglCreateSync(dpy, type, NULL, attrib_list, EGL_TRUE);
 }
 
 
 static EGLBoolean EGLAPIENTRY
-eglDestroySyncKHR(EGLDisplay dpy, EGLSyncKHR sync)
+eglDestroySyncKHR(EGLDisplay dpy, EGLSync sync)
 {
    _EGLDisplay *disp = _eglLockDisplay(dpy);
    _EGLSync *s = _eglLookupSync(sync, disp);
@@ -1354,7 +1354,7 @@ eglDestroySyncKHR(EGLDisplay dpy, EGLSyncKHR sync)
 
 
 static EGLint EGLAPIENTRY
-eglClientWaitSyncKHR(EGLDisplay dpy, EGLSyncKHR sync, EGLint flags, EGLTimeKHR timeout)
+eglClientWaitSyncKHR(EGLDisplay dpy, EGLSync sync, EGLint flags, EGLTime timeout)
 {
    _EGLDisplay *disp = _eglLockDisplay(dpy);
    _EGLSync *s = _eglLookupSync(sync, disp);
@@ -1375,7 +1375,7 @@ eglClientWaitSyncKHR(EGLDisplay dpy, EGLSyncKHR sync, EGLint flags, EGLTimeKHR t
 
 
 static EGLint EGLAPIENTRY
-eglWaitSyncKHR(EGLDisplay dpy, EGLSyncKHR sync, EGLint flags)
+eglWaitSyncKHR(EGLDisplay dpy, EGLSync sync, EGLint flags)
 {
    _EGLDisplay *disp = _eglLockDisplay(dpy);
    _EGLSync *s = _eglLookupSync(sync, disp);
@@ -1401,7 +1401,7 @@ eglWaitSyncKHR(EGLDisplay dpy, EGLSyncKHR sync, EGLint flags)
 
 
 static EGLBoolean EGLAPIENTRY
-eglSignalSyncKHR(EGLDisplay dpy, EGLSyncKHR sync, EGLenum mode)
+eglSignalSyncKHR(EGLDisplay dpy, EGLSync sync, EGLenum mode)
 {
    _EGLDisplay *disp = _eglLockDisplay(dpy);
    _EGLSync *s = _eglLookupSync(sync, disp);
@@ -1417,7 +1417,7 @@ eglSignalSyncKHR(EGLDisplay dpy, EGLSyncKHR sync, EGLenum mode)
 
 
 static EGLBoolean EGLAPIENTRY
-eglGetSyncAttribKHR(EGLDisplay dpy, EGLSyncKHR sync, EGLint attribute, EGLint *value)
+eglGetSyncAttribKHR(EGLDisplay dpy, EGLSync sync, EGLint attribute, EGLint *value)
 {
    _EGLDisplay *disp = _eglLockDisplay(dpy);
    _EGLSync *s = _eglLookupSync(sync, disp);
@@ -1465,13 +1465,13 @@ eglSwapBuffersRegionNOK(EGLDisplay dpy, EGLSurface surface,
 
 #ifdef EGL_MESA_drm_image
 
-static EGLImageKHR EGLAPIENTRY
+static EGLImage EGLAPIENTRY
 eglCreateDRMImageMESA(EGLDisplay dpy, const EGLint *attr_list)
 {
    _EGLDisplay *disp = _eglLockDisplay(dpy);
    _EGLDriver *drv;
    _EGLImage *img;
-   EGLImageKHR ret;
+   EGLImage ret;
 
    _EGL_CHECK_DISPLAY(disp, EGL_NO_IMAGE_KHR, drv);
    if (!disp->Extensions.MESA_drm_image)
@@ -1484,7 +1484,7 @@ eglCreateDRMImageMESA(EGLDisplay dpy, const EGLint *attr_list)
 }
 
 static EGLBoolean EGLAPIENTRY
-eglExportDRMImageMESA(EGLDisplay dpy, EGLImageKHR image,
+eglExportDRMImageMESA(EGLDisplay dpy, EGLImage image,
 		      EGLint *name, EGLint *handle, EGLint *stride)
 {
    _EGLDisplay *disp = _eglLockDisplay(dpy);
@@ -1566,7 +1566,7 @@ eglQueryWaylandBufferWL(EGLDisplay dpy, struct wl_resource *buffer,
 
 #ifdef EGL_WL_create_wayland_buffer_from_image
 static struct wl_buffer * EGLAPIENTRY
-eglCreateWaylandBufferFromImageWL(EGLDisplay dpy, EGLImageKHR image)
+eglCreateWaylandBufferFromImageWL(EGLDisplay dpy, EGLImage image)
 {
    _EGLDisplay *disp = _eglLockDisplay(dpy);
    _EGLImage *img;
@@ -1630,7 +1630,7 @@ eglGetSyncValuesCHROMIUM(EGLDisplay display, EGLSurface surface,
 
 #ifdef EGL_MESA_image_dma_buf_export
 static EGLBoolean EGLAPIENTRY
-eglExportDMABUFImageQueryMESA(EGLDisplay dpy, EGLImageKHR image,
+eglExportDMABUFImageQueryMESA(EGLDisplay dpy, EGLImage image,
                               EGLint *fourcc, EGLint *nplanes,
                               EGLuint64KHR *modifiers)
 {
@@ -1652,7 +1652,7 @@ eglExportDMABUFImageQueryMESA(EGLDisplay dpy, EGLImageKHR image,
 }
 
 static EGLBoolean EGLAPIENTRY
-eglExportDMABUFImageMESA(EGLDisplay dpy, EGLImageKHR image,
+eglExportDMABUFImageMESA(EGLDisplay dpy, EGLImage image,
                          int *fds, EGLint *strides, EGLint *offsets)
 {
    _EGLDisplay *disp = _eglLockDisplay(dpy);
