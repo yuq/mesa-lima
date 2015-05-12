@@ -161,20 +161,22 @@ NineResource9_GetPrivateData( struct NineResource9 *This,
                               DWORD *pSizeOfData )
 {
     struct pheader *header;
+    DWORD sizeofdata;
 
     DBG("This=%p refguid=%p pData=%p pSizeOfData=%p\n",
         This, refguid, pData, pSizeOfData);
 
-    user_assert(pSizeOfData, E_POINTER);
-
     header = util_hash_table_get(This->pdata, refguid);
     if (!header) { return D3DERR_NOTFOUND; }
 
+    user_assert(pSizeOfData, E_POINTER);
+    sizeofdata = *pSizeOfData;
+    *pSizeOfData = header->size;
+
     if (!pData) {
-        *pSizeOfData = header->size;
         return D3D_OK;
     }
-    if (*pSizeOfData < header->size) {
+    if (sizeofdata < header->size) {
         return D3DERR_MOREDATA;
     }
 
