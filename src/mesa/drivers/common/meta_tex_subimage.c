@@ -28,6 +28,7 @@
 #include "blend.h"
 #include "bufferobj.h"
 #include "buffers.h"
+#include "clear.h"
 #include "fbobject.h"
 #include "glformats.h"
 #include "glheader.h"
@@ -279,8 +280,9 @@ _mesa_meta_pbo_GetTexSubImage(struct gl_context *ctx, GLuint dims,
    int full_height, image_height;
    struct gl_texture_image *pbo_tex_image;
    struct gl_renderbuffer *rb = NULL;
-   GLenum status;
-   bool success = false;
+   GLenum status, src_base_format;
+   bool success = false, clear_channels_to_zero = false;
+   float save_clear_color[4];
    int z;
 
    if (!_mesa_is_bufferobj(packing->BufferObj))
@@ -381,6 +383,27 @@ _mesa_meta_pbo_GetTexSubImage(struct gl_context *ctx, GLuint dims,
                                   GL_COLOR_BUFFER_BIT, GL_NEAREST))
       goto fail;
 
+   src_base_format = tex_image ?
+                     tex_image->_BaseFormat :
+                     ctx->ReadBuffer->_ColorReadBuffer->_BaseFormat;
+
+   /* Depending on the base formats involved we might need to rebase some
+    * values. For example if we download from a Luminance format to RGBA
+    * format, we want G=0 and B=0.
+    */
+   clear_channels_to_zero =
+      _mesa_need_luminance_to_rgb_conversion(src_base_format,
+                                             pbo_tex_image->_BaseFormat);
+
+   if (clear_channels_to_zero) {
+      memcpy(save_clear_color, ctx->Color.ClearColor.f, 4 * sizeof(float));
+      /* Clear the Green, Blue channels. */
+      _mesa_ColorMask(GL_FALSE, GL_TRUE, GL_TRUE,
+                      src_base_format != GL_LUMINANCE_ALPHA);
+      _mesa_ClearColor(0.0, 0.0, 0.0, 1.0);
+      _mesa_Clear(GL_COLOR_BUFFER_BIT);
+   }
+
    for (z = 1; z < depth; z++) {
       _mesa_meta_bind_fbo_image(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
                                 tex_image, zoffset + z);
@@ -393,6 +416,15 @@ _mesa_meta_pbo_GetTexSubImage(struct gl_context *ctx, GLuint dims,
                                  0, z * image_height,
                                  width, z * image_height + height,
                                  GL_COLOR_BUFFER_BIT, GL_NEAREST);
+      if (clear_channels_to_zero)
+         _mesa_Clear(GL_COLOR_BUFFER_BIT);
+   }
+
+   /* Unmask the color channels and restore the saved clear color values. */
+   if (clear_channels_to_zero) {
+      _mesa_ColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+      _mesa_ClearColor(save_clear_color[0], save_clear_color[1],
+                       save_clear_color[2], save_clear_color[3]);
    }
 
    success = true;
