@@ -567,23 +567,25 @@ VkResult VKAPI vkQueueSubmit(
 {
    struct anv_queue *queue = (struct anv_queue *) _queue;
    struct anv_device *device = queue->device;
-   struct anv_cmd_buffer *cmd_buffer = (struct anv_cmd_buffer *) pCmdBuffers[0];
    int ret;
 
-   assert(cmdBufferCount == 1);
+   for (uint32_t i = 0; i < cmdBufferCount; i++) {
+      struct anv_cmd_buffer *cmd_buffer =
+         (struct anv_cmd_buffer *) pCmdBuffers[i];
 
-   if (device->dump_aub)
-      anv_cmd_buffer_dump(cmd_buffer);
+      if (device->dump_aub)
+         anv_cmd_buffer_dump(cmd_buffer);
 
-   if (!device->no_hw) {
-      ret = anv_gem_execbuffer(device, &cmd_buffer->execbuf);
-      if (ret != 0)
-         goto fail;
+      if (!device->no_hw) {
+         ret = anv_gem_execbuffer(device, &cmd_buffer->execbuf);
+         if (ret != 0)
+            goto fail;
 
-      for (uint32_t i = 0; i < cmd_buffer->bo_count; i++)
-         cmd_buffer->exec2_bos[i]->offset = cmd_buffer->exec2_objects[i].offset;
-   } else {
-      *(uint32_t *)queue->completed_serial.map = cmd_buffer->serial;
+         for (uint32_t i = 0; i < cmd_buffer->bo_count; i++)
+            cmd_buffer->exec2_bos[i]->offset = cmd_buffer->exec2_objects[i].offset;
+      } else {
+         *(uint32_t *)queue->completed_serial.map = cmd_buffer->serial;
+      }
    }
 
    return VK_SUCCESS;
