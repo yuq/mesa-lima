@@ -43,7 +43,7 @@ NineVolume9_AllocateData( struct NineVolume9 *This )
     DBG("(%p(This=%p),level=%u) Allocating 0x%x bytes of system memory.\n",
         This->base.container, This, This->level, size);
 
-    This->data = (uint8_t *)MALLOC(size);
+    This->data = (uint8_t *)align_malloc(size, 32);
     if (!This->data)
         return E_OUTOFMEMORY;
     return D3D_OK;

@@ -104,11 +104,11 @@ NineSurface9_ctor( struct NineSurface9 *This,
     /* Ram buffer with no parent. Has to allocate the resource itself */
     if (!pResource && !pContainer) {
         assert(!user_buffer);
-        This->data = MALLOC(
+        This->data = align_malloc(
             nine_format_get_level_alloc_size(This->base.info.format,
                                              pDesc->Width,
                                              pDesc->Height,
-                                             0));
+                                             0), 32);
         if (!This->data)
             return E_OUTOFMEMORY;
     }
