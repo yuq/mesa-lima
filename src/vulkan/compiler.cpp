@@ -61,6 +61,10 @@ set_binding_table_layout(struct brw_stage_prog_data *prog_data,
 
    struct anv_pipeline_layout_entry *entries;
 
+   /* No layout is valid for shaders that don't bind any resources. */
+   if (pipeline->layout == NULL)
+      return VK_SUCCESS;
+
    if (stage == VK_SHADER_STAGE_FRAGMENT)
       bias = MAX_RTS;
    else
