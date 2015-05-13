@@ -502,6 +502,7 @@ struct anv_cmd_buffer {
    uint32_t                                     bo_count;
    struct anv_batch                             batch;
    struct anv_state_stream                      surface_state_stream;
+   struct anv_state_stream                      dynamic_state_stream;
 
    /* State required while building cmd buffer */
    struct {

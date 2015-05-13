@@ -898,6 +898,7 @@ anv_cmd_buffer_destructor(struct anv_device *   device,
    struct anv_cmd_buffer *cmd_buffer = (struct anv_cmd_buffer *) object;
    
    anv_state_stream_finish(&cmd_buffer->surface_state_stream);
+   anv_state_stream_finish(&cmd_buffer->dynamic_state_stream);
    anv_batch_finish(&cmd_buffer->batch, device);
    anv_device_free(device, cmd_buffer->exec2_objects);
    anv_device_free(device, cmd_buffer->exec2_bos);
@@ -1793,6 +1794,8 @@ VkResult VKAPI vkCreateCommandBuffer(
 
    anv_state_stream_init(&cmd_buffer->surface_state_stream,
                          &device->surface_state_block_pool);
+   anv_state_stream_init(&cmd_buffer->dynamic_state_stream,
+                         &device->dyn_state_block_pool);
 
    cmd_buffer->dirty = 0;
    cmd_buffer->vb_dirty = 0;
