@@ -208,10 +208,13 @@ DWORD WINAPI
 NineResource9_SetPriority( struct NineResource9 *This,
                            DWORD PriorityNew )
 {
-    DWORD prev = This->priority;
-
+    DWORD prev;
     DBG("This=%p, PriorityNew=%d\n", This, PriorityNew);
 
+    if (This->pool != D3DPOOL_MANAGED || This->type == D3DRTYPE_SURFACE)
+        return 0;
+
+    prev = This->priority;
     This->priority = PriorityNew;
     return prev;
 }
@@ -219,6 +222,9 @@ NineResource9_SetPriority( struct NineResource9 *This,
 DWORD WINAPI
 NineResource9_GetPriority( struct NineResource9 *This )
 {
+    if (This->pool != D3DPOOL_MANAGED || This->type == D3DRTYPE_SURFACE)
+        return 0;
+
     return This->priority;
 }
 
