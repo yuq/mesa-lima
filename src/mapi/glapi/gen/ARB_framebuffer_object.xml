@@ -152,8 +152,7 @@
         <glx rop="235"/>
     </function>
 
-    <function name="DeleteRenderbuffers"
-              es2="2.0">
+    <function name="DeleteRenderbuffers" es2="2.0">
         <param name="n" type="GLsizei" counter="true"/>
         <param name="renderbuffers" type="const GLuint *" count="n"/>
 	<glx rop="4317"/>
@@ -165,8 +164,7 @@
 	<glx vendorpriv="1423" always_array="true"/>
     </function>
 
-    <function name="RenderbufferStorage"
-              es2="2.0">
+    <function name="RenderbufferStorage" es2="2.0">
         <param name="target" type="GLenum"/>
         <param name="internalformat" type="GLenum"/>
         <param name="width" type="GLsizei"/>
@@ -202,8 +200,7 @@
         <glx rop="236"/>
     </function>
 
-    <function name="DeleteFramebuffers"
-              es2="2.0">
+    <function name="DeleteFramebuffers" es2="2.0">
         <param name="n" type="GLsizei" counter="true"/>
         <param name="framebuffers" type="const GLuint *" count="n"/>
 	<glx rop="4320"/>
@@ -215,8 +212,7 @@
 	<glx vendorpriv="1426" always_array="true"/>
     </function>
 
-    <function name="CheckFramebufferStatus"
-              es2="2.0">
+    <function name="CheckFramebufferStatus" es2="2.0">
         <param name="target" type="GLenum"/>
 	<return type="GLenum"/>
 	<glx vendorpriv="1427"/>
@@ -231,8 +227,7 @@
 	<glx rop="4321"/>
     </function>
 
-    <function name="FramebufferTexture2D"
-              es2="2.0">
+    <function name="FramebufferTexture2D" es2="2.0">
         <param name="target" type="GLenum"/>
         <param name="attachment" type="GLenum"/>
         <param name="textarget" type="GLenum"/>
@@ -260,8 +255,7 @@
 	<glx rop="237"/>
     </function>
 
-    <function name="FramebufferRenderbuffer"
-              es2="2.0">
+    <function name="FramebufferRenderbuffer" es2="2.0">
         <param name="target" type="GLenum"/>
         <param name="attachment" type="GLenum"/>
         <param name="renderbuffertarget" type="GLenum"/>

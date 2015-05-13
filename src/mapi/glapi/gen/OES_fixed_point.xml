@@ -13,8 +13,7 @@
     <type name="clampx"  size="4"                                    />
 
     <!-- OpenGL ES 1.0 -->
-    <function name="AlphaFuncxOES"
-              es1="1.0" alias="AlphaFuncx">
+    <function name="AlphaFuncxOES" es1="1.0" alias="AlphaFuncx">
         <param name="func" type="GLenum"/>
         <param name="ref" type="GLclampx"/>
     </function>

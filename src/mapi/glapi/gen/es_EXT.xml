@@ -318,8 +318,7 @@
     <enum name="POINT_SIZE_ARRAY_OES"                     value="0x8B9C"/>
     <enum name="POINT_SIZE_ARRAY_BUFFER_BINDING_OES"	  value="0x8B9F"/>
 
-    <function name="PointSizePointerOES"
-	      es1="1.0" desktop="false">
+    <function name="PointSizePointerOES" es1="1.0" desktop="false">
         <param name="type" type="GLenum"/>
         <param name="stride" type="GLsizei"/>
         <param name="pointer" type="const GLvoid *"/>
@@ -627,8 +626,7 @@
 <!-- 64. GL_EXT_discard_framebuffer -->
 
 <category name="GL_EXT_discard_framebuffer" number="64">
-    <function name="DiscardFramebufferEXT" es1="1.0" es2="2.0"
- desktop="false">
+    <function name="DiscardFramebufferEXT" es1="1.0" es2="2.0" desktop="false">
         <param name="target" type="GLenum"/>
         <param name="numAttachments" type="GLsizei"/>
         <param name="attachments" type="const GLenum *" count="numAttachments"/>

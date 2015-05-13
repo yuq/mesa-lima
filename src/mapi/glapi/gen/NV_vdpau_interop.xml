@@ -10,7 +10,7 @@
 	<param name="getProcAddress" type="const GLvoid *"/>
     </function>
 
-    <function name="VDPAUFiniNV" />
+    <function name="VDPAUFiniNV"/>
 
     <function name="VDPAURegisterVideoSurfaceNV">
         <return type="GLintptr"/>
