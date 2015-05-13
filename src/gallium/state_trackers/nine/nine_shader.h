@@ -61,6 +61,7 @@ struct nine_shader_info
 
     uint8_t fog_enable;
     uint8_t fog_mode;
+    uint16_t projected; /* ps 1.1 to 1.3 */
 
     unsigned const_i_base; /* in vec4 (16 byte) units */
     unsigned const_b_base; /* in vec4 (16 byte) units */

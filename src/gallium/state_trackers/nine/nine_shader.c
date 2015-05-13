@@ -681,6 +681,54 @@ tx_pred_alloc(struct shader_translator *tx, INT idx)
         tx->regs.p = ureg_DECL_predicate(tx->ureg);
 }
 
+/* NOTE: It's not very clear on which ps1.1-ps1.3 instructions
+ * the projection should be applied on the texture. It doesn't
+ * apply on texkill.
+ * The doc is very imprecise here (it says the projection is done
+ * before rasterization, thus in vs, which seems wrong since ps instructions
+ * are affected differently)
+ * For now we only apply to the ps TEX instruction and TEXBEM.
+ * Perhaps some other instructions would need it */
+static inline void
+apply_ps1x_projection(struct shader_translator *tx, struct ureg_dst dst,
+                      struct ureg_src src, INT idx)
+{
+    struct ureg_dst tmp;
+    unsigned dim = 1 + ((tx->info->projected >> (2 * idx)) & 3);
+
+    /* no projection */
+    if (dim == 1) {
+        ureg_MOV(tx->ureg, dst, src);
+    } else {
+        tmp = tx_scratch_scalar(tx);
+        ureg_RCP(tx->ureg, tmp, ureg_scalar(src, dim-1));
+        ureg_MUL(tx->ureg, dst, tx_src_scalar(tmp), src);
+    }
+}
+
+static inline void
+TEX_with_ps1x_projection(struct shader_translator *tx, struct ureg_dst dst,
+                         unsigned target, struct ureg_src src0,
+                         struct ureg_src src1, INT idx)
+{
+    unsigned dim = 1 + ((tx->info->projected >> (2 * idx)) & 3);
+    struct ureg_dst tmp;
+
+    /* dim == 1: no projection
+     * Looks like must be disabled when it makes no
+     * sense according the texture dimensions
+     */
+    if (dim == 1 || dim <= target) {
+        ureg_TEX(tx->ureg, dst, target, src0, src1);
+    } else if (dim == 4) {
+        ureg_TXP(tx->ureg, dst, target, src0, src1);
+    } else {
+        tmp = tx_scratch(tx);
+        apply_ps1x_projection(tx, tmp, src0, idx);
+        ureg_TEX(tx->ureg, dst, target, ureg_src(tmp), src1);
+    }
+}
+
 static inline void
 tx_texcoord_alloc(struct shader_translator *tx, INT idx)
 {
@@ -2155,7 +2203,7 @@ DECL_SPECIAL(TEXBEM)
 {
     struct ureg_program *ureg = tx->ureg;
     struct ureg_dst dst = tx_dst_param(tx, &tx->insn.dst[0]);
-    struct ureg_dst tmp, tmp2;
+    struct ureg_dst tmp, tmp2, texcoord;
     struct ureg_src sample, m00, m01, m10, m11;
     struct ureg_src bumpenvlscale, bumpenvloffset;
     const int m = tx->insn.dst[0].idx;
@@ -2170,6 +2218,7 @@ DECL_SPECIAL(TEXBEM)
 
     tmp = tx_scratch(tx);
     tmp2 = tx_scratch(tx);
+    texcoord = tx_scratch(tx);
     /*
      * Bump-env-matrix:
      * 00 is X
@@ -2192,9 +2241,11 @@ DECL_SPECIAL(TEXBEM)
         bumpenvloffset = NINE_CONSTANT_SRC_SWIZZLE(8 + 8 + m / 2, W);
     }
 
+    apply_ps1x_projection(tx, texcoord, tx->regs.vT[m], m);
+
     /* u' = TextureCoordinates(stage m)u + D3DTSS_BUMPENVMAT00(stage m)*t(n)R  */
     ureg_MAD(ureg, ureg_writemask(tmp, TGSI_WRITEMASK_X), m00,
-             NINE_APPLY_SWIZZLE(ureg_src(tx->regs.tS[n]), X), tx->regs.vT[m]);
+             NINE_APPLY_SWIZZLE(ureg_src(tx->regs.tS[n]), X), ureg_src(texcoord));
     /* u' = u' + D3DTSS_BUMPENVMAT10(stage m)*t(n)G */
     ureg_MAD(ureg, ureg_writemask(tmp, TGSI_WRITEMASK_X), m10,
              NINE_APPLY_SWIZZLE(ureg_src(tx->regs.tS[n]), Y),
@@ -2202,7 +2253,7 @@ DECL_SPECIAL(TEXBEM)
 
     /* v' = TextureCoordinates(stage m)v + D3DTSS_BUMPENVMAT01(stage m)*t(n)R */
     ureg_MAD(ureg, ureg_writemask(tmp, TGSI_WRITEMASK_Y), m01,
-             NINE_APPLY_SWIZZLE(ureg_src(tx->regs.tS[n]), X), tx->regs.vT[m]);
+             NINE_APPLY_SWIZZLE(ureg_src(tx->regs.tS[n]), X), ureg_src(texcoord));
     /* v' = v' + D3DTSS_BUMPENVMAT11(stage m)*t(n)G*/
     ureg_MAD(ureg, ureg_writemask(tmp, TGSI_WRITEMASK_Y), m11,
              NINE_APPLY_SWIZZLE(ureg_src(tx->regs.tS[n]), Y),
@@ -2600,7 +2651,7 @@ DECL_SPECIAL(TEX)
     src[1] = ureg_DECL_sampler(ureg, s);
     tx->info->sampler_mask |= 1 << s;
 
-    ureg_TEX(ureg, dst, t, src[0], src[1]);
+    TEX_with_ps1x_projection(tx, dst, t, src[0], src[1], s);
 
     return D3D_OK;
 }

@@ -76,8 +76,9 @@
 #define NINE_STATE_FF_PSSTAGES (1 << 22)
 #define NINE_STATE_FF_OTHER    (1 << 23)
 #define NINE_STATE_FOG_SHADER  (1 << 24)
-#define NINE_STATE_ALL          0x1ffffff
-#define NINE_STATE_UNHANDLED   (1 << 25)
+#define NINE_STATE_PS1X_SHADER (1 << 25)
+#define NINE_STATE_ALL          0x3ffffff
+#define NINE_STATE_UNHANDLED   (1 << 26)
 
 #define NINE_STATE_COMMIT_DSA  (1 << 0)
 #define NINE_STATE_COMMIT_RASTERIZER (1 << 1)

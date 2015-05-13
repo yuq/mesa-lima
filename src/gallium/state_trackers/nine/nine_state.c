@@ -961,7 +961,8 @@ commit_ps(struct NineDevice9 *device)
     NINE_STATE_BLEND_COLOR |    \
     NINE_STATE_STENCIL_REF |    \
     NINE_STATE_SAMPLE_MASK |    \
-    NINE_STATE_FOG_SHADER)
+    NINE_STATE_FOG_SHADER |     \
+    NINE_STATE_PS1X_SHADER)
 
 #define NINE_STATE_FREQ_GROUP_1 ~NINE_STATE_FREQ_GROUP_0
 
@@ -1032,7 +1033,7 @@ nine_update_state(struct NineDevice9 *device)
         if (group & NINE_STATE_RASTERIZER)
             prepare_rasterizer(device);
 
-        if (group & (NINE_STATE_PS | NINE_STATE_TEXTURE | NINE_STATE_FOG_SHADER))
+        if (group & (NINE_STATE_PS | NINE_STATE_TEXTURE | NINE_STATE_FOG_SHADER | NINE_STATE_PS1X_SHADER))
             group |= prepare_ps(device, (group & NINE_STATE_PS) != 0);
 
         if (group & NINE_STATE_BLEND_COLOR) {

@@ -2637,6 +2637,9 @@ NineDevice9_SetTextureStageState( struct NineDevice9 *This,
     case D3DTSS_BUMPENVLOFFSET:
         bumpmap_index = 4 * 8 + 2 * Stage + 1;
         break;
+    case D3DTSS_TEXTURETRANSFORMFLAGS:
+        state->changed.group |= NINE_STATE_PS1X_SHADER;
+        break;
     default:
         break;
     }

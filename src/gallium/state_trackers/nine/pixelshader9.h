@@ -27,6 +27,7 @@
 #include "nine_shader.h"
 #include "nine_state.h"
 #include "basetexture9.h"
+#include "nine_ff.h"
 
 struct nine_lconstf;
 
@@ -67,6 +68,7 @@ NinePixelShader9_UpdateKey( struct NinePixelShader9 *ps,
 {
     uint16_t samplers_shadow;
     uint32_t samplers_ps1_types;
+    uint16_t projected;
     uint64_t key;
     BOOL res;
 
@@ -88,6 +90,11 @@ NinePixelShader9_UpdateKey( struct NinePixelShader9 *ps,
     if (ps->byte_code.version < 0x30) {
         key |= ((uint64_t)state->rs[D3DRS_FOGENABLE]) << 32;
         key |= ((uint64_t)state->rs[D3DRS_FOGTABLEMODE]) << 33;
+    }
+
+    if (unlikely(ps->byte_code.version < 0x14)) {
+        projected = nine_ff_get_projected_key(state);
+        key |= ((uint64_t) projected) << 48;
     }
 
     res = ps->last_key != key;
