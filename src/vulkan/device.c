@@ -1317,10 +1317,6 @@ VkResult VKAPI vkCreateBufferView(
 
 // Sampler functions
 
-struct anv_sampler {
-   uint32_t state[4];
-};
-
 VkResult VKAPI vkCreateSampler(
     VkDevice                                    _device,
     const VkSamplerCreateInfo*                  pCreateInfo,

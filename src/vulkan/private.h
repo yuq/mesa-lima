@@ -623,6 +623,10 @@ struct anv_image_view {
    struct anv_state                             surface_state;
 };
 
+struct anv_sampler {
+   uint32_t state[4];
+};
+
 struct anv_depth_stencil_view {
 };
 
