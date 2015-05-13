@@ -348,7 +348,8 @@ VkResult VKAPI vkCreateImageView(
     VkImageView*                                pView)
 {
    struct anv_device *device = (struct anv_device *) _device;
-   struct anv_image_view *view;
+   struct anv_surface_view *view;
+   struct anv_image *image = (struct anv_image *) pCreateInfo->image;
    const struct anv_format *format =
       anv_format_for_vk_format(pCreateInfo->format);
 
@@ -359,12 +360,13 @@ VkResult VKAPI vkCreateImageView(
    if (view == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
-   view->image = (struct anv_image *) pCreateInfo->image;
-
-   view->surface_state = create_surface_state(device, view->image, format);
+   view->bo = image->bo;
+   view->offset = image->offset;
+   view->surface_state = create_surface_state(device, image, format);
+   view->format = pCreateInfo->format;
 
    /* TODO: Miplevels */
-   view->extent = view->image->extent;
+   view->extent = image->extent;
 
    *pView = (VkImageView) view;
 
@@ -377,7 +379,8 @@ VkResult VKAPI vkCreateColorAttachmentView(
     VkColorAttachmentView*                      pView)
 {
    struct anv_device *device = (struct anv_device *) _device;
-   struct anv_color_attachment_view *view;
+   struct anv_surface_view *view;
+   struct anv_image *image = (struct anv_image *) pCreateInfo->image;
    const struct anv_format *format =
       anv_format_for_vk_format(pCreateInfo->format);
 
@@ -388,12 +391,11 @@ VkResult VKAPI vkCreateColorAttachmentView(
    if (view == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
-   view->image = (struct anv_image *) pCreateInfo->image;
-
-   view->surface_state = create_surface_state(device, view->image, format);
-
-   /* TODO: Miplevels */
-   view->extent = view->image->extent;
+   view->bo = image->bo;
+   view->offset = image->offset;
+   view->surface_state = create_surface_state(device, image, format);
+   view->extent = image->extent;
+   view->format = pCreateInfo->format;
 
    *pView = (VkColorAttachmentView) view;
 

@@ -1252,7 +1252,8 @@ VkResult VKAPI vkCreateBufferView(
     VkBufferView*                               pView)
 {
    struct anv_device *device = (struct anv_device *) _device;
-   struct anv_buffer_view *view;
+   struct anv_buffer *buffer = (struct anv_buffer *) pCreateInfo->buffer;
+   struct anv_surface_view *view;
    const struct anv_format *format;
 
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO);
@@ -1262,10 +1263,11 @@ VkResult VKAPI vkCreateBufferView(
    if (view == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
-   view->buffer = (struct anv_buffer *) pCreateInfo->buffer;
-   view->offset = pCreateInfo->offset;
+   view->bo = buffer->bo;
+   view->offset = buffer->offset + pCreateInfo->offset;
    view->surface_state =
       anv_state_pool_alloc(&device->surface_state_pool, 64, 64);
+   view->format = pCreateInfo->format;
 
    format = anv_format_for_vk_format(pCreateInfo->format);
    /* This assumes RGBA float format. */
@@ -1306,7 +1308,7 @@ VkResult VKAPI vkCreateBufferView(
       .ShaderChannelSelectAlpha = SCS_ALPHA,
       .ResourceMinLOD = 0,
       /* FIXME: We assume that the image must be bound at this time. */
-      .SurfaceBaseAddress = { NULL, view->buffer->offset + view->offset },
+      .SurfaceBaseAddress = { NULL, view->offset },
    };
 
    GEN8_RENDER_SURFACE_STATE_pack(NULL, view->surface_state.map, &surface_state);
@@ -1581,8 +1583,8 @@ void VKAPI vkUpdateDescriptors(
          update_sampler_textures = (VkUpdateSamplerTextures *) common;
 
          for (uint32_t j = 0; j < update_sampler_textures->count; j++) {
-            set->descriptors[update_sampler_textures->binding + j].image_view =
-               (struct anv_image_view *)
+            set->descriptors[update_sampler_textures->binding + j].view =
+               (struct anv_surface_view *)
                update_sampler_textures->pSamplerImageViews[j].pImageView->view;
             set->descriptors[update_sampler_textures->binding + j].sampler =
                (struct anv_sampler *)
@@ -1594,8 +1596,8 @@ void VKAPI vkUpdateDescriptors(
          update_images = (VkUpdateImages *) common;
 
          for (uint32_t j = 0; j < update_images->count; j++) {
-            set->descriptors[update_images->binding + j].image_view =
-               (struct anv_image_view *) update_images->pImageViews[j].view;
+            set->descriptors[update_images->binding + j].view =
+               (struct anv_surface_view *) update_images->pImageViews[j].view;
          }
          break;
 
@@ -1603,8 +1605,8 @@ void VKAPI vkUpdateDescriptors(
          update_buffers = (VkUpdateBuffers *) common;
 
          for (uint32_t j = 0; j < update_buffers->count; j++) {
-            set->descriptors[update_buffers->binding + j].buffer_view =
-               (struct anv_buffer_view *) update_buffers->pBufferViews[j].view;
+            set->descriptors[update_buffers->binding + j].view =
+               (struct anv_surface_view *) update_buffers->pBufferViews[j].view;
          }
          /* FIXME: descriptor arrays? */
          break;
@@ -2185,24 +2187,21 @@ flush_descriptor_sets(struct anv_cmd_buffer *cmd_buffer)
 
       if (s == VK_SHADER_STAGE_FRAGMENT) {
          for (uint32_t i = 0; i < framebuffer->color_attachment_count; i++) {
-            struct anv_color_attachment_view *view = framebuffer->color_attachments[i];
+            struct anv_surface_view *view = framebuffer->color_attachments[i];
             table[i] = view->surface_state.offset;
 
             /* Don't write the reloc back to the surface state. We do that at
              * submit time. Surface address is dwords 8-9. */
             anv_reloc_list_add(&cmd_buffer->batch.surf_relocs,
                                view->surface_state.offset + 8 * sizeof(int32_t),
-                               view->image->bo, view->image->offset);
+                               view->bo, view->offset);
          }
       }
 
       if (layout) {
          for (uint32_t i = 0; i < layout->stage[s].surface_count; i++) {
             struct anv_pipeline_layout_entry *e = &layout->stage[s].surface_entries[i];
-            struct anv_descriptor *d =
-               &cmd_buffer->descriptor_sets[e->set]->descriptors[e->index];
-            struct anv_image_view *image_view;
-            struct anv_buffer_view *buffer_view;
+            struct anv_surface_view *view;
 
             switch (e->type) {
             case VK_DESCRIPTOR_TYPE_SAMPLER:
@@ -2211,26 +2210,15 @@ flush_descriptor_sets(struct anv_cmd_buffer *cmd_buffer)
             case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
             case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
             case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
-               image_view = d->image_view;
-               table[bias + i] = image_view->surface_state.offset;
-               anv_reloc_list_add(&cmd_buffer->batch.surf_relocs,
-                                  image_view->surface_state.offset + 8 * sizeof(int32_t),
-                                  image_view->image->bo,
-                                  image_view->image->offset);
-               break;
             case VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
             case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
-               /* FIXME: What are these? TBOs? */
-               break;
-
             case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
             case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
-               buffer_view = d->buffer_view;
-               table[bias + i] = buffer_view->surface_state.offset;
+               view = cmd_buffer->descriptor_sets[e->set]->descriptors[e->index].view;
+               table[bias + i] = view->surface_state.offset;
                anv_reloc_list_add(&cmd_buffer->batch.surf_relocs,
-                                  buffer_view->surface_state.offset + 8 * sizeof(int32_t),
-                                  buffer_view->buffer->bo,
-                                  buffer_view->buffer->offset + buffer_view->offset);
+                                  view->surface_state.offset + 8 * sizeof(int32_t),
+                                  view->bo, view->offset);
                break;
 
             case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
@@ -2673,7 +2661,7 @@ VkResult VKAPI vkCreateFramebuffer(
    framebuffer->color_attachment_count = pCreateInfo->colorAttachmentCount;
    for (uint32_t i = 0; i < pCreateInfo->colorAttachmentCount; i++) {
       framebuffer->color_attachments[i] =
-         (struct anv_color_attachment_view *) pCreateInfo->pColorAttachments[i].view;
+         (struct anv_surface_view *) pCreateInfo->pColorAttachments[i].view;
    }
 
    if (pCreateInfo->pDepthStencilAttachment) {

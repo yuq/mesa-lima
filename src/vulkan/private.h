@@ -463,13 +463,8 @@ struct anv_descriptor_set_layout {
 };
 
 struct anv_descriptor {
-   union {
-      struct {
-         struct anv_sampler *sampler;
-         struct anv_image_view *image_view;
-      };
-      struct anv_buffer_view *buffer_view;
-   };
+   struct anv_sampler *sampler;
+   struct anv_surface_view *view;
 };
 
 struct anv_descriptor_set {
@@ -630,24 +625,12 @@ struct anv_image {
    VkDeviceSize                                 offset;
 };
 
-struct anv_buffer_view {
-   struct anv_buffer *                          buffer;
+struct anv_surface_view {
    struct anv_state                             surface_state;
+   struct anv_bo *                              bo;
    uint32_t                                     offset;
-};
-
-struct anv_color_attachment_view {
-   struct anv_image *                           image;
-   struct anv_state                             surface_state;
-
    VkExtent3D                                   extent;
-};
-
-struct anv_image_view {
-   struct anv_image *                           image;
-   struct anv_state                             surface_state;
-
-   VkExtent3D                                   extent;
+   VkFormat                                     format;
 };
 
 struct anv_sampler {
@@ -659,7 +642,7 @@ struct anv_depth_stencil_view {
 
 struct anv_framebuffer {
    uint32_t                                     color_attachment_count;
-   struct anv_color_attachment_view *           color_attachments[MAX_RTS];
+   struct anv_surface_view *                    color_attachments[MAX_RTS];
    struct anv_depth_stencil_view *              depth_stencil;
 
    uint32_t                                     sample_count;

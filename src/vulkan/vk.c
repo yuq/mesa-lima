@@ -562,6 +562,11 @@ int main(int argc, char *argv[])
                  },
                  &texture);
 
+   vkQueueBindObjectMemory(queue, VK_OBJECT_TYPE_IMAGE,
+                           texture,
+                           0, /* allocation index; for objects which need to bind to multiple mems */
+                           mem, 2048 + 256 * 256 * 4);
+
    VkImageView image_view;
    vkCreateImageView(device,
                      &(VkImageViewCreateInfo) {
@@ -585,11 +590,6 @@ int main(int argc, char *argv[])
                         .minLod = 0
                       },
                       &image_view);
-
-   vkQueueBindObjectMemory(queue, VK_OBJECT_TYPE_IMAGE,
-                           texture,
-                           0, /* allocation index; for objects which need to bind to multiple mems */
-                           mem, 2048 + 256 * 256 * 4);
 
    VkSampler sampler;
    vkCreateSampler(device,

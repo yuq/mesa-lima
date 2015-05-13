@@ -468,10 +468,10 @@ struct blit_region {
 
 static void
 meta_emit_blit(struct anv_cmd_buffer *cmd_buffer,
-               struct anv_image_view *src,
+               struct anv_surface_view *src,
                VkOffset3D src_offset,
                VkExtent3D src_extent,
-               struct anv_color_attachment_view *dest,
+               struct anv_surface_view *dest,
                VkOffset3D dest_offset,
                VkExtent3D dest_extent)
 {
@@ -587,7 +587,7 @@ meta_emit_blit(struct anv_cmd_buffer *cmd_buffer,
       .extent = { },
       .sampleCount = 1,
       .layers = 1,
-      .pColorFormats = (VkFormat[]) { dest->image->format },
+      .pColorFormats = (VkFormat[]) { dest->format },
       .pColorLayouts = (VkImageLayout[]) { VK_IMAGE_LAYOUT_GENERAL },
       .pColorLoadOps = (VkAttachmentLoadOp[]) { VK_ATTACHMENT_LOAD_OP_LOAD },
       .pColorStoreOps = (VkAttachmentStoreOp[]) { VK_ATTACHMENT_STORE_OP_STORE },
@@ -750,10 +750,10 @@ void VKAPI vkCmdCopyImageToBuffer(
       vkCreateColorAttachmentView(vk_device, &dest_view_info, &dest_view);
 
       meta_emit_blit(cmd_buffer,
-                     (struct anv_image_view *)src_view,
+                     (struct anv_surface_view *)src_view,
                      pRegions[r].imageOffset,
                      pRegions[r].imageExtent,
-                     (struct anv_color_attachment_view *)dest_view,
+                     (struct anv_surface_view *)dest_view,
                      (VkOffset3D) { 0, 0, 0 },
                      pRegions[r].imageExtent);
    }
