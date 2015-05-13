@@ -33,7 +33,6 @@
                    value               NMTOKEN #REQUIRED>
 <!ATTLIST function name                NMTOKEN #REQUIRED
                    alias               NMTOKEN #IMPLIED
-                   offset              CDATA   #IMPLIED
                    vectorequiv         NMTOKEN #IMPLIED
                    es1                 CDATA   "none"
                    es2                 CDATA   "none"
