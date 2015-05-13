@@ -23,6 +23,8 @@ C_SOURCES := \
 	core/ilo_state_3d.h \
 	core/ilo_state_3d_bottom.c \
 	core/ilo_state_3d_top.c \
+	core/ilo_state_sampler.c \
+	core/ilo_state_sampler.h \
 	core/ilo_state_surface.c \
 	core/ilo_state_surface.h \
 	core/ilo_state_zs.c \
