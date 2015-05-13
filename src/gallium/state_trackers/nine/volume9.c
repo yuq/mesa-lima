@@ -231,14 +231,18 @@ NineVolume9_LockBox( struct NineVolume9 *This,
         pBox ? pBox->Front : 0, pBox ? pBox->Back : 0,
         nine_D3DLOCK_to_str(Flags));
 
+    /* check if it's already locked */
+    user_assert(This->lock_count == 0, D3DERR_INVALIDCALL);
+
+    /* set pBits to NULL after lock_count check */
+    user_assert(pLockedVolume, E_POINTER);
+    pLockedVolume->pBits = NULL;
+
     user_assert(This->desc.Pool != D3DPOOL_DEFAULT ||
                 (This->desc.Usage & D3DUSAGE_DYNAMIC), D3DERR_INVALIDCALL);
 
     user_assert(!((Flags & D3DLOCK_DISCARD) && (Flags & D3DLOCK_READONLY)),
                 D3DERR_INVALIDCALL);
-
-    user_assert(This->lock_count == 0, D3DERR_INVALIDCALL);
-    user_assert(pLockedVolume, E_POINTER);
 
     if (pBox && This->desc.Pool == D3DPOOL_DEFAULT &&
         util_format_is_compressed(This->info.format)) {
