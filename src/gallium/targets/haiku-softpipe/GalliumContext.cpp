@@ -10,6 +10,8 @@
 
 #include "GalliumContext.h"
 
+#include <stdio.h>
+
 #include "GLView.h"
 
 #include "bitmap_wrapper.h"

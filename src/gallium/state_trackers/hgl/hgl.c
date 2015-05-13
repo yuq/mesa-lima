@@ -10,6 +10,8 @@
 
 #include "GLView.h"
 
+#include <stdio.h>
+
 #include "pipe/p_format.h"
 #include "util/u_atomic.h"
 #include "util/u_format.h"
