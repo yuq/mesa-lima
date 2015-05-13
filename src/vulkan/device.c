@@ -1545,8 +1545,8 @@ void VKAPI vkUpdateDescriptors(
          update_samplers = (VkUpdateSamplers *) common;
 
          for (uint32_t j = 0; j < update_samplers->count; j++) {
-            set->descriptors[update_samplers->binding + j] =
-               (void *) update_samplers->pSamplers[j];
+            set->descriptors[update_samplers->binding + j].sampler =
+               (struct anv_sampler *) update_samplers->pSamplers[j];
          }
          break;
 
@@ -1555,8 +1555,12 @@ void VKAPI vkUpdateDescriptors(
          update_sampler_textures = (VkUpdateSamplerTextures *) common;
 
          for (uint32_t j = 0; j < update_sampler_textures->count; j++) {
-            set->descriptors[update_sampler_textures->binding + j] =
-               (void *) update_sampler_textures->pSamplerImageViews[j].pImageView->view;
+            set->descriptors[update_sampler_textures->binding + j].image_view =
+               (struct anv_image_view *)
+               update_sampler_textures->pSamplerImageViews[j].pImageView->view;
+            set->descriptors[update_sampler_textures->binding + j].sampler =
+               (struct anv_sampler *)
+               update_sampler_textures->pSamplerImageViews[j].sampler;
          }
          break;
 
@@ -1564,8 +1568,8 @@ void VKAPI vkUpdateDescriptors(
          update_images = (VkUpdateImages *) common;
 
          for (uint32_t j = 0; j < update_images->count; j++) {
-            set->descriptors[update_images->binding + j] =
-               (void *) update_images->pImageViews[j].view;
+            set->descriptors[update_images->binding + j].image_view =
+               (struct anv_image_view *) update_images->pImageViews[j].view;
          }
          break;
 
@@ -1573,8 +1577,8 @@ void VKAPI vkUpdateDescriptors(
          update_buffers = (VkUpdateBuffers *) common;
 
          for (uint32_t j = 0; j < update_buffers->count; j++) {
-            set->descriptors[update_buffers->binding + j] =
-               (void *) update_buffers->pBufferViews[j].view;
+            set->descriptors[update_buffers->binding + j].buffer_view =
+               (struct anv_buffer_view *) update_buffers->pBufferViews[j].view;
          }
          /* FIXME: descriptor arrays? */
          break;
@@ -2180,17 +2184,19 @@ flush_descriptor_sets(struct anv_cmd_buffer *cmd_buffer)
       if (layout) {
          for (uint32_t i = 0; i < layout->stage[s].count; i++) {
             struct anv_pipeline_layout_entry *e = &layout->stage[s].entries[i];
+            struct anv_descriptor *d =
+               &cmd_buffer->descriptor_sets[e->set]->descriptors[e->index];
             struct anv_image_view *image_view;
             struct anv_buffer_view *buffer_view;
-            void *d = cmd_buffer->descriptor_sets[e->set]->descriptors[e->index];
 
             switch (e->type) {
             case VK_DESCRIPTOR_TYPE_SAMPLER:
-            case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
+               unreachable("sampler-only descriptor in the surface entries");
                break;
+            case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
             case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
             case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
-               image_view = d;
+               image_view = d->image_view;
                table[bias + i] = image_view->surface_state.offset;
                anv_reloc_list_add(&cmd_buffer->batch.surf_relocs,
                                   image_view->surface_state.offset + 8 * sizeof(int32_t),
@@ -2204,7 +2210,7 @@ flush_descriptor_sets(struct anv_cmd_buffer *cmd_buffer)
 
             case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
             case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
-               buffer_view = d;
+               buffer_view = d->buffer_view;
                table[bias + i] = buffer_view->surface_state.offset;
                anv_reloc_list_add(&cmd_buffer->batch.surf_relocs,
                                   buffer_view->surface_state.offset + 8 * sizeof(int32_t),

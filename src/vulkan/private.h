@@ -454,8 +454,18 @@ struct anv_descriptor_set_layout {
    } bindings[0];
 };
 
+struct anv_descriptor {
+   union {
+      struct {
+         struct anv_sampler *sampler;
+         struct anv_image_view *image_view;
+      };
+      struct anv_buffer_view *buffer_view;
+   };
+};
+
 struct anv_descriptor_set {
-   void *descriptors[0];
+   struct anv_descriptor descriptors[0];
 };
 
 struct anv_pipeline_layout_entry {
