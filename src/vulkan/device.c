@@ -1502,7 +1502,7 @@ VkResult VKAPI vkAllocDescriptorSets(
 
    for (uint32_t i = 0; i < count; i++) {
       layout = (struct anv_descriptor_set_layout *) pSetLayouts[i];
-      size = sizeof(*set) + layout->total * sizeof(set->descriptors[0]);
+      size = sizeof(*set) + layout->count * sizeof(set->descriptors[0]);
       set = anv_device_alloc(device, size, 8,
                              VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
       if (!set) {
