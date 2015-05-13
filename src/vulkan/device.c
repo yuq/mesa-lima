@@ -305,10 +305,10 @@ VkResult VKAPI vkCreateDevice(
    if (device->context_id == -1)
       goto fail_fd;
 
-   anv_block_pool_init(&device->dyn_state_block_pool, device, 2048);
+   anv_block_pool_init(&device->dynamic_state_block_pool, device, 2048);
 
-   anv_state_pool_init(&device->dyn_state_pool,
-                       &device->dyn_state_block_pool);
+   anv_state_pool_init(&device->dynamic_state_pool,
+                       &device->dynamic_state_block_pool);
 
    anv_block_pool_init(&device->instruction_block_pool, device, 2048);
    anv_block_pool_init(&device->surface_state_block_pool, device, 2048);
@@ -344,7 +344,7 @@ VkResult VKAPI vkDestroyDevice(
 
    anv_compiler_destroy(device->compiler);
 
-   anv_block_pool_finish(&device->dyn_state_block_pool);
+   anv_block_pool_finish(&device->dynamic_state_block_pool);
    anv_block_pool_finish(&device->instruction_block_pool);
    anv_block_pool_finish(&device->surface_state_block_pool);
 
@@ -628,8 +628,8 @@ VkResult VKAPI vkDeviceWaitIdle(
    int64_t timeout;
    int ret;
 
-   state = anv_state_pool_alloc(&device->dyn_state_pool, 32, 32);
-   bo = &device->dyn_state_pool.block_pool->bo;
+   state = anv_state_pool_alloc(&device->dynamic_state_pool, 32, 32);
+   bo = &device->dynamic_state_pool.block_pool->bo;
    batch.next = state.map;
    anv_batch_emit(&batch, GEN8_MI_BATCH_BUFFER_END);
    anv_batch_emit(&batch, GEN8_MI_NOOP);
@@ -672,12 +672,12 @@ VkResult VKAPI vkDeviceWaitIdle(
       }
    }
 
-   anv_state_pool_free(&device->dyn_state_pool, state);
+   anv_state_pool_free(&device->dynamic_state_pool, state);
 
    return VK_SUCCESS;
 
  fail:
-   anv_state_pool_free(&device->dyn_state_pool, state);
+   anv_state_pool_free(&device->dynamic_state_pool, state);
 
    return result;
 }
@@ -1651,11 +1651,11 @@ VkResult VKAPI vkCreateDynamicViewportState(
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
    unsigned count = pCreateInfo->viewportAndScissorCount;
-   state->sf_clip_vp = anv_state_pool_alloc(&device->dyn_state_pool,
+   state->sf_clip_vp = anv_state_pool_alloc(&device->dynamic_state_pool,
                                             count * 64, 64);
-   state->cc_vp = anv_state_pool_alloc(&device->dyn_state_pool,
+   state->cc_vp = anv_state_pool_alloc(&device->dynamic_state_pool,
                                        count * 8, 32);
-   state->scissor = anv_state_pool_alloc(&device->dyn_state_pool,
+   state->scissor = anv_state_pool_alloc(&device->dynamic_state_pool,
                                          count * 32, 32);
 
    for (uint32_t i = 0; i < pCreateInfo->viewportAndScissorCount; i++) {
@@ -1827,7 +1827,7 @@ VkResult VKAPI vkCreateCommandBuffer(
    anv_state_stream_init(&cmd_buffer->surface_state_stream,
                          &device->surface_state_block_pool);
    anv_state_stream_init(&cmd_buffer->dynamic_state_stream,
-                         &device->dyn_state_block_pool);
+                         &device->dynamic_state_block_pool);
 
    cmd_buffer->dirty = 0;
    cmd_buffer->vb_dirty = 0;
@@ -1867,7 +1867,7 @@ VkResult VKAPI vkBeginCommandBuffer(
                   .SurfaceStateMemoryObjectControlState = 0, /* FIXME: MOCS */
                   .SurfaceStateBaseAddressModifyEnable = true,
 
-                  .DynamicStateBaseAddress = { &device->dyn_state_block_pool.bo, 0 },
+                  .DynamicStateBaseAddress = { &device->dynamic_state_block_pool.bo, 0 },
                   .DynamicStateBaseAddressModifyEnable = true,
                   .DynamicStateBufferSize = 0xfffff,
                   .DynamicStateBufferSizeModifyEnable = true,

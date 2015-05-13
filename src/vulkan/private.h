@@ -285,8 +285,8 @@ struct anv_device {
     bool                                        no_hw;
     bool                                        dump_aub;
 
-    struct anv_block_pool                       dyn_state_block_pool;
-    struct anv_state_pool                       dyn_state_pool;
+    struct anv_block_pool                       dynamic_state_block_pool;
+    struct anv_state_pool                       dynamic_state_pool;
 
     struct anv_block_pool                       instruction_block_pool;
     struct anv_block_pool                       surface_state_block_pool;
