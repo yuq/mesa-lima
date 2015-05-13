@@ -57,7 +57,8 @@ NineBaseTexture9_ctor( struct NineBaseTexture9 *This,
     user_assert(!(Usage & (D3DUSAGE_RENDERTARGET | D3DUSAGE_DEPTHSTENCIL)) ||
                 Pool == D3DPOOL_DEFAULT, D3DERR_INVALIDCALL);
     user_assert(!(Usage & D3DUSAGE_DYNAMIC) ||
-                Pool != D3DPOOL_MANAGED, D3DERR_INVALIDCALL);
+                !(Pool == D3DPOOL_MANAGED ||
+                  Pool == D3DPOOL_SCRATCH), D3DERR_INVALIDCALL);
 
     hr = NineResource9_ctor(&This->base, pParams, initResource, alloc, Type, Pool, Usage);
     if (FAILED(hr))
