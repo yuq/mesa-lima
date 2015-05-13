@@ -1975,6 +1975,9 @@ mode_string(const ir_variable *var)
    case ir_var_uniform:
       return "uniform";
 
+   case ir_var_shader_storage:
+      return "buffer";
+
    case ir_var_shader_in:
       return "shader input";
 

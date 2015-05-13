@@ -370,6 +370,7 @@ public:
       case ir_var_temporary:
 	 return this->lower_temps;
       case ir_var_uniform:
+      case ir_var_shader_storage:
 	 return this->lower_uniforms;
       case ir_var_function_in:
       case ir_var_const_in:

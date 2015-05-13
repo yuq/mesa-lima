@@ -436,11 +436,12 @@ builtin_variable_generator::add_variable(const char *name,
       var->data.read_only = true;
       break;
    case ir_var_shader_out:
+   case ir_var_shader_storage:
       break;
    default:
       /* The only variables that are added using this function should be
-       * uniforms, shader inputs, and shader outputs, constants (which use
-       * ir_var_auto), and system values.
+       * uniforms, shader storage, shader inputs, and shader outputs, constants
+       * (which use ir_var_auto), and system values.
        */
       assert(0);
       break;

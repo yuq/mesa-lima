@@ -108,7 +108,8 @@ flatten_named_interface_blocks_declarations::run(exec_list *instructions)
        * but, this will require changes to the other uniform block
        * support code.
        */
-      if (var->data.mode == ir_var_uniform)
+      if (var->data.mode == ir_var_uniform ||
+          var->data.mode == ir_var_shader_storage)
          continue;
 
       const glsl_type * iface_t = var->type;
@@ -212,7 +213,7 @@ flatten_named_interface_blocks_declarations::handle_rvalue(ir_rvalue **rvalue)
     * but, this will require changes to the other uniform block
     * support code.
     */
-   if (var->data.mode == ir_var_uniform)
+   if (var->data.mode == ir_var_uniform || var->data.mode == ir_var_shader_storage)
       return;
 
    if (var->get_interface_type() != NULL) {
