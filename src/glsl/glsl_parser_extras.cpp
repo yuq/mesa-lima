@@ -854,6 +854,8 @@ _mesa_ast_type_qualifier_print(const struct ast_type_qualifier *q)
       printf("sample ");
    if (q->flags.q.uniform)
       printf("uniform ");
+   if (q->flags.q.buffer)
+      printf("buffer ");
    if (q->flags.q.smooth)
       printf("smooth ");
    if (q->flags.q.flat)

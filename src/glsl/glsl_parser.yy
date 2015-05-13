@@ -134,7 +134,7 @@ static bool match_layout_qualifier(const char *s1, const char *s2,
 }
 
 %token ATTRIBUTE CONST_TOK BOOL_TOK FLOAT_TOK INT_TOK UINT_TOK DOUBLE_TOK
-%token BREAK CONTINUE DO ELSE FOR IF DISCARD RETURN SWITCH CASE DEFAULT
+%token BREAK BUFFER CONTINUE DO ELSE FOR IF DISCARD RETURN SWITCH CASE DEFAULT
 %token BVEC2 BVEC3 BVEC4 IVEC2 IVEC3 IVEC4 UVEC2 UVEC3 UVEC4 VEC2 VEC3 VEC4 DVEC2 DVEC3 DVEC4
 %token CENTROID IN_TOK OUT_TOK INOUT_TOK UNIFORM VARYING SAMPLE
 %token NOPERSPECTIVE FLAT SMOOTH
@@ -1805,6 +1805,11 @@ storage_qualifier:
       memset(& $$, 0, sizeof($$));
       $$.flags.q.uniform = 1;
    }
+   | BUFFER
+   {
+      memset(& $$, 0, sizeof($$));
+      $$.flags.q.buffer = 1;
+   }
    ;
 
 memory_qualifier:
@@ -2507,7 +2512,17 @@ basic_interface_block:
       block->block_name = $2;
       block->declarations.push_degenerate_list_at_head(& $4->link);
 
-      if ($1.flags.q.uniform) {
+      if ($1.flags.q.buffer) {
+         if (!state->has_shader_storage_buffer_objects()) {
+            _mesa_glsl_error(& @1, state,
+                             "#version 430 / GL_ARB_shader_storage_buffer_object "
+                             "required for defining shader storage blocks");
+         } else if (state->ARB_shader_storage_buffer_object_warn) {
+            _mesa_glsl_warning(& @1, state,
+                               "#version 430 / GL_ARB_shader_storage_buffer_object "
+                               "required for defining shader storage blocks");
+         }
+      } else if ($1.flags.q.uniform) {
          if (!state->has_uniform_buffer_objects()) {
             _mesa_glsl_error(& @1, state,
                              "#version 140 / GL_ARB_uniform_buffer_object "
@@ -2551,11 +2566,13 @@ basic_interface_block:
       uint64_t interface_type_mask;
       struct ast_type_qualifier temp_type_qualifier;
 
-      /* Get a bitmask containing only the in/out/uniform flags, allowing us
-       * to ignore other irrelevant flags like interpolation qualifiers.
+      /* Get a bitmask containing only the in/out/uniform/buffer
+       * flags, allowing us to ignore other irrelevant flags like
+       * interpolation qualifiers.
        */
       temp_type_qualifier.flags.i = 0;
       temp_type_qualifier.flags.q.uniform = true;
+      temp_type_qualifier.flags.q.buffer = true;
       temp_type_qualifier.flags.q.in = true;
       temp_type_qualifier.flags.q.out = true;
       interface_type_mask = temp_type_qualifier.flags.i;
@@ -2641,6 +2658,11 @@ interface_qualifier:
    {
       memset(& $$, 0, sizeof($$));
       $$.flags.q.uniform = 1;
+   }
+   | BUFFER
+   {
+      memset(& $$, 0, sizeof($$));
+      $$.flags.q.buffer = 1;
    }
    ;
 

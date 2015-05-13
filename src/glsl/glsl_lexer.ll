@@ -308,6 +308,7 @@ in		return IN_TOK;
 out		return OUT_TOK;
 inout		return INOUT_TOK;
 uniform		return UNIFORM;
+buffer		return BUFFER;
 varying		DEPRECATED_ES_KEYWORD(VARYING);
 centroid	KEYWORD(120, 300, 120, 300, CENTROID);
 invariant	KEYWORD(120, 100, 120, 100, INVARIANT);

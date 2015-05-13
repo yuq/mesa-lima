@@ -78,7 +78,8 @@ ast_type_qualifier::has_storage() const
           || this->flags.q.varying
           || this->flags.q.in
           || this->flags.q.out
-          || this->flags.q.uniform;
+          || this->flags.q.uniform
+          || this->flags.q.buffer;
 }
 
 bool
