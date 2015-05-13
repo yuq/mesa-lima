@@ -113,7 +113,7 @@ lp_sampler_static_texture_state(struct lp_static_texture_state *state,
    state->swizzle_b         = view->swizzle_b;
    state->swizzle_a         = view->swizzle_a;
 
-   state->target            = texture->target;
+   state->target            = view->target;
    state->pot_width         = util_is_power_of_two(texture->width0);
    state->pot_height        = util_is_power_of_two(texture->height0);
    state->pot_depth         = util_is_power_of_two(texture->depth0);
