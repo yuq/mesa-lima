@@ -285,7 +285,7 @@ int main(int argc, char *argv[])
    vkCreateDescriptorSetLayout(device,
                                &(VkDescriptorSetLayoutCreateInfo) {
                                   .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
-                                  .count = 2,
+                                  .count = 3,
                                   .pBinding = (VkDescriptorSetLayoutBinding[]) {
                                      {
                                         .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
@@ -295,6 +295,12 @@ int main(int argc, char *argv[])
                                      },
                                      {
                                         .descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+                                        .count = 1,
+                                        .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
+                                        .pImmutableSamplers = NULL
+                                     },
+                                     {
+                                        .descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER,
                                         .count = 1,
                                         .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
                                         .pImmutableSamplers = NULL
@@ -561,7 +567,26 @@ int main(int argc, char *argv[])
                            0, /* allocation index; for objects which need to bind to multiple mems */
                            mem, 2048 + 256 * 256 * 4);
 
-   vkUpdateDescriptors(device, set[0], 2,
+   VkSampler sampler;
+   vkCreateSampler(device,
+                   &(VkSamplerCreateInfo) {
+                      .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
+                      .magFilter = VK_TEX_FILTER_LINEAR,
+                      .minFilter = VK_TEX_FILTER_LINEAR,
+                      .mipMode = VK_TEX_MIPMAP_MODE_NEAREST,
+                      .addressU = VK_TEX_ADDRESS_CLAMP,
+                      .addressV = VK_TEX_ADDRESS_CLAMP,
+                      .addressW = VK_TEX_ADDRESS_CLAMP,
+                      .mipLodBias = 0,
+                      .maxAnisotropy = 0,
+                      .compareOp = VK_COMPARE_OP_GREATER,
+                      .minLod = 0,
+                      .maxLod = 0,
+                      .borderColor = VK_BORDER_COLOR_TRANSPARENT_BLACK
+                   },
+                   &sampler);
+
+   vkUpdateDescriptors(device, set[0], 3,
                        (const void * []) {
                           &(VkUpdateBuffers) {
                              .sType = VK_STRUCTURE_TYPE_UPDATE_BUFFERS,
@@ -592,6 +617,12 @@ int main(int argc, char *argv[])
                                    .layout = VK_IMAGE_LAYOUT_GENERAL,
                                 }
                              }
+                          },
+                          &(const VkUpdateSamplers) {
+                             .sType = VK_STRUCTURE_TYPE_UPDATE_SAMPLERS,
+                             .binding = 3,
+                             .count = 1,
+                             .pSamplers = (const VkSampler[]) { sampler }
                           }
                        });
 
