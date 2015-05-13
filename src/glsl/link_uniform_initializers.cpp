@@ -256,7 +256,8 @@ link_set_uniform_initializers(struct gl_shader_program *prog,
       foreach_in_list(ir_instruction, node, shader->ir) {
 	 ir_variable *const var = node->as_variable();
 
-	 if (!var || var->data.mode != ir_var_uniform)
+	 if (!var || (var->data.mode != ir_var_uniform &&
+	     var->data.mode != ir_var_shader_storage))
 	    continue;
 
 	 if (!mem_ctx)

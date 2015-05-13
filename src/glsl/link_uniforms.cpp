@@ -766,7 +766,8 @@ link_update_uniform_buffer_variables(struct gl_shader *shader)
       if ((var == NULL) || !var->is_in_buffer_block())
 	 continue;
 
-      assert(var->data.mode == ir_var_uniform);
+      assert(var->data.mode == ir_var_uniform ||
+             var->data.mode == ir_var_shader_storage);
 
       if (var->is_interface_instance()) {
          var->data.location = 0;
@@ -943,7 +944,8 @@ link_assign_uniform_locations(struct gl_shader_program *prog,
       foreach_in_list(ir_instruction, node, sh->ir) {
 	 ir_variable *const var = node->as_variable();
 
-	 if ((var == NULL) || (var->data.mode != ir_var_uniform))
+	 if ((var == NULL) || (var->data.mode != ir_var_uniform &&
+	                       var->data.mode != ir_var_shader_storage))
 	    continue;
 
 	 uniform_size.process(var);
@@ -987,7 +989,7 @@ link_assign_uniform_locations(struct gl_shader_program *prog,
       foreach_in_list(ir_instruction, node, prog->_LinkedShaders[i]->ir) {
 	 ir_variable *const var = node->as_variable();
 
-	 if ((var == NULL) || (var->data.mode != ir_var_uniform))
+	 if ((var == NULL) || (var->data.mode != ir_var_uniform && var->data.mode != ir_var_shader_storage))
 	    continue;
 
 	 parcel.set_and_process(prog, var);

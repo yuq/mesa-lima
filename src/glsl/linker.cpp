@@ -777,7 +777,7 @@ cross_validate_globals(struct gl_shader_program *prog,
 	 if (var == NULL)
 	    continue;
 
-	 if (uniforms_only && (var->data.mode != ir_var_uniform))
+	 if (uniforms_only && (var->data.mode != ir_var_uniform && var->data.mode != ir_var_shader_storage))
 	    continue;
 
 	 /* Don't cross validate temporaries that are at global scope.  These
@@ -2574,7 +2574,7 @@ check_explicit_uniform_locations(struct gl_context *ctx,
 
       foreach_in_list(ir_instruction, node, sh->ir) {
          ir_variable *var = node->as_variable();
-         if ((var && var->data.mode == ir_var_uniform) &&
+         if (var && (var->data.mode == ir_var_uniform || var->data.mode == ir_var_shader_storage) &&
              var->data.explicit_location) {
             if (!reserve_explicit_locations(prog, uniform_map, var)) {
                delete uniform_map;

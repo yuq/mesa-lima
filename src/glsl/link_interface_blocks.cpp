@@ -112,7 +112,8 @@ intrastage_match(interface_block_definition *a,
     * it's not clear from the spec whether they need to match, but
     * Mesa's implementation relies on them matching.
     */
-   if (a->instance_name != NULL && mode != ir_var_uniform &&
+   if (a->instance_name != NULL &&
+       mode != ir_var_uniform && mode != ir_var_shader_storage &&
        strcmp(a->instance_name, b->instance_name) != 0) {
       return false;
    }
@@ -253,6 +254,7 @@ validate_intrastage_interface_blocks(struct gl_shader_program *prog,
    interface_block_definitions in_interfaces;
    interface_block_definitions out_interfaces;
    interface_block_definitions uniform_interfaces;
+   interface_block_definitions buffer_interfaces;
 
    for (unsigned int i = 0; i < num_shaders; i++) {
       if (shader_list[i] == NULL)
@@ -278,6 +280,9 @@ validate_intrastage_interface_blocks(struct gl_shader_program *prog,
             break;
          case ir_var_uniform:
             definitions = &uniform_interfaces;
+            break;
+         case ir_var_shader_storage:
+            definitions = &buffer_interfaces;
             break;
          default:
             /* Only in, out, and uniform interfaces are legal, so we should
@@ -361,7 +366,9 @@ validate_interstage_uniform_blocks(struct gl_shader_program *prog,
       const gl_shader *stage = stages[i];
       foreach_in_list(ir_instruction, node, stage->ir) {
          ir_variable *var = node->as_variable();
-         if (!var || !var->get_interface_type() || var->data.mode != ir_var_uniform)
+         if (!var || !var->get_interface_type() ||
+             (var->data.mode != ir_var_uniform &&
+              var->data.mode != ir_var_shader_storage))
             continue;
 
          interface_block_definition *old_def =
@@ -374,7 +381,9 @@ validate_interstage_uniform_blocks(struct gl_shader_program *prog,
              * uniform matchin rules (for uniforms, it is as though all
              * shaders are in the same shader stage).
              */
-            if (!intrastage_match(old_def, &new_def, ir_var_uniform, prog)) {
+            if (!intrastage_match(old_def, &new_def,
+                                  (ir_variable_mode) var->data.mode,
+                                  prog)) {
                linker_error(prog, "definitions of interface block `%s' do not "
                             "match\n", var->get_interface_type()->name);
                return;
