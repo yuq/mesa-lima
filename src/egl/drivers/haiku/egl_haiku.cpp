@@ -27,7 +27,6 @@
 #include <stdint.h>
 #include <stdio.h>
 
-extern "C" {
 #include "loader.h"
 #include "eglconfig.h"
 #include "eglcontext.h"
@@ -38,7 +37,6 @@ extern "C" {
 #include "eglsurface.h"
 #include "eglimage.h"
 #include "egltypedefs.h"
-}
 
 #include <InterfaceKit.h>
 #include <OpenGLKit.h>
