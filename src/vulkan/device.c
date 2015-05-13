@@ -1326,7 +1326,7 @@ VkResult VKAPI vkCreateSampler(
    struct anv_device *device = (struct anv_device *) _device;
    struct anv_sampler *sampler;
 
-   assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO);
+   assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO);
 
    sampler = anv_device_alloc(device, sizeof(*sampler), 8,
                               VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
