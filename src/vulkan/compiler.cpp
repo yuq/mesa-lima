@@ -70,8 +70,8 @@ set_binding_table_layout(struct brw_stage_prog_data *prog_data,
    else
       bias = 0;
 
-   count = pipeline->layout->stage[stage].count;
-   entries = pipeline->layout->stage[stage].entries;
+   count = pipeline->layout->stage[stage].surface_count;
+   entries = pipeline->layout->stage[stage].surface_entries;
 
    prog_data->map_entries =
       (uint32_t *) malloc(count * sizeof(prog_data->map_entries[0]));

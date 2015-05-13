@@ -560,43 +560,81 @@ VkResult VKAPI vkCreatePipelineLayout(
 {
    struct anv_device *device = (struct anv_device *) _device;
    struct anv_pipeline_layout *layout;
-   struct anv_pipeline_layout_entry *entry;
-   uint32_t total;
+   struct anv_pipeline_layout_entry *sampler_entry, *surface_entry;
+   uint32_t sampler_total, surface_total;
    size_t size;
 
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO);
    
-   total = 0;
+   sampler_total = 0;
+   surface_total = 0;
    for (uint32_t i = 0; i < pCreateInfo->descriptorSetCount; i++) {
       struct anv_descriptor_set_layout *set_layout =
          (struct anv_descriptor_set_layout *) pCreateInfo->pSetLayouts[i];
-      for (uint32_t j = 0; j < set_layout->count; j++)
-         total += set_layout->total;
+      for (uint32_t j = 0; j < set_layout->count; j++) {
+         sampler_total += set_layout->sampler_total;
+         surface_total += set_layout->surface_total;
+      }
    }
 
-   size = sizeof(*layout) + total * sizeof(layout->entries[0]);
+   size = sizeof(*layout) +
+      (sampler_total + surface_total) * sizeof(layout->entries[0]);
    layout = anv_device_alloc(device, size, 8,
                              VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
    if (layout == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
-   entry = layout->entries;
+   sampler_entry = layout->entries;
+   surface_entry = layout->entries + sampler_total;
    for (uint32_t s = 0; s < VK_NUM_SHADER_STAGE; s++) {
-      layout->stage[s].entries = entry;
+      layout->stage[s].sampler_entries = sampler_entry;
+      layout->stage[s].surface_entries = surface_entry;
 
       for (uint32_t i = 0; i < pCreateInfo->descriptorSetCount; i++) {
          struct anv_descriptor_set_layout *set_layout =
             (struct anv_descriptor_set_layout *) pCreateInfo->pSetLayouts[i];
-         for (uint32_t j = 0; j < set_layout->count; j++)
+         for (uint32_t j = 0; j < set_layout->count; j++) {
             if (set_layout->bindings[j].mask & (1 << s)) {
-               entry->type = set_layout->bindings[j].type;
-               entry->set = i;
-               entry->index = j;
-               entry++;
+               switch (set_layout->bindings[j].type) {
+               case VK_DESCRIPTOR_TYPE_SAMPLER:
+                  sampler_entry->type = set_layout->bindings[j].type;
+                  sampler_entry->set = i;
+                  sampler_entry->index = j;
+                  sampler_entry++;
+                  break;
+
+               case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
+                  sampler_entry->type = set_layout->bindings[j].type;
+                  sampler_entry->set = i;
+                  sampler_entry->index = j;
+                  sampler_entry++;
+                  /* fall through */
+
+               case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
+               case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
+               case VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
+               case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
+               case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
+               case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
+               case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
+               case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
+                  surface_entry->type = set_layout->bindings[j].type;
+                  surface_entry->set = i;
+                  surface_entry->index = j;
+                  surface_entry++;
+                  break;
+
+               default:
+                  break;
+               }
             }
+         }
       }
 
-      layout->stage[s].count = entry - layout->stage[s].entries;
+      layout->stage[s].sampler_count =
+         sampler_entry - layout->stage[s].sampler_entries;
+      layout->stage[s].surface_count =
+         surface_entry - layout->stage[s].surface_entries;
    }
 
    *pPipelineLayout = (VkPipelineLayout) layout;

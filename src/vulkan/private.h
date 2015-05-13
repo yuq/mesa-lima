@@ -446,7 +446,8 @@ struct anv_dynamic_cb_state {
 };
 
 struct anv_descriptor_set_layout {
-   uint32_t total; /* total number of entries in all stages */
+   uint32_t sampler_total; /* total number of samplers in all stages */
+   uint32_t surface_total; /* total number of surfaces in all stages */
    uint32_t count;
    struct {
       VkDescriptorType type;
@@ -476,8 +477,10 @@ struct anv_pipeline_layout_entry {
 
 struct anv_pipeline_layout {
    struct {
-      uint32_t count;
-      struct anv_pipeline_layout_entry *entries;
+      uint32_t sampler_count;
+      struct anv_pipeline_layout_entry *sampler_entries;
+      uint32_t surface_count;
+      struct anv_pipeline_layout_entry *surface_entries;
    } stage[VK_NUM_SHADER_STAGE];
    
    struct anv_pipeline_layout_entry entries[0];

@@ -1415,8 +1415,8 @@ VkResult VKAPI vkCreateDescriptorSetLayout(
 {
    struct anv_device *device = (struct anv_device *) _device;
    struct anv_descriptor_set_layout *set_layout;
-   uint32_t count, k;
-   size_t size, total;
+   uint32_t count, k, num_entries;
+   size_t size, sampler_total, surface_total;
 
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO);
 
@@ -1432,7 +1432,8 @@ VkResult VKAPI vkCreateDescriptorSetLayout(
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
    k = 0;
-   total = 0;
+   sampler_total = 0;
+   surface_total = 0;
    for (uint32_t i = 0; i < pCreateInfo->count; i++) {
       for (uint32_t j = 0; j < pCreateInfo->pBinding[i].count; j++) {
          set_layout->bindings[k].mask = pCreateInfo->pBinding[i].stageFlags;
@@ -1440,11 +1441,36 @@ VkResult VKAPI vkCreateDescriptorSetLayout(
          k++;
       }
 
-      total += pCreateInfo->pBinding[i].count *
+      num_entries = pCreateInfo->pBinding[i].count *
          __builtin_popcount(pCreateInfo->pBinding[i].stageFlags);
+
+      switch (pCreateInfo->pBinding[i].descriptorType) {
+      case VK_DESCRIPTOR_TYPE_SAMPLER:
+         sampler_total += num_entries;
+         break;
+      case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
+         sampler_total += num_entries;
+         surface_total += num_entries;
+         break;
+
+      case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
+      case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
+      case VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
+      case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
+      case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
+      case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
+      case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
+      case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
+         surface_total += num_entries;
+         break;
+
+      default:
+         unreachable("invalid descriptor type");
+      }
    }
 
-   set_layout->total = total;
+   set_layout->sampler_total = sampler_total;
+   set_layout->surface_total = surface_total;
    set_layout->count = count;
 
    *pSetLayout = (VkDescriptorSetLayout) set_layout;
@@ -2136,36 +2162,25 @@ void VKAPI vkCmdBindVertexBuffers(
 static void
 flush_descriptor_sets(struct anv_cmd_buffer *cmd_buffer)
 {
-   static const uint32_t opcodes[] = {
-      [VK_SHADER_STAGE_VERTEX] = 38,
-      [VK_SHADER_STAGE_TESS_CONTROL] = 39,
-      [VK_SHADER_STAGE_TESS_EVALUATION] = 40,
-      [VK_SHADER_STAGE_GEOMETRY] = 41,
-      [VK_SHADER_STAGE_FRAGMENT] = 42,
-      [VK_SHADER_STAGE_COMPUTE] = 0,
-   };
-
    struct anv_pipeline_layout *layout = cmd_buffer->pipeline->layout;
    struct anv_framebuffer *framebuffer = cmd_buffer->framebuffer;
 
    for (uint32_t s = 0; s < VK_NUM_SHADER_STAGE; s++) {
 
       uint32_t bias = s == VK_SHADER_STAGE_FRAGMENT ? MAX_RTS : 0;
-      uint32_t count, *table;
+      uint32_t binding_table_length, *table;
       struct anv_state table_state;
 
       if (layout)
-         count = layout->stage[s].count + bias;
+         binding_table_length = layout->stage[s].surface_count + bias;
       else if (s == VK_SHADER_STAGE_FRAGMENT)
-         count = framebuffer->color_attachment_count;
+         binding_table_length = framebuffer->color_attachment_count;
       else
-         count = 0;
+         binding_table_length = 0;
       
-      if (count == 0)
-         continue;
-
-      table_state = anv_state_stream_alloc(&cmd_buffer->surface_state_stream,
-                                           count * 4, 32);
+      if (binding_table_length > 0)
+         table_state = anv_state_stream_alloc(&cmd_buffer->surface_state_stream,
+                                              binding_table_length * 4, 32);
       table = table_state.map;
 
       if (s == VK_SHADER_STAGE_FRAGMENT) {
@@ -2182,8 +2197,8 @@ flush_descriptor_sets(struct anv_cmd_buffer *cmd_buffer)
       }
 
       if (layout) {
-         for (uint32_t i = 0; i < layout->stage[s].count; i++) {
-            struct anv_pipeline_layout_entry *e = &layout->stage[s].entries[i];
+         for (uint32_t i = 0; i < layout->stage[s].surface_count; i++) {
+            struct anv_pipeline_layout_entry *e = &layout->stage[s].surface_entries[i];
             struct anv_descriptor *d =
                &cmd_buffer->descriptor_sets[e->set]->descriptors[e->index];
             struct anv_image_view *image_view;
@@ -2227,15 +2242,62 @@ flush_descriptor_sets(struct anv_cmd_buffer *cmd_buffer)
          }
       }
 
-      /* FIXME: Samplers */
-
       /* The binding table pointer commands all have the same structure, only
        * the opcode differs.
        */
-      anv_batch_emit(&cmd_buffer->batch,
-                     GEN8_3DSTATE_BINDING_TABLE_POINTERS_VS,
-                     ._3DCommandSubOpcode  = opcodes[s],
-                     .PointertoVSBindingTable = table_state.offset);
+      static const uint32_t binding_table_opcodes[] = {
+         [VK_SHADER_STAGE_VERTEX] = 38,
+         [VK_SHADER_STAGE_TESS_CONTROL] = 39,
+         [VK_SHADER_STAGE_TESS_EVALUATION] = 40,
+         [VK_SHADER_STAGE_GEOMETRY] = 41,
+         [VK_SHADER_STAGE_FRAGMENT] = 42,
+         [VK_SHADER_STAGE_COMPUTE] = 0,
+      };
+
+      if (binding_table_length > 0)
+         anv_batch_emit(&cmd_buffer->batch,
+                        GEN8_3DSTATE_BINDING_TABLE_POINTERS_VS,
+                        ._3DCommandSubOpcode  = binding_table_opcodes[s],
+                        .PointertoVSBindingTable = table_state.offset);
+
+
+      if (layout && layout->stage[s].sampler_count > 0) {
+         struct anv_state sampler_state;
+
+         sampler_state = anv_state_stream_alloc(&cmd_buffer->dynamic_state_stream,
+                                                layout->stage[s].sampler_count * 16, 32);
+         for (uint32_t i = 0; i < layout->stage[s].sampler_count; i++) {
+            struct anv_pipeline_layout_entry *e = &layout->stage[s].sampler_entries[i];
+            struct anv_sampler *sampler;
+
+            switch (e->type) {
+            case VK_DESCRIPTOR_TYPE_SAMPLER:
+            case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
+               sampler =
+                  cmd_buffer->descriptor_sets[e->set]->descriptors[e->index].sampler;
+               break;
+            default:
+               unreachable("non-sampler descriptor in sampler entries");
+               break;
+            }
+
+            memcpy(sampler_state.map + i * 16, sampler->state, sizeof(sampler->state));
+         }
+
+         static const uint32_t sampler_state_opcodes[] = {
+            [VK_SHADER_STAGE_VERTEX] = 43,
+            [VK_SHADER_STAGE_TESS_CONTROL] = 44, /* HS */
+            [VK_SHADER_STAGE_TESS_EVALUATION] = 45, /* DS */
+            [VK_SHADER_STAGE_GEOMETRY] = 46,
+            [VK_SHADER_STAGE_FRAGMENT] = 47,
+            [VK_SHADER_STAGE_COMPUTE] = 0,
+         };
+
+         anv_batch_emit(&cmd_buffer->batch,
+                        GEN8_3DSTATE_SAMPLER_STATE_POINTERS_VS,
+                        ._3DCommandSubOpcode  = sampler_state_opcodes[s],
+                        .PointertoVSSamplerState = sampler_state.offset);
+      }
    }
 }
 
