@@ -1336,25 +1336,58 @@ VkResult VKAPI vkCreateSampler(
    if (!sampler)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
+   static const uint32_t vk_to_gen_tex_filter[] = {
+      [VK_TEX_FILTER_NEAREST] = MAPFILTER_NEAREST,
+      [VK_TEX_FILTER_LINEAR] = MAPFILTER_LINEAR
+   };
+
+   static const uint32_t vk_to_gen_mipmap_mode[] = {
+      [VK_TEX_MIPMAP_MODE_BASE] = MIPFILTER_NONE,
+      [VK_TEX_MIPMAP_MODE_NEAREST] = MIPFILTER_NEAREST,
+      [VK_TEX_MIPMAP_MODE_LINEAR] = MIPFILTER_LINEAR
+   };
+
+   static const uint32_t vk_to_gen_tex_address[] = {
+      [VK_TEX_ADDRESS_WRAP] = TCM_WRAP,
+      [VK_TEX_ADDRESS_MIRROR] = TCM_MIRROR,
+      [VK_TEX_ADDRESS_CLAMP] = TCM_CLAMP,
+      [VK_TEX_ADDRESS_MIRROR_ONCE] = TCM_MIRROR_ONCE,
+      [VK_TEX_ADDRESS_CLAMP_BORDER] = TCM_CLAMP_BORDER,
+   };
+
+   static const uint32_t vk_to_gen_compare_op[] = {
+      [VK_COMPARE_OP_NEVER]  = PREFILTEROPNEVER,
+      [VK_COMPARE_OP_LESS]  = PREFILTEROPLESS,
+      [VK_COMPARE_OP_EQUAL]  = PREFILTEROPEQUAL,
+      [VK_COMPARE_OP_LESS_EQUAL]  = PREFILTEROPLEQUAL,
+      [VK_COMPARE_OP_GREATER]  = PREFILTEROPGREATER,
+      [VK_COMPARE_OP_NOT_EQUAL]  = PREFILTEROPNOTEQUAL,
+      [VK_COMPARE_OP_GREATER_EQUAL]  = PREFILTEROPGEQUAL,
+      [VK_COMPARE_OP_ALWAYS]  = PREFILTEROPALWAYS,
+   };
+
+   if (pCreateInfo->maxAnisotropy > 0)
+       anv_finishme("missing support for anisotropic filtering");
+
    struct GEN8_SAMPLER_STATE sampler_state = {
-      .SamplerDisable = 0,
-      .TextureBorderColorMode = 0,
+      .SamplerDisable = false,
+      .TextureBorderColorMode = DX10OGL,
       .LODPreClampMode = 0,
       .BaseMipLevel = 0,
-      .MipModeFilter = 0,
-      .MagModeFilter = 0,
-      .MinModeFilter = 0,
-      .TextureLODBias = 0,
-      .AnisotropicAlgorithm = 0,
-      .MinLOD = 0,
-      .MaxLOD = 0,
+      .MipModeFilter = vk_to_gen_mipmap_mode[pCreateInfo->mipMode],
+      .MagModeFilter = vk_to_gen_tex_filter[pCreateInfo->magFilter],
+      .MinModeFilter = vk_to_gen_tex_filter[pCreateInfo->minFilter],
+      .TextureLODBias = pCreateInfo->mipLodBias * 256,
+      .AnisotropicAlgorithm = EWAApproximation,
+      .MinLOD = pCreateInfo->minLod * 256,
+      .MaxLOD = pCreateInfo->maxLod * 256,
       .ChromaKeyEnable = 0,
       .ChromaKeyIndex = 0,
       .ChromaKeyMode = 0,
-      .ShadowFunction = 0,
+      .ShadowFunction = vk_to_gen_compare_op[pCreateInfo->compareOp],
       .CubeSurfaceControlMode = 0,
       .IndirectStatePointer = 0,
-      .LODClampMagnificationMode = 0,
+      .LODClampMagnificationMode = MIPNONE,
       .MaximumAnisotropy = 0,
       .RAddressMinFilterRoundingEnable = 0,
       .RAddressMagFilterRoundingEnable = 0,
@@ -1364,9 +1397,9 @@ VkResult VKAPI vkCreateSampler(
       .UAddressMagFilterRoundingEnable = 0,
       .TrilinearFilterQuality = 0,
       .NonnormalizedCoordinateEnable = 0,
-      .TCXAddressControlMode = 0,
-      .TCYAddressControlMode = 0,
-      .TCZAddressControlMode = 0,
+      .TCXAddressControlMode = vk_to_gen_tex_address[pCreateInfo->addressU],
+      .TCYAddressControlMode = vk_to_gen_tex_address[pCreateInfo->addressV],
+      .TCZAddressControlMode = vk_to_gen_tex_address[pCreateInfo->addressW],
    };
 
    GEN8_SAMPLER_STATE_pack(NULL, sampler->state, &sampler_state);
