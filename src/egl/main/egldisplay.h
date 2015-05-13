@@ -39,6 +39,10 @@
 #include "eglarray.h"
 
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 enum _egl_platform_type {
    _EGL_PLATFORM_WINDOWS,
    _EGL_PLATFORM_X11,
@@ -268,6 +272,11 @@ struct wl_display;
 _EGLDisplay*
 _eglGetWaylandDisplay(struct wl_display *native_display,
                       const EGLint *attrib_list);
+#endif
+
+
+#ifdef __cplusplus
+}
 #endif
 
 #endif /* EGLDISPLAY_INCLUDED */

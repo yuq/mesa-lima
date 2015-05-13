@@ -38,6 +38,11 @@
 #include "eglapi.h"
 #include <stddef.h>
 
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * Define an inline driver typecast function.
  *
@@ -122,6 +127,11 @@ _eglInitDriverFallbacks(_EGLDriver *drv);
 extern void
 _eglSearchPathForEach(EGLBoolean (*callback)(const char *, size_t, void *),
                       void *callback_data);
+
+
+#ifdef __cplusplus
+}
+#endif
 
 
 #endif /* EGLDRIVER_INCLUDED */

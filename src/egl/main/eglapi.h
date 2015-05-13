@@ -31,6 +31,11 @@
 #ifndef EGLAPI_INCLUDED
 #define EGLAPI_INCLUDED
 
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * A generic function ptr type
  */
@@ -208,5 +213,10 @@ struct _egl_api
    ExportDMABUFImageMESA_t ExportDMABUFImageMESA;
 #endif
 };
+
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* EGLAPI_INCLUDED */

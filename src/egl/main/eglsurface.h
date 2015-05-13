@@ -37,6 +37,10 @@
 #include "egldisplay.h"
 
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * "Base" class for device driver surfaces.
  */
@@ -173,5 +177,9 @@ _eglGetSurfaceHandle(_EGLSurface *surf)
       (EGLSurface) surf : EGL_NO_SURFACE;
 }
 
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* EGLSURFACE_INCLUDED */

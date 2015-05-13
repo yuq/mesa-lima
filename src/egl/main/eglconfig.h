@@ -39,6 +39,10 @@
 #include "egltypedefs.h"
 
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* update _eglValidationTable and _eglOffsetOfConfig before updating this
  * struct */
 struct _egl_config
@@ -224,5 +228,9 @@ _eglGetConfigAttrib(_EGLDriver *drv, _EGLDisplay *dpy, _EGLConfig *conf, EGLint 
 extern EGLBoolean
 _eglGetConfigs(_EGLDriver *drv, _EGLDisplay *dpy, EGLConfig *configs, EGLint config_size, EGLint *num_config);
 
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* EGLCONFIG_INCLUDED */

@@ -34,6 +34,10 @@
 #include "egltypedefs.h"
 
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef EGLBoolean (*_EGLArrayForEach)(void *elem, void *foreach_data);
 
 
@@ -82,5 +86,9 @@ _eglGetArraySize(_EGLArray *array)
    return (array) ? array->Size : 0;
 }
 
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* EGLARRAY_INCLUDED */

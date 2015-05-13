@@ -35,6 +35,11 @@
 #include "egltypedefs.h"
 #include "egldisplay.h"
 
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct _egl_image_attrib_int
 {
    EGLint Value;
@@ -160,5 +165,9 @@ _eglGetImageHandle(_EGLImage *img)
       (EGLImageKHR) img : EGL_NO_IMAGE_KHR;
 }
 
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* EGLIMAGE_INCLUDED */
