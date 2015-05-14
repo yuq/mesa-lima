@@ -2774,5 +2774,20 @@ void VKAPI vkCmdEndRenderPass(
     VkCmdBuffer                                 cmdBuffer,
     VkRenderPass                                renderPass)
 {
+   /* Emit a flushing pipe control at the end of a pass.  This is kind of a
+    * hack but it ensures that render targets always actually get written.
+    * Eventually, we should do flushing based on image format transitions
+    * or something of that nature.
+    */
+   struct anv_cmd_buffer *cmd_buffer = (struct anv_cmd_buffer *)cmdBuffer;
+   anv_batch_emit(&cmd_buffer->batch, GEN8_PIPE_CONTROL,
+                  .PostSyncOperation = NoWrite,
+                  .RenderTargetCacheFlushEnable = true,
+                  .InstructionCacheInvalidateEnable = true,
+                  .DepthCacheFlushEnable = true,
+                  .VFCacheInvalidationEnable = true,
+                  .TextureCacheInvalidationEnable = true,
+                  .CommandStreamerStallEnable = true);
+
    stub();
 }
