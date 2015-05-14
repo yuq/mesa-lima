@@ -187,6 +187,13 @@ anv_cmd_buffer_restore(struct anv_cmd_buffer *cmd_buffer,
                         ANV_CMD_BUFFER_DESCRIPTOR_SET_DIRTY;
 }
 
+struct vue_header {
+   uint32_t Reserved;
+   uint32_t RTAIndex;
+   uint32_t ViewportIndex;
+   float PointWidth;
+};
+
 void
 anv_cmd_buffer_clear(struct anv_cmd_buffer *cmd_buffer,
                      struct anv_render_pass *pass)
@@ -198,12 +205,7 @@ anv_cmd_buffer_clear(struct anv_cmd_buffer *cmd_buffer,
    uint32_t size;
 
    struct instance_data {
-      struct {
-         uint32_t Reserved;
-         uint32_t RTAIndex;
-         uint32_t ViewportIndex;
-         float PointWidth;
-      } vue_header;
+      struct vue_header vue_header;
       float color[4];
    } *instance_data;
 
@@ -282,6 +284,375 @@ anv_cmd_buffer_clear(struct anv_cmd_buffer *cmd_buffer,
 
 }
 
+static void
+anv_device_init_meta_blit_state(struct anv_device *device)
+{
+   VkPipelineIaStateCreateInfo ia_create_info = {
+      .sType = VK_STRUCTURE_TYPE_PIPELINE_IA_STATE_CREATE_INFO,
+      .topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP,
+      .disableVertexReuse = false,
+      .primitiveRestartEnable = false,
+      .primitiveRestartIndex = 0
+   };
+
+   /* We don't use a vertex shader for clearing, but instead build and pass
+    * the VUEs directly to the rasterization backend.
+    */
+   static const char vs_source[] = GLSL(
+      in vec2 a_pos;
+      in vec2 a_tex_coord;
+      out vec4 v_tex_coord;
+      void main()
+      {
+         v_tex_coord = vec4(a_tex_coord, 0, 1);
+         gl_Position = vec4(a_pos, 0, 1);
+      }
+   );
+
+   static const char fs_source[] = GLSL(
+      out vec4 f_color;
+      in vec4 v_tex_coord;
+      layout(set = 0, index = 0) uniform sampler2D u_tex;
+      void main()
+      {
+         f_color = texture2D(u_tex, v_tex_coord.xy);
+      }
+   );
+
+   VkShader vs;
+   vkCreateShader((VkDevice) device,
+                  &(VkShaderCreateInfo) {
+                     .sType = VK_STRUCTURE_TYPE_SHADER_CREATE_INFO,
+                     .codeSize = sizeof(vs_source),
+                     .pCode = vs_source,
+                     .flags = 0
+                  },
+                  &vs);
+
+   VkShader fs;
+   vkCreateShader((VkDevice) device,
+                  &(VkShaderCreateInfo) {
+                     .sType = VK_STRUCTURE_TYPE_SHADER_CREATE_INFO,
+                     .codeSize = sizeof(fs_source),
+                     .pCode = fs_source,
+                     .flags = 0
+                  },
+                  &fs);
+
+   VkPipelineShaderStageCreateInfo vs_create_info = {
+      .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+      .pNext = &ia_create_info,
+      .shader = {
+         .stage = VK_SHADER_STAGE_VERTEX,
+         .shader = vs,
+         .linkConstBufferCount = 0,
+         .pLinkConstBufferInfo = NULL,
+         .pSpecializationInfo = NULL
+      }
+   };
+
+   VkPipelineShaderStageCreateInfo fs_create_info = {
+      .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+      .pNext = &vs_create_info,
+      .shader = {
+         .stage = VK_SHADER_STAGE_FRAGMENT,
+         .shader = fs,
+         .linkConstBufferCount = 0,
+         .pLinkConstBufferInfo = NULL,
+         .pSpecializationInfo = NULL
+      }
+   };
+
+   VkPipelineVertexInputCreateInfo vi_create_info = {
+      .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_CREATE_INFO,
+      .pNext = &fs_create_info,
+      .bindingCount = 2,
+      .pVertexBindingDescriptions = (VkVertexInputBindingDescription[]) {
+         {
+            .binding = 0,
+            .strideInBytes = 0,
+            .stepRate = VK_VERTEX_INPUT_STEP_RATE_VERTEX
+         },
+         {
+            .binding = 1,
+            .strideInBytes = 16,
+            .stepRate = VK_VERTEX_INPUT_STEP_RATE_VERTEX
+         },
+      },
+      .attributeCount = 3,
+      .pVertexAttributeDescriptions = (VkVertexInputAttributeDescription[]) {
+         {
+            /* VUE Header */
+            .location = 0,
+            .binding = 0,
+            .format = VK_FORMAT_R32G32B32A32_UINT,
+            .offsetInBytes = 0
+         },
+         {
+            /* Position */
+            .location = 1,
+            .binding = 1,
+            .format = VK_FORMAT_R32G32_SFLOAT,
+            .offsetInBytes = 0
+         },
+         {
+            /* Texture Coordinate */
+            .location = 2,
+            .binding = 1,
+            .format = VK_FORMAT_R32G32_SFLOAT,
+            .offsetInBytes = 8
+         }
+      }
+   };
+
+   VkDescriptorSetLayoutCreateInfo ds_layout_info = {
+      .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+      .count = 1,
+      .pBinding = (VkDescriptorSetLayoutBinding[]) {
+         {
+            .descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+            .count = 1,
+            .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
+            .pImmutableSamplers = NULL
+         },
+      }
+   };
+   vkCreateDescriptorSetLayout((VkDevice) device, &ds_layout_info,
+                               &device->blit_state.ds_layout);
+
+   VkPipelineLayoutCreateInfo pipeline_layout_info = {
+      .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+      .descriptorSetCount = 1,
+      .pSetLayouts = &device->blit_state.ds_layout,
+   };
+
+   VkPipelineLayout pipeline_layout;
+   vkCreatePipelineLayout((VkDevice) device, &pipeline_layout_info,
+                          &pipeline_layout);
+
+   VkPipelineRsStateCreateInfo rs_create_info = {
+      .sType = VK_STRUCTURE_TYPE_PIPELINE_RS_STATE_CREATE_INFO,
+      .pNext = &vi_create_info,
+      .depthClipEnable = true,
+      .rasterizerDiscardEnable = false,
+      .fillMode = VK_FILL_MODE_SOLID,
+      .cullMode = VK_CULL_MODE_NONE,
+      .frontFace = VK_FRONT_FACE_CCW
+   };
+
+   VkGraphicsPipelineCreateInfo pipeline_info = {
+      .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
+      .pNext = &rs_create_info,
+      .flags = 0,
+      .layout = pipeline_layout,
+   };
+
+   anv_pipeline_create((VkDevice) device, &pipeline_info,
+                       &(struct anv_pipeline_create_info) {
+                          .use_repclear = false,
+                          .disable_viewport = true,
+                          .disable_scissor = true,
+                          .disable_vs = true,
+                          .use_rectlist = true
+                       },
+                       &device->blit_state.pipeline);
+
+   vkDestroyObject((VkDevice) device, VK_OBJECT_TYPE_SHADER, vs);
+   vkDestroyObject((VkDevice) device, VK_OBJECT_TYPE_SHADER, fs);
+
+   vkCreateDynamicRasterState((VkDevice) device,
+                              &(VkDynamicRsStateCreateInfo) {
+                                 .sType = VK_STRUCTURE_TYPE_DYNAMIC_RS_STATE_CREATE_INFO,
+                              },
+                              &device->blit_state.rs_state);
+}
+
+static void
+meta_prepare_blit(struct anv_cmd_buffer *cmd_buffer,
+                  struct anv_saved_state *saved_state)
+{
+   struct anv_device *device = cmd_buffer->device;
+
+   anv_cmd_buffer_save(cmd_buffer, saved_state);
+
+   if ((VkPipeline) cmd_buffer->pipeline != device->blit_state.pipeline)
+      vkCmdBindPipeline((VkCmdBuffer) cmd_buffer,
+                        VK_PIPELINE_BIND_POINT_GRAPHICS,
+                        device->blit_state.pipeline);
+
+   /* We don't need anything here, only set if not already set. */
+   if (cmd_buffer->rs_state == NULL)
+      vkCmdBindDynamicStateObject((VkCmdBuffer) cmd_buffer,
+                                  VK_STATE_BIND_POINT_RASTER,
+                                  device->blit_state.rs_state);
+}
+
+struct blit_region {
+   VkOffset3D src_offset;
+   VkExtent3D src_extent;
+   VkOffset3D dest_offset;
+   VkExtent3D dest_extent;
+};
+
+static void
+meta_emit_blit(struct anv_cmd_buffer *cmd_buffer,
+               struct anv_image_view *src,
+               VkOffset3D src_offset,
+               VkExtent3D src_extent,
+               struct anv_color_attachment_view *dest,
+               VkOffset3D dest_offset,
+               VkExtent3D dest_extent)
+{
+   struct anv_device *device = cmd_buffer->device;
+
+   struct blit_vb_data {
+      float pos[2];
+      float tex_coord[2];
+   } *vb_data;
+
+   unsigned vb_size = sizeof(struct vue_header) + 3 * sizeof(*vb_data);
+
+   struct anv_state vb_state =
+      anv_state_stream_alloc(&cmd_buffer->surface_state_stream, vb_size, 16);
+   memset(vb_state.map, 0, sizeof(struct vue_header));
+   vb_data = vb_state.map + sizeof(struct vue_header);
+
+   vb_data[0] = (struct blit_vb_data) {
+      .pos = {
+         dest_offset.x + dest_extent.width,
+         dest_offset.y + dest_extent.height,
+      },
+      .tex_coord = {
+         (float)(src_offset.x + src_extent.width) / (float)src->extent.width,
+         (float)(src_offset.y + src_extent.height) / (float)src->extent.height,
+      },
+   };
+
+   vb_data[1] = (struct blit_vb_data) {
+      .pos = {
+         dest_offset.x,
+         dest_offset.y + dest_extent.height,
+      },
+      .tex_coord = {
+         (float)src_offset.x / (float)src->extent.width,
+         (float)(src_offset.y + src_extent.height) / (float)src->extent.height,
+      },
+   };
+
+   vb_data[2] = (struct blit_vb_data) {
+      .pos = {
+         dest_offset.x,
+         dest_offset.y,
+      },
+      .tex_coord = {
+         (float)src_offset.x / (float)src->extent.width,
+         (float)src_offset.y / (float)src->extent.height,
+      },
+   };
+
+   struct anv_buffer vertex_buffer = {
+      .device = device,
+      .size = vb_size,
+      .bo = &device->surface_state_block_pool.bo,
+      .offset = vb_state.offset,
+   };
+
+   vkCmdBindVertexBuffers((VkCmdBuffer) cmd_buffer, 0, 2,
+                          (VkBuffer[]) {
+                             (VkBuffer) &vertex_buffer,
+                             (VkBuffer) &vertex_buffer
+                          },
+                          (VkDeviceSize[]) {
+                             0,
+                             sizeof(struct vue_header),
+                          });
+
+   uint32_t count;
+   VkDescriptorSet set;
+   vkAllocDescriptorSets((VkDevice) device, 0 /* pool */,
+                         VK_DESCRIPTOR_SET_USAGE_ONE_SHOT,
+                         1, &device->blit_state.ds_layout, &set, &count);
+   vkUpdateDescriptors((VkDevice) device, set, 1,
+                       (const void * []) {
+                          &(VkUpdateImages) {
+                             .sType = VK_STRUCTURE_TYPE_UPDATE_IMAGES,
+                             .descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+                             .binding = 0,
+                             .count = 1,
+                             .pImageViews = (VkImageViewAttachInfo[]) {
+                                {
+                                   .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_ATTACH_INFO,
+                                   .view = (VkImageView) src,
+                                   .layout = VK_IMAGE_LAYOUT_GENERAL,
+                                }
+                             }
+                          }
+                       });
+
+   VkFramebufferCreateInfo fb_info = {
+      .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
+      .colorAttachmentCount = 1,
+      .pColorAttachments = (VkColorAttachmentBindInfo[]) {
+         {
+            .view = (VkColorAttachmentView) dest,
+            .layout = VK_IMAGE_LAYOUT_GENERAL
+         }
+      },
+      .pDepthStencilAttachment = NULL,
+      .sampleCount = 1,
+      .width = dest->extent.width,
+      .height = dest->extent.height,
+      .layers = 1
+   };
+
+   struct anv_framebuffer *fb;
+   vkCreateFramebuffer((VkDevice) device, &fb_info, (VkFramebuffer *)&fb);
+
+   VkRenderPassCreateInfo pass_info = {
+      .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
+      .renderArea = { { 0, 0 }, { dest->extent.width, dest->extent.height } },
+      .colorAttachmentCount = 1,
+      .extent = { },
+      .sampleCount = 1,
+      .layers = 1,
+      .pColorFormats = (VkFormat[]) { dest->image->format },
+      .pColorLayouts = (VkImageLayout[]) { VK_IMAGE_LAYOUT_GENERAL },
+      .pColorLoadOps = (VkAttachmentLoadOp[]) { VK_ATTACHMENT_LOAD_OP_LOAD },
+      .pColorStoreOps = (VkAttachmentStoreOp[]) { VK_ATTACHMENT_STORE_OP_STORE },
+      .pColorLoadClearValues = (VkClearColor[]) {
+         { .color = { .floatColor = { 1.0, 0.0, 0.0, 1.0 } }, .useRawValue = false }
+      },
+      .depthStencilFormat = VK_FORMAT_UNDEFINED,
+   };
+
+   VkRenderPass pass;
+   vkCreateRenderPass((VkDevice )device, &pass_info, &pass);
+
+   vkCmdBeginRenderPass((VkCmdBuffer) cmd_buffer,
+                        &(VkRenderPassBegin) {
+                           .renderPass = pass,
+                           .framebuffer = (VkFramebuffer) fb,
+                        });
+
+   vkCmdBindDynamicStateObject((VkCmdBuffer) cmd_buffer,
+                               VK_STATE_BIND_POINT_VIEWPORT, fb->vp_state);
+
+   vkCmdBindDescriptorSets((VkCmdBuffer) cmd_buffer,
+                           VK_PIPELINE_BIND_POINT_GRAPHICS, 0, 1,
+                           &set, 0, NULL);
+
+   vkCmdDraw((VkCmdBuffer) cmd_buffer, 0, 3, 0, 1);
+
+   vkCmdEndRenderPass((VkCmdBuffer) cmd_buffer, pass);
+}
+
+static void
+meta_finish_blit(struct anv_cmd_buffer *cmd_buffer,
+                 const struct anv_saved_state *saved_state)
+{
+   anv_cmd_buffer_restore(cmd_buffer, saved_state);
+}
+
 void VKAPI vkCmdCopyBuffer(
     VkCmdBuffer                                 cmdBuffer,
     VkBuffer                                    srcBuffer,
@@ -335,7 +706,87 @@ void VKAPI vkCmdCopyImageToBuffer(
     uint32_t                                    regionCount,
     const VkBufferImageCopy*                    pRegions)
 {
-   stub();
+   struct anv_cmd_buffer *cmd_buffer = (struct anv_cmd_buffer *)cmdBuffer;
+   VkDevice vk_device = (VkDevice) cmd_buffer->device;
+   struct anv_image *src_image = (struct anv_image *)srcImage;
+   struct anv_buffer *dest_buffer = (struct anv_buffer *)destBuffer;
+   struct anv_saved_state saved_state;
+
+   meta_prepare_blit(cmd_buffer, &saved_state);
+
+   for (unsigned r = 0; r < regionCount; r++) {
+      VkImageViewCreateInfo src_view_info = {
+         .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+         .image = srcImage,
+         .viewType = VK_IMAGE_VIEW_TYPE_2D,
+         .format = src_image->format,
+         .channels = {
+            VK_CHANNEL_SWIZZLE_R,
+            VK_CHANNEL_SWIZZLE_G,
+            VK_CHANNEL_SWIZZLE_B,
+            VK_CHANNEL_SWIZZLE_A
+         },
+         .subresourceRange = {
+            .aspect = pRegions[r].imageSubresource.aspect,
+            .baseMipLevel = pRegions[r].imageSubresource.mipLevel,
+            .mipLevels = 1,
+            .baseArraySlice = pRegions[r].imageSubresource.arraySlice,
+            .arraySize = 1
+         },
+         .minLod = 0
+      };
+
+      VkImageView src_view;
+      vkCreateImageView(vk_device, &src_view_info, &src_view);
+
+      VkImageCreateInfo dest_image_info = {
+         .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+         .imageType = VK_IMAGE_TYPE_2D,
+         .format = src_image->format,
+         .extent = {
+            .width = pRegions[r].imageExtent.width,
+            .height = pRegions[r].imageExtent.height,
+            .depth = 1,
+         },
+         .mipLevels = 1,
+         .arraySize = 1,
+         .samples = 1,
+         .tiling = VK_IMAGE_TILING_LINEAR,
+         .usage = VK_IMAGE_USAGE_SAMPLED_BIT,
+         .flags = 0,
+      };
+
+      struct anv_image *dest_image;
+      vkCreateImage(vk_device, &dest_image_info, (VkImage *)&dest_image);
+
+      /* We could use a vk call to bind memory, but that would require
+       * creating a dummy memory object etc. so there's really no point.
+       */
+      dest_image->bo = dest_buffer->bo;
+      dest_image->offset = dest_buffer->offset + pRegions[r].bufferOffset;
+
+      VkColorAttachmentViewCreateInfo dest_view_info = {
+         .sType = VK_STRUCTURE_TYPE_COLOR_ATTACHMENT_VIEW_CREATE_INFO,
+         .image = (VkImage)dest_image,
+         .format = src_image->format,
+         .mipLevel = 0,
+         .baseArraySlice = 0,
+         .arraySize = 1,
+      };
+
+      VkColorAttachmentView dest_view;
+      vkCreateColorAttachmentView(vk_device, &dest_view_info, &dest_view);
+
+      meta_emit_blit(cmd_buffer,
+                     (struct anv_image_view *)src_view,
+                     pRegions[r].imageOffset,
+                     pRegions[r].imageExtent,
+                     (struct anv_color_attachment_view *)dest_view,
+                     (VkOffset3D) { 0, 0, 0 },
+                     pRegions[r].imageExtent);
+   }
+
+   meta_finish_blit(cmd_buffer, &saved_state);
 }
 
 void VKAPI vkCmdCloneImageData(
@@ -407,4 +858,5 @@ void
 anv_device_init_meta(struct anv_device *device)
 {
    anv_device_init_meta_clear_state(device);
+   anv_device_init_meta_blit_state(device);
 }

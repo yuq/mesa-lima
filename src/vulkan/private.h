@@ -270,6 +270,12 @@ struct anv_clear_state {
    VkDynamicRsState                             rs_state;
 };
 
+struct anv_blit_state {
+   VkPipeline                                   pipeline;
+   VkDynamicRsState                             rs_state;
+   VkDescriptorSetLayout                        ds_layout;
+};
+
 struct anv_device {
     struct anv_instance *                       instance;
     uint32_t                                    chipset_id;
@@ -287,6 +293,7 @@ struct anv_device {
     struct anv_state_pool                       surface_state_pool;
 
     struct anv_clear_state                      clear_state;
+    struct anv_blit_state                       blit_state;
 
     struct anv_compiler *                       compiler;
     struct anv_aub_writer *                     aub_writer;
