@@ -178,6 +178,17 @@ gen8_emit_texture_surface_state(struct brw_context *brw,
    if (mt->mcs_mt) {
       aux_mt = mt->mcs_mt;
       aux_mode = GEN8_SURFACE_AUX_MODE_MCS;
+
+      /*
+       * From the BDW PRM, Volume 2d, page 260 (RENDER_SURFACE_STATE):
+       * "When MCS is enabled for non-MSRT, HALIGN_16 must be used"
+       *
+       * From the hardware spec for GEN9:
+       * "When Auxiliary Surface Mode is set to AUX_CCS_D or AUX_CCS_E, HALIGN
+       *  16 must be used."
+       */
+      assert(brw->gen < 9 || mt->align_w == 16);
+      assert(brw->gen < 8 || mt->num_samples > 1 || mt->align_w == 16);
    }
 
    uint32_t *surf = allocate_surface_state(brw, surf_offset, surf_index);
@@ -391,6 +402,17 @@ gen8_update_renderbuffer_surface(struct brw_context *brw,
    if (mt->mcs_mt) {
       aux_mt = mt->mcs_mt;
       aux_mode = GEN8_SURFACE_AUX_MODE_MCS;
+
+      /*
+       * From the BDW PRM, Volume 2d, page 260 (RENDER_SURFACE_STATE):
+       * "When MCS is enabled for non-MSRT, HALIGN_16 must be used"
+       *
+       * From the hardware spec for GEN9:
+       * "When Auxiliary Surface Mode is set to AUX_CCS_D or AUX_CCS_E, HALIGN
+       *  16 must be used."
+       */
+      assert(brw->gen < 9 || mt->align_w == 16);
+      assert(brw->gen < 8 || mt->num_samples > 1 || mt->align_w == 16);
    }
 
    uint32_t *surf = allocate_surface_state(brw, &offset, surf_index);
