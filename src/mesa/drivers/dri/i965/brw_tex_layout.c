@@ -116,8 +116,12 @@ tr_mode_horizontal_texture_alignment(const struct brw_context *brw,
 
 static unsigned int
 intel_horizontal_texture_alignment_unit(struct brw_context *brw,
-                                        struct intel_mipmap_tree *mt)
+                                        struct intel_mipmap_tree *mt,
+                                        uint32_t layout_flags)
 {
+   if (layout_flags & MIPTREE_LAYOUT_FORCE_HALIGN16)
+      return 16;
+
    /**
     * From the "Alignment Unit Size" section of various specs, namely:
     * - Gen3 Spec: "Memory Data Formats" Volume,         Section 1.20.1.4
@@ -171,9 +175,6 @@ intel_horizontal_texture_alignment_unit(struct brw_context *brw,
 
    if (brw->gen >= 7 && mt->format == MESA_FORMAT_Z_UNORM16)
       return 8;
-
-   if (brw->gen == 8 && mt->mcs_mt && mt->num_samples <= 1)
-      return 16;
 
    return 4;
 }
@@ -792,6 +793,7 @@ brw_miptree_layout(struct brw_context *brw,
           */
          mt->align_w = 64;
          mt->align_h = 64;
+         assert((layout_flags & MIPTREE_LAYOUT_FORCE_HALIGN16) == 0);
       } else {
          /* Depth uses Y tiling, so we force need Y tiling alignment for the
           * ALL_SLICES_AT_EACH_LOD miptree layout.
@@ -800,7 +802,8 @@ brw_miptree_layout(struct brw_context *brw,
          mt->align_h = 32;
       }
    } else {
-      mt->align_w = intel_horizontal_texture_alignment_unit(brw, mt);
+      mt->align_w =
+         intel_horizontal_texture_alignment_unit(brw, mt, layout_flags);
       mt->align_h = intel_vertical_texture_alignment_unit(brw, mt);
    }
 

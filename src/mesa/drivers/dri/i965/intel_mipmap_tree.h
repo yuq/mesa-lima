@@ -540,6 +540,7 @@ enum {
    MIPTREE_LAYOUT_FORCE_ALL_SLICE_AT_LOD   = 1 << 1,
    MIPTREE_LAYOUT_FOR_BO                   = 1 << 2,
    MIPTREE_LAYOUT_DISABLE_AUX              = 1 << 3,
+   MIPTREE_LAYOUT_FORCE_HALIGN16           = 1 << 4,
 };
 
 struct intel_mipmap_tree *intel_miptree_create(struct brw_context *brw,

@@ -489,6 +489,11 @@ intel_miptree_create_layout(struct brw_context *brw,
    if (layout_flags & MIPTREE_LAYOUT_FORCE_ALL_SLICE_AT_LOD)
       mt->array_layout = ALL_SLICES_AT_EACH_LOD;
 
+   /* Use HALIGN_16 if MCS is enabled for non-MSRT */
+   if (brw->gen >= 8 && num_samples < 2 &&
+       intel_miptree_is_fast_clear_capable(brw, mt))
+      layout_flags |= MIPTREE_LAYOUT_FORCE_HALIGN16;
+
    brw_miptree_layout(brw, mt, requested, layout_flags);
 
    if (mt->disable_aux_buffers)
@@ -626,6 +631,7 @@ intel_miptree_create(struct brw_context *brw,
 
 
    if (mt->msaa_layout == INTEL_MSAA_LAYOUT_CMS) {
+      assert(mt->num_samples > 1);
       if (!intel_miptree_alloc_mcs(brw, mt, num_samples)) {
          intel_miptree_release(&mt);
          return NULL;
@@ -638,8 +644,10 @@ intel_miptree_create(struct brw_context *brw,
     * clear actually occurs.
     */
    if (intel_tiling_supports_non_msrt_mcs(brw, mt->tiling) &&
-       intel_miptree_is_fast_clear_capable(brw, mt))
+       intel_miptree_is_fast_clear_capable(brw, mt)) {
       mt->fast_clear_state = INTEL_FAST_CLEAR_STATE_RESOLVED;
+      assert(brw->gen < 8 || mt->align_w == 16 || num_samples <= 1);
+   }
 
    return mt;
 }
@@ -1357,6 +1365,9 @@ intel_miptree_alloc_non_msrt_mcs(struct brw_context *brw,
    unsigned mcs_height =
       ALIGN(mt->logical_height0, height_divisor) / height_divisor;
    assert(mt->logical_depth0 == 1);
+   uint32_t layout_flags = MIPTREE_LAYOUT_ACCELERATED_UPLOAD;
+   if (brw->gen >= 8)
+      layout_flags |= MIPTREE_LAYOUT_FORCE_HALIGN16;
    mt->mcs_mt = intel_miptree_create(brw,
                                      mt->target,
                                      format,
@@ -1367,7 +1378,7 @@ intel_miptree_alloc_non_msrt_mcs(struct brw_context *brw,
                                      mt->logical_depth0,
                                      0 /* num_samples */,
                                      INTEL_MIPTREE_TILING_Y,
-                                     MIPTREE_LAYOUT_ACCELERATED_UPLOAD);
+                                     layout_flags);
 
    return mt->mcs_mt;
 }
