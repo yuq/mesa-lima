@@ -369,7 +369,7 @@ int main(int argc, char *argv[])
                     .mipLevels = 1,
                     .arraySize = 1,
                     .samples = 1,
-                    .tiling = VK_IMAGE_TILING_LINEAR,
+                    .tiling = VK_IMAGE_TILING_OPTIMAL,
                     .usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
                     .flags = 0,
                  },
