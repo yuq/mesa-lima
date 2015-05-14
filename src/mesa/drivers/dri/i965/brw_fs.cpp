@@ -3584,39 +3584,77 @@ fs_visitor::lower_integer_multiplication()
           *
           * Specifically, the 2Q mach(8) writes acc1 which does not exist for
           * integer data types.
-          */
-         if (devinfo->gen == 7 && !devinfo->is_haswell)
-            no16("SIMD16 integer multiply unsupported\n");
-
-         /* From the IVB PRM, volume 4 part 3, page 42:
           *
-          *    "For any DWord operation, including DWord multiply, accumulator
-          *     can store up to 8 channels of data, with only acc0 supported."
+          * Since we only want the low 32-bits of the result, we can do two
+          * 32-bit x 16-bit multiplies (like the mul and mach are doing), and
+          * adjust the high result and add them (like the mach is doing):
           *
-          * So make the accumulator (and null register) only 8-channels wide on
-          * Gen7+.
+          *    mul(8)  g7<1>D     g3<8,8,1>D      g4.0<8,8,1>UW
+          *    mul(8)  g8<1>D     g3<8,8,1>D      g4.1<8,8,1>UW
+          *    shl(8)  g9<1>D     g8<8,8,1>D      16D
+          *    add(8)  g2<1>D     g7<8,8,1>D      g8<8,8,1>D
+          *
+          * We avoid the shl instruction by realizing that we only want to add
+          * the low 16-bits of the "high" result to the high 16-bits of the
+          * "low" result and using proper regioning on the add:
+          *
+          *    mul(8)  g7<1>D     g3<8,8,1>D      g4.0<16,8,2>UW
+          *    mul(8)  g8<1>D     g3<8,8,1>D      g4.1<16,8,2>UW
+          *    add(8)  g7.1<2>UW  g7.1<16,8,2>UW  g8<16,8,2>UW
+          *
+          * Since it does not use the (single) accumulator register, we can
+          * schedule multi-component multiplications much better.
           */
-         const unsigned channels = devinfo->gen >= 7 ? 8 : dispatch_width;
-         const enum brw_reg_type type = inst->dst.type;
-         const fs_reg acc(retype(brw_acc_reg(channels), type));
-         const fs_reg null(retype(brw_null_vec(channels), type));
 
-         const fs_reg &src0 = inst->src[0];
-         const fs_reg &src1 = inst->src[1];
+         fs_reg low = inst->dst;
+         fs_reg high(GRF, alloc.allocate(dispatch_width / 8),
+                     inst->dst.type, dispatch_width);
 
-         if (devinfo->gen >= 7 && dispatch_width == 16) {
-            insert(MUL(acc, half(src0, 0), half(src1, 0)));
-            insert(MACH(null, half(src0, 0), half(src1, 0)));
-            insert(MOV(half(inst->dst, 0), acc));
+         if (brw->gen >= 7) {
+            fs_reg src1_0_w = inst->src[1];
+            fs_reg src1_1_w = inst->src[1];
 
-            insert(set_sechalf(MUL(acc, half(src0, 1), half(src1, 1))));
-            insert(set_sechalf(MACH(null, half(src0, 1), half(src1, 1))));
-            insert(set_sechalf(MOV(half(inst->dst, 1), acc)));
+            if (inst->src[1].file == IMM) {
+               src1_0_w.fixed_hw_reg.dw1.ud &= 0xffff;
+               src1_1_w.fixed_hw_reg.dw1.ud >>= 16;
+            } else {
+               src1_0_w.type = BRW_REGISTER_TYPE_UW;
+               src1_0_w.stride = 2;
+
+               src1_1_w.type = BRW_REGISTER_TYPE_UW;
+               src1_1_w.stride = 2;
+               src1_1_w.subreg_offset += type_sz(BRW_REGISTER_TYPE_UW);
+            }
+            insert(MUL(low, inst->src[0], src1_0_w));
+            insert(MUL(high, inst->src[0], src1_1_w));
          } else {
-            insert(MUL(acc, src0, src1));
-            insert(MACH(null, src0, src1));
-            insert(MOV(inst->dst, acc));
+            fs_reg src0_0_w = inst->src[0];
+            fs_reg src0_1_w = inst->src[0];
+
+            src0_0_w.type = BRW_REGISTER_TYPE_UW;
+            src0_0_w.stride = 2;
+
+            src0_1_w.type = BRW_REGISTER_TYPE_UW;
+            src0_1_w.stride = 2;
+            src0_1_w.subreg_offset += type_sz(BRW_REGISTER_TYPE_UW);
+
+            insert(MUL(low, src0_0_w, inst->src[1]));
+            insert(MUL(high, src0_1_w, inst->src[1]));
          }
+
+         fs_reg dst = inst->dst;
+         dst.type = BRW_REGISTER_TYPE_UW;
+         dst.subreg_offset = 2;
+         dst.stride = 2;
+
+         high.type = BRW_REGISTER_TYPE_UW;
+         high.stride = 2;
+
+         low.type = BRW_REGISTER_TYPE_UW;
+         low.subreg_offset = 2;
+         low.stride = 2;
+
+         insert(ADD(dst, low, high));
       }
 #undef insert
 
