@@ -296,7 +296,9 @@ anv_device_init_meta_blit_state(struct anv_device *device)
    };
 
    /* We don't use a vertex shader for clearing, but instead build and pass
-    * the VUEs directly to the rasterization backend.
+    * the VUEs directly to the rasterization backend.  However, we do need
+    * to provide GLSL source for the vertex shader so that the compiler
+    * does not dead-code our inputs.
     */
    static const char vs_source[] = GLSL(
       in vec2 a_pos;
