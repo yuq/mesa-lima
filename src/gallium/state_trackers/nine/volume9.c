@@ -244,12 +244,13 @@ NineVolume9_LockBox( struct NineVolume9 *This,
     user_assert(!((Flags & D3DLOCK_DISCARD) && (Flags & D3DLOCK_READONLY)),
                 D3DERR_INVALIDCALL);
 
-    if (pBox && This->desc.Pool == D3DPOOL_DEFAULT &&
-        util_format_is_compressed(This->info.format)) {
+    if (pBox && compressed_format (This->desc.Format)) { /* For volume all pools are checked */
         const unsigned w = util_format_get_blockwidth(This->info.format);
         const unsigned h = util_format_get_blockheight(This->info.format);
-        user_assert(!(pBox->Left % w) && !(pBox->Right % w) &&
-                    !(pBox->Top % h) && !(pBox->Bottom % h),
+        user_assert((pBox->Left == 0 && pBox->Right == This->desc.Width &&
+                     pBox->Top == 0 && pBox->Bottom == This->desc.Height) ||
+                    (!(pBox->Left % w) && !(pBox->Right % w) &&
+                     !(pBox->Top % h) && !(pBox->Bottom % h)),
                     D3DERR_INVALIDCALL);
     }
 
