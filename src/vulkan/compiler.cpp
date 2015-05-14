@@ -70,6 +70,8 @@ set_binding_table_layout(struct brw_stage_prog_data *prog_data,
    else
       bias = 0;
 
+   prog_data->binding_table.texture_start = bias;
+
    count = pipeline->layout->stage[stage].surface_count;
    entries = pipeline->layout->stage[stage].surface_entries;
 
