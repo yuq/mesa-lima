@@ -244,6 +244,7 @@ VkResult VKAPI vkCreateImage(
    image->bo = NULL;
    image->offset = 0;
    image->type = pCreateInfo->imageType;
+   image->format = pCreateInfo->format;
    image->extent = pCreateInfo->extent;
 
    assert(image->extent.width > 0);
@@ -362,6 +363,9 @@ VkResult VKAPI vkCreateImageView(
 
    view->surface_state = create_surface_state(device, view->image, format);
 
+   /* TODO: Miplevels */
+   view->extent = view->image->extent;
+
    *pView = (VkImageView) view;
 
    return VK_SUCCESS;
@@ -374,7 +378,6 @@ VkResult VKAPI vkCreateColorAttachmentView(
 {
    struct anv_device *device = (struct anv_device *) _device;
    struct anv_color_attachment_view *view;
-   struct anv_image *image;
    const struct anv_format *format =
       anv_format_for_vk_format(pCreateInfo->format);
 
@@ -386,9 +389,11 @@ VkResult VKAPI vkCreateColorAttachmentView(
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
    view->image = (struct anv_image *) pCreateInfo->image;
-   image = view->image;
 
-   view->surface_state = create_surface_state(device, image, format);
+   view->surface_state = create_surface_state(device, view->image, format);
+
+   /* TODO: Miplevels */
+   view->extent = view->image->extent;
 
    *pView = (VkColorAttachmentView) view;
 

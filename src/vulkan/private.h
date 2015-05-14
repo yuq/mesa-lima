@@ -610,6 +610,7 @@ anv_format_for_vk_format(VkFormat format);
 
 struct anv_image {
    VkImageType                                  type;
+   VkFormat                                     format;
    VkExtent3D                                   extent;
    uint32_t                                     tile_mode;
    VkDeviceSize                                 size;
@@ -630,11 +631,15 @@ struct anv_buffer_view {
 struct anv_color_attachment_view {
    struct anv_image *                           image;
    struct anv_state                             surface_state;
+
+   VkExtent3D                                   extent;
 };
 
 struct anv_image_view {
    struct anv_image *                           image;
    struct anv_state                             surface_state;
+
+   VkExtent3D                                   extent;
 };
 
 struct anv_sampler {
