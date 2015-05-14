@@ -453,6 +453,9 @@ struct shader_translator
         BYTE minor;
     } version;
     unsigned processor; /* TGSI_PROCESSOR_VERTEX/FRAMGENT */
+    unsigned num_constf_allowed;
+    unsigned num_consti_allowed;
+    unsigned num_constb_allowed;
 
     boolean native_integers;
     boolean inline_subroutines;
@@ -514,7 +517,6 @@ struct shader_translator
 
 #define IS_VS (tx->processor == TGSI_PROCESSOR_VERTEX)
 #define IS_PS (tx->processor == TGSI_PROCESSOR_FRAGMENT)
-#define NINE_MAX_CONST_F_SHADER (tx->processor == TGSI_PROCESSOR_VERTEX ? NINE_MAX_CONST_F : NINE_MAX_CONST_F_PS3)
 
 #define FAILURE_VOID(cond) if ((cond)) {tx->failure=1;return;}
 
@@ -537,7 +539,7 @@ static boolean
 tx_lconstf(struct shader_translator *tx, struct ureg_src *src, INT index)
 {
    INT i;
-   if (index < 0 || index >= NINE_MAX_CONST_F_SHADER) {
+   if (index < 0 || index >= tx->num_constf_allowed) {
        tx->failure = TRUE;
        return FALSE;
    }
@@ -552,7 +554,7 @@ tx_lconstf(struct shader_translator *tx, struct ureg_src *src, INT index)
 static boolean
 tx_lconsti(struct shader_translator *tx, struct ureg_src *src, INT index)
 {
-   if (index < 0 || index >= NINE_MAX_CONST_I) {
+   if (index < 0 || index >= tx->num_consti_allowed) {
        tx->failure = TRUE;
        return FALSE;
    }
@@ -563,7 +565,7 @@ tx_lconsti(struct shader_translator *tx, struct ureg_src *src, INT index)
 static boolean
 tx_lconstb(struct shader_translator *tx, struct ureg_src *src, INT index)
 {
-   if (index < 0 || index >= NINE_MAX_CONST_B) {
+   if (index < 0 || index >= tx->num_constb_allowed) {
        tx->failure = TRUE;
        return FALSE;
    }
@@ -577,9 +579,7 @@ tx_set_lconstf(struct shader_translator *tx, INT index, float f[4])
 {
     unsigned n;
 
-    FAILURE_VOID(index < 0 || index >= NINE_MAX_CONST_F_SHADER)
-    if (IS_VS && index >= NINE_MAX_CONST_F_SHADER)
-        WARN("lconstf index %i too high, indirect access won't work\n", index);
+    FAILURE_VOID(index < 0 || index >= tx->num_constf_allowed)
 
     for (n = 0; n < tx->num_lconstf; ++n)
         if (tx->lconstf[n].idx == index)
@@ -601,7 +601,7 @@ tx_set_lconstf(struct shader_translator *tx, INT index, float f[4])
 static void
 tx_set_lconsti(struct shader_translator *tx, INT index, int i[4])
 {
-    FAILURE_VOID(index < 0 || index >= NINE_MAX_CONST_I)
+    FAILURE_VOID(index < 0 || index >= tx->num_consti_allowed)
     tx->lconsti[index].idx = index;
     tx->lconsti[index].reg = tx->native_integers ?
        ureg_imm4i(tx->ureg, i[0], i[1], i[2], i[3]) :
@@ -610,7 +610,7 @@ tx_set_lconsti(struct shader_translator *tx, INT index, int i[4])
 static void
 tx_set_lconstb(struct shader_translator *tx, INT index, BOOL b)
 {
-    FAILURE_VOID(index < 0 || index >= NINE_MAX_CONST_B)
+    FAILURE_VOID(index < 0 || index >= tx->num_constb_allowed)
     tx->lconstb[index].idx = index;
     tx->lconstb[index].reg = tx->native_integers ?
        ureg_imm1u(tx->ureg, b ? 0xffffffff : 0) :
@@ -3344,6 +3344,24 @@ nine_translate_shader(struct NineDevice9 *device, struct nine_shader_info *info)
     tx->shift_wpos = !GET_CAP(TGSI_FS_COORD_PIXEL_CENTER_INTEGER);
     tx->texcoord_sn = tx->want_texcoord ?
         TGSI_SEMANTIC_TEXCOORD : TGSI_SEMANTIC_GENERIC;
+
+    if (IS_VS) {
+        tx->num_constf_allowed = NINE_MAX_CONST_F;
+    } else if (tx->version.major < 2) {/* IS_PS v1 */
+        tx->num_constf_allowed = 8;
+    } else if (tx->version.major == 2) {/* IS_PS v2 */
+        tx->num_constf_allowed = 32;
+    } else {/* IS_PS v3 */
+        tx->num_constf_allowed = NINE_MAX_CONST_F_PS3;
+    }
+
+    if (tx->version.major < 2) {
+        tx->num_consti_allowed = 0;
+        tx->num_constb_allowed = 0;
+    } else {
+        tx->num_consti_allowed = NINE_MAX_CONST_I;
+        tx->num_constb_allowed = NINE_MAX_CONST_B;
+    }
 
     /* VS must always write position. Declare it here to make it the 1st output.
      * (Some drivers like nv50 are buggy and rely on that.)
