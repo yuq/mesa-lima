@@ -161,24 +161,30 @@ struct anv_saved_state {
       struct anv_buffer *buffer;
       VkDeviceSize offset;
    } vb[2];
+   struct anv_descriptor_set *dsets[1];
    struct anv_pipeline *pipeline;
 };
 
 static void
-anv_cmd_buffer_save(struct anv_cmd_buffer *cmd_buffer, struct anv_saved_state *state)
+anv_cmd_buffer_save(struct anv_cmd_buffer *cmd_buffer,
+                    struct anv_saved_state *state)
 {
    memcpy(state->vb, cmd_buffer->vb, sizeof(state->vb));
+   memcpy(state->dsets, cmd_buffer->descriptor_sets, sizeof(state->dsets));
    state->pipeline = cmd_buffer->pipeline;
 }
 
 static void
-anv_cmd_buffer_restore(struct anv_cmd_buffer *cmd_buffer, struct anv_saved_state *state)
+anv_cmd_buffer_restore(struct anv_cmd_buffer *cmd_buffer,
+                       const struct anv_saved_state *state)
 {
    memcpy(cmd_buffer->vb, state->vb, sizeof(state->vb));
+   memcpy(cmd_buffer->descriptor_sets, state->dsets, sizeof(state->dsets));
    cmd_buffer->pipeline = state->pipeline;
 
    cmd_buffer->vb_dirty |= (1 << ARRAY_SIZE(state->vb)) - 1;
-   cmd_buffer->dirty |= ANV_CMD_BUFFER_PIPELINE_DIRTY;
+   cmd_buffer->dirty |= ANV_CMD_BUFFER_PIPELINE_DIRTY |
+                        ANV_CMD_BUFFER_DESCRIPTOR_SET_DIRTY;
 }
 
 void
