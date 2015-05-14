@@ -28,8 +28,7 @@
 #include <fcntl.h>
 
 #include "private.h"
-
-#define GLSL(src) "#version 330\n" #src
+#include "glsl_helpers.h"
 
 static void
 anv_device_init_meta_clear_state(struct anv_device *device)
@@ -45,23 +44,14 @@ anv_device_init_meta_clear_state(struct anv_device *device)
    /* We don't use a vertex shader for clearing, but instead build and pass
     * the VUEs directly to the rasterization backend.
     */
-   static const char fs_source[] = GLSL(
+   VkShader fs = GLSL_VK_SHADER(device, FRAGMENT,
       out vec4 f_color;
       flat in vec4 v_color;
       void main()
       {
          f_color = v_color;
-      });
-
-   VkShader fs;
-   vkCreateShader((VkDevice) device,
-                  &(VkShaderCreateInfo) {
-                     .sType = VK_STRUCTURE_TYPE_SHADER_CREATE_INFO,
-                     .codeSize = sizeof(fs_source),
-                     .pCode = fs_source,
-                     .flags = 0
-                  },
-                  &fs);
+      }
+   );
 
    VkPipelineShaderStageCreateInfo fs_create_info = {
       .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
@@ -300,7 +290,7 @@ anv_device_init_meta_blit_state(struct anv_device *device)
     * to provide GLSL source for the vertex shader so that the compiler
     * does not dead-code our inputs.
     */
-   static const char vs_source[] = GLSL(
+   VkShader vs = GLSL_VK_SHADER(device, VERTEX,
       in vec2 a_pos;
       in vec2 a_tex_coord;
       out vec4 v_tex_coord;
@@ -311,7 +301,7 @@ anv_device_init_meta_blit_state(struct anv_device *device)
       }
    );
 
-   static const char fs_source[] = GLSL(
+   VkShader fs = GLSL_VK_SHADER(device, FRAGMENT,
       out vec4 f_color;
       in vec4 v_tex_coord;
       layout(set = 0, index = 0) uniform sampler2D u_tex;
@@ -320,26 +310,6 @@ anv_device_init_meta_blit_state(struct anv_device *device)
          f_color = texture2D(u_tex, v_tex_coord.xy);
       }
    );
-
-   VkShader vs;
-   vkCreateShader((VkDevice) device,
-                  &(VkShaderCreateInfo) {
-                     .sType = VK_STRUCTURE_TYPE_SHADER_CREATE_INFO,
-                     .codeSize = sizeof(vs_source),
-                     .pCode = vs_source,
-                     .flags = 0
-                  },
-                  &vs);
-
-   VkShader fs;
-   vkCreateShader((VkDevice) device,
-                  &(VkShaderCreateInfo) {
-                     .sType = VK_STRUCTURE_TYPE_SHADER_CREATE_INFO,
-                     .codeSize = sizeof(fs_source),
-                     .pCode = fs_source,
-                     .flags = 0
-                  },
-                  &fs);
 
    VkPipelineShaderStageCreateInfo vs_create_info = {
       .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
