@@ -397,14 +397,33 @@ int main(int argc, char *argv[])
                    VK_OBJECT_INFO_TYPE_MEMORY_REQUIREMENTS,
                    &size, &vb_requirements);
 
+   VkBuffer image_buffer;
+   vkCreateBuffer(device,
+                  &(VkBufferCreateInfo) {
+                     .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+                     .size = width * height * 4,
+                     .usage = VK_BUFFER_USAGE_TRANSFER_DESTINATION_BIT,
+                     .flags = 0
+                  },
+                  &image_buffer);
+
+   VkMemoryRequirements ib_requirements;
+   size = sizeof(ib_requirements);
+   vkGetObjectInfo(device, VK_OBJECT_TYPE_BUFFER, image_buffer,
+                   VK_OBJECT_INFO_TYPE_MEMORY_REQUIREMENTS,
+                   &size, &ib_requirements);
+
    printf("buffer size: %lu, buffer alignment: %lu\n",
           buffer_requirements.size, buffer_requirements.alignment);
    printf("rt size: %lu, rt alignment: %lu\n",
           rt_requirements.size, rt_requirements.alignment);
    printf("vb size: %lu vb alignment: %lu\n",
           vb_requirements.size, vb_requirements.alignment);
+   printf("ib size: %lu ib alignment: %lu\n",
+          ib_requirements.size, ib_requirements.alignment);
 
-   size_t mem_size = rt_requirements.size + 2048 + 16 * 16 * 4;
+   size_t mem_size = rt_requirements.size + ib_requirements.size +
+                     2048 + 16 * 16 * 4;
    VkDeviceMemory mem;
    vkAllocMemory(device,
                  &(VkMemoryAllocInfo) {
@@ -520,6 +539,11 @@ int main(int argc, char *argv[])
                            rt,
                            0, /* allocation index; for objects which need to bind to multiple mems */
                            mem, 2048);
+
+   vkQueueBindObjectMemory(queue, VK_OBJECT_TYPE_BUFFER,
+                           image_buffer,
+                           0, /* allocation index; for objects which need to bind to multiple mems */
+                           mem, 2048 + rt_requirements.size);
 
    const uint32_t texture_width = 16, texture_height = 16;
    VkImage texture;
@@ -732,13 +756,29 @@ int main(int argc, char *argv[])
 
    vkCmdEndRenderPass(cmdBuffer, pass);
 
+   VkBufferImageCopy copy = {
+      .bufferOffset = 0,
+      .imageSubresource = {
+         .aspect = VK_IMAGE_ASPECT_COLOR,
+         .mipLevel = 0,
+         .arraySlice = 0,
+      },
+      .imageOffset = { .x = 0, .y = 0, .z = 0 },
+      .imageExtent = { .width = width, .height = height, .depth = 1 },
+   };
+
+   vkCmdCopyImageToBuffer(cmdBuffer, rt, VK_IMAGE_LAYOUT_GENERAL,
+                          image_buffer, 1, &copy);
+
    vkEndCommandBuffer(cmdBuffer);
 
    vkQueueSubmit(queue, 1, &cmdBuffer, 0);
 
    vkQueueWaitIdle(queue);
 
-   write_png("vk.png", width, height, 1024, map + 2048);
+   write_png("vk-map.png", width, height, 1024, map + 2048);
+   write_png("vk-copy.png", width, height, 1024,
+             map + 2048 + rt_requirements.size);
 
    vkDestroyObject(device, VK_OBJECT_TYPE_IMAGE, texture);
    vkDestroyObject(device, VK_OBJECT_TYPE_IMAGE, rt);
