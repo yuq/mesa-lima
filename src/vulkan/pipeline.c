@@ -388,7 +388,7 @@ anv_pipeline_create(
    offset = 1;
    length = (vue_prog_data->vue_map.num_slots + 1) / 2 - offset;
 
-   if (pipeline->vs_simd8 == NO_KERNEL)
+   if (pipeline->vs_simd8 == NO_KERNEL || (extra && extra->disable_vs))
       anv_batch_emit(&pipeline->batch, GEN8_3DSTATE_VS,
                      .FunctionEnable = false,
                      .VertexURBEntryOutputReadOffset = 1,
