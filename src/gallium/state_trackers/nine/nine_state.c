@@ -705,7 +705,6 @@ update_textures_and_samplers(struct NineDevice9 *device)
     struct pipe_context *pipe = device->pipe;
     struct nine_state *state = &device->state;
     struct pipe_sampler_view *view[NINE_MAX_SAMPLERS];
-    struct pipe_sampler_state samp;
     unsigned num_textures;
     unsigned i;
     boolean commit_views;
@@ -745,24 +744,11 @@ update_textures_and_samplers(struct NineDevice9 *device)
              * unbind dummy sampler directly when they are not needed
              * anymore, but they're going to be removed as long as texture
              * or sampler states are changed. */
-            view[i] = device->dummy_sampler;
+            view[i] = device->dummy_sampler_view;
             num_textures = i + 1;
 
-            memset(&samp, 0, sizeof(samp));
-            samp.min_mip_filter = PIPE_TEX_MIPFILTER_NONE;
-            samp.max_lod = 15.0f;
-            samp.wrap_s = PIPE_TEX_WRAP_CLAMP_TO_EDGE;
-            samp.wrap_t = PIPE_TEX_WRAP_CLAMP_TO_EDGE;
-            samp.wrap_r = PIPE_TEX_WRAP_CLAMP_TO_EDGE;
-            samp.min_img_filter = PIPE_TEX_FILTER_NEAREST;
-            samp.mag_img_filter = PIPE_TEX_FILTER_NEAREST;
-            samp.compare_mode = PIPE_TEX_COMPARE_NONE;
-            samp.compare_func = PIPE_FUNC_LEQUAL;
-            samp.normalized_coords = 1;
-            samp.seamless_cube_map = 1;
-
             cso_single_sampler(device->cso, PIPE_SHADER_FRAGMENT,
-                               s - NINE_SAMPLER_PS(0), &samp);
+                               s - NINE_SAMPLER_PS(0), &device->dummy_sampler_state);
 
             commit_views = TRUE;
             commit_samplers = TRUE;
@@ -812,24 +798,11 @@ update_textures_and_samplers(struct NineDevice9 *device)
              * unbind dummy sampler directly when they are not needed
              * anymore, but they're going to be removed as long as texture
              * or sampler states are changed. */
-            view[i] = device->dummy_sampler;
+            view[i] = device->dummy_sampler_view;
             num_textures = i + 1;
 
-            memset(&samp, 0, sizeof(samp));
-            samp.min_mip_filter = PIPE_TEX_MIPFILTER_NONE;
-            samp.max_lod = 15.0f;
-            samp.wrap_s = PIPE_TEX_WRAP_CLAMP_TO_EDGE;
-            samp.wrap_t = PIPE_TEX_WRAP_CLAMP_TO_EDGE;
-            samp.wrap_r = PIPE_TEX_WRAP_CLAMP_TO_EDGE;
-            samp.min_img_filter = PIPE_TEX_FILTER_NEAREST;
-            samp.mag_img_filter = PIPE_TEX_FILTER_NEAREST;
-            samp.compare_mode = PIPE_TEX_COMPARE_NONE;
-            samp.compare_func = PIPE_FUNC_LEQUAL;
-            samp.normalized_coords = 1;
-            samp.seamless_cube_map = 1;
-
             cso_single_sampler(device->cso, PIPE_SHADER_VERTEX,
-                               s - NINE_SAMPLER_VS(0), &samp);
+                               s - NINE_SAMPLER_VS(0), &device->dummy_sampler_state);
 
             commit_views = TRUE;
             commit_samplers = TRUE;

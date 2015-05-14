@@ -336,6 +336,8 @@ NineDevice9_ctor( struct NineDevice9 *This,
     {
         struct pipe_resource tmplt;
         struct pipe_sampler_view templ;
+        struct pipe_sampler_state samp;
+        memset(&samp, 0, sizeof(samp));
 
         tmplt.target = PIPE_TEXTURE_2D;
         tmplt.width0 = 1;
@@ -364,9 +366,22 @@ NineDevice9_ctor( struct NineDevice9 *This,
         templ.swizzle_a = PIPE_SWIZZLE_ONE;
         templ.target = This->dummy_texture->target;
 
-        This->dummy_sampler = This->pipe->create_sampler_view(This->pipe, This->dummy_texture, &templ);
-        if (!This->dummy_sampler)
+        This->dummy_sampler_view = This->pipe->create_sampler_view(This->pipe, This->dummy_texture, &templ);
+        if (!This->dummy_sampler_view)
             return D3DERR_DRIVERINTERNALERROR;
+
+        samp.min_mip_filter = PIPE_TEX_MIPFILTER_NONE;
+        samp.max_lod = 15.0f;
+        samp.wrap_s = PIPE_TEX_WRAP_CLAMP_TO_EDGE;
+        samp.wrap_t = PIPE_TEX_WRAP_CLAMP_TO_EDGE;
+        samp.wrap_r = PIPE_TEX_WRAP_CLAMP_TO_EDGE;
+        samp.min_img_filter = PIPE_TEX_FILTER_NEAREST;
+        samp.mag_img_filter = PIPE_TEX_FILTER_NEAREST;
+        samp.compare_mode = PIPE_TEX_COMPARE_NONE;
+        samp.compare_func = PIPE_FUNC_LEQUAL;
+        samp.normalized_coords = 1;
+        samp.seamless_cube_map = 1;
+        This->dummy_sampler_state = samp;
     }
 
     /* Allocate upload helper for drivers that suck (from st pov ;). */
@@ -430,7 +445,7 @@ NineDevice9_dtor( struct NineDevice9 *This )
 
     nine_bind(&This->record, NULL);
 
-    pipe_sampler_view_reference(&This->dummy_sampler, NULL);
+    pipe_sampler_view_reference(&This->dummy_sampler_view, NULL);
     pipe_resource_reference(&This->dummy_texture, NULL);
     pipe_resource_reference(&This->constbuf_vs, NULL);
     pipe_resource_reference(&This->constbuf_ps, NULL);
