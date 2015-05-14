@@ -203,7 +203,7 @@ anv_block_pool_init(struct anv_block_pool *pool,
  * without copying.  It breaks valgrind however, so we have a MAP_ANONYMOUS
  * path we can take for valgrind debugging. */
 
-#define USE_MEMFD 0
+#define USE_MEMFD 1
 
 void
 anv_block_pool_finish(struct anv_block_pool *pool)
