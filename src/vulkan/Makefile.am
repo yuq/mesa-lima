@@ -19,6 +19,14 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
+
+vulkan_includedir = $(includedir)/vulkan
+
+vulkan_include_HEADERS = \
+	$(top_srcdir)/include/vulkan/vk_platform.h \
+	$(top_srcdir)/include/vulkan/vulkan.h \
+	$(top_srcdir)/include/vulkan/vulkan_intel.h
+
 lib_LTLIBRARIES = libvulkan.la
 
 # The gallium includes are for the util/u_math.h include from main/macros.h
