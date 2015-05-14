@@ -833,6 +833,11 @@ anv_compiler_run(struct anv_compiler *compiler, struct anv_pipeline *pipeline)
    struct brw_context *brw = compiler->brw;
    struct anv_device *device = pipeline->device;
 
+   /* When we free the pipeline, we detect stages based on the NULL status
+    * of various prog_data pointers.  Make them NULL by default.
+    */
+   memset(pipeline->prog_data, 0, sizeof(pipeline->prog_data));
+
    brw->use_rep_send = pipeline->use_repclear;
    brw->no_simd8 = pipeline->use_repclear;
 
