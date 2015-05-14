@@ -1601,10 +1601,13 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
          break;
       case 16:
       case 32:
-         if (type_sz(inst->dst.type) < sizeof(float))
-            brw_set_default_compression_control(p, BRW_COMPRESSION_NONE);
-         else
+         /* If the instruction writes to more than one register, it needs to
+          * be a "compressed" instruction on Gen <= 5.
+          */
+         if (inst->exec_size * inst->dst.stride * type_sz(inst->dst.type) > 32)
             brw_set_default_compression_control(p, BRW_COMPRESSION_COMPRESSED);
+         else
+            brw_set_default_compression_control(p, BRW_COMPRESSION_NONE);
          break;
       default:
          unreachable("Invalid instruction width");
