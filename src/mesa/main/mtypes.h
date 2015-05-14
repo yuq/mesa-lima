@@ -3306,6 +3306,9 @@ struct gl_program_constants
 
    /* GL_ARB_shader_image_load_store */
    GLuint MaxImageUniforms;
+
+   /* GL_ARB_shader_storage_buffer_object */
+   GLuint MaxShaderStorageBlocks;
 };
 
 
