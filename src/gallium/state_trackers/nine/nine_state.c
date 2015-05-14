@@ -702,19 +702,16 @@ update_sampler_derived(struct nine_state *state, unsigned s)
 static void
 update_textures_and_samplers(struct NineDevice9 *device)
 {
-    struct pipe_context *pipe = device->pipe;
     struct nine_state *state = &device->state;
     struct pipe_sampler_view *view[NINE_MAX_SAMPLERS];
     unsigned num_textures;
     unsigned i;
-    boolean commit_views;
     boolean commit_samplers;
     uint16_t sampler_mask = state->ps ? state->ps->sampler_mask :
                             device->ff.ps->sampler_mask;
 
     /* TODO: Can we reduce iterations here ? */
 
-    commit_views = FALSE;
     commit_samplers = FALSE;
     state->bound_samplers_mask_ps = 0;
     for (num_textures = 0, i = 0; i < NINE_MAX_SAMPLERS_PS; ++i) {
@@ -750,7 +747,6 @@ update_textures_and_samplers(struct NineDevice9 *device)
             cso_single_sampler(device->cso, PIPE_SHADER_FRAGMENT,
                                s - NINE_SAMPLER_PS(0), &device->dummy_sampler_state);
 
-            commit_views = TRUE;
             commit_samplers = TRUE;
             state->changed.sampler[s] = ~0;
         }
@@ -758,16 +754,11 @@ update_textures_and_samplers(struct NineDevice9 *device)
         state->bound_samplers_mask_ps |= (1 << s);
     }
 
-    commit_views |= (state->changed.texture & NINE_PS_SAMPLERS_MASK) != 0;
-    commit_views |= state->changed.srgb;
-    if (commit_views)
-        pipe->set_sampler_views(pipe, PIPE_SHADER_FRAGMENT, 0,
-                                num_textures, view);
+    cso_set_sampler_views(device->cso, PIPE_SHADER_FRAGMENT, num_textures, view);
 
     if (commit_samplers)
         cso_single_sampler_done(device->cso, PIPE_SHADER_FRAGMENT);
 
-    commit_views = FALSE;
     commit_samplers = FALSE;
     sampler_mask = state->vs ? state->vs->sampler_mask : 0;
     state->bound_samplers_mask_vs = 0;
@@ -804,23 +795,18 @@ update_textures_and_samplers(struct NineDevice9 *device)
             cso_single_sampler(device->cso, PIPE_SHADER_VERTEX,
                                s - NINE_SAMPLER_VS(0), &device->dummy_sampler_state);
 
-            commit_views = TRUE;
             commit_samplers = TRUE;
             state->changed.sampler[s] = ~0;
         }
 
         state->bound_samplers_mask_vs |= (1 << s);
     }
-    commit_views |= (state->changed.texture & NINE_VS_SAMPLERS_MASK) != 0;
-    commit_views |= state->changed.srgb;
-    if (commit_views)
-        pipe->set_sampler_views(pipe, PIPE_SHADER_VERTEX, 0,
-                                num_textures, view);
+
+    cso_set_sampler_views(device->cso, PIPE_SHADER_VERTEX, num_textures, view);
 
     if (commit_samplers)
         cso_single_sampler_done(device->cso, PIPE_SHADER_VERTEX);
 
-    state->changed.srgb = FALSE;
     state->changed.texture = 0;
 }
 

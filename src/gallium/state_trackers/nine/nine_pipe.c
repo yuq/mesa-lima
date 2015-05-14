@@ -255,8 +255,8 @@ nine_pipe_context_clear(struct NineDevice9 *This)
     cso_set_samplers(cso, PIPE_SHADER_VERTEX, 0, NULL);
     cso_set_samplers(cso, PIPE_SHADER_FRAGMENT, 0, NULL);
 
-    pipe->set_sampler_views(pipe, PIPE_SHADER_FRAGMENT, 0, 0, NULL);
-    pipe->set_sampler_views(pipe, PIPE_SHADER_VERTEX, 0, 0, NULL);
+    cso_set_sampler_views(cso, PIPE_SHADER_VERTEX, 0, NULL);
+    cso_set_sampler_views(cso, PIPE_SHADER_FRAGMENT, 0, NULL);
 
     pipe->set_vertex_buffers(pipe, 0, This->caps.MaxStreams, NULL);
     pipe->set_index_buffer(pipe, NULL);
