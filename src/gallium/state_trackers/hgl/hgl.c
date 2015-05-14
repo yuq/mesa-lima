@@ -7,8 +7,7 @@
  *      Alexander von Gluck IV, kallisti5@unixzen.com
  */
 
-
-#include "GLView.h"
+#include "hgl_context.h"
 
 #include <stdio.h>
 
@@ -17,8 +16,9 @@
 #include "util/u_format.h"
 #include "util/u_memory.h"
 #include "util/u_inlines.h"
+#include "state_tracker/st_gl_api.h" /* for st_gl_api_create */
 
-#include "hgl_context.h"
+#include "GLView.h"
 
 
 #ifdef DEBUG
@@ -93,7 +93,7 @@ hgl_st_framebuffer_validate_textures(struct st_framebuffer_iface *stfbi,
 		for (i = 0; i < ST_ATTACHMENT_COUNT; i++)
 			pipe_resource_reference(&buffer->textures[i], NULL);
 	}
-	
+
 	memset(&templat, 0, sizeof(templat));
 	templat.target = buffer->target;
 	templat.width0 = width;
@@ -255,6 +255,14 @@ hgl_create_st_framebuffer(struct hgl_context* context)
 	buffer->stfbi->st_manager_private = (void*)buffer;
 
 	return buffer;
+}
+
+
+struct st_api*
+hgl_create_st_api()
+{
+	CALLED();
+	return st_gl_api_create();
 }
 
 
