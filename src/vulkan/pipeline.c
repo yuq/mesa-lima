@@ -457,7 +457,7 @@ anv_pipeline_create(
    
                   .SingleProgramFlow = false,
                   .VectorMaskEnable = true,
-                  .SamplerCount = 0,
+                  .SamplerCount = 1,
 
                   .ScratchSpaceBasePointer = 0,
                   .PerThreadScratchSpace = 0,
