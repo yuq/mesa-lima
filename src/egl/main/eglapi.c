@@ -341,7 +341,6 @@ _eglCreateExtensionsString(_EGLDisplay *dpy)
 
    char *exts = dpy->ExtensionsString;
 
-   _EGL_CHECK_EXTENSION(MESA_copy_context);
    _EGL_CHECK_EXTENSION(MESA_drm_display);
    _EGL_CHECK_EXTENSION(MESA_drm_image);
    _EGL_CHECK_EXTENSION(MESA_configless_context);

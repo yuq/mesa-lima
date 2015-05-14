@@ -90,7 +90,6 @@ struct _egl_resource
  */
 struct _egl_extensions
 {
-   EGLBoolean MESA_copy_context;
    EGLBoolean MESA_drm_display;
    EGLBoolean MESA_drm_image;
    EGLBoolean MESA_configless_context;

@@ -34,17 +34,6 @@ extern "C" {
 
 #include <EGL/eglplatform.h>
 
-#ifndef EGL_MESA_copy_context
-#define EGL_MESA_copy_context 1
-
-#ifdef EGL_EGLEXT_PROTOTYPES
-EGLAPI EGLBoolean EGLAPIENTRY eglCopyContextMESA(EGLDisplay dpy, EGLContext source, EGLContext dest, EGLint mask);
-#endif /* EGL_EGLEXT_PROTOTYPES */
-
-typedef EGLBoolean (EGLAPIENTRYP PFNEGLCOPYCONTEXTMESA) (EGLDisplay dpy, EGLContext source, EGLContext dest, EGLint mask);
-
-#endif /* EGL_MESA_copy_context */
-
 #ifndef EGL_MESA_drm_display
 #define EGL_MESA_drm_display 1
 
