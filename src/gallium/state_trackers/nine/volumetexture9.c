@@ -64,6 +64,13 @@ NineVolumeTexture9_ctor( struct NineVolumeTexture9 *This,
     if (Format == D3DFMT_ATI1 || Format == D3DFMT_ATI2)
         return D3DERR_INVALIDCALL;
 
+    if (compressed_format(Format)) {
+        const unsigned w = util_format_get_blockwidth(pf);
+        const unsigned h = util_format_get_blockheight(pf);
+        /* Compressed formats are not compressed on depth component */
+        user_assert(!(Width % w) && !(Height % h), D3DERR_INVALIDCALL);
+    }
+
     info->screen = pParams->device->screen;
     info->target = PIPE_TEXTURE_3D;
     info->format = pf;

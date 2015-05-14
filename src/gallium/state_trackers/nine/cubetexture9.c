@@ -70,6 +70,13 @@ NineCubeTexture9_ctor( struct NineCubeTexture9 *This,
     if (Format == D3DFMT_ATI1 || Format == D3DFMT_ATI2)
         return D3DERR_INVALIDCALL;
 
+    if (compressed_format(Format)) {
+        const unsigned w = util_format_get_blockwidth(pf);
+        const unsigned h = util_format_get_blockheight(pf);
+
+        user_assert(!(EdgeLength % w) && !(EdgeLength % h), D3DERR_INVALIDCALL);
+    }
+
     info->screen = pParams->device->screen;
     info->target = PIPE_TEXTURE_CUBE;
     info->format = pf;

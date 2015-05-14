@@ -1125,6 +1125,13 @@ create_zs_or_rt_surface(struct NineDevice9 *This,
     default: break;
     }
 
+    if (compressed_format(Format)) {
+        const unsigned w = util_format_get_blockwidth(templ.format);
+        const unsigned h = util_format_get_blockheight(templ.format);
+
+        user_assert(!(Width % w) && !(Height % h), D3DERR_INVALIDCALL);
+    }
+
     if (Pool == D3DPOOL_DEFAULT && Format != D3DFMT_NULL) {
         /* resource_create doesn't return an error code, so check format here */
         user_assert(templ.format != PIPE_FORMAT_NONE, D3DERR_INVALIDCALL);
