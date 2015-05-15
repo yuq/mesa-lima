@@ -23,9 +23,9 @@
 
 #pragma once
 
-#define GLSL_VK_SHADER(device, stage, ...) ({                           \
+#define GLSL_VK_SHADER(device, stage, source) ({                        \
    VkShader __shader;                                                   \
-   const char __src[] = "#version 330\n" STRINGIFY((__ARGV__));         \
+   const char __src[] = "#version 330\n" #source;                       \
    VkShaderCreateInfo __shader_create_info = {                          \
       .sType = VK_STRUCTURE_TYPE_SHADER_CREATE_INFO,                    \
       .codeSize = sizeof(__src),                                        \
