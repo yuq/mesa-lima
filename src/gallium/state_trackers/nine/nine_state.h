@@ -78,6 +78,8 @@
 #define NINE_STATE_ALL          0x0ffffff
 #define NINE_STATE_UNHANDLED   (1 << 24)
 
+#define NINE_STATE_COMMIT_DSA  (1 << 0)
+
 
 #define NINE_MAX_SIMULTANEOUS_RENDERTARGETS 4
 #define NINE_MAX_CONST_F_PS3 224
@@ -208,6 +210,11 @@ struct nine_state
 
         DWORD tex_stage[NINE_MAX_SAMPLERS][NINED3DTSS_COUNT];
     } ff;
+
+    uint32_t commit;
+    struct {
+        struct pipe_depth_stencil_alpha_state dsa;
+    } pipe;
 };
 
 /* map D3DRS -> NINE_STATE_x

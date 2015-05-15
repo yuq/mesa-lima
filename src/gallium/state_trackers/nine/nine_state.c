@@ -39,6 +39,13 @@
 
 /* State preparation only */
 
+static inline void
+prepare_dsa(struct NineDevice9 *device)
+{
+    nine_convert_dsa_state(&device->state.pipe.dsa, device->state.rs);
+    device->state.commit |= NINE_STATE_COMMIT_DSA;
+}
+
 /* State preparation incremental */
 
 /* State preparation + State commit */
@@ -186,12 +193,6 @@ static inline void
 update_blend(struct NineDevice9 *device)
 {
     nine_convert_blend_state(device->cso, device->state.rs);
-}
-
-static inline void
-update_dsa(struct NineDevice9 *device)
-{
-    nine_convert_dsa_state(device->cso, device->state.rs);
 }
 
 static inline void
@@ -844,6 +845,12 @@ update_textures_and_samplers(struct NineDevice9 *device)
 /* State commit only */
 
 static inline void
+commit_dsa(struct NineDevice9 *device)
+{
+    cso_set_depth_stencil_alpha(device->cso, &device->state.pipe.dsa);
+}
+
+static inline void
 commit_scissor(struct NineDevice9 *device)
 {
     struct pipe_context *pipe = device->pipe;
@@ -943,7 +950,7 @@ nine_update_state(struct NineDevice9 *device)
             commit_scissor(device);
 
         if (group & NINE_STATE_DSA)
-            update_dsa(device);
+            prepare_dsa(device);
         if (group & NINE_STATE_BLEND)
             update_blend(device);
 
@@ -1002,6 +1009,11 @@ nine_update_state(struct NineDevice9 *device)
     }
     if (state->changed.vtxbuf)
         update_vertex_buffers(device);
+
+    if (state->commit & NINE_STATE_COMMIT_DSA)
+        commit_dsa(device);
+
+    state->commit = 0;
 
     device->state.changed.group &=
         (NINE_STATE_FF | NINE_STATE_VS_CONST | NINE_STATE_PS_CONST);
@@ -1636,4 +1648,3 @@ const char *nine_d3drs_to_string(DWORD State)
         return "(invalid)";
     }
 }
-

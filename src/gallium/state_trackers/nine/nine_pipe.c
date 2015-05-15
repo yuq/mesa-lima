@@ -27,7 +27,8 @@
 #include "cso_cache/cso_context.h"
 
 void
-nine_convert_dsa_state(struct cso_context *ctx, const DWORD *rs)
+nine_convert_dsa_state(struct pipe_depth_stencil_alpha_state *dsa_state,
+                       const DWORD *rs)
 {
     struct pipe_depth_stencil_alpha_state dsa;
 
@@ -65,7 +66,7 @@ nine_convert_dsa_state(struct cso_context *ctx, const DWORD *rs)
         dsa.alpha.ref_value = (float)rs[D3DRS_ALPHAREF] / 255.0f;
     }
 
-    cso_set_depth_stencil_alpha(ctx, &dsa);
+    *dsa_state = dsa;
 }
 
 /* TODO: Keep a static copy in device so we don't have to memset every time ? */
