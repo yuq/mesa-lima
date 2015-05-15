@@ -2239,8 +2239,8 @@ void VKAPI vkCmdBindVertexBuffers(
     * stride from the pipeline. */
 
    for (uint32_t i = 0; i < bindingCount; i++) {
-      cmd_buffer->vb[startBinding + i].buffer = (struct anv_buffer *) pBuffers[i];
-      cmd_buffer->vb[startBinding + i].offset = pOffsets[i];
+      cmd_buffer->bindings.vb[startBinding + i].buffer = (struct anv_buffer *) pBuffers[i];
+      cmd_buffer->bindings.vb[startBinding + i].offset = pOffsets[i];
       cmd_buffer->vb_dirty |= 1 << (startBinding + i);
    }
 }
@@ -2335,8 +2335,8 @@ anv_cmd_buffer_flush_state(struct anv_cmd_buffer *cmd_buffer)
                           GEN8_3DSTATE_VERTEX_BUFFERS);
       uint32_t vb, i = 0;
       for_each_bit(vb, cmd_buffer->vb_dirty) {
-         struct anv_buffer *buffer = cmd_buffer->vb[vb].buffer;
-         uint32_t offset = cmd_buffer->vb[vb].offset;
+         struct anv_buffer *buffer = cmd_buffer->bindings.vb[vb].buffer;
+         uint32_t offset = cmd_buffer->bindings.vb[vb].offset;
       
          struct GEN8_VERTEX_BUFFER_STATE state = {
             .VertexBufferIndex = vb,

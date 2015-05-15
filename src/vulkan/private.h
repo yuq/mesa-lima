@@ -508,6 +508,11 @@ struct anv_buffer {
    
 struct anv_bindings {
    struct {
+      struct anv_buffer *buffer;
+      VkDeviceSize offset;
+   }                                            vb[MAX_VBS];
+
+   struct {
       uint32_t                                  surfaces[256];
       struct {
          struct anv_bo *bo;
@@ -532,10 +537,6 @@ struct anv_cmd_buffer {
    struct anv_state_stream                      dynamic_state_stream;
 
    /* State required while building cmd buffer */
-   struct {
-      struct anv_buffer *buffer;
-      VkDeviceSize offset;
-   }                                            vb[MAX_VBS];
    uint32_t                                     vb_dirty;
    uint32_t                                     dirty;
    struct anv_pipeline *                        pipeline;

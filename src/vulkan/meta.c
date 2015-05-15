@@ -146,11 +146,8 @@ anv_device_init_meta_clear_state(struct anv_device *device)
                               &device->clear_state.rs_state);
 }
 
+#define NUM_VB_USED 2
 struct anv_saved_state {
-   struct {
-      struct anv_buffer *buffer;
-      VkDeviceSize offset;
-   } vb[2];
    struct anv_bindings bindings;
    struct anv_pipeline *pipeline;
 };
@@ -159,7 +156,6 @@ static void
 anv_cmd_buffer_save(struct anv_cmd_buffer *cmd_buffer,
                     struct anv_saved_state *state)
 {
-   memcpy(state->vb, cmd_buffer->vb, sizeof(state->vb));
    memcpy(&state->bindings, &cmd_buffer->bindings, sizeof(state->bindings));
    state->pipeline = cmd_buffer->pipeline;
 }
@@ -168,11 +164,10 @@ static void
 anv_cmd_buffer_restore(struct anv_cmd_buffer *cmd_buffer,
                        const struct anv_saved_state *state)
 {
-   memcpy(cmd_buffer->vb, state->vb, sizeof(state->vb));
    memcpy(&cmd_buffer->bindings, &state->bindings, sizeof(state->bindings));
    cmd_buffer->pipeline = state->pipeline;
 
-   cmd_buffer->vb_dirty |= (1 << ARRAY_SIZE(state->vb)) - 1;
+   cmd_buffer->vb_dirty |= (1 << NUM_VB_USED) - 1;
    cmd_buffer->dirty |= ANV_CMD_BUFFER_PIPELINE_DIRTY |
                         ANV_CMD_BUFFER_DESCRIPTOR_SET_DIRTY;
 }
