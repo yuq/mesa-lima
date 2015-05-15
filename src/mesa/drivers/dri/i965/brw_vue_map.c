@@ -24,6 +24,15 @@
 /**
  * @file brw_vue_map.c
  *
+ * This file computes the "VUE map" for a (non-fragment) shader stage, which
+ * describes the layout of its output varyings.  The VUE map is used to match
+ * outputs from one stage with the inputs of the next.
+ *
+ * Largely, varyings can be placed however we like - producers/consumers simply
+ * have to agree on the layout.  However, there is also a "VUE Header" that
+ * prescribes a fixed-layout for items that interact with fixed function
+ * hardware, such as the clipper and rasterizer.
+ *
  * Authors:
  *   Paul Berry <stereotype441@gmail.com>
  *   Chris Forbes <chrisf@ijw.co.nz>
@@ -45,7 +54,7 @@ assign_vue_slot(struct brw_vue_map *vue_map, int varying)
 }
 
 /**
- * Compute the VUE map for vertex shader program.
+ * Compute the VUE map for a shader stage.
  */
 void
 brw_compute_vue_map(const struct brw_device_info *devinfo,
@@ -76,6 +85,9 @@ brw_compute_vue_map(const struct brw_device_info *devinfo,
 
    /* VUE header: format depends on chip generation and whether clipping is
     * enabled.
+    *
+    * See the Sandybridge PRM, Volume 2 Part 1, section 1.5.1 (page 30),
+    * "Vertex URB Entry (VUE) Formats" which describes the VUE header layout.
     */
    if (devinfo->gen < 6) {
       /* There are 8 dwords in VUE header pre-Ironlake:
