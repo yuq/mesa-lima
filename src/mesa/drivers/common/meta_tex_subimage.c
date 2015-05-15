@@ -151,7 +151,8 @@ _mesa_meta_pbo_TexSubImage(struct gl_context *ctx, GLuint dims,
    bool success = false;
    int z;
 
-   if (!_mesa_is_bufferobj(packing->BufferObj) && !create_pbo)
+   if (!_mesa_is_bufferobj(packing->BufferObj) &&
+       (!create_pbo || pixels == NULL))
       return false;
 
    if (format == GL_DEPTH_COMPONENT ||
