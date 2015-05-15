@@ -1091,6 +1091,11 @@ _mesa_PopAttrib(void)
                _mesa_ClearDepth(depth->Clear);
                _mesa_set_enable(ctx, GL_DEPTH_TEST, depth->Test);
                _mesa_DepthMask(depth->Mask);
+               if (ctx->Extensions.EXT_depth_bounds_test) {
+                  _mesa_set_enable(ctx, GL_DEPTH_BOUNDS_TEST_EXT,
+                                   depth->BoundsTest);
+                  _mesa_DepthBoundsEXT(depth->BoundsMin, depth->BoundsMax);
+               }
             }
             break;
          case GL_ENABLE_BIT:
