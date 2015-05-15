@@ -356,8 +356,8 @@ brw_upload_gs_prog(struct brw_context *brw)
    }
    brw->gs.base.prog_data = &brw->gs.prog_data->base.base;
 
-   if (memcmp(&brw->gs.prog_data->base.vue_map, &brw->vue_map_geom_out,
-              sizeof(brw->vue_map_geom_out)) != 0) {
+   if (brw->gs.prog_data->base.vue_map.slots_valid !=
+       brw->vue_map_geom_out.slots_valid) {
       brw->vue_map_geom_out = brw->gs.prog_data->base.vue_map;
       brw->ctx.NewDriverState |= BRW_NEW_VUE_MAP_GEOM_OUT;
    }
