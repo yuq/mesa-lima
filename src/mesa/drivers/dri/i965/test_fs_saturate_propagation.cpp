@@ -45,7 +45,8 @@ public:
    saturate_propagation_fs_visitor(struct brw_context *brw,
                                    struct brw_wm_prog_data *prog_data,
                                    struct gl_shader_program *shader_prog)
-      : fs_visitor(brw, NULL, NULL, prog_data, shader_prog, NULL, 8) {}
+      : fs_visitor(brw, NULL, MESA_SHADER_FRAGMENT, NULL, &prog_data->base,
+                   shader_prog, (struct gl_program *) NULL, 8) {}
 };
 
 
