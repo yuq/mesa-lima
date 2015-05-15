@@ -112,7 +112,7 @@ finalize_cbuf_state(struct ilo_context *ilo,
             ilo_buffer(cbuf->cso[i].resource),
             offset, cbuf->cso[i].user_buffer_size,
             util_format_get_blocksize(elem_format), elem_format,
-            false, false, &cbuf->cso[i].surface);
+            false, &cbuf->cso[i].surface);
 
       ilo->state_vector.dirty |= ILO_DIRTY_CBUF;
    }
@@ -683,7 +683,7 @@ ilo_set_constant_buffer(struct pipe_context *pipe,
                   ilo_buffer(buf[i].buffer),
                   buf[i].buffer_offset, buf[i].buffer_size,
                   util_format_get_blocksize(elem_format), elem_format,
-                  false, false, &cso->surface);
+                  false, &cso->surface);
 
             cso->user_buffer = NULL;
             cso->user_buffer_size = 0;
@@ -1007,7 +1007,7 @@ ilo_create_sampler_view(struct pipe_context *pipe,
 
       ilo_gpe_init_view_surface_for_buffer(dev, ilo_buffer(res),
             first_elem * elem_size, num_elems * elem_size,
-            elem_size, templ->format, false, false, &view->surface);
+            elem_size, templ->format, false, &view->surface);
    }
    else {
       struct ilo_texture *tex = ilo_texture(res);
@@ -1066,10 +1066,6 @@ ilo_create_surface(struct pipe_context *pipe,
       /* relax this? */
       assert(tex->base.target != PIPE_BUFFER);
 
-      /*
-       * classic i965 sets render_cache_rw for constant buffers and sol
-       * surfaces but not render buffers.  Why?
-       */
       ilo_gpe_init_view_surface_for_image(dev,
             &tex->image, tex->base.target,
             templ->format, templ->u.tex.level, 1,

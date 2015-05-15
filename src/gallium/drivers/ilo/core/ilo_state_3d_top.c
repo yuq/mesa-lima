@@ -469,8 +469,7 @@ view_init_for_buffer_gen6(const struct ilo_dev *dev,
                           unsigned offset, unsigned size,
                           unsigned struct_size,
                           enum pipe_format elem_format,
-                          bool is_rt, bool render_cache_rw,
-                          struct ilo_view_surface *surf)
+                          bool is_rt, struct ilo_view_surface *surf)
 {
    const int elem_size = util_format_get_blocksize(elem_format);
    int width, height, depth, pitch;
@@ -539,8 +538,6 @@ view_init_for_buffer_gen6(const struct ilo_dev *dev,
 
    dw[0] = GEN6_SURFTYPE_BUFFER << GEN6_SURFACE_DW0_TYPE__SHIFT |
            surface_format << GEN6_SURFACE_DW0_FORMAT__SHIFT;
-   if (render_cache_rw)
-      dw[0] |= GEN6_SURFACE_DW0_RENDER_CACHE_RW;
 
    dw[1] = offset;
 
@@ -691,9 +688,6 @@ view_init_for_image_gen6(const struct ilo_dev *dev,
                GEN6_SURFACE_DW0_CUBE_FACE_ENABLES__MASK;
    }
 
-   if (is_rt)
-      dw[0] |= GEN6_SURFACE_DW0_RENDER_CACHE_RW;
-
    dw[1] = 0;
 
    dw[2] = (height - 1) << GEN6_SURFACE_DW2_HEIGHT__SHIFT |
@@ -795,8 +789,7 @@ view_init_for_buffer_gen7(const struct ilo_dev *dev,
                           unsigned offset, unsigned size,
                           unsigned struct_size,
                           enum pipe_format elem_format,
-                          bool is_rt, bool render_cache_rw,
-                          struct ilo_view_surface *surf)
+                          bool is_rt, struct ilo_view_surface *surf)
 {
    const bool typed = (elem_format != PIPE_FORMAT_NONE);
    const bool structured = (!typed && struct_size > 1);
@@ -886,8 +879,6 @@ view_init_for_buffer_gen7(const struct ilo_dev *dev,
 
    dw[0] = surface_type << GEN7_SURFACE_DW0_TYPE__SHIFT |
            surface_format << GEN7_SURFACE_DW0_FORMAT__SHIFT;
-   if (render_cache_rw)
-      dw[0] |= GEN7_SURFACE_DW0_RENDER_CACHE_RW;
 
    if (ilo_dev_gen(dev) >= ILO_GEN(8)) {
       dw[8] = offset;
@@ -1117,9 +1108,6 @@ view_init_for_image_gen7(const struct ilo_dev *dev,
          dw[0] |= GEN7_SURFACE_DW0_ARYSPC_FULL;
    }
 
-   if (is_rt)
-      dw[0] |= GEN7_SURFACE_DW0_RENDER_CACHE_RW;
-
    if (surface_type == GEN6_SURFTYPE_CUBE && !is_rt)
       dw[0] |= GEN7_SURFACE_DW0_CUBE_FACE_ENABLES__MASK;
 
@@ -1213,15 +1201,15 @@ ilo_gpe_init_view_surface_for_buffer(const struct ilo_dev *dev,
                                      unsigned offset, unsigned size,
                                      unsigned struct_size,
                                      enum pipe_format elem_format,
-                                     bool is_rt, bool render_cache_rw,
+                                     bool is_rt,
                                      struct ilo_view_surface *surf)
 {
    if (ilo_dev_gen(dev) >= ILO_GEN(7)) {
       view_init_for_buffer_gen7(dev, buf, offset, size,
-            struct_size, elem_format, is_rt, render_cache_rw, surf);
+            struct_size, elem_format, is_rt, surf);
    } else {
       view_init_for_buffer_gen6(dev, buf, offset, size,
-            struct_size, elem_format, is_rt, render_cache_rw, surf);
+            struct_size, elem_format, is_rt, surf);
    }
 
    /* do not increment reference count */

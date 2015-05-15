@@ -380,7 +380,7 @@ ilo_gpe_init_view_surface_for_buffer(const struct ilo_dev *dev,
                                      unsigned offset, unsigned size,
                                      unsigned struct_size,
                                      enum pipe_format elem_format,
-                                     bool is_rt, bool render_cache_rw,
+                                     bool is_rt,
                                      struct ilo_view_surface *surf);
 
 void

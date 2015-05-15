@@ -437,7 +437,7 @@ gen6_emit_launch_grid_surface_const(struct ilo_render *r,
          session->input->buffer_offset,
          session->input->buffer_size,
          1, PIPE_FORMAT_NONE,
-         false, false, &view);
+         false, &view);
 
    assert(count == 1 && session->input->buffer);
    surface_state[base] = gen6_SURFACE_STATE(r->builder, &view, false);
@@ -488,7 +488,7 @@ gen6_emit_launch_grid_surface_global(struct ilo_render *r,
          assert(bindings[i].resource->target == PIPE_BUFFER);
 
          ilo_gpe_init_view_surface_for_buffer(r->dev, buf, 0, buf->bo_size,
-               1, PIPE_FORMAT_NONE, true, true, &view);
+               1, PIPE_FORMAT_NONE, true, &view);
          surface_state[i] =
             gen6_SURFACE_STATE(r->builder, &view, true);
       } else {

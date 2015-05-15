@@ -1711,7 +1711,7 @@ gen6_so_SURFACE_STATE(struct ilo_builder *builder,
    }
 
    ilo_gpe_init_view_surface_for_buffer(builder->dev, buf, bo_offset,
-         so->buffer_size, struct_size, elem_format, false, true, &surf);
+         so->buffer_size, struct_size, elem_format, false, &surf);
 
    return gen6_SURFACE_STATE(builder, &surf, false);
 }
