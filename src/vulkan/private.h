@@ -453,13 +453,16 @@ struct anv_dynamic_cb_state {
 };
 
 struct anv_descriptor_set_layout {
-   uint32_t sampler_total; /* total number of samplers in all stages */
-   uint32_t surface_total; /* total number of surfaces in all stages */
-   uint32_t count;
    struct {
-      VkDescriptorType type;
-      uint32_t mask;
-   } bindings[0];
+      uint32_t surface_count;
+      uint32_t *surface_start;
+      uint32_t sampler_count;
+      uint32_t *sampler_start;
+   } stage[VK_NUM_SHADER_STAGE];
+
+   uint32_t count;
+   uint32_t num_dynamic_buffers;
+   uint32_t entries[0];
 };
 
 struct anv_descriptor {
@@ -471,21 +474,23 @@ struct anv_descriptor_set {
    struct anv_descriptor descriptors[0];
 };
 
-struct anv_pipeline_layout_entry {
-   VkDescriptorType type;
-   uint32_t set;
-   uint32_t index;
-};
+#define MAX_VBS   32
+#define MAX_SETS   8
+#define MAX_RTS    8
 
 struct anv_pipeline_layout {
    struct {
-      uint32_t sampler_count;
-      struct anv_pipeline_layout_entry *sampler_entries;
+      struct anv_descriptor_set_layout *layout;
+      uint32_t surface_start[VK_NUM_SHADER_STAGE];
+      uint32_t sampler_start[VK_NUM_SHADER_STAGE];
+   } set[MAX_SETS];
+
+   uint32_t num_sets;
+
+   struct {
       uint32_t surface_count;
-      struct anv_pipeline_layout_entry *surface_entries;
+      uint32_t sampler_count;
    } stage[VK_NUM_SHADER_STAGE];
-   
-   struct anv_pipeline_layout_entry entries[0];
 };
 
 struct anv_buffer {
@@ -497,14 +502,21 @@ struct anv_buffer {
    VkDeviceSize                                 offset;   
 };
 
-#define MAX_VBS   32
-#define MAX_SETS   8
-#define MAX_RTS    8
-
 #define ANV_CMD_BUFFER_PIPELINE_DIRTY           (1 << 0)
 #define ANV_CMD_BUFFER_DESCRIPTOR_SET_DIRTY     (1 << 1)
 #define ANV_CMD_BUFFER_RS_DIRTY                 (1 << 2)
    
+struct anv_bindings {
+   struct {
+      uint32_t                                  surfaces[256];
+      struct {
+         struct anv_bo *bo;
+         uint32_t offset;
+      }                                         relocs[256];
+      struct { uint32_t dwords[4]; }            samplers[16];
+   }                                            descriptors[VK_NUM_SHADER_STAGE];
+};
+
 struct anv_cmd_buffer {
    struct anv_device *                          device;
 
@@ -525,13 +537,12 @@ struct anv_cmd_buffer {
       VkDeviceSize offset;
    }                                            vb[MAX_VBS];
    uint32_t                                     vb_dirty;
-   uint32_t                                     num_descriptor_sets;
-   struct anv_descriptor_set *                  descriptor_sets[MAX_SETS];
    uint32_t                                     dirty;
    struct anv_pipeline *                        pipeline;
    struct anv_framebuffer *                     framebuffer;
    struct anv_dynamic_rs_state *                rs_state;
    struct anv_dynamic_vp_state *                vp_state;
+   struct anv_bindings                          bindings;
 };
 
 void anv_cmd_buffer_dump(struct anv_cmd_buffer *cmd_buffer);

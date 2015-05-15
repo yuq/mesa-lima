@@ -57,9 +57,8 @@ static VkResult
 set_binding_table_layout(struct brw_stage_prog_data *prog_data,
                          struct anv_pipeline *pipeline, uint32_t stage)
 {
-   uint32_t count, bias, set, *map;
-
-   struct anv_pipeline_layout_entry *entries;
+   uint32_t bias, count, k, *map;
+   struct anv_pipeline_layout *layout = pipeline->layout;
 
    /* No layout is valid for shaders that don't bind any resources. */
    if (pipeline->layout == NULL)
@@ -72,22 +71,18 @@ set_binding_table_layout(struct brw_stage_prog_data *prog_data,
 
    prog_data->binding_table.texture_start = bias;
 
-   count = pipeline->layout->stage[stage].surface_count;
-   entries = pipeline->layout->stage[stage].surface_entries;
-
+   count = layout->stage[stage].surface_count;
    prog_data->map_entries =
       (uint32_t *) malloc(count * sizeof(prog_data->map_entries[0]));
    if (prog_data->map_entries == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
-   set = 0;
+   k = bias;
    map = prog_data->map_entries;
-   for (uint32_t i = 0; i < count; i++) {
-      if (entries[i].set == set) {
-         prog_data->bind_map[set] = map;
-         set++;
-      }
-      *map++ = bias + i;
+   for (uint32_t i = 0; i < layout->num_sets; i++) {
+      prog_data->bind_map[i] = map;
+      for (uint32_t j = 0; j < layout->set[i].layout->stage[stage].surface_count; j++)
+         *map++ = k++;
    }
 
    return VK_SUCCESS;
