@@ -949,22 +949,38 @@ commit_ps(struct NineDevice9 *device)
 }
 /* State Update */
 
-#define NINE_STATE_FREQ_GROUP_0 \
-   (NINE_STATE_FB |             \
-    NINE_STATE_VIEWPORT |       \
-    NINE_STATE_SCISSOR |        \
-    NINE_STATE_BLEND |          \
-    NINE_STATE_DSA |            \
-    NINE_STATE_RASTERIZER |     \
-    NINE_STATE_VS |             \
-    NINE_STATE_PS |             \
-    NINE_STATE_BLEND_COLOR |    \
-    NINE_STATE_STENCIL_REF |    \
-    NINE_STATE_SAMPLE_MASK |    \
-    NINE_STATE_FOG_SHADER |     \
+#define NINE_STATE_SHADER_CHANGE_VS \
+   (NINE_STATE_VS |         \
+    NINE_STATE_TEXTURE |    \
+    NINE_STATE_FOG_SHADER)
+
+#define NINE_STATE_SHADER_CHANGE_PS \
+   (NINE_STATE_PS |         \
+    NINE_STATE_TEXTURE |    \
+    NINE_STATE_FOG_SHADER | \
     NINE_STATE_PS1X_SHADER)
 
-#define NINE_STATE_FREQ_GROUP_1 ~NINE_STATE_FREQ_GROUP_0
+#define NINE_STATE_FREQUENT \
+   (NINE_STATE_RASTERIZER | \
+    NINE_STATE_TEXTURE |    \
+    NINE_STATE_SAMPLER |    \
+    NINE_STATE_VS_CONST |   \
+    NINE_STATE_PS_CONST)
+
+#define NINE_STATE_COMMON \
+   (NINE_STATE_FB |       \
+    NINE_STATE_BLEND |    \
+    NINE_STATE_DSA |      \
+    NINE_STATE_VIEWPORT | \
+    NINE_STATE_VDECL |    \
+    NINE_STATE_IDXBUF)
+
+#define NINE_STATE_RARE      \
+   (NINE_STATE_SCISSOR |     \
+    NINE_STATE_BLEND_COLOR | \
+    NINE_STATE_STENCIL_REF | \
+    NINE_STATE_SAMPLE_MASK)
+
 
 /* TODO: only go through dirty textures */
 static void
@@ -997,9 +1013,7 @@ nine_update_state(struct NineDevice9 *device)
     struct nine_state *state = &device->state;
     uint32_t group;
 
-    DBG("changed state groups: %x | %x\n",
-        state->changed.group & NINE_STATE_FREQ_GROUP_0,
-        state->changed.group & NINE_STATE_FREQ_GROUP_1);
+    DBG("changed state groups: %x\n", state->changed.group);
 
     /* NOTE: We may want to use the cso cache for everything, or let
      * NineDevice9.RestoreNonCSOState actually set the states, then we wouldn't
@@ -1014,60 +1028,34 @@ nine_update_state(struct NineDevice9 *device)
         nine_ff_update(device);
     group = state->changed.group;
 
-    if (group & (NINE_STATE_FREQ_GROUP_0 | NINE_STATE_TEXTURE)) {
-        if (group & NINE_STATE_FB)
-            group = update_framebuffer(device);
-        if (group & NINE_STATE_VIEWPORT)
-            update_viewport(device);
-        if (group & NINE_STATE_SCISSOR)
-            commit_scissor(device);
+    if (group & (NINE_STATE_SHADER_CHANGE_VS | NINE_STATE_SHADER_CHANGE_PS)) {
+        if (group & NINE_STATE_SHADER_CHANGE_VS)
+            group |= prepare_vs(device, (group & NINE_STATE_VS) != 0); /* may set NINE_STATE_RASTERIZER and NINE_STATE_SAMPLER*/
+        if (group & NINE_STATE_SHADER_CHANGE_PS)
+            group |= prepare_ps(device, (group & NINE_STATE_PS) != 0);
+    }
 
-        if (group & NINE_STATE_DSA)
-            prepare_dsa(device);
+    if (group & (NINE_STATE_COMMON | NINE_STATE_VS)) {
+        if (group & NINE_STATE_FB)
+            group |= update_framebuffer(device); /* may set NINE_STATE_RASTERIZER */
         if (group & NINE_STATE_BLEND)
             prepare_blend(device);
-
-        if (group & (NINE_STATE_VS | NINE_STATE_TEXTURE | NINE_STATE_FOG_SHADER))
-            group |= prepare_vs(device, (group & NINE_STATE_VS) != 0);
-
-        if (group & NINE_STATE_RASTERIZER)
-            prepare_rasterizer(device);
-
-        if (group & (NINE_STATE_PS | NINE_STATE_TEXTURE | NINE_STATE_FOG_SHADER | NINE_STATE_PS1X_SHADER))
-            group |= prepare_ps(device, (group & NINE_STATE_PS) != 0);
-
-        if (group & NINE_STATE_BLEND_COLOR) {
-            struct pipe_blend_color color;
-            d3dcolor_to_rgba(&color.color[0], state->rs[D3DRS_BLENDFACTOR]);
-            pipe->set_blend_color(pipe, &color);
-        }
-        if (group & NINE_STATE_SAMPLE_MASK) {
-            pipe->set_sample_mask(pipe, state->rs[D3DRS_MULTISAMPLEMASK]);
-        }
-        if (group & NINE_STATE_STENCIL_REF) {
-            struct pipe_stencil_ref ref;
-            ref.ref_value[0] = state->rs[D3DRS_STENCILREF];
-            ref.ref_value[1] = ref.ref_value[0];
-            pipe->set_stencil_ref(pipe, &ref);
-        }
-    }
-
-    if (state->changed.ucp) {
-        pipe->set_clip_state(pipe, &state->clip);
-        state->changed.ucp = 0;
-    }
-
-    if (group & (NINE_STATE_FREQ_GROUP_1 | NINE_STATE_VS)) {
-        if (group & (NINE_STATE_TEXTURE | NINE_STATE_SAMPLER))
-            update_textures_and_samplers(device);
-
-        if (group & NINE_STATE_IDXBUF)
-            commit_index_buffer(device);
-
+        if (group & NINE_STATE_DSA)
+            prepare_dsa(device);
+        if (group & NINE_STATE_VIEWPORT)
+            update_viewport(device);
         if ((group & (NINE_STATE_VDECL | NINE_STATE_VS)) ||
             state->changed.stream_freq & ~1)
             update_vertex_elements(device);
+        if (group & NINE_STATE_IDXBUF)
+            commit_index_buffer(device);
+    }
 
+    if (likely(group & (NINE_STATE_FREQUENT | NINE_STATE_VS | NINE_STATE_PS))) {
+        if (group & NINE_STATE_RASTERIZER)
+            prepare_rasterizer(device);
+        if (group & (NINE_STATE_TEXTURE | NINE_STATE_SAMPLER))
+            update_textures_and_samplers(device);
         if (device->prefer_user_constbuf) {
             if ((group & (NINE_STATE_VS_CONST | NINE_STATE_VS)) && state->vs)
                 prepare_vs_constants_userbuf(device);
@@ -1080,6 +1068,7 @@ nine_update_state(struct NineDevice9 *device)
                 upload_constants(device, PIPE_SHADER_FRAGMENT);
         }
     }
+
     if (state->changed.vtxbuf)
         update_vertex_buffers(device);
 
@@ -1099,6 +1088,30 @@ nine_update_state(struct NineDevice9 *device)
         commit_ps(device);
 
     state->commit = 0;
+
+    if (unlikely(state->changed.ucp)) {
+        pipe->set_clip_state(pipe, &state->clip);
+        state->changed.ucp = 0;
+    }
+
+    if (unlikely(group & NINE_STATE_RARE)) {
+        if (group & NINE_STATE_SCISSOR)
+            commit_scissor(device);
+        if (group & NINE_STATE_BLEND_COLOR) {
+            struct pipe_blend_color color;
+            d3dcolor_to_rgba(&color.color[0], state->rs[D3DRS_BLENDFACTOR]);
+            pipe->set_blend_color(pipe, &color);
+        }
+        if (group & NINE_STATE_SAMPLE_MASK) {
+            pipe->set_sample_mask(pipe, state->rs[D3DRS_MULTISAMPLEMASK]);
+        }
+        if (group & NINE_STATE_STENCIL_REF) {
+            struct pipe_stencil_ref ref;
+            ref.ref_value[0] = state->rs[D3DRS_STENCILREF];
+            ref.ref_value[1] = ref.ref_value[0];
+            pipe->set_stencil_ref(pipe, &ref);
+        }
+    }
 
     device->state.changed.group &=
         (NINE_STATE_FF | NINE_STATE_VS_CONST | NINE_STATE_PS_CONST);
