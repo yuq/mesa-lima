@@ -364,7 +364,7 @@ enum brw_reg_type
 brw_type_for_nir_type(nir_alu_type type)
 {
    switch (type) {
-   case nir_type_unsigned:
+   case nir_type_uint:
       return BRW_REGISTER_TYPE_UD;
    case nir_type_bool:
    case nir_type_int:
@@ -391,7 +391,7 @@ brw_glsl_base_type_for_nir_type(nir_alu_type type)
    case nir_type_int:
       return GLSL_TYPE_INT;
 
-   case nir_type_unsigned:
+   case nir_type_uint:
       return GLSL_TYPE_UINT;
 
    default:

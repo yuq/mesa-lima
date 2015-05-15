@@ -1718,7 +1718,7 @@ emit_tex(struct ir3_compile *ctx, nir_tex_instr *tex)
 	case nir_type_int:
 		type = TYPE_S32;
 		break;
-	case nir_type_unsigned:
+	case nir_type_uint:
 	case nir_type_bool:
 		type = TYPE_U32;
 		break;

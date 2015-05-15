@@ -1561,7 +1561,7 @@ glsl_type_for_nir_alu_type(nir_alu_type alu_type,
       return glsl_type::vec(components);
    case nir_type_int:
       return glsl_type::ivec(components);
-   case nir_type_unsigned:
+   case nir_type_uint:
       return glsl_type::uvec(components);
    case nir_type_bool:
       return glsl_type::bvec(components);

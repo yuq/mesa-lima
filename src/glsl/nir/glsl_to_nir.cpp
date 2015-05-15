@@ -1832,7 +1832,7 @@ nir_visitor::visit(ir_texture *ir)
       break;
    case GLSL_TYPE_BOOL:
    case GLSL_TYPE_UINT:
-      instr->dest_type = nir_type_unsigned;
+      instr->dest_type = nir_type_uint;
       break;
    default:
       unreachable("not reached");

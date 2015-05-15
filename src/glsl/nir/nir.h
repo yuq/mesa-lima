@@ -634,7 +634,7 @@ typedef enum {
    nir_type_invalid = 0, /* Not a valid type */
    nir_type_float,
    nir_type_int,
-   nir_type_unsigned,
+   nir_type_uint,
    nir_type_bool
 } nir_alu_type;
 

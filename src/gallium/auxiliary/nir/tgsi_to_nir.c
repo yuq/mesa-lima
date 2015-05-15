@@ -295,7 +295,7 @@ ttn_emit_declaration(struct ttn_compile *c)
          type = nir_type_int;
          break;
       case TGSI_RETURN_TYPE_UINT:
-         type = nir_type_unsigned;
+         type = nir_type_uint;
          break;
       case TGSI_RETURN_TYPE_FLOAT:
       default:
