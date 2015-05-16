@@ -543,7 +543,8 @@ struct anv_cmd_buffer {
    struct anv_framebuffer *                     framebuffer;
    struct anv_dynamic_rs_state *                rs_state;
    struct anv_dynamic_vp_state *                vp_state;
-   struct anv_bindings                          bindings;
+   struct anv_bindings *                        bindings;
+   struct anv_bindings                          default_bindings;
 };
 
 void anv_cmd_buffer_dump(struct anv_cmd_buffer *cmd_buffer);
@@ -685,6 +686,8 @@ void
 anv_cmd_buffer_clear(struct anv_cmd_buffer *cmd_buffer,
                      struct anv_render_pass *pass);
 
+void
+anv_cmd_buffer_fill_render_targets(struct anv_cmd_buffer *cmd_buffer);
 
 #ifdef __cplusplus
 }

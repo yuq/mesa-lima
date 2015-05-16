@@ -1860,7 +1860,8 @@ VkResult VKAPI vkCreateCommandBuffer(
    cmd_buffer->device = device;
    cmd_buffer->rs_state = NULL;
    cmd_buffer->vp_state = NULL;
-   memset(&cmd_buffer->bindings, 0, sizeof(cmd_buffer->bindings));
+   memset(&cmd_buffer->default_bindings, 0, sizeof(cmd_buffer->default_bindings));
+   cmd_buffer->bindings = &cmd_buffer->default_bindings;
 
    result = anv_batch_init(&cmd_buffer->batch, device);
    if (result != VK_SUCCESS)
@@ -2165,6 +2166,7 @@ void VKAPI vkCmdBindDescriptorSets(
 {
    struct anv_cmd_buffer *cmd_buffer = (struct anv_cmd_buffer *) cmdBuffer;
    struct anv_pipeline_layout *layout = cmd_buffer->pipeline->layout;
+   struct anv_bindings *bindings = cmd_buffer->bindings;
 
    uint32_t offset = 0;
    for (uint32_t i = 0; i < setCount; i++) {
@@ -2181,7 +2183,6 @@ void VKAPI vkCmdBindDescriptorSets(
          start = bias + layout->set[firstSet + i].surface_start[s];
          for (uint32_t b = 0; b < set_layout->stage[s].surface_count; b++) {
             struct anv_surface_view *view = set->descriptors[surface_to_desc[b]].view;
-            struct anv_bindings *bindings = &cmd_buffer->bindings;
 
             bindings->descriptors[s].surfaces[start + b] =
                view->surface_state.offset;
@@ -2193,7 +2194,7 @@ void VKAPI vkCmdBindDescriptorSets(
          for (uint32_t b = 0; b < set_layout->stage[s].sampler_count; b++) {
             struct anv_sampler *sampler = set->descriptors[sampler_to_desc[b]].sampler;
 
-            memcpy(&cmd_buffer->bindings.descriptors[s].samplers[start + b],
+            memcpy(&bindings->descriptors[s].samplers[start + b],
                    sampler->state, sizeof(sampler->state));
          }
       }
@@ -2234,13 +2235,14 @@ void VKAPI vkCmdBindVertexBuffers(
     const VkDeviceSize*                         pOffsets)
 {
    struct anv_cmd_buffer *cmd_buffer = (struct anv_cmd_buffer *) cmdBuffer;
+   struct anv_bindings *bindings = cmd_buffer->bindings;
 
    /* We have to defer setting up vertex buffer since we need the buffer
     * stride from the pipeline. */
 
    for (uint32_t i = 0; i < bindingCount; i++) {
-      cmd_buffer->bindings.vb[startBinding + i].buffer = (struct anv_buffer *) pBuffers[i];
-      cmd_buffer->bindings.vb[startBinding + i].offset = pOffsets[i];
+      bindings->vb[startBinding + i].buffer = (struct anv_buffer *) pBuffers[i];
+      bindings->vb[startBinding + i].offset = pOffsets[i];
       cmd_buffer->vb_dirty |= 1 << (startBinding + i);
    }
 }
@@ -2249,38 +2251,48 @@ static void
 flush_descriptor_sets(struct anv_cmd_buffer *cmd_buffer)
 {
    struct anv_pipeline_layout *layout = cmd_buffer->pipeline->layout;
+   struct anv_bindings *bindings = cmd_buffer->bindings;
+   uint32_t layers = cmd_buffer->framebuffer->layers;
+   uint32_t surface_count;
 
    for (uint32_t s = 0; s < VK_NUM_SHADER_STAGE; s++) {
-      uint32_t bias = s == VK_SHADER_STAGE_FRAGMENT ? MAX_RTS : 0;
-      uint32_t binding_table_length;
+      uint32_t bias;
+
+      if (s == VK_SHADER_STAGE_FRAGMENT) {
+         bias = MAX_RTS;
+         layers = cmd_buffer->framebuffer->layers;
+      } else {
+         bias = 0;
+         layers = 0;
+      }
 
       /* This is a little awkward: layout can be NULL but we still have to
        * allocate and set a binding table for the PS stage for render
        * targets. */
       if (layout)
-         binding_table_length = layout->stage[s].surface_count + bias;
+         surface_count = layout->stage[s].surface_count;
       else
-         binding_table_length = bias;
+         surface_count = 0;
 
-      if (binding_table_length > 0) {
+      if (layers + surface_count > 0) {
          struct anv_state state;
          uint32_t size;
 
-         size = binding_table_length * sizeof(uint32_t);
-         state =
-            anv_state_stream_alloc(&cmd_buffer->surface_state_stream, size, 32);
-         memcpy(state.map, cmd_buffer->bindings.descriptors[s].surfaces, size);
+         size = (layers + surface_count) * sizeof(uint32_t);
+         state = anv_state_stream_alloc(&cmd_buffer->surface_state_stream, size, 32);
+         memcpy(state.map, bindings->descriptors[s].surfaces, size);
 
-         for (uint32_t i = 0; i < binding_table_length; i++) {
-            uint32_t offset = cmd_buffer->bindings.descriptors[s].surfaces[i];
-            if (offset == 0)
-               continue;
-
+         for (uint32_t i = 0; i < layers; i++)
             anv_reloc_list_add(&cmd_buffer->batch.surf_relocs,
-                               offset + 8 * sizeof(int32_t),
-                               cmd_buffer->bindings.descriptors[s].relocs[i].bo,
-                               cmd_buffer->bindings.descriptors[s].relocs[i].offset);
-         }
+                               bindings->descriptors[s].surfaces[i] + 8 * sizeof(int32_t),
+                               bindings->descriptors[s].relocs[i].bo,
+                               bindings->descriptors[s].relocs[i].offset);
+
+         for (uint32_t i = 0; i < surface_count; i++)
+            anv_reloc_list_add(&cmd_buffer->batch.surf_relocs,
+                               bindings->descriptors[s].surfaces[bias + i] + 8 * sizeof(int32_t),
+                               bindings->descriptors[s].relocs[bias + i].bo,
+                               bindings->descriptors[s].relocs[bias + i].offset);
 
          static const uint32_t binding_table_opcodes[] = {
             [VK_SHADER_STAGE_VERTEX] = 38,
@@ -2303,7 +2315,7 @@ flush_descriptor_sets(struct anv_cmd_buffer *cmd_buffer)
 
          size = layout->stage[s].sampler_count * 16;
          state = anv_state_stream_alloc(&cmd_buffer->dynamic_state_stream, size, 32);
-         memcpy(state.map, cmd_buffer->bindings.descriptors[s].samplers, size);
+         memcpy(state.map, bindings->descriptors[s].samplers, size);
 
          static const uint32_t sampler_state_opcodes[] = {
             [VK_SHADER_STAGE_VERTEX] = 43,
@@ -2326,6 +2338,7 @@ static void
 anv_cmd_buffer_flush_state(struct anv_cmd_buffer *cmd_buffer)
 {
    struct anv_pipeline *pipeline = cmd_buffer->pipeline;
+   struct anv_bindings *bindings = cmd_buffer->bindings;
    const uint32_t num_buffers = __builtin_popcount(cmd_buffer->vb_dirty);
    const uint32_t num_dwords = 1 + num_buffers * 4;
    uint32_t *p;
@@ -2335,8 +2348,8 @@ anv_cmd_buffer_flush_state(struct anv_cmd_buffer *cmd_buffer)
                           GEN8_3DSTATE_VERTEX_BUFFERS);
       uint32_t vb, i = 0;
       for_each_bit(vb, cmd_buffer->vb_dirty) {
-         struct anv_buffer *buffer = cmd_buffer->bindings.vb[vb].buffer;
-         uint32_t offset = cmd_buffer->bindings.vb[vb].offset;
+         struct anv_buffer *buffer = bindings->vb[vb].buffer;
+         uint32_t offset = bindings->vb[vb].offset;
       
          struct GEN8_VERTEX_BUFFER_STATE state = {
             .VertexBufferIndex = vb,
@@ -2768,6 +2781,22 @@ VkResult VKAPI vkCreateRenderPass(
    return VK_SUCCESS;
 }
 
+void
+anv_cmd_buffer_fill_render_targets(struct anv_cmd_buffer *cmd_buffer)
+{
+   struct anv_framebuffer *framebuffer = cmd_buffer->framebuffer;
+   struct anv_bindings *bindings = cmd_buffer->bindings;
+
+   for (uint32_t i = 0; i < framebuffer->color_attachment_count; i++) {
+      struct anv_surface_view *view = framebuffer->color_attachments[i];
+
+      bindings->descriptors[VK_SHADER_STAGE_FRAGMENT].surfaces[i] = view->surface_state.offset;
+      bindings->descriptors[VK_SHADER_STAGE_FRAGMENT].relocs[i].bo = view->bo;
+      bindings->descriptors[VK_SHADER_STAGE_FRAGMENT].relocs[i].offset = view->offset;
+   }
+   cmd_buffer->dirty |= ANV_CMD_BUFFER_DESCRIPTOR_SET_DIRTY;
+}
+
 void VKAPI vkCmdBeginRenderPass(
     VkCmdBuffer                                 cmdBuffer,
     const VkRenderPassBegin*                    pRenderPassBegin)
@@ -2789,17 +2818,7 @@ void VKAPI vkCmdBeginRenderPass(
                   .DrawingRectangleOriginY = 0,
                   .DrawingRectangleOriginX = 0);
 
-   for (uint32_t i = 0; i < framebuffer->color_attachment_count; i++) {
-      struct anv_surface_view *view = framebuffer->color_attachments[i];
-
-      cmd_buffer->bindings.descriptors[VK_SHADER_STAGE_FRAGMENT].surfaces[i] =
-         view->surface_state.offset;
-      cmd_buffer->bindings.descriptors[VK_SHADER_STAGE_FRAGMENT].relocs[i].bo =
-         view->bo;
-      cmd_buffer->bindings.descriptors[VK_SHADER_STAGE_FRAGMENT].relocs[i].offset =
-         view->offset;
-   }
-   cmd_buffer->dirty |= ANV_CMD_BUFFER_DESCRIPTOR_SET_DIRTY;
+   anv_cmd_buffer_fill_render_targets(cmd_buffer);
 
    anv_cmd_buffer_clear(cmd_buffer, pass);
 }
