@@ -3362,6 +3362,8 @@ _mesa_NamedFramebufferRenderbuffer(GLuint framebuffer, GLenum attachment,
 
    fb = _mesa_lookup_framebuffer_err(ctx, framebuffer,
                                      "glNamedFramebufferRenderbuffer");
+   if (!fb)
+      return;
 
    if (renderbuffertarget != GL_RENDERBUFFER) {
       _mesa_error(ctx, GL_INVALID_ENUM,
