@@ -1683,11 +1683,8 @@ NineDevice9_ColorFill( struct NineDevice9 *This,
     }
     d3dcolor_to_pipe_color_union(&rgba, color);
 
-    fallback =
-        !This->screen->is_format_supported(This->screen, surf->base.info.format,
-                                           surf->base.info.target,
-                                           surf->base.info.nr_samples,
-                                           PIPE_BIND_RENDER_TARGET);
+    fallback = !(surf->base.info.bind & PIPE_BIND_RENDER_TARGET);
+
     if (!fallback) {
         psurf = NineSurface9_GetSurface(surf, 0);
         if (!psurf)
