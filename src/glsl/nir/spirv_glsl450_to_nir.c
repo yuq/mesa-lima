@@ -170,8 +170,6 @@ handle_glsl450_alu(struct vtn_builder *b, enum GLSL450Entrypoint entrypoint,
                                   nir_fcos(&b->nb, src[0]));
       return;
    case Pow:         op = nir_op_fpow;       break;
-   case Exp:         op = nir_op_fexp;       break;
-   case Log:         op = nir_op_flog;       break;
    case Exp2:        op = nir_op_fexp2;      break;
    case Log2:        op = nir_op_flog2;      break;
    case Sqrt:        op = nir_op_fsqrt;      break;
@@ -227,6 +225,8 @@ handle_glsl450_alu(struct vtn_builder *b, enum GLSL450Entrypoint entrypoint,
    case FindLSB:           op = nir_op_find_lsb;            break;
    case FindMSB:           op = nir_op_ufind_msb;           break; /* TODO */
 
+   case Exp:
+   case Log:
    case Clamp:
    case Asin:
    case Acos:
