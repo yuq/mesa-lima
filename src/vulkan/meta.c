@@ -199,6 +199,9 @@ anv_cmd_buffer_clear(struct anv_cmd_buffer *cmd_buffer,
       float color[4];
    } *instance_data;
 
+   if (pass->num_clear_layers == 0)
+      return;
+
    const float vertex_data[] = {
       /* Rect-list coordinates */
             0.0,        0.0,
