@@ -149,15 +149,17 @@ anv_device_init_meta_clear_state(struct anv_device *device)
 #define NUM_VB_USED 2
 struct anv_saved_state {
    struct anv_bindings bindings;
-   struct anv_pipeline *pipeline;
+   struct anv_bindings *old_bindings;
+   struct anv_pipeline *old_pipeline;
 };
 
 static void
 anv_cmd_buffer_save(struct anv_cmd_buffer *cmd_buffer,
                     struct anv_saved_state *state)
 {
+   state->old_bindings = cmd_buffer->bindings;
    cmd_buffer->bindings = &state->bindings;
-   state->pipeline = cmd_buffer->pipeline;
+   state->old_pipeline = cmd_buffer->pipeline;
 
    /* Initialize render targets for the meta bindings. */
    anv_cmd_buffer_fill_render_targets(cmd_buffer);
@@ -167,8 +169,8 @@ static void
 anv_cmd_buffer_restore(struct anv_cmd_buffer *cmd_buffer,
                        const struct anv_saved_state *state)
 {
-   cmd_buffer->bindings = &cmd_buffer->default_bindings;
-   cmd_buffer->pipeline = state->pipeline;
+   cmd_buffer->bindings = state->old_bindings;
+   cmd_buffer->pipeline = state->old_pipeline;
 
    cmd_buffer->vb_dirty |= (1 << NUM_VB_USED) - 1;
    cmd_buffer->dirty |= ANV_CMD_BUFFER_PIPELINE_DIRTY |
