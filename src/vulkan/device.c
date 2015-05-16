@@ -599,7 +599,7 @@ VkResult VKAPI vkQueueAddMemReferences(
    return VK_SUCCESS;
 }
 
-VkResult vkQueueRemoveMemReferences(
+VkResult VKAPI vkQueueRemoveMemReferences(
     VkQueue                                     queue,
     uint32_t                                    count,
     const VkDeviceMemory*                       pMems)
