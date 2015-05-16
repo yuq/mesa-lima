@@ -199,6 +199,7 @@ struct nine_state
     struct NineBaseTexture9 *texture[NINE_MAX_SAMPLERS]; /* PS, DMAP, VS */
 
     DWORD samp[NINE_MAX_SAMPLERS][NINED3DSAMP_COUNT];
+    DWORD samp_advertised[NINE_MAX_SAMPLERS][NINED3DSAMP_COUNT];
     uint32_t samplers_shadow;
     uint8_t bound_samplers_mask_vs;
     uint16_t bound_samplers_mask_ps;

@@ -2766,7 +2766,7 @@ NineDevice9_GetSamplerState( struct NineDevice9 *This,
     if (Sampler >= D3DDMAPSAMPLER)
         Sampler = Sampler - D3DDMAPSAMPLER + NINE_MAX_SAMPLERS_PS;
 
-    *pValue = This->state.samp[Sampler][Type];
+    *pValue = This->state.samp_advertised[Sampler][Type];
     return D3D_OK;
 }
 
@@ -2789,8 +2789,11 @@ NineDevice9_SetSamplerState( struct NineDevice9 *This,
     if (Sampler >= D3DDMAPSAMPLER)
         Sampler = Sampler - D3DDMAPSAMPLER + NINE_MAX_SAMPLERS_PS;
 
-    if (state->samp[Sampler][Type] != Value || unlikely(This->is_recording)) {
-        state->samp[Sampler][Type] = Value;
+    if (state->samp_advertised[Sampler][Type] != Value || unlikely(This->is_recording)) {
+        /* Contrary to render states, old value is kept if new value is wrong (except intel + Value == 0) */
+        if (likely(nine_check_sampler_state_value(Type, Value)))
+            state->samp[Sampler][Type] = Value;
+        state->samp_advertised[Sampler][Type] = Value;
         state->changed.group |= NINE_STATE_SAMPLER;
         state->changed.sampler[Sampler] |= 1 << Type;
     }
