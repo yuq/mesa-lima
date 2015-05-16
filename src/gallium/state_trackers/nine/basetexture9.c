@@ -530,6 +530,11 @@ NineBaseTexture9_UpdateSamplerView( struct NineBaseTexture9 *This,
             swizzle[2] = PIPE_SWIZZLE_RED;
             swizzle[3] = PIPE_SWIZZLE_RED;
         }
+    } else if (resource->format == PIPE_FORMAT_RGTC2_UNORM) {
+        swizzle[0] = PIPE_SWIZZLE_GREEN;
+        swizzle[1] = PIPE_SWIZZLE_RED;
+        swizzle[2] = PIPE_SWIZZLE_ONE;
+        swizzle[3] = PIPE_SWIZZLE_ONE;
     } else if (resource->format != PIPE_FORMAT_A8_UNORM &&
                resource->format != PIPE_FORMAT_RGTC1_UNORM) {
         /* exceptions:
