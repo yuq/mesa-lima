@@ -608,6 +608,8 @@
 #define GEN8_SURFACE_AUX_MODE_HIZ               3
 
 /* Surface state DW7 */
+#define GEN9_SURFACE_RT_COMPRESSION_SHIFT       30
+#define GEN9_SURFACE_RT_COMPRESSION_MASK        INTEL_MASK(30, 30)
 #define GEN7_SURFACE_CLEAR_COLOR_SHIFT		28
 #define GEN7_SURFACE_SCS_R_SHIFT                25
 #define GEN7_SURFACE_SCS_R_MASK                 INTEL_MASK(27, 25)

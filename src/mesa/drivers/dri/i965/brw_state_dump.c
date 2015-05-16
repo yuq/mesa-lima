@@ -67,15 +67,6 @@ static const char *surface_tiling[] = {
    "Y-tiled"
 };
 
-static const char *surface_aux_mode[] = {
-   "AUX_NONE",
-   "AUX_MCS",
-   "AUX_APPEND",
-   "AUX_HIZ",
-   "RSVD",
-   "RSVD"
-};
-
 static void
 batch_out(struct brw_context *brw, const char *name, uint32_t offset,
 	  int index, char *fmt, ...) PRINTFLIKE(5, 6);
@@ -263,12 +254,30 @@ static float q_to_float(uint32_t data, int integer_end, int integer_start,
    return n * exp2(-(fractional_end - fractional_start + 1));
 }
 
-static void dump_gen8_surface_state(struct brw_context *brw, uint32_t offset)
+static void
+dump_gen8_surface_state(struct brw_context *brw, uint32_t offset, int index)
 {
-   const char *name = "SURF";
    uint32_t *surf = brw->batch.bo->virtual + offset;
+   int aux_mode = surf[6] & INTEL_MASK(2, 0);
+   const char *aux_str;
+   char *name;
 
-   batch_out(brw, "SURF'", offset, 0, "%s %s %s VALIGN%d HALIGN%d %s\n",
+   if (brw->gen >= 9 && (aux_mode == 1 || aux_mode == 5)) {
+      bool msrt = GET_BITS(surf[4], 5, 3) > 0;
+      bool compression = GET_FIELD(surf[7], GEN9_SURFACE_RT_COMPRESSION) == 1;
+      aux_str = ralloc_asprintf(NULL, "AUX_CCS_%c (%s, MULTISAMPLE_COUNT%c1)",
+                                (aux_mode == 1) ? 'D' : 'E',
+                                compression ? "Compressed RT" : "Uncompressed",
+                                msrt ? '>' : '=');
+   } else {
+      static const char *surface_aux_mode[] = { "AUX_NONE", "AUX_MCS",
+                                                "AUX_APPEND", "AUX_HIZ",
+                                                "RSVD", "RSVD"};
+      aux_str = ralloc_asprintf(NULL, "%s", surface_aux_mode[aux_mode]);
+   }
+
+   name = ralloc_asprintf(NULL, "SURF%03d", index);
+   batch_out(brw, name, offset, 0, "%s %s %s VALIGN%d HALIGN%d %s\n",
              brw_surface_format_name(GET_FIELD(surf[0], BRW_SURFACE_TYPE)),
              brw_surface_format_name(GET_FIELD(surf[0], BRW_SURFACE_FORMAT)),
              (surf[0] & GEN7_SURFACE_IS_ARRAY) ? "array" : "",
@@ -283,7 +292,7 @@ static void dump_gen8_surface_state(struct brw_context *brw, uint32_t offset)
    batch_out(brw, name, offset, 2, "%dx%d [%s]\n",
              GET_FIELD(surf[2], GEN7_SURFACE_WIDTH) + 1,
              GET_FIELD(surf[2], GEN7_SURFACE_HEIGHT) + 1,
-             surface_aux_mode[surf[6] & INTEL_MASK(2, 0)]);
+             aux_str);
    batch_out(brw, name, offset, 3, "%d slices (depth), pitch: %d\n",
              GET_FIELD(surf[3], BRW_SURFACE_DEPTH) + 1,
              (surf[3] & INTEL_MASK(17, 0)) + 1);
@@ -298,14 +307,22 @@ static void dump_gen8_surface_state(struct brw_context *brw, uint32_t offset)
    batch_out(brw, name, offset, 6, "AUX pitch: %d qpitch: %d\n",
              GET_FIELD(surf[6], GEN8_SURFACE_AUX_QPITCH) << 2,
              GET_FIELD(surf[6], GEN8_SURFACE_AUX_PITCH) << 2);
-   batch_out(brw, name, offset, 7, "Clear color: %c%c%c%c\n",
-             GET_BITS(surf[7], 31, 31) ? 'R' : '-',
-             GET_BITS(surf[7], 30, 30) ? 'G' : '-',
-             GET_BITS(surf[7], 29, 29) ? 'B' : '-',
-             GET_BITS(surf[7], 28, 28) ? 'A' : '-');
+   if (brw->gen >= 9) {
+      batch_out(brw, name, offset, 7, "Clear color: R(%x)G(%x)B(%x)A(%x)\n",
+                surf[12], surf[13], surf[14], surf[15]);
+   } else {
+      batch_out(brw, name, offset, 7, "Clear color: %c%c%c%c\n",
+                GET_BITS(surf[7], 31, 31) ? 'R' : '-',
+                GET_BITS(surf[7], 30, 30) ? 'G' : '-',
+                GET_BITS(surf[7], 29, 29) ? 'B' : '-',
+                GET_BITS(surf[7], 28, 28) ? 'A' : '-');
+   }
 
    for (int i = 8; i < 12; i++)
       batch_out(brw, name, offset, i, "0x%08x\n", surf[i]);
+
+   ralloc_free((void *)aux_str);
+   ralloc_free(name);
 }
 
 static void
@@ -694,7 +711,8 @@ dump_state_batch(struct brw_context *brw)
 	 break;
       case AUB_TRACE_SURFACE_STATE:
          if (brw->gen >= 8) {
-            dump_gen8_surface_state(brw, offset);
+            dump_gen8_surface_state(brw, offset,
+                                    brw->state_batch_list[i].index);
          } else if (brw->gen >= 7) {
 	    dump_gen7_surface_state(brw, offset);
          } else {

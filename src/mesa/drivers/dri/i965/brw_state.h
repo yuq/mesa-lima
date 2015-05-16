@@ -229,11 +229,14 @@ void brw_destroy_caches( struct brw_context *brw );
 #define BRW_BATCH_STRUCT(brw, s) \
    intel_batchbuffer_data(brw, (s), sizeof(*(s)), RENDER_RING)
 
-void *brw_state_batch(struct brw_context *brw,
-		      enum aub_state_struct_type type,
-		      int size,
-		      int alignment,
-		      uint32_t *out_offset);
+void *__brw_state_batch(struct brw_context *brw,
+                        enum aub_state_struct_type type,
+                        int size,
+                        int alignment,
+                        int index,
+                        uint32_t *out_offset);
+#define brw_state_batch(brw, type, size, alignment, out_offset) \
+   __brw_state_batch(brw, type, size, alignment, 0, out_offset)
 
 /* brw_wm_surface_state.c */
 void gen4_init_vtable_surface_functions(struct brw_context *brw);

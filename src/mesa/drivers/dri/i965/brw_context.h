@@ -1466,6 +1466,7 @@ struct brw_context
       uint32_t offset;
       uint32_t size;
       enum aub_state_struct_type type;
+      int index;
    } *state_batch_list;
    int state_batch_count;
 
