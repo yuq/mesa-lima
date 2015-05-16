@@ -2274,7 +2274,7 @@ flush_descriptor_sets(struct anv_cmd_buffer *cmd_buffer)
          struct anv_state state;
          uint32_t size;
 
-         size = (layers + surface_count) * sizeof(uint32_t);
+         size = (bias + surface_count) * sizeof(uint32_t);
          state = anv_state_stream_alloc(&cmd_buffer->surface_state_stream, size, 32);
          memcpy(state.map, bindings->descriptors[s].surfaces, size);
 
