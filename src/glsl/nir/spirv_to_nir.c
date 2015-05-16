@@ -1186,8 +1186,6 @@ vtn_handle_body_instruction(struct vtn_builder *b, SpvOp opcode,
       nir_cf_node *tail_node = exec_node_data(nir_cf_node, list_tail, node);
       assert(tail_node->type == nir_cf_node_block);
       block->block = nir_cf_node_as_block(tail_node);
-
-      assert(exec_list_is_empty(&block->block->instr_list));
       break;
    }
 
