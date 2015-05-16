@@ -1366,6 +1366,10 @@ nine_ff_build_ps(struct NineDevice9 *device, struct nine_ff_ps_key *key)
             colorarg[2] != alphaarg[2])
             dst.WriteMask = TGSI_WRITEMASK_XYZ;
 
+        /* Special DOTPRODUCT behaviour (see wine tests) */
+        if (key->ts[s].colorop == D3DTOP_DOTPRODUCT3)
+            dst.WriteMask = TGSI_WRITEMASK_XYZW;
+
         if (used_c & 0x1) arg[0] = ps_get_ts_arg(&ps, colorarg[0]);
         if (used_c & 0x2) arg[1] = ps_get_ts_arg(&ps, colorarg[1]);
         if (used_c & 0x4) arg[2] = ps_get_ts_arg(&ps, colorarg[2]);
