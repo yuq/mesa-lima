@@ -187,9 +187,10 @@ VkResult anv_GetPhysicalDeviceInfo(
    VkPhysicalDevicePerformance *performance;
    VkPhysicalDeviceQueueProperties *queue_properties;
    VkPhysicalDeviceMemoryProperties *memory_properties;
+   VkDisplayPropertiesWSI *display_properties;
    uint64_t ns_per_tick = 80;
    
-   switch (infoType) {
+   switch ((uint32_t) infoType) {
    case VK_PHYSICAL_DEVICE_INFO_TYPE_PROPERTIES:
       properties = pData;
 
@@ -251,6 +252,23 @@ VkResult anv_GetPhysicalDeviceInfo(
       memory_properties->supportsMigration = false;
       memory_properties->supportsPinning = false;
       return VK_SUCCESS;
+
+   case VK_PHYSICAL_DEVICE_INFO_TYPE_DISPLAY_PROPERTIES_WSI:
+      anv_finishme("VK_PHYSICAL_DEVICE_INFO_TYPE_DISPLAY_PROPERTIES_WSI");
+
+      *pDataSize = sizeof(*display_properties);
+      if (pData == NULL)
+         return VK_SUCCESS;
+
+      display_properties = pData;
+      display_properties->display = 0;
+      display_properties->physicalResolution = (VkExtent2D) { 0, 0 };
+      return VK_SUCCESS;
+
+   case VK_PHYSICAL_DEVICE_INFO_TYPE_QUEUE_PRESENT_PROPERTIES_WSI:
+      anv_finishme("VK_PHYSICAL_DEVICE_INFO_TYPE_QUEUE_PRESENT_PROPERTIES_WSI");
+      return VK_SUCCESS;
+
 
    default:
       return VK_UNSUPPORTED;
@@ -383,18 +401,28 @@ VkResult anv_GetGlobalExtensionInfo(
     size_t*                                     pDataSize,
     void*                                       pData)
 {
-   uint32_t *count;
+   static const VkExtensionProperties extensions[] = {
+      {
+         .extName = "VK_WSI_LunarG",
+         .version = 3
+      }
+   };
+   uint32_t count = ARRAY_SIZE(extensions);
 
    switch (infoType) {
    case VK_EXTENSION_INFO_TYPE_COUNT:
-      count = pData;
-      assert(*pDataSize == 4);
-      *count = 0;
+      memcpy(pData, &count, sizeof(count));
+      *pDataSize = sizeof(count);
       return VK_SUCCESS;
-      
+
    case VK_EXTENSION_INFO_TYPE_PROPERTIES:
-      return vk_error(VK_ERROR_INVALID_EXTENSION);
-      
+      if (extensionIndex >= count)
+         return vk_error(VK_ERROR_INVALID_EXTENSION);
+
+      memcpy(pData, &extensions[extensionIndex], sizeof(extensions[0]));
+      *pDataSize = sizeof(extensions[0]);
+      return VK_SUCCESS;
+
    default:
       return VK_UNSUPPORTED;
    }

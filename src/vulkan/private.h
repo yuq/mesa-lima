@@ -36,6 +36,7 @@
 #define VK_PROTOTYPES
 #include <vulkan/vulkan.h>
 #include <vulkan/vulkan_intel.h>
+#include <vulkan/vk_wsi_lunarg.h>
 
 #include "entrypoints.h"
 
@@ -661,6 +662,8 @@ struct anv_image {
    /* Set when bound */
    struct anv_bo *                              bo;
    VkDeviceSize                                 offset;
+
+   struct anv_swap_chain *                      swap_chain;
 };
 
 struct anv_surface_view {
@@ -670,6 +673,15 @@ struct anv_surface_view {
    VkExtent3D                                   extent;
    VkFormat                                     format;
 };
+
+struct anv_image_create_info {
+   uint32_t                                     tile_mode;
+};
+
+VkResult anv_image_create(VkDevice _device,
+                          const VkImageCreateInfo *pCreateInfo,
+                          const struct anv_image_create_info *extra,
+                          VkImage *pImage);
 
 void anv_image_view_init(struct anv_surface_view *view,
                          struct anv_device *device,

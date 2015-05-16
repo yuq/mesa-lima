@@ -22,10 +22,11 @@
 
 vulkan_includedir = $(includedir)/vulkan
 
-vulkan_include_HEADERS = \
-	$(top_srcdir)/include/vulkan/vk_platform.h \
-	$(top_srcdir)/include/vulkan/vulkan.h \
-	$(top_srcdir)/include/vulkan/vulkan_intel.h
+vulkan_include_HEADERS =				\
+	$(top_srcdir)/include/vulkan/vk_platform.h	\
+	$(top_srcdir)/include/vulkan/vulkan.h		\
+	$(top_srcdir)/include/vulkan/vulkan_intel.h	\
+	$(top_srcdir)/include/vulkan/vk_wsi_lunarg.h
 
 lib_LTLIBRARIES = libvulkan.la
 
@@ -64,6 +65,7 @@ libvulkan_la_SOURCES =				\
 	intel.c					\
 	entrypoints.c				\
 	entrypoints.h				\
+	x11.c					\
 	formats.c				\
 	compiler.cpp
 

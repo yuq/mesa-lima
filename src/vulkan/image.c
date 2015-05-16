@@ -41,9 +41,10 @@ static const struct anv_tile_mode_info {
    [WMAJOR] = { 128, 32 }
 };
 
-VkResult anv_CreateImage(
+VkResult anv_image_create(
     VkDevice                                    _device,
     const VkImageCreateInfo*                    pCreateInfo,
+    const struct anv_image_create_info *        extra,
     VkImage*                                    pImage)
 {
    struct anv_device *device = (struct anv_device *) _device;
@@ -63,6 +64,7 @@ VkResult anv_CreateImage(
    image->type = pCreateInfo->imageType;
    image->format = pCreateInfo->format;
    image->extent = pCreateInfo->extent;
+   image->swap_chain = NULL;
 
    assert(image->extent.width > 0);
    assert(image->extent.height > 0);
@@ -71,20 +73,28 @@ VkResult anv_CreateImage(
    switch (pCreateInfo->tiling) {
    case VK_IMAGE_TILING_LINEAR:
       image->tile_mode = LINEAR;
-      /* Linear depth buffers must be 64 byte aligned, which is the strictest
-       * requirement for all kinds of linear surfaces.
-       */
-      image->alignment = 64;
       break;
    case VK_IMAGE_TILING_OPTIMAL:
       image->tile_mode = YMAJOR;
-      image->alignment = 4096;
       break;
    default:
       break;
    }
    
+   if (extra)
+      image->tile_mode = extra->tile_mode;
+
+   if (image->tile_mode == LINEAR) {
+      /* Linear depth buffers must be 64 byte aligned, which is the strictest
+       * requirement for all kinds of linear surfaces.
+       */
+      image->alignment = 64;
+   } else {
+      image->alignment = 4096;
+   }
+
    format = anv_format_for_vk_format(pCreateInfo->format);
+   assert(format->cpp > 0);
    image->stride = ALIGN_I32(image->extent.width * format->cpp,
                              tile_mode_info[image->tile_mode].tile_width);
    aligned_height = ALIGN_I32(image->extent.height,
@@ -94,6 +104,14 @@ VkResult anv_CreateImage(
    *pImage = (VkImage) image;
 
    return VK_SUCCESS;
+}
+
+VkResult anv_CreateImage(
+    VkDevice                                    device,
+    const VkImageCreateInfo*                    pCreateInfo,
+    VkImage*                                    pImage)
+{
+   return anv_image_create(device, pCreateInfo, NULL, pImage);
 }
 
 VkResult anv_GetImageSubresourceInfo(
