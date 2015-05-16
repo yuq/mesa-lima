@@ -23,6 +23,8 @@ C_SOURCES := \
 	core/ilo_state_3d.h \
 	core/ilo_state_3d_bottom.c \
 	core/ilo_state_3d_top.c \
+	core/ilo_state_zs.c \
+	core/ilo_state_zs.h \
 	core/intel_winsys.h \
 	ilo_blit.c \
 	ilo_blit.h \
