@@ -1261,6 +1261,8 @@ nine_state_set_defaults(struct NineDevice9 *device, const D3DCAPS9 *caps,
      */
     state->rs[D3DRS_POINTSIZE_MAX] = fui(caps->MaxPointSize);
 
+    memcpy(state->rs_advertised, state->rs, sizeof(state->rs));
+
     /* Set changed flags to initialize driver.
      */
     state->changed.group = NINE_STATE_ALL;

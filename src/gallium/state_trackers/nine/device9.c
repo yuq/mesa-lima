@@ -38,6 +38,7 @@
 #include "nine_pipe.h"
 #include "nine_ff.h"
 #include "nine_dump.h"
+#include "nine_limits.h"
 
 #include "pipe/p_screen.h"
 #include "pipe/p_context.h"
@@ -112,8 +113,10 @@ NineDevice9_SetDefaultState( struct NineDevice9 *This, boolean is_reset )
         This->state.scissor.maxy = refSurf->desc.Height;
     }
 
-    if (This->nswapchains && This->swapchains[0]->params.EnableAutoDepthStencil)
+    if (This->nswapchains && This->swapchains[0]->params.EnableAutoDepthStencil) {
         This->state.rs[D3DRS_ZENABLE] = TRUE;
+        This->state.rs_advertised[D3DRS_ZENABLE] = TRUE;
+    }
     if (This->state.rs[D3DRS_ZENABLE])
         NineDevice9_SetDepthStencilSurface(
             This, (IDirect3DSurface9 *)This->swapchains[0]->zsbuf);
@@ -2380,8 +2383,15 @@ NineDevice9_SetRenderState( struct NineDevice9 *This,
     DBG("This=%p State=%u(%s) Value=%08x\n", This,
         State, nine_d3drs_to_string(State), Value);
 
+    user_assert(State < D3DRS_COUNT, D3DERR_INVALIDCALL);
+
+    if (state->rs_advertised[State] == Value && likely(!This->is_recording))
+        return D3D_OK;
+
+    state->rs_advertised[State] = Value;
+
     /* Amd hacks (equivalent to GL extensions) */
-    if (State == D3DRS_POINTSIZE) {
+    if (unlikely(State == D3DRS_POINTSIZE)) {
         if (Value == RESZ_CODE)
             return NineDevice9_ResolveZ(This);
 
@@ -2394,20 +2404,17 @@ NineDevice9_SetRenderState( struct NineDevice9 *This,
     }
 
     /* NV hack */
-    if (State == D3DRS_ADAPTIVETESS_Y &&
-        (Value == D3DFMT_ATOC || (Value == D3DFMT_UNKNOWN && state->rs[NINED3DRS_ALPHACOVERAGE]))) {
+    if (unlikely(State == D3DRS_ADAPTIVETESS_Y)) {
+        if (Value == D3DFMT_ATOC || (Value == D3DFMT_UNKNOWN && state->rs[NINED3DRS_ALPHACOVERAGE])) {
             state->rs[NINED3DRS_ALPHACOVERAGE] = (Value == D3DFMT_ATOC);
             state->changed.group |= NINE_STATE_BLEND;
             return D3D_OK;
+        }
     }
 
-    user_assert(State < Elements(state->rs), D3DERR_INVALIDCALL);
-
-    if (likely(state->rs[State] != Value) || unlikely(This->is_recording)) {
-        state->rs[State] = Value;
-        state->changed.rs[State / 32] |= 1 << (State % 32);
-        state->changed.group |= nine_render_state_group[State];
-    }
+    state->rs[State] = nine_fix_render_state_value(State, Value);
+    state->changed.rs[State / 32] |= 1 << (State % 32);
+    state->changed.group |= nine_render_state_group[State];
 
     return D3D_OK;
 }
@@ -2417,9 +2424,9 @@ NineDevice9_GetRenderState( struct NineDevice9 *This,
                             D3DRENDERSTATETYPE State,
                             DWORD *pValue )
 {
-    user_assert(State < Elements(This->state.rs), D3DERR_INVALIDCALL);
+    user_assert(State < D3DRS_COUNT, D3DERR_INVALIDCALL);
 
-    *pValue = This->state.rs[State];
+    *pValue = This->state.rs_advertised[State];
     return D3D_OK;
 }
 

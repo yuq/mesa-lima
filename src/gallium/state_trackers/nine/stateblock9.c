@@ -180,6 +180,7 @@ nine_state_copy_common(struct nine_state *dst,
             const int r = ffs(m) - 1;
             m &= ~(1 << r);
             dst->rs[i * 32 + r] = src->rs[i * 32 + r];
+            dst->rs_advertised[i * 32 + r] = src->rs_advertised[i * 32 + r];
         }
     }
 
@@ -358,6 +359,7 @@ nine_state_copy_common_all(struct nine_state *dst,
 
     /* Render states. */
     memcpy(dst->rs, src->rs, sizeof(dst->rs));
+    memcpy(dst->rs_advertised, src->rs_advertised, sizeof(dst->rs_advertised));
     if (apply)
         memcpy(dst->changed.rs, src->changed.rs, sizeof(dst->changed.rs));
 

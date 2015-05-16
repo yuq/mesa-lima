@@ -181,6 +181,7 @@ struct nine_state
     uint8_t rt_mask;
 
     DWORD rs[NINED3DRS_COUNT];
+    DWORD rs_advertised[NINED3DRS_COUNT]; /* the ones apps get with GetRenderState */
 
     struct NineBaseTexture9 *texture[NINE_MAX_SAMPLERS]; /* PS, DMAP, VS */
 
