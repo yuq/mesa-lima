@@ -67,7 +67,7 @@ struct nine_ff_vs_key
             uint32_t pad4 : 8;
             uint32_t tc_idx : 24;
             uint32_t pad5 : 8;
-            uint32_t pad6;
+            uint32_t passthrough;
         };
         uint64_t value64[3]; /* don't forget to resize VertexShader9.ff_key */
         uint32_t value32[6];
@@ -342,7 +342,7 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
     unsigned i, c;
     unsigned label[32], l = 0;
     unsigned num_r = 8;
-    boolean need_rNrm = key->lighting || key->pointscale;
+    boolean need_rNrm = key->lighting || key->pointscale || key->passthrough & (1 << NINE_DECLUSAGE_NORMAL);
     boolean need_rVtx = key->lighting || key->fog_mode;
     const unsigned texcoord_sn = get_texcoord_sn(device->screen);
 
@@ -405,9 +405,9 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
     if (key->vertexpointsize)
         vs->aPsz = build_vs_add_input(vs, NINE_DECLUSAGE_PSIZE);
 
-    if (key->vertexblend_indexed)
+    if (key->vertexblend_indexed || key->passthrough & (1 << NINE_DECLUSAGE_BLENDINDICES))
         vs->aInd = build_vs_add_input(vs, NINE_DECLUSAGE_BLENDINDICES);
-    if (key->vertexblend)
+    if (key->vertexblend || key->passthrough & (1 << NINE_DECLUSAGE_BLENDWEIGHT))
         vs->aWgt = build_vs_add_input(vs, NINE_DECLUSAGE_BLENDWEIGHT);
     if (key->vertextween) {
         vs->aVtx1 = build_vs_add_input(vs, NINE_DECLUSAGE_i(POSITION,1));
@@ -419,7 +419,7 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
     oPos = ureg_DECL_output(ureg, TGSI_SEMANTIC_POSITION, 0); /* HPOS */
     oCol[0] = ureg_saturate(ureg_DECL_output(ureg, TGSI_SEMANTIC_COLOR, 0));
     oCol[1] = ureg_saturate(ureg_DECL_output(ureg, TGSI_SEMANTIC_COLOR, 1));
-    if (key->fog) {
+    if (key->fog || key->passthrough & (1 << NINE_DECLUSAGE_FOG)) {
         oFog = ureg_DECL_output(ureg, TGSI_SEMANTIC_FOG, 0);
         oFog = ureg_writemask(oFog, TGSI_WRITEMASK_X);
     }
@@ -899,9 +899,57 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
             ureg_MUL(ureg, ureg_saturate(tmp_x), _X(tmp), _YYYY(_CONST(28)));
         }
         ureg_MOV(ureg, oFog, _X(tmp));
-    } else if (key->fog) {
+    } else if (key->fog && !(key->passthrough & (1 << NINE_DECLUSAGE_FOG))) {
         ureg_MOV(ureg, oFog, ureg_scalar(vs->aCol[1], TGSI_SWIZZLE_W));
     }
+
+    if (key->passthrough & (1 << NINE_DECLUSAGE_BLENDWEIGHT)) {
+        struct ureg_src input;
+        struct ureg_dst output;
+        input = vs->aWgt;
+        output = ureg_DECL_output(ureg, TGSI_SEMANTIC_GENERIC, 18);
+        ureg_MOV(ureg, output, input);
+    }
+    if (key->passthrough & (1 << NINE_DECLUSAGE_BLENDINDICES)) {
+        struct ureg_src input;
+        struct ureg_dst output;
+        input = vs->aInd;
+        output = ureg_DECL_output(ureg, TGSI_SEMANTIC_GENERIC, 19);
+        ureg_MOV(ureg, output, input);
+    }
+    if (key->passthrough & (1 << NINE_DECLUSAGE_NORMAL)) {
+        struct ureg_src input;
+        struct ureg_dst output;
+        input = vs->aNrm;
+        output = ureg_DECL_output(ureg, TGSI_SEMANTIC_GENERIC, 20);
+        ureg_MOV(ureg, output, input);
+    }
+    if (key->passthrough & (1 << NINE_DECLUSAGE_TANGENT)) {
+        struct ureg_src input;
+        struct ureg_dst output;
+        input = build_vs_add_input(vs, NINE_DECLUSAGE_TANGENT);
+        output = ureg_DECL_output(ureg, TGSI_SEMANTIC_GENERIC, 21);
+        ureg_MOV(ureg, output, input);
+    }
+    if (key->passthrough & (1 << NINE_DECLUSAGE_BINORMAL)) {
+        struct ureg_src input;
+        struct ureg_dst output;
+        input = build_vs_add_input(vs, NINE_DECLUSAGE_BINORMAL);
+        output = ureg_DECL_output(ureg, TGSI_SEMANTIC_GENERIC, 22);
+        ureg_MOV(ureg, output, input);
+    }
+    if (key->passthrough & (1 << NINE_DECLUSAGE_FOG)) {
+        struct ureg_src input;
+        struct ureg_dst output;
+        input = build_vs_add_input(vs, NINE_DECLUSAGE_FOG);
+        input = ureg_scalar(input, TGSI_SWIZZLE_X);
+        output = oFog;
+        ureg_MOV(ureg, output, input);
+    }
+    if (key->passthrough & (1 << NINE_DECLUSAGE_DEPTH)) {
+        (void) 0; /* TODO: replace z of position output ? */
+    }
+
 
     if (key->position_t && device->driver_caps.window_space_position_support)
         ureg_property(ureg, TGSI_PROPERTY_VS_WINDOW_SPACE_POSITION, TRUE);
@@ -1411,9 +1459,15 @@ nine_ff_get_vs(struct NineDevice9 *device)
                     input_texture_coord[s] = nine_decltype_get_dim(state->vdecl->decls[i].Type);
                 else
                     DBG("FF given texture coordinate >= 8. Ignoring\n");
-            }
+            } else if (usage < NINE_DECLUSAGE_NONE)
+                key.passthrough |= 1 << usage;
         }
     }
+    /* ff vs + ps 3.0: some elements are passed to the ps (wine test).
+     * We do restrict to indices 0 */
+    key.passthrough &= ~((1 << NINE_DECLUSAGE_POSITION) | (1 << NINE_DECLUSAGE_PSIZE) |
+                         (1 << NINE_DECLUSAGE_TEXCOORD) | (1 << NINE_DECLUSAGE_POSITIONT) |
+                         (1 << NINE_DECLUSAGE_TESSFACTOR) | (1 << NINE_DECLUSAGE_SAMPLE));
     if (!key.vertexpointsize)
         key.pointscale = !!state->rs[D3DRS_POINTSCALEENABLE];
 
