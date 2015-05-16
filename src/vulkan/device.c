@@ -2253,7 +2253,6 @@ flush_descriptor_sets(struct anv_cmd_buffer *cmd_buffer)
    struct anv_pipeline_layout *layout = cmd_buffer->pipeline->layout;
    struct anv_bindings *bindings = cmd_buffer->bindings;
    uint32_t layers = cmd_buffer->framebuffer->layers;
-   uint32_t surface_count;
 
    for (uint32_t s = 0; s < VK_NUM_SHADER_STAGE; s++) {
       uint32_t bias;
@@ -2269,10 +2268,7 @@ flush_descriptor_sets(struct anv_cmd_buffer *cmd_buffer)
       /* This is a little awkward: layout can be NULL but we still have to
        * allocate and set a binding table for the PS stage for render
        * targets. */
-      if (layout)
-         surface_count = layout->stage[s].surface_count;
-      else
-         surface_count = 0;
+      uint32_t surface_count = layout ? layout->stage[s].surface_count : 0;
 
       if (layers + surface_count > 0) {
          struct anv_state state;
