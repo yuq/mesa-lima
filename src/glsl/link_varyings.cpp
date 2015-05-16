@@ -760,7 +760,9 @@ namespace {
 class varying_matches
 {
 public:
-   varying_matches(bool disable_varying_packing, bool consumer_is_fs);
+   varying_matches(bool disable_varying_packing,
+                   gl_shader_stage producer_stage,
+                   gl_shader_stage consumer_stage);
    ~varying_matches();
    void record(ir_variable *producer_var, ir_variable *consumer_var);
    unsigned assign_locations();
@@ -841,15 +843,18 @@ private:
     */
    unsigned matches_capacity;
 
-   const bool consumer_is_fs;
+   gl_shader_stage producer_stage;
+   gl_shader_stage consumer_stage;
 };
 
 } /* anonymous namespace */
 
 varying_matches::varying_matches(bool disable_varying_packing,
-                                 bool consumer_is_fs)
+                                 gl_shader_stage producer_stage,
+                                 gl_shader_stage consumer_stage)
    : disable_varying_packing(disable_varying_packing),
-     consumer_is_fs(consumer_is_fs)
+     producer_stage(producer_stage),
+     consumer_stage(consumer_stage)
 {
    /* Note: this initial capacity is rather arbitrarily chosen to be large
     * enough for many cases without wasting an unreasonable amount of space.
@@ -900,7 +905,7 @@ varying_matches::record(ir_variable *producer_var, ir_variable *consumer_var)
    }
 
    if ((consumer_var == NULL && producer_var->type->contains_integer()) ||
-       !consumer_is_fs) {
+       consumer_stage != MESA_SHADER_FRAGMENT) {
       /* Since this varying is not being consumed by the fragment shader, its
        * interpolation type varying cannot possibly affect rendering.  Also,
        * this variable is non-flat and is (or contains) an integer.
@@ -937,9 +942,22 @@ varying_matches::record(ir_variable *producer_var, ir_variable *consumer_var)
    this->matches[this->num_matches].packing_order
       = this->compute_packing_order(var);
    if (this->disable_varying_packing) {
-      unsigned slots = var->type->is_array()
-         ? (var->type->length * var->type->fields.array->matrix_columns)
-         : var->type->matrix_columns;
+      const struct glsl_type *type = var->type;
+      unsigned slots;
+
+      /* Some shader stages have 2-dimensional varyings. Use the inner type. */
+      if (!var->data.patch &&
+          ((var == producer_var && producer_stage == MESA_SHADER_TESS_CTRL) ||
+           (var == consumer_var && (consumer_stage == MESA_SHADER_TESS_CTRL ||
+                                    consumer_stage == MESA_SHADER_TESS_EVAL ||
+                                    consumer_stage == MESA_SHADER_GEOMETRY)))) {
+         assert(type->is_array());
+         type = type->fields.array;
+      }
+
+      slots = (type->is_array()
+            ? (type->length * type->fields.array->matrix_columns)
+            : type->matrix_columns);
       this->matches[this->num_matches].num_components = 4 * slots;
    } else {
       this->matches[this->num_matches].num_components
@@ -1388,7 +1406,8 @@ assign_varying_locations(struct gl_context *ctx,
       (producer && producer->Stage == MESA_SHADER_TESS_CTRL);
 
    varying_matches matches(disable_varying_packing,
-                           consumer && consumer->Stage == MESA_SHADER_FRAGMENT);
+                           producer ? producer->Stage : (gl_shader_stage)-1,
+                           consumer ? consumer->Stage : (gl_shader_stage)-1);
    hash_table *tfeedback_candidates
       = hash_table_ctor(0, hash_table_string_hash, hash_table_string_compare);
    hash_table *consumer_inputs
