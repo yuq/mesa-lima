@@ -67,6 +67,7 @@ type_size(const struct glsl_type *type)
       return 0;
    case GLSL_TYPE_IMAGE:
       return 0;
+   case GLSL_TYPE_FUNCTION:
    case GLSL_TYPE_VOID:
    case GLSL_TYPE_ERROR:
    case GLSL_TYPE_DOUBLE:

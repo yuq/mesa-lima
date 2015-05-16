@@ -34,6 +34,12 @@
 #include <string.h>
 #include "util/ralloc.h"
 
+extern "C" void
+_mesa_error_no_memory(const char *caller)
+{
+   fprintf(stderr, "Mesa error: out of memory in %s", caller);
+}
+
 void
 _mesa_warning(struct gl_context *ctx, const char *fmt, ...)
 {
