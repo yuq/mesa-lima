@@ -256,7 +256,36 @@ vtn_handle_type(struct vtn_builder *b, SpvOp opcode,
        */
       return vtn_value(b, args[1], vtn_value_type_type)->type;
 
-   case SpvOpTypeSampler:
+   case SpvOpTypeSampler: {
+      const struct glsl_type *sampled_type =
+         vtn_value(b, args[0], vtn_value_type_type)->type;
+
+      assert(glsl_type_is_vector_or_scalar(sampled_type));
+
+      enum glsl_sampler_dim dim;
+      switch ((SpvDim)args[1]) {
+      case SpvDim1D:       dim = GLSL_SAMPLER_DIM_1D;    break;
+      case SpvDim2D:       dim = GLSL_SAMPLER_DIM_2D;    break;
+      case SpvDim3D:       dim = GLSL_SAMPLER_DIM_3D;    break;
+      case SpvDimCube:     dim = GLSL_SAMPLER_DIM_CUBE;  break;
+      case SpvDimRect:     dim = GLSL_SAMPLER_DIM_RECT;  break;
+      case SpvDimBuffer:   dim = GLSL_SAMPLER_DIM_BUF;   break;
+      default:
+         unreachable("Invalid SPIR-V Sampler dimension");
+      }
+
+      /* TODO: Handle the various texture image/filter options */
+      (void)args[2];
+
+      bool is_array = args[3];
+      bool is_shadow = args[4];
+
+      assert(args[5] == 0 && "FIXME: Handl multi-sampled textures");
+
+      return glsl_sampler_type(dim, is_shadow, is_array,
+                               glsl_get_base_type(sampled_type));
+   }
+
    case SpvOpTypeRuntimeArray:
    case SpvOpTypeOpaque:
    case SpvOpTypeEvent:
@@ -559,10 +588,16 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
    }
 
    case SpvOpLoad: {
-      struct vtn_value *val = vtn_push_value(b, w[2], vtn_value_type_ssa);
       nir_deref_var *src = vtn_value(b, w[3], vtn_value_type_deref)->deref;
       const struct glsl_type *src_type = nir_deref_tail(&src->deref)->type;
+
+      if (glsl_get_base_type(src_type) == GLSL_TYPE_SAMPLER) {
+         vtn_push_value(b, w[2], vtn_value_type_deref)->deref = src;
+         return;
+      }
+
       assert(glsl_type_is_vector_or_scalar(src_type));
+      struct vtn_value *val = vtn_push_value(b, w[2], vtn_value_type_ssa);
 
       nir_intrinsic_instr *load =
          nir_intrinsic_instr_create(b->shader, nir_intrinsic_load_var);
@@ -635,11 +670,125 @@ vtn_handle_function_call(struct vtn_builder *b, SpvOp opcode,
    unreachable("Unhandled opcode");
 }
 
+static nir_tex_src
+vtn_tex_src(struct vtn_builder *b, unsigned index, nir_tex_src_type type)
+{
+   nir_tex_src src;
+   src.src = nir_src_for_ssa(vtn_value(b, index, vtn_value_type_ssa)->ssa);
+   src.src_type = type;
+   return src;
+}
+
 static void
 vtn_handle_texture(struct vtn_builder *b, SpvOp opcode,
                    const uint32_t *w, unsigned count)
 {
-   unreachable("Unhandled opcode");
+   struct vtn_value *val = vtn_push_value(b, w[2], vtn_value_type_ssa);
+   nir_deref_var *sampler = vtn_value(b, w[3], vtn_value_type_deref)->deref;
+
+   nir_tex_src srcs[8]; /* 8 should be enough */
+   nir_tex_src *p = srcs;
+
+   unsigned coord_components = 0;
+   switch (opcode) {
+   case SpvOpTextureSample:
+   case SpvOpTextureSampleDref:
+   case SpvOpTextureSampleLod:
+   case SpvOpTextureSampleProj:
+   case SpvOpTextureSampleGrad:
+   case SpvOpTextureSampleOffset:
+   case SpvOpTextureSampleProjLod:
+   case SpvOpTextureSampleProjGrad:
+   case SpvOpTextureSampleLodOffset:
+   case SpvOpTextureSampleProjOffset:
+   case SpvOpTextureSampleGradOffset:
+   case SpvOpTextureSampleProjLodOffset:
+   case SpvOpTextureSampleProjGradOffset:
+   case SpvOpTextureFetchTexelLod:
+   case SpvOpTextureFetchTexelOffset:
+   case SpvOpTextureFetchSample:
+   case SpvOpTextureFetchTexel:
+   case SpvOpTextureGather:
+   case SpvOpTextureGatherOffset:
+   case SpvOpTextureGatherOffsets:
+   case SpvOpTextureQueryLod: {
+      /* All these types have the coordinate as their first real argument */
+      struct vtn_value *coord = vtn_value(b, w[4], vtn_value_type_ssa);
+      coord_components = glsl_get_vector_elements(coord->type);
+      p->src = nir_src_for_ssa(coord->ssa);
+      p->src_type = nir_tex_src_coord;
+      p++;
+      break;
+   }
+   default:
+      break;
+   }
+
+   nir_texop texop;
+   switch (opcode) {
+   case SpvOpTextureSample:
+      texop = nir_texop_tex;
+
+      if (count == 6) {
+         texop = nir_texop_txb;
+         *p++ = vtn_tex_src(b, w[5], nir_tex_src_bias);
+      }
+      break;
+
+   case SpvOpTextureSampleDref:
+   case SpvOpTextureSampleLod:
+   case SpvOpTextureSampleProj:
+   case SpvOpTextureSampleGrad:
+   case SpvOpTextureSampleOffset:
+   case SpvOpTextureSampleProjLod:
+   case SpvOpTextureSampleProjGrad:
+   case SpvOpTextureSampleLodOffset:
+   case SpvOpTextureSampleProjOffset:
+   case SpvOpTextureSampleGradOffset:
+   case SpvOpTextureSampleProjLodOffset:
+   case SpvOpTextureSampleProjGradOffset:
+   case SpvOpTextureFetchTexelLod:
+   case SpvOpTextureFetchTexelOffset:
+   case SpvOpTextureFetchSample:
+   case SpvOpTextureFetchTexel:
+   case SpvOpTextureGather:
+   case SpvOpTextureGatherOffset:
+   case SpvOpTextureGatherOffsets:
+   case SpvOpTextureQuerySizeLod:
+   case SpvOpTextureQuerySize:
+   case SpvOpTextureQueryLod:
+   case SpvOpTextureQueryLevels:
+   case SpvOpTextureQuerySamples:
+   default:
+      unreachable("Unhandled opcode");
+   }
+
+   nir_tex_instr *instr = nir_tex_instr_create(b->shader, p - srcs);
+
+   const struct glsl_type *sampler_type = nir_deref_tail(&sampler->deref)->type;
+   instr->sampler_dim = glsl_get_sampler_dim(sampler_type);
+
+   switch (glsl_get_sampler_result_type(sampler_type)) {
+   case GLSL_TYPE_FLOAT:   instr->dest_type = nir_type_float;     break;
+   case GLSL_TYPE_INT:     instr->dest_type = nir_type_int;       break;
+   case GLSL_TYPE_UINT:    instr->dest_type = nir_type_unsigned;  break;
+   case GLSL_TYPE_BOOL:    instr->dest_type = nir_type_bool;      break;
+   default:
+      unreachable("Invalid base type for sampler result");
+   }
+
+   instr->op = texop;
+   memcpy(instr->src, srcs, instr->num_srcs * sizeof(*instr->src));
+   instr->coord_components = coord_components;
+   instr->is_array = glsl_sampler_type_is_array(sampler_type);
+   instr->is_shadow = glsl_sampler_type_is_shadow(sampler_type);
+
+   instr->sampler = sampler;
+
+   nir_ssa_dest_init(&instr->instr, &instr->dest, 4, NULL);
+   val->ssa = &instr->dest.ssa;
+
+   nir_builder_instr_insert(&b->nb, &instr->instr);
 }
 
 static void
