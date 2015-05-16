@@ -278,7 +278,7 @@ dump_gen8_surface_state(struct brw_context *brw, uint32_t offset, int index)
 
    name = ralloc_asprintf(NULL, "SURF%03d", index);
    batch_out(brw, name, offset, 0, "%s %s %s VALIGN%d HALIGN%d %s\n",
-             brw_surface_format_name(GET_FIELD(surf[0], BRW_SURFACE_TYPE)),
+             get_965_surfacetype(GET_FIELD(surf[0], BRW_SURFACE_TYPE)),
              brw_surface_format_name(GET_FIELD(surf[0], BRW_SURFACE_FORMAT)),
              (surf[0] & GEN7_SURFACE_IS_ARRAY) ? "array" : "",
              1 << (GET_BITS(surf[0], 17, 16) + 1), /* VALIGN */
