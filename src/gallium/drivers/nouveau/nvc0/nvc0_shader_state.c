@@ -147,9 +147,6 @@ nvc0_tctlprog_validate(struct nvc0_context *nvc0)
       PUSH_DATA (push, tp->code_base);
       BEGIN_NVC0(push, NVC0_3D(SP_GPR_ALLOC(2)), 1);
       PUSH_DATA (push, tp->num_gprs);
-
-      if (tp->tp.input_patch_size <= 32)
-         IMMED_NVC0(push, NVC0_3D(PATCH_VERTICES), tp->tp.input_patch_size);
    } else {
       BEGIN_NVC0(push, NVC0_3D(SP_SELECT(2)), 1);
       PUSH_DATA (push, 0x20);

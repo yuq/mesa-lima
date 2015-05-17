@@ -1021,6 +1021,7 @@ nvc0_screen_create(struct nouveau_device *dev)
    PUSH_DATA (push, 0x20);
    BEGIN_NVC0(push, NVC0_3D(SP_SELECT(0)), 1);
    PUSH_DATA (push, 0x00);
+   screen->save_state.patch_vertices = 3;
 
    BEGIN_NVC0(push, NVC0_3D(POINT_COORD_REPLACE), 1);
    PUSH_DATA (push, 0);

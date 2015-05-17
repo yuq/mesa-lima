@@ -888,6 +888,12 @@ nvc0_draw_vbo(struct pipe_context *pipe, const struct pipe_draw_info *info)
       }
    }
 
+   if (info->mode == PIPE_PRIM_PATCHES &&
+       nvc0->state.patch_vertices != info->vertices_per_patch) {
+      nvc0->state.patch_vertices = info->vertices_per_patch;
+      IMMED_NVC0(push, NVC0_3D(PATCH_VERTICES), nvc0->state.patch_vertices);
+   }
+
    /* 8 as minimum to avoid immediate double validation of new buffers */
    nvc0_state_validate(nvc0, ~0, 8);
 
