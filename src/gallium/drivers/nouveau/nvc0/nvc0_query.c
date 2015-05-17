@@ -25,6 +25,8 @@
 #define NVC0_PUSH_EXPLICIT_SPACE_CHECKING
 
 #include "nvc0/nvc0_context.h"
+#include "nvc0/nvc0_query.h"
+
 #include "nv_object.xml.h"
 #include "nvc0/nve4_compute.xml.h"
 #include "nvc0/nvc0_compute.xml.h"
@@ -34,26 +36,6 @@
 #define NVC0_QUERY_STATE_ENDED   2
 #define NVC0_QUERY_STATE_FLUSHED 3
 
-struct nvc0_query {
-   uint32_t *data;
-   uint16_t type;
-   uint16_t index;
-   int8_t ctr[4];
-   uint32_t sequence;
-   struct nouveau_bo *bo;
-   uint32_t base;
-   uint32_t offset; /* base + i * rotate */
-   uint8_t state;
-   bool is64bit;
-   uint8_t rotate;
-   int nesting; /* only used for occlusion queries */
-   union {
-      struct nouveau_mm_allocation *mm;
-      uint64_t value;
-   } u;
-   struct nouveau_fence *fence;
-};
-
 #define NVC0_QUERY_ALLOC_SPACE 256
 
 static boolean nvc0_hw_sm_query_begin(struct nvc0_context *,
@@ -61,12 +43,6 @@ static boolean nvc0_hw_sm_query_begin(struct nvc0_context *,
 static void nvc0_hw_sm_query_end(struct nvc0_context *, struct nvc0_query *);
 static boolean nvc0_hw_sm_query_result(struct nvc0_context *,
                                        struct nvc0_query *, void *, boolean);
-
-static inline struct nvc0_query *
-nvc0_query(struct pipe_query *pipe)
-{
-   return (struct nvc0_query *)pipe;
-}
 
 static bool
 nvc0_query_allocate(struct nvc0_context *nvc0, struct nvc0_query *q, int size)
@@ -523,9 +499,8 @@ nvc0_query_result(struct pipe_context *pipe, struct pipe_query *pq,
 }
 
 void
-nvc0_query_fifo_wait(struct nouveau_pushbuf *push, struct pipe_query *pq)
+nvc0_query_fifo_wait(struct nouveau_pushbuf *push, struct nvc0_query *q)
 {
-   struct nvc0_query *q = nvc0_query(pq);
    unsigned offset = q->offset;
 
    if (q->type == PIPE_QUERY_SO_OVERFLOW_PREDICATE) offset += 0x20;
@@ -596,7 +571,7 @@ nvc0_render_condition(struct pipe_context *pipe,
    }
 
    if (wait)
-      nvc0_query_fifo_wait(push, pq);
+      nvc0_query_fifo_wait(push, q);
 
    PUSH_SPACE(push, 7);
    PUSH_REFN (push, q->bo, NOUVEAU_BO_GART | NOUVEAU_BO_RD);
@@ -611,10 +586,8 @@ nvc0_render_condition(struct pipe_context *pipe,
 
 void
 nvc0_query_pushbuf_submit(struct nouveau_pushbuf *push,
-                          struct pipe_query *pq, unsigned result_offset)
+                          struct nvc0_query *q, unsigned result_offset)
 {
-   struct nvc0_query *q = nvc0_query(pq);
-
 #define NVC0_IB_ENTRY_1_NO_PREFETCH (1 << (31 - 8))
 
    PUSH_REFN(push, q->bo, NOUVEAU_BO_RD | NOUVEAU_BO_GART);

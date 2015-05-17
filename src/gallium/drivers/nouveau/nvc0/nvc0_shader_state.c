@@ -272,14 +272,14 @@ nvc0_tfb_validate(struct nvc0_context *nvc0)
          continue;
 
       if (!targ->clean)
-         nvc0_query_fifo_wait(push, targ->pq);
+         nvc0_query_fifo_wait(push, nvc0_query(targ->pq));
       BEGIN_NVC0(push, NVC0_3D(TFB_BUFFER_ENABLE(b)), 5);
       PUSH_DATA (push, 1);
       PUSH_DATAh(push, buf->address + targ->pipe.buffer_offset);
       PUSH_DATA (push, buf->address + targ->pipe.buffer_offset);
       PUSH_DATA (push, targ->pipe.buffer_size);
       if (!targ->clean) {
-         nvc0_query_pushbuf_submit(push, targ->pq, 0x4);
+         nvc0_query_pushbuf_submit(push, nvc0_query(targ->pq), 0x4);
       } else {
          PUSH_DATA(push, 0); /* TFB_BUFFER_OFFSET */
          targ->clean = false;

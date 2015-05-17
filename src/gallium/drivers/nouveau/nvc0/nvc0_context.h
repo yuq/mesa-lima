@@ -15,6 +15,7 @@
 #include "nvc0/nvc0_screen.h"
 #include "nvc0/nvc0_program.h"
 #include "nvc0/nvc0_resource.h"
+#include "nvc0/nvc0_query.h"
 
 #include "nv50/nv50_transfer.h"
 
@@ -230,17 +231,6 @@ void nvc0_program_library_upload(struct nvc0_context *);
 uint32_t nvc0_program_symbol_offset(const struct nvc0_program *,
                                     uint32_t label);
 void nvc0_program_init_tcp_empty(struct nvc0_context *);
-
-/* nvc0_query.c */
-void nvc0_init_query_functions(struct nvc0_context *);
-void nvc0_query_pushbuf_submit(struct nouveau_pushbuf *,
-                               struct pipe_query *, unsigned result_offset);
-void nvc0_query_fifo_wait(struct nouveau_pushbuf *, struct pipe_query *);
-void nvc0_so_target_save_offset(struct pipe_context *,
-                                struct pipe_stream_output_target *, unsigned i,
-                                bool *serialize);
-
-#define NVC0_QUERY_TFB_BUFFER_OFFSET (PIPE_QUERY_TYPES + 0)
 
 /* nvc0_shader_state.c */
 void nvc0_vertprog_validate(struct nvc0_context *);
