@@ -42,11 +42,17 @@ typedef struct VkDmaBufImageCreateInfo_
     uint32_t                                    strideInBytes;
 } VkDmaBufImageCreateInfo;
 
+typedef VkResult (VKAPI *PFN_vkCreateDmaBufImageINTEL)(VkDevice device, const VkDmaBufImageCreateInfo* pCreateInfo, VkDeviceMemory* pMem, VkImage* pImage);
+
+#ifdef VK_PROTOTYPES
+
 VkResult VKAPI vkCreateDmaBufImageINTEL(
     VkDevice                                    _device,
     const VkDmaBufImageCreateInfo*             pCreateInfo,
     VkDeviceMemory*                             pMem,
     VkImage*                                    pImage);
+
+#endif
 
 #ifdef __cplusplus
 } // extern "C"
