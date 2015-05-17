@@ -42,16 +42,14 @@ gen6_emit_draw_dynamic_viewports(struct ilo_render *r,
 {
    ILO_DEV_ASSERT(r->dev, 6, 6);
 
-   /* SF_VIEWPORT, CLIP_VIEWPORT, and CC_VIEWPORT */
-   if (DIRTY(VIEWPORT)) {
+   /* CLIP_VIEWPORT, SF_VIEWPORT, and CC_VIEWPORT */
+   if ((session->vp_delta.dirty & (ILO_STATE_VIEWPORT_SF_CLIP_VIEWPORT |
+                                   ILO_STATE_VIEWPORT_CC_VIEWPORT)) ||
+       r->state_bo_changed) {
       r->state.CLIP_VIEWPORT = gen6_CLIP_VIEWPORT(r->builder,
-            vec->viewport.cso, vec->viewport.count);
-
-      r->state.SF_VIEWPORT = gen6_SF_VIEWPORT(r->builder,
-            vec->viewport.cso, vec->viewport.count);
-
-      r->state.CC_VIEWPORT = gen6_CC_VIEWPORT(r->builder,
-            vec->viewport.cso, vec->viewport.count);
+            &vec->viewport.vp);
+      r->state.SF_VIEWPORT = gen6_SF_VIEWPORT(r->builder, &vec->viewport.vp);
+      r->state.CC_VIEWPORT = gen6_CC_VIEWPORT(r->builder, &vec->viewport.vp);
 
       session->viewport_changed = true;
    }
@@ -65,12 +63,12 @@ gen7_emit_draw_dynamic_viewports(struct ilo_render *r,
    ILO_DEV_ASSERT(r->dev, 7, 8);
 
    /* SF_CLIP_VIEWPORT and CC_VIEWPORT */
-   if (DIRTY(VIEWPORT)) {
+   if ((session->vp_delta.dirty & (ILO_STATE_VIEWPORT_SF_CLIP_VIEWPORT |
+                                   ILO_STATE_VIEWPORT_CC_VIEWPORT)) ||
+       r->state_bo_changed) {
       r->state.SF_CLIP_VIEWPORT = gen7_SF_CLIP_VIEWPORT(r->builder,
-            vec->viewport.cso, vec->viewport.count);
-
-      r->state.CC_VIEWPORT = gen6_CC_VIEWPORT(r->builder,
-            vec->viewport.cso, vec->viewport.count);
+            &vec->viewport.vp);
+      r->state.CC_VIEWPORT = gen6_CC_VIEWPORT(r->builder, &vec->viewport.vp);
 
       session->viewport_changed = true;
    }
@@ -84,10 +82,10 @@ gen6_emit_draw_dynamic_scissors(struct ilo_render *r,
    ILO_DEV_ASSERT(r->dev, 6, 8);
 
    /* SCISSOR_RECT */
-   if (DIRTY(SCISSOR) || DIRTY(VIEWPORT)) {
-      /* there should be as many scissors as there are viewports */
+   if ((session->vp_delta.dirty & ILO_STATE_VIEWPORT_SCISSOR_RECT) ||
+       r->state_bo_changed) {
       r->state.SCISSOR_RECT = gen6_SCISSOR_RECT(r->builder,
-            &vec->scissor, vec->viewport.count);
+            &vec->viewport.vp);
 
       session->scissor_changed = true;
    }
@@ -463,7 +461,7 @@ ilo_render_emit_rectlist_dynamic_states(struct ilo_render *render,
 
    if (blitter->uses & ILO_BLITTER_USE_VIEWPORT) {
       render->state.CC_VIEWPORT =
-         gen6_CC_VIEWPORT(render->builder, &blitter->viewport, 1);
+         gen6_CC_VIEWPORT(render->builder, &blitter->vp);
    }
 
    assert(ilo_builder_dynamic_used(render->builder) <= dynamic_used +

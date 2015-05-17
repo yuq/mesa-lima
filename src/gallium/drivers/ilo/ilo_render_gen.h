@@ -144,6 +144,8 @@ struct ilo_render_draw_session {
    bool prim_changed;
    bool primitive_restart_changed;
 
+   struct ilo_state_viewport_delta vp_delta;
+
    /* dynamic states */
    bool viewport_changed;
    bool scissor_changed;

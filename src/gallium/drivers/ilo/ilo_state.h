@@ -31,6 +31,7 @@
 #include "core/ilo_state_3d.h"
 #include "core/ilo_state_sampler.h"
 #include "core/ilo_state_surface.h"
+#include "core/ilo_state_viewport.h"
 #include "core/ilo_state_zs.h"
 #include "pipe/p_state.h"
 #include "util/u_dynarray.h"
@@ -169,6 +170,18 @@ struct ilo_view_state {
    unsigned count;
 };
 
+struct ilo_viewport_state {
+   struct ilo_state_viewport_matrix_info matrices[ILO_MAX_VIEWPORTS];
+   struct ilo_state_viewport_scissor_info scissors[ILO_MAX_VIEWPORTS];
+   struct ilo_state_viewport_params_info params;
+
+   struct pipe_viewport_state viewport0;
+   struct pipe_scissor_state scissor0;
+
+   struct ilo_state_viewport vp;
+   uint32_t vp_data[20 * ILO_MAX_VIEWPORTS];
+};
+
 struct ilo_global_binding_cso {
    struct pipe_resource *resource;
    uint32_t *handle;
@@ -208,8 +221,8 @@ struct ilo_state_vector {
    struct ilo_so_state so;
 
    struct pipe_clip_state clip;
+
    struct ilo_viewport_state viewport;
-   struct ilo_scissor_state scissor;
 
    const struct ilo_rasterizer_state *rasterizer;
    struct pipe_poly_stipple poly_stipple;

@@ -447,11 +447,19 @@ draw_session_prepare(struct ilo_render *render,
 
       session->prim_changed = true;
       session->primitive_restart_changed = true;
+
+      ilo_state_viewport_full_delta(&vec->viewport.vp, render->dev,
+            &session->vp_delta);
    } else {
       session->prim_changed =
          (render->state.reduced_prim != session->reduced_prim);
       session->primitive_restart_changed =
          (render->state.primitive_restart != vec->draw->primitive_restart);
+
+      if (vec->dirty & ILO_DIRTY_VIEWPORT) {
+         ilo_state_viewport_full_delta(&vec->viewport.vp, render->dev,
+               &session->vp_delta);
+      }
    }
 }
 

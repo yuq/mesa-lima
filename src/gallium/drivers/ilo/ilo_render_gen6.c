@@ -643,11 +643,18 @@ gen6_draw_clip(struct ilo_render *r,
        * unless we emulate viewport extent test on them.
        */
       if (ilo_dev_gen(r->dev) < ILO_GEN(8)) {
-         for (i = 0; i < vec->viewport.count; i++) {
-            const struct ilo_viewport_cso *vp = &vec->viewport.cso[i];
+         for (i = 0; i < vec->viewport.params.count; i++) {
+            const struct ilo_state_viewport_matrix_info *mat =
+               &vec->viewport.matrices[i];
+            float min_x, max_x, min_y, max_y;
 
-            if (vp->min_x > 0.0f || vp->max_x < vec->fb.state.width ||
-                vp->min_y > 0.0f || vp->max_y < vec->fb.state.height) {
+            min_x = -1.0f * fabsf(mat->scale[0]) + mat->translate[0];
+            max_x =  1.0f * fabsf(mat->scale[0]) + mat->translate[0];
+            min_y = -1.0f * fabsf(mat->scale[1]) + mat->translate[1];
+            max_y =  1.0f * fabsf(mat->scale[1]) + mat->translate[1];
+
+            if (min_x > 0.0f || max_x < vec->fb.state.width ||
+                min_y > 0.0f || max_y < vec->fb.state.height) {
                enable_guardband = false;
                break;
             }

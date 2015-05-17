@@ -35,6 +35,7 @@
 #include "ilo_core.h"
 #include "ilo_dev.h"
 #include "ilo_format.h"
+#include "ilo_state_viewport.h"
 #include "ilo_builder.h"
 #include "ilo_builder_3d_top.h"
 
@@ -1452,34 +1453,24 @@ gen7_3DSTATE_BLEND_STATE_POINTERS(struct ilo_builder *builder,
 
 static inline uint32_t
 gen6_CLIP_VIEWPORT(struct ilo_builder *builder,
-                   const struct ilo_viewport_cso *viewports,
-                   unsigned num_viewports)
+                   const struct ilo_state_viewport *vp)
 {
    const int state_align = 32;
-   const int state_len = 4 * num_viewports;
+   const int state_len = 4 * vp->count;
    uint32_t state_offset, *dw;
-   unsigned i;
+   int i;
 
    ILO_DEV_ASSERT(builder->dev, 6, 6);
-
-   /*
-    * From the Sandy Bridge PRM, volume 2 part 1, page 193:
-    *
-    *     "The viewport-related state is stored as an array of up to 16
-    *      elements..."
-    */
-   assert(num_viewports && num_viewports <= 16);
 
    state_offset = ilo_builder_dynamic_pointer(builder,
          ILO_BUILDER_ITEM_CLIP_VIEWPORT, state_align, state_len, &dw);
 
-   for (i = 0; i < num_viewports; i++) {
-      const struct ilo_viewport_cso *vp = &viewports[i];
-
-      dw[0] = fui(vp->min_gbx);
-      dw[1] = fui(vp->max_gbx);
-      dw[2] = fui(vp->min_gby);
-      dw[3] = fui(vp->max_gby);
+   for (i = 0; i < vp->count; i++) {
+      /* see viewport_matrix_set_gen7_SF_CLIP_VIEWPORT() */
+      dw[0] = vp->sf_clip[i][8];
+      dw[1] = vp->sf_clip[i][9];
+      dw[2] = vp->sf_clip[i][10];
+      dw[3] = vp->sf_clip[i][11];
 
       dw += 4;
    }
@@ -1489,38 +1480,21 @@ gen6_CLIP_VIEWPORT(struct ilo_builder *builder,
 
 static inline uint32_t
 gen6_SF_VIEWPORT(struct ilo_builder *builder,
-                 const struct ilo_viewport_cso *viewports,
-                 unsigned num_viewports)
+                 const struct ilo_state_viewport *vp)
 {
    const int state_align = 32;
-   const int state_len = 8 * num_viewports;
+   const int state_len = 8 * vp->count;
    uint32_t state_offset, *dw;
-   unsigned i;
+   int i;
 
    ILO_DEV_ASSERT(builder->dev, 6, 6);
-
-   /*
-    * From the Sandy Bridge PRM, volume 2 part 1, page 262:
-    *
-    *     "The viewport-specific state used by the SF unit (SF_VIEWPORT) is
-    *      stored as an array of up to 16 elements..."
-    */
-   assert(num_viewports && num_viewports <= 16);
 
    state_offset = ilo_builder_dynamic_pointer(builder,
          ILO_BUILDER_ITEM_SF_VIEWPORT, state_align, state_len, &dw);
 
-   for (i = 0; i < num_viewports; i++) {
-      const struct ilo_viewport_cso *vp = &viewports[i];
-
-      dw[0] = fui(vp->m00);
-      dw[1] = fui(vp->m11);
-      dw[2] = fui(vp->m22);
-      dw[3] = fui(vp->m30);
-      dw[4] = fui(vp->m31);
-      dw[5] = fui(vp->m32);
-      dw[6] = 0;
-      dw[7] = 0;
+   for (i = 0; i < vp->count; i++) {
+      /* see viewport_matrix_set_gen7_SF_CLIP_VIEWPORT() */
+      memcpy(dw, vp->sf_clip[i], sizeof(*dw) * 8);
 
       dw += 8;
    }
@@ -1530,121 +1504,44 @@ gen6_SF_VIEWPORT(struct ilo_builder *builder,
 
 static inline uint32_t
 gen7_SF_CLIP_VIEWPORT(struct ilo_builder *builder,
-                      const struct ilo_viewport_cso *viewports,
-                      unsigned num_viewports)
+                      const struct ilo_state_viewport *vp)
 {
    const int state_align = 64;
-   const int state_len = 16 * num_viewports;
-   uint32_t state_offset, *dw;
-   unsigned i;
+   const int state_len = 16 * vp->count;
 
    ILO_DEV_ASSERT(builder->dev, 7, 8);
 
-   /*
-    * From the Ivy Bridge PRM, volume 2 part 1, page 270:
-    *
-    *     "The viewport-specific state used by both the SF and CL units
-    *      (SF_CLIP_VIEWPORT) is stored as an array of up to 16 elements, each
-    *      of which contains the DWords described below. The start of each
-    *      element is spaced 16 DWords apart. The location of first element of
-    *      the array, as specified by both Pointer to SF_VIEWPORT and Pointer
-    *      to CLIP_VIEWPORT, is aligned to a 64-byte boundary."
-    */
-   assert(num_viewports && num_viewports <= 16);
-
-   state_offset = ilo_builder_dynamic_pointer(builder,
-         ILO_BUILDER_ITEM_SF_VIEWPORT, state_align, state_len, &dw);
-
-   for (i = 0; i < num_viewports; i++) {
-      const struct ilo_viewport_cso *vp = &viewports[i];
-
-      dw[0] = fui(vp->m00);
-      dw[1] = fui(vp->m11);
-      dw[2] = fui(vp->m22);
-      dw[3] = fui(vp->m30);
-      dw[4] = fui(vp->m31);
-      dw[5] = fui(vp->m32);
-      dw[6] = 0;
-      dw[7] = 0;
-
-      dw[8] = fui(vp->min_gbx);
-      dw[9] = fui(vp->max_gbx);
-      dw[10] = fui(vp->min_gby);
-      dw[11] = fui(vp->max_gby);
-
-      if (ilo_dev_gen(builder->dev) >= ILO_GEN(8)) {
-         dw[12] = fui(vp->min_x);
-         dw[13] = fui(vp->max_x - 1.0f);
-         dw[14] = fui(vp->min_y);
-         dw[15] = fui(vp->max_y - 1.0f);
-      } else {
-         dw[12] = 0;
-         dw[13] = 0;
-         dw[14] = 0;
-         dw[15] = 0;
-      }
-
-      dw += 16;
-   }
-
-   return state_offset;
+   /* see viewport_matrix_set_gen7_SF_CLIP_VIEWPORT() */
+   return ilo_builder_dynamic_write(builder, ILO_BUILDER_ITEM_SF_VIEWPORT,
+         state_align, state_len, (const uint32_t *) vp->sf_clip);
 }
 
 static inline uint32_t
 gen6_CC_VIEWPORT(struct ilo_builder *builder,
-                 const struct ilo_viewport_cso *viewports,
-                 unsigned num_viewports)
+                 const struct ilo_state_viewport *vp)
 {
    const int state_align = 32;
-   const int state_len = 2 * num_viewports;
-   uint32_t state_offset, *dw;
-   unsigned i;
+   const int state_len = 2 * vp->count;
 
    ILO_DEV_ASSERT(builder->dev, 6, 8);
 
-   /*
-    * From the Sandy Bridge PRM, volume 2 part 1, page 385:
-    *
-    *     "The viewport state is stored as an array of up to 16 elements..."
-    */
-   assert(num_viewports && num_viewports <= 16);
-
-   state_offset = ilo_builder_dynamic_pointer(builder,
-         ILO_BUILDER_ITEM_CC_VIEWPORT, state_align, state_len, &dw);
-
-   for (i = 0; i < num_viewports; i++) {
-      const struct ilo_viewport_cso *vp = &viewports[i];
-
-      dw[0] = fui(vp->min_z);
-      dw[1] = fui(vp->max_z);
-
-      dw += 2;
-   }
-
-   return state_offset;
+   /* see viewport_matrix_set_gen6_CC_VIEWPORT() */
+   return ilo_builder_dynamic_write(builder, ILO_BUILDER_ITEM_CC_VIEWPORT,
+         state_align, state_len, (const uint32_t *) vp->cc);
 }
 
 static inline uint32_t
 gen6_SCISSOR_RECT(struct ilo_builder *builder,
-                  const struct ilo_scissor_state *scissor,
-                  unsigned num_viewports)
+                  const struct ilo_state_viewport *vp)
 {
    const int state_align = 32;
-   const int state_len = 2 * num_viewports;
+   const int state_len = 2 * vp->count;
 
    ILO_DEV_ASSERT(builder->dev, 6, 8);
 
-   /*
-    * From the Sandy Bridge PRM, volume 2 part 1, page 263:
-    *
-    *     "The viewport-specific state used by the SF unit (SCISSOR_RECT) is
-    *      stored as an array of up to 16 elements..."
-    */
-   assert(num_viewports && num_viewports <= 16);
-   assert(Elements(scissor->payload) >= state_len);
-
+   /* see viewport_scissor_set_gen6_SCISSOR_RECT() */
    return ilo_builder_dynamic_write(builder, ILO_BUILDER_ITEM_SCISSOR_RECT,
-         state_align, state_len, scissor->payload);
+         state_align, state_len, (const uint32_t *) vp->scissor);
 }
 
 static inline uint32_t

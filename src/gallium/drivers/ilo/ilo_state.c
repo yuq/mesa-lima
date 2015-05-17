@@ -330,6 +330,22 @@ finalize_vertex_elements(struct ilo_context *ilo)
    }
 }
 
+static void
+finalize_viewport(struct ilo_context *ilo)
+{
+   const struct ilo_dev *dev = ilo->dev;
+   struct ilo_state_vector *vec = &ilo->state_vector;
+
+   if (vec->dirty & ILO_DIRTY_VIEWPORT) {
+      ilo_state_viewport_set_params(&vec->viewport.vp,
+            dev, &vec->viewport.params, false);
+   } else if (vec->dirty & ILO_DIRTY_SCISSOR) {
+      ilo_state_viewport_set_params(&vec->viewport.vp,
+            dev, &vec->viewport.params, true);
+      vec->dirty |= ILO_DIRTY_VIEWPORT;
+   }
+}
+
 /**
  * Finalize states.  Some states depend on other states and are
  * incomplete/invalid until finalized.
@@ -344,6 +360,8 @@ ilo_finalize_3d_states(struct ilo_context *ilo,
    finalize_constant_buffers(ilo);
    finalize_index_buffer(ilo);
    finalize_vertex_elements(ilo);
+
+   finalize_viewport(ilo);
 
    u_upload_unmap(ilo->uploader);
 }
@@ -933,11 +951,26 @@ ilo_set_scissor_states(struct pipe_context *pipe,
                        unsigned num_scissors,
                        const struct pipe_scissor_state *scissors)
 {
-   const struct ilo_dev *dev = ilo_context(pipe)->dev;
    struct ilo_state_vector *vec = &ilo_context(pipe)->state_vector;
+   unsigned i;
 
-   ilo_gpe_set_scissor(dev, start_slot, num_scissors,
-         scissors, &vec->scissor);
+   for (i = 0; i < num_scissors; i++) {
+      struct ilo_state_viewport_scissor_info *info =
+         &vec->viewport.scissors[start_slot + i];
+
+      if (scissors[i].minx < scissors[i].maxx &&
+          scissors[i].miny < scissors[i].maxy) {
+         info->min_x = scissors[i].minx;
+         info->min_y = scissors[i].miny;
+         info->max_x = scissors[i].maxx - 1;
+         info->max_y = scissors[i].maxy - 1;
+      } else {
+         info->min_x = 1;
+         info->min_y = 1;
+         info->max_x = 0;
+         info->max_y = 0;
+      }
+   }
 
    vec->dirty |= ILO_DIRTY_SCISSOR;
 }
@@ -948,28 +981,31 @@ ilo_set_viewport_states(struct pipe_context *pipe,
                         unsigned num_viewports,
                         const struct pipe_viewport_state *viewports)
 {
-   const struct ilo_dev *dev = ilo_context(pipe)->dev;
    struct ilo_state_vector *vec = &ilo_context(pipe)->state_vector;
 
    if (viewports) {
       unsigned i;
 
       for (i = 0; i < num_viewports; i++) {
-         ilo_gpe_set_viewport_cso(dev, &viewports[i],
-               &vec->viewport.cso[start_slot + i]);
+         struct ilo_state_viewport_matrix_info *info =
+            &vec->viewport.matrices[start_slot + i];
+
+         memcpy(info->scale, viewports[i].scale, sizeof(info->scale));
+         memcpy(info->translate, viewports[i].translate,
+               sizeof(info->translate));
       }
 
-      if (vec->viewport.count < start_slot + num_viewports)
-         vec->viewport.count = start_slot + num_viewports;
+      if (vec->viewport.params.count < start_slot + num_viewports)
+         vec->viewport.params.count = start_slot + num_viewports;
 
       /* need to save viewport 0 for util_blitter */
       if (!start_slot && num_viewports)
          vec->viewport.viewport0 = viewports[0];
    }
    else {
-      if (vec->viewport.count <= start_slot + num_viewports &&
-          vec->viewport.count > start_slot)
-         vec->viewport.count = start_slot;
+      if (vec->viewport.params.count <= start_slot + num_viewports &&
+          vec->viewport.params.count > start_slot)
+         vec->viewport.params.count = start_slot;
    }
 
    vec->dirty |= ILO_DIRTY_VIEWPORT;
@@ -1530,7 +1566,12 @@ void
 ilo_state_vector_init(const struct ilo_dev *dev,
                       struct ilo_state_vector *vec)
 {
-   ilo_gpe_set_scissor_null(dev, &vec->scissor);
+   ilo_state_viewport_init_data_only(&vec->viewport.vp, dev,
+         vec->viewport.vp_data, sizeof(vec->viewport.vp_data));
+   assert(vec->viewport.vp.array_size >= ILO_MAX_VIEWPORTS);
+
+   vec->viewport.params.matrices = vec->viewport.matrices;
+   vec->viewport.params.scissors = vec->viewport.scissors;
 
    ilo_state_surface_init_for_null(&vec->fb.null_rt, dev);
    ilo_state_zs_init_for_null(&vec->fb.null_zs, dev);

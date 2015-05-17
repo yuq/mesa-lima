@@ -41,7 +41,6 @@ static bool
 ilo_blitter_set_invariants(struct ilo_blitter *blitter)
 {
    struct pipe_vertex_element velem;
-   struct pipe_viewport_state vp;
 
    if (blitter->initialized)
       return true;
@@ -69,16 +68,13 @@ ilo_blitter_set_invariants(struct ilo_blitter *blitter)
     * From the Haswell PRM, volume 7, page 615:
     *
     *     "The clear value must be between the min and max depth values
-    *     (inclusive) defined in the CC_VIEWPORT."
+    *      (inclusive) defined in the CC_VIEWPORT."
     *
     * Even though clipping and viewport transformation will be disabled, we
     * still need to set up the viewport states.
     */
-   memset(&vp, 0, sizeof(vp));
-   vp.scale[0] = 1.0f;
-   vp.scale[1] = 1.0f;
-   vp.scale[2] = 1.0f;
-   ilo_gpe_set_viewport_cso(blitter->ilo->dev, &vp, &blitter->viewport);
+   ilo_state_viewport_init_for_rectlist(&blitter->vp, blitter->ilo->dev,
+         blitter->vp_data, sizeof(blitter->vp_data));
 
    blitter->initialized = true;
 

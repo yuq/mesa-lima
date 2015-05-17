@@ -101,32 +101,6 @@ struct ilo_so_state {
    bool enabled;
 };
 
-struct ilo_viewport_cso {
-   /* matrix form */
-   float m00, m11, m22, m30, m31, m32;
-
-   /* guardband in NDC space */
-   float min_gbx, min_gby, max_gbx, max_gby;
-
-   /* viewport in screen space */
-   float min_x, min_y, min_z;
-   float max_x, max_y, max_z;
-};
-
-struct ilo_viewport_state {
-   struct ilo_viewport_cso cso[ILO_MAX_VIEWPORTS];
-   unsigned count;
-
-   struct pipe_viewport_state viewport0;
-};
-
-struct ilo_scissor_state {
-   /* SCISSOR_RECT */
-   uint32_t payload[ILO_MAX_VIEWPORTS * 2];
-
-   struct pipe_scissor_state scissor0;
-};
-
 struct ilo_rasterizer_clip {
    /* 3DSTATE_CLIP */
    uint32_t payload[3];
@@ -239,22 +213,6 @@ void
 ilo_gpe_init_ve_nosrc(const struct ilo_dev *dev,
                       int comp0, int comp1, int comp2, int comp3,
                       struct ilo_ve_cso *cso);
-
-void
-ilo_gpe_set_viewport_cso(const struct ilo_dev *dev,
-                         const struct pipe_viewport_state *state,
-                         struct ilo_viewport_cso *vp);
-
-void
-ilo_gpe_set_scissor(const struct ilo_dev *dev,
-                    unsigned start_slot,
-                    unsigned num_states,
-                    const struct pipe_scissor_state *states,
-                    struct ilo_scissor_state *scissor);
-
-void
-ilo_gpe_set_scissor_null(const struct ilo_dev *dev,
-                         struct ilo_scissor_state *scissor);
 
 void
 ilo_gpe_init_rasterizer(const struct ilo_dev *dev,
