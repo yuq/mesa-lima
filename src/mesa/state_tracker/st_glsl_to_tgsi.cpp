@@ -5549,6 +5549,7 @@ get_mesa_program(struct gl_context *ctx,
     */
    _mesa_associate_uniform_storage(ctx, shader_program, prog->Parameters);
    if (!shader_program->LinkStatus) {
+      free_glsl_to_tgsi_visitor(v);
       return NULL;
    }
 
