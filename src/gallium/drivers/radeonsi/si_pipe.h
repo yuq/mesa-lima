@@ -136,6 +136,7 @@ struct si_context {
 	struct si_screen		*screen;
 	struct si_pm4_state		*init_config;
 	struct pipe_fence_handle	*last_gfx_fence;
+	struct si_shader_selector	*fixed_func_tcs_shader;
 
 	union {
 		struct {

@@ -2895,6 +2895,30 @@ static void si_set_polygon_stipple(struct pipe_context *ctx,
 	}
 }
 
+static void si_set_tess_state(struct pipe_context *ctx,
+			      const float default_outer_level[4],
+			      const float default_inner_level[2])
+{
+	struct si_context *sctx = (struct si_context *)ctx;
+	struct pipe_constant_buffer cb;
+	float array[8];
+
+	memcpy(array, default_outer_level, sizeof(float) * 4);
+	memcpy(array+4, default_inner_level, sizeof(float) * 2);
+
+	cb.buffer = NULL;
+	cb.user_buffer = NULL;
+	cb.buffer_size = sizeof(array);
+
+	si_upload_const_buffer(sctx, (struct r600_resource**)&cb.buffer,
+			       (void*)array, sizeof(array),
+			       &cb.buffer_offset);
+
+	ctx->set_constant_buffer(ctx, PIPE_SHADER_TESS_CTRL,
+				 SI_DRIVER_STATE_CONST_BUF, &cb);
+	pipe_resource_reference(&cb.buffer, NULL);
+}
+
 static void si_texture_barrier(struct pipe_context *ctx)
 {
 	struct si_context *sctx = (struct si_context *)ctx;
@@ -2972,6 +2996,7 @@ void si_init_state_functions(struct si_context *sctx)
 	sctx->b.b.texture_barrier = si_texture_barrier;
 	sctx->b.b.set_polygon_stipple = si_set_polygon_stipple;
 	sctx->b.b.set_min_samples = si_set_min_samples;
+	sctx->b.b.set_tess_state = si_set_tess_state;
 
 	sctx->b.set_occlusion_query_state = si_set_occlusion_query_state;
 	sctx->b.need_gfx_cs_space = si_need_gfx_cs_space;

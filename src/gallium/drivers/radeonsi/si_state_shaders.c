@@ -30,6 +30,7 @@
 #include "sid.h"
 
 #include "tgsi/tgsi_parse.h"
+#include "tgsi/tgsi_ureg.h"
 #include "util/u_memory.h"
 #include "util/u_simple_shaders.h"
 
@@ -1149,6 +1150,40 @@ static void si_init_tess_factor_ring(struct si_context *sctx)
 	sctx->b.flags |= SI_CONTEXT_VGT_FLUSH;
 }
 
+/**
+ * This is used when TCS is NULL in the VS->TCS->TES chain. In this case,
+ * VS passes its outputs to TES directly, so the fixed-function shader only
+ * has to write TESSOUTER and TESSINNER.
+ */
+static void si_generate_fixed_func_tcs(struct si_context *sctx)
+{
+	struct ureg_src const0, const1;
+	struct ureg_dst tessouter, tessinner;
+	struct ureg_program *ureg = ureg_create(TGSI_PROCESSOR_TESS_CTRL);
+
+	if (!ureg)
+		return; /* if we get here, we're screwed */
+
+	assert(!sctx->fixed_func_tcs_shader);
+
+	ureg_DECL_constant2D(ureg, 0, 1, SI_DRIVER_STATE_CONST_BUF);
+	const0 = ureg_src_dimension(ureg_src_register(TGSI_FILE_CONSTANT, 0),
+				    SI_DRIVER_STATE_CONST_BUF);
+	const1 = ureg_src_dimension(ureg_src_register(TGSI_FILE_CONSTANT, 1),
+				    SI_DRIVER_STATE_CONST_BUF);
+
+	tessouter = ureg_DECL_output(ureg, TGSI_SEMANTIC_TESSOUTER, 0);
+	tessinner = ureg_DECL_output(ureg, TGSI_SEMANTIC_TESSINNER, 0);
+
+	ureg_MOV(ureg, tessouter, const0);
+	ureg_MOV(ureg, tessinner, const1);
+	ureg_END(ureg);
+
+	sctx->fixed_func_tcs_shader =
+		ureg_create_shader_and_destroy(ureg, &sctx->b.b);
+	assert(sctx->fixed_func_tcs_shader);
+}
+
 static void si_update_vgt_shader_config(struct si_context *sctx)
 {
 	/* Calculate the index of the config.
@@ -1202,7 +1237,11 @@ void si_update_shaders(struct si_context *sctx)
 			si_shader_select(ctx, sctx->tcs_shader);
 			si_pm4_bind_state(sctx, hs, sctx->tcs_shader->current->pm4);
 		} else {
-			assert(!"generate TCS shader");
+			if (!sctx->fixed_func_tcs_shader)
+				si_generate_fixed_func_tcs(sctx);
+			si_shader_select(ctx, sctx->fixed_func_tcs_shader);
+			si_pm4_bind_state(sctx, hs,
+					  sctx->fixed_func_tcs_shader->current->pm4);
 		}
 
 		si_shader_select(ctx, sctx->tes_shader);
