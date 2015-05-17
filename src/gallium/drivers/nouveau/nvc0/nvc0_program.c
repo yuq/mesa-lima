@@ -46,7 +46,6 @@ nvc0_shader_input_address(unsigned sn, unsigned si, unsigned ubase)
    case TGSI_SEMANTIC_FOG:          return 0x2e8;
    case TGSI_SEMANTIC_COLOR:        return 0x280 + si * 0x10;
    case TGSI_SEMANTIC_BCOLOR:       return 0x2a0 + si * 0x10;
-   case NV50_SEMANTIC_CLIPDISTANCE: return 0x2c0 + si * 0x4;
    case TGSI_SEMANTIC_CLIPDIST:     return 0x2c0 + si * 0x10;
    case TGSI_SEMANTIC_CLIPVERTEX:   return 0x270;
    case TGSI_SEMANTIC_PCOORD:       return 0x2e0;
@@ -77,7 +76,6 @@ nvc0_shader_output_address(unsigned sn, unsigned si, unsigned ubase)
    case TGSI_SEMANTIC_FOG:           return 0x2e8;
    case TGSI_SEMANTIC_COLOR:         return 0x280 + si * 0x10;
    case TGSI_SEMANTIC_BCOLOR:        return 0x2a0 + si * 0x10;
-   case NV50_SEMANTIC_CLIPDISTANCE:  return 0x2c0 + si * 0x4;
    case TGSI_SEMANTIC_CLIPDIST:      return 0x2c0 + si * 0x10;
    case TGSI_SEMANTIC_CLIPVERTEX:    return 0x270;
    case TGSI_SEMANTIC_TEXCOORD:      return 0x300 + si * 0x10;

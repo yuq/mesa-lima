@@ -69,11 +69,6 @@ struct nv50_ir_varying
 # define NV50_IR_DEBUG_REG_ALLOC 0
 #endif
 
-#define NV50_SEMANTIC_CLIPDISTANCE  (TGSI_SEMANTIC_COUNT + 0)
-#define NV50_SEMANTIC_COUNT         (TGSI_SEMANTIC_COUNT + 10)
-
-#define NV50_PRIM_PATCHES PIPE_PRIM_MAX
-
 struct nv50_ir_prog_symbol
 {
    uint32_t label;
