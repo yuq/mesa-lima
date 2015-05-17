@@ -1019,8 +1019,7 @@ ilo_create_sampler_view(struct pipe_context *pipe,
                   "not created for sampling\n");
       }
 
-      ilo_gpe_init_view_surface_for_image(dev, &tex->image,
-            tex->base.target, templ->format,
+      ilo_gpe_init_view_surface_for_image(dev, &tex->image, templ->format,
             templ->u.tex.first_level,
             templ->u.tex.last_level - templ->u.tex.first_level + 1,
             templ->u.tex.first_layer,
@@ -1066,8 +1065,7 @@ ilo_create_surface(struct pipe_context *pipe,
       /* relax this? */
       assert(tex->base.target != PIPE_BUFFER);
 
-      ilo_gpe_init_view_surface_for_image(dev,
-            &tex->image, tex->base.target,
+      ilo_gpe_init_view_surface_for_image(dev, &tex->image,
             templ->format, templ->u.tex.level, 1,
             templ->u.tex.first_layer,
             templ->u.tex.last_layer - templ->u.tex.first_layer + 1,
@@ -1077,7 +1075,7 @@ ilo_create_surface(struct pipe_context *pipe,
 
       ilo_gpe_init_zs_surface(dev, &tex->image,
             (tex->separate_s8) ? &tex->separate_s8->image : NULL,
-            tex->base.target, templ->format,
+            templ->format,
             templ->u.tex.level, templ->u.tex.first_layer,
             templ->u.tex.last_layer - templ->u.tex.first_layer + 1,
             &surf->u.zs);
@@ -1292,7 +1290,7 @@ ilo_state_vector_init(const struct ilo_dev *dev,
 {
    ilo_gpe_set_scissor_null(dev, &vec->scissor);
 
-   ilo_gpe_init_zs_surface(dev, NULL, NULL, PIPE_TEXTURE_2D,
+   ilo_gpe_init_zs_surface(dev, NULL, NULL,
          PIPE_FORMAT_NONE, 0, 0, 1, &vec->fb.null_zs);
 
    util_dynarray_init(&vec->global_binding.bindings);

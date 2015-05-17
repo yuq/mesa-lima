@@ -675,6 +675,7 @@ img_init_size_and_format(struct ilo_image *img,
    enum pipe_format format = templ->format;
    bool require_separate_stencil = false;
 
+   img->target = templ->target;
    img->width0 = templ->width0;
    img->height0 = templ->height0;
    img->depth0 = templ->depth0;
@@ -1343,6 +1344,7 @@ img_init_for_transfer(struct ilo_image *img,
 
    img->aux.type = ILO_IMAGE_AUX_NONE;
 
+   img->target = templ->target;
    img->width0 = templ->width0;
    img->height0 = templ->height0;
    img->depth0 = templ->depth0;

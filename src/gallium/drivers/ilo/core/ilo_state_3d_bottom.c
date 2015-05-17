@@ -936,7 +936,6 @@ static void
 zs_init_info(const struct ilo_dev *dev,
              const struct ilo_image *img,
              const struct ilo_image *s8_img,
-             enum pipe_texture_target target,
              enum pipe_format format, unsigned level,
              unsigned first_layer, unsigned num_layers,
              struct ilo_zs_surface_info *info)
@@ -947,7 +946,7 @@ zs_init_info(const struct ilo_dev *dev,
 
    memset(info, 0, sizeof(*info));
 
-   info->surface_type = ilo_gpe_gen6_translate_texture(target);
+   info->surface_type = ilo_gpe_gen6_translate_texture(img->target);
 
    if (info->surface_type == GEN6_SURFTYPE_CUBE) {
       /*
@@ -1086,7 +1085,7 @@ zs_init_info(const struct ilo_dev *dev,
 
    info->width = img->width0;
    info->height = img->height0;
-   info->depth = (target == PIPE_TEXTURE_3D) ? img->depth0 : num_layers;
+   info->depth = (img->target == PIPE_TEXTURE_3D) ? img->depth0 : num_layers;
 
    info->lod = level;
    info->first_layer = first_layer;
@@ -1097,7 +1096,6 @@ void
 ilo_gpe_init_zs_surface(const struct ilo_dev *dev,
                         const struct ilo_image *img,
                         const struct ilo_image *s8_img,
-                        enum pipe_texture_target target,
                         enum pipe_format format, unsigned level,
                         unsigned first_layer, unsigned num_layers,
                         struct ilo_zs_surface *zs)
@@ -1111,7 +1109,7 @@ ilo_gpe_init_zs_surface(const struct ilo_dev *dev,
    ILO_DEV_ASSERT(dev, 6, 8);
 
    if (img) {
-      zs_init_info(dev, img, s8_img, target, format,
+      zs_init_info(dev, img, s8_img, format,
             level, first_layer, num_layers, &info);
 
       switch (img->sample_count) {

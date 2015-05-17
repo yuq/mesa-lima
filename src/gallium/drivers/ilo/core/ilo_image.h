@@ -88,6 +88,8 @@ struct ilo_image_lod {
  * Texture layout.
  */
 struct ilo_image {
+   enum pipe_texture_target target;
+
    /* size, format, etc for programming hardware states */
    unsigned width0;
    unsigned height0;

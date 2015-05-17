@@ -386,7 +386,6 @@ ilo_gpe_init_view_surface_for_buffer(const struct ilo_dev *dev,
 void
 ilo_gpe_init_view_surface_for_image(const struct ilo_dev *dev,
                                     const struct ilo_image *img,
-                                    enum pipe_texture_target target,
                                     enum pipe_format format,
                                     unsigned first_level,
                                     unsigned num_levels,
@@ -399,7 +398,6 @@ void
 ilo_gpe_init_zs_surface(const struct ilo_dev *dev,
                         const struct ilo_image *img,
                         const struct ilo_image *s8_img,
-                        enum pipe_texture_target target,
                         enum pipe_format format, unsigned level,
                         unsigned first_layer, unsigned num_layers,
                         struct ilo_zs_surface *zs);

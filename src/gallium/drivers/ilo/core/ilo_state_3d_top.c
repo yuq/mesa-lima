@@ -554,7 +554,6 @@ view_init_for_buffer_gen6(const struct ilo_dev *dev,
 static void
 view_init_for_image_gen6(const struct ilo_dev *dev,
                          const struct ilo_image *img,
-                         enum pipe_texture_target target,
                          enum pipe_format format,
                          unsigned first_level,
                          unsigned num_levels,
@@ -569,7 +568,7 @@ view_init_for_image_gen6(const struct ilo_dev *dev,
 
    ILO_DEV_ASSERT(dev, 6, 6);
 
-   surface_type = ilo_gpe_gen6_translate_texture(target);
+   surface_type = ilo_gpe_gen6_translate_texture(img->target);
    assert(surface_type != GEN6_SURFTYPE_BUFFER);
 
    if (format == PIPE_FORMAT_Z32_FLOAT_S8X24_UINT && img->separate_stencil)
@@ -583,7 +582,7 @@ view_init_for_image_gen6(const struct ilo_dev *dev,
 
    width = img->width0;
    height = img->height0;
-   depth = (target == PIPE_TEXTURE_3D) ? img->depth0 : num_layers;
+   depth = (img->target == PIPE_TEXTURE_3D) ? img->depth0 : num_layers;
    pitch = img->bo_stride;
 
    if (surface_type == GEN6_SURFTYPE_CUBE) {
@@ -910,7 +909,6 @@ view_init_for_buffer_gen7(const struct ilo_dev *dev,
 static void
 view_init_for_image_gen7(const struct ilo_dev *dev,
                          const struct ilo_image *img,
-                         enum pipe_texture_target target,
                          enum pipe_format format,
                          unsigned first_level,
                          unsigned num_levels,
@@ -925,7 +923,7 @@ view_init_for_image_gen7(const struct ilo_dev *dev,
 
    ILO_DEV_ASSERT(dev, 7, 8);
 
-   surface_type = ilo_gpe_gen6_translate_texture(target);
+   surface_type = ilo_gpe_gen6_translate_texture(img->target);
    assert(surface_type != GEN6_SURFTYPE_BUFFER);
 
    if (format == PIPE_FORMAT_Z32_FLOAT_S8X24_UINT && img->separate_stencil)
@@ -939,7 +937,7 @@ view_init_for_image_gen7(const struct ilo_dev *dev,
 
    width = img->width0;
    height = img->height0;
-   depth = (target == PIPE_TEXTURE_3D) ? img->depth0 : num_layers;
+   depth = (img->target == PIPE_TEXTURE_3D) ? img->depth0 : num_layers;
    pitch = img->bo_stride;
 
    if (surface_type == GEN6_SURFTYPE_CUBE) {
@@ -1045,7 +1043,7 @@ view_init_for_image_gen7(const struct ilo_dev *dev,
     * returns zero for the number of layers when this field is not set.
     */
    if (surface_type != GEN6_SURFTYPE_3D) {
-      switch (target) {
+      switch (img->target) {
       case PIPE_TEXTURE_1D_ARRAY:
       case PIPE_TEXTURE_2D_ARRAY:
       case PIPE_TEXTURE_CUBE_ARRAY:
@@ -1220,7 +1218,6 @@ ilo_gpe_init_view_surface_for_buffer(const struct ilo_dev *dev,
 void
 ilo_gpe_init_view_surface_for_image(const struct ilo_dev *dev,
                                     const struct ilo_image *img,
-                                    enum pipe_texture_target target,
                                     enum pipe_format format,
                                     unsigned first_level,
                                     unsigned num_levels,
@@ -1230,11 +1227,11 @@ ilo_gpe_init_view_surface_for_image(const struct ilo_dev *dev,
                                     struct ilo_view_surface *surf)
 {
    if (ilo_dev_gen(dev) >= ILO_GEN(7)) {
-      view_init_for_image_gen7(dev, img, target, format,
+      view_init_for_image_gen7(dev, img, format,
             first_level, num_levels, first_layer, num_layers,
             is_rt, surf);
    } else {
-      view_init_for_image_gen6(dev, img, target, format,
+      view_init_for_image_gen6(dev, img, format,
             first_level, num_levels, first_layer, num_layers,
             is_rt, surf);
    }
