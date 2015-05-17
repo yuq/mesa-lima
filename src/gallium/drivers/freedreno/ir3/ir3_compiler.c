@@ -3487,15 +3487,9 @@ compile_instructions(struct ir3_compile_context *ctx)
 						tgsi_get_opcode_name(opc));
 			}
 
-			switch (inst->Instruction.Saturate) {
-			case TGSI_SAT_ZERO_ONE:
+			if (inst->Instruction.Saturate) {
 				create_clamp_imm(ctx, &inst->Dst[0].Register,
 						fui(0.0), fui(1.0));
-				break;
-			case TGSI_SAT_MINUS_PLUS_ONE:
-				create_clamp_imm(ctx, &inst->Dst[0].Register,
-						fui(-1.0), fui(1.0));
-				break;
 			}
 
 			instr_finish(ctx);

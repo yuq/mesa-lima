@@ -538,10 +538,6 @@ struct tgsi_property_data {
 #define TGSI_OPCODE_DSSG                222
 #define TGSI_OPCODE_LAST                223
 
-#define TGSI_SAT_NONE            0  /* do not saturate */
-#define TGSI_SAT_ZERO_ONE        1  /* clamp to [0,1] */
-#define TGSI_SAT_MINUS_PLUS_ONE  2  /* clamp to [-1,1] */
-
 /**
  * Opcode is the operation code to execute. A given operation defines the
  * semantics how the source registers (if any) are interpreted and what is
@@ -561,13 +557,13 @@ struct tgsi_instruction
    unsigned Type       : 4;  /* TGSI_TOKEN_TYPE_INSTRUCTION */
    unsigned NrTokens   : 8;  /* UINT */
    unsigned Opcode     : 8;  /* TGSI_OPCODE_ */
-   unsigned Saturate   : 2;  /* TGSI_SAT_ */
+   unsigned Saturate   : 1;  /* BOOL */
    unsigned NumDstRegs : 2;  /* UINT */
    unsigned NumSrcRegs : 4;  /* UINT */
    unsigned Predicate  : 1;  /* BOOL */
    unsigned Label      : 1;
    unsigned Texture    : 1;
-   unsigned Padding    : 1;
+   unsigned Padding    : 2;
 };
 
 /*

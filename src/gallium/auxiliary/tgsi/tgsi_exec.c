@@ -1765,14 +1765,12 @@ store_dest(struct tgsi_exec_machine *mach,
    if (!dst)
       return;
 
-   switch (inst->Instruction.Saturate) {
-   case TGSI_SAT_NONE:
+   if (!inst->Instruction.Saturate) {
       for (i = 0; i < TGSI_QUAD_SIZE; i++)
          if (execmask & (1 << i))
             dst->i[i] = chan->i[i];
-      break;
-
-   case TGSI_SAT_ZERO_ONE:
+   }
+   else {
       for (i = 0; i < TGSI_QUAD_SIZE; i++)
          if (execmask & (1 << i)) {
             if (chan->f[i] < 0.0f)
@@ -1782,22 +1780,6 @@ store_dest(struct tgsi_exec_machine *mach,
             else
                dst->i[i] = chan->i[i];
          }
-      break;
-
-   case TGSI_SAT_MINUS_PLUS_ONE:
-      for (i = 0; i < TGSI_QUAD_SIZE; i++)
-         if (execmask & (1 << i)) {
-            if (chan->f[i] < -1.0f)
-               dst->f[i] = -1.0f;
-            else if (chan->f[i] > 1.0f)
-               dst->f[i] = 1.0f;
-            else
-               dst->i[i] = chan->i[i];
-         }
-      break;
-
-   default:
-      assert( 0 );
    }
 }
 
@@ -3317,16 +3299,14 @@ store_double_channel(struct tgsi_exec_machine *mach,
    union tgsi_double_channel temp;
    const uint execmask = mach->ExecMask;
 
-   switch (inst->Instruction.Saturate) {
-   case TGSI_SAT_NONE:
+   if (!inst->Instruction.Saturate) {
       for (i = 0; i < TGSI_QUAD_SIZE; i++)
          if (execmask & (1 << i)) {
             dst[0].u[i] = chan->u[i][0];
             dst[1].u[i] = chan->u[i][1];
          }
-      break;
-
-   case TGSI_SAT_ZERO_ONE:
+   }
+   else {
       for (i = 0; i < TGSI_QUAD_SIZE; i++)
          if (execmask & (1 << i)) {
             if (chan->d[i] < 0.0)
@@ -3339,25 +3319,6 @@ store_double_channel(struct tgsi_exec_machine *mach,
             dst[0].u[i] = temp.u[i][0];
             dst[1].u[i] = temp.u[i][1];
          }
-      break;
-
-   case TGSI_SAT_MINUS_PLUS_ONE:
-      for (i = 0; i < TGSI_QUAD_SIZE; i++)
-         if (execmask & (1 << i)) {
-            if (chan->d[i] < -1.0)
-               temp.d[i] = -1.0;
-            else if (chan->d[i] > 1.0)
-               temp.d[i] = 1.0;
-            else
-               temp.d[i] = chan->d[i];
-
-            dst[0].u[i] = temp.u[i][0];
-            dst[1].u[i] = temp.u[i][1];
-         }
-      break;
-
-   default:
-      assert( 0 );
    }
 
    store_dest_double(mach, &dst[0], reg, inst, chan_0, TGSI_EXEC_DATA_UINT);

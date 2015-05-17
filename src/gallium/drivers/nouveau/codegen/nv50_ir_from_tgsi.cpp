@@ -1604,19 +1604,8 @@ Converter::storeDst(int d, int c, Value *val)
 {
    const tgsi::Instruction::DstRegister dst = tgsi.getDst(d);
 
-   switch (tgsi.getSaturate()) {
-   case TGSI_SAT_NONE:
-      break;
-   case TGSI_SAT_ZERO_ONE:
+   if (tgsi.getSaturate()) {
       mkOp1(OP_SAT, dstTy, val, val);
-      break;
-   case TGSI_SAT_MINUS_PLUS_ONE:
-      mkOp2(OP_MAX, dstTy, val, val, mkImm(-1.0f));
-      mkOp2(OP_MIN, dstTy, val, val, mkImm(+1.0f));
-      break;
-   default:
-      assert(!"invalid saturation mode");
-      break;
    }
 
    Value *ptr = NULL;

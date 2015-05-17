@@ -1625,7 +1625,6 @@ ttn_emit_instruction(struct ttn_compile *c)
    }
 
    if (tgsi_inst->Instruction.Saturate) {
-      assert(tgsi_inst->Instruction.Saturate == TGSI_SAT_ZERO_ONE);
       assert(!dest.dest.is_ssa);
       ttn_move_dest(b, dest, nir_fsat(b, ttn_src_for_dest(b, &dest)));
    }

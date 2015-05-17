@@ -539,7 +539,7 @@ nvfx_vertprog_parse_instruction(struct nvfx_vpc *vpc,
 
    final_dst = dst  = tgsi_dst(vpc, &finst->Dst[0]);
    mask = tgsi_mask(finst->Dst[0].Register.WriteMask);
-   if(finst->Instruction.Saturate == TGSI_SAT_ZERO_ONE) {
+   if(finst->Instruction.Saturate) {
       assert(finst->Instruction.Opcode != TGSI_OPCODE_ARL);
       if (vpc->is_nv4x)
          sat = TRUE;
@@ -796,7 +796,7 @@ nvfx_vertprog_parse_instruction(struct nvfx_vpc *vpc,
       return FALSE;
    }
 
-   if(finst->Instruction.Saturate == TGSI_SAT_ZERO_ONE && !vpc->is_nv4x) {
+   if(finst->Instruction.Saturate && !vpc->is_nv4x) {
       if (!vpc->r_0_1.type)
          vpc->r_0_1 = constant(vpc, -1, 0, 1, 0, 0);
       nvfx_vp_emit(vpc, arith(0, VEC, MAX, dst, mask, nvfx_src(dst), swz(nvfx_src(vpc->r_0_1), X, X, X, X), none));

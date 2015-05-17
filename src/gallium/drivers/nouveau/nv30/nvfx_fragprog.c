@@ -531,7 +531,7 @@ nvfx_fragprog_parse_instruction(struct nvfx_fpc *fpc,
 
    dst  = tgsi_dst(fpc, &finst->Dst[0]);
    mask = tgsi_mask(finst->Dst[0].Register.WriteMask);
-   sat  = (finst->Instruction.Saturate == TGSI_SAT_ZERO_ONE);
+   sat  = finst->Instruction.Saturate;
 
    switch (finst->Instruction.Opcode) {
    case TGSI_OPCODE_ABS:

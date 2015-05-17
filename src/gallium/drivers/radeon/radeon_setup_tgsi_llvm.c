@@ -314,6 +314,21 @@ static void emit_declaration(
 	}
 }
 
+static LLVMValueRef radeon_llvm_saturate(struct lp_build_tgsi_context *bld_base,
+                                         LLVMValueRef value)
+{
+	struct lp_build_emit_data clamp_emit_data;
+
+	memset(&clamp_emit_data, 0, sizeof(clamp_emit_data));
+	clamp_emit_data.arg_count = 3;
+	clamp_emit_data.args[0] = value;
+	clamp_emit_data.args[2] = bld_base->base.one;
+	clamp_emit_data.args[1] = bld_base->base.zero;
+
+	return lp_build_emit_llvm(bld_base, TGSI_OPCODE_CLAMP,
+				  &clamp_emit_data);
+}
+
 static void
 emit_store(
 	struct lp_build_tgsi_context * bld_base,
@@ -324,7 +339,6 @@ emit_store(
 	struct radeon_llvm_context * ctx = radeon_llvm_context(bld_base);
 	struct lp_build_tgsi_soa_context *bld = lp_soa_context(bld_base);
 	struct gallivm_state *gallivm = bld->bld_base.base.gallivm;
-	struct lp_build_context base = bld->bld_base.base;
 	const struct tgsi_full_dst_register *reg = &inst->Dst[0];
 	LLVMBuilderRef builder = bld->bld_base.base.gallivm->builder;
 	LLVMValueRef temp_ptr;
@@ -350,28 +364,8 @@ emit_store(
 	TGSI_FOR_EACH_DST0_ENABLED_CHANNEL( inst, chan_index ) {
 		LLVMValueRef value = dst[chan_index];
 
-		if (inst->Instruction.Saturate != TGSI_SAT_NONE) {
-			struct lp_build_emit_data clamp_emit_data;
-
-			memset(&clamp_emit_data, 0, sizeof(clamp_emit_data));
-			clamp_emit_data.arg_count = 3;
-			clamp_emit_data.args[0] = value;
-			clamp_emit_data.args[2] = base.one;
-
-			switch(inst->Instruction.Saturate) {
-			case TGSI_SAT_ZERO_ONE:
-				clamp_emit_data.args[1] = base.zero;
-				break;
-			case TGSI_SAT_MINUS_PLUS_ONE:
-				clamp_emit_data.args[1] = LLVMConstReal(
-						base.elem_type, -1.0f);
-				break;
-			default:
-				assert(0);
-			}
-			value = lp_build_emit_llvm(bld_base, TGSI_OPCODE_CLAMP,
-						&clamp_emit_data);
-		}
+		if (inst->Instruction.Saturate)
+			value = radeon_llvm_saturate(bld_base, value);
 
 		if (reg->Register.File == TGSI_FILE_ADDRESS) {
 			temp_ptr = bld->addr[reg->Register.Index][chan_index];

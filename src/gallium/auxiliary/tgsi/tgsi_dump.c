@@ -539,17 +539,8 @@ iter_instruction(
 
    TXT( info->mnemonic );
 
-   switch (inst->Instruction.Saturate) {
-   case TGSI_SAT_NONE:
-      break;
-   case TGSI_SAT_ZERO_ONE:
+   if (inst->Instruction.Saturate) {
       TXT( "_SAT" );
-      break;
-   case TGSI_SAT_MINUS_PLUS_ONE:
-      TXT( "_SATNV" );
-      break;
-   default:
-      assert( 0 );
    }
 
    for (i = 0; i < inst->Instruction.NumDstRegs; i++) {
