@@ -2138,8 +2138,10 @@ NineDevice9_SetLight( struct NineDevice9 *This,
             return E_OUTOFMEMORY;
         state->ff.num_lights = N;
 
-        for (; n < Index; ++n)
+        for (; n < Index; ++n) {
+            memset(&state->ff.light[n], 0, sizeof(D3DLIGHT9));
             state->ff.light[n].Type = (D3DLIGHTTYPE)NINED3DLIGHT_INVALID;
+        }
     }
     state->ff.light[Index] = *pLight;
 
