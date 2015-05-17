@@ -31,7 +31,7 @@
 
 // Shader functions
 
-VkResult VKAPI vkCreateShader(
+VkResult anv_CreateShader(
     VkDevice                                    _device,
     const VkShaderCreateInfo*                   pCreateInfo,
     VkShader*                                   pShader)
@@ -214,7 +214,7 @@ emit_rs_state(struct anv_pipeline *pipeline, VkPipelineRsStateCreateInfo *info,
 
 }
 
-VkResult VKAPI vkCreateGraphicsPipeline(
+VkResult anv_CreateGraphicsPipeline(
     VkDevice                                    device,
     const VkGraphicsPipelineCreateInfo*         pCreateInfo,
     VkPipeline*                                 pPipeline)
@@ -506,7 +506,7 @@ anv_pipeline_destroy(struct anv_pipeline *pipeline)
    return VK_SUCCESS;
 }
 
-VkResult VKAPI vkCreateGraphicsPipelineDerivative(
+VkResult anv_CreateGraphicsPipelineDerivative(
     VkDevice                                    device,
     const VkGraphicsPipelineCreateInfo*         pCreateInfo,
     VkPipeline                                  basePipeline,
@@ -515,7 +515,7 @@ VkResult VKAPI vkCreateGraphicsPipelineDerivative(
    stub_return(VK_UNSUPPORTED);
 }
 
-VkResult VKAPI vkCreateComputePipeline(
+VkResult anv_CreateComputePipeline(
     VkDevice                                    device,
     const VkComputePipelineCreateInfo*          pCreateInfo,
     VkPipeline*                                 pPipeline)
@@ -523,7 +523,7 @@ VkResult VKAPI vkCreateComputePipeline(
    stub_return(VK_UNSUPPORTED);
 }
 
-VkResult VKAPI vkStorePipeline(
+VkResult anv_StorePipeline(
     VkDevice                                    device,
     VkPipeline                                  pipeline,
     size_t*                                     pDataSize,
@@ -532,7 +532,7 @@ VkResult VKAPI vkStorePipeline(
    stub_return(VK_UNSUPPORTED);
 }
 
-VkResult VKAPI vkLoadPipeline(
+VkResult anv_LoadPipeline(
     VkDevice                                    device,
     size_t                                      dataSize,
     const void*                                 pData,
@@ -541,7 +541,7 @@ VkResult VKAPI vkLoadPipeline(
    stub_return(VK_UNSUPPORTED);
 }
 
-VkResult VKAPI vkLoadPipelineDerivative(
+VkResult anv_LoadPipelineDerivative(
     VkDevice                                    device,
     size_t                                      dataSize,
     const void*                                 pData,
@@ -553,7 +553,7 @@ VkResult VKAPI vkLoadPipelineDerivative(
 
 // Pipeline layout functions
 
-VkResult VKAPI vkCreatePipelineLayout(
+VkResult anv_CreatePipelineLayout(
     VkDevice                                    _device,
     const VkPipelineLayoutCreateInfo*           pCreateInfo,
     VkPipelineLayout*                           pPipelineLayout)

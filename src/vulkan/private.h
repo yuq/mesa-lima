@@ -35,9 +35,9 @@
 
 #define VK_PROTOTYPES
 #include <vulkan/vulkan.h>
+#include <vulkan/vulkan_intel.h>
 
-#undef VKAPI
-#define VKAPI __attribute__ ((visibility ("default")))
+#include "entrypoints.h"
 
 #include "brw_context.h"
 
@@ -688,6 +688,9 @@ anv_cmd_buffer_clear(struct anv_cmd_buffer *cmd_buffer,
 
 void
 anv_cmd_buffer_fill_render_targets(struct anv_cmd_buffer *cmd_buffer);
+
+void *
+anv_lookup_entrypoint(const char *name);
 
 #ifdef __cplusplus
 }

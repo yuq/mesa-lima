@@ -628,7 +628,7 @@ meta_finish_blit(struct anv_cmd_buffer *cmd_buffer,
    anv_cmd_buffer_restore(cmd_buffer, saved_state);
 }
 
-void VKAPI vkCmdCopyBuffer(
+void anv_CmdCopyBuffer(
     VkCmdBuffer                                 cmdBuffer,
     VkBuffer                                    srcBuffer,
     VkBuffer                                    destBuffer,
@@ -638,7 +638,7 @@ void VKAPI vkCmdCopyBuffer(
    stub();
 }
 
-void VKAPI vkCmdCopyImage(
+void anv_CmdCopyImage(
     VkCmdBuffer                                 cmdBuffer,
     VkImage                                     srcImage,
     VkImageLayout                               srcImageLayout,
@@ -650,7 +650,7 @@ void VKAPI vkCmdCopyImage(
    stub();
 }
 
-void VKAPI vkCmdBlitImage(
+void anv_CmdBlitImage(
     VkCmdBuffer                                 cmdBuffer,
     VkImage                                     srcImage,
     VkImageLayout                               srcImageLayout,
@@ -662,7 +662,7 @@ void VKAPI vkCmdBlitImage(
    stub();
 }
 
-void VKAPI vkCmdCopyBufferToImage(
+void anv_CmdCopyBufferToImage(
     VkCmdBuffer                                 cmdBuffer,
     VkBuffer                                    srcBuffer,
     VkImage                                     destImage,
@@ -673,7 +673,7 @@ void VKAPI vkCmdCopyBufferToImage(
    stub();
 }
 
-void VKAPI vkCmdCopyImageToBuffer(
+void anv_CmdCopyImageToBuffer(
     VkCmdBuffer                                 cmdBuffer,
     VkImage                                     srcImage,
     VkImageLayout                               srcImageLayout,
@@ -764,7 +764,7 @@ void VKAPI vkCmdCopyImageToBuffer(
    meta_finish_blit(cmd_buffer, &saved_state);
 }
 
-void VKAPI vkCmdCloneImageData(
+void anv_CmdCloneImageData(
     VkCmdBuffer                                 cmdBuffer,
     VkImage                                     srcImage,
     VkImageLayout                               srcImageLayout,
@@ -774,7 +774,7 @@ void VKAPI vkCmdCloneImageData(
    stub();
 }
 
-void VKAPI vkCmdUpdateBuffer(
+void anv_CmdUpdateBuffer(
     VkCmdBuffer                                 cmdBuffer,
     VkBuffer                                    destBuffer,
     VkDeviceSize                                destOffset,
@@ -784,7 +784,7 @@ void VKAPI vkCmdUpdateBuffer(
    stub();
 }
 
-void VKAPI vkCmdFillBuffer(
+void anv_CmdFillBuffer(
     VkCmdBuffer                                 cmdBuffer,
     VkBuffer                                    destBuffer,
     VkDeviceSize                                destOffset,
@@ -794,7 +794,7 @@ void VKAPI vkCmdFillBuffer(
    stub();
 }
 
-void VKAPI vkCmdClearColorImage(
+void anv_CmdClearColorImage(
     VkCmdBuffer                                 cmdBuffer,
     VkImage                                     image,
     VkImageLayout                               imageLayout,
@@ -805,7 +805,7 @@ void VKAPI vkCmdClearColorImage(
    stub();
 }
 
-void VKAPI vkCmdClearDepthStencil(
+void anv_CmdClearDepthStencil(
     VkCmdBuffer                                 cmdBuffer,
     VkImage                                     image,
     VkImageLayout                               imageLayout,
@@ -817,7 +817,7 @@ void VKAPI vkCmdClearDepthStencil(
    stub();
 }
 
-void VKAPI vkCmdResolveImage(
+void anv_CmdResolveImage(
     VkCmdBuffer                                 cmdBuffer,
     VkImage                                     srcImage,
     VkImageLayout                               srcImageLayout,

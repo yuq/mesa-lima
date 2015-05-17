@@ -224,7 +224,7 @@ static const struct anv_tile_mode_info {
    [WMAJOR] = { 128, 32 }
 };
 
-VkResult VKAPI vkCreateImage(
+VkResult anv_CreateImage(
     VkDevice                                    _device,
     const VkImageCreateInfo*                    pCreateInfo,
     VkImage*                                    pImage)
@@ -279,7 +279,7 @@ VkResult VKAPI vkCreateImage(
    return VK_SUCCESS;
 }
 
-VkResult VKAPI vkGetImageSubresourceInfo(
+VkResult anv_GetImageSubresourceInfo(
     VkDevice                                    device,
     VkImage                                     image,
     const VkImageSubresource*                   pSubresource,
@@ -342,7 +342,7 @@ create_surface_state(struct anv_device *device,
    return state;
 }
 
-VkResult VKAPI vkCreateImageView(
+VkResult anv_CreateImageView(
     VkDevice                                    _device,
     const VkImageViewCreateInfo*                pCreateInfo,
     VkImageView*                                pView)
@@ -373,7 +373,7 @@ VkResult VKAPI vkCreateImageView(
    return VK_SUCCESS;
 }
 
-VkResult VKAPI vkCreateColorAttachmentView(
+VkResult anv_CreateColorAttachmentView(
     VkDevice                                    _device,
     const VkColorAttachmentViewCreateInfo*      pCreateInfo,
     VkColorAttachmentView*                      pView)
@@ -402,7 +402,7 @@ VkResult VKAPI vkCreateColorAttachmentView(
    return VK_SUCCESS;
 }
 
-VkResult VKAPI vkCreateDepthStencilView(
+VkResult anv_CreateDepthStencilView(
     VkDevice                                    device,
     const VkDepthStencilViewCreateInfo*         pCreateInfo,
     VkDepthStencilView*                         pView)

@@ -46,3 +46,5 @@ manifest.txt
 Makefile
 Makefile.in
 .install-mesa-links
+entrypoints.c
+entrypoints.h

@@ -114,7 +114,7 @@ static const VkAllocCallbacks default_alloc_callbacks = {
    .pfnFree = default_free
 };
 
-VkResult VKAPI vkCreateInstance(
+VkResult anv_CreateInstance(
     const VkInstanceCreateInfo*                 pCreateInfo,
     VkInstance*                                 pInstance)
 {
@@ -150,7 +150,7 @@ VkResult VKAPI vkCreateInstance(
    return VK_SUCCESS;
 }
 
-VkResult VKAPI vkDestroyInstance(
+VkResult anv_DestroyInstance(
     VkInstance                                  _instance)
 {
    struct anv_instance *instance = (struct anv_instance *) _instance;
@@ -160,7 +160,7 @@ VkResult VKAPI vkDestroyInstance(
    return VK_SUCCESS;
 }
 
-VkResult VKAPI vkEnumeratePhysicalDevices(
+VkResult anv_EnumeratePhysicalDevices(
     VkInstance                                  _instance,
     uint32_t*                                   pPhysicalDeviceCount,
     VkPhysicalDevice*                           pPhysicalDevices)
@@ -174,7 +174,7 @@ VkResult VKAPI vkEnumeratePhysicalDevices(
    return VK_SUCCESS;
 }
 
-VkResult VKAPI vkGetPhysicalDeviceInfo(
+VkResult anv_GetPhysicalDeviceInfo(
     VkPhysicalDevice                            physicalDevice,
     VkPhysicalDeviceInfoType                    infoType,
     size_t*                                     pDataSize,
@@ -252,7 +252,7 @@ void * vkGetProcAddr(
     VkPhysicalDevice                            physicalDevice,
     const char*                                 pName)
 {
-   return NULL;
+   return anv_lookup_entrypoint(pName);
 }
 
 static void
@@ -275,7 +275,7 @@ parse_debug_flags(struct anv_device *device)
    }
 }
 
-VkResult VKAPI vkCreateDevice(
+VkResult anv_CreateDevice(
     VkPhysicalDevice                            _physicalDevice,
     const VkDeviceCreateInfo*                   pCreateInfo,
     VkDevice*                                   pDevice)
@@ -337,7 +337,7 @@ VkResult VKAPI vkCreateDevice(
    return vk_error(VK_ERROR_UNAVAILABLE);
 }
 
-VkResult VKAPI vkDestroyDevice(
+VkResult anv_DestroyDevice(
     VkDevice                                    _device)
 {
    struct anv_device *device = (struct anv_device *) _device;
@@ -358,7 +358,7 @@ VkResult VKAPI vkDestroyDevice(
    return VK_SUCCESS;
 }
 
-VkResult VKAPI vkGetGlobalExtensionInfo(
+VkResult anv_GetGlobalExtensionInfo(
     VkExtensionInfoType                         infoType,
     uint32_t                                    extensionIndex,
     size_t*                                     pDataSize,
@@ -381,7 +381,7 @@ VkResult VKAPI vkGetGlobalExtensionInfo(
    }
 }
 
-VkResult VKAPI vkGetPhysicalDeviceExtensionInfo(
+VkResult anv_GetPhysicalDeviceExtensionInfo(
     VkPhysicalDevice                            physicalDevice,
     VkExtensionInfoType                         infoType,
     uint32_t                                    extensionIndex,
@@ -405,7 +405,7 @@ VkResult VKAPI vkGetPhysicalDeviceExtensionInfo(
    }
 }
 
-VkResult VKAPI vkEnumerateLayers(
+VkResult anv_EnumerateLayers(
     VkPhysicalDevice                            physicalDevice,
     size_t                                      maxStringSize,
     size_t*                                     pLayerCount,
@@ -417,7 +417,7 @@ VkResult VKAPI vkEnumerateLayers(
    return VK_SUCCESS;
 }
 
-VkResult VKAPI vkGetDeviceQueue(
+VkResult anv_GetDeviceQueue(
     VkDevice                                    _device,
     uint32_t                                    queueNodeIndex,
     uint32_t                                    queueIndex,
@@ -559,7 +559,7 @@ anv_batch_emit_reloc(struct anv_batch *batch,
                              location - batch->bo.map, bo, delta);
 }
 
-VkResult VKAPI vkQueueSubmit(
+VkResult anv_QueueSubmit(
     VkQueue                                     _queue,
     uint32_t                                    cmdBufferCount,
     const VkCmdBuffer*                          pCmdBuffers,
@@ -591,7 +591,7 @@ VkResult VKAPI vkQueueSubmit(
    return VK_SUCCESS;
 }
 
-VkResult VKAPI vkQueueAddMemReferences(
+VkResult anv_QueueAddMemReferences(
     VkQueue                                     queue,
     uint32_t                                    count,
     const VkDeviceMemory*                       pMems)
@@ -599,7 +599,7 @@ VkResult VKAPI vkQueueAddMemReferences(
    return VK_SUCCESS;
 }
 
-VkResult VKAPI vkQueueRemoveMemReferences(
+VkResult anv_QueueRemoveMemReferences(
     VkQueue                                     queue,
     uint32_t                                    count,
     const VkDeviceMemory*                       pMems)
@@ -607,7 +607,7 @@ VkResult VKAPI vkQueueRemoveMemReferences(
    return VK_SUCCESS;
 }
 
-VkResult VKAPI vkQueueWaitIdle(
+VkResult anv_QueueWaitIdle(
     VkQueue                                     _queue)
 {
    struct anv_queue *queue = (struct anv_queue *) _queue;
@@ -615,7 +615,7 @@ VkResult VKAPI vkQueueWaitIdle(
    return vkDeviceWaitIdle((VkDevice) queue->device);
 }
 
-VkResult VKAPI vkDeviceWaitIdle(
+VkResult anv_DeviceWaitIdle(
     VkDevice                                    _device)
 {
    struct anv_device *device = (struct anv_device *) _device;
@@ -717,7 +717,7 @@ anv_bo_init_new(struct anv_bo *bo, struct anv_device *device, uint64_t size)
    return VK_SUCCESS;
 }
 
-VkResult VKAPI vkAllocMemory(
+VkResult anv_AllocMemory(
     VkDevice                                    _device,
     const VkMemoryAllocInfo*                    pAllocInfo,
     VkDeviceMemory*                             pMem)
@@ -747,7 +747,7 @@ VkResult VKAPI vkAllocMemory(
    return result;
 }
 
-VkResult VKAPI vkFreeMemory(
+VkResult anv_FreeMemory(
     VkDevice                                    _device,
     VkDeviceMemory                              _mem)
 {
@@ -765,7 +765,7 @@ VkResult VKAPI vkFreeMemory(
    return VK_SUCCESS;
 }
 
-VkResult VKAPI vkSetMemoryPriority(
+VkResult anv_SetMemoryPriority(
     VkDevice                                    device,
     VkDeviceMemory                              mem,
     VkMemoryPriority                            priority)
@@ -773,7 +773,7 @@ VkResult VKAPI vkSetMemoryPriority(
    return VK_SUCCESS;
 }
 
-VkResult VKAPI vkMapMemory(
+VkResult anv_MapMemory(
     VkDevice                                    _device,
     VkDeviceMemory                              _mem,
     VkDeviceSize                                offset,
@@ -798,7 +798,7 @@ VkResult VKAPI vkMapMemory(
    return VK_SUCCESS;
 }
 
-VkResult VKAPI vkUnmapMemory(
+VkResult anv_UnmapMemory(
     VkDevice                                    _device,
     VkDeviceMemory                              _mem)
 {
@@ -809,7 +809,7 @@ VkResult VKAPI vkUnmapMemory(
    return VK_SUCCESS;
 }
 
-VkResult VKAPI vkFlushMappedMemory(
+VkResult anv_FlushMappedMemory(
     VkDevice                                    device,
     VkDeviceMemory                              mem,
     VkDeviceSize                                offset,
@@ -820,7 +820,7 @@ VkResult VKAPI vkFlushMappedMemory(
    return VK_SUCCESS;
 }
 
-VkResult VKAPI vkPinSystemMemory(
+VkResult anv_PinSystemMemory(
     VkDevice                                    device,
     const void*                                 pSysMem,
     size_t                                      memSize,
@@ -829,7 +829,7 @@ VkResult VKAPI vkPinSystemMemory(
    return VK_SUCCESS;
 }
 
-VkResult VKAPI vkGetMultiDeviceCompatibility(
+VkResult anv_GetMultiDeviceCompatibility(
     VkPhysicalDevice                            physicalDevice0,
     VkPhysicalDevice                            physicalDevice1,
     VkPhysicalDeviceCompatibilityInfo*          pInfo)
@@ -837,7 +837,7 @@ VkResult VKAPI vkGetMultiDeviceCompatibility(
    return VK_UNSUPPORTED;
 }
 
-VkResult VKAPI vkOpenSharedMemory(
+VkResult anv_OpenSharedMemory(
     VkDevice                                    device,
     const VkMemoryOpenInfo*                     pOpenInfo,
     VkDeviceMemory*                             pMem)
@@ -845,7 +845,7 @@ VkResult VKAPI vkOpenSharedMemory(
    return VK_UNSUPPORTED;
 }
 
-VkResult VKAPI vkOpenSharedSemaphore(
+VkResult anv_OpenSharedSemaphore(
     VkDevice                                    device,
     const VkSemaphoreOpenInfo*                  pOpenInfo,
     VkSemaphore*                                pSemaphore)
@@ -853,7 +853,7 @@ VkResult VKAPI vkOpenSharedSemaphore(
    return VK_UNSUPPORTED;
 }
 
-VkResult VKAPI vkOpenPeerMemory(
+VkResult anv_OpenPeerMemory(
     VkDevice                                    device,
     const VkPeerMemoryOpenInfo*                 pOpenInfo,
     VkDeviceMemory*                             pMem)
@@ -861,7 +861,7 @@ VkResult VKAPI vkOpenPeerMemory(
    return VK_UNSUPPORTED;
 }
 
-VkResult VKAPI vkOpenPeerImage(
+VkResult anv_OpenPeerImage(
     VkDevice                                    device,
     const VkPeerImageOpenInfo*                  pOpenInfo,
     VkImage*                                    pImage,
@@ -939,7 +939,7 @@ static VkResult (*anv_object_destructors[])(struct anv_device *device,
    [VK_OBJECT_TYPE_RENDER_PASS] =     anv_free_destructor
 };
 
-VkResult VKAPI vkDestroyObject(
+VkResult anv_DestroyObject(
     VkDevice                                    _device,
     VkObjectType                                objType,
     VkObject                                    object)
@@ -988,7 +988,7 @@ fill_memory_requirements(
    }
 }
 
-VkResult VKAPI vkGetObjectInfo(
+VkResult anv_GetObjectInfo(
     VkDevice                                    _device,
     VkObjectType                                objType,
     VkObject                                    object,
@@ -1013,7 +1013,7 @@ VkResult VKAPI vkGetObjectInfo(
 
 }
 
-VkResult VKAPI vkQueueBindObjectMemory(
+VkResult anv_QueueBindObjectMemory(
     VkQueue                                     queue,
     VkObjectType                                objType,
     VkObject                                    object,
@@ -1043,7 +1043,7 @@ VkResult VKAPI vkQueueBindObjectMemory(
    return VK_SUCCESS;
 }
 
-VkResult VKAPI vkQueueBindObjectMemoryRange(
+VkResult anv_QueueBindObjectMemoryRange(
     VkQueue                                     queue,
     VkObjectType                                objType,
     VkObject                                    object,
@@ -1056,7 +1056,7 @@ VkResult VKAPI vkQueueBindObjectMemoryRange(
    stub_return(VK_UNSUPPORTED);
 }
 
-VkResult vkQueueBindImageMemoryRange(
+VkResult anv_QueueBindImageMemoryRange(
     VkQueue                                     queue,
     VkImage                                     image,
     uint32_t                                    allocationIdx,
@@ -1067,7 +1067,7 @@ VkResult vkQueueBindImageMemoryRange(
    stub_return(VK_UNSUPPORTED);
 }
 
-VkResult VKAPI vkCreateFence(
+VkResult anv_CreateFence(
     VkDevice                                    device,
     const VkFenceCreateInfo*                    pCreateInfo,
     VkFence*                                    pFence)
@@ -1075,7 +1075,7 @@ VkResult VKAPI vkCreateFence(
    stub_return(VK_UNSUPPORTED);
 }
 
-VkResult VKAPI vkResetFences(
+VkResult anv_ResetFences(
     VkDevice                                    device,
     uint32_t                                    fenceCount,
     VkFence*                                    pFences)
@@ -1083,14 +1083,14 @@ VkResult VKAPI vkResetFences(
    stub_return(VK_UNSUPPORTED);
 }
 
-VkResult VKAPI vkGetFenceStatus(
+VkResult anv_GetFenceStatus(
     VkDevice                                    device,
     VkFence                                     fence)
 {
    stub_return(VK_UNSUPPORTED);
 }
 
-VkResult VKAPI vkWaitForFences(
+VkResult anv_WaitForFences(
     VkDevice                                    device,
     uint32_t                                    fenceCount,
     const VkFence*                              pFences,
@@ -1102,7 +1102,7 @@ VkResult VKAPI vkWaitForFences(
 
 // Queue semaphore functions
 
-VkResult VKAPI vkCreateSemaphore(
+VkResult anv_CreateSemaphore(
     VkDevice                                    device,
     const VkSemaphoreCreateInfo*                pCreateInfo,
     VkSemaphore*                                pSemaphore)
@@ -1110,14 +1110,14 @@ VkResult VKAPI vkCreateSemaphore(
    stub_return(VK_UNSUPPORTED);
 }
 
-VkResult VKAPI vkQueueSignalSemaphore(
+VkResult anv_QueueSignalSemaphore(
     VkQueue                                     queue,
     VkSemaphore                                 semaphore)
 {
    stub_return(VK_UNSUPPORTED);
 }
 
-VkResult VKAPI vkQueueWaitSemaphore(
+VkResult anv_QueueWaitSemaphore(
     VkQueue                                     queue,
     VkSemaphore                                 semaphore)
 {
@@ -1126,7 +1126,7 @@ VkResult VKAPI vkQueueWaitSemaphore(
 
 // Event functions
 
-VkResult VKAPI vkCreateEvent(
+VkResult anv_CreateEvent(
     VkDevice                                    device,
     const VkEventCreateInfo*                    pCreateInfo,
     VkEvent*                                    pEvent)
@@ -1134,21 +1134,21 @@ VkResult VKAPI vkCreateEvent(
    stub_return(VK_UNSUPPORTED);
 }
 
-VkResult VKAPI vkGetEventStatus(
+VkResult anv_GetEventStatus(
     VkDevice                                    device,
     VkEvent                                     event)
 {
    stub_return(VK_UNSUPPORTED);
 }
 
-VkResult VKAPI vkSetEvent(
+VkResult anv_SetEvent(
     VkDevice                                    device,
     VkEvent                                     event)
 {
    stub_return(VK_UNSUPPORTED);
 }
 
-VkResult VKAPI vkResetEvent(
+VkResult anv_ResetEvent(
     VkDevice                                    device,
     VkEvent                                     event)
 {
@@ -1163,7 +1163,7 @@ struct anv_query_pool {
    struct anv_bo bo;
 };
 
-VkResult VKAPI vkCreateQueryPool(
+VkResult anv_CreateQueryPool(
     VkDevice                                    _device,
     const VkQueryPoolCreateInfo*                pCreateInfo,
     VkQueryPool*                                pQueryPool)
@@ -1194,7 +1194,7 @@ VkResult VKAPI vkCreateQueryPool(
    return result;
 }
 
-VkResult VKAPI vkGetQueryPoolResults(
+VkResult anv_GetQueryPoolResults(
     VkDevice                                    device,
     VkQueryPool                                 queryPool,
     uint32_t                                    startQuery,
@@ -1208,7 +1208,7 @@ VkResult VKAPI vkGetQueryPoolResults(
 
 // Format capabilities
 
-VkResult VKAPI vkGetFormatInfo(
+VkResult anv_GetFormatInfo(
     VkDevice                                    device,
     VkFormat                                    format,
     VkFormatInfoType                            infoType,
@@ -1220,7 +1220,7 @@ VkResult VKAPI vkGetFormatInfo(
 
 // Buffer functions
 
-VkResult VKAPI vkCreateBuffer(
+VkResult anv_CreateBuffer(
     VkDevice                                    _device,
     const VkBufferCreateInfo*                   pCreateInfo,
     VkBuffer*                                   pBuffer)
@@ -1246,7 +1246,7 @@ VkResult VKAPI vkCreateBuffer(
 
 // Buffer view functions
 
-VkResult VKAPI vkCreateBufferView(
+VkResult anv_CreateBufferView(
     VkDevice                                    _device,
     const VkBufferViewCreateInfo*               pCreateInfo,
     VkBufferView*                               pView)
@@ -1320,7 +1320,7 @@ VkResult VKAPI vkCreateBufferView(
 
 // Sampler functions
 
-VkResult VKAPI vkCreateSampler(
+VkResult anv_CreateSampler(
     VkDevice                                    _device,
     const VkSamplerCreateInfo*                  pCreateInfo,
     VkSampler*                                  pSampler)
@@ -1410,7 +1410,7 @@ VkResult VKAPI vkCreateSampler(
 
 // Descriptor set functions
 
-VkResult VKAPI vkCreateDescriptorSetLayout(
+VkResult anv_CreateDescriptorSetLayout(
     VkDevice                                    _device,
     const VkDescriptorSetLayoutCreateInfo*      pCreateInfo,
     VkDescriptorSetLayout*                      pSetLayout)
@@ -1537,21 +1537,21 @@ VkResult VKAPI vkCreateDescriptorSetLayout(
    return VK_SUCCESS;
 }
 
-VkResult VKAPI vkBeginDescriptorPoolUpdate(
+VkResult anv_BeginDescriptorPoolUpdate(
     VkDevice                                    device,
     VkDescriptorUpdateMode                      updateMode)
 {
    stub_return(VK_UNSUPPORTED);
 }
 
-VkResult VKAPI vkEndDescriptorPoolUpdate(
+VkResult anv_EndDescriptorPoolUpdate(
     VkDevice                                    device,
     VkCmdBuffer                                 cmd)
 {
    stub_return(VK_UNSUPPORTED);
 }
 
-VkResult VKAPI vkCreateDescriptorPool(
+VkResult anv_CreateDescriptorPool(
     VkDevice                                    device,
     VkDescriptorPoolUsage                       poolUsage,
     uint32_t                                    maxSets,
@@ -1561,14 +1561,14 @@ VkResult VKAPI vkCreateDescriptorPool(
    stub_return(VK_UNSUPPORTED);
 }
 
-VkResult VKAPI vkResetDescriptorPool(
+VkResult anv_ResetDescriptorPool(
     VkDevice                                    device,
     VkDescriptorPool                            descriptorPool)
 {
    stub_return(VK_UNSUPPORTED);
 }
 
-VkResult VKAPI vkAllocDescriptorSets(
+VkResult anv_AllocDescriptorSets(
     VkDevice                                    _device,
     VkDescriptorPool                            descriptorPool,
     VkDescriptorSetUsage                        setUsage,
@@ -1600,7 +1600,7 @@ VkResult VKAPI vkAllocDescriptorSets(
    return VK_UNSUPPORTED;
 }
 
-void VKAPI vkClearDescriptorSets(
+void anv_ClearDescriptorSets(
     VkDevice                                    device,
     VkDescriptorPool                            descriptorPool,
     uint32_t                                    count,
@@ -1609,7 +1609,7 @@ void VKAPI vkClearDescriptorSets(
    stub();
 }
 
-void VKAPI vkUpdateDescriptors(
+void anv_UpdateDescriptors(
     VkDevice                                    _device,
     VkDescriptorSet                             descriptorSet,
     uint32_t                                    updateCount,
@@ -1692,7 +1692,7 @@ clamp_int64(int64_t x, int64_t min, int64_t max)
       return max;
 }
 
-VkResult VKAPI vkCreateDynamicViewportState(
+VkResult anv_CreateDynamicViewportState(
     VkDevice                                    _device,
     const VkDynamicVpStateCreateInfo*           pCreateInfo,
     VkDynamicVpState*                           pState)
@@ -1777,7 +1777,7 @@ VkResult VKAPI vkCreateDynamicViewportState(
    return VK_SUCCESS;
 }
 
-VkResult VKAPI vkCreateDynamicRasterState(
+VkResult anv_CreateDynamicRasterState(
     VkDevice                                    _device,
     const VkDynamicRsStateCreateInfo*           pCreateInfo,
     VkDynamicRsState*                           pState)
@@ -1813,7 +1813,7 @@ VkResult VKAPI vkCreateDynamicRasterState(
    return VK_SUCCESS;
 }
 
-VkResult VKAPI vkCreateDynamicColorBlendState(
+VkResult anv_CreateDynamicColorBlendState(
     VkDevice                                    _device,
     const VkDynamicCbStateCreateInfo*           pCreateInfo,
     VkDynamicCbState*                           pState)
@@ -1833,7 +1833,7 @@ VkResult VKAPI vkCreateDynamicColorBlendState(
    return VK_SUCCESS;
 }
 
-VkResult VKAPI vkCreateDynamicDepthStencilState(
+VkResult anv_CreateDynamicDepthStencilState(
     VkDevice                                    device,
     const VkDynamicDsStateCreateInfo*           pCreateInfo,
     VkDynamicDsState*                           pState)
@@ -1843,7 +1843,7 @@ VkResult VKAPI vkCreateDynamicDepthStencilState(
 
 // Command buffer functions
 
-VkResult VKAPI vkCreateCommandBuffer(
+VkResult anv_CreateCommandBuffer(
     VkDevice                                    _device,
     const VkCmdBufferCreateInfo*                pCreateInfo,
     VkCmdBuffer*                                pCmdBuffer)
@@ -1905,7 +1905,7 @@ VkResult VKAPI vkCreateCommandBuffer(
    return result;
 }
 
-VkResult VKAPI vkBeginCommandBuffer(
+VkResult anv_BeginCommandBuffer(
     VkCmdBuffer                                 cmdBuffer,
     const VkCmdBufferBeginInfo*                 pBeginInfo)
 {
@@ -2049,7 +2049,7 @@ anv_cmd_buffer_process_relocs(struct anv_cmd_buffer *cmd_buffer,
    }
 }
 
-VkResult VKAPI vkEndCommandBuffer(
+VkResult anv_EndCommandBuffer(
     VkCmdBuffer                                 cmdBuffer)
 {
    struct anv_cmd_buffer *cmd_buffer = (struct anv_cmd_buffer *) cmdBuffer;
@@ -2099,7 +2099,7 @@ VkResult VKAPI vkEndCommandBuffer(
    return VK_SUCCESS;
 }
 
-VkResult VKAPI vkResetCommandBuffer(
+VkResult anv_ResetCommandBuffer(
     VkCmdBuffer                                 cmdBuffer)
 {
    struct anv_cmd_buffer *cmd_buffer = (struct anv_cmd_buffer *) cmdBuffer;
@@ -2111,7 +2111,7 @@ VkResult VKAPI vkResetCommandBuffer(
 
 // Command buffer building functions
 
-void VKAPI vkCmdBindPipeline(
+void anv_CmdBindPipeline(
     VkCmdBuffer                                 cmdBuffer,
     VkPipelineBindPoint                         pipelineBindPoint,
     VkPipeline                                  _pipeline)
@@ -2122,7 +2122,7 @@ void VKAPI vkCmdBindPipeline(
    cmd_buffer->dirty |= ANV_CMD_BUFFER_PIPELINE_DIRTY;
 }
 
-void VKAPI vkCmdBindDynamicStateObject(
+void anv_CmdBindDynamicStateObject(
     VkCmdBuffer                                 cmdBuffer,
     VkStateBindPoint                            stateBindPoint,
     VkDynamicStateObject                        dynamicState)
@@ -2155,7 +2155,7 @@ void VKAPI vkCmdBindDynamicStateObject(
    };
 }
 
-void VKAPI vkCmdBindDescriptorSets(
+void anv_CmdBindDescriptorSets(
     VkCmdBuffer                                 cmdBuffer,
     VkPipelineBindPoint                         pipelineBindPoint,
     uint32_t                                    firstSet,
@@ -2205,7 +2205,7 @@ void VKAPI vkCmdBindDescriptorSets(
    cmd_buffer->dirty |= ANV_CMD_BUFFER_DESCRIPTOR_SET_DIRTY;
 }
 
-void VKAPI vkCmdBindIndexBuffer(
+void anv_CmdBindIndexBuffer(
     VkCmdBuffer                                 cmdBuffer,
     VkBuffer                                    _buffer,
     VkDeviceSize                                offset,
@@ -2227,7 +2227,7 @@ void VKAPI vkCmdBindIndexBuffer(
                   .BufferSize = buffer->size - offset);
 }
 
-void VKAPI vkCmdBindVertexBuffers(
+void anv_CmdBindVertexBuffers(
     VkCmdBuffer                                 cmdBuffer,
     uint32_t                                    startBinding,
     uint32_t                                    bindingCount,
@@ -2375,7 +2375,7 @@ anv_cmd_buffer_flush_state(struct anv_cmd_buffer *cmd_buffer)
    cmd_buffer->dirty = 0;
 }
 
-void VKAPI vkCmdDraw(
+void anv_CmdDraw(
     VkCmdBuffer                                 cmdBuffer,
     uint32_t                                    firstVertex,
     uint32_t                                    vertexCount,
@@ -2395,7 +2395,7 @@ void VKAPI vkCmdDraw(
                   .BaseVertexLocation = 0);
 }
 
-void VKAPI vkCmdDrawIndexed(
+void anv_CmdDrawIndexed(
     VkCmdBuffer                                 cmdBuffer,
     uint32_t                                    firstIndex,
     uint32_t                                    indexCount,
@@ -2441,7 +2441,7 @@ anv_batch_lri(struct anv_batch *batch, uint32_t reg, uint32_t imm)
 #define GEN7_3DPRIM_START_INSTANCE      0x243C
 #define GEN7_3DPRIM_BASE_VERTEX         0x2440
 
-void VKAPI vkCmdDrawIndirect(
+void anv_CmdDrawIndirect(
     VkCmdBuffer                                 cmdBuffer,
     VkBuffer                                    _buffer,
     VkDeviceSize                                offset,
@@ -2466,7 +2466,7 @@ void VKAPI vkCmdDrawIndirect(
                   .VertexAccessType = SEQUENTIAL);
 }
 
-void VKAPI vkCmdDrawIndexedIndirect(
+void anv_CmdDrawIndexedIndirect(
     VkCmdBuffer                                 cmdBuffer,
     VkBuffer                                    _buffer,
     VkDeviceSize                                offset,
@@ -2491,7 +2491,7 @@ void VKAPI vkCmdDrawIndexedIndirect(
                   .VertexAccessType = RANDOM);
 }
 
-void VKAPI vkCmdDispatch(
+void anv_CmdDispatch(
     VkCmdBuffer                                 cmdBuffer,
     uint32_t                                    x,
     uint32_t                                    y,
@@ -2500,7 +2500,7 @@ void VKAPI vkCmdDispatch(
    stub();
 }
 
-void VKAPI vkCmdDispatchIndirect(
+void anv_CmdDispatchIndirect(
     VkCmdBuffer                                 cmdBuffer,
     VkBuffer                                    buffer,
     VkDeviceSize                                offset)
@@ -2508,7 +2508,7 @@ void VKAPI vkCmdDispatchIndirect(
    stub();
 }
 
-void VKAPI vkCmdSetEvent(
+void anv_CmdSetEvent(
     VkCmdBuffer                                 cmdBuffer,
     VkEvent                                     event,
     VkPipeEvent                                 pipeEvent)
@@ -2516,7 +2516,7 @@ void VKAPI vkCmdSetEvent(
    stub();
 }
 
-void VKAPI vkCmdResetEvent(
+void anv_CmdResetEvent(
     VkCmdBuffer                                 cmdBuffer,
     VkEvent                                     event,
     VkPipeEvent                                 pipeEvent)
@@ -2524,7 +2524,7 @@ void VKAPI vkCmdResetEvent(
    stub();
 }
 
-void VKAPI vkCmdWaitEvents(
+void anv_CmdWaitEvents(
     VkCmdBuffer                                 cmdBuffer,
     VkWaitEvent                                 waitEvent,
     uint32_t                                    eventCount,
@@ -2535,7 +2535,7 @@ void VKAPI vkCmdWaitEvents(
    stub();
 }
 
-void VKAPI vkCmdPipelineBarrier(
+void anv_CmdPipelineBarrier(
     VkCmdBuffer                                 cmdBuffer,
     VkWaitEvent                                 waitEvent,
     uint32_t                                    pipeEventCount,
@@ -2556,7 +2556,7 @@ anv_batch_emit_ps_depth_count(struct anv_batch *batch,
                   .Address = { bo, offset });  /* FIXME: This is only lower 32 bits */
 }
 
-void VKAPI vkCmdBeginQuery(
+void anv_CmdBeginQuery(
     VkCmdBuffer                                 cmdBuffer,
     VkQueryPool                                 queryPool,
     uint32_t                                    slot,
@@ -2578,7 +2578,7 @@ void VKAPI vkCmdBeginQuery(
    }
 }
 
-void VKAPI vkCmdEndQuery(
+void anv_CmdEndQuery(
     VkCmdBuffer                                 cmdBuffer,
     VkQueryPool                                 queryPool,
     uint32_t                                    slot)
@@ -2599,7 +2599,7 @@ void VKAPI vkCmdEndQuery(
    }
 }
 
-void VKAPI vkCmdResetQueryPool(
+void anv_CmdResetQueryPool(
     VkCmdBuffer                                 cmdBuffer,
     VkQueryPool                                 queryPool,
     uint32_t                                    startQuery,
@@ -2610,7 +2610,7 @@ void VKAPI vkCmdResetQueryPool(
 
 #define TIMESTAMP 0x44070
 
-void VKAPI vkCmdWriteTimestamp(
+void anv_CmdWriteTimestamp(
     VkCmdBuffer                                 cmdBuffer,
     VkTimestampType                             timestampType,
     VkBuffer                                    destBuffer,
@@ -2640,7 +2640,7 @@ void VKAPI vkCmdWriteTimestamp(
    }
 }
 
-void VKAPI vkCmdCopyQueryPoolResults(
+void anv_CmdCopyQueryPoolResults(
     VkCmdBuffer                                 cmdBuffer,
     VkQueryPool                                 queryPool,
     uint32_t                                    startQuery,
@@ -2653,7 +2653,7 @@ void VKAPI vkCmdCopyQueryPoolResults(
    stub();
 }
 
-void VKAPI vkCmdInitAtomicCounters(
+void anv_CmdInitAtomicCounters(
     VkCmdBuffer                                 cmdBuffer,
     VkPipelineBindPoint                         pipelineBindPoint,
     uint32_t                                    startCounter,
@@ -2663,7 +2663,7 @@ void VKAPI vkCmdInitAtomicCounters(
    stub();
 }
 
-void VKAPI vkCmdLoadAtomicCounters(
+void anv_CmdLoadAtomicCounters(
     VkCmdBuffer                                 cmdBuffer,
     VkPipelineBindPoint                         pipelineBindPoint,
     uint32_t                                    startCounter,
@@ -2674,7 +2674,7 @@ void VKAPI vkCmdLoadAtomicCounters(
    stub();
 }
 
-void VKAPI vkCmdSaveAtomicCounters(
+void anv_CmdSaveAtomicCounters(
     VkCmdBuffer                                 cmdBuffer,
     VkPipelineBindPoint                         pipelineBindPoint,
     uint32_t                                    startCounter,
@@ -2685,7 +2685,7 @@ void VKAPI vkCmdSaveAtomicCounters(
    stub();
 }
 
-VkResult VKAPI vkCreateFramebuffer(
+VkResult anv_CreateFramebuffer(
     VkDevice                                    _device,
     const VkFramebufferCreateInfo*              pCreateInfo,
     VkFramebuffer*                              pFramebuffer)
@@ -2742,7 +2742,7 @@ VkResult VKAPI vkCreateFramebuffer(
    return VK_SUCCESS;
 }
 
-VkResult VKAPI vkCreateRenderPass(
+VkResult anv_CreateRenderPass(
     VkDevice                                    _device,
     const VkRenderPassCreateInfo*               pCreateInfo,
     VkRenderPass*                               pRenderPass)
@@ -2793,7 +2793,7 @@ anv_cmd_buffer_fill_render_targets(struct anv_cmd_buffer *cmd_buffer)
    cmd_buffer->dirty |= ANV_CMD_BUFFER_DESCRIPTOR_SET_DIRTY;
 }
 
-void VKAPI vkCmdBeginRenderPass(
+void anv_CmdBeginRenderPass(
     VkCmdBuffer                                 cmdBuffer,
     const VkRenderPassBegin*                    pRenderPassBegin)
 {
@@ -2819,7 +2819,7 @@ void VKAPI vkCmdBeginRenderPass(
    anv_cmd_buffer_clear(cmd_buffer, pass);
 }
 
-void VKAPI vkCmdEndRenderPass(
+void anv_CmdEndRenderPass(
     VkCmdBuffer                                 cmdBuffer,
     VkRenderPass                                renderPass)
 {

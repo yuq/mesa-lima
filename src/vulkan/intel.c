@@ -29,9 +29,7 @@
 
 #include "private.h"
 
-#include <vulkan/vulkan_intel.h>
-
-VkResult VKAPI vkCreateDmaBufImageINTEL(
+VkResult anv_CreateDmaBufImageINTEL(
     VkDevice                                    _device,
     const VkDmaBufImageCreateInfo*              pCreateInfo,
     VkDeviceMemory*                             pMem,

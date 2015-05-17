@@ -62,7 +62,19 @@ libvulkan_la_SOURCES =				\
 	image.c					\
 	meta.c					\
 	intel.c					\
+	entrypoints.c				\
+	entrypoints.h				\
 	compiler.cpp
+
+BUILT_SOURCES = entrypoints.h entrypoints.c
+
+entrypoints.h : $(vulkan_include_HEADERS) vk_gen.py
+	$(AM_V_GEN)cat $(vulkan_include_HEADERS) | $(PYTHON2) vk_gen.py header > $@
+
+entrypoints.c : $(vulkan_include_HEADERS) vk_gen.py
+	$(AM_V_GEN)cat $(vulkan_include_HEADERS) | $(PYTHON2) vk_gen.py code > $@
+
+CLEANFILES = entrypoints.h entrypoints.c
 
 bin_PROGRAMS = vk
 
