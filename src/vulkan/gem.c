@@ -98,6 +98,7 @@ anv_gem_mmap(struct anv_device *device, uint32_t gem_handle,
    int ret;
 
    gem_mmap.handle = gem_handle;
+   VG_CLEAR(gem_mmap.pad);
    gem_mmap.offset = offset;
    gem_mmap.size = size;
    VG_CLEAR(gem_mmap.addr_ptr);
