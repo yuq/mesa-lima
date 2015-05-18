@@ -1587,7 +1587,7 @@ VkResult anv_AllocDescriptorSets(
 
    *pCount = count;
 
-   return VK_UNSUPPORTED;
+   return VK_SUCCESS;
 }
 
 void anv_ClearDescriptorSets(
