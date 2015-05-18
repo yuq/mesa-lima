@@ -1529,14 +1529,14 @@ VkResult anv_BeginDescriptorPoolUpdate(
     VkDevice                                    device,
     VkDescriptorUpdateMode                      updateMode)
 {
-   stub_return(VK_UNSUPPORTED);
+   return VK_SUCCESS;
 }
 
 VkResult anv_EndDescriptorPoolUpdate(
     VkDevice                                    device,
     VkCmdBuffer                                 cmd)
 {
-   stub_return(VK_UNSUPPORTED);
+   return VK_SUCCESS;
 }
 
 VkResult anv_CreateDescriptorPool(
@@ -1546,14 +1546,16 @@ VkResult anv_CreateDescriptorPool(
     const VkDescriptorPoolCreateInfo*           pCreateInfo,
     VkDescriptorPool*                           pDescriptorPool)
 {
-   stub_return(VK_UNSUPPORTED);
+   *pDescriptorPool = 1;
+
+   return VK_SUCCESS;
 }
 
 VkResult anv_ResetDescriptorPool(
     VkDevice                                    device,
     VkDescriptorPool                            descriptorPool)
 {
-   stub_return(VK_UNSUPPORTED);
+   return VK_SUCCESS;
 }
 
 VkResult anv_AllocDescriptorSets(
@@ -1594,7 +1596,6 @@ void anv_ClearDescriptorSets(
     uint32_t                                    count,
     const VkDescriptorSet*                      pDescriptorSets)
 {
-   stub();
 }
 
 void anv_UpdateDescriptors(
