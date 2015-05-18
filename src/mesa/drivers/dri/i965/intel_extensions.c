@@ -183,7 +183,6 @@ intelInitExtensions(struct gl_context *ctx)
    ctx->Extensions.ARB_depth_buffer_float = true;
    ctx->Extensions.ARB_depth_clamp = true;
    ctx->Extensions.ARB_depth_texture = true;
-   ctx->Extensions.ARB_direct_state_access = true;
    ctx->Extensions.ARB_draw_elements_base_vertex = true;
    ctx->Extensions.ARB_draw_instanced = true;
    ctx->Extensions.ARB_ES2_compatibility = true;
