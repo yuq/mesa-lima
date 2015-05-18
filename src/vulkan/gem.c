@@ -155,8 +155,6 @@ anv_gem_wait(struct anv_device *device, int gem_handle, int64_t *timeout_ns)
 
    ret = anv_ioctl(device->fd, DRM_IOCTL_I915_GEM_WAIT, &wait);
    *timeout_ns = wait.timeout_ns;
-   if (ret == -1)
-      return -errno;
 
    return ret;
 }
