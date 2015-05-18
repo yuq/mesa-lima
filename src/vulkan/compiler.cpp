@@ -235,11 +235,11 @@ really_do_vs_prog(struct brw_context *brw,
       return false;
    }
 
-   pipeline->vs_simd8 = pipeline->program_next;
-   memcpy((char *) pipeline->device->instruction_block_pool.map +
-          pipeline->vs_simd8, program, program_size);
+   struct anv_state vs_state = anv_state_stream_alloc(&pipeline->program_stream,
+                                                      program_size, 64);
+   memcpy(vs_state.map, program, program_size);
 
-   pipeline->program_next = align(pipeline->program_next + program_size, 64);
+   pipeline->vs_simd8 = vs_state.offset;
 
    ralloc_free(mem_ctx);
 
@@ -463,7 +463,6 @@ really_do_wm_prog(struct brw_context *brw,
    struct gl_shader *fs = NULL;
    unsigned int program_size;
    const uint32_t *program;
-   uint32_t offset;
 
    if (prog)
       fs = prog->_LinkedShaders[MESA_SHADER_FRAGMENT];
@@ -514,21 +513,20 @@ really_do_wm_prog(struct brw_context *brw,
       return false;
    }
 
-   offset = pipeline->program_next;
-   pipeline->program_next = align(pipeline->program_next + program_size, 64);
+   struct anv_state ps_state = anv_state_stream_alloc(&pipeline->program_stream,
+                                                      program_size, 64);
+   memcpy(ps_state.map, program, program_size);
 
    if (prog_data->no_8)
       pipeline->ps_simd8 = NO_KERNEL;
    else
-      pipeline->ps_simd8 = offset;
+      pipeline->ps_simd8 = ps_state.offset;
 
-   if (prog_data->no_8 || prog_data->prog_offset_16)
-      pipeline->ps_simd16 = offset + prog_data->prog_offset_16;
-   else
+   if (prog_data->no_8 || prog_data->prog_offset_16) {
+      pipeline->ps_simd16 = ps_state.offset + prog_data->prog_offset_16;
+   } else {
       pipeline->ps_simd16 = NO_KERNEL;
-
-   memcpy((char *) pipeline->device->instruction_block_pool.map +
-          offset, program, program_size);
+   }
 
    ralloc_free(mem_ctx);
 
@@ -574,7 +572,6 @@ really_do_gs_prog(struct brw_context *brw,
                   struct brw_gs_prog_key *key, struct anv_pipeline *pipeline)
 {
    struct brw_gs_compile_output output;
-   uint32_t offset;
 
    /* FIXME: We pass the bind map to the compile in the output struct. Need
     * something better. */
@@ -583,14 +580,12 @@ really_do_gs_prog(struct brw_context *brw,
 
    brw_compile_gs_prog(brw, prog, gp, key, &output);
 
-   offset = pipeline->program_next;
-   pipeline->program_next = align(pipeline->program_next + output.program_size, 64);
+   struct anv_state gs_state = anv_state_stream_alloc(&pipeline->program_stream,
+                                                      output.program_size, 64);
+   memcpy(gs_state.map, output.program, output.program_size);
 
-   pipeline->gs_vec4 = offset;
+   pipeline->gs_vec4 = gs_state.offset;
    pipeline->gs_vertex_count = gp->program.VerticesIn;
-
-   memcpy((char *) pipeline->device->instruction_block_pool.map +
-          offset, output.program, output.program_size);
 
    ralloc_free(output.mem_ctx);
 
@@ -600,8 +595,6 @@ really_do_gs_prog(struct brw_context *brw,
                            output.prog_data.base.base.total_scratch))
          return false;
    }
-
-   memcpy(&pipeline->gs_prog_data, &output.prog_data, sizeof pipeline->gs_prog_data);
 
    return true;
 }
@@ -854,10 +847,8 @@ anv_compiler_run(struct anv_compiler *compiler, struct anv_pipeline *pipeline)
    fail_on_compile_error(program->LinkStatus,
                          program->InfoLog);
 
-   pipeline->program_block =
-      anv_block_pool_alloc(&device->instruction_block_pool);
-   pipeline->program_next = pipeline->program_block;
-
+   anv_state_stream_init(&pipeline->program_stream,
+                         &device->instruction_block_pool);
 
    bool success;
    struct brw_wm_prog_key wm_key;
@@ -906,12 +897,6 @@ anv_compiler_run(struct anv_compiler *compiler, struct anv_pipeline *pipeline)
       pipeline->gs_vec4 = NO_KERNEL;
    }
 
-
-   /* FIXME: Allocate more blocks if we fill up this one and worst case,
-    * allocate multiple continuous blocks from end of pool to hold really big
-    * programs. */
-   assert(pipeline->program_next - pipeline->program_block < 8192);
-
    brw->ctx.Driver.DeleteShaderProgram(&brw->ctx, program);
 
    gen7_compute_urb_partition(pipeline);
@@ -925,14 +910,11 @@ anv_compiler_run(struct anv_compiler *compiler, struct anv_pipeline *pipeline)
 void
 anv_compiler_free(struct anv_pipeline *pipeline)
 {
-   struct anv_device *device = pipeline->device;
-
    for (uint32_t stage = 0; stage < VK_NUM_SHADER_STAGE; stage++)
       if (pipeline->prog_data[stage])
          free(pipeline->prog_data[stage]->map_entries);
 
-   anv_block_pool_free(&device->instruction_block_pool,
-                       pipeline->program_block);
+   anv_state_stream_finish(&pipeline->program_stream);
 }
 
 }

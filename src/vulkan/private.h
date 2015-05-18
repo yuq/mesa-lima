@@ -587,8 +587,7 @@ struct anv_pipeline {
    struct anv_bo                                gs_scratch_bo;
 
    uint32_t                                     active_stages;
-   uint32_t                                     program_block;
-   uint32_t                                     program_next;
+   struct anv_state_stream                      program_stream;
    uint32_t                                     vs_simd8;
    uint32_t                                     ps_simd8;
    uint32_t                                     ps_simd16;

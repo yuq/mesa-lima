@@ -254,6 +254,9 @@ anv_pipeline_create(
    if (result != VK_SUCCESS)
       goto fail;
 
+   anv_state_stream_init(&pipeline->program_stream,
+                         &device->instruction_block_pool);
+
    for (common = pCreateInfo->pNext; common; common = common->pNext) {
       switch (common->sType) {
       case VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_CREATE_INFO:
