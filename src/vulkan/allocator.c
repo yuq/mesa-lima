@@ -36,6 +36,27 @@
 
 #include "private.h"
 
+#ifdef HAVE_VALGRIND
+#include <valgrind.h>
+#include <memcheck.h>
+#define VG(x) x
+#define VG_NOACCESS_READ(__ptr) ({                       \
+   VALGRIND_MAKE_MEM_DEFINED((__ptr), sizeof(*(__ptr))); \
+   __typeof(*(__ptr)) __val = *(__ptr);                  \
+   VALGRIND_MAKE_MEM_NOACCESS((__ptr), sizeof(*(__ptr)));\
+   __val;                                                \
+})
+#define VG_NOACCESS_WRITE(__ptr, __val) ({                  \
+   VALGRIND_MAKE_MEM_UNDEFINED((__ptr), sizeof(*(__ptr)));  \
+   *(__ptr) = (__val);                                      \
+   VALGRIND_MAKE_MEM_NOACCESS((__ptr), sizeof(*(__ptr)));   \
+})
+#else
+#define VG(x)
+#define VG_NOACCESS_READ(__ptr) (*(__ptr))
+#define VG_NOACCESS_WRITE(__ptr, __val) (*(__ptr) = (__val))
+#endif
+
 /* Design goals:
  *
  *  - Lock free (except when resizing underlying bos)
@@ -147,7 +168,8 @@ anv_free_list_pop(union anv_free_list *list, void **map, uint32_t *offset)
        */
       __sync_synchronize();
 
-      next.offset = *(uint32_t *)(*map + current.offset);
+      uint32_t *next_ptr = *map + current.offset;
+      next.offset = VG_NOACCESS_READ(next_ptr);
       next.count = current.count + 1;
       old.u64 = __sync_val_compare_and_swap(&list->u64, current.u64, next.u64);
       if (old.u64 == current.u64) {
@@ -169,7 +191,7 @@ anv_free_list_push(union anv_free_list *list, void *map, uint32_t offset)
    old = *list;
    do {
       current = old;
-      *next_ptr = current.offset;
+      VG_NOACCESS_WRITE(next_ptr, current.offset);
       new.offset = offset;
       new.count = current.count + 1;
       old.u64 = __sync_val_compare_and_swap(&list->u64, current.u64, new.u64);
@@ -430,6 +452,7 @@ anv_state_pool_alloc(struct anv_state_pool *pool, size_t size, size_t align)
    state.offset = anv_fixed_size_state_pool_alloc(&pool->buckets[bucket],
                                                   pool->block_pool);
    state.map = pool->block_pool->map + state.offset;
+   VG(VALGRIND_MALLOCLIKE_BLOCK(state.map, size, 0, false));
    return state;
 }
 
@@ -442,6 +465,7 @@ anv_state_pool_free(struct anv_state_pool *pool, struct anv_state state)
           size_log2 <= ANV_MAX_STATE_SIZE_LOG2);
    unsigned bucket = size_log2 - ANV_MIN_STATE_SIZE_LOG2;
 
+   VG(VALGRIND_FREELIKE_BLOCK(state.map, 0));
    anv_fixed_size_state_pool_free(&pool->buckets[bucket],
                                   pool->block_pool, state.offset);
 }
@@ -449,6 +473,13 @@ anv_state_pool_free(struct anv_state_pool *pool, struct anv_state state)
 #define NULL_BLOCK 1
 struct stream_block {
    uint32_t next;
+
+   /* The map for the BO at the time the block was givne to us */
+   void *current_map;
+
+#ifdef HAVE_VALGRIND
+   void *_vg_ptr;
+#endif
 };
 
 /* The state stream allocator is a one-shot, single threaded allocator for
@@ -473,7 +504,8 @@ anv_state_stream_finish(struct anv_state_stream *stream)
    block = stream->current_block;
    while (block != 1) {
       sb = stream->block_pool->map + block;
-      next_block = sb->next;
+      next_block = VG_NOACCESS_READ(&sb->next);
+      VG(VALGRIND_FREELIKE_BLOCK(VG_NOACCESS_READ(&sb->_vg_ptr), 0));
       anv_block_pool_free(stream->block_pool, block);
       block = next_block;
    }
@@ -490,8 +522,11 @@ anv_state_stream_alloc(struct anv_state_stream *stream,
    state.offset = ALIGN_U32(stream->next, alignment);
    if (state.offset + size > stream->end) {
       block = anv_block_pool_alloc(stream->block_pool);
-      sb = stream->block_pool->map + block;
-      sb->next = stream->current_block;
+      void *current_map = stream->block_pool->map;
+      sb = current_map + block;
+      VG_NOACCESS_WRITE(&sb->current_map, current_map);
+      VG_NOACCESS_WRITE(&sb->next, stream->current_block);
+      VG(VG_NOACCESS_WRITE(&sb->_vg_ptr, 0));
       stream->current_block = block;
       stream->next = block + sizeof(*sb);
       stream->end = block + stream->block_pool->block_size;
@@ -499,10 +534,30 @@ anv_state_stream_alloc(struct anv_state_stream *stream,
       assert(state.offset + size <= stream->end);
    }
 
-   stream->next = state.offset + size;
+   sb = stream->block_pool->map + stream->current_block;
+   void *current_map = VG_NOACCESS_READ(&sb->current_map);
 
+   state.map = current_map + state.offset;
    state.alloc_size = size;
-   state.map = stream->block_pool->map + state.offset;
+
+#ifdef HAVE_VALGRIND
+   void *vg_ptr = VG_NOACCESS_READ(&sb->_vg_ptr);
+   if (vg_ptr == NULL) {
+      vg_ptr = state.map;
+      VG_NOACCESS_WRITE(&sb->_vg_ptr, vg_ptr);
+      VG(VALGRIND_MALLOCLIKE_BLOCK(vg_ptr, size, 0, false));
+   } else {
+      ptrdiff_t vg_offset = vg_ptr - current_map;
+      assert(vg_offset >= stream->current_block &&
+             vg_offset < stream->end);
+      VALGRIND_RESIZEINPLACE_BLOCK(vg_ptr,
+                                   stream->next - vg_offset,
+                                   (state.offset + size) - vg_offset,
+                                   0);
+   }
+#endif
+
+   stream->next = state.offset + size;
 
    return state;
 }
