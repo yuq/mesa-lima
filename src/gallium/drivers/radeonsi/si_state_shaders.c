@@ -122,7 +122,8 @@ static void si_shader_ls(struct si_shader *shader)
 	shader->ls_rsrc1 = S_00B528_VGPRS((shader->num_vgprs - 1) / 4) |
 			   S_00B528_SGPRS((num_sgprs - 1) / 8) |
 		           S_00B528_VGPR_COMP_CNT(vgpr_comp_cnt);
-	shader->ls_rsrc2 = S_00B52C_USER_SGPR(num_user_sgprs);
+	shader->ls_rsrc2 = S_00B52C_USER_SGPR(num_user_sgprs) |
+			   S_00B52C_SCRATCH_EN(shader->scratch_bytes_per_wave > 0);
 }
 
 static void si_shader_hs(struct si_shader *shader)
@@ -154,7 +155,8 @@ static void si_shader_hs(struct si_shader *shader)
 		       S_00B428_VGPRS((shader->num_vgprs - 1) / 4) |
 		       S_00B428_SGPRS((num_sgprs - 1) / 8));
 	si_pm4_set_reg(pm4, R_00B42C_SPI_SHADER_PGM_RSRC2_HS,
-		       S_00B42C_USER_SGPR(num_user_sgprs));
+		       S_00B42C_USER_SGPR(num_user_sgprs) |
+		       S_00B42C_SCRATCH_EN(shader->scratch_bytes_per_wave > 0));
 }
 
 static void si_shader_es(struct si_shader *shader)
@@ -1066,10 +1068,14 @@ static unsigned si_get_scratch_buffer_bytes_per_wave(struct si_context *sctx,
 
 static unsigned si_get_max_scratch_bytes_per_wave(struct si_context *sctx)
 {
+	unsigned bytes = 0;
 
-	return MAX3(si_get_scratch_buffer_bytes_per_wave(sctx, sctx->ps_shader),
-			si_get_scratch_buffer_bytes_per_wave(sctx, sctx->gs_shader),
-			si_get_scratch_buffer_bytes_per_wave(sctx, sctx->vs_shader));
+	bytes = MAX2(bytes, si_get_scratch_buffer_bytes_per_wave(sctx, sctx->ps_shader));
+	bytes = MAX2(bytes, si_get_scratch_buffer_bytes_per_wave(sctx, sctx->gs_shader));
+	bytes = MAX2(bytes, si_get_scratch_buffer_bytes_per_wave(sctx, sctx->vs_shader));
+	bytes = MAX2(bytes, si_get_scratch_buffer_bytes_per_wave(sctx, sctx->tcs_shader));
+	bytes = MAX2(bytes, si_get_scratch_buffer_bytes_per_wave(sctx, sctx->tes_shader));
+	return bytes;
 }
 
 static void si_update_spi_tmpring_size(struct si_context *sctx)
@@ -1103,14 +1109,28 @@ static void si_update_spi_tmpring_size(struct si_context *sctx)
 			si_pm4_bind_state(sctx, ps, sctx->ps_shader->current->pm4);
 		if (si_update_scratch_buffer(sctx, sctx->gs_shader))
 			si_pm4_bind_state(sctx, gs, sctx->gs_shader->current->pm4);
+		if (si_update_scratch_buffer(sctx, sctx->tcs_shader))
+			si_pm4_bind_state(sctx, hs, sctx->tcs_shader->current->pm4);
 
-		/* VS can be bound as ES or VS. */
-		if (sctx->gs_shader) {
+		/* VS can be bound as LS, ES, or VS. */
+		if (sctx->tes_shader) {
+			if (si_update_scratch_buffer(sctx, sctx->vs_shader))
+				si_pm4_bind_state(sctx, ls, sctx->vs_shader->current->pm4);
+		} else if (sctx->gs_shader) {
 			if (si_update_scratch_buffer(sctx, sctx->vs_shader))
 				si_pm4_bind_state(sctx, es, sctx->vs_shader->current->pm4);
 		} else {
 			if (si_update_scratch_buffer(sctx, sctx->vs_shader))
 				si_pm4_bind_state(sctx, vs, sctx->vs_shader->current->pm4);
+		}
+
+		/* TES can be bound as ES or VS. */
+		if (sctx->gs_shader) {
+			if (si_update_scratch_buffer(sctx, sctx->tes_shader))
+				si_pm4_bind_state(sctx, es, sctx->tes_shader->current->pm4);
+		} else {
+			if (si_update_scratch_buffer(sctx, sctx->tes_shader))
+				si_pm4_bind_state(sctx, vs, sctx->tes_shader->current->pm4);
 		}
 	}
 
