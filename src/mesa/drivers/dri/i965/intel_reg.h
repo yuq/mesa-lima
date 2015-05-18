@@ -47,6 +47,9 @@
 /* Load a value from memory into a register.  Only available on Gen7+. */
 #define GEN7_MI_LOAD_REGISTER_MEM	(CMD_MI | (0x29 << 23))
 # define MI_LOAD_REGISTER_MEM_USE_GGTT		(1 << 22)
+/* Haswell RS control */
+#define MI_RS_CONTROL                   (CMD_MI | (0x6 << 23))
+#define MI_RS_STORE_DATA_IMM            (CMD_MI | (0x2b << 23))
 
 /* Manipulate the predicate bit based on some register values. Only on Gen7+ */
 #define GEN7_MI_PREDICATE		(CMD_MI | (0xC << 23))

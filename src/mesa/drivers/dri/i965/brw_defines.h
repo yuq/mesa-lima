@@ -1640,6 +1640,36 @@ enum brw_message_target {
 #define _3DSTATE_BINDING_TABLE_POINTERS_GS	0x7829 /* GEN7+ */
 #define _3DSTATE_BINDING_TABLE_POINTERS_PS	0x782A /* GEN7+ */
 
+#define _3DSTATE_BINDING_TABLE_POOL_ALLOC       0x7919 /* GEN7.5+ */
+#define BRW_HW_BINDING_TABLE_ENABLE             (1 << 11)
+#define GEN7_HW_BT_POOL_MOCS_SHIFT              7
+#define GEN7_HW_BT_POOL_MOCS_MASK               INTEL_MASK(10, 7)
+#define GEN8_HW_BT_POOL_MOCS_SHIFT              0
+#define GEN8_HW_BT_POOL_MOCS_MASK               INTEL_MASK(6, 0)
+/* Only required in HSW */
+#define HSW_BT_POOL_ALLOC_MUST_BE_ONE           (3 << 5)
+
+#define _3DSTATE_BINDING_TABLE_EDIT_VS          0x7843 /* GEN7.5 */
+#define _3DSTATE_BINDING_TABLE_EDIT_GS          0x7844 /* GEN7.5 */
+#define _3DSTATE_BINDING_TABLE_EDIT_HS          0x7845 /* GEN7.5 */
+#define _3DSTATE_BINDING_TABLE_EDIT_DS          0x7846 /* GEN7.5 */
+#define _3DSTATE_BINDING_TABLE_EDIT_PS          0x7847 /* GEN7.5 */
+#define BRW_BINDING_TABLE_INDEX_SHIFT           16
+#define BRW_BINDING_TABLE_INDEX_MASK            INTEL_MASK(23, 16)
+
+#define BRW_BINDING_TABLE_EDIT_TARGET_ALL       3
+#define BRW_BINDING_TABLE_EDIT_TARGET_CORE1     2
+#define BRW_BINDING_TABLE_EDIT_TARGET_CORE0     1
+/* In HSW, when editing binding table entries to surface state offsets,
+ * the surface state offset is a 16-bit value aligned to 32 bytes. But
+ * Surface State Pointer in dword 2 is [15:0]. Right shift surf_offset
+ * by 5 bits so it won't disturb bit 16 (which is used as the binding
+ * table index entry), otherwise it would hang the GPU.
+ */
+#define HSW_SURFACE_STATE_EDIT(value)           (value >> 5)
+/* Same as Haswell, but surface state offsets now aligned to 64 bytes.*/
+#define GEN8_SURFACE_STATE_EDIT(value)          (value >> 6)
+
 #define _3DSTATE_SAMPLER_STATE_POINTERS		0x7802 /* GEN6+ */
 # define PS_SAMPLER_STATE_CHANGE				(1 << 12)
 # define GS_SAMPLER_STATE_CHANGE				(1 << 9)
