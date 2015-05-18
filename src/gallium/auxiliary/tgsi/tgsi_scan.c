@@ -74,8 +74,8 @@ tgsi_scan_shader(const struct tgsi_token *tokens,
    assert(procType == TGSI_PROCESSOR_FRAGMENT ||
           procType == TGSI_PROCESSOR_VERTEX ||
           procType == TGSI_PROCESSOR_GEOMETRY ||
-          procType == TGSI_PROCESSOR_TESSCTRL ||
-          procType == TGSI_PROCESSOR_TESSEVAL ||
+          procType == TGSI_PROCESSOR_TESS_CTRL ||
+          procType == TGSI_PROCESSOR_TESS_EVAL ||
           procType == TGSI_PROCESSOR_COMPUTE);
    info->processor = procType;
 
@@ -239,8 +239,8 @@ tgsi_scan_shader(const struct tgsi_token *tokens,
 
                   if (procType == TGSI_PROCESSOR_VERTEX ||
                       procType == TGSI_PROCESSOR_GEOMETRY ||
-                      procType == TGSI_PROCESSOR_TESSCTRL ||
-                      procType == TGSI_PROCESSOR_TESSEVAL) {
+                      procType == TGSI_PROCESSOR_TESS_CTRL ||
+                      procType == TGSI_PROCESSOR_TESS_EVAL) {
                      if (semName == TGSI_SEMANTIC_CLIPDIST) {
                         info->num_written_clipdistance +=
                            util_bitcount(fulldecl->Declaration.UsageMask);

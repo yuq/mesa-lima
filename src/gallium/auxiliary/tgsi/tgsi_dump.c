@@ -286,15 +286,15 @@ iter_declaration(
    if (decl->Declaration.File == TGSI_FILE_INPUT &&
        (iter->processor.Processor == TGSI_PROCESSOR_GEOMETRY ||
         (!patch &&
-         (iter->processor.Processor == TGSI_PROCESSOR_TESSCTRL ||
-          iter->processor.Processor == TGSI_PROCESSOR_TESSEVAL)))) {
+         (iter->processor.Processor == TGSI_PROCESSOR_TESS_CTRL ||
+          iter->processor.Processor == TGSI_PROCESSOR_TESS_EVAL)))) {
       TXT("[]");
    }
 
    /* all non-patch tess ctrl shader outputs are two dimensional */
    if (decl->Declaration.File == TGSI_FILE_OUTPUT &&
        !patch &&
-       iter->processor.Processor == TGSI_PROCESSOR_TESSCTRL) {
+       iter->processor.Processor == TGSI_PROCESSOR_TESS_CTRL) {
       TXT("[]");
    }
 
