@@ -34,12 +34,13 @@ void
 __anv_finishme(const char *file, int line, const char *format, ...)
 {
    va_list ap;
+   char buffer[256];
 
    va_start(ap, format);
-   fprintf(stderr, "%s:%d: FINISHME: ", file, line);
-   vfprintf(stderr, format, ap);
-   fprintf(stderr, "\n");
+   vsnprintf(buffer, sizeof(buffer), format, ap);
    va_end(ap);
+
+   fprintf(stderr, "%s:%d: FINISHME: %s\n", file, line, buffer);
 }
 
 int
