@@ -1206,18 +1206,6 @@ VkResult anv_GetQueryPoolResults(
    stub_return(VK_UNSUPPORTED);
 }
 
-// Format capabilities
-
-VkResult anv_GetFormatInfo(
-    VkDevice                                    device,
-    VkFormat                                    format,
-    VkFormatInfoType                            infoType,
-    size_t*                                     pDataSize,
-    void*                                       pData)
-{
-   stub_return(VK_UNSUPPORTED);
-}
-
 // Buffer functions
 
 VkResult anv_CreateBuffer(

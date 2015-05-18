@@ -64,6 +64,7 @@ libvulkan_la_SOURCES =				\
 	intel.c					\
 	entrypoints.c				\
 	entrypoints.h				\
+	formats.c				\
 	compiler.cpp
 
 BUILT_SOURCES = entrypoints.h entrypoints.c

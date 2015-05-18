@@ -619,6 +619,8 @@ struct anv_format {
    uint32_t                                     format;
    int32_t                                      cpp;
    int32_t                                      channels;
+   uint32_t                                     linear_flags;
+   uint32_t                                     tiled_flags;
 };
 
 const struct anv_format *
