@@ -80,6 +80,7 @@ extern const struct st_tracked_state st_bind_gs_ubos;
 extern const struct st_tracked_state st_bind_tcs_ubos;
 extern const struct st_tracked_state st_bind_tes_ubos;
 extern const struct st_tracked_state st_update_pixel_transfer;
+extern const struct st_tracked_state st_update_tess;
 
 
 GLuint st_compare_func_to_pipe(GLenum func);

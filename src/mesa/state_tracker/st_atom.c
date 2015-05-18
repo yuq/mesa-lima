@@ -78,6 +78,7 @@ static const struct st_tracked_state *atoms[] =
    &st_bind_fs_ubos,
    &st_bind_gs_ubos,
    &st_update_pixel_transfer,
+   &st_update_tess,
 
    /* this must be done after the vertex program update */
    &st_update_array

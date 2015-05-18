@@ -53,7 +53,7 @@ struct u_upload_mgr;
 #define ST_NEW_FRAGMENT_PROGRAM        (1 << 1)
 #define ST_NEW_VERTEX_PROGRAM          (1 << 2)
 #define ST_NEW_FRAMEBUFFER             (1 << 3)
-/* gap, re-use it */
+#define ST_NEW_TESS_STATE              (1 << 4)
 #define ST_NEW_GEOMETRY_PROGRAM        (1 << 5)
 #define ST_NEW_VERTEX_ARRAYS           (1 << 6)
 #define ST_NEW_RASTERIZER              (1 << 7)
