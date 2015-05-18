@@ -101,6 +101,11 @@ anv_gem_mmap(struct anv_device *device, uint32_t gem_handle,
    gem_mmap.offset = offset;
    gem_mmap.size = size;
    VG_CLEAR(gem_mmap.addr_ptr);
+
+#ifdef I915_MMAP_WC
+   gem_mmap.flags = 0;
+#endif
+
    ret = anv_ioctl(device->fd, DRM_IOCTL_I915_GEM_MMAP, &gem_mmap);
    if (ret != 0) {
       /* FIXME: Is NULL the right error return? Cf MAP_INVALID */
