@@ -1667,10 +1667,20 @@ void *ureg_create_shader( struct ureg_program *ureg,
    else
       memset(&state.stream_output, 0, sizeof(state.stream_output));
 
-   if (ureg->processor == TGSI_PROCESSOR_VERTEX)
-      return pipe->create_vs_state( pipe, &state );
-   else
-      return pipe->create_fs_state( pipe, &state );
+   switch (ureg->processor) {
+   case TGSI_PROCESSOR_VERTEX:
+      return pipe->create_vs_state(pipe, &state);
+   case TGSI_PROCESSOR_TESS_CTRL:
+      return pipe->create_tcs_state(pipe, &state);
+   case TGSI_PROCESSOR_TESS_EVAL:
+      return pipe->create_tes_state(pipe, &state);
+   case TGSI_PROCESSOR_GEOMETRY:
+      return pipe->create_gs_state(pipe, &state);
+   case TGSI_PROCESSOR_FRAGMENT:
+      return pipe->create_fs_state(pipe, &state);
+   default:
+      return NULL;
+   }
 }
 
 
