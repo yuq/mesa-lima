@@ -190,8 +190,10 @@ VkResult anv_GetPhysicalDeviceInfo(
    switch (infoType) {
    case VK_PHYSICAL_DEVICE_INFO_TYPE_PROPERTIES:
       properties = pData;
-      assert(*pDataSize >= sizeof(*properties));
-      *pDataSize = sizeof(*properties); /* Assuming we have to return the size of our struct. */
+
+      *pDataSize = sizeof(*properties);
+      if (pData == NULL)
+         return VK_SUCCESS;
 
       properties->apiVersion = 1;
       properties->driverVersion = 1;
@@ -211,8 +213,10 @@ VkResult anv_GetPhysicalDeviceInfo(
 
    case VK_PHYSICAL_DEVICE_INFO_TYPE_PERFORMANCE:
       performance = pData;
-      assert(*pDataSize >= sizeof(*performance));
-      *pDataSize = sizeof(*performance); /* Assuming we have to return the size of our struct. */
+
+      *pDataSize = sizeof(*performance);
+      if (pData == NULL)
+         return VK_SUCCESS;
 
       performance->maxDeviceClock = 1.0;
       performance->aluPerClock = 1.0;
@@ -223,8 +227,10 @@ VkResult anv_GetPhysicalDeviceInfo(
       
    case VK_PHYSICAL_DEVICE_INFO_TYPE_QUEUE_PROPERTIES:
       queue_properties = pData;
-      assert(*pDataSize >= sizeof(*queue_properties));
+
       *pDataSize = sizeof(*queue_properties);
+      if (pData == NULL)
+         return VK_SUCCESS;
 
       queue_properties->queueFlags = 0;
       queue_properties->queueCount = 1;
@@ -235,8 +241,10 @@ VkResult anv_GetPhysicalDeviceInfo(
 
    case VK_PHYSICAL_DEVICE_INFO_TYPE_MEMORY_PROPERTIES:
       memory_properties = pData;
-      assert(*pDataSize >= sizeof(*memory_properties));
+
       *pDataSize = sizeof(*memory_properties);
+      if (pData == NULL)
+         return VK_SUCCESS;
 
       memory_properties->supportsMigration = false;
       memory_properties->supportsPinning = false;
@@ -392,8 +400,11 @@ VkResult anv_GetPhysicalDeviceExtensionInfo(
 
    switch (infoType) {
    case VK_EXTENSION_INFO_TYPE_COUNT:
+      *pDataSize = 4;
+      if (pData == NULL)
+         return VK_SUCCESS;
+
       count = pData;
-      assert(*pDataSize == 4);
       *count = 0;
       return VK_SUCCESS;
       
@@ -1000,6 +1011,10 @@ VkResult anv_GetObjectInfo(
 
    switch (infoType) {
    case VK_OBJECT_INFO_TYPE_MEMORY_REQUIREMENTS:
+      *pDataSize = sizeof(memory_requirements);
+      if (pData == NULL)
+         return VK_SUCCESS;
+
       fill_memory_requirements(objType, object, &memory_requirements);
       memcpy(pData, &memory_requirements,
              MIN2(*pDataSize, sizeof(memory_requirements)));
