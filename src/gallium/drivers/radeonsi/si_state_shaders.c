@@ -841,8 +841,15 @@ static void si_update_spi_tmpring_size(struct si_context *sctx)
 			si_pm4_bind_state(sctx, ps, sctx->ps_shader->current->pm4);
 		if (si_update_scratch_buffer(sctx, sctx->gs_shader))
 			si_pm4_bind_state(sctx, gs, sctx->gs_shader->current->pm4);
-		if (si_update_scratch_buffer(sctx, sctx->vs_shader))
-			si_pm4_bind_state(sctx, vs, sctx->vs_shader->current->pm4);
+
+		/* VS can be bound as ES or VS. */
+		if (sctx->gs_shader) {
+			if (si_update_scratch_buffer(sctx, sctx->vs_shader))
+				si_pm4_bind_state(sctx, es, sctx->vs_shader->current->pm4);
+		} else {
+			if (si_update_scratch_buffer(sctx, sctx->vs_shader))
+				si_pm4_bind_state(sctx, vs, sctx->vs_shader->current->pm4);
+		}
 	}
 
 	/* The LLVM shader backend should be reporting aligned scratch_sizes. */
