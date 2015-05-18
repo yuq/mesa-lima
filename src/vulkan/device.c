@@ -1041,7 +1041,7 @@ VkResult anv_GetObjectInfo(
     void*                                       pData)
 {
    VkMemoryRequirements memory_requirements;
-   uint32_t count;
+   uint32_t *count;
 
    switch (infoType) {
    case VK_OBJECT_INFO_TYPE_MEMORY_REQUIREMENTS:
@@ -1049,9 +1049,7 @@ VkResult anv_GetObjectInfo(
       if (pData == NULL)
          return VK_SUCCESS;
 
-      fill_memory_requirements(objType, object, &memory_requirements);
-      memcpy(pData, &memory_requirements,
-             MIN2(*pDataSize, sizeof(memory_requirements)));
+      fill_memory_requirements(objType, object, pData);
       return VK_SUCCESS;
 
    case VK_OBJECT_INFO_TYPE_MEMORY_ALLOCATION_COUNT:
@@ -1059,7 +1057,8 @@ VkResult anv_GetObjectInfo(
       if (pData == NULL)
          return VK_SUCCESS;
 
-      count = get_allocation_count(objType);
+      count = pData;
+      *count = get_allocation_count(objType);
       return VK_SUCCESS;
 
    default:
