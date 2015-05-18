@@ -87,6 +87,7 @@ typedef enum {
    nir_var_global,
    nir_var_local,
    nir_var_uniform,
+   nir_var_shader_storage,
    nir_var_system_value
 } nir_variable_mode;
 
