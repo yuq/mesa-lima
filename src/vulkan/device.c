@@ -202,11 +202,11 @@ VkResult anv_GetPhysicalDeviceInfo(
       properties->deviceType = VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU;
       strcpy(properties->deviceName, device->name);
       properties->maxInlineMemoryUpdateSize = 0;
-      properties->maxBoundDescriptorSets = 0;
-      properties->maxThreadGroupSize = 0;
+      properties->maxBoundDescriptorSets = MAX_SETS;
+      properties->maxThreadGroupSize = 512;
       properties->timestampFrequency = 1000 * 1000 * 1000 / ns_per_tick;
-      properties->multiColorAttachmentClears = 0;
-      properties->maxDescriptorSets = 2;
+      properties->multiColorAttachmentClears = true;
+      properties->maxDescriptorSets = 8;
       properties->maxViewports = 16;
       properties->maxColorAttachments = 8;
       return VK_SUCCESS;
@@ -235,8 +235,8 @@ VkResult anv_GetPhysicalDeviceInfo(
       queue_properties->queueFlags = 0;
       queue_properties->queueCount = 1;
       queue_properties->maxAtomicCounters = 0;
-      queue_properties->supportsTimestamps = 0;
-      queue_properties->maxMemReferences = 0;
+      queue_properties->supportsTimestamps = true;
+      queue_properties->maxMemReferences = 256;
       return VK_SUCCESS;
 
    case VK_PHYSICAL_DEVICE_INFO_TYPE_MEMORY_PROPERTIES:
