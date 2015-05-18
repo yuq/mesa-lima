@@ -574,10 +574,11 @@ VkResult anv_QueueSubmit(
     VkQueue                                     _queue,
     uint32_t                                    cmdBufferCount,
     const VkCmdBuffer*                          pCmdBuffers,
-    VkFence                                     fence)
+    VkFence                                     _fence)
 {
    struct anv_queue *queue = (struct anv_queue *) _queue;
    struct anv_device *device = queue->device;
+   struct anv_fence *fence = (struct anv_fence *) _fence;
    int ret;
 
    for (uint32_t i = 0; i < cmdBufferCount; i++) {
@@ -591,6 +592,12 @@ VkResult anv_QueueSubmit(
          ret = anv_gem_execbuffer(device, &cmd_buffer->execbuf);
          if (ret != 0)
             return vk_error(VK_ERROR_UNKNOWN);
+
+         if (fence) {
+            ret = anv_gem_execbuffer(device, &fence->execbuf);
+            if (ret != 0)
+               return vk_error(VK_ERROR_UNKNOWN);
+         }
 
          for (uint32_t i = 0; i < cmd_buffer->bo_count; i++)
             cmd_buffer->exec2_bos[i]->offset = cmd_buffer->exec2_objects[i].offset;
@@ -936,6 +943,19 @@ anv_free_destructor(struct anv_device *         device,
    return VK_SUCCESS;
 }
 
+static VkResult
+anv_fence_destructor(struct anv_device *   device,
+                     VkObject              object)
+{
+   struct anv_fence *fence = (struct anv_fence *) object;
+
+   anv_gem_munmap(fence->bo.map, fence->bo.size);
+   anv_gem_close(device, fence->bo.gem_handle);
+   anv_device_free(device, fence);
+
+   return VK_SUCCESS;
+}
+
 static VkResult (*anv_object_destructors[])(struct anv_device *device,
                                             VkObject object) = {
    [VK_OBJECT_TYPE_INSTANCE] =        anv_instance_destructor,
@@ -947,7 +967,8 @@ static VkResult (*anv_object_destructors[])(struct anv_device *device,
    [VK_OBJECT_TYPE_SHADER] =          anv_free_destructor,
    [VK_OBJECT_TYPE_BUFFER] =          anv_free_destructor,
    [VK_OBJECT_TYPE_IMAGE] =           anv_free_destructor,
-   [VK_OBJECT_TYPE_RENDER_PASS] =     anv_free_destructor
+   [VK_OBJECT_TYPE_RENDER_PASS] =     anv_free_destructor,
+   [VK_OBJECT_TYPE_FENCE] =           anv_fence_destructor
 };
 
 VkResult anv_DestroyObject(
@@ -1102,36 +1123,124 @@ VkResult anv_QueueBindImageMemoryRange(
 }
 
 VkResult anv_CreateFence(
-    VkDevice                                    device,
+    VkDevice                                    _device,
     const VkFenceCreateInfo*                    pCreateInfo,
     VkFence*                                    pFence)
 {
-   stub_return(VK_UNSUPPORTED);
+   struct anv_device *device = (struct anv_device *) _device;
+   struct anv_fence *fence;
+   struct anv_batch batch;
+   VkResult result;
+
+   const uint32_t fence_size = 128;
+
+   assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_FENCE_CREATE_INFO);
+
+   fence = anv_device_alloc(device, sizeof(*fence), 8,
+                            VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
+   if (fence == NULL)
+      return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+
+   result = anv_bo_init_new(&fence->bo, device, fence_size);
+   if (result != VK_SUCCESS)
+      goto fail;
+
+   fence->bo.map =
+      anv_gem_mmap(device, fence->bo.gem_handle, 0, fence->bo.size);
+   batch.next = fence->bo.map;
+   anv_batch_emit(&batch, GEN8_MI_BATCH_BUFFER_END);
+   anv_batch_emit(&batch, GEN8_MI_NOOP);
+
+   fence->exec2_objects[0].handle = fence->bo.gem_handle;
+   fence->exec2_objects[0].relocation_count = 0;
+   fence->exec2_objects[0].relocs_ptr = 0;
+   fence->exec2_objects[0].alignment = 0;
+   fence->exec2_objects[0].offset = fence->bo.offset;
+   fence->exec2_objects[0].flags = 0;
+   fence->exec2_objects[0].rsvd1 = 0;
+   fence->exec2_objects[0].rsvd2 = 0;
+
+   fence->execbuf.buffers_ptr = (uintptr_t) fence->exec2_objects;
+   fence->execbuf.buffer_count = 1;
+   fence->execbuf.batch_start_offset = 0;
+   fence->execbuf.batch_len = batch.next - fence->bo.map;
+   fence->execbuf.cliprects_ptr = 0;
+   fence->execbuf.num_cliprects = 0;
+   fence->execbuf.DR1 = 0;
+   fence->execbuf.DR4 = 0;
+
+   fence->execbuf.flags =
+      I915_EXEC_HANDLE_LUT | I915_EXEC_NO_RELOC | I915_EXEC_RENDER;
+   fence->execbuf.rsvd1 = device->context_id;
+   fence->execbuf.rsvd2 = 0;
+
+   *pFence = (VkQueryPool) fence;
+
+   return VK_SUCCESS;
+
+ fail:
+   anv_device_free(device, fence);
+
+   return result;
 }
 
 VkResult anv_ResetFences(
-    VkDevice                                    device,
+    VkDevice                                    _device,
     uint32_t                                    fenceCount,
     VkFence*                                    pFences)
 {
-   stub_return(VK_UNSUPPORTED);
+   struct anv_fence **fences = (struct anv_fence **) pFences;
+
+   for (uint32_t i; i < fenceCount; i++)
+      fences[i]->ready = false;
+
+   return VK_SUCCESS;
 }
 
 VkResult anv_GetFenceStatus(
-    VkDevice                                    device,
-    VkFence                                     fence)
+    VkDevice                                    _device,
+    VkFence                                     _fence)
 {
-   stub_return(VK_UNSUPPORTED);
+   struct anv_device *device = (struct anv_device *) _device;
+   struct anv_fence *fence = (struct anv_fence *) _fence;
+   int64_t t = 0;
+   int ret;
+
+   if (fence->ready)
+      return VK_SUCCESS;
+
+   ret = anv_gem_wait(device, fence->bo.gem_handle, &t);
+   if (ret == 0) {
+      fence->ready = true;
+      return VK_SUCCESS;
+   }
+   
+   return VK_NOT_READY;
 }
 
 VkResult anv_WaitForFences(
-    VkDevice                                    device,
+    VkDevice                                    _device,
     uint32_t                                    fenceCount,
     const VkFence*                              pFences,
     bool32_t                                    waitAll,
     uint64_t                                    timeout)
 {
-   stub_return(VK_UNSUPPORTED);
+   struct anv_device *device = (struct anv_device *) _device;
+   struct anv_fence **fences = (struct anv_fence **) pFences;
+   int64_t t = timeout;
+   int ret;
+
+   /* FIXME: handle !waitAll */
+
+   for (uint32_t i = 0; i < fenceCount; i++) {
+      ret = anv_gem_wait(device, fences[i]->bo.gem_handle, &t);
+      if (ret == -1 && errno == ETIME)
+         return VK_TIMEOUT;
+      else if (ret == -1)
+         return vk_error(VK_ERROR_UNKNOWN);
+   }      
+
+   return VK_SUCCESS;
 }
 
 // Queue semaphore functions

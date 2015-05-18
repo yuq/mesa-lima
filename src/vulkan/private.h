@@ -550,6 +550,13 @@ struct anv_cmd_buffer {
 void anv_cmd_buffer_dump(struct anv_cmd_buffer *cmd_buffer);
 void anv_aub_writer_destroy(struct anv_aub_writer *writer);
 
+struct anv_fence {
+   struct anv_bo bo;
+   struct drm_i915_gem_execbuffer2 execbuf;
+   struct drm_i915_gem_exec_object2 exec2_objects[1];
+   bool ready;
+};
+
 struct anv_shader {
    uint32_t size;
    char data[0];
