@@ -999,6 +999,18 @@ fill_memory_requirements(
    }
 }
 
+static uint32_t
+get_allocation_count(VkObjectType objType)
+{
+   switch (objType) {
+   case VK_OBJECT_TYPE_BUFFER:
+   case VK_OBJECT_TYPE_IMAGE:
+      return 1;
+   default:
+      return 0;
+   }
+}
+
 VkResult anv_GetObjectInfo(
     VkDevice                                    _device,
     VkObjectType                                objType,
@@ -1008,6 +1020,7 @@ VkResult anv_GetObjectInfo(
     void*                                       pData)
 {
    VkMemoryRequirements memory_requirements;
+   uint32_t count;
 
    switch (infoType) {
    case VK_OBJECT_INFO_TYPE_MEMORY_REQUIREMENTS:
@@ -1018,10 +1031,16 @@ VkResult anv_GetObjectInfo(
       fill_memory_requirements(objType, object, &memory_requirements);
       memcpy(pData, &memory_requirements,
              MIN2(*pDataSize, sizeof(memory_requirements)));
-      *pDataSize = sizeof(memory_requirements);
       return VK_SUCCESS;
 
    case VK_OBJECT_INFO_TYPE_MEMORY_ALLOCATION_COUNT:
+      *pDataSize = sizeof(count);
+      if (pData == NULL)
+         return VK_SUCCESS;
+
+      count = get_allocation_count(objType);
+      return VK_SUCCESS;
+
    default:
       return VK_UNSUPPORTED;
    }
