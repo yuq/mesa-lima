@@ -313,20 +313,25 @@ anv_block_pool_alloc(struct anv_block_pool *pool)
    uint32_t offset, block, size;
 
    /* Try free list first. */
-   if (anv_free_list_pop(&pool->free_list, &pool->map, &offset))
+   if (anv_free_list_pop(&pool->free_list, &pool->map, &offset)) {
+      assert(pool->map);
       return offset;
+   }
 
  restart:
    size = pool->size;
    block = __sync_fetch_and_add(&pool->next_block, pool->block_size);
    if (block < size) {
+      assert(pool->map);
       return block;
    } else if (block == size) {
       /* We allocated the first block outside the pool, we have to grow it.
        * pool->next_block acts a mutex: threads who try to allocate now will
        * get block indexes above the current limit and hit futex_wait
        * below. */
-      anv_block_pool_grow(pool);
+      int err = anv_block_pool_grow(pool);
+      assert(err == 0);
+      (void) err;
       futex_wake(&pool->size, INT_MAX);
    } else {
       futex_wait(&pool->size, size);
