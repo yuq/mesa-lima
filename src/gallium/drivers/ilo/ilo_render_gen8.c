@@ -149,7 +149,7 @@ gen8_draw_wm(struct ilo_render *r,
 
    /* 3DSTATE_DEPTH_BUFFER and 3DSTATE_CLEAR_PARAMS */
    if (DIRTY(FB) || r->batch_bo_changed) {
-      const struct ilo_zs_surface *zs;
+      const struct ilo_state_zs *zs;
       uint32_t clear_params;
 
       if (vec->fb.state.zsbuf) {
@@ -170,7 +170,7 @@ gen8_draw_wm(struct ilo_render *r,
 
       gen8_wa_pre_depth(r);
 
-      gen6_3DSTATE_DEPTH_BUFFER(r->builder, zs, false);
+      gen6_3DSTATE_DEPTH_BUFFER(r->builder, zs);
       gen6_3DSTATE_HIER_DEPTH_BUFFER(r->builder, zs);
       gen6_3DSTATE_STENCIL_BUFFER(r->builder, zs);
       gen7_3DSTATE_CLEAR_PARAMS(r->builder, clear_params);
@@ -372,10 +372,8 @@ ilo_render_emit_rectlist_commands_gen8(struct ilo_render *r,
    gen8_wa_pre_depth(r);
 
    if (blitter->uses & (ILO_BLITTER_USE_FB_DEPTH |
-                        ILO_BLITTER_USE_FB_STENCIL)) {
-      gen6_3DSTATE_DEPTH_BUFFER(r->builder,
-            &blitter->fb.dst.u.zs, true);
-   }
+                        ILO_BLITTER_USE_FB_STENCIL))
+      gen6_3DSTATE_DEPTH_BUFFER(r->builder, &blitter->fb.dst.u.zs);
 
    if (blitter->uses & ILO_BLITTER_USE_FB_DEPTH) {
       gen6_3DSTATE_HIER_DEPTH_BUFFER(r->builder,

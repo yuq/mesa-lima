@@ -1159,8 +1159,7 @@ gen6_3DSTATE_AA_LINE_PARAMETERS(struct ilo_builder *builder)
 
 static inline void
 gen6_3DSTATE_DEPTH_BUFFER(struct ilo_builder *builder,
-                          const struct ilo_zs_surface *zs,
-                          bool aligned_8x4)
+                          const struct ilo_state_zs *zs)
 {
    const uint32_t cmd = (ilo_dev_gen(builder->dev) >= ILO_GEN(7)) ?
       GEN7_RENDER_CMD(3D, 3DSTATE_DEPTH_BUFFER) :
@@ -1174,44 +1173,49 @@ gen6_3DSTATE_DEPTH_BUFFER(struct ilo_builder *builder,
    pos = ilo_builder_batch_pointer(builder, cmd_len, &dw);
 
    dw[0] = cmd | (cmd_len - 2);
-   dw[1] = zs->payload[0];
-   dw[2] = 0;
 
-   /* see ilo_gpe_init_zs_surface() */
+   /*
+    * see zs_set_gen6_3DSTATE_DEPTH_BUFFER() and
+    * zs_set_gen7_3DSTATE_DEPTH_BUFFER()
+    */
    if (ilo_dev_gen(builder->dev) >= ILO_GEN(8)) {
+      dw[1] = zs->depth[0];
+      dw[2] = 0;
       dw[3] = 0;
-      dw[4] = (aligned_8x4) ? zs->dw_aligned_8x4 : zs->payload[2];
-      dw[5] = zs->payload[3];
-      dw[6] = zs->payload[4];
-      dw[7] = zs->payload[5];
+      dw[4] = zs->depth[2];
+      dw[5] = zs->depth[3];
+      dw[6] = 0;
+      dw[7] = zs->depth[4];
 
       dw[5] |= builder->mocs << GEN8_DEPTH_DW5_MOCS__SHIFT;
 
-      if (zs->bo) {
-         ilo_builder_batch_reloc64(builder, pos + 2, zs->bo,
-               zs->payload[1], INTEL_RELOC_WRITE);
+      if (zs->depth_bo) {
+         ilo_builder_batch_reloc64(builder, pos + 2, zs->depth_bo,
+               zs->depth[1], (zs->z_readonly) ? 0 : INTEL_RELOC_WRITE);
       }
    } else {
-      dw[3] = (aligned_8x4) ? zs->dw_aligned_8x4 : zs->payload[2];
-      dw[4] = zs->payload[3];
-      dw[5] = zs->payload[4];
-      dw[6] = zs->payload[5];
+      dw[1] = zs->depth[0];
+      dw[2] = 0;
+      dw[3] = zs->depth[2];
+      dw[4] = zs->depth[3];
+      dw[5] = 0;
+      dw[6] = zs->depth[4];
 
       if (ilo_dev_gen(builder->dev) >= ILO_GEN(7))
          dw[4] |= builder->mocs << GEN7_DEPTH_DW4_MOCS__SHIFT;
       else
          dw[6] |= builder->mocs << GEN6_DEPTH_DW6_MOCS__SHIFT;
 
-      if (zs->bo) {
-         ilo_builder_batch_reloc(builder, pos + 2, zs->bo,
-               zs->payload[1], INTEL_RELOC_WRITE);
+      if (zs->depth_bo) {
+         ilo_builder_batch_reloc(builder, pos + 2, zs->depth_bo,
+               zs->depth[1], (zs->z_readonly) ? 0 : INTEL_RELOC_WRITE);
       }
    }
 }
 
 static inline void
 gen6_3DSTATE_STENCIL_BUFFER(struct ilo_builder *builder,
-                            const struct ilo_zs_surface *zs)
+                            const struct ilo_state_zs *zs)
 {
    const uint32_t cmd = (ilo_dev_gen(builder->dev) >= ILO_GEN(7)) ?
       GEN7_RENDER_CMD(3D, 3DSTATE_STENCIL_BUFFER) :
@@ -1225,33 +1229,36 @@ gen6_3DSTATE_STENCIL_BUFFER(struct ilo_builder *builder,
    pos = ilo_builder_batch_pointer(builder, cmd_len, &dw);
 
    dw[0] = cmd | (cmd_len - 2);
-   /* see ilo_gpe_init_zs_surface() */
-   dw[1] = zs->payload[6];
-   dw[2] = 0;
 
+   /* see zs_set_gen6_3DSTATE_STENCIL_BUFFER() */
    if (ilo_dev_gen(builder->dev) >= ILO_GEN(8)) {
+      dw[1] = zs->stencil[0];
+      dw[2] = 0;
+      dw[3] = 0;
+      dw[4] = zs->stencil[2];
+
       dw[1] |= builder->mocs << GEN8_STENCIL_DW1_MOCS__SHIFT;
 
-      dw[3] = 0;
-      dw[4] = zs->payload[8];
-
-      if (zs->separate_s8_bo) {
-         ilo_builder_batch_reloc64(builder, pos + 2,
-               zs->separate_s8_bo, zs->payload[7], INTEL_RELOC_WRITE);
+      if (zs->stencil_bo) {
+         ilo_builder_batch_reloc64(builder, pos + 2, zs->stencil_bo,
+               zs->stencil[1], (zs->s_readonly) ? 0 : INTEL_RELOC_WRITE);
       }
    } else {
+      dw[1] = zs->stencil[0];
+      dw[2] = 0;
+
       dw[1] |= builder->mocs << GEN6_STENCIL_DW1_MOCS__SHIFT;
 
-      if (zs->separate_s8_bo) {
-         ilo_builder_batch_reloc(builder, pos + 2,
-               zs->separate_s8_bo, zs->payload[7], INTEL_RELOC_WRITE);
+      if (zs->stencil_bo) {
+         ilo_builder_batch_reloc(builder, pos + 2, zs->stencil_bo,
+               zs->stencil[1], (zs->s_readonly) ? 0 : INTEL_RELOC_WRITE);
       }
    }
 }
 
 static inline void
 gen6_3DSTATE_HIER_DEPTH_BUFFER(struct ilo_builder *builder,
-                               const struct ilo_zs_surface *zs)
+                               const struct ilo_state_zs *zs)
 {
    const uint32_t cmd = (ilo_dev_gen(builder->dev) >= ILO_GEN(7)) ?
       GEN7_RENDER_CMD(3D, 3DSTATE_HIER_DEPTH_BUFFER) :
@@ -1265,26 +1272,29 @@ gen6_3DSTATE_HIER_DEPTH_BUFFER(struct ilo_builder *builder,
    pos = ilo_builder_batch_pointer(builder, cmd_len, &dw);
 
    dw[0] = cmd | (cmd_len - 2);
-   /* see ilo_gpe_init_zs_surface() */
-   dw[1] = zs->payload[9];
-   dw[2] = 0;
 
+   /* see zs_set_gen6_3DSTATE_HIER_DEPTH_BUFFER() */
    if (ilo_dev_gen(builder->dev) >= ILO_GEN(8)) {
+      dw[1] = zs->hiz[0];
+      dw[2] = 0;
+      dw[3] = 0;
+      dw[4] = zs->hiz[2];
+
       dw[1] |= builder->mocs << GEN8_HIZ_DW1_MOCS__SHIFT;
 
-      dw[3] = 0;
-      dw[4] = zs->payload[11];
-
       if (zs->hiz_bo) {
-         ilo_builder_batch_reloc64(builder, pos + 2,
-               zs->hiz_bo, zs->payload[10], INTEL_RELOC_WRITE);
+         ilo_builder_batch_reloc64(builder, pos + 2, zs->hiz_bo,
+               zs->hiz[1], (zs->z_readonly) ? 0 : INTEL_RELOC_WRITE);
       }
    } else {
+      dw[1] = zs->hiz[0];
+      dw[2] = 0;
+
       dw[1] |= builder->mocs << GEN6_HIZ_DW1_MOCS__SHIFT;
 
       if (zs->hiz_bo) {
-         ilo_builder_batch_reloc(builder, pos + 2,
-               zs->hiz_bo, zs->payload[10], INTEL_RELOC_WRITE);
+         ilo_builder_batch_reloc(builder, pos + 2, zs->hiz_bo,
+               zs->hiz[1], (zs->z_readonly) ? 0 : INTEL_RELOC_WRITE);
       }
    }
 }

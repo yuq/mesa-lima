@@ -1047,7 +1047,7 @@ ilo_create_surface(struct pipe_context *pipe,
    struct ilo_texture *tex = ilo_texture(res);
    struct ilo_surface_cso *surf;
 
-   surf = MALLOC_STRUCT(ilo_surface_cso);
+   surf = CALLOC_STRUCT(ilo_surface_cso);
    assert(surf);
 
    surf->base = *templ;
@@ -1071,14 +1071,37 @@ ilo_create_surface(struct pipe_context *pipe,
             templ->u.tex.last_layer - templ->u.tex.first_layer + 1,
             true, &surf->u.rt);
    } else {
+      struct ilo_state_zs_info info;
+
       assert(res->target != PIPE_BUFFER);
 
-      ilo_gpe_init_zs_surface(dev, &tex->image,
-            (tex->separate_s8) ? &tex->separate_s8->image : NULL,
-            templ->format,
-            templ->u.tex.level, templ->u.tex.first_layer,
-            templ->u.tex.last_layer - templ->u.tex.first_layer + 1,
-            &surf->u.zs);
+      memset(&info, 0, sizeof(info));
+
+      if (templ->format == PIPE_FORMAT_S8_UINT) {
+         info.s_img = &tex->image;
+      } else {
+         info.z_img = &tex->image;
+         info.s_img = (tex->separate_s8) ? &tex->separate_s8->image : NULL;
+
+         info.hiz_enable =
+            ilo_image_can_enable_aux(&tex->image, templ->u.tex.level);
+      }
+
+      info.level = templ->u.tex.level;
+      info.slice_base = templ->u.tex.first_layer;
+      info.slice_count = templ->u.tex.last_layer -
+         templ->u.tex.first_layer + 1;
+
+      ilo_state_zs_init(&surf->u.zs, dev, &info);
+
+      if (info.z_img) {
+         surf->u.zs.depth_bo = info.z_img->bo;
+         if (info.hiz_enable)
+            surf->u.zs.hiz_bo = info.z_img->aux.bo;
+      }
+
+      if (info.s_img)
+         surf->u.zs.stencil_bo = info.s_img->bo;
    }
 
    return &surf->base;
@@ -1290,8 +1313,7 @@ ilo_state_vector_init(const struct ilo_dev *dev,
 {
    ilo_gpe_set_scissor_null(dev, &vec->scissor);
 
-   ilo_gpe_init_zs_surface(dev, NULL, NULL,
-         PIPE_FORMAT_NONE, 0, 0, 1, &vec->fb.null_zs);
+   ilo_state_zs_init_for_null(&vec->fb.null_zs, dev);
 
    util_dynarray_init(&vec->global_binding.bindings);
 
@@ -1450,7 +1472,8 @@ ilo_state_vector_resource_renamed(struct ilo_state_vector *vec,
          struct ilo_surface_cso *cso =
             (struct ilo_surface_cso *) vec->fb.state.zsbuf;
 
-         cso->u.rt.bo = bo;
+         cso->u.zs.depth_bo = bo;
+
          states |= ILO_DIRTY_FB;
       }
    }

@@ -33,6 +33,7 @@
 
 #include "ilo_core.h"
 #include "ilo_dev.h"
+#include "ilo_state_zs.h"
 
 /**
  * \see brw_context.h
@@ -260,14 +261,7 @@ struct ilo_surface_cso {
    bool is_rt;
    union {
       struct ilo_view_surface rt;
-      struct ilo_zs_surface {
-         uint32_t payload[12];
-         uint32_t dw_aligned_8x4;
-
-         struct intel_bo *bo;
-         struct intel_bo *hiz_bo;
-         struct intel_bo *separate_s8_bo;
-      } zs;
+      struct ilo_state_zs zs;
    } u;
 };
 
@@ -275,7 +269,7 @@ struct ilo_fb_state {
    struct pipe_framebuffer_state state;
 
    struct ilo_view_surface null_rt;
-   struct ilo_zs_surface null_zs;
+   struct ilo_state_zs null_zs;
 
    struct ilo_fb_blend_caps {
       bool can_logicop;
@@ -393,14 +387,6 @@ ilo_gpe_init_view_surface_for_image(const struct ilo_dev *dev,
                                     unsigned num_layers,
                                     bool is_rt,
                                     struct ilo_view_surface *surf);
-
-void
-ilo_gpe_init_zs_surface(const struct ilo_dev *dev,
-                        const struct ilo_image *img,
-                        const struct ilo_image *s8_img,
-                        enum pipe_format format, unsigned level,
-                        unsigned first_layer, unsigned num_layers,
-                        struct ilo_zs_surface *zs);
 
 void
 ilo_gpe_init_vs_cso(const struct ilo_dev *dev,

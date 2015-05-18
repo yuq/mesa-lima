@@ -797,6 +797,10 @@ img_want_hiz(const struct ilo_image *img,
    if (ilo_debug & ILO_DEBUG_NOHIZ)
       return false;
 
+   /* we want 8x4 aligned levels */
+   if (templ->target == PIPE_TEXTURE_1D)
+      return false;
+
    if (!(templ->bind & PIPE_BIND_DEPTH_STENCIL))
       return false;
 
