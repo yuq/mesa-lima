@@ -297,6 +297,10 @@ static boolean parse_header( struct translate_ctx *ctx )
       processor = TGSI_PROCESSOR_VERTEX;
    else if (str_match_nocase_whole( &ctx->cur, "GEOM" ))
       processor = TGSI_PROCESSOR_GEOMETRY;
+   else if (str_match_nocase_whole( &ctx->cur, "TESS_CTRL" ))
+      processor = TGSI_PROCESSOR_TESS_CTRL;
+   else if (str_match_nocase_whole( &ctx->cur, "TESS_EVAL" ))
+      processor = TGSI_PROCESSOR_TESS_EVAL;
    else if (str_match_nocase_whole( &ctx->cur, "COMP" ))
       processor = TGSI_PROCESSOR_COMPUTE;
    else {
