@@ -647,7 +647,60 @@ void anv_CmdCopyImage(
     uint32_t                                    regionCount,
     const VkImageCopy*                          pRegions)
 {
-   stub();
+   struct anv_cmd_buffer *cmd_buffer = (struct anv_cmd_buffer *)cmdBuffer;
+   VkDevice vk_device = (VkDevice) cmd_buffer->device;
+   struct anv_image *src_image = (struct anv_image *)srcImage;
+   struct anv_saved_state saved_state;
+
+   meta_prepare_blit(cmd_buffer, &saved_state);
+
+   for (unsigned r = 0; r < regionCount; r++) {
+      VkImageViewCreateInfo src_view_info = {
+         .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+         .image = srcImage,
+         .viewType = VK_IMAGE_VIEW_TYPE_2D,
+         .format = src_image->format,
+         .channels = {
+            VK_CHANNEL_SWIZZLE_R,
+            VK_CHANNEL_SWIZZLE_G,
+            VK_CHANNEL_SWIZZLE_B,
+            VK_CHANNEL_SWIZZLE_A
+         },
+         .subresourceRange = {
+            .aspect = pRegions[r].srcSubresource.aspect,
+            .baseMipLevel = pRegions[r].srcSubresource.mipLevel,
+            .mipLevels = 1,
+            .baseArraySlice = pRegions[r].srcSubresource.arraySlice,
+            .arraySize = 1
+         },
+         .minLod = 0
+      };
+
+      VkImageView src_view;
+      vkCreateImageView(vk_device, &src_view_info, &src_view);
+
+      VkColorAttachmentViewCreateInfo dest_view_info = {
+         .sType = VK_STRUCTURE_TYPE_COLOR_ATTACHMENT_VIEW_CREATE_INFO,
+         .image = destImage,
+         .format = src_image->format,
+         .mipLevel = pRegions[r].destSubresource.mipLevel,
+         .baseArraySlice = pRegions[r].destSubresource.arraySlice,
+         .arraySize = 1,
+      };
+
+      VkColorAttachmentView dest_view;
+      vkCreateColorAttachmentView(vk_device, &dest_view_info, &dest_view);
+
+      meta_emit_blit(cmd_buffer,
+                     (struct anv_surface_view *)src_view,
+                     pRegions[r].srcOffset,
+                     pRegions[r].extent,
+                     (struct anv_surface_view *)dest_view,
+                     pRegions[r].destOffset,
+                     pRegions[r].extent);
+   }
+
+   meta_finish_blit(cmd_buffer, &saved_state);
 }
 
 void anv_CmdBlitImage(
