@@ -2454,12 +2454,6 @@ create_framebuffers(GLsizei n, GLuint *framebuffers, bool dsa)
 
    const char *func = dsa ? "glCreateFramebuffers" : "glGenFramebuffers";
 
-   if (dsa && !ctx->Extensions.ARB_direct_state_access) {
-      _mesa_error(ctx, GL_INVALID_OPERATION,
-                  "%s(GL_ARB_direct_state_access is not supported)", func);
-      return;
-   }
-
    if (n < 0) {
       _mesa_error(ctx, GL_INVALID_VALUE, "%s(n < 0)", func);
       return;
@@ -2557,13 +2551,6 @@ _mesa_CheckNamedFramebufferStatus(GLuint framebuffer, GLenum target)
 {
    struct gl_framebuffer *fb;
    GET_CURRENT_CONTEXT(ctx);
-
-   if (!ctx->Extensions.ARB_direct_state_access) {
-      _mesa_error(ctx, GL_INVALID_OPERATION,
-                  "glCheckNamedFramebufferStatus(GL_ARB_direct_state_access "
-                  "is not supported)");
-      return 0;
-   }
 
    /* Validate the target (for conformance's sake) and grab a reference to the
     * default framebuffer in case framebuffer = 0.
@@ -3110,12 +3097,6 @@ _mesa_NamedFramebufferTextureLayer(GLuint framebuffer, GLenum attachment,
 
    const char *func = "glNamedFramebufferTextureLayer";
 
-   if (!ctx->Extensions.ARB_direct_state_access) {
-      _mesa_error(ctx, GL_INVALID_OPERATION,
-                  "%s(GL_ARB_direct_state_access is not supported)", func);
-      return;
-   }
-
    /* Get the framebuffer object */
    fb = _mesa_lookup_framebuffer_err(ctx, framebuffer, func);
    if (!fb)
@@ -3200,12 +3181,6 @@ _mesa_NamedFramebufferTexture(GLuint framebuffer, GLenum attachment,
    GLboolean layered;
 
    const char *func = "glNamedFramebufferTexture";
-
-   if (!ctx->Extensions.ARB_direct_state_access) {
-      _mesa_error(ctx, GL_INVALID_OPERATION,
-                  "%s(GL_ARB_direct_state_access is not supported)", func);
-      return;
-   }
 
    if (!_mesa_has_geometry_shaders(ctx)) {
       _mesa_error(ctx, GL_INVALID_OPERATION,
@@ -3331,13 +3306,6 @@ _mesa_NamedFramebufferRenderbuffer(GLuint framebuffer, GLenum attachment,
    struct gl_framebuffer *fb;
    struct gl_renderbuffer *rb;
    GET_CURRENT_CONTEXT(ctx);
-
-   if (!ctx->Extensions.ARB_direct_state_access) {
-      _mesa_error(ctx, GL_INVALID_OPERATION,
-                  "glNamedFramebufferRenderbuffer(GL_ARB_direct_state_access "
-                  "is not supported)");
-      return;
-   }
 
    fb = _mesa_lookup_framebuffer_err(ctx, framebuffer,
                                      "glNamedFramebufferRenderbuffer");
@@ -3673,13 +3641,6 @@ _mesa_GetNamedFramebufferAttachmentParameteriv(GLuint framebuffer,
    GET_CURRENT_CONTEXT(ctx);
    struct gl_framebuffer *buffer;
 
-   if (!ctx->Extensions.ARB_direct_state_access) {
-      _mesa_error(ctx, GL_INVALID_OPERATION,
-                  "glGetNamedFramebufferAttachmentParameteriv("
-                  "GL_ARB_direct_state_access is not supported)");
-      return;
-   }
-
    if (framebuffer) {
       buffer = _mesa_lookup_framebuffer_err(ctx, framebuffer,
                               "glGetNamedFramebufferAttachmentParameteriv");
@@ -3712,13 +3673,6 @@ _mesa_NamedFramebufferParameteri(GLuint framebuffer, GLenum pname,
    (void) pname;
    (void) param;
 
-   if (!ctx->Extensions.ARB_direct_state_access) {
-      _mesa_error(ctx, GL_INVALID_OPERATION,
-                  "glNamedFramebufferParameteri("
-                  "GL_ARB_direct_state_access is not supported)");
-      return;
-   }
-
    _mesa_error(ctx, GL_INVALID_OPERATION,
                "glNamedFramebufferParameteri not supported "
                "(ARB_framebuffer_no_attachments not implemented)");
@@ -3734,13 +3688,6 @@ _mesa_GetNamedFramebufferParameteriv(GLuint framebuffer, GLenum pname,
    (void) framebuffer;
    (void) pname;
    (void) param;
-
-   if (!ctx->Extensions.ARB_direct_state_access) {
-      _mesa_error(ctx, GL_INVALID_OPERATION,
-                  "glNamedFramebufferParameteriv("
-                  "GL_ARB_direct_state_access is not supported)");
-      return;
-   }
 
    _mesa_error(ctx, GL_INVALID_OPERATION,
                "glGetNamedFramebufferParameteriv not supported "
@@ -3910,13 +3857,6 @@ _mesa_InvalidateNamedFramebufferSubData(GLuint framebuffer,
    struct gl_framebuffer *fb;
    GET_CURRENT_CONTEXT(ctx);
 
-   if (!ctx->Extensions.ARB_direct_state_access) {
-      _mesa_error(ctx, GL_INVALID_OPERATION,
-                  "glInvalidateNamedFramebufferSubData("
-                  "GL_ARB_direct_state_access is not supported)");
-      return;
-   }
-
    /* The OpenGL 4.5 core spec (02.02.2015) says (in Section 17.4 Whole
     * Framebuffer Operations, PDF page 522): "If framebuffer is zero, the
     * default draw framebuffer is affected."
@@ -3977,13 +3917,6 @@ _mesa_InvalidateNamedFramebufferData(GLuint framebuffer,
 {
    struct gl_framebuffer *fb;
    GET_CURRENT_CONTEXT(ctx);
-
-   if (!ctx->Extensions.ARB_direct_state_access) {
-      _mesa_error(ctx, GL_INVALID_OPERATION,
-                  "glInvalidateNamedFramebufferData("
-                  "GL_ARB_direct_state_access is not supported)");
-      return;
-   }
 
    /* The OpenGL 4.5 core spec (02.02.2015) says (in Section 17.4 Whole
     * Framebuffer Operations, PDF page 522): "If framebuffer is zero, the
