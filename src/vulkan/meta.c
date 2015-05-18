@@ -777,7 +777,87 @@ void anv_CmdCopyBufferToImage(
     uint32_t                                    regionCount,
     const VkBufferImageCopy*                    pRegions)
 {
-   stub();
+   struct anv_cmd_buffer *cmd_buffer = (struct anv_cmd_buffer *)cmdBuffer;
+   VkDevice vk_device = (VkDevice) cmd_buffer->device;
+   struct anv_buffer *src_buffer = (struct anv_buffer *)srcBuffer;
+   struct anv_image *dest_image = (struct anv_image *)destImage;
+   struct anv_saved_state saved_state;
+
+   meta_prepare_blit(cmd_buffer, &saved_state);
+
+   for (unsigned r = 0; r < regionCount; r++) {
+      VkImageCreateInfo src_image_info = {
+         .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+         .imageType = VK_IMAGE_TYPE_2D,
+         .format = dest_image->format,
+         .extent = {
+            .width = pRegions[r].imageExtent.width,
+            .height = pRegions[r].imageExtent.height,
+            .depth = 1,
+         },
+         .mipLevels = 1,
+         .arraySize = 1,
+         .samples = 1,
+         .tiling = VK_IMAGE_TILING_LINEAR,
+         .usage = VK_IMAGE_USAGE_SAMPLED_BIT,
+         .flags = 0,
+      };
+
+      struct anv_image *src_image;
+      vkCreateImage(vk_device, &src_image_info, (VkImage *)&src_image);
+
+      /* We could use a vk call to bind memory, but that would require
+       * creating a dummy memory object etc. so there's really no point.
+       */
+      src_image->bo = src_buffer->bo;
+      src_image->offset = src_buffer->offset + pRegions[r].bufferOffset;
+
+      VkImageViewCreateInfo src_view_info = {
+         .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+         .image = (VkImage)src_image,
+         .viewType = VK_IMAGE_VIEW_TYPE_2D,
+         .format = dest_image->format,
+         .channels = {
+            VK_CHANNEL_SWIZZLE_R,
+            VK_CHANNEL_SWIZZLE_G,
+            VK_CHANNEL_SWIZZLE_B,
+            VK_CHANNEL_SWIZZLE_A
+         },
+         .subresourceRange = {
+            .aspect = pRegions[r].imageSubresource.aspect,
+            .baseMipLevel = 0,
+            .mipLevels = 1,
+            .baseArraySlice = 0,
+            .arraySize = 1
+         },
+         .minLod = 0
+      };
+
+      VkImageView src_view;
+      vkCreateImageView(vk_device, &src_view_info, &src_view);
+
+      VkColorAttachmentViewCreateInfo dest_view_info = {
+         .sType = VK_STRUCTURE_TYPE_COLOR_ATTACHMENT_VIEW_CREATE_INFO,
+         .image = (VkImage)dest_image,
+         .format = dest_image->format,
+         .mipLevel = pRegions[r].imageSubresource.mipLevel,
+         .baseArraySlice = pRegions[r].imageSubresource.arraySlice,
+         .arraySize = 1,
+      };
+
+      VkColorAttachmentView dest_view;
+      vkCreateColorAttachmentView(vk_device, &dest_view_info, &dest_view);
+
+      meta_emit_blit(cmd_buffer,
+                     (struct anv_surface_view *)src_view,
+                     (VkOffset3D) { 0, 0, 0 },
+                     pRegions[r].imageExtent,
+                     (struct anv_surface_view *)dest_view,
+                     pRegions[r].imageOffset,
+                     pRegions[r].imageExtent);
+   }
+
+   meta_finish_blit(cmd_buffer, &saved_state);
 }
 
 void anv_CmdCopyImageToBuffer(
