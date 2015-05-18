@@ -229,6 +229,28 @@ _mesa_gl_compressed_format_base_format(GLenum format)
  *        what GL_NUM_COMPRESSED_TEXTURE_FORMATS and
  *        GL_COMPRESSED_TEXTURE_FORMATS return."
  *
+ * The KHR_texture_compression_astc_hdr spec says:
+ *
+ *    "Interactions with OpenGL 4.2
+ *
+ *        OpenGL 4.2 supports the feature that compressed textures can be
+ *        compressed online, by passing the compressed texture format enum as
+ *        the internal format when uploading a texture using TexImage1D,
+ *        TexImage2D or TexImage3D (see Section 3.9.3, Texture Image
+ *        Specification, subsection Encoding of Special Internal Formats).
+ *
+ *        Due to the complexity of the ASTC compression algorithm, it is not
+ *        usually suitable for online use, and therefore ASTC support will be
+ *        limited to pre-compressed textures only. Where on-device compression
+ *        is required, a domain-specific limited compressor will typically
+ *        be used, and this is therefore not suitable for implementation in
+ *        the driver.
+ *
+ *        In particular, the ASTC format specifiers will not be added to
+ *        Table 3.14, and thus will not be accepted by the TexImage*D
+ *        functions, and will not be returned by the (already deprecated)
+ *        COMPRESSED_TEXTURE_FORMATS query."
+ *
  * There is no formal spec for GL_ATI_texture_compression_3dc.  Since the
  * formats added by this extension are luminance-alpha formats, it is
  * reasonable to expect them to follow the same rules as

@@ -1784,6 +1784,15 @@ compressedteximage_only_format(const struct gl_context *ctx, GLenum format)
    }
 }
 
+/**
+ * Return true if the format doesn't support online compression.
+ */
+static bool
+_mesa_format_no_online_compression(const struct gl_context *ctx, GLenum format)
+{
+   return _mesa_is_astc_format(format) ||
+          compressedteximage_only_format(ctx, format);
+}
 
 /* Writes to an GL error pointer if non-null and returns whether or not the
  * error is GL_NO_ERROR */
@@ -2328,7 +2337,7 @@ texture_error_check( struct gl_context *ctx,
                      "glTexImage%dD(target can't be compressed)", dimensions);
          return GL_TRUE;
       }
-      if (compressedteximage_only_format(ctx, internalFormat)) {
+      if (_mesa_format_no_online_compression(ctx, internalFormat)) {
          _mesa_error(ctx, GL_INVALID_OPERATION,
                      "glTexImage%dD(no compression for format)", dimensions);
          return GL_TRUE;
@@ -2592,7 +2601,7 @@ texsubimage_error_check(struct gl_context *ctx, GLuint dimensions,
    }
 
    if (_mesa_is_format_compressed(texImage->TexFormat)) {
-      if (compressedteximage_only_format(ctx, texImage->InternalFormat)) {
+      if (_mesa_format_no_online_compression(ctx, texImage->InternalFormat)) {
          _mesa_error(ctx, GL_INVALID_OPERATION,
                "%s(no compression for format)", callerName);
          return GL_TRUE;
@@ -2850,7 +2859,7 @@ copytexture_error_check( struct gl_context *ctx, GLuint dimensions,
                      "glCopyTexImage%dD(target can't be compressed)", dimensions);
          return GL_TRUE;
       }
-      if (compressedteximage_only_format(ctx, internalFormat)) {
+      if (_mesa_format_no_online_compression(ctx, internalFormat)) {
          _mesa_error(ctx, GL_INVALID_OPERATION,
                "glCopyTexImage%dD(no compression for format)", dimensions);
          return GL_TRUE;
@@ -2931,7 +2940,7 @@ copytexsubimage_error_check(struct gl_context *ctx, GLuint dimensions,
    }
 
    if (_mesa_is_format_compressed(texImage->TexFormat)) {
-      if (compressedteximage_only_format(ctx, texImage->InternalFormat)) {
+      if (_mesa_format_no_online_compression(ctx, texImage->InternalFormat)) {
          _mesa_error(ctx, GL_INVALID_OPERATION,
                "%s(no compression for format)", caller);
          return GL_TRUE;
