@@ -160,9 +160,6 @@ anv_cmd_buffer_save(struct anv_cmd_buffer *cmd_buffer,
    state->old_bindings = cmd_buffer->bindings;
    cmd_buffer->bindings = &state->bindings;
    state->old_pipeline = cmd_buffer->pipeline;
-
-   /* Initialize render targets for the meta bindings. */
-   anv_cmd_buffer_fill_render_targets(cmd_buffer);
 }
 
 static void
@@ -244,6 +241,9 @@ anv_cmd_buffer_clear(struct anv_cmd_buffer *cmd_buffer,
    };
 
    anv_cmd_buffer_save(cmd_buffer, &saved_state);
+
+   /* Initialize render targets for the meta bindings. */
+   anv_cmd_buffer_fill_render_targets(cmd_buffer);
 
    anv_CmdBindVertexBuffers((VkCmdBuffer) cmd_buffer, 0, 2,
       (VkBuffer[]) {
