@@ -1489,14 +1489,6 @@ void GLAPIENTRY
 _mesa_CreateRenderbuffers(GLsizei n, GLuint *renderbuffers)
 {
    GET_CURRENT_CONTEXT(ctx);
-
-   if (!ctx->Extensions.ARB_direct_state_access) {
-      _mesa_error(ctx, GL_INVALID_OPERATION,
-                  "glCreateRenderbuffers(GL_ARB_direct_state_access "
-                  "is not supported)");
-      return;
-   }
-
    create_render_buffers(ctx, n, renderbuffers, true);
 }
 
@@ -1937,12 +1929,6 @@ renderbuffer_storage_named(GLuint renderbuffer, GLenum internalFormat,
 {
    GET_CURRENT_CONTEXT(ctx);
 
-   if (!ctx->Extensions.ARB_direct_state_access) {
-      _mesa_error(ctx, GL_INVALID_OPERATION,
-                  "%s(GL_ARB_direct_state_access is not supported)", func);
-      return;
-   }
-
    if (MESA_VERBOSE & VERBOSE_API) {
       if (samples == NO_SAMPLES)
          _mesa_debug(ctx, "%s(%u, %s, %d, %d)\n",
@@ -2196,13 +2182,6 @@ _mesa_GetNamedRenderbufferParameteriv(GLuint renderbuffer, GLenum pname,
                                       GLint *params)
 {
    GET_CURRENT_CONTEXT(ctx);
-
-   if (!ctx->Extensions.ARB_direct_state_access) {
-      _mesa_error(ctx, GL_INVALID_OPERATION,
-                  "glGetNamedRenderbufferParameteriv("
-                  "GL_ARB_direct_state_access is not supported)");
-      return;
-   }
 
    struct gl_renderbuffer *rb = _mesa_lookup_renderbuffer(ctx, renderbuffer);
    if (!rb || rb == &DummyRenderbuffer) {
