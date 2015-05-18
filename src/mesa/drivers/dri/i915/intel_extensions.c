@@ -83,7 +83,6 @@ intelInitExtensions(struct gl_context *ctx)
    if (intel->gen >= 3) {
       ctx->Extensions.ARB_ES2_compatibility = true;
       ctx->Extensions.ARB_depth_texture = true;
-      ctx->Extensions.ARB_direct_state_access = true;
       ctx->Extensions.ARB_fragment_program = true;
       ctx->Extensions.ARB_shadow = true;
       ctx->Extensions.ARB_texture_non_power_of_two = true;
