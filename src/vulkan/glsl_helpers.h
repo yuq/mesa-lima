@@ -32,6 +32,6 @@
       .pCode = __src,                                                   \
       .flags = (1 << 31) /* GLSL back-door hack */                      \
    };                                                                   \
-   vkCreateShader((VkDevice) device, &__shader_create_info, &__shader); \
+   anv_CreateShader((VkDevice) device, &__shader_create_info, &__shader); \
    __shader;                                                            \
 })

@@ -137,13 +137,13 @@ anv_device_init_meta_clear_state(struct anv_device *device)
                        },
                        &device->clear_state.pipeline);
 
-   vkDestroyObject((VkDevice) device, VK_OBJECT_TYPE_SHADER, fs);
+   anv_DestroyObject((VkDevice) device, VK_OBJECT_TYPE_SHADER, fs);
 
-   vkCreateDynamicRasterState((VkDevice) device,
-                              &(VkDynamicRsStateCreateInfo) {
-                                 .sType = VK_STRUCTURE_TYPE_DYNAMIC_RS_STATE_CREATE_INFO,
-                              },
-                              &device->clear_state.rs_state);
+   anv_CreateDynamicRasterState((VkDevice) device,
+                                &(VkDynamicRsStateCreateInfo) {
+                                   .sType = VK_STRUCTURE_TYPE_DYNAMIC_RS_STATE_CREATE_INFO,
+                                },
+                                &device->clear_state.rs_state);
 }
 
 #define NUM_VB_USED 2
@@ -245,32 +245,32 @@ anv_cmd_buffer_clear(struct anv_cmd_buffer *cmd_buffer,
 
    anv_cmd_buffer_save(cmd_buffer, &saved_state);
 
-   vkCmdBindVertexBuffers((VkCmdBuffer) cmd_buffer, 0, 2,
-                          (VkBuffer[]) {
-                             (VkBuffer) &vertex_buffer,
-                             (VkBuffer) &vertex_buffer
-                          },
-                          (VkDeviceSize[]) {
-                             0,
-                             sizeof(vertex_data)
-                          });
+   anv_CmdBindVertexBuffers((VkCmdBuffer) cmd_buffer, 0, 2,
+                            (VkBuffer[]) {
+                               (VkBuffer) &vertex_buffer,
+                               (VkBuffer) &vertex_buffer
+                            },
+                            (VkDeviceSize[]) {
+                               0,
+                               sizeof(vertex_data)
+                            });
 
    if ((VkPipeline) cmd_buffer->pipeline != device->clear_state.pipeline)
-      vkCmdBindPipeline((VkCmdBuffer) cmd_buffer,
-                        VK_PIPELINE_BIND_POINT_GRAPHICS, device->clear_state.pipeline);
+      anv_CmdBindPipeline((VkCmdBuffer) cmd_buffer,
+                          VK_PIPELINE_BIND_POINT_GRAPHICS, device->clear_state.pipeline);
 
    /* We don't need anything here, only set if not already set. */
    if (cmd_buffer->rs_state == NULL)
-      vkCmdBindDynamicStateObject((VkCmdBuffer) cmd_buffer,
-                                  VK_STATE_BIND_POINT_RASTER,
-                                  device->clear_state.rs_state);
+      anv_CmdBindDynamicStateObject((VkCmdBuffer) cmd_buffer,
+                                    VK_STATE_BIND_POINT_RASTER,
+                                    device->clear_state.rs_state);
 
    if (cmd_buffer->vp_state == NULL)
-      vkCmdBindDynamicStateObject((VkCmdBuffer) cmd_buffer,
-                                  VK_STATE_BIND_POINT_VIEWPORT,
-                                  cmd_buffer->framebuffer->vp_state);
+      anv_CmdBindDynamicStateObject((VkCmdBuffer) cmd_buffer,
+                                    VK_STATE_BIND_POINT_VIEWPORT,
+                                    cmd_buffer->framebuffer->vp_state);
 
-   vkCmdDraw((VkCmdBuffer) cmd_buffer, 0, 3, 0, pass->num_clear_layers);
+   anv_CmdDraw((VkCmdBuffer) cmd_buffer, 0, 3, 0, pass->num_clear_layers);
 
    /* Restore API state */
    anv_cmd_buffer_restore(cmd_buffer, &saved_state);
@@ -392,8 +392,8 @@ anv_device_init_meta_blit_state(struct anv_device *device)
          },
       }
    };
-   vkCreateDescriptorSetLayout((VkDevice) device, &ds_layout_info,
-                               &device->blit_state.ds_layout);
+   anv_CreateDescriptorSetLayout((VkDevice) device, &ds_layout_info,
+                                 &device->blit_state.ds_layout);
 
    VkPipelineLayoutCreateInfo pipeline_layout_info = {
       .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
@@ -402,8 +402,8 @@ anv_device_init_meta_blit_state(struct anv_device *device)
    };
 
    VkPipelineLayout pipeline_layout;
-   vkCreatePipelineLayout((VkDevice) device, &pipeline_layout_info,
-                          &pipeline_layout);
+   anv_CreatePipelineLayout((VkDevice) device, &pipeline_layout_info,
+                            &pipeline_layout);
 
    VkPipelineRsStateCreateInfo rs_create_info = {
       .sType = VK_STRUCTURE_TYPE_PIPELINE_RS_STATE_CREATE_INFO,
@@ -432,14 +432,14 @@ anv_device_init_meta_blit_state(struct anv_device *device)
                        },
                        &device->blit_state.pipeline);
 
-   vkDestroyObject((VkDevice) device, VK_OBJECT_TYPE_SHADER, vs);
-   vkDestroyObject((VkDevice) device, VK_OBJECT_TYPE_SHADER, fs);
+   anv_DestroyObject((VkDevice) device, VK_OBJECT_TYPE_SHADER, vs);
+   anv_DestroyObject((VkDevice) device, VK_OBJECT_TYPE_SHADER, fs);
 
-   vkCreateDynamicRasterState((VkDevice) device,
-                              &(VkDynamicRsStateCreateInfo) {
-                                 .sType = VK_STRUCTURE_TYPE_DYNAMIC_RS_STATE_CREATE_INFO,
-                              },
-                              &device->blit_state.rs_state);
+   anv_CreateDynamicRasterState((VkDevice) device,
+                                &(VkDynamicRsStateCreateInfo) {
+                                   .sType = VK_STRUCTURE_TYPE_DYNAMIC_RS_STATE_CREATE_INFO,
+                                 },
+                                &device->blit_state.rs_state);
 }
 
 static void
@@ -451,15 +451,15 @@ meta_prepare_blit(struct anv_cmd_buffer *cmd_buffer,
    anv_cmd_buffer_save(cmd_buffer, saved_state);
 
    if ((VkPipeline) cmd_buffer->pipeline != device->blit_state.pipeline)
-      vkCmdBindPipeline((VkCmdBuffer) cmd_buffer,
-                        VK_PIPELINE_BIND_POINT_GRAPHICS,
-                        device->blit_state.pipeline);
+      anv_CmdBindPipeline((VkCmdBuffer) cmd_buffer,
+                          VK_PIPELINE_BIND_POINT_GRAPHICS,
+                          device->blit_state.pipeline);
 
    /* We don't need anything here, only set if not already set. */
    if (cmd_buffer->rs_state == NULL)
-      vkCmdBindDynamicStateObject((VkCmdBuffer) cmd_buffer,
-                                  VK_STATE_BIND_POINT_RASTER,
-                                  device->blit_state.rs_state);
+      anv_CmdBindDynamicStateObject((VkCmdBuffer) cmd_buffer,
+                                    VK_STATE_BIND_POINT_RASTER,
+                                    device->blit_state.rs_state);
 }
 
 struct blit_region {
@@ -532,37 +532,37 @@ meta_emit_blit(struct anv_cmd_buffer *cmd_buffer,
       .offset = vb_state.offset,
    };
 
-   vkCmdBindVertexBuffers((VkCmdBuffer) cmd_buffer, 0, 2,
-                          (VkBuffer[]) {
-                             (VkBuffer) &vertex_buffer,
-                             (VkBuffer) &vertex_buffer
-                          },
-                          (VkDeviceSize[]) {
-                             0,
-                             sizeof(struct vue_header),
-                          });
+   anv_CmdBindVertexBuffers((VkCmdBuffer) cmd_buffer, 0, 2,
+                            (VkBuffer[]) {
+                               (VkBuffer) &vertex_buffer,
+                               (VkBuffer) &vertex_buffer
+                            },
+                            (VkDeviceSize[]) {
+                               0,
+                               sizeof(struct vue_header),
+                            });
 
    uint32_t count;
    VkDescriptorSet set;
-   vkAllocDescriptorSets((VkDevice) device, 0 /* pool */,
-                         VK_DESCRIPTOR_SET_USAGE_ONE_SHOT,
-                         1, &device->blit_state.ds_layout, &set, &count);
-   vkUpdateDescriptors((VkDevice) device, set, 1,
-                       (const void * []) {
-                          &(VkUpdateImages) {
-                             .sType = VK_STRUCTURE_TYPE_UPDATE_IMAGES,
-                             .descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-                             .binding = 0,
-                             .count = 1,
-                             .pImageViews = (VkImageViewAttachInfo[]) {
-                                {
-                                   .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_ATTACH_INFO,
-                                   .view = (VkImageView) src,
-                                   .layout = VK_IMAGE_LAYOUT_GENERAL,
-                                }
-                             }
-                          }
-                       });
+   anv_AllocDescriptorSets((VkDevice) device, 0 /* pool */,
+                           VK_DESCRIPTOR_SET_USAGE_ONE_SHOT,
+                           1, &device->blit_state.ds_layout, &set, &count);
+   anv_UpdateDescriptors((VkDevice) device, set, 1,
+                         (const void * []) {
+                            &(VkUpdateImages) {
+                               .sType = VK_STRUCTURE_TYPE_UPDATE_IMAGES,
+                               .descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+                               .binding = 0,
+                               .count = 1,
+                               .pImageViews = (VkImageViewAttachInfo[]) {
+                                  {
+                                     .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_ATTACH_INFO,
+                                     .view = (VkImageView) src,
+                                     .layout = VK_IMAGE_LAYOUT_GENERAL,
+                                  }
+                               }
+                            }
+                         });
 
    VkFramebufferCreateInfo fb_info = {
       .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
@@ -581,7 +581,7 @@ meta_emit_blit(struct anv_cmd_buffer *cmd_buffer,
    };
 
    struct anv_framebuffer *fb;
-   vkCreateFramebuffer((VkDevice) device, &fb_info, (VkFramebuffer *)&fb);
+   anv_CreateFramebuffer((VkDevice) device, &fb_info, (VkFramebuffer *)&fb);
 
    VkRenderPassCreateInfo pass_info = {
       .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
@@ -601,24 +601,24 @@ meta_emit_blit(struct anv_cmd_buffer *cmd_buffer,
    };
 
    VkRenderPass pass;
-   vkCreateRenderPass((VkDevice )device, &pass_info, &pass);
+   anv_CreateRenderPass((VkDevice )device, &pass_info, &pass);
 
-   vkCmdBeginRenderPass((VkCmdBuffer) cmd_buffer,
-                        &(VkRenderPassBegin) {
-                           .renderPass = pass,
-                           .framebuffer = (VkFramebuffer) fb,
-                        });
+   anv_CmdBeginRenderPass((VkCmdBuffer) cmd_buffer,
+                          &(VkRenderPassBegin) {
+                             .renderPass = pass,
+                             .framebuffer = (VkFramebuffer) fb,
+                          });
 
-   vkCmdBindDynamicStateObject((VkCmdBuffer) cmd_buffer,
-                               VK_STATE_BIND_POINT_VIEWPORT, fb->vp_state);
+   anv_CmdBindDynamicStateObject((VkCmdBuffer) cmd_buffer,
+                                 VK_STATE_BIND_POINT_VIEWPORT, fb->vp_state);
 
-   vkCmdBindDescriptorSets((VkCmdBuffer) cmd_buffer,
-                           VK_PIPELINE_BIND_POINT_GRAPHICS, 0, 1,
-                           &set, 0, NULL);
+   anv_CmdBindDescriptorSets((VkCmdBuffer) cmd_buffer,
+                             VK_PIPELINE_BIND_POINT_GRAPHICS, 0, 1,
+                             &set, 0, NULL);
 
-   vkCmdDraw((VkCmdBuffer) cmd_buffer, 0, 3, 0, 1);
+   anv_CmdDraw((VkCmdBuffer) cmd_buffer, 0, 3, 0, 1);
 
-   vkCmdEndRenderPass((VkCmdBuffer) cmd_buffer, pass);
+   anv_CmdEndRenderPass((VkCmdBuffer) cmd_buffer, pass);
 }
 
 static void
@@ -712,7 +712,7 @@ void anv_CmdCopyImageToBuffer(
       };
 
       VkImageView src_view;
-      vkCreateImageView(vk_device, &src_view_info, &src_view);
+      anv_CreateImageView(vk_device, &src_view_info, &src_view);
 
       VkImageCreateInfo dest_image_info = {
          .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
@@ -732,7 +732,7 @@ void anv_CmdCopyImageToBuffer(
       };
 
       struct anv_image *dest_image;
-      vkCreateImage(vk_device, &dest_image_info, (VkImage *)&dest_image);
+      anv_CreateImage(vk_device, &dest_image_info, (VkImage *)&dest_image);
 
       /* We could use a vk call to bind memory, but that would require
        * creating a dummy memory object etc. so there's really no point.
@@ -750,7 +750,7 @@ void anv_CmdCopyImageToBuffer(
       };
 
       VkColorAttachmentView dest_view;
-      vkCreateColorAttachmentView(vk_device, &dest_view_info, &dest_view);
+      anv_CreateColorAttachmentView(vk_device, &dest_view_info, &dest_view);
 
       meta_emit_blit(cmd_buffer,
                      (struct anv_surface_view *)src_view,
