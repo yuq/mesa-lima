@@ -977,13 +977,14 @@ src0_3src(FILE *file, const struct brw_device_info *devinfo, brw_inst *inst)
               brw_inst_3src_src0_reg_nr(devinfo, inst));
    if (err == -1)
       return 0;
-   if (src0_subreg_nr)
+   if (src0_subreg_nr || brw_inst_3src_src0_rep_ctrl(devinfo, inst))
       format(file, ".%d", src0_subreg_nr);
    if (brw_inst_3src_src0_rep_ctrl(devinfo, inst))
       string(file, "<0,1,0>");
-   else
+   else {
       string(file, "<4,4,1>");
-   err |= src_swizzle(file, brw_inst_3src_src0_swizzle(devinfo, inst));
+      err |= src_swizzle(file, brw_inst_3src_src0_swizzle(devinfo, inst));
+   }
    err |= control(file, "src da16 reg type", three_source_reg_encoding,
                   brw_inst_3src_src_type(devinfo, inst), NULL);
    return err;
@@ -1003,13 +1004,14 @@ src1_3src(FILE *file, const struct brw_device_info *devinfo, brw_inst *inst)
               brw_inst_3src_src1_reg_nr(devinfo, inst));
    if (err == -1)
       return 0;
-   if (src1_subreg_nr)
+   if (src1_subreg_nr || brw_inst_3src_src1_rep_ctrl(devinfo, inst))
       format(file, ".%d", src1_subreg_nr);
    if (brw_inst_3src_src1_rep_ctrl(devinfo, inst))
       string(file, "<0,1,0>");
-   else
+   else {
       string(file, "<4,4,1>");
-   err |= src_swizzle(file, brw_inst_3src_src1_swizzle(devinfo, inst));
+      err |= src_swizzle(file, brw_inst_3src_src1_swizzle(devinfo, inst));
+   }
    err |= control(file, "src da16 reg type", three_source_reg_encoding,
                   brw_inst_3src_src_type(devinfo, inst), NULL);
    return err;
@@ -1030,13 +1032,14 @@ src2_3src(FILE *file, const struct brw_device_info *devinfo, brw_inst *inst)
               brw_inst_3src_src2_reg_nr(devinfo, inst));
    if (err == -1)
       return 0;
-   if (src2_subreg_nr)
+   if (src2_subreg_nr || brw_inst_3src_src2_rep_ctrl(devinfo, inst))
       format(file, ".%d", src2_subreg_nr);
    if (brw_inst_3src_src2_rep_ctrl(devinfo, inst))
       string(file, "<0,1,0>");
-   else
+   else {
       string(file, "<4,4,1>");
-   err |= src_swizzle(file, brw_inst_3src_src2_swizzle(devinfo, inst));
+      err |= src_swizzle(file, brw_inst_3src_src2_swizzle(devinfo, inst));
+   }
    err |= control(file, "src da16 reg type", three_source_reg_encoding,
                   brw_inst_3src_src_type(devinfo, inst), NULL);
    return err;
