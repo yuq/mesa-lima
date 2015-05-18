@@ -3621,7 +3621,6 @@ struct gl_extensions
    GLboolean ARB_depth_clamp;
    GLboolean ARB_depth_texture;
    GLboolean ARB_derivative_control;
-   GLboolean ARB_direct_state_access;
    GLboolean ARB_draw_buffers_blend;
    GLboolean ARB_draw_elements_base_vertex;
    GLboolean ARB_draw_indirect;
