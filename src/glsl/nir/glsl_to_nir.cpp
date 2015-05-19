@@ -1036,7 +1036,8 @@ nir_visitor::add_instr(nir_instr *instr, unsigned num_components)
 {
    nir_dest *dest = get_instr_dest(instr);
 
-   nir_ssa_dest_init(instr, dest, num_components, NULL);
+   if (dest)
+      nir_ssa_dest_init(instr, dest, num_components, NULL);
 
    nir_instr_insert_after_cf_list(this->cf_node_list, instr);
    this->result = instr;
