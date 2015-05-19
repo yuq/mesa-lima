@@ -769,8 +769,8 @@ NineDevice9_Reset( struct NineDevice9 *This,
     for (i = 0; i < This->nswapchains; ++i) {
         D3DPRESENT_PARAMETERS *params = &pPresentationParameters[i];
         hr = NineSwapChain9_Resize(This->swapchains[i], params, NULL);
-        if (FAILED(hr))
-            return (hr == D3DERR_OUTOFVIDEOMEMORY) ? hr : D3DERR_DEVICELOST;
+        if (hr != D3D_OK)
+            return hr;
     }
 
     nine_pipe_context_clear(This);

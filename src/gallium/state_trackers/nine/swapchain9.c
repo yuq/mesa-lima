@@ -184,7 +184,9 @@ NineSwapChain9_Resize( struct NineSwapChain9 *This,
 
     /* Note: It is the role of the backend to fill if necessary
      * BackBufferWidth and BackBufferHeight */
-    ID3DPresent_SetPresentParameters(This->present, pParams, This->mode);
+    hr = ID3DPresent_SetPresentParameters(This->present, pParams, This->mode);
+    if (hr != D3D_OK)
+        return hr;
 
     /* When we have flip behaviour, d3d9 expects we get back the screen buffer when we flip.
      * Here we don't get back the initial content of the screen. To emulate the behaviour
