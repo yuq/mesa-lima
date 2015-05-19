@@ -131,17 +131,17 @@ repeat(int coord, unsigned size)
  * \param icoord  returns the integer texcoords
  */
 static void
-wrap_nearest_repeat(float s, unsigned size, int *icoord)
+wrap_nearest_repeat(float s, unsigned size, int offset, int *icoord)
 {
    /* s limited to [0,1) */
    /* i limited to [0,size-1] */
    int i = util_ifloor(s * size);
-   *icoord = repeat(i, size);
+   *icoord = repeat(i + offset, size);
 }
 
 
 static void
-wrap_nearest_clamp(float s, unsigned size, int *icoord)
+wrap_nearest_clamp(float s, unsigned size, int offset, int *icoord)
 {
    /* s limited to [0,1] */
    /* i limited to [0,size-1] */
@@ -151,27 +151,32 @@ wrap_nearest_clamp(float s, unsigned size, int *icoord)
       *icoord = size - 1;
    else
       *icoord = util_ifloor(s * size);
+   if (offset)
+      *icoord = CLAMP(*icoord + offset, 0, size - 1);
 }
 
 
 static void
-wrap_nearest_clamp_to_edge(float s, unsigned size, int *icoord)
+wrap_nearest_clamp_to_edge(float s, unsigned size, int offset, int *icoord)
 {
    /* s limited to [min,max] */
    /* i limited to [0, size-1] */
    const float min = 1.0F / (2.0F * size);
    const float max = 1.0F - min;
+
    if (s < min)
       *icoord = 0;
    else if (s > max)
       *icoord = size - 1;
    else
       *icoord = util_ifloor(s * size);
+   if (offset)
+      *icoord = CLAMP(*icoord + offset, 0, size - 1);
 }
 
 
 static void
-wrap_nearest_clamp_to_border(float s, unsigned size, int *icoord)
+wrap_nearest_clamp_to_border(float s, unsigned size, int offset, int *icoord)
 {
    /* s limited to [min,max] */
    /* i limited to [-1, size] */
@@ -183,11 +188,13 @@ wrap_nearest_clamp_to_border(float s, unsigned size, int *icoord)
       *icoord = size;
    else
       *icoord = util_ifloor(s * size);
+   if (offset)
+      *icoord = CLAMP(*icoord + offset, 0, size - 1);
 }
 
 
 static void
-wrap_nearest_mirror_repeat(float s, unsigned size, int *icoord)
+wrap_nearest_mirror_repeat(float s, unsigned size, int offset, int *icoord)
 {
    const float min = 1.0F / (2.0F * size);
    const float max = 1.0F - min;
@@ -201,11 +208,13 @@ wrap_nearest_mirror_repeat(float s, unsigned size, int *icoord)
       *icoord = size - 1;
    else
       *icoord = util_ifloor(u * size);
+   if (offset)
+      *icoord = CLAMP(*icoord + offset, 0, size - 1);
 }
 
 
 static void
-wrap_nearest_mirror_clamp(float s, unsigned size, int *icoord)
+wrap_nearest_mirror_clamp(float s, unsigned size, int offset, int *icoord)
 {
    /* s limited to [0,1] */
    /* i limited to [0,size-1] */
@@ -216,11 +225,13 @@ wrap_nearest_mirror_clamp(float s, unsigned size, int *icoord)
       *icoord = size - 1;
    else
       *icoord = util_ifloor(u * size);
+   if (offset)
+      *icoord = CLAMP(*icoord + offset, 0, size - 1);
 }
 
 
 static void
-wrap_nearest_mirror_clamp_to_edge(float s, unsigned size, int *icoord)
+wrap_nearest_mirror_clamp_to_edge(float s, unsigned size, int offset, int *icoord)
 {
    /* s limited to [min,max] */
    /* i limited to [0, size-1] */
@@ -233,11 +244,13 @@ wrap_nearest_mirror_clamp_to_edge(float s, unsigned size, int *icoord)
       *icoord = size - 1;
    else
       *icoord = util_ifloor(u * size);
+   if (offset)
+      *icoord = CLAMP(*icoord + offset, 0, size - 1);
 }
 
 
 static void
-wrap_nearest_mirror_clamp_to_border(float s, unsigned size, int *icoord)
+wrap_nearest_mirror_clamp_to_border(float s, unsigned size, int offset, int *icoord)
 {
    /* s limited to [min,max] */
    /* i limited to [0, size-1] */
@@ -250,6 +263,8 @@ wrap_nearest_mirror_clamp_to_border(float s, unsigned size, int *icoord)
       *icoord = size;
    else
       *icoord = util_ifloor(u * size);
+   if (offset)
+      *icoord = CLAMP(*icoord + offset, 0, size - 1);
 }
 
 
@@ -264,30 +279,34 @@ wrap_nearest_mirror_clamp_to_border(float s, unsigned size, int *icoord)
  * \param icoord  returns the computed integer texture coord
  */
 static void
-wrap_linear_repeat(float s, unsigned size,
+wrap_linear_repeat(float s, unsigned size, int offset,
                    int *icoord0, int *icoord1, float *w)
 {
    float u = s * size - 0.5F;
-   *icoord0 = repeat(util_ifloor(u), size);
+   *icoord0 = repeat(util_ifloor(u) + offset, size);
    *icoord1 = repeat(*icoord0 + 1, size);
    *w = frac(u);
 }
 
 
 static void
-wrap_linear_clamp(float s, unsigned size,
+wrap_linear_clamp(float s, unsigned size, int offset,
                   int *icoord0, int *icoord1, float *w)
 {
    float u = CLAMP(s, 0.0F, 1.0F);
    u = u * size - 0.5f;
    *icoord0 = util_ifloor(u);
    *icoord1 = *icoord0 + 1;
+   if (offset) {
+      *icoord0 = CLAMP(*icoord0 + offset, 0, size - 1);
+      *icoord1 = CLAMP(*icoord1 + offset, 0, size - 1);
+   }
    *w = frac(u);
 }
 
 
 static void
-wrap_linear_clamp_to_edge(float s, unsigned size,
+wrap_linear_clamp_to_edge(float s, unsigned size, int offset,
                           int *icoord0, int *icoord1, float *w)
 {
    float u = CLAMP(s, 0.0F, 1.0F);
@@ -298,12 +317,16 @@ wrap_linear_clamp_to_edge(float s, unsigned size,
       *icoord0 = 0;
    if (*icoord1 >= (int) size)
       *icoord1 = size - 1;
+   if (offset) {
+      *icoord0 = CLAMP(*icoord0 + offset, 0, size - 1);
+      *icoord1 = CLAMP(*icoord1 + offset, 0, size - 1);
+   }
    *w = frac(u);
 }
 
 
 static void
-wrap_linear_clamp_to_border(float s, unsigned size,
+wrap_linear_clamp_to_border(float s, unsigned size, int offset,
                             int *icoord0, int *icoord1, float *w)
 {
    const float min = -1.0F / (2.0F * size);
@@ -317,7 +340,7 @@ wrap_linear_clamp_to_border(float s, unsigned size,
 
 
 static void
-wrap_linear_mirror_repeat(float s, unsigned size,
+wrap_linear_mirror_repeat(float s, unsigned size, int offset,
                           int *icoord0, int *icoord1, float *w)
 {
    const int flr = util_ifloor(s);
@@ -336,7 +359,7 @@ wrap_linear_mirror_repeat(float s, unsigned size,
 
 
 static void
-wrap_linear_mirror_clamp(float s, unsigned size,
+wrap_linear_mirror_clamp(float s, unsigned size, int offset,
                          int *icoord0, int *icoord1, float *w)
 {
    float u = fabsf(s);
@@ -352,7 +375,7 @@ wrap_linear_mirror_clamp(float s, unsigned size,
 
 
 static void
-wrap_linear_mirror_clamp_to_edge(float s, unsigned size,
+wrap_linear_mirror_clamp_to_edge(float s, unsigned size, int offset,
                                  int *icoord0, int *icoord1, float *w)
 {
    float u = fabsf(s);
@@ -372,7 +395,7 @@ wrap_linear_mirror_clamp_to_edge(float s, unsigned size,
 
 
 static void
-wrap_linear_mirror_clamp_to_border(float s, unsigned size,
+wrap_linear_mirror_clamp_to_border(float s, unsigned size, int offset,
                                    int *icoord0, int *icoord1, float *w)
 {
    const float min = -1.0F / (2.0F * size);
@@ -395,10 +418,10 @@ wrap_linear_mirror_clamp_to_border(float s, unsigned size,
  * PIPE_TEX_WRAP_CLAMP for nearest sampling, unnormalized coords.
  */
 static void
-wrap_nearest_unorm_clamp(float s, unsigned size, int *icoord)
+wrap_nearest_unorm_clamp(float s, unsigned size, int offset, int *icoord)
 {
    int i = util_ifloor(s);
-   *icoord = CLAMP(i, 0, (int) size-1);
+   *icoord = CLAMP(i + offset, 0, (int) size-1);
 }
 
 
@@ -406,9 +429,9 @@ wrap_nearest_unorm_clamp(float s, unsigned size, int *icoord)
  * PIPE_TEX_WRAP_CLAMP_TO_BORDER for nearest sampling, unnormalized coords.
  */
 static void
-wrap_nearest_unorm_clamp_to_border(float s, unsigned size, int *icoord)
+wrap_nearest_unorm_clamp_to_border(float s, unsigned size, int offset, int *icoord)
 {
-   *icoord = util_ifloor( CLAMP(s, -0.5F, (float) size + 0.5F) );
+   *icoord = util_ifloor( CLAMP(s + offset, -0.5F, (float) size + 0.5F) );
 }
 
 
@@ -416,9 +439,9 @@ wrap_nearest_unorm_clamp_to_border(float s, unsigned size, int *icoord)
  * PIPE_TEX_WRAP_CLAMP_TO_EDGE for nearest sampling, unnormalized coords.
  */
 static void
-wrap_nearest_unorm_clamp_to_edge(float s, unsigned size, int *icoord)
+wrap_nearest_unorm_clamp_to_edge(float s, unsigned size, int offset, int *icoord)
 {
-   *icoord = util_ifloor( CLAMP(s, 0.5F, (float) size - 0.5F) );
+   *icoord = util_ifloor( CLAMP(s + offset, 0.5F, (float) size - 0.5F) );
 }
 
 
@@ -426,11 +449,11 @@ wrap_nearest_unorm_clamp_to_edge(float s, unsigned size, int *icoord)
  * PIPE_TEX_WRAP_CLAMP for linear sampling, unnormalized coords.
  */
 static void
-wrap_linear_unorm_clamp(float s, unsigned size,
+wrap_linear_unorm_clamp(float s, unsigned size, int offset,
                         int *icoord0, int *icoord1, float *w)
 {
    /* Not exactly what the spec says, but it matches NVIDIA output */
-   float u = CLAMP(s - 0.5F, 0.0f, (float) size - 1.0f);
+   float u = CLAMP(s + offset - 0.5F, 0.0f, (float) size - 1.0f);
    *icoord0 = util_ifloor(u);
    *icoord1 = *icoord0 + 1;
    *w = frac(u);
@@ -441,10 +464,10 @@ wrap_linear_unorm_clamp(float s, unsigned size,
  * PIPE_TEX_WRAP_CLAMP_TO_BORDER for linear sampling, unnormalized coords.
  */
 static void
-wrap_linear_unorm_clamp_to_border(float s, unsigned size,
+wrap_linear_unorm_clamp_to_border(float s, unsigned size, int offset,
                                   int *icoord0, int *icoord1, float *w)
 {
-   float u = CLAMP(s, -0.5F, (float) size + 0.5F);
+   float u = CLAMP(s + offset, -0.5F, (float) size + 0.5F);
    u -= 0.5F;
    *icoord0 = util_ifloor(u);
    *icoord1 = *icoord0 + 1;
@@ -458,10 +481,10 @@ wrap_linear_unorm_clamp_to_border(float s, unsigned size,
  * PIPE_TEX_WRAP_CLAMP_TO_EDGE for linear sampling, unnormalized coords.
  */
 static void
-wrap_linear_unorm_clamp_to_edge(float s, unsigned size,
+wrap_linear_unorm_clamp_to_edge(float s, unsigned size, int offset,
                                 int *icoord0, int *icoord1, float *w)
 {
-   float u = CLAMP(s, +0.5F, (float) size - 0.5F);
+   float u = CLAMP(s + offset, +0.5F, (float) size - 0.5F);
    u -= 0.5F;
    *icoord0 = util_ifloor(u);
    *icoord1 = *icoord0 + 1;
@@ -1154,7 +1177,7 @@ img_filter_1d_nearest(struct sp_sampler_view *sp_sview,
    addr.value = 0;
    addr.bits.level = args->level;
 
-   sp_samp->nearest_texcoord_s(args->s, width, &x);
+   sp_samp->nearest_texcoord_s(args->s, width, args->offset[0], &x);
 
    out = get_texel_2d(sp_sview, sp_samp, addr, x, 0);
    for (c = 0; c < TGSI_QUAD_SIZE; c++)
@@ -1186,7 +1209,7 @@ img_filter_1d_array_nearest(struct sp_sampler_view *sp_sview,
    addr.value = 0;
    addr.bits.level = args->level;
 
-   sp_samp->nearest_texcoord_s(args->s, width, &x);
+   sp_samp->nearest_texcoord_s(args->s, width, args->offset[0], &x);
    layer = coord_to_layer(args->t, sp_sview->base.u.tex.first_layer,
                           sp_sview->base.u.tex.last_layer);
 
@@ -1222,8 +1245,8 @@ img_filter_2d_nearest(struct sp_sampler_view *sp_sview,
    addr.value = 0;
    addr.bits.level = args->level;
 
-   sp_samp->nearest_texcoord_s(args->s, width, &x);
-   sp_samp->nearest_texcoord_t(args->t, height, &y);
+   sp_samp->nearest_texcoord_s(args->s, width, args->offset[0], &x);
+   sp_samp->nearest_texcoord_t(args->t, height, args->offset[1], &y);
 
    out = get_texel_2d(sp_sview, sp_samp, addr, x, y);
    for (c = 0; c < TGSI_QUAD_SIZE; c++)
@@ -1257,8 +1280,8 @@ img_filter_2d_array_nearest(struct sp_sampler_view *sp_sview,
    addr.value = 0;
    addr.bits.level = args->level;
 
-   sp_samp->nearest_texcoord_s(args->s, width, &x);
-   sp_samp->nearest_texcoord_t(args->t, height, &y);
+   sp_samp->nearest_texcoord_s(args->s, width, args->offset[0], &x);
+   sp_samp->nearest_texcoord_t(args->t, height, args->offset[1], &y);
    layer = coord_to_layer(args->p, sp_sview->base.u.tex.first_layer,
                           sp_sview->base.u.tex.last_layer);
 
@@ -1299,12 +1322,12 @@ img_filter_cube_nearest(struct sp_sampler_view *sp_sview,
     * mode CLAMP_TO_EDGE.
     */
    if (sp_samp->base.seamless_cube_map) {
-      wrap_nearest_clamp_to_edge(args->s, width, &x);
-      wrap_nearest_clamp_to_edge(args->t, height, &y);
+      wrap_nearest_clamp_to_edge(args->s, width, args->offset[0], &x);
+      wrap_nearest_clamp_to_edge(args->t, height, args->offset[1], &y);
    } else {
       /* Would probably make sense to ignore mode and just do edge clamp */
-      sp_samp->nearest_texcoord_s(args->s, width, &x);
-      sp_samp->nearest_texcoord_t(args->t, height, &y);
+      sp_samp->nearest_texcoord_s(args->s, width, args->offset[0], &x);
+      sp_samp->nearest_texcoord_t(args->t, height, args->offset[1], &y);
    }
 
    layerface = args->face_id + sp_sview->base.u.tex.first_layer;
@@ -1339,8 +1362,8 @@ img_filter_cube_array_nearest(struct sp_sampler_view *sp_sview,
    addr.value = 0;
    addr.bits.level = args->level;
 
-   sp_samp->nearest_texcoord_s(args->s, width, &x);
-   sp_samp->nearest_texcoord_t(args->t, height, &y);
+   sp_samp->nearest_texcoord_s(args->s, width, args->offset[0], &x);
+   sp_samp->nearest_texcoord_t(args->t, height, args->offset[1], &y);
    layerface = coord_to_layer(6 * args->p + sp_sview->base.u.tex.first_layer,
                               sp_sview->base.u.tex.first_layer,
                               sp_sview->base.u.tex.last_layer - 5) + args->face_id;
@@ -1375,9 +1398,9 @@ img_filter_3d_nearest(struct sp_sampler_view *sp_sview,
    assert(height > 0);
    assert(depth > 0);
 
-   sp_samp->nearest_texcoord_s(args->s, width,  &x);
-   sp_samp->nearest_texcoord_t(args->t, height, &y);
-   sp_samp->nearest_texcoord_p(args->p, depth,  &z);
+   sp_samp->nearest_texcoord_s(args->s, width,  args->offset[0], &x);
+   sp_samp->nearest_texcoord_t(args->t, height, args->offset[1], &y);
+   sp_samp->nearest_texcoord_p(args->p, depth,  args->offset[2], &z);
 
    addr.value = 0;
    addr.bits.level = args->level;
@@ -1409,7 +1432,7 @@ img_filter_1d_linear(struct sp_sampler_view *sp_sview,
    addr.value = 0;
    addr.bits.level = args->level;
 
-   sp_samp->linear_texcoord_s(args->s, width, &x0, &x1, &xw);
+   sp_samp->linear_texcoord_s(args->s, width, args->offset[0], &x0, &x1, &xw);
 
    tx0 = get_texel_2d(sp_sview, sp_samp, addr, x0, 0);
    tx1 = get_texel_2d(sp_sview, sp_samp, addr, x1, 0);
@@ -1441,7 +1464,7 @@ img_filter_1d_array_linear(struct sp_sampler_view *sp_sview,
    addr.value = 0;
    addr.bits.level = args->level;
 
-   sp_samp->linear_texcoord_s(args->s, width, &x0, &x1, &xw);
+   sp_samp->linear_texcoord_s(args->s, width, args->offset[0], &x0, &x1, &xw);
    layer = coord_to_layer(args->t, sp_sview->base.u.tex.first_layer,
                           sp_sview->base.u.tex.last_layer);
 
@@ -1477,8 +1500,8 @@ img_filter_2d_linear(struct sp_sampler_view *sp_sview,
    addr.value = 0;
    addr.bits.level = args->level;
 
-   sp_samp->linear_texcoord_s(args->s, width,  &x0, &x1, &xw);
-   sp_samp->linear_texcoord_t(args->t, height, &y0, &y1, &yw);
+   sp_samp->linear_texcoord_s(args->s, width,  args->offset[0], &x0, &x1, &xw);
+   sp_samp->linear_texcoord_t(args->t, height, args->offset[1], &y0, &y1, &yw);
 
    tx0 = get_texel_2d(sp_sview, sp_samp, addr, x0, y0);
    tx1 = get_texel_2d(sp_sview, sp_samp, addr, x1, y0);
@@ -1516,8 +1539,8 @@ img_filter_2d_array_linear(struct sp_sampler_view *sp_sview,
    addr.value = 0;
    addr.bits.level = args->level;
 
-   sp_samp->linear_texcoord_s(args->s, width,  &x0, &x1, &xw);
-   sp_samp->linear_texcoord_t(args->t, height, &y0, &y1, &yw);
+   sp_samp->linear_texcoord_s(args->s, width,  args->offset[0], &x0, &x1, &xw);
+   sp_samp->linear_texcoord_t(args->t, height, args->offset[1], &y0, &y1, &yw);
    layer = coord_to_layer(args->p, sp_sview->base.u.tex.first_layer,
                           sp_sview->base.u.tex.last_layer);
 
@@ -1565,12 +1588,12 @@ img_filter_cube_linear(struct sp_sampler_view *sp_sview,
     */
    if (sp_samp->base.seamless_cube_map) {
       /* Note this is a bit overkill, actual clamping is not required */
-      wrap_linear_clamp_to_border(args->s, width, &x0, &x1, &xw);
-      wrap_linear_clamp_to_border(args->t, height, &y0, &y1, &yw);
+      wrap_linear_clamp_to_border(args->s, width, args->offset[0], &x0, &x1, &xw);
+      wrap_linear_clamp_to_border(args->t, height, args->offset[1], &y0, &y1, &yw);
    } else {
       /* Would probably make sense to ignore mode and just do edge clamp */
-      sp_samp->linear_texcoord_s(args->s, width,  &x0, &x1, &xw);
-      sp_samp->linear_texcoord_t(args->t, height, &y0, &y1, &yw);
+      sp_samp->linear_texcoord_s(args->s, width,  args->offset[0], &x0, &x1, &xw);
+      sp_samp->linear_texcoord_t(args->t, height, args->offset[1], &y0, &y1, &yw);
    }
 
    layer = sp_sview->base.u.tex.first_layer;
@@ -1626,12 +1649,12 @@ img_filter_cube_array_linear(struct sp_sampler_view *sp_sview,
     */
    if (sp_samp->base.seamless_cube_map) {
       /* Note this is a bit overkill, actual clamping is not required */
-      wrap_linear_clamp_to_border(args->s, width, &x0, &x1, &xw);
-      wrap_linear_clamp_to_border(args->t, height, &y0, &y1, &yw);
+      wrap_linear_clamp_to_border(args->s, width, args->offset[0], &x0, &x1, &xw);
+      wrap_linear_clamp_to_border(args->t, height, args->offset[1], &y0, &y1, &yw);
    } else {
       /* Would probably make sense to ignore mode and just do edge clamp */
-      sp_samp->linear_texcoord_s(args->s, width,  &x0, &x1, &xw);
-      sp_samp->linear_texcoord_t(args->t, height, &y0, &y1, &yw);
+      sp_samp->linear_texcoord_s(args->s, width,  args->offset[0], &x0, &x1, &xw);
+      sp_samp->linear_texcoord_t(args->t, height, args->offset[1], &y0, &y1, &yw);
    }
 
    layer = coord_to_layer(6 * args->p + sp_sview->base.u.tex.first_layer,
@@ -1682,9 +1705,9 @@ img_filter_3d_linear(struct sp_sampler_view *sp_sview,
    assert(height > 0);
    assert(depth > 0);
 
-   sp_samp->linear_texcoord_s(args->s, width,  &x0, &x1, &xw);
-   sp_samp->linear_texcoord_t(args->t, height, &y0, &y1, &yw);
-   sp_samp->linear_texcoord_p(args->p, depth,  &z0, &z1, &zw);
+   sp_samp->linear_texcoord_s(args->s, width,  args->offset[0], &x0, &x1, &xw);
+   sp_samp->linear_texcoord_t(args->t, height, args->offset[1], &y0, &y1, &yw);
+   sp_samp->linear_texcoord_p(args->p, depth,  args->offset[2], &z0, &z1, &zw);
 
    tx00 = get_texel_3d(sp_sview, sp_samp, addr, x0, y0, z0);
    tx01 = get_texel_3d(sp_sview, sp_samp, addr, x1, y0, z0);
@@ -1820,6 +1843,8 @@ mip_filter_linear(struct sp_sampler_view *sp_sview,
 
    compute_lambda_lod(sp_sview, sp_samp, s, t, p, lod_in, filt_args->control, lod);
 
+   args.offset = filt_args->offset;
+
    for (j = 0; j < TGSI_QUAD_SIZE; j++) {
       int level0 = psview->u.tex.first_level + (int)lod[j];
 
@@ -1880,6 +1905,8 @@ mip_filter_nearest(struct sp_sampler_view *sp_sview,
    float lod[TGSI_QUAD_SIZE];
    int j;
    struct img_filter_args args;
+
+   args.offset = filt_args->offset;
    compute_lambda_lod(sp_sview, sp_samp, s, t, p, lod_in, filt_args->control, lod);
 
    for (j = 0; j < TGSI_QUAD_SIZE; j++) {
@@ -1922,6 +1949,8 @@ mip_filter_none(struct sp_sampler_view *sp_sview,
    struct img_filter_args args;
 
    args.level = sp_sview->base.u.tex.first_level;
+   args.offset = filt_args->offset;
+
    compute_lambda_lod(sp_sview, sp_samp, s, t, p, lod_in, filt_args->control, lod);
 
    for (j = 0; j < TGSI_QUAD_SIZE; j++) {
@@ -1955,6 +1984,7 @@ mip_filter_none_no_filter_select(struct sp_sampler_view *sp_sview,
    int j;
    struct img_filter_args args;
    args.level = sp_sview->base.u.tex.first_level;
+   args.offset = filt_args->offset;
    for (j = 0; j < TGSI_QUAD_SIZE; j++) {
       args.s = s[j];
       args.t = t[j];
@@ -3265,6 +3295,7 @@ sp_tgsi_get_samples(struct tgsi_sampler *tgsi_sampler,
    }
 
    filt_args.control = control;
+   filt_args.offset = offset;
    sp_samp->sp_sview[sview_index].get_samples(&sp_samp->sp_sview[sview_index],
                                               sp_samp->sp_sampler[sampler_index],
                                               s, t, p, c0, lod, &filt_args, rgba);

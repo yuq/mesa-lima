@@ -38,10 +38,12 @@ struct sp_sampler;
 
 typedef void (*wrap_nearest_func)(float s,
                                   unsigned size,
+                                  int offset,
                                   int *icoord);
 
 typedef void (*wrap_linear_func)(float s, 
                                  unsigned size,
+                                 int offset,
                                  int *icoord0,
                                  int *icoord1,
                                  float *w);
@@ -57,6 +59,7 @@ struct img_filter_args {
    float p;
    unsigned level;
    unsigned face_id;
+   const int8_t *offset;
 };
 
 typedef void (*img_filter_func)(struct sp_sampler_view *sp_sview,
@@ -66,6 +69,7 @@ typedef void (*img_filter_func)(struct sp_sampler_view *sp_sview,
 
 struct filter_args {
    enum tgsi_sampler_control control;
+   const int8_t *offset;
 };
 
 typedef void (*mip_filter_func)(struct sp_sampler_view *sp_sview,
