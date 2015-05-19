@@ -70,13 +70,19 @@ libvulkan_la_SOURCES =				\
 	formats.c				\
 	compiler.cpp
 
-BUILT_SOURCES = entrypoints.h entrypoints.c
+BUILT_SOURCES =					\
+	entrypoints.h				\
+	entrypoints.c				\
+	meta-spirv.h
 
 entrypoints.h : vk_gen.py $(vulkan_include_HEADERS)
 	$(AM_V_GEN)cat $(vulkan_include_HEADERS) | $(PYTHON2) $< header > $@
 
 entrypoints.c : vk_gen.py $(vulkan_include_HEADERS)
 	$(AM_V_GEN)cat $(vulkan_include_HEADERS) | $(PYTHON2) $< code > $@
+
+%-spirv.h: %.c glsl_scraper.py
+	$(AM_V_GEN) $(PYTHON2) $(srcdir)/glsl_scraper.py --glsl-only -o $@ $<
 
 CLEANFILES = entrypoints.h entrypoints.c
 

@@ -29,6 +29,7 @@
 
 #include "private.h"
 #include "glsl_helpers.h"
+#include "meta-spirv.h"
 
 static void
 anv_device_init_meta_clear_state(struct anv_device *device)

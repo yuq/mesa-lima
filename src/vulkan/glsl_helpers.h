@@ -23,13 +23,15 @@
 
 #pragma once
 
+#define _GLSL_SRC_VAR2(_line) _glsl_helpers_shader ## _line ## _glsl_src
+#define _GLSL_SRC_VAR(_line) _GLSL_SRC_VAR2(_line)
+
 #define GLSL_VK_SHADER(device, stage, ...) ({                           \
    VkShader __shader;                                                   \
-   const char __src[] = "#version 330\n" #__VA_ARGS__;                  \
    VkShaderCreateInfo __shader_create_info = {                          \
       .sType = VK_STRUCTURE_TYPE_SHADER_CREATE_INFO,                    \
-      .codeSize = sizeof(__src),                                        \
-      .pCode = __src,                                                   \
+      .codeSize = sizeof(_GLSL_SRC_VAR(__LINE__)),                      \
+      .pCode = _GLSL_SRC_VAR(__LINE__),                                 \
       .flags = (1 << 31) /* GLSL back-door hack */                      \
    };                                                                   \
    anv_CreateShader((VkDevice) device, &__shader_create_info, &__shader); \
