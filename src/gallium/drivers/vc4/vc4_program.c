@@ -1849,8 +1849,6 @@ ntq_emit_intrinsic(struct vc4_compile *c, nir_intrinsic_instr *instr)
 
         switch (instr->intrinsic) {
         case nir_intrinsic_load_uniform:
-                assert(instr->const_index[1] == 1);
-
                 for (int i = 0; i < instr->num_components; i++) {
                         dest[i] = qir_uniform(c, QUNIFORM_UNIFORM,
                                               instr->const_index[0] * 4 + i);
@@ -1858,8 +1856,6 @@ ntq_emit_intrinsic(struct vc4_compile *c, nir_intrinsic_instr *instr)
                 break;
 
         case nir_intrinsic_load_uniform_indirect:
-                assert(instr->const_index[1] == 1);
-
                 for (int i = 0; i < instr->num_components; i++) {
                         dest[i] = indirect_uniform_load(c,
                                                         ntq_get_src(c, instr->src[0], 0),
@@ -1870,8 +1866,6 @@ ntq_emit_intrinsic(struct vc4_compile *c, nir_intrinsic_instr *instr)
                 break;
 
         case nir_intrinsic_load_input:
-                assert(instr->const_index[1] == 1);
-
                 for (int i = 0; i < instr->num_components; i++)
                         dest[i] = c->inputs[instr->const_index[0] * 4 + i];
 

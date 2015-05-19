@@ -1158,14 +1158,12 @@ emit_intrinisic(struct ir3_compile *ctx, nir_intrinsic_instr *intr)
 
 	switch (intr->intrinsic) {
 	case nir_intrinsic_load_uniform:
-		compile_assert(ctx, intr->const_index[1] == 1);
 		for (int i = 0; i < intr->num_components; i++) {
 			unsigned n = idx * 4 + i;
 			dst[i] = create_uniform(ctx, n);
 		}
 		break;
 	case nir_intrinsic_load_uniform_indirect:
-		compile_assert(ctx, intr->const_index[1] == 1);
 		src = get_src(ctx, &intr->src[0]);
 		for (int i = 0; i < intr->num_components; i++) {
 			unsigned n = idx * 4 + i;
@@ -1178,14 +1176,12 @@ emit_intrinisic(struct ir3_compile *ctx, nir_intrinsic_instr *intr)
 		emit_intrinsic_load_ubo(ctx, intr, dst);
 		break;
 	case nir_intrinsic_load_input:
-		compile_assert(ctx, intr->const_index[1] == 1);
 		for (int i = 0; i < intr->num_components; i++) {
 			unsigned n = idx * 4 + i;
 			dst[i] = b->inputs[n];
 		}
 		break;
 	case nir_intrinsic_load_input_indirect:
-		compile_assert(ctx, intr->const_index[1] == 1);
 		src = get_src(ctx, &intr->src[0]);
 		struct ir3_instruction *collect =
 				create_collect(b, b->inputs, b->ninputs);
@@ -1202,7 +1198,6 @@ emit_intrinisic(struct ir3_compile *ctx, nir_intrinsic_instr *intr)
 		emit_intrinisic_store_var(ctx, intr);
 		break;
 	case nir_intrinsic_store_output:
-		compile_assert(ctx, intr->const_index[1] == 1);
 		src = get_src(ctx, &intr->src[0]);
 		for (int i = 0; i < intr->num_components; i++) {
 			unsigned n = idx * 4 + i;

@@ -1345,16 +1345,14 @@ fs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
          index -= num_direct_uniforms;
       }
 
-      for (int i = 0; i < instr->const_index[1]; i++) {
-         for (unsigned j = 0; j < instr->num_components; j++) {
-            fs_reg src = offset(retype(uniform_reg, dest.type), index);
-            if (has_indirect)
-               src.reladdr = new(mem_ctx) fs_reg(get_nir_src(instr->src[0]));
-            index++;
+      for (unsigned j = 0; j < instr->num_components; j++) {
+         fs_reg src = offset(retype(uniform_reg, dest.type), index);
+         if (has_indirect)
+            src.reladdr = new(mem_ctx) fs_reg(get_nir_src(instr->src[0]));
+         index++;
 
-            emit(MOV(dest, src));
-            dest = offset(dest, 1);
-         }
+         emit(MOV(dest, src));
+         dest = offset(dest, 1);
       }
       break;
    }
@@ -1426,17 +1424,15 @@ fs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
       /* fallthrough */
    case nir_intrinsic_load_input: {
       unsigned index = 0;
-      for (int i = 0; i < instr->const_index[1]; i++) {
-         for (unsigned j = 0; j < instr->num_components; j++) {
-            fs_reg src = offset(retype(nir_inputs, dest.type),
-                                instr->const_index[0] + index);
-            if (has_indirect)
-               src.reladdr = new(mem_ctx) fs_reg(get_nir_src(instr->src[0]));
-            index++;
+      for (unsigned j = 0; j < instr->num_components; j++) {
+         fs_reg src = offset(retype(nir_inputs, dest.type),
+                             instr->const_index[0] + index);
+         if (has_indirect)
+            src.reladdr = new(mem_ctx) fs_reg(get_nir_src(instr->src[0]));
+         index++;
 
-            emit(MOV(dest, src));
-            dest = offset(dest, 1);
-         }
+         emit(MOV(dest, src));
+         dest = offset(dest, 1);
       }
       break;
    }
@@ -1564,16 +1560,14 @@ fs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
    case nir_intrinsic_store_output: {
       fs_reg src = get_nir_src(instr->src[0]);
       unsigned index = 0;
-      for (int i = 0; i < instr->const_index[1]; i++) {
-         for (unsigned j = 0; j < instr->num_components; j++) {
-            fs_reg new_dest = offset(retype(nir_outputs, src.type),
-                                     instr->const_index[0] + index);
-            if (has_indirect)
-               src.reladdr = new(mem_ctx) fs_reg(get_nir_src(instr->src[1]));
-            index++;
-            emit(MOV(new_dest, src));
-            src = offset(src, 1);
-         }
+      for (unsigned j = 0; j < instr->num_components; j++) {
+         fs_reg new_dest = offset(retype(nir_outputs, src.type),
+                                  instr->const_index[0] + index);
+         if (has_indirect)
+            src.reladdr = new(mem_ctx) fs_reg(get_nir_src(instr->src[1]));
+         index++;
+         emit(MOV(new_dest, src));
+         src = offset(src, 1);
       }
       break;
    }

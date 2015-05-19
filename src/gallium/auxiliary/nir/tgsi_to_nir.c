@@ -401,7 +401,6 @@ ttn_src_for_file_and_index(struct ttn_compile *c, unsigned file, unsigned index,
 
       load->num_components = 4;
       load->const_index[0] = index;
-      load->const_index[1] = 1;
       if (dim) {
          if (dimind) {
             load->src[srcn] =
@@ -1671,7 +1670,6 @@ ttn_add_output_stores(struct ttn_compile *c)
             nir_intrinsic_instr_create(b->shader, nir_intrinsic_store_output);
          store->num_components = 4;
          store->const_index[0] = var->data.driver_location + i;
-         store->const_index[1] = 1;
          store->src[0].reg.reg = c->output_regs[var->data.driver_location].reg;
          nir_instr_insert_after_cf_list(b->cf_node_list, &store->instr);
       }
