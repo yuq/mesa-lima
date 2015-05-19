@@ -13,6 +13,11 @@
 #include <poll.h>
 #include <libpng16/png.h>
 
+#define for_each_bit(b, dword)                          \
+   for (uint32_t __dword = (dword);                     \
+        (b) = __builtin_ffs(__dword) - 1, __dword;      \
+        __dword &= ~(1 << (b)))
+
 static void
 fail_if(int cond, const char *format, ...)
 {
@@ -296,6 +301,42 @@ test_timestamp(VkDevice device, VkQueue queue)
 
    vkUnmapMemory(device, mem);
    vkFreeMemory(device, mem);
+}
+
+static void
+test_formats(VkDevice device, VkQueue queue)
+{
+   VkFormatProperties properties;
+   size_t size = sizeof(properties);
+   uint32_t f;
+
+   static const char *features[] = {
+      "sampled_image",
+      "storage_image",
+      "storage_image_atomic",
+      "uniform_texel_buffer",
+      "storage_texel_buffer",
+      "storage_texel_buffer_atomic",
+      "vertex_buffer",
+      "color_attachment",
+      "color_attachment_blend",
+      "depth_stencil_attachment",
+      "conversion"
+   };
+
+   vkGetFormatInfo(device, 
+                   VK_FORMAT_R32G32B32A32_SFLOAT,
+                   VK_FORMAT_INFO_TYPE_PROPERTIES,
+                   &size, &properties);
+
+   printf("linear tiling features:");
+   for_each_bit(f, properties.linearTilingFeatures)
+      printf(" %s", features[f]);
+
+   printf("\noptimal tiling features:");
+   for_each_bit(f, properties.optimalTilingFeatures)
+      printf(" %s", features[f]);
+   printf("\n");
 }
 
 static void
@@ -894,6 +935,8 @@ int main(int argc, char *argv[])
 
    if (argc > 1 && strcmp(argv[1], "timestamp") == 0) {
       test_timestamp(device, queue);
+   } else if (argc > 1 && strcmp(argv[1], "formats") == 0) {
+      test_formats(device, queue);
    } else {
       test_triangle(device, queue);
    }
