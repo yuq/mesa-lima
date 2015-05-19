@@ -19,10 +19,9 @@ Options:
 import os, sys, re, cStringIO, tempfile, subprocess, struct, shutil
 
 class Shader:
-   def __init__(self, stage, line):
+   def __init__(self, stage):
       self.stream = cStringIO.StringIO()
       self.stage = stage
-      self.line = line
 
       if self.stage == 'VERTEX':
          self.ext = 'vert'
@@ -41,6 +40,9 @@ class Shader:
 
    def add_text(self, s):
       self.stream.write(s)
+
+   def finish_text(self, line):
+      self.line = line
 
    def glsl_source(self):
       return self.stream.getvalue()
@@ -153,8 +155,6 @@ class Parser:
          self.current_shader.add_text(t)
 
    def handle_macro(self):
-      line_number = self.line_number
-
       t = self.token_iter.next()
       assert t == '('
       t = self.token_iter.next()
@@ -166,9 +166,12 @@ class Parser:
       t = self.token_iter.next()
       assert t == ','
 
-      self.current_shader = Shader(stage, line_number)
+      self.current_shader = Shader(stage)
       self.handle_shader_src()
+      self.current_shader.finish_text(self.line_number)
+
       self.shaders.append(self.current_shader)
+      self.current_shader = None
 
    def run(self):
       for t in self.token_iter:
