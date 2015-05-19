@@ -481,15 +481,20 @@ anv_batch_init(struct anv_batch *batch, struct anv_device *device)
    batch->bo.map =
       anv_gem_mmap(device, batch->bo.gem_handle, 0, BATCH_SIZE);
    if (batch->bo.map == NULL) {
-      anv_gem_close(device, batch->bo.gem_handle);
-      return vk_error(VK_ERROR_MEMORY_MAP_FAILED);
+      result = vk_error(VK_ERROR_MEMORY_MAP_FAILED);
+      goto fail_bo;
    }
 
    batch->cmd_relocs.num_relocs = 0;
-   batch->surf_relocs.num_relocs = 0;
    batch->next = batch->bo.map;
 
    return VK_SUCCESS;
+
+ fail_bo:
+   anv_gem_close(device, batch->bo.gem_handle);
+
+   return result;
+
 }
 
 void
@@ -504,7 +509,6 @@ anv_batch_reset(struct anv_batch *batch)
 {
    batch->next = batch->bo.map;
    batch->cmd_relocs.num_relocs = 0;
-   batch->surf_relocs.num_relocs = 0;
 }
 
 void *
@@ -568,7 +572,6 @@ anv_batch_emit_batch(struct anv_batch *batch, struct anv_batch *other)
 
    offset = batch->next - batch->bo.map;
    anv_reloc_list_append(&batch->cmd_relocs, &other->cmd_relocs, offset);
-   anv_reloc_list_append(&batch->surf_relocs, &other->surf_relocs, offset);
 
    batch->next += size;
 }
@@ -926,6 +929,8 @@ anv_cmd_buffer_destructor(struct anv_device *   device,
 {
    struct anv_cmd_buffer *cmd_buffer = (struct anv_cmd_buffer *) object;
    
+   anv_gem_munmap(cmd_buffer->surface_bo.map, BATCH_SIZE);
+   anv_gem_close(device, cmd_buffer->surface_bo.gem_handle);
    anv_state_stream_finish(&cmd_buffer->surface_state_stream);
    anv_state_stream_finish(&cmd_buffer->dynamic_state_stream);
    anv_state_stream_finish(&cmd_buffer->binding_table_state_stream);
@@ -2073,12 +2078,27 @@ VkResult anv_CreateCommandBuffer(
    if (result != VK_SUCCESS)
       goto fail;
 
+   result = anv_bo_init_new(&cmd_buffer->surface_bo, device, BATCH_SIZE);
+   if (result != VK_SUCCESS)
+      goto fail_batch;
+
+   cmd_buffer->surface_bo.map =
+      anv_gem_mmap(device, cmd_buffer->surface_bo.gem_handle, 0, BATCH_SIZE);
+   if (cmd_buffer->surface_bo.map == NULL) {
+      result = vk_error(VK_ERROR_MEMORY_MAP_FAILED);
+      goto fail_surface_bo;
+   }
+
+   /* Start surface_next at 1 so surface offset 0 is invalid. */
+   cmd_buffer->surface_next = 1;
+   cmd_buffer->surface_relocs.num_relocs = 0;
+
    cmd_buffer->exec2_objects =
       anv_device_alloc(device, 8192 * sizeof(cmd_buffer->exec2_objects[0]), 8,
                        VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
    if (cmd_buffer->exec2_objects == NULL) {
       result = vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
-      goto fail_batch;
+      goto fail_surface_map;
    }
 
    cmd_buffer->exec2_bos =
@@ -2105,6 +2125,10 @@ VkResult anv_CreateCommandBuffer(
 
  fail_exec2_objects:
    anv_device_free(device, cmd_buffer->exec2_objects);
+ fail_surface_map:
+   anv_gem_munmap(cmd_buffer->surface_bo.map, BATCH_SIZE);
+ fail_surface_bo:
+   anv_gem_close(device, cmd_buffer->surface_bo.gem_handle);
  fail_batch:
    anv_batch_finish(&cmd_buffer->batch, device);
  fail:
@@ -2130,7 +2154,7 @@ VkResult anv_BeginCommandBuffer(
                   .GeneralStateBufferSize = 0xfffff,
                   .GeneralStateBufferSizeModifyEnable = true,
 
-                  .SurfaceStateBaseAddress = { &device->surface_state_block_pool.bo, 0 },
+                  .SurfaceStateBaseAddress = { &cmd_buffer->surface_bo, 0 },
                   .SurfaceStateMemoryObjectControlState = 0, /* FIXME: MOCS */
                   .SurfaceStateBaseAddressModifyEnable = true,
 
@@ -2277,13 +2301,13 @@ VkResult anv_EndCommandBuffer(
    pthread_mutex_lock(&device->mutex);
 
    /* Add block pool bos first so we can add them with their relocs. */
-   anv_cmd_buffer_add_bo(cmd_buffer, &device->surface_state_block_pool.bo,
-                         &batch->surf_relocs);
+   anv_cmd_buffer_add_bo(cmd_buffer, &cmd_buffer->surface_bo,
+                         &cmd_buffer->surface_relocs);
 
-   anv_cmd_buffer_add_validate_bos(cmd_buffer, &batch->surf_relocs);
+   anv_cmd_buffer_add_validate_bos(cmd_buffer, &cmd_buffer->surface_relocs);
    anv_cmd_buffer_add_validate_bos(cmd_buffer, &batch->cmd_relocs);
    anv_cmd_buffer_add_bo(cmd_buffer, &batch->bo, &batch->cmd_relocs);
-   anv_cmd_buffer_process_relocs(cmd_buffer, &batch->surf_relocs);
+   anv_cmd_buffer_process_relocs(cmd_buffer, &cmd_buffer->surface_relocs);
    anv_cmd_buffer_process_relocs(cmd_buffer, &batch->cmd_relocs);
 
    cmd_buffer->execbuf.buffers_ptr = (uintptr_t) cmd_buffer->exec2_objects;
@@ -2313,6 +2337,8 @@ VkResult anv_ResetCommandBuffer(
    struct anv_cmd_buffer *cmd_buffer = (struct anv_cmd_buffer *) cmdBuffer;
 
    anv_batch_reset(&cmd_buffer->batch);
+   cmd_buffer->surface_next = 0;
+   cmd_buffer->surface_relocs.num_relocs = 0;
 
    return VK_SUCCESS;
 }
@@ -2363,6 +2389,22 @@ void anv_CmdBindDynamicStateObject(
    };
 }
 
+static struct anv_state
+anv_cmd_buffer_alloc_surface_state(struct anv_cmd_buffer *cmd_buffer,
+                                   uint32_t size, uint32_t alignment)
+{
+   struct anv_state state;
+
+   state.offset = ALIGN_U32(cmd_buffer->surface_next, alignment);
+   state.map = cmd_buffer->surface_bo.map + state.offset;
+   state.alloc_size = size;
+   cmd_buffer->surface_next = state.offset + size;
+
+   assert(state.offset + size < cmd_buffer->surface_bo.size);
+
+   return state;
+}
+
 void anv_CmdBindDescriptorSets(
     VkCmdBuffer                                 cmdBuffer,
     VkPipelineBindPoint                         pipelineBindPoint,
@@ -2392,8 +2434,11 @@ void anv_CmdBindDescriptorSets(
          for (uint32_t b = 0; b < set_layout->stage[s].surface_count; b++) {
             struct anv_surface_view *view = set->descriptors[surface_to_desc[b]].view;
 
-            bindings->descriptors[s].surfaces[start + b] =
-               view->surface_state.offset;
+            struct anv_state state =
+               anv_cmd_buffer_alloc_surface_state(cmd_buffer, 64, 64);
+            memcpy(state.map, view->surface_state.map, 64);
+
+            bindings->descriptors[s].surfaces[start + b] = state.offset;
             bindings->descriptors[s].relocs[start + b].bo = view->bo;
             bindings->descriptors[s].relocs[start + b].offset = view->offset;
          }
@@ -2480,24 +2525,33 @@ flush_descriptor_sets(struct anv_cmd_buffer *cmd_buffer)
 
       if (layers + surface_count > 0) {
          struct anv_state state;
+         uint32_t offset;
+         uint32_t *address;
          uint32_t size;
 
          size = (bias + surface_count) * sizeof(uint32_t);
-         state = anv_state_stream_alloc(&cmd_buffer->binding_table_state_stream,
-                                        size, 32);
+         state = anv_cmd_buffer_alloc_surface_state(cmd_buffer, size, 32);
          memcpy(state.map, bindings->descriptors[s].surfaces, size);
 
-         for (uint32_t i = 0; i < layers; i++)
-            anv_reloc_list_add(&cmd_buffer->batch.surf_relocs,
-                               bindings->descriptors[s].surfaces[i] + 8 * sizeof(int32_t),
-                               bindings->descriptors[s].relocs[i].bo,
-                               bindings->descriptors[s].relocs[i].offset);
+         for (uint32_t i = 0; i < layers; i++) {
+            offset = bindings->descriptors[s].surfaces[i] + 8 * sizeof(int32_t);
+            address = cmd_buffer->surface_bo.map + offset;
 
-         for (uint32_t i = 0; i < surface_count; i++)
-            anv_reloc_list_add(&cmd_buffer->batch.surf_relocs,
-                               bindings->descriptors[s].surfaces[bias + i] + 8 * sizeof(int32_t),
-                               bindings->descriptors[s].relocs[bias + i].bo,
-                               bindings->descriptors[s].relocs[bias + i].offset);
+            *address =
+               anv_reloc_list_add(&cmd_buffer->surface_relocs, offset,
+                                  bindings->descriptors[s].relocs[i].bo,
+                                  bindings->descriptors[s].relocs[i].offset);
+         }
+
+         for (uint32_t i = 0; i < surface_count; i++) {
+            offset = bindings->descriptors[s].surfaces[i] + 8 * sizeof(int32_t);
+            address = cmd_buffer->surface_bo.map + offset;
+
+            *address =
+               anv_reloc_list_add(&cmd_buffer->surface_relocs, offset,
+                                  bindings->descriptors[s].relocs[bias + i].bo,
+                                  bindings->descriptors[s].relocs[bias + i].offset);
+         }
 
          static const uint32_t binding_table_opcodes[] = {
             [VK_SHADER_STAGE_VERTEX] = 38,
@@ -2519,7 +2573,7 @@ flush_descriptor_sets(struct anv_cmd_buffer *cmd_buffer)
          size_t size;
 
          size = layout->stage[s].sampler_count * 16;
-         state = anv_state_stream_alloc(&cmd_buffer->dynamic_state_stream, size, 32);
+         state = anv_cmd_buffer_alloc_surface_state(cmd_buffer, size, 32);
          memcpy(state.map, bindings->descriptors[s].samplers, size);
 
          static const uint32_t sampler_state_opcodes[] = {
@@ -3086,7 +3140,11 @@ anv_cmd_buffer_fill_render_targets(struct anv_cmd_buffer *cmd_buffer)
    for (uint32_t i = 0; i < framebuffer->color_attachment_count; i++) {
       struct anv_surface_view *view = framebuffer->color_attachments[i];
 
-      bindings->descriptors[VK_SHADER_STAGE_FRAGMENT].surfaces[i] = view->surface_state.offset;
+      struct anv_state state =
+         anv_cmd_buffer_alloc_surface_state(cmd_buffer, 64, 64);
+      memcpy(state.map, view->surface_state.map, 64);
+
+      bindings->descriptors[VK_SHADER_STAGE_FRAGMENT].surfaces[i] = state.offset;
       bindings->descriptors[VK_SHADER_STAGE_FRAGMENT].relocs[i].bo = view->bo;
       bindings->descriptors[VK_SHADER_STAGE_FRAGMENT].relocs[i].offset = view->offset;
    }

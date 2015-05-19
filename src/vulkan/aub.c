@@ -261,8 +261,8 @@ anv_cmd_buffer_dump(struct anv_cmd_buffer *cmd_buffer)
    }
 
    relocate_bo(&batch->bo, &batch->cmd_relocs, aub_bos);
-   relocate_bo(&device->surface_state_block_pool.bo,
-               &batch->surf_relocs, aub_bos);
+   relocate_bo(&cmd_buffer->surface_bo,
+               &cmd_buffer->surface_relocs, aub_bos);
 
    for (uint32_t i = 0; i < cmd_buffer->bo_count; i++) {
       bo = cmd_buffer->exec2_bos[i];

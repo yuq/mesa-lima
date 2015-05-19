@@ -174,6 +174,27 @@ anv_cmd_buffer_restore(struct anv_cmd_buffer *cmd_buffer,
                         ANV_CMD_BUFFER_DESCRIPTOR_SET_DIRTY;
 }
 
+static void
+anv_cmd_buffer_copy_render_targets(struct anv_cmd_buffer *cmd_buffer,
+                                   struct anv_saved_state *state)
+{
+   struct anv_framebuffer *fb = cmd_buffer->framebuffer;
+   struct anv_bindings *old_bindings = state->old_bindings;
+   struct anv_bindings *bindings = cmd_buffer->bindings;
+
+   for (uint32_t i = 0; i < fb->color_attachment_count; i++) {
+      bindings->descriptors[VK_SHADER_STAGE_FRAGMENT].surfaces[i] =
+         old_bindings->descriptors[VK_SHADER_STAGE_FRAGMENT].surfaces[i];
+
+      bindings->descriptors[VK_SHADER_STAGE_FRAGMENT].relocs[i].bo =
+         old_bindings->descriptors[VK_SHADER_STAGE_FRAGMENT].relocs[i].bo;
+      bindings->descriptors[VK_SHADER_STAGE_FRAGMENT].relocs[i].offset =
+         old_bindings->descriptors[VK_SHADER_STAGE_FRAGMENT].relocs[i].offset;
+   }
+
+   cmd_buffer->dirty |= ANV_CMD_BUFFER_DESCRIPTOR_SET_DIRTY;
+}
+
 struct vue_header {
    uint32_t Reserved;
    uint32_t RTAIndex;
@@ -241,9 +262,7 @@ anv_cmd_buffer_clear(struct anv_cmd_buffer *cmd_buffer,
    };
 
    anv_cmd_buffer_save(cmd_buffer, &saved_state);
-
-   /* Initialize render targets for the meta bindings. */
-   anv_cmd_buffer_fill_render_targets(cmd_buffer);
+   anv_cmd_buffer_copy_render_targets(cmd_buffer, &saved_state);
 
    anv_CmdBindVertexBuffers((VkCmdBuffer) cmd_buffer, 0, 2,
       (VkBuffer[]) {

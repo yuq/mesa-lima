@@ -368,7 +368,6 @@ struct anv_batch {
    struct anv_bo                                bo;
    void *                                       next;
    struct anv_reloc_list                        cmd_relocs;
-   struct anv_reloc_list                        surf_relocs;
 };
 
 VkResult anv_batch_init(struct anv_batch *batch, struct anv_device *device);
@@ -549,6 +548,9 @@ struct anv_cmd_buffer {
 
    uint32_t                                     bo_count;
    struct anv_batch                             batch;
+   struct anv_bo                                surface_bo;
+   uint32_t                                     surface_next;
+   struct anv_reloc_list                        surface_relocs;
    struct anv_state_stream                      binding_table_state_stream;
    struct anv_state_stream                      surface_state_stream;
    struct anv_state_stream                      dynamic_state_stream;
