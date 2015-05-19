@@ -354,6 +354,11 @@ intelInitExtensions(struct gl_context *ctx)
       ctx->Extensions.ARB_stencil_texturing = true;
    }
 
+   if (brw->gen >= 9) {
+      ctx->Extensions.KHR_texture_compression_astc_ldr = true;
+      ctx->Extensions.KHR_texture_compression_astc_hdr = true;
+   }
+
    if (ctx->API == API_OPENGL_CORE)
       ctx->Extensions.ARB_base_instance = true;
    if (ctx->API != API_OPENGL_CORE)
