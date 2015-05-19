@@ -23,7 +23,8 @@
 
 #include "private.h"
 
-#define UNSUPPORTED ~0
+#define UNSUPPORTED ~0U
+
 static const struct anv_format anv_formats[] = {
    [VK_FORMAT_UNDEFINED] = { .format = RAW },
    [VK_FORMAT_R4G4_UNORM] = { .format = UNSUPPORTED },
@@ -34,252 +35,86 @@ static const struct anv_format anv_formats[] = {
    [VK_FORMAT_R5G6B5_USCALED] = { .format = UNSUPPORTED },
    [VK_FORMAT_R5G5B5A1_UNORM] = { .format = UNSUPPORTED },
    [VK_FORMAT_R5G5B5A1_USCALED] = { .format = UNSUPPORTED },
-   [VK_FORMAT_R8_UNORM] = {
-      .format = R8_UNORM, .cpp = 1, .channels = 1,
-      .linear_flags = VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT,
-      .tiled_flags = VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT
-   },
-   [VK_FORMAT_R8_SNORM] = {
-      .format = R8_SNORM, .cpp = 1, .channels = 1,
-   },
-   [VK_FORMAT_R8_USCALED] = {
-      .format = R8_USCALED, .cpp = 1, .channels = 1
-   },
-   [VK_FORMAT_R8_SSCALED] = {
-      .format = R8_SSCALED, .cpp = 1, .channels = 1
-   },
-   [VK_FORMAT_R8_UINT] = {
-      .format = R8_UINT, .cpp = 1, .channels = 1
-   },
-   [VK_FORMAT_R8_SINT] = {
-      .format = R8_SINT, .cpp = 1, .channels = 1
-   },
+   [VK_FORMAT_R8_UNORM] = { .format = R8_UNORM, .cpp = 1, .channels = 1 },
+   [VK_FORMAT_R8_SNORM] = { .format = R8_SNORM, .cpp = 1, .channels = 1, },
+   [VK_FORMAT_R8_USCALED] = { .format = R8_USCALED, .cpp = 1, .channels = 1 },
+   [VK_FORMAT_R8_SSCALED] = { .format = R8_SSCALED, .cpp = 1, .channels = 1 },
+   [VK_FORMAT_R8_UINT] = { .format = R8_UINT, .cpp = 1, .channels = 1 },
+   [VK_FORMAT_R8_SINT] = { .format = R8_SINT, .cpp = 1, .channels = 1 },
    [VK_FORMAT_R8_SRGB] = { .format = UNSUPPORTED },
-   [VK_FORMAT_R8G8_UNORM] = {
-      .format = R8G8_UNORM, .cpp = 2, .channels = 2
-   },
-   [VK_FORMAT_R8G8_SNORM] = {
-      .format = R8G8_SNORM, .cpp = 2, .channels = 2
-   },
-   [VK_FORMAT_R8G8_USCALED] = {
-      .format = R8G8_USCALED, .cpp = 2, .channels = 2
-   },
-   [VK_FORMAT_R8G8_SSCALED] = {
-      .format = R8G8_SSCALED, .cpp = 2, .channels = 2
-   },
-   [VK_FORMAT_R8G8_UINT] = {
-      .format = R8G8_UINT, .cpp = 2, .channels = 2
-   },
-   [VK_FORMAT_R8G8_SINT] = {
-      .format = R8G8_SINT, .cpp = 2, .channels = 2
-   },
+   [VK_FORMAT_R8G8_UNORM] = { .format = R8G8_UNORM, .cpp = 2, .channels = 2 },
+   [VK_FORMAT_R8G8_SNORM] = { .format = R8G8_SNORM, .cpp = 2, .channels = 2 },
+   [VK_FORMAT_R8G8_USCALED] = { .format = R8G8_USCALED, .cpp = 2, .channels = 2 },
+   [VK_FORMAT_R8G8_SSCALED] = { .format = R8G8_SSCALED, .cpp = 2, .channels = 2 },
+   [VK_FORMAT_R8G8_UINT] = { .format = R8G8_UINT, .cpp = 2, .channels = 2 },
+   [VK_FORMAT_R8G8_SINT] = { .format = R8G8_SINT, .cpp = 2, .channels = 2 },
    [VK_FORMAT_R8G8_SRGB] = { .format = UNSUPPORTED }, /* L8A8_UNORM_SRGB */
-   [VK_FORMAT_R8G8B8_UNORM] = {
-      .format = R8G8B8X8_UNORM, .cpp = 3, .channels = 3
-   },
+   [VK_FORMAT_R8G8B8_UNORM] = { .format = R8G8B8X8_UNORM, .cpp = 3, .channels = 3 },
    [VK_FORMAT_R8G8B8_SNORM] = { .format = R8G8B8_SNORM, .cpp = 4 },
-   [VK_FORMAT_R8G8B8_USCALED] = {
-      .format = R8G8B8_USCALED, .cpp = 3, .channels = 3
-   },
-   [VK_FORMAT_R8G8B8_SSCALED] = {
-      .format = R8G8B8_SSCALED, .cpp = 3, .channels = 3
-   },
-   [VK_FORMAT_R8G8B8_UINT] = {
-      .format = R8G8B8_UINT, .cpp = 3, .channels = 3
-   },
-   [VK_FORMAT_R8G8B8_SINT] = {
-      .format = R8G8B8_SINT, .cpp = 3, .channels = 3
-   },
+   [VK_FORMAT_R8G8B8_USCALED] = { .format = R8G8B8_USCALED, .cpp = 3, .channels = 3 },
+   [VK_FORMAT_R8G8B8_SSCALED] = { .format = R8G8B8_SSCALED, .cpp = 3, .channels = 3 },
+   [VK_FORMAT_R8G8B8_UINT] = { .format = R8G8B8_UINT, .cpp = 3, .channels = 3 },
+   [VK_FORMAT_R8G8B8_SINT] = { .format = R8G8B8_SINT, .cpp = 3, .channels = 3 },
    [VK_FORMAT_R8G8B8_SRGB] = { .format = UNSUPPORTED }, /* B8G8R8A8_UNORM_SRGB */
-   [VK_FORMAT_R8G8B8A8_UNORM] = {
-      .format = R8G8B8A8_UNORM, .cpp = 4, .channels = 4
-   },
-   [VK_FORMAT_R8G8B8A8_SNORM] = {
-      .format = R8G8B8A8_SNORM, .cpp = 4, .channels = 4
-   },
-   [VK_FORMAT_R8G8B8A8_USCALED] = {
-      .format = R8G8B8A8_USCALED, .cpp = 4, .channels = 4
-   },
-   [VK_FORMAT_R8G8B8A8_SSCALED] = {
-      .format = R8G8B8A8_SSCALED, .cpp = 4, .channels = 4
-   },
-   [VK_FORMAT_R8G8B8A8_UINT] = {
-      .format = R8G8B8A8_UINT, .cpp = 4, .channels = 4
-   },
-   [VK_FORMAT_R8G8B8A8_SINT] = {
-      .format = R8G8B8A8_SINT, .cpp = 4, .channels = 4
-   },
-   [VK_FORMAT_R8G8B8A8_SRGB] = {
-      .format = R8G8B8A8_UNORM_SRGB, .cpp = 4, .channels = 4
-   },
-   [VK_FORMAT_R10G10B10A2_UNORM] = {
-      .format = R10G10B10A2_UNORM, .cpp = 4, .channels = 4
-   },
-   [VK_FORMAT_R10G10B10A2_SNORM] = {
-      .format = R10G10B10A2_SNORM, .cpp = 4, .channels = 4
-   },
-   [VK_FORMAT_R10G10B10A2_USCALED] = {
-      .format = R10G10B10A2_USCALED, .cpp = 4, .channels = 4
-   },
-   [VK_FORMAT_R10G10B10A2_SSCALED] = {
-      .format = R10G10B10A2_SSCALED, .cpp = 4, .channels = 4
-   },
-   [VK_FORMAT_R10G10B10A2_UINT] = {
-      .format = R10G10B10A2_UINT, .cpp = 4, .channels = 4
-   },
-   [VK_FORMAT_R10G10B10A2_SINT] = {
-      .format = R10G10B10A2_SINT, .cpp = 4, .channels = 4
-   },
-   [VK_FORMAT_R16_UNORM] = {
-      .format = R16_UNORM, .cpp = 2, .channels = 1
-   },
-   [VK_FORMAT_R16_SNORM] = {
-      .format = R16_SNORM, .cpp = 2, .channels = 1
-   },
-   [VK_FORMAT_R16_USCALED] = {
-      .format = R16_USCALED, .cpp = 2, .channels = 1
-   },
-   [VK_FORMAT_R16_SSCALED] = {
-      .format = R16_SSCALED, .cpp = 2, .channels = 1
-   },
-   [VK_FORMAT_R16_UINT] = {
-      .format = R16_UINT, .cpp = 2, .channels = 1
-   },
-   [VK_FORMAT_R16_SINT] = {
-      .format = R16_SINT, .cpp = 2, .channels = 1
-   },
-   [VK_FORMAT_R16_SFLOAT] = {
-      .format = R16_FLOAT, .cpp = 2, .channels = 1
-   },
-   [VK_FORMAT_R16G16_UNORM] = {
-      .format = R16G16_UNORM, .cpp = 4, .channels = 2
-   },
-   [VK_FORMAT_R16G16_SNORM] = {
-      .format = R16G16_SNORM, .cpp = 4, .channels = 2
-   },
-   [VK_FORMAT_R16G16_USCALED] = {
-      .format = R16G16_USCALED, .cpp = 4, .channels = 2
-   },
-   [VK_FORMAT_R16G16_SSCALED] = {
-      .format = R16G16_SSCALED, .cpp = 4, .channels = 2
-   },
-   [VK_FORMAT_R16G16_UINT] = {
-      .format = R16G16_UINT, .cpp = 4, .channels = 2
-   },
-   [VK_FORMAT_R16G16_SINT] = {
-      .format = R16G16_SINT, .cpp = 4, .channels = 2
-   },
-   [VK_FORMAT_R16G16_SFLOAT] = {
-      .format = R16G16_FLOAT, .cpp = 4, .channels = 2
-   },
-   [VK_FORMAT_R16G16B16_UNORM] = {
-      .format = R16G16B16_UNORM, .cpp = 6, .channels = 3
-   },
-   [VK_FORMAT_R16G16B16_SNORM] = {
-      .format = R16G16B16_SNORM, .cpp = 6, .channels = 3
-   },
-   [VK_FORMAT_R16G16B16_USCALED] = {
-      .format = R16G16B16_USCALED, .cpp = 6, .channels = 3
-   },
-   [VK_FORMAT_R16G16B16_SSCALED] = {
-      .format = R16G16B16_SSCALED, .cpp = 6, .channels = 3
-   },
-   [VK_FORMAT_R16G16B16_UINT] = {
-      .format = R16G16B16_UINT, .cpp = 6, .channels = 3
-   },
-   [VK_FORMAT_R16G16B16_SINT] = {
-      .format = R16G16B16_SINT, .cpp = 6, .channels = 3
-   },
-   [VK_FORMAT_R16G16B16_SFLOAT] = {
-      .format = R16G16B16_FLOAT, .cpp = 6, .channels = 3
-   },
-   [VK_FORMAT_R16G16B16A16_UNORM] = {
-      .format = R16G16B16A16_UNORM, .cpp = 8, .channels = 4
-   },
-   [VK_FORMAT_R16G16B16A16_SNORM] = {
-      .format = R16G16B16A16_SNORM, .cpp = 8, .channels = 4
-   },
-   [VK_FORMAT_R16G16B16A16_USCALED] = {
-      .format = R16G16B16A16_USCALED, .cpp = 8, .channels = 4
-   },
-   [VK_FORMAT_R16G16B16A16_SSCALED] = {
-      .format = R16G16B16A16_SSCALED, .cpp = 8, .channels = 4
-   },
-   [VK_FORMAT_R16G16B16A16_UINT] = {
-      .format = R16G16B16A16_UINT, .cpp = 8, .channels = 4
-   },
-   [VK_FORMAT_R16G16B16A16_SINT] = {
-      .format = R16G16B16A16_SINT, .cpp = 8, .channels = 4
-   },
-   [VK_FORMAT_R16G16B16A16_SFLOAT] = {
-      .format = R16G16B16A16_FLOAT, .cpp = 8, .channels = 4
-   },
-   [VK_FORMAT_R32_UINT] = {
-      .format = R32_UINT, .cpp = 4, .channels = 1,
-      .linear_flags = VK_FORMAT_FEATURE_VERTEX_BUFFER_BIT
-   },
-   [VK_FORMAT_R32_SINT] = {
-      .format = R32_SINT, .cpp = 4, .channels = 1,
-      .linear_flags = VK_FORMAT_FEATURE_VERTEX_BUFFER_BIT
-   },
-   [VK_FORMAT_R32_SFLOAT] = {
-      .format = R32_FLOAT, .cpp = 4, .channels = 1,
-      .linear_flags = VK_FORMAT_FEATURE_VERTEX_BUFFER_BIT
-   },
-   [VK_FORMAT_R32G32_UINT] = {
-      .format = R32G32_UINT, .cpp = 8, .channels = 2,
-      .linear_flags = VK_FORMAT_FEATURE_VERTEX_BUFFER_BIT
-   },
-   [VK_FORMAT_R32G32_SINT] = {
-      .format = R32G32_SINT, .cpp = 8, .channels = 2,
-      .linear_flags = VK_FORMAT_FEATURE_VERTEX_BUFFER_BIT
-   },
-   [VK_FORMAT_R32G32_SFLOAT] = {
-      .format = R32G32_FLOAT, .cpp = 8, .channels = 2,
-      .linear_flags = VK_FORMAT_FEATURE_VERTEX_BUFFER_BIT
-   },
-   [VK_FORMAT_R32G32B32_UINT] = {
-      .format = R32G32B32_UINT, .cpp = 12, .channels = 3,
-      .linear_flags = VK_FORMAT_FEATURE_VERTEX_BUFFER_BIT
-   },
-   [VK_FORMAT_R32G32B32_SINT] = {
-      .format = R32G32B32_SINT, .cpp = 12, .channels = 3,
-      .linear_flags = VK_FORMAT_FEATURE_VERTEX_BUFFER_BIT
-   },
-   [VK_FORMAT_R32G32B32_SFLOAT] = {
-      .format = R32G32B32_FLOAT, .cpp = 12, .channels = 3,
-      .linear_flags = VK_FORMAT_FEATURE_VERTEX_BUFFER_BIT
-   },
-   [VK_FORMAT_R32G32B32A32_UINT] = {
-      .format = R32G32B32A32_UINT, .cpp = 16, .channels = 4,
-      .linear_flags = VK_FORMAT_FEATURE_VERTEX_BUFFER_BIT
-   },
-   [VK_FORMAT_R32G32B32A32_SINT] = {
-      .format = R32G32B32A32_SINT, .cpp = 16, .channels = 4,
-      .linear_flags = VK_FORMAT_FEATURE_VERTEX_BUFFER_BIT
-   },
-   [VK_FORMAT_R32G32B32A32_SFLOAT] = {
-      .format = R32G32B32A32_FLOAT, .cpp = 16, .channels = 4,
-      .linear_flags = VK_FORMAT_FEATURE_VERTEX_BUFFER_BIT
-   },
-   [VK_FORMAT_R64_SFLOAT] = {
-      .format = R64_FLOAT, .cpp = 8, .channels = 1
-   },
-   [VK_FORMAT_R64G64_SFLOAT] = {
-      .format = R64G64_FLOAT, .cpp = 16, .channels = 2
-   },
-   [VK_FORMAT_R64G64B64_SFLOAT] = {
-      .format = R64G64B64_FLOAT, .cpp = 24, .channels = 3
-   },
-   [VK_FORMAT_R64G64B64A64_SFLOAT] = {
-      .format = R64G64B64A64_FLOAT, .cpp = 32, .channels = 4
-   },
-   [VK_FORMAT_R11G11B10_UFLOAT] = {
-      .format = R11G11B10_FLOAT, .cpp = 4, .channels = 3
-   },
-   [VK_FORMAT_R9G9B9E5_UFLOAT] = {
-      .format = R9G9B9E5_SHAREDEXP, .cpp = 4, .channels = 3
-   },
+   [VK_FORMAT_R8G8B8A8_UNORM] = { .format = R8G8B8A8_UNORM, .cpp = 4, .channels = 4 },
+   [VK_FORMAT_R8G8B8A8_SNORM] = { .format = R8G8B8A8_SNORM, .cpp = 4, .channels = 4 },
+   [VK_FORMAT_R8G8B8A8_USCALED] = { .format = R8G8B8A8_USCALED, .cpp = 4, .channels = 4 },
+   [VK_FORMAT_R8G8B8A8_SSCALED] = { .format = R8G8B8A8_SSCALED, .cpp = 4, .channels = 4 },
+   [VK_FORMAT_R8G8B8A8_UINT] = { .format = R8G8B8A8_UINT, .cpp = 4, .channels = 4 },
+   [VK_FORMAT_R8G8B8A8_SINT] = { .format = R8G8B8A8_SINT, .cpp = 4, .channels = 4 },
+   [VK_FORMAT_R8G8B8A8_SRGB] = { .format = R8G8B8A8_UNORM_SRGB, .cpp = 4, .channels = 4 },
+   [VK_FORMAT_R10G10B10A2_UNORM] = { .format = R10G10B10A2_UNORM, .cpp = 4, .channels = 4 },
+   [VK_FORMAT_R10G10B10A2_SNORM] = { .format = R10G10B10A2_SNORM, .cpp = 4, .channels = 4 },
+   [VK_FORMAT_R10G10B10A2_USCALED] = { .format = R10G10B10A2_USCALED, .cpp = 4, .channels = 4 },
+   [VK_FORMAT_R10G10B10A2_SSCALED] = { .format = R10G10B10A2_SSCALED, .cpp = 4, .channels = 4 },
+   [VK_FORMAT_R10G10B10A2_UINT] = { .format = R10G10B10A2_UINT, .cpp = 4, .channels = 4 },
+   [VK_FORMAT_R10G10B10A2_SINT] = { .format = R10G10B10A2_SINT, .cpp = 4, .channels = 4 },
+   [VK_FORMAT_R16_UNORM] = { .format = R16_UNORM, .cpp = 2, .channels = 1 },
+   [VK_FORMAT_R16_SNORM] = { .format = R16_SNORM, .cpp = 2, .channels = 1 },
+   [VK_FORMAT_R16_USCALED] = { .format = R16_USCALED, .cpp = 2, .channels = 1 },
+   [VK_FORMAT_R16_SSCALED] = { .format = R16_SSCALED, .cpp = 2, .channels = 1 },
+   [VK_FORMAT_R16_UINT] = { .format = R16_UINT, .cpp = 2, .channels = 1 },
+   [VK_FORMAT_R16_SINT] = { .format = R16_SINT, .cpp = 2, .channels = 1 },
+   [VK_FORMAT_R16_SFLOAT] = { .format = R16_FLOAT, .cpp = 2, .channels = 1 },
+   [VK_FORMAT_R16G16_UNORM] = { .format = R16G16_UNORM, .cpp = 4, .channels = 2 },
+   [VK_FORMAT_R16G16_SNORM] = { .format = R16G16_SNORM, .cpp = 4, .channels = 2 },
+   [VK_FORMAT_R16G16_USCALED] = { .format = R16G16_USCALED, .cpp = 4, .channels = 2 },
+   [VK_FORMAT_R16G16_SSCALED] = { .format = R16G16_SSCALED, .cpp = 4, .channels = 2 },
+   [VK_FORMAT_R16G16_UINT] = { .format = R16G16_UINT, .cpp = 4, .channels = 2 },
+   [VK_FORMAT_R16G16_SINT] = { .format = R16G16_SINT, .cpp = 4, .channels = 2 },
+   [VK_FORMAT_R16G16_SFLOAT] = { .format = R16G16_FLOAT, .cpp = 4, .channels = 2 },
+   [VK_FORMAT_R16G16B16_UNORM] = { .format = R16G16B16_UNORM, .cpp = 6, .channels = 3 },
+   [VK_FORMAT_R16G16B16_SNORM] = { .format = R16G16B16_SNORM, .cpp = 6, .channels = 3 },
+   [VK_FORMAT_R16G16B16_USCALED] = { .format = R16G16B16_USCALED, .cpp = 6, .channels = 3 },
+   [VK_FORMAT_R16G16B16_SSCALED] = { .format = R16G16B16_SSCALED, .cpp = 6, .channels = 3 },
+   [VK_FORMAT_R16G16B16_UINT] = { .format = R16G16B16_UINT, .cpp = 6, .channels = 3 },
+   [VK_FORMAT_R16G16B16_SINT] = { .format = R16G16B16_SINT, .cpp = 6, .channels = 3 },
+   [VK_FORMAT_R16G16B16_SFLOAT] = { .format = R16G16B16_FLOAT, .cpp = 6, .channels = 3 },
+   [VK_FORMAT_R16G16B16A16_UNORM] = { .format = R16G16B16A16_UNORM, .cpp = 8, .channels = 4 },
+   [VK_FORMAT_R16G16B16A16_SNORM] = { .format = R16G16B16A16_SNORM, .cpp = 8, .channels = 4 },
+   [VK_FORMAT_R16G16B16A16_USCALED] = { .format = R16G16B16A16_USCALED, .cpp = 8, .channels = 4 },
+   [VK_FORMAT_R16G16B16A16_SSCALED] = { .format = R16G16B16A16_SSCALED, .cpp = 8, .channels = 4 },
+   [VK_FORMAT_R16G16B16A16_UINT] = { .format = R16G16B16A16_UINT, .cpp = 8, .channels = 4 },
+   [VK_FORMAT_R16G16B16A16_SINT] = { .format = R16G16B16A16_SINT, .cpp = 8, .channels = 4 },
+   [VK_FORMAT_R16G16B16A16_SFLOAT] = { .format = R16G16B16A16_FLOAT, .cpp = 8, .channels = 4 },
+   [VK_FORMAT_R32_UINT] = { .format = R32_UINT, .cpp = 4, .channels = 1, },
+   [VK_FORMAT_R32_SINT] = { .format = R32_SINT, .cpp = 4, .channels = 1, },
+   [VK_FORMAT_R32_SFLOAT] = { .format = R32_FLOAT, .cpp = 4, .channels = 1, },
+   [VK_FORMAT_R32G32_UINT] = { .format = R32G32_UINT, .cpp = 8, .channels = 2, },
+   [VK_FORMAT_R32G32_SINT] = { .format = R32G32_SINT, .cpp = 8, .channels = 2, },
+   [VK_FORMAT_R32G32_SFLOAT] = { .format = R32G32_FLOAT, .cpp = 8, .channels = 2, },
+   [VK_FORMAT_R32G32B32_UINT] = { .format = R32G32B32_UINT, .cpp = 12, .channels = 3, },
+   [VK_FORMAT_R32G32B32_SINT] = { .format = R32G32B32_SINT, .cpp = 12, .channels = 3, },
+   [VK_FORMAT_R32G32B32_SFLOAT] = { .format = R32G32B32_FLOAT, .cpp = 12, .channels = 3, },
+   [VK_FORMAT_R32G32B32A32_UINT] = { .format = R32G32B32A32_UINT, .cpp = 16, .channels = 4, },
+   [VK_FORMAT_R32G32B32A32_SINT] = { .format = R32G32B32A32_SINT, .cpp = 16, .channels = 4, },
+   [VK_FORMAT_R32G32B32A32_SFLOAT] = { .format = R32G32B32A32_FLOAT, .cpp = 16, .channels = 4, },
+   [VK_FORMAT_R64_SFLOAT] = { .format = R64_FLOAT, .cpp = 8, .channels = 1 },
+   [VK_FORMAT_R64G64_SFLOAT] = { .format = R64G64_FLOAT, .cpp = 16, .channels = 2 },
+   [VK_FORMAT_R64G64B64_SFLOAT] = { .format = R64G64B64_FLOAT, .cpp = 24, .channels = 3 },
+   [VK_FORMAT_R64G64B64A64_SFLOAT] = { .format = R64G64B64A64_FLOAT, .cpp = 32, .channels = 4 },
+   [VK_FORMAT_R11G11B10_UFLOAT] = { .format = R11G11B10_FLOAT, .cpp = 4, .channels = 3 },
+   [VK_FORMAT_R9G9B9E5_UFLOAT] = { .format = R9G9B9E5_SHAREDEXP, .cpp = 4, .channels = 3 },
    // [VK_FORMAT_D16_UNORM] = { .format = D16_UNORM },
    // [VK_FORMAT_D24_UNORM] = { .format = D24_UNORM },
    // [VK_FORMAT_D32_SFLOAT] = { .format = D32_SFLOAT },
@@ -341,15 +176,9 @@ static const struct anv_format anv_formats[] = {
    // [VK_FORMAT_ASTC_12x10_SRGB] = { .format = ASTC_12x10 },
    // [VK_FORMAT_ASTC_12x12_UNORM] = { .format = ASTC_12x12 },
    // [VK_FORMAT_ASTC_12x12_SRGB] = { .format = ASTC_12x12 },
-   [VK_FORMAT_B4G4R4A4_UNORM] = {
-      .format = B4G4R4A4_UNORM, .cpp = 2, .channels = 4
-   },
-   [VK_FORMAT_B5G5R5A1_UNORM] = {
-      .format = B5G5R5A1_UNORM, .cpp = 2, .channels = 4
-   },
-   [VK_FORMAT_B5G6R5_UNORM] = {
-      .format = B5G6R5_UNORM, .cpp = 2, .channels = 3
-   },
+   [VK_FORMAT_B4G4R4A4_UNORM] = { .format = B4G4R4A4_UNORM, .cpp = 2, .channels = 4 },
+   [VK_FORMAT_B5G5R5A1_UNORM] = { .format = B5G5R5A1_UNORM, .cpp = 2, .channels = 4 },
+   [VK_FORMAT_B5G6R5_UNORM] = { .format = B5G6R5_UNORM, .cpp = 2, .channels = 3 },
    // [VK_FORMAT_B5G6R5_USCALED] = { .format = B5G6R5_USCALED },
    // [VK_FORMAT_B8G8R8_UNORM] = { .format = B8G8R8_UNORM },
    // [VK_FORMAT_B8G8R8_SNORM] = { .format = B8G8R8_SNORM },
@@ -358,33 +187,19 @@ static const struct anv_format anv_formats[] = {
    // [VK_FORMAT_B8G8R8_UINT] = { .format = B8G8R8_UINT },
    // [VK_FORMAT_B8G8R8_SINT] = { .format = B8G8R8_SINT },
    // [VK_FORMAT_B8G8R8_SRGB] = { .format = B8G8R8_SRGB },
-   [VK_FORMAT_B8G8R8A8_UNORM] = {
-      .format = B8G8R8A8_UNORM, .cpp = 4, .channels = 4
-   },
+   [VK_FORMAT_B8G8R8A8_UNORM] = { .format = B8G8R8A8_UNORM, .cpp = 4, .channels = 4 },
    // [VK_FORMAT_B8G8R8A8_SNORM] = { .format = B8G8R8A8_SNORM },
    // [VK_FORMAT_B8G8R8A8_USCALED] = { .format = B8G8R8A8_USCALED },
    // [VK_FORMAT_B8G8R8A8_SSCALED] = { .format = B8G8R8A8_SSCALED },
    // [VK_FORMAT_B8G8R8A8_UINT] = { .format = B8G8R8A8_UINT },
    // [VK_FORMAT_B8G8R8A8_SINT] = { .format = B8G8R8A8_SINT },
    // [VK_FORMAT_B8G8R8A8_SRGB] = { .format = B8G8R8A8_SRGB },
-   [VK_FORMAT_B10G10R10A2_UNORM] = {
-      .format = B10G10R10A2_UNORM, .cpp = 4, .channels = 4
-   },
-   [VK_FORMAT_B10G10R10A2_SNORM] = {
-      .format = B10G10R10A2_SNORM, .cpp = 4, .channels = 4
-   },
-   [VK_FORMAT_B10G10R10A2_USCALED] = {
-      .format = B10G10R10A2_USCALED, .cpp = 4, .channels = 4
-   },
-   [VK_FORMAT_B10G10R10A2_SSCALED] = {
-      .format = B10G10R10A2_SSCALED, .cpp = 4, .channels = 4
-   },
-   [VK_FORMAT_B10G10R10A2_UINT] = {
-      .format = B10G10R10A2_UINT, .cpp = 4, .channels = 4
-   },
-   [VK_FORMAT_B10G10R10A2_SINT] = {
-      .format = B10G10R10A2_SINT, .cpp = 4, .channels = 4
-   }
+   [VK_FORMAT_B10G10R10A2_UNORM] = { .format = B10G10R10A2_UNORM, .cpp = 4, .channels = 4 },
+   [VK_FORMAT_B10G10R10A2_SNORM] = { .format = B10G10R10A2_SNORM, .cpp = 4, .channels = 4 },
+   [VK_FORMAT_B10G10R10A2_USCALED] = { .format = B10G10R10A2_USCALED, .cpp = 4, .channels = 4 },
+   [VK_FORMAT_B10G10R10A2_SSCALED] = { .format = B10G10R10A2_SSCALED, .cpp = 4, .channels = 4 },
+   [VK_FORMAT_B10G10R10A2_UINT] = { .format = B10G10R10A2_UINT, .cpp = 4, .channels = 4 },
+   [VK_FORMAT_B10G10R10A2_SINT] = { .format = B10G10R10A2_SINT, .cpp = 4, .channels = 4 }
 };
 
 const struct anv_format *
@@ -395,6 +210,21 @@ anv_format_for_vk_format(VkFormat format)
 
 // Format capabilities
 
+struct surface_format_info {
+   bool exists;
+   int sampling;
+   int filtering;
+   int shadow_compare;
+   int chroma_key;
+   int render_target;
+   int alpha_blend;
+   int input_vb;
+   int streamed_output_vb;
+   int color_processing;
+};
+
+extern const struct surface_format_info surface_formats[];
+
 VkResult anv_GetFormatInfo(
     VkDevice                                    _device,
     VkFormat                                    _format,
@@ -402,12 +232,41 @@ VkResult anv_GetFormatInfo(
     size_t*                                     pDataSize,
     void*                                       pData)
 {
+   struct anv_device *device = (struct anv_device *) _device;
    VkFormatProperties *properties;
    const struct anv_format *format;
+   const struct surface_format_info *info;
+   int gen;
+
+   gen = device->info.gen * 10;
+   if (device->info.is_haswell)
+      gen += 5;
 
    format = anv_format_for_vk_format(_format);
    if (format == 0)
-      return VK_ERROR_INVALID_VALUE;
+      return vk_error(VK_ERROR_INVALID_VALUE);
+   if (format->format == UNSUPPORTED)
+      return VK_UNSUPPORTED;
+   info = &surface_formats[format->format];
+   if (!info->exists)
+      return VK_UNSUPPORTED;
+
+   uint32_t linear = 0, tiled = 0;
+   if (info->sampling <= gen) {
+      linear |= VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT;
+      tiled |= VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT;
+   }
+   if (info->render_target <= gen) {
+      linear |= VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT;
+      tiled |= VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT;
+   }
+   if (info->alpha_blend <= gen) {
+      linear |= VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BLEND_BIT;
+      tiled |= VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BLEND_BIT;
+   }
+   if (info->input_vb <= gen) {
+      linear |= VK_FORMAT_FEATURE_VERTEX_BUFFER_BIT;
+   }
 
    switch (infoType) {
    case VK_FORMAT_INFO_TYPE_PROPERTIES:
@@ -417,8 +276,8 @@ VkResult anv_GetFormatInfo(
       if (pData == NULL)
          return VK_SUCCESS;
 
-      properties->linearTilingFeatures = format->linear_flags;
-      properties->optimalTilingFeatures = format->tiled_flags;
+      properties->linearTilingFeatures = linear;
+      properties->optimalTilingFeatures = tiled;
       return VK_SUCCESS;
 
    default:

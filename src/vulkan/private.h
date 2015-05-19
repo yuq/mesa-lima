@@ -640,10 +640,8 @@ void anv_compiler_free(struct anv_pipeline *pipeline);
 
 struct anv_format {
    uint32_t                                     format;
-   int32_t                                      cpp;
-   int32_t                                      channels;
-   uint32_t                                     linear_flags;
-   uint32_t                                     tiled_flags;
+   uint32_t                                     cpp;
+   uint32_t                                     channels;
 };
 
 const struct anv_format *

@@ -422,16 +422,18 @@ test_formats(VkDevice device, VkQueue queue)
       "conversion"
    };
 
-   vkGetFormatInfo(device, 
-                   VK_FORMAT_R32G32B32A32_SFLOAT,
+   VkFormat format = VK_FORMAT_R32G32B32A32_SFLOAT;
+   vkGetFormatInfo(device, format,
                    VK_FORMAT_INFO_TYPE_PROPERTIES,
                    &size, &properties);
 
-   printf("linear tiling features:");
+   printf("format 0x%x:\n", format);
+
+   printf("    linear tiling features (0x%x):", properties.linearTilingFeatures);
    for_each_bit(f, properties.linearTilingFeatures)
       printf(" %s", features[f]);
 
-   printf("\noptimal tiling features:");
+   printf("\n    optimal tiling features (0x%x):", properties.optimalTilingFeatures);
    for_each_bit(f, properties.optimalTilingFeatures)
       printf(" %s", features[f]);
    printf("\n");
