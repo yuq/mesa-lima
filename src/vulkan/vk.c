@@ -225,51 +225,83 @@ create_pipeline(VkDevice device, VkPipeline *pipeline,
    vkDestroyObject(device, VK_OBJECT_TYPE_SHADER, vs);
 }
 
-int main(int argc, char *argv[])
+static void
+test_timestamp(VkDevice device, VkQueue queue)
 {
-   VkInstance instance;
-   vkCreateInstance(&(VkInstanceCreateInfo) {
-         .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
-         .pAllocCb = &(VkAllocCallbacks) {
-            .pUserData = NULL,
-            .pfnAlloc = test_alloc,
-            .pfnFree = test_free
-         },
-         .pAppInfo = &(VkApplicationInfo) {
-            .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
-            .pAppName = "vk",
-            .apiVersion = 1
-         }
-      },
-      &instance);
-
-   uint32_t count = 1;
-   VkPhysicalDevice physicalDevices[1];
-   vkEnumeratePhysicalDevices(instance, &count, physicalDevices);
-   printf("%d physical devices\n", count);
-
-   VkPhysicalDeviceProperties properties;
-   size_t size = sizeof(properties);
-   vkGetPhysicalDeviceInfo(physicalDevices[0],
-                           VK_PHYSICAL_DEVICE_INFO_TYPE_PROPERTIES,
-                           &size, &properties);
-   printf("vendor id %04x, device name %s\n",
-          properties.vendorId, properties.deviceName);
-
-   VkDevice device;
-   vkCreateDevice(physicalDevices[0],
-                  &(VkDeviceCreateInfo) {
-                     .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
-                     .queueRecordCount = 1,
-                     .pRequestedQueues = &(VkDeviceQueueCreateInfo) {
-                        .queueNodeIndex = 0,
-                        .queueCount = 1                       
-                     }
+   VkBuffer buffer;
+   vkCreateBuffer(device,
+                  &(VkBufferCreateInfo) {
+                     .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+                     .size = 1024,
+                     .usage = VK_BUFFER_USAGE_GENERAL,
+                     .flags = 0
                   },
-                  &device);
+                  &buffer);
 
-   VkQueue queue;
-   vkGetDeviceQueue(device, 0, 0, &queue);
+   VkMemoryRequirements buffer_requirements;
+   size_t size = sizeof(buffer_requirements);
+   vkGetObjectInfo(device, VK_OBJECT_TYPE_BUFFER, buffer,
+                   VK_OBJECT_INFO_TYPE_MEMORY_REQUIREMENTS,
+                   &size, &buffer_requirements);
+
+   VkDeviceMemory mem;
+   vkAllocMemory(device,
+                 &(VkMemoryAllocInfo) {
+                    .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO,
+                    .allocationSize = buffer_requirements.size,
+                    .memProps = VK_MEMORY_PROPERTY_HOST_DEVICE_COHERENT_BIT,
+                    .memPriority = VK_MEMORY_PRIORITY_NORMAL
+                 },
+                 &mem);
+
+   void *map;
+   vkMapMemory(device, mem, 0, buffer_requirements.size, 0, &map);
+   memset(map, 0x11, buffer_requirements.size);
+
+   vkQueueBindObjectMemory(queue, VK_OBJECT_TYPE_BUFFER,
+                           buffer,
+                           0, /* allocation index; for objects which need to bind to multiple mems */
+                           mem, 0);
+
+   VkCmdBuffer cmdBuffer;
+   vkCreateCommandBuffer(device,
+                         &(VkCmdBufferCreateInfo) {
+                            .sType = VK_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO,
+                            .queueNodeIndex = 0,
+                            .flags = 0
+                         },
+                         &cmdBuffer);
+
+   vkBeginCommandBuffer(cmdBuffer,
+                        &(VkCmdBufferBeginInfo) {
+                           .sType = VK_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO,
+                           .flags = 0
+                        });
+
+   vkCmdWriteTimestamp(cmdBuffer, VK_TIMESTAMP_TYPE_TOP, buffer, 0);
+   vkCmdWriteTimestamp(cmdBuffer, VK_TIMESTAMP_TYPE_BOTTOM, buffer, 8);
+
+   vkEndCommandBuffer(cmdBuffer);
+
+   vkQueueSubmit(queue, 1, &cmdBuffer, 0);
+
+   vkQueueWaitIdle(queue);
+
+   vkDestroyObject(device, VK_OBJECT_TYPE_BUFFER, buffer);
+   vkDestroyObject(device, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer);
+
+   uint64_t *results = map;
+   printf("top timestamp:       %20ld  (%016lx)\n", results[0], results[0]);
+   printf("bottom timestamp:    %20ld  (%016lx)\n", results[1], results[1]);
+
+   vkUnmapMemory(device, mem);
+   vkFreeMemory(device, mem);
+}
+
+static void
+test_triangle(VkDevice device, VkQueue queue)
+{
+   uint32_t count;
 
    VkCmdBuffer cmdBuffer;
    vkCreateCommandBuffer(device,
@@ -352,7 +384,7 @@ int main(int argc, char *argv[])
                   &buffer);
 
    VkMemoryRequirements buffer_requirements;
-   size = sizeof(buffer_requirements);
+   size_t size = sizeof(buffer_requirements);
    vkGetObjectInfo(device, VK_OBJECT_TYPE_BUFFER, buffer,
                    VK_OBJECT_INFO_TYPE_MEMORY_REQUIREMENTS,
                    &size, &buffer_requirements);
@@ -719,6 +751,16 @@ int main(int argc, char *argv[])
                       },
                       &pass);
 
+   VkQueryPool query_pool;
+   vkCreateQueryPool(device,
+                     &(VkQueryPoolCreateInfo) {
+                        .sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO,
+                        .queryType = VK_QUERY_TYPE_OCCLUSION,
+                        .slots = 4,
+                        .pipelineStatistics = 0
+                     },
+                     &query_pool);
+
    vkBeginCommandBuffer(cmdBuffer,
                         &(VkCmdBufferBeginInfo) {
                            .sType = VK_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO,
@@ -749,12 +791,16 @@ int main(int argc, char *argv[])
    vkCmdBindDynamicStateObject(cmdBuffer,
                                VK_STATE_BIND_POINT_RASTER, rs_state);
 
-   vkCmdWriteTimestamp(cmdBuffer, VK_TIMESTAMP_TYPE_TOP, buffer, 0);
-   vkCmdWriteTimestamp(cmdBuffer, VK_TIMESTAMP_TYPE_BOTTOM, buffer, 8);
+   vkCmdBeginQuery(cmdBuffer, query_pool, 0 /*slot*/, 0 /* flags */);
 
    vkCmdDraw(cmdBuffer, 0, 3, 0, 1);
 
+   vkCmdEndQuery(cmdBuffer, query_pool, 0);
+
    vkCmdEndRenderPass(cmdBuffer, pass);
+
+   vkCmdCopyQueryPoolResults(cmdBuffer, query_pool, 0, 1, buffer, 16, 8,
+                             VK_QUERY_RESULT_WAIT_BIT | VK_QUERY_RESULT_64_BIT);
 
    VkBufferImageCopy copy = {
       .bufferOffset = 0,
@@ -776,6 +822,18 @@ int main(int argc, char *argv[])
 
    vkQueueWaitIdle(queue);
 
+   /* Result gets written to buffer at offset 0. The buffer is bound to the
+    * memory object at offset 128 */
+   uint64_t *results = map + 128;
+
+   uint64_t get_result;
+   size = sizeof(get_result);
+   vkGetQueryPoolResults(device, query_pool, 0, 1, &size, &get_result,
+                         VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WAIT_BIT);
+
+   printf("oc query (copy):          %20ld  (%016lx)\n", results[2], results[2]);
+   printf("oc query (get):           %20ld  (%016lx)\n", get_result, get_result);
+
    write_png("vk-map.png", width, height, 1024, map + 2048);
    write_png("vk-copy.png", width, height, 1024,
              map + 2048 + rt_requirements.size);
@@ -785,6 +843,60 @@ int main(int argc, char *argv[])
    vkDestroyObject(device, VK_OBJECT_TYPE_BUFFER, buffer);
    vkDestroyObject(device, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer);
    vkDestroyObject(device, VK_OBJECT_TYPE_PIPELINE, pipeline);
+   vkDestroyObject(device, VK_OBJECT_TYPE_QUERY_POOL, query_pool);
+}
+
+int main(int argc, char *argv[])
+{
+   VkInstance instance;
+   vkCreateInstance(&(VkInstanceCreateInfo) {
+         .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
+         .pAllocCb = &(VkAllocCallbacks) {
+            .pUserData = NULL,
+            .pfnAlloc = test_alloc,
+            .pfnFree = test_free
+         },
+         .pAppInfo = &(VkApplicationInfo) {
+            .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
+            .pAppName = "vk",
+            .apiVersion = 1
+         }
+      },
+      &instance);
+
+   uint32_t count = 1;
+   VkPhysicalDevice physicalDevices[1];
+   vkEnumeratePhysicalDevices(instance, &count, physicalDevices);
+   printf("%d physical devices\n", count);
+
+   VkPhysicalDeviceProperties properties;
+   size_t size = sizeof(properties);
+   vkGetPhysicalDeviceInfo(physicalDevices[0],
+                           VK_PHYSICAL_DEVICE_INFO_TYPE_PROPERTIES,
+                           &size, &properties);
+   printf("vendor id %04x, device name %s\n",
+          properties.vendorId, properties.deviceName);
+
+   VkDevice device;
+   vkCreateDevice(physicalDevices[0],
+                  &(VkDeviceCreateInfo) {
+                     .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
+                     .queueRecordCount = 1,
+                     .pRequestedQueues = &(VkDeviceQueueCreateInfo) {
+                        .queueNodeIndex = 0,
+                        .queueCount = 1
+                     }
+                  },
+                  &device);
+
+   VkQueue queue;
+   vkGetDeviceQueue(device, 0, 0, &queue);
+
+   if (argc > 1 && strcmp(argv[1], "timestamp") == 0) {
+      test_timestamp(device, queue);
+   } else {
+      test_triangle(device, queue);
+   }
 
    vkDestroyDevice(device);
 
