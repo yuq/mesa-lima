@@ -1488,7 +1488,7 @@ img_filter_2d_linear(struct sp_sampler_view *sp_sview,
    int x0, y0, x1, y1;
    float xw, yw; /* weights */
    union tex_tile_address addr;
-   const float *tx0, *tx1, *tx2, *tx3;
+   const float *tx[4];
    int c;
 
    width = u_minify(texture->width0, args->level);
@@ -1503,16 +1503,16 @@ img_filter_2d_linear(struct sp_sampler_view *sp_sview,
    sp_samp->linear_texcoord_s(args->s, width,  args->offset[0], &x0, &x1, &xw);
    sp_samp->linear_texcoord_t(args->t, height, args->offset[1], &y0, &y1, &yw);
 
-   tx0 = get_texel_2d(sp_sview, sp_samp, addr, x0, y0);
-   tx1 = get_texel_2d(sp_sview, sp_samp, addr, x1, y0);
-   tx2 = get_texel_2d(sp_sview, sp_samp, addr, x0, y1);
-   tx3 = get_texel_2d(sp_sview, sp_samp, addr, x1, y1);
+   tx[0] = get_texel_2d(sp_sview, sp_samp, addr, x0, y0);
+   tx[1] = get_texel_2d(sp_sview, sp_samp, addr, x1, y0);
+   tx[2] = get_texel_2d(sp_sview, sp_samp, addr, x0, y1);
+   tx[3] = get_texel_2d(sp_sview, sp_samp, addr, x1, y1);
 
    /* interpolate R, G, B, A */
    for (c = 0; c < TGSI_QUAD_SIZE; c++)
       rgba[TGSI_NUM_CHANNELS*c] = lerp_2d(xw, yw,
-                                          tx0[c], tx1[c],
-                                          tx2[c], tx3[c]);
+                                          tx[0][c], tx[1][c],
+                                          tx[2][c], tx[3][c]);
 }
 
 
@@ -1527,7 +1527,7 @@ img_filter_2d_array_linear(struct sp_sampler_view *sp_sview,
    int x0, y0, x1, y1, layer;
    float xw, yw; /* weights */
    union tex_tile_address addr;
-   const float *tx0, *tx1, *tx2, *tx3;
+   const float *tx[4];
    int c;
 
    width = u_minify(texture->width0, args->level);
@@ -1544,16 +1544,16 @@ img_filter_2d_array_linear(struct sp_sampler_view *sp_sview,
    layer = coord_to_layer(args->p, sp_sview->base.u.tex.first_layer,
                           sp_sview->base.u.tex.last_layer);
 
-   tx0 = get_texel_2d_array(sp_sview, sp_samp, addr, x0, y0, layer);
-   tx1 = get_texel_2d_array(sp_sview, sp_samp, addr, x1, y0, layer);
-   tx2 = get_texel_2d_array(sp_sview, sp_samp, addr, x0, y1, layer);
-   tx3 = get_texel_2d_array(sp_sview, sp_samp, addr, x1, y1, layer);
+   tx[0] = get_texel_2d_array(sp_sview, sp_samp, addr, x0, y0, layer);
+   tx[1] = get_texel_2d_array(sp_sview, sp_samp, addr, x1, y0, layer);
+   tx[2] = get_texel_2d_array(sp_sview, sp_samp, addr, x0, y1, layer);
+   tx[3] = get_texel_2d_array(sp_sview, sp_samp, addr, x1, y1, layer);
 
    /* interpolate R, G, B, A */
    for (c = 0; c < TGSI_QUAD_SIZE; c++)
       rgba[TGSI_NUM_CHANNELS*c] = lerp_2d(xw, yw,
-                                          tx0[c], tx1[c],
-                                          tx2[c], tx3[c]);
+                                          tx[0][c], tx[1][c],
+                                          tx[2][c], tx[3][c]);
 }
 
 
@@ -1568,7 +1568,7 @@ img_filter_cube_linear(struct sp_sampler_view *sp_sview,
    int x0, y0, x1, y1, layer;
    float xw, yw; /* weights */
    union tex_tile_address addr;
-   const float *tx0, *tx1, *tx2, *tx3;
+   const float *tx[4];
    float corner0[TGSI_QUAD_SIZE], corner1[TGSI_QUAD_SIZE],
          corner2[TGSI_QUAD_SIZE], corner3[TGSI_QUAD_SIZE];
    int c;
@@ -1599,22 +1599,22 @@ img_filter_cube_linear(struct sp_sampler_view *sp_sview,
    layer = sp_sview->base.u.tex.first_layer;
 
    if (sp_samp->base.seamless_cube_map) {
-      tx0 = get_texel_cube_seamless(sp_sview, addr, x0, y0, corner0, layer, args->face_id);
-      tx1 = get_texel_cube_seamless(sp_sview, addr, x1, y0, corner1, layer, args->face_id);
-      tx2 = get_texel_cube_seamless(sp_sview, addr, x0, y1, corner2, layer, args->face_id);
-      tx3 = get_texel_cube_seamless(sp_sview, addr, x1, y1, corner3, layer, args->face_id);
+      tx[0] = get_texel_cube_seamless(sp_sview, addr, x0, y0, corner0, layer, args->face_id);
+      tx[1] = get_texel_cube_seamless(sp_sview, addr, x1, y0, corner1, layer, args->face_id);
+      tx[2] = get_texel_cube_seamless(sp_sview, addr, x0, y1, corner2, layer, args->face_id);
+      tx[3] = get_texel_cube_seamless(sp_sview, addr, x1, y1, corner3, layer, args->face_id);
    } else {
-      tx0 = get_texel_cube_array(sp_sview, sp_samp, addr, x0, y0, layer + args->face_id);
-      tx1 = get_texel_cube_array(sp_sview, sp_samp, addr, x1, y0, layer + args->face_id);
-      tx2 = get_texel_cube_array(sp_sview, sp_samp, addr, x0, y1, layer + args->face_id);
-      tx3 = get_texel_cube_array(sp_sview, sp_samp, addr, x1, y1, layer + args->face_id);
+      tx[0] = get_texel_cube_array(sp_sview, sp_samp, addr, x0, y0, layer + args->face_id);
+      tx[1] = get_texel_cube_array(sp_sview, sp_samp, addr, x1, y0, layer + args->face_id);
+      tx[2] = get_texel_cube_array(sp_sview, sp_samp, addr, x0, y1, layer + args->face_id);
+      tx[3] = get_texel_cube_array(sp_sview, sp_samp, addr, x1, y1, layer + args->face_id);
    }
 
    /* interpolate R, G, B, A */
    for (c = 0; c < TGSI_QUAD_SIZE; c++)
       rgba[TGSI_NUM_CHANNELS*c] = lerp_2d(xw, yw,
-                                          tx0[c], tx1[c],
-                                          tx2[c], tx3[c]);
+                                          tx[0][c], tx[1][c],
+                                          tx[2][c], tx[3][c]);
 }
 
 
@@ -1629,7 +1629,7 @@ img_filter_cube_array_linear(struct sp_sampler_view *sp_sview,
    int x0, y0, x1, y1, layer;
    float xw, yw; /* weights */
    union tex_tile_address addr;
-   const float *tx0, *tx1, *tx2, *tx3;
+   const float *tx[4];
    float corner0[TGSI_QUAD_SIZE], corner1[TGSI_QUAD_SIZE],
          corner2[TGSI_QUAD_SIZE], corner3[TGSI_QUAD_SIZE];
    int c;
@@ -1662,22 +1662,22 @@ img_filter_cube_array_linear(struct sp_sampler_view *sp_sview,
                           sp_sview->base.u.tex.last_layer - 5);
 
    if (sp_samp->base.seamless_cube_map) {
-      tx0 = get_texel_cube_seamless(sp_sview, addr, x0, y0, corner0, layer, args->face_id);
-      tx1 = get_texel_cube_seamless(sp_sview, addr, x1, y0, corner1, layer, args->face_id);
-      tx2 = get_texel_cube_seamless(sp_sview, addr, x0, y1, corner2, layer, args->face_id);
-      tx3 = get_texel_cube_seamless(sp_sview, addr, x1, y1, corner3, layer, args->face_id);
+      tx[0] = get_texel_cube_seamless(sp_sview, addr, x0, y0, corner0, layer, args->face_id);
+      tx[1] = get_texel_cube_seamless(sp_sview, addr, x1, y0, corner1, layer, args->face_id);
+      tx[2] = get_texel_cube_seamless(sp_sview, addr, x0, y1, corner2, layer, args->face_id);
+      tx[3] = get_texel_cube_seamless(sp_sview, addr, x1, y1, corner3, layer, args->face_id);
    } else {
-      tx0 = get_texel_cube_array(sp_sview, sp_samp, addr, x0, y0, layer + args->face_id);
-      tx1 = get_texel_cube_array(sp_sview, sp_samp, addr, x1, y0, layer + args->face_id);
-      tx2 = get_texel_cube_array(sp_sview, sp_samp, addr, x0, y1, layer + args->face_id);
-      tx3 = get_texel_cube_array(sp_sview, sp_samp, addr, x1, y1, layer + args->face_id);
+      tx[0] = get_texel_cube_array(sp_sview, sp_samp, addr, x0, y0, layer + args->face_id);
+      tx[1] = get_texel_cube_array(sp_sview, sp_samp, addr, x1, y0, layer + args->face_id);
+      tx[2] = get_texel_cube_array(sp_sview, sp_samp, addr, x0, y1, layer + args->face_id);
+      tx[3] = get_texel_cube_array(sp_sview, sp_samp, addr, x1, y1, layer + args->face_id);
    }
 
    /* interpolate R, G, B, A */
    for (c = 0; c < TGSI_QUAD_SIZE; c++)
       rgba[TGSI_NUM_CHANNELS*c] = lerp_2d(xw, yw,
-                                          tx0[c], tx1[c],
-                                          tx2[c], tx3[c]);
+                                          tx[0][c], tx[1][c],
+                                          tx[2][c], tx[3][c]);
 }
 
 static void
