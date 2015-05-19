@@ -51,13 +51,17 @@ typedef float (*compute_lambda_func)(const struct sp_sampler_view *sp_sview,
                                      const float t[TGSI_QUAD_SIZE],
                                      const float p[TGSI_QUAD_SIZE]);
 
+struct img_filter_args {
+   float s;
+   float t;
+   float p;
+   unsigned level;
+   unsigned face_id;
+};
+
 typedef void (*img_filter_func)(struct sp_sampler_view *sp_sview,
                                 struct sp_sampler *sp_samp,
-                                float s,
-                                float t,
-                                float p,
-                                unsigned level,
-                                unsigned face_id,
+                                const struct img_filter_args *args,
                                 float *rgba);
 
 typedef void (*mip_filter_func)(struct sp_sampler_view *sp_sview,
