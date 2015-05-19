@@ -452,6 +452,18 @@ struct anv_dynamic_cb_state {
    uint32_t blend_offset;
 };
 
+struct anv_query_pool_slot {
+   uint64_t begin;
+   uint64_t end;
+   uint64_t available;
+};
+
+struct anv_query_pool {
+   VkQueryType                                  type;
+   uint32_t                                     slots;
+   struct anv_bo                                bo;
+};
+
 struct anv_descriptor_set_layout {
    struct {
       uint32_t surface_count;
