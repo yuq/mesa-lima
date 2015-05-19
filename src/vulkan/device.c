@@ -926,6 +926,7 @@ anv_cmd_buffer_destructor(struct anv_device *   device,
    
    anv_state_stream_finish(&cmd_buffer->surface_state_stream);
    anv_state_stream_finish(&cmd_buffer->dynamic_state_stream);
+   anv_state_stream_finish(&cmd_buffer->binding_table_state_stream);
    anv_batch_finish(&cmd_buffer->batch, device);
    anv_device_free(device, cmd_buffer->exec2_objects);
    anv_device_free(device, cmd_buffer->exec2_bos);
