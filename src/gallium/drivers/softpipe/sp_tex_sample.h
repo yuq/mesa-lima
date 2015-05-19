@@ -60,6 +60,8 @@ struct img_filter_args {
    unsigned level;
    unsigned face_id;
    const int8_t *offset;
+   bool gather_only;
+   int gather_comp;
 };
 
 typedef void (*img_filter_func)(struct sp_sampler_view *sp_sview,

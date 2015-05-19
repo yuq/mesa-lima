@@ -1476,6 +1476,72 @@ img_filter_1d_array_linear(struct sp_sampler_view *sp_sview,
       rgba[TGSI_NUM_CHANNELS*c] = lerp(xw, tx0[c], tx1[c]);
 }
 
+/*
+ * Retrieve the gathered value, need to convert to the
+ * TGSI expected interface, and take component select
+ * and swizzling into account.
+ */
+static float
+get_gather_value(const struct sp_sampler_view *sp_sview,
+                 int chan_in, int comp_sel,
+                 const float *tx[4])
+{
+   int chan;
+   unsigned swizzle;
+
+   /*
+    * softpipe samples in a different order
+    * to TGSI expects, so we need to swizzle,
+    * the samples into the correct slots.
+    */
+   switch (chan_in) {
+   case 0:
+      chan = 2;
+      break;
+   case 1:
+      chan = 3;
+      break;
+   case 2:
+      chan = 1;
+      break;
+   case 3:
+      chan = 0;
+      break;
+   default:
+      assert(0);
+      return 0.0;
+   }
+
+   /* pick which component to use for the swizzle */
+   switch (comp_sel) {
+   case 0:
+      swizzle = sp_sview->base.swizzle_r;
+      break;
+   case 1:
+      swizzle = sp_sview->base.swizzle_g;
+      break;
+   case 2:
+      swizzle = sp_sview->base.swizzle_b;
+      break;
+   case 3:
+      swizzle = sp_sview->base.swizzle_a;
+      break;
+   default:
+      assert(0);
+      return 0.0;
+   }
+
+   /* get correct result using the channel and swizzle */
+   switch (swizzle) {
+   case PIPE_SWIZZLE_ZERO:
+      return 0.0;
+   case PIPE_SWIZZLE_ONE:
+      return 1.0;
+   default:
+      return tx[chan][swizzle];
+   }
+}
+
 
 static void
 img_filter_2d_linear(struct sp_sampler_view *sp_sview,
@@ -1508,11 +1574,18 @@ img_filter_2d_linear(struct sp_sampler_view *sp_sview,
    tx[2] = get_texel_2d(sp_sview, sp_samp, addr, x0, y1);
    tx[3] = get_texel_2d(sp_sview, sp_samp, addr, x1, y1);
 
-   /* interpolate R, G, B, A */
-   for (c = 0; c < TGSI_QUAD_SIZE; c++)
-      rgba[TGSI_NUM_CHANNELS*c] = lerp_2d(xw, yw,
-                                          tx[0][c], tx[1][c],
-                                          tx[2][c], tx[3][c]);
+   if (args->gather_only) {
+      for (c = 0; c < TGSI_QUAD_SIZE; c++)
+         rgba[TGSI_NUM_CHANNELS*c] = get_gather_value(sp_sview, c,
+                                                      args->gather_comp,
+                                                      tx);
+   } else {
+      /* interpolate R, G, B, A */
+      for (c = 0; c < TGSI_QUAD_SIZE; c++)
+         rgba[TGSI_NUM_CHANNELS*c] = lerp_2d(xw, yw,
+                                             tx[0][c], tx[1][c],
+                                             tx[2][c], tx[3][c]);
+   }
 }
 
 
@@ -1549,11 +1622,18 @@ img_filter_2d_array_linear(struct sp_sampler_view *sp_sview,
    tx[2] = get_texel_2d_array(sp_sview, sp_samp, addr, x0, y1, layer);
    tx[3] = get_texel_2d_array(sp_sview, sp_samp, addr, x1, y1, layer);
 
-   /* interpolate R, G, B, A */
-   for (c = 0; c < TGSI_QUAD_SIZE; c++)
-      rgba[TGSI_NUM_CHANNELS*c] = lerp_2d(xw, yw,
-                                          tx[0][c], tx[1][c],
-                                          tx[2][c], tx[3][c]);
+   if (args->gather_only) {
+      for (c = 0; c < TGSI_QUAD_SIZE; c++)
+         rgba[TGSI_NUM_CHANNELS*c] = get_gather_value(sp_sview, c,
+                                                      args->gather_comp,
+                                                      tx);
+   } else {
+      /* interpolate R, G, B, A */
+      for (c = 0; c < TGSI_QUAD_SIZE; c++)
+         rgba[TGSI_NUM_CHANNELS*c] = lerp_2d(xw, yw,
+                                             tx[0][c], tx[1][c],
+                                             tx[2][c], tx[3][c]);
+   }
 }
 
 
@@ -1610,11 +1690,18 @@ img_filter_cube_linear(struct sp_sampler_view *sp_sview,
       tx[3] = get_texel_cube_array(sp_sview, sp_samp, addr, x1, y1, layer + args->face_id);
    }
 
-   /* interpolate R, G, B, A */
-   for (c = 0; c < TGSI_QUAD_SIZE; c++)
-      rgba[TGSI_NUM_CHANNELS*c] = lerp_2d(xw, yw,
-                                          tx[0][c], tx[1][c],
-                                          tx[2][c], tx[3][c]);
+   if (args->gather_only) {
+      for (c = 0; c < TGSI_QUAD_SIZE; c++)
+         rgba[TGSI_NUM_CHANNELS*c] = get_gather_value(sp_sview, c,
+                                                      args->gather_comp,
+                                                      tx);
+   } else {
+      /* interpolate R, G, B, A */
+      for (c = 0; c < TGSI_QUAD_SIZE; c++)
+         rgba[TGSI_NUM_CHANNELS*c] = lerp_2d(xw, yw,
+                                             tx[0][c], tx[1][c],
+                                             tx[2][c], tx[3][c]);
+   }
 }
 
 
@@ -1673,11 +1760,18 @@ img_filter_cube_array_linear(struct sp_sampler_view *sp_sview,
       tx[3] = get_texel_cube_array(sp_sview, sp_samp, addr, x1, y1, layer + args->face_id);
    }
 
-   /* interpolate R, G, B, A */
-   for (c = 0; c < TGSI_QUAD_SIZE; c++)
-      rgba[TGSI_NUM_CHANNELS*c] = lerp_2d(xw, yw,
-                                          tx[0][c], tx[1][c],
-                                          tx[2][c], tx[3][c]);
+   if (args->gather_only) {
+      for (c = 0; c < TGSI_QUAD_SIZE; c++)
+         rgba[TGSI_NUM_CHANNELS*c] = get_gather_value(sp_sview, c,
+                                                      args->gather_comp,
+                                                      tx);
+   } else {
+      /* interpolate R, G, B, A */
+      for (c = 0; c < TGSI_QUAD_SIZE; c++)
+         rgba[TGSI_NUM_CHANNELS*c] = lerp_2d(xw, yw,
+                                             tx[0][c], tx[1][c],
+                                             tx[2][c], tx[3][c]);
+   }
 }
 
 static void
@@ -1795,6 +1889,7 @@ compute_lambda_lod(struct sp_sampler_view *sp_sview,
 
    switch (control) {
    case tgsi_sampler_lod_none:
+   case tgsi_sampler_gather:
       /* XXX FIXME */
    case tgsi_sampler_derivs_explicit:
       lambda = sp_sview->compute_lambda(sp_sview, s, t, p) + lod_bias;
@@ -1822,6 +1917,12 @@ compute_lambda_lod(struct sp_sampler_view *sp_sview,
    }
 }
 
+static INLINE unsigned
+get_gather_component(const float lod_in[TGSI_QUAD_SIZE])
+{
+   /* gather component is stored in lod_in slot as unsigned */
+   return (*(unsigned int *)lod_in) & 0x3;
+}
 
 static void
 mip_filter_linear(struct sp_sampler_view *sp_sview,
@@ -1844,6 +1945,8 @@ mip_filter_linear(struct sp_sampler_view *sp_sview,
    compute_lambda_lod(sp_sview, sp_samp, s, t, p, lod_in, filt_args->control, lod);
 
    args.offset = filt_args->offset;
+   args.gather_only = filt_args->control == tgsi_sampler_gather;
+   args.gather_comp = get_gather_component(lod_in);
 
    for (j = 0; j < TGSI_QUAD_SIZE; j++) {
       int level0 = psview->u.tex.first_level + (int)lod[j];
@@ -1907,6 +2010,9 @@ mip_filter_nearest(struct sp_sampler_view *sp_sview,
    struct img_filter_args args;
 
    args.offset = filt_args->offset;
+   args.gather_only = filt_args->control == tgsi_sampler_gather;
+   args.gather_comp = get_gather_component(lod_in);
+
    compute_lambda_lod(sp_sview, sp_samp, s, t, p, lod_in, filt_args->control, lod);
 
    for (j = 0; j < TGSI_QUAD_SIZE; j++) {
@@ -1950,6 +2056,7 @@ mip_filter_none(struct sp_sampler_view *sp_sview,
 
    args.level = sp_sview->base.u.tex.first_level;
    args.offset = filt_args->offset;
+   args.gather_only = filt_args->control == tgsi_sampler_gather;
 
    compute_lambda_lod(sp_sview, sp_samp, s, t, p, lod_in, filt_args->control, lod);
 
@@ -1985,6 +2092,7 @@ mip_filter_none_no_filter_select(struct sp_sampler_view *sp_sview,
    struct img_filter_args args;
    args.level = sp_sview->base.u.tex.first_level;
    args.offset = filt_args->offset;
+   args.gather_only = filt_args->control == tgsi_sampler_gather;
    for (j = 0; j < TGSI_QUAD_SIZE; j++) {
       args.s = s[j];
       args.t = t[j];
@@ -2364,6 +2472,7 @@ mip_filter_linear_2d_linear_repeat_POT(
       args.t = t[j];
       args.p = p[j];
       args.face_id = sp_sview->faces[j];
+      args.gather_only = filt_args->control == tgsi_sampler_gather;
       if ((unsigned)level0 >= psview->u.tex.last_level) {
          if (level0 < 0)
             args.level = psview->u.tex.first_level;
@@ -2409,11 +2518,12 @@ sample_compare(struct sp_sampler_view *sp_sview,
                float rgba[TGSI_NUM_CHANNELS][TGSI_QUAD_SIZE])
 {
    const struct pipe_sampler_state *sampler = &sp_samp->base;
-   int j;
-   int k[4];
+   int j, v;
+   int k[TGSI_NUM_CHANNELS][TGSI_QUAD_SIZE];
    float pc[4];
    const struct util_format_description *format_desc;
    unsigned chan_type;
+   bool is_gather = (control == tgsi_sampler_gather);
 
    /**
     * Compare texcoord 'p' (aka R) against texture value 'rgba[0]'
@@ -2457,64 +2567,73 @@ sample_compare(struct sp_sampler_view *sp_sview,
       pc[3] = CLAMP(pc[3], 0.0F, 1.0F);
    }
 
-   /* compare four texcoords vs. four texture samples */
-   switch (sampler->compare_func) {
-   case PIPE_FUNC_LESS:
-      k[0] = pc[0] < rgba[0][0];
-      k[1] = pc[1] < rgba[0][1];
-      k[2] = pc[2] < rgba[0][2];
-      k[3] = pc[3] < rgba[0][3];
-      break;
-   case PIPE_FUNC_LEQUAL:
-      k[0] = pc[0] <= rgba[0][0];
-      k[1] = pc[1] <= rgba[0][1];
-      k[2] = pc[2] <= rgba[0][2];
-      k[3] = pc[3] <= rgba[0][3];
-      break;
-   case PIPE_FUNC_GREATER:
-      k[0] = pc[0] > rgba[0][0];
-      k[1] = pc[1] > rgba[0][1];
-      k[2] = pc[2] > rgba[0][2];
-      k[3] = pc[3] > rgba[0][3];
-      break;
-   case PIPE_FUNC_GEQUAL:
-      k[0] = pc[0] >= rgba[0][0];
-      k[1] = pc[1] >= rgba[0][1];
-      k[2] = pc[2] >= rgba[0][2];
-      k[3] = pc[3] >= rgba[0][3];
-      break;
-   case PIPE_FUNC_EQUAL:
-      k[0] = pc[0] == rgba[0][0];
-      k[1] = pc[1] == rgba[0][1];
-      k[2] = pc[2] == rgba[0][2];
-      k[3] = pc[3] == rgba[0][3];
-      break;
-   case PIPE_FUNC_NOTEQUAL:
-      k[0] = pc[0] != rgba[0][0];
-      k[1] = pc[1] != rgba[0][1];
-      k[2] = pc[2] != rgba[0][2];
-      k[3] = pc[3] != rgba[0][3];
-      break;
-   case PIPE_FUNC_ALWAYS:
-      k[0] = k[1] = k[2] = k[3] = 1;
-      break;
-   case PIPE_FUNC_NEVER:
-      k[0] = k[1] = k[2] = k[3] = 0;
-      break;
-   default:
-      k[0] = k[1] = k[2] = k[3] = 0;
-      assert(0);
-      break;
+   for (v = 0; v < (is_gather ? TGSI_NUM_CHANNELS : 1); v++) {
+      /* compare four texcoords vs. four texture samples */
+      switch (sampler->compare_func) {
+      case PIPE_FUNC_LESS:
+         k[v][0] = pc[0] < rgba[v][0];
+         k[v][1] = pc[1] < rgba[v][1];
+         k[v][2] = pc[2] < rgba[v][2];
+         k[v][3] = pc[3] < rgba[v][3];
+         break;
+      case PIPE_FUNC_LEQUAL:
+         k[v][0] = pc[0] <= rgba[v][0];
+         k[v][1] = pc[1] <= rgba[v][1];
+         k[v][2] = pc[2] <= rgba[v][2];
+         k[v][3] = pc[3] <= rgba[v][3];
+         break;
+      case PIPE_FUNC_GREATER:
+         k[v][0] = pc[0] > rgba[v][0];
+         k[v][1] = pc[1] > rgba[v][1];
+         k[v][2] = pc[2] > rgba[v][2];
+         k[v][3] = pc[3] > rgba[v][3];
+         break;
+      case PIPE_FUNC_GEQUAL:
+         k[v][0] = pc[0] >= rgba[v][0];
+         k[v][1] = pc[1] >= rgba[v][1];
+         k[v][2] = pc[2] >= rgba[v][2];
+         k[v][3] = pc[3] >= rgba[v][3];
+         break;
+      case PIPE_FUNC_EQUAL:
+         k[v][0] = pc[0] == rgba[v][0];
+         k[v][1] = pc[1] == rgba[v][1];
+         k[v][2] = pc[2] == rgba[v][2];
+         k[v][3] = pc[3] == rgba[v][3];
+         break;
+      case PIPE_FUNC_NOTEQUAL:
+         k[v][0] = pc[0] != rgba[v][0];
+         k[v][1] = pc[1] != rgba[v][1];
+         k[v][2] = pc[2] != rgba[v][2];
+         k[v][3] = pc[3] != rgba[v][3];
+         break;
+      case PIPE_FUNC_ALWAYS:
+         k[v][0] = k[v][1] = k[v][2] = k[v][3] = 1;
+         break;
+      case PIPE_FUNC_NEVER:
+         k[v][0] = k[v][1] = k[v][2] = k[v][3] = 0;
+         break;
+      default:
+         k[v][0] = k[v][1] = k[v][2] = k[v][3] = 0;
+         assert(0);
+         break;
+      }
    }
 
-   for (j = 0; j < TGSI_QUAD_SIZE; j++) {
-      rgba[0][j] = k[j];
-      rgba[1][j] = k[j];
-      rgba[2][j] = k[j];
-      rgba[3][j] = 1.0F;
+   if (is_gather) {
+      for (j = 0; j < TGSI_QUAD_SIZE; j++) {
+         for (v = 0; v < TGSI_NUM_CHANNELS; v++) {
+            rgba[v][j] = k[v][j];
+         }
+      }
+   } else {
+      for (j = 0; j < TGSI_QUAD_SIZE; j++) {
+         rgba[0][j] = k[0][j];
+         rgba[1][j] = k[0][j];
+         rgba[2][j] = k[0][j];
+         rgba[3][j] = 1.0F;
+      }
    }
 }
-
 
 static void
 do_swizzling(const struct pipe_sampler_view *sview,
@@ -2693,7 +2812,7 @@ any_swizzle(const struct pipe_sampler_view *view)
 static img_filter_func
 get_img_filter(const struct sp_sampler_view *sp_sview,
                const struct pipe_sampler_state *sampler,
-               unsigned filter)
+               unsigned filter, bool gather)
 {
    switch (sp_sview->base.target) {
    case PIPE_BUFFER:
@@ -2713,7 +2832,7 @@ get_img_filter(const struct sp_sampler_view *sp_sview,
    case PIPE_TEXTURE_RECT:
       /* Try for fast path:
        */
-      if (sp_sview->pot2d &&
+      if (!gather && sp_sview->pot2d &&
           sampler->wrap_s == sampler->wrap_t &&
           sampler->normalized_coords) 
       {
@@ -2790,17 +2909,20 @@ sample_mip(struct sp_sampler_view *sp_sview,
    img_filter_func min_img_filter = NULL;
    img_filter_func mag_img_filter = NULL;
 
-   if (sp_sview->pot2d & sp_samp->min_mag_equal_repeat_linear) {
+   if (filt_args->control == tgsi_sampler_gather) {
+      mip_filter = mip_filter_nearest;
+      min_img_filter = get_img_filter(sp_sview, &sp_samp->base, PIPE_TEX_FILTER_LINEAR, true);
+   } else if (sp_sview->pot2d & sp_samp->min_mag_equal_repeat_linear) {
       mip_filter = mip_filter_linear_2d_linear_repeat_POT;
    }
    else {
       mip_filter = sp_samp->mip_filter;
-      min_img_filter = get_img_filter(sp_sview, &sp_samp->base, sp_samp->min_img_filter);
+      min_img_filter = get_img_filter(sp_sview, &sp_samp->base, sp_samp->min_img_filter, false);
       if (sp_samp->min_mag_equal) {
          mag_img_filter = min_img_filter;
       }
       else {
-         mag_img_filter = get_img_filter(sp_sview, &sp_samp->base, sp_samp->base.mag_img_filter);
+         mag_img_filter = get_img_filter(sp_sview, &sp_samp->base, sp_samp->base.mag_img_filter, false);
       }
    }
 
@@ -2811,7 +2933,7 @@ sample_mip(struct sp_sampler_view *sp_sview,
       sample_compare(sp_sview, sp_samp, s, t, p, c0, lod, filt_args->control, rgba);
    }
 
-   if (sp_sview->need_swizzle) {
+   if (sp_sview->need_swizzle && filt_args->control != tgsi_sampler_gather) {
       float rgba_temp[TGSI_NUM_CHANNELS][TGSI_QUAD_SIZE];
       memcpy(rgba_temp, rgba, sizeof(rgba_temp));
       do_swizzling(&sp_sview->base, rgba_temp, rgba);
