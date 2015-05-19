@@ -65,6 +65,8 @@ struct gl_format_info
    GLubyte DepthBits;
    GLubyte StencilBits;
 
+   bool IsSRGBFormat;
+
    /**
     * To describe compressed formats.  If not compressed, Width=Height=1.
     */
@@ -568,30 +570,8 @@ _mesa_is_format_color_format(mesa_format format)
 GLenum
 _mesa_get_format_color_encoding(mesa_format format)
 {
-   /* XXX this info should be encoded in gl_format_info */
-   switch (format) {
-   case MESA_FORMAT_BGR_SRGB8:
-   case MESA_FORMAT_A8B8G8R8_SRGB:
-   case MESA_FORMAT_B8G8R8A8_SRGB:
-   case MESA_FORMAT_A8R8G8B8_SRGB:
-   case MESA_FORMAT_R8G8B8A8_SRGB:
-   case MESA_FORMAT_L_SRGB8:
-   case MESA_FORMAT_L8A8_SRGB:
-   case MESA_FORMAT_A8L8_SRGB:
-   case MESA_FORMAT_SRGB_DXT1:
-   case MESA_FORMAT_SRGBA_DXT1:
-   case MESA_FORMAT_SRGBA_DXT3:
-   case MESA_FORMAT_SRGBA_DXT5:
-   case MESA_FORMAT_R8G8B8X8_SRGB:
-   case MESA_FORMAT_ETC2_SRGB8:
-   case MESA_FORMAT_ETC2_SRGB8_ALPHA8_EAC:
-   case MESA_FORMAT_ETC2_SRGB8_PUNCHTHROUGH_ALPHA1:
-   case MESA_FORMAT_B8G8R8X8_SRGB:
-   case MESA_FORMAT_BPTC_SRGB_ALPHA_UNORM:
-      return GL_SRGB;
-   default:
-      return GL_LINEAR;
-   }
+   const struct gl_format_info *info = _mesa_get_format_info(format);
+   return info->IsSRGBFormat ? GL_SRGB : GL_LINEAR;
 }
 
 

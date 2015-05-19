@@ -180,6 +180,8 @@ for fmat in formats:
    bits = [ get_channel_bits(fmat, name) for name in ['l', 'i', 'z', 's']]
    print '      {0},'.format(', '.join(map(str, bits)))
 
+   print '      {0:d},'.format(fmat.colorspace == 'srgb')
+
    print '      {0}, {1}, {2},'.format(fmat.block_width, fmat.block_height,
                                        int(fmat.block_size() / 8))
 
