@@ -141,6 +141,7 @@ API_XML = \
 	ARB_map_buffer_range.xml \
 	ARB_multi_bind.xml \
 	ARB_pipeline_statistics_query.xml \
+	ARB_program_interface_query.xml \
 	ARB_robustness.xml \
 	ARB_sample_shading.xml \
 	ARB_sampler_objects.xml \
