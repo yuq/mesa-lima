@@ -3853,6 +3853,8 @@ struct gl_extensions
    GLboolean ATI_fragment_shader;
    GLboolean ATI_separate_stencil;
    GLboolean INTEL_performance_query;
+   GLboolean KHR_texture_compression_astc_hdr;
+   GLboolean KHR_texture_compression_astc_ldr;
    GLboolean MESA_pack_invert;
    GLboolean MESA_ycbcr_texture;
    GLboolean NV_conditional_render;
