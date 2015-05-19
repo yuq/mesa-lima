@@ -81,7 +81,7 @@ class Shader:
       os.remove(glsl_fname)
       os.remove(spirv_fname)
 
-   def dump_c_code(self, f):
+   def dump_c_code(self, f, glsl_only = False):
       f.write('\n\n')
       var_prefix = '_glsl_helpers_shader{0}'.format(self.line)
 
@@ -93,6 +93,9 @@ class Shader:
             continue
          f.write('\n"{0}\\n"'.format(line))
       f.write(';\n\n')
+
+      if glsl_only:
+         return
 
       # Now dump the SPIR-V source
       f.write('static const uint32_t {0}_spir_v_src[] = {{'.format(var_prefix))
@@ -192,6 +195,7 @@ def open_file(name, mode):
 infname = None
 outfname = '-'
 glslang = 'glslangValidator'
+glsl_only = False
 
 arg_idx = 1
 while arg_idx < len(sys.argv):
@@ -202,6 +206,8 @@ while arg_idx < len(sys.argv):
       outfname = sys.argv[arg_idx]
    elif sys.argv[arg_idx].startswith('--with-glslang='):
       glslang = sys.argv[arg_idx][len('--with-glslang='):]
+   elif sys.argv[arg_idx] == '--glsl-only':
+      glsl_only = True;
    else:
       infname = sys.argv[arg_idx]
       break
@@ -214,20 +220,21 @@ with open_file(infname, 'r') as infile:
    parser = Parser(infile)
    parser.run()
 
-# glslangValidator has an absolutely *insane* interface.  We pretty much
-# have to run in a temporary directory.  Sad day.
-current_dir = os.getcwd()
-tmpdir = tempfile.mkdtemp('glsl_scraper')
+if not glsl_only:
+   # glslangValidator has an absolutely *insane* interface.  We pretty much
+   # have to run in a temporary directory.  Sad day.
+   current_dir = os.getcwd()
+   tmpdir = tempfile.mkdtemp('glsl_scraper')
 
-try:
-   os.chdir(tmpdir)
+   try:
+      os.chdir(tmpdir)
 
-   for shader in parser.shaders:
-      shader.compile()
+      for shader in parser.shaders:
+         shader.compile()
 
-   os.chdir(current_dir)
-finally:
-   shutil.rmtree(tmpdir)
+      os.chdir(current_dir)
+   finally:
+      shutil.rmtree(tmpdir)
 
 with open_file(outfname, 'w') as outfile:
    outfile.write("""\
@@ -238,4 +245,4 @@ with open_file(outfname, 'w') as outfile:
 #include <stdint.h>""")
 
    for shader in parser.shaders:
-      shader.dump_c_code(outfile)
+      shader.dump_c_code(outfile, glsl_only)
