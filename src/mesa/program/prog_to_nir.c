@@ -47,6 +47,7 @@ struct ptn_compile {
    nir_builder build;
    bool error;
 
+   nir_variable *parameters;
    nir_variable *input_vars[VARYING_SLOT_MAX];
    nir_variable *output_vars[VARYING_SLOT_MAX];
    nir_register **output_regs;
@@ -112,21 +113,6 @@ ptn_get_dest(struct ptn_compile *c, const struct prog_dst_register *prog_dst)
    return dest;
 }
 
-/**
- * Multiply the contents of the ADDR register by 4 to convert from the number
- * of vec4s to the number of floating point components.
- */
-static nir_ssa_def *
-ptn_addr_reg_value(struct ptn_compile *c)
-{
-   nir_builder *b = &c->build;
-   nir_alu_src src;
-   memset(&src, 0, sizeof(src));
-   src.src = nir_src_for_reg(c->addr_reg);
-
-   return nir_imul(b, nir_fmov_alu(b, src, 1), nir_imm_int(b, 4));
-}
-
 static nir_ssa_def *
 ptn_get_src(struct ptn_compile *c, const struct prog_src_register *prog_src)
 {
@@ -180,27 +166,40 @@ ptn_get_src(struct ptn_compile *c, const struct prog_src_register *prog_src)
          }
          /* FALLTHROUGH */
       case PROGRAM_STATE_VAR: {
-         nir_intrinsic_op load_op =
-            prog_src->RelAddr ? nir_intrinsic_load_uniform_indirect :
-                                nir_intrinsic_load_uniform;
-         nir_intrinsic_instr *load = nir_intrinsic_instr_create(b->shader, load_op);
+         nir_intrinsic_instr *load =
+            nir_intrinsic_instr_create(b->shader, nir_intrinsic_load_var);
          nir_ssa_dest_init(&load->instr, &load->dest, 4, NULL);
          load->num_components = 4;
 
-         /* Multiply src->Index by 4 to scale from # of vec4s to components. */
-         load->const_index[0] = 4 * prog_src->Index;
-         load->const_index[1] = 1;
+         load->variables[0] = nir_deref_var_create(load, c->parameters);
+         nir_deref_array *deref_arr =
+            nir_deref_array_create(load->variables[0]);
+         deref_arr->deref.type = glsl_vec4_type();
+         load->variables[0]->deref.child = &deref_arr->deref;
 
          if (prog_src->RelAddr) {
-            nir_ssa_def *reladdr = ptn_addr_reg_value(c);
+            deref_arr->deref_array_type = nir_deref_array_type_indirect;
+
+            nir_alu_src addr_src = { NIR_SRC_INIT };
+            addr_src.src = nir_src_for_reg(c->addr_reg);
+            nir_ssa_def *reladdr = nir_imov_alu(b, addr_src, 1);
+
             if (prog_src->Index < 0) {
                /* This is a negative offset which should be added to the address
                 * register's value.
                 */
-               reladdr = nir_iadd(b, reladdr, nir_imm_int(b, load->const_index[0]));
-               load->const_index[0] = 0;
+               nir_alu_src addr_src = { NIR_SRC_INIT };
+               addr_src.src = nir_src_for_reg(c->addr_reg);
+               reladdr = nir_iadd(b, reladdr, nir_imm_int(b, prog_src->Index));
+
+               deref_arr->base_offset = 0;
+            } else {
+               deref_arr->base_offset = prog_src->Index;
             }
-            load->src[0] = nir_src_for_ssa(reladdr);
+            deref_arr->indirect = nir_src_for_ssa(reladdr);
+         } else {
+            deref_arr->deref_array_type = nir_deref_array_type_direct;
+            deref_arr->base_offset = prog_src->Index;
          }
 
          nir_instr_insert_after_cf_list(b->cf_node_list, &load->instr);
@@ -1057,13 +1056,11 @@ setup_registers_and_variables(struct ptn_compile *c)
    }
    reg->num_components = 1;
    c->addr_reg = reg;
-
-   /* Set the number of uniforms */
-   shader->num_uniforms = 4 * c->prog->Parameters->NumParameters;
 }
 
 struct nir_shader *
-prog_to_nir(const struct gl_program *prog, const nir_shader_compiler_options *options)
+prog_to_nir(const struct gl_program *prog,
+            const nir_shader_compiler_options *options)
 {
    struct ptn_compile *c;
    struct nir_shader *s;
@@ -1075,6 +1072,14 @@ prog_to_nir(const struct gl_program *prog, const nir_shader_compiler_options *op
    if (!s)
       goto fail;
    c->prog = prog;
+
+   c->parameters = rzalloc(s, nir_variable);
+   c->parameters->type = glsl_array_type(glsl_vec4_type(),
+                                            prog->Parameters->NumParameters);
+   c->parameters->name = "parameters";
+   c->parameters->data.read_only = true;
+   c->parameters->data.mode = nir_var_uniform;
+   exec_list_push_tail(&s->uniforms, &c->parameters->node);
 
    nir_function *func = nir_function_create(s, "main");
    nir_function_overload *overload = nir_function_overload_create(func);

@@ -122,18 +122,9 @@ brw_create_nir(struct brw_context *brw,
    /* Get rid of split copies */
    nir_optimize(nir);
 
-   if (shader_prog) {
-      nir_assign_var_locations_scalar_direct_first(nir, &nir->uniforms,
-                                                   &nir->num_direct_uniforms,
-                                                   &nir->num_uniforms);
-   } else {
-      /* ARB programs generally create a giant array of "uniform" data, and allow
-       * indirect addressing without any boundaries.  In the absence of bounds
-       * analysis, it's all or nothing.  num_direct_uniforms is only useful when
-       * we have some direct and some indirect access; it doesn't matter here.
-       */
-      nir->num_direct_uniforms = 0;
-   }
+   nir_assign_var_locations_scalar_direct_first(nir, &nir->uniforms,
+                                                &nir->num_direct_uniforms,
+                                                &nir->num_uniforms);
    nir_assign_var_locations_scalar(&nir->inputs, &nir->num_inputs);
    nir_assign_var_locations_scalar(&nir->outputs, &nir->num_outputs);
 
