@@ -61,6 +61,7 @@ EXTRA_DIST= \
 	$(MESA_GLAPI_DIR)/glapi_x86-64.S \
 	$(MESA_GLAPI_DIR)/glapi_sparc.S \
 	$(COMMON_GLX) \
+	apiexec.py \
 	gl_apitemp.py \
 	gl_enums.py \
 	gl_genexec.py \
@@ -267,7 +268,7 @@ $(MESA_GLAPI_DIR)/glapi_sparc.S: gl_SPARC_asm.py $(COMMON)
 $(MESA_DIR)/main/enums.c: gl_enums.py $(COMMON)
 	$(PYTHON_GEN) $< -f $(srcdir)/gl_and_es_API.xml > $@
 
-$(MESA_DIR)/main/api_exec.c: gl_genexec.py $(COMMON)
+$(MESA_DIR)/main/api_exec.c: gl_genexec.py apiexec.py $(COMMON)
 	$(PYTHON_GEN) $< -f $(srcdir)/gl_and_es_API.xml > $@
 
 $(MESA_DIR)/main/dispatch.h: gl_table.py $(COMMON)
