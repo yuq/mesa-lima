@@ -111,10 +111,14 @@ VkResult anv_GetImageSubresourceInfo(
 
 static struct anv_state
 create_surface_state(struct anv_device *device,
-                     struct anv_image *image, const struct anv_format *format)
+                     struct anv_image *image, const struct anv_format *format,
+                     struct anv_cmd_buffer *cmd_buffer)
 {
-   struct anv_state state =
-      anv_state_pool_alloc(&device->surface_state_pool, 64, 64);
+   struct anv_state state;
+   if (cmd_buffer)
+      state = anv_state_stream_alloc(&cmd_buffer->surface_state_stream, 64, 64);
+   else
+      state = anv_state_pool_alloc(&device->surface_state_pool, 64, 64);
 
    struct GEN8_RENDER_SURFACE_STATE surface_state = {
       .SurfaceType = SURFTYPE_2D,
@@ -159,6 +163,26 @@ create_surface_state(struct anv_device *device,
    return state;
 }
 
+void
+anv_image_view_init(struct anv_surface_view *view,
+                    struct anv_device *device,
+                    const VkImageViewCreateInfo* pCreateInfo,
+                    struct anv_cmd_buffer *cmd_buffer)
+{
+   struct anv_image *image = (struct anv_image *) pCreateInfo->image;
+   const struct anv_format *format =
+      anv_format_for_vk_format(pCreateInfo->format);
+
+   view->bo = image->bo;
+   view->offset = image->offset;
+   view->surface_state = create_surface_state(device, image, format,
+                                              cmd_buffer);
+   view->format = pCreateInfo->format;
+
+   /* TODO: Miplevels */
+   view->extent = image->extent;
+}
+
 VkResult anv_CreateImageView(
     VkDevice                                    _device,
     const VkImageViewCreateInfo*                pCreateInfo,
@@ -166,9 +190,6 @@ VkResult anv_CreateImageView(
 {
    struct anv_device *device = (struct anv_device *) _device;
    struct anv_surface_view *view;
-   struct anv_image *image = (struct anv_image *) pCreateInfo->image;
-   const struct anv_format *format =
-      anv_format_for_vk_format(pCreateInfo->format);
 
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO);
 
@@ -177,17 +198,29 @@ VkResult anv_CreateImageView(
    if (view == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
-   view->bo = image->bo;
-   view->offset = image->offset;
-   view->surface_state = create_surface_state(device, image, format);
-   view->format = pCreateInfo->format;
-
-   /* TODO: Miplevels */
-   view->extent = image->extent;
+   anv_image_view_init(view, device, pCreateInfo, NULL);
 
    *pView = (VkImageView) view;
 
    return VK_SUCCESS;
+}
+
+void
+anv_color_attachment_view_init(struct anv_surface_view *view,
+                               struct anv_device *device,
+                               const VkColorAttachmentViewCreateInfo* pCreateInfo,
+                               struct anv_cmd_buffer *cmd_buffer)
+{
+   struct anv_image *image = (struct anv_image *) pCreateInfo->image;
+   const struct anv_format *format =
+      anv_format_for_vk_format(pCreateInfo->format);
+
+   view->bo = image->bo;
+   view->offset = image->offset;
+   view->surface_state = create_surface_state(device, image, format,
+                                              cmd_buffer);
+   view->extent = image->extent;
+   view->format = pCreateInfo->format;
 }
 
 VkResult anv_CreateColorAttachmentView(
@@ -197,9 +230,6 @@ VkResult anv_CreateColorAttachmentView(
 {
    struct anv_device *device = (struct anv_device *) _device;
    struct anv_surface_view *view;
-   struct anv_image *image = (struct anv_image *) pCreateInfo->image;
-   const struct anv_format *format =
-      anv_format_for_vk_format(pCreateInfo->format);
 
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_COLOR_ATTACHMENT_VIEW_CREATE_INFO);
 
@@ -208,11 +238,7 @@ VkResult anv_CreateColorAttachmentView(
    if (view == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
-   view->bo = image->bo;
-   view->offset = image->offset;
-   view->surface_state = create_surface_state(device, image, format);
-   view->extent = image->extent;
-   view->format = pCreateInfo->format;
+   anv_color_attachment_view_init(view, device, pCreateInfo, NULL);
 
    *pView = (VkColorAttachmentView) view;
 

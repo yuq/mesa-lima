@@ -671,6 +671,16 @@ struct anv_surface_view {
    VkFormat                                     format;
 };
 
+void anv_image_view_init(struct anv_surface_view *view,
+                         struct anv_device *device,
+                         const VkImageViewCreateInfo* pCreateInfo,
+                         struct anv_cmd_buffer *cmd_buffer);
+
+void anv_color_attachment_view_init(struct anv_surface_view *view,
+                                    struct anv_device *device,
+                                    const VkColorAttachmentViewCreateInfo* pCreateInfo,
+                                    struct anv_cmd_buffer *cmd_buffer);
+
 struct anv_sampler {
    uint32_t state[4];
 };
