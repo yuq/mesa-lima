@@ -258,11 +258,7 @@ anv_block_pool_init_slave(struct anv_block_pool *pool,
  * without copying.  It breaks valgrind however, so we have a MAP_ANONYMOUS
  * path we can take for valgrind debugging. */
 
-#ifdef HAVE_VALGRIND
-#  define USE_MEMFD 0
-#else
-#  define USE_MEMFD 1
-#endif
+#define USE_MEMFD 1
 
 void
 anv_block_pool_finish(struct anv_block_pool *pool)
