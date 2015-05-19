@@ -310,7 +310,7 @@ anv_device_init_meta_blit_state(struct anv_device *device)
       layout(set = 0, binding = 0) uniform sampler2D u_tex;
       void main()
       {
-         f_color = texture2D(u_tex, v_tex_coord.xy);
+         f_color = texture(u_tex, v_tex_coord.xy);
       }
    );
 
