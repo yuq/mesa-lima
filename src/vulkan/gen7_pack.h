@@ -151,7 +151,7 @@ GEN7_MI_STORE_REGISTER_MEM_pack(__gen_user_data *data, void * restrict dst,
       0;
 
    dw[1] =
-      __gen_field(values->RegisterAddress, 2, 22) |
+      __gen_offset(values->RegisterAddress, 2, 22) |
       0;
 
    uint32_t dw2 =
@@ -4811,7 +4811,7 @@ GEN7_MI_LOAD_REGISTER_IMM_pack(__gen_user_data *data, void * restrict dst,
       0;
 
    dw[1] =
-      __gen_field(values->RegisterOffset, 2, 22) |
+      __gen_offset(values->RegisterOffset, 2, 22) |
       0;
 
    dw[2] =
@@ -4852,7 +4852,7 @@ GEN7_MI_LOAD_REGISTER_MEM_pack(__gen_user_data *data, void * restrict dst,
       0;
 
    dw[1] =
-      __gen_field(values->RegisterAddress, 2, 22) |
+      __gen_offset(values->RegisterAddress, 2, 22) |
       0;
 
    uint32_t dw2 =
@@ -5248,7 +5248,7 @@ GEN7_MI_URB_CLEAR_pack(__gen_user_data *data, void * restrict dst,
 
    dw[1] =
       __gen_field(values->URBClearLength, 16, 28) |
-      __gen_field(values->URBAddress, 0, 13) |
+      __gen_offset(values->URBAddress, 0, 13) |
       0;
 
 }
