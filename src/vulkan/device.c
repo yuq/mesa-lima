@@ -2800,7 +2800,7 @@ void anv_CmdResetQueryPool(
    stub();
 }
 
-#define TIMESTAMP 0x44070
+#define TIMESTAMP 0x2358
 
 void anv_CmdWriteTimestamp(
     VkCmdBuffer                                 cmdBuffer,
@@ -2817,6 +2817,9 @@ void anv_CmdWriteTimestamp(
       anv_batch_emit(&cmd_buffer->batch, GEN8_MI_STORE_REGISTER_MEM,
                      .RegisterAddress = TIMESTAMP,
                      .MemoryAddress = { bo, buffer->offset + destOffset });
+      anv_batch_emit(&cmd_buffer->batch, GEN8_MI_STORE_REGISTER_MEM,
+                     .RegisterAddress = TIMESTAMP + 4,
+                     .MemoryAddress = { bo, buffer->offset + destOffset + 4 });
       break;
 
    case VK_TIMESTAMP_TYPE_BOTTOM:
