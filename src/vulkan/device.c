@@ -321,6 +321,15 @@ VkResult anv_CreateDevice(
    anv_block_pool_init(&device->instruction_block_pool, device, 2048);
    anv_block_pool_init(&device->surface_state_block_pool, device, 2048);
 
+
+   /* Binding table pointers are only 16 bits so we have to make sure that
+    * they get allocated at the beginning of the surface state BO.  To
+    * handle this, we create a separate block pool that works out of the
+    * first 64 KB of the surface state BO.
+    */
+   anv_block_pool_init_slave(&device->binding_table_block_pool,
+                             &device->surface_state_block_pool, 32);
+
    anv_state_pool_init(&device->surface_state_pool,
                        &device->surface_state_block_pool);
 
@@ -2077,6 +2086,8 @@ VkResult anv_CreateCommandBuffer(
       goto fail_exec2_objects;
    }
 
+   anv_state_stream_init(&cmd_buffer->binding_table_state_stream,
+                         &device->binding_table_block_pool);
    anv_state_stream_init(&cmd_buffer->surface_state_stream,
                          &device->surface_state_block_pool);
    anv_state_stream_init(&cmd_buffer->dynamic_state_stream,
@@ -2469,7 +2480,8 @@ flush_descriptor_sets(struct anv_cmd_buffer *cmd_buffer)
          uint32_t size;
 
          size = (bias + surface_count) * sizeof(uint32_t);
-         state = anv_state_stream_alloc(&cmd_buffer->surface_state_stream, size, 32);
+         state = anv_state_stream_alloc(&cmd_buffer->binding_table_state_stream,
+                                        size, 32);
          memcpy(state.map, bindings->descriptors[s].surfaces, size);
 
          for (uint32_t i = 0; i < layers; i++)

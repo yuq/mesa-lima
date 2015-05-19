@@ -293,6 +293,7 @@ struct anv_device {
 
     struct anv_block_pool                       instruction_block_pool;
     struct anv_block_pool                       surface_state_block_pool;
+    struct anv_block_pool                       binding_table_block_pool;
     struct anv_state_pool                       surface_state_pool;
 
     struct anv_clear_state                      clear_state;
@@ -548,6 +549,7 @@ struct anv_cmd_buffer {
 
    uint32_t                                     bo_count;
    struct anv_batch                             batch;
+   struct anv_state_stream                      binding_table_state_stream;
    struct anv_state_stream                      surface_state_stream;
    struct anv_state_stream                      dynamic_state_stream;
 
