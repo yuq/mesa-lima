@@ -1810,7 +1810,7 @@ mip_filter_linear(struct sp_sampler_view *sp_sview,
                   const float p[TGSI_QUAD_SIZE],
                   const float c0[TGSI_QUAD_SIZE],
                   const float lod_in[TGSI_QUAD_SIZE],
-                  enum tgsi_sampler_control control,
+                  const struct filter_args *filt_args,
                   float rgba[TGSI_NUM_CHANNELS][TGSI_QUAD_SIZE])
 {
    const struct pipe_sampler_view *psview = &sp_sview->base;
@@ -1818,7 +1818,7 @@ mip_filter_linear(struct sp_sampler_view *sp_sview,
    float lod[TGSI_QUAD_SIZE];
    struct img_filter_args args;
 
-   compute_lambda_lod(sp_sview, sp_samp, s, t, p, lod_in, control, lod);
+   compute_lambda_lod(sp_sview, sp_samp, s, t, p, lod_in, filt_args->control, lod);
 
    for (j = 0; j < TGSI_QUAD_SIZE; j++) {
       int level0 = psview->u.tex.first_level + (int)lod[j];
@@ -1873,14 +1873,14 @@ mip_filter_nearest(struct sp_sampler_view *sp_sview,
                    const float p[TGSI_QUAD_SIZE],
                    const float c0[TGSI_QUAD_SIZE],
                    const float lod_in[TGSI_QUAD_SIZE],
-                   enum tgsi_sampler_control control,
+                   const struct filter_args *filt_args,
                    float rgba[TGSI_NUM_CHANNELS][TGSI_QUAD_SIZE])
 {
    const struct pipe_sampler_view *psview = &sp_sview->base;
    float lod[TGSI_QUAD_SIZE];
    int j;
    struct img_filter_args args;
-   compute_lambda_lod(sp_sview, sp_samp, s, t, p, lod_in, control, lod);
+   compute_lambda_lod(sp_sview, sp_samp, s, t, p, lod_in, filt_args->control, lod);
 
    for (j = 0; j < TGSI_QUAD_SIZE; j++) {
       args.s = s[j];
@@ -1914,7 +1914,7 @@ mip_filter_none(struct sp_sampler_view *sp_sview,
                 const float p[TGSI_QUAD_SIZE],
                 const float c0[TGSI_QUAD_SIZE],
                 const float lod_in[TGSI_QUAD_SIZE],
-                enum tgsi_sampler_control control,
+                const struct filter_args *filt_args,
                 float rgba[TGSI_NUM_CHANNELS][TGSI_QUAD_SIZE])
 {
    float lod[TGSI_QUAD_SIZE];
@@ -1922,7 +1922,7 @@ mip_filter_none(struct sp_sampler_view *sp_sview,
    struct img_filter_args args;
 
    args.level = sp_sview->base.u.tex.first_level;
-   compute_lambda_lod(sp_sview, sp_samp, s, t, p, lod_in, control, lod);
+   compute_lambda_lod(sp_sview, sp_samp, s, t, p, lod_in, filt_args->control, lod);
 
    for (j = 0; j < TGSI_QUAD_SIZE; j++) {
       args.s = s[j];
@@ -1949,7 +1949,7 @@ mip_filter_none_no_filter_select(struct sp_sampler_view *sp_sview,
                                  const float p[TGSI_QUAD_SIZE],
                                  const float c0[TGSI_QUAD_SIZE],
                                  const float lod_in[TGSI_QUAD_SIZE],
-                                 enum tgsi_sampler_control control,
+                                 const struct filter_args *filt_args,
                                  float rgba[TGSI_NUM_CHANNELS][TGSI_QUAD_SIZE])
 {
    int j;
@@ -2202,7 +2202,7 @@ mip_filter_linear_aniso(struct sp_sampler_view *sp_sview,
                         const float p[TGSI_QUAD_SIZE],
                         const float c0[TGSI_QUAD_SIZE],
                         const float lod_in[TGSI_QUAD_SIZE],
-                        enum tgsi_sampler_control control,
+                        const struct filter_args *filt_args,
                         float rgba[TGSI_NUM_CHANNELS][TGSI_QUAD_SIZE])
 {
    const struct pipe_resource *texture = sp_sview->base.texture;
@@ -2219,10 +2219,10 @@ mip_filter_linear_aniso(struct sp_sampler_view *sp_sview,
    float dvdy = (t[QUAD_TOP_LEFT]     - t[QUAD_BOTTOM_LEFT]) * t_to_v;
    struct img_filter_args args;
 
-   if (control == tgsi_sampler_lod_bias ||
-       control == tgsi_sampler_lod_none ||
+   if (filt_args->control == tgsi_sampler_lod_bias ||
+       filt_args->control == tgsi_sampler_lod_none ||
        /* XXX FIXME */
-       control == tgsi_sampler_derivs_explicit) {
+       filt_args->control == tgsi_sampler_derivs_explicit) {
       /* note: instead of working with Px and Py, we will use the 
        * squared length instead, to avoid sqrt.
        */
@@ -2259,12 +2259,12 @@ mip_filter_linear_aniso(struct sp_sampler_view *sp_sview,
        * this since 0.5*log(x) = log(sqrt(x))
        */
       lambda = 0.5F * util_fast_log2(Pmin2) + sp_samp->base.lod_bias;
-      compute_lod(&sp_samp->base, control, lambda, lod_in, lod);
+      compute_lod(&sp_samp->base, filt_args->control, lambda, lod_in, lod);
    }
    else {
-      assert(control == tgsi_sampler_lod_explicit ||
-             control == tgsi_sampler_lod_zero);
-      compute_lod(&sp_samp->base, control, sp_samp->base.lod_bias, lod_in, lod);
+      assert(filt_args->control == tgsi_sampler_lod_explicit ||
+             filt_args->control == tgsi_sampler_lod_zero);
+      compute_lod(&sp_samp->base, filt_args->control, sp_samp->base.lod_bias, lod_in, lod);
    }
    
    /* XXX: Take into account all lod values.
@@ -2316,14 +2316,14 @@ mip_filter_linear_2d_linear_repeat_POT(
    const float p[TGSI_QUAD_SIZE],
    const float c0[TGSI_QUAD_SIZE],
    const float lod_in[TGSI_QUAD_SIZE],
-   enum tgsi_sampler_control control,
+   const struct filter_args *filt_args,
    float rgba[TGSI_NUM_CHANNELS][TGSI_QUAD_SIZE])
 {
    const struct pipe_sampler_view *psview = &sp_sview->base;
    int j;
    float lod[TGSI_QUAD_SIZE];
 
-   compute_lambda_lod(sp_sview, sp_samp, s, t, p, lod_in, control, lod);
+   compute_lambda_lod(sp_sview, sp_samp, s, t, p, lod_in, filt_args->control, lod);
 
    for (j = 0; j < TGSI_QUAD_SIZE; j++) {
       int level0 = psview->u.tex.first_level + (int)lod[j];
@@ -2753,7 +2753,7 @@ sample_mip(struct sp_sampler_view *sp_sview,
            const float p[TGSI_QUAD_SIZE],
            const float c0[TGSI_QUAD_SIZE],
            const float lod[TGSI_QUAD_SIZE],
-           enum tgsi_sampler_control control,
+           const struct filter_args *filt_args,
            float rgba[TGSI_NUM_CHANNELS][TGSI_QUAD_SIZE])
 {
    mip_filter_func mip_filter;
@@ -2775,10 +2775,10 @@ sample_mip(struct sp_sampler_view *sp_sview,
    }
 
    mip_filter(sp_sview, sp_samp, min_img_filter, mag_img_filter,
-              s, t, p, c0, lod, control, rgba);
+              s, t, p, c0, lod, filt_args, rgba);
 
    if (sp_samp->base.compare_mode != PIPE_TEX_COMPARE_NONE) {
-      sample_compare(sp_sview, sp_samp, s, t, p, c0, lod, control, rgba);
+      sample_compare(sp_sview, sp_samp, s, t, p, c0, lod, filt_args->control, rgba);
    }
 
    if (sp_sview->need_swizzle) {
@@ -2802,7 +2802,7 @@ sample_cube(struct sp_sampler_view *sp_sview,
             const float p[TGSI_QUAD_SIZE],
             const float c0[TGSI_QUAD_SIZE],
             const float c1[TGSI_QUAD_SIZE],
-            enum tgsi_sampler_control control,
+            const struct filter_args *filt_args,
             float rgba[TGSI_NUM_CHANNELS][TGSI_QUAD_SIZE])
 {
    unsigned j;
@@ -2880,7 +2880,7 @@ sample_cube(struct sp_sampler_view *sp_sview,
       }
    }
 
-   sample_mip(sp_sview, sp_samp, ssss, tttt, pppp, c0, c1, control, rgba);
+   sample_mip(sp_sview, sp_samp, ssss, tttt, pppp, c0, c1, filt_args, rgba);
 }
 
 
@@ -3249,7 +3249,7 @@ sp_tgsi_get_samples(struct tgsi_sampler *tgsi_sampler,
                     float rgba[TGSI_NUM_CHANNELS][TGSI_QUAD_SIZE])
 {
    struct sp_tgsi_sampler *sp_samp = (struct sp_tgsi_sampler *)tgsi_sampler;
-
+   struct filter_args filt_args;
    assert(sview_index < PIPE_MAX_SHADER_SAMPLER_VIEWS);
    assert(sampler_index < PIPE_MAX_SAMPLERS);
    assert(sp_samp->sp_sampler[sampler_index]);
@@ -3263,9 +3263,11 @@ sp_tgsi_get_samples(struct tgsi_sampler *tgsi_sampler,
       }
       return;
    }
+
+   filt_args.control = control;
    sp_samp->sp_sview[sview_index].get_samples(&sp_samp->sp_sview[sview_index],
                                               sp_samp->sp_sampler[sampler_index],
-                                              s, t, p, c0, lod, control, rgba);
+                                              s, t, p, c0, lod, &filt_args, rgba);
 }
 
 

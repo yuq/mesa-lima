@@ -64,6 +64,10 @@ typedef void (*img_filter_func)(struct sp_sampler_view *sp_sview,
                                 const struct img_filter_args *args,
                                 float *rgba);
 
+struct filter_args {
+   enum tgsi_sampler_control control;
+};
+
 typedef void (*mip_filter_func)(struct sp_sampler_view *sp_sview,
                                 struct sp_sampler *sp_samp,
                                 img_filter_func min_filter,
@@ -73,7 +77,7 @@ typedef void (*mip_filter_func)(struct sp_sampler_view *sp_sview,
                                 const float p[TGSI_QUAD_SIZE],
                                 const float c0[TGSI_QUAD_SIZE],
                                 const float lod[TGSI_QUAD_SIZE],
-                                enum tgsi_sampler_control control,
+                                const struct filter_args *args,
                                 float rgba[TGSI_NUM_CHANNELS][TGSI_QUAD_SIZE]);
 
 
@@ -84,7 +88,7 @@ typedef void (*filter_func)(struct sp_sampler_view *sp_sview,
                             const float p[TGSI_QUAD_SIZE],
                             const float c0[TGSI_QUAD_SIZE],
                             const float lod[TGSI_QUAD_SIZE],
-                            enum tgsi_sampler_control control,
+                            const struct filter_args *args,
                             float rgba[TGSI_NUM_CHANNELS][TGSI_QUAD_SIZE]);
 
 
