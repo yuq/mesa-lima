@@ -254,7 +254,7 @@ ast_type_qualifier::merge_qualifier(YYLTYPE *loc,
 
    if (q.flags.q.vk_set) {
       this->set = q.set;
-      this->index = q.index;
+      this->binding = q.binding;
    }
 
    return true;

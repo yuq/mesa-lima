@@ -103,13 +103,13 @@ create_pipeline(VkDevice device, VkPipeline *pipeline,
    static const char vs_source[] = GLSL(
       layout(location = 0) in vec4 a_position;
       layout(location = 1) in vec4 a_color;
-      layout(set = 0, index = 0) uniform block1 {
+      layout(set = 0, binding = 0) uniform block1 {
          vec4 color;
       } u1;
-      layout(set = 0, index = 1) uniform block2 {
+      layout(set = 0, binding = 1) uniform block2 {
          vec4 color;
       } u2;
-      layout(set = 1, index = 0) uniform block3 {
+      layout(set = 1, binding = 0) uniform block3 {
          vec4 color;
       } u3;
       out vec4 v_color;
@@ -122,7 +122,7 @@ create_pipeline(VkDevice device, VkPipeline *pipeline,
    static const char fs_source[] = GLSL(
       out vec4 f_color;
       in vec4 v_color;
-      layout(set = 0, index = 0) uniform sampler2D tex;
+      layout(set = 0, binding = 0) uniform sampler2D tex;
       void main()
       {
          f_color = v_color + texture2D(tex, vec2(0.1, 0.1));

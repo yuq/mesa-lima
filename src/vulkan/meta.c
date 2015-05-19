@@ -307,7 +307,7 @@ anv_device_init_meta_blit_state(struct anv_device *device)
    VkShader fs = GLSL_VK_SHADER(device, FRAGMENT,
       out vec4 f_color;
       in vec4 v_tex_coord;
-      layout(set = 0, index = 0) uniform sampler2D u_tex;
+      layout(set = 0, binding = 0) uniform sampler2D u_tex;
       void main()
       {
          f_color = texture2D(u_tex, v_tex_coord.xy);

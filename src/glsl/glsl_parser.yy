@@ -1424,9 +1424,7 @@ layout_qualifier_id:
          }
       }
 
-      if ((state->ARB_shading_language_420pack_enable ||
-           state->has_atomic_counters()) &&
-          match_layout_qualifier("binding", $1, state) == 0) {
+      if (match_layout_qualifier("binding", $1, state) == 0) {
          $$.flags.q.explicit_binding = 1;
          $$.binding = $3;
       }

@@ -2647,14 +2647,14 @@ apply_type_qualifier_to_variable(const struct ast_type_qualifier *qual,
    }
 
    if (qual->flags.q.vk_set) {
-      if (!qual->flags.q.explicit_index)
+      if (!qual->flags.q.explicit_binding)
          _mesa_glsl_error(loc, state,
-                          "Vulkan descriptor set layout requires both group and index "
-                          "qualifiers");
+                          "Vulkan descriptor set layout requires both set "
+                          "and binding qualifiers");
 
       var->data.vk_set = true;
       var->data.set = qual->set;
-      var->data.index = qual->index;
+      var->data.binding = qual->binding;
    } else if (qual->flags.q.explicit_location) {
       validate_explicit_location(qual, var, state, loc);
    } else if (qual->flags.q.explicit_index) {
@@ -5794,7 +5794,7 @@ ast_interface_block::hir(exec_list *instructions,
 
          var->data.vk_set = this->layout.flags.q.vk_set;
          var->data.set = this->layout.set;
-         var->data.index = this->layout.index;
+         var->data.binding = this->layout.binding;
 
          state->symbols->add_variable(var);
          instructions->push_tail(var);
@@ -5870,7 +5870,7 @@ ast_interface_block::hir(exec_list *instructions,
 
          var->data.vk_set = this->layout.flags.q.vk_set;
          var->data.set = this->layout.set;
-         var->data.index = this->layout.index;
+         var->data.binding = this->layout.binding;
 
          state->symbols->add_variable(var);
          instructions->push_tail(var);
