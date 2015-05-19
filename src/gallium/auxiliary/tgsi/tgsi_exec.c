@@ -1952,7 +1952,7 @@ fetch_texel( struct tgsi_sampler *sampler,
 #define TEX_MODIFIER_LOD_BIAS       2
 #define TEX_MODIFIER_EXPLICIT_LOD   3
 #define TEX_MODIFIER_LEVEL_ZERO     4
-
+#define TEX_MODIFIER_GATHER         5
 
 /*
  * Fetch all 3 (for s,t,r coords) texel offsets, put them into int array.
@@ -2069,6 +2069,8 @@ exec_tex(struct tgsi_exec_machine *mach,
          control = tgsi_sampler_lod_explicit;
       else if (modifier == TEX_MODIFIER_LOD_BIAS)
          control = tgsi_sampler_lod_bias;
+      else if (modifier == TEX_MODIFIER_GATHER)
+         control = tgsi_sampler_gather;
    }
    else {
       for (i = dim; i < Elements(args); i++)
@@ -4372,6 +4374,13 @@ exec_instruction(
       /* src[0] = texcoord (src[0].w = projection) */
       /* src[1] = sampler unit */
       exec_tex(mach, inst, TEX_MODIFIER_PROJECTED, 1);
+      break;
+
+   case TGSI_OPCODE_TG4:
+      /* src[0] = texcoord */
+      /* src[1] = component */
+      /* src[2] = sampler unit */
+      exec_tex(mach, inst, TEX_MODIFIER_GATHER, 2);
       break;
 
    case TGSI_OPCODE_UP2H:

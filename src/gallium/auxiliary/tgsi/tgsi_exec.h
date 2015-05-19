@@ -93,7 +93,8 @@ enum tgsi_sampler_control {
    tgsi_sampler_lod_bias,
    tgsi_sampler_lod_explicit,
    tgsi_sampler_lod_zero,
-   tgsi_sampler_derivs_explicit
+   tgsi_sampler_derivs_explicit,
+   tgsi_sampler_gather,
 };
 
 /**
