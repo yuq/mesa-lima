@@ -3223,8 +3223,6 @@ void anv_CmdEndRenderPass(
                   .VFCacheInvalidationEnable = true,
                   .TextureCacheInvalidationEnable = true,
                   .CommandStreamerStallEnable = true);
-
-   stub();
 }
 
 void vkCmdDbgMarkerBegin(
