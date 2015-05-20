@@ -711,10 +711,10 @@ void anv_CmdCopyBuffer(
       meta_emit_blit(cmd_buffer,
                      &src_view,
                      (VkOffset3D) { 0, 0, 0 },
-                     (VkExtent3D) { pRegions[r].copySize, 0, 0 },
+                     (VkExtent3D) { pRegions[r].copySize, 1, 1 },
                      &dest_view,
                      (VkOffset3D) { 0, 0, 0 },
-                     (VkExtent3D) { pRegions[r].copySize, 0, 0 });
+                     (VkExtent3D) { pRegions[r].copySize, 1, 1 });
    }
 
    meta_finish_blit(cmd_buffer, &saved_state);
