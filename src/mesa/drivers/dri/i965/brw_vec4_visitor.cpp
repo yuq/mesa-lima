@@ -2460,11 +2460,27 @@ vec4_visitor::emit_mcs_fetch(ir_texture *ir, src_reg coordinate, src_reg sampler
       new(mem_ctx) vec4_instruction(SHADER_OPCODE_TXF_MCS,
                                     dst_reg(this, glsl_type::uvec4_type));
    inst->base_mrf = 2;
-   inst->mlen = 1;
    inst->src[1] = sampler;
 
+   int param_base;
+
+   if (devinfo->gen >= 9) {
+      /* Gen9+ needs a message header in order to use SIMD4x2 mode */
+      vec4_instruction *header_inst = new(mem_ctx)
+         vec4_instruction(VS_OPCODE_SET_SIMD4X2_HEADER_GEN9,
+                          dst_reg(MRF, inst->base_mrf));
+
+      emit(header_inst);
+
+      inst->mlen = 2;
+      inst->header_size = 1;
+      param_base = inst->base_mrf + 1;
+   } else {
+      inst->mlen = 1;
+      param_base = inst->base_mrf;
+   }
+
    /* parameters are: u, v, r, lod; lod will always be zero due to api restrictions */
-   int param_base = inst->base_mrf;
    int coord_mask = (1 << ir->coordinate->type->vector_elements) - 1;
    int zero_mask = 0xf & ~coord_mask;
 
