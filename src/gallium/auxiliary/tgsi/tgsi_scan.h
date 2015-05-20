@@ -89,6 +89,7 @@ struct tgsi_shader_info
    boolean uses_basevertex;
    boolean uses_primid;
    boolean uses_frontface;
+   boolean uses_invocationid;
    boolean writes_psize;
    boolean writes_clipvertex;
    boolean writes_viewport_index;

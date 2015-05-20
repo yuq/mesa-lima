@@ -248,6 +248,8 @@ tgsi_scan_shader(const struct tgsi_token *tokens,
                   }
                   else if (semName == TGSI_SEMANTIC_PRIMID) {
                      info->uses_primid = TRUE;
+                  } else if (semName == TGSI_SEMANTIC_INVOCATIONID) {
+                     info->uses_invocationid = TRUE;
                   }
                }
                else if (file == TGSI_FILE_OUTPUT) {
