@@ -50,6 +50,7 @@ enum pipe_error st_translate_program(
    const GLuint interpLocation[],
    GLuint numOutputs,
    const GLuint outputMapping[],
+   const GLuint outputSlotToAttr[],
    const ubyte outputSemanticName[],
    const ubyte outputSemanticIndex[],
    boolean passthrough_edgeflags,

@@ -162,6 +162,7 @@ public:
       this->cond_mask = COND_TR;
       this->reladdr = NULL;
       this->type = type;
+      this->array_id = 0;
    }
 
    st_dst_reg(gl_register_file file, int writemask, int type)
@@ -172,6 +173,7 @@ public:
       this->cond_mask = COND_TR;
       this->reladdr = NULL;
       this->type = type;
+      this->array_id = 0;
    }
 
    st_dst_reg()
@@ -182,6 +184,7 @@ public:
       this->writemask = 0;
       this->cond_mask = COND_TR;
       this->reladdr = NULL;
+      this->array_id = 0;
    }
 
    explicit st_dst_reg(st_src_reg reg);
@@ -193,6 +196,7 @@ public:
    int type; /** GLSL_TYPE_* from GLSL IR (enum glsl_base_type) */
    /** Register index should be offset by the integer in this reg. */
    st_src_reg *reladdr;
+   unsigned array_id;
 };
 
 st_src_reg::st_src_reg(st_dst_reg reg)
@@ -207,7 +211,7 @@ st_src_reg::st_src_reg(st_dst_reg reg)
    this->reladdr2 = NULL;
    this->has_index2 = false;
    this->double_reg2 = false;
-   this->array_id = 0;
+   this->array_id = reg.array_id;
 }
 
 st_dst_reg::st_dst_reg(st_src_reg reg)
@@ -218,7 +222,7 @@ st_dst_reg::st_dst_reg(st_src_reg reg)
    this->writemask = WRITEMASK_XYZW;
    this->cond_mask = COND_TR;
    this->reladdr = reg.reladdr;
-   assert(reg.array_id == 0);
+   this->array_id = reg.array_id;
 }
 
 class glsl_to_tgsi_instruction : public exec_node {
@@ -336,6 +340,8 @@ public:
 
    struct array_decl input_arrays[PIPE_MAX_SHADER_INPUTS];
    unsigned num_input_arrays;
+   struct array_decl output_arrays[PIPE_MAX_SHADER_OUTPUTS];
+   unsigned num_output_arrays;
 
    int num_address_regs;
    int samplers_used;
@@ -2287,10 +2293,30 @@ glsl_to_tgsi_visitor::visit(ir_dereference_variable *ir)
          break;
       case ir_var_shader_out:
          assert(var->data.location != -1);
-         entry = new(mem_ctx) variable_storage(var,
-                                               PROGRAM_OUTPUT,
-                                               var->data.location
-                                               + var->data.index);
+
+         if (is_inout_array(shader->Stage, var, &is_2d)) {
+            struct array_decl *decl = &output_arrays[num_output_arrays];
+
+            decl->mesa_index = var->data.location;
+            decl->array_id = num_output_arrays + 1;
+            if (is_2d)
+               decl->array_size = type_size(var->type->fields.array);
+            else
+               decl->array_size = type_size(var->type);
+            num_output_arrays++;
+
+            entry = new(mem_ctx) variable_storage(var,
+                                                  PROGRAM_OUTPUT,
+                                                  var->data.location,
+                                                  decl->array_id);
+         }
+         else {
+            entry = new(mem_ctx) variable_storage(var,
+                                                  PROGRAM_OUTPUT,
+                                                  var->data.location
+                                                  + var->data.index);
+         }
+         this->variables.push_tail(entry);
          break;
       case ir_var_system_value:
          entry = new(mem_ctx) variable_storage(var,
@@ -3399,6 +3425,7 @@ glsl_to_tgsi_visitor::glsl_to_tgsi_visitor()
    max_num_arrays = 0;
    next_array = 0;
    num_input_arrays = 0;
+   num_output_arrays = 0;
    next_signature_id = 1;
    num_immediates = 0;
    current_function = NULL;
@@ -4433,6 +4460,7 @@ struct st_translate {
    struct tgsi_texture_offset tex_offsets[MAX_GLSL_TEXTURE_OFFSET];
    unsigned *array_sizes;
    struct array_decl *input_arrays;
+   struct array_decl *output_arrays;
 
    const GLuint *inputMapping;
    const GLuint *outputMapping;
@@ -4556,9 +4584,8 @@ emit_immediate(struct st_translate *t,
  * Map a glsl_to_tgsi dst register to a TGSI ureg_dst register.
  */
 static struct ureg_dst
-dst_register(struct st_translate *t,
-             gl_register_file file,
-             GLuint index)
+dst_register(struct st_translate *t, gl_register_file file, unsigned index,
+             unsigned array_id)
 {
    unsigned array;
 
@@ -4599,16 +4626,25 @@ dst_register(struct st_translate *t,
                                    (int)(index & 0xFFFF) - 0x8000);
 
    case PROGRAM_OUTPUT:
-      if (t->procType == TGSI_PROCESSOR_VERTEX)
-         assert(index < VARYING_SLOT_MAX);
-      else if (t->procType == TGSI_PROCESSOR_FRAGMENT)
-         assert(index < FRAG_RESULT_MAX);
-      else
-         assert(index < VARYING_SLOT_MAX);
+      if (!array_id) {
+         if (t->procType == TGSI_PROCESSOR_FRAGMENT)
+            assert(index < FRAG_RESULT_MAX);
+         else
+            assert(index < VARYING_SLOT_MAX);
 
-      assert(t->outputMapping[index] < ARRAY_SIZE(t->outputs));
+         assert(t->outputMapping[index] < ARRAY_SIZE(t->outputs));
+         assert(t->outputs[t->outputMapping[index]].File != TGSI_FILE_NULL);
+         return t->outputs[t->outputMapping[index]];
+      }
+      else {
+         struct array_decl *decl = &t->output_arrays[array_id-1];
+         unsigned mesa_index = decl->mesa_index;
+         int slot = t->outputMapping[mesa_index];
 
-      return t->outputs[t->outputMapping[index]];
+         assert(slot != -1 && t->outputs[slot].File == TGSI_FILE_OUTPUT);
+         assert(t->outputs[slot].ArrayID == array_id);
+         return ureg_dst_array_offset(t->outputs[slot], index - mesa_index);
+      }
 
    case PROGRAM_ADDRESS:
       return t->address[index];
@@ -4634,7 +4670,8 @@ src_register(struct st_translate *t, const st_src_reg *reg)
 
    case PROGRAM_TEMPORARY:
    case PROGRAM_ARRAY:
-      return ureg_src(dst_register(t, reg->file, reg->index));
+   case PROGRAM_OUTPUT:
+      return ureg_src(dst_register(t, reg->file, reg->index, reg->array_id));
 
    case PROGRAM_UNIFORM:
       assert(reg->index >= 0);
@@ -4672,10 +4709,6 @@ src_register(struct st_translate *t, const st_src_reg *reg)
          return ureg_src_array_offset(t->inputs[slot], index - mesa_index);
       }
 
-   case PROGRAM_OUTPUT:
-      assert(t->outputMapping[reg->index] < ARRAY_SIZE(t->outputs));
-      return ureg_src(t->outputs[t->outputMapping[reg->index]]); /* not needed? */
-
    case PROGRAM_ADDRESS:
       return ureg_src(t->address[reg->index]);
 
@@ -4697,9 +4730,8 @@ translate_dst(struct st_translate *t,
               const st_dst_reg *dst_reg,
               bool saturate, bool clamp_color)
 {
-   struct ureg_dst dst = dst_register(t,
-                                      dst_reg->file,
-                                      dst_reg->index);
+   struct ureg_dst dst = dst_register(t, dst_reg->file, dst_reg->index,
+                                      dst_reg->array_id);
 
    if (dst.File == TGSI_FILE_NULL)
       return dst;
@@ -5186,6 +5218,7 @@ st_translate_program(
    const GLuint interpLocation[],
    GLuint numOutputs,
    const GLuint outputMapping[],
+   const GLuint outputSlotToAttr[],
    const ubyte outputSemanticName[],
    const ubyte outputSemanticIndex[],
    boolean passthrough_edgeflags,
@@ -5285,6 +5318,38 @@ st_translate_program(
       assert(0);
    }
 
+   /*
+    * Declare output attributes.
+    */
+   switch (procType) {
+   case TGSI_PROCESSOR_FRAGMENT:
+      break;
+   case TGSI_PROCESSOR_GEOMETRY:
+   case TGSI_PROCESSOR_VERTEX:
+      for (i = 0; i < numOutputs; i++) {
+         unsigned array_id = 0;
+         unsigned array_size;
+
+         if (find_array(outputSlotToAttr[i], program->output_arrays,
+                        program->num_output_arrays, &array_id, &array_size)) {
+            /* We've found an array. Declare it so. */
+            t->outputs[i] = ureg_DECL_output_array(ureg,
+                                                   outputSemanticName[i],
+                                                   outputSemanticIndex[i],
+                                                   array_id, array_size);
+            i += array_size - 1;
+         }
+         else {
+            t->outputs[i] = ureg_DECL_output(ureg,
+                                             outputSemanticName[i],
+                                             outputSemanticIndex[i]);
+         }
+      }
+      break;
+   default:
+      assert(0);
+   }
+
    if (procType == TGSI_PROCESSOR_FRAGMENT) {
       if (proginfo->InputsRead & VARYING_BIT_POS) {
           /* Must do this after setting up t->inputs. */
@@ -5295,9 +5360,6 @@ st_translate_program(
       if (proginfo->InputsRead & VARYING_BIT_FACE)
          emit_face_var(ctx, t);
 
-      /*
-       * Declare output attributes.
-       */
       for (i = 0; i < numOutputs; i++) {
          switch (outputSemanticName[i]) {
          case TGSI_SEMANTIC_POSITION:
@@ -5333,20 +5395,8 @@ st_translate_program(
          }
       }
    }
-   else if (procType == TGSI_PROCESSOR_GEOMETRY) {
+   else if (procType == TGSI_PROCESSOR_VERTEX) {
       for (i = 0; i < numOutputs; i++) {
-         t->outputs[i] = ureg_DECL_output(ureg,
-                                          outputSemanticName[i],
-                                          outputSemanticIndex[i]);
-      }
-   }
-   else {
-      assert(procType == TGSI_PROCESSOR_VERTEX);
-
-      for (i = 0; i < numOutputs; i++) {
-         t->outputs[i] = ureg_DECL_output(ureg,
-                                          outputSemanticName[i],
-                                          outputSemanticIndex[i]);
          if (outputSemanticName[i] == TGSI_SEMANTIC_FOG) {
             /* force register to contain a fog coordinate in the form (F, 0, 0, 1). */
             ureg_MOV(ureg,
@@ -5403,6 +5453,7 @@ st_translate_program(
 
    t->array_sizes = program->array_sizes;
    t->input_arrays = program->input_arrays;
+   t->output_arrays = program->output_arrays;
 
    /* Emit constants and uniforms.  TGSI uses a single index space for these,
     * so we put all the translated regs in t->constants.
@@ -5654,6 +5705,8 @@ get_mesa_program(struct gl_context *ctx,
    do_set_program_inouts(shader->ir, prog, shader->Stage);
    shrink_array_declarations(v->input_arrays, v->num_input_arrays,
                              prog->InputsRead);
+   shrink_array_declarations(v->output_arrays, v->num_output_arrays,
+                             prog->OutputsWritten);
    count_resources(v, prog);
 
    /* This must be done before the uniform storage is associated. */

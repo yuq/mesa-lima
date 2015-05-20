@@ -215,6 +215,7 @@ st_prepare_vertex_program(struct gl_context *ctx,
          unsigned slot = stvp->num_outputs++;
 
          stvp->result_to_output[attr] = slot;
+         stvp->output_slot_to_attr[slot] = attr;
 
          switch (attr) {
          case VARYING_SLOT_POS:
@@ -359,6 +360,7 @@ st_translate_vertex_program(struct st_context *st,
                                    /* outputs */
                                    num_outputs,
                                    stvp->result_to_output,
+                                   stvp->output_slot_to_attr,
                                    stvp->output_semantic_name,
                                    stvp->output_semantic_index,
                                    key->passthrough_edgeflags,
@@ -790,6 +792,7 @@ st_translate_fragment_program(struct st_context *st,
                            /* outputs */
                            fs_num_outputs,
                            outputMapping,
+                           NULL,
                            fs_output_semantic_name,
                            fs_output_semantic_index, FALSE,
                            key->clamp_color );
@@ -874,6 +877,7 @@ st_translate_geometry_program(struct st_context *st,
 {
    GLuint inputSlotToAttr[VARYING_SLOT_MAX];
    GLuint inputMapping[VARYING_SLOT_MAX];
+   GLuint outputSlotToAttr[VARYING_SLOT_MAX];
    GLuint outputMapping[VARYING_SLOT_MAX];
    struct pipe_context *pipe = st->pipe;
    GLuint attr;
@@ -904,6 +908,7 @@ st_translate_geometry_program(struct st_context *st,
 
    memset(inputSlotToAttr, 0, sizeof(inputSlotToAttr));
    memset(inputMapping, 0, sizeof(inputMapping));
+   memset(outputSlotToAttr, 0, sizeof(outputSlotToAttr));
    memset(outputMapping, 0, sizeof(outputMapping));
 
    /*
@@ -993,6 +998,7 @@ st_translate_geometry_program(struct st_context *st,
          GLuint slot = gs_num_outputs++;
 
          outputMapping[attr] = slot;
+         outputSlotToAttr[slot] = attr;
 
          switch (attr) {
          case VARYING_SLOT_POS:
@@ -1096,6 +1102,7 @@ st_translate_geometry_program(struct st_context *st,
                         /* outputs */
                         gs_num_outputs,
                         outputMapping,
+                        outputSlotToAttr,
                         gs_output_semantic_name,
                         gs_output_semantic_index,
                         FALSE,
