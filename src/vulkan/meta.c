@@ -627,6 +627,23 @@ meta_finish_blit(struct anv_cmd_buffer *cmd_buffer,
    anv_cmd_buffer_restore(cmd_buffer, saved_state);
 }
 
+static VkFormat
+vk_format_for_cpp(int cpp)
+{
+   switch (cpp) {
+   case 1: return VK_FORMAT_R8_UINT;
+   case 2: return VK_FORMAT_R8G8_UINT;
+   case 3: return VK_FORMAT_R8G8B8_UINT;
+   case 4: return VK_FORMAT_R8G8B8A8_UINT;
+   case 6: return VK_FORMAT_R16G16B16_UINT;
+   case 8: return VK_FORMAT_R16G16B16A16_UINT;
+   case 12: return VK_FORMAT_R32G32B32_UINT;
+   case 16: return VK_FORMAT_R32G32B32A32_UINT;
+   default:
+      unreachable("Invalid format cpp");
+   }
+}
+
 void anv_CmdCopyBuffer(
     VkCmdBuffer                                 cmdBuffer,
     VkBuffer                                    srcBuffer,
@@ -643,12 +660,37 @@ void anv_CmdCopyBuffer(
    meta_prepare_blit(cmd_buffer, &saved_state);
 
    for (unsigned r = 0; r < regionCount; r++) {
+      size_t src_offset = src_buffer->offset + pRegions[r].srcOffset;
+      size_t dest_offset = dest_buffer->offset + pRegions[r].destOffset;
+
+      /* First, we compute the biggest format that can be used with the
+       * given offsets and size.
+       */
+      int cpp = 16;
+
+      int fs = ffs(src_offset) - 1;
+      if (fs != -1)
+         cpp = MIN2(cpp, 1 << fs);
+      assert(src_offset % cpp == 0);
+
+      fs = ffs(dest_offset) - 1;
+      if (fs != -1)
+         cpp = MIN2(cpp, 1 << fs);
+      assert(dest_offset % cpp == 0);
+
+      fs = ffs(pRegions[r].copySize) - 1;
+      if (fs != -1)
+         cpp = MIN2(cpp, 1 << fs);
+      assert(pRegions[r].copySize % cpp == 0);
+
+      VkFormat copy_format = vk_format_for_cpp(cpp);
+
       VkImageCreateInfo image_info = {
          .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
          .imageType = VK_IMAGE_TYPE_2D,
-         .format = VK_FORMAT_R8_UNORM,
+         .format = copy_format,
          .extent = {
-            .width = pRegions[r].copySize,
+            .width = pRegions[r].copySize / cpp,
             .height = 1,
             .depth = 1,
          },
@@ -668,9 +710,9 @@ void anv_CmdCopyBuffer(
        * creating a dummy memory object etc. so there's really no point.
        */
       src_image->bo = src_buffer->bo;
-      src_image->offset = src_buffer->offset + pRegions[r].srcOffset;
+      src_image->offset = src_offset;
       dest_image->bo = dest_buffer->bo;
-      dest_image->offset = dest_buffer->offset + pRegions[r].destOffset;
+      dest_image->offset = dest_offset;
 
       struct anv_surface_view src_view;
       anv_image_view_init(&src_view, cmd_buffer->device,
@@ -678,7 +720,7 @@ void anv_CmdCopyBuffer(
             .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
             .image = (VkImage)src_image,
             .viewType = VK_IMAGE_VIEW_TYPE_2D,
-            .format = VK_FORMAT_R8_UNORM,
+            .format = copy_format,
             .channels = {
                VK_CHANNEL_SWIZZLE_R,
                VK_CHANNEL_SWIZZLE_G,
@@ -701,7 +743,7 @@ void anv_CmdCopyBuffer(
          &(VkColorAttachmentViewCreateInfo) {
             .sType = VK_STRUCTURE_TYPE_COLOR_ATTACHMENT_VIEW_CREATE_INFO,
             .image = (VkImage)dest_image,
-            .format = VK_FORMAT_R8_UNORM,
+            .format = copy_format,
             .mipLevel = 0,
             .baseArraySlice = 0,
             .arraySize = 1,
@@ -711,10 +753,10 @@ void anv_CmdCopyBuffer(
       meta_emit_blit(cmd_buffer,
                      &src_view,
                      (VkOffset3D) { 0, 0, 0 },
-                     (VkExtent3D) { pRegions[r].copySize, 1, 1 },
+                     (VkExtent3D) { pRegions[r].copySize / cpp, 1, 1 },
                      &dest_view,
                      (VkOffset3D) { 0, 0, 0 },
-                     (VkExtent3D) { pRegions[r].copySize, 1, 1 });
+                     (VkExtent3D) { pRegions[r].copySize / cpp, 1, 1 });
    }
 
    meta_finish_blit(cmd_buffer, &saved_state);
