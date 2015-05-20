@@ -4255,16 +4255,7 @@ fs_visitor::run_vs()
    if (INTEL_DEBUG & DEBUG_SHADER_TIME)
       emit_shader_time_begin();
 
-   if (brw->ctx.Const.ShaderCompilerOptions[MESA_SHADER_VERTEX].NirOptions) {
-      emit_nir_code();
-   } else {
-      foreach_in_list(ir_instruction, ir, shader->base.ir) {
-         base_ir = ir;
-         this->result = reg_undef;
-         ir->accept(this);
-      }
-      base_ir = NULL;
-   }
+   emit_nir_code();
 
    if (failed)
       return false;
@@ -4331,18 +4322,8 @@ fs_visitor::run_fs()
       /* Generate FS IR for main().  (the visitor only descends into
        * functions called "main").
        */
-      if (brw->ctx.Const.ShaderCompilerOptions[MESA_SHADER_FRAGMENT].NirOptions) {
-         emit_nir_code();
-      } else if (shader) {
-         foreach_in_list(ir_instruction, ir, shader->base.ir) {
-            base_ir = ir;
-            this->result = reg_undef;
-            ir->accept(this);
-         }
-      } else {
-         emit_fragment_program_code();
-      }
-      base_ir = NULL;
+      emit_nir_code();
+
       if (failed)
 	 return false;
 
