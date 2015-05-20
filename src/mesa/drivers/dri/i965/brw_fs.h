@@ -66,7 +66,7 @@ namespace brw {
  *
  * Translates either GLSL IR or Mesa IR (for ARB_fragment_program) into FS IR.
  */
-class fs_visitor : public backend_shader, public ir_visitor
+class fs_visitor : public backend_shader
 {
 public:
    const fs_reg reg_null_f;
@@ -84,32 +84,11 @@ public:
 
    ~fs_visitor();
 
-   fs_reg *variable_storage(ir_variable *var);
    fs_reg vgrf(const glsl_type *const type);
    fs_reg vgrf(int num_components);
    void import_uniforms(fs_visitor *v);
    void setup_uniform_clipplane_values();
    void compute_clip_distance();
-
-   void visit(ir_variable *ir);
-   void visit(ir_assignment *ir);
-   void visit(ir_dereference_variable *ir);
-   void visit(ir_dereference_record *ir);
-   void visit(ir_dereference_array *ir);
-   void visit(ir_expression *ir);
-   void visit(ir_texture *ir);
-   void visit(ir_if *ir);
-   void visit(ir_constant *ir);
-   void visit(ir_swizzle *ir);
-   void visit(ir_return *ir);
-   void visit(ir_loop *ir);
-   void visit(ir_loop_jump *ir);
-   void visit(ir_discard *ir);
-   void visit(ir_call *ir);
-   void visit(ir_function *ir);
-   void visit(ir_function_signature *ir);
-   void visit(ir_emit_vertex *);
-   void visit(ir_end_primitive *);
 
    uint32_t gather_channel(int orig_chan, uint32_t sampler);
    void swizzle_result(ir_texture_opcode op, int dest_components,
@@ -308,25 +287,15 @@ public:
    fs_inst *emit_math(enum opcode op, fs_reg dst, fs_reg src0, fs_reg src1);
    fs_inst *emit_lrp(const fs_reg &dst, const fs_reg &x, const fs_reg &y,
                      const fs_reg &a);
-   void emit_minmax(enum brw_conditional_mod conditionalmod, const fs_reg &dst,
-                    const fs_reg &src0, const fs_reg &src1);
    void emit_discard_jump();
    /** Copy any live channel from \p src to the first channel of \p dst. */
    void emit_uniformize(const fs_reg &dst, const fs_reg &src);
-   bool try_emit_b2f_of_comparison(ir_expression *ir);
-   bool try_emit_saturate(ir_expression *ir);
-   bool try_emit_line(ir_expression *ir);
-   bool try_emit_mad(ir_expression *ir);
    bool try_replace_with_sel();
-   bool try_opt_frontfacing_ternary(ir_if *ir);
    bool opt_peephole_sel();
    bool opt_peephole_predicated_break();
    bool opt_saturate_propagation();
    bool opt_cmod_propagation();
    bool opt_zero_samples();
-   void emit_bool_to_cond_code(ir_rvalue *condition);
-   void emit_bool_to_cond_code_of_reg(ir_expression *expr, fs_reg op[3]);
-   void emit_if_gen6(ir_if *ir);
    void emit_unspill(bblock_t *block, fs_inst *inst, fs_reg reg,
                      uint32_t spill_offset, int count);
    void emit_spill(bblock_t *block, fs_inst *inst, fs_reg reg,
@@ -377,31 +346,17 @@ public:
    void emit_untyped_surface_read(unsigned surf_index, fs_reg dst,
                                   fs_reg offset);
 
-   void emit_interpolate_expression(ir_expression *ir);
-
-   bool try_rewrite_rhs_to_dst(ir_assignment *ir,
-			       fs_reg dst,
-			       fs_reg src,
-			       fs_inst *pre_rhs_inst,
-			       fs_inst *last_rhs_inst);
-   void emit_assignment_writes(fs_reg &l, fs_reg &r,
-			       const glsl_type *type, bool predicated);
    void resolve_ud_negate(fs_reg *reg);
-   void resolve_bool_comparison(ir_rvalue *rvalue, fs_reg *reg);
 
    fs_reg get_timestamp(fs_inst **out_mov);
 
    struct brw_reg interp_reg(int location, int channel);
-   void setup_uniform_values(ir_variable *ir);
-   void setup_builtin_uniform_values(ir_variable *ir);
    int implied_mrf_writes(fs_inst *inst);
 
    virtual void dump_instructions();
    virtual void dump_instructions(const char *name);
    void dump_instruction(backend_instruction *inst);
    void dump_instruction(backend_instruction *inst, FILE *file);
-
-   void visit_atomic_counter_intrinsic(ir_call *ir);
 
    const void *const key;
    const struct brw_sampler_prog_key_data *key_tex;
@@ -438,7 +393,6 @@ public:
     */
    int *push_constant_loc;
 
-   struct hash_table *variable_ht;
    fs_reg frag_depth;
    fs_reg sample_mask;
    fs_reg outputs[VARYING_SLOT_MAX];
@@ -465,7 +419,7 @@ public:
    bool simd16_unsupported;
    char *no16_msg;
 
-   /* Result of last visit() method. */
+   /* Result of last visit() method. Still used by emit_texture() */
    fs_reg result;
 
    /** Register numbers for thread payload fields. */

@@ -1129,115 +1129,16 @@ fs_reg::fs_reg(enum register_file file, int reg, enum brw_reg_type type,
    this->width = width;
 }
 
-fs_reg *
-fs_visitor::variable_storage(ir_variable *var)
-{
-   return (fs_reg *)hash_table_find(this->variable_ht, var);
-}
-
-void
-import_uniforms_callback(const void *key,
-			 void *data,
-			 void *closure)
-{
-   struct hash_table *dst_ht = (struct hash_table *)closure;
-   const fs_reg *reg = (const fs_reg *)data;
-
-   if (reg->file != UNIFORM)
-      return;
-
-   hash_table_insert(dst_ht, data, key);
-}
-
 /* For SIMD16, we need to follow from the uniform setup of SIMD8 dispatch.
  * This brings in those uniform definitions
  */
 void
 fs_visitor::import_uniforms(fs_visitor *v)
 {
-   hash_table_call_foreach(v->variable_ht,
-			   import_uniforms_callback,
-			   variable_ht);
    this->push_constant_loc = v->push_constant_loc;
    this->pull_constant_loc = v->pull_constant_loc;
    this->uniforms = v->uniforms;
    this->param_size = v->param_size;
-}
-
-/* Our support for uniforms is piggy-backed on the struct
- * gl_fragment_program, because that's where the values actually
- * get stored, rather than in some global gl_shader_program uniform
- * store.
- */
-void
-fs_visitor::setup_uniform_values(ir_variable *ir)
-{
-   int namelen = strlen(ir->name);
-
-   /* The data for our (non-builtin) uniforms is stored in a series of
-    * gl_uniform_driver_storage structs for each subcomponent that
-    * glGetUniformLocation() could name.  We know it's been set up in the same
-    * order we'd walk the type, so walk the list of storage and find anything
-    * with our name, or the prefix of a component that starts with our name.
-    */
-   unsigned params_before = uniforms;
-   for (unsigned u = 0; u < shader_prog->NumUserUniformStorage; u++) {
-      struct gl_uniform_storage *storage = &shader_prog->UniformStorage[u];
-
-      if (strncmp(ir->name, storage->name, namelen) != 0 ||
-          (storage->name[namelen] != 0 &&
-           storage->name[namelen] != '.' &&
-           storage->name[namelen] != '[')) {
-         continue;
-      }
-
-      unsigned slots = storage->type->component_slots();
-      if (storage->array_elements)
-         slots *= storage->array_elements;
-
-      for (unsigned i = 0; i < slots; i++) {
-         stage_prog_data->param[uniforms++] = &storage->storage[i];
-      }
-   }
-
-   /* Make sure we actually initialized the right amount of stuff here. */
-   assert(params_before + ir->type->component_slots() == uniforms);
-   (void)params_before;
-}
-
-
-/* Our support for builtin uniforms is even scarier than non-builtin.
- * It sits on top of the PROG_STATE_VAR parameters that are
- * automatically updated from GL context state.
- */
-void
-fs_visitor::setup_builtin_uniform_values(ir_variable *ir)
-{
-   const ir_state_slot *const slots = ir->get_state_slots();
-   assert(slots != NULL);
-
-   for (unsigned int i = 0; i < ir->get_num_state_slots(); i++) {
-      /* This state reference has already been setup by ir_to_mesa, but we'll
-       * get the same index back here.
-       */
-      int index = _mesa_add_state_reference(this->prog->Parameters,
-					    (gl_state_index *)slots[i].tokens);
-
-      /* Add each of the unique swizzles of the element as a parameter.
-       * This'll end up matching the expected layout of the
-       * array/matrix/structure we're trying to fill in.
-       */
-      int last_swiz = -1;
-      for (unsigned int j = 0; j < 4; j++) {
-	 int swiz = GET_SWZ(slots[i].swizzle, j);
-	 if (swiz == last_swiz)
-	    break;
-	 last_swiz = swiz;
-
-         stage_prog_data->param[uniforms++] =
-            &prog->Parameters->ParameterValues[index][swiz];
-      }
-   }
 }
 
 fs_reg *
