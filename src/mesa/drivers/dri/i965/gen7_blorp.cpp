@@ -794,6 +794,8 @@ gen7_blorp_exec(struct brw_context *brw,
    }
    depthstencil_offset = gen6_blorp_emit_depth_stencil_state(brw, params);
    gen7_blorp_emit_depth_stencil_state_pointers(brw, depthstencil_offset);
+   if (brw->use_resource_streamer)
+      gen7_disable_hw_binding_tables(brw);
    if (params->use_wm_prog) {
       uint32_t wm_surf_offset_renderbuffer;
       uint32_t wm_surf_offset_texture = 0;
