@@ -218,8 +218,13 @@ def _parser():
     return parser.parse_args()
 
 
-if __name__ == '__main__':
+def main():
+    """Main function."""
     args = _parser()
     printer = PrintCode()
     api = gl_XML.parse_GL_API(args.filename)
     printer.Print(api)
+
+
+if __name__ == '__main__':
+    main()
