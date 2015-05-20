@@ -95,7 +95,7 @@ gallium_DRIVERS += libmesa_winsys_svga libmesa_pipe_svga
 LOCAL_CFLAGS += -DGALLIUM_VMWGFX
 endif
 ifneq ($(filter nouveau r600g,$(MESA_GPU_DRIVERS)),)
-LOCAL_SHARED_LIBRARIES += libstlport
+LOCAL_SHARED_LIBRARIES += $(if $(filter true,$(MESA_LOLLIPOP_BUILD)),libc++,libstlport)
 endif
 
 LOCAL_STATIC_LIBRARIES := \
@@ -116,6 +116,7 @@ LOCAL_STATIC_LIBRARIES += \
 	libLLVMR600Info \
 	libLLVMR600AsmPrinter \
 	libelf
+LOCAL_LDLIBS += $(if $(filter true,$(MESA_LOLLIPOP_BUILD)),-lgcc)
 endif
 
 include $(GALLIUM_COMMON_MK)
