@@ -89,13 +89,9 @@ SUBDIRS := \
 	src/glsl \
 	src/mesa \
 	src/util \
-	src/egl/main
-
-ifeq ($(strip $(MESA_BUILD_CLASSIC)),true)
-SUBDIRS += \
+	src/egl/main \
 	src/egl/drivers/dri2 \
 	src/mesa/drivers/dri
-endif
 
 ifeq ($(strip $(MESA_BUILD_GALLIUM)),true)
 SUBDIRS += src/gallium
