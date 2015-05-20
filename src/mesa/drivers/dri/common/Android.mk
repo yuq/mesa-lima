@@ -39,7 +39,9 @@ intermediates := $(call local-generated-sources-dir)
 LOCAL_C_INCLUDES := \
     $(MESA_DRI_C_INCLUDES)
 
-LOCAL_EXPORT_C_INCLUDE_DIRS := $(intermediates)
+LOCAL_EXPORT_C_INCLUDE_DIRS := \
+    $(LOCAL_PATH) \
+    $(intermediates)
 
 # swrast only
 ifeq ($(MESA_GPU_DRIVERS),swrast)
