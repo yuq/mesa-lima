@@ -40,6 +40,12 @@ _mesa_readpixels_needs_slow_path(const struct gl_context *ctx, GLenum format,
 extern GLboolean
 _mesa_need_rgb_to_luminance_conversion(mesa_format texFormat, GLenum format);
 
+extern GLbitfield
+_mesa_get_readpixels_transfer_ops(const struct gl_context *ctx,
+                                  mesa_format texFormat,
+                                  GLenum format, GLenum type,
+                                  GLboolean uses_blit);
+
 extern void
 _mesa_readpixels(struct gl_context *ctx,
                  GLint x, GLint y, GLsizei width, GLsizei height,

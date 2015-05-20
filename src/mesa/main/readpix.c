@@ -64,9 +64,11 @@ _mesa_need_rgb_to_luminance_conversion(mesa_format texFormat, GLenum format)
 /**
  * Return transfer op flags for this ReadPixels operation.
  */
-static GLbitfield
-get_readpixels_transfer_ops(const struct gl_context *ctx, mesa_format texFormat,
-                            GLenum format, GLenum type, GLboolean uses_blit)
+GLbitfield
+_mesa_get_readpixels_transfer_ops(const struct gl_context *ctx,
+                                  mesa_format texFormat,
+                                  GLenum format, GLenum type,
+                                  GLboolean uses_blit)
 {
    GLbitfield transferOps = ctx->_ImageTransferState;
 
@@ -153,8 +155,8 @@ _mesa_readpixels_needs_slow_path(const struct gl_context *ctx, GLenum format,
       }
 
       /* And finally, see if there are any transfer ops. */
-      return get_readpixels_transfer_ops(ctx, rb->Format, format, type,
-                                         uses_blit) != 0;
+      return _mesa_get_readpixels_transfer_ops(ctx, rb->Format, format, type,
+                                               uses_blit) != 0;
    }
    return GL_FALSE;
 }
@@ -420,8 +422,8 @@ read_rgba_pixels( struct gl_context *ctx,
    if (!rb)
       return;
 
-   transferOps = get_readpixels_transfer_ops(ctx, rb->Format, format, type,
-                                             GL_FALSE);
+   transferOps = _mesa_get_readpixels_transfer_ops(ctx, rb->Format, format,
+                                                   type, GL_FALSE);
    /* Describe the dst format */
    dst_is_integer = _mesa_is_enum_format_integer(format);
    dst_stride = _mesa_image_row_stride(packing, width, format, type);
