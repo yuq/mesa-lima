@@ -79,5 +79,6 @@ ifneq ($(filter vmwgfx, $(MESA_GPU_DRIVERS)),)
 SUBDIRS += winsys/svga/drm drivers/svga
 endif
 
-mkfiles := $(patsubst %,$(GALLIUM_TOP)/%/Android.mk,$(SUBDIRS))
-include $(mkfiles)
+SUBDIRS += state_trackers/dri
+
+include $(call all-named-subdir-makefiles,$(SUBDIRS))
