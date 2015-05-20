@@ -26,7 +26,7 @@
 #define UNSUPPORTED ~0U
 
 static const struct anv_format anv_formats[] = {
-   [VK_FORMAT_UNDEFINED] = { .format = RAW },
+   [VK_FORMAT_UNDEFINED] = { .format = RAW, .cpp = 1, .channels = 1 },
    [VK_FORMAT_R4G4_UNORM] = { .format = UNSUPPORTED },
    [VK_FORMAT_R4G4_USCALED] = { .format = UNSUPPORTED },
    [VK_FORMAT_R4G4B4A4_UNORM] = { .format = UNSUPPORTED },
