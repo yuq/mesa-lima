@@ -248,6 +248,24 @@ fail:
    return success;
 }
 
+static bool
+need_signed_unsigned_int_conversion(mesa_format rbFormat,
+                                    GLenum format, GLenum type)
+{
+   const GLenum srcType = _mesa_get_format_datatype(rbFormat);
+   const bool is_dst_format_integer = _mesa_is_enum_format_integer(format);
+   return (srcType == GL_INT &&
+           is_dst_format_integer &&
+           (type == GL_UNSIGNED_INT ||
+            type == GL_UNSIGNED_SHORT ||
+            type == GL_UNSIGNED_BYTE)) ||
+          (srcType == GL_UNSIGNED_INT &&
+           is_dst_format_integer &&
+           (type == GL_INT ||
+            type == GL_SHORT ||
+            type == GL_BYTE));
+}
+
 bool
 _mesa_meta_pbo_GetTexSubImage(struct gl_context *ctx, GLuint dims,
                               struct gl_texture_image *tex_image,
@@ -285,6 +303,14 @@ _mesa_meta_pbo_GetTexSubImage(struct gl_context *ctx, GLuint dims,
          return false;
 
       if (_mesa_need_rgb_to_luminance_conversion(rb->Format, format))
+         return false;
+
+      /* This function rely on BlitFramebuffer to fill in the pixel data for
+       * ReadPixels. But, BlitFrameBuffer doesn't support signed to unsigned
+       * or unsigned to signed integer conversions. OpenGL spec expects an
+       * invalid operation in that case.
+       */
+      if (need_signed_unsigned_int_conversion(rb->Format, format, type))
          return false;
    }
 
