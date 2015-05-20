@@ -290,7 +290,7 @@ $(MESA_GLX_DIR)/indirect_init.c: glX_proto_send.py $(COMMON_GLX)
 
 $(MESA_GLX_DIR)/indirect_size.h $(XORG_GLX_DIR)/indirect_size.h: glX_proto_size.py $(COMMON_GLX)
 	$(PYTHON_GEN) $< -f $(srcdir)/gl_API.xml -m size_h --only-set \
-	    -h _INDIRECT_SIZE_H_ \
+	    --header-tag _INDIRECT_SIZE_H_ \
 	  | $(INDENT) $(INDENT_FLAGS) > $@
 
 $(MESA_GLX_DIR)/indirect_size.c: glX_proto_size.py $(COMMON_GLX)
