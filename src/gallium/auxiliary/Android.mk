@@ -35,6 +35,14 @@ LOCAL_SRC_FILES := \
 LOCAL_C_INCLUDES := \
 	$(GALLIUM_TOP)/auxiliary/util
 
+ifeq ($(MESA_ENABLE_LLVM),true)
+LOCAL_SRC_FILES += \
+	$(GALLIVM_SOURCES) \
+	$(GALLIVM_CPP_SOURCES)
+
+LOCAL_CPPFLAGS := -std=c++11
+endif
+
 LOCAL_MODULE := libmesa_gallium
 
 # generate sources
