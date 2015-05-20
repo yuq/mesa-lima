@@ -1799,11 +1799,6 @@ ilo_gpe_set_fb(const struct ilo_dev *dev,
 
    util_copy_framebuffer_state(&fb->state, state);
 
-   ilo_gpe_init_view_surface_null(dev,
-         (state->width) ? state->width : 1,
-         (state->height) ? state->height : 1,
-         1, 0, &fb->null_rt);
-
    for (i = 0; i < state->nr_cbufs; i++) {
       if (state->cbufs[i]) {
          fb_set_blend_caps(dev, state->cbufs[i]->format, &fb->blend_caps[i]);

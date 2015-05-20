@@ -29,6 +29,8 @@
 #define ILO_STATE_H
 
 #include "core/ilo_state_3d.h"
+#include "core/ilo_state_surface.h"
+#include "core/ilo_state_zs.h"
 #include "pipe/p_state.h"
 #include "util/u_dynarray.h"
 
@@ -120,6 +122,39 @@ enum ilo_dirty_flags {
 };
 
 struct ilo_context;
+
+struct ilo_cbuf_cso {
+   struct pipe_resource *resource;
+   struct ilo_state_surface_buffer_info info;
+   struct ilo_state_surface surface;
+
+   /*
+    * this CSO is not so constant because user buffer needs to be uploaded in
+    * finalize_constant_buffers()
+    */
+   const void *user_buffer;
+};
+
+struct ilo_cbuf_state {
+   struct ilo_cbuf_cso cso[ILO_MAX_CONST_BUFFERS];
+   uint32_t enabled_mask;
+};
+
+struct ilo_resource_state {
+   struct pipe_surface *states[PIPE_MAX_SHADER_RESOURCES];
+   unsigned count;
+};
+
+struct ilo_view_cso {
+   struct pipe_sampler_view base;
+
+   struct ilo_state_surface surface;
+};
+
+struct ilo_view_state {
+   struct pipe_sampler_view *states[ILO_MAX_SAMPLER_VIEWS];
+   unsigned count;
+};
 
 struct ilo_global_binding_cso {
    struct pipe_resource *resource;

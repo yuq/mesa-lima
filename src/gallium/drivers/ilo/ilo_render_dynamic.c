@@ -234,13 +234,13 @@ gen6_emit_draw_dynamic_pcb(struct ilo_render *r,
             const struct ilo_cbuf_state *cbuf =
                &vec->cbuf[PIPE_SHADER_VERTEX];
 
-            if (cbuf0_size <= cbuf->cso[0].user_buffer_size) {
+            if (cbuf0_size <= cbuf->cso[0].info.size) {
                memcpy(pcb, cbuf->cso[0].user_buffer, cbuf0_size);
             } else {
                memcpy(pcb, cbuf->cso[0].user_buffer,
-                     cbuf->cso[0].user_buffer_size);
-               memset(pcb + cbuf->cso[0].user_buffer_size, 0,
-                     cbuf0_size - cbuf->cso[0].user_buffer_size);
+                     cbuf->cso[0].info.size);
+               memset(pcb + cbuf->cso[0].info.size, 0,
+                     cbuf0_size - cbuf->cso[0].info.size);
             }
 
             pcb += cbuf0_size;
@@ -271,13 +271,13 @@ gen6_emit_draw_dynamic_pcb(struct ilo_render *r,
             gen6_push_constant_buffer(r->builder, cbuf0_size, &pcb);
          r->state.wm.PUSH_CONSTANT_BUFFER_size = cbuf0_size;
 
-         if (cbuf0_size <= cbuf->cso[0].user_buffer_size) {
+         if (cbuf0_size <= cbuf->cso[0].info.size) {
             memcpy(pcb, cbuf->cso[0].user_buffer, cbuf0_size);
          } else {
             memcpy(pcb, cbuf->cso[0].user_buffer,
-                  cbuf->cso[0].user_buffer_size);
-            memset(pcb + cbuf->cso[0].user_buffer_size, 0,
-                  cbuf0_size - cbuf->cso[0].user_buffer_size);
+                  cbuf->cso[0].info.size);
+            memset(pcb + cbuf->cso[0].info.size, 0,
+                  cbuf0_size - cbuf->cso[0].info.size);
          }
 
          session->pcb_fs_changed = true;

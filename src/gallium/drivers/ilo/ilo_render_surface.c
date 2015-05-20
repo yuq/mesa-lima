@@ -64,11 +64,9 @@ gen6_emit_draw_surface_rt(struct ilo_render *r,
             (const struct ilo_surface_cso *) fb->state.cbufs[i];
 
          assert(surface->is_rt);
-         surface_state[i] =
-            gen6_SURFACE_STATE(r->builder, &surface->u.rt, true);
+         surface_state[i] = gen6_SURFACE_STATE(r->builder, &surface->u.rt);
       } else {
-         surface_state[i] =
-            gen6_SURFACE_STATE(r->builder, &fb->null_rt, true);
+         surface_state[i] = gen6_SURFACE_STATE(r->builder, &fb->null_rt);
       }
    }
 }
@@ -173,8 +171,7 @@ gen6_emit_draw_surface_view(struct ilo_render *r,
          const struct ilo_view_cso *cso =
             (const struct ilo_view_cso *) view->states[i];
 
-         surface_state[i] =
-            gen6_SURFACE_STATE(r->builder, &cso->surface, false);
+         surface_state[i] = gen6_SURFACE_STATE(r->builder, &cso->surface);
       } else {
          surface_state[i] = 0;
       }
@@ -228,12 +225,10 @@ gen6_emit_draw_surface_const(struct ilo_render *r,
    for (i = 0; i < count; i++) {
       const struct ilo_cbuf_cso *cso = &cbuf->cso[i];
 
-      if (cso->resource) {
-         surface_state[i] = gen6_SURFACE_STATE(r->builder,
-               &cso->surface, false);
-      } else {
+      if (cso->resource)
+         surface_state[i] = gen6_SURFACE_STATE(r->builder, &cso->surface);
+      else
          surface_state[i] = 0;
-      }
    }
 }
 
@@ -406,8 +401,7 @@ gen6_emit_launch_grid_surface_view(struct ilo_render *r,
          const struct ilo_view_cso *cso =
             (const struct ilo_view_cso *) view->states[i];
 
-         surface_state[i] =
-            gen6_SURFACE_STATE(r->builder, &cso->surface, false);
+         surface_state[i] = gen6_SURFACE_STATE(r->builder, &cso->surface);
       } else {
          surface_state[i] = 0;
       }
@@ -421,7 +415,8 @@ gen6_emit_launch_grid_surface_const(struct ilo_render *r,
 {
    const struct ilo_shader_state *cs = vec->cs;
    uint32_t *surface_state = r->state.cs.SURFACE_STATE;
-   struct ilo_view_surface view;
+   struct ilo_state_surface_buffer_info info;
+   struct ilo_state_surface surf;
    int base, count;
 
    ILO_DEV_ASSERT(r->dev, 7, 7.5);
@@ -432,15 +427,22 @@ gen6_emit_launch_grid_surface_const(struct ilo_render *r,
    if (!count)
       return;
 
-   ilo_gpe_init_view_surface_for_buffer(r->dev,
-         ilo_buffer(session->input->buffer),
-         session->input->buffer_offset,
-         session->input->buffer_size,
-         1, PIPE_FORMAT_NONE,
-         false, &view);
+   memset(&info, 0, sizeof(info));
+   info.buf = ilo_buffer(session->input->buffer);
+   info.access = ILO_STATE_SURFACE_ACCESS_DP_UNTYPED;
+   info.format = GEN6_FORMAT_RAW;
+   info.format_size = 1;
+   info.struct_size = 1;
+   info.readonly = true;
+   info.offset = session->input->buffer_offset;
+   info.size = session->input->buffer_size;
+
+   memset(&surf, 0, sizeof(surf));
+   ilo_state_surface_init_for_buffer(&surf, r->dev, &info);
+   surf.bo = info.buf->bo;
 
    assert(count == 1 && session->input->buffer);
-   surface_state[base] = gen6_SURFACE_STATE(r->builder, &view, false);
+   surface_state[base] = gen6_SURFACE_STATE(r->builder, &surf);
 }
 
 static void
@@ -483,14 +485,24 @@ gen6_emit_launch_grid_surface_global(struct ilo_render *r,
    for (i = 0; i < count; i++) {
       if (i < vec->global_binding.count && bindings[i].resource) {
          const struct ilo_buffer *buf = ilo_buffer(bindings[i].resource);
-         struct ilo_view_surface view;
+         struct ilo_state_surface_buffer_info info;
+         struct ilo_state_surface surf;
 
          assert(bindings[i].resource->target == PIPE_BUFFER);
 
-         ilo_gpe_init_view_surface_for_buffer(r->dev, buf, 0, buf->bo_size,
-               1, PIPE_FORMAT_NONE, true, &view);
-         surface_state[i] =
-            gen6_SURFACE_STATE(r->builder, &view, true);
+         memset(&info, 0, sizeof(info));
+         info.buf = buf;
+         info.access = ILO_STATE_SURFACE_ACCESS_DP_UNTYPED;
+         info.format = GEN6_FORMAT_RAW;
+         info.format_size = 1;
+         info.struct_size = 1;
+         info.size = buf->bo_size;
+
+         memset(&surf, 0, sizeof(surf));
+         ilo_state_surface_init_for_buffer(&surf, r->dev, &info);
+         surf.bo = info.buf->bo;
+
+         surface_state[i] = gen6_SURFACE_STATE(r->builder, &surf);
       } else {
          surface_state[i] = 0;
       }

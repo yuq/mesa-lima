@@ -33,6 +33,7 @@
 
 #include "ilo_core.h"
 #include "ilo_dev.h"
+#include "ilo_state_surface.h"
 #include "ilo_state_zs.h"
 
 /**
@@ -214,53 +215,12 @@ struct ilo_sampler_state {
    const struct ilo_sampler_cso *cso[ILO_MAX_SAMPLERS];
 };
 
-struct ilo_view_surface {
-   /* SURFACE_STATE */
-   uint32_t payload[13];
-   struct intel_bo *bo;
-
-   uint32_t scanout;
-};
-
-struct ilo_view_cso {
-   struct pipe_sampler_view base;
-
-   struct ilo_view_surface surface;
-};
-
-struct ilo_view_state {
-   struct pipe_sampler_view *states[ILO_MAX_SAMPLER_VIEWS];
-   unsigned count;
-};
-
-struct ilo_cbuf_cso {
-   struct pipe_resource *resource;
-   struct ilo_view_surface surface;
-
-   /*
-    * this CSO is not so constant because user buffer needs to be uploaded in
-    * finalize_constant_buffers()
-    */
-   const void *user_buffer;
-   unsigned user_buffer_size;
-};
-
-struct ilo_cbuf_state {
-   struct ilo_cbuf_cso cso[ILO_MAX_CONST_BUFFERS];
-   uint32_t enabled_mask;
-};
-
-struct ilo_resource_state {
-   struct pipe_surface *states[PIPE_MAX_SHADER_RESOURCES];
-   unsigned count;
-};
-
 struct ilo_surface_cso {
    struct pipe_surface base;
 
    bool is_rt;
    union {
-      struct ilo_view_surface rt;
+      struct ilo_state_surface rt;
       struct ilo_state_zs zs;
    } u;
 };
@@ -268,7 +228,7 @@ struct ilo_surface_cso {
 struct ilo_fb_state {
    struct pipe_framebuffer_state state;
 
-   struct ilo_view_surface null_rt;
+   struct ilo_state_surface null_rt;
    struct ilo_state_zs null_zs;
 
    struct ilo_fb_blend_caps {
@@ -284,33 +244,6 @@ struct ilo_fb_state {
 struct ilo_shader_cso {
    uint32_t payload[5];
 };
-
-/**
- * Translate a pipe texture target to the matching hardware surface type.
- */
-static inline int
-ilo_gpe_gen6_translate_texture(enum pipe_texture_target target)
-{
-   switch (target) {
-   case PIPE_BUFFER:
-      return GEN6_SURFTYPE_BUFFER;
-   case PIPE_TEXTURE_1D:
-   case PIPE_TEXTURE_1D_ARRAY:
-      return GEN6_SURFTYPE_1D;
-   case PIPE_TEXTURE_2D:
-   case PIPE_TEXTURE_RECT:
-   case PIPE_TEXTURE_2D_ARRAY:
-      return GEN6_SURFTYPE_2D;
-   case PIPE_TEXTURE_3D:
-      return GEN6_SURFTYPE_3D;
-   case PIPE_TEXTURE_CUBE:
-   case PIPE_TEXTURE_CUBE_ARRAY:
-      return GEN6_SURFTYPE_CUBE;
-   default:
-      assert(!"unknown texture target");
-      return GEN6_SURFTYPE_BUFFER;
-   }
-}
 
 void
 ilo_gpe_init_ve(const struct ilo_dev *dev,
@@ -361,32 +294,6 @@ void
 ilo_gpe_init_sampler_cso(const struct ilo_dev *dev,
                          const struct pipe_sampler_state *state,
                          struct ilo_sampler_cso *sampler);
-
-void
-ilo_gpe_init_view_surface_null(const struct ilo_dev *dev,
-                               unsigned width, unsigned height,
-                               unsigned depth, unsigned level,
-                               struct ilo_view_surface *surf);
-
-void
-ilo_gpe_init_view_surface_for_buffer(const struct ilo_dev *dev,
-                                     const struct ilo_buffer *buf,
-                                     unsigned offset, unsigned size,
-                                     unsigned struct_size,
-                                     enum pipe_format elem_format,
-                                     bool is_rt,
-                                     struct ilo_view_surface *surf);
-
-void
-ilo_gpe_init_view_surface_for_image(const struct ilo_dev *dev,
-                                    const struct ilo_image *img,
-                                    enum pipe_format format,
-                                    unsigned first_level,
-                                    unsigned num_levels,
-                                    unsigned first_layer,
-                                    unsigned num_layers,
-                                    bool is_rt,
-                                    struct ilo_view_surface *surf);
 
 void
 ilo_gpe_init_vs_cso(const struct ilo_dev *dev,

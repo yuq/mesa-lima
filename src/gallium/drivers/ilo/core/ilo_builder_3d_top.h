@@ -1627,8 +1627,7 @@ gen6_BINDING_TABLE_STATE(struct ilo_builder *builder,
 
 static inline uint32_t
 gen6_SURFACE_STATE(struct ilo_builder *builder,
-                   const struct ilo_view_surface *surf,
-                   bool for_render)
+                   const struct ilo_state_surface *surf)
 {
    int state_align, state_len;
    uint32_t state_offset, *dw;
@@ -1641,7 +1640,7 @@ gen6_SURFACE_STATE(struct ilo_builder *builder,
 
       state_offset = ilo_builder_surface_pointer(builder,
             ILO_BUILDER_ITEM_SURFACE, state_align, state_len, &dw);
-      memcpy(dw, surf->payload, state_len << 2);
+      memcpy(dw, surf->surface, state_len << 2);
 
       if (surf->bo) {
          const uint32_t mocs = (surf->scanout) ?
@@ -1650,7 +1649,7 @@ gen6_SURFACE_STATE(struct ilo_builder *builder,
          dw[1] |= mocs << GEN8_SURFACE_DW1_MOCS__SHIFT;
 
          ilo_builder_surface_reloc64(builder, state_offset, 8, surf->bo,
-               surf->payload[8], (for_render) ? INTEL_RELOC_WRITE : 0);
+               surf->surface[8], (surf->readonly) ? 0 : INTEL_RELOC_WRITE);
       }
    } else {
       state_align = 32;
@@ -1658,7 +1657,7 @@ gen6_SURFACE_STATE(struct ilo_builder *builder,
 
       state_offset = ilo_builder_surface_pointer(builder,
             ILO_BUILDER_ITEM_SURFACE, state_align, state_len, &dw);
-      memcpy(dw, surf->payload, state_len << 2);
+      memcpy(dw, surf->surface, state_len << 2);
 
       if (surf->bo) {
          /*
@@ -1668,7 +1667,7 @@ gen6_SURFACE_STATE(struct ilo_builder *builder,
          dw[5] |= builder->mocs << GEN6_SURFACE_DW5_MOCS__SHIFT;
 
          ilo_builder_surface_reloc(builder, state_offset, 1, surf->bo,
-               surf->payload[1], (for_render) ? INTEL_RELOC_WRITE : 0);
+               surf->surface[1], (surf->readonly) ? 0 : INTEL_RELOC_WRITE);
       }
    }
 
@@ -1682,38 +1681,49 @@ gen6_so_SURFACE_STATE(struct ilo_builder *builder,
                       int so_index)
 {
    struct ilo_buffer *buf = ilo_buffer(so->buffer);
-   unsigned bo_offset, struct_size;
-   enum pipe_format elem_format;
-   struct ilo_view_surface surf;
+   struct ilo_state_surface_buffer_info info;
+   struct ilo_state_surface surf;
 
    ILO_DEV_ASSERT(builder->dev, 6, 6);
 
-   bo_offset = so->buffer_offset + so_info->output[so_index].dst_offset * 4;
-   struct_size = so_info->stride[so_info->output[so_index].output_buffer] * 4;
+   memset(&info, 0, sizeof(info));
+   info.buf = buf;
+   info.access = ILO_STATE_SURFACE_ACCESS_DP_SVB;
 
    switch (so_info->output[so_index].num_components) {
    case 1:
-      elem_format = PIPE_FORMAT_R32_FLOAT;
+      info.format = GEN6_FORMAT_R32_FLOAT;
+      info.format_size = 4;
       break;
    case 2:
-      elem_format = PIPE_FORMAT_R32G32_FLOAT;
+      info.format = GEN6_FORMAT_R32G32_FLOAT;
+      info.format_size = 8;
       break;
    case 3:
-      elem_format = PIPE_FORMAT_R32G32B32_FLOAT;
+      info.format = GEN6_FORMAT_R32G32B32_FLOAT;
+      info.format_size = 12;
       break;
    case 4:
-      elem_format = PIPE_FORMAT_R32G32B32A32_FLOAT;
+      info.format = GEN6_FORMAT_R32G32B32A32_FLOAT;
+      info.format_size = 16;
       break;
    default:
       assert(!"unexpected SO components length");
-      elem_format = PIPE_FORMAT_R32_FLOAT;
+      info.format = GEN6_FORMAT_R32_FLOAT;
+      info.format_size = 4;
       break;
    }
 
-   ilo_gpe_init_view_surface_for_buffer(builder->dev, buf, bo_offset,
-         so->buffer_size, struct_size, elem_format, false, &surf);
+   info.struct_size =
+      so_info->stride[so_info->output[so_index].output_buffer] * 4;
+   info.offset = so->buffer_offset + so_info->output[so_index].dst_offset * 4;
+   info.size = so->buffer_size - so_info->output[so_index].dst_offset * 4;
 
-   return gen6_SURFACE_STATE(builder, &surf, false);
+   memset(&surf, 0, sizeof(surf));
+   ilo_state_surface_init_for_buffer(&surf, builder->dev, &info);
+   surf.bo = info.buf->bo;
+
+   return gen6_SURFACE_STATE(builder, &surf);
 }
 
 static inline uint32_t
