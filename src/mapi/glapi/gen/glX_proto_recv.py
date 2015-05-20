@@ -545,7 +545,8 @@ def _parser():
     return parser.parse_args()
 
 
-if __name__ == '__main__':
+def main():
+    """Main function."""
     args = _parser()
 
     if args._mode == "dispatch_c":
@@ -557,3 +558,7 @@ if __name__ == '__main__':
         args.filename, glX_proto_common.glx_proto_item_factory())
 
     printer.Print(api)
+
+
+if __name__ == '__main__':
+    main()
