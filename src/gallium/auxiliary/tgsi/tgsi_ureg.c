@@ -123,8 +123,11 @@ struct ureg_program
       unsigned semantic_name;
       unsigned semantic_index;
       unsigned usage_mask; /* = TGSI_WRITEMASK_* */
+      unsigned first;
+      unsigned last;
+      unsigned array_id;
    } output[UREG_MAX_OUTPUT];
-   unsigned nr_outputs;
+   unsigned nr_outputs, nr_output_regs;
 
    struct {
       union {
@@ -332,10 +335,12 @@ ureg_DECL_system_value(struct ureg_program *ureg,
 
 
 struct ureg_dst 
-ureg_DECL_output_masked( struct ureg_program *ureg,
-                         unsigned name,
-                         unsigned index,
-                         unsigned usage_mask )
+ureg_DECL_output_masked(struct ureg_program *ureg,
+                        unsigned name,
+                        unsigned index,
+                        unsigned usage_mask,
+                        unsigned array_id,
+                        unsigned array_size)
 {
    unsigned i;
 
@@ -343,7 +348,8 @@ ureg_DECL_output_masked( struct ureg_program *ureg,
 
    for (i = 0; i < ureg->nr_outputs; i++) {
       if (ureg->output[i].semantic_name == name &&
-          ureg->output[i].semantic_index == index) { 
+          ureg->output[i].semantic_index == index) {
+         assert(ureg->output[i].array_id == array_id);
          ureg->output[i].usage_mask |= usage_mask;
          goto out;
       }
@@ -353,6 +359,10 @@ ureg_DECL_output_masked( struct ureg_program *ureg,
       ureg->output[i].semantic_name = name;
       ureg->output[i].semantic_index = index;
       ureg->output[i].usage_mask = usage_mask;
+      ureg->output[i].first = ureg->nr_output_regs;
+      ureg->output[i].last = ureg->nr_output_regs + array_size - 1;
+      ureg->output[i].array_id = array_id;
+      ureg->nr_output_regs += array_size;
       ureg->nr_outputs++;
    }
    else {
@@ -360,16 +370,30 @@ ureg_DECL_output_masked( struct ureg_program *ureg,
    }
 
 out:
-   return ureg_dst_register( TGSI_FILE_OUTPUT, i );
+   return ureg_dst_array_register(TGSI_FILE_OUTPUT, ureg->output[i].first,
+                                  array_id);
 }
 
 
 struct ureg_dst 
-ureg_DECL_output( struct ureg_program *ureg,
-                  unsigned name,
-                  unsigned index )
+ureg_DECL_output(struct ureg_program *ureg,
+                 unsigned name,
+                 unsigned index)
 {
-   return ureg_DECL_output_masked(ureg, name, index, TGSI_WRITEMASK_XYZW);
+   return ureg_DECL_output_masked(ureg, name, index, TGSI_WRITEMASK_XYZW,
+                                  0, 1);
+}
+
+struct ureg_dst
+ureg_DECL_output_array(struct ureg_program *ureg,
+                       unsigned semantic_name,
+                       unsigned semantic_index,
+                       unsigned array_id,
+                       unsigned array_size)
+{
+   return ureg_DECL_output_masked(ureg, semantic_name, semantic_index,
+                                  TGSI_WRITEMASK_XYZW,
+                                  array_id, array_size);
 }
 
 
@@ -1516,10 +1540,12 @@ static void emit_decls( struct ureg_program *ureg )
    for (i = 0; i < ureg->nr_outputs; i++) {
       emit_decl_semantic(ureg,
                          TGSI_FILE_OUTPUT,
-                         i, i,
+                         ureg->output[i].first,
+                         ureg->output[i].last,
                          ureg->output[i].semantic_name,
                          ureg->output[i].semantic_index,
-                         ureg->output[i].usage_mask, 0);
+                         ureg->output[i].usage_mask,
+                         ureg->output[i].array_id);
    }
 
    for (i = 0; i < ureg->nr_samplers; i++) {

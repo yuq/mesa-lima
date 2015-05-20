@@ -222,15 +222,24 @@ ureg_DECL_system_value(struct ureg_program *,
                        unsigned semantic_index);
 
 struct ureg_dst
-ureg_DECL_output_masked( struct ureg_program *,
-                         unsigned semantic_name,
-                         unsigned semantic_index,
-                         unsigned usage_mask );
+ureg_DECL_output_masked(struct ureg_program *,
+                        unsigned semantic_name,
+                        unsigned semantic_index,
+                        unsigned usage_mask,
+                        unsigned array_id,
+                        unsigned array_size);
 
 struct ureg_dst
-ureg_DECL_output( struct ureg_program *,
-                  unsigned semantic_name,
-                  unsigned semantic_index );
+ureg_DECL_output(struct ureg_program *,
+                 unsigned semantic_name,
+                 unsigned semantic_index);
+
+struct ureg_dst
+ureg_DECL_output_array(struct ureg_program *ureg,
+                       unsigned semantic_name,
+                       unsigned semantic_index,
+                       unsigned array_id,
+                       unsigned array_size);
 
 struct ureg_src
 ureg_DECL_immediate( struct ureg_program *,
@@ -1175,14 +1184,14 @@ ureg_src_array_offset(struct ureg_src reg, int offset)
 static INLINE struct ureg_dst
 ureg_dst_array_offset( struct ureg_dst reg, int offset )
 {
-   assert(reg.File == TGSI_FILE_TEMPORARY);
    reg.Index += offset;
    return reg;
 }
 
 static INLINE struct ureg_dst
-ureg_dst_register( unsigned file,
-                   unsigned index )
+ureg_dst_array_register(unsigned file,
+                        unsigned index,
+                        unsigned array_id)
 {
    struct ureg_dst dst;
 
@@ -1206,9 +1215,16 @@ ureg_dst_register( unsigned file,
    dst.DimIndFile = TGSI_FILE_NULL;
    dst.DimIndIndex = 0;
    dst.DimIndSwizzle = 0;
-   dst.ArrayID = 0;
+   dst.ArrayID = array_id;
 
    return dst;
+}
+
+static INLINE struct ureg_dst
+ureg_dst_register(unsigned file,
+                  unsigned index)
+{
+   return ureg_dst_array_register(file, index, 0);
 }
 
 static INLINE struct ureg_dst
