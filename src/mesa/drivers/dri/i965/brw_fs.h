@@ -332,29 +332,6 @@ public:
    void emit_spill(bblock_t *block, fs_inst *inst, fs_reg reg,
                    uint32_t spill_offset, int count);
 
-   void emit_fragment_program_code();
-   void setup_fp_regs();
-   fs_reg get_fp_src_reg(const prog_src_register *src);
-   fs_reg get_fp_dst_reg(const prog_dst_register *dst);
-   void emit_fp_alu1(enum opcode opcode,
-                     const struct prog_instruction *fpi,
-                     fs_reg dst, fs_reg src);
-   void emit_fp_alu2(enum opcode opcode,
-                     const struct prog_instruction *fpi,
-                     fs_reg dst, fs_reg src0, fs_reg src1);
-   void emit_fp_scalar_write(const struct prog_instruction *fpi,
-                             fs_reg dst, fs_reg src);
-   void emit_fp_scalar_math(enum opcode opcode,
-                            const struct prog_instruction *fpi,
-                            fs_reg dst, fs_reg src);
-
-   void emit_fp_minmax(const struct prog_instruction *fpi,
-                       fs_reg dst, fs_reg src0, fs_reg src1);
-
-   void emit_fp_sop(enum brw_conditional_mod conditional_mod,
-                    const struct prog_instruction *fpi,
-                    fs_reg dst, fs_reg src0, fs_reg src1, fs_reg one);
-
    void emit_nir_code();
    void nir_setup_inputs(nir_shader *shader);
    void nir_setup_outputs(nir_shader *shader);
@@ -471,9 +448,6 @@ public:
    int first_non_payload_grf;
    /** Either BRW_MAX_GRF or GEN7_MRF_HACK_START */
    unsigned max_grf;
-
-   fs_reg *fp_temp_regs;
-   fs_reg *fp_input_regs;
 
    fs_reg *nir_locals;
    fs_reg *nir_globals;
