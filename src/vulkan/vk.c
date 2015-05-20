@@ -304,6 +304,104 @@ test_timestamp(VkDevice device, VkQueue queue)
 }
 
 static void
+test_buffer_copy(VkDevice device, VkQueue queue)
+{
+   /* We'll test copying 1000k buffers */
+   const int buffer_size = 1024000;
+
+   VkBufferCreateInfo buffer_info = {
+      .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+      .size = buffer_size,
+      .usage = VK_BUFFER_USAGE_GENERAL,
+      .flags = 0
+   };
+
+   VkBuffer buffer1, buffer2;
+   vkCreateBuffer(device, &buffer_info, &buffer1);
+   vkCreateBuffer(device, &buffer_info, &buffer2);
+
+   VkMemoryRequirements buffer_requirements;
+   size_t size = sizeof(buffer_requirements);
+   vkGetObjectInfo(device, VK_OBJECT_TYPE_BUFFER, buffer1,
+                   VK_OBJECT_INFO_TYPE_MEMORY_REQUIREMENTS,
+                   &size, &buffer_requirements);
+
+   const int memory_size = buffer_requirements.size * 2;
+
+   VkDeviceMemory mem;
+   vkAllocMemory(device,
+      &(VkMemoryAllocInfo) {
+         .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO,
+         .allocationSize = memory_size,
+         .memProps = VK_MEMORY_PROPERTY_HOST_DEVICE_COHERENT_BIT,
+         .memPriority = VK_MEMORY_PRIORITY_NORMAL
+      }, &mem);
+
+   void *map;
+   vkMapMemory(device, mem, 0, buffer_requirements.size * 2, 0, &map);
+
+   /* Fill the first buffer_size of the memory with a pattern */
+   uint32_t *map32 = map;
+   for (unsigned i = 0; i < buffer_size / sizeof(*map32); i++)
+      map32[i] = i;
+
+   /* Fill the rest with 0 */
+   memset((char *)map + buffer_size, 0, memory_size - buffer_size);
+
+   vkQueueBindObjectMemory(queue, VK_OBJECT_TYPE_BUFFER,
+                           buffer1,
+                           0, /* allocation index; for objects which need to bind to multiple mems */
+                           mem, 0);
+
+   vkQueueBindObjectMemory(queue, VK_OBJECT_TYPE_BUFFER,
+                           buffer2,
+                           0, /* allocation index; for objects which need to bind to multiple mems */
+                           mem, buffer_requirements.size);
+
+   VkCmdBuffer cmdBuffer;
+   vkCreateCommandBuffer(device,
+      &(VkCmdBufferCreateInfo) {
+         .sType = VK_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO,
+         .queueNodeIndex = 0,
+         .flags = 0
+      }, &cmdBuffer);
+
+   vkBeginCommandBuffer(cmdBuffer,
+      &(VkCmdBufferBeginInfo) {
+         .sType = VK_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO,
+         .flags = 0
+      });
+
+   vkCmdCopyBuffer(cmdBuffer, buffer1, buffer2, 1,
+      &(VkBufferCopy) {
+         .srcOffset = 0,
+         .destOffset = 0,
+         .copySize = buffer_size,
+      });
+
+   vkEndCommandBuffer(cmdBuffer);
+
+   vkQueueSubmit(queue, 1, &cmdBuffer, 0);
+
+   vkQueueWaitIdle(queue);
+
+   vkDestroyObject(device, VK_OBJECT_TYPE_BUFFER, buffer1);
+   vkDestroyObject(device, VK_OBJECT_TYPE_BUFFER, buffer2);
+   vkDestroyObject(device, VK_OBJECT_TYPE_COMMAND_BUFFER, cmdBuffer);
+
+   uint32_t *map32_2 = map + buffer_requirements.size;
+   for (unsigned i = 0; i < buffer_size / sizeof(*map32); i++) {
+      if (map32[i] != map32_2[i]) {
+         printf("buffer mismatch at dword %d: found 0x%x, expected 0x%x\n",
+                i, map32_2[i], map32[i]);
+      }
+   }
+
+   vkUnmapMemory(device, mem);
+   vkFreeMemory(device, mem);
+}
+
+static void
 test_formats(VkDevice device, VkQueue queue)
 {
    VkFormatProperties properties;
@@ -937,6 +1035,8 @@ int main(int argc, char *argv[])
       test_timestamp(device, queue);
    } else if (argc > 1 && strcmp(argv[1], "formats") == 0) {
       test_formats(device, queue);
+   } else if (argc > 1 && strcmp(argv[1], "buffer-copy") == 0) {
+      test_buffer_copy(device, queue);
    } else {
       test_triangle(device, queue);
    }
