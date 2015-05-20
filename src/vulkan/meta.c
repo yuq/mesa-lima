@@ -644,6 +644,88 @@ vk_format_for_cpp(int cpp)
    }
 }
 
+static void
+do_buffer_copy(struct anv_cmd_buffer *cmd_buffer,
+               struct anv_bo *src, uint64_t src_offset,
+               struct anv_bo *dest, uint64_t dest_offset,
+               int width, int height, VkFormat copy_format)
+{
+   VkDevice vk_device = (VkDevice)cmd_buffer->device;
+
+   VkImageCreateInfo image_info = {
+      .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+      .imageType = VK_IMAGE_TYPE_2D,
+      .format = copy_format,
+      .extent = {
+         .width = width,
+         .height = height,
+         .depth = 1,
+      },
+      .mipLevels = 1,
+      .arraySize = 1,
+      .samples = 1,
+      .tiling = VK_IMAGE_TILING_LINEAR,
+      .usage = VK_IMAGE_USAGE_SAMPLED_BIT,
+      .flags = 0,
+   };
+
+   struct anv_image *src_image, *dest_image;
+   anv_CreateImage(vk_device, &image_info, (VkImage *)&src_image);
+   anv_CreateImage(vk_device, &image_info, (VkImage *)&dest_image);
+
+   /* We could use a vk call to bind memory, but that would require
+    * creating a dummy memory object etc. so there's really no point.
+    */
+   src_image->bo = src;
+   src_image->offset = src_offset;
+   dest_image->bo = dest;
+   dest_image->offset = dest_offset;
+
+   struct anv_surface_view src_view;
+   anv_image_view_init(&src_view, cmd_buffer->device,
+      &(VkImageViewCreateInfo) {
+         .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+         .image = (VkImage)src_image,
+         .viewType = VK_IMAGE_VIEW_TYPE_2D,
+         .format = copy_format,
+         .channels = {
+            VK_CHANNEL_SWIZZLE_R,
+            VK_CHANNEL_SWIZZLE_G,
+            VK_CHANNEL_SWIZZLE_B,
+            VK_CHANNEL_SWIZZLE_A
+         },
+         .subresourceRange = {
+            .aspect = VK_IMAGE_ASPECT_COLOR,
+            .baseMipLevel = 0,
+            .mipLevels = 1,
+            .baseArraySlice = 0,
+            .arraySize = 1
+         },
+         .minLod = 0
+      },
+      cmd_buffer);
+
+   struct anv_surface_view dest_view;
+   anv_color_attachment_view_init(&dest_view, cmd_buffer->device,
+      &(VkColorAttachmentViewCreateInfo) {
+         .sType = VK_STRUCTURE_TYPE_COLOR_ATTACHMENT_VIEW_CREATE_INFO,
+         .image = (VkImage)dest_image,
+         .format = copy_format,
+         .mipLevel = 0,
+         .baseArraySlice = 0,
+         .arraySize = 1,
+      },
+      cmd_buffer);
+
+   meta_emit_blit(cmd_buffer,
+                  &src_view,
+                  (VkOffset3D) { 0, 0, 0 },
+                  (VkExtent3D) { width, height, 1 },
+                  &dest_view,
+                  (VkOffset3D) { 0, 0, 0 },
+                  (VkExtent3D) { width, height, 1 });
+}
+
 void anv_CmdCopyBuffer(
     VkCmdBuffer                                 cmdBuffer,
     VkBuffer                                    srcBuffer,
@@ -652,7 +734,6 @@ void anv_CmdCopyBuffer(
     const VkBufferCopy*                         pRegions)
 {
    struct anv_cmd_buffer *cmd_buffer = (struct anv_cmd_buffer *)cmdBuffer;
-   VkDevice vk_device = (VkDevice) cmd_buffer->device;
    struct anv_buffer *src_buffer = (struct anv_buffer *)srcBuffer;
    struct anv_buffer *dest_buffer = (struct anv_buffer *)destBuffer;
    struct anv_saved_state saved_state;
@@ -660,8 +741,9 @@ void anv_CmdCopyBuffer(
    meta_prepare_blit(cmd_buffer, &saved_state);
 
    for (unsigned r = 0; r < regionCount; r++) {
-      size_t src_offset = src_buffer->offset + pRegions[r].srcOffset;
-      size_t dest_offset = dest_buffer->offset + pRegions[r].destOffset;
+      uint64_t src_offset = src_buffer->offset + pRegions[r].srcOffset;
+      uint64_t dest_offset = dest_buffer->offset + pRegions[r].destOffset;
+      uint64_t copy_size = pRegions[r].copySize;
 
       /* First, we compute the biggest format that can be used with the
        * given offsets and size.
@@ -685,78 +767,37 @@ void anv_CmdCopyBuffer(
 
       VkFormat copy_format = vk_format_for_cpp(cpp);
 
-      VkImageCreateInfo image_info = {
-         .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
-         .imageType = VK_IMAGE_TYPE_2D,
-         .format = copy_format,
-         .extent = {
-            .width = pRegions[r].copySize / cpp,
-            .height = 1,
-            .depth = 1,
-         },
-         .mipLevels = 1,
-         .arraySize = 1,
-         .samples = 1,
-         .tiling = VK_IMAGE_TILING_LINEAR,
-         .usage = VK_IMAGE_USAGE_SAMPLED_BIT,
-         .flags = 0,
-      };
+      /* This is maximum possible width/height our HW can handle */
+      uint64_t max_surface_dim = 1 << 14;
 
-      struct anv_image *src_image, *dest_image;
-      vkCreateImage(vk_device, &image_info, (VkImage *)&src_image);
-      vkCreateImage(vk_device, &image_info, (VkImage *)&dest_image);
+      /* First, we make a bunch of max-sized copies */
+      uint64_t max_copy_size = max_surface_dim * max_surface_dim * cpp;
+      while (copy_size > max_copy_size) {
+         do_buffer_copy(cmd_buffer, src_buffer->bo, src_offset,
+                        dest_buffer->bo, dest_offset,
+                        max_surface_dim, max_surface_dim, copy_format);
+         copy_size -= max_copy_size;
+         src_offset += max_copy_size;
+         dest_offset += max_copy_size;
+      }
 
-      /* We could use a vk call to bind memory, but that would require
-       * creating a dummy memory object etc. so there's really no point.
-       */
-      src_image->bo = src_buffer->bo;
-      src_image->offset = src_offset;
-      dest_image->bo = dest_buffer->bo;
-      dest_image->offset = dest_offset;
+      uint64_t height = copy_size / (max_surface_dim * cpp);
+      assert(height < max_surface_dim);
+      if (height != 0) {
+         uint64_t rect_copy_size = height * max_surface_dim * cpp;
+         do_buffer_copy(cmd_buffer, src_buffer->bo, src_offset,
+                        dest_buffer->bo, dest_offset,
+                        max_surface_dim, height, copy_format);
+         copy_size -= rect_copy_size;
+         src_offset += rect_copy_size;
+         dest_offset += rect_copy_size;
+      }
 
-      struct anv_surface_view src_view;
-      anv_image_view_init(&src_view, cmd_buffer->device,
-         &(VkImageViewCreateInfo) {
-            .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-            .image = (VkImage)src_image,
-            .viewType = VK_IMAGE_VIEW_TYPE_2D,
-            .format = copy_format,
-            .channels = {
-               VK_CHANNEL_SWIZZLE_R,
-               VK_CHANNEL_SWIZZLE_G,
-               VK_CHANNEL_SWIZZLE_B,
-               VK_CHANNEL_SWIZZLE_A
-            },
-            .subresourceRange = {
-               .aspect = VK_IMAGE_ASPECT_COLOR,
-               .baseMipLevel = 0,
-               .mipLevels = 1,
-               .baseArraySlice = 0,
-               .arraySize = 1
-            },
-            .minLod = 0
-         },
-         cmd_buffer);
-
-      struct anv_surface_view dest_view;
-      anv_color_attachment_view_init(&dest_view, cmd_buffer->device,
-         &(VkColorAttachmentViewCreateInfo) {
-            .sType = VK_STRUCTURE_TYPE_COLOR_ATTACHMENT_VIEW_CREATE_INFO,
-            .image = (VkImage)dest_image,
-            .format = copy_format,
-            .mipLevel = 0,
-            .baseArraySlice = 0,
-            .arraySize = 1,
-         },
-         cmd_buffer);
-
-      meta_emit_blit(cmd_buffer,
-                     &src_view,
-                     (VkOffset3D) { 0, 0, 0 },
-                     (VkExtent3D) { pRegions[r].copySize / cpp, 1, 1 },
-                     &dest_view,
-                     (VkOffset3D) { 0, 0, 0 },
-                     (VkExtent3D) { pRegions[r].copySize / cpp, 1, 1 });
+      if (copy_size != 0) {
+         do_buffer_copy(cmd_buffer, src_buffer->bo, src_offset,
+                        dest_buffer->bo, dest_offset,
+                        copy_size / cpp, 1, copy_format);
+      }
    }
 
    meta_finish_blit(cmd_buffer, &saved_state);
