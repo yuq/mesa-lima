@@ -45,7 +45,6 @@ endif
 LOCAL_C_INCLUDES := \
 	$(MESA_TOP)/src/mapi \
 	$(MESA_TOP)/src/egl/main \
-	$(MESA_TOP)/src/loader \
 	$(DRM_GRALLOC_TOP)
 
 LOCAL_STATIC_LIBRARIES := \
