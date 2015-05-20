@@ -66,7 +66,7 @@ namespace brw {
  *
  * Translates either GLSL IR or Mesa IR (for ARB_fragment_program) into FS IR.
  */
-class fs_visitor : public backend_visitor
+class fs_visitor : public backend_shader
 {
 public:
    const fs_reg reg_null_f;

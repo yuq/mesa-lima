@@ -73,7 +73,7 @@ class vec4_live_variables;
  * Translates either GLSL IR or Mesa IR (for ARB_vertex_program and
  * fixed-function) into VS IR.
  */
-class vec4_visitor : public backend_visitor
+class vec4_visitor : public backend_shader
 {
 public:
    vec4_visitor(struct brw_context *brw,

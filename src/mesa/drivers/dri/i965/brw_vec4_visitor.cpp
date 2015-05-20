@@ -3682,7 +3682,7 @@ vec4_visitor::vec4_visitor(struct brw_context *brw,
                            shader_time_shader_type st_base,
                            shader_time_shader_type st_written,
                            shader_time_shader_type st_reset)
-   : backend_visitor(brw, shader_prog, prog, &prog_data->base, stage),
+   : backend_shader(brw, shader_prog, prog, &prog_data->base, stage),
      c(c),
      key(key),
      prog_data(prog_data),

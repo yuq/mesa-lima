@@ -141,12 +141,12 @@ bblock_t::combine_with(bblock_t *that)
 }
 
 void
-bblock_t::dump(backend_visitor *v) const
+bblock_t::dump(backend_shader *s) const
 {
    int ip = this->start_ip;
    foreach_inst_in_block(backend_instruction, inst, this) {
       fprintf(stderr, "%5d: ", ip);
-      v->dump_instruction(inst);
+      s->dump_instruction(inst);
       ip++;
    }
 }
@@ -411,7 +411,7 @@ cfg_t::make_block_array()
 }
 
 void
-cfg_t::dump(backend_visitor *v)
+cfg_t::dump(backend_shader *s)
 {
    if (idom_dirty)
       calculate_idom();
@@ -423,8 +423,8 @@ cfg_t::dump(backend_visitor *v)
                  link->block->num);
       }
       fprintf(stderr, "\n");
-      if (v != NULL)
-         block->dump(v);
+      if (s != NULL)
+         block->dump(s);
       fprintf(stderr, "END B%d", block->num);
       foreach_list_typed(bblock_link, link, link, &block->children) {
          fprintf(stderr, " ->B%d",

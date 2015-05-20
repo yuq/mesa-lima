@@ -4100,7 +4100,7 @@ fs_visitor::optimize()
          snprintf(filename, 64, "%s%d-%04d-%02d-%02d-" #pass,              \
                   stage_abbrev, dispatch_width, shader_prog ? shader_prog->Name : 0, iteration, pass_num); \
                                                                         \
-         backend_visitor::dump_instructions(filename);                  \
+         backend_shader::dump_instructions(filename);                   \
       }                                                                 \
                                                                         \
       progress = progress || this_progress;                             \
@@ -4113,7 +4113,7 @@ fs_visitor::optimize()
                stage_abbrev, dispatch_width,
                shader_prog ? shader_prog->Name : 0);
 
-      backend_visitor::dump_instructions(filename);
+      backend_shader::dump_instructions(filename);
    }
 
    bool progress;

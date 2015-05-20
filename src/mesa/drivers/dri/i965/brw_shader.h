@@ -211,14 +211,14 @@ enum instruction_scheduler_mode {
    SCHEDULE_POST,
 };
 
-class backend_visitor : public ir_visitor {
+class backend_shader : public ir_visitor {
 protected:
 
-   backend_visitor(struct brw_context *brw,
-                   struct gl_shader_program *shader_prog,
-                   struct gl_program *prog,
-                   struct brw_stage_prog_data *stage_prog_data,
-                   gl_shader_stage stage);
+   backend_shader(struct brw_context *brw,
+                  struct gl_shader_program *shader_prog,
+                  struct gl_program *prog,
+                  struct brw_stage_prog_data *stage_prog_data,
+                  gl_shader_stage stage);
 
 public:
 

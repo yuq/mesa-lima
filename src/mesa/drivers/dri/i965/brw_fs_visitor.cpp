@@ -4125,7 +4125,7 @@ fs_visitor::fs_visitor(struct brw_context *brw,
                        struct gl_shader_program *shader_prog,
                        struct gl_program *prog,
                        unsigned dispatch_width)
-   : backend_visitor(brw, shader_prog, prog, prog_data, stage),
+   : backend_shader(brw, shader_prog, prog, prog_data, stage),
      reg_null_f(retype(brw_null_vec(dispatch_width), BRW_REGISTER_TYPE_F)),
      reg_null_d(retype(brw_null_vec(dispatch_width), BRW_REGISTER_TYPE_D)),
      reg_null_ud(retype(brw_null_vec(dispatch_width), BRW_REGISTER_TYPE_UD)),

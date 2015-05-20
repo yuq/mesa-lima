@@ -1768,7 +1768,7 @@ vec4_visitor::run()
          snprintf(filename, 64, "%s-%04d-%02d-%02d-" #pass,            \
                   stage_abbrev, shader_prog ? shader_prog->Name : 0, iteration, pass_num); \
                                                                        \
-         backend_visitor::dump_instructions(filename);                 \
+         backend_shader::dump_instructions(filename);                  \
       }                                                                \
                                                                        \
       progress = progress || this_progress;                            \
@@ -1781,7 +1781,7 @@ vec4_visitor::run()
       snprintf(filename, 64, "%s-%04d-00-start",
                stage_abbrev, shader_prog ? shader_prog->Name : 0);
 
-      backend_visitor::dump_instructions(filename);
+      backend_shader::dump_instructions(filename);
    }
 
    bool progress;
