@@ -57,6 +57,8 @@
 #define RADEON_INFO_READ_REG		0x24
 #endif
 
+#define RADEON_INFO_VA_UNMAP_WORKING	0x25
+
 static struct util_hash_table *fd_tab = NULL;
 pipe_static_mutex(fd_tab_mutex);
 
@@ -399,6 +401,8 @@ static boolean do_winsys_init(struct radeon_drm_winsys *ws)
             if (!radeon_get_drm_value(ws->fd, RADEON_INFO_IB_VM_MAX_SIZE, NULL,
                                       &ib_vm_max_size))
                 ws->info.r600_virtual_address = FALSE;
+            radeon_get_drm_value(ws->fd, RADEON_INFO_VA_UNMAP_WORKING, NULL,
+                                 &ws->va_unmap_working);
         }
 	if (ws->gen == DRV_R600 && !debug_get_bool_option("RADEON_VA", FALSE))
 		ws->info.r600_virtual_address = FALSE;
