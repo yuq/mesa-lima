@@ -114,7 +114,8 @@ nv50_query_create(struct pipe_context *pipe, unsigned type, unsigned index)
 
    q->is64bit = (type == PIPE_QUERY_PRIMITIVES_GENERATED ||
                  type == PIPE_QUERY_PRIMITIVES_EMITTED ||
-                 type == PIPE_QUERY_SO_STATISTICS);
+                 type == PIPE_QUERY_SO_STATISTICS ||
+                 type == PIPE_QUERY_PIPELINE_STATISTICS);
    q->type = type;
 
    if (q->type == PIPE_QUERY_OCCLUSION_COUNTER) {
