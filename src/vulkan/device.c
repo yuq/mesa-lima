@@ -1509,7 +1509,7 @@ VkResult anv_CreateBufferView(
       .VerticalLineStrideOffset = 0,
       .SamplerL2BypassModeDisable = true,
       .RenderCacheReadWriteMode = WriteOnlyCache,
-      .MemoryObjectControlState = 0, /* FIXME: MOCS */
+      .MemoryObjectControlState = GEN8_MOCS,
       .BaseMipLevel = 0,
       .SurfaceQPitch = 0,
       .Height = (num_elements >> 7) & 0x3fff,
@@ -2211,25 +2211,29 @@ VkResult anv_BeginCommandBuffer(
 
    anv_batch_emit(&cmd_buffer->batch, GEN8_STATE_BASE_ADDRESS,
                   .GeneralStateBaseAddress = { NULL, 0 },
+                  .GeneralStateMemoryObjectControlState = GEN8_MOCS,
                   .GeneralStateBaseAddressModifyEnable = true,
                   .GeneralStateBufferSize = 0xfffff,
                   .GeneralStateBufferSizeModifyEnable = true,
 
                   .SurfaceStateBaseAddress = { &cmd_buffer->surface_bo, 0 },
-                  .SurfaceStateMemoryObjectControlState = 0, /* FIXME: MOCS */
+                  .SurfaceStateMemoryObjectControlState = GEN8_MOCS,
                   .SurfaceStateBaseAddressModifyEnable = true,
 
                   .DynamicStateBaseAddress = { &device->dynamic_state_block_pool.bo, 0 },
+                  .DynamicStateMemoryObjectControlState = GEN8_MOCS,
                   .DynamicStateBaseAddressModifyEnable = true,
                   .DynamicStateBufferSize = 0xfffff,
                   .DynamicStateBufferSizeModifyEnable = true,
 
                   .IndirectObjectBaseAddress = { NULL, 0 },
+                  .IndirectObjectMemoryObjectControlState = GEN8_MOCS,
                   .IndirectObjectBaseAddressModifyEnable = true,
                   .IndirectObjectBufferSize = 0xfffff,
                   .IndirectObjectBufferSizeModifyEnable = true,
                   
                   .InstructionBaseAddress = { &device->instruction_block_pool.bo, 0 },
+                  .InstructionMemoryObjectControlState = GEN8_MOCS,
                   .InstructionBaseAddressModifyEnable = true,
                   .InstructionBufferSize = 0xfffff,
                   .InstructionBuffersizeModifyEnable = true);
@@ -2546,7 +2550,7 @@ void anv_CmdBindIndexBuffer(
 
    anv_batch_emit(&cmd_buffer->batch, GEN8_3DSTATE_INDEX_BUFFER,
                   .IndexFormat = vk_to_gen_index_type[indexType],
-                  .MemoryObjectControlState = 0,
+                  .MemoryObjectControlState = GEN8_MOCS,
                   .BufferStartingAddress = { buffer->bo, buffer->offset + offset },
                   .BufferSize = buffer->size - offset);
 }
@@ -2663,7 +2667,7 @@ anv_cmd_buffer_flush_state(struct anv_cmd_buffer *cmd_buffer)
 
          struct GEN8_VERTEX_BUFFER_STATE state = {
             .VertexBufferIndex = vb,
-            .MemoryObjectControlState = 0,
+            .MemoryObjectControlState = GEN8_MOCS,
             .AddressModifyEnable = true,
             .BufferPitch = pipeline->binding_stride[vb],
             .BufferStartingAddress = { buffer->bo, buffer->offset + offset },

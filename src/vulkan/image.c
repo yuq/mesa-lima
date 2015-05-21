@@ -149,7 +149,7 @@ create_surface_state(struct anv_device *device,
       .VerticalLineStrideOffset = 0,
       .SamplerL2BypassModeDisable = true,
       .RenderCacheReadWriteMode = WriteOnlyCache,
-      .MemoryObjectControlState = 0, /* FIXME: MOCS */
+      .MemoryObjectControlState = GEN8_MOCS,
       .BaseMipLevel = 0,
       .SurfaceQPitch = 0,
       .Height = image->extent.height - 1,

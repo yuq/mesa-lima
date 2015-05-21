@@ -447,6 +447,12 @@ __gen_combine_address(struct anv_batch *batch, void *location,
          dw[i] = (dwords0)[i] | (dwords1)[i];                           \
    } while (0)
 
+#define GEN8_MOCS {                                     \
+      .MemoryTypeLLCeLLCCacheabilityControl = WB,       \
+      .TargetCache = L3DefertoPATforLLCeLLCselection,   \
+      .AgeforQUADLRU = 0                                \
+   }
+
 struct anv_device_memory {
    struct anv_bo                                bo;
    VkDeviceSize                                 map_size;
