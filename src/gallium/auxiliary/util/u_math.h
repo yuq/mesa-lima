@@ -42,6 +42,7 @@
 #include "pipe/p_compiler.h"
 
 #include "c99_math.h"
+#include <assert.h>
 #include <float.h>
 #include <stdarg.h>
 
