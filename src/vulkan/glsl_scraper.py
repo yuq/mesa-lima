@@ -87,6 +87,7 @@ class Shader:
 
       # First dump the GLSL source as strings
       f.write('static const char {0}_glsl_src[] ='.format(var_prefix))
+      f.write('\n_ANV_SPIRV_' + self.stage)
       f.write('\n"#version 330\\n"')
       for line in self.glsl_source().splitlines():
          if not line.strip():
@@ -244,15 +245,24 @@ with open_file(outfname, 'w') as outfile:
 
 #include <stdint.h>
 
-#define _GLSL_SRC_VAR2(_line) _glsl_helpers_shader ## _line ## _glsl_src
-#define _GLSL_SRC_VAR(_line) _GLSL_SRC_VAR2(_line)
+#define _ANV_SPIRV_MAGIC "\\x03\\x02\\x23\\x07\\0\\0\\0\\0"
+
+#define _ANV_SPIRV_VERTEX           _ANV_SPIRV_MAGIC "\\0\\0\\0\\0"
+#define _ANV_SPIRV_TESS_CONTROL     _ANV_SPIRV_MAGIC "\\1\\0\\0\\0"
+#define _ANV_SPIRV_TESS_EVALUATION  _ANV_SPIRV_MAGIC "\\2\\0\\0\\0"
+#define _ANV_SPIRV_GEOMETRY         _ANV_SPIRV_MAGIC "\\3\\0\\0\\0"
+#define _ANV_SPIRV_FRAGMENT         _ANV_SPIRV_MAGIC "\\4\\0\\0\\0"
+#define _ANV_SPIRV_COMPUTE          _ANV_SPIRV_MAGIC "\\5\\0\\0\\0"
+
+#define _ANV_GLSL_SRC_VAR2(_line) _glsl_helpers_shader ## _line ## _glsl_src
+#define _ANV_GLSL_SRC_VAR(_line) _ANV_GLSL_SRC_VAR2(_line)
 
 #define GLSL_VK_SHADER(device, stage, ...) ({                           \\
    VkShader __shader;                                                   \\
    VkShaderCreateInfo __shader_create_info = {                          \\
       .sType = VK_STRUCTURE_TYPE_SHADER_CREATE_INFO,                    \\
-      .codeSize = sizeof(_GLSL_SRC_VAR(__LINE__)),                      \\
-      .pCode = _GLSL_SRC_VAR(__LINE__),                                 \\
+      .codeSize = sizeof(_ANV_GLSL_SRC_VAR(__LINE__)),                  \\
+      .pCode = _ANV_GLSL_SRC_VAR(__LINE__),                             \\
    };                                                                   \\
    vkCreateShader((VkDevice) device, &__shader_create_info, &__shader); \\
    __shader;                                                            \\
