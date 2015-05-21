@@ -58,6 +58,20 @@ remove_phis_block(nir_block *block, void *state)
 
       nir_foreach_phi_src(phi, src) {
          assert(src->src.is_ssa);
+
+         /* For phi nodes at the beginning of loops, we may encounter some
+          * sources from backedges that point back to the destination of the
+          * same phi, i.e. something like:
+          *
+          * a = phi(a, b, ...)
+          *
+          * We can safely ignore these sources, since if all of the normal
+          * sources point to the same definition, then that definition must
+          * still dominate the phi node, and the phi will still always take
+          * the value of that definition.
+          */
+         if (src->src.ssa == &phi->dest.ssa)
+            continue;
          
          if (def == NULL) {
             def  = src->src.ssa;
@@ -71,6 +85,11 @@ remove_phis_block(nir_block *block, void *state)
 
       if (!srcs_same)
          continue;
+
+      /* We must have found at least one definition, since there must be at
+       * least one forward edge.
+       */
+      assert(def != NULL);
 
       assert(phi->dest.is_ssa);
       nir_ssa_def_rewrite_uses(&phi->dest.ssa, nir_src_for_ssa(def));
