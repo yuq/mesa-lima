@@ -54,7 +54,7 @@ class Shader:
       spirv_fname = self.ext + '.spv'
 
       glsl_file = open(glsl_fname, 'w')
-      glsl_file.write('#version 330\n')
+      glsl_file.write('#version 420 core\n')
       glsl_file.write(self.glsl_source())
       glsl_file.close()
 
