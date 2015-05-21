@@ -395,6 +395,7 @@ brw_miptree_layout_2d(struct intel_mipmap_tree *mt)
        }
    }
 
+   mt->total_width /= bw;
    mt->total_height = 0;
 
    for (unsigned level = mt->first_level; level <= mt->last_level; level++) {
@@ -419,7 +420,7 @@ brw_miptree_layout_2d(struct intel_mipmap_tree *mt)
       /* Layout_below: step right after second mipmap.
        */
       if (level == mt->first_level + 1) {
-	 x += ALIGN_NPOT(width, mt->align_w);
+	 x += ALIGN_NPOT(width, mt->align_w) / bw;
       } else {
 	 y += img_height;
       }
@@ -579,12 +580,14 @@ static void
 brw_miptree_layout_texture_3d(struct brw_context *brw,
                               struct intel_mipmap_tree *mt)
 {
-   unsigned yscale = mt->compressed ? 4 : 1;
-
    mt->total_width = 0;
    mt->total_height = 0;
 
    unsigned ysum = 0;
+   unsigned bh, bw;
+
+   _mesa_get_format_block_size(mt->format, &bw, &bh);
+
    for (unsigned level = mt->first_level; level <= mt->last_level; level++) {
       unsigned WL = MAX2(mt->physical_width0 >> level, 1);
       unsigned HL = MAX2(mt->physical_height0 >> level, 1);
@@ -601,9 +604,9 @@ brw_miptree_layout_texture_3d(struct brw_context *brw,
          unsigned x = (q % (1 << level)) * wL;
          unsigned y = ysum + (q >> level) * hL;
 
-         intel_miptree_set_image_offset(mt, level, q, x, y / yscale);
-         mt->total_width = MAX2(mt->total_width, x + wL);
-         mt->total_height = MAX2(mt->total_height, (y + hL) / yscale);
+         intel_miptree_set_image_offset(mt, level, q, x / bw, y / bh);
+         mt->total_width = MAX2(mt->total_width, (x + wL) / bw);
+         mt->total_height = MAX2(mt->total_height, (y + hL) / bh);
       }
 
       ysum += ALIGN(DL, 1 << level) / (1 << level) * hL;

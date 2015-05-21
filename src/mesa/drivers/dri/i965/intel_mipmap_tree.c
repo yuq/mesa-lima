@@ -313,15 +313,7 @@ intel_miptree_create_layout(struct brw_context *brw,
    mt->fast_clear_state = INTEL_FAST_CLEAR_STATE_NO_MCS;
    mt->disable_aux_buffers = (layout_flags & MIPTREE_LAYOUT_DISABLE_AUX) != 0;
    exec_list_make_empty(&mt->hiz_map);
-
-   /* The cpp is bytes per (1, blockheight)-sized block for compressed
-    * textures.  This is why you'll see divides by blockheight all over
-    */
-   unsigned bw, bh;
-   _mesa_get_format_block_size(format, &bw, &bh);
-   assert(_mesa_get_format_bytes(mt->format) % bw == 0);
-   mt->cpp = _mesa_get_format_bytes(mt->format) / bw;
-
+   mt->cpp = _mesa_get_format_bytes(format);
    mt->num_samples = num_samples;
    mt->compressed = _mesa_is_format_compressed(format);
    mt->msaa_layout = INTEL_MSAA_LAYOUT_NONE;
@@ -1273,7 +1265,7 @@ intel_miptree_copy_slice(struct brw_context *brw,
       unsigned int i, j;
       _mesa_get_format_block_size(dst_mt->format, &i, &j);
       height = ALIGN_NPOT(height, j) / j;
-      width = ALIGN_NPOT(width, i);
+      width = ALIGN_NPOT(width, i) / i;
    }
 
    /* If it's a packed depth/stencil buffer with separate stencil, the blit
@@ -2105,7 +2097,9 @@ intel_miptree_map_gtt(struct brw_context *brw,
     */
    _mesa_get_format_block_size(mt->format, &bw, &bh);
    assert(y % bh == 0);
+   assert(x % bw == 0);
    y /= bh;
+   x /= bw;
 
    base = intel_miptree_map_raw(brw, mt) + mt->offset;
 
