@@ -38,6 +38,8 @@
 #include <mesa/program/program.h>
 #include <glsl/program.h>
 
+#define SPIR_V_MAGIC_NUMBER 0x07230203
+
 static void
 fail_if(int cond, const char *format, ...)
 {
@@ -796,8 +798,35 @@ static const struct {
    { GL_COMPUTE_SHADER, "compute" },
 };
 
+struct spirv_header{
+   uint32_t magic;
+   uint32_t version;
+   uint32_t gen_magic;
+};
+
+static const char *
+src_as_glsl(const char *data)
+{
+   const struct spirv_header *as_spirv = (const struct spirv_header *)data;
+
+   /* Check alignment */
+   if ((intptr_t)data & 0x3) {
+      return data;
+   }
+
+   if (as_spirv->magic == SPIR_V_MAGIC_NUMBER) {
+      /* LunarG back-door */
+      if (as_spirv->version == 0)
+         return data + 12;
+      else
+         return NULL;
+   } else {
+      return data;
+   }
+}
+
 static void
-anv_compile_shader(struct anv_compiler *compiler,
+anv_compile_shader_glsl(struct anv_compiler *compiler,
                    struct gl_shader_program *program,
                    struct anv_pipeline *pipeline, uint32_t stage)
 {
@@ -807,12 +836,21 @@ anv_compile_shader(struct anv_compiler *compiler,
 
    shader = brw_new_shader(&brw->ctx, name, stage_info[stage].token);
    fail_if(shader == NULL, "failed to create %s shader\n", stage_info[stage].name);
-   shader->Source = strdup(pipeline->shaders[stage]->data);
+
+   shader->Source = strdup(src_as_glsl(pipeline->shaders[stage]->data));
    _mesa_glsl_compile_shader(&brw->ctx, shader, false, false);
    fail_on_compile_error(shader->CompileStatus, shader->InfoLog);
 
    program->Shaders[program->NumShaders] = shader;
    program->NumShaders++;
+}
+
+static void
+anv_compile_shader_spirv(struct anv_compiler *compiler,
+                         struct gl_shader_program *program,
+                         struct anv_pipeline *pipeline, uint32_t stage)
+{
+   unreachable("SPIR-V is not supported yet!");
 }
 
 int
@@ -821,7 +859,6 @@ anv_compiler_run(struct anv_compiler *compiler, struct anv_pipeline *pipeline)
    struct gl_shader_program *program;
    int name = 0;
    struct brw_context *brw = compiler->brw;
-   struct anv_device *device = pipeline->device;
 
    /* When we free the pipeline, we detect stages based on the NULL status
     * of various prog_data pointers.  Make them NULL by default.
@@ -837,18 +874,41 @@ anv_compiler_run(struct anv_compiler *compiler, struct anv_pipeline *pipeline)
    fail_if(program == NULL || program->Shaders == NULL,
            "failed to create program\n");
 
-   if (pipeline->shaders[VK_SHADER_STAGE_VERTEX])
-      anv_compile_shader(compiler, program, pipeline, VK_SHADER_STAGE_VERTEX);
-   anv_compile_shader(compiler, program, pipeline, VK_SHADER_STAGE_FRAGMENT);
-   if (pipeline->shaders[VK_SHADER_STAGE_GEOMETRY])
-      anv_compile_shader(compiler, program, pipeline, VK_SHADER_STAGE_GEOMETRY);
+   bool all_spirv = true;
+   for (unsigned i = 0; i < VK_NUM_SHADER_STAGE; i++) {
+      if (pipeline->shaders[i] == NULL)
+         continue;
 
-   _mesa_glsl_link_shader(&brw->ctx, program);
-   fail_on_compile_error(program->LinkStatus,
-                         program->InfoLog);
+      /* You need at least this much for "void main() { }" anyway */
+      assert(pipeline->shaders[i]->size >= 12);
 
-   anv_state_stream_init(&pipeline->program_stream,
-                         &device->instruction_block_pool);
+      if (src_as_glsl(pipeline->shaders[i]->data)) {
+         all_spirv = false;
+         break;
+      }
+
+      assert(pipeline->shaders[i]->size % 4 == 0);
+   }
+
+   assert(pipeline->shaders[VK_SHADER_STAGE_FRAGMENT] != NULL);
+
+   if (all_spirv) {
+      for (unsigned i = 0; i < VK_NUM_SHADER_STAGE; i++) {
+         if (pipeline->shaders[i])
+            anv_compile_shader_spirv(compiler, program, pipeline, i);
+      }
+
+      /* TODO: nir_link_shader? */
+   } else {
+      for (unsigned i = 0; i < VK_NUM_SHADER_STAGE; i++) {
+         if (pipeline->shaders[i])
+            anv_compile_shader_glsl(compiler, program, pipeline, i);
+      }
+
+      _mesa_glsl_link_shader(&brw->ctx, program);
+      fail_on_compile_error(program->LinkStatus,
+                            program->InfoLog);
+   }
 
    bool success;
    struct brw_wm_prog_key wm_key;
