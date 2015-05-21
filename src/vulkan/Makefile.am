@@ -43,7 +43,8 @@ AM_CPPFLAGS = \
 	-I$(top_srcdir)/src/mesa/drivers/dri/common \
 	-I$(top_srcdir)/src/mesa/drivers/dri/i965 \
 	-I$(top_srcdir)/src/gallium/auxiliary \
-	-I$(top_srcdir)/src/gallium/include
+	-I$(top_srcdir)/src/gallium/include \
+	-I$(top_builddir)/src/vulkan
 
 libvulkan_la_CFLAGS =							\
 	-Wall -Wextra -Wno-unused-parameter -fvisibility=hidden -O0 -g	\
