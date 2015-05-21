@@ -72,7 +72,7 @@ upload_ps_extra(struct brw_context *brw)
       brw_fragment_program_const(brw->fragment_program);
    /* BRW_NEW_FS_PROG_DATA */
    const struct brw_wm_prog_data *prog_data = brw->wm.prog_data;
-   /* BRW_NEW_NUM_SAMPLES | _NEW_MULTISAMPLE */
+   /* BRW_NEW_NUM_SAMPLES */
    const bool multisampled_fbo = brw->num_samples > 1;
 
    gen8_upload_ps_extra(brw, &fp->program, prog_data, multisampled_fbo);
@@ -80,7 +80,7 @@ upload_ps_extra(struct brw_context *brw)
 
 const struct brw_tracked_state gen8_ps_extra = {
    .dirty = {
-      .mesa  = _NEW_MULTISAMPLE,
+      .mesa  = 0,
       .brw   = BRW_NEW_CONTEXT |
                BRW_NEW_FRAGMENT_PROGRAM |
                BRW_NEW_FS_PROG_DATA |
