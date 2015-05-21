@@ -144,10 +144,9 @@ intel_finalize_mipmap_tree(struct brw_context *brw, GLuint unit)
                                           width,
                                           height,
                                           depth,
-					  true,
                                           0 /* num_samples */,
                                           INTEL_MIPTREE_TILING_ANY,
-                                          false);
+                                          MIPTREE_LAYOUT_ACCELERATED_UPLOAD);
       if (!intelObj->mt)
          return false;
    }

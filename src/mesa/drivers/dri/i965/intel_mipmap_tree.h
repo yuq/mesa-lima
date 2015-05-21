@@ -535,6 +535,13 @@ bool
 intel_miptree_alloc_non_msrt_mcs(struct brw_context *brw,
                                  struct intel_mipmap_tree *mt);
 
+enum {
+   MIPTREE_LAYOUT_ACCELERATED_UPLOAD       = 1 << 0,
+   MIPTREE_LAYOUT_FORCE_ALL_SLICE_AT_LOD   = 1 << 1,
+   MIPTREE_LAYOUT_FOR_BO                   = 1 << 2,
+   MIPTREE_LAYOUT_DISABLE_AUX              = 1 << 3,
+};
+
 struct intel_mipmap_tree *intel_miptree_create(struct brw_context *brw,
                                                GLenum target,
 					       mesa_format format,
@@ -543,10 +550,9 @@ struct intel_mipmap_tree *intel_miptree_create(struct brw_context *brw,
                                                GLuint width0,
                                                GLuint height0,
                                                GLuint depth0,
-					       bool expect_accelerated_upload,
                                                GLuint num_samples,
                                                enum intel_miptree_tiling_mode,
-                                               bool force_all_slices_at_each_lod);
+                                               uint32_t flags);
 
 struct intel_mipmap_tree *
 intel_miptree_create_for_bo(struct brw_context *brw,
@@ -557,7 +563,7 @@ intel_miptree_create_for_bo(struct brw_context *brw,
                             uint32_t height,
                             uint32_t depth,
                             int pitch,
-                            bool disable_aux_buffers);
+                            uint32_t layout_flags);
 
 void
 intel_update_winsys_renderbuffer_miptree(struct brw_context *intel,
@@ -763,9 +769,9 @@ brw_miptree_get_vertical_slice_pitch(const struct brw_context *brw,
 
 void
 brw_miptree_layout(struct brw_context *brw,
-                   bool for_bo,
+                   struct intel_mipmap_tree *mt,
                    enum intel_miptree_tiling_mode requested,
-                   struct intel_mipmap_tree *mt);
+                   uint32_t layout_flags);
 
 void *intel_miptree_map_raw(struct brw_context *brw,
                             struct intel_mipmap_tree *mt);

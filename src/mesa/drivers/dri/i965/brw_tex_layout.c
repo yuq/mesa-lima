@@ -763,9 +763,9 @@ intel_miptree_set_total_width_height(struct brw_context *brw,
 
 void
 brw_miptree_layout(struct brw_context *brw,
-                   bool for_bo,
+                   struct intel_mipmap_tree *mt,
                    enum intel_miptree_tiling_mode requested,
-                   struct intel_mipmap_tree *mt)
+                   uint32_t layout_flags)
 {
    bool gen6_hiz_or_stencil = false;
 
@@ -821,7 +821,7 @@ brw_miptree_layout(struct brw_context *brw,
       mt->align_h /= j;
    }
 
-   if (!for_bo)
+   if ((layout_flags & MIPTREE_LAYOUT_FOR_BO) == 0)
       mt->tiling = brw_miptree_choose_tiling(brw, requested, mt);
 }
 
