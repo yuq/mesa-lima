@@ -62,11 +62,13 @@ emit_vertex_input(struct anv_pipeline *pipeline, VkPipelineVertexInputCreateInfo
    const uint32_t num_dwords = 1 + info->attributeCount * 2;
    uint32_t *p;
    bool instancing_enable[32];
-   
+
+   pipeline->vb_used = 0;
    for (uint32_t i = 0; i < info->bindingCount; i++) {
       const VkVertexInputBindingDescription *desc =
          &info->pVertexBindingDescriptions[i];
-      
+
+      pipeline->vb_used |= 1 << desc->binding;
       pipeline->binding_stride[desc->binding] = desc->strideInBytes;
 
       /* Step rate is programmed per vertex element (attribute), not

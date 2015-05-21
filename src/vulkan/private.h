@@ -610,6 +610,7 @@ struct anv_pipeline {
    uint32_t                                     gs_vec4;
    uint32_t                                     gs_vertex_count;
 
+   uint32_t                                     vb_used;
    uint32_t                                     binding_stride[MAX_VBS];
 
    uint32_t                                     state_sf[GEN8_3DSTATE_SF_length];

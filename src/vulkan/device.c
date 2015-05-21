@@ -2384,8 +2384,10 @@ void anv_CmdBindPipeline(
     VkPipeline                                  _pipeline)
 {
    struct anv_cmd_buffer *cmd_buffer = (struct anv_cmd_buffer *) cmdBuffer;
+   struct anv_pipeline *pipeline = (struct anv_pipeline *) _pipeline;
 
-   cmd_buffer->pipeline = (struct anv_pipeline *) _pipeline;
+   cmd_buffer->pipeline = pipeline;
+   cmd_buffer->vb_dirty |= pipeline->vb_used;
    cmd_buffer->dirty |= ANV_CMD_BUFFER_PIPELINE_DIRTY;
 }
 
@@ -2617,18 +2619,20 @@ anv_cmd_buffer_flush_state(struct anv_cmd_buffer *cmd_buffer)
 {
    struct anv_pipeline *pipeline = cmd_buffer->pipeline;
    struct anv_bindings *bindings = cmd_buffer->bindings;
-   const uint32_t num_buffers = __builtin_popcount(cmd_buffer->vb_dirty);
-   const uint32_t num_dwords = 1 + num_buffers * 4;
    uint32_t *p;
 
-   if (cmd_buffer->vb_dirty) {
+   uint32_t vb_emit = cmd_buffer->vb_dirty & pipeline->vb_used;
+   const uint32_t num_buffers = __builtin_popcount(vb_emit);
+   const uint32_t num_dwords = 1 + num_buffers * 4;
+
+   if (vb_emit) {
       p = anv_batch_emitn(&cmd_buffer->batch, num_dwords,
                           GEN8_3DSTATE_VERTEX_BUFFERS);
       uint32_t vb, i = 0;
-      for_each_bit(vb, cmd_buffer->vb_dirty) {
+      for_each_bit(vb, vb_emit) {
          struct anv_buffer *buffer = bindings->vb[vb].buffer;
          uint32_t offset = bindings->vb[vb].offset;
-      
+
          struct GEN8_VERTEX_BUFFER_STATE state = {
             .VertexBufferIndex = vb,
             .MemoryObjectControlState = 0,
@@ -2653,7 +2657,7 @@ anv_cmd_buffer_flush_state(struct anv_cmd_buffer *cmd_buffer)
       anv_batch_emit_merge(&cmd_buffer->batch,
                            cmd_buffer->rs_state->state_sf, pipeline->state_sf);
 
-   cmd_buffer->vb_dirty = 0;
+   cmd_buffer->vb_dirty &= ~vb_emit;
    cmd_buffer->dirty = 0;
 }
 
