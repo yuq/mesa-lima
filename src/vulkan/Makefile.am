@@ -73,7 +73,8 @@ libvulkan_la_SOURCES =				\
 BUILT_SOURCES =					\
 	entrypoints.h				\
 	entrypoints.c				\
-	meta-spirv.h
+	meta-spirv.h				\
+	vk-spirv.h
 
 entrypoints.h : vk_gen.py $(vulkan_include_HEADERS)
 	$(AM_V_GEN)cat $(vulkan_include_HEADERS) | $(PYTHON2) $< header > $@

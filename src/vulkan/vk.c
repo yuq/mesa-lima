@@ -13,6 +13,8 @@
 #include <poll.h>
 #include <libpng16/png.h>
 
+#include "vk-spirv.h"
+
 #define for_each_bit(b, dword)                          \
    for (uint32_t __dword = (dword);                     \
         (b) = __builtin_ffs(__dword) - 1, __dword;      \
@@ -100,7 +102,7 @@ create_pipeline(VkDevice device, VkPipeline *pipeline,
       .primitiveRestartIndex = 0
    };
 
-   static const char vs_source[] = GLSL(
+   VkShader vs = GLSL_VK_SHADER(device, VERTEX,
       layout(location = 0) in vec4 a_position;
       layout(location = 1) in vec4 a_color;
       layout(set = 0, binding = 0) uniform block1 {
@@ -117,36 +119,18 @@ create_pipeline(VkDevice device, VkPipeline *pipeline,
       {
         gl_Position = a_position;
         v_color = a_color + u1.color + u2.color + u3.color;
-      });
+      }
+   );
 
-   static const char fs_source[] = GLSL(
+   VkShader fs = GLSL_VK_SHADER(device, FRAGMENT,
       out vec4 f_color;
       in vec4 v_color;
       layout(set = 0, binding = 0) uniform sampler2D tex;
       void main()
       {
-         f_color = v_color + texture2D(tex, vec2(0.1, 0.1));
-      });
-
-   VkShader vs;
-   vkCreateShader(device,
-                  &(VkShaderCreateInfo) {
-                     .sType = VK_STRUCTURE_TYPE_SHADER_CREATE_INFO,
-                     .codeSize = sizeof(vs_source),
-                     .pCode = vs_source,
-                     .flags = 0
-                  },
-                  &vs);
-
-   VkShader fs;
-   vkCreateShader(device,
-                  &(VkShaderCreateInfo) {
-                     .sType = VK_STRUCTURE_TYPE_SHADER_CREATE_INFO,
-                     .codeSize = sizeof(fs_source),
-                     .pCode = fs_source,
-                     .flags = 0
-                  },
-                  &fs);
+         f_color = v_color + texture(tex, vec2(0.1, 0.1));
+      }
+   );
 
    VkPipelineShaderStageCreateInfo vs_create_info = {
       .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
