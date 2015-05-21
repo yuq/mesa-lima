@@ -28,7 +28,6 @@
 #include <fcntl.h>
 
 #include "private.h"
-#include "glsl_helpers.h"
 #include "meta-spirv.h"
 
 static void
