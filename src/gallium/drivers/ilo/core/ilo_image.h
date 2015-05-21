@@ -125,8 +125,6 @@ struct ilo_image {
 
    bool scanout;
 
-   struct intel_bo *bo;
-
    struct {
       enum ilo_image_aux_type type;
 
@@ -140,8 +138,12 @@ struct ilo_image {
       unsigned bo_stride;
       unsigned bo_height;
 
+      /* managed by users */
       struct intel_bo *bo;
    } aux;
+
+   /* managed by users */
+   struct intel_bo *bo;
 };
 
 struct pipe_resource;
@@ -157,27 +159,6 @@ ilo_image_init_for_imported(struct ilo_image *img,
                             const struct pipe_resource *templ,
                             enum gen_surface_tiling tiling,
                             unsigned bo_stride);
-
-static inline void
-ilo_image_cleanup(struct ilo_image *img)
-{
-   intel_bo_unref(img->bo);
-   intel_bo_unref(img->aux.bo);
-}
-
-static inline void
-ilo_image_set_bo(struct ilo_image *img, struct intel_bo *bo)
-{
-   intel_bo_unref(img->bo);
-   img->bo = intel_bo_ref(bo);
-}
-
-static inline void
-ilo_image_set_aux_bo(struct ilo_image *img, struct intel_bo *bo)
-{
-   intel_bo_unref(img->aux.bo);
-   img->aux.bo = intel_bo_ref(bo);
-}
 
 static inline bool
 ilo_image_can_enable_aux(const struct ilo_image *img, unsigned level)

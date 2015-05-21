@@ -37,6 +37,7 @@
 struct ilo_buffer {
    unsigned bo_size;
 
+   /* managed by users */
    struct intel_bo *bo;
 };
 
@@ -75,19 +76,6 @@ ilo_buffer_init(struct ilo_buffer *buf, const struct ilo_dev *dev,
        */
       buf->bo_size = align(buf->bo_size, 4096);
    }
-}
-
-static inline void
-ilo_buffer_cleanup(struct ilo_buffer *buf)
-{
-   intel_bo_unref(buf->bo);
-}
-
-static inline void
-ilo_buffer_set_bo(struct ilo_buffer *buf, struct intel_bo *bo)
-{
-   intel_bo_unref(buf->bo);
-   buf->bo = intel_bo_ref(bo);
 }
 
 #endif /* ILO_BUFFER_H */

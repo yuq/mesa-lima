@@ -178,8 +178,8 @@ tex_create_bo(struct ilo_texture *tex)
    if (!bo)
       return false;
 
-   ilo_image_set_bo(&tex->image, bo);
-   intel_bo_unref(bo);
+   intel_bo_unref(tex->image.bo);
+   tex->image.bo = bo;
 
    return true;
 }
@@ -223,7 +223,7 @@ tex_create_hiz(struct ilo_texture *tex)
    if (!bo)
       return false;
 
-   ilo_image_set_aux_bo(&tex->image, bo);
+   tex->image.aux.bo = bo;
 
    if (tex->imported) {
       unsigned lv;
@@ -256,7 +256,7 @@ tex_create_mcs(struct ilo_texture *tex)
    if (!bo)
       return false;
 
-   ilo_image_set_aux_bo(&tex->image, bo);
+   tex->image.aux.bo = bo;
 
    return true;
 }
@@ -267,7 +267,8 @@ tex_destroy(struct ilo_texture *tex)
    if (tex->separate_s8)
       tex_destroy(tex->separate_s8);
 
-   ilo_image_cleanup(&tex->image);
+   intel_bo_unref(tex->image.bo);
+   intel_bo_unref(tex->image.aux.bo);
 
    tex_free_slices(tex);
    FREE(tex);
@@ -328,8 +329,7 @@ tex_import_handle(struct ilo_texture *tex,
       return false;
    }
 
-   ilo_image_set_bo(&tex->image, bo);
-   intel_bo_unref(bo);
+   tex->image.bo = bo;
 
    tex->imported = true;
 
@@ -427,8 +427,8 @@ buf_create_bo(struct ilo_buffer_resource *buf)
    if (!bo)
       return false;
 
-   ilo_buffer_set_bo(&buf->buffer, bo);
-   intel_bo_unref(bo);
+   intel_bo_unref(buf->buffer.bo);
+   buf->buffer.bo = bo;
 
    return true;
 }
@@ -436,7 +436,7 @@ buf_create_bo(struct ilo_buffer_resource *buf)
 static void
 buf_destroy(struct ilo_buffer_resource *buf)
 {
-   ilo_buffer_cleanup(&buf->buffer);
+   intel_bo_unref(buf->buffer.bo);
    FREE(buf);
 }
 
