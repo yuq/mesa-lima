@@ -1832,6 +1832,11 @@ VkResult anv_AllocDescriptorSets(
          return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
       }
 
+      /* Descriptor sets may not be 100% filled out so we need to memset to
+       * ensure that we can properly detect and handle holes.
+       */
+      memset(set, 0, size);
+
       pDescriptorSets[i] = (VkDescriptorSet) set;
    }
 
@@ -2461,6 +2466,8 @@ void anv_CmdBindDescriptorSets(
          start = bias + layout->set[firstSet + i].surface_start[s];
          for (uint32_t b = 0; b < set_layout->stage[s].surface_count; b++) {
             struct anv_surface_view *view = set->descriptors[surface_to_desc[b]].view;
+            if (!view)
+               continue;
 
             struct anv_state state =
                anv_cmd_buffer_alloc_surface_state(cmd_buffer, 64, 64);
@@ -2478,6 +2485,8 @@ void anv_CmdBindDescriptorSets(
          start = layout->set[firstSet + i].sampler_start[s];
          for (uint32_t b = 0; b < set_layout->stage[s].sampler_count; b++) {
             struct anv_sampler *sampler = set->descriptors[sampler_to_desc[b]].sampler;
+            if (!sampler)
+               continue;
 
             memcpy(&bindings->descriptors[s].samplers[start + b],
                    sampler->state, sizeof(sampler->state));
