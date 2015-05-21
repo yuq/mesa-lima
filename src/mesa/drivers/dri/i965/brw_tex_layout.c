@@ -367,7 +367,7 @@ brw_miptree_layout_2d(struct intel_mipmap_tree *mt)
    mt->total_width = mt->physical_width0;
 
    if (mt->compressed)
-       mt->total_width = ALIGN(mt->total_width, bw);
+       mt->total_width = ALIGN_NPOT(mt->total_width, bw);
 
    /* May need to adjust width to accommodate the placement of
     * the 2nd mipmap.  This occurs when the alignment
@@ -378,10 +378,10 @@ brw_miptree_layout_2d(struct intel_mipmap_tree *mt)
        unsigned mip1_width;
 
        if (mt->compressed) {
-          mip1_width = ALIGN(minify(mt->physical_width0, 1), mt->align_w) +
-             ALIGN(minify(mt->physical_width0, 2), bw);
+          mip1_width = ALIGN_NPOT(minify(mt->physical_width0, 1), mt->align_w) +
+             ALIGN_NPOT(minify(mt->physical_width0, 2), bw);
        } else {
-          mip1_width = ALIGN(minify(mt->physical_width0, 1), mt->align_w) +
+          mip1_width = ALIGN_NPOT(minify(mt->physical_width0, 1), mt->align_w) +
              minify(mt->physical_width0, 2);
        }
 
@@ -397,7 +397,7 @@ brw_miptree_layout_2d(struct intel_mipmap_tree *mt)
 
       intel_miptree_set_level_info(mt, level, x, y, depth);
 
-      img_height = ALIGN(height, mt->align_h);
+      img_height = ALIGN_NPOT(height, mt->align_h);
       if (mt->compressed)
 	 img_height /= bh;
 
@@ -414,7 +414,7 @@ brw_miptree_layout_2d(struct intel_mipmap_tree *mt)
       /* Layout_below: step right after second mipmap.
        */
       if (level == mt->first_level + 1) {
-	 x += ALIGN(width, mt->align_w);
+	 x += ALIGN_NPOT(width, mt->align_w);
       } else {
 	 y += img_height;
       }
@@ -434,7 +434,7 @@ brw_miptree_get_horizontal_slice_pitch(const struct brw_context *brw,
 {
    if ((brw->gen < 9 && mt->target == GL_TEXTURE_3D) ||
        (brw->gen == 4 && mt->target == GL_TEXTURE_CUBE_MAP)) {
-      return ALIGN(minify(mt->physical_width0, level), mt->align_w);
+      return ALIGN_NPOT(minify(mt->physical_width0, level), mt->align_w);
    } else {
       return 0;
    }
@@ -475,11 +475,11 @@ brw_miptree_get_vertical_slice_pitch(const struct brw_context *brw,
    } else if (mt->target == GL_TEXTURE_3D ||
               (brw->gen == 4 && mt->target == GL_TEXTURE_CUBE_MAP) ||
               mt->array_layout == ALL_SLICES_AT_EACH_LOD) {
-      return ALIGN(minify(mt->physical_height0, level), mt->align_h);
+      return ALIGN_NPOT(minify(mt->physical_height0, level), mt->align_h);
 
    } else {
-      const unsigned h0 = ALIGN(mt->physical_height0, mt->align_h);
-      const unsigned h1 = ALIGN(minify(mt->physical_height0, 1), mt->align_h);
+      const unsigned h0 = ALIGN_NPOT(mt->physical_height0, mt->align_h);
+      const unsigned h1 = ALIGN_NPOT(minify(mt->physical_height0, 1), mt->align_h);
 
       return h0 + h1 + (brw->gen >= 7 ? 12 : 11) * mt->align_h;
    }
@@ -551,7 +551,7 @@ brw_miptree_layout_texture_array(struct brw_context *brw,
 
    for (unsigned level = mt->first_level; level <= mt->last_level; level++) {
       unsigned img_height;
-      img_height = ALIGN(height, mt->align_h);
+      img_height = ALIGN_NPOT(height, mt->align_h);
       if (mt->compressed)
          img_height /= mt->align_h;
 
@@ -584,8 +584,8 @@ brw_miptree_layout_texture_3d(struct brw_context *brw,
       unsigned WL = MAX2(mt->physical_width0 >> level, 1);
       unsigned HL = MAX2(mt->physical_height0 >> level, 1);
       unsigned DL = MAX2(mt->physical_depth0 >> level, 1);
-      unsigned wL = ALIGN(WL, mt->align_w);
-      unsigned hL = ALIGN(HL, mt->align_h);
+      unsigned wL = ALIGN_NPOT(WL, mt->align_w);
+      unsigned hL = ALIGN_NPOT(HL, mt->align_h);
 
       if (mt->target == GL_TEXTURE_CUBE_MAP)
          DL = 6;
