@@ -142,9 +142,11 @@ VkResult anv_CreateInstance(
    instance->physicalDeviceCount = 0;
    result = fill_physical_device(&instance->physicalDevice,
                                  instance, "/dev/dri/renderD128");
-   if (result == VK_SUCCESS)
-      instance->physicalDeviceCount++;
 
+   if (result != VK_SUCCESS)
+      return result;
+
+   instance->physicalDeviceCount++;
    *pInstance = (VkInstance) instance;
 
    return VK_SUCCESS;
