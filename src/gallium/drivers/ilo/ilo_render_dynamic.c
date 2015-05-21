@@ -137,12 +137,11 @@ gen6_emit_draw_dynamic_samplers(struct ilo_render *r,
                                 int shader_type,
                                 struct ilo_render_draw_session *session)
 {
-   const struct ilo_sampler_cso * const *samplers =
-      vec->sampler[shader_type].cso;
-   const struct pipe_sampler_view * const *views =
-      (const struct pipe_sampler_view **) vec->view[shader_type].states;
+   const struct ilo_view_cso * const *views =
+      (const struct ilo_view_cso **) vec->view[shader_type].states;
+   struct ilo_state_sampler samplers[ILO_MAX_SAMPLERS];
    uint32_t *sampler_state, *border_color_state;
-   int sampler_count;
+   int sampler_count, i;
    bool emit_border_color = false;
    bool skip = false;
 
@@ -194,16 +193,28 @@ gen6_emit_draw_dynamic_samplers(struct ilo_render *r,
           sampler_count <= Elements(vec->sampler[shader_type].cso));
 
    if (emit_border_color) {
-      int i;
-
       for (i = 0; i < sampler_count; i++) {
-         border_color_state[i] = (samplers[i]) ?
-            gen6_SAMPLER_BORDER_COLOR_STATE(r->builder, samplers[i]) : 0;
+         const struct ilo_sampler_cso *cso = vec->sampler[shader_type].cso[i];
+
+         border_color_state[i] = (cso) ?
+            gen6_SAMPLER_BORDER_COLOR_STATE(r->builder, &cso->border) : 0;
       }
    }
 
-   *sampler_state = gen6_SAMPLER_STATE(r->builder,
-         samplers, views, border_color_state, sampler_count);
+   for (i = 0; i < sampler_count; i++) {
+      const struct ilo_sampler_cso *cso = vec->sampler[shader_type].cso[i];
+
+      if (cso && views[i]) {
+         samplers[i] = cso->sampler;
+         ilo_state_sampler_set_surface(&samplers[i],
+               r->dev, &views[i]->surface);
+      } else {
+         samplers[i] = vec->disabled_sampler;
+      }
+   }
+
+   *sampler_state = gen6_SAMPLER_STATE(r->builder, samplers,
+         border_color_state, sampler_count);
 }
 
 static void
@@ -466,10 +477,9 @@ gen6_emit_launch_grid_dynamic_samplers(struct ilo_render *r,
 {
    const unsigned shader_type = PIPE_SHADER_COMPUTE;
    const struct ilo_shader_state *cs = vec->cs;
-   const struct ilo_sampler_cso * const *samplers =
-      vec->sampler[shader_type].cso;
-   const struct pipe_sampler_view * const *views =
-      (const struct pipe_sampler_view **) vec->view[shader_type].states;
+   const struct ilo_view_cso * const *views =
+      (const struct ilo_view_cso **) vec->view[shader_type].states;
+   struct ilo_state_sampler samplers[ILO_MAX_SAMPLERS];
    int sampler_count, i;
 
    ILO_DEV_ASSERT(r->dev, 7, 7.5);
@@ -480,11 +490,25 @@ gen6_emit_launch_grid_dynamic_samplers(struct ilo_render *r,
           sampler_count <= Elements(vec->sampler[shader_type].cso));
 
    for (i = 0; i < sampler_count; i++) {
-      r->state.cs.SAMPLER_BORDER_COLOR_STATE[i] = (samplers[i]) ?
-         gen6_SAMPLER_BORDER_COLOR_STATE(r->builder, samplers[i]) : 0;
+      const struct ilo_sampler_cso *cso = vec->sampler[shader_type].cso[i];
+
+      r->state.cs.SAMPLER_BORDER_COLOR_STATE[i] = (cso) ?
+         gen6_SAMPLER_BORDER_COLOR_STATE(r->builder, &cso->border) : 0;
    }
 
-   r->state.cs.SAMPLER_STATE = gen6_SAMPLER_STATE(r->builder, samplers, views,
+   for (i = 0; i < sampler_count; i++) {
+      const struct ilo_sampler_cso *cso = vec->sampler[shader_type].cso[i];
+
+      if (cso && views[i]) {
+         samplers[i] = cso->sampler;
+         ilo_state_sampler_set_surface(&samplers[i],
+               r->dev, &views[i]->surface);
+      } else {
+         samplers[i] = vec->disabled_sampler;
+      }
+   }
+
+   r->state.cs.SAMPLER_STATE = gen6_SAMPLER_STATE(r->builder, samplers,
          r->state.cs.SAMPLER_BORDER_COLOR_STATE, sampler_count);
 }
 

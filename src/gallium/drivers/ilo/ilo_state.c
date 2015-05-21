@@ -37,6 +37,89 @@
 #include "ilo_shader.h"
 #include "ilo_state.h"
 
+static enum gen_mip_filter
+ilo_translate_mip_filter(unsigned filter)
+{
+   switch (filter) {
+   case PIPE_TEX_MIPFILTER_NEAREST:    return GEN6_MIPFILTER_NEAREST;
+   case PIPE_TEX_MIPFILTER_LINEAR:     return GEN6_MIPFILTER_LINEAR;
+   case PIPE_TEX_MIPFILTER_NONE:       return GEN6_MIPFILTER_NONE;
+   default:
+      assert(!"unknown mipfilter");
+      return GEN6_MIPFILTER_NONE;
+   }
+}
+
+static int
+ilo_translate_img_filter(unsigned filter)
+{
+   switch (filter) {
+   case PIPE_TEX_FILTER_NEAREST:       return GEN6_MAPFILTER_NEAREST;
+   case PIPE_TEX_FILTER_LINEAR:        return GEN6_MAPFILTER_LINEAR;
+   default:
+      assert(!"unknown sampler filter");
+      return GEN6_MAPFILTER_NEAREST;
+   }
+}
+
+static enum gen_texcoord_mode
+ilo_translate_address_wrap(unsigned wrap)
+{
+   switch (wrap) {
+   case PIPE_TEX_WRAP_CLAMP:           return GEN8_TEXCOORDMODE_HALF_BORDER;
+   case PIPE_TEX_WRAP_REPEAT:          return GEN6_TEXCOORDMODE_WRAP;
+   case PIPE_TEX_WRAP_CLAMP_TO_EDGE:   return GEN6_TEXCOORDMODE_CLAMP;
+   case PIPE_TEX_WRAP_CLAMP_TO_BORDER: return GEN6_TEXCOORDMODE_CLAMP_BORDER;
+   case PIPE_TEX_WRAP_MIRROR_REPEAT:   return GEN6_TEXCOORDMODE_MIRROR;
+   case PIPE_TEX_WRAP_MIRROR_CLAMP:
+   case PIPE_TEX_WRAP_MIRROR_CLAMP_TO_EDGE:
+   case PIPE_TEX_WRAP_MIRROR_CLAMP_TO_BORDER:
+   default:
+      assert(!"unknown sampler wrap mode");
+      return GEN6_TEXCOORDMODE_WRAP;
+   }
+}
+
+static enum gen_aniso_ratio
+ilo_translate_max_anisotropy(unsigned max_anisotropy)
+{
+   switch (max_anisotropy) {
+   case 0: case 1: case 2:             return GEN6_ANISORATIO_2;
+   case 3: case 4:                     return GEN6_ANISORATIO_4;
+   case 5: case 6:                     return GEN6_ANISORATIO_6;
+   case 7: case 8:                     return GEN6_ANISORATIO_8;
+   case 9: case 10:                    return GEN6_ANISORATIO_10;
+   case 11: case 12:                   return GEN6_ANISORATIO_12;
+   case 13: case 14:                   return GEN6_ANISORATIO_14;
+   default:                            return GEN6_ANISORATIO_16;
+   }
+}
+
+static enum gen_prefilter_op
+ilo_translate_shadow_func(unsigned func)
+{
+   /*
+    * For PIPE_FUNC_x, the reference value is on the left-hand side of the
+    * comparison, and 1.0 is returned when the comparison is true.
+    *
+    * For GEN6_PREFILTEROP_x, the reference value is on the right-hand side of
+    * the comparison, and 0.0 is returned when the comparison is true.
+    */
+   switch (func) {
+   case PIPE_FUNC_NEVER:               return GEN6_PREFILTEROP_ALWAYS;
+   case PIPE_FUNC_LESS:                return GEN6_PREFILTEROP_LEQUAL;
+   case PIPE_FUNC_EQUAL:               return GEN6_PREFILTEROP_NOTEQUAL;
+   case PIPE_FUNC_LEQUAL:              return GEN6_PREFILTEROP_LESS;
+   case PIPE_FUNC_GREATER:             return GEN6_PREFILTEROP_GEQUAL;
+   case PIPE_FUNC_NOTEQUAL:            return GEN6_PREFILTEROP_EQUAL;
+   case PIPE_FUNC_GEQUAL:              return GEN6_PREFILTEROP_GREATER;
+   case PIPE_FUNC_ALWAYS:              return GEN6_PREFILTEROP_NEVER;
+   default:
+      assert(!"unknown shadow compare function");
+      return GEN6_PREFILTEROP_NEVER;
+   }
+}
+
 static void
 finalize_shader_states(struct ilo_state_vector *vec)
 {
@@ -336,11 +419,105 @@ ilo_create_sampler_state(struct pipe_context *pipe,
 {
    const struct ilo_dev *dev = ilo_context(pipe)->dev;
    struct ilo_sampler_cso *sampler;
+   struct ilo_state_sampler_info info;
+   struct ilo_state_sampler_border_info border;
 
-   sampler = MALLOC_STRUCT(ilo_sampler_cso);
+   sampler = CALLOC_STRUCT(ilo_sampler_cso);
    assert(sampler);
 
-   ilo_gpe_init_sampler_cso(dev, state, sampler);
+   memset(&info, 0, sizeof(info));
+
+   info.non_normalized = !state->normalized_coords;
+   if (state->normalized_coords) {
+      info.lod_bias = state->lod_bias;
+      info.min_lod = state->min_lod;
+      info.max_lod = state->max_lod;
+
+      info.mip_filter = ilo_translate_mip_filter(state->min_mip_filter);
+   } else {
+      /* work around a bug in util_blitter */
+      info.mip_filter = GEN6_MIPFILTER_NONE;
+   }
+
+   if (state->max_anisotropy) {
+      info.min_filter = GEN6_MAPFILTER_ANISOTROPIC;
+      info.mag_filter = GEN6_MAPFILTER_ANISOTROPIC;
+   } else {
+      info.min_filter = ilo_translate_img_filter(state->min_img_filter);
+      info.mag_filter = ilo_translate_img_filter(state->mag_img_filter);
+   }
+
+   info.max_anisotropy = ilo_translate_max_anisotropy(state->max_anisotropy);
+
+   /* use LOD 0 when no mipmapping (see sampler_set_gen6_SAMPLER_STATE()) */
+   if (info.mip_filter == GEN6_MIPFILTER_NONE && info.min_lod > 0.0f) {
+      info.min_lod = 0.0f;
+      info.mag_filter = info.min_filter;
+   }
+
+   if (state->seamless_cube_map) {
+      if (state->min_img_filter == PIPE_TEX_FILTER_NEAREST ||
+          state->mag_img_filter == PIPE_TEX_FILTER_NEAREST) {
+         info.tcx_ctrl = GEN6_TEXCOORDMODE_CLAMP;
+         info.tcy_ctrl = GEN6_TEXCOORDMODE_CLAMP;
+         info.tcz_ctrl = GEN6_TEXCOORDMODE_CLAMP;
+      } else {
+         info.tcx_ctrl = GEN6_TEXCOORDMODE_CUBE;
+         info.tcy_ctrl = GEN6_TEXCOORDMODE_CUBE;
+         info.tcz_ctrl = GEN6_TEXCOORDMODE_CUBE;
+      }
+   } else {
+      info.tcx_ctrl = ilo_translate_address_wrap(state->wrap_s);
+      info.tcy_ctrl = ilo_translate_address_wrap(state->wrap_t);
+      info.tcz_ctrl = ilo_translate_address_wrap(state->wrap_r);
+
+      if (ilo_dev_gen(dev) < ILO_GEN(8)) {
+         /*
+          * For nearest filtering, PIPE_TEX_WRAP_CLAMP means
+          * PIPE_TEX_WRAP_CLAMP_TO_EDGE;  for linear filtering,
+          * PIPE_TEX_WRAP_CLAMP means PIPE_TEX_WRAP_CLAMP_TO_BORDER while
+          * additionally clamping the texture coordinates to [0.0, 1.0].
+          *
+          * PIPE_TEX_WRAP_CLAMP is not supported natively until Gen8.  The
+          * clamping has to be taken care of in the shaders.  There are two
+          * filters here, but let the minification one has a say.
+          */
+         const bool clamp_is_to_edge =
+            (state->min_img_filter == PIPE_TEX_FILTER_NEAREST);
+
+         if (clamp_is_to_edge) {
+            if (info.tcx_ctrl == GEN8_TEXCOORDMODE_HALF_BORDER)
+               info.tcx_ctrl = GEN6_TEXCOORDMODE_CLAMP;
+            if (info.tcy_ctrl == GEN8_TEXCOORDMODE_HALF_BORDER)
+               info.tcy_ctrl = GEN6_TEXCOORDMODE_CLAMP;
+            if (info.tcz_ctrl == GEN8_TEXCOORDMODE_HALF_BORDER)
+               info.tcz_ctrl = GEN6_TEXCOORDMODE_CLAMP;
+         } else {
+            if (info.tcx_ctrl == GEN8_TEXCOORDMODE_HALF_BORDER) {
+               info.tcx_ctrl = GEN6_TEXCOORDMODE_CLAMP_BORDER;
+               sampler->saturate_s = true;
+            }
+            if (info.tcy_ctrl == GEN8_TEXCOORDMODE_HALF_BORDER) {
+               info.tcy_ctrl = GEN6_TEXCOORDMODE_CLAMP_BORDER;
+               sampler->saturate_t = true;
+            }
+            if (info.tcz_ctrl == GEN8_TEXCOORDMODE_HALF_BORDER) {
+               info.tcz_ctrl = GEN6_TEXCOORDMODE_CLAMP_BORDER;
+               sampler->saturate_r = true;
+            }
+         }
+      }
+   }
+
+   if (state->compare_mode == PIPE_TEX_COMPARE_R_TO_TEXTURE)
+      info.shadow_func = ilo_translate_shadow_func(state->compare_func);
+
+   ilo_state_sampler_init(&sampler->sampler, dev, &info);
+
+   memset(&border, 0, sizeof(border));
+   memcpy(border.rgba.f, state->border_color.f, sizeof(border.rgba.f));
+
+   ilo_state_sampler_border_init(&sampler->border, dev, &border);
 
    return sampler;
 }
@@ -1357,6 +1534,8 @@ ilo_state_vector_init(const struct ilo_dev *dev,
 
    ilo_state_surface_init_for_null(&vec->fb.null_rt, dev);
    ilo_state_zs_init_for_null(&vec->fb.null_zs, dev);
+
+   ilo_state_sampler_init_disabled(&vec->disabled_sampler, dev);
 
    util_dynarray_init(&vec->global_binding.bindings);
 

@@ -36,6 +36,7 @@
 #include "ilo_core.h"
 #include "ilo_dev.h"
 #include "ilo_state_3d.h"
+#include "ilo_state_sampler.h"
 #include "ilo_builder.h"
 
 static inline void
@@ -1728,13 +1729,12 @@ gen6_so_SURFACE_STATE(struct ilo_builder *builder,
 
 static inline uint32_t
 gen6_SAMPLER_STATE(struct ilo_builder *builder,
-                   const struct ilo_sampler_cso * const *samplers,
-                   const struct pipe_sampler_view * const *views,
+                   const struct ilo_state_sampler *samplers,
                    const uint32_t *sampler_border_colors,
-                   int num_samplers)
+                   int sampler_count)
 {
    const int state_align = 32;
-   const int state_len = 4 * num_samplers;
+   const int state_len = 4 * sampler_count;
    uint32_t state_offset, *dw;
    int i;
 
@@ -1745,9 +1745,9 @@ gen6_SAMPLER_STATE(struct ilo_builder *builder,
     *
     *     "The sampler state is stored as an array of up to 16 elements..."
     */
-   assert(num_samplers <= 16);
+   assert(sampler_count <= 16);
 
-   if (!num_samplers)
+   if (!sampler_count)
       return 0;
 
    /*
@@ -1759,86 +1759,19 @@ gen6_SAMPLER_STATE(struct ilo_builder *builder,
     *
     * It also applies to other shader stages.
     */
-   ilo_builder_dynamic_pad_top(builder, 4 * (4 - (num_samplers % 4)));
+   ilo_builder_dynamic_pad_top(builder, 4 * (4 - (sampler_count % 4)));
 
    state_offset = ilo_builder_dynamic_pointer(builder,
          ILO_BUILDER_ITEM_SAMPLER, state_align, state_len, &dw);
 
-   for (i = 0; i < num_samplers; i++) {
-      const struct ilo_sampler_cso *sampler = samplers[i];
-      const struct pipe_sampler_view *view = views[i];
-      const uint32_t border_color = sampler_border_colors[i];
-      uint32_t dw_filter, dw_wrap;
+   for (i = 0; i < sampler_count; i++) {
+      /* see sampler_set_gen6_SAMPLER_STATE() */
+      dw[0] = samplers[i].sampler[0];
+      dw[1] = samplers[i].sampler[1];
+      dw[3] = samplers[i].sampler[2];
 
-      /* there may be holes */
-      if (!sampler || !view) {
-         /* disabled sampler */
-         dw[0] = 1 << 31;
-         dw[1] = 0;
-         dw[2] = 0;
-         dw[3] = 0;
-         dw += 4;
-
-         continue;
-      }
-
-      /* determine filter and wrap modes */
-      switch (view->texture->target) {
-      case PIPE_TEXTURE_1D:
-         dw_filter = (sampler->anisotropic) ?
-            sampler->dw_filter_aniso : sampler->dw_filter;
-         dw_wrap = sampler->dw_wrap_1d;
-         break;
-      case PIPE_TEXTURE_3D:
-         /*
-          * From the Sandy Bridge PRM, volume 4 part 1, page 103:
-          *
-          *     "Only MAPFILTER_NEAREST and MAPFILTER_LINEAR are supported for
-          *      surfaces of type SURFTYPE_3D."
-          */
-         dw_filter = sampler->dw_filter;
-         dw_wrap = sampler->dw_wrap;
-         break;
-      case PIPE_TEXTURE_CUBE:
-         dw_filter = (sampler->anisotropic) ?
-            sampler->dw_filter_aniso : sampler->dw_filter;
-         dw_wrap = sampler->dw_wrap_cube;
-         break;
-      default:
-         dw_filter = (sampler->anisotropic) ?
-            sampler->dw_filter_aniso : sampler->dw_filter;
-         dw_wrap = sampler->dw_wrap;
-         break;
-      }
-
-      dw[0] = sampler->payload[0];
-      dw[1] = sampler->payload[1];
-      assert(!(border_color & 0x1f));
-      dw[2] = border_color;
-      dw[3] = sampler->payload[2];
-
-      dw[0] |= dw_filter;
-
-      if (ilo_dev_gen(builder->dev) >= ILO_GEN(7)) {
-         dw[3] |= dw_wrap;
-      }
-      else {
-         /*
-          * From the Sandy Bridge PRM, volume 4 part 1, page 21:
-          *
-          *     "[DevSNB] Errata: Incorrect behavior is observed in cases
-          *      where the min and mag mode filters are different and
-          *      SurfMinLOD is nonzero. The determination of MagMode uses the
-          *      following equation instead of the one in the above
-          *      pseudocode: MagMode = (LOD + SurfMinLOD - Base <= 0)"
-          *
-          * As a way to work around that, we set Base to
-          * view->u.tex.first_level.
-          */
-         dw[0] |= view->u.tex.first_level << 22;
-
-         dw[1] |= dw_wrap;
-      }
+      assert(!(sampler_border_colors[i] & 0x1f));
+      dw[2] = sampler_border_colors[i];
 
       dw += 4;
    }
@@ -1848,7 +1781,7 @@ gen6_SAMPLER_STATE(struct ilo_builder *builder,
 
 static inline uint32_t
 gen6_SAMPLER_BORDER_COLOR_STATE(struct ilo_builder *builder,
-                                const struct ilo_sampler_cso *sampler)
+                                const struct ilo_state_sampler_border *border)
 {
    const int state_align =
       (ilo_dev_gen(builder->dev) >= ILO_GEN(8)) ? 64 : 32;
@@ -1856,11 +1789,12 @@ gen6_SAMPLER_BORDER_COLOR_STATE(struct ilo_builder *builder,
 
    ILO_DEV_ASSERT(builder->dev, 6, 8);
 
-   assert(Elements(sampler->payload) >= 3 + state_len);
-
-   /* see ilo_gpe_init_sampler_cso() */
+   /*
+    * see border_set_gen6_SAMPLER_BORDER_COLOR_STATE() and
+    * border_set_gen7_SAMPLER_BORDER_COLOR_STATE()
+    */
    return ilo_builder_dynamic_write(builder, ILO_BUILDER_ITEM_BLOB,
-         state_align, state_len, &sampler->payload[3]);
+         state_align, state_len, border->color);
 }
 
 static inline uint32_t

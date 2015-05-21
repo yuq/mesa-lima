@@ -29,6 +29,7 @@
 #define ILO_STATE_H
 
 #include "core/ilo_state_3d.h"
+#include "core/ilo_state_sampler.h"
 #include "core/ilo_state_surface.h"
 #include "core/ilo_state_zs.h"
 #include "pipe/p_state.h"
@@ -135,6 +136,18 @@ struct ilo_cbuf_cso {
    const void *user_buffer;
 };
 
+struct ilo_sampler_cso {
+   struct ilo_state_sampler sampler;
+   struct ilo_state_sampler_border border;
+   bool saturate_s;
+   bool saturate_t;
+   bool saturate_r;
+};
+
+struct ilo_sampler_state {
+   const struct ilo_sampler_cso *cso[ILO_MAX_SAMPLERS];
+};
+
 struct ilo_cbuf_state {
    struct ilo_cbuf_cso cso[ILO_MAX_CONST_BUFFERS];
    uint32_t enabled_mask;
@@ -215,6 +228,8 @@ struct ilo_state_vector {
    struct ilo_view_state view[PIPE_SHADER_TYPES];
    struct ilo_cbuf_state cbuf[PIPE_SHADER_TYPES];
    struct ilo_resource_state resource;
+
+   struct ilo_state_sampler disabled_sampler;
 
    /* GPGPU */
    struct ilo_shader_state *cs;

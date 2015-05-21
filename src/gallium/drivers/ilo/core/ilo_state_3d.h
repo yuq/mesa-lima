@@ -195,26 +195,6 @@ struct ilo_blend_state {
    uint32_t dw_ps_blend_dst_alpha_forced_one;
 };
 
-struct ilo_sampler_cso {
-   /* SAMPLER_STATE and SAMPLER_BORDER_COLOR_STATE */
-   uint32_t payload[15];
-
-   uint32_t dw_filter;
-   uint32_t dw_filter_aniso;
-   uint32_t dw_wrap;
-   uint32_t dw_wrap_1d;
-   uint32_t dw_wrap_cube;
-
-   bool anisotropic;
-   bool saturate_r;
-   bool saturate_s;
-   bool saturate_t;
-};
-
-struct ilo_sampler_state {
-   const struct ilo_sampler_cso *cso[ILO_MAX_SAMPLERS];
-};
-
 struct ilo_surface_cso {
    struct pipe_surface base;
 
@@ -289,11 +269,6 @@ void
 ilo_gpe_init_blend(const struct ilo_dev *dev,
                    const struct pipe_blend_state *state,
                    struct ilo_blend_state *blend);
-
-void
-ilo_gpe_init_sampler_cso(const struct ilo_dev *dev,
-                         const struct pipe_sampler_state *state,
-                         struct ilo_sampler_cso *sampler);
 
 void
 ilo_gpe_init_vs_cso(const struct ilo_dev *dev,
