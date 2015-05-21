@@ -530,10 +530,6 @@ struct anv_bindings {
 
    struct {
       uint32_t                                  surfaces[256];
-      struct {
-         struct anv_bo *bo;
-         uint32_t offset;
-      }                                         relocs[256];
       struct { uint32_t dwords[4]; }            samplers[16];
    }                                            descriptors[VK_NUM_SHADER_STAGE];
 };

@@ -185,11 +185,6 @@ anv_cmd_buffer_copy_render_targets(struct anv_cmd_buffer *cmd_buffer,
    for (uint32_t i = 0; i < fb->color_attachment_count; i++) {
       bindings->descriptors[VK_SHADER_STAGE_FRAGMENT].surfaces[i] =
          old_bindings->descriptors[VK_SHADER_STAGE_FRAGMENT].surfaces[i];
-
-      bindings->descriptors[VK_SHADER_STAGE_FRAGMENT].relocs[i].bo =
-         old_bindings->descriptors[VK_SHADER_STAGE_FRAGMENT].relocs[i].bo;
-      bindings->descriptors[VK_SHADER_STAGE_FRAGMENT].relocs[i].offset =
-         old_bindings->descriptors[VK_SHADER_STAGE_FRAGMENT].relocs[i].offset;
    }
 
    cmd_buffer->dirty |= ANV_CMD_BUFFER_DESCRIPTOR_SET_DIRTY;

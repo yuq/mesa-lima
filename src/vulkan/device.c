@@ -2466,9 +2466,13 @@ void anv_CmdBindDescriptorSets(
                anv_cmd_buffer_alloc_surface_state(cmd_buffer, 64, 64);
             memcpy(state.map, view->surface_state.map, 64);
 
+            /* The address goes in dwords 8 and 9 of the SURFACE_STATE */
+            *(uint64_t *)(state.map + 8 * 4) =
+               anv_reloc_list_add(&cmd_buffer->surface_relocs,
+                                  state.offset + 8 * 4,
+                                  view->bo, view->offset);
+
             bindings->descriptors[s].surfaces[start + b] = state.offset;
-            bindings->descriptors[s].relocs[start + b].bo = view->bo;
-            bindings->descriptors[s].relocs[start + b].offset = view->offset;
          }
 
          start = layout->set[firstSet + i].sampler_start[s];
@@ -2553,33 +2557,11 @@ flush_descriptor_sets(struct anv_cmd_buffer *cmd_buffer)
 
       if (layers + surface_count > 0) {
          struct anv_state state;
-         uint32_t offset;
-         uint32_t *address;
          uint32_t size;
 
          size = (bias + surface_count) * sizeof(uint32_t);
          state = anv_cmd_buffer_alloc_surface_state(cmd_buffer, size, 32);
          memcpy(state.map, bindings->descriptors[s].surfaces, size);
-
-         for (uint32_t i = 0; i < layers; i++) {
-            offset = bindings->descriptors[s].surfaces[i] + 8 * sizeof(int32_t);
-            address = cmd_buffer->surface_bo.map + offset;
-
-            *address =
-               anv_reloc_list_add(&cmd_buffer->surface_relocs, offset,
-                                  bindings->descriptors[s].relocs[i].bo,
-                                  bindings->descriptors[s].relocs[i].offset);
-         }
-
-         for (uint32_t i = 0; i < surface_count; i++) {
-            offset = bindings->descriptors[s].surfaces[i] + 8 * sizeof(int32_t);
-            address = cmd_buffer->surface_bo.map + offset;
-
-            *address =
-               anv_reloc_list_add(&cmd_buffer->surface_relocs, offset,
-                                  bindings->descriptors[s].relocs[bias + i].bo,
-                                  bindings->descriptors[s].relocs[bias + i].offset);
-         }
 
          static const uint32_t binding_table_opcodes[] = {
             [VK_SHADER_STAGE_VERTEX] = 38,
@@ -3172,9 +3154,13 @@ anv_cmd_buffer_fill_render_targets(struct anv_cmd_buffer *cmd_buffer)
          anv_cmd_buffer_alloc_surface_state(cmd_buffer, 64, 64);
       memcpy(state.map, view->surface_state.map, 64);
 
+      /* The address goes in dwords 8 and 9 of the SURFACE_STATE */
+      *(uint64_t *)(state.map + 8 * 4) =
+         anv_reloc_list_add(&cmd_buffer->surface_relocs,
+                            state.offset + 8 * 4,
+                            view->bo, view->offset);
+
       bindings->descriptors[VK_SHADER_STAGE_FRAGMENT].surfaces[i] = state.offset;
-      bindings->descriptors[VK_SHADER_STAGE_FRAGMENT].relocs[i].bo = view->bo;
-      bindings->descriptors[VK_SHADER_STAGE_FRAGMENT].relocs[i].offset = view->offset;
    }
    cmd_buffer->dirty |= ANV_CMD_BUFFER_DESCRIPTOR_SET_DIRTY;
 }
