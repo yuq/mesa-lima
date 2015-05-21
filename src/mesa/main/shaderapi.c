@@ -569,13 +569,13 @@ get_programiv(struct gl_context *ctx, GLuint program, GLenum pname,
       *params = _mesa_longest_attribute_name_length(shProg);
       return;
    case GL_ACTIVE_UNIFORMS:
-      *params = shProg->NumUserUniformStorage - shProg->NumHiddenUniforms;
+      *params = shProg->NumUniformStorage - shProg->NumHiddenUniforms;
       return;
    case GL_ACTIVE_UNIFORM_MAX_LENGTH: {
       unsigned i;
       GLint max_len = 0;
       const unsigned num_uniforms =
-         shProg->NumUserUniformStorage - shProg->NumHiddenUniforms;
+         shProg->NumUniformStorage - shProg->NumHiddenUniforms;
 
       for (i = 0; i < num_uniforms; i++) {
 	 /* Add one for the terminating NUL character for a non-array, and

@@ -218,8 +218,11 @@ fs_visitor::nir_setup_uniform(nir_variable *var)
       * our name.
       */
    unsigned index = var->data.driver_location;
-   for (unsigned u = 0; u < shader_prog->NumUserUniformStorage; u++) {
+   for (unsigned u = 0; u < shader_prog->NumUniformStorage; u++) {
       struct gl_uniform_storage *storage = &shader_prog->UniformStorage[u];
+
+      if (storage->builtin)
+              continue;
 
       if (strncmp(var->name, storage->name, namelen) != 0 ||
          (storage->name[namelen] != 0 &&

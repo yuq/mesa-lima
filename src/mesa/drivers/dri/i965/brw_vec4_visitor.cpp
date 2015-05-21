@@ -683,8 +683,11 @@ vec4_visitor::setup_uniform_values(ir_variable *ir)
     * order we'd walk the type, so walk the list of storage and find anything
     * with our name, or the prefix of a component that starts with our name.
     */
-   for (unsigned u = 0; u < shader_prog->NumUserUniformStorage; u++) {
+   for (unsigned u = 0; u < shader_prog->NumUniformStorage; u++) {
       struct gl_uniform_storage *storage = &shader_prog->UniformStorage[u];
+
+      if (storage->builtin)
+         continue;
 
       if (strncmp(ir->name, storage->name, namelen) != 0 ||
           (storage->name[namelen] != 0 &&

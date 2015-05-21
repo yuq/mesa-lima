@@ -2406,9 +2406,14 @@ _mesa_associate_uniform_storage(struct gl_context *ctx,
       if (!found)
 	 continue;
 
+      struct gl_uniform_storage *storage =
+         &shader_program->UniformStorage[location];
+
+      /* Do not associate any uniform storage to built-in uniforms */
+      if (!storage->builtin)
+         continue;
+
       if (location != last_location) {
-	 struct gl_uniform_storage *storage =
-	    &shader_program->UniformStorage[location];
 	 enum gl_uniform_driver_format format = uniform_native;
 
 	 unsigned columns = 0;

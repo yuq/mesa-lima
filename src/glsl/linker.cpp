@@ -1400,8 +1400,8 @@ link_fs_input_layout_qualifiers(struct gl_shader_program *prog,
                       "layout qualifiers for gl_FragCoord\n");
       }
 
-      /* Update the linked shader state.  Note that uses_gl_fragcoord should
-       * accumulate the results.  The other values should replace.  If there
+      /* Update the linked shader state.  Note that uses_gl_fragcoord should
+       * accumulate the results.  The other values should replace.  If there
        * are multiple redeclarations, all the fields except uses_gl_fragcoord
        * are already known to be the same.
        */
@@ -2693,7 +2693,7 @@ build_program_resource_list(struct gl_context *ctx,
    }
 
    /* Add uniforms from uniform storage. */
-   for (unsigned i = 0; i < shProg->NumUserUniformStorage; i++) {
+   for (unsigned i = 0; i < shProg->NumUniformStorage; i++) {
       /* Do not add uniforms internally used by Mesa. */
       if (shProg->UniformStorage[i].hidden)
          continue;
