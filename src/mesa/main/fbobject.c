@@ -2707,6 +2707,10 @@ check_texture_target(struct gl_context *ctx, GLenum target,
    /* We're being called by glFramebufferTextureLayer().
     * The only legal texture types for that function are 3D,
     * cube-map, and 1D/2D/cube-map array textures.
+    *
+    * We don't need to check for GL_ARB_texture_cube_map_array because the
+    * application wouldn't have been able to create a texture with a
+    * GL_TEXTURE_CUBE_MAP_ARRAY target if the extension were not enabled.
     */
    switch (target) {
    case GL_TEXTURE_3D:
@@ -2716,10 +2720,13 @@ check_texture_target(struct gl_context *ctx, GLenum target,
    case GL_TEXTURE_2D_MULTISAMPLE_ARRAY:
       return true;
    case GL_TEXTURE_CUBE_MAP:
-      /* This target is valid in TextureLayer when ARB_direct_state_access
-       * or OpenGL 4.5 is supported.
+      /* We don't need to check the extension (GL_ARB_direct_state_access) or
+       * GL version (4.5) for GL_TEXTURE_CUBE_MAP because DSA is always
+       * enabled in core profile.  This can be called from
+       * _mesa_FramebufferTextureLayer in compatibility profile (OpenGL 3.0),
+       * so we do have to check the profile.
        */
-      return ctx->Extensions.ARB_direct_state_access;
+      return ctx->API == API_OPENGL_CORE;
    }
 
    _mesa_error(ctx, GL_INVALID_OPERATION,
