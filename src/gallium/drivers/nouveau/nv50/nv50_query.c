@@ -46,6 +46,7 @@ struct nv50_query {
    boolean flushed;
    boolean is64bit;
    struct nouveau_mm_allocation *mm;
+   struct nouveau_fence *fence;
 };
 
 #define NV50_QUERY_ALLOC_SPACE 256
@@ -92,6 +93,7 @@ static void
 nv50_query_destroy(struct pipe_context *pipe, struct pipe_query *pq)
 {
    nv50_query_allocate(nv50_context(pipe), nv50_query(pq), 0);
+   nouveau_fence_ref(NULL, &nv50_query(pq)->fence);
    FREE(nv50_query(pq));
 }
 
@@ -260,12 +262,22 @@ nv50_query_end(struct pipe_context *pipe, struct pipe_query *pq)
       break;
    }
    q->ready = q->flushed = FALSE;
+
+   if (q->is64bit)
+      nouveau_fence_ref(nv50->screen->base.fence.current, &q->fence);
 }
 
 static INLINE boolean
 nv50_query_ready(struct nv50_query *q)
 {
-   return q->ready || (!q->is64bit && (q->data[0] == q->sequence));
+   if (q->is64bit) {
+      if (nouveau_fence_signalled(q->fence))
+         return TRUE;
+   } else {
+      if (q->data[0] == q->sequence)
+         return TRUE;
+   }
+   return FALSE;
 }
 
 static boolean
