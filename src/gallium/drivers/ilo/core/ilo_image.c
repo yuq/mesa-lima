@@ -1386,6 +1386,8 @@ void ilo_image_init(struct ilo_image *img,
    struct ilo_image_params params;
    bool transfer_only;
 
+   assert(ilo_is_zeroed(img, sizeof(*img)));
+
    /* use transfer layout when the texture is never bound to GPU */
    transfer_only = !(templ->bind & ~(PIPE_BIND_TRANSFER_WRITE |
                                      PIPE_BIND_TRANSFER_READ));
@@ -1410,6 +1412,8 @@ ilo_image_init_for_imported(struct ilo_image *img,
                             unsigned bo_stride)
 {
    struct ilo_image_params params;
+
+   assert(ilo_is_zeroed(img, sizeof(*img)));
 
    if ((tiling == GEN6_TILING_X && bo_stride % 512) ||
        (tiling == GEN6_TILING_Y && bo_stride % 128) ||

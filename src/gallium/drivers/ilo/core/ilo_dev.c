@@ -40,6 +40,8 @@ ilo_dev_init(struct ilo_dev *dev, struct intel_winsys *winsys)
 {
    const struct intel_winsys_info *info;
 
+   assert(ilo_is_zeroed(dev, sizeof(*dev)));
+
    info = intel_winsys_get_info(winsys);
 
    dev->winsys = winsys;

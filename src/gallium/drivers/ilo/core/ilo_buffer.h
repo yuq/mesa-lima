@@ -31,6 +31,7 @@
 #include "intel_winsys.h"
 
 #include "ilo_core.h"
+#include "ilo_debug.h"
 #include "ilo_dev.h"
 
 struct ilo_buffer {
@@ -43,6 +44,8 @@ static inline void
 ilo_buffer_init(struct ilo_buffer *buf, const struct ilo_dev *dev,
                 unsigned size, uint32_t bind, uint32_t flags)
 {
+   assert(ilo_is_zeroed(buf, sizeof(*buf)));
+
    buf->bo_size = size;
 
    /*

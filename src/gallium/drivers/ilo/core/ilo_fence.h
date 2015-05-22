@@ -31,6 +31,7 @@
 #include "intel_winsys.h"
 
 #include "ilo_core.h"
+#include "ilo_debug.h"
 #include "ilo_dev.h"
 
 struct ilo_fence {
@@ -40,7 +41,7 @@ struct ilo_fence {
 static inline void
 ilo_fence_init(struct ilo_fence *fence, const struct ilo_dev *dev)
 {
-   /* no-op */
+   assert(ilo_is_zeroed(fence, sizeof(*fence)));
 }
 
 static inline void
