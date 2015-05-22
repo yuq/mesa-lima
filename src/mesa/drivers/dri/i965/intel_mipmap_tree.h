@@ -522,15 +522,15 @@ enum intel_miptree_tiling_mode {
    INTEL_MIPTREE_TILING_NONE,
 };
 
-bool
-intel_is_non_msrt_mcs_buffer_supported(struct brw_context *brw,
-                                       struct intel_mipmap_tree *mt);
-
 void
 intel_get_non_msrt_mcs_alignment(struct brw_context *brw,
                                  struct intel_mipmap_tree *mt,
                                  unsigned *width_px, unsigned *height);
-
+bool
+intel_tiling_supports_non_msrt_mcs(struct brw_context *brw, unsigned tiling);
+bool
+intel_miptree_is_fast_clear_capable(struct brw_context *brw,
+                                    struct intel_mipmap_tree *mt);
 bool
 intel_miptree_alloc_non_msrt_mcs(struct brw_context *brw,
                                  struct intel_mipmap_tree *mt);

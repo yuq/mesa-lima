@@ -158,15 +158,32 @@ intel_get_non_msrt_mcs_alignment(struct brw_context *brw,
    }
 }
 
+bool
+intel_tiling_supports_non_msrt_mcs(struct brw_context *brw, unsigned tiling)
+{
+   /* From the Ivy Bridge PRM, Vol2 Part1 11.7 "MCS Buffer for Render
+    * Target(s)", beneath the "Fast Color Clear" bullet (p326):
+    *
+    *     - Support is limited to tiled render targets.
+    *
+    * Gen9 changes the restriction to Y-tile only.
+    */
+   if (brw->gen >= 9)
+      return tiling == I915_TILING_Y;
+   else if (brw->gen >= 7)
+      return tiling != I915_TILING_NONE;
+   else
+      return false;
+}
 
 /**
  * For a single-sampled render target ("non-MSRT"), determine if an MCS buffer
- * can be used.
+ * can be used. This doesn't (and should not) inspect any of the properties of
+ * the miptree's BO.
  *
  * From the Ivy Bridge PRM, Vol2 Part1 11.7 "MCS Buffer for Render Target(s)",
  * beneath the "Fast Color Clear" bullet (p326):
  *
- *     - Support is limited to tiled render targets.
  *     - Support is for non-mip-mapped and non-array surface types only.
  *
  * And then later, on p327:
@@ -175,8 +192,8 @@ intel_get_non_msrt_mcs_alignment(struct brw_context *brw,
  *       64bpp, and 128bpp.
  */
 bool
-intel_is_non_msrt_mcs_buffer_supported(struct brw_context *brw,
-                                       struct intel_mipmap_tree *mt)
+intel_miptree_is_fast_clear_capable(struct brw_context *brw,
+                                    struct intel_mipmap_tree *mt)
 {
    /* MCS support does not exist prior to Gen7 */
    if (brw->gen < 7)
@@ -193,11 +210,6 @@ intel_is_non_msrt_mcs_buffer_supported(struct brw_context *brw,
       return false;
    }
 
-   if (brw->gen >= 9 && mt->tiling != I915_TILING_Y)
-      return false;
-   if (mt->tiling != I915_TILING_X &&
-       mt->tiling != I915_TILING_Y)
-      return false;
    if (mt->cpp != 4 && mt->cpp != 8 && mt->cpp != 16)
       return false;
    if (mt->first_level != 0 || mt->last_level != 0) {
@@ -625,7 +637,8 @@ intel_miptree_create(struct brw_context *brw,
     * Allocation of the MCS miptree will be deferred until the first fast
     * clear actually occurs.
     */
-   if (intel_is_non_msrt_mcs_buffer_supported(brw, mt))
+   if (intel_tiling_supports_non_msrt_mcs(brw, mt->tiling) &&
+       intel_miptree_is_fast_clear_capable(brw, mt))
       mt->fast_clear_state = INTEL_FAST_CLEAR_STATE_RESOLVED;
 
    return mt;
@@ -731,7 +744,8 @@ intel_update_winsys_renderbuffer_miptree(struct brw_context *intel,
     * Allocation of the MCS miptree will be deferred until the first fast
     * clear actually occurs.
     */
-   if (intel_is_non_msrt_mcs_buffer_supported(intel, singlesample_mt))
+   if (intel_tiling_supports_non_msrt_mcs(intel, singlesample_mt->tiling) &&
+       intel_miptree_is_fast_clear_capable(intel, singlesample_mt))
       singlesample_mt->fast_clear_state = INTEL_FAST_CLEAR_STATE_RESOLVED;
 
    if (num_samples == 0) {
