@@ -29,8 +29,8 @@
 #ifndef TEXTUREVIEW_H
 #define TEXTUREVIEW_H
 
-GLboolean
-_mesa_texture_view_compatible_format(struct gl_context *ctx,
+bool
+_mesa_texture_view_compatible_format(const struct gl_context *ctx,
                                      GLenum origInternalFormat,
                                      GLenum newInternalFormat);
 

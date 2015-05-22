@@ -167,7 +167,7 @@ static const struct internal_format_class_info s3tc_compatible_internal_formats[
  * \return VIEW_CLASS if internalformat found in table, false otherwise.
  */
 static GLenum
-lookup_view_class(struct gl_context *ctx, GLenum internalformat)
+lookup_view_class(const struct gl_context *ctx, GLenum internalformat)
 {
    GLuint i;
 
@@ -320,8 +320,8 @@ target_valid(struct gl_context *ctx, GLenum origTarget, GLenum newTarget)
  * If an error is found, record it with _mesa_error()
  * \return false if any error, true otherwise.
  */
-GLboolean
-_mesa_texture_view_compatible_format(struct gl_context *ctx,
+bool
+_mesa_texture_view_compatible_format(const struct gl_context *ctx,
                                      GLenum origInternalFormat,
                                      GLenum newInternalFormat)
 {
@@ -334,14 +334,14 @@ _mesa_texture_view_compatible_format(struct gl_context *ctx,
     * or an INVALID_OPERATION error is generated.
     */
    if (origInternalFormat == newInternalFormat)
-      return GL_TRUE;
+      return true;
 
    origViewClass = lookup_view_class(ctx, origInternalFormat);
    newViewClass = lookup_view_class(ctx, newInternalFormat);
    if ((origViewClass == newViewClass) && origViewClass != false)
-      return GL_TRUE;
+      return true;
 
-   return GL_FALSE;
+   return false;
 }
 /**
  * Helper function for TexStorage and teximagemultisample to set immutable
