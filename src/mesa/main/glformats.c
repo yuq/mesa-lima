@@ -1200,7 +1200,7 @@ _mesa_is_depth_or_stencil_format(GLenum format)
  * \return GL_TRUE if compressed, GL_FALSE if uncompressed
  */
 GLboolean
-_mesa_is_compressed_format(struct gl_context *ctx, GLenum format)
+_mesa_is_compressed_format(const struct gl_context *ctx, GLenum format)
 {
    switch (format) {
    case GL_COMPRESSED_RGB_S3TC_DXT1_EXT:
