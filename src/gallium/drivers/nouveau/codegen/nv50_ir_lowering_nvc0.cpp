@@ -100,8 +100,7 @@ void
 NVC0LegalizeSSA::handleFTZ(Instruction *i)
 {
    // Only want to flush float inputs
-   if (i->sType != TYPE_F32)
-      return;
+   assert(i->sType == TYPE_F32);
 
    // If we're already flushing denorms (and NaN's) to zero, no need for this.
    if (i->dnz)
@@ -129,7 +128,7 @@ NVC0LegalizeSSA::visit(BasicBlock *bb)
    Instruction *next;
    for (Instruction *i = bb->getEntry(); i; i = next) {
       next = i->next;
-      if (i->dType == TYPE_F32) {
+      if (i->sType == TYPE_F32) {
          if (prog->getType() != Program::TYPE_COMPUTE)
             handleFTZ(i);
          continue;
