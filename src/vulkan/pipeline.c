@@ -224,6 +224,19 @@ VkResult anv_CreateGraphicsPipeline(
    return anv_pipeline_create(device, pCreateInfo, NULL, pPipeline);
 }
 
+static void
+anv_pipeline_destroy(struct anv_device *device,
+                     struct anv_object *object,
+                     VkObjectType obj_type)
+{
+   struct anv_pipeline *pipeline = (struct anv_pipeline*) object;
+
+   assert(obj_type == VK_OBJECT_TYPE_PIPELINE);
+
+   anv_compiler_free(pipeline);
+   anv_batch_finish(&pipeline->batch, pipeline->device);
+   anv_device_free(pipeline->device, pipeline);
+}
 
 VkResult
 anv_pipeline_create(
@@ -249,6 +262,7 @@ anv_pipeline_create(
    if (pipeline == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
+   pipeline->base.destructor = anv_pipeline_destroy;
    pipeline->device = device;
    pipeline->layout = (struct anv_pipeline_layout *) pCreateInfo->layout;
    memset(pipeline->shaders, 0, sizeof(pipeline->shaders));
@@ -499,16 +513,6 @@ anv_pipeline_create(
    anv_device_free(device, pipeline);
    
    return result;
-}
-
-VkResult
-anv_pipeline_destroy(struct anv_pipeline *pipeline)
-{
-   anv_compiler_free(pipeline);
-   anv_batch_finish(&pipeline->batch, pipeline->device);
-   anv_device_free(pipeline->device, pipeline);
-
-   return VK_SUCCESS;
 }
 
 VkResult anv_CreateGraphicsPipelineDerivative(

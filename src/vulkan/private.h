@@ -251,6 +251,17 @@ void anv_state_stream_finish(struct anv_state_stream *stream);
 struct anv_state anv_state_stream_alloc(struct anv_state_stream *stream,
                                         uint32_t size, uint32_t alignment);
 
+struct anv_object;
+struct anv_device;
+
+typedef void (*anv_object_destructor_cb)(struct anv_device *,
+                                         struct anv_object *,
+                                         VkObjectType);
+
+struct anv_object {
+   anv_object_destructor_cb                     destructor;
+};
+
 struct anv_physical_device {
     struct anv_instance *                       instance;
     uint32_t                                    chipset_id;
@@ -437,12 +448,13 @@ __gen_combine_address(struct anv_batch *batch, void *location,
    } while (0)
 
 struct anv_device_memory {
-   struct anv_bo bo;
-   VkDeviceSize map_size;
-   void *map;
+   struct anv_bo                                bo;
+   VkDeviceSize                                 map_size;
+   void *                                       map;
 };
 
 struct anv_dynamic_vp_state {
+   struct anv_object base;
    struct anv_state sf_clip_vp;
    struct anv_state cc_vp;
    struct anv_state scissor;
@@ -463,6 +475,7 @@ struct anv_query_pool_slot {
 };
 
 struct anv_query_pool {
+   struct anv_object                            base;
    VkQueryType                                  type;
    uint32_t                                     slots;
    struct anv_bo                                bo;
@@ -535,6 +548,7 @@ struct anv_bindings {
 };
 
 struct anv_cmd_buffer {
+   struct anv_object                            base;
    struct anv_device *                          device;
 
    struct drm_i915_gem_execbuffer2              execbuf;
@@ -567,6 +581,7 @@ void anv_cmd_buffer_dump(struct anv_cmd_buffer *cmd_buffer);
 void anv_aub_writer_destroy(struct anv_aub_writer *writer);
 
 struct anv_fence {
+   struct anv_object base;
    struct anv_bo bo;
    struct drm_i915_gem_execbuffer2 execbuf;
    struct drm_i915_gem_exec_object2 exec2_objects[1];
@@ -579,6 +594,7 @@ struct anv_shader {
 };
 
 struct anv_pipeline {
+   struct anv_object                            base;
    struct anv_device *                          device;
    struct anv_batch                             batch;
    struct anv_shader *                          shaders[VK_NUM_SHADER_STAGE];
@@ -630,8 +646,6 @@ anv_pipeline_create(VkDevice device,
                     const VkGraphicsPipelineCreateInfo *pCreateInfo,
                     const struct anv_pipeline_create_info *extra,
                     VkPipeline *pPipeline);
-
-VkResult anv_pipeline_destroy(struct anv_pipeline *pipeline);
 
 struct anv_compiler *anv_compiler_create(int fd);
 void anv_compiler_destroy(struct anv_compiler *compiler);
@@ -698,6 +712,7 @@ struct anv_depth_stencil_view {
 };
 
 struct anv_framebuffer {
+   struct anv_object                            base;
    uint32_t                                     color_attachment_count;
    struct anv_surface_view *                    color_attachments[MAX_RTS];
    struct anv_depth_stencil_view *              depth_stencil;

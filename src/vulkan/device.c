@@ -930,117 +930,72 @@ VkResult anv_OpenPeerImage(
    return VK_UNSUPPORTED;
 }
 
-static VkResult
-anv_instance_destructor(struct anv_device *     device,
-                        VkObject                object)
-{
-   return vkDestroyInstance(object);
-}
-
-static VkResult
-anv_noop_destructor(struct anv_device *         device,
-                    VkObject                    object)
-{
-   return VK_SUCCESS;
-}
-
-static VkResult
-anv_device_destructor(struct anv_device *       device,
-                      VkObject                  object)
-{
-   return vkDestroyDevice(object);
-}
-
-static VkResult
-anv_cmd_buffer_destructor(struct anv_device *   device,
-                          VkObject              object)
-{
-   struct anv_cmd_buffer *cmd_buffer = (struct anv_cmd_buffer *) object;
-   
-   anv_gem_munmap(cmd_buffer->surface_bo.map, BATCH_SIZE);
-   anv_gem_close(device, cmd_buffer->surface_bo.gem_handle);
-   anv_state_stream_finish(&cmd_buffer->surface_state_stream);
-   anv_state_stream_finish(&cmd_buffer->dynamic_state_stream);
-   anv_state_stream_finish(&cmd_buffer->binding_table_state_stream);
-   anv_batch_finish(&cmd_buffer->batch, device);
-   anv_device_free(device, cmd_buffer->exec2_objects);
-   anv_device_free(device, cmd_buffer->exec2_bos);
-   anv_device_free(device, cmd_buffer);
-
-   return VK_SUCCESS;
-}
-
-static VkResult
-anv_pipeline_destructor(struct anv_device *   device,
-                        VkObject              object)
-{
-   struct anv_pipeline *pipeline = (struct anv_pipeline *) object;
-
-   return anv_pipeline_destroy(pipeline);
-}
-
-static VkResult
-anv_free_destructor(struct anv_device *         device,
-                    VkObject                    object)
-{
-   anv_device_free(device, (void *) object);
-
-   return VK_SUCCESS;
-}
-
-static VkResult
-anv_fence_destructor(struct anv_device *   device,
-                     VkObject              object)
-{
-   struct anv_fence *fence = (struct anv_fence *) object;
-
-   anv_gem_munmap(fence->bo.map, fence->bo.size);
-   anv_gem_close(device, fence->bo.gem_handle);
-   anv_device_free(device, fence);
-
-   return VK_SUCCESS;
-}
-
-static VkResult
-anv_query_pool_destructor(struct anv_device *   device,
-                          VkObject              object)
-{
-   struct anv_query_pool *pool = (struct anv_query_pool *) object;
-
-   anv_gem_munmap(pool->bo.map, pool->bo.size);
-   anv_gem_close(device, pool->bo.gem_handle);
-   anv_device_free(device, pool);
-
-   return VK_SUCCESS;
-}
-
-static VkResult (*anv_object_destructors[])(struct anv_device *device,
-                                            VkObject object) = {
-   [VK_OBJECT_TYPE_INSTANCE] =        anv_instance_destructor,
-   [VK_OBJECT_TYPE_PHYSICAL_DEVICE] = anv_noop_destructor,
-   [VK_OBJECT_TYPE_DEVICE] =          anv_device_destructor,
-   [VK_OBJECT_TYPE_QUEUE] =           anv_noop_destructor,
-   [VK_OBJECT_TYPE_COMMAND_BUFFER] =  anv_cmd_buffer_destructor,
-   [VK_OBJECT_TYPE_PIPELINE] =        anv_pipeline_destructor,
-   [VK_OBJECT_TYPE_SHADER] =          anv_free_destructor,
-   [VK_OBJECT_TYPE_BUFFER] =          anv_free_destructor,
-   [VK_OBJECT_TYPE_IMAGE] =           anv_free_destructor,
-   [VK_OBJECT_TYPE_RENDER_PASS] =     anv_free_destructor,
-   [VK_OBJECT_TYPE_FENCE] =           anv_fence_destructor,
-   [VK_OBJECT_TYPE_QUERY_POOL] =      anv_query_pool_destructor
-};
-
 VkResult anv_DestroyObject(
     VkDevice                                    _device,
     VkObjectType                                objType,
-    VkObject                                    object)
+    VkObject                                    _object)
 {
    struct anv_device *device = (struct anv_device *) _device;
+   struct anv_object *object = (struct anv_object *) _object;
 
-   assert(objType < ARRAY_SIZE(anv_object_destructors) &&
-          anv_object_destructors[objType] != NULL);
-      
-   return anv_object_destructors[objType](device, object);
+   switch (objType) {
+   case VK_OBJECT_TYPE_INSTANCE:
+      return anv_DestroyInstance((VkInstance) _object);
+
+   case VK_OBJECT_TYPE_PHYSICAL_DEVICE:
+      /* We don't want to actually destroy physical devices */
+      return VK_SUCCESS;
+
+   case VK_OBJECT_TYPE_DEVICE:
+      assert(_device == (VkDevice) _object);
+      return anv_DestroyDevice((VkDevice) _object);
+
+   case VK_OBJECT_TYPE_QUEUE:
+      /* TODO */
+      return VK_SUCCESS;
+
+   case VK_OBJECT_TYPE_DEVICE_MEMORY:
+      return anv_FreeMemory(_device, (VkDeviceMemory) _object);
+
+   case VK_OBJECT_TYPE_DESCRIPTOR_POOL:
+      /* These are just dummys anyway, so we don't need to destroy them */
+      return VK_SUCCESS;
+
+   case VK_OBJECT_TYPE_BUFFER:
+   case VK_OBJECT_TYPE_BUFFER_VIEW:
+   case VK_OBJECT_TYPE_IMAGE:
+   case VK_OBJECT_TYPE_IMAGE_VIEW:
+   case VK_OBJECT_TYPE_COLOR_ATTACHMENT_VIEW:
+   case VK_OBJECT_TYPE_DEPTH_STENCIL_VIEW:
+   case VK_OBJECT_TYPE_SHADER:
+   case VK_OBJECT_TYPE_PIPELINE_LAYOUT:
+   case VK_OBJECT_TYPE_SAMPLER:
+   case VK_OBJECT_TYPE_DESCRIPTOR_SET:
+   case VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT:
+   case VK_OBJECT_TYPE_DYNAMIC_RS_STATE:
+   case VK_OBJECT_TYPE_DYNAMIC_CB_STATE:
+   case VK_OBJECT_TYPE_DYNAMIC_DS_STATE:
+   case VK_OBJECT_TYPE_RENDER_PASS:
+      /* These are trivially destroyable */
+      anv_device_free(device, (void *) _object);
+      return VK_SUCCESS;
+
+   case VK_OBJECT_TYPE_COMMAND_BUFFER:
+   case VK_OBJECT_TYPE_PIPELINE:
+   case VK_OBJECT_TYPE_DYNAMIC_VP_STATE:
+   case VK_OBJECT_TYPE_FENCE:
+   case VK_OBJECT_TYPE_QUERY_POOL:
+   case VK_OBJECT_TYPE_FRAMEBUFFER:
+      (object->destructor)(device, object, objType);
+      return VK_SUCCESS;
+
+   case VK_OBJECT_TYPE_SEMAPHORE:
+   case VK_OBJECT_TYPE_EVENT:
+      stub_return(VK_UNSUPPORTED);
+
+   default:
+      unreachable("Invalid object type");
+   }
 }
 
 static void
@@ -1180,6 +1135,20 @@ VkResult anv_QueueBindImageMemoryRange(
    stub_return(VK_UNSUPPORTED);
 }
 
+static void
+anv_fence_destroy(struct anv_device *device,
+                  struct anv_object *object,
+                  VkObjectType obj_type)
+{
+   struct anv_fence *fence = (struct anv_fence *) object;
+
+   assert(obj_type == VK_OBJECT_TYPE_FENCE);
+
+   anv_gem_munmap(fence->bo.map, fence->bo.size);
+   anv_gem_close(device, fence->bo.gem_handle);
+   anv_device_free(device, fence);
+}
+
 VkResult anv_CreateFence(
     VkDevice                                    _device,
     const VkFenceCreateInfo*                    pCreateInfo,
@@ -1202,6 +1171,8 @@ VkResult anv_CreateFence(
    result = anv_bo_init_new(&fence->bo, device, fence_size);
    if (result != VK_SUCCESS)
       goto fail;
+
+   fence->base.destructor = anv_fence_destroy;
 
    fence->bo.map =
       anv_gem_mmap(device, fence->bo.gem_handle, 0, fence->bo.size);
@@ -1358,6 +1329,20 @@ VkResult anv_ResetEvent(
 
 // Query functions
 
+static void
+anv_query_pool_destroy(struct anv_device *device,
+                       struct anv_object *object,
+                       VkObjectType obj_type)
+{
+   struct anv_query_pool *pool = (struct anv_query_pool *) object;
+
+   assert(obj_type == VK_OBJECT_TYPE_QUERY_POOL);
+
+   anv_gem_munmap(pool->bo.map, pool->bo.size);
+   anv_gem_close(device, pool->bo.gem_handle);
+   anv_device_free(device, pool);
+}
+
 VkResult anv_CreateQueryPool(
     VkDevice                                    _device,
     const VkQueryPoolCreateInfo*                pCreateInfo,
@@ -1383,6 +1368,8 @@ VkResult anv_CreateQueryPool(
                             VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
    if (pool == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+
+   pool->base.destructor = anv_query_pool_destroy;
 
    pool->type = pCreateInfo->queryType;
    size = pCreateInfo->slots * sizeof(struct anv_query_pool_slot);
@@ -1936,6 +1923,22 @@ clamp_int64(int64_t x, int64_t min, int64_t max)
       return max;
 }
 
+static void
+anv_dynamic_vp_state_destroy(struct anv_device *device,
+                             struct anv_object *object,
+                             VkObjectType obj_type)
+{
+   struct anv_dynamic_vp_state *state = (void *)object;
+
+   assert(obj_type == VK_OBJECT_TYPE_DYNAMIC_VP_STATE);
+
+   anv_state_pool_free(&device->dynamic_state_pool, state->sf_clip_vp);
+   anv_state_pool_free(&device->dynamic_state_pool, state->cc_vp);
+   anv_state_pool_free(&device->dynamic_state_pool, state->scissor);
+
+   anv_device_free(device, state);
+}
+
 VkResult anv_CreateDynamicViewportState(
     VkDevice                                    _device,
     const VkDynamicVpStateCreateInfo*           pCreateInfo,
@@ -1950,6 +1953,8 @@ VkResult anv_CreateDynamicViewportState(
                             VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
    if (state == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+
+   state->base.destructor = anv_dynamic_vp_state_destroy;
 
    unsigned count = pCreateInfo->viewportAndScissorCount;
    state->sf_clip_vp = anv_state_pool_alloc(&device->dynamic_state_pool,
@@ -2087,6 +2092,26 @@ VkResult anv_CreateDynamicDepthStencilState(
 
 // Command buffer functions
 
+static void
+anv_cmd_buffer_destroy(struct anv_device *device,
+                       struct anv_object *object,
+                       VkObjectType obj_type)
+{
+   struct anv_cmd_buffer *cmd_buffer = (struct anv_cmd_buffer *) object;
+
+   assert(obj_type == VK_OBJECT_TYPE_COMMAND_BUFFER);
+
+   anv_gem_munmap(cmd_buffer->surface_bo.map, BATCH_SIZE);
+   anv_gem_close(device, cmd_buffer->surface_bo.gem_handle);
+   anv_state_stream_finish(&cmd_buffer->surface_state_stream);
+   anv_state_stream_finish(&cmd_buffer->dynamic_state_stream);
+   anv_state_stream_finish(&cmd_buffer->binding_table_state_stream);
+   anv_batch_finish(&cmd_buffer->batch, device);
+   anv_device_free(device, cmd_buffer->exec2_objects);
+   anv_device_free(device, cmd_buffer->exec2_bos);
+   anv_device_free(device, cmd_buffer);
+}
+
 VkResult anv_CreateCommandBuffer(
     VkDevice                                    _device,
     const VkCmdBufferCreateInfo*                pCreateInfo,
@@ -2100,6 +2125,8 @@ VkResult anv_CreateCommandBuffer(
                                  VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
    if (cmd_buffer == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+
+   cmd_buffer->base.destructor = anv_cmd_buffer_destroy;
 
    cmd_buffer->device = device;
    cmd_buffer->rs_state = NULL;
@@ -3062,6 +3089,22 @@ void anv_CmdSaveAtomicCounters(
    stub();
 }
 
+static void
+anv_framebuffer_destroy(struct anv_device *device,
+                        struct anv_object *object,
+                        VkObjectType obj_type)
+{
+   struct anv_framebuffer *fb = (struct anv_framebuffer *)object;
+
+   assert(obj_type == VK_OBJECT_TYPE_FRAMEBUFFER);
+
+   anv_DestroyObject((VkDevice) device,
+                     VK_OBJECT_TYPE_DYNAMIC_VP_STATE,
+                     fb->vp_state);
+
+   anv_device_free(device, fb);
+}
+
 VkResult anv_CreateFramebuffer(
     VkDevice                                    _device,
     const VkFramebufferCreateInfo*              pCreateInfo,
@@ -3076,6 +3119,8 @@ VkResult anv_CreateFramebuffer(
                                   VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
    if (framebuffer == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+
+   framebuffer->base.destructor = anv_framebuffer_destroy;
 
    framebuffer->color_attachment_count = pCreateInfo->colorAttachmentCount;
    for (uint32_t i = 0; i < pCreateInfo->colorAttachmentCount; i++) {
