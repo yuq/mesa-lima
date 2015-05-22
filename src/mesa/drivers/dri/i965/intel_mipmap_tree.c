@@ -489,10 +489,26 @@ intel_miptree_create_layout(struct brw_context *brw,
    if (layout_flags & MIPTREE_LAYOUT_FORCE_ALL_SLICE_AT_LOD)
       mt->array_layout = ALL_SLICES_AT_EACH_LOD;
 
-   /* Use HALIGN_16 if MCS is enabled for non-MSRT */
-   if (brw->gen >= 8 && num_samples < 2 &&
-       intel_miptree_is_fast_clear_capable(brw, mt))
+   /*
+    * Obey HALIGN_16 constraints for Gen8 and Gen9 buffers which are
+    * multisampled or have an AUX buffer attached to it.
+    *
+    * GEN  |    MSRT        | AUX_CCS_* or AUX_MCS
+    *  -------------------------------------------
+    *  9   |  HALIGN_16     |    HALIGN_16
+    *  8   |  HALIGN_ANY    |    HALIGN_16
+    *  7   |      ?         |        ?
+    *  6   |      ?         |        ?
+    */
+   if (intel_miptree_is_fast_clear_capable(brw, mt)) {
+      if (brw->gen >= 9 || (brw->gen == 8 && num_samples == 1))
+         layout_flags |= MIPTREE_LAYOUT_FORCE_HALIGN16;
+   } else if (brw->gen >= 9 && num_samples > 1) {
       layout_flags |= MIPTREE_LAYOUT_FORCE_HALIGN16;
+   } else {
+      /* For now, nothing else has this requirement */
+      assert((layout_flags & MIPTREE_LAYOUT_FORCE_HALIGN16) == 0);
+   }
 
    brw_miptree_layout(brw, mt, requested, layout_flags);
 
