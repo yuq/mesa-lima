@@ -20,6 +20,12 @@
         (b) = __builtin_ffs(__dword) - 1, __dword;      \
         __dword &= ~(1 << (b)))
 
+static inline uint32_t
+align_u32(uint32_t value, uint32_t alignment)
+{
+   return (value + alignment - 1) & ~(alignment - 1);
+}
+
 static void
 fail_if(int cond, const char *format, ...)
 {
@@ -421,6 +427,502 @@ test_formats(VkDevice device, VkQueue queue)
    for_each_bit(f, properties.optimalTilingFeatures)
       printf(" %s", features[f]);
    printf("\n");
+}
+
+#define TEST_DEPTH_FLAG         0x01
+
+struct test_context {
+   uint32_t width, height;
+   VkDevice device;
+   VkQueue queue;
+   VkCmdBuffer cmdBuffer;
+   VkPipeline pipeline;
+   VkImage rt;
+   VkImage ds;
+   VkBuffer vertex_buffer;
+   VkBuffer image_buffer;
+   VkDeviceMemory mem;
+   void *map;
+   void *rt_map;
+   void *vertex_map;
+   void *image_map;
+   VkDynamicVpState vp_state;
+   VkDynamicRsState rs_state;
+   VkDynamicDsState ds_state;
+   VkColorAttachmentView rt_view;
+   VkDepthStencilView ds_view;
+   uint32_t rt_size;
+   VkFramebuffer framebuffer;
+   VkRenderPass pass;
+};
+
+static void
+test_prepare(struct test_context *ctx, VkDevice device, VkQueue queue, uint32_t flags)
+{
+   ctx->device = device;
+   ctx->queue = queue;
+
+   vkCreateCommandBuffer(ctx->device,
+                         &(VkCmdBufferCreateInfo) {
+                            .sType = VK_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO,
+                            .queueNodeIndex = 0,
+                            .flags = 0
+                         },
+                         &ctx->cmdBuffer);
+
+   vkCreateBuffer(ctx->device,
+                  &(VkBufferCreateInfo) {
+                     .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+                     .size = 4096,
+                     .usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+                     .flags = 0
+                  },
+                  &ctx->vertex_buffer);
+
+   VkMemoryRequirements vb_requirements;
+   size_t size = sizeof(vb_requirements);
+   vkGetObjectInfo(ctx->device, VK_OBJECT_TYPE_BUFFER, ctx->vertex_buffer,
+                   VK_OBJECT_INFO_TYPE_MEMORY_REQUIREMENTS,
+                   &size, &vb_requirements);
+
+   vkCreateImage(ctx->device,
+                 &(VkImageCreateInfo) {
+                    .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+                    .imageType = VK_IMAGE_TYPE_2D,
+                    .format = VK_FORMAT_R8G8B8A8_UNORM,
+                    .extent = { .width = ctx->width, .height = ctx->height, .depth = 1 },
+                    .mipLevels = 1,
+                    .arraySize = 1,
+                    .samples = 1,
+                    .tiling = VK_IMAGE_TILING_OPTIMAL,
+                    .usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+                    .flags = 0,
+                 },
+                 &ctx->rt);
+
+   VkMemoryRequirements rt_requirements;
+   size = sizeof(rt_requirements);
+   vkGetObjectInfo(ctx->device, VK_OBJECT_TYPE_IMAGE, ctx->rt,
+                   VK_OBJECT_INFO_TYPE_MEMORY_REQUIREMENTS,
+                   &size, &rt_requirements);
+   ctx->rt_size = rt_requirements.size;
+
+   VkDepthStencilBindInfo *ds_attachment;
+   VkDepthStencilBindInfo ds_bind_info;
+   VkMemoryRequirements ds_requirements;
+
+   if (flags & TEST_DEPTH_FLAG) {
+      vkCreateImage(ctx->device,
+                    &(VkImageCreateInfo) {
+                       .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+                       .imageType = VK_IMAGE_TYPE_2D,
+                       .format = VK_FORMAT_D24_UNORM,
+                       .extent = { .width = ctx->width, .height = ctx->height, .depth = 1 },
+                       .mipLevels = 1,
+                       .arraySize = 1,
+                       .samples = 1,
+                       .tiling = VK_IMAGE_TILING_OPTIMAL,
+                       .usage = VK_IMAGE_USAGE_DEPTH_STENCIL_BIT,
+                       .flags = 0,
+                 },
+                 &ctx->ds);
+
+      size = sizeof(ds_requirements);
+      vkGetObjectInfo(ctx->device, VK_OBJECT_TYPE_IMAGE, ctx->ds,
+                      VK_OBJECT_INFO_TYPE_MEMORY_REQUIREMENTS,
+                      &size, &ds_requirements);
+   } else {
+      ds_requirements.size = 0;
+   }
+
+   vkCreateBuffer(ctx->device,
+                  &(VkBufferCreateInfo) {
+                     .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+                     .size = ctx->width * ctx->height * 4,
+                     .usage = VK_BUFFER_USAGE_TRANSFER_DESTINATION_BIT,
+                     .flags = 0
+                  },
+                  &ctx->image_buffer);
+
+   VkMemoryRequirements ib_requirements;
+   size = sizeof(ib_requirements);
+   vkGetObjectInfo(ctx->device, VK_OBJECT_TYPE_BUFFER, ctx->image_buffer,
+                   VK_OBJECT_INFO_TYPE_MEMORY_REQUIREMENTS,
+                   &size, &ib_requirements);
+
+   size_t mem_size =
+      align_u32(vb_requirements.size, 4096) + 
+      align_u32(rt_requirements.size, 4096) +
+      align_u32(ds_requirements.size, 4096) +
+      align_u32(ib_requirements.size, 4096);
+
+   printf("mem size %ld\n", mem_size);
+
+   vkAllocMemory(ctx->device,
+                 &(VkMemoryAllocInfo) {
+                    .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO,
+                    .allocationSize = mem_size,
+                    .memProps = VK_MEMORY_PROPERTY_HOST_DEVICE_COHERENT_BIT,
+                    .memPriority = VK_MEMORY_PRIORITY_NORMAL
+                 },
+                 &ctx->mem);
+
+   vkMapMemory(ctx->device, ctx->mem, 0, mem_size, 0, &ctx->map);
+   memset(ctx->map, 0, mem_size);
+
+   uint32_t offset = 0;
+   printf("vb: %ldb at %d\n", vb_requirements.size, offset);
+   vkQueueBindObjectMemory(ctx->queue, VK_OBJECT_TYPE_BUFFER,
+                           ctx->vertex_buffer, 0, ctx->mem, offset);
+   ctx->vertex_map = ctx->map + offset;
+   offset = align_u32(offset + vb_requirements.size, 4096);
+
+   printf("rt: %ldb at %d\n", rt_requirements.size, offset);
+   vkQueueBindObjectMemory(ctx->queue, VK_OBJECT_TYPE_IMAGE,
+                           ctx->rt, 0, ctx->mem, offset);
+   ctx->rt_map = ctx->map + offset;
+   offset = align_u32(offset + rt_requirements.size, 4096);
+
+   if (flags & TEST_DEPTH_FLAG) {
+      printf("ds: %ldb at %d\n", ds_requirements.size, offset);
+      vkQueueBindObjectMemory(ctx->queue, VK_OBJECT_TYPE_IMAGE,
+                              ctx->ds, 0, ctx->mem, offset);
+      offset = align_u32(offset + ds_requirements.size, 4096);
+   }
+
+   printf("ib: %ldb at %d\n", ib_requirements.size, offset);
+   vkQueueBindObjectMemory(ctx->queue, VK_OBJECT_TYPE_BUFFER,
+                           ctx->image_buffer, 0, ctx->mem, offset);
+   ctx->image_map = ctx->map + offset;
+   offset = align_u32(offset + ib_requirements.size, 4096);
+
+   vkCreateDynamicViewportState(ctx->device,
+                                &(VkDynamicVpStateCreateInfo) {
+                                   .sType = VK_STRUCTURE_TYPE_DYNAMIC_VP_STATE_CREATE_INFO,
+                                   .viewportAndScissorCount = 1,
+                                   .pViewports = (VkViewport[]) {
+                                      {
+                                         .originX = 0,
+                                         .originY = 0,
+                                         .width = ctx->width,
+                                         .height = ctx->height,
+                                         .minDepth = -1,
+                                         .maxDepth = 1
+                                      },
+                                   },
+                                   .pScissors = (VkRect[]) {
+                                      { {  0,  0 }, { ctx->width, ctx->height } },
+                                   }
+                                },
+                                &ctx->vp_state);
+
+   vkCreateDynamicRasterState(ctx->device,
+                              &(VkDynamicRsStateCreateInfo) {
+                                 .sType = VK_STRUCTURE_TYPE_DYNAMIC_RS_STATE_CREATE_INFO,
+                              },
+                              &ctx->rs_state);
+
+   vkCreateDynamicDepthStencilState(ctx->device,
+                                    &(VkDynamicDsStateCreateInfo) {
+                                       .sType = VK_STRUCTURE_TYPE_DYNAMIC_DS_STATE_CREATE_INFO,
+                                    },
+                                    &ctx->ds_state);
+
+   vkCreateColorAttachmentView(ctx->device,
+                               &(VkColorAttachmentViewCreateInfo) {
+                                  .sType = VK_STRUCTURE_TYPE_COLOR_ATTACHMENT_VIEW_CREATE_INFO,
+                                  .image = ctx->rt,
+                                  .format = VK_FORMAT_R8G8B8A8_UNORM,
+                                  .mipLevel = 0,
+                                  .baseArraySlice = 0,
+                                  .arraySize = 1,
+                                  .msaaResolveImage = 0,
+                                  .msaaResolveSubResource = { 0, }
+                               },
+                               &ctx->rt_view);
+
+   if (flags & TEST_DEPTH_FLAG) {
+      vkCreateDepthStencilView(ctx->device,
+                               &(VkDepthStencilViewCreateInfo) {
+                                  .sType = VK_STRUCTURE_TYPE_DEPTH_STENCIL_VIEW_CREATE_INFO,
+                                  .image = ctx->ds,
+                                  .mipLevel = 0,
+                                  .baseArraySlice = 0,
+                                  .arraySize = 1,
+                                  .msaaResolveImage = 0,
+                                  .msaaResolveSubResource = { 0, }
+                               },
+                               &ctx->ds_view);
+      ds_bind_info.view = ctx->ds_view;
+      ds_bind_info.layout = 0;
+      ds_attachment = &ds_bind_info;
+   } else {
+      ds_attachment = NULL;
+   }
+
+   vkCreateFramebuffer(ctx->device,
+                       &(VkFramebufferCreateInfo) {
+                          .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
+                          .colorAttachmentCount = 1,
+                          .pColorAttachments = (VkColorAttachmentBindInfo[]) {
+                             {
+                                .view = ctx->rt_view,
+                                .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+                             }
+                          },
+                          .pDepthStencilAttachment = ds_attachment,
+                          .sampleCount = 1,
+                          .width = ctx->width,
+                          .height = ctx->height,
+                          .layers = 1
+                       },
+                       &ctx->framebuffer);
+
+   vkCreateRenderPass(ctx->device,
+                      &(VkRenderPassCreateInfo) {
+                         .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
+                         .renderArea = { { 0, 0 }, { ctx->width, ctx->height } },
+                         .colorAttachmentCount = 1,
+                         .extent = { },
+                         .sampleCount = 1,
+                         .layers = 1,
+                         .pColorFormats = (VkFormat[]) { VK_FORMAT_R8G8B8A8_UNORM },
+                         .pColorLayouts = (VkImageLayout[]) { VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL },
+                         .pColorLoadOps = (VkAttachmentLoadOp[]) { VK_ATTACHMENT_LOAD_OP_CLEAR },
+                         .pColorStoreOps = (VkAttachmentStoreOp[]) { VK_ATTACHMENT_STORE_OP_STORE },
+                         .pColorLoadClearValues = (VkClearColor[]) {
+                            { .color = { .floatColor = { 0.2, 0.2, 0.2, 1.0 } }, .useRawValue = false }
+                         },
+                         .depthStencilFormat = VK_FORMAT_D24_UNORM,
+                         .depthStencilLayout = 0,
+                         .depthLoadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+                         .depthLoadClearValue = 0.5,
+                         .depthStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+                      },
+                      &ctx->pass);
+
+   vkBeginCommandBuffer(ctx->cmdBuffer,
+                        &(VkCmdBufferBeginInfo) {
+                           .sType = VK_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO,
+                           .flags = 0
+                        });
+
+   vkCmdBeginRenderPass(ctx->cmdBuffer,
+                        &(VkRenderPassBegin) {
+                           .renderPass = ctx->pass,
+                           .framebuffer = ctx->framebuffer
+                        });
+}
+
+static void
+test_finish(struct test_context *ctx)
+{
+   vkCmdEndRenderPass(ctx->cmdBuffer, ctx->pass);
+
+   VkBufferImageCopy copy = {
+      .bufferOffset = 0,
+      .imageSubresource = {
+         .aspect = VK_IMAGE_ASPECT_COLOR,
+         .mipLevel = 0,
+         .arraySlice = 0,
+      },
+      .imageOffset = { .x = 0, .y = 0, .z = 0 },
+      .imageExtent = { .width = ctx->width, .height = ctx->height, .depth = 1 },
+   };
+
+   vkCmdCopyImageToBuffer(ctx->cmdBuffer, ctx->rt, VK_IMAGE_LAYOUT_GENERAL,
+                          ctx->image_buffer, 1, &copy);
+
+
+   vkEndCommandBuffer(ctx->cmdBuffer);
+
+   vkQueueSubmit(ctx->queue, 1, &ctx->cmdBuffer, 0);
+
+   vkQueueWaitIdle(ctx->queue);
+
+   write_png("vk-map.png", ctx->width, ctx->height, 1024, ctx->rt_map);
+   write_png("vk-copy.png", ctx->width, ctx->height, 1024, ctx->image_map);
+
+   vkDestroyObject(ctx->device, VK_OBJECT_TYPE_COMMAND_BUFFER, ctx->cmdBuffer);
+   vkDestroyObject(ctx->device, VK_OBJECT_TYPE_PIPELINE, ctx->pipeline);
+   vkDestroyObject(ctx->device, VK_OBJECT_TYPE_IMAGE, ctx->rt);
+   vkDestroyObject(ctx->device, VK_OBJECT_TYPE_BUFFER, ctx->vertex_buffer);
+   vkDestroyObject(ctx->device, VK_OBJECT_TYPE_BUFFER, ctx->image_buffer);
+   vkUnmapMemory(ctx->device, ctx->mem);
+   vkFreeMemory(ctx->device, ctx->mem);
+   vkDestroyObject(ctx->device, VK_OBJECT_TYPE_DYNAMIC_VP_STATE, ctx->vp_state);
+   vkDestroyObject(ctx->device, VK_OBJECT_TYPE_DYNAMIC_RS_STATE, ctx->rs_state);
+   vkDestroyObject(ctx->device, VK_OBJECT_TYPE_COLOR_ATTACHMENT_VIEW, ctx->rt_view);
+   vkDestroyObject(ctx->device, VK_OBJECT_TYPE_FRAMEBUFFER, ctx->framebuffer);
+   vkDestroyObject(ctx->device, VK_OBJECT_TYPE_RENDER_PASS, ctx->pass);
+}
+
+static void
+test_create_solid_color_pipeline(struct test_context *ctx)
+{
+   VkPipelineIaStateCreateInfo ia_create_info = {
+      .sType = VK_STRUCTURE_TYPE_PIPELINE_IA_STATE_CREATE_INFO,
+      .topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP,
+      .disableVertexReuse = false,
+      .primitiveRestartEnable = false,
+      .primitiveRestartIndex = 0
+   };
+
+   VkShader vs = GLSL_VK_SHADER(ctx->device, VERTEX,
+      layout(location = 0) in vec4 a_position;
+      layout(location = 1) in vec4 a_color;
+      out vec4 v_color;
+      void main()
+      {
+        gl_Position = a_position;
+        v_color = a_color;
+      }
+   );
+
+   VkShader fs = GLSL_VK_SHADER(ctx->device, FRAGMENT,
+      out vec4 f_color;
+      in vec4 v_color;
+      void main()
+      {
+         f_color = v_color;
+      }
+   );
+
+   VkPipelineShaderStageCreateInfo vs_create_info = {
+      .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+      .pNext = &ia_create_info,
+      .shader = {
+         .stage = VK_SHADER_STAGE_VERTEX,
+         .shader = vs,
+         .linkConstBufferCount = 0,
+         .pLinkConstBufferInfo = NULL,
+         .pSpecializationInfo = NULL
+      }
+   };
+
+   VkPipelineShaderStageCreateInfo fs_create_info = {
+      .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+      .pNext = &vs_create_info,
+      .shader = {
+         .stage = VK_SHADER_STAGE_FRAGMENT,
+         .shader = fs,
+         .linkConstBufferCount = 0,
+         .pLinkConstBufferInfo = NULL,
+         .pSpecializationInfo = NULL
+      }
+   };
+
+   VkPipelineVertexInputCreateInfo vi_create_info = {
+      .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_CREATE_INFO,
+      .pNext = &fs_create_info,
+      .bindingCount = 2,
+      .pVertexBindingDescriptions = (VkVertexInputBindingDescription[]) {
+         {
+            .binding = 0,
+            .strideInBytes = 16,
+            .stepRate = VK_VERTEX_INPUT_STEP_RATE_VERTEX
+         },
+         {
+            .binding = 1,
+            .strideInBytes = 16,
+            .stepRate = VK_VERTEX_INPUT_STEP_RATE_INSTANCE
+         }
+      },
+      .attributeCount = 2,
+      .pVertexAttributeDescriptions = (VkVertexInputAttributeDescription[]) {
+         {
+            .location = 0,
+            .binding = 0,
+            .format = VK_FORMAT_R32G32B32A32_SFLOAT,
+            .offsetInBytes = 0
+         },
+         {
+            .location = 1,
+            .binding = 1,
+            .format = VK_FORMAT_R32G32B32A32_SFLOAT,
+            .offsetInBytes = 0
+         }
+      }
+   };
+
+   VkPipelineRsStateCreateInfo rs_create_info = {
+      .sType = VK_STRUCTURE_TYPE_PIPELINE_RS_STATE_CREATE_INFO,
+      .pNext = &vi_create_info,
+
+      .depthClipEnable = true,
+      .rasterizerDiscardEnable = false,
+      .fillMode = VK_FILL_MODE_SOLID,
+      .cullMode = VK_CULL_MODE_NONE,
+      .frontFace = VK_FRONT_FACE_CCW
+   };
+
+   VkPipelineDsStateCreateInfo ds_create_info = {
+      .sType = VK_STRUCTURE_TYPE_PIPELINE_DS_STATE_CREATE_INFO,
+      .pNext = &rs_create_info,
+      .format = VK_FORMAT_D24_UNORM,
+      .depthTestEnable = true,
+      .depthWriteEnable = true,
+      .depthCompareOp = VK_COMPARE_OP_GREATER
+   };
+
+   vkCreateGraphicsPipeline(ctx->device,
+                            &(VkGraphicsPipelineCreateInfo) {
+                               .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
+                               .pNext = &ds_create_info,
+                               .flags = 0,
+                               .layout = VK_NULL_HANDLE
+                            },
+                            &ctx->pipeline);
+
+   vkDestroyObject(ctx->device, VK_OBJECT_TYPE_SHADER, fs);
+   vkDestroyObject(ctx->device, VK_OBJECT_TYPE_SHADER, vs);
+}
+
+static void
+test_depth_stencil(VkDevice device, VkQueue queue)
+{
+   struct test_context ctx;
+
+   ctx.width = 256;
+   ctx.height = 256;
+
+   test_prepare(&ctx, device, queue, TEST_DEPTH_FLAG);
+   test_create_solid_color_pipeline(&ctx);
+
+   static const float vertex_data[] = {
+      /* Triangle coordinates */
+      -0.5, -0.5, 0.5, 1.0,
+       0.5, -0.5, 0.5, 1.0,
+       0.0,  0.5, 0.5, 1.0,
+
+      /* Triangle coordinates */
+      -0.3, -0.3, 0.0, 1.0,
+       0.7, -0.3, 0.0, 1.0,
+       0.2,  0.7, 0.8, 1.0,
+
+      /* Color */
+       1.0,  1.0, 0.2, 1.0,
+       0.2,  0.2, 1.0, 1.0,
+   };
+   memcpy(ctx.vertex_map, vertex_data, sizeof(vertex_data));
+
+   vkCmdBindVertexBuffers(ctx.cmdBuffer, 0, 2,
+                          (VkBuffer[]) { ctx.vertex_buffer, ctx.vertex_buffer },
+                          (VkDeviceSize[]) { 0, 6 * 4 * sizeof(float) });
+
+   vkCmdBindPipeline(ctx.cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, ctx.pipeline);
+
+   vkCmdBindDynamicStateObject(ctx.cmdBuffer,
+                               VK_STATE_BIND_POINT_VIEWPORT, ctx.vp_state);
+   vkCmdBindDynamicStateObject(ctx.cmdBuffer,
+                               VK_STATE_BIND_POINT_RASTER, ctx.rs_state);
+   vkCmdBindDynamicStateObject(ctx.cmdBuffer,
+                               VK_STATE_BIND_POINT_DEPTH_STENCIL, ctx.ds_state);
+
+   vkCmdDraw(ctx.cmdBuffer, 0, 3, 0, 1);
+   vkCmdDraw(ctx.cmdBuffer, 3, 3, 1, 1);
+
+   test_finish(&ctx);
 }
 
 static void
@@ -1023,6 +1525,8 @@ int main(int argc, char *argv[])
       test_formats(device, queue);
    } else if (argc > 1 && strcmp(argv[1], "buffer-copy") == 0) {
       test_buffer_copy(device, queue);
+   } else if (argc > 1 && strcmp(argv[1], "depth-stencil") == 0) {
+      test_depth_stencil(device, queue);
    } else {
       test_triangle(device, queue);
    }
