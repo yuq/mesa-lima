@@ -288,15 +288,13 @@ tex_alloc_bos(struct ilo_texture *tex)
 
    switch (tex->image.aux.type) {
    case ILO_IMAGE_AUX_HIZ:
-      if (!tex_create_hiz(tex)) {
-         /* Separate Stencil Buffer requires HiZ to be enabled */
-         if (ilo_dev_gen(&is->dev) == ILO_GEN(6) &&
-             tex->image.separate_stencil)
-            return false;
-      }
+      if (!tex_create_hiz(tex) &&
+          !ilo_image_disable_aux(&tex->image, &is->dev))
+         return false;
       break;
    case ILO_IMAGE_AUX_MCS:
-      if (!tex_create_mcs(tex))
+      if (!tex_create_mcs(tex) &&
+          !ilo_image_disable_aux(&tex->image, &is->dev))
          return false;
       break;
    default:
