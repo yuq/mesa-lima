@@ -40,6 +40,19 @@ enum mesa_block_class {
    BLOCK_CLASS_64_BITS
 };
 
+/**
+ * Prepare the source or destination resource, including:
+ * - Error checking
+ * - Creating texture wrappers for renderbuffers
+ * \param name  the texture or renderbuffer name
+ * \param target  GL_TEXTURE target or GL_RENDERBUFFER.  For the later, will
+ *                be changed to a compatible GL_TEXTURE target.
+ * \param level  mipmap level
+ * \param tex_obj  returns a pointer to a texture object
+ * \param tex_image  returns a pointer to a texture image
+ * \param tmp_tex  returns temporary texture object name
+ * \return true if success, false if error
+ */
 static bool
 prepare_target(struct gl_context *ctx, GLuint name, GLenum *target, int level,
                struct gl_texture_object **tex_obj,
@@ -167,6 +180,12 @@ prepare_target(struct gl_context *ctx, GLuint name, GLenum *target, int level,
    return true;
 }
 
+
+/**
+ * Check that the x,y,z,width,height,region is within the texture image
+ * dimensions.
+ * \return true if bounds OK, false if regions is out of bounds
+ */
 static bool
 check_region_bounds(struct gl_context *ctx,
                     const struct gl_texture_image *tex_image,
@@ -187,6 +206,7 @@ check_region_bounds(struct gl_context *ctx,
       return false;
    }
 
+   /* Check X direction */
    if (x + width > tex_image->Width) {
       _mesa_error(ctx, GL_INVALID_VALUE,
                   "glCopyImageSubData(%sX or %sWidth exceeds image bounds)",
@@ -194,6 +214,7 @@ check_region_bounds(struct gl_context *ctx,
       return false;
    }
 
+   /* Check Y direction */
    switch (tex_image->TexObject->Target) {
    case GL_TEXTURE_1D:
    case GL_TEXTURE_1D_ARRAY:
@@ -214,6 +235,7 @@ check_region_bounds(struct gl_context *ctx,
       break;
    }
 
+   /* Check Z direction */
    switch (tex_image->TexObject->Target) {
    case GL_TEXTURE_1D:
    case GL_TEXTURE_2D:
