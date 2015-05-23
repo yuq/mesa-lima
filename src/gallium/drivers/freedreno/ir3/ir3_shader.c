@@ -127,7 +127,7 @@ static void
 assemble_variant(struct ir3_shader_variant *v)
 {
 	struct fd_context *ctx = fd_context(v->shader->pctx);
-	uint32_t gpu_id = ir3_shader_gpuid(v->shader);
+	uint32_t gpu_id = v->shader->compiler->gpu_id;
 	uint32_t sz, *bin;
 
 	bin = ir3_shader_assemble(v, gpu_id);
@@ -166,7 +166,7 @@ create_variant(struct ir3_shader *shader, struct ir3_shader_key key)
 		tgsi_dump(tokens, 0);
 	}
 
-	ret = ir3_compile_shader_nir(v, tokens, key);
+	ret = ir3_compile_shader_nir(shader->compiler, v, tokens, key);
 	if (ret) {
 		debug_error("compile failed!");
 		goto fail;
@@ -189,13 +189,6 @@ create_variant(struct ir3_shader *shader, struct ir3_shader_key key)
 fail:
 	delete_variant(v);
 	return NULL;
-}
-
-uint32_t
-ir3_shader_gpuid(struct ir3_shader *shader)
-{
-	struct fd_context *ctx = fd_context(shader->pctx);
-	return ctx->screen->gpu_id;
 }
 
 struct ir3_shader_variant *
@@ -260,6 +253,7 @@ ir3_shader_create(struct pipe_context *pctx, const struct tgsi_token *tokens,
 		enum shader_t type)
 {
 	struct ir3_shader *shader = CALLOC_STRUCT(ir3_shader);
+	shader->compiler = fd_context(pctx)->screen->compiler;
 	shader->pctx = pctx;
 	shader->type = type;
 	shader->tokens = tgsi_dup_tokens(tokens);

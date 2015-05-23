@@ -192,11 +192,7 @@ lower_tgsi(const struct tgsi_token *tokens, struct ir3_shader_variant *so)
 		break;
 	}
 
-	if (!so->shader) {
-		/* hack for standalone compiler which does not have
-		 * screen/context:
-		 */
-	} else if (ir3_shader_gpuid(so->shader) >= 400) {
+	if (so->ir->compiler->gpu_id >= 400) {
 		/* a4xx seems to have *no* sam.p */
 		lconfig.lower_TXP = ~0;  /* lower all txp */
 	} else {
@@ -214,11 +210,7 @@ compile_init(struct ir3_shader_variant *so,
 	struct ir3_compile *ctx = rzalloc(NULL, struct ir3_compile);
 	const struct tgsi_token *lowered_tokens;
 
-	if (!so->shader) {
-		/* hack for standalone compiler which does not have
-		 * screen/context:
-		 */
-	} else if (ir3_shader_gpuid(so->shader) >= 400) {
+	if (so->ir->compiler->gpu_id >= 400) {
 		/* need special handling for "flat" */
 		ctx->flat_bypass = true;
 		ctx->levels_add_one = false;
@@ -1919,8 +1911,10 @@ fixup_frag_inputs(struct ir3_compile *ctx)
 }
 
 int
-ir3_compile_shader_nir(struct ir3_shader_variant *so,
-		const struct tgsi_token *tokens, struct ir3_shader_key key)
+ir3_compile_shader_nir(struct ir3_compiler *compiler,
+		struct ir3_shader_variant *so,
+		const struct tgsi_token *tokens,
+		struct ir3_shader_key key)
 {
 	struct ir3_compile *ctx;
 	struct ir3_block *block;
@@ -1930,7 +1924,7 @@ ir3_compile_shader_nir(struct ir3_shader_variant *so,
 
 	assert(!so->ir);
 
-	so->ir = ir3_create();
+	so->ir = ir3_create(compiler);
 
 	assert(so->ir);
 

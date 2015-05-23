@@ -196,6 +196,8 @@ struct ir3_shader_variant {
 struct ir3_shader {
 	enum shader_t type;
 
+	struct ir3_compiler *compiler;
+
 	struct pipe_context *pctx;
 	const struct tgsi_token *tokens;
 
@@ -212,13 +214,14 @@ void * ir3_shader_assemble(struct ir3_shader_variant *v, uint32_t gpu_id);
 struct ir3_shader * ir3_shader_create(struct pipe_context *pctx,
 		const struct tgsi_token *tokens, enum shader_t type);
 void ir3_shader_destroy(struct ir3_shader *shader);
-uint32_t ir3_shader_gpuid(struct ir3_shader *shader);
 struct ir3_shader_variant * ir3_shader_variant(struct ir3_shader *shader,
 		struct ir3_shader_key key);
 
 /*
  * Helper/util:
  */
+
+#include "pipe/p_shader_tokens.h"
 
 static inline int
 ir3_find_output(const struct ir3_shader_variant *so, ir3_semantic semantic)

@@ -66,11 +66,12 @@ void * ir3_alloc(struct ir3 *shader, int sz)
 	return ptr;
 }
 
-struct ir3 * ir3_create(void)
+struct ir3 * ir3_create(struct ir3_compiler *compiler)
 {
 	struct ir3 *shader =
 			calloc(1, sizeof(struct ir3));
 	grow_heap(shader);
+	shader->compiler = compiler;
 	return shader;
 }
 

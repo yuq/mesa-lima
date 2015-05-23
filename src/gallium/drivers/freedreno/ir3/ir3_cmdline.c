@@ -216,6 +216,7 @@ int main(int argc, char **argv)
 	const char *filename;
 	struct tgsi_token toks[65536];
 	struct tgsi_parse_context parse;
+	struct ir3_compiler *compiler;
 	struct ir3_shader_variant v;
 	struct ir3_shader_key key = {};
 	const char *info;
@@ -319,8 +320,11 @@ int main(int argc, char **argv)
 		break;
 	}
 
+	/* TODO cmdline option to target different gpus: */
+	compiler = ir3_compiler_create(320);
+
 	info = "NIR compiler";
-	ret = ir3_compile_shader_nir(&v, toks, key);
+	ret = ir3_compile_shader_nir(compiler, &v, toks, key);
 	if (ret) {
 		fprintf(stderr, "compiler failed!\n");
 		return ret;

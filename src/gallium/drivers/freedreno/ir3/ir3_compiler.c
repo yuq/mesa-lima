@@ -1,7 +1,7 @@
 /* -*- mode: C; c-file-style: "k&r"; tab-width 4; indent-tabs-mode: t; -*- */
 
 /*
- * Copyright (C) 2013 Rob Clark <robclark@freedesktop.org>
+ * Copyright (C) 2015 Rob Clark <robclark@freedesktop.org>
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -26,21 +26,18 @@
  *    Rob Clark <robclark@freedesktop.org>
  */
 
-#ifndef IR3_COMPILER_H_
-#define IR3_COMPILER_H_
+#include "util/ralloc.h"
 
-#include "ir3_shader.h"
+#include "ir3_compiler.h"
 
-struct ir3_compiler {
-	uint32_t gpu_id;
-};
+struct ir3_compiler * ir3_compiler_create(uint32_t gpu_id)
+{
+	struct ir3_compiler *compiler = rzalloc(NULL, struct ir3_compiler);
+	compiler->gpu_id = gpu_id;
+	return compiler;
+}
 
-struct ir3_compiler * ir3_compiler_create(uint32_t gpu_id);
-void ir3_compiler_destroy(struct ir3_compiler *compiler);
-
-int ir3_compile_shader_nir(struct ir3_compiler *compiler,
-		struct ir3_shader_variant *so,
-		const struct tgsi_token *tokens,
-		struct ir3_shader_key key);
-
-#endif /* IR3_COMPILER_H_ */
+void ir3_compiler_destroy(struct ir3_compiler *compiler)
+{
+	ralloc_free(compiler);
+}

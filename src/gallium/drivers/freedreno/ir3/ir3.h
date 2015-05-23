@@ -35,6 +35,7 @@
 
 /* low level intermediate representation of an adreno shader program */
 
+struct ir3_compiler;
 struct ir3;
 struct ir3_instruction;
 struct ir3_block;
@@ -324,6 +325,7 @@ static inline int ir3_neighbor_count(struct ir3_instruction *instr)
 struct ir3_heap_chunk;
 
 struct ir3 {
+	struct ir3_compiler *compiler;
 
 	/* Track bary.f (and ldlv) instructions.. this is needed in
 	 * scheduling to ensure that all varying fetches happen before
@@ -367,7 +369,7 @@ struct ir3_block {
 	struct list_head instr_list;
 };
 
-struct ir3 * ir3_create(void);
+struct ir3 * ir3_create(struct ir3_compiler *compiler);
 void ir3_destroy(struct ir3 *shader);
 void * ir3_assemble(struct ir3 *shader,
 		struct ir3_info *info, uint32_t gpu_id);
