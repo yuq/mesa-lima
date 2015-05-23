@@ -659,9 +659,10 @@ int anv_compiler_run(struct anv_compiler *compiler, struct anv_pipeline *pipelin
 void anv_compiler_free(struct anv_pipeline *pipeline);
 
 struct anv_format {
-   uint32_t                                     format;
-   uint32_t                                     cpp;
-   uint32_t                                     channels;
+   uint16_t                                     format;
+   uint8_t                                      cpp;
+   uint8_t                                      channels;
+   bool                                         has_stencil;
 };
 
 const struct anv_format *
@@ -669,12 +670,15 @@ anv_format_for_vk_format(VkFormat format);
 
 struct anv_image {
    VkImageType                                  type;
-   VkFormat                                     format;
    VkExtent3D                                   extent;
+   VkFormat                                     format;
    uint32_t                                     tile_mode;
    VkDeviceSize                                 size;
    uint32_t                                     alignment;
-   int32_t                                      stride;
+   uint32_t                                     stride;
+
+   uint32_t                                     stencil_offset;
+   uint32_t                                     stencil_stride;
 
    /* Set when bound */
    struct anv_bo *                              bo;
@@ -715,13 +719,21 @@ struct anv_sampler {
 };
 
 struct anv_depth_stencil_view {
+   struct anv_bo *                              bo;
+
+   uint32_t                                     depth_offset;
+   uint32_t                                     depth_stride;
+   uint32_t                                     depth_format;
+
+   uint32_t                                     stencil_offset;
+   uint32_t                                     stencil_stride;
 };
 
 struct anv_framebuffer {
    struct anv_object                            base;
    uint32_t                                     color_attachment_count;
-   struct anv_surface_view *                    color_attachments[MAX_RTS];
-   struct anv_depth_stencil_view *              depth_stencil;
+   const struct anv_surface_view *              color_attachments[MAX_RTS];
+   const struct anv_depth_stencil_view *        depth_stencil;
 
    uint32_t                                     sample_count;
    uint32_t                                     width;

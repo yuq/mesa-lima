@@ -23,7 +23,7 @@
 
 #include "private.h"
 
-#define UNSUPPORTED ~0U
+#define UNSUPPORTED 0xffff
 
 static const struct anv_format anv_formats[] = {
    [VK_FORMAT_UNDEFINED] = { .format = RAW, .cpp = 1, .channels = 1 },
@@ -116,13 +116,17 @@ static const struct anv_format anv_formats[] = {
    [VK_FORMAT_R11G11B10_UFLOAT] = { .format = R11G11B10_FLOAT, .cpp = 4, .channels = 3 },
    [VK_FORMAT_R9G9B9E5_UFLOAT] = { .format = R9G9B9E5_SHAREDEXP, .cpp = 4, .channels = 3 },
 
-   [VK_FORMAT_D16_UNORM] = { .format = UNSUPPORTED },
-   [VK_FORMAT_D24_UNORM] = { .format = UNSUPPORTED },
-   [VK_FORMAT_D32_SFLOAT] = { .format = UNSUPPORTED },
-   [VK_FORMAT_S8_UINT] = { .format = UNSUPPORTED },
-   [VK_FORMAT_D16_UNORM_S8_UINT] = { .format = UNSUPPORTED },
-   [VK_FORMAT_D24_UNORM_S8_UINT] = { .format = UNSUPPORTED },
-   [VK_FORMAT_D32_SFLOAT_S8_UINT] = { .format = UNSUPPORTED },
+   /* For depth/stencil formats, the .format and .cpp fields describe the
+    * depth format. The field .has_stencil indicates whether or not there's a
+    * stencil buffer.
+    */
+   [VK_FORMAT_D16_UNORM] = { .format = D16_UNORM, .cpp = 2, .channels = 1 },
+   [VK_FORMAT_D24_UNORM] = { .format = D24_UNORM_X8_UINT, .cpp = 4, .channels = 1 },
+   [VK_FORMAT_D32_SFLOAT] = { .format = D32_FLOAT, .cpp = 4, .channels = 1 },
+   [VK_FORMAT_S8_UINT] = { .format = UNSUPPORTED, .cpp = 0, .channels = 1, .has_stencil = true },
+   [VK_FORMAT_D16_UNORM_S8_UINT] = { .format = D16_UNORM, .cpp = 2, .channels = 2, .has_stencil = true },
+   [VK_FORMAT_D24_UNORM_S8_UINT] = { .format = D24_UNORM_X8_UINT, .cpp = 4, .channels = 2, .has_stencil = true },
+   [VK_FORMAT_D32_SFLOAT_S8_UINT] = { .format = D32_FLOAT, .cpp = 4, .channels = 2, .has_stencil = true },
 
    [VK_FORMAT_BC1_RGB_UNORM] = { .format = UNSUPPORTED },
    [VK_FORMAT_BC1_RGB_SRGB] = { .format = UNSUPPORTED },

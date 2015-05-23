@@ -49,8 +49,9 @@ VkResult anv_image_create(
 {
    struct anv_device *device = (struct anv_device *) _device;
    struct anv_image *image;
-   const struct anv_format *format;
+   const struct anv_format *info;
    int32_t aligned_height;
+   uint32_t stencil_size;
 
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO);
 
@@ -93,13 +94,32 @@ VkResult anv_image_create(
       image->alignment = 4096;
    }
 
-   format = anv_format_for_vk_format(pCreateInfo->format);
-   assert(format->cpp > 0);
-   image->stride = ALIGN_I32(image->extent.width * format->cpp,
-                             tile_mode_info[image->tile_mode].tile_width);
-   aligned_height = ALIGN_I32(image->extent.height,
-                              tile_mode_info[image->tile_mode].tile_height);
-   image->size = image->stride * aligned_height;
+   info = anv_format_for_vk_format(pCreateInfo->format);
+   assert(info->cpp > 0 || info->has_stencil);
+
+   if (info->cpp > 0) {
+      image->stride = ALIGN_I32(image->extent.width * info->cpp,
+                                tile_mode_info[image->tile_mode].tile_width);
+      aligned_height = ALIGN_I32(image->extent.height,
+                                 tile_mode_info[image->tile_mode].tile_height);
+      image->size = image->stride * aligned_height;
+   } else {
+      image->size = 0;
+      image->stride = 0;
+   }
+
+   if (info->has_stencil) {
+      image->stencil_offset = ALIGN_U32(image->size, 4096);
+      image->stencil_stride = ALIGN_I32(image->extent.width,
+                                        tile_mode_info[WMAJOR].tile_width);
+      aligned_height = ALIGN_I32(image->extent.height,
+                                 tile_mode_info[WMAJOR].tile_height);
+      stencil_size = image->stencil_stride * aligned_height;
+      image->size = image->stencil_offset + stencil_size;
+   } else {
+      image->stencil_offset = 0;
+      image->stencil_stride = 0;
+   }
 
    *pImage = (VkImage) image;
 
@@ -125,14 +145,13 @@ VkResult anv_GetImageSubresourceInfo(
    stub_return(VK_UNSUPPORTED);
 }
 
-// Image view functions
-
 static struct anv_state
 create_surface_state(struct anv_device *device,
-                     struct anv_image *image, const struct anv_format *format,
-                     struct anv_cmd_buffer *cmd_buffer)
+                     struct anv_image *image, uint32_t format, uint32_t tile_mode,
+                     uint32_t offset, struct anv_cmd_buffer *cmd_buffer)
 {
    struct anv_state state;
+
    if (cmd_buffer)
       state = anv_state_stream_alloc(&cmd_buffer->surface_state_stream, 64, 64);
    else
@@ -141,10 +160,10 @@ create_surface_state(struct anv_device *device,
    struct GEN8_RENDER_SURFACE_STATE surface_state = {
       .SurfaceType = SURFTYPE_2D,
       .SurfaceArray = false,
-      .SurfaceFormat = format->format,
+      .SurfaceFormat = format,
       .SurfaceVerticalAlignment = VALIGN4,
       .SurfaceHorizontalAlignment = HALIGN4,
-      .TileMode = image->tile_mode,
+      .TileMode = tile_mode,
       .VerticalLineStride = 0,
       .VerticalLineStrideOffset = 0,
       .SamplerL2BypassModeDisable = true,
@@ -172,8 +191,7 @@ create_surface_state(struct anv_device *device,
       .ShaderChannelSelectBlue = SCS_BLUE,
       .ShaderChannelSelectAlpha = SCS_ALPHA,
       .ResourceMinLOD = 0,
-      /* FIXME: We assume that the image must be bound at this time. */
-      .SurfaceBaseAddress = { NULL, image->offset },
+      .SurfaceBaseAddress = { NULL, offset },
    };
 
    GEN8_RENDER_SURFACE_STATE_pack(NULL, state.map, &surface_state);
@@ -188,17 +206,33 @@ anv_image_view_init(struct anv_surface_view *view,
                     struct anv_cmd_buffer *cmd_buffer)
 {
    struct anv_image *image = (struct anv_image *) pCreateInfo->image;
-   const struct anv_format *format =
+   const struct anv_format *info =
       anv_format_for_vk_format(pCreateInfo->format);
+   uint32_t tile_mode, format;
 
    view->bo = image->bo;
-   view->offset = image->offset;
-   view->surface_state = create_surface_state(device, image, format,
-                                              cmd_buffer);
-   view->format = pCreateInfo->format;
+   switch (pCreateInfo->subresourceRange.aspect) {
+   case VK_IMAGE_ASPECT_STENCIL:
+      /* FIXME: How is stencil texturing formed? */
+      view->offset = image->offset + image->stencil_offset;
+      tile_mode = WMAJOR;
+      format = R8_UINT;
+      break;
+   case VK_IMAGE_ASPECT_DEPTH:
+   case VK_IMAGE_ASPECT_COLOR:
+      view->offset = image->offset;
+      tile_mode = image->tile_mode;
+      format = info->format;
+      break;
+   default:
+      assert(0);
+      break;
+   }
 
    /* TODO: Miplevels */
    view->extent = image->extent;
+   view->surface_state =
+      create_surface_state(device, image, format, tile_mode, view->offset, cmd_buffer);
 }
 
 VkResult anv_CreateImageView(
@@ -235,10 +269,11 @@ anv_color_attachment_view_init(struct anv_surface_view *view,
 
    view->bo = image->bo;
    view->offset = image->offset;
-   view->surface_state = create_surface_state(device, image, format,
-                                              cmd_buffer);
    view->extent = image->extent;
    view->format = pCreateInfo->format;
+   view->surface_state =
+      create_surface_state(device, image,
+                           format->format, image->tile_mode, view->offset, cmd_buffer);
 }
 
 VkResult anv_CreateColorAttachmentView(
@@ -264,9 +299,33 @@ VkResult anv_CreateColorAttachmentView(
 }
 
 VkResult anv_CreateDepthStencilView(
-    VkDevice                                    device,
+    VkDevice                                    _device,
     const VkDepthStencilViewCreateInfo*         pCreateInfo,
     VkDepthStencilView*                         pView)
 {
-   stub_return(VK_UNSUPPORTED);
+   struct anv_device *device = (struct anv_device *) _device;
+   struct anv_depth_stencil_view *view;
+   struct anv_image *image = (struct anv_image *) pCreateInfo->image;
+   const struct anv_format *format =
+      anv_format_for_vk_format(image->format);
+
+   assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_DEPTH_STENCIL_VIEW_CREATE_INFO);
+
+   view = anv_device_alloc(device, sizeof(*view), 8,
+                           VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
+   if (view == NULL)
+      return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+
+   view->bo = image->bo;
+
+   view->depth_stride = image->stride;
+   view->depth_offset = image->offset;
+   view->depth_format = format->format;
+
+   view->stencil_stride = image->stencil_stride;
+   view->stencil_offset = image->offset + image->stencil_offset;
+
+   *pView = (VkDepthStencilView) view;
+
+   return VK_SUCCESS;
 }

@@ -2260,15 +2260,6 @@ VkResult anv_BeginCommandBuffer(
    anv_batch_emit(&cmd_buffer->batch, GEN8_3DSTATE_SBE_SWIZ);
    anv_batch_emit(&cmd_buffer->batch, GEN8_3DSTATE_AA_LINE_PARAMETERS);
 
-   /* Hardcoded state: */
-   anv_batch_emit(&cmd_buffer->batch, GEN8_3DSTATE_DEPTH_BUFFER,
-                  .SurfaceType = SURFTYPE_2D,
-                  .Width = 1,
-                  .Height = 1,
-                  .SurfaceFormat = D16_UNORM,
-                  .SurfaceBaseAddress = { NULL, 0 },
-                  .HierarchicalDepthBufferEnable = 0);
-   
    anv_batch_emit(&cmd_buffer->batch, GEN8_3DSTATE_WM_DEPTH_STENCIL,
                   .DepthTestEnable = false,
                   .DepthBufferWriteEnable = false);
@@ -3118,6 +3109,9 @@ VkResult anv_CreateFramebuffer(
    struct anv_device *device = (struct anv_device *) _device;
    struct anv_framebuffer *framebuffer;
 
+   static const struct anv_depth_stencil_view null_view =
+      { .depth_format = D16_UNORM, .depth_stride = 0, .stencil_stride = 0 };
+
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO);
 
    framebuffer = anv_device_alloc(device, sizeof(*framebuffer), 8,
@@ -3136,6 +3130,8 @@ VkResult anv_CreateFramebuffer(
    if (pCreateInfo->pDepthStencilAttachment) {
       framebuffer->depth_stencil =
          (struct anv_depth_stencil_view *) pCreateInfo->pDepthStencilAttachment->view;
+   } else {
+      framebuffer->depth_stencil = &null_view;
    }
 
    framebuffer->sample_count = pCreateInfo->sampleCount;
@@ -3211,7 +3207,7 @@ anv_cmd_buffer_fill_render_targets(struct anv_cmd_buffer *cmd_buffer)
    struct anv_bindings *bindings = cmd_buffer->bindings;
 
    for (uint32_t i = 0; i < framebuffer->color_attachment_count; i++) {
-      struct anv_surface_view *view = framebuffer->color_attachments[i];
+      const struct anv_surface_view *view = framebuffer->color_attachments[i];
 
       struct anv_state state =
          anv_cmd_buffer_alloc_surface_state(cmd_buffer, 64, 64);
@@ -3226,6 +3222,46 @@ anv_cmd_buffer_fill_render_targets(struct anv_cmd_buffer *cmd_buffer)
       bindings->descriptors[VK_SHADER_STAGE_FRAGMENT].surfaces[i] = state.offset;
    }
    cmd_buffer->dirty |= ANV_CMD_BUFFER_DESCRIPTOR_SET_DIRTY;
+}
+
+static void
+anv_cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer,
+                                  struct anv_render_pass *pass)
+{
+   const struct anv_depth_stencil_view *view =
+      cmd_buffer->framebuffer->depth_stencil;
+
+   /* FIXME: Implement the PMA stall W/A */
+
+   anv_batch_emit(&cmd_buffer->batch, GEN8_3DSTATE_DEPTH_BUFFER,
+                  .SurfaceType = SURFTYPE_2D,
+                  .DepthWriteEnable = view->depth_stride > 0,
+                  .StencilWriteEnable = view->stencil_stride > 0,
+                  .HierarchicalDepthBufferEnable = false,
+                  .SurfaceFormat = view->depth_format,
+                  .SurfacePitch = view->depth_stride > 0 ? view->depth_stride - 1 : 0,
+                  .SurfaceBaseAddress = { view->bo,  view->depth_offset },
+                  .Height = pass->render_area.extent.height - 1,
+                  .Width = pass->render_area.extent.width - 1,
+                  .LOD = 0,
+                  .Depth = 1 - 1,
+                  .MinimumArrayElement = 0,
+                  .DepthBufferObjectControlState = GEN8_MOCS,
+                  .RenderTargetViewExtent = 1 - 1,
+                  .SurfaceQPitch = 0);
+
+   /* Disable hierarchial depth buffers. */
+   anv_batch_emit(&cmd_buffer->batch, GEN8_3DSTATE_HIER_DEPTH_BUFFER);
+
+   anv_batch_emit(&cmd_buffer->batch, GEN8_3DSTATE_STENCIL_BUFFER,
+                  .StencilBufferEnable = view->stencil_stride > 0,
+                  .StencilBufferObjectControlState = GEN8_MOCS,
+                  .SurfacePitch = view->stencil_stride > 0 ? view->stencil_stride - 1 : 0,
+                  .SurfaceBaseAddress = { view->bo, view->stencil_offset },
+                  .SurfaceQPitch = 0);
+
+   /* Clear the clear params. */
+   anv_batch_emit(&cmd_buffer->batch, GEN8_3DSTATE_CLEAR_PARAMS);
 }
 
 void anv_CmdBeginRenderPass(
@@ -3250,6 +3286,8 @@ void anv_CmdBeginRenderPass(
                   .DrawingRectangleOriginX = 0);
 
    anv_cmd_buffer_fill_render_targets(cmd_buffer);
+
+   anv_cmd_buffer_emit_depth_stencil(cmd_buffer, pass);
 
    anv_cmd_buffer_clear(cmd_buffer, pass);
 }
