@@ -193,6 +193,8 @@ intel_is_non_msrt_mcs_buffer_supported(struct brw_context *brw,
       return false;
    }
 
+   if (brw->gen >= 9 && mt->tiling != I915_TILING_Y)
+      return false;
    if (mt->tiling != I915_TILING_X &&
        mt->tiling != I915_TILING_Y)
       return false;
