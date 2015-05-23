@@ -524,7 +524,7 @@ nv30_screen_create(struct nouveau_device *dev)
 
    ret = nouveau_bo_wrap(screen->base.device, fifo->notify, &screen->notify);
    if (ret == 0)
-      nouveau_bo_map(screen->notify, 0, screen->base.client);
+      ret = nouveau_bo_map(screen->notify, 0, screen->base.client);
    if (ret)
       FAIL_SCREEN_INIT("error mapping notifier memory: %d\n", ret);
 
