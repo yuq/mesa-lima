@@ -59,10 +59,6 @@ gen8_upload_gs_state(struct brw_context *brw)
          OUT_RELOC64(stage_state->scratch_bo,
                      I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER,
                      ffs(brw->gs.prog_data->base.base.total_scratch) - 11);
-         WARN_ONCE(true,
-                   "May need to implement a temporary workaround: GS Number of "
-                   "URB Entries must be less than or equal to the GS Maximum "
-                   "Number of Threads.\n");
       } else {
          OUT_BATCH(0);
          OUT_BATCH(0);
