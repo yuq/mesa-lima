@@ -171,6 +171,17 @@ dst_reg::dst_reg(register_file file, int reg, const glsl_type *type,
    this->writemask = writemask;
 }
 
+dst_reg::dst_reg(register_file file, int reg, brw_reg_type type,
+                 unsigned writemask)
+{
+   init();
+
+   this->file = file;
+   this->reg = reg;
+   this->type = type;
+   this->writemask = writemask;
+}
+
 dst_reg::dst_reg(struct brw_reg reg)
 {
    init();
