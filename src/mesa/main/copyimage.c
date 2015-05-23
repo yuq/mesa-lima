@@ -46,8 +46,6 @@ prepare_target(struct gl_context *ctx, GLuint name, GLenum *target, int level,
                struct gl_texture_image **tex_image, GLuint *tmp_tex,
                const char *dbg_prefix)
 {
-   struct gl_renderbuffer *rb;
-
    if (name == 0) {
       _mesa_error(ctx, GL_INVALID_VALUE,
                   "glCopyImageSubData(%sName = %d)", dbg_prefix, name);
@@ -87,7 +85,7 @@ prepare_target(struct gl_context *ctx, GLuint name, GLenum *target, int level,
    }
 
    if (*target == GL_RENDERBUFFER) {
-      rb = _mesa_lookup_renderbuffer(ctx, name);
+      struct gl_renderbuffer *rb = _mesa_lookup_renderbuffer(ctx, name);
       if (!rb) {
          _mesa_error(ctx, GL_INVALID_VALUE,
                      "glCopyImageSubData(%sName = %u)", dbg_prefix, name);
@@ -170,7 +168,8 @@ prepare_target(struct gl_context *ctx, GLuint name, GLenum *target, int level,
 }
 
 static bool
-check_region_bounds(struct gl_context *ctx, struct gl_texture_image *tex_image,
+check_region_bounds(struct gl_context *ctx,
+                    const struct gl_texture_image *tex_image,
                     int x, int y, int z, int width, int height, int depth,
                     const char *dbg_prefix)
 {
@@ -260,7 +259,7 @@ check_region_bounds(struct gl_context *ctx, struct gl_texture_image *tex_image,
 }
 
 static bool
-compressed_format_compatible(struct gl_context *ctx,
+compressed_format_compatible(const struct gl_context *ctx,
                              GLenum compressedFormat, GLenum otherFormat)
 {
    enum mesa_block_class compressedClass, otherClass;
@@ -348,8 +347,8 @@ compressed_format_compatible(struct gl_context *ctx,
 }
 
 static bool
-copy_format_compatible(struct gl_context *ctx,
-                                GLenum srcFormat, GLenum dstFormat)
+copy_format_compatible(const struct gl_context *ctx,
+                       GLenum srcFormat, GLenum dstFormat)
 {
    /*
     * From ARB_copy_image spec:
@@ -389,7 +388,7 @@ _mesa_CopyImageSubData(GLuint srcName, GLenum srcTarget, GLint srcLevel,
    struct gl_texture_object *srcTexObj, *dstTexObj;
    struct gl_texture_image *srcTexImage, *dstTexImage;
    GLuint src_bw, src_bh, dst_bw, dst_bh;
-   int i, srcNewZ, dstNewZ;
+   int i;
 
    if (MESA_VERBOSE & VERBOSE_API)
       _mesa_debug(ctx, "glCopyImageSubData(%u, %s, %d, %d, %d, %d, "
@@ -447,6 +446,8 @@ _mesa_CopyImageSubData(GLuint srcName, GLenum srcTarget, GLint srcLevel,
    }
 
    for (i = 0; i < srcDepth; ++i) {
+      int srcNewZ, dstNewZ;
+
       if (srcTexObj->Target == GL_TEXTURE_CUBE_MAP) {
          srcTexImage = srcTexObj->Image[i + srcZ][srcLevel];
          srcNewZ = 0;
