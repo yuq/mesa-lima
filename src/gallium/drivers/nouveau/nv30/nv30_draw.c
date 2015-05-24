@@ -400,16 +400,16 @@ nv30_render_vbo(struct pipe_context *pipe, const struct pipe_draw_info *info)
          void *map = nv04_resource(nv30->vertprog.constbuf)->data;
          draw_set_mapped_constant_buffer(draw, PIPE_SHADER_VERTEX, 0,
                                          map, nv30->vertprog.constbuf_nr);
+      } else {
+         draw_set_mapped_constant_buffer(draw, PIPE_SHADER_VERTEX, 0, NULL, 0);
       }
    }
 
    for (i = 0; i < nv30->num_vtxbufs; i++) {
       const void *map = nv30->vtxbuf[i].user_buffer;
       if (!map) {
-         if (!nv30->vtxbuf[i].buffer) {
-            continue;
-         }
-         map = pipe_buffer_map(pipe, nv30->vtxbuf[i].buffer,
+         if (nv30->vtxbuf[i].buffer)
+            map = pipe_buffer_map(pipe, nv30->vtxbuf[i].buffer,
                                   PIPE_TRANSFER_UNSYNCHRONIZED |
                                   PIPE_TRANSFER_READ, &transfer[i]);
       }
