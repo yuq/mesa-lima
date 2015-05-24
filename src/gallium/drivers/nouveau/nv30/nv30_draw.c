@@ -103,6 +103,7 @@ nv30_render_unmap_vertices(struct vbuf_render *render,
 {
    struct nv30_render *r = nv30_render(render);
    pipe_buffer_unmap(&r->nv30->base.pipe, r->transfer);
+   r->transfer = NULL;
 }
 
 static void
@@ -444,6 +445,12 @@ nv30_render_vbo(struct pipe_context *pipe, const struct pipe_draw_info *info)
 static void
 nv30_render_destroy(struct vbuf_render *render)
 {
+   struct nv30_render *r = nv30_render(render);
+
+   if (r->transfer)
+      pipe_buffer_unmap(&r->nv30->base.pipe, r->transfer);
+   pipe_resource_reference(&r->buffer, NULL);
+   nouveau_heap_free(&r->vertprog);
    FREE(render);
 }
 
