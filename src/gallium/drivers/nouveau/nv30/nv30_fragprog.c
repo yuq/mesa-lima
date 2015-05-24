@@ -149,6 +149,7 @@ nv30_fp_state_delete(struct pipe_context *pipe, void *hwcso)
 
    FREE((void *)fp->pipe.tokens);
    FREE(fp->insn);
+   FREE(fp->consts);
    FREE(fp);
 }
 
