@@ -272,15 +272,13 @@ nv30_validate_clip(struct nv30_context *nv30)
    uint32_t clpd_enable = 0;
 
    for (i = 0; i < 6; i++) {
-      if (nv30->rast->pipe.clip_plane_enable & (1 << i)) {
-         if (nv30->dirty & NV30_NEW_CLIP) {
-            BEGIN_NV04(push, NV30_3D(VP_UPLOAD_CONST_ID), 5);
-            PUSH_DATA (push, i);
-            PUSH_DATAp(push, nv30->clip.ucp[i], 4);
-         }
-
-         clpd_enable |= 1 << (1 + 4*i);
+      if (nv30->dirty & NV30_NEW_CLIP) {
+         BEGIN_NV04(push, NV30_3D(VP_UPLOAD_CONST_ID), 5);
+         PUSH_DATA (push, i);
+         PUSH_DATAp(push, nv30->clip.ucp[i], 4);
       }
+      if (nv30->rast->pipe.clip_plane_enable & (1 << i))
+         clpd_enable |= 2 << (4*i);
    }
 
    BEGIN_NV04(push, NV30_3D(VP_CLIP_PLANES_ENABLE), 1);
@@ -389,7 +387,7 @@ static struct state_validate hwtnl_validate_list[] = {
     { nv30_validate_stipple,       NV30_NEW_STIPPLE },
     { nv30_validate_scissor,       NV30_NEW_SCISSOR | NV30_NEW_RASTERIZER },
     { nv30_validate_viewport,      NV30_NEW_VIEWPORT },
-    { nv30_validate_clip,          NV30_NEW_CLIP },
+    { nv30_validate_clip,          NV30_NEW_CLIP | NV30_NEW_RASTERIZER },
     { nv30_fragprog_validate,      NV30_NEW_FRAGPROG | NV30_NEW_FRAGCONST },
     { nv30_vertprog_validate,      NV30_NEW_VERTPROG | NV30_NEW_VERTCONST |
                                    NV30_NEW_FRAGPROG | NV30_NEW_RASTERIZER },
