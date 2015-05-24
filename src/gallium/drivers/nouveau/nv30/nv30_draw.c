@@ -218,22 +218,24 @@ static const struct {
    [TGSI_SEMANTIC_BCOLOR  ] = { EMIT_4F, INTERP_LINEAR     , 1, 3, 0x00000004 },
    [TGSI_SEMANTIC_FOG     ] = { EMIT_4F, INTERP_PERSPECTIVE, 5, 5, 0x00000010 },
    [TGSI_SEMANTIC_PSIZE   ] = { EMIT_1F_PSIZE, INTERP_POS  , 6, 6, 0x00000020 },
-   [TGSI_SEMANTIC_GENERIC ] = { EMIT_4F, INTERP_PERSPECTIVE, 8, 7, 0x00004000 }
+   [TGSI_SEMANTIC_TEXCOORD] = { EMIT_4F, INTERP_PERSPECTIVE, 8, 7, 0x00004000 },
 };
 
 static boolean
 vroute_add(struct nv30_render *r, uint attrib, uint sem, uint *idx)
 {
-   struct pipe_screen *pscreen = &r->nv30->screen->base.base;
+   struct nv30_screen *screen = r->nv30->screen;
    struct nv30_fragprog *fp = r->nv30->fragprog.program;
    struct vertex_info *vinfo = &r->vertex_info;
    enum pipe_format format;
    uint emit = EMIT_OMIT;
    uint result = *idx;
 
-   if (sem == TGSI_SEMANTIC_GENERIC && result >= 8) {
-      for (result = 0; result < 8; result++) {
-         if (fp->texcoord[result] == *idx) {
+   if (sem == TGSI_SEMANTIC_GENERIC) {
+      uint num_texcoords = (screen->eng3d->oclass < NV40_3D_CLASS) ? 8 : 10;
+      for (result = 0; result < num_texcoords; result++) {
+         if (fp->texcoord[result] == *idx + 8) {
+            sem = TGSI_SEMANTIC_TEXCOORD;
             emit = vroute[sem].emit;
             break;
          }
@@ -248,11 +250,11 @@ vroute_add(struct nv30_render *r, uint attrib, uint sem, uint *idx)
    draw_emit_vertex_attr(vinfo, emit, vroute[sem].interp, attrib);
    format = draw_translate_vinfo_format(emit);
 
-   r->vtxfmt[attrib] = nv30_vtxfmt(pscreen, format)->hw;
+   r->vtxfmt[attrib] = nv30_vtxfmt(&screen->base.base, format)->hw;
    r->vtxptr[attrib] = vinfo->size;
    vinfo->size += draw_translate_vinfo_size(emit);
 
-   if (nv30_screen(pscreen)->eng3d->oclass < NV40_3D_CLASS) {
+   if (screen->eng3d->oclass < NV40_3D_CLASS) {
       r->vtxprog[attrib][0] = 0x001f38d8;
       r->vtxprog[attrib][1] = 0x0080001b | (attrib << 9);
       r->vtxprog[attrib][2] = 0x0836106c;
@@ -264,7 +266,12 @@ vroute_add(struct nv30_render *r, uint attrib, uint sem, uint *idx)
       r->vtxprog[attrib][3] = 0x6041ff80 | (result + vroute[sem].vp40) << 2;
    }
 
-   *idx = vroute[sem].ow40 << result;
+   if (result < 8)
+      *idx = vroute[sem].ow40 << result;
+   else {
+      assert(sem == TGSI_SEMANTIC_TEXCOORD);
+      *idx = 0x00001000 << (result - 8);
+   }
    return TRUE;
 }
 
@@ -318,7 +325,7 @@ nv30_render_validate(struct nv30_context *nv30)
 
    while (pntc && attrib < 16) {
       uint index = ffs(pntc) - 1; pntc &= ~(1 << index);
-      if (vroute_add(r, attrib, TGSI_SEMANTIC_GENERIC, &index)) {
+      if (vroute_add(r, attrib, TGSI_SEMANTIC_TEXCOORD, &index)) {
          vp_attribs |= (1 << attrib++);
          vp_results |= index;
       }
