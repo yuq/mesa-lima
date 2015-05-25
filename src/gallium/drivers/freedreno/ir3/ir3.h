@@ -333,6 +333,10 @@ struct ir3_heap_chunk;
 struct ir3 {
 	struct ir3_compiler *compiler;
 
+	unsigned ninputs, noutputs;
+	struct ir3_instruction **inputs;
+	struct ir3_instruction **outputs;
+
 	/* Track bary.f (and ldlv) instructions.. this is needed in
 	 * scheduling to ensure that all varying fetches happen before
 	 * any potential kill instructions.  The hw gets grumpy if all
@@ -365,24 +369,19 @@ struct ir3 {
 
 struct ir3_block {
 	struct ir3 *shader;
-	unsigned ntemporaries, ninputs, noutputs;
-	/* maps TGSI_FILE_TEMPORARY index back to the assigning instruction: */
-	struct ir3_instruction **temporaries;
-	struct ir3_instruction **inputs;
-	struct ir3_instruction **outputs;
 	/* only a single address register: */
 	struct ir3_instruction *address;
 	struct list_head instr_list;
 };
 
-struct ir3 * ir3_create(struct ir3_compiler *compiler);
+struct ir3 * ir3_create(struct ir3_compiler *compiler,
+		unsigned nin, unsigned nout);
 void ir3_destroy(struct ir3 *shader);
 void * ir3_assemble(struct ir3 *shader,
 		struct ir3_info *info, uint32_t gpu_id);
 void * ir3_alloc(struct ir3 *shader, int sz);
 
-struct ir3_block * ir3_block_create(struct ir3 *shader,
-		unsigned ntmp, unsigned nin, unsigned nout);
+struct ir3_block * ir3_block_create(struct ir3 *shader);
 
 struct ir3_instruction * ir3_instr_create(struct ir3_block *block,
 		int category, opc_t opc);
@@ -780,32 +779,28 @@ static inline struct ir3_instruction * __ssa_src_n(struct ir3_instruction *instr
 void ir3_print(struct ir3 *ir);
 void ir3_print_instr(struct ir3_instruction *instr);
 
-/* flatten if/else: */
-int ir3_block_flatten(struct ir3_block *block);
-
 /* depth calculation: */
 int ir3_delayslots(struct ir3_instruction *assigner,
 		struct ir3_instruction *consumer, unsigned n);
 void ir3_insert_by_depth(struct ir3_instruction *instr, struct list_head *list);
-void ir3_block_depth(struct ir3_block *block);
+void ir3_depth(struct ir3 *ir);
 
 /* copy-propagate: */
-void ir3_block_cp(struct ir3_block *block);
+void ir3_cp(struct ir3 *ir);
 
 /* group neighbors and insert mov's to resolve conflicts: */
-void ir3_block_group(struct ir3_block *block);
+void ir3_group(struct ir3 *ir);
 
 /* scheduling: */
-int ir3_block_sched(struct ir3_block *block);
+int ir3_sched(struct ir3 *ir);
 
 /* register assignment: */
 struct ir3_ra_reg_set * ir3_ra_alloc_reg_set(void *memctx);
-int ir3_block_ra(struct ir3_block *block, enum shader_t type,
+int ir3_ra(struct ir3 *ir3, enum shader_t type,
 		bool frag_coord, bool frag_face);
 
 /* legalize: */
-void ir3_block_legalize(struct ir3_block *block,
-		bool *has_samp, int *max_bary);
+void ir3_legalize(struct ir3 *ir, bool *has_samp, int *max_bary);
 
 /* ************************************************************************* */
 /* instruction helpers */

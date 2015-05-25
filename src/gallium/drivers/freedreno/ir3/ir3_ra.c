@@ -527,13 +527,13 @@ ra_block_compute_live_ranges(struct ir3_ra_ctx *ctx, struct ir3_block *block)
 static void
 ra_add_interference(struct ir3_ra_ctx *ctx)
 {
-	struct ir3_block *block = ctx->ir->block;
+	struct ir3 *ir = ctx->ir;
 
 	ra_block_compute_live_ranges(ctx, ctx->ir->block);
 
 	/* need to fix things up to keep outputs live: */
-	for (unsigned i = 0; i < block->noutputs; i++) {
-		struct ir3_instruction *instr = block->outputs[i];
+	for (unsigned i = 0; i < ir->noutputs; i++) {
+		struct ir3_instruction *instr = ir->outputs[i];
 		struct ir3_instruction *defn;
 		int cls, sz, off;
 
@@ -682,10 +682,10 @@ ra_alloc(struct ir3_ra_ctx *ctx)
 	 * constraints/unknowns about setup for some of these regs:
 	 */
 	if (ctx->type == SHADER_FRAGMENT) {
-		struct ir3_block *block = ctx->ir->block;
+		struct ir3 *ir = ctx->ir;
 		unsigned i = 0, j;
-		if (ctx->frag_face && (i < block->ninputs) && block->inputs[i]) {
-			struct ir3_instruction *instr = block->inputs[i];
+		if (ctx->frag_face && (i < ir->ninputs) && ir->inputs[i]) {
+			struct ir3_instruction *instr = ir->inputs[i];
 			unsigned cls = size_to_class(1, true);
 			unsigned name = ctx->class_base[cls] + instr->name;
 			unsigned reg = ctx->set->gpr_to_ra_reg[cls][0];
@@ -695,8 +695,8 @@ ra_alloc(struct ir3_ra_ctx *ctx)
 			i += 4;
 		}
 
-		for (j = 0; i < block->ninputs; i++) {
-			struct ir3_instruction *instr = block->inputs[i];
+		for (j = 0; i < ir->ninputs; i++) {
+			struct ir3_instruction *instr = ir->inputs[i];
 			if (instr) {
 				struct ir3_instruction *defn;
 				int cls, sz, off;
@@ -725,14 +725,14 @@ ra_alloc(struct ir3_ra_ctx *ctx)
 	return 0;
 }
 
-int ir3_block_ra(struct ir3_block *block, enum shader_t type,
+int ir3_ra(struct ir3 *ir, enum shader_t type,
 		bool frag_coord, bool frag_face)
 {
 	struct ir3_ra_ctx ctx = {
-			.ir = block->shader,
+			.ir = ir,
 			.type = type,
 			.frag_face = frag_face,
-			.set = block->shader->compiler->set,
+			.set = ir->compiler->set,
 	};
 	int ret;
 

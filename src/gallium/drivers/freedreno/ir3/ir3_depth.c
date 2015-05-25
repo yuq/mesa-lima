@@ -144,22 +144,23 @@ remove_unused_by_block(struct ir3_block *block)
 	}
 }
 
-void ir3_block_depth(struct ir3_block *block)
+void
+ir3_depth(struct ir3 *ir)
 {
 	unsigned i;
 
-	ir3_clear_mark(block->shader);
-	for (i = 0; i < block->noutputs; i++)
-		if (block->outputs[i])
-			ir3_instr_depth(block->outputs[i]);
+	ir3_clear_mark(ir->block->shader);
+	for (i = 0; i < ir->noutputs; i++)
+		if (ir->outputs[i])
+			ir3_instr_depth(ir->outputs[i]);
 
 	/* mark un-used instructions: */
-	remove_unused_by_block(block);
+	remove_unused_by_block(ir->block);
 
 	/* cleanup unused inputs: */
-	for (i = 0; i < block->ninputs; i++) {
-		struct ir3_instruction *in = block->inputs[i];
+	for (i = 0; i < ir->ninputs; i++) {
+		struct ir3_instruction *in = ir->inputs[i];
 		if (in && (in->depth == DEPTH_UNUSED))
-			block->inputs[i] = NULL;
+			ir->inputs[i] = NULL;
 	}
 }

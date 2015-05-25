@@ -66,12 +66,20 @@ void * ir3_alloc(struct ir3 *shader, int sz)
 	return ptr;
 }
 
-struct ir3 * ir3_create(struct ir3_compiler *compiler)
+struct ir3 * ir3_create(struct ir3_compiler *compiler,
+		unsigned nin, unsigned nout)
 {
-	struct ir3 *shader =
-			calloc(1, sizeof(struct ir3));
+	struct ir3 *shader = calloc(1, sizeof(struct ir3));
+
 	grow_heap(shader);
+
 	shader->compiler = compiler;
+	shader->ninputs = nin;
+	shader->inputs = ir3_alloc(shader, sizeof(shader->inputs[0]) * nin);
+
+	shader->noutputs = nout;
+	shader->outputs = ir3_alloc(shader, sizeof(shader->outputs[0]) * nout);
+
 	return shader;
 }
 
@@ -601,39 +609,11 @@ static void insert_instr(struct ir3_block *block,
 		array_insert(shader->baryfs, instr);
 }
 
-struct ir3_block * ir3_block_create(struct ir3 *shader,
-		unsigned ntmp, unsigned nin, unsigned nout)
+struct ir3_block * ir3_block_create(struct ir3 *shader)
 {
-	struct ir3_block *block;
-	unsigned size;
-	char *ptr;
-
-	size = sizeof(*block);
-	size += sizeof(block->temporaries[0]) * ntmp;
-	size += sizeof(block->inputs[0]) * nin;
-	size += sizeof(block->outputs[0]) * nout;
-
-	ptr = ir3_alloc(shader, size);
-
-	block = (void *)ptr;
-	ptr += sizeof(*block);
-
-	block->temporaries = (void *)ptr;
-	block->ntemporaries = ntmp;
-	ptr += sizeof(block->temporaries[0]) * ntmp;
-
-	block->inputs = (void *)ptr;
-	block->ninputs = nin;
-	ptr += sizeof(block->inputs[0]) * nin;
-
-	block->outputs = (void *)ptr;
-	block->noutputs = nout;
-	ptr += sizeof(block->outputs[0]) * nout;
-
+	struct ir3_block *block = ir3_alloc(shader, sizeof(*block));
 	block->shader = shader;
-
 	list_inithead(&block->instr_list);
-
 	return block;
 }
 

@@ -198,10 +198,10 @@ ir3_print(struct ir3 *ir)
 
 	print_block(block, 0);
 
-	for (unsigned i = 0; i < block->noutputs; i++) {
-		if (!block->outputs[i])
+	for (unsigned i = 0; i < ir->noutputs; i++) {
+		if (!ir->outputs[i])
 			continue;
 		printf("out%d: ", i);
-		print_instr(block->outputs[i], 0);
+		print_instr(ir->outputs[i], 0);
 	}
 }

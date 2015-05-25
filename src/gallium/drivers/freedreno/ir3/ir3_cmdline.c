@@ -66,34 +66,34 @@ static void dump_info(struct ir3_shader_variant *so, const char *str)
 	// TODO make gpu_id configurable on cmdline
 	bin = ir3_shader_assemble(so, 320);
 	if (fd_mesa_debug & FD_DBG_DISASM) {
-		struct ir3_block *block = so->ir->block;
+		struct ir3 *ir = so->ir;
 		struct ir3_register *reg;
 		uint8_t regid;
 		unsigned i;
 
 		debug_printf("; %s: %s\n", type, str);
 
-		for (i = 0; i < block->ninputs; i++) {
-			if (!block->inputs[i]) {
+		for (i = 0; i < ir->ninputs; i++) {
+			if (!ir->inputs[i]) {
 				debug_printf("; in%d unused\n", i);
 				continue;
 			}
-			reg = block->inputs[i]->regs[0];
+			reg = ir->inputs[i]->regs[0];
 			regid = reg->num;
 			debug_printf("@in(%sr%d.%c)\tin%d\n",
 					(reg->flags & IR3_REG_HALF) ? "h" : "",
 					(regid >> 2), "xyzw"[regid & 0x3], i);
 		}
 
-		for (i = 0; i < block->noutputs; i++) {
-			if (!block->outputs[i]) {
+		for (i = 0; i < ir->noutputs; i++) {
+			if (!ir->outputs[i]) {
 				debug_printf("; out%d unused\n", i);
 				continue;
 			}
 			/* kill shows up as a virtual output.. skip it! */
-			if (is_kill(block->outputs[i]))
+			if (is_kill(ir->outputs[i]))
 				continue;
-			reg = block->outputs[i]->regs[0];
+			reg = ir->outputs[i]->regs[0];
 			regid = reg->num;
 			debug_printf("@out(%sr%d.%c)\tout%d\n",
 					(reg->flags & IR3_REG_HALF) ? "h" : "",

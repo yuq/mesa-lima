@@ -424,11 +424,11 @@ sched_block(struct ir3_sched_ctx *ctx, struct ir3_block *block)
 	}
 }
 
-int ir3_block_sched(struct ir3_block *block)
+int ir3_sched(struct ir3 *ir)
 {
 	struct ir3_sched_ctx ctx = {0};
-	ir3_clear_mark(block->shader);
-	sched_block(&ctx, block);
+	ir3_clear_mark(ir->block->shader);
+	sched_block(&ctx, ir->block);
 	if (ctx.error)
 		return -1;
 	return 0;

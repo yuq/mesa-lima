@@ -387,16 +387,17 @@ instr_cp(struct ir3_instruction *instr, unsigned *flags)
 	return instr;
 }
 
-void ir3_block_cp(struct ir3_block *block)
+void
+ir3_cp(struct ir3 *ir)
 {
-	ir3_clear_mark(block->shader);
+	ir3_clear_mark(ir->block->shader);
 
-	for (unsigned i = 0; i < block->noutputs; i++) {
-		if (block->outputs[i]) {
+	for (unsigned i = 0; i < ir->noutputs; i++) {
+		if (ir->outputs[i]) {
 			struct ir3_instruction *out =
-					instr_cp(block->outputs[i], NULL);
+					instr_cp(ir->outputs[i], NULL);
 
-			block->outputs[i] = out;
+			ir->outputs[i] = out;
 		}
 	}
 }

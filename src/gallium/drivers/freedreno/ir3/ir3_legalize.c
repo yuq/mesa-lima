@@ -26,7 +26,6 @@
  *    Rob Clark <robclark@freedesktop.org>
  */
 
-#include "pipe/p_shader_tokens.h"
 #include "util/u_math.h"
 
 #include "freedreno_util.h"
@@ -48,7 +47,8 @@ struct ir3_legalize_ctx {
 	int max_bary;
 };
 
-static void legalize(struct ir3_legalize_ctx *ctx)
+static void
+legalize(struct ir3_legalize_ctx *ctx)
 {
 	struct ir3_block *block = ctx->block;
 	struct ir3_instruction *last_input = NULL;
@@ -220,11 +220,11 @@ static void legalize(struct ir3_legalize_ctx *ctx)
 		->flags |= IR3_INSTR_SS | IR3_INSTR_SY;
 }
 
-void ir3_block_legalize(struct ir3_block *block,
-		bool *has_samp, int *max_bary)
+void
+ir3_legalize(struct ir3 *ir, bool *has_samp, int *max_bary)
 {
 	struct ir3_legalize_ctx ctx = {
-			.block = block,
+			.block = ir->block,
 			.max_bary = -1,
 	};
 
