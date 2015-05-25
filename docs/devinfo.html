@@ -124,11 +124,111 @@ src/mesa/state_tracker/st_glsl_to_tgsi.cpp can serve as examples.
 <h2 id="submitting">Submitting patches</h2>
 
 <p>
-You should always run the Mesa Testsuite before submitting patches.
-The Testsuite can be run using the 'make check' command. All tests
+The basic guidelines for submitting patches are:
+</p>
+
+<ul>
+<li>Patches should be sufficiently tested before submitting.
+<li>Code patches should follow Mesa coding conventions.
+<li>Whenever possible, patches should only effect individual Mesa/Gallium
+components.
+<li>Patches should never introduce build breaks and should be bisectable (see
+<code>git bisect</code>.)
+<li>Patches should be properly formatted (see below).
+<li>Patches should be submitted to mesa-dev for review using
+<code>git send-email</code>.
+<li>Patches should not mix code changes with code formatting changes (except,
+perhaps, in very trivial cases.)
+</ul>
+
+<h3>Patch formatting</h3>
+
+<p>
+The basic rules for patch formatting are:
+</p>
+
+<ul>
+<li>Lines should be limited to 75 characters or less so that git logs
+displayed in 80-column terminals avoid line wrapping.  Note that git
+log uses 4 spaces of indentation (4 + 75 &lt; 80).
+<li>The first line should be a short, concise summary of the change prefixed
+with a module name.  Examples:
+<pre>
+    mesa: Add support for querying GL_VERTEX_ATTRIB_ARRAY_LONG
+
+    gallium: add PIPE_CAP_DEVICE_RESET_STATUS_QUERY
+
+    i965: Fix missing type in local variable declaration.
+</pre>
+<li>Subsequent patch comments should describe the change in more detail,
+if needed.  For example:
+<pre>
+    i965: Remove end-of-thread SEND alignment code.
+    
+    This was present in Eric's initial implementation of the compaction code
+    for Sandybridge (commit 077d01b6). There is no documentation saying this
+    is necessary, and removing it causes no regressions in piglit on any
+    platform.
+</pre>
+<li>A "Signed-off-by:" line is not required, but not discouraged either.
+<li>If a patch address a bugzilla issue, that should be noted in the
+patch comment.  For example:
+<pre>
+   Bugzilla: https://bugs.freedesktop.org/show_bug.cgi?id=89689
+</pre>
+<li>If there have been several revisions to a patch during the review
+process, they should be noted such as in this example:
+<pre>
+    st/mesa: add ARB_texture_stencil8 support (v4)
+    
+    if we support stencil texturing, enable texture_stencil8
+    there is no requirement to support native S8 for this,
+    the texture can be converted to x24s8 fine.
+    
+    v2: fold fixes from Marek in:
+       a) put S8 last in the list
+       b) fix renderable to always test for d/s renderable
+        fixup the texture case to use a stencil only format
+        for picking the format for the texture view.
+    v3: hit fallback for getteximage
+    v4: put s8 back in front, it shouldn't get picked now (Ilia)
+</pre>
+<li>If someone tested your patch, document it with a line like this:
+<pre>
+    Tested-by: Joe Hacker &lt;jhacker@foo.com&gt;
+</pre>
+<li>If the patch was reviewed (usually the case) or acked by someone,
+that should be documented with:
+<pre>
+    Reviewed-by: Joe Hacker &lt;jhacker@foo.com&gt;
+    Acked-by: Joe Hacker &lt;jhacker@foo.com&gt;
+</pre>
+</ul>
+
+
+
+<h3>Testing Patches</h3>
+
+<p>
+It should go without saying that patches must be tested.  In general,
+do whatever testing is prudent.
+</p>
+
+<p>
+You should always run the Mesa test suite before submitting patches.
+The test suite can be run using the 'make check' command. All tests
 must pass before patches will be accepted, this may mean you have
 to update the tests themselves.
 </p>
+
+<p>
+Whenever possible and applicable, test the patch with
+<a href="http://people.freedesktop.org/~nh/piglit/">Piglit</a> to
+check for regressions.
+</p>
+
+
+<h3>Mailing Patches</h3>
 
 <p>
 Patches should be sent to the Mesa mailing list for review.
