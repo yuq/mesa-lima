@@ -34,22 +34,6 @@
  * Find/group instruction neighbors:
  */
 
-/* stop condition for iteration: */
-static bool check_stop(struct ir3_instruction *instr)
-{
-	if (ir3_instr_check_mark(instr))
-		return true;
-
-	/* stay within the block.. don't try to operate across
-	 * basic block boundaries or we'll have problems when
-	 * dealing with multiple basic blocks:
-	 */
-	if (is_meta(instr) && (instr->opc == OPC_META_INPUT))
-		return true;
-
-	return false;
-}
-
 /* bleh.. we need to do the same group_n() thing for both inputs/outputs
  * (where we have a simple instr[] array), and fanin nodes (where we have
  * an extra indirection via reg->instr).
@@ -177,7 +161,7 @@ instr_find_neighbors(struct ir3_instruction *instr)
 {
 	struct ir3_instruction *src;
 
-	if (check_stop(instr))
+	if (ir3_instr_check_mark(instr))
 		return;
 
 	if (is_meta(instr) && (instr->opc == OPC_META_FI))
