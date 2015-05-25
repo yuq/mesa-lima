@@ -340,6 +340,8 @@ to be 0.
   DLDEXP are supported.
 * ``PIPE_SHADER_CAP_TGSI_FMA_SUPPORTED``: Whether FMA and DFMA (doubles only)
   are supported.
+* ``PIPE_SHADER_CAP_TGSI_ANY_INOUT_DECL_RANGE``: Whether the driver doesn't
+  ignore tgsi_declaration_range::Last for shader inputs and outputs.
 
 
 .. _pipe_compute_cap:

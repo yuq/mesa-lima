@@ -36,6 +36,7 @@
 extern "C" {
 #endif
    
+struct pipe_screen;
 struct ureg_program;
 struct pipe_stream_output_info;
 
@@ -98,7 +99,10 @@ struct ureg_dst
 struct pipe_context;
 
 struct ureg_program *
-ureg_create( unsigned processor );
+ureg_create(unsigned processor);
+
+struct ureg_program *
+ureg_create_with_screen(unsigned processor, struct pipe_screen *screen);
 
 const struct tgsi_token *
 ureg_finalize( struct ureg_program * );

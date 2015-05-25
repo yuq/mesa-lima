@@ -321,7 +321,7 @@ st_translate_vertex_program(struct st_context *st,
       _mesa_remove_output_reads(&stvp->Base.Base, PROGRAM_OUTPUT);
    }
 
-   ureg = ureg_create( TGSI_PROCESSOR_VERTEX );
+   ureg = ureg_create_with_screen(TGSI_PROCESSOR_VERTEX, st->pipe->screen);
    if (ureg == NULL) {
       free(vpv);
       return NULL;
@@ -732,7 +732,7 @@ st_translate_fragment_program(struct st_context *st,
       }
    }
 
-   ureg = ureg_create( TGSI_PROCESSOR_FRAGMENT );
+   ureg = ureg_create_with_screen(TGSI_PROCESSOR_FRAGMENT, st->pipe->screen);
    if (ureg == NULL) {
       free(variant);
       return NULL;
@@ -890,7 +890,7 @@ st_translate_geometry_program(struct st_context *st,
    if (!gpv)
       return NULL;
 
-   ureg = ureg_create(TGSI_PROCESSOR_GEOMETRY);
+   ureg = ureg_create_with_screen(TGSI_PROCESSOR_GEOMETRY, st->pipe->screen);
    if (ureg == NULL) {
       free(gpv);
       return NULL;

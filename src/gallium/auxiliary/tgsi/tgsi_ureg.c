@@ -26,6 +26,7 @@
  **************************************************************************/
 
 
+#include "pipe/p_screen.h"
 #include "pipe/p_context.h"
 #include "pipe/p_state.h"
 #include "tgsi/tgsi_ureg.h"
@@ -96,7 +97,7 @@ struct const_decl {
 struct ureg_program
 {
    unsigned processor;
-   struct pipe_context *pipe;
+   bool supports_any_inout_decl_range;
 
    struct {
       unsigned semantic_name;
@@ -906,7 +907,11 @@ ureg_emit_src( struct ureg_program *ureg,
       out[n].ind.File = src.IndirectFile;
       out[n].ind.Swizzle = src.IndirectSwizzle;
       out[n].ind.Index = src.IndirectIndex;
-      out[n].ind.ArrayID = src.ArrayID;
+      if (!ureg->supports_any_inout_decl_range &&
+          (src.File == TGSI_FILE_INPUT || src.File == TGSI_FILE_OUTPUT))
+         out[n].ind.ArrayID = 0;
+      else
+         out[n].ind.ArrayID = src.ArrayID;
       n++;
    }
 
@@ -922,7 +927,11 @@ ureg_emit_src( struct ureg_program *ureg,
          out[n].ind.File = src.DimIndFile;
          out[n].ind.Swizzle = src.DimIndSwizzle;
          out[n].ind.Index = src.DimIndIndex;
-         out[n].ind.ArrayID = src.ArrayID;
+         if (!ureg->supports_any_inout_decl_range &&
+             (src.File == TGSI_FILE_INPUT || src.File == TGSI_FILE_OUTPUT))
+            out[n].ind.ArrayID = 0;
+         else
+            out[n].ind.ArrayID = src.ArrayID;
       } else {
          out[n].dim.Indirect = 0;
          out[n].dim.Index = src.DimensionIndex;
@@ -964,7 +973,11 @@ ureg_emit_dst( struct ureg_program *ureg,
       out[n].ind.File = dst.IndirectFile;
       out[n].ind.Swizzle = dst.IndirectSwizzle;
       out[n].ind.Index = dst.IndirectIndex;
-      out[n].ind.ArrayID = dst.ArrayID;
+      if (!ureg->supports_any_inout_decl_range &&
+          (dst.File == TGSI_FILE_INPUT || dst.File == TGSI_FILE_OUTPUT))
+         out[n].ind.ArrayID = 0;
+      else
+         out[n].ind.ArrayID = dst.ArrayID;
       n++;
    }
 
@@ -980,7 +993,11 @@ ureg_emit_dst( struct ureg_program *ureg,
          out[n].ind.File = dst.DimIndFile;
          out[n].ind.Swizzle = dst.DimIndSwizzle;
          out[n].ind.Index = dst.DimIndIndex;
-         out[n].ind.ArrayID = dst.ArrayID;
+         if (!ureg->supports_any_inout_decl_range &&
+             (dst.File == TGSI_FILE_INPUT || dst.File == TGSI_FILE_OUTPUT))
+            out[n].ind.ArrayID = 0;
+         else
+            out[n].ind.ArrayID = dst.ArrayID;
       } else {
          out[n].dim.Indirect = 0;
          out[n].dim.Index = dst.DimensionIndex;
@@ -1489,7 +1506,7 @@ emit_property(struct ureg_program *ureg,
 
 static void emit_decls( struct ureg_program *ureg )
 {
-   unsigned i;
+   unsigned i,j;
 
    for (i = 0; i < Elements(ureg->properties); i++)
       if (ureg->properties[i] != ~0)
@@ -1502,28 +1519,60 @@ static void emit_decls( struct ureg_program *ureg )
          }
       }
    } else if (ureg->processor == TGSI_PROCESSOR_FRAGMENT) {
-      for (i = 0; i < ureg->nr_inputs; i++) {
-         emit_decl_fs(ureg,
-                      TGSI_FILE_INPUT,
-                      ureg->input[i].first,
-                      ureg->input[i].last,
-                      ureg->input[i].semantic_name,
-                      ureg->input[i].semantic_index,
-                      ureg->input[i].interp,
-                      ureg->input[i].cylindrical_wrap,
-                      ureg->input[i].interp_location,
-                      ureg->input[i].array_id);
+      if (ureg->supports_any_inout_decl_range) {
+         for (i = 0; i < ureg->nr_inputs; i++) {
+            emit_decl_fs(ureg,
+                         TGSI_FILE_INPUT,
+                         ureg->input[i].first,
+                         ureg->input[i].last,
+                         ureg->input[i].semantic_name,
+                         ureg->input[i].semantic_index,
+                         ureg->input[i].interp,
+                         ureg->input[i].cylindrical_wrap,
+                         ureg->input[i].interp_location,
+                         ureg->input[i].array_id);
+         }
+      }
+      else {
+         for (i = 0; i < ureg->nr_inputs; i++) {
+            for (j = ureg->input[i].first; j <= ureg->input[i].last; j++) {
+               emit_decl_fs(ureg,
+                            TGSI_FILE_INPUT,
+                            j, j,
+                            ureg->input[i].semantic_name,
+                            ureg->input[i].semantic_index +
+                            (j - ureg->input[i].first),
+                            ureg->input[i].interp,
+                            ureg->input[i].cylindrical_wrap,
+                            ureg->input[i].interp_location, 0);
+            }
+         }
       }
    } else {
-      for (i = 0; i < ureg->nr_inputs; i++) {
-         emit_decl_semantic(ureg,
-                            TGSI_FILE_INPUT,
-                            ureg->input[i].first,
-                            ureg->input[i].last,
-                            ureg->input[i].semantic_name,
-                            ureg->input[i].semantic_index,
-                            TGSI_WRITEMASK_XYZW,
-                            ureg->input[i].array_id);
+      if (ureg->supports_any_inout_decl_range) {
+         for (i = 0; i < ureg->nr_inputs; i++) {
+            emit_decl_semantic(ureg,
+                               TGSI_FILE_INPUT,
+                               ureg->input[i].first,
+                               ureg->input[i].last,
+                               ureg->input[i].semantic_name,
+                               ureg->input[i].semantic_index,
+                               TGSI_WRITEMASK_XYZW,
+                               ureg->input[i].array_id);
+         }
+      }
+      else {
+         for (i = 0; i < ureg->nr_inputs; i++) {
+            for (j = ureg->input[i].first; j <= ureg->input[i].last; j++) {
+               emit_decl_semantic(ureg,
+                                  TGSI_FILE_INPUT,
+                                  j, j,
+                                  ureg->input[i].semantic_name,
+                                  ureg->input[i].semantic_index +
+                                  (j - ureg->input[i].first),
+                                  TGSI_WRITEMASK_XYZW, 0);
+            }
+         }
       }
    }
 
@@ -1537,15 +1586,30 @@ static void emit_decls( struct ureg_program *ureg )
                          TGSI_WRITEMASK_XYZW, 0);
    }
 
-   for (i = 0; i < ureg->nr_outputs; i++) {
-      emit_decl_semantic(ureg,
-                         TGSI_FILE_OUTPUT,
-                         ureg->output[i].first,
-                         ureg->output[i].last,
-                         ureg->output[i].semantic_name,
-                         ureg->output[i].semantic_index,
-                         ureg->output[i].usage_mask,
-                         ureg->output[i].array_id);
+   if (ureg->supports_any_inout_decl_range) {
+      for (i = 0; i < ureg->nr_outputs; i++) {
+         emit_decl_semantic(ureg,
+                            TGSI_FILE_OUTPUT,
+                            ureg->output[i].first,
+                            ureg->output[i].last,
+                            ureg->output[i].semantic_name,
+                            ureg->output[i].semantic_index,
+                            ureg->output[i].usage_mask,
+                            ureg->output[i].array_id);
+      }
+   }
+   else {
+      for (i = 0; i < ureg->nr_outputs; i++) {
+         for (j = ureg->output[i].first; j <= ureg->output[i].last; j++) {
+            emit_decl_semantic(ureg,
+                               TGSI_FILE_OUTPUT,
+                               j, j,
+                               ureg->output[i].semantic_name,
+                               ureg->output[i].semantic_index +
+                               (j - ureg->output[i].first),
+                               ureg->output[i].usage_mask, 0);
+         }
+      }
    }
 
    for (i = 0; i < ureg->nr_samplers; i++) {
@@ -1759,7 +1823,38 @@ void ureg_free_tokens( const struct tgsi_token *tokens )
 }
 
 
-struct ureg_program *ureg_create( unsigned processor )
+static INLINE unsigned
+pipe_shader_from_tgsi_processor(unsigned processor)
+{
+   switch (processor) {
+   case TGSI_PROCESSOR_VERTEX:
+      return PIPE_SHADER_VERTEX;
+   case TGSI_PROCESSOR_TESS_CTRL:
+      return PIPE_SHADER_TESS_CTRL;
+   case TGSI_PROCESSOR_TESS_EVAL:
+      return PIPE_SHADER_TESS_EVAL;
+   case TGSI_PROCESSOR_GEOMETRY:
+      return PIPE_SHADER_GEOMETRY;
+   case TGSI_PROCESSOR_FRAGMENT:
+      return PIPE_SHADER_FRAGMENT;
+   case TGSI_PROCESSOR_COMPUTE:
+      return PIPE_SHADER_COMPUTE;
+   default:
+      assert(0);
+      return PIPE_SHADER_VERTEX;
+   }
+}
+
+
+struct ureg_program *
+ureg_create(unsigned processor)
+{
+   return ureg_create_with_screen(processor, NULL);
+}
+
+
+struct ureg_program *
+ureg_create_with_screen(unsigned processor, struct pipe_screen *screen)
 {
    int i;
    struct ureg_program *ureg = CALLOC_STRUCT( ureg_program );
@@ -1767,6 +1862,11 @@ struct ureg_program *ureg_create( unsigned processor )
       goto no_ureg;
 
    ureg->processor = processor;
+   ureg->supports_any_inout_decl_range =
+      screen &&
+      screen->get_shader_param(screen,
+                               pipe_shader_from_tgsi_processor(processor),
+                               PIPE_SHADER_CAP_TGSI_ANY_INOUT_DECL_RANGE) != 0;
 
    for (i = 0; i < Elements(ureg->properties); i++)
       ureg->properties[i] = ~0;
