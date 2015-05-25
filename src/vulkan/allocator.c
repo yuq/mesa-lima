@@ -642,3 +642,76 @@ anv_state_stream_alloc(struct anv_state_stream *stream,
 
    return state;
 }
+
+struct bo_pool_bo_link {
+   struct bo_pool_bo_link *next;
+   struct anv_bo bo;
+};
+
+void
+anv_bo_pool_init(struct anv_bo_pool *pool,
+                 struct anv_device *device, uint32_t bo_size)
+{
+   pool->device = device;
+   pool->bo_size = bo_size;
+   pool->free_list = NULL;
+}
+
+void
+anv_bo_pool_finish(struct anv_bo_pool *pool)
+{
+   struct bo_pool_bo_link *link = PFL_PTR(pool->free_list);
+   while (link != NULL) {
+      struct bo_pool_bo_link link_copy = VG_NOACCESS_READ(link);
+      anv_gem_munmap(link_copy.bo.map, pool->bo_size);
+      anv_gem_close(pool->device, link_copy.bo.gem_handle);
+      link = link_copy.next;
+   }
+}
+
+VkResult
+anv_bo_pool_alloc(struct anv_bo_pool *pool, struct anv_bo *bo)
+{
+   VkResult result;
+
+   void *next_free_void;
+   if (anv_ptr_free_list_pop(&pool->free_list, &next_free_void)) {
+      struct bo_pool_bo_link *next_free = next_free_void;
+      *bo = VG_NOACCESS_READ(&next_free->bo);
+      assert(bo->map == next_free);
+      assert(bo->size == pool->bo_size);
+
+      VG(VALGRIND_MALLOCLIKE_BLOCK(bo->map, pool->bo_size, 0, false));
+
+      return VK_SUCCESS;
+   }
+
+   struct anv_bo new_bo;
+
+   result = anv_bo_init_new(&new_bo, pool->device, pool->bo_size);
+   if (result != VK_SUCCESS)
+      return result;
+
+   assert(new_bo.size == pool->bo_size);
+
+   new_bo.map = anv_gem_mmap(pool->device, new_bo.gem_handle, 0, pool->bo_size);
+   if (new_bo.map == NULL) {
+      anv_gem_close(pool->device, new_bo.gem_handle);
+      return vk_error(VK_ERROR_MEMORY_MAP_FAILED);
+   }
+
+   VG(VALGRIND_MALLOCLIKE_BLOCK(new_bo.map, pool->bo_size, 0, false));
+
+   *bo = new_bo;
+   return VK_SUCCESS;
+}
+
+void
+anv_bo_pool_free(struct anv_bo_pool *pool, const struct anv_bo *bo)
+{
+   struct bo_pool_bo_link *link = bo->map;
+   link->bo = *bo;
+
+   VG(VALGRIND_FREELIKE_BLOCK(bo->map, 0));
+   anv_ptr_free_list_push(&pool->free_list, link);
+}

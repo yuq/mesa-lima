@@ -251,6 +251,24 @@ void anv_state_stream_finish(struct anv_state_stream *stream);
 struct anv_state anv_state_stream_alloc(struct anv_state_stream *stream,
                                         uint32_t size, uint32_t alignment);
 
+/**
+ * Implements a pool of re-usable BOs.  The interface is identical to that
+ * of block_pool except that each block is its own BO.
+ */
+struct anv_bo_pool {
+   struct anv_device *device;
+
+   uint32_t bo_size;
+
+   void *free_list;
+};
+
+void anv_bo_pool_init(struct anv_bo_pool *pool,
+                      struct anv_device *device, uint32_t block_size);
+void anv_bo_pool_finish(struct anv_bo_pool *pool);
+VkResult anv_bo_pool_alloc(struct anv_bo_pool *pool, struct anv_bo *bo);
+void anv_bo_pool_free(struct anv_bo_pool *pool, const struct anv_bo *bo);
+
 struct anv_object;
 struct anv_device;
 
