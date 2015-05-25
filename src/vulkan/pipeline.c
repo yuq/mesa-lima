@@ -156,7 +156,6 @@ emit_ia_state(struct anv_pipeline *pipeline,
 static void
 emit_rs_state(struct anv_pipeline *pipeline, VkPipelineRsStateCreateInfo *info,
               const struct anv_pipeline_create_info *extra)
-
 {
    static const uint32_t vk_to_gen_cullmode[] = {
       [VK_CULL_MODE_NONE] = CULLMODE_NONE,
@@ -216,6 +215,53 @@ emit_rs_state(struct anv_pipeline *pipeline, VkPipelineRsStateCreateInfo *info,
 
 }
 
+static const uint32_t vk_to_gen_compare_op[] = {
+   [VK_COMPARE_OP_NEVER] = COMPAREFUNCTION_NEVER,
+   [VK_COMPARE_OP_LESS] = COMPAREFUNCTION_LESS,
+   [VK_COMPARE_OP_EQUAL] = COMPAREFUNCTION_EQUAL,
+   [VK_COMPARE_OP_LESS_EQUAL] = COMPAREFUNCTION_LEQUAL,
+   [VK_COMPARE_OP_GREATER] = COMPAREFUNCTION_GREATER,
+   [VK_COMPARE_OP_NOT_EQUAL] = COMPAREFUNCTION_NOTEQUAL,
+   [VK_COMPARE_OP_GREATER_EQUAL] = COMPAREFUNCTION_GEQUAL,
+   [VK_COMPARE_OP_ALWAYS] = COMPAREFUNCTION_ALWAYS,
+};
+
+static const uint32_t vk_to_gen_stencil_op[] = {
+   [VK_STENCIL_OP_KEEP] = 0,
+   [VK_STENCIL_OP_ZERO] = 0,
+   [VK_STENCIL_OP_REPLACE] = 0,
+   [VK_STENCIL_OP_INC_CLAMP] = 0,
+   [VK_STENCIL_OP_DEC_CLAMP] = 0,
+   [VK_STENCIL_OP_INVERT] = 0,
+   [VK_STENCIL_OP_INC_WRAP] = 0,
+   [VK_STENCIL_OP_DEC_WRAP] = 0
+};
+
+static void
+emit_ds_state(struct anv_pipeline *pipeline, VkPipelineDsStateCreateInfo *info)
+{
+   /* bool32_t depthBoundsEnable;          // optional (depth_bounds_test) */
+
+   struct GEN8_3DSTATE_WM_DEPTH_STENCIL wm_depth_stencil = {
+      .DepthTestEnable = info->depthTestEnable,
+      .DepthBufferWriteEnable = info->depthWriteEnable,
+      .DepthTestFunction = vk_to_gen_compare_op[info->depthCompareOp],
+      .DoubleSidedStencilEnable = true,
+
+      .StencilTestEnable = info->stencilTestEnable,
+      .StencilFailOp = vk_to_gen_stencil_op[info->front.stencilFailOp],
+      .StencilPassDepthPassOp = vk_to_gen_stencil_op[info->front.stencilPassOp],
+      .StencilPassDepthFailOp = vk_to_gen_stencil_op[info->front.stencilDepthFailOp],
+      .StencilTestFunction = vk_to_gen_compare_op[info->front.stencilCompareOp],
+      .BackfaceStencilFailOp = vk_to_gen_stencil_op[info->back.stencilFailOp],
+      .BackfaceStencilPassDepthPassOp = vk_to_gen_stencil_op[info->back.stencilPassOp],
+      .BackfaceStencilPassDepthFailOp =vk_to_gen_stencil_op[info->back.stencilDepthFailOp],
+      .BackfaceStencilTestFunction = vk_to_gen_compare_op[info->back.stencilCompareOp],
+   };
+
+   GEN8_3DSTATE_WM_DEPTH_STENCIL_pack(NULL, pipeline->state_wm_depth_stencil, &wm_depth_stencil);
+}
+
 VkResult anv_CreateGraphicsPipeline(
     VkDevice                                    device,
     const VkGraphicsPipelineCreateInfo*         pCreateInfo,
@@ -249,8 +295,9 @@ anv_pipeline_create(
    struct anv_pipeline *pipeline;
    const struct anv_common *common;
    VkPipelineShaderStageCreateInfo *shader_create_info;
-   VkPipelineIaStateCreateInfo *ia_info;
-   VkPipelineRsStateCreateInfo *rs_info;
+   VkPipelineIaStateCreateInfo *ia_info = NULL;
+   VkPipelineRsStateCreateInfo *rs_info = NULL;
+   VkPipelineDsStateCreateInfo *ds_info = NULL;
    VkPipelineVertexInputCreateInfo *vi_info;
    VkResult result;
    uint32_t offset, length;
@@ -282,14 +329,23 @@ anv_pipeline_create(
          ia_info = (VkPipelineIaStateCreateInfo *) common;
          break;
       case VK_STRUCTURE_TYPE_PIPELINE_TESS_STATE_CREATE_INFO:
+         anv_finishme("VK_STRUCTURE_TYPE_PIPELINE_TESS_STATE_CREATE_INFO");
+         break;
       case VK_STRUCTURE_TYPE_PIPELINE_VP_STATE_CREATE_INFO:
+         anv_finishme("VK_STRUCTURE_TYPE_PIPELINE_VP_STATE_CREATE_INFO");
          break;
       case VK_STRUCTURE_TYPE_PIPELINE_RS_STATE_CREATE_INFO:
          rs_info = (VkPipelineRsStateCreateInfo *) common;
          break;
       case VK_STRUCTURE_TYPE_PIPELINE_MS_STATE_CREATE_INFO:
+         anv_finishme("VK_STRUCTURE_TYPE_PIPELINE_MS_STATE_CREATE_INFO");
+         break;
       case VK_STRUCTURE_TYPE_PIPELINE_CB_STATE_CREATE_INFO:
+         anv_finishme("VK_STRUCTURE_TYPE_PIPELINE_CB_STATE_CREATE_INFO");
+         break;
       case VK_STRUCTURE_TYPE_PIPELINE_DS_STATE_CREATE_INFO:
+         ds_info = (VkPipelineDsStateCreateInfo *) common;
+         break;
       case VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO:
          shader_create_info = (VkPipelineShaderStageCreateInfo *) common;
          pipeline->shaders[shader_create_info->shader.stage] =
@@ -311,9 +367,16 @@ anv_pipeline_create(
    if (pipeline->vs_simd8 == NO_KERNEL)
       pipeline->wm_prog_data.num_varying_inputs = vi_info->attributeCount - 2;
 
+   assert(vi_info);
    emit_vertex_input(pipeline, vi_info);
+   assert(ia_info);
    emit_ia_state(pipeline, ia_info, extra);
+   assert(rs_info);
    emit_rs_state(pipeline, rs_info, extra);
+   /* ds_info is optional if we're not using depth or stencil buffers, ps is
+    * optional for depth-only rendering. */
+   if (ds_info)
+      emit_ds_state(pipeline, ds_info);
 
    anv_batch_emit(&pipeline->batch, GEN8_3DSTATE_CLIP,
                   .ClipEnable = true,

@@ -2083,11 +2083,44 @@ VkResult anv_CreateDynamicColorBlendState(
 }
 
 VkResult anv_CreateDynamicDepthStencilState(
-    VkDevice                                    device,
+    VkDevice                                    _device,
     const VkDynamicDsStateCreateInfo*           pCreateInfo,
     VkDynamicDsState*                           pState)
 {
-   stub_return(VK_UNSUPPORTED);
+   struct anv_device *device = (struct anv_device *) _device;
+   struct anv_dynamic_ds_state *state;
+
+   assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_DYNAMIC_DS_STATE_CREATE_INFO);
+
+   state = anv_device_alloc(device, sizeof(*state), 8,
+                            VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
+   if (state == NULL)
+      return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+
+   struct GEN8_3DSTATE_WM_DEPTH_STENCIL wm_depth_stencil = {
+      GEN8_3DSTATE_WM_DEPTH_STENCIL_header,
+
+      /* pCreateInfo->stencilFrontRef,
+       * pCreateInfo->stencilBackRef,
+       * go in cc state
+       */
+
+      /* Is this what we need to do? */
+      .StencilBufferWriteEnable = pCreateInfo->stencilWriteMask != 0,
+
+      .StencilTestMask = pCreateInfo->stencilReadMask,
+      .StencilWriteMask = pCreateInfo->stencilWriteMask,
+
+      .BackfaceStencilTestMask = pCreateInfo->stencilReadMask,
+      .BackfaceStencilWriteMask = pCreateInfo->stencilWriteMask,
+   };
+
+   GEN8_3DSTATE_WM_DEPTH_STENCIL_pack(NULL, state->state_wm_depth_stencil,
+                                      &wm_depth_stencil);
+
+   *pState = (VkDynamicDsState) state;
+
+   return VK_SUCCESS;
 }
 
 // Command buffer functions
@@ -2259,10 +2292,6 @@ VkResult anv_BeginCommandBuffer(
                   .ChromaKeyKillEnable = false);
    anv_batch_emit(&cmd_buffer->batch, GEN8_3DSTATE_SBE_SWIZ);
    anv_batch_emit(&cmd_buffer->batch, GEN8_3DSTATE_AA_LINE_PARAMETERS);
-
-   anv_batch_emit(&cmd_buffer->batch, GEN8_3DSTATE_WM_DEPTH_STENCIL,
-                  .DepthTestEnable = false,
-                  .DepthBufferWriteEnable = false);
 
    return VK_SUCCESS;
 }
@@ -2440,7 +2469,10 @@ void anv_CmdBindDynamicStateObject(
       cmd_buffer->dirty |= ANV_CMD_BUFFER_RS_DIRTY;
       break;
    case VK_STATE_BIND_POINT_COLOR_BLEND:
+      break;
    case VK_STATE_BIND_POINT_DEPTH_STENCIL:
+      cmd_buffer->ds_state = (struct anv_dynamic_ds_state *) dynamicState;
+      cmd_buffer->dirty |= ANV_CMD_BUFFER_DS_DIRTY;
       break;
    default:
       break;
@@ -2679,6 +2711,12 @@ anv_cmd_buffer_flush_state(struct anv_cmd_buffer *cmd_buffer)
    if (cmd_buffer->dirty & (ANV_CMD_BUFFER_PIPELINE_DIRTY | ANV_CMD_BUFFER_RS_DIRTY))
       anv_batch_emit_merge(&cmd_buffer->batch,
                            cmd_buffer->rs_state->state_sf, pipeline->state_sf);
+
+   if (cmd_buffer->ds_state &&
+       (cmd_buffer->dirty & (ANV_CMD_BUFFER_PIPELINE_DIRTY | ANV_CMD_BUFFER_DS_DIRTY)))
+      anv_batch_emit_merge(&cmd_buffer->batch,
+                           cmd_buffer->ds_state->state_wm_depth_stencil,
+                           pipeline->state_wm_depth_stencil);
 
    cmd_buffer->vb_dirty &= ~vb_emit;
    cmd_buffer->dirty = 0;

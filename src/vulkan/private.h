@@ -470,6 +470,10 @@ struct anv_dynamic_rs_state {
    uint32_t state_sf[GEN8_3DSTATE_SF_length];
 };
 
+struct anv_dynamic_ds_state {
+   uint32_t state_wm_depth_stencil[GEN8_3DSTATE_WM_DEPTH_STENCIL_length];
+};
+
 struct anv_dynamic_cb_state {
    uint32_t blend_offset;
 };
@@ -540,6 +544,7 @@ struct anv_buffer {
 #define ANV_CMD_BUFFER_PIPELINE_DIRTY           (1 << 0)
 #define ANV_CMD_BUFFER_DESCRIPTOR_SET_DIRTY     (1 << 1)
 #define ANV_CMD_BUFFER_RS_DIRTY                 (1 << 2)
+#define ANV_CMD_BUFFER_DS_DIRTY                 (1 << 3)
    
 struct anv_bindings {
    struct {
@@ -578,6 +583,7 @@ struct anv_cmd_buffer {
    struct anv_pipeline *                        pipeline;
    struct anv_framebuffer *                     framebuffer;
    struct anv_dynamic_rs_state *                rs_state;
+   struct anv_dynamic_ds_state *                ds_state;
    struct anv_dynamic_vp_state *                vp_state;
    struct anv_bindings *                        bindings;
    struct anv_bindings                          default_bindings;
@@ -637,6 +643,7 @@ struct anv_pipeline {
 
    uint32_t                                     state_sf[GEN8_3DSTATE_SF_length];
    uint32_t                                     state_raster[GEN8_3DSTATE_RASTER_length];
+   uint32_t                                     state_wm_depth_stencil[GEN8_3DSTATE_WM_DEPTH_STENCIL_length];
 };
 
 struct anv_pipeline_create_info {
