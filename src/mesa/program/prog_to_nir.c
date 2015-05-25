@@ -188,8 +188,6 @@ ptn_get_src(struct ptn_compile *c, const struct prog_src_register *prog_src)
                /* This is a negative offset which should be added to the address
                 * register's value.
                 */
-               nir_alu_src addr_src = { NIR_SRC_INIT };
-               addr_src.src = nir_src_for_reg(c->addr_reg);
                reladdr = nir_iadd(b, reladdr, nir_imm_int(b, prog_src->Index));
 
                deref_arr->base_offset = 0;
