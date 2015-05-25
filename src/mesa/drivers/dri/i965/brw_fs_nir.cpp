@@ -1399,9 +1399,13 @@ fs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
       fs_reg surf_index;
 
       if (const_index) {
-         surf_index = fs_reg(stage_prog_data->binding_table.ubo_start +
-                             const_index->u[0]);
+         uint32_t index = const_index->u[0];
+         uint32_t set = shader->base.UniformBlocks[index].Set;
+         uint32_t binding = shader->base.UniformBlocks[index].Binding;
+
+         surf_index = fs_reg(stage_prog_data->bind_map[set][binding]);
       } else {
+         assert(0 && "need more info from the ir for this.");
          /* The block index is not a constant. Evaluate the index expression
           * per-channel and add the base UBO index; we have to select a value
           * from any live channel.

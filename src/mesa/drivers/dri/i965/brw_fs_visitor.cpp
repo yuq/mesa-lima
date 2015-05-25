@@ -1206,7 +1206,7 @@ fs_visitor::visit(ir_expression *ir)
           */
          index = const_uniform_block->value.u[0];
          set = shader->base.UniformBlocks[index].Set;
-         set_index = shader->base.UniformBlocks[index].Index;
+         set_index = shader->base.UniformBlocks[index].Binding;
          binding = stage_prog_data->bind_map[set][set_index];
          surf_index = fs_reg(binding);
       } else {

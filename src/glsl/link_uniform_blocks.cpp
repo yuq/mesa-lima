@@ -294,7 +294,7 @@ link_uniform_blocks(void *mem_ctx,
                (unsigned)(ptrdiff_t)(&variables[parcel.index] - blocks[i].Uniforms);
 
             blocks[i].Set = b->set;
-            blocks[i].Index = b->index;
+            blocks[i].Binding = b->binding;
 
             i++;
          }
@@ -315,7 +315,7 @@ link_uniform_blocks(void *mem_ctx,
             (unsigned)(ptrdiff_t)(&variables[parcel.index] - blocks[i].Uniforms);
 
          blocks[i].Set = b->set;
-         blocks[i].Index = b->index;
+         blocks[i].Binding = b->binding;
 
          i++;
       }
