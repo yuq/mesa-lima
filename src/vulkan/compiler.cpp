@@ -937,6 +937,7 @@ anv_compiler_run(struct anv_compiler *compiler, struct anv_pipeline *pipeline)
       pipeline->prog_data[VK_SHADER_STAGE_VERTEX] = &pipeline->vs_prog_data.base.base;
       pipeline->active_stages |= VK_SHADER_STAGE_VERTEX_BIT;;
    } else {
+      memset(&pipeline->vs_prog_data, 0, sizeof(pipeline->vs_prog_data));
       pipeline->vs_simd8 = NO_KERNEL;
    }
 
