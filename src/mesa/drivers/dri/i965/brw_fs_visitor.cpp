@@ -3711,7 +3711,11 @@ fs_visitor::emit_single_fb_write(fs_reg color0, fs_reg color1,
       if (prog->OutputsWritten & BITFIELD64_BIT(FRAG_RESULT_DEPTH)) {
 	 /* Hand over gl_FragDepth. */
 	 assert(this->frag_depth.file != BAD_FILE);
-         sources[length] = this->frag_depth;
+         if (exec_size < dispatch_width) {
+            sources[length] = half(this->frag_depth, use_2nd_half);
+         } else {
+            sources[length] = this->frag_depth;
+         }
       } else {
 	 /* Pass through the payload depth. */
          sources[length] = fs_reg(brw_vec8_grf(payload.source_depth_reg, 0));
