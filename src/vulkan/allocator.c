@@ -198,6 +198,52 @@ anv_free_list_push(union anv_free_list *list, void *map, uint32_t offset)
    } while (old.u64 != current.u64);
 }
 
+/* All pointers in the ptr_free_list are assumed to be page-aligned.  This
+ * means that the bottom 12 bits should all be zero.
+ */
+#define PFL_COUNT(x) ((uintptr_t)(x) & 0xfff)
+#define PFL_PTR(x) ((void *)((uintptr_t)(x) & ~0xfff))
+#define PFL_PACK(ptr, count) ({           \
+   assert(((uintptr_t)(ptr) & 0xfff) == 0); \
+   (void *)((uintptr_t)(ptr) | (uintptr_t)((count) & 0xfff)); \
+})
+
+static bool
+anv_ptr_free_list_pop(void **list, void **elem)
+{
+   void *current = *list;
+   while (PFL_PTR(current) != NULL) {
+      void **next_ptr = PFL_PTR(current);
+      void *new_ptr = VG_NOACCESS_READ(next_ptr);
+      unsigned new_count = PFL_COUNT(current) + 1;
+      void *new = PFL_PACK(new_ptr, new_count);
+      void *old = __sync_val_compare_and_swap(list, current, new);
+      if (old == current) {
+         *elem = PFL_PTR(current);
+         return true;
+      }
+      current = old;
+   }
+
+   return false;
+}
+
+static void
+anv_ptr_free_list_push(void **list, void *elem)
+{
+   void *old, *current;
+   void **next_ptr = elem;
+
+   old = *list;
+   do {
+      current = old;
+      VG_NOACCESS_WRITE(next_ptr, PFL_PTR(current));
+      unsigned new_count = PFL_COUNT(current) + 1;
+      void *new = PFL_PACK(elem, new_count);
+      old = __sync_val_compare_and_swap(list, current, new);
+   } while (old != current);
+}
+
 static int
 anv_block_pool_grow(struct anv_block_pool *pool);
 
