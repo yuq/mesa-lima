@@ -320,6 +320,8 @@ struct anv_device {
     bool                                        no_hw;
     bool                                        dump_aub;
 
+    struct anv_bo_pool                          batch_bo_pool;
+
     struct anv_block_pool                       dynamic_state_block_pool;
     struct anv_state_pool                       dynamic_state_pool;
 
@@ -421,7 +423,7 @@ struct anv_address {
 static inline uint64_t
 __gen_combine_address(struct anv_batch *batch, void *location,
                       const struct anv_address address, uint32_t delta)
-{   
+{
    if (address.bo == NULL) {
       return delta;
    } else {

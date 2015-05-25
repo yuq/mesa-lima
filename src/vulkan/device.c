@@ -303,6 +303,8 @@ parse_debug_flags(struct anv_device *device)
    }
 }
 
+static const uint32_t BATCH_SIZE = 1 << 15;
+
 VkResult anv_CreateDevice(
     VkPhysicalDevice                            _physicalDevice,
     const VkDeviceCreateInfo*                   pCreateInfo,
@@ -332,6 +334,8 @@ VkResult anv_CreateDevice(
    device->context_id = anv_gem_create_context(device);
    if (device->context_id == -1)
       goto fail_fd;
+
+   anv_bo_pool_init(&device->batch_bo_pool, device, BATCH_SIZE);
 
    anv_block_pool_init(&device->dynamic_state_block_pool, device, 2048);
 
@@ -381,6 +385,8 @@ VkResult anv_DestroyDevice(
 
    anv_compiler_destroy(device->compiler);
 
+
+   anv_bo_pool_finish(&device->batch_bo_pool);
    anv_block_pool_finish(&device->dynamic_state_block_pool);
    anv_block_pool_finish(&device->instruction_block_pool);
    anv_block_pool_finish(&device->surface_state_block_pool);
@@ -495,41 +501,25 @@ VkResult anv_GetDeviceQueue(
    return VK_SUCCESS;
 }
 
-static const uint32_t BATCH_SIZE = 8192;
-
 VkResult
 anv_batch_init(struct anv_batch *batch, struct anv_device *device)
 {
    VkResult result;
 
-   result = anv_bo_init_new(&batch->bo, device, BATCH_SIZE);
+   result = anv_bo_pool_alloc(&device->batch_bo_pool, &batch->bo);
    if (result != VK_SUCCESS)
       return result;
-
-   batch->bo.map =
-      anv_gem_mmap(device, batch->bo.gem_handle, 0, BATCH_SIZE);
-   if (batch->bo.map == NULL) {
-      result = vk_error(VK_ERROR_MEMORY_MAP_FAILED);
-      goto fail_bo;
-   }
 
    batch->cmd_relocs.num_relocs = 0;
    batch->next = batch->bo.map;
 
    return VK_SUCCESS;
-
- fail_bo:
-   anv_gem_close(device, batch->bo.gem_handle);
-
-   return result;
-
 }
 
 void
 anv_batch_finish(struct anv_batch *batch, struct anv_device *device)
 {
-   anv_gem_munmap(batch->bo.map, BATCH_SIZE);
-   anv_gem_close(device, batch->bo.gem_handle);
+   anv_bo_pool_free(&device->batch_bo_pool, &batch->bo);
 }
 
 void
