@@ -399,7 +399,7 @@ nv30_render_vbo(struct pipe_context *pipe, const struct pipe_draw_info *info)
       if (nv30->vertprog.constbuf) {
          void *map = nv04_resource(nv30->vertprog.constbuf)->data;
          draw_set_mapped_constant_buffer(draw, PIPE_SHADER_VERTEX, 0,
-                                         map, nv30->vertprog.constbuf_nr);
+                                         map, nv30->vertprog.constbuf_nr * 16);
       } else {
          draw_set_mapped_constant_buffer(draw, PIPE_SHADER_VERTEX, 0, NULL, 0);
       }
