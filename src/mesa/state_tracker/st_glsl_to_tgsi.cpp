@@ -5139,8 +5139,6 @@ st_translate_program(
       goto out;
    }
 
-   memset(t, 0, sizeof *t);
-
    t->procType = procType;
    t->inputMapping = inputMapping;
    t->outputMapping = outputMapping;
