@@ -1631,6 +1631,7 @@ void radeon_llvm_dispose(struct radeon_llvm_context * ctx)
 	ctx->arrays = NULL;
 	FREE(ctx->temps);
 	ctx->temps = NULL;
+	ctx->temps_count = 0;
 	FREE(ctx->loop);
 	ctx->loop = NULL;
 	ctx->loop_depth_max = 0;
