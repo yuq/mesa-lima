@@ -123,10 +123,20 @@ anv_device_init_meta_clear_state(struct anv_device *device)
       .frontFace = VK_FRONT_FACE_CCW
    };
 
+   VkPipelineCbStateCreateInfo cb_create_info = {
+      .sType = VK_STRUCTURE_TYPE_PIPELINE_CB_STATE_CREATE_INFO,
+      .pNext = &rs_create_info,
+      .attachmentCount = 1,
+      .pAttachments = (VkPipelineCbAttachmentState []) {
+         { .channelWriteMask = VK_CHANNEL_A_BIT |
+              VK_CHANNEL_R_BIT | VK_CHANNEL_G_BIT | VK_CHANNEL_B_BIT },
+      }
+   };
+
    anv_pipeline_create((VkDevice) device,
       &(VkGraphicsPipelineCreateInfo) {
          .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
-         .pNext = &rs_create_info,
+         .pNext = &cb_create_info,
          .flags = 0,
          .layout = 0
       },
@@ -144,6 +154,13 @@ anv_device_init_meta_clear_state(struct anv_device *device)
          .sType = VK_STRUCTURE_TYPE_DYNAMIC_RS_STATE_CREATE_INFO,
       },
       &device->clear_state.rs_state);
+
+   anv_CreateDynamicColorBlendState((VkDevice) device,
+      &(VkDynamicCbStateCreateInfo) {
+         .sType = VK_STRUCTURE_TYPE_DYNAMIC_CB_STATE_CREATE_INFO
+      },
+      &device->clear_state.cb_state);
+
 }
 
 #define NUM_VB_USED 2
@@ -151,6 +168,7 @@ struct anv_saved_state {
    struct anv_bindings bindings;
    struct anv_bindings *old_bindings;
    struct anv_pipeline *old_pipeline;
+   VkDynamicCbState cb_state;
 };
 
 static void
@@ -429,9 +447,19 @@ anv_device_init_meta_blit_state(struct anv_device *device)
       .frontFace = VK_FRONT_FACE_CCW
    };
 
+   VkPipelineCbStateCreateInfo cb_create_info = {
+      .sType = VK_STRUCTURE_TYPE_PIPELINE_CB_STATE_CREATE_INFO,
+      .pNext = &rs_create_info,
+      .attachmentCount = 1,
+      .pAttachments = (VkPipelineCbAttachmentState []) {
+         { .channelWriteMask = VK_CHANNEL_A_BIT |
+              VK_CHANNEL_R_BIT | VK_CHANNEL_G_BIT | VK_CHANNEL_B_BIT },
+      }
+   };
+
    VkGraphicsPipelineCreateInfo pipeline_info = {
       .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
-      .pNext = &rs_create_info,
+      .pNext = &cb_create_info,
       .flags = 0,
       .layout = pipeline_layout,
    };
@@ -474,6 +502,11 @@ meta_prepare_blit(struct anv_cmd_buffer *cmd_buffer,
       anv_CmdBindDynamicStateObject((VkCmdBuffer) cmd_buffer,
                                     VK_STATE_BIND_POINT_RASTER,
                                     device->blit_state.rs_state);
+
+   saved_state->cb_state = (VkDynamicCbState) cmd_buffer->cb_state;
+   anv_CmdBindDynamicStateObject((VkCmdBuffer) cmd_buffer,
+                                 VK_STATE_BIND_POINT_COLOR_BLEND,
+                                 device->blit_state.cb_state);
 }
 
 struct blit_region {
@@ -639,6 +672,9 @@ meta_finish_blit(struct anv_cmd_buffer *cmd_buffer,
                  const struct anv_saved_state *saved_state)
 {
    anv_cmd_buffer_restore(cmd_buffer, saved_state);
+   anv_CmdBindDynamicStateObject((VkCmdBuffer) cmd_buffer,
+                                 VK_STATE_BIND_POINT_COLOR_BLEND,
+                                 saved_state->cb_state);
 }
 
 static VkFormat

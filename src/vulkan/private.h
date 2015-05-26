@@ -283,12 +283,14 @@ struct anv_instance {
 struct anv_clear_state {
    VkPipeline                                   pipeline;
    VkDynamicRsState                             rs_state;
+   VkDynamicCbState                             cb_state;
 };
 
 struct anv_blit_state {
    VkPipeline                                   pipeline;
    VkDynamicRsState                             rs_state;
    VkDescriptorSetLayout                        ds_layout;
+   VkDynamicCbState                             cb_state;
 };
 
 struct anv_device {
