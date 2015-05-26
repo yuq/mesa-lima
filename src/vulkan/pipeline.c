@@ -197,13 +197,16 @@ emit_rs_state(struct anv_pipeline *pipeline, VkPipelineRsStateCreateInfo *info,
 
    GEN8_3DSTATE_SF_pack(NULL, pipeline->state_sf, &sf);
 
-   anv_batch_emit(&pipeline->batch, GEN8_3DSTATE_RASTER,
-                  .FrontWinding = vk_to_gen_front_face[info->frontFace],
-                  .CullMode = vk_to_gen_cullmode[info->cullMode],
-                  .FrontFaceFillMode = vk_to_gen_fillmode[info->fillMode],
-                  .BackFaceFillMode = vk_to_gen_fillmode[info->fillMode],
-                  .ScissorRectangleEnable = !(extra && extra->disable_scissor),
-                  .ViewportZClipTestEnable = info->depthClipEnable);
+   struct GEN8_3DSTATE_RASTER raster = {
+      .FrontWinding = vk_to_gen_front_face[info->frontFace],
+      .CullMode = vk_to_gen_cullmode[info->cullMode],
+      .FrontFaceFillMode = vk_to_gen_fillmode[info->fillMode],
+      .BackFaceFillMode = vk_to_gen_fillmode[info->fillMode],
+      .ScissorRectangleEnable = !(extra && extra->disable_scissor),
+      .ViewportZClipTestEnable = info->depthClipEnable
+   };
+
+   GEN8_3DSTATE_RASTER_pack(NULL, pipeline->state_raster, &raster);
 
    anv_batch_emit(&pipeline->batch, GEN8_3DSTATE_SBE,
                   .ForceVertexURBEntryReadLength = false,

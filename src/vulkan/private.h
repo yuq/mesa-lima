@@ -468,6 +468,7 @@ struct anv_dynamic_vp_state {
 
 struct anv_dynamic_rs_state {
    uint32_t state_sf[GEN8_3DSTATE_SF_length];
+   uint32_t state_raster[GEN8_3DSTATE_RASTER_length];
 };
 
 struct anv_dynamic_ds_state {

@@ -2042,9 +2042,6 @@ VkResult anv_CreateDynamicRasterState(
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
    /* Missing these:
-    * float                                       depthBias;
-    * float                                       depthBiasClamp;
-    * float                                       slopeScaledDepthBias;
     * float                                       pointFadeThreshold;
     *                            // optional (GL45) - Size of point fade threshold
     */
@@ -2056,6 +2053,19 @@ VkResult anv_CreateDynamicRasterState(
    };
 
    GEN8_3DSTATE_SF_pack(NULL, state->state_sf, &sf);
+
+   bool enable_bias = pCreateInfo->depthBias != 0.0f ||
+      pCreateInfo->slopeScaledDepthBias != 0.0f;
+   struct GEN8_3DSTATE_RASTER raster = {
+      .GlobalDepthOffsetEnableSolid = enable_bias,
+      .GlobalDepthOffsetEnableWireframe = enable_bias,
+      .GlobalDepthOffsetEnablePoint = enable_bias,
+      .GlobalDepthOffsetConstant = pCreateInfo->depthBias,
+      .GlobalDepthOffsetScale = pCreateInfo->slopeScaledDepthBias,
+      .GlobalDepthOffsetClamp = pCreateInfo->depthBiasClamp
+   };
+
+   GEN8_3DSTATE_RASTER_pack(NULL, state->state_raster, &raster);
 
    *pState = (VkDynamicRsState) state;
 
@@ -2708,9 +2718,12 @@ anv_cmd_buffer_flush_state(struct anv_cmd_buffer *cmd_buffer)
    if (cmd_buffer->dirty & ANV_CMD_BUFFER_DESCRIPTOR_SET_DIRTY)
       flush_descriptor_sets(cmd_buffer);
 
-   if (cmd_buffer->dirty & (ANV_CMD_BUFFER_PIPELINE_DIRTY | ANV_CMD_BUFFER_RS_DIRTY))
+   if (cmd_buffer->dirty & (ANV_CMD_BUFFER_PIPELINE_DIRTY | ANV_CMD_BUFFER_RS_DIRTY)) {
       anv_batch_emit_merge(&cmd_buffer->batch,
                            cmd_buffer->rs_state->state_sf, pipeline->state_sf);
+      anv_batch_emit_merge(&cmd_buffer->batch,
+                           cmd_buffer->rs_state->state_raster, pipeline->state_raster);
+   }
 
    if (cmd_buffer->ds_state &&
        (cmd_buffer->dirty & (ANV_CMD_BUFFER_PIPELINE_DIRTY | ANV_CMD_BUFFER_DS_DIRTY)))
