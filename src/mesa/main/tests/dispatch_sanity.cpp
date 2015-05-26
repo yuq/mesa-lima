@@ -96,7 +96,7 @@ DispatchSanity_test::SetUp()
    _mesa_init_driver_functions(&driver_functions);
 
    const unsigned size = _glapi_get_dispatch_table_size();
-   nop_table = (_glapi_proc *) _glapi_new_nop_table(size);
+   nop_table = (_glapi_proc *) _mesa_new_nop_table(size);
 }
 
 void

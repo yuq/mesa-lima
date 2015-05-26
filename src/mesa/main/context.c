@@ -962,12 +962,12 @@ generic_nop(void)
  * the __stdcall convention which requires the callee to clean up the
  * call stack.  That's impossible with one generic no-op function.
  */
-#if !USE_GLAPI_NOP_FEATURES
-static struct _glapi_table *
-new_nop_table(unsigned numEntries)
+struct _glapi_table *
+_mesa_new_nop_table(unsigned numEntries)
 {
    struct _glapi_table *table;
 
+#if !USE_GLAPI_NOP_FEATURES
    table = malloc(numEntries * sizeof(_glapi_proc));
    if (table) {
       _glapi_proc *entry = (_glapi_proc *) table;
@@ -976,9 +976,11 @@ new_nop_table(unsigned numEntries)
          entry[i] = (_glapi_proc) generic_nop;
       }
    }
+#else
+   table = _glapi_new_nop_table(numEntries);
+#endif
    return table;
 }
-#endif
 
 
 /**
@@ -996,10 +998,7 @@ alloc_dispatch_table(void)
     */
    int numEntries = MAX2(_glapi_get_dispatch_table_size(), _gloffset_COUNT);
 
-#if !USE_GLAPI_NOP_FEATURES
-   struct _glapi_table *table = new_nop_table(numEntries);
-#else
-   struct _glapi_table *table = _glapi_new_nop_table(numEntries);
+   struct _glapi_table *table = _mesa_new_nop_table(numEntries);
 
 #if defined(_WIN32)
    if (table) {
@@ -1023,6 +1022,7 @@ alloc_dispatch_table(void)
    }
 #endif
 
+#if USE_GLAPI_NOP_FEATURES
    _glapi_set_nop_handler(nop_handler);
 #endif
 
