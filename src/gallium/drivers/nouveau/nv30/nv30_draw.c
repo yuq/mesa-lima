@@ -127,7 +127,7 @@ nv30_render_draw_elements(struct vbuf_render *render,
    for (i = 0; i < r->vertex_info.num_attribs; i++) {
       PUSH_RESRC(push, NV30_3D(VTXBUF(i)), BUFCTX_VTXTMP,
                        nv04_resource(r->buffer), r->offset + r->vtxptr[i],
-                       NOUVEAU_BO_LOW | NOUVEAU_BO_RD, 0, 0);
+                       NOUVEAU_BO_LOW | NOUVEAU_BO_RD, 0, NV30_3D_VTXBUF_DMA1);
    }
 
    if (!nv30_state_validate(nv30, ~0, FALSE))
@@ -172,7 +172,7 @@ nv30_render_draw_arrays(struct vbuf_render *render, unsigned start, uint nr)
    for (i = 0; i < r->vertex_info.num_attribs; i++) {
       PUSH_RESRC(push, NV30_3D(VTXBUF(i)), BUFCTX_VTXTMP,
                        nv04_resource(r->buffer), r->offset + r->vtxptr[i],
-                       NOUVEAU_BO_LOW | NOUVEAU_BO_RD, 0, 0);
+                       NOUVEAU_BO_LOW | NOUVEAU_BO_RD, 0, NV30_3D_VTXBUF_DMA1);
    }
 
    if (!nv30_state_validate(nv30, ~0, FALSE))
@@ -245,7 +245,7 @@ vroute_add(struct nv30_render *r, uint attrib, uint sem, uint *idx)
    format = draw_translate_vinfo_format(emit);
 
    r->vtxfmt[attrib] = nv30_vtxfmt(pscreen, format)->hw;
-   r->vtxptr[attrib] = vinfo->size | NV30_3D_VTXBUF_DMA1;
+   r->vtxptr[attrib] = vinfo->size;
    vinfo->size += draw_translate_vinfo_size(emit);
 
    if (nv30_screen(pscreen)->eng3d->oclass < NV40_3D_CLASS) {
