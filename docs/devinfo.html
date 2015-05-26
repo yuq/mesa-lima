@@ -266,6 +266,31 @@ re-sending the whole series). Using --in-reply-to makes
 it harder for reviewers to accidentally review old patches.
 </p>
 
+<h3>Reviewing Patches</h3>
+
+<p>
+When you've reviewed a patch on the mailing list, please be unambiguous
+about your review.  That is, state either
+<pre>
+    Reviewed-by: Joe Hacker &lt;jhacker@foo.com&gt;
+</pre>
+or
+<pre>
+    Acked-by: Joe Hacker &lt;jhacker@foo.com&gt;
+</pre>
+Rather than saying just "LGTM" or "Seems OK".
+</p>
+
+<p>
+If small changes are suggested, it's OK to say something like:
+<pre>
+   With the above fixes, Reviewed-by: Joe Hacker &lt;jhacker@foo.com&gt;
+</pre>
+which tells the patch author that the patch can be committed, as long
+as the issues are resolved first.
+</p>
+
+
 <h3>Marking a commit as a candidate for a stable branch</h3>
 
 <p>
