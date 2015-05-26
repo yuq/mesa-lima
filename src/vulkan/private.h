@@ -473,10 +473,12 @@ struct anv_dynamic_rs_state {
 
 struct anv_dynamic_ds_state {
    uint32_t state_wm_depth_stencil[GEN8_3DSTATE_WM_DEPTH_STENCIL_length];
+   uint32_t state_color_calc[GEN8_COLOR_CALC_STATE_length];
 };
 
 struct anv_dynamic_cb_state {
-   uint32_t blend_offset;
+   uint32_t                                     state_color_calc[GEN8_COLOR_CALC_STATE_length];
+
 };
 
 struct anv_query_pool_slot {
@@ -546,6 +548,7 @@ struct anv_buffer {
 #define ANV_CMD_BUFFER_DESCRIPTOR_SET_DIRTY     (1 << 1)
 #define ANV_CMD_BUFFER_RS_DIRTY                 (1 << 2)
 #define ANV_CMD_BUFFER_DS_DIRTY                 (1 << 3)
+#define ANV_CMD_BUFFER_CB_DIRTY                 (1 << 4)
    
 struct anv_bindings {
    struct {
@@ -586,6 +589,7 @@ struct anv_cmd_buffer {
    struct anv_dynamic_rs_state *                rs_state;
    struct anv_dynamic_ds_state *                ds_state;
    struct anv_dynamic_vp_state *                vp_state;
+   struct anv_dynamic_cb_state *                cb_state;
    struct anv_bindings *                        bindings;
    struct anv_bindings                          default_bindings;
 };

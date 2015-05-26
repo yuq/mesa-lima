@@ -2087,6 +2087,15 @@ VkResult anv_CreateDynamicColorBlendState(
    if (state == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
+   struct GEN8_COLOR_CALC_STATE color_calc_state = {
+      .BlendConstantColorRed = pCreateInfo->blendConst[0],
+      .BlendConstantColorGreen = pCreateInfo->blendConst[1],
+      .BlendConstantColorBlue = pCreateInfo->blendConst[2],
+      .BlendConstantColorAlpha = pCreateInfo->blendConst[3]
+   };
+
+   GEN8_COLOR_CALC_STATE_pack(NULL, state->state_color_calc, &color_calc_state);
+
    *pState = (VkDynamicCbState) state;
 
    return VK_SUCCESS;
@@ -2110,11 +2119,6 @@ VkResult anv_CreateDynamicDepthStencilState(
    struct GEN8_3DSTATE_WM_DEPTH_STENCIL wm_depth_stencil = {
       GEN8_3DSTATE_WM_DEPTH_STENCIL_header,
 
-      /* pCreateInfo->stencilFrontRef,
-       * pCreateInfo->stencilBackRef,
-       * go in cc state
-       */
-
       /* Is this what we need to do? */
       .StencilBufferWriteEnable = pCreateInfo->stencilWriteMask != 0,
 
@@ -2127,6 +2131,13 @@ VkResult anv_CreateDynamicDepthStencilState(
 
    GEN8_3DSTATE_WM_DEPTH_STENCIL_pack(NULL, state->state_wm_depth_stencil,
                                       &wm_depth_stencil);
+
+   struct GEN8_COLOR_CALC_STATE color_calc_state = {
+      .StencilReferenceValue = pCreateInfo->stencilFrontRef,
+      .BackFaceStencilReferenceValue = pCreateInfo->stencilBackRef
+   };
+
+   GEN8_COLOR_CALC_STATE_pack(NULL, state->state_color_calc, &color_calc_state);
 
    *pState = (VkDynamicDsState) state;
 
@@ -2679,6 +2690,35 @@ flush_descriptor_sets(struct anv_cmd_buffer *cmd_buffer)
    }
 }
 
+static struct anv_state
+anv_cmd_buffer_emit_dynamic(struct anv_cmd_buffer *cmd_buffer,
+                             uint32_t *a, uint32_t dwords, uint32_t alignment)
+{
+   struct anv_device *device = cmd_buffer->device;
+   struct anv_state state;
+
+   state = anv_state_pool_alloc(&device->dynamic_state_pool, dwords * 4, alignment);
+   memcpy(state.map, a, dwords * 4);
+
+   return state;
+}
+
+static struct anv_state
+anv_cmd_buffer_merge_dynamic(struct anv_cmd_buffer *cmd_buffer,
+                             uint32_t *a, uint32_t *b, uint32_t dwords, uint32_t alignment)
+{
+   struct anv_device *device = cmd_buffer->device;
+   struct anv_state state;
+   uint32_t *p;
+
+   state = anv_state_pool_alloc(&device->dynamic_state_pool, dwords * 4, alignment);
+   p = state.map;
+   for (uint32_t i = 0; i < dwords; i++)
+      p[i] = a[i] | b[i];
+
+   return state;
+}
+
 static void
 anv_cmd_buffer_flush_state(struct anv_cmd_buffer *cmd_buffer)
 {
@@ -2730,6 +2770,24 @@ anv_cmd_buffer_flush_state(struct anv_cmd_buffer *cmd_buffer)
       anv_batch_emit_merge(&cmd_buffer->batch,
                            cmd_buffer->ds_state->state_wm_depth_stencil,
                            pipeline->state_wm_depth_stencil);
+
+   if (cmd_buffer->dirty & (ANV_CMD_BUFFER_CB_DIRTY | ANV_CMD_BUFFER_DS_DIRTY)) {
+      struct anv_state state;
+      if (cmd_buffer->ds_state)
+         state = anv_cmd_buffer_merge_dynamic(cmd_buffer,
+                                              cmd_buffer->ds_state->state_color_calc,
+                                              cmd_buffer->cb_state->state_color_calc,
+                                              GEN8_COLOR_CALC_STATE_length, 32);
+      else
+         state = anv_cmd_buffer_emit_dynamic(cmd_buffer,
+                                             cmd_buffer->cb_state->state_color_calc,
+                                             GEN8_COLOR_CALC_STATE_length, 32);
+
+      anv_batch_emit(&cmd_buffer->batch,
+                     GEN8_3DSTATE_CC_STATE_POINTERS,
+                     .ColorCalcStatePointer = state.offset,
+                     .ColorCalcStatePointerValid = true);
+   }
 
    cmd_buffer->vb_dirty &= ~vb_emit;
    cmd_buffer->dirty = 0;
