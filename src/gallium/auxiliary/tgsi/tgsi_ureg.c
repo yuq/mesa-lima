@@ -111,7 +111,7 @@ struct ureg_program
    } input[UREG_MAX_INPUT];
    unsigned nr_inputs, nr_input_regs;
 
-   unsigned vs_inputs[UREG_MAX_INPUT/32];
+   unsigned vs_inputs[PIPE_MAX_ATTRIBS/32];
 
    struct {
       unsigned index;
@@ -298,7 +298,8 @@ ureg_DECL_vs_input( struct ureg_program *ureg,
                     unsigned index )
 {
    assert(ureg->processor == TGSI_PROCESSOR_VERTEX);
-   
+   assert(index / 32 < ARRAY_SIZE(ureg->vs_inputs));
+
    ureg->vs_inputs[index/32] |= 1 << (index % 32);
    return ureg_src_register( TGSI_FILE_INPUT, index );
 }
@@ -1513,7 +1514,7 @@ static void emit_decls( struct ureg_program *ureg )
          emit_property(ureg, i, ureg->properties[i]);
 
    if (ureg->processor == TGSI_PROCESSOR_VERTEX) {
-      for (i = 0; i < UREG_MAX_INPUT; i++) {
+      for (i = 0; i < PIPE_MAX_ATTRIBS; i++) {
          if (ureg->vs_inputs[i/32] & (1 << (i%32))) {
             emit_decl_range( ureg, TGSI_FILE_INPUT, i, 1 );
          }
