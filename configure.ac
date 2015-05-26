@@ -714,15 +714,15 @@ AC_ARG_ENABLE([opengl],
     [enable_opengl="$enableval"],
     [enable_opengl=yes])
 AC_ARG_ENABLE([gles1],
-    [AS_HELP_STRING([--enable-gles1],
-        [enable support for OpenGL ES 1.x API @<:@default=disabled@:>@])],
+    [AS_HELP_STRING([--disable-gles1],
+        [disable support for OpenGL ES 1.x API @<:@default=enabled@:>@])],
     [enable_gles1="$enableval"],
-    [enable_gles1=no])
+    [enable_gles1=yes])
 AC_ARG_ENABLE([gles2],
-    [AS_HELP_STRING([--enable-gles2],
-        [enable support for OpenGL ES 2.x API @<:@default=disabled@:>@])],
+    [AS_HELP_STRING([--disable-gles2],
+        [disable support for OpenGL ES 2.x API @<:@default=enabled@:>@])],
     [enable_gles2="$enableval"],
-    [enable_gles2=no])
+    [enable_gles2=yes])
 
 AC_ARG_ENABLE([dri],
     [AS_HELP_STRING([--enable-dri],
