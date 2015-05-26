@@ -389,23 +389,24 @@ int anv_gem_userptr(struct anv_device *device, void *mem, size_t size);
 
 VkResult anv_bo_init_new(struct anv_bo *bo, struct anv_device *device, uint64_t size);
 
-/* TODO: Remove hardcoded reloc limit. */
-#define ANV_BATCH_MAX_RELOCS 256
-
 struct anv_reloc_list {
    size_t                                       num_relocs;
-   struct drm_i915_gem_relocation_entry         relocs[ANV_BATCH_MAX_RELOCS];
-   struct anv_bo *                              reloc_bos[ANV_BATCH_MAX_RELOCS];
+   size_t                                       array_length;
+   struct drm_i915_gem_relocation_entry *       relocs;
+   struct anv_bo **                             reloc_bos;
 };
 
 struct anv_batch {
+   struct anv_device *                          device;
+
    struct anv_bo                                bo;
    void *                                       next;
+
    struct anv_reloc_list                        cmd_relocs;
 };
 
 VkResult anv_batch_init(struct anv_batch *batch, struct anv_device *device);
-void anv_batch_finish(struct anv_batch *batch, struct anv_device *device);
+void anv_batch_finish(struct anv_batch *batch);
 void anv_batch_reset(struct anv_batch *batch);
 void *anv_batch_emit_dwords(struct anv_batch *batch, int num_dwords);
 void anv_batch_emit_batch(struct anv_batch *batch, struct anv_batch *other);

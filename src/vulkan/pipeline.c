@@ -378,7 +378,7 @@ anv_pipeline_destroy(struct anv_device *device,
    assert(obj_type == VK_OBJECT_TYPE_PIPELINE);
 
    anv_compiler_free(pipeline);
-   anv_batch_finish(&pipeline->batch, pipeline->device);
+   anv_batch_finish(&pipeline->batch);
    anv_device_free(pipeline->device, pipeline);
 }
 

@@ -501,6 +501,75 @@ VkResult anv_GetDeviceQueue(
    return VK_SUCCESS;
 }
 
+static VkResult
+anv_reloc_list_init(struct anv_reloc_list *list, struct anv_device *device)
+{
+   list->num_relocs = 0;
+   list->array_length = 256;
+   list->relocs =
+      anv_device_alloc(device, list->array_length * sizeof(*list->relocs), 8,
+                       VK_SYSTEM_ALLOC_TYPE_INTERNAL);
+
+   if (list->relocs == NULL)
+      return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+
+   list->reloc_bos =
+      anv_device_alloc(device, list->array_length * sizeof(*list->reloc_bos), 8,
+                       VK_SYSTEM_ALLOC_TYPE_INTERNAL);
+
+   if (list->relocs == NULL) {
+      anv_device_free(device, list->relocs);
+      return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+   }
+
+   return VK_SUCCESS;
+}
+
+static void
+anv_reloc_list_finish(struct anv_reloc_list *list, struct anv_device *device)
+{
+   anv_device_free(device, list->relocs);
+   anv_device_free(device, list->reloc_bos);
+}
+
+static VkResult
+anv_reloc_list_grow(struct anv_reloc_list *list, struct anv_device *device,
+                    size_t num_additional_relocs)
+{
+   if (list->num_relocs + num_additional_relocs <= list->array_length)
+      return VK_SUCCESS;
+
+   size_t new_length = list->array_length * 2;
+   while (new_length < list->num_relocs + num_additional_relocs)
+      new_length *= 2;
+
+   struct drm_i915_gem_relocation_entry *new_relocs =
+      anv_device_alloc(device, new_length * sizeof(*list->relocs), 8,
+                       VK_SYSTEM_ALLOC_TYPE_INTERNAL);
+   if (new_relocs == NULL)
+      return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+
+   struct anv_bo **new_reloc_bos =
+      anv_device_alloc(device, new_length * sizeof(*list->reloc_bos), 8,
+                       VK_SYSTEM_ALLOC_TYPE_INTERNAL);
+   if (new_relocs == NULL) {
+      anv_device_free(device, new_relocs);
+      return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+   }
+
+   memcpy(new_relocs, list->relocs, list->num_relocs * sizeof(*list->relocs));
+   memcpy(new_reloc_bos, list->reloc_bos,
+          list->num_relocs * sizeof(*list->reloc_bos));
+
+   anv_device_free(device, list->relocs);
+   anv_device_free(device, list->reloc_bos);
+
+   list->relocs = new_relocs;
+   list->reloc_bos = new_reloc_bos;
+
+   return VK_SUCCESS;
+}
+
 VkResult
 anv_batch_init(struct anv_batch *batch, struct anv_device *device)
 {
@@ -510,16 +579,23 @@ anv_batch_init(struct anv_batch *batch, struct anv_device *device)
    if (result != VK_SUCCESS)
       return result;
 
-   batch->cmd_relocs.num_relocs = 0;
+   result = anv_reloc_list_init(&batch->cmd_relocs, device);
+   if (result != VK_SUCCESS) {
+      anv_bo_pool_free(&device->batch_bo_pool, &batch->bo);
+      return result;
+   }
+
+   batch->device = device;
    batch->next = batch->bo.map;
 
    return VK_SUCCESS;
 }
 
 void
-anv_batch_finish(struct anv_batch *batch, struct anv_device *device)
+anv_batch_finish(struct anv_batch *batch)
 {
-   anv_bo_pool_free(&device->batch_bo_pool, &batch->bo);
+   anv_bo_pool_free(&batch->device->batch_bo_pool, &batch->bo);
+   anv_reloc_list_finish(&batch->cmd_relocs, batch->device);
 }
 
 void
@@ -540,31 +616,32 @@ anv_batch_emit_dwords(struct anv_batch *batch, int num_dwords)
 }
 
 static void
-anv_reloc_list_append(struct anv_reloc_list *list,
+anv_reloc_list_append(struct anv_reloc_list *list, struct anv_device *device,
                       struct anv_reloc_list *other, uint32_t offset)
 {
-   uint32_t i, count;
+   anv_reloc_list_grow(list, device, other->num_relocs);
+   /* TODO: Handle failure */
 
-   count = list->num_relocs;
-   memcpy(&list->relocs[count], &other->relocs[0],
+   memcpy(&list->relocs[list->num_relocs], &other->relocs[0],
           other->num_relocs * sizeof(other->relocs[0]));
-   memcpy(&list->reloc_bos[count], &other->reloc_bos[0],
+   memcpy(&list->reloc_bos[list->num_relocs], &other->reloc_bos[0],
           other->num_relocs * sizeof(other->reloc_bos[0]));
-   for (i = 0; i < other->num_relocs; i++)
-      list->relocs[i + count].offset += offset;
 
-   count += other->num_relocs;
+   for (uint32_t i = 0; i < other->num_relocs; i++)
+      list->relocs[i + list->num_relocs].offset += offset;
+
+   list->num_relocs += other->num_relocs;
 }
 
 static uint64_t
-anv_reloc_list_add(struct anv_reloc_list *list,
-                   uint32_t offset,
-                   struct anv_bo *target_bo, uint32_t delta)
+anv_reloc_list_add(struct anv_reloc_list *list, struct anv_device *device,
+                   uint32_t offset, struct anv_bo *target_bo, uint32_t delta)
 {
    struct drm_i915_gem_relocation_entry *entry;
    int index;
 
-   assert(list->num_relocs < ANV_BATCH_MAX_RELOCS);
+   anv_reloc_list_grow(list, device, 1);
+   /* TODO: Handle failure */
 
    /* XXX: Can we use I915_EXEC_HANDLE_LUT? */
    index = list->num_relocs++;
@@ -589,7 +666,8 @@ anv_batch_emit_batch(struct anv_batch *batch, struct anv_batch *other)
    memcpy(batch->next, other->bo.map, size);
 
    offset = batch->next - batch->bo.map;
-   anv_reloc_list_append(&batch->cmd_relocs, &other->cmd_relocs, offset);
+   anv_reloc_list_append(&batch->cmd_relocs, batch->device,
+                         &other->cmd_relocs, offset);
 
    batch->next += size;
 }
@@ -598,7 +676,7 @@ uint64_t
 anv_batch_emit_reloc(struct anv_batch *batch,
                      void *location, struct anv_bo *bo, uint32_t delta)
 {
-   return anv_reloc_list_add(&batch->cmd_relocs,
+   return anv_reloc_list_add(&batch->cmd_relocs, batch->device,
                              location - batch->bo.map, bo, delta);
 }
 
@@ -2147,10 +2225,11 @@ anv_cmd_buffer_destroy(struct anv_device *device,
 
    anv_gem_munmap(cmd_buffer->surface_bo.map, BATCH_SIZE);
    anv_gem_close(device, cmd_buffer->surface_bo.gem_handle);
+   anv_reloc_list_finish(&cmd_buffer->surface_relocs, device);
    anv_state_stream_finish(&cmd_buffer->surface_state_stream);
    anv_state_stream_finish(&cmd_buffer->dynamic_state_stream);
    anv_state_stream_finish(&cmd_buffer->binding_table_state_stream);
-   anv_batch_finish(&cmd_buffer->batch, device);
+   anv_batch_finish(&cmd_buffer->batch);
    anv_device_free(device, cmd_buffer->exec2_objects);
    anv_device_free(device, cmd_buffer->exec2_bos);
    anv_device_free(device, cmd_buffer);
@@ -2195,7 +2274,7 @@ VkResult anv_CreateCommandBuffer(
 
    /* Start surface_next at 1 so surface offset 0 is invalid. */
    cmd_buffer->surface_next = 1;
-   cmd_buffer->surface_relocs.num_relocs = 0;
+   anv_reloc_list_init(&cmd_buffer->surface_relocs, device);
 
    cmd_buffer->exec2_objects =
       anv_device_alloc(device, 8192 * sizeof(cmd_buffer->exec2_objects[0]), 8,
@@ -2235,7 +2314,7 @@ VkResult anv_CreateCommandBuffer(
  fail_surface_bo:
    anv_gem_close(device, cmd_buffer->surface_bo.gem_handle);
  fail_batch:
-   anv_batch_finish(&cmd_buffer->batch, device);
+   anv_batch_finish(&cmd_buffer->batch);
  fail:
    anv_device_free(device, cmd_buffer);
 
@@ -2546,6 +2625,7 @@ void anv_CmdBindDescriptorSets(
             /* The address goes in dwords 8 and 9 of the SURFACE_STATE */
             *(uint64_t *)(state.map + 8 * 4) =
                anv_reloc_list_add(&cmd_buffer->surface_relocs,
+                                  cmd_buffer->device,
                                   state.offset + 8 * 4,
                                   view->bo, view->offset);
 
@@ -3321,6 +3401,7 @@ anv_cmd_buffer_fill_render_targets(struct anv_cmd_buffer *cmd_buffer)
       /* The address goes in dwords 8 and 9 of the SURFACE_STATE */
       *(uint64_t *)(state.map + 8 * 4) =
          anv_reloc_list_add(&cmd_buffer->surface_relocs,
+                            cmd_buffer->device,
                             state.offset + 8 * 4,
                             view->bo, view->offset);
 
