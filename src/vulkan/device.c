@@ -3141,7 +3141,7 @@ VkResult anv_CreateFramebuffer(
    vkCreateDynamicViewportState((VkDevice) device,
                                 &(VkDynamicVpStateCreateInfo) {
                                    .sType = VK_STRUCTURE_TYPE_DYNAMIC_VP_STATE_CREATE_INFO,
-                                   .viewportAndScissorCount = 2,
+                                   .viewportAndScissorCount = 1,
                                    .pViewports = (VkViewport[]) {
                                       {
                                          .originX = 0,
