@@ -2223,8 +2223,7 @@ anv_cmd_buffer_destroy(struct anv_device *device,
 
    assert(obj_type == VK_OBJECT_TYPE_COMMAND_BUFFER);
 
-   anv_gem_munmap(cmd_buffer->surface_bo.map, BATCH_SIZE);
-   anv_gem_close(device, cmd_buffer->surface_bo.gem_handle);
+   anv_bo_pool_free(&device->batch_bo_pool, &cmd_buffer->surface_bo);
    anv_reloc_list_finish(&cmd_buffer->surface_relocs, device);
    anv_state_stream_finish(&cmd_buffer->surface_state_stream);
    anv_state_stream_finish(&cmd_buffer->dynamic_state_stream);
@@ -2261,16 +2260,9 @@ VkResult anv_CreateCommandBuffer(
    if (result != VK_SUCCESS)
       goto fail;
 
-   result = anv_bo_init_new(&cmd_buffer->surface_bo, device, BATCH_SIZE);
+   result = anv_bo_pool_alloc(&device->batch_bo_pool, &cmd_buffer->surface_bo);
    if (result != VK_SUCCESS)
       goto fail_batch;
-
-   cmd_buffer->surface_bo.map =
-      anv_gem_mmap(device, cmd_buffer->surface_bo.gem_handle, 0, BATCH_SIZE);
-   if (cmd_buffer->surface_bo.map == NULL) {
-      result = vk_error(VK_ERROR_MEMORY_MAP_FAILED);
-      goto fail_surface_bo;
-   }
 
    /* Start surface_next at 1 so surface offset 0 is invalid. */
    cmd_buffer->surface_next = 1;
@@ -2281,7 +2273,7 @@ VkResult anv_CreateCommandBuffer(
                        VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
    if (cmd_buffer->exec2_objects == NULL) {
       result = vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
-      goto fail_surface_map;
+      goto fail_surface_bo;
    }
 
    cmd_buffer->exec2_bos =
@@ -2309,10 +2301,8 @@ VkResult anv_CreateCommandBuffer(
 
  fail_exec2_objects:
    anv_device_free(device, cmd_buffer->exec2_objects);
- fail_surface_map:
-   anv_gem_munmap(cmd_buffer->surface_bo.map, BATCH_SIZE);
  fail_surface_bo:
-   anv_gem_close(device, cmd_buffer->surface_bo.gem_handle);
+   anv_bo_pool_free(&device->batch_bo_pool, &cmd_buffer->surface_bo);
  fail_batch:
    anv_batch_finish(&cmd_buffer->batch);
  fail:
