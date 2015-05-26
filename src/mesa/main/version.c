@@ -51,14 +51,19 @@ check_for_ending(const char *string, const char *ending)
  * fwd_context is only valid if version > 0
  */
 static void
-get_gl_override(int *version, bool *fwd_context, bool *compat_context)
+get_gl_override(gl_api api, int *version, bool *fwd_context,
+                bool *compat_context)
 {
-   const char *env_var = "MESA_GL_VERSION_OVERRIDE";
+   const char *env_var = (api == API_OPENGL_CORE || api == API_OPENGL_COMPAT)
+      ? "MESA_GL_VERSION_OVERRIDE" : "MESA_GLES_VERSION_OVERRIDE";
    const char *version_str;
    int major, minor, n;
    static int override_version = -1;
    static bool fc_suffix = false;
    static bool compat_suffix = false;
+
+   if (api == API_OPENGLES)
+      return;
 
    if (override_version < 0) {
       override_version = 0;
@@ -75,7 +80,12 @@ get_gl_override(int *version, bool *fwd_context, bool *compat_context)
             override_version = 0;
          } else {
             override_version = major * 10 + minor;
-            if (override_version < 30 && fc_suffix) {
+
+            /* There is no such thing as compatibility or forward-compatible for
+             * OpenGL ES 2.0 or 3.x APIs.
+             */
+            if ((override_version < 30 && fc_suffix) ||
+                (api == API_OPENGLES2 && (fc_suffix || compat_suffix))) {
                fprintf(stderr, "error: invalid value for %s: %s\n",
                        env_var, version_str);
             }
@@ -130,18 +140,26 @@ _mesa_override_gl_version_contextless(struct gl_constants *consts,
    int version;
    bool fwd_context, compat_context;
 
-   get_gl_override(&version, &fwd_context, &compat_context);
+   get_gl_override(*apiOut, &version, &fwd_context, &compat_context);
 
    if (version > 0) {
       *versionOut = version;
-      if (version >= 30 && fwd_context) {
-         *apiOut = API_OPENGL_CORE;
-         consts->ContextFlags |= GL_CONTEXT_FLAG_FORWARD_COMPATIBLE_BIT;
-      } else if (version >= 31 && !compat_context) {
-         *apiOut = API_OPENGL_CORE;
-      } else {
-         *apiOut = API_OPENGL_COMPAT;
+
+      /* If the API is a desktop API, adjust the context flags.  We may also
+       * need to modify the API depending on the version.  For example, Mesa
+       * does not support a GL 3.3 compatibility profile.
+       */
+      if (*apiOut == API_OPENGL_CORE || *apiOut == API_OPENGL_COMPAT) {
+         if (version >= 30 && fwd_context) {
+            *apiOut = API_OPENGL_CORE;
+            consts->ContextFlags |= GL_CONTEXT_FLAG_FORWARD_COMPATIBLE_BIT;
+         } else if (version >= 31 && !compat_context) {
+            *apiOut = API_OPENGL_CORE;
+         } else {
+            *apiOut = API_OPENGL_COMPAT;
+         }
       }
+
       return true;
    }
    return false;
