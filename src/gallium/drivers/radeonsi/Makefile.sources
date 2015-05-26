@@ -1,4 +1,5 @@
 C_SOURCES := \
+	cik_sdma.c \
 	si_blit.c \
 	si_commands.c \
 	si_compute.c \
