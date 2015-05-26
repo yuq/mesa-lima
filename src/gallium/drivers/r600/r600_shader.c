@@ -1337,7 +1337,7 @@ static int emit_streamout(struct r600_shader_ctx *ctx, struct pipe_stream_output
 	int i, j, r;
 
 	/* Sanity checking. */
-	if (so->num_outputs > PIPE_MAX_SHADER_OUTPUTS) {
+	if (so->num_outputs > PIPE_MAX_SO_OUTPUTS) {
 		R600_ERR("Too many stream outputs: %d\n", so->num_outputs);
 		r = -EINVAL;
 		goto out_err;
