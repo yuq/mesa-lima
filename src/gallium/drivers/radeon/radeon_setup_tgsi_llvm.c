@@ -85,8 +85,9 @@ get_array_range(struct lp_build_tgsi_context *bld_base,
 		unsigned File, const struct tgsi_ind_register *reg)
 {
 	struct radeon_llvm_context * ctx = radeon_llvm_context(bld_base);
+
 	if (File != TGSI_FILE_TEMPORARY || reg->ArrayID == 0 ||
-            reg->ArrayID > RADEON_LLVM_MAX_ARRAYS) {
+	    reg->ArrayID > bld_base->info->array_max[TGSI_FILE_TEMPORARY]) {
 		struct tgsi_declaration_range range;
 		range.First = 0;
 		range.Last = bld_base->info->file_max[File];
@@ -252,8 +253,14 @@ static void emit_declaration(
 	}
 
 	case TGSI_FILE_TEMPORARY:
-		if (decl->Declaration.Array && decl->Array.ArrayID <= RADEON_LLVM_MAX_ARRAYS)
+		if (decl->Declaration.Array) {
+			if (!ctx->arrays) {
+				int size = bld_base->info->array_max[TGSI_FILE_TEMPORARY];
+				ctx->arrays = MALLOC(sizeof(ctx->arrays[0]) * size);
+			}
+
 			ctx->arrays[decl->Array.ArrayID - 1] = decl->Range;
+		}
 		if (uses_temp_indirect_addressing(bld_base)) {
 			lp_emit_declaration_soa(bld_base, decl);
 			break;
@@ -1432,8 +1439,6 @@ void radeon_llvm_context_init(struct radeon_llvm_context * ctx)
 	/* Allocate outputs */
 	ctx->soa.outputs = ctx->outputs;
 
-	ctx->num_arrays = 0;
-
 	/* XXX: Is there a better way to initialize all this ? */
 
 	lp_set_default_actions(bld_base);
@@ -1622,6 +1627,8 @@ void radeon_llvm_dispose(struct radeon_llvm_context * ctx)
 {
 	LLVMDisposeModule(ctx->soa.bld_base.base.gallivm->module);
 	LLVMContextDispose(ctx->soa.bld_base.base.gallivm->context);
+	FREE(ctx->arrays);
+	ctx->arrays = NULL;
 	FREE(ctx->temps);
 	ctx->temps = NULL;
 	FREE(ctx->loop);
