@@ -2670,7 +2670,7 @@ flush_descriptor_sets(struct anv_cmd_buffer *cmd_buffer)
          size_t size;
 
          size = layout->stage[s].sampler_count * 16;
-         state = anv_cmd_buffer_alloc_surface_state(cmd_buffer, size, 32);
+         state = anv_state_stream_alloc(&cmd_buffer->dynamic_state_stream, size, 32);
          memcpy(state.map, bindings->descriptors[s].samplers, size);
 
          static const uint32_t sampler_state_opcodes[] = {
