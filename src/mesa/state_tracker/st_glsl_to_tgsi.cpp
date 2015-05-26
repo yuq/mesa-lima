@@ -317,7 +317,8 @@ public:
 
    int next_temp;
 
-   unsigned array_sizes[MAX_ARRAYS];
+   unsigned *array_sizes;
+   unsigned max_num_arrays;
    unsigned next_array;
 
    int num_address_regs;
@@ -1141,6 +1142,12 @@ glsl_to_tgsi_visitor::get_temp(const glsl_type *type)
 
    if (!options->EmitNoIndirectTemp &&
        (type->is_array() || type->is_matrix())) {
+
+      if (next_array >= max_num_arrays) {
+         max_num_arrays += 32;
+         array_sizes = (unsigned*)
+            realloc(array_sizes, sizeof(array_sizes[0]) * max_num_arrays);
+      }
 
       src.file = PROGRAM_ARRAY;
       src.index = next_array << 16 | 0x8000;
@@ -3344,6 +3351,8 @@ glsl_to_tgsi_visitor::glsl_to_tgsi_visitor()
 {
    result.file = PROGRAM_UNDEFINED;
    next_temp = 1;
+   array_sizes = NULL;
+   max_num_arrays = 0;
    next_array = 0;
    next_signature_id = 1;
    num_immediates = 0;
@@ -3366,6 +3375,7 @@ glsl_to_tgsi_visitor::glsl_to_tgsi_visitor()
 
 glsl_to_tgsi_visitor::~glsl_to_tgsi_visitor()
 {
+   free(array_sizes);
    ralloc_free(mem_ctx);
 }
 
@@ -4374,7 +4384,7 @@ struct st_translate {
    struct ureg_src samplers[PIPE_MAX_SAMPLERS];
    struct ureg_src systemValues[SYSTEM_VALUE_MAX];
    struct tgsi_texture_offset tex_offsets[MAX_GLSL_TEXTURE_OFFSET];
-   unsigned array_sizes[MAX_ARRAYS];
+   unsigned *array_sizes;
 
    const GLuint *inputMapping;
    const GLuint *outputMapping;
@@ -5277,9 +5287,7 @@ st_translate_program(
       }
    }
 
-   /* Copy over array sizes
-    */
-   memcpy(t->array_sizes, program->array_sizes, sizeof(unsigned) * program->next_array);
+   t->array_sizes = program->array_sizes;
 
    /* Emit constants and uniforms.  TGSI uses a single index space for these,
     * so we put all the translated regs in t->constants.
