@@ -157,22 +157,6 @@ _mesa_override_gl_version(struct gl_context *ctx)
 }
 
 /**
- * Returns the gl override value
- *
- * version > 0 indicates there is an override requested
- */
-int
-_mesa_get_gl_version_override(void)
-{
-   int version;
-   bool fwd_context, compat_context;
-
-   get_gl_override(&version, &fwd_context, &compat_context);
-
-   return version;
-}
-
-/**
  * Override the context's GLSL version if the environment variable
  * MESA_GLSL_VERSION_OVERRIDE is set. Valid values for
  * MESA_GLSL_VERSION_OVERRIDE are integers, such as "130".
