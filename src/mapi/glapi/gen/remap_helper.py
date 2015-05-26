@@ -170,10 +170,9 @@ def _parser():
     """Parse input options and return a namsepace."""
     parser = argparse.ArgumentParser()
     parser.add_argument('-f', '--filename',
-                        type=gl_XML.parse_GL_API,
                         default="gl_API.xml",
                         metavar="input_file_name",
-                        dest='api',
+                        dest='file_name',
                         help="An xml description file.")
     parser.add_argument('-c', '--es-version',
                         choices=[None, 'es1', 'es2'],
@@ -188,11 +187,12 @@ def main():
     """Main function."""
     args = _parser()
 
+    api = gl_XML.parse_GL_API(args.file_name)
     if args.es is not None:
-        args.api.filter_functions_by_api(args.es)
+        api.filter_functions_by_api(args.es)
 
     printer = PrintGlRemap()
-    printer.Print(args.api)
+    printer.Print(api)
 
 
 if __name__ == '__main__':

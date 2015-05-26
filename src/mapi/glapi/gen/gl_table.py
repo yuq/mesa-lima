@@ -206,10 +206,9 @@ def _parser():
     """Parse arguments and return a namespace."""
     parser = argparse.ArgumentParser()
     parser.add_argument('-f', '--filename',
-                        type=gl_XML.parse_GL_API,
                         default='gl_API.xml',
                         metavar="input_file_name",
-                        dest='api',
+                        dest='file_name',
                         help="Path to an XML description of OpenGL API.")
     parser.add_argument('-m', '--mode',
                         choices=['table', 'remap_table'],
@@ -229,15 +228,17 @@ def main():
     """Main function."""
     args = _parser()
 
+    api = gl_XML.parse_GL_API(args.file_name)
+
     if args.mode == "table":
         printer = PrintGlTable(args.es)
     elif args.mode == "remap_table":
         printer = PrintRemapTable(args.es)
 
     if args.es is not None:
-        args.api.filter_functions_by_api(args.es)
+        api.filter_functions_by_api(args.es)
 
-    printer.Print(args.api)
+    printer.Print(api)
 
 
 if __name__ == '__main__':

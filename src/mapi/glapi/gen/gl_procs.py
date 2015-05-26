@@ -165,14 +165,12 @@ typedef struct {
 
 def _parser():
     """Parse arguments and return a namepsace."""
-    api_type = lambda x: gl_XML.parse_GL_API(x, glX_XML.glx_item_factory())
 
     parser = argparse.ArgumentParser()
     parser.add_argument('-f', '--filename',
-                        type=api_type,
                         default='gl_API.xml',
                         metavar="input_file_name",
-                        dest='api',
+                        dest='file_name',
                         help="Path to an XML description of OpenGL API.")
     parser.add_argument('-c', '--es-version',
                         dest='es',
@@ -184,7 +182,8 @@ def _parser():
 def main():
     """Main function."""
     args = _parser()
-    PrintGlProcs(args.es).Print(args.api)
+    api = gl_XML.parse_GL_API(args.file_name, glX_XML.glx_item_factory())
+    PrintGlProcs(args.es).Print(api)
 
 
 if __name__ == '__main__':
