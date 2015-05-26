@@ -71,12 +71,12 @@ nv30_render_allocate_vertices(struct vbuf_render *render,
    struct nv30_render *r = nv30_render(render);
    struct nv30_context *nv30 = r->nv30;
 
-   r->length = vertex_size * nr_vertices;
+   r->length = (uint32_t)vertex_size * (uint32_t)nr_vertices;
 
    if (r->offset + r->length >= render->max_vertex_buffer_bytes) {
       pipe_resource_reference(&r->buffer, NULL);
       r->buffer = pipe_buffer_create(&nv30->screen->base.base,
-                                     PIPE_BIND_VERTEX_BUFFER, 0,
+                                     PIPE_BIND_VERTEX_BUFFER, PIPE_USAGE_STREAM,
                                      render->max_vertex_buffer_bytes);
       if (!r->buffer)
          return FALSE;
@@ -91,10 +91,14 @@ static void *
 nv30_render_map_vertices(struct vbuf_render *render)
 {
    struct nv30_render *r = nv30_render(render);
-   char *map = pipe_buffer_map(&r->nv30->base.pipe, r->buffer,
-                               PIPE_TRANSFER_WRITE |
-                               PIPE_TRANSFER_UNSYNCHRONIZED, &r->transfer);
-   return map + r->offset;
+   char *map = pipe_buffer_map_range(
+         &r->nv30->base.pipe, r->buffer,
+         r->offset, r->length,
+         PIPE_TRANSFER_WRITE |
+         PIPE_TRANSFER_DISCARD_RANGE,
+         &r->transfer);
+   assert(map);
+   return map;
 }
 
 static void
