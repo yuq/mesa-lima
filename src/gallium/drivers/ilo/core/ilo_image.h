@@ -94,6 +94,8 @@ struct ilo_image {
    unsigned width0;
    unsigned height0;
    unsigned depth0;
+   unsigned array_size;
+   unsigned level_count;
    unsigned sample_count;
    enum pipe_format format;
    bool separate_stencil;

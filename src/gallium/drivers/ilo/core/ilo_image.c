@@ -679,6 +679,8 @@ img_init_size_and_format(struct ilo_image *img,
    img->width0 = templ->width0;
    img->height0 = templ->height0;
    img->depth0 = templ->depth0;
+   img->array_size = templ->array_size;
+   img->level_count = templ->last_level + 1;
    img->sample_count = (templ->nr_samples) ? templ->nr_samples : 1;
 
    /*
@@ -1348,6 +1350,8 @@ img_init_for_transfer(struct ilo_image *img,
    img->width0 = templ->width0;
    img->height0 = templ->height0;
    img->depth0 = templ->depth0;
+   img->array_size = templ->array_size;
+   img->level_count = 1;
    img->sample_count = 1;
 
    img->format = templ->format;
