@@ -5708,6 +5708,18 @@ GEN7_PIPE_CONTROL_pack(__gen_user_data *data, void * restrict dst,
 
 }
 
+#define GEN7_3DSTATE_CONSTANT_BODY_length 0x00000006
+
+#define GEN7_VERTEX_BUFFER_STATE_length 0x00000004
+
+#define GEN7_VERTEX_ELEMENT_STATE_length 0x00000002
+
+#define GEN7_SO_DECL_ENTRY_length 0x00000002
+
+#define GEN7_SO_DECL_length 0x00000001
+
+#define GEN7_SCISSOR_RECT_length 0x00000002
+
 struct GEN7_SCISSOR_RECT {
    uint32_t                                     ScissorRectangleYMin;
    uint32_t                                     ScissorRectangleXMin;
@@ -5732,6 +5744,8 @@ GEN7_SCISSOR_RECT_pack(__gen_user_data *data, void * restrict dst,
       0;
 
 }
+
+#define GEN7_SF_CLIP_VIEWPORT_length 0x00000010
 
 struct GEN7_SF_CLIP_VIEWPORT {
    float                                        ViewportMatrixElementm00;
@@ -5802,6 +5816,8 @@ GEN7_SF_CLIP_VIEWPORT_pack(__gen_user_data *data, void * restrict dst,
       0;
 
 }
+
+#define GEN7_BLEND_STATE_length 0x00000002
 
 struct GEN7_BLEND_STATE {
    uint32_t                                     ColorBufferBlendEnable;
@@ -5926,6 +5942,8 @@ GEN7_BLEND_STATE_pack(__gen_user_data *data, void * restrict dst,
 
 }
 
+#define GEN7_CC_VIEWPORT_length 0x00000002
+
 struct GEN7_CC_VIEWPORT {
    float                                        MinimumDepth;
    float                                        MaximumDepth;
@@ -5946,6 +5964,8 @@ GEN7_CC_VIEWPORT_pack(__gen_user_data *data, void * restrict dst,
       0;
 
 }
+
+#define GEN7_COLOR_CALC_STATE_length 0x00000006
 
 struct GEN7_COLOR_CALC_STATE {
    uint32_t                                     StencilReferenceValue;
@@ -5999,6 +6019,8 @@ GEN7_COLOR_CALC_STATE_pack(__gen_user_data *data, void * restrict dst,
       0;
 
 }
+
+#define GEN7_DEPTH_STENCIL_STATE_length 0x00000003
 
 struct GEN7_DEPTH_STENCIL_STATE {
    uint32_t                                     StencilTestEnable;
@@ -6096,6 +6118,10 @@ GEN7_DEPTH_STENCIL_STATE_pack(__gen_user_data *data, void * restrict dst,
 
 }
 
+#define GEN7_MEMORY_OBJECT_CONTROL_STATE_length 0x00000001
+
+#define GEN7_INTERFACE_DESCRIPTOR_DATA_length 0x00000008
+
 struct GEN7_INTERFACE_DESCRIPTOR_DATA {
    uint32_t                                     KernelStartPointer;
 #define     Multiple                                           0
@@ -6180,6 +6206,10 @@ GEN7_INTERFACE_DESCRIPTOR_DATA_pack(__gen_user_data *data, void * restrict dst,
 
 }
 
+#define GEN7_PALETTE_ENTRY_length 0x00000001
+
+#define GEN7_SAMPLER_BORDER_COLOR_STATE_length 0x00000004
+
 struct GEN7_SAMPLER_BORDER_COLOR_STATE {
    uint32_t                                     BorderColorRedDX100GL;
    uint32_t                                     BorderColorAlpha;
@@ -6218,6 +6248,8 @@ GEN7_SAMPLER_BORDER_COLOR_STATE_pack(__gen_user_data *data, void * restrict dst,
       0;
 
 }
+
+#define GEN7_SAMPLER_STATE_length 0x00000004
 
 struct GEN7_SAMPLER_STATE {
    uint32_t                                     SamplerDisable;

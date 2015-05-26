@@ -6949,6 +6949,22 @@ GEN75_PIPE_CONTROL_pack(__gen_user_data *data, void * restrict dst,
 
 }
 
+#define GEN75_3DSTATE_CONSTANT_BODY_length 0x00000006
+
+#define GEN75_BINDING_TABLE_EDIT_ENTRY_length 0x00000001
+
+#define GEN75_GATHER_CONSTANT_ENTRY_length 0x00000001
+
+#define GEN75_VERTEX_BUFFER_STATE_length 0x00000004
+
+#define GEN75_VERTEX_ELEMENT_STATE_length 0x00000002
+
+#define GEN75_SO_DECL_ENTRY_length 0x00000002
+
+#define GEN75_SO_DECL_length 0x00000001
+
+#define GEN75_SCISSOR_RECT_length 0x00000002
+
 struct GEN75_SCISSOR_RECT {
    uint32_t                                     ScissorRectangleYMin;
    uint32_t                                     ScissorRectangleXMin;
@@ -6973,6 +6989,8 @@ GEN75_SCISSOR_RECT_pack(__gen_user_data *data, void * restrict dst,
       0;
 
 }
+
+#define GEN75_SF_CLIP_VIEWPORT_length 0x00000010
 
 struct GEN75_SF_CLIP_VIEWPORT {
    float                                        ViewportMatrixElementm00;
@@ -7043,6 +7061,8 @@ GEN75_SF_CLIP_VIEWPORT_pack(__gen_user_data *data, void * restrict dst,
       0;
 
 }
+
+#define GEN75_BLEND_STATE_length 0x00000002
 
 struct GEN75_BLEND_STATE {
    uint32_t                                     ColorBufferBlendEnable;
@@ -7167,6 +7187,8 @@ GEN75_BLEND_STATE_pack(__gen_user_data *data, void * restrict dst,
 
 }
 
+#define GEN75_CC_VIEWPORT_length 0x00000002
+
 struct GEN75_CC_VIEWPORT {
    float                                        MinimumDepth;
    float                                        MaximumDepth;
@@ -7187,6 +7209,8 @@ GEN75_CC_VIEWPORT_pack(__gen_user_data *data, void * restrict dst,
       0;
 
 }
+
+#define GEN75_COLOR_CALC_STATE_length 0x00000006
 
 struct GEN75_COLOR_CALC_STATE {
    uint32_t                                     StencilReferenceValue;
@@ -7240,6 +7264,8 @@ GEN75_COLOR_CALC_STATE_pack(__gen_user_data *data, void * restrict dst,
       0;
 
 }
+
+#define GEN75_DEPTH_STENCIL_STATE_length 0x00000003
 
 struct GEN75_DEPTH_STENCIL_STATE {
    uint32_t                                     StencilTestEnable;
@@ -7337,6 +7363,10 @@ GEN75_DEPTH_STENCIL_STATE_pack(__gen_user_data *data, void * restrict dst,
 
 }
 
+#define GEN75_MEMORY_OBJECT_CONTROL_STATE_length 0x00000001
+
+#define GEN75_VEB_DI_IECP_COMMAND_SURFACE_CONTROL_BITS_length 0x00000001
+
 struct GEN75_VEB_DI_IECP_COMMAND_SURFACE_CONTROL_BITS {
 #define     Highestpriority                                    0
 #define     Secondhighestpriority                              1
@@ -7364,6 +7394,8 @@ GEN75_VEB_DI_IECP_COMMAND_SURFACE_CONTROL_BITS_pack(__gen_user_data *data, void 
       0;
 
 }
+
+#define GEN75_INTERFACE_DESCRIPTOR_DATA_length 0x00000008
 
 struct GEN75_INTERFACE_DESCRIPTOR_DATA {
    uint32_t                                     KernelStartPointer;
@@ -7448,6 +7480,10 @@ GEN75_INTERFACE_DESCRIPTOR_DATA_pack(__gen_user_data *data, void * restrict dst,
       0;
 
 }
+
+#define GEN75_PALETTE_ENTRY_length 0x00000001
+
+#define GEN75_RENDER_SURFACE_STATE_length 0x00000008
 
 struct GEN75_RENDER_SURFACE_STATE {
 #define     SURFTYPE_1D                                        0
@@ -7608,6 +7644,8 @@ GEN75_RENDER_SURFACE_STATE_pack(__gen_user_data *data, void * restrict dst,
 
 }
 
+#define GEN75_SAMPLER_BORDER_COLOR_STATE_length 0x00000014
+
 struct GEN75_SAMPLER_BORDER_COLOR_STATE {
    uint32_t                                     BorderColorRedDX100GL;
    uint32_t                                     BorderColorAlpha;
@@ -7658,6 +7696,8 @@ GEN75_SAMPLER_BORDER_COLOR_STATE_pack(__gen_user_data *data, void * restrict dst
       0;
 
 }
+
+#define GEN75_SAMPLER_STATE_length 0x00000004
 
 struct GEN75_SAMPLER_STATE {
    uint32_t                                     SamplerDisable;

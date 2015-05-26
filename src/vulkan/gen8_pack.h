@@ -7651,6 +7651,24 @@ GEN8_PIPE_CONTROL_pack(__gen_user_data *data, void * restrict dst,
 
 }
 
+#define GEN8_3DSTATE_CONSTANT_BODY_length 0x0000000a
+
+#define GEN8_BINDING_TABLE_EDIT_ENTRY_length 0x00000001
+
+#define GEN8_GATHER_CONSTANT_ENTRY_length 0x00000001
+
+#define GEN8_VERTEX_BUFFER_STATE_length 0x00000004
+
+#define GEN8_VERTEX_ELEMENT_STATE_length 0x00000002
+
+#define GEN8_SO_DECL_ENTRY_length 0x00000002
+
+#define GEN8_SO_DECL_length 0x00000001
+
+#define GEN8_SF_OUTPUT_ATTRIBUTE_DETAIL_length 0x00000001
+
+#define GEN8_SCISSOR_RECT_length 0x00000002
+
 struct GEN8_SCISSOR_RECT {
    uint32_t                                     ScissorRectangleYMin;
    uint32_t                                     ScissorRectangleXMin;
@@ -7675,6 +7693,8 @@ GEN8_SCISSOR_RECT_pack(__gen_user_data *data, void * restrict dst,
       0;
 
 }
+
+#define GEN8_SF_CLIP_VIEWPORT_length 0x00000010
 
 struct GEN8_SF_CLIP_VIEWPORT {
    float                                        ViewportMatrixElementm00;
@@ -7763,6 +7783,8 @@ GEN8_SF_CLIP_VIEWPORT_pack(__gen_user_data *data, void * restrict dst,
 
 }
 
+#define GEN8_BLEND_STATE_length 0x00000011
+
 struct GEN8_BLEND_STATE_ENTRY {
    uint32_t                                     LogicOpEnable;
    uint32_t                                     LogicOpFunction;
@@ -7848,6 +7870,10 @@ GEN8_BLEND_STATE_pack(__gen_user_data *data, void * restrict dst,
    GEN8_BLEND_STATE_ENTRY_pack(data, &dw[1], &values->Entry);
 }
 
+#define GEN8_BLEND_STATE_ENTRY_length 0x00000001
+
+#define GEN8_CC_VIEWPORT_length 0x00000002
+
 struct GEN8_CC_VIEWPORT {
    float                                        MinimumDepth;
    float                                        MaximumDepth;
@@ -7868,6 +7894,8 @@ GEN8_CC_VIEWPORT_pack(__gen_user_data *data, void * restrict dst,
       0;
 
 }
+
+#define GEN8_COLOR_CALC_STATE_length 0x00000006
 
 struct GEN8_COLOR_CALC_STATE {
    uint32_t                                     StencilReferenceValue;
@@ -7922,6 +7950,10 @@ GEN8_COLOR_CALC_STATE_pack(__gen_user_data *data, void * restrict dst,
 
 }
 
+#define GEN8_MEMORY_OBJECT_CONTROL_STATE_length 0x00000001
+
+#define GEN8_VEB_DI_IECP_COMMAND_SURFACE_CONTROL_BITS_length 0x00000001
+
 struct GEN8_VEB_DI_IECP_COMMAND_SURFACE_CONTROL_BITS {
 #define     UseCacheabilityControlsfrompagetableUCwithFenceifcoherentcycle       0
 #define     UncacheableUCnoncacheable                          1
@@ -7955,6 +7987,8 @@ GEN8_VEB_DI_IECP_COMMAND_SURFACE_CONTROL_BITS_pack(__gen_user_data *data, void *
       0;
 
 }
+
+#define GEN8_INTERFACE_DESCRIPTOR_DATA_length 0x00000008
 
 struct GEN8_INTERFACE_DESCRIPTOR_DATA {
    uint32_t                                     KernelStartPointer;
@@ -8053,6 +8087,10 @@ GEN8_INTERFACE_DESCRIPTOR_DATA_pack(__gen_user_data *data, void * restrict dst,
       0;
 
 }
+
+#define GEN8_PALETTE_ENTRY_length 0x00000001
+
+#define GEN8_RENDER_SURFACE_STATE_length 0x00000010
 
 struct GEN8_RENDER_SURFACE_STATE {
 #define     SURFTYPE_1D                                        0
@@ -8262,6 +8300,8 @@ GEN8_RENDER_SURFACE_STATE_pack(__gen_user_data *data, void * restrict dst,
       0;
 
 }
+
+#define GEN8_SAMPLER_STATE_length 0x00000004
 
 struct GEN8_SAMPLER_STATE {
    uint32_t                                     SamplerDisable;
