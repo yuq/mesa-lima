@@ -145,60 +145,6 @@ VkResult anv_GetImageSubresourceInfo(
    stub_return(VK_UNSUPPORTED);
 }
 
-static struct anv_state
-create_surface_state(struct anv_device *device,
-                     struct anv_image *image, uint32_t format, uint32_t tile_mode,
-                     uint32_t offset, struct anv_cmd_buffer *cmd_buffer)
-{
-   struct anv_state state;
-
-   if (cmd_buffer)
-      state = anv_state_stream_alloc(&cmd_buffer->surface_state_stream, 64, 64);
-   else
-      state = anv_state_pool_alloc(&device->surface_state_pool, 64, 64);
-
-   struct GEN8_RENDER_SURFACE_STATE surface_state = {
-      .SurfaceType = SURFTYPE_2D,
-      .SurfaceArray = false,
-      .SurfaceFormat = format,
-      .SurfaceVerticalAlignment = VALIGN4,
-      .SurfaceHorizontalAlignment = HALIGN4,
-      .TileMode = tile_mode,
-      .VerticalLineStride = 0,
-      .VerticalLineStrideOffset = 0,
-      .SamplerL2BypassModeDisable = true,
-      .RenderCacheReadWriteMode = WriteOnlyCache,
-      .MemoryObjectControlState = GEN8_MOCS,
-      .BaseMipLevel = 0,
-      .SurfaceQPitch = 0,
-      .Height = image->extent.height - 1,
-      .Width = image->extent.width - 1,
-      .Depth = image->extent.depth - 1,
-      .SurfacePitch = image->stride - 1,
-      .MinimumArrayElement = 0,
-      .NumberofMultisamples = MULTISAMPLECOUNT_1,
-      .XOffset = 0,
-      .YOffset = 0,
-      .SurfaceMinLOD = 0,
-      .MIPCountLOD = 0,
-      .AuxiliarySurfaceMode = AUX_NONE,
-      .RedClearColor = 0,
-      .GreenClearColor = 0,
-      .BlueClearColor = 0,
-      .AlphaClearColor = 0,
-      .ShaderChannelSelectRed = SCS_RED,
-      .ShaderChannelSelectGreen = SCS_GREEN,
-      .ShaderChannelSelectBlue = SCS_BLUE,
-      .ShaderChannelSelectAlpha = SCS_ALPHA,
-      .ResourceMinLOD = 0,
-      .SurfaceBaseAddress = { NULL, offset },
-   };
-
-   GEN8_RENDER_SURFACE_STATE_pack(NULL, state.map, &surface_state);
-
-   return state;
-}
-
 void
 anv_image_view_init(struct anv_surface_view *view,
                     struct anv_device *device,
@@ -231,8 +177,61 @@ anv_image_view_init(struct anv_surface_view *view,
 
    /* TODO: Miplevels */
    view->extent = image->extent;
-   view->surface_state =
-      create_surface_state(device, image, format, tile_mode, view->offset, cmd_buffer);
+
+   static const uint32_t vk_to_gen_swizzle[] = {
+      [VK_CHANNEL_SWIZZLE_ZERO] = SCS_ZERO,
+      [VK_CHANNEL_SWIZZLE_ONE] = SCS_ONE,
+      [VK_CHANNEL_SWIZZLE_R] = SCS_RED,
+      [VK_CHANNEL_SWIZZLE_G] = SCS_GREEN,
+      [VK_CHANNEL_SWIZZLE_B] = SCS_BLUE,
+      [VK_CHANNEL_SWIZZLE_A] = SCS_ALPHA
+   };
+
+   struct GEN8_RENDER_SURFACE_STATE surface_state = {
+      .SurfaceType = SURFTYPE_2D,
+      .SurfaceArray = false,
+      .SurfaceFormat = format,
+      .SurfaceVerticalAlignment = VALIGN4,
+      .SurfaceHorizontalAlignment = HALIGN4,
+      .TileMode = tile_mode,
+      .VerticalLineStride = 0,
+      .VerticalLineStrideOffset = 0,
+      .SamplerL2BypassModeDisable = true,
+      .RenderCacheReadWriteMode = WriteOnlyCache,
+      .MemoryObjectControlState = GEN8_MOCS,
+      .BaseMipLevel = 0,
+      .SurfaceQPitch = 0,
+      .Height = image->extent.height - 1,
+      .Width = image->extent.width - 1,
+      .Depth = image->extent.depth - 1,
+      .SurfacePitch = image->stride - 1,
+      .MinimumArrayElement = 0,
+      .NumberofMultisamples = MULTISAMPLECOUNT_1,
+      .XOffset = 0,
+      .YOffset = 0,
+      .SurfaceMinLOD = 0,
+      .MIPCountLOD = 0,
+      .AuxiliarySurfaceMode = AUX_NONE,
+      .RedClearColor = 0,
+      .GreenClearColor = 0,
+      .BlueClearColor = 0,
+      .AlphaClearColor = 0,
+      .ShaderChannelSelectRed = vk_to_gen_swizzle[pCreateInfo->channels.r],
+      .ShaderChannelSelectGreen = vk_to_gen_swizzle[pCreateInfo->channels.g],
+      .ShaderChannelSelectBlue = vk_to_gen_swizzle[pCreateInfo->channels.b],
+      .ShaderChannelSelectAlpha = vk_to_gen_swizzle[pCreateInfo->channels.a],
+      .ResourceMinLOD = 0,
+      .SurfaceBaseAddress = { NULL, view->offset },
+   };
+
+   if (cmd_buffer)
+      view->surface_state =
+         anv_state_stream_alloc(&cmd_buffer->surface_state_stream, 64, 64);
+   else
+      view->surface_state =
+         anv_state_pool_alloc(&device->surface_state_pool, 64, 64);
+
+   GEN8_RENDER_SURFACE_STATE_pack(NULL, view->surface_state.map, &surface_state);
 }
 
 VkResult anv_CreateImageView(
@@ -271,9 +270,52 @@ anv_color_attachment_view_init(struct anv_surface_view *view,
    view->offset = image->offset;
    view->extent = image->extent;
    view->format = pCreateInfo->format;
-   view->surface_state =
-      create_surface_state(device, image,
-                           format->format, image->tile_mode, view->offset, cmd_buffer);
+
+   if (cmd_buffer)
+      view->surface_state =
+         anv_state_stream_alloc(&cmd_buffer->surface_state_stream, 64, 64);
+   else
+      view->surface_state =
+         anv_state_pool_alloc(&device->surface_state_pool, 64, 64);
+
+   struct GEN8_RENDER_SURFACE_STATE surface_state = {
+      .SurfaceType = SURFTYPE_2D,
+      .SurfaceArray = false,
+      .SurfaceFormat = format->format,
+      .SurfaceVerticalAlignment = VALIGN4,
+      .SurfaceHorizontalAlignment = HALIGN4,
+      .TileMode = image->tile_mode,
+      .VerticalLineStride = 0,
+      .VerticalLineStrideOffset = 0,
+      .SamplerL2BypassModeDisable = true,
+      .RenderCacheReadWriteMode = WriteOnlyCache,
+      .MemoryObjectControlState = GEN8_MOCS,
+      .BaseMipLevel = 0,
+      .SurfaceQPitch = 0,
+      .Height = image->extent.height - 1,
+      .Width = image->extent.width - 1,
+      .Depth = image->extent.depth - 1,
+      .SurfacePitch = image->stride - 1,
+      .MinimumArrayElement = 0,
+      .NumberofMultisamples = MULTISAMPLECOUNT_1,
+      .XOffset = 0,
+      .YOffset = 0,
+      .SurfaceMinLOD = 0,
+      .MIPCountLOD = 0,
+      .AuxiliarySurfaceMode = AUX_NONE,
+      .RedClearColor = 0,
+      .GreenClearColor = 0,
+      .BlueClearColor = 0,
+      .AlphaClearColor = 0,
+      .ShaderChannelSelectRed = SCS_RED,
+      .ShaderChannelSelectGreen = SCS_GREEN,
+      .ShaderChannelSelectBlue = SCS_BLUE,
+      .ShaderChannelSelectAlpha = SCS_ALPHA,
+      .ResourceMinLOD = 0,
+      .SurfaceBaseAddress = { NULL, view->offset },
+   };
+
+   GEN8_RENDER_SURFACE_STATE_pack(NULL, view->surface_state.map, &surface_state);
 }
 
 VkResult anv_CreateColorAttachmentView(
