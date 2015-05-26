@@ -57,11 +57,6 @@
                            (1 << PROGRAM_CONSTANT) |     \
                            (1 << PROGRAM_UNIFORM))
 
-/**
- * Maximum number of arrays
- */
-#define MAX_ARRAYS        256
-
 #define MAX_GLSL_TEXTURE_OFFSET 4
 
 class st_src_reg;
@@ -4373,7 +4368,8 @@ struct st_translate {
    unsigned temps_size;
    struct ureg_dst *temps;
 
-   struct ureg_dst arrays[MAX_ARRAYS];
+   struct ureg_dst *arrays;
+   unsigned num_temp_arrays;
    struct ureg_src *constants;
    int num_constants;
    struct ureg_src *immediates;
@@ -4541,7 +4537,7 @@ dst_register(struct st_translate *t,
    case PROGRAM_ARRAY:
       array = index >> 16;
 
-      assert(array < ARRAY_SIZE(t->arrays));
+      assert(array < t->num_temp_arrays);
 
       if (ureg_dst_is_undef(t->arrays[array]))
          t->arrays[array] = ureg_DECL_array_temporary(
@@ -4749,7 +4745,7 @@ translate_tex_offset(struct st_translate *t,
       array = in_offset->index >> 16;
 
       assert(array >= 0);
-      assert(array < (int) ARRAY_SIZE(t->arrays));
+      assert(array < (int)t->num_temp_arrays);
 
       dst = t->arrays[array];
       offset.File = dst.File;
@@ -5149,6 +5145,10 @@ st_translate_program(
    t->inputMapping = inputMapping;
    t->outputMapping = outputMapping;
    t->ureg = ureg;
+   t->num_temp_arrays = program->next_array;
+   if (t->num_temp_arrays)
+      t->arrays = (struct ureg_dst*)
+                  calloc(1, sizeof(t->arrays[0]) * t->num_temp_arrays);
 
    /*
     * Declare input attributes.
@@ -5383,6 +5383,7 @@ st_translate_program(
 
 out:
    if (t) {
+      free(t->arrays);
       free(t->temps);
       free(t->insn);
       free(t->labels);
