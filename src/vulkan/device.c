@@ -2178,6 +2178,7 @@ VkResult anv_CreateCommandBuffer(
 
    cmd_buffer->dirty = 0;
    cmd_buffer->vb_dirty = 0;
+   cmd_buffer->pipeline = NULL;
 
    *pCmdBuffer = (VkCmdBuffer) cmd_buffer;
 
