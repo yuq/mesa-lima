@@ -206,10 +206,20 @@ create_pipeline(VkDevice device, VkPipeline *pipeline,
       .frontFace = VK_FRONT_FACE_CCW
    };
 
+   VkPipelineCbStateCreateInfo cb_create_info = {
+      .sType = VK_STRUCTURE_TYPE_PIPELINE_CB_STATE_CREATE_INFO,
+      .pNext = &rs_create_info,
+      .attachmentCount = 1,
+      .pAttachments = (VkPipelineCbAttachmentState []) {
+         { .channelWriteMask = VK_CHANNEL_A_BIT |
+              VK_CHANNEL_R_BIT | VK_CHANNEL_G_BIT | VK_CHANNEL_B_BIT },
+      }
+   };
+
    vkCreateGraphicsPipeline(device,
                             &(VkGraphicsPipelineCreateInfo) {
                                .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
-                               .pNext = &rs_create_info,
+                               .pNext = &cb_create_info,
                                .flags = 0,
                                .layout = pipeline_layout
                             },
@@ -449,6 +459,7 @@ struct test_context {
    VkDynamicVpState vp_state;
    VkDynamicRsState rs_state;
    VkDynamicDsState ds_state;
+   VkDynamicCbState cb_state;
    VkColorAttachmentView rt_view;
    VkDepthStencilView ds_view;
    uint32_t rt_size;
@@ -628,6 +639,12 @@ test_prepare(struct test_context *ctx, VkDevice device, VkQueue queue, uint32_t 
                                     },
                                     &ctx->ds_state);
 
+   vkCreateDynamicColorBlendState(ctx->device,
+                                  &(VkDynamicCbStateCreateInfo) {
+                                     .sType = VK_STRUCTURE_TYPE_DYNAMIC_CB_STATE_CREATE_INFO
+                                  },
+                                  &ctx->cb_state);
+
    vkCreateColorAttachmentView(ctx->device,
                                &(VkColorAttachmentViewCreateInfo) {
                                   .sType = VK_STRUCTURE_TYPE_COLOR_ATTACHMENT_VIEW_CREATE_INFO,
@@ -752,6 +769,7 @@ test_finish(struct test_context *ctx)
    vkFreeMemory(ctx->device, ctx->mem);
    vkDestroyObject(ctx->device, VK_OBJECT_TYPE_DYNAMIC_VP_STATE, ctx->vp_state);
    vkDestroyObject(ctx->device, VK_OBJECT_TYPE_DYNAMIC_RS_STATE, ctx->rs_state);
+   vkDestroyObject(ctx->device, VK_OBJECT_TYPE_DYNAMIC_CB_STATE, ctx->cb_state);
    vkDestroyObject(ctx->device, VK_OBJECT_TYPE_COLOR_ATTACHMENT_VIEW, ctx->rt_view);
    vkDestroyObject(ctx->device, VK_OBJECT_TYPE_FRAMEBUFFER, ctx->framebuffer);
    vkDestroyObject(ctx->device, VK_OBJECT_TYPE_RENDER_PASS, ctx->pass);
@@ -865,10 +883,20 @@ test_create_solid_color_pipeline(struct test_context *ctx)
       .depthCompareOp = VK_COMPARE_OP_GREATER
    };
 
+   VkPipelineCbStateCreateInfo cb_create_info = {
+      .sType = VK_STRUCTURE_TYPE_PIPELINE_CB_STATE_CREATE_INFO,
+      .pNext = &ds_create_info,
+      .attachmentCount = 1,
+      .pAttachments = (VkPipelineCbAttachmentState []) {
+         { .channelWriteMask = VK_CHANNEL_A_BIT |
+              VK_CHANNEL_R_BIT | VK_CHANNEL_G_BIT | VK_CHANNEL_B_BIT },
+      }
+   };
+
    vkCreateGraphicsPipeline(ctx->device,
                             &(VkGraphicsPipelineCreateInfo) {
                                .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
-                               .pNext = &ds_create_info,
+                               .pNext = &cb_create_info,
                                .flags = 0,
                                .layout = VK_NULL_HANDLE
                             },
@@ -918,6 +946,8 @@ test_depth_stencil(VkDevice device, VkQueue queue)
                                VK_STATE_BIND_POINT_RASTER, ctx.rs_state);
    vkCmdBindDynamicStateObject(ctx.cmdBuffer,
                                VK_STATE_BIND_POINT_DEPTH_STENCIL, ctx.ds_state);
+   vkCmdBindDynamicStateObject(ctx.cmdBuffer,
+                               VK_STATE_BIND_POINT_COLOR_BLEND, ctx.cb_state);
 
    vkCmdDraw(ctx.cmdBuffer, 0, 3, 0, 1);
    vkCmdDraw(ctx.cmdBuffer, 3, 3, 1, 1);
@@ -1193,6 +1223,13 @@ test_triangle(VkDevice device, VkQueue queue)
                               },
                               &rs_state);
    
+   VkDynamicCbState cb_state;
+   vkCreateDynamicColorBlendState(device,
+                                  &(VkDynamicCbStateCreateInfo) {
+                                     .sType = VK_STRUCTURE_TYPE_DYNAMIC_CB_STATE_CREATE_INFO
+                                  },
+                                  &cb_state);
+
    /* FIXME: Need to query memory info before binding to memory */
    vkQueueBindObjectMemory(queue, VK_OBJECT_TYPE_IMAGE,
                            rt,
@@ -1417,6 +1454,8 @@ test_triangle(VkDevice device, VkQueue queue)
                                VK_STATE_BIND_POINT_VIEWPORT, vp_state);
    vkCmdBindDynamicStateObject(cmdBuffer,
                                VK_STATE_BIND_POINT_RASTER, rs_state);
+   vkCmdBindDynamicStateObject(cmdBuffer,
+                               VK_STATE_BIND_POINT_COLOR_BLEND, cb_state);
 
    vkCmdBeginQuery(cmdBuffer, query_pool, 0 /*slot*/, 0 /* flags */);
 
