@@ -1988,6 +1988,35 @@ fetch_assign_deriv_channel(struct tgsi_exec_machine *mach,
    derivs[1][3] = d.f[3];
 }
 
+static uint
+fetch_sampler_unit(struct tgsi_exec_machine *mach,
+                   const struct tgsi_full_instruction *inst,
+                   uint sampler)
+{
+   uint unit;
+
+   if (inst->Src[sampler].Register.Indirect) {
+      const struct tgsi_full_src_register *reg = &inst->Src[sampler];
+      union tgsi_exec_channel indir_index, index2;
+
+      index2.i[0] =
+      index2.i[1] =
+      index2.i[2] =
+      index2.i[3] = reg->Indirect.Index;
+
+      fetch_src_file_channel(mach,
+                             0,
+                             reg->Indirect.File,
+                             reg->Indirect.Swizzle,
+                             &index2,
+                             &ZeroVec,
+                             &indir_index);
+      unit = inst->Src[sampler].Register.Index + indir_index.i[0];
+   } else {
+      unit = inst->Src[sampler].Register.Index;
+   }
+   return unit;
+}
 
 /*
  * execute a texture instruction.
@@ -2001,14 +2030,15 @@ exec_tex(struct tgsi_exec_machine *mach,
          const struct tgsi_full_instruction *inst,
          uint modifier, uint sampler)
 {
-   const uint unit = inst->Src[sampler].Register.Index;
    const union tgsi_exec_channel *args[5], *proj = NULL;
    union tgsi_exec_channel r[5];
    enum tgsi_sampler_control control =  tgsi_sampler_lod_none;
    uint chan;
+   uint unit;
    int8_t offsets[3];
    int dim, shadow_ref, i;
 
+   unit = fetch_sampler_unit(mach, inst, sampler);
    /* always fetch all 3 offsets, overkill but keeps code simple */
    fetch_texel_offsets(mach, inst, offsets);
 
@@ -2107,12 +2137,13 @@ static void
 exec_txd(struct tgsi_exec_machine *mach,
          const struct tgsi_full_instruction *inst)
 {
-   const uint unit = inst->Src[3].Register.Index;
    union tgsi_exec_channel r[4];
    float derivs[3][2][TGSI_QUAD_SIZE];
    uint chan;
+   uint unit;
    int8_t offsets[3];
 
+   unit = fetch_sampler_unit(mach, inst, 3);
    /* always fetch all 3 offsets, overkill but keeps code simple */
    fetch_texel_offsets(mach, inst, offsets);
 
@@ -2214,14 +2245,15 @@ static void
 exec_txf(struct tgsi_exec_machine *mach,
          const struct tgsi_full_instruction *inst)
 {
-   const uint unit = inst->Src[1].Register.Index;
    union tgsi_exec_channel r[4];
    uint chan;
+   uint unit;
    float rgba[TGSI_NUM_CHANNELS][TGSI_QUAD_SIZE];
    int j;
    int8_t offsets[3];
    unsigned target;
 
+   unit = fetch_sampler_unit(mach, inst, 1);
    /* always fetch all 3 offsets, overkill but keeps code simple */
    fetch_texel_offsets(mach, inst, offsets);
 
@@ -2296,11 +2328,13 @@ static void
 exec_txq(struct tgsi_exec_machine *mach,
          const struct tgsi_full_instruction *inst)
 {
-   const uint unit = inst->Src[1].Register.Index;
    int result[4];
    union tgsi_exec_channel r[4], src;
    uint chan;
+   uint unit;
    int i,j;
+
+   unit = fetch_sampler_unit(mach, inst, 1);
 
    fetch_source(mach, &src, &inst->Src[0], TGSI_CHAN_X, TGSI_EXEC_DATA_INT);
 
