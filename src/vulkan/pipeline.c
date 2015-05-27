@@ -192,12 +192,12 @@ emit_rs_state(struct anv_pipeline *pipeline, VkPipelineRsStateCreateInfo *info,
       .PointWidthSource = info->programPointSize ? Vertex : State,
    };
 
-   /* bool32_t                                    rasterizerDiscardEnable; */
-
+   /* FINISHME: bool32_t rasterizerDiscardEnable; */
 
    GEN8_3DSTATE_SF_pack(NULL, pipeline->state_sf, &sf);
 
    struct GEN8_3DSTATE_RASTER raster = {
+      GEN8_3DSTATE_RASTER_header,
       .FrontWinding = vk_to_gen_front_face[info->frontFace],
       .CullMode = vk_to_gen_cullmode[info->cullMode],
       .FrontFaceFillMode = vk_to_gen_fillmode[info->fillMode],
@@ -216,6 +216,101 @@ emit_rs_state(struct anv_pipeline *pipeline, VkPipelineRsStateCreateInfo *info,
                   .NumberofSFOutputAttributes =
                      pipeline->wm_prog_data.num_varying_inputs);
 
+}
+
+static void
+emit_cb_state(struct anv_pipeline *pipeline, VkPipelineCbStateCreateInfo *info)
+{
+   struct anv_device *device = pipeline->device;
+
+   static const uint32_t vk_to_gen_logic_op[] = {
+      [VK_LOGIC_OP_COPY]                        = LOGICOP_COPY,
+      [VK_LOGIC_OP_CLEAR]                       = LOGICOP_CLEAR,
+      [VK_LOGIC_OP_AND]                         = LOGICOP_AND,
+      [VK_LOGIC_OP_AND_REVERSE]                 = LOGICOP_AND_REVERSE,
+      [VK_LOGIC_OP_AND_INVERTED]                = LOGICOP_AND_INVERTED,
+      [VK_LOGIC_OP_NOOP]                        = LOGICOP_NOOP,
+      [VK_LOGIC_OP_XOR]                         = LOGICOP_XOR,
+      [VK_LOGIC_OP_OR]                          = LOGICOP_OR,
+      [VK_LOGIC_OP_NOR]                         = LOGICOP_NOR,
+      [VK_LOGIC_OP_EQUIV]                       = LOGICOP_EQUIV,
+      [VK_LOGIC_OP_INVERT]                      = LOGICOP_INVERT,
+      [VK_LOGIC_OP_OR_REVERSE]                  = LOGICOP_OR_REVERSE,
+      [VK_LOGIC_OP_COPY_INVERTED]               = LOGICOP_COPY_INVERTED,
+      [VK_LOGIC_OP_OR_INVERTED]                 = LOGICOP_OR_INVERTED,
+      [VK_LOGIC_OP_NAND]                        = LOGICOP_NAND,
+      [VK_LOGIC_OP_SET]                         = LOGICOP_SET,
+   };
+
+   static const uint32_t vk_to_gen_blend[] = {
+      [VK_BLEND_ZERO]                           = BLENDFACTOR_ZERO,
+      [VK_BLEND_ONE]                            = BLENDFACTOR_ONE,
+      [VK_BLEND_SRC_COLOR]                      = BLENDFACTOR_SRC_COLOR,
+      [VK_BLEND_ONE_MINUS_SRC_COLOR]            = BLENDFACTOR_INV_SRC_COLOR,
+      [VK_BLEND_DEST_COLOR]                     = BLENDFACTOR_DST_COLOR,
+      [VK_BLEND_ONE_MINUS_DEST_COLOR]           = BLENDFACTOR_INV_DST_COLOR,
+      [VK_BLEND_SRC_ALPHA]                      = BLENDFACTOR_SRC_ALPHA,
+      [VK_BLEND_ONE_MINUS_SRC_ALPHA]            = BLENDFACTOR_INV_SRC_ALPHA,
+      [VK_BLEND_DEST_ALPHA]                     = BLENDFACTOR_DST_ALPHA,
+      [VK_BLEND_ONE_MINUS_DEST_ALPHA]           = BLENDFACTOR_INV_DST_ALPHA,
+      [VK_BLEND_CONSTANT_COLOR]                 = BLENDFACTOR_CONST_COLOR,
+      [VK_BLEND_ONE_MINUS_CONSTANT_COLOR]       = BLENDFACTOR_INV_CONST_COLOR,
+      [VK_BLEND_CONSTANT_ALPHA]                 = BLENDFACTOR_CONST_ALPHA,
+      [VK_BLEND_ONE_MINUS_CONSTANT_ALPHA]       = BLENDFACTOR_INV_CONST_ALPHA,
+      [VK_BLEND_SRC_ALPHA_SATURATE]             = BLENDFACTOR_SRC_ALPHA_SATURATE,
+      [VK_BLEND_SRC1_COLOR]                     = BLENDFACTOR_SRC1_COLOR,
+      [VK_BLEND_ONE_MINUS_SRC1_COLOR]           = BLENDFACTOR_INV_SRC1_COLOR,
+      [VK_BLEND_SRC1_ALPHA]                     = BLENDFACTOR_SRC1_ALPHA,
+      [VK_BLEND_ONE_MINUS_SRC1_ALPHA]           = BLENDFACTOR_INV_SRC1_ALPHA,
+   };
+
+   static const uint32_t vk_to_gen_blend_op[] = {
+      [VK_BLEND_OP_ADD]                         = BLENDFUNCTION_ADD,
+      [VK_BLEND_OP_SUBTRACT]                    = BLENDFUNCTION_SUBTRACT,
+      [VK_BLEND_OP_REVERSE_SUBTRACT]            = BLENDFUNCTION_REVERSE_SUBTRACT,
+      [VK_BLEND_OP_MIN]                         = BLENDFUNCTION_MIN,
+      [VK_BLEND_OP_MAX]                         = BLENDFUNCTION_MAX,
+   };
+
+   uint32_t num_dwords = 1 + info->attachmentCount * 2;
+   pipeline->blend_state =
+      anv_state_pool_alloc(&device->dynamic_state_pool, num_dwords * 4, 64);
+
+   struct GEN8_BLEND_STATE blend_state = {
+      .AlphaToCoverageEnable = info->alphaToCoverageEnable,
+   };
+
+   uint32_t *state = pipeline->blend_state.map;
+   GEN8_BLEND_STATE_pack(NULL, state, &blend_state);
+
+   for (uint32_t i = 0; i < info->attachmentCount; i++) {
+      const VkPipelineCbAttachmentState *a = &info->pAttachments[i];
+
+      struct GEN8_BLEND_STATE_ENTRY entry = {
+         .LogicOpEnable = info->logicOpEnable,
+         .LogicOpFunction = vk_to_gen_logic_op[info->logicOp],
+         .ColorBufferBlendEnable = a->blendEnable,
+         .PreBlendSourceOnlyClampEnable = false,
+         .PreBlendColorClampEnable = false,
+         .PostBlendColorClampEnable = false,
+         .SourceBlendFactor = vk_to_gen_blend[a->srcBlendColor],
+         .DestinationBlendFactor = vk_to_gen_blend[a->destBlendColor],
+         .ColorBlendFunction = vk_to_gen_blend_op[a->blendOpColor],
+         .SourceAlphaBlendFactor = vk_to_gen_blend[a->srcBlendAlpha],
+         .DestinationAlphaBlendFactor = vk_to_gen_blend[a->destBlendAlpha],
+         .AlphaBlendFunction = vk_to_gen_blend_op[a->blendOpAlpha],
+         .WriteDisableAlpha = !(a->channelWriteMask & VK_CHANNEL_A_BIT),
+         .WriteDisableRed = !(a->channelWriteMask & VK_CHANNEL_R_BIT),
+         .WriteDisableGreen = !(a->channelWriteMask & VK_CHANNEL_G_BIT),
+         .WriteDisableBlue = !(a->channelWriteMask & VK_CHANNEL_B_BIT),
+      };
+
+      GEN8_BLEND_STATE_ENTRY_pack(NULL, state + i * 2 + 1, &entry);
+   }
+
+   anv_batch_emit(&pipeline->batch, GEN8_3DSTATE_BLEND_STATE_POINTERS,
+                  .BlendStatePointer = pipeline->blend_state.offset,
+                  .BlendStatePointerValid = true);
 }
 
 static const uint32_t vk_to_gen_compare_op[] = {
@@ -301,6 +396,7 @@ anv_pipeline_create(
    VkPipelineIaStateCreateInfo *ia_info = NULL;
    VkPipelineRsStateCreateInfo *rs_info = NULL;
    VkPipelineDsStateCreateInfo *ds_info = NULL;
+   VkPipelineCbStateCreateInfo *cb_info = NULL;
    VkPipelineVertexInputCreateInfo *vi_info;
    VkResult result;
    uint32_t offset, length;
@@ -344,7 +440,7 @@ anv_pipeline_create(
          anv_finishme("VK_STRUCTURE_TYPE_PIPELINE_MS_STATE_CREATE_INFO");
          break;
       case VK_STRUCTURE_TYPE_PIPELINE_CB_STATE_CREATE_INFO:
-         anv_finishme("VK_STRUCTURE_TYPE_PIPELINE_CB_STATE_CREATE_INFO");
+         cb_info = (VkPipelineCbStateCreateInfo *) common;
          break;
       case VK_STRUCTURE_TYPE_PIPELINE_DS_STATE_CREATE_INFO:
          ds_info = (VkPipelineDsStateCreateInfo *) common;
@@ -380,6 +476,8 @@ anv_pipeline_create(
     * optional for depth-only rendering. */
    if (ds_info)
       emit_ds_state(pipeline, ds_info);
+
+   emit_cb_state(pipeline, cb_info);
 
    anv_batch_emit(&pipeline->batch, GEN8_3DSTATE_CLIP,
                   .ClipEnable = true,

@@ -639,6 +639,7 @@ struct anv_pipeline {
 
    uint32_t                                     active_stages;
    struct anv_state_stream                      program_stream;
+   struct anv_state                             blend_state;
    uint32_t                                     vs_simd8;
    uint32_t                                     ps_simd8;
    uint32_t                                     ps_simd16;

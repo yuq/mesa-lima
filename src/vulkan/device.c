@@ -2490,6 +2490,8 @@ void anv_CmdBindDynamicStateObject(
       cmd_buffer->dirty |= ANV_CMD_BUFFER_RS_DIRTY;
       break;
    case VK_STATE_BIND_POINT_COLOR_BLEND:
+      cmd_buffer->cb_state = (struct anv_dynamic_cb_state *) dynamicState;
+      cmd_buffer->dirty |= ANV_CMD_BUFFER_CB_DIRTY;
       break;
    case VK_STATE_BIND_POINT_DEPTH_STENCIL:
       cmd_buffer->ds_state = (struct anv_dynamic_ds_state *) dynamicState;
@@ -2773,15 +2775,19 @@ anv_cmd_buffer_flush_state(struct anv_cmd_buffer *cmd_buffer)
 
    if (cmd_buffer->dirty & (ANV_CMD_BUFFER_CB_DIRTY | ANV_CMD_BUFFER_DS_DIRTY)) {
       struct anv_state state;
-      if (cmd_buffer->ds_state)
+      if (cmd_buffer->ds_state == NULL)
+         state = anv_cmd_buffer_emit_dynamic(cmd_buffer,
+                                             cmd_buffer->cb_state->state_color_calc,
+                                             GEN8_COLOR_CALC_STATE_length, 32);
+      else if (cmd_buffer->cb_state == NULL)
+         state = anv_cmd_buffer_emit_dynamic(cmd_buffer,
+                                             cmd_buffer->ds_state->state_color_calc,
+                                             GEN8_COLOR_CALC_STATE_length, 32);
+      else
          state = anv_cmd_buffer_merge_dynamic(cmd_buffer,
                                               cmd_buffer->ds_state->state_color_calc,
                                               cmd_buffer->cb_state->state_color_calc,
                                               GEN8_COLOR_CALC_STATE_length, 32);
-      else
-         state = anv_cmd_buffer_emit_dynamic(cmd_buffer,
-                                             cmd_buffer->cb_state->state_color_calc,
-                                             GEN8_COLOR_CALC_STATE_length, 32);
 
       anv_batch_emit(&cmd_buffer->batch,
                      GEN8_3DSTATE_CC_STATE_POINTERS,
