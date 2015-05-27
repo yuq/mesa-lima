@@ -79,6 +79,7 @@ VkResult anv_image_create(
       image->tile_mode = YMAJOR;
       break;
    default:
+      assert(!"bad VKImageTiling");
       break;
    }
 
