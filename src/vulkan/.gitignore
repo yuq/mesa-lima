@@ -2,3 +2,5 @@
 
 # Generated source files
 /*-spirv.h
+/entrypoints.c
+/entrypoints.h
