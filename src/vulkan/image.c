@@ -81,7 +81,7 @@ VkResult anv_image_create(
    default:
       break;
    }
-   
+
    if (extra)
       image->tile_mode = extra->tile_mode;
 
