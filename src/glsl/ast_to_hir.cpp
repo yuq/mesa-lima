@@ -2098,10 +2098,10 @@ validate_matrix_layout_for_type(struct _mesa_glsl_parse_state *state,
 static bool
 validate_binding_qualifier(struct _mesa_glsl_parse_state *state,
                            YYLTYPE *loc,
-                           ir_variable *var,
+                           const glsl_type *type,
                            const ast_type_qualifier *qual)
 {
-   if (var->data.mode != ir_var_uniform && var->data.mode != ir_var_shader_storage) {
+   if (!qual->flags.q.uniform && !qual->flags.q.buffer) {
       _mesa_glsl_error(loc, state,
                        "the \"binding\" qualifier only applies to uniforms and "
                        "shader storage buffer objects");
@@ -2114,10 +2114,11 @@ validate_binding_qualifier(struct _mesa_glsl_parse_state *state,
    }
 
    const struct gl_context *const ctx = state->ctx;
-   unsigned elements = var->type->is_array() ? var->type->length : 1;
+   unsigned elements = type->is_array() ? type->length : 1;
    unsigned max_index = qual->binding + elements - 1;
+   const glsl_type *base_type = type->without_array();
 
-   if (var->type->is_interface()) {
+   if (base_type->is_interface()) {
       /* UBOs.  From page 60 of the GLSL 4.20 specification:
        * "If the binding point for any uniform block instance is less than zero,
        *  or greater than or equal to the implementation-dependent maximum
@@ -2128,7 +2129,7 @@ validate_binding_qualifier(struct _mesa_glsl_parse_state *state,
        *
        * The implementation-dependent maximum is GL_MAX_UNIFORM_BUFFER_BINDINGS.
        */
-      if (var->data.mode == ir_var_uniform &&
+      if (qual->flags.q.uniform &&
          max_index >= ctx->Const.MaxUniformBufferBindings) {
          _mesa_glsl_error(loc, state, "layout(binding = %d) for %d UBOs exceeds "
                           "the maximum number of UBO binding points (%d)",
@@ -2136,6 +2137,7 @@ validate_binding_qualifier(struct _mesa_glsl_parse_state *state,
                           ctx->Const.MaxUniformBufferBindings);
          return false;
       }
+
       /* SSBOs. From page 67 of the GLSL 4.30 specification:
        * "If the binding point for any uniform or shader storage block instance
        *  is less than zero, or greater than or equal to the
@@ -2145,7 +2147,7 @@ validate_binding_qualifier(struct _mesa_glsl_parse_state *state,
        *  N, all elements of the array from binding through binding + N – 1 must
        *  be within this range."
        */
-      if (var->data.mode == ir_var_shader_storage &&
+      if (qual->flags.q.buffer &&
          max_index >= ctx->Const.MaxShaderStorageBufferBindings) {
          _mesa_glsl_error(loc, state, "layout(binding = %d) for %d SSBOs exceeds "
                           "the maximum number of SSBO binding points (%d)",
@@ -2153,8 +2155,7 @@ validate_binding_qualifier(struct _mesa_glsl_parse_state *state,
                           ctx->Const.MaxShaderStorageBufferBindings);
          return false;
       }
-   } else if (var->type->is_sampler() ||
-              (var->type->is_array() && var->type->fields.array->is_sampler())) {
+   } else if (base_type->is_sampler()) {
       /* Samplers.  From page 63 of the GLSL 4.20 specification:
        * "If the binding is less than zero, or greater than or equal to the
        *  implementation-dependent maximum supported number of units, a
@@ -2171,7 +2172,7 @@ validate_binding_qualifier(struct _mesa_glsl_parse_state *state,
 
          return false;
       }
-   } else if (var->type->contains_atomic()) {
+   } else if (base_type->contains_atomic()) {
       assert(ctx->Const.MaxAtomicBufferBindings <= MAX_COMBINED_ATOMIC_BUFFERS);
       if (unsigned(qual->binding) >= ctx->Const.MaxAtomicBufferBindings) {
          _mesa_glsl_error(loc, state, "layout(binding = %d) exceeds the "
@@ -2181,8 +2182,7 @@ validate_binding_qualifier(struct _mesa_glsl_parse_state *state,
 
          return false;
       }
-   } else if (state->is_version(420, 310) &&
-              var->type->without_array()->is_image()) {
+   } else if (state->is_version(420, 310) && base_type->is_image()) {
       assert(ctx->Const.MaxImageUnits <= MAX_IMAGE_UNITS);
       if (max_index >= ctx->Const.MaxImageUnits) {
          _mesa_glsl_error(loc, state, "Image binding %d exceeds the "
@@ -2783,7 +2783,7 @@ apply_type_qualifier_to_variable(const struct ast_type_qualifier *qual,
    }
 
    if (qual->flags.q.explicit_binding &&
-       validate_binding_qualifier(state, loc, var, qual)) {
+       validate_binding_qualifier(state, loc, var->type, qual)) {
       var->data.explicit_binding = true;
       var->data.binding = qual->binding;
    }
@@ -6093,6 +6093,8 @@ ast_interface_block::hir(exec_list *instructions,
                                         num_variables,
                                         packing,
                                         this->block_name);
+   if (this->layout.flags.q.explicit_binding)
+      validate_binding_qualifier(state, &loc, block_type, &this->layout);
 
    if (!state->symbols->add_interface(block_type->name, block_type, var_mode)) {
       YYLTYPE loc = this->get_location();
@@ -6222,6 +6224,10 @@ ast_interface_block::hir(exec_list *instructions,
                              "arrays of arrays interface blocks are "
                              "not allowed");
          }
+
+         if (this->layout.flags.q.explicit_binding)
+            validate_binding_qualifier(state, &loc, block_array_type,
+                                       &this->layout);
 
          var = new(state) ir_variable(block_array_type,
                                       this->instance_name,
