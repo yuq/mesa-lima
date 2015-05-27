@@ -2179,7 +2179,7 @@ validate_binding_qualifier(struct _mesa_glsl_parse_state *state,
    }
 
    const struct gl_context *const ctx = state->ctx;
-   unsigned elements = type->is_array() ? type->length : 1;
+   unsigned elements = type->is_array() ? type->arrays_of_arrays_size() : 1;
    unsigned max_index = qual->binding + elements - 1;
    const glsl_type *base_type = type->without_array();
 
