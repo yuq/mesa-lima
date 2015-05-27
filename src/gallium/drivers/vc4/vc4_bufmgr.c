@@ -286,6 +286,7 @@ vc4_bo_get_dmabuf(struct vc4_bo *bo)
                         bo->handle);
                 return -1;
         }
+        bo->private = false;
 
         return fd;
 }
