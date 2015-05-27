@@ -541,17 +541,22 @@ struct anv_query_pool {
    struct anv_bo                                bo;
 };
 
+struct anv_descriptor_slot {
+   bool dynamic;
+   uint8_t index;
+} entries[0];
+
 struct anv_descriptor_set_layout {
    struct {
       uint32_t surface_count;
-      uint32_t *surface_start;
+      struct anv_descriptor_slot *surface_start;
       uint32_t sampler_count;
-      uint32_t *sampler_start;
+      struct anv_descriptor_slot *sampler_start;
    } stage[VK_NUM_SHADER_STAGE];
 
    uint32_t count;
    uint32_t num_dynamic_buffers;
-   uint32_t entries[0];
+   struct anv_descriptor_slot entries[0];
 };
 
 struct anv_descriptor {
@@ -754,6 +759,7 @@ struct anv_surface_view {
    struct anv_state                             surface_state;
    struct anv_bo *                              bo;
    uint32_t                                     offset;
+   uint32_t                                     range;
    VkExtent3D                                   extent;
    VkFormat                                     format;
 };
