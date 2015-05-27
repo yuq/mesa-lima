@@ -914,6 +914,8 @@ brw_alu3(struct brw_codegen *p, unsigned opcode, struct brw_reg dest,
          brw_inst_set_3src_src_type(devinfo, inst, BRW_3SRC_TYPE_UD);
          brw_inst_set_3src_dst_type(devinfo, inst, BRW_3SRC_TYPE_UD);
          break;
+      default:
+         unreachable("not reached");
       }
    }
 
