@@ -1,5 +1,14 @@
 #! /usr/bin/env python
 
+import cStringIO
+import os
+import re
+import shutil
+import struct
+import subprocess
+import sys
+import tempfile
+
 def print_usage(err):
    print """\
 glsl_scraper.py [options] file
@@ -15,8 +24,6 @@ Options:
    -o outfile           Output to the given file (default: stdout)
    --with-glslang=PATH  Full path to the glslangValidator program"""
    exit(err)
-
-import os, sys, re, cStringIO, tempfile, subprocess, struct, shutil
 
 class Shader:
    def __init__(self, stage):
