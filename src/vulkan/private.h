@@ -401,18 +401,35 @@ VkResult anv_reloc_list_init(struct anv_reloc_list *list,
 void anv_reloc_list_finish(struct anv_reloc_list *list,
                            struct anv_device *device);
 
+struct anv_batch_bo {
+   struct anv_bo                                bo;
+
+   /* Bytes actually consumed in this batch BO */
+   size_t                                       length;
+
+   /* These offsets reference the per-batch reloc list */
+   size_t                                       first_reloc;
+   size_t                                       num_relocs;
+
+   struct anv_batch_bo *                        prev_batch_bo;
+};
+
 struct anv_batch {
    struct anv_device *                          device;
 
-   struct anv_bo                                bo;
+   void *                                       start;
+   void *                                       end;
    void *                                       next;
 
-   struct anv_reloc_list                        cmd_relocs;
+   struct anv_reloc_list                        relocs;
+
+   /* This callback is called (with the associated user data) in the event
+    * that the batch runs out of space.
+    */
+   VkResult (*extend_cb)(struct anv_batch *, void *);
+   void *                                       user_data;
 };
 
-VkResult anv_batch_init(struct anv_batch *batch, struct anv_device *device);
-void anv_batch_finish(struct anv_batch *batch);
-void anv_batch_reset(struct anv_batch *batch);
 void *anv_batch_emit_dwords(struct anv_batch *batch, int num_dwords);
 void anv_batch_emit_batch(struct anv_batch *batch, struct anv_batch *other);
 uint64_t anv_batch_emit_reloc(struct anv_batch *batch,
@@ -433,13 +450,12 @@ __gen_combine_address(struct anv_batch *batch, void *location,
    if (address.bo == NULL) {
       return delta;
    } else {
-      assert(batch->bo.map <= location &&
-             (char *) location < (char *) batch->bo.map + batch->bo.size);
+      assert(batch->start <= location && location < batch->end);
 
       return anv_batch_emit_reloc(batch, location, address.bo, address.offset + delta);
    }
 }
-   
+
 #include "gen7_pack.h"
 #include "gen75_pack.h"
 #undef GEN8_3DSTATE_MULTISAMPLE
@@ -597,11 +613,13 @@ struct anv_cmd_buffer {
    struct drm_i915_gem_execbuffer2              execbuf;
    struct drm_i915_gem_exec_object2 *           exec2_objects;
    struct anv_bo **                             exec2_bos;
+   uint32_t                                     exec2_array_length;
    bool                                         need_reloc;
    uint32_t                                     serial;
 
    uint32_t                                     bo_count;
    struct anv_batch                             batch;
+   struct anv_batch_bo *                        last_batch_bo;
    struct anv_bo                                surface_bo;
    uint32_t                                     surface_next;
    struct anv_reloc_list                        surface_relocs;
@@ -642,6 +660,7 @@ struct anv_pipeline {
    struct anv_object                            base;
    struct anv_device *                          device;
    struct anv_batch                             batch;
+   uint32_t                                     batch_data[256];
    struct anv_shader *                          shaders[VK_NUM_SHADER_STAGE];
    struct anv_pipeline_layout *                 layout;
    bool                                         use_repclear;

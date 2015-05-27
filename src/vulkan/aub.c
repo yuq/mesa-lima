@@ -216,7 +216,8 @@ struct aub_bo {
 };
 
 static void
-relocate_bo(struct anv_bo *bo, struct anv_reloc_list *list, struct aub_bo *bos)
+relocate_bo(struct anv_bo *bo, struct drm_i915_gem_relocation_entry *relocs,
+            size_t num_relocs, struct aub_bo *bos)
 {
    struct aub_bo *aub_bo = &bos[bo->index];
    struct drm_i915_gem_relocation_entry *reloc;
@@ -224,8 +225,8 @@ relocate_bo(struct anv_bo *bo, struct anv_reloc_list *list, struct aub_bo *bos)
 
    aub_bo->relocated = malloc(bo->size);
    memcpy(aub_bo->relocated, aub_bo->map, bo->size);
-   for (size_t i = 0; i < list->num_relocs; i++) {
-      reloc = &list->relocs[i];
+   for (size_t i = 0; i < num_relocs; i++) {
+      reloc = &relocs[i];
       assert(reloc->offset < bo->size);
       dw = aub_bo->relocated + reloc->offset;
       *dw = bos[reloc->target_handle].offset + reloc->delta;
@@ -240,7 +241,7 @@ anv_cmd_buffer_dump(struct anv_cmd_buffer *cmd_buffer)
    struct anv_aub_writer *writer;
    struct anv_bo *bo;
    uint32_t ring_flag = 0;
-   uint32_t offset, length;
+   uint32_t offset;
    struct aub_bo *aub_bos;
 
    writer = get_anv_aub_writer(device);
@@ -260,17 +261,29 @@ anv_cmd_buffer_dump(struct anv_cmd_buffer *cmd_buffer)
       offset = ALIGN_U32(offset + bo->size + 4095, 4096);
    }
 
-   relocate_bo(&batch->bo, &batch->cmd_relocs, aub_bos);
+   struct anv_batch_bo *first_bbo;
+   for (struct anv_batch_bo *bbo = cmd_buffer->last_batch_bo;
+        bbo != NULL; bbo = bbo->prev_batch_bo) {
+      /* Keep stashing the current BO until we get to the beginning */
+      first_bbo = bbo;
+
+      /* Handle relocations for this batch BO */
+      relocate_bo(&bbo->bo, &batch->relocs.relocs[bbo->first_reloc],
+                  bbo->num_relocs, aub_bos);
+   }
+   assert(first_bbo->prev_batch_bo == NULL);
+
    relocate_bo(&cmd_buffer->surface_bo,
-               &cmd_buffer->surface_relocs, aub_bos);
+               cmd_buffer->surface_relocs.relocs,
+               cmd_buffer->surface_relocs.num_relocs, aub_bos);
 
    for (uint32_t i = 0; i < cmd_buffer->bo_count; i++) {
       bo = cmd_buffer->exec2_bos[i];
       if (i == cmd_buffer->bo_count - 1) {
-         length = batch->next - batch->bo.map;
+         assert(bo == &first_bbo->bo);
          aub_write_trace_block(writer, AUB_TRACE_TYPE_BATCH,
                                aub_bos[i].relocated,
-                               length, aub_bos[i].offset);
+                               first_bbo->length, aub_bos[i].offset);
       } else {
          aub_write_trace_block(writer, AUB_TRACE_TYPE_NOTYPE,
                                aub_bos[i].relocated,
@@ -283,7 +296,7 @@ anv_cmd_buffer_dump(struct anv_cmd_buffer *cmd_buffer)
    }
 
    /* Dump ring buffer */
-   aub_build_dump_ringbuffer(writer, aub_bos[batch->bo.index].offset,
+   aub_build_dump_ringbuffer(writer, aub_bos[first_bbo->bo.index].offset,
                              offset, ring_flag);
 
    free(aub_bos);

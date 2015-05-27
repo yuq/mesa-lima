@@ -378,7 +378,7 @@ anv_pipeline_destroy(struct anv_device *device,
    assert(obj_type == VK_OBJECT_TYPE_PIPELINE);
 
    anv_compiler_free(pipeline);
-   anv_batch_finish(&pipeline->batch);
+   anv_reloc_list_finish(&pipeline->batch.relocs, pipeline->device);
    anv_device_free(pipeline->device, pipeline);
 }
 
@@ -412,9 +412,14 @@ anv_pipeline_create(
    pipeline->device = device;
    pipeline->layout = (struct anv_pipeline_layout *) pCreateInfo->layout;
    memset(pipeline->shaders, 0, sizeof(pipeline->shaders));
-   result = anv_batch_init(&pipeline->batch, device);
-   if (result != VK_SUCCESS)
-      goto fail;
+
+   result = anv_reloc_list_init(&pipeline->batch.relocs, device);
+   if (result != VK_SUCCESS) {
+      anv_device_free(device, pipeline);
+      return result;
+   }
+   pipeline->batch.next = pipeline->batch.start = pipeline->batch_data;
+   pipeline->batch.end = pipeline->batch.start + sizeof(pipeline->batch_data);
 
    anv_state_stream_init(&pipeline->program_stream,
                          &device->instruction_block_pool);
@@ -672,11 +677,6 @@ anv_pipeline_create(
    *pPipeline = (VkPipeline) pipeline;
 
    return VK_SUCCESS;
-
- fail:
-   anv_device_free(device, pipeline);
-   
-   return result;
 }
 
 VkResult anv_CreateGraphicsPipelineDerivative(

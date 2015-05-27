@@ -570,47 +570,64 @@ anv_reloc_list_grow(struct anv_reloc_list *list, struct anv_device *device,
    return VK_SUCCESS;
 }
 
-VkResult
-anv_batch_init(struct anv_batch *batch, struct anv_device *device)
+static VkResult
+anv_batch_bo_create(struct anv_device *device, struct anv_batch_bo **bbo_out)
 {
    VkResult result;
 
-   result = anv_bo_pool_alloc(&device->batch_bo_pool, &batch->bo);
-   if (result != VK_SUCCESS)
-      return result;
+   struct anv_batch_bo *bbo =
+      anv_device_alloc(device, sizeof(*bbo), 8, VK_SYSTEM_ALLOC_TYPE_INTERNAL);
+   if (bbo == NULL)
+      return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
-   result = anv_reloc_list_init(&batch->cmd_relocs, device);
+   bbo->num_relocs = 0;
+   bbo->prev_batch_bo = NULL;
+
+   result = anv_bo_pool_alloc(&device->batch_bo_pool, &bbo->bo);
    if (result != VK_SUCCESS) {
-      anv_bo_pool_free(&device->batch_bo_pool, &batch->bo);
+      anv_device_free(device, bbo);
       return result;
    }
 
-   batch->device = device;
-   batch->next = batch->bo.map;
+   *bbo_out = bbo;
 
    return VK_SUCCESS;
 }
 
-void
-anv_batch_finish(struct anv_batch *batch)
+static void
+anv_batch_bo_start(struct anv_batch_bo *bbo, struct anv_batch *batch,
+                   size_t batch_padding)
 {
-   anv_bo_pool_free(&batch->device->batch_bo_pool, &batch->bo);
-   anv_reloc_list_finish(&batch->cmd_relocs, batch->device);
+   batch->next = batch->start = bbo->bo.map;
+   batch->end = bbo->bo.map + bbo->bo.size - batch_padding;
+   bbo->first_reloc = batch->relocs.num_relocs;
 }
 
-void
-anv_batch_reset(struct anv_batch *batch)
+static void
+anv_batch_bo_finish(struct anv_batch_bo *bbo, struct anv_batch *batch)
 {
-   batch->next = batch->bo.map;
-   batch->cmd_relocs.num_relocs = 0;
+   assert(batch->start == bbo->bo.map);
+   bbo->length = batch->next - batch->start;
+   bbo->num_relocs = batch->relocs.num_relocs - bbo->first_reloc;
+}
+
+static void
+anv_batch_bo_destroy(struct anv_batch_bo *bbo, struct anv_device *device)
+{
+   anv_bo_pool_free(&device->batch_bo_pool, &bbo->bo);
+   anv_device_free(device, bbo);
 }
 
 void *
 anv_batch_emit_dwords(struct anv_batch *batch, int num_dwords)
 {
+   if (batch->next + num_dwords * 4 > batch->end)
+      batch->extend_cb(batch, batch->user_data);
+
    void *p = batch->next;
 
    batch->next += num_dwords * 4;
+   assert(batch->next <= batch->end);
 
    return p;
 }
@@ -662,12 +679,19 @@ anv_batch_emit_batch(struct anv_batch *batch, struct anv_batch *other)
 {
    uint32_t size, offset;
 
-   size = other->next - other->bo.map;
-   memcpy(batch->next, other->bo.map, size);
+   size = other->next - other->start;
+   assert(size % 4 == 0);
 
-   offset = batch->next - batch->bo.map;
-   anv_reloc_list_append(&batch->cmd_relocs, batch->device,
-                         &other->cmd_relocs, offset);
+   if (batch->next + size > batch->end)
+      batch->extend_cb(batch, batch->user_data);
+
+   assert(batch->next + size <= batch->end);
+
+   memcpy(batch->next, other->start, size);
+
+   offset = batch->next - batch->start;
+   anv_reloc_list_append(&batch->relocs, batch->device,
+                         &other->relocs, offset);
 
    batch->next += size;
 }
@@ -676,8 +700,8 @@ uint64_t
 anv_batch_emit_reloc(struct anv_batch *batch,
                      void *location, struct anv_bo *bo, uint32_t delta)
 {
-   return anv_reloc_list_add(&batch->cmd_relocs, batch->device,
-                             location - batch->bo.map, bo, delta);
+   return anv_reloc_list_add(&batch->relocs, batch->device,
+                             location - batch->start, bo, delta);
 }
 
 VkResult anv_QueueSubmit(
@@ -758,7 +782,8 @@ VkResult anv_DeviceWaitIdle(
 
    state = anv_state_pool_alloc(&device->dynamic_state_pool, 32, 32);
    bo = &device->dynamic_state_pool.block_pool->bo;
-   batch.next = state.map;
+   batch.start = batch.next = state.map;
+   batch.end = state.map + 32;
    anv_batch_emit(&batch, GEN8_MI_BATCH_BUFFER_END);
    anv_batch_emit(&batch, GEN8_MI_NOOP);
 
@@ -1244,7 +1269,8 @@ VkResult anv_CreateFence(
 
    fence->bo.map =
       anv_gem_mmap(device, fence->bo.gem_handle, 0, fence->bo.size);
-   batch.next = fence->bo.map;
+   batch.next = batch.start = fence->bo.map;
+   batch.end = fence->bo.map + fence->bo.size;
    anv_batch_emit(&batch, GEN8_MI_BATCH_BUFFER_END);
    anv_batch_emit(&batch, GEN8_MI_NOOP);
 
@@ -2228,10 +2254,44 @@ anv_cmd_buffer_destroy(struct anv_device *device,
    anv_state_stream_finish(&cmd_buffer->surface_state_stream);
    anv_state_stream_finish(&cmd_buffer->dynamic_state_stream);
    anv_state_stream_finish(&cmd_buffer->binding_table_state_stream);
-   anv_batch_finish(&cmd_buffer->batch);
+   anv_reloc_list_finish(&cmd_buffer->batch.relocs, device);
    anv_device_free(device, cmd_buffer->exec2_objects);
    anv_device_free(device, cmd_buffer->exec2_bos);
    anv_device_free(device, cmd_buffer);
+}
+
+static VkResult
+anv_cmd_buffer_chain_batch(struct anv_batch *batch, void *_data)
+{
+   struct anv_cmd_buffer *cmd_buffer = _data;
+   struct anv_batch_bo *new_bbo, *old_bbo = cmd_buffer->last_batch_bo;
+
+   VkResult result = anv_batch_bo_create(cmd_buffer->device, &new_bbo);
+   if (result != VK_SUCCESS)
+      return result;
+
+   struct GEN8_MI_BATCH_BUFFER_START cmd = {
+      GEN8_MI_BATCH_BUFFER_START_header,
+      ._2ndLevelBatchBuffer = _1stlevelbatch,
+      .AddressSpaceIndicator = ASI_PPGTT,
+      .BatchBufferStartAddress = { &new_bbo->bo, 0 },
+   };
+   GEN8_MI_BATCH_BUFFER_START_pack(batch, batch->next, &cmd);
+
+   batch->next += GEN8_MI_BATCH_BUFFER_START_length * 4;
+
+   /* Pad out to a 2-dword aligned boundary with zeros */
+   if ((uintptr_t)batch->next % 8 != 0)
+      *(uint32_t *)batch->next = 0;
+
+   anv_batch_bo_finish(cmd_buffer->last_batch_bo, batch);
+
+   new_bbo->prev_batch_bo = old_bbo;
+   cmd_buffer->last_batch_bo = new_bbo;
+
+   anv_batch_bo_start(new_bbo, batch, GEN8_MI_BATCH_BUFFER_START_length * 4);
+
+   return VK_SUCCESS;
 }
 
 VkResult anv_CreateCommandBuffer(
@@ -2256,33 +2316,32 @@ VkResult anv_CreateCommandBuffer(
    memset(&cmd_buffer->default_bindings, 0, sizeof(cmd_buffer->default_bindings));
    cmd_buffer->bindings = &cmd_buffer->default_bindings;
 
-   result = anv_batch_init(&cmd_buffer->batch, device);
+   result = anv_batch_bo_create(device, &cmd_buffer->last_batch_bo);
    if (result != VK_SUCCESS)
       goto fail;
 
+   result = anv_reloc_list_init(&cmd_buffer->batch.relocs, device);
+   if (result != VK_SUCCESS)
+      goto fail_batch_bo;
+
+   cmd_buffer->batch.device = device;
+   cmd_buffer->batch.extend_cb = anv_cmd_buffer_chain_batch;
+   cmd_buffer->batch.user_data = cmd_buffer;
+
+   anv_batch_bo_start(cmd_buffer->last_batch_bo, &cmd_buffer->batch,
+                      GEN8_MI_BATCH_BUFFER_START_length * 4);
+
    result = anv_bo_pool_alloc(&device->batch_bo_pool, &cmd_buffer->surface_bo);
    if (result != VK_SUCCESS)
-      goto fail_batch;
+      goto fail_batch_relocs;
 
    /* Start surface_next at 1 so surface offset 0 is invalid. */
    cmd_buffer->surface_next = 1;
    anv_reloc_list_init(&cmd_buffer->surface_relocs, device);
 
-   cmd_buffer->exec2_objects =
-      anv_device_alloc(device, 8192 * sizeof(cmd_buffer->exec2_objects[0]), 8,
-                       VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
-   if (cmd_buffer->exec2_objects == NULL) {
-      result = vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
-      goto fail_surface_bo;
-   }
-
-   cmd_buffer->exec2_bos =
-      anv_device_alloc(device, 8192 * sizeof(cmd_buffer->exec2_bos[0]), 8,
-                       VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
-   if (cmd_buffer->exec2_bos == NULL) {
-      result = vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
-      goto fail_exec2_objects;
-   }
+   cmd_buffer->exec2_objects = NULL;
+   cmd_buffer->exec2_bos = NULL;
+   cmd_buffer->exec2_array_length = 0;
 
    anv_state_stream_init(&cmd_buffer->binding_table_state_stream,
                          &device->binding_table_block_pool);
@@ -2299,12 +2358,10 @@ VkResult anv_CreateCommandBuffer(
 
    return VK_SUCCESS;
 
- fail_exec2_objects:
-   anv_device_free(device, cmd_buffer->exec2_objects);
- fail_surface_bo:
-   anv_bo_pool_free(&device->batch_bo_pool, &cmd_buffer->surface_bo);
- fail_batch:
-   anv_batch_finish(&cmd_buffer->batch);
+ fail_batch_relocs:
+   anv_reloc_list_finish(&cmd_buffer->batch.relocs, device);
+ fail_batch_bo:
+   anv_batch_bo_destroy(cmd_buffer->last_batch_bo, device);
  fail:
    anv_device_free(device, cmd_buffer);
 
@@ -2376,16 +2433,51 @@ VkResult anv_BeginCommandBuffer(
    return VK_SUCCESS;
 }
 
-static void
+static VkResult
 anv_cmd_buffer_add_bo(struct anv_cmd_buffer *cmd_buffer,
                       struct anv_bo *bo, struct anv_reloc_list *list)
 {
    struct drm_i915_gem_exec_object2 *obj;
 
-   bo->index = cmd_buffer->bo_count;
+   if (bo->index < cmd_buffer->bo_count &&
+       cmd_buffer->exec2_bos[bo->index] == bo)
+      return VK_SUCCESS;
+
+   if (cmd_buffer->bo_count >= cmd_buffer->exec2_array_length) {
+      uint32_t new_len = cmd_buffer->exec2_objects ?
+                         cmd_buffer->exec2_array_length * 2 : 64;
+
+      struct drm_i915_gem_exec_object2 *new_objects =
+         anv_device_alloc(cmd_buffer->device, new_len * sizeof(*new_objects),
+                          8, VK_SYSTEM_ALLOC_TYPE_INTERNAL);
+      if (new_objects == NULL)
+         return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+
+      struct anv_bo **new_bos =
+         anv_device_alloc(cmd_buffer->device, new_len * sizeof(*new_bos),
+                          8, VK_SYSTEM_ALLOC_TYPE_INTERNAL);
+      if (new_objects == NULL) {
+         anv_device_free(cmd_buffer->device, new_objects);
+         return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+      }
+
+      if (cmd_buffer->exec2_objects) {
+         memcpy(new_objects, cmd_buffer->exec2_objects,
+                cmd_buffer->bo_count * sizeof(*new_objects));
+         memcpy(new_bos, cmd_buffer->exec2_bos,
+                cmd_buffer->bo_count * sizeof(*new_bos));
+      }
+
+      cmd_buffer->exec2_objects = new_objects;
+      cmd_buffer->exec2_bos = new_bos;
+      cmd_buffer->exec2_array_length = new_len;
+   }
+
+   assert(cmd_buffer->bo_count < cmd_buffer->exec2_array_length);
+
+   bo->index = cmd_buffer->bo_count++;
    obj = &cmd_buffer->exec2_objects[bo->index];
    cmd_buffer->exec2_bos[bo->index] = bo;
-   cmd_buffer->bo_count++;
 
    obj->handle = bo->gem_handle;
    obj->relocation_count = 0;
@@ -2400,27 +2492,16 @@ anv_cmd_buffer_add_bo(struct anv_cmd_buffer *cmd_buffer,
       obj->relocation_count = list->num_relocs;
       obj->relocs_ptr = (uintptr_t) list->relocs;
    }
+
+   return VK_SUCCESS;
 }
 
 static void
 anv_cmd_buffer_add_validate_bos(struct anv_cmd_buffer *cmd_buffer,
                                 struct anv_reloc_list *list)
 {
-   struct anv_bo *bo, *batch_bo;
-
-   batch_bo = &cmd_buffer->batch.bo;
-   for (size_t i = 0; i < list->num_relocs; i++) {
-      bo = list->reloc_bos[i];
-      /* Skip any relocations targeting the batch bo. We need to make sure
-       * it's the last in the list so we'll add it manually later.
-       */
-      if (bo == batch_bo)
-         continue;
-      if (bo->index < cmd_buffer->bo_count && cmd_buffer->exec2_bos[bo->index] == bo)
-         continue;
-
-      anv_cmd_buffer_add_bo(cmd_buffer, bo, NULL);
-   }
+   for (size_t i = 0; i < list->num_relocs; i++)
+      anv_cmd_buffer_add_bo(cmd_buffer, list->reloc_bos[i], NULL);
 }
 
 static void
@@ -2456,11 +2537,18 @@ VkResult anv_EndCommandBuffer(
    anv_batch_emit(batch, GEN8_MI_BATCH_BUFFER_END);
 
    /* Round batch up to an even number of dwords. */
-   if ((batch->next - batch->bo.map) & 4)
+   if ((batch->next - batch->start) & 4)
       anv_batch_emit(batch, GEN8_MI_NOOP);
+
+   anv_batch_bo_finish(cmd_buffer->last_batch_bo, &cmd_buffer->batch);
 
    cmd_buffer->bo_count = 0;
    cmd_buffer->need_reloc = false;
+
+   /* Find the first batch bo in the list */
+   struct anv_batch_bo *batch_bo = cmd_buffer->last_batch_bo;
+   while (batch_bo->prev_batch_bo)
+      batch_bo = batch_bo->prev_batch_bo;
 
    /* Lock for access to bo->index. */
    pthread_mutex_lock(&device->mutex);
@@ -2470,15 +2558,15 @@ VkResult anv_EndCommandBuffer(
                          &cmd_buffer->surface_relocs);
 
    anv_cmd_buffer_add_validate_bos(cmd_buffer, &cmd_buffer->surface_relocs);
-   anv_cmd_buffer_add_validate_bos(cmd_buffer, &batch->cmd_relocs);
-   anv_cmd_buffer_add_bo(cmd_buffer, &batch->bo, &batch->cmd_relocs);
+   anv_cmd_buffer_add_validate_bos(cmd_buffer, &batch->relocs);
+   anv_cmd_buffer_add_bo(cmd_buffer, &batch_bo->bo, &batch->relocs);
    anv_cmd_buffer_process_relocs(cmd_buffer, &cmd_buffer->surface_relocs);
-   anv_cmd_buffer_process_relocs(cmd_buffer, &batch->cmd_relocs);
+   anv_cmd_buffer_process_relocs(cmd_buffer, &batch->relocs);
 
    cmd_buffer->execbuf.buffers_ptr = (uintptr_t) cmd_buffer->exec2_objects;
    cmd_buffer->execbuf.buffer_count = cmd_buffer->bo_count;
    cmd_buffer->execbuf.batch_start_offset = 0;
-   cmd_buffer->execbuf.batch_len = batch->next - batch->bo.map;
+   cmd_buffer->execbuf.batch_len = batch->next - batch->start;
    cmd_buffer->execbuf.cliprects_ptr = 0;
    cmd_buffer->execbuf.num_cliprects = 0;
    cmd_buffer->execbuf.DR1 = 0;
@@ -2501,7 +2589,18 @@ VkResult anv_ResetCommandBuffer(
 {
    struct anv_cmd_buffer *cmd_buffer = (struct anv_cmd_buffer *) cmdBuffer;
 
-   anv_batch_reset(&cmd_buffer->batch);
+   /* Delete all but the first batch bo */
+   while (cmd_buffer->last_batch_bo->prev_batch_bo) {
+      struct anv_batch_bo *prev = cmd_buffer->last_batch_bo->prev_batch_bo;
+      anv_batch_bo_destroy(cmd_buffer->last_batch_bo, cmd_buffer->device);
+      cmd_buffer->last_batch_bo = prev;
+   }
+   assert(cmd_buffer->last_batch_bo->prev_batch_bo == NULL);
+
+   cmd_buffer->batch.relocs.num_relocs = 0;
+   anv_batch_bo_start(cmd_buffer->last_batch_bo, &cmd_buffer->batch,
+                      GEN8_MI_BATCH_BUFFER_START_length * 4);
+
    cmd_buffer->surface_next = 0;
    cmd_buffer->surface_relocs.num_relocs = 0;
 
