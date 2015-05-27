@@ -396,6 +396,11 @@ struct anv_reloc_list {
    struct anv_bo **                             reloc_bos;
 };
 
+VkResult anv_reloc_list_init(struct anv_reloc_list *list,
+                             struct anv_device *device);
+void anv_reloc_list_finish(struct anv_reloc_list *list,
+                           struct anv_device *device);
+
 struct anv_batch {
    struct anv_device *                          device;
 

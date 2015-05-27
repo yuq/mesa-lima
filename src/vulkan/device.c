@@ -501,7 +501,7 @@ VkResult anv_GetDeviceQueue(
    return VK_SUCCESS;
 }
 
-static VkResult
+VkResult
 anv_reloc_list_init(struct anv_reloc_list *list, struct anv_device *device)
 {
    list->num_relocs = 0;
@@ -525,7 +525,7 @@ anv_reloc_list_init(struct anv_reloc_list *list, struct anv_device *device)
    return VK_SUCCESS;
 }
 
-static void
+void
 anv_reloc_list_finish(struct anv_reloc_list *list, struct anv_device *device)
 {
    anv_device_free(device, list->relocs);
