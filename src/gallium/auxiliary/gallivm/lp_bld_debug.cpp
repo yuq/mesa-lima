@@ -277,7 +277,9 @@ disassemble(const void* func, llvm::raw_ostream & Out)
    options.StackAlignmentOverride = 4;
 #endif
 #if defined(DEBUG) || defined(PROFILE)
+#if HAVE_LLVM < 0x0307
    options.NoFramePointerElim = true;
+#endif
 #endif
    OwningPtr<TargetMachine> TM(T->createTargetMachine(Triple, sys::getHostCPUName(), "", options));
 

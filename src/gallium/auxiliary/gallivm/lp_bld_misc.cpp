@@ -439,7 +439,9 @@ lp_build_create_jit_compiler_for_module(LLVMExecutionEngineRef *OutJIT,
 #if HAVE_LLVM < 0x0304
    options.NoFramePointerElimNonLeaf = true;
 #endif
+#if HAVE_LLVM < 0x0307
    options.NoFramePointerElim = true;
+#endif
 #endif
 
    builder.setEngineKind(EngineKind::JIT)
