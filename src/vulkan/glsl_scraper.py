@@ -1,5 +1,6 @@
 #! /usr/bin/env python
 
+import argparse
 import cStringIO
 import os
 import re
@@ -9,27 +10,6 @@ import subprocess
 import sys
 import tempfile
 from textwrap import dedent
-
-def print_usage(err):
-   print(dedent("""\
-      glsl_scraper.py [options] file
-
-      This program scrapes a C file for any instance of the GLSL_VK_SHADER macro,
-      grabs the GLSL source code, compiles it to SPIR-V.  The resulting SPIR-V
-      code is written to another C file as an array of 32-bit words.
-
-      If '-' is passed as the input file or output file, stdin or stdout will be
-      used instead of a file on disc.
-
-      Options:
-         -o outfile           Output to the given file (default: stdout)
-         --with-glslang=PATH  Full path to the glslangValidator program"""))
-   exit(err)
-
-def usage_error(msg):
-   print('usage error: {}'.format(msg))
-   print('')
-   print_usage(1)
 
 class Shader:
    def __init__(self, stage):
@@ -206,31 +186,35 @@ def open_file(name, mode):
    else:
       return open(name, mode)
 
-infname = None
-outfname = '-'
-glslang = 'glslangValidator'
-glsl_only = False
+def parse_args():
+   description = dedent("""\
+      This program scrapes a C file for any instance of the GLSL_VK_SHADER
+      macro, grabs the GLSL source code, compiles it to SPIR-V.  The resulting
+      SPIR-V code is written to another C file as an array of 32-bit words.
 
-arg_idx = 1
-while arg_idx < len(sys.argv):
-   if sys.argv[arg_idx] == '-h':
-      print_usage(0)
-   elif sys.argv[arg_idx] == '-o':
-      arg_idx += 1
-      outfname = sys.argv[arg_idx]
-   elif sys.argv[arg_idx].startswith('--with-glslang='):
-      glslang = sys.argv[arg_idx][len('--with-glslang='):]
-   elif sys.argv[arg_idx] == '--glsl-only':
-      glsl_only = True;
-   elif sys.argv[arg_idx].startswith('-'):
-      usage_error('unknown option {!r}'.format(sys.argv[arg_idx]))
-   else:
-      infname = sys.argv[arg_idx]
-      break
-   arg_idx += 1
+      If '-' is passed as the input file or output file, stdin or stdout will be
+      used instead of a file on disc.""")
 
-if arg_idx < len(sys.argv) - 1 or not infname or not outfname:
-   print_usage(1)
+   p = argparse.ArgumentParser(
+         description=description,
+         formatter_class=argparse.RawDescriptionHelpFormatter)
+   p.add_argument('-o', '--outfile', default='-',
+                  help='Output to the given file (default: stdout).')
+   p.add_argument('--with-glslang', metavar='PATH',
+                  default='glslangValidator',
+                  dest='glslang',
+                  help='Full path to the glslangValidator program.')
+   p.add_argument('--glsl-only', action='store_true')
+   p.add_argument('infile', metavar='INFILE')
+
+   return p.parse_args()
+
+
+args = parse_args()
+infname = args.infile
+outfname = args.outfile
+glslang = args.glslang
+glsl_only = args.glsl_only
 
 with open_file(infname, 'r') as infile:
    parser = Parser(infile)
