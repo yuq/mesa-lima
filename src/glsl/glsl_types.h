@@ -578,6 +578,25 @@ struct glsl_type {
    }
 
    /**
+    * Return the total number of elements in an array including the elements
+    * in arrays of arrays.
+    */
+   unsigned arrays_of_arrays_size() const
+   {
+      if (!is_array())
+         return 0;
+
+      unsigned size = length;
+      const glsl_type *base_type = fields.array;
+
+      while (base_type->is_array()) {
+         size = size * base_type->length;
+         base_type = base_type->fields.array;
+      }
+      return size;
+   }
+
+   /**
     * Return the amount of atomic counter storage required for a type.
     */
    unsigned atomic_size() const
