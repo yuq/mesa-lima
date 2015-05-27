@@ -145,14 +145,14 @@ wrap_nearest_clamp(float s, unsigned size, int offset, int *icoord)
 {
    /* s limited to [0,1] */
    /* i limited to [0,size-1] */
+   s *= size;
+   s += offset;
    if (s <= 0.0F)
       *icoord = 0;
-   else if (s >= 1.0F)
+   else if (s >= size)
       *icoord = size - 1;
    else
-      *icoord = util_ifloor(s * size);
-   if (offset)
-      *icoord = CLAMP(*icoord + offset, 0, size - 1);
+      *icoord = util_ifloor(s);
 }
 
 
@@ -161,17 +161,18 @@ wrap_nearest_clamp_to_edge(float s, unsigned size, int offset, int *icoord)
 {
    /* s limited to [min,max] */
    /* i limited to [0, size-1] */
-   const float min = 1.0F / (2.0F * size);
-   const float max = 1.0F - min;
+   const float min = 0.5F;
+   const float max = (float)size - 0.5F;
+
+   s *= size;
+   s += offset;
 
    if (s < min)
       *icoord = 0;
    else if (s > max)
       *icoord = size - 1;
    else
-      *icoord = util_ifloor(s * size);
-   if (offset)
-      *icoord = CLAMP(*icoord + offset, 0, size - 1);
+      *icoord = util_ifloor(s);
 }
 
 
@@ -180,26 +181,30 @@ wrap_nearest_clamp_to_border(float s, unsigned size, int offset, int *icoord)
 {
    /* s limited to [min,max] */
    /* i limited to [-1, size] */
-   const float min = -1.0F / (2.0F * size);
-   const float max = 1.0F - min;
+   const float min = -0.5F;
+   const float max = size + 0.5F;
+
+   s *= size;
+   s += offset;
    if (s <= min)
       *icoord = -1;
    else if (s >= max)
       *icoord = size;
    else
-      *icoord = util_ifloor(s * size);
-   if (offset)
-      *icoord = CLAMP(*icoord + offset, 0, size - 1);
+      *icoord = util_ifloor(s);
 }
-
 
 static void
 wrap_nearest_mirror_repeat(float s, unsigned size, int offset, int *icoord)
 {
    const float min = 1.0F / (2.0F * size);
    const float max = 1.0F - min;
-   const int flr = util_ifloor(s);
-   float u = frac(s);
+   int flr;
+   float u;
+
+   s += (float)offset / size;
+   flr = util_ifloor(s);
+   u = frac(s);
    if (flr & 1)
       u = 1.0F - u;
    if (u < min)
@@ -208,8 +213,6 @@ wrap_nearest_mirror_repeat(float s, unsigned size, int offset, int *icoord)
       *icoord = size - 1;
    else
       *icoord = util_ifloor(u * size);
-   if (offset)
-      *icoord = CLAMP(*icoord + offset, 0, size - 1);
 }
 
 
@@ -218,15 +221,13 @@ wrap_nearest_mirror_clamp(float s, unsigned size, int offset, int *icoord)
 {
    /* s limited to [0,1] */
    /* i limited to [0,size-1] */
-   const float u = fabsf(s);
+   const float u = fabsf(s * size + offset);
    if (u <= 0.0F)
       *icoord = 0;
-   else if (u >= 1.0F)
+   else if (u >= size)
       *icoord = size - 1;
    else
-      *icoord = util_ifloor(u * size);
-   if (offset)
-      *icoord = CLAMP(*icoord + offset, 0, size - 1);
+      *icoord = util_ifloor(u);
 }
 
 
@@ -235,36 +236,33 @@ wrap_nearest_mirror_clamp_to_edge(float s, unsigned size, int offset, int *icoor
 {
    /* s limited to [min,max] */
    /* i limited to [0, size-1] */
-   const float min = 1.0F / (2.0F * size);
-   const float max = 1.0F - min;
-   const float u = fabsf(s);
+   const float min = 0.5F;
+   const float max = (float)size - 0.5F;
+   const float u = fabsf(s * size + offset);
+
    if (u < min)
       *icoord = 0;
    else if (u > max)
       *icoord = size - 1;
    else
-      *icoord = util_ifloor(u * size);
-   if (offset)
-      *icoord = CLAMP(*icoord + offset, 0, size - 1);
+      *icoord = util_ifloor(u);
 }
 
 
 static void
 wrap_nearest_mirror_clamp_to_border(float s, unsigned size, int offset, int *icoord)
 {
-   /* s limited to [min,max] */
-   /* i limited to [0, size-1] */
-   const float min = -1.0F / (2.0F * size);
-   const float max = 1.0F - min;
-   const float u = fabsf(s);
+   /* u limited to [-0.5, size-0.5] */
+   const float min = -0.5F;
+   const float max = (float)size + 0.5F;
+   const float u = fabsf(s * size + offset);
+
    if (u < min)
       *icoord = -1;
    else if (u > max)
       *icoord = size;
    else
-      *icoord = util_ifloor(u * size);
-   if (offset)
-      *icoord = CLAMP(*icoord + offset, 0, size - 1);
+      *icoord = util_ifloor(u);
 }
 
 
@@ -293,14 +291,11 @@ static void
 wrap_linear_clamp(float s, unsigned size, int offset,
                   int *icoord0, int *icoord1, float *w)
 {
-   float u = CLAMP(s, 0.0F, 1.0F);
-   u = u * size - 0.5f;
+   float u = CLAMP(s * size + offset, 0.0F, (float)size);
+
+   u = u - 0.5f;
    *icoord0 = util_ifloor(u);
    *icoord1 = *icoord0 + 1;
-   if (offset) {
-      *icoord0 = CLAMP(*icoord0 + offset, 0, size - 1);
-      *icoord1 = CLAMP(*icoord1 + offset, 0, size - 1);
-   }
    *w = frac(u);
 }
 
@@ -309,18 +304,14 @@ static void
 wrap_linear_clamp_to_edge(float s, unsigned size, int offset,
                           int *icoord0, int *icoord1, float *w)
 {
-   float u = CLAMP(s, 0.0F, 1.0F);
-   u = u * size - 0.5f;
+   float u = CLAMP(s * size + offset, 0.0F, (float)size);
+   u = u - 0.5f;
    *icoord0 = util_ifloor(u);
    *icoord1 = *icoord0 + 1;
    if (*icoord0 < 0)
       *icoord0 = 0;
    if (*icoord1 >= (int) size)
       *icoord1 = size - 1;
-   if (offset) {
-      *icoord0 = CLAMP(*icoord0 + offset, 0, size - 1);
-      *icoord1 = CLAMP(*icoord1 + offset, 0, size - 1);
-   }
    *w = frac(u);
 }
 
@@ -329,10 +320,10 @@ static void
 wrap_linear_clamp_to_border(float s, unsigned size, int offset,
                             int *icoord0, int *icoord1, float *w)
 {
-   const float min = -1.0F / (2.0F * size);
-   const float max = 1.0F - min;
-   float u = CLAMP(s, min, max);
-   u = u * size - 0.5f;
+   const float min = -0.5F;
+   const float max = (float)size + 0.5F;
+   float u = CLAMP(s * size + offset, min, max);
+   u = u - 0.5f;
    *icoord0 = util_ifloor(u);
    *icoord1 = *icoord0 + 1;
    *w = frac(u);
@@ -343,8 +334,12 @@ static void
 wrap_linear_mirror_repeat(float s, unsigned size, int offset,
                           int *icoord0, int *icoord1, float *w)
 {
-   const int flr = util_ifloor(s);
-   float u = frac(s);
+   int flr;
+   float u;
+
+   s += (float)offset / size;
+   flr = util_ifloor(s);
+   u = frac(s);
    if (flr & 1)
       u = 1.0F - u;
    u = u * size - 0.5F;
@@ -362,11 +357,9 @@ static void
 wrap_linear_mirror_clamp(float s, unsigned size, int offset,
                          int *icoord0, int *icoord1, float *w)
 {
-   float u = fabsf(s);
-   if (u >= 1.0F)
+   float u = fabsf(s * size + offset);
+   if (u >= size)
       u = (float) size;
-   else
-      u *= size;
    u -= 0.5F;
    *icoord0 = util_ifloor(u);
    *icoord1 = *icoord0 + 1;
@@ -378,11 +371,9 @@ static void
 wrap_linear_mirror_clamp_to_edge(float s, unsigned size, int offset,
                                  int *icoord0, int *icoord1, float *w)
 {
-   float u = fabsf(s);
-   if (u >= 1.0F)
+   float u = fabsf(s * size + offset);
+   if (u >= size)
       u = (float) size;
-   else
-      u *= size;
    u -= 0.5F;
    *icoord0 = util_ifloor(u);
    *icoord1 = *icoord0 + 1;
@@ -398,15 +389,13 @@ static void
 wrap_linear_mirror_clamp_to_border(float s, unsigned size, int offset,
                                    int *icoord0, int *icoord1, float *w)
 {
-   const float min = -1.0F / (2.0F * size);
-   const float max = 1.0F - min;
-   float u = fabsf(s);
+   const float min = -0.5F;
+   const float max = size + 0.5F;
+   float u = fabsf(s * size + offset);
    if (u <= min)
-      u = min * size;
+      u = min;
    else if (u >= max)
-      u = max * size;
-   else
-      u *= size;
+      u = max;
    u -= 0.5F;
    *icoord0 = util_ifloor(u);
    *icoord1 = *icoord0 + 1;
@@ -1040,8 +1029,8 @@ img_filter_2d_linear_repeat_POT(struct sp_sampler_view *sp_sview,
    union tex_tile_address addr;
    int c;
 
-   float u = args->s * xpot - 0.5F;
-   float v = args->t * ypot - 0.5F;
+   float u = (args->s * xpot - 0.5F) + args->offset[0];
+   float v = (args->t * ypot - 0.5F) + args->offset[1];
 
    int uflr = util_ifloor(u);
    int vflr = util_ifloor(v);
@@ -1093,8 +1082,8 @@ img_filter_2d_nearest_repeat_POT(struct sp_sampler_view *sp_sview,
    union tex_tile_address addr;
    int c;
 
-   float u = args->s * xpot;
-   float v = args->t * ypot;
+   float u = args->s * xpot + args->offset[0];
+   float v = args->t * ypot + args->offset[1];
 
    int uflr = util_ifloor(u);
    int vflr = util_ifloor(v);
@@ -1126,8 +1115,8 @@ img_filter_2d_nearest_clamp_POT(struct sp_sampler_view *sp_sview,
    union tex_tile_address addr;
    int c;
 
-   float u = args->s * xpot;
-   float v = args->t * ypot;
+   float u = args->s * xpot + args->offset[0];
+   float v = args->t * ypot + args->offset[1];
 
    int x0, y0;
    const float *out;
@@ -1889,7 +1878,6 @@ compute_lambda_lod(struct sp_sampler_view *sp_sview,
 
    switch (control) {
    case tgsi_sampler_lod_none:
-   case tgsi_sampler_gather:
       /* XXX FIXME */
    case tgsi_sampler_derivs_explicit:
       lambda = sp_sview->compute_lambda(sp_sview, s, t, p) + lod_bias;
@@ -1908,6 +1896,7 @@ compute_lambda_lod(struct sp_sampler_view *sp_sview,
       }
       break;
    case tgsi_sampler_lod_zero:
+   case tgsi_sampler_gather:
       /* this is all static state in the sampler really need clamp here? */
       lod[0] = lod[1] = lod[2] = lod[3] = CLAMP(lod_bias, min_lod, max_lod);
       break;
@@ -2472,6 +2461,7 @@ mip_filter_linear_2d_linear_repeat_POT(
       args.t = t[j];
       args.p = p[j];
       args.face_id = sp_sview->faces[j];
+      args.offset = filt_args->offset;
       args.gather_only = filt_args->control == tgsi_sampler_gather;
       if ((unsigned)level0 >= psview->u.tex.last_level) {
          if (level0 < 0)
