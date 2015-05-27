@@ -26,6 +26,11 @@ def print_usage(err):
          --with-glslang=PATH  Full path to the glslangValidator program"""))
    exit(err)
 
+def usage_error(msg):
+   print('usage error: {}'.format(msg))
+   print('')
+   print_usage(1)
+
 class Shader:
    def __init__(self, stage):
       self.stream = cStringIO.StringIO()
@@ -217,6 +222,8 @@ while arg_idx < len(sys.argv):
       glslang = sys.argv[arg_idx][len('--with-glslang='):]
    elif sys.argv[arg_idx] == '--glsl-only':
       glsl_only = True;
+   elif sys.argv[arg_idx].startswith('-'):
+      usage_error('unknown option {!r}'.format(sys.argv[arg_idx]))
    else:
       infname = sys.argv[arg_idx]
       break
