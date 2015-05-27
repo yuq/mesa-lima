@@ -3881,9 +3881,7 @@ ast_declarator_list::hir(exec_list *instructions,
        * an array of that type.
        */
       if (!(this->type->qualifier.precision == ast_precision_none
-          || precision_qualifier_allowed(var->type)
-          || (var->type->is_array()
-	      && precision_qualifier_allowed(var->type->fields.array)))) {
+          || precision_qualifier_allowed(var->type->without_array()))) {
 
          _mesa_glsl_error(&loc, state,
                           "precision qualifiers apply only to floating point"
