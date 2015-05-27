@@ -3606,6 +3606,10 @@ fs_visitor::lower_integer_multiplication()
           * schedule multi-component multiplications much better.
           */
 
+         if (inst->conditional_mod && inst->dst.is_null()) {
+            inst->dst = fs_reg(GRF, alloc.allocate(dispatch_width / 8),
+                               inst->dst.type, dispatch_width);
+         }
          fs_reg low = inst->dst;
          fs_reg high(GRF, alloc.allocate(dispatch_width / 8),
                      inst->dst.type, dispatch_width);
@@ -3655,6 +3659,13 @@ fs_visitor::lower_integer_multiplication()
          low.stride = 2;
 
          insert(ADD(dst, low, high));
+
+         if (inst->conditional_mod) {
+            fs_reg null(retype(brw_null_reg(), inst->dst.type));
+            fs_inst *mov = MOV(null, inst->dst);
+            mov->conditional_mod = inst->conditional_mod;
+            insert(mov);
+         }
       }
 #undef insert
 
