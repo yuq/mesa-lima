@@ -246,7 +246,7 @@ lp_disassemble(LLVMValueRef func, const void *code) {
 extern "C" void
 lp_profile(LLVMValueRef func, const void *code)
 {
-#if defined(__linux__) && (defined(DEBUG) || defined(PROFILE))
+#if defined(__linux__) && defined(PROFILE)
    static boolean first_time = TRUE;
    static FILE *perf_map_file = NULL;
    static int perf_asm_fd = -1;
