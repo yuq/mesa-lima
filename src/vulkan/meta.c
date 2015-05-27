@@ -482,6 +482,12 @@ anv_device_init_meta_blit_state(struct anv_device *device)
          .sType = VK_STRUCTURE_TYPE_DYNAMIC_RS_STATE_CREATE_INFO,
        },
       &device->blit_state.rs_state);
+
+   anv_CreateDynamicColorBlendState((VkDevice) device,
+      &(VkDynamicCbStateCreateInfo) {
+         .sType = VK_STRUCTURE_TYPE_DYNAMIC_CB_STATE_CREATE_INFO
+      },
+      &device->blit_state.cb_state);
 }
 
 static void
