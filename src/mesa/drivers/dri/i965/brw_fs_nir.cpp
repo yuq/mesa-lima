@@ -131,7 +131,7 @@ fs_visitor::nir_setup_outputs(nir_shader *shader)
 
       switch (stage) {
       case MESA_SHADER_VERTEX:
-         for (int i = 0; i < ALIGN(type_size_scalar(var->type), 4) / 4; i++) {
+         for (unsigned int i = 0; i < ALIGN(type_size_scalar(var->type), 4) / 4; i++) {
             int output = var->data.location + i;
             this->outputs[output] = offset(reg, bld, 4 * i);
             this->output_components[output] = vector_elements;

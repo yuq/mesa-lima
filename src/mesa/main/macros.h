@@ -690,7 +690,12 @@ minify(unsigned value, unsigned levels)
  *
  * \sa ROUND_DOWN_TO()
  */
-#define ALIGN(value, alignment)  (((value) + (alignment) - 1) & ~((alignment) - 1))
+static inline uintptr_t
+ALIGN(uintptr_t value, int32_t alignment)
+{
+   assert((alignment > 0) && _mesa_is_pow_two(alignment));
+   return (((value) + (alignment) - 1) & ~((alignment) - 1));
+}
 
 /**
  * Align a value down to an alignment value
@@ -703,7 +708,12 @@ minify(unsigned value, unsigned levels)
  *
  * \sa ALIGN()
  */
-#define ROUND_DOWN_TO(value, alignment) ((value) & ~(alignment - 1))
+static inline uintptr_t
+ROUND_DOWN_TO(uintptr_t value, int32_t alignment)
+{
+   assert((alignment > 0) && _mesa_is_pow_two(alignment));
+   return ((value) & ~(alignment - 1));
+}
 
 
 /** Cross product of two 3-element vectors */
