@@ -30,6 +30,26 @@
 
 #include "private.h"
 
+/** Log an error message.  */
+void anv_printflike(1, 2)
+anv_loge(const char *format, ...)
+{
+   va_list va;
+
+   va_start(va, format);
+   anv_loge_v(format, va);
+   va_end(va);
+}
+
+/** \see anv_loge() */
+void
+anv_loge_v(const char *format, va_list va)
+{
+   fprintf(stderr, "vk: error: ");
+   vfprintf(stderr, format, va);
+   fprintf(stderr, "\n");
+}
+
 void anv_printflike(3, 4)
 __anv_finishme(const char *file, int line, const char *format, ...)
 {
