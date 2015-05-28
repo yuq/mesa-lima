@@ -185,6 +185,11 @@ device::max_block_size() const {
    return { v.begin(), v.end() };
 }
 
+cl_uint
+device::subgroup_size() const {
+   return get_compute_param<uint32_t>(pipe, PIPE_COMPUTE_CAP_SUBGROUP_SIZE)[0];
+}
+
 std::string
 device::device_name() const {
    return pipe->get_name(pipe);

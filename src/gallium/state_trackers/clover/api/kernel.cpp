@@ -169,7 +169,7 @@ clGetKernelWorkGroupInfo(cl_kernel d_kern, cl_device_id d_dev,
       break;
 
    case CL_KERNEL_PREFERRED_WORK_GROUP_SIZE_MULTIPLE:
-      buf.as_scalar<size_t>() = 1;
+      buf.as_scalar<size_t>() = dev.subgroup_size();
       break;
 
    case CL_KERNEL_PRIVATE_MEM_SIZE:
