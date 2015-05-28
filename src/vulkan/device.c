@@ -2279,15 +2279,19 @@ anv_cmd_buffer_chain_batch(struct anv_batch *batch, void *_data)
    if (result != VK_SUCCESS)
       return result;
 
-   struct GEN8_MI_BATCH_BUFFER_START cmd = {
+   /* We set the end of the batch a little short so we would be sure we
+    * have room for the chaining command.  Since we're about to emit the
+    * chaining command, let's set it back where it should go.
+    */
+   batch->end += GEN8_MI_BATCH_BUFFER_START_length * 4;
+   assert(batch->end == old_bbo->bo.map + old_bbo->bo.size);
+
+   anv_batch_emit(batch, GEN8_MI_BATCH_BUFFER_START,
       GEN8_MI_BATCH_BUFFER_START_header,
       ._2ndLevelBatchBuffer = _1stlevelbatch,
       .AddressSpaceIndicator = ASI_PPGTT,
       .BatchBufferStartAddress = { &new_bbo->bo, 0 },
-   };
-   GEN8_MI_BATCH_BUFFER_START_pack(batch, batch->next, &cmd);
-
-   batch->next += GEN8_MI_BATCH_BUFFER_START_length * 4;
+   );
 
    /* Pad out to a 2-dword aligned boundary with zeros */
    if ((uintptr_t)batch->next % 8 != 0) {
