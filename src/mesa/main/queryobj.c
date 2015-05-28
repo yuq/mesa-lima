@@ -217,7 +217,7 @@ get_query_binding_point(struct gl_context *ctx, GLenum target, GLuint index)
 
    case GL_TESS_CONTROL_SHADER_PATCHES_ARB:
    case GL_TESS_EVALUATION_SHADER_INVOCATIONS_ARB:
-      if (ctx->Extensions.ARB_tessellation_shader)
+      if (_mesa_has_tessellation(ctx))
          return get_pipe_stats_binding_point(ctx, target);
       else
          return NULL;

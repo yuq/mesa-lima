@@ -344,6 +344,17 @@ _mesa_has_compute_shaders(const struct gl_context *ctx)
 }
 
 
+/**
+ * Checks if the context supports tessellation.
+ */
+static inline GLboolean
+_mesa_has_tessellation(const struct gl_context *ctx)
+{
+   return ctx->API == API_OPENGL_CORE &&
+          ctx->Extensions.ARB_tessellation_shader;
+}
+
+
 #ifdef __cplusplus
 }
 #endif
