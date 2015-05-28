@@ -398,27 +398,18 @@ vec4_generator::generate_tex(vec4_instruction *inst,
       brw_mark_surface_used(&prog_data->base, sampler + base_binding_table_index);
    } else {
       /* Non-constant sampler index. */
-      /* Note: this clobbers `dst` as a temporary before emitting the send */
 
       struct brw_reg addr = vec1(retype(brw_address_reg(0), BRW_REGISTER_TYPE_UD));
-      struct brw_reg temp = vec1(retype(dst, BRW_REGISTER_TYPE_UD));
-
       struct brw_reg sampler_reg = vec1(retype(sampler_index, BRW_REGISTER_TYPE_UD));
 
       brw_push_insn_state(p);
       brw_set_default_mask_control(p, BRW_MASK_DISABLE);
       brw_set_default_access_mode(p, BRW_ALIGN_1);
 
-      /* Some care required: `sampler` and `temp` may alias:
-       *    addr = sampler & 0xff
-       *    temp = (sampler << 8) & 0xf00
-       *    addr = addr | temp
-       */
-      brw_ADD(p, addr, sampler_reg, brw_imm_ud(base_binding_table_index));
-      brw_SHL(p, temp, sampler_reg, brw_imm_ud(8u));
-      brw_AND(p, temp, temp, brw_imm_ud(0x0f00));
-      brw_AND(p, addr, addr, brw_imm_ud(0x0ff));
-      brw_OR(p, addr, addr, temp);
+      /* addr = ((sampler * 0x101) + base_binding_table_index) & 0xfff */
+      brw_MUL(p, addr, sampler_reg, brw_imm_ud(0x101));
+      brw_ADD(p, addr, addr, brw_imm_ud(base_binding_table_index));
+      brw_AND(p, addr, addr, brw_imm_ud(0xfff));
 
       brw_pop_insn_state(p);
 
