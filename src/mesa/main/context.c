@@ -1331,7 +1331,6 @@ _mesa_free_context_data( struct gl_context *ctx )
    _mesa_reference_vertprog(ctx, &ctx->VertexProgram._Current, NULL);
    _mesa_reference_vertprog(ctx, &ctx->VertexProgram._TnlProgram, NULL);
 
-   _mesa_reference_geomprog(ctx, &ctx->GeometryProgram.Current, NULL);
    _mesa_reference_geomprog(ctx, &ctx->GeometryProgram._Current, NULL);
 
    _mesa_reference_fragprog(ctx, &ctx->FragmentProgram.Current, NULL);

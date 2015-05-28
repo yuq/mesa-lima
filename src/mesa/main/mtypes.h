@@ -2275,16 +2275,10 @@ struct gl_vertex_program_state
  */
 struct gl_geometry_program_state
 {
-   GLboolean Enabled;               /**< GL_ARB_GEOMETRY_SHADER4 */
-   GLboolean _Enabled;              /**< Enabled and valid program? */
-   struct gl_geometry_program *Current;  /**< user-bound geometry program */
-
    /** Currently enabled and valid program (including internal programs
     * and compiled shader programs).
     */
    struct gl_geometry_program *_Current;
-
-   GLfloat Parameters[MAX_PROGRAM_ENV_PARAMS][4]; /**< Env params */
 };
 
 /**
@@ -3004,7 +2998,6 @@ struct gl_shared_state
    struct _mesa_HashTable *Programs; /**< All vertex/fragment programs */
    struct gl_vertex_program *DefaultVertexProgram;
    struct gl_fragment_program *DefaultFragmentProgram;
-   struct gl_geometry_program *DefaultGeometryProgram;
    /*@}*/
 
    /* GL_ATI_fragment_shader */
