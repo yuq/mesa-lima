@@ -2314,8 +2314,6 @@ struct gl_fragment_program_state
  */
 struct gl_compute_program_state
 {
-   struct gl_compute_program *Current;  /**< user-bound compute program */
-
    /** Currently enabled and valid program (including internal programs
     * and compiled shader programs).
     */

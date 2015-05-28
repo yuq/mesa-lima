@@ -97,8 +97,6 @@ _mesa_init_program(struct gl_context *ctx)
    assert(ctx->FragmentProgram.Current);
    ctx->FragmentProgram.Cache = _mesa_new_program_cache();
 
-   _mesa_reference_compprog(ctx, &ctx->ComputeProgram.Current, NULL);
-
    /* XXX probably move this stuff */
    ctx->ATIFragmentShader.Enabled = GL_FALSE;
    ctx->ATIFragmentShader.Current = ctx->Shared->DefaultFragmentShader;
@@ -117,7 +115,6 @@ _mesa_free_program_data(struct gl_context *ctx)
    _mesa_delete_program_cache(ctx, ctx->VertexProgram.Cache);
    _mesa_reference_fragprog(ctx, &ctx->FragmentProgram.Current, NULL);
    _mesa_delete_shader_cache(ctx, ctx->FragmentProgram.Cache);
-   _mesa_reference_compprog(ctx, &ctx->ComputeProgram.Current, NULL);
 
    /* XXX probably move this stuff */
    if (ctx->ATIFragmentShader.Current) {
