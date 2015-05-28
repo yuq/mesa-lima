@@ -77,13 +77,10 @@ br13_for_cpp(int cpp)
    switch (cpp) {
    case 4:
       return BR13_8888;
-      break;
    case 2:
       return BR13_565;
-      break;
    case 1:
       return BR13_8;
-      break;
    default:
       unreachable("not reached");
    }
