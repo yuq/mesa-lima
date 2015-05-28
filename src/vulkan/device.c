@@ -303,7 +303,7 @@ parse_debug_flags(struct anv_device *device)
    }
 }
 
-static const uint32_t BATCH_SIZE = 1 << 15;
+static const uint32_t BATCH_SIZE = 8192;
 
 VkResult anv_CreateDevice(
     VkPhysicalDevice                            _physicalDevice,
@@ -2264,6 +2264,7 @@ static VkResult
 anv_cmd_buffer_chain_batch(struct anv_batch *batch, void *_data)
 {
    struct anv_cmd_buffer *cmd_buffer = _data;
+
    struct anv_batch_bo *new_bbo, *old_bbo = cmd_buffer->last_batch_bo;
 
    VkResult result = anv_batch_bo_create(cmd_buffer->device, &new_bbo);
@@ -2281,8 +2282,10 @@ anv_cmd_buffer_chain_batch(struct anv_batch *batch, void *_data)
    batch->next += GEN8_MI_BATCH_BUFFER_START_length * 4;
 
    /* Pad out to a 2-dword aligned boundary with zeros */
-   if ((uintptr_t)batch->next % 8 != 0)
+   if ((uintptr_t)batch->next % 8 != 0) {
       *(uint32_t *)batch->next = 0;
+      batch->next += 4;
+   }
 
    anv_batch_bo_finish(cmd_buffer->last_batch_bo, batch);
 
@@ -2438,7 +2441,9 @@ VkResult anv_BeginCommandBuffer(
 
 static VkResult
 anv_cmd_buffer_add_bo(struct anv_cmd_buffer *cmd_buffer,
-                      struct anv_bo *bo, struct anv_reloc_list *list)
+                      struct anv_bo *bo,
+                      struct drm_i915_gem_relocation_entry *relocs,
+                      size_t num_relocs)
 {
    struct drm_i915_gem_exec_object2 *obj;
 
@@ -2491,9 +2496,9 @@ anv_cmd_buffer_add_bo(struct anv_cmd_buffer *cmd_buffer,
    obj->rsvd1 = 0;
    obj->rsvd2 = 0;
 
-   if (list) {
-      obj->relocation_count = list->num_relocs;
-      obj->relocs_ptr = (uintptr_t) list->relocs;
+   if (relocs) {
+      obj->relocation_count = num_relocs;
+      obj->relocs_ptr = (uintptr_t) relocs;
    }
 
    return VK_SUCCESS;
@@ -2504,7 +2509,7 @@ anv_cmd_buffer_add_validate_bos(struct anv_cmd_buffer *cmd_buffer,
                                 struct anv_reloc_list *list)
 {
    for (size_t i = 0; i < list->num_relocs; i++)
-      anv_cmd_buffer_add_bo(cmd_buffer, list->reloc_bos[i], NULL);
+      anv_cmd_buffer_add_bo(cmd_buffer, list->reloc_bos[i], NULL, 0);
 }
 
 static void
@@ -2548,21 +2553,36 @@ VkResult anv_EndCommandBuffer(
    cmd_buffer->bo_count = 0;
    cmd_buffer->need_reloc = false;
 
-   /* Find the first batch bo in the list */
-   struct anv_batch_bo *batch_bo = cmd_buffer->last_batch_bo;
-   while (batch_bo->prev_batch_bo)
-      batch_bo = batch_bo->prev_batch_bo;
-
    /* Lock for access to bo->index. */
    pthread_mutex_lock(&device->mutex);
 
    /* Add block pool bos first so we can add them with their relocs. */
    anv_cmd_buffer_add_bo(cmd_buffer, &cmd_buffer->surface_bo,
-                         &cmd_buffer->surface_relocs);
+                         cmd_buffer->surface_relocs.relocs,
+                         cmd_buffer->surface_relocs.num_relocs);
 
+   /* Add all of the BOs referenced by surface state */
    anv_cmd_buffer_add_validate_bos(cmd_buffer, &cmd_buffer->surface_relocs);
+
+   /* Add all but the first batch BO */
+   struct anv_batch_bo *batch_bo = cmd_buffer->last_batch_bo;
+   while (batch_bo->prev_batch_bo) {
+      anv_cmd_buffer_add_bo(cmd_buffer, &batch_bo->bo,
+                            &batch->relocs.relocs[batch_bo->first_reloc],
+                            batch_bo->num_relocs);
+      batch_bo = batch_bo->prev_batch_bo;
+   }
+
+   /* Add everything referenced by the batches */
    anv_cmd_buffer_add_validate_bos(cmd_buffer, &batch->relocs);
-   anv_cmd_buffer_add_bo(cmd_buffer, &batch_bo->bo, &batch->relocs);
+
+   /* Add the first batch bo last */
+   assert(batch_bo->prev_batch_bo == NULL && batch_bo->first_reloc == 0);
+   anv_cmd_buffer_add_bo(cmd_buffer, &batch_bo->bo,
+                         &batch->relocs.relocs[batch_bo->first_reloc],
+                         batch_bo->num_relocs);
+   assert(batch_bo->bo.index == cmd_buffer->bo_count - 1);
+
    anv_cmd_buffer_process_relocs(cmd_buffer, &cmd_buffer->surface_relocs);
    anv_cmd_buffer_process_relocs(cmd_buffer, &batch->relocs);
 
