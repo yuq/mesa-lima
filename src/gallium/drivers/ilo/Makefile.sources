@@ -33,6 +33,8 @@ C_SOURCES := \
 	core/ilo_state_sol.h \
 	core/ilo_state_surface.c \
 	core/ilo_state_surface.h \
+	core/ilo_state_urb.c \
+	core/ilo_state_urb.h \
 	core/ilo_state_viewport.c \
 	core/ilo_state_viewport.h \
 	core/ilo_state_zs.c \
