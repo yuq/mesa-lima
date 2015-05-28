@@ -270,7 +270,7 @@ anv_image_view_init(struct anv_surface_view *view,
    };
 
    struct GEN8_RENDER_SURFACE_STATE surface_state = {
-      .SurfaceType = SURFTYPE_2D,
+      .SurfaceType = anv_surf_type_from_image_view_type[pCreateInfo->viewType],
       .SurfaceArray = false,
       .SurfaceFormat = format,
       .SurfaceVerticalAlignment = anv_valign[image->v_align],
