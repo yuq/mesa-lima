@@ -532,7 +532,7 @@ get_programiv(struct gl_context *ctx, GLuint program, GLenum pname,
    /* True if geometry shaders (of the form that was adopted into GLSL 1.50
     * and GL 3.2) are available in this context
     */
-   const bool has_core_gs = _mesa_is_desktop_gl(ctx) && ctx->Version >= 32;
+   const bool has_core_gs = _mesa_has_geometry_shaders(ctx);
 
    /* Are uniform buffer objects available in this context?
     */
