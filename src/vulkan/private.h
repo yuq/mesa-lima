@@ -58,6 +58,8 @@ extern "C" {
 #define anv_noreturn __attribute__((__noreturn__))
 #define anv_printflike(a, b) __attribute__((__format__(__printf__, a, b)))
 
+#define MAX(a, b) ((a) > (b) ? (a) : (b))
+
 static inline uint32_t
 ALIGN_U32(uint32_t v, uint32_t a)
 {
