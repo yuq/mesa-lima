@@ -456,6 +456,51 @@ can_fast_copy_blit(struct brw_context *brw,
    return true;
 }
 
+static uint32_t
+xy_blit_cmd(uint32_t src_tiling, uint32_t src_tr_mode,
+            uint32_t dst_tiling, uint32_t dst_tr_mode,
+            uint32_t cpp, bool use_fast_copy_blit)
+{
+   uint32_t CMD = 0;
+
+   if (use_fast_copy_blit) {
+      CMD = XY_FAST_COPY_BLT_CMD;
+
+      if (dst_tiling != I915_TILING_NONE)
+         SET_TILING_XY_FAST_COPY_BLT(dst_tiling, dst_tr_mode, XY_FAST_DST);
+
+      if (src_tiling != I915_TILING_NONE)
+         SET_TILING_XY_FAST_COPY_BLT(src_tiling, src_tr_mode, XY_FAST_SRC);
+
+      CMD |= get_tr_horizontal_align(src_tr_mode, cpp, true /* is_src */);
+      CMD |= get_tr_vertical_align(src_tr_mode, cpp, true /* is_src */);
+
+      CMD |= get_tr_horizontal_align(dst_tr_mode, cpp, false /* is_src */);
+      CMD |= get_tr_vertical_align(dst_tr_mode, cpp, false /* is_src */);
+
+   } else {
+      assert(cpp <= 4);
+      switch (cpp) {
+      case 1:
+      case 2:
+         CMD = XY_SRC_COPY_BLT_CMD;
+         break;
+      case 4:
+         CMD = XY_SRC_COPY_BLT_CMD | XY_BLT_WRITE_ALPHA | XY_BLT_WRITE_RGB;
+         break;
+      default:
+         unreachable("not reached");
+      }
+
+      if (dst_tiling != I915_TILING_NONE)
+         CMD |= XY_DST_TILED;
+
+      if (src_tiling != I915_TILING_NONE)
+         CMD |= XY_SRC_TILED;
+   }
+   return CMD;
+}
+
 /* Copy BitBlt
  */
 bool
@@ -544,24 +589,18 @@ intelEmitCopyBlit(struct brw_context *brw,
       if (dst_tr_mode == INTEL_MIPTREE_TRMODE_YF)
          BR13 |= XY_FAST_DST_TRMODE_YF;
 
-      CMD = XY_FAST_COPY_BLT_CMD;
+      CMD = xy_blit_cmd(src_tiling, src_tr_mode,
+                        dst_tiling, dst_tr_mode,
+                        cpp, use_fast_copy_blit);
 
-      if (dst_tiling != I915_TILING_NONE) {
-         SET_TILING_XY_FAST_COPY_BLT(dst_tiling, dst_tr_mode, XY_FAST_DST);
-         /* Pitch value should be specified as a number of Dwords. */
+      /* For tiled source and destination, pitch value should be specified
+       * as a number of Dwords.
+       */
+      if (dst_tiling != I915_TILING_NONE)
          dst_pitch /= 4;
-      }
-      if (src_tiling != I915_TILING_NONE) {
-         SET_TILING_XY_FAST_COPY_BLT(src_tiling, src_tr_mode, XY_FAST_SRC);
-         /* Pitch value should be specified as a number of Dwords. */
+
+      if (src_tiling != I915_TILING_NONE)
          src_pitch /= 4;
-      }
-
-      CMD |= get_tr_horizontal_align(src_tr_mode, cpp, true /* is_src */);
-      CMD |= get_tr_vertical_align(src_tr_mode, cpp, true /* is_src */);
-
-      CMD |= get_tr_horizontal_align(dst_tr_mode, cpp, false /* is_src */);
-      CMD |= get_tr_vertical_align(dst_tr_mode, cpp, false /* is_src */);
 
    } else {
       assert(!dst_y_tiled || (dst_pitch % 128) == 0);
@@ -599,26 +638,16 @@ intelEmitCopyBlit(struct brw_context *brw,
 
       assert(cpp <= 4);
       BR13 = br13_for_cpp(cpp) | translate_raster_op(logic_op) << 16;
-      switch (cpp) {
-      case 1:
-      case 2:
-         CMD = XY_SRC_COPY_BLT_CMD;
-         break;
-      case 4:
-         CMD = XY_SRC_COPY_BLT_CMD | XY_BLT_WRITE_ALPHA | XY_BLT_WRITE_RGB;
-         break;
-      default:
-         return false;
-      }
 
-      if (dst_tiling != I915_TILING_NONE) {
-         CMD |= XY_DST_TILED;
+      CMD = xy_blit_cmd(src_tiling, src_tr_mode,
+                        dst_tiling, dst_tr_mode,
+                        cpp, use_fast_copy_blit);
+
+      if (dst_tiling != I915_TILING_NONE)
          dst_pitch /= 4;
-      }
-      if (src_tiling != I915_TILING_NONE) {
-         CMD |= XY_SRC_TILED;
+
+      if (src_tiling != I915_TILING_NONE)
          src_pitch /= 4;
-      }
    }
 
    if (dst_y2 <= dst_y || dst_x2 <= dst_x) {
