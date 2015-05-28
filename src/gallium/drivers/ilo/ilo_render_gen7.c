@@ -200,40 +200,17 @@ gen7_draw_common_urb(struct ilo_render *r,
                      struct ilo_render_draw_session *session)
 {
    /* 3DSTATE_URB_{VS,GS,HS,DS} */
-   if (DIRTY(VE) || DIRTY(VS)) {
-      /* the first 16KB are reserved for VS and PS PCBs */
-      const int offset =
-         (ilo_dev_gen(r->dev) >= ILO_GEN(8)) ||
-          (ilo_dev_gen(r->dev) == ILO_GEN(7.5) && r->dev->gt == 3) ?
-          32768 : 16384;
-      int vs_entry_size, vs_total_size;
-
-      vs_entry_size = (vec->vs) ?
-         ilo_shader_get_kernel_param(vec->vs, ILO_KERNEL_OUTPUT_COUNT) : 0;
-
-      /*
-       * From the Ivy Bridge PRM, volume 2 part 1, page 35:
-       *
-       *     "Programming Restriction: As the VS URB entry serves as both the
-       *      per-vertex input and output of the VS shader, the VS URB
-       *      Allocation Size must be sized to the maximum of the vertex input
-       *      and output structures."
-       */
-      if (vs_entry_size < vec->ve->count + vec->ve->prepend_nosrc_cso)
-         vs_entry_size = vec->ve->count + vec->ve->prepend_nosrc_cso;
-
-      vs_entry_size *= sizeof(float) * 4;
-      vs_total_size = r->dev->urb_size - offset;
-
+   if (session->urb_delta.dirty & (ILO_STATE_URB_3DSTATE_URB_VS |
+                                   ILO_STATE_URB_3DSTATE_URB_HS |
+                                   ILO_STATE_URB_3DSTATE_URB_DS |
+                                   ILO_STATE_URB_3DSTATE_URB_GS)) {
       if (ilo_dev_gen(r->dev) == ILO_GEN(7))
          gen7_wa_pre_vs(r);
 
-      gen7_3DSTATE_URB_VS(r->builder,
-            offset, vs_total_size, vs_entry_size);
-
-      gen7_3DSTATE_URB_GS(r->builder, offset, 0, 0);
-      gen7_3DSTATE_URB_HS(r->builder, offset, 0, 0);
-      gen7_3DSTATE_URB_DS(r->builder, offset, 0, 0);
+      gen7_3DSTATE_URB_VS(r->builder, &vec->urb);
+      gen7_3DSTATE_URB_GS(r->builder, &vec->urb);
+      gen7_3DSTATE_URB_HS(r->builder, &vec->urb);
+      gen7_3DSTATE_URB_DS(r->builder, &vec->urb);
    }
 }
 
@@ -243,22 +220,15 @@ gen7_draw_common_pcb_alloc(struct ilo_render *r,
                            struct ilo_render_draw_session *session)
 {
    /* 3DSTATE_PUSH_CONSTANT_ALLOC_{VS,PS} */
-   if (r->hw_ctx_changed) {
-      /*
-       * Push constant buffers are only allowed to take up at most the first
-       * 16KB of the URB.  Split the space evenly for VS and FS.
-       */
-      const int max_size =
-         (ilo_dev_gen(r->dev) >= ILO_GEN(8)) ||
-          (ilo_dev_gen(r->dev) == ILO_GEN(7.5) && r->dev->gt == 3) ?
-          32768 : 16384;
-      const int size = max_size / 2;
-      int offset = 0;
-
-      gen7_3DSTATE_PUSH_CONSTANT_ALLOC_VS(r->builder, offset, size);
-      offset += size;
-
-      gen7_3DSTATE_PUSH_CONSTANT_ALLOC_PS(r->builder, offset, size);
+   if (session->urb_delta.dirty &
+         (ILO_STATE_URB_3DSTATE_PUSH_CONSTANT_ALLOC_VS |
+          ILO_STATE_URB_3DSTATE_PUSH_CONSTANT_ALLOC_HS |
+          ILO_STATE_URB_3DSTATE_PUSH_CONSTANT_ALLOC_DS |
+          ILO_STATE_URB_3DSTATE_PUSH_CONSTANT_ALLOC_GS |
+          ILO_STATE_URB_3DSTATE_PUSH_CONSTANT_ALLOC_PS)) {
+      gen7_3DSTATE_PUSH_CONSTANT_ALLOC_VS(r->builder, &vec->urb);
+      gen7_3DSTATE_PUSH_CONSTANT_ALLOC_GS(r->builder, &vec->urb);
+      gen7_3DSTATE_PUSH_CONSTANT_ALLOC_PS(r->builder, &vec->urb);
 
       if (ilo_dev_gen(r->dev) == ILO_GEN(7))
          gen7_wa_post_3dstate_push_constant_alloc_ps(r);
@@ -671,21 +641,8 @@ static void
 gen7_rectlist_pcb_alloc(struct ilo_render *r,
                         const struct ilo_blitter *blitter)
 {
-   /*
-    * Push constant buffers are only allowed to take up at most the first
-    * 16KB of the URB.  Split the space evenly for VS and FS.
-    */
-   const int max_size =
-      (ilo_dev_gen(r->dev) >= ILO_GEN(8)) ||
-       (ilo_dev_gen(r->dev) == ILO_GEN(7.5) && r->dev->gt == 3) ?
-       32768 : 16384;
-   const int size = max_size / 2;
-   int offset = 0;
-
-   gen7_3DSTATE_PUSH_CONSTANT_ALLOC_VS(r->builder, offset, size);
-   offset += size;
-
-   gen7_3DSTATE_PUSH_CONSTANT_ALLOC_PS(r->builder, offset, size);
+   gen7_3DSTATE_PUSH_CONSTANT_ALLOC_VS(r->builder, &blitter->urb);
+   gen7_3DSTATE_PUSH_CONSTANT_ALLOC_PS(r->builder, &blitter->urb);
 
    if (ilo_dev_gen(r->dev) == ILO_GEN(7))
       gen7_wa_post_3dstate_push_constant_alloc_ps(r);
@@ -695,19 +652,10 @@ static void
 gen7_rectlist_urb(struct ilo_render *r,
                   const struct ilo_blitter *blitter)
 {
-   /* the first 16KB are reserved for VS and PS PCBs */
-   const int offset =
-      (ilo_dev_gen(r->dev) >= ILO_GEN(8)) ||
-       (ilo_dev_gen(r->dev) == ILO_GEN(7.5) && r->dev->gt == 3) ?
-       32768 : 16384;
-
-   gen7_3DSTATE_URB_VS(r->builder, offset, r->dev->urb_size - offset,
-         (blitter->ve.count + blitter->ve.prepend_nosrc_cso) *
-         4 * sizeof(float));
-
-   gen7_3DSTATE_URB_GS(r->builder, offset, 0, 0);
-   gen7_3DSTATE_URB_HS(r->builder, offset, 0, 0);
-   gen7_3DSTATE_URB_DS(r->builder, offset, 0, 0);
+   gen7_3DSTATE_URB_VS(r->builder, &blitter->urb);
+   gen7_3DSTATE_URB_GS(r->builder, &blitter->urb);
+   gen7_3DSTATE_URB_HS(r->builder, &blitter->urb);
+   gen7_3DSTATE_URB_DS(r->builder, &blitter->urb);
 }
 
 static void

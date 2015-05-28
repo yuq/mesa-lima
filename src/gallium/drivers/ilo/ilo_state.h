@@ -34,6 +34,7 @@
 #include "core/ilo_state_sampler.h"
 #include "core/ilo_state_sol.h"
 #include "core/ilo_state_surface.h"
+#include "core/ilo_state_urb.h"
 #include "core/ilo_state_viewport.h"
 #include "core/ilo_state_zs.h"
 #include "pipe/p_state.h"
@@ -274,6 +275,8 @@ struct ilo_state_vector {
    struct ilo_blend_state *blend;
 
    struct ilo_fb_state fb;
+
+   struct ilo_state_urb urb;
 
    /* shader resources */
    struct ilo_sampler_state sampler[PIPE_SHADER_TYPES];

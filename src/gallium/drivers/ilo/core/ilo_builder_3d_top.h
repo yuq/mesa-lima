@@ -38,290 +38,153 @@
 #include "ilo_state_3d.h"
 #include "ilo_state_sampler.h"
 #include "ilo_state_sol.h"
+#include "ilo_state_urb.h"
 #include "ilo_builder.h"
 
 static inline void
 gen6_3DSTATE_URB(struct ilo_builder *builder,
-                 int vs_total_size, int gs_total_size,
-                 int vs_entry_size, int gs_entry_size)
+                 const struct ilo_state_urb *urb)
 {
    const uint8_t cmd_len = 3;
-   const int row_size = 128; /* 1024 bits */
-   int vs_alloc_size, gs_alloc_size;
-   int vs_num_entries, gs_num_entries;
    uint32_t *dw;
-
-   ILO_DEV_ASSERT(builder->dev, 6, 6);
-
-   /* in 1024-bit URB rows */
-   vs_alloc_size = (vs_entry_size + row_size - 1) / row_size;
-   gs_alloc_size = (gs_entry_size + row_size - 1) / row_size;
-
-   /* the valid range is [1, 5] */
-   if (!vs_alloc_size)
-      vs_alloc_size = 1;
-   if (!gs_alloc_size)
-      gs_alloc_size = 1;
-   assert(vs_alloc_size <= 5 && gs_alloc_size <= 5);
-
-   /* the valid range is [24, 256] in multiples of 4 */
-   vs_num_entries = (vs_total_size / row_size / vs_alloc_size) & ~3;
-   if (vs_num_entries > 256)
-      vs_num_entries = 256;
-   assert(vs_num_entries >= 24);
-
-   /* the valid range is [0, 256] in multiples of 4 */
-   gs_num_entries = (gs_total_size / row_size / gs_alloc_size) & ~3;
-   if (gs_num_entries > 256)
-      gs_num_entries = 256;
 
    ilo_builder_batch_pointer(builder, cmd_len, &dw);
 
    dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_URB) | (cmd_len - 2);
-   dw[1] = (vs_alloc_size - 1) << GEN6_URB_DW1_VS_ENTRY_SIZE__SHIFT |
-           vs_num_entries << GEN6_URB_DW1_VS_ENTRY_COUNT__SHIFT;
-   dw[2] = gs_num_entries << GEN6_URB_DW2_GS_ENTRY_COUNT__SHIFT |
-           (gs_alloc_size - 1) << GEN6_URB_DW2_GS_ENTRY_SIZE__SHIFT;
-}
-
-static inline void
-gen7_3dstate_push_constant_alloc(struct ilo_builder *builder,
-                                 int subop, int offset, int size)
-{
-   const uint32_t cmd = GEN6_RENDER_TYPE_RENDER |
-                        GEN6_RENDER_SUBTYPE_3D |
-                        subop;
-   const uint8_t cmd_len = 2;
-   const int slice_count = ((ilo_dev_gen(builder->dev) == ILO_GEN(7.5) &&
-                             builder->dev->gt == 3) ||
-                            ilo_dev_gen(builder->dev) >= ILO_GEN(8)) ? 2 : 1;
-   uint32_t *dw;
-   int end;
-
-   ILO_DEV_ASSERT(builder->dev, 7, 8);
-
-   /* VS, HS, DS, GS, and PS variants */
-   assert(subop >= GEN7_RENDER_OPCODE_3DSTATE_PUSH_CONSTANT_ALLOC_VS &&
-          subop <= GEN7_RENDER_OPCODE_3DSTATE_PUSH_CONSTANT_ALLOC_PS);
-
-   /*
-    * From the Ivy Bridge PRM, volume 2 part 1, page 68:
-    *
-    *     "(A table that says the maximum size of each constant buffer is
-    *      16KB")
-    *
-    * From the Ivy Bridge PRM, volume 2 part 1, page 115:
-    *
-    *     "The sum of the Constant Buffer Offset and the Constant Buffer Size
-    *      may not exceed the maximum value of the Constant Buffer Size."
-    *
-    * Thus, the valid range of buffer end is [0KB, 16KB].
-    */
-   end = (offset + size) / 1024;
-   if (end > 16 * slice_count) {
-      assert(!"invalid constant buffer end");
-      end = 16 * slice_count;
-   }
-
-   /* the valid range of buffer offset is [0KB, 15KB] */
-   offset = (offset + 1023) / 1024;
-   if (offset > 15 * slice_count) {
-      assert(!"invalid constant buffer offset");
-      offset = 15 * slice_count;
-   }
-
-   if (offset > end) {
-      assert(!size);
-      offset = end;
-   }
-
-   /* the valid range of buffer size is [0KB, 15KB] */
-   size = end - offset;
-   if (size > 15 * slice_count) {
-      assert(!"invalid constant buffer size");
-      size = 15 * slice_count;
-   }
-
-   assert(offset % slice_count == 0 && size % slice_count == 0);
-
-   ilo_builder_batch_pointer(builder, cmd_len, &dw);
-
-   dw[0] = cmd | (cmd_len - 2);
-   dw[1] = offset << GEN7_PCB_ALLOC_DW1_OFFSET__SHIFT |
-           size;
+   /* see urb_set_gen6_3DSTATE_URB() */
+   dw[1] = urb->urb[0];
+   dw[2] = urb->urb[1];
 }
 
 static inline void
 gen7_3DSTATE_PUSH_CONSTANT_ALLOC_VS(struct ilo_builder *builder,
-                                    int offset, int size)
+                                    const struct ilo_state_urb *urb)
 {
-   gen7_3dstate_push_constant_alloc(builder,
-         GEN7_RENDER_OPCODE_3DSTATE_PUSH_CONSTANT_ALLOC_VS, offset, size);
+   const uint8_t cmd_len = 2;
+   uint32_t *dw;
+
+   ilo_builder_batch_pointer(builder, cmd_len, &dw);
+
+   dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_PUSH_CONSTANT_ALLOC_VS) |
+           (cmd_len - 2);
+   /* see urb_set_gen7_3dstate_push_constant_alloc() */
+   dw[1] = urb->pcb[0];
 }
 
 static inline void
 gen7_3DSTATE_PUSH_CONSTANT_ALLOC_HS(struct ilo_builder *builder,
-                                    int offset, int size)
+                                    const struct ilo_state_urb *urb)
 {
-   gen7_3dstate_push_constant_alloc(builder,
-         GEN7_RENDER_OPCODE_3DSTATE_PUSH_CONSTANT_ALLOC_HS, offset, size);
+   const uint8_t cmd_len = 2;
+   uint32_t *dw;
+
+   ilo_builder_batch_pointer(builder, cmd_len, &dw);
+
+   dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_PUSH_CONSTANT_ALLOC_HS) |
+           (cmd_len - 2);
+   /* see urb_set_gen7_3dstate_push_constant_alloc() */
+   dw[1] = urb->pcb[1];
 }
 
 static inline void
 gen7_3DSTATE_PUSH_CONSTANT_ALLOC_DS(struct ilo_builder *builder,
-                                    int offset, int size)
+                                    const struct ilo_state_urb *urb)
 {
-   gen7_3dstate_push_constant_alloc(builder,
-         GEN7_RENDER_OPCODE_3DSTATE_PUSH_CONSTANT_ALLOC_DS, offset, size);
+   const uint8_t cmd_len = 2;
+   uint32_t *dw;
+
+   ilo_builder_batch_pointer(builder, cmd_len, &dw);
+
+   dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_PUSH_CONSTANT_ALLOC_DS) |
+           (cmd_len - 2);
+   /* see urb_set_gen7_3dstate_push_constant_alloc() */
+   dw[1] = urb->pcb[2];
 }
 
 static inline void
 gen7_3DSTATE_PUSH_CONSTANT_ALLOC_GS(struct ilo_builder *builder,
-                                    int offset, int size)
+                                    const struct ilo_state_urb *urb)
 {
-   gen7_3dstate_push_constant_alloc(builder,
-         GEN7_RENDER_OPCODE_3DSTATE_PUSH_CONSTANT_ALLOC_GS, offset, size);
+   const uint8_t cmd_len = 2;
+   uint32_t *dw;
+
+   ilo_builder_batch_pointer(builder, cmd_len, &dw);
+
+   dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_PUSH_CONSTANT_ALLOC_GS) |
+           (cmd_len - 2);
+   /* see urb_set_gen7_3dstate_push_constant_alloc() */
+   dw[1] = urb->pcb[3];
 }
 
 static inline void
 gen7_3DSTATE_PUSH_CONSTANT_ALLOC_PS(struct ilo_builder *builder,
-                                    int offset, int size)
+                                    const struct ilo_state_urb *urb)
 {
-   gen7_3dstate_push_constant_alloc(builder,
-         GEN7_RENDER_OPCODE_3DSTATE_PUSH_CONSTANT_ALLOC_PS, offset, size);
-}
-
-static inline void
-gen7_3dstate_urb(struct ilo_builder *builder,
-                 int subop, int offset, int size,
-                 int entry_size)
-{
-   const uint32_t cmd = GEN6_RENDER_TYPE_RENDER |
-                        GEN6_RENDER_SUBTYPE_3D |
-                        subop;
    const uint8_t cmd_len = 2;
-   const int row_size = 64; /* 512 bits */
-   int alloc_size, num_entries, min_entries, max_entries;
    uint32_t *dw;
-
-   ILO_DEV_ASSERT(builder->dev, 7, 8);
-
-   /* VS, HS, DS, and GS variants */
-   assert(subop >= GEN7_RENDER_OPCODE_3DSTATE_URB_VS &&
-          subop <= GEN7_RENDER_OPCODE_3DSTATE_URB_GS);
-
-   /* in multiples of 8KB */
-   assert(offset % 8192 == 0);
-   offset /= 8192;
-
-   /* in multiple of 512-bit rows */
-   alloc_size = (entry_size + row_size - 1) / row_size;
-   if (!alloc_size)
-      alloc_size = 1;
-
-   /*
-    * From the Ivy Bridge PRM, volume 2 part 1, page 34:
-    *
-    *     "VS URB Entry Allocation Size equal to 4(5 512-bit URB rows) may
-    *      cause performance to decrease due to banking in the URB. Element
-    *      sizes of 16 to 20 should be programmed with six 512-bit URB rows."
-    */
-   if (subop == GEN7_RENDER_OPCODE_3DSTATE_URB_VS && alloc_size == 5)
-      alloc_size = 6;
-
-   /* in multiples of 8 */
-   num_entries = (size / row_size / alloc_size) & ~7;
-
-   switch (subop) {
-   case GEN7_RENDER_OPCODE_3DSTATE_URB_VS:
-      switch (ilo_dev_gen(builder->dev)) {
-      case ILO_GEN(8):
-         max_entries = 2560;
-         min_entries = 64;
-         break;
-      case ILO_GEN(7.5):
-         max_entries = (builder->dev->gt >= 2) ? 1664 : 640;
-         min_entries = (builder->dev->gt >= 2) ? 64 : 32;
-         break;
-      case ILO_GEN(7):
-      default:
-         max_entries = (builder->dev->gt == 2) ? 704 : 512;
-         min_entries = 32;
-         break;
-      }
-
-      assert(num_entries >= min_entries);
-      if (num_entries > max_entries)
-         num_entries = max_entries;
-      break;
-   case GEN7_RENDER_OPCODE_3DSTATE_URB_HS:
-      max_entries = (builder->dev->gt == 2) ? 64 : 32;
-      if (num_entries > max_entries)
-         num_entries = max_entries;
-      break;
-   case GEN7_RENDER_OPCODE_3DSTATE_URB_DS:
-      if (num_entries)
-         assert(num_entries >= 138);
-      break;
-   case GEN7_RENDER_OPCODE_3DSTATE_URB_GS:
-      switch (ilo_dev_gen(builder->dev)) {
-      case ILO_GEN(8):
-         max_entries = 960;
-         break;
-      case ILO_GEN(7.5):
-         max_entries = (builder->dev->gt >= 2) ? 640 : 256;
-         break;
-      case ILO_GEN(7):
-      default:
-         max_entries = (builder->dev->gt == 2) ? 320 : 192;
-         break;
-      }
-
-      if (num_entries > max_entries)
-         num_entries = max_entries;
-      break;
-   default:
-      break;
-   }
 
    ilo_builder_batch_pointer(builder, cmd_len, &dw);
 
-   dw[0] = cmd | (cmd_len - 2);
-   dw[1] = offset << GEN7_URB_DW1_OFFSET__SHIFT |
-           (alloc_size - 1) << GEN7_URB_DW1_ENTRY_SIZE__SHIFT |
-           num_entries;
+   dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_PUSH_CONSTANT_ALLOC_PS) |
+           (cmd_len - 2);
+   /* see urb_set_gen7_3dstate_push_constant_alloc() */
+   dw[1] = urb->pcb[4];
 }
 
 static inline void
 gen7_3DSTATE_URB_VS(struct ilo_builder *builder,
-                    int offset, int size, int entry_size)
+                    const struct ilo_state_urb *urb)
 {
-   gen7_3dstate_urb(builder, GEN7_RENDER_OPCODE_3DSTATE_URB_VS,
-         offset, size, entry_size);
+   const uint8_t cmd_len = 2;
+   uint32_t *dw;
+
+   ilo_builder_batch_pointer(builder, cmd_len, &dw);
+
+   dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_URB_VS) | (cmd_len - 2);
+   /* see urb_set_gen7_3dstate_push_constant_alloc() */
+   dw[1] = urb->urb[0];
 }
 
 static inline void
 gen7_3DSTATE_URB_HS(struct ilo_builder *builder,
-                    int offset, int size, int entry_size)
+                    const struct ilo_state_urb *urb)
 {
-   gen7_3dstate_urb(builder, GEN7_RENDER_OPCODE_3DSTATE_URB_HS,
-         offset, size, entry_size);
+   const uint8_t cmd_len = 2;
+   uint32_t *dw;
+
+   ilo_builder_batch_pointer(builder, cmd_len, &dw);
+
+   dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_URB_HS) | (cmd_len - 2);
+   /* see urb_set_gen7_3dstate_push_constant_alloc() */
+   dw[1] = urb->urb[1];
 }
 
 static inline void
 gen7_3DSTATE_URB_DS(struct ilo_builder *builder,
-                    int offset, int size, int entry_size)
+                    const struct ilo_state_urb *urb)
 {
-   gen7_3dstate_urb(builder, GEN7_RENDER_OPCODE_3DSTATE_URB_DS,
-         offset, size, entry_size);
+   const uint8_t cmd_len = 2;
+   uint32_t *dw;
+
+   ilo_builder_batch_pointer(builder, cmd_len, &dw);
+
+   dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_URB_DS) | (cmd_len - 2);
+   /* see urb_set_gen7_3dstate_push_constant_alloc() */
+   dw[1] = urb->urb[2];
 }
 
 static inline void
 gen7_3DSTATE_URB_GS(struct ilo_builder *builder,
-                    int offset, int size, int entry_size)
+                    const struct ilo_state_urb *urb)
 {
-   gen7_3dstate_urb(builder, GEN7_RENDER_OPCODE_3DSTATE_URB_GS,
-         offset, size, entry_size);
+   const uint8_t cmd_len = 2;
+   uint32_t *dw;
+
+   ilo_builder_batch_pointer(builder, cmd_len, &dw);
+
+   dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_URB_GS) | (cmd_len - 2);
+   /* see urb_set_gen7_3dstate_push_constant_alloc() */
+   dw[1] = urb->urb[3];
 }
 
 static inline void

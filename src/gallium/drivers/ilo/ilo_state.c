@@ -478,6 +478,55 @@ finalize_vertex_elements(struct ilo_context *ilo)
 }
 
 static void
+finalize_urb(struct ilo_context *ilo)
+{
+   const uint16_t attr_size = sizeof(uint32_t) * 4;
+   const struct ilo_dev *dev = ilo->dev;
+   struct ilo_state_vector *vec = &ilo->state_vector;
+   struct ilo_state_urb_info info;
+
+   if (!(vec->dirty & (ILO_DIRTY_VE | ILO_DIRTY_VS |
+                       ILO_DIRTY_GS | ILO_DIRTY_FS)))
+      return;
+
+   memset(&info, 0, sizeof(info));
+
+   info.ve_entry_size = attr_size *
+      (vec->ve->count + vec->ve->prepend_nosrc_cso);
+
+   if (vec->vs) {
+      info.vs_const_data = (bool)
+         (ilo_shader_get_kernel_param(vec->vs, ILO_KERNEL_PCB_CBUF0_SIZE) +
+          ilo_shader_get_kernel_param(vec->vs, ILO_KERNEL_VS_PCB_UCP_SIZE));
+      info.vs_entry_size = attr_size *
+         ilo_shader_get_kernel_param(vec->vs, ILO_KERNEL_OUTPUT_COUNT);
+   }
+
+   if (vec->gs) {
+      info.gs_const_data = (bool)
+         ilo_shader_get_kernel_param(vec->gs, ILO_KERNEL_PCB_CBUF0_SIZE);
+
+      /*
+       * From the Ivy Bridge PRM, volume 2 part 1, page 189:
+       *
+       *     "All outputs of a GS thread will be stored in the single GS
+       *      thread output URB entry."
+       *
+       * TODO
+       */
+      info.gs_entry_size = attr_size *
+         ilo_shader_get_kernel_param(vec->gs, ILO_KERNEL_OUTPUT_COUNT);
+   }
+
+   if (vec->fs) {
+      info.ps_const_data = (bool)
+         ilo_shader_get_kernel_param(vec->fs, ILO_KERNEL_PCB_CBUF0_SIZE);
+   }
+
+   ilo_state_urb_set_info(&vec->urb, dev, &info);
+}
+
+static void
 finalize_viewport(struct ilo_context *ilo)
 {
    const struct ilo_dev *dev = ilo->dev;
@@ -680,6 +729,7 @@ ilo_finalize_3d_states(struct ilo_context *ilo,
    finalize_index_buffer(ilo);
    finalize_vertex_elements(ilo);
 
+   finalize_urb(ilo);
    finalize_rasterizer(ilo);
    finalize_viewport(ilo);
    finalize_blend(ilo);
@@ -2065,6 +2115,8 @@ void
 ilo_state_vector_init(const struct ilo_dev *dev,
                       struct ilo_state_vector *vec)
 {
+   struct ilo_state_urb_info urb_info;
+
    vec->sample_mask = ~0u;
 
    ilo_state_viewport_init_data_only(&vec->viewport.vp, dev,
@@ -2078,6 +2130,9 @@ ilo_state_vector_init(const struct ilo_dev *dev,
    ilo_state_zs_init_for_null(&vec->fb.null_zs, dev);
 
    ilo_state_sampler_init_disabled(&vec->disabled_sampler, dev);
+
+   memset(&urb_info, 0, sizeof(urb_info));
+   ilo_state_urb_init(&vec->urb, dev, &urb_info);
 
    util_dynarray_init(&vec->global_binding.bindings);
 

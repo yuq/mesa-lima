@@ -70,6 +70,8 @@ struct ilo_blitter {
 
    uint32_t depth_clear_value;
 
+   struct ilo_state_urb urb;
+
    struct {
       struct ilo_surface_cso dst;
       unsigned width, height;

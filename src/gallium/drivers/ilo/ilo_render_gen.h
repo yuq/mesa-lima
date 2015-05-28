@@ -90,6 +90,7 @@ struct ilo_render {
       int reduced_prim;
       int so_max_vertices;
 
+      struct ilo_state_urb urb;
       struct ilo_state_raster rs;
       struct ilo_state_cc cc;
 
@@ -148,6 +149,7 @@ struct ilo_render_draw_session {
    bool prim_changed;
    bool primitive_restart_changed;
 
+   struct ilo_state_urb_delta urb_delta;
    struct ilo_state_raster_delta rs_delta;
    struct ilo_state_viewport_delta vp_delta;
    struct ilo_state_cc_delta cc_delta;

@@ -78,6 +78,9 @@ ilo_blitter_set_invariants(struct ilo_blitter *blitter)
    ilo_state_viewport_init_for_rectlist(&blitter->vp, blitter->ilo->dev,
          blitter->vp_data, sizeof(blitter->vp_data));
 
+   ilo_state_urb_init_for_rectlist(&blitter->urb, blitter->ilo->dev,
+         blitter->ve.count + blitter->ve.prepend_nosrc_cso);
+
    blitter->initialized = true;
 
    return true;

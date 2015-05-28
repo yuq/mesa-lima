@@ -329,64 +329,19 @@ gen6_draw_common_urb(struct ilo_render *r,
                      const struct ilo_state_vector *vec,
                      struct ilo_render_draw_session *session)
 {
+   const bool gs_active = (vec->gs || (vec->vs &&
+            ilo_shader_get_kernel_param(vec->vs, ILO_KERNEL_VS_GEN6_SO)));
+
    /* 3DSTATE_URB */
-   if (DIRTY(VE) || DIRTY(VS) || DIRTY(GS)) {
-      const bool gs_active = (vec->gs || (vec->vs &&
-               ilo_shader_get_kernel_param(vec->vs, ILO_KERNEL_VS_GEN6_SO)));
-      int vs_entry_size, gs_entry_size;
-      int vs_total_size, gs_total_size;
-
-      vs_entry_size = (vec->vs) ?
-         ilo_shader_get_kernel_param(vec->vs, ILO_KERNEL_OUTPUT_COUNT) : 0;
-
-      /*
-       * As indicated by 2e712e41db0c0676e9f30fc73172c0e8de8d84d4, VF and VS
-       * share VUE handles.  The VUE allocation size must be large enough to
-       * store either VF outputs (number of VERTEX_ELEMENTs) and VS outputs.
-       *
-       * I am not sure if the PRM explicitly states that VF and VS share VUE
-       * handles.  But here is a citation that implies so:
-       *
-       * From the Sandy Bridge PRM, volume 2 part 1, page 44:
-       *
-       *     "Once a FF stage that spawn threads has sufficient input to
-       *      initiate a thread, it must guarantee that it is safe to request
-       *      the thread initiation. For all these FF stages, this check is
-       *      based on :
-       *
-       *      - The availability of output URB entries:
-       *        - VS: As the input URB entries are overwritten with the
-       *          VS-generated output data, output URB availability isn't a
-       *          factor."
-       */
-      if (vs_entry_size < vec->ve->count + vec->ve->prepend_nosrc_cso)
-         vs_entry_size = vec->ve->count + vec->ve->prepend_nosrc_cso;
-
-      gs_entry_size = (vec->gs) ?
-         ilo_shader_get_kernel_param(vec->gs, ILO_KERNEL_OUTPUT_COUNT) :
-         (gs_active) ? vs_entry_size : 0;
-
-      /* in bytes */
-      vs_entry_size *= sizeof(float) * 4;
-      gs_entry_size *= sizeof(float) * 4;
-      vs_total_size = r->dev->urb_size;
-
-      if (gs_active) {
-         vs_total_size /= 2;
-         gs_total_size = vs_total_size;
-      }
-      else {
-         gs_total_size = 0;
-      }
-
-      gen6_3DSTATE_URB(r->builder, vs_total_size, gs_total_size,
-            vs_entry_size, gs_entry_size);
+   if (session->urb_delta.dirty & (ILO_STATE_URB_3DSTATE_URB_VS |
+                                   ILO_STATE_URB_3DSTATE_URB_GS)) {
+      gen6_3DSTATE_URB(r->builder, &vec->urb);
 
       if (r->state.gs.active && !gs_active)
          gen6_wa_post_3dstate_urb_no_gs(r);
-
-      r->state.gs.active = gs_active;
    }
+
+   r->state.gs.active = gs_active;
 }
 
 static void
@@ -920,9 +875,7 @@ ilo_render_emit_rectlist_commands_gen6(struct ilo_render *r,
 
    gen6_3DSTATE_VERTEX_ELEMENTS(r->builder, &blitter->ve);
 
-   gen6_3DSTATE_URB(r->builder, r->dev->urb_size, 0,
-         (blitter->ve.count + blitter->ve.prepend_nosrc_cso) * 4 * sizeof(float),
-         0);
+   gen6_3DSTATE_URB(r->builder, &blitter->urb);
 
    if (r->state.gs.active) {
       gen6_wa_post_3dstate_urb_no_gs(r);
