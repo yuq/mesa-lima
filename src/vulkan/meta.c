@@ -145,22 +145,9 @@ anv_device_init_meta_clear_state(struct anv_device *device)
          .disable_viewport = true,
          .use_rectlist = true
       },
-      &device->clear_state.pipeline);
+      &device->meta_state.clear.pipeline);
 
    anv_DestroyObject((VkDevice) device, VK_OBJECT_TYPE_SHADER, fs);
-
-   anv_CreateDynamicRasterState((VkDevice) device,
-      &(VkDynamicRsStateCreateInfo) {
-         .sType = VK_STRUCTURE_TYPE_DYNAMIC_RS_STATE_CREATE_INFO,
-      },
-      &device->clear_state.rs_state);
-
-   anv_CreateDynamicColorBlendState((VkDevice) device,
-      &(VkDynamicCbStateCreateInfo) {
-         .sType = VK_STRUCTURE_TYPE_DYNAMIC_CB_STATE_CREATE_INFO
-      },
-      &device->clear_state.cb_state);
-
 }
 
 #define NUM_VB_USED 2
@@ -287,15 +274,16 @@ anv_cmd_buffer_clear(struct anv_cmd_buffer *cmd_buffer,
          sizeof(vertex_data)
       });
 
-   if ((VkPipeline) cmd_buffer->pipeline != device->clear_state.pipeline)
+   if ((VkPipeline) cmd_buffer->pipeline != device->meta_state.clear.pipeline)
       anv_CmdBindPipeline((VkCmdBuffer) cmd_buffer,
-                          VK_PIPELINE_BIND_POINT_GRAPHICS, device->clear_state.pipeline);
+                          VK_PIPELINE_BIND_POINT_GRAPHICS,
+                          device->meta_state.clear.pipeline);
 
    /* We don't need anything here, only set if not already set. */
    if (cmd_buffer->rs_state == NULL)
       anv_CmdBindDynamicStateObject((VkCmdBuffer) cmd_buffer,
                                     VK_STATE_BIND_POINT_RASTER,
-                                    device->clear_state.rs_state);
+                                    device->meta_state.shared.rs_state);
 
    if (cmd_buffer->vp_state == NULL)
       anv_CmdBindDynamicStateObject((VkCmdBuffer) cmd_buffer,
@@ -425,12 +413,12 @@ anv_device_init_meta_blit_state(struct anv_device *device)
       }
    };
    anv_CreateDescriptorSetLayout((VkDevice) device, &ds_layout_info,
-                                 &device->blit_state.ds_layout);
+                                 &device->meta_state.blit.ds_layout);
 
    VkPipelineLayoutCreateInfo pipeline_layout_info = {
       .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
       .descriptorSetCount = 1,
-      .pSetLayouts = &device->blit_state.ds_layout,
+      .pSetLayouts = &device->meta_state.blit.ds_layout,
    };
 
    VkPipelineLayout pipeline_layout;
@@ -472,22 +460,10 @@ anv_device_init_meta_blit_state(struct anv_device *device)
                           .disable_vs = true,
                           .use_rectlist = true
                        },
-                       &device->blit_state.pipeline);
+                       &device->meta_state.blit.pipeline);
 
    anv_DestroyObject((VkDevice) device, VK_OBJECT_TYPE_SHADER, vs);
    anv_DestroyObject((VkDevice) device, VK_OBJECT_TYPE_SHADER, fs);
-
-   anv_CreateDynamicRasterState((VkDevice) device,
-      &(VkDynamicRsStateCreateInfo) {
-         .sType = VK_STRUCTURE_TYPE_DYNAMIC_RS_STATE_CREATE_INFO,
-       },
-      &device->blit_state.rs_state);
-
-   anv_CreateDynamicColorBlendState((VkDevice) device,
-      &(VkDynamicCbStateCreateInfo) {
-         .sType = VK_STRUCTURE_TYPE_DYNAMIC_CB_STATE_CREATE_INFO
-      },
-      &device->blit_state.cb_state);
 }
 
 static void
@@ -498,21 +474,21 @@ meta_prepare_blit(struct anv_cmd_buffer *cmd_buffer,
 
    anv_cmd_buffer_save(cmd_buffer, saved_state);
 
-   if ((VkPipeline) cmd_buffer->pipeline != device->blit_state.pipeline)
+   if ((VkPipeline) cmd_buffer->pipeline != device->meta_state.blit.pipeline)
       anv_CmdBindPipeline((VkCmdBuffer) cmd_buffer,
                           VK_PIPELINE_BIND_POINT_GRAPHICS,
-                          device->blit_state.pipeline);
+                          device->meta_state.blit.pipeline);
 
    /* We don't need anything here, only set if not already set. */
    if (cmd_buffer->rs_state == NULL)
       anv_CmdBindDynamicStateObject((VkCmdBuffer) cmd_buffer,
                                     VK_STATE_BIND_POINT_RASTER,
-                                    device->blit_state.rs_state);
+                                    device->meta_state.shared.rs_state);
 
    saved_state->cb_state = (VkDynamicCbState) cmd_buffer->cb_state;
    anv_CmdBindDynamicStateObject((VkCmdBuffer) cmd_buffer,
                                  VK_STATE_BIND_POINT_COLOR_BLEND,
-                                 device->blit_state.cb_state);
+                                 device->meta_state.shared.cb_state);
 }
 
 struct blit_region {
@@ -599,7 +575,7 @@ meta_emit_blit(struct anv_cmd_buffer *cmd_buffer,
    VkDescriptorSet set;
    anv_AllocDescriptorSets((VkDevice) device, 0 /* pool */,
                            VK_DESCRIPTOR_SET_USAGE_ONE_SHOT,
-                           1, &device->blit_state.ds_layout, &set, &count);
+                           1, &device->meta_state.blit.ds_layout, &set, &count);
    anv_UpdateDescriptors((VkDevice) device, set, 1,
       (const void * []) {
          &(VkUpdateImages) {
@@ -1238,4 +1214,16 @@ anv_device_init_meta(struct anv_device *device)
 {
    anv_device_init_meta_clear_state(device);
    anv_device_init_meta_blit_state(device);
+
+   anv_CreateDynamicRasterState((VkDevice) device,
+      &(VkDynamicRsStateCreateInfo) {
+         .sType = VK_STRUCTURE_TYPE_DYNAMIC_RS_STATE_CREATE_INFO,
+      },
+      &device->meta_state.shared.rs_state);
+
+   anv_CreateDynamicColorBlendState((VkDevice) device,
+      &(VkDynamicCbStateCreateInfo) {
+         .sType = VK_STRUCTURE_TYPE_DYNAMIC_CB_STATE_CREATE_INFO
+      },
+      &device->meta_state.shared.cb_state);
 }

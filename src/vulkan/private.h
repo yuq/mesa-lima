@@ -298,17 +298,20 @@ struct anv_instance {
     struct anv_physical_device                  physicalDevice;
 };
 
-struct anv_clear_state {
-   VkPipeline                                   pipeline;
-   VkDynamicRsState                             rs_state;
-   VkDynamicCbState                             cb_state;
-};
+struct anv_meta_state {
+   struct {
+      VkPipeline                                pipeline;
+   } clear;
 
-struct anv_blit_state {
-   VkPipeline                                   pipeline;
-   VkDynamicRsState                             rs_state;
-   VkDescriptorSetLayout                        ds_layout;
-   VkDynamicCbState                             cb_state;
+   struct {
+      VkPipeline                                pipeline;
+      VkDescriptorSetLayout                     ds_layout;
+   } blit;
+
+   struct {
+      VkDynamicRsState                          rs_state;
+      VkDynamicCbState                          cb_state;
+   } shared;
 };
 
 struct anv_device {
@@ -330,8 +333,7 @@ struct anv_device {
     struct anv_block_pool                       binding_table_block_pool;
     struct anv_state_pool                       surface_state_pool;
 
-    struct anv_clear_state                      clear_state;
-    struct anv_blit_state                       blit_state;
+    struct anv_meta_state                       meta_state;
 
     struct anv_compiler *                       compiler;
     struct anv_aub_writer *                     aub_writer;
