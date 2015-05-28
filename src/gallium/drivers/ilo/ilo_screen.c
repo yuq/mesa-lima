@@ -193,6 +193,7 @@ ilo_get_compute_param(struct pipe_screen *screen,
       uint32_t max_clock_frequency;
       uint32_t max_compute_units;
       uint32_t images_supported;
+      uint32_t subgroup_size;
    } val;
    const void *ptr;
    int size;
@@ -283,6 +284,13 @@ ilo_get_compute_param(struct pipe_screen *screen,
 
       ptr = &val.images_supported;
       size = sizeof(val.images_supported);
+      break;
+   case PIPE_COMPUTE_CAP_SUBGROUP_SIZE:
+      /* best case is actually SIMD32 */
+      val.subgroup_size = 16;
+
+      ptr = &val.subgroup_size;
+      size = sizeof(val.subgroup_size);
       break;
    default:
       ptr = NULL;

@@ -384,6 +384,8 @@ pipe_screen::get_compute_param.
   Value type: ``uint32_t``
 * ``PIPE_COMPUTE_CAP_IMAGES_SUPPORTED``: Whether images are supported
   non-zero means yes, zero means no. Value type: ``uint32_t``
+* ``PIPE_COMPUTE_CAP_SUBGROUP_SIZE``: The size of a basic execution unit in
+  threads. Also known as wavefront size, warp size or SIMD width.
 
 .. _pipe_bind:
 

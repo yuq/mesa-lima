@@ -341,6 +341,7 @@ nvc0_screen_get_compute_param(struct pipe_screen *pscreen,
                               enum pipe_compute_cap param, void *data)
 {
    uint64_t *data64 = (uint64_t *)data;
+   uint32_t *data32 = (uint32_t *)data;
    const uint16_t obj_class = nvc0_screen(pscreen)->compute->oclass;
 
    switch (param) {
@@ -372,6 +373,9 @@ nvc0_screen_get_compute_param(struct pipe_screen *pscreen,
    case PIPE_COMPUTE_CAP_MAX_INPUT_SIZE: /* c[], arbitrary limit */
       data64[0] = 4096;
       return 8;
+   case PIPE_COMPUTE_CAP_SUBGROUP_SIZE:
+      data32[0] = 32;
+      return 4;
    default:
       return 0;
    }

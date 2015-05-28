@@ -636,6 +636,12 @@ static int r600_get_compute_param(struct pipe_screen *screen,
 		return sizeof(uint32_t);
 	case PIPE_COMPUTE_CAP_MAX_PRIVATE_SIZE:
 		break; /* unused */
+	case PIPE_COMPUTE_CAP_SUBGROUP_SIZE:
+		if (ret) {
+			uint32_t *subgroup_size = ret;
+			*subgroup_size = r600_wavefront_size(rscreen->family);
+		}
+		return sizeof(uint32_t);
 	}
 
         fprintf(stderr, "unknown PIPE_COMPUTE_CAP %d\n", param);

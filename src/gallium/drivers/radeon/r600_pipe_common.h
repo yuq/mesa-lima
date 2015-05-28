@@ -570,6 +570,26 @@ static inline unsigned r600_tex_aniso_filter(unsigned filter)
 	 /* else */        return 4;
 }
 
+static inline unsigned r600_wavefront_size(enum radeon_family family)
+{
+	switch (family) {
+	case CHIP_RV610:
+	case CHIP_RS780:
+	case CHIP_RV620:
+	case CHIP_RS880:
+		return 16;
+	case CHIP_RV630:
+	case CHIP_RV635:
+	case CHIP_RV730:
+	case CHIP_RV710:
+	case CHIP_PALM:
+	case CHIP_CEDAR:
+		return 32;
+	default:
+		return 64;
+	}
+}
+
 #define COMPUTE_DBG(rscreen, fmt, args...) \
 	do { \
 		if ((rscreen->b.debug_flags & DBG_COMPUTE)) fprintf(stderr, fmt, ##args); \
