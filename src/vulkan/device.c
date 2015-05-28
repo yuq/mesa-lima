@@ -2249,6 +2249,14 @@ anv_cmd_buffer_destroy(struct anv_device *device,
 
    assert(obj_type == VK_OBJECT_TYPE_COMMAND_BUFFER);
 
+   /* Destroy all of the batch buffers */
+   struct anv_batch_bo *bbo = cmd_buffer->last_batch_bo;
+   while (bbo->prev_batch_bo) {
+      struct anv_batch_bo *prev = bbo->prev_batch_bo;
+      anv_batch_bo_destroy(bbo, cmd_buffer->device);
+      bbo = prev;
+   }
+
    anv_bo_pool_free(&device->batch_bo_pool, &cmd_buffer->surface_bo);
    anv_reloc_list_finish(&cmd_buffer->surface_relocs, device);
    anv_state_stream_finish(&cmd_buffer->surface_state_stream);
