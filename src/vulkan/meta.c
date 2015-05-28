@@ -290,6 +290,11 @@ anv_cmd_buffer_clear(struct anv_cmd_buffer *cmd_buffer,
                                     VK_STATE_BIND_POINT_VIEWPORT,
                                     cmd_buffer->framebuffer->vp_state);
 
+   if (cmd_buffer->ds_state == NULL)
+      anv_CmdBindDynamicStateObject((VkCmdBuffer) cmd_buffer,
+                                    VK_STATE_BIND_POINT_DEPTH_STENCIL,
+                                    device->meta_state.shared.ds_state);
+
    anv_CmdDraw((VkCmdBuffer) cmd_buffer, 0, 3, 0, pass->num_clear_layers);
 
    /* Restore API state */
@@ -484,6 +489,10 @@ meta_prepare_blit(struct anv_cmd_buffer *cmd_buffer,
       anv_CmdBindDynamicStateObject((VkCmdBuffer) cmd_buffer,
                                     VK_STATE_BIND_POINT_RASTER,
                                     device->meta_state.shared.rs_state);
+   if (cmd_buffer->ds_state == NULL)
+      anv_CmdBindDynamicStateObject((VkCmdBuffer) cmd_buffer,
+                                    VK_STATE_BIND_POINT_DEPTH_STENCIL,
+                                    device->meta_state.shared.ds_state);
 
    saved_state->cb_state = (VkDynamicCbState) cmd_buffer->cb_state;
    anv_CmdBindDynamicStateObject((VkCmdBuffer) cmd_buffer,
@@ -1226,4 +1235,10 @@ anv_device_init_meta(struct anv_device *device)
          .sType = VK_STRUCTURE_TYPE_DYNAMIC_CB_STATE_CREATE_INFO
       },
       &device->meta_state.shared.cb_state);
+
+   anv_CreateDynamicDepthStencilState((VkDevice) device,
+      &(VkDynamicDsStateCreateInfo) {
+         .sType = VK_STRUCTURE_TYPE_DYNAMIC_DS_STATE_CREATE_INFO
+      },
+      &device->meta_state.shared.ds_state);
 }

@@ -311,6 +311,7 @@ struct anv_meta_state {
    struct {
       VkDynamicRsState                          rs_state;
       VkDynamicCbState                          cb_state;
+      VkDynamicDsState                          ds_state;
    } shared;
 };
 
