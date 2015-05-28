@@ -41,6 +41,19 @@ static const uint8_t anv_valign[] = {
     [16] = VALIGN16,
 };
 
+static const uint8_t anv_surf_type_from_image_type[] = {
+   [VK_IMAGE_TYPE_1D] = SURFTYPE_1D,
+   [VK_IMAGE_TYPE_2D] = SURFTYPE_2D,
+   [VK_IMAGE_TYPE_3D] = SURFTYPE_3D,
+};
+
+static const uint8_t anv_surf_type_from_image_view_type[] = {
+   [VK_IMAGE_VIEW_TYPE_1D]    = SURFTYPE_1D,
+   [VK_IMAGE_VIEW_TYPE_2D]    = SURFTYPE_2D,
+   [VK_IMAGE_VIEW_TYPE_3D]    = SURFTYPE_3D,
+   [VK_IMAGE_VIEW_TYPE_CUBE]  = SURFTYPE_CUBE,
+};
+
 static const struct anv_tile_info {
    uint32_t width;
    uint32_t height;
