@@ -2386,16 +2386,10 @@ VkResult anv_CreateCommandBuffer(
    return result;
 }
 
-VkResult anv_BeginCommandBuffer(
-    VkCmdBuffer                                 cmdBuffer,
-    const VkCmdBufferBeginInfo*                 pBeginInfo)
+static void
+anv_cmd_buffer_emit_state_base_address(struct anv_cmd_buffer *cmd_buffer)
 {
-   struct anv_cmd_buffer *cmd_buffer = (struct anv_cmd_buffer *) cmdBuffer;
    struct anv_device *device = cmd_buffer->device;
-
-   anv_batch_emit(&cmd_buffer->batch, GEN8_PIPELINE_SELECT,
-                  .PipelineSelection = _3D);
-   anv_batch_emit(&cmd_buffer->batch, GEN8_STATE_SIP);
 
    anv_batch_emit(&cmd_buffer->batch, GEN8_STATE_BASE_ADDRESS,
                   .GeneralStateBaseAddress = { NULL, 0 },
@@ -2419,12 +2413,25 @@ VkResult anv_BeginCommandBuffer(
                   .IndirectObjectBaseAddressModifyEnable = true,
                   .IndirectObjectBufferSize = 0xfffff,
                   .IndirectObjectBufferSizeModifyEnable = true,
-                  
+
                   .InstructionBaseAddress = { &device->instruction_block_pool.bo, 0 },
                   .InstructionMemoryObjectControlState = GEN8_MOCS,
                   .InstructionBaseAddressModifyEnable = true,
                   .InstructionBufferSize = 0xfffff,
                   .InstructionBuffersizeModifyEnable = true);
+}
+
+VkResult anv_BeginCommandBuffer(
+    VkCmdBuffer                                 cmdBuffer,
+    const VkCmdBufferBeginInfo*                 pBeginInfo)
+{
+   struct anv_cmd_buffer *cmd_buffer = (struct anv_cmd_buffer *) cmdBuffer;
+
+   anv_batch_emit(&cmd_buffer->batch, GEN8_PIPELINE_SELECT,
+                  .PipelineSelection = _3D);
+   anv_batch_emit(&cmd_buffer->batch, GEN8_STATE_SIP);
+
+   anv_cmd_buffer_emit_state_base_address(cmd_buffer);
 
    anv_batch_emit(&cmd_buffer->batch, GEN8_3DSTATE_VF_STATISTICS,
                    .StatisticsEnable = true);
