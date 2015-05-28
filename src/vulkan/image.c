@@ -54,6 +54,19 @@ static const uint8_t anv_surf_type_from_image_view_type[] = {
    [VK_IMAGE_VIEW_TYPE_CUBE]  = SURFTYPE_CUBE,
 };
 
+static const struct anv_surf_type_limits {
+   int32_t width;
+   int32_t height;
+   int32_t depth;
+} anv_surf_type_limits[] = {
+   [SURFTYPE_1D]     = {16384,       0,   2048},
+   [SURFTYPE_2D]     = {16384,   16384,   2048},
+   [SURFTYPE_3D]     = {2048,     2048,   2048},
+   [SURFTYPE_CUBE]   = {16384,   16384,    340},
+   [SURFTYPE_BUFFER] = {128,     16384,     64},
+   [SURFTYPE_STRBUF] = {128,     16384,     64},
+};
+
 static const struct anv_tile_info {
    uint32_t width;
    uint32_t height;
@@ -132,12 +145,25 @@ VkResult anv_image_create(
    /* TODO(chadv): How should we validate inputs? */
    image->surf_type = anv_surf_type_from_image_type[pCreateInfo->imageType];
 
+   const struct anv_surf_type_limits *limits =
+      &anv_surf_type_limits[image->surf_type];
+
    assert(image->extent.width > 0);
    assert(image->extent.height > 0);
    assert(image->extent.depth > 0);
 
    const struct anv_tile_info *tile_info =
        &anv_tile_info_table[image->tile_mode];
+
+   if (image->extent.width > limits->width ||
+       image->extent.height > limits->height ||
+       image->extent.depth > limits->depth) {
+      anv_loge("image extent is too large");
+      free(image);
+
+      /* TODO(chadv): What is the correct error? */
+      return vk_error(VK_ERROR_INVALID_MEMORY_SIZE);
+   }
 
    image->alignment = tile_info->surface_alignment;
 
