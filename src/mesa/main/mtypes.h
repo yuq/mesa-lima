@@ -398,7 +398,6 @@ struct gl_config
 {
    GLboolean rgbMode;
    GLboolean floatMode;
-   GLboolean colorIndexMode;  /* XXX is this used anywhere? */
    GLuint doubleBufferMode;
    GLuint stereoMode;
 
