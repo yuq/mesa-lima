@@ -414,6 +414,9 @@ vec4_generator::generate_tex(vec4_instruction *inst,
 
       brw_pop_insn_state(p);
 
+      if (inst->base_mrf != -1)
+         gen6_resolve_implied_move(p, &src, inst->base_mrf);
+
       /* dst = send(offset, a0.0 | <descriptor>) */
       brw_inst *insn = brw_send_indirect_message(
          p, BRW_SFID_SAMPLER, dst, src, addr);
