@@ -3317,7 +3317,8 @@ void anv_CmdCopyQueryPoolResults(
    /* FIXME: If we're not waiting, should we just do this on the CPU? */
    if (flags & VK_QUERY_RESULT_WAIT_BIT)
       anv_batch_emit(&cmd_buffer->batch, GEN8_PIPE_CONTROL,
-                     .CommandStreamerStallEnable = true);
+                     .CommandStreamerStallEnable = true,
+                     .StallAtPixelScoreboard = true);
 
    dst_offset = buffer->offset + destOffset;
    for (uint32_t i = 0; i < queryCount; i++) {
