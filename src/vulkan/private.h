@@ -814,6 +814,9 @@ struct anv_image {
    uint8_t h_align;
    uint8_t v_align;
    /** \} */
+
+   /** RENDER_SURFACE_STATE.SurfaceType */
+   uint8_t surf_type;
 };
 
 struct anv_surface_view {

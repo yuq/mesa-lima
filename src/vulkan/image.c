@@ -129,6 +129,9 @@ VkResult anv_image_create(
    image->swap_chain = NULL;
    image->tile_mode = anv_image_choose_tile_mode(pCreateInfo, extra);
 
+   /* TODO(chadv): How should we validate inputs? */
+   image->surf_type = anv_surf_type_from_image_type[pCreateInfo->imageType];
+
    assert(image->extent.width > 0);
    assert(image->extent.height > 0);
    assert(image->extent.depth > 0);
