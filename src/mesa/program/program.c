@@ -328,7 +328,7 @@ _mesa_new_program(struct gl_context *ctx, GLenum target, GLuint id)
                                          CALLOC_STRUCT(gl_fragment_program),
                                          target, id );
       break;
-   case MESA_GEOMETRY_PROGRAM:
+   case GL_GEOMETRY_PROGRAM_NV:
       prog = _mesa_init_geometry_program(ctx,
                                          CALLOC_STRUCT(gl_geometry_program),
                                          target, id);
@@ -414,8 +414,8 @@ _mesa_reference_program_(struct gl_context *ctx,
       else if ((*ptr)->Target == GL_FRAGMENT_PROGRAM_ARB)
          assert(prog->Target == GL_FRAGMENT_PROGRAM_ARB ||
                 prog->Target == GL_FRAGMENT_PROGRAM_NV);
-      else if ((*ptr)->Target == MESA_GEOMETRY_PROGRAM)
-         assert(prog->Target == MESA_GEOMETRY_PROGRAM);
+      else if ((*ptr)->Target == GL_GEOMETRY_PROGRAM_NV)
+         assert(prog->Target == GL_GEOMETRY_PROGRAM_NV);
    }
 #endif
 
@@ -427,7 +427,7 @@ _mesa_reference_program_(struct gl_context *ctx,
       printf("Program %p ID=%u Target=%s  Refcount-- to %d\n",
              *ptr, (*ptr)->Id,
              ((*ptr)->Target == GL_VERTEX_PROGRAM_ARB ? "VP" :
-              ((*ptr)->Target == MESA_GEOMETRY_PROGRAM ? "GP" : "FP")),
+              ((*ptr)->Target == GL_GEOMETRY_PROGRAM_NV ? "GP" : "FP")),
              (*ptr)->RefCount - 1);
 #endif
       assert((*ptr)->RefCount > 0);
@@ -452,7 +452,7 @@ _mesa_reference_program_(struct gl_context *ctx,
       printf("Program %p ID=%u Target=%s  Refcount++ to %d\n",
              prog, prog->Id,
              (prog->Target == GL_VERTEX_PROGRAM_ARB ? "VP" :
-              (prog->Target == MESA_GEOMETRY_PROGRAM ? "GP" : "FP")),
+              (prog->Target == GL_GEOMETRY_PROGRAM_NV ? "GP" : "FP")),
              prog->RefCount);
 #endif
       /*mtx_unlock(&prog->Mutex);*/
@@ -542,7 +542,7 @@ _mesa_clone_program(struct gl_context *ctx, const struct gl_program *prog)
          fpc->PixelCenterInteger = fp->PixelCenterInteger;
       }
       break;
-   case MESA_GEOMETRY_PROGRAM:
+   case GL_GEOMETRY_PROGRAM_NV:
       {
          const struct gl_geometry_program *gp = gl_geometry_program_const(prog);
          struct gl_geometry_program *gpc = gl_geometry_program(clone);

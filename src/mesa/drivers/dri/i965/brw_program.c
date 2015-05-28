@@ -88,7 +88,7 @@ static struct gl_program *brwNewProgram( struct gl_context *ctx,
 	 return NULL;
    }
 
-   case MESA_GEOMETRY_PROGRAM: {
+   case GL_GEOMETRY_PROGRAM_NV: {
       struct brw_geometry_program *prog = CALLOC_STRUCT(brw_geometry_program);
       if (prog) {
          prog->id = get_new_program_id(brw->intelScreen);

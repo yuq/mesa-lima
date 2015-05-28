@@ -1217,7 +1217,7 @@ destroy_program_variants(struct st_context *st, struct gl_program *program)
          }
       }
       break;
-   case MESA_GEOMETRY_PROGRAM:
+   case GL_GEOMETRY_PROGRAM_NV:
       {
          struct st_geometry_program *stgp =
             (struct st_geometry_program *) program;

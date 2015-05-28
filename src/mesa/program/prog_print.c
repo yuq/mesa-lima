@@ -864,7 +864,7 @@ _mesa_fprint_program_opt(FILE *f,
       else
          fprintf(f, "# Fragment Program/Shader %u\n", prog->Id);
       break;
-   case MESA_GEOMETRY_PROGRAM:
+   case GL_GEOMETRY_PROGRAM_NV:
       fprintf(f, "# Geometry Shader\n");
    }
 
