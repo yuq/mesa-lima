@@ -72,6 +72,15 @@ ALIGN_I32(int32_t v, int32_t a)
    return (v + a - 1) & ~(a - 1);
 }
 
+static inline uint32_t
+anv_minify(uint32_t n, uint32_t levels)
+{
+   if (unlikely(n == 0))
+      return 0;
+   else
+      return MAX(n >> levels, 1);
+}
+
 #define for_each_bit(b, dword)                          \
    for (uint32_t __dword = (dword);                     \
         (b) = __builtin_ffs(__dword) - 1, __dword;      \
