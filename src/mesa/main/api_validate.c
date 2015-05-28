@@ -69,6 +69,25 @@ check_valid_to_render(struct gl_context *ctx, const char *function)
          return false;
       }
 
+      /* The spec argues that this is allowed because a tess ctrl shader
+       * without a tess eval shader can be used with transform feedback.
+       * However, glBeginTransformFeedback doesn't allow GL_PATCHES and
+       * therefore doesn't allow tessellation.
+       *
+       * Further investigation showed that this is indeed a spec bug and
+       * a tess ctrl shader without a tess eval shader shouldn't have been
+       * allowed, because there is no API in GL 4.0 that can make use this
+       * to produce something useful.
+       *
+       * Also, all vendors except one don't support a tess ctrl shader without
+       * a tess eval shader anyway.
+       */
+      if (ctx->TessCtrlProgram._Current && !ctx->TessEvalProgram._Current) {
+         _mesa_error(ctx, GL_INVALID_OPERATION,
+                     "%s(tess eval shader is missing)", function);
+         return false;
+      }
+
       /* Section 7.3 (Program Objects) of the OpenGL 4.5 Core Profile spec
        * says:
        *
