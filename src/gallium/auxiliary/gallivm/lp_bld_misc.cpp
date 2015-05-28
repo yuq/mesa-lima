@@ -50,6 +50,12 @@
 
 #include <stddef.h>
 
+// Workaround http://llvm.org/PR23628
+#if HAVE_LLVM >= 0x0307
+#  pragma push_macro("DEBUG")
+#  undef DEBUG
+#endif
+
 #include <llvm-c/Core.h>
 #include <llvm-c/ExecutionEngine.h>
 #include <llvm/Target/TargetOptions.h>
@@ -69,6 +75,11 @@
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/Module.h>
 #include <llvm/Support/CBindingWrapping.h>
+
+// Workaround http://llvm.org/PR23628
+#if HAVE_LLVM >= 0x0307
+#  pragma pop_macro("DEBUG")
+#endif
 
 #include "pipe/p_config.h"
 #include "util/u_debug.h"
