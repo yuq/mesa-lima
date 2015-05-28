@@ -123,12 +123,6 @@ intel_horizontal_texture_alignment_unit(struct brw_context *brw,
       return 16;
 
    /**
-    * From the "Alignment Unit Size" section of various specs, namely:
-    * - Gen3 Spec: "Memory Data Formats" Volume,         Section 1.20.1.4
-    * - i965 and G45 PRMs:             Volume 1,         Section 6.17.3.4.
-    * - Ironlake and Sandybridge PRMs: Volume 1, Part 1, Section 7.18.3.4
-    * - BSpec (for Ivybridge and slight variations in separate stencil)
-    *
     * +----------------------------------------------------------------------+
     * |                                        | alignment unit width  ("i") |
     * | Surface Property                       |-----------------------------|
@@ -146,32 +140,6 @@ intel_horizontal_texture_alignment_unit(struct brw_context *brw,
     * On IVB+, non-special cases can be overridden by setting the SURFACE_STATE
     * "Surface Horizontal Alignment" field to HALIGN_4 or HALIGN_8.
     */
-    if (_mesa_is_format_compressed(mt->format)) {
-       /* The hardware alignment requirements for compressed textures
-        * happen to match the block boundaries.
-        */
-      unsigned int i, j;
-      _mesa_get_format_block_size(mt->format, &i, &j);
-
-      /* On Gen9+ we can pick our own alignment for compressed textures but it
-       * has to be a multiple of the block size. The minimum alignment we can
-       * pick is 4 so we effectively have to align to 4 times the block
-       * size
-       */
-      if (brw->gen >= 9)
-         return i * 4;
-      else
-         return i;
-    }
-
-   if (mt->format == MESA_FORMAT_S_UINT8)
-      return 8;
-
-   if (brw->gen >= 9 && mt->tr_mode != INTEL_MIPTREE_TRMODE_NONE) {
-      uint32_t align = tr_mode_horizontal_texture_alignment(brw, mt);
-      /* XY_FAST_COPY_BLT doesn't support horizontal alignment < 32. */
-      return align < 32 ? 32 : align;
-   }
 
    if (brw->gen >= 7 && mt->format == MESA_FORMAT_Z_UNORM16)
       return 8;
@@ -248,12 +216,6 @@ intel_vertical_texture_alignment_unit(struct brw_context *brw,
                                       const struct intel_mipmap_tree *mt)
 {
    /**
-    * From the "Alignment Unit Size" section of various specs, namely:
-    * - Gen3 Spec: "Memory Data Formats" Volume,         Section 1.20.1.4
-    * - i965 and G45 PRMs:             Volume 1,         Section 6.17.3.4.
-    * - Ironlake and Sandybridge PRMs: Volume 1, Part 1, Section 7.18.3.4
-    * - BSpec (for Ivybridge and slight variations in separate stencil)
-    *
     * +----------------------------------------------------------------------+
     * |                                        | alignment unit height ("j") |
     * | Surface Property                       |-----------------------------|
@@ -270,23 +232,6 @@ intel_vertical_texture_alignment_unit(struct brw_context *brw,
     * Where "*" means either VALIGN_2 or VALIGN_4 depending on the setting of
     * the SURFACE_STATE "Surface Vertical Alignment" field.
     */
-    if (_mesa_is_format_compressed(mt->format)) {
-       unsigned int i, j;
-
-       _mesa_get_format_block_size(mt->format, &i, &j);
-
-       /* See comment above for the horizontal alignment */
-       return brw->gen >= 9 ? j * 4 : 4;
-    }
-
-   if (mt->format == MESA_FORMAT_S_UINT8)
-      return brw->gen >= 7 ? 8 : 4;
-
-   if (mt->tr_mode != INTEL_MIPTREE_TRMODE_NONE) {
-      uint32_t align = tr_mode_vertical_texture_alignment(brw, mt);
-      /* XY_FAST_COPY_BLT doesn't support vertical alignment < 64 */
-      return align < 64 ? 64 : align;
-   }
 
    /* Broadwell only supports VALIGN of 4, 8, and 16.  The BSpec says 4
     * should always be used, except for stencil buffers, which should be 8.
@@ -775,6 +720,13 @@ intel_miptree_set_alignment(struct brw_context *brw,
                             struct intel_mipmap_tree *mt,
                             uint32_t layout_flags)
 {
+   /**
+    * From the "Alignment Unit Size" section of various specs, namely:
+    * - Gen3 Spec: "Memory Data Formats" Volume,         Section 1.20.1.4
+    * - i965 and G45 PRMs:             Volume 1,         Section 6.17.3.4.
+    * - Ironlake and Sandybridge PRMs: Volume 1, Part 1, Section 7.18.3.4
+    * - BSpec (for Ivybridge and slight variations in separate stencil)
+    */
    bool gen6_hiz_or_stencil = false;
 
    if (brw->gen == 6 && mt->array_layout == ALL_SLICES_AT_EACH_LOD) {
@@ -806,6 +758,29 @@ intel_miptree_set_alignment(struct brw_context *brw,
          mt->align_w = 128 / mt->cpp;
          mt->align_h = 32;
       }
+   } else if (mt->compressed) {
+       /* The hardware alignment requirements for compressed textures
+        * happen to match the block boundaries.
+        */
+      _mesa_get_format_block_size(mt->format, &mt->align_w, &mt->align_h);
+
+      /* On Gen9+ we can pick our own alignment for compressed textures but it
+       * has to be a multiple of the block size. The minimum alignment we can
+       * pick is 4 so we effectively have to align to 4 times the block
+       * size
+       */
+      if (brw->gen >= 9) {
+         mt->align_w *= 4;
+         mt->align_h *= 4;
+      }
+   } else if (mt->format == MESA_FORMAT_S_UINT8) {
+      mt->align_w = 8;
+      mt->align_h = brw->gen >= 7 ? 8 : 4;
+   } else if (brw->gen >= 9 && mt->tr_mode != INTEL_MIPTREE_TRMODE_NONE) {
+      /* XY_FAST_COPY_BLT doesn't support horizontal alignment < 32 or
+       * vertical alignment < 64. */
+      mt->align_w = MAX2(tr_mode_horizontal_texture_alignment(brw, mt), 32);
+      mt->align_h = MAX2(tr_mode_vertical_texture_alignment(brw, mt), 64);
    } else {
       mt->align_w =
          intel_horizontal_texture_alignment_unit(brw, mt, layout_flags);
