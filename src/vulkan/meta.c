@@ -152,8 +152,8 @@ anv_device_init_meta_clear_state(struct anv_device *device)
 
 #define NUM_VB_USED 2
 struct anv_saved_state {
-   struct anv_bindings bindings;
-   struct anv_bindings *old_bindings;
+   struct anv_vertex_binding old_vertex_bindings[NUM_VB_USED];
+   struct anv_descriptor_set *old_descriptor_set0;
    struct anv_pipeline *old_pipeline;
    VkDynamicCbState cb_state;
 };
@@ -162,37 +162,24 @@ static void
 anv_cmd_buffer_save(struct anv_cmd_buffer *cmd_buffer,
                     struct anv_saved_state *state)
 {
-   state->old_bindings = cmd_buffer->bindings;
-   cmd_buffer->bindings = &state->bindings;
    state->old_pipeline = cmd_buffer->pipeline;
+   state->old_descriptor_set0 = cmd_buffer->descriptors[0].set;
+   memcpy(state->old_vertex_bindings, cmd_buffer->vertex_bindings,
+          sizeof(state->old_vertex_bindings));
 }
 
 static void
 anv_cmd_buffer_restore(struct anv_cmd_buffer *cmd_buffer,
                        const struct anv_saved_state *state)
 {
-   cmd_buffer->bindings = state->old_bindings;
    cmd_buffer->pipeline = state->old_pipeline;
+   cmd_buffer->descriptors[0].set = state->old_descriptor_set0;
+   memcpy(cmd_buffer->vertex_bindings, state->old_vertex_bindings,
+          sizeof(state->old_vertex_bindings));
 
    cmd_buffer->vb_dirty |= (1 << NUM_VB_USED) - 1;
    cmd_buffer->dirty |= ANV_CMD_BUFFER_PIPELINE_DIRTY |
                         ANV_CMD_BUFFER_DESCRIPTOR_SET_DIRTY;
-}
-
-static void
-anv_cmd_buffer_copy_render_targets(struct anv_cmd_buffer *cmd_buffer,
-                                   struct anv_saved_state *state)
-{
-   struct anv_framebuffer *fb = cmd_buffer->framebuffer;
-   struct anv_bindings *old_bindings = state->old_bindings;
-   struct anv_bindings *bindings = cmd_buffer->bindings;
-
-   for (uint32_t i = 0; i < fb->color_attachment_count; i++) {
-      bindings->descriptors[VK_SHADER_STAGE_FRAGMENT].surfaces[i] =
-         old_bindings->descriptors[VK_SHADER_STAGE_FRAGMENT].surfaces[i];
-   }
-
-   cmd_buffer->dirty |= ANV_CMD_BUFFER_DESCRIPTOR_SET_DIRTY;
 }
 
 struct vue_header {
@@ -262,7 +249,6 @@ anv_cmd_buffer_clear(struct anv_cmd_buffer *cmd_buffer,
    };
 
    anv_cmd_buffer_save(cmd_buffer, &saved_state);
-   anv_cmd_buffer_copy_render_targets(cmd_buffer, &saved_state);
 
    anv_CmdBindVertexBuffers((VkCmdBuffer) cmd_buffer, 0, 2,
       (VkBuffer[]) {

@@ -544,7 +544,7 @@ struct anv_query_pool {
 struct anv_descriptor_slot {
    int8_t dynamic_slot;
    uint8_t index;
-} entries[0];
+};
 
 struct anv_descriptor_set_layout {
    struct {
@@ -601,17 +601,15 @@ struct anv_buffer {
 #define ANV_CMD_BUFFER_RS_DIRTY                 (1 << 2)
 #define ANV_CMD_BUFFER_DS_DIRTY                 (1 << 3)
 #define ANV_CMD_BUFFER_CB_DIRTY                 (1 << 4)
-   
-struct anv_bindings {
-   struct {
-      struct anv_buffer *buffer;
-      VkDeviceSize offset;
-   }                                            vb[MAX_VBS];
 
-   struct {
-      uint32_t                                  surfaces[256];
-      struct { uint32_t dwords[4]; }            samplers[16];
-   }                                            descriptors[VK_NUM_SHADER_STAGE];
+struct anv_vertex_binding {
+   struct anv_buffer *                          buffer;
+   VkDeviceSize                                 offset;
+};
+
+struct anv_descriptor_set_binding {
+   struct anv_descriptor_set *                  set;
+   uint32_t                                     dynamic_offsets[256];
 };
 
 struct anv_cmd_buffer {
@@ -644,8 +642,8 @@ struct anv_cmd_buffer {
    struct anv_dynamic_ds_state *                ds_state;
    struct anv_dynamic_vp_state *                vp_state;
    struct anv_dynamic_cb_state *                cb_state;
-   struct anv_bindings *                        bindings;
-   struct anv_bindings                          default_bindings;
+   struct anv_vertex_binding                    vertex_bindings[MAX_VBS];
+   struct anv_descriptor_set_binding            descriptors[MAX_SETS];
 };
 
 void anv_cmd_buffer_dump(struct anv_cmd_buffer *cmd_buffer);
@@ -831,9 +829,6 @@ void anv_device_init_meta(struct anv_device *device);
 void
 anv_cmd_buffer_clear(struct anv_cmd_buffer *cmd_buffer,
                      struct anv_render_pass *pass);
-
-void
-anv_cmd_buffer_fill_render_targets(struct anv_cmd_buffer *cmd_buffer);
 
 void *
 anv_lookup_entrypoint(const char *name);
