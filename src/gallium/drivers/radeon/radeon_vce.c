@@ -47,6 +47,8 @@
 #define FW_40_2_2 ((40 << 24) | (2 << 16) | (2 << 8))
 #define FW_50_0_1 ((50 << 24) | (0 << 16) | (1 << 8))
 #define FW_50_1_2 ((50 << 24) | (1 << 16) | (2 << 8))
+#define FW_50_10_2 ((50 << 24) | (10 << 16) | (2 << 8))
+#define FW_50_17_3 ((50 << 24) | (17 << 16) | (3 << 8))
 
 /**
  * flush commands to the hardware
@@ -463,6 +465,8 @@ struct pipe_video_codec *rvce_create_encoder(struct pipe_context *context,
 
 	case FW_50_0_1:
 	case FW_50_1_2:
+	case FW_50_10_2:
+	case FW_50_17_3:
 		radeon_vce_50_init(enc);
 		break;
 
@@ -490,7 +494,9 @@ bool rvce_is_fw_version_supported(struct r600_common_screen *rscreen)
 {
 	return rscreen->info.vce_fw_version == FW_40_2_2 ||
 		rscreen->info.vce_fw_version == FW_50_0_1 ||
-		rscreen->info.vce_fw_version == FW_50_1_2;
+		rscreen->info.vce_fw_version == FW_50_1_2 ||
+		rscreen->info.vce_fw_version == FW_50_10_2 ||
+		rscreen->info.vce_fw_version == FW_50_17_3;
 }
 
 /**
