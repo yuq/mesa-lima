@@ -1127,6 +1127,7 @@ static OMX_ERRORTYPE vid_enc_EncodeFrame(omx_base_PortType *port, OMX_BUFFERHEAD
       if (buf->nFlags & OMX_BUFFERFLAG_EOS) {
          buf->nFilledLen = buf->nAllocLen;
          enc_ClearBframes(port, inp);
+         priv->codec->flush(priv->codec);
       }
       return base_port_SendBufferFunction(port, buf);
    }
