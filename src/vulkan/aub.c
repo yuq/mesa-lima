@@ -273,9 +273,14 @@ anv_cmd_buffer_dump(struct anv_cmd_buffer *cmd_buffer)
    }
    assert(first_bbo->prev_batch_bo == NULL);
 
-   relocate_bo(&cmd_buffer->surface_bo,
-               cmd_buffer->surface_relocs.relocs,
-               cmd_buffer->surface_relocs.num_relocs, aub_bos);
+   for (struct anv_batch_bo *bbo = cmd_buffer->surface_batch_bo;
+        bbo != NULL; bbo = bbo->prev_batch_bo) {
+
+      /* Handle relocations for this surface state BO */
+      relocate_bo(&bbo->bo,
+                  &cmd_buffer->surface_relocs.relocs[bbo->first_reloc],
+                  bbo->num_relocs, aub_bos);
+   }
 
    for (uint32_t i = 0; i < cmd_buffer->bo_count; i++) {
       bo = cmd_buffer->exec2_bos[i];

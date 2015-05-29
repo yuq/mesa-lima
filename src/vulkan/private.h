@@ -609,7 +609,7 @@ struct anv_vertex_binding {
 
 struct anv_descriptor_set_binding {
    struct anv_descriptor_set *                  set;
-   uint32_t                                     dynamic_offsets[256];
+   uint32_t                                     dynamic_offsets[128];
 };
 
 struct anv_cmd_buffer {
@@ -626,7 +626,7 @@ struct anv_cmd_buffer {
    uint32_t                                     bo_count;
    struct anv_batch                             batch;
    struct anv_batch_bo *                        last_batch_bo;
-   struct anv_bo                                surface_bo;
+   struct anv_batch_bo *                        surface_batch_bo;
    uint32_t                                     surface_next;
    struct anv_reloc_list                        surface_relocs;
    struct anv_state_stream                      binding_table_state_stream;

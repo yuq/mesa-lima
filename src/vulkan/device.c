@@ -2285,16 +2285,23 @@ anv_cmd_buffer_destroy(struct anv_device *device,
    struct anv_batch_bo *bbo = cmd_buffer->last_batch_bo;
    while (bbo->prev_batch_bo) {
       struct anv_batch_bo *prev = bbo->prev_batch_bo;
-      anv_batch_bo_destroy(bbo, cmd_buffer->device);
+      anv_batch_bo_destroy(bbo, device);
       bbo = prev;
    }
+   anv_reloc_list_finish(&cmd_buffer->batch.relocs, device);
 
-   anv_bo_pool_free(&device->batch_bo_pool, &cmd_buffer->surface_bo);
+   /* Destroy all of the surface state buffers */
+   bbo = cmd_buffer->surface_batch_bo;
+   while (bbo->prev_batch_bo) {
+      struct anv_batch_bo *prev = bbo->prev_batch_bo;
+      anv_batch_bo_destroy(bbo, device);
+      bbo = prev;
+   }
    anv_reloc_list_finish(&cmd_buffer->surface_relocs, device);
+
    anv_state_stream_finish(&cmd_buffer->surface_state_stream);
    anv_state_stream_finish(&cmd_buffer->dynamic_state_stream);
    anv_state_stream_finish(&cmd_buffer->binding_table_state_stream);
-   anv_reloc_list_finish(&cmd_buffer->batch.relocs, device);
    anv_device_free(device, cmd_buffer->exec2_objects);
    anv_device_free(device, cmd_buffer->exec2_bos);
    anv_device_free(device, cmd_buffer);
@@ -2377,13 +2384,17 @@ VkResult anv_CreateCommandBuffer(
    anv_batch_bo_start(cmd_buffer->last_batch_bo, &cmd_buffer->batch,
                       GEN8_MI_BATCH_BUFFER_START_length * 4);
 
-   result = anv_bo_pool_alloc(&device->batch_bo_pool, &cmd_buffer->surface_bo);
+   result = anv_batch_bo_create(device, &cmd_buffer->surface_batch_bo);
    if (result != VK_SUCCESS)
       goto fail_batch_relocs;
+   cmd_buffer->surface_batch_bo->first_reloc = 0;
+
+   result = anv_reloc_list_init(&cmd_buffer->surface_relocs, device);
+   if (result != VK_SUCCESS)
+      goto fail_ss_batch_bo;
 
    /* Start surface_next at 1 so surface offset 0 is invalid. */
    cmd_buffer->surface_next = 1;
-   anv_reloc_list_init(&cmd_buffer->surface_relocs, device);
 
    cmd_buffer->exec2_objects = NULL;
    cmd_buffer->exec2_bos = NULL;
@@ -2407,6 +2418,8 @@ VkResult anv_CreateCommandBuffer(
 
    return VK_SUCCESS;
 
+ fail_ss_batch_bo:
+   anv_batch_bo_destroy(cmd_buffer->surface_batch_bo, device);
  fail_batch_relocs:
    anv_reloc_list_finish(&cmd_buffer->batch.relocs, device);
  fail_batch_bo:
@@ -2429,7 +2442,7 @@ anv_cmd_buffer_emit_state_base_address(struct anv_cmd_buffer *cmd_buffer)
                   .GeneralStateBufferSize = 0xfffff,
                   .GeneralStateBufferSizeModifyEnable = true,
 
-                  .SurfaceStateBaseAddress = { &cmd_buffer->surface_bo, 0 },
+                  .SurfaceStateBaseAddress = { &cmd_buffer->surface_batch_bo->bo, 0 },
                   .SurfaceStateMemoryObjectControlState = GEN8_MOCS,
                   .SurfaceStateBaseAddressModifyEnable = true,
 
@@ -2599,6 +2612,9 @@ VkResult anv_EndCommandBuffer(
       anv_batch_emit(batch, GEN8_MI_NOOP);
 
    anv_batch_bo_finish(cmd_buffer->last_batch_bo, &cmd_buffer->batch);
+   cmd_buffer->surface_batch_bo->num_relocs =
+      cmd_buffer->surface_relocs.num_relocs - cmd_buffer->surface_batch_bo->first_reloc;
+   cmd_buffer->surface_batch_bo->length = cmd_buffer->surface_next;
 
    cmd_buffer->bo_count = 0;
    cmd_buffer->need_reloc = false;
@@ -2606,10 +2622,13 @@ VkResult anv_EndCommandBuffer(
    /* Lock for access to bo->index. */
    pthread_mutex_lock(&device->mutex);
 
-   /* Add block pool bos first so we can add them with their relocs. */
-   anv_cmd_buffer_add_bo(cmd_buffer, &cmd_buffer->surface_bo,
-                         cmd_buffer->surface_relocs.relocs,
-                         cmd_buffer->surface_relocs.num_relocs);
+   /* Add surface state bos first so we can add them with their relocs. */
+   for (struct anv_batch_bo *bbo = cmd_buffer->surface_batch_bo;
+        bbo != NULL; bbo = bbo->prev_batch_bo) {
+      anv_cmd_buffer_add_bo(cmd_buffer, &bbo->bo,
+                            &cmd_buffer->surface_relocs.relocs[bbo->first_reloc],
+                            bbo->num_relocs);
+   }
 
    /* Add all of the BOs referenced by surface state */
    anv_cmd_buffer_add_validate_bos(cmd_buffer, &cmd_buffer->surface_relocs);
@@ -2674,7 +2693,15 @@ VkResult anv_ResetCommandBuffer(
    anv_batch_bo_start(cmd_buffer->last_batch_bo, &cmd_buffer->batch,
                       GEN8_MI_BATCH_BUFFER_START_length * 4);
 
-   cmd_buffer->surface_next = 0;
+   /* Delete all but the first batch bo */
+   while (cmd_buffer->surface_batch_bo->prev_batch_bo) {
+      struct anv_batch_bo *prev = cmd_buffer->surface_batch_bo->prev_batch_bo;
+      anv_batch_bo_destroy(cmd_buffer->surface_batch_bo, cmd_buffer->device);
+      cmd_buffer->surface_batch_bo = prev;
+   }
+   assert(cmd_buffer->surface_batch_bo->prev_batch_bo == NULL);
+
+   cmd_buffer->surface_next = 1;
    cmd_buffer->surface_relocs.num_relocs = 0;
 
    return VK_SUCCESS;
@@ -2740,13 +2767,44 @@ anv_cmd_buffer_alloc_surface_state(struct anv_cmd_buffer *cmd_buffer,
    struct anv_state state;
 
    state.offset = ALIGN_U32(cmd_buffer->surface_next, alignment);
-   state.map = cmd_buffer->surface_bo.map + state.offset;
+   if (state.offset + size > cmd_buffer->surface_batch_bo->bo.size)
+      return (struct anv_state) { 0 };
+
+   state.map = cmd_buffer->surface_batch_bo->bo.map + state.offset;
    state.alloc_size = size;
    cmd_buffer->surface_next = state.offset + size;
 
-   assert(state.offset + size < cmd_buffer->surface_bo.size);
+   assert(state.offset + size <= cmd_buffer->surface_batch_bo->bo.size);
 
    return state;
+}
+
+static VkResult
+anv_cmd_buffer_new_surface_state_bo(struct anv_cmd_buffer *cmd_buffer)
+{
+   struct anv_batch_bo *new_bbo, *old_bbo = cmd_buffer->surface_batch_bo;
+
+   /* Finish off the old buffer */
+   old_bbo->num_relocs =
+      cmd_buffer->surface_relocs.num_relocs - old_bbo->first_reloc;
+   old_bbo->length = cmd_buffer->surface_next;
+
+   VkResult result = anv_batch_bo_create(cmd_buffer->device, &new_bbo);
+   if (result != VK_SUCCESS)
+      return result;
+
+   new_bbo->first_reloc = cmd_buffer->surface_relocs.num_relocs;
+   cmd_buffer->surface_next = 1;
+
+   new_bbo->prev_batch_bo = old_bbo;
+   cmd_buffer->surface_batch_bo = new_bbo;
+
+   /* Re-emit state base addresses so we get the new surface state base
+    * address before we start emitting binding tables etc.
+    */
+   anv_cmd_buffer_emit_state_base_address(cmd_buffer);
+
+   return VK_SUCCESS;
 }
 
 void anv_CmdBindDescriptorSets(
@@ -2827,7 +2885,7 @@ void anv_CmdBindVertexBuffers(
    }
 }
 
-static void
+static VkResult
 cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
                               unsigned stage)
 {
@@ -2849,11 +2907,14 @@ cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
    uint32_t surface_count = layout ? layout->stage[stage].surface_count : 0;
 
    if (color_attachments + surface_count == 0)
-      return;
+      return VK_SUCCESS;
 
    size = (bias + surface_count) * sizeof(uint32_t);
    bt_state = anv_cmd_buffer_alloc_surface_state(cmd_buffer, size, 32);
    uint32_t *bt_map = bt_state.map;
+
+   if (bt_state.map == NULL)
+      return VK_ERROR_OUT_OF_DEVICE_MEMORY;
 
    static const uint32_t binding_table_opcodes[] = {
       [VK_SHADER_STAGE_VERTEX] = 38,
@@ -2876,6 +2937,9 @@ cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
       struct anv_state state =
          anv_cmd_buffer_alloc_surface_state(cmd_buffer, 64, 64);
 
+      if (state.map == NULL)
+         return VK_ERROR_OUT_OF_DEVICE_MEMORY;
+
       memcpy(state.map, view->surface_state.map, 64);
 
       /* The address goes in dwords 8 and 9 of the SURFACE_STATE */
@@ -2889,7 +2953,7 @@ cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
    }
 
    if (layout == NULL)
-      return;
+      return VK_SUCCESS;
 
    for (uint32_t set = 0; set < layout->num_sets; set++) {
       struct anv_descriptor_set_binding *d = &cmd_buffer->descriptors[set];
@@ -2905,6 +2969,9 @@ cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
 
          struct anv_state state =
             anv_cmd_buffer_alloc_surface_state(cmd_buffer, 64, 64);
+
+         if (state.map == NULL)
+            return VK_ERROR_OUT_OF_DEVICE_MEMORY;
 
          uint32_t offset;
          if (surface_slots[b].dynamic_slot >= 0) {
@@ -2929,24 +2996,29 @@ cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
          bt_map[start + b] = state.offset;
       }
    }
+
+   return VK_SUCCESS;
 }
 
-static void
+static VkResult
 cmd_buffer_emit_samplers(struct anv_cmd_buffer *cmd_buffer, unsigned stage)
 {
    struct anv_pipeline_layout *layout = cmd_buffer->pipeline->layout;
    struct anv_state state;
 
    if (!layout)
-      return;
+      return VK_SUCCESS;
 
    uint32_t sampler_count = layout->stage[stage].sampler_count;
 
    if (sampler_count == 0)
-      return;
+      return VK_SUCCESS;
 
    uint32_t size = sampler_count * 16;
    state = anv_state_stream_alloc(&cmd_buffer->dynamic_state_stream, size, 32);
+
+   if (state.map == NULL)
+      return VK_ERROR_OUT_OF_DEVICE_MEMORY;
 
    static const uint32_t sampler_state_opcodes[] = {
       [VK_SHADER_STAGE_VERTEX] = 43,
@@ -2981,14 +3053,37 @@ cmd_buffer_emit_samplers(struct anv_cmd_buffer *cmd_buffer, unsigned stage)
                 sampler->state, sizeof(sampler->state));
       }
    }
+
+   return VK_SUCCESS;
 }
 
 static void
 flush_descriptor_sets(struct anv_cmd_buffer *cmd_buffer)
 {
+   VkResult result;
    for (uint32_t s = 0; s < VK_NUM_SHADER_STAGE; s++) {
-      cmd_buffer_emit_binding_table(cmd_buffer, s);
-      cmd_buffer_emit_samplers(cmd_buffer, s);
+      result = cmd_buffer_emit_binding_table(cmd_buffer, s);
+      if (result != VK_SUCCESS)
+         break;
+
+      result = cmd_buffer_emit_samplers(cmd_buffer, s);
+      if (result != VK_SUCCESS)
+         break;
+   }
+
+   if (result != VK_SUCCESS) {
+      assert(result == VK_ERROR_OUT_OF_DEVICE_MEMORY);
+
+      result = anv_cmd_buffer_new_surface_state_bo(cmd_buffer);
+      assert(result == VK_SUCCESS);
+
+      for (uint32_t s = 0; s < VK_NUM_SHADER_STAGE; s++) {
+         result = cmd_buffer_emit_binding_table(cmd_buffer, s);
+         result = cmd_buffer_emit_samplers(cmd_buffer, s);
+      }
+
+      /* It had better succeed this time */
+      assert(result == VK_SUCCESS);
    }
 
    cmd_buffer->dirty &= ~ANV_CMD_BUFFER_DESCRIPTOR_SET_DIRTY;
