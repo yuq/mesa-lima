@@ -336,6 +336,9 @@ struct anv_device {
 
     struct anv_meta_state                       meta_state;
 
+    struct anv_state                            float_border_colors;
+    struct anv_state                            uint32_border_colors;
+
     struct anv_compiler *                       compiler;
     struct anv_aub_writer *                     aub_writer;
     pthread_mutex_t                             mutex;

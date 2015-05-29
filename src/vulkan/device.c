@@ -303,6 +303,35 @@ parse_debug_flags(struct anv_device *device)
    }
 }
 
+static void
+anv_device_init_border_colors(struct anv_device *device)
+{
+   float float_border_colors[][4] = {
+      [VK_BORDER_COLOR_OPAQUE_WHITE]            = { 1.0, 1.0, 1.0, 1.0 },
+      [VK_BORDER_COLOR_TRANSPARENT_BLACK]       = { 0.0, 0.0, 0.0, 0.0 },
+      [VK_BORDER_COLOR_OPAQUE_BLACK]            = { 0.0, 0.0, 0.0, 1.0 }
+   };
+
+   uint32_t uint32_border_colors[][4] = {
+      [VK_BORDER_COLOR_OPAQUE_WHITE]            = { 1, 1, 1, 1 },
+      [VK_BORDER_COLOR_TRANSPARENT_BLACK]       = { 0, 0, 0, 0 },
+      [VK_BORDER_COLOR_OPAQUE_BLACK]            = { 0, 0, 0, 1 }
+   };
+
+   device->float_border_colors =
+      anv_state_pool_alloc(&device->dynamic_state_pool,
+                           sizeof(float_border_colors), 32);
+   memcpy(device->float_border_colors.map,
+          float_border_colors, sizeof(float_border_colors));
+
+   device->uint32_border_colors =
+      anv_state_pool_alloc(&device->dynamic_state_pool,
+                           sizeof(uint32_border_colors), 32);
+   memcpy(device->uint32_border_colors.map,
+          uint32_border_colors, sizeof(uint32_border_colors));
+
+}
+
 static const uint32_t BATCH_SIZE = 8192;
 
 VkResult anv_CreateDevice(
@@ -365,6 +394,8 @@ VkResult anv_CreateDevice(
    pthread_mutex_init(&device->mutex, NULL);
 
    anv_device_init_meta(device);
+
+   anv_device_init_border_colors(device);
 
    *pDevice = (VkDevice) device;
 
@@ -1715,7 +1746,11 @@ VkResult anv_CreateSampler(
       .ChromaKeyMode = 0,
       .ShadowFunction = vk_to_gen_compare_op[pCreateInfo->compareOp],
       .CubeSurfaceControlMode = 0,
-      .IndirectStatePointer = 0,
+
+      .IndirectStatePointer =
+         device->float_border_colors.offset +
+         pCreateInfo->borderColor * sizeof(float) * 4;
+
       .LODClampMagnificationMode = MIPNONE,
       .MaximumAnisotropy = 0,
       .RAddressMinFilterRoundingEnable = 0,
