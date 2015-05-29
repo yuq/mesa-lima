@@ -1256,7 +1256,8 @@ dri2_bind_tex_image(_EGLDriver *drv,
       format = __DRI_TEXTURE_FORMAT_RGBA;
       break;
    default:
-      assert(0);
+      assert(!"Unexpected texture format in dri2_bind_tex_image()");
+      format = __DRI_TEXTURE_FORMAT_RGBA;
    }
 
    switch (dri2_surf->base.TextureTarget) {
@@ -1264,7 +1265,8 @@ dri2_bind_tex_image(_EGLDriver *drv,
       target = GL_TEXTURE_2D;
       break;
    default:
-      assert(0);
+      target = GL_TEXTURE_2D;
+      assert(!"Unexpected texture target in dri2_bind_tex_image()");
    }
 
    (*dri2_dpy->tex_buffer->setTexBuffer2)(dri2_ctx->dri_context,
