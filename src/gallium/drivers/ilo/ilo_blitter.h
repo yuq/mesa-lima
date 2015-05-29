@@ -61,6 +61,8 @@ struct ilo_blitter {
    struct ilo_ve_state ve;
    struct pipe_draw_info draw;
 
+   struct ilo_state_sol sol;
+
    struct ilo_state_viewport vp;
    uint32_t vp_data[20];
 

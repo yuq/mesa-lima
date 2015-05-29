@@ -28,6 +28,8 @@
 #ifndef ILO_SHADER_INTERNAL_H
 #define ILO_SHADER_INTERNAL_H
 
+#include "core/ilo_state_sol.h"
+
 #include "ilo_common.h"
 #include "ilo_state.h"
 #include "ilo_shader.h"
@@ -111,7 +113,9 @@ struct ilo_shader {
 
    bool stream_output;
    int svbi_post_inc;
-   struct pipe_stream_output_info so_info;
+
+   uint32_t sol_data[PIPE_MAX_SO_OUTPUTS][2];
+   struct ilo_state_sol sol;
 
    /* for VS stream output / rasterizer discard */
    int gs_offsets[3];

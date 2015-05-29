@@ -557,39 +557,103 @@ ilo_shader_state_search_variant(struct ilo_shader_state *state,
 }
 
 static void
-copy_so_info(struct ilo_shader *sh,
-             const struct pipe_stream_output_info *so_info)
+init_sol(struct ilo_shader *kernel,
+         const struct ilo_dev *dev,
+         const struct pipe_stream_output_info *so_info,
+         bool rasterizer_discard)
 {
-   unsigned i, attr;
+   struct ilo_state_sol_decl_info decls[4][PIPE_MAX_SO_OUTPUTS];
+   unsigned buf_offsets[PIPE_MAX_SO_BUFFERS];
+   struct ilo_state_sol_info info;
+   unsigned i;
 
-   if (!so_info->num_outputs)
+   if (!so_info->num_outputs) {
+      ilo_state_sol_init_disabled(&kernel->sol, dev, rasterizer_discard);
       return;
+   }
 
-   sh->so_info = *so_info;
+   memset(&info, 0, sizeof(info));
+   info.data = kernel->sol_data;
+   info.data_size = sizeof(kernel->sol_data);
+   info.sol_enable = true;
+   info.stats_enable = true;
+   info.tristrip_reorder = GEN7_REORDER_TRAILING;
+   info.render_disable = rasterizer_discard;
+   info.render_stream = 0;
 
+   for (i = 0; i < 4; i++) {
+      info.buffer_strides[i] = so_info->stride[i] * 4;
+
+      info.streams[i].cv_vue_attr_count = kernel->out.count;
+      info.streams[i].decls = decls[i];
+   }
+
+   memset(decls, 0, sizeof(decls));
+   memset(buf_offsets, 0, sizeof(buf_offsets));
    for (i = 0; i < so_info->num_outputs; i++) {
+      const unsigned stream = so_info->output[i].stream;
+      const unsigned buffer = so_info->output[i].output_buffer;
+      struct ilo_state_sol_decl_info *decl;
+      unsigned attr;
+
       /* figure out which attribute is sourced */
-      for (attr = 0; attr < sh->out.count; attr++) {
-         const int reg_idx = sh->out.register_indices[attr];
+      for (attr = 0; attr < kernel->out.count; attr++) {
+         const int reg_idx = kernel->out.register_indices[attr];
          if (reg_idx == so_info->output[i].register_index)
             break;
       }
-
-      if (attr < sh->out.count) {
-         sh->so_info.output[i].register_index = attr;
-      }
-      else {
+      if (attr >= kernel->out.count) {
          assert(!"stream output an undefined register");
-         sh->so_info.output[i].register_index = 0;
+         attr = 0;
       }
 
+      if (info.streams[stream].vue_read_count < attr + 1)
+         info.streams[stream].vue_read_count = attr + 1;
+
+      /* pad with holes first */
+      while (buf_offsets[buffer] < so_info->output[i].dst_offset) {
+         int num_dwords;
+
+         num_dwords = so_info->output[i].dst_offset - buf_offsets[buffer];
+         if (num_dwords > 4)
+            num_dwords = 4;
+
+         assert(info.streams[stream].decl_count < ARRAY_SIZE(decls[stream]));
+         decl = &decls[stream][info.streams[stream].decl_count];
+
+         decl->attr = 0;
+         decl->is_hole = true;
+         decl->component_base = 0;
+         decl->component_count = num_dwords;
+         decl->buffer = buffer;
+
+         info.streams[stream].decl_count++;
+         buf_offsets[buffer] += num_dwords;
+      }
+      assert(buf_offsets[buffer] == so_info->output[i].dst_offset);
+
+      assert(info.streams[stream].decl_count < ARRAY_SIZE(decls[stream]));
+      decl = &decls[stream][info.streams[stream].decl_count];
+
+      decl->attr = attr;
+      decl->is_hole = false;
       /* PSIZE is at W channel */
-      if (sh->out.semantic_names[attr] == TGSI_SEMANTIC_PSIZE) {
+      if (kernel->out.semantic_names[attr] == TGSI_SEMANTIC_PSIZE) {
          assert(so_info->output[i].start_component == 0);
          assert(so_info->output[i].num_components == 1);
-         sh->so_info.output[i].start_component = 3;
+         decl->component_base = 3;
+         decl->component_count = 1;
+      } else {
+         decl->component_base = so_info->output[i].start_component;
+         decl->component_count = so_info->output[i].num_components;
       }
+      decl->buffer = buffer;
+
+      info.streams[stream].decl_count++;
+      buf_offsets[buffer] += so_info->output[i].num_components;
    }
+
+   ilo_state_sol_init(&kernel->sol, dev, &info);
 }
 
 /**
@@ -599,17 +663,20 @@ static struct ilo_shader *
 ilo_shader_state_add_variant(struct ilo_shader_state *state,
                              const struct ilo_shader_variant *variant)
 {
+   bool rasterizer_discard = false;
    struct ilo_shader *sh;
 
    switch (state->info.type) {
    case PIPE_SHADER_VERTEX:
       sh = ilo_shader_compile_vs(state, variant);
+      rasterizer_discard = variant->u.vs.rasterizer_discard;
       break;
    case PIPE_SHADER_FRAGMENT:
       sh = ilo_shader_compile_fs(state, variant);
       break;
    case PIPE_SHADER_GEOMETRY:
       sh = ilo_shader_compile_gs(state, variant);
+      rasterizer_discard = variant->u.gs.rasterizer_discard;
       break;
    case PIPE_SHADER_COMPUTE:
       sh = ilo_shader_compile_cs(state, variant);
@@ -625,7 +692,8 @@ ilo_shader_state_add_variant(struct ilo_shader_state *state,
 
    sh->variant = *variant;
 
-   copy_so_info(sh, &state->info.stream_output);
+   init_sol(sh, state->info.dev, &state->info.stream_output,
+         rasterizer_discard);
 
    ilo_shader_state_add_shader(state, sh);
 
@@ -1164,11 +1232,17 @@ ilo_shader_get_kernel_cso(const struct ilo_shader_state *shader)
 const struct pipe_stream_output_info *
 ilo_shader_get_kernel_so_info(const struct ilo_shader_state *shader)
 {
+   return &shader->info.stream_output;
+}
+
+const struct ilo_state_sol *
+ilo_shader_get_kernel_sol(const struct ilo_shader_state *shader)
+{
    const struct ilo_shader *kernel = shader->shader;
 
    assert(kernel);
 
-   return &kernel->so_info;
+   return &kernel->sol;
 }
 
 /**

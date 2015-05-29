@@ -32,6 +32,7 @@
 #include "core/ilo_state_cc.h"
 #include "core/ilo_state_raster.h"
 #include "core/ilo_state_sampler.h"
+#include "core/ilo_state_sol.h"
 #include "core/ilo_state_surface.h"
 #include "core/ilo_state_viewport.h"
 #include "core/ilo_state_zs.h"

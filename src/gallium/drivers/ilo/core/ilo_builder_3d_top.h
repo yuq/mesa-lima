@@ -37,6 +37,7 @@
 #include "ilo_dev.h"
 #include "ilo_state_3d.h"
 #include "ilo_state_sampler.h"
+#include "ilo_state_sol.h"
 #include "ilo_builder.h"
 
 static inline void
@@ -1013,131 +1014,41 @@ gen7_disable_3DSTATE_GS(struct ilo_builder *builder)
 
 static inline void
 gen7_3DSTATE_STREAMOUT(struct ilo_builder *builder,
-                       int render_stream,
-                       bool render_disable,
-                       int vertex_attrib_count,
-                       const int *buf_strides)
+                       const struct ilo_state_sol *sol)
 {
    const uint8_t cmd_len = (ilo_dev_gen(builder->dev) >= ILO_GEN(8)) ? 5 : 3;
    uint32_t *dw;
-   int buf_mask;
 
    ILO_DEV_ASSERT(builder->dev, 7, 8);
 
    ilo_builder_batch_pointer(builder, cmd_len, &dw);
 
    dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_STREAMOUT) | (cmd_len - 2);
-
-   dw[1] = render_stream << GEN7_SO_DW1_RENDER_STREAM_SELECT__SHIFT;
-   if (render_disable)
-      dw[1] |= GEN7_SO_DW1_RENDER_DISABLE;
-
-   if (buf_strides) {
-      buf_mask = ((bool) buf_strides[3]) << 3 |
-                 ((bool) buf_strides[2]) << 2 |
-                 ((bool) buf_strides[1]) << 1 |
-                 ((bool) buf_strides[0]);
-      if (ilo_dev_gen(builder->dev) >= ILO_GEN(8)) {
-         dw[3] = buf_strides[1] << 16 | buf_strides[0];
-         dw[4] = buf_strides[3] << 16 | buf_strides[1];
-      }
-   } else {
-      buf_mask = 0;
-   }
-
-   if (buf_mask) {
-      int read_len;
-
-      dw[1] |= GEN7_SO_DW1_SO_ENABLE |
-               GEN7_SO_DW1_STATISTICS;
-      /* API_OPENGL */
-      if (true)
-         dw[1] |= GEN7_REORDER_TRAILING << GEN7_SO_DW1_REORDER_MODE__SHIFT;
-      if (ilo_dev_gen(builder->dev) < ILO_GEN(8))
-         dw[1] |= buf_mask << GEN7_SO_DW1_BUFFER_ENABLES__SHIFT;
-
-      read_len = (vertex_attrib_count + 1) / 2;
-      if (!read_len)
-         read_len = 1;
-
-      dw[2] = 0 << GEN7_SO_DW2_STREAM3_READ_OFFSET__SHIFT |
-              (read_len - 1) << GEN7_SO_DW2_STREAM3_READ_LEN__SHIFT |
-              0 << GEN7_SO_DW2_STREAM2_READ_OFFSET__SHIFT |
-              (read_len - 1) << GEN7_SO_DW2_STREAM2_READ_LEN__SHIFT |
-              0 << GEN7_SO_DW2_STREAM1_READ_OFFSET__SHIFT |
-              (read_len - 1) << GEN7_SO_DW2_STREAM1_READ_LEN__SHIFT |
-              0 << GEN7_SO_DW2_STREAM0_READ_OFFSET__SHIFT |
-              (read_len - 1) << GEN7_SO_DW2_STREAM0_READ_LEN__SHIFT;
-   } else {
-      dw[2] = 0;
+   /* see sol_set_gen7_3DSTATE_STREAMOUT() */
+   dw[1] = sol->so[0];
+   dw[2] = sol->so[1];
+   if (ilo_dev_gen(builder->dev) >= ILO_GEN(8)) {
+      dw[3] = sol->so[2];
+      dw[4] = sol->so[3];
    }
 }
 
 static inline void
 gen7_3DSTATE_SO_DECL_LIST(struct ilo_builder *builder,
-                          const struct pipe_stream_output_info *so_info)
+                          const struct ilo_state_sol *sol)
 {
    /*
     * Note that "DWord Length" has 9 bits for this command and the type of
     * cmd_len cannot be uint8_t.
     */
    uint16_t cmd_len;
-   struct {
-      int buf_selects;
-      int decl_count;
-      uint16_t decls[128];
-   } streams[4];
-   unsigned buf_offsets[PIPE_MAX_SO_BUFFERS];
-   int hw_decl_count, i;
+   int cmd_decl_count;
    uint32_t *dw;
 
    ILO_DEV_ASSERT(builder->dev, 7, 8);
 
-   memset(streams, 0, sizeof(streams));
-   memset(buf_offsets, 0, sizeof(buf_offsets));
-
-   for (i = 0; i < so_info->num_outputs; i++) {
-      unsigned decl, st, buf, reg, mask;
-
-      st = so_info->output[i].stream;
-      buf = so_info->output[i].output_buffer;
-
-      /* pad with holes */
-      while (buf_offsets[buf] < so_info->output[i].dst_offset) {
-         int num_dwords;
-
-         num_dwords = so_info->output[i].dst_offset - buf_offsets[buf];
-         if (num_dwords > 4)
-            num_dwords = 4;
-
-         decl = buf << GEN7_SO_DECL_OUTPUT_SLOT__SHIFT |
-                GEN7_SO_DECL_HOLE_FLAG |
-                ((1 << num_dwords) - 1) << GEN7_SO_DECL_COMPONENT_MASK__SHIFT;
-
-         assert(streams[st].decl_count < Elements(streams[st].decls));
-         streams[st].decls[streams[st].decl_count++] = decl;
-         buf_offsets[buf] += num_dwords;
-      }
-      assert(buf_offsets[buf] == so_info->output[i].dst_offset);
-
-      reg = so_info->output[i].register_index;
-      mask = ((1 << so_info->output[i].num_components) - 1) <<
-         so_info->output[i].start_component;
-
-      decl = buf << GEN7_SO_DECL_OUTPUT_SLOT__SHIFT |
-             reg << GEN7_SO_DECL_REG_INDEX__SHIFT |
-             mask << GEN7_SO_DECL_COMPONENT_MASK__SHIFT;
-
-      assert(streams[st].decl_count < Elements(streams[st].decls));
-
-      streams[st].buf_selects |= 1 << buf;
-      streams[st].decls[streams[st].decl_count++] = decl;
-      buf_offsets[buf] += so_info->output[i].num_components;
-   }
-
    if (ilo_dev_gen(builder->dev) >= ILO_GEN(7.5)) {
-      hw_decl_count = MAX4(streams[0].decl_count, streams[1].decl_count,
-                           streams[2].decl_count, streams[3].decl_count);
+      cmd_decl_count = sol->decl_count;
    } else {
       /*
        * From the Ivy Bridge PRM, volume 2 part 1, page 201:
@@ -1146,28 +1057,22 @@ gen7_3DSTATE_SO_DECL_LIST(struct ilo_builder *builder,
        *      whenever this command is issued. The "Num Entries [n]" fields
        *      still contain the actual numbers of valid decls."
        */
-      hw_decl_count = 128;
+      cmd_decl_count = 128;
    }
 
-   cmd_len = 3 + 2 * hw_decl_count;
+   cmd_len = 3 + 2 * cmd_decl_count;
 
    ilo_builder_batch_pointer(builder, cmd_len, &dw);
 
    dw[0] = GEN7_RENDER_CMD(3D, 3DSTATE_SO_DECL_LIST) | (cmd_len - 2);
-   dw[1] = streams[3].buf_selects << GEN7_SO_DECL_DW1_STREAM3_BUFFER_SELECTS__SHIFT |
-           streams[2].buf_selects << GEN7_SO_DECL_DW1_STREAM2_BUFFER_SELECTS__SHIFT |
-           streams[1].buf_selects << GEN7_SO_DECL_DW1_STREAM1_BUFFER_SELECTS__SHIFT |
-           streams[0].buf_selects << GEN7_SO_DECL_DW1_STREAM0_BUFFER_SELECTS__SHIFT;
-   dw[2] = streams[3].decl_count << GEN7_SO_DECL_DW2_STREAM3_ENTRY_COUNT__SHIFT |
-           streams[2].decl_count << GEN7_SO_DECL_DW2_STREAM2_ENTRY_COUNT__SHIFT |
-           streams[1].decl_count << GEN7_SO_DECL_DW2_STREAM1_ENTRY_COUNT__SHIFT |
-           streams[0].decl_count << GEN7_SO_DECL_DW2_STREAM0_ENTRY_COUNT__SHIFT;
-   dw += 3;
+   /* see sol_set_gen7_3DSTATE_SO_DECL_LIST() */
+   dw[1] = sol->so[4];
+   dw[2] = sol->so[5];
+   memcpy(&dw[3], sol->decl, sizeof(sol->decl[0]) * sol->decl_count);
 
-   for (i = 0; i < hw_decl_count; i++) {
-      dw[0] = streams[1].decls[i] << 16 | streams[0].decls[i];
-      dw[1] = streams[3].decls[i] << 16 | streams[2].decls[i];
-      dw += 2;
+   if (sol->decl_count < cmd_decl_count) {
+      memset(&dw[3 + 2 * sol->decl_count], 0, sizeof(sol->decl[0]) *
+            cmd_decl_count - sol->decl_count);
    }
 }
 

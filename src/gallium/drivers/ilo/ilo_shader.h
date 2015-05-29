@@ -96,6 +96,7 @@ struct ilo_rasterizer_state;
 struct ilo_shader_cache;
 struct ilo_shader_state;
 struct ilo_shader_cso;
+struct ilo_state_sol;
 struct ilo_state_vector;
 
 struct ilo_shader_cache *
@@ -167,6 +168,9 @@ ilo_shader_get_kernel_cso(const struct ilo_shader_state *shader);
 
 const struct pipe_stream_output_info *
 ilo_shader_get_kernel_so_info(const struct ilo_shader_state *shader);
+
+const struct ilo_state_sol *
+ilo_shader_get_kernel_sol(const struct ilo_shader_state *shader);
 
 const struct ilo_kernel_routing *
 ilo_shader_get_kernel_routing(const struct ilo_shader_state *shader);

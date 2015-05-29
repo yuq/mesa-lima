@@ -420,7 +420,7 @@ gen7_draw_sol(struct ilo_render *r,
               const struct ilo_state_vector *vec,
               struct ilo_render_draw_session *session)
 {
-   const struct pipe_stream_output_info *so_info;
+   const struct ilo_state_sol *sol;
    const struct ilo_shader_state *shader;
    bool dirty_sh = false;
 
@@ -433,12 +433,15 @@ gen7_draw_sol(struct ilo_render *r,
       dirty_sh = DIRTY(VS);
    }
 
-   so_info = ilo_shader_get_kernel_so_info(shader);
+   sol = ilo_shader_get_kernel_sol(shader);
 
    /* 3DSTATE_SO_BUFFER */
    if ((DIRTY(SO) || dirty_sh || r->batch_bo_changed) &&
        vec->so.enabled) {
+      const struct pipe_stream_output_info *so_info;
       int i;
+
+      so_info = ilo_shader_get_kernel_so_info(shader);
 
       for (i = 0; i < vec->so.count; i++) {
          const int stride = so_info->stride[i] * 4; /* in bytes */
@@ -452,22 +455,30 @@ gen7_draw_sol(struct ilo_render *r,
 
    /* 3DSTATE_SO_DECL_LIST */
    if (dirty_sh && vec->so.enabled)
-      gen7_3DSTATE_SO_DECL_LIST(r->builder, so_info);
+      gen7_3DSTATE_SO_DECL_LIST(r->builder, sol);
+
+   /*
+    * From the Ivy Bridge PRM, volume 2 part 1, page 196-197:
+    *
+    *     "Anytime the SOL unit MMIO registers or non-pipeline state are
+    *      written, the SOL unit needs to receive a pipeline state update with
+    *      SOL unit dirty state for information programmed in MMIO/NP to get
+    *      loaded into the SOL unit.
+    *
+    *      The SOL unit incorrectly double buffers MMIO/NP registers and only
+    *      moves them into the design for usage when control topology is
+    *      received with the SOL unit dirty state.
+    *
+    *      If the state does not change, need to resend the same state.
+    *
+    *      Because of corruption, software must flush the whole fixed function
+    *      pipeline when 3DSTATE_STREAMOUT changes state."
+    *
+    * The first and fourth paragraphs are gone on Gen7.5+.
+    */
 
    /* 3DSTATE_STREAMOUT */
-   if (DIRTY(SO) || DIRTY(RASTERIZER) || dirty_sh) {
-      const int output_count = ilo_shader_get_kernel_param(shader,
-            ILO_KERNEL_OUTPUT_COUNT);
-      int buf_strides[4] = { 0, 0, 0, 0 };
-      int i;
-
-      for (i = 0; i < vec->so.count; i++)
-         buf_strides[i] = so_info->stride[i] * 4;
-
-      gen7_3DSTATE_STREAMOUT(r->builder, 0,
-            vec->rasterizer->state.rasterizer_discard,
-            output_count, buf_strides);
-   }
+   gen7_3DSTATE_STREAMOUT(r->builder, sol);
 }
 
 static void
@@ -717,7 +728,7 @@ gen7_rectlist_vs_to_sf(struct ilo_render *r,
    gen7_3DSTATE_CONSTANT_GS(r->builder, NULL, NULL, 0);
    gen7_disable_3DSTATE_GS(r->builder);
 
-   gen7_3DSTATE_STREAMOUT(r->builder, 0, false, 0x0, 0);
+   gen7_3DSTATE_STREAMOUT(r->builder, &blitter->sol);
 
    gen6_3DSTATE_CLIP(r->builder, &blitter->fb.rs);
 

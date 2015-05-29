@@ -64,6 +64,8 @@ ilo_blitter_set_invariants(struct ilo_blitter *blitter)
    blitter->draw.mode = ILO_PRIM_RECTANGLES;
    blitter->draw.count = 3;
 
+   ilo_state_sol_init_disabled(&blitter->sol, blitter->ilo->dev, false);
+
    /**
     * From the Haswell PRM, volume 7, page 615:
     *
