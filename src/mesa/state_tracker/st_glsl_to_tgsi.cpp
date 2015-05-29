@@ -4209,6 +4209,7 @@ get_pixel_transfer_visitor(struct st_fragment_program *fp,
       st_dst_reg temp_dst = st_dst_reg(temp);
 
       assert(st->pixel_xfer.pixelmap_texture);
+      (void) st;
 
       /* With a little effort, we can do four pixel map look-ups with
        * two TEX instructions:
