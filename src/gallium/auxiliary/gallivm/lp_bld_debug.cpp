@@ -115,18 +115,6 @@ lp_debug_dump_value(LLVMValueRef value)
 }
 
 
-static const char *
-disassemblerSymbolLookupCB(void *DisInfo,
-                           uint64_t ReferenceValue,
-                           uint64_t *ReferenceType,
-                           uint64_t ReferencePC,
-                           const char **ReferenceName)
-{
-   // TODO: Maybe this can be used to guess jumps
-   return NULL;
-}
-
-
 /*
  * Disassemble a function, using the LLVM MC disassembler.
  *
@@ -149,7 +137,7 @@ disassemble(const void* func, llvm::raw_ostream & Out)
     */
 
    std::string Triple = llvm::sys::getProcessTriple();
-   LLVMDisasmContextRef D = LLVMCreateDisasm(Triple.c_str(), NULL, 0, NULL, &disassemblerSymbolLookupCB);
+   LLVMDisasmContextRef D = LLVMCreateDisasm(Triple.c_str(), NULL, 0, NULL, NULL);
    char outline[1024];
 
    if (!D) {
