@@ -789,7 +789,8 @@ fs_generator::generate_tex(fs_inst *inst, struct brw_reg dst, struct brw_reg src
 
       /* addr = ((sampler * 0x101) + base_binding_table_index) & 0xfff */
       brw_MUL(p, addr, sampler_reg, brw_imm_ud(0x101));
-      brw_ADD(p, addr, addr, brw_imm_ud(base_binding_table_index));
+      if (base_binding_table_index)
+         brw_ADD(p, addr, addr, brw_imm_ud(base_binding_table_index));
       brw_AND(p, addr, addr, brw_imm_ud(0xfff));
 
       brw_pop_insn_state(p);
