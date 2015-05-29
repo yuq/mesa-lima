@@ -542,7 +542,7 @@ struct anv_query_pool {
 };
 
 struct anv_descriptor_slot {
-   bool dynamic;
+   int8_t dynamic_slot;
    uint8_t index;
 } entries[0];
 

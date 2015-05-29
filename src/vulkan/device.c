@@ -1826,7 +1826,8 @@ VkResult anv_CreateDescriptorSetLayout(
    }
 
    uint32_t descriptor = 0;
-   bool dynamic;
+   int8_t dynamic_slot = 0;
+   bool is_dynamic;
    for (uint32_t i = 0; i < pCreateInfo->count; i++) {
       switch (pCreateInfo->pBinding[i].descriptorType) {
       case VK_DESCRIPTOR_TYPE_SAMPLER:
@@ -1834,7 +1835,7 @@ VkResult anv_CreateDescriptorSetLayout(
          for_each_bit(s, pCreateInfo->pBinding[i].stageFlags)
             for (uint32_t j = 0; j < pCreateInfo->pBinding[i].count; j++) {
                sampler[s]->index = descriptor + j;
-               sampler[s]->dynamic = false;
+               sampler[s]->dynamic_slot = -1;
                sampler[s]++;
             }
          break;
@@ -1845,10 +1846,10 @@ VkResult anv_CreateDescriptorSetLayout(
       switch (pCreateInfo->pBinding[i].descriptorType) {
       case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
       case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
-         dynamic = true;
+         is_dynamic = true;
          break;
       default:
-         dynamic = false;
+         is_dynamic = false;
          break;
       }
 
@@ -1865,13 +1866,20 @@ VkResult anv_CreateDescriptorSetLayout(
          for_each_bit(s, pCreateInfo->pBinding[i].stageFlags)
             for (uint32_t j = 0; j < pCreateInfo->pBinding[i].count; j++) {
                surface[s]->index = descriptor + j;
-               surface[s]->dynamic = dynamic;
+               if (is_dynamic)
+                  surface[s]->dynamic_slot = dynamic_slot + j;
+               else
+                  surface[s]->dynamic_slot = -1;
                surface[s]++;
             }
          break;
       default:
          break;
       }
+
+      if (is_dynamic)
+         dynamic_slot += pCreateInfo->pBinding[i].count;
+
       descriptor += pCreateInfo->pBinding[i].count;
    }
 
@@ -2754,8 +2762,8 @@ void anv_CmdBindDescriptorSets(
    struct anv_cmd_buffer *cmd_buffer = (struct anv_cmd_buffer *) cmdBuffer;
    struct anv_pipeline_layout *layout = cmd_buffer->pipeline->layout;
    struct anv_bindings *bindings = cmd_buffer->bindings;
+   uint32_t dynamic_base = 0;
 
-   uint32_t dynamic_slot = 0;
    for (uint32_t i = 0; i < setCount; i++) {
       struct anv_descriptor_set *set =
          (struct anv_descriptor_set *) pDescriptorSets[i];
@@ -2777,11 +2785,12 @@ void anv_CmdBindDescriptorSets(
                anv_cmd_buffer_alloc_surface_state(cmd_buffer, 64, 64);
 
             uint32_t offset;
-            if (surface_slots[b].dynamic) {
-               offset = view->offset + pDynamicOffsets[dynamic_slot];
+            if (surface_slots[b].dynamic_slot != -1) {
+               uint32_t dynamic_offset =
+                  pDynamicOffsets[dynamic_base + surface_slots[b].dynamic_slot];
+               offset = view->offset + dynamic_offset;
                fill_buffer_surface_state(state.map, view->format, offset,
-                                         view->range - pDynamicOffsets[dynamic_slot]);
-               dynamic_slot++;
+                                         view->range - dynamic_offset);
             } else {
                offset = view->offset;
                memcpy(state.map, view->surface_state.map, 64);
@@ -2808,6 +2817,8 @@ void anv_CmdBindDescriptorSets(
                    sampler->state, sizeof(sampler->state));
          }
       }
+
+      dynamic_base += set_layout->num_dynamic_buffers;
    }
 
    cmd_buffer->dirty |= ANV_CMD_BUFFER_DESCRIPTOR_SET_DIRTY;
