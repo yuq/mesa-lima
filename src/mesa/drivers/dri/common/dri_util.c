@@ -164,7 +164,7 @@ driCreateNewScreen2(int scrn, int fd,
 
     struct gl_constants consts = { 0 };
     gl_api api;
-    int version;
+    unsigned version;
 
     api = API_OPENGLES2;
     if (_mesa_override_gl_version_contextless(&consts, &api, &version))
