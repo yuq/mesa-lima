@@ -1921,10 +1921,7 @@ if test "x$enable_gallium_llvm" = xyes; then
             AC_MSG_ERROR([LLVM $LLVM_REQUIRED_VERSION_MAJOR.$LLVM_REQUIRED_VERSION_MINOR or newer is required])
         fi
 
-        LLVM_COMPONENTS="engine bitwriter"
-        if $LLVM_CONFIG --components | grep -qw 'mcjit'; then
-            LLVM_COMPONENTS="${LLVM_COMPONENTS} mcjit"
-        fi
+        LLVM_COMPONENTS="engine bitwriter mcjit"
 
         if test "x$enable_opencl" = xyes; then
             llvm_check_version_for "3" "5" "0" "opencl"
