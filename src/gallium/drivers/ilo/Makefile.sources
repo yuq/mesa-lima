@@ -29,6 +29,8 @@ C_SOURCES := \
 	core/ilo_state_raster.h \
 	core/ilo_state_sampler.c \
 	core/ilo_state_sampler.h \
+	core/ilo_state_sol.c \
+	core/ilo_state_sol.h \
 	core/ilo_state_surface.c \
 	core/ilo_state_surface.h \
 	core/ilo_state_viewport.c \
