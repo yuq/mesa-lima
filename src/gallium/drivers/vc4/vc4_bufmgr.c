@@ -49,8 +49,18 @@ vc4_bo_from_cache(struct vc4_screen *screen, uint32_t size, const char *name)
         struct vc4_bo *bo = NULL;
         pipe_mutex_lock(cache->lock);
         if (!is_empty_list(&cache->size_list[page_index])) {
-                struct simple_node *node = last_elem(&cache->size_list[page_index]);
+                struct simple_node *node = first_elem(&cache->size_list[page_index]);
                 bo = container_of(node, struct vc4_bo, size_list);
+
+                /* Check that the BO has gone idle.  If not, then we want to
+                 * allocate something new instead, since we assume that the
+                 * user will proceed to CPU map it and fill it with stuff.
+                 */
+                if (!vc4_bo_wait(bo, 0)) {
+                        pipe_mutex_unlock(cache->lock);
+                        return NULL;
+                }
+
                 pipe_reference_init(&bo->reference, 1);
                 remove_from_list(&bo->time_list);
                 remove_from_list(&bo->size_list);
