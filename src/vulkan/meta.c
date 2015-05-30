@@ -178,8 +178,8 @@ anv_cmd_buffer_restore(struct anv_cmd_buffer *cmd_buffer,
           sizeof(state->old_vertex_bindings));
 
    cmd_buffer->vb_dirty |= (1 << NUM_VB_USED) - 1;
-   cmd_buffer->dirty |= ANV_CMD_BUFFER_PIPELINE_DIRTY |
-                        ANV_CMD_BUFFER_DESCRIPTOR_SET_DIRTY;
+   cmd_buffer->dirty |= ANV_CMD_BUFFER_PIPELINE_DIRTY;
+   cmd_buffer->descriptors_dirty |= VK_SHADER_STAGE_VERTEX_BIT;
 }
 
 struct vue_header {

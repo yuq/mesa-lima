@@ -556,6 +556,7 @@ struct anv_descriptor_set_layout {
 
    uint32_t count;
    uint32_t num_dynamic_buffers;
+   uint32_t shader_stages;
    struct anv_descriptor_slot entries[0];
 };
 
@@ -597,7 +598,6 @@ struct anv_buffer {
 };
 
 #define ANV_CMD_BUFFER_PIPELINE_DIRTY           (1 << 0)
-#define ANV_CMD_BUFFER_DESCRIPTOR_SET_DIRTY     (1 << 1)
 #define ANV_CMD_BUFFER_RS_DIRTY                 (1 << 2)
 #define ANV_CMD_BUFFER_DS_DIRTY                 (1 << 3)
 #define ANV_CMD_BUFFER_CB_DIRTY                 (1 << 4)
@@ -636,6 +636,7 @@ struct anv_cmd_buffer {
    /* State required while building cmd buffer */
    uint32_t                                     vb_dirty;
    uint32_t                                     dirty;
+   uint32_t                                     descriptors_dirty;
    struct anv_pipeline *                        pipeline;
    struct anv_framebuffer *                     framebuffer;
    struct anv_dynamic_rs_state *                rs_state;

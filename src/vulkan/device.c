@@ -1754,6 +1754,7 @@ VkResult anv_CreateDescriptorSetLayout(
    uint32_t surface_count[VK_NUM_SHADER_STAGE] = { 0, };
    uint32_t num_dynamic_buffers = 0;
    uint32_t count = 0;
+   uint32_t stages = 0;
    uint32_t s;
 
    for (uint32_t i = 0; i < pCreateInfo->count; i++) {
@@ -1793,6 +1794,7 @@ VkResult anv_CreateDescriptorSetLayout(
          break;
       }
 
+      stages |= pCreateInfo->pBinding[i].stageFlags;
       count += pCreateInfo->pBinding[i].count;
    }
 
@@ -1812,6 +1814,7 @@ VkResult anv_CreateDescriptorSetLayout(
 
    set_layout->num_dynamic_buffers = num_dynamic_buffers;
    set_layout->count = count;
+   set_layout->shader_stages = stages;
 
    struct anv_descriptor_slot *p = set_layout->entries;
    struct anv_descriptor_slot *sampler[VK_NUM_SHADER_STAGE];
@@ -2409,6 +2412,7 @@ VkResult anv_CreateCommandBuffer(
 
    cmd_buffer->dirty = 0;
    cmd_buffer->vb_dirty = 0;
+   cmd_buffer->descriptors_dirty = 0;
    cmd_buffer->pipeline = NULL;
    cmd_buffer->vp_state = NULL;
    cmd_buffer->rs_state = NULL;
@@ -2851,10 +2855,10 @@ void anv_CmdBindDescriptorSets(
              pDynamicOffsets + dynamic_slot,
              set_layout->num_dynamic_buffers * sizeof(*pDynamicOffsets));
 
+      cmd_buffer->descriptors_dirty |= set_layout->shader_stages;
+
       dynamic_slot += set_layout->num_dynamic_buffers;
    }
-
-   cmd_buffer->dirty |= ANV_CMD_BUFFER_DESCRIPTOR_SET_DIRTY;
 }
 
 void anv_CmdBindIndexBuffer(
@@ -3078,8 +3082,11 @@ cmd_buffer_emit_samplers(struct anv_cmd_buffer *cmd_buffer, unsigned stage)
 static void
 flush_descriptor_sets(struct anv_cmd_buffer *cmd_buffer)
 {
+   uint32_t s, dirty = cmd_buffer->descriptors_dirty &
+                       cmd_buffer->pipeline->active_stages;
+
    VkResult result;
-   for (uint32_t s = 0; s < VK_NUM_SHADER_STAGE; s++) {
+   for_each_bit(s, dirty) {
       result = cmd_buffer_emit_binding_table(cmd_buffer, s);
       if (result != VK_SUCCESS)
          break;
@@ -3095,7 +3102,8 @@ flush_descriptor_sets(struct anv_cmd_buffer *cmd_buffer)
       result = anv_cmd_buffer_new_surface_state_bo(cmd_buffer);
       assert(result == VK_SUCCESS);
 
-      for (uint32_t s = 0; s < VK_NUM_SHADER_STAGE; s++) {
+      /* Re-emit all active binding tables */
+      for_each_bit(s, cmd_buffer->pipeline->active_stages) {
          result = cmd_buffer_emit_binding_table(cmd_buffer, s);
          result = cmd_buffer_emit_samplers(cmd_buffer, s);
       }
@@ -3104,7 +3112,7 @@ flush_descriptor_sets(struct anv_cmd_buffer *cmd_buffer)
       assert(result == VK_SUCCESS);
    }
 
-   cmd_buffer->dirty &= ~ANV_CMD_BUFFER_DESCRIPTOR_SET_DIRTY;
+   cmd_buffer->descriptors_dirty &= ~cmd_buffer->pipeline->active_stages;
 }
 
 static struct anv_state
@@ -3172,7 +3180,7 @@ anv_cmd_buffer_flush_state(struct anv_cmd_buffer *cmd_buffer)
    if (cmd_buffer->dirty & ANV_CMD_BUFFER_PIPELINE_DIRTY)
       anv_batch_emit_batch(&cmd_buffer->batch, &pipeline->batch);
 
-   if (cmd_buffer->dirty & ANV_CMD_BUFFER_DESCRIPTOR_SET_DIRTY)
+   if (cmd_buffer->descriptors_dirty)
       flush_descriptor_sets(cmd_buffer);
 
    if (cmd_buffer->dirty & (ANV_CMD_BUFFER_PIPELINE_DIRTY | ANV_CMD_BUFFER_RS_DIRTY)) {
@@ -3782,7 +3790,7 @@ void anv_CmdBeginRenderPass(
 
    cmd_buffer->framebuffer = framebuffer;
 
-   cmd_buffer->dirty |= ANV_CMD_BUFFER_DESCRIPTOR_SET_DIRTY;
+   cmd_buffer->descriptors_dirty |= VK_SHADER_STAGE_FRAGMENT_BIT;
 
    anv_batch_emit(&cmd_buffer->batch, GEN8_3DSTATE_DRAWING_RECTANGLE,
                   .ClippedDrawingRectangleYMin = pass->render_area.offset.y,
