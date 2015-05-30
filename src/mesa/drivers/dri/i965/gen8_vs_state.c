@@ -39,6 +39,9 @@ upload_vs_state(struct brw_context *brw)
    /* BRW_NEW_VS_PROG_DATA */
    const struct brw_vue_prog_data *prog_data = &brw->vs.prog_data->base;
 
+   assert(prog_data->dispatch_mode == DISPATCH_MODE_SIMD8 ||
+          prog_data->dispatch_mode == DISPATCH_MODE_4X2_DUAL_OBJECT);
+
    if (prog_data->base.use_alt_mode)
       floating_point_mode = GEN6_VS_FLOATING_POINT_MODE_ALT;
 
