@@ -343,15 +343,17 @@ vc4_wait_seqno(struct vc4_screen *screen, uint64_t seqno, uint64_t timeout_ns)
                 ret = 0;
         }
 
-        if (ret == -ETIME) {
-                return false;
-        } else if (ret != 0) {
-                fprintf(stderr, "wait failed\n");
-                abort();
-        } else {
+        if (ret == 0) {
                 screen->finished_seqno = wait.seqno;
                 return true;
         }
+
+        if (errno != ETIME) {
+                fprintf(stderr, "wait failed: %d\n", ret);
+                abort();
+        }
+
+        return false;
 }
 
 bool
@@ -370,14 +372,15 @@ vc4_bo_wait(struct vc4_bo *bo, uint64_t timeout_ns)
         else
                 ret = 0;
 
-        if (ret == -ETIME) {
-                return false;
-        } else if (ret != 0) {
-                fprintf(stderr, "wait failed\n");
-                abort();
-        } else {
+        if (ret == 0)
                 return true;
+
+        if (errno != ETIME) {
+                fprintf(stderr, "wait failed: %d\n", ret);
+                abort();
         }
+
+        return false;
 }
 
 void *
