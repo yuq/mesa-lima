@@ -1799,16 +1799,23 @@ fs_visitor::emit_urb_writes(gl_clip_plane *clip_planes)
       compute_clip_distance(clip_planes);
 
    /* If we don't have any valid slots to write, just do a minimal urb write
-    * send to terminate the shader. */
+    * send to terminate the shader.  This includes 1 slot of undefined data,
+    * because it's invalid to write 0 data:
+    *
+    * From the Broadwell PRM, Volume 7: 3D Media GPGPU, Shared Functions -
+    * Unified Return Buffer (URB) > URB_SIMD8_Write and URB_SIMD8_Read >
+    * Write Data Payload:
+    *
+    *    "The write data payload can be between 1 and 8 message phases long."
+    */
    if (vue_map->slots_valid == 0) {
-
-      fs_reg payload = fs_reg(GRF, alloc.allocate(1), BRW_REGISTER_TYPE_UD);
+      fs_reg payload = fs_reg(GRF, alloc.allocate(2), BRW_REGISTER_TYPE_UD);
       bld.exec_all().MOV(payload, fs_reg(retype(brw_vec8_grf(1, 0),
                                                 BRW_REGISTER_TYPE_UD)));
 
       fs_inst *inst = bld.emit(SHADER_OPCODE_URB_WRITE_SIMD8, reg_undef, payload);
       inst->eot = true;
-      inst->mlen = 1;
+      inst->mlen = 2;
       inst->offset = 1;
       return;
    }
