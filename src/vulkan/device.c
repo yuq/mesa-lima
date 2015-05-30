@@ -2802,7 +2802,22 @@ anv_cmd_buffer_new_surface_state_bo(struct anv_cmd_buffer *cmd_buffer)
    /* Re-emit state base addresses so we get the new surface state base
     * address before we start emitting binding tables etc.
     */
+   anv_batch_emit(&cmd_buffer->batch, GEN8_PIPE_CONTROL,
+                  .CommandStreamerStallEnable = true,
+                  .RenderTargetCacheFlushEnable = true);
    anv_cmd_buffer_emit_state_base_address(cmd_buffer);
+
+   /* It seems like just chainging the state base addresses isn't enough.
+    * If we don't do another PIPE_CONTROL afterwards to invalidate the
+    * texture cache, we still don't always get the right results.  I have
+    * no idea if this is actually what we are supposed to do, but it seems
+    * to work.
+    *
+    * FIXME: We should look into this more.  Maybe there is something more
+    * specific we're supposed to be doing.
+    */
+   anv_batch_emit(&cmd_buffer->batch, GEN8_PIPE_CONTROL,
+                  .TextureCacheInvalidationEnable = true);
 
    return VK_SUCCESS;
 }
