@@ -2967,6 +2967,9 @@ cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
          struct anv_surface_view *view =
             d->set->descriptors[surface_slots[b].index].view;
 
+         if (!view)
+            continue;
+
          struct anv_state state =
             anv_cmd_buffer_alloc_surface_state(cmd_buffer, 64, 64);
 
