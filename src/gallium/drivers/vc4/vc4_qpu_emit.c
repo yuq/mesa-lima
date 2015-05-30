@@ -47,14 +47,14 @@ queue(struct vc4_compile *c, uint64_t inst)
 {
         struct queued_qpu_inst *q = rzalloc(c, struct queued_qpu_inst);
         q->inst = inst;
-        insert_at_tail(&c->qpu_inst_list, &q->link);
+        list_addtail(&q->link, &c->qpu_inst_list);
 }
 
 static uint64_t *
 last_inst(struct vc4_compile *c)
 {
         struct queued_qpu_inst *q =
-                (struct queued_qpu_inst *)last_elem(&c->qpu_inst_list);
+                (struct queued_qpu_inst *)c->qpu_inst_list.prev;
         return &q->inst;
 }
 
@@ -144,7 +144,7 @@ vc4_generate_code(struct vc4_context *vc4, struct vc4_compile *c)
                 QPU_UNPACK_16B_TO_F32,
         };
 
-        make_empty_list(&c->qpu_inst_list);
+        list_inithead(&c->qpu_inst_list);
 
         switch (c->stage) {
         case QSTAGE_VERT:
@@ -170,10 +170,7 @@ vc4_generate_code(struct vc4_context *vc4, struct vc4_compile *c)
                 break;
         }
 
-        struct simple_node *node;
-        foreach(node, &c->instructions) {
-                struct qinst *qinst = (struct qinst *)node;
-
+        list_for_each_entry(struct qinst, qinst, &c->instructions, link) {
 #if 0
                 fprintf(stderr, "translating qinst to qpu: ");
                 qir_dump_inst(qinst);

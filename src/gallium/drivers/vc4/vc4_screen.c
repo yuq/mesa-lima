@@ -459,7 +459,7 @@ vc4_screen_create(int fd)
         pscreen->is_format_supported = vc4_screen_is_format_supported;
 
         screen->fd = fd;
-        make_empty_list(&screen->bo_cache.time_list);
+        list_inithead(&screen->bo_cache.time_list);
 
         vc4_fence_init(screen);
 

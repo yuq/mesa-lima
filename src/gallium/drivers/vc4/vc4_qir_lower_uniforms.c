@@ -88,7 +88,6 @@ is_lowerable_uniform(struct qinst *inst, int i)
 void
 qir_lower_uniforms(struct vc4_compile *c)
 {
-        struct simple_node *node;
         struct hash_table *ht =
                 _mesa_hash_table_create(c, index_hash, index_compare);
 
@@ -96,8 +95,7 @@ qir_lower_uniforms(struct vc4_compile *c)
          * than one uniform referenced, and add those uniform values to the
          * ht.
          */
-        foreach(node, &c->instructions) {
-                struct qinst *inst = (struct qinst *)node;
+        list_for_each_entry(struct qinst, inst, &c->instructions, link) {
                 uint32_t nsrc = qir_get_op_nsrc(inst->op);
 
                 uint32_t count = 0;
@@ -137,10 +135,9 @@ qir_lower_uniforms(struct vc4_compile *c)
                 struct qreg temp = qir_get_temp(c);
                 struct qreg unif = { QFILE_UNIF, max_index };
                 struct qinst *mov = qir_inst(QOP_MOV, temp, unif, c->undef);
-                insert_at_head(&c->instructions, &mov->link);
+                list_add(&mov->link, &c->instructions);
                 c->defs[temp.index] = mov;
-                foreach(node, &c->instructions) {
-                        struct qinst *inst = (struct qinst *)node;
+                list_for_each_entry(struct qinst, inst, &c->instructions, link) {
                         uint32_t nsrc = qir_get_op_nsrc(inst->op);
 
                         uint32_t count = 0;

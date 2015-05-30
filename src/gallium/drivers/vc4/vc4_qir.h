@@ -33,7 +33,7 @@
 
 #include "util/macros.h"
 #include "glsl/nir/nir.h"
-#include "util/simple_list.h"
+#include "util/list.h"
 #include "util/u_math.h"
 
 enum qfile {
@@ -162,12 +162,12 @@ enum qop {
 };
 
 struct queued_qpu_inst {
-        struct simple_node link;
+        struct list_head link;
         uint64_t inst;
 };
 
 struct qinst {
-        struct simple_node link;
+        struct list_head link;
 
         enum qop op;
         struct qreg dst;
@@ -356,10 +356,10 @@ struct vc4_compile {
         struct qreg undef;
         enum qstage stage;
         uint32_t num_temps;
-        struct simple_node instructions;
+        struct list_head instructions;
         uint32_t immediates[1024];
 
-        struct simple_node qpu_inst_list;
+        struct list_head qpu_inst_list;
         uint64_t *qpu_insts;
         uint32_t qpu_inst_count;
         uint32_t qpu_inst_size;

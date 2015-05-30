@@ -38,13 +38,10 @@ bool
 qir_opt_copy_propagation(struct vc4_compile *c)
 {
         bool progress = false;
-        struct simple_node *node;
         bool debug = false;
         struct qreg *movs = calloc(c->num_temps, sizeof(struct qreg));
 
-        foreach(node, &c->instructions) {
-                struct qinst *inst = (struct qinst *)node;
-
+        list_for_each_entry(struct qinst, inst, &c->instructions, link) {
                 for (int i = 0; i < qir_get_op_nsrc(inst->op); i++) {
                         int index = inst->src[i].index;
                         if (inst->src[i].file == QFILE_TEMP &&

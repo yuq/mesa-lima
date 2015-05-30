@@ -161,7 +161,6 @@ node_to_temp_priority(const void *in_a, const void *in_b)
 struct qpu_reg *
 vc4_register_allocate(struct vc4_context *vc4, struct vc4_compile *c)
 {
-        struct simple_node *node;
         struct node_to_temp_map map[c->num_temps];
         uint32_t temp_to_node[c->num_temps];
         uint32_t def[c->num_temps];
@@ -189,9 +188,7 @@ vc4_register_allocate(struct vc4_context *vc4, struct vc4_compile *c)
         /* Compute the live ranges so we can figure out interference.
          */
         uint32_t ip = 0;
-        foreach(node, &c->instructions) {
-                struct qinst *inst = (struct qinst *)node;
-
+        list_for_each_entry(struct qinst, inst, &c->instructions, link) {
                 if (inst->dst.file == QFILE_TEMP) {
                         def[inst->dst.index] = ip;
                         use[inst->dst.index] = ip;
@@ -227,9 +224,7 @@ vc4_register_allocate(struct vc4_context *vc4, struct vc4_compile *c)
         }
 
         /* Figure out our register classes and preallocated registers*/
-        foreach(node, &c->instructions) {
-                struct qinst *inst = (struct qinst *)node;
-
+        list_for_each_entry(struct qinst, inst, &c->instructions, link) {
                 switch (inst->op) {
                 case QOP_FRAG_Z:
                         ra_set_node_reg(g, temp_to_node[inst->dst.index],
