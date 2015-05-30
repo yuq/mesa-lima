@@ -1980,22 +1980,14 @@ fs_visitor::emit_urb_writes()
          fs_reg *payload_sources = ralloc_array(mem_ctx, fs_reg, length + 1);
          fs_reg payload = fs_reg(GRF, alloc.allocate(length + 1),
                                  BRW_REGISTER_TYPE_F, dispatch_width);
-
-         /* We need WE_all on the MOV for the message header (the URB handles)
-          * so do a MOV to a dummy register and set force_writemask_all on the
-          * MOV.  LOAD_PAYLOAD will preserve that.
-          */
-         fs_reg dummy = fs_reg(GRF, alloc.allocate(1),
-                               BRW_REGISTER_TYPE_UD);
-         fs_inst *inst = emit(MOV(dummy, fs_reg(retype(brw_vec8_grf(1, 0),
-                                                       BRW_REGISTER_TYPE_UD))));
-         inst->force_writemask_all = true;
-         payload_sources[0] = dummy;
+         payload_sources[0] =
+            fs_reg(retype(brw_vec8_grf(1, 0), BRW_REGISTER_TYPE_UD));
 
          memcpy(&payload_sources[1], sources, length * sizeof sources[0]);
          emit(LOAD_PAYLOAD(payload, payload_sources, length + 1, 1));
 
-         inst = emit(SHADER_OPCODE_URB_WRITE_SIMD8, reg_undef, payload);
+         fs_inst *inst =
+            emit(SHADER_OPCODE_URB_WRITE_SIMD8, reg_undef, payload);
          inst->eot = last;
          inst->mlen = length + 1;
          inst->offset = urb_offset;
