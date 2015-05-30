@@ -700,7 +700,11 @@ anv_bo_pool_alloc(struct anv_bo_pool *pool, struct anv_bo *bo)
       return vk_error(VK_ERROR_MEMORY_MAP_FAILED);
    }
 
-   VG(VALGRIND_MALLOCLIKE_BLOCK(new_bo.map, pool->bo_size, 0, false));
+   /* We don't need to call VALGRIND_MALLOCLIKE_BLOCK here because valgrind
+    * already picks up on the gem_mmap and treats that as a malloc.  If we
+    * really want to be pedantic we could do a VALGRIND_FREELIKE_BLOCK
+    * right after the mmap, but there's no good reason.
+    */
 
    *bo = new_bo;
    return VK_SUCCESS;
