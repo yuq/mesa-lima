@@ -54,6 +54,7 @@
 #include "ast.h"
 #include "glsl_types.h"
 #include "program/hash_table.h"
+#include "main/shaderobj.h"
 #include "ir.h"
 #include "ir_builder.h"
 
@@ -2522,6 +2523,12 @@ apply_type_qualifier_to_variable(const struct ast_type_qualifier *qual,
       }
    }
 
+   if (qual->flags.q.subroutine && !qual->flags.q.uniform) {
+      _mesa_glsl_error(loc, state,
+                       "`subroutine' may only be applied to uniforms, "
+                       "subroutine type declarations, or function definitions");
+   }
+
    if (qual->flags.q.constant || qual->flags.q.attribute
        || qual->flags.q.uniform
        || (qual->flags.q.varying && (state->stage == MESA_SHADER_FRAGMENT)))
@@ -3597,7 +3604,7 @@ ast_declarator_list::hir(exec_list *instructions,
    foreach_list_typed (ast_declaration, decl, link, &this->declarations) {
       const struct glsl_type *var_type;
       ir_variable *var;
-
+      const char *identifier = decl->identifier;
       /* FINISHME: Emit a warning if a variable declaration shadows a
        * FINISHME: declaration at a higher scope.
        */
@@ -3615,10 +3622,24 @@ ast_declarator_list::hir(exec_list *instructions,
          continue;
       }
 
+      if (this->type->qualifier.flags.q.subroutine) {
+         const glsl_type *t;
+         const char *name;
+
+         t = state->symbols->get_type(this->type->specifier->type_name);
+         if (!t)
+            _mesa_glsl_error(& loc, state,
+                             "invalid type in declaration of `%s'",
+                             decl->identifier);
+         name = ralloc_asprintf(ctx, "%s_%s", _mesa_shader_stage_to_subroutine_prefix(state->stage), decl->identifier);
+
+         identifier = name;
+
+      }
       var_type = process_array_type(&loc, decl_type, decl->array_specifier,
                                     state);
 
-      var = new(ctx) ir_variable(var_type, decl->identifier, ir_var_auto);
+      var = new(ctx) ir_variable(var_type, identifier, ir_var_auto);
 
       /* The 'varying in' and 'varying out' qualifiers can only be used with
        * ARB_geometry_shader4 and EXT_geometry_shader4, which we don't support
@@ -3690,6 +3711,8 @@ ast_declarator_list::hir(exec_list *instructions,
           */
          if (this->type->qualifier.flags.q.attribute) {
             mode = "attribute";
+         } else if (this->type->qualifier.flags.q.subroutine) {
+            mode = "subroutine uniform";
          } else if (this->type->qualifier.flags.q.uniform) {
             mode = "uniform";
          } else if (this->type->qualifier.flags.q.varying) {
@@ -3930,6 +3953,9 @@ ast_declarator_list::hir(exec_list *instructions,
          if (state->stage == MESA_SHADER_TESS_CTRL) {
             handle_tess_ctrl_shader_output_decl(state, loc, var);
          }
+      } else if (var->type->contains_subroutine()) {
+         /* declare subroutine uniforms as hidden */
+         var->data.how_declared = ir_var_hidden;
       }
 
       /* Integer fragment inputs must be qualified with 'flat'.  In GLSL ES,
@@ -4394,6 +4420,7 @@ ast_function::hir(exec_list *instructions,
    ir_function *f = NULL;
    ir_function_signature *sig = NULL;
    exec_list hir_parameters;
+   YYLTYPE loc = this->get_location();
 
    const char *const name = identifier;
 
@@ -4445,6 +4472,17 @@ ast_function::hir(exec_list *instructions,
       return_type = glsl_type::error_type;
    }
 
+   /* ARB_shader_subroutine states:
+    *  "Subroutine declarations cannot be prototyped. It is an error to prepend
+    *   subroutine(...) to a function declaration."
+    */
+   if (this->return_type->qualifier.flags.q.subroutine_def && !is_definition) {
+      YYLTYPE loc = this->get_location();
+      _mesa_glsl_error(&loc, state,
+                       "function declaration `%s' cannot have subroutine prepended",
+                       name);
+   }
+
    /* From page 56 (page 62 of the PDF) of the GLSL 1.30 spec:
     * "No qualifier is allowed on the return type of a function."
     */
@@ -4482,15 +4520,15 @@ ast_function::hir(exec_list *instructions,
    f = state->symbols->get_function(name);
    if (f == NULL) {
       f = new(ctx) ir_function(name);
-      if (!state->symbols->add_function(f)) {
-         /* This function name shadows a non-function use of the same name. */
-         YYLTYPE loc = this->get_location();
-
-         _mesa_glsl_error(&loc, state, "function name `%s' conflicts with "
-                          "non-function", name);
-         return NULL;
+      if (!this->return_type->qualifier.flags.q.subroutine) {
+         if (!state->symbols->add_function(f)) {
+            /* This function name shadows a non-function use of the same name. */
+            YYLTYPE loc = this->get_location();
+            _mesa_glsl_error(&loc, state, "function name `%s' conflicts with "
+                             "non-function", name);
+            return NULL;
+         }
       }
-
       emit_function(state, f);
    }
 
@@ -4576,6 +4614,44 @@ ast_function::hir(exec_list *instructions,
 
    sig->replace_parameters(&hir_parameters);
    signature = sig;
+
+   if (this->return_type->qualifier.flags.q.subroutine_def) {
+      int idx;
+
+      f->num_subroutine_types = this->return_type->qualifier.subroutine_list->declarations.length();
+      f->subroutine_types = ralloc_array(state, const struct glsl_type *,
+                                         f->num_subroutine_types);
+      idx = 0;
+      foreach_list_typed(ast_declaration, decl, link, &this->return_type->qualifier.subroutine_list->declarations) {
+         const struct glsl_type *type;
+         /* the subroutine type must be already declared */
+         type = state->symbols->get_type(decl->identifier);
+         if (!type) {
+            _mesa_glsl_error(& loc, state, "unknown type '%s' in subroutine function definition", decl->identifier);
+         }
+         f->subroutine_types[idx++] = type;
+      }
+      state->subroutines = (ir_function **)reralloc(state, state->subroutines,
+                                                    ir_function *,
+                                                    state->num_subroutines + 1);
+      state->subroutines[state->num_subroutines] = f;
+      state->num_subroutines++;
+
+   }
+
+   if (this->return_type->qualifier.flags.q.subroutine) {
+      if (!state->symbols->add_type(this->identifier, glsl_type::get_subroutine_instance(this->identifier))) {
+         _mesa_glsl_error(& loc, state, "type '%s' previously defined", this->identifier);
+         return NULL;
+      }
+      state->subroutine_types = (ir_function **)reralloc(state, state->subroutine_types,
+                                                         ir_function *,
+                                                         state->num_subroutine_types + 1);
+      state->subroutine_types[state->num_subroutine_types] = f;
+      state->num_subroutine_types++;
+
+      f->is_subroutine = true;
+   }
 
    /* Function declarations (prototypes) do not have r-values.
     */

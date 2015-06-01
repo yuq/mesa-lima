@@ -121,7 +121,7 @@ static bool match_layout_qualifier(const char *s1, const char *s2,
    ast_case_statement *case_statement;
    ast_case_statement_list *case_statement_list;
    ast_interface_block *interface_block;
-
+   ast_subroutine_list *subroutine_list;
    struct {
       ast_node *cond;
       ast_expression *rest;
@@ -186,7 +186,7 @@ static bool match_layout_qualifier(const char *s1, const char *s2,
 %token PRAGMA_OPTIMIZE_ON PRAGMA_OPTIMIZE_OFF
 %token PRAGMA_INVARIANT_ALL
 %token LAYOUT_TOK
-
+%token DOT_TOK
    /* Reserved words that are not actually used in the grammar.
     */
 %token ASM CLASS UNION ENUM TYPEDEF TEMPLATE THIS PACKED_TOK GOTO
@@ -215,6 +215,8 @@ static bool match_layout_qualifier(const char *s1, const char *s2,
 %type <type_qualifier> layout_qualifier_id_list layout_qualifier_id
 %type <type_qualifier> interface_block_layout_qualifier
 %type <type_qualifier> memory_qualifier
+%type <type_qualifier> subroutine_qualifier
+%type <subroutine_list> subroutine_type_list
 %type <type_qualifier> interface_qualifier
 %type <type_specifier> type_specifier
 %type <type_specifier> type_specifier_nonarray
@@ -260,10 +262,6 @@ static bool match_layout_qualifier(const char *s1, const char *s2,
 %type <expression> function_call_generic
 %type <expression> function_call_or_method
 %type <expression> function_call
-%type <expression> method_call_generic
-%type <expression> method_call_header_with_parameters
-%type <expression> method_call_header_no_parameters
-%type <expression> method_call_header
 %type <n> assignment_operator
 %type <n> unary_operator
 %type <expression> function_identifier
@@ -476,7 +474,7 @@ postfix_expression:
    {
       $$ = $1;
    }
-   | postfix_expression '.' any_identifier
+   | postfix_expression DOT_TOK FIELD_SELECTION
    {
       void *ctx = state;
       $$ = new(ctx) ast_expression(ast_field_selection, $1, NULL, NULL);
@@ -507,12 +505,6 @@ function_call:
 
 function_call_or_method:
    function_call_generic
-   | postfix_expression '.' method_call_generic
-   {
-      void *ctx = state;
-      $$ = new(ctx) ast_expression(ast_field_selection, $1, $3, NULL);
-      $$->set_location_range(@1, @3);
-   }
    ;
 
 function_call_generic:
@@ -554,62 +546,17 @@ function_identifier:
       $$ = new(ctx) ast_function_expression($1);
       $$->set_location(@1);
       }
-   | variable_identifier
+   | postfix_expression
    {
       void *ctx = state;
-      ast_expression *callee = new(ctx) ast_expression($1);
-      callee->set_location(@1);
-      $$ = new(ctx) ast_function_expression(callee);
+      $$ = new(ctx) ast_function_expression($1);
       $$->set_location(@1);
       }
-   | FIELD_SELECTION
-   {
-      void *ctx = state;
-      ast_expression *callee = new(ctx) ast_expression($1);
-      callee->set_location(@1);
-      $$ = new(ctx) ast_function_expression(callee);
-      $$->set_location(@1);
-      }
-   ;
-
-method_call_generic:
-   method_call_header_with_parameters ')'
-   | method_call_header_no_parameters ')'
-   ;
-
-method_call_header_no_parameters:
-   method_call_header VOID_TOK
-   | method_call_header
-   ;
-
-method_call_header_with_parameters:
-   method_call_header assignment_expression
-   {
-      $$ = $1;
-      $$->set_location(@1);
-      $$->expressions.push_tail(& $2->link);
-   }
-   | method_call_header_with_parameters ',' assignment_expression
-   {
-      $$ = $1;
-      $$->set_location(@1);
-      $$->expressions.push_tail(& $3->link);
-   }
    ;
 
    // Grammar Note: Constructors look like methods, but lexical
    // analysis recognized most of them as keywords. They are now
    // recognized through "type_specifier".
-method_call_header:
-   variable_identifier '('
-   {
-      void *ctx = state;
-      ast_expression *callee = new(ctx) ast_expression($1);
-      callee->set_location(@1);
-      $$ = new(ctx) ast_function_expression(callee);
-      $$->set_location(@1);
-   }
-   ;
 
    // Grammar Note: No traditional style type casts.
 unary_expression:
@@ -910,7 +857,11 @@ function_header:
       $$->return_type = $1;
       $$->identifier = $2;
 
-      state->symbols->add_function(new(state) ir_function($2));
+      if ($1->qualifier.flags.q.subroutine) {
+         /* add type for IDENTIFIER search */
+         state->symbols->add_type($2, glsl_type::get_subroutine_instance($2));
+      } else
+         state->symbols->add_function(new(state) ir_function($2));
       state->symbols->push_scope();
    }
    ;
@@ -1676,6 +1627,41 @@ interface_block_layout_qualifier:
    }
    ;
 
+subroutine_qualifier:
+   SUBROUTINE
+   {
+      memset(& $$, 0, sizeof($$));
+      $$.flags.q.subroutine = 1;
+   }
+   | SUBROUTINE '(' subroutine_type_list ')'
+   {
+      memset(& $$, 0, sizeof($$));
+      $$.flags.q.subroutine_def = 1;
+      $$.subroutine_list = $3;
+   }
+   ;
+
+subroutine_type_list:
+   any_identifier
+   {
+        void *ctx = state;
+        ast_declaration *decl = new(ctx)  ast_declaration($1, NULL, NULL);
+        decl->set_location(@1);
+
+        $$ = new(ctx) ast_subroutine_list();
+        $$->declarations.push_tail(&decl->link);
+   }
+   | subroutine_type_list ',' any_identifier
+   {
+        void *ctx = state;
+        ast_declaration *decl = new(ctx)  ast_declaration($3, NULL, NULL);
+        decl->set_location(@3);
+
+        $$ = $1;
+        $$->declarations.push_tail(&decl->link);
+   }
+   ;
+
 interpolation_qualifier:
    SMOOTH
    {
@@ -1711,6 +1697,7 @@ type_qualifier:
    | interpolation_qualifier
    | layout_qualifier
    | memory_qualifier
+   | subroutine_qualifier
    | precision_qualifier
    {
       memset(&$$, 0, sizeof($$));
@@ -1798,6 +1785,11 @@ type_qualifier:
       if (!state->ARB_shading_language_420pack_enable && $2.has_layout())
          _mesa_glsl_error(&@1, state, "duplicate layout(...) qualifiers");
 
+      $$ = $1;
+      $$.merge_qualifier(&@1, state, $2);
+   }
+   | subroutine_qualifier type_qualifier
+   {
       $$ = $1;
       $$.merge_qualifier(&@1, state, $2);
    }

@@ -40,7 +40,12 @@ ast_type_specifier::print(void) const
 bool
 ast_fully_specified_type::has_qualifiers() const
 {
-   return this->qualifier.flags.i != 0;
+   /* 'subroutine' isnt a real qualifier. */
+   ast_type_qualifier subroutine_only;
+   subroutine_only.flags.i = 0;
+   subroutine_only.flags.q.subroutine = 1;
+   subroutine_only.flags.q.subroutine_def = 1;
+   return (this->qualifier.flags.i & ~subroutine_only.flags.i) != 0;
 }
 
 bool ast_type_qualifier::has_interpolation() const

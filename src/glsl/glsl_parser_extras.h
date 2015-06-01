@@ -589,6 +589,25 @@ struct _mesa_glsl_parse_state {
    unsigned atomic_counter_offsets[MAX_COMBINED_ATOMIC_BUFFERS];
 
    bool allow_extension_directive_midshader;
+
+   /**
+    * Known subroutine type declarations.
+    */
+   int num_subroutine_types;
+   ir_function **subroutine_types;
+
+   /**
+    * Functions that are associated with
+    * subroutine types.
+    */
+   int num_subroutines;
+   ir_function **subroutines;
+
+   /**
+    * field selection temporary parser storage -
+    * did the parser just parse a dot.
+    */
+   bool is_field;
 };
 
 # define YYLLOC_DEFAULT(Current, Rhs, N)			\

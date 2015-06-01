@@ -173,6 +173,10 @@ _mesa_glsl_parse_state::_mesa_glsl_parse_state(struct gl_context *_ctx,
    this->all_invariant = false;
    this->user_structures = NULL;
    this->num_user_structures = 0;
+   this->num_subroutines = 0;
+   this->subroutines = NULL;
+   this->num_subroutine_types = 0;
+   this->subroutine_types = NULL;
 
    /* supported_versions should be large enough to support the known desktop
     * GLSL versions plus 3 GLES versions (ES 1.00, ES 3.00, and ES 3.10))
@@ -855,6 +859,15 @@ _mesa_ast_set_aggregate_type(const glsl_type *type,
 void
 _mesa_ast_type_qualifier_print(const struct ast_type_qualifier *q)
 {
+   if (q->flags.q.subroutine)
+      printf("subroutine ");
+
+   if (q->flags.q.subroutine_def) {
+      printf("subroutine (");
+      q->subroutine_list->print();
+      printf(")");
+   }
+
    if (q->flags.q.constant)
       printf("const ");
 
@@ -1445,6 +1458,15 @@ ast_struct_specifier::ast_struct_specifier(const char *identifier,
    name = identifier;
    this->declarations.push_degenerate_list_at_head(&declarator_list->link);
    is_declaration = true;
+}
+
+void ast_subroutine_list::print(void) const
+{
+   foreach_list_typed (ast_node, ast, link, & this->declarations) {
+      if (&ast->link != this->declarations.get_head())
+         printf(", ");
+      ast->print();
+   }
 }
 
 static void

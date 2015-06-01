@@ -595,6 +595,10 @@ subroutine	KEYWORD_WITH_ALT(400, 300, 400, 0, yyextra->ARB_shader_subroutine_ena
 			    return classify_identifier(state, yytext);
 			}
 
+\.			{ struct _mesa_glsl_parse_state *state = yyextra;
+			  state->is_field = true;
+			  return DOT_TOK; }
+
 .			{ return yytext[0]; }
 
 %%
@@ -602,6 +606,10 @@ subroutine	KEYWORD_WITH_ALT(400, 300, 400, 0, yyextra->ARB_shader_subroutine_ena
 int
 classify_identifier(struct _mesa_glsl_parse_state *state, const char *name)
 {
+   if (state->is_field) {
+      state->is_field = false;
+      return FIELD_SELECTION;
+   }
    if (state->symbols->get_variable(name) || state->symbols->get_function(name))
       return IDENTIFIER;
    else if (state->symbols->get_type(name))
