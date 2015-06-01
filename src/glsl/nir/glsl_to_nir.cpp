@@ -653,6 +653,22 @@ nir_visitor::visit(ir_call *ir)
          op = nir_intrinsic_store_ssbo;
       } else if (strcmp(ir->callee_name(), "__intrinsic_load_ssbo") == 0) {
          op = nir_intrinsic_load_ssbo;
+      } else if (strcmp(ir->callee_name(), "__intrinsic_ssbo_atomic_add_internal") == 0) {
+         op = nir_intrinsic_ssbo_atomic_add;
+      } else if (strcmp(ir->callee_name(), "__intrinsic_ssbo_atomic_and_internal") == 0) {
+         op = nir_intrinsic_ssbo_atomic_and;
+      } else if (strcmp(ir->callee_name(), "__intrinsic_ssbo_atomic_or_internal") == 0) {
+         op = nir_intrinsic_ssbo_atomic_or;
+      } else if (strcmp(ir->callee_name(), "__intrinsic_ssbo_atomic_xor_internal") == 0) {
+         op = nir_intrinsic_ssbo_atomic_xor;
+      } else if (strcmp(ir->callee_name(), "__intrinsic_ssbo_atomic_min_internal") == 0) {
+         op = nir_intrinsic_ssbo_atomic_min;
+      } else if (strcmp(ir->callee_name(), "__intrinsic_ssbo_atomic_max_internal") == 0) {
+         op = nir_intrinsic_ssbo_atomic_max;
+      } else if (strcmp(ir->callee_name(), "__intrinsic_ssbo_atomic_exchange_internal") == 0) {
+         op = nir_intrinsic_ssbo_atomic_exchange;
+      } else if (strcmp(ir->callee_name(), "__intrinsic_ssbo_atomic_comp_swap_internal") == 0) {
+         op = nir_intrinsic_ssbo_atomic_comp_swap;
       } else {
          unreachable("not reached");
       }
@@ -855,7 +871,47 @@ nir_visitor::visit(ir_call *ir)
                                            &load_ssbo_compare->instr);
             dest = &load_ssbo_compare->dest.dest;
          }
+         break;
+      }
+      case nir_intrinsic_ssbo_atomic_add:
+      case nir_intrinsic_ssbo_atomic_min:
+      case nir_intrinsic_ssbo_atomic_max:
+      case nir_intrinsic_ssbo_atomic_and:
+      case nir_intrinsic_ssbo_atomic_or:
+      case nir_intrinsic_ssbo_atomic_xor:
+      case nir_intrinsic_ssbo_atomic_exchange:
+      case nir_intrinsic_ssbo_atomic_comp_swap: {
+         int param_count = ir->actual_parameters.length();
+         assert(param_count == 3 || param_count == 4);
 
+         /* Block index */
+         exec_node *param = ir->actual_parameters.get_head();
+         ir_instruction *inst = (ir_instruction *) param;
+         instr->src[0] = evaluate_rvalue(inst->as_rvalue());
+
+         /* Offset */
+         param = param->get_next();
+         inst = (ir_instruction *) param;
+         instr->src[1] = evaluate_rvalue(inst->as_rvalue());
+
+         /* data1 parameter (this is always present) */
+         param = param->get_next();
+         inst = (ir_instruction *) param;
+         instr->src[2] = evaluate_rvalue(inst->as_rvalue());
+
+         /* data2 parameter (only with atomic_comp_swap) */
+         if (param_count == 4) {
+            assert(op == nir_intrinsic_ssbo_atomic_comp_swap);
+            param = param->get_next();
+            inst = (ir_instruction *) param;
+            instr->src[3] = evaluate_rvalue(inst->as_rvalue());
+         }
+
+         /* Atomic result */
+         assert(ir->return_deref);
+         nir_ssa_dest_init(&instr->instr, &instr->dest,
+                           ir->return_deref->type->vector_elements, NULL);
+         nir_instr_insert_after_cf_list(this->cf_node_list, &instr->instr);
          break;
       }
       default:
