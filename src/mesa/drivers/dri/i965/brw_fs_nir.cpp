@@ -29,8 +29,10 @@
 #include "brw_fs.h"
 #include "brw_fs_surface_builder.h"
 #include "brw_nir.h"
+#include "brw_fs_surface_builder.h"
 
 using namespace brw;
+using namespace brw::surface_access;
 
 void
 fs_visitor::emit_nir_code()
@@ -1695,6 +1697,75 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
 
          bld.emit(FS_OPCODE_LINTERP, dest, dst_xy, src);
          dest = offset(dest, bld, 1);
+      }
+      break;
+   }
+
+   case nir_intrinsic_store_ssbo_indirect:
+      has_indirect = true;
+      /* fallthrough */
+   case nir_intrinsic_store_ssbo: {
+      assert(devinfo->gen >= 7);
+
+      /* Block index */
+      fs_reg surf_index;
+      nir_const_value *const_uniform_block =
+         nir_src_as_const_value(instr->src[1]);
+      if (const_uniform_block) {
+         unsigned index = stage_prog_data->binding_table.ubo_start +
+                          const_uniform_block->u[0];
+         surf_index = fs_reg(index);
+         brw_mark_surface_used(prog_data, index);
+      } else {
+         surf_index = vgrf(glsl_type::uint_type);
+         bld.ADD(surf_index, get_nir_src(instr->src[1]),
+                  fs_reg(stage_prog_data->binding_table.ubo_start));
+         surf_index = bld.emit_uniformize(surf_index);
+
+         brw_mark_surface_used(prog_data,
+                               stage_prog_data->binding_table.ubo_start +
+                               shader_prog->NumUniformBlocks - 1);
+      }
+
+      /* Offset */
+      fs_reg offset_reg = vgrf(glsl_type::uint_type);
+      unsigned const_offset_bytes = 0;
+      if (has_indirect) {
+         bld.MOV(offset_reg, get_nir_src(instr->src[2]));
+      } else {
+         const_offset_bytes = instr->const_index[0];
+         bld.MOV(offset_reg, fs_reg(const_offset_bytes));
+      }
+
+      /* Value */
+      fs_reg val_reg = get_nir_src(instr->src[0]);
+
+      /* Writemask */
+      unsigned writemask = instr->const_index[1];
+
+      /* Write each component present in the writemask */
+      unsigned skipped_channels = 0;
+      for (int i = 0; i < instr->num_components; i++) {
+         int component_mask = 1 << i;
+         if (writemask & component_mask) {
+            if (skipped_channels) {
+               if (!has_indirect) {
+                  const_offset_bytes += 4 * skipped_channels;
+                  bld.MOV(offset_reg, fs_reg(const_offset_bytes));
+               } else {
+                  bld.ADD(offset_reg, offset_reg,
+                           brw_imm_ud(4 * skipped_channels));
+               }
+               skipped_channels = 0;
+            }
+
+            emit_untyped_write(bld, surf_index, offset_reg,
+                               offset(val_reg, bld, i),
+                               1 /* dims */, 1 /* size */,
+                               BRW_PREDICATE_NONE);
+         }
+
+         skipped_channels++;
       }
       break;
    }
