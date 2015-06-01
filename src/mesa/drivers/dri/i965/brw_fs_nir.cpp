@@ -1567,6 +1567,68 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
       break;
    }
 
+   case nir_intrinsic_load_ssbo_indirect:
+      has_indirect = true;
+      /* fallthrough */
+   case nir_intrinsic_load_ssbo: {
+      assert(devinfo->gen >= 7);
+
+      nir_const_value *const_uniform_block =
+         nir_src_as_const_value(instr->src[0]);
+
+      fs_reg surf_index;
+      if (const_uniform_block) {
+         unsigned index = stage_prog_data->binding_table.ubo_start +
+                          const_uniform_block->u[0];
+         surf_index = fs_reg(index);
+         brw_mark_surface_used(prog_data, index);
+      } else {
+         surf_index = vgrf(glsl_type::uint_type);
+         bld.ADD(surf_index, get_nir_src(instr->src[0]),
+                 fs_reg(stage_prog_data->binding_table.ubo_start));
+         surf_index = bld.emit_uniformize(surf_index);
+
+         /* Assume this may touch any UBO. It would be nice to provide
+          * a tighter bound, but the array information is already lowered away.
+          */
+         brw_mark_surface_used(prog_data,
+                               stage_prog_data->binding_table.ubo_start +
+                               shader_prog->NumUniformBlocks - 1);
+      }
+
+      /* Get the offset to read from */
+      fs_reg offset_reg = vgrf(glsl_type::uint_type);
+      unsigned const_offset_bytes = 0;
+      if (has_indirect) {
+         bld.MOV(offset_reg, get_nir_src(instr->src[1]));
+      } else {
+         const_offset_bytes = instr->const_index[0];
+         bld.MOV(offset_reg, fs_reg(const_offset_bytes));
+      }
+
+      /* Read the vector */
+      for (int i = 0; i < instr->num_components; i++) {
+         fs_reg read_result = emit_untyped_read(bld, surf_index, offset_reg,
+                                                1 /* dims */, 1 /* size */,
+                                                BRW_PREDICATE_NONE);
+         read_result.type = dest.type;
+         bld.MOV(dest, read_result);
+         dest = offset(dest, bld, 1);
+
+         /* Vector components are stored contiguous in memory */
+         if (i < instr->num_components) {
+            if (!has_indirect) {
+               const_offset_bytes += 4;
+               bld.MOV(offset_reg, fs_reg(const_offset_bytes));
+            } else {
+               bld.ADD(offset_reg, offset_reg, brw_imm_ud(4));
+            }
+         }
+      }
+
+      break;
+   }
+
    case nir_intrinsic_load_input_indirect:
       has_indirect = true;
       /* fallthrough */
