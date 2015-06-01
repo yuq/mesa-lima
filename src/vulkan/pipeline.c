@@ -129,17 +129,17 @@ emit_ia_state(struct anv_pipeline *pipeline,
               const struct anv_pipeline_create_info *extra)
 {
    static const uint32_t vk_to_gen_primitive_type[] = {
-      [VK_PRIMITIVE_TOPOLOGY_POINT_LIST] = _3DPRIM_POINTLIST,
-      [VK_PRIMITIVE_TOPOLOGY_LINE_LIST] = _3DPRIM_LINELIST,
-      [VK_PRIMITIVE_TOPOLOGY_LINE_STRIP] = _3DPRIM_LINESTRIP,
-      [VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST] = _3DPRIM_TRILIST,
-      [VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP] = _3DPRIM_TRISTRIP,
-      [VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN] = _3DPRIM_TRIFAN,
-      [VK_PRIMITIVE_TOPOLOGY_LINE_LIST_ADJ] = _3DPRIM_LINELIST_ADJ,
-      [VK_PRIMITIVE_TOPOLOGY_LINE_STRIP_ADJ] = _3DPRIM_LISTSTRIP_ADJ,
+      [VK_PRIMITIVE_TOPOLOGY_POINT_LIST]        = _3DPRIM_POINTLIST,
+      [VK_PRIMITIVE_TOPOLOGY_LINE_LIST]         = _3DPRIM_LINELIST,
+      [VK_PRIMITIVE_TOPOLOGY_LINE_STRIP]        = _3DPRIM_LINESTRIP,
+      [VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST]     = _3DPRIM_TRILIST,
+      [VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP]    = _3DPRIM_TRISTRIP,
+      [VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN]      = _3DPRIM_TRIFAN,
+      [VK_PRIMITIVE_TOPOLOGY_LINE_LIST_ADJ]     = _3DPRIM_LINELIST_ADJ,
+      [VK_PRIMITIVE_TOPOLOGY_LINE_STRIP_ADJ]    = _3DPRIM_LISTSTRIP_ADJ,
       [VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST_ADJ] = _3DPRIM_TRILIST_ADJ,
       [VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP_ADJ] = _3DPRIM_TRISTRIP_ADJ,
-      [VK_PRIMITIVE_TOPOLOGY_PATCH] = _3DPRIM_PATCHLIST_1
+      [VK_PRIMITIVE_TOPOLOGY_PATCH]             = _3DPRIM_PATCHLIST_1
    };
    uint32_t topology = vk_to_gen_primitive_type[info->topology];
 
@@ -158,26 +158,26 @@ emit_rs_state(struct anv_pipeline *pipeline, VkPipelineRsStateCreateInfo *info,
               const struct anv_pipeline_create_info *extra)
 {
    static const uint32_t vk_to_gen_cullmode[] = {
-      [VK_CULL_MODE_NONE] = CULLMODE_NONE,
-      [VK_CULL_MODE_FRONT] = CULLMODE_FRONT,
-      [VK_CULL_MODE_BACK] = CULLMODE_BACK,
-      [VK_CULL_MODE_FRONT_AND_BACK] = CULLMODE_BOTH
+      [VK_CULL_MODE_NONE]                       = CULLMODE_NONE,
+      [VK_CULL_MODE_FRONT]                      = CULLMODE_FRONT,
+      [VK_CULL_MODE_BACK]                       = CULLMODE_BACK,
+      [VK_CULL_MODE_FRONT_AND_BACK]             = CULLMODE_BOTH
    };
 
    static const uint32_t vk_to_gen_fillmode[] = {
-      [VK_FILL_MODE_POINTS] = RASTER_POINT,
-      [VK_FILL_MODE_WIREFRAME] = RASTER_WIREFRAME,
-      [VK_FILL_MODE_SOLID] = RASTER_SOLID
+      [VK_FILL_MODE_POINTS]                     = RASTER_POINT,
+      [VK_FILL_MODE_WIREFRAME]                  = RASTER_WIREFRAME,
+      [VK_FILL_MODE_SOLID]                      = RASTER_SOLID
    };
 
    static const uint32_t vk_to_gen_front_face[] = {
-      [VK_FRONT_FACE_CCW] = CounterClockwise,
-      [VK_FRONT_FACE_CW] = Clockwise
+      [VK_FRONT_FACE_CCW]                       = CounterClockwise,
+      [VK_FRONT_FACE_CW]                        = Clockwise
    };
    
    static const uint32_t vk_to_gen_coordinate_origin[] = {
-      [VK_COORDINATE_ORIGIN_UPPER_LEFT] = UPPERLEFT,
-      [VK_COORDINATE_ORIGIN_LOWER_LEFT] = LOWERLEFT
+      [VK_COORDINATE_ORIGIN_UPPER_LEFT]         = UPPERLEFT,
+      [VK_COORDINATE_ORIGIN_LOWER_LEFT]         = LOWERLEFT
    };
 
    struct GEN8_3DSTATE_SF sf = {
@@ -314,25 +314,25 @@ emit_cb_state(struct anv_pipeline *pipeline, VkPipelineCbStateCreateInfo *info)
 }
 
 static const uint32_t vk_to_gen_compare_op[] = {
-   [VK_COMPARE_OP_NEVER] = COMPAREFUNCTION_NEVER,
-   [VK_COMPARE_OP_LESS] = COMPAREFUNCTION_LESS,
-   [VK_COMPARE_OP_EQUAL] = COMPAREFUNCTION_EQUAL,
-   [VK_COMPARE_OP_LESS_EQUAL] = COMPAREFUNCTION_LEQUAL,
-   [VK_COMPARE_OP_GREATER] = COMPAREFUNCTION_GREATER,
-   [VK_COMPARE_OP_NOT_EQUAL] = COMPAREFUNCTION_NOTEQUAL,
-   [VK_COMPARE_OP_GREATER_EQUAL] = COMPAREFUNCTION_GEQUAL,
-   [VK_COMPARE_OP_ALWAYS] = COMPAREFUNCTION_ALWAYS,
+   [VK_COMPARE_OP_NEVER]                        = COMPAREFUNCTION_NEVER,
+   [VK_COMPARE_OP_LESS]                         = COMPAREFUNCTION_LESS,
+   [VK_COMPARE_OP_EQUAL]                        = COMPAREFUNCTION_EQUAL,
+   [VK_COMPARE_OP_LESS_EQUAL]                   = COMPAREFUNCTION_LEQUAL,
+   [VK_COMPARE_OP_GREATER]                      = COMPAREFUNCTION_GREATER,
+   [VK_COMPARE_OP_NOT_EQUAL]                    = COMPAREFUNCTION_NOTEQUAL,
+   [VK_COMPARE_OP_GREATER_EQUAL]                = COMPAREFUNCTION_GEQUAL,
+   [VK_COMPARE_OP_ALWAYS]                       = COMPAREFUNCTION_ALWAYS,
 };
 
 static const uint32_t vk_to_gen_stencil_op[] = {
-   [VK_STENCIL_OP_KEEP] = 0,
-   [VK_STENCIL_OP_ZERO] = 0,
-   [VK_STENCIL_OP_REPLACE] = 0,
-   [VK_STENCIL_OP_INC_CLAMP] = 0,
-   [VK_STENCIL_OP_DEC_CLAMP] = 0,
-   [VK_STENCIL_OP_INVERT] = 0,
-   [VK_STENCIL_OP_INC_WRAP] = 0,
-   [VK_STENCIL_OP_DEC_WRAP] = 0
+   [VK_STENCIL_OP_KEEP]                         = 0,
+   [VK_STENCIL_OP_ZERO]                         = 0,
+   [VK_STENCIL_OP_REPLACE]                      = 0,
+   [VK_STENCIL_OP_INC_CLAMP]                    = 0,
+   [VK_STENCIL_OP_DEC_CLAMP]                    = 0,
+   [VK_STENCIL_OP_INVERT]                       = 0,
+   [VK_STENCIL_OP_INC_WRAP]                     = 0,
+   [VK_STENCIL_OP_DEC_WRAP]                     = 0
 };
 
 static void

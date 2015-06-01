@@ -180,12 +180,12 @@ anv_image_view_init(struct anv_surface_view *view,
    view->extent = image->extent;
 
    static const uint32_t vk_to_gen_swizzle[] = {
-      [VK_CHANNEL_SWIZZLE_ZERO] = SCS_ZERO,
-      [VK_CHANNEL_SWIZZLE_ONE] = SCS_ONE,
-      [VK_CHANNEL_SWIZZLE_R] = SCS_RED,
-      [VK_CHANNEL_SWIZZLE_G] = SCS_GREEN,
-      [VK_CHANNEL_SWIZZLE_B] = SCS_BLUE,
-      [VK_CHANNEL_SWIZZLE_A] = SCS_ALPHA
+      [VK_CHANNEL_SWIZZLE_ZERO]                 = SCS_ZERO,
+      [VK_CHANNEL_SWIZZLE_ONE]                  = SCS_ONE,
+      [VK_CHANNEL_SWIZZLE_R]                    = SCS_RED,
+      [VK_CHANNEL_SWIZZLE_G]                    = SCS_GREEN,
+      [VK_CHANNEL_SWIZZLE_B]                    = SCS_BLUE,
+      [VK_CHANNEL_SWIZZLE_A]                    = SCS_ALPHA
    };
 
    struct GEN8_RENDER_SURFACE_STATE surface_state = {

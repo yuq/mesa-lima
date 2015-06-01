@@ -1698,33 +1698,33 @@ VkResult anv_CreateSampler(
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
    static const uint32_t vk_to_gen_tex_filter[] = {
-      [VK_TEX_FILTER_NEAREST] = MAPFILTER_NEAREST,
-      [VK_TEX_FILTER_LINEAR] = MAPFILTER_LINEAR
+      [VK_TEX_FILTER_NEAREST]                   = MAPFILTER_NEAREST,
+      [VK_TEX_FILTER_LINEAR]                    = MAPFILTER_LINEAR
    };
 
    static const uint32_t vk_to_gen_mipmap_mode[] = {
-      [VK_TEX_MIPMAP_MODE_BASE] = MIPFILTER_NONE,
-      [VK_TEX_MIPMAP_MODE_NEAREST] = MIPFILTER_NEAREST,
-      [VK_TEX_MIPMAP_MODE_LINEAR] = MIPFILTER_LINEAR
+      [VK_TEX_MIPMAP_MODE_BASE]                 = MIPFILTER_NONE,
+      [VK_TEX_MIPMAP_MODE_NEAREST]              = MIPFILTER_NEAREST,
+      [VK_TEX_MIPMAP_MODE_LINEAR]               = MIPFILTER_LINEAR
    };
 
    static const uint32_t vk_to_gen_tex_address[] = {
-      [VK_TEX_ADDRESS_WRAP] = TCM_WRAP,
-      [VK_TEX_ADDRESS_MIRROR] = TCM_MIRROR,
-      [VK_TEX_ADDRESS_CLAMP] = TCM_CLAMP,
-      [VK_TEX_ADDRESS_MIRROR_ONCE] = TCM_MIRROR_ONCE,
-      [VK_TEX_ADDRESS_CLAMP_BORDER] = TCM_CLAMP_BORDER,
+      [VK_TEX_ADDRESS_WRAP]                     = TCM_WRAP,
+      [VK_TEX_ADDRESS_MIRROR]                   = TCM_MIRROR,
+      [VK_TEX_ADDRESS_CLAMP]                    = TCM_CLAMP,
+      [VK_TEX_ADDRESS_MIRROR_ONCE]              = TCM_MIRROR_ONCE,
+      [VK_TEX_ADDRESS_CLAMP_BORDER]             = TCM_CLAMP_BORDER,
    };
 
    static const uint32_t vk_to_gen_compare_op[] = {
-      [VK_COMPARE_OP_NEVER]  = PREFILTEROPNEVER,
-      [VK_COMPARE_OP_LESS]  = PREFILTEROPLESS,
-      [VK_COMPARE_OP_EQUAL]  = PREFILTEROPEQUAL,
-      [VK_COMPARE_OP_LESS_EQUAL]  = PREFILTEROPLEQUAL,
-      [VK_COMPARE_OP_GREATER]  = PREFILTEROPGREATER,
-      [VK_COMPARE_OP_NOT_EQUAL]  = PREFILTEROPNOTEQUAL,
-      [VK_COMPARE_OP_GREATER_EQUAL]  = PREFILTEROPGEQUAL,
-      [VK_COMPARE_OP_ALWAYS]  = PREFILTEROPALWAYS,
+      [VK_COMPARE_OP_NEVER]                     = PREFILTEROPNEVER,
+      [VK_COMPARE_OP_LESS]                      = PREFILTEROPLESS,
+      [VK_COMPARE_OP_EQUAL]                     = PREFILTEROPEQUAL,
+      [VK_COMPARE_OP_LESS_EQUAL]                = PREFILTEROPLEQUAL,
+      [VK_COMPARE_OP_GREATER]                   = PREFILTEROPGREATER,
+      [VK_COMPARE_OP_NOT_EQUAL]                 = PREFILTEROPNOTEQUAL,
+      [VK_COMPARE_OP_GREATER_EQUAL]             = PREFILTEROPGEQUAL,
+      [VK_COMPARE_OP_ALWAYS]                    = PREFILTEROPALWAYS,
    };
 
    if (pCreateInfo->maxAnisotropy > 1) {
@@ -2906,9 +2906,9 @@ void anv_CmdBindIndexBuffer(
    struct anv_buffer *buffer = (struct anv_buffer *) _buffer;
 
    static const uint32_t vk_to_gen_index_type[] = {
-      [VK_INDEX_TYPE_UINT8] = INDEX_BYTE,
-      [VK_INDEX_TYPE_UINT16] = INDEX_WORD,
-      [VK_INDEX_TYPE_UINT32] = INDEX_DWORD,
+      [VK_INDEX_TYPE_UINT8]                     = INDEX_BYTE,
+      [VK_INDEX_TYPE_UINT16]                    = INDEX_WORD,
+      [VK_INDEX_TYPE_UINT32]                    = INDEX_DWORD,
    };
 
    anv_batch_emit(&cmd_buffer->batch, GEN8_3DSTATE_INDEX_BUFFER,
@@ -2971,12 +2971,12 @@ cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
       return VK_ERROR_OUT_OF_DEVICE_MEMORY;
 
    static const uint32_t binding_table_opcodes[] = {
-      [VK_SHADER_STAGE_VERTEX] = 38,
-      [VK_SHADER_STAGE_TESS_CONTROL] = 39,
-      [VK_SHADER_STAGE_TESS_EVALUATION] = 40,
-      [VK_SHADER_STAGE_GEOMETRY] = 41,
-      [VK_SHADER_STAGE_FRAGMENT] = 42,
-      [VK_SHADER_STAGE_COMPUTE] = 0,
+      [VK_SHADER_STAGE_VERTEX]                  = 38,
+      [VK_SHADER_STAGE_TESS_CONTROL]            = 39,
+      [VK_SHADER_STAGE_TESS_EVALUATION]         = 40,
+      [VK_SHADER_STAGE_GEOMETRY]                = 41,
+      [VK_SHADER_STAGE_FRAGMENT]                = 42,
+      [VK_SHADER_STAGE_COMPUTE]                 = 0,
    };
 
    anv_batch_emit(&cmd_buffer->batch,
@@ -3078,12 +3078,12 @@ cmd_buffer_emit_samplers(struct anv_cmd_buffer *cmd_buffer, unsigned stage)
       return VK_ERROR_OUT_OF_DEVICE_MEMORY;
 
    static const uint32_t sampler_state_opcodes[] = {
-      [VK_SHADER_STAGE_VERTEX] = 43,
-      [VK_SHADER_STAGE_TESS_CONTROL] = 44, /* HS */
-      [VK_SHADER_STAGE_TESS_EVALUATION] = 45, /* DS */
-      [VK_SHADER_STAGE_GEOMETRY] = 46,
-      [VK_SHADER_STAGE_FRAGMENT] = 47,
-      [VK_SHADER_STAGE_COMPUTE] = 0,
+      [VK_SHADER_STAGE_VERTEX]                  = 43,
+      [VK_SHADER_STAGE_TESS_CONTROL]            = 44, /* HS */
+      [VK_SHADER_STAGE_TESS_EVALUATION]         = 45, /* DS */
+      [VK_SHADER_STAGE_GEOMETRY]                = 46,
+      [VK_SHADER_STAGE_FRAGMENT]                = 47,
+      [VK_SHADER_STAGE_COMPUTE]                 = 0,
    };
 
    anv_batch_emit(&cmd_buffer->batch,
