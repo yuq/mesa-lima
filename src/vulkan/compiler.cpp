@@ -71,8 +71,6 @@ set_binding_table_layout(struct brw_stage_prog_data *prog_data,
    else
       bias = 0;
 
-   prog_data->binding_table.texture_start = bias;
-
    count = layout->stage[stage].surface_count;
    prog_data->map_entries =
       (uint32_t *) malloc(count * sizeof(prog_data->map_entries[0]));

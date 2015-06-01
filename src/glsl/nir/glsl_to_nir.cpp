@@ -321,6 +321,7 @@ nir_visitor::visit(ir_variable *ir)
    }
 
    var->data.index = ir->data.index;
+   var->data.descriptor_set = ir->data.set;
    var->data.binding = ir->data.binding;
    /* XXX Get rid of buffer_index */
    var->data.atomic.buffer_index = ir->data.binding;

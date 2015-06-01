@@ -300,6 +300,7 @@ typedef struct {
        *
        * For array types, this represents the binding point for the first element.
        */
+      int descriptor_set;
       int binding;
 
       /**
@@ -984,6 +985,9 @@ typedef struct {
 
    /* gather component selector */
    unsigned component : 2;
+
+   /* The descriptor set containing this texture */
+   unsigned sampler_set;
 
    /** The sampler index
     *

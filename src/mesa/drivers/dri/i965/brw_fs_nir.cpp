@@ -1622,7 +1622,9 @@ fs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
 void
 fs_visitor::nir_emit_texture(nir_tex_instr *instr)
 {
-   unsigned sampler = instr->sampler_index;
+   uint32_t set = instr->sampler_set;
+   uint32_t index = instr->sampler_index;
+   unsigned sampler = stage_prog_data->bind_map[set][index];
    fs_reg sampler_reg(sampler);
 
    /* FINISHME: We're failing to recompile our programs when the sampler is
