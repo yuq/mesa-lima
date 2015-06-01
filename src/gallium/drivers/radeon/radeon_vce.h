@@ -77,8 +77,12 @@ struct rvce_encoder {
 	void (*motion_estimation)(struct rvce_encoder *enc);
 	void (*rdo)(struct rvce_encoder *enc);
 	void (*vui)(struct rvce_encoder *enc);
+	void (*config)(struct rvce_encoder *enc);
 	void (*encode)(struct rvce_encoder *enc);
 	void (*destroy)(struct rvce_encoder *enc);
+	void (*task_info)(struct rvce_encoder *enc, uint32_t op,
+			  uint32_t dep, uint32_t fb_idx,
+			  uint32_t ring_idx);
 
 	unsigned			stream_handle;
 
@@ -102,6 +106,8 @@ struct rvce_encoder {
 	struct rvid_buffer		*fb;
 	struct rvid_buffer		cpb;
 	struct pipe_h264_enc_picture_desc pic;
+	unsigned			task_info_idx;
+
 	bool				use_vm;
 	bool				use_vui;
 	bool				dual_pipe;

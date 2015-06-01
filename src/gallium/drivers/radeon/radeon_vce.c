@@ -56,6 +56,7 @@
 static void flush(struct rvce_encoder *enc)
 {
 	enc->ws->cs_flush(enc->cs, RADEON_FLUSH_ASYNC, NULL, 0);
+	enc->task_info_idx = 0;
 }
 
 #if 0
@@ -280,24 +281,19 @@ static void rvce_begin_frame(struct pipe_video_codec *encoder,
 		enc->fb = &fb;
 		enc->session(enc);
 		enc->create(enc);
-		enc->rate_control(enc);
-		need_rate_control = false;
-		enc->config_extension(enc);
-		enc->motion_estimation(enc);
-		enc->rdo(enc);
-		if (enc->use_vui)
-			enc->vui(enc);
-		enc->pic_control(enc);
+		enc->config(enc);
 		enc->feedback(enc);
 		flush(enc);
 		//dump_feedback(enc, &fb);
 		rvid_destroy_buffer(&fb);
+		need_rate_control = false;
 	}
 
-	enc->session(enc);
-
-	if (need_rate_control)
-		enc->rate_control(enc);
+	if (need_rate_control) {
+		enc->session(enc);
+		enc->config(enc);
+		flush(enc);
+	}
 }
 
 static void rvce_encode_bitstream(struct pipe_video_codec *encoder,
@@ -314,6 +310,7 @@ static void rvce_encode_bitstream(struct pipe_video_codec *encoder,
 		RVID_ERR("Can't create feedback buffer.\n");
 		return;
 	}
+	enc->session(enc);
 	enc->encode(enc);
 	enc->feedback(enc);
 }

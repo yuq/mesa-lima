@@ -44,18 +44,6 @@
 #include "radeon_video.h"
 #include "radeon_vce.h"
 
-static void task_info(struct rvce_encoder *enc, uint32_t taskOperation)
-{
-	RVCE_BEGIN(0x00000002); // task info
-	RVCE_CS(0xffffffff); // offsetOfNextTaskInfo
-	RVCE_CS(taskOperation); // taskOperation
-	RVCE_CS(0x00000000); // referencePictureDependency
-	RVCE_CS(0x00000000); // collocateFlagDependency
-	RVCE_CS(0x00000000); // feedbackIndex
-	RVCE_CS(0x00000000); // videoBitstreamRingIndex
-	RVCE_END();
-}
-
 static void rate_control(struct rvce_encoder *enc)
 {
 	RVCE_BEGIN(0x04000005); // rate control
@@ -93,7 +81,7 @@ static void encode(struct rvce_encoder *enc)
 	int i;
 	unsigned luma_offset, chroma_offset;
 
-	task_info(enc, 0x00000003);
+	enc->task_info(enc, 0x00000003, 0, 0, 0);
 
 	RVCE_BEGIN(0x05000001); // context buffer
 	RVCE_READWRITE(enc->cpb.res->cs_buf, enc->cpb.res->domains, 0); // encodeContextAddressHi/Lo

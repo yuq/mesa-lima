@@ -53,15 +53,24 @@ static void session(struct rvce_encoder *enc)
 	RVCE_END();
 }
 
-static void task_info(struct rvce_encoder *enc, uint32_t taskOperation)
+static void task_info(struct rvce_encoder *enc, uint32_t op,
+		      uint32_t dep, uint32_t fb_idx, uint32_t ring_idx)
 {
 	RVCE_BEGIN(0x00000002); // task info
+	if (op == 0x3) {
+		if (enc->task_info_idx) {
+			uint32_t offs = enc->cs->cdw - enc->task_info_idx + 3;
+			// Update offsetOfNextTaskInfo
+			enc->cs->buf[enc->task_info_idx] = offs;
+		}
+		enc->task_info_idx = enc->cs->cdw;
+	}
 	RVCE_CS(0xffffffff); // offsetOfNextTaskInfo
-	RVCE_CS(taskOperation); // taskOperation
-	RVCE_CS(0x00000000); // referencePictureDependency
+	RVCE_CS(op); // taskOperation
+	RVCE_CS(dep); // referencePictureDependency
 	RVCE_CS(0x00000000); // collocateFlagDependency
-	RVCE_CS(0x00000000); // feedbackIndex
-	RVCE_CS(0x00000000); // videoBitstreamRingIndex
+	RVCE_CS(fb_idx); // feedbackIndex
+	RVCE_CS(ring_idx); // videoBitstreamRingIndex
 	RVCE_END();
 }
 
@@ -75,7 +84,7 @@ static void feedback(struct rvce_encoder *enc)
 
 static void create(struct rvce_encoder *enc)
 {
-	task_info(enc, 0x00000000);
+	enc->task_info(enc, 0x00000000, 0, 0, 0);
 
 	RVCE_BEGIN(0x01000001); // create cmd
 	RVCE_CS(0x00000000); // encUseCircularBuffer
@@ -271,12 +280,24 @@ static void vui(struct rvce_encoder *enc)
 	RVCE_END();
 }
 
+static void config(struct rvce_encoder *enc)
+{
+	enc->task_info(enc, 0x00000002, 0, 0xffffffff, 0);
+	enc->rate_control(enc);
+	enc->config_extension(enc);
+	enc->motion_estimation(enc);
+	enc->rdo(enc);
+	if (enc->use_vui)
+		enc->vui(enc);
+	enc->pic_control(enc);
+}
+
 static void encode(struct rvce_encoder *enc)
 {
 	int i;
 	unsigned luma_offset, chroma_offset;
 
-	task_info(enc, 0x00000003);
+	enc->task_info(enc, 0x00000003, 0, 0, 0);
 
 	RVCE_BEGIN(0x05000001); // context buffer
 	RVCE_READWRITE(enc->cpb.res->cs_buf, enc->cpb.res->domains, 0x0); // encodeContextAddressHi/Lo
@@ -401,7 +422,7 @@ static void encode(struct rvce_encoder *enc)
 
 static void destroy(struct rvce_encoder *enc)
 {
-	task_info(enc, 0x00000001);
+	enc->task_info(enc, 0x00000001, 0, 0, 0);
 
 	RVCE_BEGIN(0x02000001); // destroy
 	RVCE_END();
@@ -410,6 +431,7 @@ static void destroy(struct rvce_encoder *enc)
 void radeon_vce_40_2_2_init(struct rvce_encoder *enc)
 {
 	enc->session = session;
+	enc->task_info = task_info;
 	enc->create = create;
 	enc->feedback = feedback;
 	enc->rate_control = rate_control;
@@ -418,6 +440,7 @@ void radeon_vce_40_2_2_init(struct rvce_encoder *enc)
 	enc->motion_estimation = motion_estimation;
 	enc->rdo = rdo;
 	enc->vui = vui;
+	enc->config = config;
 	enc->encode = encode;
 	enc->destroy = destroy;
 }
