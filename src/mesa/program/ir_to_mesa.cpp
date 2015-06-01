@@ -405,7 +405,7 @@ ir_to_mesa_visitor::emit_dp(ir_instruction *ir,
 			    dst_reg dst, src_reg src0, src_reg src1,
 			    unsigned elements)
 {
-   static const gl_inst_opcode dot_opcodes[] = {
+   static const enum prog_opcode dot_opcodes[] = {
       OPCODE_DP2, OPCODE_DP3, OPCODE_DP4
    };
 

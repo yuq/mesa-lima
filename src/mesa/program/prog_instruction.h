@@ -134,7 +134,7 @@
 /**
  * Program instruction opcodes for vertex, fragment and geometry programs.
  */
-typedef enum prog_opcode {
+enum prog_opcode {
                      /* ARB_vp   ARB_fp   NV_vp   NV_fp     GLSL */
                      /*------------------------------------------*/
    OPCODE_NOP = 0,   /*                                      X   */
@@ -204,7 +204,7 @@ typedef enum prog_opcode {
    OPCODE_TRUNC,     /*                                      X   */
    OPCODE_XPD,       /*   X        X                             */
    MAX_OPCODE
-} gl_inst_opcode;
+};
 
 
 /**
@@ -291,7 +291,7 @@ struct prog_dst_register
  */
 struct prog_instruction
 {
-   gl_inst_opcode Opcode;
+   enum prog_opcode Opcode;
    struct prog_src_register SrcReg[3];
    struct prog_dst_register DstReg;
 
@@ -379,19 +379,19 @@ extern void
 _mesa_free_instructions(struct prog_instruction *inst, GLuint count);
 
 extern GLuint
-_mesa_num_inst_src_regs(gl_inst_opcode opcode);
+_mesa_num_inst_src_regs(enum prog_opcode opcode);
 
 extern GLuint
-_mesa_num_inst_dst_regs(gl_inst_opcode opcode);
+_mesa_num_inst_dst_regs(enum prog_opcode opcode);
 
 extern GLboolean
-_mesa_is_tex_instruction(gl_inst_opcode opcode);
+_mesa_is_tex_instruction(enum prog_opcode opcode);
 
 extern GLboolean
 _mesa_check_soa_dependencies(const struct prog_instruction *inst);
 
 extern const char *
-_mesa_opcode_string(gl_inst_opcode opcode);
+_mesa_opcode_string(enum prog_opcode opcode);
 
 
 #ifdef __cplusplus
