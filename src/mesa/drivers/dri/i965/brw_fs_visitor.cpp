@@ -1207,7 +1207,7 @@ fs_visitor::visit(ir_expression *ir)
          index = const_uniform_block->value.u[0];
          set = shader->base.UniformBlocks[index].Set;
          set_index = shader->base.UniformBlocks[index].Binding;
-         binding = stage_prog_data->bind_map[set][set_index];
+         binding = stage_prog_data->bind_map[set].index[set_index];
          surf_index = fs_reg(binding);
       } else {
          assert(0 && "need more info from the ir for this.");
@@ -2302,7 +2302,7 @@ fs_visitor::visit(ir_texture *ir)
    assert(deref_var);
    ir_variable *var = deref_var->var;
 
-   sampler = stage_prog_data->bind_map[var->data.set][var->data.index];
+   sampler = stage_prog_data->bind_map[var->data.set].index[var->data.index];
 
    ir_rvalue *nonconst_sampler_index =
       _mesa_get_sampler_array_nonconst_index(ir->sampler);

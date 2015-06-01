@@ -1403,7 +1403,13 @@ fs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
          uint32_t set = shader->base.UniformBlocks[index].Set;
          uint32_t binding = shader->base.UniformBlocks[index].Binding;
 
-         surf_index = fs_reg(stage_prog_data->bind_map[set][binding]);
+         /* FIXME: We should probably assert here, but dota2 seems to hit
+          * it and we'd like to keep going.
+          */
+         if (binding >= stage_prog_data->bind_map[set].index_count)
+            binding = 0;
+
+         surf_index = fs_reg(stage_prog_data->bind_map[set].index[binding]);
       } else {
          assert(0 && "need more info from the ir for this.");
          /* The block index is not a constant. Evaluate the index expression
@@ -1623,8 +1629,12 @@ void
 fs_visitor::nir_emit_texture(nir_tex_instr *instr)
 {
    uint32_t set = instr->sampler_set;
-   uint32_t index = instr->sampler_index;
-   unsigned sampler = stage_prog_data->bind_map[set][index];
+   uint32_t binding = instr->sampler_index;
+
+   assert(binding < stage_prog_data->bind_map[set].index_count);
+   assert(stage_prog_data->bind_map[set].index[binding] < 1000);
+
+   unsigned sampler = stage_prog_data->bind_map[set].index[binding];
    fs_reg sampler_reg(sampler);
 
    /* FINISHME: We're failing to recompile our programs when the sampler is
