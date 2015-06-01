@@ -1734,6 +1734,30 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
       break;
    }
 
+   case nir_intrinsic_get_buffer_size: {
+      nir_const_value *const_uniform_block = nir_src_as_const_value(instr->src[0]);
+      unsigned ubo_index = const_uniform_block ? const_uniform_block->u[0] : 0;
+      int reg_width = dispatch_width / 8;
+
+      assert(shader->base.UniformBlocks[ubo_index].IsShaderStorage);
+
+      /* Set LOD = 0 */
+      fs_reg source = fs_reg(0);
+
+      int mlen = 1 * reg_width;
+      fs_reg src_payload = fs_reg(GRF, alloc.allocate(mlen),
+                                  BRW_REGISTER_TYPE_UD);
+      bld.LOAD_PAYLOAD(src_payload, &source, 1, 0);
+
+      fs_reg surf_index = fs_reg(prog_data->binding_table.ubo_start + ubo_index);
+      fs_inst *inst = bld.emit(FS_OPCODE_GET_BUFFER_SIZE, dest,
+                               src_payload, surf_index);
+      inst->header_size = 0;
+      inst->mlen = mlen;
+      bld.emit(inst);
+      break;
+   }
+
    default:
       unreachable("unknown intrinsic");
    }
