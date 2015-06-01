@@ -1322,6 +1322,16 @@ nir_visitor::visit(ir_expression *ir)
          unreachable("not reached");
       }
       break;
+   case ir_unop_get_buffer_size: {
+      nir_intrinsic_instr *load = nir_intrinsic_instr_create(
+         this->shader,
+         nir_intrinsic_get_buffer_size);
+      load->num_components = ir->type->vector_elements;
+      load->src[0] = evaluate_rvalue(ir->operands[0]);
+      add_instr(&load->instr, ir->type->vector_elements);
+      return;
+   }
+
    case ir_binop_add:
    case ir_binop_sub:
    case ir_binop_mul:

@@ -62,6 +62,13 @@ INTRINSIC(interp_var_at_offset, 1, ARR(2), true, 0, 1, 0,
           NIR_INTRINSIC_CAN_ELIMINATE | NIR_INTRINSIC_CAN_REORDER)
 
 /*
+ * Ask the driver for the size of a given buffer. It takes the buffer index
+ * as source.
+ */
+INTRINSIC(get_buffer_size, 1, ARR(1), true, 1, 0, 0,
+          NIR_INTRINSIC_CAN_ELIMINATE | NIR_INTRINSIC_CAN_REORDER)
+
+/*
  * a barrier is an intrinsic with no inputs/outputs but which can't be moved
  * around/optimized in general
  */
