@@ -118,15 +118,6 @@
 
 
 /**
- * Saturation modes when storing values.
- */
-/*@{*/
-#define SATURATE_OFF            0
-#define SATURATE_ZERO_ONE       1
-/*@}*/
-
-
-/**
  * Per-component negation masks
  */
 /*@{*/
@@ -327,15 +318,12 @@ struct prog_instruction
    GLuint CondDst:1;
 
    /**
-    * Saturate each value of the vectored result to the range [0,1] or the
-    * range [-1,1].  \c SSAT mode (i.e., saturation to the range [-1,1]) is
-    * only available in NV_fragment_program2 mode.
-    * Value is one of the SATURATE_* tokens.
+    * Saturate each value of the vectored result to the range [0,1].
     *
     * \since
     * NV_fragment_program_option, NV_vertex_program3.
     */
-   GLuint SaturateMode:2;
+   GLuint Saturate:1;
 
    /**
     * Per-instruction selectable precision: FLOAT32, FLOAT16, FIXED12.

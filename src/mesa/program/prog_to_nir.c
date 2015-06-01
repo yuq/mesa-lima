@@ -900,8 +900,8 @@ ptn_emit_instruction(struct ptn_compile *c, struct prog_instruction *prog_inst)
       break;
    }
 
-   if (prog_inst->SaturateMode) {
-      assert(prog_inst->SaturateMode == SATURATE_ZERO_ONE);
+   if (prog_inst->Saturate) {
+      assert(prog_inst->Saturate);
       assert(!dest.dest.is_ssa);
       ptn_move_dest(b, dest, nir_fsat(b, ptn_src_for_dest(c, &dest)));
    }

@@ -55,7 +55,7 @@ _mesa_init_instructions(struct prog_instruction *inst, GLuint count)
       inst[i].DstReg.CondMask = COND_TR;
       inst[i].DstReg.CondSwizzle = SWIZZLE_NOOP;
 
-      inst[i].SaturateMode = SATURATE_OFF;
+      inst[i].Saturate = GL_FALSE;
       inst[i].Precision = FLOAT32;
    }
 }

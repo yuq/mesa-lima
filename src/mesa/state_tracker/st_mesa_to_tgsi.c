@@ -665,7 +665,7 @@ compile_instruction(
    if (num_dst) 
       dst[0] = translate_dst( t, 
                               &inst->DstReg,
-                              inst->SaturateMode,
+                              inst->Saturate,
                               clamp_dst_color_output);
 
    for (i = 0; i < num_src; i++) 

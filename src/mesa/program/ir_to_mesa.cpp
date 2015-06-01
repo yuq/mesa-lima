@@ -2720,7 +2720,7 @@ get_mesa_program(struct gl_context *ctx,
       mesa_inst->Opcode = inst->op;
       mesa_inst->CondUpdate = inst->cond_update;
       if (inst->saturate)
-	 mesa_inst->SaturateMode = SATURATE_ZERO_ONE;
+	 mesa_inst->Saturate = GL_TRUE;
       mesa_inst->DstReg.File = inst->dst.file;
       mesa_inst->DstReg.Index = inst->dst.index;
       mesa_inst->DstReg.CondMask = inst->dst.cond_mask;

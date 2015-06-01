@@ -2308,7 +2308,7 @@ asm_instruction_copy_ctor(const struct prog_instruction *base,
       inst->Base.Opcode = base->Opcode;
       inst->Base.CondUpdate = base->CondUpdate;
       inst->Base.CondDst = base->CondDst;
-      inst->Base.SaturateMode = base->SaturateMode;
+      inst->Base.Saturate = base->Saturate;
       inst->Base.Precision = base->Precision;
 
       asm_instruction_set_operands(inst, dst, src0, src1, src2);

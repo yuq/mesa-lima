@@ -600,7 +600,7 @@ _mesa_fprint_alu_instruction(FILE *f,
       fprintf(f, ".C");
 
    /* frag prog only */
-   if (inst->SaturateMode == SATURATE_ZERO_ONE)
+   if (inst->Saturate)
       fprintf(f, "_SAT");
 
    fprintf(f, " ");
@@ -658,7 +658,7 @@ _mesa_fprint_instruction_opt(FILE *f,
    switch (inst->Opcode) {
    case OPCODE_SWZ:
       fprintf(f, "SWZ");
-      if (inst->SaturateMode == SATURATE_ZERO_ONE)
+      if (inst->Saturate)
          fprintf(f, "_SAT");
       fprintf(f, " ");
       fprint_dst_reg(f, &inst->DstReg, mode, prog);
@@ -675,7 +675,7 @@ _mesa_fprint_instruction_opt(FILE *f,
    case OPCODE_TXB:
    case OPCODE_TXD:
       fprintf(f, "%s", _mesa_opcode_string(inst->Opcode));
-      if (inst->SaturateMode == SATURATE_ZERO_ONE)
+      if (inst->Saturate)
          fprintf(f, "_SAT");
       fprintf(f, " ");
       fprint_dst_reg(f, &inst->DstReg, mode, prog);
