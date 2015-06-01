@@ -156,24 +156,30 @@ check_tex_size(struct vc4_exec_info *exec, struct drm_gem_cma_object *fbo,
 	uint32_t utile_w = utile_width(cpp);
 	uint32_t utile_h = utile_height(cpp);
 
-	/* The values are limited by the packet/texture parameter bitfields,
-	 * so we don't need to worry as much about integer overflow.
+	/* The shaded vertex format stores signed 12.4 fixed point
+	 * (-2048,2047) offsets from the viewport center, so we should
+	 * never have a render target larger than 4096.  The texture
+	 * unit can only sample from 2048x2048, so it's even more
+	 * restricted.  This lets us avoid worrying about overflow in
+	 * our math.
 	 */
-	BUG_ON(width > 65535);
-	BUG_ON(height > 65535);
+	if (width > 4096 || height > 4096) {
+		DRM_ERROR("Surface dimesions (%d,%d) too large", width, height);
+		return false;
+	}
 
 	switch (tiling_format) {
 	case VC4_TILING_FORMAT_LINEAR:
-		aligned_width = roundup(width, utile_w);
+		aligned_width = round_up(width, utile_w);
 		aligned_height = height;
 		break;
 	case VC4_TILING_FORMAT_T:
-		aligned_width = roundup(width, utile_w * 8);
-		aligned_height = roundup(height, utile_h * 8);
+		aligned_width = round_up(width, utile_w * 8);
+		aligned_height = round_up(height, utile_h * 8);
 		break;
 	case VC4_TILING_FORMAT_LT:
-		aligned_width = roundup(width, utile_w);
-		aligned_height = roundup(height, utile_h);
+		aligned_width = round_up(width, utile_w);
+		aligned_height = round_up(height, utile_h);
 		break;
 	default:
 		DRM_ERROR("buffer tiling %d unsupported\n", tiling_format);
@@ -181,13 +187,6 @@ check_tex_size(struct vc4_exec_info *exec, struct drm_gem_cma_object *fbo,
 	}
 
 	stride = aligned_width * cpp;
-
-	if (INT_MAX / stride < aligned_height) {
-		DRM_ERROR("Overflow in fbo size (%dx%d -> %dx%d)\n",
-			  width, height,
-			  aligned_width, aligned_height);
-		return false;
-	}
 	size = stride * aligned_height;
 
 	if (size + offset < size ||
@@ -269,14 +268,11 @@ validate_wait_on_semaphore(VALIDATE_ARGS)
 static int
 validate_branch_to_sublist(VALIDATE_ARGS)
 {
-	struct drm_gem_cma_object *target;
 	uint32_t offset;
 
-	if (!vc4_use_handle(exec, 0, VC4_MODE_TILE_ALLOC, &target))
-		return -EINVAL;
-
-	if (target != exec->tile_alloc_bo) {
-		DRM_ERROR("Jumping to BOs other than tile alloc unsupported\n");
+	if (!exec->tile_alloc_bo) {
+		DRM_ERROR("VC4_PACKET_BRANCH_TO_SUB_LIST seen before "
+			  "binner setup\n");
 		return -EINVAL;
 	}
 
@@ -286,15 +282,14 @@ validate_branch_to_sublist(VALIDATE_ARGS)
 	}
 
 	offset = *(uint32_t *)(untrusted + 0);
-	if (offset % exec->tile_alloc_init_block_size ||
-	    offset / exec->tile_alloc_init_block_size >=
-	    exec->bin_tiles_x * exec->bin_tiles_y) {
+	if (offset & exec->tile_alloc_init_block_mask ||
+	    offset > exec->tile_alloc_init_block_last) {
 		DRM_ERROR("VC4_PACKET_BRANCH_TO_SUB_LIST must jump to initial "
 			  "tile allocation space.\n");
 		return -EINVAL;
 	}
 
-	*(uint32_t *)(validated + 0) = target->paddr + offset;
+	*(uint32_t *)(validated + 0) = exec->tile_alloc_bo->paddr + offset;
 
 	return 0;
 }
@@ -496,6 +491,7 @@ validate_tile_binning_config(VALIDATE_ARGS)
 	struct drm_gem_cma_object *tile_state_data_array;
 	uint8_t flags;
 	uint32_t tile_allocation_size;
+	uint32_t tile_alloc_init_block_size;
 
 	if (!vc4_use_handle(exec, 0, VC4_MODE_TILE_ALLOC, &tile_allocation) ||
 	    !vc4_use_handle(exec, 1, VC4_MODE_TSDA, &tile_state_data_array))
@@ -547,15 +543,19 @@ validate_tile_binning_config(VALIDATE_ARGS)
 	*(uint32_t *)validated = tile_allocation->paddr;
 	exec->tile_alloc_bo = tile_allocation;
 
-	exec->tile_alloc_init_block_size = 1 << (5 + ((flags >> 5) & 3));
+	tile_alloc_init_block_size = 1 << (5 + ((flags >> 5) & 3));
 	if (exec->bin_tiles_x * exec->bin_tiles_y *
-	    exec->tile_alloc_init_block_size > tile_allocation_size) {
+	    tile_alloc_init_block_size > tile_allocation_size) {
 		DRM_ERROR("tile init exceeds tile alloc size (%d vs %d)\n",
 			  exec->bin_tiles_x * exec->bin_tiles_y *
-			  exec->tile_alloc_init_block_size,
+			  tile_alloc_init_block_size,
 			  tile_allocation_size);
 		return -EINVAL;
 	}
+	exec->tile_alloc_init_block_mask = tile_alloc_init_block_size - 1;
+	exec->tile_alloc_init_block_last = tile_alloc_init_block_size *
+		(exec->bin_tiles_x * exec->bin_tiles_y - 1);
+
 	if (*(uint32_t *)(untrusted + 8) != 0) {
 		DRM_ERROR("TSDA offset != 0 unsupported\n");
 		return -EINVAL;
@@ -927,15 +927,15 @@ reloc_tex(struct vc4_exec_info *exec,
 
 		switch (tiling_format) {
 		case VC4_TILING_FORMAT_T:
-			aligned_width = roundup(level_width, utile_w * 8);
-			aligned_height = roundup(level_height, utile_h * 8);
+			aligned_width = round_up(level_width, utile_w * 8);
+			aligned_height = round_up(level_height, utile_h * 8);
 			break;
 		case VC4_TILING_FORMAT_LT:
-			aligned_width = roundup(level_width, utile_w);
-			aligned_height = roundup(level_height, utile_h);
+			aligned_width = round_up(level_width, utile_w);
+			aligned_height = round_up(level_height, utile_h);
 			break;
 		default:
-			aligned_width = roundup(level_width, utile_w);
+			aligned_width = round_up(level_width, utile_w);
 			aligned_height = level_height;
 			break;
 		}
