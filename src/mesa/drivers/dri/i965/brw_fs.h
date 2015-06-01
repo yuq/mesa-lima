@@ -256,6 +256,8 @@ public:
                        nir_ssa_undef_instr *instr);
    void nir_emit_intrinsic(const brw::fs_builder &bld,
                            nir_intrinsic_instr *instr);
+   void nir_emit_ssbo_atomic(const brw::fs_builder &bld,
+                             int op, nir_intrinsic_instr *instr);
    void nir_emit_texture(const brw::fs_builder &bld,
                          nir_tex_instr *instr);
    void nir_emit_jump(const brw::fs_builder &bld,
