@@ -1688,6 +1688,7 @@ VkResult anv_CreateSampler(
 {
    struct anv_device *device = (struct anv_device *) _device;
    struct anv_sampler *sampler;
+   uint32_t mag_filter, min_filter, max_anisotropy;
 
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO);
 
@@ -1726,17 +1727,24 @@ VkResult anv_CreateSampler(
       [VK_COMPARE_OP_ALWAYS]  = PREFILTEROPALWAYS,
    };
 
-   if (pCreateInfo->maxAnisotropy > 0)
-       anv_finishme("missing support for anisotropic filtering");
-
+   if (pCreateInfo->maxAnisotropy > 1) {
+      mag_filter = MAPFILTER_ANISOTROPIC;
+      min_filter = MAPFILTER_ANISOTROPIC;
+      max_anisotropy = (pCreateInfo->maxAnisotropy - 2) / 2;
+   } else {
+      mag_filter = vk_to_gen_tex_filter[pCreateInfo->magFilter];
+      min_filter = vk_to_gen_tex_filter[pCreateInfo->minFilter];
+      max_anisotropy = RATIO21;
+   }
+   
    struct GEN8_SAMPLER_STATE sampler_state = {
       .SamplerDisable = false,
       .TextureBorderColorMode = DX10OGL,
       .LODPreClampMode = 0,
       .BaseMipLevel = 0,
       .MipModeFilter = vk_to_gen_mipmap_mode[pCreateInfo->mipMode],
-      .MagModeFilter = vk_to_gen_tex_filter[pCreateInfo->magFilter],
-      .MinModeFilter = vk_to_gen_tex_filter[pCreateInfo->minFilter],
+      .MagModeFilter = mag_filter,
+      .MinModeFilter = min_filter,
       .TextureLODBias = pCreateInfo->mipLodBias * 256,
       .AnisotropicAlgorithm = EWAApproximation,
       .MinLOD = pCreateInfo->minLod * 256,
@@ -1749,10 +1757,10 @@ VkResult anv_CreateSampler(
 
       .IndirectStatePointer =
          device->float_border_colors.offset +
-         pCreateInfo->borderColor * sizeof(float) * 4;
+         pCreateInfo->borderColor * sizeof(float) * 4,
 
       .LODClampMagnificationMode = MIPNONE,
-      .MaximumAnisotropy = 0,
+      .MaximumAnisotropy = max_anisotropy,
       .RAddressMinFilterRoundingEnable = 0,
       .RAddressMagFilterRoundingEnable = 0,
       .VAddressMinFilterRoundingEnable = 0,
