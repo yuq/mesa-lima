@@ -133,16 +133,16 @@ static void print_instr_cat0(instr_t *instr)
 		break;
 	case OPC_BR:
 		printf(" %sp0.%c, #%d", cat0->inv ? "!" : "",
-				component[cat0->comp], cat0->immed);
+				component[cat0->comp], cat0->a3xx.immed);
 		break;
 	case OPC_JUMP:
 	case OPC_CALL:
-		printf(" #%d", cat0->immed);
+		printf(" #%d", cat0->a3xx.immed);
 		break;
 	}
 
-	if ((debug & PRINT_VERBOSE) && (cat0->dummy1|cat0->dummy2|cat0->dummy3|cat0->dummy4))
-		printf("\t{0: %x,%x,%x,%x}", cat0->dummy1, cat0->dummy2, cat0->dummy3, cat0->dummy4);
+	if ((debug & PRINT_VERBOSE) && (cat0->a3xx.dummy1|cat0->dummy2|cat0->dummy3|cat0->dummy4))
+		printf("\t{0: %x,%x,%x,%x}", cat0->a3xx.dummy1, cat0->dummy2, cat0->dummy3, cat0->dummy4);
 }
 
 static void print_instr_cat1(instr_t *instr)

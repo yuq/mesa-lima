@@ -41,6 +41,7 @@ struct ir3_instruction;
 struct ir3_block;
 
 struct ir3_info {
+	uint32_t gpu_id;
 	uint16_t sizedwords;
 	uint16_t instrs_count;   /* expanded to account for rpt's */
 	/* NOTE: max_reg, etc, does not include registers not touched

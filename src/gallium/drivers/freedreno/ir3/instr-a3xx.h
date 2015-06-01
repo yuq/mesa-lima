@@ -278,8 +278,16 @@ static inline int reg_special(reg_t reg)
 
 typedef struct PACKED {
 	/* dword0: */
-	int16_t  immed    : 16;
-	uint32_t dummy1   : 16;
+	union PACKED {
+		struct PACKED {
+			int16_t  immed    : 16;
+			uint32_t dummy1   : 16;
+		} a3xx;
+		struct PACKED {
+			int32_t  immed    : 20;
+			uint32_t dummy1   : 12;
+		} a4xx;
+	};
 
 	/* dword1: */
 	uint32_t dummy2   : 8;

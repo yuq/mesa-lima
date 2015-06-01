@@ -152,7 +152,11 @@ static int emit_cat0(struct ir3_instruction *instr, void *ptr,
 {
 	instr_cat0_t *cat0 = ptr;
 
-	cat0->immed    = instr->cat0.immed;
+	if (info->gpu_id >= 400) {
+		cat0->a4xx.immed = instr->cat0.immed;
+	} else {
+		cat0->a3xx.immed = instr->cat0.immed;
+	}
 	cat0->repeat   = instr->repeat;
 	cat0->ss       = !!(instr->flags & IR3_INSTR_SS);
 	cat0->inv      = instr->cat0.inv;
@@ -547,6 +551,7 @@ void * ir3_assemble(struct ir3 *shader, struct ir3_info *info,
 	struct ir3_block *block = shader->block;
 	uint32_t *ptr, *dwords;
 
+	info->gpu_id        = gpu_id;
 	info->max_reg       = -1;
 	info->max_half_reg  = -1;
 	info->max_const     = -1;
