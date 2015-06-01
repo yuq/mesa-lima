@@ -35,6 +35,30 @@ extern "C" {
 #include "program/program.h"
 }
 
+static void
+add_indirect_to_tex(nir_tex_instr *instr, nir_src indirect)
+{
+   /* First, we have to resize the array of texture sources */
+   nir_tex_src *new_srcs = rzalloc_array(instr, nir_tex_src,
+                                         instr->num_srcs + 1);
+
+   for (unsigned i = 0; i < instr->num_srcs; i++) {
+      new_srcs[i].src_type = instr->src[i].src_type;
+      nir_instr_move_src(&instr->instr, &new_srcs[i].src, &instr->src[i].src);
+   }
+
+   ralloc_free(instr->src);
+   instr->src = new_srcs;
+
+   /* Now we can go ahead and move the source over to being a
+    * first-class texture source.
+    */
+   instr->src[instr->num_srcs].src_type = nir_tex_src_sampler_offset;
+   instr->num_srcs++;
+   nir_instr_rewrite_src(&instr->instr, &instr->src[instr->num_srcs - 1].src,
+                         indirect);
+}
+
 static unsigned
 get_sampler_index(const struct gl_shader_program *shader_program,
                   gl_shader_stage stage, const char *name)
@@ -83,27 +107,9 @@ lower_sampler(nir_tex_instr *instr, const struct gl_shader_program *shader_progr
                ralloc_asprintf_append(&name, "[%u]", deref_array->base_offset);
             break;
          case nir_deref_array_type_indirect: {
-            /* First, we have to resize the array of texture sources */
-            nir_tex_src *new_srcs = rzalloc_array(instr, nir_tex_src,
-                                                  instr->num_srcs + 1);
-
-            for (unsigned i = 0; i < instr->num_srcs; i++) {
-               new_srcs[i].src_type = instr->src[i].src_type;
-               nir_instr_move_src(&instr->instr, &new_srcs[i].src,
-                                  &instr->src[i].src);
-            }
-
-            ralloc_free(instr->src);
-            instr->src = new_srcs;
-
-            /* Now we can go ahead and move the source over to being a
-             * first-class texture source.
-             */
-            instr->src[instr->num_srcs].src_type = nir_tex_src_sampler_offset;
-            instr->num_srcs++;
-            nir_instr_move_src(&instr->instr,
-                               &instr->src[instr->num_srcs - 1].src,
-                               &deref_array->indirect);
+            add_indirect_to_tex(instr, deref_array->indirect);
+            nir_instr_rewrite_src(&instr->instr, &deref_array->indirect,
+                                  NIR_SRC_INIT);
 
             instr->sampler_array_size = glsl_get_length(deref->type);
 
@@ -181,5 +187,51 @@ nir_lower_samplers(nir_shader *shader, const struct gl_shader_program *shader_pr
    nir_foreach_overload(shader, overload) {
       if (overload->impl)
          lower_impl(overload->impl, shader_program, stage);
+   }
+}
+
+static bool
+lower_samplers_for_vk_block(nir_block *block, void *data)
+{
+   nir_foreach_instr(block, instr) {
+      if (instr->type != nir_instr_type_tex)
+         continue;
+
+      nir_tex_instr *tex = nir_instr_as_tex(instr);
+
+      assert(tex->sampler);
+
+      tex->sampler_set = tex->sampler->var->data.descriptor_set;
+      tex->sampler_index = tex->sampler->var->data.binding;
+
+      if (tex->sampler->deref.child) {
+         assert(tex->sampler->deref.child->deref_type == nir_deref_type_array);
+         nir_deref_array *arr = nir_deref_as_array(tex->sampler->deref.child);
+
+         /* Only one-level arrays are allowed in vulkan */
+         assert(arr->deref.child == NULL);
+
+         tex->sampler_index += arr->base_offset;
+         if (arr->deref_array_type == nir_deref_array_type_indirect) {
+            add_indirect_to_tex(tex, arr->indirect);
+            nir_instr_rewrite_src(instr, &arr->indirect, NIR_SRC_INIT);
+
+            tex->sampler_array_size = glsl_get_length(tex->sampler->deref.type);
+         }
+      }
+
+      tex->sampler = NULL;
+   }
+
+   return true;
+}
+
+extern "C" void
+nir_lower_samplers_for_vk(nir_shader *shader)
+{
+   nir_foreach_overload(shader, overload) {
+      if (overload->impl) {
+         nir_foreach_block(overload->impl, lower_samplers_for_vk_block, NULL);
+      }
    }
 }
