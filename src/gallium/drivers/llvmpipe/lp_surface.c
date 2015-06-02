@@ -139,11 +139,6 @@ static void lp_blit(struct pipe_context *pipe,
       return; /* done */
    }
 
-   if (info.mask & PIPE_MASK_S) {
-      debug_printf("llvmpipe: cannot blit stencil, skipping\n");
-      info.mask &= ~PIPE_MASK_S;
-   }
-
    if (!util_blitter_is_blit_supported(lp->blitter, &info)) {
       debug_printf("llvmpipe: blit unsupported %s -> %s\n",
                    util_format_short_name(info.src.resource->format),
