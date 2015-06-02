@@ -716,6 +716,7 @@ int anv_compiler_run(struct anv_compiler *compiler, struct anv_pipeline *pipelin
 void anv_compiler_free(struct anv_pipeline *pipeline);
 
 struct anv_format {
+   const char *                                 name;
    uint16_t                                     format;
    uint8_t                                      cpp;
    uint8_t                                      channels;

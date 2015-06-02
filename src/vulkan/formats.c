@@ -26,7 +26,7 @@
 #define UNSUPPORTED 0xffff
 
 #define fmt(__vk_fmt, ...) \
-   [VK_FORMAT_##__vk_fmt] = { __VA_ARGS__ }
+   [VK_FORMAT_##__vk_fmt] = { .name = "VK_FORMAT_" #__vk_fmt, __VA_ARGS__ }
 
 static const struct anv_format anv_formats[] = {
    fmt(UNDEFINED, .format = RAW, .cpp = 1, .channels = 1),
@@ -233,6 +233,18 @@ struct surface_format_info {
 };
 
 extern const struct surface_format_info surface_formats[];
+
+VkResult anv_validate_GetFormatInfo(
+    VkDevice                                    _device,
+    VkFormat                                    _format,
+    VkFormatInfoType                            infoType,
+    size_t*                                     pDataSize,
+    void*                                       pData)
+{
+   const struct anv_format *format = anv_format_for_vk_format(_format);
+   fprintf(stderr, "vkGetFormatInfo(%s)\n", format->name);
+   return anv_GetFormatInfo(_device, _format, infoType, pDataSize, pData);
+}
 
 VkResult anv_GetFormatInfo(
     VkDevice                                    _device,
