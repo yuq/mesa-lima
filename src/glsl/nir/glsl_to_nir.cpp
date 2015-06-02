@@ -930,13 +930,9 @@ nir_visitor::evaluate_rvalue(ir_rvalue* ir)
    }
 
    nir_dest *dest = get_instr_dest(this->result);
-
    assert(dest->is_ssa);
-   nir_src src = NIR_SRC_INIT;
-   src.is_ssa = true;
-   src.ssa = &dest->ssa;
 
-   return src;
+   return nir_src_for_ssa(&dest->ssa);
 }
 
 nir_alu_instr *
