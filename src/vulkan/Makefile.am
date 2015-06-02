@@ -68,7 +68,8 @@ libvulkan_la_SOURCES =				\
 	entrypoints.h				\
 	x11.c					\
 	formats.c				\
-	compiler.cpp
+	compiler.cpp				\
+	query.c
 
 BUILT_SOURCES =					\
 	entrypoints.h				\

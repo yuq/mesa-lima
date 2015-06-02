@@ -531,19 +531,6 @@ struct anv_dynamic_cb_state {
 
 };
 
-struct anv_query_pool_slot {
-   uint64_t begin;
-   uint64_t end;
-   uint64_t available;
-};
-
-struct anv_query_pool {
-   struct anv_object                            base;
-   VkQueryType                                  type;
-   uint32_t                                     slots;
-   struct anv_bo                                bo;
-};
-
 struct anv_descriptor_slot {
    int8_t dynamic_slot;
    uint8_t index;
