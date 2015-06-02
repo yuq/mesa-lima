@@ -310,7 +310,7 @@ finalize_shader_states(struct ilo_state_vector *vec)
       /* need to setup SBE for FS */
       if (type == PIPE_SHADER_FRAGMENT && vec->dirty &
             (state | ILO_DIRTY_GS | ILO_DIRTY_VS | ILO_DIRTY_RASTERIZER)) {
-         if (ilo_shader_select_kernel_routing(shader,
+         if (ilo_shader_select_kernel_sbe(shader,
                (vec->gs) ? vec->gs : vec->vs, vec->rasterizer))
             vec->dirty |= state;
       }

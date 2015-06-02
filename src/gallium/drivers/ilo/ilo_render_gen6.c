@@ -599,10 +599,9 @@ gen6_draw_sf(struct ilo_render *r,
              struct ilo_render_draw_session *session)
 {
    /* 3DSTATE_SF */
-   if ((session->rs_delta.dirty & ILO_STATE_RASTER_3DSTATE_SF) ||
-       DIRTY(RASTERIZER) || DIRTY(FS)) {
-      gen6_3DSTATE_SF(r->builder, &vec->rasterizer->rs,
-            vec->rasterizer->state.sprite_coord_mode, vec->fs);
+   if ((session->rs_delta.dirty & ILO_STATE_RASTER_3DSTATE_SF) || DIRTY(FS)) {
+      const struct ilo_state_sbe *sbe = ilo_shader_get_kernel_sbe(vec->fs);
+      gen6_3DSTATE_SF(r->builder, &vec->rasterizer->rs, sbe);
    }
 }
 
@@ -799,7 +798,7 @@ gen6_rectlist_vs_to_sf(struct ilo_render *r,
    gen6_disable_3DSTATE_GS(r->builder);
 
    gen6_3DSTATE_CLIP(r->builder, &blitter->fb.rs);
-   gen6_3DSTATE_SF(r->builder, &blitter->fb.rs, 0, NULL);
+   gen6_3DSTATE_SF(r->builder, &blitter->fb.rs, &blitter->sbe);
 }
 
 static void

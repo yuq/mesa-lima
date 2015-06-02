@@ -897,82 +897,103 @@ route_attr(const int *semantics, const int *indices, int len,
  * \return true if a different routing is selected
  */
 bool
-ilo_shader_select_kernel_routing(struct ilo_shader_state *shader,
-                                 const struct ilo_shader_state *source,
-                                 const struct ilo_rasterizer_state *rasterizer)
+ilo_shader_select_kernel_sbe(struct ilo_shader_state *shader,
+                             const struct ilo_shader_state *source,
+                             const struct ilo_rasterizer_state *rasterizer)
 {
-   const uint32_t sprite_coord_enable = rasterizer->state.sprite_coord_enable;
+   const bool is_point = true;
    const bool light_twoside = rasterizer->state.light_twoside;
+   const uint32_t sprite_coord_enable = rasterizer->state.sprite_coord_enable;
+   const int sprite_coord_mode = rasterizer->state.sprite_coord_mode;
    struct ilo_shader *kernel = shader->shader;
    struct ilo_kernel_routing *routing = &kernel->routing;
+   struct ilo_state_sbe_swizzle_info swizzles[ILO_STATE_SBE_MAX_SWIZZLE_COUNT];
+   struct ilo_state_sbe_info info;
    const int *src_semantics, *src_indices;
-   int src_len, max_src_slot;
+   int src_skip, src_len, src_slot;
    int dst_len, dst_slot;
-
-   /* we are constructing 3DSTATE_SBE here */
-   ILO_DEV_ASSERT(shader->info.dev, 6, 8);
 
    assert(kernel);
 
    if (source) {
       assert(source->shader);
+
       src_semantics = source->shader->out.semantic_names;
       src_indices = source->shader->out.semantic_indices;
       src_len = source->shader->out.count;
-   }
-   else {
+
+      assert(src_len >= 2 &&
+             src_semantics[0] == TGSI_SEMANTIC_PSIZE &&
+             src_semantics[1] == TGSI_SEMANTIC_POSITION);
+
+      /*
+       * skip PSIZE and POSITION (how about the optional CLIPDISTs?), unless
+       * they are all the source shader has and FS needs to read some
+       * attributes.
+       */
+      if (src_len > 2 || !kernel->in.count) {
+         src_semantics += 2;
+         src_indices += 2;
+         src_len -= 2;
+         src_skip = 2;
+      }
+   } else {
       src_semantics = kernel->in.semantic_names;
       src_indices = kernel->in.semantic_indices;
       src_len = kernel->in.count;
+      src_skip = 0;
    }
 
    /* no change */
-   if (kernel->routing_initialized &&
-       routing->source_skip + routing->source_len <= src_len &&
-       kernel->routing_sprite_coord_enable == sprite_coord_enable &&
-       !memcmp(kernel->routing_src_semantics,
-          &src_semantics[routing->source_skip],
-          sizeof(kernel->routing_src_semantics[0]) * routing->source_len) &&
-       !memcmp(kernel->routing_src_indices,
-          &src_indices[routing->source_skip],
-          sizeof(kernel->routing_src_indices[0]) * routing->source_len))
+   if (routing->initialized &&
+       routing->is_point == is_point &&
+       routing->light_twoside == light_twoside &&
+       routing->sprite_coord_enable == sprite_coord_enable &&
+       routing->sprite_coord_mode == sprite_coord_mode &&
+       routing->src_len <= src_len &&
+       !memcmp(routing->src_semantics, src_semantics,
+          sizeof(src_semantics[0]) * routing->src_len) &&
+       !memcmp(routing->src_indices, src_indices,
+          sizeof(src_indices[0]) * routing->src_len))
       return false;
 
-   if (source) {
-      /* skip PSIZE and POSITION (how about the optional CLIPDISTs?) */
-      assert(src_semantics[0] == TGSI_SEMANTIC_PSIZE);
-      assert(src_semantics[1] == TGSI_SEMANTIC_POSITION);
-      routing->source_skip = 2;
+   routing->is_point = is_point;
+   routing->light_twoside = light_twoside;
+   routing->sprite_coord_enable = sprite_coord_enable;
+   routing->sprite_coord_mode = sprite_coord_mode;
 
-      routing->source_len = src_len - routing->source_skip;
-      src_semantics += routing->source_skip;
-      src_indices += routing->source_skip;
-   }
-   else {
-      routing->source_skip = 0;
-      routing->source_len = src_len;
-   }
+   assert(kernel->in.count <= Elements(swizzles));
+   dst_len = MIN2(kernel->in.count, Elements(swizzles));
 
-   routing->const_interp_enable = kernel->in.const_interp_enable;
-   routing->point_sprite_enable = 0;
-   routing->swizzle_enable = false;
+   memset(&info, 0, sizeof(info));
+   memset(&swizzles, 0, sizeof(swizzles));
 
-   assert(kernel->in.count <= Elements(routing->swizzles));
-   dst_len = MIN2(kernel->in.count, Elements(routing->swizzles));
-   max_src_slot = -1;
+   info.attr_count = dst_len;
+   info.cv_vue_attr_count = src_skip + src_len;
+   info.vue_read_base = src_skip;
+   info.vue_read_count = 0;
+   info.has_min_read_count = true;
+   info.swizzle_enable = false;
+   info.swizzle_16_31 = false;
+   info.swizzle_count = 0;
+   info.swizzles = swizzles;
+   info.const_interp_enables = kernel->in.const_interp_enable;
+   info.point_sprite_enables = 0x0;
+   info.point_sprite_origin_lower_left =
+      (sprite_coord_mode == PIPE_SPRITE_COORD_LOWER_LEFT);
+   info.cv_is_point = is_point;
 
    for (dst_slot = 0; dst_slot < dst_len; dst_slot++) {
       const int semantic = kernel->in.semantic_names[dst_slot];
       const int index = kernel->in.semantic_indices[dst_slot];
-      int src_slot;
 
       if (semantic == TGSI_SEMANTIC_GENERIC &&
           (sprite_coord_enable & (1 << index)))
-         routing->point_sprite_enable |= 1 << dst_slot;
+         info.point_sprite_enables |= 1 << dst_slot;
 
       if (source) {
-         src_slot = route_attr(src_semantics, src_indices,
-               routing->source_len, semantic, index);
+         src_slot = route_attr(src_semantics, src_indices, src_len,
+               semantic, index);
 
          /*
           * The source shader stage does not output this attribute.  The value
@@ -986,59 +1007,47 @@ ilo_shader_select_kernel_routing(struct ilo_shader_state *shader,
           */
          if (src_slot < 0)
             src_slot = 0;
-      }
-      else {
+      } else {
          src_slot = dst_slot;
       }
 
-      routing->swizzles[dst_slot] = src_slot;
-
       /* use the following slot for two-sided lighting */
       if (semantic == TGSI_SEMANTIC_COLOR && light_twoside &&
-          src_slot + 1 < routing->source_len &&
+          src_slot + 1 < src_len &&
           src_semantics[src_slot + 1] == TGSI_SEMANTIC_BCOLOR &&
           src_indices[src_slot + 1] == index) {
-         routing->swizzles[dst_slot] |= GEN6_INPUTATTR_FACING <<
-            GEN8_SBE_SWIZ_SWIZZLE_SELECT__SHIFT;
+         swizzles[dst_slot].attr_select = GEN6_INPUTATTR_FACING;
+         swizzles[dst_slot].attr = src_slot;
+         info.swizzle_enable = true;
          src_slot++;
+      } else {
+         swizzles[dst_slot].attr_select = GEN6_INPUTATTR_NORMAL;
+         swizzles[dst_slot].attr = src_slot;
+         if (src_slot != dst_slot)
+            info.swizzle_enable = true;
       }
 
-      if (routing->swizzles[dst_slot] != dst_slot)
-         routing->swizzle_enable = true;
+      swizzles[dst_slot].force_zeros = false;
 
-      if (max_src_slot < src_slot)
-         max_src_slot = src_slot;
+      if (info.vue_read_count < src_slot + 1)
+         info.vue_read_count = src_slot + 1;
    }
 
-   memset(&routing->swizzles[dst_slot], 0, sizeof(routing->swizzles) -
-         sizeof(routing->swizzles[0]) * dst_slot);
+   if (info.swizzle_enable)
+      info.swizzle_count = dst_len;
 
-   /*
-    * From the Sandy Bridge PRM, volume 2 part 1, page 248:
-    *
-    *     "It is UNDEFINED to set this field (Vertex URB Entry Read Length) to
-    *      0 indicating no Vertex URB data to be read.
-    *
-    *      This field should be set to the minimum length required to read the
-    *      maximum source attribute. The maximum source attribute is indicated
-    *      by the maximum value of the enabled Attribute # Source Attribute if
-    *      Attribute Swizzle Enable is set, Number of Output Attributes-1 if
-    *      enable is not set.
-    *
-    *        read_length = ceiling((max_source_attr+1)/2)
-    *
-    *      [errata] Corruption/Hang possible if length programmed larger than
-    *      recommended"
-    */
-   routing->source_len = max_src_slot + 1;
+   if (routing->initialized)
+      ilo_state_sbe_set_info(&routing->sbe, shader->info.dev, &info);
+   else
+      ilo_state_sbe_init(&routing->sbe, shader->info.dev, &info);
 
-   /* remember the states of the source */
-   kernel->routing_initialized = true;
-   kernel->routing_sprite_coord_enable = sprite_coord_enable;
-   memcpy(kernel->routing_src_semantics, src_semantics,
-         sizeof(kernel->routing_src_semantics[0]) * routing->source_len);
-   memcpy(kernel->routing_src_indices, src_indices,
-         sizeof(kernel->routing_src_indices[0]) * routing->source_len);
+   routing->src_len = info.vue_read_count;
+   memcpy(routing->src_semantics, src_semantics,
+         sizeof(src_semantics[0]) * routing->src_len);
+   memcpy(routing->src_indices, src_indices,
+         sizeof(src_indices[0]) * routing->src_len);
+
+   routing->initialized = true;
 
    return true;
 }
@@ -1248,12 +1257,12 @@ ilo_shader_get_kernel_sol(const struct ilo_shader_state *shader)
 /**
  * Return the routing info of the selected kernel.
  */
-const struct ilo_kernel_routing *
-ilo_shader_get_kernel_routing(const struct ilo_shader_state *shader)
+const struct ilo_state_sbe *
+ilo_shader_get_kernel_sbe(const struct ilo_shader_state *shader)
 {
    const struct ilo_shader *kernel = shader->shader;
 
    assert(kernel);
 
-   return &kernel->routing;
+   return &kernel->routing.sbe;
 }

@@ -457,9 +457,9 @@ gen7_draw_sf(struct ilo_render *r,
              struct ilo_render_draw_session *session)
 {
    /* 3DSTATE_SBE */
-   if (DIRTY(RASTERIZER) || DIRTY(FS)) {
-      gen7_3DSTATE_SBE(r->builder, vec->fs, (vec->rasterizer) ?
-            vec->rasterizer->state.sprite_coord_mode : 0);
+   if (DIRTY(FS)) {
+      const struct ilo_state_sbe *sbe = ilo_shader_get_kernel_sbe(vec->fs);
+      gen7_3DSTATE_SBE(r->builder, sbe);
    }
 
    /* 3DSTATE_SF */
@@ -684,7 +684,7 @@ gen7_rectlist_vs_to_sf(struct ilo_render *r,
       gen7_wa_pre_3dstate_sf_depth_bias(r);
 
    gen7_3DSTATE_SF(r->builder, &blitter->fb.rs);
-   gen7_3DSTATE_SBE(r->builder, NULL, 0);
+   gen7_3DSTATE_SBE(r->builder, &blitter->sbe);
 }
 
 static void

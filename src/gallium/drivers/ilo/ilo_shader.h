@@ -81,21 +81,13 @@ enum ilo_kernel_param {
    ILO_KERNEL_PARAM_COUNT,
 };
 
-struct ilo_kernel_routing {
-   uint32_t const_interp_enable;
-   uint32_t point_sprite_enable;
-   unsigned source_skip, source_len;
-
-   bool swizzle_enable;
-   uint16_t swizzles[16];
-};
-
 struct intel_bo;
 struct ilo_builder;
 struct ilo_rasterizer_state;
 struct ilo_shader_cache;
 struct ilo_shader_state;
 struct ilo_shader_cso;
+struct ilo_state_sbe;
 struct ilo_state_sol;
 struct ilo_state_vector;
 
@@ -152,9 +144,9 @@ ilo_shader_select_kernel(struct ilo_shader_state *shader,
                          uint32_t dirty);
 
 bool
-ilo_shader_select_kernel_routing(struct ilo_shader_state *shader,
-                                 const struct ilo_shader_state *source,
-                                 const struct ilo_rasterizer_state *rasterizer);
+ilo_shader_select_kernel_sbe(struct ilo_shader_state *shader,
+                             const struct ilo_shader_state *source,
+                             const struct ilo_rasterizer_state *rasterizer);
 
 uint32_t
 ilo_shader_get_kernel_offset(const struct ilo_shader_state *shader);
@@ -172,7 +164,7 @@ ilo_shader_get_kernel_so_info(const struct ilo_shader_state *shader);
 const struct ilo_state_sol *
 ilo_shader_get_kernel_sol(const struct ilo_shader_state *shader);
 
-const struct ilo_kernel_routing *
-ilo_shader_get_kernel_routing(const struct ilo_shader_state *shader);
+const struct ilo_state_sbe *
+ilo_shader_get_kernel_sbe(const struct ilo_shader_state *shader);
 
 #endif /* ILO_SHADER_H */

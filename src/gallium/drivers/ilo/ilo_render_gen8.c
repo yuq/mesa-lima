@@ -68,15 +68,13 @@ gen8_draw_sf(struct ilo_render *r,
    if (session->rs_delta.dirty & ILO_STATE_RASTER_3DSTATE_RASTER)
       gen8_3DSTATE_RASTER(r->builder, &vec->rasterizer->rs);
 
-   /* 3DSTATE_SBE */
-   if (DIRTY(RASTERIZER) || DIRTY(FS)) {
-      gen8_3DSTATE_SBE(r->builder, vec->fs, (vec->rasterizer) ?
-            vec->rasterizer->state.sprite_coord_mode : 0);
-   }
+   /* 3DSTATE_SBE and 3DSTATE_SBE_SWIZ */
+   if (DIRTY(FS)) {
+      const struct ilo_state_sbe *sbe = ilo_shader_get_kernel_sbe(vec->fs);
 
-   /* 3DSTATE_SBE_SWIZ */
-   if (DIRTY(FS))
-      gen8_3DSTATE_SBE_SWIZ(r->builder, vec->fs);
+      gen8_3DSTATE_SBE(r->builder, sbe);
+      gen8_3DSTATE_SBE_SWIZ(r->builder, sbe);
+   }
 
    /* 3DSTATE_SF */
    if (session->rs_delta.dirty & ILO_STATE_RASTER_3DSTATE_SF)

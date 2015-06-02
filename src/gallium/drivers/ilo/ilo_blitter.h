@@ -67,6 +67,7 @@ struct ilo_blitter {
    struct ilo_state_viewport vp;
    uint32_t vp_data[20];
 
+   struct ilo_state_sbe sbe;
    struct ilo_state_cc cc;
 
    uint32_t depth_clear_value;

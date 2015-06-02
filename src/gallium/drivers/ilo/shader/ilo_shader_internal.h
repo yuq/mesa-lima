@@ -28,6 +28,7 @@
 #ifndef ILO_SHADER_INTERNAL_H
 #define ILO_SHADER_INTERNAL_H
 
+#include "core/ilo_state_sbe.h"
 #include "core/ilo_state_sol.h"
 
 #include "ilo_common.h"
@@ -72,6 +73,19 @@ struct ilo_shader_variant {
    } sampler_view_swizzles[ILO_MAX_SAMPLER_VIEWS];
 
    uint32_t saturate_tex_coords[3];
+};
+
+struct ilo_kernel_routing {
+   bool initialized;
+   bool is_point;
+   bool light_twoside;
+   uint32_t sprite_coord_enable;
+   int sprite_coord_mode;
+   int src_len;
+   int src_semantics[PIPE_MAX_SHADER_OUTPUTS];
+   int src_indices[PIPE_MAX_SHADER_OUTPUTS];
+
+   struct ilo_state_sbe sbe;
 };
 
 /**
@@ -125,10 +139,6 @@ struct ilo_shader {
    void *kernel;
    int kernel_size;
 
-   bool routing_initialized;
-   int routing_src_semantics[PIPE_MAX_SHADER_OUTPUTS];
-   int routing_src_indices[PIPE_MAX_SHADER_OUTPUTS];
-   uint32_t routing_sprite_coord_enable;
    struct ilo_kernel_routing routing;
 
    /* what does the push constant buffer consist of? */
