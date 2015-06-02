@@ -423,57 +423,32 @@ finalize_index_buffer(struct ilo_context *ilo)
 static void
 finalize_vertex_elements(struct ilo_context *ilo)
 {
+   const struct ilo_dev *dev = ilo->dev;
    struct ilo_state_vector *vec = &ilo->state_vector;
+   struct ilo_ve_state *ve = vec->ve;
+   const bool is_quad = (vec->draw->mode == PIPE_PRIM_QUADS ||
+                         vec->draw->mode == PIPE_PRIM_QUAD_STRIP);
+   const bool last_element_edge_flag = (vec->vs &&
+         ilo_shader_get_kernel_param(vec->vs, ILO_KERNEL_VS_INPUT_EDGEFLAG));
+   const bool prepend_vertexid = (vec->vs &&
+         ilo_shader_get_kernel_param(vec->vs, ILO_KERNEL_VS_INPUT_VERTEXID));
+   const bool prepend_instanceid = (vec->vs &&
+         ilo_shader_get_kernel_param(vec->vs,
+            ILO_KERNEL_VS_INPUT_INSTANCEID));
 
-   if (!(vec->dirty & (ILO_DIRTY_VE | ILO_DIRTY_VS)))
-      return;
+   /* check for non-orthogonal states */
+   if (ve->vf_params.cv_is_quad != is_quad ||
+       ve->vf_params.prepend_vertexid != prepend_vertexid ||
+       ve->vf_params.prepend_instanceid != prepend_instanceid ||
+       ve->vf_params.last_element_edge_flag != last_element_edge_flag) {
+      ve->vf_params.cv_is_quad = is_quad;
+      ve->vf_params.prepend_vertexid = prepend_vertexid;
+      ve->vf_params.prepend_instanceid = prepend_instanceid;
+      ve->vf_params.last_element_edge_flag = last_element_edge_flag;
 
-   vec->dirty |= ILO_DIRTY_VE;
+      ilo_state_vf_set_params(&ve->vf, dev, &ve->vf_params);
 
-   vec->ve->last_cso_edgeflag = false;
-   if (vec->ve->count && vec->vs &&
-         ilo_shader_get_kernel_param(vec->vs, ILO_KERNEL_VS_INPUT_EDGEFLAG)) {
-      vec->ve->edgeflag_cso = vec->ve->cso[vec->ve->count - 1];
-      ilo_gpe_set_ve_edgeflag(ilo->dev, &vec->ve->edgeflag_cso);
-      vec->ve->last_cso_edgeflag = true;
-   }
-
-   vec->ve->prepend_nosrc_cso = false;
-   if (vec->vs &&
-       (ilo_shader_get_kernel_param(vec->vs,
-                                    ILO_KERNEL_VS_INPUT_INSTANCEID) ||
-        ilo_shader_get_kernel_param(vec->vs,
-                                    ILO_KERNEL_VS_INPUT_VERTEXID))) {
-      ilo_gpe_init_ve_nosrc(ilo->dev,
-            GEN6_VFCOMP_STORE_VID,
-            GEN6_VFCOMP_STORE_IID,
-            GEN6_VFCOMP_NOSTORE,
-            GEN6_VFCOMP_NOSTORE,
-            &vec->ve->nosrc_cso);
-      vec->ve->prepend_nosrc_cso = true;
-   } else if (!vec->vs) {
-      /* generate VUE header */
-      ilo_gpe_init_ve_nosrc(ilo->dev,
-            GEN6_VFCOMP_STORE_0, /* Reserved */
-            GEN6_VFCOMP_STORE_0, /* Render Target Array Index */
-            GEN6_VFCOMP_STORE_0, /* Viewport Index */
-            GEN6_VFCOMP_STORE_0, /* Point Width */
-            &vec->ve->nosrc_cso);
-      vec->ve->prepend_nosrc_cso = true;
-   } else if (!vec->ve->count) {
-      /*
-       * From the Sandy Bridge PRM, volume 2 part 1, page 92:
-       *
-       *    "SW must ensure that at least one vertex element is defined prior
-       *     to issuing a 3DPRIMTIVE command, or operation is UNDEFINED."
-       */
-      ilo_gpe_init_ve_nosrc(ilo->dev,
-            GEN6_VFCOMP_STORE_0,
-            GEN6_VFCOMP_STORE_0,
-            GEN6_VFCOMP_STORE_0,
-            GEN6_VFCOMP_STORE_1_FP,
-            &vec->ve->nosrc_cso);
-      vec->ve->prepend_nosrc_cso = true;
+      vec->dirty |= ILO_DIRTY_VE;
    }
 }
 
@@ -491,8 +466,7 @@ finalize_urb(struct ilo_context *ilo)
 
    memset(&info, 0, sizeof(info));
 
-   info.ve_entry_size = attr_size *
-      (vec->ve->count + vec->ve->prepend_nosrc_cso);
+   info.ve_entry_size = attr_size * ilo_state_vf_get_attr_count(&vec->ve->vf);
 
    if (vec->vs) {
       info.vs_const_data = (bool)
@@ -1319,12 +1293,58 @@ ilo_create_vertex_elements_state(struct pipe_context *pipe,
                                  const struct pipe_vertex_element *elements)
 {
    const struct ilo_dev *dev = ilo_context(pipe)->dev;
+   struct ilo_state_vf_element_info vf_elements[PIPE_MAX_ATTRIBS];
+   struct ilo_state_vf_info vf_info;
    struct ilo_ve_state *ve;
+   unsigned i;
 
-   ve = MALLOC_STRUCT(ilo_ve_state);
+   ve = CALLOC_STRUCT(ilo_ve_state);
    assert(ve);
 
-   ilo_gpe_init_ve(dev, num_elements, elements, ve);
+   for (i = 0; i < num_elements; i++) {
+      const struct pipe_vertex_element *elem = &elements[i];
+      struct ilo_state_vf_element_info *attr = &vf_elements[i];
+      unsigned hw_idx;
+
+      /*
+       * map the pipe vb to the hardware vb, which has a fixed instance
+       * divisor
+       */
+      for (hw_idx = 0; hw_idx < ve->vb_count; hw_idx++) {
+         if (ve->vb_mapping[hw_idx] == elem->vertex_buffer_index &&
+             ve->instance_divisors[hw_idx] == elem->instance_divisor)
+            break;
+      }
+
+      /* create one if there is no matching hardware vb */
+      if (hw_idx >= ve->vb_count) {
+         hw_idx = ve->vb_count++;
+
+         ve->vb_mapping[hw_idx] = elem->vertex_buffer_index;
+         ve->instance_divisors[hw_idx] = elem->instance_divisor;
+      }
+
+      attr->buffer = hw_idx;
+      attr->vertex_offset = elem->src_offset;
+      attr->format = ilo_format_translate_vertex(dev, elem->src_format);
+      attr->format_size = util_format_get_blocksize(elem->src_format);
+      attr->component_count = util_format_get_nr_components(elem->src_format);
+      attr->is_integer = util_format_is_pure_integer(elem->src_format);
+      attr->is_double = (util_format_is_float(elem->src_format) &&
+         attr->format_size == attr->component_count * 8);
+   }
+
+   memset(&vf_info, 0, sizeof(vf_info));
+   vf_info.data = ve->vf_data;
+   vf_info.data_size = sizeof(ve->vf_data);
+   vf_info.elements = vf_elements;
+   vf_info.element_count = num_elements;
+   /* vf_info.params and ve->vf_params are both zeroed */
+
+   if (!ilo_state_vf_init(&ve->vf, dev, &vf_info)) {
+      FREE(ve);
+      return NULL;
+   }
 
    return ve;
 }

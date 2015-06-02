@@ -39,6 +39,7 @@
 #include "ilo_state_sampler.h"
 #include "ilo_state_sol.h"
 #include "ilo_state_urb.h"
+#include "ilo_state_vf.h"
 #include "ilo_builder.h"
 
 static inline void
@@ -249,10 +250,10 @@ gen6_3d_translate_pipe_prim(unsigned prim)
 }
 
 static inline void
-gen8_3DSTATE_VF_TOPOLOGY(struct ilo_builder *builder, unsigned pipe_prim)
+gen8_3DSTATE_VF_TOPOLOGY(struct ilo_builder *builder,
+                         enum gen_3dprim_type topology)
 {
    const uint8_t cmd_len = 2;
-   const int prim = gen6_3d_translate_pipe_prim(pipe_prim);
    uint32_t *dw;
 
    ILO_DEV_ASSERT(builder->dev, 8, 8);
@@ -260,7 +261,7 @@ gen8_3DSTATE_VF_TOPOLOGY(struct ilo_builder *builder, unsigned pipe_prim)
    ilo_builder_batch_pointer(builder, cmd_len, &dw);
 
    dw[0] = GEN8_RENDER_CMD(3D, 3DSTATE_VF_TOPOLOGY) | (cmd_len - 2);
-   dw[1] = prim;
+   dw[1] = topology << GEN8_TOPOLOGY_DW1_TYPE__SHIFT;
 }
 
 static inline void
@@ -283,8 +284,7 @@ gen8_3DSTATE_VF_INSTANCING(struct ilo_builder *builder,
 
 static inline void
 gen8_3DSTATE_VF_SGVS(struct ilo_builder *builder,
-                     bool vid_enable, int vid_ve, int vid_comp,
-                     bool iid_enable, int iid_ve, int iid_comp)
+                     const struct ilo_state_vf *vf)
 {
    const uint8_t cmd_len = 2;
    uint32_t *dw;
@@ -294,25 +294,16 @@ gen8_3DSTATE_VF_SGVS(struct ilo_builder *builder,
    ilo_builder_batch_pointer(builder, cmd_len, &dw);
 
    dw[0] = GEN8_RENDER_CMD(3D, 3DSTATE_VF_SGVS) | (cmd_len - 2);
-   dw[1] = 0;
-
-   if (iid_enable) {
-      dw[1] |= GEN8_SGVS_DW1_IID_ENABLE |
-               vid_comp << GEN8_SGVS_DW1_IID_VE_COMP__SHIFT |
-               vid_ve << GEN8_SGVS_DW1_IID_VE_INDEX__SHIFT;
-   }
-
-   if (vid_enable) {
-      dw[1] |= GEN8_SGVS_DW1_VID_ENABLE |
-               vid_comp << GEN8_SGVS_DW1_VID_VE_COMP__SHIFT |
-               vid_ve << GEN8_SGVS_DW1_VID_VE_INDEX__SHIFT;
-   }
+   /* see vf_params_set_gen8_3DSTATE_VF_SGVS() */
+   dw[1] = vf->sgvs[0];
 }
 
 static inline void
 gen6_3DSTATE_VERTEX_BUFFERS(struct ilo_builder *builder,
-                            const struct ilo_ve_state *ve,
-                            const struct ilo_vb_state *vb)
+                            const struct ilo_vb_state *vb,
+                            const unsigned *vb_mapping,
+                            const unsigned *instance_divisors,
+                            unsigned vb_count)
 {
    uint8_t cmd_len;
    uint32_t *dw;
@@ -325,21 +316,21 @@ gen6_3DSTATE_VERTEX_BUFFERS(struct ilo_builder *builder,
     *
     *     "From 1 to 33 VBs can be specified..."
     */
-   assert(ve->vb_count <= 33);
+   assert(vb_count <= 33);
 
-   if (!ve->vb_count)
+   if (!vb_count)
       return;
 
-   cmd_len = 1 + 4 * ve->vb_count;
+   cmd_len = 1 + 4 * vb_count;
    pos = ilo_builder_batch_pointer(builder, cmd_len, &dw);
 
    dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_VERTEX_BUFFERS) | (cmd_len - 2);
    dw++;
    pos++;
 
-   for (hw_idx = 0; hw_idx < ve->vb_count; hw_idx++) {
-      const unsigned instance_divisor = ve->instance_divisors[hw_idx];
-      const unsigned pipe_idx = ve->vb_mapping[hw_idx];
+   for (hw_idx = 0; hw_idx < vb_count; hw_idx++) {
+      const unsigned instance_divisor = instance_divisors[hw_idx];
+      const unsigned pipe_idx = vb_mapping[hw_idx];
       const struct pipe_vertex_buffer *cso = &vb->states[pipe_idx];
 
       dw[0] = hw_idx << GEN6_VB_DW0_INDEX__SHIFT;
@@ -428,46 +419,27 @@ gen6_user_3DSTATE_VERTEX_BUFFERS(struct ilo_builder *builder,
 
 static inline void
 gen6_3DSTATE_VERTEX_ELEMENTS(struct ilo_builder *builder,
-                             const struct ilo_ve_state *ve)
+                             const struct ilo_state_vf *vf)
 {
    uint8_t cmd_len;
    uint32_t *dw;
-   unsigned i;
 
    ILO_DEV_ASSERT(builder->dev, 6, 8);
 
-   /*
-    * From the Sandy Bridge PRM, volume 2 part 1, page 92:
-    *
-    *    "At least one VERTEX_ELEMENT_STATE structure must be included."
-    *
-    * From the Sandy Bridge PRM, volume 2 part 1, page 93:
-    *
-    *     "Up to 34 (DevSNB+) vertex elements are supported."
-    */
-   assert(ve->count + ve->prepend_nosrc_cso >= 1);
-   assert(ve->count + ve->prepend_nosrc_cso <= 34);
+   cmd_len = 1 + 2 * (vf->internal_ve_count + vf->user_ve_count);
 
-   STATIC_ASSERT(Elements(ve->cso[0].payload) == 2);
-
-   cmd_len = 1 + 2 * (ve->count + ve->prepend_nosrc_cso);
    ilo_builder_batch_pointer(builder, cmd_len, &dw);
 
    dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_VERTEX_ELEMENTS) | (cmd_len - 2);
    dw++;
 
-   if (ve->prepend_nosrc_cso) {
-      memcpy(dw, ve->nosrc_cso.payload, sizeof(ve->nosrc_cso.payload));
-      dw += 2;
+   /* see vf_set_gen6_3DSTATE_VERTEX_ELEMENTS() */
+   if (vf->internal_ve_count) {
+      memcpy(dw, vf->internal_ve,
+            sizeof(vf->internal_ve[0]) * vf->internal_ve_count);
+      dw += 2 * vf->internal_ve_count;
    }
-
-   for (i = 0; i < ve->count - ve->last_cso_edgeflag; i++) {
-      memcpy(dw, ve->cso[i].payload, sizeof(ve->cso[i].payload));
-      dw += 2;
-   }
-
-   if (ve->last_cso_edgeflag)
-      memcpy(dw, ve->edgeflag_cso.payload, sizeof(ve->edgeflag_cso.payload));
+   memcpy(dw, vf->user_ve, sizeof(vf->user_ve[0]) * vf->user_ve_count);
 }
 
 static inline void

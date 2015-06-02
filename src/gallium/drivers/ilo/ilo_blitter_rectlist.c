@@ -40,29 +40,24 @@
 static bool
 ilo_blitter_set_invariants(struct ilo_blitter *blitter)
 {
-   struct pipe_vertex_element velem;
+   struct ilo_state_vf_element_info elem;
 
    if (blitter->initialized)
       return true;
-
-   /* only vertex X and Y */
-   memset(&velem, 0, sizeof(velem));
-   velem.src_format = PIPE_FORMAT_R32G32_FLOAT;
-   ilo_gpe_init_ve(blitter->ilo->dev, 1, &velem, &blitter->ve);
-
-   /* generate VUE header */
-   ilo_gpe_init_ve_nosrc(blitter->ilo->dev,
-         GEN6_VFCOMP_STORE_0, /* Reserved */
-         GEN6_VFCOMP_STORE_0, /* Render Target Array Index */
-         GEN6_VFCOMP_STORE_0, /* Viewport Index */
-         GEN6_VFCOMP_STORE_0, /* Point Width */
-         &blitter->ve.nosrc_cso);
-   blitter->ve.prepend_nosrc_cso = true;
 
    /* a rectangle has 3 vertices in a RECTLIST */
    util_draw_init_info(&blitter->draw);
    blitter->draw.mode = ILO_PRIM_RECTANGLES;
    blitter->draw.count = 3;
+
+   memset(&elem, 0, sizeof(elem));
+   /* only vertex X and Y */
+   elem.format = GEN6_FORMAT_R32G32_FLOAT;
+   elem.format_size = 8;
+   elem.component_count = 2;
+
+   ilo_state_vf_init_for_rectlist(&blitter->vf, blitter->ilo->dev,
+         blitter->vf_data, sizeof(blitter->vf_data), &elem, 1);
 
    ilo_state_sol_init_disabled(&blitter->sol, blitter->ilo->dev, false);
 
@@ -79,7 +74,7 @@ ilo_blitter_set_invariants(struct ilo_blitter *blitter)
          blitter->vp_data, sizeof(blitter->vp_data));
 
    ilo_state_urb_init_for_rectlist(&blitter->urb, blitter->ilo->dev,
-         blitter->ve.count + blitter->ve.prepend_nosrc_cso);
+         ilo_state_vf_get_attr_count(&blitter->vf));
 
    blitter->initialized = true;
 

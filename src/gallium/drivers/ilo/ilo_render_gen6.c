@@ -434,12 +434,14 @@ gen6_draw_vf(struct ilo_render *r,
    }
 
    /* 3DSTATE_VERTEX_BUFFERS */
-   if (DIRTY(VB) || DIRTY(VE) || r->batch_bo_changed)
-      gen6_3DSTATE_VERTEX_BUFFERS(r->builder, vec->ve, &vec->vb);
+   if (DIRTY(VB) || DIRTY(VE) || r->batch_bo_changed) {
+      gen6_3DSTATE_VERTEX_BUFFERS(r->builder, &vec->vb, vec->ve->vb_mapping,
+            vec->ve->instance_divisors, vec->ve->vb_count);
+   }
 
    /* 3DSTATE_VERTEX_ELEMENTS */
-   if (DIRTY(VE))
-      gen6_3DSTATE_VERTEX_ELEMENTS(r->builder, vec->ve);
+   if (session->vf_delta.dirty & ILO_STATE_VF_3DSTATE_VERTEX_ELEMENTS)
+      gen6_3DSTATE_VERTEX_ELEMENTS(r->builder, &vec->ve->vf);
 }
 
 void
@@ -873,7 +875,7 @@ ilo_render_emit_rectlist_commands_gen6(struct ilo_render *r,
          session->vb_start, session->vb_end,
          sizeof(blitter->vertices[0]));
 
-   gen6_3DSTATE_VERTEX_ELEMENTS(r->builder, &blitter->ve);
+   gen6_3DSTATE_VERTEX_ELEMENTS(r->builder, &blitter->vf);
 
    gen6_3DSTATE_URB(r->builder, &blitter->urb);
 

@@ -150,6 +150,7 @@ struct ilo_render_draw_session {
    bool primitive_restart_changed;
 
    struct ilo_state_urb_delta urb_delta;
+   struct ilo_state_vf_delta vf_delta;
    struct ilo_state_raster_delta rs_delta;
    struct ilo_state_viewport_delta vp_delta;
    struct ilo_state_cc_delta cc_delta;

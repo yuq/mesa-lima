@@ -449,6 +449,7 @@ draw_session_prepare(struct ilo_render *render,
       session->primitive_restart_changed = true;
 
       ilo_state_urb_full_delta(&vec->urb, render->dev, &session->urb_delta);
+      ilo_state_vf_full_delta(&vec->ve->vf, render->dev, &session->vf_delta);
 
       ilo_state_raster_full_delta(&vec->rasterizer->rs, render->dev,
             &session->rs_delta);
@@ -466,6 +467,11 @@ draw_session_prepare(struct ilo_render *render,
 
       ilo_state_urb_get_delta(&vec->urb, render->dev,
             &render->state.urb, &session->urb_delta);
+
+      if (vec->dirty & ILO_DIRTY_VE) {
+         ilo_state_vf_full_delta(&vec->ve->vf, render->dev,
+               &session->vf_delta);
+      }
 
       if (vec->dirty & ILO_DIRTY_RASTERIZER) {
          ilo_state_raster_get_delta(&vec->rasterizer->rs, render->dev,

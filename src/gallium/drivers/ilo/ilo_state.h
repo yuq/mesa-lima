@@ -35,6 +35,7 @@
 #include "core/ilo_state_sol.h"
 #include "core/ilo_state_surface.h"
 #include "core/ilo_state_urb.h"
+#include "core/ilo_state_vf.h"
 #include "core/ilo_state_viewport.h"
 #include "core/ilo_state_zs.h"
 #include "pipe/p_state.h"
@@ -128,6 +129,17 @@ enum ilo_dirty_flags {
 };
 
 struct ilo_context;
+
+struct ilo_ve_state {
+   unsigned vb_mapping[PIPE_MAX_ATTRIBS];
+   unsigned instance_divisors[PIPE_MAX_ATTRIBS];
+   unsigned vb_count;
+
+   /* these are not valid until the state is finalized */
+   uint32_t vf_data[PIPE_MAX_ATTRIBS][2];
+   struct ilo_state_vf_params_info vf_params;
+   struct ilo_state_vf vf;
+};
 
 struct ilo_cbuf_cso {
    struct pipe_resource *resource;

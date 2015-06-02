@@ -762,7 +762,7 @@ ilo_render_emit_rectlist_commands_gen7(struct ilo_render *r,
          session->vb_start, session->vb_end,
          sizeof(blitter->vertices[0]));
 
-   gen6_3DSTATE_VERTEX_ELEMENTS(r->builder, &blitter->ve);
+   gen6_3DSTATE_VERTEX_ELEMENTS(r->builder, &blitter->vf);
 
    gen7_rectlist_pcb_alloc(r, blitter);
 

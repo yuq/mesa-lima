@@ -72,27 +72,6 @@ struct ilo_ib_state {
    int64_t draw_start_offset;
 };
 
-struct ilo_ve_cso {
-   /* VERTEX_ELEMENT_STATE */
-   uint32_t payload[2];
-};
-
-struct ilo_ve_state {
-   struct ilo_ve_cso cso[PIPE_MAX_ATTRIBS];
-   unsigned count;
-
-   unsigned instance_divisors[PIPE_MAX_ATTRIBS];
-   unsigned vb_mapping[PIPE_MAX_ATTRIBS];
-   unsigned vb_count;
-
-   /* these are not valid until the state is finalized */
-   struct ilo_ve_cso edgeflag_cso;
-   bool last_cso_edgeflag;
-
-   struct ilo_ve_cso nosrc_cso;
-   bool prepend_nosrc_cso;
-};
-
 struct ilo_so_state {
    struct pipe_stream_output_target *states[ILO_MAX_SO_BUFFERS];
    unsigned count;
@@ -137,21 +116,6 @@ struct ilo_fb_state {
 struct ilo_shader_cso {
    uint32_t payload[5];
 };
-
-void
-ilo_gpe_init_ve(const struct ilo_dev *dev,
-                unsigned num_states,
-                const struct pipe_vertex_element *states,
-                struct ilo_ve_state *ve);
-
-void
-ilo_gpe_set_ve_edgeflag(const struct ilo_dev *dev,
-                        struct ilo_ve_cso *cso);
-
-void
-ilo_gpe_init_ve_nosrc(const struct ilo_dev *dev,
-                      int comp0, int comp1, int comp2, int comp3,
-                      struct ilo_ve_cso *cso);
 
 void
 ilo_gpe_init_vs_cso(const struct ilo_dev *dev,
