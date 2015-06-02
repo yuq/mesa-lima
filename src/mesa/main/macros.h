@@ -698,6 +698,16 @@ ALIGN(uintptr_t value, int32_t alignment)
 }
 
 /**
+ * Like ALIGN(), but works with a non-power-of-two alignment.
+ */
+static inline uintptr_t
+ALIGN_NPOT(uintptr_t value, int32_t alignment)
+{
+   assert(alignment > 0);
+   return (value + alignment - 1) / alignment * alignment;
+}
+
+/**
  * Align a value down to an alignment value
  *
  * If \c value is not already aligned to the requested alignment value, it
