@@ -49,6 +49,8 @@
 #include "glsl/glsl_types.h"
 #include "program/sampler.h"
 
+using namespace brw;
+
 void
 fs_inst::init(enum opcode opcode, uint8_t exec_size, const fs_reg &dst,
               const fs_reg *src, unsigned sources)
@@ -3321,6 +3323,9 @@ fs_visitor::lower_load_payload()
       assert(inst->dst.file == MRF || inst->dst.file == GRF);
       assert(inst->saturate == false);
 
+      const fs_builder ibld = bld.group(inst->exec_size, inst->force_sechalf)
+                                 .exec_all(inst->force_writemask_all)
+                                 .at(block, inst);
       fs_reg dst = inst->dst;
 
       /* Get rid of COMPR4.  We'll add it back in if we need it */
@@ -3333,9 +3338,7 @@ fs_visitor::lower_load_payload()
             fs_reg mov_dst = retype(dst, BRW_REGISTER_TYPE_UD);
             fs_reg mov_src = retype(inst->src[i], BRW_REGISTER_TYPE_UD);
             mov_src.width = 8;
-            fs_inst *mov = MOV(mov_dst, mov_src);
-            mov->force_writemask_all = true;
-            inst->insert_before(block, mov);
+            ibld.exec_all().MOV(mov_dst, mov_src);
          }
          dst = offset(dst, 1);
       }
@@ -3366,23 +3369,13 @@ fs_visitor::lower_load_payload()
                if (devinfo->has_compr4) {
                   fs_reg compr4_dst = retype(dst, inst->src[i].type);
                   compr4_dst.reg |= BRW_MRF_COMPR4;
-
-                  fs_inst *mov = MOV(compr4_dst, inst->src[i]);
-                  mov->force_writemask_all = inst->force_writemask_all;
-                  inst->insert_before(block, mov);
+                  ibld.MOV(compr4_dst, inst->src[i]);
                } else {
                   /* Platform doesn't have COMPR4.  We have to fake it */
                   fs_reg mov_dst = retype(dst, inst->src[i].type);
                   mov_dst.width = 8;
-
-                  fs_inst *mov = MOV(mov_dst, half(inst->src[i], 0));
-                  mov->force_writemask_all = inst->force_writemask_all;
-                  inst->insert_before(block, mov);
-
-                  mov = MOV(offset(mov_dst, 4), half(inst->src[i], 1));
-                  mov->force_writemask_all = inst->force_writemask_all;
-                  mov->force_sechalf = true;
-                  inst->insert_before(block, mov);
+                  ibld.half(0).MOV(mov_dst, half(inst->src[i], 0));
+                  ibld.half(1).MOV(offset(mov_dst, 4), half(inst->src[i], 1));
                }
             }
 
@@ -3405,13 +3398,8 @@ fs_visitor::lower_load_payload()
       }
 
       for (uint8_t i = inst->header_size; i < inst->sources; i++) {
-         if (inst->src[i].file != BAD_FILE) {
-            fs_inst *mov = MOV(retype(dst, inst->src[i].type),
-                               inst->src[i]);
-            mov->force_writemask_all = inst->force_writemask_all;
-            mov->force_sechalf = inst->force_sechalf;
-            inst->insert_before(block, mov);
-         }
+         if (inst->src[i].file != BAD_FILE)
+            ibld.MOV(retype(dst, inst->src[i].type), inst->src[i]);
          dst = offset(dst, 1);
       }
 
