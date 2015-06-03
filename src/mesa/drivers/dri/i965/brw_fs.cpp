@@ -3431,7 +3431,7 @@ fs_visitor::lower_integer_multiplication()
            inst->dst.type != BRW_REGISTER_TYPE_UD))
          continue;
 
-#define insert(instr) inst->insert_before(block, instr)
+      const fs_builder ibld = bld.at(block, inst);
 
       /* The MUL instruction isn't commutative. On Gen <= 6, only the low
        * 16-bits of src0 are read, and on Gen >= 7 only the low 16-bits of
@@ -3445,10 +3445,10 @@ fs_visitor::lower_integer_multiplication()
          if (devinfo->gen < 7) {
             fs_reg imm(GRF, alloc.allocate(dispatch_width / 8),
                        inst->dst.type, dispatch_width);
-            insert(MOV(imm, inst->src[1]));
-            insert(MUL(inst->dst, imm, inst->src[0]));
+            ibld.MOV(imm, inst->src[1]);
+            ibld.MUL(inst->dst, imm, inst->src[0]);
          } else {
-            insert(MUL(inst->dst, inst->src[0], inst->src[1]));
+            ibld.MUL(inst->dst, inst->src[0], inst->src[1]);
          }
       } else {
          /* Gen < 8 (and some Gen8+ low-power parts like Cherryview) cannot
@@ -3519,8 +3519,8 @@ fs_visitor::lower_integer_multiplication()
                src1_1_w.stride = 2;
                src1_1_w.subreg_offset += type_sz(BRW_REGISTER_TYPE_UW);
             }
-            insert(MUL(low, inst->src[0], src1_0_w));
-            insert(MUL(high, inst->src[0], src1_1_w));
+            ibld.MUL(low, inst->src[0], src1_0_w);
+            ibld.MUL(high, inst->src[0], src1_1_w);
          } else {
             fs_reg src0_0_w = inst->src[0];
             fs_reg src0_1_w = inst->src[0];
@@ -3532,8 +3532,8 @@ fs_visitor::lower_integer_multiplication()
             src0_1_w.stride = 2;
             src0_1_w.subreg_offset += type_sz(BRW_REGISTER_TYPE_UW);
 
-            insert(MUL(low, src0_0_w, inst->src[1]));
-            insert(MUL(high, src0_1_w, inst->src[1]));
+            ibld.MUL(low, src0_0_w, inst->src[1]);
+            ibld.MUL(high, src0_1_w, inst->src[1]);
          }
 
          fs_reg dst = inst->dst;
@@ -3548,16 +3548,14 @@ fs_visitor::lower_integer_multiplication()
          low.subreg_offset = 2;
          low.stride = 2;
 
-         insert(ADD(dst, low, high));
+         ibld.ADD(dst, low, high);
 
          if (inst->conditional_mod) {
             fs_reg null(retype(brw_null_reg(), inst->dst.type));
-            fs_inst *mov = MOV(null, inst->dst);
-            mov->conditional_mod = inst->conditional_mod;
-            insert(mov);
+            set_condmod(inst->conditional_mod,
+                        ibld.MOV(null, inst->dst));
          }
       }
-#undef insert
 
       inst->remove(block);
       progress = true;
