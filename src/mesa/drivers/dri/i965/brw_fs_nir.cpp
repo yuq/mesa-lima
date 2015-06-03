@@ -397,21 +397,21 @@ void
 fs_visitor::nir_emit_if(nir_if *if_stmt)
 {
    /* first, put the condition into f0 */
-   fs_inst *inst = emit(MOV(reg_null_d,
+   fs_inst *inst = bld.MOV(bld.null_reg_d(),
                             retype(get_nir_src(if_stmt->condition),
-                                   BRW_REGISTER_TYPE_D)));
+                                   BRW_REGISTER_TYPE_D));
    inst->conditional_mod = BRW_CONDITIONAL_NZ;
 
-   emit(IF(BRW_PREDICATE_NORMAL));
+   bld.IF(BRW_PREDICATE_NORMAL);
 
    nir_emit_cf_list(&if_stmt->then_list);
 
    /* note: if the else is empty, dead CF elimination will remove it */
-   emit(BRW_OPCODE_ELSE);
+   bld.emit(BRW_OPCODE_ELSE);
 
    nir_emit_cf_list(&if_stmt->else_list);
 
-   emit(BRW_OPCODE_ENDIF);
+   bld.emit(BRW_OPCODE_ENDIF);
 
    if (!try_replace_with_sel() && devinfo->gen < 6) {
       no16("Can't support (non-uniform) control flow on SIMD16\n");
@@ -425,11 +425,11 @@ fs_visitor::nir_emit_loop(nir_loop *loop)
       no16("Can't support (non-uniform) control flow on SIMD16\n");
    }
 
-   emit(BRW_OPCODE_DO);
+   bld.emit(BRW_OPCODE_DO);
 
    nir_emit_cf_list(&loop->body);
 
-   emit(BRW_OPCODE_WHILE);
+   bld.emit(BRW_OPCODE_WHILE);
 }
 
 void
@@ -443,6 +443,7 @@ fs_visitor::nir_emit_block(nir_block *block)
 void
 fs_visitor::nir_emit_instr(nir_instr *instr)
 {
+   const fs_builder abld = bld.annotate(NULL, instr);
    this->base_ir = instr;
 
    switch (instr->type) {
@@ -465,7 +466,7 @@ fs_visitor::nir_emit_instr(nir_instr *instr)
       break;
 
    case nir_instr_type_jump:
-      nir_emit_jump(nir_instr_as_jump(instr));
+      nir_emit_jump(abld, nir_instr_as_jump(instr));
       break;
 
    default:
@@ -1745,14 +1746,14 @@ fs_visitor::nir_emit_texture(nir_tex_instr *instr)
 }
 
 void
-fs_visitor::nir_emit_jump(nir_jump_instr *instr)
+fs_visitor::nir_emit_jump(const fs_builder &bld, nir_jump_instr *instr)
 {
    switch (instr->type) {
    case nir_jump_break:
-      emit(BRW_OPCODE_BREAK);
+      bld.emit(BRW_OPCODE_BREAK);
       break;
    case nir_jump_continue:
-      emit(BRW_OPCODE_CONTINUE);
+      bld.emit(BRW_OPCODE_CONTINUE);
       break;
    case nir_jump_return:
    default:
