@@ -76,6 +76,11 @@ endif
 endif
 endif
 
+# vc4
+ifneq ($(filter vc4, $(MESA_GPU_DRIVERS)),)
+SUBDIRS += winsys/vc4/drm drivers/vc4
+endif
+
 # vmwgfx
 ifneq ($(filter vmwgfx, $(MESA_GPU_DRIVERS)),)
 SUBDIRS += winsys/svga/drm drivers/svga
