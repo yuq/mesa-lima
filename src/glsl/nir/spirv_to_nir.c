@@ -1355,20 +1355,11 @@ vtn_walk_blocks(struct vtn_builder *b, struct vtn_block *start,
 {
    struct vtn_block *block = start;
    while (block != end_block) {
-      if (block->block != NULL) {
-         /* We've already visited this block once before so this is a
-          * back-edge.  Back-edges are only allowed to point to a loop
-          * merge.
-          */
-         assert(block == cont_block);
-         return;
-      }
-
       if (block->merge_op == SpvOpLoopMerge) {
          /* This is the jump into a loop. */
-         cont_block = block;
-         break_block = vtn_value(b, block->merge_block_id,
-                                 vtn_value_type_block)->block;
+         struct vtn_block *new_cont_block = block;
+         struct vtn_block *new_break_block =
+            vtn_value(b, block->merge_block_id, vtn_value_type_block)->block;
 
          nir_loop *loop = nir_loop_create(b->shader);
          nir_cf_node_insert_end(b->nb.cf_node_list, &loop->cf_node);
@@ -1379,7 +1370,7 @@ vtn_walk_blocks(struct vtn_builder *b, struct vtn_block *start,
          block->merge_op = SpvOpNop;
 
          nir_builder_insert_after_cf_list(&b->nb, &loop->body);
-         vtn_walk_blocks(b, block, break_block, cont_block, NULL);
+         vtn_walk_blocks(b, block, new_break_block, new_cont_block, NULL);
 
          nir_builder_insert_after_cf_list(&b->nb, old_list);
          block = break_block;
@@ -1411,8 +1402,16 @@ vtn_walk_blocks(struct vtn_builder *b, struct vtn_block *start,
 
             return;
          } else if (branch_block == end_block) {
+            /* We're branching to the merge block of an if, since for loops
+             * and functions end_block == NULL, so we're done here.
+             */
             return;
          } else {
+            /* We're branching to another block, and according to the rules,
+             * we can only branch to another block with one predecessor (so
+             * we're the only one jumping to it) so we can just process it
+             * next.
+             */
             block = branch_block;
             continue;
          }
@@ -1454,7 +1453,10 @@ vtn_walk_blocks(struct vtn_builder *b, struct vtn_block *start,
                                            &jump->instr);
             block = then_block;
          } else {
-            /* Conventional if statement */
+            /* According to the rules we're branching to two blocks that don't
+             * have any other predecessors, so we can handle this as a
+             * conventional if.
+             */
             assert(block->merge_op == SpvOpSelectionMerge);
             struct vtn_block *merge_block =
                vtn_value(b, block->merge_block_id, vtn_value_type_block)->block;
