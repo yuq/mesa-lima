@@ -281,6 +281,11 @@ anv_cmd_buffer_clear(struct anv_cmd_buffer *cmd_buffer,
                                     VK_STATE_BIND_POINT_DEPTH_STENCIL,
                                     device->meta_state.shared.ds_state);
 
+   if (cmd_buffer->cb_state == NULL)
+      anv_CmdBindDynamicStateObject((VkCmdBuffer) cmd_buffer,
+                                    VK_STATE_BIND_POINT_COLOR_BLEND,
+                                    device->meta_state.shared.cb_state);
+
    anv_CmdDraw((VkCmdBuffer) cmd_buffer, 0, 3, 0, pass->num_clear_layers);
 
    /* Restore API state */
