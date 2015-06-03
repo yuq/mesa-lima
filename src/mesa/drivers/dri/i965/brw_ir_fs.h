@@ -256,7 +256,6 @@ public:
    uint8_t exec_size;
 
    bool eot:1;
-   bool force_uncompressed:1;
    bool force_sechalf:1;
    bool pi_noperspective:1;   /**< Pixel interpolator noperspective flag */
 };
