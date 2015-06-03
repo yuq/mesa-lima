@@ -30,6 +30,8 @@
 #include "glsl/glsl_types.h"
 #include "glsl/ir_optimization.h"
 
+using namespace brw;
+
 static void
 assign_reg(unsigned *reg_hw_locations, fs_reg *reg)
 {
@@ -696,25 +698,24 @@ fs_visitor::emit_unspill(bblock_t *block, fs_inst *inst, fs_reg dst,
       dst.width = 16;
    }
 
+   const fs_builder ibld = bld.annotate(inst->annotation, inst->ir)
+                              .group(reg_size * 8, 0)
+                              .at(block, inst);
+
    for (int i = 0; i < count / reg_size; i++) {
       /* The gen7 descriptor-based offset is 12 bits of HWORD units. */
       bool gen7_read = devinfo->gen >= 7 && spill_offset < (1 << 12) * REG_SIZE;
-
-      fs_inst *unspill_inst =
-         new(mem_ctx) fs_inst(gen7_read ?
-                              SHADER_OPCODE_GEN7_SCRATCH_READ :
-                              SHADER_OPCODE_GEN4_SCRATCH_READ,
-                              dst);
+      fs_inst *unspill_inst = ibld.emit(gen7_read ?
+                                        SHADER_OPCODE_GEN7_SCRATCH_READ :
+                                        SHADER_OPCODE_GEN4_SCRATCH_READ,
+                                        dst);
       unspill_inst->offset = spill_offset;
-      unspill_inst->ir = inst->ir;
-      unspill_inst->annotation = inst->annotation;
       unspill_inst->regs_written = reg_size;
 
       if (!gen7_read) {
          unspill_inst->base_mrf = 14;
          unspill_inst->mlen = 1; /* header contains offset */
       }
-      inst->insert_before(block, unspill_inst);
 
       dst.reg_offset += reg_size;
       spill_offset += reg_size * REG_SIZE;
@@ -732,17 +733,17 @@ fs_visitor::emit_spill(bblock_t *block, fs_inst *inst, fs_reg src,
       reg_size = 2;
    }
 
+   const fs_builder ibld = bld.annotate(inst->annotation, inst->ir)
+                              .group(reg_size * 8, 0)
+                              .at(block, inst->next);
+
    for (int i = 0; i < count / reg_size; i++) {
       fs_inst *spill_inst =
-         new(mem_ctx) fs_inst(SHADER_OPCODE_GEN4_SCRATCH_WRITE,
-                              reg_size * 8, reg_null_f, src);
+         ibld.emit(SHADER_OPCODE_GEN4_SCRATCH_WRITE, bld.null_reg_f(), src);
       src.reg_offset += reg_size;
       spill_inst->offset = spill_offset + i * reg_size * REG_SIZE;
-      spill_inst->ir = inst->ir;
-      spill_inst->annotation = inst->annotation;
       spill_inst->mlen = 1 + reg_size; /* header, value */
       spill_inst->base_mrf = spill_base_mrf;
-      inst->insert_after(block, spill_inst);
    }
 }
 
