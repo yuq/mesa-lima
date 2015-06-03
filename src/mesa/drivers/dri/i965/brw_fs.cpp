@@ -1595,7 +1595,7 @@ fs_visitor::emit_discard_jump()
    /* For performance, after a discard, jump to the end of the
     * shader if all relevant channels have been discarded.
     */
-   fs_inst *discard_jump = emit(FS_OPCODE_DISCARD_JUMP);
+   fs_inst *discard_jump = bld.emit(FS_OPCODE_DISCARD_JUMP);
    discard_jump->flag_subreg = 1;
 
    discard_jump->predicate = (dispatch_width == 8)
@@ -4185,7 +4185,7 @@ fs_visitor::run_fs()
        * Initialize it with the dispatched pixels.
        */
       if (wm_prog_data->uses_kill) {
-         fs_inst *discard_init = emit(FS_OPCODE_MOV_DISPATCH_TO_FLAGS);
+         fs_inst *discard_init = bld.emit(FS_OPCODE_MOV_DISPATCH_TO_FLAGS);
          discard_init->flag_subreg = 1;
       }
 
@@ -4198,7 +4198,7 @@ fs_visitor::run_fs()
 	 return false;
 
       if (wm_prog_data->uses_kill)
-         emit(FS_OPCODE_PLACEHOLDER_HALT);
+         bld.emit(FS_OPCODE_PLACEHOLDER_HALT);
 
       if (wm_key->alpha_test_func)
          emit_alpha_test();
