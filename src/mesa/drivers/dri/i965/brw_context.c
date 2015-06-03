@@ -545,6 +545,7 @@ brw_initialize_context_constants(struct brw_context *brw)
     */
    ctx->Const.UniformBufferOffsetAlignment = 16;
    ctx->Const.TextureBufferOffsetAlignment = 16;
+   ctx->Const.MaxTextureBufferSize = 128 * 1024 * 1024;
 
    if (brw->gen >= 6) {
       ctx->Const.MaxVarying = 32;
