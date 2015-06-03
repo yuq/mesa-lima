@@ -190,6 +190,28 @@ public:
    }
 };
 
+/**
+ * Make the execution of \p inst dependent on the evaluation of a possibly
+ * inverted predicate.
+ */
+inline vec4_instruction *
+set_predicate_inv(enum brw_predicate pred, bool inverse,
+                  vec4_instruction *inst)
+{
+   inst->predicate = pred;
+   inst->predicate_inverse = inverse;
+   return inst;
+}
+
+/**
+ * Make the execution of \p inst dependent on the evaluation of a predicate.
+ */
+inline vec4_instruction *
+set_predicate(enum brw_predicate pred, vec4_instruction *inst)
+{
+   return set_predicate_inv(pred, false, inst);
+}
+
 } /* namespace brw */
 
 #endif
