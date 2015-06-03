@@ -2918,13 +2918,12 @@ fs_visitor::emit_repclear_shader()
    int base_mrf = 1;
    int color_mrf = base_mrf + 2;
 
-   fs_inst *mov = emit(MOV(vec4(brw_message_reg(color_mrf)),
-                           fs_reg(UNIFORM, 0, BRW_REGISTER_TYPE_F)));
-   mov->force_writemask_all = true;
+   fs_inst *mov = bld.exec_all().MOV(vec4(brw_message_reg(color_mrf)),
+                                     fs_reg(UNIFORM, 0, BRW_REGISTER_TYPE_F));
 
    fs_inst *write;
    if (key->nr_color_regions == 1) {
-      write = emit(FS_OPCODE_REP_FB_WRITE);
+      write = bld.emit(FS_OPCODE_REP_FB_WRITE);
       write->saturate = key->clamp_fragment_color;
       write->base_mrf = color_mrf;
       write->target = 0;
@@ -2933,7 +2932,7 @@ fs_visitor::emit_repclear_shader()
    } else {
       assume(key->nr_color_regions > 0);
       for (int i = 0; i < key->nr_color_regions; ++i) {
-         write = emit(FS_OPCODE_REP_FB_WRITE);
+         write = bld.emit(FS_OPCODE_REP_FB_WRITE);
          write->saturate = key->clamp_fragment_color;
          write->base_mrf = base_mrf;
          write->target = i;

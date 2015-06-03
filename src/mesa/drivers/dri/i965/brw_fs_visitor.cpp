@@ -1296,12 +1296,12 @@ fs_visitor::emit_dummy_fs()
    /* Everyone's favorite color. */
    const float color[4] = { 1.0, 0.0, 1.0, 0.0 };
    for (int i = 0; i < 4; i++) {
-      emit(MOV(fs_reg(MRF, 2 + i * reg_width, BRW_REGISTER_TYPE_F,
-                      dispatch_width), fs_reg(color[i])));
+      bld.MOV(fs_reg(MRF, 2 + i * reg_width, BRW_REGISTER_TYPE_F,
+                     dispatch_width), fs_reg(color[i]));
    }
 
    fs_inst *write;
-   write = emit(FS_OPCODE_FB_WRITE);
+   write = bld.emit(FS_OPCODE_FB_WRITE);
    write->eot = true;
    if (devinfo->gen >= 6) {
       write->base_mrf = 2;
@@ -1479,7 +1479,7 @@ fs_visitor::setup_color_payload(fs_reg *dst, fs_reg color, unsigned components,
       fs_reg tmp = vgrf(glsl_type::vec4_type);
       assert(color.type == BRW_REGISTER_TYPE_F);
       for (unsigned i = 0; i < components; i++) {
-         inst = emit(MOV(offset(tmp, i), offset(color, i)));
+         inst = bld.MOV(offset(tmp, i), offset(color, i));
          inst->saturate = true;
       }
       color = tmp;
@@ -1550,15 +1550,14 @@ fs_visitor::emit_alpha_test()
 }
 
 fs_inst *
-fs_visitor::emit_single_fb_write(fs_reg color0, fs_reg color1,
+fs_visitor::emit_single_fb_write(const fs_builder &bld,
+                                 fs_reg color0, fs_reg color1,
                                  fs_reg src0_alpha, unsigned components,
                                  unsigned exec_size, bool use_2nd_half)
 {
    assert(stage == MESA_SHADER_FRAGMENT);
    brw_wm_prog_data *prog_data = (brw_wm_prog_data*) this->prog_data;
    brw_wm_prog_key *key = (brw_wm_prog_key*) this->key;
-
-   this->current_annotation = "FB write header";
    int header_size = 2, payload_header_size;
 
    /* We can potentially have a message length of up to 15, so we have to set
@@ -1589,22 +1588,23 @@ fs_visitor::emit_single_fb_write(fs_reg color0, fs_reg color1,
 
    if (payload.aa_dest_stencil_reg) {
       sources[length] = fs_reg(GRF, alloc.allocate(1));
-      emit(MOV(sources[length],
-               fs_reg(brw_vec8_grf(payload.aa_dest_stencil_reg, 0))));
+      bld.exec_all().annotate("FB write stencil/AA alpha")
+         .MOV(sources[length],
+              fs_reg(brw_vec8_grf(payload.aa_dest_stencil_reg, 0)));
       length++;
    }
 
    prog_data->uses_omask =
       prog->OutputsWritten & BITFIELD64_BIT(FRAG_RESULT_SAMPLE_MASK);
    if (prog_data->uses_omask) {
-      this->current_annotation = "FB write oMask";
       assert(this->sample_mask.file != BAD_FILE);
       /* Hand over gl_SampleMask. Only lower 16 bits are relevant.  Since
        * it's unsinged single words, one vgrf is always 16-wide.
        */
       sources[length] = fs_reg(GRF, alloc.allocate(1),
                                BRW_REGISTER_TYPE_UW, 16);
-      emit(FS_OPCODE_SET_OMASK, sources[length], this->sample_mask);
+      bld.exec_all().annotate("FB write oMask")
+         .emit(FS_OPCODE_SET_OMASK, sources[length], this->sample_mask);
       length++;
    }
 
@@ -1665,20 +1665,21 @@ fs_visitor::emit_single_fb_write(fs_reg color0, fs_reg color1,
    if (payload.dest_depth_reg)
       sources[length++] = fs_reg(brw_vec8_grf(payload.dest_depth_reg, 0));
 
+   const fs_builder ubld = bld.group(exec_size, use_2nd_half);
    fs_inst *load;
    fs_inst *write;
    if (devinfo->gen >= 7) {
       /* Send from the GRF */
       fs_reg payload = fs_reg(GRF, -1, BRW_REGISTER_TYPE_F, exec_size);
-      load = emit(LOAD_PAYLOAD(payload, sources, length, payload_header_size));
+      load = ubld.LOAD_PAYLOAD(payload, sources, length, payload_header_size);
       payload.reg = alloc.allocate(load->regs_written);
       load->dst = payload;
-      write = emit(FS_OPCODE_FB_WRITE, reg_undef, payload);
+      write = ubld.emit(FS_OPCODE_FB_WRITE, reg_undef, payload);
       write->base_mrf = -1;
    } else {
       /* Send from the MRF */
-      load = emit(LOAD_PAYLOAD(fs_reg(MRF, 1, BRW_REGISTER_TYPE_F, exec_size),
-                               sources, length, payload_header_size));
+      load = ubld.LOAD_PAYLOAD(fs_reg(MRF, 1, BRW_REGISTER_TYPE_F, exec_size),
+                               sources, length, payload_header_size);
 
       /* On pre-SNB, we have to interlace the color values.  LOAD_PAYLOAD
        * will do this for us if we just give it a COMPR4 destination.
@@ -1686,7 +1687,7 @@ fs_visitor::emit_single_fb_write(fs_reg color0, fs_reg color1,
       if (brw->gen < 6 && exec_size == 16)
          load->dst.reg |= BRW_MRF_COMPR4;
 
-      write = emit(FS_OPCODE_FB_WRITE);
+      write = ubld.emit(FS_OPCODE_FB_WRITE);
       write->exec_size = exec_size;
       write->base_mrf = 1;
    }
@@ -1709,10 +1710,10 @@ fs_visitor::emit_fb_writes()
 
    fs_inst *inst = NULL;
    if (do_dual_src) {
-      this->current_annotation = ralloc_asprintf(this->mem_ctx,
-						 "FB dual-source write");
-      inst = emit_single_fb_write(this->outputs[0], this->dual_src_output,
-                                  reg_undef, 4, 8);
+      const fs_builder abld = bld.annotate("FB dual-source write");
+
+      inst = emit_single_fb_write(abld, this->outputs[0],
+                                  this->dual_src_output, reg_undef, 4, 8);
       inst->target = 0;
 
       /* SIMD16 dual source blending requires to send two SIMD8 dual source
@@ -1733,8 +1734,9 @@ fs_visitor::emit_fb_writes()
        * m + 3: a1
        */
       if (dispatch_width == 16) {
-         inst = emit_single_fb_write(this->outputs[0], this->dual_src_output,
-                                     reg_undef, 4, 8, true);
+         inst = emit_single_fb_write(abld, this->outputs[0],
+                                     this->dual_src_output, reg_undef, 4, 8,
+                                     true);
          inst->target = 0;
       }
 
@@ -1745,14 +1747,14 @@ fs_visitor::emit_fb_writes()
          if (this->outputs[target].file == BAD_FILE)
             continue;
 
-         this->current_annotation = ralloc_asprintf(this->mem_ctx,
-                                                    "FB write target %d",
-                                                    target);
+         const fs_builder abld = bld.annotate(
+            ralloc_asprintf(this->mem_ctx, "FB write target %d", target));
+
          fs_reg src0_alpha;
          if (devinfo->gen >= 6 && key->replicate_alpha && target != 0)
             src0_alpha = offset(outputs[0], 3);
 
-         inst = emit_single_fb_write(this->outputs[target], reg_undef,
+         inst = emit_single_fb_write(abld, this->outputs[target], reg_undef,
                                      src0_alpha,
                                      this->output_components[target],
                                      dispatch_width);
@@ -1765,13 +1767,12 @@ fs_visitor::emit_fb_writes()
        * alpha out the pipeline to our null renderbuffer to support
        * alpha-testing, alpha-to-coverage, and so on.
        */
-      inst = emit_single_fb_write(reg_undef, reg_undef, reg_undef, 0,
+      inst = emit_single_fb_write(bld, reg_undef, reg_undef, reg_undef, 0,
                                   dispatch_width);
       inst->target = 0;
    }
 
    inst->eot = true;
-   this->current_annotation = NULL;
 }
 
 void
