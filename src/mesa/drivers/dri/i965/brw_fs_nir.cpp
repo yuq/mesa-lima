@@ -452,7 +452,7 @@ fs_visitor::nir_emit_instr(nir_instr *instr)
       break;
 
    case nir_instr_type_intrinsic:
-      nir_emit_intrinsic(nir_instr_as_intrinsic(instr));
+      nir_emit_intrinsic(abld, nir_instr_as_intrinsic(instr));
       break;
 
    case nir_instr_type_tex:
@@ -1221,7 +1221,7 @@ fs_visitor::emit_percomp(const fs_builder &bld, const fs_inst &inst,
 }
 
 void
-fs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
+fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr)
 {
    fs_reg dest;
    if (nir_intrinsic_infos[instr->intrinsic].has_dest)
@@ -1239,12 +1239,12 @@ fs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
        */
       fs_inst *cmp;
       if (instr->intrinsic == nir_intrinsic_discard_if) {
-         cmp = emit(CMP(reg_null_f, get_nir_src(instr->src[0]),
-                        fs_reg(0), BRW_CONDITIONAL_Z));
+         cmp = bld.CMP(bld.null_reg_f(), get_nir_src(instr->src[0]),
+                       fs_reg(0), BRW_CONDITIONAL_Z);
       } else {
          fs_reg some_reg = fs_reg(retype(brw_vec8_grf(0, 0),
                                        BRW_REGISTER_TYPE_UW));
-         cmp = emit(CMP(reg_null_f, some_reg, some_reg, BRW_CONDITIONAL_NZ));
+         cmp = bld.CMP(bld.null_reg_f(), some_reg, some_reg, BRW_CONDITIONAL_NZ);
       }
       cmp->predicate = BRW_PREDICATE_NORMAL;
       cmp->flag_subreg = 1;
@@ -1281,8 +1281,8 @@ fs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
    }
 
    case nir_intrinsic_load_front_face:
-      emit(MOV(retype(dest, BRW_REGISTER_TYPE_D),
-               *emit_frontfacing_interpolation()));
+      bld.MOV(retype(dest, BRW_REGISTER_TYPE_D),
+              *emit_frontfacing_interpolation());
       break;
 
    case nir_intrinsic_load_vertex_id:
@@ -1292,7 +1292,7 @@ fs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
       fs_reg vertex_id = nir_system_values[SYSTEM_VALUE_VERTEX_ID_ZERO_BASE];
       assert(vertex_id.file != BAD_FILE);
       dest.type = vertex_id.type;
-      emit(MOV(dest, vertex_id));
+      bld.MOV(dest, vertex_id);
       break;
    }
 
@@ -1300,7 +1300,7 @@ fs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
       fs_reg base_vertex = nir_system_values[SYSTEM_VALUE_BASE_VERTEX];
       assert(base_vertex.file != BAD_FILE);
       dest.type = base_vertex.type;
-      emit(MOV(dest, base_vertex));
+      bld.MOV(dest, base_vertex);
       break;
    }
 
@@ -1308,7 +1308,7 @@ fs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
       fs_reg instance_id = nir_system_values[SYSTEM_VALUE_INSTANCE_ID];
       assert(instance_id.file != BAD_FILE);
       dest.type = instance_id.type;
-      emit(MOV(dest, instance_id));
+      bld.MOV(dest, instance_id);
       break;
    }
 
@@ -1316,7 +1316,7 @@ fs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
       fs_reg sample_mask_in = nir_system_values[SYSTEM_VALUE_SAMPLE_MASK_IN];
       assert(sample_mask_in.file != BAD_FILE);
       dest.type = sample_mask_in.type;
-      emit(MOV(dest, sample_mask_in));
+      bld.MOV(dest, sample_mask_in);
       break;
    }
 
@@ -1324,8 +1324,8 @@ fs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
       fs_reg sample_pos = nir_system_values[SYSTEM_VALUE_SAMPLE_POS];
       assert(sample_pos.file != BAD_FILE);
       dest.type = sample_pos.type;
-      emit(MOV(dest, sample_pos));
-      emit(MOV(offset(dest, 1), offset(sample_pos, 1)));
+      bld.MOV(dest, sample_pos);
+      bld.MOV(offset(dest, 1), offset(sample_pos, 1));
       break;
    }
 
@@ -1333,7 +1333,7 @@ fs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
       fs_reg sample_id = nir_system_values[SYSTEM_VALUE_SAMPLE_ID];
       assert(sample_id.file != BAD_FILE);
       dest.type = sample_id.type;
-      emit(MOV(dest, sample_id));
+      bld.MOV(dest, sample_id);
       break;
    }
 
@@ -1357,7 +1357,7 @@ fs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
             src.reladdr = new(mem_ctx) fs_reg(get_nir_src(instr->src[0]));
          index++;
 
-         emit(MOV(dest, src));
+         bld.MOV(dest, src);
          dest = offset(dest, 1);
       }
       break;
@@ -1379,9 +1379,9 @@ fs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
           * from any live channel.
           */
          surf_index = vgrf(glsl_type::uint_type);
-         emit(ADD(surf_index, get_nir_src(instr->src[0]),
-                  fs_reg(stage_prog_data->binding_table.ubo_start)));
-         emit_uniformize(surf_index, surf_index);
+         bld.ADD(surf_index, get_nir_src(instr->src[0]),
+                 fs_reg(stage_prog_data->binding_table.ubo_start));
+         bld.emit_uniformize(surf_index, surf_index);
 
          /* Assume this may touch any UBO. It would be nice to provide
           * a tighter bound, but the array information is already lowered away.
@@ -1394,9 +1394,9 @@ fs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
       if (has_indirect) {
          /* Turn the byte offset into a dword offset. */
          fs_reg base_offset = vgrf(glsl_type::int_type);
-         emit(SHR(base_offset, retype(get_nir_src(instr->src[1]),
-                                 BRW_REGISTER_TYPE_D),
-                  fs_reg(2)));
+         bld.SHR(base_offset, retype(get_nir_src(instr->src[1]),
+                                     BRW_REGISTER_TYPE_D),
+                 fs_reg(2));
 
          unsigned vec4_offset = instr->const_index[0] / 4;
          for (int i = 0; i < instr->num_components; i++)
@@ -1407,8 +1407,8 @@ fs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
          packed_consts.type = dest.type;
 
          fs_reg const_offset_reg((unsigned) instr->const_index[0] & ~15);
-         emit(FS_OPCODE_UNIFORM_PULL_CONSTANT_LOAD, packed_consts,
-              surf_index, const_offset_reg);
+         bld.emit(FS_OPCODE_UNIFORM_PULL_CONSTANT_LOAD, packed_consts,
+                  surf_index, const_offset_reg);
 
          for (unsigned i = 0; i < instr->num_components; i++) {
             packed_consts.set_smear(instr->const_index[0] % 16 / 4 + i);
@@ -1418,7 +1418,7 @@ fs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
              */
             assert(packed_consts.subreg_offset < 32);
 
-            emit(MOV(dest, packed_consts));
+            bld.MOV(dest, packed_consts);
             dest = offset(dest, 1);
          }
       }
@@ -1437,7 +1437,7 @@ fs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
             src.reladdr = new(mem_ctx) fs_reg(get_nir_src(instr->src[0]));
          index++;
 
-         emit(MOV(dest, src));
+         bld.MOV(dest, src);
          dest = offset(dest, 1);
       }
       break;
@@ -1470,7 +1470,7 @@ fs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
        */
       no16("interpolate_at_* not yet supported in SIMD16 mode.");
 
-      fs_reg dst_xy = vgrf(2);
+      fs_reg dst_xy = bld.vgrf(BRW_REGISTER_TYPE_F, 2);
 
       /* For most messages, we need one reg of ignored data; the hardware
        * requires mlen==1 even when there is no payload. in the per-slot
@@ -1482,7 +1482,8 @@ fs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
 
       switch (instr->intrinsic) {
       case nir_intrinsic_interp_var_at_centroid:
-         inst = emit(FS_OPCODE_INTERPOLATE_AT_CENTROID, dst_xy, src, fs_reg(0u));
+         inst = bld.emit(FS_OPCODE_INTERPOLATE_AT_CENTROID,
+                         dst_xy, src, fs_reg(0u));
          break;
 
       case nir_intrinsic_interp_var_at_sample: {
@@ -1490,8 +1491,8 @@ fs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
          nir_const_value *const_sample = nir_src_as_const_value(instr->src[0]);
          assert(const_sample);
          unsigned msg_data = const_sample ? const_sample->i[0] << 4 : 0;
-         inst = emit(FS_OPCODE_INTERPOLATE_AT_SAMPLE, dst_xy, src,
-                     fs_reg(msg_data));
+         inst = bld.emit(FS_OPCODE_INTERPOLATE_AT_SAMPLE, dst_xy, src,
+                         fs_reg(msg_data));
          break;
       }
 
@@ -1502,17 +1503,17 @@ fs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
             unsigned off_x = MIN2((int)(const_offset->f[0] * 16), 7) & 0xf;
             unsigned off_y = MIN2((int)(const_offset->f[1] * 16), 7) & 0xf;
 
-            inst = emit(FS_OPCODE_INTERPOLATE_AT_SHARED_OFFSET, dst_xy, src,
-                        fs_reg(off_x | (off_y << 4)));
+            inst = bld.emit(FS_OPCODE_INTERPOLATE_AT_SHARED_OFFSET, dst_xy, src,
+                            fs_reg(off_x | (off_y << 4)));
          } else {
             src = vgrf(glsl_type::ivec2_type);
             fs_reg offset_src = retype(get_nir_src(instr->src[0]),
                                        BRW_REGISTER_TYPE_F);
             for (int i = 0; i < 2; i++) {
                fs_reg temp = vgrf(glsl_type::float_type);
-               emit(MUL(temp, offset(offset_src, i), fs_reg(16.0f)));
+               bld.MUL(temp, offset(offset_src, i), fs_reg(16.0f));
                fs_reg itemp = vgrf(glsl_type::int_type);
-               emit(MOV(itemp, temp));  /* float to int */
+               bld.MOV(itemp, temp);  /* float to int */
 
                /* Clamp the upper end of the range to +7/16.
                 * ARB_gpu_shader5 requires that we support a maximum offset
@@ -1529,14 +1530,13 @@ fs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
                 * implementation-dependent constant
                 * FRAGMENT_INTERPOLATION_OFFSET_BITS"
                 */
-
-               emit(BRW_OPCODE_SEL, offset(src, i), itemp, fs_reg(7))
-                   ->conditional_mod = BRW_CONDITIONAL_L; /* min(src2, 7) */
+               set_condmod(BRW_CONDITIONAL_L,
+                           bld.SEL(offset(src, i), itemp, fs_reg(7)));
             }
 
             mlen = 2;
-            inst = emit(FS_OPCODE_INTERPOLATE_AT_PER_SLOT_OFFSET, dst_xy, src,
-                        fs_reg(0u));
+            inst = bld.emit(FS_OPCODE_INTERPOLATE_AT_PER_SLOT_OFFSET, dst_xy, src,
+                            fs_reg(0u));
          }
          break;
       }
@@ -1554,7 +1554,7 @@ fs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
          fs_reg src = interp_reg(instr->variables[0]->var->data.location, j);
          src.type = dest.type;
 
-         emit(FS_OPCODE_LINTERP, dest, dst_xy, src);
+         bld.emit(FS_OPCODE_LINTERP, dest, dst_xy, src);
          dest = offset(dest, 1);
       }
       break;
@@ -1572,7 +1572,7 @@ fs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
          if (has_indirect)
             src.reladdr = new(mem_ctx) fs_reg(get_nir_src(instr->src[1]));
          index++;
-         emit(MOV(new_dest, src));
+         bld.MOV(new_dest, src);
          src = offset(src, 1);
       }
       break;
