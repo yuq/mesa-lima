@@ -3650,6 +3650,9 @@ fs_visitor::dump_instruction(backend_instruction *be_inst, FILE *file)
    }
    fprintf(file, "(%d) ", inst->exec_size);
 
+   if (inst->mlen) {
+      fprintf(file, "(mlen: %d) ", inst->mlen);
+   }
 
    switch (inst->dst.file) {
    case GRF:
