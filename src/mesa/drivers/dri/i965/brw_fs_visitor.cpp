@@ -47,6 +47,7 @@
 #include "glsl/ir_optimization.h"
 #include "program/sampler.h"
 
+using namespace brw;
 
 fs_reg *
 fs_visitor::emit_vs_system_value(int location)
@@ -2045,7 +2046,8 @@ fs_visitor::fs_visitor(struct brw_context *brw,
      reg_null_d(retype(brw_null_vec(dispatch_width), BRW_REGISTER_TYPE_D)),
      reg_null_ud(retype(brw_null_vec(dispatch_width), BRW_REGISTER_TYPE_UD)),
      key(key), prog_data(prog_data),
-     dispatch_width(dispatch_width), promoted_constants(0)
+     dispatch_width(dispatch_width), promoted_constants(0),
+     bld(fs_builder(this, dispatch_width).at_end())
 {
    this->mem_ctx = mem_ctx;
 

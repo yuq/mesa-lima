@@ -29,6 +29,7 @@
 
 #include "brw_shader.h"
 #include "brw_ir_fs.h"
+#include "brw_fs_builder.h"
 
 extern "C" {
 
@@ -453,6 +454,7 @@ public:
    const unsigned dispatch_width; /**< 8 or 16 */
 
    unsigned promoted_constants;
+   brw::fs_builder bld;
 };
 
 /**

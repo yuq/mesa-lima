@@ -3989,6 +3989,17 @@ fs_visitor::calculate_register_pressure()
 void
 fs_visitor::optimize()
 {
+   /* bld is the common builder object pointing at the end of the program we
+    * used to translate it into i965 IR.  For the optimization and lowering
+    * passes coming next, any code added after the end of the program without
+    * having explicitly called fs_builder::at() clearly points at a mistake.
+    * Ideally optimization passes wouldn't be part of the visitor so they
+    * wouldn't have access to bld at all, but they do, so just in case some
+    * pass forgets to ask for a location explicitly set it to NULL here to
+    * make it trip.
+    */
+   bld = bld.at(NULL, NULL);
+
    split_virtual_grfs();
 
    move_uniform_array_access_to_pull_constants();
