@@ -40,12 +40,12 @@ fs_visitor::emit_nir_code()
     */
 
    if (nir->num_inputs > 0) {
-      nir_inputs = vgrf(nir->num_inputs);
+      nir_inputs = bld.vgrf(BRW_REGISTER_TYPE_F, nir->num_inputs);
       nir_setup_inputs(nir);
    }
 
    if (nir->num_outputs > 0) {
-      nir_outputs = vgrf(nir->num_outputs);
+      nir_outputs = bld.vgrf(BRW_REGISTER_TYPE_F, nir->num_outputs);
       nir_setup_outputs(nir);
    }
 
@@ -60,7 +60,7 @@ fs_visitor::emit_nir_code()
       unsigned array_elems =
          reg->num_array_elems == 0 ? 1 : reg->num_array_elems;
       unsigned size = array_elems * reg->num_components;
-      nir_globals[reg->index] = vgrf(size);
+      nir_globals[reg->index] = bld.vgrf(BRW_REGISTER_TYPE_F, size);
    }
 
    /* get the main function and emit it */
@@ -95,8 +95,8 @@ fs_visitor::nir_setup_inputs(nir_shader *shader)
          unsigned array_length = var->type->is_array() ? var->type->length : 1;
          for (unsigned i = 0; i < array_length; i++) {
             for (unsigned j = 0; j < components; j++) {
-               emit(MOV(retype(offset(input, components * i + j), type),
-                        offset(fs_reg(ATTR, var->data.location + i, type), j)));
+               bld.MOV(retype(offset(input, components * i + j), type),
+                       offset(fs_reg(ATTR, var->data.location + i, type), j));
             }
          }
          break;
@@ -363,7 +363,7 @@ fs_visitor::nir_emit_impl(nir_function_impl *impl)
       unsigned array_elems =
          reg->num_array_elems == 0 ? 1 : reg->num_array_elems;
       unsigned size = array_elems * reg->num_components;
-      nir_locals[reg->index] = vgrf(size);
+      nir_locals[reg->index] = bld.vgrf(BRW_REGISTER_TYPE_F, size);
    }
 
    nir_emit_cf_list(&impl->body);
@@ -1163,8 +1163,8 @@ fs_reg_for_nir_reg(fs_visitor *v, nir_register *nir_reg,
       int multiplier = nir_reg->num_components * (v->dispatch_width / 8);
 
       reg.reladdr = new(v->mem_ctx) fs_reg(v->vgrf(glsl_type::int_type));
-      v->emit(v->MUL(*reg.reladdr, v->get_nir_src(*indirect),
-                     fs_reg(multiplier)));
+      v->bld.MUL(*reg.reladdr, v->get_nir_src(*indirect),
+                 fs_reg(multiplier));
    }
 
    return reg;
@@ -1176,11 +1176,10 @@ fs_visitor::get_nir_src(nir_src src)
    if (src.is_ssa) {
       assert(src.ssa->parent_instr->type == nir_instr_type_load_const);
       nir_load_const_instr *load = nir_instr_as_load_const(src.ssa->parent_instr);
-      fs_reg reg = vgrf(src.ssa->num_components);
-      reg.type = BRW_REGISTER_TYPE_D;
+      fs_reg reg = bld.vgrf(BRW_REGISTER_TYPE_D, src.ssa->num_components);
 
       for (unsigned i = 0; i < src.ssa->num_components; ++i)
-         emit(MOV(offset(reg, i), fs_reg(load->value.i[i])));
+         bld.MOV(offset(reg, i), fs_reg(load->value.i[i]));
 
       return reg;
    } else {
