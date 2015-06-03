@@ -317,9 +317,7 @@ GEN75_STATE_BASE_ADDRESS_pack(__gen_user_data *data, void * restrict dst,
    uint32_t dw_StatelessDataPortAccessMemoryObjectControlState;
    GEN75_MEMORY_OBJECT_CONTROL_STATE_pack(data, &dw_StatelessDataPortAccessMemoryObjectControlState, &values->StatelessDataPortAccessMemoryObjectControlState);
    uint32_t dw1 =
-      /* Struct  GeneralStateMemoryObjectControlState (8..11): */
       __gen_field(dw_GeneralStateMemoryObjectControlState, 8, 11) |
-      /* Struct  StatelessDataPortAccessMemoryObjectControlState (4..7): */
       __gen_field(dw_StatelessDataPortAccessMemoryObjectControlState, 4, 7) |
       __gen_field(values->GeneralStateBaseAddressModifyEnable, 0, 0) |
       0;
@@ -330,7 +328,6 @@ GEN75_STATE_BASE_ADDRESS_pack(__gen_user_data *data, void * restrict dst,
    uint32_t dw_SurfaceStateMemoryObjectControlState;
    GEN75_MEMORY_OBJECT_CONTROL_STATE_pack(data, &dw_SurfaceStateMemoryObjectControlState, &values->SurfaceStateMemoryObjectControlState);
    uint32_t dw2 =
-      /* Struct  SurfaceStateMemoryObjectControlState (8..11): */
       __gen_field(dw_SurfaceStateMemoryObjectControlState, 8, 11) |
       __gen_field(values->SurfaceStateBaseAddressModifyEnable, 0, 0) |
       0;
@@ -341,7 +338,6 @@ GEN75_STATE_BASE_ADDRESS_pack(__gen_user_data *data, void * restrict dst,
    uint32_t dw_DynamicStateMemoryObjectControlState;
    GEN75_MEMORY_OBJECT_CONTROL_STATE_pack(data, &dw_DynamicStateMemoryObjectControlState, &values->DynamicStateMemoryObjectControlState);
    uint32_t dw3 =
-      /* Struct  DynamicStateMemoryObjectControlState (8..11): */
       __gen_field(dw_DynamicStateMemoryObjectControlState, 8, 11) |
       __gen_field(values->DynamicStateBaseAddressModifyEnable, 0, 0) |
       0;
@@ -352,7 +348,6 @@ GEN75_STATE_BASE_ADDRESS_pack(__gen_user_data *data, void * restrict dst,
    uint32_t dw_IndirectObjectMemoryObjectControlState;
    GEN75_MEMORY_OBJECT_CONTROL_STATE_pack(data, &dw_IndirectObjectMemoryObjectControlState, &values->IndirectObjectMemoryObjectControlState);
    uint32_t dw4 =
-      /* Struct  IndirectObjectMemoryObjectControlState (8..11): */
       __gen_field(dw_IndirectObjectMemoryObjectControlState, 8, 11) |
       __gen_field(values->IndirectObjectBaseAddressModifyEnable, 0, 0) |
       0;
@@ -363,7 +358,6 @@ GEN75_STATE_BASE_ADDRESS_pack(__gen_user_data *data, void * restrict dst,
    uint32_t dw_InstructionMemoryObjectControlState;
    GEN75_MEMORY_OBJECT_CONTROL_STATE_pack(data, &dw_InstructionMemoryObjectControlState, &values->InstructionMemoryObjectControlState);
    uint32_t dw5 =
-      /* Struct  InstructionMemoryObjectControlState (8..11): */
       __gen_field(dw_InstructionMemoryObjectControlState, 8, 11) |
       __gen_field(values->InstructionBaseAddressModifyEnable, 0, 0) |
       0;
@@ -517,7 +511,6 @@ GEN75_SWTESS_BASE_ADDRESS_pack(__gen_user_data *data, void * restrict dst,
    uint32_t dw_SWTessellationMemoryObjectControlState;
    GEN75_MEMORY_OBJECT_CONTROL_STATE_pack(data, &dw_SWTessellationMemoryObjectControlState, &values->SWTessellationMemoryObjectControlState);
    uint32_t dw1 =
-      /* Struct  SWTessellationMemoryObjectControlState (8..11): */
       __gen_field(dw_SWTessellationMemoryObjectControlState, 8, 11) |
       0;
 
@@ -1110,7 +1103,6 @@ GEN75_3DSTATE_BINDING_TABLE_POOL_ALLOC_pack(__gen_user_data *data, void * restri
    GEN75_MEMORY_OBJECT_CONTROL_STATE_pack(data, &dw_SurfaceObjectControlState, &values->SurfaceObjectControlState);
    uint32_t dw1 =
       __gen_field(values->BindingTablePoolEnable, 11, 11) |
-      /* Struct  SurfaceObjectControlState (7..10): */
       __gen_field(dw_SurfaceObjectControlState, 7, 10) |
       0;
 
@@ -1434,7 +1426,6 @@ GEN75_3DSTATE_CONSTANT_BODY_pack(__gen_user_data *data, void * restrict dst,
    uint32_t dw_ConstantBufferObjectControlState;
    GEN75_MEMORY_OBJECT_CONTROL_STATE_pack(data, &dw_ConstantBufferObjectControlState, &values->ConstantBufferObjectControlState);
    uint32_t dw2 =
-      /* Struct  ConstantBufferObjectControlState (0..4): */
       __gen_field(dw_ConstantBufferObjectControlState, 0, 4) |
       0;
 
@@ -1709,7 +1700,6 @@ GEN75_3DSTATE_DEPTH_BUFFER_pack(__gen_user_data *data, void * restrict dst,
    dw[4] =
       __gen_field(values->Depth, 21, 31) |
       __gen_field(values->MinimumArrayElement, 10, 20) |
-      /* Struct  DepthBufferObjectControlState (0..3): */
       __gen_field(dw_DepthBufferObjectControlState, 0, 3) |
       0;
 
@@ -2210,7 +2200,6 @@ GEN75_3DSTATE_GATHER_POOL_ALLOC_pack(__gen_user_data *data, void * restrict dst,
    GEN75_MEMORY_OBJECT_CONTROL_STATE_pack(data, &dw_MemoryObjectControlState, &values->MemoryObjectControlState);
    uint32_t dw1 =
       __gen_field(values->GatherPoolEnable, 11, 11) |
-      /* Struct  MemoryObjectControlState (0..3): */
       __gen_field(dw_MemoryObjectControlState, 0, 3) |
       0;
 
@@ -2397,7 +2386,6 @@ GEN75_3DSTATE_HIER_DEPTH_BUFFER_pack(__gen_user_data *data, void * restrict dst,
    uint32_t dw_HierarchicalDepthBufferObjectControlState;
    GEN75_MEMORY_OBJECT_CONTROL_STATE_pack(data, &dw_HierarchicalDepthBufferObjectControlState, &values->HierarchicalDepthBufferObjectControlState);
    dw[1] =
-      /* Struct  HierarchicalDepthBufferObjectControlState (25..28): */
       __gen_field(dw_HierarchicalDepthBufferObjectControlState, 25, 28) |
       __gen_field(values->SurfacePitch, 0, 16) |
       0;
@@ -2551,7 +2539,6 @@ GEN75_3DSTATE_INDEX_BUFFER_pack(__gen_user_data *data, void * restrict dst,
       __gen_field(values->CommandSubType, 27, 28) |
       __gen_field(values->_3DCommandOpcode, 24, 26) |
       __gen_field(values->_3DCommandSubOpcode, 16, 23) |
-      /* Struct  MemoryObjectControlState (12..15): */
       __gen_field(dw_MemoryObjectControlState, 12, 15) |
       __gen_field(values->IndexFormat, 8, 9) |
       __gen_field(values->DwordLength, 0, 7) |
@@ -3949,7 +3936,6 @@ GEN75_3DSTATE_SO_BUFFER_pack(__gen_user_data *data, void * restrict dst,
    GEN75_MEMORY_OBJECT_CONTROL_STATE_pack(data, &dw_SOBufferObjectControlState, &values->SOBufferObjectControlState);
    dw[1] =
       __gen_field(values->SOBufferIndex, 29, 30) |
-      /* Struct  SOBufferObjectControlState (25..28): */
       __gen_field(dw_SOBufferObjectControlState, 25, 28) |
       __gen_field(values->SurfacePitch, 0, 11) |
       0;
@@ -4018,18 +4004,16 @@ GEN75_SO_DECL_ENTRY_pack(__gen_user_data *data, void * restrict dst,
    GEN75_SO_DECL_pack(data, &dw_Stream1Decl, &values->Stream1Decl);
    uint32_t dw_Stream0Decl;
    GEN75_SO_DECL_pack(data, &dw_Stream0Decl, &values->Stream0Decl);
-   dw[0] =
-      /* Struct  Stream3Decl (48..63): */
+   uint64_t qw0 =
       __gen_field(dw_Stream3Decl, 48, 63) |
-      /* Struct  Stream2Decl (32..47): */
       __gen_field(dw_Stream2Decl, 32, 47) |
-      /* Struct  Stream1Decl (16..31): */
       __gen_field(dw_Stream1Decl, 16, 31) |
-      /* Struct  Stream0Decl (0..15): */
       __gen_field(dw_Stream0Decl, 0, 15) |
       0;
 
-   GEN75_SO_DECL_pack(data, &dw[0], &values->Stream0Decl);
+   dw[0] = qw0;
+   dw[1] = qw0 >> 32;
+
 }
 
 struct GEN75_3DSTATE_SO_DECL_LIST {
@@ -4119,7 +4103,6 @@ GEN75_3DSTATE_STENCIL_BUFFER_pack(__gen_user_data *data, void * restrict dst,
    GEN75_MEMORY_OBJECT_CONTROL_STATE_pack(data, &dw_StencilBufferObjectControlState, &values->StencilBufferObjectControlState);
    dw[1] =
       __gen_field(values->StencilBufferEnable, 31, 31) |
-      /* Struct  StencilBufferObjectControlState (25..28): */
       __gen_field(dw_StencilBufferObjectControlState, 25, 28) |
       __gen_field(values->SurfacePitch, 0, 16) |
       0;
@@ -4434,7 +4417,6 @@ GEN75_VERTEX_BUFFER_STATE_pack(__gen_user_data *data, void * restrict dst,
    dw[0] =
       __gen_field(values->VertexBufferIndex, 26, 31) |
       __gen_field(values->BufferAccessType, 20, 20) |
-      /* Struct  VertexBufferMemoryObjectControlState (16..19): */
       __gen_field(dw_VertexBufferMemoryObjectControlState, 16, 19) |
       __gen_field(values->AddressModifyEnable, 14, 14) |
       __gen_field(values->NullVertexBuffer, 13, 13) |
@@ -7616,7 +7598,6 @@ GEN75_RENDER_SURFACE_STATE_pack(__gen_user_data *data, void * restrict dst,
    dw[5] =
       __gen_offset(values->XOffset, 25, 31) |
       __gen_offset(values->YOffset, 20, 23) |
-      /* Struct  SurfaceObjectControlState (16..19): */
       __gen_field(dw_SurfaceObjectControlState, 16, 19) |
       __gen_field(values->SurfaceMinLOD, 4, 7) |
       __gen_field(values->MIPCountLOD, 0, 3) |
@@ -7655,9 +7636,9 @@ struct GEN75_SAMPLER_BORDER_COLOR_STATE {
    uint32_t                                     BorderColorGreen0;
    uint32_t                                     BorderColorBlue0;
    uint32_t                                     BorderColorAlpha0;
-   uint32_t                                     BorderColor;
-   uint32_t                                     BorderColor0;
-   uint32_t                                     BorderColor1;
+   uint64_t                                     BorderColor;
+   uint64_t                                     BorderColor0;
+   uint64_t                                     BorderColor1;
 };
 
 static inline void

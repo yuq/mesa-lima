@@ -278,9 +278,7 @@ GEN7_STATE_BASE_ADDRESS_pack(__gen_user_data *data, void * restrict dst,
    uint32_t dw_StatelessDataPortAccessMemoryObjectControlState;
    GEN7_MEMORY_OBJECT_CONTROL_STATE_pack(data, &dw_StatelessDataPortAccessMemoryObjectControlState, &values->StatelessDataPortAccessMemoryObjectControlState);
    uint32_t dw1 =
-      /* Struct  GeneralStateMemoryObjectControlState (8..11): */
       __gen_field(dw_GeneralStateMemoryObjectControlState, 8, 11) |
-      /* Struct  StatelessDataPortAccessMemoryObjectControlState (4..7): */
       __gen_field(dw_StatelessDataPortAccessMemoryObjectControlState, 4, 7) |
       __gen_field(values->StatelessDataPortAccessForceWriteThru, 3, 3) |
       __gen_field(values->GeneralStateBaseAddressModifyEnable, 0, 0) |
@@ -292,7 +290,6 @@ GEN7_STATE_BASE_ADDRESS_pack(__gen_user_data *data, void * restrict dst,
    uint32_t dw_SurfaceStateMemoryObjectControlState;
    GEN7_MEMORY_OBJECT_CONTROL_STATE_pack(data, &dw_SurfaceStateMemoryObjectControlState, &values->SurfaceStateMemoryObjectControlState);
    uint32_t dw2 =
-      /* Struct  SurfaceStateMemoryObjectControlState (8..11): */
       __gen_field(dw_SurfaceStateMemoryObjectControlState, 8, 11) |
       __gen_field(values->SurfaceStateBaseAddressModifyEnable, 0, 0) |
       0;
@@ -303,7 +300,6 @@ GEN7_STATE_BASE_ADDRESS_pack(__gen_user_data *data, void * restrict dst,
    uint32_t dw_DynamicStateMemoryObjectControlState;
    GEN7_MEMORY_OBJECT_CONTROL_STATE_pack(data, &dw_DynamicStateMemoryObjectControlState, &values->DynamicStateMemoryObjectControlState);
    uint32_t dw3 =
-      /* Struct  DynamicStateMemoryObjectControlState (8..11): */
       __gen_field(dw_DynamicStateMemoryObjectControlState, 8, 11) |
       __gen_field(values->DynamicStateBaseAddressModifyEnable, 0, 0) |
       0;
@@ -314,7 +310,6 @@ GEN7_STATE_BASE_ADDRESS_pack(__gen_user_data *data, void * restrict dst,
    uint32_t dw_IndirectObjectMemoryObjectControlState;
    GEN7_MEMORY_OBJECT_CONTROL_STATE_pack(data, &dw_IndirectObjectMemoryObjectControlState, &values->IndirectObjectMemoryObjectControlState);
    uint32_t dw4 =
-      /* Struct  IndirectObjectMemoryObjectControlState (8..11): */
       __gen_field(dw_IndirectObjectMemoryObjectControlState, 8, 11) |
       __gen_field(values->IndirectObjectBaseAddressModifyEnable, 0, 0) |
       0;
@@ -325,7 +320,6 @@ GEN7_STATE_BASE_ADDRESS_pack(__gen_user_data *data, void * restrict dst,
    uint32_t dw_InstructionMemoryObjectControlState;
    GEN7_MEMORY_OBJECT_CONTROL_STATE_pack(data, &dw_InstructionMemoryObjectControlState, &values->InstructionMemoryObjectControlState);
    uint32_t dw5 =
-      /* Struct  InstructionMemoryObjectControlState (8..11): */
       __gen_field(dw_InstructionMemoryObjectControlState, 8, 11) |
       __gen_field(values->InstructionBaseAddressModifyEnable, 0, 0) |
       0;
@@ -479,7 +473,6 @@ GEN7_SWTESS_BASE_ADDRESS_pack(__gen_user_data *data, void * restrict dst,
    uint32_t dw_SWTessellationMemoryObjectControlState;
    GEN7_MEMORY_OBJECT_CONTROL_STATE_pack(data, &dw_SWTessellationMemoryObjectControlState, &values->SWTessellationMemoryObjectControlState);
    uint32_t dw1 =
-      /* Struct  SWTessellationMemoryObjectControlState (8..11): */
       __gen_field(dw_SWTessellationMemoryObjectControlState, 8, 11) |
       0;
 
@@ -1107,7 +1100,6 @@ GEN7_3DSTATE_CONSTANT_BODY_pack(__gen_user_data *data, void * restrict dst,
    uint32_t dw_ConstantBufferObjectControlState;
    GEN7_MEMORY_OBJECT_CONTROL_STATE_pack(data, &dw_ConstantBufferObjectControlState, &values->ConstantBufferObjectControlState);
    uint32_t dw2 =
-      /* Struct  ConstantBufferObjectControlState (0..4): */
       __gen_field(dw_ConstantBufferObjectControlState, 0, 4) |
       0;
 
@@ -1382,7 +1374,6 @@ GEN7_3DSTATE_DEPTH_BUFFER_pack(__gen_user_data *data, void * restrict dst,
    dw[4] =
       __gen_field(values->Depth, 21, 31) |
       __gen_field(values->MinimumArrayElement, 10, 20) |
-      /* Struct  DepthBufferObjectControlState (0..3): */
       __gen_field(dw_DepthBufferObjectControlState, 0, 3) |
       0;
 
@@ -1752,7 +1743,6 @@ GEN7_3DSTATE_HIER_DEPTH_BUFFER_pack(__gen_user_data *data, void * restrict dst,
    uint32_t dw_HierarchicalDepthBufferObjectControlState;
    GEN7_MEMORY_OBJECT_CONTROL_STATE_pack(data, &dw_HierarchicalDepthBufferObjectControlState, &values->HierarchicalDepthBufferObjectControlState);
    dw[1] =
-      /* Struct  HierarchicalDepthBufferObjectControlState (25..28): */
       __gen_field(dw_HierarchicalDepthBufferObjectControlState, 25, 28) |
       __gen_field(values->SurfacePitch, 0, 16) |
       0;
@@ -1901,7 +1891,6 @@ GEN7_3DSTATE_INDEX_BUFFER_pack(__gen_user_data *data, void * restrict dst,
       __gen_field(values->CommandSubType, 27, 28) |
       __gen_field(values->_3DCommandOpcode, 24, 26) |
       __gen_field(values->_3DCommandSubOpcode, 16, 23) |
-      /* Struct  MemoryObjectControlState (12..15): */
       __gen_field(dw_MemoryObjectControlState, 12, 15) |
       __gen_field(values->CutIndexEnable, 10, 10) |
       __gen_field(values->IndexFormat, 8, 9) |
@@ -3179,7 +3168,6 @@ GEN7_3DSTATE_SO_BUFFER_pack(__gen_user_data *data, void * restrict dst,
    GEN7_MEMORY_OBJECT_CONTROL_STATE_pack(data, &dw_SOBufferObjectControlState, &values->SOBufferObjectControlState);
    dw[1] =
       __gen_field(values->SOBufferIndex, 29, 30) |
-      /* Struct  SOBufferObjectControlState (25..28): */
       __gen_field(dw_SOBufferObjectControlState, 25, 28) |
       __gen_field(values->SurfacePitch, 0, 11) |
       0;
@@ -3248,18 +3236,16 @@ GEN7_SO_DECL_ENTRY_pack(__gen_user_data *data, void * restrict dst,
    GEN7_SO_DECL_pack(data, &dw_Stream1Decl, &values->Stream1Decl);
    uint32_t dw_Stream0Decl;
    GEN7_SO_DECL_pack(data, &dw_Stream0Decl, &values->Stream0Decl);
-   dw[0] =
-      /* Struct  Stream3Decl (48..63): */
+   uint64_t qw0 =
       __gen_field(dw_Stream3Decl, 48, 63) |
-      /* Struct  Stream2Decl (32..47): */
       __gen_field(dw_Stream2Decl, 32, 47) |
-      /* Struct  Stream1Decl (16..31): */
       __gen_field(dw_Stream1Decl, 16, 31) |
-      /* Struct  Stream0Decl (0..15): */
       __gen_field(dw_Stream0Decl, 0, 15) |
       0;
 
-   GEN7_SO_DECL_pack(data, &dw[0], &values->Stream0Decl);
+   dw[0] = qw0;
+   dw[1] = qw0 >> 32;
+
 }
 
 struct GEN7_3DSTATE_SO_DECL_LIST {
@@ -3347,7 +3333,6 @@ GEN7_3DSTATE_STENCIL_BUFFER_pack(__gen_user_data *data, void * restrict dst,
    uint32_t dw_StencilBufferObjectControlState;
    GEN7_MEMORY_OBJECT_CONTROL_STATE_pack(data, &dw_StencilBufferObjectControlState, &values->StencilBufferObjectControlState);
    dw[1] =
-      /* Struct  StencilBufferObjectControlState (25..28): */
       __gen_field(dw_StencilBufferObjectControlState, 25, 28) |
       __gen_field(values->SurfacePitch, 0, 16) |
       0;
@@ -3662,7 +3647,6 @@ GEN7_VERTEX_BUFFER_STATE_pack(__gen_user_data *data, void * restrict dst,
    dw[0] =
       __gen_field(values->VertexBufferIndex, 26, 31) |
       __gen_field(values->BufferAccessType, 20, 20) |
-      /* Struct  VertexBufferMemoryObjectControlState (16..19): */
       __gen_field(dw_VertexBufferMemoryObjectControlState, 16, 19) |
       __gen_field(values->AddressModifyEnable, 14, 14) |
       __gen_field(values->NullVertexBuffer, 13, 13) |
