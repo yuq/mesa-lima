@@ -293,4 +293,15 @@ set_predicate(enum brw_predicate pred, fs_inst *inst)
    return set_predicate_inv(pred, false, inst);
 }
 
+/**
+ * Write the result of evaluating the condition given by \p mod to a flag
+ * register.
+ */
+static inline fs_inst *
+set_condmod(enum brw_conditional_mod mod, fs_inst *inst)
+{
+   inst->conditional_mod = mod;
+   return inst;
+}
+
 #endif
