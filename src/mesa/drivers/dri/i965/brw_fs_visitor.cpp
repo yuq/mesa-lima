@@ -1164,17 +1164,16 @@ fs_visitor::emit_untyped_atomic(unsigned atomic_op, unsigned surf_index,
 
    sources[0] = fs_reg(GRF, alloc.allocate(1), BRW_REGISTER_TYPE_UD);
    /* Initialize the sample mask in the message header. */
-   emit(MOV(sources[0], fs_reg(0u)))
-      ->force_writemask_all = true;
+   bld.exec_all().MOV(sources[0], fs_reg(0u));
 
    if (stage == MESA_SHADER_FRAGMENT) {
       if (((brw_wm_prog_data*)this->prog_data)->uses_kill) {
-         emit(MOV(component(sources[0], 7), brw_flag_reg(0, 1)))
-            ->force_writemask_all = true;
+         bld.exec_all()
+            .MOV(component(sources[0], 7), brw_flag_reg(0, 1));
       } else {
-         emit(MOV(component(sources[0], 7),
-                  retype(brw_vec1_grf(1, 7), BRW_REGISTER_TYPE_UD)))
-            ->force_writemask_all = true;
+         bld.exec_all()
+            .MOV(component(sources[0], 7),
+                 retype(brw_vec1_grf(1, 7), BRW_REGISTER_TYPE_UD));
       }
    } else {
       /* The execution mask is part of the side-band information sent together with
@@ -1183,37 +1182,37 @@ fs_visitor::emit_untyped_atomic(unsigned atomic_op, unsigned surf_index,
        * the atomic operation.
        */
       assert(stage == MESA_SHADER_VERTEX || stage == MESA_SHADER_COMPUTE);
-      emit(MOV(component(sources[0], 7),
-               fs_reg(0xffffu)))->force_writemask_all = true;
+      bld.exec_all()
+         .MOV(component(sources[0], 7), fs_reg(0xffffu));
    }
    length++;
 
    /* Set the atomic operation offset. */
    sources[1] = vgrf(glsl_type::uint_type);
-   emit(MOV(sources[1], offset));
+   bld.MOV(sources[1], offset);
    length++;
 
    /* Set the atomic operation arguments. */
    if (src0.file != BAD_FILE) {
       sources[length] = vgrf(glsl_type::uint_type);
-      emit(MOV(sources[length], src0));
+      bld.MOV(sources[length], src0);
       length++;
    }
 
    if (src1.file != BAD_FILE) {
       sources[length] = vgrf(glsl_type::uint_type);
-      emit(MOV(sources[length], src1));
+      bld.MOV(sources[length], src1);
       length++;
    }
 
    int mlen = 1 + (length - 1) * reg_width;
    fs_reg src_payload = fs_reg(GRF, alloc.allocate(mlen),
                                BRW_REGISTER_TYPE_UD, dispatch_width);
-   emit(LOAD_PAYLOAD(src_payload, sources, length, 1));
+   bld.LOAD_PAYLOAD(src_payload, sources, length, 1);
 
    /* Emit the instruction. */
-   fs_inst *inst = emit(SHADER_OPCODE_UNTYPED_ATOMIC, dst, src_payload,
-                        fs_reg(surf_index), fs_reg(atomic_op));
+   fs_inst *inst = bld.emit(SHADER_OPCODE_UNTYPED_ATOMIC, dst, src_payload,
+                            fs_reg(surf_index), fs_reg(atomic_op));
    inst->mlen = mlen;
 }
 
@@ -1227,17 +1226,17 @@ fs_visitor::emit_untyped_surface_read(unsigned surf_index, fs_reg dst,
 
    sources[0] = fs_reg(GRF, alloc.allocate(1), BRW_REGISTER_TYPE_UD);
    /* Initialize the sample mask in the message header. */
-   emit(MOV(sources[0], fs_reg(0u)))
-      ->force_writemask_all = true;
+   bld.exec_all()
+      .MOV(sources[0], fs_reg(0u));
 
    if (stage == MESA_SHADER_FRAGMENT) {
       if (((brw_wm_prog_data*)this->prog_data)->uses_kill) {
-         emit(MOV(component(sources[0], 7), brw_flag_reg(0, 1)))
-            ->force_writemask_all = true;
+         bld.exec_all()
+            .MOV(component(sources[0], 7), brw_flag_reg(0, 1));
       } else {
-         emit(MOV(component(sources[0], 7),
-                  retype(brw_vec1_grf(1, 7), BRW_REGISTER_TYPE_UD)))
-            ->force_writemask_all = true;
+         bld.exec_all()
+            .MOV(component(sources[0], 7),
+                 retype(brw_vec1_grf(1, 7), BRW_REGISTER_TYPE_UD));
       }
    } else {
       /* The execution mask is part of the side-band information sent together with
@@ -1246,22 +1245,22 @@ fs_visitor::emit_untyped_surface_read(unsigned surf_index, fs_reg dst,
        * the atomic operation.
        */
       assert(stage == MESA_SHADER_VERTEX || stage == MESA_SHADER_COMPUTE);
-      emit(MOV(component(sources[0], 7),
-               fs_reg(0xffffu)))->force_writemask_all = true;
+      bld.exec_all()
+         .MOV(component(sources[0], 7), fs_reg(0xffffu));
    }
 
    /* Set the surface read offset. */
    sources[1] = vgrf(glsl_type::uint_type);
-   emit(MOV(sources[1], offset));
+   bld.MOV(sources[1], offset);
 
    int mlen = 1 + reg_width;
    fs_reg src_payload = fs_reg(GRF, alloc.allocate(mlen),
                                BRW_REGISTER_TYPE_UD, dispatch_width);
-   fs_inst *inst = emit(LOAD_PAYLOAD(src_payload, sources, 2, 1));
+   fs_inst *inst = bld.LOAD_PAYLOAD(src_payload, sources, 2, 1);
 
    /* Emit the instruction. */
-   inst = emit(SHADER_OPCODE_UNTYPED_SURFACE_READ, dst, src_payload,
-               fs_reg(surf_index), fs_reg(1));
+   inst = bld.emit(SHADER_OPCODE_UNTYPED_SURFACE_READ, dst, src_payload,
+                   fs_reg(surf_index), fs_reg(1));
    inst->mlen = mlen;
 }
 
