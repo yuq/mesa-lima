@@ -88,11 +88,6 @@ entrypoints.c : vk_gen.py $(vulkan_include_HEADERS)
 
 CLEANFILES = entrypoints.h entrypoints.c
 
-bin_PROGRAMS = vk
-
-vk_SOURCES = vk.c
-vk_LDADD = libvulkan.la -lpng16
-
 libvulkan_la_LIBADD = -lxcb -lxcb-dri3 \
 	$(top_builddir)/src/mesa/drivers/dri/i965/libi965_compiler.la
 
