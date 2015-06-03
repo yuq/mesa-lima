@@ -28,6 +28,8 @@
 #include "brw_fs.h"
 #include "brw_nir.h"
 
+using namespace brw;
+
 void
 fs_visitor::emit_nir_code()
 {
@@ -107,7 +109,7 @@ fs_visitor::nir_setup_inputs(nir_shader *shader)
          if (var->data.location == VARYING_SLOT_POS) {
             reg = *emit_fragcoord_interpolation(var->data.pixel_center_integer,
                                                 var->data.origin_upper_left);
-            emit_percomp(MOV(input, reg), 0xF);
+            emit_percomp(bld, fs_inst(BRW_OPCODE_MOV, input, reg), 0xF);
          } else {
             emit_general_interpolation(input, var->name, var->type,
                                        (glsl_interp_qualifier) var->data.interpolation,
@@ -1201,19 +1203,20 @@ fs_visitor::get_nir_dest(nir_dest dest)
 }
 
 void
-fs_visitor::emit_percomp(fs_inst *inst, unsigned wr_mask)
+fs_visitor::emit_percomp(const fs_builder &bld, const fs_inst &inst,
+                         unsigned wr_mask)
 {
    for (unsigned i = 0; i < 4; i++) {
       if (!((wr_mask >> i) & 1))
          continue;
 
-      fs_inst *new_inst = new(mem_ctx) fs_inst(*inst);
+      fs_inst *new_inst = new(mem_ctx) fs_inst(inst);
       new_inst->dst = offset(new_inst->dst, i);
       for (unsigned j = 0; j < new_inst->sources; j++)
-         if (inst->src[j].file == GRF)
+         if (new_inst->src[j].file == GRF)
             new_inst->src[j] = offset(new_inst->src[j], i);
 
-      emit(new_inst);
+      bld.emit(new_inst);
    }
 }
 
@@ -1738,7 +1741,8 @@ fs_visitor::nir_emit_texture(nir_tex_instr *instr)
    fs_reg dest = get_nir_dest(instr->dest);
    dest.type = this->result.type;
    unsigned num_components = nir_tex_instr_dest_size(instr);
-   emit_percomp(MOV(dest, this->result), (1 << num_components) - 1);
+   emit_percomp(bld, fs_inst(BRW_OPCODE_MOV, dest, this->result),
+                (1 << num_components) - 1);
 }
 
 void

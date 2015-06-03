@@ -322,7 +322,8 @@ public:
    void nir_emit_jump(nir_jump_instr *instr);
    fs_reg get_nir_src(nir_src src);
    fs_reg get_nir_dest(nir_dest dest);
-   void emit_percomp(fs_inst *inst, unsigned wr_mask);
+   void emit_percomp(const brw::fs_builder &bld, const fs_inst &inst,
+                     unsigned wr_mask);
 
    bool optimize_frontfacing_ternary(nir_alu_instr *instr,
                                      const fs_reg &result);
