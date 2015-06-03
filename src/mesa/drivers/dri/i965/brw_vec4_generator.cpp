@@ -407,7 +407,7 @@ vec4_generator::generate_tex(vec4_instruction *inst,
       brw_set_default_access_mode(p, BRW_ALIGN_1);
 
       /* addr = ((sampler * 0x101) + base_binding_table_index) & 0xfff */
-      brw_MUL(p, addr, sampler_reg, brw_imm_ud(0x101));
+      brw_MUL(p, addr, sampler_reg, brw_imm_uw(0x101));
       if (base_binding_table_index)
          brw_ADD(p, addr, addr, brw_imm_ud(base_binding_table_index));
       brw_AND(p, addr, addr, brw_imm_ud(0xfff));
