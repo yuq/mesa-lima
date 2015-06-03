@@ -2582,7 +2582,7 @@ fs_visitor::opt_sampler_eot()
 
    tex_inst->offset |= fb_write->target << 24;
    tex_inst->eot = true;
-   tex_inst->dst = reg_null_ud;
+   tex_inst->dst = bld.null_reg_ud();
    fb_write->remove(cfg->blocks[cfg->num_blocks - 1]);
 
    /* If a header is present, marking the eot is sufficient. Otherwise, we need
@@ -2594,7 +2594,8 @@ fs_visitor::opt_sampler_eot()
    if (tex_inst->header_size != 0)
       return true;
 
-   fs_reg send_header = vgrf(load_payload->sources + 1);
+   fs_reg send_header = bld.vgrf(BRW_REGISTER_TYPE_F,
+                                 load_payload->sources + 1);
    fs_reg *new_sources =
       ralloc_array(mem_ctx, fs_reg, load_payload->sources + 1);
 
