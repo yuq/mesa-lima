@@ -2297,6 +2297,7 @@ VkResult anv_CreateCommandBuffer(
    cmd_buffer->device = device;
    cmd_buffer->rs_state = NULL;
    cmd_buffer->vp_state = NULL;
+   cmd_buffer->cb_state = NULL;
    memset(&cmd_buffer->descriptors, 0, sizeof(cmd_buffer->descriptors));
 
    result = anv_batch_bo_create(device, &cmd_buffer->last_batch_bo);
