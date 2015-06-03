@@ -1823,7 +1823,7 @@ void fs_visitor::compute_clip_distance()
 
    setup_uniform_clipplane_values();
 
-   current_annotation = "user clip distances";
+   const fs_builder abld = bld.annotate("user clip distances");
 
    this->outputs[VARYING_SLOT_CLIP_DIST0] = vgrf(glsl_type::vec4_type);
    this->outputs[VARYING_SLOT_CLIP_DIST1] = vgrf(glsl_type::vec4_type);
@@ -1833,10 +1833,10 @@ void fs_visitor::compute_clip_distance()
       fs_reg output = outputs[VARYING_SLOT_CLIP_DIST0 + i / 4];
       output.reg_offset = i & 3;
 
-      emit(MUL(output, outputs[clip_vertex], u));
+      abld.MUL(output, outputs[clip_vertex], u);
       for (int j = 1; j < 4; j++) {
          u.reg = userplane[i].reg + j;
-         emit(MAD(output, output, offset(outputs[clip_vertex], j), u));
+         abld.MAD(output, output, offset(outputs[clip_vertex], j), u);
       }
    }
 }
@@ -1864,11 +1864,10 @@ fs_visitor::emit_urb_writes()
    if (vue_map->slots_valid == 0) {
 
       fs_reg payload = fs_reg(GRF, alloc.allocate(1), BRW_REGISTER_TYPE_UD);
-      fs_inst *inst = emit(MOV(payload, fs_reg(retype(brw_vec8_grf(1, 0),
-                                                      BRW_REGISTER_TYPE_UD))));
-      inst->force_writemask_all = true;
+      bld.exec_all().MOV(payload, fs_reg(retype(brw_vec8_grf(1, 0),
+                                                BRW_REGISTER_TYPE_UD)));
 
-      inst = emit(SHADER_OPCODE_URB_WRITE_SIMD8, reg_undef, payload);
+      fs_inst *inst = bld.emit(SHADER_OPCODE_URB_WRITE_SIMD8, reg_undef, payload);
       inst->eot = true;
       inst->mlen = 1;
       inst->offset = 1;
@@ -1897,7 +1896,7 @@ fs_visitor::emit_urb_writes()
          }
 
          zero = fs_reg(GRF, alloc.allocate(1), BRW_REGISTER_TYPE_UD);
-         emit(MOV(zero, fs_reg(0u)));
+         bld.MOV(zero, fs_reg(0u));
 
          sources[length++] = zero;
          if (vue_map->slots_valid & VARYING_BIT_LAYER)
@@ -1952,8 +1951,7 @@ fs_visitor::emit_urb_writes()
             for (int i = 0; i < 4; i++) {
                reg = fs_reg(GRF, alloc.allocate(1), outputs[varying].type);
                src = offset(this->outputs[varying], i);
-               fs_inst *inst = emit(MOV(reg, src));
-               inst->saturate = true;
+               set_saturate(true, bld.MOV(reg, src));
                sources[length++] = reg;
             }
          } else {
@@ -1963,7 +1961,7 @@ fs_visitor::emit_urb_writes()
          break;
       }
 
-      current_annotation = "URB write";
+      const fs_builder abld = bld.annotate("URB write");
 
       /* If we've queued up 8 registers of payload (2 VUE slots), if this is
        * the last slot or if we need to flush (see BAD_FILE varying case
@@ -1980,10 +1978,10 @@ fs_visitor::emit_urb_writes()
             fs_reg(retype(brw_vec8_grf(1, 0), BRW_REGISTER_TYPE_UD));
 
          memcpy(&payload_sources[1], sources, length * sizeof sources[0]);
-         emit(LOAD_PAYLOAD(payload, payload_sources, length + 1, 1));
+         abld.LOAD_PAYLOAD(payload, payload_sources, length + 1, 1);
 
          fs_inst *inst =
-            emit(SHADER_OPCODE_URB_WRITE_SIMD8, reg_undef, payload);
+            abld.emit(SHADER_OPCODE_URB_WRITE_SIMD8, reg_undef, payload);
          inst->eot = last;
          inst->mlen = length + 1;
          inst->offset = urb_offset;
