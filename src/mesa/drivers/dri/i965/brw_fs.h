@@ -131,7 +131,6 @@ public:
                 enum brw_conditional_mod condition);
    fs_inst *LRP(const fs_reg &dst, const fs_reg &a, const fs_reg &y,
                 const fs_reg &x);
-   fs_inst *DEP_RESOLVE_MOV(int grf);
    fs_inst *BFREV(const fs_reg &dst, const fs_reg &value);
    fs_inst *BFE(const fs_reg &dst, const fs_reg &bits, const fs_reg &offset,
                 const fs_reg &value);
@@ -159,6 +158,7 @@ public:
                                         const fs_reg &surf_index,
                                         const fs_reg &varying_offset,
                                         uint32_t const_offset);
+   void DEP_RESOLVE_MOV(const brw::fs_builder &bld, int grf);
 
    bool run_fs();
    bool run_vs();

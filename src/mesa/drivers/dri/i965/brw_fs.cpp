@@ -418,20 +418,16 @@ fs_visitor::VARYING_PULL_CONSTANT_LOAD(const fs_reg &dst,
  * A helper for MOV generation for fixing up broken hardware SEND dependency
  * handling.
  */
-fs_inst *
-fs_visitor::DEP_RESOLVE_MOV(int grf)
+void
+fs_visitor::DEP_RESOLVE_MOV(const fs_builder &bld, int grf)
 {
-   fs_inst *inst = MOV(brw_null_reg(), fs_reg(GRF, grf, BRW_REGISTER_TYPE_F));
-
-   inst->ir = NULL;
-   inst->annotation = "send dependency resolve";
-
    /* The caller always wants uncompressed to emit the minimal extra
     * dependencies, and to avoid having to deal with aligning its regs to 2.
     */
-   inst->exec_size = 8;
+   const fs_builder ubld = bld.annotate("send dependency resolve")
+                              .half(0);
 
-   return inst;
+   ubld.MOV(ubld.null_reg_f(), fs_reg(GRF, grf, BRW_REGISTER_TYPE_F));
 }
 
 bool
@@ -3117,9 +3113,8 @@ fs_visitor::insert_gen4_pre_send_dependency_workarounds(bblock_t *block,
        */
       if (block->start() == scan_inst) {
          for (int i = 0; i < write_len; i++) {
-            if (needs_dep[i]) {
-               inst->insert_before(block, DEP_RESOLVE_MOV(first_write_grf + i));
-            }
+            if (needs_dep[i])
+               DEP_RESOLVE_MOV(bld.at(block, inst), first_write_grf + i);
          }
          return;
       }
@@ -3135,7 +3130,7 @@ fs_visitor::insert_gen4_pre_send_dependency_workarounds(bblock_t *block,
             if (reg >= first_write_grf &&
                 reg < first_write_grf + write_len &&
                 needs_dep[reg - first_write_grf]) {
-               inst->insert_before(block, DEP_RESOLVE_MOV(reg));
+               DEP_RESOLVE_MOV(bld.at(block, inst), reg);
                needs_dep[reg - first_write_grf] = false;
                if (scan_inst->exec_size == 16)
                   needs_dep[reg - first_write_grf + 1] = false;
@@ -3182,8 +3177,7 @@ fs_visitor::insert_gen4_post_send_dependency_workarounds(bblock_t *block, fs_ins
       if (block->end() == scan_inst) {
          for (int i = 0; i < write_len; i++) {
             if (needs_dep[i])
-               scan_inst->insert_before(block,
-                                        DEP_RESOLVE_MOV(first_write_grf + i));
+               DEP_RESOLVE_MOV(bld.at(block, scan_inst), first_write_grf + i);
          }
          return;
       }
@@ -3198,7 +3192,7 @@ fs_visitor::insert_gen4_post_send_dependency_workarounds(bblock_t *block, fs_ins
           scan_inst->dst.reg >= first_write_grf &&
           scan_inst->dst.reg < first_write_grf + write_len &&
           needs_dep[scan_inst->dst.reg - first_write_grf]) {
-         scan_inst->insert_before(block, DEP_RESOLVE_MOV(scan_inst->dst.reg));
+         DEP_RESOLVE_MOV(bld.at(block, scan_inst), scan_inst->dst.reg);
          needs_dep[scan_inst->dst.reg - first_write_grf] = false;
       }
 
