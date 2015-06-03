@@ -1132,21 +1132,21 @@ fs_visitor::try_replace_with_sel()
       if (src0.file == IMM) {
          src0 = vgrf(glsl_type::float_type);
          src0.type = then_mov->src[0].type;
-         emit(MOV(src0, then_mov->src[0]));
+         bld.MOV(src0, then_mov->src[0]);
       }
 
-      fs_inst *sel;
       if (if_inst->conditional_mod) {
          /* Sandybridge-specific IF with embedded comparison */
-         emit(CMP(reg_null_d, if_inst->src[0], if_inst->src[1],
-                  if_inst->conditional_mod));
-         sel = emit(BRW_OPCODE_SEL, then_mov->dst, src0, else_mov->src[0]);
-         sel->predicate = BRW_PREDICATE_NORMAL;
+         bld.CMP(bld.null_reg_d(), if_inst->src[0], if_inst->src[1],
+                 if_inst->conditional_mod);
+         set_predicate(BRW_PREDICATE_NORMAL,
+                       bld.emit(BRW_OPCODE_SEL, then_mov->dst,
+                                src0, else_mov->src[0]));
       } else {
          /* Separate CMP and IF instructions */
-         sel = emit(BRW_OPCODE_SEL, then_mov->dst, src0, else_mov->src[0]);
-         sel->predicate = if_inst->predicate;
-         sel->predicate_inverse = if_inst->predicate_inverse;
+         set_predicate_inv(if_inst->predicate, if_inst->predicate_inverse,
+                           bld.emit(BRW_OPCODE_SEL, then_mov->dst,
+                                    src0, else_mov->src[0]));
       }
 
       return true;
