@@ -1525,7 +1525,7 @@ fs_visitor::emit_alpha_test()
 {
    assert(stage == MESA_SHADER_FRAGMENT);
    brw_wm_prog_key *key = (brw_wm_prog_key*) this->key;
-   this->current_annotation = "Alpha test";
+   const fs_builder abld = bld.annotate("Alpha test");
 
    fs_inst *cmp;
    if (key->alpha_test_func == GL_ALWAYS)
@@ -1535,15 +1535,15 @@ fs_visitor::emit_alpha_test()
       /* f0.1 = 0 */
       fs_reg some_reg = fs_reg(retype(brw_vec8_grf(0, 0),
                                       BRW_REGISTER_TYPE_UW));
-      cmp = emit(CMP(reg_null_f, some_reg, some_reg,
-                     BRW_CONDITIONAL_NEQ));
+      cmp = abld.CMP(bld.null_reg_f(), some_reg, some_reg,
+                     BRW_CONDITIONAL_NEQ);
    } else {
       /* RT0 alpha */
       fs_reg color = offset(outputs[0], 3);
 
       /* f0.1 &= func(color, ref) */
-      cmp = emit(CMP(reg_null_f, color, fs_reg(key->alpha_test_ref),
-                     cond_for_alpha_func(key->alpha_test_func)));
+      cmp = abld.CMP(bld.null_reg_f(), color, fs_reg(key->alpha_test_ref),
+                     cond_for_alpha_func(key->alpha_test_func));
    }
    cmp->predicate = BRW_PREDICATE_NORMAL;
    cmp->flag_subreg = 1;
