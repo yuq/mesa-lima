@@ -1355,9 +1355,9 @@ fs_visitor::compute_sample_position(fs_reg dst, fs_reg int_sample_pos)
 
    if (key->compute_pos_offset) {
       /* Convert int_sample_pos to floating point */
-      emit(MOV(dst, int_sample_pos));
+      bld.MOV(dst, int_sample_pos);
       /* Scale to the range [0, 1] */
-      emit(MUL(dst, dst, fs_reg(1 / 16.0f)));
+      bld.MUL(dst, dst, fs_reg(1 / 16.0f));
    }
    else {
       /* From ARB_sample_shading specification:
@@ -1365,7 +1365,7 @@ fs_visitor::compute_sample_position(fs_reg dst, fs_reg int_sample_pos)
        *  rasterization is disabled, gl_SamplePosition will always be
        *  (0.5, 0.5).
        */
-      emit(MOV(dst, fs_reg(0.5f)));
+      bld.MOV(dst, fs_reg(0.5f));
    }
 }
 
@@ -1374,7 +1374,7 @@ fs_visitor::emit_samplepos_setup()
 {
    assert(devinfo->gen >= 6);
 
-   this->current_annotation = "compute sample position";
+   const fs_builder abld = bld.annotate("compute sample position");
    fs_reg *reg = new(this->mem_ctx) fs_reg(vgrf(glsl_type::vec2_type));
    fs_reg pos = *reg;
    fs_reg int_sample_x = vgrf(glsl_type::int_type);
@@ -1396,22 +1396,22 @@ fs_visitor::emit_samplepos_setup()
                     BRW_REGISTER_TYPE_B), 16, 8, 2);
 
    if (dispatch_width == 8) {
-      emit(MOV(int_sample_x, fs_reg(sample_pos_reg)));
+      abld.MOV(int_sample_x, fs_reg(sample_pos_reg));
    } else {
-      emit(MOV(half(int_sample_x, 0), fs_reg(sample_pos_reg)));
-      emit(MOV(half(int_sample_x, 1), fs_reg(suboffset(sample_pos_reg, 16))))
-         ->force_sechalf = true;
+      abld.half(0).MOV(half(int_sample_x, 0), fs_reg(sample_pos_reg));
+      abld.half(1).MOV(half(int_sample_x, 1),
+                       fs_reg(suboffset(sample_pos_reg, 16)));
    }
    /* Compute gl_SamplePosition.x */
    compute_sample_position(pos, int_sample_x);
    pos = offset(pos, 1);
    if (dispatch_width == 8) {
-      emit(MOV(int_sample_y, fs_reg(suboffset(sample_pos_reg, 1))));
+      abld.MOV(int_sample_y, fs_reg(suboffset(sample_pos_reg, 1)));
    } else {
-      emit(MOV(half(int_sample_y, 0),
-               fs_reg(suboffset(sample_pos_reg, 1))));
-      emit(MOV(half(int_sample_y, 1), fs_reg(suboffset(sample_pos_reg, 17))))
-         ->force_sechalf = true;
+      abld.half(0).MOV(half(int_sample_y, 0),
+                       fs_reg(suboffset(sample_pos_reg, 1)));
+      abld.half(1).MOV(half(int_sample_y, 1),
+                       fs_reg(suboffset(sample_pos_reg, 17)));
    }
    /* Compute gl_SamplePosition.y */
    compute_sample_position(pos, int_sample_y);
@@ -1425,7 +1425,7 @@ fs_visitor::emit_sampleid_setup()
    brw_wm_prog_key *key = (brw_wm_prog_key*) this->key;
    assert(devinfo->gen >= 6);
 
-   this->current_annotation = "compute sample id";
+   const fs_builder abld = bld.annotate("compute sample id");
    fs_reg *reg = new(this->mem_ctx) fs_reg(vgrf(glsl_type::int_type));
 
    if (key->compute_sample_id) {
@@ -1452,26 +1452,25 @@ fs_visitor::emit_sampleid_setup()
        * are sample 1 of subspan 0; the third group is sample 0 of
        * subspan 1, and finally sample 1 of subspan 1.
        */
-      fs_inst *inst;
-      inst = emit(BRW_OPCODE_AND, t1,
-                  fs_reg(retype(brw_vec1_grf(0, 0), BRW_REGISTER_TYPE_UD)),
-                  fs_reg(0xc0));
-      inst->force_writemask_all = true;
-      inst = emit(BRW_OPCODE_SHR, t1, t1, fs_reg(5));
-      inst->force_writemask_all = true;
+      abld.exec_all()
+          .AND(t1, fs_reg(retype(brw_vec1_grf(0, 0), BRW_REGISTER_TYPE_UD)),
+               fs_reg(0xc0));
+      abld.exec_all().SHR(t1, t1, fs_reg(5));
+
       /* This works for both SIMD8 and SIMD16 */
-      inst = emit(MOV(t2, brw_imm_v(key->persample_2x ? 0x1010 : 0x3210)));
-      inst->force_writemask_all = true;
+      abld.exec_all()
+          .MOV(t2, brw_imm_v(key->persample_2x ? 0x1010 : 0x3210));
+
       /* This special instruction takes care of setting vstride=1,
        * width=4, hstride=0 of t2 during an ADD instruction.
        */
-      emit(FS_OPCODE_SET_SAMPLE_ID, *reg, t1, t2);
+      abld.emit(FS_OPCODE_SET_SAMPLE_ID, *reg, t1, t2);
    } else {
       /* As per GL_ARB_sample_shading specification:
        * "When rendering to a non-multisample buffer, or if multisample
        *  rasterization is disabled, gl_SampleID will always be zero."
        */
-      emit(BRW_OPCODE_MOV, *reg, fs_reg(0));
+      abld.MOV(*reg, fs_reg(0));
    }
 
    return reg;
