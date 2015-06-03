@@ -85,9 +85,9 @@ fs_visitor::opt_peephole_predicated_break()
        * instruction to set the flag register.
        */
       if (devinfo->gen == 6 && if_inst->conditional_mod) {
-         fs_inst *cmp_inst = CMP(reg_null_d, if_inst->src[0], if_inst->src[1],
-                                 if_inst->conditional_mod);
-         if_inst->insert_before(if_block, cmp_inst);
+         bld.at(if_block, if_inst)
+            .CMP(bld.null_reg_d(), if_inst->src[0], if_inst->src[1],
+                 if_inst->conditional_mod);
          jump_inst->predicate = BRW_PREDICATE_NORMAL;
       } else {
          jump_inst->predicate = if_inst->predicate;
