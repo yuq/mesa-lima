@@ -3179,7 +3179,7 @@ void anv_CmdDrawIndexed(
                   .StartVertexLocation = firstIndex,
                   .InstanceCount = instanceCount,
                   .StartInstanceLocation = firstInstance,
-                  .BaseVertexLocation = 0);
+                  .BaseVertexLocation = vertexOffset);
 }
 
 static void
