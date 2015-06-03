@@ -26,6 +26,8 @@
 #include "brw_cfg.h"
 #include "program/program.h"
 
+using namespace brw;
+
 class saturate_propagation_test : public ::testing::Test {
    virtual void SetUp();
 
@@ -101,13 +103,13 @@ saturate_propagation(fs_visitor *v)
 
 TEST_F(saturate_propagation_test, basic)
 {
+   const fs_builder &bld = v->bld;
    fs_reg dst0 = v->vgrf(glsl_type::float_type);
    fs_reg dst1 = v->vgrf(glsl_type::float_type);
    fs_reg src0 = v->vgrf(glsl_type::float_type);
    fs_reg src1 = v->vgrf(glsl_type::float_type);
-   v->emit(BRW_OPCODE_ADD, dst0, src0, src1);
-   v->emit(BRW_OPCODE_MOV, dst1, dst0)
-      ->saturate = true;
+   bld.ADD(dst0, src0, src1);
+   set_saturate(true, bld.MOV(dst1, dst0));
 
    /* = Before =
     *
@@ -136,15 +138,15 @@ TEST_F(saturate_propagation_test, basic)
 
 TEST_F(saturate_propagation_test, other_non_saturated_use)
 {
+   const fs_builder &bld = v->bld;
    fs_reg dst0 = v->vgrf(glsl_type::float_type);
    fs_reg dst1 = v->vgrf(glsl_type::float_type);
    fs_reg dst2 = v->vgrf(glsl_type::float_type);
    fs_reg src0 = v->vgrf(glsl_type::float_type);
    fs_reg src1 = v->vgrf(glsl_type::float_type);
-   v->emit(BRW_OPCODE_ADD, dst0, src0, src1);
-   v->emit(BRW_OPCODE_MOV, dst1, dst0)
-      ->saturate = true;
-   v->emit(BRW_OPCODE_ADD, dst2, dst0, src0);
+   bld.ADD(dst0, src0, src1);
+   set_saturate(true, bld.MOV(dst1, dst0));
+   bld.ADD(dst2, dst0, src0);
 
    /* = Before =
     *
@@ -174,14 +176,14 @@ TEST_F(saturate_propagation_test, other_non_saturated_use)
 
 TEST_F(saturate_propagation_test, predicated_instruction)
 {
+   const fs_builder &bld = v->bld;
    fs_reg dst0 = v->vgrf(glsl_type::float_type);
    fs_reg dst1 = v->vgrf(glsl_type::float_type);
    fs_reg src0 = v->vgrf(glsl_type::float_type);
    fs_reg src1 = v->vgrf(glsl_type::float_type);
-   v->emit(BRW_OPCODE_ADD, dst0, src0, src1)
+   bld.ADD(dst0, src0, src1)
       ->predicate = BRW_PREDICATE_NORMAL;
-   v->emit(BRW_OPCODE_MOV, dst1, dst0)
-      ->saturate = true;
+   set_saturate(true, bld.MOV(dst1, dst0));
 
    /* = Before =
     *
@@ -209,14 +211,14 @@ TEST_F(saturate_propagation_test, predicated_instruction)
 
 TEST_F(saturate_propagation_test, neg_mov_sat)
 {
+   const fs_builder &bld = v->bld;
    fs_reg dst0 = v->vgrf(glsl_type::float_type);
    fs_reg dst1 = v->vgrf(glsl_type::float_type);
    fs_reg src0 = v->vgrf(glsl_type::float_type);
    fs_reg src1 = v->vgrf(glsl_type::float_type);
-   v->emit(BRW_OPCODE_ADD, dst0, src0, src1);
+   bld.ADD(dst0, src0, src1);
    dst0.negate = true;
-   v->emit(BRW_OPCODE_MOV, dst1, dst0)
-      ->saturate = true;
+   set_saturate(true, bld.MOV(dst1, dst0));
 
    /* = Before =
     *
@@ -244,14 +246,14 @@ TEST_F(saturate_propagation_test, neg_mov_sat)
 
 TEST_F(saturate_propagation_test, abs_mov_sat)
 {
+   const fs_builder &bld = v->bld;
    fs_reg dst0 = v->vgrf(glsl_type::float_type);
    fs_reg dst1 = v->vgrf(glsl_type::float_type);
    fs_reg src0 = v->vgrf(glsl_type::float_type);
    fs_reg src1 = v->vgrf(glsl_type::float_type);
-   v->emit(BRW_OPCODE_ADD, dst0, src0, src1);
+   bld.ADD(dst0, src0, src1);
    dst0.abs = true;
-   v->emit(BRW_OPCODE_MOV, dst1, dst0)
-      ->saturate = true;
+   set_saturate(true, bld.MOV(dst1, dst0));
 
    /* = Before =
     *
@@ -279,16 +281,15 @@ TEST_F(saturate_propagation_test, abs_mov_sat)
 
 TEST_F(saturate_propagation_test, producer_saturates)
 {
+   const fs_builder &bld = v->bld;
    fs_reg dst0 = v->vgrf(glsl_type::float_type);
    fs_reg dst1 = v->vgrf(glsl_type::float_type);
    fs_reg dst2 = v->vgrf(glsl_type::float_type);
    fs_reg src0 = v->vgrf(glsl_type::float_type);
    fs_reg src1 = v->vgrf(glsl_type::float_type);
-   v->emit(BRW_OPCODE_ADD, dst0, src0, src1)
-      ->saturate = true;
-   v->emit(BRW_OPCODE_MOV, dst1, dst0)
-      ->saturate = true;
-   v->emit(BRW_OPCODE_MOV, dst2, dst0);
+   set_saturate(true, bld.ADD(dst0, src0, src1));
+   set_saturate(true, bld.MOV(dst1, dst0));
+   bld.MOV(dst2, dst0);
 
    /* = Before =
     *
@@ -319,16 +320,15 @@ TEST_F(saturate_propagation_test, producer_saturates)
 
 TEST_F(saturate_propagation_test, intervening_saturating_copy)
 {
+   const fs_builder &bld = v->bld;
    fs_reg dst0 = v->vgrf(glsl_type::float_type);
    fs_reg dst1 = v->vgrf(glsl_type::float_type);
    fs_reg dst2 = v->vgrf(glsl_type::float_type);
    fs_reg src0 = v->vgrf(glsl_type::float_type);
    fs_reg src1 = v->vgrf(glsl_type::float_type);
-   v->emit(BRW_OPCODE_ADD, dst0, src0, src1);
-   v->emit(BRW_OPCODE_MOV, dst1, dst0)
-      ->saturate = true;
-   v->emit(BRW_OPCODE_MOV, dst2, dst0)
-      ->saturate = true;
+   bld.ADD(dst0, src0, src1);
+   set_saturate(true, bld.MOV(dst1, dst0));
+   set_saturate(true, bld.MOV(dst2, dst0));
 
    /* = Before =
     *
@@ -361,16 +361,16 @@ TEST_F(saturate_propagation_test, intervening_saturating_copy)
 
 TEST_F(saturate_propagation_test, intervening_dest_write)
 {
+   const fs_builder &bld = v->bld;
    fs_reg dst0 = v->vgrf(glsl_type::vec4_type);
    fs_reg dst1 = v->vgrf(glsl_type::float_type);
    fs_reg src0 = v->vgrf(glsl_type::float_type);
    fs_reg src1 = v->vgrf(glsl_type::float_type);
    fs_reg src2 = v->vgrf(glsl_type::vec2_type);
-   v->emit(BRW_OPCODE_ADD, offset(dst0, 2), src0, src1);
-   v->emit(SHADER_OPCODE_TEX, dst0, src2)
+   bld.ADD(offset(dst0, 2), src0, src1);
+   bld.emit(SHADER_OPCODE_TEX, dst0, src2)
       ->regs_written = 4;
-   v->emit(BRW_OPCODE_MOV, dst1, offset(dst0, 2))
-      ->saturate = true;
+   set_saturate(true, bld.MOV(dst1, offset(dst0, 2)));
 
    /* = Before =
     *
@@ -401,18 +401,17 @@ TEST_F(saturate_propagation_test, intervening_dest_write)
 
 TEST_F(saturate_propagation_test, mul_neg_mov_sat_mov_sat)
 {
+   const fs_builder &bld = v->bld;
    fs_reg dst0 = v->vgrf(glsl_type::float_type);
    fs_reg dst1 = v->vgrf(glsl_type::float_type);
    fs_reg dst2 = v->vgrf(glsl_type::float_type);
    fs_reg src0 = v->vgrf(glsl_type::float_type);
    fs_reg src1 = v->vgrf(glsl_type::float_type);
-   v->emit(BRW_OPCODE_MUL, dst0, src0, src1);
+   bld.MUL(dst0, src0, src1);
    dst0.negate = true;
-   v->emit(BRW_OPCODE_MOV, dst1, dst0)
-      ->saturate = true;
+   set_saturate(true, bld.MOV(dst1, dst0));
    dst0.negate = false;
-   v->emit(BRW_OPCODE_MOV, dst2, dst0)
-      ->saturate = true;
+   set_saturate(true, bld.MOV(dst2, dst0));
 
    /* = Before =
     *
