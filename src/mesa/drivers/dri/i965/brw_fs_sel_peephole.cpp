@@ -153,9 +153,6 @@ fs_visitor::opt_peephole_sel()
       if (movs == 0)
          continue;
 
-      fs_inst *sel_inst[MAX_MOVS] = { NULL };
-      fs_inst *mov_imm_inst[MAX_MOVS] = { NULL };
-
       enum brw_predicate predicate;
       bool predicate_inverse;
       if (devinfo->gen == 6 && if_inst->conditional_mod) {
@@ -188,25 +185,6 @@ fs_visitor::opt_peephole_sel()
             movs = i;
             break;
          }
-
-         if (then_mov[i]->src[0].equals(else_mov[i]->src[0])) {
-            sel_inst[i] = MOV(then_mov[i]->dst, then_mov[i]->src[0]);
-         } else {
-            /* Only the last source register can be a constant, so if the MOV
-             * in the "then" clause uses a constant, we need to put it in a
-             * temporary.
-             */
-            fs_reg src0(then_mov[i]->src[0]);
-            if (src0.file == IMM) {
-               src0 = vgrf(glsl_type::float_type);
-               src0.type = then_mov[i]->src[0].type;
-               mov_imm_inst[i] = MOV(src0, then_mov[i]->src[0]);
-            }
-
-            sel_inst[i] = SEL(then_mov[i]->dst, src0, else_mov[i]->src[0]);
-            sel_inst[i]->predicate = predicate;
-            sel_inst[i]->predicate_inverse = predicate_inverse;
-         }
       }
 
       if (movs == 0)
@@ -220,9 +198,27 @@ fs_visitor::opt_peephole_sel()
       }
 
       for (int i = 0; i < movs; i++) {
-         if (mov_imm_inst[i])
-            if_inst->insert_before(block, mov_imm_inst[i]);
-         if_inst->insert_before(block, sel_inst[i]);
+         if (then_mov[i]->src[0].equals(else_mov[i]->src[0])) {
+            fs_inst *inst = MOV(then_mov[i]->dst, then_mov[i]->src[0]);
+            if_inst->insert_before(block, inst);
+         } else {
+            /* Only the last source register can be a constant, so if the MOV
+             * in the "then" clause uses a constant, we need to put it in a
+             * temporary.
+             */
+            fs_reg src0(then_mov[i]->src[0]);
+            if (src0.file == IMM) {
+               src0 = vgrf(glsl_type::float_type);
+               src0.type = then_mov[i]->src[0].type;
+               fs_inst *inst = MOV(src0, then_mov[i]->src[0]);
+               if_inst->insert_before(block, inst);
+            }
+
+            fs_inst *inst = SEL(then_mov[i]->dst, src0, else_mov[i]->src[0]);
+            inst->predicate = predicate;
+            inst->predicate_inverse = predicate_inverse;
+            if_inst->insert_before(block, inst);
+         }
 
          then_mov[i]->remove(then_block);
          else_mov[i]->remove(else_block);
