@@ -132,7 +132,7 @@ fs_visitor::emit_texture_gen4(ir_texture_opcode op, fs_reg dst,
 
    if (shadow_c.file != BAD_FILE) {
       for (int i = 0; i < coord_components; i++) {
-	 emit(MOV(fs_reg(MRF, base_mrf + mlen + i), coordinate));
+         bld.MOV(fs_reg(MRF, base_mrf + mlen + i), coordinate);
 	 coordinate = offset(coordinate, 1);
       }
 
@@ -140,7 +140,7 @@ fs_visitor::emit_texture_gen4(ir_texture_opcode op, fs_reg dst,
        * the unused slots must be zeroed.
        */
       for (int i = coord_components; i < 3; i++) {
-         emit(MOV(fs_reg(MRF, base_mrf + mlen + i), fs_reg(0.0f)));
+         bld.MOV(fs_reg(MRF, base_mrf + mlen + i), fs_reg(0.0f));
       }
       mlen += 3;
 
@@ -148,25 +148,25 @@ fs_visitor::emit_texture_gen4(ir_texture_opcode op, fs_reg dst,
 	 /* There's no plain shadow compare message, so we use shadow
 	  * compare with a bias of 0.0.
 	  */
-	 emit(MOV(fs_reg(MRF, base_mrf + mlen), fs_reg(0.0f)));
+         bld.MOV(fs_reg(MRF, base_mrf + mlen), fs_reg(0.0f));
 	 mlen++;
       } else if (op == ir_txb || op == ir_txl) {
-	 emit(MOV(fs_reg(MRF, base_mrf + mlen), lod));
+         bld.MOV(fs_reg(MRF, base_mrf + mlen), lod);
 	 mlen++;
       } else {
          unreachable("Should not get here.");
       }
 
-      emit(MOV(fs_reg(MRF, base_mrf + mlen), shadow_c));
+      bld.MOV(fs_reg(MRF, base_mrf + mlen), shadow_c);
       mlen++;
    } else if (op == ir_tex) {
       for (int i = 0; i < coord_components; i++) {
-	 emit(MOV(fs_reg(MRF, base_mrf + mlen + i), coordinate));
+         bld.MOV(fs_reg(MRF, base_mrf + mlen + i), coordinate);
 	 coordinate = offset(coordinate, 1);
       }
       /* zero the others. */
       for (int i = coord_components; i<3; i++) {
-         emit(MOV(fs_reg(MRF, base_mrf + mlen + i), fs_reg(0.0f)));
+         bld.MOV(fs_reg(MRF, base_mrf + mlen + i), fs_reg(0.0f));
       }
       /* gen4's SIMD8 sampler always has the slots for u,v,r present. */
       mlen += 3;
@@ -174,7 +174,7 @@ fs_visitor::emit_texture_gen4(ir_texture_opcode op, fs_reg dst,
       fs_reg &dPdx = lod;
 
       for (int i = 0; i < coord_components; i++) {
-	 emit(MOV(fs_reg(MRF, base_mrf + mlen + i), coordinate));
+         bld.MOV(fs_reg(MRF, base_mrf + mlen + i), coordinate);
 	 coordinate = offset(coordinate, 1);
       }
       /* the slots for u and v are always present, but r is optional */
@@ -195,20 +195,20 @@ fs_visitor::emit_texture_gen4(ir_texture_opcode op, fs_reg dst,
        *        m5     m6     m7     m8     m9     m10
        */
       for (int i = 0; i < grad_components; i++) {
-	 emit(MOV(fs_reg(MRF, base_mrf + mlen), dPdx));
+         bld.MOV(fs_reg(MRF, base_mrf + mlen), dPdx);
 	 dPdx = offset(dPdx, 1);
       }
       mlen += MAX2(grad_components, 2);
 
       for (int i = 0; i < grad_components; i++) {
-	 emit(MOV(fs_reg(MRF, base_mrf + mlen), dPdy));
+         bld.MOV(fs_reg(MRF, base_mrf + mlen), dPdy);
 	 dPdy = offset(dPdy, 1);
       }
       mlen += MAX2(grad_components, 2);
    } else if (op == ir_txs) {
       /* There's no SIMD8 resinfo message on Gen4.  Use SIMD16 instead. */
       simd16 = true;
-      emit(MOV(fs_reg(MRF, base_mrf + mlen, BRW_REGISTER_TYPE_UD), lod));
+      bld.MOV(fs_reg(MRF, base_mrf + mlen, BRW_REGISTER_TYPE_UD), lod);
       mlen += 2;
    } else {
       /* Oh joy.  gen4 doesn't have SIMD8 non-shadow-compare bias/lod
@@ -218,8 +218,8 @@ fs_visitor::emit_texture_gen4(ir_texture_opcode op, fs_reg dst,
       assert(op == ir_txb || op == ir_txl || op == ir_txf);
 
       for (int i = 0; i < coord_components; i++) {
-	 emit(MOV(fs_reg(MRF, base_mrf + mlen + i * 2, coordinate.type),
-                  coordinate));
+         bld.MOV(fs_reg(MRF, base_mrf + mlen + i * 2, coordinate.type),
+                 coordinate);
 	 coordinate = offset(coordinate, 1);
       }
 
@@ -227,13 +227,13 @@ fs_visitor::emit_texture_gen4(ir_texture_opcode op, fs_reg dst,
        * be necessary for TXF (ld), but seems wise to do for all messages.
        */
       for (int i = coord_components; i < 3; i++) {
-	 emit(MOV(fs_reg(MRF, base_mrf + mlen + i * 2), fs_reg(0.0f)));
+         bld.MOV(fs_reg(MRF, base_mrf + mlen + i * 2), fs_reg(0.0f));
       }
 
       /* lod/bias appears after u/v/r. */
       mlen += 6;
 
-      emit(MOV(fs_reg(MRF, base_mrf + mlen, lod.type), lod));
+      bld.MOV(fs_reg(MRF, base_mrf + mlen, lod.type), lod);
       mlen++;
 
       /* The unused upper half. */
@@ -261,7 +261,7 @@ fs_visitor::emit_texture_gen4(ir_texture_opcode op, fs_reg dst,
       unreachable("not reached");
    }
 
-   fs_inst *inst = emit(opcode, dst, reg_undef, fs_reg(sampler));
+   fs_inst *inst = bld.emit(opcode, dst, reg_undef, fs_reg(sampler));
    inst->base_mrf = base_mrf;
    inst->mlen = mlen;
    inst->header_size = 1;
@@ -269,7 +269,7 @@ fs_visitor::emit_texture_gen4(ir_texture_opcode op, fs_reg dst,
 
    if (simd16) {
       for (int i = 0; i < 4; i++) {
-	 emit(MOV(orig_dst, dst));
+         bld.MOV(orig_dst, dst);
 	 orig_dst = offset(orig_dst, 1);
 	 dst = offset(dst, 2);
       }
@@ -295,7 +295,7 @@ fs_visitor::emit_texture_gen4_simd16(ir_texture_opcode op, fs_reg dst,
 
    /* Copy the coordinates. */
    for (int i = 0; i < vector_elements; i++) {
-      emit(MOV(retype(offset(message, i), coordinate.type), coordinate));
+      bld.MOV(retype(offset(message, i), coordinate.type), coordinate);
       coordinate = offset(coordinate, 1);
    }
 
@@ -304,20 +304,20 @@ fs_visitor::emit_texture_gen4_simd16(ir_texture_opcode op, fs_reg dst,
    /* Messages other than sample and ld require all three components */
    if (has_lod || shadow_c.file != BAD_FILE) {
       for (int i = vector_elements; i < 3; i++) {
-         emit(MOV(offset(message, i), fs_reg(0.0f)));
+         bld.MOV(offset(message, i), fs_reg(0.0f));
       }
    }
 
    if (has_lod) {
       fs_reg msg_lod = retype(offset(message, 3), op == ir_txf ?
                               BRW_REGISTER_TYPE_UD : BRW_REGISTER_TYPE_F);
-      emit(MOV(msg_lod, lod));
+      bld.MOV(msg_lod, lod);
       msg_end = offset(msg_lod, 1);
    }
 
    if (shadow_c.file != BAD_FILE) {
       fs_reg msg_ref = offset(message, 3 + has_lod);
-      emit(MOV(msg_ref, shadow_c));
+      bld.MOV(msg_ref, shadow_c);
       msg_end = offset(msg_ref, 1);
    }
 
@@ -332,7 +332,7 @@ fs_visitor::emit_texture_gen4_simd16(ir_texture_opcode op, fs_reg dst,
    default: unreachable("not reached");
    }
 
-   fs_inst *inst = emit(opcode, dst, reg_undef, fs_reg(sampler));
+   fs_inst *inst = bld.emit(opcode, dst, reg_undef, fs_reg(sampler));
    inst->base_mrf = message.reg - 1;
    inst->mlen = msg_end.reg - inst->base_mrf;
    inst->header_size = 1;
@@ -372,7 +372,7 @@ fs_visitor::emit_texture_gen5(ir_texture_opcode op, fs_reg dst,
    }
 
    for (int i = 0; i < vector_elements; i++) {
-      emit(MOV(retype(offset(msg_coords, i), coordinate.type), coordinate));
+      bld.MOV(retype(offset(msg_coords, i), coordinate.type), coordinate);
       coordinate = offset(coordinate, 1);
    }
    fs_reg msg_end = offset(msg_coords, vector_elements);
@@ -380,7 +380,7 @@ fs_visitor::emit_texture_gen5(ir_texture_opcode op, fs_reg dst,
 
    if (shadow_c.file != BAD_FILE) {
       fs_reg msg_shadow = msg_lod;
-      emit(MOV(msg_shadow, shadow_c));
+      bld.MOV(msg_shadow, shadow_c);
       msg_lod = offset(msg_shadow, 1);
       msg_end = msg_lod;
    }
@@ -391,13 +391,13 @@ fs_visitor::emit_texture_gen5(ir_texture_opcode op, fs_reg dst,
       opcode = SHADER_OPCODE_TEX;
       break;
    case ir_txb:
-      emit(MOV(msg_lod, lod));
+      bld.MOV(msg_lod, lod);
       msg_end = offset(msg_lod, 1);
 
       opcode = FS_OPCODE_TXB;
       break;
    case ir_txl:
-      emit(MOV(msg_lod, lod));
+      bld.MOV(msg_lod, lod);
       msg_end = offset(msg_lod, 1);
 
       opcode = SHADER_OPCODE_TXL;
@@ -414,11 +414,11 @@ fs_visitor::emit_texture_gen5(ir_texture_opcode op, fs_reg dst,
        */
       msg_end = msg_lod;
       for (int i = 0; i < grad_components; i++) {
-         emit(MOV(msg_end, lod));
+         bld.MOV(msg_end, lod);
          lod = offset(lod, 1);
          msg_end = offset(msg_end, 1);
 
-         emit(MOV(msg_end, lod2));
+         bld.MOV(msg_end, lod2);
          lod2 = offset(lod2, 1);
          msg_end = offset(msg_end, 1);
       }
@@ -428,21 +428,21 @@ fs_visitor::emit_texture_gen5(ir_texture_opcode op, fs_reg dst,
    }
    case ir_txs:
       msg_lod = retype(msg_end, BRW_REGISTER_TYPE_UD);
-      emit(MOV(msg_lod, lod));
+      bld.MOV(msg_lod, lod);
       msg_end = offset(msg_lod, 1);
 
       opcode = SHADER_OPCODE_TXS;
       break;
    case ir_query_levels:
       msg_lod = msg_end;
-      emit(MOV(retype(msg_lod, BRW_REGISTER_TYPE_UD), fs_reg(0u)));
+      bld.MOV(retype(msg_lod, BRW_REGISTER_TYPE_UD), fs_reg(0u));
       msg_end = offset(msg_lod, 1);
 
       opcode = SHADER_OPCODE_TXS;
       break;
    case ir_txf:
       msg_lod = offset(msg_coords, 3);
-      emit(MOV(retype(msg_lod, BRW_REGISTER_TYPE_UD), lod));
+      bld.MOV(retype(msg_lod, BRW_REGISTER_TYPE_UD), lod);
       msg_end = offset(msg_lod, 1);
 
       opcode = SHADER_OPCODE_TXF;
@@ -450,9 +450,9 @@ fs_visitor::emit_texture_gen5(ir_texture_opcode op, fs_reg dst,
    case ir_txf_ms:
       msg_lod = offset(msg_coords, 3);
       /* lod */
-      emit(MOV(retype(msg_lod, BRW_REGISTER_TYPE_UD), fs_reg(0u)));
+      bld.MOV(retype(msg_lod, BRW_REGISTER_TYPE_UD), fs_reg(0u));
       /* sample index */
-      emit(MOV(retype(offset(msg_lod, 1), BRW_REGISTER_TYPE_UD), sample_index));
+      bld.MOV(retype(offset(msg_lod, 1), BRW_REGISTER_TYPE_UD), sample_index);
       msg_end = offset(msg_lod, 2);
 
       opcode = SHADER_OPCODE_TXF_CMS;
@@ -467,7 +467,7 @@ fs_visitor::emit_texture_gen5(ir_texture_opcode op, fs_reg dst,
       unreachable("not reached");
    }
 
-   fs_inst *inst = emit(opcode, dst, reg_undef, fs_reg(sampler));
+   fs_inst *inst = bld.emit(opcode, dst, reg_undef, fs_reg(sampler));
    inst->base_mrf = message.reg;
    inst->mlen = msg_end.reg - message.reg;
    inst->header_size = header_size;
@@ -525,7 +525,7 @@ fs_visitor::emit_texture_gen7(ir_texture_opcode op, fs_reg dst,
    }
 
    if (shadow_c.file != BAD_FILE) {
-      emit(MOV(sources[length], shadow_c));
+      bld.MOV(sources[length], shadow_c);
       length++;
    }
 
@@ -548,11 +548,11 @@ fs_visitor::emit_texture_gen7(ir_texture_opcode op, fs_reg dst,
    case ir_lod:
       break;
    case ir_txb:
-      emit(MOV(sources[length], lod));
+      bld.MOV(sources[length], lod);
       length++;
       break;
    case ir_txl:
-      emit(MOV(sources[length], lod));
+      bld.MOV(sources[length], lod);
       length++;
       break;
    case ir_txd: {
@@ -562,7 +562,7 @@ fs_visitor::emit_texture_gen7(ir_texture_opcode op, fs_reg dst,
        * [hdr], [ref], x, dPdx.x, dPdy.x, y, dPdx.y, dPdy.y, z, dPdx.z, dPdy.z
        */
       for (int i = 0; i < coord_components; i++) {
-	 emit(MOV(sources[length], coordinate));
+         bld.MOV(sources[length], coordinate);
 	 coordinate = offset(coordinate, 1);
 	 length++;
 
@@ -570,11 +570,11 @@ fs_visitor::emit_texture_gen7(ir_texture_opcode op, fs_reg dst,
           * only derivatives for (u, v, r).
           */
          if (i < grad_components) {
-            emit(MOV(sources[length], lod));
+            bld.MOV(sources[length], lod);
             lod = offset(lod, 1);
             length++;
 
-            emit(MOV(sources[length], lod2));
+            bld.MOV(sources[length], lod2);
             lod2 = offset(lod2, 1);
             length++;
          }
@@ -584,11 +584,11 @@ fs_visitor::emit_texture_gen7(ir_texture_opcode op, fs_reg dst,
       break;
    }
    case ir_txs:
-      emit(MOV(retype(sources[length], BRW_REGISTER_TYPE_UD), lod));
+      bld.MOV(retype(sources[length], BRW_REGISTER_TYPE_UD), lod);
       length++;
       break;
    case ir_query_levels:
-      emit(MOV(retype(sources[length], BRW_REGISTER_TYPE_UD), fs_reg(0u)));
+      bld.MOV(retype(sources[length], BRW_REGISTER_TYPE_UD), fs_reg(0u));
       length++;
       break;
    case ir_txf:
@@ -596,23 +596,23 @@ fs_visitor::emit_texture_gen7(ir_texture_opcode op, fs_reg dst,
        * On Gen9 they are u, v, lod, r
        */
 
-      emit(MOV(retype(sources[length], BRW_REGISTER_TYPE_D), coordinate));
+      bld.MOV(retype(sources[length], BRW_REGISTER_TYPE_D), coordinate);
       coordinate = offset(coordinate, 1);
       length++;
 
       if (devinfo->gen >= 9) {
          if (coord_components >= 2) {
-            emit(MOV(retype(sources[length], BRW_REGISTER_TYPE_D), coordinate));
+            bld.MOV(retype(sources[length], BRW_REGISTER_TYPE_D), coordinate);
             coordinate = offset(coordinate, 1);
          }
          length++;
       }
 
-      emit(MOV(retype(sources[length], BRW_REGISTER_TYPE_D), lod));
+      bld.MOV(retype(sources[length], BRW_REGISTER_TYPE_D), lod);
       length++;
 
       for (int i = devinfo->gen >= 9 ? 2 : 1; i < coord_components; i++) {
-	 emit(MOV(retype(sources[length], BRW_REGISTER_TYPE_D), coordinate));
+         bld.MOV(retype(sources[length], BRW_REGISTER_TYPE_D), coordinate);
 	 coordinate = offset(coordinate, 1);
 	 length++;
       }
@@ -620,18 +620,18 @@ fs_visitor::emit_texture_gen7(ir_texture_opcode op, fs_reg dst,
       coordinate_done = true;
       break;
    case ir_txf_ms:
-      emit(MOV(retype(sources[length], BRW_REGISTER_TYPE_UD), sample_index));
+      bld.MOV(retype(sources[length], BRW_REGISTER_TYPE_UD), sample_index);
       length++;
 
       /* data from the multisample control surface */
-      emit(MOV(retype(sources[length], BRW_REGISTER_TYPE_UD), mcs));
+      bld.MOV(retype(sources[length], BRW_REGISTER_TYPE_UD), mcs);
       length++;
 
       /* there is no offsetting for this message; just copy in the integer
        * texture coordinates
        */
       for (int i = 0; i < coord_components; i++) {
-         emit(MOV(retype(sources[length], BRW_REGISTER_TYPE_D), coordinate));
+         bld.MOV(retype(sources[length], BRW_REGISTER_TYPE_D), coordinate);
          coordinate = offset(coordinate, 1);
          length++;
       }
@@ -645,19 +645,19 @@ fs_visitor::emit_texture_gen7(ir_texture_opcode op, fs_reg dst,
 
          /* More crazy intermixing */
          for (int i = 0; i < 2; i++) { /* u, v */
-            emit(MOV(sources[length], coordinate));
+            bld.MOV(sources[length], coordinate);
             coordinate = offset(coordinate, 1);
             length++;
          }
 
          for (int i = 0; i < 2; i++) { /* offu, offv */
-            emit(MOV(retype(sources[length], BRW_REGISTER_TYPE_D), offset_value));
+            bld.MOV(retype(sources[length], BRW_REGISTER_TYPE_D), offset_value);
             offset_value = offset(offset_value, 1);
             length++;
          }
 
          if (coord_components == 3) { /* r if present */
-            emit(MOV(sources[length], coordinate));
+            bld.MOV(sources[length], coordinate);
             coordinate = offset(coordinate, 1);
             length++;
          }
@@ -670,7 +670,7 @@ fs_visitor::emit_texture_gen7(ir_texture_opcode op, fs_reg dst,
    /* Set up the coordinate (except for cases where it was done above) */
    if (!coordinate_done) {
       for (int i = 0; i < coord_components; i++) {
-         emit(MOV(sources[length], coordinate));
+         bld.MOV(sources[length], coordinate);
          coordinate = offset(coordinate, 1);
          length++;
       }
@@ -684,7 +684,7 @@ fs_visitor::emit_texture_gen7(ir_texture_opcode op, fs_reg dst,
 
    fs_reg src_payload = fs_reg(GRF, alloc.allocate(mlen),
                                BRW_REGISTER_TYPE_F, dispatch_width);
-   emit(LOAD_PAYLOAD(src_payload, sources, length, header_size));
+   bld.LOAD_PAYLOAD(src_payload, sources, length, header_size);
 
    /* Generate the SEND */
    enum opcode opcode;
@@ -707,7 +707,7 @@ fs_visitor::emit_texture_gen7(ir_texture_opcode op, fs_reg dst,
    default:
       unreachable("not reached");
    }
-   fs_inst *inst = emit(opcode, dst, src_payload, sampler);
+   fs_inst *inst = bld.emit(opcode, dst, src_payload, sampler);
    inst->base_mrf = -1;
    inst->mlen = mlen;
    inst->header_size = header_size;
@@ -725,7 +725,6 @@ fs_reg
 fs_visitor::rescale_texcoord(fs_reg coordinate, int coord_components,
                              bool is_rect, uint32_t sampler, int texunit)
 {
-   fs_inst *inst = NULL;
    bool needs_gl_clamp = true;
    fs_reg scale_x, scale_y;
 
@@ -784,10 +783,10 @@ fs_visitor::rescale_texcoord(fs_reg coordinate, int coord_components,
       fs_reg src = coordinate;
       coordinate = dst;
 
-      emit(MUL(dst, src, scale_x));
+      bld.MUL(dst, src, scale_x);
       dst = offset(dst, 1);
       src = offset(src, 1);
-      emit(MUL(dst, src, scale_y));
+      bld.MUL(dst, src, scale_y);
    } else if (is_rect) {
       /* On gen6+, the sampler handles the rectangle coordinates
        * natively, without needing rescaling.  But that means we have
@@ -801,8 +800,8 @@ fs_visitor::rescale_texcoord(fs_reg coordinate, int coord_components,
 	    fs_reg chan = coordinate;
 	    chan = offset(chan, i);
 
-	    inst = emit(BRW_OPCODE_SEL, chan, chan, fs_reg(0.0f));
-	    inst->conditional_mod = BRW_CONDITIONAL_GE;
+            set_condmod(BRW_CONDITIONAL_GE,
+                        bld.emit(BRW_OPCODE_SEL, chan, chan, fs_reg(0.0f)));
 
 	    /* Our parameter comes in as 1.0/width or 1.0/height,
 	     * because that's what people normally want for doing
@@ -811,11 +810,11 @@ fs_visitor::rescale_texcoord(fs_reg coordinate, int coord_components,
 	     * parameter type, so just invert back.
 	     */
 	    fs_reg limit = vgrf(glsl_type::float_type);
-	    emit(MOV(limit, i == 0 ? scale_x : scale_y));
-	    emit(SHADER_OPCODE_RCP, limit, limit);
+            bld.MOV(limit, i == 0 ? scale_x : scale_y);
+            bld.emit(SHADER_OPCODE_RCP, limit, limit);
 
-	    inst = emit(BRW_OPCODE_SEL, chan, chan, limit);
-	    inst->conditional_mod = BRW_CONDITIONAL_L;
+            set_condmod(BRW_CONDITIONAL_L,
+                        bld.emit(BRW_OPCODE_SEL, chan, chan, limit));
 	 }
       }
    }
@@ -825,9 +824,7 @@ fs_visitor::rescale_texcoord(fs_reg coordinate, int coord_components,
 	 if (key_tex->gl_clamp_mask[i] & (1 << sampler)) {
 	    fs_reg chan = coordinate;
 	    chan = offset(chan, i);
-
-	    fs_inst *inst = emit(MOV(chan, chan));
-	    inst->saturate = true;
+            set_saturate(true, bld.MOV(chan, chan));
 	 }
       }
    }
@@ -847,13 +844,13 @@ fs_visitor::emit_mcs_fetch(fs_reg coordinate, int components, fs_reg sampler)
    /* parameters are: u, v, r; missing parameters are treated as zero */
    for (int i = 0; i < components; i++) {
       sources[i] = vgrf(glsl_type::float_type);
-      emit(MOV(retype(sources[i], BRW_REGISTER_TYPE_D), coordinate));
+      bld.MOV(retype(sources[i], BRW_REGISTER_TYPE_D), coordinate);
       coordinate = offset(coordinate, 1);
    }
 
-   emit(LOAD_PAYLOAD(payload, sources, components, 0));
+   bld.LOAD_PAYLOAD(payload, sources, components, 0);
 
-   fs_inst *inst = emit(SHADER_OPCODE_TXF_MCS, dest, payload, sampler);
+   fs_inst *inst = bld.emit(SHADER_OPCODE_TXF_MCS, dest, payload, sampler);
    inst->base_mrf = -1;
    inst->mlen = components * reg_width;
    inst->header_size = 0;
@@ -893,7 +890,7 @@ fs_visitor::emit_texture(ir_texture_opcode op,
          this->result = res;
 
          for (int i=0; i<4; i++) {
-            emit(MOV(res, fs_reg(swiz == SWIZZLE_ZERO ? 0.0f : 1.0f)));
+            bld.MOV(res, fs_reg(swiz == SWIZZLE_ZERO ? 0.0f : 1.0f));
             res = offset(res, 1);
          }
          return;
@@ -950,7 +947,7 @@ fs_visitor::emit_texture(ir_texture_opcode op,
    if (op == ir_txs && is_cube_array) {
       fs_reg depth = offset(dst, 2);
       fs_reg fixed_depth = vgrf(glsl_type::int_type);
-      emit_math(SHADER_OPCODE_INT_QUOTIENT, fixed_depth, depth, fs_reg(6));
+      bld.emit(SHADER_OPCODE_INT_QUOTIENT, fixed_depth, depth, fs_reg(6));
 
       fs_reg *fixed_payload = ralloc_array(mem_ctx, fs_reg, inst->regs_written);
       int components = inst->regs_written / (dst.width / 8);
@@ -961,7 +958,7 @@ fs_visitor::emit_texture(ir_texture_opcode op,
             fixed_payload[i] = offset(dst, i);
          }
       }
-      emit(LOAD_PAYLOAD(dst, fixed_payload, components, 0));
+      bld.LOAD_PAYLOAD(dst, fixed_payload, components, 0);
    }
 
    swizzle_result(op, dest_type->vector_elements, dst, sampler);
@@ -981,16 +978,16 @@ fs_visitor::emit_gen6_gather_wa(uint8_t wa, fs_reg dst)
    for (int i = 0; i < 4; i++) {
       fs_reg dst_f = retype(dst, BRW_REGISTER_TYPE_F);
       /* Convert from UNORM to UINT */
-      emit(MUL(dst_f, dst_f, fs_reg((float)((1 << width) - 1))));
-      emit(MOV(dst, dst_f));
+      bld.MUL(dst_f, dst_f, fs_reg((float)((1 << width) - 1)));
+      bld.MOV(dst, dst_f);
 
       if (wa & WA_SIGN) {
          /* Reinterpret the UINT value as a signed INT value by
           * shifting the sign bit into place, then shifting back
           * preserving sign.
           */
-         emit(SHL(dst, dst, fs_reg(32 - width)));
-         emit(ASR(dst, dst, fs_reg(32 - width)));
+         bld.SHL(dst, dst, fs_reg(32 - width));
+         bld.ASR(dst, dst, fs_reg(32 - width));
       }
 
       dst = offset(dst, 1);
@@ -1054,12 +1051,12 @@ fs_visitor::swizzle_result(ir_texture_opcode op, int dest_components,
 	 l = offset(l, i);
 
 	 if (swiz == SWIZZLE_ZERO) {
-	    emit(MOV(l, fs_reg(0.0f)));
+            bld.MOV(l, fs_reg(0.0f));
 	 } else if (swiz == SWIZZLE_ONE) {
-	    emit(MOV(l, fs_reg(1.0f)));
+            bld.MOV(l, fs_reg(1.0f));
 	 } else {
-            emit(MOV(l, offset(orig_val,
-                               GET_SWZ(key_tex->swizzles[sampler], i))));
+            bld.MOV(l, offset(orig_val,
+                              GET_SWZ(key_tex->swizzles[sampler], i)));
 	 }
       }
       this->result = swizzled_result;
