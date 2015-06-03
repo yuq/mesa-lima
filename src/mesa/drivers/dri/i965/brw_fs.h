@@ -339,7 +339,8 @@ public:
 
    void emit_shader_time_begin();
    void emit_shader_time_end();
-   fs_inst *SHADER_TIME_ADD(enum shader_time_shader_type type, fs_reg value);
+   void SHADER_TIME_ADD(const brw::fs_builder &bld,
+                        enum shader_time_shader_type type, fs_reg value);
 
    void emit_untyped_atomic(unsigned atomic_op, unsigned surf_index,
                             fs_reg dst, fs_reg offset, fs_reg src0,
@@ -350,7 +351,7 @@ public:
 
    void resolve_ud_negate(fs_reg *reg);
 
-   fs_reg get_timestamp(fs_inst **out_mov);
+   fs_reg get_timestamp(const brw::fs_builder &bld);
 
    struct brw_reg interp_reg(int location, int channel);
    int implied_mrf_writes(fs_inst *inst);

@@ -675,7 +675,7 @@ fs_visitor::type_size(const struct glsl_type *type)
  * the destination of the MOV, with extra parameters set.
  */
 fs_reg
-fs_visitor::get_timestamp(fs_inst **out_mov)
+fs_visitor::get_timestamp(const fs_builder &bld)
 {
    assert(devinfo->gen >= 7);
 
@@ -686,11 +686,10 @@ fs_visitor::get_timestamp(fs_inst **out_mov)
 
    fs_reg dst = fs_reg(GRF, alloc.allocate(1), BRW_REGISTER_TYPE_UD, 4);
 
-   fs_inst *mov = MOV(dst, ts);
    /* We want to read the 3 fields we care about even if it's not enabled in
     * the dispatch.
     */
-   mov->force_writemask_all = true;
+   bld.exec_all().MOV(dst, ts);
 
    /* The caller wants the low 32 bits of the timestamp.  Since it's running
     * at the GPU clock rate of ~1.2ghz, it will roll over every ~3 seconds,
@@ -704,24 +703,18 @@ fs_visitor::get_timestamp(fs_inst **out_mov)
     */
    dst.set_smear(0);
 
-   *out_mov = mov;
    return dst;
 }
 
 void
 fs_visitor::emit_shader_time_begin()
 {
-   current_annotation = "shader time start";
-   fs_inst *mov;
-   shader_start_time = get_timestamp(&mov);
-   emit(mov);
+   shader_start_time = get_timestamp(bld.annotate("shader time start"));
 }
 
 void
 fs_visitor::emit_shader_time_end()
 {
-   current_annotation = "shader time end";
-
    enum shader_time_shader_type type, written_type, reset_type;
    switch (stage) {
    case MESA_SHADER_VERTEX:
@@ -758,47 +751,41 @@ fs_visitor::emit_shader_time_end()
    /* Insert our code just before the final SEND with EOT. */
    exec_node *end = this->instructions.get_tail();
    assert(end && ((fs_inst *) end)->eot);
+   const fs_builder ibld = bld.annotate("shader time end")
+                              .exec_all().at(NULL, end);
 
-   fs_inst *tm_read;
-   fs_reg shader_end_time = get_timestamp(&tm_read);
-   end->insert_before(tm_read);
+   fs_reg shader_end_time = get_timestamp(ibld);
 
    /* Check that there weren't any timestamp reset events (assuming these
     * were the only two timestamp reads that happened).
     */
    fs_reg reset = shader_end_time;
    reset.set_smear(2);
-   fs_inst *test = AND(reg_null_d, reset, fs_reg(1u));
-   test->conditional_mod = BRW_CONDITIONAL_Z;
-   test->force_writemask_all = true;
-   end->insert_before(test);
-   end->insert_before(IF(BRW_PREDICATE_NORMAL));
+   set_condmod(BRW_CONDITIONAL_Z,
+               ibld.AND(ibld.null_reg_ud(), reset, fs_reg(1u)));
+   ibld.IF(BRW_PREDICATE_NORMAL);
 
    fs_reg start = shader_start_time;
    start.negate = true;
    fs_reg diff = fs_reg(GRF, alloc.allocate(1), BRW_REGISTER_TYPE_UD, 1);
    diff.set_smear(0);
-   fs_inst *add = ADD(diff, start, shader_end_time);
-   add->force_writemask_all = true;
-   end->insert_before(add);
+   ibld.ADD(diff, start, shader_end_time);
 
    /* If there were no instructions between the two timestamp gets, the diff
     * is 2 cycles.  Remove that overhead, so I can forget about that when
     * trying to determine the time taken for single instructions.
     */
-   add = ADD(diff, diff, fs_reg(-2u));
-   add->force_writemask_all = true;
-   end->insert_before(add);
-
-   end->insert_before(SHADER_TIME_ADD(type, diff));
-   end->insert_before(SHADER_TIME_ADD(written_type, fs_reg(1u)));
-   end->insert_before(new(mem_ctx) fs_inst(BRW_OPCODE_ELSE, dispatch_width));
-   end->insert_before(SHADER_TIME_ADD(reset_type, fs_reg(1u)));
-   end->insert_before(new(mem_ctx) fs_inst(BRW_OPCODE_ENDIF, dispatch_width));
+   ibld.ADD(diff, diff, fs_reg(-2u));
+   SHADER_TIME_ADD(ibld, type, diff);
+   SHADER_TIME_ADD(ibld, written_type, fs_reg(1u));
+   ibld.emit(BRW_OPCODE_ELSE);
+   SHADER_TIME_ADD(ibld, reset_type, fs_reg(1u));
+   ibld.emit(BRW_OPCODE_ENDIF);
 }
 
-fs_inst *
-fs_visitor::SHADER_TIME_ADD(enum shader_time_shader_type type, fs_reg value)
+void
+fs_visitor::SHADER_TIME_ADD(const fs_builder &bld,
+                            enum shader_time_shader_type type, fs_reg value)
 {
    int shader_time_index =
       brw_get_shader_time_index(brw, shader_prog, prog, type);
@@ -810,8 +797,7 @@ fs_visitor::SHADER_TIME_ADD(enum shader_time_shader_type type, fs_reg value)
    else
       payload = vgrf(glsl_type::uint_type);
 
-   return new(mem_ctx) fs_inst(SHADER_OPCODE_SHADER_TIME_ADD,
-                               fs_reg(), payload, offset, value);
+   bld.emit(SHADER_OPCODE_SHADER_TIME_ADD, fs_reg(), payload, offset, value);
 }
 
 void
