@@ -351,15 +351,13 @@ fs_visitor::LOAD_PAYLOAD(const fs_reg &dst, fs_reg *src, int sources,
    return inst;
 }
 
-exec_list
-fs_visitor::VARYING_PULL_CONSTANT_LOAD(const fs_reg &dst,
+void
+fs_visitor::VARYING_PULL_CONSTANT_LOAD(const fs_builder &bld,
+                                       const fs_reg &dst,
                                        const fs_reg &surf_index,
                                        const fs_reg &varying_offset,
                                        uint32_t const_offset)
 {
-   exec_list instructions;
-   fs_inst *inst;
-
    /* We have our constant surface use a pitch of 4 bytes, so our index can
     * be any component of a vector, and then we load 4 contiguous
     * components starting from that.
@@ -372,8 +370,7 @@ fs_visitor::VARYING_PULL_CONSTANT_LOAD(const fs_reg &dst,
     * the redundant ones.
     */
    fs_reg vec4_offset = vgrf(glsl_type::int_type);
-   instructions.push_tail(ADD(vec4_offset,
-                              varying_offset, fs_reg(const_offset & ~3)));
+   bld.ADD(vec4_offset, varying_offset, fs_reg(const_offset & ~3));
 
    int scale = 1;
    if (devinfo->gen == 4 && dst.width == 8) {
@@ -395,9 +392,8 @@ fs_visitor::VARYING_PULL_CONSTANT_LOAD(const fs_reg &dst,
    int regs_written = 4 * (dst.width / 8) * scale;
    fs_reg vec4_result = fs_reg(GRF, alloc.allocate(regs_written),
                                dst.type, dst.width);
-   inst = new(mem_ctx) fs_inst(op, vec4_result, surf_index, vec4_offset);
+   fs_inst *inst = bld.emit(op, vec4_result, surf_index, vec4_offset);
    inst->regs_written = regs_written;
-   instructions.push_tail(inst);
 
    if (devinfo->gen < 7) {
       inst->base_mrf = 13;
@@ -408,10 +404,7 @@ fs_visitor::VARYING_PULL_CONSTANT_LOAD(const fs_reg &dst,
          inst->mlen = 1 + dispatch_width / 8;
    }
 
-   fs_reg result = offset(vec4_result, (const_offset & 3) * scale);
-   instructions.push_tail(MOV(dst, result));
-
-   return instructions;
+   bld.MOV(dst, offset(vec4_result, (const_offset & 3) * scale));
 }
 
 /**
@@ -2211,26 +2204,22 @@ fs_visitor::demote_pull_constants()
 	    continue;
 
          /* Set up the annotation tracking for new generated instructions. */
-         base_ir = inst->ir;
-         current_annotation = inst->annotation;
-
+         const fs_builder ibld = bld.annotate(inst->annotation, inst->ir)
+                                    .at(block, inst);
          fs_reg surf_index(stage_prog_data->binding_table.pull_constants_start);
          fs_reg dst = vgrf(glsl_type::float_type);
 
          /* Generate a pull load into dst. */
          if (inst->src[i].reladdr) {
-            exec_list list = VARYING_PULL_CONSTANT_LOAD(dst,
-                                                        surf_index,
-                                                        *inst->src[i].reladdr,
-                                                        pull_index);
-            inst->insert_before(block, &list);
+            VARYING_PULL_CONSTANT_LOAD(ibld, dst,
+                                       surf_index,
+                                       *inst->src[i].reladdr,
+                                       pull_index);
             inst->src[i].reladdr = NULL;
          } else {
             fs_reg offset = fs_reg((unsigned)(pull_index * 4) & ~15);
-            fs_inst *pull =
-               new(mem_ctx) fs_inst(FS_OPCODE_UNIFORM_PULL_CONSTANT_LOAD, 8,
-                                    dst, surf_index, offset);
-            inst->insert_before(block, pull);
+            ibld.emit(FS_OPCODE_UNIFORM_PULL_CONSTANT_LOAD,
+                      dst, surf_index, offset);
             inst->src[i].set_smear(pull_index & 3);
          }
 

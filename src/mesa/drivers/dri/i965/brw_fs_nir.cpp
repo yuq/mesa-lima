@@ -1397,8 +1397,8 @@ fs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
 
          unsigned vec4_offset = instr->const_index[0] / 4;
          for (int i = 0; i < instr->num_components; i++)
-            emit(VARYING_PULL_CONSTANT_LOAD(offset(dest, i), surf_index,
-                                            base_offset, vec4_offset + i));
+            VARYING_PULL_CONSTANT_LOAD(bld, offset(dest, i), surf_index,
+                                       base_offset, vec4_offset + i);
       } else {
          fs_reg packed_consts = vgrf(glsl_type::float_type);
          packed_consts.type = dest.type;
