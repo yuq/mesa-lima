@@ -319,7 +319,8 @@ public:
    void nir_emit_alu(const brw::fs_builder &bld, nir_alu_instr *instr);
    void nir_emit_intrinsic(const brw::fs_builder &bld,
                            nir_intrinsic_instr *instr);
-   void nir_emit_texture(nir_tex_instr *instr);
+   void nir_emit_texture(const brw::fs_builder &bld,
+                         nir_tex_instr *instr);
    void nir_emit_jump(const brw::fs_builder &bld,
                       nir_jump_instr *instr);
    fs_reg get_nir_src(nir_src src);

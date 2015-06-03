@@ -456,7 +456,7 @@ fs_visitor::nir_emit_instr(nir_instr *instr)
       break;
 
    case nir_instr_type_tex:
-      nir_emit_texture(nir_instr_as_tex(instr));
+      nir_emit_texture(abld, nir_instr_as_tex(instr));
       break;
 
    case nir_instr_type_load_const:
@@ -1584,7 +1584,7 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
 }
 
 void
-fs_visitor::nir_emit_texture(nir_tex_instr *instr)
+fs_visitor::nir_emit_texture(const fs_builder &bld, nir_tex_instr *instr)
 {
    unsigned sampler = instr->sampler_index;
    fs_reg sampler_reg(sampler);
@@ -1671,8 +1671,8 @@ fs_visitor::nir_emit_texture(nir_tex_instr *instr)
 
          /* Emit code to evaluate the actual indexing expression */
          sampler_reg = vgrf(glsl_type::uint_type);
-         emit(ADD(sampler_reg, src, fs_reg(sampler)));
-         emit_uniformize(sampler_reg, sampler_reg);
+         bld.ADD(sampler_reg, src, fs_reg(sampler));
+         bld.emit_uniformize(sampler_reg, sampler_reg);
          break;
       }
 
