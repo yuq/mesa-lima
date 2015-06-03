@@ -2178,11 +2178,11 @@ VkResult anv_CreateDynamicDepthStencilState(
       /* Is this what we need to do? */
       .StencilBufferWriteEnable = pCreateInfo->stencilWriteMask != 0,
 
-      .StencilTestMask = pCreateInfo->stencilReadMask,
-      .StencilWriteMask = pCreateInfo->stencilWriteMask,
+      .StencilTestMask = pCreateInfo->stencilReadMask & 0xff,
+      .StencilWriteMask = pCreateInfo->stencilWriteMask & 0xff,
 
-      .BackfaceStencilTestMask = pCreateInfo->stencilReadMask,
-      .BackfaceStencilWriteMask = pCreateInfo->stencilWriteMask,
+      .BackfaceStencilTestMask = pCreateInfo->stencilReadMask & 0xff,
+      .BackfaceStencilWriteMask = pCreateInfo->stencilWriteMask & 0xff,
    };
 
    GEN8_3DSTATE_WM_DEPTH_STENCIL_pack(NULL, state->state_wm_depth_stencil,
