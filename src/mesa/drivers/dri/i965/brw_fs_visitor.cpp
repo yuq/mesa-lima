@@ -1354,19 +1354,19 @@ fs_visitor::emit_interpolation_setup_gen4()
 {
    struct brw_reg g1_uw = retype(brw_vec1_grf(1, 0), BRW_REGISTER_TYPE_UW);
 
-   this->current_annotation = "compute pixel centers";
+   fs_builder abld = bld.annotate("compute pixel centers");
    this->pixel_x = vgrf(glsl_type::uint_type);
    this->pixel_y = vgrf(glsl_type::uint_type);
    this->pixel_x.type = BRW_REGISTER_TYPE_UW;
    this->pixel_y.type = BRW_REGISTER_TYPE_UW;
-   emit(ADD(this->pixel_x,
+   abld.ADD(this->pixel_x,
             fs_reg(stride(suboffset(g1_uw, 4), 2, 4, 0)),
-            fs_reg(brw_imm_v(0x10101010))));
-   emit(ADD(this->pixel_y,
+            fs_reg(brw_imm_v(0x10101010)));
+   abld.ADD(this->pixel_y,
             fs_reg(stride(suboffset(g1_uw, 5), 2, 4, 0)),
-            fs_reg(brw_imm_v(0x11001100))));
+            fs_reg(brw_imm_v(0x11001100)));
 
-   this->current_annotation = "compute pixel deltas from v0";
+   abld = bld.annotate("compute pixel deltas from v0");
 
    this->delta_xy[BRW_WM_PERSPECTIVE_PIXEL_BARYCENTRIC] =
       vgrf(glsl_type::vec2_type);
@@ -1375,27 +1375,27 @@ fs_visitor::emit_interpolation_setup_gen4()
    const fs_reg ystart(negate(brw_vec1_grf(1, 1)));
 
    if (devinfo->has_pln && dispatch_width == 16) {
-      emit(ADD(half(offset(delta_xy, 0), 0), half(this->pixel_x, 0), xstart));
-      emit(ADD(half(offset(delta_xy, 0), 1), half(this->pixel_y, 0), ystart));
-      emit(ADD(half(offset(delta_xy, 1), 0), half(this->pixel_x, 1), xstart))
-         ->force_sechalf = true;
-      emit(ADD(half(offset(delta_xy, 1), 1), half(this->pixel_y, 1), ystart))
-         ->force_sechalf = true;
+      for (unsigned i = 0; i < 2; i++) {
+         abld.half(i).ADD(half(offset(delta_xy, i), 0),
+                          half(this->pixel_x, i), xstart);
+         abld.half(i).ADD(half(offset(delta_xy, i), 1),
+                          half(this->pixel_y, i), ystart);
+      }
    } else {
-      emit(ADD(offset(delta_xy, 0), this->pixel_x, xstart));
-      emit(ADD(offset(delta_xy, 1), this->pixel_y, ystart));
+      abld.ADD(offset(delta_xy, 0), this->pixel_x, xstart);
+      abld.ADD(offset(delta_xy, 1), this->pixel_y, ystart);
    }
 
-   this->current_annotation = "compute pos.w and 1/pos.w";
+   abld = bld.annotate("compute pos.w and 1/pos.w");
    /* Compute wpos.w.  It's always in our setup, since it's needed to
     * interpolate the other attributes.
     */
    this->wpos_w = vgrf(glsl_type::float_type);
-   emit(FS_OPCODE_LINTERP, wpos_w, delta_xy, interp_reg(VARYING_SLOT_POS, 3));
+   abld.emit(FS_OPCODE_LINTERP, wpos_w, delta_xy,
+             interp_reg(VARYING_SLOT_POS, 3));
    /* Compute the pixel 1/W value from wpos.w. */
    this->pixel_w = vgrf(glsl_type::float_type);
-   emit_math(SHADER_OPCODE_RCP, this->pixel_w, wpos_w);
-   this->current_annotation = NULL;
+   abld.emit(SHADER_OPCODE_RCP, this->pixel_w, wpos_w);
 }
 
 /** Emits the interpolation for the varying inputs. */
@@ -1404,7 +1404,7 @@ fs_visitor::emit_interpolation_setup_gen6()
 {
    struct brw_reg g1_uw = retype(brw_vec1_grf(1, 0), BRW_REGISTER_TYPE_UW);
 
-   this->current_annotation = "compute pixel centers";
+   fs_builder abld = bld.annotate("compute pixel centers");
    if (brw->gen >= 8 || dispatch_width == 8) {
       /* The "Register Region Restrictions" page says for BDW (and newer,
        * presumably):
@@ -1418,15 +1418,15 @@ fs_visitor::emit_interpolation_setup_gen6()
        */
       fs_reg int_pixel_xy(GRF, alloc.allocate(dispatch_width / 8),
                           BRW_REGISTER_TYPE_UW, dispatch_width * 2);
-      emit(ADD(int_pixel_xy,
+      abld.exec_all()
+          .ADD(int_pixel_xy,
                fs_reg(stride(suboffset(g1_uw, 4), 1, 4, 0)),
-               fs_reg(brw_imm_v(0x11001010))))
-         ->force_writemask_all = true;
+               fs_reg(brw_imm_v(0x11001010)));
 
       this->pixel_x = vgrf(glsl_type::float_type);
       this->pixel_y = vgrf(glsl_type::float_type);
-      emit(FS_OPCODE_PIXEL_X, this->pixel_x, int_pixel_xy);
-      emit(FS_OPCODE_PIXEL_Y, this->pixel_y, int_pixel_xy);
+      abld.emit(FS_OPCODE_PIXEL_X, this->pixel_x, int_pixel_xy);
+      abld.emit(FS_OPCODE_PIXEL_Y, this->pixel_y, int_pixel_xy);
    } else {
       /* The "Register Region Restrictions" page says for SNB, IVB, HSW:
        *
@@ -1440,12 +1440,12 @@ fs_visitor::emit_interpolation_setup_gen6()
       fs_reg int_pixel_y = vgrf(glsl_type::uint_type);
       int_pixel_x.type = BRW_REGISTER_TYPE_UW;
       int_pixel_y.type = BRW_REGISTER_TYPE_UW;
-      emit(ADD(int_pixel_x,
+      abld.ADD(int_pixel_x,
                fs_reg(stride(suboffset(g1_uw, 4), 2, 4, 0)),
-               fs_reg(brw_imm_v(0x10101010))));
-      emit(ADD(int_pixel_y,
+               fs_reg(brw_imm_v(0x10101010)));
+      abld.ADD(int_pixel_y,
                fs_reg(stride(suboffset(g1_uw, 5), 2, 4, 0)),
-               fs_reg(brw_imm_v(0x11001100))));
+               fs_reg(brw_imm_v(0x11001100)));
 
       /* As of gen6, we can no longer mix float and int sources.  We have
        * to turn the integer pixel centers into floats for their actual
@@ -1453,21 +1453,19 @@ fs_visitor::emit_interpolation_setup_gen6()
        */
       this->pixel_x = vgrf(glsl_type::float_type);
       this->pixel_y = vgrf(glsl_type::float_type);
-      emit(MOV(this->pixel_x, int_pixel_x));
-      emit(MOV(this->pixel_y, int_pixel_y));
+      abld.MOV(this->pixel_x, int_pixel_x);
+      abld.MOV(this->pixel_y, int_pixel_y);
    }
 
-   this->current_annotation = "compute pos.w";
+   abld = bld.annotate("compute pos.w");
    this->pixel_w = fs_reg(brw_vec8_grf(payload.source_w_reg, 0));
    this->wpos_w = vgrf(glsl_type::float_type);
-   emit_math(SHADER_OPCODE_RCP, this->wpos_w, this->pixel_w);
+   abld.emit(SHADER_OPCODE_RCP, this->wpos_w, this->pixel_w);
 
    for (int i = 0; i < BRW_WM_BARYCENTRIC_INTERP_MODE_COUNT; ++i) {
       uint8_t reg = payload.barycentric_coord_reg[i];
       this->delta_xy[i] = fs_reg(brw_vec16_grf(reg, 0));
    }
-
-   this->current_annotation = NULL;
 }
 
 void

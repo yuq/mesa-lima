@@ -1130,15 +1130,15 @@ fs_visitor::emit_fragcoord_interpolation(bool pixel_center_integer,
 
    /* gl_FragCoord.x */
    if (pixel_center_integer) {
-      emit(MOV(wpos, this->pixel_x));
+      bld.MOV(wpos, this->pixel_x);
    } else {
-      emit(ADD(wpos, this->pixel_x, fs_reg(0.5f)));
+      bld.ADD(wpos, this->pixel_x, fs_reg(0.5f));
    }
    wpos = offset(wpos, 1);
 
    /* gl_FragCoord.y */
    if (!flip && pixel_center_integer) {
-      emit(MOV(wpos, this->pixel_y));
+      bld.MOV(wpos, this->pixel_y);
    } else {
       fs_reg pixel_y = this->pixel_y;
       float offset = (pixel_center_integer ? 0.0 : 0.5);
@@ -1148,22 +1148,22 @@ fs_visitor::emit_fragcoord_interpolation(bool pixel_center_integer,
 	 offset += key->drawable_height - 1.0;
       }
 
-      emit(ADD(wpos, pixel_y, fs_reg(offset)));
+      bld.ADD(wpos, pixel_y, fs_reg(offset));
    }
    wpos = offset(wpos, 1);
 
    /* gl_FragCoord.z */
    if (devinfo->gen >= 6) {
-      emit(MOV(wpos, fs_reg(brw_vec8_grf(payload.source_depth_reg, 0))));
+      bld.MOV(wpos, fs_reg(brw_vec8_grf(payload.source_depth_reg, 0)));
    } else {
-      emit(FS_OPCODE_LINTERP, wpos,
+      bld.emit(FS_OPCODE_LINTERP, wpos,
            this->delta_xy[BRW_WM_PERSPECTIVE_PIXEL_BARYCENTRIC],
            interp_reg(VARYING_SLOT_POS, 2));
    }
    wpos = offset(wpos, 1);
 
    /* gl_FragCoord.w: Already set up in emit_interpolation */
-   emit(BRW_OPCODE_MOV, wpos, this->wpos_w);
+   bld.MOV(wpos, this->wpos_w);
 
    return reg;
 }
@@ -1198,8 +1198,8 @@ fs_visitor::emit_linterp(const fs_reg &attr, const fs_reg &interp,
        */
       barycoord_mode = BRW_WM_PERSPECTIVE_PIXEL_BARYCENTRIC;
    }
-   return emit(FS_OPCODE_LINTERP, attr,
-               this->delta_xy[barycoord_mode], interp);
+   return bld.emit(FS_OPCODE_LINTERP, attr,
+                   this->delta_xy[barycoord_mode], interp);
 }
 
 void
@@ -1257,7 +1257,7 @@ fs_visitor::emit_general_interpolation(fs_reg attr, const char *name,
 	       struct brw_reg interp = interp_reg(location, k);
 	       interp = suboffset(interp, 3);
                interp.type = attr.type;
-	       emit(FS_OPCODE_CINTERP, attr, fs_reg(interp));
+               bld.emit(FS_OPCODE_CINTERP, attr, fs_reg(interp));
 	       attr = offset(attr, 1);
 	    }
 	 } else {
@@ -1270,7 +1270,7 @@ fs_visitor::emit_general_interpolation(fs_reg attr, const char *name,
                    * unlit, replace the centroid data with non-centroid
                    * data.
                    */
-                  emit(FS_OPCODE_MOV_DISPATCH_TO_FLAGS);
+                  bld.emit(FS_OPCODE_MOV_DISPATCH_TO_FLAGS);
 
                   fs_inst *inst;
                   inst = emit_linterp(attr, fs_reg(interp), interpolation_mode,
@@ -1294,7 +1294,7 @@ fs_visitor::emit_general_interpolation(fs_reg attr, const char *name,
                                mod_sample || key->persample_shading);
                }
                if (devinfo->gen < 6 && interpolation_mode == INTERP_QUALIFIER_SMOOTH) {
-                  emit(BRW_OPCODE_MUL, attr, attr, this->pixel_w);
+                  bld.MUL(attr, attr, this->pixel_w);
                }
 	       attr = offset(attr, 1);
 	    }
@@ -1325,7 +1325,7 @@ fs_visitor::emit_frontfacing_interpolation()
       fs_reg g0 = fs_reg(retype(brw_vec1_grf(0, 0), BRW_REGISTER_TYPE_W));
       g0.negate = true;
 
-      emit(ASR(*reg, g0, fs_reg(15)));
+      bld.ASR(*reg, g0, fs_reg(15));
    } else {
       /* Bit 31 of g1.6 is 0 if the polygon is front facing. We want to create
        * a boolean result from this (1/true or 0/false).
@@ -1340,7 +1340,7 @@ fs_visitor::emit_frontfacing_interpolation()
       fs_reg g1_6 = fs_reg(retype(brw_vec1_grf(1, 6), BRW_REGISTER_TYPE_D));
       g1_6.negate = true;
 
-      emit(ASR(*reg, g1_6, fs_reg(31)));
+      bld.ASR(*reg, g1_6, fs_reg(31));
    }
 
    return reg;
