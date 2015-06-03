@@ -1482,8 +1482,8 @@ fs_visitor::resolve_source_modifiers(fs_reg *src)
    if (!src->abs && !src->negate)
       return;
 
-   fs_reg temp = retype(vgrf(1), src->type);
-   emit(MOV(temp, *src));
+   fs_reg temp = bld.vgrf(src->type);
+   bld.MOV(temp, *src);
    *src = temp;
 }
 

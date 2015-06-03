@@ -448,7 +448,7 @@ fs_visitor::nir_emit_instr(nir_instr *instr)
 
    switch (instr->type) {
    case nir_instr_type_alu:
-      nir_emit_alu(nir_instr_as_alu(instr));
+      nir_emit_alu(abld, nir_instr_as_alu(instr));
       break;
 
    case nir_instr_type_intrinsic:
@@ -546,7 +546,7 @@ fs_visitor::optimize_frontfacing_ternary(nir_alu_instr *instr,
       tmp.subreg_offset = 2;
       tmp.stride = 2;
 
-      fs_inst *or_inst = emit(OR(tmp, g0, fs_reg(0x3f80)));
+      fs_inst *or_inst = bld.OR(tmp, g0, fs_reg(0x3f80));
       or_inst->src[1].type = BRW_REGISTER_TYPE_UW;
 
       tmp.type = BRW_REGISTER_TYPE_D;
@@ -571,15 +571,15 @@ fs_visitor::optimize_frontfacing_ternary(nir_alu_instr *instr,
          g1_6.negate = true;
       }
 
-      emit(OR(tmp, g1_6, fs_reg(0x3f800000)));
+      bld.OR(tmp, g1_6, fs_reg(0x3f800000));
    }
-   emit(AND(retype(result, BRW_REGISTER_TYPE_D), tmp, fs_reg(0xbf800000)));
+   bld.AND(retype(result, BRW_REGISTER_TYPE_D), tmp, fs_reg(0xbf800000));
 
    return true;
 }
 
 void
-fs_visitor::nir_emit_alu(nir_alu_instr *instr)
+fs_visitor::nir_emit_alu(const fs_builder &bld, nir_alu_instr *instr)
 {
    struct brw_wm_prog_key *fs_key = (struct brw_wm_prog_key *) this->key;
    fs_inst *inst;
@@ -611,7 +611,7 @@ fs_visitor::nir_emit_alu(nir_alu_instr *instr)
          if (!instr->src[i].src.is_ssa &&
              instr->dest.dest.reg.reg == instr->src[i].src.reg.reg) {
             need_extra_copy = true;
-            temp = retype(vgrf(4), result.type);
+            temp = bld.vgrf(result.type, 4);
             break;
          }
       }
@@ -621,11 +621,11 @@ fs_visitor::nir_emit_alu(nir_alu_instr *instr)
             continue;
 
          if (instr->op == nir_op_imov || instr->op == nir_op_fmov) {
-            inst = emit(MOV(offset(temp, i),
-                        offset(op[0], instr->src[0].swizzle[i])));
+            inst = bld.MOV(offset(temp, i),
+                           offset(op[0], instr->src[0].swizzle[i]));
          } else {
-            inst = emit(MOV(offset(temp, i),
-                        offset(op[i], instr->src[i].swizzle[0])));
+            inst = bld.MOV(offset(temp, i),
+                           offset(op[i], instr->src[i].swizzle[0]));
          }
          inst->saturate = instr->dest.saturate;
       }
@@ -639,7 +639,7 @@ fs_visitor::nir_emit_alu(nir_alu_instr *instr)
             if (!(instr->dest.write_mask & (1 << i)))
                continue;
 
-            emit(MOV(offset(result, i), offset(temp, i)));
+            bld.MOV(offset(result, i), offset(temp, i));
          }
       }
       return;
@@ -671,13 +671,13 @@ fs_visitor::nir_emit_alu(nir_alu_instr *instr)
    switch (instr->op) {
    case nir_op_i2f:
    case nir_op_u2f:
-      inst = emit(MOV(result, op[0]));
+      inst = bld.MOV(result, op[0]);
       inst->saturate = instr->dest.saturate;
       break;
 
    case nir_op_f2i:
    case nir_op_f2u:
-      emit(MOV(result, op[0]));
+      bld.MOV(result, op[0]);
       break;
 
    case nir_op_fsign: {
@@ -686,17 +686,17 @@ fs_visitor::nir_emit_alu(nir_alu_instr *instr)
          * Predicated OR ORs 1.0 (0x3f800000) with the sign bit if val is not
          * zero.
          */
-      emit(CMP(reg_null_f, op[0], fs_reg(0.0f), BRW_CONDITIONAL_NZ));
+      bld.CMP(bld.null_reg_f(), op[0], fs_reg(0.0f), BRW_CONDITIONAL_NZ);
 
       fs_reg result_int = retype(result, BRW_REGISTER_TYPE_UD);
       op[0].type = BRW_REGISTER_TYPE_UD;
       result.type = BRW_REGISTER_TYPE_UD;
-      emit(AND(result_int, op[0], fs_reg(0x80000000u)));
+      bld.AND(result_int, op[0], fs_reg(0x80000000u));
 
-      inst = emit(OR(result_int, result_int, fs_reg(0x3f800000u)));
+      inst = bld.OR(result_int, result_int, fs_reg(0x3f800000u));
       inst->predicate = BRW_PREDICATE_NORMAL;
       if (instr->dest.saturate) {
-         inst = emit(MOV(result, result));
+         inst = bld.MOV(result, result);
          inst->saturate = true;
       }
       break;
@@ -707,87 +707,87 @@ fs_visitor::nir_emit_alu(nir_alu_instr *instr)
        *               -> non-negative val generates 0x00000000.
        *  Predicated OR sets 1 if val is positive.
        */
-      emit(CMP(reg_null_d, op[0], fs_reg(0), BRW_CONDITIONAL_G));
-      emit(ASR(result, op[0], fs_reg(31)));
-      inst = emit(OR(result, result, fs_reg(1)));
+      bld.CMP(bld.null_reg_d(), op[0], fs_reg(0), BRW_CONDITIONAL_G);
+      bld.ASR(result, op[0], fs_reg(31));
+      inst = bld.OR(result, result, fs_reg(1));
       inst->predicate = BRW_PREDICATE_NORMAL;
       break;
 
    case nir_op_frcp:
-      inst = emit_math(SHADER_OPCODE_RCP, result, op[0]);
+      inst = bld.emit(SHADER_OPCODE_RCP, result, op[0]);
       inst->saturate = instr->dest.saturate;
       break;
 
    case nir_op_fexp2:
-      inst = emit_math(SHADER_OPCODE_EXP2, result, op[0]);
+      inst = bld.emit(SHADER_OPCODE_EXP2, result, op[0]);
       inst->saturate = instr->dest.saturate;
       break;
 
    case nir_op_flog2:
-      inst = emit_math(SHADER_OPCODE_LOG2, result, op[0]);
+      inst = bld.emit(SHADER_OPCODE_LOG2, result, op[0]);
       inst->saturate = instr->dest.saturate;
       break;
 
    case nir_op_fsin:
-      inst = emit_math(SHADER_OPCODE_SIN, result, op[0]);
+      inst = bld.emit(SHADER_OPCODE_SIN, result, op[0]);
       inst->saturate = instr->dest.saturate;
       break;
 
    case nir_op_fcos:
-      inst = emit_math(SHADER_OPCODE_COS, result, op[0]);
+      inst = bld.emit(SHADER_OPCODE_COS, result, op[0]);
       inst->saturate = instr->dest.saturate;
       break;
 
    case nir_op_fddx:
       if (fs_key->high_quality_derivatives) {
-         inst = emit(FS_OPCODE_DDX_FINE, result, op[0]);
+         inst = bld.emit(FS_OPCODE_DDX_FINE, result, op[0]);
       } else {
-         inst = emit(FS_OPCODE_DDX_COARSE, result, op[0]);
+         inst = bld.emit(FS_OPCODE_DDX_COARSE, result, op[0]);
       }
       inst->saturate = instr->dest.saturate;
       break;
    case nir_op_fddx_fine:
-      inst = emit(FS_OPCODE_DDX_FINE, result, op[0]);
+      inst = bld.emit(FS_OPCODE_DDX_FINE, result, op[0]);
       inst->saturate = instr->dest.saturate;
       break;
    case nir_op_fddx_coarse:
-      inst = emit(FS_OPCODE_DDX_COARSE, result, op[0]);
+      inst = bld.emit(FS_OPCODE_DDX_COARSE, result, op[0]);
       inst->saturate = instr->dest.saturate;
       break;
    case nir_op_fddy:
       if (fs_key->high_quality_derivatives) {
-         inst = emit(FS_OPCODE_DDY_FINE, result, op[0],
-                     fs_reg(fs_key->render_to_fbo));
+         inst = bld.emit(FS_OPCODE_DDY_FINE, result, op[0],
+                         fs_reg(fs_key->render_to_fbo));
       } else {
-         inst = emit(FS_OPCODE_DDY_COARSE, result, op[0],
-                     fs_reg(fs_key->render_to_fbo));
+         inst = bld.emit(FS_OPCODE_DDY_COARSE, result, op[0],
+                         fs_reg(fs_key->render_to_fbo));
       }
       inst->saturate = instr->dest.saturate;
       break;
    case nir_op_fddy_fine:
-      inst = emit(FS_OPCODE_DDY_FINE, result, op[0],
-                  fs_reg(fs_key->render_to_fbo));
+      inst = bld.emit(FS_OPCODE_DDY_FINE, result, op[0],
+                      fs_reg(fs_key->render_to_fbo));
       inst->saturate = instr->dest.saturate;
       break;
    case nir_op_fddy_coarse:
-      inst = emit(FS_OPCODE_DDY_COARSE, result, op[0],
-                  fs_reg(fs_key->render_to_fbo));
+      inst = bld.emit(FS_OPCODE_DDY_COARSE, result, op[0],
+                      fs_reg(fs_key->render_to_fbo));
       inst->saturate = instr->dest.saturate;
       break;
 
    case nir_op_fadd:
    case nir_op_iadd:
-      inst = emit(ADD(result, op[0], op[1]));
+      inst = bld.ADD(result, op[0], op[1]);
       inst->saturate = instr->dest.saturate;
       break;
 
    case nir_op_fmul:
-      inst = emit(MUL(result, op[0], op[1]));
+      inst = bld.MUL(result, op[0], op[1]);
       inst->saturate = instr->dest.saturate;
       break;
 
    case nir_op_imul:
-      emit(MUL(result, op[0], op[1]));
+      bld.MUL(result, op[0], op[1]);
       break;
 
    case nir_op_imul_high:
@@ -797,8 +797,8 @@ fs_visitor::nir_emit_alu(nir_alu_instr *instr)
 
       struct brw_reg acc = retype(brw_acc_reg(dispatch_width), result.type);
 
-      fs_inst *mul = emit(MUL(acc, op[0], op[1]));
-      emit(MACH(result, op[0], op[1]));
+      fs_inst *mul = bld.MUL(acc, op[0], op[1]);
+      bld.MACH(result, op[0], op[1]);
 
       /* Until Gen8, integer multiplies read 32-bits from one source, and
        * 16-bits from the other, and relying on the MACH instruction to
@@ -826,7 +826,7 @@ fs_visitor::nir_emit_alu(nir_alu_instr *instr)
 
    case nir_op_idiv:
    case nir_op_udiv:
-      emit_math(SHADER_OPCODE_INT_QUOTIENT, result, op[0], op[1]);
+      bld.emit(SHADER_OPCODE_INT_QUOTIENT, result, op[0], op[1]);
       break;
 
    case nir_op_uadd_carry: {
@@ -836,8 +836,8 @@ fs_visitor::nir_emit_alu(nir_alu_instr *instr)
       struct brw_reg acc = retype(brw_acc_reg(dispatch_width),
                                   BRW_REGISTER_TYPE_UD);
 
-      emit(ADDC(reg_null_ud, op[0], op[1]));
-      emit(MOV(result, fs_reg(acc)));
+      bld.ADDC(bld.null_reg_ud(), op[0], op[1]);
+      bld.MOV(result, fs_reg(acc));
       break;
    }
 
@@ -848,63 +848,63 @@ fs_visitor::nir_emit_alu(nir_alu_instr *instr)
       struct brw_reg acc = retype(brw_acc_reg(dispatch_width),
                                   BRW_REGISTER_TYPE_UD);
 
-      emit(SUBB(reg_null_ud, op[0], op[1]));
-      emit(MOV(result, fs_reg(acc)));
+      bld.SUBB(bld.null_reg_ud(), op[0], op[1]);
+      bld.MOV(result, fs_reg(acc));
       break;
    }
 
    case nir_op_umod:
-      emit_math(SHADER_OPCODE_INT_REMAINDER, result, op[0], op[1]);
+      bld.emit(SHADER_OPCODE_INT_REMAINDER, result, op[0], op[1]);
       break;
 
    case nir_op_flt:
    case nir_op_ilt:
    case nir_op_ult:
-      emit(CMP(result, op[0], op[1], BRW_CONDITIONAL_L));
+      bld.CMP(result, op[0], op[1], BRW_CONDITIONAL_L);
       break;
 
    case nir_op_fge:
    case nir_op_ige:
    case nir_op_uge:
-      emit(CMP(result, op[0], op[1], BRW_CONDITIONAL_GE));
+      bld.CMP(result, op[0], op[1], BRW_CONDITIONAL_GE);
       break;
 
    case nir_op_feq:
    case nir_op_ieq:
-      emit(CMP(result, op[0], op[1], BRW_CONDITIONAL_Z));
+      bld.CMP(result, op[0], op[1], BRW_CONDITIONAL_Z);
       break;
 
    case nir_op_fne:
    case nir_op_ine:
-      emit(CMP(result, op[0], op[1], BRW_CONDITIONAL_NZ));
+      bld.CMP(result, op[0], op[1], BRW_CONDITIONAL_NZ);
       break;
 
    case nir_op_inot:
       if (devinfo->gen >= 8) {
          resolve_source_modifiers(&op[0]);
       }
-      emit(NOT(result, op[0]));
+      bld.NOT(result, op[0]);
       break;
    case nir_op_ixor:
       if (devinfo->gen >= 8) {
          resolve_source_modifiers(&op[0]);
          resolve_source_modifiers(&op[1]);
       }
-      emit(XOR(result, op[0], op[1]));
+      bld.XOR(result, op[0], op[1]);
       break;
    case nir_op_ior:
       if (devinfo->gen >= 8) {
          resolve_source_modifiers(&op[0]);
          resolve_source_modifiers(&op[1]);
       }
-      emit(OR(result, op[0], op[1]));
+      bld.OR(result, op[0], op[1]);
       break;
    case nir_op_iand:
       if (devinfo->gen >= 8) {
          resolve_source_modifiers(&op[0]);
          resolve_source_modifiers(&op[1]);
       }
-      emit(AND(result, op[0], op[1]));
+      bld.AND(result, op[0], op[1]);
       break;
 
    case nir_op_fdot2:
@@ -952,53 +952,53 @@ fs_visitor::nir_emit_alu(nir_alu_instr *instr)
       unreachable("not reached: should be handled by ldexp_to_arith()");
 
    case nir_op_fsqrt:
-      inst = emit_math(SHADER_OPCODE_SQRT, result, op[0]);
+      inst = bld.emit(SHADER_OPCODE_SQRT, result, op[0]);
       inst->saturate = instr->dest.saturate;
       break;
 
    case nir_op_frsq:
-      inst = emit_math(SHADER_OPCODE_RSQ, result, op[0]);
+      inst = bld.emit(SHADER_OPCODE_RSQ, result, op[0]);
       inst->saturate = instr->dest.saturate;
       break;
 
    case nir_op_b2i:
-      emit(AND(result, op[0], fs_reg(1)));
+      bld.AND(result, op[0], fs_reg(1));
       break;
    case nir_op_b2f:
-      emit(AND(retype(result, BRW_REGISTER_TYPE_UD), op[0], fs_reg(0x3f800000u)));
+      bld.AND(retype(result, BRW_REGISTER_TYPE_UD), op[0], fs_reg(0x3f800000u));
       break;
 
    case nir_op_f2b:
-      emit(CMP(result, op[0], fs_reg(0.0f), BRW_CONDITIONAL_NZ));
+      bld.CMP(result, op[0], fs_reg(0.0f), BRW_CONDITIONAL_NZ);
       break;
    case nir_op_i2b:
-      emit(CMP(result, op[0], fs_reg(0), BRW_CONDITIONAL_NZ));
+      bld.CMP(result, op[0], fs_reg(0), BRW_CONDITIONAL_NZ);
       break;
 
    case nir_op_ftrunc:
-      inst = emit(RNDZ(result, op[0]));
+      inst = bld.RNDZ(result, op[0]);
       inst->saturate = instr->dest.saturate;
       break;
 
    case nir_op_fceil: {
       op[0].negate = !op[0].negate;
       fs_reg temp = vgrf(glsl_type::float_type);
-      emit(RNDD(temp, op[0]));
+      bld.RNDD(temp, op[0]);
       temp.negate = true;
-      inst = emit(MOV(result, temp));
+      inst = bld.MOV(result, temp);
       inst->saturate = instr->dest.saturate;
       break;
    }
    case nir_op_ffloor:
-      inst = emit(RNDD(result, op[0]));
+      inst = bld.RNDD(result, op[0]);
       inst->saturate = instr->dest.saturate;
       break;
    case nir_op_ffract:
-      inst = emit(FRC(result, op[0]));
+      inst = bld.FRC(result, op[0]);
       inst->saturate = instr->dest.saturate;
       break;
    case nir_op_fround_even:
-      inst = emit(RNDE(result, op[0]));
+      inst = bld.RNDE(result, op[0]);
       inst->saturate = instr->dest.saturate;
       break;
 
@@ -1006,11 +1006,11 @@ fs_visitor::nir_emit_alu(nir_alu_instr *instr)
    case nir_op_imin:
    case nir_op_umin:
       if (devinfo->gen >= 6) {
-         inst = emit(BRW_OPCODE_SEL, result, op[0], op[1]);
+         inst = bld.emit(BRW_OPCODE_SEL, result, op[0], op[1]);
          inst->conditional_mod = BRW_CONDITIONAL_L;
       } else {
-         emit(CMP(reg_null_d, op[0], op[1], BRW_CONDITIONAL_L));
-         inst = emit(SEL(result, op[0], op[1]));
+         bld.CMP(bld.null_reg_d(), op[0], op[1], BRW_CONDITIONAL_L);
+         inst = bld.SEL(result, op[0], op[1]);
          inst->predicate = BRW_PREDICATE_NORMAL;
       }
       inst->saturate = instr->dest.saturate;
@@ -1020,11 +1020,11 @@ fs_visitor::nir_emit_alu(nir_alu_instr *instr)
    case nir_op_imax:
    case nir_op_umax:
       if (devinfo->gen >= 6) {
-         inst = emit(BRW_OPCODE_SEL, result, op[0], op[1]);
+         inst = bld.emit(BRW_OPCODE_SEL, result, op[0], op[1]);
          inst->conditional_mod = BRW_CONDITIONAL_GE;
       } else {
-         emit(CMP(reg_null_d, op[0], op[1], BRW_CONDITIONAL_GE));
-         inst = emit(SEL(result, op[0], op[1]));
+         bld.CMP(bld.null_reg_d(), op[0], op[1], BRW_CONDITIONAL_GE);
+         inst = bld.SEL(result, op[0], op[1]);
          inst->predicate = BRW_PREDICATE_NORMAL;
       }
       inst->saturate = instr->dest.saturate;
@@ -1043,57 +1043,57 @@ fs_visitor::nir_emit_alu(nir_alu_instr *instr)
       unreachable("not reached: should be handled by lower_packing_builtins");
 
    case nir_op_unpack_half_2x16_split_x:
-      inst = emit(FS_OPCODE_UNPACK_HALF_2x16_SPLIT_X, result, op[0]);
+      inst = bld.emit(FS_OPCODE_UNPACK_HALF_2x16_SPLIT_X, result, op[0]);
       inst->saturate = instr->dest.saturate;
       break;
    case nir_op_unpack_half_2x16_split_y:
-      inst = emit(FS_OPCODE_UNPACK_HALF_2x16_SPLIT_Y, result, op[0]);
+      inst = bld.emit(FS_OPCODE_UNPACK_HALF_2x16_SPLIT_Y, result, op[0]);
       inst->saturate = instr->dest.saturate;
       break;
 
    case nir_op_fpow:
-      inst = emit_math(SHADER_OPCODE_POW, result, op[0], op[1]);
+      inst = bld.emit(SHADER_OPCODE_POW, result, op[0], op[1]);
       inst->saturate = instr->dest.saturate;
       break;
 
    case nir_op_bitfield_reverse:
-      emit(BFREV(result, op[0]));
+      bld.BFREV(result, op[0]);
       break;
 
    case nir_op_bit_count:
-      emit(CBIT(result, op[0]));
+      bld.CBIT(result, op[0]);
       break;
 
    case nir_op_ufind_msb:
    case nir_op_ifind_msb: {
-      emit(FBH(retype(result, BRW_REGISTER_TYPE_UD), op[0]));
+      bld.FBH(retype(result, BRW_REGISTER_TYPE_UD), op[0]);
 
       /* FBH counts from the MSB side, while GLSL's findMSB() wants the count
        * from the LSB side. If FBH didn't return an error (0xFFFFFFFF), then
        * subtract the result from 31 to convert the MSB count into an LSB count.
        */
 
-      emit(CMP(reg_null_d, result, fs_reg(-1), BRW_CONDITIONAL_NZ));
+      bld.CMP(bld.null_reg_d(), result, fs_reg(-1), BRW_CONDITIONAL_NZ);
       fs_reg neg_result(result);
       neg_result.negate = true;
-      inst = emit(ADD(result, neg_result, fs_reg(31)));
+      inst = bld.ADD(result, neg_result, fs_reg(31));
       inst->predicate = BRW_PREDICATE_NORMAL;
       break;
    }
 
    case nir_op_find_lsb:
-      emit(FBL(result, op[0]));
+      bld.FBL(result, op[0]);
       break;
 
    case nir_op_ubitfield_extract:
    case nir_op_ibitfield_extract:
-      emit(BFE(result, op[2], op[1], op[0]));
+      bld.BFE(result, op[2], op[1], op[0]);
       break;
    case nir_op_bfm:
-      emit(BFI1(result, op[0], op[1]));
+      bld.BFI1(result, op[0], op[1]);
       break;
    case nir_op_bfi:
-      emit(BFI2(result, op[0], op[1], op[2]));
+      bld.BFI2(result, op[0], op[1], op[2]);
       break;
 
    case nir_op_bitfield_insert:
@@ -1101,26 +1101,26 @@ fs_visitor::nir_emit_alu(nir_alu_instr *instr)
                   "lower_instructions::bitfield_insert_to_bfm_bfi");
 
    case nir_op_ishl:
-      emit(SHL(result, op[0], op[1]));
+      bld.SHL(result, op[0], op[1]);
       break;
    case nir_op_ishr:
-      emit(ASR(result, op[0], op[1]));
+      bld.ASR(result, op[0], op[1]);
       break;
    case nir_op_ushr:
-      emit(SHR(result, op[0], op[1]));
+      bld.SHR(result, op[0], op[1]);
       break;
 
    case nir_op_pack_half_2x16_split:
-      emit(FS_OPCODE_PACK_HALF_2x16_SPLIT, result, op[0], op[1]);
+      bld.emit(FS_OPCODE_PACK_HALF_2x16_SPLIT, result, op[0], op[1]);
       break;
 
    case nir_op_ffma:
-      inst = emit(MAD(result, op[2], op[1], op[0]));
+      inst = bld.MAD(result, op[2], op[1], op[0]);
       inst->saturate = instr->dest.saturate;
       break;
 
    case nir_op_flrp:
-      inst = emit_lrp(result, op[0], op[1], op[2]);
+      inst = bld.LRP(result, op[0], op[1], op[2]);
       inst->saturate = instr->dest.saturate;
       break;
 
@@ -1128,8 +1128,8 @@ fs_visitor::nir_emit_alu(nir_alu_instr *instr)
       if (optimize_frontfacing_ternary(instr, result))
          return;
 
-      emit(CMP(reg_null_d, op[0], fs_reg(0), BRW_CONDITIONAL_NZ));
-      inst = emit(SEL(result, op[1], op[2]));
+      bld.CMP(bld.null_reg_d(), op[0], fs_reg(0), BRW_CONDITIONAL_NZ);
+      inst = bld.SEL(result, op[1], op[2]);
       inst->predicate = BRW_PREDICATE_NORMAL;
       break;
 
@@ -1143,9 +1143,9 @@ fs_visitor::nir_emit_alu(nir_alu_instr *instr)
    if (devinfo->gen <= 5 &&
        (instr->instr.pass_flags & BRW_NIR_BOOLEAN_MASK) == BRW_NIR_BOOLEAN_NEEDS_RESOLVE) {
       fs_reg masked = vgrf(glsl_type::int_type);
-      emit(AND(masked, result, fs_reg(1)));
+      bld.AND(masked, result, fs_reg(1));
       masked.negate = true;
-      emit(MOV(retype(result, BRW_REGISTER_TYPE_D), masked));
+      bld.MOV(retype(result, BRW_REGISTER_TYPE_D), masked);
    }
 }
 
