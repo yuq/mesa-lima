@@ -37,6 +37,8 @@
  */
 #define MAX_MOVS 8 /**< The maximum number of MOVs to attempt to match. */
 
+using namespace brw;
+
 /**
  * Scans forwards from an IF counting consecutive MOV instructions in the
  * "then" and "else" blocks of the if statement.
@@ -190,17 +192,16 @@ fs_visitor::opt_peephole_sel()
       if (movs == 0)
          continue;
 
+      const fs_builder ibld = bld.at(block, if_inst);
+
       /* Emit a CMP if our IF used the embedded comparison */
-      if (devinfo->gen == 6 && if_inst->conditional_mod) {
-         fs_inst *cmp_inst = CMP(reg_null_d, if_inst->src[0], if_inst->src[1],
-                                 if_inst->conditional_mod);
-         if_inst->insert_before(block, cmp_inst);
-      }
+      if (devinfo->gen == 6 && if_inst->conditional_mod)
+         ibld.CMP(ibld.null_reg_d(), if_inst->src[0], if_inst->src[1],
+                  if_inst->conditional_mod);
 
       for (int i = 0; i < movs; i++) {
          if (then_mov[i]->src[0].equals(else_mov[i]->src[0])) {
-            fs_inst *inst = MOV(then_mov[i]->dst, then_mov[i]->src[0]);
-            if_inst->insert_before(block, inst);
+            ibld.MOV(then_mov[i]->dst, then_mov[i]->src[0]);
          } else {
             /* Only the last source register can be a constant, so if the MOV
              * in the "then" clause uses a constant, we need to put it in a
@@ -210,14 +211,12 @@ fs_visitor::opt_peephole_sel()
             if (src0.file == IMM) {
                src0 = vgrf(glsl_type::float_type);
                src0.type = then_mov[i]->src[0].type;
-               fs_inst *inst = MOV(src0, then_mov[i]->src[0]);
-               if_inst->insert_before(block, inst);
+               ibld.MOV(src0, then_mov[i]->src[0]);
             }
 
-            fs_inst *inst = SEL(then_mov[i]->dst, src0, else_mov[i]->src[0]);
-            inst->predicate = predicate;
-            inst->predicate_inverse = predicate_inverse;
-            if_inst->insert_before(block, inst);
+            set_predicate_inv(predicate, predicate_inverse,
+                              ibld.SEL(then_mov[i]->dst, src0,
+                                       else_mov[i]->src[0]));
          }
 
          then_mov[i]->remove(then_block);
