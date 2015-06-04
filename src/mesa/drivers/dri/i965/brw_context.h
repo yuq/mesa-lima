@@ -1988,6 +1988,9 @@ void intel_screen_destroy(struct intel_screen *screen);
 struct brw_context *intel_context_create(struct intel_screen *screen);
 void intel_context_destroy(struct brw_context *brw);
 
+void
+brw_initialize_context_constants(struct brw_context *brw);
+
 #ifdef __cplusplus
 }
 #endif

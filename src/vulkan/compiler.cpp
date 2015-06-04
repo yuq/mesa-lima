@@ -35,6 +35,7 @@
 
 #include <mesa/main/shaderobj.h>
 #include <mesa/main/fbobject.h>
+#include <mesa/main/context.h>
 #include <mesa/program/program.h>
 #include <glsl/program.h>
 
@@ -620,43 +621,73 @@ fail_on_compile_error(int status, const char *msg)
 struct anv_compiler {
    struct intel_screen *screen;
    struct brw_context *brw;
+   struct gl_pipeline_object pipeline;
 };
-
 
 extern "C" {
 
 struct anv_compiler *
-anv_compiler_create(int fd)
+anv_compiler_create(struct anv_device *device)
 {
+   const struct brw_device_info *devinfo = &device->info;
    struct anv_compiler *compiler;
+   struct gl_context *ctx;
 
-   compiler = (struct anv_compiler *) malloc(sizeof *compiler);
+   compiler = rzalloc(NULL, struct anv_compiler);
    if (compiler == NULL)
       return NULL;
 
-   compiler->screen = intel_screen_create(fd);
-   if (compiler->screen == NULL) {
-      free(compiler);
-      return NULL;
-   }
+   compiler->screen = rzalloc(compiler, struct intel_screen);
+   if (compiler->screen == NULL)
+      goto fail;
 
-   compiler->brw = intel_context_create(compiler->screen);
-   if (compiler->brw == NULL) {
-      free(compiler);
-      return NULL;
-   }
+   compiler->brw = rzalloc(compiler, struct brw_context);
+   if (compiler->brw == NULL)
+      goto fail;
+
+   compiler->brw->optionCache.info = NULL;
+   compiler->brw->bufmgr = NULL;
+   compiler->brw->gen = devinfo->gen;
+   compiler->brw->is_g4x = devinfo->is_g4x;
+   compiler->brw->is_baytrail = devinfo->is_baytrail;
+   compiler->brw->is_haswell = devinfo->is_haswell;
+   compiler->brw->is_cherryview = devinfo->is_cherryview;
+   compiler->brw->intelScreen = compiler->screen;
+   compiler->screen->devinfo = &device->info;
+
+   brw_process_intel_debug_variable(compiler->brw);
+
+   if (device->info.gen >= 8 && !(INTEL_DEBUG & DEBUG_VEC4VS))
+      compiler->brw->scalar_vs = true;
+
+   ctx = &compiler->brw->ctx;
+   _mesa_init_shader_object_functions(&ctx->Driver);
+
+   _mesa_init_constants(&ctx->Const, API_OPENGL_CORE);
+
+   brw_initialize_context_constants(compiler->brw);
+
+   intelInitExtensions(ctx);
+
+   /* Set dd::NewShader */
+   brwInitFragProgFuncs(&ctx->Driver);
+
+   compiler->screen->compiler = brw_compiler_create(compiler, &device->info);
+   ctx->_Shader = &compiler->pipeline;
 
    compiler->brw->precompile = false;
 
    return compiler;
+
+ fail:
+   ralloc_free(compiler);
+   return NULL;
 }
 
 void
 anv_compiler_destroy(struct anv_compiler *compiler)
 {
-   intel_context_destroy(compiler->brw);
-   intel_screen_destroy(compiler->screen);
-   free(compiler);
+   ralloc_free(compiler);
 }
 
 /* From gen7_urb.c */

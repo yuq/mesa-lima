@@ -710,7 +710,7 @@ anv_pipeline_create(VkDevice device,
                     const struct anv_pipeline_create_info *extra,
                     VkPipeline *pPipeline);
 
-struct anv_compiler *anv_compiler_create(int fd);
+struct anv_compiler *anv_compiler_create(struct anv_device *device);
 void anv_compiler_destroy(struct anv_compiler *compiler);
 int anv_compiler_run(struct anv_compiler *compiler, struct anv_pipeline *pipeline);
 void anv_compiler_free(struct anv_pipeline *pipeline);

@@ -386,10 +386,10 @@ VkResult anv_CreateDevice(
    anv_state_pool_init(&device->surface_state_pool,
                        &device->surface_state_block_pool);
 
-   device->compiler = anv_compiler_create(device->fd);
-   device->aub_writer = NULL;
-
    device->info = *physicalDevice->info;
+
+   device->compiler = anv_compiler_create(device);
+   device->aub_writer = NULL;
 
    pthread_mutex_init(&device->mutex, NULL);
 

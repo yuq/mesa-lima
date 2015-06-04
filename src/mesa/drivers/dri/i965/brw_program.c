@@ -275,7 +275,7 @@ brw_get_scratch_bo(struct brw_context *brw,
 
 void brwInitFragProgFuncs( struct dd_function_table *functions )
 {
-   assert(functions->ProgramStringNotify == _tnl_program_string);
+   /* assert(functions->ProgramStringNotify == _tnl_program_string); */
 
    functions->NewProgram = brwNewProgram;
    functions->DeleteProgram = brwDeleteProgram;

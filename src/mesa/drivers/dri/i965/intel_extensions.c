@@ -275,9 +275,11 @@ intelInitExtensions(struct gl_context *ctx)
       ctx->Extensions.EXT_shader_integer_mix = ctx->Const.GLSLVersion >= 130;
       ctx->Extensions.EXT_timer_query = true;
 
-      if (brw->gen == 5 || can_write_oacontrol(brw)) {
-         ctx->Extensions.AMD_performance_monitor = true;
-         ctx->Extensions.INTEL_performance_query = true;
+      if (brw->bufmgr) {
+         if (brw->gen == 5 || can_write_oacontrol(brw)) {
+            ctx->Extensions.AMD_performance_monitor = true;
+            ctx->Extensions.INTEL_performance_query = true;
+         }
       }
    }
 
@@ -285,6 +287,7 @@ intelInitExtensions(struct gl_context *ctx)
       uint64_t dummy;
 
       ctx->Extensions.ARB_blend_func_extended =
+         brw->optionCache.info == NULL ||
          !driQueryOptionb(&brw->optionCache, "disable_blend_func_extended");
       ctx->Extensions.ARB_conditional_render_inverted = true;
       ctx->Extensions.ARB_draw_buffers_blend = true;
@@ -308,7 +311,7 @@ intelInitExtensions(struct gl_context *ctx)
       ctx->Extensions.OES_depth_texture_cube_map = true;
 
       /* Test if the kernel has the ioctl. */
-      if (drm_intel_reg_read(brw->bufmgr, TIMESTAMP, &dummy) == 0)
+      if (brw->bufmgr && drm_intel_reg_read(brw->bufmgr, TIMESTAMP, &dummy) == 0)
          ctx->Extensions.ARB_timer_query = true;
 
       /* Only enable this in core profile because other parts of Mesa behave
@@ -328,7 +331,8 @@ intelInitExtensions(struct gl_context *ctx)
       ctx->Extensions.ARB_texture_compression_bptc = true;
       ctx->Extensions.ARB_texture_view = true;
 
-      if (can_do_pipelined_register_writes(brw)) {
+      if (brw->bufmgr &&
+          can_do_pipelined_register_writes(brw)) {
          ctx->Extensions.ARB_draw_indirect = true;
          ctx->Extensions.ARB_transform_feedback2 = true;
          ctx->Extensions.ARB_transform_feedback3 = true;
@@ -353,7 +357,9 @@ intelInitExtensions(struct gl_context *ctx)
    if (ctx->API != API_OPENGL_CORE)
       ctx->Extensions.ARB_color_buffer_float = true;
 
-   if (ctx->Mesa_DXTn || driQueryOptionb(&brw->optionCache, "force_s3tc_enable"))
+   if (ctx->Mesa_DXTn ||
+       (brw->optionCache.info != NULL &&
+        driQueryOptionb(&brw->optionCache, "force_s3tc_enable")))
       ctx->Extensions.EXT_texture_compression_s3tc = true;
 
    ctx->Extensions.ANGLE_texture_compression_dxt = true;
