@@ -2410,7 +2410,7 @@ _mesa_associate_uniform_storage(struct gl_context *ctx,
          &shader_program->UniformStorage[location];
 
       /* Do not associate any uniform storage to built-in uniforms */
-      if (!storage->builtin)
+      if (storage->builtin)
          continue;
 
       if (location != last_location) {
