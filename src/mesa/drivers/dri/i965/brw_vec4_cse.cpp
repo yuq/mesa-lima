@@ -114,8 +114,16 @@ instructions_match(vec4_instruction *a, vec4_instruction *b)
 {
    return a->opcode == b->opcode &&
           a->saturate == b->saturate &&
+          a->predicate == b->predicate &&
+          a->predicate_inverse == b->predicate_inverse &&
           a->conditional_mod == b->conditional_mod &&
+          a->flag_subreg == b->flag_subreg &&
           a->dst.type == b->dst.type &&
+          a->offset == b->offset &&
+          a->mlen == b->mlen &&
+          a->base_mrf == b->base_mrf &&
+          a->header_size == b->header_size &&
+          a->shadow_compare == b->shadow_compare &&
           a->dst.writemask == b->dst.writemask &&
           a->force_writemask_all == b->force_writemask_all &&
           a->regs_written == b->regs_written &&
