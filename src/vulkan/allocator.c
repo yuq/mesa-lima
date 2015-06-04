@@ -626,7 +626,7 @@ anv_state_stream_alloc(struct anv_state_stream *stream,
    if (vg_ptr == NULL) {
       vg_ptr = state.map;
       VG_NOACCESS_WRITE(&sb->_vg_ptr, vg_ptr);
-      VG(VALGRIND_MALLOCLIKE_BLOCK(vg_ptr, size, 0, false));
+      VALGRIND_MALLOCLIKE_BLOCK(vg_ptr, size, 0, false);
    } else {
       ptrdiff_t vg_offset = vg_ptr - current_map;
       assert(vg_offset >= stream->current_block &&
