@@ -76,7 +76,9 @@ noinst_LTLIBRARIES = \
 	libi965_compiler.la \
 	$(I965_PERGEN_LIBS)
 
-libi965_dri_la_SOURCES = $(i965_FILES)
+libi965_dri_la_SOURCES = \
+	$(i965_FILES) \
+	$(i965_oa_GENERATED_FILES)
 libi965_dri_la_LIBADD = \
 	$(top_builddir)/src/intel/common/libintel_common.la \
 	$(top_builddir)/src/intel/isl/libisl.la \
@@ -93,7 +95,9 @@ BUILT_SOURCES = $(i965_compiler_GENERATED_FILES)
 CLEANFILES = $(BUILT_SOURCES)
 
 EXTRA_DIST = \
-	brw_nir_trig_workarounds.py
+	brw_nir_trig_workarounds.py \
+	brw_oa_hsw.xml \
+	brw_oa.py
 
 TEST_LIBS = \
 	libi965_compiler.la \
@@ -170,3 +174,14 @@ test_eu_validate_SOURCES = \
 test_eu_validate_LDADD = \
 	$(top_builddir)/src/gtest/libgtest.la \
 	$(TEST_LIBS)
+
+BUILT_SOURCES += $(i965_oa_GENERATED_FILES)
+
+# Note: we avoid using a multi target rule here and outputting both the
+# .c and .h files in one go so we don't hit problems with parallel
+# make and multiple invocations of the same script trying to write
+# to the same files.
+brw_oa_%.h: brw_oa_%.xml brw_oa.py Makefile.am
+	$(PYTHON2) $(PYTHON_FLAGS) $(srcdir)/brw_oa.py --header=$(builddir)/brw_oa_$(*).h --chipset="$(*)" $(srcdir)/brw_oa_$(*).xml
+brw_oa_%.c: brw_oa_%.xml brw_oa.py Makefile.am
+	$(PYTHON2) $(PYTHON_FLAGS) $(srcdir)/brw_oa.py --code=$(builddir)/brw_oa_$(*).c --chipset="$(*)" $(srcdir)/brw_oa_$(*).xml

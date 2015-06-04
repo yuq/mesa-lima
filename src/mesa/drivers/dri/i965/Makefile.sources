@@ -262,3 +262,7 @@ i965_gen8_FILES = \
 
 i965_gen9_FILES = \
 	genX_blorp_exec.c
+
+i965_oa_GENERATED_FILES = \
+	brw_oa_hsw.h \
+	brw_oa_hsw.c
