@@ -594,6 +594,7 @@ struct shader_times;
 struct gen_l3_config;
 
 enum brw_query_kind {
+   OA_COUNTERS,
    PIPELINE_STATS
 };
 
@@ -1078,6 +1079,26 @@ struct brw_context
    } predicate;
 
    struct {
+      /* Variables referenced in the XML meta data for OA performance
+       * counters, e.g in the normalization equations.
+       *
+       * All uint64_t for consistent operand types in generated code
+       */
+      struct {
+         uint64_t timestamp_frequency; /** $GpuTimestampFrequency */
+         uint64_t n_eus;               /** $EuCoresTotalCount */
+         uint64_t n_eu_slices;         /** $EuSlicesTotalCount */
+         uint64_t subslice_mask;       /** $SubsliceMask */
+         uint64_t gt_min_freq;         /** $GpuMinFrequency */
+         uint64_t gt_max_freq;         /** $GpuMaxFrequency */
+      } sys_vars;
+
+      /* OA metric sets, indexed by GUID, as know by Mesa at build time,
+       * to cross-reference with the GUIDs of configs advertised by the
+       * kernel at runtime
+       */
+      struct hash_table *oa_metrics_table;
+
       struct brw_perf_query_info *queries;
       int n_queries;
 
