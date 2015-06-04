@@ -414,6 +414,9 @@ VkResult anv_DestroyDevice(
 {
    struct anv_device *device = (struct anv_device *) _device;
 
+   /* FIXME: We should make device destruction actually safe. */
+   return VK_UNSUPPORTED;
+
    anv_compiler_destroy(device->compiler);
 
 
