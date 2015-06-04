@@ -761,15 +761,12 @@ intel_miptree_set_total_width_height(struct brw_context *brw,
        mt->total_width, mt->total_height, mt->cpp);
 }
 
-void
-brw_miptree_layout(struct brw_context *brw,
-                   struct intel_mipmap_tree *mt,
-                   enum intel_miptree_tiling_mode requested,
-                   uint32_t layout_flags)
+static void
+intel_miptree_set_alignment(struct brw_context *brw,
+                            struct intel_mipmap_tree *mt,
+                            uint32_t layout_flags)
 {
    bool gen6_hiz_or_stencil = false;
-
-   mt->tr_mode = INTEL_MIPTREE_TRMODE_NONE;
 
    if (brw->gen == 6 && mt->array_layout == ALL_SLICES_AT_EACH_LOD) {
       const GLenum base_format = _mesa_get_format_base_format(mt->format);
@@ -805,7 +802,17 @@ brw_miptree_layout(struct brw_context *brw,
          intel_horizontal_texture_alignment_unit(brw, mt, layout_flags);
       mt->align_h = intel_vertical_texture_alignment_unit(brw, mt);
    }
+}
 
+void
+brw_miptree_layout(struct brw_context *brw,
+                   struct intel_mipmap_tree *mt,
+                   enum intel_miptree_tiling_mode requested,
+                   uint32_t layout_flags)
+{
+   mt->tr_mode = INTEL_MIPTREE_TRMODE_NONE;
+
+   intel_miptree_set_alignment(brw, mt, layout_flags);
    intel_miptree_set_total_width_height(brw, mt);
 
    if (!mt->total_width || !mt->total_height) {
