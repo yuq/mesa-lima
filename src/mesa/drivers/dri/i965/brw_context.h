@@ -1114,7 +1114,59 @@ struct brw_context
       struct brw_perf_query_info *queries;
       int n_queries;
 
+      /* The i915 perf stream we open to setup + enable the OA counters */
+      int oa_stream_fd;
+
+      /* An i915 perf stream fd gives exclusive access to the OA unit that will
+       * report counter snapshots for a specific counter set/profile in a
+       * specific layout/format so we can only start OA queries that are
+       * compatible with the currently open fd...
+       */
+      int current_oa_metrics_set_id;
+      int current_oa_format;
+
+      /* List of buffers containing OA reports */
+      struct exec_list sample_buffers;
+
+      /* Cached list of empty sample buffers */
+      struct exec_list free_sample_buffers;
+
+      int n_active_oa_queries;
       int n_active_pipeline_stats_queries;
+
+      /* The number of queries depending on running OA counters which
+       * extends beyond brw_end_perf_query() since we need to wait until
+       * the last MI_RPC command has parsed by the GPU.
+       *
+       * Accurate accounting is important here as emitting an
+       * MI_REPORT_PERF_COUNT command while the OA unit is disabled will
+       * effectively hang the gpu.
+       */
+      int n_oa_users;
+
+      /* To help catch an spurious problem with the hardware or perf
+       * forwarding samples, we emit each MI_REPORT_PERF_COUNT command
+       * with a unique ID that we can explicitly check for...
+       */
+      int next_query_start_report_id;
+
+      /**
+       * An array of queries whose results haven't yet been assembled
+       * based on the data in buffer objects.
+       *
+       * These may be active, or have already ended.  However, the
+       * results have not been requested.
+       */
+      struct brw_perf_query_object **unaccumulated;
+      int unaccumulated_elements;
+      int unaccumulated_array_size;
+
+      /* The total number of query objects so we can relinquish
+       * our exclusive access to perf if the application deletes
+       * all of its objects. (NB: We only disable perf while
+       * there are no active queries)
+       */
+      int n_query_instances;
    } perfquery;
 
    int num_atoms[BRW_NUM_PIPELINES];
