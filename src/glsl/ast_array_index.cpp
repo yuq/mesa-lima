@@ -235,7 +235,7 @@ _mesa_ast_array_index_to_hir(void *mem_ctx,
                   ir_var_shader_storage) {
             _mesa_glsl_error(&loc, state, "unsized array index must be constant");
          }
-      } else if (array->type->fields.array->is_interface()
+      } else if (array->type->without_array()->is_interface()
                  && (array->variable_referenced()->data.mode == ir_var_uniform ||
                      array->variable_referenced()->data.mode == ir_var_shader_storage)
                  && !state->is_version(400, 0) && !state->ARB_gpu_shader5_enable) {
