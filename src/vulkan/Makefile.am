@@ -85,7 +85,7 @@ entrypoints.c : vk_gen.py $(vulkan_include_HEADERS)
 %-spirv.h: %.c glsl_scraper.py
 	$(AM_V_GEN) $(PYTHON2) $(srcdir)/glsl_scraper.py --glsl-only -o $@ $<
 
-CLEANFILES = entrypoints.h entrypoints.c
+CLEANFILES = $(BUILT_SOURCES)
 
 libvulkan_la_LIBADD = -lxcb -lxcb-dri3 \
 	$(top_builddir)/src/mesa/drivers/dri/i965/libi965_compiler.la
