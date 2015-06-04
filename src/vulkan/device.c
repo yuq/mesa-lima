@@ -1331,7 +1331,7 @@ VkResult anv_CreateFence(
    fence->execbuf.rsvd1 = device->context_id;
    fence->execbuf.rsvd2 = 0;
 
-   *pFence = (VkQueryPool) fence;
+   *pFence = (VkFence) fence;
 
    return VK_SUCCESS;
 
@@ -1561,7 +1561,7 @@ VkResult anv_CreateBufferView(
    fill_buffer_surface_state(view->surface_state.map,
                              pCreateInfo->format, view->offset, pCreateInfo->range);
 
-   *pView = (VkImageView) view;
+   *pView = (VkBufferView) view;
 
    return VK_SUCCESS;
 }
