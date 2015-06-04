@@ -764,7 +764,8 @@ ptn_emit_instruction(struct ptn_compile *c, struct prog_instruction *prog_inst)
 
    switch (op) {
    case OPCODE_RSQ:
-      ptn_move_dest(b, dest, nir_frsq(b, ptn_channel(b, src[0], X)));
+      ptn_move_dest(b, dest,
+                    nir_frsq(b, nir_fabs(b, ptn_channel(b, src[0], X))));
       break;
 
    case OPCODE_RCP:
