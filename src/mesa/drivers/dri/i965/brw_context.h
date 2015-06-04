@@ -602,9 +602,21 @@ struct brw_perf_query_info
 {
    enum brw_query_kind kind;
    const char *name;
+   const char *guid;
    struct brw_perf_query_counter *counters;
    int n_counters;
    size_t data_size;
+
+   /* OA specific */
+   uint64_t oa_metrics_set_id;
+   int oa_format;
+
+   /* For indexing into the accumulator[] ... */
+   int gpu_time_offset;
+   int gpu_clock_offset;
+   int a_offset;
+   int b_offset;
+   int c_offset;
 };
 
 /**
