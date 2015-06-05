@@ -815,6 +815,23 @@ intel_miptree_release_levels(struct intel_mipmap_tree *mt)
    }
 }
 
+static bool
+intel_miptree_can_use_tr_mode(const struct intel_mipmap_tree *mt)
+{
+   if (mt->tiling == I915_TILING_Y ||
+       mt->tiling == (I915_TILING_Y | I915_TILING_X) ||
+       mt->tr_mode == INTEL_MIPTREE_TRMODE_NONE) {
+      /* FIXME: Don't allow YS tiling at the moment. Using 64KB tiling
+       * for small textures might result in to memory wastage. Revisit
+       * this condition when we have more information about the specific
+       * cases where using YS over YF will be useful.
+       */
+      if (mt->tr_mode != INTEL_MIPTREE_TRMODE_YS)
+         return true;
+   }
+   return false;
+}
+
 void
 brw_miptree_layout(struct brw_context *brw,
                    struct intel_mipmap_tree *mt,
@@ -882,17 +899,8 @@ brw_miptree_layout(struct brw_context *brw,
 
       mt->tiling = brw_miptree_choose_tiling(brw, requested, mt);
       if (is_tr_mode_yf_ys_allowed) {
-         if (mt->tiling == I915_TILING_Y ||
-             mt->tiling == (I915_TILING_Y | I915_TILING_X) ||
-             mt->tr_mode == INTEL_MIPTREE_TRMODE_NONE) {
-            /* FIXME: Don't allow YS tiling at the moment. Using 64KB tiling
-             * for small textures might result in to memory wastage. Revisit
-             * this condition when we have more information about the specific
-             * cases where using YS over YF will be useful.
-             */
-            if (mt->tr_mode != INTEL_MIPTREE_TRMODE_YS)
-               break;
-         }
+         if (intel_miptree_can_use_tr_mode(mt))
+            break;
          /* Failed to use selected tr_mode. Free up the memory allocated
           * for miptree levels in intel_miptree_total_width_height().
           */
