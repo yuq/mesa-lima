@@ -82,10 +82,12 @@ ilo_blitter_set_invariants(struct ilo_blitter *blitter)
 }
 
 static void
-ilo_blitter_set_op(struct ilo_blitter *blitter,
-                   enum ilo_blitter_rectlist_op op)
+ilo_blitter_set_earlyz_op(struct ilo_blitter *blitter,
+                          enum ilo_state_raster_earlyz_op op,
+                          bool earlyz_stencil_clear)
 {
-   blitter->op = op;
+   blitter->earlyz_op = op;
+   blitter->earlyz_stencil_clear = earlyz_stencil_clear;
 }
 
 /**
@@ -128,6 +130,15 @@ ilo_blitter_set_dsa(struct ilo_blitter *blitter,
 }
 
 static void
+ilo_blitter_set_fb_rs(struct ilo_blitter *blitter)
+{
+   memset(&blitter->fb.rs, 0, sizeof(blitter->fb.rs));
+   ilo_state_raster_init_for_rectlist(&blitter->fb.rs, blitter->ilo->dev,
+         blitter->fb.num_samples, blitter->earlyz_op,
+         blitter->earlyz_stencil_clear);
+}
+
+static void
 ilo_blitter_set_fb(struct ilo_blitter *blitter,
                    struct pipe_resource *res, unsigned level,
                    const struct ilo_surface_cso *cso)
@@ -142,6 +153,8 @@ ilo_blitter_set_fb(struct ilo_blitter *blitter,
       blitter->fb.num_samples = 1;
 
    memcpy(&blitter->fb.dst, cso, sizeof(*cso));
+
+   ilo_blitter_set_fb_rs(blitter);
 }
 
 static void
@@ -187,9 +200,9 @@ hiz_align_fb(struct ilo_blitter *blitter)
 {
    unsigned align_w, align_h;
 
-   switch (blitter->op) {
-   case ILO_BLITTER_RECTLIST_CLEAR_ZS:
-   case ILO_BLITTER_RECTLIST_RESOLVE_Z:
+   switch (blitter->earlyz_op) {
+   case ILO_STATE_RASTER_EARLYZ_DEPTH_CLEAR:
+   case ILO_STATE_RASTER_EARLYZ_DEPTH_RESOLVE:
       break;
    default:
       return;
@@ -393,7 +406,9 @@ ilo_blitter_rectlist_clear_zs(struct ilo_blitter *blitter,
    }
 
    ilo_blitter_set_invariants(blitter);
-   ilo_blitter_set_op(blitter, ILO_BLITTER_RECTLIST_CLEAR_ZS);
+   ilo_blitter_set_earlyz_op(blitter,
+         ILO_STATE_RASTER_EARLYZ_DEPTH_CLEAR,
+         clear_flags & PIPE_CLEAR_STENCIL);
 
    ilo_blitter_set_dsa(blitter, &dsa_state);
    ilo_blitter_set_clear_values(blitter, clear_value, (ubyte) stencil);
@@ -437,7 +452,8 @@ ilo_blitter_rectlist_resolve_z(struct ilo_blitter *blitter,
    dsa_state.depth.func = PIPE_FUNC_NEVER;
 
    ilo_blitter_set_invariants(blitter);
-   ilo_blitter_set_op(blitter, ILO_BLITTER_RECTLIST_RESOLVE_Z);
+   ilo_blitter_set_earlyz_op(blitter,
+         ILO_STATE_RASTER_EARLYZ_DEPTH_RESOLVE, false);
 
    ilo_blitter_set_dsa(blitter, &dsa_state);
    ilo_blitter_set_clear_values(blitter, s->clear_value, 0);
@@ -470,7 +486,8 @@ ilo_blitter_rectlist_resolve_hiz(struct ilo_blitter *blitter,
    dsa_state.depth.writemask = true;
 
    ilo_blitter_set_invariants(blitter);
-   ilo_blitter_set_op(blitter, ILO_BLITTER_RECTLIST_RESOLVE_HIZ);
+   ilo_blitter_set_earlyz_op(blitter,
+         ILO_STATE_RASTER_EARLYZ_HIZ_RESOLVE, false);
 
    ilo_blitter_set_dsa(blitter, &dsa_state);
    ilo_blitter_set_fb_from_resource(blitter, res, res->format, level, slice);

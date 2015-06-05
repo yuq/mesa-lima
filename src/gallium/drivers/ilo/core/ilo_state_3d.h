@@ -101,42 +101,6 @@ struct ilo_so_state {
    bool enabled;
 };
 
-struct ilo_rasterizer_clip {
-   /* 3DSTATE_CLIP */
-   uint32_t payload[3];
-
-   uint32_t can_enable_guardband;
-};
-
-struct ilo_rasterizer_sf {
-   /* 3DSTATE_SF */
-   uint32_t payload[3];
-   uint32_t dw_msaa;
-
-   /* Global Depth Offset Constant/Scale/Clamp */
-   uint32_t dw_depth_offset_const;
-   uint32_t dw_depth_offset_scale;
-   uint32_t dw_depth_offset_clamp;
-
-   /* Gen8+ 3DSTATE_RASTER */
-   uint32_t dw_raster;
-};
-
-struct ilo_rasterizer_wm {
-   /* 3DSTATE_WM */
-   uint32_t payload[2];
-   uint32_t dw_msaa_rast;
-   uint32_t dw_msaa_disp;
-};
-
-struct ilo_rasterizer_state {
-   struct pipe_rasterizer_state state;
-
-   struct ilo_rasterizer_clip clip;
-   struct ilo_rasterizer_sf sf;
-   struct ilo_rasterizer_wm wm;
-};
-
 struct ilo_dsa_state {
    /* DEPTH_STENCIL_STATE or Gen8+ 3DSTATE_WM_DEPTH_STENCIL */
    uint32_t payload[3];
@@ -186,6 +150,9 @@ struct ilo_fb_state {
    struct ilo_state_zs null_zs;
 
    struct ilo_fb_blend_caps {
+      bool is_unorm;
+      bool is_integer;
+
       bool can_logicop;
       bool can_blend;
       bool can_alpha_test;
@@ -193,6 +160,10 @@ struct ilo_fb_state {
    } blend_caps[PIPE_MAX_COLOR_BUFS];
 
    unsigned num_samples;
+
+   bool has_integer_rt;
+   bool has_hiz;
+   enum gen_depth_format depth_offset_format;
 };
 
 struct ilo_shader_cso {
@@ -214,10 +185,6 @@ ilo_gpe_init_ve_nosrc(const struct ilo_dev *dev,
                       int comp0, int comp1, int comp2, int comp3,
                       struct ilo_ve_cso *cso);
 
-void
-ilo_gpe_init_rasterizer(const struct ilo_dev *dev,
-                        const struct pipe_rasterizer_state *state,
-                        struct ilo_rasterizer_state *rasterizer);
 void
 ilo_gpe_init_dsa(const struct ilo_dev *dev,
                  const struct pipe_depth_stencil_alpha_state *state,

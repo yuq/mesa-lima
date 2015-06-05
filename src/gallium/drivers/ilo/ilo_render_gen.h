@@ -31,6 +31,7 @@
 #include "core/ilo_builder.h"
 #include "core/ilo_builder_3d.h"
 #include "core/ilo_builder_render.h"
+#include "core/ilo_state_raster.h"
 
 #include "ilo_common.h"
 #include "ilo_state.h"
@@ -89,6 +90,8 @@ struct ilo_render {
       int reduced_prim;
       int so_max_vertices;
 
+      struct ilo_state_raster rs;
+
       uint32_t SF_VIEWPORT;
       uint32_t CLIP_VIEWPORT;
       uint32_t SF_CLIP_VIEWPORT; /* GEN7+ */
@@ -144,6 +147,7 @@ struct ilo_render_draw_session {
    bool prim_changed;
    bool primitive_restart_changed;
 
+   struct ilo_state_raster_delta rs_delta;
    struct ilo_state_viewport_delta vp_delta;
 
    /* dynamic states */

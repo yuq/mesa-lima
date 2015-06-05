@@ -36,580 +36,11 @@
 #include "../ilo_shader.h"
 
 static void
-rasterizer_init_clip(const struct ilo_dev *dev,
-                     const struct pipe_rasterizer_state *state,
-                     struct ilo_rasterizer_clip *clip)
-{
-   uint32_t dw1, dw2, dw3;
-
-   ILO_DEV_ASSERT(dev, 6, 8);
-
-   dw1 = GEN6_CLIP_DW1_STATISTICS;
-
-   if (ilo_dev_gen(dev) >= ILO_GEN(7)) {
-      /*
-       * From the Ivy Bridge PRM, volume 2 part 1, page 219:
-       *
-       *     "Workaround : Due to Hardware issue "EarlyCull" needs to be
-       *      enabled only for the cases where the incoming primitive topology
-       *      into the clipper guaranteed to be Trilist."
-       *
-       * What does this mean?
-       */
-      dw1 |= 0 << 19 |
-             GEN7_CLIP_DW1_EARLY_CULL_ENABLE;
-
-      if (ilo_dev_gen(dev) < ILO_GEN(8)) {
-         if (state->front_ccw)
-            dw1 |= GEN6_FRONTWINDING_CCW << 20;
-
-         switch (state->cull_face) {
-         case PIPE_FACE_NONE:
-            dw1 |= GEN6_CULLMODE_NONE << 16;
-            break;
-         case PIPE_FACE_FRONT:
-            dw1 |= GEN6_CULLMODE_FRONT << 16;
-            break;
-         case PIPE_FACE_BACK:
-            dw1 |= GEN6_CULLMODE_BACK << 16;
-            break;
-         case PIPE_FACE_FRONT_AND_BACK:
-            dw1 |= GEN6_CULLMODE_BOTH << 16;
-            break;
-         }
-      }
-   }
-
-   dw2 = GEN6_CLIP_DW2_CLIP_ENABLE |
-         GEN6_CLIP_DW2_XY_TEST_ENABLE |
-         state->clip_plane_enable << GEN6_CLIP_DW2_UCP_CLIP_ENABLES__SHIFT |
-         GEN6_CLIPMODE_NORMAL << 13;
-
-   if (state->clip_halfz)
-      dw2 |= GEN6_CLIP_DW2_APIMODE_D3D;
-   else
-      dw2 |= GEN6_CLIP_DW2_APIMODE_OGL;
-
-   if (ilo_dev_gen(dev) < ILO_GEN(8) && state->depth_clip)
-      dw2 |= GEN6_CLIP_DW2_Z_TEST_ENABLE;
-
-   if (state->flatshade_first) {
-      dw2 |= 0 << GEN6_CLIP_DW2_TRI_PROVOKE__SHIFT |
-             0 << GEN6_CLIP_DW2_LINE_PROVOKE__SHIFT |
-             1 << GEN6_CLIP_DW2_TRIFAN_PROVOKE__SHIFT;
-   }
-   else {
-      dw2 |= 2 << GEN6_CLIP_DW2_TRI_PROVOKE__SHIFT |
-             1 << GEN6_CLIP_DW2_LINE_PROVOKE__SHIFT |
-             2 << GEN6_CLIP_DW2_TRIFAN_PROVOKE__SHIFT;
-   }
-
-   dw3 = 0x1 << GEN6_CLIP_DW3_MIN_POINT_WIDTH__SHIFT |
-         0x7ff << GEN6_CLIP_DW3_MAX_POINT_WIDTH__SHIFT;
-
-   clip->payload[0] = dw1;
-   clip->payload[1] = dw2;
-   clip->payload[2] = dw3;
-
-   clip->can_enable_guardband = true;
-
-   /*
-    * There are several reasons that guard band test should be disabled
-    *
-    *  - GL wide points (to avoid partially visibie object)
-    *  - GL wide or AA lines (to avoid partially visibie object)
-    */
-   if (state->point_size_per_vertex || state->point_size > 1.0f)
-      clip->can_enable_guardband = false;
-   if (state->line_smooth || state->line_width > 1.0f)
-      clip->can_enable_guardband = false;
-}
-
-static void
-rasterizer_init_sf_depth_offset_gen6(const struct ilo_dev *dev,
-                                     const struct pipe_rasterizer_state *state,
-                                     struct ilo_rasterizer_sf *sf)
-{
-   ILO_DEV_ASSERT(dev, 6, 8);
-
-   /*
-    * Scale the constant term.  The minimum representable value used by the HW
-    * is not large enouch to be the minimum resolvable difference.
-    */
-   sf->dw_depth_offset_const = fui(state->offset_units * 2.0f);
-   sf->dw_depth_offset_scale = fui(state->offset_scale);
-   sf->dw_depth_offset_clamp = fui(state->offset_clamp);
-}
-
-static void
-rasterizer_init_sf_gen6(const struct ilo_dev *dev,
-                        const struct pipe_rasterizer_state *state,
-                        struct ilo_rasterizer_sf *sf)
-{
-   int line_width, point_width;
-   uint32_t dw1, dw2, dw3;
-
-   ILO_DEV_ASSERT(dev, 6, 7.5);
-
-   /*
-    * From the Sandy Bridge PRM, volume 2 part 1, page 248:
-    *
-    *     "This bit (Statistics Enable) should be set whenever clipping is
-    *      enabled and the Statistics Enable bit is set in CLIP_STATE. It
-    *      should be cleared if clipping is disabled or Statistics Enable in
-    *      CLIP_STATE is clear."
-    */
-   dw1 = GEN7_SF_DW1_STATISTICS |
-         GEN7_SF_DW1_VIEWPORT_TRANSFORM;
-
-   /* XXX GEN6 path seems to work fine for GEN7 */
-   if (false && ilo_dev_gen(dev) >= ILO_GEN(7)) {
-      /*
-       * From the Ivy Bridge PRM, volume 2 part 1, page 258:
-       *
-       *     "This bit (Legacy Global Depth Bias Enable, Global Depth Offset
-       *      Enable Solid , Global Depth Offset Enable Wireframe, and Global
-       *      Depth Offset Enable Point) should be set whenever non zero depth
-       *      bias (Slope, Bias) values are used. Setting this bit may have
-       *      some degradation of performance for some workloads."
-       */
-      if (state->offset_tri || state->offset_line || state->offset_point) {
-         /* XXX need to scale offset_const according to the depth format */
-         dw1 |= GEN7_SF_DW1_LEGACY_DEPTH_OFFSET;
-
-         dw1 |= GEN7_SF_DW1_DEPTH_OFFSET_SOLID |
-                GEN7_SF_DW1_DEPTH_OFFSET_WIREFRAME |
-                GEN7_SF_DW1_DEPTH_OFFSET_POINT;
-      }
-   } else {
-      if (state->offset_tri)
-         dw1 |= GEN7_SF_DW1_DEPTH_OFFSET_SOLID;
-      if (state->offset_line)
-         dw1 |= GEN7_SF_DW1_DEPTH_OFFSET_WIREFRAME;
-      if (state->offset_point)
-         dw1 |= GEN7_SF_DW1_DEPTH_OFFSET_POINT;
-   }
-
-   switch (state->fill_front) {
-   case PIPE_POLYGON_MODE_FILL:
-      dw1 |= GEN6_FILLMODE_SOLID << 5;
-      break;
-   case PIPE_POLYGON_MODE_LINE:
-      dw1 |= GEN6_FILLMODE_WIREFRAME << 5;
-      break;
-   case PIPE_POLYGON_MODE_POINT:
-      dw1 |= GEN6_FILLMODE_POINT << 5;
-      break;
-   }
-
-   switch (state->fill_back) {
-   case PIPE_POLYGON_MODE_FILL:
-      dw1 |= GEN6_FILLMODE_SOLID << 3;
-      break;
-   case PIPE_POLYGON_MODE_LINE:
-      dw1 |= GEN6_FILLMODE_WIREFRAME << 3;
-      break;
-   case PIPE_POLYGON_MODE_POINT:
-      dw1 |= GEN6_FILLMODE_POINT << 3;
-      break;
-   }
-
-   if (state->front_ccw)
-      dw1 |= GEN6_FRONTWINDING_CCW;
-
-   dw2 = 0;
-
-   if (state->line_smooth) {
-      /*
-       * From the Sandy Bridge PRM, volume 2 part 1, page 251:
-       *
-       *     "This field (Anti-aliasing Enable) must be disabled if any of the
-       *      render targets have integer (UINT or SINT) surface format."
-       *
-       * From the Sandy Bridge PRM, volume 2 part 1, page 317:
-       *
-       *     "This field (Hierarchical Depth Buffer Enable) must be disabled
-       *      if Anti-aliasing Enable in 3DSTATE_SF is enabled.
-       *
-       * TODO We do not check those yet.
-       */
-      dw2 |= GEN7_SF_DW2_AA_LINE_ENABLE |
-             GEN7_SF_DW2_AA_LINE_CAP_1_0;
-   }
-
-   switch (state->cull_face) {
-   case PIPE_FACE_NONE:
-      dw2 |= GEN6_CULLMODE_NONE << 29;
-      break;
-   case PIPE_FACE_FRONT:
-      dw2 |= GEN6_CULLMODE_FRONT << 29;
-      break;
-   case PIPE_FACE_BACK:
-      dw2 |= GEN6_CULLMODE_BACK << 29;
-      break;
-   case PIPE_FACE_FRONT_AND_BACK:
-      dw2 |= GEN6_CULLMODE_BOTH << 29;
-      break;
-   }
-
-   /*
-    * Smooth lines should intersect ceil(line_width) or (ceil(line_width) + 1)
-    * pixels in the minor direction.  We have to make the lines slightly
-    * thicker, 0.5 pixel on both sides, so that they intersect that many
-    * pixels are considered into the lines.
-    *
-    * Line width is in U3.7.
-    */
-   line_width = (int)
-      ((state->line_width + (float) state->line_smooth) * 128.0f + 0.5f);
-   line_width = CLAMP(line_width, 0, 1023);
-
-   /* use GIQ rules */
-   if (line_width == 128 && !state->line_smooth)
-      line_width = 0;
-
-   dw2 |= line_width << GEN7_SF_DW2_LINE_WIDTH__SHIFT;
-
-   if (ilo_dev_gen(dev) == ILO_GEN(7.5) && state->line_stipple_enable)
-      dw2 |= GEN75_SF_DW2_LINE_STIPPLE_ENABLE;
-
-   if (state->scissor)
-      dw2 |= GEN7_SF_DW2_SCISSOR_ENABLE;
-
-   dw3 = GEN7_SF_DW3_TRUE_AA_LINE_DISTANCE |
-         GEN7_SF_DW3_SUBPIXEL_8BITS;
-
-   if (state->line_last_pixel)
-      dw3 |= GEN7_SF_DW3_LINE_LAST_PIXEL_ENABLE;
-
-   if (state->flatshade_first) {
-      dw3 |= 0 << GEN7_SF_DW3_TRI_PROVOKE__SHIFT |
-             0 << GEN7_SF_DW3_LINE_PROVOKE__SHIFT |
-             1 << GEN7_SF_DW3_TRIFAN_PROVOKE__SHIFT;
-   } else {
-      dw3 |= 2 << GEN7_SF_DW3_TRI_PROVOKE__SHIFT |
-             1 << GEN7_SF_DW3_LINE_PROVOKE__SHIFT |
-             2 << GEN7_SF_DW3_TRIFAN_PROVOKE__SHIFT;
-   }
-
-   if (!state->point_size_per_vertex)
-      dw3 |= GEN7_SF_DW3_USE_POINT_WIDTH;
-
-   /* in U8.3 */
-   point_width = (int) (state->point_size * 8.0f + 0.5f);
-   point_width = CLAMP(point_width, 1, 2047);
-
-   dw3 |= point_width;
-
-   STATIC_ASSERT(Elements(sf->payload) >= 3);
-   sf->payload[0] = dw1;
-   sf->payload[1] = dw2;
-   sf->payload[2] = dw3;
-
-   if (state->multisample) {
-      sf->dw_msaa = GEN6_MSRASTMODE_ON_PATTERN << 8;
-
-      /*
-       * From the Sandy Bridge PRM, volume 2 part 1, page 251:
-       *
-       *     "Software must not program a value of 0.0 when running in
-       *      MSRASTMODE_ON_xxx modes - zero-width lines are not available
-       *      when multisampling rasterization is enabled."
-       */
-      if (!line_width) {
-         line_width = 128; /* 1.0f */
-
-         sf->dw_msaa |= line_width << GEN7_SF_DW2_LINE_WIDTH__SHIFT;
-      }
-   } else {
-      sf->dw_msaa = 0;
-   }
-
-   rasterizer_init_sf_depth_offset_gen6(dev, state, sf);
-   /* 3DSTATE_RASTER is Gen8+ only */
-   sf->dw_raster = 0;
-}
-
-static uint32_t
-rasterizer_get_sf_raster_gen8(const struct ilo_dev *dev,
-                              const struct pipe_rasterizer_state *state)
-{
-   uint32_t dw = 0;
-
-   ILO_DEV_ASSERT(dev, 8, 8);
-
-   if (state->front_ccw)
-      dw |= GEN6_FRONTWINDING_CCW << 21;
-
-   switch (state->cull_face) {
-   case PIPE_FACE_NONE:
-      dw |= GEN6_CULLMODE_NONE << 16;
-      break;
-   case PIPE_FACE_FRONT:
-      dw |= GEN6_CULLMODE_FRONT << 16;
-      break;
-   case PIPE_FACE_BACK:
-      dw |= GEN6_CULLMODE_BACK << 16;
-      break;
-   case PIPE_FACE_FRONT_AND_BACK:
-      dw |= GEN6_CULLMODE_BOTH << 16;
-      break;
-   }
-
-   if (state->point_smooth)
-      dw |= GEN8_RASTER_DW1_SMOOTH_POINT_ENABLE;
-
-   if (state->multisample)
-      dw |= GEN8_RASTER_DW1_API_MULTISAMPLE_ENABLE;
-
-   if (state->offset_tri)
-      dw|= GEN8_RASTER_DW1_DEPTH_OFFSET_SOLID;
-   if (state->offset_line)
-      dw|= GEN8_RASTER_DW1_DEPTH_OFFSET_WIREFRAME;
-   if (state->offset_point)
-      dw|= GEN8_RASTER_DW1_DEPTH_OFFSET_POINT;
-
-   switch (state->fill_front) {
-   case PIPE_POLYGON_MODE_FILL:
-      dw |= GEN6_FILLMODE_SOLID << 5;
-      break;
-   case PIPE_POLYGON_MODE_LINE:
-      dw |= GEN6_FILLMODE_WIREFRAME << 5;
-      break;
-   case PIPE_POLYGON_MODE_POINT:
-      dw |= GEN6_FILLMODE_POINT << 5;
-      break;
-   }
-
-   switch (state->fill_back) {
-   case PIPE_POLYGON_MODE_FILL:
-      dw |= GEN6_FILLMODE_SOLID << 3;
-      break;
-   case PIPE_POLYGON_MODE_LINE:
-      dw |= GEN6_FILLMODE_WIREFRAME << 3;
-      break;
-   case PIPE_POLYGON_MODE_POINT:
-      dw |= GEN6_FILLMODE_POINT << 3;
-      break;
-   }
-
-   if (state->line_smooth)
-      dw |= GEN8_RASTER_DW1_AA_LINE_ENABLE;
-
-   if (state->scissor)
-      dw |= GEN8_RASTER_DW1_SCISSOR_ENABLE;
-
-   if (state->depth_clip)
-      dw |= GEN8_RASTER_DW1_Z_TEST_ENABLE;
-
-   return dw;
-}
-
-static void
-rasterizer_init_sf_gen8(const struct ilo_dev *dev,
-                        const struct pipe_rasterizer_state *state,
-                        struct ilo_rasterizer_sf *sf)
-{
-   int line_width, point_width;
-   uint32_t dw1, dw2, dw3;
-
-   ILO_DEV_ASSERT(dev, 8, 8);
-
-   /* in U3.7 */
-   line_width = (int)
-      ((state->line_width + (float) state->line_smooth) * 128.0f + 0.5f);
-   line_width = CLAMP(line_width, 0, 1023);
-
-   /* use GIQ rules */
-   if (line_width == 128 && !state->line_smooth)
-      line_width = 0;
-
-   /* in U8.3 */
-   point_width = (int) (state->point_size * 8.0f + 0.5f);
-   point_width = CLAMP(point_width, 1, 2047);
-
-   dw1 = GEN7_SF_DW1_STATISTICS |
-         GEN7_SF_DW1_VIEWPORT_TRANSFORM;
-
-   dw2 = line_width << GEN7_SF_DW2_LINE_WIDTH__SHIFT;
-   if (state->line_smooth)
-      dw2 |= GEN7_SF_DW2_AA_LINE_CAP_1_0;
-
-   dw3 = GEN7_SF_DW3_TRUE_AA_LINE_DISTANCE |
-         GEN7_SF_DW3_SUBPIXEL_8BITS |
-         point_width;
-
-   if (state->line_last_pixel)
-      dw3 |= GEN7_SF_DW3_LINE_LAST_PIXEL_ENABLE;
-
-   if (state->flatshade_first) {
-      dw3 |= 0 << GEN7_SF_DW3_TRI_PROVOKE__SHIFT |
-             0 << GEN7_SF_DW3_LINE_PROVOKE__SHIFT |
-             1 << GEN7_SF_DW3_TRIFAN_PROVOKE__SHIFT;
-   } else {
-      dw3 |= 2 << GEN7_SF_DW3_TRI_PROVOKE__SHIFT |
-             1 << GEN7_SF_DW3_LINE_PROVOKE__SHIFT |
-             2 << GEN7_SF_DW3_TRIFAN_PROVOKE__SHIFT;
-   }
-
-   if (!state->point_size_per_vertex)
-      dw3 |= GEN7_SF_DW3_USE_POINT_WIDTH;
-
-   dw3 |= point_width;
-
-   STATIC_ASSERT(Elements(sf->payload) >= 3);
-   sf->payload[0] = dw1;
-   sf->payload[1] = dw2;
-   sf->payload[2] = dw3;
-
-   rasterizer_init_sf_depth_offset_gen6(dev, state, sf);
-
-   sf->dw_msaa = 0;
-   sf->dw_raster = rasterizer_get_sf_raster_gen8(dev, state);
-}
-
-static void
-rasterizer_init_wm_gen6(const struct ilo_dev *dev,
-                        const struct pipe_rasterizer_state *state,
-                        struct ilo_rasterizer_wm *wm)
-{
-   uint32_t dw5, dw6;
-
-   ILO_DEV_ASSERT(dev, 6, 6);
-
-   /* only the FF unit states are set, as in GEN7 */
-
-   dw5 = GEN6_WM_DW5_AA_LINE_WIDTH_2_0;
-
-   /* same value as in 3DSTATE_SF */
-   if (state->line_smooth)
-      dw5 |= GEN6_WM_DW5_AA_LINE_CAP_1_0;
-
-   if (state->poly_stipple_enable)
-      dw5 |= GEN6_WM_DW5_POLY_STIPPLE_ENABLE;
-   if (state->line_stipple_enable)
-      dw5 |= GEN6_WM_DW5_LINE_STIPPLE_ENABLE;
-
-   /*
-    * assertion that makes sure
-    *
-    *   dw6 |= wm->dw_msaa_rast | wm->dw_msaa_disp;
-    *
-    * is valid
-    */
-   STATIC_ASSERT(GEN6_MSRASTMODE_OFF_PIXEL == 0 &&
-                 GEN6_WM_DW6_MSDISPMODE_PERSAMPLE == 0);
-   dw6 = GEN6_ZW_INTERP_PIXEL << GEN6_WM_DW6_ZW_INTERP__SHIFT;
-
-   if (state->bottom_edge_rule)
-      dw6 |= GEN6_WM_DW6_POINT_RASTRULE_UPPER_RIGHT;
-
-   wm->dw_msaa_rast =
-      (state->multisample) ? (GEN6_MSRASTMODE_ON_PATTERN << 1) : 0;
-   wm->dw_msaa_disp = GEN6_WM_DW6_MSDISPMODE_PERPIXEL;
-
-   STATIC_ASSERT(Elements(wm->payload) >= 2);
-   wm->payload[0] = dw5;
-   wm->payload[1] = dw6;
-}
-
-static void
-rasterizer_init_wm_gen7(const struct ilo_dev *dev,
-                        const struct pipe_rasterizer_state *state,
-                        struct ilo_rasterizer_wm *wm)
-{
-   uint32_t dw1, dw2;
-
-   ILO_DEV_ASSERT(dev, 7, 7.5);
-
-   /*
-    * assertion that makes sure
-    *
-    *   dw1 |= wm->dw_msaa_rast;
-    *   dw2 |= wm->dw_msaa_disp;
-    *
-    * is valid
-    */
-   STATIC_ASSERT(GEN6_MSRASTMODE_OFF_PIXEL == 0 &&
-                 GEN7_WM_DW2_MSDISPMODE_PERSAMPLE == 0);
-   dw1 = GEN6_ZW_INTERP_PIXEL << GEN7_WM_DW1_ZW_INTERP__SHIFT |
-         GEN7_WM_DW1_AA_LINE_WIDTH_2_0;
-   dw2 = 0;
-
-   /* same value as in 3DSTATE_SF */
-   if (state->line_smooth)
-      dw1 |= GEN7_WM_DW1_AA_LINE_CAP_1_0;
-
-   if (state->poly_stipple_enable)
-      dw1 |= GEN7_WM_DW1_POLY_STIPPLE_ENABLE;
-   if (state->line_stipple_enable)
-      dw1 |= GEN7_WM_DW1_LINE_STIPPLE_ENABLE;
-
-   if (state->bottom_edge_rule)
-      dw1 |= GEN7_WM_DW1_POINT_RASTRULE_UPPER_RIGHT;
-
-   wm->dw_msaa_rast =
-      (state->multisample) ? GEN6_MSRASTMODE_ON_PATTERN : 0;
-   wm->dw_msaa_disp = GEN7_WM_DW2_MSDISPMODE_PERPIXEL;
-
-   STATIC_ASSERT(Elements(wm->payload) >= 2);
-   wm->payload[0] = dw1;
-   wm->payload[1] = dw2;
-}
-
-static uint32_t
-rasterizer_get_wm_gen8(const struct ilo_dev *dev,
-                       const struct pipe_rasterizer_state *state)
-{
-   uint32_t dw;
-
-   ILO_DEV_ASSERT(dev, 8, 8);
-
-   dw = GEN6_ZW_INTERP_PIXEL << GEN7_WM_DW1_ZW_INTERP__SHIFT |
-        GEN7_WM_DW1_AA_LINE_WIDTH_2_0;
-
-   /* same value as in 3DSTATE_SF */
-   if (state->line_smooth)
-      dw |= GEN7_WM_DW1_AA_LINE_CAP_1_0;
-
-   if (state->poly_stipple_enable)
-      dw |= GEN7_WM_DW1_POLY_STIPPLE_ENABLE;
-   if (state->line_stipple_enable)
-      dw |= GEN7_WM_DW1_LINE_STIPPLE_ENABLE;
-
-   if (state->bottom_edge_rule)
-      dw |= GEN7_WM_DW1_POINT_RASTRULE_UPPER_RIGHT;
-
-   return dw;
-}
-
-void
-ilo_gpe_init_rasterizer(const struct ilo_dev *dev,
-                        const struct pipe_rasterizer_state *state,
-                        struct ilo_rasterizer_state *rasterizer)
-{
-   rasterizer_init_clip(dev, state, &rasterizer->clip);
-
-   if (ilo_dev_gen(dev) >= ILO_GEN(8)) {
-      memset(&rasterizer->wm, 0, sizeof(rasterizer->wm));
-      rasterizer->wm.payload[0] = rasterizer_get_wm_gen8(dev, state);
-
-      rasterizer_init_sf_gen8(dev, state, &rasterizer->sf);
-   } else if (ilo_dev_gen(dev) >= ILO_GEN(7)) {
-      rasterizer_init_wm_gen7(dev, state, &rasterizer->wm);
-      rasterizer_init_sf_gen6(dev, state, &rasterizer->sf);
-   } else {
-      rasterizer_init_wm_gen6(dev, state, &rasterizer->wm);
-      rasterizer_init_sf_gen6(dev, state, &rasterizer->sf);
-   }
-}
-
-static void
 fs_init_cso_gen6(const struct ilo_dev *dev,
                  const struct ilo_shader_state *fs,
                  struct ilo_shader_cso *cso)
 {
-   int start_grf, input_count, sampler_count, interps, max_threads;
+   int start_grf, input_count, sampler_count, max_threads;
    uint32_t dw2, dw4, dw5, dw6;
 
    ILO_DEV_ASSERT(dev, 6, 6);
@@ -617,8 +48,6 @@ fs_init_cso_gen6(const struct ilo_dev *dev,
    start_grf = ilo_shader_get_kernel_param(fs, ILO_KERNEL_URB_DATA_START_REG);
    input_count = ilo_shader_get_kernel_param(fs, ILO_KERNEL_INPUT_COUNT);
    sampler_count = ilo_shader_get_kernel_param(fs, ILO_KERNEL_SAMPLER_COUNT);
-   interps = ilo_shader_get_kernel_param(fs,
-         ILO_KERNEL_FS_BARYCENTRIC_INTERPOLATIONS);
 
    /* see brwCreateContext() */
    max_threads = (dev->gt == 2) ? 80 : 40;
@@ -691,8 +120,7 @@ fs_init_cso_gen6(const struct ilo_dev *dev,
    dw5 |= GEN6_PS_DISPATCH_8 << GEN6_WM_DW5_PS_DISPATCH_MODE__SHIFT;
 
    dw6 = input_count << GEN6_WM_DW6_SF_ATTR_COUNT__SHIFT |
-         GEN6_POSOFFSET_NONE << GEN6_WM_DW6_PS_POSOFFSET__SHIFT |
-         interps << GEN6_WM_DW6_BARYCENTRIC_INTERP__SHIFT;
+         GEN6_POSOFFSET_NONE << GEN6_WM_DW6_PS_POSOFFSET__SHIFT;
 
    STATIC_ASSERT(Elements(cso->payload) >= 4);
    cso->payload[0] = dw2;
@@ -709,9 +137,7 @@ fs_get_wm_gen7(const struct ilo_dev *dev,
 
    ILO_DEV_ASSERT(dev, 7, 7.5);
 
-   dw = ilo_shader_get_kernel_param(fs,
-         ILO_KERNEL_FS_BARYCENTRIC_INTERPOLATIONS) <<
-      GEN7_WM_DW1_BARYCENTRIC_INTERP__SHIFT;
+   dw = 0;
 
    /*
     * TODO set this bit only when
@@ -839,17 +265,6 @@ fs_get_psx_gen8(const struct ilo_dev *dev,
    return dw;
 }
 
-static uint32_t
-fs_get_wm_gen8(const struct ilo_dev *dev,
-               const struct ilo_shader_state *fs)
-{
-   ILO_DEV_ASSERT(dev, 8, 8);
-
-   return ilo_shader_get_kernel_param(fs,
-         ILO_KERNEL_FS_BARYCENTRIC_INTERPOLATIONS) <<
-      GEN7_WM_DW1_BARYCENTRIC_INTERP__SHIFT;
-}
-
 static void
 fs_init_cso_gen8(const struct ilo_dev *dev,
                  const struct ilo_shader_state *fs,
@@ -879,12 +294,11 @@ fs_init_cso_gen8(const struct ilo_dev *dev,
          0 << GEN8_PS_DW7_URB_GRF_START1__SHIFT |
          0 << GEN8_PS_DW7_URB_GRF_START2__SHIFT;
 
-   STATIC_ASSERT(Elements(cso->payload) >= 5);
+   STATIC_ASSERT(Elements(cso->payload) >= 4);
    cso->payload[0] = dw3;
    cso->payload[1] = dw6;
    cso->payload[2] = dw7;
    cso->payload[3] = fs_get_psx_gen8(dev, fs);
-   cso->payload[4] = fs_get_wm_gen8(dev, fs);
 }
 
 void
@@ -1589,6 +1003,11 @@ fb_set_blend_caps(const struct ilo_dev *dev,
    if (format == PIPE_FORMAT_NONE || desc->is_mixed)
       return;
 
+   caps->is_unorm = (ch >= 0 && desc->channel[ch].normalized &&
+         desc->channel[ch].type == UTIL_FORMAT_TYPE_UNSIGNED &&
+         desc->colorspace == UTIL_FORMAT_COLORSPACE_RGB);
+   caps->is_integer = util_format_is_pure_integer(format);
+
    /*
     * From the Sandy Bridge PRM, volume 2 part 1, page 365:
     *
@@ -1597,16 +1016,10 @@ fb_set_blend_caps(const struct ilo_dev *dev,
     *
     * According to the classic driver, this is lifted on Gen8+.
     */
-   if (ilo_dev_gen(dev) >= ILO_GEN(8)) {
-      caps->can_logicop = true;
-   } else {
-      caps->can_logicop = (ch >= 0 && desc->channel[ch].normalized &&
-            desc->channel[ch].type == UTIL_FORMAT_TYPE_UNSIGNED &&
-            desc->colorspace == UTIL_FORMAT_COLORSPACE_RGB);
-   }
+   caps->can_logicop = (ilo_dev_gen(dev) >= ILO_GEN(8) || caps->is_unorm);
 
    /* no blending for pure integer formats */
-   caps->can_blend = !util_format_is_pure_integer(format);
+   caps->can_blend = !caps->is_integer;
 
    /*
     * From the Sandy Bridge PRM, volume 2 part 1, page 382:
@@ -1614,7 +1027,7 @@ fb_set_blend_caps(const struct ilo_dev *dev,
     *     "Alpha Test can only be enabled if Pixel Shader outputs a float
     *      alpha value."
     */
-   caps->can_alpha_test = !util_format_is_pure_integer(format);
+   caps->can_alpha_test = !caps->is_integer;
 
    caps->dst_alpha_forced_one =
       (ilo_format_translate_render(dev, format) !=
@@ -1650,9 +1063,12 @@ ilo_gpe_set_fb(const struct ilo_dev *dev,
 
    util_copy_framebuffer_state(&fb->state, state);
 
+   fb->has_integer_rt = false;
    for (i = 0; i < state->nr_cbufs; i++) {
       if (state->cbufs[i]) {
          fb_set_blend_caps(dev, state->cbufs[i]->format, &fb->blend_caps[i]);
+
+         fb->has_integer_rt |= fb->blend_caps[i].is_integer;
 
          if (!first_surf)
             first_surf = state->cbufs[i];
@@ -1667,6 +1083,18 @@ ilo_gpe_set_fb(const struct ilo_dev *dev,
    fb->num_samples = (first_surf) ? first_surf->texture->nr_samples : 1;
    if (!fb->num_samples)
       fb->num_samples = 1;
+
+   if (state->zsbuf) {
+      const struct ilo_surface_cso *cso =
+         (const struct ilo_surface_cso *) state->zsbuf;
+
+      fb->has_hiz = cso->u.zs.hiz_bo;
+      fb->depth_offset_format =
+         ilo_state_zs_get_depth_format(&cso->u.zs, dev);
+   } else {
+      fb->has_hiz = false;
+      fb->depth_offset_format = GEN6_ZFORMAT_D32_FLOAT;
+   }
 
    /*
     * The PRMs list several restrictions when the framebuffer has more than

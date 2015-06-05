@@ -633,37 +633,8 @@ gen6_draw_clip(struct ilo_render *r,
                struct ilo_render_draw_session *session)
 {
    /* 3DSTATE_CLIP */
-   if (DIRTY(RASTERIZER) || DIRTY(FS) || DIRTY(VIEWPORT) || DIRTY(FB)) {
-      bool enable_guardband = true;
-      unsigned i;
-
-      /*
-       * Gen8+ has viewport extent test.  Guard band test can be enabled on
-       * prior Gens only when the viewport is larger than the framebuffer,
-       * unless we emulate viewport extent test on them.
-       */
-      if (ilo_dev_gen(r->dev) < ILO_GEN(8)) {
-         for (i = 0; i < vec->viewport.params.count; i++) {
-            const struct ilo_state_viewport_matrix_info *mat =
-               &vec->viewport.matrices[i];
-            float min_x, max_x, min_y, max_y;
-
-            min_x = -1.0f * fabsf(mat->scale[0]) + mat->translate[0];
-            max_x =  1.0f * fabsf(mat->scale[0]) + mat->translate[0];
-            min_y = -1.0f * fabsf(mat->scale[1]) + mat->translate[1];
-            max_y =  1.0f * fabsf(mat->scale[1]) + mat->translate[1];
-
-            if (min_x > 0.0f || max_x < vec->fb.state.width ||
-                min_y > 0.0f || max_y < vec->fb.state.height) {
-               enable_guardband = false;
-               break;
-            }
-         }
-      }
-
-      gen6_3DSTATE_CLIP(r->builder, vec->rasterizer,
-            vec->fs, enable_guardband, 1);
-   }
+   if (session->rs_delta.dirty & ILO_STATE_RASTER_3DSTATE_CLIP)
+      gen6_3DSTATE_CLIP(r->builder, &vec->rasterizer->rs);
 }
 
 static void
@@ -672,9 +643,10 @@ gen6_draw_sf(struct ilo_render *r,
              struct ilo_render_draw_session *session)
 {
    /* 3DSTATE_SF */
-   if (DIRTY(RASTERIZER) || DIRTY(FS) || DIRTY(FB)) {
-      gen6_3DSTATE_SF(r->builder, vec->rasterizer, vec->fs,
-            vec->fb.num_samples);
+   if ((session->rs_delta.dirty & ILO_STATE_RASTER_3DSTATE_SF) ||
+       DIRTY(RASTERIZER) || DIRTY(FS)) {
+      gen6_3DSTATE_SF(r->builder, &vec->rasterizer->rs,
+            vec->rasterizer->state.sprite_coord_mode, vec->fs);
    }
 }
 
@@ -708,7 +680,8 @@ gen6_draw_wm(struct ilo_render *r,
 
    /* 3DSTATE_WM */
    if (DIRTY(FS) || DIRTY(BLEND) || DIRTY(DSA) ||
-       DIRTY(RASTERIZER) || r->instruction_bo_changed) {
+       (session->rs_delta.dirty & ILO_STATE_RASTER_3DSTATE_WM) ||
+       r->instruction_bo_changed) {
       const bool dual_blend = vec->blend->dual_blend;
       const bool cc_may_kill = (vec->dsa->dw_blend_alpha ||
                                 vec->blend->alpha_to_coverage);
@@ -716,8 +689,8 @@ gen6_draw_wm(struct ilo_render *r,
       if (ilo_dev_gen(r->dev) == ILO_GEN(6) && r->hw_ctx_changed)
          gen6_wa_pre_3dstate_wm_max_threads(r);
 
-      gen6_3DSTATE_WM(r->builder, vec->fs,
-            vec->rasterizer, dual_blend, cc_may_kill);
+      gen6_3DSTATE_WM(r->builder, &vec->rasterizer->rs, vec->fs,
+            dual_blend, cc_may_kill);
    }
 }
 
@@ -726,8 +699,9 @@ gen6_draw_wm_multisample(struct ilo_render *r,
                          const struct ilo_state_vector *vec,
                          struct ilo_render_draw_session *session)
 {
-   /* 3DSTATE_MULTISAMPLE and 3DSTATE_SAMPLE_MASK */
-   if (DIRTY(SAMPLE_MASK) || DIRTY(FB)) {
+   /* 3DSTATE_MULTISAMPLE */
+   if (DIRTY(FB) || (session->rs_delta.dirty &
+            ILO_STATE_RASTER_3DSTATE_MULTISAMPLE)) {
       const uint32_t *pattern;
 
       pattern = (vec->fb.num_samples > 1) ?
@@ -739,12 +713,12 @@ gen6_draw_wm_multisample(struct ilo_render *r,
       }
 
       gen6_3DSTATE_MULTISAMPLE(r->builder,
-            vec->fb.num_samples, pattern,
-            vec->rasterizer->state.half_pixel_center);
-
-      gen6_3DSTATE_SAMPLE_MASK(r->builder,
-            (vec->fb.num_samples > 1) ? vec->sample_mask : 0x1);
+            &vec->rasterizer->rs, pattern, 1);
    }
+
+   /* 3DSTATE_SAMPLE_MASK */
+   if (session->rs_delta.dirty & ILO_STATE_RASTER_3DSTATE_SAMPLE_MASK)
+      gen6_3DSTATE_SAMPLE_MASK(r->builder, &vec->rasterizer->rs);
 }
 
 static void
@@ -872,35 +846,18 @@ gen6_rectlist_vs_to_sf(struct ilo_render *r,
    gen6_3DSTATE_CONSTANT_GS(r->builder, NULL, NULL, 0);
    gen6_disable_3DSTATE_GS(r->builder);
 
-   gen6_disable_3DSTATE_CLIP(r->builder);
-   gen6_3DSTATE_SF(r->builder, NULL, NULL, blitter->fb.num_samples);
+   gen6_3DSTATE_CLIP(r->builder, &blitter->fb.rs);
+   gen6_3DSTATE_SF(r->builder, &blitter->fb.rs, 0, NULL);
 }
 
 static void
 gen6_rectlist_wm(struct ilo_render *r,
                  const struct ilo_blitter *blitter)
 {
-   uint32_t hiz_op;
-
-   switch (blitter->op) {
-   case ILO_BLITTER_RECTLIST_CLEAR_ZS:
-      hiz_op = GEN6_WM_DW4_DEPTH_CLEAR;
-      break;
-   case ILO_BLITTER_RECTLIST_RESOLVE_Z:
-      hiz_op = GEN6_WM_DW4_DEPTH_RESOLVE;
-      break;
-   case ILO_BLITTER_RECTLIST_RESOLVE_HIZ:
-      hiz_op = GEN6_WM_DW4_HIZ_RESOLVE;
-      break;
-   default:
-      hiz_op = 0;
-      break;
-   }
-
    gen6_3DSTATE_CONSTANT_PS(r->builder, NULL, NULL, 0);
 
    gen6_wa_pre_3dstate_wm_max_threads(r);
-   gen6_hiz_3DSTATE_WM(r->builder, hiz_op);
+   gen6_3DSTATE_WM(r->builder, &blitter->fb.rs, NULL, false, false);
 }
 
 static void
@@ -936,11 +893,8 @@ gen6_rectlist_wm_multisample(struct ilo_render *r,
 
    gen6_wa_pre_3dstate_multisample(r);
 
-   gen6_3DSTATE_MULTISAMPLE(r->builder, blitter->fb.num_samples,
-         pattern, true);
-
-   gen6_3DSTATE_SAMPLE_MASK(r->builder,
-         (1 << blitter->fb.num_samples) - 1);
+   gen6_3DSTATE_MULTISAMPLE(r->builder, &blitter->fb.rs, pattern, true);
+   gen6_3DSTATE_SAMPLE_MASK(r->builder, &blitter->fb.rs);
 }
 
 int

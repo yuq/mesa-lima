@@ -483,16 +483,11 @@ gen7_draw_sf(struct ilo_render *r,
    }
 
    /* 3DSTATE_SF */
-   if (DIRTY(RASTERIZER) || DIRTY(FB)) {
-      struct pipe_surface *zs = vec->fb.state.zsbuf;
-
+   if (session->rs_delta.dirty & ILO_STATE_RASTER_3DSTATE_SF) {
       if (ilo_dev_gen(r->dev) == ILO_GEN(7))
          gen7_wa_pre_3dstate_sf_depth_bias(r);
 
-      gen7_3DSTATE_SF(r->builder,
-            (vec->rasterizer) ? &vec->rasterizer->sf : NULL,
-            (zs) ? zs->format : PIPE_FORMAT_NONE,
-            vec->fb.num_samples);
+      gen7_3DSTATE_SF(r->builder, &vec->rasterizer->rs);
    }
 }
 
@@ -502,11 +497,12 @@ gen7_draw_wm(struct ilo_render *r,
              struct ilo_render_draw_session *session)
 {
    /* 3DSTATE_WM */
-   if (DIRTY(FS) || DIRTY(BLEND) || DIRTY(DSA) || DIRTY(RASTERIZER)) {
+   if (DIRTY(FS) || DIRTY(BLEND) || DIRTY(DSA) ||
+       (session->rs_delta.dirty & ILO_STATE_RASTER_3DSTATE_WM)) {
       const bool cc_may_kill = (vec->dsa->dw_blend_alpha ||
                                 vec->blend->alpha_to_coverage);
 
-      gen7_3DSTATE_WM(r->builder, vec->fs, vec->rasterizer, cc_may_kill);
+      gen7_3DSTATE_WM(r->builder, &vec->rasterizer->rs, vec->fs, cc_may_kill);
    }
 
    /* 3DSTATE_BINDING_TABLE_POINTERS_PS */
@@ -600,24 +596,30 @@ gen7_draw_wm_multisample(struct ilo_render *r,
                          const struct ilo_state_vector *vec,
                          struct ilo_render_draw_session *session)
 {
-   /* 3DSTATE_MULTISAMPLE and 3DSTATE_SAMPLE_MASK */
-   if (DIRTY(SAMPLE_MASK) || DIRTY(FB)) {
+   /* 3DSTATE_MULTISAMPLE */
+   if (DIRTY(FB) || (session->rs_delta.dirty &
+            ILO_STATE_RASTER_3DSTATE_MULTISAMPLE)) {
       const uint32_t *pattern;
+      int pattern_len;
 
       gen7_wa_pre_3dstate_multisample(r);
 
-      pattern = (vec->fb.num_samples > 4) ? r->sample_pattern_8x :
-                (vec->fb.num_samples > 1) ? &r->sample_pattern_4x :
-                &r->sample_pattern_1x;
+      if (vec->fb.num_samples > 4) {
+         pattern = r->sample_pattern_8x;
+         pattern_len = ARRAY_SIZE(r->sample_pattern_8x);
+      } else {
+         pattern = (vec->fb.num_samples > 1) ?
+            &r->sample_pattern_4x : &r->sample_pattern_1x;
+         pattern_len = 1;
+      }
 
-      gen6_3DSTATE_MULTISAMPLE(r->builder,
-            vec->fb.num_samples, pattern,
-            vec->rasterizer->state.half_pixel_center);
-
-      gen7_3DSTATE_SAMPLE_MASK(r->builder,
-            (vec->fb.num_samples > 1) ? vec->sample_mask : 0x1,
-            vec->fb.num_samples);
+      gen6_3DSTATE_MULTISAMPLE(r->builder, &vec->rasterizer->rs,
+            pattern, pattern_len);
    }
+
+   /* 3DSTATE_SAMPLE_MASK */
+   if (session->rs_delta.dirty & ILO_STATE_RASTER_3DSTATE_SAMPLE_MASK)
+      gen6_3DSTATE_SAMPLE_MASK(r->builder, &vec->rasterizer->rs);
 }
 
 void
@@ -720,13 +722,12 @@ gen7_rectlist_vs_to_sf(struct ilo_render *r,
 
    gen7_3DSTATE_STREAMOUT(r->builder, 0, false, 0x0, 0);
 
-   gen6_disable_3DSTATE_CLIP(r->builder);
+   gen6_3DSTATE_CLIP(r->builder, &blitter->fb.rs);
 
    if (ilo_dev_gen(r->dev) == ILO_GEN(7))
       gen7_wa_pre_3dstate_sf_depth_bias(r);
 
-   gen7_3DSTATE_SF(r->builder, NULL, blitter->fb.dst.base.format,
-         blitter->fb.num_samples);
+   gen7_3DSTATE_SF(r->builder, &blitter->fb.rs);
    gen7_3DSTATE_SBE(r->builder, NULL, 0);
 }
 
@@ -734,24 +735,7 @@ static void
 gen7_rectlist_wm(struct ilo_render *r,
                  const struct ilo_blitter *blitter)
 {
-   uint32_t hiz_op;
-
-   switch (blitter->op) {
-   case ILO_BLITTER_RECTLIST_CLEAR_ZS:
-      hiz_op = GEN7_WM_DW1_DEPTH_CLEAR;
-      break;
-   case ILO_BLITTER_RECTLIST_RESOLVE_Z:
-      hiz_op = GEN7_WM_DW1_DEPTH_RESOLVE;
-      break;
-   case ILO_BLITTER_RECTLIST_RESOLVE_HIZ:
-      hiz_op = GEN7_WM_DW1_HIZ_RESOLVE;
-      break;
-   default:
-      hiz_op = 0;
-      break;
-   }
-
-   gen7_hiz_3DSTATE_WM(r->builder, hiz_op);
+   gen7_3DSTATE_WM(r->builder, &blitter->fb.rs, NULL, false);
 
    gen7_3DSTATE_CONSTANT_PS(r->builder, NULL, NULL, 0);
 
@@ -787,18 +771,24 @@ static void
 gen7_rectlist_wm_multisample(struct ilo_render *r,
                              const struct ilo_blitter *blitter)
 {
-   const uint32_t *pattern =
-      (blitter->fb.num_samples > 4) ? r->sample_pattern_8x :
-      (blitter->fb.num_samples > 1) ? &r->sample_pattern_4x :
-      &r->sample_pattern_1x;
+   const uint32_t *pattern;
+   int pattern_len;
+
+   if (blitter->fb.num_samples > 4) {
+      pattern = r->sample_pattern_8x;
+      pattern_len = ARRAY_SIZE(r->sample_pattern_8x);
+   } else {
+      pattern = (blitter->fb.num_samples > 1) ?
+         &r->sample_pattern_4x : &r->sample_pattern_1x;
+      pattern_len = 1;
+   }
 
    gen7_wa_pre_3dstate_multisample(r);
 
-   gen6_3DSTATE_MULTISAMPLE(r->builder, blitter->fb.num_samples,
-         pattern, true);
+   gen6_3DSTATE_MULTISAMPLE(r->builder, &blitter->fb.rs,
+         pattern, pattern_len);
 
-   gen7_3DSTATE_SAMPLE_MASK(r->builder,
-         (1 << blitter->fb.num_samples) - 1, blitter->fb.num_samples);
+   gen6_3DSTATE_SAMPLE_MASK(r->builder, &blitter->fb.rs);
 }
 
 void

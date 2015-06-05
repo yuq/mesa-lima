@@ -29,6 +29,7 @@
 #define ILO_STATE_H
 
 #include "core/ilo_state_3d.h"
+#include "core/ilo_state_raster.h"
 #include "core/ilo_state_sampler.h"
 #include "core/ilo_state_surface.h"
 #include "core/ilo_state_viewport.h"
@@ -170,6 +171,14 @@ struct ilo_view_state {
    unsigned count;
 };
 
+struct ilo_rasterizer_state {
+   struct pipe_rasterizer_state state;
+
+   /* these are invalid until finalize_rasterizer() */
+   struct ilo_state_raster_info info;
+   struct ilo_state_raster rs;
+};
+
 struct ilo_viewport_state {
    struct ilo_state_viewport_matrix_info matrices[ILO_MAX_VIEWPORTS];
    struct ilo_state_viewport_scissor_info scissors[ILO_MAX_VIEWPORTS];
@@ -224,7 +233,8 @@ struct ilo_state_vector {
 
    struct ilo_viewport_state viewport;
 
-   const struct ilo_rasterizer_state *rasterizer;
+   struct ilo_rasterizer_state *rasterizer;
+
    struct pipe_poly_stipple poly_stipple;
    unsigned sample_mask;
 

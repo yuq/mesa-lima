@@ -39,12 +39,6 @@ enum ilo_blitter_uses {
    ILO_BLITTER_USE_FB_STENCIL    = 1 << 4,
 };
 
-enum ilo_blitter_rectlist_op {
-   ILO_BLITTER_RECTLIST_CLEAR_ZS,
-   ILO_BLITTER_RECTLIST_RESOLVE_Z,
-   ILO_BLITTER_RECTLIST_RESOLVE_HIZ,
-};
-
 struct blitter_context;
 struct pipe_resource;
 struct pipe_surface;
@@ -57,7 +51,8 @@ struct ilo_blitter {
    /*
     * A minimal context with the goal to send RECTLISTs down the pipeline.
     */
-   enum ilo_blitter_rectlist_op op;
+   enum ilo_state_raster_earlyz_op earlyz_op;
+   bool earlyz_stencil_clear;
    uint32_t uses;
 
    bool initialized;
@@ -83,6 +78,8 @@ struct ilo_blitter {
       struct ilo_surface_cso dst;
       unsigned width, height;
       unsigned num_samples;
+
+      struct ilo_state_raster rs;
    } fb;
 };
 

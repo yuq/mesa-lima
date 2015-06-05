@@ -35,100 +35,27 @@
 #include "ilo_core.h"
 #include "ilo_dev.h"
 #include "ilo_format.h"
+#include "ilo_state_raster.h"
 #include "ilo_state_viewport.h"
 #include "ilo_builder.h"
 #include "ilo_builder_3d_top.h"
 
 static inline void
 gen6_3DSTATE_CLIP(struct ilo_builder *builder,
-                  const struct ilo_rasterizer_state *rasterizer,
-                  const struct ilo_shader_state *fs,
-                  bool enable_guardband,
-                  int num_viewports)
-{
-   const uint8_t cmd_len = 4;
-   uint32_t dw1, dw2, dw3, *dw;
-   int interps;
-
-   ILO_DEV_ASSERT(builder->dev, 6, 8);
-
-   dw1 = rasterizer->clip.payload[0];
-   dw2 = rasterizer->clip.payload[1];
-   dw3 = rasterizer->clip.payload[2];
-
-   if (enable_guardband && rasterizer->clip.can_enable_guardband)
-      dw2 |= GEN6_CLIP_DW2_GB_TEST_ENABLE;
-
-   interps = (fs) ?  ilo_shader_get_kernel_param(fs,
-         ILO_KERNEL_FS_BARYCENTRIC_INTERPOLATIONS) : 0;
-
-   if (interps & (GEN6_INTERP_NONPERSPECTIVE_PIXEL |
-                  GEN6_INTERP_NONPERSPECTIVE_CENTROID |
-                  GEN6_INTERP_NONPERSPECTIVE_SAMPLE))
-      dw2 |= GEN6_CLIP_DW2_NONPERSPECTIVE_BARYCENTRIC_ENABLE;
-
-   dw3 |= GEN6_CLIP_DW3_FORCE_RTAINDEX_ZERO |
-          (num_viewports - 1);
-
-   ilo_builder_batch_pointer(builder, cmd_len, &dw);
-
-   dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_CLIP) | (cmd_len - 2);
-   dw[1] = dw1;
-   dw[2] = dw2;
-   dw[3] = dw3;
-}
-
-static inline void
-gen6_disable_3DSTATE_CLIP(struct ilo_builder *builder)
+                  const struct ilo_state_raster *rs)
 {
    const uint8_t cmd_len = 4;
    uint32_t *dw;
 
-   ILO_DEV_ASSERT(builder->dev, 6, 7.5);
+   ILO_DEV_ASSERT(builder->dev, 6, 8);
 
    ilo_builder_batch_pointer(builder, cmd_len, &dw);
 
    dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_CLIP) | (cmd_len - 2);
-   dw[1] = 0;
-   dw[2] = 0;
-   dw[3] = 0;
-}
-
-static inline void
-gen7_internal_3dstate_sf(struct ilo_builder *builder,
-                         uint8_t cmd_len, uint32_t *dw,
-                         const struct ilo_rasterizer_sf *sf,
-                         int num_samples)
-{
-   ILO_DEV_ASSERT(builder->dev, 6, 7.5);
-
-   assert(cmd_len == 7);
-
-   dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_SF) | (cmd_len - 2);
-
-   if (!sf) {
-      dw[1] = 0;
-      dw[2] = (num_samples > 1) ? (GEN6_MSRASTMODE_ON_PATTERN << 8) : 0;
-      dw[3] = 0;
-      dw[4] = 0;
-      dw[5] = 0;
-      dw[6] = 0;
-
-      return;
-   }
-
-   /* see rasterizer_init_sf_gen6() */
-   STATIC_ASSERT(Elements(sf->payload) >= 3);
-   dw[1] = sf->payload[0];
-   dw[2] = sf->payload[1];
-   dw[3] = sf->payload[2];
-
-   if (num_samples > 1)
-      dw[2] |= sf->dw_msaa;
-
-   dw[4] = sf->dw_depth_offset_const;
-   dw[5] = sf->dw_depth_offset_scale;
-   dw[6] = sf->dw_depth_offset_clamp;
+   /* see raster_set_gen6_3DSTATE_CLIP() */
+   dw[1] = rs->clip[0];
+   dw[2] = rs->clip[1];
+   dw[3] = rs->clip[2];
 }
 
 static inline void
@@ -232,34 +159,34 @@ gen8_internal_3dstate_sbe_swiz(struct ilo_builder *builder,
 
 static inline void
 gen6_3DSTATE_SF(struct ilo_builder *builder,
-                const struct ilo_rasterizer_state *rasterizer,
-                const struct ilo_shader_state *fs,
-                int sample_count)
+                const struct ilo_state_raster *rs,
+                unsigned sprite_coord_mode,
+                const struct ilo_shader_state *fs)
 {
    const uint8_t cmd_len = 20;
    uint32_t gen8_3dstate_sbe[4], gen8_3dstate_sbe_swiz[11];
-   uint32_t gen7_3dstate_sf[7];
-   const struct ilo_rasterizer_sf *sf;
-   int sprite_coord_mode;
    uint32_t *dw;
 
    ILO_DEV_ASSERT(builder->dev, 6, 6);
-
-   sf = (rasterizer) ? &rasterizer->sf : NULL;
-   sprite_coord_mode = (rasterizer) ? rasterizer->state.sprite_coord_mode : 0;
 
    gen8_internal_3dstate_sbe(builder, Elements(gen8_3dstate_sbe),
          gen8_3dstate_sbe, fs, sprite_coord_mode);
    gen8_internal_3dstate_sbe_swiz(builder, Elements(gen8_3dstate_sbe_swiz),
          gen8_3dstate_sbe_swiz, fs);
-   gen7_internal_3dstate_sf(builder, Elements(gen7_3dstate_sf),
-         gen7_3dstate_sf, sf, sample_count);
 
    ilo_builder_batch_pointer(builder, cmd_len, &dw);
 
    dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_SF) | (cmd_len - 2);
    dw[1] = gen8_3dstate_sbe[1];
-   memcpy(&dw[2], &gen7_3dstate_sf[1], sizeof(*dw) * 6);
+
+   /* see raster_set_gen7_3DSTATE_SF() */
+   dw[2] = rs->sf[0];
+   dw[3] = rs->sf[1];
+   dw[4] = rs->sf[2];
+   dw[5] = rs->raster[1];
+   dw[6] = rs->raster[2];
+   dw[7] = rs->raster[3];
+
    memcpy(&dw[8], &gen8_3dstate_sbe_swiz[1], sizeof(*dw) * 8);
    dw[16] = gen8_3dstate_sbe[2];
    dw[17] = gen8_3dstate_sbe[3];
@@ -269,63 +196,26 @@ gen6_3DSTATE_SF(struct ilo_builder *builder,
 
 static inline void
 gen7_3DSTATE_SF(struct ilo_builder *builder,
-                const struct ilo_rasterizer_sf *sf,
-                enum pipe_format zs_format,
-                int sample_count)
+                const struct ilo_state_raster *rs)
 {
-   const uint8_t cmd_len = 7;
+   const uint8_t cmd_len = (ilo_dev_gen(builder->dev) >= ILO_GEN(8)) ? 4 : 7;
    uint32_t *dw;
 
-   ILO_DEV_ASSERT(builder->dev, 7, 7.5);
-
-   ilo_builder_batch_pointer(builder, cmd_len, &dw);
-
-   gen7_internal_3dstate_sf(builder, cmd_len, dw, sf, sample_count);
-
-   if (ilo_dev_gen(builder->dev) >= ILO_GEN(7)) {
-      int hw_format;
-
-      /* separate stencil */
-      switch (zs_format) {
-      case PIPE_FORMAT_Z16_UNORM:
-         hw_format = GEN6_ZFORMAT_D16_UNORM;
-         break;
-      case PIPE_FORMAT_Z32_FLOAT:
-      case PIPE_FORMAT_Z32_FLOAT_S8X24_UINT:
-         hw_format = GEN6_ZFORMAT_D32_FLOAT;
-         break;
-      case PIPE_FORMAT_Z24X8_UNORM:
-      case PIPE_FORMAT_Z24_UNORM_S8_UINT:
-         hw_format = GEN6_ZFORMAT_D24_UNORM_X8_UINT;
-         break;
-      default:
-         /* FLOAT surface is assumed when there is no depth buffer */
-         hw_format = GEN6_ZFORMAT_D32_FLOAT;
-         break;
-      }
-
-      dw[1] |= hw_format << GEN7_SF_DW1_DEPTH_FORMAT__SHIFT;
-   }
-}
-
-static inline void
-gen8_3DSTATE_SF(struct ilo_builder *builder,
-                const struct ilo_rasterizer_sf *sf)
-{
-   const uint8_t cmd_len = 4;
-   uint32_t *dw;
-
-   ILO_DEV_ASSERT(builder->dev, 8, 8);
+   ILO_DEV_ASSERT(builder->dev, 7, 8);
 
    ilo_builder_batch_pointer(builder, cmd_len, &dw);
 
    dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_SF) | (cmd_len - 2);
 
-   /* see rasterizer_init_sf_gen8() */
-   STATIC_ASSERT(Elements(sf->payload) >= 3);
-   dw[1] = sf->payload[0];
-   dw[2] = sf->payload[1];
-   dw[3] = sf->payload[2];
+   /* see raster_set_gen7_3DSTATE_SF() or raster_set_gen8_3DSTATE_SF() */
+   dw[1] = rs->sf[0];
+   dw[2] = rs->sf[1];
+   dw[3] = rs->sf[2];
+   if (ilo_dev_gen(builder->dev) < ILO_GEN(8)) {
+      dw[4] = rs->raster[1];
+      dw[5] = rs->raster[2];
+      dw[6] = rs->raster[3];
+   }
 }
 
 static inline void
@@ -386,7 +276,7 @@ gen8_3DSTATE_SBE_SWIZ(struct ilo_builder *builder,
 
 static inline void
 gen8_3DSTATE_RASTER(struct ilo_builder *builder,
-                    const struct ilo_rasterizer_sf *sf)
+                    const struct ilo_state_raster *rs)
 {
    const uint8_t cmd_len = 5;
    uint32_t *dw;
@@ -396,39 +286,47 @@ gen8_3DSTATE_RASTER(struct ilo_builder *builder,
    ilo_builder_batch_pointer(builder, cmd_len, &dw);
 
    dw[0] = GEN8_RENDER_CMD(3D, 3DSTATE_RASTER) | (cmd_len - 2);
-   dw[1] = sf->dw_raster;
-   dw[2] = sf->dw_depth_offset_const;
-   dw[3] = sf->dw_depth_offset_scale;
-   dw[4] = sf->dw_depth_offset_clamp;
+   /* see raster_set_gen8_3DSTATE_RASTER() */
+   dw[1] = rs->raster[0];
+   dw[2] = rs->raster[1];
+   dw[3] = rs->raster[2];
+   dw[4] = rs->raster[3];
 }
 
 static inline void
 gen6_3DSTATE_WM(struct ilo_builder *builder,
+                const struct ilo_state_raster *rs,
                 const struct ilo_shader_state *fs,
-                const struct ilo_rasterizer_state *rasterizer,
                 bool dual_blend, bool cc_may_kill)
 {
    const uint8_t cmd_len = 9;
+   const bool multisample = false;
    const int num_samples = 1;
-   const struct ilo_shader_cso *cso;
    uint32_t dw2, dw4, dw5, dw6, *dw;
 
    ILO_DEV_ASSERT(builder->dev, 6, 6);
 
-   cso = ilo_shader_get_kernel_cso(fs);
-   dw2 = cso->payload[0];
-   dw4 = cso->payload[1];
-   dw5 = cso->payload[2];
-   dw6 = cso->payload[3];
+   dw2 = 0;
+   /* see raster_set_gen6_3dstate_wm() */
+   dw4 = rs->raster[0];
+   dw5 = rs->raster[1];
+   dw6 = rs->raster[2];
 
-   /*
-    * From the Sandy Bridge PRM, volume 2 part 1, page 248:
-    *
-    *     "This bit (Statistics Enable) must be disabled if either of these
-    *      bits is set: Depth Buffer Clear , Hierarchical Depth Buffer Resolve
-    *      Enable or Depth Buffer Resolve Enable."
-    */
-   dw4 |= GEN6_WM_DW4_STATISTICS;
+   if (fs) {
+      const struct ilo_shader_cso *cso;
+
+      cso = ilo_shader_get_kernel_cso(fs);
+      /* see fs_init_cso_gen6() */
+      dw2 |= cso->payload[0];
+      dw4 |= cso->payload[1];
+      dw5 |= cso->payload[2];
+      dw6 |= cso->payload[3];
+   } else {
+      const int max_threads = (builder->dev->gt == 2) ? 80 : 40;
+
+      /* honor the valid range even if dispatching is disabled */
+      dw5 |= (max_threads - 1) << GEN6_WM_DW5_MAX_THREADS__SHIFT;
+   }
 
    if (cc_may_kill)
       dw5 |= GEN6_WM_DW5_PS_KILL_PIXEL | GEN6_WM_DW5_PS_DISPATCH_ENABLE;
@@ -436,14 +334,8 @@ gen6_3DSTATE_WM(struct ilo_builder *builder,
    if (dual_blend)
       dw5 |= GEN6_WM_DW5_PS_DUAL_SOURCE_BLEND;
 
-   dw5 |= rasterizer->wm.payload[0];
-
-   dw6 |= rasterizer->wm.payload[1];
-
-   if (num_samples > 1) {
-      dw6 |= rasterizer->wm.dw_msaa_rast |
-             rasterizer->wm.dw_msaa_disp;
-   }
+   if (multisample && num_samples > 1)
+      dw6 |= GEN6_WM_DW6_MSDISPMODE_PERPIXEL;
 
    ilo_builder_batch_pointer(builder, cmd_len, &dw);
 
@@ -459,58 +351,35 @@ gen6_3DSTATE_WM(struct ilo_builder *builder,
 }
 
 static inline void
-gen6_hiz_3DSTATE_WM(struct ilo_builder *builder, uint32_t hiz_op)
-{
-   const uint8_t cmd_len = 9;
-   const int max_threads = (builder->dev->gt == 2) ? 80 : 40;
-   uint32_t *dw;
-
-   ILO_DEV_ASSERT(builder->dev, 6, 6);
-
-   ilo_builder_batch_pointer(builder, cmd_len, &dw);
-
-   dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_WM) | (cmd_len - 2);
-   dw[1] = 0;
-   dw[2] = 0;
-   dw[3] = 0;
-   dw[4] = hiz_op;
-   /* honor the valid range even if dispatching is disabled */
-   dw[5] = (max_threads - 1) << GEN6_WM_DW5_MAX_THREADS__SHIFT;
-   dw[6] = 0;
-   dw[7] = 0;
-   dw[8] = 0;
-}
-
-static inline void
 gen7_3DSTATE_WM(struct ilo_builder *builder,
+                const struct ilo_state_raster *rs,
                 const struct ilo_shader_state *fs,
-                const struct ilo_rasterizer_state *rasterizer,
                 bool cc_may_kill)
 {
    const uint8_t cmd_len = 3;
+   const bool multisample = false;
    const int num_samples = 1;
-   const struct ilo_shader_cso *cso;
    uint32_t dw1, dw2, *dw;
 
    ILO_DEV_ASSERT(builder->dev, 7, 7.5);
 
-   /* see rasterizer_init_wm_gen7() */
-   dw1 = rasterizer->wm.payload[0];
-   dw2 = rasterizer->wm.payload[1];
+   /* see raster_set_gen8_3DSTATE_WM() */
+   dw1 = rs->wm[0];
 
-   /* see fs_init_cso_gen7() */
-   cso = ilo_shader_get_kernel_cso(fs);
-   dw1 |= cso->payload[3];
+   if (fs) {
+      const struct ilo_shader_cso *cso;
 
-   dw1 |= GEN7_WM_DW1_STATISTICS;
+      cso = ilo_shader_get_kernel_cso(fs);
+      /* see fs_init_cso_gen7() */
+      dw1 |= cso->payload[3];
+   }
 
    if (cc_may_kill)
       dw1 |= GEN7_WM_DW1_PS_DISPATCH_ENABLE | GEN7_WM_DW1_PS_KILL_PIXEL;
 
-   if (num_samples > 1) {
-      dw1 |= rasterizer->wm.dw_msaa_rast;
-      dw2 |= rasterizer->wm.dw_msaa_disp;
-   }
+   dw2 = 0;
+   if (multisample && num_samples > 1)
+      dw2 |= GEN7_WM_DW2_MSDISPMODE_PERPIXEL;
 
    ilo_builder_batch_pointer(builder, cmd_len, &dw);
 
@@ -521,43 +390,18 @@ gen7_3DSTATE_WM(struct ilo_builder *builder,
 
 static inline void
 gen8_3DSTATE_WM(struct ilo_builder *builder,
-                const struct ilo_shader_state *fs,
-                const struct ilo_rasterizer_state *rasterizer)
+                const struct ilo_state_raster *rs)
 {
    const uint8_t cmd_len = 2;
-   const struct ilo_shader_cso *cso;
-   uint32_t dw1, interps, *dw;
+   uint32_t *dw;
 
    ILO_DEV_ASSERT(builder->dev, 8, 8);
 
-   /* see rasterizer_get_wm_gen8() */
-   dw1 = rasterizer->wm.payload[0];
-   dw1 |= GEN7_WM_DW1_STATISTICS;
-
-   /* see fs_init_cso_gen8() */
-   cso = ilo_shader_get_kernel_cso(fs);
-   interps = cso->payload[4];
-
-   assert(!(dw1 & interps));
-
    ilo_builder_batch_pointer(builder, cmd_len, &dw);
 
    dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_WM) | (cmd_len - 2);
-   dw[1] = dw1 | interps;
-}
-
-static inline void
-gen7_hiz_3DSTATE_WM(struct ilo_builder *builder, uint32_t hiz_op)
-{
-   const uint8_t cmd_len = 3;
-   uint32_t *dw;
-
-   ILO_DEV_ASSERT(builder->dev, 7, 7.5);
-
-   ilo_builder_batch_pointer(builder, cmd_len, &dw);
-   dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_WM) | (cmd_len - 2);
-   dw[1] = hiz_op;
-   dw[2] = 0;
+   /* see raster_set_gen8_3DSTATE_WM() */
+   dw[1] = rs->wm[0];
 }
 
 static inline void
@@ -580,48 +424,24 @@ gen8_3DSTATE_WM_DEPTH_STENCIL(struct ilo_builder *builder,
 }
 
 static inline void
-gen8_3DSTATE_WM_HZ_OP(struct ilo_builder *builder, uint32_t op,
-                      uint16_t width, uint16_t height, int sample_count)
+gen8_3DSTATE_WM_HZ_OP(struct ilo_builder *builder,
+                      const struct ilo_state_raster *rs,
+                      uint16_t width, uint16_t height)
 {
    const uint8_t cmd_len = 5;
-   const uint32_t sample_mask = ((1 << sample_count) - 1) | 0x1;
-   uint32_t dw1, *dw;
+   uint32_t *dw;
 
    ILO_DEV_ASSERT(builder->dev, 8, 8);
-
-   dw1 = op;
-
-   switch (sample_count) {
-   case 0:
-   case 1:
-      dw1 |= GEN6_NUMSAMPLES_1 << 13;
-      break;
-   case 2:
-      dw1 |= GEN8_NUMSAMPLES_2 << 13;
-      break;
-   case 4:
-      dw1 |= GEN6_NUMSAMPLES_4 << 13;
-      break;
-   case 8:
-      dw1 |= GEN7_NUMSAMPLES_8 << 13;
-      break;
-   case 16:
-      dw1 |= GEN8_NUMSAMPLES_16 << 13;
-      break;
-   default:
-      assert(!"unsupported sample count");
-      dw1 |= GEN6_NUMSAMPLES_1 << 13;
-      break;
-   }
 
    ilo_builder_batch_pointer(builder, cmd_len, &dw);
 
    dw[0] = GEN8_RENDER_CMD(3D, 3DSTATE_WM_HZ_OP) | (cmd_len - 2);
-   dw[1] = dw1;
+   /* see raster_set_gen8_3dstate_wm_hz_op() */
+   dw[1] = rs->wm[1];
    dw[2] = 0;
-   /* exclusive? */
+   /* exclusive */
    dw[3] = height << 16 | width;
-   dw[4] = sample_mask;
+   dw[4] = rs->wm[2];
 }
 
 static inline void
@@ -863,94 +683,40 @@ gen7_3DSTATE_SAMPLER_STATE_POINTERS_PS(struct ilo_builder *builder,
 
 static inline void
 gen6_3DSTATE_MULTISAMPLE(struct ilo_builder *builder,
-                         int num_samples, const uint32_t *pattern,
-                         bool pixel_location_center)
+                         const struct ilo_state_raster *rs,
+                         const uint32_t *pattern, int pattern_len)
 {
    const uint8_t cmd_len = (ilo_dev_gen(builder->dev) >= ILO_GEN(7)) ? 4 : 3;
-   const enum gen_pixel_location pixloc = (pixel_location_center) ?
-      GEN6_PIXLOC_CENTER : GEN6_PIXLOC_UL_CORNER;
-   uint32_t dw1, dw2, dw3, *dw;
+   uint32_t *dw;
 
    ILO_DEV_ASSERT(builder->dev, 6, 7.5);
-
-   dw1 = pixloc << 4;
-
-   switch (num_samples) {
-   case 0:
-   case 1:
-      dw1 |= GEN6_NUMSAMPLES_1 << 1;
-      dw2 = 0;
-      dw3 = 0;
-      break;
-   case 4:
-      dw1 |= GEN6_NUMSAMPLES_4 << 1;
-      dw2 = pattern[0];
-      dw3 = 0;
-      break;
-   case 8:
-      assert(ilo_dev_gen(builder->dev) >= ILO_GEN(7));
-      dw1 |= GEN7_NUMSAMPLES_8 << 1;
-      dw2 = pattern[0];
-      dw3 = pattern[1];
-      break;
-   default:
-      assert(!"unsupported sample count");
-      dw1 |= GEN6_NUMSAMPLES_1 << 1;
-      dw2 = 0;
-      dw3 = 0;
-      break;
-   }
 
    ilo_builder_batch_pointer(builder, cmd_len, &dw);
 
    dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_MULTISAMPLE) | (cmd_len - 2);
-   dw[1] = dw1;
-   dw[2] = dw2;
+   /* see raster_set_gen8_3DSTATE_MULTISAMPLE() */
+   dw[1] = rs->sample[0];
+
+   assert(pattern_len == 1 || pattern_len == 2);
+   dw[2] = pattern[0];
    if (ilo_dev_gen(builder->dev) >= ILO_GEN(7))
-      dw[3] = dw3;
+      dw[3] = (pattern_len == 2) ? pattern[1] : 0;
 }
 
 static inline void
 gen8_3DSTATE_MULTISAMPLE(struct ilo_builder *builder,
-                         int num_samples,
-                         bool pixel_location_center)
+                         const struct ilo_state_raster *rs)
 {
    const uint8_t cmd_len = 2;
-   const enum gen_pixel_location pixloc = (pixel_location_center) ?
-      GEN6_PIXLOC_CENTER : GEN6_PIXLOC_UL_CORNER;
-   uint32_t dw1, *dw;
+   uint32_t *dw;
 
    ILO_DEV_ASSERT(builder->dev, 8, 8);
-
-   dw1 = pixloc << 4;
-
-   switch (num_samples) {
-   case 0:
-   case 1:
-      dw1 |= GEN6_NUMSAMPLES_1 << 1;
-      break;
-   case 2:
-      dw1 |= GEN8_NUMSAMPLES_2 << 1;
-      break;
-   case 4:
-      dw1 |= GEN6_NUMSAMPLES_4 << 1;
-      break;
-   case 8:
-      dw1 |= GEN7_NUMSAMPLES_8 << 1;
-      break;
-   case 16:
-      dw1 |= GEN8_NUMSAMPLES_16 << 1;
-      break;
-   default:
-      assert(!"unsupported sample count");
-      dw1 |= GEN6_NUMSAMPLES_1 << 1;
-      break;
-   }
 
    ilo_builder_batch_pointer(builder, cmd_len, &dw);
 
    dw[0] = GEN8_RENDER_CMD(3D, 3DSTATE_MULTISAMPLE) | (cmd_len - 2);
-   dw[1] = dw1;
+   /* see raster_set_gen8_3DSTATE_MULTISAMPLE() */
+   dw[1] = rs->sample[0];
 }
 
 static inline void
@@ -982,48 +748,18 @@ gen8_3DSTATE_SAMPLE_PATTERN(struct ilo_builder *builder,
 
 static inline void
 gen6_3DSTATE_SAMPLE_MASK(struct ilo_builder *builder,
-                         unsigned sample_mask)
+                         const struct ilo_state_raster *rs)
 {
    const uint8_t cmd_len = 2;
-   const unsigned valid_mask = 0xf;
    uint32_t *dw;
 
-   ILO_DEV_ASSERT(builder->dev, 6, 6);
-
-   sample_mask &= valid_mask;
+   ILO_DEV_ASSERT(builder->dev, 6, 8);
 
    ilo_builder_batch_pointer(builder, cmd_len, &dw);
 
    dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_SAMPLE_MASK) | (cmd_len - 2);
-   dw[1] = sample_mask;
-}
-
-static inline void
-gen7_3DSTATE_SAMPLE_MASK(struct ilo_builder *builder,
-                         unsigned sample_mask,
-                         int num_samples)
-{
-   const uint8_t cmd_len = 2;
-   const unsigned valid_mask = ((1 << num_samples) - 1) | 0x1;
-   uint32_t *dw;
-
-   ILO_DEV_ASSERT(builder->dev, 7, 8);
-
-   /*
-    * From the Ivy Bridge PRM, volume 2 part 1, page 294:
-    *
-    *     "If Number of Multisamples is NUMSAMPLES_1, bits 7:1 of this field
-    *      (Sample Mask) must be zero.
-    *
-    *      If Number of Multisamples is NUMSAMPLES_4, bits 7:4 of this field
-    *      must be zero."
-    */
-   sample_mask &= valid_mask;
-
-   ilo_builder_batch_pointer(builder, cmd_len, &dw);
-
-   dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_SAMPLE_MASK) | (cmd_len - 2);
-   dw[1] = sample_mask;
+   /* see raster_set_gen6_3DSTATE_SAMPLE_MASK() */
+   dw[1] = rs->sample[1];
 }
 
 static inline void

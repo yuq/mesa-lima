@@ -25,6 +25,7 @@
  *    Chia-I Wu <olv@lunarg.com>
  */
 
+#include "core/ilo_builder_3d.h" /* for gen6_3d_translate_pipe_prim() */
 #include "core/ilo_format.h"
 #include "core/ilo_state_3d.h"
 #include "util/u_dynarray.h"
@@ -118,6 +119,45 @@ ilo_translate_shadow_func(unsigned func)
       assert(!"unknown shadow compare function");
       return GEN6_PREFILTEROP_NEVER;
    }
+}
+
+static enum gen_front_winding
+ilo_translate_front_ccw(unsigned front_ccw)
+{
+   return (front_ccw) ? GEN6_FRONTWINDING_CCW : GEN6_FRONTWINDING_CW;
+}
+
+static enum gen_cull_mode
+ilo_translate_cull_face(unsigned cull_face)
+{
+   switch (cull_face) {
+   case PIPE_FACE_NONE:                return GEN6_CULLMODE_NONE;
+   case PIPE_FACE_FRONT:               return GEN6_CULLMODE_FRONT;
+   case PIPE_FACE_BACK:                return GEN6_CULLMODE_BACK;
+   case PIPE_FACE_FRONT_AND_BACK:      return GEN6_CULLMODE_BOTH;
+   default:
+      assert(!"unknown face culling");
+      return GEN6_CULLMODE_NONE;
+   }
+}
+
+static enum gen_fill_mode
+ilo_translate_poly_mode(unsigned poly_mode)
+{
+   switch (poly_mode) {
+   case PIPE_POLYGON_MODE_FILL:        return GEN6_FILLMODE_SOLID;
+   case PIPE_POLYGON_MODE_LINE:        return GEN6_FILLMODE_WIREFRAME;
+   case PIPE_POLYGON_MODE_POINT:       return GEN6_FILLMODE_POINT;
+   default:
+      assert(!"unknown polygon mode");
+      return GEN6_FILLMODE_SOLID;
+   }
+}
+
+static enum gen_pixel_location
+ilo_translate_half_pixel_center(bool half_pixel_center)
+{
+   return (half_pixel_center) ? GEN6_PIXLOC_CENTER : GEN6_PIXLOC_UL_CORNER;
 }
 
 static void
@@ -346,6 +386,86 @@ finalize_viewport(struct ilo_context *ilo)
    }
 }
 
+static bool
+can_enable_gb_test(const struct ilo_rasterizer_state *rasterizer,
+                   const struct ilo_viewport_state *viewport,
+                   const struct ilo_fb_state *fb)
+{
+   unsigned i;
+
+   /*
+    * There are several reasons that guard band test should be disabled
+    *
+    *  - GL wide points (to avoid partially visibie object)
+    *  - GL wide or AA lines (to avoid partially visibie object)
+    *  - missing 2D clipping
+    */
+   if (rasterizer->state.point_size_per_vertex ||
+       rasterizer->state.point_size > 1.0f ||
+       rasterizer->state.line_width > 1.0f ||
+       rasterizer->state.line_smooth)
+      return false;
+
+   for (i = 0; i < viewport->params.count; i++) {
+      const struct ilo_state_viewport_matrix_info *mat =
+         &viewport->matrices[i];
+      float min_x, max_x, min_y, max_y;
+
+      min_x = -1.0f * fabsf(mat->scale[0]) + mat->translate[0];
+      max_x =  1.0f * fabsf(mat->scale[0]) + mat->translate[0];
+      min_y = -1.0f * fabsf(mat->scale[1]) + mat->translate[1];
+      max_y =  1.0f * fabsf(mat->scale[1]) + mat->translate[1];
+
+      if (min_x > 0.0f || max_x < fb->state.width ||
+          min_y > 0.0f || max_y < fb->state.height)
+         return false;
+   }
+
+   return true;
+}
+
+static void
+finalize_rasterizer(struct ilo_context *ilo)
+{
+   const struct ilo_dev *dev = ilo->dev;
+   struct ilo_state_vector *vec = &ilo->state_vector;
+   struct ilo_rasterizer_state *rasterizer = vec->rasterizer;
+   struct ilo_state_raster_info *info = &vec->rasterizer->info;
+   const bool gb_test_enable =
+      can_enable_gb_test(rasterizer, &vec->viewport, &vec->fb);
+   const bool multisample =
+      (rasterizer->state.multisample && vec->fb.num_samples > 1);
+   const uint8_t barycentric_interps = ilo_shader_get_kernel_param(vec->fs,
+         ILO_KERNEL_FS_BARYCENTRIC_INTERPOLATIONS);
+
+   /* check for non-orthogonal states */
+   if (info->clip.viewport_count != vec->viewport.params.count ||
+       info->clip.gb_test_enable != gb_test_enable ||
+       info->setup.msaa_enable != multisample ||
+       info->setup.line_msaa_enable != multisample ||
+       info->tri.depth_offset_format != vec->fb.depth_offset_format ||
+       info->scan.sample_count != vec->fb.num_samples ||
+       info->scan.sample_mask != vec->sample_mask ||
+       info->scan.barycentric_interps != barycentric_interps ||
+       info->params.any_integer_rt != vec->fb.has_integer_rt ||
+       info->params.hiz_enable != vec->fb.has_hiz) {
+      info->clip.viewport_count = vec->viewport.params.count;
+      info->clip.gb_test_enable = gb_test_enable;
+      info->setup.msaa_enable = multisample;
+      info->setup.line_msaa_enable = multisample;
+      info->tri.depth_offset_format = vec->fb.depth_offset_format;
+      info->scan.sample_count = vec->fb.num_samples;
+      info->scan.sample_mask = vec->sample_mask;
+      info->scan.barycentric_interps = barycentric_interps;
+      info->params.any_integer_rt = vec->fb.has_integer_rt;
+      info->params.hiz_enable = vec->fb.has_hiz;
+
+      ilo_state_raster_set_info(&rasterizer->rs, dev, &rasterizer->info);
+
+      vec->dirty |= ILO_DIRTY_RASTERIZER;
+   }
+}
+
 /**
  * Finalize states.  Some states depend on other states and are
  * incomplete/invalid until finalized.
@@ -361,6 +481,7 @@ ilo_finalize_3d_states(struct ilo_context *ilo,
    finalize_index_buffer(ilo);
    finalize_vertex_elements(ilo);
 
+   finalize_rasterizer(ilo);
    finalize_viewport(ilo);
 
    u_upload_unmap(ilo->uploader);
@@ -601,12 +722,74 @@ ilo_create_rasterizer_state(struct pipe_context *pipe,
 {
    const struct ilo_dev *dev = ilo_context(pipe)->dev;
    struct ilo_rasterizer_state *rast;
+   struct ilo_state_raster_info *info;
 
-   rast = MALLOC_STRUCT(ilo_rasterizer_state);
+   rast = CALLOC_STRUCT(ilo_rasterizer_state);
    assert(rast);
 
    rast->state = *state;
-   ilo_gpe_init_rasterizer(dev, state, rast);
+
+   info = &rast->info;
+
+   info->clip.clip_enable = true;
+   info->clip.stats_enable = true;
+   info->clip.viewport_count = 1;
+   info->clip.force_rtaindex_zero = true;
+   info->clip.user_clip_enables = state->clip_plane_enable;
+   info->clip.gb_test_enable = true;
+   info->clip.xy_test_enable = true;
+   info->clip.z_far_enable = state->depth_clip;
+   info->clip.z_near_enable = state->depth_clip;
+   info->clip.z_near_zero = state->clip_halfz;
+
+   info->setup.first_vertex_provoking = state->flatshade_first;
+   info->setup.viewport_transform = true;
+   info->setup.scissor_enable = state->scissor;
+   info->setup.msaa_enable = false;
+   info->setup.line_msaa_enable = false;
+   info->point.aa_enable = state->point_smooth;
+   info->point.programmable_width = state->point_size_per_vertex;
+   info->line.aa_enable = state->line_smooth;
+   info->line.stipple_enable = state->line_stipple_enable;
+   info->line.giq_enable = true;
+   info->line.giq_last_pixel = state->line_last_pixel;
+   info->tri.front_winding = ilo_translate_front_ccw(state->front_ccw);
+   info->tri.cull_mode = ilo_translate_cull_face(state->cull_face);
+   info->tri.fill_mode_front = ilo_translate_poly_mode(state->fill_front);
+   info->tri.fill_mode_back = ilo_translate_poly_mode(state->fill_back);
+   info->tri.depth_offset_format = GEN6_ZFORMAT_D24_UNORM_X8_UINT;
+   info->tri.depth_offset_solid = state->offset_tri;
+   info->tri.depth_offset_wireframe = state->offset_line;
+   info->tri.depth_offset_point = state->offset_point;
+   info->tri.poly_stipple_enable = state->poly_stipple_enable;
+
+   info->scan.stats_enable = true;
+   info->scan.sample_count = 1;
+   info->scan.pixloc =
+      ilo_translate_half_pixel_center(state->half_pixel_center);
+   info->scan.sample_mask = ~0u;
+   info->scan.zw_interp = GEN6_ZW_INTERP_PIXEL;
+   info->scan.barycentric_interps = GEN6_INTERP_PERSPECTIVE_PIXEL;
+   info->scan.earlyz_control = GEN7_EDSC_NORMAL;
+   info->scan.earlyz_op = ILO_STATE_RASTER_EARLYZ_NORMAL;
+   info->scan.earlyz_stencil_clear = false;
+
+   info->params.any_integer_rt = false;
+   info->params.hiz_enable = true;
+   info->params.point_width =
+      (state->point_size == 0.0f) ? 1.0f : state->point_size;
+   info->params.line_width =
+      (state->line_width == 0.0f) ? 1.0f : state->line_width;
+
+   info->params.depth_offset_scale = state->offset_scale;
+   /*
+    * Scale the constant term.  The minimum representable value used by the HW
+    * is not large enouch to be the minimum resolvable difference.
+    */
+   info->params.depth_offset_const = state->offset_units * 2.0f;
+   info->params.depth_offset_clamp = state->offset_clamp;
+
+   ilo_state_raster_init(&rast->rs, dev, info);
 
    return rast;
 }
@@ -1566,6 +1749,8 @@ void
 ilo_state_vector_init(const struct ilo_dev *dev,
                       struct ilo_state_vector *vec)
 {
+   vec->sample_mask = ~0u;
+
    ilo_state_viewport_init_data_only(&vec->viewport.vp, dev,
          vec->viewport.vp_data, sizeof(vec->viewport.vp_data));
    assert(vec->viewport.vp.array_size >= ILO_MAX_VIEWPORTS);
