@@ -442,9 +442,10 @@ public:
    glsl_interp_qualifier determine_interpolation_mode(bool flat_shade);
 
    /**
-    * Determine whether or not a variable is part of a uniform block.
+    * Determine whether or not a variable is part of a uniform or
+    * shader storage block.
     */
-   inline bool is_in_uniform_block() const
+   inline bool is_in_buffer_block() const
    {
       return (this->data.mode == ir_var_uniform ||
               this->data.mode == ir_var_shader_storage) &&

@@ -2007,7 +2007,7 @@ validate_matrix_layout_for_type(struct _mesa_glsl_parse_state *state,
                                 const glsl_type *type,
                                 ir_variable *var)
 {
-   if (var && !var->is_in_uniform_block()) {
+   if (var && !var->is_in_buffer_block()) {
       /* Layout qualifiers may only apply to interface blocks and fields in
        * them.
        */

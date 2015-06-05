@@ -1063,7 +1063,7 @@ vec4_visitor::visit(ir_variable *ir)
        * Some uniforms, such as samplers and atomic counters, have no actual
        * storage, so we should ignore them.
        */
-      if (ir->is_in_uniform_block() || type_size(ir->type) == 0)
+      if (ir->is_in_buffer_block() || type_size(ir->type) == 0)
          return;
 
       /* Track how big the whole uniform variable is, in case we need to put a

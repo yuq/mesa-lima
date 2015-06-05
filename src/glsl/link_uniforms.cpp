@@ -298,7 +298,7 @@ public:
 
    void process(ir_variable *var)
    {
-      this->is_ubo_var = var->is_in_uniform_block();
+      this->is_ubo_var = var->is_in_buffer_block();
       if (var->is_interface_instance())
          program_resource_visitor::process(var->get_interface_type(),
                                            var->get_interface_type()->name);
@@ -431,7 +431,7 @@ public:
       field_counter = 0;
 
       ubo_block_index = -1;
-      if (var->is_in_uniform_block()) {
+      if (var->is_in_buffer_block()) {
          if (var->is_interface_instance() && var->type->is_array()) {
             unsigned l = strlen(var->get_interface_type()->name);
 
@@ -763,7 +763,7 @@ link_update_uniform_buffer_variables(struct gl_shader *shader)
    foreach_in_list(ir_instruction, node, shader->ir) {
       ir_variable *const var = node->as_variable();
 
-      if ((var == NULL) || !var->is_in_uniform_block())
+      if ((var == NULL) || !var->is_in_buffer_block())
 	 continue;
 
       assert(var->data.mode == ir_var_uniform);

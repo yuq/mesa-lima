@@ -1873,7 +1873,7 @@ update_array_sizes(struct gl_shader_program *prog)
           * locations assigned based on the declaration ordering and
           * sizes, array compaction would mess that up.
 	  */
-	 if (var->is_in_uniform_block() || var->type->contains_atomic())
+	 if (var->is_in_buffer_block() || var->type->contains_atomic())
 	    continue;
 
 	 unsigned int size = var->data.max_array_access;
