@@ -466,7 +466,8 @@ brw_meta_fast_clear(struct brw_context *brw, struct gl_framebuffer *fb,
        *      linear (untiled) memory is UNDEFINED."
        */
       if (irb->mt->tiling == I915_TILING_NONE) {
-         perf_debug("falling back to plain clear because buffers are untiled\n");
+         perf_debug("Falling back to plain clear because %dx%d buffer is untiled\n",
+                    irb->mt->logical_width0, irb->mt->logical_height0);
          clear_type = PLAIN_CLEAR;
       }
 
@@ -477,7 +478,8 @@ brw_meta_fast_clear(struct brw_context *brw, struct gl_framebuffer *fb,
       for (int i = 0; i < 4; i++) {
          if (_mesa_format_has_color_component(irb->mt->format, i) &&
              !color_mask[i]) {
-            perf_debug("falling back to plain clear because of color mask\n");
+            perf_debug("Falling back to plain clear on %dx%d buffer because of color mask\n",
+                       irb->mt->logical_width0, irb->mt->logical_height0);
             clear_type = PLAIN_CLEAR;
          }
       }
