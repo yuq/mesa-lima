@@ -489,8 +489,8 @@ init_program_limits(struct gl_constants *consts, gl_shader_stage stage,
       prog->MaxOutputComponents = 16 * 4; /* old limit not to break tnl and swrast */
       break;
    case MESA_SHADER_FRAGMENT:
-      prog->MaxParameters = MAX_NV_FRAGMENT_PROGRAM_PARAMS;
-      prog->MaxAttribs = MAX_NV_FRAGMENT_PROGRAM_INPUTS;
+      prog->MaxParameters = MAX_FRAGMENT_PROGRAM_PARAMS;
+      prog->MaxAttribs = MAX_FRAGMENT_PROGRAM_INPUTS;
       prog->MaxAddressRegs = MAX_FRAGMENT_PROGRAM_ADDRESS_REGS;
       prog->MaxUniformComponents = 4 * MAX_UNIFORMS;
       prog->MaxInputComponents = 16 * 4; /* old limit not to break tnl and swrast */
