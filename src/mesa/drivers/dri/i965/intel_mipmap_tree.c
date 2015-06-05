@@ -198,10 +198,23 @@ intel_is_non_msrt_mcs_buffer_supported(struct brw_context *brw,
       return false;
    if (mt->cpp != 4 && mt->cpp != 8 && mt->cpp != 16)
       return false;
-   if (mt->first_level != 0 || mt->last_level != 0)
+   if (mt->first_level != 0 || mt->last_level != 0) {
+      if (brw->gen >= 8) {
+         perf_debug("Multi-LOD fast clear - giving up (%dx%dx%d).\n",
+                    mt->logical_width0, mt->logical_height0, mt->last_level);
+      }
+
       return false;
-   if (mt->physical_depth0 != 1)
+   }
+   if (mt->physical_depth0 != 1) {
+      if (brw->gen >= 8) {
+         perf_debug("Layered fast clear - giving up. (%dx%d%d)\n",
+                    mt->logical_width0, mt->logical_height0,
+                    mt->physical_depth0);
+      }
+
       return false;
+   }
 
    /* There's no point in using an MCS buffer if the surface isn't in a
     * renderable format.

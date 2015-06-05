@@ -340,6 +340,10 @@ is_color_fast_clear_compatible(struct brw_context *brw,
                                const union gl_color_union *color)
 {
    if (_mesa_is_format_integer_color(format))
+      if (brw->gen >= 8) {
+         perf_debug("Integer fast clear not enabled for (%s)",
+                    _mesa_get_format_name(format));
+      }
       return false;
 
    for (int i = 0; i < 4; i++) {
