@@ -2141,12 +2141,7 @@ process_array_type(YYLTYPE *loc, const glsl_type *base,
           *
           * "Only one-dimensional arrays may be declared."
           */
-         if (!state->ARB_arrays_of_arrays_enable) {
-            _mesa_glsl_error(loc, state,
-                             "invalid array of `%s'"
-                             "GL_ARB_arrays_of_arrays "
-                             "required for defining arrays of arrays",
-                             base->name);
+         if (!state->check_arrays_of_arrays_allowed(loc)) {
             return glsl_type::error_type;
          }
       }

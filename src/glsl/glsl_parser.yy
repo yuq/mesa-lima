@@ -1978,25 +1978,18 @@ array_specifier:
       void *ctx = state;
       $$ = $1;
 
-      if (!state->ARB_arrays_of_arrays_enable) {
-         _mesa_glsl_error(& @1, state,
-                          "GL_ARB_arrays_of_arrays "
-                          "required for defining arrays of arrays");
+      if (state->check_arrays_of_arrays_allowed(& @1)) {
+         $$->add_dimension(new(ctx) ast_expression(ast_unsized_array_dim, NULL,
+                                                   NULL, NULL));
       }
-      $$->add_dimension(new(ctx) ast_expression(ast_unsized_array_dim, NULL,
-                                                NULL, NULL));
    }
    | array_specifier '[' constant_expression ']'
    {
       $$ = $1;
 
-      if (!state->ARB_arrays_of_arrays_enable) {
-         _mesa_glsl_error(& @1, state,
-                          "GL_ARB_arrays_of_arrays "
-                          "required for defining arrays of arrays");
+      if (state->check_arrays_of_arrays_allowed(& @1)) {
+         $$->add_dimension($3);
       }
-
-      $$->add_dimension($3);
    }
    ;
 
