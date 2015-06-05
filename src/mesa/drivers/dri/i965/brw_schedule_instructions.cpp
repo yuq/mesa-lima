@@ -1405,17 +1405,18 @@ instruction_scheduler::schedule_instructions(bblock_t *block)
       instructions_to_schedule--;
       update_register_pressure(chosen->inst);
 
+      /* If we expected a delay for scheduling, then bump the clock to reflect
+       * that.  In reality, the hardware will switch to another hyperthread
+       * and may not return to dispatching our thread for a while even after
+       * we're unblocked.  After this, we have the time when the chosen
+       * instruction will start executing.
+       */
+      time = MAX2(time, chosen->unblocked_time);
+
       /* Update the clock for how soon an instruction could start after the
        * chosen one.
        */
       time += issue_time(chosen->inst);
-
-      /* If we expected a delay for scheduling, then bump the clock to reflect
-       * that as well.  In reality, the hardware will switch to another
-       * hyperthread and may not return to dispatching our thread for a while
-       * even after we're unblocked.
-       */
-      time = MAX2(time, chosen->unblocked_time);
 
       if (debug) {
          fprintf(stderr, "clock %4d, scheduled: ", time);
