@@ -139,8 +139,8 @@ blt_pitch(struct intel_mipmap_tree *mt)
    return pitch;
 }
 
-static bool
-blt_compatible_formats(mesa_format src, mesa_format dst)
+bool
+intel_miptree_blit_compatible_formats(mesa_format src, mesa_format dst)
 {
    /* The BLT doesn't handle sRGB conversion */
    assert(src == _mesa_get_srgb_format_linear(src));
@@ -206,7 +206,7 @@ intel_miptree_blit(struct brw_context *brw,
     * the X channel don't matter), and XRGB8888 to ARGB8888 by setting the A
     * channel to 1.0 at the end.
     */
-   if (!blt_compatible_formats(src_format, dst_format)) {
+   if (!intel_miptree_blit_compatible_formats(src_format, dst_format)) {
       perf_debug("%s: Can't use hardware blitter from %s to %s, "
                  "falling back.\n", __func__,
                  _mesa_get_format_name(src_format),
