@@ -804,6 +804,17 @@ intel_miptree_set_alignment(struct brw_context *brw,
    }
 }
 
+static void
+intel_miptree_release_levels(struct intel_mipmap_tree *mt)
+{
+   unsigned int level = 0;
+
+   for (level = mt->first_level; level <= mt->last_level; level++) {
+      free(mt->level[level].slice);
+      mt->level[level].slice = NULL;
+   }
+}
+
 void
 brw_miptree_layout(struct brw_context *brw,
                    struct intel_mipmap_tree *mt,
@@ -871,8 +882,6 @@ brw_miptree_layout(struct brw_context *brw,
 
       mt->tiling = brw_miptree_choose_tiling(brw, requested, mt);
       if (is_tr_mode_yf_ys_allowed) {
-         unsigned int level = 0;
-
          if (mt->tiling == I915_TILING_Y ||
              mt->tiling == (I915_TILING_Y | I915_TILING_X) ||
              mt->tr_mode == INTEL_MIPTREE_TRMODE_NONE) {
@@ -887,10 +896,7 @@ brw_miptree_layout(struct brw_context *brw,
          /* Failed to use selected tr_mode. Free up the memory allocated
           * for miptree levels in intel_miptree_total_width_height().
           */
-         for (level = mt->first_level; level <= mt->last_level; level++) {
-            free(mt->level[level].slice);
-            mt->level[level].slice = NULL;
-         }
+         intel_miptree_release_levels(mt);
       }
       i++;
    }
