@@ -1348,7 +1348,7 @@ VkResult anv_ResetFences(
 {
    struct anv_fence **fences = (struct anv_fence **) pFences;
 
-   for (uint32_t i; i < fenceCount; i++)
+   for (uint32_t i = 0; i < fenceCount; i++)
       fences[i]->ready = false;
 
    return VK_SUCCESS;

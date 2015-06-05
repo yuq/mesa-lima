@@ -172,7 +172,7 @@ anv_image_view_init(struct anv_surface_view *view,
       format = info->format;
       break;
    default:
-      assert(0);
+      unreachable("");
       break;
    }
 

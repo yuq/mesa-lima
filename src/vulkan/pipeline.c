@@ -399,7 +399,7 @@ anv_pipeline_create(
    VkPipelineRsStateCreateInfo *rs_info = NULL;
    VkPipelineDsStateCreateInfo *ds_info = NULL;
    VkPipelineCbStateCreateInfo *cb_info = NULL;
-   VkPipelineVertexInputCreateInfo *vi_info;
+   VkPipelineVertexInputCreateInfo *vi_info = NULL;
    VkResult result;
    uint32_t offset, length;
 
