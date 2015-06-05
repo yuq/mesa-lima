@@ -130,6 +130,15 @@ set_blitter_tiling(struct brw_context *brw,
       ADVANCE_BATCH();                                                  \
    } while (0)
 
+static int
+blt_pitch(struct intel_mipmap_tree *mt)
+{
+   int pitch = mt->pitch;
+   if (mt->tiling)
+      pitch /= 4;
+   return pitch;
+}
+
 /**
  * Implements a rectangular block transfer (blit) of pixels between two
  * miptrees.
@@ -197,14 +206,14 @@ intel_miptree_blit(struct brw_context *brw,
     *
     * Furthermore, intelEmitCopyBlit (which is called below) uses a signed
     * 16-bit integer to represent buffer pitch, so it can only handle buffer
-    * pitches < 32k.
+    * pitches < 32k. However, the pitch is measured in bytes for linear buffers
+    * and dwords for tiled buffers.
     *
     * As a result of these two limitations, we can only use the blitter to do
-    * this copy when the miptree's pitch is less than 32k.
+    * this copy when the miptree's pitch is less than 32k linear or 128k tiled.
     */
-   if (src_mt->pitch >= 32768 ||
-       dst_mt->pitch >= 32768) {
-      perf_debug("Falling back due to >=32k pitch\n");
+   if (blt_pitch(src_mt) >= 32768 || blt_pitch(dst_mt) >= 32768) {
+      perf_debug("Falling back due to >= 32k/128k pitch\n");
       return false;
    }
 
